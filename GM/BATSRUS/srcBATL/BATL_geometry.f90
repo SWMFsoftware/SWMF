@@ -24,6 +24,7 @@ module BATL_geometry
   logical, public:: IsSphericalAxis   = .false. ! theta=0 and theta=pi boundary
   logical, public:: IsCylindrical     = .false.
   logical, public:: IsCylindricalAxis = .false. ! r=0 boundary
+  logical, public:: IsCubedSphere     = .false.
   logical, public:: IsLogRadius       = .false. ! logarithmic radial coordinate
   logical, public:: IsGenRadius       = .false. ! stretched radial coordinate
 
@@ -55,8 +56,9 @@ contains
     ! Logicals are useful for efficient code
     IsCartesian   = TypeGeometry(1:9)  == 'cartesian'
     IsRzGeometry  = TypeGeometry(1:2)  == 'rz'
-    IsSpherical   = TypeGeometry(1:9)  == 'spherical'
-    IsCylindrical = TypeGeometry(1:11) == 'cylindrical'
+    IsSpherical   = TypeGeometry(1:3)  == 'sph'
+    IsCylindrical = TypeGeometry(1:3)  == 'cyl'
+    IsCubedSphere = TypeGeometry(1:3)  == 'cub'
 
     IsLogRadius   = index(TypeGeometry,'lnr')  > 0
     IsGenRadius   = index(TypeGeometry,'genr') > 0
@@ -81,7 +83,7 @@ contains
     real, intent(in) :: XyzIn_D(MaxDim)
     real, intent(out):: CoordOut_D(MaxDim)
 
-    real:: x, y
+    real:: x, y, r2
 
     character(len=*), parameter:: NameSub = 'BATL_geometry::xyz_to_coord'
     !----------------------------------------------------------------------
@@ -96,6 +98,13 @@ contains
        CoordOut_D(3) = XyzIn_D(3)
     elseif(IsSpherical)then
        call xyz_to_sph(XyzIn_D, CoordOut_D)
+    elseif(IsCubedSphere)then
+       r2 = sum(XyzIn_D**2)
+       if(r2 > 0.0)then
+          CoordOut_D = sqrt(r2/maxval(XyzIn_D**2)) * XyzIn_D
+       else
+          CoordOut_D = 0.0
+       end if
     else
        call CON_stop(NameSub// &
             ' not yet implemented for TypeGeometry='//TypeGeometry)
@@ -118,7 +127,7 @@ contains
     real, intent(in) :: CoordIn_D(MaxDim)
     real, intent(out):: XyzOut_D(MaxDim)
 
-    real:: r, Phi, Coord_D(MaxDim)
+    real:: r, r2, Phi, Coord_D(MaxDim)
 
     character(len=*), parameter:: NameSub = 'BATL_geometry::coord_to_xyz'
     !----------------------------------------------------------------------
@@ -143,6 +152,13 @@ contains
        XyzOut_D(3) = Coord_D(3)
     elseif(IsSpherical)then
        call sph_to_xyz(Coord_D, XyzOut_D)
+    elseif(IsCubedSphere)then
+       r2 = sum(CoordIn_D**2)
+       if(r2 > 0.0)then
+          XyzOut_D = maxval(abs(CoordIn_D))/sqrt(r2) * CoordIn_D
+       else
+          XyzOut_D = 0.0
+       end if
     else
        call CON_stop(NameSub// &
             ' not yet implemented for TypeGeometry='//TypeGeometry)
@@ -263,94 +279,127 @@ contains
 
     end if
 
-    if(nDim > 1)then
-       if(DoTestMe) write(*,*)'Testing init_geometry for cylindrical_lnr'
-       IsPeriodicTest_D = (/.false., .true., .true./)
+    if(nDim == 1) RETURN
 
-       call init_geometry('cylindrical_lnr', &
-            IsPeriodicIn_D = IsPeriodicTest_D(1:nDim))
+    if(DoTestMe) write(*,*)'Testing init_geometry for cylindrical_lnr'
+    IsPeriodicTest_D = (/.false., .true., .true./)
 
-       if(TypeGeometry /= 'cylindrical_lnr') &
-            write(*,*)'ERROR: init_geometry failed, ', &
-            'TypeGeometry=', TypeGeometry, ' should be cylindrical_lnr'
+    call init_geometry('cylindrical_lnr', &
+         IsPeriodicIn_D = IsPeriodicTest_D(1:nDim))
 
-       if(.not.IsCylindrical .or. IsCartesian.or.IsRzGeometry.or.IsSpherical)&
-            write(*,*)'ERROR: init_geometry failed for cylindrical_lnr, ', &
-            'IsCartesian, IsRzGeometry, IsSpherical, IsCylindrical=', &
-            IsCartesian, IsRzGeometry, IsSpherical, IsCylindrical
+    if(TypeGeometry /= 'cylindrical_lnr') &
+         write(*,*)'ERROR: init_geometry failed, ', &
+         'TypeGeometry=', TypeGeometry, ' should be cylindrical_lnr'
 
-       if(.not.IsLogRadius .or. IsGenRadius) &
-            write(*,*)'ERROR: init_geometry failed for cylindrical_lnr, ',&
-            'IsLogRadius, IsGenRadius =', IsLogRadius, IsGenRadius
+    if(.not.IsCylindrical .or. IsCartesian.or.IsRzGeometry.or.IsSpherical)&
+         write(*,*)'ERROR: init_geometry failed for cylindrical_lnr, ', &
+         'IsCartesian, IsRzGeometry, IsSpherical, IsCylindrical=', &
+         IsCartesian, IsRzGeometry, IsSpherical, IsCylindrical
 
-       if(any(IsPeriodic_D(1:nDim) .neqv. IsPeriodicTest_D(1:nDim))) &
-            write(*,*)'ERROR: init_geometry failed, ', &
-            'for TypeGeometry=', TypeGeometry,         &
-            'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
-            ' should be ', IsPeriodicTest_D(1:nDim)
+    if(.not.IsLogRadius .or. IsGenRadius) &
+         write(*,*)'ERROR: init_geometry failed for cylindrical_lnr, ',&
+         'IsLogRadius, IsGenRadius =', IsLogRadius, IsGenRadius
 
-       if(DoTestMe) write(*,*)'Testing xyz_to_coord for cylindrical_lnr'
-       Xyz_D = (/1., 2., 3./)
-       Good_D = (/log(sqrt(5.)), atan2(2.,1.), 3./)
-       call xyz_to_coord(Xyz_D, Coord_D)
-       if(any(abs(Coord_D - Good_D) > 1e-6)) &
-            write(*,*)'ERROR: xyz_to_coord failed for cylindrical_lnr, ', &
-            'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
+    if(any(IsPeriodic_D(1:nDim) .neqv. IsPeriodicTest_D(1:nDim))) &
+         write(*,*)'ERROR: init_geometry failed, ', &
+         'for TypeGeometry=', TypeGeometry,         &
+         'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
+         ' should be ', IsPeriodicTest_D(1:nDim)
 
-       if(DoTestMe) write(*,*)'Testing coord_to_xyz for cylindrical_lnr'
-       Good_D = Xyz_D
-       call coord_to_xyz(Coord_D, Xyz_D)
-       if(any(abs(Xyz_D - Good_D) > 1e-6)) &
-            write(*,*)'ERROR: coord_to_xyz failed for cylindrical_lnr, ', &
-            'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for cylindrical_lnr'
+    Xyz_D = (/1., 2., 3./)
+    Good_D = (/log(sqrt(5.)), atan2(2.,1.), 3./)
+    call xyz_to_coord(Xyz_D, Coord_D)
+    if(any(abs(Coord_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: xyz_to_coord failed for cylindrical_lnr, ', &
+         'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    end if
+    if(DoTestMe) write(*,*)'Testing init_geometry for cubedsphere'
+    IsPeriodicTest_D = (/.false., .false., .false./)
 
-    if(nDim == 3)then
-       if(DoTestMe) write(*,*)'Testing init_geometry for spherical_genr'
-       IsPeriodicTest_D = (/.false., .true., .false./)
+    call init_geometry('cubedsphere', &
+         IsPeriodicIn_D = IsPeriodicTest_D(1:nDim))
 
-       call init_geometry('spherical_genr', IsPeriodicIn_D = IsPeriodicTest_D)
+    if(TypeGeometry /= 'cubedsphere') &
+         write(*,*)'ERROR: init_geometry failed, ', &
+         'TypeGeometry=', TypeGeometry, ' should be cubedsphere'
 
-       if(TypeGeometry /= 'spherical_genr') &
-            write(*,*)'ERROR: init_geometry failed, ', &
-            'TypeGeometry=', TypeGeometry, ' should be spherical_genr'
+    if(.not.IsCubedSphere .or. IsCartesian.or.IsRzGeometry &
+         .or.IsCylindrical.or.IsSpherical)&
+         write(*,*)'ERROR: init_geometry failed for cubedsphere, ', &
+         'IsCubedSphere,IsCartesian,IsRzGeometry,IsSpherical,IsCylindrical=', &
+         IsCubedSphere, IsCartesian, IsRzGeometry, IsSpherical, IsCylindrical
 
-       if(.not.IsSpherical .or. IsCartesian.or.IsRzGeometry.or.IsCylindrical)&
-            write(*,*)'ERROR: init_geometry failed for spherical_genr, ', &
-            'IsCartesian, IsRzGeometry, IsCylindrical, IsSpherical=', &
-            IsCartesian, IsRzGeometry, IsCylindrical, IsSpherical
+    if(IsLogRadius .or. IsGenRadius) &
+         write(*,*)'ERROR: init_geometry failed for cubedsphere, ',&
+         'IsLogRadius, IsGenRadius =', IsLogRadius, IsGenRadius
 
-       if(.not.IsGenRadius .or. IsLogRadius) &
-            write(*,*)'ERROR: init_geometry failed for spherical_genr, ',&
-            'IsLogRadius, IsGenRadius =', IsLogRadius, IsGenRadius
+    if(any(IsPeriodic_D(1:nDim) .neqv. IsPeriodicTest_D(1:nDim))) &
+         write(*,*)'ERROR: init_geometry failed, ', &
+         'for TypeGeometry=', TypeGeometry,         &
+         'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
+         ' should be ', IsPeriodicTest_D(1:nDim)
 
-       if(any(IsPeriodic_D(1:nDim) .neqv. IsPeriodicTest_D(1:nDim))) &
-            write(*,*)'ERROR: init_geometry failed, ', &
-            'for TypeGeometry=', TypeGeometry,         &
-            'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
-            ' should be ', IsPeriodicTest_D(1:nDim)
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for cubsedsphere'
+    Xyz_D  = (/3., 4., nDim-2.0/)
+    Good_D = sqrt(sum(Xyz_D**2))/4.0 * Xyz_D
+    call xyz_to_coord(Xyz_D, Coord_D)
+    if(any(abs(Coord_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: xyz_to_coord failed for cubsedsphere, ', &
+         'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-       ! genr is not yet implemented, so switch to plain spherical
-       call init_geometry('spherical')
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for cubsedsphere'
+    Good_D = Xyz_D
+    call coord_to_xyz(Coord_D, Xyz_D)
+    if(any(abs(Xyz_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: coord_to_xyz failed for cubsedsphere, ', &
+         'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-       if(DoTestMe) write(*,*)'Testing xyz_to_coord for spherical'
-       Xyz_D = (/9., 12., 20./)
-       Good_D = (/25., atan2(15.,20.),  atan2(12., 9.)/)
-       call xyz_to_coord(Xyz_D, Coord_D)
-       if(any(abs(Coord_D - Good_D) > 1e-6)) &
-            write(*,*)'ERROR: xyz_to_coord failed for spherical, ', &
-            'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
+    if(nDim < 3) RETURN
 
-       if(DoTestMe) write(*,*)'Testing coord_to_xyz for spherical'
-       Good_D = Xyz_D
-       call coord_to_xyz(Coord_D, Xyz_D)
-       if(any(abs(Xyz_D - Good_D) > 1e-6)) &
-            write(*,*)'ERROR: coord_to_xyz failed for spherical, ', &
-            'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
+    if(DoTestMe) write(*,*)'Testing init_geometry for spherical_genr'
+    IsPeriodicTest_D = (/.false., .true., .false./)
 
-    end if
+    call init_geometry('spherical_genr', IsPeriodicIn_D = IsPeriodicTest_D)
 
-  end subroutine test_geometry
+    if(TypeGeometry /= 'spherical_genr') &
+         write(*,*)'ERROR: init_geometry failed, ', &
+         'TypeGeometry=', TypeGeometry, ' should be spherical_genr'
+
+    if(.not.IsSpherical .or. IsCartesian.or.IsRzGeometry.or.IsCylindrical)&
+         write(*,*)'ERROR: init_geometry failed for spherical_genr, ', &
+         'IsCartesian, IsRzGeometry, IsCylindrical, IsSpherical=', &
+         IsCartesian, IsRzGeometry, IsCylindrical, IsSpherical
+
+    if(.not.IsGenRadius .or. IsLogRadius) &
+         write(*,*)'ERROR: init_geometry failed for spherical_genr, ',&
+         'IsLogRadius, IsGenRadius =', IsLogRadius, IsGenRadius
+
+    if(any(IsPeriodic_D(1:nDim) .neqv. IsPeriodicTest_D(1:nDim))) &
+         write(*,*)'ERROR: init_geometry failed, ', &
+         'for TypeGeometry=', TypeGeometry,         &
+         'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
+         ' should be ', IsPeriodicTest_D(1:nDim)
+
+    ! genr is not yet implemented, so switch to plain spherical
+    call init_geometry('spherical')
+
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for spherical'
+    Xyz_D = (/9., 12., 20./)
+    Good_D = (/25., atan2(15.,20.),  atan2(12., 9.)/)
+    call xyz_to_coord(Xyz_D, Coord_D)
+    if(any(abs(Coord_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: xyz_to_coord failed for spherical, ', &
+         'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
+
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for spherical'
+    Good_D = Xyz_D
+    call coord_to_xyz(Coord_D, Xyz_D)
+    if(any(abs(Xyz_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: coord_to_xyz failed for spherical, ', &
+         'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
+
+
+end subroutine test_geometry
 
 end module BATL_geometry
