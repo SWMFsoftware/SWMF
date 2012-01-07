@@ -1,0 +1,32 @@
+
+Once you have the output from GITM in a bunch of output files, there
+are a few IDL programs that you can use to visualize them:
+\begin{enumerate}
+\item {\bf thermo\_plotsat:} This is plotting 1D results.  It is the
+  most commonly used program for plotting 1D.  It can be used for
+  plotting satelite files and for plotting 1D simulations.  It is
+  relatively straight forward to use, but experimentation can be help.
+  This is an actual program, so you have to {\tt .run} it.
+\item {\bf thermo\_gui:} This is a graphical user interface code for
+  plotting 3D results that is somewhat simplistic.  The filename has
+  to be entered manually in the upper left.  You then have to press
+  the button for loading the file.  Variables appear on the left side,
+  and you can select which one you want to plot.  You then select
+  which plane you would like to look at (lat/lon, lat/alt, lon/alt).
+  You can scroll through which altitude/latitude/longitude you want to
+  look at.  You can also add wind vectors on, plot in polar
+  coordinats, and plot the log of the variable.
+\item {\bf thermo\_batch\_new:} This code will let you look at at 3D
+  files exactly the same way as thermo\_gui, but is all scripted.
+  There are a few features that this has that thermo\_batch doesn't
+  have: (1) you can use wildcards for the file name, so it can read in
+  a list of files.  The postscript file name will be appended with
+  numbers. (2) When plotting a lat/alt plane, you can do a zonal
+  average. (3) You can do a global average.
+\item {\bf thermo\_plotter:} All of the above plotting codes will only
+  plot one plot per page.  This code will plot many more than one plot
+  per page.  You can plot multiple variables on the same page, or multiple
+  files with the same variable, or both.
+\end{enumerate}
+
+

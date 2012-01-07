@@ -1,0 +1,131 @@
+
+\section{Setting the Grid}
+
+Setting the grid resolution in GITM is not very complicated, but it
+does involve some thought.  There are a few variables that control
+this.  In {\tt ModSize.f90}, the following variables are defined:
+
+\begin{verbatim}
+integer, parameter :: nLons = 9
+integer, parameter :: nLats = 9
+integer, parameter :: nAlts = 50
+
+integer, parameter :: nBlocksMax = 4
+\end{verbatim}
+
+The first three variables (nLons, nLats and nAlts) define the size of
+a single block.  In the example above, there are 9 cells in latitude,
+9 cells in longitude and 50 cells in altitude.  The final variable
+(nBlocksMax) defines the maximum number of blocks you can have on a
+single processor.  Typically, most people run with one single block
+per processor, so setting this to ``1'' is almost always fine.  In
+theory, this can save memory.
+
+\subsection{Running 3D Over the Whole Globe}
+
+Once the number of cells is defined, then the number of blocks in
+latitude and longitude need to be defined.  This is done in the {\tt
+  UAM.in} file.  For example, this sets the number of blocks to 8 in
+the latitude direction and 8 in the longitude direction:
+\begin{verbatim}
+#GRID
+8           lons
+8           lats
+-90.0       minimum latitude to model
+90.0        maximum latitude to model
+0.0         minimum longitude to model
+0.0         maximum longitude to model
+\end{verbatim}
+The number of cells in the simulation domain will then be 72 in
+longitude, 72 in latitude, and 50 in altitude.  Given that there are
+360$\deg$ in longitude and $180\deg$ in latitude, the resolution would
+be $360\deg/72 = 5.0\deg$ and $180\deg/72 = 2.5\deg$ in latitude.  If
+one block were put on each processor, 64 processors would be required.
+This problem fits quite nicely on either four- or eight-core
+processors.  On 12-core processors, this would not work very well at
+all.  We have started to run simulations of $1\deg$ in latitude and
+$5\deg$ in longitude, which can fit nicely on a 12-core processor
+machine.  For example, in {\tt ModSize.f90}:
+\begin{verbatim}
+integer, parameter :: nLons = 9
+integer, parameter :: nLats = 15
+\end{verbatim}
+and in {\tt UAM.in}:
+\begin{verbatim}
+#GRID
+8		lons
+12		lats
+\end{verbatim}
+This can then run on 96 cores, which is nicely divisible by 12.
+Essentially, an infinite combination of cells per block and number of
+blocks can be utilized.  Typically, the number of blocks in latitude
+and longitude are even numbers.
+
+\subsection{Running 3D Over the Part of the Globe}
+
+GITM can be run over part of the globe - both in latitude and in
+longitude.  It can be run over a single polar region (by setting
+either the minimum or maximum latitude to be greater (or less) than
+$\pm 90\deg$).  If this is selected, message passing over the poles is
+implemented.  If the pole is not selected, then boundary conditions
+have to be set in {\tt set\_horizontal\_bcs.f90}.  By default, a
+continuous gradient boundary condition is used on the densities and
+temperatures, while a continuous value is used on the velocity.  This
+is true in both latitude and longitude.  In longitude, message passing
+is implemented all of the time, but the values are over-written by the
+boundary conditions if the maximum and minimum longitude are not equal
+to each other.
+
+The longitudinal resolution ($\Delta{\phi}$) is set by:
+\begin{equation}
+\Delta{\phi} = \frac{\phi_{end} - \phi_{start}}{nBlocksLon \times nCellsLon}
+\end{equation}
+while, the latitudinal resolution ($\Delta{\theta}$) is set by:
+\begin{equation}
+\Delta{\theta} = \frac{\theta_{end} - \theta_{start}}{nBlocksLat \times nCellsLat}
+\end{equation}
+
+\subsection{Running in 1D}
+
+GITM can run in 1D mode, in which the call to advance\_horizontal is
+not completed.  This means that GITM runs exactly the same way, but
+ignoring all of the horizontal advection terms.  You have to do two
+things to make GITM run in 1D.  First, in {\tt ModSize.f90}:
+\begin{verbatim}
+integer, parameter :: nLons = 1
+integer, parameter :: nLats = 1
+integer, parameter :: nAlts = 50
+
+integer, parameter :: nBlocksMax = 1
+\end{verbatim}
+This tells the code that you only want one single latitude and
+longitude location.  To specify the exact location, in {\tt UAM.in}:
+\begin{verbatim}
+#GRID
+1           lons
+1           lats
+41.75       minimum latitude to model
+41.75       maximum latitude to model
+275.0       minimum longitude to model
+275.0       maximum longitude to model
+\end{verbatim}
+This is pretty close to some place in Michigan.  GITM will model this
+exact point for as long as you specify.  One thing to keep in mind
+with running in 1D is that the Earth still rotates, so the spot will
+have a strong day to night variation in temperature.  In 3D, the winds
+decrease some of the variability between day and night, but in 1D,
+this doesn't happen.  So, the results are going to be perfect.  But,
+1D is great for debugging.
+
+\subsection{Stretching the Grid}
+
+You can stretch the grid in GITM in the latitudinal direction.  It
+takes some practice to get the stretching just the way that you might
+like.  Here is an example that we typically use for stretching near
+the equator for an equatorial electrodynamics run:
+\begin{verbatim}
+#STRETCH
+0.0            ! Equator
+0.7            ! Amount of stretch
+0.8            ! more control
+\end{verbatim}

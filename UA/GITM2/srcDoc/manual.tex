@@ -1,0 +1,73 @@
+\documentclass[twoside,10pt]{book}
+\usepackage{times}
+\usepackage{graphicx}
+\usepackage{alltt}
+\usepackage{amsmath}
+\usepackage{epsfig}
+\usepackage{fancyheadings}
+\usepackage[square]{natbib}
+
+% use these lengths for a more uniform margin
+% this format is more pleasing for stapling
+\setlength{\oddsidemargin}{-.1 in}
+\setlength{\evensidemargin}{0.0 in}
+\setlength{\textwidth}{6.5 in}
+\setlength{\topmargin}{0 in}
+\setlength{\textheight}{8.5 in}
+
+\renewcommand{\deg}{^{\circ}}
+
+
+\title{GITM User Manual \\ \large Version 2.0}
+\author{A.J. Ridley}
+
+\begin{document}
+
+\pagestyle{fancy}
+\lhead[\fancyplain{}{\bfseries\thepage}]{\fancyplain{}{\bfseries\rightmark}}
+\rhead[\fancyplain{}{\bfseries\leftmark}]{\fancyplain{}{\bfseries\thepage}}
+\cfoot{}
+
+%\pagestyle{headings}
+
+\maketitle
+
+\tableofcontents
+
+\clearpage
+
+\chapter{Introduction to GITM}
+\input{intro}
+
+\section{Code Outline}
+
+This is an outline of GITM.  To produce this file, go into the {\tt src} 
+directory, and type:
+\begin{verbatim}
+cd ../src
+./calling_sequence.pl > outline.tex
+mv outline.tex ../srcDoc
+cd ../srcDoc
+\end{verbatim}
+
+\input{outline.tex}
+
+\chapter{Running GITM}
+\input{quickstart}
+
+\input{grid}
+
+\chapter{Inputs}
+
+\input{set_inputs}
+
+\input{more_inputs}
+
+\chapter{Outputs}
+
+\input{outputs}
+
+\bibliographystyle{authyear}
+\bibliography{wholebib}
+
+\end{document}

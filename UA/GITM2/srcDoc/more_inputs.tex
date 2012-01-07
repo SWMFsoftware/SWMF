@@ -1,0 +1,204 @@
+
+\section{Auxiliary Input Files}
+
+
+\subsection{IMF and Solar Wind}
+
+This file controls the high-latitude electric field and aurora when
+using models that depend on the solar wind and interplanetary magnetic
+field (IMF).  It allows for dynamically controlling these quantities.
+You can create realistical IMF files or hypothetical ones.  For
+realistic IMF files, we typically use CDF files downloaded from the
+CDAWEB ftp site, and IDL code that merges the solar wind and IMF files
+to create one single file.  The IDL code also propagates the solar
+wind and IMF from L1 to 32 Re upstream of the Earth.  You can use the
+{\tt DELAY} statement to shift the time more (e.g.,in the example
+below, it shifts by an additional 15 minutes).  The IDL code to
+process the CDF files is called {\tt cdf\_to\_mhd.pro}.  It requires
+both a solar wind file and an IMF file. For example, the IMF file
+would be {\tt ac\_h0\_mfi\_20011231\_v04.cdf} and the solar wind file
+would be {\tt ac\_h0\_swe\_20011231\_v06.cdf}.  The code assumes that
+the data starts at {\tt \#START}, and ends when it encounters an
+error.  This can mean that if there is an error in the data somewhere,
+the code will only read up to that point.  To validate that the solar
+wind and IMF is what you think it is, it is recommended that you use
+the IDL code {\tt imf\_plot.pro}.
+
+Here is an example file:
+\begin{verbatim}
+
+This file was created by Aaron Ridley to do some
+wicked cool science thing.
+
+The format is:
+ Year MM DD HH Mi SS mS   Bx  By   Bz     Vx   Vy   Vz    N        T
+
+Year=year
+MM = Month
+DD = Day
+HH = Hour
+Mi = Minute
+SS = Second
+mS = Millisecond
+Bx = IMF Bx GSM Component (nT)
+By = IMF By GSM Component (nT)
+Bz = IMF Bz GSM Component (nT)
+Vx = Solar Wind Vx (km/s)
+Vy = Solar Wind Vy (km/s)
+Vz = Solar Wind Vz (km/s)
+N  = Solar Wind Density (/cm3)
+T  = Solar Wind Temperature (K)
+
+#DELAY
+900.0
+
+#START
+ 2000  3 20  2 53  0  0  0.0 0.0  2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  2 54  0  0  0.0 0.0  2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  2 55  0  0  0.0 0.0  2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  2 56  0  0  0.0 0.0  2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  2 57  0  0  0.0 0.0  2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  2 58  0  0  0.0 0.0  2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  2 59  0  0  0.0 0.0  2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  3  0  0  0  0.0 0.0 -2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  3  1  0  0  0.0 0.0 -2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  3  2  0  0  0.0 0.0 -2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  3  3  0  0  0.0 0.0 -2.0 -400.0  0.0  0.0  5.0  50000.0
+ 2000  3 20  3  4  0  0  0.0 0.0 -2.0 -400.0  0.0  0.0  5.0  50000.0
+\end{verbatim}
+
+
+To actually read in this file, in {\tt UAM.in}, use the command:
+
+\begin{verbatim}
+#MHD_INDICES
+filename
+\end{verbatim}
+
+\subsection{Hemispheric Power}
+
+These files describe the dynamic variation of the auroral power going
+into each hemisphere.  Models such as \cite{fuller87} use the
+Hemispheric Power to determine which level of the model it should use.
+The Hemispheric Power is converted to a Hemispheric Power Index using the 
+formula (check):
+\begin{equation}
+HPI = 2.09log(HP)^{1.0475}
+\end{equation}
+
+Example File 1:
+
+\begin{verbatim}
+# Prepared by the U.S. Dept. of Commerce, NOAA, Space Environment Center.
+# Please send comments and suggestions to sec@sec.noaa.gov 
+# 
+# Source: NOAA POES (Whatever is aloft)
+# Units: gigawatts
+
+# Format:
+
+# The first line of data contains the four-digit year of the data.
+# Each following line is formatted as in this example:
+
+# NOAA-12(S)  10031     9.0  4    .914
+
+# Please note that if the first line of data in the file has a
+# day-of-year of 365 (or 366) and a HHMM of greater than 2300, 
+# that polar pass started at the end of the previous year and
+# ended on day-of-year 001 of the current year.
+
+# A7    NOAA POES Satellite number
+# A3    (S) or (N) - hemisphere
+# I3    Day of year
+# I4    UT hour and minute
+# F8.1  Estimated Hemispheric Power in gigawatts
+# I3    Hemispheric Power Index (activity level)
+# F8.3  Normalizing factor
+
+2000
+NOAA-15(N)  10023    35.5  7    1.085
+NOAA-14(S)  10044    25.3  7     .843
+NOAA-15(S)  10114    29.0  7     .676
+NOAA-14(N)  10135   108.7 10    1.682
+NOAA-15(N)  10204    36.4  7    1.311
+.
+.
+.
+\end{verbatim}
+
+The second example shows a file format that is much better.  This
+format started in 2007, while all of the files before this time are of
+the first example type.
+
+\begin{verbatim}
+:Data_list: power_2010.txt
+:Created: Sun Jan  2 10:12:58 UTC 2011
+
+
+# Prepared by the U.S. Dept. of Commerce, NOAA, Space Environment Center.
+# Please send comments and suggestions to sec@sec.noaa.gov 
+# 
+# Source: NOAA POES (Whatever is aloft)
+# Units: gigawatts
+
+# Format:
+
+# Each line is formatted as in this example:
+
+# 2006-09-05 00:54:25 NOAA-16 (S)  7  29.67   0.82
+
+# A19   Date and UT at the center of the polar pass as YYYY-MM-DD hh:mm:ss
+# 1X    (Space)
+# A7    NOAA POES Satellite number
+# 1X    (Space)
+# A3    (S) or (N) - hemisphere
+# I3    Hemispheric Power Index (activity level)
+# F7.2  Estimated Hemispheric Power in gigawatts
+# F7.2  Normalizing factor
+
+2010-01-01 00:14:37 NOAA-17 (N)  1   1.45   1.16
+2010-01-01 00:44:33 NOAA-19 (N)  1   1.45   1.17
+.
+.
+.
+\end{verbatim}
+
+
+\subsection{Solar Irradiance}
+
+
+More to come here.
+
+\subsection{Satellites}
+
+
+\begin{verbatim}
+#SATELLITES 
+2                    nSats 
+guvi.2002041623.in 
+15.0                 SatDtPlot 
+stfd.fpi.in 
+60.0                 SatDtPlot
+
+\end{verbatim}
+
+Here is a sample satellite input file:
+
+\begin{verbatim}
+year mm dd hh mm ss msec long lat alt
+#START
+2002 4 16 23 34 25 0 299.16 -2.21 0.00 
+2002 4 16 23 34 25 0 293.63 -1.21 0.00 
+2002 4 16 23 34 25 0 291.28 -0.75 0.00 
+2002 4 16 23 34 25 0 289.83 -0.45 0.00 
+2002 4 16 23 34 25 0 288.79 -0.21 0.00 
+2002 4 16 23 34 25 0 287.98 -0.01 0.00 
+2002 4 16 23 34 25 0 287.32  0.16 0.00 
+2002 4 16 23 34 25 0 286.76  0.31 0.00 
+2002 4 16 23 34 25 0 286.26  0.46 0.00 
+2002 4 16 23 34 25 0 285.81  0.60 0.00 
+2002 4 16 23 34 25 0 285.39  0.74 0.00
+\end{verbatim}
+
+At this time, GITM ignores the altitude, and just outputs the entire column.
+
