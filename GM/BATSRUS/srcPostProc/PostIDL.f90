@@ -673,6 +673,13 @@ contains
     real:: PoloidalAngle, r, z, StretchCoef, dAngle, Residual, WallRadius
 
     !---------------------------------------------------------------------
+    if(TypeGeometry(1:5)=='cubed')then
+
+       XyzGen_D = sqrt(sum(Xyz_D**2))/maxval(abs(Xyz_D)) * Xyz_D
+
+       RETURN
+    end if
+
     rCyl = sqrt(Xyz_D(1)**2 + Xyz_D(2)**2)
 
     ! Calculate phi
