@@ -42,6 +42,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   
   if (minval(NDensityS(iLon,iLat,:,1:nSpecies,iBlock)) <= 0.0) then
      write(*,*) "negative density found!"
+     write(*,*) NDensityS(iLon,iLat,1,1:nSpecies,iBlock)
      call stop_gitm("Can't Continue")
   endif
 
