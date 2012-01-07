@@ -13,7 +13,7 @@ contains
     allocate(Value_VII(60,201,201))
 
     iFile = io_unit_new()
-    open(iFile, file='Xe_opac_ARTEP.dat', form='formatted',status='old')
+    open(iFile, file='xz_opac.artep', form='formatted',status='old')
     line=0
     do iTe = 1, 201
        do iRho = 1,201
@@ -61,9 +61,10 @@ program save_eos_table
                                       ' Ross11 Ross12 Ross13 Ross14 Ross15'//&
                                       ' Ross16 Ross17 Ross18 Ross19 Ross20'//&
                                       ' Ross21 Ross22 Ross23 Ross24 Ross25'//&
-                                      ' Ross26 Ross27 Ross28 Ross29 Ross30', &
+                                      ' Ross26 Ross27 Ross28 Ross29 Ross30 EvMin EvMax', &
          CoordMinIn_D   = (/log10(AtomicMass*1.0e+24), log10(0.030)/),       &                             
          CoordMaxIn_D   = (/log10(AtomicMass*1.0e+29),          3.0/),       &
+         ParamIn_I      = (/0.1,2.0e+4/),                                    &
          VarIn_VII      = Value_VII)
   stop
 end program save_eos_table
