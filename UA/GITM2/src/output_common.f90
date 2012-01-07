@@ -149,6 +149,7 @@ subroutine output(dir, iBlock, iOutputType)
   call calc_rates(iBlock)
   call calc_collisions(iBlock)
   call chapman_integrals(iBlock)
+  call set_horizontal_bcs(iBlock)
   if (.not. Is1D) call calc_efield(iBlock)
 
   iBLK = iStartBLK + iBlock
@@ -226,13 +227,19 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('3DION')
 
-     nvars_to_write = 8+nIons+6+4
+     nvars_to_write = 8+nIons+6+4+1
      call output_3dion(iBlock)
 
   case ('3DTHM')
 
      nvars_to_write = 14
      call output_3dthm(iBlock)
+
+  case ('1DCHM')
+
+     nGCs = 0
+     nvars_to_write = 30
+     call output_1dchm(iBlock)
 
   case ('3DCHM')
 
@@ -573,10 +580,11 @@ contains
           write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "Je2"
           write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Magnetic Latitude"
           write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "Magnetic Longitude"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "E.F. East"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "E.F. North"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "E.F. Vertical"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+10, " ", "E.F. Magnitude"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "Potential"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "E.F. East"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "E.F. North"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+10, " ", "E.F. Vertical"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+11, " ", "E.F. Magnitude"
 
        endif
 
@@ -915,6 +923,7 @@ subroutine output_3dion(iBlock)
 		je2(iLon,iLat,iAlt), &
                 mLatitude(iLon,iLat,iAlt,iBlock), &
                 mLongitude(iLon,iLat,iAlt,iBlock), &
+                potential(iLon,iLat,iAlt,iBlock), &
                 EField(iLon,iLat,iAlt,:), &  ! EField(Lon,lat,alt,3)
                 sqrt(sum(EField(iLon,iLat,iAlt,:)**2))   ! magnitude of E.F.
         enddo
@@ -1012,6 +1021,42 @@ subroutine output_1dthm
   enddo
 
 end subroutine output_1dthm
+
+!----------------------------------------------------------------
+!
+!----------------------------------------------------------------
+subroutine output_1dchm(iBlock)
+
+  use ModGITM
+  use ModInputs
+  use ModSources
+  use ModConstants
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iAlt, iiAlt, iReact
+  real :: vars(nReactions)
+
+  do iAlt=-1,nAlts+2
+     iiAlt = max(min(iAlt,nAlts),1)
+     do iReact = 1, nReactions
+        vars(iReact) = ChemicalHeatingSpecies(1,1,iiAlt,iReact) / &
+             Element_Charge
+     enddo
+              
+     write(iOutputUnit_) &
+          Longitude(1,iBlock),               &
+          Latitude(1,iBlock),                &
+          Altitude_GB(1,1,iAlt,iBlock),   &
+          Vars, &
+          ChemicalHeatingRate(1,1,iiAlt) * &
+          cp(1,1,iiAlt,iBlock) *   &
+          Rho(1,1,iiAlt,iBlock)*TempUnit(1,1,iiAlt) / &
+          Element_Charge
+  enddo
+
+end subroutine output_1dchm
+
 
 !----------------------------------------------------------------
 !
