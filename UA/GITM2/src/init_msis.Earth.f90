@@ -188,15 +188,22 @@ subroutine init_msis
                    F107A,F107,AP,48,msis_dens,msis_temp)
 
               ! Initialize densities to zero in case msis does not set it
-              NDensityS(iLon,iLat,iAlt,:,iBlock) = 0.0
+              NDensityS(iLon,iLat,iAlt,:,iBlock) = 1.0
 
-              NDensityS(iLon,iLat,iAlt,iH_,iBlock)          = msis_dens(1)
-              NDensityS(iLon,iLat,iAlt,iO_3P_,iBlock)          = msis_dens(2)
-              NDensityS(iLon,iLat,iAlt,iN2_,iBlock)         = msis_dens(3)
-              NDensityS(iLon,iLat,iAlt,iO2_,iBlock)         = msis_dens(4)
-              NDensityS(iLon,iLat,iAlt,iAr_,iBlock)         = msis_dens(5)
-              NDensityS(iLon,iLat,iAlt,iHe_,iBlock)         = msis_dens(7)
-              NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)       = msis_dens(8)
+              NDensityS(iLon,iLat,iAlt,iH_,iBlock)          = &
+                   max(msis_dens(1),100.0)
+              NDensityS(iLon,iLat,iAlt,iO_3P_,iBlock)       = &
+                   max(msis_dens(2),100.0)
+              NDensityS(iLon,iLat,iAlt,iN2_,iBlock)         = &
+                   max(msis_dens(3),100.0)
+              NDensityS(iLon,iLat,iAlt,iO2_,iBlock)         = &
+                   max(msis_dens(4),100.0)
+              NDensityS(iLon,iLat,iAlt,iAr_,iBlock)         = &
+                   max(msis_dens(5),100.0)
+              NDensityS(iLon,iLat,iAlt,iHe_,iBlock)         = &
+                   max(msis_dens(7),100.0)
+              NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)       = &
+                   max(msis_dens(8),100.0)
               NDensityS(iLon,iLat,iAlt,iN_2P_,iBlock)       = &
                    NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)/10000.0
               NDensityS(iLon,iLat,iAlt,iN_2D_,iBlock)       = &
@@ -225,13 +232,13 @@ subroutine init_msis
 
               if (geo_alt < 120.) then
                  NDensityS(iLon,iLat,iAlt,iNO_,iBlock)=  &
-                      1e14-1e10*abs((geo_alt-110.0))**3.5
+                      max(1e14-1e10*abs((geo_alt-110.0))**3.5, 100.0)
                       !10**(-0.003*(geo_alt-105.)**2 +14+LOG10(3.))
               else 
                  m = (1e10-3.9e13)/(200)
                  k = 1e10+(-m*300.) 
                  NDensityS(iLon,iLat,iAlt,iNO_,iBlock)=  &
-                      MAX(k+(m*geo_alt)-(geo_alt - 120.0)**2,1.0)
+                      MAX(k+(m*geo_alt)-(geo_alt - 120.0)**2,100.0)
                    !   MAX(10**(13.-LOG10(3.)*(geo_alt-165.)/35.),1.0)
               endif
 
@@ -311,10 +318,13 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   CALL GTD6(iJulianDay,uTime,Alt,Lat,Lon,LST, &
        F107A,F107,AP_I,48,msis_dens,msis_temp)
 
-  LogNS(iO_3P_)  = alog(msis_dens(2))
-  LogNS(iO2_) = alog(msis_dens(4))
-  LogNS(iN2_) = alog(msis_dens(3))
-  if (nSpecies >= iN_4S_) LogNS(min(nSpecies,iN_4S_)) = alog(msis_dens(8))
+!  write(*,*) msis_dens(2), msis_dens(3), msis_dens(4), msis_dens(8), msis_dens(6), msis_temp(2)
+
+  LogNS(iO_3P_)  = alog(max(msis_dens(2),1.0))
+  LogNS(iO2_) = alog(max(msis_dens(4),1.0))
+  LogNS(iN2_) = alog(max(msis_dens(3),1.0))
+  if (nSpecies >= iN_4S_) &
+       LogNS(min(nSpecies,iN_4S_)) = alog(max(msis_dens(8),1.0))
 
   if (nSpecies >= iNO_) then
      ffactor = 6.36*log(f107)-13.8
