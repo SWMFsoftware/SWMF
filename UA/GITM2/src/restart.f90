@@ -108,6 +108,8 @@ subroutine read_restart(dir)
   !---------------------------------------------------------------------------
   call report("read_restart",1)
 
+  RestartTime = CurrentTime
+
   do iBlock = 1, nBlocks
 
      write(cBlock,'(a1,i4.4)') "b",iBlock+iStartBLK

@@ -19,7 +19,7 @@ subroutine write_output
              ", Time : ",iTimeArray(4:6)
      else
         RealTime = get_timing("GITM")
-        CompletedTime = (EndTime-CurrentTime)/(CurrentTime-StartTime)
+        CompletedTime = (EndTime-CurrentTime)/(CurrentTime-RestartTime)
         ProjectedTime = RealTime * CompletedTime
         write(*,"(a,i6,a,3i2.2,a,f10.2,a,f10.2)") "iStep ", iStep, &
              ", Time : ",iTimeArray(4:6), &
