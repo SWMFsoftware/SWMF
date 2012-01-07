@@ -38,15 +38,17 @@ subroutine add_sources
      !! To turn off AuroralHeating, turn Use=AuroralHeating.false. in UAM.in
      !! To turn off Conduction, turn UseConduction=.false. in UAM.in
 
-  
      Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
           Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
           LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
           /TempUnit(1:nLons,1:nLats,1:nAlts)&
          - RadCooling(1:nLons, 1:nLats, 1:nAlts, iBlock) &
            + EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-           + AuroralHeating + JouleHeating) + &
-          Conduction + ChemicalHeatingRate
+           + AuroralHeating &
+           + JouleHeating &
+           ) &
+           + Conduction &
+           + ChemicalHeatingRate
 
      !-------------------------------------------
      ! This is an example of a user output:
