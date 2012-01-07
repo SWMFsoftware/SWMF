@@ -68,8 +68,11 @@ subroutine set_inputs
               enddo
 
               if (iError /= 0) then
-                 write(*,*) 'Incorrect format for #TIMESTART:'
-                 write(*,*) '#TIMESTART'
+                 write(*,*) 'Incorrect format for #STARTTIME:'
+                 write(*,*) 'This sets the starting time of the simulation.'
+                 write(*,*) 'Even when you restart, the starttime should be'
+                 write(*,*) 'to the real start time, not the restart time.'
+                 write(*,*) '#STARTTIME'
                  write(*,*) 'iYear    (integer)'
                  write(*,*) 'iMonth   (integer)'
                  write(*,*) 'iDay     (integer)'
@@ -110,8 +113,9 @@ subroutine set_inputs
               enddo
 
               if (iError /= 0) then
-                 write(*,*) 'Incorrect format for #TIMEEND:'
-                 write(*,*) '#TIMEEND'
+                 write(*,*) 'Incorrect format for #ENDTIME:'
+                 write(*,*) 'This sets the ending time of the simulation.'
+                 write(*,*) '#ENDTIME'
                  write(*,*) 'iYear    (integer)'
                  write(*,*) 'iMonth   (integer)'
                  write(*,*) 'iDay     (integer)'
@@ -128,15 +132,24 @@ subroutine set_inputs
 
         case ("#PAUSETIME")
            call read_in_time(PauseTime, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #PAUSE:'
+              write(*,*) 'This will set a time for the code to just pause.'
+              write(*,*) 'Really, this should never be used.'
+              write(*,*) '#PAUSETIME'
+              write(*,*) 'iYear iMonth iDay iHour iMinute iSecond'
+              IsDone = .true.
+           endif
 
         case ("#ISTEP")
            call read_in_int(iStep, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #ISTEP:'
+              write(*,*) 'This is typically only specified in a'
+              write(*,*) 'restart header.  If you specify it in a start UAM.in'
+              write(*,*) 'it will start the counter to whatever you specify.'
               write(*,*) '#ISTEP'
               write(*,*) 'iStep     (integer)'
-              write(*,*) 'This is typically only specified in a'
-              write(*,*) 'restart header.'
               IsDone = .true.
            endif
 
@@ -144,6 +157,13 @@ subroutine set_inputs
            call read_in_real(CPUTIMEMAX, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #CPUTIMEMAX:'
+              write(*,*) 'This sets the maximum CPU time that the code should'
+              write(*,*) 'run before it starts to write a restart file and end'
+              write(*,*) 'the simulation.  It is very useful on systems that'
+              write(*,*) 'have a queueing system and has limited time runs.'
+              write(*,*) 'Typically, set it for a couple of minutes short of'
+              write(*,*) 'the max wall clock, since it needs some time to write'
+              write(*,*) 'the restart files.'
               write(*,*) '#CPUTIMEMAX'
               write(*,*) 'CPUTimeMax    (real)'
            endif
@@ -154,6 +174,15 @@ subroutine set_inputs
                 call read_in_real(DtStatisticalModels,iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #STATISTICALMODELSONLY:'
+              write(*,*) 'This command will skip all pretty much all of the '
+              write(*,*) 'physics of GITM, and will reinitialize the model '
+              write(*,*) 'with the MSIS and IRI values at the interval set in '
+              write(*,*) 'the second variable. If you want to compare a run to' 
+              write(*,*) 'MSIS and IRI, you can run GITM with this command and'
+              write(*,*) 'get output at exactly the same cadence and locations,'
+              write(*,*) 'thereby allowing easier comparisons. The dt can be '
+              write(*,*) 'set as low as needed, so you can run satellites '
+              write(*,*) 'through MSIS and IRI.'
               write(*,*) '#STATISTICALMODELSONLY'
               write(*,*) 'UseStatisticalModelsOnly    (logical)'
               write(*,*) 'DtStatisticalModels         (real)'
@@ -173,10 +202,12 @@ subroutine set_inputs
               tSimulation = tSim_temp
               if (iError /= 0) then
                  write(*,*) 'Incorrect format for #TSIMULATION:'
-                 write(*,*) '#TSIMULATION'
-                 write(*,*) 'tsimulation    (real)'
                  write(*,*) 'This is typically only specified in a'
                  write(*,*) 'restart header.'
+                 write(*,*) 'It sets the offset from the starttime to the'
+                 write(*,*) 'currenttime. Should really only be used with caution.'
+                 write(*,*) '#TSIMULATION'
+                 write(*,*) 'tsimulation    (real)'
                  IsDone = .true.
               else
                  CurrentTime = CurrentTime + tsimulation
@@ -191,6 +222,9 @@ subroutine set_inputs
 
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #F107:'
+              write(*,*) 'Sets the F10.7 and 81 day average F10.7.  This is'
+              write(*,*) 'used to set the initial altitude grid, and drive the'
+              write(*,*) 'lower boundary conditions.'
               write(*,*) '#F107'
               write(*,*) 'f107  (real)'
               write(*,*) 'f107a (real - 81 day average of f107)'
@@ -224,6 +258,10 @@ subroutine set_inputs
            endif
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #INITIAL:'
+              write(*,*) 'This specifies the initial conditions and the'
+              write(*,*) 'lower boundary conditions.  For Earth, we typically'
+              write(*,*) 'just use MSIS and IRI for initial conditions.'
+              write(*,*) 'For other planets, the vertical BCs can be set here.'
               write(*,*) '#INITIAL'
               write(*,*) 'UseMSIS        (logical)'
               write(*,*) 'UseIRI         (logical)'
@@ -244,6 +282,11 @@ subroutine set_inputs
            call read_in_logical(UseWACCMTides, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #TIDES:'
+              write(*,*) 'This says how to use tides.  The first one is using'
+              write(*,*) 'MSIS with no tides.  The second is using MSIS with'
+              write(*,*) 'full up tides. The third is using GSWM tides, while'
+              write(*,*) 'the forth is for experimentation with using WACCM'
+              write(*,*) 'tides.'
               write(*,*) '#TIDES'
               write(*,*) 'UseMSISOnly        (logical)'
               write(*,*) 'UseMSISTides       (logical)'
@@ -253,9 +296,6 @@ subroutine set_inputs
               if (UseGSWMTides)  UseMSISOnly = .true.
               if (UseWACCMTides) UseMSISOnly = .true.
            endif
-
-        case ("#DAMPING")
-           call read_in_logical(UseDamping,iError)
 
         case ("#DUSTDATA")
            call read_in_logical(UseDustDistribution,iError) 
@@ -278,15 +318,14 @@ subroutine set_inputs
               write(*,*) 'Conrnu'
            endif
 
-        case ("#GRAVITYWAVE")
-           call read_in_logical(UseGravityWave,iError)
-
         CASE ("#GSWMCOMP")
            DO i=1,4
               CALL read_in_logical(UseGswmComp(i), iError)
            enddo
            IF (iError /= 0) then
               write(*,*) 'Incorrect format for #GSWMCOMP:'
+              write(*,*) 'If you selected to use GSWM tides above, you'
+              write(*,*) 'can specify which components to use.'
               write(*,*) '#GSWMCOMP'
               write(*,*) 'GSWMdiurnal(1)        (logical)'
               write(*,*) 'GSWMdiurnal(2)        (logical)'
@@ -294,11 +333,36 @@ subroutine set_inputs
               write(*,*) 'GSWMsemidiurnal(2)    (logical)'
            ENDIF
 
+        case ("#DAMPING")
+           call read_in_logical(UseDamping,iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #DAMPING:'
+              write(*,*) 'This is probably for damping vertical wind'
+              write(*,*) 'oscillations that can occur in the lower atmosphere.'
+              write(*,*) '#DAMPING'
+              write(*,*) 'UseDamping        (logical)'
+              IsDone = .true.
+           endif
+
+        case ("#GRAVITYWAVE")
+           call read_in_logical(UseGravityWave,iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #GRAVITYWAVE:'
+              write(*,*) 'I dont know what this is for...'
+              write(*,*) ''
+              write(*,*) '#GRAVITYWAVE'
+              write(*,*) 'UseGravityWave        (logical)'
+              IsDone = .true.
+           endif
+
         case ("#HPI")
 
            call read_in_real(HemisphericPower, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #HPI:'
+              write(*,*) 'This sets the hemispheric power of the aurora.'
+              write(*,*) 'Typical it ranges from 1-1000, although 20 is a'
+              write(*,*) 'nominal, quiet time value.'
               write(*,*) '#HPI'
               write(*,*) 'HemisphericPower  (real)'
               IsDone = .true.
@@ -310,6 +374,8 @@ subroutine set_inputs
            call read_in_real(kp, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #KP:'
+              write(*,*) 'I dont think that GITM actually uses this unless'
+              write(*,*) 'the Foster electric field model is used.'
               write(*,*) '#KP'
               write(*,*) 'kp  (real)'
               IsDone = .true.
@@ -321,6 +387,10 @@ subroutine set_inputs
            call read_in_real(cfl, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #cfl:'
+              write(*,*) 'The CFL condition sets how close to the maximum time'
+              write(*,*) 'step that GITM will take.  1.0 is the maximum value.'
+              write(*,*) 'A value of about 0.75 is typical.  If instabilities'
+              write(*,*) 'form, a lower value is probably needed.'
               write(*,*) '#CFL'
               write(*,*) 'cfl  (real)'
               IsDone = .true.
@@ -333,6 +403,10 @@ subroutine set_inputs
            call read_in_real(vx, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #SOLARWIND:'
+              write(*,*) 'This sets the driving conditions for the high-latitude'
+              write(*,*) 'electric field models.  This is static for the whole'
+              write(*,*) 'run, though.  It is better to use the MHD\_INDICES'
+              write(*,*) 'command to have dynamic driving conditions.'
               write(*,*) '#SOLARWIND'
               write(*,*) 'bx  (real)'
               write(*,*) 'by  (real)'
@@ -345,6 +419,38 @@ subroutine set_inputs
               call IO_set_sw_v_single(abs(vx))
            endif
 
+        case ("#MHD_INDICES")
+
+           cTempLines(1) = cLine
+           call read_in_string(cTempLine, iError)
+
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #MHD_INDICES:'
+              write(*,*) 'Use this for dynamic IMF and solar wind conditions.'
+              write(*,*) 'The exact format of the file is discussed further'
+              write(*,*) 'in the manual.'
+              write(*,*) '#MHD_INDICES'
+              write(*,*) 'filename  (string)'
+              IsDone = .true.
+           else
+
+              cTempLines(2) = cTempLine
+              cTempLines(3) = " "
+              cTempLines(4) = "#END"
+
+              iError = 0
+              call IO_set_inputs(cTempLines)
+              call read_MHDIMF_Indices(iError)
+
+              if (iError /= 0) then 
+                 write(*,*) "read indices was NOT successful (imf file)"
+                 IsDone = .true.
+              else
+                 UseVariableInputs = .true.
+              endif
+
+           endif
+
         case ("#NEWELLAURORA")
            call read_in_logical(UseNewellAurora, iError)
            call read_in_logical(UseNewellAveraged, iError)
@@ -354,6 +460,8 @@ subroutine set_inputs
            call read_in_logical(DoNewellAverage, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #NEWELLAURORA'
+              write(*,*) 'This is for using Pat Newells aurora (Ovation).'
+              write(*,*) ''
               write(*,*) '#NEWELLAURORA'
               write(*,*) 'UseNewellAurora   (logical)'
               write(*,*) 'UseNewellAveraged (logical)'
@@ -369,6 +477,7 @@ subroutine set_inputs
            call read_in_string(cAMIEFileSouth, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #AMIEFILES:'
+              write(*,*) ''
               write(*,*) '#AMIEFILES'
               write(*,*) 'cAMIEFileNorth  (string)'
               write(*,*) 'cAMIEFileSouth  (string)'
@@ -379,6 +488,9 @@ subroutine set_inputs
            call read_in_string(TypeLimiter, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #LIMITER:'
+              write(*,*) 'The limiter is quite important.  It is a value'
+              write(*,*) 'between 1.0 and 2.0, with 1.0 being more diffuse and'
+              write(*,*) 'robust, and 2.0 being less diffuse, but less robust.'
               write(*,*) '#LIMITER'
               write(*,*) 'TypeLimiter  (string)'
               IsDone = .true.
@@ -409,6 +521,15 @@ subroutine set_inputs
            call read_in_logical(UseBarriers, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DEBUG:'
+              write(*,*) 'This will set how much information the code screams'
+              write(*,*) 'at you - set to 0 to get minimal, set to 10 to get'
+              write(*,*) 'EVERYTHING.  You can also change which processor is'
+              write(*,*) 'shouting the information - PE 0 is the first one.'
+              write(*,*) 'If you set the iDebugLevel to 0, you can set the dt'
+              write(*,*) 'of the reporting.  If you set it to a big value,'
+              write(*,*) 'you wont get very many outputs.  If you set it to a'
+              write(*,*) 'tiny value, you will get a LOT of outputs.'
+              write(*,*) 'UseBarriers will force the code to sync up a LOT.'
               write(*,*) '#DEBUG'
               write(*,*) 'iDebugLevel (integer)'
               write(*,*) 'iDebugProc  (integer)'
@@ -429,6 +550,7 @@ subroutine set_inputs
            call read_in_real(EddyScaling, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #THERMO:'
+              write(*,*) ''
               write(*,*) '#THERMO'
               write(*,*) "UseSolarHeating   (logical)"
               write(*,*) "UseJouleHeating   (logical)"
@@ -446,6 +568,7 @@ subroutine set_inputs
            call read_in_real(KappaTemp0, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #THERMALDIFFUSION:'
+              write(*,*) ''
               write(*,*) '#THERMALDIFFUSION'
               write(*,*) "KappaTemp0    (thermal conductivity, real)"
            endif
@@ -456,6 +579,7 @@ subroutine set_inputs
            call read_in_real(MaximumVerticalVelocity, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #VERTICALSOURCES:'
+              write(*,*) ''
               write(*,*) '#VERTICALSOURCES'
               write(*,*) "UseEddyInSolver              (logical)"
               write(*,*) "UseNeutralFrictionInSolver   (logical)"
@@ -467,6 +591,7 @@ subroutine set_inputs
            call read_in_logical(UseEddyCorrection, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #VERTICALSOURCES:'
+              write(*,*) ''
               write(*,*) '#EDDYVELOCITY'
               write(*,*) "UseBoquehoAndBlelly              (logical)"
               write(*,*) "UseEddyCorrection   (logical)"
@@ -476,6 +601,7 @@ subroutine set_inputs
            call read_in_logical(UseStressHeating, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #WAVEDRAG:'
+              write(*,*) ''
               write(*,*) '#WAVEDRAG'
               write(*,*) "UseStressHeating              (logical)"
            endif
@@ -489,15 +615,16 @@ subroutine set_inputs
            endif
 
            if (EddyDiffusionPressure0 < EddyDiffusionPressure1) then
-              write(*,*) "If you use eddy diffusion, you must specify two pressure"
-              write(*,*) "levels - under the first, the eddy diffusion is constant."
-              write(*,*) "Between the first and the second, there is a linear drop-off."
-              write(*,*) "Therefore The first pressure must be larger than the second!"
               iError = 1
            endif
              
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DIFFUSION:'
+              write(*,*) ''
+              write(*,*) "If you use eddy diffusion, you must specify two pressure"
+              write(*,*) "levels - under the first, the eddy diffusion is constant."
+              write(*,*) "Between the first and the second, there is a linear drop-off."
+              write(*,*) "Therefore The first pressure must be larger than the second!"
               write(*,*) '#DIFFUSION'
               write(*,*) "UseDiffusion (logical)"
               write(*,*) "EddyDiffusionCoef (real)"
@@ -514,6 +641,7 @@ subroutine set_inputs
            call read_in_logical(UseGravity, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #THERMO:'
+              write(*,*) ''
               write(*,*) '#FORCING'
               write(*,*) "UsePressureGradient (logical)"
               write(*,*) "UseIonDrag          (logical)"
@@ -531,6 +659,7 @@ subroutine set_inputs
            call read_in_real(MaxResidual, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DYNAMO:'
+              write(*,*) ''
               write(*,*) '#DYNAMO'
               write(*,*) "UseDynamo              (logical)"
               write(*,*) "DynamoHighLatBoundary  (real)"
@@ -546,6 +675,7 @@ subroutine set_inputs
            call read_in_logical(UseDynamo, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #IONFORCING:'
+              write(*,*) ''
               write(*,*) '#IONFORCING'
               write(*,*) "UseExB                 (logical)"
               write(*,*) "UseIonPressureGradient (logical)"
@@ -602,6 +732,7 @@ subroutine set_inputs
 
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DIPOLE:'
+              write(*,*) ''
               write(*,*) '#DIPOLE'
               write(*,*) 'MagneticPoleRotation   (real)'
               write(*,*) 'MagneticPoleTilt       (real)'
@@ -637,6 +768,7 @@ subroutine set_inputs
               
               if (iError /= 0) then
                  write(*,*) 'Incorrect format for #APEX:'
+                 write(*,*) ''
                  write(*,*) '#APEX'
                  write(*,*) 'UseApex (logical)'
                  write(*,*) '        Sets whether to use a realistic magnetic'
@@ -646,6 +778,25 @@ subroutine set_inputs
 
            endif
 
+
+        case ("#ALTITUDE")
+           call read_in_real(AltMin, iError)
+           call read_in_real(AltMax, iError)
+           call read_in_logical(UseStretchedAltitude, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #ALTITUDE'
+              write(*,*) 'For Earth, the AltMin is the only variable used here.'
+              write(*,*) 'The altitudes are set to 0.3 times the scale height'
+              write(*,*) 'reported by MSIS, at the equator for the specified'
+              write(*,*) 'F107 and F107a values.'
+              write(*,*) '#ALTITUDE'
+              write(*,*) 'AltMin                (real, km)'
+              write(*,*) 'AltMax                (real, km)'
+              write(*,*) 'UseStretchedAltitude  (logical)'
+           else
+              AltMin = AltMin * 1000.0
+              AltMax = AltMax * 1000.0
+           endif
 
         case ("#GRID")
            if (nLats == 1 .and. nLons == 1) Is1D = .true.
@@ -669,13 +820,7 @@ subroutine set_inputs
 
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #GRID:'
-              write(*,*) '#GRID'
-              write(*,*) 'nBlocksLon   (integer)'
-              write(*,*) 'nBlocksLat   (integer)'
-              write(*,*) 'LatStart     (real)'
-              write(*,*) 'LatEnd       (real)'
-              write(*,*) 'LonStart     (real)'
-              write(*,*) 'LonEnd       (real)'
+              write(*,*) ''
               write(*,*) 'If LatStart and LatEnd are set to < -90 and'
               write(*,*) '> 90, respectively, then GITM does a whole'
               write(*,*) 'sphere.  If not, it models between the two.'
@@ -683,6 +828,13 @@ subroutine set_inputs
               write(*,*) 'ModSizeGitm.f90, then recompile, then set LatStart'
               write(*,*) 'and LonStart to the point on the Globe you want'
               write(*,*) 'to model.'
+              write(*,*) '#GRID'
+              write(*,*) 'nBlocksLon   (integer)'
+              write(*,*) 'nBlocksLat   (integer)'
+              write(*,*) 'LatStart     (real)'
+              write(*,*) 'LatEnd       (real)'
+              write(*,*) 'LonStart     (real)'
+              write(*,*) 'LonEnd       (real)'
               IsDone = .true.
            else
 
@@ -706,6 +858,7 @@ subroutine set_inputs
 
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #STRETCH:'
+              write(*,*) ''
               write(*,*) '#STRETCH'
               write(*,*) 'ConcentrationLatitude (real, degrees)'
               write(*,*) 'StretchingPercentage  (real, 0-1)'
@@ -724,6 +877,7 @@ subroutine set_inputs
            call read_in_logical(UseTopography, iError)
            if(iError /= 0) then
               write(*,*) 'Incorrect format for #TOPOGRAPHY:'
+              write(*,*) ''
               write(*,*) '#TOPOGRAPHY'
               write(*,*) 'UseTopography (logical)'
               IsDone = .true.
@@ -733,6 +887,7 @@ subroutine set_inputs
            call read_in_logical(DoRestart, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #RESTART:'
+              write(*,*) ''
               write(*,*) '#RESTART'
               write(*,*) 'DoRestart (logical)'
               IsDone = .true.
@@ -746,6 +901,9 @@ subroutine set_inputs
            enddo
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #PLOTTIMECHANGE:'
+              write(*,*) 'This will allow you to change the output cadence'
+              write(*,*) 'of the files for a limited time.  If you have an event'
+              write(*,*) 'then you can output much more often during that event.'
               write(*,*) '#PLOTTIMECHANGE'
               write(*,*) 'yyyy mm dd hh mm ss ms (start)'
               write(*,*) 'yyyy mm dd hh mm ss ms (end)'
@@ -759,6 +917,10 @@ subroutine set_inputs
            call read_in_logical(DoAppendFiles, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #APPENDFILES:'
+              write(*,*) 'For satellite files, you can have one single file'
+              write(*,*) 'per satellite, instead of one for every output.'
+              write(*,*) 'This makes GITM output significantly less files.'
+              write(*,*) 'It only works for satellite files now.'
               write(*,*) '#APPENDFILES'
               write(*,*) 'DoAppendFiles    (logical)'
            endif
@@ -783,6 +945,15 @@ subroutine set_inputs
            endif
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #SAVEPLOT'
+              write(*,*) 'The DtRestart variable sets the time in between '
+              write(*,*) 'writing full restart files to the UA/restartOUT '
+              write(*,*) 'directory.\\'
+              write(*,*) 'This sets the output files.  The most common type'
+              write(*,*) 'is 3DALL, which outputs all primary state variables.'
+              write(*,*) 'Types include : 3DALL, 3DNEU, 3DION, 3DTHM, 3DCHM, '
+              write(*,*) '3DUSR, 3DGLO, 2DGEL, 2DMEL, 2DUSR, 1DALL, 1DGLO, '
+              write(*,*) '1DTHM, 1DNEW, 1DCHM, 1DCMS, 1DUSR. DtPlot sets the'
+              write(*,*) 'frequency of output'
               write(*,*) '#SAVEPLOT'
               write(*,*) 'DtRestart (real, seconds)'
               write(*,*) 'nOutputTypes  (integer)'
@@ -805,6 +976,7 @@ subroutine set_inputs
            endif
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #SATELLITES'
+              write(*,*) ''
               write(*,*) '#SATELLITES'
               write(*,*) 'nSats     (integer - max = ',nMaxSats,')'
               write(*,*) 'SatFile1  (string)'
@@ -821,6 +993,9 @@ subroutine set_inputs
            call read_in_real(dTAurora, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #ELECTRODYNAMICS'
+              write(*,*) 'Sets the time for updating the high-latitude'
+              write(*,*) '(and low-latitude) electrodynamic drivers, such as'
+              write(*,*) 'the potential and the aurora.'
               write(*,*) '#ELECTRODYNAMICS'
               write(*,*) 'DtPotential (real, seconds)'
               write(*,*) 'DtAurora    (real, seconds)'
@@ -831,6 +1006,7 @@ subroutine set_inputs
            call read_in_real(DtLTERadiation, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #LTERadiation:'
+              write(*,*) ''
               write(*,*) '#LTERadiation'
               write(*,*) 'DtLTERadiation (real)'
               IsDone = .true.
@@ -842,6 +1018,7 @@ subroutine set_inputs
            call read_in_string(IonHeatingRateFilename, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #IONPRECIPITATION'
+              write(*,*) 'This is really highly specific.  You dont want this.'
               write(*,*) '#IONPRECIPITATION'
               write(*,*) 'UseIonPrecipitation     (logical)'
               write(*,*) 'IonIonizationFilename   (string)'
@@ -853,24 +1030,15 @@ subroutine set_inputs
            call read_in_real(dTLogFile, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #LOGFILE'
+              write(*,*) 'You really want a log file.  They are very important.'
+              write(*,*) 'It is output in UA/data/log*.dat.'
+              write(*,*) 'You can output the log file at whatever frequency'
+              write(*,*) 'you would like, but if you set dt to some very small'
+              write(*,*) 'value, you will get an output every iteration, which'
+              write(*,*) 'is probably a good thing.'
               write(*,*) '#LOGFILE'
               write(*,*) 'DtLogFile   (real, seconds)'
               IsDone = .true.
-           endif
-
-        case ("#ALTITUDE")
-           call read_in_real(AltMin, iError)
-           call read_in_real(AltMax, iError)
-           call read_in_logical(UseStretchedAltitude, iError)
-           if (iError /= 0) then
-              write(*,*) 'Incorrect format for #ALTITUDE'
-              write(*,*) '#ALTITUDE'
-              write(*,*) 'AltMin                (real, km)'
-              write(*,*) 'AltMax                (real, km)'
-              write(*,*) 'UseStretchedAltitude  (logical)'
-           else
-              AltMin = AltMin * 1000.0
-              AltMax = AltMax * 1000.0
            endif
 
         case ("#EUV_DATA")
@@ -880,6 +1048,7 @@ subroutine set_inputs
            if (UseEUVData) call Set_Euv(iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #EUV_DATA'
+              write(*,*) 'This is for a FISM or some other solar spectrum file.'
               write(*,*) '#EUV_DATA'
               write(*,*) 'UseEUVData            (logical)'
               write(*,*) 'cEUVFile              (string)'
@@ -888,25 +1057,6 @@ subroutine set_inputs
         case ("#GLOW")
            call read_in_logical(UseGlow, iError) 
            call read_in_real(dTGlow, iError)
-
-        case ("#MHD_INDICES")
-
-           cTempLines(1) = cLine
-           call read_in_string(cTempLine, iError)
-           cTempLines(2) = cTempLine
-           cTempLines(3) = " "
-           cTempLines(4) = "#END"
-
-           iError = 0
-           call IO_set_inputs(cTempLines)
-           call read_MHDIMF_Indices(iError)
-
-           if (iError /= 0) then 
-              write(*,*) "read indices was NOT successful (imf file)"
-              IsDone = .true.
-           else
-              UseVariableInputs = .true.
-           endif
 
         case ("#NGDC_INDICES")
            cTempLines(1) = cLine
@@ -983,6 +1133,8 @@ subroutine set_inputs
   if (iError /= 0) then
      call stop_gitm("Must Stop!!")
   endif
+
+  RestartTime = CurrentTime
 
 !  KappaTemp0 = 3.6e-4
 
