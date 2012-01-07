@@ -243,7 +243,7 @@ test_levelset:
 	@echo test_levelset starting		>  test_levelset.diff
 	@make test_levelset_exe			>> test_levelset.diff
 	@echo ${MPIRUN} ./test_levelset_exe	>> test_levelset.diff
-	-(${MPIRUN} ./test_levelset.exe > test_levelset.tmp)
+	-@(${MPIRUN} ./test_levelset.exe > test_levelset.tmp)
 	-@gunzip -c test_levelset.ref.gz > test_levelset.ref
 	-@(${SCRIPTDIR}/DiffNum.pl \
 	    test_levelset.out test_levelset.ref >  test_levelset.diff)
@@ -505,6 +505,7 @@ test_process_var_name1:
 		echo working on $${i} >> test_process_var_name.log;\
 		make test_process_var_name_exe;\
 		make test_process_var_name_run;\
+		sleep 0.2;\
 	done
 	@make test_process_var_name_check
 	@rm -f ModEquation* ModExtraVariables* ModSingleFluid* 
