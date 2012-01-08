@@ -4,9 +4,9 @@ module CRASH_ModEosTable
   use CRASH_ModEos
   use ModLookupTable, ONLY: MaxTable
   use CRASH_ModMultiGroup, ONLY: nGroup, &
-       OpacityPlanck_I, OpacityRosseland_I
-  use ModConst, ONLY: cAtomicMass, cEvToK, cEv, cBoltzmann
-
+      OpacityPlanck_I, OpacityRosseland_I
+  use CRASH_ModInterfaceNlte
+  use ModConst
   implicit none
 
   !The following subroutine:
@@ -90,6 +90,10 @@ module CRASH_ModEosTable
   !In gas: N~3.10^{25} m-3
   !In solids: N<10^{29} m-3
   ! electron temperature of 1e-3 eV is approximately 11.6 K
+  !interface check_opac_table
+  !   module procedure check_opac_table_2freqs
+  !   module procedure check_opac_table_evgroups
+  !end interface
 
 contains
   !============================================================================
@@ -240,22 +244,42 @@ contains
     Te  = Arg1 * cEvToK
 
     ValueTmp_V = 0.0
-    call eos(iMaterial,Rho,&
-         TeIn = Te, &
-         eTotalOut = ValueTmp_V(E_)    ,&
-         pTotalOut = ValueTmp_V(P_)    ,&
-         GammaOut  = ValueTmp_V(Gamma_),&
-         CvTotalOut= ValueTmp_V(Cv_)   ,&
-         eElectronOut = ValueTmp_V(Ee_),&
-         pElectronOut = ValueTmp_V(Pe_),&
-         GammaEOut    = ValueTmp_V(GammaE_),&
-         CvElectronOut = ValueTmp_V(Cve_)  ,& 
-         HeatCond      = ValueTmp_V(Cond_) ,&
-         TeTiRelax    = ValueTmp_V(TeTi_)  ,&
-         zAverageOut   = ValueTmp_V(Z_)    ,&
-         z2AverageOut  = ValueTmp_V(Z2_)   )
 
-    ValueTmp_V(-1:0) = 0.0
+    if(.not.UseNLTE)then
+       call eos(iMaterial,Rho,&
+       TeIn = Te, &
+       eTotalOut = ValueTmp_V(E_)    ,&
+       pTotalOut = ValueTmp_V(P_)    ,&
+       GammaOut  = ValueTmp_V(Gamma_),&
+       CvTotalOut= ValueTmp_V(Cv_)   ,&
+       eElectronOut = ValueTmp_V(Ee_),&
+       pElectronOut = ValueTmp_V(Pe_),&
+       GammaEOut    = ValueTmp_V(GammaE_),&
+       CvElectronOut = ValueTmp_V(Cve_)  ,& 
+       HeatCond      = ValueTmp_V(Cond_) ,&
+       TeTiRelax    = ValueTmp_V(TeTi_)  ,&
+       zAverageOut   = ValueTmp_V(Z_)    ,&
+       z2AverageOut  = ValueTmp_V(Z2_)   )
+    else
+       call nlte_eos(iMaterial,Rho,&
+       TeIn = Te, &
+       eTotalOut = ValueTmp_V(E_)    ,&
+       pTotalOut = ValueTmp_V(P_)    ,&
+       GammaOut  = ValueTmp_V(Gamma_),&
+       CvTotalOut= ValueTmp_V(Cv_)   ,& 
+       HeatCond      = ValueTmp_V(Cond_) ,&
+       TeTiRelax    = ValueTmp_V(TeTi_)  ,&
+       zAverageOut   = ValueTmp_V(Z_)    ,&
+       z2AverageOut  = ValueTmp_V(Z2_)   )
+       call nlte_eos(iMaterial,Rho,&
+       TeIn = Te, &
+       eElectronOut = ValueTmp_V(Ee_),&
+       pElectronOut = ValueTmp_V(Pe_),&
+       GammaEOut    = ValueTmp_V(GammaE_),&
+       CvElectronOut = ValueTmp_V(Cve_))
+    end if
+    ValueTmp_V(-1:0) =  0.0
+
     ValueTmp_V(E_)   =  ValueTmp_V(E_)/(cEV * Arg2)
     ValueTmp_V(P_)   =  ValueTmp_V(P_)/(cEV * Arg2)
     ValueTmp_V(Ee_)  =  ValueTmp_V(Ee_)/(cEV * Arg2)
@@ -268,7 +292,7 @@ contains
 
   !=========================================================================
 
-  subroutine check_opac_table(FreqMinSi, FreqMaxSi, iComm)
+  subroutine check_opac_table(FreqMinSi, FreqMaxSi, iComm,EGroupIn_I)
 
     use ModConst,       ONLY: cHPlanckEv
     use ModLookupTable, ONLY: Table_I, TableType, &
@@ -278,14 +302,16 @@ contains
 
     real,    optional, intent(in):: FreqMinSi, FreqMaxSi
     integer, optional, intent(in):: iComm
+    real,    optional, intent(in):: EGroupIn_I(:)
 
     ! Minimum and maximum group energies in electron volts
     real:: EvMin, EvMax
+    real, allocatable:: EGroup_I(:)
 
     integer:: iMaterial, iTable, iProc, iError
     character(len=2):: NameMaterial
     type(TableType), pointer:: Ptr
-
+    
     character(len=*), parameter:: NameSub = 'check_opac_table'
     !----------------------------------------------------------------------
     ! set iProc for less verbose error messages
@@ -298,7 +324,17 @@ contains
     EvMin = 0.1
     if(present(FreqMinSi)) EvMin = FreqMinSi * cHPlanckEV
     EvMax = 20000.0
+
     if(present(FreqMaxSi)) EvMax = FreqMaxSi * cHPlanckEV
+    if(present(EGroupIn_I))then
+       allocate(EGroup_I(size(EGroupIn_I)))
+       EGroup_I = EGroupIn_I
+    else
+       allocate(EGroup_I(2))
+       EGroup_I = (/EvMin, EvMax/)
+    end if
+       
+       
 
     ! Construct NameVarOpac
     nVarOpac = 2*nGroup
@@ -332,6 +368,9 @@ contains
        ! Check if table is already set by #LOOKUPTABLE command
        if(iTable < 0)then
           ! initialize the opacity table with the default parameters
+          ! Set up the energy grid
+          
+          if(iMaterial == 0) call set_multigroup(EnergyEv_I=EGroup_I)
           call init_lookup_table(                                       &
                NameTable = NameMaterial//'_opac',                       &
                NameCommand = 'save',                                    &
@@ -347,7 +386,7 @@ contains
                TypeFile = 'real8',                                      &
                StringDescription = 'CRASH Opacity for '//NameMaterial,  &
                nParam = 2,                                              &
-               Param_I = (/ EvMin, EvMax /)                             )
+               Param_I =  EGroup_I                           )
 
           ! Get the table index and the pointer to the table
           iTable =  i_lookup_table(NameMaterial//'_opac')
@@ -378,14 +417,14 @@ contains
                   ' should be equal to 2 or nGroup+1=', nGroup+1
              call CON_stop(NameSub//' change number of groups or table')
           end if
+          ! Set up the energy grid
+          if(iMaterial == 0) call set_multigroup(EnergyEv_I=Ptr%Param_I)
        end if
 
        ! The table is now initialized. Set indexes:
        iTableOpac4Material_I(iMaterial) = iTable
        iMaterial4OpacTable_I(iTable)    = iMaterial
 
-       ! Set up the energy grid
-       if(iMaterial == 0) call set_multigroup(EnergyEv_I=Ptr%Param_I)
 
        ! Fill in the table. Note: nothing is done if table is loaded from file
        ! The UseOpacityTable_I has to be switched off
@@ -411,10 +450,18 @@ contains
     Te  = Arg2 * cEvToK
 
     Value_V = 0.0
-    call eos(iMaterial,Rho,&
-         TeIn = Te, &
-         OpacityPlanckOut_I = PlanckTmp_I, &
-         OpacityRosselandOut_I = RosselandTmp_I )
+
+    if(.not.UseNLTE)then
+       call eos(iMaterial,Rho,&
+       TeIn = Te, &
+       OpacityPlanckOut_I = PlanckTmp_I, &
+       OpacityRosselandOut_I = RosselandTmp_I )
+    else
+       call eos(iMaterial,Rho,&
+       TeIn = Te, &
+       OpacityPlanckOut_I = PlanckTmp_I, &
+       OpacityRosselandOut_I = RosselandTmp_I )
+    end if
 
 
     Value_V(1:nGroup) = PlanckTmp_I/Arg1
