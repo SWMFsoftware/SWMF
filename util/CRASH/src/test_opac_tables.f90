@@ -9,7 +9,8 @@ program save_opac_table
   use CRASH_ModAtomicDataMix
   use CRASH_ModExcitationData,ONLY : n_ground, cExcitationN_III
   use CRASH_ModIonMix
-  use CRASH_ModEos, ONLY:UseEosTable_I, UseOpacityTable_I,&
+  use CRASH_ModEos, ONLY:UseEosTable_I, UseOpacityTable_I, nMaterialEos
+  use CRASH_ModEosTable, ONLY:&
                          check_opac_table,IndexDefaultOpac_I
   use ModMpi
   implicit none
@@ -22,9 +23,10 @@ program save_opac_table
   !Set reduced table izes
   IndexDefaultOpac_I = (/9,9/)
   call set_multigroup(10,0.1/cHPlanckEV,20000.0/cHPlanckEV)
-  
+  nMaterialEos = 1
   call MPI_Init(iError)
-  call check_opac_table(MPI_COMM_WORLD,.true.,'ascii')
+  call check_opac_table(0.1/cHPlanckEV,20000.0/cHPlanckEV,MPI_COMM_WORLD,&
+       TypeFileIn='ascii')
   call MPI_Finalize(iError)
 end program save_opac_table
 !============================================================================
