@@ -318,11 +318,11 @@ contains
        end if
 
        ! Cell center positions based on generalized coordinates
-       !do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       !   Coord_D = CoordMin_DB(:,iBlock) + &
-       !        ( (/i, j, k/) - 0.5 ) * CellSize_DB(:,iBlock)
-       !   call coord_to_xyz(Coord_D, Xyz_DGB(:,i,j,k,iBlock))
-       !end do; end do; end do
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          Coord_D = CoordMin_DB(:,iBlock) + &
+               ( (/i, j, k/) - 0.5 ) * CellSize_DB(:,iBlock)
+          call coord_to_xyz(Coord_D, Xyz_DGB(:,i,j,k,iBlock))
+       end do; end do; end do
 
     else
 
