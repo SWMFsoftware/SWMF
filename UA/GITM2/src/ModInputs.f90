@@ -30,6 +30,8 @@ module ModInputs
   character (len=iCharLen_) :: PotentialModel
   character (len=iCharLen_) :: AuroralModel
 
+  logical :: UseCCMCFileName = .false.
+
   logical :: UseIMF = .true.
   logical :: UseHpi = .true.
 

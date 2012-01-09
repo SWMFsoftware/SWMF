@@ -925,6 +925,17 @@ subroutine set_inputs
               write(*,*) 'DoAppendFiles    (logical)'
            endif
 
+        case ("#CCMCFILENAME")
+           call read_in_logical(UseCCMCFileName, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #CCMCFILENAME:'
+              write(*,*) 'Typicaly file is named (e.g.) 1DALL_yymmdd_hhmmss.bin'
+              write(*,*) 'With this it will be named'
+              write(*,*) '1DALL_GITM_yyyy-mm-ddThh-mm-ss.bin'
+              write(*,*) '#CCMCFILENAME'
+              write(*,*) 'UseCCMCFileName    (logical)'
+           endif
+
         case ("#SAVEPLOTS", "#SAVEPLOT")
            call read_in_real(DtRestart, iError)
            call read_in_int(nOutputTypes, iError)

@@ -69,8 +69,8 @@ subroutine output(dir, iBlock, iOutputType)
   integer, intent(in) :: iOutputType
 
   character (len=5) :: proc_str,cBlock, cType
-  character (len=14) :: cTime='', cTimeSave=''
-  integer :: iiLat, iiLon, nGCs
+  character (len=24) :: cTime='', cTimeSave=''
+  integer :: iiLat, iiLon, nGCs, cL
   integer :: iLon,iLat,iAlt, nVars_to_Write, nlines, iBLK,iSpecies
   logical :: done, IsFirstTime = .true., IsThere
 
@@ -78,6 +78,7 @@ subroutine output(dir, iBlock, iOutputType)
   real :: rLon, rLat
 
   character (len=2) :: cYear, cMonth, cDay, cHour, cMinute, cSecond
+  character (len=4) :: cYearL
 
   !! construct naming strings
 
@@ -157,6 +158,7 @@ subroutine output(dir, iBlock, iOutputType)
   write(cBlock,'(a1,i4.4)') "b",iBLK
 
   call i2s(mod(iTimeArray(1),100), cYear, 2)
+  call i2s(iTimeArray(1), cYearL, 4)
   call i2s(iTimeArray(2), cMonth, 2)
   call i2s(iTimeArray(3), cDay, 2)
   call i2s(iTimeArray(4), cHour, 2)
@@ -173,7 +175,15 @@ subroutine output(dir, iBlock, iOutputType)
   if ( IsFirstTime         .or. &
        .not. DoAppendFiles .or. &
        (iOutputType /= -1 .and. .not. Is1D)) then
-     cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//cSecond
+     if (UseCCMCFileName) then
+        cTime = "GITM_"//cYearL//"-"//cMonth//"-"//cDay//"T" &
+             //cHour//"-"//cMinute//"-"//cSecond
+        cL = 24
+     else
+        cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//cSecond
+        cL = 14
+     endif
+        
      if (IsFirstTime) cTimeSave = cTime
   else
      cTime = cTimeSave
@@ -184,28 +194,28 @@ subroutine output(dir, iBlock, iOutputType)
   !! ---------------------------------------------
 
   if (iOutputType == -1) then
-     inquire(file=dir//"/"//CurrentSatelliteName//"_"//cTime//".sat", &
+     inquire(file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".sat", &
           EXIST=IsThere)
      if (.not. DoAppendFiles .or. tSimulation < 0.1 .or. .not. IsThere) then
         open(unit=iOutputUnit_, form="unformatted", &
-             file=dir//"/"//CurrentSatelliteName//"_"//cTime//".sat",&
+             file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".sat",&
              status="unknown")
      else
         open(unit=iOutputUnit_, form="unformatted", &
-             file=dir//"/"//CurrentSatelliteName//"_"//cTime//".sat",&
+             file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".sat",&
              status="unknown",position='append')
      endif
   else
      if (cType /= '2DMEL' .or. iBLK == 1) then
-        inquire(file=dir//"/"//cType//"_"//cTime//"."//cBlock,&
+        inquire(file=dir//"/"//cType//"_"//cTime(1:cL)//"."//cBlock,&
              EXIST=IsThere)
         if (.not. DoAppendFiles .or. tSimulation < 0.1 .or. .not. IsThere) then
            open(unit=iOutputUnit_, form="unformatted", &
-                file=dir//"/"//cType//"_"//cTime//"."//cBlock,&
+                file=dir//"/"//cType//"_"//cTime(1:cL)//"."//cBlock,&
                 status="unknown")
         else
            open(unit=iOutputUnit_, form="unformatted", &
-                file=dir//"/"//cType//"_"//cTime//"."//cBlock,&
+                file=dir//"/"//cType//"_"//cTime(1:cL)//"."//cBlock,&
                 status="unknown",position='append')
         endif
      endif
@@ -305,27 +315,27 @@ subroutine output(dir, iBlock, iOutputType)
   if ((iProc == 0 .and. iBlock == nBlocks) .or. iOutputType == -1) then 
 
      if (iOutputType == -1) then
-        inquire(file=dir//"/"//CurrentSatelliteName//"_"//cTime//".header", &
+        inquire(file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".header", &
              EXIST=IsThere)
         if (.not. DoAppendFiles .or. tSimulation < 0.1 .or. .not. IsThere) then
            open(unit=iOutputUnit_, &
-                file=dir//"/"//CurrentSatelliteName//"_"//cTime//".header",&
+                file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".header",&
                 status="unknown")
         else
            open(unit=iOutputUnit_, &
-                file=dir//"/"//CurrentSatelliteName//"_"//cTime//".header",&
+                file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".header",&
                 status="unknown",position='append')
         endif
      else
-        inquire(file=dir//"/"//cType//"_"//cTime//".header",&
+        inquire(file=dir//"/"//cType//"_"//cTime(1:cL)//".header",&
              EXIST=IsThere)
         if (.not. DoAppendFiles .or. tSimulation < 0.1 .or. .not. IsThere) then
            open(unit=iOutputUnit_, &
-                file=dir//"/"//cType//"_"//cTime//".header",&
+                file=dir//"/"//cType//"_"//cTime(1:cL)//".header",&
                 status="unknown")
         else
            open(unit=iOutputUnit_, &
-                file=dir//"/"//cType//"_"//cTime//".header",&
+                file=dir//"/"//cType//"_"//cTime(1:cL)//".header",&
                 status="unknown",position='append')
         endif
      endif
@@ -796,7 +806,7 @@ end subroutine output
 !!  
 !!    !! open file
 !!    open(unit=iOutputUnit_, &
-!!         file=dir//"/"//cName//"_"//cTime//"."//"dat",&
+!!         file=dir//"/"//cName//"_"//cTime(1:cL)//"."//"dat",&
 !!         status="unknown")
 !!  
 !!    write(iOutputUnit_,*) ""
