@@ -229,18 +229,8 @@ program PROPACEOS
          NameMaterial//'_opac_PRISM.dat',                                &
          TypeFileIn     = 'real8',                     &
          StringHeaderIn = 'PROPACEOS Opacity for'//NameMaterial, &
-         NameVarIn      = 'logRho logTe Planck01 Planck02 Planck03 Planck04 Planck05'//&
-                                      ' Planck06 Planck07 Planck08 Planck09 Planck10'//&
-                                      ' Planck11 Planck12 Planck13 Planck14 Planck15'//&
-                                      ' Planck16 Planck17 Planck18 Planck19 Planck20'//&
-                                      ' Planck21 Planck22 Planck23 Planck24 Planck25'//&
-                                      ' Planck26 Planck27 Planck28 Planck29 Planck30'//&
-                                      ' Ross01 Ross02 Ross03 Ross04 Ross05'//&
-                                      ' Ross06 Ross07 Ross08 Ross09 Ross10'//&
-                                      ' Ross11 Ross12 Ross13 Ross14 Ross15'//&
-                                      ' Ross16 Ross17 Ross18 Ross19 Ross20'//&
-                                      ' Ross21 Ross22 Ross23 Ross24 Ross25'//&
-                                      ' Ross26 Ross27 Ross28 Ross29 Ross30', &
+         NameVarIn      = 'logRho logTe Planck(30) Ross(30) EvMin EvMax',&
+         ParamIn_I      = (/0.1, 2.0e4/), &
          CoordMinIn_D   = (/log10(Rho_I(1)), log10(Temperature_I(1))/),             &                             
          CoordMaxIn_D   = (/log10(Rho_I(nDensity)), log10(Temperature_I(nTemperature))/),             &
          VarIn_VII      = Value_VII)

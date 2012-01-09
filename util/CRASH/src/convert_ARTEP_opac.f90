@@ -2,22 +2,42 @@ module ModReadArtep
   use ModIoUnit, ONLY: io_unit_new
   implicit none
 
-  integer, parameter:: nRho = 201, nTe = 201, nGroup = 30
+  integer:: nRho = 201, nTe = 201, nGroup = 30
 
   SAVE
   real, allocatable:: Value_VII(:,:,:) 
+  real, allocatable:: EGroup_I(:)
   integer::line
+  real:: TMin, TMax, RhoMin, RhoMax
+  character(LEN=15)NameEmpty
 contains
   !==================================================================================
   subroutine read_artep
     integer:: iFile, iRho, iTe
     real:: Aux_V(7), Aux
-    !--------------------------------------------------------------------------------
-
-    allocate(Value_VII(2*nGroup,nRho,nTe))
+    !-----------------------------------------
+    iFile = io_unit_new()
+    open(iFile, file='header.C5O2H8',status = 'old')
+    do line = 1,17
+       read(iFile,*)
+    end do
+    read(iFile,*)NameEmpty, TMin, TMax, nTe
+    write(*,*)'NameEmpty, TMin, TMax, nTe=',NameEmpty, TMin, TMax, nTe
+    read(iFile,*)NameEmpty, RhoMin, RhoMax, nRho
+    write(*,*)'NameEmpty, RhoMin, RhoMax, nRho=',NameEmpty, RhoMin, RhoMax, nRho
+    read(iFile,*)
+    !read(iFile,*)
+    !read(iFile,*)
+    read(iFile,*)NameEmpty,NameEmpty,NameEmpty,nGroup
+    write(*,*)'nGroup=', nGroup
+    allocate(Value_VII(2*nGroup,nRho,nTe), EGroup_I(1+nGroup))
+   
+    read(iFile,*)EGroup_I
+    close(iFile)
+    write(*,*)EGroup_I
 
     iFile = io_unit_new()
-    open(iFile, file='xz_opac.artep', form='formatted',status='old')
+    open(iFile, file='opa.C5O2H8', form='formatted',status='old')
     line=0
     do iTe = 1, nTe
        do iRho = 1, nRho
@@ -27,6 +47,7 @@ contains
        end do
     end do
     close(iFile)
+
   end subroutine read_artep
 
 end Module ModReadArtep
@@ -52,16 +73,15 @@ program save_eos_table
   real:: AtomicMass
   !----------------------------------------------------------------------------------
   call read_artep
-  AtomicMass = cAtomicMass_I(54) * cAtomicMass
   Value_VII = 0.10 * Value_VII  !cm^2/g = 1e-4 m^2/(1e-3 kg) = 0.1 m2/kg
   call save_plot_file( &
-         'Xe_opac.dat',                                                      &
+         'Ay_opac.dat',                                                      &
          TypeFileIn     = 'real8',                                           &
-         StringHeaderIn = 'ARTEP Opacity for Xenon',                         &
-         NameVarIn      = 'logRho logTe Planck(30) Ross(30) EvMin EvMax',    &
-         CoordMinIn_D   = (/log10(AtomicMass*1.0e+24), log10(0.03)/),        &
-         CoordMaxIn_D   = (/log10(AtomicMass*1.0e+29),       3.0  /),        &
-         ParamIn_I      = (/0.1, 2e4/),                                      &
+         StringHeaderIn = 'ARTEP Opacity for Ay',                            &
+         NameVarIn      = 'logRho logTe Planck(30) Ross(30) EGropu00 EGroup(30)',&
+         CoordMinIn_D   = (/log10(1.0e3*RhoMin), log10(TMin)/),        &
+         CoordMaxIn_D   = (/log10(1.0e3*RhoMax), log10(TMax)/),        &
+         ParamIn_I      = EGroup_I,                                     &
          VarIn_VII      = Value_VII)
 
 end program save_eos_table
