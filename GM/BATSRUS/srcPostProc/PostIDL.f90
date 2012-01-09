@@ -213,7 +213,7 @@ program PostIDL
      if(.not.structured)then
         if(real(nx1)*real(nx2) > 1e8)then
            write(*,*)'PostIDL WARNING: very fine grid, no averaging is done!'
-        elseif(any(CellSizePlot_D(1:2) > 0.0))then
+        elseif(CellSizePlot_D(2) > 0.0)then
            write(*,*)'PostIDL WARNING: not AMR in all dimensions, ', &
                 'no averaging is done!'
         else
@@ -257,23 +257,8 @@ program PostIDL
 
 
   !Initialize State_VC 
-  State_VC=0.0
-
-  !Calculate Coord_DC for structured grid
-  if(structured)then 
-      do k=1,nz
-         xcut(3)=zmin+(k-0.5)*dz
-         do j=1,ny
-            xcut(2)=ymin+(j-0.5)*dy
-            do i=1,nx
-               xcut(1)=xmin+(i-0.5)*dx
-                 do idim=1,ndim
-                     Coord_DC(idim,i,j,k)=xcut(icutdim(idim))
-                 end do
-            end do 
-         end do
-      end do
-  endif
+  State_VC = 0.0
+  Coord_DC = 0.0
 
   call set_strings
 
@@ -364,7 +349,11 @@ program PostIDL
               frac=1.0
            end if
            State_VC(:,i,j,k) = State_VC(:,i,j,k) + frac*w1
-           total=total+frac
+           do iDim = 1, nDim
+              Coord_DC(iDim,i,j,k) = Coord_DC(iDim,i,j,k) &
+                   + frac*Xyz_D(iCutDim(iDim))
+           end do
+           total=total + frac
         else
            ! Cell is coarser than required resolution
            imin=min(nx,max(1,nint((x-0.5*dxcell-xmin)/dx+1)))
@@ -378,6 +367,11 @@ program PostIDL
            do iw=1,nw
               State_VC(iw,imin:imax,jmin:jmax,kmin:kmax)= &
                    State_VC(iw,imin:imax,jmin:jmax,kmin:kmax)+w1(iw)
+           end do
+           do iDim = 1, nDim
+              Coord_DC(iDim,imin:imax,jmin:jmax,kmin:kmax) = &
+                   Coord_DC(iDim,imin:imax,jmin:jmax,kmin:kmax) &
+                   + Xyz_D(iCutDim(iDim))
            end do
 
            if(imax<imin.or.jmax<jmin.or.kmax<kmin)&
@@ -450,7 +444,7 @@ program PostIDL
         nStepIn = it, TimeIn = t, &
         ParamIn_I = Param_I, &
         NameVarIn = varnames, &
-        IsCartesianIn = structured,&
+        IsCartesianIn = TypeGeometry=='cartesian' .and. structured,&
         nDimIn = ndim,&
         CoordIn_DIII = Coord_DC(:,1:nx,:,:), & 
         VarIn_VIII = State_VC(:,1:nx,:,:))
