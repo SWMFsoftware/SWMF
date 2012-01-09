@@ -398,56 +398,23 @@ contains
 
     use BATL_lib, ONLY: MaxDim, nBlock, Unused_B, &
          iComm, nProc, iProc, iNode_B, &
-         TypeGeometry, IsSpherical, Phi_, &
+         TypeGeometry, IsSpherical, Phi_, nDimAmr, CoordMin_D, CoordMax_D, &
          CellVolume_GB, CellSize_DB, Xyz_DGB, CoordMin_DB, CoordMax_DB
 
     use ModMpi,    ONLY: MPI_REAL, MPI_INTEGER, MPI_MIN, MPI_SUM, MPI_reduce
     use ModIoUnit, ONLY: UnitTmp_
     use ModKind,   ONLY: nByteReal
-    use ModNumConst, ONLY: cHalfPi, cDegToRad
+    use ModNumConst, ONLY: cPi, cTwoPi, cHalfPi
 
     character(len=100):: NameSnapshot, NameFile
     real:: CellSizeMin_D(MaxDim), CellSizeMinAll_D(MaxDim), &
          CellSizePlot_D(MaxDim)
     real:: PlotMax_D(MaxDim), PlotMin_D(MaxDim)
     integer :: iDim, iBlock, i, j, k, iError
-    integer :: nCell, nCellAll, nPlotDim
+    integer :: nCell, nCellAll, nPlotDim, iPlot, nPlot, iXyz
     !-----------------------------------------------------------------------
-    write(NameSnapshot,'(a,i7.7)') 'plots/z=0_var_1_n',iStep
 
-    ! write data from all processors into separate files
-    write(NameFile,'(a,i4.4,a)') trim(NameSnapshot)//'_pe',iProc,'.idl'
-    open(UnitTmp_, file=NameFile, status='replace', form='unformatted')
-    nCell = 0
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-       if(IsSpherical)then
-          if(CoordMin_DB(2,iBlock) > cHalfPi) CYCLE
-          if(CoordMax_DB(2,iBlock) < cHalfPi) CYCLE
-       else
-          if(CoordMin_DB(3,iBlock) > 1e-6) CYCLE
-          if(CoordMax_DB(3,iBlock) <-1e-6) CYCLE
-       end if
-       do k = 1, nK; 
-          if(.not. IsSpherical .and. &
-               abs(Xyz_DGB(3,1,1,k,iBlock)) > 0.51*CellSize_DB(3,iBlock)) CYCLE
-          do j = 1, nJ; 
-             if(IsSpherical)then
-                if(product(Xyz_DGB(3,1,j-1:j+1:2,1,iBlock)) > 0) CYCLE
-             end if
-             do i = 1, nI
-                nCell = nCell + 1
-                write(UnitTmp_) CellSize_DB(1,iBlock), &
-                     Xyz_DGB(:,i,j,k,iBlock), State_VGB(:,i,j,k,iBlock), &
-                     exact_density(Xyz_DGB(:,i,j,k,iBlock)), &
-                     CellVolume_GB(i,j,k,iBlock), real(iNode_B(iBlock)), &
-                     real(iProc), real(iBlock)
-             end do
-          end do
-       end do
-    end do
-    close(UnitTmp_)
-
+    ! Calculate minimum cell size
     do iDim = 1, MaxDim
        CellSizeMin_D(iDim) = &
             minval(CellSize_DB(iDim,1:nBlock), MASK=.not.Unused_B(1:nBlock))
@@ -455,54 +422,143 @@ contains
     call MPI_reduce(CellSizeMin_D, CellSizeMinAll_D, MaxDim, MPI_REAL, &
          MPI_MIN, 0, iComm, iError)
 
-    call MPI_reduce(nCell, nCellAll, 1, MPI_INTEGER, MPI_SUM, 0, iComm, iError)
+    ! Swap theta and phi to conform the r-lat-lon grid used in PostIDL
+    if(IsSpherical) &
+         CellSizeMinAll_D = CellSizeMinAll_D( (/1,3,2/) )
 
-    if(iProc == 0)then
-       nPlotDim = min(2,nDim)
+    ! Set plot sizes
+    CellSizePlot_D = CellSizeMinAll_D
 
-       ! Initialize for ignored dimension
+    if(MaxLevel > 0)then
+       ! Indicates to PostIDL that there is AMR in first element
+       CellSizePlot_D(1) = -1.0
+       ! Indicate full AMR by setting all values to -1
+       if(nDimAmr == nDim) CellSizePlot_D = -1.0
+    end if
 
-       if(IsSpherical)then
-          ! Swap theta and phi to conform the r-lat-lon grid used in PostIDL
-          PlotMin_D(1) = DomainMin_D(1)
-          PlotMax_D(1) = DomainMax_D(1)
-          PlotMin_D(2) = DomainMin_D(Phi_)*cDegToRad
-          PlotMax_D(2) = DomainMax_D(Phi_)*cDegToRad
-          PlotMin_D(3) = -1e-10
-          PlotMax_D(3) = +1e-10
-          CellSizeMinAll_D = CellSizeMinAll_D( (/1,3,2/) )
+    nPlot = 1
+    if(nDim == 3) nPlot = 2
+
+    do iPlot = 1, nPlot
+       if(nDim==1)then
+          ! 1D cut along X axis
+          write(NameSnapshot,'(a,i7.7)') 'plots/cut_var_1_n',iStep
+       elseif(iPlot == 1)then
+          ! 2D plot in Z=0 plane
+          write(NameSnapshot,'(a,i7.7)') 'plots/z=0_var_1_n',iStep
+          iXyz = 3
        else
-          PlotMin_D = -1e-10 
-          PlotMax_D = +1e-10
-          PlotMin_D(1:nPlotDim) = DomainMin_D(1:nPlotDim)
-          PlotMax_D(1:nPlotDim) = DomainMax_D(1:nPlotDim)
+          ! 2D plot in Y=0 plane
+          write(NameSnapshot,'(a,i7.7)') 'plots/y=0_var_2_n',iStep
+          iXyz = 2
        end if
 
-       CellSizePlot_D = CellSizeMinAll_D
-       CellSizePlot_D(1:nDimAmr) = -1.0
-
-       NameFile = trim(NameSnapshot)//'.h'
-       open(UnitTmp_,file=NameFile,status="replace")
-       write(UnitTmp_,'(a)')         NameFile
-       write(UnitTmp_,'(i8,a)')      nProc,        ' nProc'
-       write(UnitTmp_,'(i8,a)')      iStep,        ' n_step'
-       write(UnitTmp_,'(1pe13.5,a)') Time,         ' t'
-       write(UnitTmp_,'(6(1pe18.10),a)') &
-            (PlotMin_D(iDim),PlotMax_D(iDim),iDim=1,MaxDim),' plot_range'
-       write(UnitTmp_,'(6(1pe18.10),i10,a)') &
-            CellSizePlot_D, &
-            CellSizeMinAll_D, nCellAll,            ' plot_dx, dxmin, ncell'
-       write(UnitTmp_,'(i8,a)')     nVar+5,        ' nplotvar'
-       write(UnitTmp_,'(i8,a)')     1,             ' neqpar'
-       write(UnitTmp_,'(10es13.5)') 0.0            ! eqpar
-       write(UnitTmp_,'(a)')        'rho exact volume node proc block none' 
-       write(UnitTmp_,'(a)')        '1 1 1'        ! units
-       write(UnitTmp_,'(l8,a)')     .true.,        ' IsBinary' 
-       write(UnitTmp_,'(i8,a)')     nByteReal,     ' nByteReal'
-       write(UnitTmp_,'(a)')        TypeGeometry
-       write(UnitTmp_,'(a)')        'real4'        ! type of .out file
+       ! write data from all processors into separate files
+       write(NameFile,'(a,i4.4,a)') trim(NameSnapshot)//'_pe',iProc,'.idl'
+       open(UnitTmp_, file=NameFile, status='replace', form='unformatted')
+       nCell = 0
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          if(IsSpherical)then
+             if(iPlot == 1)then
+                if(CoordMin_DB(2,iBlock) > cHalfPi) CYCLE
+                if(CoordMax_DB(2,iBlock) < cHalfPi) CYCLE
+             else
+                if(  CoordMin_DB(Phi_,iBlock) > 0  .and.  &
+                     CoordMax_DB(Phi_,iBlock) < cPi       ) CYCLE
+                if(  CoordMin_DB(Phi_,iBlock) > cPi .and. &
+                     CoordMax_DB(Phi_,iBlock) < cTwoPi    ) CYCLE
+             end if
+          elseif(nDim > 1)then
+             if(CoordMin_DB(iXyz,iBlock) > 1e-6) CYCLE
+             if(CoordMax_DB(iXyz,iBlock) <-1e-6) CYCLE
+          end if
+          do k = 1, nK 
+             if(nDim > 2 .and. (iPlot == 1 .and. .not. IsSpherical &
+                  .or.          iPlot == 2 .and.       IsSpherical) )then
+                ! Check for sign change of Y or Z along 3rd coordinate
+                if(product(Xyz_DGB(iXyz,1,1,k-1:k+1:2,iBlock)) > 0) CYCLE
+             end if
+             do j = 1, nJ; 
+                if(  iPlot == 1 .and.       IsSpherical .or. &
+                     iPlot == 2 .and. .not. IsSPherical)then
+                   ! Check for sign change of Y or Z along second coordinate
+                   if(product(Xyz_DGB(iXyz,1,j-1:j+1:2,1,iBlock)) > 0) CYCLE
+                end if
+                do i = 1, nI
+                   nCell = nCell + 1
+                   write(UnitTmp_) CellSize_DB(1,iBlock), &
+                        Xyz_DGB(:,i,j,k,iBlock), &
+                        CoordMin_DB(:,iBlock) &
+                        + ((/i,j,k/)-0.5)*CellSize_DB(:,iBlock), &
+                        State_VGB(:,i,j,k,iBlock), &
+                        exact_density(Xyz_DGB(:,i,j,k,iBlock)), &
+                        CellVolume_GB(i,j,k,iBlock), real(iNode_B(iBlock)), &
+                        real(iProc), real(iBlock)
+                end do
+             end do
+          end do
+       end do
        close(UnitTmp_)
-    end if
+
+       call MPI_reduce(nCell, nCellAll, 1, MPI_INTEGER, MPI_SUM, 0, &
+            iComm, iError)
+
+       ! Write header file
+       if(iProc == 0)then
+
+          nPlotDim = min(2,nDim)
+
+          ! set plotting range
+
+          if(IsSpherical)then
+             ! Conform with the r-lat-lon grid used in PostIDL
+             PlotMin_D(1) = CoordMin_D(1)
+             PlotMax_D(1) = CoordMax_D(1)
+             PlotMin_D(2) = CoordMin_D(3)
+             PlotMax_D(2) = CoordMax_D(3)
+             PlotMin_D(3) = cHalfPi - CoordMax_D(2)
+             PlotMax_D(3) = cHalfPi - CoordMin_D(2)
+          else
+             PlotMin_D = CoordMin_D
+             PlotMax_D = CoordMax_D
+          end if
+
+          if(nDim == 1)then
+             PlotMin_D(2:3) = -1e-10
+             PlotMax_D(2:3) = +1e-10
+          elseif(iPlot == 1)then
+             PlotMin_D(3) = -1e-10
+             PlotMax_D(3) = +1e-10
+          else
+             PlotMin_D(2) = -1e-10 
+             PlotMax_D(2) = +1e-10
+          end if
+
+          NameFile = trim(NameSnapshot)//'.h'
+          open(UnitTmp_,file=NameFile,status="replace")
+          write(UnitTmp_,'(a)')         NameFile
+          write(UnitTmp_,'(i8,a)')      nProc,        ' nProc'
+          write(UnitTmp_,'(i8,a)')      iStep,        ' n_step'
+          write(UnitTmp_,'(1pe13.5,a)') Time,         ' t'
+          write(UnitTmp_,'(6(1pe18.10),a)') &
+               (PlotMin_D(iDim),PlotMax_D(iDim),iDim=1,MaxDim),' plot_range'
+          write(UnitTmp_,'(6(1pe18.10),i10,a)') &
+               CellSizePlot_D, &
+               CellSizeMinAll_D, nCellAll,            ' plot_dx, dxmin, ncell'
+          write(UnitTmp_,'(i8,a)')     nVar+8,        ' nplotvar'
+          write(UnitTmp_,'(i8,a)')     1,             ' neqpar'
+          write(UnitTmp_,'(10es13.5)') 0.0            ! eqpar
+          write(UnitTmp_,'(a)')        &
+               'coord1 coord2 coord3 rho exact volume node proc block none' 
+          write(UnitTmp_,'(a)')        '1 1 1'        ! units
+          write(UnitTmp_,'(l8,a)')     .true.,        ' IsBinary' 
+          write(UnitTmp_,'(i8,a)')     nByteReal,     ' nByteReal'
+          write(UnitTmp_,'(a)')        TypeGeometry
+          write(UnitTmp_,'(a)')        'real4'        ! type of .out file
+          close(UnitTmp_)
+       end if
+    end do
 
   end subroutine save_plot
   !===========================================================================
