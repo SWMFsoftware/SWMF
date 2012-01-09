@@ -90,10 +90,6 @@ module CRASH_ModEosTable
   !In gas: N~3.10^{25} m-3
   !In solids: N<10^{29} m-3
   ! electron temperature of 1e-3 eV is approximately 11.6 K
-  !interface check_opac_table
-  !   module procedure check_opac_table_2freqs
-  !   module procedure check_opac_table_evgroups
-  !end interface
 
 contains
   !============================================================================
@@ -292,7 +288,7 @@ contains
 
   !=========================================================================
 
-  subroutine check_opac_table(FreqMinSi, FreqMaxSi, iComm,EGroupIn_I)
+  subroutine check_opac_table(FreqMinSi, FreqMaxSi, iComm,EGroupIn_I,TypeFileIn)
 
     use ModConst,       ONLY: cHPlanckEv
     use ModLookupTable, ONLY: Table_I, TableType, &
@@ -300,20 +296,37 @@ contains
     use CRASH_ModMultiGroup,  ONLY: set_multigroup
     use ModMpi,        ONLY: MPI_COMM_RANK
 
+    !Input minimum and maximum frequency (Hz) of photons
     real,    optional, intent(in):: FreqMinSi, FreqMaxSi
+
+    !Input communicator for parallel computations
     integer, optional, intent(in):: iComm
+
+    !Input energy grid, in eV. In case there are only two
+    !values they are minimum and maximum energy in electron-volts 
     real,    optional, intent(in):: EGroupIn_I(:)
+
+    !For test the capability to save ascii file should be kept
+    character(LEN=*) , intent(in),optional  :: TypeFileIn
 
     ! Minimum and maximum group energies in electron volts
     real:: EvMin, EvMax
-    real, allocatable:: EGroup_I(:)
+    real, allocatable:: EGroup_I(:) !Energy Grid [eV]
 
     integer:: iMaterial, iTable, iProc, iError
     character(len=2):: NameMaterial
     type(TableType), pointer:: Ptr
+
+    character(LEN=5)::TypeFile='real8'
+
+    logical:: UseLogarithmicGrid
     
     character(len=*), parameter:: NameSub = 'check_opac_table'
-    !----------------------------------------------------------------------
+    !----------------------------------------------------------
+   
+    if(.not.any(UseOpacityTable_I(0:nMaterialEos-1)))return
+    UseLogarithmicGrid = .true. !Reset if there in an input energy array (0:nGroup)
+
     ! set iProc for less verbose error messages
     if(present(iComm))then
        call MPI_COMM_RANK(iComm, iProc, iError)
@@ -326,34 +339,70 @@ contains
     EvMax = 20000.0
 
     if(present(FreqMaxSi)) EvMax = FreqMaxSi * cHPlanckEV
+
     if(present(EGroupIn_I))then
        allocate(EGroup_I(size(EGroupIn_I)))
        EGroup_I = EGroupIn_I
+       UseLogarithmicGrid = size(Egroup_I) /= (ngroup + 1)
     else
        allocate(EGroup_I(2))
        EGroup_I = (/EvMin, EvMax/)
     end if
        
-       
+    if(present(TypeFileIn))TypeFile = TypeFileIn
 
     ! Construct NameVarOpac
     nVarOpac = 2*nGroup
     NameVarOpac = ''
 
     if(nGroup==1)then
+
        NameVarOpac = 'Planck Ross'
+
     elseif(2 <= nGroup.and.nGroup <= 9)then
-       write(NameVarOpac,'(a,i1,a,i1,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,')'
+
+       if(UseLogarithmicGrid)then
+          write(NameVarOpac,'(a,i1,a,i1,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,') EvMin EvMax'
+       else
+          write(NameVarOpac,'(a,i1,a,i1,a,i1,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,&
+            ') Egroup0 EGroup(',nGroup,')'
+       end if
+
     elseif(10 <= nGroup.and.nGroup <= 99)then
-       write(NameVarOpac,'(a,i2,a,i2,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,')'
+
+       if(UseLogarithmicGrid)then
+
+          write(NameVarOpac,'(a,i2,a,i2,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,') EvMin EvMax'
+       else
+          write(NameVarOpac,'(a,i2,a,i2,a,i2,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,&
+            ') Egroup00 EGroup(',nGroup,')'
+       end if
     elseif(100 <= nGroup.and.nGroup <= 999)then
-       write(NameVarOpac,'(a,i3,a,i3,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,')'
+
+      if(UseLogarithmicGrid)then
+         write(NameVarOpac,'(a,i3,a,i3,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,') EvMin EvMax'
+      else
+         write(NameVarOpac,'(a,i3,a,i3,a,i3,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,&
+            ') Egroup000 EGroup(',nGroup,')'
+      end if
+         
     elseif(1000 <= nGroup.and.nGroup <= 9999)then
-       write(NameVarOpac,'(a,i4,a,i4,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,')'
+
+      if(UseLogarithmicGrid)then
+
+         write(NameVarOpac,'(a,i4,a,i4,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,') EvMin EvMax'
+         else
+            write(NameVarOpac,'(a,i4,a,i4,a,i4,a)')&
+            'Planck(', nGroup, ')  Ross(',nGroup,&
+            ') Egroup0000 EGroup(',nGroup,')'
+      end if  
     else
        call CON_stop( &
             'The opacity table cannot be set with the declared nGroup')
@@ -368,13 +417,16 @@ contains
        ! Check if table is already set by #LOOKUPTABLE command
        if(iTable < 0)then
           ! initialize the opacity table with the default parameters
-          ! Set up the energy grid
-          
+
+          !\
+          ! Set up the energy grid as needed for calculating opacities
+          !/
           if(iMaterial == 0) call set_multigroup(EnergyEv_I=EGroup_I)
+
           call init_lookup_table(                                       &
                NameTable = NameMaterial//'_opac',                       &
                NameCommand = 'save',                                    &
-               NameVar = 'logRho logTe '//NameVarOpac//' EvMin EvMax',  &
+               NameVar = 'logRho logTe '//NameVarOpac,  &
                nIndex_I = IndexDefaultOpac_I,                           &
                IndexMin_I = (/NaDefault_II(Min_, iMaterial)*            &
                cAtomicMass * cAtomicMassCRASH_I(iMaterial),             &
@@ -383,14 +435,15 @@ contains
                cAtomicMass * cAtomicMassCRASH_I(iMaterial),             &
                TeDefaultOpac_II(Max_, iMaterial)/),                     &
                NameFile = NameMaterial//'_opac_CRASH.dat',              &
-               TypeFile = 'real8',                                      &
+               TypeFile = TypeFile,                                     &
                StringDescription = 'CRASH Opacity for '//NameMaterial,  &
-               nParam = 2,                                              &
+               nParam = size(EGroup_I),                                 &
                Param_I =  EGroup_I                           )
 
           ! Get the table index and the pointer to the table
           iTable =  i_lookup_table(NameMaterial//'_opac')
           Ptr => Table_I(iTable)
+
        else
           Ptr => Table_I(iTable)
           ! Check table for number of opacity values
