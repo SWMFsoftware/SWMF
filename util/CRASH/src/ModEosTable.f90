@@ -8,7 +8,8 @@ module CRASH_ModEosTable
   use CRASH_ModInterfaceNlte
   use ModConst
   implicit none
-
+  PRIVATE
+  SAVE
   !The following subroutine:
   !1. Checks if the tables are available for these 
   !   materials for which UseEosTable_I is True
