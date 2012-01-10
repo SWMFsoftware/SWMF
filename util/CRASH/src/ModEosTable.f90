@@ -296,6 +296,7 @@ contains
          i_lookup_table, init_lookup_table, make_lookup_table
     use CRASH_ModMultiGroup,  ONLY: set_multigroup
     use ModMpi,        ONLY: MPI_COMM_RANK
+    use ModIoUnit
 
     !Input minimum and maximum frequency (Hz) of photons
     real,    optional, intent(in):: FreqMinSi, FreqMaxSi
@@ -320,7 +321,12 @@ contains
 
     character(LEN=5)::TypeFile='real8'
 
-    logical:: UseLogarithmicGrid
+    !Used to split NameVar
+    integer:: iPosition
+    character(LEN=100)Name,Name1,Name2
+
+    logical:: UseLogarithmicGrid, DoSave
+    integer:: iFile
     
     character(len=*), parameter:: NameSub = 'check_opac_table'
     !----------------------------------------------------------
@@ -477,10 +483,44 @@ contains
 
        ! Fill in the table. Note: nothing is done if table is loaded from file
        ! The UseOpacityTable_I has to be switched off
+       DoSave = Ptr%NameCommand=='save'
        UseOpacityTable_I(iMaterial) = .false.
        call make_lookup_table(iTable, calc_opac_table, iComm)
        UseOpacityTable_I(iMaterial) = .true.
-
+       if((.not.DoSave).or.(.not.iProc==0))CYCLE
+       iFile = io_unit_new()
+       open(iFile,file=NameMaterial//'_opac_CRASH.head')
+       write(iFile,'(a)')'  '
+       write(iFile,'(a)')'----------------OPACITY TABLE----------'
+       write(iFile,'(a)')'  '
+       write(iFile,'(a)')'#LOOKUPTABLE'
+       write(iFile,'(a)')NameMaterial//'_opac                 NameTable'
+       write(iFile,'(a)')'use param               NameCommand'
+       write(iFile,'(a)')'Tables/'//NameMaterial//'_opac_CRASH.dat'
+       write(iFile,'(a)')'real8                   TypeFile'
+       Name = trim(Ptr%NameVar)
+       iPosition = index(Name,'Ross')
+       iPosition = iPosition+index(Name(iPosition+1:len_trim(Name)),')')
+       Name1 = Name(1:iPosition)
+       Name2 = Name(iPosition+1:len_trim(Name))
+       write(iFile,'(a)') trim(Name2)
+       write(iFile,'(e13.7)')Ptr%Param_I
+       write(iFile,'(a)')'Opacity(rho,Te) for '//NameMaterial
+       write(iFile,'(a)') trim(Name1)
+       write(iFile,'(i4,a)')Ptr%nIndex_I(1),'                    nIndex1'
+       write(iFile,'(e13.7,a)')10.0**(Ptr%IndexMin_I(1)),&
+            '           Index1Min (kg/m3)'
+       write(iFile,'(e13.7,a)')10.0**(Ptr%IndexMax_I(1)),& 
+            '           Index1Max (kg/m3)'
+       write(iFile,'(i4,a)')Ptr%nIndex_I(2),'                    nIndex2'
+       write(iFile,'(e13.7,a)')10.0**(Ptr%IndexMin_I(2)),&
+            '           Index2Min (eV)'
+       write(iFile,'(e13.7,a)')10.0**(Ptr%IndexMax_I(2)),&
+            '           Index2Max (eV)'
+       write(iFile,'(a)')'  '
+       write(iFile,'(a)')'#END'
+       write(iFile,'(a)')'  '
+       close(iFile)
     end do
 
   end subroutine check_opac_table
