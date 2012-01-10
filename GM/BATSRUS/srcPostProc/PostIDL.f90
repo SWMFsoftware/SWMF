@@ -393,9 +393,11 @@ program PostIDL
      volume=product(real(nxyz))
      if(ndim==1 .and. abs(total/volume-4.0)<0.0001)then
         State_VC = 0.25*State_VC
+        Coord_DC = 0.25*Coord_DC
         write(*,*)'Averaged 1D structured file everywhere'
      elseif(abs(total/volume-2.0)<0.0001)then
         State_VC = 0.5*State_VC
+        Coord_DC = 0.5*Coord_DC
         write(*,*)'Averaged structured file everywhere'
      elseif(abs(total/volume-1.0)>0.0001)then
         write(*,*)'!!! Discrepancy in structured file:',&
