@@ -16,9 +16,11 @@ IOMIX=\
 	ModMultiGroup.o	
 
 NLTE=\
-	ModLocalProperties.o \
+	ModInterfaceNLTE.o \
 	ModExpTable.o \
+	ModLocalProperties.o \
 	ModRadiom.o \
+	ModZtf.o \
 	nlte.o \
 	radiom.o  
 
@@ -26,7 +28,6 @@ OBJECTS=\
 	ModAtomicMass.o \
 	ModAtomicNotation.o\
 	ModAtomicDataMix.o \
-	ModCaltz.o \
 	ModEos.o \
 	ModEosTable.o \
 	ModExcitation.o \
@@ -34,7 +35,6 @@ OBJECTS=\
 	ModPowerLawEos.o\
 	ModFermiGas.o\
 	ModHydrogenicModel.o \
-	ModInterfaceNLTE.o \
         ModIonizPotential.o \
 	ModMolecularData.o \
 	ModPartition.o \

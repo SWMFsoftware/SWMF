@@ -9,7 +9,7 @@ module M_RADIOM
   !Projects the radiation energy densities in user-defined groups 
   !onto a refined grid  
   implicit none
-
+  PRIVATE !Except
 
   !\
   ! Parameters for writing the version
@@ -37,7 +37,7 @@ module M_RADIOM
   logical,save :: setXubar=.true.
 
   real,parameter :: aSaha=6.02e21, b_CovR=1.34e13*0.2 ,one=1.0
-
+  public:: caltz0,prep_projE,PrepCorrUBar
 
   !-------
 contains
@@ -70,10 +70,10 @@ contains
     !
     use CRASH_M_projE	! ,only : mxOut
     use CRASH_M_expTab
-    real :: ubar
+    real,intent(Out)   :: ubar
     integer,intent(IN) :: ngr
-    real,intent(IN) :: Te_in,Ne_in
-    real,intent(IN) :: grBound(0:ngr),EoB(ngr)
+    real,intent(IN)    :: Te_in,Ne_in
+    real,intent(IN)    :: grBound(0:ngr),EoB(ngr)
 
     real,parameter :: A_LTE_limit=7.38905609	! =exp(2)
     real,parameter :: smallR=1d-200,two=2
@@ -190,7 +190,7 @@ contains
     QJ=log(at32s)
     betapm= (b_CovR/Gaunt/aSaha)*at32s*Te_in**2        
     !	     --------
-    call projSP_E(Te_in,EoB,nOut,gotoLTE)		! ,Uout,SPout
+    call projSP_E(Te_in,EoB,nOut,gotoLTE)	
     !	     --------
     if(gotoLTE) then
        ubar=QJ ! =log(at32s)		! thus Tz/Te will be  1
@@ -223,7 +223,7 @@ contains
     call CorrUbar(ubar,QJ)
   end subroutine xubar0
   !-------
-  subroutine calTz(Te,Ne, Tz, hnug,eg,bg,ng)
+  !subroutine calTz(Te,Ne, Tz, hnug,eg,bg,ng)
     !-
     !-     THIS ROUTINE CALCULATES THE VALUE OF Tz IN BUSQUET THEORY FROM Te, IT
     !-     TAKES CALCULATED VALUES OF F^RAD(U_M) FOR EACH VALUE OF GROUP U_M;
@@ -262,44 +262,44 @@ contains
     !   hnug(0:ng)  are  the group boundaries, in same units than Te (usually eV)
     !
     !
-    use CRASH_M_projE,only : nbIn
+   ! use CRASH_M_projE,only : nbIn
 
     !Inputs
-    real,intent(IN) :: Te,ne
-    integer,intent(IN) :: ng
-    real,dimension(ng),intent(IN) :: eg,bg
-    real,dimension(0:ng),intent(IN) :: hnug
-    real,intent(OUT) :: Tz
+    !real,intent(IN) :: Te,ne
+    !integer,intent(IN) :: ng
+    !real,dimension(ng),intent(IN) :: eg,bg
+    !real,dimension(0:ng),intent(IN) :: hnug
+    !real,intent(OUT) :: Tz
 
-    real,dimension(mxgr) :: EoB
-    real,parameter :: smallB=1d-30
-    integer :: ig
+    !real,dimension(mxgr) :: EoB
+    !real,parameter :: smallB=1d-30
+    !integer :: ig
 
-    real :: at32s,ubar,QJ
+    !real :: at32s,ubar,QJ
 
-    if(nbIn.le.0) then
-       write(*,*)'-P- prep_projE not done before "calTE"'
-       call CON_stop('-E- calTZ: prep_projE not done')
-    end if
-    at32s=aSaha*te*sqrt(te)/Ne
-    tz=te
-    if(at32s <= one) return
-    if(ng.gt.0) then
-       EOB(1:ng)=0.
-       do ig=1,ng
-          if(bg(ig) >smallB) EoB(ig)=eg(ig)/bg(ig)
-       end do
-       !	elseif(ng.lt.0) then
-       !  may use empirical fit ...
-       !	 return
-    else
-       write(*,*)'-E- CALTZ: ng=0, should use an artifical gridding ...'
-       call CON_stop('-P- no Eg(:) in CALTZ')
-    end if
-    call xubar(te,ne,ng,hnug,EoB ,ubar)	! no more a function
-    QJ=log(at32s)
-    tz=te*ubar/QJ
-  end subroutine calTz
+    !if(nbIn.le.0) then
+    !   write(*,*)'-P- prep_projE not done before "calTE"'
+    !   call CON_stop('-E- calTZ: prep_projE not done')
+    !end if
+    !at32s=aSaha*te*sqrt(te)/Ne
+    !tz=te
+    !if(at32s <= one) return
+    !if(ng.gt.0) then
+    !   EOB(1:ng)=0.
+    !   do ig=1,ng
+    !      if(bg(ig) >smallB) EoB(ig)=eg(ig)/bg(ig)
+    !   end do
+    !   !	elseif(ng.lt.0) then
+    !   !  may use empirical fit ...
+    !   !	 return
+    !else
+    !   write(*,*)'-E- CALTZ: ng=0, should use an artifical gridding ...'
+    !   call CON_stop('-P- no Eg(:) in CALTZ')
+    !end if
+    !call xubar(te,ne,ng,hnug,EoB ,ubar)	! no more a function
+    !QJ=log(at32s)
+    !tz=te*ubar/QJ
+  !end subroutine calTz
   !-------
   subroutine calTz0(Te,Ne, Tz, EoB)
     !-

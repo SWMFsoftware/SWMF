@@ -33,7 +33,7 @@ module CRASH_M_NLTE
   !(from which the temperatures should be solved) and E_{eff} is the tabulated
   !LTE equation of state with (rho, T_Z) being the input parameters for the 
   !latter.
-  use M_RADIOM,only : caltz0,calte0,caltz,calte
+  use M_RADIOM,only : caltz0!,calte0,caltz,calte
   use CRASH_M_projE,only : mxOut
   use CRASH_M_localProperties
   implicit none
@@ -207,7 +207,8 @@ contains
              Ne=Zbar*Ni
              call calTz0(Te,Ne, Tz, EoB)
              if(dbg) write(*,*)'niter#',niter,' calTz0(Te=',te,' Ne=',ne,' -> Tz=',tz
-             call LTE_EOS_dir(tz,Ee,Pe,Zbar,Cv)	! ro : in module M_localProperties	
+             call LTE_EOS_dir(tz,Ee,Pe,Zbar,Cv)	! ro : in module M_localProperties
+             if(zBar<=0.0)EXIT DIR	
              d=(Ne-Ni*zbar)/(Ne+Ni*zbar)
              if(dbg) write(*,*)'oldNe,newNe=',ne,zbar*ni,'  d=',d
              niter=niter+1

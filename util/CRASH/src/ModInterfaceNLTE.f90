@@ -13,7 +13,8 @@ contains
   subroutine check_nlte
     use CRASH_M_EOS,   ONLY: SetOptions
     use CRASH_M_expTab,ONLY: exp_tab8
-    use CRASH_ModMultiGroup, ONLY:EnergyGroup_I
+    use CRASH_ModMultiGroup, ONLY: EnergyGroup_I,set_multigroup
+    use ModConst,            ONLY: cHPlanckEV
     use CRASH_M_NLTE,only : ng_rad
     use M_RADIOM, only : prep_projE, prepCorrUbar
     logical,save:: DoInit = .true.
@@ -23,18 +24,20 @@ contains
     !Initialize NLTE calculations
     call exp_tab8()
     call setoptions(.false., .false., .true.)
+    
     !What else?
-
-    !\
-    ! Initialize and calculate some internal arrays
-    !/
-    call prepCorrUbar()
-
+    call set_multigroup(30,0.1/cHPlanckEV,20000.0/cHPlanckEV)
+   
     !\
     ! Coefficients for transforming from the user defined grid to
     ! the refined logrithmic-uniform internal fixed grid
     !/ 
     call prep_projE(EnergyGroup_I(0:nGroup),nGroup)
+
+    !\
+    ! Initialize and calculate some internal arrays
+    !/
+    call prepCorrUbar()
    
     ng_rad=nGroup
 
@@ -130,7 +133,7 @@ contains
          Pt_out=PTotalOut)
        if(present(TeOut))TeOut=Te
     end if
-    if(.not.(&
+    if(&
          present(GammaOut).or.      &
          present(GammaEOut).or.     &
          present(CvTotalOut).or.    &
@@ -140,7 +143,8 @@ contains
          present(HeatCond).or.      &
          present(TeTiRelax).or.     &
          present(Ne).or.            &
-         present(z2AverageOut) ) )  &
+         present(zAverageOut).or.   & 
+         present(z2AverageOut) )    &
          call eos(&
          iMaterial=iMaterialIn,       &
          Rho=Rho,                     &
@@ -154,6 +158,7 @@ contains
          HeatCond=HeatCond,           &
          TeTiRelax=TeTiRelax,         &
          Ne=Ne,                       &
+         zAverageOut=zAverageOut,   &
          z2AverageOut=z2AverageOut)
   end subroutine NLTE_EOS
 end module CRASH_ModInterfaceNLTE
