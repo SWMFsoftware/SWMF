@@ -48,6 +48,7 @@ MODULE CRASH_M_projE
   real,save         :: lgdu
   !\
   ! exp(lgdu)
+  !/
   real,save         :: rdu 
 
   real,save         :: Efirst,Elast
@@ -256,7 +257,7 @@ contains
     ! 
   end subroutine prep_projE
   !======
-  subroutine projSP_E(Te,SPin,nOut,gotoLTE)	! ,Uout,SPout
+  subroutine projSP_E(Te,SPin,nOut,gotoLTE)
     real,intent(In) :: Te,SPin(nbIn)
     integer,intent(Out) :: nOut
     real :: Ufirst,Ulast ,uBef,uAft,c,r,u
@@ -442,7 +443,7 @@ contains
           u=Eout(to)/te
           if(u.gt.Umin .or. to.ne.tt2) goto 201
           n1=ctr+1
-          write(*,*)'563 : n1,n2=',n1,n2
+           if(dbg)write(*,*)'563 : n1,n2=',n1,n2
        end do
 201    tt1=to_ctrb(n2)
        tt2=n2
@@ -506,13 +507,14 @@ contains
     call CON_stop('- projSP_E, error=1101 -')
   end subroutine projSP_E
   !-------
-  subroutine projSP(Uin,SPin,nbIn)	! ,Uout,SPout,nbOut
+  subroutine projSP(Uin,SPin,nbIn)	
     !
     !  Uin(i)=eg(i)/Te, for i=1,nbIn+1
     !
     implicit none
-    integer :: nbIn, out1,out2	! ,nbOut
-    real :: Uin(nbIn+1),SPin(nbIn)	! ,Uout(nbOut+1),SPout(nbOut)
+    integer, intent(in) :: nbIn
+    integer             :: out1,out2	
+    real,intent(in) :: Uin(nbIn+1),SPin(nbIn)	
     real :: du,u1,u2,r
     !
     integer :: nIN,nOut
@@ -525,7 +527,7 @@ contains
     du=Uout(nOut+1)-Uout(nOut)
     out1=0
     out2=0
-    LOOP10:	do nIn=1,nbIn	! U(nIn)-U(nIn+1)
+    LOOP10:	do nIn=1,nbIn	
 1      if(Uin(nIn).ge.Uout(nOut+1)) then	! input segment does not
           if(nOut.ge.nbOut) exit LOOP10 !  goto 20		!  overlap actual output segment
           nOut=nOut+1
