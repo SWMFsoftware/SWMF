@@ -419,11 +419,6 @@ contains
        if(iTable < 0)then
           ! initialize the opacity table with the default parameters
 
-          !\
-          ! Set up the energy grid as needed for calculating opacities
-          !/
-          if(iMaterial == 0) call set_multigroup(EnergyEv_I=EGroup_I)
-
           call init_lookup_table(                                       &
                NameTable = NameMaterial//'_opac',                       &
                NameCommand = 'save',                                    &
@@ -471,14 +466,14 @@ contains
                   ' should be equal to 2 or nGroup+1=', nGroup+1
              call CON_stop(NameSub//' change number of groups or table')
           end if
-          ! Set up the energy grid
-          if(iMaterial == 0) call set_multigroup(EnergyEv_I=Ptr%Param_I)
        end if
 
        ! The table is now initialized. Set indexes:
        iTableOpac4Material_I(iMaterial) = iTable
        iMaterial4OpacTable_I(iTable)    = iMaterial
 
+       ! Set up the energy grid
+       if(iMaterial == 0) call set_multigroup(EnergyEv_I=Ptr%Param_I)
 
        ! Fill in the table. Note: nothing is done if table is loaded from file
        ! The UseOpacityTable_I has to be switched off
