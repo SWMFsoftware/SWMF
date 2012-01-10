@@ -1,4 +1,0 @@
-//Types of symmetry
-#define no_symmetry           0
-#define cylindrical_symmetry  1
-#define spherical_symmetry    2
