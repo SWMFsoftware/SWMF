@@ -8,8 +8,7 @@ subroutine crcm_run(delta_t)
   use ModFieldTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
                             ekev,iba,bo,pp,Have, sinA, vel, alscone, iw2
   use ModGmCrcm,      ONLY: Den_IC,Temp_IC,StateIntegral_IIV,AveP_,AveDens_, &
-                            iLatMin,DoMultiFluidGMCoupling,AveDen_I,AveP_I, &
-                            DoAnisoPressureGMCoupling
+                            iLatMin,DoMultiFluidGMCoupling,AveDen_I,AveP_I
   use ModIeCrcm,      ONLY: pot
   use ModCrcmPlot,    ONLY: Crcm_plot, Crcm_plot_fls, DtOutput, DoSavePlot,&
                             DoSaveFlux
@@ -64,8 +63,8 @@ subroutine crcm_run(delta_t)
                  dipmom)
   call timing_stop('crcm_fieldpara')
 
-  ! get Bmin for anisotropic pressure coupling, needs to be passed to GM
-  if(DoAnisoPressureGMCoupling) Bmin_C = bo
+  ! get Bmin, needs to be passed to GM for anisotropic pressure coupling
+  Bmin_C = bo
 
   !set boundary density and temperature inside iba
   if (.not. DoMultiFluidGMCoupling) then
@@ -258,14 +257,12 @@ subroutine crcm_run(delta_t)
           0, iComm, iError)
      if (iProc==0) iba(:)=BufferRecv_I(:)
 
-     if(DoAnisoPressureGMCoupling)then
-        BufferSend_C(:,:) = Bmin_C(:,:)
-        call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
-             BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
-             0, iComm, iError)
-        if (iProc==0) Bmin_C(:,:)=BufferRecv_C(:,:)
-     end if
-
+     BufferSend_C(:,:) = Bmin_C(:,:)
+     call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          0, iComm, iError)
+     if (iProc==0) Bmin_C(:,:)=BufferRecv_C(:,:)
+     
   endif
   
   ! On processor O, gather info and save plots

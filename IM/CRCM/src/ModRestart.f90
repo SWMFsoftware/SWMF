@@ -12,7 +12,7 @@ contains
     use ModCrcmGrid,  ONLY: np,nt,nm,nk
     use ModCrcm,      ONLY: f2, phot, Pressure_IC, FAC_C, Ppar_IC, Bmin_C
     use ModFieldTrace,ONLY: iba
-    use ModGmCrcm,    ONLY: Den_IC, DoAnisoPressureGMCoupling
+    use ModGmCrcm,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCrcmGrid,  ONLY: iProc,nProc,iComm
     use ModMpi
@@ -30,7 +30,7 @@ contains
        read(UnitTmp_) FAC_C             
        read(UnitTmp_) iba
        read(UnitTmp_) Ppar_IC
-       if(DoAnisoPressureGMCoupling) read(UnitTmp_) Bmin_C
+       read(UnitTmp_) Bmin_C
        close(UnitTmp_)
     end if
 
@@ -43,8 +43,7 @@ contains
        call MPI_bcast(FAC_C, np*nt, MPI_REAL, 0, iComm, iError)
        call MPI_bcast(iba, nt, MPI_INTEGER, 0, iComm, iError)
        call MPI_bcast(Ppar_IC, nspec*np*nt, MPI_REAL, 0, iComm, iError)
-       if(DoAnisoPressureGMCoupling) &
-          call MPI_bcast(Bmin_C, np*nt, MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(Bmin_C, np*nt, MPI_REAL, 0, iComm, iError)
     endif
 
   end subroutine crcm_read_restart
@@ -56,7 +55,7 @@ contains
     use ModCrcmGrid,  ONLY: np,nt,nm,nk,MinLonPar,MaxLonPar
     use ModCrcm,      ONLY: f2,time, phot, Pressure_IC, FAC_C, Ppar_IC, Bmin_C
     use ModFieldTrace,ONLY: iba    
-    use ModGmCrcm,    ONLY: Den_IC, DoAnisoPressureGMCoupling
+    use ModGmCrcm,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCrcmGrid,  ONLY: iProc,nProc,iComm,nLonPar,nLonPar_P,nLonBefore_P
     use ModMpi
@@ -128,13 +127,11 @@ contains
        if (iProc==0) iba(:)=BufferRecv_I(:)
 
        !gather Bmin
-       if(DoAnisoPressureGMCoupling)then
-          BufferSend_C(:,:)=Bmin_C(:,:)
-          call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
-               MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P, MPI_REAL, &
-               0, iComm, iError)
-          if (iProc==0) Bmin_C(:,:)=BufferRecv_C(:,:)
-       endif
+       BufferSend_C(:,:)=Bmin_C(:,:)
+       call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+            MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+            0, iComm, iError)
+       if (iProc==0) Bmin_C(:,:)=BufferRecv_C(:,:)
     endif
 
     if(iProc==0) then
@@ -146,7 +143,7 @@ contains
        write(UnitTmp_) FAC_C
        write(UnitTmp_) iba                
        write(UnitTmp_) Ppar_IC
-       if(DoAnisoPressureGMCoupling) write(UnitTmp_) Bmin_C
+       write(UnitTmp_) Bmin_C
        close(UnitTmp_)
 
        open(unit=UnitTmp_,file='IM/restartOUT/restart.H')
