@@ -1,0 +1,16 @@
+#LOOKUPTABLE
+Ay_opac					NameTable
+use param				NameCommand
+Tables/Ay_opac_CRASH.dat		NameFile
+real8					TypeFile
+EvMin EvMax				NameTableParam
+0.1		        		TableParam [eV]
+20000.0		        		TableParam [eV]
+Opacity(rho,Te) for Ay			StringDescription
+logrho logT Planck(30) Ross(30)		NameVar
+201					nIndex1
+1.1083255751072E-02			Index1Min [kg/m3]
+1.6624883626608E+03			Index1Max [kg/m3]
+201					nIndex2
+5.0E-2					Index2Min [eV]
+1.0E+2					Index2Max [eV]

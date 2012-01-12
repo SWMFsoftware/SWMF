@@ -1,0 +1,15 @@
+#LOOKUPTABLE
+Ay_eos				NameTable
+use param			NameCommand
+Tables/Ay_eos_CRASH.dat		NameFile
+real8				TypeFile
+Mass				NameTableParam
+6.674529			TableParam [amu]
+EOS(Te, Na) for Ay		StringDescription
+logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2
+201   	      	      	     	nIndex1
+1.0E-3				Index1Min [eV]
+1.0E+2				Index1Max [eV]
+201                     	nIndex2
+1.0E+24				Index2Min [m-3]
+1.5E+29				Index2Max [m-3]
