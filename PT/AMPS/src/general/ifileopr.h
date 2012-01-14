@@ -43,8 +43,13 @@ public:
     fclose(fd);
   };
 
+  void rewindfile() {
+    rewind(fd);
+    line=0;
+  }
+
   void moveLineBack() {
-    char c;
+    int c;
 
     fseek(fd,-1,SEEK_CUR);
 
@@ -111,7 +116,11 @@ public:
 
     if (!feof(fd)) do {
       line++;
-      if (fgets(str,n,fd)==NULL) error();
+      if (fgets(str,n,fd)==NULL) {
+        //error();
+        str[0]='\0',init_str[0]='\0';
+        return false;
+      }
 
       for (i=0;(str[i]!='\0')&&(str[i]!='\n')&&(str[i]==' ');i++);
       for (j=0;(str[i+j]!='\0')&&(str[i+j]!='\n');j++) str[j]=str[i+j];
@@ -130,16 +139,18 @@ public:
 
       
       if (i<init_str_maxlength-1) init_str[i]=str[i];
-      if ((str[i]>='a')&&(str[i]<='z')) str[i]=str[i]-32;
+      if ((str[i]>='a')&&(str[i]<='z')) str[i]=(char)(str[i]-(char)32);
+      if (str[i]=='\t') str[i]=' ';
     }
     
     init_str[(i<init_str_maxlength-1) ? i : init_str_maxlength-1 ]='\0';
     return true;
   }; 
 
-  void error() {
+  void error(const char *msg=NULL) {
     printf("Error in file %s, line=%ld\n",fname,line);
     printf("%s\n",init_str);
+    if (msg!=NULL) printf("Error message: %s\n",msg);
     exit(0);
   }; 
 };

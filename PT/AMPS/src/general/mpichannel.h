@@ -1,5 +1,5 @@
 //====================================================================
-//$Id$
+//$$
 //====================================================================
 
 #ifndef MPI_CHANNEL
@@ -9,6 +9,9 @@ using namespace std;
 
 #define MPI_CHANNEL_DEFAULT_BUFFER_SIZE 100000
 
+#define _MPI_CHANNEL_MODE_BCAST_    0
+#define _MPI_CHANNEL_MODE_SENDRECV_ 1
+
 class CMPI_channel {
 private:
   long int max_MPIbuffer_size;
@@ -17,7 +20,13 @@ private:
   long int sendptr,*recvptr;
   
   long int *RecvDataLength;
-  int sendThread,TotalThreadsNumber,ThisThread;
+  int TotalThreadsNumber,BcastThread;
+
+  int ChannelMode;
+
+public:
+  int ThisThread,sendThread;
+
 
   void exit(long int nline,const char* msg=NULL) {
     char str[2000];
@@ -27,16 +36,48 @@ private:
     tm *ct=localtime(&TimeValue);
 
     if (msg==NULL) sprintf(str," exit: line=%ld, file=%s\n",nline,__FILE__);
-    else sprintf(str," exit: line=%ld, file=%s, message=%s\n",nline,__FILE__,msg);
+    sprintf(str," exit: line=%ld, file=%s, message=%s\n",nline,__FILE__,msg);
 
     fprintf(errorlog,"Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
     fprintf(errorlog,"%s\n\n",msg);
 
+    printf("Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+    printf("%s\n\n",msg); 
+
     fclose(errorlog);
-    std::exit(0);
+    ::exit(0);
   }
 
 public:
+
+
+
+  void RedirectSendBuffer(int newSendThread) {
+    if (sendThread==-1) exit(__LINE__,"Error: need to init first");
+    flush();
+    sendThread=newSendThread;
+  }
+
+  void RedirectRecvBuffer(int newRecvThread,int oldRecvThread=-1) {
+
+    if (recvBuffer[newRecvThread]!=NULL) return;
+
+//    if (recvBuffer[newRecvThread]!=NULL) exit(__LINE__,"Error: the recv direction is already initialized");
+
+    if (oldRecvThread==-1) { //search for an allocated buffer
+      for (int i=0;i<TotalThreadsNumber;i++) if (recvBuffer[i]!=NULL) {
+        oldRecvThread=i;
+        break;
+      }
+
+      if (oldRecvThread==-1) exit(__LINE__,"Error: need to allocate the recv buffer first");
+    }
+
+    if ((recvBuffer[oldRecvThread]==NULL)||(recvptr[oldRecvThread]!=RecvDataLength[oldRecvThread])) exit(__LINE__,"Error: cannot redirect the recv buffer");
+
+    recvBuffer[newRecvThread]=recvBuffer[oldRecvThread],recvptr[newRecvThread]=0,RecvDataLength[newRecvThread]=0;
+    recvBuffer[oldRecvThread]=NULL,recvptr[oldRecvThread]=0,RecvDataLength[oldRecvThread]=0;
+  }
 
   void init(long int buffersize) {
     max_MPIbuffer_size=buffersize;
@@ -61,6 +102,8 @@ public:
   };
 
   CMPI_channel(long int buffersize) {
+    ChannelMode=_MPI_CHANNEL_MODE_SENDRECV_,BcastThread=-1;
+
     init(buffersize);
   }
 
@@ -74,6 +117,8 @@ public:
     recvBuffer=NULL;
     recvptr=NULL;
     RecvDataLength=NULL;
+
+    ChannelMode=_MPI_CHANNEL_MODE_SENDRECV_,BcastThread=-1;
   };
 
   void remove() {
@@ -114,14 +159,21 @@ public:
     }
 
     sendptr=0,sendThread=send; 
+    ChannelMode=_MPI_CHANNEL_MODE_SENDRECV_;
   };
 
   void flush() {
     if (sendptr!=0) {
 
 #ifdef MPI_ON
-      MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_COMM_WORLD);
-      MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD);
+      if (ChannelMode==_MPI_CHANNEL_MODE_SENDRECV_) {
+        MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_COMM_WORLD);
+        MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD);
+      }
+      else {
+        MPI_Bcast(&sendptr,1,MPI_LONG,sendThread,MPI_COMM_WORLD);
+        MPI_Bcast(sendBuffer,sendptr,MPI_CHAR,sendThread,MPI_COMM_WORLD);
+      }
 #endif
 
       sendptr=0;
@@ -130,13 +182,13 @@ public:
 
 
   void closeSend() {
-    if (sendptr!=0) {
+    if (sendBuffer!=NULL) {
       flush();
 
       delete [] sendBuffer;
 
       sendBuffer=NULL;
-      sendThread=-1;
+      sendThread=-1,sendptr=0;
     }
   };
 
@@ -147,8 +199,14 @@ public:
     if (sendptr+length>=max_MPIbuffer_size) {
 
 #ifdef MPI_ON
-      MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_COMM_WORLD); 
-      MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD);
+      if (ChannelMode==_MPI_CHANNEL_MODE_SENDRECV_) {
+        MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_COMM_WORLD);
+        MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD);
+      }
+      else {
+        MPI_Bcast(&sendptr,1,MPI_LONG,sendThread,MPI_COMM_WORLD);
+        MPI_Bcast(sendBuffer,sendptr,MPI_CHAR,sendThread,MPI_COMM_WORLD);
+      }
 #endif
 
       sendptr=0;
@@ -180,6 +238,7 @@ public:
     }
 
     recvptr[thread]=0;
+    ChannelMode=_MPI_CHANNEL_MODE_SENDRECV_;
   };
 
   void openRecvAll() {
@@ -212,13 +271,19 @@ public:
     register T t;
     register char *ptr;
    
-    if (recvptr[thread]==RecvDataLength[thread]) {
+    if (recvptr[thread]>=RecvDataLength[thread]) {
 
 #ifdef MPI_ON
-      MPI_Status status;
+      if (ChannelMode==_MPI_CHANNEL_MODE_SENDRECV_) {
+        MPI_Status status;
 
-      MPI_Recv(RecvDataLength+thread,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
-      MPI_Recv(recvBuffer[thread],RecvDataLength[thread],MPI_CHAR,thread,0,MPI_COMM_WORLD,&status);
+        MPI_Recv(RecvDataLength+thread,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
+        MPI_Recv(recvBuffer[thread],RecvDataLength[thread],MPI_CHAR,thread,0,MPI_COMM_WORLD,&status);
+      }
+      else {
+        MPI_Bcast(RecvDataLength+thread,1,MPI_LONG,thread,MPI_COMM_WORLD);
+        MPI_Bcast(recvBuffer[thread],RecvDataLength[thread],MPI_CHAR,thread,MPI_COMM_WORLD);
+      }
 #endif
 
       recvptr[thread]=0;
@@ -241,6 +306,25 @@ public:
     recv(data,thread); 
     return data;
   }
+
+  //open/close procedures in the Bcast mode
+  void openBcast(int thread) {
+    if (ThisThread==thread) openSend(thread);
+    else openRecv(thread);
+
+    ChannelMode=_MPI_CHANNEL_MODE_BCAST_,BcastThread=thread;
+  }
+
+  void closeBcast() {
+    if (ChannelMode!=_MPI_CHANNEL_MODE_BCAST_) exit(__LINE__,"wrong option");
+
+    if (ThisThread==BcastThread) closeSend();
+    else closeRecv(BcastThread);
+
+    BcastThread=-1;
+  }
+
+
 };
 
 #endif 

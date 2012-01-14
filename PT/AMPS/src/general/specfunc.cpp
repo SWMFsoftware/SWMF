@@ -9,8 +9,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-extern int ThisThread;
-extern int TotalThreadsNumber;
+
+#include "rnd.h"
+
+
+int ThisThread;
+int TotalThreadsNumber;
 
 long int nint(double a)
 {
@@ -20,22 +24,55 @@ long int nint(double a)
    return n;
 }
 
-void rnd_seed() {
+/*
+void rnd_seed(int seed=-1) {
   static char random_state_buffer[256];
 
 #ifdef MPI_ON
   int thread;
   MPI_Comm_rank(MPI_COMM_WORLD,&thread);
-  initstate((unsigned) (thread /*+time(NULL)*/ ),random_state_buffer,256);
+
+  if (seed==-1) seed=thread; //+time(NULL)
+
+  initstate(seed,random_state_buffer,256);
 #else  
-  initstate((unsigned) 0 /*time(NULL)*/ ,random_state_buffer,256);
+
+  if (seed==-1) seed=0;  //time(NULL)
+
+  initstate(seed,random_state_buffer,256);
 #endif
 }
 
 //===================================================
 double rnd() {
-  return ((double)(random())+1.0)/2147483649.0;
+ return ((double)(random())+1.0)/2147483649.0;
+
+}*/
+
+/*
+int rndLastSeed=0;
+
+
+void rnd_seed(int seed=-1) {
+  int thread;
+  MPI_Comm_rank(MPI_COMM_WORLD,&thread);
+
+  if (seed==-1) seed=thread;
+
+  rndLastSeed=seed;
 }
+*/
+
+/*
+double rnd() {
+  rndLastSeed*=48828125;
+  if (rndLastSeed<0) rndLastSeed=(rndLastSeed+2147483647)+1;
+  if (rndLastSeed==0) rndLastSeed=1;
+
+  return rndLastSeed/2147483647.0;
+}
+
+*/
 
 //===================================================
 /*
@@ -94,9 +131,6 @@ void PrintErrorLog(const char* message) {
 
 //use: PrintErrorLog(__LINE__,__FILE__, "mesage")
 void PrintErrorLog(long int nline, const char* fname, const char* message) {
-
-return;
-
   FILE* errorlog=fopen("error.log","a+");
 
   time_t TimeValue=time(0);
@@ -105,6 +139,10 @@ return;
   fprintf(errorlog,"Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
   fprintf(errorlog,"file=%s, line=%ld\n",fname,nline);
   fprintf(errorlog,"%s\n\n",message);
+
+  printf("Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+  printf("file=%s, line=%ld\n",fname,nline);
+  printf("%s\n\n",message);
 
   fclose(errorlog);
 }
@@ -138,6 +176,8 @@ void exit(long int nline, const char* fname, const char* msg) {
 
   if (msg==NULL) sprintf(str," exit: line=%ld, file=%s\n",nline,fname);
   else sprintf(str," exit: line=%ld, file=%s, message=%s\n",nline,fname,msg); 
+
+  printf("%s",str);
 
   PrintErrorLog(str);
   exit(0);

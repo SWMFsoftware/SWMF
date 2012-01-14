@@ -5,15 +5,25 @@
 #include <math.h>
 #include <iostream>
 
-extern int DIM;
+#include "mpi.h"
+
+#include "rnd.h"
+
+//extern int DIM;
 extern int ThisThread;
 extern int TotalThreadsNumber;
 
 long int nint(double);
 
-void rnd_seed();
-double rnd();
 
+
+//void rnd_seed(int seed=-1);
+//double rnd();
+
+
+
+
+/////////////////////
 /* gamma and error functions used from g++ math library
 double erf(double);
 double gam(double);
@@ -51,7 +61,7 @@ void PrintLineMark(long int nline ,char* fname ,T code) {
 }
 
 
-
+#ifdef DIM
 template<class TMesh>
 bool GetGradient(double* gradQ,double cellQ,double* Q,long int ncell,TMesh &grid) {
   int counter,idim,pface;
@@ -111,6 +121,7 @@ bool GetGradient(double* gradQ,double cellQ,double* Q,long int ncell,TMesh &grid
 
   return true;
 }
+#endif
 
 //=========================================================
 //calculation of CRC-32
