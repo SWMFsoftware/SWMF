@@ -307,6 +307,9 @@ Not_Inside_Circle:
     int nLevel=0;
 
 
+    exit(__LINE__,__FILE__,"error: the function is not finished");
+
+
     //init the level 0 data
     for (levelDataPtr=LevelData,idim=0;idim<2;idim++) levelDataPtr->xSubBlockMax[idim]=xBlockMaxInit[idim],levelDataPtr->xSubBlockMin[idim]=xBlockMinInit[idim];
 

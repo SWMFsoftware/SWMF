@@ -189,11 +189,51 @@ template <class cCornerNode,class cCenterNode> class cBasicBlockAMR;
 #define _GLOBAL_POSITION_REAL_NODE_CURRENT_ 2
 #define _GLOBAL_POSITION_REAL_NODE_DOWN_    3
 
+class cAMRnodeID {
+public:
+  int ResolutionLevel;
+  unsigned char id[1+3*_MAX_REFINMENT_LEVEL_/8];
+
+  cAMRnodeID() {
+    ResolutionLevel=0;
+    for (int i=0;i<1+3*_MAX_REFINMENT_LEVEL_/8;i++) id[i]=0;
+  }
+
+  bool operator == (cAMRnodeID ID) {
+    if (ResolutionLevel!=ID.ResolutionLevel) return false;
+
+    //compare the bit's fields
+    int nbytes,i,nbits;
+
+    nbits=3*ResolutionLevel;
+    nbytes=nbits/8;
+    nbits-=8*ResolutionLevel;
+
+    //compare bytes
+    for (i=0;i<nbytes;i++) if (id[i]!=ID.id[i]) return false;
+
+    //compare bits
+    unsigned char ComparisonMask=0;
+
+//      for (i=0;i<nbits;i++) ComparisonMask+=(1<<i); substituted by the following
+    for (i=0;i<nbits;i++) ComparisonMask=(unsigned char)(ComparisonMask|(1<<i));
+
+    if ((id[nbytes]&ComparisonMask)!=(ID.id[nbytes]&ComparisonMask)) return false;
+
+    return true;
+  }
+
+  bool operator != (cAMRnodeID ID) {
+    return ((*this)==ID) ? false : true;
+  }
+};
+
 template <class cBlockAMR>
 class cTreeNodeAMR : public cAMRexit {
 public:
   cTreeNodeAMR *upNode,*downNode[1<<_MESH_DIMENSION_];
   cBlockAMR *block;
+  cAMRnodeID AMRnodeID;
 
   //Neighbors of the nodes
   #if _MESH_DIMENSION_ == 1
@@ -735,7 +775,17 @@ public:
     #endif
   }
 
+  inline cCenterNode **GetCenterNodeList() {return centerNodes;}
 
+  inline int GetCenterNodeListLength() {
+    #if _MESH_DIMENSION_ == 1
+    return _TOTAL_BLOCK_CELLS_X_;
+    #elif _MESH_DIMENSION_ == 2
+    return _TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_;
+    #elif _MESH_DIMENSION_ == 3
+    return _TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_*_TOTAL_BLOCK_CELLS_Z_;
+    #endif
+  }
 
   //set and get the pointers to the corner nodes of the block
   cCornerNode **GetCornerNodeBuffer() {
@@ -770,6 +820,18 @@ public:
     if ((nd<0)||(nd>=nMaxCornerNodes)) exit(__LINE__,__FILE__,"The value is outside of the limit");
 
     cornerNodes[nd]=nodeptr;
+  }
+
+  inline cCornerNode **GetCornerNodeList() {return cornerNodes;}
+
+  inline int GetCornerNodeListLength() {
+    #if _MESH_DIMENSION_ == 1
+    return 1+_TOTAL_BLOCK_CELLS_X_;
+    #elif _MESH_DIMENSION_ == 2
+    return (1+_TOTAL_BLOCK_CELLS_X_)*(1+_TOTAL_BLOCK_CELLS_Y_);
+    #elif _MESH_DIMENSION_ == 3
+    return (1+_TOTAL_BLOCK_CELLS_X_)*(1+_TOTAL_BLOCK_CELLS_Y_)*(1+_TOTAL_BLOCK_CELLS_Z_);
+    #endif
   }
 
   inline long int getCornerNodeLocalNumber(int i,int j,int k) {
@@ -1260,6 +1322,9 @@ public:
     //set up the tree and the root block
 //    rootBlock=blocks.newElement();
     rootTree=treeNodes.newElement();
+
+    //init the ID of the root node
+    GetAMRnodeID(rootTree->AMRnodeID,rootTree);
 
 
     meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true,meshMaximumRefinmentLevel=0;
@@ -4236,6 +4301,8 @@ cout << __LINE__ << endl;
        //upBlock
        newTreeNode->upNode=startNode;
 
+       //init the node ID
+       GetAMRnodeID(newTreeNode->AMRnodeID,newTreeNode);
 
        //init newTreeNode->xmin,xmax 
        xmin=newTreeNode->xmin;
@@ -5595,8 +5662,7 @@ if (ncheckMeshConsistencyCalls==38) {
 
 
 //################## DEBUG #####################
-
-checkMeshConsistency(rootTree);
+//checkMeshConsistency(rootTree);
 //#################  END DEBUG #################
 
 
@@ -6121,6 +6187,7 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
 
                 if (ThisThread==startNode->Thread) {
                   tempCenterNode=CenterNodes.newElement();
+                  tempCenterNode->SetX(xNode);
 
                   if (GetCenterNodesInterpolationCoefficients==NULL) {
 #if _MESH_DIMENSION_ == 1
@@ -6143,6 +6210,8 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
                 }
                 else if (ThisThread==0) {
                   tempCenterNode=CenterNodes.newElement();
+                  tempCenterNode->SetX(xNode);
+
                   tempCenterNode->PrintData(fout,DataSetNumber,&pipe,startNode->Thread);
                   CenterNodes.deleteElement(tempCenterNode);
                 }
@@ -6847,6 +6916,8 @@ nMPIops++;
       fwrite(&countingNumber,sizeof(long int),1,fout);
     }
 
+    //save the node ID
+    fwrite(&startNode->AMRnodeID,sizeof(cAMRnodeID),1,fout);
 
 
     //save the node neighbors
@@ -7008,6 +7079,9 @@ nMPIops++;
 
       if (startNode->downNode[nDownNode]!=NULL) startNode->downNode[nDownNode]->upNode=startNode;
     }
+
+    //read the node ID
+    fread(&startNode->AMRnodeID,sizeof(cAMRnodeID),1,fout);
 
     //read the node neighbors
 #if _MESH_DIMENSION_ == 1
@@ -7898,6 +7972,7 @@ nMPIops++;
   }
 
   //Calculate ID of an AMR node,  and find an AMR node by an ID
+  /*
   class cAMRnodeID {
   public:
     int ResolutionLevel;
@@ -7936,6 +8011,7 @@ nMPIops++;
       return ((*this)==ID) ? false : true;
     }
   };
+  */
 
   cTreeNodeAMR<cBlockAMR>* findAMRnodeWithID(cAMRnodeID node) {
     int Level,i,j,k,nDownNode;

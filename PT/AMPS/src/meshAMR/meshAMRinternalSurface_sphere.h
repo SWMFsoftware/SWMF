@@ -609,7 +609,7 @@ LevelProcessingDone:
        d=b*b-4.0*a*c;
 
        if (d<=0.0) {
-         if (pow(x0[0]-OriginPosition[0],2)+pow(x0[1]-OriginPosition[1],2)+pow(x0[2]-OriginPosition[2]+l*0.5,2)>R2) res+=1;
+//         if (pow(x0[0]-OriginPosition[0],2)+pow(x0[1]-OriginPosition[1],2)+pow(x0[2]-OriginPosition[2]+l*0.5,2)>R2) res+=1;
 
 //         res=(levelDataPtr->xSubBlockMax[0]-levelDataPtr->xSubBlockMin[0])*(levelDataPtr->xSubBlockMax[1]-levelDataPtr->xSubBlockMin[1])*(levelDataPtr->xSubBlockMax[2]-levelDataPtr->xSubBlockMin[2]);
        }
@@ -622,10 +622,10 @@ LevelProcessingDone:
          nSegments=0;
 
          SegmentSplittingTime[0]=0.0;
-         if ((t1>0.0)&&(t1<1.0)) SegmentSplittingTime[nSegments++]=t1;
+         if ((t1>0.0)&&(t1<1.0)) SegmentSplittingTime[++nSegments]=t1;
 
          if ((t2>0.0)&&(t2<1.0)) {
-           if (t2>SegmentSplittingTime[nSegments-1]) SegmentSplittingTime[nSegments++]=t2;
+           if (t2>SegmentSplittingTime[nSegments]) SegmentSplittingTime[++nSegments]=t2;
            else {
              SegmentSplittingTime[2]=SegmentSplittingTime[1];
              SegmentSplittingTime[1]=t2;
@@ -633,7 +633,7 @@ LevelProcessingDone:
            }
          }
 
-         SegmentSplittingTime[nSegments]=1.0;
+         SegmentSplittingTime[++nSegments]=1.0;
          xy2=pow(x0[0]-OriginPosition[0],2)+pow(x0[1]-OriginPosition[1],2);
 
          for (i=0;i<nSegments;i++) {
@@ -643,24 +643,14 @@ LevelProcessingDone:
              res+=t2-t1;
              IntersectionFound=true;
            }
-//           else {
-//             res+=EPS;
-//           }
-         }
-
-
-         if (nSegments==0) if (xy2+pow(x0[2]-OriginPosition[2]+l*0.5,2)>R2) {
-           IntersectionFound=true;
-           res+=1;
          }
 
        }
        }
 
        res/=9.0;
-       if (IntersectionFound==false) res=1.0E-20;
-
-         res*=(levelDataPtr->xSubBlockMax[0]-levelDataPtr->xSubBlockMin[0])*(levelDataPtr->xSubBlockMax[1]-levelDataPtr->xSubBlockMin[1])*(levelDataPtr->xSubBlockMax[2]-levelDataPtr->xSubBlockMin[2]);
+       if (IntersectionFound==false) res=pow(EPS,3.0);
+       else res*=(levelDataPtr->xSubBlockMax[0]-levelDataPtr->xSubBlockMin[0])*(levelDataPtr->xSubBlockMax[1]-levelDataPtr->xSubBlockMin[1])*(levelDataPtr->xSubBlockMax[2]-levelDataPtr->xSubBlockMin[2]);
 
          #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
          if (res<0.0) {
