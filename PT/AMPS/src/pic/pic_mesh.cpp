@@ -11,9 +11,10 @@ int PIC::Mesh::cDataBlockAMR::LocalParticleWeightOffset=0;
 int PIC::Mesh::cDataBlockAMR::totalAssociatedDataLength=0;
 
 
-//init the cells' sampling data
-int PIC::Mesh::cDataCenterNode::totalAssociatedDataLength=0;
 
+//init the cells' global data
+int PIC::Mesh::cDataCenterNode::totalAssociatedDataLength=0;
+int PIC::Mesh::cDataCenterNode::LocalParticleVolumeInjectionRateOffset=0;
 
 //the offsets to the sampled data stored in 'center nodes'
 int PIC::Mesh::completedCellSampleDataPointerOffset=0,PIC::Mesh::collectingCellSampleDataPointerOffset=0;
@@ -193,6 +194,9 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
   exit(__LINE__,__FILE__,"not implemented");
   #endif
 
+
+
+
   //set up the offsets for 'center node' sampled data
   long int offset=0;
 
@@ -232,8 +236,18 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
 
   PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=2*PIC::Mesh::sampleSetDataLength;
 
+  //the volume partilce injection: save the volume particle injection rate
+#if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
+  PIC::Mesh::cDataCenterNode::LocalParticleVolumeInjectionRateOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+  PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double)*PIC::nTotalSpecies;
+#endif
 
-
+  //allocate the model requested static (not sampling) cell data
+  if (PIC::IndividualModelSampling::RequestStaticCellData.size()!=0) {
+    for (unsigned int i=0;i<PIC::IndividualModelSampling::RequestStaticCellData.size();i++) {
+      PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=PIC::IndividualModelSampling::RequestStaticCellData[i](PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+    }
+  }
 }
 
 

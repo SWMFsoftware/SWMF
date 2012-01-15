@@ -62,19 +62,19 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
         if (DIM!=3) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 3D simulations");
 
         Sphere=(cInternalSphericalData*)descriptor->BoundaryElement;
-        ParticleInjection+=Sphere->InjectionRate(spec,(void*)Sphere)*Sphere->maxIntersectedNodeTimeStep[spec];
+        if (Sphere->InjectionRate!=NULL) ParticleInjection+=Sphere->InjectionRate(spec,(void*)Sphere)*Sphere->maxIntersectedNodeTimeStep[spec];
         break;
       case _INTERNAL_BOUNDARY_TYPE_CIRCLE_:
         if (DIM!=2) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 2D simulations");
 
         Circle=(cInternalCircleData*)descriptor->BoundaryElement;
-        ParticleInjection+=Circle->InjectionRate(spec,(void*)Circle)*Circle->maxIntersectedNodeTimeStep[spec];
+        if (Circle->InjectionRate!=NULL) ParticleInjection+=Circle->InjectionRate(spec,(void*)Circle)*Circle->maxIntersectedNodeTimeStep[spec];
         break;
       case _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_:
         if (DIM!=1) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 1D simulations");
 
         Sphere1D=(cInternalSphere1DData*)descriptor->BoundaryElement;
-        ParticleInjection+=Sphere1D->InjectionRate(spec,(void*)Sphere1D)*Sphere1D->maxIntersectedNodeTimeStep[spec];
+        if (Sphere1D->InjectionRate!=NULL) ParticleInjection+=Sphere1D->InjectionRate(spec,(void*)Sphere1D)*Sphere1D->maxIntersectedNodeTimeStep[spec];
         break;
       default:
         exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
@@ -82,13 +82,12 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
     }
 
 
+    //calcualte the total volume production rate
+    if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) ParticleInjection+=PIC::VolumeParticleInjection::GetTotalInjectionRate(spec);
+
+    //calculate the particle weight
     GlobalParticleWeight=ParticleInjection/maxReferenceInjectedParticleNumber;
 
-    //exchange the particle weight
-    double WeightArray[PIC::nTotalThreads];
-    MPI_Gather(&GlobalParticleWeight,1,MPI_DOUBLE,WeightArray,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-
-    if (PIC::ThisThread==0) for (int thread=0;thread<PIC::nTotalThreads;thread++) if (GlobalParticleWeight<WeightArray[thread]) GlobalParticleWeight=WeightArray[thread];
     MPI_Bcast(&GlobalParticleWeight,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
     if (GlobalParticleWeight<=0.0) exit(__LINE__,__FILE__,"Error: ParticleInjection has zero value");
@@ -124,6 +123,20 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
 
     if (startNode->block!=NULL) for (s=0;s<PIC::nTotalSpecies;s++) {
       blockTimeStep=PIC::ParticleWeightTimeStep::LocalTimeStep(s,startNode);
+
+      //check if the volume injection of model particles is initialized
+      if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) {
+        double TimeStepLimit;
+        bool TimeStepLimitationImposed;
+        int nInjectionProcess;
+
+        for (nInjectionProcess=0;nInjectionProcess<PIC::VolumeParticleInjection::nRegistratedInjectionProcesses;nInjectionProcess++) {
+          TimeStepLimit=PIC::VolumeParticleInjection::VolumeInjectionDescriptor[nInjectionProcess].LocalTimeStepLimit(s,TimeStepLimitationImposed,startNode);
+
+          if (TimeStepLimitationImposed==true) blockTimeStep=min(blockTimeStep,TimeStepLimit);
+        }
+      }
+
       startNode->block->SetLocalTimeStep(blockTimeStep,s);
 
       //injection rate from the internal surfaces

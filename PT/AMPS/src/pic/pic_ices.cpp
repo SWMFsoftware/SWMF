@@ -488,18 +488,17 @@ void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) 
 //====================================================
 //output background parameters loaded with ICES from SWMF output
 void PIC::ICES::PrintVariableList(FILE* fout,int DataSetNumber) {
-  int idim;
 
 #if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
-  for (idim=0;idim<3;idim++) fprintf(fout,", \"E%i\"",idim);
-  for (idim=0;idim<3;idim++) fprintf(fout,", \"B%i\"",idim);
-  for (idim=0;idim<3;idim++) fprintf(fout,", \"PlasmaVel%i\"",idim);
+  for (int idim=0;idim<3;idim++) fprintf(fout,", \"E%i\"",idim);
+  for (int idim=0;idim<3;idim++) fprintf(fout,", \"B%i\"",idim);
+  for (int idim=0;idim<3;idim++) fprintf(fout,", \"PlasmaVel%i\"",idim);
 
   fprintf(fout,", \"Plasma Pressure\", \"Plasma Temperature\", \"Plasma number Desnity\"");
 #endif
 
 #if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
-  for (idim=0;idim<3;idim++) fprintf(fout,", \"NeutralVel%i\"",idim);
+  for (int idim=0;idim<3;idim++) fprintf(fout,", \"NeutralVel%i\"",idim);
   fprintf(fout,", \"Neutral number Desnity\", \"Neutral Temperature\"");
 #endif
 
@@ -517,15 +516,13 @@ void PIC::ICES::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int Ce
 
 
   if (pipe->ThisThread==CenterNodeThread) {
-    int idim;
-    char *offset=CenterNode->GetAssociatedDataBufferPointer();
 
 #if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
     dataSWMF.swNumberDensity=*((double*)(PlasmaNumberDensityOffset+offset));
     dataSWMF.swPressure=*((double*)(PlasmaPressureOffset+offset));
     dataSWMF.swTemperature=*((double*)(PlasmaTemperatureOffset+offset));
 
-    for (idim=0;idim<3;idim++) {
+    for (int idim=0;idim<3;idim++) {
       dataSWMF.B[idim]=*(idim+(double*)(MagneticFieldOffset+offset));
       dataSWMF.E[idim]=*(idim+(double*)(ElectricFieldOffset+offset));
       dataSWMF.swVel[idim]=*(idim+(double*)(PlasmaBulkVelocityOffset+offset));
@@ -533,8 +530,9 @@ void PIC::ICES::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int Ce
 #endif
 
 #if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
-    for (idim=0;idim<3;idim++) dataDSMC.neutralVel[idim]=*(idim+(double*)(offset+NeutralBullVelocityOffset));
+    for (int idim=0;idim<3;idim++) dataDSMC.neutralVel[idim]=*(idim+(double*)(offset+NeutralBullVelocityOffset));
 
+    char *offset=CenterNode->GetAssociatedDataBufferPointer();
     dataDSMC.neutralNumberDensity=*(double*)(offset+NeutralNumberDensityOffset);
     dataDSMC.neutralTemperature=*(double*)(offset+NeutralTemperatureOffset);
 #endif
@@ -574,7 +572,7 @@ void PIC::ICES::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int Ce
 }
 
 void PIC::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
-  int idim,i;
+  int i;
   double c;
   char *offset,*offsetCenterNode;
 

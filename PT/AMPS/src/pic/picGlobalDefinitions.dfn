@@ -1,5 +1,9 @@
 
 
+//general macro
+#define _PIC_MODE_ON_  0
+#define _PIC_MODE_OFF_ 1
+
 
 //the definition of the 'time step' mode
 #define _SINGLE_GLOBAL_TIME_STEP_              0
@@ -41,5 +45,41 @@
 //the modes for modelling of photolytic reactions 
 #define _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_    0
 #define _PIC_PHOTOLYTIC_REACTIONS_MODE_OFF_   1
+
+//the modes for modelling of generic reactions of a particle transformation 
+#define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_     0
+#define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_OFF_    1
+
+//sampling of the paricle's data
+#define _PIC_SAMPLE_PARTICLE_DATA_MODE__BETWEEN_ITERATIONS_      0
+#define _PIC_SAMPLE_PARTICLE_DATA_MODE__DURING_PARTICLE_MOTION_  1
+
+//allows to load the user definition file 'UserDefinition.PIC.h'
+#define _PIC_USER_DEFINITION_MODE__ENABLED_    0
+#define _PIC_USER_DEFINITION_MODE__DISABLED_   1
+
+//the interaction with the background atmosphere
+#define _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_    0
+#define _PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_   1
+
+//the models of the velocity redidstribution after a collision in the background atmosphere model
+#define _PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__USER_DEFINED_    -1
+#define _PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__ISOTROPIC_          0
+
+//the volume injection of the particles and the type of injection of model particles into a cell
+#define _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_      0
+#define _PIC_VOLUME_PARTICLE_INJECTION_MODE__OFF_      1
+
+#define _PIC_VOLUME_PARTICLE_INJECTION__INJECTION_MODE__UNIFORM_        0
+#define _PIC_VOLUME_PARTICLE_INJECTION__INJECTION_MODE__RATE_DEPENDENT_ 1
+
+//collisions of the model particles with the background atmosphere (use uniform collision frequrncy in a cell, or collision frequency that depends on the distribution of the 
+//background gas density in a cell
+#define _PIC_BACKGROUND_ATMOSPHERE_COLLISION_FREQ_MODE__UNIFORM_                    0
+#define _PIC_BACKGROUND_ATMOSPHERE_COLLISION_FREQ_MODE__LOCAL_BACKGROUND_DENSITY_   1
+
+
+
+
 
 

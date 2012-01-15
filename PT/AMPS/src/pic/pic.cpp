@@ -11,6 +11,15 @@
 long int PIC::LastSampleLength=0,PIC::CollectingSampleCounter=0,PIC::RequiredSampleLength=100,PIC::DataOutputFileNumber=0;
 int PIC::SamplingMode=_RESTART_SAMPLING_MODE_;
 
+//external sampling procedure
+const int PIC::Sampling::ExternalSamplingLocalVariables::nMaxSamplingRoutines=128;
+int PIC::Sampling::ExternalSamplingLocalVariables::SamplingRoutinesRegistrationCounter=0;
+PIC::Sampling::ExternalSamplingLocalVariables::fSamplingProcessor *PIC::Sampling::ExternalSamplingLocalVariables::SamplingProcessor=NULL;
+PIC::Sampling::ExternalSamplingLocalVariables::fPrintOutputFile *PIC::Sampling::ExternalSamplingLocalVariables::PrintOutputFile=NULL;
+
+
+
+
 //====================================================
 //perform one time step
 void PIC::TimeStep() {
@@ -31,7 +40,12 @@ void PIC::TimeStep() {
 
   //injection boundary conditions
   InjectionBoundaryTime=MPI_Wtime();
+
+  //inject particle through the domain's boundaries
   PIC::BC::InjectionBoundaryConditions();
+
+  //inject particles into the volume of the domain
+  if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) PIC::BC::nInjectedParticles+=PIC::VolumeParticleInjection::InjectParticle();
   InjectionBoundaryTime=MPI_Wtime()-InjectionBoundaryTime;
 
   //move existing particles
@@ -474,6 +488,9 @@ void PIC::Sampling::Sampling() {
     for (nfunc=0;nfunc<nfuncTotal;nfunc++) PIC::IndividualModelSampling::SamplingProcedure[nfunc]();
   }
 
+  //sample local data sets of the user defined functions
+  for (int nfunc=0;nfunc<PIC::Sampling::ExternalSamplingLocalVariables::SamplingRoutinesRegistrationCounter;nfunc++) PIC::Sampling::ExternalSamplingLocalVariables::SamplingProcessor[nfunc]();
+
   //Increment the sample length
   CollectingSampleCounter++;
 
@@ -561,13 +578,37 @@ void PIC::Sampling::Sampling() {
       }
 #endif
 
+      //print the sampled local data sets of the user defined functions
+      for (int nfunc=0;nfunc<PIC::Sampling::ExternalSamplingLocalVariables::SamplingRoutinesRegistrationCounter;nfunc++) PIC::Sampling::ExternalSamplingLocalVariables::PrintOutputFile[nfunc](DataOutputFileNumber);
+
+      //print the sampled total production rate due to volume injection
+      if (PIC::VolumeParticleInjection::SourceRate!=NULL) {
+         double buffer[PIC::nTotalSpecies*PIC::nTotalThreads];
+
+         MPI_Gather(PIC::VolumeParticleInjection::SourceRate,PIC::nTotalSpecies,MPI_DOUBLE,buffer,PIC::nTotalSpecies,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+         if (PIC::ThisThread==0) {
+           for (int thread=1;thread<PIC::nTotalThreads;thread++) for (s=0;s<PIC::nTotalSpecies;s++) buffer[s]+=buffer[thread*PIC::nTotalSpecies+s];
+           printf("Total sources rate by volume production injection models: \n Specie \t Soruce rate [s^{-1}]\n");
+
+           for (s=0;s<PIC::nTotalSpecies;s++) {
+             PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
+             printf("%s (s=%i):\t %e\n",ChemSymbol,s,buffer[s]/LastSampleLength);
+           }
+
+           printf("\n");
+         }
+
+         if (SamplingMode==_RESTART_SAMPLING_MODE_) for (s=0;s<PIC::nTotalSpecies;s++) PIC::VolumeParticleInjection::SourceRate[s]=0.0;
+      }
+
       //print into the file the sampled data of the internal surfaces installed into the mesh
 #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_OFF_
       //do nothing
 #elif _INTERNAL_BOUNDARY_MODE_ ==  _INTERNAL_BOUNDARY_MODE_ON_
       long int iSphericalSurface,nTotalSphericalSurfaces=PIC::BC::InternalBoundary::Sphere::InternalSpheres.usedElements();
 
-      for (iSphericalSurface=0;iSphericalSurface<nTotalSphericalSurfaces;iSphericalSurface++) {
+      for (s=0;s<PIC::nTotalSpecies;s++) for (iSphericalSurface=0;iSphericalSurface<nTotalSphericalSurfaces;iSphericalSurface++) {
         sprintf(fname,"pic.Sphere=%ld.%s.s=%i.out=%ld.dat",iSphericalSurface,ChemSymbol,s,DataOutputFileNumber);
 
         if (PIC::Mesh::mesh.ThisThread==0) {
@@ -716,7 +757,7 @@ void PIC::SignalHandler(int sig) {
 }
 //====================================================
 //init the particle solver
-void PIC::Init() {
+void PIC::Init_BeforeParser() {
 
   //init MPI variables
   MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
@@ -736,9 +777,45 @@ void PIC::Init() {
 #ifdef _PIC_INIT_ICES_
   PIC::ICES::Init();
 #endif
+
+  //init the background atmosphere model
+#if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
+  PIC::MolecularCollisions::BackgroundAtmosphere::Init_BeforeParser();
+#endif
 }
 
+void PIC::Init_AfterParser() {
+  int i,j,k;
+  long int LocalCellNumber;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  PIC::Mesh::cDataBlockAMR *block;
 
+  //flush the sampling buffers
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+    block=node->block;
+
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+      for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+        for (i=0;i<_BLOCK_CELLS_X_;i++) {
+          LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+          PIC::Mesh::flushCollectingSamplingBuffer(block->GetCenterNode(LocalCellNumber));
+          PIC::Mesh::flushCompletedSamplingBuffer(block->GetCenterNode(LocalCellNumber));
+        }
+
+        if (DIM==1) break;
+      }
+
+      if ((DIM==1)||(DIM==2)) break;
+    }
+  }
+
+
+
+  //init the model of volume particle injections
+#if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
+  PIC::VolumeParticleInjection::Init();
+#endif
+}
 
 //====================================================
 //set up the particle weight and time step

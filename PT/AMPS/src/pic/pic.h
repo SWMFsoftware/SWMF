@@ -28,9 +28,17 @@ using namespace std;
 #ifndef _PIC_
 #define _PIC_
 
+//the global model settings
 #include "picGlobal.dfn"
+
+//load the user defined settings
+#if _PIC_USER_DEFINITION_MODE_ == _PIC_USER_DEFINITION_MODE__ENABLED_
+#include "UserDefinition.PIC.h"
+#endif
+
 #include "ifileopr.h"
 #include "specfunc.h"
+#include "constants.h"
 
 //include the appropriate mesh header
 #if DIM == 3
@@ -45,11 +53,15 @@ using namespace std;
 
 //the maximum length of the strings
 #define _MAX_STRING_LENGTH_PIC_  500
+
+
+/*
 #define Kbol 1.3806503E-23
 #define ElectronCharge 1.602176565E-19
 #define ElectronMass 9.10938291E-31
 #define ProtonMass 1.67262158E-27
-
+#define eV2J ElectronCharge
+*/
 
 
 
@@ -86,7 +98,8 @@ namespace PIC {
 //  void Sampling();
 
   //init the particle solver
-  void Init();
+  void Init_BeforeParser();
+  void Init_AfterParser();
 
   //the list of functions used to exchenge the execution statiscics
   typedef void (*fExchangeExecutionStatistics) (CMPI_channel*,long int);
@@ -101,6 +114,9 @@ namespace PIC {
     void readGeneral(CiFileOperations&);
 
   }
+
+
+
 
 
   namespace MolecularData {
@@ -522,7 +538,7 @@ namespace PIC {
     class cDataCenterNode : public cBasicCenterNode {
     public:
 	    //parameters that defines the parameters of the associated data used for sampling and code running
-      static int totalAssociatedDataLength;
+      static int totalAssociatedDataLength,LocalParticleVolumeInjectionRateOffset;
 
       long int FirstCellParticle,tempParticleMovingList;
 
@@ -549,7 +565,9 @@ namespace PIC {
 	      int i,length=totalAssociatedDataLength/sizeof(double);
 	      double *ptr;
 	      for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
-	    }
+
+	      if (totalAssociatedDataLength%sizeof(double)) exit(__LINE__,__FILE__,"Error: the cell internal buffers contains data different from double");
+ 	    }
 
 	    //init the buffers
 	    cDataCenterNode() : cBasicCenterNode() {
@@ -951,8 +969,114 @@ namespace PIC {
 
   }
 
+  //volume injection of model particles
+#if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
+  namespace VolumeParticleInjection {
+
+    //init the model
+    void Init();
+
+    //Generte new particle internal properties
+    typedef void (*fGenerateInternalParticleProperties)(long int ptr,int spec,int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+    extern fGenerateInternalParticleProperties GenerateInternalParticleProperties;
+
+    //generate a random position in a cell
+    void GetRandomCellPosition(double *x,int iCell,int jCell,int kCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+    //The list of volume injection processes
+    //the injection rate of particle due to a specific injection process
+    typedef void (*fSpeciesInjectionRate)(bool *InjectionFlag,double *Rate, int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+    //the function that process that injection reaction (generate the particles)
+    typedef long int (*fInjectionProcessor)(int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+    //the limit of the local time step due to the injection process
+    typedef double (*fLocalTimeStepLimit)(int spec,bool& TimeStepLimitationImposed, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+    //the array that stores the total injection rate by the volume injection
+    extern double *SourceRate;
+
+    struct cVolumeInjectionDescriptor {
+      fSpeciesInjectionRate SpeciesInjectionRate;
+      fInjectionProcessor InjectionProcessor;
+      fLocalTimeStepLimit LocalTimeStepLimit;
+    };
+
+    const int nMaxInjectionProcessEntries=128;
+    extern int nRegistratedInjectionProcesses;
+
+    extern cVolumeInjectionDescriptor VolumeInjectionDescriptor[nMaxInjectionProcessEntries];
+
+    void inline RegisterVolumeInjectionProcess(fSpeciesInjectionRate f1, fInjectionProcessor f2, fLocalTimeStepLimit f3) {
+      if (nRegistratedInjectionProcesses==nMaxInjectionProcessEntries-1) {
+        exit(__LINE__,__FILE__,"Error: the volume injection processes buffer is overflow, increase the length of the buffer ('PIC::VolumeParticleInjection::nMaxInjectionProcessEntries'");
+      }
+
+      if ((f1==NULL)||(f2==NULL)||(f3==NULL)) exit(__LINE__,__FILE__,"Error: one of the functions is not defined");
+
+      if (SourceRate==NULL) {
+        if (PIC::nTotalSpecies==0) exit(__LINE__,__FILE__,"Error: neede to know the total number of species before initializing the sampling buffer");
+
+        SourceRate=new double[PIC::nTotalSpecies];
+        for (int s=0;s<PIC::nTotalSpecies;s++) SourceRate[s]=0.0;
+      }
+
+      VolumeInjectionDescriptor[nRegistratedInjectionProcesses].SpeciesInjectionRate=f1;
+      VolumeInjectionDescriptor[nRegistratedInjectionProcesses].InjectionProcessor=f2;
+      VolumeInjectionDescriptor[nRegistratedInjectionProcesses].LocalTimeStepLimit=f3;
+
+      nRegistratedInjectionProcesses++;
+    }
+
+
+    long int  InjectParticle();
+
+    //paericle weight injection rates
+    void InitTotalInjectionRate();
+    double GetTotalInjectionRate(int);
+    double GetBlockInjectionRate(int spec,PIC::Mesh::cDataBlockAMR *block);
+    double GetCellInjectionRate(int spec,PIC::Mesh::cDataCenterNode *cell);
+  }
+#endif
+
   //sampling functions
   namespace Sampling {
+
+    namespace ExternalSamplingLocalVariables {
+
+      //the external procedures for sampling particle data
+      typedef void (*fSamplingProcessor) ();
+
+      //the procedure that prints the sampled data into a file
+      typedef void (*fPrintOutputFile)(int);
+
+      extern const int nMaxSamplingRoutines;
+      extern int SamplingRoutinesRegistrationCounter;
+
+      extern fSamplingProcessor *SamplingProcessor;
+      extern fPrintOutputFile *PrintOutputFile;
+
+      inline void RegisterSamplingRoutine(fSamplingProcessor p,fPrintOutputFile f) {
+        if (SamplingRoutinesRegistrationCounter==0) {
+          SamplingProcessor=new fSamplingProcessor[nMaxSamplingRoutines];
+          PrintOutputFile=new fPrintOutputFile[nMaxSamplingRoutines];
+
+          for (int i=0;i<nMaxSamplingRoutines;i++) SamplingProcessor[i]=NULL,PrintOutputFile[i]=NULL;
+        }
+        else if (SamplingRoutinesRegistrationCounter==nMaxSamplingRoutines-1) {
+          exit(__LINE__,__FILE__,"Error: SamplingRoutinesRegistrationCounter exeeds its maximum value: increse the value of PIC::Sampling::ExternalSamplingProcedures::nMaxSamplingRoutines");
+        }
+
+        SamplingProcessor[SamplingRoutinesRegistrationCounter]=p;
+        PrintOutputFile[SamplingRoutinesRegistrationCounter]=f;
+
+        SamplingRoutinesRegistrationCounter++;
+      }
+
+
+    }
+
+
 
     void Sampling();
 
@@ -992,11 +1116,47 @@ namespace PIC {
     }
   }
 
+  //colecular collisions
+  namespace MolecularCollisions {
+
+    //collisions with the background atmosphere
+#if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
+    namespace BackgroundAtmosphere {
+
+      //include the user defined properties of the background atmosphere
+      #include "UserDefinition.BackgroundAtmosphere.h"
+
+
+      //Sampling of the model data
+      extern int LocalTotalCollisionFreqSamplingOffset;
+      int RequestSamplingData(int offset);
+      void PrintVariableList(FILE* fout,int DataSetNumber);
+      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+      void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+
+
+      //init the model
+      void Init_BeforeParser();
+
+
+
+      //processor of the collisions
+      void CollisionProcessor();
+      void RemoveThermalBackgroundParticles();
+    }
+#endif
+
+  }
+
   namespace IndividualModelSampling {
 
     //reserve memory to store sampling data
     typedef int (*fRequestSamplingData)(int);
     extern vector<fRequestSamplingData> RequestSamplingData;
+
+    //reserve memoty in a cell associated data buffer for non-sampling data
+    typedef int (*fRequestStaticCellData)(int);
+    extern vector<fRequestStaticCellData> RequestStaticCellData;
 
     //the list of user defined sampling procedures
     typedef void (*fSamplingProcedure)();
@@ -1176,6 +1336,11 @@ namespace PIC {
     extern fSpeciesDependentParticleMover *MoveParticleTimeStep;
     extern fTotalParticleAcceleration TotalParticleAcceleration;
     extern fSpeciesDependentParticleMover_BoundaryInjection *MoveParticleBoundaryInjection;
+
+    //process a particle when it leaves the boundary of the computational domain
+    typedef int (*fProcessOutsideDomainParticles) (long int ptr,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
+    extern fProcessOutsideDomainParticles ProcessOutsideDomainParticles;
+
 
     void Init();
     void MoveParticles();
@@ -1402,7 +1567,7 @@ namespace PIC {
     namespace GenericParticleTranformation {
       //contains functions that are used to describe transformations (changing of internal parameters of a particle) that are not due to chemical reactions
       //dt <- can be limited by the function
-      typedef int (*fTransformationIndicator)(double *x,double *v,int spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double &dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+      typedef int (*fTransformationIndicator)(double *x,double *v,int spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double &dt,bool &TransformationTimeStepLimitFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
       extern fTransformationIndicator *TransformationIndicator;
 
       typedef int (*fTransformationProcessor)(double *xInit,double *xFinal,double *v,int spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);

@@ -162,7 +162,8 @@ void PIC::Parallel::ExchangeParticleData() {
 
 
 #if DIM == 3
-  cMeshAMR3d<PIC::Mesh::cDataCornerNode,PIC::Mesh::cDataCenterNode,PIC::Mesh::cDataBlockAMR > :: cAMRnodeID nodeid;
+//  cMeshAMR3d<PIC::Mesh::cDataCornerNode,PIC::Mesh::cDataCenterNode,PIC::Mesh::cDataBlockAMR > :: cAMRnodeID nodeid;
+  cAMRnodeID nodeid;
 #elif DIM == 2
   cMeshAMR2d<PIC::Mesh::cDataCornerNode,PIC::Mesh::cDataCenterNode,PIC::Mesh::cDataBlockAMR > :: cAMRnodeID nodeid;
 #else
@@ -197,6 +198,11 @@ void PIC::Parallel::ExchangeParticleData() {
 
   for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) sendProcList[thread]=-1,recvProcList[thread]=-1,sendProcVector[thread]=0;
 
+
+  //local copy of the block's cells
+  int cellListLength=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::ThisThread]->block->GetCenterNodeListLength();
+  PIC::Mesh::cDataCenterNode *cellList[cellListLength],*cell;
+
   //calculate the number of bytes that will be send
   for (To=0;To<PIC::Mesh::mesh.nTotalThreads;To++) if ((PIC::ThisThread!=To)&&(PIC::Mesh::mesh.ParallelSendRecvMap[PIC::ThisThread][To]==true)) {
       bool CommunicationInitialed_BLOCK_;
@@ -204,10 +210,14 @@ void PIC::Parallel::ExchangeParticleData() {
 
       for (sendNode=PIC::Mesh::mesh.DomainBoundaryLayerNodesList[To];sendNode!=NULL;sendNode=sendNode->nextNodeThisThread) {
         CommunicationInitialed_BLOCK_=false;
+        memcpy(cellList,sendNode->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
 
         for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
           LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
-          Particle=sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
+          cell=cellList[LocalCellNumber];
+          Particle=cell->FirstCellParticle;
+
+//          Particle=sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
 
 
           if  (Particle!=-1) {
@@ -295,15 +305,20 @@ void PIC::Parallel::ExchangeParticleData() {
       //send the nodes' data
       for (sendNode=PIC::Mesh::mesh.DomainBoundaryLayerNodesList[To];sendNode!=NULL;sendNode=sendNode->nextNodeThisThread) {
         CommunicationInitialed_BLOCK_=false;
+        memcpy(cellList,sendNode->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
 
         for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
           LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
-          Particle=sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
+          cell=cellList[LocalCellNumber];
+          Particle=cell->FirstCellParticle;
+
+//          Particle=sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
 
 
           if  (Particle!=-1) {
             if (CommunicationInitialed_BLOCK_==false) {
-              PIC::Mesh::mesh.GetAMRnodeID(nodeid,sendNode);
+//              PIC::Mesh::mesh.GetAMRnodeID(nodeid,sendNode);
+              nodeid=sendNode->AMRnodeID;
 
               //pipe.send(_NEW_BLOCK_ID_SIGNAL_);
               *((int*)(buffer+offset))=_NEW_BLOCK_ID_SIGNAL_;
@@ -311,7 +326,8 @@ void PIC::Parallel::ExchangeParticleData() {
 
               //pipe.send((char*)(&nodeid),sizeof(nodeid));
               #if DIM == 3
-              *((cMeshAMR3d<PIC::Mesh::cDataCornerNode,PIC::Mesh::cDataCenterNode,PIC::Mesh::cDataBlockAMR > :: cAMRnodeID*)(buffer+offset))=nodeid;
+//              *((cMeshAMR3d<PIC::Mesh::cDataCornerNode,PIC::Mesh::cDataCenterNode,PIC::Mesh::cDataBlockAMR > :: cAMRnodeID*)(buffer+offset))=nodeid;
+              *((cAMRnodeID*)(buffer+offset))=nodeid;
               #else
               exit(__LINE__,__FILE__,"Error: not implemetned");
               #endif
@@ -399,26 +415,30 @@ void PIC::Parallel::ExchangeParticleData() {
        case _NEW_BLOCK_ID_SIGNAL_ :
          //pipe.recv((char*)(&nodeid),sizeof(nodeid),From);
          #if DIM == 3
-         nodeid=*((cMeshAMR3d<PIC::Mesh::cDataCornerNode,PIC::Mesh::cDataCenterNode,PIC::Mesh::cDataBlockAMR > :: cAMRnodeID*)(buffer+offset));
+         nodeid=*((cAMRnodeID*)(buffer+offset));
          #else
          exit(__LINE__,__FILE__,"Error: not implemetned");
          #endif
 
          offset+=sizeof(nodeid);
          recvNode=PIC::Mesh::mesh.findAMRnodeWithID(nodeid);
+         memcpy(cellList,recvNode->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
 
          if (recvNode->block==NULL) exit(__LINE__,__FILE__,"Error: the node is not allocated");
          break;
        case _CENTRAL_NODE_NUMBER_SIGNAL_ :
          //pipe.recv(LocalCellNumber,From);
          LocalCellNumber=*((long int*)(buffer+offset));
+         cell=cellList[LocalCellNumber];
          offset+=sizeof(long int);
 
          break;
        case _NEW_PARTICLE_SIGNAL_ :
          //pipe.recv(buffer,PIC::ParticleBuffer::ParticleDataLength,From);
 
-         newParticle=PIC::ParticleBuffer::GetNewParticle(recvNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle);
+//         newParticle=PIC::ParticleBuffer::GetNewParticle(recvNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle);
+
+         newParticle=PIC::ParticleBuffer::GetNewParticle(cell->FirstCellParticle);
          PIC::ParticleBuffer::UnPackParticleData(buffer+offset,newParticle);
          recvParticleCounter++;
 

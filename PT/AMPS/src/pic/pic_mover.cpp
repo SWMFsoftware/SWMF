@@ -1956,13 +1956,55 @@ exit(__LINE__,__FILE__,"not implemented");
 
 
 
+  //check if the particle is outside of the internal surfaces. In a case if the particle is inside an internal surface -> correct its position and exdcute the boundary condition procedure
+  for (InternalBoundaryDescriptor=startNode->InternalBoundaryDescriptorList;InternalBoundaryDescriptor!=NULL;InternalBoundaryDescriptor=InternalBoundaryDescriptor->nextInternalBCelement) {
 
-  //the particle is still within the computational domain:
-  //place it to the local list of particles related to the new block and cell
-//  long int LocalCellNumber;
-//  int i,j,k;
+    switch (InternalBoundaryDescriptor->BondaryType) {
+    case _INTERNAL_BOUNDARY_TYPE_SPHERE_: case _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_:
 
-//  PIC::Mesh::cDataCenterNode *cell;
+#if DIM == 3
+      Sphere=(cInternalSphericalData*)(InternalBoundaryDescriptor->BoundaryElement);
+      Sphere->GetSphereGeometricalParameters(x0Sphere,radiusSphere);
+#elif DIM == 2
+      exit(__LINE__,__FILE__,"not implemented");
+#else
+      Sphere1D=(cInternalSphere1DData*)(InternalBoundaryDescriptor->BoundaryElement);
+      Sphere1D->GetSphereGeometricalParameters(x0Sphere,radiusSphere);
+#endif
+
+      dx=xFinal[0]-x0Sphere[0],dy=xFinal[1]-x0Sphere[1],dz=xFinal[2]-x0Sphere[2];
+      c=dx*dx+dy*dy+dz*dz-radiusSphere*radiusSphere;
+
+      if (c<0.0) {
+        //the particle is inside the sphese
+        //1. project the particle on the surface of the spehre
+        //2. apply boundary conditions
+
+        double l=0.0;
+        int code;
+
+        l=sqrt(dx*dx+dy*dy+dz*dz);
+        l=(radiusSphere+PIC::Mesh::mesh.EPS)/l;
+
+        xFinal[0]=x0Sphere[0]+l*dx;
+        xFinal[1]=x0Sphere[1]+l*dy;
+        xFinal[2]=x0Sphere[2]+l*dz;
+        startNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
+
+        FirstBoundaryFlag=true;
+#if DIM == 3
+        code=Sphere->ParticleSphereInteraction(spec,ptr,xInit,vInit,dtTotal,(void*)startNode,InternalBoundaryDescriptor->BoundaryElement);
+#elif DIM == 2
+        exit(__LINE__,__FILE__,"not implemented");
+#else
+        code=Sphere1D->ParticleSphereInteraction(spec,ptr,xInit,vInit,dtTotal,(void*)startNode,InternalBoundaryDescriptor->BoundaryElement);
+#endif
+
+        if (code==_PARTICLE_DELETED_ON_THE_FACE_) return _PARTICLE_LEFT_THE_DOMAIN_;;
+      }
+    }
+  }
+
 
 
   //Rotate particle position and velocity when symmetry is accounted
