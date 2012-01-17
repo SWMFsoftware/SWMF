@@ -56,7 +56,7 @@ contains
     use CRASH_ModEos,ONLY: eos, cAtomicMassCRASH_I, &
                            nZMix_II, cMix_II
     use CRASH_M_localProperties,only : atoNum,atoMass
-    use ModConst, ONLY: cAtomicMass
+    use ModConst
     ! Eos function for single material
 
     integer, intent(in):: iMaterialIn     ! index of material
@@ -95,24 +95,28 @@ contains
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
     real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
     
-    real:: Tz, NAtomic, Te
+    real:: Tz, NAtomic, Te, EIn     !in eV, cm-3, eV, erg/cm3 
     !---------------
     !Set iMaterial and dependent variables
 
     iMaterial = iMaterialIn
-    NAtomic = Rho/( cAtomicMassCRASH_I(iMaterial)*cAtomicMass )
+
+    !Calculate atomic density
+    NAtomic = Rho/( cAtomicMassCRASH_I(iMaterial)*cAtomicMass ) * 1.0e-6 ![cm-3] !Convert units
+
     atomass = cAtomicMassCRASH_I(iMaterial)
     atonum  = sum(nZMix_II(:,iMaterial)*cMix_II(:,iMaterial))
 
     EoB(1:ng_rad)=0.0  !Zero radiation energy
     call set_kbr(NAtom=NAtomic)
     if(present(TeIn))then
-       Te=TeIn
+
+       !Convert temperature to eV
+       Te=TeIn * cKToeV
+
        !get Tz
        call NLTE(Natom=NAtomic,&
          Te_in=Te,             &
-         Ee_in=EElectronIn,    &
-         Et_in=ETotalIn,       &
          Zbar_out=zAverageOut, &
          Tz_out=Tz,            &
          Te_out=TeOut,         &
@@ -120,19 +124,56 @@ contains
          Et_out=ETotalOut,     &
          Pe_out=PElectronOut,  &
          Pt_out=PTotalOut)
-    else
+    elseif(present(EElectronIn))then
+       !Convert J/m3 = 10^7erg/10^6cm3=10 erg/cm3
+       EIn = EElectronIn * 10.0
+
+       !Get Tz
+       call NLTE(Natom=NAtomic,&
+         Ee_in=EIn,           &
+         Zbar_out=zAverageOut,&
+         Tz_out=Tz,           &
+         Te_out=TeOut,        &
+         Ee_out=EElectronOut, &
+         Et_out=ETotalOut,    &
+         Pe_out=PElectronOut, &
+         Pt_out=PTotalOut)
+       
+    elseif(present(ETotalIn))then
+
+       !Convert J/m3 = 10^7erg/10^6cm3=10 erg/cm3
+       EIn = EElectronIn * 10.0
+
+       !Get Tz
+
        call NLTE(Natom=NAtomic,&
          Ee_in=EElectronIn,   &
          Et_in=ETotalIn,      &
          Zbar_out=zAverageOut,&
          Tz_out=Tz,           &
-         Te_out=Te,           &
+         Te_out=TeOut,        &
          Ee_out=EElectronOut, &
          Et_out=ETotalOut,    &
          Pe_out=PElectronOut, &
          Pt_out=PTotalOut)
-       if(present(TeOut))TeOut=Te
+    else
+       call CON_stop(&
+            'Stop NLTE_eos: TeIn or EElectronIn or ETotalIn must be present')
     end if
+    !\
+    ! CONVERT
+    !/
+
+    !eV to K
+    Tz = Tz*ceVToK
+    if(present(TeOut))TeOut = Te*ceVToK
+
+    !erg/cm3=0.1 J/m3
+    if(present(EElectronOut))EElectronOut = EElectronOut*0.10
+    if(present(ETotalOut   ))ETotalOut    = ETotalOut   *0.10
+    if(present(PElectronOut))PElectronOut = PElectronOut*0.10
+    if(present(PTotalOut   ))PTotalOut    = PTotalOut   *0.10
+
     if(&
          present(GammaOut).or.      &
          present(GammaEOut).or.     &
@@ -146,12 +187,12 @@ contains
          present(zAverageOut).or.   & 
          present(z2AverageOut) )    &
          call eos(&
-         iMaterial=iMaterialIn,       &
-         Rho=Rho,                     &
-         TeIn=Tz,                     &
-         GammaOut=GammaOut,           &
-         CvTotalOut=CvTotalOut,       &
-         GammaEOut=GammaEOut,         &
+         iMaterial=iMaterialIn,     &
+         Rho=Rho,                   &
+         TeIn=Tz,                   &
+         GammaOut=GammaOut,         &
+         CvTotalOut=CvTotalOut,     &
+         GammaEOut=GammaEOut,       &
          CvElectronOut=CvElectronOut, &
          OpacityPlanckOut_I=OpacityPlanckOut_I,       &
          OpacityRosselandOut_I=OpacityRosselandOut_I, &

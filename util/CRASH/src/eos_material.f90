@@ -17,12 +17,13 @@ contains
     real,optional,intent(IN) :: ro,Natom
     if(useCrashEos)then
        if(present(ro) ) then
+          call CON_stop('set_kbr for CRASH requires nAtomic as as input')
           kBr_E= ro/(cAtomicMass * cAtomicMassCRASH_I(iMaterial))& !Natomic
                * cBoltzmann * cEVToK 
           kBr_P= kBr_E
        else
-          kBr_E= Natom * cBoltzmann * cEVToK 
-          kBr_P= Natom * cBoltzmann * cEVToK 
+          kBr_E= Natom * (1.0e7*cBoltzmann) * cEVToK  !erg/(cm3*eV) 
+          kBr_P= Natom * (1.0e7*cBoltzmann) * cEVToK 
        end if
     else
        if(present(ro) ) then
@@ -76,29 +77,35 @@ subroutine LTE_EOS_dir(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
   use CRASH_M_EOS,ONLY:iMaterial,useCALEOS=>UseCrashEos
   use ModConst
   implicit none
-  real,intent(IN) :: te
-  real,intent(OUT) :: Etot,Ptot,Zbar,Cv
+  real,intent(IN) :: te   !in eV
+  real,intent(OUT) :: Etot,Ptot,Zbar,Cv  !erg/cm3, dyne/cm2, 1, erg/(cm3*eV)
   real,external :: zbrent_EE_inv
 
   if(useCALEOS) then
       if(zion==0) then !The electron contribution only
         call eos(iMaterial=iMaterial,&
-                 Rho=ro, &
-                 TeIn=Te,&
+                 Rho=ro*1.0e3,  &   !ro is in g/cm3
+                 TeIn=Te*ceVToK,&   !Te is in eV
                  eElectronOut=ETot,&
                  pElectronOut=PTot,&
                  zAverageOut=zBar,&
                  CvElectronOut=Cv)
      else
         call eos(iMaterial=iMaterial,&
-                 Rho=ro, &
-                 TeIn=Te,&
+                 Rho=ro*1.0e3,  &   !ro is in g/cm3
+                 TeIn=Te*ceVToK,&   !Te is in eV
                  eTotalOut=ETot,&
                  pTotalOut=PTot,&
                  zAverageOut=zBar,&
                  CvTotalOut=Cv)
      end if 
-     Cv = Cv * cEvToK
+     !\
+     !CONVERT
+     !/
+     ETot = ETot * 10.0   !J/m3 = 10^7 erg/10^6cm3 = 10 erg/cm3
+     PTot = PTot * 10.0   !J/m3 = 10^7 erg/10^6cm3 = 10 erg/cm3
+     Cv   = Cv   * 10.0   !J/m3 = 10^7 erg/10^6cm3 = 10 erg/cm3
+     Cv = Cv * cEvToK     !erg/cm3K = erg/cm^3eV *(eV/K)
   else
      call ZTF_EOS_dir(te,Etot,Ptot,Zbar,Cv)
   end if
@@ -111,6 +118,7 @@ subroutine LTE_EOS_inv(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
   use CRASH_M_ZTF,only : ZTF_EOS_inv,setCALEOS
   use CRASH_ModEos, ONLY: eos
   use CRASH_M_EOS,ONLY:iMaterial,useCALEOS=>UseCrashEos
+  use ModConst, ONLY:cKToEv,cEVToK
   implicit none
   real,intent(IN) :: Etot
   real,intent(OUT) :: te,Ptot,Zbar,Cv
@@ -118,21 +126,28 @@ subroutine LTE_EOS_inv(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
   if(useCALEOS) then
      if(zion==0) then !The electron contribution only
         call eos(iMaterial=iMaterial,&
-                 Rho=ro, &
-                 eElectronIn=ETot,&
+                 Rho=ro*1.0e3,         &  !ro is in g/cm3
+                 eElectronIn=ETot*0.10,&  !eTot is in erg/cm3
                  TeOut=Te,&
                  pElectronOut=PTot,&
                  zAverageOut=zBar,&
                  CvElectronOut=Cv)
      else
         call eos(iMaterial=iMaterial,&
-                 Rho=ro, &
-                 eTotalIn=ETot,&
+                 Rho=ro*1.0e3,         &  !ro is in g/cm3
+                 eTotalIn=ETot*0.10,   &  !eTot is in erg/cm3
                  TeOut=Te,&
                  pTotalOut=PTot,&
                  zAverageOut=zBar,&
                  CvTotalOut=Cv)
      end if
+     !\
+     !CONVERT
+     !/
+     Te   = Te * cKToeV   
+     PTot = PTot * 10.0   !J/m3 = 10^7 erg/10^6cm3 = 10 erg/cm3
+     Cv   = Cv   * 10.0   !J/m3 = 10^7 erg/10^6cm3 = 10 erg/cm3
+     Cv   = Cv * cEvToK   !erg/cm3K = erg/cm^3eV *(eV/K)
   else
      call ZTF_EOS_inv(te,Etot,Ptot,Zbar,Cv)
   end if
