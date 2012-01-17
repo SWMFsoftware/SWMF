@@ -333,6 +333,17 @@ subroutine set_inputs
               write(*,*) 'GSWMsemidiurnal(2)    (logical)'
            ENDIF
 
+        case ("#USEPERTURBATION")
+           call read_in_logical(UsePerturbation,iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #USEPERTURBATION:'
+              write(*,*) ''
+              write(*,*) ''
+              write(*,*) '#USEPERTURBATION'
+              write(*,*) 'UsePerturbation        (logical)'
+              IsDone = .true.
+           endif
+
         case ("#DAMPING")
            call read_in_logical(UseDamping,iError)
            if (iError /= 0) then
@@ -356,7 +367,6 @@ subroutine set_inputs
            endif
 
         case ("#HPI")
-
            call read_in_real(HemisphericPower, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #HPI:'

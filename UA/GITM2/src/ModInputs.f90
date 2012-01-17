@@ -58,6 +58,8 @@ module ModInputs
   logical :: UseBarriers = .false.
   integer :: nSteps = 10
 
+  logical :: UsePerturbation = .false.
+
   real :: CFL = 0.25
 
   integer :: nOutputTypes = 0

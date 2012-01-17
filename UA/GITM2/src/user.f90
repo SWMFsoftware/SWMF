@@ -1,4 +1,15 @@
 
+subroutine user_create_perturbation
+
+  use ModGITM
+  use ModInputs
+
+  NDensityS(nLons/2,nLats/2,2,1:3,1) = NDensityS(nLons/2,nLats/2,2,1:3,1)*50.0
+  temperature(nLons/2,nLats/2,2,1) = temperature(nLons/2,nLats/2,2,1)*100.0
+
+end subroutine user_create_perturbation
+
+
 ! ----------------------------------------------------------------
 ! If you want to output some specific variables, then do that here.
 ! In ModUserGITM, there are two variables defined, UserData2D and UserData3D.

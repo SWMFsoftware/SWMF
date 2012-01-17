@@ -66,6 +66,7 @@ subroutine initialize_gitm(TimeIn)
      call set_inputs
      call read_restart("UA/restartIN")
      call init_msis
+     if (UsePerturbation) call user_create_perturbation
   endif
 
   call set_RrTempInd
