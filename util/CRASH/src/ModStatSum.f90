@@ -103,25 +103,7 @@ Contains
     heat_capacity_e = heat_capacity() - 1.50 
 
   end function heat_capacity_e 
-  !==================================
-  !Calculate the specific heat capacity at constant volume 
-  !(derivative of internal energy wrt Te) from temperature:
-  !ONLY for free electrons AND the derivative is taken at
-  !constant Z and partition functions. Used for non-LTE
-  !simulations only.
-  real function heat_capacity_nonlte()
-    use CRASH_ModFermiGas
-    !------------------
-
-    if( zAv <= cZMin )then
-       heat_capacity_nonlte = 1.50; return
-    end if
-
-    ! calculate the heat capacity:
-    heat_capacity_nonlte = 1.50 * 2.50 * RPlus * zAv &
-         -2.250 * zAv / RMinus
-
-  end function heat_capacity_nonlte
+  
   !==========================================================================!
   !Thermodynamic derivatives for pressure
   !Thermodynamic derivatives: use abbreviations:
