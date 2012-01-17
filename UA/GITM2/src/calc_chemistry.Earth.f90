@@ -30,7 +30,7 @@ subroutine calc_chemistry(iBlock)
   real :: LonDeg, LatDeg, AltKm, LST
   real,dimension(7)    :: AP  
 
-  real :: ChemicalHeatingSub,percent,o2total,o2ptotal
+  real :: ChemicalHeatingSub,percent,o2ptotal
   real :: Emission(nEmissions), EmissionTotal(nEmissions)
   real, dimension(nLons,nLats,nAlts) :: &
        tr3d, tr33d,te12d, tr3m0443d, tr3m083d, tr3m043d, &
@@ -44,6 +44,7 @@ subroutine calc_chemistry(iBlock)
 
   real :: te3m05,te3m07,te12m056, tr3m044, tr3m04, tr3m08
   real :: te3m039, te3m085, rr_opn2, te22m05
+  real :: ionso, ionlo, neuso, neulo
 
   logical :: UseNeutralConstituent(nSpeciesTotal)
   logical :: UseIonConstituent(nIons)
@@ -242,7 +243,6 @@ subroutine calc_chemistry(iBlock)
            Neutrals = NDensityS(iLon,iLat,iAlt,:,iBlock)
 
            niters = 0
-           o2total = 0
            o2ptotal = 0
 
            do while (DtTotal < Dt)
@@ -1732,24 +1732,24 @@ subroutine calc_chemistry(iBlock)
                  enddo
               endif
 
-              tli = DtSub * IonLosses
-              tsi = DtSub * IonSources + Ions
-
-              do iIon = 1, nIons-1
-                 do while (tsi(iIon)-tli(iIon) < 0.0 .and. DtSub > 1.0e-2)
-                    if (tsi(iIon)-tli(iIon) < 0.0 .and. Ions(iIon) < 1.0e7) then
-                       IonLosses(iIon) = &
-                            (IonSources(iIon) + Ions(iIon)/DtSub)*0.9
-                    else
-                       DtSub = DtSub/2.0
-                    endif
-                    tli(iIon) = DtSub * IonLosses(iIon)
-                    tsi(iIon) = DtSub * IonSources(iIon) + Ions(iIon)
-                 enddo
-              enddo
-
-              !---- Neutrals
-
+!!!              tli = DtSub * IonLosses
+!!!              tsi = DtSub * IonSources + Ions
+!!!
+!!!              do iIon = 1, nIons-1
+!!!                 do while (tsi(iIon)-tli(iIon) < 0.0 .and. DtSub > 1.0e-2)
+!!!                    if (tsi(iIon)-tli(iIon) < 0.0 .and. Ions(iIon) < 1.0e7) then
+!!!                       IonLosses(iIon) = &
+!!!                            (IonSources(iIon) + Ions(iIon)/DtSub)*0.9
+!!!                    else
+!!!                       DtSub = DtSub/2.0
+!!!                    endif
+!!!                    tli(iIon) = DtSub * IonLosses(iIon)
+!!!                    tsi(iIon) = DtSub * IonSources(iIon) + Ions(iIon)
+!!!                 enddo
+!!!              enddo
+!!!
+!!!              !---- Neutrals
+!!!
               if (.not. UseNeutralChemistry) then
                  NeutralSources = 0.0
                  NeutralLosses = 0.0
@@ -1769,28 +1769,40 @@ subroutine calc_chemistry(iBlock)
 
               tln = DtSub * NeutralLosses
               tsn = DtSub * NeutralSources + 0.1*Neutrals
-              do while (minval(tsn-tln) < 0.0)
+              do while (minval(tsn-tln) < 0.0 .and. DtSub > 0.1)
                  DtSub = DtSub/2.0
                  tln = DtSub * NeutralLosses
                  tsn = DtSub * NeutralSources + 0.1*Neutrals
               enddo
 
-              Ions(nIons) = 0.0
-!              !if (ialt .eq. 10) write(*,*) "NO sources and losses: ",NeutralSources(iNO_), &
-!                   NeutralLosses(iNO_)
+!!!              Ions(nIons) = 0.0
+
               do iIon = 1, nIons-1
 
+!!!                 if (Ions(iIon) + &
+!!!                      (IonSources(iIon) - IonLosses(iIon)) * DtSub < 0.0) then
+!!!                    !!!!!! Solve Steady-State !!!!!!!
+!!!                    Ions(iIon) = IonSources(iIon)*Ions(iIon)/IonLosses(iIon)
+!!!                 else
+!!!                    Ions(iIon) = Ions(iIon) + &
+!!!                         (IonSources(iIon) - IonLosses(iIon)) * DtSub
+!!!                 endif
+
+!                 Ions(iIon) = max(0.01,Ions(iIon))
+                 
                  if (Ions(iIon) + &
                       (IonSources(iIon) - IonLosses(iIon)) * DtSub < 0.0) then
-                    !!!!!! Solve Steady-State !!!!!!!
-                    Ions(iIon) = IonSources(iIon)*Ions(iIon)/IonLosses(iIon)
+                    ! Take Implicit time step
+                    ionso = IonSources(iIon)
+                    ionlo = IonLosses(iIon)/Ions(iIon)
+                    Ions(iIon) = (Ions(iIon) + ionso * DtSub) / &
+                                 (1 + DtSub * ionlo)
                  else
                     Ions(iIon) = Ions(iIon) + &
                          (IonSources(iIon) - IonLosses(iIon)) * DtSub
                  endif
 
-!                 Ions(iIon) = max(0.01,Ions(iIon))
-                 
+
                  ! sum for e-
                  Ions(nIons) = Ions(nIons) + Ions(iIon)
 
@@ -1802,16 +1814,27 @@ subroutine calc_chemistry(iBlock)
                  endif
               enddo
 
-              o2total = o2total +  ((IonSources(iO2P_) - IonLosses(iO2P_)) * &
-                      DtSub)
-
-!              write(*,*) "Total Change: ", 
               do iNeutral = 1, nSpeciesTotal
-                 Neutrals(iNeutral) = &
-                      Neutrals(iNeutral) + &
-                      (NeutralSources(iNeutral) - NeutralLosses(iNeutral)) * &
-                      DtSub
-                 
+
+                 if (Neutrals(iNeutral) + &
+                      (NeutralSources(iNeutral) - &
+                       NeutralLosses(iNeutral)) * DtSub < 0.0) then
+
+                    neuso = NeutralSources(iNeutral)
+                    neulo = NeutralLosses(iNeutral) / Neutrals(iNeutral)
+
+                    Neutrals(iNeutral)=(Neutrals(iNeutral) + neuso * DtSub) / &
+                                 (1 + DtSub * neulo)
+
+                 else
+
+                    Neutrals(iNeutral) = &
+                         Neutrals(iNeutral) + &
+                         (NeutralSources(iNeutral)-NeutralLosses(iNeutral)) * &
+                         DtSub
+
+                 endif
+
                  NeutralSourcesTotal(ialt,iNeutral) = &
                       NeutralSourcesTotal(ialt,iNeutral) + &
                       NeutralSources(iNeutral) * DtSub
@@ -1820,7 +1843,6 @@ subroutine calc_chemistry(iBlock)
                       NeutralLossesTotal(ialt,iNeutral) + &
                       NeutralLosses(iNeutral) * DtSub
                  
-
                  if (Neutrals(iNeutral) < 0.0) then
                     write(*,*) "Negative Neutral Density : ", &
                          iNeutral, iLon, iLat, iAlt, DtSub, &
