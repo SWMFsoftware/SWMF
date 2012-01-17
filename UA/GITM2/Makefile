@@ -170,7 +170,7 @@ test_mars_check:
 
 dist:
 	make distclean
-	tar cvzf gitm_`date "+%y%m%d"`.tgz Makefile* config.pl get_info.pl \
-	    share src srcData srcIDL srcIE srcIO srcInterface \
-	    srcMake srcSphereAB
-	make install
+	tar cvzf gitm_`date "+%y%m%d"`.tgz Makefile* Config.pl get_info.pl \
+	    share util src srcData srcDoc srcGlow srcIDL srcInterface \
+	    srcPython srcMake srcSphereAB srcUser Copyright
+
