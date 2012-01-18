@@ -20,8 +20,11 @@ program advect
   real :: TimeStartLocalStep = 0.49999*20.0
   real :: DtPlot = 1.0
 
-  ! Advection velocity. Should be positive. For now set to 2
-  real :: Velocity_D(nDim) = 2.0
+  ! Velocity field
+  logical:: UseConstantVelocity = .false.
+  real :: Velocity_D(nDim) = 0.0
+  real :: RadialVelocity   = 0.0
+  real :: AngularVelocity  = 0.0
 
   ! Spatial order of accuracy and beta parameter for the TVD limiter
   integer :: nOrder = 2
@@ -50,6 +53,9 @@ program advect
 
   ! Face centered flux for one block
   real:: Flux_VFD(nVar,1:nI+1,1:nJ+1,1:nK+1,nDim)
+
+  ! Normal velocity times area
+  real:: vFaceNormal_DF(nDim,1:nI+1,1:nJ+1,1:nK+1)
 
   ! Face centered flux for conservation fix
   real, allocatable, dimension(:,:,:,:,:):: Flux_VXB, Flux_VYB, Flux_VZB
@@ -164,18 +170,28 @@ contains
 
     use BATL_lib,    ONLY: IsCartesian, IsRzGeometry, IsPeriodic_D
     use ModNumConst, ONLY: cHalfPi
+    use ModCoordTransform, ONLY: rot_matrix_z
 
     real, intent(in):: Xyz_D(nDim)
 
     ! Square of the radius of the circle/sphere
     real:: XyzShift_D(nDim)
 
-    real :: r2, Rho
+    real :: r1, r2, Rho, rot_DD(3,3)
 
     real:: DomainSize_D(nDim)
     !-------------------------------------------------------------------------
     ! Move position back to initial point
-    XyzShift_D = Xyz_D - Time*Velocity_D
+    if(RadialVelocity > 0.0) then
+       r1 = sqrt(sum(Xyz_D**2))
+       r2 = max(0.0, r1 - Time*RadialVelocity)
+       XyzShift_D = (r2/r1)*Xyz_D
+    elseif(AngularVelocity /= 0.0)then
+       rot_DD = rot_matrix_z(Time*AngularVelocity)
+       XyzShift_D = matmul(Xyz_D, rot_DD(1:nDim,1:nDim))
+    else
+       XyzShift_D = Xyz_D - Time*Velocity_D
+    end if
 
     ! Take periodicity into account for Cartesian and RZ geometry only
     if(IsCartesian .or. IsRzGeometry) then
@@ -190,9 +206,14 @@ contains
     Rho = 1.0
     if(r2 < BlobRadius2) Rho = Rho + cos(cHalfPi*sqrt(r2/BlobRadius2))**2
 
-    exact_density = Rho
-    ! Scale by 1/r so radial flow has no effect in RZ geometry
-    if(IsRzGeometry) exact_density = Rho/Xyz_D(r_)
+    if(RadialVelocity > 0)then
+       ! Scale by 1/r1**(D-1) so radial flow is stationary solution
+       exact_density = Rho/r1**(nDim-1)
+    elseif(IsRzGeometry) then
+       exact_density = Rho/Xyz_D(r_)
+    else
+       exact_density = Rho
+    end if
 
   end function exact_density
 
@@ -205,6 +226,8 @@ contains
 
     use ModReadParam, ONLY: read_file, read_init, &
          read_line, read_command, read_var
+
+    use ModNumConst, ONLY: cDegToRad
 
     character(len=100):: StringLine, NameCommand
 
@@ -246,6 +269,11 @@ contains
           do iDim = 1, nDim
              call read_var('Velocity_D', Velocity_D(iDim))
           end do
+       case("#RADIALFLOW")
+          call read_var('RadialVelocity', RadialVelocity)
+       case("#ROTATINGFLOW")
+          call read_var('AngularVelocity', AngularVelocity)
+          AngularVelocity = AngularVelocity*cDegToRad
        case("#SCHEME")
           call read_var('nOrder', nOrder)
           if(nOrder > 1)then
@@ -264,6 +292,9 @@ contains
           call CON_stop(NameSub//' unknown command='//trim(NameCommand))
        end select
     end do READPARAM
+
+    UseConstantVelocity = RadialVelocity == 0.0 .and. AngularVelocity == 0.0
+
 
     ! Note that the periodicity will be fixed based on TypeGeometry
     call init_batl( &
@@ -675,11 +706,10 @@ contains
 
   end subroutine set_boundary
   !===========================================================================
-  subroutine calc_face_values(iBlock)
+  subroutine calc_face_flux(iBlock)
 
     use ModNumConst, ONLY: i_DD
-    use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
-         CellVolume_GB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB
+    use BATL_lib, ONLY: CellVolume_GB
 
     integer, intent(in):: iBlock
 
@@ -688,7 +718,7 @@ contains
     real:: Slope_VGD(nVar,0:nI+1,0:nJ+1,0:nK+1,nDim)
     real:: State_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    real :: CellFace, FaceNormal_D(nDim), vFaceNormal, vInv
+    real:: vInv, vFaceNormal
 
     integer :: iDim, i, j, k, Di, Dj, Dk
     !------------------------------------------------------------------------
@@ -734,38 +764,24 @@ contains
        end do
     end if
 
-    ! Calculate upwinded fluxes 
-    if(IsCartesian .or. IsRzGeometry)then
-       do iDim = 1, nDim
-          if(IsCartesian) CellFace = CellFace_DB(iDim,iBlock)
-          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-          do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
-             if(IsRzGeometry) CellFace = CellFace_DFB(iDim,i,j,k,iBlock)
-             ! Here we assume positive velocities, so left state is used
-             Flux_VFD(:,i,j,k,iDim) = &
-                  CellFace*Velocity_D(iDim)*StateLeft_VFD(:,i,j,k,iDim)
-          end do; end do; end do
-       end do
-    else
-       do iDim = 1, nDim
-          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-          do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
-             FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
-             vFaceNormal = sum(FaceNormal_D*Velocity_D)
-             ! Use flux from upwind direction
-             if(vFaceNormal > 0.0)then
-                Flux_VFD(:,i,j,k,iDim) = &
-                     vFaceNormal*StateLeft_VFD(:,i,j,k,iDim)
-             else
-                Flux_VFD(:,i,j,k,iDim) = &
-                     vFaceNormal*StateRight_VFD(:,i,j,k,iDim)
-             end if
-          end do; end do; end do
-       end do
+    ! Calculate fluxes
+    call calc_vface_normal(iBlock)
 
-    end if
+    do iDim = 1, nDim
+       Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+       do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
 
-  end subroutine calc_face_values
+          vFaceNormal = vFaceNormal_DF(iDim,i,j,k)
+          ! Calculate upwinded flux
+          if(vFaceNormal > 0)then
+             Flux_VFD(:,i,j,k,iDim)=vFaceNormal*StateLeft_VFD(:,i,j,k,iDim)
+          else
+             Flux_VFD(:,i,j,k,iDim)=vFaceNormal*StateRight_VFD(:,i,j,k,iDim)
+          end if
+       end do; end do; end do
+    end do
+
+  end subroutine calc_face_flux
   !===========================================================================
   subroutine limit_slope(State_VG, Slope_VGD)
 
@@ -794,11 +810,59 @@ contains
 
   end subroutine limit_slope
   !===========================================================================
+  subroutine calc_vface_normal(iBlock)
+
+    use ModNumConst, ONLY: i_DD
+    use BATL_lib, ONLY: IsCartesian, IsRzGeometry, x_, y_, Xyz_DGB, &
+         CellFace_DB, CellFace_DFB, FaceNormal_DDFB
+
+    integer, intent(in):: iBlock
+
+    ! Calculate either Flux_DF fluxes or vFaceNormal_DF for CFL condition
+
+    real:: XyzFace_D(nDim), vFaceNormal
+
+    integer:: iDim, Di, Dj, Dk, i, j, k
+    !-----------------------------------------------------------------------
+
+    ! Calculate upwinded fluxes 
+    do iDim = 1, nDim
+       Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+       do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
+
+          ! Calculate velocity
+          if(RadialVelocity > 0. .or. AngularVelocity > 0.)then
+             XyzFace_D = 0.5*(Xyz_DGB(1:nDim,i,j,k,iBlock) &
+                  +           Xyz_DGB(1:nDim,i+Di,j+Dj,k+Dk,iBlock))
+             if(RadialVelocity > 0.)then
+                Velocity_D = XyzFace_D/sqrt(sum(XyzFace_D**2))*RadialVelocity
+             else
+                Velocity_D(x_) = -AngularVelocity*XyzFace_D(y_)
+                Velocity_D(y_) =  AngularVelocity*XyzFace_D(x_)
+             end if
+          end if
+
+          ! Calculate normal velocity times face area
+          if(IsCartesian)then
+             vFaceNormal = CellFace_DB(iDim,iBlock)*Velocity_D(iDim)
+          elseif(IsRzGeometry)then
+             vFaceNormal = CellFace_DFB(iDim,i,j,k,iBlock)*Velocity_D(iDim)
+          else
+             vFaceNormal = sum(FaceNormal_DDFB(:,iDim,i,j,k,iBlock)*Velocity_D)
+          end if
+
+          vFaceNormal_DF(iDim,i,j,k) = vFaceNormal
+       end do; end do; end do
+    end do
+
+  end subroutine calc_vface_normal
+
+  !============================================================================
+
   subroutine advance_explicit
 
     use BATL_lib, ONLY: message_pass_cell, nBlock, Unused_B, &
          IsCartesian, IsRzGeometry, CellSize_DB, CellVolume_B, CellVolume_GB, &
-         FaceNormal_DDFB, &
          iComm, nProc, store_face_flux, apply_flux_correction
     use ModNumConst, ONLY: i_DD
     use ModMpi
@@ -810,25 +874,29 @@ contains
     character(len=*), parameter:: NameSub = 'advance_explicit'
     !--------------------------------------------------------------------------
     DtInv = 0.0
-    if(IsCartesian .or. IsRzGeometry)then
+
+    ! Calculate time step limit for each block
+    if(IsCartesian .or. IsRzGeometry .and. UseConstantVelocity)then
        ! Velocity is constant and positive so simply check cellsize per block
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          DtInv = max( DtInv, sum( Velocity_D/CellSize_DB(1:nDim,iBlock) ) )
+          DtInv = max(DtInv, sum(abs(Velocity_D)/CellSize_DB(1:nDim,iBlock)) )
        end do
     else
        ! Cell width is estimated as Volume/FaceArea
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
+
+          ! Calculate 
+          call calc_vface_normal(iBlock)
+
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Flux = 0.0
              do iDim = 1, nDim
                 Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-                Flux = Flux + max( &
-                     abs(sum(Velocity_D &
-                     *       FaceNormal_DDFB(:,iDim,i,j,k,iBlock))), &
-                     abs(sum(Velocity_D &
-                     *       FaceNormal_DDFB(:,iDim,i+Di,j+Dj,k+Dk,iBlock))))
+
+                Flux = Flux + max(abs(vFaceNormal_DF(iDim,i,j,k)), &
+                     abs(vFaceNormal_DF(iDim,i+Di,j+Dj,k+Dk)))
              end do
              DtInv = max(DtInv, Flux/CellVolume_GB(i,j,k,iBlock))
           end do; end do; end do
@@ -863,7 +931,7 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
 
-          call calc_face_values(iBlock)
+          call calc_face_flux(iBlock)
 
           DtStage = (Dt*iStage)/nOrder
 
@@ -964,7 +1032,7 @@ contains
 
           iStageBlock = iStage_B(iBlock)
 
-          call calc_face_values(iBlock)
+          call calc_face_flux(iBlock)
 
           DtLocal =  Dt_B(iBlock) * iStageBlock/2.0
 
