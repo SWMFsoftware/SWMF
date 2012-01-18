@@ -11,7 +11,7 @@ module ModReadArtep
   real:: TMin, TMax, RhoMin, RhoMax
   character(LEN=15)NameEmpty
 contains
-  !==================================================================================
+  !============================================================================
   subroutine read_artep
     integer:: iFile, iRho, iTe
     real:: Aux_V(7), Aux
@@ -24,7 +24,8 @@ contains
     read(iFile,*)NameEmpty, TMin, TMax, nTe
     write(*,*)'NameEmpty, TMin, TMax, nTe=',NameEmpty, TMin, TMax, nTe
     read(iFile,*)NameEmpty, RhoMin, RhoMax, nRho
-    write(*,*)'NameEmpty, RhoMin, RhoMax, nRho=',NameEmpty, RhoMin, RhoMax, nRho
+    write(*,*)'NameEmpty, RhoMin, RhoMax, nRho=', &
+         NameEmpty, RhoMin, RhoMax, nRho
     read(iFile,*)
     !read(iFile,*)
     !read(iFile,*)
@@ -51,7 +52,7 @@ contains
   end subroutine read_artep
 
 end Module ModReadArtep
-!====================================================================================
+!==============================================================================
 program save_eos_table
 
   use CRASH_ModStatSum
@@ -69,23 +70,21 @@ program save_eos_table
   use CRASH_ModAtomicMass,ONLY: cAtomicMass_I
   use ModConst
   implicit none
-  integer:: iError, iMaterial
-  real:: AtomicMass
-  !----------------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   call read_artep
   Value_VII = 0.10 * Value_VII  !cm^2/g = 1e-4 m^2/(1e-3 kg) = 0.1 m2/kg
   call save_plot_file( &
          'Ay_opac.dat',                                                      &
          TypeFileIn     = 'real8',                                           &
          StringHeaderIn = 'ARTEP Opacity for Ay',                            &
-         NameVarIn      = 'logRho logTe Planck(30) Ross(30) EGropu00 EGroup(30)',&
-         CoordMinIn_D   = (/log10(1.0e3*RhoMin), log10(TMin)/),        &
-         CoordMaxIn_D   = (/log10(1.0e3*RhoMax), log10(TMax)/),        &
-         ParamIn_I      = EGroup_I,                                     &
+         NameVarIn      = 'logRho logTe Planck(30) Ross(30) Ev(31)',         &
+         CoordMinIn_D   = (/log10(1.0e3*RhoMin), log10(TMin)/),              &
+         CoordMaxIn_D   = (/log10(1.0e3*RhoMax), log10(TMax)/),              &
+         ParamIn_I      = EGroup_I,                                          &
          VarIn_VII      = Value_VII)
 
 end program save_eos_table
-!====================================================================================
+!============================================================================
 ! The following subroutines are here so that we can use SWMF library routines
 ! Also some features available in SWMF mode only require empty subroutines
 ! for compilation of the stand alone code.
