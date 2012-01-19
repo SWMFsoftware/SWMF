@@ -55,10 +55,11 @@ cd Tmp
 # Remove the previous test directory if necessary
 rm -rf SWMF
 
-# Checkout and install the latest code
-cvs co -D "19:00EDT" SWMF >& /dev/null
+# Checkout and install the latest code together with HYPRE
+cvs co -D "`date +%m/%d/%Y` 19:00" SWMF HYPRE >& /dev/null
+mv HYPRE SWMF/util
 cd SWMF
-./Config.pl -install >& test_swmf.log
+./Config.pl -install -hypre >& test_swmf.log
 
 #
 # Select one of the following options:
