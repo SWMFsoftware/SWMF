@@ -494,6 +494,7 @@ test_laserpackage:
 
 test_laserpackage_compile:
 	./Config.pl -e=Crash -u=Crash -g=8,8,1,200,200 -nMaterial=5 -nWave=30
+	./Config.pl -hypre
 	$(MAKE) CRASH
 	$(MAKE) PIDL
 
