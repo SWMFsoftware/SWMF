@@ -3,13 +3,15 @@ module CRASH_ModEosTable
 
   use CRASH_ModEos
   use ModLookupTable, ONLY: MaxTable
-  use CRASH_ModMultiGroup, ONLY: nGroup, &
-      OpacityPlanck_I, OpacityRosseland_I
+  use CRASH_ModMultiGroup, ONLY: nGroup
   use CRASH_ModInterfaceNlte
   use ModConst
+
   implicit none
+
   PRIVATE
   SAVE
+
   !The following subroutine:
   !1. Checks if the tables are available for these 
   !   materials for which UseEosTable_I is True
@@ -289,14 +291,15 @@ contains
 
   !=========================================================================
 
-  subroutine check_opac_table(FreqMinSi, FreqMaxSi, iComm,EGroupIn_I,TypeFileIn)
+  subroutine check_opac_table(FreqMinSi, FreqMaxSi, iComm, &
+       EGroupIn_I, TypeFileIn)
 
     use ModConst,       ONLY: cHPlanckEv
     use ModLookupTable, ONLY: Table_I, TableType, &
          i_lookup_table, init_lookup_table, make_lookup_table
     use CRASH_ModMultiGroup,  ONLY: set_multigroup
-    use ModMpi,        ONLY: MPI_COMM_RANK
-    use ModIoUnit
+    use ModMpi,         ONLY: MPI_COMM_RANK
+    use ModIoUnit,      ONLY: UnitTmp_
 
     !Input minimum and maximum frequency (Hz) of photons
     real,    optional, intent(in):: FreqMinSi, FreqMaxSi
@@ -309,7 +312,7 @@ contains
     real,    optional, intent(in):: EGroupIn_I(:)
 
     !For test the capability to save ascii file should be kept
-    character(LEN=*) , intent(in),optional  :: TypeFileIn
+    character(LEN=*), optional, intent(in):: TypeFileIn
 
     ! Minimum and maximum group energies in electron volts
     real:: EvMin, EvMax
@@ -326,13 +329,15 @@ contains
     character(LEN=100)Name,Name1,Name2
 
     logical:: UseLogarithmicGrid, DoSave
-    integer:: iFile
-    
+    character:: String1, String2
+
     character(len=*), parameter:: NameSub = 'check_opac_table'
     !----------------------------------------------------------
    
     if(.not.any(UseOpacityTable_I(0:nMaterialEos-1)))return
-    UseLogarithmicGrid = .true. !Reset if there in an input energy array (0:nGroup)
+
+    ! Reset if there in an input energy array (0:nGroup)
+    UseLogarithmicGrid = .true. 
 
     ! set iProc for less verbose error messages
     if(present(iComm))then
@@ -362,57 +367,21 @@ contains
     nVarOpac = 2*nGroup
     NameVarOpac = ''
 
-    if(nGroup==1)then
-
+    if(nGroup == 1)then
        NameVarOpac = 'Planck Ross'
-
-    elseif(2 <= nGroup.and.nGroup <= 9)then
-
-       if(UseLogarithmicGrid)then
-          write(NameVarOpac,'(a,i1,a,i1,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,') EvMin EvMax'
-       else
-          write(NameVarOpac,'(a,i1,a,i1,a,i1,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,&
-            ') Egroup0 EGroup(',nGroup,')'
-       end if
-
-    elseif(10 <= nGroup.and.nGroup <= 99)then
-
-       if(UseLogarithmicGrid)then
-
-          write(NameVarOpac,'(a,i2,a,i2,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,') EvMin EvMax'
-       else
-          write(NameVarOpac,'(a,i2,a,i2,a,i2,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,&
-            ') Egroup00 EGroup(',nGroup,')'
-       end if
-    elseif(100 <= nGroup.and.nGroup <= 999)then
-
-      if(UseLogarithmicGrid)then
-         write(NameVarOpac,'(a,i3,a,i3,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,') EvMin EvMax'
-      else
-         write(NameVarOpac,'(a,i3,a,i3,a,i3,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,&
-            ') Egroup000 EGroup(',nGroup,')'
-      end if
-         
-    elseif(1000 <= nGroup.and.nGroup <= 9999)then
-
-      if(UseLogarithmicGrid)then
-
-         write(NameVarOpac,'(a,i4,a,i4,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,') EvMin EvMax'
-         else
-            write(NameVarOpac,'(a,i4,a,i4,a,i4,a)')&
-            'Planck(', nGroup, ')  Ross(',nGroup,&
-            ') Egroup0000 EGroup(',nGroup,')'
-      end if  
     else
-       call CON_stop( &
-            'The opacity table cannot be set with the declared nGroup')
+       ! Number of digits needed for nGroup
+       write(String1,'(i1)') 1 + int(alog10(real(nGroup)))
+       if(UseLogarithmicGrid)then
+          write(NameVarOpac,'(a,i'//String1//',a,i'//String1//',a)')&
+               'Planck(', nGroup, ') Ross(',nGroup,') EvMin EvMax'
+       else
+          ! Number of digits needed for nGroup+1
+          write(String2,'(i1)') 1 + int(alog10(real(nGroup+1)))
+          write(NameVarOpac, &
+               '(a,i'//String1//',a,i'//String1//',a,i'//String2//',a)')&
+               'Planck(', nGroup, ') Ross(',nGroup,') Ev(',nGroup+1,')'
+       end if
     end if
 
     do iMaterial = 0, nMaterialEos-1
@@ -428,7 +397,7 @@ contains
           call init_lookup_table(                                       &
                NameTable = NameMaterial//'_opac',                       &
                NameCommand = 'save',                                    &
-               NameVar = 'logRho logTe '//NameVarOpac,  &
+               NameVar = 'logRho logTe '//NameVarOpac,                  &
                nIndex_I = IndexDefaultOpac_I,                           &
                IndexMin_I = (/NaDefault_II(Min_, iMaterial)*            &
                cAtomicMass * cAtomicMassCRASH_I(iMaterial),             &
@@ -487,40 +456,48 @@ contains
        UseOpacityTable_I(iMaterial) = .false.
        call make_lookup_table(iTable, calc_opac_table, iComm)
        UseOpacityTable_I(iMaterial) = .true.
-       if((.not.DoSave).or.(.not.iProc==0))CYCLE
-       iFile = io_unit_new()
-       open(iFile,file=NameMaterial//'_opac_CRASH.head')
-       write(iFile,'(a)')'  '
-       write(iFile,'(a)')'----------------OPACITY TABLE----------'
-       write(iFile,'(a)')'  '
-       write(iFile,'(a)')'#LOOKUPTABLE'
-       write(iFile,'(a)')NameMaterial//'_opac                 NameTable'
-       write(iFile,'(a)')'use param               NameCommand'
-       write(iFile,'(a)')'Tables/'//NameMaterial//'_opac_CRASH.dat'
-       write(iFile,'(a)')'real8                   TypeFile'
-       Name = trim(Ptr%NameVar)
+
+       if(.not.DoSave .or. iProc/=0)CYCLE
+
+       ! Save an include parameter file that documents what the table contains
+       ! and allows the user to recreate the table if desired
+
+       open(UnitTmp_,file=NameMaterial//'_opac_CRASH.head')
+       write(UnitTmp_,'(a)')'#LOOKUPTABLE'
+       write(UnitTmp_,'(a)')NameMaterial//&
+            '_opac                                 NameTable'
+       write(UnitTmp_,'(a)') &
+            'use param                               NameCommand'
+       write(UnitTmp_,'(a)')'Tables/'//NameMaterial//'_opac_CRASH.dat'// &
+            '                NameFile'
+       write(UnitTmp_,'(a)') &
+            'real8                                   TypeFile'
+       Name      = Ptr%NameVar
        iPosition = index(Name,'Ross')
-       iPosition = iPosition+index(Name(iPosition+1:len_trim(Name)),')')
+       iPosition = iPosition + index(Name(iPosition+1:len_trim(Name)),')')
        Name1 = Name(1:iPosition)
        Name2 = Name(iPosition+1:len_trim(Name))
-       write(iFile,'(a)') trim(Name2)
-       write(iFile,'(e13.7)')Ptr%Param_I
-       write(iFile,'(a)')'Opacity(rho,Te) for '//NameMaterial
-       write(iFile,'(a)') trim(Name1)
-       write(iFile,'(i4,a)')Ptr%nIndex_I(1),'                    nIndex1'
-       write(iFile,'(e13.7,a)')10.0**(Ptr%IndexMin_I(1)),&
-            '           Index1Min (kg/m3)'
-       write(iFile,'(e13.7,a)')10.0**(Ptr%IndexMax_I(1)),& 
-            '           Index1Max (kg/m3)'
-       write(iFile,'(i4,a)')Ptr%nIndex_I(2),'                    nIndex2'
-       write(iFile,'(e13.7,a)')10.0**(Ptr%IndexMin_I(2)),&
-            '           Index2Min (eV)'
-       write(iFile,'(e13.7,a)')10.0**(Ptr%IndexMax_I(2)),&
-            '           Index2Max (eV)'
-       write(iFile,'(a)')'  '
-       write(iFile,'(a)')'#END'
-       write(iFile,'(a)')'  '
-       close(iFile)
+       write(UnitTmp_,'(a)') trim(Name2)//&
+            '                                 NameTableParam'
+       write(UnitTmp_,&
+            '(es13.7,"                           TableParam [eV]")') &
+            Ptr%Param_I
+       write(UnitTmp_,'(a)')'Opacity(rho,Te) for '//NameMaterial//&
+            '                  StringDescription'
+       write(UnitTmp_,'(a)') trim(Name1)//'         NameVar'
+       write(UnitTmp_,'(i4,a)')Ptr%nIndex_I(1),&
+            '                                    nIndex1'
+       write(UnitTmp_,'(es13.7,a)')10.0**(Ptr%IndexMin_I(1)),&
+            '                           Index1Min [kg/m3]'
+       write(UnitTmp_,'(es13.7,a)')10.0**(Ptr%IndexMax_I(1)),& 
+            '                           Index1Max [kg/m3]'
+       write(UnitTmp_,'(i4,a)')Ptr%nIndex_I(2),&
+            '                                    nIndex2'
+       write(UnitTmp_,'(es13.7,a)')10.0**(Ptr%IndexMin_I(2)),&
+            '                           Index2Min [eV]'
+       write(UnitTmp_,'(es13.7,a)')10.0**(Ptr%IndexMax_I(2)),&
+            '                           Index2Max [eV]'
+       close(UnitTmp_)
     end do
 
   end subroutine check_opac_table
