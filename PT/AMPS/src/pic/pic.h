@@ -1042,6 +1042,9 @@ namespace PIC {
   //sampling functions
   namespace Sampling {
 
+    //the minimum number of iteration for output of the datafile
+    extern int minIterationNumberForDataOutput;
+
     namespace ExternalSamplingLocalVariables {
 
       //the external procedures for sampling particle data
