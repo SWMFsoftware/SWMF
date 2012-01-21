@@ -129,7 +129,8 @@ EXEOBJECT = swmf.o
 
 SWMFEXE: TMP_DIRS
 	@make ${EXEOBJECT}
-	${LINK.f90} -o ${SWMFEXE} ${EXEOBJECT} Tmp_*/*.o ${LBLAS} ${Lflag1}
+	${LINK.f90} -o ${SWMFEXE} ${EXEOBJECT} Tmp_*/*.o ${LBLAS} ${Lflag1} \
+		${HYPRELIB}
 	@rm -rf Tmp_*
 	@echo
 	@echo Program ${SWMFEXE} has been brought up to date.
