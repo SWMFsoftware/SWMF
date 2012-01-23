@@ -535,7 +535,7 @@ contains
     integer :: i, j, k, iBlock, iWave
     real :: CoronalHeating, RadiativeCooling
     real :: DissipationLength, WaveDissipation, FullB_D(3), FullB
-    real :: DtInvWave, Vdt_Source
+    real :: DtInvWave, Vdt_Source, Vdt
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -564,15 +564,19 @@ contains
              DtInvWave  = abs(WaveDissipation &
                /max(State_VGB(iWave,i,j,k,iBlock),1e-30))
 
-             Vdt_Source = DtInvWave / vInv_CB(i,j,k,iBlock)
+             Vdt_Source = 2.0*DtInvWave/vInv_CB(i,j,k,iBlock)
 
-             ! The following prevents the wave energy from becoming negative
-             ! due to too large source terms.
-             ! This should be cell-centered, since the source are, but we add
-             ! them for now to the left face of VdtFace.
-             VdtFace_x(i,j,k) = VdtFace_x(i,j,k) + 2.0*Vdt_Source
-             VdtFace_y(i,j,k) = VdtFace_y(i,j,k) + 2.0*Vdt_Source
-             VdtFace_z(i,j,k) = VdtFace_z(i,j,k) + 2.0*Vdt_Source
+             Vdt = min(VdtFace_x(i,j,k),VdtFace_y(i,j,k),VdtFace_z(i,j,k))
+
+             if(Vdt_Source > Vdt)then
+                ! The following prevents the wave energy from becoming negative
+                ! due to too large source terms. This should be cell-centered,
+                ! since the source are, but we add
+                ! them for now to the left face of VdtFace.
+                VdtFace_x(i,j,k) = max(VdtFace_x(i,j,k), Vdt_Source)
+                VdtFace_y(i,j,k) = max(VdtFace_y(i,j,k), Vdt_Source)
+                VdtFace_z(i,j,k) = max(VdtFace_z(i,j,k), Vdt_Source)
+             end if
           end do
        else
           CoronalHeating = 0.0
