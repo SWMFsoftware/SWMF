@@ -63,8 +63,8 @@ module CRASH_ModEosTable
   !\
   ! Defaultparameters for EOS tables:
   !/
-  integer, parameter :: Min_=1, Max_=2, &
-       IndexDefaultEos_I(2) = (/201, 201/)
+  integer, parameter :: Min_=1, Max_=2
+  integer, public    :: IndexDefaultEos_I(2) = (/201, 201/)
   integer, public    :: IndexDefaultOpac_I(2)= (/201, 201/)
   real,dimension(Min_:Max_,0:nMaterialMax-1), parameter::&
        TeDefaultEos_II = reshape(&     ! original minimum
@@ -152,20 +152,26 @@ contains
 
   end subroutine read_name_var_eos
   !===========================================================================
-  subroutine check_eos_table(iComm)
+  subroutine check_eos_table(iComm,TypeFileIn)
 
     use ModLookupTable, ONLY: Table_I, TableType, &
          i_lookup_table, init_lookup_table, make_lookup_table
 
     integer, optional, intent(in) :: iComm
+    character(LEN=*),optional,intent(in)::TypeFileIn
 
     integer:: iMaterial, iTable, i
     character(len=2):: NameMaterial
     type(TableType), pointer:: Ptr
+    character(len=5)::TypeFile
 
     character(len=*), parameter:: NameSub = 'check_eos_table'
     !------------------------------------------------------------------------
-
+    if(present(TypeFileIn))then
+       TypeFile = TypeFileIn
+    else
+       TypeFile = 'real8'
+    end if
     do iMaterial = 0, nMaterialEos-1
 
        if(.not.UseEosTable_I(iMaterial))CYCLE
@@ -185,7 +191,7 @@ contains
                IndexMax_I = (/TeDefaultEos_II(Max_, iMaterial),        &
                NaDefault_II(max_, iMaterial)/),                        &
                NameFile = NameMaterial//'_eos_CRASH.dat',              &
-               TypeFile = 'real8',                                     &
+               TypeFile = TypeFile,                                    &
                StringDescription = 'CRASH EOS for '//NameMaterial,     &
                nParam = 1,                                             &
                Param_I = (/ cAtomicMassCrash_I(iMaterial) /)   )
