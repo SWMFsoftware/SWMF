@@ -202,12 +202,17 @@ program PostIDL
      ! Sph/cyl. X=0 and Y=0 cuts require doubled lookup table (+/- r)
      if(idim0==2)then
         if(TypeGeometry(1:9)=='spherical') then
-           ! Use -pi/2 < theta' < 3/2* pi as generalized coordinate
-           UseDoubleCut = .true.; nx2 = 2*nx2
+           ! Use LatMin < Lat' < 2*LatMax-LatMin as generalized coordinate
+           UseDoubleCut = .true.; nx2 = 2*nx2; 
+           ! nxyz(3) = 2*nxyz(3)
         elseif(TypeGeometry=='cylindrical')then
-           ! Use 0 < r' < 2*rmax as generalized coordinate
-           UseDoubleCut = .true.; nx1 = 2*nx1
+           ! Use rMin < r' < 2*rMax - rMin as generalized coordinate
+           UseDoubleCut = .true.; nx1 = 2*nx1; 
+           ! nxyz(1) = 2*nxyz(1)
         end if
+
+        ! Do not attempt to use structured grid for double cuts
+        if(UseDoubleCut) structured = .false.
      end if
 
      if(.not.structured)then
@@ -242,8 +247,8 @@ program PostIDL
 
   ! Get components for sake of efficiency
   xmin=xyzmin(1); ymin=xyzmin(2); zmin=xyzmin(3)
-  dx  =dxyz(1);   dy  =dxyz(2);   dz  =dxyz(3)
-  nx  =nxyz(1);   ny  =nxyz(2);   nz  =nxyz(3)
+  dx = dxyz(1);   dy = dxyz(2);   dz = dxyz(3)
+  nx = nxyz(1);   ny = nxyz(2);   nz = nxyz(3)
 
   ! Cell aspect ratios
   dyperdx=dxyzmin(2)/dxyzmin(1); dzperdx=dxyzmin(3)/dxyzmin(1)
@@ -699,8 +704,11 @@ contains
           case(2)
              ! This is x=0 or y=0 plane, use signed radius vs Z
              Xyz_D(1) = sign(1.0, Xyz_D(1)+Xyz_D(2))*rCyl
-             ! The generalized coordinate will run from 0 to 2r?
-             XyzGen_D(1) = Xyz_D(1) + XyzMax(1)
+             ! Radial distance
+             XyzGen_D(1) = rCyl
+             ! The generalized coordinate runs from rMin to 2*rMax-rMin
+             if(UseDoubleCut .and. Xyz_D(1) < 0.0) &
+                  XyzGen_D(1) = XyzGen_D(1) + xmax1 - xmin1
           end select
        end if
        if(TypeGeometry=='cylindrical_lnr') XyzGen_D(1) = log(XyzGen_D(1))
@@ -717,20 +725,20 @@ contains
           case(2)
              ! This is x=0 or y=0 plane, use axial radius vs Z
              Xyz_D(1) = sign(1.00,Xyz_D(1)+Xyz_D(2))*rCyl
+             ! XyzGen_D(2) = xmin2 ! could be usedul for structured grid
           case(3)
-             ! Stretch X and Y with rSph/rCyl since instead of simply
+             ! This is the z=0 plane
+             ! Stretch X and Y with rSph/rCyl instead of simply
              ! projecting the points down to the X-Y plane
-             Xyz_D(1:2)=Xyz_D(1:2)*XyzGen_D(1)/rCyl
+             Xyz_D(1:2) = Xyz_D(1:2)*XyzGen_D(1)/rCyl
           end select
        end if
-       if(ndim==2 .and. idim0==2) then
-          ! Use 360 degrees for theta to distinguish left and right halves
-          XyzGen_D(3) = cHalfPi - atan2(Xyz_D(3),Xyz_D(1))
-          if (XyzGen_D(3) < -cHalfPi) XyzGen_D(3) = XyzGen_D(3) + cTwoPi
-       else
-          ! Colatitude
-          XyzGen_D(3) = cHalfPi - acos(Xyz_D(3)/XyzGen_D(1))
-       end if
+       ! Latitude
+       XyzGen_D(3) = asin(Xyz_D(3)/XyzGen_D(1))
+       ! Shift by width of latitude range for the left half 
+       if(UseDoubleCut .and. Xyz_D(1) < 0.0) & 
+            XyzGen_D(3) = XyzGen_D(3) + xmax2 - xmin2
+
        if(TypeGeometry=='spherical_lnr') XyzGen_D(1) = log(XyzGen_D(1))
 
     case('axial_torus')
