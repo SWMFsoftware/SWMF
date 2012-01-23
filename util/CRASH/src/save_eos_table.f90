@@ -9,7 +9,9 @@ program save_eos_table
   use CRASH_ModAtomicDataMix
   use CRASH_ModExcitationData,ONLY : n_ground, cExcitationN_III
   use CRASH_ModIonMix
-  use CRASH_ModEos, ONLY:UseEosTable_I, check_eos_table
+  use CRASH_ModEos
+  use CRASH_ModEosTable
+  use CRASH_ModInterfaceNLTE, ONLY : UseNLTE, check_NLTE
   use ModMpi
   implicit none
   integer:: iError
@@ -17,9 +19,18 @@ program save_eos_table
   UseCoulombCorrection = .true.
   UseExcitation = .true.
   UseEosTable_I = .true.
+  UseNlte       = .true.
+  !nMaterialEos  = 1
+  !Test: small grid, ascii output
+  !\
+  !Set reduced table sizes
+  !/
+  !IndexDefaultEos_I = (/9,9/)
+  if(UseNlte)call check_nlte
+  
   
   call MPI_Init(iError)
-  call check_eos_table(MPI_COMM_WORLD,.true.,'ascii')
+  call check_eos_table(iComm=MPI_COMM_WORLD)!  ,TypeFileIn='ascii')
   call MPI_Finalize(iError)
 end program save_eos_table
 !============================================================================
