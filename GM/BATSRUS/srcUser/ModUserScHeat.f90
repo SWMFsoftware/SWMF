@@ -525,8 +525,8 @@ contains
   subroutine user_calc_sources
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
-         B0_DGB
-    use ModGeometry,       ONLY: r_BLK
+         B0_DGB, VdtFace_x, VdtFace_y, VdtFace_z
+    use ModGeometry,       ONLY: r_BLK, vInv_CB
     use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, UseB0
     use ModPhysics,        ONLY: gm1, rBody
     use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, Energy_, p_, Pe_, &
@@ -535,6 +535,7 @@ contains
     integer :: i, j, k, iBlock, iWave
     real :: CoronalHeating, RadiativeCooling
     real :: DissipationLength, WaveDissipation, FullB_D(3), FullB
+    real :: DtInvWave, Vdt_Source
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -558,6 +559,20 @@ contains
                   /sqrt(State_VGB(Rho_,i,j,k,iBlock))/DissipationLength
              Source_VC(iWave,i,j,k) = Source_VC(iWave,i,j,k) - WaveDissipation
              CoronalHeating = CoronalHeating + WaveDissipation
+
+             ! Simplistic time step control for large source terms.
+             DtInvWave  = abs(WaveDissipation &
+               /max(State_VGB(iWave,i,j,k,iBlock),1e-30))
+
+             Vdt_Source = DtInvWave / vInv_CB(i,j,k,iBlock)
+
+             ! The following prevents the wave energy from becoming negative
+             ! due to too large source terms.
+             ! This should be cell-centered, since the source are, but we add
+             ! them for now to the left face of VdtFace.
+             VdtFace_x(i,j,k) = VdtFace_x(i,j,k) + 2.0*Vdt_Source
+             VdtFace_y(i,j,k) = VdtFace_y(i,j,k) + 2.0*Vdt_Source
+             VdtFace_z(i,j,k) = VdtFace_z(i,j,k) + 2.0*Vdt_Source
           end do
        else
           CoronalHeating = 0.0
@@ -565,6 +580,7 @@ contains
        if(UseElectronPressure)then
           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                + gm1*(1.0 - QeByQtotal)*CoronalHeating
+          ! The following needs a time step control
           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                + gm1*QeByQtotal*CoronalHeating
        else
@@ -583,6 +599,7 @@ contains
        else
           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + gm1*RadiativeCooling
        end if
+
     end do; end do; end do
 
   end subroutine user_calc_sources
