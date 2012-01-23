@@ -1,10 +1,18 @@
 !^CFG COPYRIGHT UM
 module CRASH_ModInterfaceNLTE
   use CRASH_ModMultiGroup, ONLY:nGroup
-    use CRASH_M_EOS,   ONLY: UseNLTE=>UseCrashEos
+  use CRASH_M_EOS,   ONLY: UseNLTE=>UseCrashEos
   implicit none
+  PRIVATE !Except
+  public:: UseNLTE  !Logical describing if the nonLTE is used 
+  public:: read_nlte,check_nlte !reads UseNlte, makes a check if UseNlte==.true.
+  public:: NLTE_EOS !Full list of the eos function parameters (no pIn)
 contains
   subroutine read_nlte
+    !Use in PARAM.in:
+    !#NLTE
+    !T/F               UseNLTE
+    !
     use ModReadParam,  ONLY: read_var
     !----------------------
     call read_var('UseNLTE',UseNLTE)
@@ -46,6 +54,7 @@ contains
   subroutine NLTE_EOS(& !Full list of the eos function parameters (no pIn)
        iMaterialIn,Rho,&
        TeIn, eTotalIn, eElectronIn,   &
+       EoBIn_I,                                              &
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
        OpacityPlanckOut_I, OpacityRosselandOut_I,            &
@@ -73,6 +82,9 @@ contains
     real,    optional, intent(in)  :: TeIn         ! temperature SI[K]
     real,    optional, intent(in)  :: eTotalIn     ! internal energy density
     real,    optional, intent(in)  :: eElectronIn  ! internal energu density of electrons
+
+    ! E-over-B ratio for all known groups
+    real,    optional, intent(in)  :: EoBIn_I(1:ng_rad)
 
     ! One or more of the output parameters can be present
     real,    optional, intent(out) :: TeOut        ! temperature
@@ -102,13 +114,20 @@ contains
     iMaterial = iMaterialIn
 
     !Calculate atomic density
-    NAtomic = Rho/( cAtomicMassCRASH_I(iMaterial)*cAtomicMass ) * 1.0e-6 ![cm-3] !Convert units
+    NAtomic = Rho/( cAtomicMassCRASH_I(iMaterial)*cAtomicMass ) & !In 1/m3
+         * 1.0e-6                                   ![cm-3] !Convert units
 
     atomass = cAtomicMassCRASH_I(iMaterial)
     atonum  = sum(nZMix_II(:,iMaterial)*cMix_II(:,iMaterial))
 
-    EoB(1:ng_rad)=0.0  !Zero radiation energy
+    if(present(EoBIn_I))then
+       EoB(1:ng_rad) = EoBIn_I
+    else
+       EoB(1:ng_rad)=0.0  !Zero radiation energy
+    end if
+
     call set_kbr(NAtom=NAtomic)
+
     if(present(TeIn))then
 
        !Convert temperature to eV
