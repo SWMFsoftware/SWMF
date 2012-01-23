@@ -69,12 +69,12 @@ contains
          .and.                        CoordMax_D(Theta_) > 179.99
 
     ! Convert degrees to radians for the domain boundaries
-    if(IsCylindrical .or. IsSpherical)then
+    if(IsCylindrical .or. IsSpherical .or. IsRLonLat)then
        CoordMin_D(Phi_) = CoordMin_D(Phi_)*cDegToRad
        CoordMax_D(Phi_) = CoordMax_D(Phi_)*cDegToRad
     end if
 
-    if(IsSpherical)then
+    if(IsSpherical .or. IsRLonLat)then
        CoordMin_D(Theta_) = CoordMin_D(Theta_)*cDegToRad
        CoordMax_D(Theta_) = CoordMax_D(Theta_)*cDegToRad
     end if

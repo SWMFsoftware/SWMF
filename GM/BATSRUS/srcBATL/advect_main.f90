@@ -193,7 +193,7 @@ contains
        XyzShift_D = Xyz_D - Time*Velocity_D
     end if
 
-    ! Take periodicity into account for Cartesian and RZ geometry only
+    ! Take periodicity into account for Cartesian and RZ geometries only
     if(IsCartesian .or. IsRzGeometry) then
        DomainSize_D = DomainMax_D(1:nDim) - DomainMin_D(1:nDim)
        where(IsPeriodic_D(1:nDim))
@@ -429,7 +429,8 @@ contains
 
     use BATL_lib, ONLY: MaxDim, nBlock, Unused_B, &
          iComm, nProc, iProc, iNode_B, &
-         TypeGeometry, IsSpherical, Phi_, nDimAmr, CoordMin_D, CoordMax_D, &
+         TypeGeometry, IsCylindrical, IsSpherical, IsRLonLat, &
+         Phi_, nDimAmr, CoordMin_D, CoordMax_D, &
          CellVolume_GB, CellSize_DB, Xyz_DGB, CoordMin_DB, CoordMax_DB
 
     use ModMpi,    ONLY: MPI_REAL, MPI_INTEGER, MPI_MIN, MPI_SUM, MPI_reduce
@@ -453,19 +454,20 @@ contains
     call MPI_reduce(CellSizeMin_D, CellSizeMinAll_D, MaxDim, MPI_REAL, &
          MPI_MIN, 0, iComm, iError)
 
-    ! Swap theta and phi to conform the r-lat-lon grid used in PostIDL
+    ! Swap theta and phi to conform the r-lon-lat grid used in PostIDL
     if(IsSpherical) &
          CellSizeMinAll_D = CellSizeMinAll_D( (/1,3,2/) )
 
     ! Set plot sizes
     CellSizePlot_D = CellSizeMinAll_D
 
-    if(MaxLevel > 0)then
+    ! uncomment "if" to create sturctured grids if there is no AMR
+    ! if(MaxLevel > 0)then 
        ! Indicates to PostIDL that there is AMR in first element
        CellSizePlot_D(1) = -1.0
        ! Indicate full AMR by setting all values to -1
        if(nDimAmr == nDim) CellSizePlot_D = -1.0
-    end if
+    ! end if
 
     nPlot = 1
     if(nDim == 3) nPlot = 2
@@ -490,16 +492,19 @@ contains
        nCell = 0
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          if(IsSpherical)then
-             if(iPlot == 1)then
-                if(CoordMin_DB(2,iBlock) > cHalfPi) CYCLE
-                if(CoordMax_DB(2,iBlock) < cHalfPi) CYCLE
-             else
-                if(  CoordMin_DB(Phi_,iBlock) > 0  .and.  &
-                     CoordMax_DB(Phi_,iBlock) < cPi       ) CYCLE
-                if(  CoordMin_DB(Phi_,iBlock) > cPi .and. &
-                     CoordMax_DB(Phi_,iBlock) < cTwoPi    ) CYCLE
-             end if
+          if(IsSpherical .and. iPlot == 1)then
+             if(CoordMin_DB(2,iBlock) > cHalfPi) CYCLE
+             if(CoordMax_DB(2,iBlock) < cHalfPi) CYCLE
+          elseif((IsSpherical .or. IsRLonLat) .and. iPlot == 2)then
+             if(  CoordMin_DB(Phi_,iBlock) > 0  .and.  &
+                  CoordMax_DB(Phi_,iBlock) < cPi       ) CYCLE
+             if(  CoordMin_DB(Phi_,iBlock) > cPi .and. &
+                  CoordMax_DB(Phi_,iBlock) < cTwoPi    ) CYCLE
+          elseif(IsCylindrical .and. iPlot == 2)then
+             if(  CoordMin_DB(Phi_,iBlock) > 1e-6          .and. &
+                  CoordMax_DB(Phi_,iBlock) < cPi    - 1e-6       ) CYCLE   
+             if(  CoordMin_DB(Phi_,iBlock) > cPi    + 1e-6 .and. &
+                  CoordMax_DB(Phi_,iBlock) < cTwoPi - 1e-6       ) CYCLE
           elseif(nDim > 1)then
              if(CoordMin_DB(iXyz,iBlock) > 1e-6) CYCLE
              if(CoordMax_DB(iXyz,iBlock) <-1e-6) CYCLE
@@ -543,7 +548,7 @@ contains
           ! set plotting range
 
           if(IsSpherical)then
-             ! Conform with the r-lat-lon grid used in PostIDL
+             ! Conform with the r-lon-lat grid used in PostIDL
              PlotMin_D(1) = CoordMin_D(1)
              PlotMax_D(1) = CoordMax_D(1)
              PlotMin_D(2) = CoordMin_D(3)
@@ -585,7 +590,11 @@ contains
           write(UnitTmp_,'(a)')        '1 1 1'        ! units
           write(UnitTmp_,'(l8,a)')     .true.,        ' IsBinary' 
           write(UnitTmp_,'(i8,a)')     nByteReal,     ' nByteReal'
-          write(UnitTmp_,'(a)')        TypeGeometry
+          if(IsRLonLat)then
+             write(UnitTmp_,'(a)')     'spherical'
+          else
+             write(UnitTmp_,'(a)')     TypeGeometry
+          end if
           write(UnitTmp_,'(a)')        'real4'        ! type of .out file
           close(UnitTmp_)
        end if
@@ -753,8 +762,8 @@ contains
              ! Divide by volume averaged over the face
              ! Maybe some more accurate approximation is needed???
              do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
-                vInv = 2/(CellVolume_GB(i-Di,j-Dj,k-Dk,iBlock) &
-                     +    CellVolume_GB(i,j,k,iBlock))
+                vInv = 2/(abs(CellVolume_GB(i-Di,j-Dj,k-Dk,iBlock)) &
+                     +    abs(CellVolume_GB(i,j,k,iBlock)))
 
                 StateLeft_VFD( :,i,j,k,iDim)=vInv*StateLeft_VFD( :,i,j,k,iDim)
                 StateRight_VFD(:,i,j,k,iDim)=vInv*StateRight_VFD(:,i,j,k,iDim)

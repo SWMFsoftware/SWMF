@@ -21,6 +21,7 @@ module BATL_geometry
   logical, public:: IsCartesian       = .true.
   logical, public:: IsRzGeometry      = .false.
   logical, public:: IsSpherical       = .false.
+  logical, public:: IsRLonLat         = .false.
   logical, public:: IsSphericalAxis   = .false. ! theta=0 and theta=pi boundary
   logical, public:: IsCylindrical     = .false.
   logical, public:: IsCylindricalAxis = .false. ! r=0 boundary
@@ -57,19 +58,22 @@ contains
     IsCartesian   = TypeGeometry(1:9)  == 'cartesian'
     IsRzGeometry  = TypeGeometry(1:2)  == 'rz'
     IsSpherical   = TypeGeometry(1:3)  == 'sph'
+    IsRLonLat     = TypeGeometry(1:3)  == 'rlo'
     IsCylindrical = TypeGeometry(1:3)  == 'cyl'
     IsCubedSphere = TypeGeometry(1:3)  == 'cub'
 
     IsLogRadius   = index(TypeGeometry,'lnr')  > 0
     IsGenRadius   = index(TypeGeometry,'genr') > 0
 
-    r_ = -1; Phi_ = -1; Theta_ = -1
+    r_ = -1; Phi_ = -1; Theta_ = -1; Lon_ = -1; Lat_ = -1
     if(IsRzGeometry)then
        r_ = 2
     elseif(IsCylindrical)then
        r_ = 1; Phi_ = 2
     elseif(IsSpherical)then
        r_ = 1; Theta_ = 2; Phi_ = 3
+    elseif(IsRLonLat)then
+       r_ = 1; Phi_ = 2; Theta_ = 3; Lon_ =2; Lat_ = 3
     end if
 
   end subroutine init_geometry
@@ -79,6 +83,7 @@ contains
   subroutine xyz_to_coord(XyzIn_D, CoordOut_D)
 
     use ModCoordTransform, ONLY: atan2_check, xyz_to_sph
+    use ModNumConst,       ONLY: cHalfPi
 
     real, intent(in) :: XyzIn_D(MaxDim)
     real, intent(out):: CoordOut_D(MaxDim)
@@ -98,6 +103,12 @@ contains
        CoordOut_D(3) = XyzIn_D(3)
     elseif(IsSpherical)then
        call xyz_to_sph(XyzIn_D, CoordOut_D)
+    elseif(IsRLonLat)then
+       ! Use xyz to r,theta,phi conversion
+       call xyz_to_sph(XyzIn_D, &
+            CoordOut_D(r_), CoordOut_D(Theta_), CoordOut_D(Phi_))
+       ! Convert colatitude to latitude
+       CoordOut_D(Lat_) = cHalfPi - CoordOut_D(Theta_)
     elseif(IsCubedSphere)then
        r2 = sum(XyzIn_D**2)
        if(r2 > 0.0)then
@@ -123,6 +134,7 @@ contains
   subroutine coord_to_xyz(CoordIn_D, XyzOut_D)
 
     use ModCoordTransform, ONLY: sph_to_xyz
+    use ModNumConst,       ONLY: cHalfPi
 
     real, intent(in) :: CoordIn_D(MaxDim)
     real, intent(out):: XyzOut_D(MaxDim)
@@ -152,6 +164,9 @@ contains
        XyzOut_D(3) = Coord_D(3)
     elseif(IsSpherical)then
        call sph_to_xyz(Coord_D, XyzOut_D)
+    elseif(IsRLonLat)then
+       call sph_to_xyz(Coord_D(r_), cHalfPi - Coord_D(Lat_), Coord_D(Phi_), &
+            XyzOut_D)
     elseif(IsCubedSphere)then
        r2 = sum(CoordIn_D**2)
        if(r2 > 0.0)then

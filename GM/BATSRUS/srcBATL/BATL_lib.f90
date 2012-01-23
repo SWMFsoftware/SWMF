@@ -48,9 +48,9 @@ module BATL_lib
   public:: IsNewDecomposition, IsNewTree
 
   ! Inherited from BATL_geometry
-  public:: TypeGeometry, IsCartesian, IsRzGeometry, IsSpherical, &
+  public:: TypeGeometry, IsCartesian, IsRzGeometry, IsSpherical, IsRLonLat, &
        IsCylindrical, IsPeriodic_D, IsNodeBasedGrid, &
-       x_, y_, z_, r_, phi_, theta_
+       x_, y_, z_, r_, Phi_, Theta_, Lon_, Lat_
 
   ! Inherited from BATL_grid
   public:: CoordMin_D, CoordMax_D, CoordMin_DB, CoordMax_DB, CellSize_DB
