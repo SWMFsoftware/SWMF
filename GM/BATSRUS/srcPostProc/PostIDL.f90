@@ -212,7 +212,10 @@ program PostIDL
         end if
 
         ! Do not attempt to use structured grid for double cuts
-        if(UseDoubleCut) structured = .false.
+        if(UseDoubleCut)then
+           structured = .false.
+           CellSizePlot_D = -1.0
+        end if
      end if
 
      if(.not.structured)then
