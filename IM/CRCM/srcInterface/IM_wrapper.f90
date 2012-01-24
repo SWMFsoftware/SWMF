@@ -200,7 +200,7 @@ subroutine IM_save_restart(TimeSimulation)
 end subroutine IM_save_restart
 !===========================================================================
 
-subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
+subroutine IM_put_from_gm_crcm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
   use ModGmCRCM
   use ModCrcmGrid,  ONLY: nLat => np, nLon => nt, iProc, nProc
@@ -210,8 +210,8 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
 !  use ModPrerunField,ONLY: DoWritePrerun, save_prerun
   implicit none
 
-  integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
-  real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn)
+  integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
+  real,    intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
   integer, intent(in) :: nVarLine, nPointLine
   real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
 
@@ -231,11 +231,11 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   DoMultiFluidGMCoupling = .false.
   DoAnisoPressureGMCoupling = .false.
  
-  if(NameVar == 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')then
+  if(NameVar == 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')then
      DoMultiFluidGMCoupling = .true.
-  elseif(NameVar == 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:ppar')then
+  elseif(NameVar == 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar')then
      DoAnisoPressureGMCoupling = .true.
-  elseif(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p')then
+  elseif(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p')then
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end if
 
@@ -245,69 +245,73 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   end if
   DoneGmCoupling=.true.
   if(DoTestMe)then
-     write(*,*)NameSub,' iSizeIn,jSizeIn,nIntegralIn=',&
-          iSizeIn,jSizeIn,nIntegralIn
+     write(*,*)NameSub,' iSizeIn,jSizeIn,nVarIn=',&
+          iSizeIn,jSizeIn,nVarIn
      write(*,*)NameSub,' nVarLine,nPointLine=',nVarLine,nPointLine
-     !write(*,*)NameSub,' Integral_IIV(21,1,:)=',Integral_IIV(21,1,:)
+     !write(*,*)NameSub,' Buffer_IIV(21,1,:)=',Buffer_IIV(21,1,:)
      write(*,*)NameSub,' BufferLine_VI(:,1) =',BufferLine_VI(:,1)
      write(*,*)NameSub,' BufferLine_VI(:,2) =',BufferLine_VI(:,2)
-     write(*,*)NameSub,' IMF: Density  = ',Integral_IIV(1,1,6)
-     write(*,*)NameSub,' IMF: Velocity = ',Integral_IIV(2,1,6)
-     write(*,*)NameSub,' IMF: Bx       = ',Integral_IIV(5,1,6)
-     write(*,*)NameSub,' IMF: By       = ',Integral_IIV(6,1,6)
-     write(*,*)NameSub,' IMF: Bz       = ',Integral_IIV(7,1,6)
+     write(*,*)NameSub,' IMF: Density  = ',Buffer_IIV(1,1,6)
+     write(*,*)NameSub,' IMF: Velocity = ',Buffer_IIV(2,1,6)
+     write(*,*)NameSub,' IMF: Bx       = ',Buffer_IIV(5,1,6)
+     write(*,*)NameSub,' IMF: By       = ',Buffer_IIV(6,1,6)
+     write(*,*)NameSub,' IMF: Bz       = ',Buffer_IIV(7,1,6)
   end if
   
   if (allocated(StateLine_VI)) then
-     deallocate(StateLine_VI,StateIntegral_IIV)
+     deallocate(StateLine_VI,StateBmin_IIV)
   endif
   
   if (.not.allocated(StateLine_VI)) then
      allocate(StateLine_VI(nVarLine,nPointLine),&
-          StateIntegral_IIV(iSizeIn,jSizeIn,nIntegralIn))
+          StateBmin_IIV(iSizeIn,jSizeIn,nVarIn))
   endif
 
   StateLine_VI      = BufferLine_VI
-  StateIntegral_IIV(:,:,:) = Integral_IIV(:,:,:)
+  StateBmin_IIV(:,:,:) = Buffer_IIV(:,:,:)
+
+  ! convert unit of locations X and Y
+  StateBmin_IIV(:,:,1:2) = StateBmin_IIV(:,:,1:2)/rEarth ! m --> Earth Radii
+
   nPoint    = nPointLine
-  nIntegral = nIntegralIn
+  nVarBmin = nVarIn
   !Convert Units
   StateLine_VI(2,:) = StateLine_VI(2,:) / rEarth ! m --> Earth Radii
   StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
 
 ! for anisopressure coupling 
-!  if(DoTest)then
-!     write(NameOut,"(a,f6.1)") 'StateIntegral_t_',tSimulation
-!     open(UnitTmp_,FILE=NameOut)
-!     write(UnitTmp_,"(a)") 'IM_put_from_gm_crcm, StateIntegral_IIV, last index 1:5 and 7 '
-!     write(UnitTmp_,"(a)") 'Xeq Yeq Beq rho p ppar'
-!     do iLat =iSizeIn,1,-1
-!        do iLon =1,jSizeIn
-!        write(UnitTmp_,"(100es18.10)")StateIntegral_IIV(iLat,iLon,1:5), &
-!             StateIntegral_IIV(iLat,iLon,7)
-!        enddo
-!     enddo
-!     close(UnitTmp_)
-!  end if
+  if(DoTest)then
+     write(NameOut,"(a,f6.1)") 'StateBmin_t_',tSimulation
+     open(UnitTmp_,FILE=NameOut)
+     write(UnitTmp_,"(a)") 'IM_put_from_gm_crcm, StateBmin_IIV, last index 1:5 and 7 '
+     write(UnitTmp_,"(a)") 'Xeq Yeq Beq rho p ppar'
+     do iLat =iSizeIn,1,-1
+        do iLon =1,jSizeIn
+        write(UnitTmp_,"(100es18.10)")StateBmin_IIV(iLat,iLon,1:5), &
+             StateBmin_IIV(iLat,iLon,7)
+        enddo
+     enddo
+     close(UnitTmp_)
+  end if
 
 !  if (nProc == 1) then
-!     write(NameOut,"(a,i2.2)") 'StateIntegral1_0_iproc_',iProc
+!     write(NameOut,"(a,i2.2)") 'StateBmin1_0_iproc_',iProc
 !     open(UnitTmp_,FILE=NameOut)
 !     do iLat =1,nLat
-!        write(UnitTmp_,"(100es18.10)")StateIntegral_IIV(iLat,1:nLon,1)
+!        write(UnitTmp_,"(100es18.10)")StateBmin_IIV(iLat,1:nLon,1)
 !     enddo
 !     close(UnitTmp_)
-!     write(*,*)'!!! iProc, StateIntegral_IIV(21,25)',iProc, StateIntegral_IIV(21,25,1)
+!     write(*,*)'!!! iProc, StateBmin_IIV(21,25)',iProc, StateBmin_IIV(21,25,1)
 !     write(*,*) '!!! iSizeIn,jSizeIn',iSizeIn,jSizeIn
 !     call con_stop('')
 !  else
-!     write(NameOut,"(a,i2.2)") 'StateIntegral1_iproc_',iProc
+!     write(NameOut,"(a,i2.2)") 'StateBmin1_iproc_',iProc
 !     open(UnitTmp_,FILE=NameOut)
 !     do iLat =1,nLat
-!        write(UnitTmp_,"(100es18.10)")StateIntegral_IIV(iLat,1:nLon,1)
+!        write(UnitTmp_,"(100es18.10)")StateBmin_IIV(iLat,1:nLon,1)
 !     enddo
 !     close(UnitTmp_)
-!     write(*,*)'!!! iProc, StateIntegral_IIV(21,25)',iProc, StateIntegral_IIV(21,25,1)
+!     write(*,*)'!!! iProc, StateBmin_IIV(21,25)',iProc, StateBmin_IIV(21,25,1)
 !     write(*,*) '!!! iSizeIn,jSizeIn',iSizeIn,jSizeIn
 !     call con_stop('')
 !  endif
@@ -315,8 +319,8 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
 
   !Solar wind values
   if(IsFirstCall .or. (.not. UseSmooth)) then
-     xnswa(1) = Integral_IIV(1,1,6)*1.0e-6                   !m^-3 -->/cc
-     vswa (1) = sqrt(sum(Integral_IIV(2:4,1,6)**2.0))*1.0e-3 !m/s-->km/s
+     xnswa(1) = Buffer_IIV(1,1,6)*1.0e-6                   !m^-3 -->/cc
+     vswa (1) = sqrt(sum(Buffer_IIV(2:4,1,6)**2.0))*1.0e-3 !m/s-->km/s
   else
      ! Update Solar wind value, but do not let them change more than 5 percent 
      ! per update
@@ -324,14 +328,14 @@ subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
      SwDensMin = 0.95*xnswa(1)
      SwVelMax  = 1.05*vswa(1)
      SwVelMin  = 0.95*vswa(1)
-     xnswa(1) = min(SwDensMax,Integral_IIV(1,1,6)*1.0e-6)
+     xnswa(1) = min(SwDensMax,Buffer_IIV(1,1,6)*1.0e-6)
      xnswa(1) = max(SwDensMin,xnswa(1))
-     vswa(1)  = min(SwVelMax,sqrt(sum(Integral_IIV(2:4,1,6)**2.0))*1.0e-3)
+     vswa(1)  = min(SwVelMax,sqrt(sum(Buffer_IIV(2:4,1,6)**2.0))*1.0e-3)
      vswa(1)  = max(SwVelMin,vswa(1))
   endif
-  bxw(1) = Integral_IIV(5,1,6)*1.0e9      !T --> nT
-  byw(1) = Integral_IIV(6,1,6)*1.0e9      !T --> nT
-  bzw(1) = Integral_IIV(7,1,6)*1.0e9      !T --> nT
+  bxw(1) = Buffer_IIV(5,1,6)*1.0e9      !T --> nT
+  byw(1) = Buffer_IIV(6,1,6)*1.0e9      !T --> nT
+  bzw(1) = Buffer_IIV(7,1,6)*1.0e9      !T --> nT
 
   nsw = 1
   
@@ -515,10 +519,10 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
            Buffer_IIV(i,j,bmin_) = Bmin_C(i,j)
         end if
         if(DoMultiFluidGMCoupling)then
-           Buffer_IIV(i,j,Hpres_) = Pressure_IC(1,i,j)  ! convert unit?
+           Buffer_IIV(i,j,Hpres_) = Pressure_IC(1,i,j)*1e-9
            Buffer_IIV(i,j,Hdens_) = &
                 Den_IC (1,i,j)*cProtonMass*amu_I(1)
-           Buffer_IIV(i,j,Opres_) = Pressure_IC(2,i,j)
+           Buffer_IIV(i,j,Opres_) = Pressure_IC(2,i,j)*1e-9
            Buffer_IIV(i,j,Odens_) = &
                 Den_IC (2,i,j)*cProtonMass*amu_I(2)
            
@@ -586,21 +590,22 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   end do; end do
 
   !for anisopressure IM coupling
-!  if(iProc == 0) then
-!     write(NameOut,"(a,f6.1,a)") 'IM_Buffer_IIV_t', Time, '.out'
-!     open(UnitTmp_,FILE=NameOut)
-!     write(UnitTmp_,"(a)") 'IM_get_for_GM, Buffer_IIV:'
-!     write(UnitTmp_,"(a)") ' '
-!     write(UnitTmp_,"(a)") ' '
-!     write(UnitTmp_,"(a)") ' '
-!     write(UnitTmp_,"(a)") 'p rho ppar bmin'
-!     do i = iSizeIn, 1, -1                                                                       
-!        do j =1,jSizeIn 
-!           write(UnitTmp_,"(4es18.10)")  Buffer_IIV(i,j,:)
-!        end do
-!     end do
-!     close(UnitTmp_)
-!  end if
+ if(DoTest .and. iProc == 0) then
+    write(NameOut,"(a,f6.1,a)") 'IM_Buffer_IIV_t', Time, '.out'
+    open(UnitTmp_,FILE=NameOut)
+    write(UnitTmp_,"(a)") 'IM_get_for_GM, Buffer_IIV:'
+!    write(UnitTmp_,"(a)") ' '
+!    write(UnitTmp_,"(a)") ' '
+!    write(UnitTmp_,"(a)") ' '
+    write(UnitTmp_,"(a)") 'bmin rho p ppar'
+    do i = iSizeIn, 1, -1                                                                       
+       do j =1,jSizeIn 
+          write(UnitTmp_,"(4es18.10)")  Buffer_IIV(i,j,bmin_), Buffer_IIV(i,j,dens_), &
+               Buffer_IIV(i,j,pres_), Buffer_IIV(i,j,parpres_)
+       end do
+    end do
+    close(UnitTmp_)
+ end if
 
   ! Units of rcm_mass_density are kg/m3
 !  where(Buffer_IIV(:,:,dens_) > 0.0) &

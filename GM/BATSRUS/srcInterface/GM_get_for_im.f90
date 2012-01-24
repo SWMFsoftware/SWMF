@@ -22,13 +22,13 @@ subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, nPointL
   !---------------------------------------------------------------------
 
   if(DoMultiFluidIMCoupling)then
-     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
+     if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
           call CON_stop(NameSub//' invalid NameVar='//NameVar)
   else if(DoAnisoPressureIMCoupling)then
-     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:ppar') &
+     if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar') &
           call CON_stop(NameSub//' invalid NameVar='//NameVar)
   else
-     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p') &
+     if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p') &
           call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end if
 
@@ -59,27 +59,18 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   use ModGeometry,ONLY: x2
   use ModProcMH,  ONLY: iProc
   use ModIoUnit, ONLY: UNITTMP_
-
-  use ModMain, ONLY: Time_Simulation, DoMultiFluidIMCoupling, &
-       DoAnisoPressureIMCoupling
-
-  use ModGmImCoupling, ONLY: &
-       IM_lat, IM_lon, &
-       write_integrated_data_tec, write_integrated_data_idl, &
-       MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p, NoValue,&
-       MHD_SUM_ppar, MHD_HpRho, MHD_OpRho, MHD_Hpp, MHD_Opp
-
-  use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
-       InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, pparInvB_, &
-       HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_,xEnd_, CLOSEDRAY
-
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
-                           MassFluid_I, IonFirst_, nVar
-
-  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_,UnitRho_
+  use ModMain, ONLY: Time_Simulation, TypeCoordSystem, &
+       DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
+  use ModGmImCoupling, ONLY: NoValue
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, Ppar_,&
+                           iRho_I, iP_I, MassFluid_I, IonFirst_, IonLast_, nVar
+  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_, UnitRho_, rBody
   use ModSolarwind, ONLY: get_solar_wind_point
+  use ModConst, ONLY: cProtonMass
 
   use CON_line_extract, ONLY: line_get, line_clean
+  use CON_axes,         ONLY: transform_matrix
+  use CON_planet,       ONLY: RadiusPlanet
 
   implicit none
 
@@ -92,127 +83,116 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
   character (len=*), intent(in):: NameVar
 
-  integer :: nVarExtract, nPoint, iPoint
+  integer :: nVarExtract, nPoint, iPoint, iStartPoint
   real, allocatable :: Buffer_VI(:,:)
   real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p
 
   logical :: DoTestTec, DoTestIdl
   logical :: DoTest, DoTestMe
 
-  integer :: iLat,iLon,iLine
+  integer :: iLat,iLon,iLine,iLocBmin
+  integer :: iIonSecond
+  real    :: SmGm_DD(3,3), XyzBminSm_D(3)
   real    :: SolarWind_V(nVar)
   character(len=100) :: NameOut
   !--------------------------------------------------------------------------
 
   if(DoMultiFluidIMCoupling)then
-     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
+     if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
           call CON_stop(NameSub//' invalid NameVar='//NameVar)
   else if(DoAnisoPressureIMCoupling)then
-     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:ppar') &
+     if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar') &
           call CON_stop(NameSub//' invalid NameVar='//NameVar)
   else
-     if(NameVar /= 'vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p') &
+     if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p') &
           call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end if
 
   if(iProc /= 0)then
      ! Clean and return
-     deallocate(RayIntegral_VII, RayResult_VII)
      call line_clean
      RETURN
   end if
 
-  call CON_set_do_test(NameSub//'_tec', DoTestTec, DoTestMe)
-  call CON_set_do_test(NameSub//'_idl', DoTestIdl, DoTestMe)
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-  ! Copy RayResult into small arrays used in old algorithm
-  MHD_SUM_vol = RayResult_VII(InvB_   ,:,:)
-  MHD_Xeq     = RayResult_VII(Z0x_    ,:,:)
-  MHD_Yeq     = RayResult_VII(Z0y_    ,:,:)
-  MHD_Beq     = RayResult_VII(Z0b_    ,:,:)
-  MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
-  MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
-  
-  if(DoMultiFluidIMCoupling)then
-     MHD_HpRho= RayResult_VII(HpRhoInvB_,:,:)
-     MHD_OpRho= RayResult_VII(OpRhoInvB_,:,:)
-     MHD_HpP= RayResult_VII(HpPInvB_,:,:)
-     MHD_OpP= RayResult_VII(OpPInvB_,:,:)
-  end if
-  
-  if(DoAnisoPressureIMCoupling) &
-       MHD_SUM_ppar = RayResult_VII(pparInvB_,:,:)
-
-  ! Put impossible values if the ray is not closed
-  where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-     MHD_Xeq     = NoValue
-     MHD_Yeq     = NoValue
-     MHD_SUM_vol = -1.0
-     MHD_SUM_rho = 0.0
-     MHD_SUM_p   = 0.0
-     MHD_Beq     = NoValue
-  end where
-
-  if(DoMultiFluidIMCoupling)then
-     where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-        MHD_Hprho = 0.0
-        MHD_Oprho = 0.0
-        MHD_HpP   = 0.0
-        MHD_OpP   = 0.0
-     end where
-  end if
-
-  if(DoAnisoPressureIMCoupling)then
-     where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-        MHD_SUM_ppar = 0.0
-     end where
-  end if
-
-  ! Put impossible value for volume when inside inner boundary
-  where(MHD_SUM_vol == 0.0) MHD_SUM_vol = -1.0
-
-  ! Put the extracted data into BufferLine_VI
-
+  ! Put the extracted data into BufferLine_I
   call line_get(nVarExtract, nPoint)
   if(nPoint /= nPointLine)call stop_mpi(NameSub//': nPointLine error')
   if(nVarExtract < nVarLine)call stop_mpi(NameSub//': nVarLine error')
   allocate(Buffer_VI(0:nVarExtract, nPoint))
   call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
-  
+
+  ! Transformation matrix between CRCM(SM) and GM coordinates
+  SmGm_DD = transform_matrix(Time_Simulation,TypeCoordSystem,'SMG')
+          
+  ! For multifluid coupling
+  if(DoMultiFluidIMCoupling) &
+       iIonSecond = min(IonFirst_+1, IonLast_)
+
+  ! The first field line starts from iPoint = 1
+  iStartPoint = 1
   do iPoint = 1, nPoint
 
      iLine =  Buffer_VI(0,iPoint)     ! line index
      iLat = mod(iLine-1, iSizeIn) + 1
      iLon = (iLine-1)/iSizeIn + 1
-
-     ! exclude open field lines by setting impossible line index
-     if(MHD_Xeq(iLat, iLon) == NoValue)then
-        iLine = -1
-     endif
-
+     
      BufferLine_VI(1,iPoint) = iLine
      BufferLine_VI(2,iPoint) = Buffer_VI(1,iPoint)                 ! Length
      BufferLine_VI(3,iPoint) = sqrt(sum(Buffer_VI(2:4,iPoint)**2)) ! |r|
      BufferLine_VI(4,iPoint) = &
           sqrt(sum(Buffer_VI(4+Bx_:4+Bz_,iPoint)**2))       ! |B|
+
+     ! Find the location of minimum B, Bmin, and other variables at Bmin 
+     ! for each field line
+     if(Buffer_VI(0,min(nPoint,iPoint+1)) /= Buffer_VI(0,iPoint) &
+          .or. iPoint == nPoint)then
+        ! Exclude open field lines by checking the radial 
+        ! distance of the last point on a field line
+        if(BufferLine_VI(3,iPoint) > (rBody + 1)*RadiusPlanet)then
+           BufferLine_VI(1,iPoint) = -1              ! set line index = -1
+           Buffer_IIV(iLat, iLon, 1:2) = NoValue*1e6    ! x, y
+           Buffer_IIV(iLat, iLon, 3) = NoValue       ! Bmin
+           Buffer_IIV(iLat, iLon, 4:5) = 0.0         ! rho, p
+           if(DoMultiFluidIMCoupling) &
+                Buffer_IIV(iLat, iLon, 7:10) = 0.0
+           if(DoAnisoPressureIMCoupling) &
+             Buffer_IIV(iLat, iLon, 7) = 0.0
+           
+        else
+           ! For closed field lines 
+           ! Location of Bmin for this field line
+           iLocBmin = minloc(BufferLine_VI(4,iStartPoint:iPoint), dim=1) &
+                + iStartPoint - 1
+           Buffer_IIV(iLat, iLon, 3) = BufferLine_VI(4, iLocBmin)     ! Bmin
+	   
+           ! Convert location from GM to SMG coordinates
+           XyzBminSm_D = matmul(SmGm_DD, Buffer_VI(2:4,iLocBmin))
+           Buffer_IIV(iLat, iLon, 1) = XyzBminSm_D(1) ! x
+           Buffer_IIV(iLat, iLon, 2) = XyzBminSm_D(2) ! y
+           Buffer_IIV(iLat, iLon, 4) = Buffer_VI(4+Rho_,iLocBmin) &
+                /cProtonMass                          ! rho in [#/m^3]
+           Buffer_IIV(iLat, iLon, 5) = Buffer_VI(4+p_,  iLocBmin)     ! p
+           if(DoMultiFluidIMCoupling)then
+              Buffer_IIV(iLat, iLon, 7:8) &
+                   = Buffer_VI(4+iRho_I(IonFirst_:iIonSecond), iLocBmin) ! HpRho,OpRho
+              Buffer_IIV(iLat, iLon, 9:10) &
+                   = Buffer_VI(4+iP_I(IonFirst_:iIonSecond),   iLocBmin) ! HpP,OpP
+           end if
+           ! Ppar and HpRho share the same index in buffer_iiv for now
+           ! does not work for multifluid MHD with anisotropic pressure
+           if(DoAnisoPressureIMCoupling) &
+	        Buffer_IIV(iLat, iLon, 7) = Buffer_VI(4+Ppar_,  iLocBmin) ! Ppar
+        end if
+
+        ! Set the start point for the next field line
+        iStartPoint = iPoint +1
+     end if
   end do
   
-  deallocate(RayIntegral_VII, RayResult_VII, Buffer_VI)
+  deallocate(Buffer_VI)
   call line_clean
-
-  ! Output before processing
-  if(DoTest .or. DoTestTec)call write_integrated_data_tec
-  if(DoTest .or. DoTestIdl)call write_integrated_data_idl
-  !kludge
-  !call write_integrated_data_idl
-
-  ! Put results into output buffer
-  Buffer_IIV(:,:,1)  = MHD_Xeq
-  Buffer_IIV(:,:,2)  = MHD_Yeq
-  Buffer_IIV(:,:,3)  = MHD_Beq * No2Si_V(UnitB_)
-  Buffer_IIV(:,:,4)  = MHD_SUM_rho / MHD_SUM_vol * No2Si_V(UnitN_) 
-  Buffer_IIV(:,:,5)  = MHD_SUM_p   / MHD_SUM_vol * No2Si_V(UnitP_)
  
   ! Send solar wind values in the array of the extra integral
   ! This is a temporary solution. IM should use MHD_SUM_rho and MHD_SUM_p
@@ -228,34 +208,22 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   Buffer_IIV(7,:,6) = SolarWind_V(Bz_) * No2Si_V(UnitB_)
   Buffer_IIV(8,:,6) = SolarWind_V(p_)  * No2Si_V(UnitP_)
 
-  if(DoMultiFluidIMCoupling)then
-     Buffer_IIV(:,:,7) = MHD_HpRho / MHD_SUM_vol * No2Si_V(UnitN_) 
-     Buffer_IIV(:,:,8) = MHD_Oprho / MHD_SUM_vol * No2Si_V(UnitN_) 
-     Buffer_IIV(:,:,9)   = MHD_HpP / MHD_SUM_vol * No2Si_V(UnitP_)
-     Buffer_IIV(:,:,10)  = MHD_OpP / MHD_SUM_vol * No2Si_V(UnitP_)
-  end if
-
-  ! ppar and HpRho share the same index in buffer_iiv for now
-  ! does not work for multifluid MHD with anisotropic pressure
-  if(DoAnisoPressureIMCoupling) &
-        Buffer_IIV(:,:,7)  = MHD_SUM_ppar / MHD_SUM_vol * No2Si_V(UnitP_)
-
   !^CFG END RAYTRACE
 
   ! test only for anisop
-! if(iProc == 0 .and. DoTestIdl .and. DoAnisoPressureIMCoupling)then
-!    write(NameOut,"(a,f6.1)") 'GM_get_for_IM_t_', Time_Simulation
-!    open(UnitTmp_,FILE=NameOut)
-!    write(UnitTmp_,"(a)") 'GM_get_for_im_crcm, Buffer_IIV, last index 1:5 and 7 '
-!    write(UnitTmp_,"(a)") 'Xeq Yeq Beq rho p ppar'
-!    do iLat =iSizeIn,1,-1
-!       do iLon =1,jSizeIn
-!       write(UnitTmp_,"(100es18.10)") Buffer_IIV(iLat,iLon,1:5), &
-!            Buffer_IIV(iLat,iLon,7)
-!       enddo
-!    enddo
-!    close(UnitTmp_)
-! end if
+ if(iProc == 0 .and. DoTest .and. DoAnisoPressureIMCoupling)then
+    write(NameOut,"(a,f6.1)") 'GM_get_for_IM_t_', Time_Simulation
+    open(UnitTmp_,FILE=NameOut)
+    write(UnitTmp_,"(a)") 'GM_get_for_im_crcm, Buffer_IIV, last index 1:5 and 7 '
+    write(UnitTmp_,"(a)") 'Xeq Yeq Beq rho p ppar'
+    do iLat =iSizeIn,1,-1
+       do iLon =1,jSizeIn
+       write(UnitTmp_,"(100es18.10)") Buffer_IIV(iLat,iLon,1:5), &
+            Buffer_IIV(iLat,iLon,7)
+       enddo
+    enddo
+    close(UnitTmp_)
+ end if
 
 end subroutine GM_get_for_im_crcm
 

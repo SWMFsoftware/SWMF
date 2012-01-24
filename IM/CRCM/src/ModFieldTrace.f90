@@ -797,23 +797,23 @@ contains
     endif
 
     if (.not. UseDipole) then
-       ro1=sqrt(sum(StateIntegral_IIV(iLat,iLon,1:2)**2.0))
+       ro1=sqrt(sum(StateBmin_IIV(iLat,iLon,1:2)**2.0))
        xmlt1=&
-            (atan2(-StateIntegral_IIV(iLat,iLon,2),&
-            -StateIntegral_IIV(iLat,iLon,1)))&
+            (atan2(-StateBmin_IIV(iLat,iLon,2),&
+            -StateBmin_IIV(iLat,iLon,1)))&
             *12./cPi   ! mlt in hr
 
 !       if (iLon==25 .and. .not.UseDipole) then
 !                    write(*,*) '!!! iLat,iLon,iLineIndex_II(iLon,iLat),iPoint',iLat,iLon,iLineIndex_II(iLon,iLat),iPoint
-!          write(*,*) '!!! StateIntegral_IIV(iLat,iLon,2),-StateIntegral_IIV(iLat,iLon,1),Lon,xmlt1',&
-!               StateIntegral_IIV(iLat,iLon,2),-StateIntegral_IIV(iLat,iLon,1),Lon,xmlt1
+!          write(*,*) '!!! StateBmin_IIV(iLat,iLon,2),-StateBmin_IIV(iLat,iLon,1),Lon,xmlt1',&
+!               StateBmin_IIV(iLat,iLon,2),-StateBmin_IIV(iLat,iLon,1),Lon,xmlt1
 !          call con_stop('')
 !       endif
 
 
 
        if (xmlt1 < 0.) xmlt1=xmlt1+24.
-       bo1=StateIntegral_IIV(iLat,iLon,3)
+       bo1=StateBmin_IIV(iLat,iLon,3)
     endif
 
     !Check that nAlt < np

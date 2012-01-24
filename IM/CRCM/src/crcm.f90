@@ -7,7 +7,7 @@ subroutine crcm_run(delta_t)
                             dFactor_I,tFactor_I
   use ModFieldTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
                             ekev,iba,bo,pp,Have, sinA, vel, alscone, iw2
-  use ModGmCrcm,      ONLY: Den_IC,Temp_IC,StateIntegral_IIV,AveP_,AveDens_, &
+  use ModGmCrcm,      ONLY: Den_IC,Temp_IC,StateBmin_IIV,AveP_,AveDens_, &
                             iLatMin,DoMultiFluidGMCoupling,AveDen_I,AveP_I
   use ModIeCrcm,      ONLY: pot
   use ModCrcmPlot,    ONLY: Crcm_plot, Crcm_plot_fls, DtOutput, DoSavePlot,&
@@ -81,20 +81,20 @@ subroutine crcm_run(delta_t)
               if (iLat < iLatMin) then
                  !Inside MHD boundary set den and temp to value at boundary
                  Den_IC(iSpecies,iLat,iLon) = dFactor_I(iSpecies) * &
-                      StateIntegral_IIV(iLatMin,iLon,AveDens_)/FactorTotalDens
+                      StateBmin_IIV(iLatMin,iLon,AveDens_)/FactorTotalDens
                  Temp_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies) * &
-                      StateIntegral_IIV(iLatMin,iLon,AveP_) * FactorTotalDens &
-                      / StateIntegral_IIV(iLatMin,iLon,AveDens_) &
+                      StateBmin_IIV(iLatMin,iLon,AveP_) * FactorTotalDens &
+                      / StateBmin_IIV(iLatMin,iLon,AveDens_) &
                       * 6.2415e18 !J-->eV
 !                 Den_IC(iSpecies,iLat,iLon) = dFactor_I(iSpecies) * 1.0e6
 !                 Temp_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies)* 5000.0
               else
                  !Outside MHD boundary set den and temp from MHD
                  Den_IC(iSpecies,iLat,iLon) = dFactor_I(iSpecies) * &
-                      StateIntegral_IIV(iLat,iLon,AveDens_)/FactorTotalDens
+                      StateBmin_IIV(iLat,iLon,AveDens_)/FactorTotalDens
                  Temp_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies) * &
-                      StateIntegral_IIV(iLat,iLon,AveP_) * FactorTotalDens &
-                      / StateIntegral_IIV(iLat,iLon,AveDens_) &
+                      StateBmin_IIV(iLat,iLon,AveP_) * FactorTotalDens &
+                      / StateBmin_IIV(iLat,iLon,AveDens_) &
                       * 6.2415e18 !J-->eV  
               endif
            end do
@@ -109,10 +109,10 @@ subroutine crcm_run(delta_t)
               if (iLat < iLatMin) then
                  !Inside MHD boundary set den and temp to value at boundary
                  Den_IC(iSpecies,iLat,iLon) = &
-                      StateIntegral_IIV(iLatMin,iLon,AveDen_I(iSpecies))&
+                      StateBmin_IIV(iLatMin,iLon,AveDen_I(iSpecies))&
                       / amu_I(iSpecies)
                  Temp_IC(iSpecies,iLat,iLon) = &
-                      StateIntegral_IIV(iLatMin,iLon,AveP_I(iSpecies))&
+                      StateBmin_IIV(iLatMin,iLon,AveP_I(iSpecies))&
                       /(Den_IC(iSpecies,iLat,iLon)) &
                         * 6.2415e18 !J-->eV
 !                 Den_IC(iSpecies,iLat,iLon) = dFactor_I(iSpecies) * 1.0e6
@@ -120,10 +120,10 @@ subroutine crcm_run(delta_t)
               else
                  !Outside MHD boundary set den and temp from MHD
                  Den_IC(iSpecies,iLat,iLon) = &
-                      StateIntegral_IIV(iLat,iLon,AveDen_I(iSpecies))&
+                      StateBmin_IIV(iLat,iLon,AveDen_I(iSpecies))&
                       / amu_I(iSpecies)
                  Temp_IC(iSpecies,iLat,iLon) = &
-                      StateIntegral_IIV(iLat,iLon,AveP_I(iSpecies))&
+                      StateBmin_IIV(iLat,iLon,AveP_I(iSpecies))&
                       /(Den_IC(iSpecies,iLat,iLon)) &
                          * 6.2415e18 !J-->eV  
               endif

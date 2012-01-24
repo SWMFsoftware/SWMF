@@ -5,8 +5,8 @@ Module ModGmCrcm
 
   implicit none
 
-  real, allocatable :: StateLine_VI(:,:),StateIntegral_IIV(:,:,:)
-  integer :: iLineIndex_II(nLon,1:nLat),nPoint, nIntegral
+  real, allocatable :: StateLine_VI(:,:),StateBmin_IIV(:,:,:)
+  integer :: iLineIndex_II(nLon,1:nLat),nPoint, nVarBmin
   integer, parameter :: AveDens_=4, AveP_=5, AvePpar_=7, AveHpRho_=7, &
        AveOpRho_=8, AveHpP_=9, AveOpP_=10
   integer, parameter,dimension(nspec-1) :: AveDen_I = (/7,8/)

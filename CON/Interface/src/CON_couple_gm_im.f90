@@ -428,8 +428,8 @@ contains
     ! Coupling variables
     !/
 
-    ! Number of integrals to pass
-    integer  :: nIntegral
+    ! Number of varibles at minimum B to pass
+    integer  :: nVarBmin
 !    integer, parameter :: nIntegral=6
 
     ! Names of variables to pass
@@ -440,7 +440,7 @@ contains
     integer :: nVarLine, nPointLine
 
     ! Buffer for the variables on the 2D IM grid and line data
-    real, allocatable :: Integral_IIV(:,:,:), BufferLine_VI(:,:)
+    real, allocatable :: Buffer_IIV(:,:,:), BufferLine_VI(:,:)
 
     ! Buffer for satellite locations   
     real, dimension(:,:,:), allocatable :: SatPos_DII
@@ -478,22 +478,22 @@ contains
          iProcWorld,i_proc0(GM_),i_proc0(IM_)
 
     if(DoMultiFluidIMCoupling) then
-       NameVar='vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp'
-       nIntegral = 10
+       NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp'
+       nVarBmin = 10
     else if(DoAnisoPressureIMCoupling)then
-       NameVar='vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p:ppar'
-       nIntegral = 7
+       NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar'
+       nVarBmin = 7
     else
-       NameVar='vol:Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:rho:p'
-       nIntegral = 6
+       NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p'
+       nVarBmin = 6
     endif
 
 
     !\
     ! Allocate buffers both in GM and IM
     !/
-    allocate(Integral_IIV(iSize,jSize,nIntegral), stat=iError)
-    call check_allocate(iError,NameSub//": Integral_IIV")
+    allocate(Buffer_IIV(iSize,jSize,nVarBmin), stat=iError)
+    call check_allocate(iError,NameSub//": Buffer_IIV")
 
     if (nShareSats > 0) then
        allocate(SatPos_DII(4,2,nShareSats), stat=iError)
@@ -506,16 +506,16 @@ contains
          ', iProc:',iProcWorld
 
     !\
-    ! Get field line integrals from GM
+    ! Get variables @ Bmin for each field line from GM
     !/
     if(is_proc(GM_)) then
        call GM_get_for_im_trace_crcm(iSize, jSize, NameVar, nVarLine, nPointLine)
        allocate(BufferLine_VI(nVarLine, nPointLine))
-       call GM_get_for_im_crcm(Integral_IIV, iSize, jSize, nIntegral, &
+       call GM_get_for_im_crcm(Buffer_IIV, iSize, jSize, nVarBmin, &
             BufferLine_VI, nVarLine, nPointLine, NameVar)
        if(DoTest) &
-            write(*,*) 'GM_get_for_im_crcm: iProc, Integral_IIV(1,1,:)=',&
-            iProcWorld,Integral_IIV(1,1,:)
+            write(*,*) 'GM_get_for_im_crcm: iProc, Buffer_IIV(1,1,:)=',&
+            iProcWorld,Buffer_IIV(1,1,:)
     end if
     !\
     ! If IM sat tracing is enabled, get sat locations from GM
@@ -527,13 +527,13 @@ contains
     ! Transfer variables from GM to IM
     !/
     if(i_proc0(IM_) /= i_proc0(GM_))then
-       nSize = iSize*jSize*nIntegral
+       nSize = iSize*jSize*nVarBmin
        if(is_proc0(GM_)) then
           call MPI_send(nVarLine,1,MPI_INTEGER,i_proc0(IM_),&
                1,i_comm(),iError)
           call MPI_send(nPointLine,1,MPI_INTEGER,i_proc0(IM_),&
                1,i_comm(),iError)
-          call MPI_send(Integral_IIV,nSize,MPI_REAL,&
+          call MPI_send(Buffer_IIV,nSize,MPI_REAL,&
                i_proc0(IM_),1,i_comm(),iError)
           call MPI_send(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
                i_proc0(IM_),2,i_comm(),iError)
@@ -552,7 +552,7 @@ contains
           allocate(BufferLine_VI(nVarLine, nPointLine))
 
           !recieve variables from GM
-          call MPI_recv(Integral_IIV,nSize,MPI_REAL,&
+          call MPI_recv(Buffer_IIV,nSize,MPI_REAL,&
                i_proc0(GM_),1,i_comm(),iStatus_I,iError)
           call MPI_recv(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
                i_proc0(GM_),2,i_comm(),iStatus_I,iError)
@@ -562,10 +562,10 @@ contains
 
         !Broadcast variables inside IM
     if(n_proc(IM_)>1 .and. is_proc(IM_)) then
-       nSize = iSize*jSize*nIntegral
+       nSize = iSize*jSize*nVarBmin
        call MPI_bcast(nVarLine,1,MPI_INTEGER,0,i_comm(IM_),iError)
        call MPI_bcast(nPointLine,1,MPI_INTEGER,0,i_comm(IM_),iError)
-       call MPI_bcast(Integral_IIV,nSize,MPI_REAL,0,i_comm(IM_),iError)
+       call MPI_bcast(Buffer_IIV,nSize,MPI_REAL,0,i_comm(IM_),iError)
        if (.not. allocated(BufferLine_VI))&
             allocate(BufferLine_VI(nVarLine, nPointLine))
        call MPI_bcast(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,0,&
@@ -620,11 +620,11 @@ contains
     ! Put variables into IM
     !/
     if(is_proc(IM_)) then
-       call IM_put_from_gm_crcm(Integral_IIV,iSize,jSize,nIntegral,&
+       call IM_put_from_gm_crcm(Buffer_IIV,iSize,jSize,nVarBmin,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
        if(DoTest) &
-            write(*,*) 'IM_put_from_gm_crcm: iProc, Integral_IIV(1,1,:)=',&
-            iProcWorld,Integral_IIV(1,1,:)
+            write(*,*) 'IM_put_from_gm_crcm: iProc, Buffer_IIV(1,1,:)=',&
+            iProcWorld,Buffer_IIV(1,1,:)
     endif
 
     if(is_proc0(IM_))then
@@ -632,14 +632,14 @@ contains
             call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
 !       if(DoTest) &
 !            write(*,*)'IM got from GM: IM iProc, Buffer(1,1,:)=',&
-!            iProcWorld,Integral_IIV(1,1,:)
+!            iProcWorld,Buffer_IIV(1,1,:)
     end if
     
 
     !\
     ! Deallocate buffer to save memory
     !/
-    deallocate(Integral_IIV, BufferLine_VI)
+    deallocate(Buffer_IIV, BufferLine_VI)
 
     if (nShareSats > 0) then
        deallocate(NameSat_I)

@@ -256,8 +256,9 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
               PperpInvPpar = Pperp/PparIm_C(i,j,k)
               b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
               if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-              Coeff = 1/(PperpInvPpar + BminIm_C(i,j,k) &
-                   /sqrt(sum(b_D**2))*(1 - PperpInvPpar))
+              Coeff = 1/(PperpInvPpar &
+!                   + BminIm_C(i,j,k)/sqrt(sum(b_D**2))*(1 - PperpInvPpar))
+                   + min(1.0, BminIm_C(i,j,k)/sqrt(sum(b_D**2)))*(1 - PperpInvPpar))
               ! pressures and density at an arbitrary location of a field line.                  
               pIm_IC(1,i,j,k) = pIm_IC(1,i,j,k)*Coeff &
                    + 2.0*Pperp*(Coeff - 1)*Coeff/3.0
