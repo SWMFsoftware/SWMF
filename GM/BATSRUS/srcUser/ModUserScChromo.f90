@@ -609,8 +609,8 @@ contains
   subroutine user_calc_sources
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
-                                 B0_DGB
-    use ModGeometry,       ONLY: r_BLK
+         B0_DGB, VdtFace_x, VdtFace_y, VdtFace_z
+    use ModGeometry,       ONLY: r_BLK, vInv_CB
     use ModMain,           ONLY: GlobalBlk
     use ModPhysics,        ONLY: gm1, rBody, UnitTemperature_, No2Si_V
     use ModVarIndexes,     ONLY: Rho_, Energy_, p_, Pe_, WaveFirst_, WaveLast_
@@ -620,6 +620,7 @@ contains
     integer :: i, j, k, iBlock
     real    :: TemperatureSi, FullB
     real    :: CoronalHeating, RadiativeCooling, MagneticHeating
+    real    :: DtInvWavePlus, DtInvWaveMinus, Vdt_Source, Vdt
 
     ! varaibles for wave dissipation
     real    :: WaveDissipationPlus, WaveDissipationMinus
@@ -649,7 +650,28 @@ contains
                - WaveDissipationMinus
        end if
       
+
+       ! Limit time step according to size of source terms:
+       DtInvWavePlus = WaveDissipationPlus/ &
+            max(State_VGB(WaveFirst_,i,j,k,iBlock),1e-30)
+       DtInvWaveMinus = WaveDissipationMinus/ &
+            max(State_VGB(WaveLast_,i,j,k,iBlock),1e-30)
        
+       Vdt_Source = 2.0*max(DtInvWavePlus, DtInvWaveMinus)/&
+            vInv_CB(i,j,k,iBlock)
+
+       Vdt = min(VdtFace_x(i,j,k),VdtFace_y(i,j,k),VdtFace_z(i,j,k))
+
+       if(Vdt_Source > Vdt)then
+          ! The following prevents the wave energy from becoming negative
+          ! due to too large source terms. This should be cell-centered,
+          ! since the source are, but we add
+          ! them for now to the left face of VdtFace.
+          VdtFace_x(i,j,k) = max(VdtFace_x(i,j,k), Vdt_Source)
+          VdtFace_y(i,j,k) = max(VdtFace_y(i,j,k), Vdt_Source)
+          VdtFace_z(i,j,k) = max(VdtFace_z(i,j,k), Vdt_Source)
+       end if
+
        ! Add magnetic heating if desired (due to Abbett 2007)
        if (DoMagneticHeating) then
           TemperatureSi = No2Si_V(UnitTemperature_)* MassIon_I(1)* &
