@@ -63,10 +63,16 @@ contains
     CoordMax_D(1:nDim) = CoordMaxIn_D
 
     ! Set special boundary conditions
+    IsCylindricalAxis = .false.
     if(IsCylindrical) IsCylindricalAxis = CoordMin_D(r_) == 0.0
 
-    if(IsSpherical) IsSphericalAxis = CoordMin_D(Theta_) < 0.01 &
+    IsSphericalAxis = .false.
+    if(IsSpherical) IsSphericalAxis = CoordMin_D(Theta_) <   0.01 &
          .and.                        CoordMax_D(Theta_) > 179.99
+
+    IsLatitudeAxis = .false.
+    if(IsRLonLat) IsLatitudeAxis    = CoordMin_D(Lat_)   < -89.99 &
+         .and.                        CoordMax_D(Lat_)   >  89.99
 
     ! Convert degrees to radians for the domain boundaries
     if(IsCylindrical .or. IsSpherical .or. IsRLonLat)then

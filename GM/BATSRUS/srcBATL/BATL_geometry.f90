@@ -23,6 +23,7 @@ module BATL_geometry
   logical, public:: IsSpherical       = .false.
   logical, public:: IsRLonLat         = .false.
   logical, public:: IsSphericalAxis   = .false. ! theta=0 and theta=pi boundary
+  logical, public:: IsLatitudeAxis    = .false. ! |lat|=pi/2 boundaries
   logical, public:: IsCylindrical     = .false.
   logical, public:: IsCylindricalAxis = .false. ! r=0 boundary
   logical, public:: IsCubedSphere     = .false.

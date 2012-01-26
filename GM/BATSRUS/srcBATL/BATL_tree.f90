@@ -894,12 +894,13 @@ contains
   subroutine find_neighbor(iBlock)
 
     use BATL_size, ONLY: iRatio_D
-    use BATL_geometry, ONLY: IsCylindricalAxis, IsSphericalAxis, IsPeriodic_D
+    use BATL_geometry, ONLY: IsPeriodic_D, &
+         IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis
 
     integer, intent(in):: iBlock
 
     integer :: iNode, iLevel, i, j, k, Di, Dj, Dk, jNode
-    real :: Scale_D(MaxDim), x, y, z
+    real :: Scale_D(MaxDim), x, y, z, y0, z0
 
     logical, parameter :: DoTestMe = .false.
     !-----------------------------------------------------------------------
@@ -935,13 +936,15 @@ contains
           if(z > 1.0 .or. z < 0.0)then
              if(IsPeriodic_D(3))then
                 z = modulo(z, 1.0)
-             else
+             elseif(.not.IsLatitudeAxis)then
                 iNodeNei_IIIB(:,:,k,iBlock) = Unset_
                 DiLevelNei_IIIB(:,:,Dk,iBlock) = Unset_
                 CYCLE
              end if
           end if
        end if
+       ! store z for spherical or latitude axis 
+       z0 = z 
        do j=0,3
           Dj = nint((j - 1.5)/1.5)
           if(nDim < 2)then
@@ -955,14 +958,21 @@ contains
                 elseif(IsSphericalAxis)then
                    ! Push back theta and go around half way in phi
                    y = max(0.0, min(1.0, y))
-                   z = modulo( z+0.5, 1.0)
+                   z = modulo(z0+0.5, 1.0)
                 else
                    iNodeNei_IIIB(:,j,k,iBlock) = Unset_
                    DiLevelNei_IIIB(:,Dj,Dk,iBlock) = Unset_
                    CYCLE
                 end if
              end if
+             if(z0 > 1.0 .or. z0 < 0.0)then
+                ! Push back latitude and go around half way in longitude
+                z = max(0.0, min(1.0, z0))
+                y = modulo(y+0.5, 1.0)
+             end if
           end if
+          ! store y for cylindrical axis case
+          y0 = y
           do i=0,3
              ! Exclude inner points
              if(0<i.and.i<3.and.0<j.and.j<3.and.0<k.and.k<3) CYCLE
@@ -992,7 +1002,7 @@ contains
                 elseif(IsCylindricalAxis .and. x < 0.0)then
                    ! Push back radius and go around half way in phi direction
                    x = 0.0
-                   y = modulo( y+0.5, 1.0)
+                   y = modulo(y0+0.5, 1.0)
                 else
                    iNodeNei_IIIB(i,j,k,iBlock) = Unset_
                    DiLevelNei_IIIB(Di,Dj,Dk,iBlock) = Unset_
