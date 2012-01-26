@@ -1768,11 +1768,19 @@ subroutine calc_chemistry(iBlock)
               endif
 
               tln = DtSub * NeutralLosses
-              tsn = DtSub * NeutralSources + 0.1*Neutrals
-              do while (minval(tsn-tln) < 0.0 .and. DtSub > 0.1)
+              tsn = DtSub * NeutralSources + 0.25*Neutrals
+              do while (minval(tsn-tln) < 0.0 .and. DtSub > 0.05)
                  DtSub = DtSub/2.0
                  tln = DtSub * NeutralLosses
-                 tsn = DtSub * NeutralSources + 0.1*Neutrals
+                 tsn = DtSub * NeutralSources + 0.25*Neutrals
+              enddo
+
+              tli = DtSub * IonLosses
+              tsi = DtSub * IonSources + 0.25*Ions
+              do while (minval(tsi-tli) < 0.0 .and. DtSub > 0.05)
+                 DtSub = DtSub/2.0
+                 tli = DtSub * IonLosses
+                 tsi = DtSub * IonSources + 0.25*Ions
               enddo
 
 !!!              Ions(nIons) = 0.0
