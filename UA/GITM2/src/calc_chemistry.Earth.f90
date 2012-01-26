@@ -1769,7 +1769,7 @@ subroutine calc_chemistry(iBlock)
 
               tln = DtSub * NeutralLosses
               tsn = DtSub * NeutralSources + 0.25*Neutrals
-              do while (minval(tsn-tln) < 0.0 .and. DtSub > 0.05)
+              do while (minval(tsn-tln) < 0.0 .and. DtSub > 0.5)
                  DtSub = DtSub/2.0
                  tln = DtSub * NeutralLosses
                  tsn = DtSub * NeutralSources + 0.25*Neutrals
@@ -1777,7 +1777,7 @@ subroutine calc_chemistry(iBlock)
 
               tli = DtSub * IonLosses
               tsi = DtSub * IonSources + 0.25*Ions
-              do while (minval(tsi-tli) < 0.0 .and. DtSub > 0.05)
+              do while (minval(tsi-tli) < 0.0 .and. DtSub > 0.5)
                  DtSub = DtSub/2.0
                  tli = DtSub * IonLosses
                  tsi = DtSub * IonSources + 0.25*Ions
