@@ -116,6 +116,9 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+  ! Initialize buffer_iiv
+  Buffer_IIV = 0.0
+
   ! Put the extracted data into BufferLine_I
   call line_get(nVarExtract, nPoint)
   if(nPoint /= nPointLine)call stop_mpi(NameSub//': nPointLine error')
