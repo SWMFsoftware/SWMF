@@ -586,7 +586,7 @@ contains
           write(UnitTmp_,'(i8,a)')     1,             ' neqpar'
           write(UnitTmp_,'(10es13.5)') 0.0            ! eqpar
           write(UnitTmp_,'(a)')        &
-               'coord1 coord2 coord3 rho exact volume node proc block none' 
+               'coord1 coord2 coord3 rho rhoexact volume node proc block none' 
           write(UnitTmp_,'(a)')        '1 1 1'        ! units
           write(UnitTmp_,'(l8,a)')     .true.,        ' IsBinary' 
           write(UnitTmp_,'(i8,a)')     nByteReal,     ' nByteReal'
