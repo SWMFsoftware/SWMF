@@ -34,7 +34,7 @@ module BATL_grid
        Xyz_DGB(:,:,:,:,:),      &    ! Cartesian cell centers coords
        FaceNormal_DDFB(:,:,:,:,:,:)  ! Normal face area vector
 
-  logical, public:: IsNodeBasedGrid = .false.
+  logical, public:: IsNodeBasedGrid = .true.
 
   ! Local variables
 
@@ -42,7 +42,7 @@ module BATL_grid
 
 contains
   !============================================================================
-  subroutine init_grid(CoordMinIn_D, CoordMaxIn_D)
+  subroutine init_grid(CoordMinIn_D, CoordMaxIn_D, UseRadianIn)
 
     use ModNumConst, ONLY: cPi, cTwoPi, cDegToRad
 
@@ -51,10 +51,19 @@ contains
     ! even for logarithmic or strethed radial grids.
 
     real, intent(in):: CoordMinIn_D(nDim), CoordMaxIn_D(nDim)
+    logical, optional, intent(in):: UseRadianIn
+
+    logical:: UseRadian
+    real   :: Unit
     !-------------------------------------------------------------------------
     if(.not. DoInitializeGrid) RETURN
 
     DoInitializeGrid = .false.
+
+    UseRadian = .false.
+    if(present(UseRadianIn)) UseRadian = UseRadianIn
+    Unit = 1.0
+    if(UseRadian) Unit = cDegToRad
 
     ! Make sure that the thickness is unity in the ignored dimensions
     CoordMin_D = -0.5
@@ -66,23 +75,26 @@ contains
     IsCylindricalAxis = .false.
     if(IsCylindrical) IsCylindricalAxis = CoordMin_D(r_) == 0.0
 
+
     IsSphericalAxis = .false.
-    if(IsSpherical) IsSphericalAxis = CoordMin_D(Theta_) <   0.01 &
-         .and.                        CoordMax_D(Theta_) > 179.99
+    if(IsSpherical) IsSphericalAxis = CoordMin_D(Theta_) <   0.01*Unit &
+         .and.                        CoordMax_D(Theta_) > 179.99*Unit
 
     IsLatitudeAxis = .false.
-    if(IsRLonLat) IsLatitudeAxis    = CoordMin_D(Lat_)   < -89.99 &
-         .and.                        CoordMax_D(Lat_)   >  89.99
+    if(IsRLonLat) IsLatitudeAxis    = CoordMin_D(Lat_)   < -89.99*Unit &
+         .and.                        CoordMax_D(Lat_)   >  89.99*Unit
 
-    ! Convert degrees to radians for the domain boundaries
-    if(IsCylindrical .or. IsSpherical .or. IsRLonLat)then
-       CoordMin_D(Phi_) = CoordMin_D(Phi_)*cDegToRad
-       CoordMax_D(Phi_) = CoordMax_D(Phi_)*cDegToRad
-    end if
+    if(.not.UseRadian)then
+       ! Convert degrees to radians for the domain boundaries
+       if(IsCylindrical .or. IsSpherical .or. IsRLonLat)then
+          CoordMin_D(Phi_) = CoordMin_D(Phi_)*cDegToRad
+          CoordMax_D(Phi_) = CoordMax_D(Phi_)*cDegToRad
+       end if
 
-    if(IsSpherical .or. IsRLonLat)then
-       CoordMin_D(Theta_) = CoordMin_D(Theta_)*cDegToRad
-       CoordMax_D(Theta_) = CoordMax_D(Theta_)*cDegToRad
+       if(IsSpherical .or. IsRLonLat)then
+          CoordMin_D(Theta_) = CoordMin_D(Theta_)*cDegToRad
+          CoordMax_D(Theta_) = CoordMax_D(Theta_)*cDegToRad
+       end if
     end if
 
     ! Convert rMin, rMax to log(rMin) log(rMax) for logarithmic radius
@@ -1097,6 +1109,10 @@ contains
           end do
        end do
     end if
+
+    ! This is temporary solution to keep the test working
+    ! We should probably have a single option.
+    IsNodeBasedGrid = .false.
 
     if(nDim >= 2)then
        if(DoTestMe) write(*,*)'Testing create_grid in cylindrical geometry'
