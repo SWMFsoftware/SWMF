@@ -27,6 +27,13 @@
 
 
 #include "meshAMRdef.h"
+
+
+//include the user defined data for the internal boundaries
+#include "UserDefinition.meshAMR.h"
+
+
+
 #include "meshAMRinternalSurface.h"
 
 
