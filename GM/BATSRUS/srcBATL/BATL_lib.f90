@@ -85,7 +85,7 @@ contains
   !============================================================================
   subroutine init_batl(&
        CoordMinIn_D, CoordMaxIn_D, MaxBlockIn, &
-       TypeGeometryIn, IsPeriodicIn_D, nRootIn_D)
+       TypeGeometryIn, IsPeriodicIn_D, nRootIn_D, UseRadianIn)
 
     integer, intent(in):: MaxBlockIn         ! max number of blocks/processor
     real,    intent(in):: CoordMinIn_D(nDim) ! min (gen) coordinates of domain
@@ -97,6 +97,9 @@ contains
     character(len=*), optional, intent(in):: TypeGeometryIn
     ! Periodicity of grid boundaries per dimention
     logical,          optional, intent(in):: IsPeriodicIn_D(nDim)
+
+    ! Use radian or degrees for angle coordinate
+    logical,          optional, intent(in):: UseRadianIn
 
     ! Initialize the block-adaptive tree and the domain. 
     !
@@ -126,7 +129,7 @@ contains
 
     call init_tree(MaxBlockIn)
     call init_geometry(TypeGeometryIn, IsPeriodicIn_D)
-    call init_grid(CoordMinIn_D, CoordMaxIn_D)
+    call init_grid(CoordMinIn_D, CoordMaxIn_D, UseRadianIn)
     call set_tree_root(nRootIn_D)
     call distribute_tree(.true.)
     call create_grid
