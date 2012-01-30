@@ -42,28 +42,36 @@ module BATL_grid
 
 contains
   !============================================================================
-  subroutine init_grid(CoordMinIn_D, CoordMaxIn_D, UseRadianIn)
+  subroutine init_grid(CoordMinIn_D, CoordMaxIn_D, UseRadiusIn, UseDegreeIn)
 
     use ModNumConst, ONLY: cPi, cTwoPi, cDegToRad
 
-    ! The angular coordinate limits should be given in degrees.
-    ! The radial coordinate limits should be given as true radial values
-    ! even for logarithmic or strethed radial grids.
+    ! The angular coordinate limits should be given in degrees unless
+    ! UseDegreeIn is false.
+    ! The radial coordinate limits should be given as true radial values even
+    ! for logarithmic or strethed radial grids unless UseRadiusIn is false.
 
     real, intent(in):: CoordMinIn_D(nDim), CoordMaxIn_D(nDim)
-    logical, optional, intent(in):: UseRadianIn
+    logical, optional, intent(in):: UseRadiusIn
+    logical, optional, intent(in):: UseDegreeIn
 
-    logical:: UseRadian
+    logical:: UseRadius, UseDegree
     real   :: Unit
     !-------------------------------------------------------------------------
     if(.not. DoInitializeGrid) RETURN
 
     DoInitializeGrid = .false.
+    
+    UseRadius = .true.
+    if(present(UseRadiusIn)) UseRadius = UseRadiusIn
 
-    UseRadian = .false.
-    if(present(UseRadianIn)) UseRadian = UseRadianIn
-    Unit = 1.0
-    if(UseRadian) Unit = cDegToRad
+    UseDegree = .true.
+    if(present(UseDegreeIn)) UseDegree = UseDegreeIn
+    if(UseDegree)then
+       Unit = 1.0
+    else
+       Unit = cDegToRad
+    end if
 
     ! Make sure that the thickness is unity in the ignored dimensions
     CoordMin_D = -0.5
@@ -71,10 +79,22 @@ contains
     CoordMin_D(1:nDim) = CoordMinIn_D
     CoordMax_D(1:nDim) = CoordMaxIn_D
 
-    ! Set special boundary conditions
+    ! Set special boundary conditions and convert coordinates
     IsCylindricalAxis = .false.
-    if(IsCylindrical) IsCylindricalAxis = CoordMin_D(r_) == 0.0
+    if(IsCylindrical .and. .not.IsLogRadius .and. .not.IsGenRadius) &
+         IsCylindricalAxis = CoordMin_D(r_) == 0.0
 
+    if(UseRadius)then
+       if(IsLogRadius)then
+          ! Convert rMin, rMax to log(rMin) log(rMax) for logarithmic radius
+          CoordMin_D(r_) = log(CoordMin_D(r_))
+          CoordMax_D(r_) = log(CoordMax_D(r_))
+       elseif(IsGenRadius)then
+          ! Convert rMin, rMax to generalized radial coordinates
+          call radius_to_gen(CoordMin_D(r_))
+          call radius_to_gen(CoordMax_D(r_))
+       end if
+    end if
 
     IsSphericalAxis = .false.
     if(IsSpherical) IsSphericalAxis = CoordMin_D(Theta_) <   0.01*Unit &
@@ -84,7 +104,7 @@ contains
     if(IsRLonLat) IsLatitudeAxis    = CoordMin_D(Lat_)   < -89.99*Unit &
          .and.                        CoordMax_D(Lat_)   >  89.99*Unit
 
-    if(.not.UseRadian)then
+    if(UseDegree)then
        ! Convert degrees to radians for the domain boundaries
        if(IsCylindrical .or. IsSpherical .or. IsRLonLat)then
           CoordMin_D(Phi_) = CoordMin_D(Phi_)*cDegToRad
@@ -95,15 +115,6 @@ contains
           CoordMin_D(Theta_) = CoordMin_D(Theta_)*cDegToRad
           CoordMax_D(Theta_) = CoordMax_D(Theta_)*cDegToRad
        end if
-    end if
-
-    ! Convert rMin, rMax to log(rMin) log(rMax) for logarithmic radius
-    if(IsLogRadius)then
-       CoordMin_D(r_) = log(CoordMin_D(r_))
-       CoordMax_D(r_) = log(CoordMax_D(r_))
-    elseif(IsGenRadius)then
-       call radius_to_gen(CoordMin_D(r_))
-       call radius_to_gen(CoordMax_D(r_))
     end if
 
     allocate(CoordMin_DB(MaxDim,MaxBlock))

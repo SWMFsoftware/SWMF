@@ -2940,6 +2940,8 @@ contains
 
     use BATL_lib, ONLY: init_mpi, init_batl, CoordMin_D, CoordMax_D
     use ModBatlInterface, ONLY: set_batsrus_grid
+
+    character(len=20):: TypeGeometryBatl
     !-----------------------------------------------------------------------
 
     if(i_line_command("#GRID", iSessionIn = 1) < 0) &
@@ -3067,9 +3069,17 @@ contains
     ! Set BATL grid
     if(UseBatl)then
        call init_mpi(iComm)
+       if(TypeGeometry(1:9)=='spherical') then
+          TypeGeometryBatl = 'rlonlat'//TypeGeometry(10:20)
+          write(*,*)'TypeGeometryBatl = ',TypeGeometryBatl
+       else
+          TypeGeometryBatl = TypeGeometry
+       end if
+
        call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
-            TypeGeometry, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
-            proc_dims(1:nDimBatl))
+            TypeGeometryBatl, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
+            proc_dims(1:nDimBatl), UseRadiusIn=.false., UseDegreeIn=.false.)
+
        ! Fix grid size in ignored directions
        if(nDimBatl == 1)then
           y1 = -0.5; XyzMin_D(2) = -0.5
