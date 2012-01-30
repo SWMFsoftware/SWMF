@@ -237,6 +237,11 @@
                 plottitles(*) = string(format=timetitle,t)
             endif
 
+            if(keyword_set(plottitles_file))then begin
+               plottitle = plottitles_file(ifile)
+               str2arr,plottitle,plottitles,nfunc,';'
+            end
+
             plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
               variables,wnames,axistype,plotmodes,plottitles,$
               ax,az,contourlevel,linestyle,$
