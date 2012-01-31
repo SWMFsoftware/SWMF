@@ -26,6 +26,7 @@ program dgcpm
 
   use ModMainDGCPM
   use ModIoDGCPM
+  use ModTimeDGCPM
 
   implicit none
 
@@ -60,10 +61,14 @@ program dgcpm
   write(*,*) 'times:',nst,nstep,npr,nkp,nibc,i2,dt,nstep*2.*dt
 
   do i3=nst,nstep			! begin time loop
+    
+     open(unit=17, file='test.txt', format='formatted', access='APPEND') 
+     write(17,*) 'i3:', i3, ' T:', t, ' kp:', kp
+     close(17)
 
      call getkpa(i3,nst,i2,nkp)
 
-     write(*,*) 'i3:',i3,t,kp
+     write(*,*) kp
 
      call magconv(i3,nst)
      call thermal
@@ -73,6 +78,7 @@ program dgcpm
 !.......increment time
 
      t=t+2.*dt
+     CurrentTime = CurrentTime + 2.*dt
 
 !.......print desired result files at every tint sec 
 

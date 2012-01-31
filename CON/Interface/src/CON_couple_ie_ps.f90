@@ -1,9 +1,14 @@
+!^CMP COPYRIGHT UM
+!^CMP FILE IE
+!^CMP FILE PS
+
 !BOP
 !MODULE: CON_couple_ie_ps - couple IE and PS components
 !
 !DESCRIPTION:
-! Couple IE and PS components
-!
+! Couple between two components:\\
+!    Ionosphere Electrodynamics (IE) Source\\
+!    Plasmasphere (PS)        Target
 !INTERFACE:
 module CON_couple_ie_ps
 
@@ -16,20 +21,31 @@ module CON_couple_ie_ps
 
   !PUBLIC MEMBER FUNCTIONS:
 
-  public :: couple_ie_ps_init ! initialize both couplings
+  public :: couple_ie_ps_init ! initialize coupling
   public :: couple_ie_ps      ! couple IE to PS
+  public :: couple_ps_ie      ! couple PS to IE
 
   !REVISION HISTORY:
-  ! 01/21/2008 D. De Zeeuw - initial version
-  !
+  ! 01/31/2012 A.Dodger <adodger@umich.edu> - Updated to allow IE-PS coupling
   !EOP
 
-  ! Logicals to simplify message passing and execution
-  logical :: IsInitialized = .false., UseMe=.true.
+  character(len=lNameVersion):: NameVersionPs
+  logical :: IsInitialized = .false.
 
-  ! Size of the 2D PS grid
-  integer, save :: iSize, jSize
-  real, allocatable :: MLTs(:,:), Lats(:,:)
+  ! Variables for coupler with coupling toolkit
+  type(GridDescriptorType)::IE_Grid           ! Source
+  type(GridDescriptorType)::PS_Grid           ! Target
+  type(RouterType),save:: RouterIePs, RouterPsIe
+ 
+  logical :: DoTest, DoTestMe
+
+  ! Variables for the simple coupler
+  logical, save :: UseMe
+  integer, save :: nTheta, nPhi
+  integer, save :: iProc0Ie, iProc0Ps, iCommWorld
+
+  ! Name of this interface
+  character (len=*), parameter :: NameMod='CON_couple_ie_ps'
 
 contains
 
@@ -37,118 +53,85 @@ contains
   !IROUTINE: couple_ie_ps_init - initialize IE-PS coupling
   !INTERFACE:
   subroutine couple_ie_ps_init
+
     !DESCRIPTION:
-    ! Set and store PS grid.
+    ! This subroutine should be called from all PE-s so that
+    ! a union group can be formed. Since both IE and PS grids are
+    ! static, the router is formed here for the whole run.
     !EOP
 
-    ! MPI status variable
-    integer :: iStatus_I(MPI_STATUS_SIZE)
-
-    ! General error code
-    integer :: iError
-
-    ! Message size
-    integer :: nSize
-
+    use CON_world, ONLY: get_comp_info
     !------------------------------------------------------------------------
+
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
-    UseMe = is_proc(IE_) .or. is_proc(PS_)
-    if(.not.UseMe) RETURN
+    ! This coupler does not work for RAM, because RAM grid is not on the
+    ! ionosphere. 
+    call get_comp_info(PS_,NameVersion=NameVersionPs)
 
-    !\
-    ! Set Grid
-    ! Assume that all PS processors know grid info,
-    !   but it must be passed to IE processors
-    !/
+!    if(NameVersionPs(1:3) == 'DGC')then
+       ! IE-PS coupling uses MPI
+       UseMe = is_proc(IE_) .or. is_proc(PS_)
 
-    ! Get size
-    if(is_proc(PS_)) call PS_get_grid_size(iSize,jSize)
+       nTheta = size(Grid_C(IE_) % Coord1_I)
+       nPhi   = size(Grid_C(IE_) % Coord2_I)
 
-    ! Transfer variables from IE proc0 to PS proc0
-    if(i_proc0(IE_) /= i_proc0(PS_))then
-       if(is_proc0(IE_)) &
-            call MPI_send(iSize,1,MPI_INTEGER,i_proc0(IE_),&
-            1,i_comm(),iError)
-       if(is_proc(PS_)) &
-            call MPI_recv(iSize,1,MPI_INTEGER,i_proc0(PS_),&
-            1,i_comm(),iStatus_I,iError)
-
-       if(is_proc0(IE_)) &
-            call MPI_send(jSize,1,MPI_INTEGER,i_proc0(IE_),&
-            1,i_comm(),iError)
-       if(is_proc(PS_)) &
-            call MPI_recv(jSize,1,MPI_INTEGER,i_proc0(PS_),&
-            1,i_comm(),iStatus_I,iError)
-    end if
-
-    ! Allocate grid
-    allocate(MLTs(iSize,jSize))
-    allocate(Lats(iSize,jSize))
-
-    ! Get grid
-    if(is_proc(PS_)) call PS_get_grid(MLTs,Lats)
-
-    ! Transfer variables from IE proc0 to PS proc0
-    if(i_proc0(IE_) /= i_proc0(PS_))then
-       nSize=iSize*jSize
-
-       if(is_proc0(IE_)) &
-            call MPI_send(MLTs,nSize,MPI_REAL,i_proc0(IE_),&
-            1,i_comm(),iError)
-       if(is_proc(PS_)) &
-            call MPI_recv(MLTs,nSize,MPI_REAL,i_proc0(PS_),&
-            1,i_comm(),iStatus_I,iError)
-
-       if(is_proc0(IE_)) &
-            call MPI_send(Lats,nSize,MPI_REAL,i_proc0(IE_),&
-            1,i_comm(),iError)
-       if(is_proc(PS_)) &
-            call MPI_recv(Lats,nSize,MPI_REAL,i_proc0(PS_),&
-            1,i_comm(),iStatus_I,iError)
-    end if
-
-    ! Set the coupler grids
-    call IE_setnMlts('PS',iSize,iError)
-    call IE_setnLats('PS',jSize,iError)
-    call IE_setgrid('PS',MLTs,Lats,iError)
-
-    ! Deallocate varibles
-    deallocate(MLTs)
-    deallocate(Lats)
+       iProc0Ps   = i_proc0(PS_)
+       iProc0Ie   = i_proc0(IE_)
+       iCommWorld = i_comm()
 
   end subroutine couple_ie_ps_init
-
   !BOP =======================================================================
-  !IROUTINE: couple_ie_ps - couple components, IE to PS
+  !IROUTINE: couple_ps_ie - couple PS to IE component
   !INTERFACE:
-  subroutine couple_ie_ps(tSimulation)
-    
+  subroutine couple_ps_ie(tSimulation)
+
     !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
     !DESCRIPTION:
-    ! Couple between two components:
-    !    Ionosphere    (IE) source
-    !    Plasamasphere (PS) target
+    ! Couple between two components:\\
+    !    Plasmasphere (PS)        Source\\
+    !    Ionosphere Electrodynamics (IE) Target
     !
-    ! Send field line volumes, average density and pressure and
-    ! geometrical information.
+    ! Send field-align current from PS to IE.
     !EOP
 
-    !\
-    ! General coupling variables
-    !/
-
-    ! Name of this interface
-    character (len=*), parameter :: NameSub='couple_ie_ps'
-
-    logical :: DoTest, DoTestMe
-    integer :: iProcWorld
+    external PS_get_for_ie,IE_put_from_ps
+    integer, parameter :: nVarPsIe=3
+    real :: tSimulationTmp
+    character(len=*), parameter:: NameSub = NameMod//'::couple_ps_ie'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
+    write(*,*) "There is no PS->IE coupling!"
+    
+  end subroutine couple_ps_ie
+
+  !BOP =======================================================================
+  !IROUTINE: couple_ie_ps - couple IE to PS component
+  !INTERFACE:
+  subroutine couple_ie_ps(tSimulation)
+
+    !INPUT ARGUMENTS:
+    real, intent(in) :: tSimulation     ! simulation time at coupling
+
+    !DESCRIPTION:
+    ! Couple between two components:\\
+    !    Ionosphere Electrodynamics (IE) Source\\
+    !    Plasmasphere (PS)        Target
+    !
+    ! Send electrostatic potential from IE to PS.
+    !EOP
+
+    external IE_get_for_ps, PS_put_from_ie
+    integer, parameter :: nVarIePs=4
+    real :: tSimulationTmp
+    integer :: iProcWorld
+    character(len=*), parameter:: NameSub = NameMod//'::couple_ie_ps'
+    !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
     iProcWorld = i_proc()
     call couple_mpi
 
@@ -159,77 +142,93 @@ contains
     !==========================================================================
     subroutine couple_mpi
 
-      character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
+    use ModInterGen, ONLY: Bilinear_general
+    use CON_coupler
+    character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
 
-      ! Number of variables to pass
-      integer, parameter :: nVarPS=6
-
-      ! Buffer for the variables on the 2D PS grid
-      real, dimension(:,:,:), allocatable :: Buffer_IIV
-
-      ! MPI related variables
-
+      ! Variable to pass is potential on the 2D IE grid
+      real, dimension(:,:), allocatable ::Potential_Out
       ! MPI status variable
       integer :: iStatus_I(MPI_STATUS_SIZE)
+      integer :: i,j
+      integer :: iPS_Size, jPS_Size, iSize, jSize
+      real :: iPS(Grid_C(PS_) % nCoord_D(1))
+      real :: jPS(Grid_C(PS_) % nCoord_D(2))
+      real :: Buffer_IIV(Grid_C(IE_) % nCoord_D(1),Grid_C(IE_) % nCoord_D(2))
+      character (len=100) :: FieldModel
+      real :: pi
 
       ! General error code
       integer :: iError
-
-      ! Message size
-      integer :: nSize
-
       !------------------------------------------------------------------------
 
       ! After everything is initialized exclude PEs which are not involved
       if(.not.UseMe) RETURN
 
-      if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
-      if(DoTest)write(*,*)NameSubSub,', iProc, i_proc0(IE_), i_proc0(PS_)=', &
-           iProcWorld,i_proc0(IE_),i_proc0(PS_)
+      if(DoTest)write(*,*)NameSubSub,', iProc, iProc0Ie, iProc0Ps=', &
+           iProcWorld, iProc0Ie, iProc0Ps
 
-      !\
-      ! Allocate buffers in both IE and PS
-      !/
-      allocate(Buffer_IIV(iSize,jSize,nVarPS), stat=iError)
-      call check_allocate(iError,NameSubSub//": Buffer_IIV")
+        ! Get Plasmasphere grid size
+        iPs_Size = Grid_C(PS_) % nCoord_D(1)
+        jPs_Size = Grid_C(PS_) % nCoord_D(2)
 
-      if(DoTest)write(*,*)NameSubSub,', variables allocated, iProc:',iProcWorld
+        ! Get Plasmasphere Grid
+        iPS = (Grid_C(PS_) % Coord1_I)
+!        iPS = 90.0 - (Grid_C(PS_) % Coord1_I)
+        jPS = (Grid_C(PS_) % Coord2_I)-180.    
 
-      !\
-      ! Get variables from IE
-      !/
-      if(is_proc(IE_)) call IE_get_for_ps(Buffer_IIV,iSize,jSize,nVarPS)
+        do j=1, jPS_Size
+            if (jPS(j) .lt. 0) then
+            jPS(j) = jPS(j) +360. 
+            else 
+            jPS(j) = jPS(j)
+            endif
+        enddo
 
-      !\
-      ! Transfer variables from IE proc0 to PS proc0
-      !/
-      if(i_proc0(IE_) /= i_proc0(PS_))then
-         nSize = iSize*jSize*nVarPS
+      ! Allocate buffers both on PS and IE root processors
+      allocate(Potential_out(iPS_Size,jPS_Size), stat=iError)
+       
+      ! Get Potential from IE, then Bilinear Interpolate
+      if(is_proc0(IE_)) then
+        call IE_get_for_ps(Buffer_IIV, iSize, jSize, tSimulation, FieldModel)
+                
+        ! Assign Pi, needed since RIM uses Radians
+        pi = 3.14159265
+
+        call bilinear_general(size(Grid_C(IE_) % Coord1_I),&
+                                size(Grid_C(IE_) % Coord2_I),&
+                                size(Grid_C(PS_) % Coord1_I),&
+                                size(Grid_C(PS_) % Coord2_I),&
+                                (Grid_C(IE_) % Coord1_I)*180./pi,&
+                                (Grid_C(IE_) % Coord2_I)*180./pi,&
+                                iPS, jPS,&
+                                Buffer_IIV,Potential_Out)
+      endif
+
+      ! Transfer variables from IE to PS
+      if(iProc0Ie /= iProc0Ps)then
          if(is_proc0(IE_)) &
-              call MPI_send(Buffer_IIV,nSize,MPI_REAL,i_proc0(IE_),&
-              1,i_comm(),iError)
-         if(is_proc(PS_)) &
-              call MPI_recv(Buffer_IIV,nSize,MPI_REAL,i_proc0(PS_),&
-              1,i_comm(),iStatus_I,iError)
+              call MPI_send(Potential_out,size(Potential_out),MPI_REAL,iProc0Ps,&
+              1,iCommWorld,iError)
+         if(is_proc0(PS_)) &
+              call MPI_recv(Potential_out,size(Potential_out),MPI_REAL,iProc0Ie,&
+              1,iCommWorld,iStatus_I,iError)
       end if
 
-      ! Broadcast variables inside PS
-      if(n_proc(PS_)>1 .and. is_proc(PS_)) &
-           call MPI_bcast(Buffer_IIV,nSize,MPI_REAL,0,i_comm(PS_),iError)
+      if(DoTest)write(*,*)NameSubSub,', variables transferred iProc:',iProcWorld
 
-      !\
       ! Put variables into PS
-      !/
-      if(is_proc(PS_)) call PS_put_from_ie(Buffer_IIV,iSize,jSize,nVarPS)
+      if(is_proc0(PS_)) then
+        call PS_put_from_ie(iPs_Size, jPs_Size, Potential_out, FieldModel)
+      endif
 
       !\
       ! Deallocate buffer to save memory
       !/
-      deallocate(Buffer_IIV)
+      deallocate(Potential_Out)
 
       if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
            ', iProc:',iProcWorld
-
       if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
 
     end subroutine couple_mpi
