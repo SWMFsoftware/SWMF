@@ -21,9 +21,10 @@ MODULES = \
 	ModExactRS.o\
 	ModFreq.o\
 	ModInterpolate.o\
+        ModInterGen.o\
+        ModInterWrapper.o\
 	ModIoUnit.o\
 	ModKind.o\
-	ModLevelSet.o\
 	ModLinearAdvection.o\
 	ModLinearSolver.o\
 	ModLookupTable.o\
