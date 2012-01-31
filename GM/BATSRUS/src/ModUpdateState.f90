@@ -387,7 +387,7 @@ subroutine fix_anisotropy
        time_accurate, Cfl, dt
   use ModB0,      ONLY: B0_DGB
   use ModAdvance, ONLY: State_VGB, time_BLK
-  use ModPhysics, ONLY: TauWaveParticle, TauInstability, rIsotropy
+  use ModPhysics, ONLY: TauInstability
   use ModGeometry,ONLY: r_BLK, true_cell
 
   implicit none
@@ -397,9 +397,8 @@ subroutine fix_anisotropy
 
   integer:: i, j, k, iBlock
   !---------------------------------------------------------------------------
-  ! correct the parallel pressure to avoid negative perpendicular pressure
-  ! pressure relaxation for anisotropic pressure in unstable regions with
-  ! TauInstability and in other regions with TauWaveParticle
+  ! pressure relaxation for anisotropic pressure in unstable regions 
+  ! with TauInstability
   do iBlock = 1, nBlock
      if(UnusedBlk(iBlock)) CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
@@ -409,7 +408,7 @@ subroutine fix_anisotropy
         State_VGB(Ppar_,i,j,k,iBlock) = &
              min(3*State_VGB(p_,i,j,k,iBlock),State_VGB(Ppar_,i,j,k,iBlock)) 
 
-        if(TauInstability < 0.0 .and. TauWaveParticle < 0.0) CYCLE
+        if(TauInstability < 0.0) CYCLE
 
         B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
         if(UseB0) B_D = B_D + B0_DGB(:,i,j,k,iBlock)
@@ -437,9 +436,6 @@ subroutine fix_anisotropy
            ! proton cyclotron
            Dp = DtCell*(Ppar - Pperp + Ppar*0.3*sqrt(0.5*B2/max(1e-8,Ppar))) &
                 /(DtCell + TauInstability)
-        else if(TauWaveParticle > -1.0)then
-           ! Generic "wave-particle" term making the pressure isotropic
-           Dp = DtCell*(Ppar - Pperp)/(DtCell + TauWaveParticle)
         else
            CYCLE
         end if

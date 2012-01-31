@@ -306,7 +306,6 @@ subroutine set_physics_constants
 
   pMin_I = pMinDim_I * Io2No_V(UnitP_)
 
-  TauWaveParticle = TauWaveParticleSi*Si2No_V(UnitT_)
   TauInstability  = TauInstabilitySi*Si2No_V(UnitT_)
 
   !\
