@@ -9,19 +9,12 @@ ccc subroutine initmain, plasmasphere ccc
 ccccccccccccccccccccccccccccccccccccccccc
 
       subroutine initmain()
-
-c Set nthetacells, nphicells array index
-      integer nthetacells, nphicells
-ccc Use this line for Lmax=15
-c      parameter (nthetacells = 100, nphicells = 120)
-ccc Use this line for Lmax=10
-      parameter (nthetacells = 60, nphicells = 120)
-c Set thetamin, thetamax in Degrees
-      real thetamin, thetamax
-ccc Use this line for Lmax=15
-c      parameter (thetamin = 14.963217, thetamax = 60.0)
-ccc Use this line for Lmax=10
-      parameter (thetamin = 18.434949, thetamax = 60.0)
+      use ModSizeDGCPM, only: nthetacells, nphicells, thetamin, thetamax
+      use ModMainDGCPM, only: delr, delphi, vrcells, vthetacells,
+     *    vthetacells,vphicells, mgridb, mgridbi, mgridpot, mgridcoro, 
+     *    mgrider, mgridep, mgridvr, mgridvp, mgridn, mgridden,
+     *    mgridhalf, mgridvol, mgridx, mgridy, mgridoc,
+     *    mgridsource, mgridfluxa, mgridfluxr
 
 c Input for entry getgrid
 c Input: nt, np size of thetagrid, phigrid arrays
@@ -59,8 +52,6 @@ c input: wc=0 corotating; wc=1 inertial
       integer wc
 
 c Inputs for entry plasmasphere
-c Input: Delt in second
-      real delt
 c Input: par
       real par(2)
 
@@ -69,38 +60,7 @@ c Input: filename
       character filename*80
 
 c Internal variables
-
-c delr in Re, delphi in degrees
-      real delr, delphi
-c vrcells in Re, vthetacells, vphicells in degrees 
-      real vrcells(nthetacells), vthetacells(nthetacells)
-      real vphicells(nphicells)
-c mgridb in tesla
-      real mgridb(nthetacells,nphicells)
-c mgridbi in tesla
-      real mgridbi(nthetacells,nphicells)
-c mgridpot in volts
-      real mgridpot(nthetacells,nphicells)
-c mgrider, mgridep in volts/meter
-      real mgrider(nthetacells,nphicells)
-      real mgridep(nthetacells,nphicells)
-c mgridvr in meter/sec, and mgridvp in degree /sec
-      real mgridvr(nthetacells,nphicells)
-      real mgridvp(nthetacells,nphicells)
-c mgridn in particles / weber
-      real mgridn(nthetacells,nphicells)
-c mgridhalf in particles / weber (Work space for upwind)
-      real mgridhalf(nthetacells,nphicells)
-c mgridden in particles / m**3
-      real mgridden(nthetacells,nphicells)
-c mgridvol in m**3 / weber
-      real mgridvol(nthetacells,nphicells)
-c mgridx, mgridy, in Re
-      real mgridx(nthetacells,nphicells)
-      real mgridy(nthetacells,nphicells)
-c mgridoc, open(0) or closed(1) table
-      real mgridoc(nthetacells,nphicells)
-
+      real delt
       real pari(2)
       data pari /-1,-1/
 
@@ -113,11 +73,7 @@ c mgridoc, open(0) or closed(1) table
 c variables for getgrid
       real gdelr, gvrcell
 
-      save nrcells,rmin,rmax,vrcells,vthetacells,
-     *   vphicells,delr,delphi,mgridb,mgridbi,
-     *   mgridpot,mgrider,mgridep,mgridvr,mgridvp,
-     *   mgridn,mgridden,mgridvol,mgridx,mgridy,
-     *   mgridoc,pari,deltmax
+      save nrcells,rmin,rmax,pari,deltmax, output
 
       pi = 3.14159          ! rad
       rad = pi / 180.0      ! rad/degree
@@ -127,14 +83,14 @@ c variables for getgrid
       rmin = 1.0/(sin(thetamax*rad)*sin(thetamax*rad))
       rmax = 1.0/(sin(thetamin*rad)*sin(thetamin*rad))
 
-      print*,'rmin = ',rmin
-      print*,'rmax = ',rmax
+      !print*,'rmin = ',rmin
+      !print*,'rmax = ',rmax
 
       delr = ((rmax - rmin) / float(nrcells-1))
       delphi  = (360.0 / float(nphicells))
 
-      print*,'delr = ',delr
-      print*,'delphi = ',delphi
+      !print*,'delr = ',delr
+      !print*,'delphi = ',delphi
 
       do i = 1, nrcells
        vrcells(i) = rmin + (float(i-1) * delr)
@@ -145,27 +101,25 @@ c variables for getgrid
        vphicells(j) = (j-1)*360.0/nphicells
       enddo
 
-      print*, 'Number of middle grid cells = ',nrcells*nphicells
+      !print*, 'Number of middle grid cells = ',nrcells*nphicells
 
-      print*, 'Getting equatorial B field on middle grid'
-      call getmgridb(nrcells,nphicells,vrcells,mgridb)
+      !print*, 'Getting equatorial B field on middle grid'
+      call getmgridb()
 
-      print*, 'Getting ionospheric B field on middle grid'
-      call getmgridbi(nrcells,nphicells,vthetacells,mgridbi)
+      !print*, 'Getting ionospheric B field on middle grid'
+      call getmgridbi()
 
 c get flux tube volumes
-       print*, 'Getting volume of flux tubes on middle grid'
-       call getdipolevol(nthetacells,nphicells,vthetacells,mgridvol)
+       !print*, 'Getting volume of flux tubes on middle grid'
+       call getdipolevol()
 
 c get equatorial locations of flux tubes
-      print*, 'Getting x, y values for flux tubes'
-      call getxydipole(nthetacells,nphicells,vthetacells,
-     *   vphicells,mgridx,mgridy,mgridoc)
+      !print*, 'Getting x, y values for flux tubes'
+      call getxydipole()
 
 c set initial particle distribution
-      print*, 'Setting initial content of flux tubes on middle grid'
-      call initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
-     *   mgridvol,mgridoc)
+      !print*, 'Setting initial content of flux tubes on middle grid'
+      call initmgridn()
 
       return
 
@@ -225,9 +179,8 @@ ccccccccccccccccccccccccc
       entry initdensity()
 
 c set initial particle distribution
-      print*, 'Setting initial content of flux tubes on middle grid'
-      call initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
-     *   mgridvol,mgridoc)
+      !print*, 'Setting initial content of flux tubes on middle grid'
+      call initmgridn()
 
       return
 
@@ -251,17 +204,17 @@ cccccccccccccccccccc
       call interpol2dpolar(thetagrid,nt,phigrid,np,pot,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridpot)
 
+      call addcorotpot()
+
 c      print*, 'Differencing setpot on middle grid to get electric ',
 c     *   'field'
-      call gradpot(nrcells,nphicells,vrcells,delr,delphi,mgridpot,
-     *   mgrider,mgridep)
+      call gradpot()
 
       maxvr = 0.0
       maxvp = 0.0
 
 c      print*, 'Calculating the E cross B drift velocity on middle grid'
-      call ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,mgridb,
-     *   mgridvr,mgridvp,maxvr,maxvp)
+      call ecrossb(maxvr,maxvp)
 
 c deltr,deltp in units of seconds
       re    = 6.378E6   ! in meters
@@ -294,22 +247,18 @@ ccc entry getpot ccc
 cccccccccccccccccccc
 
       entry getpot(thetagrid,nt,phigrid,np,pot,par,wc)
+        print*, "Par:", par
 
-c      print*, 'Getting electric potential on middle grid'
-      call getmgridpot(nrcells,nphicells,vrcells,vthetacells,
-     *   vphicells,mgridpot,par)
+      write (*,*) 'WC:', wc
+      call getmgridpot(par)
 
       if (wc.eq.1) then
-       call addcorotpot(nrcells,nphicells,vrcells,vthetacells,
-     *    vphicells,mgridpot)
+       call addcorotpot()
       endif
-
-c      print*,'Got pot'
 
       call interpol2dpolar(vthetacells,nthetacells,vphicells,
      *   nphicells,mgridpot,thetagrid,nt,phigrid,np,pot)
 
-c      print*,'finished'
 
       return
 
@@ -321,21 +270,20 @@ cccccccccccccccccccccccccc
 
       if ((par(1).ne.pari(1)).or.(par(2).ne.pari(2))) then 
 
+        write(*,*) 'Calling the Potential calculations'
+
 c       print*, 'Getting electric potential on middle grid'
-       call getmgridpot(nrcells,nphicells,vrcells,vthetacells,
-     *    vphicells,mgridpot,par)
+        call getmgridpot(par)
 
 c       print*, 'Differencing potential on middle grid to get electric ',
 c     *    'field'
-       call gradpot(nrcells,nphicells,vrcells,delr,delphi,mgridpot,
-     *    mgrider,mgridep)
+       call gradpot()
 
        maxvr = 0.0
        maxvp = 0.0
 
 c       print*, 'Calculating the E cross B drift velocity on middle grid'
-       call ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,mgridb,
-     *    mgridvr,mgridvp,maxvr,maxvp)
+       call ecrossb(maxvr,maxvp)
 
 c deltr,deltp in units of seconds
        deltr = (delr*re)/maxvr
@@ -364,12 +312,7 @@ c delt in units of seconds
 
       end if
 
-c      print*, 'Upwind differencing on middle grid to advance ',
-c     *   'solution in time'
-
       if (deltmax.ge.delt) deltmax = delt
-
-c      print*, 'Using a time step of ',deltmax,' seconds'
 
       time = 0.0
 
@@ -377,30 +320,20 @@ c      print*, 'Using a time step of ',deltmax,' seconds'
 
       if ((delt-time).lt.deltmax) deltmax = (delt-time)
 
-c      print*,'Time = ',time
-c      print*,'Time step = ',deltmax
-
 c Upwind differencing on middle grid to advance solution in time
 c       call upwind(nrcells,nphicells,vrcells,delr,delphi,mgridn,
 c     *    mgridvr,mgridvp,deltmax,mgridhalf)
 
 c Upwind/LaxWendroff-superbee differencing on middle grid to 
 c advance solution in time
-       call superbee(nrcells,nphicells,vrcells,delr,delphi,mgridn,
-     *    mgridvr,mgridvp,deltmax,mgridhalf)
+       call superbee(deltmax)
 
 c calculate filling and draining of flux tubes
-       call filling(nrcells,nphicells,vrcells,vthetacells,vphicells,
-     *    mgridn,mgridden,mgridvol,mgridoc,mgridbi,deltmax)
+        call filling(deltmax)
 
        time = time + deltmax
 
       end do
-
-c      print*,'Time = ',time
-c      print*,'Time step = ',deltmax
-
-c      print*,'finished'
 
       return
 
@@ -410,8 +343,7 @@ cccccccccccccccccccccccccccccc
 
       entry saveplasmasphere(filename)
 
-      call saveit(vthetacells,nthetacells,vphicells,nphicells,
-     *   mgridden,mgridx,mgridy,mgridoc,mgridpot,filename)
+      call saveit(filename)
 
       return
 
@@ -421,11 +353,9 @@ cccccccccccccccccccccccccccccc
 
       entry loadplasmasphere(filename)
 
-      call loadit(vthetacells,nthetacells,vphicells,nphicells,
-     *   mgridden,mgridx,mgridy,mgridoc,filename)
+      call loadit(filename)
 
-      call denton(nthetacells,nphicells,mgridden,mgridvol,
-     *    mgridoc,mgridn)
+      call denton()
 
       return
       end
@@ -434,38 +364,42 @@ ccccccccccccccccccccccccc
 ccc subroutine saveit ccc
 ccccccccccccccccccccccccc
 
-      subroutine saveit(vthetacells,nthetacells,vphicells,nphicells,
-     *   mgridden,mgridx,mgridy,mgridoc,mgridpot,filename)
+      subroutine saveit(filename)
 
-c Input: nthetacells, nphicells array index
-      integer nthetacells, nphicells
-c Input: vthetacells, vphicells in degrees 
-      real vthetacells(nthetacells), vphicells(nphicells)
-c Input: mgridden in particles / m**3
-      real mgridden(nthetacells,nphicells)
+    
+      use ModTimeDGCPM, only: currenttime
+      use ModSizeDGCPM, only: nthetacells, nphicells
+      use ModMainDGCPM, only: nthetacells, nphicells, mgridden,
+     *    mgridx, mgridy, mgridoc, mgridpot, mgridcoro, 
+     *    mgridvr, mgridvp, mgridsource, mgridn, mgridvol,
+     *    mgridfluxa, mgridfluxr, vthetacells, vphicells
+
+      implicit none
+    
 c Input: filename
       character filename*80
-c mgridx, mgridy, in Re
-      real mgridx(nthetacells,nphicells)
-      real mgridy(nthetacells,nphicells)
-c mgridoc, open(0) or closed(1) table
-      real mgridoc(nthetacells,nphicells)
-c mgridpot in volts
-      real mgridpot(nthetacells,nphicells)
-
+      
       open(unit = 10, file=filename, status = 'unknown',
      *   form = 'formatted')
-	print *, 'Saving the DGCPM output'
       write(10,*) nthetacells, nphicells
-      write(10,*) vthetacells
+      write(10,*) 90.0-vthetacells
       write(10,*) vphicells
       write(10,*) mgridden
       write(10,*) mgridx
       write(10,*) mgridy
       write(10,*) mgridoc
       write(10,*) mgridpot
+      write(10,*) mgridcoro
+      write(10,*) mgridvr
+      write(10,*) mgridvp
+      write(10,*) mgridsource
+      write(10,*) mgridfluxr
+      write(10,*) mgridfluxa
+      write(10,*) mgridn
+      write(10,*) mgridvol
+      write(10,*) CurrentTime
       close(unit = 10)
-
+      
       return
       end
 
@@ -473,23 +407,14 @@ ccccccccccccccccccccccccc
 ccc subroutine loadit ccc
 ccccccccccccccccccccccccc
 
-      subroutine loadit(vthetacells,nthetacells,vphicells,nphicells,
-     *   mgridden,mgridx,mgridy,mgridoc,filename)
+      subroutine loadit(filename)
 
+      use ModSizeDGCPM, only: nthetacells, nphicells
+      use ModMainDGCPM, only: vthetacells, vphicells, mgridden,
+     *    mgridx, mgridy, mgridoc
+        
 c Input: filename
       character filename*80
-
-c Output: nthetacells, nphicells array index
-      integer nthetacells, nphicells
-c Output: vthetacells, vphicells in degrees 
-      real vthetacells(nthetacells), vphicells(nphicells)
-c Output: mgridden in particles / m**3
-      real mgridden(nthetacells,nphicells)
-c Output: mgridx, mgridy, in Re
-      real mgridx(nthetacells,nphicells)
-      real mgridy(nthetacells,nphicells)
-c Output: mgridoc, open(0) or closed(1) table
-      real mgridoc(nthetacells,nphicells)
 
 c Internal: nthetacells1, nphicells1 array index
       integer nthetacells1, nphicells1
@@ -546,73 +471,73 @@ c Internal: mgridoc1, open(0) or closed(1) table
 ccccccccccccccccccccccccccc
 ccc function saturation ccc
 ccccccccccccccccccccccccccc
-
-      real function saturation(l)
-
+C
+C      real function saturation(l)
+c
 c Carpenter and Anderson's saturation density in units of
 c particles / m**3 
 c Carpenter and Anderson, JGR, p. 1097, 1992.
-
+C
 c input: l in re
-      real l
-
+C      real l
+C
 c output: saturation in particles / m**3
-
-      saturation = (1.0e6) * 10.0**((-0.3145*l)+3.9043)
-
-      return
-      end
+C
+C      saturation = (1.0e6) * 10.0**((-0.3145*l)+3.9043)
+C
+C      return
+C      end
 
 ccccccccccccccccccccccc
 ccc function trough ccc
 ccccccccccccccccccccccc
 
-      real function trough(l)
-
+C      real function trough(l)
+C
 c Carpenter and Anderson's trough density in units of
 c particles / m**3 
 c Carpenter and Anderson, JGR, p. 1097, 1992.
-
+C
 c input: l in re
-      real l
-
+C      real l
+C
 c output: trough in particles / m**3
-
-      trough = (1.0e6) * 0.5 * ((10.0/l)**4.0)
-
-      return
-      end
+C
+C      trough = (1.0e6) * 0.5 * ((10.0/l)**4.0)
+C
+C      return
+C      end
 
 cccccccccccccccccccccccccccccccccc
 ccc function DipoleFluxTubeVol ccc
 cccccccccccccccccccccccccccccccccc
-
-      real function dipoleFluxTubeVol(l)
-
+C
+C      real function dipoleFluxTubeVol(l)
+C
 c calculates the unit volume of a dipole magnetic field flux tube
 c (the volume in m**3 per unit of magnetic flux(weber))
-
+C
 c 1 tesla = newton/(ampere-meter) or (volt-sec)/meter**2
 c 1 weber = Tesla-m**2 or joule/ampere or volt-sec
-
+C
 c input: l in re
-      real l
-
+C      real l
+C
 c output: dipoleFluxTubevol in m/Tesla or m**3/weber
-
-      real pi, re, mu, m
-
-      pi = 3.14159          ! rad
-      re = 6.378e6          ! radius of Earth in meters
-      mu = 4.0*pi*1.0e-7    ! newtons/amps**2
-      m = 8.05e22           ! amps*meter**2
-
-      dipoleFluxTubeVol = ((4.0*pi)/(mu*m)) * (32.0/35.0) * (l**4) * 
-     *    sqrt(1.0-(1.0/l)) * (1.0+(1.0/(2.0*l))+(3.0/(8.0*l*l))+
-     *    (5.0/(16.0*l*l*l))) * (re**4.0)
-
-      return
-      end
+C
+C      real pi, re, mu, m
+C
+C      pi = 3.14159          ! rad
+C      re = 6.378e6          ! radius of Earth in meters
+C      mu = 4.0*pi*1.0e-7    ! newtons/amps**2
+C      m = 8.05e22           ! amps*meter**2
+C
+C      dipoleFluxTubeVol = ((4.0*pi)/(mu*m)) * (32.0/35.0) * (l**4) * 
+C     *    sqrt(1.0-(1.0/l)) * (1.0+(1.0/(2.0*l))+(3.0/(8.0*l*l))+
+C     *    (5.0/(16.0*l*l*l))) * (re**4.0)
+C
+C      return
+C      end
 
 ccccccccccccccccccccccccccc
 ccc subroutine mydipole ccc
@@ -820,15 +745,10 @@ cccccccccccccccccccccccccccc
 ccc subroutine getmgridb ccc
 cccccccccccccccccccccccccccc
 
-      subroutine getmgridb(nrcells,nphicells,vrcells,mgridb)
+      subroutine getmgridb()
 
-c input: nrcells, nphicells array index
-      integer nrcells, nphicells
-c input: vrcells in Re
-      real vrcells(nrcells)
-
-c output: mgridb in tesla
-      real mgridb(nrcells,nphicells)
+      use ModSizeDGCPM, only: nrcells, nphicells
+      use ModMainDGCPM, only: vrcells, mgridb
 
       integer i, j
       real bfield
@@ -847,15 +767,10 @@ ccccccccccccccccccccccccccccc
 ccc subroutine getmgridbi ccc
 ccccccccccccccccccccccccccccc
 
-      subroutine getmgridbi(nrcells,nphicells,vthetacells,mgridbi)
+      subroutine getmgridbi()
 
-c input: nrcells, nphicells array index
-      integer nrcells, nphicells
-c input: vthetacells in degrees
-      real vthetacells(nrcells)
-
-c output: mgridbi in tesla
-      real mgridbi(nrcells,nphicells)
+      use ModSizeDGCPM, only: nrcells, nphicells
+      use ModMainDGCPM, only: vthetacells, mgridbi
 
       integer i, j
       real bfield
@@ -874,20 +789,13 @@ cccccccccccccccccccccccccc
 ccc subroutine ecrossb ccc
 cccccccccccccccccccccccccc
 
-      subroutine ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,
-     *              mgridb,mgridvr,mgridvp,maxvr,maxvp)
+      subroutine ecrossb(maxvr,maxvp)
 
-c Input: nrcells, nphicells array index
-      integer nrcells, nphicells
-c Input: vrcells in Re 
-      real vrcells(nrcells)
-c Input: mgridb in tesla
-      real mgridb(nrcells,nphicells)
-c Input: mgrider, mgridep in volts/meter
-      real mgrider(nrcells,nphicells), mgridep(nrcells,nphicells)
+      use ModSizeDGCPM, only: nrcells, nphicells
+      use ModMainDGCPM, only: vrcells, mgrider, mgridep, mgridb,
+     *    mgridvr, mgridvp
 
-c Output: mgridvr in meter/sec, and mgridvp in degree /sec
-      real mgridvr(nrcells,nphicells), mgridvp(nrcells,nphicells)
+
 c Output: maxvr, maxvp in meter / sec
       real maxvr, maxvp
 
@@ -914,8 +822,7 @@ c Output: maxvr, maxvp in meter / sec
           jvr = j
 	endif
         vt = - mgrider(i, j) / mgridb(i,j)
-        call coro(vrcells(i),90.0,vc)
-        mgridvp(i,j) = (vt + vc)/(vrcells(i)*re*rad)
+        mgridvp(i,j) = vt/(vrcells(i)*re*rad)
         if (abs(mgridvp(i,j)).gt.maxvp) then
 	  maxvp = abs(mgridvp(i,j))
 	  ivp  = i
@@ -923,8 +830,6 @@ c Output: maxvr, maxvp in meter / sec
 	endif
        enddo
       enddo
-	print *, 'Max Vr:',ivr,jvr,maxvr,vrcells(ivr)
-	print *, 'Max Vp:',ivp,jvp,maxvp,vrcells(ivp)
 
       return
       end
@@ -933,16 +838,11 @@ ccccccccccccccccccccccccccccccc
 ccc subroutine getdipolevol ccc
 ccccccccccccccccccccccccccccccc
 
-      subroutine getdipolevol(nthetacells,nphicells,
-     *    vthetacells,mgridvol)
+      subroutine getdipolevol()
 
-c Input: nthetacells, nphicells array index
-      integer nthetacells, nphicells
-c Input: vthetacells in degrees 
-      real vthetacells(nthetacells)
-
-c Output: mgridvol in m**3 / weber
-      real mgridvol(nthetacells,nphicells)
+      use ModSizeDGCPM, only: nthetacells, nphicells
+      use ModMainDGCPM, only: vthetacells, mgridvol
+      use ModFunctionsDGCPM
 
       real pi, rad, re
       integer i, j
@@ -968,24 +868,17 @@ cccccccccccccccccccccccccccccc
 ccc subroutine getxydipole ccc
 cccccccccccccccccccccccccccccc
 
-      subroutine getxydipole(nthetacells,nphicells,
-     *   vthetacells,vphicells,mgridx,mgridy,mgridoc)
+      subroutine getxydipole()
+
+      use ModSizeDGCPM, only: nthetacells, nphicells
+      use ModMainDGCPM, only: vthetacells, vphicells, mgridx, mgridy,
+     *    mgridoc
 
 c Theta is zero at the north pole, positive towards the equator 
 c phi is zero at 24 MLT (antisunward), positive rotation towards dawn
 c x is positive towards dusk (phi = 270.0)
 c y is positive towards the sun (phi = 180.0)
 
-c Set nthetacells, nphicells array index
-      integer nthetacells, nphicells
-c vthetacells, vphicells in degrees 
-      real vthetacells(nthetacells)
-      real vphicells(nphicells)
-c mgridx, mgridy, in Re
-      real mgridx(nthetacells,nphicells)
-      real mgridy(nthetacells,nphicells)
-c mgridoc, open(0) or closed(1) table
-      real mgridoc(nthetacells,nphicells)
 
       real pi, rad, angle, ca, sa, st, r
       integer i, j
@@ -1013,26 +906,12 @@ ccccccccccccccccccccccccccccc
 ccc subroutine initmgridn ccc
 ccccccccccccccccccccccccccccc
 
-      subroutine initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
-     *   mgridvol,mgridoc)
+      subroutine initmgridn()
 
-c Input: nrcells, nphicells array index
-      integer nrcells, nphicells
-c Input: vrcells in Re 
-      real vrcells(nrcells)
-c Input: mgridvol in m**3 / weber
-      real mgridvol(nrcells,nphicells)
-c mgridoc, open(0) or closed(1) table
-      real mgridoc(nrcells,nphicells)
-
-c Output: mgridn in particles / weber
-      real mgridn(nrcells,nphicells)
-c Output: mgridden in particles / m**3
-      real mgridden(nrcells,nphicells)
-
-c mgridn in units of particles per unit of magnetic flux
-c particles/weber or particles/(Tesla-meter**2)
-c mgridden in units of particles per m**3
+      use ModSizeDGCPM, only: nrcells, nphicells
+      use ModMainDGCPM, only: vrcells, mgridn, mgridden, 
+     *    mgridvol, mgridoc
+      use ModFunctionsDGCPM
 
       integer i, j
       real dn
@@ -1068,21 +947,11 @@ ccccccccccccccccccccccccc
 ccc subroutine denton ccc
 ccccccccccccccccccccccccc
 
-      subroutine denton(nthetacells,nphicells,mgridden,mgridvol,
-     *    mgridoc,mgridn)
+      subroutine denton()
 
-c Input: nthetacells, nphicells array index
-      integer nthetacells, nphicells
-c Input: mgridden in particles / m**3
-      real mgridden(nthetacells,nphicells)
-c Input: mgridvol in m**3 / weber
-      real mgridvol(nthetacells,nphicells)
-c Imput: mgridoc, open(0) or closed(1) table
-      real mgridoc(nthetacells,nphicells)
-
-c Output: mgridn in particles / weber
-      real mgridn(nthetacells,nphicells)
-
+      use ModSizeDGCPM, only: nthetacells, nphicells
+      use ModMainDGCPM, only: mgridden, mgridvol, mgridoc, mgridn
+        
       integer i, j
 
       do i = 1, nthetacells
@@ -1100,30 +969,23 @@ cccccccccccccccccccccccccc
 ccc subroutine filling ccc
 cccccccccccccccccccccccccc
 
-      subroutine filling(nrcells,nphicells,vrcells,vthetacells,
-     *    vphicells,mgridn,mgridden,mgridvol,mgridoc,mgridbi,delt)
+      subroutine filling(delt)
 
-c Input: nrcells, nphicells array index
-      integer nrcells, nphicells
-c Input: vrcells in Re, vthetacells, vphicells in degrees 
-      real vrcells(nrcells), vthetacells(nrcells), vphicells(nphicells)
+      use ModSizeDGCPM, only: nrcells, nphicells
+      use ModMainDGCPM, only: vrcells, vthetacells, vphicells,
+     *    mgridn, mgridden, mgridvol, mgridoc, mgridbi, mgridsource,
+     *    EmptyPeriodOpen, EmptyPeriodClosed, FluxMax 
+      use ModTimeDGCPM, only: CurrentTime
+      use ModFunctionsDGCPM
+
 c Input: delt in seconds
       real delt
-c Input: mgridbi in tesla
-      real mgridbi(nrcells,nphicells)
-c Input: mgridoc, open(0) or closed(1) table
-      real mgridoc(nrcells,nphicells)
-
-c Output: mgridn in particles / weber
-      real mgridn(nrcells,nphicells)
-c Output: mgridden in particles / m**3
-      real mgridden(nrcells,nphicells)
-c Output: mgridvol in m**3 / weber
-      real mgridvol(nrcells,nphicells)
 
       real pi, rad, re
       integer i, j
-      real fmax, dsat, br, f, tden, tn
+      real fmax, dsat, br, f, tden, tn 
+      real FillDays, MinVolume, MinLocation 
+
 
       pi = 3.14159          ! rad
       rad = pi / 180.0      ! rad/degree
@@ -1131,30 +993,70 @@ c Output: mgridvol in m**3 / weber
 
 c fmax is the upward flow of particles in units of 
 c particles/m**2/sec
-      fmax  = 2.0e12
 
+C Calculate Fmax. Fmax is defined to be a flow of particles
+C necessary to reach the saturation density in FillDays days
+C of constant flow, with the effect of solar zenith angle being
+C taken into account. Fmax is in particles/sec.
+
+!      WRITE(*,*) Vrcells
+
+      FillDays = 1.5
+      MinVolume = MaxVal(mgridvol)
+      do i=1, nrcells
+        do j=1, nphicells
+            if (mgridvol(i,j).LT.MinVolume) then
+                MinVolume = mgridvol(i,j)
+                MinLocation = i
+            endif
+        enddo
+      enddo
+        fmax = MinVolume * saturation(vrcells(MinLocation)) * 2. *
+     *  vrcells(MinLocation)  / 
+     *  (FillDays * 24.0 * 3600.0)
+
+C Calculate Cell filling / loss
       do i = 1, nrcells
-       dsat = saturation(vrcells(i))
-       do j = 1, nphicells
+        dsat = saturation(vrcells(i))
+        do j = 1, nphicells
+
+C Check For Closed Cells
         if (mgridoc(i,j).gt.0.999) then
+
+C Dayside Closed Cells
          if ((vphicells(j).ge.90.0).and.(vphicells(j).le.270.0)) then
           mgridden(i,j) = mgridn(i,j) / mgridvol(i,j)
           tn = mgridn(i,j)
           tden = mgridden(i,j)
           if (tden.lt.dsat) then
-           f = ((dsat-mgridden(i,j))/dsat)*fmax
-           br = mgridbi(i,j)
-           mgridn(i,j) = mgridn(i,j) + ((f*delt)/br)
-           mgridden(i,j) = mgridn(i,j) / mgridvol(i,j)
+C If cell density is below saturation, filling is calculated
+           f = ((dsat-mgridden(i,j))/dsat) * fmax *
+     *     (1./vrcells(i))**(0.3) *                        ! L_Shell Dep
+     *     sin(rad * (vphicells(j)-90.0))           ! Solar Zenith Dep
+
+!           br = mgridbi(i,j)
+!           mgridn(i,j) = mgridn(i,j) + ((f*delt)/br)
+!           mgridsource(i,j) = ((f*delt)/br) / mgridvol(i,j)
+           mgridn(i,j) = mgridn(i,j) + (f * delt)
+           mgridsource(i,j) = (f * delt) / mgridvol(i,j)
+            mgridden(i,j) = mgridn(i,j) / mgridvol(i,j)
           else
+C If cell density is above saturation, excess is lost
            mgridn(i,j) = dsat * mgridvol(i,j)
            mgridden(i,j) = mgridn(i,j) / mgridvol(i,j)
+           mgridsource(i,j) = 0.
           endif
          else
-          mgridn(i,j) = mgridn(i,j) - 
-     *       (mgridn(i,j)*(delt/(10.0*24.0*3600.0)))
-          mgridden(i,j) = mgridn(i,j) / mgridvol(i,j)
+  
+C Night Closed Cells Loss 
+         mgridn(i,j) = mgridn(i,j) - 
+     *       (mgridn(i,j)*(delt/(EmptyPeriodClosed*24.0*3600.0)))
+         mgridden(i,j) = mgridn(i,j) / mgridvol(i,j)
+         mgridsource(i,j) = (-1. * (mgridn(i,j)*(delt/(EmptyPeriodClosed*
+     *       24.0*3600.0))))/mgridvol(i,j)
          end if
+
+C Error Check - Loss greater then cell contents
          if (mgridden(i,j).le.0.0) then
           print*,'subroutine: filling'
           print*,'i,j,mgridden = ',i,j,mgridden(i,j)
@@ -1167,41 +1069,36 @@ c particles/m**2/sec
           print*,'delt',delt
           print*,'deln',((f*delt)/br)
           stop
-         end if
+         endif
+
+C All Open Cell Loss Terms
         else
-c         print*,mgridoc(i,j),i,j
-         mgridn(i,j) = mgridn(i,j) - mgridn(i,j)*(delt/(24.0*3600.0))
-         mgridden(i,j) = 0.0
-        end if
+         mgridn(i,j) = mgridn(i,j) - mgridn(i,j)*(delt/(EmptyPeriodOpen *
+     *   24.0*3600.0))
+         mgridden(i,j) = mgridn(i,j) / mgridvol(i,j) 
+         mgridsource(i,j)=- mgridn(i,j)*(delt/(EmptyPeriodOpen * 
+     *   24.0*3600.0)) / mgridvol(i,j)
+        endif
        enddo
       enddo
 
       return
-      end
+      end 
 
 ccccccccccccccccccccccccc
 ccc subroutine upwind ccc
 ccccccccccccccccccccccccc
 
-      subroutine upwind(nrcells,nphicells,vrcells,delr,delphi,mgridn,
-     *   mgridvr,mgridvp,delt,mgridhalf)
+      subroutine upwind(delt)
 
+      use ModSizeDGCPM, only: nrcells, nphicells
+      use ModMainDGCPM, only: vrcells, delr, delphi, mgridn, mgridvr,
+     *    mgridvp, mgridhalf
+    
 C First order upwind differencing 
 
-c Input: nrcells, nphicells array index
-      integer nrcells, nphicells
-c Input: vrcells in Re
-      real vrcells(nrcells)
-c Input: delr in Re, delphi in degrees
-      real delr, delphi
 c Input: delt in seconds
       real delt
-c Input: mgridvr in meter/sec, and mgridvp in degree /sec
-      real mgridvr(nrcells,nphicells), mgridvp(nrcells,nphicells)
-c Input: mgridn in particles / weber
-      real mgridn(nrcells,nphicells),mgridhalf(nrcells,nphicells)
-
-C Output: mgridn in particles / weber
 
       real pi, rad, re
       integer i, j, ip, im, jp, jm
@@ -1333,28 +1230,19 @@ ccccccccccccccccccccccccccc
 ccc subroutine superbee ccc
 ccccccccccccccccccccccccccc
 
-      subroutine superbee(nrcells,nphicells,vrcells,delr,delphi,mgridn,
-     *   mgridvr,mgridvp,delt,mgridhalf)
+      subroutine superbee(delt)
+
+      use ModSizeDGCPM, only: nrcells, nphicells
+      use ModMainDGCPM, only: vrcells, delr, delphi, mgridn, mgridvr,
+     *    mgridvp, mgridhalf, mgridfluxa, mgridfluxr, mgridvol, mgridden
 
 C Mixed first order upwind and
 c second order Lax-Wendroff 
 c differencing with the 
 c Superbee limiter function
 
-c Input: nrcells, nphicells array index
-      integer nrcells, nphicells
-c Input: vrcells in Re
-      real vrcells(nrcells)
-c Input: delr in Re, delphi in degrees
-      real delr, delphi
-c Input: delt in seconds
-      real delt
-c Input: mgridvr in meter/sec, and mgridvp in degree /sec
-      real mgridvr(nrcells,nphicells), mgridvp(nrcells,nphicells)
-c Input: mgridn in particles / weber
-      real mgridn(nrcells,nphicells),mgridhalf(nrcells,nphicells)
-
-C Output: mgridn in particles / weber
+c Hack - Changed Fluxr to be mgridhalf, checking for an increase
+c in plasma content. 
 
       real pi, rad, re
       integer i, j, ip, ipp, im, imm, jp, jpp, jm, jmm
@@ -1366,6 +1254,7 @@ C Output: mgridn in particles / weber
       real rjm1, rjm2, rjm, sim
       real fph, fmh
       real mscale, mdiv
+      real lambda
 
       small = 0.0001
 
@@ -1377,8 +1266,15 @@ C Output: mgridn in particles / weber
       delret = delt / (delr * re)
 
 c Advect the radial component first
-c For BC on the outer cells, the two rows on the edge 
+!c For BC on the outer cells, the two rows on the edge 
 c are calculated separately outside of the r loop
+
+c Set Ghost Cell Conditions
+        do i=nrcells-1, nrcells
+            do j=1, nphicells
+                mgridn(i,j) = 1.00
+            enddo
+        enddo
 
 c do the first r cell
       i = 1
@@ -1388,8 +1284,11 @@ c do the first r cell
         mgridhalf(i,j) = mgridn(i,j)  - 
      *     (mgridvr(i,j)*delret) *
      *     (mgridn(ip,j) - mgridn(i,j))
+c        mgridfluxr(i,j) = (mgridvr(i,j)*delret) *
+c     *     (mgridn(ip,j) - mgridn(i,j)) 
        else
         mgridhalf(i,j) = mgridn(i,j)
+c        mgridfluxr(i,j) = 0.
        end if
       enddo
 
@@ -1403,13 +1302,18 @@ c do the second r cell
          mgridhalf(i,j) = mgridn(i,j)  - 
      *      (mgridvr(i,j)*delret) *
      *      (mgridn(i,j) - mgridn(im,j))
+c         mgridfluxr(i,j) = (mgridvr(i,j)*delret) *
+c     *      (mgridn(i,j) - mgridn(im,j))
         else
          mgridhalf(i,j) = mgridn(i,j)  - 
      *      (mgridvr(i,j)*delret) *
      *      (mgridn(ip,j) - mgridn(i,j))
+c         mgridfluxr(i,j) = (mgridvr(i,j)*delret) *
+c     *      (mgridn(ip,j) - mgridn(i,j))
         end if
        else
         mgridhalf(i,j) = mgridn(i,j)
+c        mgridfluxr(i,j) = 0.
        end if
       enddo
 
@@ -1439,8 +1343,8 @@ c calculate the limiter function
 
           rjp1 = (mgridn(i,j)/mdiv - mgridn(im,j)/mdiv)
           rjp2 = (mgridn(ip,j)/mdiv - mgridn(i,j)/mdiv)
-          if (abs(rjp2).gt.abs(0.5*rjp1)) then 
-           rjp = (rjp1 / rjp2)
+           if (abs(rjp2).gt.abs(0.5*rjp1)) then 
+            rjp = (rjp1 / rjp2)
           else
            rjp = 2.0
           end if
@@ -1502,8 +1406,12 @@ c difference
          fph = fphup + (fphlw - fphup)*sip
          fmh = fmhup + (fmhlw - fmhup)*sim
          mgridhalf(i,j) = mgridn(i,j) - (cou*(fph - fmh))
+c         mgridfluxr(i,j) = (cou*(fph-fmh)) 
+
+!Postive = Flux Out, Negative = Flux In
         else
          mgridhalf(i,j) = mgridn(i,j)
+c         mgridfluxr(i,j) = 0.
         end if
        enddo
       enddo
@@ -1518,13 +1426,22 @@ c do the second to last r cell
          mgridhalf(i,j) = mgridn(i,j)  - 
      *      (mgridvr(i,j)*delret) *
      *      (mgridn(i,j) - mgridn(im,j))
+c        mgridfluxr(i,j) = (mgridvr(i,j)*delret) *
+c     *      (mgridn(i,j) - mgridn(im,j))
         else
+        mgridhalf(i,j) = mgridn(i,j)
+c        mgridfluxr(i,j) = 0.
          mgridhalf(i,j) = mgridn(i,j)  - 
      *      (mgridvr(i,j)*delret) *
      *      (mgridn(ip,j) - mgridn(i,j))
+c         mgridflux(i,j) = mgridvr(i,j) *
+c     *      (mgridvr(i,j)*delret) *
+c     *      (mgridn(ip,j) - mgridn(i,j))
+c     *      / mgridvol(i,j)
         end if
        else
         mgridhalf(i,j) = mgridn(i,j)
+c        mgridfluxr(i,j) = 0.
        end if
       enddo
 
@@ -1536,13 +1453,22 @@ c do the last r cell
         mgridhalf(i,j) = mgridn(i,j)  - 
      *     (mgridvr(i,j)*delret) *
      *     (mgridn(i,j) - mgridn(im,j))
+c        mgridfluxr(i,j) = (mgridvr(i,j)*delret) *
+c     *     (mgridn(i,j) - mgridn(im,j))
        else
         mgridhalf(i,j) = mgridn(i,j)
+c        mgridfluxr(i,j) = 0.
        end if
       enddo
 
+      do i = 1, nrcells
+        do j = 1, nphicells
+            mgridfluxr(i,j) = mgridhalf(i,j)
+        enddo
+      enddo
+
 c Advect the azimuthal component next
-c Due to rap around of the phi cells, the two columns on the edge 
+c Due to wrap around of the phi cells, the two columns on the edge 
 c are calculated separately outside of the phi loop
 
       delphit = delt / delphi
@@ -1578,7 +1504,6 @@ c Do the phi cells in a loop
       end if
 
        do i = 1, nrcells
-
         if (abs(mgridvp(i,j)).gt.small) then
 c courant number
          cou = delphit*mgridvp(i,j)
@@ -1662,15 +1587,24 @@ c difference
          fph = fphup + (fphlw - fphup)*sip
          fmh = fmhup + (fmhlw - fmhup)*sim
          mgridn(i,j) = mgridhalf(i,j) - (cou*(fph - fmh))
-        else
+         mgridfluxa(i,j)= (cou*(fph - fmh))
+       else
          mgridn(i,j) = mgridhalf(i,j)
+         mgridfluxa(i,j)= 0.
         end if
        enddo
 
       enddo
 
+      do i = 1, nrcells
+        do j = 1, nphicells
+            mgridden(i,j) = mgridn(i,j) / mgridvol(i,j)
+        enddo
+      enddo
+
+      
       return
-      end
+      end 
 
 ccccccccccccccccccccccccccccc
 ccc subroutine epotsimple ccc
@@ -1688,7 +1622,7 @@ c Input: Kp index
 c output: pot potential in volts
       real pot
 
-c   Assuming a uniform dawn-dusk electric field
+c      Assuming a uniform dawn-dusk electric field
 c      and an assumed kp relationship
 c
 c     Stagnation point (Re)     Electric Field (V/Re)   Kp
@@ -1861,20 +1795,15 @@ cccccccccccccccccccccccccccccc
 ccc subroutine getmgridpot ccc
 cccccccccccccccccccccccccccccc
 
-      subroutine getmgridpot(nrcells,nphicells,vrcells,vthetacells,
-     *   vphicells,mgridpot,par)
+      subroutine getmgridpot(par)
+
+      use ModSizeDGCPM, only: nthetacells, nphicells, nrcells
+      use ModMainDGCPM, only: vrcells, vthetacells, vphicells,
+     *    mgridpot
 
 c Get the electric potential on the grid
-
-c Input: nrcells, nphicells array index
-      integer nrcells, nphicells
-c Input: vrcells in Re, vthetacells, vphicells in degrees 
-      real vrcells(nrcells), vthetacells(nrcells), vphicells(nphicells)
 c Input: par index
       real par(2)
-
-c Output: mgridpot in volts
-      real mgridpot(nrcells,nphicells)
 
       real pi, rad, re
       integer i, j
@@ -1907,18 +1836,13 @@ cccccccccccccccccccccccccccccc
 ccc subroutine addcorotpot ccc
 cccccccccccccccccccccccccccccc
 
-      subroutine addcorotpot(nrcells,nphicells,vrcells,vthetacells,
-     *   vphicells,mgridpot)
+      subroutine addcorotpot()
 
+      use ModSizeDGCPM, only: nthetacells, nphicells
+      use ModMainDGCPM, only: vrcells, vthetacells, vphicells, 
+     *    mgridpot, mgridcoro
+        
 c Get the corotation electric potential on the grid
-
-c Input: nrcells, nphicells array index
-      integer nrcells, nphicells
-c Input: vrcells in Re, vthetacells, vphicells in degrees 
-      real vrcells(nrcells), vthetacells(nrcells), vphicells(nphicells)
-
-c Output: mgridpot in volts
-      real mgridpot(nrcells,nphicells)
 
       real pi, re, w, mu, m
       integer i, j
@@ -1930,10 +1854,11 @@ c Output: mgridpot in volts
       mu = 4.0*pi*1.0e-7              ! newtons/amps**2
       m = 8.05e22                     ! amps*meter**2
 
-      do i = 1, nrcells
+      do i = 1, nthetacells
        coro = - (w*mu*m) / (4.0*pi*vrcells(i)*re)
        do j = 1, nphicells
         mgridpot(i,j) = mgridpot(i,j) + coro
+        mgridcoro(i,j) = coro
        enddo
       enddo
 
@@ -1944,23 +1869,14 @@ cccccccccccccccccccccccccc
 ccc subroutine gradpot ccc
 cccccccccccccccccccccccccc
 
-      subroutine gradpot(nrcells,nphicells,vrcells,delr,delphi,
-     *   mgridpot,mgrider,mgridep)
+      subroutine gradpot()
+
+        use ModSizeDGCPM, only: nphicells, nthetacells
+        use ModMainDGCPM, only: vrcells, delr, delphi, mgridpot,
+     *      mgrider, mgridep
 
 c Calculates the two components of the electric field
 c from the gradient of the electric potential on the grid
-
-c Input: nrcells, nphicells array index
-      integer nrcells, nphicells
-c Input: vrcells in Re
-      real vrcells(nrcells)
-c Input: delr in Re, delphi in degrees
-      real delr, delphi
-c Input: mgridpot in volts
-      real mgridpot(nrcells,nphicells)
-
-c Output: mgrider, mgridep in volts/meter
-      real mgrider(nrcells,nphicells), mgridep(nrcells,nphicells)
 
       real pi, rad, re
       integer i, j, ip, im, jp, jm
@@ -1995,7 +1911,7 @@ c Output: mgrider, mgridep in volts/meter
       mgridep(i,j) = - (1.0/(vrcells(i)*re)) *
      *   ((mgridpot(i,jp)-mgridpot(i,jm))/(2.0*delphi*rad))
 
-      do i = 2, nrcells-1
+      do i = 2, nthetacells-1
        ip = i + 1
        im = i - 1
        j = 1
@@ -2022,7 +1938,7 @@ c Output: mgrider, mgridep in volts/meter
      *    ((mgridpot(i,jp)-mgridpot(i,jm))/(2.0*delphi*rad))
       enddo
 
-      i = nrcells
+      i = nthetacells
       ip = i
       im = i - 1
       j = 1
@@ -2209,20 +2125,12 @@ cccccccccccccccccccccccccc
 ccc subroutine savet96 ccc
 cccccccccccccccccccccccccc
 
-      subroutine savet96(vthetacells,nthetacells,vphicells,nphicells,
-     *   mgridvol,mgridx,mgridy,mgridoc,parmod)
+      subroutine savet96(parmod)
 
-c Input: nthetacells, nphicells array index
-      integer nthetacells, nphicells
-c Input: vthetacells, vphicells in degrees 
-      real vthetacells(nthetacells), vphicells(nphicells)
-c Output: mgridvol in m**3 / weber
-      real mgridvol(nthetacells,nphicells)
-c mgridx, mgridy, in Re
-      real mgridx(nthetacells,nphicells)
-      real mgridy(nthetacells,nphicells)
-c mgridoc, open(0) or closed(1) table
-      real mgridoc(nthetacells,nphicells)
+      use ModSizeDGCPM, only: nthetacells, nphicells
+      use ModMainDGCPM, only: vthetacells, vphicells, mgridvol,
+     *    mgridx, mgridy, mgridoc
+
       real parmod(10)
 
       open(unit = 10, file='t96_2.dato', status = 'new',
@@ -2244,73 +2152,26 @@ cccccccccccccccccccccccccc
 ccc subroutine readt96 ccc
 cccccccccccccccccccccccccc
 
-      subroutine readt96(vthetacells,nthetacells,vphicells,nphicells,
-     *   mgridvol,mgridx,mgridy,mgridoc,parmod)
-
-c Input: nthetacells, nphicells array index
-      integer nthetacells, nphicells
-c Input: vthetacells, vphicells in degrees 
-      real vthetacells(nthetacells), vphicells(nphicells)
-c Output: mgridvol in m**3 / weber
-      real mgridvol(nthetacells,nphicells)
-c mgridx, mgridy, in Re
-      real mgridx(nthetacells,nphicells)
-      real mgridy(nthetacells,nphicells)
-c mgridoc, open(0) or closed(1) table
-      real mgridoc(nthetacells,nphicells)
-      real parmod(10)
-
-      open(unit = 10, file='t96_2.dato', status = 'old',
-     *   form = 'formatted')
-      read(10,*) parmod
-      read(10,*) nthetacells, nphicells
-      read(10,*) vthetacells
-      read(10,*) vphicells
-      read(10,*) mgridx
-      read(10,*) mgridy
-      read(10,*) mgridvol
-      read(10,*) mgridoc
-      close(unit = 10)
-
-      return
-      end
-
-c Scratch space
-
-c23456789012345678901234567890123456789012345678901234567890123456789012
-
-c Input: nrcells, nphicells array index
-c      integer nrcells, nphicells
-c Input: vrcells in Re, vthetacells, vphicells in degrees 
-c      real vrcells(nrcells), vthetacells(nrcells), vphicells(nphicells)
-c Input: delr in Re, delphi in degrees
-c      real delr, delphi
-c Output: mgridb in tesla
-c      real mgridb(nrcells,nphicells)
-c Output: mgridbi in tesla
-c      real mgridbi(nrcells,nphicells)
-c Output: mgridpot in volts
-c      real mgridpot(nrcells,nphicells)
-c Output: mgrider, mgridep in volts/meter
-c      real mgrider(nrcells,nphicells), mgridep(nrcells,nphicells)
-c Output: mgridvr in meter/sec, and mgridvp in degree /sec
-c      real mgridvr(nrcells,nphicells), mgridvp(nrcells,nphicells)
-c Output: mgridn in particles / weber
-c      real mgridn(nrcells,nphicells)
-c Output: mgridden in particles / m**3
-c      real mgridden(nrcells,nphicells)
-c Output: mgridvol in m**3 / weber
-c      real mgridvol(nrcells,nphicells)
-c mgridx, mgridy, in Re
-c      real mgridx(nthetacells,nphicells)
-c      real mgridy(nthetacells,nphicells)
-c mgridoc, open(0) or closed(1) table
-c      real mgridoc(nthetacells,nphicells)
-
-c      real pi, rad, re
-c      integer i, j, ip, im, jp, jm
-
-c      pi = 3.14159          ! rad
-c      rad = pi / 180.0      ! rad/degree
-c      re = 6.378e6          ! radius of Earth in meters
+!      subroutine readt96(parmod)
+!
+!      use ModSizeDGCPM, only: nthetacells, nphicells
+!      use ModMainDGCpM, only: vthetacells, vphicells, mgridvol,
+!     *   mgridx, mgridy, mgridoc
+!
+!      real parmod(10)
+!
+!      open(unit = 10, file='t96_2.dato', status = 'old',
+!     *   form = 'formatted')
+!      read(10,*) parmod
+!      read(10,*) nthetacells, nphicells
+!      read(10,*) vthetacells
+!      read(10,*) vphicells
+!      read(10,*) mgridx
+!      read(10,*) mgridy
+!      read(10,*) mgridvol
+!      read(10,*) mgridoc
+!      close(unit = 10)
+!
+!      return
+!      end
 

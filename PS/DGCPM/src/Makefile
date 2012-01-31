@@ -22,30 +22,33 @@ help:
 
 
 MODULES = \
-	ModConstants.o\
-	ModSizeDGCPM.o\
-	ModMainDGCPM.o\
-	ModIoDGCPM.o\
-	ModHeidiDGCPM.o\
-	ModDGCPMWaves.o\
-	ModProcPS.o
+    ModSizeDGCPM.o\
+    ModConstants.o\
+    ModMainDGCPM.o\
+    ModIoDGCPM.o\
+    ModProcPS.o\
+    ModTimeDGCPM.o\
+    ModCoupleDGCPM.o\
+    ModFunctionsDGCPM.o\
+    ModIonoDGCPM.o
 
 OBJECTS = \
-	dgcpm_setup_011.o\
-	dgcpm_coefficients_010.o\
-	dgcpm_output_010.o\
-	DGCPM_read_inputs.o\
-	pbo.o\
-	stop_dgcpm.o\
-	DGCPM_read_inputs.o\
-	PS_wrapper.o
+    dgcpm_setup.o\
+    dgcpm_coefficients.o\
+    dgcpm_output.o\
+    dgcpm_read_inputs.o\
+    pbo.o\
+    dgcpm_stop.o\
+    dgcpm_test.o\
+    PS_wrapper.o\
+    dgcpm_log.o
 
 
 #
 #	Libraries
 #
 
-SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
+SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR} -I${DATAREADINDICESDIR}
 
 #DEPEND:
 #	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES} ${OBJECTS}
