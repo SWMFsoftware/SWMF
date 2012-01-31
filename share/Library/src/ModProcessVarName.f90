@@ -23,7 +23,7 @@ module ModProcessVarName
   integer  :: nSynonym = 4
 
   ! State variables not associated with a specific fluid/ specie
-  integer,parameter  :: nVarExtra = 7
+  integer,parameter  :: nVarExtra = 8
 
   ! Named indices for species/fluids
   integer, parameter :: &
@@ -81,6 +81,7 @@ module ModProcessVarName
        'by  ', &
        'bz  ', &
        'pe  ', &
+       'te0 ', &
        'ew  ', &
        'eint', &
        'hyp ' /)
@@ -90,6 +91,7 @@ module ModProcessVarName
        'By  ', &
        'Bz  ', &
        'Pe  ', &
+       'Te0 ', &
        'Ew  ', &
        'Eint', &
        'Hyp ' /)
