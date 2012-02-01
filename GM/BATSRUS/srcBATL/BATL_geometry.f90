@@ -9,6 +9,7 @@ module BATL_geometry
   private ! except
 
   public:: init_geometry  ! initialize the module
+  public:: clean_geometry ! clean up storage
   public:: xyz_to_coord   ! convert XYZ coordinates to generalized coordinates
   public:: coord_to_xyz   ! convert generalized coordinates to XYZ coordinates
   public:: radius_to_gen  ! convert radial coordinate to generalized coordinate
@@ -39,14 +40,40 @@ module BATL_geometry
   ! The following index names will be set in init_geometry
   integer, public:: r_=-1, Phi_=-1, Theta_=-1, Lon_=-1, Lat_=-1
 
+  ! General radial coordinates
+  integer          :: nGenR = -1    ! number of elements in GenLogR_I
+  real, allocatable:: GenLogR_I(:)  ! array of log(r) values
+
 contains
 
   !=========================================================================
 
-  subroutine init_geometry(TypeGeometryIn, IsPeriodicIn_D)
+  subroutine init_geometry(TypeGeometryIn, IsPeriodicIn_D, GenLogRIn_I)
 
     character(len=*), optional, intent(in):: TypeGeometryIn
     logical,          optional, intent(in):: IsPeriodicIn_D(nDim)
+    real,             optional, intent(in):: GenLogRIn_I(:)
+
+    ! Initialize geometry for BATL
+    !
+    ! TypeGeometry can be
+    !    'cartesian'
+    !    'rz'
+    !    'cylindrical'
+    !    'cylindrical_lnr'
+    !    'cylindrical_genr'
+    !    'spherical'
+    !    'spherical_lnr'
+    !    'spherical_genr'
+    !    'cubedsphere'
+    !
+    ! IsPeriodic_D defines periodicity for each dimension
+    !
+    ! GenLogRIn_I defines a mapping from a general index space to log(radius)
+    ! The index space is mapped to the 0-1 interval so the first element
+    ! GenLogRIn_I corresponds to 0.0, and the last element to 1.0
+
+    character(len=*), parameter:: NameSub = 'init_geometry'
     !-----------------------------------------------------------------------
 
     TypeGeometry = 'cartesian'
@@ -77,7 +104,30 @@ contains
        r_ = 1; Phi_ = 2; Theta_ = 3; Lon_ =2; Lat_ = 3
     end if
 
+    nGenR = -1
+    if(allocated(GenLogR_I)) deallocate(GenLogR_I)
+    if(IsGenRadius)then
+       if(.not.present(GenLogRIn_I)) call CON_stop(NameSub// &
+            ': GenLogRIn_I is missing for TypeGeometry=' //TypeGeometry)
+ 
+       ! Store general radial coordinate table
+       nGenR = size(GenLogRIn_I)
+       allocate(GenLogR_I(nGenR))
+       GenLogR_I = GenLogRIn_I
+    end if
+
   end subroutine init_geometry
+
+  !=========================================================================
+
+  subroutine clean_geometry
+
+    ! Release storage
+
+    nGenR = -1
+    if(allocated(GenLogR_I)) deallocate(GenLogR_I)
+
+  end subroutine clean_geometry
 
   !=========================================================================
   
@@ -186,24 +236,39 @@ contains
 
   subroutine radius_to_gen(r)
 
+    use ModInterpolate, ONLY: find_cell
+
     ! Convert true radial coordinate to general coordinate
     real, intent(inout):: r
 
-    character(len=*), parameter:: NameSub='BATL_geometry::radius_to_gen'
+    integer:: i
+    real:: dCoord
 
-    call CON_stop(NameSub//' not yet implemented')
+    character(len=*), parameter:: NameSub='BATL_geometry::radius_to_gen'
+    !-------------------------------------------------------------------------
+    ! interpolate the logarithm of r
+    call find_cell(0, nGenR-1, alog(r), &
+         i, dCoord, GenLogR_I, DoExtrapolate=.true.)
+
+    ! r is the real coordinate scaled to the 0-1 interval
+    r = (i + dCoord)/(nGenr - 1)
+
   end subroutine radius_to_gen
 
   !============================================================================
 
   subroutine gen_to_radius(r)
 
+    use ModInterpolate, ONLY: linear
+
     ! Convert generalized radial coordinate to true radial coordinate
     real, intent(inout):: r
 
     character(len=*), parameter:: NameSub='BATL_geometry::gen_to_radius'
+    !-------------------------------------------------------------------------
 
-    call CON_stop(NameSub//' not yet implemented')
+    ! interpolate the GenLogR_I array for the general coordinate
+    r = exp(linear(GenLogR_I, 0, nGenR-1, r*(nGenR-1), DoExtrapolate=.true.))
 
   end subroutine gen_to_radius
 
@@ -215,6 +280,9 @@ contains
 
     logical:: IsPeriodicTest_D(MaxDim)
     real:: Xyz_D(MaxDim), Coord_D(MaxDim), Good_D(MaxDim)
+
+    real:: r, GenR
+    real:: GenR_I(5) = (/ 1.0, 1.2, 5.0, 25.0, 100.0 /)
 
     logical:: DoTestMe
     character(len=*), parameter :: NameSub = 'test_geometry'
@@ -376,7 +444,8 @@ contains
     if(DoTestMe) write(*,*)'Testing init_geometry for spherical_genr'
     IsPeriodicTest_D = (/.false., .true., .false./)
 
-    call init_geometry('spherical_genr', IsPeriodicIn_D = IsPeriodicTest_D)
+    call init_geometry('spherical_genr', IsPeriodicIn_D = IsPeriodicTest_D, &
+         GenLogRIn_I = alog(GenR_I) )
 
     if(TypeGeometry /= 'spherical_genr') &
          write(*,*)'ERROR: init_geometry failed, ', &
@@ -397,25 +466,77 @@ contains
          'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
          ' should be ', IsPeriodicTest_D(1:nDim)
 
-    ! genr is not yet implemented, so switch to plain spherical
-    call init_geometry('spherical')
+    if(nGenR /= size(GenR_I)) &
+         write(*,*)'ERROR: init_geometry failed, ', &
+         'for TypeGeometry=', TypeGeometry,         &
+         'nGenR=', nGenR,' should be ',size(GenR_I)
+    
+    if(.not.allocated(GenLogR_I)) &
+         write(*,*)'ERROR: init_geometry failed, ', &
+         'for TypeGeometry=', TypeGeometry,         &
+         'GenLogR_I is not allocated'
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for spherical'
+    if(any(abs(exp(GenLogR_I) - GenR_I) > 1e-6)) &
+         write(*,*)'ERROR: init_geometry failed, ', &
+         'for TypeGeometry=', TypeGeometry,         &
+         'exp(GenLogR_I) =', exp(GenLogR_I),' should be ',GenR_I
+
+
+    if(DoTestMe) write(*,*)'Testing radius_to_gen and gen_to_radius'
+    r = sqrt(GenR_I(2)*GenR_I(3))
+    GenR = r
+    call radius_to_gen(GenR)
+    if(abs(GenR - 1.5/4) > 1e-6) &
+         write(*,*)'ERROR: radius_to_gen failed for spherical_genr, ', &
+         'r=', r,' GenR =', GenR, ' should be ', 1.5/4
+
+    ! Test conversion back
+    call gen_to_radius(GenR)
+    if(abs(GenR - r) > 1e-6) &
+         write(*,*)'ERROR: gen_to_radius failed for spherical_genr, ', &
+         'Orig r=', r,' new r =', GenR
+
+    r = 1.0/GenR_I(2)**2
+    GenR = r
+    call radius_to_gen(GenR)
+    if(abs(GenR + 2.0/4) > 1e-6) &
+         write(*,*)'ERROR: radius_to_gen failed for spherical_genr, ', &
+         'r=', r,' GenR =', GenR, ' should be ', -2.0/4
+
+    ! Test conversion back
+    call gen_to_radius(GenR)
+    if(abs(GenR - r) > 1e-6) &
+         write(*,*)'ERROR: gen_to_radius failed for spherical_genr, ', &
+         'Orig r=', r,' new r =', GenR
+
+    r = 1600.0
+    GenR = r
+    call radius_to_gen(GenR)
+    if(abs(GenR - (1+2./4)) > 1e-6) &
+         write(*,*)'ERROR: radius_to_gen failed for spherical_genr, ', &
+         'r=', r,' GenR =', GenR, ' should be ', 1 + 2./4.
+
+    ! Test conversion back
+    call gen_to_radius(GenR)
+    if(abs(GenR - r) > 1e-6) &
+         write(*,*)'ERROR: gen_to_radius failed for spherical_genr, ', &
+         'Orig r=', r,' new r =', GenR
+
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for spherical_genr'
     Xyz_D = (/9., 12., 20./)
-    Good_D = (/25., atan2(15.,20.),  atan2(12., 9.)/)
+    Good_D = (/0.75, atan2(15.,20.),  atan2(12., 9.)/)
     call xyz_to_coord(Xyz_D, Coord_D)
     if(any(abs(Coord_D - Good_D) > 1e-6)) &
-         write(*,*)'ERROR: xyz_to_coord failed for spherical, ', &
+         write(*,*)'ERROR: xyz_to_coord failed for spherical_genr, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for spherical'
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for spherical_genr'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for spherical, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-
-end subroutine test_geometry
+  end subroutine test_geometry
 
 end module BATL_geometry
