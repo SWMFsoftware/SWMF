@@ -41,18 +41,18 @@ module BATL_geometry
   integer, public:: r_=-1, Phi_=-1, Theta_=-1, Lon_=-1, Lat_=-1
 
   ! General radial coordinates
-  integer          :: nGenR = -1    ! number of elements in GenLogR_I
-  real, allocatable:: GenLogR_I(:)  ! array of log(r) values
+  integer, public:: nRgen = -1    ! number of elements in LogRgen_I
+  real,    public, allocatable:: LogRgen_I(:)  ! array of log(r) values
 
 contains
 
   !=========================================================================
 
-  subroutine init_geometry(TypeGeometryIn, IsPeriodicIn_D, GenLogRIn_I)
+  subroutine init_geometry(TypeGeometryIn, IsPeriodicIn_D, RgenIn_I)
 
     character(len=*), optional, intent(in):: TypeGeometryIn
     logical,          optional, intent(in):: IsPeriodicIn_D(nDim)
-    real,             optional, intent(in):: GenLogRIn_I(:)
+    real,             optional, intent(in):: RgenIn_I(:)
 
     ! Initialize geometry for BATL
     !
@@ -69,9 +69,10 @@ contains
     !
     ! IsPeriodic_D defines periodicity for each dimension
     !
-    ! GenLogRIn_I defines a mapping from a general index space to log(radius)
+    ! RgenIn_I defines a mapping from a general index space to the radial coordinate.
     ! The index space is mapped to the 0-1 interval so the first element
-    ! GenLogRIn_I corresponds to 0.0, and the last element to 1.0
+    ! RgenIn_I corresponds to 0.0, and the last element to 1.0. The interpolation
+    ! is done in log(R), so we get a logarithmic radial grid within each interval.
 
     character(len=*), parameter:: NameSub = 'init_geometry'
     !-----------------------------------------------------------------------
@@ -104,16 +105,16 @@ contains
        r_ = 1; Phi_ = 2; Theta_ = 3; Lon_ =2; Lat_ = 3
     end if
 
-    nGenR = -1
-    if(allocated(GenLogR_I)) deallocate(GenLogR_I)
+    nRgen = -1
+    if(allocated(LogRgen_I)) deallocate(LogRgen_I)
     if(IsGenRadius)then
-       if(.not.present(GenLogRIn_I)) call CON_stop(NameSub// &
-            ': GenLogRIn_I is missing for TypeGeometry=' //TypeGeometry)
+       if(.not.present(RgenIn_I)) call CON_stop(NameSub// &
+            ': RgenIn_I argument is missing for TypeGeometry=' //TypeGeometry)
  
        ! Store general radial coordinate table
-       nGenR = size(GenLogRIn_I)
-       allocate(GenLogR_I(nGenR))
-       GenLogR_I = GenLogRIn_I
+       nRgen = size(RgenIn_I)
+       allocate(LogRgen_I(nRgen))
+       LogRgen_I = alog(RgenIn_I)
     end if
 
   end subroutine init_geometry
@@ -124,8 +125,8 @@ contains
 
     ! Release storage
 
-    nGenR = -1
-    if(allocated(GenLogR_I)) deallocate(GenLogR_I)
+    nRgen = -1
+    if(allocated(LogRgen_I)) deallocate(LogRgen_I)
 
   end subroutine clean_geometry
 
@@ -247,11 +248,11 @@ contains
     character(len=*), parameter:: NameSub='BATL_geometry::radius_to_gen'
     !-------------------------------------------------------------------------
     ! interpolate the logarithm of r
-    call find_cell(0, nGenR-1, alog(r), &
-         i, dCoord, GenLogR_I, DoExtrapolate=.true.)
+    call find_cell(0, nRgen-1, alog(r), &
+         i, dCoord, LogRgen_I, DoExtrapolate=.true.)
 
     ! r is the real coordinate scaled to the 0-1 interval
-    r = (i + dCoord)/(nGenr - 1)
+    r = (i + dCoord)/(nRgen - 1)
 
   end subroutine radius_to_gen
 
@@ -267,8 +268,8 @@ contains
     character(len=*), parameter:: NameSub='BATL_geometry::gen_to_radius'
     !-------------------------------------------------------------------------
 
-    ! interpolate the GenLogR_I array for the general coordinate
-    r = exp(linear(GenLogR_I, 0, nGenR-1, r*(nGenR-1), DoExtrapolate=.true.))
+    ! interpolate the LogRgen_I array for the general coordinate
+    r = exp(linear(LogRgen_I, 0, nRgen-1, r*(nRgen-1), DoExtrapolate=.true.))
 
   end subroutine gen_to_radius
 
@@ -282,7 +283,7 @@ contains
     real:: Xyz_D(MaxDim), Coord_D(MaxDim), Good_D(MaxDim)
 
     real:: r, GenR
-    real:: GenR_I(5) = (/ 1.0, 1.2, 5.0, 25.0, 100.0 /)
+    real:: Rgen_I(5) = (/ 1.0, 1.2, 5.0, 25.0, 100.0 /)
 
     logical:: DoTestMe
     character(len=*), parameter :: NameSub = 'test_geometry'
@@ -445,7 +446,7 @@ contains
     IsPeriodicTest_D = (/.false., .true., .false./)
 
     call init_geometry('spherical_genr', IsPeriodicIn_D = IsPeriodicTest_D, &
-         GenLogRIn_I = alog(GenR_I) )
+         RgenIn_I = Rgen_I )
 
     if(TypeGeometry /= 'spherical_genr') &
          write(*,*)'ERROR: init_geometry failed, ', &
@@ -466,24 +467,23 @@ contains
          'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
          ' should be ', IsPeriodicTest_D(1:nDim)
 
-    if(nGenR /= size(GenR_I)) &
+    if(nRgen /= size(Rgen_I)) &
          write(*,*)'ERROR: init_geometry failed, ', &
          'for TypeGeometry=', TypeGeometry,         &
-         'nGenR=', nGenR,' should be ',size(GenR_I)
+         'nRgen=', nRgen,' should be ',size(Rgen_I)
     
-    if(.not.allocated(GenLogR_I)) &
+    if(.not.allocated(LogRgen_I)) &
          write(*,*)'ERROR: init_geometry failed, ', &
          'for TypeGeometry=', TypeGeometry,         &
-         'GenLogR_I is not allocated'
+         'LogRgen_I is not allocated'
 
-    if(any(abs(exp(GenLogR_I) - GenR_I) > 1e-6)) &
+    if(any(abs(exp(LogRgen_I) - Rgen_I) > 1e-6)) &
          write(*,*)'ERROR: init_geometry failed, ', &
          'for TypeGeometry=', TypeGeometry,         &
-         'exp(GenLogR_I) =', exp(GenLogR_I),' should be ',GenR_I
-
+         'exp(LogRgen_I) =', exp(LogRgen_I),' should be ',Rgen_I
 
     if(DoTestMe) write(*,*)'Testing radius_to_gen and gen_to_radius'
-    r = sqrt(GenR_I(2)*GenR_I(3))
+    r = sqrt(Rgen_I(2)*Rgen_I(3))
     GenR = r
     call radius_to_gen(GenR)
     if(abs(GenR - 1.5/4) > 1e-6) &
@@ -496,7 +496,7 @@ contains
          write(*,*)'ERROR: gen_to_radius failed for spherical_genr, ', &
          'Orig r=', r,' new r =', GenR
 
-    r = 1.0/GenR_I(2)**2
+    r = 1.0/Rgen_I(2)**2
     GenR = r
     call radius_to_gen(GenR)
     if(abs(GenR + 2.0/4) > 1e-6) &

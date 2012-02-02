@@ -233,7 +233,7 @@ contains
 
     integer:: nRoot_D(MaxDim) = (/4,4,2/)
     logical, allocatable:: DoRefine_B(:)
-    real :: BlobRadius
+    real :: BlobRadius, Rgen_I(3)
     integer :: iDim, i, j, k, iBlock, iLevel
     !------------------------------------------------------------------------
 
@@ -295,6 +295,9 @@ contains
 
     UseConstantVelocity = RadialVelocity == 0.0 .and. AngularVelocity == 0.0
 
+    ! Setup generalized radus array
+    if(index(TypeGeometry,'genr') > 0) Rgen_I = &
+         (/ DomainMin_D(1), (DomainMin_D(1)**3*DomainMax_D(1))**0.25, DomainMax_D(1) /)
 
     ! Note that the periodicity will be fixed based on TypeGeometry
     call init_batl( &
@@ -303,7 +306,8 @@ contains
          CoordMaxIn_D   = DomainMax_D,  &
          nRootIn_D      = nRoot_D,      & 
          TypeGeometryIn = TypeGeometry, &
-         IsPeriodicIn_D = (/.true., .true., .true./) )
+         IsPeriodicIn_D = (/.true., .true., .true./), &
+         RgenIn_I       = Rgen_I)
 
     ! Allow only MaxLevel levels of refinement
     iTree_IA(MaxLevel_,:) = MaxLevel
@@ -429,8 +433,8 @@ contains
 
     use BATL_lib, ONLY: MaxDim, nBlock, Unused_B, &
          iComm, nProc, iProc, iNode_B, &
-         TypeGeometry, IsCylindrical, IsSpherical, IsRLonLat, &
-         Phi_, nDimAmr, CoordMin_D, CoordMax_D, &
+         TypeGeometry, IsCylindrical, IsSpherical, IsRLonLat, IsGenRadius, &
+         Phi_, nDimAmr, CoordMin_D, CoordMax_D, nRgen, LogRgen_I, &
          CellVolume_GB, CellSize_DB, Xyz_DGB, CoordMin_DB, CoordMax_DB
 
     use ModMpi,    ONLY: MPI_REAL, MPI_INTEGER, MPI_MIN, MPI_SUM, MPI_reduce
@@ -594,6 +598,10 @@ contains
              write(UnitTmp_,'(a)')     'spherical'
           else
              write(UnitTmp_,'(a)')     TypeGeometry
+          end if
+          if(IsGenRadius)then
+             write(UnitTmp_,'(i8,a)')   nRgen,        ' nRgen'
+             write(UnitTmp_,'(es13.5," LogRgen")') LogRgen_I
           end if
           write(UnitTmp_,'(a)')        'real4'        ! type of .out file
           close(UnitTmp_)

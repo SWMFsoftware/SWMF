@@ -49,7 +49,8 @@ module BATL_lib
 
   ! Inherited from BATL_geometry
   public:: TypeGeometry, IsCartesian, IsRzGeometry, IsSpherical, IsRLonLat, &
-       IsCylindrical, IsPeriodic_D, IsNodeBasedGrid, &
+       IsCylindrical, IsPeriodic_D, IsNodeBasedGrid, IsLogRadius, IsGenRadius, &
+       nRgen, LogRgen_I, &
        x_, y_, z_, r_, Phi_, Theta_, Lon_, Lat_
 
   ! Inherited from BATL_grid
@@ -85,7 +86,8 @@ contains
   !============================================================================
   subroutine init_batl(&
        CoordMinIn_D, CoordMaxIn_D, MaxBlockIn, &
-       TypeGeometryIn, IsPeriodicIn_D, nRootIn_D, UseRadiusIn, UseDegreeIn)
+       TypeGeometryIn, IsPeriodicIn_D, nRootIn_D, UseRadiusIn, UseDegreeIn, &
+       rGenIn_I)
 
     integer, intent(in):: MaxBlockIn         ! max number of blocks/processor
     real,    intent(in):: CoordMinIn_D(nDim) ! min (gen) coordinates of domain
@@ -103,6 +105,9 @@ contains
 
     ! Use radian or degrees for angle coordinate
     logical,          optional, intent(in):: UseDegreeIn
+
+    ! Array describing the stretched radial coordinate
+    real,             optional, intent(in):: rGenIn_I(:)
 
     ! Initialize the block-adaptive tree and the domain. 
     !
@@ -131,7 +136,7 @@ contains
     if(IsBatlInitialized) RETURN
 
     call init_tree(MaxBlockIn)
-    call init_geometry(TypeGeometryIn, IsPeriodicIn_D)
+    call init_geometry(TypeGeometryIn, IsPeriodicIn_D, rGenIn_I)
     call init_grid(CoordMinIn_D, CoordMaxIn_D, UseRadiusIn, UseDegreeIn)
     call set_tree_root(nRootIn_D)
     call distribute_tree(.true.)
