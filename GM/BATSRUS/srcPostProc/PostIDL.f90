@@ -73,6 +73,14 @@ program PostIDL
   integer:: iPoint, nPoint
   real :: rTorusSmall, rTorusLarge
   real, allocatable:: TorusSurface_I(:)
+
+  ! Logarithmic radial coordinate
+  logical:: IsLogRadius = .false.
+
+  ! Stretched radial coordinates
+  logical:: IsGenRadius = .false.
+  integer:: nRgen = -1
+  real, allocatable:: LogRgen_I(:)
   !---------------------------------------------------------------------------
 
   write(*,'(a)')'PostIDL (G.Toth 2000-2002) starting'
@@ -147,6 +155,16 @@ program PostIDL
   if(TypeGeometry == 'rz' .or. TypeGeometry == 'xr')then
      TypeGeometry = 'cartesian'
      coord = (/'x    ','r    ','phi  '/)
+  end if
+
+  IsLogRadius = index(TypeGeometry,'lnr')  > 0
+  IsGenRadius = index(TypeGeometry,'genr') > 0
+  if(IsGenRadius)then
+     read(*,*) nRgen
+     allocate(LogRgen_I(nRgen))
+     do i = 1, nRgen
+        read(*,*) LogRgen_I(i)
+     end do
   end if
 
   ! Read TypeFile for idl plot, if possible
@@ -694,7 +712,7 @@ contains
     end if
 
     select case(TypeGeometry)
-    case('cylindrical','cylindrical_lnr')
+    case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
        XyzGen_D(1) = rCyl
        XyzGen_D(3) = Xyz_D(3)
 
@@ -714,9 +732,7 @@ contains
                   XyzGen_D(1) = XyzGen_D(1) + xmax1 - xmin1
           end select
        end if
-       if(TypeGeometry=='cylindrical_lnr') XyzGen_D(1) = log(XyzGen_D(1))
-
-    case('spherical','spherical_lnr')
+    case('spherical', 'spherical_lnr', 'spherical_genr')
        XyzGen_D(1) = sqrt(rCyl**2 + Xyz_D(3)**2)
 
        if(ndim==2)then
@@ -741,8 +757,6 @@ contains
        ! Shift by width of latitude range for the left half 
        if(UseDoubleCut .and. Xyz_D(1) < 0.0) & 
             XyzGen_D(3) = XyzGen_D(3) + xmax2 - xmin2
-
-       if(TypeGeometry=='spherical_lnr') XyzGen_D(1) = log(XyzGen_D(1))
 
     case('axial_torus')
 
@@ -775,6 +789,17 @@ contains
        write(*,*)'Unknown TypeGeometry='//TypeGeometry
        stop
     end select
+
+
+    if(IsLogRadius .or. IsGenRadius) XyzGen_D(1) = log(XyzGen_D(1))
+
+    if(IsGenRadius)then
+       i = min(nRgen-1, count(LogRgen_I < XyzGen_D(1)))
+       XyzGen_D(1) = ( i -1  &
+            + (XyzGen_D(1) - LogRgen_I(i)) / (LogRgen_I(i+1) - LogRgen_I(i)) )&
+            / (nRgen - 1)
+    end if
+
   end subroutine set_gen_coord
 
 end program PostIDL
