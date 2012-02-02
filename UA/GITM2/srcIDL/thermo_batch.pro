@@ -1,7 +1,7 @@
 dir = "/grid/swmf/Oct26/SixCompFixed3/UA"
 
 filelist = findfile("-t "+dir+"/*.save")
-if (strlen(filelist(0)) eq 0) then filelist = findfile("-t *.dat")
+if (strlen(filelist(0)) eq 0) then filelist = findfile("-t *.bin")
 
 filelist = ask('filename to plot',filelist(0))
 
@@ -16,7 +16,7 @@ for iFile = 0, nFiles-1 do begin
     print, 'Reading file ',filename
 
     read_thermosphere_file, filename, nvars, nalts, nlats, nlons, $
-      vars, data, rb, cb, bl_cnt
+      vars, data, rb, cb, bl_cnt, iTime, Version
 
     alt = reform(data(2,*,*,*)) / 1000.0
     lat = reform(data(1,*,*,*)) / !dtor
@@ -75,7 +75,7 @@ for iFile = 0, nFiles-1 do begin
         if (plotvector) then begin
             print,'-1  : automatic selection'
             factors = [1.0, 5.0, 10.0, 20.0, 25.0, $
-                       50.0, 75.0, 100.0, 150.0, 200.0]
+                       50.0, 75.0, 100.0, 150.0, 200.0,300.0]
             nfacs = n_elements(factors)
             for i=0,nfacs-1 do print, tostr(i)+'. '+string(factors(i)*10.0)
             vector_factor = fix(ask('velocity factor','-1'))
@@ -104,13 +104,13 @@ for iFile = 0, nFiles-1 do begin
         yeswrite_cnt = 1
 
 ; polar is variable to say whether we have polar plots or not
-        polar = 0
+        polar = 1
 
 ; npolar is whether we are doing the northern or southern hemisphere
         npolar = 1
 
 ; MinLat is for polar plots:
-        MinLat = 00.0
+        MinLat = 50.0
 
 ; showgridyes says whether to plot the grid or not.
         showgridyes = 0
@@ -122,10 +122,10 @@ for iFile = 0, nFiles-1 do begin
         step = 1
 
 ; vi_cnt is whether to plot vectors of Vi
-        vi_cnt = 0
+        vi_cnt = 1
 
 ; vn_cnt is whether to plot vectors of Vn
-        vn_cnt = 1
+        vn_cnt = 1-vi_cnt
 
         cursor_cnt = 0
 
@@ -153,7 +153,7 @@ for iFile = 0, nFiles-1 do begin
 		     plotvectoryes,vi_cnt,vn_cnt,vector_factor,	  $
 		     cursor_cnt,data,alt,lat,lon,	  $
 		     xrange,yrange,selset,smini_final,smaxi_final,	  $
-		     filename,vars, psfile_final, 0, 'all'
+		     filename,vars, psfile_final, 0, 'mid', itime
 
 endfor
 

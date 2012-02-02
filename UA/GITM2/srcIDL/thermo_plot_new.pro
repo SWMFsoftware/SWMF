@@ -1,4 +1,4 @@
-pro thermo_plot,cursor_x,cursor_y,strx,stry,step,nvars,sel,nfiles, $
+pro thermo_plot_new,cursor_x,cursor_y,strx,stry,step,nvars,sel,nfiles, $
                 cnt1,cnt2,cnt3,ghostcells,no,yeslog,  	  $
                 nolog,nalts,nlats,nlons,yeswrite_cnt,$
                 polar,npolar,MinLat,showgridyes,	  $
@@ -6,12 +6,17 @@ pro thermo_plot,cursor_x,cursor_y,strx,stry,step,nvars,sel,nfiles, $
                 cursor_cnt,data,alt,lat,lon,	  $
                 xrange,yrange,selset,smini,smaxi,	  $
                 filename,vars, psfile, mars, colortable, itime, $
-                plotpole = plotpole
+                plotpole = plotpole, iSecondVar=iSecondVar, $
+                IsZonalAverage = IsZonalAverage
 
 if (n_elements(colortable) eq 0) then colortable = 'mid'
 if (strlen(colortable) eq 0) then colortable = 'mid'
 
 if (n_elements(logplot) eq 0) then logplot = yeslog
+
+if (n_elements(iSecondVar) eq 0) then iSecondVar=-1
+
+if (n_elements(IsZonalAverage) eq 0) then IsZonalAverage = 0
 
 if (min(data(sel,*,*,*)) lt 0.0) then begin
   logplot = 0
@@ -61,6 +66,8 @@ if (polar) then utrot = ut * 15.0 else utrot = 0.0
 
 if (cnt1 eq 0 and polar) then polar = 0
 
+dataSecond = fltarr(2,2)
+
 ;According to the button user selected, get the values for plotting
 if cnt1 eq 1 then begin
     if (polar) then MinLat = MinLat else MinLat = -1000.0
@@ -85,18 +92,17 @@ if cnt1 eq 1 then begin
     endelse
 
     if (polar) then begin
-       if (lon(0,0,0) lt 0.0) then begin
-          datatoplot=reform(data(sel,2:nLons-2,loc,selset))
-          datatoplot(nLons-4,*) = datatoplot(0,*)
-          iLonS = 2
-          iLonE = nLons-2
-       endif else begin
-          iLonS = 0
-          iLonE = nLons-1
-          datatoplot=reform(data(sel,0:nLons-1,loc,selset))
-          ;datatoplot(nLons-1,*) = datatoplot(0,*)
-       endelse
-    endif else datatoplot=reform(data(sel,*,loc,selset))
+       datatoplot=reform(data(sel,2:nLons-2,loc,selset))
+       datatoplot(nLons-4,*) = datatoplot(0,*)
+       if (iSecondVar gt -1) then begin
+          dataSecond=reform(data(iSecondVar,2:nLons-2,loc,selset))
+          dataSecond(nLons-4,*) = dataSecond(0,*)
+       endif
+    endif else begin
+       datatoplot=reform(data(sel,*,loc,selset))
+       if (iSecondVar gt -1) then $
+          dataSecond=reform(data(iSecondVar,*,loc,selset))
+    endelse
 
     maxi=max(datatoplot)
     mini=min(datatoplot)
@@ -104,15 +110,15 @@ if cnt1 eq 1 then begin
     if (polar) then begin
 
         if (npolar) then begin
-            x = reform( (90.0 - lat(iLonS:iLonE,loc,selset)) * $
-                        cos((lon(iLonS:iLonE,loc,selset)+utrot)*!pi/180.0 - !pi/2.0))
-            y = reform( (90.0 - lat(iLonS:iLonE,loc,selset)) * $
-                        sin((lon(iLonS:iLonE,loc,selset)+utrot)*!pi/180.0 - !pi/2.0))
+            x = reform( (90.0 - lat(2:nLons-2,loc,selset)) * $
+                        cos((lon(2:nLons-2,loc,selset)+utrot)*!pi/180.0 - !pi/2.0))
+            y = reform( (90.0 - lat(2:nLons-2,loc,selset)) * $
+                        sin((lon(2:nLons-2,loc,selset)+utrot)*!pi/180.0 - !pi/2.0))
         endif else begin
-            x = reform( (90.0 + lat(iLonS:iLonE,loc,selset)) * $
-                        cos((lon(iLonS:iLonE,loc,selset)+utrot)*!pi/180.0 - !pi/2.0))
-            y = reform( (90.0 + lat(iLonS:iLonE,loc,selset)) * $
-                        sin((lon(iLonS:iLonE,loc,selset)+utrot)*!pi/180.0 - !pi/2.0))
+            x = reform( (90.0 + lat(2:nLons-2,loc,selset)) * $
+                        cos((lon(2:nLons-2,loc,selset)+utrot)*!pi/180.0 - !pi/2.0))
+            y = reform( (90.0 + lat(2:nLons-2,loc,selset)) * $
+                        sin((lon(2:nLons-2,loc,selset)+utrot)*!pi/180.0 - !pi/2.0))
         endelse
 
         xrange = [-mr,mr]
@@ -142,6 +148,7 @@ endif
 
 if cnt2 eq 1 then begin
     datatoplot=reform(data(sel,*,selset,*))
+    if (iSecondVar gt -1) then dataSecond=reform(data(iSecondVar,*,selset,*))
     maxi=max(datatoplot)
     mini=min(datatoplot)
     x=reform(lon(*,selset,*))
@@ -170,19 +177,34 @@ if cnt2 eq 1 then begin
         endelse
     endif
 
-xrange = [0,360]
+    print, 'lon : ',mm(lon)
+    if (min(lon) gt 0 and max(lon) lt 0) then xrange = mm(lon) $
+    else xrange = [0,360]
 
     ygrids=nalts
     xgrids=nlons
 endif
 
 if cnt3 eq 1 then begin
-    datatoplot=reform(data(sel,selset,*,*))
+   if (IsZonalAverage) then begin
+      datatoplot = fltarr(nLats,nAlts)
+      if (iSecondVar gt -1) then dataSecond = fltarr(nLats,nAlts)
+      for iLat = 0,nLats-1 do for iAlt = 0,nAlts-1 do begin
+         datatoplot(iLat,iAlt) = mean(data(sel,2:nLons-3,iLat,iAlt))
+         if (iSecondVar gt -1) then $
+            dataSecond(iLat,iAlt) = mean(data(iSecondVar,2:nLons-3,iLat,iAlt))
+      endfor
+      location = 'Zonal Mean'
+   endif else begin
+      datatoplot=reform(data(sel,selset,*,*))
+      if (iSecondVar gt -1) then dataSecond=reform(data(iSecondVar,selset,*,*))
+      location = string(lon(selset,0,0),format='(f5.1)')+' deg Longitude'
+   endelse
+
     maxi=max(datatoplot)
     mini=min(datatoplot)
     x=reform(lat(selset,*,*))
     y=reform(alt(selset,*,*))
-    location = string(lon(selset,0,0),format='(f5.1)')+' deg Longitude'
     xtitle='Latitude (deg)'
     ytitle='Altitude (km)'
     if ghostcells eq 1 then begin
@@ -208,24 +230,25 @@ if cnt3 eq 1 then begin
     ygrids=nalts
     xgrids=nlats
 
-xrange = [-90,90]
+    if (min(lat) gt -90.0 and max(lat) lt 90.0) then xrange = mm(lat) $
+    else xrange = [-90,90]
 
 endif
+
+maxiSecond=max(dataSecond)
+miniSecond=min(dataSecond)
+
 
   ;Calculate the xld, yld according to the cursor position user set.
   ;Calculate and get the array will be plotted.  
 
-;xld = x(*,0)
-;yld = y(0,*)
-;dist_x=abs(xld-cursor_x)
-;dist_y=abs(yld-cursor_y)
-;locx=where(dist_x eq min(dist_x))
-;locy=where(dist_y eq min(dist_y))
-;datald=reform(data(sel,*,locx,locy))
-
-IsManual = 0
-
-print, mini, maxi
+xld = x(*,0)
+yld = y(0,*)
+dist_x=abs(xld-cursor_x)
+dist_y=abs(yld-cursor_y)
+locx=where(dist_x eq min(dist_x))
+locy=where(dist_y eq min(dist_y))
+datald=reform(data(sel,*,locx,locy))
 
 if n_elements(smini) eq 0 then smini = '0.0'
 if n_elements(smaxi) eq 0 then smaxi = '0.0'
@@ -235,7 +258,6 @@ if (float(smini) ne 0 or float(smaxi) ne 0) then begin
     maxi = float(smaxi)
     mini = mini(0)
     maxi = maxi(0)
-    IsManual = 1
 endif else begin
 
     if (logplot) then begin
@@ -249,24 +271,32 @@ endif else begin
 
     mini = mini(0)
     maxi = maxi(0)
+
+    if (mini lt 0.0 and maxi gt 0.0) then begin
+       nmaxi = max([abs(mini),maxi])
+       if (abs(mini) gt 0.2*nmaxi and maxi gt 0.2*nmaxi) then begin
+          maxi = nmaxi
+          mini = -nmaxi
+          colortable = 'mid'
+       endif
+    endif
+
     r = (maxi-mini)*0.05
     mini = mini - r
     maxi = maxi + r
 
 endelse
 
-if (abs(mini-maxi) lt 0.001*abs(maxi)) or (abs(mini-maxi) eq 0.0) then begin
-   if (not IsManual) then maxi=mini*1.01+1.0
+if abs(mini-maxi) lt 0.001*abs(maxi) then begin
+    maxi=mini*1.01+1.0
 endif
 
-if (mini lt -0.1*maxi and maxi gt 0.0 and not IsManual) then begin
-
-  maxi = max([abs(mini),maxi])
-  mini = -maxi
-
+if abs(miniSecond-maxiSecond) lt 0.001*abs(maxiSecond) then begin
+    maxiSecond=miniSecond*1.01+1.0
 endif
 
 levels = findgen(31)/30.0*(maxi-mini) + mini
+levelSecond = findgen(7)/6.0*(maxiSecond-miniSecond) + miniSecond
 
 loc = where(datatoplot lt levels(1), count)
 if (count gt 0) then datatoplot(loc) = levels(1)
@@ -284,6 +314,8 @@ endif
 plotdumb
 
 variable = strcompress(vars(sel),/remove)
+if (iSecondVar gt -1) then variable = variable+' under '+$
+                                      strcompress(vars(iSecondVar),/remove)
 
 ;  makect,'wyr'
 
@@ -348,18 +380,25 @@ if ghostcells eq 0 then begin
             locx = where(x(*,0) ge   0.0 and x(*,0) le 360.0,nx)
             locy = where(y(0,*) ge -90.0 and y(0,*) le  90.0,ny)
             d2 = fltarr(nx,ny)
+            d2Second = fltarr(nx,ny)
             x2 = fltarr(nx,ny)
             y2 = fltarr(nx,ny)
             for i=nx/2, nx-1 do begin
                 d2(i-nx/2,0:ny-1)  = datatoplot(locx(i),locy)
+                if (iSecondVar gt -1) then $
+                   d2Second(i-nx/2,0:ny-1)  = dataSecond(locx(i),locy)
                 x2(i-nx/2,0:ny-1)  = x(locx(i),locy)
                 y2(i-nx/2,0:ny-1)  = y(locx(i),locy)
                 d2(i,0:ny-1)  = datatoplot(locx(i-nx/2),locy)
+                if (iSecondVar gt -1) then $
+                   d2Second(i,0:ny-1)  = dataSecond(locx(i-nx/2),locy)
                 x2(i,0:ny-1)  = x(locx(i-nx/2),locy)
                 y2(i,0:ny-1)  = y(locx(i-nx/2),locy)
             endfor
         endif else begin
             d2 = datatoplot
+            if (iSecondVar gt -1) then $
+               d2Second = dataSecond
             x2 = x
             y2 = y
             ny = n_elements(y2(0,*))
@@ -388,6 +427,7 @@ if ghostcells eq 0 then begin
     endif else begin
 
         d2 = datatoplot
+        if (iSecondVar gt -1) then d2Second = dataSecond
         x2 = x
         y2 = y
 
@@ -413,12 +453,23 @@ if ghostcells eq 0 then begin
           c_colors=clevels,$
           xtitle=xtitle,ytitle=ytitle,/cell_fill,/over
 
+        if (iSecondVar gt -1) then begin
+           contour,d2Second, x2, y2,POS=pos,$
+                   levels=levelSecond,xstyle=xstyle,ystyle=ystyle,$
+                   xrange=xrange,yrange=yrange,/over, /follow
+        endif
+
     endif else begin
         contour,d2, x2, y2,POS=pos,$
           levels=levels,xstyle=xstyle,ystyle=ystyle,$
           xrange=xrange,yrange=yrange,$
           c_colors=clevels,$
           xtitle=xtitle,ytitle=ytitle,/cell_fill,/noerase
+        if (iSecondVar gt -1) then begin
+           contour,d2Second, x2, y2,POS=pos,$
+                   levels=levelSecond,xstyle=xstyle,ystyle=ystyle,$
+                   xrange=xrange,yrange=yrange,/noerase, /follow
+        endif
     endelse
 
     if (not polar and cnt1 and not mars) then map_continents, color = 0
@@ -492,14 +543,12 @@ if ghostcells eq 1 then begin
     y2=min(lat)
                                 ;If user does not want to do the Plot Log.
     if nolog eq 1 then begin
-       if (not IsManual) then begin
-          maxi=max(datatoplot)
-          mini=min(datatoplot)
-          if mini eq maxi then maxi=mini+1
-       endif
-       levels = findgen(31)/30.0*(maxi-mini) + mini
+        maxi=max(datatoplot)
+        mini=min(datatoplot)
+        if mini eq maxi then maxi=mini+1
+        levels = findgen(31)/30.0*(maxi-mini) + mini
 
-        contour,datatoplot(*,*),x(*,*),y(*,*),POS=pos,$
+        contour,datatoplot,x,y,POS=pos,$
           levels=levels,xstyle=1,ystyle=1,$
           xrange=xrange,yrange=yrange,$
           title='Contour Plot Thermosphere',c_colors=clevels,$
@@ -674,11 +723,8 @@ endif
 ;;closedevice
 ;;mes=widget_message('Done with writing into file!')
 ;;endif
-
-if (not IsManual) then begin
-   smini = mini
-   smaxi = maxi
-endif
+smini = mini
+smaxi = maxi
 
 closedevice
 

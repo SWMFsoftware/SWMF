@@ -1,5 +1,5 @@
 
-pro labelvalue, btr, etr, mini, maxi, value, title
+pro labelvalue, btr, etr, mini, maxi, value, title, sAlt
 
   if (strpos(title,'alog') gt -1 and strpos(title,'O/N') lt 0) then begin
       v = 10.0^value
@@ -28,24 +28,42 @@ pro labelvalue, btr, etr, mini, maxi, value, title
   xyouts, etr+(etr-btr)/200.0, (mini+maxi)/2, tostr(fix(s))+"%", $
     orient=270,align=0.5,charsize = 1.2
 
+  xyouts, etr+(etr-btr)/25.0*1.75, (mini+maxi)/2, sAlt, $
+    orient=270, align=0.5,charsize = 1.2
+
 end
 
 
 GetNewData = 1
 fpi = 0
+ccmc = 1
 
-filelist_new = findfile("b0001_*.*ALL")
+if (n_elements(start) eq 0) then start='????'
+
+old_start = start
+
+start = ask('starting characters of the satellite',start)
+
+filelist_new = findfile(start+"*.*ALL")
 nfiles_new = n_elements(filelist_new)
 if (nfiles_new eq 1) then begin
-    filelist_new = findfile("????_*.dat")
+    filelist_new = findfile(start+"*.dat")
+    nfiles_new = n_elements(filelist_new)
+endif
+
+if (nfiles_new eq 1) then begin
+    filelist_new = findfile(start+"*.bin")
     nfiles_new = n_elements(filelist_new)
 endif
 
 if n_elements(nfiles) gt 0 then begin
     if (nfiles_new eq nfiles) then default = 'n' else default='y'
+    if (strpos(old_start,start) eq -1) then default = 'n'
     GetNewData = mklower(strmid(ask('whether to reread data',default),0,1))
     if (GetNewData eq 'n') then GetNewData = 0 else GetNewData = 1
 endif
+
+help, filelist_new, getnewdata, nsats
 
 if (GetNewData) then begin
 
@@ -75,82 +93,82 @@ if (nSats eq 1) then begin
                 cos(angle)*cos(Lats*!dtor) * $ 
                 cos(!pi*(LocalTime-12.0)/12.0))
 
-    t  = reform(data(0,0:nPts-1,4,0:nalts-1))
-
-    ; o / n2 stuff
-    o  = reform(data(0,0:nPts-1,5,0:nalts-1))
-    o2 = reform(data(0,0:nPts-1,6,0:nalts-1))
-    n2 = reform(data(0,0:nPts-1,7,0:nalts-1))
-    n4s = reform(data(0,0:nPts-1,9,0:nalts-1))
-    n = o + n2 + o2 + n4s
-    k = 1.3807e-23
-    mp = 1.6726e-27
-    rho = o*mp*16 + o2*mp*32 + n2*mp*14
-    data(0,0:nPts-1,3,0:nalts-1) = rho
-
-    p = n*k*t
-    oon  = o/n
-    n2on = n2/n
-    o2on = o2/n
-    non = n4s/n
-
-    oInt = fltarr(nPts)
-    n2Int = fltarr(nPts)
-    on2ratio = o/n2
-    AltInt = fltarr(nPts)
-
-    MaxValN2 = 1.0e21
-
-    for i=0,nPts-1 do begin
-
-        iAlt = nalts-1
-        Done = 0
-        while (Done eq 0) do begin
-            dAlt = (Alts(i,iAlt)-Alts(i,iAlt-1))*1000.0
-            n2Mid = (n2(i,iAlt) + n2(i,iAlt-1))/2.0
-            oMid  = ( o(i,iAlt) +  o(i,iAlt-1))/2.0
-            if (n2Int(i) + n2Mid*dAlt lt MaxValN2) then begin
-                n2Int(i) = n2Int(i) + n2Mid*dAlt
-                oInt(i)  =  oInt(i) +  oMid*dAlt
-                iAlt = iAlt - 1
-            endif else begin
-                dAlt = (MaxValN2 - n2Int(i)) / n2Mid
-                n2Int(i) = n2Int(i) + n2Mid*dAlt
-                oInt(i)  =  oInt(i) +  oMid*dAlt
-                AltInt(i) = Alts(i,iAlt) - dAlt/1000.0
-                Done = 1
-            endelse
-        endwhile
-
-    endfor
-
-    re = 6372000.0
-    r = re + Alts*1000.0
-    g = 9.8 * (re/r)^2
-    mp = 1.6726e-27
-    k = 1.3807e-23
-    mo = 16.0 * mp
-    mo2 = mo*2.0
-
-    t  = reform(data(0,0:nPts-1,4,0:nalts-1))
-
-    o_scale_est  = k*t / (mo*g) / 1000.0
-    o2_scale_est = k*t / (mo2*g) / 1000.0
-
-    o_scale = o
-    alogo = alog(o(*,1:nalts-1)/o(*,0:nalts-2))
-    mini = 0.1
-    loc = where(alogo ge -mini,count)
-    if (count gt 0) then alogo(loc) = -mini
-    o_scale(*,1:nalts-1) = - (Alts(*,1:nalts-1) - Alts(*,0:nalts-2))/$
-      alogo
-    o_scale(*,0) = o_scale(*,1)
-
-    o2_scale = o2
-    o2_scale(*,1:nalts-1) = -(Alts(*,1:nalts-1) - Alts(*,0:nalts-2))/$
-      alog(o2(*,1:nalts-1)/o2(*,0:nalts-2))
-    o2_scale(*,0) = o2_scale(*,1)
-
+;;     t  = reform(data(0,0:nPts-1,4,0:nalts-1))
+;; 
+;;     ; o / n2 stuff
+;;     o  = reform(data(0,0:nPts-1,5,0:nalts-1))
+;;     o2 = reform(data(0,0:nPts-1,6,0:nalts-1))
+;;     n2 = reform(data(0,0:nPts-1,7,0:nalts-1))
+;;     n4s = reform(data(0,0:nPts-1,9,0:nalts-1))
+;;     n = o + n2 + o2 + n4s
+;;     k = 1.3807e-23
+;;     mp = 1.6726e-27
+;;     rho = o*mp*16 + o2*mp*32 + n2*mp*14
+;;     data(0,0:nPts-1,3,0:nalts-1) = rho
+;; 
+;;     p = n*k*t
+;;     oon  = o/n
+;;     n2on = n2/n
+;;     o2on = o2/n
+;;     non = n4s/n
+;; 
+;;     oInt = fltarr(nPts)
+;;     n2Int = fltarr(nPts)
+;;     on2ratio = o/n2
+;;     AltInt = fltarr(nPts)
+;; 
+;;     MaxValN2 = 1.0e21
+;; 
+;;     for i=0,nPts-1 do begin
+;; 
+;;         iAlt = nalts-1
+;;         Done = 0
+;;         while (Done eq 0) do begin
+;;             dAlt = (Alts(i,iAlt)-Alts(i,iAlt-1))*1000.0
+;;             n2Mid = (n2(i,iAlt) + n2(i,iAlt-1))/2.0
+;;             oMid  = ( o(i,iAlt) +  o(i,iAlt-1))/2.0
+;;             if (n2Int(i) + n2Mid*dAlt lt MaxValN2) then begin
+;;                 n2Int(i) = n2Int(i) + n2Mid*dAlt
+;;                 oInt(i)  =  oInt(i) +  oMid*dAlt
+;;                 iAlt = iAlt - 1
+;;             endif else begin
+;;                 dAlt = (MaxValN2 - n2Int(i)) / n2Mid
+;;                 n2Int(i) = n2Int(i) + n2Mid*dAlt
+;;                 oInt(i)  =  oInt(i) +  oMid*dAlt
+;;                 AltInt(i) = Alts(i,iAlt) - dAlt/1000.0
+;;                 Done = 1
+;;             endelse
+;;         endwhile
+;; 
+;;     endfor
+;; 
+;;     re = 6372000.0
+;;     r = re + Alts*1000.0
+;;     g = 9.8 * (re/r)^2
+;;     mp = 1.6726e-27
+;;     k = 1.3807e-23
+;;     mo = 16.0 * mp
+;;     mo2 = mo*2.0
+;; 
+;;     t  = reform(data(0,0:nPts-1,4,0:nalts-1))
+;; 
+;;     o_scale_est  = k*t / (mo*g) / 1000.0
+;;     o2_scale_est = k*t / (mo2*g) / 1000.0
+;; 
+;;     o_scale = o
+;;     alogo = alog(o(*,1:nalts-1)/o(*,0:nalts-2))
+;;     mini = 0.1
+;;     loc = where(alogo ge -mini,count)
+;;     if (count gt 0) then alogo(loc) = -mini
+;;     o_scale(*,1:nalts-1) = - (Alts(*,1:nalts-1) - Alts(*,0:nalts-2))/$
+;;       alogo
+;;     o_scale(*,0) = o_scale(*,1)
+;; 
+;;     o2_scale = o2
+;;     o2_scale(*,1:nalts-1) = -(Alts(*,1:nalts-1) - Alts(*,0:nalts-2))/$
+;;       alog(o2(*,1:nalts-1)/o2(*,0:nalts-2))
+;;     o2_scale(*,0) = o2_scale(*,1)
+;; 
     d = Lats - Lats(0)
 ;    if (max(abs(d)) lt 1.0) then stationary = 1 else stationary = 0
     stationary = 1
@@ -161,25 +179,28 @@ if (nSats eq 1) then begin
     display, vars
     if (n_elements(iVar) eq 0) then iVar = 3
     nVars = n_elements(Vars)
-
-    if (GetNewData) then begin
-
-        print, tostr(nVars),  ".  O/N2"
-        print, tostr(nVars+1),".  O/Nt"
-        print, tostr(nVars+2),".  O2/Nt"
-        print, tostr(nVars+3),".  N2/Nt"
-        print, tostr(nVars+4),".  N4S/Nt"
-        print, tostr(nVars+5),".  O Scale Height"
-        print, tostr(nVars+6),".  O2 Scale Height"
-        print, tostr(nVars+7),".  Pressure"
-        vars = [vars,'O/N!D2!N', 'O/Nt', 'O!D2!N/Nt', 'N!D2!N/Nt', $
-                'N(!U4!DS)/Nt', $
-                'O Scale Height','O2 Scale Height', $
-                'Pressure']
-
-    endif
+;; 
+;;     if (GetNewData) then begin
+;; 
+;;         print, tostr(nVars),  ".  O/N2"
+;;         print, tostr(nVars+1),".  O/Nt"
+;;         print, tostr(nVars+2),".  O2/Nt"
+;;         print, tostr(nVars+3),".  N2/Nt"
+;;         print, tostr(nVars+4),".  N4S/Nt"
+;;         print, tostr(nVars+5),".  O Scale Height"
+;;         print, tostr(nVars+6),".  O2 Scale Height"
+;;         print, tostr(nVars+7),".  Pressure"
+;;         vars = [vars,'O/N!D2!N', 'O/Nt', 'O!D2!N/Nt', 'N!D2!N/Nt', $
+;;                 'N(!U4!DS)/Nt', $
+;;                 'O Scale Height','O2 Scale Height', $
+;;                 'Pressure']
+;; 
+;;     endif
 
     iVar = fix(ask('variable to plot',tostr(iVar)))
+
+    IsElectronDensity = 0
+    if (strpos(vars(iVar),'e-') gt -1) then IsElectronDensity = 1
 
     if (iVar lt nVars) then value = reform(data(0,0:nPts-1,iVar,0:nalts-1))
     if (iVar eq nVars) then value = on2ratio
@@ -192,43 +213,53 @@ if (nSats eq 1) then begin
     if (iVar eq nVars+6) then value = o2_scale
     if (iVar eq nVars+7) then value = p
 
-    if (min(value) gt 0) then begin
+;    if (min(value+1.0e-32) gt 0) then begin
+    if (min(value+1.0e-32) le 0) then an = 'n'
         if (n_elements(an) eq 0) then an = 'y'
         an = ask('whether you would like variable to be alog10',an)
         if (strpos(mklower(an),'y') eq 0) then begin
-            value = alog10(value)
+            value = alog10(value+1.0e-32)
             title = 'alog10('+vars(ivar)+')'
         endif else title = vars(ivar)
-    endif else title = vars(ivar)
+;    endif else title = vars(ivar)
 
     if (stationary and iVar ne nVars) then begin
 
-        if (n_elements(alt1) eq 0) then alt1 = 120.0 else alt1 = alt1(0)
-        if (n_elements(alt2) eq 0) then alt2 = 350.0 else alt2 = alt2(0)
-        alt1 = float(ask('altitude of first cut', string(alt1)))
-        alt2 = float(ask('altitude of second cut', string(alt2)))
+       if (not IsElectronDensity) then begin
 
-        d = abs(alt1 - reform(Alts(0,*)))
-        loc = where(d eq min(d))
-        iAlt1 = loc(0)
+          if (n_elements(alt1) eq 0) then alt1 = 120.0 else alt1 = alt1(0)
+          if (n_elements(alt2) eq 0) then alt2 = 350.0 else alt2 = alt2(0)
+          alt1 = float(ask('altitude of first cut', string(alt1)))
+          alt2 = float(ask('altitude of second cut', string(alt2)))
 
-        d = abs(alt2 - reform(Alts(0,*)))
-        loc = where(d eq min(d))
-        iAlt2 = loc(0)
+          d = abs(alt1 - reform(Alts(0,*)))
+          loc = where(d eq min(d))
+          iAlt1 = loc(0)
+          sAlt1 = string(Alts(0,iAlt1),format='(f5.1)')+' km'
 
-        nomap     = ask('whether you want the map on the page','y')
-        nocontour = ask('whether you want the contour on the page','y')
+          d = abs(alt2 - reform(Alts(0,*)))
+          loc = where(d eq min(d))
+          iAlt2 = loc(0)
+          sAlt2 = string(Alts(0,iAlt2),format='(f5.1)')+' km'
+
+       endif else begin
+          sAlt1 = 'NMF2'
+          sAlt2 = 'HMF2'
+       endelse
+       nomap     = ask('whether you want the map on the page','y')
+       nocontour = ask('whether you want the contour on the page','y')
 
     endif
 
     setdevice, 'test.ps', 'p', 5, 0.95
 
-    makect, 'all'
+;    makect, 'mid'
+    makect, 'bristow'
 
     ppp = 8
     space = 0.01
     pos_space, ppp, space, sizes, ny = ppp
-    
+   
     stime = time(0)
     etime = max(time)
     time_axis, stime, etime,btr,etr, xtickname, xtitle, xtickv, xminor, xtickn
@@ -253,31 +284,36 @@ if (nSats eq 1) then begin
 
         levels = findgen(31) * (maxi-mini) / 30 + mini
 
-        v = reform(value(*,0:nalts-1))
+        v = reform(value(*,2:nalts-3))
         l = where(v gt maxi,c)
         if (c gt 0) then v(l) = maxi
         l = where(v lt mini,c)
         if (c gt 0) then v(l) = mini
-        contour, v, time2d(*,0:nalts-1), Alts(*,0:nalts-1), $
+        contour, v, time2d(*,2:nalts-3), Alts(*,2:nalts-3), $
           /follow, /fill, $
           nlevels = 30, pos = pos, levels = levels, $
-          yrange = [0,max(alts)], ystyle = 1, ytitle = 'Altitude (km)', $
+          yrange = [0,max(alts(*,2:nalts-3))], ystyle = 1, $
+          ytitle = 'Altitude (km)', $
           xtickname = xtickname, xtitle = xtitle, xtickv = xtickv, $
           xminor = xminor, xticks = xtickn, xstyle = 1, charsize = 1.2
+
 
     ; Plot a dashed line on the altitudes where the line plots are going
     ; to be made.
 
         if (stationary) then begin
-            if (iVar ne nVars) then begin
-                oplot, [time2d(0,0),time2d(nPts-1,0)], $
-                  [Alts(0,iAlt1),Alts(0,iAlt1)], $
-                  linestyle = 1
-                oplot, [time2d(0,0),time2d(nPts-1,0)], $
-                  [Alts(0,iAlt2),Alts(0,iAlt2)], $
-                  linestyle = 1
+           if (iVar ne nVars) then begin
 
-                if (fpi) then begin
+              if (not IsElectronDensity) then begin
+
+                 oplot, [time2d(0,0),time2d(nPts-1,0)], $
+                        [Alts(0,iAlt1),Alts(0,iAlt1)], $
+                        linestyle = 1, thick = 2
+                 oplot, [time2d(0,0),time2d(nPts-1,0)], $
+                        [Alts(0,iAlt2),Alts(0,iAlt2)], $
+                        linestyle = 1, thick = 2
+
+                 if (fpi) then begin
 
                     blankstart = -1
                     blankend   = -1
@@ -286,20 +322,52 @@ if (nSats eq 1) then begin
 
                     for i=1,nPts-1 do begin
                     
-                        if (sza(i) gt !pi/2 and sza(i-1) le !pi/2) then begin
-                            if blankend(0) gt -1 then blankend = [blankend,i] $
-                            else blankend = i
-                        endif
-                        if (sza(i) lt !pi/2 and sza(i-1) ge !pi/2) then begin
-                            if blankstart(0) gt -1 then blankstart=[blankstart,i] $
-                            else blankstart = i
-                        endif
+                       if (sza(i) gt !pi/2 and sza(i-1) le !pi/2) then begin
+                          if blankend(0) gt -1 then blankend = [blankend,i] $
+                          else blankend = i
+                       endif
+                       if (sza(i) lt !pi/2 and sza(i-1) ge !pi/2) then begin
+                          if blankstart(0) gt -1 then blankstart=[blankstart,i] $
+                          else blankstart = i
+                       endif
 
                     endfor
 
-                endif
+                 endif
 
-            endif
+              endif else begin
+
+                 hmf2 = fltarr(nPts)
+                 hmf2l = fltarr(nPts)
+                 hmf2u = fltarr(nPts)
+
+                 nmf2 = fltarr(nPts)
+                 iAlt1 = 10
+                 iAlt2 = 20
+                 help, alts, v
+                 alts_small = reform(alts(0,*))
+                 for i=0,nPts-1 do begin
+;                    l_alts = where(alts_small gt 200)
+                    nmf2(i) = max(v(i,*))
+                    l = where(v(i,*) eq max(v(i,*)))
+;                    hmf2(i) = alts(i,2+l(0))
+                    hmf2(i) = alts_small(l(0))
+                    l = where(v(i,*) gt 0.9*nmf2(i),c)
+;                    hmf2l(i) = alts(i,2+l(0))
+;                    hmf2u(i) = alts(i,2+l(c-1))
+                    hmf2l(i) = alts_small(l(0))
+                    hmf2u(i) = alts_small(l(c-1))
+
+                 endfor
+
+                 oplot, time2d(*,0), hmf2
+                 oplot, time2d(*,0), hmf2l, linestyle = 1
+                 oplot, time2d(*,0), hmf2u, linestyle = 1
+
+              endelse
+
+           endif
+
         endif
 
         ctpos = pos
@@ -374,12 +442,14 @@ if (nSats eq 1) then begin
 
         if (iVar ne nVars) then begin
 
-            value2 = value
-            if (iVar eq nVars+5) then value2 = o_scale_est
-            if (iVar eq nVars+6) then value2 = o2_scale_est
+           if (IsElectronDensity) then v1 = hmf2 else v1 = reform(value(*,iAlt1))
+           if (IsElectronDensity) then v2 = hmf2 else v2 = reform(value(*,iAlt1))
+;           value2 = value
+           if (iVar eq nVars+5) then v2 = reform(o_scale_est(*,iAlt1))
+           if (iVar eq nVars+6) then v2 = reform(o2_scale_est(*,iAlt1))
 
-            mini = min([value(*, iAlt1),value2(*, iAlt1)])
-            maxi = max([value(*, iAlt1),value2(*, iAlt1)])
+            mini = min([v1,v2])
+            maxi = max([v1,v2])
             range = maxi-mini
             mini = mini - 0.02*range
             maxi = maxi + 0.02*range
@@ -388,13 +458,13 @@ if (nSats eq 1) then begin
             maxi = float(ask('maximum values for alt1',tostrf(maxi)))
 
             if (fpi) then begin
-                l = where(sza gt !pi/2,c)
+               l = where(sza gt !pi/2,c)
             endif else c = 0
 
             if (c gt 0) then begin
 
                 t = time-stime
-                v = reform(value(*, iAlt1))
+                v = v1
 
                 v(l) = -2.0e32
 
@@ -426,14 +496,14 @@ if (nSats eq 1) then begin
                       ytickname = strarr(10)+' '
                 endif
 
-                v = reform(value(*, iAlt1))
+                v = v1
                 new_title = title
 
             endif else begin
 
-                v = reform(value(*, iAlt1))
+                v = v1
                 fac = floor(alog10(max(abs(v))))
-                if (fac gt 2 or fac lt -2) then begin
+                if (fac gt 3 or fac lt -3) then begin
                     v = v / (10.0^fac)
                     mini = mini / (10.0^fac)
                     maxi = maxi / (10.0^fac)
@@ -450,16 +520,26 @@ if (nSats eq 1) then begin
 
             endelse
 
-            labelvalue, btr, etr, mini, maxi, v, new_title
+            labelvalue, btr, etr, mini, maxi, v, new_title, sAlt1
     
             if (iVar ge nVars+5) then $ 
               oplot, time-stime, value2(*,ialt1), linestyle = 1
 
+            if (IsElectronDensity) then begin
+               oplot, time-stime, hmf2l, linestyle = 1
+               oplot, time-stime, hmf2u, linestyle = 1
+            endif
+
             get_position, ppp, space, sizes, 2, pos1, /rect
             pos = [pos1(0)+0.05,pos1(1), pos1(2)-0.07,pos1(3)]
 
-            mini = min([value(*, iAlt2),value2(*, iAlt2)])
-            maxi = max([value(*, iAlt2),value2(*, iAlt2)])
+            if (IsElectronDensity) then v1 = nmf2 else v1 = reform(value(*,iAlt2))
+            if (IsElectronDensity) then v2 = nmf2 else v2 = reform(value(*,iAlt2))
+            if (iVar eq nVars+5) then v2 = reform(o_scale_est(*,iAlt2))
+            if (iVar eq nVars+6) then v2 = reform(o2_scale_est(*,iAlt2))
+
+            mini = min([v1,v2])
+            maxi = max([v1,v2])
             range = maxi-mini
             mini = mini - 0.02*range
             maxi = maxi + 0.02*range
@@ -474,7 +554,7 @@ if (nSats eq 1) then begin
             if (c gt 0) then begin
 
                 t = time-stime
-                v = reform(value(*, iAlt2))
+                v = v1
 
                 v(l) = -2.0e32
 
@@ -491,7 +571,7 @@ if (nSats eq 1) then begin
                 if (c gt 0) then begin
 
                     t = time-stime
-                    v = reform(value(*, iAlt2))
+                    v = v1
                     v(l) = -2.0e32
 
                     plot, t, v, $
@@ -505,14 +585,14 @@ if (nSats eq 1) then begin
                       ytickname = strarr(10)+' '
                 endif
 
-                v = reform(value(*, iAlt1))
+                v = v1
                 new_title = title
 
             endif else begin
 
-                v = reform(value(*, iAlt2))
+                v = v1
                 fac = floor(alog10(max(abs(v))))
-                if (fac gt 2 or fac lt -2) then begin
+                if (fac gt 3 or fac lt -3) then begin
                     v = v / (10.0^fac)
                     mini = mini / (10.0^fac)
                     maxi = maxi / (10.0^fac)
@@ -528,10 +608,14 @@ if (nSats eq 1) then begin
 
             endelse
 
-            labelvalue, btr, etr, mini, maxi, v, new_title
+            labelvalue, btr, etr, mini, maxi, v, new_title, sAlt2
 
             if (iVar ge nVars+5) then $ 
               oplot, time-stime, value2(*,ialt2), linestyle = 1
+
+            if (IsElectronDensity) then begin
+               oplot, time-stime, nmf2*0.9/ (10.0^fac), linestyle = 1
+            endif
 
         endif else begin
 
@@ -551,7 +635,7 @@ if (nSats eq 1) then begin
               xminor = xminor, xticks = xtickn, xstyle = 1, pos = pos, $
               thick = 3, yrange = [mini,maxi], ystyle = 1, charsize = 1.2
   
-            labelvalue, btr, etr, mini, maxi, v, 'O/N!D2!N'
+            labelvalue, btr, etr, mini, maxi, v, 'O/N!D2!N', ' '
 
             get_position, ppp, space, sizes, 2, pos1, /rect
             pos = [pos1(0)+0.05,pos1(1), pos1(2)-0.07,pos1(3)]
@@ -572,7 +656,7 @@ if (nSats eq 1) then begin
               xminor = xminor, xticks = xtickn, xstyle = 1, pos = pos, $
               thick = 3, yrange = [mini,maxi], ystyle = 1, charsize = 1.2
     
-            labelvalue, btr, etr, mini, maxi, v, 'Altitude (km)'
+            labelvalue, btr, etr, mini, maxi, v, 'Altitude (km)', ' '
 
         endelse
 
@@ -752,5 +836,38 @@ endif else begin
 endelse
 
 !p.position = -1
+
+if (ccmc) then begin
+
+   stime = min(time)
+   c_r_to_a, itime, stime
+   c_a_to_ymd, itime, ymd
+   outfile = start+'_'+ymd
+
+   if (IsElectronDensity) then begin
+      outfile1 = outfile+'_nmf2.ccmc'
+      outfile2 = outfile+'_hmf2.ccmc'
+      openw,1,outfile1
+      openw,2,outfile2
+
+      l = where(hmf2 eq alts(0,nalts-3), c)
+      if (c gt 0) then hmf2(l) = hmf2l(l)
+
+      for iPt = 0, nPts-1 do begin
+
+         if (time(iPt)-time(0) ge 24.0*3600.0) then begin
+            c_r_to_a, itime, time(iPt)
+            jd = jday(itime(0), itime(1), itime(2))
+            printf,1, itime(0), jd, itime(3), itime(4), itime(5), lats(iPt), lons(iPt), nmf2(iPt)/1.0e6, format = '(i5,4i4,2f7.2,e12.4)'
+            printf,2, itime(0), jd, itime(3), itime(4), itime(5), lats(iPt), lons(iPt), hmf2(iPt), hmf2u(iPt), hmf2l(iPt), format = '(i5,4i4,2f7.2,3f12.2)'
+
+         endif
+
+      endfor
+
+      close,1,2
+   endif
+
+endif
 
 end

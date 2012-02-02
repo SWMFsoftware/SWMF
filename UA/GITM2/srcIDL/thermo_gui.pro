@@ -47,7 +47,6 @@ case whichevent of
         rb = fix((*ptr).rb)
         cb = fix((*ptr).cb)
         
-        print,'rb & cb:',(*ptr).rb,(*ptr).cb
         file=(*ptr).filename
         if file eq '' then begin
             mes=widget_message('Please enter the file to search!')
@@ -62,14 +61,13 @@ case whichevent of
             if filelist[0] eq '' or nfiles eq 0 then begin
                 me=widget_message('There is no such a file!')
             endif else begin
-;                print, "going into read_thermo..."
                 read_thermosphere_file, filelist, nvars, nalts, nlats, nlons,vars,data,rb,cb,bl_cnt, iTime
-;                print,'bl_cnt:',bl_cnt
                 (*ptr).bl_cnt = bl_cnt
                 if (*ptr).bl_cnt eq 1 then begin
                                 ;Store the array 'data' to the '*(*ptr).data'
                     *(*ptr).vars=vars
                     *(*ptr).data=data
+                    *(*ptr).itime=itime
 
                                 ;Store the nvars,nalts,nlats,nlons to the pointer.
                     (*ptr).nvars=nvars
@@ -247,7 +245,7 @@ case whichevent of
                             psfile=strtrim(string(txt[0]),2)
                             mars = (*ptr).mars
                             colortable = (*ptr).colortable
-        
+                            itime = *(*ptr).itime
 
                                 ;Call the subprogram to do the plots.
                             thermo_plot,cursor_x,cursor_y,strx,stry,step,vars,sel,nfiles,	  $
@@ -295,6 +293,7 @@ case whichevent of
                         cnt1=(*ptr).lat_lon_cnt
                         cnt2=(*ptr).alt_lon_cnt
                         cnt3=(*ptr).alt_lat_cnt
+
                         if cnt1 eq 1 then begin
                             widget_control,(*ptr).sli,set_slider_max=nalts-1
                         endif
@@ -312,6 +311,8 @@ case whichevent of
                                   nlats, nlons,vars,data,rb,cb,bl_cnt, iTime
                                 ;Store the data to pointer
                                 *(*ptr).data = data
+                                *(*ptr).itime = itime
+
                                 if sel eq -1 then begin
 
                                 endif else begin						
@@ -414,7 +415,8 @@ case whichevent of
                                         psfile=strtrim(string(txt[0]),2)
                                         mars = (*ptr).mars
                                         colortable = (*ptr).colortable
-        
+                                        itime = *(*ptr).itime
+
 
                                 ;Call the subprogram to do the plots.
                                         thermo_plot,cursor_x,cursor_y,strx,stry,step,vars,sel,nfiles,	  $
@@ -634,6 +636,7 @@ case whichevent of
             psfile=strtrim(string(txt[0]),2)
             mars = (*ptr).mars
             colortable = (*ptr).colortable
+            itime = *(*ptr).itime
         
 
                                 ;Call the subprogram to do the plots.
@@ -777,6 +780,7 @@ case whichevent of
             psfile=strtrim(string(txt[0]),2)
             mars = (*ptr).mars
             colortable = (*ptr).colortable
+            itime = *(*ptr).itime
         
                                 ;Call the subprogram to do the plots.
             thermo_plot,cursor_x,cursor_y,strx,stry,step,vars,sel,nfiles,	  $
@@ -985,6 +989,7 @@ case whichevent of
             psfile=strtrim(string(txt[0]),2)
             mars = (*ptr).mars
             colortable = (*ptr).colortable
+            itime = *(*ptr).itime
 
 
                                 ;Call the subprogram to do the plots.
@@ -1113,8 +1118,8 @@ case whichevent of
             psfile=strtrim(string(txt[0]),2)
             mars = (*ptr).mars
             colortable = (*ptr).colortable
+            itime = *(*ptr).itime
         
-
                                 ;Call the subprogram to do the plots.
             thermo_plot,cursor_x,cursor_y,strx,stry,step,vars,sel,nfiles,	  $
               cnt1,cnt2,cnt3,yes,no,yeslog,  	  $
@@ -1288,6 +1293,7 @@ case whichevent of
             psfile=strtrim(string(txt[0]),2)
             mars = (*ptr).mars
             colortable = (*ptr).colortable
+            itime = *(*ptr).itime
         
 
                                 ;Call the subprogram to do the plots.
@@ -1443,7 +1449,7 @@ lab=widget_label(dirlab,value='Enter file name (can use *) [p0000b0001i0200.dat]
 filename_base=widget_base(dirlab,/row)
 filelist = findfile("-t *.save")
 ;if (strlen(filelist(0)) eq 0) then filelist = findfile("-t *.dat")
-if (strlen(filelist(0)) eq 0) then filelist = findfile("-t *.3D*")
+if (strlen(filelist(0)) eq 0) then filelist = findfile("-t *.bin")
 txt=filelist(0)
 
 file_txt=widget_text(filename_base,value=txt,uvalue='FILENAME',xsize=46,/editable,/align_left)
@@ -1634,16 +1640,28 @@ widget_control,vs_sli,sensitive=0
 
 if nowrite_cnt eq 1 then begin
 	widget_control,writefile_txt,sensitive=0
-endif
+    endif
+itime = [1965,0,0,0,0,0]
 
-ptr = ptr_new({status:0,lists_base:lists_base,file_txt:file_txt,rb_txt:rb_txt,cb_txt:cb_txt,$
-	rb:'',cb:'',vars_list:vars_list,filename:'',vars:ptr_new(vars),data:ptr_new(data),$
-	nvars:0,nalts:0,nlats:0,nlons:0,lat_lon_cnt:0,alt_lon_cnt:0,alt_lat_cnt:0,$
+ptr = ptr_new({status:0, $
+               lists_base:lists_base,$
+               file_txt:file_txt,$
+               rb_txt:rb_txt,$
+               cb_txt:cb_txt,$
+               rb:'',cb:'',$
+               vars_list:vars_list,$
+               filename:'',$
+               vars:ptr_new(vars),$
+               data:ptr_new(data),$
+               nvars:0,$
+               nalts:0,nlats:0,nlons:0,$
+               lat_lon_cnt:0,alt_lon_cnt:0,alt_lat_cnt:0,$
 	sli:sli,lat_lon_but:lat_lon_but,alt_lon_but:alt_lon_but,lat_lon_max:0,$
 	alt_lon_max:0,alt_lat_max:0,alt_lat_but:alt_lat_but,sel:-1,nfiles:0,$
 	slider_txt   : slider_txt,   $
         min_txt      : min_txt,      $
         max_txt      : max_txt,      $
+        itime        : ptr_new(itime), $
         gh_buts      : gh_buts,      $
         no_but       : no_but,       $
 	yes_but      : yes_but,      $
