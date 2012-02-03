@@ -65,7 +65,7 @@ module CON_couple_ih_sc
 
   ! Variables used by global MPI coupler
   ! Communicator and logicals to simplify message passing and execution
-  logical       :: UseMe=.true., IsInitialized=.false.
+  logical       :: UseMe=.true., IsInitialized=.false., DoMatchIBC = .true.
 
   ! Size and limits of the 3D spherical buffer grid
   integer, save :: iSize, jSize, kSize, nCell_D(3)
@@ -90,6 +90,7 @@ contains
          index(Grid_C(SC_) % TypeGeometry,'spherical') > 0)then
        UseGlobalMpiCoupler_CC(SC_,IH_) = .TRUE.
        UseGlobalMpiCoupler_CC(IH_,SC_) = .TRUE.
+
        call couple_ih_sc_init_global
        RETURN
     end if
@@ -552,9 +553,10 @@ contains
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     if(IsInitialized) RETURN
     IsInitialized = .true.
-    DoTEst=.true.
+
     if(DoTest) write(*,*) NameSub, ' started'
 
+    UseGlobalMpiCoupler = .true.
     if(i_proc() == 0) write(*,*) 'Using global MPI coupler'
     ! Determine which state variables should be coupled
     call set_couple_var_info(SC_,IH_)
@@ -646,7 +648,6 @@ contains
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     iProcWorld = i_proc()
-
     ! Exclude PEs which are not involved
     if(.not.UseMe) RETURN
 
@@ -666,6 +667,7 @@ contains
 
     nSize = iSize*(jSize+2)*(kSize+2)*nVarCouple
 
+    if(DoTest)write(*,*)NameSub,', finished allocating global buffer'
     ! Fill in the coupled state variables
     if(is_proc(SC_)) then
        call SC_get_for_global_buffer(iSize,jSize,kSize, &
@@ -675,6 +677,7 @@ contains
             0, i_comm(SC_), iError)
     end if
 
+    if(DoTest)write(*,*)NameSub,', SC finished filling global buffer'
     if(i_proc0(SC_) /= i_proc0(IH_))then
        ! Pass filled buffer to IH root PE
        if(is_proc0(SC_)) &
@@ -702,6 +705,10 @@ contains
             iProcWorld,Buffer_VIII(:,1,1,1)
     end if
 
+    if(DoMatchIBC) then
+       DoMatchIBC = .false.
+       if(is_proc(IH_))call IH_match_ibc
+    end if
     !\
     ! Deallocate buffer to save memory
     !/
