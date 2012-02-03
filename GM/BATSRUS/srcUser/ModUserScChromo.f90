@@ -354,7 +354,7 @@ contains
 
     uCorona = rTransonic**2*exp(1.5 - 2.0*rTransonic)
 
-    do k = 1, nK ; do j = 1, nJ ; do i = 1, nI
+    do k = -1, nK+2 ; do j = -1, nJ+2 ; do i = -1, nI+2
        x = x_BLK(i,j,k,iBlock)
        y = y_BLK(i,j,k,iBlock)
        z = z_BLK(i,j,k,iBlock)
