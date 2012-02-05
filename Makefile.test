@@ -27,6 +27,8 @@ test_help:
 	@echo "    test6                      (run GM-IE-CRCM test only)"
 	@echo "    test7                      (run IH-OH test only)"
 	@echo "    test8		      (run multifluid GM-IM coupling test only)"
+	@echo "    test9		      (run Chromo SC-IH coupling test only)"
+
 test:
 	@rm -f *.diff
 	-@(${MAKE} test_share_library)
@@ -42,6 +44,7 @@ test:
 	-@(${MAKE} test6)
 	-@(${MAKE} test7)
 	-@(${MAKE} test8)
+	-@(${MAKE} test9)
 	-@(${MAKE} test_check)
 
 test_check:
@@ -617,6 +620,50 @@ test8_check:
 		${TESTDIR}/RESULTS/IM/t20.dat \
 		> test8_im_rcm_multi.diff)
 	ls -l test8*.diff
+
+### test9: Chromospheric SC + IH with Alfven waves test ###
+
+test9:
+	@echo "test9_compile..." > test9_sc_chromo.diff
+	@echo "test9_compile..." > test9_ih.diff
+	${MAKE} test9_compile
+	@echo "test9_rundir..." >> test9_sc_chromo.diff
+	@echo "test9_rundir..." >> test9_ih.diff
+	${MAKE} test9_rundir
+	@echo "test9_run..." >> test9_sc_chromo.diff
+	@echo "test9_run..." >> test9_ih.diff
+	${MAKE} test9_run
+	@echo "test9_check..." >> test9_sc_chromo.diff
+	@echo "test9_check..." >> test9_ih.diff
+	${MAKE} test9_check
+
+test9_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesHyp,nWave=2
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesHyp,nWave=2
+	./Config.pl -g=SC:6,4,4,4500,1,IH:8,8,8,400,1
+	${MAKE} SWMF PIDL
+
+test9_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.ChromoIH ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
+
+test9_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test9_check:
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/SC/log_n000001.log \
+		output/test9/SC_log_n000001.log \
+		> test9_sc_chromo.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IH/log_n000001.log \
+		output/test9/IH_log_n000001.log \
+		> test9_ih.diff)
+	ls -l test9*.diff
 
 
 ### test_lc: Lower Corona test ###
