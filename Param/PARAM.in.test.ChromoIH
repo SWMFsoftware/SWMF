@@ -80,7 +80,7 @@ buffergrid
 64     nPhiBuff
 32     nThetaBuff
 16.0     rBuffMin
-19.0     rBuffMax
+20.0     rBuffMax
 0.0     PhiBuffMin
 360.    PhiBuffMax
 0.0     ThetaBuffMin
