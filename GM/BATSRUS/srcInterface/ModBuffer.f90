@@ -101,7 +101,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
      DoInit = .false.
      allocate(Buffer_V(nVarCouple))
   end if
-
+  State_V = 0.0
   TypeCoordSource = Grid_C(SourceID_) % TypeCoord
 
   if(TypeCoordSource /= TypeCoordSystem) then
