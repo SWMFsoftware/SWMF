@@ -1687,11 +1687,17 @@ MovingLoop:
     int GenericParticleTransformationReturnCode=_GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
     bool TransformationTimeStepLimitFlag=false;
 
+    /*
     if (PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator!=NULL) if (PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec]!=NULL) {
       dtTotal+=dtMin;
       GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec](xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
       dtTotal-=dtMin;
     }
+    */
+
+    dtTotal+=dtMin;
+    GenericParticleTransformationReturnCode= _PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_ (xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
+    dtTotal-=dtMin;
 
     if ((GenericParticleTransformationReturnCode!=_GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_)&&(TransformationTimeStepLimitFlag==true)) ParticleIntersectionCode=_UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
 #endif
