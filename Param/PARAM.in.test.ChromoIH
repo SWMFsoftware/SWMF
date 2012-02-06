@@ -2,23 +2,13 @@
 T			DoEcho
 
 #DESCRIPTION
-Input file for creating a steady state solar corona
+Input file for creating a steady state solar corona using spherical SC and Cartesian IH. Both components include Alfven wave advection and dissipation.
 
 #TIMEACCURATE
 F		DoTimeAccurate
 
-#STARTTIME
-1998			iYear
-5			iMonth
-1			iDay
-0			iHour
-0			iMinute
-0			iSecond
-0.0 			FracSecond
-
 #SAVERESTART
 F			DoSaveRestart
-
 2000			DnSaveRestart
 -1.0			DtSaveRestart
 
@@ -38,9 +28,6 @@ T			UseBody
 16.			rBody
 3.0E+8			Body_Rho_Dim
 3.5E+6			Body_T_Dim
-
-#BODY
-F
 
 #PLASMA
 1.0                     IonMass [amu]
@@ -70,7 +57,7 @@ initial
 5
 shell0
 15.0
-25.0
+21.0
 
 #INNERBOUNDARY
 buffergrid
@@ -100,7 +87,7 @@ T			UseUserSource
 F			UseUserPerturbation
 F			UseUserOuterBcs
 F			UseUserICs
-T			UseUserSpecifyRefinement
+F			UseUserSpecifyRefinement
 F			UseUserLogFiles
 F			UseUserWritePlot
 F			UseUserAMR
@@ -136,11 +123,11 @@ RAW			StringLogfile
 
 #SAVEPLOT
 1			nPlotFiles
-x=0 VAR idl             StringPlot
+y=0 VAR idl             StringPlot
 10                       DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-rho uy uz by bz I01 I02 p 
+rho ux uz bx bz I01 I02 p 
 g rbody
 
 #END_COMP IH ---------------------------------------------------------------
@@ -186,7 +173,7 @@ spherical               TypeGeometry
 
 #LIMITRADIUS
 1.0                     rMin
-26.0                    rMax
+24.0                    rMax
 
 #GRIDLEVEL
 3                       nLevelArea
@@ -226,7 +213,7 @@ F			UseUserUpdateStates
 
 #SOLARDIPOLE
 -2.836e-4
-0.
+30.
 
 #CHROMOBC
 T               UseChromoBc
@@ -255,7 +242,6 @@ spitzer                 TypeHeatConduction
 T                       UseHeatFluxRegion
 5.0                     rCollisional
 10.0                    rCollisionless
-
 
 #USECURLB0
 T			UseCurlB0
@@ -323,11 +309,11 @@ T
 
 #SAVEPLOT
 1			nPlotFiles
-x=0 VAR idl		StringPlot
+y=0 VAR idl		StringPlot
 10  			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-rho uy uz by bz I01 I02 p 
+rho ux uz bx bz I01 I02 p 
 g rbody
 
 #END_COMP SC
