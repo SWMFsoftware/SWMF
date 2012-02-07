@@ -9,7 +9,6 @@ subroutine BATS_setup
   use ModCT, ONLY : DoInitConstrainB               !^CFG IF CONSTRAINB
   use ModImplicit, ONLY : UsePartImplicit,n_prev   !^CFG IF IMPLICIT
   use ModIO
-  use ModHdf5, ONLY : hdf5_setup
   use ModAMR, ONLY : &
        DnAmr, initial_refine_levels, nRefineLevelIC, nRefineLevel,&
        automatic_refinement
@@ -46,7 +45,6 @@ subroutine BATS_setup
 
   call initialize_files
 
-  call hdf5_setup
 
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
 
