@@ -137,7 +137,7 @@ contains
     integer,                 intent(in):: nPlotVar
     character(len=80),       intent(in):: filename
     character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
-    character(len=lNameH5),  intent(in):: plotVarUnits(nPlotVar)
+    character(len=lNameVar),  intent(in):: plotVarUnits(nPlotVar)
     real,                    intent(in):: xMin, xMax, yMin, yMax, zMin, zMax
     integer,                 intent(in):: nBLKcells
 
@@ -267,6 +267,8 @@ contains
     call write_plot_string(nPlotVar,UnknownNameArray,"plotVarNames",&
          fileID)
 
+    call write_plot_vars(nPlotVar, offsetPerProc(iProc), fileID)
+
     do iVar = 1, nPlotVar
        UnknownNameArray(iVar) = plotVarUnits(iVar)
        !The VisIt plugin needs null padded names.
@@ -275,9 +277,10 @@ contains
           UnknownNameArray(iVar)(iLen:iLen) = CHAR(0)
        end do
     end do
-    call write_plot_string(nPlotVar, UnknownNameArray, "plotVarUnits", fileID)
+    call write_plot_string(nPlotVar, UnknownNameArray, "plotVarUnits",&
+        fileID)
 
-    call write_plot_vars(nPlotVar, offsetPerProc(iProc), fileID)
+
     deallocate(PlotVarIdx)
     deallocate(unknownNameArray)
     call write_bounding_box(offsetPerProc(iProc), fileID)
