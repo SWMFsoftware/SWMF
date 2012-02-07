@@ -115,6 +115,9 @@ mc			TypeLimiter
 2			nStage
 0.8			CflExpl
 
+#HYPERBOLICDIVB
+F       UseHyperbolicDivB
+
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
