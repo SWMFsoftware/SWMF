@@ -2,7 +2,7 @@
 T			DoEcho
 
 #DESCRIPTION
-Input file for creating a steady state solar corona using spherical SC and Cartesian IH. Both components include Alfven wave advection and dissipation.
+Input file for creating a steady state chromoshpere to solar wind solution.
 
 #TIMEACCURATE
 F		DoTimeAccurate
@@ -212,11 +212,17 @@ F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
 
-#USERINPUTBEGIN ------------------------
+#MAGNETOGRAM
+T                       UseMagnetogram
+1.0                     rMagnetogram
+2.5                     rSourceSurface
+0.0                     HeightInnerBc
+SC/Param/CR2077_GNG.dat     NameMagnetogramFile
+12                      nHeaderLine
+0.0                     PhiShift
+1.0                     UnitB
 
-#SOLARDIPOLE
--2.836e-4
-30.
+#USERINPUTBEGIN ------------------------
 
 #CHROMOBC
 T               UseChromoBc
