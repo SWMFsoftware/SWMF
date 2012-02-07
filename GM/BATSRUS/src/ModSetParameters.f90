@@ -2347,6 +2347,16 @@ contains
 
     MassIon_I = MassFluid_I(IonFirst_:IonLast_) ! Ion masses
 
+    ! Default limits for  buffergrid boundary conditions
+    if (TypeBc_I(body1_)=='buffergrid') then
+       BufferMin_D(R_)     = 19.
+       BufferMin_D(Phi_)   = 0.
+       BufferMin_D(Theta_) = 0.
+       BufferMax_D(R_)     = 21.
+       BufferMax_D(Phi_)   = 360.
+       BufferMax_D(Theta_) = 180.
+    end if
+
     !\
     ! Set component dependent defaults
     !/
@@ -2575,16 +2585,6 @@ contains
     if(any(TypeBc_I(1:2)=='periodic')) TypeBc_I(1:2)='periodic'
     if(any(TypeBc_I(3:4)=='periodic')) TypeBc_I(3:4)='periodic'
     if(any(TypeBc_I(5:6)=='periodic')) TypeBc_I(5:6)='periodic'
-
-    ! Default limits for  buffergrid boundary conditions
-    if (TypeBc_I(body1_)=='buffergrid') then
-       BufferMin_D(1) = 19.
-       BufferMin_D(2) = 0.
-       BufferMin_D(3) = 0.
-       BufferMax_D(1) = 21.
-       BufferMax_D(2) = 360.
-       BufferMax_D(3) = 180.
-    end if
 
     if(UseConstrainB .and. .not.time_accurate)then  !^CFG IF CONSTRAINB BEGIN
        if(iProc==0)then
