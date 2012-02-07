@@ -301,8 +301,8 @@ subroutine write_plot_common(ifile)
     call get_idl_units(ifile, nPlotVar, plotVarNames, NamePlotUnit_V, &
          unitstr_IDL)
 
-    call write_plot_hdf5(filename, plotVarNames, NamePlotUnit_V, nPlotVar,&
-         xmin, xmax, ymin, ymax, zmin, zmax, nBLKcells)
+    !call write_plot_hdf5(filename, plotVarNames, NamePlotUnit_V, nPlotVar,&
+    !     xmin, xmax, ymin, ymax, zmin, zmax, nBLKcells)
 
     RETURN
  endif
