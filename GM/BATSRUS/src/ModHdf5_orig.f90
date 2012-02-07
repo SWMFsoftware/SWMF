@@ -23,6 +23,8 @@ module ModHdf5
 
   integer :: nBlocksUsed, nBlkUsedGlobal, iBlk
 
+  real, allocatable :: Position_DA(:,:)
+
 contains
 
   subroutine write_var_hdf5(PlotVar, nPlotVar, H5Index, iBlk)
@@ -44,6 +46,7 @@ contains
     if (.not. allocated(PlotVarIdx)) then
        allocate(PlotVarIdx(nI, nJ, nK, nBlockMax, nPlotVar))
        allocate(UsedBlocksTemp(nBlockMax))
+
     end if
 
 
@@ -65,73 +68,134 @@ contains
   end subroutine write_var_hdf5
   !=============================================================
   !=============================================================
-  integer function TestFunction2D(a,b)
-    integer, intent(in) :: a(2),b(2)
+!   integer function TestFunction2D(a,b)
+!     integer, intent(in) :: a(2),b(2)
+! 
+!     TestFunction2D = 0
+!     if(a(2) < b(2)) then
+!        TestFunction2D = -1
+!     elseif(b(2) < a(2)) then
+!        TestFunction2D = 1
+!     else
+!        if(a(1) < b(1)) then
+!           TestFunction2D = -1
+!        elseif(b(1) < a(1)) then
+!           TestFunction2D = 1
+!        end if
+!     end if
+!   end function TestFunction2D
+! 
+!   !=============================================================
+!   !=============================================================
+!   integer function TestFunction3D(a,b)
+!     integer, intent(in) :: a(2),b(2)
+! 
+!     TestFunction3D = 0
+!     if(a(3) < b(3)) then
+!        TestFunction3D = -1
+!     elseif(b(3) < a(3)) then
+!        TestFunction3D = 1
+!     else
+!        if(a(2) < b(2)) then
+!           TestFunction3D = -1
+!        elseif(b(2) < a(2)) then
+!           TestFunction3D = 1
+!        else
+!           if(a(1) < b(1)) then
+!              TestFunction3D = -1
+!           elseif(b(1) < a(1)) then
+!              TestFunction3D = 1
+!           end if
+!        end if
+!     end if
+!   end function TestFunction3D
+!   !=============================================================
+!   !=============================================================
+!   integer function TestFunction1D(a,b)
+!     integer, intent(in) :: a(2),b(2)
+! 
+!     TestFunction1D = 0
+!     if(a(1) < b(1)) then
+!        TestFunction1D = -1
+!     elseif(b(1) < a(1)) then
+!        TestFunction1D = 1
+!     end if
+!   end function TestFunction1D
+    
+! 
+!     logical function sort_test(i,j)
+!         use BATL_tree, only : iTree_IA, Level_, Coord1_,Coord2_,Coord3_,&
+!             nDim, MaxLevel 
+!         integer, intent(in) :: i, j
+!         integer :: valueI(3), valueJ(3), iGlobal, jGlobal
+!         
+!         iGlobal = GlobalUsedNodes(i)
+!         jGlobal = GlobalUsedNodes(j)
+!         valueI = 
+!         if (nDim == 3) then
+! 
+            
+       
+  logical function sort_test(i, j)
+    use BATL_lib, ONLY : nDim 
 
-    TestFunction2D = 0
-    if(a(2) < b(2)) then
-       TestFunction2D = -1
-    else if(b(2) < a(2)) then
-       TestFunction2D = 1
-    else
-       if(a(1) < b(1)) then
-          TestFunction2D = -1
-       else if(b(1) < a(1)) then
-          TestFunction2D = 1
-       end if
-    end if
-  end function TestFunction2D
-
-  !=============================================================
-  !=============================================================
-  integer function TestFunction3D(a,b)
-    integer, intent(in) :: a(2),b(2)
-
-    TestFunction3D = 0
-    if(a(3) < b(3)) then
-       TestFunction3D = -1
-    else if(b(3) < a(3)) then
-       TestFunction3D = 1
-    else
-       if(a(2) < b(2)) then
-          TestFunction3D = -1
-       else if(b(2) < a(2)) then
-          TestFunction3D = 1
+    integer, intent(in) :: i,j
+    if(ndim == 3) then
+        sort_test = 0
+        if(Position_DA(3,i) < Position_DA(3,j)) then
+           sort_test = .false.
+        elseif(Position_DA(3,j) < Position_DA(3,i)) then
+           sort_test = .true.
+        else
+           if(Position_DA(2,i) < Position_DA(2,j)) then
+              sort_test = .false.
+           elseif(Position_DA(2,j) < Position_DA(2,i)) then
+              sort_test = .true.
+           else
+              if(Position_DA(1,i) < Position_DA(1,j)) then
+                 sort_test = .false.
+              elseif(Position_DA(1,j) < Position_DA(1,i)) then
+                 sort_test = .true.
+              end if
+           end if
+        end if
+    elseif(nDim == 2) then
+       if(Position_DA(2,i) < Position_DA(2,j)) then
+          sort_test = .false.
+       elseif(Position_DA(2,j) < Position_DA(2,i)) then
+          sort_test = .true.
        else
-          if(a(1) < b(1)) then
-             TestFunction3D = -1
-          else if(b(1) < a(1)) then
-             TestFunction3D = 1
+          if(Position_DA(1,i) < Position_DA(1,j)) then
+             sort_test = .false.
+          elseif(Position_DA(1,j) < Position_DA(1,i)) then
+             sort_test = .true.
           end if
        end if
-    end if
-  end function TestFunction3D
-  !=============================================================
-  !=============================================================
-  integer function TestFunction1D(a,b)
-    integer, intent(in) :: a(2),b(2)
+    elseif(nDim == 1) then
+        if(Position_DA(1,i) < Position_DA(1,j)) then
+            sort_test = .false.
+        elseif(Position_DA(1,j) < Position_DA(1,i)) then
+             sort_test = .true.
+        end if
 
-    TestFunction1D = 0
-    if(a(1) < b(1)) then
-       TestFunction1D = -1
-    else if(b(1) < a(1)) then
-       TestFunction1D = 1
+    else
+        sort_test = .false.
     end if
-  end function TestFunction1D
-
+    end function sort_test
   !=================================================================
   !================================================================
 
-  subroutine write_plot_hdf5(filename, plotVarNames, plotVarUnits, nPlotVar, &
-       xmin, xmax, ymin, ymax, zmin, zmax, nBLKcells)
+  subroutine write_plot_hdf5(filename, plotVarNames, plotVarUnits,&
+    nPlotVar,xmin, xmax, ymin, ymax, zmin, zmax, nBLKcells)
 
-    use BATL_tree, only: iNode_B, iTree_IA, Coord1_, Coord2_, Coord3_, Level_,&
-         iMortonNode_A, MaxNode, get_tree_position
+    use BATL_tree, only: iNode_B, iTree_IA, Coord1_, Coord2_, Coord3_,&
+        Level_,iMortonNode_A, MaxNode, get_tree_position, nNodeUsed,&
+        Block_, Proc_,iNodeMorton_I, Unused_BP
     use ModMpi
-    use ModMain, only : nI,nJ,nK
+    use ModMain, only : nI,nJ,nK, nBlockMax
     use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
     use BATL_lib, ONLY : nDim, MaxDim
-    use ModSort, only : qsort_real_2D
+    use ModSort, only : sort_quick_func
     use BATL_lib, ONLY : CoordMin_DB
 
     integer,                 intent(in):: nPlotVar
@@ -143,16 +207,13 @@ contains
 
     integer :: offsetPerProc(0:nProc-1), blocksPerProc(0:nProc-1)
     integer :: fileID, error, procIdx, lastCoord, iNode, iLen, iVar 
-    integer :: labelLeng, i, PosMinType
+    integer :: labelLeng, i, PosMinType, iMorton
     real, allocatable :: coordinates(:,:)
     integer, allocatable :: minLogicalExtents(:,:)
     integer, allocatable :: procNum(:)
-    integer, allocatable :: UsedNodesGlobal(:,:)
-    integer, allocatable :: UsedNodesAll(:)
     integer, allocatable :: VisItIndx(:)
-    real, allocatable :: PositionMinD(:,:)
-    real, allocatable :: PositionMinDGlobal(:,:,:)
-    real :: positionMin(MaxDim), positionMax(MaxDim)
+    integer, allocatable :: NumUnsedBlkTo(:,:)
+    real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
     !--------------------------------------------------------------------------
 
     if (iProc == 0) write (*,*) '===================================='
@@ -190,69 +251,52 @@ contains
     !The UsedBlocksTemp array will not serve our purpose because it will
     !have trailing negative numbers.  Move it to an array of the correct
     !size and use it to create an array of used Nodes.
-
     allocate(UsedBlocks(nBlocksUsed))
     UsedBlocks(1:nBlocksUsed) = UsedBlocksTemp(1:nBlocksUsed)
     deallocate(UsedBlocksTemp)
 
     allocate(UsedNodes(nBlocksUsed))
     UsedNodes(1:nBlocksUsed) = iNode_B(UsedBlocks(1:nBlocksUsed))
-    !     call MPI_Allgather(usedNodes, nBlocksUsed, MPI_INTEGER, usedNodesGlobal, &
-    !          nBlocksUsed, MPI_INTEGER, iComm, error)
 
-    if (iProc == 0) write (*,*) '  writing data'
-    !     i = 1
-    !     do iNode = 1, MaxNode
-    !         if(iMortonNode_A(iNode) == 0) cycle
-    !         usedNodesGlobal(i) = iNode
-    !         i = i + 1
-    !     end do
-
-    allocate(PositionMinD(nDim, nBlocksUsed))
-
-    do iBlk = 1, nBlocksUsed
-       iNode = UsedNodes(iBlk)
-       call get_tree_position(iNode,PositionMin, PositionMax)
-       PositionMinD(1:nDIm,iBlk) = PositionMin(1:nDim)
-
-    end do
-    allocate(PositionMinDGlobal(nDim, maxval(blocksPerProc),0:nProc-1))
-    call MPI_TYPE_CONTIGUOUS(nDim,MPI_DOUBLE_PRECISION, PosMinType, error)
-    call MPI_TYPE_COMMIT(PosMinType, error)
-    call MPI_Allgather(PositionMinD, nBlocksUsed, PosMinType,&
-         PositionMinDGlobal, maxVal(blocksPerProc), PosMinType, iComm, error)
-    deallocate(PositionMinD)    
-    allocate(PositionMinD(nDim, nBlkUsedGlobal))
-
+    allocate(NumUnsedBlkTo(nBlockMax,0:nProc-1))
+    NumUnsedBlkTo = 0
     do procIdx = 0, nProc-1
-       do iBlk = 1, BlocksPerProc(procIdx)
-
-          PositionMinD(:,OffsetPerProc(procIdx)+iBlk) = PositionMinDGlobal(:,iBlk, procIdx)
-       end do
+        if(Unused_BP(1, procIdx))&
+            NumUnsedBlkTo(1, procIdx) = 1
+        do iBlk = 2, nBlockMax
+            if (Unused_BP(iBlk,procIdx)) then
+                NumUnsedBlkTo(iBlk,procIdx)=NumUnsedBlkTo(iBlk-1,ProcIdx)&
+                    +1
+            else
+                NumUnsedBlkTo(iBlk,procIdx)=NumUnsedBlkTo(iBlk-1,procIdx)
+            end if
+        end do
     end do
-    deallocate(PositionMinDGlobal)
+
+    allocate(Position_DA(nDim,nNodeUsed))
+    do iMorton = 1, nNodeUsed
+        iNode = iNodeMorton_I(iMorton)
+        iBlk = iTree_IA(Block_,iNode)
+        procIdx = iTree_IA(Proc_,iNode) 
+        i = offsetPerProc(procIdx) + iBlk - NumUnsedBlkTo(iBlk,procIdx)
+        call get_tree_position(iNode, PositionMin_D, PositionMax_D)
+        Position_DA(:,i) = PositionMin_D(1:nDim)
+    end do
+    deallocate(NumUnsedBlkTo)
+
     allocate(VisItIndx(nBlkUsedGlobal))        
 
-    if(nDim == 3) then
-       call qsort_real_2D(nBlkUsedGlobal, nDim, PositionMinD, &
-            TestFunction3D,VisItIndx)
+    call sort_quick_func(nBlkUsedGlobal, sort_test, VisItIndx)
 
-    else if(nDim == 2) then
-       call qsort_real_2D(nBlkUsedGlobal, nDim, PositionMinD, &
-            TestFunction2D,VisItIndx)
+    deallocate(Position_DA)
+    call writeHdf5Rank1Integer(fileID, VisItIndx, nBlkUsedGlobal,&
+       nBlkUsedGlobal, 0,"VisIt Index")
 
-    else if(nDim == 1) then
-       call qsort_real_2D(nBlkUsedGlobal, nDim, PositionMinD,&
-            TestFunction1D,VisItIndx)
-    end if
-
-    call writeHdf5Rank1Integer(fileID, VisItIndx,nBlkUsedGlobal, &
-         nBlkUsedGlobal, 0, "VisIt Index")
 
 
 
     deallocate(VisItIndx)
-    deallocate(PositionMinD)
+    
 
     allocate(unknownNameArray(nPlotVar))
     do iVar = 1, nPlotVar
@@ -1006,11 +1050,11 @@ contains
     iData = iData + 1
     if(IsCartesian) then
        IntegerMetaData(iData) = 0
-    else if(IsRzGeometry) then
+    elseif(IsRzGeometry) then
        IntegerMetaData(iData) = 1
-    else if(IsSpherical) then
+    elseif(IsSpherical) then
        IntegerMetaData(iData) = 2
-    else if(IsCylindrical) then
+    elseif(IsCylindrical) then
        IntegerMetaData(iData) = 3
     endif
 
