@@ -70,17 +70,17 @@ contains
 
     TestFunction2D = 0
     if(a(2) < b(2)) then
-        TestFunction2D = -1
+       TestFunction2D = -1
     else if(b(2) < a(2)) then
-        TestFunction2D = 1
+       TestFunction2D = 1
     else
-         if(a(1) < b(1)) then
-            TestFunction2D = -1
-        else if(b(1) < a(1)) then
-            TestFunction2D = 1
-        end if
+       if(a(1) < b(1)) then
+          TestFunction2D = -1
+       else if(b(1) < a(1)) then
+          TestFunction2D = 1
+       end if
     end if
-  end function
+  end function TestFunction2D
 
   !=============================================================
   !=============================================================
@@ -89,55 +89,58 @@ contains
 
     TestFunction3D = 0
     if(a(3) < b(3)) then
-        TestFunction3D = -1
+       TestFunction3D = -1
     else if(b(3) < a(3)) then
-        TestFunction3D = 1
+       TestFunction3D = 1
     else
-        if(a(2) < b(2)) then
-            TestFunction3D = -1
-        else if(b(2) < a(2)) then
-            TestFunction3D = 1
-        else
-             if(a(1) < b(1)) then
-                TestFunction3D = -1
-            else if(b(1) < a(1)) then
-                TestFunction3D = 1
-            end if
-        end if
-   end if
-  end function
+       if(a(2) < b(2)) then
+          TestFunction3D = -1
+       else if(b(2) < a(2)) then
+          TestFunction3D = 1
+       else
+          if(a(1) < b(1)) then
+             TestFunction3D = -1
+          else if(b(1) < a(1)) then
+             TestFunction3D = 1
+          end if
+       end if
+    end if
+  end function TestFunction3D
   !=============================================================
   !=============================================================
   integer function TestFunction1D(a,b)
     integer, intent(in) :: a(2),b(2)
 
     TestFunction1D = 0
-     if(a(1) < b(1)) then
-        TestFunction1D = -1
+    if(a(1) < b(1)) then
+       TestFunction1D = -1
     else if(b(1) < a(1)) then
-        TestFunction1D = 1
+       TestFunction1D = 1
     end if
-  end function
+  end function TestFunction1D
 
   !=================================================================
   !================================================================
 
-  subroutine write_plot_hdf5(filename, plotVarNames, plotVarUnits, nPlotVar,xmin,xmax,ymin,ymax,zmin,zmax, nBLKcells)
+  subroutine write_plot_hdf5(filename, plotVarNames, plotVarUnits, nPlotVar, &
+       xmin, xmax, ymin, ymax, zmin, zmax, nBLKcells)
 
-    use BATL_tree, only: iNode_B, iTree_IA, Coord1_,Coord2_,Coord3_, Level_, iMortonNode_A, MaxNode, get_tree_position
+    use BATL_tree, only: iNode_B, iTree_IA, Coord1_, Coord2_, Coord3_, Level_,&
+         iMortonNode_A, MaxNode, get_tree_position
     use ModMpi
     use ModMain, only : nI,nJ,nK
     use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
     use BATL_lib, ONLY : nDim, MaxDim
     use ModSort, only : qsort_real_2D
     use BATL_lib, ONLY : CoordMin_DB
-    
-    real, intent(in) :: xmin,xmax,ymin,ymax
-    real, intent(in) :: zmin,zmax
-    integer, intent(in) :: nPlotVar, nBLKcells
-    character (len=80), intent(in)  :: filename
-    character (len=lNameVar), intent(in)  :: plotVarNames(nPlotVar)
-    character (len=lNameH5), intent(in)  :: plotVarUnits(nPlotVar)
+
+    integer,                 intent(in):: nPlotVar
+    character(len=80),       intent(in):: filename
+    character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
+    character(len=lNameH5),  intent(in):: plotVarUnits(nPlotVar)
+    real,                    intent(in):: xMin, xMax, yMin, yMax, zMin, zMax
+    integer,                 intent(in):: nBLKcells
+
     integer :: offsetPerProc(0:nProc-1), blocksPerProc(0:nProc-1)
     integer :: fileID, error, procIdx, lastCoord, iNode, iLen, iVar 
     integer :: labelLeng, i, PosMinType
@@ -194,66 +197,65 @@ contains
 
     allocate(UsedNodes(nBlocksUsed))
     UsedNodes(1:nBlocksUsed) = iNode_B(UsedBlocks(1:nBlocksUsed))
-!     call MPI_Allgather(usedNodes, nBlocksUsed, MPI_INTEGER, usedNodesGlobal, &
-!          nBlocksUsed, MPI_INTEGER, iComm, error)
+    !     call MPI_Allgather(usedNodes, nBlocksUsed, MPI_INTEGER, usedNodesGlobal, &
+    !          nBlocksUsed, MPI_INTEGER, iComm, error)
 
     if (iProc == 0) write (*,*) '  writing data'
-!     i = 1
-!     do iNode = 1, MaxNode
-!         if(iMortonNode_A(iNode) == 0) cycle
-!         usedNodesGlobal(i) = iNode
-!         i = i + 1
-!     end do
+    !     i = 1
+    !     do iNode = 1, MaxNode
+    !         if(iMortonNode_A(iNode) == 0) cycle
+    !         usedNodesGlobal(i) = iNode
+    !         i = i + 1
+    !     end do
 
     allocate(PositionMinD(nDim, nBlocksUsed))
 
     do iBlk = 1, nBlocksUsed
-        iNode = UsedNodes(iBlk)
-        call get_tree_position(iNode,PositionMin, PositionMax)
-        PositionMinD(1:nDIm,iBlk) = PositionMin(1:nDim)
-        
+       iNode = UsedNodes(iBlk)
+       call get_tree_position(iNode,PositionMin, PositionMax)
+       PositionMinD(1:nDIm,iBlk) = PositionMin(1:nDim)
+
     end do
     allocate(PositionMinDGlobal(nDim, maxval(blocksPerProc),0:nProc-1))
     call MPI_TYPE_CONTIGUOUS(nDim,MPI_DOUBLE_PRECISION, PosMinType, error)
     call MPI_TYPE_COMMIT(PosMinType, error)
     call MPI_Allgather(PositionMinD, nBlocksUsed, PosMinType,&
-        PositionMinDGlobal, maxVal(blocksPerProc), PosMinType, iComm, error)
+         PositionMinDGlobal, maxVal(blocksPerProc), PosMinType, iComm, error)
     deallocate(PositionMinD)    
     allocate(PositionMinD(nDim, nBlkUsedGlobal))
 
     do procIdx = 0, nProc-1
-        do iBlk = 1, BlocksPerProc(procIdx)
+       do iBlk = 1, BlocksPerProc(procIdx)
 
-            PositionMinD(:,OffsetPerProc(procIdx)+iBlk) = PositionMinDGlobal(:,iBlk, procIdx)
-        end do
+          PositionMinD(:,OffsetPerProc(procIdx)+iBlk) = PositionMinDGlobal(:,iBlk, procIdx)
+       end do
     end do
     deallocate(PositionMinDGlobal)
     allocate(VisItIndx(nBlkUsedGlobal))        
 
     if(nDim == 3) then
-        call qsort_real_2D(nBlkUsedGlobal, nDim, PositionMinD, &
+       call qsort_real_2D(nBlkUsedGlobal, nDim, PositionMinD, &
             TestFunction3D,VisItIndx)
 
     else if(nDim == 2) then
-        call qsort_real_2D(nBlkUsedGlobal, nDim, PositionMinD, &
+       call qsort_real_2D(nBlkUsedGlobal, nDim, PositionMinD, &
             TestFunction2D,VisItIndx)
 
     else if(nDim == 1) then
-        call qsort_real_2D(nBlkUsedGlobal, nDim, PositionMinD,&
+       call qsort_real_2D(nBlkUsedGlobal, nDim, PositionMinD,&
             TestFunction1D,VisItIndx)
     end if
 
-   call writeHdf5Rank1Integer(fileID, VisItIndx,nBlkUsedGlobal, &
-       nBlkUsedGlobal, 0, "VisIt Index")
+    call writeHdf5Rank1Integer(fileID, VisItIndx,nBlkUsedGlobal, &
+         nBlkUsedGlobal, 0, "VisIt Index")
 
 
-    
+
     deallocate(VisItIndx)
     deallocate(PositionMinD)
 
     allocate(unknownNameArray(nPlotVar))
     do iVar = 1, nPlotVar
-
        UnknownNameArray(iVar) = plotVarNames(iVar)
        !The VisIt plugin needs null padded names.
        labelLeng = len_trim(UnknownNameArray(iVar))
@@ -261,15 +263,25 @@ contains
           UnknownNameArray(iVar)(iLen:iLen) = CHAR(0)
        end do
     end do
+
     call write_plot_string(nPlotVar,UnknownNameArray,"plotVarNames",&
-        fileID)
-    call write_plot_string(nPlotVar,plotVarUnits,"plotVarUnits",&
-        fileID)
+         fileID)
+
+    do iVar = 1, nPlotVar
+       UnknownNameArray(iVar) = plotVarUnits(iVar)
+       !The VisIt plugin needs null padded names.
+       labelLeng = len_trim(UnknownNameArray(iVar))
+       do iLen = labelLeng + 1,lNameH5 
+          UnknownNameArray(iVar)(iLen:iLen) = CHAR(0)
+       end do
+    end do
+    call write_plot_string(nPlotVar, UnknownNameArray, "plotVarUnits", fileID)
+
     call write_plot_vars(nPlotVar, offsetPerProc(iProc), fileID)
     deallocate(PlotVarIdx)
     deallocate(unknownNameArray)
     call write_bounding_box(offsetPerProc(iProc), fileID)
-!    call write_block_center_coords(offsetPerProc(iProc),fileID)
+    !    call write_block_center_coords(offsetPerProc(iProc),fileID)
 
     !write_min_logical_extents also write the VisIt index
     allocate(coordinates(ndim,nBlocksUsed))
@@ -284,36 +296,36 @@ contains
             (z_BLK(nI,nJ,nK,UsedBlocks(iBLK))+&
             z_BLK(1,1,1,UsedBlocks(iBLK)))
     end do
-!
+    !
     call writeHdf5Rank2Real(fileID, coordinates, nBlocksUsed,&
-        nBlkUsedGlobal, offsetPerProc(iProc), "coordinates", nDim)
+         nBlkUsedGlobal, offsetPerProc(iProc), "coordinates", nDim)
 
     deallocate(coordinates)
     allocate(minLogicalExtents(ndim, nBlocksUsed))
     lastCoord = Coord1_ + nDim-1
     do iBLK = 1, nBlocksUsed
-        iNode = UsedNodes(iBLK)
-        minLogicalExtents(:,iBlk) = iTree_IA(Coord1_:LastCoord,iNode)&
+       iNode = UsedNodes(iBLK)
+       minLogicalExtents(:,iBlk) = iTree_IA(Coord1_:LastCoord,iNode)&
             -1.0
-    end do 
-!
+    end do
+    !
     call writeHdf5Rank2Integer(fileID, minLogicalExtents, nBlocksUsed,&
-        nBlkUsedGlobal, offsetPerProc(iProc), "MinLogicalExtents", nDim)
-!    call write_iMortonNode_A(fileID,offsetPerProc(iProc))
+         nBlkUsedGlobal, offsetPerProc(iProc), "MinLogicalExtents", nDim)
+    !    call write_iMortonNode_A(fileID,offsetPerProc(iProc))
 
     deallocate(minLogicalExtents)
     call writeHdf5Rank1Integer(fileID, iMortonNode_A(UsedNodes), &
-        nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"iMortonNode_A")
-    
+         nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"iMortonNode_A")
+
     deallocate(usedBlocks)
     call writeHdf5Rank1Integer(fileID, iTree_IA(Level_,UsedNodes), &
-        nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"refine level")
+         nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"refine level")
     deallocate(usedNodes)
 
     allocate(procNum(nBlocksUsed))
     procNum = iProc
     call writeHdf5Rank1Integer(fileID, procNum,nBlocksUsed, &
-        nBlkUsedGlobal, offsetPerProc(iProc),"Processor Number")
+         nBlkUsedGlobal, offsetPerProc(iProc),"Processor Number")
     deallocate(procNum)
 
     call write_integer_metadata(fileID, nPlotVar)
@@ -336,7 +348,7 @@ contains
   !=====================================================================
 
   subroutine writeHdf5Rank1Integer(fileID, dataBuff, localNumBlocks,&
-    globalNumBlocks, localOffset, description)
+       globalNumBlocks, localOffset, description)
 
     implicit none
 
@@ -410,7 +422,7 @@ contains
   !=====================================================================
 
   subroutine writeHdf5Rank2Integer(fileID, dataBuff, localNumBlocks,&
-    globalNumBlocks, localOffset, description, dimens)
+       globalNumBlocks, localOffset, description, dimens)
 
     implicit none
 
@@ -487,7 +499,7 @@ contains
   !=====================================================================
 
   subroutine writeHdf5Rank2Real(fileID, dataBuff, localNumBlocks,&
-    globalNumBlocks, localOffset, description, dimens)
+       globalNumBlocks, localOffset, description, dimens)
 
     implicit none
 
@@ -890,18 +902,18 @@ contains
     iData = iData + 1
     !    attName(3) = 'xmax'
     RealMetaData(iData) = xmax
-   iData = iData + 1
-   !    attName(4) = 'ymin'
-   RealMetaData(iData) = ymin
-   iData = iData + 1
-   !    attName(5) = 'ymax'
-   RealMetaData(iData) = ymax
-     iData = iData + 1
-!    attName(6) = 'zmin'
+    iData = iData + 1
+    !    attName(4) = 'ymin'
+    RealMetaData(iData) = ymin
+    iData = iData + 1
+    !    attName(5) = 'ymax'
+    RealMetaData(iData) = ymax
+    iData = iData + 1
+    !    attName(6) = 'zmin'
     RealMetaData(iData) = zmin
 
     iData = iData + 1
-!    attName(7) = 'zmax'
+    !    attName(7) = 'zmax'
     RealMetaData(iData) = zmax
     !-------------------------------------------------------------------
     !write the real Metadata
@@ -981,10 +993,10 @@ contains
     !    attName(8) = 'nxb' 
     iData = iData + 1
     IntegerMetaData(iData) = nJ
-   !    attName(9) = 'nyb'
+    !    attName(9) = 'nyb'
     iData = iData + 1
     IntegerMetaData(iData) = nK
-   !    attName(10) = 'nzb'
+    !    attName(10) = 'nzb'
 
     !HDF5 has no boolean datatype so any logical parameters should go here.
 
