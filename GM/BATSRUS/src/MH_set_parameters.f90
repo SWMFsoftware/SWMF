@@ -2946,6 +2946,7 @@ contains
 
     use BATL_lib, ONLY: init_mpi, init_batl, CoordMin_D, CoordMax_D
     use ModBatlInterface, ONLY: set_batsrus_grid
+    use ModCovariant, ONLY: yR_I
 
     character(len=20):: TypeGeometryBatl
     !-----------------------------------------------------------------------
@@ -3084,7 +3085,8 @@ contains
 
        call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
             TypeGeometryBatl, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
-            proc_dims(1:nDimBatl), UseRadiusIn=.false., UseDegreeIn=.false.)
+            proc_dims(1:nDimBatl), UseRadiusIn=.false., UseDegreeIn=.false.,&
+            RgenIn_I = exp(yR_I))
 
        ! Fix grid size in ignored directions
        if(nDimBatl == 1)then
