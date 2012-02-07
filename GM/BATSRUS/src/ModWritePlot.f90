@@ -8,7 +8,7 @@ subroutine write_plot_common(ifile)
   use ModProcMH
   use ModMain
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,true_cell
-  use ModGeometry, ONLY : TypeGeometry,UseCovariant
+  use ModGeometry, ONLY : TypeGeometry,UseCovariant, nGrid, yR_I
   use ModPhysics, ONLY : No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5
@@ -32,7 +32,6 @@ subroutine write_plot_common(ifile)
   integer :: iError
 
   integer, parameter:: lNameVar = 10
-  integer, parameter:: lNameH5 = lNameVar + 1
 
   ! Plot variables
   real :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
@@ -44,7 +43,7 @@ subroutine write_plot_common(ifile)
 
   character (len=lNameVar) :: plotvarnames(nplotvarmax) = ''
   integer :: nplotvar
-  character (len=lNameH5) :: Hdf5Units(nplotvarmax)
+  character(len=lNameVar) :: NamePlotUnit_V(nplotvarmax)
   ! True for spherical plots
   logical:: IsSphPlot
 
@@ -299,21 +298,14 @@ subroutine write_plot_common(ifile)
 
   ! Write the HDF5 output file and return
   if (plot_form(ifile) == 'hdf') then
-    call get_idl_units(ifile, nPlotVar, plotVarNames, unitstr_IDL, Hdf5Units)
-    
-    do iVar = 1, nPlotVar
-       !The VisIt plugin needs null padded names.
-       labelLeng = len_trim(Hdf5Units(iVar))
-       do iLen = labelLeng + 1, lNameH5
-          Hdf5Units(iVar)(iLen:iLen) = CHAR(0)
-       end do
-    end do
+    call get_idl_units(ifile, nPlotVar, plotVarNames, NamePlotUnit_V, &
+         unitstr_IDL)
 
-     call write_plot_hdf5(filename, plotVarNames, Hdf5Units, nPlotVar,&
-        xmin,xmax,ymin,ymax,zmin,zmax,nBLKcells)
+    call write_plot_hdf5(filename, plotVarNames, NamePlotUnit_V, nPlotVar,&
+         xmin, xmax, ymin, ymax, zmin, zmax, nBLKcells)
 
-     RETURN
-  endif
+    RETURN
+ endif
 
   ! Get the headers that contain variables names and units
   select case(plot_form(ifile))
@@ -321,7 +313,8 @@ subroutine write_plot_common(ifile)
      call get_tec_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
   case('idl')
-     call get_idl_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
+     call get_idl_units(ifile, nplotvar, plotvarnames, NamePlotUnit_V, &
+          unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
   end select
 
@@ -333,16 +326,13 @@ subroutine write_plot_common(ifile)
      ! but doesn't hurt cartesian.
      allocate(PlotXYZNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,3))
 
-     if(TypeGeometry == 'cartesian' .or. TypeGeometry == 'rz')then
-        ! here, also the periodicity in the z-direction for the cylinder should go
+     if(TypeGeometry == 'cartesian' .or. TypeGeometry == 'rz' .or. UseBatl)then
+        ! the periodicity in the z-direction for the cylinder should go ???
         PlotXYZNodes_NBI(:,:,:,:,1)=NodeX_NB
         PlotXYZNodes_NBI(:,:,:,:,2)=NodeY_NB
         PlotXYZNodes_NBI(:,:,:,:,3)=NodeZ_NB
      else
-        if(UseBatl) then
-           call stop_mpi('Geomery not suported in UseBatl')
-        end if
-
+        ! This is to avoid rounding errors. May or may not be needed for BATL
         NodeValue_NB = NodeX_NB(:,:,:,:)                   ! X
         call pass_and_average_nodes(.true.,NodeValue_NB)
         PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
@@ -489,7 +479,11 @@ subroutine write_plot_common(ifile)
            write(unit_tmp,'(l8,a)')save_binary,' save_binary'
            if(save_binary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
            write(unit_tmp,'(a)')TypeGeometry
-           write(unit_tmp,'(a)')TypeIdlFile_I(ifile)
+           if(index(TypeGeometry,'genr') > 0)then
+              write(Unit_tmp,'(i8,    " nRgen"  )') nGrid
+              write(Unit_tmp,'(es13.5," LogRgen")') yR_I
+          end if
+          write(unit_tmp,'(a)')TypeIdlFile_I(ifile)
         end select
         close(unit_tmp)
      end do
@@ -1738,7 +1732,8 @@ end subroutine get_TEC_variables
 
 !==============================================================================
 
-subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl, Hdf5Units)
+subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
+     StringUnitIdl)
 
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
@@ -1751,8 +1746,9 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl, Hdf5Unit
 
   integer, intent(in)             :: iFile, nPlotVar
   character (len=10), intent(in)  :: NamePlotVar_V(nPlotVar)
-  character (len=500),intent(out) :: StringUnitIdl 
-  character (len = 11), optional, intent(out) :: Hdf5Units(nPlotVar)
+  character (len=10), intent(out) :: NamePlotUnit_V(nPlotVar)
+  character (len=500),intent(out) :: StringUnitIdl
+
   character (len=10) :: String, NamePlotVar, NameVar, NameUnit
   integer            :: iPlotVar, iVar
 
@@ -1762,8 +1758,8 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl, Hdf5Unit
   !/
 
   if(.not.plot_dimensional(iFile))then
+     NamePlotUnit_V = 'normalized'
      StringUnitIdl = 'normalized variables'
-     Hdf5Units(1:nPlotVar) =  'normalized'
      RETURN
   end if
 
@@ -1829,18 +1825,14 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl, Hdf5Unit
            NameVar = NameVar_V(iVar)
            call lower_case(NameVar)
            if(NameVar == NamePlotVar)then
-              NameUnit = NameUnitUserIdl_V(iVar)
-                            
+              NameUnit = NameUnitUserIdl_V(iVar)                            
               EXIT
            end if
         end do
      end select
      ! Append the unit string for this variable to the output string
-     hdf5units(iVar) = NameUnit 
+     NamePlotUnit_V(iVar) = NameUnit
      StringUnitIdl = trim(StringUnitIdl)//' '//trim(NameUnit)
   end do
 
 end subroutine get_idl_units
-
-!==============================================================================
-
