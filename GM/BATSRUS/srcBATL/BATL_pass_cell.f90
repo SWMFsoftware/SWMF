@@ -1,6 +1,8 @@
 !^CFG COPYRIGHT UM
 module BATL_pass_cell
 
+  use BATL_geometry, ONLY: IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis
+
   ! Possible improvements:
   ! (1) Instead of sending the receiving block number
   !     and the 2*nDim range limits, we can send only the tag which
@@ -369,7 +371,7 @@ contains
                            (jDir /= 0 .or.  kDir /= 0)) CYCLE
 
                       DiLevel = DiLevelNei_IIIB(iDir,jDir,kDir,iBlockSend)
-
+                      
                       ! Do prolongation in the second stage if nProlongOrder=2
                       ! We still need to call restriction and prolongation in
                       ! both stages to calculate the amount of received data
@@ -467,12 +469,12 @@ contains
 
       ! Copy buffer into recv block of State_VGB
 
-      integer:: iBufferR, i, j, k
+      integer:: iBufferR, i, j, k, Di, Dj, Dk
       real :: TimeSend, WeightOld, WeightNew
       !------------------------------------------------------------------------
 
-      jRMin = 1; jRMax = 1
-      kRMin = 1; kRMax = 1
+      jRMin = 1; jRMax = 1; Dj = 1
+      kRMin = 1; kRMax = 1; Dk = 1
 
       iBufferR = 0
       do iProcSend = 0, nProc - 1
@@ -482,10 +484,13 @@ contains
             iBlockRecv = nint(BufferR_I(iBufferR+1))
             iRMin      = nint(BufferR_I(iBufferR+2))
             iRMax      = nint(BufferR_I(iBufferR+3))
+            Di         = sign(1,iRMax - iRMin)
             if(nDim > 1) jRMin = nint(BufferR_I(iBufferR+4))
             if(nDim > 1) jRMax = nint(BufferR_I(iBufferR+5))
+            if(nDim > 1) Dj = sign(1, jRmax - jRMin)
             if(nDim > 2) kRMin = nint(BufferR_I(iBufferR+6))
             if(nDim > 2) kRMax = nint(BufferR_I(iBufferR+7))
+            if(nDim > 2) Dk = sign(1, kRmax - kRMin)
 
             iBufferR = iBufferR + 1 + 2*nDim
             if(present(Time_B))then
@@ -498,7 +503,7 @@ contains
                WeightOld = (TimeSend - Time_B(iBlockRecv)) &
                     /      (TimeSend - TimeOld_B(iBlockRecv))
                WeightNew = 1 - WeightOld
-               do k = kRMin, kRmax; do j = jRMin, jRMax; do i = iRMin, iRmax
+               do k = kRMin, kRmax, Dk; do j = jRMin, jRMax, Dj; do i = iRMin, iRmax, Di
                   State_VGB(:,i,j,k,iBlockRecv) = &
                        WeightOld*State_VGB(:,i,j,k,iBlockRecv) + &
                        WeightNew*BufferR_I(iBufferR+1:iBufferR+nVar)
@@ -506,7 +511,7 @@ contains
                   iBufferR = iBufferR + nVar
                end do; end do; end do
             else
-               do k = kRMin, kRmax; do j = jRMin, jRMax; do i = iRMin, iRmax
+               do k = kRMin, kRmax, Dk; do j = jRMin, jRMax, Dj; do i = iRMin, iRmax, Di
                   State_VGB(:,i,j,k,iBlockRecv) = &
                        BufferR_I(iBufferR+1:iBufferR+nVar)
 
@@ -525,6 +530,8 @@ contains
 
       integer :: iBufferS, i, j, k, nSize
       real    :: WeightOld, WeightNew
+
+      integer:: Di=1, Dj=1, Dk=1
       !------------------------------------------------------------------------
 
       iSend = (3*iDir + 3)/2
@@ -545,6 +552,10 @@ contains
       kRMin = iEqualR_DII(3,kDir,Min_)
       kRMax = iEqualR_DII(3,kDir,Max_)
 
+      !if(IsCylindricalAxis .and. iBlockRecv == 7)then
+      !   write(*,*)'!!! iDir, jDir, iNodeSend =', iDir, jDir, iNodeSend
+      !end if
+
       if(DoCountOnly)then
          ! Number of reals to send to and received from the other processor
          nSize = nVar*(iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1) &
@@ -555,6 +566,30 @@ contains
          RETURN
       end if
 
+      if(nDim > 2 .and. IsLatitudeAxis)then
+
+         if(  kDir == -1 .and. iTree_IA(Coord3_,iNodeRecv) == 1 .or. &
+              kDir == +1 .and. iTree_IA(Coord3_,iNodeSend) == 1)then
+            kRMin = iEqualR_DII(3,-kDir,Max_)
+            kRMax = iEqualR_DII(3,-kDir,Min_)
+         end if
+
+      elseif(nDim > 2 .and. IsSphericalAxis)then
+
+         if(  jDir == -1 .and. iTree_IA(Coord2_,iNodeRecv) == 1 .or. &
+              jDir == +1 .and. iTree_IA(Coord2_,iNodeSend) == 1)then
+            jRMin = iEqualR_DII(2,-jDir,Max_)
+            jRMax = iEqualR_DII(2,-jDir,Min_)
+         end if
+
+      elseif(nDim > 1 .and. IsCylindricalAxis .and. iDir == -1 .and. &
+           iTree_IA(Coord1_,iNodeSend) == 1)then
+
+         iRMin = iEqualR_DII(1,1,Max_)
+         iRMax = iEqualR_DII(1,1,Min_)
+
+      end if
+
       iSMin = iEqualS_DII(1,iDir,Min_)
       iSMax = iEqualS_DII(1,iDir,Max_)
       jSMin = iEqualS_DII(2,jDir,Min_)
@@ -562,21 +597,32 @@ contains
       kSMin = iEqualS_DII(3,kDir,Min_)
       kSMax = iEqualS_DII(3,kDir,Max_)
 
+      !if(IsCylindricalAxis .and. (iBlockRecv == 7 .and. iBlockSend == 3 .or. iBlockSend == 8))then
+      !   write(*,*)'!!! iSMin, iSMax, jSMin, jSMax=', iSMin, iSMax, jSMin, jSMax
+      !   write(*,*)'!!! iRMin, iRMax, jRMin, jRMax=', iRMin, iRMax, jRMin, jRMax
+      !   write(*,*)'!!! State(SendMin)=',State_VGB(:,iSMin,jSMin,kSMin,iBlockSend)
+      !end if
+
       if(iProc == iProcRecv)then
          ! Local copy
+         Di =              sign(1, iRMax - iRMin)
+         if(nDim > 1) Dj = sign(1, jRMax - jRMin)
+         if(nDim > 2) Dk = sign(1, kRMax - kRMin)
+
          if(present(Time_B)) UseTime = &
               abs(Time_B(iBlockSend) - Time_B(iBlockRecv)) > 1e-30
          if(UseTime)then
             WeightOld = (Time_B(iBlockSend) - Time_B(iBlockRecv)) &
                  /      (Time_B(iBlockSend) - TimeOld_B(iBlockRecv))
             WeightNew = 1 - WeightOld
-            State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv)= &
-                 WeightOld* &
-                 State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) +&
-                 WeightNew* &
+            State_VGB(:,iRMin:iRMax:Di,jRMin:jRMax:Dj,kRMin:kRMax:Dk,&
+                 iBlockRecv)= WeightOld* &
+                 State_VGB(:,iRMin:iRMax:Di,jRMin:jRMax:Dj,kRMin:kRMax:Dk, &
+                 iBlockRecv) + WeightNew* &
                  State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
          else
-            State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv)= &
+            State_VGB(:,iRMin:iRMax:Di,jRMin:jRMax:Dj,kRMin:kRMax:Dk, &
+                 iBlockRecv)= &
                  State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
          end if
       else
@@ -606,6 +652,9 @@ contains
          iBufferS_P(iProcRecv) = iBufferS
 
       end if
+
+      !if(IsCylindricalAxis .and. iBlockRecv == 7) &
+      !     write(*,*)'!!! State(:,0,1,1,7)=', State_VGB(:,0,1,1,7)
 
     end subroutine do_equal
 
@@ -1197,19 +1246,20 @@ contains
          nIJK_D, iRatio_D
     use BATL_tree, ONLY: init_tree, set_tree_root, find_tree_node, &
          refine_tree_node, distribute_tree, show_tree, clean_tree, &
-         Unused_B, DiLevelNei_IIIB, iNode_B
+         Unused_B, DiLevelNei_IIIB, iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB
     use BATL_grid, ONLY: init_grid, create_grid, clean_grid, &
          Xyz_DGB, CellSize_DB, CoordMin_DB
-    use BATL_geometry, ONLY: init_geometry
+    use BATL_geometry, ONLY: init_geometry, z_, IsPeriodic_D
+    use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
 
     use ModMpi, ONLY: MPI_allreduce, MPI_REAL, MPI_MIN, MPI_MAX
 
     integer, parameter:: MaxBlockTest            = 50
-    integer, parameter:: nRootTest_D(MaxDim)     = (/3,3,3/)
-    logical, parameter:: IsPeriodicTest_D(MaxDim)= .true.
-    real :: DomainMin_D(MaxDim) = (/ 1.0, 10.0, 100.0 /)
-    real :: DomainMax_D(MaxDim) = (/ 4.0, 40.0, 400.0 /)
-    real :: DomainSize_D(MaxDim)
+    logical:: IsPeriodicTest_D(MaxDim)= .true.
+    integer:: nRootTest_D(MaxDim) = (/3,3,3/)
+    real   :: DomainMin_D(MaxDim) = (/ 1.0, 10.0, 100.0 /)
+    real   :: DomainMax_D(MaxDim) = (/ 4.0, 40.0, 400.0 /)
+    real   :: DomainSize_D(MaxDim)
 
     real, parameter:: Tolerance = 1e-6
 
@@ -1239,7 +1289,7 @@ contains
     integer :: iFG, jFG, kFG
     integer :: nFineCell
     integer :: iMpiOperator
-    integer :: iError
+    integer :: iError, iTest
 
     logical:: DoTestMe
     character(len=*), parameter :: NameSub = 'test_pass_cell'
@@ -1462,8 +1512,8 @@ contains
     call distribute_tree(.true.)
     call create_grid
 
-    ! Position of Cell coners, for solving problems with round of 
-    ! when geting fine grid positions
+    ! Position of cell corners, for solving problems with round-off 
+    ! when getting fine grid positions
     allocate(XyzCorn_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest))
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -1593,6 +1643,126 @@ contains
     deallocate(Scalar_GB, FineGridLocal_III, FineGridGlobal_III,XyzCorn_DGB)
     call clean_grid
     call clean_tree
+
+    if(nDim == 1) RETURN !------------------------
+
+    do iTest = 1, 1
+
+       call init_tree(MaxBlockTest)
+
+       select case(iTest)
+       case(1)
+          if(DoTestMe)write(*,*) 'Test message passing across cylindrical pole'
+
+          ! 0 < r < 10, 0 < phi < 360deg, -5 < z < 5
+          DomainMin_D = (/ 0.0,  0.0, -5.0 /)
+          DomainMax_D = (/ 8.0, cTwoPi, +5.0 /)
+          DomainSize_D = DomainMax_D - DomainMin_D
+          IsPeriodicTest_D = (/ .false., .true., .true. /)
+
+          ! There must be an even number of root blocks in the phi direction
+          nRootTest_D = (/ 2, 4, 2 /)
+
+          call init_geometry('cylindrical', &
+               IsPeriodicIn_D=IsPeriodicTest_D(1:nDim))
+       case(2)
+          if(nDim < 3)CYCLE
+          if(DoTestMe) write(*,*) 'Test message passing across spherical pole'
+
+          ! 1 < r < 9, 0 < theta < 180deg, 0 < phi < 360deg
+          DomainMin_D = (/ 1.0,  0.0, 0.0 /)
+          DomainMax_D = (/ 9.0,  cPi, cTwoPi /)
+          DomainSize_D = DomainMax_D - DomainMin_D
+          IsPeriodicTest_D = (/ .false., .false., .true. /)
+
+          ! There must be an even number of root blocks in the phi direction
+          nRootTest_D = (/ 2, 2, 4 /)
+
+          call init_geometry('spherical', IsPeriodicIn_D=IsPeriodicTest_D)
+       case(3)
+          if(nDim < 3)CYCLE
+          if(DoTestMe) write(*,*) 'Test message passing across latitude pole'
+
+          ! 1 < r < 9, 0 < phi < 360deg, -90 < lat < 90
+          DomainMin_D = (/ 1.0,    0.0, -cHalfPi /)
+          DomainMax_D = (/ 9.0, cTwoPi, cHalfPi /)
+          DomainSize_D = DomainMax_D - DomainMin_D
+          IsPeriodicTest_D = (/ .false., .true., .false. /)
+
+          ! There must be an even number of root blocks in the phi direction
+          nRootTest_D = (/ 2, 4, 2 /)
+
+          call init_geometry('rlonlat', IsPeriodicIn_D=IsPeriodicTest_D)
+       end select
+
+
+       call init_grid(DomainMin_D(1:nDim), DomainMax_D(1:nDim), &
+            UseDegreeIn=.false.)
+       call set_tree_root( nRootTest_D(1:nDim))
+
+       if(any(IsPeriodic_D(1:nDim) .neqv. IsPeriodicTest_D(1:nDim))) &
+            write(*,*) NameSub,': IsPeriodic_D=', IsPeriodic_D(1:nDim), &
+            ' should agree with ', IsPeriodicTest_D(1:nDim)
+
+       !call find_tree_node( (/0.5,0.5,0.5/), iNode)
+       !if(DoTestMe)write(*,*) NameSub,' middle node=',iNode
+       !call refine_tree_node(iNode)
+
+       call distribute_tree(.true.)
+       call create_grid
+
+       ! if(DoTestMe) call show_tree(NameSub,.true.)
+
+       !do iBlock = 1, 7, 2
+       !   do i = 0, 3
+       !      write(*,*) '!!! iBlock, i, iNodeNei_IIIB(i,:,1,iBlock)=', &
+       !           iBlock, i, iNodeNei_IIIB(i,:,1,iBlock)
+       !   end do
+       !end do
+
+       allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest))
+
+       State_VGB = 0.0
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          State_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
+               Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)
+       end do
+
+       ! Second order
+       call message_pass_cell(nVar, State_VGB)
+    
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+
+          ! Loop through all cells including ghost cells
+          do k = 1, nK; do j = MinJ, MaxJ; do i = MinI, nI
+
+             ! The filled in second order accurate ghost cell value 
+             ! should be the same as the coordinates of the cell center
+             Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
+
+             ! Shift ghost cell Z coordinate into periodic domain
+             if(nDim == 3) Xyz_D(z_) = DomainMin_D(z_) &
+                  + modulo(Xyz_D(z_) - DomainMin_D(z_), DomainSize_D(z_))
+
+             do iDim = 1, nDim
+                if(abs(State_VGB(iDim,i,j,k,iBlock) - Xyz_D(iDim)) &
+                     > Tolerance)then
+                   write(*,*)'iProc,iBlock,i,j,k,iDim,State,Xyz=', &
+                        iProc,iBlock,i,j,k,iDim, &
+                        State_VGB(iDim,i,j,k,iBlock), &
+                        Xyz_D(iDim)
+                end if
+             end do
+          end do; end do; end do
+       end do
+
+       deallocate(State_VGB)
+
+       call clean_grid
+       call clean_tree
+    end do
 
   end subroutine test_pass_cell
 
