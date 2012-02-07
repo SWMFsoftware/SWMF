@@ -31,6 +31,9 @@ subroutine write_plot_common(ifile)
 
   integer :: iError
 
+  integer, parameter:: lNameVar = 10
+  integer, parameter:: lNameH5 = lNameVar + 1
+
   ! Plot variables
   real :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
   real :: PlotVarBlk(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
@@ -39,9 +42,9 @@ subroutine write_plot_common(ifile)
   real, allocatable :: PlotVarNodes_VNB(:,:,:,:,:)
   real, allocatable :: PlotXYZNodes_NBI(:,:,:,:,:)
 
-  character (len=10) :: plotvarnames(nplotvarmax) = ''
+  character (len=lNameVar) :: plotvarnames(nplotvarmax) = ''
   integer :: nplotvar
-
+  character (len=lNameH5) :: Hdf5Units(nplotvarmax)
   ! True for spherical plots
   logical:: IsSphPlot
 
@@ -59,7 +62,7 @@ subroutine write_plot_common(ifile)
   character (len=20) :: TypeForm
 
   ! Indices and coordinates
-  integer :: iBLK,i,j,k,l,iVar
+  integer :: iBLK,i,j,k,l,iVar, H5Index, iLen, labelLeng, nUnit
   integer :: ntheta, nphi
   real :: xmin,xmax,ymin,ymax,zmin,zmax
   real :: rplot
@@ -190,7 +193,7 @@ subroutine write_plot_common(ifile)
   elseif(plot_form(ifile)=='hdf') then
      ! Only one plotfile will be generated, so do not include PE number
      ! in filename. ModHdf5 will handle opening the file.
-     filename = trim(NameSnapshot)//".hdf"
+     filename = trim(NameSnapshot)//".batl"
   else
      ! For IDL just open one file
      filename = trim(NameSnapshot)//trim(NameProc)
@@ -234,9 +237,10 @@ subroutine write_plot_common(ifile)
         end if
      end do
   end if
-
+  !plot index for hdf5 plots
+  H5Index = 1
   ! Compute the plot variables and write them to the disk
-  PlotVarBlk=0.
+  PlotVarBlk=0
   do iBLK=1,nBlockMax
      if(unusedBLK(iBLK))CYCLE
 
@@ -271,7 +275,8 @@ subroutine write_plot_common(ifile)
                 xmin,xmax,ymin,ymax,zmin,zmax, &
                 dxblk,dyblk,dzblk,nBLKcells)
         case('hdf')
-           call write_var_hdf5(PlotVar, nPlotVar, iBLK)
+           call write_var_hdf5(PlotVar, nPlotVar, H5Index, iBlk)
+           H5Index = H5Index + 1
         end select
      end if
 
@@ -294,7 +299,19 @@ subroutine write_plot_common(ifile)
 
   ! Write the HDF5 output file and return
   if (plot_form(ifile) == 'hdf') then
-     call write_plot_hdf5(filename, plotVarNames, nPlotVar, ifile)
+    call get_idl_units(ifile, nPlotVar, plotVarNames, unitstr_IDL, Hdf5Units)
+    
+    do iVar = 1, nPlotVar
+       !The VisIt plugin needs null padded names.
+       labelLeng = len_trim(Hdf5Units(iVar))
+       do iLen = labelLeng + 1, lNameH5
+          Hdf5Units(iVar)(iLen:iLen) = CHAR(0)
+       end do
+    end do
+
+     call write_plot_hdf5(filename, plotVarNames, Hdf5Units, nPlotVar,&
+        xmin,xmax,ymin,ymax,zmin,zmax,nBLKcells)
+
      RETURN
   endif
 
@@ -1721,7 +1738,7 @@ end subroutine get_TEC_variables
 
 !==============================================================================
 
-subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
+subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl, Hdf5Units)
 
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
@@ -1735,7 +1752,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
   integer, intent(in)             :: iFile, nPlotVar
   character (len=10), intent(in)  :: NamePlotVar_V(nPlotVar)
   character (len=500),intent(out) :: StringUnitIdl 
-
+  character (len = 11), optional, intent(out) :: Hdf5Units(nPlotVar)
   character (len=10) :: String, NamePlotVar, NameVar, NameUnit
   integer            :: iPlotVar, iVar
 
@@ -1746,6 +1763,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
 
   if(.not.plot_dimensional(iFile))then
      StringUnitIdl = 'normalized variables'
+     Hdf5Units(1:nPlotVar) =  'normalized'
      RETURN
   end if
 
@@ -1812,12 +1830,17 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
            call lower_case(NameVar)
            if(NameVar == NamePlotVar)then
               NameUnit = NameUnitUserIdl_V(iVar)
+                            
               EXIT
            end if
         end do
      end select
      ! Append the unit string for this variable to the output string
+     hdf5units(iVar) = NameUnit 
      StringUnitIdl = trim(StringUnitIdl)//' '//trim(NameUnit)
   end do
 
 end subroutine get_idl_units
+
+!==============================================================================
+
