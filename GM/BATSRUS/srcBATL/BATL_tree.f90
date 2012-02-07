@@ -265,15 +265,26 @@ contains
 
   subroutine set_tree_root(nRootIn_D)
 
+    use BATL_geometry, ONLY: &
+         IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Phi_
+
     integer, optional, intent(in) :: nRootIn_D(nDim)
 
     integer :: iRoot, jRoot, kRoot, iNode, iRoot_D(MaxDim)
+
+    character(len=*), parameter:: NameSub = 'BATL_tree::set_tree_root'
     !-----------------------------------------------------------------------
 
     ! Set number of root blocks: default or input arguments
     nRoot_D = 1
     if(present(nRootIn_D)) nRoot_D(1:nDim) = nRootIn_D
     nRoot   = product(nRoot_D)
+
+    ! Chect for even number of root blocks in phi direction around the axis
+    if(IsCylindricalAxis .or. IsSphericalAxis .or. IsLatitudeAxis)then
+       if(modulo(nRoot_D(Phi_),2) /= 0) call CON_stop(NameSub // &
+            ': there must be an even number of root blocks around the axis')
+    end if
 
     ! Use the first product(nRoot_D) nodes as root nodes in the tree
     iNode = 0
@@ -1008,6 +1019,8 @@ contains
                    DiLevelNei_IIIB(Di,Dj,Dk,iBlock) = Unset_
                    CYCLE
                 end if
+             else
+                y = y0
              end if
 
              call find_tree_node( (/x, y, z/), jNode)
