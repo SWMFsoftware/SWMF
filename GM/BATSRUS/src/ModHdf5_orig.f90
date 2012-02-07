@@ -66,75 +66,7 @@ contains
     end do
 
   end subroutine write_var_hdf5
-  !=============================================================
-  !=============================================================
-!   integer function TestFunction2D(a,b)
-!     integer, intent(in) :: a(2),b(2)
-! 
-!     TestFunction2D = 0
-!     if(a(2) < b(2)) then
-!        TestFunction2D = -1
-!     elseif(b(2) < a(2)) then
-!        TestFunction2D = 1
-!     else
-!        if(a(1) < b(1)) then
-!           TestFunction2D = -1
-!        elseif(b(1) < a(1)) then
-!           TestFunction2D = 1
-!        end if
-!     end if
-!   end function TestFunction2D
-! 
-!   !=============================================================
-!   !=============================================================
-!   integer function TestFunction3D(a,b)
-!     integer, intent(in) :: a(2),b(2)
-! 
-!     TestFunction3D = 0
-!     if(a(3) < b(3)) then
-!        TestFunction3D = -1
-!     elseif(b(3) < a(3)) then
-!        TestFunction3D = 1
-!     else
-!        if(a(2) < b(2)) then
-!           TestFunction3D = -1
-!        elseif(b(2) < a(2)) then
-!           TestFunction3D = 1
-!        else
-!           if(a(1) < b(1)) then
-!              TestFunction3D = -1
-!           elseif(b(1) < a(1)) then
-!              TestFunction3D = 1
-!           end if
-!        end if
-!     end if
-!   end function TestFunction3D
-!   !=============================================================
-!   !=============================================================
-!   integer function TestFunction1D(a,b)
-!     integer, intent(in) :: a(2),b(2)
-! 
-!     TestFunction1D = 0
-!     if(a(1) < b(1)) then
-!        TestFunction1D = -1
-!     elseif(b(1) < a(1)) then
-!        TestFunction1D = 1
-!     end if
-!   end function TestFunction1D
-    
-! 
-!     logical function sort_test(i,j)
-!         use BATL_tree, only : iTree_IA, Level_, Coord1_,Coord2_,Coord3_,&
-!             nDim, MaxLevel 
-!         integer, intent(in) :: i, j
-!         integer :: valueI(3), valueJ(3), iGlobal, jGlobal
-!         
-!         iGlobal = GlobalUsedNodes(i)
-!         jGlobal = GlobalUsedNodes(j)
-!         valueI = 
-!         if (nDim == 3) then
-! 
-            
+  !===============================================================           
        
   logical function sort_test(i, j)
     use BATL_lib, ONLY : nDim 
