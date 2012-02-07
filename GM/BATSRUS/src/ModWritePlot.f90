@@ -1831,7 +1831,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
         end do
      end select
      ! Append the unit string for this variable to the output string
-     NamePlotUnit_V(iVar) = NameUnit
+     NamePlotUnit_V(iPlotVar) = NameUnit
      StringUnitIdl = trim(StringUnitIdl)//' '//trim(NameUnit)
   end do
 
