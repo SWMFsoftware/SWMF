@@ -5,7 +5,8 @@ module ModHdf5
   implicit none
 
   integer, parameter:: lNameVar = 10
-  integer, parameter:: lNameH5  = lNameVar + 1
+  integer, parameter:: lNameH5  = lNameVar
+!  integer, parameter:: lNameH5  = lNameVar + 1
 
 
 contains
