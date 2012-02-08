@@ -552,8 +552,9 @@ contains
       kRMin = iEqualR_DII(3,kDir,Min_)
       kRMax = iEqualR_DII(3,kDir,Max_)
 
-      !if(IsCylindricalAxis .and. iBlockRecv == 7)then
-      !   write(*,*)'!!! iDir, jDir, iNodeSend =', iDir, jDir, iNodeSend
+      !if(IsSphericalAxis .and. iBlockRecv == 1)then
+      !   write(*,*)'!!! iDir, jDir, kDir, iNodeSend =', &
+      !        iDir, jDir, kDir, iNodeSend
       !end if
 
       if(DoCountOnly)then
@@ -568,16 +569,16 @@ contains
 
       if(nDim > 2 .and. IsLatitudeAxis)then
 
-         if(  kDir == -1 .and. iTree_IA(Coord3_,iNodeRecv) == 1 .or. &
-              kDir == +1 .and. iTree_IA(Coord3_,iNodeSend) == 1)then
+         if(  kDir /= 0 .and. &
+              iTree_IA(Coord3_,iNodeRecv) == iTree_IA(Coord3_,iNodeSend))then
             kRMin = iEqualR_DII(3,-kDir,Max_)
             kRMax = iEqualR_DII(3,-kDir,Min_)
          end if
 
       elseif(nDim > 2 .and. IsSphericalAxis)then
-
-         if(  jDir == -1 .and. iTree_IA(Coord2_,iNodeRecv) == 1 .or. &
-              jDir == +1 .and. iTree_IA(Coord2_,iNodeSend) == 1)then
+         ! Sending in Theta direction across (equal Coord2) pole
+         if(jDir /= 0 .and. &
+              iTree_IA(Coord2_,iNodeRecv) == iTree_IA(Coord2_,iNodeSend))then
             jRMin = iEqualR_DII(2,-jDir,Max_)
             jRMax = iEqualR_DII(2,-jDir,Min_)
          end if
@@ -597,10 +598,13 @@ contains
       kSMin = iEqualS_DII(3,kDir,Min_)
       kSMax = iEqualS_DII(3,kDir,Max_)
 
-      !if(IsCylindricalAxis .and. (iBlockRecv == 7 .and. iBlockSend == 3 .or. iBlockSend == 8))then
-      !   write(*,*)'!!! iSMin, iSMax, jSMin, jSMax=', iSMin, iSMax, jSMin, jSMax
-      !   write(*,*)'!!! iRMin, iRMax, jRMin, jRMax=', iRMin, iRMax, jRMin, jRMax
-      !   write(*,*)'!!! State(SendMin)=',State_VGB(:,iSMin,jSMin,kSMin,iBlockSend)
+      !if(IsSphericalAxis .and. iBlockRecv == 1)then
+      !   write(*,*)'!!! iSMin, iSMax, jSMin, jSMax, kSMin, kSMax=', &
+      !        iSMin, iSMax, jSMin, jSMax, kSMin, kSMax
+      !   write(*,*)'!!! iRMin, iRMax, jRMin, jRMax, kRMin, kRMax=', &
+      !        iRMin, iRMax, jRMin, jRMax, kRMin, kRMax
+      !   write(*,*)'!!! State(SendMin)=', &
+      !        State_VGB(:,iSMin,jSMin,kSMin,iBlockSend)
       !end if
 
       if(iProc == iProcRecv)then
@@ -652,9 +656,6 @@ contains
          iBufferS_P(iProcRecv) = iBufferS
 
       end if
-
-      !if(IsCylindricalAxis .and. iBlockRecv == 7) &
-      !     write(*,*)'!!! State(:,0,1,1,7)=', State_VGB(:,0,1,1,7)
 
     end subroutine do_equal
 
@@ -1249,7 +1250,7 @@ contains
          Unused_B, DiLevelNei_IIIB, iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB
     use BATL_grid, ONLY: init_grid, create_grid, clean_grid, &
          Xyz_DGB, CellSize_DB, CoordMin_DB
-    use BATL_geometry, ONLY: init_geometry, z_, IsPeriodic_D
+    use BATL_geometry, ONLY: init_geometry, z_, IsPeriodic_D, TypeGeometry
     use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
 
     use ModMpi, ONLY: MPI_allreduce, MPI_REAL, MPI_MIN, MPI_MAX
@@ -1646,13 +1647,19 @@ contains
 
     if(nDim == 1) RETURN !------------------------
 
-    do iTest = 1, 1
+    do iTest = 1, 3
 
        call init_tree(MaxBlockTest)
 
+       ! Do not test ghost cells in the radial direction
+       iMin = 1; iMax = nI
+       jMin = MinJ; jMax = MaxJ
+       kMin = MinK; kMax = MaxK
+
        select case(iTest)
        case(1)
-          if(DoTestMe)write(*,*) 'Test message passing across cylindrical pole'
+          if(DoTestMe)write(*,*) &
+               'testing message_pass_cell across cylindrical pole'
 
           ! 0 < r < 10, 0 < phi < 360deg, -5 < z < 5
           DomainMin_D = (/ 0.0,  0.0, -5.0 /)
@@ -1663,11 +1670,15 @@ contains
           ! There must be an even number of root blocks in the phi direction
           nRootTest_D = (/ 2, 4, 2 /)
 
+          ! Test ghost cells at rMin
+          iMin = MinI
+
           call init_geometry('cylindrical', &
                IsPeriodicIn_D=IsPeriodicTest_D(1:nDim))
        case(2)
           if(nDim < 3)CYCLE
-          if(DoTestMe) write(*,*) 'Test message passing across spherical pole'
+          if(DoTestMe) write(*,*) &
+               'testing message_pass_cell across spherical pole'
 
           ! 1 < r < 9, 0 < theta < 180deg, 0 < phi < 360deg
           DomainMin_D = (/ 1.0,  0.0, 0.0 /)
@@ -1681,7 +1692,8 @@ contains
           call init_geometry('spherical', IsPeriodicIn_D=IsPeriodicTest_D)
        case(3)
           if(nDim < 3)CYCLE
-          if(DoTestMe) write(*,*) 'Test message passing across latitude pole'
+          if(DoTestMe) write(*,*) &
+               'testing message_pass_cell across latitude pole'
 
           ! 1 < r < 9, 0 < phi < 360deg, -90 < lat < 90
           DomainMin_D = (/ 1.0,    0.0, -cHalfPi /)
@@ -1704,6 +1716,7 @@ contains
             write(*,*) NameSub,': IsPeriodic_D=', IsPeriodic_D(1:nDim), &
             ' should agree with ', IsPeriodicTest_D(1:nDim)
 
+
        !call find_tree_node( (/0.5,0.5,0.5/), iNode)
        !if(DoTestMe)write(*,*) NameSub,' middle node=',iNode
        !call refine_tree_node(iNode)
@@ -1711,9 +1724,9 @@ contains
        call distribute_tree(.true.)
        call create_grid
 
-       ! if(DoTestMe) call show_tree(NameSub,.true.)
+       !if(DoTestMe) call show_tree(NameSub,.true.)
 
-       !do iBlock = 1, 7, 2
+       !do iBlock = 1, 2
        !   do i = 0, 3
        !      write(*,*) '!!! iBlock, i, iNodeNei_IIIB(i,:,1,iBlock)=', &
        !           iBlock, i, iNodeNei_IIIB(i,:,1,iBlock)
@@ -1736,14 +1749,14 @@ contains
           if(Unused_B(iBlock)) CYCLE
 
           ! Loop through all cells including ghost cells
-          do k = 1, nK; do j = MinJ, MaxJ; do i = MinI, nI
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
 
              ! The filled in second order accurate ghost cell value 
              ! should be the same as the coordinates of the cell center
              Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
 
-             ! Shift ghost cell Z coordinate into periodic domain
-             if(nDim == 3) Xyz_D(z_) = DomainMin_D(z_) &
+             ! For 3D cylindrical Z coordinate is periodic
+             if(iTest==1 .and. nDim == 3) Xyz_D(z_) = DomainMin_D(z_) &
                   + modulo(Xyz_D(z_) - DomainMin_D(z_), DomainSize_D(z_))
 
              do iDim = 1, nDim
