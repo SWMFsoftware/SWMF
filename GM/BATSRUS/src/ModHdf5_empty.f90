@@ -5,9 +5,6 @@ module ModHdf5
   implicit none
 
   integer, parameter:: lNameVar = 10
-  integer, parameter:: lNameH5  = lNameVar
-!  integer, parameter:: lNameH5  = lNameVar + 1
-
 
 contains
   !============================================================================
@@ -25,7 +22,7 @@ contains
     integer,                 intent(in):: nPlotVar
     character(len=80),       intent(in):: filename
     character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
-    character(len=lNameH5),  intent(in):: plotVarUnits(nPlotVar)
+    character(len=lNameVar), intent(in):: plotVarUnits(nPlotVar)
     real,                    intent(in):: xMin, xMax, yMin, yMax, zMin, zMax
     integer,                 intent(in):: nBLKcells
     !----------------------------------------------------------------------
