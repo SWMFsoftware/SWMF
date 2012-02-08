@@ -96,7 +96,7 @@ contains
             if (ikp.eq.0) then
                 call read_var('KP',KP)
             else if (ikp.eq.6) then
-                cTempLines(1) = NameCommand
+                cTempLines(1) = '#NGDC_INDICES'
                 call read_var('kpFileName', kpFileName)
                 cTempLines(2) = kpFileName
                 cTempLines(3) = " "
