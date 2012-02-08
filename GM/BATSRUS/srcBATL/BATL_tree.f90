@@ -954,9 +954,10 @@ contains
              end if
           end if
        end if
-       ! store z for spherical or latitude axis 
+       ! store z for spherical axis 
        z0 = z 
        do j=0,3
+          z = z0
           Dj = nint((j - 1.5)/1.5)
           if(nDim < 2)then
              if(j/=1) CYCLE
@@ -1007,6 +1008,7 @@ contains
              end if
 
              x = (iTree_IA(Coord1_, iNode) + 0.4*i - 1.1)*Scale_D(1)
+             y = y0
              if(x > 1.0 .or. x < 0.0)then
                 if(IsPeriodic_D(1))then
                    x = modulo(x, 1.0)
@@ -1019,8 +1021,6 @@ contains
                    DiLevelNei_IIIB(Di,Dj,Dk,iBlock) = Unset_
                    CYCLE
                 end if
-             else
-                y = y0
              end if
 
              call find_tree_node( (/x, y, z/), jNode)
@@ -1029,7 +1029,7 @@ contains
              DiLevelNei_IIIB(Di,Dj,Dk,iBlock) = &
                   iLevel - iTree_IA(Level_, jNode)
 
-             if(DoTestMe)write(*,'(a,3i2,3f6.3,i4)') &
+             if(DoTestMe) write(*,'(a,3i2,3f6.3,i4)') &
                   'i,j,k,x,y,z,jNode=',i,j,k,x,y,z,jNode
 
           end do
