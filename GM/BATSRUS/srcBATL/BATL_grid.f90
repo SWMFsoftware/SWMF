@@ -143,14 +143,6 @@ contains
             IsPeriodic_D(Phi_) = .true.
     end if
 
-    ! There is a pi-periodicity at the poles of a spherical grid,
-    ! otherwise periodicity does not make sense
-    if(Theta_ > 0)then
-       IsPeriodic_D(Theta_) = &
-            abs(CoordMin_D(Theta_)) < 1e-6 .and. &
-            abs(CoordMax_D(Theta_) - cPi) < 1e-6
-    end if
-
   end subroutine init_grid
   !===========================================================================
   subroutine clean_grid
@@ -158,6 +150,7 @@ contains
     if(DoInitializeGrid) RETURN
 
     DoInitializeGrid = .true.
+    IsNodeBasedGrid  = .true.
 
     deallocate(CoordMin_DB, CoordMax_DB, CellSize_DB, CellFace_DB, &
          CellVolume_B, Xyz_DGB)
@@ -1121,9 +1114,7 @@ contains
        end do
     end if
 
-    ! This is temporary solution to keep the test working
     ! We should probably have a single option.
-    IsNodeBasedGrid = .false.
 
     if(nDim >= 2)then
        if(DoTestMe) write(*,*)'Testing create_grid in cylindrical geometry'
@@ -1137,6 +1128,8 @@ contains
        DomainMin_D = (/1., 0., -0.5/)
        DomainMax_D = (/3., 90., 0.5/)
 
+       ! This is temporary solution to keep the test working
+       IsNodeBasedGrid = .false.
        call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
        call create_grid
        call show_grid
@@ -1201,6 +1194,8 @@ contains
        DomainMin_D = (/1.,  45.0,  0.0 /)
        DomainMax_D = (/3., 135.0, 90.0/)
 
+       ! This is temporary solution to keep the test working
+       IsNodeBasedGrid = .false.
        call init_grid( DomainMin_D, DomainMax_D )
        call create_grid
        call show_grid
