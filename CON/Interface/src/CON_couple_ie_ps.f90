@@ -173,8 +173,7 @@ contains
         jPs_Size = Grid_C(PS_) % nCoord_D(2)
 
         ! Get Plasmasphere Grid
-        iPS = (Grid_C(PS_) % Coord1_I)
-!        iPS = 90.0 - (Grid_C(PS_) % Coord1_I)
+        iPS = 90.0 - (Grid_C(PS_) % Coord1_I)
         jPS = (Grid_C(PS_) % Coord2_I)-180.    
 
         do j=1, jPS_Size
