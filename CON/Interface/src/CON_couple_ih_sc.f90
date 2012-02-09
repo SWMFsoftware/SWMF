@@ -615,12 +615,12 @@ contains
   !IROUTINE: couple_sc_ih_global - couple SC component to IH component
 
   !INTERFACE:
-  subroutine couple_sc_ih_global(tSimulation)
+  subroutine couple_sc_ih_global(TimeCoupling)
     
     use ModMpi,    ONLY: MPI_reduce
 
     !INPUT ARGUMENTS:
-    real, intent(in) :: tSimulation     ! simulation time at coupling
+    real, intent(in) :: TimeCoupling     ! simulation time at coupling
 
 
     !DESCRIPTION:
@@ -671,7 +671,7 @@ contains
     ! Fill in the coupled state variables
     if(is_proc(SC_)) then
        call SC_get_for_global_buffer(iSize,jSize,kSize, &
-            BufferMinMaxIh_DI,Buffer_VIII)
+            BufferMinMaxIh_DI,TimeCoupling,SC_, IH_, Buffer_VIII)
        ! Collect to the SC root PE
        call MPI_reduce(Buffer_VIII, BufferGlobal_VIII, nSize, MPI_REAL,MPI_SUM,&
             0, i_comm(SC_), iError)
