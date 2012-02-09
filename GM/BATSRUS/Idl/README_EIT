@@ -1,0 +1,110 @@
+;------------------------------------------------------------------------------
+; Here is a quick description of how to use get_eit_set.pro
+;  Please see the header of get_eit_set.pro for a detailed description 
+;  of the keywords
+;
+; The idea is to have an automated way of getting and calibrating SOHO EIT
+;  images for comparing three filter sets to the SWMF euv synthesis
+;
+; This will also print and/or return the HGI position of SOHO for input into
+;  the SWMF PARAM.in file
+;
+; The one REQUIRED input is a date.
+; Also, 3 Raw LZ EIT images will always be saved to disk.
+;
+; The optional outputs are:
+;  a) tecplot ascii file - same format as the los euv tec saves from SWMF
+;  b) color display to plot device
+;  c) color png - saves a color image for each filter
+;  d) idl variables - put the image arrays, headers, and positions into IDL vars
+;
+; I also included a quick routine to read a SWMF ascii tecplot output for
+;  loading in synthesis output or for testing the program
+;
+; Also note that some of the contained routines can be used independently
+;
+; **** NEED TO COMPILE GET_EIT_SET.PRO TWICE IN ORDER FOR THE ROUTINES TO WORK
+; **** (the IDL interpreter needs two passes to recognize the custom functions)
+; **** (so ignore the error the first time                                    )
+;
+; the Solar SoftWare Idl package (SSW) must be installed, up to date and
+;  properly loaded/linked in IDL for this to work properly. 
+;  The additional SSW packages needed are SOHO/EIT, and VSO.
+;  ALSO, the SSWDB calibration database for SOHO/EIT must be installed and up
+;  to date at least for the time requested or the images will NOT calibrate
+;  correctly. (eit_prep might also crash if SSWDB is not configured right)
+;
+; PLEASE contact me (cdowns@ifa.hawaii.edu) if you have questions or find bugs.
+;
+; below are some examples:
+;
+;
+; EXAMPLES: (don't forget to  double compile the file the first time)
+;   -Default behaivior (default save location is ./): 
+     .compile get_eit_set
+     .compile get_eit_set
+     get_eit_set, '1996/08/27T01:00:00'
+;
+;   -Save the level zero fits to a specific directory head, and the data/pngs
+;     to a separate location. Also use full database path for raw data:
+        get_eit_set, '2002/08/24T01:00:00', FitsDir='./soho_data/', $
+                       OutDir='./output/', /UseFullPath
+;
+;   -Save the EIT images at full resolution (small shift/stretch is applied)
+        get_eit_set, '2003/04/17T08:00:00', nPix=1024, rFov=1.4
+;
+;   -Account for the simulation time being different than the observations
+;     (will only modify the output Hgi positions)
+        get_eit_set, '2005/01/01T19:00:00', SimDate='2005/01/01T00:00:00'
+;
+;   -Do not display the images:
+        get_eit_set, '2003/08/27T13:00:00', /NoDisplay
+;              
+;   -Forego saving TecFile and pngs, return the reduced images to Idl keywds:
+;     also get the header and the hgi coordinates
+        get_eit_set, '1999/12/31T19:00:00', Images=Images, Headers=Headers, $
+                       HgiXyz=HgiXyz, /NoTecFile, /NoPngs
+;
+;   -Test functionality without calling eit_prep for calibration
+;     (images won't look right because of lack of calibration)
+        get_eit_set, '2008/03/25T01:00:00', /NoCal
+;
+
+; ANALYSIS EXAMPLE
+; Here is an example where you get the images, keep them high res, and
+; do an IDL comparison to synthetic images
+; *Note: all this ProjectedX_I business is a way of keeping track of the x/y
+;         positions of each pixel. This is a way to account for arbitrary image
+;         resolution. 
+;         I chose projected solar radii units, which are saved by the SWMF
+   get_eit_set, '1996/08/27T01:00:00', Images=ImageObs, ProjectedX_I=ImageX, $
+      /NoDisplay, rFov=1.4, nPix=1024
+
+   ; now say you have the synthetic images and want to compare them
+   FileName = './los_euv_LCrunD.dat'
+   read_los_tec, Filename, ImageSynth, ProjectedX_I=SynthX
+   display_eit_set, ImageSynth, SynthX, 500, rFov=1.4
+   display_eit_set, ImageObs, ImageX, 500, rFov=1.4
+
+; just load the data to an IDL variable (don't save tecFile/pngs).
+;  Using nPix and rFov defaults means one can compare output directly to the
+;  to synthesis array, pixel by pixel, without worrying about positions
+   get_eit_set, '2008/03/25T01:00:00', /NoTecFile, /NoPngs, Images=Images, $
+      Headers=Headers, HgiXyz=HgiXyz
+
+;----- RELEVANT SOLARSOFT COMMANDS: -----------------
+; (SolarSoft website: www.lmsal.com/solarsoft/ )
+
+; get latest EIT idl files:
+ssw_upgrade,/spawn,/loud,/passive_ftp,/verbose,/eit
+
+; get latest VSO idl files:
+ssw_upgrade,/spawn,/loud,/passive_ftp,/verbose,/vso
+
+; get latest EIT calibration files:
+sswdb_upgrade,/spawn,/loud,/passive_ftp,/verbose,/eit
+
+; make sure paths are set while running SSW
+ssw_path, /eit, /vso
+
+
