@@ -167,6 +167,7 @@ contains
 
   subroutine create_grid_block(iBlock, iNodeIn)
 
+    use ModNumConst, ONLY: cHalfPi
     use ModCoordTransform, ONLY: cross_product
 
     ! Create geometrical information for block iBlock on the local PE
@@ -178,7 +179,7 @@ contains
 
     real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim)
 
-    real, allocatable, save:: &
+    real, allocatable:: &
          rCell_I(:), rFace_I(:),  &
          SinPhi_I(:), CosPhi_I(:), SinPhiFace_I(:), CosPhiFace_I(:), &
          SinThetaFace_I(:), dCosTheta_I(:), &
@@ -242,10 +243,8 @@ contains
 
     elseif(IsNodeBasedGrid)then
 
-       if(.not.allocated(Xyz_DN))then
-          if(nDim == 2) allocate(Xyz_DN(3,MinI:MaxI+1,MinJ:MaxJ+1,1))
-          if(nDim == 3) allocate(Xyz_DN(3,MinI:MaxI+1,MinJ:MaxJ+1,MinK:MaxK+1))
-       end if
+       if(nDim == 2) allocate(Xyz_DN(3,MinI:MaxI+1,MinJ:MaxJ+1,1))
+       if(nDim == 3) allocate(Xyz_DN(3,MinI:MaxI+1,MinJ:MaxJ+1,MinK:MaxK+1))
 
        ! Calculate node positions in Cartesian space
        do k = MinK, MaxK+1
@@ -348,8 +347,7 @@ contains
 
     else
 
-       if(.not.allocated(rCell_I)) allocate( &
-            rCell_I(MinI:MaxI), rFace_I(MinI:MaxI+1))
+       allocate(rCell_I(MinI:MaxI), rFace_I(MinI:MaxI+1))
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Coord_D = CoordMin_DB(:,iBlock) + &
@@ -379,7 +377,7 @@ contains
 
        if(IsCylindrical)then
 
-          if(.not.allocated(SinPhi_I)) allocate( &
+          allocate( &
                SinPhi_I(MinJ:MaxJ), CosPhi_I(MinJ:MaxJ), &
                SinPhiFace_I(nJ+1), CosPhiFace_I(nJ+1) )
           
@@ -444,8 +442,7 @@ contains
 
           Dtheta = CellSize_DB(Theta_,iBlock)
 
-          if(.not.allocated(SinThetaFace_I)) &
-               allocate( SinThetaFace_I(nJ+1), dCosTheta_I(MinJ:MaxJ))
+          allocate( SinThetaFace_I(nJ+1), dCosTheta_I(MinJ:MaxJ))
 
           do j = 1, nJ+1
              SinThetaFace_I(j) = sin(CoordMin_DB(Theta_,iBlock) + (j-1)*Dtheta)
@@ -498,10 +495,76 @@ contains
 
           end do; end do; end do
 
+       elseif(IsRLonLat)then
+          Dtheta = CellSize_DB(Lat_,iBlock)
+
+          allocate(SinThetaFace_I(nK+1), dCosTheta_I(MinK:MaxK))
+
+          do k = 1, nK+1
+             SinThetaFace_I(k) = cos(CoordMin_DB(Lat_,iBlock) + (k-1)*Dtheta)
+          end do
+
+          do k = MinK, MaxK
+             Theta = cHalfPi - (CoordMin_DB(Lat_,iBlock) + (k-1)*Dtheta)
+             ! Note the sign change
+             dCosTheta_I(k) = cos(Theta-dTheta) - cos(Theta)
+          end do
+
+          ! dV = d(r^3)/3*dphi*d(cos theta)
+          do k = MinK, MaxK; do i = MinI, MaxI
+             ! NOTE: for ghost cells beyond the axis r=0 can be negative
+             CellVolume_GB(i,:,k,iBlock) = &
+                  cThird*(rFace_I(i+1)**3-rFace_I(i)**3)*Dphi*dCosTheta_I(k)
+          end do; end do
+
+          ! dA_r = r_(i+1/2)^2*dphi*d(cos theta)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+             ! Exact surface area
+             Area = rFace_I(i)**2*Dphi*dCosTheta_I(k)
+             CellFace_DFB(r_,i,j,k,iBlock) = Area
+
+             ! Orthogonal coordinate system
+             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)
+             FaceNormal_DDFB(:,r_,i,j,k,iBlock) = Area*d_D/sqrt(sum(d_D**2))
+
+          end do; end do; end do
+
+          ! dA_phi = r*dr*dtheta
+          do k = 1, nK; do j=1, nJ+1; do i = 1, nI
+             Area = rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dtheta
+             CellFace_DFB(Phi_,i,j,k,iBlock) = Area
+
+             ! Orthogonal coordinate system
+             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)
+             FaceNormal_DDFB(:,Phi_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
+
+          end do; end do; end do
+
+          ! dA_lat = r_i*sin(theta)*dr*dphi
+          do k = 1, nK+1; do j=1, nJ; do i = 1, nI
+             Area = rCell_I(i)*SinThetaFace_I(k)*(rFace_I(i+1)-rFace_I(i))*Dphi
+             CellFace_DFB(Lat_,i,j,k,iBlock) = Area
+
+             ! Orthogonal coordinate system
+             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)
+             FaceNormal_DDFB(:,Lat_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
+
+          end do; end do; end do
+
        else
           call CON_stop(NameSub//': '//TypeGeometry// &
                ' geometry is not yet implemented')
        end if
+
+       if(allocated(rCell_I)) &
+            deallocate(rCell_I, rFace_I)
+       if(allocated(SinPhi_I)) &
+            deallocate(SinPhi_I, CosPhi_I, SinPhiFace_I, CosPhiFace_I)
+       if(allocated(SinThetaFace_I)) &
+            deallocate(SinThetaFace_I, dCosTheta_I)
+       if(allocated(Xyz_DN)) &
+            deallocate(Xyz_DN)
+
     end if
 
   contains
@@ -1193,6 +1256,23 @@ contains
 
        DomainMin_D = (/1.,  45.0,  0.0 /)
        DomainMax_D = (/3., 135.0, 90.0/)
+
+       ! This is temporary solution to keep the test working
+       IsNodeBasedGrid = .false.
+       call init_grid( DomainMin_D, DomainMax_D )
+       call create_grid
+       call show_grid
+
+       if(DoTestMe) write(*,*)'Testing create_grid in rlonlat geometry'
+
+       ! Clean  grid
+       call clean_grid
+
+       ! Initialize cylindrical grid
+       call init_geometry(TypeGeometryIn = 'rlonlat')
+
+       DomainMin_D = (/1.,  0.0, -45.0 /)
+       DomainMax_D = (/3., 90.0,  45.0 /)
 
        ! This is temporary solution to keep the test working
        IsNodeBasedGrid = .false.
