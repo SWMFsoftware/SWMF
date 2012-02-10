@@ -9,6 +9,7 @@
 double* PIC::MolecularData::MolMass=NULL;
 double* PIC::MolecularData::ElectricCharge=NULL;
 char** PIC::MolecularData::ChemTable=NULL;
+int *PIC::MolecularData::SpcecieTypeTable=NULL;
 char** PIC::MolecularData::LoadingSpeciesList=NULL;
 int PIC::MolecularData::MolModelCode=_HS_MOL_MODEL_;
 bool PIC::MolecularData::ExternalSpeciesModelingFlag=_EXTERNAL_SPECIES_OFF_;
@@ -63,3 +64,41 @@ void PIC::MolecularData::GetChemSymbol(char* sym,int spec) {
 
   sprintf(sym,"%s",ChemTable[spec]);
 }
+
+//===========================================================
+//set and get the species type
+void PIC::MolecularData::SetSpecieType(int SpcecieType,int spec) {
+  if (SpcecieTypeTable==NULL) exit(__LINE__,__FILE__,"Error: SpcecieTypeTable is not initialized");
+
+  SpcecieTypeTable[spec]=SpcecieType;
+}
+
+int PIC::MolecularData::GetSpecieType(int spec) {
+  if (SpcecieTypeTable==NULL) exit(__LINE__,__FILE__,"Error: SpcecieTypeTable is not initialized");
+
+  return SpcecieTypeTable[spec];
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

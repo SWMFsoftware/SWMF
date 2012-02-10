@@ -260,7 +260,7 @@ int PIC::BC::InternalBoundary::Sphere::ParticleSphereInteraction_SpecularReflect
 //====================================================
 //print default surface data
 void PIC::BC::InternalBoundary::Sphere::PrintDefaultVariableList(FILE* fout) {
-  fprintf(fout,", \"Flux Down\"");
+  fprintf(fout,", \"Flux Down\", \"Flux Up\"");
 }
 void PIC::BC::InternalBoundary::Sphere::PrintDefaultTitle(FILE* fout) {
   fprintf(fout,"TITPLE=\"SurfaceData\"");
@@ -272,7 +272,7 @@ void PIC::BC::InternalBoundary::Sphere::PrintDefaultDataStateVector(FILE* fout,l
 //  cSurfaceDataSphere *SurfaceData;
   double *SampleData;
 
-  double FluxDown=0.0;
+  double FluxDown=0.0,FluxUp=0.0;
 
 //  SurfaceData=(cSurfaceDataSphere*)Sphere->GetSurfaceDataPointer();
 
@@ -298,27 +298,33 @@ if (nSurfaceElement==311) {
     InterpolationCoefficient=Sphere->GetSurfaceElementArea(nSurfaceElement);
 
     FluxDown+=SampleData[sampledFluxDownRelativeOffset]*InterpolationCoefficient;
+    FluxUp+=SampleData[sampledFluxUpRelativeOffset]*InterpolationCoefficient;
 
     InterpolationNormalization+=InterpolationCoefficient;
   }
 
 
-  FluxDown/=InterpolationNormalization*PIC::LastSampleLength;
-
-
+  if (PIC::LastSampleLength!=0) {
+    FluxDown/=InterpolationNormalization*PIC::LastSampleLength;
+    FluxUp/=InterpolationNormalization*PIC::LastSampleLength;
+  }
 
   if (ThisThread==0)  {
 
     //collect sampled data from all processors
     for (int thread=1;thread<nTotalThreads;thread++) {
       FluxDown+=pipe->recv<double>(thread);
+      FluxUp+=pipe->recv<double>(thread);
     }
 
 
 
-    fprintf(fout," %e ",FluxDown);
+    fprintf(fout," %e %e ",FluxDown,FluxUp);
   }
-  else pipe->send(FluxDown);
+  else {
+    pipe->send(FluxDown);
+    pipe->send(FluxUp);
+  }
 }
 
 

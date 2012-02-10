@@ -7845,6 +7845,18 @@ nMPIops++;
     if (startNode==NULL) startNode=rootTree;
     if (startNode==rootTree) InitCellMeasure_ResetToZero(rootTree);
 
+
+
+
+//=============   DEBUG ==================
+if (startNode!=NULL) if (startNode->Temp_ID==5096) {
+  cout << __FILE__ << "@" << __LINE__ << endl;
+}
+
+//=============  END DEBUG ===============
+
+
+
     if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
       for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) InitCellMeasure(startNode->downNode[nDownNode]);
     }

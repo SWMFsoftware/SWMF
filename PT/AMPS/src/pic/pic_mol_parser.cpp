@@ -15,6 +15,7 @@ void PIC::MolecularData::Parser::SpeciesBlock(char *ChemSymbol,int SpecieNumber,
   double a;
 
   PIC::MolecularData::SetChemSymbol(ChemSymbol,SpecieNumber);
+  PIC::MolecularData::SetSpecieType(_PIC_SPECIE_TYPE__GAS_,SpecieNumber);
 
   while (ifile.eof()==false) {
 	ifile.GetInputStr(str,sizeof(str));
@@ -39,7 +40,7 @@ void PIC::MolecularData::Parser::run(CiFileOperations& ifile) {
   char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
 
   //read the data file
-  int s;
+  int s,SpecieType;
   bool SpecieFound;
 
   int LoadedSpecieCountingNumber=0;
@@ -50,6 +51,16 @@ void PIC::MolecularData::Parser::run(CiFileOperations& ifile) {
     if (strcmp("#COMPONENT",str1)==0) {
       ifile.CutInputStr(str1,str);
       SpecieFound=false;
+      SpecieType=_PIC_SPECIE_TYPE__GAS_;
+
+      if (strcmp("EXTERNALSPEC",str1)==0) {
+        SpecieType=_PIC_SPECIE_TYPE__EXTERNAL_;
+        ifile.CutInputStr(str1,str);
+      }
+      else if (strcmp("BACKGROUNDSPEC",str1)==0) {
+        SpecieType=_PIC_SPECIE_TYPE__BACKGROUND_;
+        ifile.CutInputStr(str1,str);
+      }
 
       for (s=0;s<PIC::nTotalSpecies;s++) if (strcmp(LoadingSpeciesList[s],str1)==0) {
         SpecieFound=true;
@@ -65,8 +76,13 @@ void PIC::MolecularData::Parser::run(CiFileOperations& ifile) {
 
         ifile.moveLineBack();
       }
-      else if ((strcmp("EXTERNALSPEC",str1)!=0)&&(strcmp("BACKGROUNDSPEC",str1)!=0)) {
+      else if (SpecieType==_PIC_SPECIE_TYPE__GAS_) {
         SpeciesBlock(str1,LoadedSpecieCountingNumber,ifile);
+        LoadedSpecieCountingNumber++;
+      }
+      else if ((SpecieType==_PIC_SPECIE_TYPE__EXTERNAL_)||(SpecieType==_PIC_SPECIE_TYPE__BACKGROUND_)) {
+        PIC::MolecularData::SetChemSymbol(str1,LoadedSpecieCountingNumber);
+        PIC::MolecularData::SetSpecieType(SpecieType,LoadedSpecieCountingNumber);
         LoadedSpecieCountingNumber++;
       }
     }

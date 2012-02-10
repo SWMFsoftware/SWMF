@@ -7,12 +7,11 @@
 
 #include "pic.h"
 
-long int PIC::ParticleBuffer::ParticleDataLength=_PIC_PARTICLE_DATA_POSITION_OFFSET_+sizeof(double)*DIM;
+long int PIC::ParticleBuffer::ParticleDataLength=_PIC_PARTICLE_DATA__DEFAULT_DATA_LENGTH_;
 PIC::ParticleBuffer::byte *PIC::ParticleBuffer::ParticleDataBuffer=NULL;
 long int PIC::ParticleBuffer::MaxNPart=0;
 long int PIC::ParticleBuffer::NAllPart=0;
 long int PIC::ParticleBuffer::FirstPBufferParticle=-1;
-int PIC::ParticleBuffer::_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_=-1;
 
 //==========================================================
 //init the buffer
@@ -23,16 +22,6 @@ void PIC::ParticleBuffer::Init(long int BufrerLength) {
   if (BufrerLength<=0) exit(__LINE__,__FILE__,"BufrerLength is less that zero");
 
   //reserve the space for additional 'particle's variables'
-
-  //the individual particle's weight corection
-#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-  _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_=ParticleDataLength;
-  ParticleDataLength+=sizeof(double);
-#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
-  //do nothing
-#else
-  exit(__LINE__,__FILE__,"Error: unknown option");
-#endif
 
   //allocate the memory for the buffer
   MaxNPart=BufrerLength;
@@ -47,6 +36,8 @@ void PIC::ParticleBuffer::Init(long int BufrerLength) {
 //==========================================================
 //Request additional data for a particle
 void PIC::ParticleBuffer::RequestDataStorage(long int &offset,int TotalDataLength) {
+  if (ParticleDataBuffer!=NULL) exit(__LINE__,__FILE__,"Error: the particle data buffer is already initialized. Request the particle data storage before the initialization of the particle data buffer");
+
   offset=ParticleDataLength;
   ParticleDataLength+=TotalDataLength;
 }
@@ -57,182 +48,6 @@ PIC::ParticleBuffer::byte *PIC::ParticleBuffer::GetParticleDataPointer(long int 
   return ParticleDataBuffer+ptr*ParticleDataLength;
 }
 
-
-/*
-
-//==========================================================
-//get the idividual particle weight correction
-double PIC::ParticleBuffer::GetIndividualStatWeightCorrection(long int ptr) {
-#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-  return *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_));
-#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
-  return 1;
-#else
-  exit(__LINE__,__FILE__,"Error: unknown option");
-#endif
-}
-
-double PIC::ParticleBuffer::GetIndividualStatWeightCorrection(byte *ParticleDataStart) {
-#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-  return *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_));
-#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
-  return 1;
-#else
-  exit(__LINE__,__FILE__,"Error: unknown option");
-#endif
-}
-
-void PIC::ParticleBuffer::SetIndividualStatWeightCorrection(double WeightCorrectionFactor,long int ptr) {
-#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-  *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
-#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
-  //do nothing
-#else
-  exit(__LINE__,__FILE__,"Error: unknown option");
-#endif
-}
-
-void PIC::ParticleBuffer::SetIndividualStatWeightCorrection(double WeightCorrectionFactor,byte *ParticleDataStart) {
-#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-  *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
-#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
-  //do nothing
-#else
-  exit(__LINE__,__FILE__,"Error: unknown option");
-#endif
-}
-//==========================================================
-//get the particle position
-double *PIC::ParticleBuffer::GetX(long int ptr) {
-  return (double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-}
-
-double *PIC::ParticleBuffer::GetX(byte *ParticleDataStart) {
-  return (double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-}
-
-void PIC::ParticleBuffer::GetX(double* x,long int ptr) {
-  register double *xptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-  register int idim;
-
-  for (idim=0;idim<DIM;idim++) x[idim]=xptr[idim];
-}
-
-void PIC::ParticleBuffer::GetX(double* x,byte *ParticleDataStart) {
-  register double *xptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-  register int idim;
-
-  for (idim=0;idim<DIM;idim++) x[idim]=xptr[idim];
-}
-
-void PIC::ParticleBuffer::SetX(double* x,long int ptr) {
-  register double *xptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-  register int idim;
-
-  for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
-}
-
-void PIC::ParticleBuffer::SetX(double* x,byte *ParticleDataStart) {
-  register double *xptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-  register int idim;
-
-  for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
-}
-
-//==========================================================
-//get the particle velocity
-double *PIC::ParticleBuffer::GetV(long int ptr) {
-  return (double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
-}
-
-double *PIC::ParticleBuffer::GetV(byte *ParticleDataStart) {
-  return (double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
-}
-
-void PIC::ParticleBuffer::GetV(double* v,long int ptr) {
-  register double *vptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
-  register int idim;
-
-  for (idim=0;idim<DIM;idim++) v[idim]=vptr[idim];
-}
-
-void PIC::ParticleBuffer::GetV(double* v,byte *ParticleDataStart) {
-  register double *vptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
-  register int idim;
-
-  for (idim=0;idim<DIM;idim++) v[idim]=vptr[idim];
-}
-
-void PIC::ParticleBuffer::SetV(double* v,long int ptr) {
-  register double *vptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
-  register int idim;
-
-  for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
-}
-
-void PIC::ParticleBuffer::SetV(double* v,byte *ParticleDataStart) {
-  register double *vptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
-  register int idim;
-
-  for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
-}
-
-
-//==========================================================
-//get the particle's species ID
-
-unsigned int PIC::ParticleBuffer::GetI(byte* ParticleDataStart) {
-  return *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_));
-}
-
-unsigned int PIC::ParticleBuffer::GetI(long int ptr) {
-  return *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_));
-}
-
-void PIC::ParticleBuffer::SetI(unsigned int spec,byte* ParticleDataStart) {
-  *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=spec;
-}
-
-void PIC::ParticleBuffer::SetI(unsigned int spec,long int ptr) {
-  *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=spec;
-}
-
-//==========================================================
-//get/set prev
-long int PIC::ParticleBuffer::GetPrev(long int ptr) {
-  return *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_PREV_OFFSET_));
-}
-
-long int PIC::ParticleBuffer::GetPrev(byte* ParticleDataStart) {
-  return *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_PREV_OFFSET_));
-}
-
-void PIC::ParticleBuffer::SetPrev(long int prev,long int ptr) {
-  *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_PREV_OFFSET_))=prev;
-}
-
-void PIC::ParticleBuffer::SetPrev(long int prev,byte* ParticleDataStart) {
-  *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_PREV_OFFSET_))=prev;
-}
-
-//get/set next
-long int PIC::ParticleBuffer::GetNext(long int ptr) {
-  return *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_NEXT_OFFSET_));
-}
-
-long int PIC::ParticleBuffer::GetNext(byte* ParticleDataStart) {
-  return *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_NEXT_OFFSET_));
-}
-
-void PIC::ParticleBuffer::SetNext(long int next,long int ptr) {
-  *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_NEXT_OFFSET_))=next;
-}
-
-void PIC::ParticleBuffer::SetNext(long int next,byte* ParticleDataStart) {
-  *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_NEXT_OFFSET_))=next;
-}
-
-*/
 
 //==========================================================
 //the functions that controls the particle buffer
@@ -320,7 +135,7 @@ void PIC::ParticleBuffer::DeleteParticle(long int ptr,long int& ListFirstParticl
 
 void PIC::ParticleBuffer::CloneParticle(long int copy,long int source) {
   byte *SourceData,*CopyData;
-  long int i,next,prev;
+  long int next,prev;
 
   SourceData=GetParticleDataPointer(source);
   CopyData=GetParticleDataPointer(copy);
@@ -328,7 +143,8 @@ void PIC::ParticleBuffer::CloneParticle(long int copy,long int source) {
   prev=GetPrev(CopyData);
   next=GetNext(CopyData);
 
-  for (i=0;i<ParticleDataLength;i++) CopyData[i]=SourceData[i];
+//  for (i=0;i<ParticleDataLength;i++) CopyData[i]=SourceData[i];
+  memcpy(CopyData,SourceData,ParticleDataLength*sizeof(byte));
 
   SetPrev(prev,CopyData);
   SetNext(next,CopyData);
@@ -350,21 +166,25 @@ void PIC::ParticleBuffer::LoadImageFile(int fd) {
 
 void PIC::ParticleBuffer::PackParticleData(char* buffer,long int ptr) {
   byte *SourceData=GetParticleDataPointer(ptr);
-  long int i;
+//  long int i;
 
-  for (i=0;i<ParticleDataLength;i++) buffer[i]=SourceData[i];
+//  for (int i=0;i<ParticleDataLength;i++) buffer[i]=SourceData[i];
+
+  memcpy(buffer,SourceData,ParticleDataLength*sizeof(byte));
 }
 
 
 void PIC::ParticleBuffer::UnPackParticleData(char* buffer,long int ptr) {
   byte *pdata;
-  long int i,next,prev;
+  long int next,prev;
 
   pdata=GetParticleDataPointer(ptr);
   prev=GetPrev(pdata);
   next=GetNext(pdata);
 
-  for (i=0;i<ParticleDataLength;i++) pdata[i]=buffer[i];
+//  for (int i=0;i<ParticleDataLength;i++) pdata[i]=buffer[i];
+
+  memcpy(pdata,buffer,ParticleDataLength*sizeof(byte));
 
   SetPrev(prev,pdata);
   SetNext(next,pdata);

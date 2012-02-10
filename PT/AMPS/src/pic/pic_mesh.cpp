@@ -37,9 +37,9 @@ cMeshAMR1d<PIC::Mesh::cDataCornerNode,PIC::Mesh::cDataCenterNode,PIC::Mesh::cDat
 
 
 //the user defined functions for output of the 'ceneter node' data into a data file
-list<PIC::Mesh::fPrintVariableListCenterNode> PIC::Mesh::PrintVariableListCenterNode;
-list<PIC::Mesh::fPrintDataCenterNode> PIC::Mesh::PrintDataCenterNode;
-list<PIC::Mesh::fInterpolateCenterNode> PIC::Mesh::InterpolateCenterNode;
+vector<PIC::Mesh::fPrintVariableListCenterNode> PIC::Mesh::PrintVariableListCenterNode;
+vector<PIC::Mesh::fPrintDataCenterNode> PIC::Mesh::PrintDataCenterNode;
+vector<PIC::Mesh::fInterpolateCenterNode> PIC::Mesh::InterpolateCenterNode;
 
 
 
@@ -50,10 +50,15 @@ void PIC::Mesh::SetCellSamplingDataRequest() {
 void PIC::Mesh::cDataCenterNode::PrintVariableList(FILE* fout,int DataSetNumber) {
  fprintf(fout,", \"Number Density\", \"Particle Number\"");
  for (int idim=0;idim<DIM;idim++) fprintf(fout,", \"V%i\"",idim);
- fprintf(fout,", \"Speed\", \"Translational Temperature\"");
+ fprintf(fout,", \"Speed\"");
+
+ //the following will be printed only for the gas species
+ if (PIC::MolecularData::GetSpecieType(DataSetNumber)==_PIC_SPECIE_TYPE__GAS_) {
+   fprintf(fout,", \"Translational Temperature\"");
+ }
 
  //print the user defind 'center node' data
- list<fPrintVariableListCenterNode>::iterator fptr;
+ vector<fPrintVariableListCenterNode>::iterator fptr;
  for (fptr=PrintVariableListCenterNode.begin();fptr!=PrintVariableListCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber);
 
  //print varialbes sampled by the user defined sampling procedures
@@ -75,7 +80,10 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
     OutputData.ParticleNumber=GetParticleNumber(DataSetNumber);
     GetBulkVelocity(OutputData.v,DataSetNumber);
     OutputData.MeanParticleSpeed=GetMeanParticleSpeed(DataSetNumber);
-    OutputData.TranslationalTemeprature=GetTranslationalTemperature(DataSetNumber);
+
+    if (PIC::MolecularData::GetSpecieType(DataSetNumber)==_PIC_SPECIE_TYPE__GAS_) {
+      OutputData.TranslationalTemeprature=GetTranslationalTemperature(DataSetNumber);
+    }
   }
 
 
@@ -84,12 +92,16 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
 
     fprintf(fout,"%e  %e ",OutputData.NumberDesnity,OutputData.ParticleNumber);
     for (idim=0;idim<DIM;idim++) fprintf(fout,"%e ",OutputData.v[idim]);
-    fprintf(fout,"%e %e ",OutputData.MeanParticleSpeed,OutputData.TranslationalTemeprature);
+    fprintf(fout,"%e ",OutputData.MeanParticleSpeed);
+
+    if (PIC::MolecularData::GetSpecieType(DataSetNumber)==_PIC_SPECIE_TYPE__GAS_) {
+      fprintf(fout,"%e ",OutputData.TranslationalTemeprature);
+    }
   }
   else pipe->send((char*)&OutputData,sizeof(OutputData));
 
   //print the user defind 'center node' data
-  list<fPrintDataCenterNode>::iterator fptr;
+  vector<fPrintDataCenterNode>::iterator fptr;
 
   for (fptr=PrintDataCenterNode.begin();fptr!=PrintDataCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber,pipe,CenterNodeThread,this);
 
@@ -158,7 +170,7 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
   }
 
   //print the user defind 'center node' data
-  list<fInterpolateCenterNode>::iterator fptr;
+  vector<fInterpolateCenterNode>::iterator fptr;
 
   for (fptr=InterpolateCenterNode.begin();fptr!=InterpolateCenterNode.end();fptr++) (*fptr)(InterpolationList,InterpolationCoeficients,nInterpolationCoeficients,this);
 

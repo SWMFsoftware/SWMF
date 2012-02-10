@@ -21,7 +21,8 @@ class cInternalSphericalData : public cAMRexit
 , public cInternalSphericalData_UserDefined
 #endif
 {
-protected:
+//protected:
+public:
   double OriginPosition[3],Radius;
 //  void *SurfaceData;
 
@@ -34,7 +35,7 @@ protected:
   static double dZenithAngle;
   #endif
 
-public:
+//public:
 
   typedef void (*fPrintVariableList)(FILE*);
   fPrintVariableList PrintVariableList;
@@ -74,10 +75,13 @@ public:
     cleanDataBuffer();
   }
 
+
+  /*
   void SetGeneralSurfaceMeshParameters(long int nZenithElements,long int nAzimuthalElements) {
     nZenithSurfaceElements=nZenithElements,nAzimuthalSurfaceElements=nAzimuthalElements;
     dAzimuthalAngle=2.0*Pi/nAzimuthalSurfaceElements;
   }
+  */
 
   /*
   void SetSurfaceDataPointer(void *DataPointer) {SurfaceData=DataPointer;}
@@ -485,12 +489,23 @@ Not_Inside_Sphere:
 
      static const int nLevelMax=6;
 
+     /*
+     int nLevelEPS=0;
+
+     for (idim=0;idim<3;idim++) {
+       register int t=1+(int)(log((xBlockMaxInit[idim]-xBlockMinInit[idim])/EPS)/log(2.0));
+       if (t>nLevelEPS) nLevelEPS=t;
+     }
+*/
 
 
      struct cLevelData {
        double xSubBlockMin[3],xSubBlockMax[3],dx,dy;
        int i,j;
      };
+
+     //cLevelData LevelData[max(nLevelMax,nLevelEPS) +1];
+
 
      cLevelData LevelData[nLevelMax+1];
      cLevelData *levelDataPtr;
@@ -786,6 +801,18 @@ return 0.0;
 
 
 };
+
+//set up the surface parameters of the sphere
+void inline SetGeneralSphereSurfaceMeshParameters(long int nZenithElements,long int nAzimuthalElements) {
+  cInternalSphericalData::nAzimuthalSurfaceElements=nAzimuthalElements,cInternalSphericalData::nZenithSurfaceElements=nZenithElements;
+  cInternalSphericalData::dAzimuthalAngle=2.0*Pi/cInternalSphericalData::nAzimuthalSurfaceElements;
+
+#if  _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_COSINE_DISTRIBUTION_
+  cInternalSphericalData::dCosZenithAngle=2.0/cInternalSphericalData::nZenithSurfaceElements;
+#elif _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_UNIFORM_DISTRIBUTION_
+  cInternalSphericalData::dZenithAngle=Pi/cInternalSphericalData::nZenithSurfaceElements;
+#endif
+}
 
 
 #endif

@@ -206,6 +206,22 @@ public:
 
 };
 
+
+//=========================================================
+//Vector Rotations
+namespace VectorRotation {
+  inline void Along_Z_direction(double *l,double angle) {
+    double temp[2],cosAngle,sinAngle;
+
+    cosAngle=cos(angle);
+    sinAngle=sin(angle);
+
+    temp[0]=cosAngle*l[0]-sinAngle*l[1];
+    temp[1]=sinAngle*l[0]+cosAngle*l[1];
+
+    memcpy(l,temp,2*sizeof(double));
+  }
+}
  
   
 

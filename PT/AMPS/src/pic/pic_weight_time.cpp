@@ -83,7 +83,9 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
 
 
     //calcualte the total volume production rate
+#if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
     if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) ParticleInjection+=PIC::VolumeParticleInjection::GetTotalInjectionRate(spec);
+#endif
 
     //calculate the particle weight
     GlobalParticleWeight=ParticleInjection/maxReferenceInjectedParticleNumber;
@@ -117,14 +119,19 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight() {
 //set particle's local time step
 
 void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    double blockTimeStep=0.0;
-    int s;
+  cInternalBoundaryConditionsDescriptor *descriptor;
+  cInternalSphericalData *Sphere;
+  cInternalCircleData *Circle;
+  cInternalSphere1DData *Sphere1D;
+  double blockTimeStep=0.0;
+  int s;
 
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
     if (startNode->block!=NULL) for (s=0;s<PIC::nTotalSpecies;s++) {
       blockTimeStep=PIC::ParticleWeightTimeStep::LocalTimeStep(s,startNode);
 
       //check if the volume injection of model particles is initialized
+#if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
       if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) {
         double TimeStepLimit;
         bool TimeStepLimitationImposed;
@@ -136,16 +143,14 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
           if (TimeStepLimitationImposed==true) blockTimeStep=min(blockTimeStep,TimeStepLimit);
         }
       }
+#endif
 
       startNode->block->SetLocalTimeStep(blockTimeStep,s);
 
       //injection rate from the internal surfaces
  //     list<cInternalBoundaryConditionsDescriptor>::iterator descriptor;
 
-      cInternalBoundaryConditionsDescriptor *descriptor;
-      cInternalSphericalData *Sphere;
-      cInternalCircleData *Circle;
-      cInternalSphere1DData *Sphere1D;
+
 
 //      for (descriptor=PIC::Mesh::mesh.InternalBoundaryList.begin();descriptor!=PIC::Mesh::mesh.InternalBoundaryList.end();descriptor++) {
       for (descriptor=startNode->InternalBoundaryDescriptorList;descriptor!=NULL;descriptor=descriptor->nextInternalBCelement) {
@@ -181,6 +186,74 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
 
     for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) initTimeStep(downNode);
+
+    //determine the global value for the 'maxIntersectedNodeTimeStep'
+    if (startNode==PIC::Mesh::mesh.rootTree) {
+      double buffer[PIC::nTotalThreads];
+      list<cInternalBoundaryConditionsDescriptor>::iterator ptr;
+      int thread;
+
+      for (ptr=PIC::Mesh::mesh.InternalBoundaryList.begin();ptr!=PIC::Mesh::mesh.InternalBoundaryList.end();ptr++) {
+        for (s=0;s<PIC::nTotalSpecies;s++) {
+          switch (ptr->BondaryType) {
+          case _INTERNAL_BOUNDARY_TYPE_SPHERE_:
+            if (DIM!=3) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 3D simulations");
+
+            Sphere=(cInternalSphericalData*)ptr->BoundaryElement;
+            blockTimeStep=Sphere->maxIntersectedNodeTimeStep[s];
+            break;
+          case _INTERNAL_BOUNDARY_TYPE_CIRCLE_:
+            if (DIM!=2) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 2D simulations");
+
+            Circle=(cInternalCircleData*)ptr->BoundaryElement;
+            blockTimeStep=Circle->maxIntersectedNodeTimeStep[s];
+            break;
+          case _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_:
+            if (DIM!=1) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 1D simulations");
+
+            Sphere1D=(cInternalSphere1DData*)ptr->BoundaryElement;
+            blockTimeStep=Sphere1D->maxIntersectedNodeTimeStep[s];
+            break;
+          default:
+            exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
+          }
+
+          MPI_Gather(&blockTimeStep,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+          if (PIC::ThisThread==0) {
+            for (thread=1;thread<PIC::nTotalThreads;thread++) if (buffer[thread]>blockTimeStep) blockTimeStep=buffer[thread];
+          }
+
+          MPI_Bcast(&blockTimeStep,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+          switch (ptr->BondaryType) {
+          case _INTERNAL_BOUNDARY_TYPE_SPHERE_:
+            if (DIM!=3) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 3D simulations");
+
+            Sphere=(cInternalSphericalData*)ptr->BoundaryElement;
+            Sphere->maxIntersectedNodeTimeStep[s]=blockTimeStep;
+            break;
+          case _INTERNAL_BOUNDARY_TYPE_CIRCLE_:
+            if (DIM!=2) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 2D simulations");
+
+            Circle=(cInternalCircleData*)ptr->BoundaryElement;
+            Circle->maxIntersectedNodeTimeStep[s]=blockTimeStep;
+            break;
+          case _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_:
+            if (DIM!=1) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 1D simulations");
+
+            Sphere1D=(cInternalSphere1DData*)ptr->BoundaryElement;
+            Sphere1D->maxIntersectedNodeTimeStep[s]=blockTimeStep;
+            break;
+          default:
+            exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
+          }
+
+        }
+      }
+
+
+    }
   }
 }
 

@@ -22,6 +22,10 @@ int PIC::ICES::TotalAssociatedDataLength=0,PIC::ICES::AssociatedDataOffset=-1;
 //offsets of the data loaded from the DSMC results
 int PIC::ICES::NeutralBullVelocityOffset=-1,PIC::ICES::NeutralNumberDensityOffset=-1,PIC::ICES::NeutralTemperatureOffset=-1;
 
+//pre-processor of the data
+PIC::ICES::fDSMCdataPreProcessor PIC::ICES::DSMCdataPreProcessor=NULL;
+PIC::ICES::fSWMFdataPreProcessor PIC::ICES::SWMFdataPreProcessor=NULL;
+
 //====================================================
 void PIC::ICES::SetLocationICES(const char* loc) {
   sprintf(locationICES,"%s",loc);
@@ -364,6 +368,10 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cD
 
         if (CenterNode==NULL) continue;
 
+        //preprocess the data if needed
+        if (SWMFdataPreProcessor!=NULL) SWMFdataPreProcessor(CenterNode->GetX(),dataSWMF);
+
+        //save the data on the mesh
         offset=CenterNode->GetAssociatedDataBufferPointer();
 
         if (status!=0) { //check the status of the reading
@@ -460,6 +468,10 @@ void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) 
 
         if (CenterNode==NULL) continue;
 
+        //preprocess the data if needed
+        if (DSMCdataPreProcessor!=NULL) DSMCdataPreProcessor(CenterNode->GetX(),dataDSMC);
+
+        //save the data on the mesh
         offset=CenterNode->GetAssociatedDataBufferPointer();
 
         if (status!=0) { //check the status of the reading
@@ -512,6 +524,12 @@ void PIC::ICES::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int Ce
 
 #if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
   cDataNodeDSMC dataDSMC;
+#endif
+
+#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
+  char *offset=CenterNode->GetAssociatedDataBufferPointer();
+#elif _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
+  char *offset=CenterNode->GetAssociatedDataBufferPointer();
 #endif
 
 
@@ -588,7 +606,7 @@ void PIC::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,doubl
   *((double*)(PlasmaPressureOffset+offsetCenterNode))=0.0;
   *((double*)(PlasmaTemperatureOffset+offsetCenterNode))=0.0;
 
-  for (idim=0;idim<3;idim++) {
+  for (int idim=0;idim<3;idim++) {
     *(idim+(double*)(MagneticFieldOffset+offsetCenterNode))=0.0;
     *(idim+(double*)(ElectricFieldOffset+offsetCenterNode))=0.0;
     *(idim+(double*)(PlasmaBulkVelocityOffset+offsetCenterNode))=0.0;
@@ -596,7 +614,7 @@ void PIC::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,doubl
 #endif
 
 #if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
-  for (idim=0;idim<3;idim++) {
+  for (int idim=0;idim<3;idim++) {
     *(idim+(double*)(NeutralBullVelocityOffset+offsetCenterNode))=0.0;
   }
 
@@ -614,7 +632,7 @@ void PIC::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,doubl
     *((double*)(PlasmaPressureOffset+offsetCenterNode))+=c*(*((double*)(PlasmaPressureOffset+offset)));
     *((double*)(PlasmaTemperatureOffset+offsetCenterNode))+=c*(*((double*)(PlasmaTemperatureOffset+offset)));
 
-    for (idim=0;idim<3;idim++) {
+    for (int idim=0;idim<3;idim++) {
       *(idim+(double*)(MagneticFieldOffset+offsetCenterNode))+=c*(*(idim+(double*)(MagneticFieldOffset+offset)));
       *(idim+(double*)(ElectricFieldOffset+offsetCenterNode))+=c*(*(idim+(double*)(ElectricFieldOffset+offset)));
       *(idim+(double*)(PlasmaBulkVelocityOffset+offsetCenterNode))+=c*(*(idim+(double*)(PlasmaBulkVelocityOffset+offset)));
@@ -622,7 +640,7 @@ void PIC::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,doubl
 #endif
 
 #if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
-    for (idim=0;idim<3;idim++) {
+    for (int idim=0;idim<3;idim++) {
       *(idim+(double*)(NeutralBullVelocityOffset+offsetCenterNode))+=c*(*(idim+(double*)(NeutralBullVelocityOffset+offset)));
     }
 

@@ -494,8 +494,28 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
   double timeCounter,localTimeStep,TranslationalEnergy;
   double massModelParticle,massBackgroundParticle,Vrel[3]={0.0,0.0,0.0},Vcm[3]={0.0,0.0,0.0},am;
 
+
+//--------------------------   DEBUG --------------------------
+/*
+static long int nCall=0;
+*/
+//--------------------------   END DEBUg -----------------------
+
   while (node!=NULL) {
     block=node->block;
+
+//--------------------------   DEBUG --------------------------
+/*
+nCall++;
+
+if ((nCall==1452339-1)&&(PIC::ThisThread==1)) {
+  cout << __FILE__ << "$" << __LINE__ << endl;
+}
+*/
+
+//--------------------------   END DEBUg -----------------------
+
+
 
     for (centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;centerNodeIndexCounter++) {
       LocalCellNumber=centerNodeIndexTable[centerNodeIndexCounter];
@@ -510,6 +530,8 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
 
 
       while (modelParticle!=-1) {
+        if (nCollidingParticles==ParticleBufferLength) exit(__LINE__,__FILE__,"Error: the value of 'ParticleBufferLength' is exeeded - too many particles in a cells. Increase the value of 'ParticleBufferLength'");
+
         CollidingParticleList[nCollidingParticles].Particle=modelParticle;
         CollidingParticleList[nCollidingParticles].CollisionTimeFraction=1.0;
 
@@ -543,7 +565,7 @@ _StartParticleCollisionLoop_:
 
 
 //TEST!!!!!!!!!!!!!!!
-//MajorantCollisionFreq=(sqrt(xModelParticle[0]*xModelParticle[0]+xModelParticle[1]*xModelParticle[1]+xModelParticle[2]*xModelParticle[2])<700.0E3+_RADIUS_(_TARGET_)) ? 3.6E6*1.0E6*SigmaCrMax : 0.0;
+//MajorantCollisionFreq=(sqrt(xModelParticle[0]*xModelParticle[0]+xModelParticle[1]*xModelParticle[1]+xModelParticle[2]*xModelParticle[2])<700.0E3+_RADIUS_(_TARGET_)) ? 4E5*1.0E6*SigmaCrMax : 0.0;
 
 
 
@@ -695,7 +717,7 @@ for (idim=0;idim<3;idim++) vBackgroundParticle[idim]=0.0;
            }
 
             //check if the model particle should be removed from the system
-            if (KeepBackgroundAtmosphereParticle(modelParticleData)==false) {
+            if (true) { //// (KeepBackgroundAtmosphereParticle(modelParticleData)==false) {
               //the particle should be removed
               long int next,prev;
 

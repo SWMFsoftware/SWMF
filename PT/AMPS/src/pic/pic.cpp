@@ -6,6 +6,7 @@
 #include "pic.h"
 
 
+
 //sampling variables
 
 long int PIC::LastSampleLength=0,PIC::CollectingSampleCounter=0,PIC::RequiredSampleLength=100,PIC::DataOutputFileNumber=0;
@@ -18,6 +19,7 @@ PIC::Sampling::ExternalSamplingLocalVariables::fSamplingProcessor *PIC::Sampling
 PIC::Sampling::ExternalSamplingLocalVariables::fPrintOutputFile *PIC::Sampling::ExternalSamplingLocalVariables::PrintOutputFile=NULL;
 
 
+int PIC::Sampling::minIterationNumberForDataOutput=0;
 
 
 //====================================================
@@ -45,8 +47,12 @@ void PIC::TimeStep() {
   PIC::BC::InjectionBoundaryConditions();
 
   //inject particles into the volume of the domain
+#if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
   if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) PIC::BC::nInjectedParticles+=PIC::VolumeParticleInjection::InjectParticle();
+#endif
+
   InjectionBoundaryTime=MPI_Wtime()-InjectionBoundaryTime;
+
 
   //move existing particles
   ParticleMovingTime=MPI_Wtime();
@@ -213,6 +219,12 @@ void PIC::TimeStep() {
     int EmergencyLoadRebalancingFlag=false;
 
     if (PIC::Mesh::mesh.ThisThread==0) if (PIC::Parallel::CumulativeLatency>PIC::Parallel::EmergencyLoadRebalancingFactor*PIC::Parallel::RebalancingTime) EmergencyLoadRebalancingFlag=true;
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+    EmergencyLoadRebalancingFlag=true;
+#endif
+#endif
 
     MPI_Bcast(&EmergencyLoadRebalancingFlag,1,MPI_INT,0,MPI_COMM_WORLD);
 
@@ -554,7 +566,7 @@ void PIC::Sampling::Sampling() {
     //print output file
     char fname[_MAX_STRING_LENGTH_PIC_],ChemSymbol[_MAX_STRING_LENGTH_PIC_];
 
-    for (s=0;s<PIC::nTotalSpecies;s++) {
+    if (LastSampleLength>=minIterationNumberForDataOutput) for (s=0;s<PIC::nTotalSpecies;s++) {
       PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
       sprintf(fname,"pic.%s.s=%i.out=%ld.dat",ChemSymbol,s,DataOutputFileNumber);
 
@@ -582,7 +594,8 @@ void PIC::Sampling::Sampling() {
       for (int nfunc=0;nfunc<PIC::Sampling::ExternalSamplingLocalVariables::SamplingRoutinesRegistrationCounter;nfunc++) PIC::Sampling::ExternalSamplingLocalVariables::PrintOutputFile[nfunc](DataOutputFileNumber);
 
       //print the sampled total production rate due to volume injection
-      if (PIC::VolumeParticleInjection::SourceRate!=NULL) {
+#if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
+      if (PIC::VolumeParticleInjection::SourceRate!=NULL) if (LastSampleLength>=minIterationNumberForDataOutput) {
          double buffer[PIC::nTotalSpecies*PIC::nTotalThreads];
 
          MPI_Gather(PIC::VolumeParticleInjection::SourceRate,PIC::nTotalSpecies,MPI_DOUBLE,buffer,PIC::nTotalSpecies,MPI_DOUBLE,0,MPI_COMM_WORLD);
@@ -601,6 +614,7 @@ void PIC::Sampling::Sampling() {
 
          if (SamplingMode==_RESTART_SAMPLING_MODE_) for (s=0;s<PIC::nTotalSpecies;s++) PIC::VolumeParticleInjection::SourceRate[s]=0.0;
       }
+#endif
 
       //print into the file the sampled data of the internal surfaces installed into the mesh
 #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_OFF_
@@ -608,7 +622,7 @@ void PIC::Sampling::Sampling() {
 #elif _INTERNAL_BOUNDARY_MODE_ ==  _INTERNAL_BOUNDARY_MODE_ON_
       long int iSphericalSurface,nTotalSphericalSurfaces=PIC::BC::InternalBoundary::Sphere::InternalSpheres.usedElements();
 
-      for (s=0;s<PIC::nTotalSpecies;s++) for (iSphericalSurface=0;iSphericalSurface<nTotalSphericalSurfaces;iSphericalSurface++) {
+      for (iSphericalSurface=0;iSphericalSurface<nTotalSphericalSurfaces;iSphericalSurface++) {
         sprintf(fname,"pic.Sphere=%ld.%s.s=%i.out=%ld.dat",iSphericalSurface,ChemSymbol,s,DataOutputFileNumber);
 
         if (PIC::Mesh::mesh.ThisThread==0) {
@@ -762,6 +776,14 @@ void PIC::Init_BeforeParser() {
   //init MPI variables
   MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
   MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
+
+  if (ThisThread==0) {
+    time_t TimeValue=time(NULL);
+    tm *ct=localtime(&TimeValue);
+
+    printf("\nPIC: (%i/%i %i:%i:%i), Initialization of the code\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+    printf("PIC: Simulation Target - %s \n",_MACRO_STR_VALUE_(_TARGET_));
+  }
 
   //init sections of the particle solver
 

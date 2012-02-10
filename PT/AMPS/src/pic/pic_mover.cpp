@@ -6,15 +6,17 @@
 #include "pic.h"
 
 
-PIC::Mover::fSpeciesDependentParticleMover *PIC::Mover::MoveParticleTimeStep=NULL;
-PIC::Mover::fTotalParticleAcceleration PIC::Mover::TotalParticleAcceleration=PIC::Mover::TotalParticleAcceleration_default;
-PIC::Mover::fSpeciesDependentParticleMover_BoundaryInjection *PIC::Mover::MoveParticleBoundaryInjection=NULL;
+//PIC::Mover::fSpeciesDependentParticleMover *PIC::Mover::MoveParticleTimeStep=NULL;
+//PIC::Mover::fTotalParticleAcceleration PIC::Mover::TotalParticleAcceleration=PIC::Mover::TotalParticleAcceleration_default;
+//PIC::Mover::fSpeciesDependentParticleMover_BoundaryInjection *PIC::Mover::MoveParticleBoundaryInjection=NULL;
 PIC::Mover::fProcessOutsideDomainParticles PIC::Mover::ProcessOutsideDomainParticles=NULL;
 
 //====================================================
 //init the particle mover
 void PIC::Mover::Init() {
+/*
   int s;
+
 
   //allocate the mover functions array
   if ((MoveParticleTimeStep!=NULL)||(PIC::nTotalSpecies==0)) exit(__LINE__,__FILE__,"Error: the initialization of PIC::Mover is failed");
@@ -22,6 +24,7 @@ void PIC::Mover::Init() {
   MoveParticleTimeStep=new fSpeciesDependentParticleMover[PIC::nTotalSpecies];
   MoveParticleBoundaryInjection=new fSpeciesDependentParticleMover_BoundaryInjection[PIC::nTotalSpecies];
   for (s=0;s<PIC::nTotalSpecies;s++) MoveParticleTimeStep[s]=NULL,MoveParticleBoundaryInjection[s]=NULL;
+  */
 }
 
 //====================================================
@@ -101,7 +104,8 @@ void PIC::Mover::MoveParticles() {
               s=PIC::ParticleBuffer::GetI(ptr);
               LocalTimeStep=node->block->GetLocalTimeStep(s);
 
-              MoveParticleTimeStep[s](ptr,LocalTimeStep,node);
+//              MoveParticleTimeStep[s](ptr,LocalTimeStep,node);
+              _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node);
             }
 
           }
@@ -341,12 +345,12 @@ int iTemp,jTemp,kTemp;
     InternalBoundaryDescriptor_dtMin=NULL;
     ParticleIntersectionCode=_UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
 
-#if _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ == _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ON_
+#if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
     double accl[3],vv;
     int spec;
 
     spec=PIC::ParticleBuffer::GetI(ParticleData);
-    TotalParticleAcceleration(accl,spec,ptr,x,v,startNode);
+    _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(accl,spec,ptr,x,v,startNode);
 
     a=sqrt(accl[0]*accl[0]+accl[1]*accl[1]+accl[2]*accl[2]);
     vv=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
@@ -522,7 +526,7 @@ int iTemp,jTemp,kTemp;
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
     bool TransformationTimeStepLimitFlag=false;
 
-    int GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec](x,v,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
+    int GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_(x,v,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
 #endif
 
     //advance the particle's position
@@ -539,7 +543,7 @@ int iTemp,jTemp,kTemp;
 
     FirstBoundaryFlag=false;
 
-#if _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ == _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ON_
+#if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
     v[0]+=dtMin*accl[0],v[1]+=dtMin*accl[1],v[2]+=dtMin*accl[2];
 #endif
 
@@ -573,7 +577,7 @@ int iTemp,jTemp,kTemp;
      int specInit=spec;
 #endif
 
-     GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationProcessor[spec](xInit,x,v,spec,ptr,ParticleData,dtMin,startNode);
+     GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,x,v,spec,ptr,ParticleData,dtMin,startNode);
 
      //adjust the value of the dtLeft to match the time step for the species 'spec'
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -929,7 +933,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
     dt=dtLeft;
     dtLeft=0.0;
 
-    TotalParticleAcceleration(accl,spec,ptr,x,v,startNode);
+    _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(accl,spec,ptr,x,v,startNode);
 
     aa=sqrt(accl[0]*accl[0]+accl[1]*accl[1]+accl[2]*accl[2]);
     vv=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
@@ -975,7 +979,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
     bool TransformationTimeStepLimitFlag=false;
 
     dtLeft+=dt;
-    GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec](x,v,spec,ptr,ParticleData,dt,TransformationTimeStepLimitFlag,startNode);
+    GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_(x,v,spec,ptr,ParticleData,dt,TransformationTimeStepLimitFlag,startNode);
     dtLeft-=dt;
 #endif
 
@@ -984,7 +988,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
     x[0]+=dt*v[0],x[1]+=dt*v[1],x[2]+=dt*v[2];
 
     //first order trajectory integration
-    #if _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ == _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ON_
+    #if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
     v[0]+=dt*accl[0],v[1]+=dt*accl[1],v[2]+=dt*accl[2];
     #endif
 
@@ -1014,7 +1018,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
       int specInit=spec;
 #endif
 
-      GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationProcessor[spec](xinit,x,v,spec,ptr,ParticleData,dt,startNode);
+      GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xinit,x,v,spec,ptr,ParticleData,dt,startNode);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
  #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -1218,7 +1222,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_SecondOrder(long int ptr,double dt
     dtLeft=0.0;
     IntegrationInterrupted=false;
 
-    TotalParticleAcceleration(accl,spec,ptr,xInit,vInit,startNode);
+    _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(accl,spec,ptr,xInit,vInit,startNode);
 
     aa=sqrt(accl[0]*accl[0]+accl[1]*accl[1]+accl[2]*accl[2]);
     vv=sqrt(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2]);
@@ -1246,7 +1250,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_SecondOrder(long int ptr,double dt
     //in the case when a symmetry has to be considered, transfer the particle position and velcoty accordinly
 #if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
     middleNode=PIC::Mesh::mesh.findTreeNode(xMiddle,startNode);
-    TotalParticleAcceleration(accl,spec,ptr,xMiddle,vMiddle,newNode);
+    _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(accl,spec,ptr,xMiddle,vMiddle,newNode);
 #elif _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_
     exit(__LINE__,__FILE__,"not implemented");
 #else
@@ -1452,10 +1456,10 @@ MovingLoop:
     InternalBoundaryDescriptor_dtMin=NULL;
     ParticleIntersectionCode=_UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
 
-#if _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ == _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ON_
+#if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
     double acclInit[3],acclMiddle[3],vv;
 
-    TotalParticleAcceleration(acclInit,spec,ptr,xInit,vInit,startNode);
+    _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclInit,spec,ptr,xInit,vInit,startNode);
 
     a=sqrt(acclInit[0]*acclInit[0]+acclInit[1]*acclInit[1]+acclInit[2]*acclInit[2]);
     vv=sqrt(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2]);
@@ -1496,7 +1500,7 @@ MovingLoop:
       }
     }
 
-    TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode);
+    _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode);
 #elif _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_
     exit(__LINE__,__FILE__,"not implemented");
 #else
@@ -1696,7 +1700,7 @@ MovingLoop:
     */
 
     dtTotal+=dtMin;
-    GenericParticleTransformationReturnCode= _PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_ (xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
+    GenericParticleTransformationReturnCode= _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_ (xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
     dtTotal-=dtMin;
 
     if ((GenericParticleTransformationReturnCode!=_GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_)&&(TransformationTimeStepLimitFlag==true)) ParticleIntersectionCode=_UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
@@ -1930,7 +1934,7 @@ exit(__LINE__,__FILE__,"not implemented");
     if (GenericParticleTransformationReturnCode==_GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_) {
       int specInit=spec;
 
-      GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationProcessor[spec](xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode);
+      GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode);
 
       if (GenericParticleTransformationReturnCode==_GENERIC_PARTICLE_TRANSFORMATION_CODE__PARTICLE_REMOVED_) {
         PIC::ParticleBuffer::DeleteParticle(ptr);

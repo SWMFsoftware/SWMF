@@ -167,6 +167,12 @@ namespace PIC {
     void SetChemSymbol(char*,int);
     void GetChemSymbol(char*,int);
 
+    //set and get the specie type (gas, external, background)
+    extern int *SpcecieTypeTable;
+    void SetSpecieType(int SpcecieType,int spec);
+    int GetSpecieType(int spec);
+
+
     namespace Parser {
       void InitChemTable(CiFileOperations&);
       int GetSpeciesNumber(int&,CiFileOperations&);
@@ -186,8 +192,44 @@ namespace PIC {
     #define _PIC_PARTICLE_DATA_VELOCITY_OFFSET_  (_PIC_PARTICLE_DATA_PREV_OFFSET_ + sizeof(long int))
     #define _PIC_PARTICLE_DATA_POSITION_OFFSET_  (_PIC_PARTICLE_DATA_VELOCITY_OFFSET_+ 3*sizeof(double))
 
-    //the offset for the variable that contains the 'particle weight correction'
-    extern int _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_;
+    #define _PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_ (_PIC_PARTICLE_DATA_POSITION_OFFSET_+DIM*sizeof(double))
+
+    //the individual particle's weight corection
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+    #define _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_ _PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_
+    #define _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_  sizeof(double)
+#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+    #define _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_ -1
+    #define _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_  0
+#else
+   exit(__LINE__,__FILE__,"Error: unknown option");
+#endif
+
+
+    //electrically charged dust
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+   #define _PIC_PARTICLE_DATA__DUST_GRAIN_MASS_OFFSET_    (_PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_)
+   #define _PIC_PARTICLE_DATA__DUST_GRAIN_RADIUS_OFFSET_  (_PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_+sizeof(double))
+
+#if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
+   #define _PIC_PARTICLE_DATA__DUST_GRAIN_CHARGE_OFFSET_  (_PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_+2*sizeof(double))
+   #define _PIC_PARTICLE_DATA__DUST_GRAIN__DATA_LENGTH_   3*sizeof(double)
+#else
+   #define _PIC_PARTICLE_DATA__DUST_GRAIN_CHARGE_OFFSET_  -1
+   #define _PIC_PARTICLE_DATA__DUST_GRAIN__DATA_LENGTH_    2*sizeof(double)
+#endif
+
+#else
+   #define _PIC_PARTICLE_DATA__DUST_GRAIN_MASS_OFFSET_    -1
+   #define _PIC_PARTICLE_DATA__DUST_GRAIN_RADIUS_OFFSET_  -1
+   #define _PIC_PARTICLE_DATA__DUST_GRAIN_CHARGE_OFFSET_  -1
+   #define _PIC_PARTICLE_DATA__DUST_GRAIN__DATA_LENGTH_    0
+#endif
+
+
+    //the total length of the default particle data
+    #define _PIC_PARTICLE_DATA__DEFAULT_DATA_LENGTH_  (_PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_+_PIC_PARTICLE_DATA__DUST_GRAIN__DATA_LENGTH_)
+
 
     //the total length of a data allocated for a particle
     extern long int ParticleDataLength;
@@ -530,9 +572,9 @@ namespace PIC {
     typedef void (*fPrintDataCenterNode)(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,cDataCenterNode *CenterNode);
     typedef void (*fInterpolateCenterNode)(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,cDataCenterNode *CenterNode);
 
-    extern list<fPrintVariableListCenterNode> PrintVariableListCenterNode;
-    extern list<fPrintDataCenterNode> PrintDataCenterNode;
-    extern list<fInterpolateCenterNode> InterpolateCenterNode;
+    extern vector<fPrintVariableListCenterNode> PrintVariableListCenterNode;
+    extern vector<fPrintDataCenterNode> PrintDataCenterNode;
+    extern vector<fInterpolateCenterNode> InterpolateCenterNode;
 
     //the class defining the 'central node' that contains the sampling data
     class cDataCenterNode : public cBasicCenterNode {
@@ -1323,6 +1365,9 @@ namespace PIC {
 */
 
   namespace Mover {
+
+    #include "UserDefinition.PIC.Mover.h"
+
     //the return codes of the moving procedures
     #define _PARTICLE_REJECTED_ON_THE_FACE_ -1
     #define _PARTICLE_DELETED_ON_THE_FACE_   0
@@ -1330,15 +1375,15 @@ namespace PIC {
     #define _PARTICLE_LEFT_THE_DOMAIN_       2
     #define _PARTICLE_MOTION_FINISHED_       3
 
-    typedef void (*fTotalParticleAcceleration)(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
+//    typedef void (*fTotalParticleAcceleration)(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
     typedef int (*fSpeciesDependentParticleMover) (long int,double,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
     typedef int (*fSpeciesDependentParticleMover_BoundaryInjection) (long int,double,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,bool);
 
 
     //the vector containing the species specific particle moving procedures
-    extern fSpeciesDependentParticleMover *MoveParticleTimeStep;
-    extern fTotalParticleAcceleration TotalParticleAcceleration;
-    extern fSpeciesDependentParticleMover_BoundaryInjection *MoveParticleBoundaryInjection;
+//    extern fSpeciesDependentParticleMover *MoveParticleTimeStep;
+//    extern fTotalParticleAcceleration TotalParticleAcceleration;
+//    extern fSpeciesDependentParticleMover_BoundaryInjection *MoveParticleBoundaryInjection;
 
     //process a particle when it leaves the boundary of the computational domain
     typedef int (*fProcessOutsideDomainParticles) (long int ptr,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
@@ -1462,6 +1507,12 @@ namespace PIC {
      void readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree); //MeanIonMass -> the mean ion mass of the plasma flow in [amu]
      void readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
+     //user defined pre-processor of the data that is readed by ICES
+     typedef void (*fDSMCdataPreProcessor)(double *x,cDataNodeDSMC& data);
+     typedef void (*fSWMFdataPreProcessor)(double *x,cDataNodeSWMF& data);
+
+     extern fDSMCdataPreProcessor DSMCdataPreProcessor;
+     extern fSWMFdataPreProcessor SWMFdataPreProcessor;
 
      void PrintVariableList(FILE* fout,int DataSetNumber);
      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
@@ -1571,12 +1622,13 @@ namespace PIC {
       //contains functions that are used to describe transformations (changing of internal parameters of a particle) that are not due to chemical reactions
       //dt <- can be limited by the function
       typedef int (*fTransformationIndicator)(double *x,double *v,int spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double &dt,bool &TransformationTimeStepLimitFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
-      extern fTransformationIndicator *TransformationIndicator;
+//      extern fTransformationIndicator *TransformationIndicator;
 
-      typedef int (*fTransformationProcessor)(double *xInit,double *xFinal,double *v,int spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
-      extern fTransformationProcessor *TransformationProcessor;
+      typedef int (*fTransformationProcessor)(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+//      extern fTransformationProcessor *TransformationProcessor;
 
       inline void Init() {
+        /*
         TransformationIndicator=new fTransformationIndicator[PIC::nTotalSpecies];
         TransformationProcessor=new fTransformationProcessor[PIC::nTotalSpecies];
 
@@ -1584,13 +1636,16 @@ namespace PIC {
         if (_PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_) exit(__LINE__,__FILE__,"Error: only one particle transformation model can be used");
 
         for (int s=0;s<PIC::nTotalSpecies;s++) TransformationIndicator[s]=NULL,TransformationProcessor[s]=NULL;
+        */
       }
 
       inline void SetSpeciesModel(fTransformationIndicator Indicator, fTransformationProcessor Processor,int spec) {
+        /*
          if (TransformationIndicator==NULL) Init();
 
          TransformationIndicator[spec]=Indicator;
          TransformationProcessor[spec]=Processor;
+         */
       }
 
       #define _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_       0
@@ -1864,5 +1919,13 @@ namespace PIC {
 }
 
 
-
 #endif
+
+//include headers for individual physical models
+#if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
+#include "pic__model__electrically_charged_dust.h"
+#endif
+
+
+
+

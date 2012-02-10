@@ -102,6 +102,9 @@ void PIC::Parser::readMain(CiFileOperations& ifile) {
       PIC::MolecularData::LoadingSpeciesList[spec][0]='\0';
     }
 
+    PIC::MolecularData::SpcecieTypeTable=new int [PIC::nTotalSpecies];
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) PIC::MolecularData::SpcecieTypeTable[spec]=-1;
+
 	  spec=0;
 
 	   while (str[0]!='\0') {
