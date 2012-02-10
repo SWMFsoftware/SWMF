@@ -7,36 +7,27 @@ module ModHdf5
   integer, parameter:: lNameVar = 10
 
 contains
-  !============================================================================
-  subroutine hdf5_setup
-
-    ! do nothing
-
-  end subroutine hdf5_setup
   !=========================================================================
-  subroutine write_plot_hdf5(filename, PlotVarNames, PlotVarUnits, nPlotVar, &
-       xmin, xmax, ymin, ymax, zmin, zmax, nBLKcells)
+  subroutine write_plot_hdf5(NameFile, NameVar_V, NameUnit_V, &
+       nPlotVar, xMin, xMax, yMin, yMax, zMin, zMax, nCell)
 
-    use ModIO, ONLY : nplotvarmax
-
+    character(len=80),       intent(in):: NameFile
     integer,                 intent(in):: nPlotVar
-    character(len=80),       intent(in):: filename
-    character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
-    character(len=lNameVar), intent(in):: plotVarUnits(nPlotVar)
+    character(len=lNameVar), intent(in):: NameVar_V(nPlotVar)
+    character(len=lNameVar), intent(in):: NameUnit_V(nPlotVar)
     real,                    intent(in):: xMin, xMax, yMin, yMax, zMin, zMax
-    integer,                 intent(in):: nBLKcells
+    integer,                 intent(in):: nCell
     !----------------------------------------------------------------------
     write (*,*) "ERROR: HDF5 plotting is not enabled!"
 
   end subroutine write_plot_hdf5
   !=========================================================================
-  subroutine write_var_hdf5(PlotVar, nPlotVar, H5Index, iBLK)
+  subroutine write_var_hdf5(PlotVar_GI, nPlotVar, iBlockH5, iBlock)
 
-    use ModMain, ONLY : nI, nJ, nK, nBlockMax
-    use ModIO, ONLY: nPlotVarMax
+    use ModMain, ONLY : nI, nJ, nK
 
-    integer, intent(in) :: nPlotVar, H5Index, iBLK
-    real, intent(in) :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVarMax)
+    integer, intent(in) :: nPlotVar, iBlockH5, iBlock
+    real, intent(in) :: PlotVar_GI(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
     !----------------------------------------------------------------------
     write (*,*) "ERROR: HDF5 plotting not enabled!"
 
