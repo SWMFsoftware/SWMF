@@ -1122,6 +1122,36 @@ namespace PIC {
     }
 
 
+    namespace SampleVelocityDistribution {
+
+      struct cVelocityVector {
+        double v[3];
+      };
+
+      struct cSamplePositionVector {
+        double x[DIM];
+      };
+
+      extern cVelocityVector *minSampledVelocity,*maxSampledVelocity,*dVel; //the sampling velocity range and size of the "velocity bin" for each species
+      extern int nVelocitySamplingIntervals; //the total number of "velocity bins" sampled in the distribution function
+      extern vector< pair<PIC::Mesh::cDataBlockAMR*,int> > SamplingPointsList; //the list of the nodes and cells' numbers where the distribution functiho will be sampled
+      extern vector<cSamplePositionVector> SamplingPointsPositions; //the list of the physical locations where the distribution function will be sampled
+
+      //init the internal buffers of the model
+      void Init();
+
+      //add new sampling point
+      void AddSamplingPoint(double *x);
+
+      //set up the velocity distribution limits
+      void SetSamplingLimits(cVelocityVector *minvel,cVelocityVector *maxvel,int nSamplingIntervals);
+
+      //sample the distribution
+      void Sampling();
+
+      //print output file and clear the sampling buffers
+      void PrintOutputFile(char *fname);
+    }
 
     void Sampling();
 
@@ -1366,7 +1396,7 @@ namespace PIC {
 
   namespace Mover {
 
-    #include "UserDefinition.PIC.Mover.h"
+//    #include "UserDefinition.PIC.Mover.h"
 
     //the return codes of the moving procedures
     #define _PARTICLE_REJECTED_ON_THE_FACE_ -1
@@ -1926,6 +1956,9 @@ namespace PIC {
 #include "pic__model__electrically_charged_dust.h"
 #endif
 
-
+//inlude headers for the user defined models
+#ifdef _PIC__USER_DEFINED__USER_PHYSICAL_MODEL_LIST_
+#include _PIC__USER_DEFINED__USER_PHYSICAL_MODEL_LIST_
+#endif
 
 

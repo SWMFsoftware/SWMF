@@ -20,8 +20,14 @@
 #define _INDIVIDUAL_PARTICLE_WEIGHT_MODE_  _INDIVIDUAL_PARTICLE_WEIGHT_ON_ 
 
 
-//accounting for force acting upon on a particle when integrate the particle trajectory 
-#define _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ _PARTICLE_TRAJECTORY_FORCE_INTEGRTAION_MODE_ON_
+//accounting for force acting upon on a particle when integrate the particle trajectory; 
+#define _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
+#define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_(xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode) _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_OFF_;
+#define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(accl,spec,ptr,x,v,startNode) TotalParticleAcceleration_default(accl,spec,ptr,x,v,startNode);
+#define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xinit,x,v,spec,ptr,ParticleData,dt,startNode) _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
+#define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder(ptr,LocalTimeStep,node);
+#define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(ptr,LocalTimeStep,node,FirstBoundaryFlag) PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(ptr,LocalTimeStep,node,FirstBoundaryFlag);
+
 
 //sampling the distribution function
 #define _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ _SAMPLING_DISTRIBUTION_FUNCTION_ON_
@@ -57,3 +63,7 @@
 
 //collisions of model particles with the background atmosphere 
 #define _PIC_BACKGROUND_ATMOSPHERE_COLLISION_FREQ_MODE_ _PIC_BACKGROUND_ATMOSPHERE_COLLISION_FREQ_MODE__UNIFORM_
+
+//the model of the electrically charged dust
+#define _PIC_MODEL__DUST__MODE_ _PIC_MODEL__DUST__MODE__OFF_
+#define _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__OFF_
