@@ -610,13 +610,13 @@ contains
 
   !BOP =======================================================================
   !IROUTINE: couple_ih_oh_global - couple IH component to OH component
- !INTERFACE:                                      
-  subroutine couple_ih_oh_global(tSimulation)
+  !INTERFACE:                                      
+  subroutine couple_ih_oh_global(TimeCoupling)
 
     use ModMpi,    ONLY: MPI_reduce
 
     !INPUT ARGUMENTS:                                       
-    real, intent(in) :: tSimulation     ! simulation time at coupling  
+    real, intent(in) :: TimeCoupling     ! simulation time at coupling  
 
     !DESCRIPTION:                   
     ! Couple between two components:     
@@ -666,7 +666,7 @@ contains
     ! Fill in coupled state variables
     if(is_proc(IH_)) then
        call IH_get_for_global_buffer(iSize,jSize,kSize, &
-            BufferMinMaxIh_DI,Buffer_VIII)
+            BufferMinMaxIh_DI, TimeCoupling, IH_, OH_, Buffer_VIII)
        ! Collect to the IH root PE                       
        call MPI_reduce(Buffer_VIII, BufferGlobal_VIII, nSize, MPI_REAL,MPI_SUM,&
             0, i_comm(IH_), iError)
@@ -715,10 +715,10 @@ contains
   !BOP =======================================================================
   !IROUTINE: couple_oh_ih_global - couple OH to IH
   !INTERFACE:
-  subroutine couple_oh_ih_global(tSimulation)
+  subroutine couple_oh_ih_global(TimeCoupling)
 
     !INPUT ARGUMENT:                                   
-    real, intent(in) :: tSimulation
+    real, intent(in) :: TimeCoupling
 
     !DESCRIPTION:
     ! Couple between two components: 
