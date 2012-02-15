@@ -1,7 +1,9 @@
 !^CFG COPYRIGHT UM
 module BATL_pass_cell
 
-  use BATL_geometry, ONLY: IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis
+  use BATL_geometry, ONLY: IsCartesian, IsRzGeometry, &
+       IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
+  use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
 
   ! Possible improvements:
   ! (1) Instead of sending the receiving block number
@@ -117,6 +119,8 @@ contains
          iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, iNode_B, &
          iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_
 
+    use BATL_grid, ONLY: CoordMin_DB, CoordMax_DB
+
     use ModMpi
 
 
@@ -187,6 +191,9 @@ contains
     integer :: iNodeRecv, iNodeSend
     integer :: iBlockRecv, iProcRecv, iBlockSend, iProcSend, DiLevel
 
+    ! Is the sending node next to the symmetry axis?
+    logical :: IsAxisNode
+
     ! Fast lookup tables for index ranges per dimension
     integer, parameter:: Min_=1, Max_=2
     integer:: iEqualS_DII(MaxDim,-1:1,Min_:Max_)
@@ -199,6 +206,9 @@ contains
     ! Index range for recv and send segments of the blocks
     integer :: iRMin, iRMax, jRMin, jRMax, kRMin, kRMax
     integer :: iSMin, iSMax, jSMin, jSMax, kSMin, kSMax
+
+    ! Message passing across the pole can reverse the recv. index range
+    integer :: DiR = 1, DjR = 1, DkR = 1
 
     ! Variables related to recv and send buffers
     integer, allocatable, save:: iBufferS_P(:), nBufferS_P(:), nBufferR_P(:)
@@ -352,15 +362,29 @@ contains
              if(Unused_B(iBlockSend)) CYCLE
 
              iNodeSend = iNode_B(iBlockSend)
+             
+             IsAxisNode = .false.
 
              do kDir = -1, 1
                 ! Do not message pass in ignored dimensions
                 if(nDim < 3 .and. kDir /= 0) CYCLE
 
+                if(nDim > 2 .and. IsLatitudeAxis) IsAxisNode = &
+                     kDir == -1 .and. &
+                     CoordMin_DB(Lat_,iBlockSend) < -cHalfPi + 1e-8 .or. &
+                     kDir == +1 .and. &
+                     CoordMax_DB(Lat_,iBlockSend) > +cHalfPi - 1e-8
+
                 do jDir = -1, 1
                    if(nDim < 2 .and. jDir /= 0) CYCLE
                    ! Skip edges
                    if(.not.DoSendCorner .and. jDir /= 0 .and. kDir /= 0) CYCLE
+
+                   if(nDim > 2 .and. IsSphericalAxis) IsAxisNode = &
+                        jDir == -1 .and. &
+                        CoordMin_DB(Theta_,iBlockSend) < 1e-8 .or. &
+                        jDir == +1 .and. &
+                        CoordMax_DB(Theta_,iBlockSend) > cPi-1e-8
 
                    do iDir = -1,1
                       ! Ignore inner parts of the sending block
@@ -369,6 +393,9 @@ contains
                       ! Exclude corners where i and j or k is at the edge
                       if(.not.DoSendCorner .and. iDir /= 0 .and. &
                            (jDir /= 0 .or.  kDir /= 0)) CYCLE
+
+                      if(nDim > 1 .and. IsCylindricalAxis) IsAxisNode = &
+                           iDir == -1 .and. iTree_IA(Coord1_,iNodeSend) == 1
 
                       DiLevel = DiLevelNei_IIIB(iDir,jDir,kDir,iBlockSend)
                       
@@ -469,12 +496,12 @@ contains
 
       ! Copy buffer into recv block of State_VGB
 
-      integer:: iBufferR, i, j, k, Di, Dj, Dk
+      integer:: iBufferR, i, j, k
       real :: TimeSend, WeightOld, WeightNew
       !------------------------------------------------------------------------
 
-      jRMin = 1; jRMax = 1; Dj = 1
-      kRMin = 1; kRMax = 1; Dk = 1
+      jRMin = 1; jRMax = 1
+      kRMin = 1; kRMax = 1
 
       iBufferR = 0
       do iProcSend = 0, nProc - 1
@@ -484,13 +511,13 @@ contains
             iBlockRecv = nint(BufferR_I(iBufferR+1))
             iRMin      = nint(BufferR_I(iBufferR+2))
             iRMax      = nint(BufferR_I(iBufferR+3))
-            Di         = sign(1,iRMax - iRMin)
+            if(nDim > 1) DiR = sign(1,iRMax - iRMin)
             if(nDim > 1) jRMin = nint(BufferR_I(iBufferR+4))
             if(nDim > 1) jRMax = nint(BufferR_I(iBufferR+5))
-            if(nDim > 1) Dj = sign(1, jRmax - jRMin)
+            if(nDim > 2) DjR   = sign(1, jRmax - jRMin)
             if(nDim > 2) kRMin = nint(BufferR_I(iBufferR+6))
             if(nDim > 2) kRMax = nint(BufferR_I(iBufferR+7))
-            if(nDim > 2) Dk = sign(1, kRmax - kRMin)
+            if(nDim > 2) DkR   = sign(1, kRmax - kRMin)
 
             iBufferR = iBufferR + 1 + 2*nDim
             if(present(Time_B))then
@@ -503,7 +530,7 @@ contains
                WeightOld = (TimeSend - Time_B(iBlockRecv)) &
                     /      (TimeSend - TimeOld_B(iBlockRecv))
                WeightNew = 1 - WeightOld
-               do k = kRMin, kRmax, Dk; do j = jRMin, jRMax, Dj; do i = iRMin, iRmax, Di
+               do k=kRMin,kRmax,DkR; do j=jRMin,jRMax,DjR; do i=iRMin,iRmax,DiR
                   State_VGB(:,i,j,k,iBlockRecv) = &
                        WeightOld*State_VGB(:,i,j,k,iBlockRecv) + &
                        WeightNew*BufferR_I(iBufferR+1:iBufferR+nVar)
@@ -511,7 +538,7 @@ contains
                   iBufferR = iBufferR + nVar
                end do; end do; end do
             else
-               do k = kRMin, kRmax, Dk; do j = jRMin, jRMax, Dj; do i = iRMin, iRmax, Di
+               do k=kRMin,kRmax,DkR; do j=jRMin,jRMax,DjR; do i=iRMin,iRmax,DiR
                   State_VGB(:,i,j,k,iBlockRecv) = &
                        BufferR_I(iBufferR+1:iBufferR+nVar)
 
@@ -530,8 +557,6 @@ contains
 
       integer :: iBufferS, i, j, k, nSize
       real    :: WeightOld, WeightNew
-
-      integer:: Di=1, Dj=1, Dk=1
       !------------------------------------------------------------------------
 
       iSend = (3*iDir + 3)/2
@@ -552,11 +577,6 @@ contains
       kRMin = iEqualR_DII(3,kDir,Min_)
       kRMax = iEqualR_DII(3,kDir,Max_)
 
-      !if(IsSphericalAxis .and. iBlockRecv == 1)then
-      !   write(*,*)'!!! iDir, jDir, kDir, iNodeSend =', &
-      !        iDir, jDir, kDir, iNodeSend
-      !end if
-
       if(DoCountOnly)then
          ! Number of reals to send to and received from the other processor
          nSize = nVar*(iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1) &
@@ -567,28 +587,17 @@ contains
          RETURN
       end if
 
-      if(nDim > 2 .and. IsLatitudeAxis)then
-
-         if(  kDir /= 0 .and. &
-              iTree_IA(Coord3_,iNodeRecv) == iTree_IA(Coord3_,iNodeSend))then
+      if(IsAxisNode)then
+         if(IsLatitudeAxis)then
             kRMin = iEqualR_DII(3,-kDir,Max_)
             kRMax = iEqualR_DII(3,-kDir,Min_)
-         end if
-
-      elseif(nDim > 2 .and. IsSphericalAxis)then
-         ! Sending in Theta direction across (equal Coord2) pole
-         if(jDir /= 0 .and. &
-              iTree_IA(Coord2_,iNodeRecv) == iTree_IA(Coord2_,iNodeSend))then
+         elseif(IsSphericalAxis)then
             jRMin = iEqualR_DII(2,-jDir,Max_)
             jRMax = iEqualR_DII(2,-jDir,Min_)
+         elseif(IsCylindricalAxis)then
+            iRMin = iEqualR_DII(1,1,Max_)
+            iRMax = iEqualR_DII(1,1,Min_)
          end if
-
-      elseif(nDim > 1 .and. IsCylindricalAxis .and. iDir == -1 .and. &
-           iTree_IA(Coord1_,iNodeSend) == 1)then
-
-         iRMin = iEqualR_DII(1,1,Max_)
-         iRMax = iEqualR_DII(1,1,Min_)
-
       end if
 
       iSMin = iEqualS_DII(1,iDir,Min_)
@@ -598,7 +607,7 @@ contains
       kSMin = iEqualS_DII(3,kDir,Min_)
       kSMax = iEqualS_DII(3,kDir,Max_)
 
-      !if(IsSphericalAxis .and. iBlockRecv == 1)then
+      !if(DoTest)then
       !   write(*,*)'!!! iSMin, iSMax, jSMin, jSMax, kSMin, kSMax=', &
       !        iSMin, iSMax, jSMin, jSMax, kSMin, kSMax
       !   write(*,*)'!!! iRMin, iRMax, jRMin, jRMax, kRMin, kRMax=', &
@@ -609,9 +618,9 @@ contains
 
       if(iProc == iProcRecv)then
          ! Local copy
-         Di =              sign(1, iRMax - iRMin)
-         if(nDim > 1) Dj = sign(1, jRMax - jRMin)
-         if(nDim > 2) Dk = sign(1, kRMax - kRMin)
+         if(nDim > 1) DiR = sign(1, iRMax - iRMin)
+         if(nDim > 2) DjR = sign(1, jRMax - jRMin)
+         if(nDim > 2) DkR = sign(1, kRMax - kRMin)
 
          if(present(Time_B)) UseTime = &
               abs(Time_B(iBlockSend) - Time_B(iBlockRecv)) > 1e-30
@@ -619,13 +628,13 @@ contains
             WeightOld = (Time_B(iBlockSend) - Time_B(iBlockRecv)) &
                  /      (Time_B(iBlockSend) - TimeOld_B(iBlockRecv))
             WeightNew = 1 - WeightOld
-            State_VGB(:,iRMin:iRMax:Di,jRMin:jRMax:Dj,kRMin:kRMax:Dk,&
+            State_VGB(:,iRMin:iRMax:DiR,jRMin:jRMax:DjR,kRMin:kRMax:DkR,&
                  iBlockRecv)= WeightOld* &
-                 State_VGB(:,iRMin:iRMax:Di,jRMin:jRMax:Dj,kRMin:kRMax:Dk, &
+                 State_VGB(:,iRMin:iRMax:DiR,jRMin:jRMax:DjR,kRMin:kRMax:DkR, &
                  iBlockRecv) + WeightNew* &
                  State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
          else
-            State_VGB(:,iRMin:iRMax:Di,jRMin:jRMax:Dj,kRMin:kRMax:Dk, &
+            State_VGB(:,iRMin:iRMax:DiR,jRMin:jRMax:DjR,kRMin:kRMax:DkR, &
                  iBlockRecv)= &
                  State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
          end if
@@ -740,6 +749,23 @@ contains
          RETURN
       end if
 
+      if(IsAxisNode)then
+         if(IsLatitudeAxis)then
+            kRMin = iRestrictR_DII(3,kSend,Max_)
+            kRMax = iRestrictR_DII(3,kSend,Min_)
+         elseif(IsSphericalAxis)then
+            jRMin = iRestrictR_DII(2,jSend,Max_)
+            jRMax = iRestrictR_DII(2,jSend,Min_)
+         elseif(IsCylindricalAxis)then
+            iRMin = iRestrictR_DII(1,0,Max_)
+            iRMax = iRestrictR_DII(1,0,Min_)
+         end if
+      end if
+
+      if(nDim > 1) DiR = sign(1, iRMax - iRMin)
+      if(nDim > 2) DjR = sign(1, jRMax - jRMin)
+      if(nDim > 2) DkR = sign(1, kRMax - kRMin)
+
       ! Index range that gets restricted depends on iDir,jDir,kDir only
       iSMin = iRestrictS_DII(1,iDir,Min_)
       iSMax = iRestrictS_DII(1,iDir,Max_)
@@ -779,14 +805,14 @@ contains
                  /      (Time_B(iBlockSend) - TimeOld_B(iBlockRecv))
             WeightNew = 1 - WeightOld
 
-            do kR = kRMin, kRMax
-               kS1 = kSMin + kRatioRestr*(kR-kRMin)
+            do kR = kRMin, kRMax, DkR
+               kS1 = kSMin + kRatioRestr*abs(kR-kRMin)
                kS2 = kS1 + kRatioRestr - 1
-               do jR = jRMin, jRMax
-                  jS1 = jSMin + jRatioRestr*(jR-jRMin)
+               do jR = jRMin, jRMax, DjR
+                  jS1 = jSMin + jRatioRestr*abs(jR-jRMin)
                   jS2 = jS1 + jRatioRestr - 1
-                  do iR = iRMin, iRMax
-                     iS1 = iSMin + iRatioRestr*(iR-iRMin)
+                  do iR = iRMin, iRMax, DiR
+                     iS1 = iSMin + iRatioRestr*abs(iR-iRMin)
                      iS2 = iS1 + iRatioRestr - 1
                      if(UseMin) then
                         do iVar = 1, nVar
@@ -815,14 +841,14 @@ contains
 
          else
             ! No time interpolation/extrapolation is needed
-            do kR = kRMin, kRMax
-               kS1 = kSMin + kRatioRestr*(kR-kRMin)
+            do kR = kRMin, kRMax, DkR
+               kS1 = kSMin + kRatioRestr*abs(kR-kRMin)
                kS2 = kS1 + kRatioRestr - 1
-               do jR = jRMin, jRMax
-                  jS1 = jSMin + jRatioRestr*(jR-jRMin)
+               do jR = jRMin, jRMax, DjR
+                  jS1 = jSMin + jRatioRestr*abs(jR-jRMin)
                   jS2 = jS1 + jRatioRestr - 1
-                  do iR = iRMin, iRMax
-                     iS1 = iSMin + iRatioRestr*(iR-iRMin)
+                  do iR = iRMin, iRMax, DiR
+                     iS1 = iSMin + iRatioRestr*abs(iR-iRMin)
                      iS2 = iS1 + iRatioRestr - 1
                      if(UseMin)then
                         do iVar = 1, nVar
@@ -842,6 +868,14 @@ contains
                                 InvIjkRatioRestr * &
                                 sum(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2, &
                                 iBlockSend))
+
+                           ! The above average is exact for linear functions
+                           ! on Cartesian grids. For testing purposes 
+                           ! apply exact solution to test the rest of the code
+                           ! For serial execution only (iBlockRecv is local)
+                           !if(.not.(IsCartesian .or. IsRzGeometry)) &
+                           !     State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
+                           !     Xyz_DGB(iVar,iR,jR,kR,iBlockRecv) !!!
                         end do
                      end if
                   end do
@@ -867,14 +901,14 @@ contains
             BufferS_I(iBufferS) = Time_B(iBlockSend)
          end if
 
-         do kR=kRMin,kRMax
-            kS1 = kSMin + kRatioRestr*(kR-kRMin)
+         do kR = kRMin, kRMax, DkR
+            kS1 = kSMin + kRatioRestr*abs(kR-kRMin)
             kS2 = kS1 + kRatioRestr - 1
-            do jR=jRMin,jRMax
-               jS1 = jSMin + jRatioRestr*(jR-jRMin)
+            do jR = jRMin, jRMax, DjR
+               jS1 = jSMin + jRatioRestr*abs(jR-jRMin)
                jS2 = jS1 + jRatioRestr - 1
-               do iR=iRMin,iRMax
-                  iS1 = iSMin + iRatioRestr*(iR-iRMin)
+               do iR = iRMin, iRMax, DiR
+                  iS1 = iSMin + iRatioRestr*abs(iR-iRMin)
                   iS2 = iS1 + iRatioRestr - 1
                   if(UseMin) then
                      do iVar = 1, nVar
@@ -910,12 +944,26 @@ contains
 
     subroutine do_prolong
 
+      use ModCoordTransform, ONLY: cross_product
+      use BATL_grid, ONLY: Xyz_DGB, CoordMin_D, CoordMax_D
+      use BATL_tree, ONLY: get_tree_position
+      use BATL_geometry, ONLY: coord_to_xyz
+      use BATL_size,     ONLY: nDimAmr
+
       integer :: iR, jR, kR, iS, jS, kS, iS1, jS1, kS1
       integer :: iRatioRestr, jRatioRestr, kRatioRestr
       integer :: iBufferS, nSize
       integer, parameter:: Di=iRatio-1, Dj=jRatio-1, Dk=kRatio-1
-      real    :: WeightOld, WeightNew
+      real    :: WeightOld, WeightNew, WeightI, WeightJ, WeightK, InvV
+      real, dimension(MaxDim):: Xyz_D, dI_D, dJ_D, dK_D, dR_D, &
+           PositionMinR_D, PositionMaxR_D, CoordMinR_D, CoordMaxR_D, &
+           CellSizeR_D, CoordR_D
+
+      logical :: UseSimpleWeights
       !------------------------------------------------------------------------
+
+      UseSimpleWeights = nDim == 1 .or. nDimAmr < nDim &
+           .or. IsCartesian .or. IsRzGeometry
 
       ! Loop through the subfaces or subedges
       do kSide = (1-kDir)/2, 1-(1+kDir)/2, 3-kRatio
@@ -974,6 +1022,23 @@ contains
                   CYCLE
                end if
 
+               if(IsAxisNode)then
+                  if(IsLatitudeAxis)then
+                     kRMin = iProlongR_DII(3,kSend,Max_)
+                     kRMax = iProlongR_DII(3,kSend,Min_)
+                  elseif(IsSphericalAxis)then
+                     jRMin = iProlongR_DII(2,jSend,Max_)
+                     jRMax = iProlongR_DII(2,jSend,Min_)
+                  elseif(IsCylindricalAxis)then
+                     iRMin = iProlongR_DII(1,0,Max_)
+                     iRMax = iProlongR_DII(1,0,Min_)
+                  end if
+               end if
+
+               if(nDim > 1) DiR = sign(1, iRMax - iRMin)
+               if(nDim > 2) DjR = sign(1, jRMax - jRMin)
+               if(nDim > 2) DkR = sign(1, kRMax - kRMin)
+
                ! Sending range depends on iSend,jSend,kSend = 0..3
                iSMin = iProlongS_DII(1,iSend,Min_)
                iSMax = iProlongS_DII(1,iSend,Max_)
@@ -990,15 +1055,15 @@ contains
                end if
 
                !if(DoTest)then
-               !   write(*,*)'iNodeRecv, iProcRecv, iBlovkRecv=', &
+               !   write(*,*)'iNodeSend, iProc    , iBlockSend=', &
+               !        iNodeSend, iProc, iBlockSend
+               !   write(*,*)'iNodeRecv, iProcRecv, iBlockRecv=', &
                !        iNodeRecv, iProcRecv, iBlockRecv
-               !   write(*,*)'kSide,jSide,iSide=',kSide,jSide,iSide
-               !   write(*,*)'kSend,jSend,iSend=',kSend,jSend,iSend
-               !   write(*,*)'kRecv,jRecv,iRecv=',kRecv,jRecv,iRecv
-	       !
+               !   write(*,*)'iSide,jSide,kSide=',iSide,jSide,kSide
+               !   write(*,*)'iSend,jSend,kSend=',iSend,jSend,kSend
+               !   write(*,*)'iRecv,jRecv,kRecv=',iRecv,jRecv,kRecv
                !   write(*,*)'iSMin,iSmax,jSMin,jSMax,kSMin,kSmax=',&
                !        iSMin,iSmax,jSMin,jSMax,kSMin,kSmax
-               !
                !   write(*,*)'iRMin,iRmax,jRMin,jRMax,kRMin,kRmax=',&
                !        iRMin,iRmax,jRMin,jRMax,kRMin,kRmax
                !end if
@@ -1006,41 +1071,116 @@ contains
                if(nProlongOrder == 2)then
                   ! Add up 2nd order corrections for all AMR dimensions
                   ! Use simple interpolation, should be OK for ghost cells
-                  Slope_VG(:,iRMin:iRmax,jRMin:jRMax,kRMin:kRMax) = 0.0
+                  Slope_VG(:,iRMin:iRmax:DiR,jRMin:jRMax:DjR,kRMin:kRMax:DkR)&
+                       = 0.0
 
-                  do kR = kRMin, kRMax
-                     ! For kRatio = 1 simple shift: kS = kSMin + kR - kRMin 
+                  if(.not.UseSimpleWeights .and. iProcRecv /= iProc)then
+                     call get_tree_position(iNodeRecv, &
+                          PositionMinR_D, PositionMaxR_D)
+                     CoordMinR_D = CoordMin_D &
+                          + (CoordMax_D - CoordMin_D)*PositionMinR_D
+                     CoordMaxR_D = CoordMin_D &
+                          + (CoordMax_D - CoordMin_D)*PositionMaxR_D
+                     CellSizeR_D = (CoordMaxR_D - CoordMinR_D)/nIjk_D
+                  end if
+
+                  do kR = kRMin, kRMax, DkR
+                     ! For kRatio = 1 simple shift: kS = kSMin + |kR - kRMin|
                      ! For kRatio = 2 coarsen both kR and kRMin before shift
-                     kS = kSMin + (kR+3)/kRatio - (kRMin+3)/kRatio
-                     do jR = jRMin, jRMax
-                        jS = jSMin + (jR+3)/jRatio - (jRMin+3)/jRatio
-                        do iR = iRMin, iRMax
-                           iS = iSMin + (iR+3)/iRatio - (iRMin+3)/iRatio
+                     kS = kSMin + abs((kR+3)/kRatio - (kRMin+3)/kRatio)
 
-                           if(iRatio == 2)then
-                              ! Interpolate left for odd iR, right for even iR
-                              iS1 = iS + 1 - 2*modulo(iR,2)
-                              Slope_VG(:,iR,jR,kR) = Slope_VG(:,iR,jR,kR) &
-                                   + 0.25* &
-                                   ( State_VGB(:,iS1,jS,kS,iBlockSend) &
-                                   - State_VGB(:,iS ,jS,kS,iBlockSend) )
+                     ! DkR=+1: interpolate left for odd kR, right for even kR 
+                     ! DkR=-1: interpolate left for even kR, right for odd kR 
+                     if(kRatio == 1) kS1 = kS
+                     if(kRatio == 2) kS1 = kS + DkR*(1 - 2*modulo(kR,2))
+
+                     do jR = jRMin, jRMax, DjR
+                        jS = jSMin + abs((jR+3)/jRatio - (jRMin+3)/jRatio)
+                        if(jRatio == 1) jS1 = jS
+                        if(jRatio == 2) jS1 = jS + DjR*(1 - 2*modulo(jR,2))
+
+                        do iR = iRMin, iRMax, DiR
+                           iS = iSMin + abs((iR+3)/iRatio - (iRMin+3)/iRatio)
+
+                           if(iRatio == 1) iS1 = iS
+                           if(iRatio == 2) iS1 = iS + DiR*(1 - 2*modulo(iR,2))
+
+                           if(UseSimpleWeights)then
+                              ! For Cartesian-like grids the weights are 0.25
+                              if(iRatio == 2) WeightI = 0.25
+                              if(jRatio == 2) WeightJ = 0.25
+                              if(kRatio == 2) WeightK = 0.25
+                           else
+                              ! The weights are area/volume fractions
+                              Xyz_D= Xyz_DGB(:,iS,jS,kS,iBlockSend)
+                              dI_D = Xyz_DGB(:,iS1,jS,kS,iBlockSend) - Xyz_D
+                              dJ_D = Xyz_DGB(:,iS,jS1,kS,iBlockSend) - Xyz_D
+                              dK_D = Xyz_DGB(:,iS,jS,kS1,iBlockSend) - Xyz_D
+
+                              if(iProcRecv == iProc)then
+                                 dR_D = Xyz_DGB(:,iR,jR,kR,iBlockRecv) - Xyz_D
+                              else
+                                 CoordR_D = CoordMinR_D + &
+                                      ((/iR,jR,kR/) - 0.5)*CellSizeR_D
+                                 call coord_to_xyz(CoordR_D, dR_D)
+                                 dR_D = dR_D - Xyz_D
+                              end if
+
+                              ! The max(0.0, avoids extrapolation when the
+                              ! receiving point is outside the sending 
+                              ! polyhedron. Remove the max(0.0 for exact
+                              ! second order test.
+                              if(nDim == 2)then
+                                 InvV = 1/ &
+                                      (dI_D(1)*dJ_D(2)-dI_D(2)*dJ_D(1))
+                                 WeightI = max(0.0, InvV* &
+                                      (dR_D(1)*dJ_D(2)-dR_D(2)*dJ_D(1)))
+                                 WeightJ = max(0.0, InvV* &
+                                      (dI_D(1)*dR_D(2)-dI_D(2)*dR_D(1)))
+                              else
+                                 InvV = 1/ &
+                                      sum(dI_D*cross_product(dJ_D,dK_D))
+                                 WeightI = max(0.0, InvV* &
+                                      sum(dR_D*cross_product(dJ_D,dK_D)))
+                                 WeightJ = max(0.0, InvV* &
+                                      sum(dI_D*cross_product(dR_D,dK_D)))
+                                 WeightK = max(0.0, InvV* &
+                                      sum(dI_D*cross_product(dJ_D,dR_D)))
+
+                                 !if(IsSphericalAxis .and. &
+                                 !     iNodeSend==20 .and. iNodeRecv==26 .and.&
+                                 !     iR==7 .and. jR==7 .and. kR==-1)then
+                                 !   write(*,*)'!!! iNodeSend, iBlockSend=', &
+                                 !        iNodeSend, iBlockSend
+                                 !   write(*,*)'!!! iS,jS,kS,iS1,jS1,kS1=', &
+                                 !        iS,jS,kS,iS1,jS1,kS1
+                                 !   write(*,*)'!!! Xyz_D=',Xyz_D
+                                 !   write(*,*)'!!! dI_D =',dI_D
+                                 !   write(*,*)'!!! dJ_D =',dJ_D
+                                 !   write(*,*)'!!! dK_D =',dK_D
+                                 !   write(*,*)'!!! dR_D =',dR_D
+                                 !   write(*,*)'InvV,WeightI, J, K=',&
+                                 !        InvV, WeightI, WeightJ, WeightK
+                                 !end if
+
+
+                              end if
                            end if
 
-                           if(jRatio == 2)then
-                              jS1 = jS + 1 - 2*modulo(jR,2)
-                              Slope_VG(:,iR,jR,kR) = Slope_VG(:,iR,jR,kR) &
-                                   + 0.25* &
-                                   ( State_VGB(:,iS,jS1,kS,iBlockSend) &
-                                   - State_VGB(:,iS,jS ,kS,iBlockSend) )
-                           end if
+                           if(iRatio == 2) Slope_VG(:,iR,jR,kR) = &
+                                Slope_VG(:,iR,jR,kR) + WeightI* &
+                                ( State_VGB(:,iS1,jS,kS,iBlockSend) &
+                                - State_VGB(:,iS ,jS,kS,iBlockSend) )
 
-                           if(kRatio == 2)then
-                              kS1 = kS + 1 - 2*modulo(kR,2)
-                              Slope_VG(:,iR,jR,kR) = Slope_VG(:,iR,jR,kR) &
-                                   + 0.25* &
-                                   ( State_VGB(:,iS,jS,kS1,iBlockSend) &
-                                   - State_VGB(:,iS,jS,kS ,iBlockSend) )
-                           end if
+                           if(jRatio == 2) Slope_VG(:,iR,jR,kR) = &
+                                Slope_VG(:,iR,jR,kR) + WeightJ* &
+                                ( State_VGB(:,iS,jS1,kS,iBlockSend) &
+                                - State_VGB(:,iS,jS ,kS,iBlockSend) )
+
+                           if(kRatio == 2) Slope_VG(:,iR,jR,kR) = &
+                                Slope_VG(:,iR,jR,kR) + WeightK* &
+                                ( State_VGB(:,iS,jS,kS1,iBlockSend) &
+                                - State_VGB(:,iS,jS,kS ,iBlockSend) )
 
                         end do
                      end do
@@ -1057,16 +1197,17 @@ contains
                           /      (Time_B(iBlockSend) - TimeOld_B(iBlockRecv))
                      WeightNew = 1 - WeightOld
 
-                     do kR=kRMin,kRMax
+                     do kR = kRMin, kRMax, DkR
                         ! For kRatio = 1 simple shift: kS = kSMin + kR - kRMin 
                         ! For kRatio = 2 coarsen both kR and kRMin before shift
-                        kS = kSMin + (kR+3)/kRatioRestr - (kRMin+3)/kRatioRestr
-                        do jR=jRMin,jRMax
-                           jS = jSMin + &
-                                (jR+3)/jRatioRestr - (jRMin+3)/jRatioRestr
-                           do iR=iRMin,iRMax
-                              iS = iSMin &
-                                   + (iR+3)/iRatioRestr - (iRMin+3)/iRatioRestr
+                        kS = kSMin + abs((kR+3)/kRatioRestr &
+                             -           (kRMin+3)/kRatioRestr)
+                        do jR = jRMin, jRMax, DjR
+                           jS = jSMin + abs((jR+3)/jRatioRestr &
+                                -           (jRMin+3)/jRatioRestr)
+                           do iR = iRMin, iRMax, DiR
+                              iS = iSMin + abs((iR+3)/iRatioRestr &
+                                   -           (iRMin+3)/iRatioRestr)
                               State_VGB(:,iR,jR,kR,iBlockRecv) = &
                                    WeightOld*State_VGB(:,iR,jR,kR,iBlockRecv)+&
                                    WeightNew*(State_VGB(:,iS,jS,kS,iBlockSend)&
@@ -1075,14 +1216,16 @@ contains
                         end do
                      end do
                   else
-                     do kR=kRMin,kRMax
-                        kS = kSMin + (kR+3)/kRatioRestr - (kRMin+3)/kRatioRestr
-                        do jR=jRMin,jRMax
-                           jS = jSMin + &
-                                (jR+3)/jRatioRestr - (jRMin+3)/jRatioRestr
-                           do iR=iRMin,iRMax
-                              iS = iSMin &
-                                   + (iR+3)/iRatioRestr - (iRMin+3)/iRatioRestr
+                     do kR = kRMin, kRMax, DkR
+                        kS = kSMin + abs((kR+3)/kRatioRestr &
+                             -           (kRMin+3)/kRatioRestr)
+                        do jR = jRMin, jRMax, DjR
+                           jS = jSMin + abs((jR+3)/jRatioRestr &
+                                -           (jRMin+3)/jRatioRestr)
+                           do iR = iRMin, iRMax, DiR
+                              iS = iSMin + abs((iR+3)/iRatioRestr &
+                                   -           (iRMin+3)/iRatioRestr)
+
                               State_VGB(:,iR,jR,kR,iBlockRecv) = &
                                    State_VGB(:,iS,jS,kS,iBlockSend) &
                                    + Slope_VG(:,iR,jR,kR)
@@ -1108,13 +1251,15 @@ contains
                      BufferS_I(iBufferS) = Time_B(iBlockSend)
                   end if
 
-                  do kR=kRMin,kRMax
-                     kS = kSMin + (kR+3)/kRatioRestr - (kRMin+3)/kRatioRestr
-                     do jR=jRMin,jRMax
-                        jS = jSMin + (jR+3)/jRatioRestr - (jRMin+3)/jRatioRestr
-                        do iR=iRMin,iRMax
-                           iS = iSMin &
-                                + (iR+3)/iRatioRestr - (iRMin+3)/iRatioRestr
+                  do kR = kRMin, kRMax, DkR
+                     kS = kSMin + abs((kR+3)/kRatioRestr &
+                          -           (kRMin+3)/kRatioRestr)
+                     do jR=jRMin, jRMax, DjR
+                        jS = jSMin + abs((jR+3)/jRatioRestr &
+                             -           (jRMin+3)/jRatioRestr)
+                        do iR = iRMin, iRMax, DiR
+                           iS = iSMin + abs((iR+3)/iRatioRestr &
+                                -           (iRMin+3)/iRatioRestr)
                            BufferS_I(iBufferS+1:iBufferS+nVar)= &
                                 State_VGB(:,iS,jS,kS,iBlockSend) &
                                 + Slope_VG(:,iR,jR,kR)
@@ -1242,16 +1387,15 @@ contains
   subroutine test_pass_cell
 
     use BATL_mpi,  ONLY: iProc, iComm
-    use BATL_size, ONLY: MaxDim, nDim, iRatio, jRatio, kRatio, &
+    use BATL_size, ONLY: MaxDim, nDim, nDimAmr, iRatio, jRatio, kRatio, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG, nI, nJ, nK, nBlock,&
          nIJK_D, iRatio_D
     use BATL_tree, ONLY: init_tree, set_tree_root, find_tree_node, &
          refine_tree_node, distribute_tree, show_tree, clean_tree, &
-         Unused_B, DiLevelNei_IIIB, iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB
+         Unused_B, DiLevelNei_IIIB, iNode_B, iNodeNei_IIIB
     use BATL_grid, ONLY: init_grid, create_grid, clean_grid, &
          Xyz_DGB, CellSize_DB, CoordMin_DB
-    use BATL_geometry, ONLY: init_geometry, z_, IsPeriodic_D, TypeGeometry
-    use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
+    use BATL_geometry, ONLY: init_geometry, z_, IsPeriodic_D
 
     use ModMpi, ONLY: MPI_allreduce, MPI_REAL, MPI_MIN, MPI_MAX
 
@@ -1262,7 +1406,7 @@ contains
     real   :: DomainMax_D(MaxDim) = (/ 4.0, 40.0, 400.0 /)
     real   :: DomainSize_D(MaxDim)
 
-    real, parameter:: Tolerance = 1e-6
+    real   :: Tolerance = 1e-6
 
     integer, parameter:: nVar = nDim
     real, allocatable:: State_VGB(:,:,:,:,:)
@@ -1291,6 +1435,8 @@ contains
     integer :: nFineCell
     integer :: iMpiOperator
     integer :: iError, iTest
+
+    character(len=20):: NameGeometry
 
     logical:: DoTestMe
     character(len=*), parameter :: NameSub = 'test_pass_cell'
@@ -1647,7 +1793,10 @@ contains
 
     if(nDim == 1) RETURN !------------------------
 
-    do iTest = 1, 3
+    do iTest = 1,6
+
+       ! The code is quite inaccurate for partial AMR across the pole
+       if(nDimAmr < nDim .and. iTest > 3) EXIT
 
        call init_tree(MaxBlockTest)
 
@@ -1657,56 +1806,63 @@ contains
        kMin = MinK; kMax = MaxK
 
        select case(iTest)
-       case(1)
-          if(DoTestMe)write(*,*) &
-               'testing message_pass_cell across cylindrical pole'
+       case(1,4)
+          NameGeometry = 'cylindrical'
 
           ! 0 < r < 10, 0 < phi < 360deg, -5 < z < 5
           DomainMin_D = (/ 0.0,  0.0, -5.0 /)
           DomainMax_D = (/ 8.0, cTwoPi, +5.0 /)
-          DomainSize_D = DomainMax_D - DomainMin_D
           IsPeriodicTest_D = (/ .false., .true., .true. /)
 
           ! There must be an even number of root blocks in the phi direction
-          nRootTest_D = (/ 2, 4, 2 /)
+          ! There are 3 root blocks in z so that we can refine the middle
+          ! and avoid issues of periodicity in the testing
+          nRootTest_D = (/ 2, 4, 3 /)
 
           ! Test ghost cells at rMin
           iMin = MinI
 
-          call init_geometry('cylindrical', &
-               IsPeriodicIn_D=IsPeriodicTest_D(1:nDim))
-       case(2)
+       case(2,5)
           if(nDim < 3)CYCLE
-          if(DoTestMe) write(*,*) &
-               'testing message_pass_cell across spherical pole'
+          NameGeometry = 'spherical'
 
           ! 1 < r < 9, 0 < theta < 180deg, 0 < phi < 360deg
           DomainMin_D = (/ 1.0,  0.0, 0.0 /)
           DomainMax_D = (/ 9.0,  cPi, cTwoPi /)
-          DomainSize_D = DomainMax_D - DomainMin_D
           IsPeriodicTest_D = (/ .false., .false., .true. /)
 
           ! There must be an even number of root blocks in the phi direction
-          nRootTest_D = (/ 2, 2, 4 /)
+          ! There are 3 root blocks in r so that we can refine the middle
+          ! and avoid issues at inner and outer radial boundaries
+          nRootTest_D = (/ 3, 2, 4 /)
 
-          call init_geometry('spherical', IsPeriodicIn_D=IsPeriodicTest_D)
-       case(3)
+       case(3,6)
           if(nDim < 3)CYCLE
-          if(DoTestMe) write(*,*) &
-               'testing message_pass_cell across latitude pole'
+          NameGeometry = 'rlonlat'
 
           ! 1 < r < 9, 0 < phi < 360deg, -90 < lat < 90
           DomainMin_D = (/ 1.0,    0.0, -cHalfPi /)
           DomainMax_D = (/ 9.0, cTwoPi, cHalfPi /)
-          DomainSize_D = DomainMax_D - DomainMin_D
           IsPeriodicTest_D = (/ .false., .true., .false. /)
 
           ! There must be an even number of root blocks in the phi direction
-          nRootTest_D = (/ 2, 4, 2 /)
+          ! There are 3 root blocks in r so that we can refine the middle
+          ! and avoid issues at inner and outer radial boundaries
+          nRootTest_D = (/ 3, 4, 2 /)
 
-          call init_geometry('rlonlat', IsPeriodicIn_D=IsPeriodicTest_D)
        end select
+       DomainSize_D = DomainMax_D - DomainMin_D
 
+       if(DoTestMe)then
+          if(iTest <= 3)write(*,*) &
+               'testing message_pass_cell across '//trim(NameGeometry)//' pole'
+          if(iTest >= 4)write(*,*) &
+               'testing message_pass_cell across '//trim(NameGeometry)// &
+               ' pole with resolution change'
+       end if
+
+       call init_geometry(NameGeometry, &
+            IsPeriodicIn_D=IsPeriodicTest_D(1:nDim))
 
        call init_grid(DomainMin_D(1:nDim), DomainMax_D(1:nDim), &
             UseDegreeIn=.false.)
@@ -1717,20 +1873,33 @@ contains
             ' should agree with ', IsPeriodicTest_D(1:nDim)
 
 
-       !call find_tree_node( (/0.5,0.5,0.5/), iNode)
-       !if(DoTestMe)write(*,*) NameSub,' middle node=',iNode
-       !call refine_tree_node(iNode)
+       if(iTest > 3)then
+          ! Test with refined grid
+          if(iTest==4)then
+             ! refine node next to r=0 axis but middle in Z direction
+             call refine_tree_node(9)
+          else
+             ! refine root nodes at min and max (theta/lat/phi) coordinates
+             ! but middle in the R direction
+             call refine_tree_node(2)
+             call refine_tree_node(23)
+          end if
+          ! Restriction is not linear so there is truncation error
+          Tolerance = 0.02
+       else
+          ! For tests with no AMR the error is round-off only
+          Tolerance = 1e-6
+       end if
 
        call distribute_tree(.true.)
        call create_grid
 
        !if(DoTestMe) call show_tree(NameSub,.true.)
-
-       !do iBlock = 1, 2
-       !   do i = 0, 3
-       !      write(*,*) '!!! iBlock, i, iNodeNei_IIIB(i,:,1,iBlock)=', &
-       !           iBlock, i, iNodeNei_IIIB(i,:,1,iBlock)
-       !   end do
+       !do iBlock = 3, 3
+       !   do j = 0, 3; do i = 0, 3
+       !      write(*,*) '!!! iBlock, i, j, iNodeNei_IIIB(i,j,:,iBlock)=', &
+       !           iBlock, i, j, iNodeNei_IIIB(i,j,:,iBlock)
+       !   end do; end do
        !end do
 
        allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest))
@@ -1744,7 +1913,7 @@ contains
 
        ! Second order
        call message_pass_cell(nVar, State_VGB)
-    
+
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
 
@@ -1756,16 +1925,18 @@ contains
              Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
 
              ! For 3D cylindrical Z coordinate is periodic
-             if(iTest==1 .and. nDim == 3) Xyz_D(z_) = DomainMin_D(z_) &
+             if( (iTest==1 .or. iTest==4) .and. nDim == 3) &
+                  Xyz_D(z_) = DomainMin_D(z_) &
                   + modulo(Xyz_D(z_) - DomainMin_D(z_), DomainSize_D(z_))
 
              do iDim = 1, nDim
                 if(abs(State_VGB(iDim,i,j,k,iBlock) - Xyz_D(iDim)) &
-                     > Tolerance)then
+                     /abs( Xyz_D(iDim)) > Tolerance)then
                    write(*,*)'iProc,iBlock,i,j,k,iDim,State,Xyz=', &
                         iProc,iBlock,i,j,k,iDim, &
                         State_VGB(iDim,i,j,k,iBlock), &
                         Xyz_D(iDim)
+
                 end if
              end do
           end do; end do; end do
