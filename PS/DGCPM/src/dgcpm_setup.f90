@@ -30,10 +30,11 @@ SUBROUTINE GETKPA(i3)
   use ModIoDGCPM
   use ModMainDGCPM
   use ModTimeDGCPM
+  use ModIndicesInterfaces
 
   implicit none
 
-  integer i3,i4,JKP,ii, i
+  integer i3,i4,JKP,ii, i, ierror
   real KPN,KPO,lambdae,KPtab(48),tol,RSUN,KPP,XKP
   real kpt, dut, dkp
   save tol,i4,XKP,KPP,KPN,KPO
@@ -97,7 +98,15 @@ SUBROUTINE GETKPA(i3)
     KP=RKPH(MIN0(I2, NSTEP/NKP+2))
     IF (KP.GT.10.) KP=10.
     IF (KP.LT.0.)  KP=0.
-  END IF
+  
+  ELSE IF (IKP.EQ.6) THEN ! IKP=6 Use NGDC Index File
+    call get_kp(CurrentTime, KP, iError)
+    write(*,*) KP
+    if (iError /= 0) then
+           write(*,*) "Can not find IMF Bz."
+            kp=0.
+    ENDIF
+  ENDIF
 
   if (ilambe == 0) ilambe = 3
   IF (IKP.EQ.4) THEN   ! Midnight Boundary Index
