@@ -1857,6 +1857,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseExtraBoundary',UseExtraBoundary)
         if(UseExtraBoundary)then
            call read_var('TypeBc_I(ExtraBc_)', TypeBc_I(ExtraBc_))      
+           ! Backward compatibility
+           if (TypeBc_I(ExtraBc_) == 'coronatoih') &
+                TypeBc_I(ExtraBc_)= 'buffergrid'
            call read_var('DoFixExtraBoundary', DoFixExtraBoundaryOrPole)
         end if
 
