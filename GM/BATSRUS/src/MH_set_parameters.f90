@@ -2351,7 +2351,7 @@ contains
     MassIon_I = MassFluid_I(IonFirst_:IonLast_) ! Ion masses
 
     ! Default limits for  buffergrid boundary conditions
-    if (TypeBc_I(body1_)=='buffergrid') then
+    if (any(TypeBc_I(body1_:ExtraBc_)=='buffergrid')) then
        BufferMin_D(R_)     = 19.
        BufferMin_D(Phi_)   = 0.
        BufferMin_D(Theta_) = 0.
