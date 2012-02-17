@@ -52,11 +52,16 @@ RAW			StringLogfile
 -1.0			DtSaveLogfile
 
 #SAVEPLOT
-1			nPlotfile
+2			nPlotfile
 z=0 VAR idl		PlotString
 -1                      DnSavePlot
 2.10038e-9              DtSavePlot
 -1.0			DxSavePlot
+rho ux uy uz Eint p Xe Be Pl level tekev trkev planck ross
+gamma
+z=0 VAR hdf              PlotString
+-1                      DnSavePlot
+1.0e-9                  DtSavePlot
 rho ux uy uz Eint p Xe Be Pl level tekev trkev planck ross
 gamma
 

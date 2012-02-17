@@ -455,6 +455,7 @@ test_hyades2d:
 
 test_hyades2d_compile:
 	./Config.pl -e=HdRadCrash -u=Crash -g=4,4,1,1000,1000 -nMaterial=3
+	./Config.pl -hdf5
 	$(MAKE) CRASH
 	$(MAKE) PIDL
 
