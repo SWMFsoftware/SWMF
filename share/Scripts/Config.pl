@@ -553,7 +553,7 @@ sub set_hdf5_{
 	@ARGV = ($MakefileConf);
 	while(<>){
 	    # Add/remove HDF5 related definitions
-	    s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_MPI\})(.*)/$1$H5pfc \#$2/ 
+	    s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_\w+\})(.*)/$1$H5pfc \#$2/ 
 		if $Hdf5 eq "yes";
 	    s/$H5pfc \#(.*)/$1/
 		if $Hdf5 eq "no";
