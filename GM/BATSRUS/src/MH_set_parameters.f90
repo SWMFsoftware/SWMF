@@ -820,14 +820,12 @@ subroutine MH_set_parameters(TypeAction)
               if(index(plot_string,'idl_ascii') > 0) &
                    TypeIdlFile_I(iFile) = 'ascii'
            elseif(index(plot_string, 'hdf') > 0) then
-              !With these values VisIt recognises the files as timesteps
-              !with the general defaults it does not. 
-              IsPlotName_n = .false.
-              IsPlotName_t = .true.
+              ! With these values VisIt recognises the files as timesteps
+              ! with the general defaults it does not. 
+              IsPlotName_n = .true.
+              IsPlotName_t = .false.
               IsPlotName_e = .false.
-              NameMaxTimeUnit = 'timestep'
               plot_form(iFile)='hdf'
-              call read_var('DxSavePlot',plot_dx(1,ifile))
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
               plot_dx(1,ifile)=0.

@@ -1666,8 +1666,6 @@ subroutine get_time_string
   case('nanosecond')
      if(Time_Simulation < 1e-6) &
           write(StringDateOrTime,'(f8.4)') Time_Simulation*1e9
-  case('timestep')
-     write(stringDateOrTime,'(i8)') n_step  
   case default
      ! Could not find unit
      StringDateOrTime = ''
