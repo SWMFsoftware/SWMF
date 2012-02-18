@@ -345,10 +345,7 @@ void PIC::Sampling::Sampling() {
     exit(__LINE__,__FILE__,"Error: the otion is not recognized");
 #endif
 
-    //sample the distrivution function
-#if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
-    if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction(node);
-#endif
+
 
 
 
@@ -502,6 +499,11 @@ void PIC::Sampling::Sampling() {
 
   //sample local data sets of the user defined functions
   for (int nfunc=0;nfunc<PIC::Sampling::ExternalSamplingLocalVariables::SamplingRoutinesRegistrationCounter;nfunc++) PIC::Sampling::ExternalSamplingLocalVariables::SamplingProcessor[nfunc]();
+
+  //sample the distrivution function
+#if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
+  if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction();
+#endif
 
   //Increment the sample length
   CollectingSampleCounter++;
