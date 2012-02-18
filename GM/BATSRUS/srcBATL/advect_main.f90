@@ -595,7 +595,7 @@ contains
           write(UnitTmp_,'(l8,a)')     .true.,        ' IsBinary' 
           write(UnitTmp_,'(i8,a)')     nByteReal,     ' nByteReal'
           if(IsRLonLat)then
-             write(UnitTmp_,'(a)')     'spherical'
+             write(UnitTmp_,'(a)')     'spherical'//TypeGeometry(8:20)
           else
              write(UnitTmp_,'(a)')     TypeGeometry
           end if
