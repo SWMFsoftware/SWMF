@@ -17,7 +17,7 @@ subroutine init_get_potential
   integer :: iError
   iError = 0
 
-  if (.not.IsFirstTime) return
+  if (.not.IsFirstTime .or. IsFramework) return
 
   IsFirstTime = .false.
 
@@ -230,11 +230,13 @@ subroutine get_potential(iBlock)
   endif
 
   call init_get_potential
-  call IO_SetnMLTs(nLons+4)
-  call IO_SetnLats(nLats+4)
-  call IO_SetTime(CurrentTime)
-  call IO_SetNorth
-  call set_indices
+  call UA_SetnMLTs(nLons+4)
+  call UA_SetnLats(nLats+4)
+  if (.not. IsFramework) then 
+     call IO_SetTime(CurrentTime)
+     call set_indices
+  endif
+  call UA_SetNorth
 
   if (iDebugLevel > 1) write(*,*) "==> Setting up IE Grid"
 
@@ -248,13 +250,13 @@ subroutine get_potential(iBlock)
      do iAlt=-1,nAlts+2
 
         call start_timing("setgrid")
-        call IO_SetGrid(                    &
+        call UA_SetGrid(                    &
              MLT(-1:nLons+2,-1:nLats+2,iAlt), &
              MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), iError)
         call end_timing("setgrid")
 
         if (iError /= 0) then
-           write(*,*) "Error in routine get_potential (IO_SetGrid):"
+           write(*,*) "Error in routine get_potential (UA_SetGrid):"
            write(*,*) iError
            call stop_gitm("Stopping in get_potential")
         endif
@@ -265,11 +267,11 @@ subroutine get_potential(iBlock)
         TempPotential = 0.0
 
         call start_timing("getpotential")
-        call IO_GetPotential(TempPotential, iError)
+        call UA_GetPotential(TempPotential, iError)
         call end_timing("getpotential")
 
         if (iError /= 0) then
-           write(*,*) "Error in get_potential (IO_GetPotential):"
+           write(*,*) "Error in get_potential (UA_GetPotential):"
            write(*,*) iError
            call stop_gitm("Stopping in get_potential")
         endif
@@ -326,20 +328,20 @@ subroutine get_potential(iBlock)
      else
 
         call start_timing("setgrid")
-        call IO_SetGrid(                    &
+        call UA_SetGrid(                    &
              MLT(-1:nLons+2,-1:nLats+2,iAlt), &
              MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), iError)
         call end_timing("setgrid")
 
         if (iError /= 0) then
-           write(*,*) "Error in routine get_potential (IO_SetGrid):"
+           write(*,*) "Error in routine get_potential (UA_SetGrid):"
            write(*,*) iError
            call stop_gitm("Stopping in get_potential")
         endif
 
-        call IO_GetAveE(ElectronAverageEnergy, iError)
+        call UA_GetAveE(ElectronAverageEnergy, iError)
         if (iError /= 0) then
-           write(*,*) "Error in get_potential (IO_GetAveE):"
+           write(*,*) "Error in get_potential (UA_GetAveE):"
            write(*,*) iError
            call stop_gitm("Stopping in get_potential")
         endif
@@ -359,9 +361,9 @@ subroutine get_potential(iBlock)
            enddo
         enddo
 
-        call IO_GetEFlux(ElectronEnergyFlux, iError)
+        call UA_GetEFlux(ElectronEnergyFlux, iError)
         if (iError /= 0) then
-           write(*,*) "Error in get_potential (IO_GetEFlux):"
+           write(*,*) "Error in get_potential (UA_GetEFlux):"
            write(*,*) iError
            call stop_gitm("Stopping in get_potential")
         endif
