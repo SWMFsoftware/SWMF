@@ -32,6 +32,18 @@ module ModEIE_Interface
   real :: IOr_NeedKp      = -1.0e32 
   logical :: IOl_IsNorth  = .true.
 
+!  real (Real8_)               :: UAd_NeedTime = -1.0e32
+  real, allocatable, dimension(:,:) :: UAr2_NeedLats, UAr2_NeedMLTs
+  real, allocatable, dimension(:,:) :: UAr2_NeedPotential
+  real, allocatable, dimension(:,:) :: UAr2_NeedEFlux
+  real, allocatable, dimension(:,:) :: UAr2_NeedAveE
+  integer                           :: UAi_NeednLats
+  integer                           :: UAi_NeednMLTs
+  integer                           :: UAi_NeednTimes
+  integer, allocatable, dimension(:,:,:) :: UAi3_InterpolationIndices
+  real, allocatable, dimension(:,:,:)    :: UAr3_InterpolationRatios
+  logical :: UAl_IsNorth  = .true.
+
   integer                           :: iDebugLevel = 0
   integer                           :: iProc = 0
 
