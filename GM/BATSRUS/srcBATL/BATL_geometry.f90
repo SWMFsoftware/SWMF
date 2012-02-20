@@ -19,15 +19,15 @@ module BATL_geometry
   character(len=20), public:: TypeGeometry = 'cartesian'
 
   ! Cartesian, cylindrical or spherical coordinates
-  logical, public:: IsCartesian       = .true.
-  logical, public:: IsRzGeometry      = .false.
-  logical, public:: IsSpherical       = .false.
-  logical, public:: IsRLonLat         = .false.
-  logical, public:: IsSphericalAxis   = .false. ! theta=0 and theta=pi boundary
+  logical, public:: IsCartesian       = .true.  ! Cartesian grid
+  logical, public:: IsRzGeometry      = .false. ! RZ geometry (x is symmetry axis)
+  logical, public:: IsRoundCube       = .false. ! square/cube stretched to be roun
+  logical, public:: IsCylindrical     = .false. ! cylindrical: r, phi, z (in 3D)
+  logical, public:: IsSpherical       = .false. ! spherical: r, theta, phi
+  logical, public:: IsRLonLat         = .false. ! spherical: r, lon, lat
+  logical, public:: IsCylindricalAxis = .false. ! r=0 boundary for cylindrical
+  logical, public:: IsSphericalAxis   = .false. ! theta=0 and theta=pi boundaries
   logical, public:: IsLatitudeAxis    = .false. ! |lat|=pi/2 boundaries
-  logical, public:: IsCylindrical     = .false.
-  logical, public:: IsCylindricalAxis = .false. ! r=0 boundary
-  logical, public:: IsCubedSphere     = .false.
   logical, public:: IsLogRadius       = .false. ! logarithmic radial coordinate
   logical, public:: IsGenRadius       = .false. ! stretched radial coordinate
 
@@ -59,13 +59,16 @@ contains
     ! TypeGeometry can be
     !    'cartesian'
     !    'rz'
+    !    'roundcube'
     !    'cylindrical'
     !    'cylindrical_lnr'
     !    'cylindrical_genr'
     !    'spherical'
     !    'spherical_lnr'
     !    'spherical_genr'
-    !    'cubedsphere'
+    !    'rlonlat'
+    !    'rlonlat_lnr'
+    !    'rlonlat_genr'
     !
     ! IsPeriodic_D defines periodicity for each dimension
     !
@@ -89,7 +92,7 @@ contains
     IsSpherical   = TypeGeometry(1:3)  == 'sph'
     IsRLonLat     = TypeGeometry(1:3)  == 'rlo'
     IsCylindrical = TypeGeometry(1:3)  == 'cyl'
-    IsCubedSphere = TypeGeometry(1:3)  == 'cub'
+    IsRoundCube   = TypeGeometry(1:5)  == 'round'
 
     IsLogRadius   = index(TypeGeometry,'lnr')  > 0
     IsGenRadius   = index(TypeGeometry,'genr') > 0
@@ -161,7 +164,7 @@ contains
             CoordOut_D(r_), CoordOut_D(Theta_), CoordOut_D(Phi_))
        ! Convert colatitude to latitude
        CoordOut_D(Lat_) = cHalfPi - CoordOut_D(Theta_)
-    elseif(IsCubedSphere)then
+    elseif(IsRoundCube)then
        r2 = sum(XyzIn_D**2)
        if(r2 > 0.0)then
           CoordOut_D = sqrt(r2/maxval(XyzIn_D**2)) * XyzIn_D
@@ -219,7 +222,7 @@ contains
     elseif(IsRLonLat)then
        call sph_to_xyz(Coord_D(r_), cHalfPi - Coord_D(Lat_), Coord_D(Phi_), &
             XyzOut_D)
-    elseif(IsCubedSphere)then
+    elseif(IsRoundCube)then
        r2 = sum(CoordIn_D**2)
        if(r2 > 0.0)then
           XyzOut_D = maxval(abs(CoordIn_D))/sqrt(r2) * CoordIn_D
@@ -399,24 +402,24 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for cylindrical_lnr, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing init_geometry for cubedsphere'
+    if(DoTestMe) write(*,*)'Testing init_geometry for roundcube'
     IsPeriodicTest_D = (/.false., .false., .false./)
 
-    call init_geometry('cubedsphere', &
+    call init_geometry('roundcube', &
          IsPeriodicIn_D = IsPeriodicTest_D(1:nDim))
 
-    if(TypeGeometry /= 'cubedsphere') &
+    if(TypeGeometry /= 'roundcube') &
          write(*,*)'ERROR: init_geometry failed, ', &
-         'TypeGeometry=', TypeGeometry, ' should be cubedsphere'
+         'TypeGeometry=', TypeGeometry, ' should be roundcube'
 
-    if(.not.IsCubedSphere .or. IsCartesian.or.IsRzGeometry &
+    if(.not.IsRoundCube .or. IsCartesian.or.IsRzGeometry &
          .or.IsCylindrical.or.IsSpherical)&
-         write(*,*)'ERROR: init_geometry failed for cubedsphere, ', &
-         'IsCubedSphere,IsCartesian,IsRzGeometry,IsSpherical,IsCylindrical=', &
-         IsCubedSphere, IsCartesian, IsRzGeometry, IsSpherical, IsCylindrical
+         write(*,*)'ERROR: init_geometry failed for roundcube, ', &
+         'IsRoundCube,IsCartesian,IsRzGeometry,IsSpherical,IsCylindrical=', &
+         IsRoundCube, IsCartesian, IsRzGeometry, IsSpherical, IsCylindrical
 
     if(IsLogRadius .or. IsGenRadius) &
-         write(*,*)'ERROR: init_geometry failed for cubedsphere, ',&
+         write(*,*)'ERROR: init_geometry failed for roundcube, ',&
          'IsLogRadius, IsGenRadius =', IsLogRadius, IsGenRadius
 
     if(any(IsPeriodic_D(1:nDim) .neqv. IsPeriodicTest_D(1:nDim))) &
