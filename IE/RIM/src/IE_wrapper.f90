@@ -394,7 +394,6 @@ subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,tSimulation)
   use ModProcIE, only:nProc
   use ModSizeRIM
   use ModRIM
-
   implicit none
   character (len=*),parameter :: NameSub='IE_get_for_gm'
 
@@ -768,9 +767,9 @@ end subroutine IE_put_from_im_complete
 
 subroutine IE_get_for_ps(Buffer_IIV,iSize,jSize,tSimulation,FieldModel)
 
-use ModRIM, ONLY: PotentialAll
-use ModSizeRim, ONLY: nLats, nLonsall
-use ModParamRIM, ONLY: NameEFieldModel
+  use ModRIM, ONLY: PotentialAll
+  use ModSizeRim, ONLY: nLats, nLonsall
+  use ModParamRIM, ONLY: NameEFieldModel
 
   implicit none
   character (len=*),parameter :: NameSub='IE_get_for_ps'
@@ -877,7 +876,9 @@ subroutine initialize_ie_ua_buffers(iOutputError)
 
   character (len=*),parameter :: NameSub='initialize_ie_ua_buffers'
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  ! We don't have anything to do here.
+
+!!  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
 end subroutine initialize_ie_ua_buffers
 
@@ -898,36 +899,91 @@ end subroutine IE_put_from_UA
 
 !==============================================================================
 
-subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
+subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,tSimulation)
+
+  use ModProcIE
+  use ModSizeRIM
+  use ModRIM
 
   implicit none
 
   integer,          intent(in)  :: iSize,jSize
   real,             intent(out) :: Buffer_II(iSize,jSize)
   character (len=*),intent(in)  :: NameVar
-  character (len=*),intent(in)  :: NameHem
   real,             intent(in)  :: tSimulation
+  real                          :: tSimulationTmp
 
   character (len=*),parameter :: NameSub='IE_get_for_ua'
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  !--------------------------------------------------------------------------
+  if(iSize /= nLats+2 .or. jSize /= nLons*nProc+1)then
+     write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
+          ' nLats+2,nLons*nProc+1=',nLats+2,nLons*nProc+1
+     call CON_stop(NameSub//' SWMF_ERROR')
+  end if
+
+  select case(NameVar)
+
+  case('Pot')
+     ! Make sure that the most recent result is provided
+     ! Since Pot is always the first, we just run this the first time.
+     tSimulationTmp = tSimulation
+     call IE_run(tSimulationTmp,tSimulation)
+     Buffer_II = PotentialAll
+  case('Ave')
+     Buffer_II = AveEAll
+  case('Tot')
+     Buffer_II = EFluxAll
+  case default
+     call CON_stop(NameSub//' invalid NameVar='//NameVar)
+
+  end select
+
+!  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
 end subroutine IE_get_for_ua
 
 !==============================================================================
 
-subroutine SPS_put_into_ie(Buffer_II, iSize, jSize, NameVar, iBlock)
+subroutine SPS_put_into_ie(Buffer_II, iSize, jSize, NameVar)
+
+  use ModEIE_Interface
 
   implicit none
 
   integer, intent(in)           :: iSize,jSize
   real, intent(in)              :: Buffer_II(iSize,jSize)
   character (len=*),intent(in)  :: NameVar
-  integer,intent(in)            :: iBlock
 
   character (len=*), parameter :: NameSub='SPS_put_into_ie'
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  integer :: iMlt,iLat
+
+  ! Here is where we take a leap of faith !
+
+  select case(NameVar)
+ 
+  case('Pot')
+     do iLat = 1, iSize
+        EIEr3_HavePotential(1,iLat,1) = Buffer_II(iLat,jSize-1)
+        EIEr3_HavePotential(2:jSize,iLat,1) = Buffer_II(iLat,:)
+     enddo
+  case('Ave')
+     do iLat = 1, iSize
+        EIEr3_HaveEFlux(1,iLat,1) = Buffer_II(iLat,jSize-1)
+        EIEr3_HaveEFlux(2:jSize,iLat,1) = Buffer_II(iLat,:)
+     enddo
+  case('Tot')
+     do iLat = 1, iSize
+        EIEr3_HaveAveE(1,iLat,1) = Buffer_II(iLat,jSize-1)
+        EIEr3_HaveAveE(2:jSize,iLat,1) = Buffer_II(iLat,:)
+     enddo
+  case default
+     call CON_stop(NameSub//' invalid NameVar='//NameVar)
+ 
+  end select
+
+  UAl_UseGridBasedEIE = .true.
 
 end subroutine SPS_put_into_ie
 
