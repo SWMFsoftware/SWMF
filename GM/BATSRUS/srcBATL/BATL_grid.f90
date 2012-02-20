@@ -32,6 +32,7 @@ module BATL_grid
        CellVolume_B(:),         &    ! Cell volume for Cartesian grids
        CellVolume_GB(:,:,:,:),  &    ! Cell volume for general grids
        Xyz_DGB(:,:,:,:,:),      &    ! Cartesian cell centers coords
+       Xyz_DNB(:,:,:,:,:),      &    ! Cartesian node coordinates
        FaceNormal_DDFB(:,:,:,:,:,:)  ! Normal face area vector
 
   logical, public:: IsNodeBasedGrid = .true.
@@ -129,8 +130,10 @@ contains
     allocate(CellVolume_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(Xyz_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
-    if(.not.IsCartesian .and. .not. IsRzGeometry) &
-         allocate(FaceNormal_DDFB(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+    if(.not.IsCartesian .and. .not. IsRzGeometry) then
+       allocate(Xyz_DNB(MaxDim,nINode,nJNode,nKNode,MaxBlock))
+       allocate(FaceNormal_DDFB(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+    end if
 
     ! Periodicity in the radial direction is not possible at all
     if(r_ > 0) IsPeriodic_D(r_) = .false.
@@ -158,6 +161,7 @@ contains
          CellVolume_B, Xyz_DGB)
     if(allocated(CellVolume_GB))   deallocate(CellVolume_GB)
     if(allocated(CellFace_DFB))    deallocate(CellFace_DFB)
+    if(allocated(Xyz_DNB))         deallocate(Xyz_DNB)
     if(allocated(FaceNormal_DDFB)) deallocate(FaceNormal_DDFB)
 
     CoordMin_D =  0.0
@@ -249,7 +253,7 @@ contains
           call coord_to_xyz(Coord_D, Xyz_DGB(:,i,j,k,iBlock))
        end do; end do; end do
 
-       ! This will be stored in global arrays... !!!
+       ! Temporary node coordinates including ghost cells
        if(nDim == 2) allocate(Xyz_DN(3,MinI:MaxI+1,MinJ:MaxJ+1,1))
        if(nDim == 3) allocate(Xyz_DN(3,MinI:MaxI+1,MinJ:MaxJ+1,MinK:MaxK+1))
 
@@ -262,6 +266,9 @@ contains
              call coord_to_xyz(Coord_D, Xyz_DN(:,i,j,k) )
           end do; end do
        end do
+
+       ! Store node coordinates
+       Xyz_DNB(:,:,:,:,iBlock) = Xyz_DN(:,1:nINode,1:nJNode,1:nKNode)
 
        if(IsNodeBasedGrid)then
           ! Calculate face area vectors assuming flat faces
@@ -320,7 +327,7 @@ contains
        end if
 
        ! Cell volumes for grids with no analytic formulas
-       if(IsCubedSphere)then
+       if(IsRoundCube)then
           ! to be simplified !!!
           if(nDim == 2)then
              ! Calculate cell volume as a sum of 2 triangle areas
@@ -610,8 +617,6 @@ contains
 
       volume3 = 0.5*( b_D(1)*c_D(2) - b_D(2)*c_D(1))
 
-      Xyz_D(1:2) = Xyz_D(1:2) + volume3*(a_D + cThird*(b_D + c_D))
-
     end function volume3
     !=========================================================================
     real function volume4(i1,j1,k1, i2,j2,k2, i3,j3,k3, i4,j4,k4)
@@ -632,8 +637,6 @@ contains
 
       ! Triple product divided by 6
       volume4 = cSixth*sum( b_D*cross_product(c_D, d_D) )
-
-      Xyz_D = Xyz_D + volume4*(a_D + 0.25*(b_D + c_D + d_D))
 
     end function volume4
 
