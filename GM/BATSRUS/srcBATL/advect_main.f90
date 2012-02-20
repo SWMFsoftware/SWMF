@@ -235,6 +235,7 @@ contains
     logical, allocatable:: DoRefine_B(:)
     real :: BlobRadius, Rgen_I(3)
     integer :: iDim, i, j, k, iBlock, iLevel
+    logical:: IsNodeBasedRead = .true.
     !------------------------------------------------------------------------
 
     call init_mpi
@@ -256,7 +257,7 @@ contains
        case("#GRIDGEOMETRY")
           call read_var('TypeGeometry', TypeGeometry)
        case("#GRIDTYPE")
-          call read_var('IsNodeBasedGrid', IsNodeBasedGrid)
+          call read_var('IsNodeBasedGrid', IsNodeBasedRead)
        case("#AMR")
           call read_var('MaxLevel', MaxLevel)
        case("#BLOB")
@@ -308,6 +309,8 @@ contains
          TypeGeometryIn = TypeGeometry, &
          IsPeriodicIn_D = (/.true., .true., .true./), &
          RgenIn_I       = Rgen_I)
+
+    IsNodeBasedGrid = IsNodeBasedRead
 
     ! Allow only MaxLevel levels of refinement
     iTree_IA(MaxLevel_,:) = MaxLevel
