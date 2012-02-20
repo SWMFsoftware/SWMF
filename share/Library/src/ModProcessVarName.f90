@@ -23,7 +23,7 @@ module ModProcessVarName
   integer  :: nSynonym = 4
 
   ! State variables not associated with a specific fluid/ specie
-  integer,parameter  :: nVarExtra = 8
+  integer,parameter  :: nVarExtra = 9
 
   ! Named indices for species/fluids
   integer, parameter :: &
@@ -84,7 +84,8 @@ module ModProcessVarName
        'te0 ', &
        'ew  ', &
        'eint', &
-       'hyp ' /)
+       'hyp ', &
+       'sign' /)
 
  character(len=4) :: NameVarExtraStandardized_I(nVarExtra) = (/ &
        'Bx  ', &
@@ -94,7 +95,8 @@ module ModProcessVarName
        'Te0 ', &
        'Ew  ', &
        'Eint', &
-       'Hyp ' /)
+       'Hyp ', &
+       'Sign' /)
 
   ! Array storing standarized variable names for all species / fluids
   character(len = 20),allocatable :: SubstanceStandardName_II(:,:)
@@ -222,7 +224,7 @@ contains
  
        if(.not. IsFoundVar) then 
           write(*,*) 'ERROR: Var name not in dictionary: ',NameVarIn
-          write(*,*) 'Please use standard variable names in ModEuqation '// &
+          write(*,*) 'Please use standard variable names in ModEquation '// &
                'and recompile:'
           !write(*,*) SubstanceStandardName_II
           write(*,*) ''
