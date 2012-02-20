@@ -44,6 +44,10 @@ subroutine set_imf
   if (iDebugLevel > 1) write(*,*) "==> Solar Wind Velocity : ",temp
 
   call get_SW_N(CurrentTime, temp, iError)
+  if (iError /= 0) then
+     temp = 5.0
+     iError = 0
+  endif
   call IO_SetSWN(temp)
 
   if (iError /= 0) then
