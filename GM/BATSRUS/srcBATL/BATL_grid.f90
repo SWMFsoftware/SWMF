@@ -148,6 +148,8 @@ contains
             IsPeriodic_D(Phi_) = .true.
     end if
 
+    if(IsRoundCube) IsPeriodic_D = .false.
+
   end subroutine init_grid
   !===========================================================================
   subroutine clean_grid
@@ -328,14 +330,15 @@ contains
 
        ! Cell volumes for grids with no analytic formulas
        if(IsRoundCube)then
-          ! to be simplified !!!
           if(nDim == 2)then
              ! Calculate cell volume as a sum of 2 triangle areas
              ! Also calculate cell center as the center of mass
              do j = MinJ, MaxJ; do i = MinI, MaxI
-                CellVolume_GB(i,j,1,iBlock) = &
-                     volume3(i,j, i+1,j, i+1,j+1) + &
-                     volume3(i,j, i+1,j+1, i,j+1)
+                CellVolume_GB(i,j,1,iBlock) = 0.5*abs(            &
+                     (Xyz_DN(1,i+1,j+1,1) - Xyz_DN(1,i,j  ,1))*   &
+                     (Xyz_DN(2,i+1,j  ,1) - Xyz_DN(2,i,j+1,1)) -  &
+                     (Xyz_DN(2,i+1,j+1,1) - Xyz_DN(2,i,j  ,1))*   &
+                     (Xyz_DN(1,i+1,j  ,1) - Xyz_DN(1,i,j+1,1)))
              end do; end do
           else
              ! Calculate cell volume as a sum of 6 tetrahedra
@@ -602,22 +605,6 @@ contains
       end if
 
     end subroutine calc_analytic_face
-    !=========================================================================
-    real function volume3(i1,j1, i2,j2, i3,j3)
-
-      integer, intent(in):: i1,j1, i2,j2, i3,j3
-
-      real, parameter:: cThird = 1.0/3.0
-
-      real, dimension(2):: a_D, b_D, c_D
-      !----------------------------------------------------------------------
-      a_D = Xyz_DN(1:2,i1,j1,1)
-      b_D = Xyz_DN(1:2,i2,j2,1) - a_D
-      c_D = Xyz_DN(1:2,i3,j3,1) - a_D
-
-      volume3 = 0.5*( b_D(1)*c_D(2) - b_D(2)*c_D(1))
-
-    end function volume3
     !=========================================================================
     real function volume4(i1,j1,k1, i2,j2,k2, i3,j3,k3, i4,j4,k4)
 
