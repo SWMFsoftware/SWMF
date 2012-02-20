@@ -44,7 +44,7 @@ contains
   !============================================================================
   subroutine init_grid(CoordMinIn_D, CoordMaxIn_D, UseRadiusIn, UseDegreeIn)
 
-    use ModNumConst, ONLY: cPi, cTwoPi, cDegToRad
+    use ModNumConst, ONLY: cTwoPi, cDegToRad
 
     ! The angular coordinate limits should be given in degrees unless
     ! UseDegreeIn is false.
@@ -181,17 +181,14 @@ contains
 
     real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim)
 
-    real, allocatable:: &
-         rCell_I(:), rFace_I(:),  &
-         SinPhi_I(:), CosPhi_I(:), SinPhiFace_I(:), CosPhiFace_I(:), &
-         SinThetaFace_I(:), dCosTheta_I(:), &
+    real, allocatable:: rCell_I(:), rFace_I(:), dCosTheta_I(:), &
          Xyz_DN(:,:,:,:)
 
-    real :: Area, Phi, Theta, Dphi, Dz, Dtheta, Xyz_D(MaxDim), d_D(MaxDim)
+    real :: Theta, Dphi, Dz, Dtheta, Xyz_D(MaxDim)
     integer :: iNode, i, j, k
 
     real, parameter:: cThird = 1.0/3.0
-    
+
     character(len=*), parameter:: NameSub = 'create_grid_block'
     !-------------------------------------------------------------------------
     if(present(iNodeIn))then
@@ -243,8 +240,16 @@ contains
           CellVolume_GB(:,:,:,iBlock) = CellVolume_B(iBlock)
        end if
 
-    elseif(IsNodeBasedGrid)then
+    else
 
+       ! Cell center positions based on generalized coordinates
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          Coord_D = CoordMin_DB(:,iBlock) + &
+               ( (/i, j, k/) - 0.5 ) * CellSize_DB(:,iBlock)
+          call coord_to_xyz(Coord_D, Xyz_DGB(:,i,j,k,iBlock))
+       end do; end do; end do
+
+       ! This will be stored in global arrays... !!!
        if(nDim == 2) allocate(Xyz_DN(3,MinI:MaxI+1,MinJ:MaxJ+1,1))
        if(nDim == 3) allocate(Xyz_DN(3,MinI:MaxI+1,MinJ:MaxJ+1,MinK:MaxK+1))
 
@@ -258,318 +263,338 @@ contains
           end do; end do
        end do
 
-       ! Calculate face area vectors
-       if(nDim == 2)then
-          ! Calculate face area vectors as 90 degree rotations of edge vectors
-          do j = 1, nJ; do i = 1, nI+1
-             FaceNormal_DDFB(x_,1,i,j,1,iBlock) = &
-                  Xyz_DN(2,i,j+1,1) - Xyz_DN(2,i,j,1)
-             FaceNormal_DDFB(y_,1,i,j,1,iBlock) = &
-                  Xyz_DN(1,i,j,1) - Xyz_DN(1,i,j+1,1)
+       if(IsNodeBasedGrid)then
+          ! Calculate face area vectors assuming flat faces
+          if(nDim == 2)then
+             ! Calculate face vectors as 90 degree rotations of edge vectors
+             do j = 1, nJ; do i = 1, nI+1
+                FaceNormal_DDFB(x_,1,i,j,1,iBlock) = &
+                     Xyz_DN(2,i,j+1,1) - Xyz_DN(2,i,j,1)
+                FaceNormal_DDFB(y_,1,i,j,1,iBlock) = &
+                     Xyz_DN(1,i,j,1) - Xyz_DN(1,i,j+1,1)
 
-             CellFace_DFB(1,i,j,1,iBlock) = &
-                  sqrt(sum(FaceNormal_DDFB(:,1,i,j,1,iBlock)**2))
+                CellFace_DFB(1,i,j,1,iBlock) = &
+                     sqrt(sum(FaceNormal_DDFB(:,1,i,j,1,iBlock)**2))
 
-          end do; end do
-          do j = 1, nJ+1; do i = 1, nI
-             FaceNormal_DDFB(x_,2,i,j,1,iBlock) = &
-                  Xyz_DN(2,i,j,1) - Xyz_DN(2,i+1,j,1)
-             FaceNormal_DDFB(y_,2,i,j,1,iBlock) = &
-                  Xyz_DN(1,i+1,j,1) - Xyz_DN(1,i,j,1)
+             end do; end do
+             do j = 1, nJ+1; do i = 1, nI
+                FaceNormal_DDFB(x_,2,i,j,1,iBlock) = &
+                     Xyz_DN(2,i,j,1) - Xyz_DN(2,i+1,j,1)
+                FaceNormal_DDFB(y_,2,i,j,1,iBlock) = &
+                     Xyz_DN(1,i+1,j,1) - Xyz_DN(1,i,j,1)
 
-             CellFace_DFB(2,i,j,1,iBlock) = &
-                  sqrt(sum(FaceNormal_DDFB(:,2,i,j,1,iBlock)**2))
+                CellFace_DFB(2,i,j,1,iBlock) = &
+                     sqrt(sum(FaceNormal_DDFB(:,2,i,j,1,iBlock)**2))
 
-          end do; end do
-       else
-          ! Calculate face area vectors as cross products of diagonals
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-             FaceNormal_DDFB(:,x_,i,j,k,iBlock) = 0.5*cross_product( &
-                  Xyz_DN(:,i,j+1,k+1) - Xyz_DN(:,i,j  ,k),           &
-                  Xyz_DN(:,i,j  ,k+1) - Xyz_DN(:,i,j+1,k)          )
+             end do; end do
+          else
+             ! Calculate face area vectors as cross products of diagonals
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+                FaceNormal_DDFB(:,x_,i,j,k,iBlock) = 0.5*cross_product( &
+                     Xyz_DN(:,i,j+1,k+1) - Xyz_DN(:,i,j  ,k),           &
+                     Xyz_DN(:,i,j  ,k+1) - Xyz_DN(:,i,j+1,k)          )
 
-             CellFace_DFB(1,i,j,k,iBlock) = &
-                  sqrt(sum(FaceNormal_DDFB(:,1,i,j,k,iBlock)**2))
+                CellFace_DFB(1,i,j,k,iBlock) = &
+                     sqrt(sum(FaceNormal_DDFB(:,1,i,j,k,iBlock)**2))
 
-          end do; end do; end do
-          do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-             FaceNormal_DDFB(:,y_,i,j,k,iBlock) = 0.5*cross_product( &
-                  Xyz_DN(:,i+1,j,k+1) - Xyz_DN(:,i,j,k  ),           &
-                  Xyz_DN(:,i+1,j,k  ) - Xyz_DN(:,i,j,k+1)          )
+             end do; end do; end do
+             do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+                FaceNormal_DDFB(:,y_,i,j,k,iBlock) = 0.5*cross_product( &
+                     Xyz_DN(:,i+1,j,k+1) - Xyz_DN(:,i,j,k  ),           &
+                     Xyz_DN(:,i+1,j,k  ) - Xyz_DN(:,i,j,k+1)          )
 
-             CellFace_DFB(2,i,j,k,iBlock) = &
-                  sqrt(sum(FaceNormal_DDFB(:,2,i,j,k,iBlock)**2))
+                CellFace_DFB(2,i,j,k,iBlock) = &
+                     sqrt(sum(FaceNormal_DDFB(:,2,i,j,k,iBlock)**2))
 
-          end do; end do; end do
-          do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-             FaceNormal_DDFB(:,z_,i,j,k,iBlock) = 0.5*cross_product( &
-                  Xyz_DN(:,i+1,j+1,k) - Xyz_DN(:,i  ,j,k),           &
-                  Xyz_DN(:,i  ,j+1,k) - Xyz_DN(:,i+1,j,k)          )
+             end do; end do; end do
+             do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+                FaceNormal_DDFB(:,z_,i,j,k,iBlock) = 0.5*cross_product( &
+                     Xyz_DN(:,i+1,j+1,k) - Xyz_DN(:,i  ,j,k),           &
+                     Xyz_DN(:,i  ,j+1,k) - Xyz_DN(:,i+1,j,k)          )
 
-             CellFace_DFB(3,i,j,k,iBlock) = &
-                  sqrt(sum(FaceNormal_DDFB(:,3,i,j,k,iBlock)**2))
+                CellFace_DFB(3,i,j,k,iBlock) = &
+                     sqrt(sum(FaceNormal_DDFB(:,3,i,j,k,iBlock)**2))
 
-          end do; end do; end do
+             end do; end do; end do
+          end if
        end if
 
-       ! Calculate cell volumes
-       if(nDim == 2)then
-          ! Calculate cell volume as a sum of 2 triangle areas
-          ! Also calculate cell center as the center of mass
-          do j = MinJ, MaxJ; do i = MinI, MaxI
-             Xyz_D = 0.0
-             CellVolume_GB(i,j,1,iBlock) = &
-                  volume3(i,j, i+1,j, i+1,j+1) + &
-                  volume3(i,j, i+1,j+1, i,j+1)
-             Xyz_DGB(:,i,j,1,iBlock) = Xyz_D/CellVolume_GB(i,j,1,iBlock)
-          end do; end do
+       ! Cell volumes for grids with no analytic formulas
+       if(IsCubedSphere)then
+          ! to be simplified !!!
+          if(nDim == 2)then
+             ! Calculate cell volume as a sum of 2 triangle areas
+             ! Also calculate cell center as the center of mass
+             do j = MinJ, MaxJ; do i = MinI, MaxI
+                CellVolume_GB(i,j,1,iBlock) = &
+                     volume3(i,j, i+1,j, i+1,j+1) + &
+                     volume3(i,j, i+1,j+1, i,j+1)
+             end do; end do
+          else
+             ! Calculate cell volume as a sum of 6 tetrahedra
+             ! The tips of the tetrahedra are at the min position of the cell
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                CellVolume_GB(i,j,k,iBlock) = &
+                     volume4(i,j,k, i+1,j  ,k  , i+1,j+1,k  , i+1,j  ,k+1) + &
+                     volume4(i,j,k, i+1,j+1,k+1, i+1,j  ,k+1, i+1,j+1,k  ) + &
+                     volume4(i,j,k, i  ,j+1,k  , i  ,j+1,k+1, i+1,j+1,k  ) + &
+                     volume4(i,j,k, i+1,j+1,k+1, i+1,j+1,k  , i  ,j+1,k+1) + &
+                     volume4(i,j,k, i  ,j  ,k+1, i+1,j  ,k+1, i  ,j+1,k+1) + &
+                     volume4(i,j,k, i+1,j+1,k+1, i  ,j+1,k+1, i+1,j  ,k+1)
+             end do; end do; end do
+          end if
        else
-          ! Calculate cell volume as a sum of 6 tetrahedra
-          ! The tips of the tetrahedra are at the min position of the cell
-          ! Also calculate cell center as the center of mass
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Xyz_D = 0.0
-             CellVolume_GB(i,j,k,iBlock) = &
-                  volume4(i,j,k, i+1,j  ,k  , i+1,j+1,k  , i+1,j  ,k+1) + &
-                  volume4(i,j,k, i+1,j+1,k+1, i+1,j  ,k+1, i+1,j+1,k  ) + &
-                  volume4(i,j,k, i  ,j+1,k  , i  ,j+1,k+1, i+1,j+1,k  ) + &
-                  volume4(i,j,k, i+1,j+1,k+1, i+1,j+1,k  , i  ,j+1,k+1) + &
-                  volume4(i,j,k, i  ,j  ,k+1, i+1,j  ,k+1, i  ,j+1,k+1) + &
-                  volume4(i,j,k, i+1,j+1,k+1, i  ,j+1,k+1, i+1,j  ,k+1)
-             Xyz_DGB(:,i,j,k,iBlock) = Xyz_D/CellVolume_GB(i,j,k,iBlock)
-          end do; end do; end do
-       end if
+          ! cylindrical, spherical, or rlonlat geometries
 
-       ! Cell center positions based on generalized coordinates
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          Coord_D = CoordMin_DB(:,iBlock) + &
-               ( (/i, j, k/) - 0.5 ) * CellSize_DB(:,iBlock)
-          call coord_to_xyz(Coord_D, Xyz_DGB(:,i,j,k,iBlock))
-       end do; end do; end do
-
-    else
-
-       allocate(rCell_I(MinI:MaxI), rFace_I(MinI:MaxI+1))
-
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          Coord_D = CoordMin_DB(:,iBlock) + &
-               ( (/i, j, k/) - 0.5 ) * CellSize_DB(:,iBlock)
-          call coord_to_xyz(Coord_D, Xyz_DGB(:,i,j,k,iBlock))
-       end do; end do; end do
-
-       do i = MinI, MaxI
-          rCell_I(i) = CoordMin_DB(1,iBlock) + (i-0.5)*CellSize_DB(1,iBlock)
-       end do
-       do i = MinI, MaxI+1
-          rFace_I(i) = CoordMin_DB(1,iBlock) + (i-1)*CellSize_DB(1,iBlock)
-       end do
-       if(IsLogRadius)then
-          rCell_I = exp(rCell_I)
-          rFace_I = exp(rFace_I)
-       elseif(IsGenRadius)then
+          allocate(rCell_I(MinI:MaxI), rFace_I(MinI:MaxI+1))
           do i = MinI, MaxI
-             call gen_to_radius(rCell_I(i))
+             rCell_I(i) = CoordMin_DB(1,iBlock) + (i-0.5)*CellSize_DB(1,iBlock)
           end do
           do i = MinI, MaxI+1
-             call gen_to_radius(rFace_I(i))
+             rFace_I(i) = CoordMin_DB(1,iBlock) + (i-1)*CellSize_DB(1,iBlock)
           end do
-       end if
-
-       Dphi = CellSize_DB(Phi_,iBlock)
-
-       if(IsCylindrical)then
-
-          allocate( &
-               SinPhi_I(MinJ:MaxJ), CosPhi_I(MinJ:MaxJ), &
-               SinPhiFace_I(nJ+1), CosPhiFace_I(nJ+1) )
-          
-          do j = MinJ, MaxJ
-             Phi = CoordMin_DB(2,iBlock) + (j-0.5)*Dphi
-             SinPhi_I(j) =  sin(Phi)
-             CosPhi_I(j) =  cos(Phi)
-          end do
-
-          do j = 1, nJ+1
-             Phi = CoordMin_DB(2,iBlock) + (j-1)*Dphi
-             SinPhiFace_I(j) =  sin(Phi)
-             CosPhiFace_I(j) =  cos(Phi)
-          end do
-
-          Dz = CellSize_DB(3,iBlock)
-
-          ! dV = r*dr*dphi*dz
-          do i = MinI, MaxI
-             ! NOTE: for ghost cells beyond the axis r=0 can be negative
-             CellVolume_GB(i,:,:,iBlock) = &
-                  rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dphi*Dz
-          end do
-
-          ! dA_r = r_(i+1/2)*dphi*dz * (cos phi, sin phi, 0)
-          if(nDim == 3) FaceNormal_DDFB(z_,r_,:,:,:,iBlock) = 0
-          do i = 1, nI+1
-             Area = rFace_I(i)*Dphi*Dz
-             CellFace_DFB(r_,i,:,:,iBlock) = Area
-             if(Area > 0)then
-                do k = 1, nK; do j=1, nJ
-                   FaceNormal_DDFB(x_,r_,i,j,k,iBlock) = Area*CosPhi_I(j)
-                   FaceNormal_DDFB(y_,r_,i,j,k,iBlock) = Area*SinPhi_I(j)
-                end do; end do
-             else
-                FaceNormal_DDFB(x_:y_,r_,i,:,:,iBlock) = 0
-             end if
-          end do
-
-          ! dA_phi = dr*dz * (-sin phi, cos phi, 0) = dr*dz * (-y/r, x/r, 0)
-          if(nDim == 3)FaceNormal_DDFB(z_,Phi_,:,:,:,iBlock) = 0
-          do i = 1, nI
-             Area = (rFace_I(i+1)-rFace_I(i))*Dz
-             CellFace_DFB(Phi_,i,:,:,iBlock) = Area
-             do k = 1, nK; do j=1, nJ+1
-                FaceNormal_DDFB(x_,Phi_,i,j,k,iBlock) = -Area*SinPhiFace_I(j)
-                FaceNormal_DDFB(y_,Phi_,i,j,k,iBlock) = +Area*CosPhiFace_I(j)
-             end do; end do
-          end do
-
-          if(nDim == 3)then
-             ! dA_z = r*dr*dphi * (0,0,1)
-             FaceNormal_DDFB(x_:y_,z_,:,:,:,iBlock) = 0
-             do i = 1, nI
-                Area = rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dphi
-                CellFace_DFB(z_,i,:,:,iBlock)       = Area
-                FaceNormal_DDFB(z_,z_,i,:,:,iBlock) = Area
+          if(IsLogRadius)then
+             rCell_I = exp(rCell_I)
+             rFace_I = exp(rFace_I)
+          elseif(IsGenRadius)then
+             do i = MinI, MaxI
+                call gen_to_radius(rCell_I(i))
+             end do
+             do i = MinI, MaxI+1
+                call gen_to_radius(rFace_I(i))
              end do
           end if
 
-       elseif(IsSpherical)then
+          Dphi = CellSize_DB(Phi_,iBlock)
 
-          Dtheta = CellSize_DB(Theta_,iBlock)
+          if(IsCylindrical)then
 
-          allocate( SinThetaFace_I(nJ+1), dCosTheta_I(MinJ:MaxJ))
+             Dz = CellSize_DB(3,iBlock)
 
-          do j = 1, nJ+1
-             SinThetaFace_I(j) = sin(CoordMin_DB(Theta_,iBlock) + (j-1)*Dtheta)
-          end do
+             ! dV = r*dr*dphi*dz
+             do i = MinI, MaxI
+                ! NOTE: for ghost cells beyond the axis r=0 can be negative
+                CellVolume_GB(i,:,:,iBlock) = &
+                     rCell_I(i)*(rFace_I(i+1) - rFace_I(i))*Dphi*Dz
+             end do
 
-          do j = MinJ, MaxJ
-             Theta = CoordMin_DB(Theta_,iBlock) + (j-1)*Dtheta
-             ! Note the sign change
-             dCosTheta_I(j) = cos(Theta) - cos(Theta+dTheta)
-          end do
+          elseif(IsSpherical)then
 
-          ! dV = d(r^3)/3*dphi*d(cos theta)
-          do j = MinJ, MaxJ; do i = MinI, MaxI
-             ! NOTE: for ghost cells beyond the axis r=0 can be negative
-             CellVolume_GB(i,j,:,iBlock) = &
-                  cThird*(rFace_I(i+1)**3-rFace_I(i)**3)*Dphi*dCosTheta_I(j)
-          end do; end do
+             Dtheta = CellSize_DB(Theta_,iBlock)
 
-          ! dA_r = r_(i+1/2)^2*dphi*d(cos theta)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-             ! Exact surface area
-             Area = rFace_I(i)**2*Dphi*dCosTheta_I(j)
-             CellFace_DFB(r_,i,j,k,iBlock) = Area
+             allocate(dCosTheta_I(MinJ:MaxJ))
 
-             ! Orthogonal coordinate system
-             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)
-             FaceNormal_DDFB(:,r_,i,j,k,iBlock) = Area*d_D/sqrt(sum(d_D**2))
+             do j = MinJ, MaxJ
+                Theta = CoordMin_DB(Theta_,iBlock) + (j-1)*Dtheta
+                ! Note the sign change
+                dCosTheta_I(j) = cos(Theta) - cos(Theta + dTheta)
+             end do
 
-          end do; end do; end do
+             ! dV = d(r^3)/3*dphi*d(cos theta)
+             do j = MinJ, MaxJ; do i = MinI, MaxI
+                ! NOTE: for ghost cells beyond the axis r=0 can be negative
+                CellVolume_GB(i,j,:,iBlock) = &
+                     cThird*(rFace_I(i+1)**3-rFace_I(i)**3)*Dphi*dCosTheta_I(j)
+             end do; end do
 
-          ! dA_theta = r_i*sin(theta)*dr*dphi
-          do k = 1, nK; do j=1, nJ+1; do i = 1, nI
-             Area = rCell_I(i)*SinThetaFace_I(j)*(rFace_I(i+1)-rFace_I(i))*Dphi
-             CellFace_DFB(Theta_,i,j,k,iBlock) = Area
+          elseif(IsRLonLat)then
+             Dtheta = CellSize_DB(Lat_,iBlock)
 
-             ! Orthogonal coordinate system
-             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)
-             FaceNormal_DDFB(:,Theta_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
+             allocate(dCosTheta_I(MinK:MaxK))
 
-          end do; end do; end do
+             do k = MinK, MaxK
+                Theta = cHalfPi - (CoordMin_DB(Lat_,iBlock) + (k-1)*Dtheta)
+                ! Note the sign change
+                dCosTheta_I(k) = cos(Theta - dTheta) - cos(Theta)
+             end do
 
-          ! dA_phi = r*dr*dtheta
-          do k = 1, nK+1; do j=1, nJ; do i = 1, nI
-             Area = rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dtheta
-             CellFace_DFB(Phi_,i,j,k,iBlock) = Area
+             ! dV = d(r^3)/3*dphi*d(cos theta)
+             do k = MinK, MaxK; do i = MinI, MaxI
+                ! NOTE: for ghost cells beyond the axis r=0 can be negative
+                CellVolume_GB(i,:,k,iBlock) = &
+                     cThird*(rFace_I(i+1)**3-rFace_I(i)**3)*Dphi*dCosTheta_I(k)
+             end do; end do
 
-             ! Orthogonal coordinate system
-             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)
-             FaceNormal_DDFB(:,Phi_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
+          else
+             call CON_stop(NameSub//': '//TypeGeometry// &
+                  ' geometry is not yet implemented')
+          end if
 
-          end do; end do; end do
+          if(.not.IsNodeBasedGrid) call calc_analytic_face
 
-       elseif(IsRLonLat)then
-          Dtheta = CellSize_DB(Lat_,iBlock)
-
-          allocate(SinThetaFace_I(nK+1), dCosTheta_I(MinK:MaxK))
-
-          do k = 1, nK+1
-             SinThetaFace_I(k) = cos(CoordMin_DB(Lat_,iBlock) + (k-1)*Dtheta)
-          end do
-
-          do k = MinK, MaxK
-             Theta = cHalfPi - (CoordMin_DB(Lat_,iBlock) + (k-1)*Dtheta)
-             ! Note the sign change
-             dCosTheta_I(k) = cos(Theta-dTheta) - cos(Theta)
-          end do
-
-          ! dV = d(r^3)/3*dphi*d(cos theta)
-          do k = MinK, MaxK; do i = MinI, MaxI
-             ! NOTE: for ghost cells beyond the axis r=0 can be negative
-             CellVolume_GB(i,:,k,iBlock) = &
-                  cThird*(rFace_I(i+1)**3-rFace_I(i)**3)*Dphi*dCosTheta_I(k)
-          end do; end do
-
-          ! dA_r = r_(i+1/2)^2*dphi*d(cos theta)
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-             ! Exact surface area
-             Area = rFace_I(i)**2*Dphi*dCosTheta_I(k)
-             CellFace_DFB(r_,i,j,k,iBlock) = Area
-
-             ! Orthogonal coordinate system
-             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)
-             FaceNormal_DDFB(:,r_,i,j,k,iBlock) = Area*d_D/sqrt(sum(d_D**2))
-
-          end do; end do; end do
-
-          ! dA_phi = r*dr*dtheta
-          do k = 1, nK; do j=1, nJ+1; do i = 1, nI
-             Area = rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dtheta
-             CellFace_DFB(Phi_,i,j,k,iBlock) = Area
-
-             ! Orthogonal coordinate system
-             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)
-             FaceNormal_DDFB(:,Phi_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
-
-          end do; end do; end do
-
-          ! dA_lat = r_i*sin(theta)*dr*dphi
-          do k = 1, nK+1; do j=1, nJ; do i = 1, nI
-             Area = rCell_I(i)*SinThetaFace_I(k)*(rFace_I(i+1)-rFace_I(i))*Dphi
-             CellFace_DFB(Lat_,i,j,k,iBlock) = Area
-
-             ! Orthogonal coordinate system
-             d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)
-             FaceNormal_DDFB(:,Lat_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
-
-          end do; end do; end do
-
-       else
-          call CON_stop(NameSub//': '//TypeGeometry// &
-               ' geometry is not yet implemented')
        end if
 
-       if(allocated(rCell_I)) &
-            deallocate(rCell_I, rFace_I)
-       if(allocated(SinPhi_I)) &
-            deallocate(SinPhi_I, CosPhi_I, SinPhiFace_I, CosPhiFace_I)
-       if(allocated(SinThetaFace_I)) &
-            deallocate(SinThetaFace_I, dCosTheta_I)
-       if(allocated(Xyz_DN)) &
-            deallocate(Xyz_DN)
+       if(allocated(rCell_I))     deallocate(rCell_I, rFace_I)
+       if(allocated(dCosTheta_I)) deallocate(dCosTheta_I)
+       if(allocated(Xyz_DN))      deallocate(Xyz_DN)
 
     end if
 
   contains
+    !=========================================================================
+    subroutine calc_analytic_face
+
+      real, allocatable:: SinThetaFace_I(:), &
+           SinPhi_I(:), CosPhi_I(:), SinPhiFace_I(:), CosPhiFace_I(:)
+
+      real:: Phi, Area, d_D(MaxDim)
+           
+      integer:: i, j, k
+
+      character(len=*), parameter:: NameSub = 'calc_analytic_face'
+      !----------------------------------------------------------------------
+
+      ! Calculate analytic (curved) face areas
+      if(IsCylindrical)then
+
+         allocate( &
+              SinPhi_I(MinJ:MaxJ), CosPhi_I(MinJ:MaxJ), &
+              SinPhiFace_I(nJ+1), CosPhiFace_I(nJ+1) )
+
+         do j = MinJ, MaxJ
+            Phi = CoordMin_DB(2,iBlock) + (j-0.5)*Dphi
+            SinPhi_I(j) =  sin(Phi)
+            CosPhi_I(j) =  cos(Phi)
+         end do
+
+         do j = 1, nJ+1
+            Phi = CoordMin_DB(2,iBlock) + (j-1)*Dphi
+            SinPhiFace_I(j) =  sin(Phi)
+            CosPhiFace_I(j) =  cos(Phi)
+         end do
+
+         ! dA_r = r_(i+1/2)*dphi*dz * (cos phi, sin phi, 0)
+         if(nDim == 3) FaceNormal_DDFB(z_,r_,:,:,:,iBlock) = 0
+         do i = 1, nI+1
+            Area = rFace_I(i)*Dphi*Dz
+            CellFace_DFB(r_,i,:,:,iBlock) = Area
+            if(Area > 0)then
+               do k = 1, nK; do j=1, nJ
+                  FaceNormal_DDFB(x_,r_,i,j,k,iBlock) = Area*CosPhi_I(j)
+                  FaceNormal_DDFB(y_,r_,i,j,k,iBlock) = Area*SinPhi_I(j)
+               end do; end do
+            else
+               FaceNormal_DDFB(x_:y_,r_,i,:,:,iBlock) = 0
+            end if
+         end do
+
+         ! dA_phi = dr*dz * (-sin phi, cos phi, 0) = dr*dz * (-y/r, x/r, 0)
+         if(nDim == 3)FaceNormal_DDFB(z_,Phi_,:,:,:,iBlock) = 0
+         do i = 1, nI
+            Area = (rFace_I(i+1)-rFace_I(i))*Dz
+            CellFace_DFB(Phi_,i,:,:,iBlock) = Area
+            do k = 1, nK; do j=1, nJ+1
+               FaceNormal_DDFB(x_,Phi_,i,j,k,iBlock) = -Area*SinPhiFace_I(j)
+               FaceNormal_DDFB(y_,Phi_,i,j,k,iBlock) = +Area*CosPhiFace_I(j)
+            end do; end do
+         end do
+
+         if(nDim == 3)then
+            ! dA_z = r*dr*dphi * (0,0,1)
+            FaceNormal_DDFB(x_:y_,z_,:,:,:,iBlock) = 0
+            do i = 1, nI
+               Area = rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dphi
+               CellFace_DFB(z_,i,:,:,iBlock)       = Area
+               FaceNormal_DDFB(z_,z_,i,:,:,iBlock) = Area
+            end do
+         end if
+
+         deallocate(SinPhi_I, CosPhi_I, SinPhiFace_I, CosPhiFace_I)
+
+      elseif(IsSpherical)then
+
+         allocate(SinThetaFace_I(nJ+1))
+
+         do j = 1, nJ+1
+            SinThetaFace_I(j) = sin(CoordMin_DB(Theta_,iBlock) + (j-1)*Dtheta)
+         end do
+
+         ! dA_r = r_(i+1/2)^2*dphi*d(cos theta)
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+            ! Exact surface area
+            Area = rFace_I(i)**2*Dphi*dCosTheta_I(j)
+            CellFace_DFB(r_,i,j,k,iBlock) = Area
+
+            ! Orthogonal coordinate system
+            d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)
+            FaceNormal_DDFB(:,r_,i,j,k,iBlock) = Area*d_D/sqrt(sum(d_D**2))
+
+         end do; end do; end do
+
+         ! dA_theta = r_i*sin(theta)*dr*dphi
+         do k = 1, nK; do j=1, nJ+1; do i = 1, nI
+            Area = rCell_I(i)*SinThetaFace_I(j)*(rFace_I(i+1)-rFace_I(i))*Dphi
+            CellFace_DFB(Theta_,i,j,k,iBlock) = Area
+
+            ! Orthogonal coordinate system
+            d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)
+            FaceNormal_DDFB(:,Theta_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
+
+         end do; end do; end do
+
+         ! dA_phi = r*dr*dtheta
+         do k = 1, nK+1; do j=1, nJ; do i = 1, nI
+            Area = rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dtheta
+            CellFace_DFB(Phi_,i,j,k,iBlock) = Area
+
+            ! Orthogonal coordinate system
+            d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)
+            FaceNormal_DDFB(:,Phi_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
+
+         end do; end do; end do
+
+         deallocate(SinThetaFace_I)
+
+      elseif(IsRLonLat)then
+
+         allocate(SinThetaFace_I(nK+1))
+
+         do k = 1, nK+1
+            SinThetaFace_I(k) = cos(CoordMin_DB(Lat_,iBlock) + (k-1)*Dtheta)
+         end do
+
+         ! dA_r = r_(i+1/2)^2*dphi*d(cos theta)
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+            ! Exact surface area
+            Area = rFace_I(i)**2*Dphi*dCosTheta_I(k)
+            CellFace_DFB(r_,i,j,k,iBlock) = Area
+
+            ! Orthogonal coordinate system
+            d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)
+            FaceNormal_DDFB(:,r_,i,j,k,iBlock) = Area*d_D/sqrt(sum(d_D**2))
+
+         end do; end do; end do
+
+         ! dA_phi = r*dr*dtheta
+         do k = 1, nK; do j=1, nJ+1; do i = 1, nI
+            Area = rCell_I(i)*(rFace_I(i+1)-rFace_I(i))*Dtheta
+            CellFace_DFB(Phi_,i,j,k,iBlock) = Area
+
+            ! Orthogonal coordinate system
+            d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)
+            FaceNormal_DDFB(:,Phi_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
+
+         end do; end do; end do
+
+         ! dA_lat = r_i*sin(theta)*dr*dphi
+         do k = 1, nK+1; do j=1, nJ; do i = 1, nI
+            Area = rCell_I(i)*SinThetaFace_I(k)*(rFace_I(i+1)-rFace_I(i))*Dphi
+            CellFace_DFB(Lat_,i,j,k,iBlock) = Area
+
+            ! Orthogonal coordinate system
+            d_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)
+            FaceNormal_DDFB(:,Lat_,i,j,k,iBlock)= Area*d_D/sqrt(sum(d_D**2))
+
+         end do; end do; end do
+
+         deallocate(SinThetaFace_I)
+
+      else
+         call CON_stop(NameSub//': '//TypeGeometry// &
+              ' geometry is not yet implemented')
+      end if
+
+    end subroutine calc_analytic_face
     !=========================================================================
     real function volume3(i1,j1, i2,j2, i3,j3)
 
@@ -604,7 +629,7 @@ contains
       b_D = Xyz_DN(:,i2,j2,k2) - a_D
       c_D = Xyz_DN(:,i3,j3,k3) - a_D
       d_D = Xyz_DN(:,i4,j4,k4) - a_D
-      
+
       ! Triple product divided by 6
       volume4 = cSixth*sum( b_D*cross_product(c_D, d_D) )
 
