@@ -49,13 +49,13 @@ module BATL_lib
 
   ! Inherited from BATL_geometry
   public:: TypeGeometry, IsCartesian, IsRzGeometry, IsSpherical, IsRLonLat, &
-       IsCylindrical, IsPeriodic_D, IsNodeBasedGrid, IsLogRadius, IsGenRadius, &
+       IsCylindrical, IsPeriodic_D, IsNodeBasedGrid, IsLogRadius, IsGenRadius,&
        nRgen, LogRgen_I, &
        x_, y_, z_, r_, Phi_, Theta_, Lon_, Lat_
 
   ! Inherited from BATL_grid
   public:: CoordMin_D, CoordMax_D, CoordMin_DB, CoordMax_DB, CellSize_DB
-  public:: Xyz_DGB
+  public:: Xyz_DGB, Xyz_DNB
   public:: CellFace_DB, CellFace_DFB, FaceNormal_DDFB
   public:: CellVolume_B, CellVolume_GB
   public:: find_grid_block, interpolate_grid
