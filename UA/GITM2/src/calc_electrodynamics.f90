@@ -74,7 +74,10 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   
   if (DipoleStrength == 0) return
 
-  if (.not. UseDynamo .or. Is1D) return
+  ! Used to have a return here for UseDynamo=F, but sort of need this for
+  ! coupling if we are in the SWMF.
+
+  if (Is1D) return
 
   call report("UA_calc_electrodynamics",1)
   call start_timing("calc_electrodyn")
@@ -301,6 +304,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         enddo
      enddo
   end if
+
+  if (.not. UseDynamo) return
 
   !\
   ! Magnetic grid is defined as:
@@ -1097,28 +1102,29 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   allocate( x(nX), y(nX), rhs(nX), b(nX), &
        d_I(nX), e_I(nX), e1_I(nX), f_I(nX), f1_I(nX) )
 
-  call IO_SetnMLTs(nMagLons+1)
-  call IO_SetnLats(2)
+  call UA_SetnMLTs(nMagLons+1)
+  call UA_SetnLats(2)
      
   SmallMagLocTimeMC(:,1) = MagLocTimeMC(:,1)
   SmallMagLocTimeMC(:,2) = MagLocTimeMC(:,nMagLats)
   SmallMagLatMC(:,1)     = MagLatMC(:,1)
   SmallMagLatMC(:,2)     = MagLatMC(:,nMagLats)
   iError = 0
-  call IO_SetGrid(SmallMagLocTimeMC, SmallMagLatMC, iError)
+  call UA_SetGrid(SmallMagLocTimeMC, SmallMagLatMC, iError)
   if (iError /= 0) then
-     write(*,*) "Error in routine calc_electrodynamics (IO_SetGrid):"
+     write(*,*) "Error in routine calc_electrodynamics (UA_SetGrid):"
      write(*,*) iError
-     call stop_gitm("Stopping in calc_electrodynamics")
+     call stop_gitm("Stopping in calc_electrodynamics")     
   endif
      
   iError = 0
-  call IO_GetPotential(SmallPotentialMC, iError)
+  call UA_GetPotential(SmallPotentialMC, iError)
 
   if (iError /= 0) then
-     write(*,*) "Error in routine calc_electrodynamics (IO_GetPotential):"
+     write(*,*) "Error in routine calc_electrodynamics (UA_GetPotential):"
      write(*,*) iError
-     call stop_gitm("Stopping in calc_electrodynamics")
+!     call stop_gitm("Stopping in calc_electrodynamics")
+     SmallPotentialMC = 0.0
   endif
 
   do iLat=2,nMagLats-1
