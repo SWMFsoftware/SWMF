@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 module BATL_pass_cell
 
-  use BATL_geometry, ONLY: IsCartesian, IsRzGeometry, &
+  use BATL_geometry, ONLY: IsCartesian, IsRzGeometry, IsRoundCube, &
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
 
@@ -963,7 +963,7 @@ contains
       !------------------------------------------------------------------------
 
       UseSimpleWeights = nDim == 1 .or. nDimAmr < nDim &
-           .or. IsCartesian .or. IsRzGeometry
+           .or. IsCartesian .or. IsRzGeometry .or. IsRoundCube
 
       ! Loop through the subfaces or subedges
       do kSide = (1-kDir)/2, 1-(1+kDir)/2, 3-kRatio
