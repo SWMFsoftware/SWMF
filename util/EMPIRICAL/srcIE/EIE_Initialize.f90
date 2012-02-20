@@ -18,6 +18,7 @@ subroutine EIE_Initialize(iOutputError)
   integer, parameter  :: North_ = 2
 
   logical :: IsFound_EFieldModel
+  integer :: nAmieLats, nAmieMlts, nAmieBlocks
 
   iError = 0
   iOutputError = 0
@@ -162,6 +163,7 @@ subroutine EIE_Initialize(iOutputError)
 
      IsFound_EFieldModel = .true.
      UseGridBasedEIE = .true.
+     UAl_UseGridBasedEIE = .true.
 
      call AMIE_SetFileName(AMIEFileNorth)
      call readAMIEOutput(North_, .false., iError)
@@ -174,50 +176,11 @@ subroutine EIE_Initialize(iOutputError)
         call readAMIEOutput(South_, .false., iError)
      endif
 
-     call AMIE_GetnLats(EIEi_HavenLats)
-     call AMIE_GetnMLTs(EIEi_HavenMLTs)
-     EIEi_HavenBLKs = 2
+     call AMIE_GetnLats(nAmieLats)
+     call AMIE_GetnMLTs(nAmieMlts)
+     nAmieBlocks = 2
 
-     if (iDebugLevel > 1) then
-        write(*,*) "=> EIEi_HavenBLKs : ", EIEi_HavenBLKs
-        write(*,*) "=> EIEi_HavenLats : ", EIEi_HavenLats
-        write(*,*) "=> EIEi_HavenMLTs : ", EIEi_HavenMLTs
-     endif
-
-     allocate(EIEr3_HaveLats(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs), &
-          stat=iError)
-     if (iError /= 0) then
-        write(*,*) "Error in allocating array EIEr3_HaveLats in Interface"
-        stop
-     endif
-
-     allocate(EIEr3_HaveMlts(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs), &
-          stat=iError)
-     if (iError /= 0) then
-        write(*,*) "Error in allocating array EIEr3_HaveMlts in Interface"
-        stop
-     endif
-
-     allocate(EIEr3_HavePotential(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs), &
-          stat=iError)
-     if (iError /= 0) then
-        write(*,*) "Error in allocating array EIEr3_HavePotential in Interface"
-        stop
-     endif
-
-     allocate(EIEr3_HaveEFlux(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs), &
-          stat=iError)
-     if (iError /= 0) then
-        write(*,*) "Error in allocating array EIEr3_HaveEFlux in Interface"
-        stop
-     endif
-
-     allocate(EIEr3_HaveAveE(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs), &
-          stat=iError)
-     if (iError /= 0) then
-        write(*,*) "Error in allocating array EIEr3_HaveAveE in Interface"
-        stop
-     endif
+     call EIE_InitGrid(nAmieLats, nAmieMlts, nAmieBlocks, iOutputError)
 
      call AMIE_GetLats(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs,&
           EIEr3_HaveLats,iError)
@@ -236,3 +199,118 @@ subroutine EIE_Initialize(iOutputError)
   if (iDebugLevel > 3) write(*,*) "====> Done with EIE_Initialize"
 
 end subroutine EIE_Initialize
+
+!------------------------------------------------------------------------
+!------------------------------------------------------------------------
+
+subroutine EIE_InitGrid(nLats, nMlts, nBlocks, iOutputError)
+
+  use ModErrors
+  use ModEIE_Interface
+  use ModEIEFiles
+
+  implicit none
+
+  integer, intent(in)  :: nLats, nMlts, nBlocks
+  integer, intent(out) :: iOutputError
+
+  integer :: iError
+
+  iError = 0
+
+  EIEi_HavenLats = nLats
+  EIEi_HavenMLTs = nMlts
+  EIEi_HavenBLKs = nBlocks
+
+  if (iDebugLevel > 1) then
+     write(*,*) "=> EIEi_HavenBLKs : ", EIEi_HavenBLKs
+     write(*,*) "=> EIEi_HavenLats : ", EIEi_HavenLats
+     write(*,*) "=> EIEi_HavenMLTs : ", EIEi_HavenMLTs
+  endif
+
+  allocate(EIEr3_HaveLats(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs), &
+       stat=iError)
+  if (iError /= 0) then
+     write(*,*) "Error in allocating array EIEr3_HaveLats in Interface"
+     stop
+  endif
+
+  allocate(EIEr3_HaveMlts(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs), &
+       stat=iError)
+  if (iError /= 0) then
+     write(*,*) "Error in allocating array EIEr3_HaveMlts in Interface"
+     stop
+  endif
+
+  allocate(EIEr3_HavePotential(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs), &
+       stat=iError)
+  if (iError /= 0) then
+     write(*,*) "Error in allocating array EIEr3_HavePotential in Interface"
+     stop
+  endif
+
+  allocate(EIEr3_HaveEFlux(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs), &
+       stat=iError)
+  if (iError /= 0) then
+     write(*,*) "Error in allocating array EIEr3_HaveEFlux in Interface"
+     stop
+  endif
+
+  allocate(EIEr3_HaveAveE(EIEi_HavenMlts,EIEi_HavenLats,EIEi_HavenBLKs), &
+       stat=iError)
+  if (iError /= 0) then
+     write(*,*) "Error in allocating array EIEr3_HaveAveE in Interface"
+     stop
+  endif
+
+  iOutputError = iError
+
+end subroutine EIE_InitGrid
+
+!------------------------------------------------------------------------
+!------------------------------------------------------------------------
+
+subroutine EIE_FillLats(Lats, iOutputError)
+
+  use ModErrors
+  use ModEIE_Interface
+
+  implicit none
+
+  real, intent(in)  :: Lats(EIEi_HavenLats)
+  integer, intent(out) :: iOutputError
+
+  integer :: iMlt
+
+  iOutputError = 0
+
+  do iMlt=1,EIEi_HavenMlts
+     EIEr3_HaveLats(iMlt,:,1) = Lats
+  enddo
+
+end subroutine EIE_FillLats
+
+!------------------------------------------------------------------------
+!------------------------------------------------------------------------
+
+subroutine EIE_FillMltsOffset(Mlts, iOutputError)
+
+  use ModErrors
+  use ModEIE_Interface
+
+  implicit none
+
+  real, intent(in)  :: Mlts(EIEi_HavenMlts-1)
+  integer, intent(out) :: iOutputError
+
+  integer :: iMlt,iLat
+
+  iOutputError = 0
+
+  do iLat=1,EIEi_HavenLats
+     EIEr3_HaveMlts(1,iLat,1) = Mlts(EIEi_HavenMlts-2)-360.0
+     EIEr3_HaveMlts(2:EIEi_HavenMlts,iLat,1) = Mlts
+  enddo
+
+end subroutine EIE_FillMltsOffset
+
