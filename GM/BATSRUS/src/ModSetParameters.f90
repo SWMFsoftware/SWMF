@@ -2070,6 +2070,8 @@ subroutine MH_set_parameters(TypeAction)
         BufferMin_D(Phi_:Theta_) = BufferMin_D(Phi_:Theta_) * cDegToRad
         BufferMax_D(Phi_:Theta_) = BufferMax_D(Phi_:Theta_) * cDegToRad
 
+     case("#THINCURRENTSHEET")
+        call read_var('DoThinCurrentSheet', DoThinCurrentSheet)
 
         ! OUTERHELIOSPHERE SPECIFIC COMMANDS
 

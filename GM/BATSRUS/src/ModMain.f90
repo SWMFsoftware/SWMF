@@ -313,4 +313,8 @@ Module ModMain
   !/
   logical :: UseLaserHeating = .false.
 
+  ! Logical for a thin heliospheric current sheet method similar to that
+  ! in the ENLIL code of D. Odstril
+  logical :: DoThinCurrentSheet = .false.
+
 end module ModMain
