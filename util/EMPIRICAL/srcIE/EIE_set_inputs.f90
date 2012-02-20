@@ -74,6 +74,7 @@ subroutine EIE_set_inputs(StringInputLines)
                 EIE_NameOfEFieldModel = 'samie'
 
            UseGridBasedEIE = .false.
+           UAl_UseGridBasedEIE = .false.
 
         endif
 
@@ -82,6 +83,7 @@ subroutine EIE_set_inputs(StringInputLines)
            call read_in_string(AMIEFileSouth)
            EIE_NameOfEFieldModel = "amie"
            UseGridBasedEIE = .true.
+           UAl_UseGridBasedEIE = .true.
         endif
 
         if (index(StringLine,"#DEBUG") > 0) then

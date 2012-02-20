@@ -125,7 +125,7 @@ subroutine UA_SetGrid(MLTsIn, LatsIn, iError)
   call UA_SetLats(LatsIn, iError)
   if (iError /= 0) return
 
-  if (UseGridBasedEIE) then
+  if (UAl_UseGridBasedEIE) then
 
      if (allocated(UAi3_InterpolationIndices)) &
           deallocate(UAi3_InterpolationIndices)
@@ -184,7 +184,7 @@ subroutine UA_GetPotential(PotentialOut, iError)
 
   iError = 0
 
-  if (UseGridBasedEIE) then
+  if (UAl_UseGridBasedEIE) then
 
      EIE_Value = EIEr3_HavePotential
 
@@ -419,7 +419,7 @@ subroutine UA_GetAveE(AveEOut, iError)
 
   iError = 0
 
-  if (UseGridBasedEIE) then
+  if (UAl_UseGridBasedEIE) then
 
      EIE_Value = EIEr3_HaveAveE
      call UA_GetValue(EIE_Value, ValueOut, 0.1, iError)
@@ -536,7 +536,7 @@ subroutine UA_GetEFlux(EFluxOut, iError)
 
   iError = 0
 
-  if (UseGridBasedEIE) then
+  if (UAl_UseGridBasedEIE) then
 
      EIE_Value = EIEr3_HaveEFlux
      call UA_GetValue(EIE_Value, ValueOut, 1.0e-10, iError)

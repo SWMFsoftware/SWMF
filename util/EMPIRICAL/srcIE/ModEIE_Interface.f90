@@ -56,6 +56,7 @@ module ModEIE_Interface
   character (len=100) :: EIE_NameOfSolarModel
   character (len=100) :: EIE_NameOfModelDir
 
+  logical :: UAl_UseGridBasedEIE
   logical :: UseGridBasedEIE
 
 end module ModEIE_Interface
