@@ -695,7 +695,7 @@ contains
     real:: PoloidalAngle, r, z, StretchCoef, dAngle, Residual, WallRadius
 
     !---------------------------------------------------------------------
-    if(TypeGeometry(1:5)=='cubed')then
+    if(TypeGeometry(1:5)=='round')then
 
        XyzGen_D = sqrt(sum(Xyz_D**2))/maxval(abs(Xyz_D)) * Xyz_D
 
