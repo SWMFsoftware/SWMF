@@ -273,7 +273,8 @@ subroutine get_potential(iBlock)
         if (iError /= 0) then
            write(*,*) "Error in get_potential (UA_GetPotential):"
            write(*,*) iError
-           call stop_gitm("Stopping in get_potential")
+           TempPotential = 0.0
+!           call stop_gitm("Stopping in get_potential")
         endif
 
         if (UseDynamo) then
@@ -343,7 +344,8 @@ subroutine get_potential(iBlock)
         if (iError /= 0) then
            write(*,*) "Error in get_potential (UA_GetAveE):"
            write(*,*) iError
-           call stop_gitm("Stopping in get_potential")
+!           call stop_gitm("Stopping in get_potential")
+           ElectronAverageEnergy = 1.0
         endif
 
         do iLat=-1,nLats+2
@@ -365,7 +367,8 @@ subroutine get_potential(iBlock)
         if (iError /= 0) then
            write(*,*) "Error in get_potential (UA_GetEFlux):"
            write(*,*) iError
-           call stop_gitm("Stopping in get_potential")
+           ElectronEnergyFlux = 0.1
+!           call stop_gitm("Stopping in get_potential")
         endif
 
      endif
