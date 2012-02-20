@@ -4,7 +4,7 @@ module ModFaceFlux
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit, &
        iTest, jTest, kTest, ProcTest, BlkTest, DimTest
   use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction, &
-       UseIonHeatConduction
+       UseIonHeatConduction, DoThinCurrentSheet
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, UseNeutralFluid
@@ -2807,6 +2807,9 @@ contains
 
       if(UseAlfvenWaves)then
          AlfvenSpeed = FullBn/sqrt(Rho)
+         if(Sign_>1 .and. DoThinCurrentSheet)then
+            if(State_V(Sign_) < 0.0) AlfvenSpeed = -AlfvenSpeed
+         end if
 
          do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
             Flux_V(iVar) = Flux_V(iVar) + AlfvenSpeed*State_V(iVar) !!PLUS
