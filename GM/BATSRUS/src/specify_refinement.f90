@@ -15,9 +15,11 @@ subroutine specify_refinement(DoRefine_B)
   use ModUser,     ONLY: user_specify_refinement
 
   ! Needed for the 'currentsheet' area type only
-  use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
-  use ModGeometry, ONLY: far_field_BCs_BLK
-  use ModNumConst, ONLY: cTiny, cRadToDeg
+  use ModAdvance,        ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
+  use ModExtraVariables, ONLY: Sign_
+  use ModGeometry,       ONLY: far_field_BCs_BLK
+  use ModMain,           ONLY: DoThinCurrentSheet
+  use ModNumConst,       ONLY: cTiny, cRadToDeg
 
   implicit none
 
@@ -97,28 +99,34 @@ subroutine specify_refinement(DoRefine_B)
            call user_specify_refinement(iBlock, iArea, DoRefine_B(iBlock))
         case('currentsheet')
 
-           ! Calculate BdotR including ghost cells in all directions
-           if(UseB0)then
-              do k=0, nK+1; do j=1, nJ; do i=1, nI
-                 rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-                      * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
-                      +              y_BLK(i,j,k,iBlock)   &
-                      * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
-                      +              z_BLK(i,j,k,iBlock)   &
-                      * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
-              end do; end do; end do
+           if(Sign_>1 .and. DoThinCurrentSheet)then
+              DoRefine_B(iBlock) = &
+                   maxval(State_VGB(Sign_,1:nI,1:nJ,0:nK+1,iBlock))>0.0 .and. &
+                   minval(State_VGB(Sign_,1:nI,1:nJ,0:nK+1,iBlock))<0.0
            else
-              do k=0, nK+1; do j=1, nJ; do i=1, nI
-                 rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-                      * State_VGB(Bx_,i,j,k,iBlock) &
-                      +           y_BLK(i,j,k,iBlock)   &
-                      * State_VGB(By_,i,j,k,iBlock) &
-                      +           z_BLK(i,j,k,iBlock)   &
-                      * State_VGB(Bz_,i,j,k,iBlock)
-              end do; end do; end do
+              ! Calculate BdotR including ghost cells in all directions
+              if(UseB0)then
+                 do k=0, nK+1; do j=1, nJ; do i=1, nI
+                    rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+                         * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
+                         +           y_BLK(i,j,k,iBlock)   &
+                         * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
+                         +           z_BLK(i,j,k,iBlock)   &
+                         * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
+                 end do; end do; end do
+              else
+                 do k=0, nK+1; do j=1, nJ; do i=1, nI
+                    rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+                         * State_VGB(Bx_,i,j,k,iBlock) &
+                         +           y_BLK(i,j,k,iBlock)   &
+                         * State_VGB(By_,i,j,k,iBlock) &
+                         +           z_BLK(i,j,k,iBlock)   &
+                         * State_VGB(Bz_,i,j,k,iBlock)
+                 end do; end do; end do
+              end if
+              DoRefine_B(iBlock) = &
+                   maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
            end if
-           DoRefine_B(iBlock) = &
-                maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
 
         case default
            IsSpecialArea = .false.
