@@ -2807,8 +2807,8 @@ contains
 
       if(UseAlfvenWaves)then
          AlfvenSpeed = FullBn/sqrt(Rho)
-         if(Sign_>1 .and. DoThinCurrentSheet)then
-            if(State_V(Sign_) < 0.0) AlfvenSpeed = -AlfvenSpeed
+         if(SignB_>1 .and. DoThinCurrentSheet)then
+            if(State_V(SignB_) < 0.0) AlfvenSpeed = -AlfvenSpeed
          end if
 
          do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
