@@ -72,7 +72,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_, &
                            WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
-                           UseMultiSpecies, Sign_
+                           UseMultiSpecies, SignB_
   use CON_coupler,   ONLY: Grid_C, DoCoupleVar_V, iVar_V, nVarCouple,&
                            Bfield_, ElectronPressure_, AnisoPressure_, Wave_,&
                            MultiFluid_, MultiSpecie_, &
@@ -182,17 +182,17 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
      IsFullyCoupledFluid = .true.
   end if
 
-  if(Sign_>1)then
+  if(SignB_>1)then
      if(DoThinCurrentSheet)then
         ! In both IH and OH we have no B0, so we ignore that !         
         if(sum(State_V(Bx_:Bz_)*XyzTarget_D) < 0.0)then
            State_V(Bx_:Bz_) = -State_V(Bx_:Bz_)
-           State_V(Sign_)=-State_V(Rho_)
+           State_V(SignB_)=-State_V(Rho_)
         else
-           State_V(Sign_)= State_V(Rho_)
+           State_V(SignB_)= State_V(Rho_)
         end if
      else
-        State_V(Sign_) = 0.0
+        State_V(SignB_) = 0.0
      end if
   end if
 
