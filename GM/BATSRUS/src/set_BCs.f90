@@ -762,20 +762,6 @@ contains
        VarsGhostFace_V = FaceState_V
        if(UseB0)VarsGhostFace_V(Bx_:Bz_)=VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
-       if(Sign_>1)then
-          if(DoThinCurrentSheet)then
-             ! In both IH and OH we have no B0, so we ignore that !
-             if(sum(VarsGhostFace_V(Bx_:Bz_)*FaceCoords_D) < 0.0)then
-                VarsGhostFace_V(Bx_:Bz_) = -VarsGhostFace_V(Bx_:Bz_)
-                VarsGhostFace_V(Sign_) = -VarsGhostFace_V(Rho_)
-             else
-                VarsGhostFace_V(Sign_) = VarsGhostFace_V(Rho_)
-             end if
-          else
-             VarsGhostFace_V(Sign_) = 0.0
-          end if
-       end if
-
        if(.not. IsFullyCoupledFluid .and. nFluid > 1) then
           ! Only variable associated with the main MHD plasma are passed
           ! through the buffer grid. BC's for fluids must be specified somehow.
