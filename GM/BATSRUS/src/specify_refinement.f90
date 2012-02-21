@@ -16,7 +16,7 @@ subroutine specify_refinement(DoRefine_B)
 
   ! Needed for the 'currentsheet' area type only
   use ModAdvance,        ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
-  use ModExtraVariables, ONLY: Sign_
+  use ModExtraVariables, ONLY: SignB_
   use ModGeometry,       ONLY: far_field_BCs_BLK
   use ModMain,           ONLY: DoThinCurrentSheet
   use ModNumConst,       ONLY: cTiny, cRadToDeg
@@ -99,10 +99,10 @@ subroutine specify_refinement(DoRefine_B)
            call user_specify_refinement(iBlock, iArea, DoRefine_B(iBlock))
         case('currentsheet')
 
-           if(Sign_>1 .and. DoThinCurrentSheet)then
+           if(SignB_>1 .and. DoThinCurrentSheet)then
               DoRefine_B(iBlock) = &
-                   maxval(State_VGB(Sign_,1:nI,1:nJ,0:nK+1,iBlock))>0.0 .and. &
-                   minval(State_VGB(Sign_,1:nI,1:nJ,0:nK+1,iBlock))<0.0
+                   maxval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))>0.0.and. &
+                   minval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))<0.0
            else
               ! Calculate BdotR including ghost cells in all directions
               if(UseB0)then
