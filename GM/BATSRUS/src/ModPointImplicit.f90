@@ -257,9 +257,13 @@ contains
 
           Epsilon_C = EpsPointImpl*Norm_C + EpsPointImpl_V(iVar)
 
-          if(DefaultState_V(iVar) > 0.5 .and. .not. IsAsymmetric) &
-               Epsilon_C = min(Epsilon_C, max(1e-30, 0.5*maxval(State0_C)))
-
+          if(DefaultState_V(iVar) > 0.5 .and. .not. IsAsymmetric)then
+             if(DoNormalizeCell)then
+                Epsilon_C = min(Epsilon_C, max(1e-30, 0.5*State0_C))
+             else
+                Epsilon_C = min(Epsilon_C, max(1e-30, 0.5*minval(State0_C)))
+             end if
+          end if
           ! Perturb the state
           State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C + Epsilon_C
 
