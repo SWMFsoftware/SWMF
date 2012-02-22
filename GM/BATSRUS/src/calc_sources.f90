@@ -490,8 +490,6 @@ contains
     DyInvHalf = 0.5/Dy_BLK(iBlock)
     DzInvHalf = 0.5/Dz_BLK(iBlock)
 
-!!!    if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field
-
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        dB1nEast = DxInvHalf*&
@@ -525,9 +523,10 @@ contains
             dB1nEast + dB1nWest + dB1nSouth + dB1nNorth
 
        if(nK > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
-            + dB1nTop + dB1nBot             
+            + dB1nTop + dB1nBot
 
-       if(.not.IsMhd) CYCLE
+       ! Momentum source term from B0 only needed for div(B^2/2 - BB) discretization
+       if(.not.(IsMhd.and.UseB0)) CYCLE
 
        Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
             -B0_DX(:,i,j,k)*dB1nEast    &
@@ -542,18 +541,8 @@ contains
 
     end do; end do; end do
 
-!!!    if(SignB_>1 .and. DoThinCurrentSheet)then
-!!!       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-!!!          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-!!!
-!!!          if(State_VGB(SignB_,i,j,k,iBlock) < 0.0) &
-!!!               DivB1_GB(i,j,k,iBlock) = -DivB1_GB(i,j,k,iBlock)
-!!!       end do; end do; end do
-!!!
-!!!       call reverse_field
-!!!    end if
-
-    if((.not.IsMhd).or.(.not.UseB0)) RETURN
+    ! Momentum source term from B0 only needed for true MHD equations
+    if(.not.(IsMhd .and. UseB0)) RETURN
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -570,9 +559,6 @@ contains
     real :: B1nJumpL, B1nJumpR, DivBInternal_C(1:nI,1:nJ,1:nK)
     integer :: i,j,k
     !------------------------------------------------------------------------
-    ! Covariant grid is not used in the heliosphere
-    if(SignB_>1 .and. DoThinCurrentSheet) &
-         call stop_mpi("Thin current sheet option not available for covariant")
     
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -900,8 +886,8 @@ subroutine calc_divb(iBlock)
   ! Compute divB using averaged and conservatively corrected 
   ! left and right values
 
-  use ModMain,       ONLY: nI, nJ, nK, DoThinCurrentSheet
-  use ModVarIndexes, ONLY: Bx_, By_, Bz_, SignB_
+  use ModMain,       ONLY: nI,nJ,nK
+  use ModVarIndexes, ONLY: Bx_,By_,Bz_
   use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK 
   use ModAdvance,    ONLY: DivB1_GB,State_VGB, &
        LeftState_VX, RightState_VX, &
@@ -919,8 +905,6 @@ subroutine calc_divb(iBlock)
   InvDx            = 1/dx_BLK(iBlock)
   if(nJ > 1) InvDy = 1/dy_BLK(iBlock)
   if(nK > 1) InvDz = 1/dz_BLK(iBlock)
-
-!!!  if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field
 
   do k=1, nK; do j=1, nJ; do i=1, nI
      DivB = InvDx* &
@@ -945,58 +929,7 @@ subroutine calc_divb(iBlock)
 
   end do; end do; end do
 
-!!!  if(SignB_>1 .and. DoThinCurrentSheet)then
-!!!     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-!!!        if(State_VGB(SignB_,i,j,k,iBlock) < 0.0) &
-!!!             DivB1_GB(i,j,k,iBlock) = -DivB1_GB(i,j,k,iBlock)
-!!!     end do; end do; end do
-!!!
-!!!     call reverse_field
-!!!  end if
-
 end subroutine calc_divb
-
-!===========================================================================
-
-subroutine reverse_field
-
-  use ModMain,       ONLY: nI, nJ, nK
-  use ModVarIndexes, ONLY: Bx_, By_, Bz_, SignB_
-  use ModAdvance,    ONLY: &
-       LeftState_VX, RightState_VX, &
-       LeftState_VY, RightState_VY, &
-       LeftState_VZ, RightState_VZ
-  implicit none
-
-  integer :: i, j, k
-  !--------------------------------------------------------------------------
-
-  do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-     if(LeftState_VX(SignB_,i,j,k) < 0.0) &
-          LeftState_VX(Bx_:Bz_,i,j,k) = -LeftState_VX(Bx_:Bz_,i,j,k)
-     if(RightState_VX(SignB_,i,j,k) < 0.0) &
-          RightState_VX(Bx_:Bz_,i,j,k) = -RightState_VX(Bx_:Bz_,i,j,k)
-  end do; end do; end do
-
-  if(nJ > 1)then
-     do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-        if(LeftState_VY(SignB_,i,j,k) < 0.0) &
-             LeftState_VY(Bx_:Bz_,i,j,k) = -LeftState_VY(Bx_:Bz_,i,j,k)
-        if(RightState_VY(SignB_,i,j,k) < 0.0) &
-             RightState_VY(Bx_:Bz_,i,j,k) = -RightState_VY(Bx_:Bz_,i,j,k)
-     end do; end do; end do
-  end if
-
-  if(nK > 1)then
-     do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-        if(LeftState_VZ(SignB_,i,j,k) < 0.0) &
-             LeftState_VZ(Bx_:Bz_,i,j,k) = -LeftState_VZ(Bx_:Bz_,i,j,k)
-        if(RightState_VZ(SignB_,i,j,k) < 0.0) &
-             RightState_VZ(Bx_:Bz_,i,j,k) = -RightState_VZ(Bx_:Bz_,i,j,k)
-     end do; end do; end do
-  end if
-
-end subroutine reverse_field
 
 !===========================================================================
 
