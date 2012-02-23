@@ -6539,6 +6539,27 @@ Default value is DoExpandTransitionRegion = .false.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!! HELIOSPHERE SPECIFIC COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="THINCURRENTSHEET">
+	 <parameter name="DoThinCurrentSheet" type="logical" default="F"/>
+
+#THINCURRENTSHEET
+F			DoThinCurrentSheet
+
+The thin current sheet option is based on the thin current sheet method of
+the ENLIL code. Numerical reconnection of magnetic field about the
+heliospheric current sheet is avoided by reversing the field direction in one
+hemisphere (the hemisphere for which the radial magnetic is negative). This
+method assumes that there is no guide field, which would otherwise start to
+reconnection. It is only intended for inner and outer heliosphere simulations,
+assuming no coronal mass ejections are present.
+
+This method requires an equation model that contains the SignB variable.
+This variable is used to track where the field is reversed and where the
+current sheet is located by using a level set method for the sign.
+
+Default value is DoThinCurrentSheet = .false.
+</command>
+
 <command name="HELIOUPDATEB0" if="$NameComp ne 'GM'">
 	<parameter name="DtUpdateB0" type="real" min="-1" default="0.0001"/>
 
