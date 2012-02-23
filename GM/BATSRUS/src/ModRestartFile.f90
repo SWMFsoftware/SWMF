@@ -8,8 +8,8 @@ module ModRestartFile
   use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
        nBlockAll, nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
-       NameThisComp, UseBatl, iteration_number
-  use ModVarIndexes, ONLY: nVar, DefaultState_V
+       NameThisComp, UseBatl, iteration_number, DoThinCurrentSheet
+  use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_
   use ModAdvance,    ONLY: State_VGB
   use ModCovariant,  ONLY: NameGridFile
   use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
@@ -163,6 +163,12 @@ contains
     !------------------------------------------------------------------------
     call timing_start(NameSub)
 
+    if(SignB_>1 .and. DoThinCurrentSheet)then
+       do iBlock = 1, nBlock
+          if (.not.unusedBLK(iBlock)) call reverse_field(iBlock)
+       end do
+    end if
+
     if(UseBatl)then
        write(NameFile,'(a)') trim(NameRestartOutDir)//'octree.rst'
        if (UseRestartOutSeries) &
@@ -191,6 +197,12 @@ contains
     end select
     if(iProc==0)call save_advected_points
     if(DoWriteIndices .and. iProc==0)call write_geoind_restart
+
+    if(SignB_>1 .and. DoThinCurrentSheet)then
+       do iBlock = 1, nBlock
+          if (.not.unusedBLK(iBlock)) call reverse_field(iBlock)
+       end do
+    end if
 
     call timing_stop(NameSub)
 
@@ -224,6 +236,12 @@ contains
        if (.not.unusedBLK(iBlock)) call fix_block_geometry(iBlock)
     end do
     if(.not.UseBatl) call set_body_flag
+
+    if(SignB_>1 .and. DoThinCurrentSheet)then
+       do iBlock = 1, nBlock
+          if (.not.unusedBLK(iBlock)) call reverse_field(iBlock)
+       end do
+    end if
 
     ! Try reading geoIndices restart file if needed
     if(DoWriteIndices .and. iProc==0)call read_geoind_restart
