@@ -21,6 +21,7 @@ subroutine write_plot_common(ifile)
   use BATL_lib, ONLY: message_pass_node, calc_error_amr_criteria
   use ModAdvance, ONLY : State_VGB
   use ModMultiFluid, ONLY: extract_fluid_name
+  use ModVarIndexes, ONLY: SignB_
   implicit none
 
   ! Arguments
@@ -243,6 +244,8 @@ subroutine write_plot_common(ifile)
   do iBLK=1,nBlockMax
      if(unusedBLK(iBLK))CYCLE
 
+     if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
+
      call set_plotvar(iBLK, ifile-plot_, nPlotVar, plotvarnames, plotvar, &
           plotvar_inBody, plotvar_useBody)
 
@@ -293,6 +296,8 @@ subroutine write_plot_common(ifile)
    	dxPEmin(2)=min(dxPEmin(2),dyblk)
    	dxPEmin(3)=min(dxPEmin(3),dzblk)
      end if
+
+     if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
 
   end do ! iBLK
 
@@ -1836,3 +1841,22 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
   end do
 
 end subroutine get_idl_units
+
+!==============================================================================
+subroutine reverse_field(iBlock)
+
+  use ModAdvance,    ONLY: State_VGB
+  use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  use ModVarIndexes, ONLY: Bx_, Bz_, SignB_
+  implicit none
+
+  integer, intent(in) :: iBlock
+
+  integer :: i, j, k
+  !----------------------------------------------------------------------------
+  do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+     if(State_VGB(SignB_,i,j,k,iBlock) < 0.0) &
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = -State_VGB(Bx_:Bz_,i,j,k,iBlock)
+  end do; end do; end do
+
+end subroutine reverse_field
