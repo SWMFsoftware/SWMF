@@ -20,6 +20,7 @@ subroutine advance
 
   if (UseGSWMTides)  call update_tides
   if (UseWACCMTides) call update_waccm_tides
+  if (UsePerturbation) call user_perturbation
 
   if (.not. UseStatisticalModelsOnly) then
 
