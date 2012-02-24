@@ -34,7 +34,6 @@ module ModUser
 
   ! Venus stuff
   logical ::  UseMultiSpecies=.true.
-  logical ::  IsDoneNeutralDen=.false.
   integer, parameter :: MaxSpecies=4, MaxNuSpecies=3,  &
        MaxReactions=10
   integer :: nSpecies=4, nNuSpecies=3, &
@@ -338,7 +337,8 @@ contains
   !========================================================================
 
   subroutine user_sources
-    use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest 
+    use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest, &
+         iNewGrid, iNewDecomposition, UnusedBlk, nBlock
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_
     use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
@@ -354,6 +354,9 @@ contains
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps
     logical:: oktest,oktest_me
     real :: SourceLossMax, vdtmin, chalf=0.5
+
+
+    integer:: iLastGrid = -1, iLastDecomposition = -1
     !
     !\
     ! Variable meanings:
@@ -366,9 +369,14 @@ contains
     !
     !--------------------------------------------------------------------------
 
-    !write(*,*)'IsDoneNeutralDen=',IsDoneNeutralDen
-    if(.not.IsDoneNeutralDen)then
-       do iBlock=1, nBLK
+    if(iNewGrid /= iLastGrid .or. iNewDecomposition /= iLastDecomposition)then
+       iLastGrid          = iNewGrid
+       iLastDecomposition = iNewDecomposition
+
+       if(iProc==0) write(*,*)'Calculating neutral density for Venus'
+       
+       do iBlock=1, nBlock
+          if(UnusedBlk(iBlock)) CYCLE
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(R_BLK(i,j,k,iBlock)<= Rbody)then
                 nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
@@ -405,10 +413,7 @@ contains
 
 
        end do
-       write(*,*)'IsDoneNeutralDen=',IsDoneNeutralDen
-       IsDoneNeutralDen=.true.  
     end if
-
 
     iBlock = globalBlk
 
@@ -451,6 +456,7 @@ contains
           MaxSLSpecies_CB(i,j,k,iBlock)=1.0e-3
          
           Productrate= Productrate_CB(i,j,k,iBlock)
+
           ReactionRate_I(CO2_hv__CO2p_em_)= &
                Rate_I(CO2_hv__CO2p_em_)&
                *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
@@ -742,9 +748,6 @@ contains
        end if
 
     end do; end do; end do
-
-    IsDoneNeutralDen=.true.
-    
 
     if(.not.restart)then
 
