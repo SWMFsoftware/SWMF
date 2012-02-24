@@ -554,7 +554,9 @@ subroutine loadmodel(datafile)
         deallocate(gfs,gfm,gfl,gvbar,gwbar,gzwght,gbz,gbm)
     endif
 
-    open(unit=23,file=trim(datafile),form='unformatted')
+    write(*,*) "Opening HWM file!"
+
+    open(unit=23,file=trim(datafile),form='unformatted',status='old')
     read(23) nbf,maxs,maxm,maxl,maxn,ncomp
     read(23) nlev,p
     nnode = nlev + p
@@ -1333,7 +1335,9 @@ subroutine loaddwm(datafile)
 
     external vsh_basis_init
 
-    open(unit=23,file=trim(datafile),form='unformatted')
+    write(*,*) "Opening HWM file!"
+
+    open(unit=23,file=trim(datafile),form='unformatted',status='old')
 
     if (allocated(termarr)) deallocate(termarr,coeff)
     read(23) nterm, maxmd, maxld
