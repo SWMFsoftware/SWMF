@@ -2,14 +2,17 @@ subroutine fix_axis_cells
 
   use ModProcMH, ONLY: iComm
   use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk, iTest, jTest, kTest, &
-       BlkTest
+       BlkTest, UseBatl
   use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
        x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB,&
        r_to_gen
   use ModEnergy, ONLY: calc_energy_point
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
+  use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_
+  use ModNumConst, ONLY: cHalfPi
   use ModMpi
+
   implicit none
 
   real, allocatable:: Buffer_VIII(:,:,:,:), SumBuffer_VIII(:,:,:,:)
@@ -40,6 +43,9 @@ subroutine fix_axis_cells
      RETURN
   end if
 
+  if(TypeGeometry(1:3) /= 'sph') &
+       call stop_mpi(NameSub//': invalid geometry='//TypeGeometry)
+
   ! Maximum number of cells along the axis
   nR = nint((XyzMax_D(1)-XyzMin_D(1))/MinDxValue)
   allocate(Buffer_VIII(nVar, nR, 1:Geom_, North_:South_), &
@@ -49,7 +55,8 @@ subroutine fix_axis_cells
   SumBuffer_VIII = 0.0
 
   do iBlock = 1, nBlock
-     if(unusedBlk(iBlock) .or. .not. far_field_BCs_BLK(iBlock)) CYCLE
+     if(unusedBlk(iBlock))CYCLE
+     if(.not.UseBatl .and. .not.far_field_BCs_BLK(iBlock)) CYCLE
 
      if(rMin_BLK(iBlock) < r2FixAxis) then 
         nAxisCell = 2
@@ -60,13 +67,24 @@ subroutine fix_axis_cells
      end if
 
      ! Determine hemisphere
-     if( NeiLTop(iBlock) == NOBLK )then
-        iHemisphere = North_; kMin = nK+1-nAxisCell; kMax = nK; kOut = kMin-1
-     elseif( NeiLBot(iBlock) == NOBLK) then
-        iHemisphere = South_; kMin = 1; kMax = nAxisCell; kOut = kMax+1
+     if(UseBatl)then
+
+        if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
+           iHemisphere = North_; kMin = nK+1-nAxisCell; kMax = nK; kOut = kMin-1
+        elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
+           iHemisphere = South_; kMin = 1; kMax = nAxisCell; kOut = kMax+1
+        else
+           CYCLE
+        end if
      else
-        CYCLE
-     endif
+        if( NeiLTop(iBlock) == NOBLK )then
+           iHemisphere = North_; kMin = nK+1-nAxisCell; kMax = nK; kOut = kMin-1
+        elseif( NeiLBot(iBlock) == NOBLK) then
+           iHemisphere = South_; kMin = 1; kMax = nAxisCell; kOut = kMax+1
+        else
+           CYCLE
+        endif
+     end if
 
      do i=1,nI
         r = r_Blk(i,1,1,iBlock)
@@ -127,13 +145,25 @@ subroutine fix_axis_cells
         CYCLE
      end if
 
-     if( NeiLTop(iBlock) == NOBLK )then
-        iHemisphere = North_; kMax = nK + 1; kMin = nK + 1 - nAxisCell
-     elseif( NeiLBot(iBlock) == NOBLK) then
-        iHemisphere = South_; kMin = 0; kMax = nAxisCell
+
+     if(UseBatl)then
+
+        if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
+           iHemisphere = North_; kMax = nK + 1; kMin = nK + 1 - nAxisCell
+        elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
+           iHemisphere = South_; kMin = 0; kMax = nAxisCell
+        else
+           CYCLE
+        end if
      else
-        CYCLE
-     endif
+        if( NeiLTop(iBlock) == NOBLK )then
+           iHemisphere = North_; kMax = nK + 1; kMin = nK + 1 - nAxisCell
+        elseif( NeiLBot(iBlock) == NOBLK) then
+           iHemisphere = South_; kMin = 0; kMax = nAxisCell
+        else
+           CYCLE
+        endif
+     end if
 
      do i = 1, nI
         r = r_Blk(i,1,1,iBlock)
@@ -192,7 +222,7 @@ subroutine fix_axis_cells_cyl
   use ModMain, ONLY: nJ, nK, nBlock, UnusedBlk
   use ModAdvance, ONLY: nVar, State_VGB, r2FixAxis
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MinDxValue, &
-       x_Blk, y_Blk, z_Blk, Dx_Blk, Dz_Blk, vInv_CB
+       rMin_Blk, x_Blk, y_Blk, z_Blk, Dx_Blk, Dz_Blk, vInv_CB
   use ModEnergy, ONLY: calc_energy_point
   use ModParallel, ONLY: NeiLEast, NOBLK
   use ModMpi
@@ -226,7 +256,8 @@ subroutine fix_axis_cells_cyl
   end if
 
   do iBlock = 1, nBlock
-     if(unusedBlk(iBlock) .or. NeiLeast(iBlock) /= NOBLK) CYCLE
+     if(unusedBlk(iBlock)) CYCLE
+     if(rMin_BLK(iBlock) > dx_BLK(iBlock)) CYCLE
 
      do k=1,nK
         z = z_Blk(1,1,k,iBlock)
