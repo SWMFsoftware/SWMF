@@ -124,8 +124,9 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
 
   use ModBoundaryCells, ONLY: MinBoundarySaved, MaxBoundarySaved, &
        IsBoundaryCell_IGB, iBoundary_GB, DomainOp, domain_
-  use ModMain, ONLY : nBlock, UnusedBlk, iNewGrid, iNewDecomposition, &
-       UseBatl, nI, nJ, nK, body2_, Top_
+  use ModMain, ONLY : nBlock, UnusedBlk, iNewGrid, iNewDecomposition, nOrder,&
+       UseBatl, nI, nJ, nK, body2_, Top_, &
+       BlkTest, iTest, jTest, kTest
   use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB,&
        x_BLK, y_BLK, z_BLK
   !use ModProcMH, ONLY: iProc
@@ -137,19 +138,35 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
 
   integer:: i,j,k
   integer:: iBlock, iBoundary
-  integer:: iGridHere=-1, iDecompositionHere=-1
-  !-----------------------------------------------------------------------------
-  if(iGridHere==iNewGrid .and. iDecompositionHere==iNewDecomposition) RETURN
+  integer:: iGridHere=-1, iDecompositionHere=-1, nOrderHere=-1
 
-  !  if(iProc==0)write(*,*)'Start fix boundary cells'
+  logical:: DoTest, DoTestMe
+  character(len=*), parameter:: NameSub = 'fix_boundary_ghost_cells'
+  !----------------------------------------------------------------------------
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
-  iGridHere=iNewGrid; iDecompositionHere=iNewDecomposition
+  if(DoTestMe) write(*,*) NameSub,' UseMonotone=',UseMonotoneRestrict
+
+  ! Recalculate ghost cell info if grid changed. If BATL is not used,
+  ! also has to redo it if the order of the scheme changed.
+  ! Depending on what the boundary cell info in the ghost cells is used for,
+  ! this condition may have to be revised !!!
+  if(iGridHere==iNewGrid .and. iDecompositionHere==iNewDecomposition &
+       .and. (nOrderHere==nOrder .or. UseBatl)) RETURN
+
+  iGridHere=iNewGrid; iDecompositionHere=iNewDecomposition; nOrderHere=nOrder
+
+  if(DoTestMe) write(*,*)NameSub,' starting with true_cell(i-2:i+2)=', &
+       true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
 
   if(UseBatl) then
      call message_pass_cell_scalar(Int_GB=iBoundary_GB, &
           nProlongOrderIn=1, nCoarseLayerIn=2, &
           DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
           NameOperatorIn=DomainOp)
+
+     if(DoTestMe) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
+          iBoundary_GB(iTest-2:iTest+2,jTest,kTest,BlkTest)
 
      do iBlock = 1, nBlock
         if(unusedBLK(iBlock)) CYCLE
@@ -165,7 +182,13 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
         end do
      end do
   else
+     if(DoTestMe) write(*,*) NameSub,': MinBoundarySaved, MaxBoundarySaved=', &
+          MinBoundarySaved, MaxBoundarySaved
+
      call message_pass_boundary_cells(UseMonotoneRestrict)
+
+     if(DoTestMe) write(*,*) NameSub, ': IsBoundaryCell_IGB = ', &
+          IsBoundaryCell_IGB(:,iTest,jTest,kTest,BlkTest)
 
      do iBlock = 1, nBlock
 
@@ -178,10 +201,14 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
                 .and. .not.IsBoundaryCell_IGB(iBoundary,:,:,:,iBlock)
         end do
 
-        ! body_BLK: if any cell INCLUDING ghost cells is outside the comp. domain
+        ! body_BLK: if any cell INCLUDING ghost cells is outside 
+        ! the comp. domain
         body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))
 
      end do
   end if
+
+  if(DoTestMe) write(*,*) NameSub,' finished with true_cell(i-2:i+2)=', &
+       true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
 
 end subroutine fix_boundary_ghost_cells
