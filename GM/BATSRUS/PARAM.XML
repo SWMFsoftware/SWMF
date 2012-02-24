@@ -2690,6 +2690,7 @@ out. The unit of the pertrubation output is nT.
 			<part name="plotform" type="string" input="select" 
 								required="T">
 				<option value="tec" name="TECPLOT"/>
+				<option value="hdf" name="HDF5"/>
 				<option value="idl" name="IDL" default="T"/>
 				<option value="idl_real4" 
 					name="IDL single prec"/>
@@ -2833,8 +2834,11 @@ out. The unit of the pertrubation output is nT.
 		</if>
 	</for>
 #SAVEPLOT
-15			nPlotfile
+16			nPlotfile
 3d  MHD tec		StringPlot ! 3d plot with MHD data
+100			DnSavePlot
+-1.			DtSavePlot
+3d  FUL hdf		StringPlot ! 3d HDF plot with a lot of data
 100			DnSavePlot
 -1.			DtSavePlot
 y=0 VAR idl		StringPlot ! y=0 plane plot with listed variables
@@ -2956,7 +2960,7 @@ StringPlot must contain the following 3 parts in the following order
 \begin{verbatim}
 plotform plotarea plotvar
 
-plotform = 'tec', 'idl', 'idl_real4', 'idl_real8', 'idl_ascii'
+plotform = 'tec', 'hdf', 'idl', 'idl_real4', 'idl_real8', 'idl_ascii'
 plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr', 'eqr', 'ieb', 'lcb'
 plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'euv', 'sxr', 'pos', 'var', 'bbk' 'rwi' 'int' 'nul' - normalized
 plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'EUV', 'SXR', 'pos', 'VAR', 'BBK' 'RWI' 'INT' 'NUL' - dimensional
@@ -2969,8 +2973,12 @@ NOTES: The plotvar option 'sol' is only valid for plotarea 'los';
 \\
 
 \noindent
-The plotform string selects the output to be usable for Tecplot or IDL 
-visualization software. The IDL output can be written as single
+The plotform string selects the output to be usable for 
+Tecplot (tec), VISIT (hdf), or IDL (idl*) visualization software. 
+The HDF output works only if the HDF library is installed, 
+the appropriate parallel HDF module is loaded and BATSRUS is 
+configured with the -hdf flag.
+The IDL output can be written as single
 precision binary (idl_real4), double precision binary (idl_real8) 
 or ASCII file (idl_ascii). The default is 'idl_real4' that can also 
 be written simply as 'idl'.
