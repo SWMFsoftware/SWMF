@@ -240,7 +240,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_,&
        State_VGB
   use ModGeometry, ONLY: True_Blk, true_cell
-  use ModGeometry, ONLY: UseCovariant     
+  use ModGeometry, ONLY: UseCovariant
   use ModPartSteady, ONLY: UsePartSteady
   use ModAMR, ONLY : availableBLKs, UnusedBlock_BP
   use ModParallel
@@ -250,8 +250,11 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModConserveFlux, ONLY: init_cons_flux
 
   use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, Used_,&
-       regrid_batl
+       regrid_batl, IsCartesian, IsRzGeometry
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
+
+  ! Temporary
+  use ModCovariant,ONLY: UseVertexBasedGrid, do_fix_geometry_at_reschange
 
   implicit none
 
@@ -312,96 +315,98 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   ! BATL related variables
   integer:: iNode
   integer, allocatable:: iTypeAdvance_A(:), iTypeBalance_A(:)
- 
- !---------------------------------------------------------------------------
+
+  !---------------------------------------------------------------------------
   if(UseBatl)then
 
      call select_stepping(DoMoveCoord)       !^CFG IF IMPLICIT
 
-     if (nProc==1 .or. index(test_string,'NOLOADBALANCE')>0) then
+     if (nProc>1 .and. index(test_string,'NOLOADBALANCE') < 1) then
 
-        ! When load balancing is done Skipped and Unused blocks coincide 
-        UnusedBlock_BP(1:nBlock,:) = iTypeAdvance_BP(1:nBlock,:) == SkippedBlock_
-
-        call find_test_cell
-        RETURN
-     end if
-
-     ! If the coordinates are known then include the body block info into
-     ! iTypeAdvance_B and _BP by changing the sign to negative for body blocks
-     if(DoMoveCoord)then
+        ! If the coordinates are known then include the body block info into
+        ! iTypeAdvance_B and _BP by changing the sign to negative for body blocks
+        if(DoMoveCoord)then
 !!! If there was a IsTrueBlock_BP array there was no need for MPI_ALLGATHER
-        where(.not. True_BLK(1:nBlock)) &
-             iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
+           where(.not. True_BLK(1:nBlock)) &
+                iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
 
-        ! Update iTypeAdvance_BP
-        ! CHEATING: only indicate first index to circumvent ModMpiInterfaces.
-        ! Set displacement equal to MaxBlock so we get same behavior 
-        ! as MPI_allgather. Use nBlockMax for maximum receive data for speed!
-        nBlockMax_P = nBlockMax
-        call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
-             iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
-             MPI_INTEGER, iComm, iError)
+           ! Update iTypeAdvance_BP
+           ! CHEATING: only indicate first index to circumvent ModMpiInterfaces.
+           ! Set displacement equal to MaxBlock so we get same behavior 
+           ! as MPI_allgather. Use nBlockMax for maximum receive data for speed!
+           nBlockMax_P = nBlockMax
+           call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
+                iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
+                MPI_INTEGER, iComm, iError)
+        end if
+
+        ! Set the transformation from iTypeAdvance to iType
+        iType_I = 1
+        iType_I(SkippedBlock_) = 0
+        if(UsePartSteady)then
+           iType_I(SteadyBoundBlock_) = 2
+           iType_I(ExplBlock_)        = 2
+           iType_I(-SteadyBoundBlock_) = 3
+           iType_I(-ExplBlock_)        = 3
+        elseif(UsePartImplicit)then                !^CFG IF IMPLICIT
+           iType_I( ImplBlock_) = 2                !^CFG IF IMPLICIT
+           iType_I(-ImplBlock_) = 2                !^CFG IF IMPLICIT
+        else
+           iType_I(-ExplBlock_) = 2
+        endif
+        nType = maxval(iType_I)
+
+        allocate(iTypeAdvance_A(nNode), iTypeBalance_A(MaxNode))
+
+        do iNode = 1, nNode
+           if(iTree_IA(Status_,iNode) /= Used_) CYCLE
+           iTypeAdvance_A(iNode) = &
+                iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode))
+           iTypeBalance_A(iNode) = iType_I(iTypeAdvance_A(iNode))
+        end do
+
+        ! load balance depending on block types
+        if(DoMoveData)then
+           call init_load_balance
+           call regrid_batl(nVar, State_VGB, Dt_BLK,  &
+                iTypeNode_A=iTypeBalance_A,           &
+                DoBalanceOnlyIn=.true.,               &
+                nExtraData=nBuffer,                   &
+                pack_extra_data=pack_load_balance,    &
+                unpack_extra_data=unpack_load_balance )
+           call set_batsrus_grid
+           call set_batsrus_state
+        else
+           call regrid_batl(nVar, State_VGB, Dt_BLK, Used_GB=true_cell, &
+                iTypeNode_A=iTypeBalance_A)
+           call set_batsrus_grid
+        end if
+
+        ! restore iTypeAdvance_B and _BP with positive values
+        iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
+        do iNode = 1, nNode
+           if(iTree_IA(Status_,iNode) /= Used_) CYCLE
+           iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode)) = &
+                abs(iTypeAdvance_A(iNode))
+        end do
+        iTypeAdvance_B(1:nBlock)  = iTypeAdvance_BP(1:nBlock,iProc)
+
+        deallocate(iTypeAdvance_A, iTypeBalance_A)
+
      end if
-
-     ! Set the transformation from iTypeAdvance to iType
-     iType_I = 1
-     iType_I(SkippedBlock_) = 0
-     if(UsePartSteady)then
-        iType_I(SteadyBoundBlock_) = 2
-        iType_I(ExplBlock_)        = 2
-        iType_I(-SteadyBoundBlock_) = 3
-        iType_I(-ExplBlock_)        = 3
-     elseif(UsePartImplicit)then                !^CFG IF IMPLICIT
-        iType_I( ImplBlock_) = 2                !^CFG IF IMPLICIT
-        iType_I(-ImplBlock_) = 2                !^CFG IF IMPLICIT
-     else
-        iType_I(-ExplBlock_) = 2
-     endif
-     nType = maxval(iType_I)
-
-     allocate(iTypeAdvance_A(nNode), iTypeBalance_A(MaxNode))
-
-     do iNode = 1, nNode
-        if(iTree_IA(Status_,iNode) /= Used_) CYCLE
-        iTypeAdvance_A(iNode) = &
-             iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode))
-        iTypeBalance_A(iNode) = iType_I(iTypeAdvance_A(iNode))
-     end do
-
-     ! load balance depending on block types
-     if(DoMoveData)then
-        call init_load_balance
-        call regrid_batl(nVar, State_VGB, Dt_BLK,  &
-             iTypeNode_A=iTypeBalance_A,           &
-             DoBalanceOnlyIn=.true.,               &
-             nExtraData=nBuffer,                   &
-             pack_extra_data=pack_load_balance,    &
-             unpack_extra_data=unpack_load_balance )
-        call set_batsrus_grid
-        call set_batsrus_state
-     else
-        call regrid_batl(nVar, State_VGB, Dt_BLK, Used_GB=true_cell, &
-             iTypeNode_A=iTypeBalance_A)
-        call set_batsrus_grid
-     end if
-
-     ! restore iTypeAdvance_B and _BP with positive values
-     iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
-     do iNode = 1, nNode
-        if(iTree_IA(Status_,iNode) /= Used_) CYCLE
-        iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode)) = &
-             abs(iTypeAdvance_A(iNode))
-     end do
-     iTypeAdvance_B(1:nBlock)  = iTypeAdvance_BP(1:nBlock,iProc)
 
      ! When load balancing is done Skipped and Unused blocks coincide 
      UnusedBlock_BP(1:nBlock,:) = iTypeAdvance_BP(1:nBlock,:) == SkippedBlock_
 
-
      call find_test_cell
 
-     deallocate(iTypeAdvance_A, iTypeBalance_A)
+     ! This is a temporary solution for backward compatibility
+     if(.not.(IsCartesian.or.IsRzGeometry) .and. DoMoveCoord .and. UseVertexBasedGrid)then
+        do iBlock=1, nBlock
+           if(do_fix_geometry_at_reschange(iBlock)) &       
+                call fix_geometry_at_reschange(iBlock) 
+        end do
+     end if
 
      RETURN
   end if
