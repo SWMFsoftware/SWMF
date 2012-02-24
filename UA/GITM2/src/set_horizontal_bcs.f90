@@ -25,27 +25,40 @@ subroutine set_horizontal_bcs(iBlock)
               VerticalVelocity(iLon,:,iAlt,iSpecies,iBlock) = &
                    VerticalVelocity(iLon+1,:,iAlt,iSpecies,iBlock)
               nDensityS(iLon,:,iAlt,iSpecies,iBlock) = &
-                   2*nDensityS(iLon+1,:,iAlt,iSpecies,iBlock) - &
-                   nDensityS(iLon+2,:,iAlt,iSpecies,iBlock)
+                   nDensityS(iLon+1,:,iAlt,iSpecies,iBlock)
+!              nDensityS(iLon,:,iAlt,iSpecies,iBlock) = &
+!                   2*nDensityS(iLon+1,:,iAlt,iSpecies,iBlock) - &
+!                   nDensityS(iLon+2,:,iAlt,iSpecies,iBlock)
            enddo
 
            Rho(iLon, :,iAlt,iBlock) = &
-                2*Rho(iLon+1,:,iAlt,iBlock) - &
-                Rho(iLon+2,:,iAlt,iBlock)
+                Rho(iLon+1,:,iAlt,iBlock)
            Temperature( iLon,:,iAlt,iBlock)= &
-                2*Temperature(iLon+1,:,iAlt,iBlock) - &
-                Temperature(iLon+2,:,iAlt,iBlock)
+                Temperature(iLon+1,:,iAlt,iBlock)
            iTemperature(iLon,:,iAlt,iBlock) = &
-                2*iTemperature(iLon+1,:,iAlt,iBlock) - &
-                iTemperature(iLon+2,:,iAlt,iBlock)
+                iTemperature(iLon+1,:,iAlt,iBlock)
            eTemperature(iLon,:,iAlt,iBlock) = &
-                2*eTemperature(iLon+1,:,iAlt,iBlock) - &
-                eTemperature(iLon+2,:,iAlt,iBlock)
+                eTemperature(iLon+1,:,iAlt,iBlock)
+
+!           Rho(iLon, :,iAlt,iBlock) = &
+!                2*Rho(iLon+1,:,iAlt,iBlock) - &
+!                Rho(iLon+2,:,iAlt,iBlock)
+!           Temperature( iLon,:,iAlt,iBlock)= &
+!                2*Temperature(iLon+1,:,iAlt,iBlock) - &
+!                Temperature(iLon+2,:,iAlt,iBlock)
+!           iTemperature(iLon,:,iAlt,iBlock) = &
+!                2*iTemperature(iLon+1,:,iAlt,iBlock) - &
+!                iTemperature(iLon+2,:,iAlt,iBlock)
+!           eTemperature(iLon,:,iAlt,iBlock) = &
+!                2*eTemperature(iLon+1,:,iAlt,iBlock) - &
+!                eTemperature(iLon+2,:,iAlt,iBlock)
 
            do iIon = 1, nIons
               IDensityS(iLon,:,iAlt,iIon,iBlock) = &
-                   2*IDensityS(iLon+1,:,iAlt,iIon,iBlock) - &
                    IDensityS(iLon+1,:,iAlt,iIon,iBlock)
+!              IDensityS(iLon,:,iAlt,iIon,iBlock) = &
+!                   2*IDensityS(iLon+1,:,iAlt,iIon,iBlock) - &
+!                   IDensityS(iLon+2,:,iAlt,iIon,iBlock)
            enddo
 
            Velocity(iLon,:,iAlt,iNorth_,iBlock) = &
@@ -76,27 +89,40 @@ subroutine set_horizontal_bcs(iBlock)
               VerticalVelocity(iLon,:,iAlt,iSpecies,iBlock) = &
                    VerticalVelocity(iLon-1,:,iAlt,iSpecies,iBlock)
               nDensityS(iLon,:,iAlt,iSpecies,iBlock) = &
-                   2*nDensityS(iLon-1,:,iAlt,iSpecies,iBlock) - &
-                   nDensityS(iLon-2,:,iAlt,iSpecies,iBlock)
+                   nDensityS(iLon-1,:,iAlt,iSpecies,iBlock)
+!              nDensityS(iLon,:,iAlt,iSpecies,iBlock) = &
+!                   2*nDensityS(iLon-1,:,iAlt,iSpecies,iBlock) - &
+!                   nDensityS(iLon-2,:,iAlt,iSpecies,iBlock)
            enddo
 
            Rho(iLon, :,iAlt,iBlock) = &
-                2*Rho(iLon-1,:,iAlt,iBlock) - &
-                Rho(iLon-2,:,iAlt,iBlock)
+                Rho(iLon-1,:,iAlt,iBlock)
            Temperature( iLon,:,iAlt,iBlock)= &
-                2*Temperature(iLon-1,:,iAlt,iBlock) - &
-                Temperature(iLon-2,:,iAlt,iBlock)
+                Temperature(iLon-1,:,iAlt,iBlock)
            iTemperature(iLon,:,iAlt,iBlock) = &
-                2*iTemperature(iLon-1,:,iAlt,iBlock) - &
-                iTemperature(iLon-2,:,iAlt,iBlock)
+                iTemperature(iLon-1,:,iAlt,iBlock)
            eTemperature(iLon,:,iAlt,iBlock) = &
-                2*eTemperature(iLon-1,:,iAlt,iBlock) - &
-                eTemperature(iLon-2,:,iAlt,iBlock)
+                eTemperature(iLon-1,:,iAlt,iBlock)
+
+!           Rho(iLon, :,iAlt,iBlock) = &
+!                2*Rho(iLon-1,:,iAlt,iBlock) - &
+!                Rho(iLon-2,:,iAlt,iBlock)
+!           Temperature( iLon,:,iAlt,iBlock)= &
+!                2*Temperature(iLon-1,:,iAlt,iBlock) - &
+!                Temperature(iLon-2,:,iAlt,iBlock)
+!           iTemperature(iLon,:,iAlt,iBlock) = &
+!                2*iTemperature(iLon-1,:,iAlt,iBlock) - &
+!                iTemperature(iLon-2,:,iAlt,iBlock)
+!           eTemperature(iLon,:,iAlt,iBlock) = &
+!                2*eTemperature(iLon-1,:,iAlt,iBlock) - &
+!                eTemperature(iLon-2,:,iAlt,iBlock)
 
            do iIon = 1, nIons
               IDensityS(iLon,:,iAlt,iIon,iBlock) = &
-                   2*IDensityS(iLon-1,:,iAlt,iIon,iBlock) - &
-                   IDensityS(iLon-2,:,iAlt,iIon,iBlock)
+                   IDensityS(iLon-1,:,iAlt,iIon,iBlock)
+!              IDensityS(iLon,:,iAlt,iIon,iBlock) = &
+!                   2*IDensityS(iLon-1,:,iAlt,iIon,iBlock) - &
+!                   IDensityS(iLon-2,:,iAlt,iIon,iBlock)
            enddo
 
            Velocity(iLon,:,iAlt,iNorth_,iBlock) = &
@@ -131,10 +157,21 @@ subroutine set_horizontal_bcs(iBlock)
                    VerticalVelocity(:,iLat+1,iAlt,iSpecies,iBlock)
               nDensityS(:,iLat,iAlt,iSpecies,iBlock) = &
                    nDensityS(:,iLat+1,iAlt,iSpecies,iBlock)
+!              nDensityS(:,iLat,iAlt,iSpecies,iBlock) = &
+!                   2*nDensityS(:,iLat+1,iAlt,iSpecies,iBlock)- &
+!                   nDensityS(:,iLat+2,iAlt,iSpecies,iBlock)
            enddo
 
-           Rho(:, iLat,iAlt,iBlock) = Rho(:,iLat+1,iAlt,iBlock)
-           Temperature( :, iLat,iAlt,iBlock)= Temperature(:,iLat+1,iAlt,iBlock)
+           Rho(:, iLat,iAlt,iBlock) = &
+                Rho(:,iLat+1,iAlt,iBlock)
+           Temperature( :, iLat,iAlt,iBlock)= &
+                Temperature(:,iLat+1,iAlt,iBlock)
+!           Rho(:, iLat,iAlt,iBlock) = &
+!                2*Rho(:,iLat+1,iAlt,iBlock) - &
+!                Rho(:,iLat+2,iAlt,iBlock)
+!           Temperature( :, iLat,iAlt,iBlock)= &
+!                2*Temperature(:,iLat+1,iAlt,iBlock)- &
+!                Temperature(:,iLat+2,iAlt,iBlock)
            iTemperature(:, iLat,iAlt,iBlock)=iTemperature(:,iLat+1,iAlt,iBlock)
            eTemperature(:, iLat,iAlt,iBlock)=eTemperature(:,iLat+1,iAlt,iBlock)
 
@@ -172,10 +209,21 @@ subroutine set_horizontal_bcs(iBlock)
                    VerticalVelocity(:,iLat-1,iAlt,iSpecies,iBlock)
               nDensityS(:,iLat,iAlt,iSpecies,iBlock) = &
                    nDensityS(:,iLat-1,iAlt,iSpecies,iBlock)
+!              nDensityS(:,iLat,iAlt,iSpecies,iBlock) = &
+!                   2*nDensityS(:,iLat-1,iAlt,iSpecies,iBlock) - &
+!                   nDensityS(:,iLat-2,iAlt,iSpecies,iBlock)
            enddo
 
-           Rho(:, iLat,iAlt,iBlock) = Rho(:,iLat-1,iAlt,iBlock)
-           Temperature( :, iLat,iAlt,iBlock)= Temperature(:,iLat-1,iAlt,iBlock)
+           Rho(:, iLat,iAlt,iBlock) = &
+                Rho(:,iLat-1,iAlt,iBlock)
+           Temperature( :, iLat,iAlt,iBlock)= &
+                Temperature(:,iLat-1,iAlt,iBlock)
+!           Rho(:, iLat,iAlt,iBlock) = &
+!                2*Rho(:,iLat-1,iAlt,iBlock) - &
+!                Rho(:,iLat-2,iAlt,iBlock)
+!           Temperature( :, iLat,iAlt,iBlock)= &
+!                2*Temperature(:,iLat-1,iAlt,iBlock) - &
+!                Temperature(:,iLat-2,iAlt,iBlock)
            iTemperature(:, iLat,iAlt,iBlock)=iTemperature(:,iLat-1,iAlt,iBlock)
            eTemperature(:, iLat,iAlt,iBlock)=eTemperature(:,iLat-1,iAlt,iBlock)
 
