@@ -1294,7 +1294,8 @@ subroutine find_test_cell
 
   use ModProcMH
   use ModMain
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,r_BLK,dx_BLK,dy_BLK,dz_BLK,vInv_CB
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,r_BLK,dx_BLK,dy_BLK,dz_BLK,vInv_CB, &
+       UseCovariant, FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModParallel, ONLY : NOBLK, neiLEV,neiPE,neiBLK
   use ModAdvance,  ONLY : tmp1_BLK
   use ModMpi
@@ -1386,6 +1387,11 @@ subroutine find_test_cell
              ' dy=',     dy_BLK(BLKtest),&
              ' dz=',     dz_BLK(BLKtest),&
              ' Volume=', 1./vInv_CB(iTest,jTest,kTest,BLKtest)
+        if(UseCovariant)then
+           write(*,*)' FaceAreaI_D=', FaceAreaI_DFB(:,iTest,jTest,kTest,BLKtest)
+           write(*,*)' FaceAreaJ_D=', FaceAreaJ_DFB(:,iTest,jTest,kTest,BLKtest)
+           write(*,*)' FaceAreaK_D=', FaceAreaK_DFB(:,iTest,jTest,kTest,BLKtest)
+        end if
         if(UseBatl)then
            write(*,'(a,3f12.5,a,f12.5)') &
                 ' CellSize_D=',CellSize_DB(:,BLKtest),&
