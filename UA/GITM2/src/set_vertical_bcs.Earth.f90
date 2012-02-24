@@ -37,6 +37,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   logical :: IsFirstTime = .true., UseMsisBCs = .false.
   real    :: HP, v(2)
   integer :: ierror
+  real    :: temptemp
 
   integer, dimension(25) :: sw
 
@@ -61,8 +62,10 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
         Lst = mod(UTime/3600.0+Lon/15.0,24.0)
 
         call msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
-             F107A,F107,AP,LogNS(iAlt,:), Temp(iAlt), &
+             F107A,F107,AP,LogNS(iAlt,:), temptemp, &
              LogRho(iAlt),v)
+
+        if (.not. DuringPerturb) temp(iAlt) = temptemp
 
         vel_gd(iAlt,iEast_) = v(iEast_)
         vel_gd(iAlt,iNorth_) = v(iNorth_)
@@ -74,8 +77,10 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
      Vel_GD(-1:0,iNorth_) = 0.0
   endif
 
-  Vel_GD(-1:0,iUp_)    = 0.0
-  VertVel(-1:0,:)      = 0.0
+  if (.not. DuringPerturb) then
+     Vel_GD(-1:0,iUp_)    = 0.0
+     VertVel(-1:0,:)      = 0.0
+  endif
 
   if (UseGSWMTides) then
      Vel_GD(-1:0,iEast_)  = TidesEast(iLon1D,iLat1D,1:2,iBlock1D)
