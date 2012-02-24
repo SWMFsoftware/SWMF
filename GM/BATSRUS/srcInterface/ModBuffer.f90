@@ -187,9 +187,9 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
         ! In both IH and OH we have no B0, so we ignore that !         
         if(sum(State_V(Bx_:Bz_)*XyzTarget_D) < 0.0)then
            State_V(Bx_:Bz_) = -State_V(Bx_:Bz_)
-           State_V(SignB_)=-State_V(Rho_)
+           State_V(SignB_)=-1.0
         else
-           State_V(SignB_)= State_V(Rho_)
+           State_V(SignB_)= 1.0
         end if
      else
         State_V(SignB_) = 0.0

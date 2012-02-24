@@ -471,6 +471,17 @@ subroutine calc_sources
        call calc_source_rad_diffusion(iBlock)
   !^CFG END IMPLICIT
 
+  if(SignB_>1 .and. DoThinCurrentSheet)then
+     ! Note that the velocity of the first (and only) fluid is used
+     DivU            =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+     if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
+     if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
+     DivU = vInv_CB(i,j,k,iBlock)*DivU
+
+     Source_VC(SignB_,i,j,k) = Source_VC(SignB_,i,j,k) &
+          + State_VGB(SignB_,i,j,k,iBlock)*DivU
+  end if
+
   if(UseUserSource)then
      call user_calc_sources
      if(DoTestMe) call write_source('After user sources')
