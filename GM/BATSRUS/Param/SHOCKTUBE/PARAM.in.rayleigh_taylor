@@ -3,9 +3,6 @@ Begin session: 1
 #ECHO
 T                       DoEcho
 
-#BATL
-T			UseBatl
-
 #DESCRIPTION
 Raileigh-Taylor test	StringDescription
 
