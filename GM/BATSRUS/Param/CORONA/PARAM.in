@@ -4,11 +4,8 @@ T			DoEcho
 #COMPONENT
 SC			NameComp
 
-#BATL
-F			UseBatl
-
 #BATLTEST
-F			UseBatlTest
+T			UseBatlTest
 
 #DESCRIPTION
 Test BATSRSUS in SC mode. Remember: make rundir COMPONENT=SC
@@ -61,22 +58,6 @@ T			UseBody
 1.0			rBody
 3.0E+8			BodyNDim
 3.5E+6			BodyTDim
-
-#BODY
-F                       UseBody
-
-#EXTRABOUNDARY
-T                       UseExtraBoundary
-user                    TypeBc_I(ExtraBc_)
-F                       DoFixExtraBoundary
-
-#FACEBOUNDARY
-0                       MinBoundary
-0                       MaxBoundary
-F                       DoFixOuterBoundary
-
-#RESCHANGEBOUNDARY
-T			DoSaveBoundaryCells
 
 #GAMMA
 1.5000E+00		Gamma
