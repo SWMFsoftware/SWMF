@@ -58,7 +58,7 @@ module ModInputs
   logical :: UseBarriers = .false.
   integer :: nSteps = 10
 
-  logical :: UsePerturbation = .false.
+  logical :: UsePerturbation = .false., DuringPerturb = .false.
 
   real :: CFL = 0.25
 
