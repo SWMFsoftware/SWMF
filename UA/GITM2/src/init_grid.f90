@@ -82,7 +82,7 @@ subroutine init_grid
            range = LonEnd-LonStart
            dlFull = Longitude(2,iBlock)-Longitude(1,iBlock)
            dlPart = dlFull/(2*pi)*range
-           iPoint = (Longitude(:,iBlock)-dlFull/2) / dlFull
+           iPoint = int((Longitude(:,iBlock)+3*dlFull/2) / dlFull + 0.5)-1
            Longitude(:,iBlock) = LonStart + iPoint*dlPart+dlPart/2.0
         enddo
 
