@@ -83,7 +83,7 @@ contains
   !==========================================================================
   subroutine advance_vertical_all
 
-    call report("advance_vertical_all",1)
+    call report("advance_vertical_all",2)
     call start_timing("vertical_all")
 
     do iBlock = 1, nBlocks
