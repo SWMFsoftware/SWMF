@@ -70,7 +70,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_,&
                            TypeCoordSystem, Time_Simulation, DoThinCurrentSheet
   use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_, &
+  use ModVarIndexes, ONLY: Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
                            WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
                            UseMultiSpecies, SignB_
   use CON_coupler,   ONLY: Grid_C, DoCoupleVar_V, iVar_V, nVarCouple,&
@@ -201,15 +201,15 @@ end subroutine get_from_spher_buffer_grid
 !===============================================================                       
 subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
 
- ! DESCRIPTION
-  ! This subroutine is used to interpolate from  state varaibles defined on a
+  ! DESCRIPTION
+  ! This subroutine is used to interpolate from  state variables defined on a
   ! spherical buffer grid into the input point SphSource_D.
-  ! The buffer grid overlaps some part of the computational grid of a source component
-  ! that is coupled to this component.
+  ! The buffer grid overlaps some part of the computational grid of a 
+  ! source component that is coupled to this component.
   ! The buffer grid  has the same coordinate system as the source component
   ! (but may have a different grid resolution).
-  ! It is assumed that the buffer grid was filled with the state vector from the
-  ! source component at some earlier stage.
+  ! It is assumed that the buffer grid was filled with the state vector from 
+  ! the source component at some earlier stage.
 
   ! INPUT:
   ! SphSource_D is associated with a point in the target component, and it
@@ -217,15 +217,15 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
  
   ! nVar is the number of state variables used in coupling the two components.
 
-  ! Implicit inputs to this subroutine are the buffer grid size, points and the 
-  ! state vector at each point (USEd from BATSRUS).
+  ! Implicit inputs to this subroutine are the buffer grid size, points 
+  ! and the state vector at each point (USEd from BATSRUS).
 
   ! OUTPUT:
   ! Buffer_V is the state vector resulting from the interpolation.
 
   use ModInterpolate, ONLY: trilinear
-  use ModMain,        ONLY: BufferState_VG, R_, Theta_, Phi_, BufferMin_D,&
-                            nRBuff, nPhiBuff, nThetaBuff, dSphBuff_D, Phi_
+  use ModMain,        ONLY: BufferState_VG, BufferMin_D,&
+                            nRBuff, nPhiBuff, nThetaBuff, dSphBuff_D
  
   implicit none
 
@@ -234,23 +234,19 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
   integer,intent(in) :: nVar
   real,intent(out)   :: Buffer_V(nVar)
 
-  real    :: Sph_D(3),  NormR, NormPhi, NormTheta, NormSph_D(3)
-  logical :: DoTest, DoTestMe
+  real    :: NormSph_D(3)
+  ! logical :: DoTest, DoTestMe
 
   character(len=*), parameter :: NameSub = 'interpolate_from_global_buffer'
-  !-------------------------------------------------------------        
+  !-------------------------------------------------------------------------
   !  call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
-  Sph_D = SphSource_D
+  ! Convert to normalized coordinates. 
+  ! Radial is node centered, theta and phi are cell centered.
+  NormSph_D = (SphSource_D - BufferMin_D)/dSphBuff_D + (/ 1.0, 0.5, 0.5 /)
 
-  ! Convert to normalized coordinates
-  NormR = (Sph_D(R_) - BufferMin_D(R_))/dSphBuff_D(R_) + 1
-  NormPhi   = (Sph_D(Phi_)   - BufferMin_D(Phi_))  /dSphBuff_D(Phi_)   + 0.5
-  NormTheta = (Sph_D(Theta_) - BufferMin_D(Theta_))/dSphBuff_D(Theta_) + 0.5
-
-  NormSph_D = (/NormR, NormPhi, NormTheta/)
   Buffer_V = trilinear(BufferState_VG, nVar, 1, nRBuff,0, nPhiBuff+1, &
-       0, nThetaBuff+1, NormSph_D, DoExtrapolate=.TRUE.)
+       0, nThetaBuff+1, NormSph_D, DoExtrapolate=.true.)
 
 end subroutine interpolate_from_global_buffer
           
