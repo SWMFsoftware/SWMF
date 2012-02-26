@@ -13,7 +13,7 @@ subroutine calc_GITM_sources(iBlock)
   integer :: iiAlt, iiLat, iiLon
   real :: tmp(nLons, nLats, nAlts+1)
   real :: tmp2(nLons, nLats, nAlts), diff(nLons, nLats, nAlts)
-  real :: tmp3(nLons, nLats, -1:nAlts+2)
+  real :: tmp3(nLons, nLats, 0:nAlts+1)
   real :: tmp4(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
   real :: tmp5(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
   real :: mmm(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
@@ -156,8 +156,8 @@ subroutine calc_GITM_sources(iBlock)
 
   if(UseConduction)then
 
-     tmp3 = Rho(1:nLons, 1:nLats, -1:nAlts+2, iBlock) * &
-             cp(1:nLons, 1:nLats, -1:nAlts+2, iBlock)
+     tmp3 = Rho(1:nLons, 1:nLats, 0:nAlts+1, iBlock) * &
+             cp(1:nLons, 1:nLats, 0:nAlts+1, iBlock)
      
      Prandtl = 0.0
   

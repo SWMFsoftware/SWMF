@@ -14,7 +14,7 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
   real :: solution(nLons, nLats, 0:nAlts+1)
 
   real :: beta(0:nAlts+1),  tempold(-1:nAlts+2), temp(0:nAlts+1)
-  real, dimension(nAlts+2) :: a,b,c,r,u, gam
+  real, dimension(-1:nAlts+2) :: a,b,c,r,u, gam
   real :: tempsave(0:nAlts+1), one_2kb(0:nAlts+1), bet
   integer :: iLon, iLat, iAlt, nIters
   real :: tolerance = 0.01, residual, maxresidual
