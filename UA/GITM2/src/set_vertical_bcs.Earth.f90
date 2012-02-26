@@ -9,7 +9,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   ! Fill in ghost cells at the top and bottom
 
   use ModSizeGitm, only: nAlts
-  use ModPlanet, only: nSpecies, nSpeciesTotal, nIonsAdvect, Mass, nIons, IsEarth,iN2_,iNO_
+  use ModPlanet, only: nSpecies, nIonsAdvect, Mass, nIons, IsEarth,iN2_,iNO_
   use ModGITM, only: TempUnit, iEast_, iNorth_, iUp_
   use ModInputs
   use ModConstants
@@ -114,13 +114,13 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 !     endif
 !  endif
 
-  do iSpecies=nSpecies+1, nSpeciesTotal
-     dn = (LogNS(2,iSpecies) - LogNS(1,iSpecies))
-     LogNS(0,iSpecies) = LogNS(1,iSpecies) - dn
-     LogNS(-1,iSpecies) = LogNS(0,iSpecies) - dn
-!     if (LogNS( 0,iSpecies) < -30) LogNS( 0,iSpecies) = -30.0
-!     if (LogNS(-1,iSpecies) < -30) LogNS(-1,iSpecies) = -30.0
-  enddo
+!  do iSpecies=nSpecies+1, nSpeciesTotal
+!     dn = (LogNS(2,iSpecies) - LogNS(1,iSpecies))
+!     LogNS(0,iSpecies) = LogNS(1,iSpecies) - dn
+!     LogNS(-1,iSpecies) = LogNS(0,iSpecies) - dn
+!!     if (LogNS( 0,iSpecies) < -30) LogNS( 0,iSpecies) = -30.0
+!!     if (LogNS(-1,iSpecies) < -30) LogNS(-1,iSpecies) = -30.0
+!  enddo
 
 !  dn = (LogNS(2,iN_4S_) - LogNS(1,iN_4S_))
 !  LogNS(0,iN_4S_) = LogNS(1,iN_4S_) - dn

@@ -62,10 +62,10 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      VertVel(:,iSpecies) = VerticalVelocity(iLon,iLat,:,iSpecies,iBlock)
   enddo
 
-  do iSpecies = nSpecies+1, nSpeciesTotal
-     LogNS1(:,iSpecies)  = log(NDensityS(iLon,iLat,:,iSpecies,iBlock))
-     VertVel(:,iSpecies) = Velocity(iLon,iLat,:,iUp_,iBlock)
-  enddo
+!  do iSpecies = nSpecies+1, nSpeciesTotal
+!     LogNS1(:,iSpecies)  = log(NDensityS(iLon,iLat,:,iSpecies,iBlock))
+!     VertVel(:,iSpecies) = Velocity(iLon,iLat,:,iUp_,iBlock)
+!  enddo
 
   cMax1   = cMax_GDB(iLon,iLat,:,iUp_,iBlock)
 
@@ -117,7 +117,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      VerticalVelocity(iLon,iLat,:,iSpecies,iBlock) = VertVel(:,iSpecies)
   enddo
 
-  do iSpecies = nSpecies+1, nSpeciesTotal 
+  do iSpecies = nSpecies+1, nSpecies 
      LogNS(iLon,iLat,:,iSpecies,iBlock)              = LogNS1(:,iSpecies)
   enddo
 
@@ -147,7 +147,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      call stop_gitm("Can't continue")
   endif
 
-  do iSpecies = 1, nSpeciesTotal
+  do iSpecies = 1, nSpecies
      nDensityS(iLon,iLat,:,iSpecies,iBlock) = exp(LogNS1(:,iSpecies))
   enddo
 
