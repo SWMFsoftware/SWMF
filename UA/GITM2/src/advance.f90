@@ -27,6 +27,8 @@ subroutine advance
      call advance_vertical_all
      call add_sources 
      if (.not. Is1D) call advance_horizontal_all
+
+     write(*,*) 'vel : ',iProc, Velocity(15,:,50,iNorth_,1)
  
   else
 
@@ -114,9 +116,21 @@ contains
        call calc_rates(iBlock)
        call calc_physics(iBlock)
 
+       if (.not. IsFullSphere) &
+            call set_horizontal_bcs(iBlock)
+
        call advance_horizontal(iBlock)
 
     end do
+
+    ! Sync everything up again.
+
+    call exchange_messages_sphere
+
+    do iBlock = 1, nBlocks
+       if (.not. IsFullSphere) &
+            call set_horizontal_bcs(iBlock)
+    enddo
 
 !    Two stage
 !
