@@ -51,6 +51,7 @@ my $nStep          = -1;           # Number of steps
 # List of input and output restart directory name(s) for each component
 # Alternative names should be separated by commas without space.
 my %RestartOutDir = (
+		     EE => "EE/restartOUT",
 		     GM => "GM/restartOUT",
                      LC => "LC/restartOUT", 
                      SC => "SC/restartOUT",
@@ -62,6 +63,7 @@ my %RestartOutDir = (
 		     UA => "UA/restartOUT,UA/RestartOUT" );
 
 my %RestartInDir =  (
+		     EE => "EE/restartIN",
 		     GM => "GM/restartIN",
                      LC => "LC/restartIN",
 		     SC => "SC/restartIN",
@@ -78,6 +80,7 @@ my %RestartInDirFound;
 
 # The name of the restart header file (if any) for each component.
 my %HeaderFile   =  (
+		     EE => "restart.H",
 		     GM => "restart.H",
                      LC => "restart.H",
 		     SC => "restart.H",
