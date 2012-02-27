@@ -1644,6 +1644,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
      axistype='coord'
   endif
 
+  xtitle = !x.title
+  ytitle = !y.title
+
   if axistype eq 'coord' then begin
      if usereg then $
         getaxes,ndim,xreg,xx,yy,zz,cut,cut0,rSlice,plotdim,variables $
@@ -1659,6 +1662,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
   set_space, ppp, space, sizes, nx = multix, ny = multiy
 
                                 ; Store x and y titles and tick names
+
+  newytitle = ytitle ne !y.title
+
   xtitle    = !x.title
   ytitle    = !y.title
   xtickname = !x.tickname
@@ -1764,6 +1770,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         plotiy=multi0/multix
      endelse
 
+     if plotix eq 0 then newytitle = 0
+
      if plotmod ne 'shade' and plotmod ne 'surface' then begin
 
                                 ; obtain position for flat plotmodes
@@ -1824,13 +1832,14 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         endif
 
                                 ; Omit X axis if unneeded
-        if (plotiy gt 0) then begin
+        if plotiy gt 0 then begin
            !x.tickname = strarr(60)+' '
            !x.title = ' '
         endif
 
                                 ; Omit Y axis if unneeded
-        if (plotix gt 0 and strmid(plotmod,0,4) ne 'plot') then begin
+        if plotix gt 0 and not newytitle $
+           and strmid(plotmod,0,4) ne 'plot' then begin
            !y.tickname = strarr(60)+' '
            !y.title = ' '
         endif
