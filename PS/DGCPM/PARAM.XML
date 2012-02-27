@@ -1,0 +1,44 @@
+<!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
+
+<commandList name="DGCPM: PS Component">
+
+List of PS commands used in the PARAM.in file.
+
+
+<set name="NameComp"          type="string" value="$_NameComp"/>
+<set name="NameRestartOutDir" type="string" value="$NameComp/restartOUT"/>
+<set name="NamePlotDir"       type="string" value="$NameComp/IO2"/>
+
+<commandgroup name="STAND ALONE MODE">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+</commandgroup>
+
+<commandgroup name="STAND ALONE MODE">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Options for configuring the model in stand-alone mode (no SWMF-interface.)
+Many of these are required if DGCPM is not called from the SWMF, redundant
+otherwise.
+
+</commandgroup>
+
+<commandgroup name="NUMERICAL SCHEME">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!Numerics group!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Options for configuring the schemes and solvers, boundary conditions, 
+and other numerical options.
+
+<command name="TIMESTEP"><parameter name="DtStep" type="float" default="10.0"/>
+#TIMESTEP
+10.0	DtStep
+
+Set the timestep for the simulation.  Default values are shown.
+
+</commandgroup>
+
+</commandList>
