@@ -56,6 +56,7 @@ if($KeepMovieOnly){
 
 # Name of the plot directories for various components
 my %PlotDir = (
+    "EE"     => "EE/IO2",
     "GM"     => "GM/IO2",
     "IE"     => "IE/ionosphere,IE/Output",
     "IH"     => "IH/IO2",
@@ -104,7 +105,7 @@ REPEAT:{
 		&shell("./pION");
 	    }
             &concat_sat_log if $Concat;
-	}elsif( $Dir =~ /^SC|LC|IH|OH|GM$/ ){
+	}elsif( $Dir =~ /^SC|LC|IH|OH|GM|EE$/ ){
 	    &shell("./pIDL $MovieFlag -n=$nThread $Pattern");
 	    if($Gzip){
 		&shell("./pTEC A g");
@@ -141,7 +142,7 @@ REPEAT:{
 	    my $PlotDir = $PlotDir{$Dir};
 	    next unless -d $PlotDir;
 	    my $command = $rsync;
-	    $command .= $exclude if $Dir =~ /GM|SC|LC|IH|OH/;
+	    $command .= $exclude if $Dir =~ /GM|SC|LC|IH|OH|EE/;
 	    &shell("$command $PlotDir/ $Rsync/$Dir") if -d $PlotDir;
 	}
 	&shell("$rsync $ParamIn $Rsync/")          if -f $ParamIn;
