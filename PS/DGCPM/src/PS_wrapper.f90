@@ -88,6 +88,8 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
 
         select case(NameCommand)
+        case("#TIMESTEP")
+           call read_var('DtStep', DT)
         case("#TIMING")
             call read_var('DtStep',DT)
             call read_var('TMAX', Tmax)
@@ -302,7 +304,7 @@ subroutine PS_init_session(iSession, tSimulation)
   ! Initialize the Plasmasphere (PS) module for session iSession
 
   use CON_physics,   ONLY: get_time, get_planet, get_axes
-
+  use CON_time,   ONLY: tSimulationMax
   use ModIoDGCPM
   use ModMainDGCPM
   use ModTimeDGCPM
@@ -312,10 +314,13 @@ subroutine PS_init_session(iSession, tSimulation)
   !INPUT PARAMETERS:
   integer,  intent(in) :: iSession      ! session number (starting from 1)
   real,     intent(in) :: tSimulation   ! seconds from start time
-
+  
   !DESCRIPTION:
   ! Initialize the Plasmasphere (PS) module for session iSession
 
+  ! Local variables:
+  real :: Tmax = 0.0
+  
   character(len=*), parameter :: NameSub='PS_init_session'
   logical :: DoTest,DoTestMe
 
@@ -345,6 +350,10 @@ subroutine PS_init_session(iSession, tSimulation)
      call thermal   ! setup only
 
      if (TestFill.gt.0) call TestFilling(1.0)
+
+     ! Use the SWMF time max, set max number of steps.
+     Tmax = tSimulationMax
+     NSTEP=NINT(TMAX/DT/2.)
 
      ! Finish Initialization     
      IsUninitialized = .false.
@@ -413,7 +422,7 @@ subroutine PS_run(tSimulation,tSimulationLimit)
   real, intent(in) :: tSimulationLimit ! simulation time not to be exceeded
 
   real(Real8_) :: tStart
-  integer      :: i3, npr
+  integer      :: i3
   real         :: dt_requested
 
   character(len=*), parameter :: NameSub='PS_run'
@@ -453,8 +462,6 @@ subroutine PS_run(tSimulation,tSimulationLimit)
   if (i3.eq.nst) call wresult(1)
 
   tSimulation = tSimulation+2.*dt
-
-  npr=nint(tint/dt/2.)
   
 ! Log File Writing
   if (WriteLogFile) then
@@ -463,8 +470,8 @@ subroutine PS_run(tSimulation,tSimulationLimit)
 
 
 ! General Output Writing
-  if (mod(i3,npr) == 0) then
-        call wresult(0)
+  if (mod(tSimulation, tint) < 1E-5) then
+     call wresult(0)
   end if
 
   return
