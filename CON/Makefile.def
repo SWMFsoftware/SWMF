@@ -22,6 +22,7 @@ STANDALONE=NO
 # Select the physics components by commenting out exactly one version for each
 # This is normally done by the perl script Config.pl
 
+EE_VERSION = Empty#			^CMP IF EE
 GM_VERSION = Empty#			^CMP IF GM
 IE_VERSION = Empty#			^CMP IF IE
 IH_VERSION = Empty#			^CMP IF IH
@@ -58,6 +59,7 @@ INTERFACEDIR = ${CONDIR}/${INT_VERSION}/src
 # Component directories
 #
 
+EEDIR = ${DIR}/EE/${EE_VERSION}#	^CMP IF EE
 GMDIR = ${DIR}/GM/${GM_VERSION}#	^CMP IF GM
 IEDIR = ${DIR}/IE/${IE_VERSION}#	^CMP IF IE
 IHDIR = ${DIR}/IH/${IH_VERSION}#	^CMP IF IH
