@@ -22,7 +22,7 @@ $Outfile = $o; $Outfile = "RenameList.pl" unless $Outfile;
 # for the IH component. This code only generates the renaming rules.
 # The rules can be used by Rename.pl to do the actual renaming.
 #
-# There are some special rules for OH,IH, SC, LC and GM because the
+# There are some special rules for EE, OH, IH, SC, LC and GM because the
 # BATSRUS code implements all three of these components.
 #
 #!REVISION HISTORY:
@@ -37,8 +37,8 @@ It collects the subroutine and function names from Fortran files
 and creates a renaming list which has the correct component prefix.
 The output list can be used by Rename.pl to do the actual renaming.
 
-For components OH, IH, SC, LC and GM method names starting with MH_ OH_ IH_ SC_ LC_
-and GM_ are handled intelligently.
+For components EE, OH, IH, SC, LC and GM method names starting with
+MH_ EE_ OH_ IH_ SC_ LC_ and GM_ are handled intelligently.
 
 ',
 #BOC
@@ -174,6 +174,7 @@ foreach $method (sort values %method){
 
     s/^(GM|IH|MH)_// if $Comp eq "LC";#IH_ GM_ and MH_ prefix removed for LC
     s/^(GM|IH|MH)_// if $Comp eq "OH";#IH_ GM_ and MH_ prefix removed for OH
+    s/^(GM|IH|MH)_// if $Comp eq "EE";#IH_ GM_ and MH_ prefix removed for EE
 
     $replace = $Comp."_$_";          # Add component prefix
 
