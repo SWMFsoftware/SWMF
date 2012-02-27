@@ -128,6 +128,10 @@ install: ENV_CHECK mkdir
 	cd ESMF/ESMF_SWMF;	make install
 
 	@if([ -d "GM/BATSRUS" ]); then \
+		if([ -d "EE/BATSRUS" ]); \
+			then cp EE/BATSRUS/Config.pl EE/BATSRUS; \
+			     perl -i -pe 's/GM/EE/' EE/BATSRUS/Config.pl; \
+		fi; \
 		if([ -d "SC/BATSRUS" ]); \
 			then cp GM/BATSRUS/Config.pl SC/BATSRUS; \
 			     perl -i -pe 's/GM/SC/' SC/BATSRUS/Config.pl; \
@@ -352,6 +356,7 @@ rundir: ENV_CHECK
 	touch ${RUNDIR}/core
 	chmod 444 ${RUNDIR}/core
 	cd ${RUNDIR}; ln -s  ${DIR}/bin/SWMF.exe . ; ln -s  ${DIR}/Param .
+	cd ${EEDIR}; make rundir                 #^CMP IF EE
 	cd ${GMDIR}; make rundir                 #^CMP IF GM
 	cd ${IEDIR}; make rundir                 #^CMP IF IE
 	cd ${IHDIR}; make rundir                 #^CMP IF IH
@@ -400,6 +405,40 @@ ETAGS = etags
 
 tags:	ENV_CHECK
 	-$(ETAGS) ./*/*/*/*.[fF]90 ./*/*/*/*.[fF] ./*/*/*/*.for
+
+
+#^CMP IF EE BEGIN
+#
+# collect source files for EE/BATSRUS component
+#
+EE/BATSRUS/src/Makefile:
+	cd EE/BATSRUS; \
+		rm -rf src srcBATL srcUser srcEquation; \
+		mkdir src srcBATL srcUser srcEquation
+	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../EE/BATSRUS/src
+	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
+						  ../../../EE/BATSRUS/srcBATL
+	cp GM/BATSRUS/srcUser/*.f90 EE/BATSRUS/srcUser/	  
+	cp GM/BATSRUS/srcEquation/*.f90 EE/BATSRUS/srcEquation/
+	cd GM/BATSRUS; \
+		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
+			../../EE/BATSRUS/
+	cd EE/BATSRUS/src; rm -f main.f90
+
+# rename EE source files to avoid name conflicts
+EE_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90
+
+EEBATSRUS: EE/BATSRUS/src/Makefile \
+		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
+	cd EE/BATSRUS; \
+		${SCRIPTDIR}/Methods.pl EE ${EE_SRC}; \
+		${SCRIPTDIR}/Rename.pl -w -r -common=EE ${EE_SRC}
+	cd EE/BATSRUS; \
+		perl -i -pe 's/GM/EE/' Config.pl; \
+		./Config.pl -install=c -u=Ee -e=MhdEosRad
+
+#^CMP END EE
+
 
 #^CMP IF IH BEGIN
 #
