@@ -433,6 +433,7 @@ EEBATSRUS: EE/BATSRUS/src/Makefile \
 	cd EE/BATSRUS; \
 		${SCRIPTDIR}/Methods.pl EE ${EE_SRC}; \
 		${SCRIPTDIR}/Rename.pl -w -r -common=EE ${EE_SRC}
+	touch EE/BATSRUS/srcInterface/Makefile.DEPEND
 	cd EE/BATSRUS; \
 		perl -i -pe 's/GM/EE/' Config.pl; \
 		./Config.pl -install=c -u=Ee -e=MhdEosRad
