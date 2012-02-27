@@ -40,9 +40,6 @@ subroutine advance_horizontal(iBlock)
 
   call report("advance_horizontal",2)
 
-  if (.not. IsFullSphere) &
-       call set_horizontal_bcs(iBlock)
-
   do iAlt=1,nAlts
 
      cp_c       = cp(:,:,iAlt,iBlock)
@@ -82,8 +79,8 @@ subroutine advance_horizontal(iBlock)
               IsFound = .false.
               do iSpecies = 1, nSpecies
                  if (NewNum_CV(iLon, iLat, iSpecies) < 0.0) then
-                 write(*,*) "Species : ", iSpecies, iLon, iLat, iBlock
-stop
+                    write(*,*) "Species : ", iSpecies, iLon, iLat, iBlock
+                    stop
                     NewNum_CV(iLon, iLat, iSpecies) = 1.0
                     IsFound=.true.
                  endif
@@ -101,26 +98,6 @@ stop
      endif
  
      nDensityS(1:nLons,1:nLats,iAlt,1:nSpecies,iBlock)    = NewNum_CV
-
-!    do iLon = 1, nLons
-!        do iLat = 1, nLats
-!           if (abs(IDensityS(iLon,iLat,iAlt,1,iBlock) - &
-!                NewINum_CV(iLon,iLat,1))/NewINum_CV(iLon,iLat,1) &
-!                > MaxDiff) then
-!!              write(*,*) "MaxDiff: ",iLon, iLat, iAlt, &
-!!                   MaxDiff, &
-!!                   IDensityS(iLon,iLat,iAlt,1,iBlock), &
-!!                   NewINum_CV(iLon,iLat,1),&
-!!                   IVel_CD(iLon,iLat,1),IVel_CD(iLon,iLat,2)
-!              MaxDiff = abs(IDensityS(iLon,iLat,iAlt,1,iBlock) - &
-!                NewINum_CV(iLon,iLat,1))/NewINum_CV(iLon,iLat,1)
-!           endif
-!        enddo
-!     enddo
-
-!     MaxDiff = max(MaxDiff, &
-!          maxval(abs((IDensityS(1:nLons,1:nLats,iAlt,1:nIonsAdvect,iBlock) - &
-!          NewINum_CV)/NewINum_CV)))
 
      if (UseIonAdvection) then
 
