@@ -63,6 +63,10 @@ if($ListVersions){
 &set_versions if @NewVersion;
 
 if($Installed){
+    # Create EE/BATSRUS if needed
+    &shell_command("make EEBATSRUS")
+	if $Version{"EE"} eq "BATSRUS" and not -f "EE/BATSRUS/src/Makefile";
+
     # Create IH/BATSRUS if needed
     &shell_command("make IHBATSRUS")
 	if $Version{"IH"} eq "BATSRUS" and not -f "IH/BATSRUS/src/Makefile";
