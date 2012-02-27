@@ -129,7 +129,7 @@ install: ENV_CHECK mkdir
 
 	@if([ -d "GM/BATSRUS" ]); then \
 		if([ -d "EE/BATSRUS" ]); \
-			then cp EE/BATSRUS/Config.pl EE/BATSRUS; \
+			then cp GM/BATSRUS/Config.pl EE/BATSRUS; \
 			     perl -i -pe 's/GM/EE/' EE/BATSRUS/Config.pl; \
 		fi; \
 		if([ -d "SC/BATSRUS" ]); \
