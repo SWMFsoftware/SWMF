@@ -104,6 +104,25 @@ subroutine update_states(iStage,iBlock)
   end if
 
 end subroutine update_states
+!===========================
+subroutine update_te0
+  use ModPhysics, ONLY: UnitTemperature_,Si2No_V
+  use ModAdvance, ONLY: State_VGB,  nI, nJ, nK
+  use ModMain,    ONLY: nBlock, unusedBLK
+  use ModUser,    ONLY: user_material_properties
+  use ModVarIndexes, ONLY: Te0_
+  real:: Te0Si
+  integer:: i, j, k, iBlock
+  !-----------------
+  do iBlock = 1, nBlock
+     if(unusedBLK(iBlock))CYCLE
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        call user_material_properties(State_VGB(:,i,j,k,iBlock),i,j,k,iBlock, TeOut=Te0SI)
+        State_VGB(Te0_,i,j,k,iBlock) = Te0SI * Si2No_V(UnitTemperature_)
+     end do; end do; end do
+  end do
+end subroutine update_te0
+!===========================
 
 ! BEGIN ADJOINT SPECIFIC
 !============================================================================

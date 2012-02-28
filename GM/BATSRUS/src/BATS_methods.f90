@@ -395,6 +395,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
   use ModLaserHeating,    ONLY: add_laser_heating
   use ModAdjoint, ONLY: DoAdjoint                          !ADJOINT SPECIFIC
+  use ModVarIndexes, ONLY: Te0_
   use ModMessagePass, ONLY: exchange_messages
 
   implicit none
@@ -458,6 +459,9 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseLaserHeating) call add_laser_heating
 
+  !Calculate temperature at the end of time step
+  if(Te0_>1)call update_te0
+  
   call exchange_messages
 
   if(UseSemiImplicit .and. Dt>0) call advance_impl   !^CFG IF IMPLICIT

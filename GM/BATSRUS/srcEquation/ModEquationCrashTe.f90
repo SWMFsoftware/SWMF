@@ -11,8 +11,9 @@ module ModVarIndexes
        Redefine7 => Pe_, &
        Redefine8 => nMaterial, &
        Redefine9 => MaterialFirst_, &
-       Redefine10=> MaterialLast_
-
+       Redefine10=> MaterialLast_,  &
+       Redefine11=> Te0_
+  
   implicit none
 
   save
