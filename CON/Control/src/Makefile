@@ -47,6 +47,8 @@ LIBCOUPLER = ${LIBDIR}/libCOUPLER.a
 #######################
 # Use alphabetic order for components!
 
+LIBEE = ${LIBDIR}/libEE.a	#^CMP IF EE
+
 LIBGM = ${LIBDIR}/libGM.a	#^CMP IF GM
 
 LIBIE = ${LIBDIR}/libIE.a	#^CMP IF IE
@@ -166,18 +168,19 @@ LIB:
 	@cd ${EMPIRICALUADIR};       make LIB
 	@cd ${LIBRARYDIR};           make LIB
 	@cd ${COUPLERDIR};           make LIB
+	@cd ${EEDIR};                make LIB	#^CMP IF EE
 	@cd ${GMDIR};                make LIB	#^CMP IF GM
 	@cd ${IEDIR};                make LIB	#^CMP IF IE
 	@cd ${IHDIR};                make LIB	#^CMP IF IH
 	@cd ${IMDIR};                make LIB	#^CMP IF IM
 	@cd ${LADIR};                make LIB	#^CMP IF LA
-	@cd ${OHDIR};                make LIB   #^CMP IF OH
+	@cd ${OHDIR};                make LIB	#^CMP IF OH
 	@cd ${PSDIR};                make LIB	#^CMP IF PS
 	@cd ${PWDIR};                make LIB	#^CMP IF PW
 	@cd ${RBDIR};                make LIB	#^CMP IF RB
-	@cd ${LCDIR};		     make LIB   #^CMP IF LC
-	@cd ${SCDIR};                make LIB   #^CMP IF SC
-	@cd ${SPDIR};                make LIB   #^CMP IF SP
+	@cd ${LCDIR};                make LIB	#^CMP IF LC
+	@cd ${SCDIR};                make LIB	#^CMP IF SC
+	@cd ${SPDIR};                make LIB	#^CMP IF SP
 	@cd ${UADIR};                make LIB	#^CMP IF UA
 	@cd ${INTERFACEDIR};         make LIB
 	@make DEPEND
@@ -213,6 +216,7 @@ TMP_DIRS: LIB
 	mkdir Tmp_COUPLER;     cd Tmp_COUPLER;   ${AR_X} ${LIBCOUPLER}
 	mkdir Tmp_INTERFACE;   cd Tmp_INTERFACE; ${AR_X} ${LIBINTERFACE}
 	mkdir Tmp_CONTROL;     cd Tmp_CONTROL;   ${AR_X} ${LIBCONTROL}
+	mkdir Tmp_LIBEE;       cd Tmp_LIBEE;     ${AR_X} ${LIBEE} #^CMP IF EE
 	mkdir Tmp_LIBGM;       cd Tmp_LIBGM;     ${AR_X} ${LIBGM} #^CMP IF GM
 	mkdir Tmp_LIBIE;       cd Tmp_LIBIE;     ${AR_X} ${LIBIE} #^CMP IF IE
 	mkdir Tmp_LIBIH;       cd Tmp_LIBIH;     ${AR_X} ${LIBIH} #^CMP IF IH
