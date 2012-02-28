@@ -20,6 +20,11 @@ module BATL_amr
   integer, public, parameter  :: AmrRemoved_ = -1, &
        AmrUnchanged_ = 0, AmrMoved_ = 1, AmrRefined_ = 2, AmrCoarsened_ = 3
 
+  ! For non-Cartesian grids refinement can be fully conservative or simple
+  ! The current conservative algorithm works well for the BATL advection 
+  ! problems, but it does not work well for non RZ geometries in BATSRUS.
+  logical, public:: UseSimpleRefinement
+
   ! Private data for test_amr
   integer, parameter:: nExtraData   = 2
   real,  allocatable:: ExtraData_IB(:,:)
@@ -28,9 +33,10 @@ contains
 
   !===========================================================================
 
-  subroutine init_amr()
+  subroutine init_amr
 
     use BATL_size, ONLY: MaxBlock
+    use BATL_geometry, ONLY: IsRzGeometry
     !-------------------------------------------------------------------------
 
     if(.not.allocated(iAmrChange_B)) &
@@ -38,6 +44,10 @@ contains
 
     ! Initialize iAmrChange_B
     iAmrChange_B = AmrUnchanged_
+
+    ! Set UseSimpleRefinement based on geometry. 
+    ! The current curvilinear algorithm is only good for RZ geometry.
+    UseSimpleRefinement = .not. IsRzGeometry
 
   end subroutine init_amr
 
@@ -660,7 +670,7 @@ contains
 
                      Buffer_I(iBuffer+iVar) = Buffer_I(iBuffer+iVar)/Volume
 
-                     if(.not.IsCartesian) &
+                     if(.not.UseSimpleRefinement) &
                           Buffer_I(iBuffer+iVar) = Buffer_I(iBuffer+iVar) &
                           *CellVolume_GB(i,j,k,iBlockSend)
 
@@ -674,7 +684,7 @@ contains
                   CYCLE
                end if
             end if
-            if(IsCartesian)then
+            if(UseSimpleRefinement)then
                Buffer_I(iBuffer+1:iBuffer+nVar) = &
                     State_VGB(:,i,j,k,iBlockSend)
             else
@@ -688,7 +698,7 @@ contains
          end do; end do; end  do
       else
          iBuffer = 1
-         if(IsCartesian)then
+         if(UseSimpleRefinement)then
             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
                Buffer_I(iBuffer+1:iBuffer+nVar) = &
                     State_VGB(:,i,j,k,iBlockSend)
@@ -872,7 +882,7 @@ contains
          end do
       endif
 
-      if(IsCartesian) RETURN
+      if(UseSimpleRefinement) RETURN
 
       ! Divide back by volume and IjkRatio
       do kR = 1, nK; do jR = 1, nJ; do iR = 1, nI

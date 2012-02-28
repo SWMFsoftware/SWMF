@@ -222,7 +222,9 @@ contains
 
     use BATL_lib, ONLY: init_mpi, init_batl, init_grid_batl, &
          iProc, MaxDim, MaxBlock, nBlock, Unused_B, Xyz_DGB, &
-         iTree_IA, MaxLevel_, BetaProlong, IsNodeBasedGrid
+         iTree_IA, MaxLevel_, BetaProlong, IsNodeBasedGrid, IsCartesian
+
+    use BATL_amr, ONLY: UseSimpleRefinement
 
     use ModReadParam, ONLY: read_file, read_init, &
          read_line, read_command, read_var
@@ -310,6 +312,9 @@ contains
          IsPeriodicIn_D = (/.true., .true., .true./), &
          RgenIn_I       = Rgen_I)
 
+    ! The default value is .not.IsRzGeometry
+    UseSimpleRefinement = IsCartesian
+
     IsNodeBasedGrid = IsNodeBasedRead
 
     ! Allow only MaxLevel levels of refinement
@@ -330,6 +335,7 @@ contains
        end do LOOPBLOCK
 
        call init_grid_batl(DoRefine_B)
+       UseSimpleRefinement = IsCartesian
 
     end do
     deallocate(DoRefine_B)
