@@ -1730,10 +1730,6 @@ subroutine MH_set_parameters(TypeAction)
            call read_grid_file(NameGridFile)
         end if
 
-        ! BATL cannot handle spherical/cylindrical grids yet
-        if(TypeGeometry /= 'rz' .and. TypeGeometry /= 'cartesian') &
-             UseBatl = .false.
-
      case("#GRIDSYMMETRY")
         nMirror_D = 1
         call read_var('IsMirrorX', IsMirrorX)
