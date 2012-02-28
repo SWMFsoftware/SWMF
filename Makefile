@@ -418,6 +418,12 @@ EE/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../EE/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
 						  ../../../EE/BATSRUS/srcBATL
+	cd GM/BATSRUS/srcInterface/; \
+		cp ModGridDescriptor.f90 ModBuffer.f90 \
+		update_lagrangian_grid.f90 \
+		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
+		ModDensityAndGradient.f90 \
+		../../../EE/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 EE/BATSRUS/srcUser/	  
 	cp GM/BATSRUS/srcEquation/*.f90 EE/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
@@ -426,15 +432,15 @@ EE/BATSRUS/src/Makefile:
 	cd EE/BATSRUS/src; rm -f main.f90
 
 # rename EE source files to avoid name conflicts
-EE_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90
+EE_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
+	srcInterface/*.f90
 
 EEBATSRUS: EE/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
 	cd EE/BATSRUS; \
 		${SCRIPTDIR}/Methods.pl EE ${EE_SRC}; \
-		${SCRIPTDIR}/Rename.pl -w -r -common=EE ${EE_SRC}
-	touch EE/BATSRUS/srcInterface/Makefile.DEPEND
-	cd EE/BATSRUS; \
+		${SCRIPTDIR}/Rename.pl -w -r -common=EE ${EE_SRC}; \
+		touch srcInterface/Makefile.DEPEND; \
 		perl -i -pe 's/GM/EE/' Config.pl; \
 		./Config.pl -install=c -u=Ee -e=MhdEosRad
 

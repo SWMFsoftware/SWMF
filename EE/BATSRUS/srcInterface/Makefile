@@ -7,7 +7,13 @@ include Makefile.DEPEND
 
 
 
-OBJECTS =
+OBJECTS = \
+	ModBuffer.o \
+	update_lagrangian_grid.o \
+	ModRadioWaveImage.o \
+	ModGridDescriptor.o \
+	ModRadioWaveRaytracing.o \
+	ModDensityAndGradient.o
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
 	-I${EMPIRICALEEDIR} -I../src -I../srcBATL
@@ -33,6 +39,8 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
-	rm -f   Makefile.DEPEND
+	rm -f   Makefile.DEPEND ModBuffer.f90 update_lagrangian_grid.f90 \
+	ModRadioWaveImage.f90 ModGridDescriptor.f90 \
+	ModRadioWaveRaytracing.f90 ModDensityAndGradient.f90
 
 # keep this line
