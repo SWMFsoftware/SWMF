@@ -73,7 +73,7 @@ module ModVarIndexes
        0.0, & ! RhoUz_
        (0.0, iMaterial=MaterialFirst_,MaterialLast_), &
        1.0, & ! Pe_
-       1.0, & ! Te0_
+       0.777770, & ! Te0_
        (1.0, iWave=WaveFirst_,WaveLast_), &
        0.0, & ! ExtraEint_
        1.0, & ! p_
