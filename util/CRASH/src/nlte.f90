@@ -478,16 +478,16 @@ contains
     !Subroutine re-assigns 
     use CRASH_M_projE,only : prep_projE
     implicit none
-    integer,intent(IN) :: ng
-    real,dimension(0:ng) :: hnug
-    real,dimension(ng) :: eg_o_bg
+    integer,intent(IN) :: ng                 !The dimension of array EOverB
+    real,dimension(0:ng),intent(in) :: hnug  !The group boundaries, in eV
+    real,dimension(ng),intent(in) :: eg_o_bg !Input array of EOverB
     integer :: i
 
     if(ng.ne.ng_rad) then
        call prep_projE(hnug,ng)
     end if
     ng_rad=ng
-    hnu_rad(1:ng_rad)=hnug(1:ng)
+    hnu_rad(0:ng_rad)=hnug(0:ng)
     EoB(1:ng_Rad)=eg_o_bg(1:ng_Rad)
 
   end subroutine setErad
