@@ -242,7 +242,8 @@ contains
 
           ! Calculate the ionization level
           call user_material_properties( &
-               State_V=State_VGB(:,i,j,k,iBlock), &
+               State_VGB(:,i,j,k,iBlock),         &
+               i, j, k, iBlock,                   &
                NAtomicOut=NAtomicSI,              &
                TeOut=TeSI,                        &
                AverageIonChargeOut=zAverage)
@@ -274,10 +275,12 @@ contains
 
           ! Interpolate (X gradient of Rho*Z)
           call user_material_properties( &
-               State_V=State_VGB(:,i+1,j,k,iBlock), &
+               State_VGB(:,i+1,j,k,iBlock),         &
+               i+1, j, k, iBlock,                   &
                AverageIonChargeOut=ZaverageR)
           call user_material_properties( &
-               State_V=State_VGB(:,i-1,j,k,iBlock), &
+               State_VGB(:,i-1,j,k,iBlock),         &
+               i-1, j, k, iBlock,                   &
                AverageIonChargeOut=ZaverageL)
           ZaverageR = max(ZaverageR,1.0)
           ZaverageL = max(ZaverageL,1.0)
@@ -289,10 +292,12 @@ contains
           ! Interpolate (Y gradient of Rho*Z)
           if(nDim > 1)then
              call user_material_properties( &
-                  State_V=State_VGB(:,i,j+1,k,iBlock), &
+                  State_VGB(:,i,j+1,k,iBlock),         &
+                  i,j+1,k,iBlock,                      &
                   AverageIonChargeOut=ZaverageR)
              call user_material_properties( &
-                  State_V=State_VGB(:,i,j-1,k,iBlock), &
+                  State_VGB(:,i,j-1,k,iBlock),         &
+                  i, j-1, k, iBlock,                   &
                   AverageIonChargeOut=ZaverageL)
              ZaverageR = max(ZaverageR,1.0)
              ZaverageL = max(ZaverageL,1.0)
@@ -305,10 +310,12 @@ contains
           ! Interpolate (Z gradient of Rho*Z)
           if(nDim==3)then
              call user_material_properties( &
-                  State_V=State_VGB(:,i,j,k+1,iBlock), &
+                  State_VGB(:,i,j,k+1,iBlock),         &
+                  i, j, k+1, iBlock,                   &
                   AverageIonChargeOut=ZaverageR)
              call user_material_properties( &
-                  State_V=State_VGB(:,i,j,k-1,iBlock), &
+                  State_VGB(:,i,j,k-1,iBlock),         &
+                  i,j,k-1,iBlock,                      &
                   AverageIonChargeOut=ZaverageL)
              ZaverageR = max(ZaverageR,1.0)
              ZaverageL = max(ZaverageL,1.0)

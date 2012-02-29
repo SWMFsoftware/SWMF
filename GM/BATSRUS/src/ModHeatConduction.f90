@@ -264,7 +264,7 @@ contains
        else
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              call user_material_properties( &
-                  State_VGB(:,i,j,k,iBlock), TeOut=TeSi)
+                  State_VGB(:,i,j,k,iBlock),i,j,k,iBlock,TeOut=TeSi)
              Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
        end if
@@ -594,7 +594,7 @@ contains
           else
 
              call user_material_properties( &
-                  State_VGB(:,i,j,k,iBlock), TeOut=TeSi, CvOut = CvSi)
+                  State_VGB(:,i,j,k,iBlock),i,j,k,iBlock,TeOut=TeSi, CvOut = CvSi)
 
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
                   TeSi*Si2No_V(UnitTemperature_)
@@ -945,6 +945,7 @@ contains
           EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i,j,k,iBlock, &
                EinternalIn = EinternalSi, PressureOut = PressureSi)
 
           State_VGB(iP,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
