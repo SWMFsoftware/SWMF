@@ -28,6 +28,7 @@ module ModUser
        Be_, Plastic_, Au_, Ay_
   use BATL_amr, ONLY: BetaProlong
   use BATL_lib, ONLY: MaxLevel
+  use CRASH_ModInterfaceNLTE, ONLY: UseNLTE
 
   include 'user_module.h' !list of public methods
 
@@ -209,6 +210,9 @@ module ModUser
   ! Maximum allowed value of the inverse magnetic Reynolds number
   real :: MaxNormalizedResistivity = 1e5
 
+  !Non LTE array to store E/B ratios
+  real, allocatable :: EOverB_VGB(:,:,:,:,:) 
+
 contains
 
   !============================================================================
@@ -220,7 +224,7 @@ contains
     use ModGeometry,         ONLY: TypeGeometry, UseCovariant
     use ModWaves,            ONLY: FreqMinSI, FreqMaxSI
     use ModConst,            ONLY: cHPlanckEV
-
+    use CRASH_ModInterfaceNLTE, ONLY: read_nlte
     integer :: iMaterial
     real :: EnergyPhotonMin, EnergyPhotonMax
     logical :: IsCylindrical
@@ -380,6 +384,9 @@ contains
        case("#MAXRESISTIVITY")
           ! Maximum allowed value of the inverse magnetic Reynolds number
           call read_var('MaxNormalizedResistivity', MaxNormalizedResistivity)
+
+       case("#NLTE")
+          call read_nlte
 
        case('#USERINPUTEND')
           EXIT
@@ -1735,22 +1742,51 @@ contains
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, UseElectronPressure
     use ModPhysics,  ONLY: inv_gm1, Si2No_V, No2Si_V, &
-         UnitP_, UnitEnergyDens_, ExtraEintMin
+         UnitP_, UnitEnergyDens_, ExtraEintMin, UnitTemperature_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModAdjoint, ONLY: DoAdjoint, AdjUserUpdate1_, & ! ADJOINT SPECIFIC
          AdjUserUpdate2_, store_block_buffer            ! ADJOINT SPECIFIC
-    use ModVarIndexes, ONLY: Pe_
+    use ModVarIndexes, ONLY: Pe_, Te0_, nWave, WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: DefaultState_V
+    use ModSize, ONLY:MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature
 
     implicit none
 
     integer, intent(in):: iStage,iBlock
 
-    integer:: i, j, k, iP
-    real   :: PressureSi, EinternalSi
+    integer:: i, j, k, iP, iGroup
+    real   :: PressureSi, EinternalSi, Te0Si, PlanckSi
     logical:: IsConserv
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
+    if(UseNLTE.and. iStage==1) then
+       !\
+       !Reset value of E_rad/B
+       !/
+       !Ghost cells are needed to calculate temperature or electron density 
+       !gradients
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+
+          if(State_VGB(Te0_,i,j,k,iBlock)==DefaultState_V(Te0_))then
+             !Not filled-in ghost cell or initial conditions
+             EOverB_VGB(:,i,j,k,iBlock) = 1.0
+             CYCLE
+          end if
+          !Calculate "E_rad"
+          EOverB_VGB(:,i,j,k,iBlock) = No2Si_V(UnitEnergyDens_)* &
+               State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+             
+          !Calculate "over B"
+          Te0Si = State_VGB(Te0_,i,j,k,iBlock) * No2Si_V(UnitTemperature_)
+          do iGroup = 1, nWave
+             call get_planck_g_from_temperature(iGroup, Te0Si, EgSI=PlanckSi)
+             EOverB_VGB(:,i,j,k,iBlock) = EOverB_VGB(:,i,j,k,iBlock)/PlanckSi
+          end do
+       end do; end do; end do
+    end if
+
 
     call update_states_MHD(iStage,iBlock)
 
@@ -2337,7 +2373,7 @@ contains
   subroutine user_init_session
 
     use ModProcMH,      ONLY: iProc, iComm
-    use ModVarIndexes,  ONLY: Rho_, UnitUser_V
+    use ModVarIndexes,  ONLY: Rho_, UnitUser_V, Te0_
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
     use ModPhysics,     ONLY: cRadiationNo, Si2No_V, UnitTemperature_, &
          No2Io_V, UnitX_
@@ -2347,9 +2383,11 @@ contains
     use CRASH_ModMultiGroup, ONLY: nGroup, IsLogMultiGroupGrid
     use CRASH_ModEos,        ONLY: nMaterialEos, NameMaterial_I 
     use CRASH_ModEosTable,   ONLY: check_eos_table, check_opac_table
+    use ModSize,             ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
+    use ModVarIndexes,       ONLY: nWave
 
     integer:: iMaterial
-    logical:: IsFirstTime = .true.
+    logical:: IsFirstTime = .true., UseNLTESaved = .false.
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
     
@@ -2366,14 +2404,28 @@ contains
        UnitUser_V(LevelXe_:LevelMax) = UnitUser_V(Rho_)*No2Io_V(UnitX_)
     end if
 
-
-    ! Create separate EOS table for each material
-!!!  Why is this done multiple times ???
-    call check_eos_table(iComm = iComm)
-
+    if(UseNLTE)then
+       if(Te0_==1)call CON_stop('Use state vector with Te0_ component with NLTE!')
+       if(.not.allocated(EOverB_VGB))then
+          allocate(EOverB_VGB(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+          EOverB_VGB = 1.0
+       end if
+    end if
+ 
     ! The rest of the initialization should be done once
     if(.not.IsFirstTime) RETURN
     IsFirstTime = .false.
+
+    ! Create separate EOS table for each material
+    ! This should be done with UseNLTE = .false., because
+    ! to create the EOS tables with UseNLTE = .true. would
+    ! create NLTE tables for E_rad/B = 0
+    UseNLTESaved = UseNLTE    
+    UseNLTE = .false.
+
+    call check_eos_table(iComm = iComm)
+
+    UseNLTE = UseNLTESaved
 
     !Set the photon energy range
     !First, check if the values of FreqMinSI and FreqSI are set:
@@ -2635,16 +2687,16 @@ contains
     ! total (electron + ion) pressure, and the total specific heat.
 
     use CRASH_ModEos,  ONLY: eos, Xe_, Be_, Plastic_
-    use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature, &
-         get_temperature_from_energy_g
+    use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature
     use ModMain,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          inv_gm1, g, Si2No_V, cRadiationNo, UnitTemperature_
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
-         WaveFirst_, WaveLast_, Pe_
+         WaveFirst_, WaveLast_, Pe_, ExtraEint_
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cAtomicMass
+    use CRASH_ModInterfaceNLTE, ONLY: NLTE_EOS
 
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
@@ -2756,8 +2808,11 @@ contains
 
     if(present(TeOut)) TeOut = TeSi
 
-    if(present(OpacityPlanckOut_W) &
-         .or. present(OpacityRosselandOut_W))then
+    if((present(OpacityPlanckOut_W) &
+         .or. present(OpacityRosselandOut_W))&
+         !if UseNLTE, the opacity is calculated
+         !together with the other variables
+         .and.(.not.UseNLTE))then
 
        if(iTableOpacity > 0 .and. nWave == 1)then
           if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error(&
@@ -2831,9 +2886,16 @@ contains
                   OpacityPlanckOut_I=OpacityPlanckOut_W, &
                   OpacityRosselandOut_I=OpacityRosselandOut_W)
           else
-             call eos(iMaterial, RhoSi, TeIn=TeSi, &
+             if(.not.UseNLTE)then
+                call eos(iMaterial, RhoSi, TeIn=TeSi, &
                   OpacityPlanckOut_I=OpacityPlanckOut_W, &
                   OpacityRosselandOut_I=OpacityRosselandOut_W)
+             else
+                call NLTE_EOS(iMaterial, RhoSi, TeIn=TeSi, &
+                   EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),   &
+                   OpacityPlanckOut_I=OpacityPlanckOut_W, & 
+                   OpacityRosselandOut_I=OpacityRosselandOut_W)
+             end if
 
              if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
                   = OpacityPlanckOut_W*PlanckScaleFactor_I(iMaterial)
@@ -2882,10 +2944,18 @@ contains
                     GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut)
             else
-               call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
+               if(.not.UseNLTE)then
+                  call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
                     pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
                     GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut)
+               else
+                   call NLTE_EOS(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
+                    EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
+                    pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
+                    GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                    HeatCond=HeatCondOut)
+                end if
             end if
          end if
       elseif(present(TeIn))then
@@ -2897,10 +2967,18 @@ contains
                  CvTotalOut=CvOut, GammaOut=GammaOut, &
                  zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
          else
-            call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
+            if(.not.UseNLTE)then
+               call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
                  eTotalOut=EinternalOut, pTotalOut=pSi, &
                  CvTotalOut=CvOut, GammaOut=GammaOut, &
                  zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+            else
+               call NLTE_EOS(iMaterial, Rho=RhoSi, TeIn=TeIn, &
+                 EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
+                 eTotalOut=EinternalOut, pTotalOut=pSi, &
+                 CvTotalOut=CvOut, GammaOut=GammaOut, &
+                 zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+            end if
          end if
       else
          ! Pressure is simply part of State_V
@@ -2932,6 +3010,8 @@ contains
                        CvTotalOut=CvOut, GammaOut=GammaOut, &
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
                else
+                  if(UseNLTE)&
+                       call CON_stop('NLTE energy cannot be found from pressure')
                   call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                        EtotalOut=EinternalOut, TeOut=TeSi, &
                        CvTotalOut=CvOut, GammaOut=GammaOut, &
@@ -2987,10 +3067,19 @@ contains
                     CvTotalOut=CvOut, GammaOut=GammaOut, &
                     zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
             else
-               call eos(iMaterial, RhoSi, pTotalIn=pSi, &
+               if(.not.UseNLTE)then
+                  call eos(iMaterial, RhoSi, pTotalIn=pSi, &
                     eTotalOut = EinternalOut, TeOut=TeSi, &
                     CvTotalOut=CvOut, GammaOut=GammaOut, &
                     zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+               else
+                  call NLTE_EOS(iMaterial, RhoSi, eTotalIn=pSi*inv_gm1+&
+                       State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_), &
+                       EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
+                       eTotalOut = EinternalOut, TeOut=TeSi, &
+                       CvTotalOut=CvOut, GammaOut=GammaOut, &
+                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)  
+               end if
             end if
          end if
       end if
@@ -3025,10 +3114,18 @@ contains
                     GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
-               call eos(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
+               if(.not.UseNLTE)then
+                  call eos(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
                     pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
                     GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+               else
+                  call NLTE_EOS(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
+                    EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                    pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                    GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                    HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+               end if
             end if
          end if
       elseif(present(TeIn))then
@@ -3041,11 +3138,20 @@ contains
                  GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                  HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          else
-            call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
+            if(.not.UseNLTE)then
+               call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
                  eElectronOut=EinternalOut, &
                  pElectronOut=pSi, CvElectronOut=CvOut, &
                  GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                  HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+            else
+              call NLTE_EOS(iMaterial, Rho=RhoSi, TeIn=TeIn, &
+                 EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                 eElectronOut=EinternalOut, &
+                 pElectronOut=pSi, CvElectronOut=CvOut, &
+                 GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+            end if
          end if
       else
          ! electron pressure is State_V(Pe_)
@@ -3078,6 +3184,8 @@ contains
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                        TeTiRelax=TeTiRelaxOut)
                else
+                  if(UseNLTE)&
+                       call CON_stop('NLTE energy cannot be found from pressure')
                   call eos(iMaterial, RhoSi, pElectronIn=pSi, &
                        eElectronOut=EinternalOut, TeOut=TeSi, &
                        CvElectronOut=CvOut, GammaEOut=GammaOut, &
@@ -3139,11 +3247,21 @@ contains
                     zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
-               call eos(iMaterial, RhoSi, pElectronIn=pSi, &
+               if(.not.UseNLTE)then
+                  call eos(iMaterial, RhoSi, pElectronIn=pSi, &
                     eElectronOut=EinternalOut, TeOut=TeSi, &
                     CvElectronOut=CvOut, GammaEOut=GammaOut, &
                     zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                     TeTiRelax=TeTiRelaxOut)
+               else
+                  call NLTE_EOS(iMaterial, RhoSi, eElectronIn=pSi*inv_gm1+&
+                    State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_), &
+                    EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                    eElectronOut=EinternalOut, TeOut=TeSi, &
+                    CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                    TeTiRelax=TeTiRelaxOut)
+               end if
             end if
          end if
       end if
