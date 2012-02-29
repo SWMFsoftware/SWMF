@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 module CRASH_ModInterfaceNLTE
-  use CRASH_ModMultiGroup, ONLY:nGroup
+  use CRASH_ModMultiGroup, ONLY:nGroup, EnergyGroup_I
   use CRASH_M_EOS,   ONLY: UseNLTE=>UseCrashEos
   implicit none
   PRIVATE !Except
@@ -22,7 +22,6 @@ contains
   subroutine check_nlte
     use CRASH_M_EOS,   ONLY: SetOptions
     use CRASH_M_expTab,ONLY: exp_tab8
-    use CRASH_ModMultiGroup, ONLY: EnergyGroup_I,set_multigroup
     use ModConst,            ONLY: cHPlanckEV
     use CRASH_M_NLTE,only : ng_rad
     use M_RADIOM, only : prep_projE, prepCorrUbar
@@ -62,7 +61,7 @@ contains
        HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut)
 
     use CRASH_M_EOS,   ONLY: iMaterial, set_kbr
-    use CRASH_M_NLTE,only : ng_rad,EoB, NLTE=>NLTE_EOS 
+    use CRASH_M_NLTE,only : ng_rad,EoB, NLTE=>NLTE_EOS, setErad 
     use CRASH_ModEos,ONLY: eos, cAtomicMassCRASH_I, &
                            nZMix_II, cMix_II
     use CRASH_M_localProperties,only : atoNum,atoMass
@@ -122,12 +121,15 @@ contains
     atonum  = sum(nZMix_II(:,iMaterial)*cMix_II(:,iMaterial))
 
     if(present(EoBIn_I))then
-       EoB(1:ng_rad) = EoBIn_I
+       EoB(1:nGroup) = EoBIn_I
     else
-       EoB(1:ng_rad)=0.0  !Zero radiation energy
+       EoB(1:nGroup)=0.0  !Zero radiation energy
     end if
 
     call set_kbr(NAtom=NAtomic)
+    call setErad(eg_o_bg= EoB(1:nGroup),&
+                 hnug=EnergyGroup_I(0:nGroup),&          
+                 ng=nGroup)
 
     if(present(TeIn))then
 
@@ -162,7 +164,7 @@ contains
     elseif(present(ETotalIn))then
 
        !Convert J/m3 = 10^7erg/10^6cm3=10 erg/cm3
-       EIn = EElectronIn * 10.0
+        EIn = EElectronIn * 10.0
 
        !Get Tz
 
