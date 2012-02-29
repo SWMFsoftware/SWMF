@@ -26,7 +26,10 @@ program save_eos_table
   !Set reduced table sizes
   !/
   !IndexDefaultEos_I = (/9,9/)
-  if(UseNlte)call check_nlte
+  if(UseNlte)then
+     call set_multigroup(30,0.1/cHPlanckEV,20000.0/cHPlanckEV)
+     call check_nlte
+  end if
   
   
   call MPI_Init(iError)

@@ -16,6 +16,7 @@ contains
     use ModReadParam,  ONLY: read_var
     !----------------------
     call read_var('UseNLTE',UseNLTE)
+    if(UseNLTE)call check_nlte
   end subroutine read_nlte
   !====================
   subroutine check_nlte
@@ -34,7 +35,7 @@ contains
     call setoptions(.false., .false., .true.)
     
     !What else?
-    call set_multigroup(30,0.1/cHPlanckEV,20000.0/cHPlanckEV)
+   
    
     !\
     ! Coefficients for transforming from the user defined grid to
