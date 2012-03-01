@@ -50,6 +50,10 @@ module ModUser
   real    :: nCoronaSi = 0.0, tCoronaSi = 0.0
   real    :: DipoleTiltDeg = 0.0
 
+  ! Current sheet refinement 
+  real    :: rRefine = -1.
+  logical :: DoRefineFarSheet = .false.
+
   ! Input parameters for two-temperature effects
   real    :: TeFraction, TiFraction
   real    :: QeByQtotal = 0.0
@@ -123,7 +127,11 @@ contains
        case("#PARKERIC")
           call read_var('nCoronaSi', nCoronaSi)
           call read_var('tCoronaSi', tCoronaSi)
-         
+
+       case("#REFINEFARSHEET")
+          call read_var('DoRefineFarSheet', DoRefineFarSheet)
+          call read_var('rRefine'         , rRefine)
+
        case('#ELECTRONHEATING')
           ! Steven Cranmer his electron heating fraction (Apj 2009)
           call read_var('QeByQtotal', QeByQtotal)
@@ -475,10 +483,28 @@ contains
   !============================================================================
   subroutine user_update_states(iStage, iBlock)
 
-    integer, intent(in) :: iStage, iBlock    
+    use ModAdvance,    ONLY: State_VGB
+    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, r_BLK
+    use ModVarIndexes, ONLY: nVar
+
+    integer, intent(in) :: iStage, iBlock
+
+    integer :: i,j,k, iVar
+
     !--------------------------------------------------------------------------
     call update_states_MHD(iStage, iBlock)
     
+    do i=-1, nI+2 ; do j= -1, nJ+2 ; do k=-1, nK+2
+       do iVar = 1, nVar
+          if(IsNan(State_VGB(iVar,i,j,k,iBlock))) then
+             write(*,*) 'Found Nan at iVar: ',iVar
+             write(*,*) 'x,y,z: ', x_BLK(i,j,k,iBlock), &
+                  y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
+             call CON_stop('update states')
+          end if
+       end do
+    end do; end do ; end do
+
   end subroutine user_update_states
   !============================================================================
   subroutine write_ghost_and_boundary
@@ -1000,11 +1026,12 @@ contains
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
     use ModNumConst, ONLY: cTiny
     use ModMain,     ONLY: x_, y_, z_, time_loop, UseB0
+    use ModPhysics,  ONLY: rBody
 
     integer, intent(in) :: iBlock, iArea
     logical,intent(out) :: DoRefine
 
-    real :: rDotB_G(1:nI,1:nJ,0:nK+1)
+    real :: rDotB_G(1:nI,1:nJ,0:nK+1), r_G(1:nI,1:nJ,1:nK), rMin=0.0
     integer :: i, j, k
     character (len=*), parameter :: NameSub = 'user_specify_refinement'
     !--------------------------------------------------------------------------
@@ -1038,7 +1065,18 @@ contains
        end do; end do; end do
     end if
 
-    DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
+    DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny 
+
+    ! only refine in the far current sheet if required
+    if(DoRefineFarSheet .and. rRefine > rBody) then
+       do k=1,nK ; do j=1,nJ ; do i=1,nI
+          r_G(i,j,k) = sqrt(x_BLK(i,j,k,iBlock)**2 + &
+                          y_BLK(i,j,k,iBlock)**2 + &
+                          z_BLK(i,j,k,iBlock)**2)
+       end do ; end do; end do
+       rMin = minval(r_G)
+       if (rMin < rRefine) DoRefine = .false.
+    end if
 
   end subroutine user_specify_refinement
   !============================================================================
