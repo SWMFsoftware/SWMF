@@ -1,0 +1,427 @@
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2007
+
+ BATSRUS version 9.10 is running as GM on      4 PE(s)
+
+ EQUATIONS:   MHD Waves
+ USER MODULE: Chromosphere to solar wind model with Alfven waves - Oran, van der Holst 1.00
+
+ModReadParam::read_file: read and broadcast nLine= 221 lines of text
+ ----- Starting Session  1  ------
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
+
+#BATLTEST
+T		UseBatlTest
+
+#COMPONENT
+SC			NameComponent
+
+#DESCRIPTION
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#STARTTIME
+2008			iYear
+11			iMonth
+20			iDay
+7			iHour
+13			iMinute
+0			iSecond
+
+#COORDSYSTEM
+HGR			TypeCoordSystem
+ GM_set_parameters setting .UseRotatingFrame = T
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#PLASMA
+1.0			IonMass [amu]		MassFluid
+1.0			AverageIonCharge [e]		ChargeIon
+1.0			ElectronTemperatureRatio
+
+#BODY
+T			UseBody
+1.0			rBody
+1.5e8			BodyNDim
+1.5e6			BodyTDim
+
+#USER_FLAGS
+T			UseUserInnerBcs
+T			UseUserSource
+F			UseUserPerturbation
+F			UseUserOuterBcs
+T			UseUserICs
+T			UseUserSpecifyRefinement
+T			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+F			UseUserUpdateStates
+
+#USECURLB0
+T			UseCurlB0
+0.0			rCurrentFreeB0
+
+#HYPERBOLICDIVB
+T			UseHyperbolicDivB
+400.0			SpeedHypDim
+0.1			HypDecay
+
+#MAGNETOGRAM
+T                       UseMagnetogram
+1.0                     rMagnetogram
+2.5                     rSourceSurface
+0.0                     HeightInnerBc
+Param/CORONA/CR2077_GNG.dat     NameMagnetogramFile
+12                      nHeaderLine
+0.0                     PhiShift
+1.0                     UnitB
+
+#RADIATIVECOOLING
+T			UseRadCooling
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+Param/CORONA/RadCool.dat		NameFile
+ascii			TypeFile
+
+#TRANSITIONREGION
+T			DoExpandTransitionRegion		DoExtendTransitionRegion
+3.0e5			TeTransitionRegionSi		TeModSi
+1.0e1			DeltaTeSi		DeltaTeModSi
+
+#USERINPUTBEGIN ------------------------
+ User read_input CHROMOSPHERE-CORONA starts
+
+#CHROMOBC
+T			UseChromoBc
+2e4			DeltaUSi  [m/s]		WaveDeltaU
+2e16			nChromoSi [1/m^3]
+2e4			tChromoSi [K]
+T			UseConsRhoUpar		UseUparBc
+F			UseExtrapolatedEwave
+
+#PARKERIC
+1.5e14			NumDensitySi 1e14		nCoronaSi
+1.5e6			Temperature (K) 1.5e6		tCoronaSi
+
+#WAVEDISSIPATION
+T                       UseWaveDissipation
+3.4e6                   Lmax [m T-1/2]		LkolIo
+25.                     Lratio > 1
+
+#USERINPUTEND ----------------------------
+ User read_input SOLAR CORONA ends
+
+#HEATCONDUCTION
+T			UseHeatConduction
+spitzer			TypeHeatConduction
+
+#HEATFLUXREGION
+T			UseHeatFluxRegion
+5.0			rCollisional
+10.0			rCollisionless
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#MESSAGEPASS
+all			TypeMessagePass
+
+#RESCHANGE
+T			UseAccurateResChange
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#FACEBOUNDARY
+-1			MinBoundary
+-1			MaxBoundary
+
+#OUTERBOUNDARY
+user			TypeBcEast
+float			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
+
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+Param/CORONA/grid_TR.dat		NameGridFile
+
+#GRID
+1			nRootBlockX
+2			nRootBlockY
+1			nRootBlockZ
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
+
+#LIMITRADIUS
+1.0			rMin		Coord1Min
+24.0			rMax		Coord1Max
+
+#GRIDLEVEL
+3			nLevelArea
+all			NameArea
+
+#GRIDLEVEL
+4		nLevelArea
+currentsheet		NameArea
+
+#GRIDLEVEL
+5			nLevelArea
+box_gen			NameArea
+1.0			rMin		xMinBox
+0.0			LonMin		yMinBox
+-76.0			LatMin		zMinBox
+24.0			rMax		xMaxBox
+360.0			LonMax		yMaxBox
+76.0			LatMax		zMaxBox
+
+#GRIDLEVEL
+3			nLevelArea
+initial 		NameArea
+
+#GRIDLEVEL
+3			nLevelArea
+initial			NameArea
+
+#AMR
+60			DnRefine
+F			DoAutomaticRefinement		DoAutoRefine
+
+#SAVEPLOT
+1			nPlotFiles
+y=0 VAR tec		StringPlot
+20			DnSavePlot
+-1.			DtSavePlot
+rho ux uy uz bx by bz I01 I02 temp disstot lkol lcp		NameVars
+g rbody		NamePars
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#STOP
+100	                MaxIteration
+-1.0                    tSimulationMax
+ SC_set_parameters: CHECK iSession = 1
+  
+ SC_set_parameters WARNING: there must be at least two blocks along latitude after initial refinement!
+init_mod_advance allocated arrays
+init_mod_geometry allocated arrays
+ Only Extra and Outer boundary cells can be saved
+init_mod_nodes allocated arrays
+init_mod_raytrace allocated arrays
+ Norder =  180
+ Entered coefficient file name :: Param/CORONA/CR2077_GNG.dat     
+ Entered number of header lines::  12
+ Reset N_PFSSM= 30
+ Magnetogram is extended by  3  nodes towards the Sun
+ Writing PFSSM_Br output file, named
+ SC/IO2/PFSSM_Br.dat             
+ 
+ user_init_session:
+ 
+ 
+ user_init_session finished
+ 
+ BATS_setup starting initial refinement level, nBlockAll = 1 2
+ BATS_setup starting initial refinement level, nBlockAll = 2 16
+ BATS_setup starting initial refinement level, nBlockAll = 3 128
+     total blocks =  1024
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: HELIOSPHERIC            Normalization: SOLARWIND
+
+          Gamma:         1.66666667
+
+          rBody:         1.00000E+00, rPlanet:     6.96000E+08
+          BodyNDim:      1.50000E+08, BodyTDim:    1.50000E+06
+          Bdp:           0.00000E+00, Tilt:        0.00000E+00
+          Gravity is used, gBody= -9.24468E+00
+
+          UseBody2: .false.
+
+          ClightFactor:  1.00000E+00, Clight:      2.08686E+03
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          2nd-order scheme with mc3 limiter
+              BetaLimiter = 1.20
+          Sokolov flux function
+          Steady state calculation
+          Explicit time stepping
+              nStage: 2
+              Cfl:    0.80
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  4
+
+ After initial grid setup:
+   nBlockMax =  256  nBLK =  5000
+   Total number of blocks used =  1024
+   Total number of cells =  98304
+   Total number of true cells =  98304
+   Smallest cell dx:    2.3118947368114966E-02   Largest cell dx:    2.3118947368114984E-02
+
+ root blocks:        1       2       1
+ nIJK_D:             6       4       4
+ x:              -100.00000000    100.00000000
+ y:              -100.00000000    100.00000000
+ z:              -100.00000000    100.00000000
+
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   0.47    100.00         1         1
+-------------------------------------------------------------------------------
+setup                     0.47    100.00         1         1
+exch_msgs                 0.03      5.93         1         1
+batl_pass                 0.02      3.99         1         2
+local_pass                0.01      2.21         1         4
+wait_pass                 0.01      1.31         1         2
+buffer_to_state           0.00      0.43         1         2
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   3.8793517178982080E-29
+Speed is  51454.4 c/s/p after      4.8 s at N =      10
+  Message passing for plot files ...
+ Starting assign_node_numbers ...
+  nBlockALL= 1024  NodesPerBlock= 175  unreduced total= 179200  nNodeALL= 101920
+saved ifile= 5 type=y=0_var    at n_step=     20
+ Calling exchange_messages to reset ghost cells ...
+Speed is  53711.8 c/s/p after     10.0 s at N =      20
+Speed is  53894.4 c/s/p after     14.8 s at N =      30
+  Message passing for plot files ...
+ Starting assign_node_numbers ...
+  nBlockALL= 1024  NodesPerBlock= 175  unreduced total= 179200  nNodeALL= 101920
+saved ifile= 5 type=y=0_var    at n_step=     40
+ Calling exchange_messages to reset ghost cells ...
+Speed is  54519.9 c/s/p after     19.9 s at N =      40
+Speed is  54259.6 c/s/p after     24.7 s at N =      50
+ >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
+ |
+ |  AMR:  nBlockMax =  796  nBLK =  5000
+ |  AMR:  Total number of blocks used =  3145
+ |  AMR:  Total number of cells =  301920
+ |  AMR:  Total number of true cells =  301920
+ |  Smallest cell dx:    1.1559473684057483E-02   Largest cell dx:    2.3118947368114984E-02
+ |
+Timing for last SC_amr (BATSRUS):    1.09 sec
+ >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
+  Message passing for plot files ...
+ Starting assign_node_numbers ...
+  nBlockALL= 3145  NodesPerBlock= 175  unreduced total= 550375  nNodeALL= 321114
+saved ifile= 5 type=y=0_var    at n_step=     60
+ Calling exchange_messages to reset ghost cells ...
+Speed is 164317.3 c/s/p after     31.5 s at N =      60
+Speed is  49702.3 c/s/p after     47.1 s at N =      70
+  Message passing for plot files ...
+ Starting assign_node_numbers ...
+  nBlockALL= 3145  NodesPerBlock= 175  unreduced total= 550375  nNodeALL= 321114
+saved ifile= 5 type=y=0_var    at n_step=     80
+ Calling exchange_messages to reset ghost cells ...
+Speed is  48704.7 c/s/p after     63.4 s at N =      80
+Speed is  48744.3 c/s/p after     79.0 s at N =      90
+  Message passing for plot files ...
+ Starting assign_node_numbers ...
+  nBlockALL= 3145  NodesPerBlock= 175  unreduced total= 550375  nNodeALL= 321114
+saved ifile= 5 type=y=0_var    at n_step=    100
+ Calling exchange_messages to reset ghost cells ...
+Speed is  49425.4 c/s/p after     96.2 s at N =     100
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     100    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    96.22   96.222   96.222   100.00
+-------------------------------------------------------------------------------
+advance                 100     100    89.83    0.898    0.898    93.36
+save_logfile            100     100     1.60    0.016    0.016     1.66
+exch_msgs                 5      10     0.25    0.051    0.025     0.26
+pass_node                 5       5     0.04    0.007    0.007     0.04
+save_plot                 5       5     3.28    0.655    0.655     3.41
+SC_amr                    1       1     1.09    1.088    1.088     1.13
+-------------------------------------------------------------------------------
+   100 of    100 iterations completed.   Expected time to completion:      0.00
+
+
+    Finished Numerical Simulation
+    -----------------------------
+saved ifile= 1 type=restart    at n_step=    100
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     100    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                  96.39    100.00         1         1
+-------------------------------------------------------------------------------
+advance                  89.83     93.20       100       100
+calc_fluxes              51.59     53.52       100     93600
+calc_sources              9.23      9.58       100     93600
+calc_facevalues           9.19      9.54       100     93600
+exch_msgs                 6.41      6.64       106       212
+batl_pass                 4.22      4.38       106       213
+save_plot                 3.28      3.40         5         5
+calc_fluxes_bfo           3.17      3.29        40     30080
+barrier-expl2             3.11      3.23       100       200
+local_pass                2.81      2.91       106       426
+update_states             2.35      2.44       100     93600
+update_check              2.24      2.33       100       200
+calc_face_bfo             1.69      1.75        40     30080
+save_logfile              1.60      1.66       100       100
+SC_amr                    1.09      1.13         1         1
+wait_pass                 0.81      0.84       106       213
+buffer_to_state           0.59      0.61       106       213
+pass_node                 0.53      0.55        10        10
+write_restart_files       0.17      0.17         1         1
+set_bcs                   0.16      0.17       100     13360
+barrier-expl1             0.10      0.10       100       200
+send_cons_flux            0.08      0.08       100       200
+send_pass                 0.01      0.01       106       213
+send_recv                 0.00      0.00       100       200
+init_pass                 0.00      0.00       106       213
+recv_pass                 0.00      0.00       106       213
+-------------------------------------------------------------------------------
+clean_mod_advance deallocated arrays
+clean_mod_geometry deallocated arrays
+clean_mod_nodes deallocated arrays
+clean_mod_raytrace deallocated arrays
+Error_report for Time step reduction, min(factor)
+ OCCURED first= 1  last= 69  count_max= 112  count_sum= 112
+ VALUES min=   3.8793517178982080E-29  max=   0.8199802393730227  mean=   0.2096023889337122  last=   0.6030251937342485  last_sum=   0.6030251937342485
+
