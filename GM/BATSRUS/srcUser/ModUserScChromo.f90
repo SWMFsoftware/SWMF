@@ -494,17 +494,6 @@ contains
     !--------------------------------------------------------------------------
     call update_states_MHD(iStage, iBlock)
     
-    do i=-1, nI+2 ; do j= -1, nJ+2 ; do k=-1, nK+2
-       do iVar = 1, nVar
-          if(IsNan(State_VGB(iVar,i,j,k,iBlock))) then
-             write(*,*) 'Found Nan at iVar: ',iVar
-             write(*,*) 'x,y,z: ', x_BLK(i,j,k,iBlock), &
-                  y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
-             call CON_stop('update states')
-          end if
-       end do
-    end do; end do ; end do
-
   end subroutine user_update_states
   !============================================================================
   subroutine write_ghost_and_boundary
