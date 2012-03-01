@@ -3077,7 +3077,6 @@ contains
        call init_mpi(iComm)
        if(TypeGeometry(1:9)=='spherical') then
           TypeGeometryBatl = 'rlonlat'//TypeGeometry(10:20)
-          write(*,*)'TypeGeometryBatl = ',TypeGeometryBatl
        else
           TypeGeometryBatl = TypeGeometry
        end if
