@@ -47,6 +47,7 @@ contains
     DoSendRay = UseIM .or. index(log_vars, 'status') > 0  !!! to be improved
 
     nBuffer = nScalarData
+
     if(UseConstrainB) nBuffer = nBuffer + 3*nCellGhost
     if(DoSendRay) &
          nBuffer = nBuffer + 6*nIJK
@@ -308,15 +309,20 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
   logical :: SkippedAnyBlock
 
-  logical :: DoTest, DoTestMe
-
   logical :: DoFixVar_B(MaxBlock)
 
   ! BATL related variables
   integer:: iNode
   integer, allocatable:: iTypeAdvance_A(:), iTypeBalance_A(:)
 
+  logical:: DoTest, DoTestMe
+  character(len=*), parameter:: NameSub = 'load_balance'
   !---------------------------------------------------------------------------
+  call set_oktest(NameSub, DoTest, DoTestMe)
+  if(DoTestMe)write(*,*) NameSub, &
+       ' starting with DoMoveCoord,DoMoveData,IsNewBlock=', &
+       DoMoveCoord, DoMoveData, IsNewBlock
+
   if(UseBatl)then
 
      call select_stepping(DoMoveCoord)       !^CFG IF IMPLICIT
@@ -331,9 +337,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
                 iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
 
            ! Update iTypeAdvance_BP
-           ! CHEATING: only indicate first index to circumvent ModMpiInterfaces.
+           ! CHEATING: only indicate first index to circumvent ModMpiInterfaces
            ! Set displacement equal to MaxBlock so we get same behavior 
-           ! as MPI_allgather. Use nBlockMax for maximum receive data for speed!
+           ! as MPI_allgather. Use nBlockMax for maximum receive data for speed
            nBlockMax_P = nBlockMax
            call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
                 iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
@@ -365,15 +371,19 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
            iTypeBalance_A(iNode) = iType_I(iTypeAdvance_A(iNode))
         end do
 
+
         ! load balance depending on block types
         if(DoMoveData)then
+
            call init_load_balance
+
            call regrid_batl(nVar, State_VGB, Dt_BLK,  &
                 iTypeNode_A=iTypeBalance_A,           &
                 DoBalanceOnlyIn=.true.,               &
                 nExtraData=nBuffer,                   &
                 pack_extra_data=pack_load_balance,    &
                 unpack_extra_data=unpack_load_balance )
+
            call set_batsrus_grid
            call set_batsrus_state
         else
@@ -401,7 +411,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      call find_test_cell
 
      ! This is a temporary solution for backward compatibility
-     if(.not.(IsCartesian.or.IsRzGeometry) .and. DoMoveCoord .and. UseVertexBasedGrid)then
+     if(.not.(IsCartesian.or.IsRzGeometry) &
+          .and. DoMoveCoord .and. UseVertexBasedGrid)then
         do iBlock=1, nBlock
            if(do_fix_geometry_at_reschange(iBlock)) &       
                 call fix_geometry_at_reschange(iBlock) 
@@ -410,12 +421,6 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
      RETURN
   end if
-
-  call set_oktest('load_balance',DoTest,DoTestMe)
-
-  if (DoTestMe) write(*,*)'load_balance: ',&
-       'iProc, DoMoveCoord, DoMoveData, IsNewBlock=',&
-       iProc, DoMoveCoord, DoMoveData, IsNewBlock
 
   ! starting value of number of blocks moved between processors
   nBlockMoved = 0
