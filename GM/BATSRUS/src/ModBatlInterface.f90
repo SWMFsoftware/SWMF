@@ -38,7 +38,7 @@ contains
        ! grid/tree is not changed from the view of BATL
        IsNewDecomposition = .false.
        IsNewTree          = .false.
-    
+
        nBlockAll  = nNodeUsed
        nBlockBats = nBlock
        call MPI_ALLREDUCE(nBlock, nBlockMax, 1, MPI_INTEGER, MPI_MAX, &
@@ -243,7 +243,6 @@ contains
        FaceArea2MinK_B(iBlock) = 1e-30
     end if
 
-
   end subroutine set_batsrus_block
   !============================================================================
   subroutine set_batsrus_state
@@ -252,25 +251,25 @@ contains
 
     use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B,&
          restrict_amr_criteria
-    use ModEnergy, ONLY: calc_energy_cell
-     use ModResistivity,   ONLY: UseResistivity
-    
+    use ModEnergy, ONLY: calc_energy_ghost
+    use ModResistivity,   ONLY: UseResistivity
+
     integer:: iBlock
     !-------------------------------------------------------------------------
 
-     do iBlock = 1, nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-              
+
        ! If nothing happened to the block, no need to do anything
        if(iAmrChange_B(iBlock) < AmrMoved_) CYCLE
-       
+
        ! Update all kinds of extra block variables
        call calc_other_soln_vars(iBlock)
        call fix_soln_block(iBlock)
-       call calc_energy_cell(iBlock)
+       call calc_energy_ghost(iBlock)
        call restrict_amr_criteria(iBlock)
        if(UseResistivity) call set_resistivity(iBlock)
-    end do 
+    end do
 
   end subroutine set_batsrus_state
   !============================================================================
