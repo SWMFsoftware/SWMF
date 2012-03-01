@@ -2387,7 +2387,8 @@ contains
     use ModVarIndexes,       ONLY: nWave
 
     integer:: iMaterial
-    logical:: IsFirstTime = .true., UseNLTESaved = .false.
+    logical:: IsFirstTime = .true.
+    logical,save:: UseNLTESaved = .false.
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
     
@@ -2404,13 +2405,9 @@ contains
        UnitUser_V(LevelXe_:LevelMax) = UnitUser_V(Rho_)*No2Io_V(UnitX_)
     end if
 
-    if(UseNLTE)then
-       if(Te0_==1)call CON_stop('Use state vector with Te0_ component with NLTE!')
-       if(.not.allocated(EOverB_VGB))then
-          allocate(EOverB_VGB(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-          EOverB_VGB = 1.0
-       end if
-    end if
+    if((.not.IsFirstTime).and.&
+         (UseNLTE.eqv..true.).and.(UseNLTESaved.eqv..false.))&
+         call CON_stop('NLTE can be turned on only in the first session')
  
     ! The rest of the initialization should be done once
     if(.not.IsFirstTime) RETURN
@@ -2446,6 +2443,14 @@ contains
 
     ! create separate opacity lookup tables for each material
     call check_opac_table(FreqMinSI, FreqMaxSI, iComm = iComm)
+
+    if(UseNLTE)then
+       if(Te0_==1)call CON_stop('Use state vector with Te0_ component with NLTE!')
+       if(.not.allocated(EOverB_VGB))then
+          allocate(EOverB_VGB(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+          EOverB_VGB = 1.0
+       end if
+    end if
 
     ! The above call sets IsLogMultigroupGrid variable
     ! If the energy grid is not logarithmic, do not advect waves
