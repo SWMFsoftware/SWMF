@@ -3,14 +3,13 @@
           for 3D Heliospheric Flows
  University of Michigan, 1995-2007
 
- BATSRUS version 9.00 is running as GM on      2 PE(s)
+ BATSRUS version 9.10 is running as GM on      4 PE(s)
 
  EQUATIONS:   Multi-fluid MHD for Mars
  USER MODULE: Mars 5 Fluids + Pe MHD code, Dalal Najib 1.20
 
-ModReadParam::read_file: read and broadcast nLine= 224 lines of text
+ModReadParam::read_file: read and broadcast nLine= 227 lines of text
  ----- Starting Session  1  ------
- init_mod_restart_file: setting TypeRestartOutFile = one
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
 
 #NORMALIZATION
@@ -36,30 +35,33 @@ T			UseGravity
 2                      nRootBlockY
 2                      nRootBlockZ
 -24.                    xMin
-  8.                    xMax
--16.                    yMin
+  8.              TypeGeometryBatl TypeGeometryBatl = rlo TypeGeometryBatl = rlonlat_lnr         xMax
+-16.                    y = rlonlat_lnr         
+nlat_lnr         
+       
+Min
  16.                    yMax
 -16.                    zMin
  16.                    zMax
 
 #LIMITRADIUS
 1.029884232197		rMin		Coord1Min
-32.9849					rMax = sqrt(24^2+16^2+16^2)		Coord1Max
+32.9849			rMax = sqrt(24^2+16^2+16^2)		Coord1Max
 
 #GRIDLEVEL
 3			nLevelArea
-initial					NameArea
+initial			NameArea
 
 #GRIDLEVEL
 1			nLevelArea
-sphere0					NameArea
-1.7							Radius = 1.5*rBody
+sphere0			NameArea
+1.7			Radius = 1.5*rBody
 
 #POINTIMPLICIT
 T			UsePointImplicit	
 1.0			BetaPointImpl			BetaPointImplicit
 F			IsAssymetric			IsAsymmetric
-F			DoNormalizeCell
+T			DoNormalizeCell
 
 #BODY
 T			body1		UseBody
@@ -165,7 +167,10 @@ F			DoReplaceDensity
 32.0            IonMass O2 [amu]		MassFluid
 16.0            IonMass O [amu]		MassFluid
 44.0            IonMass CO2 [amu]		MassFluid
-1.0             AverageIonCharge (ignored)		AverageIonCharge
+1.0             IonCharge H [e]		ChargeIon
+1.0             IonCharge O2 [e]		ChargeIon
+1.0             IonCharge O [e]		ChargeIon
+1.0             IonCharge CO2 [e]		ChargeIon
 1.0             ElectronTemperatureRatio
 
 #MULTIION
@@ -196,15 +201,14 @@ z=0 MHD idl             StringPlot
 -1.0			tSimulationMax
  GM_set_parameters: CHECK iSession = 1
   
+ TypeGeometryBatl = rlonlat_lnr         
 init_mod_advance allocated arrays
 init_mod_geometry allocated arrays
 init_mod_nodes allocated arrays
 init_mod_raytrace allocated arrays
- BATS_setup starting initial refinement level  1
- parallel_refine starting to refine  4  block(s) on PE 0
- BATS_setup starting initial refinement level  2
- BATS_setup starting initial refinement level  3
- renumber_octree: finished renumbering 36  blocks.
+ BATS_setup starting initial refinement level, nBlockAll = 1 8
+ BATS_setup starting initial refinement level, nBlockAll = 2 36
+ BATS_setup starting initial refinement level, nBlockAll = 3 36
      total blocks =  36
 
     Begin Numerical Simulation
@@ -266,14 +270,14 @@ init_mod_raytrace allocated arrays
     Other Runtime Parameters
     ------------------------
 
- Available processors: nProc =  2
+ Available processors: nProc =  4
 
  After initial grid setup:
-   nBlockMax =  22  nBLK =  1000
+   nBlockMax =  9  nBLK =  1000
    Total number of blocks used =  36
    Total number of cells =  7776
    Total number of true cells =  7460
-   Smallest cell dx:    0.1444418117079069   Largest cell dx:    0.2888836234158138
+   Smallest cell dx:    0.1444418117079068   Largest cell dx:    0.2888836234158138
 
  root blocks:        2       2       2
  nIJK_D:             6       6       6
@@ -285,22 +289,23 @@ init_mod_raytrace allocated arrays
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   0.26    100.00         1         1
+BATSRUS                   0.05    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     0.26    100.00         1         1
-exch_msgs                 0.01      4.55         1         1
-load_balance              0.01      4.41         1         1
+setup                     0.05     99.96         1         1
+exch_msgs                 0.02     42.07         1         1
+batl_pass                 0.02     40.43         1         2
+wait_pass                 0.02     37.96         1         2
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
- First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.4804688501200487E-10
-Speed is   4589.0 c/s/p after      8.6 s at N =      10
-Speed is   4619.3 c/s/p after     17.1 s at N =      20
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.4804688501200859E-10
+Speed is   7756.0 c/s/p after      2.6 s at N =      10
+Speed is   7955.9 c/s/p after      5.1 s at N =      20
 
     Finished Numerical Simulation
     -----------------------------
-saved ifile= 4 type=x=0_mhd    at n_step=     20
-saved ifile= 5 type=y=0_mhd    at n_step=     20
-saved ifile= 6 type=z=0_mhd    at n_step=     20
+saved ifile= 5 type=x=0_mhd    at n_step=     20
+saved ifile= 6 type=y=0_mhd    at n_step=     20
+saved ifile= 7 type=z=0_mhd    at n_step=     20
 
     Finished Saving Output Files
     ----------------------------
@@ -308,26 +313,34 @@ saved ifile= 6 type=z=0_mhd    at n_step=     20
 SORTED TIMING from step       0 to      20    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                  17.19    100.00         1         1
+BATSRUS                   5.14    100.00         1         1
 -------------------------------------------------------------------------------
-advance                  16.93     98.46        20        20
-update_states            13.31     77.44        20       720
-update_point_implici     13.00     75.62        20       360
-calc_fluxes               1.73     10.07        20       720
-calc_facevalues           0.66      3.82        20       720
-calc_sources              0.33      1.94        20       720
-exch_msgs                 0.28      1.64        20        40
-save_logfile              0.20      1.18        20        20
-calc_face_bfo             0.17      0.99        20       320
-barrier-expl2             0.16      0.93        20        40
-update_check              0.16      0.92        20        40
-save_plot                 0.06      0.36         1         3
-calc_fluxes_bfo           0.04      0.23        20       320
-set_bcs                   0.04      0.21        20       560
-send_cons_flux            0.01      0.03        20        40
-barrier-expl1             0.00      0.02        20        40
+advance                   5.04     97.95        20        20
+update_states             3.85     74.84        20       360
+update_point_implici      3.75     72.96        20       180
+calc_fluxes               0.52     10.04        20       360
+barrier-expl2             0.22      4.29        20        40
+calc_facevalues           0.18      3.57        20       360
+save_logfile              0.09      1.78        20        20
+calc_sources              0.08      1.63        20       360
+exch_msgs                 0.07      1.38        20        40
+update_check              0.04      0.84        20        40
+calc_face_bfo             0.04      0.83        20       160
+batl_pass                 0.03      0.66        20        40
+local_pass                0.01      0.27        20        80
+save_plot                 0.01      0.26         1         3
+calc_fluxes_bfo           0.01      0.23        20       160
+wait_pass                 0.01      0.22        20        40
+set_bcs                   0.01      0.14        20       280
+buffer_to_state           0.01      0.10        20        40
+init_pass                 0.00      0.07        20        40
+barrier-expl1             0.00      0.03        20        40
 -------------------------------------------------------------------------------
+clean_mod_advance deallocated arrays
+clean_mod_geometry deallocated arrays
+clean_mod_nodes deallocated arrays
+clean_mod_raytrace deallocated arrays
 Error_report for Time step reduction, min(factor)
  OCCURED first= 1  last= 19  count_max= 37  count_sum= 37
- VALUES min=   1.4804688501200487E-10  max=   0.7362120231209833  mean=   0.1309903813041116  last=   0.7362120231209833  last_sum=   0.7362120231209833
+ VALUES min=   1.4804688501200859E-10  max=   0.7362123619896325  mean=   0.1309904239676875  last=   0.7362123619896325  last_sum=   0.7362123619896325
 

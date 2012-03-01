@@ -17,8 +17,8 @@ T			UseGravity
 #POINTIMPLICIT
 T			UsePointImplicit
 1.0			BetaPointImpl	
-F 			IsAssymetric	
-F			DoNormalizeCell 
+F 			IsAsymmetric	
+T			DoNormalizeCell 
 
 #TIMEACCURATE
 F			DoTimeAccurate

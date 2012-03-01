@@ -61,8 +61,8 @@ sphere0			NameArea
 #POINTIMPLICIT
 T			UsePointImplicit
 1.0			BetaPointImpl	
-F			IsAssymetric	
-F			DoNormalizeCell 
+F			IsAsymmetric	
+T			DoNormalizeCell 
 
 #BODY
 T			body1
