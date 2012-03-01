@@ -3017,12 +3017,20 @@ contains
                        CvTotalOut=CvOut, GammaOut=GammaOut, &
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
                else
-                  if(UseNLTE)&
-                       call CON_stop('NLTE energy cannot be found from pressure')
-                  call eos(iMaterial,RhoSi,pTotalIn=pSi, &
+                  if(UseNLTE)then
+                       ! call CON_stop('NLTE energy cannot be found from pressure')
+                     call NLTE_EOS(iMaterial, RhoSi, eTotalIn=pSi*inv_gm1+&
+                       State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_), &
+                       EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
+                       eTotalOut = EinternalOut, TeOut=TeSi, &
+                       CvTotalOut=CvOut, GammaOut=GammaOut, &
+                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+                  else
+                     call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                        EtotalOut=EinternalOut, TeOut=TeSi, &
                        CvTotalOut=CvOut, GammaOut=GammaOut, &
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+                  end if
                end if
             end if
          end if
@@ -3191,13 +3199,22 @@ contains
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                        TeTiRelax=TeTiRelaxOut)
                else
-                  if(UseNLTE)&
-                       call CON_stop('NLTE energy cannot be found from pressure')
-                  call eos(iMaterial, RhoSi, pElectronIn=pSi, &
+                  if(UseNLTE)then
+                     !call CON_stop('NLTE energy cannot be found from pressure')
+                     call NLTE_EOS(iMaterial, RhoSi, eElectronIn=pSi*inv_gm1+&
+                          State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_), &
+                          EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                          eElectronOut=EinternalOut, TeOut=TeSi, &
+                          CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                          TeTiRelax=TeTiRelaxOut)
+                  else
+                     call eos(iMaterial, RhoSi, pElectronIn=pSi, &
                        eElectronOut=EinternalOut, TeOut=TeSi, &
                        CvElectronOut=CvOut, GammaEOut=GammaOut, &
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                        TeTiRelax=TeTiRelaxOut)
+                  end if
                end if
             end if
          end if
