@@ -16,7 +16,6 @@ contains
     use ModReadParam,  ONLY: read_var
     !----------------------
     call read_var('UseNLTE',UseNLTE)
-    if(UseNLTE)call check_nlte
   end subroutine read_nlte
   !====================
   subroutine check_nlte
