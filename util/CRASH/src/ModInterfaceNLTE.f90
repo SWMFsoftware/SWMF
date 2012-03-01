@@ -163,7 +163,7 @@ contains
     elseif(present(ETotalIn))then
 
        !Convert J/m3 = 10^7erg/10^6cm3=10 erg/cm3
-        EIn = EETotalIn * 10.0
+        EIn = ETotalIn * 10.0
 
        !Get Tz
 
