@@ -134,17 +134,24 @@ contains
 
        !Convert temperature to eV
        Te=TeIn * cKToeV
-
-       !get Tz
-       call NLTE(Natom=NAtomic,&
-         Te_in=Te,             &
-         Zbar_out=zAverageOut, &
-         Tz_out=Tz,            &
-         Te_out=TeOut,         &
-         Ee_out=EElectronOut,  &
-         Et_out=ETotalOut,     &
-         Pe_out=PElectronOut,  &
-         Pt_out=PTotalOut)
+       if(present(EElectronOut).or.present(PElectronOut))then
+          !get Tz
+          call NLTE(Natom=NAtomic,&
+               Te_in=Te,             &
+               Zbar_out=zAverageOut, &
+               Tz_out=Tz,            &
+               Te_out=TeOut,         &
+               Ee_out=EElectronOut,  &
+               Pe_out=PElectronOut)
+       else
+          call NLTE(Natom=NAtomic,   &
+               Te_in=Te,             &
+               Zbar_out=zAverageOut, &
+               Tz_out=Tz,            &
+               Te_out=TeOut,         &
+               Et_out=ETotalOut,     &
+               Pt_out=PTotalOut)
+       end if
     elseif(present(EElectronIn))then
        !Convert J/m3 = 10^7erg/10^6cm3=10 erg/cm3
        EIn = EElectronIn * 10.0
@@ -156,9 +163,7 @@ contains
          Tz_out=Tz,           &
          Te_out=TeOut,        &
          Ee_out=EElectronOut, &
-         Et_out=ETotalOut,    &
-         Pe_out=PElectronOut, &
-         Pt_out=PTotalOut)
+         Pe_out=PElectronOut)
        
     elseif(present(ETotalIn))then
 
@@ -172,9 +177,7 @@ contains
          Zbar_out=zAverageOut,&
          Tz_out=Tz,           &
          Te_out=TeOut,        &
-         Ee_out=EElectronOut, &
          Et_out=ETotalOut,    &
-         Pe_out=PElectronOut, &
          Pt_out=PTotalOut)
     else
        call CON_stop(&

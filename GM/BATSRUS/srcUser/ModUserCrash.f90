@@ -3019,10 +3019,11 @@ contains
                else
                   if(UseNLTE)then
                        ! call CON_stop('NLTE energy cannot be found from pressure')
-                     call NLTE_EOS(iMaterial, RhoSi, eTotalIn=pSi*inv_gm1+&
-                       State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_), &
+                     EinternalOut = pSi*inv_gm1 + State_VGB(ExtraEint_,i,j,k,iBlock)*&
+                          No2Si_V(UnitP_)
+                     call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
                        EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
-                       eTotalOut = EinternalOut, TeOut=TeSi, &
+                       TeOut=TeSi,        &
                        CvTotalOut=CvOut, GammaOut=GammaOut, &
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
                   else
@@ -3088,10 +3089,11 @@ contains
                     CvTotalOut=CvOut, GammaOut=GammaOut, &
                     zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
                else
-                  call NLTE_EOS(iMaterial, RhoSi, eTotalIn=pSi*inv_gm1+&
-                       State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_), &
+                  EinternalSi = pSi*inv_gm1+&
+                       State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
+                  call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalSi,&
                        EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
-                       eTotalOut = EinternalOut, TeOut=TeSi, &
+                       TeOut=TeSi, &
                        CvTotalOut=CvOut, GammaOut=GammaOut, &
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)  
                end if
@@ -3201,10 +3203,11 @@ contains
                else
                   if(UseNLTE)then
                      !call CON_stop('NLTE energy cannot be found from pressure')
-                     call NLTE_EOS(iMaterial, RhoSi, eElectronIn=pSi*inv_gm1+&
-                          State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_), &
+                     EInternalOut=pSi*inv_gm1+&
+                          State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
+                     call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
                           EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
-                          eElectronOut=EinternalOut, TeOut=TeSi, &
+                          TeOut=TeSi, &
                           CvElectronOut=CvOut, GammaEOut=GammaOut, &
                           zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                           TeTiRelax=TeTiRelaxOut)
@@ -3278,10 +3281,11 @@ contains
                     zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                     TeTiRelax=TeTiRelaxOut)
                else
-                  call NLTE_EOS(iMaterial, RhoSi, eElectronIn=pSi*inv_gm1+&
-                    State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_), &
+                  EinternalSi = pSi*inv_gm1+&
+                    State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
+                  call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalSi,&
                     EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
-                    eElectronOut=EinternalOut, TeOut=TeSi, &
+                    TeOut=TeSi, &
                     CvElectronOut=CvOut, GammaEOut=GammaOut, &
                     zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                     TeTiRelax=TeTiRelaxOut)
