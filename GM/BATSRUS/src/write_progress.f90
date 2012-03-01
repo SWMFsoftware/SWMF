@@ -93,7 +93,7 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)'   --------------------------'
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)
-  if ((NamePlanet /= 'NONE') .and. body1) then
+  if (NamePlanet /= 'NONE' .and. body1 .and. NameThisComp == 'GM') then
      call write_prefix; write(iUnitOut,*)'   Planetary Parameters'
      call write_prefix; write(iUnitOut,*)'   --------------------'
      call write_prefix; write(iUnitOut,*)
