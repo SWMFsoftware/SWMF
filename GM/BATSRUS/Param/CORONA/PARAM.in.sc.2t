@@ -1,12 +1,8 @@
 #ECHO
 T			DoEcho
 
-
-#BATLTEST
-T
-
 #COMPONENT
-SC
+SC			NameComponent
 
 #DESCRIPTION
 Test for two-temperature SC
@@ -39,9 +35,6 @@ T			UseBody
 1.035			rBody
 1.0e8			BodyNDim
 1.5e6			BodyTDim
-
-#BODY
-F			UseBody
 
 #USER_FLAGS
 T			UseUserInnerBcs
@@ -142,9 +135,6 @@ all			TypeMessagePass
 #RESCHANGE
 T			UseAccurateResChange
 
-#RESCHANGEBOUNDARY
-T			SaveBoundaryCells
-
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
@@ -155,15 +145,9 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#EXTRABOUNDARY
-T			UseExtraBoundary
-user			TypeBc_I(ExtraBc_)
-F			DoFixExtraBoundary
-
 #FACEBOUNDARY
 0			MinBoundary
 0			MaxBoundary
-F			DoFixOuterBoundary
 
 #OUTERBOUNDARY
 float			TypeBcEast
