@@ -163,13 +163,12 @@ contains
     elseif(present(ETotalIn))then
 
        !Convert J/m3 = 10^7erg/10^6cm3=10 erg/cm3
-        EIn = EElectronIn * 10.0
+        EIn = EETotalIn * 10.0
 
        !Get Tz
 
        call NLTE(Natom=NAtomic,&
-         Ee_in=EElectronIn,   &
-         Et_in=ETotalIn,      &
+         Et_in=EIn,           &
          Zbar_out=zAverageOut,&
          Tz_out=Tz,           &
          Te_out=TeOut,        &
