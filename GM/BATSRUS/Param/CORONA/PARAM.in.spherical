@@ -107,18 +107,9 @@ T			UseBody
 3.0E+8			BodyNDim
 3.5E+6			BodyTDim
 
-! The following done to allow resolution change at the inner boundary
-#BODY
-F			UseBody
-
 #FACEBOUNDARY
-0			MinBoundary
-0			MaxBoundary
-
-#EXTRABOUNDARY
-T			UseExtraBoundary
-user			TypeExtraBc
-F			DoFixExtraBc
+-1			MinBoundary
+-1			MaxBoundary
 
 #USECURLB0
 T			UseCurlB0
@@ -133,9 +124,6 @@ F			DoAutoRefine
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc                      TypeLimiter
 1.2			LimiterBeta
-
-#RESCHANGEBOUNDARY
-T			DoSaveBoundaryCells
 
 #TIMESTEPPING
 2                       nStage
@@ -161,9 +149,6 @@ z=0 MHD idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-
-! Since there is no initial refinement, this is needed
-#MESSAGEPASSACROSSPOLE
 
 #STOP
 70			MaxIteration
