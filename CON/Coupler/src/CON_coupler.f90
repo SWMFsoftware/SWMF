@@ -52,7 +52,7 @@ module CON_coupler
 
   public :: MaxCouple           ! Maximum number of couplings
 
-  integer, parameter :: MaxCouple = 25
+  integer, parameter :: MaxCouple = 27
 
   public :: nCouple             ! Actual number of couplings
 
@@ -63,6 +63,8 @@ module CON_coupler
   ! This is the default order based on the propagation of information
   ! from component to component
   integer :: iCompCoupleOrder_II(2,MaxCouple) = reshape ( (/&
+       EE_, SC_, &
+       SC_, EE_, &
        LC_, SC_, &
        SC_, LC_, &
        SC_, IH_, & 
