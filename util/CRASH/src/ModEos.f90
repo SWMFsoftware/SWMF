@@ -136,10 +136,10 @@ module CRASH_ModEos
 
   !Arrays for mixtures
   integer, dimension(1:nMixMax, 0:nMaterialMax-1):: nZMix_II=reshape((/&
-                                   1, 0, 0, 0, 0, 0, &
-                                   1, 0, 0, 0, 0, 0, &
+                                   54, 0, 0, 0, 0, 0, &
+                                   4, 0, 0, 0, 0, 0, &
                                    6, 1, 7, 8, 0, 0, &
-                                   1, 0, 0, 0, 0, 0, &
+                                   79, 0, 0, 0, 0, 0, &
                                    6, 8, 1, 0, 0, 0/),(/6,5/))
 
   real, dimension(1:nMixMax, 0:nMaterialMax-1) :: cMix_II=reshape((/&
@@ -315,6 +315,8 @@ contains
              !Find the atomic mass:
              cAtomicMassCRASH_I(iMaterial) = &
                   cAtomicMass_I(nZ_I(iMaterial))
+             nZMix_II(1,iMaterial) = nZ_I(iMaterial)
+             cMix_II( 1,iMaterial) = 1.0
           end if
        end if
     end do

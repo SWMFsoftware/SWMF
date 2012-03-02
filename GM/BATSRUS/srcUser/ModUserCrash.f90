@@ -1782,7 +1782,12 @@ contains
           Te0Si = State_VGB(Te0_,i,j,k,iBlock) * No2Si_V(UnitTemperature_)
           do iGroup = 1, nWave
              call get_planck_g_from_temperature(iGroup, Te0Si, EgSI=PlanckSi)
-             EOverB_VGB(:,i,j,k,iBlock) = EOverB_VGB(:,i,j,k,iBlock)/PlanckSi
+             if(EOverB_VGB(iGroup,i,j,k,iBlock)>0.0)then
+                EOverB_VGB(iGroup,i,j,k,iBlock) = EOverB_VGB(iGroup,i,j,k,iBlock)/&
+                     max(PlanckSi,1.0e-2*EOverB_VGB(iGroup,i,j,k,iBlock))
+             else
+                EOverB_VGB(iGroup,i,j,k,iBlock)=0.0
+             end if
           end do
        end do; end do; end do
     end if
@@ -2118,7 +2123,7 @@ contains
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo, No2Si_V, UnitEnergyDens_
     use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
-    use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_, Te0_
     use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_, Au_, Ay_
     use BATL_size,    ONLY: nI, nJ, nK, MinI, MaxI
 
@@ -2159,11 +2164,18 @@ contains
        end do; end do; end do
     case('tekev', 'TeKev')
        NameIdlUnit = 'KeV'
-       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, TeOut = PlotVar_G(i,j,k))
-          PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * cKToKev
-       end do; end do; end do
+       !if(Te0_>1)then
+       !   do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+       !      PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * &
+       !           No2Si_V(UnitTemperature_) * cKToKev
+       !   end do; end do; end do
+       !else
+          do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, TeOut = PlotVar_G(i,j,k))
+             PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * cKToKev
+          end do; end do; end do
+       !end if
     case('tikev', 'TiKev')
        NameIdlUnit = 'KeV'
        if(UseElectronPressure)then
@@ -2816,10 +2828,7 @@ contains
     if(present(TeOut)) TeOut = TeSi
 
     if((present(OpacityPlanckOut_W) &
-         .or. present(OpacityRosselandOut_W))&
-         !if UseNLTE, the opacity is calculated
-         !together with the other variables
-         .and.(.not.UseNLTE))then
+         .or. present(OpacityRosselandOut_W)))then
 
        if(iTableOpacity > 0 .and. nWave == 1)then
           if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error(&
@@ -3021,6 +3030,7 @@ contains
                        ! call CON_stop('NLTE energy cannot be found from pressure')
                      EinternalOut = pSi*inv_gm1 + State_VGB(ExtraEint_,i,j,k,iBlock)*&
                           No2Si_V(UnitP_)
+                     EInternalOut = max(EInternalOut,1e-30)
                      call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
                        EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
                        TeOut=TeSi,        &
@@ -3091,6 +3101,7 @@ contains
                else
                   EinternalSi = pSi*inv_gm1+&
                        State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
+                  EInternalSi = max(EInternalSi,1e-30)
                   call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalSi,&
                        EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
                        TeOut=TeSi, &
@@ -3203,8 +3214,9 @@ contains
                else
                   if(UseNLTE)then
                      !call CON_stop('NLTE energy cannot be found from pressure')
-                     EInternalOut=pSi*inv_gm1+&
+                     EInternalOut = pSi*inv_gm1+&
                           State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
+                     EInternalOut = max(EInternalOut,1e-30)
                      call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
                           EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
                           TeOut=TeSi, &
@@ -3283,6 +3295,7 @@ contains
                else
                   EinternalSi = pSi*inv_gm1+&
                     State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
+                  EInternalSi = max(EInternalSi,1e-30)
                   call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalSi,&
                     EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
                     TeOut=TeSi, &

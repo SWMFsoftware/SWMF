@@ -106,7 +106,7 @@ contains
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
     real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
     
-    real:: Tz, NAtomic, Te, EIn     !in eV, cm-3, eV, erg/cm3 
+    real:: Tz, NAtomic, Te, EIn, TzSi    !in eV, cm-3, eV, erg/cm3 
     !---------------
     !Set iMaterial and dependent variables
 
@@ -117,8 +117,10 @@ contains
          * 1.0e-6                                   ![cm-3] !Convert units
 
     atomass = cAtomicMassCRASH_I(iMaterial)
-    atonum  = sum(nZMix_II(:,iMaterial)*cMix_II(:,iMaterial))
-
+   
+    atonum  = sum(nZMix_II(:,iMaterial)*&
+                      cMix_II(:,iMaterial))
+    
     if(present(EoBIn_I))then
        EoB(1:nGroup) = EoBIn_I
     else
@@ -131,7 +133,6 @@ contains
                  ng=nGroup)
 
     if(present(TeIn))then
-
        !Convert temperature to eV
        Te=TeIn * cKToeV
        if(present(EElectronOut).or.present(PElectronOut))then
@@ -140,7 +141,6 @@ contains
                Te_in=Te,             &
                Zbar_out=zAverageOut, &
                Tz_out=Tz,            &
-               Te_out=TeOut,         &
                Ee_out=EElectronOut,  &
                Pe_out=PElectronOut)
        else
@@ -148,9 +148,12 @@ contains
                Te_in=Te,             &
                Zbar_out=zAverageOut, &
                Tz_out=Tz,            &
-               Te_out=TeOut,         &
-               Et_out=ETotalOut,     &
+               Et_out=Ein,           &
                Pt_out=PTotalOut)
+          !We use a fake parameter for ETotalOut,
+          !which is needed in case no energetic output
+          !parameters are present
+          if(present(ETotalOut))ETotalOut=EIn
        end if
     elseif(present(EElectronIn))then
        !Convert J/m3 = 10^7erg/10^6cm3=10 erg/cm3
@@ -161,12 +164,10 @@ contains
          Ee_in=EIn,           &
          Zbar_out=zAverageOut,&
          Tz_out=Tz,           &
-         Te_out=TeOut,        &
-         Ee_out=EElectronOut, &
+         Te_out=Te,           &
          Pe_out=PElectronOut)
        
     elseif(present(ETotalIn))then
-
        !Convert J/m3 = 10^7erg/10^6cm3=10 erg/cm3
         EIn = ETotalIn * 10.0
 
@@ -176,8 +177,7 @@ contains
          Et_in=EIn,           &
          Zbar_out=zAverageOut,&
          Tz_out=Tz,           &
-         Te_out=TeOut,        &
-         Et_out=ETotalOut,    &
+         Te_out=Te,           &
          Pt_out=PTotalOut)
     else
        call CON_stop(&
@@ -188,14 +188,24 @@ contains
     !/
 
     !eV to K
-    Tz = Tz*ceVToK
-    if(present(TeOut))TeOut = Te*ceVToK
-
+    TzSi = Tz*ceVToK
+    
+    if(present(TeOut))then
+       TeOut = Te*ceVToK
+    end if
     !erg/cm3=0.1 J/m3
-    if(present(EElectronOut))EElectronOut = EElectronOut*0.10
-    if(present(ETotalOut   ))ETotalOut    = ETotalOut   *0.10
-    if(present(PElectronOut))PElectronOut = PElectronOut*0.10
-    if(present(PTotalOut   ))PTotalOut    = PTotalOut   *0.10
+    if(present(EElectronOut))then
+       EElectronOut = EElectronOut*0.10
+    end if
+    if(present(ETotalOut   ))then
+       ETotalOut    = ETotalOut   *0.10
+    end if
+    if(present(PElectronOut))then
+       PElectronOut = PElectronOut*0.10
+    end if
+    if(present(PTotalOut   ))then
+       PTotalOut    = PTotalOut   *0.10
+    end if
 
     if(&
          present(GammaOut).or.      &
@@ -212,7 +222,7 @@ contains
          call eos(&
          iMaterial=iMaterialIn,     &
          Rho=Rho,                   &
-         TeIn=Tz,                   &
+         TeIn=TzSi,                   &
          GammaOut=GammaOut,         &
          CvTotalOut=CvTotalOut,     &
          GammaEOut=GammaEOut,       &
@@ -224,5 +234,6 @@ contains
          Ne=Ne,                       &
          zAverageOut=zAverageOut,   &
          z2AverageOut=z2AverageOut)
+    !TBD  Correct heat conduction and TeTiRelax with (Te/Tz)factors
   end subroutine NLTE_EOS
 end module CRASH_ModInterfaceNLTE
