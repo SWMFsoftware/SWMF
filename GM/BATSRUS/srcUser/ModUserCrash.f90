@@ -2418,9 +2418,9 @@ contains
        UnitUser_V(LevelXe_:LevelMax) = UnitUser_V(Rho_)*No2Io_V(UnitX_)
     end if
 
-    if((.not.IsFirstTime).and.&
-         (UseNLTE.eqv..true.).and.(UseNLTESaved.eqv..false.))&
-         call CON_stop('NLTE can be turned on only in the first session')
+    if( .not.IsFirstTime .and. UseNLTE .and. .not. UseNLTESaved) &
+         call CON_stop(NameSub// &
+         ': NLTE can be turned on only in the first session')
  
     ! The rest of the initialization should be done once
     if(.not.IsFirstTime) RETURN
@@ -2431,7 +2431,7 @@ contains
     ! to create the EOS tables with UseNLTE = .true. would
     ! create NLTE tables for E_rad/B = 0
     UseNLTESaved = UseNLTE    
-    UseNLTE = .false.
+    UseNLTE      = .false.
 
     call check_eos_table(iComm = iComm)
 
@@ -2827,8 +2827,7 @@ contains
 
     if(present(TeOut)) TeOut = TeSi
 
-    if((present(OpacityPlanckOut_W) &
-         .or. present(OpacityRosselandOut_W)))then
+    if(present(OpacityPlanckOut_W) .or. present(OpacityRosselandOut_W))then
 
        if(iTableOpacity > 0 .and. nWave == 1)then
           if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error(&
