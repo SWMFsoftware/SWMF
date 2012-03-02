@@ -39,6 +39,7 @@ module CON_couple_all
   !^CMP END IH
   !^CMP IF SC BEGIN
   use CON_couple_lc_sc        !^CMP IF LC
+  use CON_couple_ee_sc        !^CMP IF EE
   !^CMP END SC
   use CON_couple_mh_sp        !^CMP IF SP
 
@@ -87,6 +88,7 @@ contains
     !                                                     ^CMP END IH
     !                                                     ^CMP IF SC BEGIN
     if(use_comp(LC_).and.use_comp(SC_))call couple_lc_sc_init  !!^CMP IF LC
+    if(use_comp(SC_).and.use_comp(EE_))call couple_ee_sc_init  !^CMP IF EE
     !                                                     ^CMP END SC
     if((&                                                 !^CMP IF SP BEGIN
          use_comp(IH_).or.&                               !^CMP IF IH
@@ -145,6 +147,13 @@ contains
     UseGlobalMpiCoupler = UseGlobalMpiCoupler_CC(iCompSource,iCompTarget)
 
     select case(iCompSource)
+    case(EE_)                                 !^CMP IF EE BEGIN
+       select case(iCompTarget)               
+       case(SC_)                              !^CMP IF SC
+          call couple_ee_sc(TimeSimulation)   !^CMP IF SC
+       case default                           
+          call error
+       end select                             !^CMP END EE
     case(LC_)                                 !^CMP IF LC BEGIN
        select case(iCompTarget)               
        case(SC_)                              !^CMP IF SC
@@ -160,6 +169,8 @@ contains
           call couple_sc_sp(TimeSimulation)   !^CMP IF SP
        case(LC_)                              !^CMP IF LC
           call couple_sc_lc(TimeSimulation)   !^CMP IF LC
+       case(EE_)                              !^CMP IF EE
+          call couple_sc_ee(TimeSimulation)   !^CMP IF EE
        case default                           
           call error
        end select                             !^CMP END SC
