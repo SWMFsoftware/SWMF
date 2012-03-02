@@ -32,13 +32,17 @@ contains
     logical, optional, intent(in) :: DoResChangeOnlyIn, UseOrder2In
 
     integer :: iBlock
-    logical :: oktest, oktest_me, oktime, oktime_me
     logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
     logical :: DoCorners, DoFaces
     logical :: UseOrder2=.false.
     integer :: nWidth, nCoarseLayer
     logical :: DoResChangeOnly
+
+    logical:: DoTest, DoTestMe, DoTime, DoTimeMe
+    character (len=*), parameter :: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
+    call set_oktest('time_exchange', DoTime, DoTimeMe)
 
     !!^CFG IF DEBUGGING BEGIN
     ! call testmessage_pass_nodes
@@ -57,8 +61,10 @@ contains
     DoTwoCoarseLayers = &
          nOrder==2 .and. prolong_order==1 .and. .not. DoOneCoarserLayer
 
-    call set_oktest('exchange_messages',oktest,oktest_me)
-    call set_oktest('time_exchange',oktime,oktime_me)
+
+    if(DoTestMe)write(*,*) NameSub, &
+         ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers=',&
+         DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers
 
     call timing_start('exch_msgs')
     ! Ensure that energy and pressure are consistent and positive in real cells
@@ -66,13 +72,12 @@ contains
     if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
           if (unusedBLK(iBlock)) CYCLE
-          if (far_field_BCs_BLK(iBlock).and.prolong_order==2)&
+          if (far_field_BCs_BLK(iBlock) .and. prolong_order==2)&
                call set_outer_BCs(iBlock,time_simulation,.false.)        
           if(UseConstrainB)call correctP(iBlock)   !^CFG IF CONSTRAINB
           if(UseProjection)call correctP(iBlock)   !^CFG IF PROJECTION
        end do
        !end if                       !^CFG IF NOT PROJECTION
-       if(oktest)write(*,*)'Checked negative P, me=',iProc
     end if
 
     if (UseOrder2) then
@@ -87,7 +92,6 @@ contains
           if(.not.DoResChangeOnly) &
                call fix_boundary_ghost_cells(DoRestrictFace)
        else
-          if(oktest)write(*,*)'calling message_pass with plot options'
           !                         Don't send just one layer
           !                                Don't send faces only
           !                                         Don't monotone restrict
@@ -96,8 +100,6 @@ contains
           if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
        end if
     elseif (optimize_message_pass=='all') then
-       if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
-            iProc,optimize_message_pass
        ! If ShockSlope is not zero then even the first order scheme needs 
        ! two ghost cell layers to fill in the corner cells at the sheared BCs.
        DoOneLayer = nOrder == 1 .and. ShockSlope == 0.0
@@ -117,9 +119,6 @@ contains
           if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
        end if
     else
-       if(oktest)write(*,*)'calling message_pass: me,type=',&
-            iProc,optimize_message_pass
-
        select case(optimize_message_pass)
        case('max','dir','face','min')
           ! Pass corners
@@ -161,8 +160,6 @@ contains
        end select
     end if
 
-    if(oktest)write(*,*)'Ensure that E and P consistent, me=',iProc
-
     if(DoProfileAmr) call timing_start('E and P')
 
     do iBlock = 1, nBlock
@@ -185,9 +182,9 @@ contains
     if(DoProfileAmr) call timing_stop('E and P')
 
     call timing_stop('exch_msgs')
-    if(oktime)call timing_show('exch_msgs',1)
+    if(DoTime)call timing_show('exch_msgs',1)
 
-    if(oktest)write(*,*)'exchange_messages finished, me=',iProc
+    if(DoTestMe)write(*,*) NameSub,' finished'
 
   end subroutine exchange_messages
 
