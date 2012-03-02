@@ -65,7 +65,7 @@ module CON_couple_ih_oh
 
   ! Variables used by global MPI coupler
   ! Communicator and logicals to simplify message passing and execution
-  logical       :: UseMe=.true., IsInitialized=.false.
+  logical       :: UseMe=.true., IsInitialized=.false., DoMatchIBC = .true.
 
   ! Size and limits of the 3D spherical buffer grid
   integer, save :: iSize, jSize, kSize, nCell_D(3)
@@ -663,6 +663,8 @@ contains
 
     nSize = iSize*(jSize+2)*(kSize+2)*nVarCouple
 
+    if(DoTest) write(*,*) NameSub,' finished allocating global buffer'
+
     ! Fill in coupled state variables
     if(is_proc(IH_)) then
        call IH_get_for_global_buffer(iSize,jSize,kSize, &
@@ -671,6 +673,8 @@ contains
        call MPI_reduce(Buffer_VIII, BufferGlobal_VIII, nSize, MPI_REAL,MPI_SUM,&
             0, i_comm(IH_), iError)
     end if
+
+    if(DoTest) write(*,*) NameSub,', SC finished filling global buffer'
 
     if(i_proc0(IH_) /= i_proc0(OH_))then
        ! Pass filled buffer to OH root PE
@@ -698,6 +702,12 @@ contains
             write(*,*)NameSub//' iProc, Buffer(:,1,1,1)=',&
             iProcWorld,Buffer_VIII(:,1,1,1)
     end if
+
+    ! Apply initial boundary condition in OH
+    if(DoMatchIBC) then
+       DoMatchIBC = .false.
+       if(is_proc(OH_)) call OH_match_IBC
+     end if
 
     !\                               
     ! Deallocate buffer to save memory
