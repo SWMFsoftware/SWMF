@@ -10,8 +10,8 @@ module ModInitGridStorage
   !EOP
   integer,parameter:: MaxGrid = MaxComp+3
   type(DomainDecompositionType),private,save,target::&
-       GmGrid, IeGrid, IhGrid, ImGrid, LaGrid, OhGrid, PsGrid, PwGrid, RbGrid, &
-       ScGrid, LcGrid, SpGrid, UaGrid
+       EeGrid, GmGrid, IeGrid, IhGrid, ImGrid, LaGrid, OhGrid, PsGrid, &
+       PwGrid, RbGrid, ScGrid, LcGrid, SpGrid, UaGrid
 contains
   !BOP
   !REVISION HISTORY:
@@ -35,6 +35,8 @@ contains
     ! decomposition while adding a new component to the framework. 
     !EOP
     select case(GridID_)
+    case(EE_)
+       DD_I(GridID_)%Ptr=>EeGrid
     case(GM_)
        DD_I(GridID_)%Ptr=>GmGrid
     case(IE_)
