@@ -51,8 +51,9 @@ module ModUser
   real    :: DipoleTiltDeg = 0.0
 
   ! Current sheet refinement 
-  real    :: rRefine = -1.
-  logical :: DoRefineFarSheet = .false.
+  real,allocatable    :: rRefine_I(:)
+  logical :: DoRefineGradualSheet = .false.
+  integer :: nLevelGradual = 0
 
   ! Input parameters for two-temperature effects
   real    :: TeFraction, TiFraction
@@ -67,9 +68,11 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam, ONLY: read_line, read_command, read_var
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
-    use ModPhysics,   ONLY: DipoleStrengthSi
+    use ModPhysics,   ONLY: DipoleStrengthSi, rBody
 
+    integer :: iLevel
     character (len=100) :: NameCommand
+
     character(len=*), parameter :: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
     UseUserInitSession = .true.
@@ -128,10 +131,16 @@ contains
           call read_var('nCoronaSi', nCoronaSi)
           call read_var('tCoronaSi', tCoronaSi)
 
-       case("#REFINEFARSHEET")
-          call read_var('DoRefineFarSheet', DoRefineFarSheet)
-          call read_var('rRefine'         , rRefine)
-
+       case("#REFINEGRADUALSHEET")
+          call read_var('DoRefineGradualSheet', DoRefineGradualSheet)
+          call read_var('nLevelGradual'     , nLevelGradual)
+          if (DoRefineGradualSheet .and. nLevelGradual > 0) then
+             allocate(rRefine_I(0:nLevelGradual))
+             rRefine_I(0) = rBody
+             do iLevel = 1, nLevelGradual
+                call read_var('rRefine', rRefine_I(iLevel))
+             end do
+          end if
        case('#ELECTRONHEATING')
           ! Steven Cranmer his electron heating fraction (Apj 2009)
           call read_var('QeByQtotal', QeByQtotal)
@@ -488,8 +497,6 @@ contains
     use ModVarIndexes, ONLY: nVar
 
     integer, intent(in) :: iStage, iBlock
-
-    integer :: i,j,k, iVar
 
     !--------------------------------------------------------------------------
     call update_states_MHD(iStage, iBlock)
@@ -1014,14 +1021,15 @@ contains
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
     use ModNumConst, ONLY: cTiny
-    use ModMain,     ONLY: x_, y_, z_, time_loop, UseB0
+    use ModMain,     ONLY: x_, y_, z_, time_loop, UseB0, iNewGrid
     use ModPhysics,  ONLY: rBody
 
     integer, intent(in) :: iBlock, iArea
     logical,intent(out) :: DoRefine
 
     real :: rDotB_G(1:nI,1:nJ,0:nK+1), r_G(1:nI,1:nJ,1:nK), rMin=0.0
-    integer :: i, j, k
+    integer       :: i, j, k
+    integer, save :: iLevel = 0, iLastGrid = -1
     character (len=*), parameter :: NameSub = 'user_specify_refinement'
     !--------------------------------------------------------------------------
 
@@ -1030,7 +1038,7 @@ contains
 
        RETURN
     end if
-
+    
     ! Calculate r.B in all physical cells and ghost cells 
     ! in the Z/Theta direction to find current sheet 
     ! passing between blocks
@@ -1056,15 +1064,22 @@ contains
 
     DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny 
 
-    ! only refine in the far current sheet if required
-    if(DoRefineFarSheet .and. rRefine > rBody) then
-       do k=1,nK ; do j=1,nJ ; do i=1,nI
-          r_G(i,j,k) = sqrt(x_BLK(i,j,k,iBlock)**2 + &
-                          y_BLK(i,j,k,iBlock)**2 + &
-                          z_BLK(i,j,k,iBlock)**2)
-       end do ; end do; end do
-       rMin = minval(r_G)
-       if (rMin < rRefine) DoRefine = .false.
+    ! Do gradual refinement along R if required
+    if(DoRefineGradualSheet) then
+       if(iNewGrid > iLastGrid ) then
+          iLastGrid = iNewGrid
+          iLevel = min(iLevel + 1, nLevelGradual)
+       end if
+
+       if(rRefine_I(iLevel) > rRefine_I(iLevel-1)) then
+          do k=1,nK ; do j=1,nJ ; do i=1,nI
+             r_G(i,j,k) = sqrt(x_BLK(i,j,k,iBlock)**2 + &
+                  y_BLK(i,j,k,iBlock)**2 + &
+                  z_BLK(i,j,k,iBlock)**2)
+          end do; end do; end do
+          rMin = minval(r_G)
+          if (rMin < rRefine_I(iLevel)) DoRefine = .false.
+       end if
     end if
 
   end subroutine user_specify_refinement
