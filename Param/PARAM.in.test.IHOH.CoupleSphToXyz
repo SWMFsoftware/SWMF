@@ -16,11 +16,8 @@ OH_fill_buffer_only
 
 #BEGIN_COMP IH --------------------------------------------------------------
 
-#BATL
-F
-
 #BATLTEST
-F
+T
 
 #COORDSYSTEM
 HGI                     TypeCoordSystem
@@ -31,7 +28,7 @@ F                       UseGravity (rest of parameters read if true)
 
 #BODY
 T                       UseBody
-500.0                    rBody (Rs)
+50.0                    rBody (Rs)
 1.00e3                  BodyNDim(1) [/cc] number density for ions
 1.00E5                  BodyTDim(1) [K] temperature for ions
 
@@ -111,7 +108,7 @@ spherical
 initial
 
 #GRIDLEVEL
-1                       nLevelArea
+2                       nLevelArea
 all                     NameArea
 
 #GRIDLEVEL
@@ -178,11 +175,8 @@ F
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
-#BATL
-F
-
 #BATLTEST
-F
+T
 
 #COORDSYSTEM
 HGI
