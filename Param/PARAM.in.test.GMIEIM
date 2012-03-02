@@ -44,9 +44,6 @@ IE			NameComp2
 
 #BEGIN_COMP GM ----------------------------------------
 
-#BATLTEST
-T			UseBatlTest
-
 #GRID
 1			nRootBlockX
 1			nRootBlockY
