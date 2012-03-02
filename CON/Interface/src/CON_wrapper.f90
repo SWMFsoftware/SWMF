@@ -148,6 +148,8 @@ contains
     call get_comp_info(iComp,CompInfo=CompInfo)
 
     select case(iComp)
+    case(EE_)                                     !^CMP IF EE
+       call EE_set_param(CompInfo,TypeAction)     !^CMP IF EE
     case(GM_)                                     !^CMP IF GM
        call GM_set_param(CompInfo,TypeAction)     !^CMP IF GM
     case(IE_)                                     !^CMP IF IE
@@ -259,6 +261,8 @@ contains
     call check_i_comp(iComp,NameSub)
 
     select case(iComp)
+    case(EE_)                                    !^CMP IF EE
+       call EE_set_param(CompInfo,'VERSION')     !^CMP IF EE
     case(GM_)                                    !^CMP IF GM
        call GM_set_param(CompInfo,'VERSION')     !^CMP IF GM
     case(IE_)                                    !^CMP IF IE
@@ -324,6 +328,8 @@ contains
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
     select case(iComp)
+    case(EE_)                                            !^CMP IF EE
+       call EE_init_session(iSession,TimeSimulation)     !^CMP IF EE
     case(GM_)                                            !^CMP IF GM
        call GM_init_session(iSession,TimeSimulation)     !^CMP IF GM
     case(IE_)                                            !^CMP IF IE
@@ -390,6 +396,8 @@ contains
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
     select case(iComp)
+    case(EE_)                               !^CMP IF EE
+       call EE_finalize(TimeSimulation)     !^CMP IF EE
     case(GM_)                               !^CMP IF GM
        call GM_finalize(TimeSimulation)     !^CMP IF GM
     case(IE_)                               !^CMP IF IE
@@ -455,6 +463,8 @@ contains
          ': Time=', TimeSimulation
 
     select case(iComp)
+    case(EE_)                                   !^CMP IF EE
+       call EE_save_restart(TimeSimulation)     !^CMP IF EE
     case(GM_)                                   !^CMP IF GM
        call GM_save_restart(TimeSimulation)     !^CMP IF GM
     case(IE_)                                   !^CMP IF IE
@@ -525,6 +535,8 @@ contains
 
     call timing_start(NameComp_I(iComp)//'_run')
     select case(iComp)
+    case(EE_)                                               !^CMP IF EE
+       call EE_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF EE
     case(GM_)                                               !^CMP IF GM
        call GM_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF GM
     case(IE_)                                               !^CMP IF IE
