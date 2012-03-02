@@ -6500,7 +6500,7 @@ Default is DoOpenClosedField = .false.
 <command name="RADIATIVECOOLING">
 	 <parameter name="UseRadCooling" type="logical" default="F" />
 #RADIATIVECOOLING
-T
+T			UseRadCooling
 
 Switches the radiation cooling on and off. For coronal solar plasma the
 emissivity calculated in the "coronal" approximation (optically thin plasma
