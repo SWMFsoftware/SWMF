@@ -4,9 +4,6 @@ T			DoEcho
 #COMPONENT
 SC			NameComp
 
-#BATLTEST
-T			UseBatlTest
-
 #DESCRIPTION
 Test BATSRSUS in SC mode. Remember: make rundir COMPONENT=SC
 
