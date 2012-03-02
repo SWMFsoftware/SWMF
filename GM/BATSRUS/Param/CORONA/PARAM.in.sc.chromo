@@ -1,9 +1,6 @@
 #ECHO
 T			DoEcho
 
-#BATLTEST
-T			UseBatlTest
-
 #COMPONENT
 SC			NameComponent
 
