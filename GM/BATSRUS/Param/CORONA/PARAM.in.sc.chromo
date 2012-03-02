@@ -39,14 +39,11 @@ T			UseBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
-#BODY
-F			UseBody
-
 #USER_FLAGS
 T			UseUserInnerBcs
 T			UseUserSource
 F			UseUserPerturbation
-T			UseUserOuterBcs
+F			UseUserOuterBcs
 T			UseUserICs
 T			UseUserSpecifyRefinement
 T			UseUserLogFiles
@@ -136,9 +133,6 @@ all			TypeMessagePass
 #RESCHANGE
 T			UseAccurateResChange
 
-#RESCHANGEBOUNDARY
-T			SaveBoundaryCells
-
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
@@ -149,15 +143,9 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#EXTRABOUNDARY
-T			UseExtraBoundary
-user			TypeBc_I(ExtraBc_)
-T			DoFixExtraBoundary
-
 #FACEBOUNDARY
-0			MinBoundary
-0			MaxBoundary
-F			DoFixOuterBoundary
+-1			MinBoundary
+-1			MaxBoundary
 
 #OUTERBOUNDARY
 user			TypeBcEast
