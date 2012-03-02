@@ -954,7 +954,7 @@ contains
       integer :: iRatioRestr, jRatioRestr, kRatioRestr
       integer :: iBufferS, nSize
       integer, parameter:: Di=iRatio-1, Dj=jRatio-1, Dk=kRatio-1
-      real    :: WeightOld, WeightNew, WeightI, WeightJ, WeightK, InvV
+      real    :: WeightOld, WeightNew, Weight, WeightI, WeightJ, WeightK, InvV
       real, dimension(MaxDim):: Xyz_D, dI_D, dJ_D, dK_D, dR_D, &
            PositionMinR_D, PositionMaxR_D, CoordMinR_D, CoordMaxR_D, &
            CellSizeR_D, CoordR_D
@@ -1126,9 +1126,10 @@ contains
                                  dR_D = dR_D - Xyz_D
                               end if
 
-                              ! The max(0.0, avoids extrapolation when the
+                              ! The max(0.0, and the normalization to 1
+                              ! avoids extrapolation when the
                               ! receiving point is outside the sending 
-                              ! polyhedron. Remove the max(0.0 for exact
+                              ! polyhedron. Remove these for exact
                               ! second order test.
                               if(nDim == 2)then
                                  InvV = 1/ &
@@ -1137,6 +1138,11 @@ contains
                                       (dR_D(1)*dJ_D(2)-dR_D(2)*dJ_D(1)))
                                  WeightJ = max(0.0, InvV* &
                                       (dI_D(1)*dR_D(2)-dI_D(2)*dR_D(1)))
+                                 Weight = WeightI + WeightJ
+                                 if(Weight > 1)then
+                                    WeightI = WeightI / Weight
+                                    WeightJ = WeightJ / Weight
+                                 end if
                               else
                                  InvV = 1/ &
                                       sum(dI_D*cross_product(dJ_D,dK_D))
@@ -1146,6 +1152,14 @@ contains
                                       sum(dI_D*cross_product(dR_D,dK_D)))
                                  WeightK = max(0.0, InvV* &
                                       sum(dI_D*cross_product(dJ_D,dR_D)))
+
+                                 Weight  = WeightI + WeightJ + WeightK
+                                 if(Weight > 1.0)then
+                                    WeightI = WeightI / Weight
+                                    WeightJ = WeightJ / Weight
+                                    WeightK = WeightK / Weight
+                                 end if
+
 
                                  !if(IsSphericalAxis .and. &
                                  !     iNodeSend==20 .and. iNodeRecv==26 .and.&
@@ -1885,7 +1899,7 @@ contains
              call refine_tree_node(23)
           end if
           ! Restriction is not linear so there is truncation error
-          Tolerance = 0.02
+          Tolerance = 0.15
        else
           ! For tests with no AMR the error is round-off only
           Tolerance = 1e-6
