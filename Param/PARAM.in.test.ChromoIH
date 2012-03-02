@@ -5,7 +5,7 @@ T			DoEcho
 Input file for creating a steady state chromoshpere to solar wind solution.
 
 #TIMEACCURATE
-F		DoTimeAccurate
+F			DoTimeAccurate
 
 #SAVERESTART
 F			DoSaveRestart
@@ -15,10 +15,7 @@ F			DoSaveRestart
 #BEGIN_COMP IH -------------------------------------------------------------
 
 #BATLTEST
-F			UseBatlTest
-
-#BATL
-F
+T			UseBatlTest
 
 #COORDSYSTEM
 HGI			TypeCoordSystem
@@ -26,8 +23,8 @@ HGI			TypeCoordSystem
 #BODY
 T			UseBody
 16.			rBody
-3.0E+8			Body_Rho_Dim
-3.5E+6			Body_T_Dim
+3.0E+8			BodyNDim
+3.5E+6			BodyTDim
 
 #PLASMA
 1.0                     IonMass [amu]
@@ -46,32 +43,32 @@ T			UseBody
  120.0			zMax
 
 #GRIDLEVEL
-4
-all
+4			nLevel
+all			NameArea
 
 #GRIDLEVEL
-5
-initial
+5			nLevel
+initial			NameArea
 
 #GRIDLEVEL
-5
-shell0
-15.0
-21.0
+5			nLevel
+shell0			NameArea
+15.0			Radius1
+25.0			Radius2
 
 #INNERBOUNDARY
-buffergrid
+buffergrid		TypeBcInner
 
 #BUFFERGRID
-2       nRBuff
-64     nPhiBuff
-32     nThetaBuff
-16.0     rBuffMin
-20.0     rBuffMax
-0.0     PhiBuffMin
-360.    PhiBuffMax
-0.0     ThetaBuffMin
-180.    ThetaBuffMax
+2			nRBuff
+64			nPhiBuff
+32			nThetaBuff
+16.0			rBuffMin
+20.0			rBuffMax
+0.0			PhiBuffMin
+360.			PhiBuffMax
+0.0			ThetaBuffMin
+180.			ThetaBuffMax
 
 #OUTERBOUNDARY
 float			TypeBcEast
@@ -116,7 +113,7 @@ mc			TypeLimiter
 0.8			CflExpl
 
 #HYPERBOLICDIVB
-F       UseHyperbolicDivB
+F			UseHyperbolicDivB
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -138,10 +135,7 @@ g rbody
 #BEGIN_COMP SC --------------------------------------------------------------
 
 #BATLTEST
-F			UseBatlTest
-
-#BATL
-F
+T			UseBatlTest
 
 #BODY
 T			Usebody
@@ -150,7 +144,7 @@ T			Usebody
 1.5E+6			BodyTDim
 
 #BODY
-F
+F			UseBody
 
 #PLASMA
 1.0                     IonMass [amu]
@@ -225,16 +219,16 @@ SC/Param/CR2077_GNG.dat     NameMagnetogramFile
 #USERINPUTBEGIN ------------------------
 
 #CHROMOBC
-T               UseChromoBc
-3e4           DeltaU [m/s]
-2e16            nChromoSi [1/m^3]
-2e4             tChromoSi [K]
-T               UseConsRhoUpar
-F               UseExtrapolatedEwave
+T			UseChromoBc
+3e4			DeltaUSi [m/s]
+2e16			nChromoSi [1/m^3]
+2e4			tChromoSi [K]
+T               	UseConsRhoUpar
+F               	UseExtrapolatedEwave
 
 #PARKERIC
-1.5e14          NumDensitySi 1e14
-1.5e6           Temperature (K) 1.5e6
+1.5e14			NumDensitySi 1e14
+1.5e6			Temperature (K) 1.5e6
 
 #WAVEDISSIPATION
 T                       UseWaveDissipation
@@ -257,23 +251,23 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 
 #HYPERBOLICDIVB
-T       UseHyperbolicDivB
-400.0
-0.1
+T			UseHyperbolicDivB
+400.0			SpeedHypDim
+0.1			HypDecay
 
 #RADIATIVECOOLING
-T
+T			UseRadCooling
 
 #LOOKUPTABLE
-radcool
-load
+radcool			NameTable
+load			NameCommand
 SC/Param/RadCool.dat
-ascii
+ascii			TypeFile
 
 #TRANSITIONREGION
-T
-3.0e5
-1.0e1
+T			DoExpandTransitionRegion
+3.0e5			TeTransitionRegionSi
+1.0e1			DeltaTeSi
 
 #SCHEME
 2			nOrder (1 or 2)
@@ -283,9 +277,6 @@ mc                      TypeLimiter
 
 #TVDRESCHANGE
 T                       UseTvdResChange
-
-#RESCHANGEBOUNDARY
-T
 
 #TIMESTEPPING
 2                       nStage
@@ -300,21 +291,21 @@ RAW			StringLogfile
 #END_COMP SC ----------------------------------------------------------------
 
 #COMPONENT
-IH
-F
+IH			NameComp
+F			UseComp
 
 #STOP
-50
--1.
+50			MaxIteration
+-1.			tSimulationMax
 
-#RUN ------------------------------------------------------------------------
+#RUN #######################################################################
 Session 2 Begin
 
 #COMPONENT
-IH
-T
+IH			NameComp
+T			UseComp
 
-#BEGIN_COMP SC
+#BEGIN_COMP SC -------------------------------------------------------------
 
 #SAVEPLOT
 1			nPlotFiles
@@ -325,7 +316,7 @@ y=0 VAR idl		StringPlot
 rho ux uz bx bz I01 I02 p 
 g rbody
 
-#END_COMP SC
+#END_COMP SC ---------------------------------------------------------------
 
 #COUPLE1
 SC                      NameSource
@@ -334,12 +325,10 @@ IH                      NameTarget
 -1.0                    DtCouple
 
 #COUPLERTYPE
-SC
-IH
-MPI
+SC			NameSource
+IH			NameTarget
+MPI			TypeCoupler
 
 #STOP
 100			MaxIteration
 -1.0			tSimulationMax
-
-#END
