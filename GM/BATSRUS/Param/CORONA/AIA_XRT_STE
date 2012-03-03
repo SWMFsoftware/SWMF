@@ -7,38 +7,92 @@
 ! Position files should be in HGI Coordinates, 
 ! !!!!NOTE!!!!!!!!!!!!!!!!!!!!
 ! Time as set in PARAM.in
-! filw should coinside with the 
-! observation time
+! file should coinside with the 
+! !!!!OBSERVATION TIME!!!!!!!!
+! Otherwise, the observer position will be wrong.
 !-------------------------
+!To take the Earth coordinates in HGI, one should manually modify 
+!
+! Param/HELIOSPHERE/Earth_Traj.in
+!
+!file: put there the desired date/time, change coordinate system to 
+!HGI and reduce time interval for output (0.0  0.0  10.0). You can do this
+!in the Param/HELIOSPHERE directory or in any other place you want
+
+!Then in the root directory of BATSRUS do
+!
+! make EARTH_TRAJ
+!
+!Then in the Param/HEIOSPHERE directory of BATSRUS or in any other directory
+!where we put the modified EARTH_TRAJ.in do
+!
+!PATH_TO_SWMF/SWMF/bin/EARTH_TRAJ.exe  
+
+!three coordinates of the Earth position in HGI will be printed at your screen 
+!(the very last three reals), already normalized by R_sun. Put these three 
+!coordinates to the current file as
+!	      
+!FirstNumber          xPos(Earth)
+!SeconndNumber        yPos(Earth)
+!ThirdNumber          zPos(Earth)
+!
+!----------------------------------------
+! 
 !To download the orbit for STEREO A use
-!>wget ftp://mussel.srl.caltech.edu/pub/stereo/Position/ahead//position_ahead_2011_HCI.txt
+!
+!wget ftp://mussel.srl.caltech.edu/pub/stereo/Position/ahead//position_ahead_2011_HCI.txt
 !
 !For STEREO B use
-!wget ftp://mussel.srl.caltech.edu/pub/stereo/Position/behind/position_behind_2011_HCI.txt
-!The positions of the satellite (three last numers in each line) should be normalized by R_sun.
-!To achieve this the data should be divided by 696000 (km)
 !
-!To take the Earth coordinates in HGI, one should manually modify Param/HELIOSPHERE/Earth_Traj.in
-!file: put there the desired date/time, change coordinate system to HGI and reduce time interval
-!for output (0.0  0.0  10.0) Then three coordinates of the Earth position in HGI will be printed
-!The output is for 2011/03/07 UT2-:00 
+!wget ftp://mussel.srl.caltech.edu/pub/stereo/Position/behind/position_behind_2011_HCI.txt
+!
+!these commands are for the year 2011, the change for another year (late 2006 and later)
+!is evident. 
+!
+!The positions of the satellite (three last numbers in each line) should be found for the 
+!day-of-year as determined from Month/day (year, if it is a leap one) and the second-of-day
+!which is hour*3600+minute*60+second. The flag (0/1) going after year/day/second should be ignored
+!
+!The three coordinares in km should be normalized by R_sun.
+!To achieve this, the data should be divided by 696000 (km)
+!
+!The obtained numbers should be put into a current file as
+!1. For Stereo A ("ahead")
+!
+!FirstNumber(DividedBy696000)          xPos(STEREO A)
+!SeconndNumber(DividedBy696000)        yPos(STEREO A)     
+!ThirdNumber(DividedBy696000)          zPos(STEREO A)
+!
+!2. For Stereo B ("behind")
+!
+!FirstNumber(DividedBy696000)          xPos(STEREO B)
+!SeconndNumber(DividedBy696000)        yPos(STEREO B)     
+!ThirdNumber(DividedBy696000)          zPos(STEREO B)
+!
+!
+!The current file is for 2011/03/07 UT20:00 
+!(year=2011, day-of-year=66, second-of-day=72000)
+!It is assumed that SC component simulates the
+!close proximity of the Sun (if LC does, you should
+!modify the file names). 
+!
 
 #LOOKUPTABLE
 AiaXrt                  NameTable
 load                    TypeAction
-Param/los_tbl.dat       NameFile
+SC/Param/los_tbl.dat       NameFile
 ascii                   TypeFIle
 
 #LOOKUPTABLE
 EuviA                   NameTable
 load                    TypeAction
-Param/ResEuviA.dat      NameFile
+SC/Param/ResEuviA.dat      NameFile
 ascii                   TypeFile
 
 #LOOKUPTABLE
 EuviB                   NameTable
 load                    TypeAction
-Param/ResEuviB.dat      NameFIle
+SC/Param/ResEuviB.dat      NameFIle
 ascii                   TypeFIle
 
 
