@@ -49,7 +49,7 @@ subroutine write_plot_los(iFile)
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, unusedBLK, &
        time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
-       x_,y_,z_,R_,Phi_,Theta_,Body1,body1_
+       x_,y_,z_,R_,Phi_,Theta_,Body1,body1_, StartTime
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK, &
        XyzStart_BLK, TypeGeometry, IsBoundaryBlock_IB, nMirror_D
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
@@ -60,12 +60,13 @@ subroutine write_plot_los(iFile)
   use ModMpi
   use CON_axes, ONLY : transform_matrix
   use ModCoordTransform, ONLY : rot_matrix_z, cross_product
-  use ModUtilities, ONLY: lower_case, split_string
+  use ModUtilities, ONLY: lower_case, split_string, join_string
   use ModPlotFile, ONLY: save_plot_file
   use ModNodes, ONLY: NodeX_NB,NodeY_NB,NodeZ_NB
-  use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
-  use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
+  use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK, BlkNeighborLev
+  use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
   use ModVarIndexes, ONLY: nVar
+  use ModFaceGradient, ONLY: set_block_field2
 
   implicit none
 
@@ -89,9 +90,9 @@ subroutine write_plot_los(iFile)
   real, allocatable :: ImagePe_VII(:,:,:), Image_VII(:,:,:)
 
   real ::     eqpar(neqparmax)
-  character (len=10) :: eqparnames(neqparmax)
-  character (len=10) :: plotvarnames(nPlotVarLosMax)
-  character (len=10) :: NameVar
+  character (len=20) :: eqparnames(neqparmax)
+  character (len=20) :: plotvarnames(nPlotVarLosMax)
+  character (len=20) :: NameVar
 
 
   integer :: nEqpar, nPlotVar
@@ -116,10 +117,17 @@ subroutine write_plot_los(iFile)
   ! rOuter in SC should be smaller than the size of the domain
   real :: rInner, rInner2, rOuter, rOuter2
 
-  character (LEN=79) :: allnames, StringHeadLine
+  character (LEN=500) :: allnames, StringHeadLine
   character (LEN=500) :: unitstr_TEC, unitstr_IDL
   character (LEN=4) :: file_extension
   character (LEN=40) :: file_format
+
+  ! extra variables needed for auxiliarry data writing with tec output
+  ! (style copied from write_plot_tec) 
+  character (len=23) :: TextDateTime0, TextDateTime
+  character (len=80) :: FormatTime
+  character(len=80) :: StringTmp
+  integer :: iTime0_I(7),iTime_I(7)
 
   ! block and variable Indices
   integer :: iBLK, iMirror, jMirror, kMirror, iVar
@@ -140,6 +148,20 @@ subroutine write_plot_los(iFile)
   logical :: AlignedZ = .false.
 
   integer :: iTableEUV = -1, iTableSXR= -1
+
+  ! variables for reading in a generalized table
+  logical :: UseTableGen = .false.
+  integer :: iTableGen = -1
+  character (len=20) :: TableVarNames(nPlotVarLosMax)
+  integer :: nTableVar
+  real, allocatable :: InterpValues_I(:)
+  
+
+  ! temporary variable for setting correct ghostcells in State_VGB
+  ! using the set_block_field routine
+  real :: Aux1_G(nVar, -1:nI+2, -1:nJ+2, -1:nK+2)
+  real :: Aux_G(nVar, -1:nI+2, -1:nJ+2, -1:nK+2)
+
 
   character(len=*), parameter :: NameSub = 'write_plot_los'
   !---------------------------------------------------------------------------
@@ -242,7 +264,38 @@ subroutine write_plot_los(iFile)
   call split_string(plot_pars1,neqparmax,eqparnames,neqpar)
   call set_eqpar(ifile-plot_,neqpar,eqparnames,eqpar)
 
+  ! For generalized Los Table check PlotVarNames for string 'tbl'
+  UseTableGen = any(PlotVarNames(1:nPlotVar)== 'tbl')
+
+  if(UseTableGen) then
+     iTableGen = i_lookup_table(trim(NameLosTable(iFile)))
+     if (iTableGen <=0) &
+          call stop_mpi('Need to load #LOOKUPTABLE for TBL response!')
+     ! split the variable list string read in the table
+     call split_string(Table_I(iTableGen)%NameVar, nPlotVarLosMax, &
+                        TableVarNames, nTableVar)
+     ! don't count the x and y table labels as plot variables
+     nPlotVar=nTableVar-2
+     PlotVarNames(1:nPlotVar)=TableVarNames(3:nTableVar)
+
+     ! redefine plot_vars1 with correct table info
+     call join_string(nPlotVar, PlotVarNames, plot_vars1)
+  
+     if(oktest_me) then
+        write(*,*) 'plot variables, UseRho=', plot_vars1, UseRho
+        write(*,*) 'nPlotVar, PlotVarNames_V=', &
+             nPlotVar,plotvarnames(1:nPlotVar)
+     end if
+
+     ! allocate the vector that will contain the interpolated values
+     if(.not.allocated(InterpValues_I)) &
+          allocate(InterpValues_I(nPlotVar))
+
+     if(oktest_me) write(*,*) 'NameVar: ', Table_I(iTableGen)%NameVar
+  endif
+
   allnames='x y '//trim(plot_vars1)//' '//plot_pars1
+  if(oktest_me) write(*,*) 'AllNames: ', AllNames
 
   if(oktest_me) then
      write(*,*) 'plot variables, UseRho=', plot_vars1, UseRho
@@ -259,6 +312,21 @@ subroutine write_plot_los(iFile)
      call get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
   end select
+
+  if(UseTableGen) then
+     write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y'
+     do iVar=1, nPlotVar
+        write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "'
+        write(unitstr_TEC,'(a)') trim(unitstr_TEC)//trim(PlotVarNames(iVar))
+     enddo
+     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"'
+     if(oktest .and. iProc==0) write(*,*)'unitstr_TEC: ',unitstr_TEC
+
+     write(unitstr_IDL,'(a)') 'x y'
+     call join_string(nPlotVar, PlotVarNames, plot_vars1)
+     write(unitstr_IDL,'(a)') trim(unitstr_IDL)//' '//trim(plot_vars1)
+     if(oktest .and. iProc==0) write(*,*)'unitstr_IDL: ',unitstr_IDL
+  endif
 
   ! Create unit vectors aUnit_D and bUnit_D orthogonal to the 
   ! central line of sight to setup the coordinate system in the viewing plane
@@ -314,7 +382,7 @@ subroutine write_plot_los(iFile)
 
   ! Do we need to calculate density (also for white light and polarization)
   UseRho = UseScattering .or. any(plotvarnames(1:nPlotVar) == 'rho') &
-       .or. UseEuv .or. UseSxr
+       .or. UseEuv .or. UseSxr .or. UseTableGen
 
   if(DoTiming)call timing_start('los_block_loop')
 
@@ -322,6 +390,17 @@ subroutine write_plot_los(iFile)
   do iBLK = 1, nBlock
 
      if (unusedBLK(iBLK)) CYCLE
+
+     ! Here set correct ghostcell values if block has an adjacent reschange.
+     ! This is important because exchange messages does not correct values
+     ! at the reschange ---> interpolation will be off if not corrected by
+     ! set_block_field interpolation
+     if(any(BlkNeighborLev(:,:,:,iBLK)/=0)) then
+        Aux_G(:,:,:,:) = State_VGB(:,:,:,:,iBLK)
+        call set_block_field2(iBLK, nVar, Aux1_G, Aux_G)
+        State_VGB(:,:,:,:,iBLK) = Aux_G(:,:,:,:)
+     endif
+
 
      CellSize_D = (/ dx_BLK(iBlk), dy_BLK(iBlk), dz_BLK(iBlk) /)
 
@@ -390,6 +469,46 @@ subroutine write_plot_los(iFile)
         write(unit_tmp,'(a)')trim(unitstr_TEC)
         write(unit_tmp,*) 'ZONE T="LOS Image"', &
              ', I=',nPix,', J=',nPix,', K=1, F=POINT'
+
+
+        ! Write Auxilliary header info, which is useful for EUV images.
+        ! Makes it easier to identify, and automatically process synthetic 
+        ! images from different instruments/locations
+        if (UseTableGen) then
+           
+           write(FormatTime,*)&
+              '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
+           call get_date_time_start(iTime0_I)
+           call get_date_time(iTime_I)
+           write(TextDateTime0,FormatTime) iTime0_I
+           write(TextDateTime ,FormatTime) iTime_I
+           
+          !TIMEEVENT
+          write(StringTmp,'(a)')TextDateTime
+          write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(adjustl(StringTmp)),'"'
+
+          !TIMEEVENTSTART
+          write(StringTmp,'(a)')TextDateTime0
+          write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENTSTART="',trim(adjustl(StringTmp)),'"'
+
+          !TIMESECONDSABSOLUTE     ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
+          write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+          write(unit_tmp,'(a,a,a)') 'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
+
+          !ITER
+          write(StringTmp,'(i12)')n_step
+          write(unit_tmp,'(a,a,a)') 'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
+
+          !NAMELOSTABLE
+          write(StringTmp,'(a)')trim(NameLosTable(iFile))
+          write(unit_tmp,'(a,a,a)') 'AUXDATA NAMELOSTABLE="',trim(adjustl(StringTmp)),'"'
+
+          !HGIXYZ
+          write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
+          write(unit_tmp,'(a,a,a)') 'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
+
+        endif
+
         ! Write point values
         do iPix = 1, nPix
            aPix = (iPix - 1) * SizePix - rSizeImage
@@ -410,6 +529,51 @@ subroutine write_plot_los(iFile)
      case('idl')
         ! description of file contains units, physics and dimension
         StringHeadLine = 'LOS integrals_var22'
+        ! Write Auxilliary header info, which is useful for EUV images.
+        ! Makes it easier to identify, and automatically process synthetic 
+        ! images from different instruments/locations
+        if (UseTableGen) then
+           
+           write(FormatTime,*)&
+                '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
+           call get_date_time_start(iTime0_I)
+           call get_date_time(iTime_I)
+           write(TextDateTime0,FormatTime) iTime0_I
+           write(TextDateTime ,FormatTime) iTime_I
+           
+          !TIMEEVENT
+          write(StringTmp,'(a)')TextDateTime
+          write(StringHeadLine,'(a)')trim(StringHeadline)//'_TIMEEVENT='//&
+               trim(adjustl(StringTmp))
+
+          !TIMEEVENTSTART
+          write(StringTmp,'(a)')TextDateTime0
+          write(StringHeadLine,'(a)')trim(StringHeadLine)//&
+               '_TIMEEVENTSTART='//trim(adjustl(StringTmp))
+
+          !TIMESECONDSABSOLUTE     ! time in seconds since 1965 
+          !                          Jan 01 T00:00:00.000 UTC
+          write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+          write(StringHeadLine,'(a)')trim(StringHeadLine)//&
+               '_TIMESECONDSABSOLUTE='//trim(adjustl(StringTmp))
+
+          !ITER
+          write(StringTmp,'(i12)')n_step
+          write(StringHeadLine,'(a)')trim(StringHeadLine)//'_ITER='//&
+               trim(adjustl(StringTmp))
+
+          !NAMELOSTABLE
+          write(StringTmp,'(a)')trim(NameLosTable(iFile))
+          write(StringHeadLine,'(a)')trim(StringHeadLine)//'_NAMELOSTABLE='//&
+               trim(adjustl(StringTmp))
+
+          !HGIXYZ
+          write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
+          write(StringHeadLine,'(a)')trim(StringHeadLine)//'_HGIXYZ='//&
+               trim(adjustl(StringTmp))
+
+        endif
+
         ! set the size of plot image
         aPix = rSizeImage 
         if (plot_dimensional(ifile)) aPix = aPix * No2Io_V(UnitX_)
@@ -435,6 +599,8 @@ subroutine write_plot_los(iFile)
   call barrier_mpi
 
   deallocate(ImagePe_VII, Image_VII)
+
+  if(UseTableGen) deallocate(InterpValues_I)
 
   if(oktest_me)write(*,*) NameSub,' finished'
 
@@ -470,7 +636,7 @@ contains
 
        rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
 
-       if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr)) then 
+       if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr .or. UseTableGen)) then 
           ! in cartesian grid, the rBody boundary cuts through blocks and,
           ! since EUV plots are integrating to surface, need to make sure that
           ! interpolation does not interpolate to ghost cells filled with
@@ -968,7 +1134,7 @@ contains
     end if
 
     ! remove backside of sun from EUV images
-    if(UseEuv.or.UseSxr) then 
+    if(UseEuv.or.UseSxr.or.UseTableGen) then 
        call los_cut_backside(Point1_D, Point2_D,IsAllBehind)
        ! don't continue if all on backside
        if(IsAllBehind) RETURN
@@ -1113,7 +1279,7 @@ contains
     Ds = sqrt(sum((XyzEnd_D - XyzStart_D)**2)) / nSegment
 
     ! Don't want to divide block states repeatedly in nSegment loop
-    if(UseEuv .or. UseSxr)then
+    if(UseEuv .or. UseSxr .or. UseTableGen)then
        ! Fully ionized hydrogen plasma only for now.
        if(UseElectronPressure)then
           Temp_G = State_VGB(Pe_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
@@ -1201,7 +1367,7 @@ contains
           end if
        end if
 
-       if(UseEuv.or.UseSxr)then
+       if(UseEuv.or.UseSxr.or.UseTableGen)then
 
           ! need to interpolate electron temperature. Should really be calling
           ! user_material_properties, but would need user to have implemented
@@ -1254,7 +1420,23 @@ contains
              SxrResponse = SxrResponse * FractionTrue
           end if
 
+          if (UseTableGen) then
+             if(iTableGen <= 0) &
+                  call stop_mpi('Need to load #LOOKUPTABLE for '//NameLosTable(iFile)//' response!')
+             ! now interpolate the entire table
+             call interpolate_lookup_table(iTableGen, LogTemp, LogNe, &
+                  InterpValues_I, DoExtrapolate=.true.)
+             InterpValues_I = InterpValues_I * FractionTrue
+          endif
+
        end if
+
+       ! if using a generalized table can do it vector style
+       if(UseTableGen) then
+          ImagePe_VII(:,iPix,jPix) = ImagePe_VII(:,iPix,jPix) + &
+                                       InterpValues_I*ResponseFactor*Ds
+          CYCLE !cycle the nSegment loop
+       endif
 
        do iVar = 1, nPlotVar
           Value = 0.0 ! initialize to 0 so that if statements below work right
@@ -1811,9 +1993,9 @@ subroutine get_TEC_los_variables(iFile,nPlotVar,plotvarnames,unitstr_TEC)
   ! Arguments
 
   integer, intent(in) :: NPlotVar,iFile
-  character (LEN=10), intent(in) :: plotvarnames(NPlotVar)
+  character (len=20), intent(in) :: plotvarnames(NPlotVar)
   character (len=500), intent(out) :: unitstr_TEC 
-  character (len=10) :: s
+  character (len=20) :: s
 
   integer :: iVar
   !--------------------------------------------------------------------------
@@ -1936,9 +2118,9 @@ subroutine get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL)
   ! Arguments
 
   integer, intent(in) :: iFile,NPlotVar
-  character (LEN=10), intent(in) :: plotvarnames(NPlotVar)
+  character (len=20), intent(in) :: plotvarnames(NPlotVar)
   character (len=79), intent(out) :: unitstr_IDL 
-  character (len=10) :: s
+  character (len=20) :: s
 
   integer :: iVar
   !----------------------------------------------------------------------------

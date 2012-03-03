@@ -58,6 +58,7 @@ Module ModIO
   real :: radius_occult(maxfile), mu_los
   real :: offset_angle(maxfile)
   real, dimension(3,maxfile) :: ObsPos_DI
+  character (LEN=20) :: NameLosTable(maxfile)
 
   ! Variables for radiowave image
   ! ObsPos_DI is borrowed from the LOS plot

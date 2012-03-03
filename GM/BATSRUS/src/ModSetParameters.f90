@@ -767,7 +767,13 @@ subroutine MH_set_parameters(TypeAction)
               ! read the limb darkening parameter
               call read_var('MuLimbDarkening',mu_los)
               ! read the number of pixels
-              call read_var('nPix',n_pix_r(ifile))            
+              call read_var('nPix',n_pix_r(ifile))
+              ! if it is an EUV plot using a long table then read in the name 
+              ! of the specific lookup table (will be matched to the name read
+              ! in by the lookuptable command).
+              if (index(plot_string,'TBL')>0&
+                   .or.index(plot_string,'tbl')>0) &
+                call read_var('NameLosTable',NameLosTable(ifile))            
            elseif (index(plot_string,'rfr')>0) then
               ! Refractive radiowave image 
               plot_area='rfr'
@@ -887,6 +893,11 @@ subroutine MH_set_parameters(TypeAction)
               plot_var='sxr'
               plot_dimensional(ifile) = index(plot_string,'SXR')>0
               plot_vars(ifile)='sxr' ! soft x-ray band
+              plot_pars(ifile)='mu'
+           elseif(index(plot_string,'TBL')>0.or.index(plot_string,'tbl')>0)then
+              plot_var='tbl'
+              plot_dimensional(ifile) = index(plot_string,'TBL')>0
+              plot_vars(ifile)='tbl' ! will read a table in write_plot_los 
               plot_pars(ifile)='mu'
            elseif(index(plot_string,'RWI')>0.or.index(plot_string,'rwi')>0)then 
               plot_var='rwi'
