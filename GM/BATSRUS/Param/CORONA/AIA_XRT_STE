@@ -4,10 +4,24 @@
 ! STEREO A (EUVI-A)
 ! STEREO B (EUVI-B)
 !-------------------------
-! Position files should be in HGI
-! Coordinates, Time as set in PARAM.in
+! Position files should be in HGI Coordinates, 
+! !!!!NOTE!!!!!!!!!!!!!!!!!!!!
+! Time as set in PARAM.in
 ! filw should coinside with the 
 ! observation time
+!-------------------------
+!To download the orbit for STEREO A use
+!>wget ftp://mussel.srl.caltech.edu/pub/stereo/Position/ahead//position_ahead_2011_HCI.txt
+!
+!For STEREO B use
+!wget ftp://mussel.srl.caltech.edu/pub/stereo/Position/behind/position_behind_2011_HCI.txt
+!The positions of the satellite (three last numers in each line) should be normalized by R_sun.
+!To achieve this the data should be divided by 696000 (km)
+!
+!To take the Earth coordinates in HGI, one should manually modify Param/HELIOSPHERE/Earth_Traj.in
+!file: put there the desired date/time, change coordinate system to HGI and reduce time interval
+!for output (0.0  0.0  10.0) Then three coordinates of the Earth position in HGI will be printed
+!The output is for 2011/03/07 UT2-:00 
 
 #LOOKUPTABLE
 AiaXrt                  NameTable
@@ -34,8 +48,9 @@ ascii                   TypeFIle
 los tbl tec		StringPlot
 40000			DnSavePlot
 -1			DtSavePlot
-#INCLUDE
-POS_EARTH
+ -4.21                  xPos(Earth)
+211.56                  yPos(Earth)
+-26.91                  zPos(Earth)
 0.			OffsetAngle
 1.98			rSizeImage
 0.			xOffset
@@ -47,8 +62,9 @@ AiaXrt                  NameLosTable
 los tbl tec		StringPlot
 40000			DnSavePlot
 -1			DtSavePlot
-#INCLUDE
-POS_STEREOA
+-205.89                 xPos(STEREO A)
+   7.66                 yPos(STEREO A)
+  -0.68                 zPos(STEREO A)
 0.			OffsetAngle
 1.98			rSizeImage
 0.			xOffset
@@ -60,8 +76,9 @@ EuviA                   NameLosTable
 los tbl tec		StringPlot
 40000			DnSavePlot
 -1			DtSavePlot
-#INCLUDE
-POS_STEREOB
+ 217.53                 xPos(Stereo B)
+ -17.59                 yPos(Stereo B)
+   3.36                 zPos(Stereo B)  
 0.			OffsetAngle
 1.98			rSizeImage
 0.			xOffset
