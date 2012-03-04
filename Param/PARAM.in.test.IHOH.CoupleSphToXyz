@@ -276,8 +276,8 @@ buffergrid
 5.2	rBuffMax
 0.0	PhiBuffMin
 360.	PhiBuffMax
-0.0	ThetaBuffMin
-180.	ThetaBuffMax
+-90.	LatBuffMin
+90.	LatBuffMax
 
 #OUTERBOUNDARY
 float      
