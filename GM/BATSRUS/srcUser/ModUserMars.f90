@@ -1865,7 +1865,7 @@ contains
           
           do k=1,nK
              Theta = (k-1)*dTheta  + xyzStart_BLK(Theta_,globalBLK)      
-             Theta =  180*(0.5-Theta/cPi)
+             !Theta =  180*(0.5-Theta/cPi) !don't need anymore, already co-latitude
              kLat=int((theta+87.5)/5.0+1.0)
              kp1=min(kLat+1, NLat)
              kLat = max(kLat,1)
