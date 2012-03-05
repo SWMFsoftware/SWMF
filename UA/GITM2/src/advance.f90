@@ -28,8 +28,6 @@ subroutine advance
      call add_sources 
      if (.not. Is1D) call advance_horizontal_all
 
-     write(*,*) 'vel : ',iProc, Velocity(15,:,50,iNorth_,1)
- 
   else
 
      Dt = DtStatisticalModels
