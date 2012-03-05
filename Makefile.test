@@ -17,6 +17,7 @@ test_help:
 	@echo "    test_comp                  (run component tests only)"
 	@echo "    test_lc                    (run LC/BATSRUS only)"
 	@echo "    test_pw                    (run PW/PWOM test only)"
+	@echo "    test_ps                    (run PW/DGCPM test only)"
 	@echo "    test_rb                    (run RB/RBE test only)"
 	@echo "    test_esmf                  (run ESMF_SWMF test only)"
 	@echo "    test_ccmc                  (run CCMC test only)"
@@ -112,6 +113,44 @@ test_pw_check:
 		${PWDIR}/data/output/Earth/north_plots_iline0001.out \
 		> test_pw.diff)
 	ls -ltr test_pw*.diff
+
+
+#### Plasmasphere model: DGCPM test ###
+#
+test_ps:
+	@echo "starting..." > test_ps.diff
+	@echo "test_ps_compile..." >> test_ps.diff
+	${MAKE} test_ps_compile
+	@echo "test_ps_rundir..." >> test_ps.diff
+	${MAKE} test_ps_rundir
+	@echo "test_ps_run..." >> test_ps.diff
+	${MAKE} test_ps_run
+	@echo "test_ps_check..." >> test_ps.diff
+	${MAKE} test_ps_check	
+
+test_ps_compile:
+	./Config.pl -v=Empty,PS/DGCPM
+	${MAKE} SWMF
+	
+test_ps_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.PS ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.PS ${TESTDIR}/LAYOUT.in
+	cp ${PSDIR}/Input/a1001_dgcpm.in ${TESTDIR}/PS/Input/
+	cp ${PSDIR}/Input/a1001_kp.in ${TESTDIR}/PS/Input/
+
+
+test_ps_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+
+test_ps_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+		${TESTDIR}/PS/Output/a1001_dgcpm_dynamic_00003.dat \
+		${PSDIR}/Output/a1001_dgcpm_dynamic_00003.ref \
+		> test_ps.diff)
+	ls -ltr test_ps*.diff
+
 
 #### Radiation belt model test ###
 #
