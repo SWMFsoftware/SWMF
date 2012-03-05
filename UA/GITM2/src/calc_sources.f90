@@ -11,8 +11,8 @@ subroutine calc_GITM_sources(iBlock)
 
   integer :: iAlt, iError, iDir, iLat, iLon, iSpecies
   integer :: iiAlt, iiLat, iiLon
-  real :: tmp(nLons, nLats, nAlts+1)
-  real :: tmp2(nLons, nLats, nAlts), diff(nLons, nLats, nAlts)
+  real :: tmp(nLons, nLats, nAlts)
+  real :: tmp2(nLons, nLats, 0:nAlts+1)
   real :: tmp3(nLons, nLats, -1:nAlts+2)
   real :: tmp4(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
   real :: tmp5(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
@@ -116,7 +116,7 @@ subroutine calc_GITM_sources(iBlock)
 
   if (UseJouleHeating .and. UseIonDrag) then
 
-     tmp2 = Collisions(1:nLons,1:nLats,1:nAlts,iVIN_) * &
+     tmp = Collisions(1:nLons,1:nLats,1:nAlts,iVIN_) * &
           RhoI(1:nLons,1:nLats,1:nAlts)/ &
           Rho(1:nLons,1:nLats,1:nAlts,iBlock) 
 
@@ -132,7 +132,7 @@ subroutine calc_GITM_sources(iBlock)
 
      do iDir = 1, 3
 
-        JouleHeating(:,:,:) = JouleHeating(:,:,:) + tmp2 * &
+        JouleHeating(:,:,:) = JouleHeating(:,:,:) + tmp * &
              (IVelocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock) - &
              Velocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock))**2
 
@@ -156,8 +156,8 @@ subroutine calc_GITM_sources(iBlock)
 
   if(UseConduction)then
 
-     tmp2 = Rho(1:nLons, 1:nLats,1:nAlts, iBlock) * &
-          cp(1:nLons, 1:nLats,1:nAlts, iBlock)
+     tmp2 = Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+          cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
      
      Prandtl = 0.0
   
@@ -210,8 +210,9 @@ if (UseTurbulentCond) then
            Prandtl(1:nLons,1:nLats,0:nAlts+1) = &
              KappaEddyDiffusion(1:nLons,1:nLats,0:nAlts+1,iBlock)*Rho(1:nLons,1:nLats,0:nAlts+1,iBlock)
 
-           tmp2(1:nLons,1:nLats,1:nAlts) = &
-              Rho(1:nLons,1:nLats,1:nAlts,iBlock)/Gamma(1:nLons,1:nLats,1:nAlts,iBlock)
+           tmp2(1:nLons,1:nLats,0:nAlts+1) = &
+              Rho(1:nLons,1:nLats,0:nAlts+1,iBlock)/&
+              Gamma(1:nLons,1:nLats,0:nAlts+1,iBlock)
 
           call calc_conduction(iBlock, &
                Theta(1:nLons, 1:nLats,-1:nAlts+2), &
@@ -272,11 +273,11 @@ if (UseTurbulentCond) then
 
   if (UseIonDrag) then
 
-     tmp2 = Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)*&
+     tmp = Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)*&
           RhoI/Rho(1:nLons,1:nLats,1:nAlts,iBlock)
 
      do iDir = 1, 3
-        IonDrag(:,:,:,iDir) = tmp2 * &
+        IonDrag(:,:,:,iDir) = tmp * &
              (IVelocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock) - &
              Velocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock))
      enddo
@@ -285,14 +286,14 @@ if (UseTurbulentCond) then
      ! where Vis = Vin *(Ns/N)  
 
      do iSpecies = 1, nSpecies
-        tmp2 = Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)*&
+        tmp = Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)*&
              RhoI / &
              (Mass(iSpecies) * &
              NDensityS(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock)) * &
              (NDensityS(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock) / &
              NDensity(1:nLons,1:nLats,1:nAlts,iBlock))
 
-        VerticalIonDrag(:,:,:,iSpecies) = tmp2 * &
+        VerticalIonDrag(:,:,:,iSpecies) = tmp * &
              (IVelocity(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) - &
              VerticalVelocity(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock))
 

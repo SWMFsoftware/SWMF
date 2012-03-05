@@ -9,7 +9,7 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
   integer, intent(in) :: iBlock
   real, intent(in) :: Quantity(nLons, nLats, -1:nAlts+2)
   real, intent(in) :: Diff(nLons, nLats, 0:nAlts+1)
-  real, intent(in) :: MulFac(nLons, nLats,-1:nAlts+2)
+  real, intent(in) :: MulFac(nLons, nLats,0:nAlts+1)
   real, intent(out) :: dTdt_cond(nLons, nLats, nAlts)
   real :: solution(nLons, nLats, 0:nAlts+1)
 
