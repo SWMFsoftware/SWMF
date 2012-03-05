@@ -81,7 +81,7 @@
                 write(10,*) 'TIME NTHETA NPHI N POT'
                 write(10,*) CurrentTime
                 write(10,*) nthetacells, nphicells
-                write(10,*) mgridn
+                write(10,*) mgridden
                 write(10,*) mgridpot
             CASE ('VELOCITY')
                 write(10,*) 'TIME NTHETA NPHI X Y DEN POT VR VP'
