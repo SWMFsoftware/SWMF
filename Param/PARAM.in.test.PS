@@ -2,11 +2,11 @@
 T
 
 #PROGRESS
-1			DnShowProgressShort
-100			DnShowProgressLong
+100			DnShowProgressShort
+1000			DnShowProgressLong
 
 #DESCRIPTION
-Run GM and IE in time accurate mode
+PS:DGCPM Stand-alone test.
 
 #PLANET
 EARTH
@@ -18,11 +18,11 @@ F
 T			DoTimeAccurate
 
 #STARTTIME
-2000			iYear
-3			iMonth
+2001			iYear
+10			iMonth
 21			iDay
-10			iHour
-45			iMinute
+00  	 	iHour
+00			iMinute
 0			iSecond
 0.0			FracSecond
 
@@ -30,26 +30,35 @@ T			DoTimeAccurate
 ! align rotation and magnetic axes with z axis
 
 #ROTATION
-F			UseRotation
+F                       UseRotation
+
 
 #BEGIN_COMP PS #############################################################
-20.,3600.,1800.,00.
-20,24,42,71,24
-.01,.006,1.26,1.E6
-3,4,1,0,0,0,1,13,1
-0,1,0,1
-2001,294,0.0,154.,15.,3.0
-0,7,0,7
-0,9,0,7
-120.,0.,0.03
-1,0,1,0,0,0,1,0,1,0,0,1,1,1,1
-a1001
+
+#TIMESTEP
+20.0			DtStep
+
+#KP
+3                       IKP
+
+#Name
+a1001                  NAME
+
+#OUTPUT
+T			WriteStatic
+T			WriteDynamic
+600.		OutputInterval
+SHORT			OutputType
+DIPOLE		MagneticType
+
+#LOG
+T		 	WriteLogFile
 
 #END_COMP PS ###############################################################
 
 #STOP
--1
-3600.0
+-1                      MaxIteration
+1800.0                 tSimulationMax
 
 #END
 
