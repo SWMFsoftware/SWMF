@@ -14,9 +14,6 @@ F			DoSaveRestart
 
 #BEGIN_COMP IH -------------------------------------------------------------
 
-#BATLTEST
-T			UseBatlTest
-
 #COORDSYSTEM
 HGI			TypeCoordSystem
 
@@ -133,9 +130,6 @@ g rbody
 #END_COMP IH ---------------------------------------------------------------
 
 #BEGIN_COMP SC --------------------------------------------------------------
-
-#BATLTEST
-T			UseBatlTest
 
 #BODY
 T			Usebody

@@ -16,9 +16,6 @@ OH_fill_buffer_only
 
 #BEGIN_COMP IH --------------------------------------------------------------
 
-#BATLTEST
-T
-
 #COORDSYSTEM
 HGI                     TypeCoordSystem
 
@@ -174,9 +171,6 @@ F
 #END_COMP IH -----------------------------------------------------------------
 
 #BEGIN_COMP OH ---------------------------------------------------------------
-
-#BATLTEST
-T
 
 #COORDSYSTEM
 HGI
