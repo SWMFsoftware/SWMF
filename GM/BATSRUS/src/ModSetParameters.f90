@@ -199,8 +199,7 @@ subroutine MH_set_parameters(TypeAction)
      end if
 
      ! Planet NONE in GM means that we do not use a body
-     if ((NameThisComp=='GM' .OR. NameThisComp=='EE') &
-          .and. NamePlanet == 'NONE' .and. iSession == 1)then
+     if (NameThisComp=='GM' .and. NamePlanet == 'NONE' .and. iSession == 1)then
         body1 = .false.
         ! Change the default conservative criteria when there is no planet
         ! and the #CONSERVATIVECRITERIA command did not occur
@@ -215,14 +214,14 @@ subroutine MH_set_parameters(TypeAction)
      ! In standalone mode set and obtain GM specific parameters 
      ! in CON_planet and CON_axes
 
-     if(NameThisComp == 'GM' .OR. NameThisComp == 'EE') then
+     if(NameThisComp == 'GM') then
         ! Initialize axes
         call init_axes(StartTime)
         call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
         call get_planet(DipoleStrengthOut = DipoleStrengthSi)
      end if
 
-     if(IsStandAlone .and. (NameThisComp=='GM' .OR. NameThisComp=='EE')) then
+     if(IsStandAlone .and. NameThisComp=='GM') then
         ! Check and set some planet variables (e.g. DoUpdateB0)
         call check_planet_var(iProc==0, time_accurate)
 
@@ -2248,9 +2247,12 @@ contains
     case('SC','LC')
        UseRotatingFrame  = .true.
        UseRotatingBc     = .false.; TypeCoordSystem   = 'HGR'
-    case('GM','EE')
+    case('GM')
        UseRotatingFrame  = .false.
        UseRotatingBc     = .true.;  TypeCoordSystem   = 'GSM'
+    case('EE')
+       UseRotatingFrame  = .false.
+       UseRotatingBc     = .false.; TypeCoordSystem   = 'GSM'
     end select
 
     !Do not set B0 field in IH and OH
@@ -2408,7 +2410,7 @@ contains
        RefineCrit(2)  = 'Va'
        RefineCrit(3)  = 'flux'
 
-    case('GM','EE')
+    case('GM')
        ! Body Parameters
        UseGravity=.false.
        body1      =.true.
@@ -2439,6 +2441,38 @@ contains
        RefineCrit(1)  = 'gradlogP'
        RefineCrit(2)  = 'curlB'
        RefineCrit(3)  = 'Rcurrents'
+
+    case('EE')
+       ! Body Parameters
+       UseGravity = .true.
+       GravityDir = 3
+       GravitySi  = -273.06667
+       body1      = .false.
+       Rbody      = 1.00
+       Rcurrents  =-1.00
+
+       ! Non Conservative Parameters
+       UseNonConservative = .false.
+       nConservCrit       = 0
+       rConserv           = -1.
+
+       ! Boundary Conditions and Normalization
+       TypeBc_I(East_:North_) = 'periodic'
+       TypeBc_I(Bot_)         = 'fixvalue'
+       TypeBc_I(Top_)         = 'no_inflow'
+       TypeBc_I(body1_)       = 'unknown'
+       BodyTDim_I    = 25000.0          ! K
+       BodyNDim_I    = 5.0              ! /cc
+
+       ! Normalization and I/O units
+       TypeNormalization = "READ"
+       No2Si_V(UnitX_)   = 1.5e5
+       No2Si_V(UnitU_)   = 6.4e3
+       No2Si_V(UnitRho_) = 2.7e-4
+       TypeIoUnit        = "HELIOSPHERIC"
+
+       ! Refinement Criteria
+       nRefineCrit = 0
 
     end select
 

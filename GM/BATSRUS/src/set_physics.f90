@@ -37,7 +37,7 @@ subroutine set_physics_constants
   !/
   NamePlanetRadius = 'R'
   select case(NameThisComp)
-  case('GM','EE')
+  case('GM')
      call get_planet( &
           RadiusPlanetOut   = rPlanetSi, &
           MassPlanetOut     = MassBodySi, &
@@ -52,6 +52,11 @@ subroutine set_physics_constants
      RotPeriodSi = RotationPeriodSun
      SW_n_dim    = BodyNDim_I(IonFirst_)  ! Needed for SOLARWIND normalization only
      SW_T_dim    = BodyTDim_I(IonFirst_)  ! Needed for SOLARWIND normalization only
+  case('EE')
+     MassBodySi = mSun
+     RotPeriodSi = RotationPeriodSun
+     rPlanetSi = 1000.0  ! 1 km
+     NamePlanetRadius = 'km'
   end select
  
   ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)

@@ -305,7 +305,7 @@ contains
     write(unit_tmp,'(i8,a32)') nJ,'nJ'
     write(unit_tmp,'(i8,a32)') nK,'nK'
     write(unit_tmp,'(i8,a32)') nBlockALL,'MinBlockALL'
-    if (IsStandAlone .and. (NameThisComp == 'GM' .OR. NameThisComp == 'EE')) then
+    if (IsStandAlone .and. NameThisComp == 'GM') then
        write(unit_tmp,*)
        write(unit_tmp,'(a)')'#PLANET'
        write(unit_tmp,'(a,a32)') NamePlanet,'NamePlanet'
@@ -401,7 +401,7 @@ contains
        write(unit_tmp,'(a)')'#BODY'
        write(unit_tmp,'(l1,a39)')      .true., 'UseBody'
        write(unit_tmp,'(es22.15,a18)') rBody, 'rBody'
-       if(NameThisComp=='GM' .OR. NameThisComp=='EE') &
+       if(NameThisComp=='GM') &
             write(unit_tmp,'(es22.15,a18)') rCurrents, 'rCurrents'
        do iFluid = IonFirst_, nFluid
           write(unit_tmp,'(es22.15,a18)') BodyNDim_I(iFluid), 'BodyNDim'
