@@ -37,7 +37,7 @@ subroutine set_physics_constants
   !/
   NamePlanetRadius = 'R'
   select case(NameThisComp)
-  case('GM')
+  case('GM','EE')
      call get_planet( &
           RadiusPlanetOut   = rPlanetSi, &
           MassPlanetOut     = MassBodySi, &

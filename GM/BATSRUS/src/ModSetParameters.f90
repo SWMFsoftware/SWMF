@@ -199,7 +199,8 @@ subroutine MH_set_parameters(TypeAction)
      end if
 
      ! Planet NONE in GM means that we do not use a body
-     if (NameThisComp=='GM' .and. NamePlanet == 'NONE' .and. iSession == 1)then
+     if ((NameThisComp=='GM' .OR. NameThisComp=='EE') &
+          .and. NamePlanet == 'NONE' .and. iSession == 1)then
         body1 = .false.
         ! Change the default conservative criteria when there is no planet
         ! and the #CONSERVATIVECRITERIA command did not occur
@@ -214,14 +215,14 @@ subroutine MH_set_parameters(TypeAction)
      ! In standalone mode set and obtain GM specific parameters 
      ! in CON_planet and CON_axes
 
-     if(NameThisComp == 'GM') then
+     if(NameThisComp == 'GM' .OR. NameThisComp == 'EE') then
         ! Initialize axes
         call init_axes(StartTime)
         call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
         call get_planet(DipoleStrengthOut = DipoleStrengthSi)
      end if
 
-     if(IsStandAlone .and. NameThisComp=='GM') then
+     if(IsStandAlone .and. (NameThisComp=='GM' .OR. NameThisComp=='EE')) then
         ! Check and set some planet variables (e.g. DoUpdateB0)
         call check_planet_var(iProc==0, time_accurate)
 
@@ -2247,7 +2248,7 @@ contains
     case('SC','LC')
        UseRotatingFrame  = .true.
        UseRotatingBc     = .false.; TypeCoordSystem   = 'HGR'
-    case('GM')
+    case('GM','EE')
        UseRotatingFrame  = .false.
        UseRotatingBc     = .true.;  TypeCoordSystem   = 'GSM'
     end select
@@ -2407,7 +2408,7 @@ contains
        RefineCrit(2)  = 'Va'
        RefineCrit(3)  = 'flux'
 
-    case('GM')
+    case('GM','EE')
        ! Body Parameters
        UseGravity=.false.
        body1      =.true.

@@ -25,6 +25,7 @@ test_help:
 	@echo "    test2                      (run SC-IH test only )"
 	@echo "    test3                      (run GM-IE-IM test only)"
 	@echo "    test4                      (run GM-IE-HEIDI test only)"
+	@echo "    test5                      (run EE-SC test only)"
 	@echo "    test6                      (run GM-IE-CRCM test only)"
 	@echo "    test7                      (run IH-OH test only)"
 	@echo "    test8		      (run multifluid GM-IM coupling test only)"
@@ -42,6 +43,7 @@ test:
 	-@(${MAKE} test2)
 	-@(${MAKE} test3)
 	-@(${MAKE} test4)
+	-@(${MAKE} test5)
 	-@(${MAKE} test6)
 	-@(${MAKE} test7)
 	-@(${MAKE} test8)
@@ -437,7 +439,7 @@ test4_check:
                 > test4_im_heidi.diff)
 	ls -l test4*.diff
 
-### test5: Lower Corona test to be extended to LC+SC+IH###
+### test5: Eruptive Event generator coupled to the corona ###
 test5:
 	@echo "test5_compile..." > test5.diff
 	${MAKE} test5_compile
@@ -449,25 +451,35 @@ test5:
 	${MAKE} test5_check
 
 test5_compile:
-	./Config.pl -v=Empty,LC/BATSRUS
-	cd LC/BATSRUS; ./Config.pl -u=Lc -e=MhdWaves -setvar=nWave=2
-	./Config.pl -g=LC:6,4,4,3000,1
+	./Config.pl -v=Empty,EE/BATSRUS
+	./Config.pl -g=EE:10,10,10,500,1
 	${MAKE} SWMF PIDL
 
 test5_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.LCSCIH ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.LC ${TESTDIR}/LAYOUT.in
+	cp Param/LAYOUT.in.test.EE ${TESTDIR}/LAYOUT.in
+	cd ${TESTDIR}; cp ../GM/BATSRUS/data/FLUXEMERGENCE/*.dat* .
+	cd ${TESTDIR}; cp ../GM/BATSRUS/Param/FLUXEMERGENCE/Grid.* .
+	cd ${TESTDIR}; gunzip *.gz
 
 test5_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; cp Param/PARAM.in.test.EE.1D PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_1d
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_1d
+	cd ${TESTDIR}; cp Param/PARAM.in.test.EE.3D PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_3d
+	cd ${TESTDIR}; ./Restart.pl
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_3d
+	cd ${TESTDIR}; cp Param/PARAM.in.test.EE PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_restart; \
+	   	       		mv runlog_restart RESULTS/run_restart
 
 test5_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/LC/log_n000001.log \
-		output/test_lc/LC_log_n000001.log \
+	-(${SCRIPTDIR}/DiffNum.pl -b \
+		${TESTDIR}/RESULTS/run_restart/EE/log_n000011.log \
+		output/test5/EE_log_n000011.log \
 		> test5.diff)
 	ls -l test5.diff
 
