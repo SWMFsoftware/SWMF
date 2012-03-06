@@ -1,145 +1,142 @@
-! Full euv and X-ray images
-! SDO(AIA) - 6 bands of EUV
-! Hinode(XRT) - XRT (three channels)
-! STEREO A (EUVI-A)
-! STEREO B (EUVI-B)
-!-------------------------
-! Position files should be in HGI Coordinates, 
-! !!!!NOTE!!!!!!!!!!!!!!!!!!!!
-! Time as set in PARAM.in
-! file should coinside with the 
-! !!!!OBSERVATION TIME!!!!!!!!
-! Otherwise, the observer position will be wrong.
-!-------------------------
-!To take the Earth coordinates in HGI, one should manually modify 
-!
-! Param/HELIOSPHERE/Earth_Traj.in
-!
-!file: put there the desired date/time, change coordinate system to 
-!HGI and reduce time interval for output (0.0  0.0  10.0). You can do this
-!in the Param/HELIOSPHERE directory or in any other place you want
+Full euv and X-ray images
+SDO(AIA) - 6 bands of EUV
+Hinode(XRT) - XRT (three channels)
+STEREO A (EUVI-A)
+STEREO B (EUVI-B)
+------------------------
+Position files should be in HGI Coordinates, 
+!!!!NOTE!!!!!!!!!!!!!!!!!!!!
+Time as set in PARAM.in
+file should coinside with the 
+!!!!OBSERVATION TIME!!!!!!!!
+Otherwise, the observer position will be wrong.
+------------------------
+To take the Earth coordinates in HGI, one should manually modify 
 
-!Then in the root directory of BATSRUS do
-!
-! make EARTH_TRAJ
-!
-!Then in the Param/HEIOSPHERE directory of BATSRUS or in any other directory
-!where we put the modified EARTH_TRAJ.in do
-!
-!PATH_TO_SWMF/SWMF/bin/EARTH_TRAJ.exe  
+  Param/HELIOSPHERE/Earth_Traj.in
 
-!three coordinates of the Earth position in HGI will be printed at your screen 
-!(the very last three reals), already normalized by R_sun. Put these three 
-!coordinates to the current file as
-!	      
-!FirstNumber          xPos(Earth)
-!SeconndNumber        yPos(Earth)
-!ThirdNumber          zPos(Earth)
-!
-!----------------------------------------
-! 
-!To download the orbit for STEREO A use
-!
-!wget ftp://mussel.srl.caltech.edu/pub/stereo/Position/ahead//position_ahead_2011_HCI.txt
-!
-!For STEREO B use
-!
-!wget ftp://mussel.srl.caltech.edu/pub/stereo/Position/behind/position_behind_2011_HCI.txt
-!
-!these commands are for the year 2011, the change for another year (late 2006 and later)
-!is evident. 
-!
-!The positions of the satellite (three last numbers in each line) should be found for the 
-!day-of-year as determined from Month/day (year, if it is a leap one) and the second-of-day
-!which is hour*3600+minute*60+second. The flag (0/1) going after year/day/second should be ignored
-!
-!The three coordinares in km should be normalized by R_sun.
-!To achieve this, the data should be divided by 696000 (km)
-!
-!The obtained numbers should be put into a current file as
-!1. For Stereo A ("ahead")
-!
-!FirstNumber(DividedBy696000)          xPos(STEREO A)
-!SeconndNumber(DividedBy696000)        yPos(STEREO A)     
-!ThirdNumber(DividedBy696000)          zPos(STEREO A)
-!
-!2. For Stereo B ("behind")
-!
-!FirstNumber(DividedBy696000)          xPos(STEREO B)
-!SeconndNumber(DividedBy696000)        yPos(STEREO B)     
-!ThirdNumber(DividedBy696000)          zPos(STEREO B)
-!
-!
-!The current file is for 2011/03/07 UT20:00 
-!(year=2011, day-of-year=66, second-of-day=72000)
-!It is assumed that SC component simulates the
-!close proximity of the Sun (if LC does, you should
-!modify the file names). 
-!
+file: put there the desired date/time, change coordinate system to 
+HGI and reduce time interval for output (0.0  0.0  10.0). You can do this
+in the Param/HELIOSPHERE directory or in any other place you want
+
+Then in the root directory of BATSRUS do
+
+  make EARTH_TRAJ
+
+Then in the Param/HEIOSPHERE directory of BATSRUS or in any other directory
+where we put the modified EARTH_TRAJ.in do
+
+PATH_TO_SWMF/SWMF/bin/EARTH_TRAJ.exe  
+
+three coordinates of the Earth position in HGI will be printed at your screen 
+(the very last three reals), already normalized by R_sun. Put these three 
+coordinates to the current file as
+	      
+FirstNumber          xPos(Earth)
+SeconndNumber        yPos(Earth)
+ThirdNumber          zPos(Earth)
+
+----------------------------------------
+ 
+To download the orbit for STEREO A use
+
+wget ftp://mussel.srl.caltech.edu/pub/stereo/Position/ahead//position_ahead_2011_HCI.txt
+
+For STEREO B use
+
+wget ftp://mussel.srl.caltech.edu/pub/stereo/Position/behind/position_behind_2011_HCI.txt
+
+these commands are for the year 2011, the change for another year (late 2006 and later)
+is evident. 
+
+The positions of the satellite (three last numbers in each line) should be found for the 
+day-of-year as determined from Month/day (year, if it is a leap one) and the second-of-day
+which is hour*3600+minute*60+second. The flag (0/1) going after year/day/second should be ignored
+
+The three coordinares in km should be normalized by R_sun.
+To achieve this, the data should be divided by 696000 (km)
+
+The obtained numbers should be put into a current file as
+
+1. For Stereo A ("ahead")
+
+FirstNumber(DividedBy696000)          xPos(STEREO A)
+SeconndNumber(DividedBy696000)        yPos(STEREO A)     
+ThirdNumber(DividedBy696000)          zPos(STEREO A)
+
+2. For Stereo B ("behind")
+
+FirstNumber(DividedBy696000)          xPos(STEREO B)
+SeconndNumber(DividedBy696000)        yPos(STEREO B)     
+ThirdNumber(DividedBy696000)          zPos(STEREO B)
+
+
+The current file is for 2011/03/07 UT20:00 
+(year=2011, day-of-year=66, second-of-day=72000)
+It is assumed that SC component simulates the
+close proximity of the Sun (if LC does, you should
+modify the file names). 
+
 
 #LOOKUPTABLE
-AiaXrt                  NameTable
-load                    TypeAction
-SC/Param/los_tbl.dat       NameFile
-ascii                   TypeFIle
+AiaXrt				NameTable
+load                    	TypeAction
+SC/Param/los_tbl.dat		NameFile
+ascii                   	TypeFIle
 
 #LOOKUPTABLE
-EuviA                   NameTable
-load                    TypeAction
-SC/Param/ResEuviA.dat      NameFile
-ascii                   TypeFile
+EuviA				NameTable
+load                    	TypeAction
+SC/Param/los_EuviA.dat      	NameFile
+ascii                   	TypeFile
 
 #LOOKUPTABLE
-EuviB                   NameTable
-load                    TypeAction
-SC/Param/ResEuviB.dat      NameFIle
-ascii                   TypeFIle
-
-
+EuviB                   	NameTable
+load                    	TypeAction
+SC/Param/los_EuviB.dat		NameFIle
+ascii                   	TypeFIle
 
 #SAVEPLOT
-3                       nPlotFiles
-los tbl tec		StringPlot
-40000			DnSavePlot
--1			DtSavePlot
- -4.21                  xPos(Earth)
-211.56                  yPos(Earth)
--26.91                  zPos(Earth)
-0.			OffsetAngle
-1.98			rSizeImage
-0.			xOffset
-0.			yOffset
-0.			rOccult
-0.			MuLimbDarkening
-512			nPix
-AiaXrt                  NameLosTable
-los tbl tec		StringPlot
-40000			DnSavePlot
--1			DtSavePlot
--205.89                 xPos(STEREO A)
-   7.66                 yPos(STEREO A)
-  -0.68                 zPos(STEREO A)
-0.			OffsetAngle
-1.98			rSizeImage
-0.			xOffset
-0.			yOffset
-0.			rOccult
-0.			MuLimbDarkening
-512			nPix
-EuviA                   NameLosTable
-los tbl tec		StringPlot
-40000			DnSavePlot
--1			DtSavePlot
- 217.53                 xPos(Stereo B)
- -17.59                 yPos(Stereo B)
-   3.36                 zPos(Stereo B)  
-0.			OffsetAngle
-1.98			rSizeImage
-0.			xOffset
-0.			yOffset
-0.			rOccult
-0.			MuLimbDarkening
-512			nPix
-EuviB                   NameLosTable
-
-#END
+3                       	nPlotFiles
+los tbl tec			StringPlot
+40000				DnSavePlot
+-1				DtSavePlot
+ -4.21                  	xPos(Earth)
+211.56                  	yPos(Earth)
+-26.91                  	zPos(Earth)
+0.				OffsetAngle
+1.98				rSizeImage
+0.				xOffset
+0.				yOffset
+0.				rOccult
+0.				MuLimbDarkening
+512				nPix
+AiaXrt                  	NameLosTable
+los tbl tec			StringPlot
+40000				DnSavePlot
+-1				DtSavePlot
+-205.89                 	xPos(STEREO A)
+   7.66                 	yPos(STEREO A)
+  -0.68                 	zPos(STEREO A)
+0.				OffsetAngle
+1.98				rSizeImage
+0.				xOffset
+0.				yOffset
+0.				rOccult
+0.				MuLimbDarkening
+512				nPix
+EuviA                   	NameLosTable
+los tbl tec			StringPlot
+40000				DnSavePlot
+-1				DtSavePlot
+ 217.53                 	xPos(Stereo B)
+ -17.59                 	yPos(Stereo B)
+   3.36                 	zPos(Stereo B)  
+0.				OffsetAngle
+1.98				rSizeImage
+0.				xOffset
+0.				yOffset
+0.				rOccult
+0.				MuLimbDarkening
+512				nPix
+EuviB                   	NameLosTable
