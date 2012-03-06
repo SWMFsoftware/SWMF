@@ -3,15 +3,28 @@ subroutine calc_timestep
   use ModProcMH
   use ModMain
   use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
-       DoFixAxis, rFixAxis, r2FixAxis, State_VGB, Rho_, FluxType, NormB0_CB
+       DoFixAxis, rFixAxis, r2FixAxis, State_VGB, Rho_, FluxType, NormB0_CB, &
+       UseElectronPressure
   use ModGeometry, ONLY: true_cell, true_BLK, vInv_CB, rMin_BLK, TypeGeometry
   use ModGeometry, ONLY: y_BLK, TypeGeometry
   use ModParallel, ONLY: NeiLEast, NeiLBot, NeiLTop, NOBLK
+  use ModCoronalHeating, ONLY: UseCoronalHeating, &
+       get_block_heating, CoronalHeating_C
+  use ModRadiativeCooling, ONLY: UseRadCooling, &
+       get_radiative_cooling, add_chromosphere_heating
+  use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
+       UseChromosphereHeating
+  use ModPhysics, ONLY: inv_gm1
+  use ModWaves, ONLY: UseAlfvenWaves
   implicit none
 
   logical :: DoTest, DoTestMe
   integer :: i, j, k, Di, Dk, iBlock
   real:: Vdt
+
+  ! Variables for time step control due to loss terms
+  real :: TeSi_C(nI,nJ,nK)
+  real :: Einternal, Source, DtInv, Vdt_Source
   !--------------------------------------------------------------------------
   iBlock = GlobalBlk
 
@@ -20,6 +33,54 @@ subroutine calc_timestep
   else
      DoTest=.false.; DoTestMe=.false.
   endif
+
+  ! Time step restriction due to loss terms (only explicit source terms)
+  if(.not.UseAlfvenWaves .and. UseRadCooling)then
+     if(UseElectronPressure) call stop_mpi( &
+          'Radiative cooling time step control for single temperature only')
+
+     call get_tesi_c(iBlock, TeSi_C)
+
+     if(UseCoronalHeating)then
+        call get_block_heating(iBlock)
+        ! ?????? is this really used ?????
+        if(UseChromosphereHeating .and. DoExtendTransitionRegion)then
+           call add_chromosphere_heating(TeSi_C, iBlock)
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              CoronalHeating_C(i,j,k) = &
+                   CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
+           end do; end do; end do
+        end if
+     end if
+
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
+
+        call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), Source)
+
+        if(UseCoronalHeating) Source = Source + CoronalHeating_C(i,j,k)
+        
+        ! Only limit for losses
+        Source = min(Source, 0.0)
+
+        ! Simplistic time step control for large source terms.
+        DtInv  = abs(Source/max(Einternal,1e-30))
+
+        Vdt_Source = 2.0*DtInv/vInv_CB(i,j,k,iBlock)
+
+        Vdt = min(VdtFace_x(i,j,k), VdtFace_y(i,j,k), VdtFace_z(i,j,k))
+
+        if(Vdt_Source > Vdt)then
+           ! The following prevents the pressure from becoming negative
+           ! due to too large loss terms. This should be cell-centered,
+           ! since the source are, but we add
+           ! them for now to the left face of VdtFace.
+           VdtFace_x(i,j,k) = max(VdtFace_x(i,j,k), Vdt_Source)
+           VdtFace_y(i,j,k) = max(VdtFace_y(i,j,k), Vdt_Source)
+           VdtFace_z(i,j,k) = max(VdtFace_z(i,j,k), Vdt_Source)
+        end if
+     end do; end do; end do
+  end if
 
   ! Calculate time step limit based on maximum speeds across 6 faces
   do k=1,nK; do j=1,nJ; do i=1,nI
