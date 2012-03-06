@@ -22,7 +22,7 @@ the SWMF and create the user manual please follow the instructions below.
 
 # Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
 # are in the CRASH_data repository. On many machines at the UofM this is 
-# alread available through a shared disk as
+# already available through a shared disk as
 
 /csem1/CRASH_data
 
@@ -86,7 +86,7 @@ Config.pl -install -compiler=mpxlf90,mpxlc
 
 # For machines with no MPI library, use
 
-Config.pl -instal -nompi -compiler=....
+Config.pl -install -nompi -compiler=....
 
 # This will only allow serial execution, of course.
 
