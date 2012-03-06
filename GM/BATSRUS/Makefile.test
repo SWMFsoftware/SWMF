@@ -108,7 +108,8 @@ test_fluxemergence_compile:
 	make
 	$(MAKE) PIDL
 
-test_fluxemergence_rundir: test_rundir
+test_fluxemergence_rundir:
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=EE STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp ../data/FLUXEMERGENCE/*.dat* .
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/Grid.* .
 	cd ${TESTDIR}; gunzip *.gz
@@ -129,7 +130,8 @@ test_fluxemergence_run:
 test_fluxemergence_check:	
 	${SCRIPTDIR}/DiffNum.pl -t \
 		Param/FLUXEMERGENCE/TestOutput/log_fluxemergence.log \
-		${TESTDIR}/RESULTS/run_restart/GM/log_n000011.log > test_fluxemergence.diff
+		${TESTDIR}/RESULTS/run_restart/EE/log_n000011.log \
+		> test_fluxemergence.diff
 	ls -l test_fluxemergence.diff
 
 ### SHOCK TUBE TEST ###

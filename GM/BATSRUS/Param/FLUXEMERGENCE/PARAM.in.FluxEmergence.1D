@@ -1,8 +1,8 @@
 #ECHO
 T			DoEcho
 
-INCLUDE
-RESTART.in
+#COMPONENT
+EE			NameComp
 
 #PROGRESS
 10                      DnProgressShort

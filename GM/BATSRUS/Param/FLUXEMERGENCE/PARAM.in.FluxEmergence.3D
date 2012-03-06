@@ -1,6 +1,9 @@
 #ECHO
 T			DoEcho
 
+#COMPONENT
+EE			NameComp
+
 #PROGRESS
 10                      DnProgressShort
 100                     DnProgressLong
