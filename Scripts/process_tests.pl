@@ -4,13 +4,11 @@ use strict;
 my %WeightMachine = (
     "pleiades"     => "1.0",
     "gfortran"     => "1.0",
-    "grendel"      => "0.5",
     "grid"         => "1.0",
     "mesh"         => "1.0",
-    "nyx"          => "0.2",
+    "nyx"          => "1.0",
     "nyx_pgf90"    => "1.0",
     "nyx_ifort"    => "0.5",
-    "xena"         => "0.1",
     );
 
 my @ScoreTypes = ("ALL", "CCHM", "CWMM", "CRASH");
