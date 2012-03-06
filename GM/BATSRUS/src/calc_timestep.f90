@@ -54,14 +54,14 @@ subroutine calc_timestep
      end if
 
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
-
         call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), Source)
 
         if(UseCoronalHeating) Source = Source + CoronalHeating_C(i,j,k)
         
         ! Only limit for losses
-        Source = min(Source, 0.0)
+        if(Source >= 0.0) CYCLE
+
+        Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
 
         ! Simplistic time step control for large source terms.
         DtInv  = abs(Source/max(Einternal,1e-30))
