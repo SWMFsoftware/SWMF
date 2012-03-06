@@ -18,6 +18,7 @@ my %WeightTest = (
 
     "CCHM:test2_sc"                       => "1.0",
     "CCHM:test2_ih"                       => "1.0",
+    "CCHM:test5_ee"                       => "1.0",
     "CCHM:test7_ih"                       => "1.0",
     "CCHM:test7_oh"                       => "1.0",
     "CCHM:GM/BATSRUS/test_corona"         => "1.0",
