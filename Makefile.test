@@ -38,6 +38,7 @@ test:
 	-@(${MAKE} test_lc)
 	-@(${MAKE} test_pw)
 	-@(${MAKE} test_rb)
+	-@(${MAKE} test_ps)
 	-@(${MAKE} test_esmf)
 	-@(${MAKE} test1)
 	-@(${MAKE} test2)
@@ -147,7 +148,7 @@ test_ps_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test_ps_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8 \
 		${TESTDIR}/PS/Output/a1001_dgcpm_dynamic_00003.dat \
 		${PSDIR}/Output/a1001_dgcpm_dynamic_00003.ref \
 		> test_ps.diff)
