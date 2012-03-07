@@ -3,6 +3,7 @@ SHELL =/bin/sh
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
+include Makefile.DEPEND
 
 #			
 #	Menu of make options
@@ -17,11 +18,10 @@ help:
 	@echo '    help         (Makefile option list)'
 	@echo '    clean        (rm -f *~ *.o *.kmo *.mod *.T *.lst core)'
 	@echo '    distclean    (make clean; rm -f Makefile.DEPEND)'
-	@echo '    backup       (tar -cf IONO.`date +%m_%d_%y_%H%M.tar` ...)'
 	@echo ' '
 
 
-MODULES = \
+OBJECTS = \
     ModSizeDGCPM.o\
     ModConstants.o\
     ModMainDGCPM.o\
@@ -30,9 +30,7 @@ MODULES = \
     ModTimeDGCPM.o\
     ModCoupleDGCPM.o\
     ModFunctionsDGCPM.o\
-    ModIonoDGCPM.o
-
-OBJECTS = \
+    ModIonoDGCPM.o\
     dgcpm_setup.o\
     dgcpm_coefficients.o\
     dgcpm_output.o\
@@ -49,33 +47,30 @@ OBJECTS = \
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR} -I${DATAREADINDICESDIR}
 
-#DEPEND:
-#	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES} ${OBJECTS}
+DEPEND:
+	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
 
 MY_LIB = ${LIBDIR}/libPS.a
 
-LIB:	
+LIB:	DEPEND
 	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}:	${MODULES} ${OBJECTS}
+${MY_LIB}:	${OBJECTS}
 	rm -f ${MY_LIB}
-	${AR} ${MY_LIB} ${MODULES} ${OBJECTS}
+	${AR} ${MY_LIB} ${OBJECTS}
 
 #
-#	Stand-alone executables
+#	Stand-alone executable
 #
 
-dgcpm:
+dgcpm: DEPEND
 	make dgcpm.exe
 
-dgcpm010:
-	make dgcpm.exe
-
-dgcpm.exe:	${MODULES} ${OBJECTS_010} dgcpm_main_010.o
-	$(COMPILE.f90) $(LFLAGS) -o dgcpm.exe ${MODULES} ${OBJECTS_010} dgcpm_main_010.o
+dgcpm.exe: ${OBJECTS} dgcpm_main.o
+	$(COMPILE.f90) $(LFLAGS) -o dgcpm.exe ${OBJECTS} dgcpm_main.o
 
 distclean: clean
 	rm -f Makefile.RULES Makefile.DEPEND
