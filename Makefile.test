@@ -441,13 +441,13 @@ test4_check:
 
 ### test5: Eruptive Event generator coupled to the corona ###
 test5:
-	@echo "test5_compile..." > test5.diff
+	@echo "test5_compile..." > test5_ee.diff
 	${MAKE} test5_compile
-	@echo "test_rundir..." >> test5.diff
+	@echo "test_rundir..." >> test5_ee.diff
 	${MAKE} test5_rundir
-	@echo "test5_run..." >> test5.diff
+	@echo "test5_run..." >> test5_ee.diff
 	${MAKE} test5_run
-	@echo "test5_check..." >> test5.diff
+	@echo "test5_check..." >> test5_ee.diff
 	${MAKE} test5_check
 
 test5_compile:
@@ -480,8 +480,8 @@ test5_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b \
 		${TESTDIR}/RESULTS/run_restart/EE/log_n000011.log \
 		output/test5/EE_log_n000011.log \
-		> test5.diff)
-	ls -l test5.diff
+		> test5_ee.diff)
+	ls -l test5_ee.diff
 
 ### Test6: GM+IE+IM=CRCM ###
 
