@@ -984,7 +984,8 @@ c Input: delt in seconds
       real pi, rad, re
       integer i, j
       real fmax, dsat, br, f, tden, tn 
-      real FillDays, MinVolume, MinLocation 
+      real FillDays, MinVolume
+      integer MinLocation 
 
 
       pi = 3.14159          ! rad
