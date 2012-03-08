@@ -1851,12 +1851,11 @@ Default value is ImplCritType='dt'.
 
 The options are
 \begin{verbatim}
-if     (TypeImplCrit =='dt'  ) then blocks with DtBLK .gt. DtFixed
+if     (TypeImplCrit =='dt'  ) then blocks with DtBLK .lt. DtFixed
 elseif (TypeImplCrit =='r'   ) then blocks with rMinBLK .lt. rImplicit
 elseif (TypeImplCrit =='test') then block iBlockTest on processor iProcTest
 \end{verbatim}
-and are handled with local/implicit scheme. 
-Here DtBlock is the time step
+are handled with the implicit scheme. Here DtBlock is the time step
 allowed by the CFL condition for a given block, while rMinBLK is the
 smallest radial distance for all the cells in the block.\\
 
