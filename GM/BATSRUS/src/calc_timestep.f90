@@ -24,7 +24,7 @@ subroutine calc_timestep
 
   ! Variables for time step control due to loss terms
   real :: TeSi_C(nI,nJ,nK)
-  real :: Einternal, Source, DtInv, Vdt_Source
+  real :: Einternal, Source, Dt_loss
   !--------------------------------------------------------------------------
   iBlock = GlobalBlk
 
@@ -34,7 +34,19 @@ subroutine calc_timestep
      DoTest=.false.; DoTestMe=.false.
   endif
 
-  ! Time step restriction due to loss terms (only explicit source terms)
+  ! Calculate time step limit based on maximum speeds across 6 faces
+  do k=1,nK; do j=1,nJ; do i=1,nI
+
+     Vdt = max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))
+     if(nJ > 1) Vdt = Vdt + max(VdtFace_y(i,j,k), VdtFace_y(i,j+1,k))
+     if(nK > 1) Vdt = Vdt + max(VdtFace_z(i,j,k), VdtFace_z(i,j,k+1))
+     time_BLK(i,j,k,iBlock) = 1.0 / (vInv_CB(i,j,k,iBlock)*Vdt)
+
+  end do; end do; end do
+
+
+  ! Time step restriction due to point wise loss terms
+  ! (only explicit source terms)
   if(.not.UseAlfvenWaves .and. UseRadCooling)then
      if(UseElectronPressure) call stop_mpi( &
           'Radiative cooling time step control for single temperature only')
@@ -59,38 +71,16 @@ subroutine calc_timestep
         if(UseCoronalHeating) Source = Source + CoronalHeating_C(i,j,k)
         
         ! Only limit for losses
-        if(Source >= 0.0) CYCLE
+        if(Source >= -1e-30) CYCLE
 
         Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
 
-        ! Simplistic time step control for large source terms.
-        DtInv  = abs(Source/max(Einternal,1e-30))
-
-        Vdt_Source = 2.0*DtInv/vInv_CB(i,j,k,iBlock)
-
-        Vdt = min(VdtFace_x(i,j,k), VdtFace_y(i,j,k), VdtFace_z(i,j,k))
-
-        if(Vdt_Source > Vdt)then
-           ! The following prevents the pressure from becoming negative
-           ! due to too large loss terms. This should be cell-centered,
-           ! since the source are, but we add
-           ! them for now to the left face of VdtFace.
-           VdtFace_x(i,j,k) = max(VdtFace_x(i,j,k), Vdt_Source)
-           VdtFace_y(i,j,k) = max(VdtFace_y(i,j,k), Vdt_Source)
-           VdtFace_z(i,j,k) = max(VdtFace_z(i,j,k), Vdt_Source)
-        end if
+        Dt_loss = 0.5*Einternal/abs(Source)
+        ! The following prevents the pressure from becoming negative
+        ! due to too large loss terms.
+        time_BLK(i,j,k,iBlock) = min(time_BLK(i,j,k,iBlock), Dt_loss)
      end do; end do; end do
   end if
-
-  ! Calculate time step limit based on maximum speeds across 6 faces
-  do k=1,nK; do j=1,nJ; do i=1,nI
-
-     Vdt = max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))
-     if(nJ > 1) Vdt = Vdt + max(VdtFace_y(i,j,k), VdtFace_y(i,j+1,k))
-     if(nK > 1) Vdt = Vdt + max(VdtFace_z(i,j,k), VdtFace_z(i,j,k+1))
-     time_BLK(i,j,k,iBlock) = 1.0 / (vInv_CB(i,j,k,iBlock)*Vdt)
-
-  end do; end do; end do
   
 
   if(DoFixAxis .and. time_accurate)then
