@@ -922,11 +922,12 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB, StateOld_VCB
     use ModMain,       ONLY: UseB0
     use ModNumConst,   ONLY: cTolerance
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, UnitX_
-    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_, WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, By_, Bz_, RhoUx_, RhoUy_, RhoUz_, &
+         WaveFirst_, WaveLast_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -1007,6 +1008,66 @@ contains
                /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
        end do; end do; end do
 
+    case('rhoerr')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = (State_VGB(rho_,i,j,k,iBlock) &
+               -StateOld_VCB(rho_,i,j,k,iBlock))/State_VGB(rho_,i,j,k,iBlock)
+       end do; end do; end do
+
+    case('perr')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = (State_VGB(p_,i,j,k,iBlock) &
+               -StateOld_VCB(p_,i,j,k,iBlock))/State_VGB(p_,i,j,k,iBlock)
+       end do; end do; end do
+
+    case('mxerr')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = (State_VGB(rhoUx_,i,j,k,iBlock) &
+               -StateOld_VCB(rhoUx_,i,j,k,iBlock))/State_VGB(rhoUx_,i,j,k,iBlock)
+       end do; end do; end do
+
+    case('myerr')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = (State_VGB(rhoUy_,i,j,k,iBlock) &
+               -StateOld_VCB(rhoUy_,i,j,k,iBlock))/State_VGB(rhoUy_,i,j,k,iBlock)
+       end do; end do; end do
+
+    case('mzerr')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = (State_VGB(rhoUz_,i,j,k,iBlock) &
+               -StateOld_VCB(rhoUz_,i,j,k,iBlock))/State_VGB(rhoUz_,i,j,k,iBlock)
+       end do; end do; end do
+
+    case('bxerr')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = (State_VGB(bx_,i,j,k,iBlock) &
+               -StateOld_VCB(bx_,i,j,k,iBlock))/State_VGB(bx_,i,j,k,iBlock)
+       end do; end do; end do
+
+    case('byerr')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = (State_VGB(by_,i,j,k,iBlock) &
+               -StateOld_VCB(by_,i,j,k,iBlock))/State_VGB(by_,i,j,k,iBlock)
+       end do; end do; end do
+
+    case('bzerr')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = (State_VGB(bz_,i,j,k,iBlock) &
+               -StateOld_VCB(bz_,i,j,k,iBlock))/State_VGB(bz_,i,j,k,iBlock)
+       end do; end do; end do
+
+    case('i01err')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = (State_VGB(WaveFirst_,i,j,k,iBlock) &
+               -StateOld_VCB(WaveFirst_,i,j,k,iBlock))/State_VGB(WaveFirst_,i,j,k,iBlock)
+       end do; end do; end do
+
+    case('i02err')
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = (State_VGB(WaveLast_,i,j,k,iBlock) &
+               -StateOld_VCB(WaveLast_,i,j,k,iBlock))/State_VGB(WaveLast_,i,j,k,iBlock)
+       end do; end do; end do
+       
     case default
        IsFound = .false.
     end select
