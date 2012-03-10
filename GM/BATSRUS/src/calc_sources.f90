@@ -21,8 +21,8 @@ subroutine calc_sources
   use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
   use ModCovariant,     ONLY: UseCovariant 
   use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
-  use ModCoronalHeating,ONLY: UseCoronalHeating,&
-                              get_block_heating,CoronalHeating_C
+  use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
+       CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC
   use ModRadiativeCooling,ONLY: RadCooling_C,UseRadCooling,&
                               get_radiative_cooling, add_chromosphere_heating
   use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -184,10 +184,12 @@ subroutine calc_sources
      end do; end do; end do
   end if
 
-  if(UseCoronalHeating.and.DoExtendTransitionRegion &
-       .or. UseRadCooling)call get_tesi_c(iBlock, TeSi_C)
+  if(UseCoronalHeating .and. DoExtendTransitionRegion .or. UseRadCooling) &
+       call get_tesi_c(iBlock, TeSi_C)
+
   if(UseCoronalHeating)then
      call get_block_heating(iBlock)
+
      if(UseChromosphereHeating.and. DoExtendTransitionRegion)then
         call add_chromosphere_heating(TeSi_C, iBlock)
         do k=1,nK; do j=1,nJ; do i=1,nI
@@ -195,11 +197,22 @@ subroutine calc_sources
                 CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
         end do; end do; end do
      end if
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
-             CoronalHeating_C(i,j,k)
-        Source_VC(p_,     i,j,k) = Source_VC(p_,     i,j,k) + &
-             CoronalHeating_C(i,j,k) * (g-1.0)
+
+     if(UseAlfvenWaveDissipation)then
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
+                Source_VC(WaveFirst_:WaveLast_,i,j,k) &
+                - WaveDissipation_VC(:,i,j,k)
+        end do; end do; end do
+     else
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
+                CoronalHeating_C(i,j,k)
+        end do; end do; end do
+     end if
+
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + CoronalHeating_C(i,j,k)*gm1
      end do; end do; end do
   end if
 

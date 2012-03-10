@@ -900,6 +900,7 @@ contains
        UseUnsignedFluxModel = .false.
        UseCranmerHeating    = .false.
        UseExponentialHeating= .false.
+       UseAlfvenWaveDissipation = .false.
        select case(TypeCoronalHeating)
        case('F','none')
           UseCoronalHeating = .false.
@@ -914,6 +915,10 @@ contains
           call read_var('HeatNormalization', HeatNormalization)
        case('Cranmer','NonWKB')
           UseCranmerHeating     = .true.
+       case('alfvenwavedissipation')
+          UseAlfvenWaveDissipation = .true.
+          call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
+          call read_var('Crefl', Crefl)
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
@@ -931,14 +936,6 @@ contains
           call read_var('HeatChCgs', HeatChCgs)
           call read_var('DecayLengthCh', DecayLengthCh)
        end if
-
-    case("#ALFVENWAVEDISSIPATION")
-       call read_var('UseAlfvenWaveDissipation', UseAlfvenWaveDissipation)
-       if(UseAlfvenWaveDissipation)then
-          call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-          call read_var('Crefl', Crefl)
-       end if
-
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
             // NameCommand)
