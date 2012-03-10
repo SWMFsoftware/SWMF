@@ -8,14 +8,13 @@ subroutine calc_timestep
   use ModGeometry, ONLY: true_cell, true_BLK, vInv_CB, rMin_BLK, TypeGeometry
   use ModGeometry, ONLY: y_BLK, TypeGeometry
   use ModParallel, ONLY: NeiLEast, NeiLBot, NeiLTop, NOBLK
-  use ModCoronalHeating, ONLY: UseCoronalHeating, &
-       get_block_heating, CoronalHeating_C
+  use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
+       CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC
   use ModRadiativeCooling, ONLY: UseRadCooling, &
        get_radiative_cooling, add_chromosphere_heating
   use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
        UseChromosphereHeating
   use ModPhysics, ONLY: inv_gm1
-  use ModWaves, ONLY: UseAlfvenWaves
   implicit none
 
   logical :: DoTest, DoTestMe
@@ -47,15 +46,16 @@ subroutine calc_timestep
 
   ! Time step restriction due to point wise loss terms
   ! (only explicit source terms)
-  if(.not.UseAlfvenWaves .and. UseRadCooling)then
+  if(UseAlfvenWaveDissipation .or. UseRadCooling)then
      if(UseElectronPressure) call stop_mpi( &
           'Radiative cooling time step control for single temperature only')
 
-     call get_tesi_c(iBlock, TeSi_C)
+     if(UseRadCooling .or. (UseChromosphereHeating .and. &
+          DoExtendTransitionRegion)) call get_tesi_c(iBlock, TeSi_C)
 
      if(UseCoronalHeating)then
         call get_block_heating(iBlock)
-        ! ?????? is this really used ?????
+
         if(UseChromosphereHeating .and. DoExtendTransitionRegion)then
            call add_chromosphere_heating(TeSi_C, iBlock)
            do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -65,21 +65,33 @@ subroutine calc_timestep
         end if
      end if
 
-     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), Source)
+     if(UseAlfvenWaveDissipation)then
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           Dt_loss = 0.5*minval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
+                /WaveDissipation_VC(:,i,j,k))
+           ! The following prevents the wave energies from becoming negative
+           ! due to too large loss terms.
+           time_BLK(i,j,k,iBlock) = min(time_BLK(i,j,k,iBlock), Dt_loss)
+        end do; end do; end do
+     end if
 
-        if(UseCoronalHeating) Source = Source + CoronalHeating_C(i,j,k)
+     if(UseRadCooling)then
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), Source)
+
+           if(UseCoronalHeating) Source = Source + CoronalHeating_C(i,j,k)
         
-        ! Only limit for losses
-        if(Source >= -1e-30) CYCLE
+           ! Only limit for losses
+           if(Source >= -1e-30) CYCLE
 
-        Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
+           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
 
-        Dt_loss = 0.5*Einternal/abs(Source)
-        ! The following prevents the pressure from becoming negative
-        ! due to too large loss terms.
-        time_BLK(i,j,k,iBlock) = min(time_BLK(i,j,k,iBlock), Dt_loss)
-     end do; end do; end do
+           Dt_loss = 0.5*Einternal/abs(Source)
+           ! The following prevents the pressure from becoming negative
+           ! due to too large loss terms.
+           time_BLK(i,j,k,iBlock) = min(time_BLK(i,j,k,iBlock), Dt_loss)
+        end do; end do; end do
+     end if
   end if
   
 
