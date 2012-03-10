@@ -6373,10 +6373,11 @@ Default values are show.
 <command name="CORONALHEATING">
 	<parameter name="TypeCoronalHeating" type="string" case="lower"
 		input="select" >
-		<option name="none"     default="T"/>
-		<option name="exponential"         />
-		<option name="unsignedflux"        />
-		<option name="NonWKB"              />
+		<option name="none"      default="T"/>
+		<option name="exponential"          />
+		<option name="unsignedflux"         />
+		<option name="NonWKB"               />
+		<option name="Alfvenwavedissipation"/>
 	</parameter>
 	<if expr="$TypeCoronalHeating =~ /exponential/">
 		<parameter name="DecayLengthExp" type="real" 
@@ -6390,6 +6391,12 @@ Default values are show.
 		<parameter name="HeatNormalization" type="real" 
 						default="1.0"/>
 	</if>
+	<if expr="$TypeCoronalHeating =~ /alfvenwavedissipation/">
+		<parameter name="LperpTimesSqrtBSi" type="real" 
+						default="7.5E4"/>
+		<parameter name="Crefl" type="real" 
+						default="0.04"/>
+	</if>
 
 #CORONALHEATING
 exponential	TypeCoronalHeating
@@ -6400,6 +6407,12 @@ exponential	TypeCoronalHeating
 unsignedflux	TypeCoronalHeating
 0.0575		DecayLength	  [Rsun] (read for unsignedflux heating only)
 1.0		HeatNormalization [none] (read for unsignedflux heating only)
+
+#CORONALHEATING
+alfvenwavedissipation	TypeCoronalHeating
+7.5E4			LperpTimesSqrtBSi (read for alfvenwavedissipation only)
+0.04			Crefl             (read for alfvenwavedissipation only)
+
 
 If UseCoronalHeating is false, no CoronalHeating is included.
 If UseCoronalHeating is true, then one can select a simple exponential scale 
@@ -6420,6 +6433,9 @@ is used to uniformly multiply the heating rate by this factor (default 1.0).
 
 For TypeCoronalHeating='NonWKB' coronal heating is applied using the wave
 dissapation model of Cranmer 2010. No additional input parameters are needed.
+
+For TypeCoronalHeating='alfvenwavedissipation' coronal heating is applied
+using an anisotropic formulation of the Kolmogorov-type dissipation.
 
 The default is TypeCoronalHeating="none"
 </command>
