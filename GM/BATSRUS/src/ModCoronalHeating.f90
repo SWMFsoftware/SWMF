@@ -868,14 +868,18 @@ module ModCoronalHeating
   ! Normalization constant for Abbett Model
   real :: HeatNormalization = 1.0
 
+  ! Alfven wave dissipation
+  logical :: UseAlfvenWaveDissipation = .false.
+  real :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
+  real :: LperpTimesSqrtB
+  real :: Crefl = 0.04
 
-  
   ! long scale height heating (Ch = Coronal Hole)
   logical :: DoChHeat = .false.
   real :: HeatChCgs = 5.0e-7
   real :: DecayLengthCh = 0.7
   
-  !Arrays for the calcelated heat function and dissipated wave energy
+  !Arrays for the calculated heat function and dissipated wave energy
   real :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
 
@@ -927,24 +931,36 @@ contains
           call read_var('HeatChCgs', HeatChCgs)
           call read_var('DecayLengthCh', DecayLengthCh)
        end if
+
+    case("#ALFVENWAVEDISSIPATION")
+       call read_var('UseAlfvenWaveDissipation', UseAlfvenWaveDissipation)
+       if(UseAlfvenWaveDissipation)then
+          call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
+          call read_var('Crefl', Crefl)
+       end if
+
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
             // NameCommand)
     end select
 
   end subroutine read_corona_heating
-  !=========================================================================
+  !============================================================================
   subroutine init_coronal_heating
-    use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_
+    use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_, UnitB_, UnitX_
     use ModAlfvenWaveHeating, ONLY: set_adiabatic_law_4_waves
 
-    if(.not.DoInit)return
+    !--------------------------------------------------------------------------
+    if(.not.DoInit) RETURN
     DoInit = .false.
 
     if(UseExponentialHeating)then
         HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     end if
+
+    if(UseAlfvenWaveDissipation) LperpTimesSqrtB = LperpTimesSqrtBSi &
+         *Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
 
     call set_adiabatic_law_4_waves
 
@@ -981,7 +997,7 @@ contains
     real :: FractionB, Bcell
 
     real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
-    
+    real :: WaveDissipation_V(WaveFirst_:WaveLast_)
     !--------------------------------------------------------------------------
     
     if(UseB0)then
@@ -990,7 +1006,12 @@ contains
        B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
     end if
 
-    if(UseUnsignedFluxModel)then
+    if(UseAlfvenWaveDissipation)then
+
+       call calc_alfven_wave_dissipation(i, j, k, iBlock, &
+            WaveDissipation_V, CoronalHeating)
+
+    elseif(UseUnsignedFluxModel)then
        
        call get_coronal_heating(i, j, k, iBlock, CoronalHeating)
        CoronalHeating = CoronalHeating * HeatNormalization
@@ -1072,7 +1093,7 @@ contains
     endif
                        
   end subroutine get_cell_heating
-  !===========================
+  !============================================================================
   
   subroutine get_block_heating(iBlock)
 
@@ -1105,11 +1126,16 @@ contains
     real :: FractionB, Bcell
 
     real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
-    
     !--------------------------------------------------------------------------
-    
 
-    if(UseUnsignedFluxModel)then
+    if(UseAlfvenWaveDissipation)then
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call calc_alfven_wave_dissipation(i, j, k, iBlock, &
+               WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k))
+       end do; end do; end do
+
+    elseif(UseUnsignedFluxModel)then
 
        do k=1,nK;do j=1,nJ; do i=1,nI
        
@@ -1220,6 +1246,40 @@ contains
     endif
     
   end subroutine get_block_heating
-  !============================================================================!
+  !============================================================================
+
+  subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, WaveDissipation_V, &
+       CoronalHeating)
+
+    use ModAdvance, ONLY: State_VGB, B0_DGB
+    use ModMain, ONLY: UseB0
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(out) :: WaveDissipation_V(WaveFirst_:WaveLast_),CoronalHeating
+
+    real :: EwavePlus, EwaveMinus, DissipationRate, FullB_D(3), FullB
+    !--------------------------------------------------------------------------
+
+    if(UseB0)then
+       FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    else
+       FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    end if
+    FullB = sqrt(sum(FullB_D**2))
+
+    EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+    EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+
+    DissipationRate = (Crefl*sqrt(max(EwavePlus,EwaveMinus)) &
+         + sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
+         *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
+
+    WaveDissipation_V = DissipationRate &
+         *State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+
+    CoronalHeating = sum(WaveDissipation_V(:))
+
+  end subroutine calc_alfven_wave_dissipation
   
 end module ModCoronalHeating
