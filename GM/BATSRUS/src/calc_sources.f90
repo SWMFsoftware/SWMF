@@ -203,16 +203,15 @@ subroutine calc_sources
            Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                 Source_VC(WaveFirst_:WaveLast_,i,j,k) &
                 - WaveDissipation_VC(:,i,j,k)
-        end do; end do; end do
-     else
-        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
-                CoronalHeating_C(i,j,k)
+           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                - sum(WaveDissipation_VC(:,i,j,k))
         end do; end do; end do
      end if
 
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + CoronalHeating_C(i,j,k)*gm1
+        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+             + CoronalHeating_C(i,j,k)
      end do; end do; end do
   end if
 
