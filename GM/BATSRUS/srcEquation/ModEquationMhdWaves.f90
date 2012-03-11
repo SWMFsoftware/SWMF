@@ -20,7 +20,7 @@ module ModVarIndexes
   integer, private :: iWave
 
   ! Number of frequency bins in spectrum
-  integer, parameter :: nWave =1
+  integer, parameter :: nWave = 2
   integer, parameter :: nVar = 8 + nWave
   
   ! Array of strings for plotting
