@@ -52,112 +52,104 @@ subroutine PS_set_param(CompInfo, TypeAction)
   end select
 
 contains
-    subroutine read_param
-
-  use ModReadParam
-  use ModUtilities, Only: fix_dir_name, check_dir, lower_case
-
-  ! The name of the command
-  character (len=100) :: NameCommand
-
-  ! Read parameters
-  logical :: DoEcho=.false., UseStrict=.true.
-
-  ! Plot file parameters
-  integer :: iFile, i, iError, iDebugProc
-  character (len=50) :: plot_string
-  character (len=100) :: imffilename, kpfilename
-  character (len=100), dimension(100) :: cTempLines
-  real :: tmax
- 
-  !----------------------------------------------------------------------------
-  select case(TypeAction)
-  case('CHECK')
-    ! We should check and correct parameters here
-    if(iProc==0)write(*,*) NameSub,': CHECK iSession =',i_session_read()
-    RETURN
-
-  case('READ')
-    if(iProc==0)write(*,*) NameSub,': READ iSession =',i_session_read(),&
-        ' iLine=',i_line_read(),' nLine =',n_line_read()
+  subroutine read_param
+    
+    use ModReadParam
+    use ModUtilities, Only: fix_dir_name, check_dir, lower_case
+    ! The name of the command
+    character (len=100) :: NameCommand
+    
+    ! Read parameters
+    logical :: DoEcho=.false., UseStrict=.true.
+    
+    ! Plot file parameters
+    integer :: iFile, i, iError, iDebugProc
+    character (len=50) :: plot_string
+    character (len=100) :: imffilename, kpfilename
+    character (len=100), dimension(100) :: cTempLines
+    real :: tmax
+    
+    !-------------------------------------------------------------------------
+    select case(TypeAction)
+    case('CHECK')
+       ! We should check and correct parameters here
+       if(iProc==0)write(*,*) NameSub,': CHECK iSession =',i_session_read()
+       RETURN
+       
+    case('READ')
+       if(iProc==0)write(*,*) NameSub,': READ iSession =',i_session_read(),&
+            ' iLine=',i_line_read(),' nLine =',n_line_read()
     end select
-
+    
     ! Read Input Data from Text via ModReadParam
-      do
+    do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
-
-        select case(NameCommand)
-        case("#TIMESTEP")
-           call read_var('DtStep', DT)
-        case("#TIMING")
-            call read_var('DtStep',DT)
-            call read_var('TMAX', Tmax)
-        case("#KP")
-            call read_var('IKP',IKP)
-            if (ikp.eq.0) then
-                call read_var('KP',KP)
-            else if (ikp.eq.6) then
-                cTempLines(1) = '#NGDC_INDICES'
-                call read_var('kpFileName', kpFileName)
-                cTempLines(2) = kpFileName
-                cTempLines(3) = " "
-                cTempLines(4) = "#END"
-                
-                call IO_set_Inputs(cTempLines)
-                call read_NGDC_Indices(iError)
-
-                if (iError /= 0) then
-                    write(*,*) "Read indices was NOT successful (NGDC KP File)"
-                    EXIT
-                endif
-            endif
-
-        case("#Name")
-           call read_var('Name', Name)
-        case("#SHUE")
-           call read_var('UseShue', UseShue)
-        case("#OUTPUT")
-            call read_var('WriteStatic',WriteStatic)
-            call read_var('WriteDynamic',WriteDynamic)
-            call read_var('OutputInterval',TINT)
-            call read_var('OutputType', OutputType)
-            call read_var('MagneticType', MagneticType)
-        case("#RESTART")
-            call read_var('WriteRestart', WriteRestart)
-        case("#LOG")
-            call read_var('WriteLogFile', WriteLogFile)
-        case("#FILLING")
-            call read_var('EmptyPeriodClosed', EmptyPeriodClosed)
-            call read_var('EmptyPeriodOpen', EmptyPeriodOpen)
-            call read_var('FluxMax', FluxMax)
-        case("#TESTS")
-            call read_var('TestFill', TestFill)
-      case default
+       
+       select case(NameCommand)
+       case("#TIMESTEP")
+          call read_var('DtStep', DT)
+       case("#TIMING")
+          call read_var('DtStep',DT)
+          call read_var('TMAX', Tmax)
+       case("#KP")
+          call read_var('IKP',IKP)
+          if (ikp.eq.0) then
+             call read_var('KP',KP)
+          else if (ikp.eq.6) then
+             cTempLines(1) = '#NGDC_INDICES'
+             call read_var('kpFileName', kpFileName)
+             cTempLines(2) = kpFileName
+             cTempLines(3) = " "
+             cTempLines(4) = "#END"
+             
+             call IO_set_Inputs(cTempLines)
+             call read_NGDC_Indices(iError)
+             
+             if (iError /= 0) then
+                write(*,*) "Read indices was NOT successful (NGDC KP File)"
+                EXIT
+             endif
+          endif
+          
+       case("#NAME")
+          call read_var('Name', Name)
+       case("#SHUE")
+          call read_var('UseShue', UseShue)
+       case("#OUTPUT")
+          call read_var('WriteStatic',WriteStatic)
+          call read_var('WriteDynamic',WriteDynamic)
+          call read_var('OutputInterval',TINT)
+          call read_var('OutputType', OutputType)
+          call read_var('MagneticType', MagneticType)
+       case("#RESTART")
+          call read_var('WriteRestart', WriteRestart)
+       case("#LOG")
+          call read_var('WriteLogFile', WriteLogFile)
+       case("#FILLING")
+          call read_var('EmptyPeriodClosed', EmptyPeriodClosed)
+          call read_var('EmptyPeriodOpen', EmptyPeriodOpen)
+          call read_var('FluxMax', FluxMax)
+       case("#TESTS")
+          call read_var('TestFill', TestFill)
+       case default
           if(iProc==0) then
              write(*,'(a,i4,a)')NameSub//' IE_ERROR at line ',i_line_read(),&
                   ' invalid command '//trim(NameCommand)
              if(UseStrict)call CON_stop('Correct PARAM.in!')
           end if
        end select
-end do
-
-
-  CLOSE(1)
-
-  DT = DT * 2.
-!  Tmax = tSimulationMax
-
-  NSTEP=NINT(TMAX/DT/2.)                 ! time splitting
-
-  ithermfirst=1		! So we do the setup routines in THERMAL
-
- LAMGAM=2.       ! Empirical E-field shielding parameter
-
-  RETURN
-
-end subroutine read_param
-
+    end do
+    
+    DT = DT * 2.
+    !  Tmax = tSimulationMax
+    
+    ithermfirst=1		! So we do the setup routines in THERMAL
+    
+    LAMGAM=2.       ! Empirical E-field shielding parameter
+    
+  end subroutine read_param
+  
 end subroutine PS_set_param
 
 !=============================================================================
@@ -332,6 +324,9 @@ subroutine PS_init_session(iSession, tSimulation)
 
     if (debug .gt. 0) write(*,*) "PS_init_session"
 
+     ! Use the SWMF time max, set max number of steps.
+     Tmax = tSimulationMax
+     NSTEP=NINT(TMAX/DT/2.)
      ! Setup Time variables
      time = tSimulation
      t=time
@@ -350,10 +345,6 @@ subroutine PS_init_session(iSession, tSimulation)
      call thermal   ! setup only
 
      if (TestFill.gt.0) call TestFilling(1.0)
-
-     ! Use the SWMF time max, set max number of steps.
-     Tmax = tSimulationMax
-     NSTEP=NINT(TMAX/DT/2.)
 
      ! Finish Initialization     
      IsUninitialized = .false.
@@ -454,7 +445,7 @@ subroutine PS_run(tSimulation,tSimulationLimit)
   call getkpa(i3)
 
 !  if (debug .gt. 0) write(*,*) "magconv"
-  if (.not.(isCoupled)) call magconv(i3)
+  if (.not.(isCoupled)) call magconv()
 !  if (debug .gt. 0) write(*,*) "thermal"
   call thermal
 
