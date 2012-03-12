@@ -46,7 +46,6 @@ Module ModMainDGCPM
   real :: mgridhalf(nthetacells,nphicells)
   real delr, delphi
   real :: CrossPotential=0.0
-  real :: PotentialRatio=0.0
   
   ! Test Variables for WEIMER Errors.    
   real test1_den, test1_pot, test1_er, test1_ep, test1_vr, test1_vp

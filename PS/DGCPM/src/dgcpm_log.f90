@@ -1,7 +1,7 @@
 
 subroutine logfileDGCPM(dir, i3)
 
-  use ModMainDGCPM, ONLY: mgridpot,CrossPotential, PotentialRatio, rkph
+  use ModMainDGCPM, ONLY: mgridpot,CrossPotential, rkph
   use ModCoupleDGCPM, ONLY: IsCoupled
   use ModTimeDGCPM, ONLY: StartTime, CurrentTime
   use ModProcPS,   ONLY : iProc
@@ -35,9 +35,9 @@ subroutine logfileDGCPM(dir, i3)
              file=trim(dir)//"PS.log",status="old", position="append")
      endif
 
-     write(UnitTmp_,'(i8,f20.0,f8.2,f8.2)') &
+     write(UnitTmp_,'(i8,f20.0,f8.2)') &
           i3, CurrentTime, &
-           CrossPotential, PotentialRatio
+           CrossPotential
      close(UnitTmp_)
 
   endif
