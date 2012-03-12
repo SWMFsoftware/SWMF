@@ -10,8 +10,8 @@ subroutine logfileDGCPM(dir, i3)
   implicit none
 
   character (len=*), intent(in) :: dir
+  integer, intent(in) ::  i3
   logical :: IsFirstTime = .true.
-  integer i3
   real kp
   !----------------------------------------------------------------------------
 

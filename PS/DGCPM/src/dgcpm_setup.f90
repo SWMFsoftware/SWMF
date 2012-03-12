@@ -26,6 +26,7 @@
 !! SUBROUTINE GETKPA(i3,nst,i2,nkp)
 SUBROUTINE GETKPA(i3)
 
+  use ModIoUnit,  ONLY: UnitTMP_
   use ModSizeDGCPM
   use ModIoDGCPM
   use ModMainDGCPM
@@ -34,11 +35,15 @@ SUBROUTINE GETKPA(i3)
 
   implicit none
 
-  integer i3,i4,JKP,ii, i, ierror
-  real KPN,KPO,lambdae,KPtab(48),tol,RSUN,KPP,XKP
-  real kpt, dut, dkp
-  save tol,i4,XKP,KPP,KPN,KPO
-  character*80 header
+  integer, intent(in) :: i3
+
+  integer, save :: i4
+  real,    save :: tol=0.0, XKP, KPP, KPN, KPO
+
+  integer :: JKP,ii, i, ierror
+  real :: lambdae, KPtab(48), RSUN
+  real :: kpt, dut, dkp
+  character(len=80) ::  header
 
   ! Setup Variables
   KPT=-1./3./3600. ! model rate of decay of Kp in s-1
@@ -53,15 +58,14 @@ SUBROUTINE GETKPA(i3)
        0.333,0.333,0.333,0.667,1.333,2.000,2.000,1.000/ 
 
   ! Read KP file if Uninitialized
-
   IF (IsUninitialized) THEN
     If ((IKP.EQ.3).OR.(IKP.EQ.4).OR.(IKP.EQ.5)) THEN
-     OPEN(1,FILE=cInputDir//NAME//'_kp.in',STATUS='OLD') 
-     read(1,*) Header
+     OPEN(UnitTMP_,FILE=cInputDir//NAME//'_kp.in',STATUS='OLD') 
+     read(UnitTMP_,*) Header
      DO I=1,NSTEP/NKP+2
-        READ(1,*) DAYR(I),DUT,RKPH(I),F107R(I),APR(I),RSUNR(I)
+        READ(UnitTMP_,*) DAYR(I),DUT,RKPH(I),F107R(I),APR(I),RSUNR(I)
      ENDDO
-     CLOSE(1)
+     CLOSE(UnitTMP_)
     ENDIF
   ELSE 
   
@@ -74,17 +78,17 @@ SUBROUTINE GETKPA(i3)
      KP=KPtab(JKP) 
   
   ELSE IF (IKP.EQ.3 .OR. IKP.EQ.4) THEN	! IKP=3 Read from file
-     IF (MOD(I3-1,NKP).EQ.0 .OR. I3.EQ.NST) THEN
-        KPP=RKPH(MAX0(1,I2-1))
-        KPO=RKPH(I2)
-        KPN=RKPH(MIN0(NSTEP/NKP+2,I2+1))
-        XKP=.125*(10.*KPO-KPP-KPN)
-        AP=APR(I2)
-        F107=F107R(I2)
-        RSUN=RSUNR(I2)
-        I2=I2+1
-        KPN=RKPH(I2)	
-     END IF
+     !IF (MOD(I3-1,NKP).EQ.0 .OR. I3.EQ.NST) THEN
+     KPP=RKPH(MAX0(1,I2-1))
+     KPO=RKPH(I2)
+     KPN=RKPH(MIN0(NSTEP/NKP+2,I2+1))
+     XKP=.125*(10.*KPO-KPP-KPN)
+     AP=APR(I2)
+     F107=F107R(I2)
+     RSUN=RSUNR(I2)
+     I2=I2+1
+     KPN=RKPH(I2)	
+     !END IF
      IF (T-TOL.LT.3600.) THEN
         KP=.5*(KPP+KPO)+(XKP-.5*(KPP+KPO))*(T-TOL)/3600.
      ELSE IF (T-TOL.LT.7200.) THEN
@@ -101,7 +105,7 @@ SUBROUTINE GETKPA(i3)
   
   ELSE IF (IKP.EQ.6) THEN ! IKP=6 Use NGDC Index File
     call get_kp(CurrentTime, KP, iError)
-    write(*,*) KP
+    write(*,*) 'DGCPM: Kp = ', KP
     if (iError /= 0) then
            write(*,*) "Can not find IMF Bz."
             kp=0.
@@ -256,8 +260,7 @@ SUBROUTINE THERMAL
     
      call initmain()
      call getgrid(vthetacells,nthetacells,vphicells,nphicells)
-     call getxydipole(nthetacells,nphicells,vthetacells,vphicells, &
-          mgridx,mgridy,mgridoc)
+     call getxydipole()
      do i=1,nthetacells
         vlzcells(i)=1./sin(dtor*vthetacells(i))**2.
      enddo

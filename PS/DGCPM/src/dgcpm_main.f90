@@ -68,9 +68,7 @@ program dgcpm
 
      call getkpa(i3,nst,i2,nkp)
 
-     write(*,*) kp
-
-     call magconv(i3,nst)
+     call magconv()
      call thermal
 
      if (i3.eq.nst) call wresult(1)
