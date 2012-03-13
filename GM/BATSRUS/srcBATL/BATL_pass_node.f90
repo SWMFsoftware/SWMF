@@ -1,6 +1,11 @@
 !^CFG COPYRIGHT UM
 module BATL_pass_node
 
+  use BATL_geometry, ONLY: IsCartesian, IsRzGeometry, IsRoundCube, &
+       IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
+  use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
+
+
   ! Possible improvements:
   ! (1) Instead of sending the receiving block number
   !     and the 3*nDim range limits and strides, we can send only a tag.
@@ -37,6 +42,8 @@ contains
          iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, iNode_B, &
          iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_
 
+    use BATL_grid, ONLY: CoordMin_DB, CoordMax_DB
+
     use ModMpi 
 
     use ModUtilities, ONLY: lower_case 
@@ -62,6 +69,9 @@ contains
     integer :: iDir, jDir, kDir
     integer :: iNodeRecv, iNodeSend
     integer :: iBlockRecv, iProcRecv, iBlockSend, iProcSend, DiLevel
+
+    ! Is the sending node next to the symmetry axis?
+    logical :: IsAxisNode
 
     ! Fast lookup tables for index ranges per dimension
     integer, parameter:: Min_=1, Max_=2
@@ -174,16 +184,34 @@ contains
 
           iNodeSend = iNode_B(iBlockSend)
 
+          IsAxisNode = .false.
+
           do kDir = -1, 1
              ! Do not message pass in ignored dimensions
              if(nDim < 3 .and. kDir /= 0) CYCLE
 
+             if(nDim > 2 .and. IsLatitudeAxis) IsAxisNode = &
+                  kDir == -1 .and. &
+                  CoordMin_DB(Lat_,iBlockSend) < -cHalfPi + 1e-8 .or. &
+                  kDir == +1 .and. &
+                  CoordMax_DB(Lat_,iBlockSend) > +cHalfPi - 1e-8
+
+
              do jDir = -1, 1
                 if(nDim < 2 .and. jDir /= 0) CYCLE
+
+                if(nDim > 2 .and. IsSphericalAxis) IsAxisNode = &
+                     jDir == -1 .and. &
+                     CoordMin_DB(Theta_,iBlockSend) < 1e-8 .or. &
+                     jDir == +1 .and. &
+                     CoordMax_DB(Theta_,iBlockSend) > cPi-1e-8
 
                 do iDir = -1,1
                    ! Ignore inner parts of the sending block
                    if(iDir == 0 .and. jDir == 0 .and. kDir == 0) CYCLE
+
+                   if(nDim > 1 .and. IsCylindricalAxis) IsAxisNode = &
+                        iDir == -1 .and. iTree_IA(Coord1_,iNodeSend) == 1
 
                    DiLevel = DiLevelNei_IIIB(iDir,jDir,kDir,iBlockSend)
 
@@ -382,6 +410,19 @@ contains
          RETURN
       end if
 
+      if(IsAxisNode)then
+         if(IsLatitudeAxis)then
+            kRMin = iEqualR_DII(3,-kDir,Min_)
+            kRMax = iEqualR_DII(3,-kDir,Max_)
+         elseif(IsSphericalAxis)then
+            jRMin = iEqualR_DII(2,-jDir,Min_)
+            jRMax = iEqualR_DII(2,-jDir,Max_)
+         elseif(IsCylindricalAxis)then
+            iRMin = iEqualR_DII(1,1,Min_)
+            iRMax = iEqualR_DII(1,1,Max_)
+         end if
+      end if
+
       iSMin = iEqualS_DII(1,iDir,Min_)
       iSMax = iEqualS_DII(1,iDir,Max_)
       jSMin = iEqualS_DII(2,jDir,Min_)
@@ -500,6 +541,19 @@ contains
          RETURN
       end if
 
+      if(IsAxisNode)then
+         if(IsLatitudeAxis)then
+            kRMin = iRestrictR_DII(3,kSend,Min_)
+            kRMax = iRestrictR_DII(3,kSend,Max_)
+         elseif(IsSphericalAxis)then
+            jRMin = iRestrictR_DII(2,jSend,Min_)
+            jRMax = iRestrictR_DII(2,jSend,Max_)
+         elseif(IsCylindricalAxis)then
+            iRMin = iRestrictR_DII(1,0,Min_)
+            iRMax = iRestrictR_DII(1,0,Max_)
+         end if
+      end if
+
       iBufferS = iBufferS_P(iProcRecv)
 
       BufferS_I(            iBufferS+1)  = iBlockRecv
@@ -611,6 +665,19 @@ contains
 
                   nBufferS_P(iProcRecv) = nBufferS_P(iProcRecv) + nSize
                   CYCLE
+               end if
+
+               if(IsAxisNode)then
+                  if(IsLatitudeAxis)then
+                     kRMin = iProlongR_DII(3,kSend,Min_)
+                     kRMax = iProlongR_DII(3,kSend,Max_)
+                  elseif(IsSphericalAxis)then
+                     jRMin = iProlongR_DII(2,jSend,Min_)
+                     jRMax = iProlongR_DII(2,jSend,Max_)
+                  elseif(IsCylindricalAxis)then
+                     iRMin = iProlongR_DII(1,0,Min_)
+                     iRMax = iProlongR_DII(1,0,Max_)
+                  end if
                end if
 
                iBufferS = iBufferS_P(iProcRecv)
