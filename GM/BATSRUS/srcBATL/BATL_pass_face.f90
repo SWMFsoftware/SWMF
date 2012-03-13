@@ -31,7 +31,13 @@ contains
          iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, iNode_B, &
          iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_, Level_
 
-    use ModNumConst, ONLY: i_DD
+    use BATL_geometry, ONLY: &
+         IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
+
+    use BATL_grid, ONLY: &
+         CoordMin_DB, CoordMax_DB
+
+    use ModNumConst, ONLY: i_DD, cHalfPi, cPi
     use ModMpi
 
     ! Arguments
@@ -136,6 +142,7 @@ contains
        do iDim = 1, nDim
 
           do iDimSide = 1, 2
+
              ! Opposite side will receive the fluxes
              iRecvSide = 3 - iDimSide
 
@@ -150,6 +157,22 @@ contains
 
              ! For res. change send flux from fine side to coarse side
              if(DoResChangeOnly .and. DiLevel == 0) CYCLE
+
+             ! Do not pass faces at the axis
+             if(IsCylindricalAxis .and. iDim == 1 .and. iDimSide == 1 .and. &
+                  iTree_IA(Coord1_,iNode) == 1) CYCLE
+
+             if(IsSphericalAxis .and. iDim == 2)then
+                if(iDimSide==1 .and. CoordMin_DB(Theta_,iBlock) < 1e-8)CYCLE
+                if(iDimSide==2 .and. CoordMax_DB(Theta_,iBlock)>cPi-1e-8)CYCLE
+             end if
+
+             if(IsLatitudeAxis .and. iDim == 3)then
+                if(iDimSide==1 .and. CoordMin_DB(Lat_,iBlock)<-cHalfPi+1e-8)&
+                     CYCLE
+                if(iDimSide==2 .and. CoordMax_DB(Lat_,iBlock)> cHalfPi-1e-8)&
+                     CYCLE
+             end if
 
              if(DiLevel == 0)then
                 ! call do_equal !!!
