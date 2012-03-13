@@ -124,8 +124,8 @@ subroutine set_ics
               end do
               if(.not.UseB0)CYCLE
               ! Remove B0 from B (if any)
-              State_VGB(Bx_:Bz_,i,j,k,iBlock)=State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
-                   B0_DGB(:,i,j,k,iBlock)
+              State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                   State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
            end if
 
         end do; end do; end do

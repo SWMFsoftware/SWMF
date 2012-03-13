@@ -185,7 +185,8 @@ contains
     use ModMain,     ONLY: globalBLK, unusedBLK, TypeCoordSystem, GravitySi
     use ModGeometry, ONLY: x1, x2, y1, y2, x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, &
-         Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, UseElectronPressure, UseAnisoPressure
+         Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
+         UseElectronPressure, UseAnisoPressure
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, &
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
@@ -258,7 +259,7 @@ contains
     case('AdvectSphere')
        DoAdvectSphere = .true.
        ! This case describes an IC with uniform 1D flow of plasma in a fixed 
-       ! direction, with no density or pressure gradients and no magnetic field.
+       ! direction, with no density, pressure gradients, or magnetic field.
        ! A sphere with higher density is embedded in the flow, initially at 
        ! xSphereCenterInit,  ySphereCenterInit, zSphereCenterInit.
        ! The density profile within the sphere is given by:
@@ -293,9 +294,9 @@ contains
             xSphereCenterInit**2 + &
             ySphereCenterInit**2 + &
             zSphereCenterInit**2)
-       !\                                                                      
-       ! Start filling in cells (including ghost cells)                       
-       !/                          
+       
+       ! Start filling in cells (including ghost cells)
+
        if (DoInitSphere) then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              xCell = x_BLK(i,j,k,iBlock)
@@ -318,17 +319,19 @@ contains
        else
           State_VGB(rho_,:,:,:,iBlock) = RhoBackgrndNo
        end if
-       ! velocity                                                              
+
+       ! velocity
        State_VGB(RhoUx_,:,:,:,iBlock) = UxNo*State_VGB(rho_,:,:,:,iBlock) 
        State_VGB(RhoUy_,:,:,:,iBlock) = UyNo*State_VGB(rho_,:,:,:,iBlock) 
        State_VGB(RhoUz_,:,:,:,iBlock) = UzNo*State_VGB(rho_,:,:,:,iBlock)
-       State_VGB(Bx_:Bz_,:,:,:,iBlock) = 0.0
-       State_VGB(p_,     :,:,:,iBlock) = pBackgrndIo*Io2No_V(UnitP_)
 
-       ! Transform to HGC frame - initially aligned with HGI, only velocity 
-       ! and/ or momentum in X-Y plane hould be transformed
+       ! pressure
+       State_VGB(p_,    :,:,:,iBlock) = pBackgrndIo*Io2No_V(UnitP_)
 
        if (TypeCoordSystem =='HGC') then
+          ! Transform to HGC frame - initially aligned with HGI, only velocity 
+          ! and/or momentum in X-Y plane should be transformed
+
           OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
           State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(RhoUx_,:,:,:,iBlock) &
                + State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*y_BLK(:,:,:,iBlock)
