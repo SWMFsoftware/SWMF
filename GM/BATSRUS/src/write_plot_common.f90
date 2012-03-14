@@ -18,10 +18,12 @@ subroutine write_plot_common(ifile)
   use ModParallel, ONLY: proc_dims
   use ModMpi
   use ModUtilities, ONLY: lower_case, split_string
-  use BATL_lib, ONLY: message_pass_node, calc_error_amr_criteria
+  use BATL_lib, ONLY: message_pass_node, calc_error_amr_criteria, Xyz_DNB,&
+       message_pass_node
   use ModAdvance, ONLY : State_VGB
   use ModMultiFluid, ONLY: extract_fluid_name
   use ModVarIndexes, ONLY: SignB_
+  
   implicit none
 
   ! Arguments
@@ -303,14 +305,14 @@ subroutine write_plot_common(ifile)
 
   ! Write the HDF5 output file and return
   if (plot_form(ifile) == 'hdf') then
-    call get_idl_units(ifile, nPlotVar, plotVarNames, NamePlotUnit_V, &
-         unitstr_IDL)
+     call get_idl_units(ifile, nPlotVar, plotVarNames, NamePlotUnit_V, &
+          unitstr_IDL)
 
-    call write_plot_hdf5(filename, plotVarNames, NamePlotUnit_V,&
-        nPlotVar,xmin, xmax, ymin, ymax, zmin, zmax, nBLKcells)
+     call write_plot_hdf5(filename, plotVarNames, NamePlotUnit_V,&
+          nPlotVar,xmin, xmax, ymin, ymax, zmin, zmax, nBLKcells)
 
-    RETURN
- endif
+     RETURN
+  endif
 
   ! Get the headers that contain variables names and units
   select case(plot_form(ifile))
@@ -331,22 +333,40 @@ subroutine write_plot_common(ifile)
      ! but doesn't hurt cartesian.
      allocate(PlotXYZNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,3))
 
-     if(TypeGeometry == 'cartesian' .or. TypeGeometry == 'rz' .or. UseBatl)then
+     if(TypeGeometry == 'cartesian' .or. TypeGeometry == 'rz')then
         ! the periodicity in the z-direction for the cylinder should go ???
         PlotXYZNodes_NBI(:,:,:,:,1)=NodeX_NB
         PlotXYZNodes_NBI(:,:,:,:,2)=NodeY_NB
         PlotXYZNodes_NBI(:,:,:,:,3)=NodeZ_NB
      else
-        ! This is to avoid rounding errors. May or may not be needed for BATL
-        NodeValue_NB = NodeX_NB(:,:,:,:)                   ! X
-        call pass_and_average_nodes(.true.,NodeValue_NB)
-        PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
-        NodeValue_NB = NodeY_NB(:,:,:,:)                   ! Y
-        call pass_and_average_nodes(.true.,NodeValue_NB)
-        PlotXYZNodes_NBI(:,:,:,:,2)=NodeValue_NB
-        NodeValue_NB = NodeZ_NB(:,:,:,:)                   ! Z
-        call pass_and_average_nodes(.true.,NodeValue_NB)
-        PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
+        if(useBatl) then
+          ! This is to avoid rounding errors. May or may not be needed for BATL
+           NodeValue_NB =NodeX_NB!Xyz_DNB(1,:,:,:,:)! NodeX_NB(:,:,:,:)                   ! X
+           call  set_block_hanging_nodes(NodeValue_NB)
+           PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
+
+           NodeValue_NB = NodeY_NB!Xyz_DNB(2,:,:,:,:)!NodeY_NB(:,:,:,:)                   ! Y
+           call  set_block_hanging_nodes(NodeValue_NB)
+           PlotXYZNodes_NBI(:,:,:,:,2)=NodeValue_NB
+
+           NodeValue_NB = NodeZ_NB!Xyz_DNB(3,:,:,:,:)!NodeZ_NB(:,:,:,:)                   ! Z
+           call  set_block_hanging_nodes(NodeValue_NB)
+           PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
+
+        else
+           ! This is to avoid rounding errors. May or may not be needed for BATL
+           NodeValue_NB =NodeX_NB(:,:,:,:)                    ! X
+           call pass_and_average_nodes(.true.,NodeValue_NB)
+           PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
+
+           NodeValue_NB = NodeY_NB(:,:,:,:)                   ! Y
+           call pass_and_average_nodes(.true.,NodeValue_NB)    
+           PlotXYZNodes_NBI(:,:,:,:,2)=NodeValue_NB
+
+           NodeValue_NB = NodeZ_NB(:,:,:,:)                   ! Z
+           call pass_and_average_nodes(.true.,NodeValue_NB)
+           PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
+        end if
 
         ! Make near zero values exactly zero
         do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
@@ -487,8 +507,8 @@ subroutine write_plot_common(ifile)
            if(index(TypeGeometry,'genr') > 0)then
               write(Unit_tmp,'(i8,    " nRgen"  )') nGrid
               write(Unit_tmp,'(es13.5," LogRgen")') yR_I
-          end if
-          write(unit_tmp,'(a)')TypeIdlFile_I(ifile)
+           end if
+           write(unit_tmp,'(a)')TypeIdlFile_I(ifile)
         end select
         close(unit_tmp)
      end do
