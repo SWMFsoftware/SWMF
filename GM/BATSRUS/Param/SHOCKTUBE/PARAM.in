@@ -10,9 +10,6 @@ NONE
 #NORMALIZATION
 NONE
 
-#NONCONSERVATIVE
-F		UseNonConservative
-
 A single block 256x4x4 grid
 #INCLUDE
 Param/SHOCKTUBE/grid256

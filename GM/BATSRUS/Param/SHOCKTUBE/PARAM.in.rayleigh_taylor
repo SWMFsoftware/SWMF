@@ -68,9 +68,6 @@ float                   TypeBcTop
 
 #USERINPUTEND   ----------------
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SCHEME
 2			nOrder
 godunov			TypeFlux

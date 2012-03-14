@@ -11,9 +11,6 @@ PLANETARY
 #NORMALIZATION
 PLANETARY
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 A single block 256x4x4 grid
 #CHECKGRIDSIZE
 64                              nI

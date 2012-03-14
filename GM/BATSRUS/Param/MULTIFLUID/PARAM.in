@@ -13,9 +13,6 @@ NONE
 #DESCRIPTION
 Brio-Wu shock tube for ions, Sod shock tube for neutrals
 
-#NONCONSERVATIVE
-F		UseNonConservative
-
 4 blocks with 64x2x2 cells, -128<x<128 grid
 #INCLUDE
 Param/SHOCKTUBE/grid64
