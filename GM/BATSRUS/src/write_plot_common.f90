@@ -42,7 +42,7 @@ subroutine write_plot_common(ifile)
   real :: PlotVar_inBody(nplotvarmax)
   logical :: PlotVar_useBody(nplotvarmax)
   real, allocatable :: PlotVarNodes_VNB(:,:,:,:,:)
-  real, allocatable :: PlotXYZNodes_NBI(:,:,:,:,:)
+  real, allocatable :: PlotXYZNodes_DNB(:,:,:,:,:)
 
   character (len=lNameVar) :: plotvarnames(nplotvarmax) = ''
   integer :: nplotvar
@@ -331,47 +331,39 @@ subroutine write_plot_common(ifile)
      ! with "non-hanging" nodes.
      ! Specifically, this fixes many grid problems for spherical plots, 
      ! but doesn't hurt cartesian.
-     allocate(PlotXYZNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,3))
+     allocate(PlotXYZNodes_DNB(3,1:1+nI,1:1+nJ,1:1+nK,nBLK))
 
      if(TypeGeometry == 'cartesian' .or. TypeGeometry == 'rz')then
         ! the periodicity in the z-direction for the cylinder should go ???
-        PlotXYZNodes_NBI(:,:,:,:,1)=NodeX_NB
-        PlotXYZNodes_NBI(:,:,:,:,2)=NodeY_NB
-        PlotXYZNodes_NBI(:,:,:,:,3)=NodeZ_NB
+        PlotXYZNodes_DNB(1,:,:,:,:)=NodeX_NB
+        PlotXYZNodes_DNB(2,:,:,:,:)=NodeY_NB
+        PlotXYZNodes_DNB(3,:,:,:,:)=NodeZ_NB
      else
         if(useBatl) then
-          ! This is to avoid rounding errors. May or may not be needed for BATL
-           NodeValue_NB =NodeX_NB!Xyz_DNB(1,:,:,:,:)! NodeX_NB(:,:,:,:)                   ! X
-           call  set_block_hanging_nodes(NodeValue_NB)
-           PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
 
-           NodeValue_NB = NodeY_NB!Xyz_DNB(2,:,:,:,:)!NodeY_NB(:,:,:,:)                   ! Y
-           call  set_block_hanging_nodes(NodeValue_NB)
-           PlotXYZNodes_NBI(:,:,:,:,2)=NodeValue_NB
-
-           NodeValue_NB = NodeZ_NB!Xyz_DNB(3,:,:,:,:)!NodeZ_NB(:,:,:,:)                   ! Z
-           call  set_block_hanging_nodes(NodeValue_NB)
-           PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
-
+           ! Fixing hanging nodes at resolution change
+           PlotXYZNodes_DNB(:,:,:,:,1:nBlock) = Xyz_DNB(:,:,:,:,1:nBlock)
+           call  set_block_hanging_node(nDim,PlotXYZNodes_DNB)
+           
         else
            ! This is to avoid rounding errors. May or may not be needed for BATL
            NodeValue_NB =NodeX_NB(:,:,:,:)                    ! X
            call pass_and_average_nodes(.true.,NodeValue_NB)
-           PlotXYZNodes_NBI(:,:,:,:,1)=NodeValue_NB
+           PlotXYZNodes_DNB(1,:,:,:,:)=NodeValue_NB
 
            NodeValue_NB = NodeY_NB(:,:,:,:)                   ! Y
            call pass_and_average_nodes(.true.,NodeValue_NB)    
-           PlotXYZNodes_NBI(:,:,:,:,2)=NodeValue_NB
+           PlotXYZNodes_DNB(2,:,:,:,:)=NodeValue_NB
 
            NodeValue_NB = NodeZ_NB(:,:,:,:)                   ! Z
            call pass_and_average_nodes(.true.,NodeValue_NB)
-           PlotXYZNodes_NBI(:,:,:,:,3)=NodeValue_NB
+           PlotXYZNodes_DNB(3,:,:,:,:)=NodeValue_NB
         end if
 
         ! Make near zero values exactly zero
         do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
-           where(abs(PlotXYZNodes_NBI(:,:,:,iBlk,:))<1.e-10) &
-                PlotXYZNodes_NBI(:,:,:,iBlk,:) = 0.
+           where(abs(PlotXYZNodes_DNB(:,:,:,:,iBlk))<1.e-10) &
+                PlotXYZNodes_DNB(:,:,:,:,iBlk) = 0.
         end do
      end if
 
@@ -391,8 +383,8 @@ subroutine write_plot_common(ifile)
         end do
      end if
      call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB, &
-          PlotXYZNodes_NBI, unitstr_TEC, xmin,xmax,ymin,ymax,zmin,zmax)
-     deallocate(PlotXYZNodes_NBI)
+          PlotXYZNodes_DNB, unitstr_TEC, xmin,xmax,ymin,ymax,zmin,zmax)
+     deallocate(PlotXYZNodes_DNB)
      deallocate(PlotVarNodes_VNB)
   end if
 
