@@ -47,10 +47,12 @@ contains
     select case(NameCommand)
     case("#CONTROLTIMESTEP", "#TIMESTEPCONTROL")
        call read_var('UseTimeStepControl', UseTimeStepControl)
-    if(UseTimeStepControl) then
-    	case("#CONTROLINIT")
+    case("#CONTROLINIT")
+        if(UseTimeStepControl) then
     	   call read_var('TimesStepControlInit', TimesStepControlInit)
-    end if
+        else
+           TimesStepControlInit = 1.0
+        end if
     case("#CONTROLDECREASE")
        call read_var('RejectStepLevel1' ,  RejectStepLevel1)
        call read_var('ReduceStepLevel1' ,  ReduceStepLevel1)
