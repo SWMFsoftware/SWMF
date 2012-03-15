@@ -241,7 +241,7 @@ contains
     real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
     real,    intent(out):: HeatCondCoefNormal, HeatFlux
 
-    integer :: i, j, k
+    integer :: i, j, k, iP
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
     real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi
 
@@ -250,17 +250,13 @@ contains
 
     if(IsNewBlockHeatCond)then
        if(UseIdealEos)then
-          if(UseElectronPressure)then
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                Te_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
-                     /State_VGB(Rho_,i,j,k,iBlock)
-             end do; end do; end do
-          else
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                Te_G(i,j,k) = TeFraction*State_VGB(p_,i,j,k,iBlock) &
-                     /State_VGB(Rho_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
+          iP = p_
+          if(UseElectronPressure) iP = Pe_
+
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             Te_G(i,j,k) = TeFraction*State_VGB(iP,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)
+          end do; end do; end do
        else
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              call user_material_properties( &
@@ -555,7 +551,6 @@ contains
 
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModFaceGradient, ONLY: set_block_field2
-    use ModGeometry,     ONLY: UseCovariant
     use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk, iTeImpl
     use ModMain,         ONLY: nI, nJ, nK, MaxImplBlk, x_, y_, z_
     use ModNumConst,     ONLY: i_DD
@@ -563,13 +558,14 @@ contains
          inv_gm1
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
+    use BATL_lib,        ONLY: IsCartesian
 
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iImplBlock, iP
     real :: TeSi, CvSi
-    real :: Normal_D(3), Area
+    real :: FaceNormal_D(nDim)
     real :: HeatCond_DD(3,3)
 
     integer, parameter :: jMin1 = 1 - min(1,nJ-1), jMax1 = nJ + min(1,nJ-1)
@@ -593,8 +589,8 @@ contains
                   inv_gm1*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
           else
 
-             call user_material_properties( &
-                  State_VGB(:,i,j,k,iBlock),i,j,k,iBlock,TeOut=TeSi, CvOut = CvSi)
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi)
 
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
                   TeSi*Si2No_V(UnitTemperature_)
@@ -619,14 +615,15 @@ contains
        ! and multiply with the area
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-          if(.not.UseCovariant) call set_cartesian_cell_face(iDim, iBlock)
+          if(IsCartesian) call set_cartesian_cell_face(iDim, iBlock)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-             if(UseCovariant) call set_covariant_cell_face(iDim,i,j,k,iBlock)
+             if(.not.IsCartesian) &
+                  call set_general_cell_face(iDim,i,j,k,iBlock)
 
              do iDir = 1, nDim
                 HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
-                     0.5*Area*sum( Normal_D*(HeatCond_DDG(:,iDir,i,j,k) &
-                     + HeatCond_DDG(:,iDir,i-Di,j-Dj,k-Dk)) )
+                     0.5*sum( FaceNormal_D*(HeatCond_DDG(:nDim,iDir,i,j,k) &
+                     + HeatCond_DDG(:nDim,iDir,i-Di,j-Dj,k-Dk)) )
              end do
           end do; end do; end do
        end do
@@ -731,55 +728,26 @@ contains
       integer, intent(in) :: iDim, iBlock
       !------------------------------------------------------------------------
 
-      Area = CellFace_DB(iDim,iBlock)
-      Normal_D = 0.0; Normal_D(iDim) = 1.0
+      FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
 
     end subroutine set_cartesian_cell_face
 
     !==========================================================================
 
-    subroutine set_covariant_cell_face(iDim, i, j, k, iBlock)
+    subroutine set_general_cell_face(iDim, i, j, k, iBlock)
 
-      use ModGeometry, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
-           FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B, &
-           x_BLK, y_BLK, z_BLK
+      use BATL_lib, ONLY: IsRzGeometry, FaceNormal_DDFB, CellFace_DFB
 
       integer, intent(in) :: iDim, i, j, k, iBlock
-
-      integer :: iLeft, jLeft, kLeft
-      real :: Area_D(3), Area2, Area2Min
       !------------------------------------------------------------------------
 
-      select case(iDim)
-      case(x_)
-         iLeft = i-1; jLeft = j; kLeft = k
-         Area_D = FaceAreaI_DFB(:,i,j,k,iBlock)
-         Area2Min = FaceArea2MinI_B(iBlock)
-      case(y_)
-         iLeft = i; jLeft = j-1; kLeft = k
-         Area_D = FaceAreaJ_DFB(:,i,j,k,iBlock)
-         Area2Min = FaceArea2MinJ_B(iBlock)
-      case(z_)
-         iLeft = i; jLeft = j; kLeft = k-1
-         Area_D = FaceAreaK_DFB(:,i,j,k,iBlock)
-         Area2Min = FaceArea2MinK_B(iBlock)
-      end select
-
-      Area2 = sum(Area_D**2)
-
-      if(Area2 < 0.5*Area2Min)then
-         ! The face is at the pole
-         Normal_D(x_) = x_BLK(i,j,k,iBlock) - x_BLK(iLeft,jLeft,kLeft,iBlock)
-         Normal_D(y_) = y_BLK(i,j,k,iBlock) - y_BLK(iLeft,jLeft,kLeft,iBlock)
-         Normal_D(z_) = z_BLK(i,j,k,iBlock) - z_BLK(iLeft,jLeft,kLeft,iBlock)
-         Normal_D = Normal_D/sqrt(sum(Normal_D**2))
-         Area = 0.0
+      if(IsRzGeometry)then
+         FaceNormal_D = 0.0; FaceNormal_D(iDim)=CellFace_DFB(iDim,i,j,k,iBlock)
       else
-         Area = sqrt(Area2)
-         Normal_D = Area_D/Area
+         FaceNormal_D(:nDim) = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
       end if
 
-    end subroutine set_covariant_cell_face
+    end subroutine set_general_cell_face
 
   end subroutine get_impl_heat_cond_state
 
@@ -844,11 +812,11 @@ contains
   subroutine add_jacobian_heat_cond(iBlock, Jacobian_VVCI)
 
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModGeometry,     ONLY: vInv_CB, UseCovariant
+    use ModGeometry,     ONLY: vInv_CB
     use ModImplicit,     ONLY: iTeImpl, nVarSemi, UseNoOverlap
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
-    use BATL_lib,        ONLY: IsRzGeometry, CellSize_DB
+    use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, CellSize_DB
 
     integer, parameter:: nStencil = 2*nDim + 1
 
@@ -856,25 +824,26 @@ contains
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
     integer :: i, j, k, iDim, Di, Dj, Dk
-    real :: DiffLeft, DiffRight, InvDcoord_D(MaxDim), InvDxyz_D(MaxDim)
+    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyz_D(nDim)
     !--------------------------------------------------------------------------
 
-    InvDcoord_D = 1/CellSize_DB(:,iBlock)
+    InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
 
-    if(UseCovariant .and. .not.IsRzGeometry) &
+    if(.not.(IsCartesian .or. IsRzGeometry)) &
          call set_block_jacobian_face(iBlock)
 
     ! the transverse diffusion is ignored in the Jacobian
     do iDim = 1, nDim
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(UseCovariant .and. .not.IsRzGeometry)then
-             InvDxyz_D = DcoordDxyz_DDFD(iDim,:,i,j,k,iDim)*InvDcoord_D(iDim)
+          if(.not.(IsCartesian .or. IsRzGeometry))then
+             InvDxyz_D = DcoordDxyz_DDFD(iDim,:nDim,i,j,k,iDim) &
+                  *InvDcoord_D(iDim)
              DiffLeft = vInv_CB(i,j,k,iBlock) &
                   *sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyz_D)
 
-             InvDxyz_D = &
-                  DcoordDxyz_DDFD(iDim,:,i+Di,j+Dj,k+Dk,iDim)*InvDcoord_D(iDim)
+             InvDxyz_D = DcoordDxyz_DDFD(iDim,:nDim,i+Di,j+Dj,k+Dk,iDim) &
+                  *InvDcoord_D(iDim)
              DiffRight = vInv_CB(i,j,k,iBlock) &
                   *sum(HeatCond_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyz_D)
           else
