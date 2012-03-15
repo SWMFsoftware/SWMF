@@ -409,7 +409,8 @@ contains
 
   subroutine get_impl_resistivity_state(StateImpl_VGB, DconsDsemi_VCB)
 
-    use BATL_lib,        ONLY: IsCartesian, message_pass_cell
+    use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, message_pass_cell, &
+         CellFace_DB, CellFace_DFB, FaceNormal_DDFB
     use ModAdvance,      ONLY: State_VGB
     use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk
     use ModMain,         ONLY: MaxImplBlk
@@ -448,10 +449,18 @@ contains
 
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-          if(IsCartesian) call set_cartesian_cell_face(iDim, iBlock)
+          if(IsCartesian)then
+             FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
+          end if
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-             if(.not.IsCartesian) &
-                  call set_general_cell_face(iDim, i, j, k, iBlock)
+             if(.not.IsCartesian)then
+                if(IsRzGeometry)then
+                   FaceNormal_D = 0.0
+                   FaceNormal_D(iDim)=CellFace_DFB(iDim,i,j,k,iBlock)
+                else
+                   FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
+                end if
+             end if
 
              Eta = 0.5*(Eta_GB(i,j,k,iBlock) + Eta_GB(i-Di,j-Dj,k-Dk,iBlock))
 
@@ -459,36 +468,6 @@ contains
           end do; end do; end do
        end do
     end do
-
-  contains
-
-    subroutine set_cartesian_cell_face(iDim, iBlock)
-
-      use BATL_lib, ONLY: CellFace_DB
-
-      integer, intent(in) :: iDim, iBlock
-      !------------------------------------------------------------------------
-
-      FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
-
-    end subroutine set_cartesian_cell_face
-
-    !==========================================================================
-
-    subroutine set_general_cell_face(iDim, i, j, k, iBlock)
-
-      use BATL_lib, ONLY: IsRzGeometry, FaceNormal_DDFB, CellFace_DFB
-
-      integer, intent(in) :: iDim, i, j, k, iBlock
-      !------------------------------------------------------------------------
-
-      if(IsRzGeometry)then
-         FaceNormal_D = 0.0; FaceNormal_D(iDim)=CellFace_DFB(iDim,i,j,k,iBlock)
-      else
-         FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
-      end if
-
-    end subroutine set_general_cell_face
 
   end subroutine get_impl_resistivity_state
 

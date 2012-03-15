@@ -558,7 +558,8 @@ contains
          inv_gm1
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
-    use BATL_lib,        ONLY: IsCartesian
+    use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
+         CellFace_DB, CellFace_DFB, FaceNormal_DDFB
 
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
@@ -615,10 +616,18 @@ contains
        ! and multiply with the area
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-          if(IsCartesian) call set_cartesian_cell_face(iDim, iBlock)
+          if(IsCartesian)then
+             FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
+          end if
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-             if(.not.IsCartesian) &
-                  call set_general_cell_face(iDim, i, j, k, iBlock)
+             if(.not.IsCartesian)then
+                if(IsRzGeometry)then
+                   FaceNormal_D = 0.0
+                   FaceNormal_D(iDim)=CellFace_DFB(iDim,i,j,k,iBlock)
+                else
+                   FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
+                end if
+             end if
 
              do iDir = 1, nDim
                 HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
@@ -718,36 +727,6 @@ contains
       end if
 
     end subroutine get_heat_cond_tensor
-
-    !==========================================================================
-
-    subroutine set_cartesian_cell_face(iDim, iBlock)
-
-      use BATL_lib, ONLY: CellFace_DB
-
-      integer, intent(in) :: iDim, iBlock
-      !------------------------------------------------------------------------
-
-      FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
-
-    end subroutine set_cartesian_cell_face
-
-    !==========================================================================
-
-    subroutine set_general_cell_face(iDim, i, j, k, iBlock)
-
-      use BATL_lib, ONLY: IsRzGeometry, FaceNormal_DDFB, CellFace_DFB
-
-      integer, intent(in) :: iDim, i, j, k, iBlock
-      !------------------------------------------------------------------------
-
-      if(IsRzGeometry)then
-         FaceNormal_D = 0.0; FaceNormal_D(iDim)=CellFace_DFB(iDim,i,j,k,iBlock)
-      else
-         FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
-      end if
-
-    end subroutine set_general_cell_face
 
   end subroutine get_impl_heat_cond_state
 
