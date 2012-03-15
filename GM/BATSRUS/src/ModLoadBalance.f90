@@ -371,7 +371,6 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
            iTypeBalance_A(iNode) = iType_I(iTypeAdvance_A(iNode))
         end do
 
-
         ! load balance depending on block types
         if(DoMoveData)then
 
@@ -393,20 +392,22 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         end if
 
         ! restore iTypeAdvance_B and _BP with positive values
+        ! Go up to nBlockMax instead of nBlock (!) to clean up beyond nBlock
         iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
         do iNode = 1, nNode
            if(iTree_IA(Status_,iNode) /= Used_) CYCLE
            iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode)) = &
                 abs(iTypeAdvance_A(iNode))
         end do
-        iTypeAdvance_B(1:nBlock)  = iTypeAdvance_BP(1:nBlock,iProc)
+        iTypeAdvance_B(1:nBlockMax)  = iTypeAdvance_BP(1:nBlockMax,iProc)
 
         deallocate(iTypeAdvance_A, iTypeBalance_A)
 
      end if
 
-     ! When load balancing is done Skipped and Unused blocks coincide 
-     UnusedBlock_BP(1:nBlock,:) = iTypeAdvance_BP(1:nBlock,:) == SkippedBlock_
+     ! When load balancing is done Skipped and Unused blocks coincide
+     UnusedBlock_BP(1:nBlockMax,:) = &
+          iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
 
      call find_test_cell
 
