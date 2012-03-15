@@ -147,11 +147,6 @@ contains
          NameSub = 'ModHeatConduction::init_heat_conduction'
     !--------------------------------------------------------------------------
 
-    if(UseSemiImplicit)then
-       write(*,*) "The field aligned heat conduction is under construction"
-       write(*,*) "It is currently guaranteed to give wrong results !!!"
-    end if
-
     if(UseHeatConduction)then
        if(.not.allocated(Te_G))allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
     else
