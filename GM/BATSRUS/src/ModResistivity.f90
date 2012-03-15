@@ -151,7 +151,7 @@ contains
 
           allocate( &
                FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
-               Eta_DFDB(MaxDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
+               Eta_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
 
           if(.not.(IsCartesian.or.IsRzGeometry)) &
                call stop_mpi(NameSub//': semi-implicit resistivity not '// &
@@ -421,7 +421,7 @@ contains
 
     integer :: iDim, i, j, k, Di, Dj, Dk, iBlock, iImplBlock
     real :: Eta
-    real :: area, Normal_D(MaxDim)
+    real :: FaceNormal_D(nDim)
 
     character(len=*), parameter :: &
          NameSub = 'ModResistivity::get_impl_resistivity_state'
@@ -451,11 +451,11 @@ contains
           if(IsCartesian) call set_cartesian_cell_face(iDim, iBlock)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
              if(.not.IsCartesian) &
-                  call set_covariant_cell_face(iDim,i,j,k,iBlock)
+                  call set_general_cell_face(iDim, i, j, k, iBlock)
 
              Eta = 0.5*(Eta_GB(i,j,k,iBlock) + Eta_GB(i-Di,j-Dj,k-Dk,iBlock))
 
-             Eta_DFDB(:,i,j,k,iDim,iBlock) = Area*Eta*Normal_D
+             Eta_DFDB(:,i,j,k,iDim,iBlock) = Eta*FaceNormal_D
           end do; end do; end do
        end do
     end do
@@ -469,56 +469,26 @@ contains
       integer, intent(in) :: iDim, iBlock
       !------------------------------------------------------------------------
 
-      Area = CellFace_DB(iDim,iBlock)
-      Normal_D = 0.0; Normal_D(iDim) = 1.0
+      FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
 
     end subroutine set_cartesian_cell_face
 
     !==========================================================================
 
-    subroutine set_covariant_cell_face(iDim, i, j, k, iBlock)
+    subroutine set_general_cell_face(iDim, i, j, k, iBlock)
 
-      use ModGeometry, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
-           FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B, &
-           x_BLK, y_BLK, z_BLK
-      use ModSize,     ONLY: x_, y_, z_
+      use BATL_lib, ONLY: IsRzGeometry, FaceNormal_DDFB, CellFace_DFB
 
       integer, intent(in) :: iDim, i, j, k, iBlock
-
-      integer :: iLeft, jLeft, kLeft
-      real :: Area_D(3), Area2, Area2Min
       !------------------------------------------------------------------------
 
-      select case(iDim)
-      case(x_)
-         iLeft = i-1; jLeft = j; kLeft = k
-         Area_D = FaceAreaI_DFB(:,i,j,k,iBlock)
-         Area2Min = FaceArea2MinI_B(iBlock)
-      case(y_)
-         iLeft = i; jLeft = j-1; kLeft = k
-         Area_D = FaceAreaJ_DFB(:,i,j,k,iBlock)
-         Area2Min = FaceArea2MinJ_B(iBlock)
-      case(z_)
-         iLeft = i; jLeft = j; kLeft = k-1
-         Area_D = FaceAreaK_DFB(:,i,j,k,iBlock)
-         Area2Min = FaceArea2MinK_B(iBlock)
-      end select
-
-      Area2 = sum(Area_D**2)
-
-      if(Area2 < 0.5*Area2Min)then
-         ! The face is at the pole
-         Normal_D(x_) = x_BLK(i,j,k,iBlock) - x_BLK(iLeft,jLeft,kLeft,iBlock)
-         Normal_D(y_) = y_BLK(i,j,k,iBlock) - y_BLK(iLeft,jLeft,kLeft,iBlock)
-         Normal_D(z_) = z_BLK(i,j,k,iBlock) - z_BLK(iLeft,jLeft,kLeft,iBlock)
-         Normal_D = Normal_D/sqrt(sum(Normal_D**2))
-         Area = 0.0
+      if(IsRzGeometry)then
+         FaceNormal_D = 0.0; FaceNormal_D(iDim)=CellFace_DFB(iDim,i,j,k,iBlock)
       else
-         Area = sqrt(Area2)
-         Normal_D = Area_D/Area
+         FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
       end if
 
-    end subroutine set_covariant_cell_face
+    end subroutine set_general_cell_face
 
   end subroutine get_impl_resistivity_state
 
@@ -553,16 +523,28 @@ contains
           call get_face_curl(iDim, i, j, k, iBlock, IsNewBlock, StateImpl_VG, &
                Current_D)
 
-          FluxImpl_VFD(BxImpl_,i,j,k,iDim) = &
-               + Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(z_) &
-               - Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(y_)
-          FluxImpl_VFD(ByImpl_,i,j,k,iDim) = &
-               + Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(x_) &
-               - Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(z_)
+          if(nDim == 3)then
+             FluxImpl_VFD(BxImpl_,i,j,k,iDim) = &
+                  + Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(z_) &
+                  - Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(y_)
+          else
+             FluxImpl_VFD(BxImpl_,i,j,k,iDim) = &
+                  + Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(z_)
+          end if
+
+          if(nDim == 3)then
+             FluxImpl_VFD(ByImpl_,i,j,k,iDim) = &
+                  + Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(x_) &
+                  - Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(z_)
+          else
+             FluxImpl_VFD(ByImpl_,i,j,k,iDim) = &
+                  - Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(z_)
+          end if
+
           FluxImpl_VFD(BzImpl_,i,j,k,iDim) = &
                + Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(y_) &
                - Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(x_)
-
+                  
        end do; end do; end do
     end do
 
@@ -615,10 +597,10 @@ contains
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iB
-    real :: DiffLeft, DiffRight, InvDcoord_D(MaxDim)
+    real :: DiffLeft, DiffRight, InvDcoord_D(nDim)
     !--------------------------------------------------------------------------
 
-    InvDcoord_D = 1/CellSize_DB(:,iBlock)
+    InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
 
     ! the transverse diffusion is ignored in the Jacobian
     do iDim = 1, nDim

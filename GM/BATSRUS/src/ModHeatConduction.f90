@@ -618,7 +618,7 @@ contains
           if(IsCartesian) call set_cartesian_cell_face(iDim, iBlock)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
              if(.not.IsCartesian) &
-                  call set_general_cell_face(iDim,i,j,k,iBlock)
+                  call set_general_cell_face(iDim, i, j, k, iBlock)
 
              do iDir = 1, nDim
                 HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
@@ -744,7 +744,7 @@ contains
       if(IsRzGeometry)then
          FaceNormal_D = 0.0; FaceNormal_D(iDim)=CellFace_DFB(iDim,i,j,k,iBlock)
       else
-         FaceNormal_D(:nDim) = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
+         FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
       end if
 
     end subroutine set_general_cell_face
@@ -914,7 +914,7 @@ contains
           EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i,j,k,iBlock, &
+               i, j, k, iBlock, &
                EinternalIn = EinternalSi, PressureOut = PressureSi)
 
           State_VGB(iP,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
