@@ -9,7 +9,7 @@ module ModTimeStepControl
   public:: read_time_step_control_param
   public:: control_time_step
   logical, public:: UseTimeStepControl   = .false.
-  real,    public:: TimesStepControlInit = 1.0
+  real,    public:: TimeStepControlInit  = 1.0
 
   ! Local variables
   integer             :: nVarControl = -1
@@ -48,11 +48,7 @@ contains
     case("#CONTROLTIMESTEP", "#TIMESTEPCONTROL")
        call read_var('UseTimeStepControl', UseTimeStepControl)
     case("#CONTROLINIT")
-        if(UseTimeStepControl) then
-    	   call read_var('TimesStepControlInit', TimesStepControlInit)
-        else
-           TimesStepControlInit = 1.0
-        end if
+       call read_var('TimeStepControlInit', TimeStepControlInit)
     case("#CONTROLDECREASE")
        call read_var('RejectStepLevel1' ,  RejectStepLevel1)
        call read_var('ReduceStepLevel1' ,  ReduceStepLevel1)

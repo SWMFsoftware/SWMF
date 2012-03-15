@@ -3329,7 +3329,7 @@ contains
   subroutine set_extra_parameters
 
     use ModMultiFluid, ONLY: UseMultiIon
-    use ModTimeStepControl, ONLY: UseTimeStepControl,TimesStepControlInit
+    use ModTimeStepControl, ONLY: UseTimeStepControl,TimeStepControlInit
     !--------------------------------------------------------------------------
     ! We need normalization for dt
     if(UseDtFixed)then
@@ -3354,11 +3354,17 @@ contains
        ! Reduce initial time step / Cfl number. 
        ! The original values are stored in DtFixedOrig and CflOrig
        if(UseDtFixed)then
-          DtFixed = TimesStepControlInit*DtFixed
+          DtFixed = TimeStepControlInit*DtFixed
        else
-          Cfl     = TimesStepControlInit*Cfl
+          Cfl     = TimeStepControlInit*Cfl
        end if
-       TimesStepControlInit = 1.0
+       TimeStepControlInit = 1.0
+    else
+       if(UseDtFixed)then
+          DtFixed = DtFixedOrig
+       else
+          Cfl     = CflOrig
+       end if
     end if
 
     DoOneCoarserLayer = .not. (nOrder==2 .and. &
