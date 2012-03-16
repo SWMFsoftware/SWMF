@@ -426,7 +426,7 @@ contains
          iBuffer = iBuffer + nExtraData
       end if
 
-      call MPI_send(Buffer_I, iBuffer, MPI_REAL, iProcRecv, 1, iComm, iError)
+      call MPI_send(Buffer_I, iBuffer, MPI_REAL, iProcRecv, 31, iComm, iError)
 
     end subroutine send_block
     !==========================================================================
@@ -444,7 +444,7 @@ contains
       end if
       if(present(Dt_B))       iBuffer = iBuffer + 1
       if(present(nExtraData)) iBuffer = iBuffer + nExtraData
-      call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
+      call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 31, iComm, &
            iStatus_I, iError)
 
       iBuffer = 0
@@ -551,7 +551,7 @@ contains
       end if
 
       if(iProcRecv /= iProcSend) call MPI_send(Buffer_I, iBuffer, &
-           MPI_REAL, iProcRecv, 1, iComm, iError)
+           MPI_REAL, iProcRecv, 32, iComm, iError)
 
     end subroutine send_coarsened_block
     !==========================================================================
@@ -567,7 +567,7 @@ contains
       if(iProcRecv /= iProcSend)then
          iBuffer = nIJK*nVar/IjkRatio 
          if(present(Dt_B))  iBuffer = iBuffer + 1
-         call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
+         call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 32, iComm, &
               iStatus_I, iError)
       end if
 
@@ -720,7 +720,7 @@ contains
       end if
 
       if(iProcRecv /= iProcSend) &
-           call MPI_send(Buffer_I, iBuffer, MPI_REAL, iProcRecv, 1, &
+           call MPI_send(Buffer_I, iBuffer, MPI_REAL, iProcRecv, 33, &
            iComm, iError)
 
     end subroutine send_refined_block
@@ -759,7 +759,7 @@ contains
       if(iProcRecv /= iProcSend)then
          iBuffer = nSizeP*nVarBuffer+1
          if(present(Dt_B)) iBuffer = iBuffer + 1
-         call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 1, iComm, &
+         call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 33, iComm, &
               iStatus_I, iError)
       end if
 
