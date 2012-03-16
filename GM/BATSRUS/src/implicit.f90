@@ -93,6 +93,8 @@ subroutine advance_impl
   use ModImplHypre, ONLY: hypre_preconditioner, hypre_initialize
   use ModMessagePass, ONLY: exchange_messages
 
+  use BATL_lib, ONLY: Unused_B, Unused_BP
+
   implicit none
 
   real, external :: minval_BLK, minval_loc_BLK
@@ -184,6 +186,10 @@ subroutine advance_impl
         UnusedBlock_BP(1:nBlockMax,:) = &
              iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_
         UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+        if(UseBatl)then
+           Unused_BP(1:nBlockMax,:) = UnusedBlock_BP(1:nBlockMax,:)
+           Unused_B(1:nBlockMax)    = UnusedBLK(1:nBlockMax)
+        end if
      end if
 
      ! advance explicit blocks, calc timestep 
@@ -196,6 +202,10 @@ subroutine advance_impl
         UnusedBlock_BP(1:nBlockMax,:) = &
              iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
         UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+        if(UseBatl)then
+           Unused_BP(1:nBlockMax,:) = UnusedBlock_BP(1:nBlockMax,:)
+           Unused_B(1:nBlockMax)    = UnusedBLK(1:nBlockMax)
+        end if
      end if
 
      call exchange_messages
@@ -205,6 +215,10 @@ subroutine advance_impl
      UnusedBlock_BP(1:nBlockMax,:) = &
           iTypeAdvance_BP(1:nBlockMax,:) /= ImplBlock_
      UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+     if(UseBatl)then
+        Unused_BP(1:nBlockMax,:) = UnusedBlock_BP(1:nBlockMax,:)
+        Unused_B(1:nBlockMax)    = UnusedBLK(1:nBlockMax)
+     end if
   end if
 
   !\
@@ -391,6 +405,10 @@ subroutine advance_impl
      UnusedBlock_BP(1:nBlockMax,:) = &
           iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
      UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+     if(UseBatl)then
+        Unused_BP(1:nBlockMax,:) = UnusedBlock_BP(1:nBlockMax,:)
+        Unused_B(1:nBlockMax)    = UnusedBLK(1:nBlockMax)
+     end if
   endif
 
   ! Exchange messages, so ghost cells of all blocks are updated

@@ -11,13 +11,14 @@ module ModPartSteady
   use ModVarIndexes, ONLY: nVar
   use ModSize,       ONLY: MaxBlock, nI, nJ, nK, nIJK
   use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, UnusedBLK, &
-       East_, Top_, time_accurate,  n_step, lVerbose    
+       East_, Top_, time_accurate,  n_step, lVerbose, UseBatl
   use ModAMR,        ONLY: UnusedBlock_BP
   use ModGeometry,   ONLY: Dx_BLK, MinDxValue
   use ModParallel,   ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
   use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, &
        State_VGB, StateOld_VCB
+  use BATL_lib, ONLY: Unused_B, Unused_BP !!!
   use ModMpi
 
   implicit none
@@ -69,6 +70,12 @@ contains
     end if
     ! Update local UnusedBLK array
     UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+
+    ! Copy back into BATL !!! to be eliminated
+    if(UseBatl)then
+       Unused_B(1:nBlockMax)    = UnusedBLK(1:nBlockMax)
+       Unused_BP(1:nBlockMax,:) = UnusedBlock_BP(1:nBlockMax,:)
+    end if
 
     if(DoDebug)write(*,*)'part_steady_switch nBlockMax, nUnused=',&
          nBlockMax, count(UnusedBLK(1:nBlockMax))
