@@ -28,7 +28,7 @@ contains
     use BATL_mpi, ONLY: iComm, nProc, iProc
 
     use BATL_tree, ONLY: &
-         iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, iNode_B, &
+         iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, Unused_BP, iNode_B, &
          iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_, Level_
 
     use BATL_geometry, ONLY: &
@@ -206,7 +206,7 @@ contains
        iRequestR = iRequestR + 1
 
        call MPI_irecv(BufferR_IP(1,iProcSend), iBufferR_P(iProcSend), &
-            MPI_REAL, iProcSend, 1, iComm, iRequestR_I(iRequestR), &
+            MPI_REAL, iProcSend, 20, iComm, iRequestR_I(iRequestR), &
             iError)
 
     end do
@@ -218,7 +218,7 @@ contains
        iRequestS = iRequestS + 1
 
        call MPI_isend(BufferS_IP(1,iProcRecv), iBufferS_P(iProcRecv), &
-            MPI_REAL, iProcRecv, 1, iComm, iRequestS_I(iRequestS), &
+            MPI_REAL, iProcRecv, 20, iComm, iRequestS_I(iRequestS), &
             iError)
     end do
 
@@ -391,6 +391,9 @@ contains
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
+      ! For part steady/implicit schemes
+      if(Unused_BP(iBlockRecv,iProcRecv)) RETURN
+
       select case(iDim)
       case(1)
          call do_flux(2, 3, nJ, nK, jRatio, kRatio, jSide, kSide, Flux_VXB)
@@ -507,7 +510,11 @@ contains
 
                iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlock)
                iProcRecv  = iTree_IA(Proc_,iNodeRecv)
-               
+               iBlockRecv = iTree_IA(Block_,iNodeRecv)
+
+               ! For part steady/implicit schemes
+               if(Unused_BP(iBlockRecv,iProcRecv)) CYCLE
+
                ! Same processor gets direct copy
                if(iProc == iProcRecv) CYCLE
 

@@ -39,7 +39,7 @@ contains
     use BATL_mpi, ONLY: iComm, nProc, barrier_mpi
 
     use BATL_tree, ONLY: &
-         iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, iNode_B, &
+         iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, Unused_BP, iNode_B, &
          iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_
 
     use BATL_grid, ONLY: CoordMin_DB, CoordMax_DB
@@ -244,7 +244,7 @@ contains
           if(nBufferR_P(iProcSend) == 0) CYCLE
           iRequestR = iRequestR + 1
           call MPI_irecv(BufferR_I(iBufferR), nBufferR_P(iProcSend), &
-               MPI_REAL, iProcSend, 1, iComm, iRequestR_I(iRequestR), &
+               MPI_REAL, iProcSend, 40, iComm, iRequestR_I(iRequestR), &
                iError)
           iBufferR  = iBufferR  + nBufferR_P(iProcSend)
        end do
@@ -266,10 +266,10 @@ contains
 
           if(UseRSend)then
              call MPI_rsend(BufferS_I(iBufferS), nBufferS_P(iProcRecv), &
-                  MPI_REAL, iProcRecv, 1, iComm, iError)
+                  MPI_REAL, iProcRecv, 40, iComm, iError)
           else
              call MPI_isend(BufferS_I(iBufferS), nBufferS_P(iProcRecv), &
-                  MPI_REAL, iProcRecv, 1, iComm, iRequestS_I(iRequestS), &
+                  MPI_REAL, iProcRecv, 40, iComm, iRequestS_I(iRequestS), &
                   iError)
           end if
 
@@ -393,6 +393,9 @@ contains
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
+      ! For part steady/implicit schemes
+      if(Unused_BP(iBlockRecv,iProcRecv)) RETURN
+
       iRMin = iEqualR_DII(1,iDir,Min_)
       iRMax = iEqualR_DII(1,iDir,Max_)
       jRMin = iEqualR_DII(2,jDir,Min_)
@@ -486,6 +489,9 @@ contains
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
+
+      ! For part steady/implicit schemes
+      if(Unused_BP(iBlockRecv,iProcRecv)) RETURN
 
       if(DoCountOnly)then
          ! This processor will receive a prolonged buffer from
@@ -617,6 +623,9 @@ contains
                iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
                iProcRecv  = iTree_IA(Proc_,iNodeRecv)
                iBlockRecv = iTree_IA(Block_,iNodeRecv)
+
+               ! For part steady/implicit schemes
+               if(Unused_BP(iBlockRecv,iProcRecv)) CYCLE
 
                if(DoCountOnly)then
                   ! This processor will receive a restricted buffer from

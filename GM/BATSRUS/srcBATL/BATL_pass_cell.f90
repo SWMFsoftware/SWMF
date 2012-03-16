@@ -116,7 +116,7 @@ contains
     use BATL_mpi, ONLY: iComm, nProc, iProc, barrier_mpi
 
     use BATL_tree, ONLY: &
-         iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, iNode_B, &
+         iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, Unused_BP, iNode_B, &
          iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_
 
     use BATL_grid, ONLY: CoordMin_DB, CoordMax_DB
@@ -337,7 +337,7 @@ contains
                 ! Make buffers large enough
                 if(sum(nBufferR_P) > MaxBufferR) then
                    if(allocated(BufferR_I)) deallocate(BufferR_I)
-                   MaxBufferR = sum(nBufferR_P)
+                   MaxBufferR = sum(nBufferR_P) 
                    allocate(BufferR_I(MaxBufferR))
                 end if
 
@@ -433,7 +433,7 @@ contains
           iRequestR = iRequestR + 1
 
           call MPI_irecv(BufferR_I(iBufferR), nBufferR_P(iProcSend), &
-               MPI_REAL, iProcSend, 1, iComm, iRequestR_I(iRequestR), &
+               MPI_REAL, iProcSend, 10, iComm, iRequestR_I(iRequestR), &
                iError)
 
           iBufferR  = iBufferR  + nBufferR_P(iProcSend)
@@ -458,10 +458,10 @@ contains
 
           if(UseRSend)then
              call MPI_rsend(BufferS_I(iBufferS), nBufferS_P(iProcRecv), &
-                  MPI_REAL, iProcRecv, 1, iComm, iError)
+                  MPI_REAL, iProcRecv, 10, iComm, iError)
           else
              call MPI_isend(BufferS_I(iBufferS), nBufferS_P(iProcRecv), &
-                  MPI_REAL, iProcRecv, 1, iComm, iRequestS_I(iRequestS), &
+                  MPI_REAL, iProcRecv, 10, iComm, iRequestS_I(iRequestS), &
                   iError)
           end if
 
@@ -526,6 +526,7 @@ contains
                TimeSend  = BufferR_I(iBufferR)
                UseTime = abs(TimeSend - Time_B(iBlockRecv)) > 1e-30
             end if
+
             if(UseTime)then
                WeightOld = (TimeSend - Time_B(iBlockRecv)) &
                     /      (TimeSend - TimeOld_B(iBlockRecv))
@@ -566,6 +567,9 @@ contains
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
+
+      ! For part implicit and part steady schemes
+      if(Unused_BP(iBlockRecv,iProcRecv)) RETURN
 
       ! No need to count data for local copy
       if(DoCountOnly .and. iProc == iProcRecv) RETURN
@@ -702,6 +706,9 @@ contains
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
+
+      ! For part implicit and part steady schemes
+      if(Unused_BP(iBlockRecv,iProcRecv)) RETURN
 
       ! No need to count data for local copy
       if(DoCountOnly .and. iProc == iProcRecv) RETURN
@@ -979,6 +986,9 @@ contains
                iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
                iProcRecv  = iTree_IA(Proc_,iNodeRecv)
                iBlockRecv = iTree_IA(Block_,iNodeRecv)
+
+               ! For part implicit and part steady schemes
+               if(Unused_BP(iBlockRecv,iProcRecv)) CYCLE
 
                ! No need to count data for local copy
                if(DoCountOnly .and. iProc == iProcRecv) CYCLE
