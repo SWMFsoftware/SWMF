@@ -3121,29 +3121,27 @@ contains
     if(TypeGeometry /= 'spherical_genr') &
          call set_fake_grid_file
 
-    ! Set BATL grid
-    if(UseBatl)then
-       call init_mpi(iComm)
-       if(TypeGeometry(1:9)=='spherical') then
-          TypeGeometryBatl = 'rlonlat'//TypeGeometry(10:20)
-       else
-          TypeGeometryBatl = TypeGeometry
-       end if
+    ! Initialize BATL
+    call init_mpi(iComm)
+    if(TypeGeometry(1:9)=='spherical') then
+       TypeGeometryBatl = 'rlonlat'//TypeGeometry(10:20)
+    else
+       TypeGeometryBatl = TypeGeometry
+    end if
 
-       call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
-            TypeGeometryBatl, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
-            proc_dims(1:nDimBatl), UseRadiusIn=.false., UseDegreeIn=.false.,&
-            RgenIn_I = exp(yR_I))
+    call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
+         TypeGeometryBatl, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
+         proc_dims(1:nDimBatl), UseRadiusIn=.false., UseDegreeIn=.false.,&
+         RgenIn_I = exp(yR_I))
 
-       ! Fix grid size in ignored directions
-       if(nDimBatl == 1)then
-          y1 = -0.5; XyzMin_D(2) = -0.5
-          y2 = +0.5; XyzMax_D(2) = +0.5
-       end if
-       if(nDimBatl < 3)then
-          z1 = -0.5; XyzMin_D(3) = -0.5
-          z2 = +0.5; XyzMax_D(3) = +0.5
-       end if
+    ! Fix grid size in ignored directions
+    if(nDimBatl == 1)then
+       y1 = -0.5; XyzMin_D(2) = -0.5
+       y2 = +0.5; XyzMax_D(2) = +0.5
+    end if
+    if(nDimBatl < 3)then
+       z1 = -0.5; XyzMin_D(3) = -0.5
+       z2 = +0.5; XyzMax_D(3) = +0.5
     end if
 
   end subroutine correct_grid_geometry
