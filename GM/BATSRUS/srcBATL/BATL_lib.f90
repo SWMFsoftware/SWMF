@@ -149,9 +149,10 @@ contains
   !============================================================================
   subroutine clean_batl
 
+    ! Free up memory
     call clean_amr_criteria
-    ! Free up memory by cleaning the grid and tree data
     call clean_grid
+    call clean_geometry
     call clean_tree
 
     IsBatlInitialized = .false.
