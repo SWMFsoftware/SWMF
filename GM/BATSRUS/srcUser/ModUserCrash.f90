@@ -2242,7 +2242,7 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, GammaOut = PlotVar_G(i,j,k))
        end do; end do; end do
-    case('usersphere')
+    case('usersphere10')
        ! Test function for LOS images: sphere with "density" 
        !    100 - r^2 inside r=10, and 0 outside.
        if(TypeGeometry == 'rz')then
