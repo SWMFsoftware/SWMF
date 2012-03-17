@@ -63,10 +63,9 @@ subroutine write_plot_los(iFile)
   use ModUtilities, ONLY: lower_case, split_string, join_string
   use ModPlotFile, ONLY: save_plot_file
   use ModNodes, ONLY: NodeX_NB,NodeY_NB,NodeZ_NB
-  use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK, BlkNeighborLev
+  use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
   use ModVarIndexes, ONLY: nVar
-  use ModFaceGradient, ONLY: set_block_field2
 
   implicit none
 
@@ -155,13 +154,6 @@ subroutine write_plot_los(iFile)
   character (len=20) :: TableVarNames(nPlotVarLosMax)
   integer :: nTableVar
   real, allocatable :: InterpValues_I(:)
-  
-
-  ! temporary variable for setting correct ghostcells in State_VGB
-  ! using the set_block_field routine
-  real :: Aux1_G(nVar, -1:nI+2, -1:nJ+2, -1:nK+2)
-  real :: Aux_G(nVar, -1:nI+2, -1:nJ+2, -1:nK+2)
-
 
   character(len=*), parameter :: NameSub = 'write_plot_los'
   !---------------------------------------------------------------------------
@@ -273,14 +265,14 @@ subroutine write_plot_los(iFile)
           call stop_mpi('Need to load #LOOKUPTABLE for TBL response!')
      ! split the variable list string read in the table
      call split_string(Table_I(iTableGen)%NameVar, nPlotVarLosMax, &
-                        TableVarNames, nTableVar)
+          TableVarNames, nTableVar)
      ! don't count the x and y table labels as plot variables
      nPlotVar=nTableVar-2
      PlotVarNames(1:nPlotVar)=TableVarNames(3:nTableVar)
 
      ! redefine plot_vars1 with correct table info
      call join_string(nPlotVar, PlotVarNames, plot_vars1)
-  
+
      if(oktest_me) then
         write(*,*) 'plot variables, UseRho=', plot_vars1, UseRho
         write(*,*) 'nPlotVar, PlotVarNames_V=', &
@@ -391,17 +383,6 @@ subroutine write_plot_los(iFile)
 
      if (unusedBLK(iBLK)) CYCLE
 
-     ! Here set correct ghostcell values if block has an adjacent reschange.
-     ! This is important because exchange messages does not correct values
-     ! at the reschange ---> interpolation will be off if not corrected by
-     ! set_block_field interpolation
-     if(any(BlkNeighborLev(:,:,:,iBLK)/=0)) then
-        Aux_G(:,:,:,:) = State_VGB(:,:,:,:,iBLK)
-        call set_block_field2(iBLK, nVar, Aux1_G, Aux_G)
-        State_VGB(:,:,:,:,iBLK) = Aux_G(:,:,:,:)
-     endif
-
-
      CellSize_D = (/ dx_BLK(iBlk), dy_BLK(iBlk), dz_BLK(iBlk) /)
 
      do iMirror = 1, nMirror_D(1)
@@ -475,37 +456,35 @@ subroutine write_plot_los(iFile)
         ! Makes it easier to identify, and automatically process synthetic 
         ! images from different instruments/locations
         if (UseTableGen) then
-           
+
            write(FormatTime,*)&
-              '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
+                '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
            call get_date_time_start(iTime0_I)
            call get_date_time(iTime_I)
            write(TextDateTime0,FormatTime) iTime0_I
            write(TextDateTime ,FormatTime) iTime_I
-           
-          !TIMEEVENT
-          write(StringTmp,'(a)')TextDateTime
-          write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(adjustl(StringTmp)),'"'
 
-          !TIMEEVENTSTART
-          write(StringTmp,'(a)')TextDateTime0
-          write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENTSTART="',trim(adjustl(StringTmp)),'"'
+           !TIMEEVENT
+           write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(TextDateTime),'"'
 
-          !TIMESECONDSABSOLUTE     ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
-          write(StringTmp,'(E20.13)')StartTime+Time_Simulation
-          write(unit_tmp,'(a,a,a)') 'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
+           !TIMEEVENTSTART
+           write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENTSTART="',trim(TextDateTime0),'"'
 
-          !ITER
-          write(StringTmp,'(i12)')n_step
-          write(unit_tmp,'(a,a,a)') 'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
+           !TIMESECONDSABSOLUTE     ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
+           write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+           write(unit_tmp,'(a,a,a)') &
+                'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
 
-          !NAMELOSTABLE
-          write(StringTmp,'(a)')trim(NameLosTable(iFile))
-          write(unit_tmp,'(a,a,a)') 'AUXDATA NAMELOSTABLE="',trim(adjustl(StringTmp)),'"'
+           !ITER
+           write(StringTmp,'(i12)')n_step
+           write(unit_tmp,'(a,a,a)') 'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
 
-          !HGIXYZ
-          write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
-          write(unit_tmp,'(a,a,a)') 'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
+           !NAMELOSTABLE
+           write(unit_tmp,'(a,a,a)') 'AUXDATA NAMELOSTABLE="',trim(NameLosTable(iFile)),'"'
+
+           !HGIXYZ
+           write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
+           write(unit_tmp,'(a,a,a)') 'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
 
         endif
 
@@ -533,44 +512,38 @@ subroutine write_plot_los(iFile)
         ! Makes it easier to identify, and automatically process synthetic 
         ! images from different instruments/locations
         if (UseTableGen) then
-           
+
            write(FormatTime,*)&
                 '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
            call get_date_time_start(iTime0_I)
            call get_date_time(iTime_I)
            write(TextDateTime0,FormatTime) iTime0_I
            write(TextDateTime ,FormatTime) iTime_I
-           
-          !TIMEEVENT
-          write(StringTmp,'(a)')TextDateTime
-          write(StringHeadLine,'(a)')trim(StringHeadline)//'_TIMEEVENT='//&
-               trim(adjustl(StringTmp))
 
-          !TIMEEVENTSTART
-          write(StringTmp,'(a)')TextDateTime0
-          write(StringHeadLine,'(a)')trim(StringHeadLine)//&
-               '_TIMEEVENTSTART='//trim(adjustl(StringTmp))
+           ! TIMEEVENT and TIMEEVENTSTART
+           StringHeadLine = trim(StringHeadline)// &
+                '_TIMEEVENT='//trim(TextDateTime)// &
+                '_TIMEEVENTSTART='//TextDateTime0
 
-          !TIMESECONDSABSOLUTE     ! time in seconds since 1965 
-          !                          Jan 01 T00:00:00.000 UTC
-          write(StringTmp,'(E20.13)')StartTime+Time_Simulation
-          write(StringHeadLine,'(a)')trim(StringHeadLine)//&
-               '_TIMESECONDSABSOLUTE='//trim(adjustl(StringTmp))
+           ! TIMESECONDSABSOLUTE    
+           ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
+           write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+           StringHeadLine = trim(StringHeadLine)//&
+                '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
 
-          !ITER
-          write(StringTmp,'(i12)')n_step
-          write(StringHeadLine,'(a)')trim(StringHeadLine)//'_ITER='//&
-               trim(adjustl(StringTmp))
+           ! ITER
+           write(StringTmp,'(i12)')n_step
+           write(StringHeadLine,'(a)')trim(StringHeadLine)//'_ITER='//&
+                adjustl(StringTmp)
 
-          !NAMELOSTABLE
-          write(StringTmp,'(a)')trim(NameLosTable(iFile))
-          write(StringHeadLine,'(a)')trim(StringHeadLine)//'_NAMELOSTABLE='//&
-               trim(adjustl(StringTmp))
+           ! NAMELOSTABLE
+           StringHeadLine = trim(StringHeadLine)//'_NAMELOSTABLE='//&
+                NameLosTable(iFile)
 
-          !HGIXYZ
-          write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
-          write(StringHeadLine,'(a)')trim(StringHeadLine)//'_HGIXYZ='//&
-               trim(adjustl(StringTmp))
+           ! HGIXYZ
+           write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
+           write(StringHeadLine,'(a)')trim(StringHeadLine)//'_HGIXYZ='//&
+                adjustl(StringTmp)
 
         endif
 
@@ -1434,7 +1407,7 @@ contains
        ! if using a generalized table can do it vector style
        if(UseTableGen) then
           ImagePe_VII(:,iPix,jPix) = ImagePe_VII(:,iPix,jPix) + &
-                                       InterpValues_I*ResponseFactor*Ds
+               InterpValues_I*ResponseFactor*Ds
           CYCLE !cycle the nSegment loop
        endif
 
