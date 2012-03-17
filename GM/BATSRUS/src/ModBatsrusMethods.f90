@@ -464,7 +464,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   
   call exchange_messages
 
-  if(UseSemiImplicit .and. Dt>0) call advance_impl   !^CFG IF IMPLICIT
+  if(UseSemiImplicit .and. (Dt>0 .or. .not.time_accurate)) & !^CFG IF IMPLICIT
+       call advance_impl                                     !^CFG IF IMPLICIT
 
   if(UseTimeStepControl .and. time_accurate .and. Dt>0) call control_time_step
 

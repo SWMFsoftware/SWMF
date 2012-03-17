@@ -308,7 +308,6 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
        TypeSemiImplicit, iVarSemiMin, iVarSemiMax, nVarSemi, &
        FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, UseAccurateRadiation
   use ModLinearSolver, ONLY: UsePDotADotP
-  use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
@@ -406,13 +405,14 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
   ! Calculate y_I = A.x_I where A is the linearized sem-implicit operator
 
+  use ModAdvance, ONLY: time_BLK
   use ModImplicit, ONLY: StateSemi_VGB, ResImpl_VCB, &
        FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, &
        nImplBlk, impl2iblk, &
        TypeSemiImplicit, UseSplitSemiImplicit, &
        iVarSemiMin, iVarSemiMax, iVarSemi, nVarSemi, &
        ImplCoeff, DconsDsemi_VCB, KrylovType, UseAccurateRadiation
-  use ModMain, ONLY: dt
+  use ModMain, ONLY: dt, time_accurate, Cfl
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
@@ -431,7 +431,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   real, intent(inout):: y_I(MaxN)
 
   integer :: iImplBlock, iBlock, i, j, k, iVar, n
-  real :: Volume
+  real :: Volume, DtLocal
 
   character(len=*), parameter:: NameSub = 'get_semi_impl_matvec'
   !------------------------------------------------------------------------
@@ -496,22 +496,25 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
      end select
 
      if(UsePDotADotP)then
+        DtLocal = dt
         if(UseSplitSemiImplicit)then
-           do k=1,nK; do j=1,nJ; do i=1,nI
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
               Volume = 1.0/vInv_CB(i,j,k,iBlock)
               n = n + 1
               pDotADotPPe = pDotADotPPe +  &
                    Volume*x_I(n)**2*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)&
-                   /(dt * ImplCoeff)
+                   /(DtLocal * ImplCoeff)
            end do; enddo; enddo
         else
-           do k=1,nK; do j=1,nJ; do i=1,nI
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
               Volume = 1.0/vInv_CB(i,j,k,iBlock)
               do iVar = 1, nVarSemi
                  n = n + 1
                  pDotADotPPe = pDotADotPPe +  &
                       Volume*x_I(n)**2*DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
-                      /(dt * ImplCoeff)
+                      /(DtLocal * ImplCoeff)
               enddo
            enddo; enddo; enddo
         end if
@@ -537,21 +540,23 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
+     DtLocal = dt
      if(UseSplitSemiImplicit)then
-        do k=1,nK; do j=1,nJ; do i=1,nI
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
            Volume = 1.0/vInv_CB(i,j,k,iBlock)
            n = n + 1
-           y_I(n) = &
-                Volume*(x_I(n)*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)/dt &
-                - ImplCoeff * ResImpl_VCB(1,i,j,k,iImplBlock))
+           y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock) &
+                /DtLocal - ImplCoeff * ResImpl_VCB(1,i,j,k,iImplBlock))
          end do; enddo; enddo
      else
-        do k=1,nK; do j=1,nJ; do i=1,nI
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
            Volume = 1.0/vInv_CB(i,j,k,iBlock)
            do iVar = 1, nVarSemi
               n = n + 1
-              y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVar,i,j,k,iImplBlock)/dt&
-                   - ImplCoeff * ResImpl_VCB(iVar,i,j,k,iImplBlock))
+              y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
+                   /DtLocal - ImplCoeff * ResImpl_VCB(iVar,i,j,k,iImplBlock))
             enddo
         enddo; enddo; enddo
      end if
@@ -566,6 +571,7 @@ end subroutine get_semi_impl_matvec
 !==============================================================================
 subroutine get_semi_impl_jacobian
 
+  use ModAdvance, ONLY: time_BLK
   use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
        PrecondType, DnInitHypreAmg, &
        UseSplitSemiImplicit, iVarSemi, &
@@ -573,7 +579,7 @@ subroutine get_semi_impl_jacobian
   use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
   use ModHeatConduction, ONLY: add_jacobian_heat_cond
   use ModResistivity,    ONLY: add_jacobian_resistivity
-  use ModMain, ONLY: nI, nJ, nK, Dt, n_step
+  use ModMain, ONLY: nI, nJ, nK, Dt, n_step, time_accurate, Cfl
   use ModGeometry, ONLY: vInv_CB
   use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix, &
        DoInitHypreAmg
@@ -581,7 +587,7 @@ subroutine get_semi_impl_jacobian
   implicit none
 
   integer :: iImplBlock, iBlock, i, j, k, iStencil, iVar, jVar
-  real    :: Coeff
+  real    :: Coeff, DtLocal
 
   integer:: nStepLast = -1
 
@@ -612,8 +618,10 @@ subroutine get_semi_impl_jacobian
         MAT(:, :, i, j, k, iStencil, iImplBlock) = &
              Coeff * MAT(:, :, i, j, k, iStencil, iImplBlock)
      end do; end do; end do; end do
+     DtLocal = dt
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        Coeff = 1.0/(dt*vInv_CB(i,j,k,iBlock))
+        if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+        Coeff = 1.0/(DtLocal*vInv_CB(i,j,k,iBlock))
         if(UseSplitSemiImplicit)then
            MAT(1,1,i,j,k,1,iImplBlock) = &
                 Coeff*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock) &
