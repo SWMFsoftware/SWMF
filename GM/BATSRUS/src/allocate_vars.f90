@@ -94,15 +94,12 @@ subroutine allocate_vars
        iBlockRestartALL_A(MaxBlockALL))
 
   !\
-  ! allocate unusedBlock_BP and set the default false value
-  !/
-  allocate(unusedBlock_BP(MaxBlock, 0:nProc-1))
-
-  !\  
-  ! Initialize unused block indicators.
+  ! Initialize unused block indicators in a strange manner 
   !/  
-  unusedBLK     = .true.
-  unusedBlock_BP= .false.
+  if(.not.UseBatl)then
+     unusedBlk     = .true.
+     unusedBlock_BP= .false.
+  end if
 
   !\  
   ! allocate and initialize the displacement and the maximum number

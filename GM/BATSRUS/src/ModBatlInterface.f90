@@ -11,10 +11,9 @@ contains
     use BATL_lib, ONLY: nNodeUsed, nBlock, MaxBlock, Unused_B, Unused_BP, &
          iProc, iComm, iNodeMorton_I, iTree_IA, Block_, Proc_,&
          IsNewDecomposition, IsNewTree
-    use ModAmr, ONLY: UnusedBlock_BP
     use ModParallel, ONLY: iBlock_A, iProc_A
 
-    use ModMain, ONLY: nBlockAll, nBlockBats => nBlock, nBlockMax, UnusedBlk, &
+    use ModMain, ONLY: nBlockAll, nBlockBats => nBlock, nBlockMax, &
          iNewGrid, iNewDecomposition
 
     use ModGeometry, ONLY: dx_BLK, MinDxValue, MaxDxValue
@@ -43,9 +42,6 @@ contains
        nBlockBats = nBlock
        call MPI_ALLREDUCE(nBlock, nBlockMax, 1, MPI_INTEGER, MPI_MAX, &
             iComm, iError)
-
-       UnusedBlk(1:nBlockMax)      = Unused_B(1:nBlockMax)
-       UnusedBlock_BP(1:nBlockMax,:) = Unused_BP(1:nBlockMax,:)
 
        do iMorton = 1, nNodeUsed
           iNode = iNodeMorton_I(iMorton)

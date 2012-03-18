@@ -7,6 +7,9 @@ Module ModMain
   use ModSize
   use ModVarIndexes
 
+  ! Logigal array for the blocks used (=.false.) on the given processor
+  use BATL_lib, ONLY: UnusedBLK => Unused_B
+
   implicit none
 
   save
@@ -117,9 +120,6 @@ Module ModMain
 
   ! Identifiers for the grid and decomposition changes
   integer :: iNewGrid=0, iNewDecomposition=0
-
-  ! Logigal array for the blocks used (=.false.) on the given processor
-  logical, dimension(nBLK) :: UnusedBLK
 
   ! nBlock is a maximum block index number used on the given processor
   ! nBlockMax is a maximum of nBlock over all the processors, 

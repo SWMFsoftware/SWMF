@@ -1,5 +1,8 @@
 !^CFG COPYRIGHT UM
 module ModAMR
+
+  use BATL_lib, ONLY:  unusedBlock_BP => Unused_BP
+
   use ModCube
   implicit none
   save
@@ -40,8 +43,6 @@ module ModAMR
   integer, dimension(:,:), allocatable :: SortB
   integer, dimension(:,:), allocatable :: SortP
   real, dimension(:,:), allocatable :: SortC
-
-  logical, dimension(:,:),     allocatable :: unusedBlock_BP
 
   !\
   ! Refinement criteria parameters
