@@ -1156,6 +1156,7 @@ contains
     use ModVarIndexes, ONLY: Rho_, p_, WaveFirst_, WaveLast_, &
                              Bx_, Bz_, Ux_, Uz_
     use ModMultiFluid, ONLY: MassIon_I
+    use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
@@ -1171,6 +1172,13 @@ contains
          call CON_stop('Wrong iSide in user_set_outerBCs')
 
     IsFound = .true.
+
+    if(TypeBc == 'usersemi')then
+       StateSemi_VGB(iTeImpl,0,:,:,iBlock) = tChromo
+       RETURN
+    elseif(TypeBc == 'usersemilinear')then
+       RETURN
+    end if
 
     if (UseChromoBc) then
 
