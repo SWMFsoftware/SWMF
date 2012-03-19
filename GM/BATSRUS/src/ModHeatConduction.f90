@@ -561,7 +561,6 @@ contains
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iImplBlock, iP
     real :: TeSi, CvSi
-    real :: FaceNormal_D(nDim)
     real :: HeatCond_DD(3,3)
 
     integer, parameter :: jMin1 = 1 - min(1,nJ-1), jMax1 = nJ + min(1,nJ-1)
@@ -611,24 +610,25 @@ contains
        ! and multiply with the area
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-          if(IsCartesian)then
-             FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
-          end if
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-             if(.not.IsCartesian)then
-                if(IsRzGeometry)then
-                   FaceNormal_D = 0.0
-                   FaceNormal_D(iDim)=CellFace_DFB(iDim,i,j,k,iBlock)
-                else
-                   FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
-                end if
-             end if
-
-             do iDir = 1, nDim
+             if(IsCartesian)then
                 HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
-                     0.5*sum( FaceNormal_D*(HeatCond_DDG(:nDim,iDir,i,j,k) &
-                     + HeatCond_DDG(:nDim,iDir,i-Di,j-Dj,k-Dk)) )
-             end do
+                     CellFace_DB(iDim,iBlock) &
+                     *0.5*(HeatCond_DDG(iDim,iDir,i,j,k) &
+                     +     HeatCond_DDG(iDim,iDir,i-Di,j-Dj,k-Dk))
+             elseif(IsRzGeometry)then
+                HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
+                     CellFace_DFB(iDim,i,j,k,iBlock) &
+                     *0.5*(HeatCond_DDG(iDim,iDir,i,j,k) &
+                     +     HeatCond_DDG(iDim,iDir,i-Di,j-Dj,k-Dk))
+             else
+                do iDir = 1, nDim
+                   HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
+                        0.5*sum( FaceNormal_DDFB(:,iDim,i,j,k,iBlock) &
+                        *(HeatCond_DDG(:nDim,iDir,i,j,k) &
+                        + HeatCond_DDG(:nDim,iDir,i-Di,j-Dj,k-Dk)) )
+                end do
+             else
           end do; end do; end do
        end do
 
