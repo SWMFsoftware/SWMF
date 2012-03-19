@@ -741,13 +741,14 @@ test_chromo:
 	$(MAKE) test_chromo_check
 
 test_chromo_compile:
-	./Config.pl -u=ScChromo -e=MhdWavesHyp -g=6,4,4,5000,1 -nWave=2
+	./Config.pl -u=ScChromo -e=MhdWaves -g=6,4,4,1000,1000
 	$(MAKE) BATSRUS
 
 test_chromo_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.chromo PARAM.in
+	cd ${TESTDIR}; cp Param/CORONA/GridChromo GridChromo
 
 test_chromo_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
@@ -755,8 +756,8 @@ test_chromo_run:
 	
 test_chromo_check:
 	${SCRIPTDIR}/DiffNum.pl -t \
-		Param/CORONA/TestOutput/log_n000001.sc.chromo \
-		${TESTDIR}/RESULTS/SC/log_n000001.log > test_chromo.diff
+		Param/CORONA/TestOutput/log_n000000.sc.chromo \
+		${TESTDIR}/RESULTS/SC/log_n000000.log > test_chromo.diff
 	ls -l test_chromo.diff
 
 ### STANDALONE OUTER HELIOSPHERE TESTS ###

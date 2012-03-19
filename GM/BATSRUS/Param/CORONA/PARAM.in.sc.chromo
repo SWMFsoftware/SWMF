@@ -1,29 +1,21 @@
+Begin session: 1
+
 #ECHO
 T			DoEcho
 
-#COMPONENT
-SC			NameComponent
-
 #DESCRIPTION
-Test for Chromospheric-Coronal model with Counter Propogating Alfven Waves
+Input file for creating a steady state solar corona
 
-#TIMEACCURATE
-F			DoTimeAccurate
+#COMPONENT 
+SC			NameComp
 
-#STARTTIME
-2008			iYear
-11			iMonth
-20			iDay
-7			iHour
-13			iMinute
-0			iSecond
-0.0			FracSecond
+#SAVERESTART
+T			DoSaveRestart
+10000			DnSaveRestart
+-1.0			DtSaveRestart
 
 #COORDSYSTEM
 HGR			TypeCoordSystem
-
-#NONCONSERVATIVE
-F			UseNonConservative
 
 #PLASMA
 1.0			IonMass [amu]
@@ -36,39 +28,104 @@ T			UseBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
+#BODY
+F			UseBody
+
+#STARTTIME
+2011			iYear
+2			iMonth
+16			iDay
+17			iHour
+26			iMinute
+0			iSecond
+0.0			FracSecond
+
+READPOTENTIALFIELD
+T			UseMagnetogram
+potentialfield.out	NamePotentialFieldFile
+0.0			H_PFSSM
+2.0			UnitB 1.0
+
+#MAGNETOGRAM
+T			UseMagnetogram
+1.0			rMagnetogram
+2.5			rSourceSurface
+0.0			HeightInnerBc
+Param/CORONA/CR2077_GNG.dat	NameMagnetogramFile
+12			nHeaderLine
+0.0			PhiShift
+2.0			UnitB
+
+#USECURLB0
+T			UseCurlB0
+2.5			rCurrentFreeB0
+
 #USER_FLAGS
 T			UseUserInnerBcs
-T			UseUserSource
+F			UseUserSource
 F			UseUserPerturbation
-F			UseUserOuterBcs
+T			UseUserOuterBcs
 T			UseUserICs
 T			UseUserSpecifyRefinement
 T			UseUserLogFiles
-F			UseUserWritePlot
+T			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
 F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
 
-#USECURLB0
-T			UseCurlB0
-0.0			rCurrentFreeB0
+#USERINPUTBEGIN ------------------------
 
-#HYPERBOLICDIVB
-T			UseHyperbolicDivB
+#CHROMOBC
+T			UseChromoBc
+1.5e4			DeltaU [m/s]
+2e16			nChromoSi [1/m^3]
+2e4			tChromoSi [K]
+T			UseFloatUpar
+F			UseExtrapolatedEwave
+
+#PARKERIC
+1.5e14			NumDensitySi 1e14
+1.5e6			Temperature (K) 1.5e6
+
+#USERINPUTEND ----------------------------
+
+#CORONALHEATING
+alfvenwavedissipation	TypeCoronalHeating
+7.5e4			LperpTimesSqrtBSi
+0.04			Crefl
+
+HYPERBOLICDIVB
+F			UseHyperbolicDivb
 400.0			SpeedHypDim
 0.1			HypDecay
 
-#MAGNETOGRAM
-T                       UseMagnetogram
-1.0                     rMagnetogram
-2.5                     rSourceSurface
-0.0                     HeightInnerBc
-Param/CORONA/CR2077_GNG.dat     NameMagnetogramFile
-12                      nHeaderLine
-0.0                     PhiShift
-1.0                     UnitB
+#HEATCONDUCTION
+T			UseHeatConduction
+spitzer			TypeHeatConduction
+
+#HEATFLUXREGION
+T			UseHeatFluxRegion
+5.0			rCollisional
+10.0			rCollisionless
+
+#TEST
+krylov
+
+#SEMIIMPLICIT
+T			UseSemiImplicit
+parcond			TypeSemiImplicit
+
+#KRYLOV
+gmres			TypeKrylov
+nul			TypeInitKrylov
+1.0e-5			ErrorMaxKrylov
+10			MaxMatvecKrylov
+
+#PRECONDITIONER
+left			TypePrecondSide (left, symmetric, right)
+bilu			TypePrecond (MBILU)
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -80,43 +137,23 @@ Param/CORONA/RadCool.dat
 ascii			TypeFile
 
 #TRANSITIONREGION
-T			DoExpandTransitionRegion
-3.0e5			TeTransitionRegionSi
-1.0e1			DeltaTeSi
+T			DoExtendTransitionRegion
+3.0e5			TeModSi
+1.0e1			DeltaTeModSi
 
-#USERINPUTBEGIN ------------------------
+#INCLUDE
+GridChromo
 
-SOLARDIPOLE
--2.836e-4
-30.
+#AMR
+40			DnRefine 40000
+F			DoAutoRefine
 
-#CHROMOBC
-T			UseChromoBc
-2e4			DeltaUSi  [m/s]
-2e16			nChromoSi [1/m^3]
-2e4			tChromoSi [K]
-T			UseConsRhoUpar
-F			UseExtrapolatedEwave
+#TIMEACCURATE
+F			DoTimeAccurate
 
-#PARKERIC
-1.5e14			NumDensitySi 1e14
-1.5e6			Temperature (K) 1.5e6
-
-#WAVEDISSIPATION
-T                       UseWaveDissipation
-3.4e6                   Lmax [m T-1/2]
-25.                     Lratio > 1
-
-#USERINPUTEND ----------------------------
-
-#HEATCONDUCTION
-T			UseHeatConduction
-spitzer			TypeHeatConduction
-
-#HEATFLUXREGION
-T			UseHeatFluxRegion
-5.0			rCollisional
-10.0			rCollisionless
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
 
 #SCHEME
 2			nOrder (1 or 2)
@@ -124,15 +161,17 @@ Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
 
+#NONCONSERVATIVE
+F			UseNonConservative
+
 #MESSAGEPASS
 all			TypeMessagePass
 
 #RESCHANGE
 T			UseAccurateResChange
 
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
+#RESCHANGEBOUNDARY
+T			SaveBoundaryCells
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -140,40 +179,47 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
+#EXTRABOUNDARY
+T			UseExtraBoundary
+user			TypeBc_I(ExtraBc_)
+T			DoFixExtraBoundary
+
 #FACEBOUNDARY
--1			MinBoundary
--1			MaxBoundary
+0			MinBoundary
+0			MaxBoundary
+F			DoFixOuterBoundary
 
 #OUTERBOUNDARY
-user			TypeBcEast
+user			TypeBcEast   user for spherical and user_outerbcs
 float			TypeBcWest
 float			TypeBcSouth
 float			TypeBcNorth
 float			TypeBcBottom
 float			TypeBcTop
 
-#INCLUDE
-Param/CORONA/GridChromo
-
-#GRIDLEVEL
-3			nLevelArea
-initial			NameArea
-
-#AMR
-60			DnRefine
-F			DoAutomaticRefinement 
-
 #SAVEPLOT
-1			nPlotFiles
-y=0 VAR tec		StringPlot
-20			DnSavePlot
+1			nPlotFiles 1
+x=0 VAR idl		StringPlot
+20			DnSavePlot 5000
 -1.			DtSavePlot
-rho ux uy uz bx by bz I01 I02 temp disstot lkol lcp
+-1.0			DxSavePlot
+rho ux uy uz ti bx by bz I01 I02 p
+g rbody
+x=0 VAR tec		StringPlot
+10000			DnSavePlot
+-1.			DtSavePlot
+rho ux uy uz ti bx by bz I01 I02 p
+g rbody
+3d VAR tec
+50000			DnSavePlot
+-1.			DtSavePlot
+rho ux uy uz ti bx by bz I01 I02 p
 g rbody
 
+
 #SAVEINITIAL
-F			DoSaveInitial
+T			DoSaveInitial
 
 #STOP
-100	                MaxIteration
--1.0                    tSimulationMax
+50			MaxIteration 60000
+-1.0			tSimulationMax

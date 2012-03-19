@@ -1,5 +1,13 @@
+#FIXAXIS
+F			UsePoleDiffusion
+T			DoFixAxis
+8.0			rFixAxis
+0.0			r2FixAxis
+
+turn these off when restarting
+---------------------------------------------------
 #GRIDGEOMETRY
-spherical_genr		TypeGeometry
+spherical_genr
 Param/CORONA/grid_TR.dat
 
 ! Use a true sphere, so box is made much larger
@@ -18,24 +26,25 @@ Param/CORONA/grid_TR.dat
 1.0			rMin
 24.0			rMax
 
+----------------------------------------------------
 #GRIDLEVEL
-3			nLevelArea
+2			nLevelArea 4
 all			NameArea
-
-#GRIDLEVEL
-4
-currentsheet
 
 #GRIDLEVEL
 5			nLevelArea
 box_gen			NameArea
 1.0			rMin
 0.0			LonMin
--76.0			LatMin
-24.0			rMax
+-90.0			LatMin
+1.7			rMax
 360.0			LonMax
-76.0			LatMax
+90.0			LatMax
 
 #GRIDLEVEL
-3			nLevelArea
-initial 		NameArea
+5			nLevelArea
+user			NameArea
+
+#GRIDLEVEL
+2			nLevelArea 5
+initial			NameArea
