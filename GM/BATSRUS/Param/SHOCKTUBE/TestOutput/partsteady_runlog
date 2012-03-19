@@ -1,0 +1,468 @@
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2007
+
+ BATSRUS version 9.10 is running as GM on      2 PE(s)
+
+ EQUATIONS:   MHD with hyperbolic cleaning
+ USER MODULE: DEFAULT EMPTY ROUTINES 1.00
+
+ModReadParam::read_file: read and broadcast nLine= 140 lines of text
+ ----- Starting Session  1  ------
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#CHECKGRIDSIZE
+4                       nI
+4                       nJ
+1                       nK
+100                     MinBlockALL
+
+#GRID
+64                      nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-128.			xMin	
+ 128.			xMax	
+-1.			yMin	
+ 1.			yMax	
+-1.			zMin	
+ 1.			zMax
+
+#GRIDLEVEL
+1			nLevel		nLevelArea
+initial			NameArea
+
+#GRIDLEVEL
+1			nLevel		nLevelArea
+brick0			NameArea
+2.0			xSize
+2.0			ySize
+2.0			zSize
+
+#PARTSTEADY
+T			UsePartSteady
+
+#PARTSTEADYCRITERIA
+2			MinCheckVar
+2			MaxCheckVar
+0.0			RelativeEps
+1e-4			AbsoluteEps
+
+#GAMMA
+2.0		Gamma
+
+#HYPERBOLICDIVB
+T			UseHyperbolicDivb		UseHyperbolicDivB
+4.0			SpeedHypDim
+0.1			HypDecay
+
+#DIVB
+F		UseDivbSource
+F		UseDivbDiffusion
+F		UseProjection
+F		UseConstrainB
+
+#SHOCKTUBE
+1.			rho (left state)		rho        left
+0.			Ux		ux         left
+0.			Uy		uy         left
+0.			Uz		uz         left
+0.75			Bx		bx         left
+1.			By		by         left
+0.			Bz		bz         left
+0.			Hyp		hyp        left
+1.			P		p          left
+0.125			rho (right state)		rho        right
+0.			Ux		ux         right
+0.			Uy		uy         right
+0.			Uz		uz         right
+0.75			Bx		bx         right
+-1.			By		by         right
+0.			Bz		bz         right
+0.0			Hyp		hyp        right
+0.1			P		p          right
+
+#OUTERBOUNDARY
+float			xMinBc		TypeBcEast
+float			xMaxBc		TypeBcWest
+float			yMinBc		TypeBcSouth
+float			yMaxBc		TypeBcNorth
+float			zMinBc		TypeBcBottom
+float			zMaxBc		TypeBcTop
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder
+Roe			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaverestart		DoSaveRestart
+
+#PLOTFILENAME
+second			NameTimeMaxUnit		NameMaxTimeUnit
+
+#SAVEPLOT
+2			nPlotfile		nPlotFile
+z=0 var idl		PlotString		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+0.0			DxSavePlot
+rho ux uy uz bx by bz p hyp evolve proc		NameVars
+g		NamePars
+cut var idl_ascii	PlotString		StringPlot
+-1              	DnSavePlot
+10.0            	DtSavePlot
+-128.0			xMinCut
++128.0			xMaxCut
+-0.01			yMinCut
+0.01			yMaxCut
+-0.01			zMinCut
+0.01			zMaxCut
+0.0             	DxSavePlot
+rho ux uy uz bx by bz p hyp evolve		NameVars
+g		NamePars
+
+#STOP
+-1			MaxIteration
+25.6			tSimulationMax
+ GM_set_parameters: CHECK iSession = 1
+  
+init_mod_advance allocated arrays
+init_mod_geometry allocated arrays
+ Only Extra and Outer boundary cells can be saved
+init_mod_nodes allocated arrays
+init_mod_raytrace allocated arrays
+ BATS_setup starting initial refinement level, nBlockAll = 1 64
+     total blocks =  70
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: NONE            Normalization: NONE
+
+          Gamma:         2.00000000
+
+          UseBody1: .false.
+
+          UseBody2: .false.
+
+          ClightFactor:  1.00000E+00, Clight:      2.99790E+08
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          2nd-order scheme with mc3 limiter
+              BetaLimiter = 1.20
+          Roe flux function
+          Time accurate calculation
+          Explicit time stepping
+              nStage: 2
+              Cfl:    0.80
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  2
+
+ After initial grid setup:
+   nBlockMax =  35  nBLK =  1000
+   Total number of blocks used =  70
+   Total number of cells =  1120
+   Total number of true cells =  1120
+   Smallest cell dx:    0.5000000000000000   Largest cell dx:    1.0000000000000000
+
+ root blocks:       64       1       1
+ nIJK_D:             4       4       1
+ x:              -128.00000000    128.00000000
+ y:                -1.00000000      1.00000000
+ z:                -0.50000000      0.50000000
+
+saved ifile= 5 type=z=0_var    at n_step=      0 time=   0:00:00 h:m:s
+saved ifile= 6 type=cut_var    at n_step=      0 time=   0:00:00 h:m:s
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   0.04    100.00         1         1
+-------------------------------------------------------------------------------
+setup                     0.04     99.92         1         1
+exch_msgs                 0.01     20.58         1         1
+save_plot                 0.01     14.20         1         2
+batl_pass                 0.00      2.46         1         2
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 2 1930 62 4 4
+Speed is 107217.3 c/s/p after      0.2 s at N =      10 (3.0000E-01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 11 1930 61 3 6
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 12 1930 60 2 8
+Speed is  87583.3 c/s/p after      0.3 s at N =      20 (6.3320E-01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 25 1930 59 2 9
+Speed is  73771.5 c/s/p after      0.4 s at N =      30 (9.6327E-01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 38 1930 58 2 10
+Speed is  73242.4 c/s/p after      0.5 s at N =      40 (1.2875E+00 s)
+Speed is  73356.8 c/s/p after      0.6 s at N =      50 (1.6078E+00 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 54 1930 57 2 11
+Speed is  63803.8 c/s/p after      0.7 s at N =      60 (1.9257E+00 s)
+Speed is  60804.3 c/s/p after      0.8 s at N =      70 (2.2419E+00 s)
+Speed is  64280.5 c/s/p after      0.9 s at N =      80 (2.5569E+00 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 87 1930 56 2 12
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 90 1930 55 2 13
+Speed is  62402.0 c/s/p after      1.0 s at N =      90 (2.8719E+00 s)
+Speed is  56939.5 c/s/p after      1.2 s at N =     100 (3.1861E+00 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     100    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     1.17    1.173    1.173   100.00
+-------------------------------------------------------------------------------
+advance                 100     100     0.86    0.009    0.009    73.01
+save_logfile            100     100     0.29    0.003    0.003    24.46
+-------------------------------------------------------------------------------
+   100 of    815 iterations completed.   Expected time to completion:      6.13
+
+Speed is  53743.6 c/s/p after      1.3 s at N =     110 (3.4991E+00 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 120 1930 54 2 14
+Speed is  56321.0 c/s/p after      1.4 s at N =     120 (3.8129E+00 s)
+Speed is  57090.3 c/s/p after      1.6 s at N =     130 (4.1288E+00 s)
+Speed is  57084.8 c/s/p after      1.7 s at N =     140 (4.4473E+00 s)
+Speed is  52975.1 c/s/p after      1.8 s at N =     150 (4.7683E+00 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 151 1930 53 2 15
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 154 1930 52 2 16
+Speed is  51094.4 c/s/p after      2.0 s at N =     160 (5.0922E+00 s)
+Speed is  51885.6 c/s/p after      2.1 s at N =     170 (5.4200E+00 s)
+Speed is  51314.3 c/s/p after      2.2 s at N =     180 (5.7525E+00 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 186 1930 51 2 17
+Speed is  45901.2 c/s/p after      2.4 s at N =     190 (6.0858E+00 s)
+Speed is  45267.8 c/s/p after      2.5 s at N =     200 (6.4192E+00 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     200    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     2.53    2.530    2.530   100.00
+-------------------------------------------------------------------------------
+advance                 200     200     1.91    0.010    0.010    75.69
+save_logfile            200     200     0.57    0.003    0.003    22.61
+-------------------------------------------------------------------------------
+   200 of    775 iterations completed.   Expected time to completion:      5.51
+
+Speed is  45672.7 c/s/p after      2.7 s at N =     210 (6.7525E+00 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 214 1930 50 2 18
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 218 1930 49 2 19
+Speed is  41960.3 c/s/p after      2.8 s at N =     220 (7.0858E+00 s)
+Speed is  42150.0 c/s/p after      3.0 s at N =     230 (7.4192E+00 s)
+Speed is  41940.8 c/s/p after      3.2 s at N =     240 (7.7525E+00 s)
+Speed is  41558.6 c/s/p after      3.3 s at N =     250 (8.0858E+00 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 251 1930 48 2 20
+Speed is  41453.7 c/s/p after      3.5 s at N =     260 (8.4192E+00 s)
+Speed is  41925.8 c/s/p after      3.7 s at N =     270 (8.7525E+00 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 278 1930 47 2 21
+Speed is  38599.4 c/s/p after      3.8 s at N =     280 (9.0858E+00 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 283 1930 46 2 22
+Speed is  38351.1 c/s/p after      4.0 s at N =     290 (9.4192E+00 s)
+Speed is  38453.4 c/s/p after      4.2 s at N =     300 (9.7525E+00 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     300    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     4.18    4.180    4.180   100.00
+-------------------------------------------------------------------------------
+advance                 300     300     3.26    0.011    0.011    78.04
+save_logfile            300     300     0.86    0.003    0.003    20.51
+-------------------------------------------------------------------------------
+   300 of    775 iterations completed.   Expected time to completion:      5.16
+
+saved ifile= 5 type=z=0_var    at n_step=    308 time=   0:00:10 h:m:s
+saved ifile= 6 type=cut_var    at n_step=    308 time=   0:00:10 h:m:s
+Speed is  38401.2 c/s/p after      4.4 s at N =     310 (1.0086E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 316 1930 45 2 23
+Speed is  35904.1 c/s/p after      4.5 s at N =     320 (1.0419E+01 s)
+Speed is  34328.3 c/s/p after      4.7 s at N =     330 (1.0752E+01 s)
+Speed is  36045.2 c/s/p after      4.9 s at N =     340 (1.1086E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 343 1930 44 2 24
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 348 1930 43 2 25
+Speed is  33541.0 c/s/p after      5.1 s at N =     350 (1.1419E+01 s)
+Speed is  33343.4 c/s/p after      5.3 s at N =     360 (1.1752E+01 s)
+Speed is  33387.0 c/s/p after      5.5 s at N =     370 (1.2086E+01 s)
+Speed is  32666.4 c/s/p after      5.7 s at N =     380 (1.2419E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 381 1930 42 2 26
+Speed is  33193.1 c/s/p after      5.9 s at N =     390 (1.2752E+01 s)
+Speed is  33282.0 c/s/p after      6.1 s at N =     400 (1.3086E+01 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     400    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     6.10    6.101    6.101   100.00
+-------------------------------------------------------------------------------
+advance                 400     400     4.87    0.012    0.012    79.90
+save_logfile            400     400     1.14    0.003    0.003    18.73
+save_plot                 1       2     0.01    0.006    0.003     0.09
+#others                                 0.08    0.078              1.28
+-------------------------------------------------------------------------------
+   400 of    775 iterations completed.   Expected time to completion:      4.57
+
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 409 1930 41 2 27
+Speed is  30720.3 c/s/p after      6.3 s at N =     410 (1.3419E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 414 1930 40 2 28
+Speed is  31235.8 c/s/p after      6.5 s at N =     420 (1.3752E+01 s)
+Speed is  31395.3 c/s/p after      6.7 s at N =     430 (1.4086E+01 s)
+Speed is  31302.4 c/s/p after      6.9 s at N =     440 (1.4419E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 446 1930 39 2 29
+Speed is  29291.7 c/s/p after      7.1 s at N =     450 (1.4752E+01 s)
+Speed is  29221.3 c/s/p after      7.4 s at N =     460 (1.5086E+01 s)
+Speed is  29131.8 c/s/p after      7.6 s at N =     470 (1.5419E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 475 1930 38 2 30
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 479 1930 37 2 31
+Speed is  27063.5 c/s/p after      7.8 s at N =     480 (1.5752E+01 s)
+Speed is  27457.7 c/s/p after      8.1 s at N =     490 (1.6086E+01 s)
+Speed is  27627.2 c/s/p after      8.3 s at N =     500 (1.6419E+01 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     500    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1     8.29    8.288    8.288   100.00
+-------------------------------------------------------------------------------
+advance                 500     500     6.75    0.014    0.014    81.50
+save_logfile            500     500     1.43    0.003    0.003    17.22
+save_plot                 1       2     0.01    0.006    0.003     0.07
+#others                                 0.10    0.100              1.21
+-------------------------------------------------------------------------------
+   500 of    775 iterations completed.   Expected time to completion:      3.72
+
+Speed is  27452.2 c/s/p after      8.5 s at N =     510 (1.6752E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 512 1930 36 2 32
+Speed is  27677.7 c/s/p after      8.8 s at N =     520 (1.7086E+01 s)
+Speed is  27472.8 c/s/p after      9.0 s at N =     530 (1.7419E+01 s)
+Speed is  27691.4 c/s/p after      9.2 s at N =     540 (1.7752E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 542 1930 35 2 33
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 544 1930 34 2 34
+Speed is  26065.7 c/s/p after      9.5 s at N =     550 (1.8086E+01 s)
+Speed is  25983.9 c/s/p after      9.7 s at N =     560 (1.8419E+01 s)
+Speed is  26095.0 c/s/p after     10.0 s at N =     570 (1.8752E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 577 1930 33 2 35
+Speed is  24683.8 c/s/p after     10.2 s at N =     580 (1.9086E+01 s)
+Speed is  24737.1 c/s/p after     10.5 s at N =     590 (1.9419E+01 s)
+Speed is  24767.9 c/s/p after     10.7 s at N =     600 (1.9752E+01 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     600    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    10.72   10.721   10.721   100.00
+-------------------------------------------------------------------------------
+advance                 600     600     8.89    0.015    0.015    82.92
+save_logfile            600     600     1.71    0.003    0.003    15.97
+save_plot                 1       2     0.01    0.006    0.003     0.05
+#others                                 0.11    0.114              1.06
+-------------------------------------------------------------------------------
+   600 of    775 iterations completed.   Expected time to completion:      2.59
+
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 608 1930 32 2 36
+saved ifile= 5 type=z=0_var    at n_step=    608 time=   0:00:20 h:m:s
+saved ifile= 6 type=cut_var    at n_step=    608 time=   0:00:20 h:m:s
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 610 1930 31 2 37
+Speed is  24572.0 c/s/p after     11.0 s at N =     610 (2.0086E+01 s)
+Speed is  23577.9 c/s/p after     11.3 s at N =     620 (2.0419E+01 s)
+Speed is  23486.9 c/s/p after     11.5 s at N =     630 (2.0752E+01 s)
+Speed is  23627.7 c/s/p after     11.8 s at N =     640 (2.1086E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 643 1930 30 2 38
+Speed is  22024.6 c/s/p after     12.1 s at N =     650 (2.1419E+01 s)
+Speed is  23423.2 c/s/p after     12.4 s at N =     660 (2.1752E+01 s)
+Speed is  23348.9 c/s/p after     12.7 s at N =     670 (2.2086E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 675 1930 28 2 40
+Speed is  22526.2 c/s/p after     13.0 s at N =     680 (2.2419E+01 s)
+Speed is  22401.6 c/s/p after     13.2 s at N =     690 (2.2752E+01 s)
+Speed is  22455.8 c/s/p after     13.5 s at N =     700 (2.3086E+01 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     700    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    13.52   13.518   13.518   100.00
+-------------------------------------------------------------------------------
+advance                 700     700    11.31    0.016    0.016    83.69
+save_logfile            700     700     2.06    0.003    0.003    15.25
+save_plot                 2       4     0.01    0.006    0.003     0.08
+#others                                 0.13    0.132              0.98
+-------------------------------------------------------------------------------
+   700 of    775 iterations completed.   Expected time to completion:      1.21
+
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 708 1930 27 2 41
+Speed is  21600.6 c/s/p after     13.8 s at N =     710 (2.3419E+01 s)
+Speed is  21598.3 c/s/p after     14.1 s at N =     720 (2.3752E+01 s)
+Speed is  21545.0 c/s/p after     14.4 s at N =     730 (2.4086E+01 s)
+Speed is  21512.0 c/s/p after     14.7 s at N =     740 (2.4419E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 741 1930 26 2 42
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 742 1930 25 2 43
+Speed is  20396.9 c/s/p after     15.0 s at N =     750 (2.4752E+01 s)
+Speed is  20359.1 c/s/p after     15.3 s at N =     760 (2.5086E+01 s)
+Speed is  20503.1 c/s/p after     15.6 s at N =     770 (2.5419E+01 s)
+ part_steady finished: nStep,nSkipped,Steady,Bound,ExplALL= 773 1930 24 2 44
+
+    Finished Numerical Simulation
+    -----------------------------
+   Simulated Time T =   0.25600E+02 (    0.426667 min,     0.007111 hrs)
+saved ifile= 5 type=z=0_var    at n_step=    776 time=   0:00:25 h:m:s
+saved ifile= 6 type=cut_var    at n_step=    776 time=   0:00:25 h:m:s
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     776    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                  15.77    100.00         1         1
+-------------------------------------------------------------------------------
+advance                  13.33     84.51       776       776
+calc_fluxes               8.22     52.10       776     22090
+calc_facevalues           2.63     16.67       776     22090
+save_logfile              2.28     14.46       776       776
+exch_msgs                 0.72      4.54       776      1552
+update_states             0.51      3.20       776     22090
+calc_face_bfo             0.42      2.64       776      4928
+calc_fluxes_bfo           0.23      1.47       776      4928
+batl_pass                 0.20      1.30       776      1578
+update_check              0.15      0.98       776      1552
+local_pass                0.14      0.90       776      3156
+calc_sources              0.08      0.51       776     22090
+init_pass                 0.04      0.28       776      1578
+int_domain                0.04      0.27       776       776
+send_cons_flux            0.04      0.23       776      1552
+part_steady               0.03      0.21       775       775
+barrier-expl1             0.03      0.18       776      1552
+save_plot                 0.02      0.11         3         6
+buffer_to_state           0.01      0.04       776      1578
+barrier-expl2             0.00      0.03       776      1552
+wait_pass                 0.00      0.02       776      1578
+send_recv                 0.00      0.02       776      1552
+send_pass                 0.00      0.01       776      1578
+recv_pass                 0.00      0.01       776      1578
+-------------------------------------------------------------------------------
+clean_mod_advance deallocated arrays
+clean_mod_geometry deallocated arrays
+clean_mod_nodes deallocated arrays
+clean_mod_raytrace deallocated arrays
+ error report: no errors...

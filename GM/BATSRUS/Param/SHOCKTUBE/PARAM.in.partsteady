@@ -1,58 +1,60 @@
 #ECHO
-T
-
-#BATL
-F
+T			DoEcho
 
 #PLANET
-NONE
+NONE			NamePlanet
 
 #IOUNITS
-NONE
+NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE
-
-#NONCONSERVATIVE
-F		UseNonConservative
+NONE			TypeNormalization
 
 #CHECKGRIDSIZE
-4                              nI
-2                               nJ
-2                               nK
-100                              MinBlockALL
+4                       nI
+4                       nJ
+1                       nK
+100                     MinBlockALL
 
 #GRID
-64                              nRootBlockX
-1				nRootBlockY
-1				nRootBlockZ
--128.				xMin	   
- 128.				xMax	   
--1.				yMin	   
- 1.				yMax	   
--1.				zMin	   
- 1.				zMax
+64                      nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-128.			xMin	   
+ 128.			xMax	   
+-1.			yMin	   
+ 1.			yMax	   
+-1.			zMin	   
+ 1.			zMax
+
+#GRIDLEVEL
+1			nLevel
+initial			NameArea
+
+#GRIDLEVEL
+1			nLevel
+brick0			NameArea
+2.0			xSize
+2.0			ySize
+2.0			zSize
 
 #PARTSTEADY
-T				UsePartSteady
+T			UsePartSteady
 
 #PARTSTEADYCRITERIA
-2				MinCheckVar
-3				MaxCheckVar
-1e-6				RelativeEps
-1e-6				AbsoluteEps
-1e-6				RelativeEps
-1e-6				AbsoluteEps
-
+2			MinCheckVar
+2			MaxCheckVar
+0.0			RelativeEps
+1e-4			AbsoluteEps
 
 Brio-Wu MHD shock tube problem rotated around Z axis
 #GAMMA
 2.0
 
 #HYPERBOLICDIVB
-T		UseHyperbolicDivb
-4.0		SpeedHypDim
-0.1		HypDecay
+T			UseHyperbolicDivb
+4.0			SpeedHypDim
+0.1			HypDecay
 
 #DIVB
 F
@@ -61,83 +63,78 @@ F
 F
 
 #SHOCKTUBE
-1.		rho (left state)
-0.		Ux
-0.		Uy
-0.		Uz
-0.75		Bx
-1.		By
-0.		Bz
-0.		Hyp
-1.		P
-0.125		rho (right state)
-0.		Ux
-0.		Uy
-0.		Uz
-0.75		Bx
--1.		By
-0.		Bz
-0.0		Hyp
-0.1		P
+1.			rho (left state)
+0.			Ux
+0.			Uy
+0.			Uz
+0.75			Bx
+1.			By
+0.			Bz
+0.			Hyp
+1.			P
+0.125			rho (right state)
+0.			Ux
+0.			Uy
+0.			Uz
+0.75			Bx
+-1.			By
+0.			Bz
+0.0			Hyp
+0.1			P
 
-#SHOCKPOSITION
-0.0		ShockPosition
-0.5		ShockSlope
-
-Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY
-shear		xMinBc
-shear		xMaxBc
-shear		yMinBc
-shear		yMaxBc
-float		zMinBc
-float		zMaxBc
+float			xMinBc
+float			xMaxBc
+float			yMinBc
+float			yMaxBc
+float			zMinBc
+float			zMaxBc
 
 #TIMESTEPPING
-2		nStage
-0.8		CflExpl
+2			nStage
+0.8			CflExpl
 
 #SCHEME
-2		nOrder
-Roe		TypeFlux
-mc3		TypeLimiter
-1.5		LimiterBeta
+2			nOrder
+Roe			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
 
 #SAVELOGFILE
-T		DoSaveLogfile
-raw		StringLogfile
-1		DnSaveLogfile
--1.		DtSaveLogfile
+T			DoSaveLogfile
+raw			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #SAVERESTART
-F		DoSaverestart
+F			DoSaverestart
 
 #PLOTFILENAME
-second
+second			NameTimeMaxUnit
 
 #SAVEPLOT
-2		nPlotfile
-z=0 var idl	PlotString
--1		DnSavePlot
-10.0		DtSavePlot
-0.0		DxSavePlot
-rho ux uy uz bx by bz p hyp evolve
+2			nPlotfile
+z=0 var idl		PlotString
+-1			DnSavePlot
+10.0			DtSavePlot
+0.0			DxSavePlot
+rho ux uy uz bx by bz p hyp evolve proc
 g
 cut var idl_ascii	PlotString
--1              DnSavePlot
-10.0            DtSavePlot
--128.0		xMinCut
-+128.0		xMaxCut
--0.01		yMinCut
-0.01		yMaxCut
--0.01		zMinCut
-0.01		zMaxCut
-0.0             DxSavePlot
+-1              	DnSavePlot
+10.0            	DtSavePlot
+-128.0			xMinCut
++128.0			xMaxCut
+-0.01			yMinCut
+0.01			yMaxCut
+-0.01			zMinCut
+0.01			zMaxCut
+0.0             	DxSavePlot
 rho ux uy uz bx by bz p hyp evolve
 g
 
 The grid size is 256, so the final time corresponds to the usual 0.1
 #STOP
--1		MaxIteration
-25.6		tSimulationMax
+-1			MaxIteration
+25.6			tSimulationMax
 
