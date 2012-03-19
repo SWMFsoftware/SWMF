@@ -16,7 +16,7 @@ subroutine specify_refinement(DoRefine_B)
 
   ! Needed for the 'currentsheet' area type only
   use ModAdvance,        ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
-  use ModExtraVariables, ONLY: SignB_
+  use ModVarIndexes,     ONLY: SignB_
   use ModGeometry,       ONLY: far_field_BCs_BLK
   use ModMain,           ONLY: DoThinCurrentSheet
   use ModNumConst,       ONLY: cTiny, cRadToDeg
