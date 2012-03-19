@@ -349,7 +349,7 @@ subroutine advance_impl
 
         call solve_linear_system
 
-        if(info /= 0 .and. info /= 3 .and. iProc == 0) then
+        if(info /= 0 .and. info /= 3 .and. iProc == 0 .and. time_accurate) then
            write(*,*) 'ERROR in ',NameSub,': Krylov solver failed!'
            write(*,*) 'info, KrylovEerror, KrylovErrorMax=', &
                 info, KrylovError, KrylovErrorMax
@@ -664,7 +664,7 @@ contains
     if(DoTestMe.and.info/=0)write(*,*) NameSub, &
          ' warning: no convergence, info:',info
 
-    if(info /= 0 .and. info /= 3 .and. iProc == 0) &
+    if(info /= 0 .and. info /= 3 .and. iProc == 0 .and. time_accurate) &
          call error_report('Krylov solver failure, Krylov error', &
          KrylovError, iError1, .true.)
 
