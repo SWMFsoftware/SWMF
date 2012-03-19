@@ -628,7 +628,7 @@ contains
                         *(HeatCond_DDG(:nDim,iDir,i,j,k) &
                         + HeatCond_DDG(:nDim,iDir,i-Di,j-Dj,k-Dk)) )
                 end do
-             else
+             end if
           end do; end do; end do
        end do
 
