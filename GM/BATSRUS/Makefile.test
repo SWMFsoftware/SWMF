@@ -7,6 +7,7 @@ test:
 	@rm -f *.diff
 	-@($(MAKE) test_fluxemergence)
 	-@($(MAKE) test_shocktube)
+	-@($(MAKE) test_partsteady)
 	-@($(MAKE) test_hallmhd)
 	-@($(MAKE) test_twofluidmhd)
 	-@($(MAKE) test_multifluid)
@@ -55,8 +56,8 @@ test_help:
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
 	@echo "    test_2bodyplot             (run 2 Body Plot test)"
 	@echo "    test_comet                 (run comet test)"
-	@echo "    test_corona                (run Solar Corona test)"
-	@echo "    test_coronasph             (run spherical Solar Corona test)"
+	@echo "    test_corona                (run solar corona test)"
+	@echo "    test_coronasph             (run spherical corona test)"
 	@echo "    test_corona_2t             (run 2T Solar Corona test)"
 	@echo "    test_chromo                (run Chromo - Solar Corona test)"
 	@echo "    test_earthsph              (run spherical Earth test)"
@@ -79,6 +80,7 @@ test_help:
 	@echo "    test_multifluid            (run multi-fluid test)"
 	@echo "    test_multiion              (run multi-ion test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
+	@echo "    test_partsteady            (run part steady test)"
 	@echo "    test_saturn                (run Saturn test)"
 	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_titan                 (run Titan tests)"
@@ -105,8 +107,7 @@ test_fluxemergence:
 
 test_fluxemergence_compile:
 	./Config.pl -e=MhdEosRad -u=Ee -g=10,10,10,500,1
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_fluxemergence_rundir:
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=EE STANDALONE=YES GMDIR=`pwd`
@@ -148,8 +149,7 @@ test_shocktube:
 
 test_shocktube_compile:
 	./Config.pl -u=Default -e=MhdHyp -g=64,2,2,10,1
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_shocktube_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.hyp PARAM.in
@@ -163,6 +163,37 @@ test_shocktube_check:
 		${TESTDIR}/RESULT/GM/cut_*t25*.out \
 		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out > test_shocktube.diff
 	ls -l test_shocktube.diff
+
+### PART STEADY TEST ###
+
+test_partsteady:
+	@echo "test_partsteady_compile..." > test_partsteady.diff
+	$(MAKE) test_partsteady_compile
+	@echo "test_partsteady_rundir..." >> test_partsteady.diff
+	$(MAKE) test_partsteady_rundir
+	@echo "test_partsteady_run..." >> test_partsteady.diff
+	$(MAKE) test_partsteady_run
+	@echo "test_partsteady_check..." >> test_partsteady.diff
+	$(MAKE) test_partsteady_check
+
+test_partsteady_compile:
+	./Config.pl -u=Default -e=MhdHyp -g=4,4,1,1000,1
+	$(MAKE) BATSRUS PIDL
+
+test_partsteady_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.partsteady PARAM.in
+
+test_partsteady_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+
+test_partsteady_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+		${TESTDIR}/RESULT/GM/cut_*t25*.out \
+		Param/SHOCKTUBE/TestOutput/partsteady_ref.out \
+		> test_partsteady.diff
+	ls -l test_partsteady.diff
+
 
 ### HALL MHD TEST ###
 
@@ -178,8 +209,7 @@ test_hallmhd:
 
 test_hallmhd_compile:
 	./Config.pl -u=Waves -e=Mhd -g=64,2,2,10,10
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_hallmhd_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.HallTest PARAM.in
@@ -208,8 +238,7 @@ test_twofluidmhd:
 
 test_twofluidmhd_compile:
 	./Config.pl -u=Waves -e=MhdHypPe -g=64,2,2,10,10
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_twofluidmhd_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.TwofluidTest PARAM.in
@@ -238,8 +267,7 @@ test_multifluid:
 
 test_multifluid_compile:
 	./Config.pl -u=Default -e=MhdHd -g=64,2,2,10,1
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_multifluid_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MULTIFLUID/PARAM.in .
@@ -267,8 +295,7 @@ test_magnetometer:
 
 test_magnetometer_compile:
 	./Config.pl -u=Default -e=Mhd -g=4,4,4,400,1
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 	
 test_magnetometer_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MAGNETOMETER/PARAM.in PARAM.in
@@ -299,8 +326,7 @@ test_multiion:
 
 test_multiion_compile:
 	./Config.pl -u=Default -e=MultiIon -g=64,2,2,10,1
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_multiion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MULTIION/PARAM.in .
@@ -329,8 +355,7 @@ test_mhdions:
 
 test_mhdions_compile:
 	./Config.pl -u=Default -e=MhdIons -g=64,2,2,40,1
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_mhdions_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MHDIONS/PARAM.in .
@@ -360,8 +385,7 @@ test_mhdnoncons:
 
 test_mhdnoncons_compile:
 	./Config.pl -u=Default -e=MhdNonCons -g=64,2,2,40,1
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_mhdnoncons_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/MHDNONCONS/PARAM.in .
@@ -393,8 +417,7 @@ test_eosgodunov:
 
 test_eosgodunov_compile:
 	./Config.pl -e=HdEos -u=Eos -g=10,1,1,100,1
-	$(MAKE) CRASH
-	$(MAKE) PIDL
+	$(MAKE) CRASH PIDL
 
 test_eosgodunov_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.eosgodunov PARAM.in; \
@@ -424,8 +447,7 @@ test_levelset:
 
 test_levelset_compile:
 	./Config.pl -e=HdCrash -u=Crash -g=4,4,1,2000,1 -nMaterial=3
-	$(MAKE) CRASH
-	$(MAKE) PIDL
+	$(MAKE) CRASH PIDL
 
 test_levelset_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.levelset PARAM.in
@@ -458,8 +480,7 @@ test_hyades2d:
 test_hyades2d_compile:
 	./Config.pl -e=HdRadCrash -u=Crash -g=4,4,1,1000,1000 -nMaterial=3
 	./Config.pl -hdf5
-	$(MAKE) CRASH
-	$(MAKE) PIDL
+	$(MAKE) CRASH PIDL
 
 test_hyades2d_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in
@@ -498,8 +519,7 @@ test_laserpackage:
 test_laserpackage_compile:
 	./Config.pl -e=Crash -u=Crash -g=8,8,1,200,200 -nMaterial=5 -nWave=30
 	./Config.pl -hypre
-	$(MAKE) CRASH
-	$(MAKE) PIDL
+	$(MAKE) CRASH PIDL
 
 test_laserpackage_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.laserpackage PARAM.in
@@ -529,8 +549,7 @@ test_adjhyades2d:
 
 test_adjhyades2d_compile:
 	./Config.pl -e=HdRadCrash -u=Crash -g=10,10,1,200,200
-	$(MAKE) CRASH
-	$(MAKE) PIDL
+	$(MAKE) CRASH PIDL
 
 test_adjhyades2d_rundir: test_rundir
 	gunzip -c dataCRASH/input/hyades2d_1.1ns.out.gz \
@@ -563,8 +582,7 @@ test_mixedcell:
 
 test_mixedcell_compile:
 	./Config.pl -e=HdCrash -u=Crash -g=4,4,2,2000,1 -nMaterial=3
-	$(MAKE) CRASH
-	$(MAKE) PIDL
+	$(MAKE) CRASH PIDL
 
 test_mixedcell_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.mixedcell PARAM.in
@@ -595,8 +613,7 @@ test_graydiffusion:
 
 test_graydiffusion_compile:
 	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
-	$(MAKE) BATSRUS
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_graydiffusion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.graydiffusion PARAM.in
@@ -815,8 +832,7 @@ test_titan_start:
 
 test_titan_compile:
 	./Config.pl -u=Titan -e=MhdTitan -g=6,6,6,1000,200
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_titan_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -883,8 +899,7 @@ test_mars_start:
 
 test_mars_compile:
 	./Config.pl -u=Mars -e=MhdMars -g=6,6,6,1000,200
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_mars_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -920,8 +935,7 @@ test_marsfluids_start:
 
 test_marsfluids_compile:
 	./Config.pl -u=MarsFluids -e=MhdMarsFluids -g=6,6,6,1000,200
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_marsfluids_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -990,8 +1004,7 @@ test_venus_start:
 
 test_venus_compile:
 	./Config.pl -u=Venus -e=MhdMars -g=6,6,6,1000,200
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_venus_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1057,8 +1070,7 @@ test_saturn_start:
 
 test_saturn_compile:
 	./Config.pl -u=Saturn -e=MhdHyp -g=8,8,8,720,1
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_saturn_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1089,8 +1101,7 @@ test_comet:
 
 test_comet_compile:
 	./Config.pl -u=Comet6Sp -e=MhdComet -g=8,8,8,600,100
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_comet_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1157,8 +1168,7 @@ test_2bodyplot:
 
 test_2bodyplot_compile:
 	./Config.pl -e=Mhd -u=Default -g=8,8,8,600,300
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_2bodyplot_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1210,8 +1220,7 @@ test_anisotropic:
 
 test_anisotropic_compile:
 	./Config.pl -u=Waves -e=MhdAnisoP -g=100,2,2,100,1
-	make
-	$(MAKE) PIDL
+	$(MAKE) BATSRUS PIDL
 
 test_anisotropic_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/ANISOPRESSURE/PARAM.in.Alfven PARAM.in
