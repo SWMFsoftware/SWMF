@@ -612,15 +612,15 @@ contains
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
              if(IsCartesian)then
-                HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
+                HeatCond_DFDB(:nDim,i,j,k,iDim,iBlock) = &
                      CellFace_DB(iDim,iBlock) &
-                     *0.5*(HeatCond_DDG(iDim,iDir,i,j,k) &
-                     +     HeatCond_DDG(iDim,iDir,i-Di,j-Dj,k-Dk))
+                     *0.5*(HeatCond_DDG(iDim,:nDim,i,j,k) &
+                     +     HeatCond_DDG(iDim,:nDim,i-Di,j-Dj,k-Dk))
              elseif(IsRzGeometry)then
-                HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
+                HeatCond_DFDB(:nDim,i,j,k,iDim,iBlock) = &
                      CellFace_DFB(iDim,i,j,k,iBlock) &
-                     *0.5*(HeatCond_DDG(iDim,iDir,i,j,k) &
-                     +     HeatCond_DDG(iDim,iDir,i-Di,j-Dj,k-Dk))
+                     *0.5*(HeatCond_DDG(iDim,:nDim,i,j,k) &
+                     +     HeatCond_DDG(iDim,:nDim,i-Di,j-Dj,k-Dk))
              else
                 do iDir = 1, nDim
                    HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
