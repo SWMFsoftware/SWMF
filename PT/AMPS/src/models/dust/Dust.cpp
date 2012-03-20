@@ -9,7 +9,12 @@
 
 #include "pic.h"
 
+#if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
+
+
+
 //#include "pic__model__electrically_charged_dust.h"
+
 
 //the offsets to the internal properties of the dust grains
 double ElectricallyChargedDust::SampledDustMassInjectionRate=0.0;
@@ -39,6 +44,7 @@ int ElectricallyChargedDust::Sampling::nDustSizeSamplingIntervals=0;
 double ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals=0.0;
 int ElectricallyChargedDust::Sampling::CellSamplingDataOffset=-1;
 int ElectricallyChargedDust::Sampling::DustSizeSamplingInterval_NumberDensity_Offset=-1,ElectricallyChargedDust::Sampling::DustSizeSamplingInterval_Velocity_Offset=-1;
+int ElectricallyChargedDust::Sampling::DustSizeSamplingInterval_Speed_Offset=-1;
 int ElectricallyChargedDust::Sampling::DustSizeSamplingInterval_ElectricCherge_Offset=-1,ElectricallyChargedDust::Sampling::DustSizeSamplingInterval_ElectricCurrent_Offset=-1;
 int ElectricallyChargedDust::Sampling::TotalDustElectricChargeDensitySamplingOffset=-1,ElectricallyChargedDust::Sampling::TotalDustElectricCurrentDensitySamplingOffset=-1;
 
@@ -84,6 +90,9 @@ int ElectricallyChargedDust::Sampling::RequestSamplingData(int offset) {
 
     DustSizeSamplingInterval_Velocity_Offset=CellSamplingDataOffset+SamplingLength;
     SamplingLength+=3*sizeof(double)*nDustSizeSamplingIntervals;
+
+    DustSizeSamplingInterval_Speed_Offset=CellSamplingDataOffset+SamplingLength;
+    SamplingLength+=sizeof(double)*nDustSizeSamplingIntervals;
 
 #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
     DustSizeSamplingInterval_ElectricCherge_Offset=CellSamplingDataOffset+SamplingLength;
@@ -195,7 +204,7 @@ bool ElectricallyChargedDust::EvaluateLocalTimeStep(int spec,double &dt,cTreeNod
   GrainVelocityGroup::GetGroupVelocityRange(minGroupSpeed,maxGroupSpeed,DustGroup);
   CharacteristicCellSize=startNode->GetCharacteristicCellSize();
 
-  dt=0.3*CharacteristicCellSize/maxGroupSpeed;
+  dt=0.1*CharacteristicCellSize/maxGroupSpeed;
   return true;
 }
 
@@ -491,7 +500,7 @@ long int ElectricallyChargedDust::DustInjection__Sphere(void *SphereDataPointer)
 /*----------------------------------------------- Print Output File -------------------------------------------*/
 //functions that output the data file
 void ElectricallyChargedDust::PrintVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,", \"Total Dust Number Density [m^{-3}]\"");
+  fprintf(fout,", \"Total Dust Number Density [m^{-3}]\", \"Mean Grains Bulk Velocity[0]\", \"Mean Grains Bulk Velocity[1]\", \"Mean Grains Bulk Velocity[2]\", \"Mean Grains Speed\"");
 
 #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
   fprintf(fout,", \"Total Dust Electric Charge Desnity\", \"Dust Electric Current Density[0]\", \"Dust Electric Current Density[1]\", \"Dust Electric Current Density[2]\"");
@@ -507,6 +516,8 @@ void ElectricallyChargedDust::PrintVariableList(FILE* fout,int DataSetNumber) {
       for (int idim=0;idim<DIM;idim++) {
         fprintf(fout,", \"Dust Velocity[%i] (%e<a<%e)\"",idim,minDustRadius*exp(nInterval*Sampling::dLogDustSamplingIntervals),minDustRadius*exp((1+nInterval)*Sampling::dLogDustSamplingIntervals));
       }
+
+      fprintf(fout,", \"Dust Grains Speed (%e<a<%e)\"",minDustRadius*exp(nInterval*Sampling::dLogDustSamplingIntervals),minDustRadius*exp((1+nInterval)*Sampling::dLogDustSamplingIntervals));
 
 #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
       fprintf(fout,", \"Dust Charge Density (%e<a<%e)\"",minDustRadius*exp(nInterval*Sampling::dLogDustSamplingIntervals),minDustRadius*exp((1+nInterval)*Sampling::dLogDustSamplingIntervals));
@@ -579,6 +590,17 @@ void ElectricallyChargedDust::Interpolate(PIC::Mesh::cDataCenterNode** Interpola
       *(idim+3*nInterval+(double*)(CellNodeSamplingBuffer+ElectricallyChargedDust::Sampling::DustSizeSamplingInterval_Velocity_Offset))=c1;
     }
 
+    //grain's speed
+    for (c0=0.0,c1=0.0,i=0;i<nInterpolationCoeficients;i++) {
+      SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
+
+      c0+=*(nInterval+(double*)(SamplingBuffer+ElectricallyChargedDust::Sampling::DustSizeSamplingInterval_NumberDensity_Offset));
+      c1+=*(nInterval+(double*)(SamplingBuffer+ElectricallyChargedDust::Sampling::DustSizeSamplingInterval_Speed_Offset));
+    }
+
+    if (c0>0.0) c1/=c0;
+    *(nInterval+(double*)(CellNodeSamplingBuffer+ElectricallyChargedDust::Sampling::DustSizeSamplingInterval_Speed_Offset))=c1;
+
 #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
     //dust grains' charge density
     for (c0=0.0,i=0;i<nInterpolationCoeficients;i++) {
@@ -639,6 +661,44 @@ if (nCallCounter==61723) {
   }
   else pipe->send(TotalDustNumberDensity);
 
+  //the total mean dust velocity vector and speed
+  double MeanBulkVelocity[3]={0.0,0.0,0.0},Speed=0.0;
+
+  if (pipe->ThisThread==CenterNodeThread) {
+    double vGroup[3],w,wtot=0.0;
+
+    for (int s=_DUST_SPEC_;s<_DUST_SPEC_+GrainVelocityGroup::nGroups;s++) {
+      w=CenterNode->GetNumberDensity(s);
+      wtot+=w;
+      Speed+=CenterNode->GetMeanParticleSpeed(s)*w;
+
+      CenterNode->GetBulkVelocity(vGroup,s);
+      for (int idim=0;idim<DIM;idim++) MeanBulkVelocity[idim]+=vGroup[idim]*w;
+    }
+
+    if (wtot>0.0) {
+      Speed/=wtot;
+      for (int idim=0;idim<DIM;idim++) MeanBulkVelocity[idim]/=wtot;
+    }
+  }
+
+  if (pipe->ThisThread==0) {
+    if (CenterNodeThread!=0) {
+      pipe->recv(Speed,CenterNodeThread);
+      pipe->recv(MeanBulkVelocity,DIM,CenterNodeThread);
+    }
+
+    for (int idim=0;idim<3;idim++) fprintf(fout,"%e ",MeanBulkVelocity[idim]);
+    fprintf(fout,"%e ",Speed);
+  }
+  else {
+    pipe->send(Speed);
+    pipe->send(MeanBulkVelocity,DIM);
+  }
+
+
+
+
   //total dust elelctric charge and current densities
 #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
   //total electric charge
@@ -698,6 +758,18 @@ if (nCallCounter==61723) {
       }
       else pipe->send(t);
     }
+
+    //grain's speed
+    if (pipe->ThisThread==CenterNodeThread) {
+      t= *(nInterval+(double*)(SamplingBuffer+ElectricallyChargedDust::Sampling::DustSizeSamplingInterval_Speed_Offset));
+    }
+
+    if (pipe->ThisThread==0) {
+      if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
+
+      fprintf(fout,"%e ",t);
+    }
+    else pipe->send(t);
 
 #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
     //electric charge density
@@ -900,7 +972,7 @@ void ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::printDis
       fprintf(fout,"\"TITLE=Dust size distribution function at x=%e",SamplingLocations[nProbe][0]);
       for (idim=1;idim<DIM;idim++) fprintf(fout,", %e",SamplingLocations[nProbe][idim]);
 
-      fprintf(fout,"\"\nVARIABLES=\"lg Dust GrainRadius\", \"f_size(a)\",  \"Vx(a)\",\"Vy(a)\",\"Vz(a)\",\"Speed(a)\"");
+      fprintf(fout,"\"\nVARIABLES=\"Dust GrainRadius\", \"f_size(a)\",  \"Vx(a)\",\"Vy(a)\",\"Vz(a)\",\"Speed(a)\"");
 
 #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
       fprintf(fout,"    \"Electric Charge(a)\",  \"Vx times Electric Charge (a)\",\"Vy times Electric Charge (a)\",\"Vz times Electric Charge (a)\",\"Speed times Electric Charge (a)\"\n");
@@ -926,17 +998,27 @@ void ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::printDis
         if (t>0.0) for (nVariable=1;nVariable<SamplingIntervalDataLength;nVariable++) SamplingBuffer[nProbe][iInterval*SamplingIntervalDataLength+nVariable]/=t;
       }
 
-      //normalize the size distribution functions
-      for (norm=0.0,iInterval=0;iInterval<nSamplingIntervals;iInterval++)  {
-        norm+=SamplingBuffer[nProbe][iInterval*SamplingIntervalDataLength+0]*log(10.0)*minDustRadius*pow(10,iInterval*dLog10DustRadius)*(pow(10,dLog10DustRadius)-1.0)*dLog10DustRadius;
+      //diffirentiate the sample of grains's sizes to get the distribution function
+      for (iInterval=0;iInterval<nSamplingIntervals;iInterval++) {
+        double dl=minDustRadius*(pow(10,(iInterval+1)*dLog10DustRadius)-pow(10,iInterval*dLog10DustRadius));
+
+        SamplingBuffer[nProbe][iInterval*SamplingIntervalDataLength+0]/=dl;
       }
 
-      if (norm>0.0) for (iInterval=0;iInterval<nSamplingIntervals;iInterval++) SamplingBuffer[nProbe][iInterval*SamplingIntervalDataLength+nVariable]/=norm;
+
+      //normalize the distribution fucntion
+      for (norm=0.0,iInterval=0;iInterval<nSamplingIntervals;iInterval++)  {
+        double dl=minDustRadius*(pow(10,(iInterval+1)*dLog10DustRadius)-pow(10,iInterval*dLog10DustRadius));
+
+        norm+=SamplingBuffer[nProbe][iInterval*SamplingIntervalDataLength+0]*dl;
+      }
+
+      if (norm>0.0) for (iInterval=0;iInterval<nSamplingIntervals;iInterval++) SamplingBuffer[nProbe][iInterval*SamplingIntervalDataLength+0]/=norm;
 
 
       //print the output file
       for (iInterval=0;iInterval<nSamplingIntervals+1;iInterval++) {
-        fprintf(fout,"%e  ",log10(minDustRadius)+iInterval*dLog10DustRadius);
+        fprintf(fout,"%e  ",minDustRadius*pow(10,iInterval*dLog10DustRadius));
 
         for (nVariable=0;nVariable<SamplingIntervalDataLength;nVariable++) {
           if (iInterval==0) c=SamplingBuffer[nProbe][iInterval*SamplingIntervalDataLength+nVariable];
@@ -974,7 +1056,7 @@ void ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::printDis
 /*----------------------------------------------- Sampling Size Distribution Function : END -------------------------------------------*/
 
 
-
+#endif
 
 
 
