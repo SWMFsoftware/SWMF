@@ -67,7 +67,7 @@ module BATL_amr_criteria
   integer :: nExtCritUsed = 0 ! Number of External criteria actually used, 
   !4 :symmetry (BATSRUS)
   integer :: nIntCrit = 0 ! Number of internal criteria, 2nd order err estimate
-  integer :: nAmrCritOld = 0, nBlockOld = 0
+  integer :: nAmrCritOld = -1
 
   ! How large the relative discrepancy in the Criteria for 
   ! symmetry points can be and still be refined in the same 
@@ -171,21 +171,21 @@ contains
 
     !------------ Collect all criteria external and internals -------------
 
-    if(nAmrCrit /= nAmrCritOld .or. nBlock /= nBlockOld) then
+    if(nAmrCrit /= nAmrCritOld) then
        if(allocated(AmrCrit_IB)) deallocate(AmrCrit_IB)
-       allocate(AmrCrit_IB(nIntCrit+nExtCritUsed,nBlock))
-       nAmrCritOld=nAmrCrit
-       nBlockOld  = nBlock
+       allocate(AmrCrit_IB(nAmrCrit,MaxBlock))
+       AmrCrit_IB = -1.0
+       nAmrCritOld = nAmrCrit
     end if
 
-    AmrCrit_IB = 0.0
+    AmrCrit_IB(:,1:nBlock) = 0.0
 
     ! add external criteria into the list of all criteria
     if(present(CritExt_IB)) then
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
               do iCrit = 1, nExtCritUsed
-                AmrCrit_IB(nIntCrit+iCrit,iBlock) =  CritExt_IB(iCrit,iBlock)
+                AmrCrit_IB(nIntCrit+iCrit,iBlock) = CritExt_IB(iCrit,iBlock)
              end do
        end do
 
@@ -201,7 +201,7 @@ contains
          call calc_error_amr_criteria(nVar, State_VGB, Used_GB=Used_GB)
 
     if(DoSortAmrCrit .or. .not.DoStrictAmr) then
-       ! we make a amr priority list
+       ! we make an AMR priority list
        call sort_amr_criteria
     else
        ! refine only based on criteria
@@ -353,7 +353,7 @@ contains
        Crit = CritSort_II(iSort,1)
 
 
-       ! group together criteass which has a diffrence of 
+       ! group together criteria which has a diffrence of 
        ! less then DeltaCritera by giving them the same
        ! sort ranking
        do iCritSort = 2,nNodeSort
@@ -834,7 +834,6 @@ contains
        call read_var('nCrit', nCrit)
 
        nAmrCrit = nCrit
-       nAmrCritOld = nCrit
 
        ! deallocate,if they are already allocated
        if(allocated(CoarsenCritAll_I)) deallocate( &
@@ -1076,10 +1075,8 @@ contains
     if(allocated(MaxLevelCrit_I)) deallocate(MaxLevelCrit_I)
     nAmrCrit     = 0
     nAmrCritUsed = 0
-    nAmrCritOld  = 0
+    nAmrCritOld  = -1
     nIntCrit     = 0
-    nBlockOld = 0
-
 
   end subroutine clean_amr_criteria
 
