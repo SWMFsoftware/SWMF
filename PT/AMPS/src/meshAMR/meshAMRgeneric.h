@@ -901,9 +901,9 @@ public:
     register double res;
     register int idim;
 
-    res=pow((_MESH_AMR_XMAX_[0]-_MESH_AMR_XMIN_[0])/_TOTAL_BLOCK_CELLS_X_,2);
-    if (_MESH_DIMENSION_>1) res+=pow((_MESH_AMR_XMAX_[1]-_MESH_AMR_XMIN_[1])/_TOTAL_BLOCK_CELLS_Y_,2);
-    if (_MESH_DIMENSION_>2) res+=pow((_MESH_AMR_XMAX_[2]-_MESH_AMR_XMIN_[2])/_TOTAL_BLOCK_CELLS_Z_,2); 
+    res=pow((_MESH_AMR_XMAX_[0]-_MESH_AMR_XMIN_[0])/_BLOCK_CELLS_X_,2);
+    if (_MESH_DIMENSION_>1) res+=pow((_MESH_AMR_XMAX_[1]-_MESH_AMR_XMIN_[1])/_BLOCK_CELLS_Y_,2);
+    if (_MESH_DIMENSION_>2) res+=pow((_MESH_AMR_XMAX_[2]-_MESH_AMR_XMIN_[2])/_BLOCK_CELLS_Z_,2);
 
     res=sqrt(res)/(1<<blockDescriptor.RefinmentLevel);
 
