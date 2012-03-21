@@ -160,7 +160,7 @@ test_shocktube_run:
 
 test_shocktube_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/cut_*t25*.out \
+		${TESTDIR}/RESULT/GM/cut_*t25.6*.out \
 		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out > test_shocktube.diff
 	ls -l test_shocktube.diff
 
@@ -189,7 +189,7 @@ test_partsteady_run:
 
 test_partsteady_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/cut_*t25*.out \
+		${TESTDIR}/RESULT/GM/cut_*t25.6*.out \
 		Param/SHOCKTUBE/TestOutput/partsteady_ref.out \
 		> test_partsteady.diff
 	ls -l test_partsteady.diff
