@@ -110,6 +110,7 @@ test_fluxemergence_compile:
 	$(MAKE) BATSRUS PIDL
 
 test_fluxemergence_rundir:
+	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=EE STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp ../data/FLUXEMERGENCE/*.dat* .
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/Grid.* .
