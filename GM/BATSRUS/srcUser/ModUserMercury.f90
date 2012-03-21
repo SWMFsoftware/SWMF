@@ -6,12 +6,11 @@ module ModUser
 
   use ModUserEmpty,                       &
        IMPLEMENTED1 => user_init_session, &
-       IMPLEMENTED2 => user_face_bcs,     &
-       IMPLEMENTED3 => user_set_ics,      &
-       IMPLEMENTED4 => user_update_states,&
-       IMPLEMENTED5 => user_set_resistivity,&
-       IMPLEMENTED6 => user_set_plot_var,&
-       IMPLEMENTED7 => user_read_inputs
+       IMPLEMENTED2 => user_set_ics,      &
+       IMPLEMENTED3 => user_update_states,&
+       IMPLEMENTED4 => user_set_resistivity,&
+       IMPLEMENTED5 => user_read_inputs,&
+       IMPLEMENTED6 => user_set_plot_var
   include 'user_module.h' !list of public methods
 
   real,              parameter :: VersionUserModule = 1.0
@@ -23,9 +22,6 @@ module ModUser
 
 contains
 
-  !========================================================================
-  !  SUBROUTINE user_init_session
-  !========================================================================
   subroutine user_init_session
 
     use CON_planet,    ONLY: RadiusPlanet, MassPlanet
@@ -35,7 +31,7 @@ contains
     use ModProcMH,     ONLY:iProc
 
     CHARACTER(LEN=*), PARAMETER  :: FMT1 = "(A20,E10.3)"
-
+    !-------------------------------------------------------------------
 
     planetDensity  = planetDensity*Si2No_V(UnitRho_)
     planetPressure = planetPressure*Si2No_V(UnitP_)
@@ -46,7 +42,7 @@ contains
        print *, "WHY here!!! ", planetDensity
        planetDensity  = SI2No_V(UnitRho_)*3.0*MassPlanet/(4.0*cPi*RadiusPlanet**3)
     end if
-    
+
     if(planetR < 0.0) &
          planetR = SI2No_V(UnitX_)*RadiusPlanet
 
@@ -58,10 +54,10 @@ contains
 
     if(sum(planetResistivR_I) < 0.0 ) &
          planetResistivR_I(:) = (/1.0, 0.0/)
-    
+
     ResistivetyRate = &
          planetMaxResistivity/(planetResistivR_I(1)-planetResistivR_I(2))
-    
+
     if(iProc==0) then
        call write_myname
        write(*,*) ''
@@ -82,9 +78,6 @@ contains
   end subroutine user_init_session
 
 
-  !========================================================================
-  !  SUBROUTINE user_read_inputs
-  !========================================================================
   subroutine user_read_inputs
 
     use ModMain
@@ -92,14 +85,11 @@ contains
     use ModReadParam
     use ModIO, ONLY: write_prefix, write_myname, iUnitOut
 
-
-
     character (len=100) :: NameCommand
-
     !-------------------------------------------------------------------
 
     if(iProc==0.and.lVerbose > 0)then
-       call write_prefix; write(iUnitOut,*)'User read_input Comet starts'
+       call write_prefix; write(iUnitOut,*)
     endif
 
     do
@@ -140,9 +130,6 @@ contains
     end do
 
   end subroutine user_read_inputs
-  !========================================================================
-  !  SUBROUTINE user_set_ics
-  !========================================================================
 
   subroutine user_set_ics
 
@@ -163,18 +150,6 @@ contains
 
     integer :: iBlock,i,j,k
     character (len=*), parameter :: NameSub = 'user_set_ics'
-    !-------------------------------------------------------------------
-
-!!$    planetDensity  = SI2No_V(UnitRho_)*3.0*MassPlanet/(4.0*cPi*RadiusPlanet**3)
-!!$
-!!$    planetPressure = 1.0e-8
-!!$
-!!$    planetMaxResistivity = 1.0e16
-!!$
-!!$    planetR = 1.0
-!!$
-!!$    useFloat     = .false.
-
     !-------------------------------------------------------------------
     !The routine is called for each block, the number of block should
     !be passed to the routine using globalBLK
@@ -199,20 +174,6 @@ contains
 
   end subroutine user_set_ics
 
-  !========================================================================
-  !  SUBROUTINE user_face_bcs(VarsGhostFace_V)
-  !========================================================================
-  subroutine user_face_bcs(VarsGhostFace_V)
-    real, intent(out):: VarsGhostFace_V(:)
-    !-------------------------------------------------------------------
-
-
-  end subroutine user_face_bcs
-
-  !========================================================================
-  !  SUBROUTINE user_update_states(iStage,iBlock)
-  !========================================================================
-
   subroutine user_update_states(iStage,iBlock)
 
     use CON_planet,    ONLY: RadiusPlanet, MassPlanet
@@ -226,14 +187,12 @@ contains
 
     integer,intent(in) :: iStage, iBlock
 
-    real :: r_D(3),vr_D(3), vr
+    real :: r_D(3),rhovr_D(3), rhovr
     integer :: i, j, k, iVar
     character (len=*), parameter :: NameSub = 'user_set_ics'
     !----------------------------------------------------------------------
 
     call update_states_MHD(iStage,iBlock)
-
-
 
     if(Rmin_BLK(iBlock) <= planetR) then
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -251,43 +210,32 @@ contains
 
           r_D  = (/ X_BLK(i,j,k,iBlock),Y_BLK(i,j,k,iBlock),Z_BLK(i,j,k,iBlock)/)/R_BLK(i,j,k,iBlock)
 
-          vr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
-          if(vr > 0.0) then
+          rhovr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
+          if(rhovr > 0.0) then
              ! If low out of the planet boundary we set the radial componet to zero for the momentum inside
-             vr_D = r_D*vr
+             rhovr_D = r_D*rhovr
           else
              ! If flow into the planet it will be absourbed
-             vr_D = (/0.0,0.0,0.0/)
+             rhovr_D = (/0.0,0.0,0.0/)
           end if
 
           ! Two cell boundary layer inside the planet
           !! -1
           State_VGB(Rho_,i-1,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
-          State_VGB(RhoUx_:RhoUz_,i-1,j,k,iBlock) = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) - vr_D
+          State_VGB(RhoUx_:RhoUz_,i-1,j,k,iBlock) = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) - rhovr_D
           State_VGB(Bz_+1:nVar,i-1,j,k,iBlock) = State_VGB(Bz_+1:nVar,i,j,k,iBlock)
           !! -2
           State_VGB(Rho_,i-2,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
-          State_VGB(RhoUx_:RhoUz_,i-2,j,k,iBlock) = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) - vr_D
+          State_VGB(RhoUx_:RhoUz_,i-2,j,k,iBlock) = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) - rhovr_D
           State_VGB(Bz_+1:nVar,i-2,j,k,iBlock) = State_VGB(Bz_+1:nVar,i,j,k,iBlock)
 
        end do; end do; end do
+
     end if
-
-    where (State_VGB(Rho_,:,:,:,iBlock) <= 0.0) &
-         State_VGB(Rho_,:,:,:,iBlock) = 1e-15
-
-    where (State_VGB(P_,:,:,:,iBlock) <= 0.0) &
-         State_VGB(P_,:,:,:,iBlock) = 1e-15
-
 
     call calc_energy_cell(iBlock)
 
   end subroutine user_update_states
-
-
-  !========================================================================
-  !  SUBROUTINE user_set_resistivity(iBlock, Eta_G)
-  !========================================================================
 
   subroutine user_set_resistivity(iBlock, Eta_G)
     use ModEnergy
@@ -313,10 +261,6 @@ contains
 
   end subroutine user_set_resistivity
 
-  !========================================================================
-  !  SUBROUTINE user_set_plot_var(iBlock,.........)
-  !========================================================================
-
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -336,6 +280,11 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !-------------------------------------------------------------------
+
+    !  The planet 2-cell wide layer is included in the computational domain,
+    !  but are not true values. This boundary layer shod be masked or the 
+    !  planet body stretched out to cover this layer
+
 
   end subroutine user_set_plot_var
 
