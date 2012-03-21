@@ -94,7 +94,7 @@ contains
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
-       case("#RESISTIVPLANET")
+       case("#RESISTIVEPLANET")
           call read_var('PlanetDensity'       , PlanetDensity)
           call read_var('PlanetPressure'      , PlanetPressure)
           call read_var('PlanetMaxResistivity', PlanetMaxResistivity) 
