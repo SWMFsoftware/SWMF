@@ -755,7 +755,7 @@ test_chromo_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_chromo_check:
-	${SCRIPTDIR}/DiffNum.pl -t -a=1e-28 \
+	${SCRIPTDIR}/DiffNum.pl -t -a=1e-27 \
 		Param/CORONA/TestOutput/log_n000000.sc.chromo \
 		${TESTDIR}/RESULTS/SC/log_n000000.log > test_chromo.diff
 	ls -l test_chromo.diff
