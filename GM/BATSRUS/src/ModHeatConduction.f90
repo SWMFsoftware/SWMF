@@ -855,6 +855,7 @@ contains
 
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModEnergy,   ONLY: calc_energy_cell
+    use ModGeometry, ONLY: true_cell
     use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB
     use ModMain,     ONLY: nI, nJ, nK
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
@@ -873,6 +874,7 @@ contains
     if(UseElectronPressure) iP = Pe_
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
        DeltaEinternal = DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
             *(StateImpl_VG(iTeImpl,i,j,k) - ImplOld_VCB(iTeImpl,i,j,k,iBlock))
