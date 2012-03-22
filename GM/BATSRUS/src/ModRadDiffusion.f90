@@ -248,6 +248,7 @@ contains
           iDiffHeat = 1; iDiffRadFirst = 2; iDiffRadLast = nWave + 1
 
           if(UseSplitSemiImplicit)then
+             UseTemperature = .true.
              iDiff_I = 1
              nRelax  = 0
              nPoint  = 1 + nWave
@@ -606,25 +607,34 @@ contains
 
           case('radcond')
              if(UseElectronPressure)then
-                ! Store variables for 
-                ! TeTiCoef*(B_e - B_i) = TeTiCoef'*(Te - Ti) term
-                TeTiCoefPrime = TeTiCoef/Cvi &
-                     /(cRadiationNo*(Te+Ti)*(Te**2+Ti**2))
-                PointCoef_VCB(1,i,j,k,iBlock) = &
-                     TeTiCoefPrime*Cvi/(1.0 + ImplCoeff*Dt*TeTiCoefPrime)
-                PointImpl_VCB(1,i,j,k,iBlock) = cRadiationNo*Ti**4
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
              else
                 DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
              end if
 
              if(UseSplitSemiImplicit)then
+                if(UseElectronPressure)then
+                   PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef &
+                        /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
+                   PointImpl_VCB(1,i,j,k,iBlock) = Ti
+                end if
+
                 ! The radiation-material energy exchange is point-implicit
                 PointCoef_VCB(iTrImplFirst:,i,j,k,iBlock) &
                      = Clight*OpacityPlanck_W
                 PointImpl_VCB(iTrImplFirst:,i,j,k,iBlock) &
                      = Planck_W
              else
+                if(UseElectronPressure)then
+                   ! Store variables for 
+                   ! TeTiCoef*(B_e - B_i) = TeTiCoef'*(Te - Ti) term
+                   TeTiCoefPrime = TeTiCoef/Cvi &
+                        /(cRadiationNo*(Te+Ti)*(Te**2+Ti**2))
+                   PointCoef_VCB(1,i,j,k,iBlock) = &
+                        TeTiCoefPrime*Cvi/(1.0 + ImplCoeff*Dt*TeTiCoefPrime)
+                   PointImpl_VCB(1,i,j,k,iBlock) = cRadiationNo*Ti**4
+                end if
+
                 ! The radiation-material energy exchange is semi-implicit
                 RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
                 PlanckWeight_WCB(:,i,j,k,iBlock) = Planck_W/Planck
