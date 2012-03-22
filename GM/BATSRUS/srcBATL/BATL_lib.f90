@@ -139,7 +139,7 @@ contains
     call init_geometry(TypeGeometryIn, IsPeriodicIn_D, rGenIn_I)
     call init_grid(CoordMinIn_D, CoordMaxIn_D, UseRadiusIn, UseDegreeIn)
     call set_tree_root(nRootIn_D)
-    call distribute_tree(.true.)
+    call distribute_tree(DoMove=.true.)
     call create_grid
     call init_amr
     call init_amr_criteria
@@ -189,7 +189,8 @@ contains
   !============================================================================
 
   subroutine regrid_batl(nVar, State_VGB, Dt_B, DoRefine_B, DoCoarsen_B, &
-       DoBalanceEachLevelIn, iTypeNode_A, Used_GB, DoBalanceOnlyIn, DoTestIn, &
+       DoBalanceEachLevelIn, iTypeBalance_A, iTypeNode_A, &
+       Used_GB, DoBalanceOnlyIn, DoTestIn, &
        nExtraData, pack_extra_data, unpack_extra_data)
 
     integer, intent(in)   :: nVar                         ! number of variables
@@ -201,7 +202,8 @@ contains
     logical, intent(in), optional:: DoRefine_B(MaxBlock)  ! request to refine
     logical, intent(in), optional:: DoCoarsen_B(MaxBlock) ! request to coarsen
     logical, intent(in), optional:: DoBalanceEachLevelIn  ! balance per level?
-    integer, intent(in), optional:: iTypeNode_A(MaxNode)  ! balance node types
+    integer,intent(in),  optional:: iTypeBalance_A(MaxNode)!balance by types
+    integer,intent(inout),optional::iTypeNode_A(MaxNode)  ! adapt node types
     logical, intent(in), optional:: &
          Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)  ! used cells
     logical, intent(in), optional:: DoBalanceOnlyIn       ! balance with ghosts
@@ -235,8 +237,11 @@ contains
     ! state variables in State_VGB. Use second order accurate conservative
     ! restriction and prolongation operators. Load balance by Morton ordering.
     !
-    ! If iTypeNode_A is present, it contains positive integers corresponding
-    ! to different block types, and each block type is balanced.
+    ! If iTypeBalance_A is present, it contains positive integers corresponding
+    ! to different groups of blocks. Each group is load balanced separately.
+    !
+    ! If iTypeNode_A is present, it contains integers corresponding
+    ! to different block types. The block types are inherited during AMR.
     !
     ! If DoBalanceEachLevelIn is true, balance each AMR level independently.  
     !
@@ -309,18 +314,18 @@ contains
 
     ! Coarsen and refine the tree nodes
     if(DoTest)write(*,*) NameSub,' call adapt_tree'
-    call adapt_tree
+    call adapt_tree(iTypeNode_A)
 
     ! Load balance the tree
     if(DoTest)write(*,*) NameSub, &
          ' call distribute_tree with DoBalanceEachLevel=', DoBalanceEachLevel
 
-    if(present(iTypeNode_A))then
-       call distribute_tree(DoMove=.false., iTypeNode_A=iTypeNode_A)
-    elseif(DoBalanceEachLevel)then
-       call distribute_tree(DoMove=.false., iTypeNode_A=iTree_IA(Level_,:)+1)
+    if(DoBalanceEachLevel)then
+       call distribute_tree(DoMove=.false., &
+            iTypeBalance_A=iTree_IA(Level_,:)+1)
     else
-       call distribute_tree(DoMove=.false.)
+       call distribute_tree(DoMove=.false., &
+            iTypeBalance_A=iTypeBalance_A)
     end if
 
     ! Initialize iAmrChange
@@ -340,9 +345,9 @@ contains
          pack_extra_data=pack_extra_data, &
          unpack_extra_data=unpack_extra_data)
 
-    ! Finalize the tree information
+    ! Finalize the tree information and compact the tree
     if(DoTest)write(*,*) NameSub,' call move_tree'
-    call move_tree
+    call move_tree(iTypeNode_A)
 
     if(DoTest)write(*,*) NameSub,' finished'
 

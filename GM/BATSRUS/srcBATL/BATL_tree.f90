@@ -36,21 +36,24 @@ module BATL_tree
   ! refined/coarsen or the program with stop. Usually associated with 
   ! criteria
   ! nNodeSort is the numbner of nodes in the sorted ranking list iRank_A
-  integer,public :: nDesiredRefine,nNodeRefine, &
+  integer, public :: nDesiredRefine,nNodeRefine, &
        nDesiredCoarsen, nNodeCoarsen, nNodeSort
 
-  ! Max differens in in Criteria rang for saying that is the same criteia
+  ! Max differens in in Criteria range for saying that is the same criteria
   ! level 
-  real, public,parameter :: diffRange = 1.0e-6
+  real, public, parameter :: DiffRange = 1.0e-6
 
   ! We can also specify the percentage of blocks we want to refine. For doing
   ! this we need to sort them into a priority list iRank_A. This priority list
   ! can also be used for refining/coarsening blocks to the point where we 
-  ! to the point where we have no more blocks available, and not stopping 
-  ! the program ( used with BATL_tree )
+  ! have no more blocks available, and not stopping the program 
+  ! ( used with BATL_tree )
   ! Rank_A store the criteria values for iRank_A
   integer,public, allocatable :: iRank_A(:)
-  real,public, allocatable :: Rank_A(:)
+
+  ! large Rank_A value means high priority for refinement
+  ! low Rank_A value means high priority for coarsening
+  real,public, allocatable :: Rank_A(:) 
 
   ! Maximun number of try to refine/coarsen the grid based on iRank_A
   integer, public :: iMaxTryAmr = 100
@@ -311,9 +314,10 @@ contains
   end subroutine set_tree_root
 
   !==========================================================================
-  subroutine refine_tree_node(iNode)
+  subroutine refine_tree_node(iNode, iTypeNode_A)
 
     integer, intent(in) :: iNode
+    integer, intent(inout), optional:: iTypeNode_A(MaxNode)
 
     integer :: iChild, DiChild, iLevelChild, iProc, iBlock
     integer :: iCoord_D(nDim)
@@ -373,6 +377,8 @@ contains
           endif
        end do
 
+       ! Set node type to be the same as the parent's
+       if(present(iTypeNode_A)) iTypeNode_A(iNodeChild) = iTypeNode_A(iNode)
     end do
 
     ! Keep track of used nodes in the future tree 
@@ -381,9 +387,10 @@ contains
   end subroutine refine_tree_node
 
   !==========================================================================
-  subroutine coarsen_tree_node(iNode)
+  subroutine coarsen_tree_node(iNode, iTypeNode_A)
 
     integer, intent(in) :: iNode
+    integer, intent(inout), optional:: iTypeNode_A(MaxNode)
 
     integer :: iChild, iNodeChild
     !-----------------------------------------------------------------------
@@ -404,15 +411,24 @@ contains
     ! Increase nNode if necessary
     nNode = max(nNode, iNode)
 
+    ! Set node type to be the largest of all children
+    if(present(iTypeNode_A)) iTypeNode_A(iNode) = &
+         maxval(iTypeNode_A(iTree_IA(Child1_:ChildLast_,iNode)))
+
   end subroutine coarsen_tree_node
 
   !===========================================================================
 
-  subroutine adapt_tree
+  subroutine adapt_tree(iTypeNode_A)
 
     use BATL_size, ONLY: iRatio, jRatio, kRatio
     use BATL_mpi, ONLY: iComm, nProc
     use ModMpi, ONLY: MPI_allreduce, MPI_INTEGER, MPI_MAX
+
+    ! Optional node type:
+    ! refined nodes inherit the type of the parent node
+    ! coarsened node receive the largest integer type of the children
+    integer, intent(inout), optional:: iTypeNode_A(MaxNode)
 
     ! All processors can request some status changes in iStatusNew_A.
     ! Here we collect requests, check for proper nesting, 
@@ -427,11 +443,14 @@ contains
     integer:: iSide, iSideMin, iSideMax
     integer:: jSide, jSideMin, jSideMax
     integer:: kSide, kSideMin, kSideMax
-    integer:: iTryAmr, iRank, nRefine
-    real   :: nRefineDiff = 0.0, FracSibling=1.0
-    real, save :: nRefineDiffOld=0.0
+    integer:: iTryAmr, iRank, iRankLast
+    real:: RankLimit
+
+    ! Expected number of nodes minus availabla number of nodes
+    integer:: DnNode = 0, DnNodeOld = 0
+
     logical, parameter :: DoTest = .false., DoTestNei = .false. 
-    integer, allocatable :: iInitialiStatusNew_A(:)
+    integer, allocatable :: iStatusNew0_A(:)
     !------------------------------------------------------------------------
 
     ! Collect the local status requests into a global request
@@ -441,15 +460,14 @@ contains
        iStatusNew_A(1:nNode) = iStatusAll_A(1:nNode)
     end if
 
-    ! storing the initall list that will not be chenged by the 
-    ! proper nesting
+    ! storing the initall list that will not be chenged by the proper nesting
     if(.not.DoStrictAmr) then
-       allocate(iInitialiStatusNew_A(MaxNode))
-       iInitialiStatusNew_A(1:nNode) = iStatusNew_A(1:nNode)
+       allocate(iStatusNew0_A(MaxNode))
+       iStatusNew0_A(1:nNode) = iStatusNew_A(1:nNode)
     end if
 
-    nRefineDiffOld =  0.0!nRefineDiff
-    BLOCKTRY: do iTryAmr=1,iMaxTryAmr
+    DnNodeOld = 0
+    LOOPTRY: do iTryAmr = 1, iMaxTryAmr
 
        ! Check max and min levels and coarsening of all siblings
        iLevelMin = nLevel
@@ -492,15 +510,15 @@ contains
 
        ! Check proper nesting. Go down level by level. No need to 
        ! check base level. Changes in the requests will be applied 
-       ! to all siblings immediately
-       do iLevel = iLevelMax, max(iLevelMin, 1), -1
+       ! to all siblings immediately.
+       LOOPLEVEL: do iLevel = iLevelMax, max(iLevelMin, 1), -1
 
           ! Parallel processing of nodes (blocks)
-          BLOCKLOOP: do iBlock = 1, nBlock
+          LOOPBLOCK: do iBlock = 1, nBlock
 
-             if(Unused_B(iBlock)) CYCLE BLOCKLOOP
+             if(Unused_B(iBlock)) CYCLE LOOPBLOCK
              iNode = iNode_B(iBlock)
-             if(iTree_IA(Level_,iNode) /= iLevel) CYCLE BLOCKLOOP
+             if(iTree_IA(Level_,iNode) /= iLevel) CYCLE LOOPBLOCK
 
              ! Calculate requested level
              if(iStatusNew_A(iNode) == Refine_)then
@@ -565,111 +583,114 @@ contains
                       ! Don't check if neighbor is outside the domain
                       if(jNode == Unset_) CYCLE
 
-                      ! Get the current and requested level for the neighbor node
+                      ! Get the current and requested levels for the neighbor
                       jLevel = iTree_IA(Level_,jNode)
 
                       jLevelNew = jLevel
-                      if(iStatusNew_A(jNode) == Refine_)  jLevelNew = jLevel + 1
-                      if(iStatusNew_A(jNode) == Coarsen_) jLevelNew = jLevel - 1
+                      if(iStatusNew_A(jNode) == Refine_) jLevelNew = jLevel + 1
+                      if(iStatusNew_A(jNode) == Coarsen_)jLevelNew = jLevel - 1
 
                       ! Fix levels if difference is too much
                       if(iLevelNew >= jLevelNew + 2)then
 
                          if(jLevel > 0)then
                             jNodeParent = iTree_IA(Parent_,jNode) 
-                            jNodeChild_I= iTree_IA(Child1_:ChildLast_,jNodeParent)
+                            jNodeChild_I= &
+                                 iTree_IA(Child1_:ChildLast_,jNodeParent)
 
                             ! Neighbor and its siblings cannot be coarsened
                             iStatusNew_A(jNodeChild_I) = &
                                  max(iStatusNew_A(jNodeChild_I), DontCoarsen_)
                          endif
 
-                         ! If neighbow was coarser it has to be refined
+                         ! If neighbor was coarser it has to be refined
                          if(jLevel < iLevel) iStatusNew_A(jNode) = Refine_
 
                       elseif(iLevelNew <= jLevelNew - 2)then
                          ! Cannot coarsen this node
                          iNodeParent = iTree_IA(Parent_,iNode)
-                         iStatusNew_A(iTree_IA(Child1_:ChildLast_,iNodeParent)) &
-                              = DontCoarsen_
+                         iStatusNew_A(iTree_IA(Child1_:ChildLast_, &
+                              iNodeParent)) = DontCoarsen_
 
-                         CYCLE BLOCKLOOP
+                         CYCLE LOOPBLOCK
                       end if
 
                    end do ! iSide
                 end do ! jSide
              end do ! kSide
-          end do BLOCKLOOP
+          end do LOOPBLOCK
 
           ! Collect the local status requests into a global request
           if(nProc > 1)then
-             call MPI_allreduce(iStatusNew_A, iStatusAll_A, nNode, MPI_INTEGER, &
-                  MPI_MAX, iComm, iError)
+             call MPI_allreduce(iStatusNew_A, iStatusAll_A, nNode, &
+                  MPI_INTEGER, MPI_MAX, iComm, iError)
              iStatusNew_A(1:nNode) = iStatusAll_A(1:nNode)
           end if         
 
-       end do ! levels
+       end do LOOPLEVEL
+
+       ! all blocks marked for refinement shoud be refined if true
+       if(DoStrictAmr) EXIT LOOPTRY
       
-       ! all blocks marked for refinment shoud be refined if true
-       if(DoStrictAmr) EXIT BLOCKTRY
-      
-       ! Estimate the difference between the number of block we can 
-       ! use and how many we want to use after refinment.
-       nRefineDiff = (nNodeUsed - count(iStatusNew_A == Coarsen_) + &
+       ! Estimate the difference between the expected number of blocks
+       ! after AMR and the number of available/allowed blocks.
+       DnNode = (nNodeUsed - count(iStatusNew_A == Coarsen_) + &
             count(iStatusNew_A == Refine_)*(nChild-1)) &
             - min(nProc*MaxBlock,MaxTotalBlock) 
 
-       nRefineDiffOld = nRefineDiff 
+       DnNodeOld = DnNode 
 
-       ! we have space for all the new blocks that will be generated if true
-       if(nRefineDiff < 0) EXIT BLOCKTRY
+       ! exit if we have enough space for all the new blocks
+       if(DnNode < 0) EXIT LOOPTRY
 
-       ! Number of blocks we want to remove from the refinment list. Increase
-       ! with the number of interations
-       nRefineDiff = (iTryAmr-1)*(nChild-1) + nRefineDiff 
+       ! Number of blocks we want to remove from the refinement list. 
+       ! Increase with the number of iterations
+       DnNode = (iTryAmr-1)*(nChild-1) + DnNode 
 
-       ! Reset iStatusNew_A to its inital setings
-       iStatusNew_A = iInitialiStatusNew_A 
+       ! Reset iStatusNew_A to its inital value
+       iStatusNew_A = iStatusNew0_A 
 
-       ! When FracSibling = 1.0 we say that every refinemnet block will only
-       ! result in that addinianl nChild-1 new blocks are used.
-       FracSibling = 1.0
-       nRefine = 0
-       ! remove blocks for refinment as thay follow in the 
-       ! sorted list iRank_A
-       BLOCKRM:do iRank = nNodeSort-nDesiredRefine, nNodeSort
+       ! nodes to be refined are indexed 
+       ! from nNodeSort-nDesiredRefine to nNodeSort in the sorted list. 
+       ! The lowest priority corresponds to the first element.
+       ! Remove blocks starting from the lowest priority until the 
+       ! number of blocks in the new grid will not exceed the maximum.
+       LOOPREMOVE: do iRank = nNodeSort - nDesiredRefine, nNodeSort
           iNode = iRank_A(iRank)
 
-          ! have reach max level, have no inpact ignore
-          iLevel    = iTree_IA(Level_,iNode)
-          if(iLevel >= iTree_IA(MaxLevel_,iNode)) CYCLE BLOCKRM
+          ! if a block has reached the max level, it has no impact
+          iLevel = iTree_IA(Level_,iNode)
+          if(iLevel >= iTree_IA(MaxLevel_,iNode)) CYCLE LOOPREMOVE
 
-          ! Remove the block and predict how many bocks we have
-          ! removed from the future grid
+          ! Remove the block from the to-be-refined list and modify the
+          ! estimate of the number of blocks above the available max
           if(iStatusNew_A(iNode) == Refine_ ) then
              iStatusNew_A(iNode) = Unset_
-             nRefineDiff = nRefineDiff - FracSibling*(nChild-1)
-             nRefine = nRefine + 1
+             DnNode = DnNode - (nChild-1)
+
+             ! Check if we have reached the goal
+             if(DnNode < 0) EXIT LOOPREMOVE
           end if
+       end do LOOPREMOVE
 
-          ! by estimate we have removed all blocks needed form
-          ! refinment list
-          if(nRefineDiff < 0) EXIT BLOCKRM
-       end do BLOCKRM
+       ! make sure that the refinment list starts at a point that has
+       ! a jump in the criteria larger than DiffRange. This makes
+       ! sure that blocks with identical criteria are all refined together.
+       ! This helps preserving symmetry.
 
-
-       ! make sure that the refinment list starts at a point that have
-       ! a jump in criteria larger then diffRan
-       nRefine = min(iRank-1,nNodeSort)
-       do iRank= nNodeSort-nDesiredRefine+1, nNodeSort
+       ! iRank is the last indirect index that was removed from refinement list
+       ! in LOOPREMOVE. Blocks with Rank below RankLimit should be removed too
+       iRankLast = min(iRank, nNodeSort)
+       RankLimit = Rank_A(iRankLast) + DiffRange
+       do iRank = iRankLast + 1, nNodeSort
           iNode = iRank_A(iRank)
-          if((Rank_A(iRank)-Rank_A(nRefine)) >=  diffRange ) CYCLE BLOCKTRY
+          if( Rank_A(iRank) >= RankLimit ) CYCLE LOOPTRY
           iStatusNew_A(iNode) = Unset_
        end do
       
-    end do BLOCKTRY
+    end do LOOPTRY
 
-    if(.not.DoStrictAmr) deallocate(iInitialiStatusNew_A)
+    if(.not.DoStrictAmr) deallocate(iStatusNew0_A)
 
     nNodeUsedNow = nNodeUsed
 
@@ -690,7 +711,7 @@ contains
        ! Coarsen the parent node based on the request stored in the first child
        if(iTree_IA(Child1_,iNodeParent) /= iNode) CYCLE
 
-       call coarsen_tree_node(iNodeParent)
+       call coarsen_tree_node(iNodeParent, iTypeNode_A)
     end do
   
     ! Refine next
@@ -703,7 +724,7 @@ contains
        IsNewDecomposition = .true.
 
        ! Refine tree node
-       call refine_tree_node(iNode)
+       call refine_tree_node(iNode, iTypeNode_A)
 
        if(nNodeUsed > MaxBlock*nProc) EXIT
 
@@ -1040,12 +1061,16 @@ contains
 
   !==========================================================================
 
-  subroutine compact_tree
+  subroutine compact_tree(iTypeNode_A)
 
-    ! Eliminate holes from the tree
+    integer, intent(inout), optional:: iTypeNode_A(MaxNode)
+
+    ! Eliminate holes from the tree.
+    ! If iTypeNode_A is present, move the integer type with the node.
 
     ! Amount of shift for each node
     integer :: iNode, iNodeSkipped, iNodeOld, iNodeNew, i, iBlock
+    character(len=*), parameter:: NameSub = 'compact_tree'
     !-------------------------------------------------------------------------
     ! Set impossible initial value
     iNodeSkipped = MaxNode + 1
@@ -1058,6 +1083,9 @@ contains
        elseif(iNodeSkipped < iNode)then
           ! Move node to the first skipped position
           iTree_IA(:,iNodeSkipped) = iTree_IA(:,iNode)
+          if(present(iTypeNode_A)) &
+               iTypeNode_A(iNodeSkipped) = iTypeNode_A(iNode)
+
           iTree_IA(Status_, iNode) = Unset_
           ! Store new node index
           iNodeNew_A(iNode) = iNodeSkipped
@@ -1181,13 +1209,15 @@ contains
   end subroutine read_tree_file
   
   !==========================================================================
-  subroutine distribute_tree(DoMove, iTypeNode_A)
+  subroutine distribute_tree(DoMove, iTypeBalance_A, iTypeNode_A)
 
     ! Order tree with the space filling curve then
     ! - if DoMove=T, assign tree nodes to processors and blocks immediately
     ! - if DoMove=F, set iProcNew_A only with future processor index
-    ! - if iTypeNode_A is present, it contains block types 1, 2, .., nType
+    ! - if iTypeBalance_A is present, it contains block types 1, 2, .., nType
     !   each type is balanced separately. The total is also balanced.
+    ! - if iTypeNode_A is present, it contains node types that should be
+    !   moved together with the nodes (only used if DoMove=T).
 
     use BATL_mpi, ONLY: nProc
 
@@ -1195,7 +1225,10 @@ contains
     logical, intent(in):: DoMove
 
     ! Optional block type. Each type is balanced separately
-    integer, intent(in), optional:: iTypeNode_A(MaxNode)
+    integer, intent(in),    optional:: iTypeBalance_A(MaxNode)
+
+    ! Optional node type that should be moved together with the node.
+    integer, intent(inout), optional:: iTypeNode_A(MaxNode)
 
     integer :: iMorton, iNode, iBlockTo, iProcTo
 
@@ -1205,6 +1238,8 @@ contains
 
     character(len=*), parameter:: NameSub='BATL_tree::distribute_tree'
     !------------------------------------------------------------------------
+    ! DoMove is only true when we initialize the grid, so this is done only
+    ! a few times.
     if(DoMove)Unused_BP = .true.
 
     ! Initialize processor and block indexes
@@ -1214,9 +1249,9 @@ contains
     call order_tree
 
     ! Check if there are multiple node types that need separate balancing
-    if(present(iTypeNode_A))then
+    if(present(iTypeBalance_A))then
        ! Find number of types and allocate arrays
-       nType = maxval(iTypeNode_A(1:nNode), &
+       nType = maxval(iTypeBalance_A(1:nNode), &
             MASK=iTree_IA(Status_,1:nNode)>=Used_)
     else
        nType = 1
@@ -1236,11 +1271,11 @@ contains
     iProcType_I = 0
     iBlock_P    = 0
 
-    if(present(iTypeNode_A))then
+    if(present(iTypeBalance_A))then
        ! Count number of nodes for each type. 
        do iNode = 1, nNode
           if(iTree_IA(Status_,iNode)<=0) CYCLE
-          iType = iTypeNode_A(iNode)
+          iType = iTypeBalance_A(iNode)
           if(iType > 0) nNodeType_I(iType) = nNodeType_I(iType) + 1
        end do
     else
@@ -1273,8 +1308,8 @@ contains
 
        ! Get the node index and type
        iNode = iNodeMorton_I(iMorton)
-       if(present(iTypeNode_A))then
-          iType = iTypeNode_A(iNode)
+       if(present(iTypeBalance_A))then
+          iType = iTypeBalance_A(iNode)
        else
           iType = 1
        end if
@@ -1310,21 +1345,26 @@ contains
 
     deallocate(iNodeType_I, nNodeType_I, iProcType_I, iBlock_P, nBlockType_PI)
 
-    if(DoMove) call move_tree
+    if(DoMove) call move_tree(iTypeNode_A)
 
   end subroutine distribute_tree
 
   !==========================================================================
 
-  subroutine move_tree
+  subroutine move_tree(iTypeNode_A)
 
     ! Finish the load balancing (with or without data movement)
     ! Set status for newly used and unused/unset nodes.
     ! Then compact the tree and find all the neighbors
+    ! If iTypeNode_A is present, compact_tree moves the type with the node.
 
     use BATL_mpi, ONLY: iProc
 
+    integer, intent(inout), optional:: iTypeNode_A(MaxNode)
+
     integer:: iMorton, iNode, iNodeChild, iNodeParent, iChild, iBlock
+
+    character(len=*), parameter :: NameSub = 'move_tree'
     !-----------------------------------------------------------------------
     ! Update local Unused_B array
     Unused_B(:) = Unused_BP(:,iProc)
@@ -1368,7 +1408,7 @@ contains
 
     end do
     ! Now that we removed children of coarsened blocks, compact the tree
-    call compact_tree
+    call compact_tree(iTypeNode_A)
 
     ! Set neighbor info
     do iBlock = 1, nBlock
