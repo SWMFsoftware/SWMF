@@ -418,7 +418,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModResistivity,    ONLY: get_resistivity_rhs
   use ModMessagePass, ONLY: message_pass_dir
-  use ModGeometry, ONLY: vInv_CB
+  use ModGeometry, ONLY: vInv_CB, true_cell
   use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
   use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
        apply_flux_correction_block
@@ -499,6 +499,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         DtLocal = dt
         if(UseSplitSemiImplicit)then
            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              if(.not.true_cell(i,j,k,iBlock)) CYCLE
               if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
               Volume = 1.0/vInv_CB(i,j,k,iBlock)
               n = n + 1
@@ -508,6 +509,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
            end do; enddo; enddo
         else
            do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              if(.not.true_cell(i,j,k,iBlock)) CYCLE
               if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
               Volume = 1.0/vInv_CB(i,j,k,iBlock)
               do iVar = 1, nVarSemi
@@ -543,6 +545,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
      DtLocal = dt
      if(UseSplitSemiImplicit)then
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           if(.not.true_cell(i,j,k,iBlock)) CYCLE
            if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
            Volume = 1.0/vInv_CB(i,j,k,iBlock)
            n = n + 1
@@ -551,6 +554,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
          end do; enddo; enddo
      else
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           if(.not.true_cell(i,j,k,iBlock)) CYCLE
            if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
            Volume = 1.0/vInv_CB(i,j,k,iBlock)
            do iVar = 1, nVarSemi
@@ -580,7 +584,7 @@ subroutine get_semi_impl_jacobian
   use ModHeatConduction, ONLY: add_jacobian_heat_cond
   use ModResistivity,    ONLY: add_jacobian_resistivity
   use ModMain, ONLY: nI, nJ, nK, Dt, n_step, time_accurate, Cfl
-  use ModGeometry, ONLY: vInv_CB
+  use ModGeometry, ONLY: vInv_CB, true_cell
   use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix, &
        DoInitHypreAmg
 
@@ -620,6 +624,7 @@ subroutine get_semi_impl_jacobian
      end do; end do; end do; end do
      DtLocal = dt
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
         if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
         Coeff = 1.0/(DtLocal*vInv_CB(i,j,k,iBlock))
         if(UseSplitSemiImplicit)then
