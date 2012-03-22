@@ -164,10 +164,11 @@ trouble = .false.
   mnd = NDensity(:,:,:,iBlock)+1.0
 
 !write(*,*) '==> calc_rates:  Before MeanMajorMass Calculation.'
+write(*,*) temperature(1,1,1,1)*tempunit(1,1,1),temperature(1,1,1,1),tempunit(1,1,1),meanmajormass(1,1,1)
 
   MeanIonMass = 0.0
   MeanMajorMass = 0.0
-  do iSpecies = 1, nSpecies
+  do iSpecies = 1, nSpeciesTotal
      MeanMajorMass = MeanMajorMass + &
           Mass(iSpecies) * &
           NDensityS(:,:,:,iSpecies,iBlock)/mnd
@@ -188,8 +189,11 @@ trouble = .false.
 
 ! -------------------------------------------------------------------------------
 
-  TempUnit = MeanMajorMass / Boltzmanns_Constant       
+write(*,*) temperature(1,1,1,1)*tempunit(1,1,1),temperature(1,1,1,1),tempunit(1,1,1),meanmajormass(1,1,1)
 
+  TempUnit = MeanMajorMass / Boltzmanns_Constant       
+write(*,*) temperature(1,1,1,1)*tempunit(1,1,1),temperature(1,1,1,1),tempunit(1,1,1),meanmajormass(1,1,1)
+stop
 ! -------------------------------------------------------------------------------
 
 !write(*,*) '==> calc_rates:  Before Mixing Ratio Calculation.'
@@ -207,7 +211,7 @@ trouble = .false.
  
 !   Temperature Based Arrays 
    ttot(:,:,iAlt) = Temperature(:,:,iAlt,iBlock) * &
-                          TempUnit(:,:,iAlt)   
+                         TempUnit(:,:,iAlt)   
    tt(:,:,iAlt) = ttot(:,:,iAlt)**0.69
 
   enddo
