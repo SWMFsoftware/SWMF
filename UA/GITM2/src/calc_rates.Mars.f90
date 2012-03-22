@@ -168,7 +168,7 @@ write(*,*) temperature(1,1,1,1)*tempunit(1,1,1),temperature(1,1,1,1),tempunit(1,
 
   MeanIonMass = 0.0
   MeanMajorMass = 0.0
-  do iSpecies = 1, nSpeciesTotal
+  do iSpecies = 1, nSpecies
      MeanMajorMass = MeanMajorMass + &
           Mass(iSpecies) * &
           NDensityS(:,:,:,iSpecies,iBlock)/mnd

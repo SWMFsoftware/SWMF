@@ -69,7 +69,7 @@ subroutine init_msis
 
   logical :: Done = .False.,NotStarted = .True.
   character (len=iCharLen_) :: cLine
-  real :: inDensities(9),altlow,althigh,latlow,lathigh
+  real :: inDensities(9),altlow,althigh,latlow,lathigh,invscaleheights
   real :: ralt, invAltDiff, altFind, altdiff, LogElectronDensity,dalt(nspeciestotal),alttemp(nInAlts)
   real, dimension(nInitialAlts) :: tempalt,LogInitialDensity,InitialEDensity,InitialAlt
 
@@ -329,6 +329,16 @@ subroutine init_msis
      ! Initialize MeanMajorMass to 0.0
      !/
      NDensityS = exp(nDensityS)
+     do iSpecies = 1, nSpecies
+        do ialt = 0, nalts + 2
+           InvScaleHeightS = -Gravity_GB(1,1,iAlt,1) * &
+                Mass(iSpecies) / (Temperature(1,1,iAlt,1)*Boltzmanns_Constant)
+           NDensityS(1,1,ialt,iSpecies,1) = NDensityS(1,1,ialt-1,iSpecies,1) * &
+                exp(-(altitude_gb(1,1,ialt,1)-altitude_gb(1,1,ialt-1,1))*invScaleheightS)
+           
+enddo
+enddo
+
      MeanMajorMass(-1:nLons+2,-1:nLats+2,-1:nAlts+2) = 0.0
      MeanIonMass(-1:nLons+2,-1:nLats+2,-1:nAlts+2) = 0.0
 
@@ -348,7 +358,7 @@ subroutine init_msis
                       NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
               enddo
 
-              do iSpecies = 1,nSpeciesTotal
+              do iSpecies = 1,nSpecies
                  MeanMajorMass(iLon,iLat,iAlt) = &
                       MeanMajorMass(iLon,iLat,iAlt) + &
                       Mass(iSpecies)*NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)/ &
@@ -372,6 +382,7 @@ subroutine init_msis
           MeanMajorMass(-1:nLons+2,-1:nLats+2,-1:nAlts+2)/&
           Boltzmanns_Constant
 
+
      !\
      ! Initialize Rho to 0.0
      !/
@@ -382,10 +393,20 @@ subroutine init_msis
           Temperature(-1:nLons+2,-1:nLats+2,-1:nAlts+2,iBlock) / &
           TempUnit(-1:nLons+2,-1:nLats+2,-1:nAlts+2)
 
-
      Rho(-1:nLons+2,-1:nLats+2,-1:nAlts+2,iBlock) = &
           MeanMajorMass(-1:nLons+2,-1:nLats+2,-1:nAlts+2)* &
           NDensity(-1:nLons+2,-1:nLats+2,-1:nAlts+2,iBlock)
+
+     pressure(1,1,-1:nalts+2,1) = temperature(1,1,-1:nalts+2,1)*tempunit(1,1,-1:nalts+2)&
+          *boltzmanns_constant * &
+          ndensity(1,1,-1:nalts+2,1)
+      
+
+     open(unit=1,file='temp.dat')
+     do ialt = 0, nalts+1
+        write(1,*) ialt, pressure(1,1,ialt,1),gravity_gb(1,1,ialt,1),altitude_gb(1,1,ialt,1),rho(1,1,ialt,1)
+enddo
+close(1)
 
      write(*,*) '==> Now Completing Mars Background Composition: END', iBlock   
 
