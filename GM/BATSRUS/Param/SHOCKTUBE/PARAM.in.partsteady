@@ -38,6 +38,19 @@ brick0			NameArea
 2.0			ySize
 2.0			zSize
 
+#DOAMR
+T			DoAmr
+1			DnAmr
+-1.0			DtAmr
+T			IsStrictAmr
+
+#AMRCRITERIALEVEL
+1                       nRefineCrit
+gradlogP                TypeRefine
+0.01			CoarsenLimit
+0.05			RefineLimit
+1			MaxLevel
+
 #PARTSTEADY
 T			UsePartSteady
 
@@ -118,11 +131,11 @@ z=0 var idl		PlotString
 -1			DnSavePlot
 10.0			DtSavePlot
 0.0			DxSavePlot
-rho ux uy uz bx by bz p hyp evolve proc
+rho ux uy uz bx by bz p hyp evolve proc crit1 dx
 g
 cut var idl_ascii	PlotString
 -1              	DnSavePlot
-10.0            	DtSavePlot
+1.0			DtSavePlot
 -128.0			xMinCut
 +128.0			xMaxCut
 -0.01			yMinCut
@@ -130,7 +143,7 @@ cut var idl_ascii	PlotString
 -0.01			zMinCut
 0.01			zMaxCut
 0.0             	DxSavePlot
-rho ux uy uz bx by bz p hyp evolve
+rho ux uy uz bx by bz p hyp evolve dx
 g
 
 The grid size is 256, so the final time corresponds to the usual 0.1
