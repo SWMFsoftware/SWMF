@@ -130,6 +130,15 @@ contains
      !\
      ! Mercury (10)                        
      !/ 
+     NamePlanet_I(Mercury_)                = 'MERCURY'
+
+     rPlanet_I(Mercury_)                   = 2439.0e+3               ! [ m]
+     mPlanet_I(Mercury_)                   = 3.3022e+23               ! [kg]
+     OrbitalPeriodPlanet_I(Mercury_)       = 87.969* cDay          ! [ s]
+     RotationPeriodPlanet_I(Mercury_)      = 58.646* cDay          ! [ s]
+
+     TypeBFieldPlanet_I(Mercury_)         = "DIPOLE"
+     DipoleStrengthPlanet_I(Mercury_)     = -200.0e-9              ! [ T]
 
      !\                                
      ! Venus (20)                          
