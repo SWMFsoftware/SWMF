@@ -3703,32 +3703,28 @@ for AMR.
 	 <parameter name="DnAmr" type="integer" min="-1" default="-1" />
 	 <parameter name="DtAmr" type="real" min="-1.0" default="-1.0" />
 	 <parameter name="IsStrictAmr" type="logical" default="T" />
-
-ONLY with BATL
-
 #DOAMR
 T                       DoAmr
 1                       DnAmr
--1                      DtAmr
+-1.0                    DtAmr
 T                       IsStrictAmr
 
 DoAmr is telling if you do AMR based on criteria decided during the simulation 
 every DnAmr step or DtAmr intervals. DtAmr is not implemented by 7 Aug 2011.
-For both DtAmr and DnAmr negative numbers will be ignored. IsStrictAmr if TRUE
-we demand that the number of cells indicated by criteria or percentage 
-should be refined or coarsened, else it will tray to refine the number
-of blocks indicated but if the max number of blocks is reached it will reduce to 
-a numbers that is lower then max blocks. 
+For both DtAmr and DnAmr negative numbers will be ignored. If IsStrictAmr 
+is true, we demand that the number of cells indicated by criteria or 
+percentage should be refined or coarsened, otherwise the code stops.
+If IsStrictAmr is false, the code will continue with the maximum of 
+available blocks.
+
+Default is DoAmr false.
 </command>
 
 <command name="AMRLIMIT"> 
-	 <parameter name="PercentCoarsen" type="real" min="0.0" default="0.0" />
-	 <parameter name="PercentRefine" type="real" min="0.0" default="0.0" />
-	 <parameter name="DiffCriteriaLevel" type="real" min="0.0" default="1e-8" />
-
-ONLY with BATL
-
-
+	 <parameter name="PercentCoarsen" type="real" min="0" default="0" />
+	 <parameter name="PercentRefine" type="real" min="0" default="0" />
+	 <parameter name="DiffCriteriaLevel" type="real" min="0" 
+	 	    			     		 default="1e-8" />
 #AMRLIMIT
 40.                     PercentCoarsen
 30.                     PercentRefine
@@ -3736,7 +3732,7 @@ ONLY with BATL
 1e-8                    DiffCriteriaLevel
 
 Setting up percentage refinement and coarsening using the criteria given by
-AMRERRORCRIT and/or AMRCRITERIA. MaxBlockAll set max for total number of 
+AMRCRITERIA or AMRCRITERIALEVEL. MaxBlockAll set max for total number of 
 blocks if both _nProc and MaxBlock are set. DiffCriteriaLevel give the deviation
 of the criteria that should have the same AMR treatment. 
 </command>
@@ -3754,14 +3750,15 @@ of the criteria that should have the same AMR treatment.
 				min="1" default="99999" />
 		</if>
 	</if>
-
-
 #AMR
 2001			DnRefine
 T			DoAutoRefine   ! read if DnRefine is positive
 0.			PercentCoarsen ! read if DoAutoRefine is true
 0.			PercentRefine  ! read if DoAutoRefine is true
 99999			MaxTotalBlocks ! read if DoAutoRefine is true
+
+This command is kept for backwards compatibility. The #DOAMR and #AMRLIMIT
+commands offer more control.
 
 The DnRefine parameter determines the frequency of adaptive mesh refinements
 in terms of total steps nStep.
@@ -3833,13 +3830,14 @@ Default for DnRefine is -1, i.e. no run time refinement.
 			</if>
 		</if>
 	</for>
-
-If you are using BATL,  "#AMRCRITERIALEVEL" gives more control.
-
 #AMRCRITERIA
-3			nRefineCrit (number of refinement criteria: 1,2 or 3)
-gradlogP		TypeRefine
-divB			TypeRefine
+3			nRefineCrit (1 to3)
+gradP			TypeRefine
+0.2			CoarsenLimit  ! Only if UseBatl is true
+0.8			RefineLimit   ! Only if UseBatl is true
+user			TypeRefine
+0.5			CoarsenLimit  ! Only if UseBatl is true
+0.5			RefineLimit   ! Only if UseBatl is true
 Transient		TypeRefine
 Rho_dot			TypeTransient ! Only if 'Transient' or 'transient'
 T			UseSunEarth   ! Only if 'Transient'
@@ -3848,14 +3846,7 @@ T			UseSunEarth   ! Only if 'Transient'
 0.00E+00		zEarth        ! Only if UseSunEarth
 5.00E-01		InvD2Ray      ! Only if UseSunEarth
 
-#AMRCRITERIA
-2			nRefineCrit (number of refinement criteria: 1,2 or 3)
-gradP			TypeRefine
-0.2			CoarsenLimit  ! Only if UseBatl is true
-0.8			RefineLimit   ! Only if UseBatl is true
-user			TypeRefine
-0.5			CoarsenLimit  ! Only if UseBatl is true
-0.5			RefineLimit   ! Only if UseBatl is true
+Note: "#AMRCRITERIALEVEL" gives even more control.
 
 This command defines the criteria to select blocks for refinement or
 coarsening when the #AMR command is used with DoAutoRefine=T parameter. 
@@ -3922,6 +3913,7 @@ Example for InvD2Ray =
    3 - refine_profile = 0.0001 at distance Rsun/10 from the ray
 \end{verbatim}
 </command>
+
 <command name="AMRCRITERIALEVEL">
 	<parameter name="nRefineCrit" type="integer" min="0" default="0" />
 	<for from="1" to="$nRefineCrit">
@@ -3996,7 +3988,7 @@ T                       UseSunEarth   ! Only if there are any 'transient' crit
 5.00E-01                InvD2Ray      ! Only if UseSunEarth is true
 
 This command defines the criteria to select blocks for refinement or
-coarsening when the #AMR command is used with DoAutoRefine=T parameter. 
+coarsening when the #DOAMR command is used with DoAmr=T parameter. 
 
 The number of criteria is given by the nCriteria parameter.
 Up to 3 different types of criteria (given by TypeCriteria) can be used. 
@@ -4013,7 +4005,8 @@ the maximum grid level or too many blocks would be created.
 
 Coarsening is done if ALL the criteria allow it and the block
 can be coarsened. A block cannot be coarsened if the block level
-is already at the minimum level. 
+is already at the minimum level or it has a neighbor block that is
+and remains finer. 
 
 TypeCriteria can be chosen from the following list:
 \begin{verbatim}
