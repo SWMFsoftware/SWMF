@@ -14,7 +14,7 @@ module ModVarIndexes
 
   ! This equation module contains the standard MHD equations plus one
   ! extra wave energy of a single frequency w, Iw that carries the extra energy.
-  character (len=*), parameter :: NameEquation='MHD Waves'
+  character (len=*), parameter :: NameEquation='MHD Waves with Hyperbolic cleaning and Level Set B'
 
 
 
