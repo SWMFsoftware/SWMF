@@ -781,7 +781,7 @@ contains
   end subroutine apply_unsorted_criteria
 
   !============================================================================
-  recursive subroutine  read_amr_criteria(NameCommand, nCritOut, NameCritOut_I, &
+  subroutine read_amr_criteria(NameCommand, nCritOut, NameCritOut_I,&
        NameStatVarIn_V, nStateVarIn, ReadExtraOut)
 
     use ModReadParam, ONLY: read_var
@@ -794,7 +794,6 @@ contains
     character(len=*), intent(in) :: NameCommand
     character (len=20) :: TypeAmr
     integer :: iCrit,iBlock,iAmrBox,iCritName,nCrit,iIntCrit,iStatVar
-    character(len=*), parameter:: NameSub='BATL_tree::read_amr_criteria'
 
     ! Number and name of criteria to be used by BATSRUS (at most 3)
     integer,           optional, intent(out):: nCritOut
@@ -807,30 +806,21 @@ contains
 
     character (len=20) :: CritName,lowerCritName
     character (len=20) :: NameStatVar
-    logical :: IsLevel = .true.
+    logical :: IsLevel
     logical :: DoAmr
     integer :: DnAmr
     real    :: DtAmr
     real    :: tmp
+
+    character(len=*), parameter:: NameSub='BATL_tree::read_amr_criteria'
     !-------------------------------------------------------------------------
     ReadExtra = .false.
 
     DoSortAmrCrit = .not. DoStrictAmr
     select case(NameCommand)
-    case("#AMRCRITERIA")
-       IsLevel = .false.  
-       call read_amr_criteria("#AMRCRITERIALEVEL", nCritOut=nCritOut,&
-            NameCritOut_I = NameCritOut_I,NameStatVarIn_V=NameStatVarIn_V, &
-            nStateVarIn=nStateVarIn, ReadExtraOut=ReadExtraOut)
-       if(allocated(iTree_IA)) then
-          MaxLevelCrit_I(1:nAmrCritUsed) = maxval(iTree_IA(MaxLevel_,:))
-       else
-          ! if the grid is not initzilised at this point, we set it to max
-          ! value and lett propper threading take care of it
-          MaxLevelCrit_I(1:nAmrCritUsed) = MaxLevel 
-       end if
-       IsLevel = .true.
-    case("#AMRCRITERIALEVEL")
+    case("#AMRCRITERIA", "#AMRCRITERIALEVEL")
+       IsLevel = NameCommand == "#AMRCRITERIALEVEL"
+       
        call read_var('nCrit', nCrit)
 
        nAmrCrit = nCrit
@@ -857,7 +847,7 @@ contains
        do iCrit = 1, nCrit
           IsUniqueCritName = .true.
           !find index of the criteria from its name
-          call read_var('CritName',CritName)
+          call read_var('CritName', CritName)
 
           if(CritName(1:5) == 'error') then
              UseErrorCrit = .true.
@@ -866,8 +856,8 @@ contains
                   .and. .not. present(NameStatVarIn_V))&
                   call CON_stop(NameCommand//' ERROR: Need a name table')
 
-             ! find index assosiated with name => iStatVar
-             do iStatVar=1,nStateVarIn
+             ! find index associated with name => iStatVar
+             do iStatVar = 1, nStateVarIn
                 NameStatVar = NameStatVarIn_V(iStatVar)
                 call lower_case(NameStatVar)
                 lowerCritName = trim(CritName(7:9))
@@ -888,8 +878,8 @@ contains
                 nIntCrit = nIntCrit+1
              end if
           elseif(CritName(1:9) == 'transient') then
-             if(.not. present(ReadExtraOut))&
-                  call CON_stop(NameCommand//' ERROR: BATSRUS need flag to read more data')
+             if(.not. present(ReadExtraOut)) call CON_stop(NameCommand//&
+                  ' ERROR: BATSRUS need flag to read more data')
              ReadExtra = .true.
 
              ! Find out it the name has bin used before
@@ -948,16 +938,27 @@ contains
        if(ReadExtra) &
             call read_var('ReadExtraOut',ReadExtraOut)
 
-       !UseMultiCrit = .true.
+       ! UseMultiCrit = .true.
        DoCritAmr = .true.
        DoAutoAmr = .true.      
        nExtCritUsed = nCritOut
        nIntCrit = nIntCrit-1
-       nAmrCritUsed  = nCrit
+       nAmrCritUsed = nCrit
        where(iVarCrit_I > 0)
           iVarCrit_I = iVarCrit_I + nIntCrit
        end where
        iVarCrit_I = abs(iVarCrit_I)
+
+       ! Extra stuff for #AMRCRITERIA
+       if(.not.IsLevel)then
+          if(allocated(iTree_IA)) then
+             MaxLevelCrit_I(1:nAmrCritUsed) = maxval(iTree_IA(MaxLevel_,:))
+          else
+             ! if the grid is not initzilised at this point, we set it to max
+             ! value and lett propper threading take care of it
+             MaxLevelCrit_I(1:nAmrCritUsed) = MaxLevel 
+          end if
+       end if
 
        !print *," nCritOut        = ", nCritOut
        !print *," nIntCrit        = ", nIntCrit
@@ -983,7 +984,7 @@ contains
        call read_var('DiffCriteriaLevel',  DeltaCritera)
        DoSortAmrCrit = PercentCoarsen > 0.0 .or. PercentRefine > 0.0
     case("#DOAMR") 
-       call read_var('DoAmr',DoAmr) !!!
+       call read_var('DoAmr',DoAmr)
        if(DoAmr) then
           call read_var('DnAmr',DnAmr)
           call read_var('DtAmr',DtAmr)
