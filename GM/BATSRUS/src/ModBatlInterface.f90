@@ -16,6 +16,8 @@ contains
     use ModMain, ONLY: nBlockAll, nBlockBats => nBlock, nBlockMax, &
          iNewGrid, iNewDecomposition
 
+    use ModPartSteady, ONLY: UsePartSteady
+
     use ModGeometry, ONLY: dx_BLK, MinDxValue, MaxDxValue
 
     use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
@@ -49,12 +51,14 @@ contains
           iProc_A(iMorton) = iTree_IA(Proc_,iNode)
        end do
 
-       where(Unused_BP(1:nBlockMax,:))
-          iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
-       elsewhere
-          iTypeAdvance_BP(1:nBlockMax,:) = ExplBlock_
-       end where
-       iTypeAdvance_B(1:nBlock) = iTypeAdvance_BP(1:nBlock,iProc)
+       if(.not.UsePartSteady)then
+          where(Unused_BP(1:nBlockMax,:))
+             iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
+          elsewhere
+             iTypeAdvance_BP(1:nBlockMax,:) = ExplBlock_
+          end where
+          iTypeAdvance_B(1:nBlock) = iTypeAdvance_BP(1:nBlock,iProc)
+       end if
 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
