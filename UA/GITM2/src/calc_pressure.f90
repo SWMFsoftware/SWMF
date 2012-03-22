@@ -13,7 +13,7 @@ subroutine calc_pressure
   call report("calc_pressure",2)
 
   NDensity = 0.0
-  do iSpecies = 1, nSpecies
+  do iSpecies = 1, nSpeciesTotal
      NDensity(:,:,:,1:nBlocks) = &
           NDensity(:,:,:,1:nBlocks) + NDensityS(:,:,:,iSpecies,1:nBlocks)
   enddo
