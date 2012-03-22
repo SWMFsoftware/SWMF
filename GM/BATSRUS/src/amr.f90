@@ -8,18 +8,22 @@ subroutine amr(DoFullMessagePass)
   use ModAMR, ONLY : automatic_refinement, RefineLimit_I, CoarsenLimit_I, &
        nRefineCrit, DoProfileAmr
   use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
-       nVar, State_VGB
+       nVar, State_VGB, &
+       SkippedBlock_ !!!
   use ModBlockData, ONLY: clean_block_data
   use ModIO, ONLY : write_prefix, iUnitOut
   use ModMpi
 
   use BATL_lib,         ONLY: regrid_batl, set_amr_criteria, &
-       Unused_B, iNode_B, iStatusNew_A, Refine_, Coarsen_
+       Unused_B, iNode_B, iStatusNew_A, Refine_, Coarsen_, &
+       MaxNode, nNode, iTree_IA, Status_, Used_, Proc_, Block_ !!!
+
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   use ModUser,          ONLY: user_amr_criteria
-  use ModBatlInterface, ONLY: useBatlTest
+  use ModBatlInterface, ONLY: UseBatlTest
   use ModParallel, ONLY:nBlockMax_P, MaxBlockDisp_P
   use ModMessagePass, ONLY: exchange_messages
+  use ModPartSteady, ONLY: UsePartSteady
 
   implicit none
 
@@ -39,6 +43,9 @@ subroutine amr(DoFullMessagePass)
 
   real :: refine_criteria(4, nBLK)
 
+  integer:: iNode !!!
+  integer, allocatable:: iTypeAdvance_A(:) !!!
+
   !----------------------------------------------------------------------------
 
   call set_oktest(NameSub, DoTest, DoTestMe)
@@ -51,6 +58,16 @@ subroutine amr(DoFullMessagePass)
      call exchange_messages(UseOrder2In= .not.UseBatlTest,&
           DoResChangeOnlyIn=.not.DoFullMessagePass)
      if(DoProfileAmr) call timing_stop('amr::exchange_true')
+
+     if(UsePartSteady)then
+        ! Convert iTypeAdvance_BP to _A !!! should use _A all the time
+        allocate(iTypeAdvance_A(MaxNode))
+        do iNode = 1, nNode
+           if(iTree_IA(Status_,iNode) /= Used_) CYCLE
+           iTypeAdvance_A(iNode) = &
+                iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode))
+        end do
+     end if
 
      if(automatic_refinement) then
 
@@ -70,8 +87,13 @@ subroutine amr(DoFullMessagePass)
         end if
 
         if(DoProfileAmr) call timing_start('amr::regrid_batl')
-        call regrid_batl(nVar, State_VGB, Dt_BLK, &
-             DoTestIn=DoTestMe, Used_GB=true_cell)
+        if(UsePartSteady)then
+           call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe, &
+                Used_GB=true_cell, iTypeNode_A=iTypeAdvance_A)
+        else
+           call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe, &
+                Used_GB=true_cell)
+        end if
         if(DoProfileAmr) call timing_stop('amr::regrid_batl')
      else
         if(DoProfileAmr) call timing_start('amr::specify_refinement')
@@ -79,9 +101,30 @@ subroutine amr(DoFullMessagePass)
         if(DoProfileAmr) call timing_stop('amr::specify_refinement')
 
         if(DoProfileAmr) call timing_start('amr::regrid_batl')
-        call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, &
-             DoTestIn=DoTestMe, Used_GB=true_cell)
+        if(UsePartSteady)then
+           call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, &
+                DoTestIn=DoTestMe, Used_GB=true_cell, &
+                iTypeNode_A=iTypeAdvance_A)
+        else
+           call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, &
+                DoTestIn=DoTestMe, Used_GB=true_cell)
+        end if
         if(DoProfileAmr) call timing_stop('amr::regrid_batl')
+     end if
+
+     ! This should be eliminated by using iTypeAdvance_A everywhere !!!
+     if(UsePartSteady)then
+        ! restore iTypeAdvance_B and _BP
+        iTypeAdvance_BP = SkippedBlock_
+        iTypeAdvance_B  = SkippedBlock_
+        do iNode = 1, nNode
+           if(iTree_IA(Status_,iNode) /= Used_) CYCLE
+           iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode)) = &
+                iTypeAdvance_A(iNode)
+           if(iTree_IA(Proc_,iNode) == iProc) &
+                iTypeAdvance_B(iTree_IA(Block_,iNode)) = iTypeAdvance_A(iNode)
+        end do
+        deallocate(iTypeAdvance_A)
      end if
 
      if(DoProfileAmr) call timing_start('amr::set_batsrus_grid')
@@ -160,7 +203,6 @@ subroutine amr(DoFullMessagePass)
   end if
 
   ! Ensure ghostcells are up to date.
-  ! UsePlotMessageOptions = .true. !!! this would be useful
   call exchange_messages
   if (automatic_refinement) then
      ! Physics based refinement.
@@ -215,7 +257,6 @@ subroutine amr(DoFullMessagePass)
   end if
 
   ! Update ghost cells
-  ! UsePlotMessageOptions = .false. !!! this would be useful (see above)
   call exchange_messages
   if(UseB0)then
      ! Correct B0 face at newly created and removed resolution changes
