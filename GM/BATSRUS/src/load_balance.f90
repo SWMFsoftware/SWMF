@@ -274,7 +274,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
   ! Set this logical to .false. to return to the previous version,
   ! which did not move the B0 and body force variables.
-  ! There is another declaration in subroutine move_block! Change together!!!
+  ! There is another declaration in subroutine move_block! Change together!
   logical, parameter :: DoMoveExtraData = .true.
 
   ! Maximum number of block types to be load balanced separately
@@ -330,9 +330,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      if (nProc>1 .and. index(test_string,'NOLOADBALANCE') < 1) then
 
         ! If the coordinates are known then include the body block info into
-        ! iTypeAdvance_B and _BP by changing the sign to negative for body blocks
+        ! iTypeAdvance_B and _BP by changing the sign to negative 
+        ! for body blocks
         if(DoMoveCoord)then
-!!! If there was a IsTrueBlock_BP array there was no need for MPI_ALLGATHER
            where(.not. True_BLK(1:nBlock)) &
                 iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
 
@@ -362,12 +362,15 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         endif
         nType = maxval(iType_I)
 
-        allocate(iTypeAdvance_A(nNode), iTypeBalance_A(MaxNode))
+        ! Convert from block/proc index to node index.
+        allocate(iTypeAdvance_A(MaxNode), iTypeBalance_A(MaxNode))
 
         do iNode = 1, nNode
+
            if(iTree_IA(Status_,iNode) /= Used_) CYCLE
            iTypeAdvance_A(iNode) = &
                 iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode))
+
            iTypeBalance_A(iNode) = iType_I(iTypeAdvance_A(iNode))
         end do
 
@@ -377,7 +380,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
            call init_load_balance
 
            call regrid_batl(nVar, State_VGB, Dt_BLK,  &
-                iTypeNode_A=iTypeBalance_A,           &
+                iTypeBalance_A=iTypeBalance_A,        &
+                iTypeNode_A=iTypeAdvance_A,           &
                 DoBalanceOnlyIn=.true.,               &
                 nExtraData=nBuffer,                   &
                 pack_extra_data=pack_load_balance,    &
@@ -387,7 +391,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
            call set_batsrus_state
         else
            call regrid_batl(nVar, State_VGB, Dt_BLK, Used_GB=true_cell, &
-                iTypeNode_A=iTypeBalance_A)
+                iTypeBalance_A=iTypeBalance_A, iTypeNode_A=iTypeAdvance_A)
            call set_batsrus_grid
         end if
 
@@ -453,7 +457,6 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   ! If the coordinates are known then include the body block info into
   ! iTypeAdvance_B and _BP by changing the sign to negative for body blocks
   if(DoMoveCoord)then
-!!! If there was a IsTrueBlock_BP array there was no need for MPI_ALLGATHER
      where(.not. True_BLK(1:nBlock)) &
           iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
 
@@ -730,7 +733,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
 
   ! Set this logical to .false. to return to the previous version,
   ! which did not move the B0 and body force variables.
-  ! There is another declaration in subroutine load_balance! Change together!!!
+  ! There is another declaration in subroutine load_balance! Change together!
   logical, parameter :: DoMoveExtraData = .true.
 
   integer, parameter :: nScalarBLK=14, &
@@ -1090,6 +1093,7 @@ end subroutine move_block
 !^CFG IF IMPLICIT BEGIN
 !=============================================================================
 subroutine select_stepping(DoPartSelect)
+
   ! Set logical arrays for implicit blocks, 
   ! set number of implicit and explicit blocks,
   ! and if DoPartSelect is true then select explicit and implicit blocks
