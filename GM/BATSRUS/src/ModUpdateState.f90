@@ -382,23 +382,30 @@ end subroutine update_states_mhd
 
 subroutine fix_anisotropy
 
+  !\
+  ! calc pressure relaxation term for anisotropic pressure in unstable regions 
+  ! if UseConstantTau = true, use TauInstability read from PARAM.in as the 
+  ! contant relaxation time, same for different instabilities.
+  ! if UseConstantTau = false, use growth-rate based relaxation time, varying
+  ! with location.
+  !/
+
   use ModVarIndexes, ONLY: Bx_, Bz_, Ppar_, p_
   use ModMain,    ONLY: nI, nJ, nK, nBlock, UnusedBlk, UseB0, &
        time_accurate, Cfl, dt
   use ModB0,      ONLY: B0_DGB
   use ModAdvance, ONLY: State_VGB, time_BLK
-  use ModPhysics, ONLY: TauInstability
-  use ModGeometry,ONLY: r_BLK, true_cell
+  use ModPhysics, ONLY: UseConstantTau, TauInstability, IonMassPerCharge
+  use ModGeometry,ONLY: true_cell
 
   implicit none
 
   ! Variables for anisotropic pressure
   real:: B_D(3), B2, Ppar, Pperp, Dp, DtCell
+  real:: InvGyroFreq, PparOverLimit
 
   integer:: i, j, k, iBlock
   !---------------------------------------------------------------------------
-  ! pressure relaxation for anisotropic pressure in unstable regions 
-  ! with TauInstability
   do iBlock = 1, nBlock
      if(UnusedBlk(iBlock)) CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
@@ -408,7 +415,8 @@ subroutine fix_anisotropy
         State_VGB(Ppar_,i,j,k,iBlock) = &
              min(3*State_VGB(p_,i,j,k,iBlock),State_VGB(Ppar_,i,j,k,iBlock)) 
 
-        if(TauInstability < 0.0) CYCLE
+        ! Do not apply the relaxation term in this case
+        if(UseConstantTau .and. TauInstability < 0.0) CYCLE
 
         B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
         if(UseB0) B_D = B_D + B0_DGB(:,i,j,k,iBlock)
@@ -421,25 +429,47 @@ subroutine fix_anisotropy
            DtCell = dt
         end if
 
-        ! Check for firehose and mirror instabilities
+        InvGyroFreq = IonMassPerCharge/max(1e-8, sqrt(B2))
+
+        ! Check for the firehose, mirror and ion cyclotron instabilities
         ! Limit anisotropy to instability criteria in unstable regions
-        if(TauInstability > -1.0 .and. (Ppar - Pperp) > B2)then
+        if((Ppar - Pperp) > B2)then
            ! firehose
-           Dp = DtCell*(Ppar - Pperp - B2)/(DtCell + TauInstability)
-        else if(TauInstability > -1.0 .and. &
-             Pperp**2 > Ppar*Pperp + 0.5*B2*Ppar)then
+           ! by how much the instability limit is exceeded
+           PparOverLimit = Ppar - Pperp - B2                 ! Delta pf
+           if(.not. UseConstantTau) &
+                !\
+                ! Calc relaxation time based on the maximum growth rate 
+                ! calculated from eqn (2) of Hall [1981]
+                ! with theta = 0 and ppar < 4*pperp 
+                ! MaxGrowthRate = 
+                !        0.5*GyroFreq*Delta pf/sqrt(ppar*(pperp-ppar/4))
+                !/
+                TauInstability = 2.0*InvGyroFreq* &
+                sqrt(max(3.0*Ppar*(Pperp-0.25*Ppar),1e-8))/PparOverLimit
+           Dp = DtCell*PparOverLimit/(DtCell + TauInstability)
+        else if(Pperp**2 > Ppar*Pperp + 0.5*B2*Ppar)then
            ! mirror
-           Dp = DtCell*(Ppar - Pperp + 0.5*B2*Ppar/Pperp) &
-                /(DtCell + TauInstability)
-        else if(TauInstability > -1.0 .and. &
-           Pperp > Ppar + Ppar*0.3*sqrt(0.5*B2/max(1e-8,Ppar)))then
-           ! proton cyclotron
+           PparOverLimit = Pperp - Ppar - 0.5*B2*Ppar/Pperp   ! Delta pm
+           if(.not. UseConstantTau) &
+                !\
+                ! Calc relaxation time based on the maximum growth rate
+                ! from eqn (7) of Southwood [1993], with the wavelength @
+                ! maximum growth from eqn (21) of Hall [1980]
+                ! MaxGrowthRate = 
+                !        4/3/sqrt(5)*GyroFreq*sqrt(2*Delta pm/ppar)
+                !/
+           TauInstability = 0.75*InvGyroFreq*sqrt(2.5*Ppar/PparOverLimit)
+           Dp = -DtCell*PparOverLimit/(DtCell + TauInstability)
+        else if(Pperp > Ppar + Ppar*0.3*sqrt(0.5*B2/max(1e-8,Ppar)))then
+           ! ion cyclotron
+           if(.not. UseConstantTau) &
+                TauInstability = 1e2*InvGyroFreq
            Dp = DtCell*(Ppar - Pperp + Ppar*0.3*sqrt(0.5*B2/max(1e-8,Ppar))) &
                 /(DtCell + TauInstability)
         else
            CYCLE
         end if
-
         State_VGB(Ppar_,i,j,k,iBlock)  = Ppar - 2./3.*Dp
      end do; end do; end do  
   end do

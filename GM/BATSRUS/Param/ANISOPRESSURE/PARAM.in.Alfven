@@ -96,6 +96,10 @@ float		yMaxBc
 float		zMinBc
 float		zMaxBc
 
+#ANISOTROPICPRESSURE
+T		UseConstantTau
+-1		TauInstability
+
 #TIMESTEPPING
 2		nStage
 0.8		CflExpl
