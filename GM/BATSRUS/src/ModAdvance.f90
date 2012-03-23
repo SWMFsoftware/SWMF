@@ -105,11 +105,6 @@ module ModAdvance
   real :: Theat0(nI,nJ,nK)
   real, allocatable :: DivB1_GB(:,:,:,:)
 
-  real, dimension(0:nI+1, 0:nJ+1, 0:nK+1) :: &
-       gradX_Ux, gradX_Uy, gradX_Uz, gradX_Bx, gradX_By, gradX_Bz, gradX_VAR,&
-       gradY_Ux, gradY_Uy, gradY_Uz, gradY_Bx, gradY_By, gradY_Bz, gradY_VAR,&
-       gradZ_Ux, gradZ_Uy, gradZ_Uz, gradZ_Bx, gradZ_By, gradZ_Bz, gradZ_VAR
-
   !\
   ! X Face local MHD solution array definitions.
   !/
