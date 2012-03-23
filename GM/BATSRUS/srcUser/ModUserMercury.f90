@@ -16,8 +16,13 @@ module ModUser
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = 'Mercury, Lars Daldorff'
 
-  real :: PlanetDensity, PlanetPressure, PlanetMaxResistivity, &
-       PlanetRadius, PlanetResistiveR_I(2), ResistivityRate
+  real :: PlanetDensity=-1., PlanetPressure=-1., PlanetMaxResistivity=-1., &
+       PlanetRadius=-1., PlanetResistiveR_I(2)= (/-1.,-1./)
+
+  real :: PlanetDensitySi=-1., PlanetPressureSi=-1., PlanetMaxResistivitySi=-1., &
+       PlanetRadiusSi=-1., PlanetResistiveRSi_I(2)=(/-1.,-1./)
+
+  real :: ResistivityRate
 
 contains
 
@@ -25,11 +30,13 @@ contains
 
   subroutine user_init_session
 
-    use CON_planet,    ONLY: RadiusPlanet, MassPlanet
-    use ModNumConst,   ONLY:cPi
-    use ModPhysics,    ONLY: Si2No_V,No2Si_V,UnitRho_, UnitP_, UnitX_
-    use ModIO, ONLY: write_prefix, write_myname, iUnitOut
-    use ModProcMH,     ONLY:iProc
+    use CON_planet,     ONLY: RadiusPlanet, MassPlanet
+    use ModNumConst,    ONLY: cPi
+    use ModPhysics,     ONLY: Si2No_V,No2Si_V,UnitRho_, &
+                              UnitP_, UnitX_
+    use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
+    use ModProcMH,      ONLY: iProc
+    use ModResistivity, ONLY: Si2NoEta
 
     CHARACTER(LEN=*), PARAMETER  :: FMT1 = "(A20,E10.3)"
     !-------------------------------------------------------------------
@@ -38,25 +45,32 @@ contains
     !!! from that. Initialize these to -1. PlanetRadius should be
     !!! in dimensional units.
 
-    PlanetDensity      = PlanetDensity*Si2No_V(UnitRho_)
-    PlanetPressure     = PlanetPressure*Si2No_V(UnitP_)
-    PlanetRadius       = PlanetRadius*Si2No_V(UnitX_)
-    PlanetResistiveR_I = PlanetResistiveR_I*Si2No_V(UnitX_)
+    if (index(TypeGeometry,'spherical')>0) &
+         call stop_mpi('ERROR: Correct PARAM.in, need spherical grid.')
 
-    if(PlanetDensity < 0.0) &
-         PlanetDensity  = SI2No_V(UnitRho_)*3.0*MassPlanet/(4.0*cPi*RadiusPlanet**3)
+
+    if(PlanetDensitySi < 0.0) &
+         PlanetDensitySI  = 3.0*MassPlanet/(4.0*cPi*RadiusPlanet**3)
 
     if(PlanetRadius < 0.0) &
-         PlanetRadius = SI2No_V(UnitX_)*RadiusPlanet
+         PlanetRadius = RadiusPlanet*Si2No_V(UnitX_)
 
-    if(PlanetPressure < 0.0) &
-         PlanetPressure = 1.0e-8
+    if(PlanetPressureSi < 0.0) &
+         PlanetPressureSi = 1.0e-8*No2Si_V(UnitP_)
 
-    if(PlanetMaxResistivity < 0.0) &
-         PlanetMaxResistivity = 1.0e13
+    if(PlanetMaxResistivitySi < 0.0) &
+         PlanetMaxResistivitySi = 1.0e13
 
     if(sum(PlanetResistiveR_I) < 0.0 ) &
          PlanetResistiveR_I(:) = (/1.0, 0.0/)
+    
+ 
+    PlanetDensity           = PlanetDensitySi*Si2No_V(UnitRho_)
+    PlanetPressure          = PlanetPressureSi*Si2No_V(UnitP_)
+    PlanetMaxResistivity    = PlanetMaxResistivitySi*Si2NoEta
+
+    PlanetRadiusSi          = PlanetRadius*No2Si_V(UnitX_)
+    PlanetResistiveRSi_I(:) = PlanetResistiveR_I(:)*No2Si_V(UnitX_)
 
     ResistivityRate = &
          PlanetMaxResistivity/(PlanetResistiveR_I(1)-PlanetResistiveR_I(2))
@@ -64,16 +78,16 @@ contains
     if(iProc==0) then
        call write_myname
        write(*,*) ''
-       write(*,FMT1) '  Planet density  = ',PlanetDensity*No2Si_V(UnitRho_)
-       write(*,FMT1) '  Planet pressure = ',PlanetPressure*No2Si_V(UnitP_)
-       write(*,FMT1) '  Planet radius   = ',PlanetRadius*No2Si_V(UnitX_)
+       write(*,FMT1) '  Planet density  = ',PlanetDensitySi
+       write(*,FMT1) '  Planet pressure = ',PlanetPressureSi
+       write(*,FMT1) '  Planet radius   = ',PlanetRadiusSi
        write(*,*) ''
        write(*,"(A45,E10.3)") '  Planet resistivity goes linear from radius',&
-            PlanetResistiveR_I(1)*No2Si_V(UnitX_) 
+            PlanetResistiveRSi_I(1)
        write(*,"(A6,E10.3,A27,E10.3)") '  to ', &
-            PlanetResistiveR_I(2)*No2Si_V(UnitX_), &
+            PlanetResistiveRSi_I(2), &
             ' where it has maximum value :', &
-            PlanetMaxResistivity 
+            PlanetMaxResistivitySi 
        write(*,*) ''
        write(*,*) ''
     end if
@@ -85,9 +99,8 @@ contains
   subroutine user_read_inputs
 
     use ModMain
-    use ModProcMH,     ONLY:iProc
+    use ModProcMH,      ONLY: iProc
     use ModReadParam
-
     character(len=100) :: NameCommand
     !-------------------------------------------------------------------
     do
@@ -95,12 +108,12 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
        case("#RESISTIVEPLANET")
-          call read_var('PlanetDensity'       , PlanetDensity)
-          call read_var('PlanetPressure'      , PlanetPressure)
-          call read_var('PlanetMaxResistivity', PlanetMaxResistivity) 
-          call read_var('PlanetRadius'        , PlanetRadius)
-          call read_var('OuterResistiveRadius', PlanetResistiveR_I(1))
-          call read_var('InerResistiveRadius' , PlanetResistiveR_I(2))
+          call read_var('PlanetDensitySi'       , PlanetDensitySi)
+          call read_var('PlanetPressureSi'      , PlanetPressureSi)
+          call read_var('PlanetMaxResistivitySi', PlanetMaxResistivitySi) 
+          call read_var('PlanetRadiusDim'        , PlanetRadius)
+          call read_var('OuterResistiveRadiusDim', PlanetResistiveR_I(1))
+          call read_var('InerResistiveRadiusDim' , PlanetResistiveR_I(2))
           if(sum(PlanetResistiveR_I) >= 0.0)then
              if(PlanetResistiveR_I(1) <= PlanetResistiveR_I(2)) then
                 write(*,*) 'ERROR: OuterResistivRadius has to be '//&
