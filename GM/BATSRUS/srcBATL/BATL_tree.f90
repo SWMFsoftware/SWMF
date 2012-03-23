@@ -627,10 +627,10 @@ contains
              iStatusNew_A(1:nNode) = iStatusAll_A(1:nNode)
           end if         
 
-       end do LOOPLEVEL
-
-       ! all blocks marked for refinement shoud be refined if true
-       if(DoStrictAmr) EXIT LOOPTRY
+       end do LOOPLEVEL! levels
+      
+       ! all blocks marked for refinment shoud be refined if true
+       if(DoStrictAmr .or. count(iStatusNew_A == Refine_) == 0) EXIT LOOPTRY
       
        ! Estimate the difference between the expected number of blocks
        ! after AMR and the number of available/allowed blocks.
@@ -687,7 +687,7 @@ contains
           if( Rank_A(iRank) >= RankLimit ) CYCLE LOOPTRY
           iStatusNew_A(iNode) = Unset_
        end do
-      
+
     end do LOOPTRY
 
     if(.not.DoStrictAmr) deallocate(iStatusNew0_A)

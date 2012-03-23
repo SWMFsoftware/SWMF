@@ -438,7 +438,7 @@ contains
     ! Get the number of elements to refine by percentage
     ! taking into account that each refinements generate nChild-1 
     ! new blocks
-    nDesiredRefine  = floor(PercentRefine*nNodeUsed/(100.0*(nChild-1)))
+    nDesiredRefine  = floor(PercentRefine*nNodeUsed/(100.0))
     nDesiredCoarsen = floor(PercentCoarsen*nNodeUsed/100.0)
 
     ! make sure thay do not take more then thay can
@@ -493,9 +493,7 @@ contains
        iRank_A(iSort) =iIdxSort_II(iCritSort,1)
        Rank_A(iSort) = Rank_I(iCritSort)
     end do
-
-
-
+    
     ! making sure that the refinment and coarsning are starting from
     ! a position with have a transition in its criteria larger then
     ! diffRange

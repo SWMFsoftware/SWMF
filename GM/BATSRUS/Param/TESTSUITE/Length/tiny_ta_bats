@@ -41,7 +41,7 @@ F                       IsStrictAmr
 
 AMRLIMIT
 40.                     PercentCoarsen
-30.                     PercentRefine
+4.29                     PercentRefine
 999999                  MaxBlockAll
 1e-8                    DiffCriteriaLevel
 

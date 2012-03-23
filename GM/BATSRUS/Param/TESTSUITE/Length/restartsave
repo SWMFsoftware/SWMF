@@ -43,7 +43,7 @@ F                       IsStrictAmr
 
 #AMRLIMIT
 40.                     percentCoarsen
-80.                     percentRefine
+11.43                     percentRefine
 999999                  MaxBlcokALL
 1e-8                 DiffCriteriaLevel
 
