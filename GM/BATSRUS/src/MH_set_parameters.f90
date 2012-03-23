@@ -1265,11 +1265,11 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('InvD2Ray',InvD2Ray)
            end if
         else
-           call read_var('nRefineCrit',nRefineCrit)
-           if(nRefineCrit<0 .or. nRefineCrit>3)&
-                call stop_mpi(NameSub//' ERROR: nRefineCrit must be 0, 1, 2 or 3')
+           call read_var('nRefineCrit', nRefineCrit)
+           if(nRefineCrit<0 .or. nRefineCrit>3) call stop_mpi(NameSub// &
+                ' ERROR: nRefineCrit must be 0, 1, 2 or 3')
            do i=1,nRefineCrit
-              call read_var('TypeRefine',RefineCrit(i))
+              call read_var('TypeRefine', RefineCrit(i), IsLowerCase=.true.)
               if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
                  call read_var('TypeTransient_I(i)',TypeTransient_I(i))
                  call read_var('UseSunEarth'       ,UseSunEarth)
