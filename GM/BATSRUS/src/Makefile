@@ -102,7 +102,6 @@ OBJECTS = \
 	amr.o\
 	amr_criteria.o\
 	amr_physics.o\
-	calc_gradients.o\
 	calc_sources.o\
 	calc_timestep.o\
 	coarsen_grid.o\
