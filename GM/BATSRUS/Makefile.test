@@ -30,6 +30,7 @@ test:
 	-@($(MAKE) test_mars)
 	-@($(MAKE) test_marsfluids)
 	-@($(MAKE) test_venus)
+	-@($(MAKE) test_mercurysph)
 	-@($(MAKE) test_saturn)
 	-@($(MAKE) test_comet)
 	-@($(MAKE) test_magnetometer)
@@ -72,6 +73,7 @@ test_help:
 	@echo "    test_levelset              (run levelset test)"
 	@echo "    test_magnetometer          (run magnetometer test)"
 	@echo "    test_mars                  (run Mars test)"
+	@echo "    test_mercurysph                (run Mercury test)"
 	@echo "    test_marsfluids            (run marsfluids tests)"
 	@echo "    test_marsfluids_start      (run first marsfluids test)"
 	@echo "    test_marsfluids_restart    (run marsfluids restart test)"
@@ -1088,6 +1090,48 @@ test_saturn_check:
 		Param/SATURN/TestOutput/log_n000001.log \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_saturn.diff
 	ls -l test_saturn.diff
+
+### TESTS FOR MODELING MERCURY ###
+
+test_mercurysph:
+	@echo "test_mercurysph_compile..." > test_mercurysph.diff
+	$(MAKE) test_mercurysph_compile
+	@echo "test_mercurysph_rundir..." >> test_mercurysph.diff
+	$(MAKE) test_mercurysph_rundir
+	@echo "test_mercurysph_run..." >> test_mercurysph.diff
+	$(MAKE) test_mercurysph_run
+	@echo "test_mercurysph_check..." >> test_mercurysph.diff
+	$(MAKE) test_mercurysph_check
+
+test_mercurysph_compile:
+	./Config.pl -u=Mercury -e=Mhd -g=4,4,4,600,100
+	$(MAKE) BATSRUS PIDL
+
+test_mercurysph_rundir: test_rundir
+	cd ${TESTDIR}; \
+		cp Param/MERCURY/PARAM.in .; \
+		#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_mercurysph_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}/GM; ./pTEC g
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
+
+test_mercurysph_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
+		Param/MERCURY/TestOutput/REFlog_n000000.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_mercurysph.diff)
+	gunzip -c Param/MERCURY/TestOutput/REF3d__var_2_n0000100.dat.gz | ${SORT} \
+	        | grep -v AUXDATA \
+		> ${TESTDIR}/RESULTS/GM/ref_y=0.dat
+	gunzip -c ${TESTDIR}/RESULTS/GM/3d__var_2_n0000100.dat.gz | ${SORT} \
+		| grep -v AUXDATA \
+		> ${TESTDIR}/RESULTS/GM/y=0.dat
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
+		${TESTDIR}/RESULTS/GM/ref_y=0.dat \
+		${TESTDIR}/RESULTS/GM/y=0.dat >> test_mercurysph.diff)
+	ls -l test_mercurysph.diff
+
 
 ### TESTS FOR MODELING COMET6SP ###
 
