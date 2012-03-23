@@ -1435,22 +1435,22 @@ subroutine covariant_force_integral(i,j,k,iBLK,Fai_S)
 
 end subroutine covariant_force_integral
 !-----------------------------------------------------------------------------
-subroutine covariant_gradient(iBlock, Var_G,&     
-     GradientX_G, GradientY_G, GradientZ_G)
+subroutine covariant_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
+
   use ModSize
   use ModMain, ONLY: x_, y_, z_
   use ModCovariant
-  use ModGeometry,ONLY:body_blk, true_cell, &
-       vInv_CB
+  use ModGeometry,ONLY:body_blk, true_cell, vInv_CB
   use ModNumConst
+
   implicit none
 
   integer,intent(in) :: iBlock
 
   real, dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn),&
        intent(in) :: Var_G
-  real, dimension(0:nI+1, 0:nJ+1, 0:nK+1),&
-       intent(out) ::  GradientX_G, GradientY_G, GradientZ_G
+  real, dimension(1:nI,1:nJ,1:nK),&
+       intent(out) ::  GradX_C, GradY_C, GradZ_C
 
   real, dimension(0:nI+1, 0:nJ+1, 0:nK+1) :: OneTrue_G
 
@@ -1460,12 +1460,7 @@ subroutine covariant_gradient(iBlock, Var_G,&
   real,dimension(east_:top_) :: Difference_S
 
   real::VInvHalf
-
-  !To fill in the ghostcells
-  GradientX_G = cZero
-  GradientY_G = cZero
-  GradientZ_G = cZero
-
+  !--------------------------------------------------------------------------
   if(.not.body_BLK(iBlock)) then
      do k=1,nK; do j=1,nJ; do i=1,nI
         VInvHalf=chalf*vInv_CB(i,j,k,iBlock)
@@ -1481,11 +1476,11 @@ subroutine covariant_gradient(iBlock, Var_G,&
         Difference_S(Bot_)  = -(Var_G(i,j,k-1)+Var_G(i,j,k))
         Difference_S(Top_)  = +(Var_G(i,j,k+1)+Var_G(i,j,k))
 
-        GradientX_G(i,j,k) = &
+        GradX_C(i,j,k) = &
              dot_product(FaceArea_DS(x_,:),Difference_S)*VInvHalf
-        GradientY_G(i,j,k) = &
+        GradY_C(i,j,k) = &
              dot_product(FaceArea_DS(y_,:),Difference_S)*VInvHalf
-        GradientZ_G(i,j,k) = &
+        GradZ_C(i,j,k) = &
              dot_product(FaceArea_DS(z_,:),Difference_S)*VInvHalf
      end do; end do; end do
   else
@@ -1538,11 +1533,11 @@ subroutine covariant_gradient(iBlock, Var_G,&
              OneTrue_G(i,j,k-1)*&
              (Var_G(i,j,k)-Var_G(i,j,k-1))
 
-        GradientX_G(i,j,k) = &
+        GradX_C(i,j,k) = &
              dot_product(FaceArea_DS(x_,:),Difference_S)*VInvHalf
-        GradientY_G(i,j,k) = &
+        GradY_C(i,j,k) = &
              dot_product(FaceArea_DS(y_,:),Difference_S)*VInvHalf
-        GradientZ_G(i,j,k) = &
+        GradZ_C(i,j,k) = &
              dot_product(FaceArea_DS(z_,:),Difference_S)*VInvHalf
      end do; end do; end do
   end if
