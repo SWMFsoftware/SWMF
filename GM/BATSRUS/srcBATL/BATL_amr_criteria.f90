@@ -802,8 +802,8 @@ contains
     integer,           optional, intent(in):: nStateVarIn
     character(len=*),  optional, dimension(:), intent(in):: NameStatVarIn_V
 
-    character (len=20) :: CritName,lowerCritName
-    character (len=20) :: NameStatVar
+    character(len=20) :: CritName
+    character(len=20) :: NameStatVar
     logical :: IsLevel
     logical :: DoAmr
     integer :: DnAmr
@@ -824,10 +824,9 @@ contains
        nAmrCrit = nCrit
 
        ! deallocate,if they are already allocated
-       if(allocated(CoarsenCritAll_I)) deallocate( &
-            CoarsenCritAll_I,RefineCritAll_I, iVarCrit_I)
-       if(allocated(MaxLevelCrit_I)) &
-            deallocate(MaxLevelCrit_I)
+       if(allocated(CoarsenCritAll_I)) &
+            deallocate(CoarsenCritAll_I, RefineCritAll_I, iVarCrit_I)
+       if(allocated(MaxLevelCrit_I)) deallocate(MaxLevelCrit_I)
        
        ! allocate all arrays
        allocate(CoarsenCritAll_I(nCrit), RefineCritAll_I(nCrit), &
@@ -845,7 +844,7 @@ contains
        do iCrit = 1, nCrit
           IsUniqueCritName = .true.
           !find index of the criteria from its name
-          call read_var('CritName', CritName)
+          call read_var('CritName', CritName, IsLowerCase=.true.)
 
           if(CritName(1:5) == 'error') then
              UseErrorCrit = .true.
@@ -858,13 +857,10 @@ contains
              do iStatVar = 1, nStateVarIn
                 NameStatVar = NameStatVarIn_V(iStatVar)
                 call lower_case(NameStatVar)
-                lowerCritName = trim(CritName(7:9))
-                call lower_case(lowerCritName )
-                if(trim(NameStatVar) == lowerCritName ) &
-                     EXIT
+                if(NameStatVar == CritName(7:6+len_trim(NameStatVar)) ) EXIT
              end do
              !find if index iStatVar exsit in list before
-             do iIntCrit=1,nIntCrit
+             do iIntCrit = 1, nIntCrit
                 if(iStateVarCrit_I(iIntCrit) == iStatVar) then
                    IsUniqueCritName = .false.
                 end if
@@ -882,7 +878,7 @@ contains
 
              ! Find out it the name has bin used before
              do iCritName = 1, 3
-                if(trim(CritName(11:20)) == trim(NameCritOut_I(iCritName))) then
+                if(CritName(11:20) == NameCritOut_I(iCritName)) then
                    iVarCrit_I(iCrit) = iCritName
                    IsUniqueCritName = .false.
                    EXIT
@@ -894,7 +890,7 @@ contains
                 do iCritName = 1, min(nCritOut+1,3)
                    if(NameCritOut_I(iCritName) == "NULL" )then
                       iVarCrit_I(iCrit) = iCritName
-                      NameCritOut_I(iCritName) = trim(CritName(11:20))
+                      NameCritOut_I(iCritName) = CritName(11:20)
                       EXIT
                    end if
                 end do
