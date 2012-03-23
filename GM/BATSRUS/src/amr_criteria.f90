@@ -1,251 +1,330 @@
 !^CFG COPYRIGHT UM
-subroutine amr_criteria(ref_criteria)
-  use ModMain
-  use ModGeometry, ONLY:x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,true_cell
-  use ModAdvance
-  use ModAMR,      ONLY:nRefineCrit,RefineCrit
-  use ModPhysics,  ONLY:cosTHETAtilt,sinTHETAtilt,Rcurrents
-  use ModPhysics,  ONLY:UseSunEarth
-  use ModConst
-  use ModUser, ONLY: user_amr_criteria
-  use ModCurrent, ONLY: get_current
-  use BATL_lib, ONLY: DoAmr_B, UseAmrMask
+subroutine amr_criteria(Crit_IB)
+
+  use ModSize,     ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+       x_, y_, z_, MaxBlock
+  use ModMain,     ONLY: nBlock, UseBatl, UseB0, UseUserAmr, UnusedBlk
+  use ModGeometry, ONLY: &
+       x_BLK, y_BLK, z_BLK, r_BLK, dx_BLK, dy_BLK, dz_BLK, true_cell
+  use ModAdvance,  ONLY: State_VGB, StateOld_VCB, B0_DGB, &
+       Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
+  use ModAMR,      ONLY: nRefineCrit,RefineCrit
+  use ModPhysics,  ONLY: rCurrents
+  use ModPhysics,  ONLY: UseSunEarth
+  use ModUser,     ONLY: user_amr_criteria
+  use ModCurrent,  ONLY: get_current
+  use BATL_lib,    ONLY: DoAmr_B, UseAmrMask
+  use ModNumConst, ONLY: cSqrtTwo, cTiny
   implicit none
 
-  real, intent(out) :: ref_criteria(4,nBLK)
-  real :: userCriteria
+  real, intent(out) :: Crit_IB(4,MaxBlock)
 
-  logical :: UseSwitchAMR,IsFound
-  integer :: iBLK, iCrit, iVar, i, j, k
-  real :: xxx,yyy,zzz,RR, dsMIN,dsMAX,ds2, RcritAMR,AMRsort_1,AMRsort_2
-  real :: XTilt, YTilt, ZTilt, Zmax, ZTiltmin, ZTiltmax
+  real :: UserCriteria
 
-  real, dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn) :: outVAR,&
-       Rho_G, RhoUx_G, RhoUy_G, RhoUz_G, Bx_G, By_G, Bz_G, P_G
+  logical :: UseSwitchAMR, IsFound
+  integer :: iBlock, iCrit, iVar, i, j, k
+  real :: xxx,yyy,zzz,RR, RcritAMR,AMRsort_1,AMRsort_2
 
-  real, dimension(3) :: Current_D
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: &
+       Var_G, Rho_G, RhoUx_G, RhoUy_G, RhoUz_G, Bx_G, By_G, Bz_G, P_G
+
+  ! X, Y and Z derivatives for vectors and scalars
+  real, dimension(1:nI,1:nJ,1:nK) :: &
+       GradXVarX_C, GradXVarY_C, GradXVarZ_C, GradX_C, &
+       GradYVarX_C, GradYVarY_C, GradYVarZ_C, GradY_C, &
+       GradZVarX_C, GradZVarY_C, GradZVarZ_C, GradZ_C
+
+  real:: Current_D(3)
+
+  character(len=*), parameter:: NameSub='amr_criteria'
+  !--------------------------------------------------------------------------
 
   ! initialize all criteria to zero
-  ref_criteria = cZero
-  do iBLK=1,nBLK
-     if (unusedBLK(iBLK)) CYCLE
+  Crit_IB = 0.0
+  do iBlock = 1, nBlock
+     if (unusedBLK(iBlock)) CYCLE
 
-     
      if(UseBatl) then
         if(UseAmrMask) then
-           if(.not.DoAmr_B(iBLK)) CYCLE
+           if(.not.DoAmr_B(iBlock)) CYCLE
         end if
      end if
 
-     ! set 4th criteria to block radius, used in amr_physics to preserve symmetry
-     ref_criteria(4,iBLK) = maxval(R_BLK(1:nI,1:nJ,1:nK,iBLK))
+     ! set 4th criteria to block radius, used in amr_physics to preserve 
+     ! symmetry (not used by BATL !!!)
+     Crit_IB(4,iBlock) = maxval(R_BLK(1:nI,1:nJ,1:nK,iBlock))
+
      ! Initialize values to use below for criteria
-     dsMIN = min(dx_BLK(iBLK), dy_BLK(iBLK), dz_BLK(iBLK))
-     dsMAX = max(dx_BLK(iBLK), dy_BLK(iBLK), dz_BLK(iBLK))
-     ds2 = dsMIN*dsMIN
      if (UseSunEarth) then
-        RcritAMR = cOne+(cOne+cHalf)*cSqrtTwo*dsMAX
+        RcritAMR = 1 + &
+             1.5*cSqrtTwo*max(dx_BLK(iBlock), dy_BLK(iBlock), dz_BLK(iBlock))
      else
-        RcritAMR = cZero
+        RcritAMR = 0.0
      end if
 
-     do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
-        Rho_G(i,j,k)  = State_VGB(rho_,i,j,k,iBLK)
-        RhoUx_G(i,j,k)= State_VGB(rhoUx_,i,j,k,iBLK)
-        RhoUy_G(i,j,k)= State_VGB(rhoUy_,i,j,k,iBLK)
-        RhoUz_G(i,j,k)= State_VGB(rhoUz_,i,j,k,iBLK)
-        Bx_G(i,j,k)   = State_VGB(Bx_,i,j,k,iBLK)
-        By_G(i,j,k)   = State_VGB(By_,i,j,k,iBLK)
-        Bz_G(i,j,k)   = State_VGB(Bz_,i,j,k,iBLK)
-        P_G(i,j,k)    = State_VGB(P_,i,j,k,iBLK)
+     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+        Rho_G(i,j,k)  = State_VGB(Rho_,i,j,k,iBlock)
+        RhoUx_G(i,j,k)= State_VGB(RhoUx_,i,j,k,iBlock)
+        RhoUy_G(i,j,k)= State_VGB(RhoUy_,i,j,k,iBlock)
+        RhoUz_G(i,j,k)= State_VGB(RhoUz_,i,j,k,iBlock)
+        Bx_G(i,j,k)   = State_VGB(Bx_,i,j,k,iBlock)
+        By_G(i,j,k)   = State_VGB(By_,i,j,k,iBlock)
+        Bz_G(i,j,k)   = State_VGB(Bz_,i,j,k,iBlock)
+        P_G(i,j,k)    = State_VGB(P_,i,j,k,iBlock)
      end do; end do; end do
 
-     do iCrit=1,nRefineCrit
+     do iCrit = 1, nRefineCrit
         select case(RefineCrit(iCrit))
-        case('gradT','gradt')
+        case('gradt')
            ! Temperature gradient.
-           outVAR = P_G/Rho_G
-           call grad1D(1,iBLK,outVAR,gradX_VAR,gradY_VAR,gradZ_VAR,"none",0)
-           ref_criteria(iCrit,iBLK) = maxval(ds2*sqrt( &
-                gradX_VAR(1:nI,1:nJ,1:nK)**2 + &
-                gradY_VAR(1:nI,1:nJ,1:nK)**2 + &
-                gradZ_VAR(1:nI,1:nJ,1:nK)**2))
+           Var_G = P_G/Rho_G
+           call calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
+           Crit_IB(iCrit,iBlock) = &
+                sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
         case('gradlogrho')
            ! Log of density gradient.
-           outVAR = log10(Rho_G)
-           call grad1D(1, iBLK, outVAR, gradX_VAR,gradY_VAR,gradZ_VAR, "none",0)
-           ref_criteria(iCrit,iBLK) = maxval(ds2*sqrt( &
-                gradX_VAR(1:nI,1:nJ,1:nK)**2 + &
-                gradY_VAR(1:nI,1:nJ,1:nK)**2 + &
-                gradZ_VAR(1:nI,1:nJ,1:nK)**2))
-        case('gradlogP','gradlogp')
+           Var_G = log10(Rho_G)
+           call calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
+           Crit_IB(iCrit,iBlock) = &
+                sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
+        case('gradlogp')
            ! Log of pressure gradient
-           outVAR = log10(P_G)
-           call grad1D(1, iBLK, outVAR, gradX_VAR,gradY_VAR,gradZ_VAR, "none",0)
-           ref_criteria(iCrit,iBLK) = maxval(ds2*sqrt( &
-                gradX_VAR(1:nI,1:nJ,1:nK)**2 + &
-                gradY_VAR(1:nI,1:nJ,1:nK)**2 + &
-                gradZ_VAR(1:nI,1:nJ,1:nK)**2))
-        case('gradP','gradp')
+           Var_G = log10(P_G)
+           call calc_gradient( iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
+           Crit_IB(iCrit,iBlock) = &
+                sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
+
+        case('gradp')
            ! Pressure gradient 2.
-           call grad1D(1, iBLK, P_G, gradX_VAR,gradY_VAR,gradZ_VAR, "none",0)
-           ref_criteria(iCrit,iBLK) = maxval(ds2*sqrt( &
-                gradX_VAR(1:nI,1:nJ,1:nK)**2 + &
-                gradY_VAR(1:nI,1:nJ,1:nK)**2 + &
-                gradZ_VAR(1:nI,1:nJ,1:nK)**2))
-        case('gradE')
+           call calc_gradient(iBlock, P_G, GradX_C,GradY_C,GradZ_C)
+           Crit_IB(iCrit,iBlock) = &
+                sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
+
+        case('grade')
            ! Electric field gradient.
            if(UseB0)then
-              outVAR = sqrt( &
+              Var_G = sqrt( &
                    ( -((RhoUy_G/Rho_G)* &
-                   (Bz_G+B0_DGB(z_,:,:,:,iBLK)) - &
+                   (Bz_G+B0_DGB(z_,:,:,:,iBlock)) - &
                    (RhoUz_G/Rho_G)* &
-                   (By_G+B0_DGB(y_,:,:,:,iBLK))) )**2 + &
+                   (By_G+B0_DGB(y_,:,:,:,iBlock))) )**2 + &
                    ( -((RhoUz_G/Rho_G)* &
-                   (Bx_G+B0_DGB(x_,:,:,:,iBLK)) - &
+                   (Bx_G+B0_DGB(x_,:,:,:,iBlock)) - &
                    (RhoUx_G/Rho_G)* &
-                   (Bz_G+B0_DGB(z_,:,:,:,iBLK))) )**2 + &
+                   (Bz_G+B0_DGB(z_,:,:,:,iBlock))) )**2 + &
                    ( -((RhoUx_G/Rho_G)* &
-                   (By_G+B0_DGB(y_,:,:,:,iBLK)) - &
+                   (By_G+B0_DGB(y_,:,:,:,iBlock)) - &
                    (RhoUy_G/Rho_G)* &
-                   (Bx_G+B0_DGB(x_,:,:,:,iBLK))) )**2 )
+                   (Bx_G+B0_DGB(x_,:,:,:,iBlock))) )**2 )
            else
-              outVAR = sqrt( &
-                   ( -((RhoUy_G/Rho_G)* &
-                   Bz_G - &
-                   (RhoUz_G/Rho_G)* &
-                   By_G) )**2 + &
-                   ( -((RhoUz_G/Rho_G)* &
-                   Bx_G - &
-                   (RhoUx_G/Rho_G)* &
-                   Bz_G) )**2 + &
-                   ( -((RhoUx_G/Rho_G)* &
-                   By_G - &
-                   (RhoUy_G/Rho_G)* &
-                   Bx_G) )**2 )
+              Var_G = sqrt( &
+                   (RhoUy_G*Bz_G - RhoUz_G*By_G)**2 + &
+                   (RhoUz_G*Bx_G - RhoUx_G*Bz_G)**2 + &
+                   (RhoUx_G*By_G - RhoUy_G*Bx_G)**2 )/Rho_G
            end if
-           call grad1D(1, iBLK, outVAR, gradX_VAR,gradY_VAR,gradZ_VAR, "none",0)
-           ref_criteria(iCrit,iBLK) = maxval(ds2*sqrt( &
-                gradX_VAR(1:nI,1:nJ,1:nK)**2 + &
-                gradY_VAR(1:nI,1:nJ,1:nK)**2 + &
-                gradZ_VAR(1:nI,1:nJ,1:nK)**2))
-        case('curlV','curlv','curlU','curlu')
+           call calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
+           Crit_IB(iCrit,iBlock) = &
+                sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
+
+        case('curlv', 'curlu')
            ! Curl of velocity
-           call grad1D(1, iBLK, RhoUx_G/Rho_G, &
-                gradX_Ux,gradY_Ux,gradZ_Ux, "none",Ux_)
-           call grad1D(1, iBLK, RhoUy_G/Rho_G, &
-                gradX_Uy,gradY_Uy,gradZ_Uy, "none",Uy_)
-           call grad1D(1, iBLK, RhoUz_G/Rho_G, &
-                gradX_Uz,gradY_Uz,gradZ_Uz, "none",Uz_)
-           ref_criteria(iCrit,iBLK) = maxval(ds2*sqrt( &
-                (gradY_Uz(1:nI,1:nJ,1:nK)-gradZ_Uy(1:nI,1:nJ,1:nK))**2 + &
-                (gradZ_Ux(1:nI,1:nJ,1:nK)-gradX_Uz(1:nI,1:nJ,1:nK))**2 + &
-                (gradX_Uy(1:nI,1:nJ,1:nK)-gradY_Ux(1:nI,1:nJ,1:nK))**2))
-        case('curlB','curlb')
+           call calc_gradient(iBlock, RhoUx_G/Rho_G, &
+                GradXVarX_C, GradYVarX_C, GradZVarX_C)
+           call calc_gradient(iBlock, RhoUy_G/Rho_G, &
+                GradXVarY_C, GradYVarY_C, GradZVarY_C)
+           call calc_gradient(iBlock, RhoUz_G/Rho_G, &
+                GradXVarZ_C, GradYVarZ_C, GradZVarZ_C)
+           Crit_IB(iCrit,iBlock) = sqrt(maxval( &
+                (GradYVarZ_C - GradZVarY_C)**2 + &
+                (GradZVarX_C - GradXVarZ_C)**2 + &
+                (GradXVarY_C - GradYVarX_C)**2))
+
+        case('curlb')
            ! Curl of magnetic field (current)
-           call grad1D(1, iBLK, Bx_G, &
-                gradX_Bx,gradY_Bx,gradZ_Bx,"none",Bx_)
-           call grad1D(1, iBLK, By_G, &
-                gradX_By,gradY_By,gradZ_By, "none",By_)
-           call grad1D(1, iBLK, Bz_G, &
-                gradX_Bz,gradY_Bz,gradZ_Bz, "none",Bz_)
-           ref_criteria(iCrit,iBLK) = maxval(ds2*sqrt( &
-                (gradY_Bz(1:nI,1:nJ,1:nK)-gradZ_By(1:nI,1:nJ,1:nK))**2 + &
-                (gradZ_Bx(1:nI,1:nJ,1:nK)-gradX_Bz(1:nI,1:nJ,1:nK))**2 + &
-                (gradX_By(1:nI,1:nJ,1:nK)-gradY_Bx(1:nI,1:nJ,1:nK))**2))
-        case('J2','j2')
-           ref_criteria(iCrit,iBLK) = 0.0
+           call calc_gradient(iBlock, Bx_G, &
+                GradXVarX_C, GradYVarX_C, GradZVarX_C)
+           call calc_gradient(iBlock, By_G, &
+                GradXVarY_C, GradYVarY_C, GradZVarY_C)
+           call calc_gradient(iBlock, Bz_G, &
+                GradXVarZ_C, GradYVarZ_C, GradZVarZ_C)
+           Crit_IB(iCrit,iBlock) = sqrt(maxval( &
+                (GradYVarZ_C - GradZVarY_C)**2 + &
+                (GradZVarX_C - GradXVarZ_C)**2 + &
+                (GradXVarY_C - GradYVarX_C)**2))
+
+        case('j2')
+           Crit_IB(iCrit,iBlock) = 0.0
            do k=1,nK; do j=1,nJ; do i=1,nI
-              call  get_current(i, j, k, iBLK, Current_D)
-              ref_criteria(iCrit,iBLK) = max(ref_criteria(iCrit,iBLK),&
+              call  get_current(i, j, k, iBlock, Current_D)
+              Crit_IB(iCrit,iBlock) = max(Crit_IB(iCrit,iBlock),&
                    sum(Current_D**2))
            end do;end do;end do
-!!$         call grad1D(1, iBLK, Bx_G, &
-!!$                gradX_Bx,gradY_Bx,gradZ_Bx,"none",Bx_)
-!!$           call grad1D(1, iBLK, By_G, &
-!!$                gradX_By,gradY_By,gradZ_By, "none",By_)
-!!$           call grad1D(1, iBLK, Bz_G, &
-!!$                gradX_Bz,gradY_Bz,gradZ_Bz, "none",Bz_)
-!!$           ref_criteria(iCrit,iBLK) = maxval(( &
-!!$                (gradY_Bz(1:nI,1:nJ,1:nK)-gradZ_By(1:nI,1:nJ,1:nK))**2 + &
-!!$                (gradZ_Bx(1:nI,1:nJ,1:nK)-gradX_Bz(1:nI,1:nJ,1:nK))**2 + &
-!!$                (gradX_By(1:nI,1:nJ,1:nK)-gradY_Bx(1:nI,1:nJ,1:nK))**2))
-        case('divU','divu','divV','divv')
-           ! Divergence of velocity.
-           call grad1D(1, iBLK, RhoUx_G/Rho_G, &
-                gradX_Ux,gradY_Ux,gradZ_Ux, "none",Ux_)
-           call grad1D(1, iBLK, RhoUy_G/Rho_G, &
-                gradX_Uy,gradY_Uy,gradZ_Uy, "none",Uy_)
-           call grad1D(1, iBLK, RhoUz_G/Rho_G, &
-                gradX_Uz,gradY_Uz,gradZ_Uz, "none",Uz_)
 
-           ref_criteria(iCrit,iBLK) = maxval(ds2*abs( &
-                gradX_Ux(1:nI,1:nJ,1:nK) + &
-                gradY_Uy(1:nI,1:nJ,1:nK) + &
-                gradZ_Uz(1:nI,1:nJ,1:nK)))
-        case('divB','divb')
-           ! Divergence of magnetic field.
-           ref_criteria(iCrit,iBLK) = maxval(abs(DivB1_GB(1:nI,1:nJ,1:nK,iBLK)),&
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
-        case('Rcurrents','rcurrents')	
+        case('divu','divv')
+           ! Divergence of velocity (this is REALLY INEFFICIENT !!!)
+           call calc_gradient( iBlock, RhoUx_G/Rho_G, &
+                GradXVarX_C, GradYVarX_C, GradZVarX_C)
+           call calc_gradient( iBlock, RhoUy_G/Rho_G, &
+                GradXVarY_C,GradYVarY_C,GradZVarY_C)
+           call calc_gradient( iBlock, RhoUz_G/Rho_G, &
+                GradXVarZ_C,GradYVarZ_C,GradZVarZ_C)
+
+           Crit_IB(iCrit,iBlock) = &
+                maxval(abs(GradXVarX_C + GradYVarY_C + GradZVarZ_C))
+
+        case('rcurrents')	
            ! Inverse distance from Rcurrents, squared
-           outVAR(1:nI,1:nJ,1:nK) = cOne/((max(cTiny, &
-                abs(Rcurrents-R_BLK(1:nI,1:nJ,1:nK,iBLK))))**2)
-           ref_criteria(iCrit,iBLK) = maxval(outVAR(1:nI,1:nJ,1:nK),&
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
+           Var_G(1:nI,1:nJ,1:nK) = 1.0/((max(cTiny, &
+                abs(Rcurrents - R_BLK(1:nI,1:nJ,1:nK,iBlock))))**2)
+           Crit_IB(iCrit,iBlock) = maxval(Var_G(1:nI,1:nJ,1:nK),&
+                MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+
         case default
            ! WARNING if we do not find the criteria in the abou list we 
            ! will search for it among 'transient' criteria
 
            if (UseUserAMR .or. index(RefineCrit(iCrit),'user') > 0 ) then
               IsFound=.false.
-              call user_amr_criteria(iBLK, userCriteria, RefineCrit(iCrit), IsFound)
+              call user_amr_criteria(iBlock, &
+                   UserCriteria, RefineCrit(iCrit), IsFound)
               if (IsFound) then
-                 ref_criteria(iCrit,iBLK) = userCriteria
+                 Crit_IB(iCrit,iBlock) = userCriteria
               else            
-                 write(*,*) 'User refinement criteria not found in user_amr_criteria:', &
-                      RefineCrit(iCrit)
+                 write(*,*) NameSub, &
+                      ' User refinement criteria=', trim(RefineCrit(iCrit)), &
+                      ' not found in user_amr_criteria in the user module!'
                  call stop_mpi('Fix user_amr_criteria or PARAM.in!')
               end if
            else
-              xxx = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
-              yyy = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
-              zzz = cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
+              xxx = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(1,1,1,iBlock))
+              yyy = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(1,1,1,iBlock))
+              zzz = 0.5*(z_BLK(nI,nJ,nK,iBlock)+z_BLK(1,1,1,iBlock))
               RR = sqrt(xxx**2+yyy**2+zzz**2 )
               if (UseSunEarth) then
-                 UseSwitchAMR = (RR.gt.RcritAMR)
+                 UseSwitchAMR = RR > RcritAMR
               else
-                 UseSwitchAMR = (RR.gt.RcritAMR).and.(abs(zzz).le.dz_BLK(iBLK))
+                 UseSwitchAMR = RR > RcritAMR .and. abs(zzz) <= dz_BLK(iBlock)
               end if
               if (UseSwitchAMR) then
                  !\
                  ! Use dynamic refinement if there is a transient event 
                  !/
-                 call trace_transient(RefineCrit(iCrit),iCrit,iBLK,AMRsort_1)
-                 ref_criteria(iCrit,iBLK) = AMRsort_1*ds2
+                 call trace_transient(RefineCrit(iCrit),iCrit,iBlock,AMRsort_1)
+                 Crit_IB(iCrit,iBlock) = AMRsort_1
                  !\              
                  ! Restrict the refinement to the particular ray Sun-Earth only
                  ! Only if UseSunEarth == .true.
                  !/
                  if (UseSunEarth) then
-                    call refine_sun_earth_cyl(iBLK,xxx,yyy,zzz,AMRsort_2)
+                    call refine_sun_earth_cyl(iBlock,xxx,yyy,zzz,AMRsort_2)
                  else
-                    AMRsort_2 = cOne
+                    AMRsort_2 = 1.0
                  end if
-                 ref_criteria(iCrit,iBLK) = AMRsort_2*ref_criteria(iCrit,iBLK)
+                 Crit_IB(iCrit,iBlock) = AMRsort_2*Crit_IB(iCrit,iBlock)
               end if
            end if
         end select
      end do ! iCrit
-  end do ! iBLK
+  end do ! iBlock
 
 contains
-  subroutine trace_transient(NameCrit,iCrit,iBLK,refine_crit)
+  !============================================================================
+  subroutine calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
+
+    ! This is an interface to cartesian or covariant_gradient.
+
+    use ModGeometry,ONLY: UseCovariant
+
+    integer, intent(in):: iBlock
+    real,    intent(in):: Var_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
+    real, intent(out), dimension(1:nI,1:nJ,1:nK):: GradX_C, GradY_C, GradZ_C
+
+    !--------------------------------------------------------------------------
+    if(UseCovariant)then                               
+       call covariant_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)  
+    else                                                
+       call cartesian_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
+    end if
+  end subroutine calc_gradient
+
+  !============================================================================
+  subroutine cartesian_gradient(iBlock, Var_G, GradX_C,GradY_C,GradZ_C)
+
+    use ModGeometry, ONLY: &
+         body_blk, true_cell, fAX_BLK, fAY_BLK, fAZ_BLK, vInv_CB
+
+    integer,intent(in) :: iBlock
+
+    real, intent(in) :: Var_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
+    real, intent(out), dimension(1:nI,1:nJ,1:nK):: GradX_C,GradY_C,GradZ_C
+
+    real, dimension(0:nI+1, 0:nJ+1, 0:nK+1) :: OneTrue_G
+
+    integer :: i, j, k
+    !---------------------------------------------------
+
+    if(.not.body_blk(iBlock)) then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          GradX_C(i,j,k) = 0.5*fAX_BLK(iBlock)*&
+               (Var_G(i+1,j,k) - Var_G(i-1,j,k))*vInv_CB(i,j,k,iBlock)
+          GradY_C(i,j,k) = 0.5*fAY_BLK(iBlock)*&
+               (Var_G(i,j+1,k) - Var_G(i,j-1,k))*vInv_CB(i,j,k,iBlock)
+          GradZ_C(i,j,k) = 0.5*fAZ_BLK(iBlock)*&
+               (Var_G(i,j,k+1) - Var_G(i,j,k-1))*vInv_CB(i,j,k,iBlock)
+       end do; end do; end do
+    else
+       where(true_cell(0:nI+1, 0:nJ+1, 0:nK+1,iBlock)) 
+          OneTrue_G = 1.0
+       elsewhere
+          OneTrue_G = 0.0
+       end where
+       !
+       !\
+       ! Where .not.true_cell, all the gradients are zero
+       ! In true_cell the input to gradient from the face neighbor
+       ! is ignored, if the face neighbor is .not.true_cell, the input
+       ! from the opposite cell is doubled in this case
+       !/
+       !
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          GradX_C(i,j,k) = 0.5*fAX_BLK(iBlock)*&
+               OneTrue_G(i,j,k)*(&
+               (Var_G(i+1,j,k) - Var_G(i,j,k))*&
+               OneTrue_G(i+1,j,k)*&
+               (2.0 - OneTrue_G(i-1,j,k)) + &
+               (Var_G(i,j,k)-Var_G(i-1,j,k))*&
+               OneTrue_G(i-1,j,k)*&
+               (2.0 - OneTrue_G(i+1,j,k)) )*vInv_CB(i,j,k,iBlock)
+
+          GradY_C(i,j,k) = 0.5*fAY_BLK(iBlock)*&
+               OneTrue_G(i,j,k)*(&
+               (Var_G(i,j+1,k) - Var_G(i,j,k))*&
+               OneTrue_G(i,j+1,k)*&
+               (2.0 - OneTrue_G(i,j-1,k))+&
+               (Var_G(i,j,k)-Var_G(i,j-1,k))*&
+               OneTrue_G(i,j-1,k)*&
+               (2.0 - OneTrue_G(i,j+1,k)) )*vInv_CB(i,j,k,iBlock)
+
+          GradZ_C(i,j,k) = 0.5*fAZ_BLK(iBlock)*&
+               OneTrue_G(i,j,k)*(&
+               (Var_G(i,j,k+1)-Var_G(i,j,k))*&
+               OneTrue_G(i,j,k+1)*&
+               (2.0 - OneTrue_G(i,j,k-1))+&
+               (Var_G(i,j,k)-Var_G(i,j,k-1))*&
+               OneTrue_G(i,j,k-1)*&
+               (2.0 - OneTrue_G(i,j,k+1)) )*vInv_CB(i,j,k,iBlock)
+       end do; end do; end do
+    end if
+  end subroutine cartesian_gradient
+
+  !===========================================================================
+
+  subroutine trace_transient(NameCrit,iCrit,iBlock,refine_crit)
     use ModAMR,      ONLY:nRefineCrit,RefineCrit, nRefineLevelIC
 
     character(len=*), intent(in) :: NameCrit
 
-    integer, intent(in) :: iBLK,iCrit
+    integer, intent(in) :: iBlock,iCrit
     real, intent(out) :: refine_crit
     real :: AMRsort
     real, dimension(1:nI,1:nJ,1:nK) :: scrARR
@@ -257,25 +336,25 @@ contains
     ! old walue. Can be inporved in the future
     if(nRefineLevelIC>0 ) then
        do k=1,nK; do j=1,nJ; do i=1,nI
-          RhoOld_C(i,j,k)  = State_VGB(rho_,i,j,k,iBLK)
-          RhoUxOld_C(i,j,k)= State_VGB(rhoUx_,i,j,k,iBLK)
-          RhoUyOld_C(i,j,k)= State_VGB(rhoUy_,i,j,k,iBLK)
-          RhoUzOld_C(i,j,k)= State_VGB(rhoUz_,i,j,k,iBLK)
-          BxOld_C(i,j,k)   = State_VGB(Bx_,i,j,k,iBLK)
-          ByOld_C(i,j,k)   = State_VGB(By_,i,j,k,iBLK)
-          BzOld_C(i,j,k)   = State_VGB(Bz_,i,j,k,iBLK)
-          POld_C(i,j,k)    = State_VGB(P_,i,j,k,iBLK)
+          RhoOld_C(i,j,k)  = State_VGB(rho_,i,j,k,iBlock)
+          RhoUxOld_C(i,j,k)= State_VGB(rhoUx_,i,j,k,iBlock)
+          RhoUyOld_C(i,j,k)= State_VGB(rhoUy_,i,j,k,iBlock)
+          RhoUzOld_C(i,j,k)= State_VGB(rhoUz_,i,j,k,iBlock)
+          BxOld_C(i,j,k)   = State_VGB(Bx_,i,j,k,iBlock)
+          ByOld_C(i,j,k)   = State_VGB(By_,i,j,k,iBlock)
+          BzOld_C(i,j,k)   = State_VGB(Bz_,i,j,k,iBlock)
+          POld_C(i,j,k)    = State_VGB(P_,i,j,k,iBlock)
        end do; end do; end do
     else
        do k=1,nK; do j=1,nJ; do i=1,nI
-          RhoOld_C(i,j,k)  = StateOld_VCB(rho_,i,j,k,iBLK)
-          RhoUxOld_C(i,j,k)= StateOld_VCB(rhoUx_,i,j,k,iBLK)
-          RhoUyOld_C(i,j,k)= StateOld_VCB(rhoUy_,i,j,k,iBLK)
-          RhoUzOld_C(i,j,k)= StateOld_VCB(rhoUz_,i,j,k,iBLK)
-          BxOld_C(i,j,k)   = StateOld_VCB(Bx_,i,j,k,iBLK)
-          ByOld_C(i,j,k)   = StateOld_VCB(By_,i,j,k,iBLK)
-          BzOld_C(i,j,k)   = StateOld_VCB(Bz_,i,j,k,iBLK)
-          POld_C(i,j,k)    = StateOld_VCB(P_,i,j,k,iBLK)
+          RhoOld_C(i,j,k)  = StateOld_VCB(rho_,i,j,k,iBlock)
+          RhoUxOld_C(i,j,k)= StateOld_VCB(rhoUx_,i,j,k,iBlock)
+          RhoUyOld_C(i,j,k)= StateOld_VCB(rhoUy_,i,j,k,iBlock)
+          RhoUzOld_C(i,j,k)= StateOld_VCB(rhoUz_,i,j,k,iBlock)
+          BxOld_C(i,j,k)   = StateOld_VCB(Bx_,i,j,k,iBlock)
+          ByOld_C(i,j,k)   = StateOld_VCB(By_,i,j,k,iBlock)
+          BzOld_C(i,j,k)   = StateOld_VCB(Bz_,i,j,k,iBlock)
+          POld_C(i,j,k)    = StateOld_VCB(P_,i,j,k,iBlock)
        end do; end do; end do
     end if
 
@@ -283,7 +362,7 @@ contains
     case('P_dot','p_dot')
        !\
        ! refine_crit = abs(|p|-|p|_o)/max(|p|,|p|_o,cTiny)
-       ! over all the cells of block iBLK
+       ! over all the cells of block iBlock
        !/
        scrARR(1:nI,1:nJ,1:nK) = abs(P_G(1:nI,1:nJ,1:nK) - POld_C(1:nI,1:nJ,1:nK))
        scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny,P_G(1:nI,1:nJ,1:nK), &
@@ -292,7 +371,7 @@ contains
     case('T_dot','t_dot')
        !\
        ! refine_crit = abs(|T|-|T|_o)/max(|T|,|T|_o,cTiny)
-       ! over all the cells of block iBLK
+       ! over all the cells of block iBlock
        !/
        scrARR(1:nI,1:nJ,1:nK) = abs(P_G(1:nI,1:nJ,1:nK)/Rho_G(1:nI,1:nJ,1:nK)  - &
             POld_C(1:nI,1:nJ,1:nK)/RhoOld_C(1:nI,1:nJ,1:nK))
@@ -303,7 +382,7 @@ contains
     case('Rho_dot','rho_dot')
        !\
        ! refine_crit = abs(|rho|-|rho|_o)/max(|rho|,|rho|_o,cTiny)
-       ! over all the cells of block iBLK
+       ! over all the cells of block iBlock
        !/
        scrARR(1:nI,1:nJ,1:nK) = abs(Rho_G(1:nI,1:nJ,1:nK) - RhoOld_C(1:nI,1:nJ,1:nK))
        scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny,Rho_G(1:nI,1:nJ,1:nK), &
@@ -312,7 +391,7 @@ contains
     case('RhoU_dot','rhoU_dot','rhou_dot')
        !\
        ! refine_crit = abs(|rhoU|-|rhoU|_o)/max(|rhoU|,|rhoU|_o,cTiny)
-       ! over all the cells of block iBLK
+       ! over all the cells of block iBlock
        !/
        scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2              + &
             RhoUy_G(1:nI,1:nJ,1:nK)**2 + RhoUz_G(1:nI,1:nJ,1:nK)**2)      - &
@@ -326,7 +405,7 @@ contains
     case('B_dot','b_dot')
        !\
        ! refine_crit = abs(|B|-|B|_o)/max(|B|,|B|_o,cTiny)
-       ! over all the cells of block iBLK
+       ! over all the cells of block iBlock
        !/
        scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(Bx_G(1:nI,1:nJ,1:nK)**2           + &
             By_G(1:nI,1:nJ,1:nK)**2 + Bz_G(1:nI,1:nJ,1:nK)**2)      - &
@@ -383,27 +462,31 @@ contains
 
   end subroutine trace_transient
 end subroutine amr_criteria
+!==============================================================================
+subroutine refine_sun_earth_cone(iBlock,xBLK,yBLK,zBLK,refine_profile)
 
+  !!! The code below is WAY overcomplicated. To be removed.
 
-subroutine refine_sun_earth_cone(iBLK,xBLK,yBLK,zBLK,refine_profile)
-  use ModMain,     ONLY:BLKtest
-  use ModProcMH,   ONLY:iProc
-  use ModPhysics,  ONLY:Rbody,xEarth,yEarth,zEarth,InvD2Ray
-  use ModNumConst, ONLY:cOne,cHalf,cZero,cTiny,cPi
+  use ModMain,     ONLY: BLKtest
+  use ModProcMH,   ONLY: iProc
+  use ModPhysics,  ONLY: Rbody,xEarth,yEarth,zEarth,InvD2Ray
+  use ModNumConst, ONLY: cRadToDeg
+
+  ! This subroutine aims to restrict the refinement mainly along the ray 
+  ! Sun-Earth, in a cone with a user-defined opening angle.
+
   implicit none
   
-  integer, intent(in) :: iBLK
+  integer, intent(in) :: iBlock
   real, intent(in) :: xBLK,yBLK,zBLK
   real, intent(out) :: refine_profile
-  real, parameter:: cOneighty=180.0000000000000000000000000000000
+
   real :: rBLK, xxx,yyy,zzz, cutFACT
   real :: signY,cosPHI,cosTHETA
   real :: signY_BLK,cosPHI_BLK,cosTHETA_BLK
-  !\
-  ! This module aims to restrict the refinement mainly along the ray 
-  ! Sun-Earth, in a cone with a user-defined opening angle.
-  !/
-  cutFACT = InvD2Ray*2*cOneighty/cPi  
+  !---------------------------------------------------------------------------
+
+  cutFACT = InvD2Ray*2*cRadToDeg
   !\
   ! For InvD2Ray = 1. ==> refine_profile = 0.174587 at angle 5deg around the ray.
   ! For InvD2Ray = 2. ==> refine_profile = 0.030481 at angle 5deg around the ray.
@@ -412,30 +495,30 @@ subroutine refine_sun_earth_cone(iBLK,xBLK,yBLK,zBLK,refine_profile)
   yyy = yEarth
   zzz = zEarth
   
-  if (yyy == cZero) then
-     signY = cOne
+  if (yyy == 0.0) then
+     signY = 1.0
   else
      signY = abs(yyy)/yyy
   end if
   cosTHETA = zzz/sqrt(xxx**2+yyy**2+zzz**2)
   cosPHI   = xxx/sqrt(xxx**2+yyy**2)
-  if ((iProc==0).and.(iBLK==BLKtest)) then
+  if ((iProc==0).and.(iBlock==BLKtest)) then
      write(*,*) ''
      write(*,*) '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<'
      write(*,*) '                 Position of the Earth'
      write(*,*) '' 
      write(*,*) 'cosPHI   =',cosPHI
-     write(*,*) 'PHI      =',acos(cosPHI)*cOneighty/cPi
+     write(*,*) 'PHI      =',acos(cosPHI)*cRadToDeg
      write(*,*) 'cosTHETA =',cosTHETA
-     write(*,*) 'THETA    =',acos(cosTHETA)*cOneighty/cPi
+     write(*,*) 'THETA    =',acos(cosTHETA)*cRadToDeg
      write(*,*) '' 
      write(*,*) '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
      write(*,*) '' 
   end if
   rBLK = sqrt(xBLK**2+yBLK**2+zBLK**2)
   if (rBLK.gt.Rbody) then
-     if (yBLK == cZero) then
-        signY_BLK = cOne
+     if (yBLK == 0.0) then
+        signY_BLK = 1.0
      else
         signY_BLK = abs(yBLK)/yBLK
      end if
@@ -446,32 +529,37 @@ subroutine refine_sun_earth_cone(iBLK,xBLK,yBLK,zBLK,refine_profile)
           exp(-cutFACT*(acos(cosPHI_BLK)-acos(cosPHI))**2)* &
           exp(-cutFACT*(acos(cosTHETA_BLK)-acos(cosTHETA))**2))
   else
-     refine_profile = cZero
+     refine_profile = 0.0
   end if
   
 end subroutine refine_sun_earth_cone
+!==============================================================================
+subroutine refine_sun_earth_cyl(iBlock,xBLK,yBLK,zBLK,refine_profile)
 
-subroutine refine_sun_earth_cyl(iBLK,xBLK,yBLK,zBLK,refine_profile)
-  use ModPhysics,  ONLY:Rbody,xEarth,yEarth,zEarth,InvD2Ray
-  use ModNumConst, ONLY:cOne,cHalf,cZero,cTiny
+  !!! The code below is WAY overcomplicated. To be removed.
+
+  use ModPhysics, ONLY: rBody, xEarth, yEarth, zEarth, InvD2Ray
+
   implicit none
   
-  integer, intent(in) :: iBLK
+  integer, intent(in) :: iBlock
   real, intent(in) :: xBLK,yBLK,zBLK
   real, intent(out) :: refine_profile
   real :: rBLK, xxx,yyy,zzz, cutFact
   real :: cosPHI,sinPHI,cosTHETA,sinTHETA
   real :: dist2BLK,yPrimeBLK
-  !\
-  ! This module aims to restrict the refinement mainly along the ray 
+
+  ! This subroutine aims to restrict the refinement mainly along the ray 
   ! Sun-Earth, in a cylinder with user-defined profile across.
-  !/
+  !----------------------------------------------------------------------------
   cutFact = (InvD2Ray*10)**2
   !\
   ! For InvD2Ray = 1. ==> refine_profile = 0.3679 at distance 0.1*Rsun from the ray
   ! For InvD2Ray = 2. ==> refine_profile = 0.0183 at distance 0.1*Rsun from the ray
   ! For InvD2Ray = 3. ==> refine_profile = 0.0001 at distance 0.1*Rsun from the ray
   !/
+
+
   xxx = xEarth
   yyy = yEarth
   zzz = zEarth
@@ -493,10 +581,10 @@ subroutine refine_sun_earth_cyl(iBLK,xBLK,yBLK,zBLK,refine_profile)
      if (cutFact*dist2BLK <= 150.0) then
         refine_profile = exp(-cutFact*dist2BLK)
      else
-        refine_profile = cZero
+        refine_profile = 0.0
      end if
   else
-     refine_profile = cZero
+     refine_profile = 0.0
   end if
   
 end subroutine refine_sun_earth_cyl
