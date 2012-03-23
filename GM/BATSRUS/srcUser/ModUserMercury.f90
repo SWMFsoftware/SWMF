@@ -45,7 +45,7 @@ contains
     !!! from that. Initialize these to -1. PlanetRadius should be
     !!! in dimensional units.
 
-    if (index(TypeGeometry,'spherical')>0) &
+    if (TypeGeometry /= 'spherical_lnr') &
          call stop_mpi('ERROR: Correct PARAM.in, need spherical grid.')
 
 
