@@ -823,6 +823,8 @@ contains
 
        nAmrCrit = nCrit
 
+       if(nCrit == 0) RETURN 
+
        ! deallocate,if they are already allocated
        if(allocated(CoarsenCritAll_I)) &
             deallocate(CoarsenCritAll_I, RefineCritAll_I, iVarCrit_I)
