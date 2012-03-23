@@ -40,7 +40,7 @@ module ModResistivity
   real               :: Eta0AnomSi=0.0, Eta0Anom
   real               :: EtaMaxAnomSi=0.0, EtaMaxAnom
   real               :: jCritAnomSi=1.0, jCritInv
-  real               :: Si2NoEta
+  real, public       :: Si2NoEta
   real               :: EtaCoeff = 0.0
   real               :: jInvbCrit = 0.0
 
