@@ -37,7 +37,7 @@ contains
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModProcMH,      ONLY: iProc
     use ModResistivity, ONLY: Si2NoEta
-
+    use ModGeometry,    ONLY: TypeGeometry
     CHARACTER(LEN=*), PARAMETER  :: FMT1 = "(A20,E10.3)"
     !-------------------------------------------------------------------
 
