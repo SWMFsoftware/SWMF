@@ -62,6 +62,10 @@ module ModHeatConduction
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
 
+  ! electron-ion energy exchange
+  real, allocatable :: PointCoef_CB(:,:,:,:)
+  real, allocatable :: PointImpl_CB(:,:,:,:)
+
 contains
 
   !============================================================================
@@ -213,6 +217,12 @@ contains
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
             HeatCond_DDG(MaxDim,MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
             HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
+
+       if(UseElectronPressure)then
+          allocate( &
+               PointImpl_CB(nI,nJ,nK,MaxBlock), &
+               PointCoef_CB(nI,nJ,nK,MaxBlock) )
+       end if
 
        iTeImpl = 1
     end if
@@ -546,11 +556,11 @@ contains
 
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModFaceGradient, ONLY: set_block_field2
-    use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk, iTeImpl
-    use ModMain,         ONLY: nI, nJ, nK, MaxImplBlk, x_, y_, z_
+    use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk, iTeImpl, ImplCoeff
+    use ModMain,         ONLY: nI, nJ, nK, MaxImplBlk, Dt
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_,&
-         inv_gm1
+         UnitN_, UnitT_, inv_gm1
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
@@ -562,6 +572,7 @@ contains
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iImplBlock, iP
     real :: TeSi, CvSi
     real :: HeatCond_DD(3,3)
+    real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi
 
     integer, parameter :: jMin1 = 1 - min(1,nJ-1), jMax1 = nJ + min(1,nJ-1)
     integer, parameter :: kMin1 = 1 - min(1,nK-1), kMax1 = nK + min(1,nK-1)
@@ -584,14 +595,30 @@ contains
                   inv_gm1*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
           else
 
-             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi)
+             if(UseElectronPressure)then
+                call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                     i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi, &
+                     NatomicOut = NatomicSi, TeTiRelaxOut = TeTiRelaxSi)
+
+                Natomic = NatomicSi*Si2No_V(UnitN_)
+                TeTiCoef = Natomic*TeTiRelaxSi/Si2No_V(UnitT_)
+             else
+                call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                     i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi)
+             end if
 
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
                   TeSi*Si2No_V(UnitTemperature_)
 
              DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
                   CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+          end if
+
+          if(UseElectronPressure)then
+             Cvi = inv_gm1*Natomic
+             PointCoef_CB(i,j,k,iBlock) = TeTiCoef &
+                  /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
+             PointImpl_CB(i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)/Natomic
           end if
        end do; end do; end do
 
@@ -730,6 +757,7 @@ contains
   subroutine get_heat_conduction_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
     use BATL_lib,        ONLY: store_face_flux
+    use ModAdvance,      ONLY: UseElectronPressure
     use ModFaceGradient, ONLY: get_face_gradient
     use ModGeometry,     ONLY: vInv_CB
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, FluxImpl_VXB, FluxImpl_VYB, &
@@ -779,12 +807,28 @@ contains
        end do; end do; end do
     end do
 
+    ! Point implicit source terms due to electron-ion energy exchange
+    if(UseElectronPressure)then
+       if(IsLinear)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
+                  - PointCoef_CB(i,j,k,iBlock)*StateImpl_VG(iTeImpl,i,j,k)
+          end do; end do; end do
+       else
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) + PointCoef_CB(i,j,k,iBlock) &
+                  *(PointImpl_CB(i,j,k,iBlock) - StateImpl_VG(iTeImpl,i,j,k))
+          end do; end do; end do
+       end if
+    end if
+
   end subroutine get_heat_conduction_rhs
 
   !============================================================================
 
   subroutine add_jacobian_heat_cond(iBlock, Jacobian_VVCI)
 
+    use ModAdvance,      ONLY: UseElectronPressure
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
     use ModGeometry,     ONLY: vInv_CB
     use ModImplicit,     ONLY: iTeImpl, nVarSemi, UseNoOverlap
@@ -800,6 +844,14 @@ contains
     integer :: i, j, k, iDim, Di, Dj, Dk
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyz_D(nDim)
     !--------------------------------------------------------------------------
+
+    ! Contributions due to electron-ion energy exchange
+    if(UseElectronPressure)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
+               - PointCoef_CB(i,j,k,iBlock)
+       end do; end do; end do
+    end if
 
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
 
@@ -856,8 +908,8 @@ contains
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: true_cell
-    use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB
-    use ModMain,     ONLY: nI, nJ, nK
+    use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
+    use ModMain,     ONLY: nI, nJ, nK, Dt
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, ExtraEintMin
     use ModUser,     ONLY: user_material_properties
@@ -899,8 +951,20 @@ contains
                Einternal - inv_gm1*State_VGB(iP,i,j,k,iBlock))
 
        end if
+
+       ! update ion pressure for energy exchange between ions and electrons
+       if(UseElectronPressure)then
+          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
+               + Dt*PointCoef_CB(i,j,k,iBlock)*( &
+               + ImplCoeff*(StateImpl_VG(iTeImpl,i,j,k) &
+               -            PointImpl_CB(i,j,k,iBlock)) &
+               + (1.0 - ImplCoeff)*(ImplOld_VCB(iTeImpl,i,j,k,iBlock) &
+               -            PointImpl_CB(i,j,k,iBlock)) )
+
+          State_VGB(p_,i,j,k,iBlock) = max(1e-30, gm1*Einternal)
+       end if
     end do; end do; end do
-       
+
     call calc_energy_cell(iBlock)
 
   end subroutine update_impl_heat_cond
