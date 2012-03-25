@@ -133,7 +133,7 @@ contains
   subroutine init_heat_conduction
 
     use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
-    use ModAdvance,    ONLY: UseElectronPressure
+    use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge
     use ModImplicit,   ONLY: UseSemiImplicit, nVarSemi, iTeImpl
@@ -151,15 +151,17 @@ contains
          NameSub = 'ModHeatConduction::init_heat_conduction'
     !--------------------------------------------------------------------------
 
-    if(UseHeatConduction)then
-       if(.not.allocated(Te_G))allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-    else
-       if(allocated(Te_G))deallocate(Te_G)
-    end if
-    if(UseIonHeatConduction)then
-       if(.not.allocated(Ti_G))allocate(Ti_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-    else
-       if(allocated(Ti_G))deallocate(Ti_G)
+    if(.not.UseSemiImplicit)then
+       if(UseHeatConduction)then
+          if(.not.allocated(Te_G))allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+       else
+          if(allocated(Te_G))deallocate(Te_G)
+       end if
+       if(UseIonHeatConduction)then
+          if(.not.allocated(Ti_G))allocate(Ti_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+       else
+          if(allocated(Ti_G))deallocate(Ti_G)
+       end if
     end if
 
     ! TeFraction is used for ideal EOS:
@@ -218,7 +220,7 @@ contains
             HeatCond_DDG(MaxDim,MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
             HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
 
-       if(UseElectronPressure)then
+       if(UseElectronPressure .and. .not.UseIdealEos)then
           allocate( &
                PointImpl_CB(nI,nJ,nK,MaxBlock), &
                PointCoef_CB(nI,nJ,nK,MaxBlock) )
@@ -614,7 +616,7 @@ contains
                   CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           end if
 
-          if(UseElectronPressure)then
+          if(UseElectronPressure .and. .not.UseIdealEos)then
              Cvi = inv_gm1*Natomic
              PointCoef_CB(i,j,k,iBlock) = TeTiCoef &
                   /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
@@ -757,7 +759,7 @@ contains
   subroutine get_heat_conduction_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
     use BATL_lib,        ONLY: store_face_flux
-    use ModAdvance,      ONLY: UseElectronPressure
+    use ModAdvance,      ONLY: UseElectronPressure, UseIdealEos
     use ModFaceGradient, ONLY: get_face_gradient
     use ModGeometry,     ONLY: vInv_CB
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, FluxImpl_VXB, FluxImpl_VYB, &
@@ -808,7 +810,7 @@ contains
     end do
 
     ! Point implicit source terms due to electron-ion energy exchange
-    if(UseElectronPressure)then
+    if(UseElectronPressure .and. .not.UseIdealEos)then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
@@ -828,7 +830,7 @@ contains
 
   subroutine add_jacobian_heat_cond(iBlock, Jacobian_VVCI)
 
-    use ModAdvance,      ONLY: UseElectronPressure
+    use ModAdvance,      ONLY: UseElectronPressure, UseIdealEos
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
     use ModGeometry,     ONLY: vInv_CB
     use ModImplicit,     ONLY: iTeImpl, nVarSemi, UseNoOverlap
@@ -846,7 +848,7 @@ contains
     !--------------------------------------------------------------------------
 
     ! Contributions due to electron-ion energy exchange
-    if(UseElectronPressure)then
+    if(UseElectronPressure .and. .not.UseIdealEos)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                - PointCoef_CB(i,j,k,iBlock)
@@ -953,7 +955,7 @@ contains
        end if
 
        ! update ion pressure for energy exchange between ions and electrons
-       if(UseElectronPressure)then
+       if(UseElectronPressure .and. .not.UseIdealEos)then
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
                + Dt*PointCoef_CB(i,j,k,iBlock)*( &
                + ImplCoeff*(StateImpl_VG(iTeImpl,i,j,k) &
