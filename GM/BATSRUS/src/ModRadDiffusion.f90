@@ -473,11 +473,11 @@ contains
     integer :: iImplBlock, iBlock, i, j, k, iVar, iVarImpl
     real :: OpacityPlanckSi_W(nWave), OpacityRosselandSi_W(nWave)
     real :: OpacityPlanck_W(nWave), CvSi, Cv, TeSi, Te
-    real :: HeatCondSi, HeatCond, TeTiRelaxSi, TeTiRelax
+    real :: HeatCondSi, HeatCond, TeTiRelaxSi
     real :: Grad2ByErad2, DiffRad, InvDx2, InvDy2, InvDz2
     real :: InvDx, InvDy
-    real :: NatomicSi, Zav, CveSi, Cve, CviSi, Cvi, PiSi, TiSi, Ti, PeSi
-    real :: TeTiCoefSi, TeTiCoef, TeTiCoefPrime
+    real :: NatomicSi, Natomic, Zav, CveSi, Cve, Cvi, Ti
+    real :: TeTiCoef, TeTiCoefPrime
 
     integer :: iMin, iMax, jMin, jMax, kMin, kMax
     integer :: iDim, Di, Dj, Dk, iDiff
@@ -553,20 +553,16 @@ contains
                   HeatCondOut = HeatCondSi, TeTiRelaxOut = TeTiRelaxSi, &
                   PlanckOut_W = PlanckSi_W)
 
-             PiSi = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
-             TiSi = PiSi/(cBoltzmann*NatomicSi)
-             Ti = TiSi*Si2No_V(UnitTemperature_)
-             CviSi = inv_gm1*cBoltzmann*NatomicSi
-             Cvi = CviSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+             Natomic = NatomicSi*Si2No_V(UnitN_)
+             Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
+             Cvi = inv_gm1*Natomic
              Te = TeSi*Si2No_V(UnitTemperature_)
              Cve = CveSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
              if(.not.UseTemperature)then
                 Cvi = Cvi/(4.0*cRadiationNo*Ti**3)
                 Cve = Cve/(4.0*cRadiationNo*Te**3)
              end if
-             TeTiCoefSi = TeTiRelaxSi*cBoltzmann*NatomicSi
-             TeTiCoef = TeTiCoefSi*Si2No_V(UnitEnergyDens_) &
-                  /(Si2No_V(UnitTemperature_)*Si2No_V(UnitT_))
+             TeTiCoef = Natomic*TeTiRelaxSi/Si2No_V(UnitT_)
           else
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
