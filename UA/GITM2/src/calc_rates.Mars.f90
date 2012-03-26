@@ -164,7 +164,6 @@ trouble = .false.
   mnd = NDensity(:,:,:,iBlock)+1.0
 
 !write(*,*) '==> calc_rates:  Before MeanMajorMass Calculation.'
-write(*,*) temperature(1,1,1,1)*tempunit(1,1,1),temperature(1,1,1,1),tempunit(1,1,1),meanmajormass(1,1,1)
 
   MeanIonMass = 0.0
   MeanMajorMass = 0.0
@@ -189,11 +188,8 @@ write(*,*) temperature(1,1,1,1)*tempunit(1,1,1),temperature(1,1,1,1),tempunit(1,
 
 ! -------------------------------------------------------------------------------
 
-write(*,*) temperature(1,1,1,1)*tempunit(1,1,1),temperature(1,1,1,1),tempunit(1,1,1),meanmajormass(1,1,1)
-
   TempUnit = MeanMajorMass / Boltzmanns_Constant       
-write(*,*) temperature(1,1,1,1)*tempunit(1,1,1),temperature(1,1,1,1),tempunit(1,1,1),meanmajormass(1,1,1)
-stop
+
 ! -------------------------------------------------------------------------------
 
 !write(*,*) '==> calc_rates:  Before Mixing Ratio Calculation.'
