@@ -48,12 +48,12 @@
 subroutine hwm07(iyd,sec,alt,glat,glon,stl,f107a,f107,ap,w)
 
     implicit none
-    integer(4),intent(in)   :: iyd
-    real(4),intent(in)      :: sec,alt,glat,glon,stl,f107a,f107
-    real(4),intent(in)      :: ap(2)
-    real(4),intent(out)     :: w(2)
+    integer*4,intent(in)   :: iyd
+    real*4,intent(in)      :: sec,alt,glat,glon,stl,f107a,f107
+    real*4,intent(in)      :: ap(2)
+    real*4,intent(out)     :: w(2)
 
-    real(4)                 :: qw(2),dw(2)
+    real*4                 :: qw(2),dw(2)
 
     call hwmqt(iyd,sec,alt,glat,glon,stl,f107a,f107,ap,qw)
     
@@ -90,23 +90,23 @@ module NEWmodel
     integer                 :: nlev             ! e.g. Number of B-spline nodes
     integer                 :: nnode            ! nlev + p
 
-    real(8)                 :: alttns           ! Transition 1
-    real(8)                 :: altsym           ! Transition 2
-    real(8)                 :: altiso           ! Constant Limit
+    real*8                 :: alttns           ! Transition 1
+    real*8                 :: altsym           ! Transition 2
+    real*8                 :: altiso           ! Constant Limit
 
     integer,allocatable     :: nb(:)            ! total number of basis functions @ level
     integer,allocatable     :: order(:,:)       ! spectral content @ level
-    real(8),allocatable     :: vnode(:)         ! Vertical Altitude Nodes
-    real(8),allocatable     :: mparm(:,:)       ! Model Parameters
+    real*8,allocatable     :: vnode(:)         ! Vertical Altitude Nodes
+    real*8,allocatable     :: mparm(:,:)       ! Model Parameters
     
     ! Global store for quasi-static model space parameters
     ! These will change internally depending on the input parameters
     
-    real(8),allocatable     :: gfs(:,:),gfm(:,:),gfl(:,:)
-    real(8),allocatable     :: gvbar(:,:),gwbar(:,:)
-    real(8),allocatable     :: gbz(:,:),gbm(:,:)
+    real*8,allocatable     :: gfs(:,:),gfm(:,:),gfl(:,:)
+    real*8,allocatable     :: gvbar(:,:),gwbar(:,:)
+    real*8,allocatable     :: gbz(:,:),gbm(:,:)
     
-    real(8),allocatable     :: gzwght(:)
+    real*8,allocatable     :: gzwght(:)
     integer                 :: glev
      
     ! Miscellaneous flags and indicies
@@ -149,13 +149,13 @@ subroutine HWMQT(IYD,SEC,ALT,GLAT,GLON,STL,F107A,F107,AP,W)
     implicit none
 
     INTEGER,intent(in)      :: IYD
-    REAL(4),intent(in)      :: SEC,ALT,GLAT,GLON,STL,F107A,F107
-    REAL(4),intent(in)      :: AP(2)
-    REAL(4),intent(out)     :: W(2)
+    REAL*4,intent(in)      :: SEC,ALT,GLAT,GLON,STL,F107A,F107
+    REAL*4,intent(in)      :: AP(2)
+    REAL*4,intent(out)     :: W(2)
 
-    real(8)                 :: last(5)
-    real(8)                 :: input(5)
-    real(8)                 :: u,v
+    real*8                 :: last(5)
+    real*8                 :: input(5)
+    real*8                 :: u,v
     
     input(1) = dble(mod(IYD,1000))
     input(2) = dble(sec)
@@ -199,32 +199,32 @@ subroutine HWMupdate(input,last,fs,fl,fm,vbar,wbar,ebz,ebm,zwght,lev,u,v)
     use NewModel
     implicit none
     
-    real(8),intent(in)              :: input(5) ! jday,utsec,glon,glat,alt
-    real(8),intent(inout)           :: last(5)
-    real(8),intent(inout)           :: fs(0:maxs,2)
-    real(8),intent(inout)           :: fm(0:maxm,2)
-    real(8),intent(inout)           :: fl(0:maxl,2)
+    real*8,intent(in)              :: input(5) ! jday,utsec,glon,glat,alt
+    real*8,intent(inout)           :: last(5)
+    real*8,intent(inout)           :: fs(0:maxs,2)
+    real*8,intent(inout)           :: fm(0:maxm,2)
+    real*8,intent(inout)           :: fl(0:maxl,2)
     
-    real(8),intent(inout)           :: vbar(0:maxn,0:maxo)
-    real(8),intent(inout)           :: wbar(0:maxn,0:maxo)
-    real(8),intent(inout),target    :: ebz(nbf,0:p)
-    real(8),intent(inout),target    :: ebm(nbf,0:p)
+    real*8,intent(inout)           :: vbar(0:maxn,0:maxo)
+    real*8,intent(inout)           :: wbar(0:maxn,0:maxo)
+    real*8,intent(inout),target    :: ebz(nbf,0:p)
+    real*8,intent(inout),target    :: ebm(nbf,0:p)
 
-    real(8),intent(inout)           :: zwght(0:p)
+    real*8,intent(inout)           :: zwght(0:p)
     integer,intent(inout)           :: lev
    
-    real(8),intent(out)             :: u,v
+    real*8,intent(out)             :: u,v
  
     ! Local variables
 
-    real(8),pointer           :: bz(:)
-    real(8),pointer           :: bm(:)
+    real*8,pointer           :: bz(:)
+    real*8,pointer           :: bm(:)
     
-    real(8)                   :: cs,ss,cm,sm,cl,sl
-    real(8)                   :: cmcs,smcs,cmss,smss
-    real(8)                   :: clcs,slcs,clss,slss	
-    real(8)                   :: AA,BB,CC,DD
-    real(8)                   :: vb,wb
+    real*8                   :: cs,ss,cm,sm,cl,sl
+    real*8                   :: cmcs,smcs,cmss,smss
+    real*8                   :: clcs,slcs,clss,slss	
+    real*8                   :: AA,BB,CC,DD
+    real*8                   :: vb,wb
     
     integer                   :: b,c,d,m,n,s,l
     
@@ -234,8 +234,8 @@ subroutine HWMupdate(input,last,fs,fl,fm,vbar,wbar,ebz,ebm,zwght,lev,u,v)
 
     logical                   :: refresh(5)
        
-    real(8),parameter         :: twoPi = 2.0d0*3.1415926535897932384626433832795d0
-    real(8),parameter         :: deg2rad = twoPi/360.0d0
+    real*8,parameter         :: twoPi = 2.0d0*3.1415926535897932384626433832795d0
+    real*8,parameter         :: deg2rad = twoPi/360.0d0
     
 ! ====================================================================
 ! Update VSH model terms based on any change in the input parameters
@@ -619,18 +619,18 @@ subroutine vertwght(alt,wght,iz)
     use NEWmodel
     implicit none
     
-    real(8),intent(in)  :: alt
-    real(8),intent(out) :: wght(4)
+    real*8,intent(in)  :: alt
+    real*8,intent(out) :: wght(4)
     integer,intent(out) :: iz
     
-    real(8)             :: we(0:4)
+    real*8             :: we(0:4)
 
-    real(8)             :: e1(0:4) = &
+    real*8             :: e1(0:4) = &
         (/1.d0, 0.428251121076233d0,0.192825112107623d0,0.484304932735426d0,0.0d0/)
-    real(8)             :: e2(0:4) = &
+    real*8             :: e2(0:4) = &
         (/0.d0, 0.571748878923767d0,0.807174887892377d0,-0.484304932735426d0,1.0d0/)
 
-    real(8),parameter   :: H = 60.0d0
+    real*8,parameter   :: H = 60.0d0
         
     iz = findspan(nnode-p-1,p,alt,vnode) - p
 
@@ -667,15 +667,15 @@ contains
 
         implicit none
         
-        real(8)     :: bspline
+        real*8     :: bspline
         integer     :: p,m
-        real(8)     :: V(0:m)
+        real*8     :: V(0:m)
         integer     :: i
-        real(8)     :: u
+        real*8     :: u
         
-        real(8)     :: N(0:p+1)
-        real(8)     :: Vleft,Vright
-        real(8)     :: saved,temp
+        real*8     :: N(0:p+1)
+        real*8     :: Vleft,Vright
+        real*8     :: saved,temp
         integer     :: j,k
                 
         if ((i .eq. 0) .and. (u .eq. V(0))) then
@@ -737,8 +737,8 @@ contains
         implicit none
         
         integer,intent(in)      :: n,p
-        real(8),intent(in)      :: u
-        real(8),intent(in)      :: V(0:n+1)
+        real*8,intent(in)      :: u
+        real*8,intent(in)      :: V(0:n+1)
         integer                 :: low,mid,high
         
         if (u .ge. V(n+1)) then
@@ -791,10 +791,10 @@ module vshengine
     implicit none
     integer,parameter          :: mmax = 11
     integer,parameter          :: nmax = 11
-    real(8)                    :: p0(0:nmax,0:mmax),p1(0:nmax,0:mmax)
-    real(8)                    :: sf(0:nmax,0:mmax)
-    real(8)                    :: a(0:nmax,0:mmax),b(0:nmax,0:mmax)
-    real(8)                    :: c(0:nmax,0:mmax),d(0:nmax,0:mmax)    
+    real*8                    :: p0(0:nmax,0:mmax),p1(0:nmax,0:mmax)
+    real*8                    :: sf(0:nmax,0:mmax)
+    real*8                    :: a(0:nmax,0:mmax),b(0:nmax,0:mmax)
+    real*8                    :: c(0:nmax,0:mmax),d(0:nmax,0:mmax)    
 end module vshengine
 
 ! ==========================================================================
@@ -811,13 +811,13 @@ subroutine vshbasis(maxn,maxo,theta,vbar,wbar)
     implicit none
 
     integer,intent(in)  :: maxn,maxo
-    real(8),intent(in)  :: theta
-    real(8),intent(out) :: vbar(0:maxn,0:maxo)
-    real(8),intent(out) :: wbar(0:maxn,0:maxo)
+    real*8,intent(in)  :: theta
+    real*8,intent(out) :: vbar(0:maxn,0:maxo)
+    real*8,intent(out) :: wbar(0:maxn,0:maxo)
 
-    real(8)             :: pbar(0:nmax,0:maxo+1)
-    real(8)             :: pb(0:nmax),td(0:nmax)
-    real(8)             :: p0i,p1i,cost,r
+    real*8             :: pbar(0:nmax,0:maxo+1)
+    real*8             :: pb(0:nmax),td(0:nmax)
+    real*8             :: p0i,p1i,cost,r
     integer             :: i,m,mm1,mp1,n,nm1,nm2,nmm
 
     ! Normalized Associated Legendre Polynomials
@@ -880,13 +880,13 @@ contains
     ! along the diagonal from a recursion relation.
     ! --------------------------------------------------------------
 
-    real(8) function lfpt(n,m,theta,cp)
+    real*8 function lfpt(n,m,theta,cp)
         implicit none
         integer,intent(in)      :: n,m
-        real(8),intent(in)      :: theta
-        real(8),intent(in)      :: cp(n)
-        real(8)                 :: cdt,sdt
-        real(8)                 :: ct,st,cth
+        real*8,intent(in)      :: theta
+        real*8,intent(in)      :: cp(n)
+        real*8                 :: cdt,sdt
+        real*8                 :: ct,st,cth
         integer                 :: kdo,k
         lfpt = 0.0d0
         if (m .gt. n) return
@@ -947,10 +947,10 @@ contains
     subroutine tridiag(n,r,a,b,c)
         implicit none
         integer,intent(in)      :: n
-        real(8),intent(in)      :: r,a(n)
-        real(8),intent(inout)   :: b(n),c(n)
-        real(8)                 :: bih,bih1,b1
-        real(8)                 :: qih,q2,ratio,rih
+        real*8,intent(in)      :: r,a(n)
+        real*8,intent(inout)   :: b(n),c(n)
+        real*8                 :: bih,bih1,b1
+        real*8                 :: qih,q2,ratio,rih
         integer                 :: i,j
         select case (n)
             case(:0)
@@ -1013,8 +1013,8 @@ subroutine vshengineinit()
 
     use vshengine
     implicit none
-    real(8)             :: fnmm,fnpn,fnpm
-    real(8)             :: nfac1,nfac2
+    real*8             :: fnmm,fnpn,fnpm
+    real*8             :: nfac1,nfac2
     integer             :: m,n,npm,nmm,nm1,nm2,i
     
     ! Factors for the normalized associated legendre polynomial
@@ -1066,9 +1066,9 @@ contains
     subroutine alfk(n,m,cp)
         implicit none
         integer,intent(in)      :: n,m
-        real(8),intent(out)     :: cp(n)
-        real(8)                 :: fnum,fden,fnmh,fnnp1,fnmsq,fk
-        real(8)                 :: pm1,t1,t2,cp2,a1,b1,c1
+        real*8,intent(out)     :: cp(n)
+        real*8                 :: fnum,fden,fnmh,fnnp1,fnmsq,fk
+        real*8                 :: pm1,t1,t2,cp2,a1,b1,c1
         integer                 :: nmms2,l,i
         if (m .gt. n) then
             cp(1) = 0.0d0
@@ -1177,16 +1177,16 @@ module dwm_module
 
     implicit none
 
-    integer(4)             :: nterm          ! Number of terms in the model
-    integer(4)             :: lmax           ! Max latitudinal degree
-    integer(4)             :: mmax           ! Max order of MLT var.
+    integer*4             :: nterm          ! Number of terms in the model
+    integer*4             :: lmax           ! Max latitudinal degree
+    integer*4             :: mmax           ! Max order of MLT var.
 
-    integer(4),allocatable :: termarr(:,:)   ! 3 x nterm index of coupled terms
-    real(4),allocatable    :: coeff(:)       ! Model coefficients
-    real(4),allocatable    :: vsh_terms(:,:) ! VSH basis values
-    integer(4)             :: nvshfn         ! # of VSH basis functions
-    real(4)                :: twidth         ! Transition width of high-lat mask
-    real(4),allocatable    :: termval(:,:)   ! Term values to which coefficients are applied
+    integer*4,allocatable :: termarr(:,:)   ! 3 x nterm index of coupled terms
+    real*4,allocatable    :: coeff(:)       ! Model coefficients
+    real*4,allocatable    :: vsh_terms(:,:) ! VSH basis values
+    integer*4             :: nvshfn         ! # of VSH basis functions
+    real*4                :: twidth         ! Transition width of high-lat mask
+    real*4,allocatable    :: termval(:,:)   ! Term values to which coefficients are applied
 
     ! Initialization flags and information
 
@@ -1211,17 +1211,17 @@ subroutine dwm07b_hwm_interface(IYD,SEC,ALT,GLAT,GLON,AP,DW)
     implicit none
 
     INTEGER,intent(in)      :: IYD
-    REAL(4),intent(in)      :: SEC,ALT,GLAT,GLON
-    REAL(4),intent(in)      :: AP(2)
-    REAL(4),intent(out)     :: DW(2)
+    REAL*4,intent(in)      :: SEC,ALT,GLAT,GLON
+    REAL*4,intent(in)      :: AP(2)
+    REAL*4,intent(out)     :: DW(2)
 
-    real(4)                 :: ut, mlat, mlt, kp, mmpwind, mzpwind
-    real(4)                 :: f1e, f1n, f2e, f2n
-    real(4)                 :: dummy
-    real(4)                 :: day, mlon, asun_glat, asun_glon, asun_mlat, asun_mlon
-    real(4), external       :: ap_to_kp, dwm_altwgt
+    real*4                 :: ut, mlat, mlt, kp, mmpwind, mzpwind
+    real*4                 :: f1e, f1n, f2e, f2n
+    real*4                 :: dummy
+    real*4                 :: day, mlon, asun_glat, asun_glon, asun_mlat, asun_mlon
+    real*4, external       :: ap_to_kp, dwm_altwgt
 
-    real(8), parameter      :: pi=3.141592653590, dtor=pi/180D0, sin_eps=0.39781868
+    real*8, parameter      :: pi=3.141592653590, dtor=pi/180D0, sin_eps=0.39781868
 
     !CONVERT AP TO KP
     kp = ap_to_kp(ap(2))
@@ -1271,22 +1271,22 @@ subroutine dwm07b(mlt, mlat, kp, mmpwind, mzpwind)
     use dwm_module
     implicit none
 
-    real(4),intent(in)        :: mlt            !Magnetic local time (hours)
-    real(4),intent(in)        :: mlat           !Magnetic latitude (degrees)
-    real(4),intent(in)        :: kp             !3-hour Kp
+    real*4,intent(in)        :: mlt            !Magnetic local time (hours)
+    real*4,intent(in)        :: mlat           !Magnetic latitude (degrees)
+    real*4,intent(in)        :: kp             !3-hour Kp
 
-    real(4),intent(out)       :: mmpwind        !Mer. disturbance wind (+north, QD coordinates)
-    real(4),intent(out)       :: mzpwind        !Zon. disturbance wind (+east, QD coordinates)
+    real*4,intent(out)       :: mmpwind        !Mer. disturbance wind (+north, QD coordinates)
+    real*4,intent(out)       :: mzpwind        !Zon. disturbance wind (+east, QD coordinates)
 
     ! Local variables
-    real(4)                   :: mltdeg
-    real(4)                   :: kp_terms(0:2)
-    real(4)                   :: latwgt_terms
-    real(4)                   :: termval_temp(0:1)
-    integer(4)                :: iterm
+    real*4                   :: mltdeg
+    real*4                   :: kp_terms(0:2)
+    real*4                   :: latwgt_terms
+    real*4                   :: termval_temp(0:1)
+    integer*4                :: iterm
 
     external                  :: loaddwm, vsh_basis
-    real(4), external         :: dwm_latwgt2
+    real*4, external         :: dwm_latwgt2
 
     
     !LOAD MODEL PARAMETERS IF NECESSARY
@@ -1372,25 +1372,25 @@ module vsh_basis_module
     implicit none
 
     type :: fn_map                              ! Structure of VSH basis function map
-      integer(4) :: realimag
-      integer(4) :: irrotational
-      integer(4) :: M
-      integer(4) :: N
+      integer*4 :: realimag
+      integer*4 :: irrotational
+      integer*4 :: M
+      integer*4 :: N
     end type
     type (fn_map), allocatable :: fn_map1(:)    ! Working array of VSH map structure
 
-    real(8), allocatable :: A(:,:)  !Derivative of the Associated Legendre Functions
-    real(8), allocatable :: B(:,:)  !m/sin(theta) times the Associated Legendre Functions
-    real(8), allocatable :: anm(:,:)
-    real(8), allocatable :: bnm(:,:)
-    real(8), allocatable :: cm(:)
-    real(8), allocatable :: cn(:)
-    real(8), allocatable :: e0n(:)
-    real(8), allocatable :: fnm(:,:)
-    real(8), allocatable :: m_arr(:)
-    real(8), allocatable :: n_arr(:)
-    real(8), allocatable :: cosmz(:)
-    real(8), allocatable :: sinmz(:)
+    real*8, allocatable :: A(:,:)  !Derivative of the Associated Legendre Functions
+    real*8, allocatable :: B(:,:)  !m/sin(theta) times the Associated Legendre Functions
+    real*8, allocatable :: anm(:,:)
+    real*8, allocatable :: bnm(:,:)
+    real*8, allocatable :: cm(:)
+    real*8, allocatable :: cn(:)
+    real*8, allocatable :: e0n(:)
+    real*8, allocatable :: fnm(:,:)
+    real*8, allocatable :: m_arr(:)
+    real*8, allocatable :: n_arr(:)
+    real*8, allocatable :: cosmz(:)
+    real*8, allocatable :: sinmz(:)
 
 end module vsh_basis_module
 
@@ -1406,7 +1406,7 @@ subroutine vsh_basis_init
 
     implicit none
 
-    integer(4)       :: i, j, n, m, ifn
+    integer*4       :: i, j, n, m, ifn
     type (fn_map)    :: fn_map0(0:2*2*(m_max+1)*(n_max+1))
 
 
@@ -1518,12 +1518,12 @@ subroutine vsh_basis(theta, phi)
 
     implicit none
 
-    real(4)            :: theta, phi
-    real(8)            :: x, y, z, mz, norm_m
-    integer(4)         :: n, m, ifn
-    integer(4)         :: fn_id
+    real*4            :: theta, phi
+    real*8            :: x, y, z, mz, norm_m
+    integer*4         :: n, m, ifn
+    integer*4         :: fn_id
 
-    real(8), parameter :: pi=3.141592653590, dtor=pi/180D0
+    real*8, parameter :: pi=3.141592653590, dtor=pi/180D0
 
     !PROCESS INPUT ARGUMENTS
 
@@ -1623,11 +1623,11 @@ subroutine dwm_kpspl3_calc(kp0, dwm_kpspl3)
 
     implicit none
 
-    real(4), intent(in)       :: kp0
-    real(4), intent(out)      :: dwm_kpspl3(0:2)
+    real*4, intent(in)       :: kp0
+    real*4, intent(out)      :: dwm_kpspl3(0:2)
 
-    real(4)                   :: kp
-    real(4)                   :: kpspl(0:4)
+    real*4                   :: kp
+    real*4                   :: kpspl(0:4)
 
     external :: bspline_calc
 
@@ -1671,13 +1671,13 @@ function dwm_latwgt2(mlat, mlt, kp0, twidth)
 
     implicit none
 
-    real(4)                   :: dwm_latwgt2
-    real(4)                   :: mlat, mlt, kp0, kp, twidth
-    real(4)                   :: mltrad, sinmlt, cosmlt, tlat
+    real*4                   :: dwm_latwgt2
+    real*4                   :: mlat, mlt, kp0, kp, twidth
+    real*4                   :: mltrad, sinmlt, cosmlt, tlat
 
-    real(4), parameter :: coeff(0:5) = (/ 65.7633,  -4.60256,  -3.53915,  &
+    real*4, parameter :: coeff(0:5) = (/ 65.7633,  -4.60256,  -3.53915,  &
                                          -1.99971,  -0.752193,  0.972388 /)
-    real(4), parameter :: pi=3.141592653590, dtor=pi/180D0
+    real*4, parameter :: pi=3.141592653590, dtor=pi/180D0
 
 
     mltrad = mlt * 15.0 * dtor
@@ -1767,14 +1767,14 @@ subroutine bspline_calc(nnode0, x0, node0, bspline, order, periodic)
 
   implicit none
 
-  integer(4), intent(in) :: nnode0, order, periodic
-  real(4), intent(in)    :: x0, node0(0:nnode0-1)
-  integer(4)             :: i, j, k, nnode, nspl
-  real(4)                :: x, perint(0:1), perspan, dx1, dx2
-  real(4), allocatable   :: node(:), node1(:)
-  real(4), allocatable   :: bspline0(:)
-  real(4), intent(out)   :: bspline(0:nnode0-1-periodic-(1-periodic)*(order+1))
-  real(4), external      :: pershift
+  integer*4, intent(in) :: nnode0, order, periodic
+  real*4, intent(in)    :: x0, node0(0:nnode0-1)
+  integer*4             :: i, j, k, nnode, nspl
+  real*4                :: x, perint(0:1), perspan, dx1, dx2
+  real*4, allocatable   :: node(:), node1(:)
+  real*4, allocatable   :: bspline0(:)
+  real*4, intent(out)   :: bspline(0:nnode0-1-periodic-(1-periodic)*(order+1))
+  real*4, external      :: pershift
 
 
   !PREPARE WORKING ARRAYS
@@ -1848,9 +1848,9 @@ end subroutine bspline_calc
 
 function pershift(x, perint)
 
-  real(4), parameter :: tol=1e-4
-  real(4)            :: x, perint(0:1)
-  real(4)            :: a, span, offset, offset1, pershift
+  real*4, parameter :: tol=1e-4
+  real*4            :: x, perint(0:1)
+  real*4            :: a, span, offset, offset1, pershift
 
   pershift = x
   a = perint(0)
@@ -1889,14 +1889,14 @@ end function pershift
 
 function ap_to_kp(ap0)
 
-  real(4), parameter :: apgrid(0:27) = (/0.,2.,3.,4.,5.,6.,7.,9.,12.,15.,18., &
+  real*4, parameter :: apgrid(0:27) = (/0.,2.,3.,4.,5.,6.,7.,9.,12.,15.,18., &
                                          22.,27.,32.,39.,48.,56.,67.,80.,94., &
                                        111.,132.,154.,179.,207.,236.,300.,400./)
-  real(4), parameter :: kpgrid(0:27) = (/0.,1.,2.,3.,4.,5.,6.,7.,8.,9.,10.,11., &
+  real*4, parameter :: kpgrid(0:27) = (/0.,1.,2.,3.,4.,5.,6.,7.,8.,9.,10.,11., &
                                          12.,13.,14.,15.,16.,17.,18.,19.,20.,21., &
                                          22.,23.,24.,25.,26.,27./) / 3.0
-  real(4)            :: ap0, ap, ap_to_kp
-  integer(4)         :: i
+  real*4            :: ap0, ap, ap_to_kp
+  integer*4         :: i
 
 
   ap = ap0
@@ -1935,8 +1935,8 @@ end function ap_to_kp
 
 function dwm_altwgt(alt)
 
-  real(4), parameter :: talt=125.0, twidth=5.0
-  real(4)            :: alt, dwm_altwgt
+  real*4, parameter :: talt=125.0, twidth=5.0
+  real*4            :: alt, dwm_altwgt
 
   dwm_altwgt = 1.0 / (1 + exp(-(alt - talt)/twidth))
 
@@ -1950,13 +1950,13 @@ subroutine gd2qd(glat,glon,qdlat,qdlon,f1e,f1n,f2e,f2n)
 
     implicit none
 
-    real(4), intent(in)      :: glat,glon
-    real(4), intent(out)     :: qdlat, qdlon
-    real(4), intent(out)     :: f1e,f1n,f2e,f2n
-    real(4)                  :: f1(2),f2(2)
-    integer(4)               :: ist
-    real(4), parameter       :: alt = 250.0
-    real(4)                  :: hr
+    real*4, intent(in)      :: glat,glon
+    real*4, intent(out)     :: qdlat, qdlon
+    real*4, intent(out)     :: f1e,f1n,f2e,f2n
+    real*4                  :: f1(2),f2(2)
+    integer*4               :: ist
+    real*4, parameter       :: alt = 250.0
+    real*4                  :: hr
     
     call apex(glat,glon,alt,hr,qdlon,qdlat,f1,f2,ist)
                     
