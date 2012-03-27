@@ -31,8 +31,8 @@ subroutine MH_set_parameters(TypeAction)
   use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
   use ModPlanetConst
   use CON_axes,         ONLY: init_axes,get_axes
-  use ModUtilities,     ONLY: check_dir, fix_dir_name, DoFlush, split_string
-
+  use ModUtilities,     ONLY: check_dir, fix_dir_name, DoFlush, &
+       split_string, join_string
   use CON_planet,       ONLY: get_planet
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
   use ModCoordTransform,ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
@@ -871,6 +871,12 @@ subroutine MH_set_parameters(TypeAction)
               plot_vars(ifile) = NamePrimitiveVar
               plot_pars(ifile)='g'
               if(rBody>0.0)plot_pars(ifile)='g rbody'
+           elseif(index(plot_string,'ALL')>0.or.index(plot_string,'all')>0)then
+              ! This is intended for restart with a different dimensionality
+              plot_var='all'
+              plot_dimensional(ifile) = .false.
+              call join_string(nVar, NameVar_V(1:nVar), plot_vars(ifile))
+              plot_pars(ifile)='g'
            elseif(index(plot_string,'FUL')>0.or.index(plot_string,'ful')>0)then
               plot_var='ful'
               plot_dimensional(ifile) = index(plot_string,'FUL')>0
