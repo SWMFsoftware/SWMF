@@ -27,6 +27,7 @@ $Debug=$d;
 $Quiet=$q;
 $Warning=$w;
 $Common=$common;
+$nThread= ($n or 4);
 
 if($Check and $Warning){
     print "Either check (-c) or no warnings (-w) \n\n";
@@ -65,6 +66,7 @@ Options (specify them separately as  -a -b  and not as  -ab !):
                           );
 
 -l             list names to be changed
+-n=NTHREAD     process files in parallel. Default is 4 threads.
 -c             check input file and source files, do not rename variables
 -r             replace old names with new
 -u             undo replacements
@@ -84,8 +86,8 @@ renaming by adding a "!do not rename" trailing comment.
 Typical usage:
 
 Rename.pl -c                   #  check the replacement rules
-Rename.pl -c *.f90             #  check the source files
-Rename.pl -r *.f90             #  do replacements
+Rename.pl -c -n=1 *.f90        #  check the source files on 1 core
+Rename.pl -r -n=8 *.f90        #  do replacements on 8 cores
 Rename.pl -r -common=SC *.f90  #  do replacements including common blocks'
 #EOC
 ,"\n";
@@ -151,109 +153,138 @@ if($List){
 }
 
 if($Rename or $Check){
-    &rename(%newname);
+    &rename_files(%newname);
 }elsif($Undo){
-    &rename(%oldname);
+    &rename_files(%oldname);
 };
 
 exit;
 
 ##########################################################################
-sub rename{
+sub rename_files{
 
     %rename=@_;
 
     @old=sort keys   %rename;
     @new=sort values %rename;
 
-    while($file=shift(@ARGV)){
-	if(not open(FILE,$file)){
-	    print "Error opening file $file !!!\n";
-	    next;
-	}
-	read(FILE,$text,-s $file);
-	close(FILE);
-	print "old text=\n$text\n" if $Debug;
+    @Files = @ARGV;
+    $nFile = scalar(@Files);
 
-	# Protect lines with containing the '!DO NOT RENAME' string and 
-	# case(' or case(" statements.
-	$icase=0; @case=();
-	while($text =~ s/^(.*\!\s*do\ not\ rename.*|
+    print "Number of files to process=$nFile\n" unless $Quiet or $nFile<=1;
+
+    $nfile = 0; $countall = 0;
+    if($nThread > 1 and $nFile > 1){
+	foreach my $iThread (1..$nThread){
+	    # parent process does nothing
+	    next if fork();
+	    for (my $iFile = $iThread-1; $iFile < $nFile; $iFile+=$nThread){
+		$File = $Files[$iFile];
+		&rename($File);
+	    }
+	    print "Thread $iThread finished $countall replacement(s) ".
+		"in $nfile file(s)\n" if $countall and not $Quiet;
+	    exit;
+	}
+	foreach (1..$nThread){wait};
+    }else{
+	foreach $File (@Files){
+	    &rename($File);
+	}
+	print "Finished $countall replacement(s) in $nfile file(s)\n"
+	    if $countall and not $Quiet;
+    }
+}
+
+##########################################################################
+sub rename{
+
+    $file = shift;
+
+    if(not open(FILE,$file)){
+	print "Error opening file $file !!!\n";
+	return;
+    }
+    read(FILE,$text,-s $file);
+    close(FILE);
+    print "old text=\n$text\n" if $Debug;
+
+    # Protect lines with containing the '!DO NOT RENAME' string and 
+    # case(' or case(" statements.
+    $icase=0; @case=();
+    while($text =~ s/^(.*\!\s*do\ not\ rename.*|
 			   \s*case\s*\(\s*[\'\"].*)/_\[CASE$icase\]_/imx){
-	    print " replacing case $icase\n" if $Debug;
-	    $case[$icase++]=$1;
-	}
-
-	foreach $oldname (@old){
-	    $newname=$rename{$oldname};
-	    next if lc($newname) eq lc($oldname); # Only capitalization changes
-	    if($text=~/\b$newname\b/i){
-		print "  warning: variable $newname occurs in file $file !\n"
-		    unless $Warning;
-	    }
-	}
-
-	# Take next file if check only
-	next if $Check;
-	
-	print "Renaming variables...\n" if $Debug;
-
-	# Replace old names with tokens of the form _[NUMBER]_
-        $count=0;
-
-        # Replace common block names if required
-        if($Common){
-	    if($Undo){
-		# Undo: common/XX_.../ --> common/.../
-		$count+=($text =~ s[^(\s*common\s*/)$Common\_(\w+/)][$1$2]mgi);
-	    }else{
-		# Replace: common/.../ --> common/XX_.../
-		$count +=
-		    ($text =~ s[^(\s*common\s*/)(\w+/)][$1$Common\_$2]mgi);
-		# Avoid double change: common/XX_XX_ --> common/XX_
-		$count -=
-		    ($text =~ 
-		     s[^(\s*common\s*/)$Common\_$Common\_][$1$Common\_]mgi);
-	    }
-	}
-
-	for($i=0;$i<=$#old;$i++){
-            $oldname=$old[$i];
-            if($Undo or $DANGER{uc($oldname)}){
-                # Replace only with strict case agreement
-		$count += ($text=~s/\b$oldname\b/_\[$i\]_/g);
-	    }else{
-		# Replace with relaxed case checking
-		$count += ($text=~s/\b$oldname\b/_\[$i\]_/ig);
-	    }
-	}
-	if($count==0){
-	    print "No variables to rename in file $file\n" unless $Quiet;
-	    next;
-	}
-	print "tok text=\n$text\n" if $Debug;
-        # Replace tokens with new names
-	for($i=0;$i<=$#old;$i++){
-	    $text=~s/_\[$i\]_/$rename{$old[$i]}/g;
-	}
-	print "New text=\n$text\n" if $Debug;
-
-	# Put back the case(' and case(" lines
-	for($icase=0; $icase<=$#case; $icase++){
-	    $text =~ s/_\[CASE$icase\]_/$case[$icase]/i;
-	}
-
-        # Replace the file with the modified text
-	rename $file,"$file~";
-	open(FILE,">$file");
-	print FILE $text;
-	close(FILE);
-
-	print "Finished $count replacements in file $file\n" unless $Quiet;
-	$countall += $count;
-	$nfile += 1;
+	print " replacing case $icase\n" if $Debug;
+	$case[$icase++]=$1;
     }
 
-    print "Finished  $countall replacement(s) in $nfile file(s)\n"
-	if $countall and not $Quiet;
+    foreach $oldname (@old){
+	$newname=$rename{$oldname};
+	next if lc($newname) eq lc($oldname); # Only capitalization changes
+	if($text=~/\b$newname\b/i){
+	    print "  warning: variable $newname occurs in file $file !\n"
+		unless $Warning;
+	}
+    }
+
+    # Finished with this file if check only
+    return if $Check;
+
+    print "Renaming variables...\n" if $Debug;
+
+    # Replace old names with tokens of the form _[NUMBER]_
+    $count=0;
+
+    # Replace common block names if required
+    if($Common){
+	if($Undo){
+	    # Undo: common/XX_.../ --> common/.../
+	    $count+=($text =~ s[^(\s*common\s*/)$Common\_(\w+/)][$1$2]mgi);
+	}else{
+	    # Replace: common/.../ --> common/XX_.../
+	    $count +=
+		($text =~ s[^(\s*common\s*/)(\w+/)][$1$Common\_$2]mgi);
+	    # Avoid double change: common/XX_XX_ --> common/XX_
+	    $count -=
+		($text =~ 
+		 s[^(\s*common\s*/)$Common\_$Common\_][$1$Common\_]mgi);
+	}
+    }
+
+    for($i=0;$i<=$#old;$i++){
+	$oldname=$old[$i];
+	if($Undo or $DANGER{uc($oldname)}){
+	    # Replace only with strict case agreement
+	    $count += ($text=~s/\b$oldname\b/_\[$i\]_/g);
+	}else{
+	    # Replace with relaxed case checking
+	    $count += ($text=~s/\b$oldname\b/_\[$i\]_/ig);
+	}
+    }
+    if($count==0){
+	print "No variables to rename in file $file\n" unless $Quiet;
+	return;
+    }
+    print "tok text=\n$text\n" if $Debug;
+    # Replace tokens with new names
+    for($i=0;$i<=$#old;$i++){
+	$text=~s/_\[$i\]_/$rename{$old[$i]}/g;
+    }
+    print "New text=\n$text\n" if $Debug;
+
+    # Put back the case(' and case(" lines
+    for($icase=0; $icase<=$#case; $icase++){
+	$text =~ s/_\[CASE$icase\]_/$case[$icase]/i;
+    }
+
+    # Replace the file with the modified text
+    rename $file,"$file~";
+    open(FILE,">$file");
+    print FILE $text;
+    close(FILE);
+
+    print "Finished $count replacements in file $file\n" unless $Quiet;
+    $nfile++;
+    $countall += $count;
+
 }
