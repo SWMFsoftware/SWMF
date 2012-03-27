@@ -4,9 +4,6 @@ T
 #DESCRIPTION
 TestSuite for BATSRUS.
 
-#BATLTEST
-T
-
 #INCLUDE
 Planet
 
