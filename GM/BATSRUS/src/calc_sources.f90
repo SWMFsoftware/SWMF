@@ -485,6 +485,8 @@ subroutine calc_sources
 
   if(SignB_>1 .and. DoThinCurrentSheet)then
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
         ! Note that the velocity of the first (and only) fluid is used
         DivU            =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
         if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
