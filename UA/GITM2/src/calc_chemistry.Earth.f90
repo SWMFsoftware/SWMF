@@ -1816,12 +1816,12 @@ subroutine calc_chemistry(iBlock)
                  Ions(nIons) = Ions(nIons) + Ions(iIon)
 
 !                 if (Ions(iIon) < 0.0) then
-                 if (isnan(Ions(iIon))) then
-                    write(*,*) "Negative Ion Density : ", &
-                         iIon, iLon, iLat, iAlt, &
-                         Ions(iIon), &
-                         IonSources(iIon), IonLosses(iIon)
-                 endif
+!!!                 if (isnan(Ions(iIon))) then
+!!!                    write(*,*) "Negative Ion Density : ", &
+!!!                         iIon, iLon, iLat, iAlt, &
+!!!                         Ions(iIon), &
+!!!                         IonSources(iIon), IonLosses(iIon)
+!!!                 endif
               enddo
 
               do iNeutral = 1, nSpeciesTotal
@@ -1854,12 +1854,12 @@ subroutine calc_chemistry(iBlock)
                       NeutralLosses(iNeutral) * DtSub
                  
 !                 if (Neutrals(iNeutral) < 0.0) then
-                 if (isnan(Neutrals(iNeutral))) then
-                    write(*,*) "Negative Neutral Density : ", &
-                         iNeutral, iLon, iLat, iAlt, DtSub, &
-                         Neutrals(iNeutral), &
-                         NeutralSources(iNeutral), NeutralLosses(iNeutral)
-                 endif
+!!!                 if (isnan(Neutrals(iNeutral))) then
+!!!                    write(*,*) "Negative Neutral Density : ", &
+!!!                         iNeutral, iLon, iLat, iAlt, DtSub, &
+!!!                         Neutrals(iNeutral), &
+!!!                         NeutralSources(iNeutral), NeutralLosses(iNeutral)
+!!!                 endif
 
 
               enddo
