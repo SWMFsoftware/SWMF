@@ -18,9 +18,9 @@ install:
 	fi)
 
 LIB: check_src
-	cd srcBATL; make LIB
-	cd src; make LIB
-	cd srcInterface; make LIB
+	cd srcBATL; $(MAKE) LIB
+	cd src; $(MAKE) LIB
+	cd srcInterface; $(MAKE) LIB
 
 test:
 	@echo EE/BATSRUS is tested in GM/BATSRUS

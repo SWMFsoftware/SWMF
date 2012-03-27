@@ -130,7 +130,7 @@ EXEOBJECT = swmf.o
 # As a work around we load the object files directly from Tmp_*
 
 SWMFEXE: TMP_DIRS
-	@make ${EXEOBJECT}
+	@$(MAKE) ${EXEOBJECT}
 	${LINK.f90} -o ${SWMFEXE} ${EXEOBJECT} Tmp_*/*.o ${LBLAS} ${Lflag1} \
 		${HYPRELIB}
 	@rm -rf Tmp_*
@@ -157,34 +157,34 @@ SWMFEXE: TMP_DIRS
 # Create all libraries and then libCONTROL.a (MY_LIB)
 # Use alphabetic order for components!
 LIB:
-	@cd ${SHAREDIR};             make LIB
-	@cd ${TIMINGDIR};            make LIB
-	@cd ${DATAREADINDICESDIR};   make LIB
-	@cd ${MAGNETOGRAMDIR};       make LIB
-	@cd ${DEMTDIR}; 	     make LIB
-	@cd ${EMPIRICALEEDIR};       make LIB
-	@cd ${EMPIRICALGMDIR};       make LIB
-	@cd ${EMPIRICALIEDIR};       make LIB
-	@cd ${EMPIRICALUADIR};       make LIB
-	@cd ${LIBRARYDIR};           make LIB
-	@cd ${COUPLERDIR};           make LIB
-	@cd ${EEDIR};                make LIB	#^CMP IF EE
-	@cd ${GMDIR};                make LIB	#^CMP IF GM
-	@cd ${IEDIR};                make LIB	#^CMP IF IE
-	@cd ${IHDIR};                make LIB	#^CMP IF IH
-	@cd ${IMDIR};                make LIB	#^CMP IF IM
-	@cd ${LADIR};                make LIB	#^CMP IF LA
-	@cd ${OHDIR};                make LIB	#^CMP IF OH
-	@cd ${PSDIR};                make LIB	#^CMP IF PS
-	@cd ${PWDIR};                make LIB	#^CMP IF PW
-	@cd ${RBDIR};                make LIB	#^CMP IF RB
-	@cd ${LCDIR};                make LIB	#^CMP IF LC
-	@cd ${SCDIR};                make LIB	#^CMP IF SC
-	@cd ${SPDIR};                make LIB	#^CMP IF SP
-	@cd ${UADIR};                make LIB	#^CMP IF UA
-	@cd ${INTERFACEDIR};         make LIB
+	@cd ${SHAREDIR};             $(MAKE) LIB
+	@cd ${TIMINGDIR};            $(MAKE) LIB
+	@cd ${DATAREADINDICESDIR};   $(MAKE) LIB
+	@cd ${MAGNETOGRAMDIR};       $(MAKE) LIB
+	@cd ${DEMTDIR}; 	     $(MAKE) LIB
+	@cd ${EMPIRICALEEDIR};       $(MAKE) LIB
+	@cd ${EMPIRICALGMDIR};       $(MAKE) LIB
+	@cd ${EMPIRICALIEDIR};       $(MAKE) LIB
+	@cd ${EMPIRICALUADIR};       $(MAKE) LIB
+	@cd ${LIBRARYDIR};           $(MAKE) LIB
+	@cd ${COUPLERDIR};           $(MAKE) LIB
+	@cd ${EEDIR};                $(MAKE) LIB	#^CMP IF EE
+	@cd ${GMDIR};                $(MAKE) LIB	#^CMP IF GM
+	@cd ${IEDIR};                $(MAKE) LIB	#^CMP IF IE
+	@cd ${IHDIR};                $(MAKE) LIB	#^CMP IF IH
+	@cd ${IMDIR};                $(MAKE) LIB	#^CMP IF IM
+	@cd ${LADIR};                $(MAKE) LIB	#^CMP IF LA
+	@cd ${OHDIR};                $(MAKE) LIB	#^CMP IF OH
+	@cd ${PSDIR};                $(MAKE) LIB	#^CMP IF PS
+	@cd ${PWDIR};                $(MAKE) LIB	#^CMP IF PW
+	@cd ${RBDIR};                $(MAKE) LIB	#^CMP IF RB
+	@cd ${LCDIR};                $(MAKE) LIB	#^CMP IF LC
+	@cd ${SCDIR};                $(MAKE) LIB	#^CMP IF SC
+	@cd ${SPDIR};                $(MAKE) LIB	#^CMP IF SP
+	@cd ${UADIR};                $(MAKE) LIB	#^CMP IF UA
+	@cd ${INTERFACEDIR};         $(MAKE) LIB
 	@make DEPEND
-	make ${MY_LIB}
+	$(MAKE) ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo

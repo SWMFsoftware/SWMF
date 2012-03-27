@@ -19,7 +19,7 @@ DEPEND:
 MY_LIB = ${LIBDIR}/libLIBRARY.a
 
 LIB:	DEPEND
-	make ${MY_LIB}
+	$(MAKE) ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
@@ -31,9 +31,9 @@ ${MY_LIB}: ${MODULES}
 test: test_registry
 
 test_registry: DEPEND
-	cd ${SHAREDIR}; make LIB
-	make LIB
-	make test_registry.exe
+	cd ${SHAREDIR}; $(MAKE) LIB
+	$(MAKE) LIB
+	$(MAKE) test_registry.exe
 	mpirun -np 4 test_registry.exe
 	cat LAYOUT.in
 
@@ -41,8 +41,8 @@ TEST_REGISTRY_OBJ= \
 	test_registry.o
 
 test_registry.exe: DEPEND ${TEST_REGISTRY_OBJ}
-	cd ${SHAREDIR}; make LIB
-	cd ${LIBRARYDIR}; make LIB
+	cd ${SHAREDIR}; $(MAKE) LIB
+	cd ${LIBRARYDIR}; $(MAKE) LIB
 	${LINK.f90} -o test_registry.exe ${SEARCH} \
 		${TEST_REGISTRY_OBJ} -L${LIBDIR} -lLIBRARY -lSHARE
 

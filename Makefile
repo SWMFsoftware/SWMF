@@ -179,47 +179,47 @@ rmdir:
 #	SWMF
 #
 SWMF:	ENV_CHECK
-	@cd ${CONTROLDIR}; make SWMFEXE  
+	@cd ${CONTROLDIR}; $(MAKE) SWMFEXE  
 	@echo ' '
 
 #
 #       SWMF library (for external code)
 #
 LIB:	ENV_CHECK
-	@cd ${CONTROLDIR}; make SWMFLIB
+	@cd ${CONTROLDIR}; $(MAKE) SWMFLIB
 	@echo ' '
 
 #
 #       ESMF driver for the SWMF and a simple ESMF component
 #
 ESMF_SWMF: LIB
-	@cd ESMF/ESMF_SWMF/src; make EXE
+	@cd ESMF/ESMF_SWMF/src; $(MAKE) EXE
 
 # NOMPI library for execution without MPI
 
 NOMPI: ENV_CHECK
-	cd ${NOMPIDIR}; make LIB
+	cd ${NOMPIDIR}; $(MAKE) LIB
 
 #^CMP IF GM BEGIN
 #	Post processing codes for BATSRUS plot files
 #
 PSPH:	ENV_CHECK
-	cd GM/BATSRUS; make PSPH
+	cd GM/BATSRUS; $(MAKE) PSPH
 	@echo ' '
 
 PIDL:	ENV_CHECK
-	cd GM/BATSRUS; make PIDL
+	cd GM/BATSRUS; $(MAKE) PIDL
 	@echo ' '
 
 SNAPSHOT: ENV_CHECK
-	cd GM/BATSRUS; make SNAPSHOT
+	cd GM/BATSRUS; $(MAKE) SNAPSHOT
 	@echo ' '
 
 #
 #	Code for generating Earth trajectory for IH/BATSRUS
 #
 EARTH_TRAJ: ENV_CHECK
-	cd GM/BATSRUS; make EARTH_TRAJ
+	cd GM/BATSRUS; $(MAKE) EARTH_TRAJ
 	@echo ' '
 #^CMP END GM
 
@@ -227,7 +227,7 @@ EARTH_TRAJ: ENV_CHECK
 #	Post processing code for IE/Ridley_serial plot files
 #
 PIONO:	ENV_CHECK
-	cd IE/Ridley_serial; make PIONO
+	cd IE/Ridley_serial; $(MAKE) PIONO
 	@echo ' '
 
 #^CMP END IE

@@ -37,7 +37,7 @@ BATL_size.f90: BATL_size_orig.f90
 MY_LIB = libBATL.a
 
 LIB: DEPEND
-	make ${MY_LIB}
+	$(MAKE) ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
@@ -48,7 +48,7 @@ ${MY_LIB}: ${OBJECTS}
 
 BATL:
 	make DEPEND
-	make ${BINDIR}/BATL.exe
+	$(MAKE) ${BINDIR}/BATL.exe
 
 ${BINDIR}/BATL.exe: main.o ${OBJECTS}
 	${LINK.f90} -o ${BINDIR}/BATL.exe main.o ${OBJECTS} \
@@ -56,7 +56,7 @@ ${BINDIR}/BATL.exe: main.o ${OBJECTS}
 
 ADVECT:
 	make DEPEND
-	make ${BINDIR}/ADVECT.exe
+	$(MAKE) ${BINDIR}/ADVECT.exe
 
 ${BINDIR}/ADVECT.exe: advect_main.o ${OBJECTS}
 	${LINK.f90} -o ${BINDIR}/ADVECT.exe advect_main.o ${OBJECTS} \

@@ -27,7 +27,7 @@ DEPEND:
 MY_LIB = ${LIBDIR}/libCOUPLER.a
 
 LIB:	DEPEND
-	make ${MY_LIB}
+	$(MAKE) ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
