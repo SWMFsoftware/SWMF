@@ -18,8 +18,10 @@ OBJECTS = \
 	trace_dipole.o\
 	plot_fieldline.o\
 	set_parameters.o\
-	pbo_2.o\
 	geopack.o
+
+
+#	pbo_2.o\
 
 DEPEND:
 	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
