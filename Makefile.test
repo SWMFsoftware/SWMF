@@ -691,9 +691,9 @@ test9:
 
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesHyp,nWave=2
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesHyp,nWave=2
-	./Config.pl -g=SC:6,4,4,4500,1,IH:4,4,4,4500,1
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesHyp
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesHypSignB
+	./Config.pl -g=SC:6,4,4,1200,1,IH:4,4,4,4500,1
 	${MAKE} SWMF PIDL
 
 test9_rundir:
