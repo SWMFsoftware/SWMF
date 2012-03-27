@@ -187,7 +187,8 @@ OBJECT:
 	}
     }
     if(not $file){
-	print "$WARNING source file not found, skipping $object !!!\n";
+	print "$WARNING source file not found, skipping $object !!!\n"
+	    unless $object =~ /^(main\.o|advect_main\.o)$/;
 	next OBJECT;
     }
 
