@@ -556,10 +556,11 @@ contains
 
   subroutine get_impl_heat_cond_state(StateImpl_VGB, DconsDsemi_VCB)
 
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
+         time_BLK
     use ModFaceGradient, ONLY: set_block_field2
     use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk, iTeImpl, ImplCoeff
-    use ModMain,         ONLY: nI, nJ, nK, MaxImplBlk, Dt
+    use ModMain,         ONLY: nI, nJ, nK, MaxImplBlk, Dt, time_accurate, Cfl
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_,&
          UnitN_, UnitT_, inv_gm1
@@ -572,9 +573,9 @@ contains
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iImplBlock, iP
-    real :: TeSi, CvSi
+    real :: DtLocal
     real :: HeatCond_DD(3,3)
-    real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi
+    real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
 
     integer, parameter :: jMin1 = 1 - min(1,nJ-1), jMax1 = nJ + min(1,nJ-1)
     integer, parameter :: kMin1 = 1 - min(1,nK-1), kMax1 = nK + min(1,nK-1)
@@ -582,6 +583,8 @@ contains
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
+
+    DtLocal = Dt
 
     do iImplBlock = 1, nImplBLK
        iBlock = impl2iBLK(iImplBlock)
@@ -617,9 +620,10 @@ contains
           end if
 
           if(UseElectronPressure .and. .not.UseIdealEos)then
+             if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
              Cvi = inv_gm1*Natomic
              PointCoef_CB(i,j,k,iBlock) = TeTiCoef &
-                  /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
+                  /(1.0 + ImplCoeff*DtLocal*TeTiCoef/Cvi)
              PointImpl_CB(i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)/Natomic
           end if
        end do; end do; end do
@@ -907,11 +911,12 @@ contains
 
   subroutine update_impl_heat_cond(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure
+    use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
+         time_BLK
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: true_cell
     use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
-    use ModMain,     ONLY: nI, nJ, nK, Dt
+    use ModMain,     ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, ExtraEintMin
     use ModUser,     ONLY: user_material_properties
@@ -922,10 +927,13 @@ contains
 
     integer :: i, j, k, iP
     real :: DeltaEinternal, Einternal, EinternalSi, PressureSi
+    real :: DtLocal
     !--------------------------------------------------------------------------
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
+
+    DtLocal = Dt
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -956,8 +964,9 @@ contains
 
        ! update ion pressure for energy exchange between ions and electrons
        if(UseElectronPressure .and. .not.UseIdealEos)then
+          if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-               + Dt*PointCoef_CB(i,j,k,iBlock)*( &
+               + DtLocal*PointCoef_CB(i,j,k,iBlock)*( &
                + ImplCoeff*(StateImpl_VG(iTeImpl,i,j,k) &
                -            PointImpl_CB(i,j,k,iBlock)) &
                + (1.0 - ImplCoeff)*(ImplOld_VCB(iTeImpl,i,j,k,iBlock) &
