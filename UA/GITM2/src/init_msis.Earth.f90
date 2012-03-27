@@ -93,8 +93,8 @@ subroutine init_msis
   real :: geo_lat, geo_lon, geo_alt, geo_lst,m,k, ut
   real, dimension(7)  :: ap = 10.0
 
-  real(4) :: hwm_utime, hwm_alt, hwm_lat, hwm_lon, hwm_lst
-  real(4) :: hwm_f107a, hwm_f107, hwm_ap(2), qw(2)
+  real*4 :: hwm_utime, hwm_alt, hwm_lat, hwm_lon, hwm_lst
+  real*4 :: hwm_f107a, hwm_f107, hwm_ap(2), qw(2)
 
   call report("init_msis",1)
 
@@ -310,8 +310,8 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   real :: AP_I(7), ffactor, no
   integer :: iyd
 
-  real(4) :: hwm_utime, hwm_alt, hwm_lat, hwm_lon, hwm_lst
-  real(4) :: hwm_f107a, hwm_f107, hwm_ap(2), qw(2)
+  real*4 :: hwm_utime, hwm_alt, hwm_lat, hwm_lon, hwm_lst
+  real*4 :: hwm_f107a, hwm_f107, hwm_ap(2), qw(2)
 
   !----------------------------------------------------------------------------
   AP_I = AP
