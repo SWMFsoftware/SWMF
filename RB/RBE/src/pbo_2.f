@@ -1,12 +1,12 @@
 c
 c                               pbo_2.f
 c  
-c  This is a modification of pbo.for from Dan Ober.  This code is linked to
-c  ram02_plsp.f.
+c  This is a modification of pbo.for from Dan Ober.  
+c  This code is linked to ram02_plsp.f.
 c
 c  Created on 14 May 2004 by Mei-Ching Fok, Code 692, NASA GSFC.
 c
-c*****************************************************************************
+c***************************************************************************
 
 c 07/3/2002 2:22:28 PM
 
@@ -15,12 +15,12 @@ ccc file pbo.for ccc
 cccccccccccccccccccc
 
 ccccccccccccccccccccccccccccccccccccccccc
-ccc subroutine initmain, plasmasphere ccc
+ccc subroutine RB_initmain, RB_plasmasphere ccc
 ccccccccccccccccccccccccccccccccccccccccc
 
 c MCF
-c     subroutine initmain()
-      subroutine initmain(thetamin,thetamax)
+c     subroutine RB_initmain()
+      subroutine RB_initmain(thetamin,thetamax)
       use rbe_cread1
 c MCF end
 
@@ -33,20 +33,20 @@ C MCF
 c     parameter (thetamin = 14.963217, thetamax = 60.0)
 c MCF end
 
-c Input for entry getgrid
+c Input for entry RB_getgrid
 c Input: nt, np size of thetagrid, phigrid arrays
 c Output: vthetacells, vphicells are put into thetagrid, phigrid
 
       integer nt, np
       real thetagrid(nt),phigrid(np)
 
-c inputs for entry setfluxtubevol
+c inputs for entry RB_setfluxtubevol
 c Input: nt, np size of thetagrid, phigrid arrays
 c input: fluxtubevol of sixe nt, np
 
       real fluxtubevol(nt,np)
 
-c inputs for entry setxygrid
+c inputs for entry RB_setxygrid
 c Input: nt, np size of thetagrid, phigrid arrays
 c input: gridx,gridy,gridoc of sixe nt, np
 
@@ -54,13 +54,13 @@ c input: gridx,gridy,gridoc of sixe nt, np
       real gridy(nt,np)
       real gridoc(nt,np)
 
-c inputs for getdensity
+c inputs for RB_getdensity
 c Input: nt, np size of thetagrid, phigrid arrays
 c input: density of sixe nt, np
 
       real density(nt,np)
 
-c inputs for getpot
+c inputs for RB_getpot
 c Input: nt, np size of thetagrid, phigrid arrays
 c input: pot of sixe nt, np
 c input: wc=0 corotating; wc=1 inertial 
@@ -68,13 +68,13 @@ c input: wc=0 corotating; wc=1 inertial
       real pot(nt,np)
       integer wc
 
-c Inputs for entry plasmasphere
+c Inputs for entry RB_plasmasphere
 c Input: Delt in second
       real delt
 c Input: par
       real par(2)
 
-c Inputs for entry saveplasmasphere
+c Inputs for entry RB_saveplasmasphere
 c Input: filename
       character filename*80
 
@@ -99,7 +99,7 @@ c mgridvr in meter/sec, and mgridvp in degree /sec
       real mgridvp(nthetacells,nphicells)
 c mgridn in particles / weber
       real mgridn(nthetacells,nphicells)
-c mgridhalf in particles / weber (Work space for upwind)
+c mgridhalf in particles / weber (Work space for RB_upwind)
       real mgridhalf(nthetacells,nphicells)
 c mgridden in particles / m**3
       real mgridden(nthetacells,nphicells)
@@ -120,7 +120,7 @@ c mgridoc, open(0) or closed(1) table
       integer nrcells
       real maxvr, maxvp, deltr, deltp, deltmax, time
 
-c variables for getgrid
+c variables for RB_getgrid
       real gdelr, gvrcell
 
       save nrcells,rmin,rmax,vrcells,vthetacells,
@@ -158,32 +158,32 @@ cMCF  type*,'delphi = ',delphi
 cMCF  type*, 'Number of middle grid cells = ',nrcells*nphicells
 
 cMCF  type*, 'Getting equatorial B field on middle grid'
-      call getmgridb(nrcells,nphicells,vrcells,mgridb)
+      call RB_getmgridb(nrcells,nphicells,vrcells,mgridb)
 
 cMCF  type*, 'Getting ionospheric B field on middle grid'
-      call getmgridbi(nrcells,nphicells,vthetacells,mgridbi)
+      call RB_getmgridbi(nrcells,nphicells,vthetacells,mgridbi)
 
 c get flux tube volumes
 cMCF   type*, 'Getting volume of flux tubes on middle grid'
-       call getdipolevol(nthetacells,nphicells,vthetacells,mgridvol)
+       call RB_getdipolevol(nthetacells,nphicells,vthetacells,mgridvol)
 
 c get equatorial locations of flux tubes
 cMCF  type*, 'Getting x, y values for flux tubes'
-      call getxydipole(nthetacells,nphicells,vthetacells,
+      call RB_getxydipole(nthetacells,nphicells,vthetacells,
      *   vphicells,mgridx,mgridy,mgridoc)
 
 c set initial particle distribution
 cMCF  type*, 'Setting initial content of flux tubes on middle grid'
-      call initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
+      call RB_initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
      *   mgridvol,mgridoc)
 
       return
 
 ccccccccccccccccccccc
-ccc entry getgrid ccc
+ccc entry RB_getgrid ccc
 ccccccccccccccccccccc
 
-      entry getgrid(thetagrid,nt,phigrid,np)
+      entry RB_getgrid(thetagrid,nt,phigrid,np)
 
       gdelr = ((rmax - rmin) / (float(nt-1)))
 
@@ -199,13 +199,13 @@ ccccccccccccccccccccc
       return
 
 cccccccccccccccccccccccccccc
-ccc entry setfluxtubevol ccc
+ccc entry RB_setfluxtubevol ccc
 cccccccccccccccccccccccccccc
 
-      entry setfluxtubevol(thetagrid,nt,phigrid,np,fluxtubevol)
+      entry RB_setfluxtubevol(thetagrid,nt,phigrid,np,fluxtubevol)
 
-cMCF  write(6,*) ' in setfluxtubevol'
-      call interpol2dpolar(thetagrid,nt,phigrid,np,fluxtubevol,
+cMCF  write(6,*) ' in RB_setfluxtubevol'
+      call RB_interpol2dpolar(thetagrid,nt,phigrid,np,fluxtubevol,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridvol)
       do i=1,nt
          do j=1,np
@@ -228,29 +228,29 @@ cMCF  write(6,*) ' in setfluxtubevol'
       return
 
 ccccccccccccccccccccccc
-ccc entry setxygrid ccc
+ccc entry RB_setxygrid ccc
 ccccccccccccccccccccccc
 
-      entry setxygrid(thetagrid,nt,phigrid,np,gridx,gridy,gridoc)
+      entry RB_setxygrid(thetagrid,nt,phigrid,np,gridx,gridy,gridoc)
 
-      call interpol2dpolar(thetagrid,nt,phigrid,np,gridx,
+      call RB_interpol2dpolar(thetagrid,nt,phigrid,np,gridx,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridx)
 
-      call interpol2dpolar(thetagrid,nt,phigrid,np,gridy,
+      call RB_interpol2dpolar(thetagrid,nt,phigrid,np,gridy,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridy)
 
-      call interpol2dpolar(thetagrid,nt,phigrid,np,gridoc,
+      call RB_interpol2dpolar(thetagrid,nt,phigrid,np,gridoc,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridoc)
 
       return
 
 ccccccccccccccccccccccccc
-ccc entry initdensity ccc
+ccc entry RB_initdensity ccc
 ccccccccccccccccccccccccc
 
 c MCF
-c     entry initdensity()
-      entry initdensity(itype)
+c     entry RB_initdensity()
+      entry RB_initdensity(itype)
 c MCF end
 
 c set initial particle distribution
@@ -258,8 +258,8 @@ cMCF  type*, 'Setting initial content of flux tubes on middle grid'
 
 c MCF 
       if (itype.eq.1) then
-         call initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
-     *                   mgridvol,mgridoc)
+         call RB_initmgridn(nrcells,nphicells,vrcells,mgridn,
+     *                      mgridden,mgridvol,mgridoc)
       else
          open(unit=32,file=outname//'_c.den',status='old',
      *        form='unformatted')
@@ -272,12 +272,12 @@ c MCF end
       return
 
 cccccccccccccccccccccccc
-ccc entry getdensity ccc
+ccc entry RB_getdensity ccc
 cccccccccccccccccccccccc
 
-      entry getdensity(thetagrid,nt,phigrid,np,density)
+      entry RB_getdensity(thetagrid,nt,phigrid,np,density)
 
-      call interpol2dpolar(vthetacells,nthetacells,vphicells,
+      call RB_interpol2dpolar(vthetacells,nthetacells,vphicells,
      *   nphicells,mgridden,thetagrid,nt,phigrid,np,density)
 
 C MCF
@@ -291,24 +291,24 @@ c MCF end
       return
 
 cccccccccccccccccccc
-ccc entry setpot ccc
+ccc entry RB_setpot ccc
 cccccccccccccccccccc
 
-      entry setpot(thetagrid,nt,phigrid,np,pot)
+      entry RB_setpot(thetagrid,nt,phigrid,np,pot)
 
-      call interpol2dpolar(thetagrid,nt,phigrid,np,pot,
+      call RB_interpol2dpolar(thetagrid,nt,phigrid,np,pot,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridpot)
 
-cMCF  type*, 'Differencing setpot on middle grid to get electric ',
+cMCF  type*, 'Differencing RB_setpot on middle grid to get electric ',
 cMCF *   'field'
-      call gradpot(nrcells,nphicells,vrcells,delr,delphi,mgridpot,
+      call RB_gradpot(nrcells,nphicells,vrcells,delr,delphi,mgridpot,
      *   mgrider,mgridep)
 
       maxvr = 0.0
       maxvp = 0.0
 
 cMCF  type*, 'Calculating the E cross B drift velocity on middle grid'
-      call ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,mgridb,
+      call RB_ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,mgridb,
      *   mgridvr,mgridvp,maxvr,maxvp)
 
 c deltr,deltp in units of seconds
@@ -333,23 +333,23 @@ c delt in units of seconds
       return
 
 cccccccccccccccccccc
-ccc entry getpot ccc
+ccc entry RB_getpot ccc
 cccccccccccccccccccc
 
-      entry getpot(thetagrid,nt,phigrid,np,pot,par,wc)
+      entry RB_getpot(thetagrid,nt,phigrid,np,pot,par,wc)
 
       print *, 'Getting electric potential on middle grid'
-      call getmgridpot(nrcells,nphicells,vrcells,vthetacells,
+      call RB_getmgridpot(nrcells,nphicells,vrcells,vthetacells,
      *   vphicells,mgridpot,par)
 
       if (wc.eq.1) then
-       call addcorotpot(nrcells,nphicells,vrcells,vthetacells,
+       call RB_addcorotpot(nrcells,nphicells,vrcells,vthetacells,
      *    vphicells,mgridpot)
       endif
 
       print *,'Got pot'
 
-      call interpol2dpolar(vthetacells,nthetacells,vphicells,
+      call RB_interpol2dpolar(vthetacells,nthetacells,vphicells,
      *   nphicells,mgridpot,thetagrid,nt,phigrid,np,pot)
 
       print *,'finnished'
@@ -357,21 +357,21 @@ cccccccccccccccccccc
       return
 
 cccccccccccccccccccccccccc
-ccc entry plasmasphere ccc
+ccc entry RB_plasmasphere ccc
 cccccccccccccccccccccccccc
 
-      entry plasmasphere(delt,par)
+      entry RB_plasmasphere(delt,par)
 
       if ((par(1).ne.pari(1)).or.(par(2).ne.pari(2))) then 
 
        print *, 'Getting electric potential on middle grid'
-       call getmgridpot(nrcells,nphicells,vrcells,vthetacells,
+       call RB_getmgridpot(nrcells,nphicells,vrcells,vthetacells,
      *    vphicells,mgridpot,par)
 
        print *, 
      *    'Differencing potential on middle grid to get electric ',
      *    'field'
-       call gradpot(nrcells,nphicells,vrcells,delr,delphi,mgridpot,
+       call RB_gradpot(nrcells,nphicells,vrcells,delr,delphi,mgridpot,
      *    mgrider,mgridep)
 
        maxvr = 0.0
@@ -379,8 +379,8 @@ cccccccccccccccccccccccccc
 
        print *,
      *    'Calculating the E cross B drift velocity on middle grid'
-       call ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,mgridb,
-     *    mgridvr,mgridvp,maxvr,maxvp)
+       call RB_ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,
+     *                 mgridb,mgridvr,mgridvp,maxvr,maxvp)
 
 c deltr,deltp in units of seconds
        deltr = (delr*re)/maxvr
@@ -406,7 +406,7 @@ c delt in units of seconds
 
       end if
 
-cMCF  type*, 'Upwind differencing on middle grid to advance ',
+cMCF  type*, 'RB_upwind differencing on middle grid to advance ',
 cMCF *   'solution in time'
 
       if (deltmax.ge.delt) deltmax = delt
@@ -422,17 +422,17 @@ cMCF  type*, 'Using a time step of ',deltmax,' seconds'
 c      type*,'Time = ',time
 c      type*,'Time step = ',deltmax
 
-c Upwind differencing on middle grid to advance solution in time
-c       call upwind(nrcells,nphicells,vrcells,delr,delphi,mgridn,
+c RB_upwind differencing on middle grid to advance solution in time
+c       call RB_upwind(nrcells,nphicells,vrcells,delr,delphi,mgridn,
 c     *    mgridvr,mgridvp,deltmax,mgridhalf)
 
-c Upwind/LaxWendroff-superbee differencing on middle grid to 
+c RB_upwind/LaxWendroff-RB_superbee differencing on middle grid to 
 c advance solution in time
-       call superbee(nrcells,nphicells,vrcells,delr,delphi,mgridn,
+       call RB_superbee(nrcells,nphicells,vrcells,delr,delphi,mgridn,
      *    mgridvr,mgridvp,deltmax,mgridhalf)
 
-c calculate filling and draining of flux tubes
-       call filling(nrcells,nphicells,vrcells,vthetacells,vphicells,
+c calculate RB_filling and draining of flux tubes
+       call RB_filling(nrcells,nphicells,vrcells,vthetacells,vphicells,
      *    mgridn,mgridden,mgridvol,mgridoc,mgridbi,deltmax)
 
        time = time + deltmax
@@ -447,14 +447,14 @@ cMCF  type*,'finished'
       return
 
 cccccccccccccccccccccccccccccc
-ccc entry saveplasmasphere ccc
+ccc entry RB_saveplasmasphere ccc
 cccccccccccccccccccccccccccccc
 
 c MCF
-c     entry saveplasmasphere(filename)
-      entry saveplasmasphere(t,tstart,itype)
+c     entry RB_saveplasmasphere(filename)
+      entry RB_saveplasmasphere(t,tstart,itype)
 
-c     call saveit(vthetacells,nthetacells,vphicells,nphicells,
+c     call RB_saveit(vthetacells,nthetacells,vphicells,nphicells,
 c    *   mgridden,mgridx,mgridy,mgridoc,filename)
 
       if (t.eq.tstart.and.itype.eq.1) then
@@ -481,25 +481,25 @@ c MCF end
       return
 
 cccccccccccccccccccccccccccccc
-ccc entry loadplasmasphere ccc
+ccc entry RB_loadplasmasphere ccc
 cccccccccccccccccccccccccccccc
 
-      entry loadplasmasphere(filename)
+      entry RB_loadplasmasphere(filename)
 
-      call loadit(vthetacells,nthetacells,vphicells,nphicells,
+      call RB_loadit(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridden,mgridx,mgridy,mgridoc,filename)
 
-      call denton(nthetacells,nphicells,mgridden,mgridvol,
+      call RB_denton(nthetacells,nphicells,mgridden,mgridvol,
      *    mgridoc,mgridn)
 
       return
       end
 
 ccccccccccccccccccccccccc
-ccc subroutine saveit ccc
+ccc subroutine RB_saveit ccc
 ccccccccccccccccccccccccc
 
-      subroutine saveit(vthetacells,nthetacells,vphicells,nphicells,
+      subroutine RB_saveit(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridden,mgridx,mgridy,mgridoc,filename)
 
 c Input: nthetacells, nphicells array index
@@ -531,10 +531,10 @@ c mgridoc, open(0) or closed(1) table
       end
 
 ccccccccccccccccccccccccc
-ccc subroutine loadit ccc
+ccc subroutine RB_loadit ccc
 ccccccccccccccccccccccccc
 
-      subroutine loadit(vthetacells,nthetacells,vphicells,nphicells,
+      subroutine RB_loadit(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridden,mgridx,mgridy,mgridoc,filename)
 
 c Input: filename
@@ -570,8 +570,8 @@ c Internal: mgridoc1, open(0) or closed(1) table
      *   form = 'formatted')
       read(10,*) nthetacells1, nphicells1
 
-      if (nthetacells1.ne.nthetacells2.or.nphicells1.ne.nphicells2) then
-       print *,'File size mismatch in subroutine Loadit'
+      if(nthetacells1.ne.nthetacells2.or.nphicells1.ne.nphicells2)then
+       print *,'File size mismatch in subroutine RB_loadit'
        stop
       endif
 
@@ -583,19 +583,19 @@ c Internal: mgridoc1, open(0) or closed(1) table
       read(10,*) mgridoc1
       close(unit = 10)
 
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
+      call RB_interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
      *   nphicells1,mgridden1,vthetacells,nthetacells,vphicells,
      *   nphicells,mgridden)
 
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
+      call RB_interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
      *   nphicells1,mgridx1,vthetacells,nthetacells,vphicells,
      *   nphicells,mgridx)
 
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
+      call RB_interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
      *   nphicells1,mgridy1,vthetacells,nthetacells,vphicells,
      *   nphicells,mgridy)
 
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
+      call RB_interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
      *   nphicells1,mgridoc1,vthetacells,nthetacells,vphicells,
      *   nphicells,mgridoc)
 
@@ -603,50 +603,50 @@ c Internal: mgridoc1, open(0) or closed(1) table
       end
 
 ccccccccccccccccccccccccccc
-ccc function saturation ccc
+ccc function RB_saturation ccc
 ccccccccccccccccccccccccccc
 
-      real function saturation(l)
+      real function RB_saturation(l)
 
-c Carpenter and Anderson's saturation density in units of
+c Carpenter and Anderson's RB_saturation density in units of
 c particles / m**3 
 c Carpenter and Anderson, JGR, p. 1097, 1992.
 
 c input: l in re
       real l
 
-c output: saturation in particles / m**3
+c output: RB_saturation in particles / m**3
 
-      saturation = (1.0e6) * 10.0**((-0.3145*l)+3.9043)
+      RB_saturation = (1.0e6) * 10.0**((-0.3145*l)+3.9043)
 
       return
       end
 
 ccccccccccccccccccccccc
-ccc function trough ccc
+ccc function RB_trough ccc
 ccccccccccccccccccccccc
 
-      real function trough(l)
+      real function RB_trough(l)
 
-c Carpenter and Anderson's trough density in units of
+c Carpenter and Anderson's RB_trough density in units of
 c particles / m**3 
 c Carpenter and Anderson, JGR, p. 1097, 1992.
 
 c input: l in re
       real l
 
-c output: trough in particles / m**3
+c output: RB_trough in particles / m**3
 
-      trough = (1.0e6) * 0.5 * ((10.0/l)**4.0)
+      RB_trough = (1.0e6) * 0.5 * ((10.0/l)**4.0)
 
       return
       end
 
 cccccccccccccccccccccccccccccccccc
-ccc function DipoleFluxTubeVol ccc
+ccc function RB_dipoleFluxTubeVol ccc
 cccccccccccccccccccccccccccccccccc
 
-      real function dipoleFluxTubeVol(l)
+      real function RB_dipoleFluxTubeVol(l)
 
 c calculates the unit volume of a dipole magnetic field flux tube
 c (the volume in m**3 per unit of magnetic flux(weber))
@@ -657,7 +657,7 @@ c 1 weber = Tesla-m**2 or joule/ampere or volt-sec
 c input: l in re
       real l
 
-c output: dipoleFluxTubevol in m/Tesla or m**3/weber
+c output: RB_dipoleFluxTubeVol in m/Tesla or m**3/weber
 
       real pi, re, mu, m
 
@@ -666,7 +666,7 @@ c output: dipoleFluxTubevol in m/Tesla or m**3/weber
       mu = 4.0*pi*1.0e-7    ! newtons/amps**2
       m = 8.05e22           ! amps*meter**2
 
-      dipoleFluxTubeVol = ((4.0*pi)/(mu*m)) * (32.0/35.0) * (l**4) * 
+      RB_dipoleFluxTubeVol = ((4.0*pi)/(mu*m)) * (32.0/35.0) * (l**4)* 
      *    sqrt(1.0-(1.0/l)) * (1.0+(1.0/(2.0*l))+(3.0/(8.0*l*l))+
      *    (5.0/(16.0*l*l*l))) * (re**4.0)
 
@@ -674,10 +674,10 @@ c output: dipoleFluxTubevol in m/Tesla or m**3/weber
       end
 
 ccccccccccccccccccccccccccc
-ccc subroutine mydipole ccc
+ccc subroutine RB_mydipole ccc
 ccccccccccccccccccccccccccc
 
-      subroutine mydipole(r,theta,br,btheta)
+      subroutine RB_mydipole(r,theta,br,btheta)
 
 c calculates the two components of a dipole magnetic field
 
@@ -707,10 +707,10 @@ c 1 tesla = 1 newton/(ampere-meter)
       end
 
 cccccccccccccccccccccccccc
-ccc subroutine dipoleb ccc
+ccc subroutine RB_dipoleb ccc
 cccccccccccccccccccccccccc
 
-      subroutine dipoleb(r,theta,eb)
+      subroutine RB_dipoleb(r,theta,eb)
 
 c calculates the magnitude of a dipole magnetic field
 c 1 tesla = 1 newton/(ampere-meter)
@@ -737,10 +737,10 @@ c output: eb in tesla
       end
 
 ccccccccccccccccccccccccccccccc
-ccc subroutine DipoleLshell ccc
+ccc subroutine RB_dipoleLshell ccc
 ccccccccccccccccccccccccccccccc
 
-      subroutine dipoleLshell(r,theta,l)
+      subroutine RB_dipoleLshell(r,theta,l)
 
 c calculates the L parameter of a dipole magnetic field line
 
@@ -763,10 +763,10 @@ c output: l parameter in re
       end
 
 ccccccccccccccccccccccc
-ccc subroutine coro ccc
+ccc subroutine RB_coro ccc
 ccccccccccccccccccccccc
 
-      subroutine coro(r,theta,vphi)
+      subroutine RB_coro(r,theta,vphi)
 
 c calculates the corotation velocity in meter / sec
 
@@ -792,10 +792,10 @@ c 1 coulomb = 1 amp sec
       end
 
 ccccccccccccccccccccccccc
-ccc subroutine dipsph ccc
+ccc subroutine RB_dipsph ccc
 ccccccccccccccccccccccccc
 
-      subroutine dipsph(s,q,r,theta,j)
+      subroutine RB_dipsph(s,q,r,theta,j)
 
 c converts dipole coords into spherical ones and vica versa
 c (theta in degrees).
@@ -828,7 +828,7 @@ c output:     r,teta          s,q
         end if
         step = step / 2.0
         if (step.eq.0.0) then
-         print *,'dipsph failed'
+         print *,'RB_dipsph failed'
          print *,f,ft,err,g/rad,step/rad
          stop
         end if
@@ -847,10 +847,10 @@ c output:     r,teta          s,q
       end
 
 ccccccccccccccccccccccccc
-ccc subroutine vpocar ccc
+ccc subroutine RB_vpocar ccc
 ccccccccccccccccccccccccc
 
-      subroutine vpocar(theta,vr,vtheta,vx,vy)
+      subroutine RB_vpocar(theta,vr,vtheta,vx,vy)
 
 c Calculates cartesian vector components from polar
 
@@ -876,10 +876,10 @@ c Output: vx,vy vector components
       end
 
 cccccccccccccccccccccccccccc
-ccc subroutine getmgridb ccc
+ccc subroutine RB_getmgridb ccc
 cccccccccccccccccccccccccccc
 
-      subroutine getmgridb(nrcells,nphicells,vrcells,mgridb)
+      subroutine RB_getmgridb(nrcells,nphicells,vrcells,mgridb)
 
 c input: nrcells, nphicells array index
       integer nrcells, nphicells
@@ -893,7 +893,7 @@ c output: mgridb in tesla
       real bfield
 
       do i = 1, nrcells
-       call dipoleb(vrcells(i),90.0,bfield)
+       call RB_dipoleb(vrcells(i),90.0,bfield)
        do j = 1, nphicells
         mgridb(i,j) = bfield
        enddo
@@ -903,10 +903,10 @@ c output: mgridb in tesla
       end
 
 ccccccccccccccccccccccccccccc
-ccc subroutine getmgridbi ccc
+ccc subroutine RB_getmgridbi ccc
 ccccccccccccccccccccccccccccc
 
-      subroutine getmgridbi(nrcells,nphicells,vthetacells,mgridbi)
+      subroutine RB_getmgridbi(nrcells,nphicells,vthetacells,mgridbi)
 
 c input: nrcells, nphicells array index
       integer nrcells, nphicells
@@ -920,7 +920,7 @@ c output: mgridbi in tesla
       real bfield
 
       do i = 1, nrcells
-       call dipoleb(1.0,vthetacells(i),bfield)
+       call RB_dipoleb(1.0,vthetacells(i),bfield)
        do j = 1, nphicells
         mgridbi(i,j) = bfield
        enddo
@@ -930,10 +930,10 @@ c output: mgridbi in tesla
       end
 
 cccccccccccccccccccccccccc
-ccc subroutine ecrossb ccc
+ccc subroutine RB_ecrossb ccc
 cccccccccccccccccccccccccc
 
-      subroutine ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,
+      subroutine RB_ecrossb(nrcells,nphicells,vrcells,mgrider,mgridep,
      *              mgridb,mgridvr,mgridvp,maxvr,maxvp)
 
 c Input: nrcells, nphicells array index
@@ -968,7 +968,7 @@ c Limit the velocity
         if (mgridvr(i,j).lt.-20000.0) mgridvr(i,j) = -20000.0
         if (abs(mgridvr(i,j)).gt.maxvr) maxvr = abs(mgridvr(i,j))
         vt = - mgrider(i, j) / mgridb(i,j)
-        call coro(vrcells(i),90.0,vc)
+        call RB_coro(vrcells(i),90.0,vc)
         mgridvp(i,j) = (vt + vc)/(vrcells(i)*re*rad)
 c Limit the velocity
         if (mgridvp(i,j).gt.0.1) mgridvp(i,j) = 0.1
@@ -981,10 +981,10 @@ c Limit the velocity
       end
 
 ccccccccccccccccccccccccccccccc
-ccc subroutine getdipolevol ccc
+ccc subroutine RB_getdipolevol ccc
 ccccccccccccccccccccccccccccccc
 
-      subroutine getdipolevol(nthetacells,nphicells,
+      subroutine RB_getdipolevol(nthetacells,nphicells,
      *    vthetacells,mgridvol)
 
 c Input: nthetacells, nphicells array index
@@ -1006,7 +1006,7 @@ c Output: mgridvol in m**3 / weber
       do i = 1, nthetacells
         st = sin(vthetacells(i)*rad)
         vrcell = 1.0/(st*st)
-        dvol = dipolefluxtubevol(vrcell)
+        dvol = RB_dipoleFluxTubeVol(vrcell)
        do j = 1, nphicells
         mgridvol(i,j) = dvol
        enddo
@@ -1016,10 +1016,10 @@ c Output: mgridvol in m**3 / weber
       end
 
 cccccccccccccccccccccccccccccc
-ccc subroutine getxydipole ccc
+ccc subroutine RB_getxydipole ccc
 cccccccccccccccccccccccccccccc
 
-      subroutine getxydipole(nthetacells,nphicells,
+      subroutine RB_getxydipole(nthetacells,nphicells,
      *   vthetacells,vphicells,mgridx,mgridy,mgridoc)
 
 c Theta is zero at the north pole, positive towards the equator 
@@ -1067,11 +1067,11 @@ c mgridoc, open(0) or closed(1) table
       end
 
 ccccccccccccccccccccccccccccc
-ccc subroutine initmgridn ccc
+ccc subroutine RB_initmgridn ccc
 ccccccccccccccccccccccccccccc
 
-      subroutine initmgridn(nrcells,nphicells,vrcells,mgridn,mgridden,
-     *   mgridvol,mgridoc)
+      subroutine RB_initmgridn(nrcells,nphicells,vrcells,mgridn,
+     *                         mgridden,mgridvol,mgridoc)
 
 c Input: nrcells, nphicells array index
       integer nrcells, nphicells
@@ -1095,7 +1095,7 @@ c mgridden in units of particles per m**3
       real dn
 
       do i = 1, nrcells-1
-       dn = saturation(vrcells(i))
+       dn = RB_saturation(vrcells(i))
        do j = 1, nphicells
         if (mgridoc(i,j).gt.0.999) then
          mgridden(i,j) = dn
@@ -1107,7 +1107,7 @@ c mgridden in units of particles per m**3
        enddo
       enddo
       i = nrcells
-      dn = trough(vrcells(i))
+      dn = RB_trough(vrcells(i))
       do j = 1, nphicells
        if (mgridoc(i,j).gt.0.999) then
         mgridden(i,j) = dn
@@ -1122,10 +1122,10 @@ c mgridden in units of particles per m**3
       end
 
 ccccccccccccccccccccccccc
-ccc subroutine denton ccc
+ccc subroutine RB_denton ccc
 ccccccccccccccccccccccccc
 
-      subroutine denton(nthetacells,nphicells,mgridden,mgridvol,
+      subroutine RB_denton(nthetacells,nphicells,mgridden,mgridvol,
      *    mgridoc,mgridn)
 
 c Input: nthetacells, nphicells array index
@@ -1154,10 +1154,10 @@ c Output: mgridn in particles / weber
       end
 
 cccccccccccccccccccccccccc
-ccc subroutine filling ccc
+ccc subroutine RB_filling ccc
 cccccccccccccccccccccccccc
 
-      subroutine filling(nrcells,nphicells,vrcells,vthetacells,
+      subroutine RB_filling(nrcells,nphicells,vrcells,vthetacells,
      *    vphicells,mgridn,mgridden,mgridvol,mgridoc,mgridbi,delt)
 
 c Input: nrcells, nphicells array index
@@ -1191,7 +1191,7 @@ c particles/m**2/sec
       fmax  = 2.0e12
 
       do i = 1, nrcells
-       dsat = saturation(vrcells(i))
+       dsat = RB_saturation(vrcells(i))
        do j = 1, nphicells
         if (mgridoc(i,j).gt.0.999) then
          if ((vphicells(j).ge.90.0).and.(vphicells(j).le.270.0)) then
@@ -1213,7 +1213,7 @@ c particles/m**2/sec
           mgridden(i,j) = mgridn(i,j) / mgridvol(i,j)
          end if
          if (mgridden(i,j).le.0.0) then
-          print *,'subroutine: filling'
+          print *,'subroutine: RB_filling'
           print *,'i,j,mgridden = ',i,j,mgridden(i,j)
           print *,'mgridoc,mgridvol',mgridoc(i,j),mgridvol(i,j)
           print *,'mgridden',mgridden(i,j)
@@ -1237,13 +1237,13 @@ c         type*,mgridoc(i,j),i,j
       end
 
 ccccccccccccccccccccccccc
-ccc subroutine upwind ccc
+ccc subroutine RB_upwind ccc
 ccccccccccccccccccccccccc
 
-      subroutine upwind(nrcells,nphicells,vrcells,delr,delphi,mgridn,
-     *   mgridvr,mgridvp,delt,mgridhalf)
+      subroutine RB_upwind(nrcells,nphicells,vrcells,delr,delphi,
+     *   mgridn,mgridvr,mgridvp,delt,mgridhalf)
 
-C First order upwind differencing 
+C First order RB_upwind differencing 
 
 c Input: nrcells, nphicells array index
       integer nrcells, nphicells
@@ -1283,7 +1283,7 @@ c do the first r cell
       do j = 1, nphicells
        if (abs(mgridvr(i,j)).gt.small) then
         if (mgridvr(i,j).gt.0.0) then
-         ibn = saturation(vrcells(i)) * dipolefluxtubevol(vrcells(i))
+         ibn=RB_saturation(vrcells(i))*RB_dipoleFluxTubeVol(vrcells(i))
          mgridhalf(i,j) = mgridn(i,j)  - 
      *      (mgridvr(i,j)*delret) *
      *      (mgridn(i,j) - ibn)
@@ -1326,7 +1326,7 @@ c do the last r cell
      *      (mgridvr(i,j)*delret) *
      *      (mgridn(i,j) - mgridn(im,j))
         else
-         obn = trough(6.6) * dipolefluxtubevol(6.6)
+         obn = RB_trough(6.6) * RB_dipoleFluxTubeVol(6.6)
          mgridhalf(i,j) = mgridn(i,j)  - 
      *      (mgridvr(i,j)*delret) *
      *      (obn - mgridn(i,j))
@@ -1401,16 +1401,16 @@ c Do the last phi cell
       end
 
 ccccccccccccccccccccccccccc
-ccc subroutine superbee ccc
+ccc subroutine RB_superbee ccc
 ccccccccccccccccccccccccccc
 
-      subroutine superbee(nrcells,nphicells,vrcells,delr,delphi,mgridn,
-     *   mgridvr,mgridvp,delt,mgridhalf)
+      subroutine RB_superbee(nrcells,nphicells,vrcells,delr,delphi,
+     *                       mgridn,mgridvr,mgridvp,delt,mgridhalf)
 
-C Mixed first order upwind and
+C Mixed first order RB_upwind and
 c second order Lax-Wendroff 
 c differencing with the 
-c Superbee limiter function
+c RB_superbee limiter function
 
 c Input: nrcells, nphicells array index
       integer nrcells, nphicells
@@ -1461,7 +1461,7 @@ c do the first r cell
       do j = 1, nphicells
        if (abs(mgridvr(i,j)).gt.small) then
         if (mgridvr(i,j).gt.0.0) then
-         ibn = saturation(vrcells(i)) * dipolefluxtubevol(vrcells(i))
+         ibn=RB_saturation(vrcells(i))*RB_dipoleFluxTubeVol(vrcells(i))
          mgridhalf(i,j) = mgridn(i,j)  - 
      *      (mgridvr(i,j)*delret) *
      *      (mgridn(i,j) - ibn)
@@ -1507,7 +1507,7 @@ c courant number
          cou = delret*mgridvr(i,j)
 c sign of courant number
          scou = cou / (abs(cou))
-c upwind
+c RB_upwind
          fphup = 0.5*((1+scou)*mgridn(i,j) + (1-scou)*mgridn(ip,j))
          fmhup = 0.5*((1+scou)*mgridn(im,j) + (1-scou)*mgridn(i,j))
 c lax-Wendroff
@@ -1618,7 +1618,7 @@ c do the last r cell
      *      (mgridvr(i,j)*delret) *
      *      (mgridn(i,j) - mgridn(im,j))
         else
-         obn = trough(6.6) * dipolefluxtubevol(6.6)
+         obn = RB_trough(6.6) * RB_dipoleFluxTubeVol(6.6)
          mgridhalf(i,j) = mgridn(i,j)  - 
      *      (mgridvr(i,j)*delret) *
      *      (obn - mgridn(i,j))
@@ -1671,7 +1671,7 @@ c courant number
          cou = delphit*mgridvp(i,j)
 c sign of courant number
          scou = cou/abs(cou)
-c upwind
+c RB_upwind
          fphup = 0.5*((1+scou)*mgridhalf(i,j) + 
      *      (1-scou)*mgridhalf(i,jp))
          fmhup = 0.5*((1+scou)*mgridhalf(i,jm) + 
@@ -1763,10 +1763,10 @@ c difference
       end
 
 ccccccccccccccccccccccccccccc
-ccc subroutine epotsimple ccc
+ccc subroutine RB_epotsimple ccc
 ccccccccccccccccccccccccccccc
 
-      subroutine epotsimple(dtheta,dphi,kp,pot)
+      subroutine RB_epotsimple(dtheta,dphi,kp,pot)
 
 c input: dtheta, and dphi in degrees
 c phi is zero at 24 MLT positive towards dawn
@@ -1808,10 +1808,10 @@ c            5                        3675               7
       end
 
 cccccccccccccccccccccccccccc
-ccc subroutine epotsojka ccc
+ccc subroutine RB_epotsojka ccc
 cccccccccccccccccccccccccccc
 
-      subroutine epotsojka(dtheta,dphi,kp,pot)
+      subroutine RB_epotsojka(dtheta,dphi,kp,pot)
 
 c input: dphi,dtheta (spherical coordinates) in degrees
 c theta is zero at the pole and 
@@ -1948,10 +1948,10 @@ c output: pot potential in volts
       end
 
 cccccccccccccccccccccccccccccc
-ccc subroutine getmgridpot ccc
+ccc subroutine RB_getmgridpot ccc
 cccccccccccccccccccccccccccccc
 
-      subroutine getmgridpot(nrcells,nphicells,vrcells,vthetacells,
+      subroutine RB_getmgridpot(nrcells,nphicells,vrcells,vthetacells,
      *   vphicells,mgridpot,par)
 
 c Get the electric potential on the grid
@@ -1978,10 +1978,10 @@ c Output: mgridpot in volts
        do j = 1, nphicells
         mgridpot(i,j) = 0.0
         if (par(1).eq.1.0) then
-         call epotsimple(vthetacells(i),vphicells(j),par(2),pot)
+         call RB_epotsimple(vthetacells(i),vphicells(j),par(2),pot)
          mgridpot(i,j) = mgridpot(i,j) + pot
         else if (par(1).eq.2.0) then
-         call epotsojka(vthetacells(i),vphicells(j),par(2),pot)
+         call RB_epotsojka(vthetacells(i),vphicells(j),par(2),pot)
          mgridpot(i,j) = mgridpot(i,j) + pot
         else
          print *,'par(1) ne 1 or 2'
@@ -1994,10 +1994,10 @@ c Output: mgridpot in volts
       end
 
 cccccccccccccccccccccccccccccc
-ccc subroutine addcorotpot ccc
+ccc subroutine RB_addcorotpot ccc
 cccccccccccccccccccccccccccccc
 
-      subroutine addcorotpot(nrcells,nphicells,vrcells,vthetacells,
+      subroutine RB_addcorotpot(nrcells,nphicells,vrcells,vthetacells,
      *   vphicells,mgridpot)
 
 c Get the corotation electric potential on the grid
@@ -2012,7 +2012,7 @@ c Output: mgridpot in volts
 
       real pi, re, w, mu, m
       integer i, j
-      real coro
+      real RB_coro
 
       pi = 3.14159                    ! rad
       re = 6.378e6                    ! radius of Earth in meters
@@ -2021,9 +2021,9 @@ c Output: mgridpot in volts
       m = 8.05e22                     ! amps*meter**2
 
       do i = 1, nrcells
-       coro = - (w*mu*m) / (4.0*pi*vrcells(i)*re)
+       RB_coro = - (w*mu*m) / (4.0*pi*vrcells(i)*re)
        do j = 1, nphicells
-        mgridpot(i,j) = mgridpot(i,j) + coro
+        mgridpot(i,j) = mgridpot(i,j) + RB_coro
        enddo
       enddo
 
@@ -2031,10 +2031,10 @@ c Output: mgridpot in volts
       end
 
 cccccccccccccccccccccccccc
-ccc subroutine gradpot ccc
+ccc subroutine RB_gradpot ccc
 cccccccccccccccccccccccccc
 
-      subroutine gradpot(nrcells,nphicells,vrcells,delr,delphi,
+      subroutine RB_gradpot(nrcells,nphicells,vrcells,delr,delphi,
      *   mgridpot,mgrider,mgridep)
 
 c Calculates the two components of the electric field
@@ -2142,10 +2142,10 @@ c Output: mgrider, mgridep in volts/meter
       end
 
 ccccccccccccccccccccccc
-ccc subroutine hunt ccc
+ccc subroutine RB_HUNT ccc
 ccccccccccccccccccccccc
 
-      SUBROUTINE HUNT(XX,N,X,JLO)
+      SUBROUTINE RB_HUNT(XX,N,X,JLO)
 c
 c if x.le.min(xx) then jlo = 0
 c if x.gt.max(xx) then jlo = n
@@ -2219,10 +2219,10 @@ c     END
 c MCF end
 
 cccccccccccccccccccccccccccccccccc
-ccc subroutine interpol2dpolar ccc
+ccc subroutine RB_interpol2dpolar ccc
 cccccccccccccccccccccccccccccccccc
 
-      subroutine interpol2dpolar(theta1,ntheta1,phi1, 
+      subroutine RB_interpol2dpolar(theta1,ntheta1,phi1, 
      *   nphi1,data1,theta2,ntheta2,phi2,nphi2,data2)
 
 c interpolate/extrapolate values from data1 into data2
@@ -2239,27 +2239,27 @@ c interpolate/extrapolate values from data1 into data2
 
       do i = 1, ntheta2
        if (theta2(i).lt.0.0) then
-        print *,'interpol2dpolar: theta2(',i,') is less than zero'
+        print *,'RB_interpol2dpolar: theta2(',i,') is less than zero'
         stop
        endif
        if (theta2(i).gt.90.0) then
-        print *,'interpol2dpolar: theta2(',i,') is greater than 90'
+        print *,'RB_interpol2dpolar: theta2(',i,') is greater than 90'
         stop
        endif
-       call hunt(theta1,ntheta1,theta2(i),ii)
+       call RB_HUNT(theta1,ntheta1,theta2(i),ii)
        if (ii.eq.0) ii = 1
        if (ii.eq.ntheta1) ii = ntheta1 - 1
        stheta = (theta2(i)-theta1(ii))/(theta1(ii+1)-theta1(ii))
        do j = 1, nphi2
         if (phi2(j).lt.0.0) then
-         print *,'interpol2dpolar: phi2(',j,') is less than zero'
+         print *,'RB_interpol2dpolar: phi2(',j,') is less than zero'
          stop
         endif
         if (phi2(j).gt.360.0) then
-         print *,'interpol2dpolar: phi2(',j,') is greater than 360'
+         print *,'RB_interpol2dpolar: phi2(',j,') is greater than 360'
          stop
         endif
-        call hunt(phi1,nphi1,phi2(j),jj)
+        call RB_HUNT(phi1,nphi1,phi2(j),jj)
         if (jj.eq.0) then
          jj = nphi1
          jjp = 1
@@ -2298,11 +2298,11 @@ c interpolate/extrapolate values from data1 into data2
       end
 
 cccccccccccccccccccccccccc
-ccc subroutine savet96 ccc
+ccc subroutine RB_savet96 ccc
 cccccccccccccccccccccccccc
 
-      subroutine savet96(vthetacells,nthetacells,vphicells,nphicells,
-     *   mgridvol,mgridx,mgridy,mgridoc,parmod,filename)
+      subroutine RB_savet96(vthetacells,nthetacells,vphicells,
+     *   nphicells,mgridvol,mgridx,mgridy,mgridoc,parmod,filename)
 
 c Input: nthetacells, nphicells array index
       integer nthetacells, nphicells
@@ -2335,11 +2335,11 @@ c Save file name
       end
 
 cccccccccccccccccccccccccc
-ccc subroutine readt96 ccc
+ccc subroutine RB_readt96 ccc
 cccccccccccccccccccccccccc
 
-      subroutine readt96(vthetacells,nthetacells,vphicells,nphicells,
-     *   mgridvol,mgridx,mgridy,mgridoc,parmod,filename)
+      subroutine RB_readt96(vthetacells,nthetacells,vphicells,
+     *   nphicells,mgridvol,mgridx,mgridy,mgridoc,parmod,filename)
 
 c Input: nthetacells, nphicells array index
       integer nthetacells, nphicells

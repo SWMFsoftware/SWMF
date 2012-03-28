@@ -142,28 +142,28 @@ subroutine rbe_init
 
   if (iplsp.eq.1) then
      call timing_start('rbe_initmain')
-     call initmain(colat(ir),colat(1)) 
+     call RB_initmain(colat(ir),colat(1)) 
      call timing_stop('rbe_initmain')
      call timing_start('rbe_set_flux_tube')
-     call setfluxtubevol(colat,ir,xmltd,ip,volume)
+     call RB_setfluxtubevol(colat,ir,xmltd,ip,volume)
      call timing_stop('rbe_set_flux_tube')
      call timing_start('rbe_set_xy_grid')
-     call setxygrid(colat,ir,xmltd,ip,xo,yo,gridoc)
+     call RB_setxygrid(colat,ir,xmltd,ip,xo,yo,gridoc)
      call timing_stop('rbe_set_xy_grid')
      call timing_start('rbe_init_density')
-     call initdensity(itype)  ! saturated plasmasphere when itype=1
+     call RB_initdensity(itype)  ! saturated plasmasphere when itype=1
      call timing_stop('rbe_init_density')
      if (itype.eq.1) then     ! initial warm up of the plasmasphere
         call timing_start('rbe_set_pot')
-        call setpot(colat,ir,xmltd,ip,potent)
+        call RB_setpot(colat,ir,xmltd,ip,potent)
         call timing_stop('rbe_set_pot')
         delt=86400.              
         call timing_start('rbe_plasmasphere')
-        call plasmasphere(delt,par)
+        call RB_plasmasphere(delt,par)
         call timing_stop('rbe_plasmasphere')
      endif
      call timing_start('rbe_get_density')
-     call getdensity(colat,ir,xmltd,ip,density)
+     call RB_getdensity(colat,ir,xmltd,ip,density)
      call timing_stop('rbe_get_density')
   endif
 
@@ -201,8 +201,8 @@ subroutine rbe_run
      vswb0,xnswb0,itype,ibset,irm,irm0,iba)
      call E_change(f2,d4,ekev,elb,eub,e_l,ecbf,iba,iw1,iw2)
      if (iplsp.eq.1) then
-        call setfluxtubevol(colat,ir,xmltd,ip+1,volume)
-        call setxygrid(colat,ir,xmltd,ip+1,xo,yo,gridoc)
+        call RB_setfluxtubevol(colat,ir,xmltd,ip+1,volume)
+        call RB_setxygrid(colat,ir,xmltd,ip+1,xo,yo,gridoc)
      endif
      if (js.eq.2) call cepara(dt,ekev,Hdens,v,irm,iw1,iw2)
   endif
@@ -256,8 +256,8 @@ subroutine rbe_run
      vswb0,xnswb0,itype,ibset,irm,irm0,iba)
      call E_change(f2,d4,ekev,elb,eub,e_l,ecbf,iba,iw1,iw2)
      if (iplsp.eq.1) then
-        call setfluxtubevol(colat,ir,xmltd,ip+1,volume)
-        call setxygrid(colat,ir,xmltd,ip+1,xo,yo,gridoc)
+        call RB_setfluxtubevol(colat,ir,xmltd,ip+1,volume)
+        call RB_setxygrid(colat,ir,xmltd,ip+1,xo,yo,gridoc)
      endif
      if (js.eq.2) call cepara(dt,ekev,Hdens,v,irm,iw1,iw2)
   endif
@@ -301,10 +301,10 @@ subroutine rbe_run
   endif
   ! update the plasmasphere density
   if (iplsp.eq.1) then
-     call setpot(colat,ir,xmltd,ip+1,potent)
+     call RB_setpot(colat,ir,xmltd,ip+1,potent)
      delt=2.*dt
-     call plasmasphere(delt,par)
-     call getdensity(colat,ir,xmltd,ip+1,density)
+     call RB_plasmasphere(delt,par)
+     call RB_getdensity(colat,ir,xmltd,ip+1,density)
   endif
 
   !  Print results
@@ -2262,7 +2262,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
      write(UnitTmp_) eclc
      write(UnitTmp_) ecce
      close(UnitTmp_)
-     if (iplsp.eq.1) call saveplasmasphere(t,tstart,itype)
+     if (iplsp.eq.1) call RB_saveplasmasphere(t,tstart,itype)
      
      ! Write the restart.H file to be included at restart
      open(unit=UnitTmp_,file='RB/restartOUT/restart.H')
@@ -2605,7 +2605,7 @@ subroutine driftlp(t,dt1,f2,k,m,vl,cl,cp,ro,rb,fb,dlati,iba,irm,n)
         if (f2(i,j,k,m).lt.0..and.f2(i,j,k,m).gt.-1.e-20) f2(i,j,k,m)=0.
         if (f2(i,j,k,m).lt.0.) then
            if (iup.eq.0) then
-              iup=1         ! use upwind scheme when high res. method fails
+              iup=1         ! use RB_upwind scheme when high res. method fails
               fal(1:ir,1:ip)=fupl(1:ir,1:ip)
               fap(1:ir,1:ip)=fupp(1:ir,1:ip)
               goto 1
@@ -2735,7 +2735,7 @@ subroutine FLS_2or(ibc,fb0,fb1,ipt,c,f,fa)
               ! MC limiter with beta parameter
               xlimiter = min(BetaLimiter*r, BetaLimiter, 0.5*(1+r))
            else
-              ! Superbee limiter
+              ! superbee limiter
               xlimiter=max(min(2.*r,1.),min(r,2.))
            end if
            corr=-0.5*(c(i)-xsign)*x      
@@ -2800,7 +2800,7 @@ subroutine interFlux(cl,cp,f,fal,fap,fupl,fupp)
         endif
         ! find fap
         xsign=sign(1.,cp(i,j))
-        fupp(i,j)=0.5*(1.+xsign)*fwbc(i,j)+0.5*(1.-xsign)*fwbc(i,j1)   ! upwind
+        fupp(i,j)=0.5*(1.+xsign)*fwbc(i,j)+0.5*(1.-xsign)*fwbc(i,j1)   ! RB_upwind
         if (UseCentralDiff) then
            flw=0.5*fwbc(i,j)+0.5*fwbc(i,j1)   ! Central diff
         else
