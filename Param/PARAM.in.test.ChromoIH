@@ -54,7 +54,7 @@ shell0			NameArea
 25.0			Radius2
 
 #THINCURRENTSHEET
-F			DoThinCurrentSheet
+T			DoThinCurrentSheet
 
 #INNERBOUNDARY
 buffergrid		TypeBcInner
