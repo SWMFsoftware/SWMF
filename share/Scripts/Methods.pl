@@ -6,11 +6,11 @@ $All = $a;
 $Outfile = $o; $Outfile = "RenameList.pl" unless $Outfile;
 
 #BOP
-#!ROUTINE: Methods.pl - Collect subroutine, function and module names
+#!ROUTINE: Methods.pl - Collect subroutine, entry, function and module names
 #!DESCRIPTION:
 # This script can be used to avoid name conflicts between components.
-# It collects the subroutine, function and module names from Fortran files
-# and creates a renaming list which has the correct component prefix.
+# It collects the subroutine, entry, function and module names from Fortran 
+# files and creates a renaming list which has the correct component prefix.
 # For example 
 # \begin{verbatim}
 # subroutine read_param
@@ -33,8 +33,8 @@ $Outfile = $o; $Outfile = "RenameList.pl" unless $Outfile;
 if($Help or $help){
     print '
 This script can be used to avoid name conflicts between components.
-It collects the subroutine and function names from Fortran files
-and creates a renaming list which has the correct component prefix.
+It collects the subroutine, entry, function and module names from Fortran 
+files and creates a renaming list which has the correct component prefix.
 The output list can be used by Rename.pl to do the actual renaming.
 
 For components EE, OH, IH, SC, LC and GM method names starting with
@@ -135,6 +135,13 @@ foreach $source (@source){
 	    push(@subroutine,$subroutine) if $Debug;
 	}
 
+        # enrtry XXX
+	if(/^\s*entry\s+(\w+)/i){              
+	    $entry = $+;
+	    $method{lc($entry)}=$entry;             # Use lower case for key
+	    push(@entry,$entry) if $Debug;
+	}
+
 	# [recursive] [type] function XXX
 	if(/^\s*
 	   (recursive\s+)?             # recursive
@@ -160,7 +167,7 @@ foreach $source (@source){
 }
 
 
-# Make new names for the found subroutines and functions
+# Make new names for the found methods
 foreach $method (sort values %method){
     $_ = $method;                    # use $_ for easy match and replace
 
@@ -201,6 +208,7 @@ close OUT;
 
 print "Modules:     @module \n"     if $Debug;
 print "Subroutines: @subroutine \n" if $Debug;
+print "Entries:     @entry \n"      if $Debug;
 print "Functions:   @function \n"   if $Debug;
 
 exit 0;
