@@ -124,12 +124,12 @@ eint			NameVarControl
 #CONTROLDECREASE
 0.3			RejectStepLevel
 0.6			ReduceStepLevel
-0.8			IncreaseStepLevel
+0.7			IncreaseStepLevel
 
 #CONTROLINCREASE
 1.9			RejectStepLevel
 1.5			ReduceStepLevel
-1.2			IncreaseStepLevel
+1.5			IncreaseStepLevel
 
 #CONTROLFACTOR
 0.7			RejectStepFactor
@@ -153,12 +153,10 @@ RAW			StringLogfile
 
 #SAVEPLOT
 3			nPlotfile
-z=0 var idl		PlotString
--20			DnSavePlot
+z=0 all idl		PlotString
+-1			DnSavePlot
 1.e-10			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy Eint p pe level tekev trkev tikev zavg elaser dx
-gamma
 idl los var		StringPlot ! line of sight plot
 -1			DnSavePlot
 1.0e-10			DtSavePlot
