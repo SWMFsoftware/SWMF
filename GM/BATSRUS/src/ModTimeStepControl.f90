@@ -161,8 +161,8 @@ contains
        ! Reduce next time step if change exceeded ReduceStepLevel
        Factor = ReduceStepFactor
 
-    elseif(   RelativeChangeMin > IncreaseStepLevel1  &
-         .or. RelativeChangeMax < IncreaseStepLevel2 )then
+    elseif(    RelativeChangeMin > IncreaseStepLevel1  &
+         .and. RelativeChangeMax < IncreaseStepLevel2 )then
        ! Increase next time step if change is within IncreaseStepLevel
        Factor = IncreaseStepFactor
     else
