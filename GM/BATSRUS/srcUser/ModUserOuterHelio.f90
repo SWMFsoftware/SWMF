@@ -754,7 +754,7 @@ contains
     write(*,'(10X,A19,F15.6)') 'TNeutralsISW_dim:',TNeutralsISW_dim     
     write(*,*)
 
-  end subroutine user_write_progress
+  end subroutine user_action
 
   !=====================================================================
   subroutine user_io_units
