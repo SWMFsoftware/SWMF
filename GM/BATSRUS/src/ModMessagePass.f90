@@ -320,51 +320,6 @@ contains
   !^CFG END DEBUGGING
   !============================================================================
 
-  ! moved form file exchange_messages.f90 
-  subroutine exchange_messages_adjoint
-
-    use ModProcMH
-    use ModMain, ONLY : nI,nJ,nK,gcn,nBlockMax,unusedBLK, &
-         TypeBc_I,time_loop,&
-         time_simulation,nOrder,prolong_order,optimize_message_pass, UseBatl
-    use ModVarIndexes
-    use ModAdvance, ONLY : State_VGB, divB1_GB
-    use ModGeometry, ONLY : far_field_BCs_BLK        
-    use ModMpi
-    use ModMPCells, ONLY : DoOneCoarserLayer
-    use ModBoundaryCells,ONLY:SaveBoundaryCells
-    use ModPhysics, ONLY : ShockSlope
-    use ModFaceValue,ONLY: UseAccurateResChange
-    use ModEnergy,   ONLY: calc_energy_ghost_adjoint
-    use BATL_lib, ONLY: message_pass_cell
-    use ModAdjoint, ONLY : Adjoint_VGB
-
-    implicit none
-
-    integer :: iBlock
-    logical :: oktest, oktest_me, oktime, oktime_me
-    logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
-    logical :: DoCorners, DoFaces
-    integer :: nWidth, nCoarseLayer
-
-    character (len=*), parameter :: NameSub = 'exchange_messages_adjoint'
-    !-------------------------------------------------------------------------
-
-    do iBlock = 1, nBlockMax
-       if (unusedBLK(iBlock)) CYCLE
-       call calc_energy_ghost_adjoint(iBlock)
-       if (far_field_BCs_BLK(iBlock)) &                        
-            call set_outer_BCs_adjoint (iBlock,time_simulation,.false.) 
-       if(time_loop.and. any(TypeBc_I=='buffergrid'))&
-            call stop_mpi(NameSub // ' Not supported!')
-    end do
-
-    ! Need to modify to send ghost info to procs (reverse mode) in an additive way
-    call stop_mpi(NameSub // ' needs reverse ghost message passing!')
-
-  end subroutine exchange_messages_adjoint
-
-  !============================================================================
   subroutine message_pass_dir(&
        idirmin,idirmax,width,sendcorners,prolongorder,nVar,sol_BLK,&
        Sol_VGB,restrictface,DoTwoCoarseLayers)

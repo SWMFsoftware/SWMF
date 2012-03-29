@@ -14,8 +14,6 @@ subroutine MH_set_parameters(TypeAction)
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
   use ModImplHypre, ONLY: hypre_read_param              !^CFG IF IMPLICIT
-  use ModAdjoint, ONLY : read_adjoint_parameters, &     !ADJOINT SPECIFIC
-       init_mod_adjoint, DoAdjoint                      !ADJOINT SPECIFIC
   use ModPhysics
   use ModProject                                        !^CFG IF PROJECTION
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
@@ -255,7 +253,6 @@ subroutine MH_set_parameters(TypeAction)
      if(UseConstrainB) call init_mod_ct        !^CFG IF CONSTRAINB
      if(UseImplicit.or.UseSemiImplicit) &      !^CFG IF IMPLICIT
           call init_mod_implicit               !^CFG IF IMPLICIT
-     if (DoAdjoint) call init_mod_adjoint      !ADJOINT SPECIFIC
      if (DoWriteIndices) call init_mod_geoindices
 
      ! clean dynamic storage
@@ -2158,9 +2155,6 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#CME", "#ARCH", "#TD99FLUXROPE", "#GL98FLUXROPE", "#SHEARFLOW")
         call EEE_set_parameters(NameCommand)
-
-     case("#ADJOINT")                                 !ADJOINT SPECIFIC
-        call read_adjoint_parameters(NameCommand)     !ADJOINT SPECIFIC
 
      case default
         if(iProc==0) then
