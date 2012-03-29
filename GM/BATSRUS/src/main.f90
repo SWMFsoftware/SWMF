@@ -18,9 +18,6 @@ program BATSRUS
 
   use ModMpi
 
-  use ModAdjoint, ONLY : DoAdjoint,  &  !ADJOINT SPECIFIC
-       clean_mod_adjoint                !ADJOINT SPECIFIC
-
   implicit none
 
   integer :: iSession=1
@@ -129,9 +126,7 @@ program BATSRUS
 
         call timing_step(n_step+1)
 
-        if (DoAdjoint) then                         !ADJOINT SPECIFIC 
-           call BATS_advance_adjoint                !ADJOINT SPECIFIC
-        else if(time_accurate .and. t_max > 0.0) then
+        if(time_accurate .and. t_max > 0.0) then
            call BATS_advance(t_max)
         else
            call BATS_advance(huge(0.0))
@@ -140,8 +135,6 @@ program BATSRUS
         call show_progress
 
      end do TIMELOOP
-
-     if (DoAdjoint) call clean_mod_adjoint           !ADJOINT SPECIFIC
 
      if(IsLastRead)then
         EXIT SESSIONLOOP
@@ -167,9 +160,7 @@ program BATSRUS
   end if
   if (dn_timing > -2) call timing_report
 
-  if (.not.DoAdjoint) then             !ADJOINT SPECIFIC
-     call BATS_save_files('FINALWITHRESTART')
-  end if                               !ADJOINT SPECIFIC
+  call BATS_save_files('FINALWITHRESTART')
 
   if(iProc==0.and.lVerbose>0)then
      write(*,*)
@@ -205,14 +196,10 @@ contains
 
     StopConditionTrue = .false.
 
-    if(.not.DoAdjoint)then                          !ADJOINT SPECIFIC
-       if(nIter >= 0 .and. iteration_number >= nIter) StopConditionTrue = .true.
-       if(time_accurate .and. t_max > 0.0 &
-            .and. time_simulation >= t_max) &
-            StopConditionTrue = .true.
-    else                                            !ADJOINT SPECIFIC BEGIN
-       if(iteration_number <=0) StopConditionTrue = .true.
-    end if                                          !ADJOINT SPECIFIC END
+    if(nIter >= 0 .and. iteration_number >= nIter) StopConditionTrue = .true.
+    if(time_accurate .and. t_max > 0.0 &
+         .and. time_simulation >= t_max) &
+         StopConditionTrue = .true.
 
   end function stop_condition_true
 
