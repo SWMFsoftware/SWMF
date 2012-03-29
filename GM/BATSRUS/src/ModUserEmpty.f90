@@ -13,11 +13,11 @@ module ModUserEmpty
 contains
 
   !=====================================================================
-  subroutine user_set_boundary_cells(iBLK)
+  subroutine user_set_boundary_cells(iBlock)
 
-    integer,intent(in)::iBLK
+    integer,intent(in)::iBlock
 
-    character (len=*), parameter :: NameSub = 'user_set_boundary_cells'
+    character(len=*), parameter :: NameSub = 'user_set_boundary_cells'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_set_boundary_cells
@@ -29,7 +29,7 @@ contains
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
-    character (len=*), parameter :: NameSub = 'user_face_bcs' 
+    character(len=*), parameter :: NameSub = 'user_face_bcs' 
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_face_bcs
@@ -41,7 +41,7 @@ contains
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    character(len=*), parameter :: NameSub = 'user_set_outerbcs'
     !-------------------------------------------------------------------
     IsFound = .false.
     call stop_user(NameSub)
@@ -50,7 +50,7 @@ contains
   !=====================================================================
   subroutine user_initial_perturbation
     use ModMain,ONLY: nBlockMax
-    character (len=*), parameter :: NameSub = 'user_initial_perturbation'
+    character(len=*), parameter :: NameSub = 'user_initial_perturbation'
     integer::iBlock
     !-------------------------------------------------------------------
     !The routine is called once and should be applied for all blocks, the 
@@ -68,12 +68,10 @@ contains
   subroutine user_set_ics
     use ModMain,ONLY: globalBLK
 
-    character (len=*), parameter :: NameSub = 'user_set_ics'
+    character(len=*), parameter :: NameSub = 'user_set_ics'
     integer::iBlock
     !-------------------------------------------------------------------
-    !The routine is called for each block, the number of block should
-    !be passed to the routine using globalBLK
-
+    ! The routine is called for each block indexed by globalBLK
     iBlock = globalBLK  
 
     call stop_user(NameSub)
@@ -82,31 +80,46 @@ contains
   !=====================================================================
   subroutine user_init_session
 
-    character (len=*), parameter :: NameSub = 'user_init_session'
+    character(len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_init_session
 
+  !=====================================================================
+  subroutine user_action(NameAction)
+
+    character(len=*), intent(in):: NameAction
+
+    character(len=*), parameter :: NameSub = 'user_action'
+    !-------------------------------------------------------------------
+    !select case(NameAction)
+    !case('initial condition done')
+    !  ...
+    !case('write progress')
+    !  ...
+    !end select
+
+  end subroutine user_action
   !=====================================================================
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
 
     integer, intent(in) :: iBlock, iArea
     logical,intent(out) :: DoRefine
 
-    character (len=*), parameter :: NameSub = 'user_specify_refinement'
+    character(len=*), parameter :: NameSub = 'user_specify_refinement'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_specify_refinement
 
   !=====================================================================
-  subroutine user_amr_criteria(iBLK, UserCriteria, TypeCriteria, IsFound)
+  subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
-    integer, intent(in)          :: iBLK
-    real, intent(out)            :: userCriteria
-    character (len=*),intent(in) :: TypeCriteria
+    integer, intent(in)          :: iBlock
+    real, intent(out)            :: UserCriteria
+    character(len=*),intent(in) :: TypeCriteria
     logical, intent(inout)       :: IsFound
 
-    character (len=*), parameter :: NameSub = 'user_amr_criteria'
+    character(len=*), parameter :: NameSub = 'user_amr_criteria'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_amr_criteria
@@ -114,27 +127,19 @@ contains
   !=====================================================================
   subroutine user_read_inputs
 
-    character (len=*), parameter :: NameSub = 'user_read_inputs'
+    character(len=*), parameter :: NameSub = 'user_read_inputs'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_read_inputs
 
   !=====================================================================
-  subroutine user_write_progress
-
-    character (len=*), parameter :: NameSub = 'user_write_progress'
-    !-------------------------------------------------------------------
-    call stop_user(NameSub)
-  end subroutine user_write_progress
-
-  !=====================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     real, intent(out)            :: VarValue
-    character (len=*), intent(in):: TypeVar
+    character(len=*), intent(in):: TypeVar
     real, intent(in), optional :: Radius
 
-    character (len=*), parameter :: NameSub = 'user_get_log_var'
+    character(len=*), parameter :: NameSub = 'user_get_log_var'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_get_log_var
@@ -158,7 +163,7 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    character(len=*), parameter :: NameSub = 'user_set_plot_var'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
 
@@ -167,26 +172,22 @@ contains
   !====================================================================
 
   subroutine user_calc_sources
+    use ModMain,ONLY: globalBLK
 
-    character (len=*), parameter :: NameSub = 'user_calc_sources'
+    integer::iBlock
+    character(len=*), parameter :: NameSub = 'user_calc_sources'
     !-------------------------------------------------------------------
+    ! The routine is called for each block indexed by globalBLK
+    iBlock = globalBLK
+
     call stop_user(NameSub)
   end subroutine user_calc_sources
-
-  !====================================================================
-
-  subroutine user_calc_sources_adjoint
-
-    character (len=*), parameter :: NameSub = 'user_calc_sources_adjoint'
-    !-------------------------------------------------------------------
-    call stop_user(NameSub)
-  end subroutine user_calc_sources_adjoint
 
   !=====================================================================
 
   subroutine user_init_point_implicit
 
-    character (len=*), parameter :: NameSub = 'user_init_point_implicit'
+    character(len=*), parameter :: NameSub = 'user_init_point_implicit'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
 
@@ -194,41 +195,31 @@ contains
 
   !=====================================================================
 
-  subroutine user_get_b0(xx,yy,zz,B0)
+  subroutine user_get_b0(x, y, z, B0_D)
 
-    real, intent(in):: xx,yy,zz
-    real, intent(out), dimension(3):: B0
+    real, intent(in) :: x, y, z
+    real, intent(out):: B0_D(3)
 
-    character (len=*), parameter :: NameSub = 'user_get_b0'
+    character(len=*), parameter :: NameSub = 'user_get_b0'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_get_b0
 
   !=====================================================================
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iStage, iBlock)
 
     integer,intent(in)::iStage,iBlock
 
-    character (len=*), parameter :: NameSub = 'user_update_states'
+    character(len=*), parameter :: NameSub = 'user_update_states'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_update_states
   
   !=====================================================================
-  subroutine user_update_states_adjoint(iStage,iBlock)
-
-    integer,intent(in)::iStage,iBlock
-
-    character (len=*), parameter :: NameSub = 'user_update_states_adjoint'
-    !-------------------------------------------------------------------
-    call stop_user(NameSub)
-  end subroutine user_update_states_adjoint
-
-  !=====================================================================
   subroutine user_normalization
     use ModPhysics 
     
-    character (len=*), parameter :: NameSub = 'user_normalization'
+    character(len=*), parameter :: NameSub = 'user_normalization'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_normalization
@@ -237,7 +228,7 @@ contains
   subroutine user_io_units
     use ModPhysics 
     
-    character (len=*), parameter :: NameSub = 'user_io_units'
+    character(len=*), parameter :: NameSub = 'user_io_units'
     !-------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_io_units
@@ -249,10 +240,10 @@ contains
 
     integer, intent(in) :: iBlock
     real,    intent(out):: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
-    character (len=*), parameter :: NameSub = 'user_set_resistivity'
+    character(len=*), parameter :: NameSub = 'user_set_resistivity'
 
     !-------------------------------------------------------------------
-    call stop_mpi(NameSub)
+    call stop_user(NameSub)
 
   end subroutine user_set_resistivity
 
@@ -299,9 +290,9 @@ contains
     !  Group Planckian spectral energy density
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
 
-    character (len=*), parameter :: NameSub = 'user_material_properties'
+    character(len=*), parameter :: NameSub = 'user_material_properties'
     !------------------------------------------------------------------------
-    call stop_mpi(NameSub)
+    call stop_user(NameSub)
 
   end subroutine user_material_properties
 
@@ -310,7 +301,7 @@ contains
     ! Note that this routine is not a user routine but just a routine
     ! which warns the user if they try to use an unimplemented user routine.
 
-    character (len=*), intent(in) :: NameSub
+    character(len=*), intent(in) :: NameSub
     !-------------------------------------------------------------------
     call stop_mpi('You are trying to call the empty user routine '//   &
          NameSub//'. Please implement the routine in src/ModUser.f90')
