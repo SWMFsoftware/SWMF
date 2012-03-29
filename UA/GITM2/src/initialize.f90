@@ -141,7 +141,6 @@ subroutine initialize_gitm(TimeIn)
         
      end if
   endif
-write(*,*) Altitude_GB(1,:,0,1)
 
   ! Calculate vertical cell sizes
   do iAlt = 0,nAlts+1
