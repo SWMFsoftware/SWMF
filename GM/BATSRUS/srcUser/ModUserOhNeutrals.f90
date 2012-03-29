@@ -33,7 +33,7 @@ module ModUser
        IMPLEMENTED4  => user_set_outerbcs,              &
        IMPLEMENTED5  => user_set_ics,                   &
        IMPLEMENTED6  => user_initial_perturbation,      &
-       IMPLEMENTED8  => user_write_progress,            & 
+       IMPLEMENTED8  => user_action,                    & 
        IMPLEMENTED9  => user_io_units,                  &
        IMPLEMENTED10 => user_set_plot_var,              &
        IMPLEMENTED11 => user_calc_sources,              &
@@ -666,15 +666,18 @@ contains
 
   !=====================================================================
 
-  subroutine user_write_progress
+  subroutine user_action(NameAction)
+
     use ModMain
     use ModPhysics
     use ModMultiFluid
-    implicit none
+
+    character(len=*), intent(in):: NameAction
 
     character(len=*), parameter:: StringFormat = '(10X,A19,F15.6,A11,F15.6)'
     !-----------------------------------------------------------------------
 
+    if(NameAction /= 'write progress') RETURN
 
     write(*,StringFormat) 'SWH_rho_dim [n/cc]:',SWH_rho_dim,'SWH_rho:',SWH_rho
 
@@ -708,8 +711,6 @@ contains
     write(*,StringFormat) 'PNeutralsISW_dim:',PNeutralsISW_dim,'PNeutralsISW:',PNeutralsISW
     write(*,'(10X,A19,F15.6)') 'TNeutralsISW_dim:',TNeutralsISW_dim     
     write(*,*)
-
-    !------------------------------------------------------------------
 
   end subroutine user_write_progress
 
