@@ -150,17 +150,11 @@ for iw=0,nw-1 do case ndim of
         'bx' : bx=w(*,iw)
         'by' : by=w(*,iw)
         'bz' : bz=w(*,iw)
-        'b1' : bx=w(*,iw)
-        'b2' : by=w(*,iw)
-        'b3' : bz=w(*,iw)
         'p'  : p=w(*,iw)
         'pth': p=w(*,iw)
         'mx' : ux=w(*,iw)/rho
         'my' : uy=w(*,iw)/rho
         'mz' : uz=w(*,iw)/rho
-        'm1' : ux=w(*,iw)/rho
-        'm2' : uy=w(*,iw)/rho
-        'm3' : uz=w(*,iw)/rho
         'e'  : e=w(*,iw)
         else :
     endcase
@@ -172,17 +166,11 @@ for iw=0,nw-1 do case ndim of
         'bx' : bx=w(*,*,iw)
         'by' : by=w(*,*,iw)
         'bz' : bz=w(*,*,iw)
-        'b1' : bx=w(*,*,iw)
-        'b2' : by=w(*,*,iw)
-        'b3' : bz=w(*,*,iw)
         'p'  : p=w(*,*,iw)
         'pth': p=w(*,*,iw)
         'mx' : ux=w(*,*,iw)/rho
         'my' : uy=w(*,*,iw)/rho
         'mz' : uz=w(*,*,iw)/rho
-        'm1' : ux=w(*,*,iw)/rho
-        'm2' : uy=w(*,*,iw)/rho
-        'm3' : uz=w(*,*,iw)/rho
         'e'  : e=w(*,*,iw)
         else :
     endcase
@@ -194,17 +182,11 @@ for iw=0,nw-1 do case ndim of
         'bx' : bx=w(*,*,*,iw)
         'by' : by=w(*,*,*,iw)
         'bz' : bz=w(*,*,*,iw)
-        'b1' : bx=w(*,*,*,iw)
-        'b2' : by=w(*,*,*,iw)
-        'b3' : bz=w(*,*,*,iw)
         'p'  : p=w(*,*,*,iw)
         'pth': p=w(*,*,*,iw)
         'mx' : ux=w(*,*,*,iw)/rho
         'my' : uy=w(*,*,*,iw)/rho
         'mz' : uz=w(*,*,*,iw)/rho
-        'm1' : ux=w(*,*,*,iw)/rho
-        'm2' : uy=w(*,*,*,iw)/rho
-        'm3' : uz=w(*,*,*,iw)/rho
         'e'  : e=w(*,*,*,iw)
         else :
     endcase
