@@ -149,7 +149,8 @@ contains
   !===========================================================================
 
   subroutine set_initial_conditions
-    use ModUser,        ONLY: user_initial_perturbation
+
+    use ModUser,        ONLY: user_initial_perturbation, user_action
     use ModIO,          ONLY: restart
     use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
     use ModRestartFile, ONLY: read_restart_files, &
@@ -227,6 +228,8 @@ contains
        !/
        call set_ICs
     end do
+
+    call user_action('initial condition done')
 
     !\
     ! Allow the user to add a perturbation to the initial condition.
