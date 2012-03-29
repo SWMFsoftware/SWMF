@@ -680,7 +680,7 @@ subroutine init_mhd_variables
   if(SignB_ > 1)then
      UnitUser_V(SignB_)        = 1.0
      NameUnitUserTec_V(SignB_) = ''
-     NameUnitUserIdl_V(SignB_) = ''
+     NameUnitUserIdl_V(SignB_) = '1'
   end if
 
 end subroutine init_mhd_variables
