@@ -6,7 +6,7 @@ subroutine update_states(iStage,iBlock)
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
   use ModUser, ONLY: user_update_states
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
-  use ModAdjoint, ONLY : AdjPreUpdate_, store_block_buffer, DoAdjoint  ! ADJOINT SPECIFIC
+
   implicit none
 
   integer, intent(in) :: iStage,iBlock
@@ -43,8 +43,6 @@ subroutine update_states(iStage,iBlock)
           Flux_VZ(VARtest,Itest,Jtest,Ktest+1)
      write(*,*)'source=',Source_VC(VARtest,Itest,Jtest,Ktest)
   end if
-
-  if (DoAdjoint) call store_block_buffer(iBlock,AdjPreUpdate_)   ! ADJOINT SPECIFIC
 
   if(UseUserUpdateStates)then
      call user_update_states(iStage,iBlock)
@@ -104,7 +102,7 @@ subroutine update_states(iStage,iBlock)
   end if
 
 end subroutine update_states
-!===========================
+!===========================================================================
 subroutine update_te0
   use ModPhysics, ONLY: UnitTemperature_,Si2No_V
   use ModAdvance, ONLY: State_VGB,  nI, nJ, nK
@@ -113,43 +111,16 @@ subroutine update_te0
   use ModVarIndexes, ONLY: Te0_
   real:: Te0Si
   integer:: i, j, k, iBlock
-  !-----------------
+  !-------------------------------------------------------------------------
   do iBlock = 1, nBlock
      if(unusedBLK(iBlock))CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
-        call user_material_properties(State_VGB(:,i,j,k,iBlock),i,j,k,iBlock, TeOut=Te0SI)
+        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+             i,j,k,iBlock, TeOut=Te0SI)
         State_VGB(Te0_,i,j,k,iBlock) = Te0SI * Si2No_V(UnitTemperature_)
      end do; end do; end do
   end do
 end subroutine update_te0
-!===========================
-
-! BEGIN ADJOINT SPECIFIC
-!============================================================================
-subroutine update_states_adjoint(iStage,iBlock) 
-  use ModMain
-  use ModUser, ONLY: user_update_states_adjoint
-  use ModAdjoint, ONLY: AdjPreUpdate_, recall_block_buffer
-  implicit none
-
-  integer, intent(in) :: iStage,iBlock
-
-  character(len=*), parameter:: NameSub = 'update_states_adjoint'
-  !--------------------------------------------------------------------------
-
-  if(UseUserUpdateStates)then
-     call user_update_states_adjoint(iStage,iBlock)
-  else
-     call update_states_MHD_adjoint(iStage,iBlock)
-  end if
-
-  ! Restore stage-beginning state values from buffer
-  call recall_block_buffer(iBlock,AdjPreUpdate_) 
-
-end subroutine update_states_adjoint
-! ADJOINT SPECIFIC END
-
-
 
 !============================================================================
 subroutine update_check(iStage)
