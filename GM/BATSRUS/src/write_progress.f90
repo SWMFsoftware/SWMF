@@ -64,7 +64,7 @@ subroutine write_runtime_values()
   use ModParallel,  ONLY: proc_dims
   use ModImplicit,  ONLY: UseSplitSemiImplicit, &     !^CFG IF IMPLICIT
        UseImplicit, UseSemiImplicit, TypeSemiImplicit !^CFG IF IMPLICIT
-  use ModUser, ONLY: user_write_progress
+  use ModUser, ONLY: user_action
   use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid, iFluid
   use ModFaceFlux,   ONLY: TypeFluxNeutral
   use CON_planet,   ONLY: NamePlanet, IsPlanetModified, Planet_, NewPlanet_, &
@@ -303,7 +303,8 @@ subroutine write_runtime_values()
   call write_prefix
   write(iUnitOut,'(1x,a,2f16.8)') 'z:           ', z1, z2
   call write_prefix; write(iUnitOut,*)
-  if(UseUserEchoInput) call user_write_progress
+  if(UseUserEchoInput) call user_action('write progress')
+
 end subroutine write_runtime_values
 
 !==============================================================================
