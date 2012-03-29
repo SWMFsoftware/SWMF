@@ -885,13 +885,15 @@ subroutine set_inputs
 
         case("#TOPOGRAPHY")
            call read_in_logical(UseTopography, iError)
+            call read_in_real(AltMinUniform,iError)
            if(iError /= 0) then
               write(*,*) 'Incorrect format for #TOPOGRAPHY:'
-              write(*,*) ''
               write(*,*) '#TOPOGRAPHY'
               write(*,*) 'UseTopography (logical)'
+              write(*,*) 'AltMinUniform (real)'
               IsDone = .true.
            endif
+           AltMinUniform=AltMinUniform*1000.0
 
         case ("#RESTART")
            call read_in_logical(DoRestart, iError)

@@ -93,7 +93,7 @@ module ModInputs
   real :: StretchingFactor = 1.0
 
   logical :: UseTopography = .false.
-
+  real :: AltMinUniform = 0.0
   real :: AltMinIono=80.0 ! in km
 
   real :: TempMax = 1000.0

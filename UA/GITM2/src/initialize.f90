@@ -15,7 +15,7 @@ subroutine initialize_gitm(TimeIn)
   type (UAM_ITER) :: r_iter
 
   real(Real8_), intent(in) :: TimeIn
-  integer :: iLat, iAlt, iBlock, iSpecies, iLon, iError
+  integer :: iLat, iAlt, iBlock, iSpecies, iLon, iError,nAltsMean,iilon,iilat
 
   real :: TempAve
   real :: TempDiff
@@ -24,7 +24,7 @@ subroutine initialize_gitm(TimeIn)
   real :: LogRho(-1:nLons+2,-1:nLats+2), NewSumRho(-1:nLons+2,-1:nLats+2)
   real :: GradAlt_CD(nLons, nLats, nAlts, 3)
 
-  real :: TempUnit_const, t, h
+  real :: TempUnit_const, t, h,meanaltzero,altdiff, dAlt
 
   logical :: IsThere, IsOk, IsDone, IsFirstTime = .true.
 
@@ -90,14 +90,58 @@ subroutine initialize_gitm(TimeIn)
      if (UseStretchedAltitude) then
         call init_altitude
      else
-        ! Uniform grid
-        do iAlt=-1,nAlts+2
-           Altitude_GB(:,:,iAlt,1:nBlocks) = &
-                AltMin + (iAlt-0.5)*(AltMax-AltMin)/nAlts
-        enddo
-     endif
+        if (UseTopography) then
+           if (AltMin > 1.0) then 
+              write(*,*) 'When using topography, the minimum altitude'
+              write(*,*) 'must be zero.  Stopping...'
+              call stop_gitm('Incorrect minimum altitude')
+           endif
+           altzero = 0.0
+           call init_topography
 
-  end if
+           meanAltZero = sum(altzero)/(nlons*nlats*nblocks)
+           altdiff = AltMinUniform - meanAltZero
+           naltsmean = floor(nalts - nalts*((AltMax-AltMinUniform)/(AltMax)))
+
+           do iBlock = 1, nBlocks
+              do iLon = -1,nLons +2
+                 do iLat = -1, nLats +2
+                     iiLon = min(max(iLon,1),nLons)
+                     iilat = min(max(iLat,1),nLats)
+
+                    do iAlt = -1,nAltsmean
+                       
+                       dAlt = (AltMinUniform-AltZero(iiLon,iiLat,iBlock))/nAltsmean
+                       Altitude_GB(iLon,iLat,iAlt,iBlock) = &
+                            AltZero(iiLon,iiLat,iBlock) + ialt*dAlt
+                    enddo
+!                  if (ilon ==1) then
+!                     write(93,*) ilat,altzero(iilon,iilat,iblock)
+!                     write(93,*)ilat, iblock,latitude(ilat,iblock)*180/pi,altitude_GB(1,ilat,0,iblock)
+!                  endif
+                                                         
+                 enddo
+              enddo
+
+              dAlt = (AltMax-AltMinUniform)/(nAlts-naltsmean)
+
+              do iAlt = 1, (nAlts+2)-naltsmean
+                 Altitude_GB(:,:,iAlt+naltsmean,1:nBlocks) = &
+                      AltMinUniform + iAlt * dAlt
+              enddo
+           enddo
+
+        else
+           ! Uniform grid
+           do iAlt=-1,nAlts+2
+              Altitude_GB(:,:,iAlt,1:nBlocks) = &
+                   AltMin + (iAlt-0.5)*(AltMax-AltMin)/nAlts
+           enddo
+        endif
+        
+     end if
+  endif
+write(*,*) Altitude_GB(1,:,0,1)
 
   ! Calculate vertical cell sizes
   do iAlt = 0,nAlts+1
