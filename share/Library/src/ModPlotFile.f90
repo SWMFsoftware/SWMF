@@ -433,7 +433,8 @@ contains
        deallocate(Coord4_ID, Var4_IV)
     end select
 
-    if(.not.present(iUnitIn)) close(iUnit) !if iUnitIn is passed, keep file connected
+    ! if iUnitIn is passed, keep file connected
+    if(.not.present(iUnitIn)) close(iUnit) 
 
     if(present(CoordMinOut_D)) CoordMinOut_D(1:nDim) = minval(Coord_ID, DIM=1)
     if(present(CoordMaxOut_D)) CoordMaxOut_D(1:nDim) = maxval(Coord_ID, DIM=1)
@@ -469,14 +470,13 @@ contains
           if(present(VarOut_IIV))  VarOut_IIV(i,j,iVar)    = Var_IV(n, iVar)
           if(present(VarOut_IIIV)) VarOut_IIIV(i,j,k,iVar) = Var_IV(n, iVar)
 
-      
        end do; end do; end do
     end do
 
     deallocate(Coord_ID, Var_IV)
 
   contains
-
+    !==========================================================================
     subroutine read_header
 
       n_D = 1
