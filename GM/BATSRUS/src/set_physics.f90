@@ -677,4 +677,10 @@ subroutine init_mhd_variables
           trim(NameIdlUnit_V(UnitB_)) // trim(NameIdlUnit_V(UnitU_))
   end if
 
+  if(SignB_ > 1)then
+     UnitUser_V(SignB_)        = 1.0
+     NameUnitUserTec_V(SignB_) = ''
+     NameUnitUserIdl_V(SignB_) = ''
+  end if
+
 end subroutine init_mhd_variables
