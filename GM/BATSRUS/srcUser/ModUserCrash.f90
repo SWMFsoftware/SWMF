@@ -7,16 +7,15 @@ module ModUser
   use ModUserEmpty,                                      &
        IMPLEMENTED1  => user_update_states,              &
        IMPLEMENTED2  => user_calc_sources,               &
-       IMPLEMENTED4  => user_read_inputs,                &
-       IMPLEMENTED5  => user_set_plot_var,               &
-       IMPLEMENTED6  => user_init_session,               &
-       IMPLEMENTED7  => user_set_ics,                    &
-       IMPLEMENTED8  => user_material_properties,        &
-       IMPLEMENTED9  => user_amr_criteria,               &
-       IMPLEMENTED10 => user_get_log_var,                &
-       IMPLEMENTED11 => user_update_states_adjoint,      &
-       IMPLEMENTED12 => user_calc_sources_adjoint,       &
-       IMPLEMENTED13 => user_set_resistivity
+       IMPLEMENTED3  => user_read_inputs,                &
+       IMPLEMENTED4  => user_set_plot_var,               &
+       IMPLEMENTED5  => user_init_session,               &
+       IMPLEMENTED6  => user_set_ics,                    &
+       IMPLEMENTED7  => user_material_properties,        &
+       IMPLEMENTED8  => user_amr_criteria,               &
+       IMPLEMENTED9  => user_get_log_var,                &
+       IMPLEMENTED10 => user_set_resistivity,            &
+       IMPLEMENTED11 => user_action
 
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates, &
@@ -101,6 +100,21 @@ module ModUser
   ! Mixed material cell is assumed if the ratio of dominant to total
   ! atomic concentration is below MixLimit
   real :: MixLimit = 0.97
+
+  ! Variables for triangulation of 2D initialization file
+  integer, allocatable:: iNodeTriangle_II(:,:)
+  integer, allocatable:: nTriangle_C(:,:)
+  integer, pointer    :: iTriangle_IC(:,:,:)
+
+  ! Variables for reading 2D CRASH file
+  logical           :: UseCrash2DFile  = .false. ! read CRAS2D file?
+  character(len=100):: NameCrash2DFile           ! name of CRASH2D file
+  character(len=5)  :: TypeCrash2DFile           ! type of CRASH2D file
+  real              :: TimeCrash2D    = -1.0     ! time of CRASH2D snapshot
+
+  integer           :: nCellRead      = -1       ! number of cells in 2D file
+  real, allocatable :: CoordRead_DC(:,:)         ! coords of input file
+  real, allocatable :: StateRead_VC(:,:)         ! state  of input file
 
   ! Variables for Hyades file
   logical           :: UseDelaunay     = .false. ! use Delaunay triangulation?
@@ -243,6 +257,12 @@ contains
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
+       case("#CRASH2D")
+          call read_var('UseCrash2DFile',  UseCrash2DFile)
+          call read_var('NameCrash2DFile', NameCrash2DFile)
+          call read_var('TypeCrash2DFile', TypeCrash2DFile)
+          call read_var('TimeCrash2D'    , TimeCrash2D)
+
        case("#HYADES")
           call read_var('UseHyadesFile', UseHyadesFile)
           call read_var('NameHyadesFile',NameHyadesFile)
@@ -424,11 +444,21 @@ contains
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
-
     iBlock = GlobalBlk
+
+    if(UseCrash2dFile)then
+
+       call timing_start('interpolate_crash2d')
+       call interpolate_crash2d(iBlock)
+       call timing_stop('interpolate_crash2d')
+
+       RETURN
+    end if
+
     call timing_start(NameSub)
 
     if(UseHyadesFile)then
+
        call timing_start('interpolate_hyades')
        ! interpolate Hyades output
        if(nDimHyades == 1)then
@@ -437,6 +467,7 @@ contains
           call interpolate_hyades2d(iBlock)
        end if
        call timing_stop('interpolate_hyades')
+
     end if
 
     if(UseElectronPressure .and. (UseTube .or. UseGold))then
@@ -451,13 +482,7 @@ contains
        y = y_BLK(i,j,k,iBlock)
        z = z_BLK(i,j,k,iBlock)
 
-       if(UseNozzle) call set_nozzle_yz(x,y,z)
-
-       if(nK > 1)then
-          r = sqrt(y**2 + z**2)
-       else
-          r = abs(y)
-       end if
+       call set_yzr(x, y, z, r)
 
        if(UseTube)then
           ! Distance from plastic wall: 
@@ -574,7 +599,7 @@ contains
           end if
 
        end if ! nDimHyades /= 2
-       !When the hyades file is used for Xe, and the actual matetial is
+       !When the hyades file is used for Xe, and the actual material is
        !different, rescale the density of xenon:
        !if(UseHyadesFile.and.&
        !maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1)==1)&
@@ -960,6 +985,182 @@ contains
     end subroutine unperturbed_5_materials
 
   end subroutine user_set_ics
+
+
+  !============================================================================
+
+  subroutine read_crash2d_file
+
+    use ModProcMH,   ONLY: iProc
+    use ModAdvance,  ONLY: nVar
+    use ModMain,     ONLY: Time_Simulation
+    use ModPlotFile, ONLY: read_plot_file
+    use ModIoUnit,   ONLY: UnitTmp_
+
+    integer:: nDimRead, nVarRead, nCellRead_D(2), iSnapshot
+    character(len=500):: NameVarRead
+
+    character(len=*), parameter :: NameSub = "ModUser::read_crash2d_file"
+    !-------------------------------------------------------------------------
+    do iSnapShot = 1, 100000
+       
+       call read_plot_file(NameCrash2DFile, UnitTmp_, TypeCrash2DFile, &
+            TimeOut = Time_Simulation, nDimOut = nDimRead, nVarOut = nVarRead,&
+            nOut_D = nCellRead_D, NameVarOut = NameVarRead)
+
+       if(nDimRead /= 2 .and. iProc==0)then
+          write(*,*)'ERROR: nDimRead=', nDimRead,' instead of 2'
+          call stop_mpi(NameSub//': cannot use file '//trim(NameCrash2DFile))
+       end if
+
+       if(nVarRead /= nVar)then
+          write(*,*)'ERROR: nVarRead=',nVarRead,' is different from nVar=',nVar
+          call stop_mpi(NameSub// &
+               ': incorrect number of variables in '//trim(NameCrash2DFile))
+       end if
+
+       ! total number of mesh cells
+       nCellRead = product(nCellRead_D)
+
+       if(allocated(CoordRead_DC)) deallocate(CoordRead_DC, StateRead_VC)
+       allocate(CoordRead_DC(2,nCellRead), StateRead_VC(nVar,nCellRead))
+
+       ! Read in the data
+       call read_plot_file(NameCrash2DFile, UnitTmp_, TypeCrash2DFile, &
+            CoordOut_DI = CoordRead_DC, VarOut_VI = StateRead_VC)
+
+       if(time_simulation >= TimeCrash2D) EXIT
+
+    end do
+    close(UnitTmp_)
+
+    if(iProc==0)then
+       write(*,*) NameSub, ': read 2D file     = ', trim(NameCrash2DFile)
+       if(iSnapshot > 1) &
+            write(*,*) NameSub, ': snapshot number  =',iSnapshot
+       write(*,*) NameSub, ': simulation time  =', time_simulation
+       write(*,*) NameSub, ': number of cells  =', nCellRead
+       write(*,*) NameSub, ': number of vars   =', nVarRead
+       write(*,*) NameSub, ': coord array size =', size(CoordRead_DC)
+       write(*,*) NameSub, ': state array size =', size(StateRead_VC)
+       write(*,*) NameSub, ': coord/var/par names = ', trim(NameVarRead)
+    end if
+
+  end subroutine read_crash2d_file
+
+  !============================================================================
+
+  subroutine interpolate_crash2d(iBlock)
+
+    ! Use Delaunay triangulation to interpolate 2D CRASH grid onto 
+    ! a different (3D?) CRASH grid
+
+    use ModProcMH,      ONLY: iProc
+    use ModSize,        ONLY: nI, nJ, nK
+    use ModMain,        ONLY: nBlock
+    use ModAdvance,     ONLY: State_VGB, RhoUy_, RhoUz_, By_, Bz_, UseB
+    use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
+    use ModTriangulate, ONLY: calc_triangulation, find_triangle
+
+    integer, intent(in) :: iBlock
+
+    integer, save              :: nTriangle
+    real, save :: xMin, xMax, rMax
+
+    integer :: i, j, k, iNode1, iNode2, iNode3
+    real    :: x, y, z, r, Weight1, Weight2, Weight3
+    real    :: RhoUr, Bphi
+
+    character(len=*), parameter :: NameSub='interpolate_hyades2d'
+    !-------------------------------------------------------------------------
+    if(.not.allocated(iNodeTriangle_II))then
+
+       if(.not.allocated(CoordRead_DC) .and. iProc==0) &
+            call CON_stop(NameSub// &
+            ': no 2D CRASH file was read. Add #CRASH2D command')
+
+       ! allocate variables for triangulation, nTriangle_C for fast search.
+       allocate(iNodeTriangle_II(3,2*nCellRead), nTriangle_C(200,200))
+       nTriangle_C(1,1) = -1
+
+       ! Triangulate the 2D CRASH mesh
+       call calc_triangulation( &
+            nCellRead, CoordRead_DC, iNodeTriangle_II, nTriangle)
+
+       ! Determine (approximate) coordinate limits
+       xMin = minval(CoordRead_DC(1,:))
+       xMax = maxval(CoordRead_DC(1,:))
+       rMax = maxval(CoordRead_DC(2,:))
+    end if
+
+    ! Interpolate points 
+    do j = 1, nJ; do i = 1, nI; do k = 1, nk
+
+       x = x_Blk(i,j,k,iBlock)
+       y = y_Blk(i,j,k,iBlock)
+       z = z_Blk(i,j,k,iBlock)
+
+       call set_yzr(x, y, z, r, rMax)
+
+       ! Stay within the size of the 2D file
+       x = max(xMin, min(xMax,x))
+
+       ! Find the triangle around this position
+       call find_triangle(&
+            nCellRead, nTriangle, &
+            (/x, r/), CoordRead_DC, &
+            iNodeTriangle_II, &
+            iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, &
+            nTriangle_C=nTriangle_C, iTriangle_IC=iTriangle_IC)
+
+       ! Interpolate state (the CRASH input is already smooth)
+       State_VGB(:,i,j,k,iBlock) = &
+            Weight1*StateRead_VC(:,iNode1) + &
+            Weight2*StateRead_VC(:,iNode2) + &
+            Weight3*StateRead_VC(:,iNode3)
+
+       ! Done if running in 2D
+       if(nK == 1) CYCLE
+
+       ! Correct the y,z velocity components to point in radial direction
+       RhoUr = State_VGB(RhoUy_,i,j,k,iBlock)
+       State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = (/y, z/)/r * RhoUr
+
+       ! Done with hydro
+       if(.not. UseB) CYCLE
+
+       ! Correct the magnetic field to point in the azimuthal direction
+       Bphi = State_VGB(Bz_,i,j,k,iBlock)
+       State_VGB(By_:Bz_,i,j,k,iBlock) = (/-z, y/)/r * Bphi
+
+    end do; end do; end do
+
+  end subroutine interpolate_crash2d
+
+  !============================================================================
+
+  subroutine user_action(NameAction)
+
+    use ModProcMH, ONLY: iProc
+
+    character(len=*), intent(in):: NameAction
+
+    character(len=*), parameter:: NameSub = 'user_action'
+    !-------------------------------------------------------------------------
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+
+    select case(NameAction)
+    case('initial condition done')
+       if(allocated(CoordRead_DC)) deallocate( &
+            CoordRead_DC, StateRead_VC)
+       if(allocated(iNodeTriangle_II)) deallocate( &
+            iNodeTriangle_II, nTriangle_C, iTriangle_IC)
+       if(allocated(DataHyadesMesh_VC)) deallocate( &
+            DataHyadesMesh_VC, DataHyades_VC, &
+            CoordHyades_DC, CoordHyadesMesh_DC)
+    end select
+
+  end subroutine user_action
 
   !============================================================================
 
@@ -1496,7 +1697,7 @@ contains
 
   subroutine interpolate_hyades2d(iBlock)
 
-    ! Use Delaunay triangulation to interpolate Hyades grid onto CRASH grid
+    ! Use triangulation to interpolate Hyades grid onto CRASH grid
 
     use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModSize,        ONLY: nI, nJ, nK
@@ -1574,25 +1775,10 @@ contains
        y = y_Blk(i,j,k,iBlock)
        z = z_Blk(i,j,k,iBlock)
 
-       if(UseNozzle) call set_nozzle_yz(x, y, z)
-
-       if(nK > 1)then
-          r = sqrt(y**2 + z**2)
-       else
-          r = abs(y)
-          z = 0.0
-       end if
-
-       ! Check if we are further away than the width of the box
-       if(r > y2)then
-          ! Shrink coordinates in the radial direction to y2
-          y = y*y2/r
-          z = z*y2/r
-          r = y2
-       end if
+       call set_yzr(x, y, z, r, rMax=y2)
 
        ! Check if we are at the end of the Hyades grid
-       if(x >= DataHyades_VC(iXHyades, iCellLastHyades))then
+       if(x >= DataHyades_VC(iXHyades,iCellLastHyades))then
           iNode1 = iCellLastHyades;  Weight1 = 1.0
           iNode2 = 1;                Weight2 = 0.0
           iNode3 = 1;                Weight3 = 0.0
@@ -1744,8 +1930,6 @@ contains
     use ModPhysics,  ONLY: inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin, UnitTemperature_
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModAdjoint, ONLY: DoAdjoint, AdjUserUpdate1_, & ! ADJOINT SPECIFIC
-         AdjUserUpdate2_, store_block_buffer            ! ADJOINT SPECIFIC
     use ModVarIndexes, ONLY: Pe_, Te0_, nWave, WaveFirst_, WaveLast_
     use ModVarIndexes, ONLY: DefaultState_V
     use ModSize, ONLY:MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -1794,8 +1978,6 @@ contains
 
 
     call update_states_MHD(iStage,iBlock)
-
-    if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate1_)  ! ADJOINT SPECIFIC
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
@@ -1849,155 +2031,11 @@ contains
 
     end do; end do; end do
 
-    if (DoAdjoint) call store_block_buffer(iBlock,AdjUserUpdate2_)  ! ADJOINT SPECIFIC
-
     ! Calculate e^n+1 using updated P^n+1 (Pe^n+1) for single (two-)temperature
     ! Note that this is identical to e^n+1 = e^* + ExtraEInt^* - ExtraEint^n+1
     call calc_energy_cell(iBlock)
 
   end subroutine user_update_states
-
-  !BEGIN ADJOINT SPECIFIC
-  !============================================================================
-
-  subroutine user_update_states_adjoint(iStage,iBlock)
-
-    use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
-         UseNonConservative, IsConserv_CB, &
-         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
-    use ModGeometry, ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
-    use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
-         UnitP_, UnitEnergyDens_, ExtraEintMin
-    use ModEnergy,   ONLY: calc_energy_cell_adjoint
-    use ModAdjoint
-
-    implicit none
-
-    integer, intent(in):: iStage,iBlock
-
-    integer:: i, j, k
-    real   :: PressureSi, EinternalSi, GammaEos, DivU
-    logical:: IsConserv
-    real   :: Etemp, rtemp
-    real   :: EinternalSi_U(nVar) = 0.0
-    real   :: pressureSi_U(nVar) = 0.0
-
-    character(len=*), parameter :: NameSub = 'user_update_states_adjoint'
-    !------------------------------------------------------------------------
-
-    ! recall state from block buffer
-    call recall_block_buffer(iBlock,AdjUserUpdate2_) 
-
-    ! energy cell calculation, adjoint version
-    call calc_energy_cell_adjoint(iBlock)
-
-    ! recall state from block buffer
-    call recall_block_buffer(iBlock,AdjUserUpdate1_) 
-
-    ! update of pressure, ionization and total energies -- adjoint version
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       ! Total internal energy ExtraEint + P/(\gamma -1) transformed to SI
-
-       if(allocated(IsConserv_CB))then
-          IsConserv = IsConserv_CB(i,j,k,iBlock)
-       else
-          IsConserv = .not. UseNonConservative
-       end if
-
-       if(IsConserv)then
-          ! At this point p=(g-1)(e-rhov^2/2) with the ideal gamma g.
-          ! Use this p to get total internal energy density.
-          EinternalSi = No2Si_V(UnitEnergyDens_)*&
-               (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
-               State_VGB(ExtraEint_,i,j,k,iBlock))
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, &
-               EinternalIn=EinternalSi, PressureOut=PressureSi)
-          ! TODO: need PressureSi_U
-          ! set EinternalSi_U
-          EinternalSi_U = 0.
-          EinternalSi_U(ExtraEint_) = No2Si_V(UnitEnergyDens_)          
-          EinternalSi_U(p_)         = No2Si_V(UnitEnergyDens_)*inv_gm1
-
-          ! Set true pressure
-          State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
-       else
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, EinternalOut=EinternalSi)
-          ! TODO: need EinternalSi_U
-       end if
-
-       Etemp = Si2No_V(UnitEnergyDens_)*EinternalSi - inv_gm1*State_VGB(p_,i,j,k,iBlock)
-       if (ExtraEintMin > Etemp) then
-          Adjoint_VGB(p_,i,j,k,iBlock) =  Adjoint_VGB(p_,i,j,k,iBlock) - &
-               inv_gm1*Adjoint_VGB(ExtraEint_,i,j,k,iBlock)
-          Adjoint_VGB(:,i,j,k,iBlock) = Adjoint_VGB(:,i,j,k,iBlock) + &
-               Si2No_V(UnitEnergyDens_)*EinternalSi*EinternalSi_U * &
-               Adjoint_VGB(ExtraEint_,i,j,k,iBlock)
-       end if
-
-       if (IsConserv)then
-          Adjoint_VGB(:,i,j,k,iBlock) = Adjoint_VGB(:,i,j,k,iBlock) + &
-               Si2No_V(UnitP_)*PressureSi_U*Adjoint_VGB(p_,i,j,k,iBlock)
-       end if
-
-       ! Set ExtraEint = Total internal energy - P/(gamma -1)
-       State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, Etemp)
-
-    end do; end do; end do
-
-    ! recall state from block buffer
-    call recall_block_buffer(iBlock,AdjUserUpdate1_) 
-
-    call update_states_MHD_adjoint(iStage,iBlock)
-
-    ! recall state from block buffer
-    call recall_block_buffer(iBlock,AdjPreUpdate_) 
-
-
-    ! Fix adiabatic compression source for pressure
-    AdjuDotArea_XI = 0.
-    AdjuDotArea_YI = 0.
-    AdjuDotArea_ZI = 0.
-    if(UseNonConservative)then
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          DivU          =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
-          if(nJ>1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
-          if(nK>1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
-          DivU = vInv_CB(i,j,k,iBlock)*DivU
-
-          ! TODO: adjoint version of this function for GammaEos_State
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, GammaOut=GammaEos)
-
-          !   Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-          !        -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*DivU
-
-          ! update AdjuDotArea_** via dep of Source on DivU
-          rtemp = - (GammaEos-g) * State_VGB(p_,i,j,k,iBlock) * &
-               vInv_CB(i,j,k,iBlock) * AdjSource_VC(p_,i,j,k)
-          AdjuDotArea_XI(i+1,j,k,1) = AdjuDotArea_XI(i+1,j,k,1)+rtemp
-          if(nJ>1)AdjuDotArea_YI(i,j+1,k,1) = AdjuDotArea_YI(i,j+1,k,1)+rtemp
-          if(nK>1)AdjuDotArea_ZI(i,j,k+1,1) = AdjuDotArea_ZI(i,j,k+1,1)+rtemp
-          AdjuDotArea_XI(i,j,k,1) = AdjuDotArea_XI(i,j,k,1)-rtemp
-          if(nJ>1)AdjuDotArea_YI(i,j,k,1) = AdjuDotArea_YI(i,j,k,1)-rtemp
-          if(nK>1)AdjuDotArea_ZI(i,j,k,1) = AdjuDotArea_ZI(i,j,k,1)-rtemp
-
-          ! update adjoint with dep of Source on U
-          Adjoint_VGB(p_,i,j,k,iBlock) = & 
-               Adjoint_VGB(p_,i,j,k,iBlock) - &
-               (GammaEos-g)*DivU*AdjSource_VC(p_,i,j,k)
-
-          ! TODO: still need dependence of GammaEos on state
-
-
-       end do; end do; end do
-    end if
-
-  end subroutine user_update_states_adjoint
-  !ADJOINT SPECIFIC END
-
 
   !============================================================================
 
@@ -2055,62 +2093,6 @@ contains
     end do; end do; end do
 
   end subroutine user_calc_sources
-
-
-  !ADJOINT SPECIFIC BEGIN
-  !============================================================================
-
-  subroutine user_calc_sources_adjoint
-
-    use ModMain,     ONLY: nI, nJ, nK, GlobalBlk
-    use ModAdvance,  ONLY: State_VGB, &
-         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
-    use ModGeometry, ONLY: vInv_CB
-    use ModAdjoint
-
-    integer :: i, j, k, iBlock, d
-    real :: DivU, rtemp
-    character (len=*), parameter :: NameSub = 'user_calc_sources_adjoint'
-    !-------------------------------------------------------------------
-
-    iBlock = globalBlk
-
-    ! Add Level*div(u) as a source term so level sets beome advected scalars
-    ! Note that all levels use the velocity of the first (and only) fluid
-
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       DivU            =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
-       if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
-       if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
-       DivU = vInv_CB(i,j,k,iBlock)*DivU
-
-       Source_VC(LevelXe_:LevelMax,i,j,k) = &
-            Source_VC(LevelXe_:LevelMax,i,j,k) &
-            + State_VGB(LevelXe_:LevelMax,i,j,k,iBlock)*DivU
-
-       ! update AdjuDotArea_** via dep of Source on DivU
-       rtemp = 0.0
-       do d = LevelXe_,LevelMax
-          rtemp = rtemp + State_VGB(d,i,j,k,iBlock) * AdjSource_VC(d,i,j,k)
-       end do
-
-       AdjuDotArea_XI(i+1,j,k,1) = AdjuDotArea_XI(i+1,j,k,1) + rtemp
-       AdjuDotArea_YI(i,j+1,k,1) = AdjuDotArea_YI(i,j+1,k,1) + rtemp
-       AdjuDotArea_ZI(i,j,k+1,1) = AdjuDotArea_ZI(i,j,k+1,1) + rtemp
-       AdjuDotArea_XI(i,j,k,1) = AdjuDotArea_XI(i,j,k,1) - rtemp
-       AdjuDotArea_YI(i,j,k,1) = AdjuDotArea_YI(i,j,k,1) - rtemp
-       AdjuDotArea_ZI(i,j,k,1) = AdjuDotArea_ZI(i,j,k,1) - rtemp
-
-       ! update adjoint with dep of Source on U
-       Adjoint_VGB(LevelXe_:LevelMax,i,j,k,iBlock) = & 
-            Adjoint_VGB(LevelXe_:LevelMax,i,j,k,iBlock) + &
-            AdjSource_VC(LevelXe_:LevelMax,i,j,k)*DivU
-
-    end do; end do; end do
-
-  end subroutine user_calc_sources_adjoint
-  !ADJOINT SPECIFIC END
-
 
   !===========================================================================
 
@@ -2453,6 +2435,9 @@ contains
 
     ! Read in Hyades output
     if(UseHyadesFile .and. .not. restart) call read_hyades_file
+
+    ! Read in 2D CRASH output
+    if(UseCrash2DFile .and. .not. restart) call read_crash2d_file
 
     ! create separate opacity lookup tables for each material
     call check_opac_table(FreqMinSI, FreqMaxSI, iComm = iComm)
@@ -3452,26 +3437,54 @@ contains
 
   !===========================================================================
 
-  subroutine set_nozzle_yz(x,y,z)
-    real, intent(in):: x
-    real, intent(inout):: y, z
+  subroutine set_yzr(x, y, z, r, rMax)
 
-    ! Set the Y,Z coordinates for the nozzle geometry.
-    ! The Y and Z coordinates are divided by a factor
+    real, intent(in)   :: x
+    real, intent(inout):: y, z
+    real, intent(out)  :: r
+
+    real, intent(in), optional:: rMax
+
+    ! For nozzle geometry divide the Y and Z coordinates by a shrink factor
     !
-    ! 1 (for x <= xStartNozzle)  and 
-    ! yRatioNozzle or zRatioNozzle (for x >= xEndNozzle), respectively.
+    !  = 1                            (for x <= xStartNozzle)
+    !  = yRatioNozzle or zRatioNozzle (for x >= xEndNozzle)
     !
     ! The factor is linearly varying in the [xStartNozzle,xEndNozzle] interval.
+    !
+    ! Then calculate the 2D (x-r) coordinate pair from input coordinates
+    !
+    ! Then limit the radial distance if necessary
 
     real :: Factor
     !-------------------------------------------------------------------------
-    Factor = max(0.0, min(1.0, &
-         (x - xStartNozzle)/(xEndNozzle - xStartNozzle)))
-    y = y/(1 + Factor*(yRatioNozzle-1))
-    z = z/(1 + Factor*(zRatioNozzle-1))
+    if(UseNozzle)then
+       Factor = max(0.0, min(1.0, &
+            (x - xStartNozzle)/(xEndNozzle - xStartNozzle)))
+       y = y/(1 + Factor*(yRatioNozzle-1))
+       z = z/(1 + Factor*(zRatioNozzle-1))
+    end if
 
-  end subroutine set_nozzle_yz
+    if(nK > 1)then
+       ! in 3D
+       r = sqrt(y**2 + z**2)
+    else
+       ! in 2D
+       r = abs(y)
+       z = 0.0
+    end if
+    
+    if(present(rMax))then
+
+       if(r > rMax)then
+          ! Shrink coordinates in the radial direction to rMax
+          y = y*rMax/r
+          z = z*rMax/r
+          r = rMax
+       end if
+
+    end if
+  end subroutine set_yzr
 
   !============================================================================
 
