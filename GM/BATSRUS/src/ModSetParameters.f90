@@ -586,6 +586,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseConstantTau', UseConstantTau)
         if(UseConstantTau) &
              call read_var('TauInstabilitySi', TauInstabilitySi)
+        call read_var('TauGlobalSi', TauGlobalSi)
 
      case("#EXTRAINTERNALENERGY")
         call read_var('ExtraEintMinSi', ExtraEintMinSi)

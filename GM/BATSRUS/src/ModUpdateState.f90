@@ -391,13 +391,13 @@ subroutine fix_anisotropy
        time_accurate, Cfl, dt
   use ModB0,      ONLY: B0_DGB
   use ModAdvance, ONLY: State_VGB, time_BLK
-  use ModPhysics, ONLY: UseConstantTau, TauInstability, IonMassPerCharge
+  use ModPhysics, ONLY: UseConstantTau, TauInstability, IonMassPerCharge, TauGlobal
   use ModGeometry,ONLY: true_cell
 
   implicit none
 
   ! Variables for anisotropic pressure
-  real:: B_D(3), B2, Ppar, Pperp, Dp, DtCell
+  real:: B_D(3), B2, p, Ppar, Pperp, Dp, DtCell
   real:: InvGyroFreq, PparOverLimit
 
   integer:: i, j, k, iBlock
@@ -418,7 +418,8 @@ subroutine fix_anisotropy
         if(UseB0) B_D = B_D + B0_DGB(:,i,j,k,iBlock)
         B2     = sum(B_D**2)
         Ppar   = State_VGB(Ppar_,i,j,k,iBlock)
-        Pperp  = (3*State_VGB(p_,i,j,k,iBlock) - Ppar)/2.
+        p = State_VGB(p_,i,j,k,iBlock)
+        Pperp  = (3*p - Ppar)/2.
         if(.not. time_accurate)then
            DtCell = Cfl*time_BLK(i,j,k,iBlock)
         else
@@ -427,46 +428,62 @@ subroutine fix_anisotropy
 
         InvGyroFreq = IonMassPerCharge/max(1e-8, sqrt(B2))
 
+        ! Find the instability that changes ppar the most
+        Dp = 0.0
+
+        ! This is what global relaxation would do
+        if(TauGlobal > 0) Dp = DtCell*(p - Ppar)/(DtCell + TauGlobal)
+
         ! Check for the firehose, mirror and ion cyclotron instabilities
         ! Limit anisotropy to instability criteria in unstable regions
-        if((Ppar - Pperp) > B2)then
+        if(Ppar - Pperp > B2)then
            ! firehose
            ! by how much the instability limit is exceeded
-           PparOverLimit = Ppar - Pperp - B2                 ! Delta pf
+           PparOverLimit = Ppar - Pperp - B2              ! Delta pf
+        
+           ! Calc firehose relaxation time based on the maximum 
+           ! growth rate calculated from eqn (2) of Hall [1981]
+           ! with theta = 0 and ppar < 4*pperp 
+           ! MaxGrowthRate = 
+           !    0.5*GyroFreq*Delta pf/sqrt(ppar*(pperp-ppar/4))
            if(.not. UseConstantTau) &
-                !\
-                ! Calc relaxation time based on the maximum growth rate 
-                ! calculated from eqn (2) of Hall [1981]
-                ! with theta = 0 and ppar < 4*pperp 
-                ! MaxGrowthRate = 
-                !        0.5*GyroFreq*Delta pf/sqrt(ppar*(pperp-ppar/4))
-                !/
                 TauInstability = 2.0*InvGyroFreq* &
                 sqrt(max(3.0*Ppar*(Pperp-0.25*Ppar),1e-8))/PparOverLimit
-           Dp = DtCell*PparOverLimit/(DtCell + TauInstability)
-        else if(Pperp**2 > Ppar*Pperp + 0.5*B2*Ppar)then
-           ! mirror
-           PparOverLimit = Pperp - Ppar - 0.5*B2*Ppar/Pperp   ! Delta pm
-           if(.not. UseConstantTau) &
-                !\
-                ! Calc relaxation time based on the maximum growth rate
-                ! from eqn (7) of Southwood [1993], with the wavelength @
-                ! maximum growth from eqn (21) of Hall [1980]
-                ! MaxGrowthRate = 
-                !        4/3/sqrt(5)*GyroFreq*sqrt(2*Delta pm/ppar)
-                !/
-           TauInstability = 0.75*InvGyroFreq*sqrt(2.5*Ppar/PparOverLimit)
-           Dp = -DtCell*PparOverLimit/(DtCell + TauInstability)
-        else if(Pperp > Ppar + Ppar*0.3*sqrt(0.5*B2/max(1e-8,Ppar)))then
-           ! ion cyclotron
-           if(.not. UseConstantTau) &
-                TauInstability = 1e2*InvGyroFreq
-           Dp = DtCell*(Ppar - Pperp + Ppar*0.3*sqrt(0.5*B2/max(1e-8,Ppar))) &
-                /(DtCell + TauInstability)
-        else
-           CYCLE
+              
+           Dp = min(Dp, -DtCell*PparOverLimit/(DtCell + TauInstability))
+
+        else 
+           if(Pperp**2 > Ppar*Pperp + 0.5*B2*Ppar)then
+              ! mirror 
+              PparOverLimit = 2*Pperp**2/(B2 + 2*Pperp) - Ppar  
+
+              ! Calc mirror relaxation time based on the maximum 
+              ! growth rate from eqn (7) of Southwood [1993], 
+              ! with the wavelength at maximum growth from eqn (21) 
+              ! of Hall [1980]
+              ! MaxGrowthRate = 
+              !    4/3/sqrt(5)*GyroFreq*sqrt(2*Delta pm/ppar)
+              ! where Delta pm = pperp-ppar-B^2*ppar/(2*pperp)
+              if(.not. UseConstantTau) &
+                   TauInstability = 0.75*InvGyroFreq*sqrt(2.5*Ppar &
+                   *(PparOverLimit+Ppar)/(Pperp*PparOverLimit))
+
+              Dp = max(Dp, DtCell*PparOverLimit/(DtCell + TauInstability))
+           end if
+           if(Pperp > Ppar + 0.3*sqrt(0.5*B2*Ppar))then
+              ! ion cyclotron
+              PparOverLimit = (sqrt(0.09*B2 + 8*Pperp) &
+                   - 0.3*sqrt(B2))**2/8. - Ppar
+
+              ! Estimate ion cyclotron relaxation time from
+              ! observations in the magnetosphere and theories 
+              if(.not. UseConstantTau) &
+                   TauInstability = 100*InvGyroFreq
+              
+              Dp = max(Dp, DtCell*PparOverLimit/(DtCell + TauInstability))
+           end if
         end if
-        State_VGB(Ppar_,i,j,k,iBlock)  = Ppar - 2./3.*Dp
+        State_VGB(Ppar_,i,j,k,iBlock) = Ppar + Dp
      end do; end do; end do  
   end do
 

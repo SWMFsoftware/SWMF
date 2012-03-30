@@ -312,6 +312,7 @@ subroutine set_physics_constants
   pMin_I = pMinDim_I * Io2No_V(UnitP_)
 
   TauInstability  = TauInstabilitySi*Si2No_V(UnitT_)
+  TauGlobal  = TauGlobalSi*Si2No_V(UnitT_)
 
   !\
   ! Now do the magnetic field stuff

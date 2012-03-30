@@ -132,7 +132,8 @@ module ModPhysics
 
   ! Relaxation time for anisotropic pressure
   logical :: UseConstantTau = .false.
-  real :: TauInstabilitySi = -1.0, TauInstability
+  real    :: TauInstabilitySi = -1.0, TauInstability
+  real    :: TauGlobalSi = -1.0, TauGlobal
   
   !\
   ! General variables for the second body

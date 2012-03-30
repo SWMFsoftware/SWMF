@@ -5749,20 +5749,28 @@ The default value is -1, i.e. no threshold is applied.
 	 <parameter name="UseConstantTau" type="logical" default="F"/>
 	 <if expr="$UseConstantTau">
 	 	 <parameter name="TauInstabilitySi" type="real" default="-1"/>
-	 </if>	    			    
+	 </if>
+	 <parameter name="TauGLobalSi" type="real" default="-1"/>
 		
 #ANISOTROPICPRESSURE
 T			UseConstantTau 
 10			TauInstabilitySi (only read if UseConstantTau is true)
+100			TauGlobalSi
 
 If UseConstantTau is set to false, use the growth-rate based relaxation time. 
-This is the default.
+This is the default and also recommended.
 
-If UseConstantTau is set to true, TauInstabilitySi provides the relaxation time in 
-seconds for the relaxation term to restrict the 
-pressure anisotropy. Within the time, the parallel pressure is pushed towards 
-plasma instability limits in unstable regions. The default value is -1, i.e. 
-do not apply the relaxation term. The example shows a recommended value for 
+If UseConstantTau is set to true, TauInstabilitySi provides the relaxation time 
+in seconds for the relaxation term to restrict the pressure anisotropy in 
+unstable regions. Within the time, the parallel pressure is pushed towards 
+plasma instability limits. The default value is -1, i.e. do not apply the 
+relaxation term due to instabilities. If applied, a typical value for 
+magnetospheric simulations is 10 seconds.
+
+TauGlobalSi provides the global pressure relaxation time in seconds applied
+in the whole domain. Within the time, the parallel pressure is pushed towards
+the total scalar pressure. The default value is -1, i.e. do not apply 
+the global relaxation term. The example shows a recommended value for 
 magnetospheric simulations.
 </command>
 

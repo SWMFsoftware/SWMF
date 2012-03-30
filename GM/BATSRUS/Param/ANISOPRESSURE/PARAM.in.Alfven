@@ -99,6 +99,7 @@ float		zMaxBc
 #ANISOTROPICPRESSURE
 T		UseConstantTau
 -1		TauInstability
+-1		TauGlobal
 
 #TIMESTEPPING
 2		nStage
