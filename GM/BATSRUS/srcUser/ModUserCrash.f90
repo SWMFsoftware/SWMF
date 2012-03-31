@@ -293,9 +293,12 @@ contains
           call read_var('pDimOutside',   pDimOutside)
           call read_var('xUniformXe',    xUniformXe)
 
+       case("#TUBEDIAMETER")
+          call read_var('rInnerTube', rInnerTube)
+          call read_var('rOuterTube', rOuterTube)
+
        case('#RHOINSIDE')
           call read_var('RhoDimInside',RhoDimInside)
-
 
        case("#GOLD")
           call read_var('UseGold',    UseGold)
