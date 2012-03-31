@@ -256,6 +256,8 @@ contains
   return
   end subroutine init_aerosol
 
-
+  subroutine init_topography
+    return
+  end subroutine init_topography
 
 end module ModPlanet
