@@ -74,7 +74,7 @@ OBJECTS = \
 	output.o\
 	output_common.o\
 	logfile.o\
-	calc_conduction_new.o\
+	calc_conduction.o\
 	calc_physics.o\
 	calc_avesza.o\
 	calc_euv.o\
@@ -84,7 +84,7 @@ OBJECTS = \
 	stop_file.o\
 	read_inputs.o\
 	add_sources.o\
-	calc_sources_new.o\
+	calc_sources.o\
 	apex.o\
 	write_output.o\
 	gradient.o\
