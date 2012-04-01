@@ -62,11 +62,6 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      VertVel(:,iSpecies) = VerticalVelocity(iLon,iLat,:,iSpecies,iBlock)
   enddo
 
-!  do iSpecies = nSpecies+1, nSpeciesTotal
-!     LogNS1(:,iSpecies)  = log(NDensityS(iLon,iLat,:,iSpecies,iBlock))
-!     VertVel(:,iSpecies) = Velocity(iLon,iLat,:,iUp_,iBlock)
-!  enddo
-
   cMax1   = cMax_GDB(iLon,iLat,:,iUp_,iBlock)
 
   do iDim = 1, 3 
@@ -147,8 +142,11 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      call stop_gitm("Can't continue")
   endif
 
+  nDensity(iLon,iLat,:,iBlock) = 0.0
   do iSpecies = 1, nSpecies
      nDensityS(iLon,iLat,:,iSpecies,iBlock) = exp(LogNS1(:,iSpecies))
+     nDensity(iLon,iLat,:,iBlock) = nDensity(iLon,iLat,:,iBlock) + &
+          nDensityS(iLon,iLat,:,iSpecies,iBlock)
   enddo
 
   if (UseIonAdvection) then
@@ -157,24 +155,6 @@ subroutine advance_vertical(iLon,iLat,iBlock)
         IDensityS(iLon,iLat,:,iIon,iBlock) = exp(LogINS(:,iIon))
      enddo
 
-!     if (Maxval(LogINS) > 75.0) then
-!        write(*,*) "Maxval of Ion LogINS too high!!!"
-!        do iAlt = -1,nAlts+2
-!           do iSpecies = 1, nIonsAdvect
-!              if (LogINS(iAlt,iSpecies) > 75.0) then
-!                 write(*,*) "iSpecies, iBlock, Alt,Lon, Lat, maxval : ",&
-!                      iSpecies,iBlock,&
-!                      Altitude_GB(iLon,iLat,iAlt,iBlock)/1000.0, &
-!                      longitude(iLon,iBlock)*180/pi, &
-!                      latitude(iLat,iBlock)*180/pi, LogINS(iAlt,ispecies)
-!              endif
-!           enddo
-!        enddo
-!        call stop_gitm("Can't continue")
-!     endif
-!
-
-!!!!!     IDensityS(iLon,iLat,:,1:nIonsAdvect,iBlock) = LogINS
      !\
      ! New Electron Density
      !/
@@ -186,7 +166,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      enddo
   endif
 
-SpeciesDensity(iLon,iLat,:,1:nSpeciesTotal,iBlock) = NDensityS(iLon,iLat,:,:,iBlock)
+  SpeciesDensity(iLon,iLat,:,1:nSpeciesTotal,iBlock) = &
+       NDensityS(iLon,iLat,:,:,iBlock)
   SpeciesDensity(iLon,iLat,:,nSpeciesTotal+1:nSpeciesAll,iBlock) = &
        IDensityS(iLon,iLat,:,1:nIons-1,iBlock)
 
