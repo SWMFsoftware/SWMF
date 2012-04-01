@@ -13,27 +13,9 @@ subroutine calc_GITM_sources(iBlock)
   integer :: iiAlt, iiLat, iiLon
   real :: tmp(nLons, nLats, nAlts)
   real :: tmp2(nLons, nLats, 0:nAlts+1)
-  real :: tmp3(nLons, nLats, -1:nAlts+2)
-  real :: tmp4(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
-  real :: tmp5(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
-  real :: mmm(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
-  real :: mmr(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
-  real :: inside(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
-  real :: Omega(nLons, nLats, nAlts)
+  real :: tmp3(nLons, nLats, 0:nAlts+1)
   real :: RhoI(nLons, nLats, nAlts)
-  real :: ReducedMass(nLons, nLats, nAlts)
   real :: ScaleHeight(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
-  real :: TmpGradient(nLons, nLats, nAlts,3)
-
-  real :: NSoverN(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
-  real :: NSoverNGradient(1:nLons, 1:nLats, 1:nAlts, 3)
-  real:: LogNum(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
-
-  real :: oldtemp(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
-
-  real :: dtsub, dttotal, dtsubmax, dtr
-
-  real :: diffusion_velocity(nLons, nLats, 0:nAlts+1,nspecies)
 
   real :: nVel(1:nAlts, nSpecies)
   real :: NF_Eddy(1:nAlts), NF_NDen(1:nAlts), NF_Temp(1:nAlts)
@@ -47,7 +29,6 @@ subroutine calc_GITM_sources(iBlock)
   real :: Theta(nLons, nLats, -1:nAlts+2)
   real :: GammaScale(nLons, nLats, -1:nAlts+2)
   real :: P0(nLons, nLats, -1:nAlts+2)
-  real :: Ones(nLons, nLats, -1:nAlts+2)
 
 !! Eddy Velocity Terms
   real :: ConS(nLons,nLats,-1:nAlts+2,1:nSpecies)
@@ -161,7 +142,6 @@ subroutine calc_GITM_sources(iBlock)
      
      Prandtl = 0.0
   
-
      call calc_conduction(iBlock, &
           Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
           TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
@@ -171,99 +151,106 @@ subroutine calc_GITM_sources(iBlock)
      
       Conduction = MoleConduction/TempUnit(1:nLons, 1:nLats,1:nAlts) 
 
+      if (UseTurbulentCond) then
 
-if (UseTurbulentCond) then
+         if (UseUpdatedTurbulentCond) then
 
-        if (UseUpdatedTurbulentCond) then
-
-         Ones(1:nLons,1:nLats,1:nAlts) = 1.0
-
-         do iAlt = -1,nAlts+2
-          P0(1:nLons,1:nLats,iAlt) = Pressure(1:nLons,1:nLats,0,iBlock)
-         enddo
-
+            do iAlt = -1,nAlts+2
+               P0(1:nLons,1:nLats,iAlt) = Pressure(1:nLons,1:nLats,0,iBlock)
+            enddo
 
 !! Set the Exponent for the Potential Temperature as (Gamma - 1/Gamma)
 !! Must span the range from -1 to nAlts + 2  (same as Theta)
 
-         do iAlt = 1,nAlts
-          GammaScale(1:nLons,1:nLats,iAlt) = &
-                 ( Gamma(1:nLons,1:nLats,iAlt,iBlock) - Ones(1:nLons,1:nLats,iAlt) )/Gamma(1:nLons,1:nLats,iAlt,iBlock)
-         enddo
+            do iLon = 1, nLons
+               do iLat = 1, nLats
+                  do iAlt = 1,nAlts
+                     GammaScale(iLon,iLat,iAlt) = &
+                          (Gamma(iLon,iLat,iAlt,iBlock)-1.0) / &
+                          Gamma(iLon,iLat,iAlt,iBlock)
+                  enddo
+               enddo
+            enddo
 
-         do iAlt = -1,0
-            GammaScale(1:nLons,1:nLats,iAlt) = GammaScale(1:nLons,1:nLats,1) 
-         enddo
+            do iAlt = -1,0
+               GammaScale(1:nLons,1:nLats,iAlt) = &
+                    GammaScale(1:nLons,1:nLats,1) 
+            enddo
 
-         do iAlt = nAlts,nAlts+2
-            GammaScale(1:nLons,1:nLats,iAlt) = GammaScale(1:nLons,1:nLats,nAlts) 
-         enddo
-        
+            do iAlt = nAlts,nAlts+2
+               GammaScale(1:nLons,1:nLats,iAlt) = &
+                    GammaScale(1:nLons,1:nLats,nAlts) 
+            enddo
 
-         Theta(1:nLons,1:nLats,-1:nAlts+2) = &
-            Temperature(1:nLons,1:nLats,-1:nAlts+2,iBlock)*TempUnit(1:nLons,1:nLats,-1:nAlts+2)*&
-            (P0(1:nLons,1:nLats,-1:nAlts+2)/ &
-       Pressure(1:nLons,1:nLats,-1:nAlts+2,iBlock))**GammaScale(1:nLons,1:nLats,-1:nAlts+2)
+            Theta(1:nLons,1:nLats,-1:nAlts+2) = &
+                 Temperature(1:nLons,1:nLats,-1:nAlts+2,iBlock) * &
+                 TempUnit(1:nLons,1:nLats,-1:nAlts+2)*&
+                 (P0(1:nLons,1:nLats,-1:nAlts+2)/ &
+                 Pressure(1:nLons,1:nLats,-1:nAlts+2,iBlock))**&
+                 GammaScale(1:nLons,1:nLats,-1:nAlts+2)
  
 !! Prandtl is the Eddy Heat Conduction Coefficient After Hickey et al [2000] 
 
-           Prandtl(1:nLons,1:nLats,0:nAlts+1) = &
-             KappaEddyDiffusion(1:nLons,1:nLats,0:nAlts+1,iBlock)*Rho(1:nLons,1:nLats,0:nAlts+1,iBlock)
+            Prandtl = &
+                 KappaEddyDiffusion(1:nLons,1:nLats,0:nAlts+1,iBlock) * &
+                 Rho(1:nLons,1:nLats,0:nAlts+1,iBlock)
 
-           tmp2(1:nLons,1:nLats,0:nAlts+1) = &
-              Rho(1:nLons,1:nLats,0:nAlts+1,iBlock)/&
-              Gamma(1:nLons,1:nLats,0:nAlts+1,iBlock)
+            tmp2(1:nLons,1:nLats,0:nAlts+1) = &
+                 Rho(1:nLons,1:nLats,0:nAlts+1,iBlock)/&
+                 Gamma(1:nLons,1:nLats,0:nAlts+1,iBlock)
 
-          call calc_conduction(iBlock, &
-               Theta(1:nLons, 1:nLats,-1:nAlts+2), &
-               Prandtl(1:nLons, 1:nLats,0:nAlts+1), &
-               tmp2,EddyCond)
+            call calc_conduction(&
+                 iBlock, &
+                 Theta,   &
+                 Prandtl, &
+                 tmp2,    &
+                 EddyCond)
 
 !! Eddy Scaling is Set in UAM.in.  Defaults to 1.0
 
-           EddyCondAdia(1:nLons,1:nLats,1:nAlts) = &
-               (1.0/EddyScaling)*(Temperature(1:nLons,1:nLats,1:nAlts,iBlock)/Theta(1:nLons,1:nLats,1:nAlts))*&
-                EddyCond(1:nLons,1:nLats,1:nAlts)
-
-
-        else  !! Use The Old Version
+            EddyCondAdia = &
+                 (1.0/EddyScaling)* &
+                 (Temperature(1:nLons,1:nLats,1:nAlts,iBlock) / &
+                 Theta(1:nLons,1:nLats,1:nAlts))*EddyCond
+            
+         else  !! Use The Old Version
 
             Prandtl = & 
-             KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-             Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-             Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
+                 KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+                 Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+                 Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
 
-           call calc_conduction(iBlock, &
-                Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
-                TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
-                Prandtl(1:nLons, 1:nLats,0:nAlts+1), &
-                tmp2, &
-                EddyCond)
+            call calc_conduction(iBlock, &
+                 Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
+                 TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
+                 Prandtl, &
+                 tmp2, &
+                 EddyCond)
 
+            Conduction = Conduction + &
+                 EddyCond/TempUnit(1:nLons, 1:nLats,1:nAlts) 
 
-           Conduction = Conduction + EddyCond/TempUnit(1:nLons, 1:nLats,1:nAlts) 
+            tmp3 = &
+                 Prandtl      / &
+                 Gamma(1:nLons,1:nLats, 0:nAlts+1,iBlock) / &
+                 Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock)  / &
+                 Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
 
-           call calc_conduction(iBlock, &
-                Pressure(1:nLons, 1:nLats,-1:nAlts+2,iBlock), &
-                Prandtl(1:nLons, 1:nLats,0:nAlts+1)/&
-                Gamma(1:nLons,1:nLats, 0:nAlts+1,iBlock)/Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) / &
-                  Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock),  &
-                tmp2, EddyCondAdia)
+            call calc_conduction(iBlock, &
+                 Pressure(1:nLons, 1:nLats,-1:nAlts+2,iBlock), &
+                 tmp3, &
+                 tmp2, &
+                 EddyCondAdia)
    
-           Conduction = Conduction - &
-                EddyCondAdia/TempUnit(1:nLons, 1:nLats,1:nAlts)
+            Conduction = Conduction - &
+                 EddyCondAdia/TempUnit(1:nLons, 1:nLats,1:nAlts)
    
-        endif  !! UseUpdatedTurbulentCond Check
-     endif  ! THE USETurbulentCond Check
-
+         endif  !! UseUpdatedTurbulentCond Check
+      endif  ! THE USETurbulentCond Check
 
   else
      Conduction = 0.0
   end if
-
-
-
-
 
   !\
   ! ---------------------------------------------------------------
@@ -424,13 +411,13 @@ if (UseTurbulentCond) then
      call calc_conduction(iBlock, &
           Velocity(1:nLons, 1:nLats,-1:nAlts+2, iNorth_, iBlock), &
           ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
-          Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
+          Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock), &
           Viscosity(1:nLons, 1:nLats,1:nAlts, iNorth_))
 
      call calc_conduction(iBlock, &
           Velocity(1:nLons, 1:nLats,-1:nAlts+2, iEast_, iBlock), &
           ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
-          Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
+          Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock), &
           Viscosity(1:nLons, 1:nLats,1:nAlts, iEast_))
 
      Viscosity(:,:,:,iUp_) = 0.0
