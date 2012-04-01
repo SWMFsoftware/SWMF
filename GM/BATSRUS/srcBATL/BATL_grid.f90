@@ -105,6 +105,8 @@ contains
     if(IsRLonLat) IsLatitudeAxis    = CoordMin_D(Lat_)   < -89.99*Unit &
          .and.                        CoordMax_D(Lat_)   >  89.99*Unit
 
+    IsAnyAxis = IsCylindricalAxis .or. IsSphericalAxis .or. IsLatitudeAxis
+
     if(UseDegree)then
        ! Convert degrees to radians for the domain boundaries
        if(IsCylindrical .or. IsSpherical .or. IsRLonLat)then
@@ -190,7 +192,7 @@ contains
     real, allocatable:: rCell_I(:), rFace_I(:), dCosTheta_I(:), &
          Xyz_DN(:,:,:,:)
 
-    real :: Theta, Dphi, Dz, Dtheta, Xyz_D(MaxDim)
+    real :: Theta, Dphi, Dz, Dtheta
     integer :: iNode, i, j, k
 
     real, parameter:: cThird = 1.0/3.0
