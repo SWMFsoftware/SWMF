@@ -28,6 +28,7 @@ module BATL_geometry
   logical, public:: IsCylindricalAxis = .false. ! r=0 boundary for cylindrical
   logical, public:: IsSphericalAxis   = .false. ! theta=0 and theta=pi boundaries
   logical, public:: IsLatitudeAxis    = .false. ! |lat|=pi/2 boundaries
+  logical, public:: IsAnyAxis         = .false. ! true if any of the above 3 is
   logical, public:: IsLogRadius       = .false. ! logarithmic radial coordinate
   logical, public:: IsGenRadius       = .false. ! stretched radial coordinate
 
