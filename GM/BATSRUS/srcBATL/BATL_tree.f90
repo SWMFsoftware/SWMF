@@ -2,6 +2,8 @@ module BATL_tree
 
   use BATL_size, ONLY: MaxBlock, nBlock, MaxDim, nDim, iRatio_D, &
        nDimAmr, iDimAmr_D, nIJK_D
+  use BATL_geometry, ONLY: IsPeriodic_D, Phi_, Theta_, &
+       IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, IsAnyAxis
 
   implicit none
   save
@@ -31,41 +33,43 @@ module BATL_tree
   logical,public :: DoStrictAmr = .true.
 
   ! nDesiredRefine and nDesiredCoarsen set the number of blocks that we
-  ! want refined/coarsen by percentage of with DoSoftAmrCrit = .true.
-  ! nNodeRefine and nNodeCoarsen set the number of blocks that will be
-  ! refined/coarsen or the program with stop. Usually associated with 
-  ! criteria
-  ! nNodeSort is the numbner of nodes in the sorted ranking list iRank_A
+  ! wish to refine/coarsen but may not happen (e.g. DoSoftAmrCrit = .true.)
+  ! nNodeRefine and nNodeCoarsen set the number of blocks that has to be
+  ! refined/coarsened or the program with stop. 
+  ! nNodeSort is the numbner of nodes in the ranking list iRank_A
+  ! sorted by one or more AMR criteria
+
   integer, public :: nDesiredRefine,nNodeRefine, &
        nDesiredCoarsen, nNodeCoarsen, nNodeSort
 
-  ! Max differens in in Criteria range for saying that is the same criteria
-  ! level 
+  ! If the difference in the criteria is less than DiffRange for two blocks, 
+  ! then the blocks are refined/coarsened together (preserves symmetry).
   real, public, parameter :: DiffRange = 1.0e-6
 
   ! We can also specify the percentage of blocks we want to refine. For doing
   ! this we need to sort them into a priority list iRank_A. This priority list
   ! can also be used for refining/coarsening blocks to the point where we 
-  ! have no more blocks available, and not stopping the program 
-  ! ( used with BATL_tree )
-  ! Rank_A store the criteria values for iRank_A
+  ! have no more blocks available.
+  ! Rank_A stores the criteria values for iRank_A
   integer,public, allocatable :: iRank_A(:)
 
-  ! large Rank_A value means high priority for refinement
-  ! low Rank_A value means high priority for coarsening
+  ! Large Rank_A value means high priority for refinement, while
+  ! low Rank_A value means high priority for coarsening.
   real,public, allocatable :: Rank_A(:) 
 
   ! Maximun number of try to refine/coarsen the grid based on iRank_A
   integer, public :: iMaxTryAmr = 100
 
-  ! Input paramiter
+  ! Input parameter
   integer, public :: MaxTotalBlock
 
+  ! Number of children per node
   integer, public, parameter :: nChild = 2**nDimAmr
 
   ! Global tree information
   integer, public, allocatable :: iTree_IA(:,:)
 
+  ! Named indexes of iTree_IA
   integer, public, parameter :: &
        Status_   =  1, &
        Level_    =  2, &
@@ -83,9 +87,8 @@ module BATL_tree
        Child1_   = Child0_ + 1,      &
        ChildLast_= Child0_ + nChild
 
-  ! Tell if the grid has changed (refined/coarsen) or
-  ! blocks moved.  if IsNewGrid == .true. IsNewDecomposition
-  ! should also be .true.
+  ! Tell if the grid has changed (refined/coarsened) or blocks were moved.
+  ! If IsNewGrid == .true. IsNewDecomposition should also be .true.
   logical, public :: IsNewDecomposition, IsNewTree
 
   ! Number of items stored in iTree_IA
@@ -178,6 +181,10 @@ module BATL_tree
   ! Needed for compact_tree
   integer, allocatable:: iNodeNew_A(:)
 
+  ! Neighbor in the +phi direction for nodes around the poles
+  ! All neighbors can be found by going from node to node
+  integer, allocatable:: iNodeAxisNei_A(:)
+
 contains
 
   subroutine init_tree(MaxBlockIn)
@@ -212,6 +219,7 @@ contains
     allocate(Unused_BP(MaxBlock,0:nProc-1));            Unused_BP      = .true.
     allocate(iNodeNei_IIIB(0:3,0:3,0:3,MaxBlock));      iNodeNei_IIIB  = Unset_
     allocate(DiLevelNei_IIIB(-1:1,-1:1,-1:1,MaxBlock)); DiLevelNei_IIIB= Unset_
+    allocate(iNodeAxisNei_A(MaxNode));                  iNodeAxisNei_A = Unset_
 
     ! Initialize minimum and maximum levels of refinement
     iTree_IA(MinLevel_,:) = 0;
@@ -229,8 +237,8 @@ contains
          iNode_B, Unused_B, Unused_BP, &
          iNodeNei_IIIB, DiLevelNei_IIIB)
 
-    if(allocated(iRank_A)) deallocate(iRank_A)
-
+    if(allocated(iRank_A))        deallocate(iRank_A)
+    if(allocated(iNodeAxisNei_A)) deallocate(iNodeAxisNei_A)
 
     MaxNode = 0
     iNodeNew = 0
@@ -268,9 +276,6 @@ contains
 
   subroutine set_tree_root(nRootIn_D)
 
-    use BATL_geometry, ONLY: &
-         IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Phi_
-
     integer, optional, intent(in) :: nRootIn_D(nDim)
 
     integer :: iRoot, jRoot, kRoot, iNode, iRoot_D(MaxDim)
@@ -284,7 +289,7 @@ contains
     nRoot   = product(nRoot_D)
 
     ! Chect for even number of root blocks in phi direction around the axis
-    if(IsCylindricalAxis .or. IsSphericalAxis .or. IsLatitudeAxis)then
+    if(IsAnyAxis)then
        if(modulo(nRoot_D(Phi_),2) /= 0) call CON_stop(NameSub // &
             ': there must be an even number of root blocks around the axis')
     end if
@@ -590,6 +595,9 @@ contains
                       if(iStatusNew_A(jNode) == Refine_) jLevelNew = jLevel + 1
                       if(iStatusNew_A(jNode) == Coarsen_)jLevelNew = jLevel - 1
 
+                      ! Nothing to worry about
+                      if(iLevelNew == jLevelNew) CYCLE
+
                       ! Fix levels if difference is too much
                       if(iLevelNew >= jLevelNew + 2)then
 
@@ -625,13 +633,13 @@ contains
              call MPI_allreduce(iStatusNew_A, iStatusAll_A, nNode, &
                   MPI_INTEGER, MPI_MAX, iComm, iError)
              iStatusNew_A(1:nNode) = iStatusAll_A(1:nNode)
-          end if         
+          end if
 
        end do LOOPLEVEL! levels
-      
+
        ! all blocks marked for refinment shoud be refined if true
        if(DoStrictAmr .or. count(iStatusNew_A == Refine_) == 0) EXIT LOOPTRY
-      
+
        ! Estimate the difference between the expected number of blocks
        ! after AMR and the number of available/allowed blocks.
        DnNode = (nNodeUsed - count(iStatusNew_A == Coarsen_) + &
@@ -713,7 +721,7 @@ contains
 
        call coarsen_tree_node(iNodeParent, iTypeNode_A)
     end do
-  
+
     ! Refine next
     do iMorton = 1, nNodeUsedNow
        iNode   = iNodeMorton_I(iMorton)
@@ -729,7 +737,7 @@ contains
        if(nNodeUsed > MaxBlock*nProc) EXIT
 
     end do
-  
+
     iStatusNew_A(1:nNode) = Unset_
 
   end subroutine adapt_tree
@@ -899,7 +907,7 @@ contains
           Weight_D(2) = 1.0 - Weight_D(2)
        end  do
        Weight_D(3) = 1.0 - Weight_D(3)
-    end  do    
+    end  do
 
   end subroutine interpolate_tree
   !==========================================================================
@@ -926,8 +934,6 @@ contains
   subroutine find_neighbor(iBlock)
 
     use BATL_size, ONLY: iRatio_D
-    use BATL_geometry, ONLY: IsPeriodic_D, &
-         IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis
 
     integer, intent(in):: iBlock
 
@@ -1056,8 +1062,53 @@ contains
           end do
        end do
     end do
-    
+
   end subroutine find_neighbor
+
+  !==========================================================================
+
+  subroutine find_axis_neighbor
+
+    ! Set iNodeAxisNei_A array for axis neighbor in +phi direction.
+    ! There is no MPI communication. There are few blocks next to the axis.
+
+    integer:: iNode, jNode, iLevel, iCoord, MaxCoord
+    real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim)
+    !------------------------------------------------------------------------
+    if(.not.IsAnyAxis) RETURN
+
+    do iNode = 1, nNode
+
+       iNodeAxisNei_A(iNode) = Unset_
+       if(iTree_IA(Status_,iNode) /= Used_) CYCLE
+
+       ! Check if node is next to the pole
+       if(IsCylindricalAxis)then
+          if(iTree_IA(Coord1_,iNode) > 1) CYCLE
+       else
+          iLevel = iTree_IA(Level_,iNode)
+          MaxCoord = nRoot_D(Theta_)
+          if(iRatio_D(Theta_) == 2) MaxCoord = MaxCoord*MaxCoord_I(iLevel)
+          iCoord = iTree_IA(Coord0_+Theta_,iNode) 
+          if(iCoord > 1 .and. iCoord < MaxCoord) CYCLE
+       end if
+
+       ! Get node position
+       call get_tree_position(iNode, PositionMin_D, PositionMax_D)
+
+       ! Calculate normalized coordinates for the node center
+       Coord_D = 0.5*(PositionMax_D + PositionMin_D)
+
+       ! Shift the Phi coordinate in the positive direction to the next node
+       Coord_D(Phi_) = modulo(&
+            Coord_D(Phi_) + 0.6*(PositionMax_D(Phi_) - PositionMin_D(Phi_)), &
+            1.0)
+
+       call find_tree_node(Coord_D, jNode)
+       iNodeAxisNei_A(iNode) = jNode
+    end do
+
+  end subroutine find_axis_neighbor
 
   !==========================================================================
 
@@ -1416,6 +1467,8 @@ contains
        call find_neighbor(iBlock)
     end do
 
+    if(IsAnyAxis) call find_axis_neighbor
+
   end subroutine move_tree
   !==========================================================================
   subroutine order_tree
@@ -1473,8 +1526,6 @@ contains
 
   subroutine show_tree(String, DoShowNei)
 
-    use BATL_geometry, ONLY: IsPeriodic_D
-
     character(len=*), intent(in):: String
     logical, optional,intent(in):: DoShowNei
 
@@ -1514,6 +1565,8 @@ contains
     write(*,*)'iNodeNei_IIIB(1,:,1,  First)=',   iNodeNei_IIIB(1,:,1,iBlock)
     write(*,*)'iNodeNei_IIIB(1,1,:,  First)=',   iNodeNei_IIIB(1,1,:,iBlock)
 
+    if(IsAnyAxis)write(*,*)'iNodeAxisNei_A=',iNodeAxisNei_A(1:nNode)
+
   end subroutine show_tree
 
   !==========================================================================
@@ -1522,7 +1575,7 @@ contains
 
     use BATL_size, ONLY: nI, nJ, nK
     use BATL_mpi, ONLY: iProc, nProc
-    use BATL_geometry, ONLY: init_geometry, IsPeriodic_D
+    use BATL_geometry, ONLY: init_geometry
 
     integer, parameter:: MaxBlockTest            = 50
     integer, parameter:: nRootTest_D(MaxDim)     = (/3,2,1/)
