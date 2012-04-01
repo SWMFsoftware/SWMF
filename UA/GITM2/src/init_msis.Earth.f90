@@ -216,7 +216,7 @@ subroutine init_msis
               do iSpecies = 1, nSpecies
                  MeanMajorMass(iLon,iLat,iAlt) = MeanMajorMass(iLon,iLat,iAlt) +   &
                       Mass(iSpecies) * NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)/   &
-                      sum(NDensityS(iLon,iLat,iAlt,1:3,iBlock))
+                      sum(NDensityS(iLon,iLat,iAlt,1:nSpecies,iBlock))
               enddo
   
               TempUnit(iLon,iLat,iAlt) = &
