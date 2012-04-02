@@ -510,12 +510,16 @@ contains
     !/
     if(is_proc(GM_)) then
        call GM_get_for_im_trace_crcm(iSize, jSize, NameVar, nVarLine, nPointLine)
+       ! BufferLine_VI has to exist on all GM processors but only the root proc uses it
        allocate(BufferLine_VI(nVarLine, nPointLine))
        call GM_get_for_im_crcm(Buffer_IIV, iSize, jSize, nVarBmin, &
             BufferLine_VI, nVarLine, nPointLine, NameVar)
-       if(DoTest) &
-            write(*,*) 'GM_get_for_im_crcm: iProc, Buffer_IIV(1,1,:)=',&
-            iProcWorld,Buffer_IIV(1,1,:)
+       ! The BufferLine_VI array has zero size on the non-root GM processors: deallocate
+       if(.not.is_proc0(GM_)) deallocate(BufferLine_VI)
+       if(DoTest .and. iProcWorld == 0)then
+          write(*,*) 'GM_get_for_im_crcm: iProc, Buffer_IIV(1,1,:)=',&
+               iProcWorld,Buffer_IIV(1,1,:)
+       end if
     end if
     !\
     ! If IM sat tracing is enabled, get sat locations from GM
@@ -639,7 +643,8 @@ contains
     !\
     ! Deallocate buffer to save memory
     !/
-    deallocate(Buffer_IIV, BufferLine_VI)
+    if(allocated(Buffer_IIV))   deallocate(Buffer_IIV)
+    if(allocated(BufferLine_VI))deallocate(BufferLine_VI)
 
     if (nShareSats > 0) then
        deallocate(NameSat_I)
