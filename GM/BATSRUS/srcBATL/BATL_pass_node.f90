@@ -1,9 +1,9 @@
 !^CFG COPYRIGHT UM
 module BATL_pass_node
 
-  use BATL_geometry, ONLY: IsCartesian, IsRzGeometry, IsRoundCube, &
+  use BATL_geometry, ONLY: &
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
-  use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
+  use ModNumConst, ONLY: cPi, cHalfPi
 
 
   ! Possible improvements:
