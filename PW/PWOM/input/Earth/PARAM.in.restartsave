@@ -2,7 +2,7 @@
 F		IsCentrifugal
 
 #FIELDLINE
-4		nTotalLine
+8		nTotalLine
 
 #SAVEPLOT
 50.0		DtSavePlot

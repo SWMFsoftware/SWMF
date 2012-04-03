@@ -99,6 +99,22 @@ test_check:
 		${TESTDIR}/PW/restartOUT/restart_iline0004.dat \
 		data/output/${PLANET}/restart_iline0004.dat \
 		>> test_${PLANET}${MYTEST}.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
+		${TESTDIR}/PW/restartOUT/restart_iline0005.dat \
+		data/output/${PLANET}/restart_iline0005.dat \
+		>> test_${PLANET}${MYTEST}.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
+		${TESTDIR}/PW/restartOUT/restart_iline0006.dat \
+		data/output/${PLANET}/restart_iline0006.dat \
+		>> test_${PLANET}${MYTEST}.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
+		${TESTDIR}/PW/restartOUT/restart_iline0007.dat \
+		data/output/${PLANET}/restart_iline0007.dat \
+		>> test_${PLANET}${MYTEST}.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
+		${TESTDIR}/PW/restartOUT/restart_iline0008.dat \
+		data/output/${PLANET}/restart_iline0008.dat \
+		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/north_plots_iline0001.out \
 		data/output/${PLANET}/north_plots_iline0001.out \
