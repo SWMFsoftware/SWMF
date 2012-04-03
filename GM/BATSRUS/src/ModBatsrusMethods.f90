@@ -148,6 +148,9 @@ contains
     use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
     use ModRestartFile, ONLY: read_restart_files
     use ModCovariant,   ONLY: UseVertexBasedGrid,do_fix_geometry_at_reschange 
+    use ModMain,        ONLY: UseBatl, iNewGrid, iNewDecomposition 
+    use ModMessagePass, ONLY: exchange_messages
+
     !\
     ! Set intial conditions for solution in each block.
     !/
@@ -255,6 +258,12 @@ contains
        end if
     end if
     !^CFG END CONSTRAINB
+
+    call exchange_messages(.false.)
+    if(.not. useBATL) then
+       iNewDecomposition = mod(iNewDecomposition+1,10000)
+       iNewGrid = mod( iNewGrid+1, 10000)
+    end if
 
   end subroutine set_initial_conditions
 
