@@ -53,9 +53,6 @@ T			UseBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
-#BODY
-F			UseBody
-
 #READPOTENTIALFIELD
 T			UseMagnetogram
 potentialfield.out	NamePotentialFieldFile
@@ -211,6 +208,7 @@ initial			NameArea
 #AMR
 50001			DnRefine
 F			DoAutoRefine
+
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
@@ -239,15 +237,12 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#EXTRABOUNDARY
-T			UseExtraBoundary
-user			TypeBc_I(ExtraBc_)
-T			DoFixExtraBoundary
+#INNERBOUNDARY
+user			TypeBcInner
 
 #FACEBOUNDARY
-0			MinBoundary
-0			MaxBoundary
-F			DoFixOuterBoundary
+-1			MinBoundary
+-1			MaxBoundary
 
 #OUTERBOUNDARY
 user			TypeBcEast   user for spherical and user_outerbcs
@@ -333,7 +328,7 @@ currentsheet		NameArea
 T			DoThinCurrentSheet
 
 #INNERBOUNDARY
-buffergrid
+buffergrid		TypeBcInner
 
 #BUFFERGRID
 2			nRBuff
@@ -347,9 +342,8 @@ buffergrid
 90.0			LatBuffMax
 
 #FACEBOUNDARY
-0			MinBoundary
-0			MaxBoundary
-F			DoFixOuterBoundary
+-1			MinBoundary
+-1			MaxBoundary
 
 #OUTERBOUNDARY
 float			TypeBcEast
