@@ -646,6 +646,13 @@ contains
             count(iStatusNew_A == Refine_)*(nChild-1)) &
             - min(nProc*MaxBlock,MaxTotalBlock) 
 
+       ! If we have gemometry based AMR only and we want more blocks
+       ! then we have allocated for we abort refining/coarsing
+       if(.not.allocated(iRank_A) .and. DnNode >0) then
+          iStatusNew_A = Unset_
+          RETURN
+       end if
+
        DnNodeOld = DnNode 
 
        ! exit if we have enough space for all the new blocks
