@@ -533,7 +533,7 @@ contains
          WaveFirst_, WaveLast_
 
     integer :: i, j, k, iBlock, iWave
-    real :: CoronalHeating, RadiativeCooling
+    real :: CoronalHeating
     real :: DissipationLength, WaveDissipation, FullB_D(3), FullB
     real :: DtInvWave, Vdt_Source, Vdt
 
@@ -591,89 +591,9 @@ contains
           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + gm1*CoronalHeating
        end if
 
-       CYCLE
-
-       call get_radiative_cooling( &
-            State_VGB(:,i,j,k,iBlock), RadiativeCooling)
-
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k)+RadiativeCooling
-
-       if(UseElectronPressure)then
-          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + gm1*RadiativeCooling
-       else
-          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + gm1*RadiativeCooling
-       end if
-
     end do; end do; end do
 
   end subroutine user_calc_sources
-
-  !============================================================================
-
-  subroutine get_radiative_cooling(State_V, RadiativeCooling)
-
-    use ModAdvance,    ONLY: UseElectronPressure
-    use ModMultiFluid, ONLY: MassIon_I
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitT_, UnitN_, &
-         UnitEnergyDens_, UnitTemperature_, AverageIonCharge
-    use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_
-
-    real, intent(in) :: State_V(nVar)
-    real, intent(out):: RadiativeCooling
-
-    real :: Te, TeSi, CoolingFunctionCgs
-    real :: NumDensIonCgs, NumDensElectronCgs
-    !--------------------------------------------------------------------------
-
-    if(UseElectronPressure)then
-       Te = TeFraction*State_V(Pe_)/State_V(Rho_)
-    else
-       Te = TeFraction*State_V(p_)/State_V(Rho_)
-    end if
-    TeSi =Te*No2Si_V(UnitTemperature_)
-
-    ! CGS is used to avoid insane numbers
-    call get_cooling_function(TeSi, CoolingFunctionCgs)
-    NumDensIonCgs = (State_V(Rho_)/MassIon_I(1))*No2Si_V(UnitN_)*1.0e-6
-    NumDensElectronCgs = AverageIonCharge*NumDensIonCgs
-
-    RadiativeCooling = -NumDensIonCgs*NumDensElectronCgs*CoolingFunctionCgs &
-         *0.1*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
-
-  contains
-
-    subroutine get_cooling_function(TeSi, CoolingFunctionCgs)
-
-      ! Based on Rosner et al. (1978) and Peres et al. (1982)
-      ! Need to be replaced by Chianti tables
-
-      real, intent(in) :: TeSi
-      real, intent(out):: CoolingFunctionCgs
-      !------------------------------------------------------------------------
-
-      if(TeSi <= 8e3)then
-         CoolingFunctionCgs = (1.0606e-6*TeSi)**11.7
-      elseif(TeSi <= 2e4)then
-         CoolingFunctionCgs = (1.397e-8*TeSi)**6.15
-      elseif(TeSi <= 10**4.575)then
-         CoolingFunctionCgs = 10**(-21.85)
-      elseif(TeSi <= 10**4.9)then
-         CoolingFunctionCgs = 10**(-31.0)*TeSi**2
-      elseif(TeSi <= 10**5.4)then
-         CoolingFunctionCgs = 10**(-21.2)
-      elseif(TeSi <= 10**5.77)then
-         CoolingFunctionCgs = 10**(-10.4)/TeSi**2
-      elseif(TeSi <= 10**6.315)then
-         CoolingFunctionCgs = 10**(-21.94)
-      elseif(TeSi <= 10**7.60457)then
-         CoolingFunctionCgs = 10**(-17.73)/TeSi**(2.0/3.0)
-      else
-         CoolingFunctionCgs = 10**(-26.6)*sqrt(TeSi)
-      end if
-
-    end subroutine get_cooling_function
-
-  end subroutine get_radiative_cooling
 
   !============================================================================
 
@@ -890,6 +810,7 @@ contains
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_
+    use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
@@ -906,6 +827,10 @@ contains
 
     IsFound = .true.
 
+    if(TypeBc == 'usersemilinear')then
+       RETURN
+    end if
+
     do k = -1, nK+2; do j = -1, nJ+2
        x_D(x_) = 0.5*sum(x_Blk(0:1,j,k,iBlock))
        x_D(y_) = 0.5*sum(y_Blk(0:1,j,k,iBlock))
@@ -913,22 +838,25 @@ contains
 
        call get_plasma_parameters_base(x_D, RhoBase, Tbase)
 
-       ! Fixed density
-       State_VGB(Rho_,0,j,k,iBlock) = &
-            2.0*RhoBase - State_VGB(Rho_,1,j,k,iBlock)
-       State_VGB(Rho_,-1,j,k,iBlock) = State_VGB(Rho_,0,j,k,iBlock)
+       if(TypeBc == 'usersemi')then
+          StateSemi_VGB(iTeImpl,0,j,k,iBlock) = Tbase
+       else
+          ! Fixed density
+          State_VGB(Rho_,-1:0,j,k,iBlock) = RhoBase
 
-       ! fixed electron and ion temperature
-       do i = -1, 0
-          NumDensIon = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
-          NumDensElectron = NumDensIon*AverageIonCharge
-          if(UseElectronPressure)then
-             State_VGB(p_,i,j,k,iBlock) = NumDensIon*Tbase
-             State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*Tbase
-          else
-             State_VGB(p_,i,j,k,iBlock) = (NumDensIon + NumDensElectron)*Tbase
-          end if
-       end do
+          ! fixed electron and ion temperature
+          do i = -1, 0
+             NumDensIon = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
+             NumDensElectron = NumDensIon*AverageIonCharge
+             if(UseElectronPressure)then
+                State_VGB(p_,i,j,k,iBlock) = NumDensIon*Tbase
+                State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*Tbase
+             else
+                State_VGB(p_,i,j,k,iBlock) = &
+                     (NumDensIon + NumDensElectron)*Tbase
+             end if
+          end do
+       end if
 
     end do; end do
 
