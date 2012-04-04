@@ -12,6 +12,7 @@ module BATL_tree
 
   public:: init_tree
   public:: clean_tree
+  public:: set_tree_param
   public:: set_tree_root
   public:: refine_tree_node
   public:: coarsen_tree_node
@@ -185,8 +186,11 @@ module BATL_tree
   ! All neighbors can be found by going from node to node
   integer, allocatable:: iNodeAxisNei_A(:)
 
-contains
+  ! Use uniform resolution around axis
+  logical:: UseUniformAxis = .false.
 
+contains
+  !===========================================================================
   subroutine init_tree(MaxBlockIn)
 
     use BATL_mpi, ONLY: nProc
@@ -223,14 +227,29 @@ contains
     allocate(Unused_BP(MaxBlock,0:nProc-1));            Unused_BP      = .true.
     allocate(iNodeNei_IIIB(0:3,0:3,0:3,MaxBlock));      iNodeNei_IIIB  = Unset_
     allocate(DiLevelNei_IIIB(-1:1,-1:1,-1:1,MaxBlock)); DiLevelNei_IIIB= Unset_
-    allocate(iNodeAxisNei_A(MaxNode));                  iNodeAxisNei_A = Unset_
 
     ! Initialize minimum and maximum levels of refinement
     iTree_IA(MinLevel_,:) = 0;
     iTree_IA(MaxLevel_,:) = MaxLevel
 
   end subroutine init_tree
+  !==========================================================================
+  subroutine set_tree_param(UseUniformAxisIn)
 
+    logical, optional:: UseUniformAxisIn
+    !-----------------------------------------------------------------------
+    if(.not.present(UseUniformAxisIn)) RETURN
+    UseUniformAxis = UseUniformAxisIn
+    if(UseUniformAxis)then
+       if(MaxNode == 0)call CON_stop('Set UseUniformAxis after init_tree!')
+       if(.not.allocated(iNodeAxisNei_A))then
+          allocate(iNodeAxisNei_A(MaxNode)); iNodeAxisNei_A = Unset_
+       end if
+    else
+       if(allocated(iNodeAxisNei_A)) deallocate(iNodeAxisNei_A)
+    end if
+
+  end subroutine set_tree_param
   !==========================================================================
   subroutine clean_tree
 
@@ -242,7 +261,7 @@ contains
          iNodeNei_IIIB, DiLevelNei_IIIB)
 
     if(allocated(iRank_A))        deallocate(iRank_A)
-    if(allocated(iNodeAxisNei_A)) deallocate(iNodeAxisNei_A)
+    call set_tree_param(UseUniformAxisIn=.false.)
 
     MaxNode = 0
     iNodeNew = 0
@@ -444,9 +463,9 @@ contains
     ! limitations on level, number of blocks, etc, 
     ! modify iStatusNew_A and set iTree_IA.
 
-    integer:: nNodeUsedNow, iMorton, iBlock, iStatus, iError
-    integer:: iNode, iNodeParent, iNodeChild_I(nChild)
-    integer:: jNode, jNodeParent, jNodeChild_I(nChild)
+    integer:: nNodeUsedNow, iMorton, iBlock, iChild, iStatus, iError
+    integer:: iNode, iNodeParent, iNodeChild, iNodeChild_I(nChild)
+    integer:: jNode, jNodeParent
     integer:: iLevel, iLevelNew, iLevelMax, iLevelMin
     integer:: jLevel, jLevelNew
     integer:: iSide, iSideMin, iSideMax
@@ -471,7 +490,7 @@ contains
        iStatusNew_A(1:nNode) = iStatusAll_A(1:nNode)
     end if
 
-    ! storing the initall list that will not be chenged by the proper nesting
+    ! store the initall list that will not be changed by the proper nesting
     if(.not.DoStrictAmr) then
        allocate(iStatusNew0_A(MaxNode))
        iStatusNew0_A(1:nNode) = iStatusNew_A(1:nNode)
@@ -495,6 +514,11 @@ contains
                 CYCLE
              end if
              iLevelMax = max(iLevelMax, iLevel)
+
+             if(UseUniformAxis)then
+                ! All axis neighbors have to be refined
+                if(iNodeAxisNei_A(iNode) /= Unset_) call refine_axis(iNode)
+             end if
           end if
 
           ! Only nodes to be coarsened need further checking
@@ -507,6 +531,12 @@ contains
           end if
           iLevelMax = max(iLevelMax, iLevel)
 
+          ! Cancel coarsening if any axis neighbor is not to be coarsened
+          if(UseUniformAxis)then
+             if(iNodeAxisNei_A(iNode) /= Unset_) &
+                  call check_axis_coarsening(iNode)
+          end if
+
           ! Check if all siblings want to be coarsened
           iNodeParent = iTree_IA(Parent_,iNode)
           iNodeChild_I = iTree_IA(Child1_:ChildLast_,iNodeParent)
@@ -514,6 +544,16 @@ contains
              ! Cancel coarsening requests for all siblings
              where(iStatusNew_A(iNodeChild_I) == Coarsen_) &
                   iStatusNew_A(iNodeChild_I) = Unset_
+
+             if(UseUniformAxis)then
+                ! Cancel coarsening around axis if any child is at the axis
+                do iChild = 1, nChild
+                   iNodeChild = iNodeChild_I(iChild)
+                   if(iNodeAxisNei_A(iNodeChild) /= Unset_) &
+                        call cancel_axis_coarsening(iNodeChild)
+                end do
+             end if
+
           end if
 
        end do
@@ -606,25 +646,38 @@ contains
                       ! Fix levels if difference is too much
                       if(iLevelNew >= jLevelNew + 2)then
 
-                         if(jLevel > 0)then
-                            jNodeParent = iTree_IA(Parent_,jNode) 
-                            jNodeChild_I= &
-                                 iTree_IA(Child1_:ChildLast_,jNodeParent)
-
+                         if(jLevelNew < jLevel)then
                             ! Neighbor and its siblings cannot be coarsened
-                            iStatusNew_A(jNodeChild_I) = &
-                                 max(iStatusNew_A(jNodeChild_I), DontCoarsen_)
+                            jNodeParent = iTree_IA(Parent_,jNode) 
+                            do iChild = Child1_, ChildLast_
+                               iNodeChild = iTree_IA(iChild,jNodeParent)
+                               if(iStatusNew_A(iNodeChild) /= Coarsen_) CYCLE
+                               iStatusNew_A(iNodeChild) = DontCoarsen_
+                               if(.not.UseUniformAxis) CYCLE
+                               if(iNodeAxisNei_A(iNodeChild) == Unset_) CYCLE
+                               call cancel_axis_coarsening(iNodeChild)
+                            end do
                          endif
 
                          ! If neighbor was coarser it has to be refined
-                         if(jLevel < iLevel) iStatusNew_A(jNode) = Refine_
+                         if(jLevel < iLevel)then
+                            iStatusNew_A(jNode) = Refine_
+                            if(UseUniformAxis)then
+                               if(iNodeAxisNei_A(jNode) /= Unset_) &
+                                    call refine_axis(jNode)
+                            end if
+                         end if
 
                       elseif(iLevelNew <= jLevelNew - 2)then
                          ! Cannot coarsen this node
                          iNodeParent = iTree_IA(Parent_,iNode)
-                         iStatusNew_A(iTree_IA(Child1_:ChildLast_, &
-                              iNodeParent)) = DontCoarsen_
-
+                         do iChild = Child1_, ChildLast_
+                            iNodeChild = iTree_IA(iChild,iNodeParent)
+                            iStatusNew_A(iNodeChild) = DontCoarsen_
+                            if(.not.UseUniformAxis) CYCLE
+                            if(iNodeAxisNei_A(iNodeChild) == Unset_) CYCLE
+                            call cancel_axis_coarsening(iNodeChild)
+                         end do
                          CYCLE LOOPBLOCK
                       end if
 
@@ -752,6 +805,63 @@ contains
     end do
 
     iStatusNew_A(1:nNode) = Unset_
+
+  contains
+    !========================================================================
+    subroutine refine_axis(iNode)
+
+      ! Refine all axis neighbors of iNode
+
+      integer, intent(in):: iNode    
+      integer:: jNode
+      !-----------------------------------------------------------------------
+      jNode = iNode
+      do
+         jNode = iNodeAxisNei_A(jNode)
+         if(jNode == iNode) EXIT
+         iStatusNew_A(jNode) = Refine_
+      end do
+    end subroutine refine_axis
+    !========================================================================
+    subroutine check_axis_coarsening(iNode)
+
+      ! Check if any of the axis neighbors are not to be coarsened.
+      ! If not then cancel coarsening for all axis neighbors.
+
+      integer, intent(in):: iNode    
+      integer:: jNode
+      !-----------------------------------------------------------------------
+      jNode = iNode
+      do
+         jNode = iNodeAxisNei_A(jNode)
+         if(jNode == iNode) EXIT
+         if(iStatusNew_A(jNode) /= Coarsen_) EXIT
+      end do
+      ! No problem if all nodes around the axis are to be coarsened
+      if(jNode == iNode) RETURN
+      ! Cancel coarsening of the axis
+      call cancel_axis_coarsening(iNode)
+
+    end subroutine check_axis_coarsening
+    !========================================================================
+    subroutine cancel_axis_coarsening(iNode)
+
+      ! Cancel coarsening for all axis neighbors
+
+      integer, intent(in):: iNode    
+      integer:: jNode, jNodeParent, jNodeChild_I(nChild)
+      !-----------------------------------------------------------------------
+      jNode = iNode
+      do
+         jNode = iNodeAxisNei_A(jNode)
+         jNodeParent = iTree_IA(Parent_,jNode)
+         jNodeChild_I = iTree_IA(Child1_:ChildLast_,jNodeParent)
+         iStatusNew_A(jNodeChild_I) = &
+              max(iStatusNew_A(jNodeChild_I), DontCoarsen_)
+         if(jNode == iNode) EXIT
+      end do
+    end subroutine cancel_axis_coarsening
+    !========================================================================
 
   end subroutine adapt_tree
   !==========================================================================
@@ -1480,7 +1590,7 @@ contains
        call find_neighbor(iBlock)
     end do
 
-    if(IsAnyAxis) call find_axis_neighbor
+    if(UseUniformAxis) call find_axis_neighbor
 
   end subroutine move_tree
   !==========================================================================
@@ -1578,7 +1688,7 @@ contains
     write(*,*)'iNodeNei_IIIB(1,:,1,  First)=',   iNodeNei_IIIB(1,:,1,iBlock)
     write(*,*)'iNodeNei_IIIB(1,1,:,  First)=',   iNodeNei_IIIB(1,1,:,iBlock)
 
-    if(IsAnyAxis)write(*,*)'iNodeAxisNei_A=',iNodeAxisNei_A(1:nNode)
+    if(UseUniformAxis)write(*,*)'iNodeAxisNei_A=',iNodeAxisNei_A(1:nNode)
 
   end subroutine show_tree
 
