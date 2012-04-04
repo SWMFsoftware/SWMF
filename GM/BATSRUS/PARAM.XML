@@ -1456,6 +1456,26 @@ the Voronoy cells only.
 
 </command>
 
+<command name="UNIFORMAXIS" if="$_IsFirstSession">
+	 <parameter name="UseUniformAxis" type="logical" default="T"/>
+
+#UNIFORMAXIS
+T			UseUniformAxis
+
+This command can only be used in the first session. 
+If UseUniformAxis is true, there can be no resolution change AROUND the
+axis of a spherical or cylindrical grid. This is required by the supercell
+algorithm that can be activated by the #FIXAXIS command. Note that there can
+still be resolution changes ALONG the axis.
+
+If UseUniformAxis is false, the AMR can produce resolution changes around 
+the axis of the grid. The super-cell algorithm cannot be used. 
+For restarted runs the false setting has to be repeated in the PARAM.in file 
+used for the restart.
+
+The default is UseUniformAxis=T.
+</command>
+
 <command name="FIXAXIS">
 	<parameter name="UsePoleDiffusion" type="logical" default="F"/>
 	<parameter name="DoFixAxis" type="logical" default="F"/>
@@ -1479,7 +1499,11 @@ When DoFixAxis is true, the cells around the pole are merged into one
 For blocks within r2FixAxis, the radius of the supercell is 2 normal
 cells. Merging the small cells allows larger time steps in time accurate runs:
 about a factor of 2 if only rFixAxis is used, and around factor of 3 
-if r2FixAxis is also used.
+if r2FixAxis is also used. 
+
+Note that the super-cell algorithm requires that there is no 
+resolution change around the axis in the phi direction. See
+the #UNIFORMAXIS command for more discussion.
 
 Default is false for both UsePoleDiffusion and DoFixAxis.
 </command>
@@ -3699,25 +3723,31 @@ for AMR.
 </command>
 
 <command name="DOAMR">
-	 <parameter name="DoAmr" type="logical" default="F" />
-	 <parameter name="DnAmr" type="integer" min="-1" default="-1" />
-	 <parameter name="DtAmr" type="real" min="-1.0" default="-1.0" />
-	 <parameter name="IsStrictAmr" type="logical" default="T" />
+	 <parameter name="DoAmr" type="logical" default="F"/>
+	 <if expr="$DoAmr">
+	    <parameter name="DnAmr" type="integer" min="-1" default="-1" />
+	    <parameter name="DtAmr" type="real" min="-1.0" default="-1.0" />
+	    <parameter name="IsStrictAmr" type="logical" default="T" />
+	 </if>
 #DOAMR
-T                       DoAmr
+T                       DoAmr (the rest is only read if true)
 1                       DnAmr
 -1.0                    DtAmr
 T                       IsStrictAmr
 
-DoAmr is telling if you do AMR based on criteria decided during the simulation 
-every DnAmr step or DtAmr intervals. DtAmr is not implemented by 7 Aug 2011.
+DoAmr is telling if you do AMR based on geometrical description or 
+AMR criteria decided during the simulation every DnAmr step or DtAmr 
+intervals. NOTE: DtAmr is not implemented by 7 Aug 2011.
 For both DtAmr and DnAmr negative numbers will be ignored. If IsStrictAmr 
 is true, we demand that the number of cells indicated by criteria or 
 percentage should be refined or coarsened, otherwise the code stops.
 If IsStrictAmr is false, the code will continue with the maximum of 
-available blocks.
+available blocks. 
 
-Default is DoAmr false.
+For pure geometry based AMR the IsStrictAmr=F will causes the code to 
+skip the complete AMR if there are not enough blocsk.
+
+Default is DoAmr false and IsStrictAmr true.
 </command>
 
 <command name="AMRLIMIT"> 
