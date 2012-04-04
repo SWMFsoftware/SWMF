@@ -942,8 +942,8 @@ contains
             *(StateImpl_VG(iTeImpl,i,j,k) - ImplOld_VCB(iTeImpl,i,j,k,iBlock))
 
        if(UseIdealEos)then
-          State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-               + gm1*DeltaEinternal
+          State_VGB(iP,i,j,k,iBlock) = max(1e-30, State_VGB(iP,i,j,k,iBlock) &
+               + gm1*DeltaEinternal)
        else
 
           Einternal = inv_gm1*State_VGB(iP,i,j,k,iBlock) &
