@@ -456,7 +456,7 @@ contains
           State_VGB(p_,i,j,k,iBlock) = NumDensIon*tCorona
           State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tCorona
        end if
-       if (r > 1.7) then
+       if (r > 1.5) then
           ! NOTE: If you wish to recover the Parker solution, remove this case.
 
           ! "Vacuum cleaner" initial condition to speed up convergence.
