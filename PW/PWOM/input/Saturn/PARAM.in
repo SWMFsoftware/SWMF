@@ -24,7 +24,7 @@ F		IsUseJr
 0.75e7		DeltaR
 
 #FIELDLINE
-4		nTotalLine
+8		nTotalLine
 
 #STOP
 10.0		Tmax
