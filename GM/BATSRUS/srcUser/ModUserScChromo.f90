@@ -456,8 +456,18 @@ contains
           State_VGB(p_,i,j,k,iBlock) = NumDensIon*tCorona
           State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tCorona
        end if
-      
-       State_VGB(Rho_,i,j,k,iBlock) = Rho
+       if (r > 1.7) then
+          ! NOTE: If you wish to recover the Parker solution, remove this case.
+
+          ! "Vacuum cleaner" initial condition to speed up convergence.
+          ! Basically, it makes the initial solution lighter and easier to
+          ! push out of the domain. Note, this initial solution is not
+          ! self consistent, but this should not affect the final state.
+          State_VGB(Rho_,i,j,k,iBlock) = Rho/2
+       else
+          State_VGB(Rho_,i,j,k,iBlock) = Rho
+       end if
+
        State_VGB(RhoUx_,i,j,k,iBlock) = Rho*Ur*x/r *Usound
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
@@ -1079,10 +1089,11 @@ contains
   !============================================================================
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
 
-    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
+    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB, SignB_
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
     use ModNumConst, ONLY: cTiny
-    use ModMain,     ONLY: x_, y_, z_, time_loop, UseB0, iNewGrid
+    use ModMain,     ONLY: x_, y_, z_, time_loop, UseB0, iNewGrid, &
+                           DoThinCurrentSheet
     use ModPhysics,  ONLY: rBody
 
     integer, intent(in) :: iBlock, iArea
@@ -1100,36 +1111,47 @@ contains
        RETURN
     end if
     
-    ! Calculate r.B in all physical cells and ghost cells 
-    ! in the Z/Theta direction to find current sheet 
-    ! passing between blocks
-    if(UseB0)then
-       do k=0, nK+1; do j=1, nJ; do i=1, nI
-          rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-               * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
-               +           y_BLK(i,j,k,iBlock)   &
-               * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
-               +           z_BLK(i,j,k,iBlock)   &
-               * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
-       end do; end do; end do
+    ! Check if current sheet passess through this block
+    ! (i.e. if B.r changes sign)
+    if(SignB_>1 .and. DoThinCurrentSheet)then
+       DoRefine = &
+            maxval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))>0.0.and. &
+            minval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))<0.0
     else
-       do k=0, nK+1; do j=1, nJ; do i=1, nI
-          rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-               * State_VGB(Bx_,i,j,k,iBlock) &
-               +           y_BLK(i,j,k,iBlock)   &
-               * State_VGB(By_,i,j,k,iBlock) &
-               +           z_BLK(i,j,k,iBlock)   &
-               * State_VGB(Bz_,i,j,k,iBlock)
-       end do; end do; end do
+
+       if(UseB0)then
+          do k=0, nK+1; do j=1, nJ; do i=1, nI
+             rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+                  * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
+                  +           y_BLK(i,j,k,iBlock)   &
+                  * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
+                  +           z_BLK(i,j,k,iBlock)   &
+                  * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
+          end do; end do; end do
+       else
+          do k=0, nK+1; do j=1, nJ; do i=1, nI
+             rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+                  * State_VGB(Bx_,i,j,k,iBlock) &
+                  +           y_BLK(i,j,k,iBlock)   &
+                  * State_VGB(By_,i,j,k,iBlock) &
+                  +           z_BLK(i,j,k,iBlock)   &
+                  * State_VGB(Bz_,i,j,k,iBlock)
+          end do; end do; end do
+       end if
+       DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny 
+
     end if
-
-    DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny 
-
+  
     ! Do gradual refinement along R if required
     if(DoRefineGradualSheet) then
        if(iNewGrid > iLastGrid ) then
+          iLevel = iLevel + 1
           iLastGrid = iNewGrid
-          iLevel = min(iLevel + 1, nLevelGradual)
+       end if
+
+       if (iLevel > nLevelGradual) then
+          DoRefine = .false.
+          RETURN
        end if
 
        if(rRefine_I(iLevel) > rRefine_I(iLevel-1)) then
