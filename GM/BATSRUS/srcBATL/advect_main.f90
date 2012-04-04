@@ -238,6 +238,7 @@ contains
     real :: BlobRadius, Rgen_I(3)
     integer :: iDim, i, j, k, iBlock, iLevel
     logical:: IsNodeBasedRead = .true.
+    logical:: UseUniformAxis
     !------------------------------------------------------------------------
 
     call init_mpi
@@ -258,6 +259,8 @@ contains
           end do
        case("#GRIDGEOMETRY")
           call read_var('TypeGeometry', TypeGeometry)
+       case("#UNIFORMAXIS")
+          call read_var('UseUniformaxis', UseUniformAxis)
        case("#GRIDTYPE")
           call read_var('IsNodeBasedGrid', IsNodeBasedRead)
        case("#AMR")
@@ -310,7 +313,8 @@ contains
          nRootIn_D      = nRoot_D,      & 
          TypeGeometryIn = TypeGeometry, &
          IsPeriodicIn_D = (/.true., .true., .true./), &
-         RgenIn_I       = Rgen_I)
+         RgenIn_I       = Rgen_I, &
+         UseUniformAxisIn = UseUniformAxis)
 
     ! The default value is .not.IsRzGeometry
     UseSimpleRefinement = IsCartesian
