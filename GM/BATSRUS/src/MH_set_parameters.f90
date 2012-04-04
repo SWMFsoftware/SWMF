@@ -136,6 +136,9 @@ subroutine MH_set_parameters(TypeAction)
   ! Variables for #LIMITGENCOORD1 or #LIMITRADIUS
   real :: Coord1Min = -1.0, Coord1Max = -1.0
 
+  ! Variable for #UNIFORMAXIS
+  logical:: UseUniformAxis = .true.
+
   ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
   character(len=lStringLine):: NameArea='all'
   integer :: nLevelArea=0
@@ -1761,6 +1764,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('Coord1Min', Coord1Min)
         call read_var('Coord1Max', Coord1Max)
 
+     case("#UNIFORMAXIS")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('UseUniformAxis', UseUniformAxis)
+
      case("#FIXAXIS")
         call read_var('UsePoleDiffusion', UsePoleDiffusion)
         call read_var('DoFixAxis',DoFixAxis)
@@ -2980,7 +2987,6 @@ contains
        end if
     end if
 
-    ! 
     if(TypeGeometry == 'cartesian')then                               
        if(UsePoleDiffusion .or. DoFixAxis)then
           UsePoleDiffusion = .false.
@@ -2989,6 +2995,9 @@ contains
                ' setting UsePoleDiffusion and DoFixAxis to FALSE'
        end if
     end if
+
+    if(DoFixAxis .and. .not. UseUniformAxis) &
+         call stop_mpi("DoFixAxis=T only works with UseUniformAxis=T!")
 
   end subroutine correct_parameters
 
@@ -3135,7 +3144,7 @@ contains
     call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
          TypeGeometryBatl, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
          proc_dims(1:nDimBatl), UseRadiusIn=.false., UseDegreeIn=.false.,&
-         RgenIn_I = exp(yR_I))
+         RgenIn_I = exp(yR_I), UseUniformAxisIn=UseUniformAxis)
 
     ! Fix grid size in ignored directions
     if(nDimBatl == 1)then
