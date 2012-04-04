@@ -16,13 +16,16 @@ module ModUser
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = 'Mercury, Lars Daldorff'
 
-  real :: PlanetDensity=-1., PlanetPressure=-1., PlanetMaxResistivity=-1., &
-       PlanetRadius=-1., PlanetResistiveR_I(2)= (/-1.,-1./)
+  real :: PlanetDensity=-1., PlanetPressure=-1., PlanetRadius=-1.
 
-  real :: PlanetDensitySi=-1., PlanetPressureSi=-1., PlanetMaxResistivitySi=-1., &
-       PlanetRadiusSi=-1., PlanetResistiveRSi_I(2)=(/-1.,-1./)
+  real :: PlanetDensitySi=-1., PlanetPressureSi=-1., PlanetRadiusSi=-1.
 
-  real :: ResistivityRate
+  integer :: nLayer =0 ! Number of points in planet resistivity profile
+  real, allocatable :: PlanetRadiusSi_I(:),PlanetRadius_I(:),&
+       ResistivetySi_I(:),Resistivety_I(:)
+  real, allocatable :: ResistivityRate(:)
+
+  integer :: iLayer
 
 contains
 
@@ -33,17 +36,17 @@ contains
     use CON_planet,     ONLY: RadiusPlanet, MassPlanet
     use ModNumConst,    ONLY: cPi
     use ModPhysics,     ONLY: Si2No_V,No2Si_V,UnitRho_, &
-                              UnitP_, UnitX_
+         UnitP_, UnitX_
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModProcMH,      ONLY: iProc
     use ModResistivity, ONLY: Si2NoEta
     use ModGeometry,    ONLY: TypeGeometry
-    CHARACTER(LEN=*), PARAMETER  :: FMT1 = "(A20,E10.3)"
+    CHARACTER(LEN=*), PARAMETER  :: FMT1 = "(A22,E10.3)"
     !-------------------------------------------------------------------
 
-    !!! Introduce PlanetDensitySi etc., read those and convert 
-    !!! from that. Initialize these to -1. PlanetRadius should be
-    !!! in dimensional units.
+!!! Introduce PlanetDensitySi etc., read those and convert 
+!!! from that. Initialize these to -1. PlanetRadius should be
+!!! in dimensional units.
 
     if (TypeGeometry /= 'spherical_lnr') &
          call stop_mpi('ERROR: Correct PARAM.in, need spherical grid.')
@@ -58,40 +61,48 @@ contains
     if(PlanetPressureSi < 0.0) &
          PlanetPressureSi = 1.0e-8*No2Si_V(UnitP_)
 
-    if(PlanetMaxResistivitySi < 0.0) &
-         PlanetMaxResistivitySi = 1.0e13
-
-    if(sum(PlanetResistiveR_I) < 0.0 ) &
-         PlanetResistiveR_I(:) = (/1.0, 0.0/)
-    
  
     PlanetDensity           = PlanetDensitySi*Si2No_V(UnitRho_)
     PlanetPressure          = PlanetPressureSi*Si2No_V(UnitP_)
-    PlanetMaxResistivity    = PlanetMaxResistivitySi*Si2NoEta
 
     PlanetRadiusSi          = PlanetRadius*No2Si_V(UnitX_)
-    PlanetResistiveRSi_I(:) = PlanetResistiveR_I(:)*No2Si_V(UnitX_)
 
-    ResistivityRate = &
-         PlanetMaxResistivity/(PlanetResistiveR_I(1)-PlanetResistiveR_I(2))
+    if(nLayer > 1) then
+       PlanetRadiusSi_I = PlanetRadius_I*No2Si_V(UnitX_)
+       Resistivety_I = ResistivetySi_I*Si2NoEta
+       do iLayer=2,nLayer
+          ResistivityRate(iLayer-1) = &
+               (Resistivety_I(iLayer) -Resistivety_I(iLayer-1))/&
+               (PlanetRadius_I(iLayer) - PlanetRadius_I(iLayer-1))
+       end do
+    end if
 
-    if(iProc==0) then
+    print *," Rate eta", ResistivityRate
+
+
+     if(iProc==0) then
        call write_myname
+       write(*,*) ''
+       write(*,*) '   Resistiv Planet Model'       
+       write(*,*) '   ---------------------'       
        write(*,*) ''
        write(*,FMT1) '  Planet density  = ',PlanetDensitySi
        write(*,FMT1) '  Planet pressure = ',PlanetPressureSi
        write(*,FMT1) '  Planet radius   = ',PlanetRadiusSi
-       write(*,*) ''
-       write(*,"(A45,E10.3)") '  Planet resistivity goes linear from radius',&
-            PlanetResistiveRSi_I(1)
-       write(*,"(A6,E10.3,A27,E10.3)") '  to ', &
-            PlanetResistiveRSi_I(2), &
-            ' where it has maximum value :', &
-            PlanetMaxResistivitySi 
+       if(nLayer > 0 ) then
+          write(*,*) ''
+          write(*,*) '   |-------- Planet Resistivety Profile -----|'
+          write(*,*) '       Radius(SI)            Resistivety(SI)'
+          do iLayer =1,nLayer 
+             write(*,"(A7,E10.3,A15,E10.3)") " ",PlanetRadiusSi_I(iLayer)," ",&
+                  ResistivetySi_I(iLayer)
+          end do
+       else
+          write(*,*) 'Conducting Planet (eta =0)'
+       end if
        write(*,*) ''
        write(*,*) ''
     end if
-
   end subroutine user_init_session
   
   !===========================================================================
@@ -110,17 +121,39 @@ contains
        case("#RESISTIVEPLANET")
           call read_var('PlanetDensitySi'       , PlanetDensitySi)
           call read_var('PlanetPressureSi'      , PlanetPressureSi)
-          call read_var('PlanetMaxResistivitySi', PlanetMaxResistivitySi) 
-          call read_var('PlanetRadiusDim'        , PlanetRadius)
-          call read_var('OuterResistiveRadiusDim', PlanetResistiveR_I(1))
-          call read_var('InerResistiveRadiusDim' , PlanetResistiveR_I(2))
-          if(sum(PlanetResistiveR_I) >= 0.0)then
-             if(PlanetResistiveR_I(1) <= PlanetResistiveR_I(2)) then
-                write(*,*) 'ERROR: OuterResistivRadius has to be '//&
-                     'larger than InnerResistiveRadius'
-                call stop_mpi('ERROR: Correct PARAM.in or user_read_inputs!')
-             end if
+          call read_var('PlanetRadius'        , PlanetRadius)
+
+          call read_var('nResistivPoints', nLayer)
+          if(nLayer == 1) then
+             write(*,*) ' We need minimum 2 points for including resistivety profile'
+             call stop_mpi('ERROR: Correct PARAM.in or user_read_inputs!')
           end if
+
+          if(nLayer > 1) then
+             allocate(ResistivityRate(nLayer-1),&
+                  PlanetRadiusSi_I(nLayer),&
+                  PlanetRadius_I(nLayer), &
+                  ResistivetySi_I(nLayer),&
+                  Resistivety_I(nLayer))
+
+             do iLayer=1,nLayer
+                call read_var('Radius',PlanetRadius_I(iLayer))
+                call read_var('Resistivety', ResistivetySi_I(iLayer))
+             end do
+
+             
+
+
+             !Check values
+             do iLayer=2,nLayer
+                if(PlanetRadius_I(iLayer-1) < &
+                     PlanetRadius_I(iLayer)) then
+                   write(*,*) 'ERROR: Shoud be decreasing Radius.'
+                   call stop_mpi('ERROR: Correct PARAM.in or user_read_inputs!')
+                end if
+             end do
+          end if
+
        case('#USERINPUTEND')
           EXIT
        case default
@@ -263,18 +296,21 @@ contains
     integer, intent(in) :: iBlock
     real, intent(out) :: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) 
 
-    integer ::i,j,k
-
+    integer ::i,j,k,iLayer
+    !-------------------------------------------------------------------
     Eta_G = Eta0
 
-    if(Rmin_BLK(iBlock) > PlanetRadius) return
+    if(nLayer <2 ) RETURN
+    if(Rmin_BLK(iBlock) > PlanetRadius_I(1)) RETURN
 
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-       if(R_BLK(i,j,k,iBlock) > PlanetResistiveR_I(1) ) CYCLE
-       if(R_BLK(i,j,k,iBlock) < PlanetResistiveR_I(2) ) CYCLE
-       ! to avoid eta jumps adding Eta_G
-       Eta_G(i,j,k) = Eta_G(i,j,k) + (PlanetResistiveR_I(1) - R_BLK(i,j,k,iBlock))* &
-            ResistivityRate
+       do iLayer=nLayer-1,1,-1
+          if(R_BLK(i,j,k,iBlock) < PlanetRadius_I(iLayer+1) ) CYCLE
+          if(R_BLK(i,j,k,iBlock) > PlanetRadius_I(iLayer) ) CYCLE
+          ! to avoid eta jumps adding Eta_G
+          Eta_G(i,j,k) = Eta_G(i,j,k) +Resistivety_I(iLayer+1)+(R_BLK(i,j,k,iBlock)-PlanetRadius_I(iLayer+1))* &
+               ResistivityRate(iLayer)
+       end do
     end do; end do; end do
 
   end subroutine user_set_resistivity

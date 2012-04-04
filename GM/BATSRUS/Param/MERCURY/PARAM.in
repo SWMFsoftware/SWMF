@@ -152,10 +152,16 @@ user
 #RESISTIVEPLANET
 5e-21                  Density
 -1                     Pressure
-1.0e8                  MaxResistivity
--1                     Radius
--1                     OuterResistivRadius
--1                     InerResistivRadius
+1.0 		       PlanetRadius
+4		       nResistivPoints
+1.0		       Radius
+0.0		       Resistivety
+0.7		       Radius
+1.0e13                 Resistivety
+0.6		       Radius
+0.7e13                 Resistivety
+0.4                    Radius
+0.0                    Resistivety
 
 #USERINPUTEND ----------------------
 
