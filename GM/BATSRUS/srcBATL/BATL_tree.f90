@@ -200,6 +200,10 @@ contains
     ! Store tree size and maximum number of blocks/processor
     MaxBlock = MaxBlockIn
 
+    ! Initialize max number of blocks for all processors
+    ! (may be reduced in BATL_amr_criteria)
+    MaxTotalBlock = nProc*MaxBlock
+
     ! During AMR we may need extra nodes. So use 2/(nChild-1) instead of 1/...
     MaxNode  = ceiling(nProc*MaxBlock*(1 + 2.0/(nChild - 1)))
 
@@ -427,7 +431,7 @@ contains
   subroutine adapt_tree(iTypeNode_A)
 
     use BATL_size, ONLY: iRatio, jRatio, kRatio
-    use BATL_mpi, ONLY: iComm, nProc
+    use BATL_mpi, ONLY: iProc, nProc, iComm
     use ModMpi, ONLY: MPI_allreduce, MPI_INTEGER, MPI_MAX
 
     ! Optional node type:
@@ -452,10 +456,12 @@ contains
     real:: RankLimit
 
     ! Expected number of nodes minus availabla number of nodes
-    integer:: DnNode = 0, DnNodeOld = 0
+    integer:: DnNode = 0
 
     logical, parameter :: DoTest = .false., DoTestNei = .false. 
     integer, allocatable :: iStatusNew0_A(:)
+
+    character(len=*), parameter:: NameSub = 'BATL_tree::adapt_tree'
     !------------------------------------------------------------------------
 
     ! Collect the local status requests into a global request
@@ -471,7 +477,6 @@ contains
        iStatusNew0_A(1:nNode) = iStatusNew_A(1:nNode)
     end if
 
-    DnNodeOld = 0
     LOOPTRY: do iTryAmr = 1, iMaxTryAmr
 
        ! Check max and min levels and coarsening of all siblings
@@ -637,23 +642,24 @@ contains
 
        end do LOOPLEVEL! levels
 
-       ! all blocks marked for refinment shoud be refined if true
-       if(DoStrictAmr .or. count(iStatusNew_A == Refine_) == 0) EXIT LOOPTRY
+       ! For strict AMR (or if there is no refinement) don't check anything
+       if(DoStrictAmr .or. count(iStatusNew_A(1:nNode) == Refine_) == 0) &
+            EXIT LOOPTRY
 
        ! Estimate the difference between the expected number of blocks
        ! after AMR and the number of available/allowed blocks.
-       DnNode = (nNodeUsed - count(iStatusNew_A == Coarsen_) + &
-            count(iStatusNew_A == Refine_)*(nChild-1)) &
-            - min(nProc*MaxBlock,MaxTotalBlock) 
+       DnNode = (nNodeUsed - count(iStatusNew_A(1:nNode) == Coarsen_) + &
+            count(iStatusNew_A(1:nNode) == Refine_)*(nChild-1)) &
+            - min(nProc*MaxBlock, MaxTotalBlock) 
 
-       ! If we have gemometry based AMR only and we want more blocks
-       ! then we have allocated for we abort refining/coarsing
-       if(.not.allocated(iRank_A) .and. DnNode >0) then
-          iStatusNew_A = Unset_
+       ! If we have geometry based AMR only and we ran out of blocks,
+       ! then we abort refining/coarsening
+       if(.not.allocated(iRank_A) .and. DnNode > 0) then
+          if(iProc==0) write(*,*)'!!! WARNING in ',NameSub, &
+               ': Need ', DnNode,' more blocks in total! Skipping AMR !!!'
+          iStatusNew_A(1:nNode) = Unset_
           RETURN
        end if
-
-       DnNodeOld = DnNode 
 
        ! exit if we have enough space for all the new blocks
        if(DnNode < 0) EXIT LOOPTRY
