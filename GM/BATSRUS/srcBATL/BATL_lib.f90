@@ -87,7 +87,7 @@ contains
   subroutine init_batl(&
        CoordMinIn_D, CoordMaxIn_D, MaxBlockIn, &
        TypeGeometryIn, IsPeriodicIn_D, nRootIn_D, UseRadiusIn, UseDegreeIn, &
-       rGenIn_I)
+       rGenIn_I, UseUniformAxisIn)
 
     integer, intent(in):: MaxBlockIn         ! max number of blocks/processor
     real,    intent(in):: CoordMinIn_D(nDim) ! min (gen) coordinates of domain
@@ -108,6 +108,9 @@ contains
 
     ! Array describing the stretched radial coordinate
     real,             optional, intent(in):: rGenIn_I(:)
+
+    ! Logical for uniform grid in the Phi direction around the axis
+    logical,          optional, intent(in):: UseUniformAxisIn
 
     ! Initialize the block-adaptive tree and the domain. 
     !
@@ -138,6 +141,11 @@ contains
     call init_tree(MaxBlockIn)
     call init_geometry(TypeGeometryIn, IsPeriodicIn_D, rGenIn_I)
     call init_grid(CoordMinIn_D, CoordMaxIn_D, UseRadiusIn, UseDegreeIn)
+    if(present(UseUniformAxisIn))then
+       ! IsAnyAxis is set by init_grid.
+       if(IsAnyAxis .and. UseUniformAxisIn) &
+            call set_tree_param(UseUniformAxisIn=.true.)
+    end if
     call set_tree_root(nRootIn_D)
     call distribute_tree(DoMove=.true.)
     call create_grid
