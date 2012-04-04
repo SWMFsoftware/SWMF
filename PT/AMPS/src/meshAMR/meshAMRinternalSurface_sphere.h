@@ -98,7 +98,7 @@ public:
      r=Radius;
   }
 
-  long int GetLocalSurfaceElementNumber(long int nZenithElement,long int nAzimuthalElement) {
+  inline long int GetLocalSurfaceElementNumber(long int nZenithElement,long int nAzimuthalElement) {
 
     #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
     if ((nZenithElement<0)||(nZenithElement>=nZenithSurfaceElements)||(nAzimuthalElement<0)||(nAzimuthalElement>=nAzimuthalSurfaceElements)) exit(__LINE__,__FILE__,"Error: 'nZenithElement' or 'nAzimuthalElement' are outside of the range ");
@@ -107,7 +107,7 @@ public:
     return nZenithElement+nZenithSurfaceElements*nAzimuthalElement;
   }
 
-  void GetSurfaceElementIndex(int &nZenithElement,int &nAzimuthalElement,int nSurfaceElement) {
+  inline void GetSurfaceElementIndex(int &nZenithElement,int &nAzimuthalElement,int nSurfaceElement) {
 
     #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
     if ((nSurfaceElement<0)||(nSurfaceElement>=nZenithSurfaceElements*nAzimuthalSurfaceElements)) exit(__LINE__,__FILE__,"Error: 'nSurfaceElement' is out of range");
@@ -148,7 +148,35 @@ public:
   } 
 
 
-  void GetSurfaceElementProjectionIndex(double *x,long int &nZenithElement,long int &nAzimuthalElement) {
+  inline void GetSurfaceElementNormal(double *norm,int SurfaceElementNumber) {
+    int nZenithElement,nAzimuthalElement;
+    double ZenithAngle,AzimuthalAngle;
+
+    GetSurfaceElementIndex(nZenithElement,nAzimuthalElement,SurfaceElementNumber);
+
+    AzimuthalAngle=(nAzimuthalElement+0.5)*dAzimuthalAngle;
+
+#if _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_COSINE_DISTRIBUTION_
+    ZenithAngle=acos(1.0-dCosZenithAngle*(nZenithElement+0.5));
+#elif _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_UNIFORM_DISTRIBUTION_
+    ZenithAngle=(0.5+nZenithElement)*dZenithAngle
+#else
+    exit(__LINE__,__FILE__,"Error: wrong option");
+#endif
+
+    norm[0]=sin(ZenithAngle)*cos(AzimuthalAngle);
+    norm[1]=sin(ZenithAngle)*sin(AzimuthalAngle);
+    norm[2]=cos(ZenithAngle);
+  }
+
+  inline void GetSurfaceElementMiddlePoint(double *x,int SurfaceElementNumber) {
+    int idim;
+
+    GetSurfaceElementNormal(x,SurfaceElementNumber);
+    for (idim=0;idim<3;idim++) x[idim]=x[idim]*Radius+OriginPosition[idim];
+  }
+
+  inline void GetSurfaceElementProjectionIndex(double *x,long int &nZenithElement,long int &nAzimuthalElement) {
     double r,r2,AzimuthalAngle,xNormalized[3];
     int idim;
 
