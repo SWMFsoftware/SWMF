@@ -38,9 +38,9 @@ if(not open(FILE2, $File2)){
     print "$ERROR: could not open $File2\n"; die "$ERROR\n";
 }
 
-
-my $Text1 = $File1 . "_txt_";
-my $Text2 = $File2 . "_txt_";
+# Files for text comparison. Use local directory.
+my $Text1 = "_diffnum_file1_";
+my $Text2 = "_diffnum_file2_";
 
 if($TextDiff){
     open(TEXT1, ">$Text1") or 
