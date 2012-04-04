@@ -205,9 +205,11 @@ user			NameArea
 5			nLevelArea
 initial			NameArea
 
-#AMR
-50001			DnRefine
-F			DoAutoRefine
+#DOAMR
+T			DoAmr
+50001			DnAmr
+-1.0			DtAmr
+F			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage
@@ -258,11 +260,6 @@ x=0 VAR idl		StringPlot
 5000			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti bx by bz I01 I02 p
-g rbody
-x=0 VAR tec		StringPlot
-100000			DnSavePlot
--1.			DtSavePlot
 rho ux uy uz ti bx by bz I01 I02 p
 g rbody
 3d VAR tec
@@ -494,9 +491,11 @@ F			UseComp
 
 #BEGIN_COMP IH ----------------------------------------------------------------
 
-#AMR
-1001			DnRefine
-F			DoAutoRefine
+#DOAMR
+T			DoAmr
+1001			DnAmr
+-1.0			DtAmr
+F			IsStrictAmr
 
 #END_COMP IH   ----------------------------------------------------------------
 
