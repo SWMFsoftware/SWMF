@@ -20,12 +20,13 @@ PIC::Sampling::ExternalSamplingLocalVariables::fPrintOutputFile *PIC::Sampling::
 
 
 int PIC::Sampling::minIterationNumberForDataOutput=0;
+bool *PIC::Sampling::SaveOutputDataFile=NULL;
 
 
 //====================================================
 //perform one time step
 void PIC::TimeStep() {
-   double ParticleMovingTime,InjectionBoundaryTime,ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
+   double UserDefinedMPI_RoutineExecutionTime=0.0,ParticleMovingTime,InjectionBoundaryTime,ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
 
    //Collect and exchange the run's statictic information
    static const int nRunStatisticExchangeIterationsMin=5,nRunStatisticExchangeIterationsMax=500,nRunStatisticExchangeTime=120;
@@ -48,7 +49,7 @@ void PIC::TimeStep() {
 
   //inject particles into the volume of the domain
 #if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
-  if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) PIC::BC::nInjectedParticles+=PIC::VolumeParticleInjection::InjectParticle();
+  if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) PIC::BC::nTotalInjectedParticles+=PIC::VolumeParticleInjection::InjectParticle();
 #endif
 
   InjectionBoundaryTime=MPI_Wtime()-InjectionBoundaryTime;
@@ -71,6 +72,13 @@ void PIC::TimeStep() {
   PIC::Parallel::ExchangeParticleData();
   ParticleExchangeTime=MPI_Wtime()-ParticleExchangeTime;
 
+  //call user defined MPI procedure
+#if _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_ == _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__ON_
+  UserDefinedMPI_RoutineExecutionTime=MPI_Wtime();
+  _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_();
+  UserDefinedMPI_RoutineExecutionTime=MPI_Wtime()-UserDefinedMPI_RoutineExecutionTime;
+#endif
+
 
   struct cExchangeStatisticData {
     double TotalInterationRunTime;
@@ -83,6 +91,7 @@ void PIC::TimeStep() {
     double Latency;
     long int recvParticleCounter,sendParticleCounter;
     long int nInjectedParticles;
+    double UserDefinedMPI_RoutineExecutionTime;
   };
 
   struct cStatExchangeControlParameters {
@@ -95,6 +104,8 @@ void PIC::TimeStep() {
     cExchangeStatisticData localRunStatisticData;
     int thread;
     cExchangeStatisticData *ExchangeBuffer=NULL;
+    long int nInjectedParticleExchangeBuffer[PIC::nTotalThreads];
+    double ParticleProductionRateExchangeBuffer[PIC::nTotalThreads];
 
     localRunStatisticData.TotalInterationRunTime=MPI_Wtime()-StartTime;
     localRunStatisticData.IterationExecutionTime=IterationExecutionTime;
@@ -106,14 +117,17 @@ void PIC::TimeStep() {
     localRunStatisticData.Latency=PIC::Parallel::Latency;
     localRunStatisticData.recvParticleCounter=PIC::Parallel::recvParticleCounter;
     localRunStatisticData.sendParticleCounter=PIC::Parallel::sendParticleCounter;
-    localRunStatisticData.nInjectedParticles=PIC::BC::nInjectedParticles;
+    localRunStatisticData.nInjectedParticles=PIC::BC::nTotalInjectedParticles;
+    localRunStatisticData.UserDefinedMPI_RoutineExecutionTime=UserDefinedMPI_RoutineExecutionTime;
+
+    PIC::BC::nTotalInjectedParticles=0;
 
 
     if (PIC::Mesh::mesh.ThisThread==0) {
       time_t TimeValue=time(NULL);
       tm *ct=localtime(&TimeValue);
 
-      printf("\nPIC: (%i/%i %i:%i:%i), Iteration: %ld  (%ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,nTotalIterations,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
+      printf("\nPIC: (%i/%i %i:%i:%i), Iteration: %ld  (currect sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,nTotalIterations,PIC::RequiredSampleLength,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
 
 
 
@@ -122,7 +136,8 @@ void PIC::TimeStep() {
 
 
       //output the data
-      long int nTotalModelParticles=0,nTotalInjectedParticels=0;
+      long int nTotalModelParticles=0;
+      double nTotalInjectedParticels=0.0;
       double MinExecutionTime=localRunStatisticData.IterationExecutionTime,MaxExecutionTime=localRunStatisticData.IterationExecutionTime,MaxLatency=0.0,MeanLatency=0.0;
 
       printf("Description:\n");
@@ -138,16 +153,18 @@ void PIC::TimeStep() {
       printf("10:\t Send Particles\n");
       printf("11:\t Recv Particles\n");
       printf("12:\t nInjected Particls\n");
+      printf("13:\t Userr Defined MPI Routine - Execution Time\n");
 
-      printf("1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\n");
+      printf("1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\n");
 
 //      printf("Thread, Total Particle's number, Total Interation Time, Iteration Execution Time, Sampling Time, Injection Boundary Time, Particle Moving Time, Particle Exchange Time, Latency, Send Particles, Recv Particles, nInjected Particls\n");
 
       for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
-        printf("%i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
+        printf("%i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\t %e\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
             ExchangeBuffer[thread].IterationExecutionTime,ExchangeBuffer[thread].SamplingTime,ExchangeBuffer[thread].InjectionBoundaryTime,ExchangeBuffer[thread].ParticleMovingTime,
             ExchangeBuffer[thread].ParticleExchangeTime,ExchangeBuffer[thread].Latency,ExchangeBuffer[thread].sendParticleCounter,
-            ExchangeBuffer[thread].recvParticleCounter,ExchangeBuffer[thread].nInjectedParticles);
+            ExchangeBuffer[thread].recvParticleCounter,ExchangeBuffer[thread].nInjectedParticles/((nExchangeStatisticsIterationNumberSteps!=0) ? nExchangeStatisticsIterationNumberSteps : 1),
+            ExchangeBuffer[thread].UserDefinedMPI_RoutineExecutionTime);
 
         nTotalModelParticles+=ExchangeBuffer[thread].TotalParticlesNumber;
         nTotalInjectedParticels+=ExchangeBuffer[thread].nInjectedParticles;
@@ -160,9 +177,35 @@ void PIC::TimeStep() {
 
       MeanLatency/=PIC::Mesh::mesh.nTotalThreads;
       PIC::Parallel::CumulativeLatency+=MeanLatency*nInteractionsAfterRunStatisticExchange;
+      if (nExchangeStatisticsIterationNumberSteps!=0) nTotalInjectedParticels/=nExchangeStatisticsIterationNumberSteps;
 
       printf("Total number of particles: %ld\n",nTotalModelParticles);
-      printf("Total number of injected particles: %ld\n",nTotalInjectedParticels);
+
+      //exchange statistics of the particle production
+      printf("Species dependent particle production:\nSpecie\tInjected Particles\tProductionRate\n");
+
+      for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+        double c=0.0;
+
+        MPI_Gather(PIC::BC::nInjectedParticles+spec,1,MPI_LONG,nInjectedParticleExchangeBuffer,1,MPI_LONG,0,MPI_COMM_WORLD);
+        MPI_Gather(PIC::BC::ParticleProductionRate+spec,1,MPI_DOUBLE,ParticleProductionRateExchangeBuffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+        for (thread=1;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
+          nInjectedParticleExchangeBuffer[0]+=nInjectedParticleExchangeBuffer[thread];
+          ParticleProductionRateExchangeBuffer[0]+=ParticleProductionRateExchangeBuffer[thread];
+        }
+
+        if (nExchangeStatisticsIterationNumberSteps!=0) {
+          c=double(nInjectedParticleExchangeBuffer[0])/nExchangeStatisticsIterationNumberSteps;
+          ParticleProductionRateExchangeBuffer[0]/=nExchangeStatisticsIterationNumberSteps;
+        }
+
+        printf("%i\t%e\t%e\n",spec,c,ParticleProductionRateExchangeBuffer[0]);
+
+        PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0;
+      }
+
+      printf("Total number of injected particles: %e\n",nTotalInjectedParticels);
       printf("Iteration Execution Time: min=%e, max=%e\n",MinExecutionTime,MaxExecutionTime);
       printf("Latency: max=%e,mean=%e;CumulativeLatency=%e,Iterations after rebalabcing=%ld,Rebalancing Time=%e\n",MaxLatency,MeanLatency,PIC::Parallel::CumulativeLatency,PIC::Parallel::IterationNumberAfterRebalancing,PIC::Parallel::RebalancingTime);
 
@@ -194,6 +237,16 @@ void PIC::TimeStep() {
       cStatExchangeControlParameters StatExchangeControlParameters;
 
       MPI_Gather((char*)&localRunStatisticData,sizeof(cExchangeStatisticData),MPI_CHAR,(char*)ExchangeBuffer,sizeof(cExchangeStatisticData),MPI_CHAR,0,MPI_COMM_WORLD);
+
+      //exchange statistics of the particle production
+      for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+        MPI_Gather(PIC::BC::nInjectedParticles+spec,1,MPI_LONG,nInjectedParticleExchangeBuffer,1,MPI_LONG,0,MPI_COMM_WORLD);
+        MPI_Gather(PIC::BC::ParticleProductionRate+spec,1,MPI_DOUBLE,ParticleProductionRateExchangeBuffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+        PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0;
+      }
+
+
       MPI_Bcast(&StatExchangeControlParameters,sizeof(cStatExchangeControlParameters),MPI_CHAR,0,MPI_COMM_WORLD);
 
       nExchangeStatisticsIterationNumberSteps=StatExchangeControlParameters.nExchangeStatisticsIterationNumberSteps;
@@ -463,7 +516,15 @@ void PIC::Sampling::Sampling() {
 
               *(s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleSpeedRelativeOffset))+=sqrt(Speed2)*LocalParticleWeight;
 
+              //call sampling procedures of indivudual models
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+              ElectricallyChargedDust::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s);
+#endif
 
+              //call user defined particle sampling procedure
+#ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING_
+              _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s);
+#endif
             }
 
             memcpy((void*)SamplingData,(void*)tempSamplingBuffer,/*PIC::Mesh::*/sampleSetDataLength);
@@ -503,6 +564,11 @@ void PIC::Sampling::Sampling() {
   //sample the distrivution function
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
   if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction();
+#endif
+
+  //Sample size distribution parameters of dust grains
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+  ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::SampleDistributionFnction();
 #endif
 
   //Increment the sample length
@@ -568,29 +634,35 @@ void PIC::Sampling::Sampling() {
     //print output file
     char fname[_MAX_STRING_LENGTH_PIC_],ChemSymbol[_MAX_STRING_LENGTH_PIC_];
 
-    if (LastSampleLength>=minIterationNumberForDataOutput) for (s=0;s<PIC::nTotalSpecies;s++) {
-      PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
-      sprintf(fname,"pic.%s.s=%i.out=%ld.dat",ChemSymbol,s,DataOutputFileNumber);
+    if (LastSampleLength>=minIterationNumberForDataOutput) {
 
-      if (PIC::Mesh::mesh.ThisThread==0) {
-        printf("printing output file: %s.........",fname);
-        fflush(stdout);
-      }
+/*----------------------------------  BEGIN OUTPUT OF THE DATA FILES SECTION --------------------------------*/
 
-      PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+      //print the macroscopic parameters of the flow
+      for (s=0;s<PIC::nTotalSpecies;s++) if (SaveOutputDataFile[s]==true) {
+        PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
+        sprintf(fname,"pic.%s.s=%i.out=%ld.dat",ChemSymbol,s,DataOutputFileNumber);
 
-      if (PIC::Mesh::mesh.ThisThread==0) {
-        printf("done.\n");
-        fflush(stdout);
-      }
+        if (PIC::Mesh::mesh.ThisThread==0) {
+          printf("printing output file: %s.........",fname);
+          fflush(stdout);
+        }
+
+        PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+
+        if (PIC::Mesh::mesh.ThisThread==0) {
+          printf("done.\n");
+          fflush(stdout);
+        }
 
       //print the sampled distribution function into a file
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
-      if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) {
-        sprintf(fname,"pic.distribution.%s.s=%i.out=%ld",ChemSymbol,s,DataOutputFileNumber);
-        PIC::DistributionFunctionSample::printDistributionFunction(fname,s);
-      }
+        if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) {
+          sprintf(fname,"pic.distribution.%s.s=%i.out=%ld",ChemSymbol,s,DataOutputFileNumber);
+          PIC::DistributionFunctionSample::printDistributionFunction(fname,s);
+        }
 #endif
+      }
 
       //print the sampled local data sets of the user defined functions
       for (int nfunc=0;nfunc<PIC::Sampling::ExternalSamplingLocalVariables::SamplingRoutinesRegistrationCounter;nfunc++) PIC::Sampling::ExternalSamplingLocalVariables::PrintOutputFile[nfunc](DataOutputFileNumber);
@@ -624,7 +696,8 @@ void PIC::Sampling::Sampling() {
 #elif _INTERNAL_BOUNDARY_MODE_ ==  _INTERNAL_BOUNDARY_MODE_ON_
       long int iSphericalSurface,nTotalSphericalSurfaces=PIC::BC::InternalBoundary::Sphere::InternalSpheres.usedElements();
 
-      for (iSphericalSurface=0;iSphericalSurface<nTotalSphericalSurfaces;iSphericalSurface++) {
+      for (s=0;s<PIC::nTotalSpecies;s++) for (iSphericalSurface=0;iSphericalSurface<nTotalSphericalSurfaces;iSphericalSurface++) {
+        PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
         sprintf(fname,"pic.Sphere=%ld.%s.s=%i.out=%ld.dat",iSphericalSurface,ChemSymbol,s,DataOutputFileNumber);
 
         if (PIC::Mesh::mesh.ThisThread==0) {
@@ -644,6 +717,12 @@ void PIC::Sampling::Sampling() {
 #else
       exit(__LINE__,__FILE__,"Error: unknown option");
 #endif
+
+      //clean user defined sampling buffers if needed
+#if _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ == _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__ON_
+     _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_();
+#endif
+/*----------------------------------  END OUTPUT OF THE DATA FILES SECTION --------------------------------*/
     }
 
     //print the statistic information for the run
@@ -672,12 +751,21 @@ void PIC::Sampling::Sampling() {
       pipe.closeRecvAll();
     }
 
-    //Finish the code execution if the walltime exeeds the limit
-    if (PIC::Alarm::WallTimeExeedsLimit==true) PIC::Alarm::FinishExecution();
+
 
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
     if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::flushSamplingBuffers();
 #endif
+
+    //Sample size distribution parameters of dust grains
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+    ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::printDistributionFunction(DataOutputFileNumber);
+#endif
+
+
+    //Finish the code execution if the walltime exeeds the limit
+    if (PIC::Alarm::WallTimeExeedsLimit==true) PIC::Alarm::FinishExecution();
+
 
     //increment the output file number
     DataOutputFileNumber++;
@@ -787,6 +875,59 @@ void PIC::Init_BeforeParser() {
     printf("PIC: Simulation Target - %s \n",_MACRO_STR_VALUE_(_TARGET_));
   }
 
+
+  //check the type of the CPU and the size of the cash line
+  char VendorSign[13];
+//  char *VendorSign_dword1=VendorSign+4,*VendorSign_dword2=VendorSign+8;
+  unsigned int w0,w1,w2;
+
+  __asm {
+    xor eax,eax
+    cpuid
+
+    mov [w0],ebx
+    mov [w1],edx
+    mov [w2],ecx
+  }
+
+  memcpy(VendorSign,&w0,4);
+  memcpy(VendorSign+4,&w1,4);
+  memcpy(VendorSign+8,&w2,4);
+
+  VendorSign[12]='\0';
+
+  if (strcmp(VendorSign,"GenuineIntel")==0) {
+    //intell processor
+    //check the size of the cache line
+    //function 80000006h return the size of the cache line in register ecx [bits 7:0]; ecx [bits 31:16] L2 cache size
+
+    __asm {
+      mov eax,80000006h
+      cpuid
+
+      mov eax,ecx
+      and eax,0xff
+      mov [w0],eax
+
+      mov eax,ecx
+      and eax,0xff00
+      mov [w1],eax
+    }
+
+    if (ThisThread==0) {
+      printf("CPU Manifacturer: INTEL\nCash line size is %i bytes, L2 cache size is %i KB\n",w0,w1);
+    }
+
+  }
+  else if (strcmp(VendorSign,"AuthenticAMD")==0) {
+    //AMD processor
+    exit(__LINE__,__FILE__,"Error: not implemented");
+  }
+  else {
+    cout << "Unknown type of CPU: the vendor string is \"" << VendorSign <<"\"" << endl;
+    exit(__LINE__,__FILE__,"Error: unknown processor");
+  }
+
   //init sections of the particle solver
 
   //set up the signal handler
@@ -833,7 +974,15 @@ void PIC::Init_AfterParser() {
     }
   }
 
+  //init the vector of flag that determins output of the data files
+  PIC::Sampling::SaveOutputDataFile=new bool[PIC::nTotalSpecies];
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) PIC::Sampling::SaveOutputDataFile[spec]=true;
 
+  //init the counter of the injected particles and the injection rates
+  PIC::BC::nInjectedParticles=new long int[PIC::nTotalSpecies];
+  PIC::BC::ParticleProductionRate=new double [PIC::nTotalSpecies];
+
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0;
 
   //init the model of volume particle injections
 #if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
