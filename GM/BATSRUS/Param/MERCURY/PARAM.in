@@ -32,11 +32,8 @@ F			DoTimeAccurate
 #GRIDGEOMETRY
 spherical_lnr		TypeGeometry
 
-FIXAXIS
-F                       UsePoleDiffusion
-T                       DoFixAxis
-1000.0                  rFixAxis
-1.0                     r2FixAxis
+#UNIFORMAXIS
+F                       UseUniformAxis
 
 #PLANET
 mercury
