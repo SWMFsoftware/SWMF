@@ -255,7 +255,7 @@ float			TypeBcBottom
 float			TypeBcTop
 
 #SAVEPLOT
-3			nPlotFiles
+2			nPlotFiles
 x=0 VAR idl		StringPlot
 5000			DnSavePlot
 -1.			DtSavePlot
