@@ -1187,9 +1187,10 @@ contains
     integer :: i,j,k
     real    :: x, y, z, r, r_D(3), rUnit_DG(3,3), bUnit_DG(3,3), U_DG(3,3)
     real    :: FullBr, FullB, FullB_D(3), Br1_D(3), Bt1_D(3),Ewave
+    real :: Runit_D(3)
 
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
-    !-------------------------------------------------------------------------- 
+    !--------------------------------------------------------------------------
     if(iSide /= East_ .or. TypeGeometry(1:9) /='spherical') &
          call CON_stop('Wrong iSide in user_set_outerBCs')
 
@@ -1212,7 +1213,21 @@ contains
        State_VGB(p_,-1:0,:,:,iBlock) = & 
             2.*State_VGB(Rho_,-1:0,:,:,iBlock)/MassIon_I(1)*tChromo
 
+       do k = -1, nK+2; do j = -1, nJ+2
+          Runit_D = (/ x_BLK(1,j,k,iBlock), y_BLK(1,j,k,iBlock), &
+               z_BLK(1,j,k,iBlock) /) / r_BLK(1,j,k,iBlock)
+
+          Br1_D = sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
+          Bt1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) - Br1_D
+
+          do i = -1, 0
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = Bt1_D
+          end do
+          
+       end do; end do
+
     end if
+
     ! Safety
     if (UseUserInnerBcs) RETURN
 
