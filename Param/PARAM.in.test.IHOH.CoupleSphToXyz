@@ -2,14 +2,8 @@ Parameter file for test7 - launch a blob in IH, advect to OH, calcualte error
 #ECHO
 T			DoEcho
 
-#STRICT
-F
-
 #SAVERESTART
-F
-
-#TIMEACCURATE
-T
+F			DoSaveRestart
 
 #TEST
 OH_fill_buffer_only
@@ -30,7 +24,7 @@ T                       UseBody
 1.00E5                  BodyTDim(1) [K] temperature for ions
 
 #BODY
-F
+F			UseBody
 
 #USERFLAGS
 F                       UseUserInnerBcs
@@ -57,17 +51,17 @@ T
 rSun
 
 #ADVECTSPHERE
-T		DoInitSphere
-1.0e3		NumDensBackgrndIo
-.00001	        pBackgrndIo
-20000.0		uBackgrndIo
-90.0		FlowAngleTheta (Deg)
-0.0		FlowAnglePhi (Deg)
-400.0		rSphere  (Rs)
-3.5e3		NumDensSphereIo
-550.0		xSphereCenterInitIo
-0.0		ySphereCenterInitIo
-0.0		zSphereCenterInitIo
+T			DoInitSphere
+1.0e3			NumDensBackgrndIo
+.00001	        	pBackgrndIo
+20000.0			uBackgrndIo
+90.0			FlowAngleTheta (Deg)
+0.0			FlowAnglePhi (Deg)
+400.0			rSphere  (Rs)
+3.5e3			NumDensSphereIo
+550.0			xSphereCenterInitIo
+0.0			ySphereCenterInitIo
+0.0			zSphereCenterInitIo
 
 #ANALYTIC
 T
@@ -75,15 +69,19 @@ T
 #USERINPUTEND -------------------------------------------------------------
 
 #OUTERBOUNDARY
-float
-float
-float
-float
-float
-float
+float			TypeBcXMin
+float    		TypeBcXMax
+float			TypeBcYMin
+float			TypeBcYMax
+float			TypeBcZMin
+float			TypeBzZMax
 
 #GRIDGEOMETRY
-spherical
+spherical		TypeGeometry
+
+Allow resolution change around the axis
+#UNIFORMAXIS
+F			UseUniformAxis
 
 #GRID
 1                     	nRootBlockX
@@ -91,18 +89,18 @@ spherical
 1                     	nRootBlockZ
 -1290.0	                xMin
  2600.0                 xMax
--1290.0                  yMin
- 1290.0                  yMax
--1290.0                  zMin
- 1290.0                  zMax
+-1290.0                 yMin
+ 1290.0                 yMax
+-1290.0                 zMin
+ 1290.0                 zMax
 
 #LIMITRADIUS
-50.
-2580.
+50.			rMin
+2580.			rMax
 
 #GRIDLEVEL
-3			nLevelIh
-initial
+3			nLevelArea
+initial			NameArea
 
 #GRIDLEVEL
 1                       nLevelArea
@@ -110,29 +108,23 @@ all                     NameArea
 
 #GRIDLEVEL
 3			nLevelIh
-box_gen
-50.0
-320.
--40.
-2600.
-360.
-40.
+box_gen			NameArea
+50.0			xMinBox
+320.			yMinBox
+-40.			zMinBox
+2600.			xMaxBox
+360.			yMaxBox
+40.			zMaxBox
 
 #GRIDLEVEL
 3			nLevelIh
-box_gen
-50.0
-0.
--40.
-2600.
-40.
-40.
-
-#DIVB
-T
-F
-F
-F
+box_gen			NameArea
+50.0			xMinBox
+0.			yMinBox
+-40.			zMinBox
+2600.			xMaxBox
+40.			yMaxBox
+40.			zMaxBox
 
 #TIMESTEPPING
 2			nStage
@@ -141,14 +133,11 @@ F
 #SCHEME
 2			nOrder
 Rusanov			TypeFlux
-mc
-2.0
+mc			TypeLimiter
+2.0			BetaLimiter
 
 #SAVEINITIAL
-T
-
-#SAVEBINARY
-F
+T			DoSaveInitial
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -158,31 +147,28 @@ RAW			StringLogfile
 
 #SAVEPLOT
 1			nPlotFiles
-z=0 VAR idl
--1
+z=0 VAR idl		StringOutput
+-1			DnOutput
 350.			DtOutput
--1.
+-1.			DxOutput
 rho ux uy uz mach p rhoexact rhoerr
 g rbody
-
-#RESCHANGEBOUNDARY
-F
 
 #END_COMP IH -----------------------------------------------------------------
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
 #COORDSYSTEM
-HGI
+HGI			NameCoordSystem
 
 #BODY
 T                       UseBody
 3.0                     rBody (AU)
-1.00e3                  BodyNDim(1) [/cc] number density for ions
-1.00E5                  BodyTDim(1) [K] temperature for ions
+1.00e3                  BodyNDim [/cc] number density for ions
+1.00E5                  BodyTDim [K] temperature for ions
 
 #BODY
-F
+F			UseBody
 
 #GRAVITY
 F                       UseGravity (rest of parameters read if true)
@@ -213,17 +199,17 @@ T
 rSun
 
 #ADVECTSPHERE
-F		DoInitSphere
-1.0e3		NumDensBackgrndIo
-.00001	        pBackgrndIo
-20000.0		uBackgrndIo
-90.0		FlowAngleTheta (Deg)
-0.0		FlowAnglePhi   (Deg)
-400.0		rSphere  (Rs)
-3.5e3		NumDensSphereIo
-550.0		xSphereCenterInitIo
-0.0		ySphereCenterInitIo
-0.0		zSphereCenterInitIo
+F			DoInitSphere
+1.0e3			NumDensBackgrndIo
+.00001	        	pBackgrndIo
+20000.0			uBackgrndIo
+90.0			FlowAngleTheta (Deg)
+0.0			FlowAnglePhi   (Deg)
+400.0			rSphere  (Rs)
+3.5e3			NumDensSphereIo
+550.0			xSphereCenterInitIo
+0.0			ySphereCenterInitIo
+0.0			zSphereCenterInitIo
 
 #ANALYTIC
 T
@@ -234,74 +220,62 @@ T
 1			nRootBlockX
 1			nRootBlockY
 1			nRootBlockZ
--7.		xMin
-12.		xMin
--7.		xMin
-7.		xMin
--7.		xMin
-7.		xMin
+-7.			xMin
+12.			xMax
+-7.			yMin
+7.			yMax
+-7.			zMin
+7.			zMax
 
 #GRIDLEVEL
-3			nLevelOh
+3			nLevelArea
 initial			NameArea
 
 #GRIDLEVEL
-1
-all
+1			nLevelArea
+all			NameArea
 
 #GRIDLEVEL
-3			nLevelOh
+3			nLevelArea
 box			NameArea
-0.
--3.
--3.
-12.
-3.
-3.
+0.			xMinBox
+-3.			yMinBox
+-3.			zMinBox
+12.			xMaxBox
+3.			yMaxBox
+3.			zMaxBox
 
 #INNERBOUNDARY
-buffergrid
+buffergrid		TypeBcInner
 
 #BUFFERGRID
-2	nRBuff
-90	nPhiBuff
-45	nThetaBuff
-4.0	rBuffMin
-5.2	rBuffMax
-0.0	PhiBuffMin
-360.	PhiBuffMax
--90.	LatBuffMin
-90.	LatBuffMax
+2			nRBuff
+90			nPhiBuff
+45			nThetaBuff
+4.0			rBuffMin
+5.2			rBuffMax
+0.0			PhiBuffMin
+360.			PhiBuffMax
+-90.			LatBuffMin
+90.			LatBuffMax
 
 #OUTERBOUNDARY
-float      
-float    
-float
-float
-float
-float
+float			TypeBcXMin
+float    		TypeBcXMax
+float			TypeBcYMin
+float			TypeBcYMax
+float			TypeBcZMin
+float			TypeBzZMax
 
 #SCHEME
 2			nOrder
 Rusanov			TypeFlux
-mc
-2.0
+mc			TypeLimiter
+2.0			BetaLimiter
 
 #TIMESTEPPING
-2                       nStage (1 or 2)
+2                       nStage
 0.80                    CflExpl
-
-#RESCHANGEBOUNDARY
-T
-
-#DIVB
-T
-F
-F
-F
-
-#SAVEBINARY
-F
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -317,25 +291,23 @@ T			DoSaveInitial
 z=0 VAR idl		StringPlot
 -1			DnOutput
 350.	        	DtOutput
--1.
+-1.			DxOutput
 rho ux uy uz mach p rhoexact rhoerr
 g rbody
 
 #END_COMP OH -----------------------------------------------------------
 
 #COUPLE1
-IH
-OH
--1
-70. 	DtCouple
+IH			NameSource
+OH			NameTarget
+-1			DnCouple
+70.			DtCouple
 
 #COUPLERTYPE
-IH
-OH
-MPI
+IH			NameSource
+OH			NameTarget
+MPI			TypeCoupler
 
 #STOP
--1
-50000.0
-
-#END
+-1			MaxIteration
+50000.0			tSimulationMax
