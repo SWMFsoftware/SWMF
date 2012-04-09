@@ -291,6 +291,11 @@ subroutine write_runtime_values()
        nTrueCellsALL
   call write_prefix; write(iUnitOut,*)'  Smallest cell dx: ', minDXvalue, &
        '  Largest cell dx: ', maxDXvalue
+
+  ! Constrained transport is not implemented for AMR grids anymore...
+  if(UseConstrainB .and.  minDXvalue /= maxDXvalue) &
+       call stop_mpi('Constrained transport works on uniform grid only!')
+
   call write_prefix; write(iUnitOut,*)
   call write_prefix
   write(iUnitOut,'(1x,a,3i8)')    'root blocks: ', proc_dims
