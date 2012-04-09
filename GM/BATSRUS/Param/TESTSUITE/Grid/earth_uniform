@@ -1,0 +1,15 @@
+#GRID
+1                       proc_dims(1)
+1                       proc_dims(2)
+1                       proc_dims(3)
+-96.                    x1
+  32.                   x2
+-64.                    y1
+ 64.                    y2
+-64.                    z1
+ 64.                    z2
+
+!refine inside 1.5*rcurrents, rcurrents = 3.5
+#GRIDRESOLUTION
+2.0
+all
