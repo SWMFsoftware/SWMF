@@ -74,16 +74,21 @@ test_numeric_rundir:
 	make rundir RUNDIR=${TESTDIR2} STANDALONE="YES" PWDIR=`pwd`
 	cd input; cp PARAM.numeric.in ../${TESTDIR2}/PARAM.in
 
+# The tests run on 1 or 2 PE-s only
 test_analytic_run: 
-	if [ "$(MPIRUN)" = "mpirun -np 4" ]; then \
-		cd ${TESTDIR1}; ./HEIDI.exe; \
+	if [ "$(MPIRUN)" = "mpiexec" ]; then \
+		cd ${TESTDIR1}; mpiexec -np 2 ./HEIDI.exe; \
+	elif [ "$(MPIRUN)" = "mpirun -np 4" ]; then \
+		cd ${TESTDIR1}; mpirun -np 2 ./HEIDI.exe; \
 	else \
 		cd ${TESTDIR1}; ${MPIRUN} ./HEIDI.exe; \
 	fi;
 
 test_numeric_run: 
-	if [ "$(MPIRUN)" = "mpirun -np 4" ]; then \
-		cd ${TESTDIR2}; ./HEIDI.exe; \
+	if [ "$(MPIRUN)" = "mpiexec" ]; then \
+		cd ${TESTDIR2}; mpiexec -np 2 ./HEIDI.exe; \
+	elif [ "$(MPIRUN)" = "mpirun -np 4" ]; then \
+		cd ${TESTDIR2}; mpirun -np 2 ./HEIDI.exe; \
 	else \
 		cd ${TESTDIR2}; ${MPIRUN} ./HEIDI.exe; \
 	fi;
