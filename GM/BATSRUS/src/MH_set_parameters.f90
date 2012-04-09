@@ -1458,10 +1458,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseDivbDiffusion',UseDivbDiffusion)!^CFG IF DIVBDIFFUSE
         call read_var('UseProjection'   ,UseProjection)  !^CFG IF PROJECTION
         call read_var('UseConstrainB'   ,UseConstrainB)  !^CFG IF CONSTRAINB
-        if(UseConstrainB) then
-           UseBatl     = .false.
-           UseBatlTest = .false.
-        end if
 
         !^CFG IF CONSTRAINB BEGIN
         if (UseProjection.and.UseConstrainB.and.iProc==0) &
@@ -2673,7 +2669,14 @@ contains
           write(*,*)NameSub//' setting optimize_message_pass = all'
        end if
        optimize_message_pass = 'all'
-    endif                                            !^CFG END CONSTRAINB
+    endif
+    if (UseConstrainB .and. DoAmr)then
+       if(iProc==0)write(*,'(a)')NameSub//&
+            ' WARNING: cannot use AMR with constrained transport'
+       if(UseStrict)call stop_mpi('Correct PARAM.in!')
+       if(iProc==0)write(*,*)NameSub//' setting DoAmr=F'
+       DoAmr = .false.
+    end if                                            !^CFG END CONSTRAINB
 
     if ( (UseHallResist &
          .or. UseResistivity &                       !^CFG IF DISSFLUX
