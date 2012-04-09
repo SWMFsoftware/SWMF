@@ -80,7 +80,8 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-ta -Stage=2 -partimpl05 -Limiter=mc3",
 	     "-hall -logsatmove -Reschange=accurate -Length=tiny_ta");
 
-    &execute($testbatsrus,"-ta -Stage=2 -constrain -Length=tiny_ta_bats");     #^CFG IF CONSTRAINB
+    &execute($testbatsrus,"-ta -Stage=2 -constrain",                      #^CFG IF CONSTRAINB
+	     "-Grid=earth_uniform -Res=2.0 -Length=tiny_ta_noamr");       #^CFG IF CONSTRAINB
     &execute($testbatsrus,"-ta -Stage=2 -project -Length=tiny_ta");       #^CFG IF PROJECTION
     &execute($testbatsrus,"-ta -Stage=2 -diffuse -Length=tiny_ta");       #^CFG IF DIVBDIFFUSE
 
