@@ -1261,7 +1261,7 @@ subroutine MAGCONV(I3,NST)
      !	  end do
      ! Here the Jfac from the various species are summed together
 
-     if (nProc.gt.1) then
+     if (nProc > 1) then
         call MPI_BARRIER(iComm,iError)
         Jfac = 0.0
         do i = 1, nProc
@@ -1282,7 +1282,7 @@ subroutine MAGCONV(I3,NST)
         end do
      endif
 
-     if (iProc.eq.0) then
+     if (iProc==0) then
         call write_prefix; write(iUnitStdOut,*) 'FACs being sent to potential solver' 
      end if
 50   format(F5.1,1P,25E12.4)
@@ -1299,19 +1299,15 @@ subroutine MAGCONV(I3,NST)
      ! End the sawtooth snap block
      if (iProc==0) then
         call write_prefix; write(iUnitStdOut,*) '...Calling EPENCALC'
-     end if
-     call EPENCALC(t,f107,bc_choice,BYSW,BZSW,evsw) 
-     ! Aaron Ridley's solver 
-     ! for the potential
-     ! from the field-aligned currents
-     ! Note: By and Bz in nT, Usw in m/s
+        call EPENCALC(t,f107,bc_choice,BYSW,BZSW,evsw) 
+        ! Aaron Ridley's solver 
+        ! for the potential
+        ! from the field-aligned currents
+        ! Note: By and Bz in nT, Usw in m/s
 
-     if (iProc==0) then 
         call write_prefix; write(iUnitStdOut,*) &
              'Potentials returned from the solver'
      end if
-
-     call MPI_BARRIER(iComm,iError)
 
      call MPI_Bcast(fpot,(NR+3)*NT,MPI_Real,0,iComm,iError)
 
