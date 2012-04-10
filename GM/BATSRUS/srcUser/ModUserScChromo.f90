@@ -449,12 +449,13 @@ contains
       
        NumDensIon = Rho/MassIon_I(1)
        NumDensElectron = NumDensIon*AverageIonCharge
-       State_VGB(p_,i,j,k,iBlock) = &
-            (NumDensIon + NumDensElectron)*Temperature
 
        if(UseElectronPressure)then
-          State_VGB(p_,i,j,k,iBlock) = NumDensIon*tCorona
-          State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tCorona
+          State_VGB(p_,i,j,k,iBlock) = NumDensIon*Temperature
+          State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*Temperature
+       else
+          State_VGB(p_,i,j,k,iBlock) = &
+               (NumDensIon + NumDensElectron)*Temperature
        end if
        if (r > 1.5) then
           ! NOTE: If you wish to recover the Parker solution, remove this case.
@@ -1172,13 +1173,14 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only 
     ! modifies ghost cells in the r direction
     
-    use ModAdvance,    ONLY: State_VGB, B0_DGB
+    use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure
     use ModMain,       ONLY: East_, UseB0, UseUSerInnerBcs
     use ModGeometry,   ONLY: TypeGeometry, x_BLK, y_BLK, z_BLK, r_BLK
-    use ModVarIndexes, ONLY: Rho_, p_, WaveFirst_, WaveLast_, &
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_, WaveFirst_, WaveLast_, &
                              Bx_, Bz_, Ux_, Uz_
     use ModMultiFluid, ONLY: MassIon_I
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
+    use ModPhysics,    ONLY: AverageIonCharge
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
@@ -1187,6 +1189,7 @@ contains
     integer :: i,j,k
     real    :: x, y, z, r, r_D(3), rUnit_DG(3,3), bUnit_DG(3,3), U_DG(3,3)
     real    :: FullBr, FullB, FullB_D(3), Br1_D(3), Bt1_D(3),Ewave
+    real    :: NumDensIon, NumDensElectron
     real :: Runit_D(3)
 
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
@@ -1210,8 +1213,18 @@ contains
             2.*RhoChromo - State_VGB(rho_,1,:,:,iBlock)
        State_VGB(Rho_,-1,:,:,iBlock) = &
             2.*State_VGB(Rho_,0,:,:,iBlock)  - State_VGB(rho_,1,:,:,iBlock)
-       State_VGB(p_,-1:0,:,:,iBlock) = & 
-            2.*State_VGB(Rho_,-1:0,:,:,iBlock)/MassIon_I(1)*tChromo
+
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, 0
+          NumDensIon = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
+          NumDensElectron = NumDensIon*AverageIonCharge
+          if(UseElectronPressure)then
+             State_VGB(p_,i,j,k,iBlock) = NumDensIon*tChromo
+             State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tChromo
+          else
+             State_VGB(p_,i,j,k,iBlock) = &
+                  (NumDensIon + NumDensElectron)*tChromo
+          end if
+       end do; end do; end do
 
        do k = -1, nK+2; do j = -1, nJ+2
           Runit_D = (/ x_BLK(1,j,k,iBlock), y_BLK(1,j,k,iBlock), &
@@ -1324,8 +1337,7 @@ contains
 
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
-    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK, UseB0, &
-         UseHeatConduction
+    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK, UseB0
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge, BodyRho_I, &
                               BodyTDim_I, Si2No_V, UnitTemperature_, UnitN_
@@ -1429,15 +1441,10 @@ contains
     NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
     if(UseElectronPressure)then
-       VarsGhostFace_V(p_) = max(NumDensIon*Tbase, VarsTrueFace_V(p_))
+       VarsGhostFace_V(p_) = NumDensIon*Tbase
        VarsGhostFace_V(Pe_) = NumDensElectron*Tbase
     else
-       if(UseHeatConduction)then
-          VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Tbase
-       else
-          VarsGhostFace_V(p_) = &
-               max((NumDensIon + NumDensElectron)*Tbase, VarsTrueFace_V(p_))
-       end if
+       VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Tbase
     end if
 
     if(Hyp_>1) VarsGhostFace_V(Hyp_) = 0.0

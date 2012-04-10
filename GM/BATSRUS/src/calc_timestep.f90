@@ -47,9 +47,6 @@ subroutine calc_timestep
   ! Time step restriction due to point wise loss terms
   ! (only explicit source terms)
   if(UseAlfvenWaveDissipation .or. UseRadCooling)then
-     if(UseElectronPressure) call stop_mpi( &
-          'Radiative cooling time step control for single temperature only')
-
      if(UseRadCooling .or. (UseChromosphereHeating .and. &
           DoExtendTransitionRegion)) call get_tesi_c(iBlock, TeSi_C)
 
@@ -75,7 +72,8 @@ subroutine calc_timestep
         end do; end do; end do
      end if
 
-     if(UseRadCooling)then
+     ! No time step restriction yet if the electron pressure is used
+     if(UseRadCooling .and. .not.UseElectronPressure)then
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
            call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), Source)
 
