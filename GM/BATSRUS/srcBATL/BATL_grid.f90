@@ -778,6 +778,7 @@ contains
     real:: InvSize_D(nDim), Weight_D(nDim), Weight
     integer:: iBlock, iDim, DiLevel, iCell_D(MaxDim)
     integer:: i, j, k, iLo, jLo, kLo, iHi, jHi, kHi
+    integer:: iDir_D(MaxDim)
 
     logical, parameter:: DoTest = .false.
     !------------------------------------------------------------------------
@@ -874,6 +875,24 @@ contains
 
        end do
 
+       ! The coarse block SHOULD NOT contribute to the interpolation 
+       ! if the point is inside the finer edge/corner neighbor cell centers
+       if(nDim > 1)then
+          iDir_D = 0
+          do iDim = 1, nDim
+             ! Check which edge/corner direction is the point towards
+             if(Coord_D(iDim) < &
+                  CoordMin_DB(iDim,iBlock) - 0.25*CellSize_D(iDim)) then
+                iDir_D(iDim) = -1
+             elseif(Coord_D(iDim) > &
+                  CoordMax_DB(iDim,iBlock) + 0.25*CellSize_D(iDim)) then
+                iDir_D(iDim) = 1
+             end if
+          end do
+          if(DiLevelNei_IIIB(iDir_D(1),iDir_D(2),iDir_D(3),iBlock) == -1) &
+               CYCLE LOOPBLOCK
+       end if
+
        ! Find closest cell center indexes towards the lower index direction
        iCell_D = 1 ! for ignored dimensions
        iCell_D(1:nDim) = floor(0.5 + &
@@ -965,9 +984,9 @@ contains
 
     ! number of points in each dimension to test interpolation
     integer, parameter:: &
-         nPointI = 51, &
-         nPointJ = 1 + 50*min(1,nDim-1), &
-         nPointK = 1 + 50*max(0,nDim-2)
+         nPointI = 91, &
+         nPointJ = 1 + 90*min(1,nDim-1), &
+         nPointK = 1 + 90*max(0,nDim-2)
 
     integer, parameter:: nPoint_D(MaxDim) = (/ nPointI, nPointJ, nPointK /)
     real, allocatable:: Point_VIII(:,:,:,:), PointAll_VIII(:,:,:,:)
