@@ -685,6 +685,22 @@ contains
 
   !===========================================================================
 
+  subroutine show_grid_proc
+
+    ! Show all blocks sequentially on the calling processor
+
+    integer:: iBlock
+    !------------------------------------------------------------------------
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       call show_grid_block(iBlock)
+    end do
+
+  end subroutine show_grid_proc
+
+  !===========================================================================
+
   subroutine show_grid
 
     use BATL_mpi, ONLY: iProc, nProc, barrier_mpi
@@ -692,17 +708,12 @@ contains
     ! Show all blocks sequentially on all processors, ie. show_grid 
     ! must be called from all processors of the MPI communicator iComm!
 
-    integer:: iBlock, iPe
+    integer:: iPe
     !------------------------------------------------------------------------
 
     call barrier_mpi
     do iPe = 0, nProc - 1
-       if(iPe == iProc) then
-          do iBlock = 1, nBlock
-             if(Unused_B(iBlock)) CYCLE
-             call show_grid_block(iBlock)
-          end do
-       end if
+       if(iPe == iProc) call show_grid_proc
        call barrier_mpi
     end do
 
@@ -776,12 +787,12 @@ contains
     real:: CoordMin, CoordMax, Shift
     real:: CellSize_D(nDim), BufferLo_D(nDim), BufferHi_D(nDim)
     real:: InvSize_D(nDim), Weight_D(nDim), Weight
-    integer:: iBlock, iDim, DiLevel, iCell_D(MaxDim)
+    integer:: iBlock, iDim, DiLevel, iCell_D(MaxDim), iCell, i_D(MaxDim)
     integer:: i, j, k, iLo, jLo, kLo, iHi, jHi, kHi
-    integer:: iDir_D(MaxDim)
 
     logical, parameter:: DoTest = .false.
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub='BATL_grid::interpolate_grid'
+    !------------------------------------------------------------------------   
     ! Convert to generalized coordinates if necessary
     if(IsCartesian .or. IsRzGeometry)then
        Coord_D = Xyz_D
@@ -877,20 +888,45 @@ contains
 
        ! The coarse block SHOULD NOT contribute to the interpolation 
        ! if the point is inside the finer edge/corner neighbor cell centers
-       if(nDim > 1)then
-          iDir_D = 0
+       if(nDimAmr > 1)then
+          i_D = 0
           do iDim = 1, nDim
-             ! Check which edge/corner direction is the point towards
+             ! No need to check non-AMR directions
+             if(iRatio_D(iDim) < 2) CYCLE
+
+             ! Check which finer edge/corner neighbor the point could belong to
              if(Coord_D(iDim) < &
                   CoordMin_DB(iDim,iBlock) - 0.25*CellSize_D(iDim)) then
-                iDir_D(iDim) = -1
+                i_D(iDim) = -1
              elseif(Coord_D(iDim) > &
                   CoordMax_DB(iDim,iBlock) + 0.25*CellSize_D(iDim)) then
-                iDir_D(iDim) = 1
+                i_D(iDim) = 1
              end if
           end do
-          if(DiLevelNei_IIIB(iDir_D(1),iDir_D(2),iDir_D(3),iBlock) == -1) &
-               CYCLE LOOPBLOCK
+          ! Check 1-2 edges
+          if(iRatio_D(1) > 1 .and. iRatio_D(2) > 1) then
+             if(abs(i_D(1)) + abs(i_D(2)) == 2 .and. &
+                  DiLevelNei_IIIB(i_D(1),i_D(2),0,iBlock) == -1) &
+                  CYCLE LOOPBLOCK
+          end if
+          ! Check 1-3 edges
+          if(iRatio_D(1) > 1 .and. iRatio_D(3) > 1) then
+             if(abs(i_D(1)) + abs(i_D(3)) == 2 .and. &
+                  DiLevelNei_IIIB(i_D(1),0,i_D(3),iBlock) == -1) &
+                  CYCLE LOOPBLOCK
+          end if
+          ! Check 2-3 edges
+          if(iRatio_D(2) > 1 .and. iRatio_D(3) > 1) then
+             if(abs(i_D(2)) + abs(i_D(3)) == 2 .and. &
+                  DiLevelNei_IIIB(0,i_D(2),i_D(3),iBlock) == -1) &
+                  CYCLE LOOPBLOCK
+          end if
+          ! Check corners
+          if(nDimAmr == 3)then
+             if(abs(i_D(1)) + abs(i_D(2)) + abs(i_D(3)) == 3 .and.&
+                  DiLevelNei_IIIB(i_D(1),i_D(2),i_D(3),iBlock) == -1) &
+                  CYCLE LOOPBLOCK
+          end if
        end if
 
        ! Find closest cell center indexes towards the lower index direction
@@ -948,23 +984,38 @@ contains
           nCell = nCell + 1
 
           if(nCell > 2**nDim)then
-             write(*,*)'ERROR in interpolate_grid: too many cells!'
-             write(*,*)'iProc,iBlock,nDim=',iProc,iBlock,nDim
-             write(*,*)'iLo,iHi,jLo,jHi,kLo,kHi=',iLo,iHi,jLo,jHi,kLo,kHi
-             write(*,*)'Coord_D=',Coord_D(1:nDim)
+             if(nCell == 2**nDim+1)then
+                write(*,*)'ERROR in ',NameSub,': too many cells!'
+                write(*,*)'iProc,iBlock,nDim=',iProc,iBlock,nDim
+                write(*,*)'iLo,iHi,jLo,jHi,kLo,kHi=',iLo,iHi,jLo,jHi,kLo,kHi
+                write(*,*)'Coord_D=',Coord_D(1:nDim)
+                i_D = 1
+                do iCell = 1, 2**nDim
+                   i_D(1:nDim) = iCell_II(1:nDim,iCell)
+                   write(*,*)'iCell, iCell_II(:,i), weight, Xyz=', &
+                        iCell, iCell_II(:,iCell), Weight_I(iCell), &
+                        Xyz_DGB(1:nDim,i_D(1),i_D(2),i_D(3),iCell_II(0,iCell))
+                end do
+             end if
+             write(*,*)'iCell, iCell_II(:,i), weight=', &
+                  nCell, iBlock, iCell_D(1:nDim), Weight, &
+                  Xyz_DGB(1:nDim,i,j,k,iBlock)
+          else
+             Weight_I(nCell)   = Weight
+             iCell_II(0,nCell) = iBlock
+             iCell_II(1:nDim,nCell) = iCell_D(1:nDim)
           end if
-
-          Weight_I(nCell)   = Weight
-          iCell_II(0,nCell) = iBlock
-          iCell_II(1:nDim,nCell) = iCell_D(1:nDim)
-
           if(DoTest)write(*,*)'!!! nCell, CoordCell, Weight=', &
                nCell, CoordCell_D(1:nDim), Weight
 
        end do; end do; end do
     end do LOOPBLOCK
 
+    if(nCell > 2**nDim) call CON_stop(NameSub// &
+         ': too many cells to interpolate from')
+
   end subroutine interpolate_grid
+
   !===========================================================================
 
   subroutine test_grid
@@ -977,7 +1028,7 @@ contains
     integer :: iBlock
 
     integer, parameter:: MaxBlockTest            = 50
-    integer, parameter:: nRootTest_D(MaxDim)     = (/3,2,1/)
+    integer, parameter:: nRootTest_D(MaxDim)     = (/3,3,3/)
     logical, parameter:: IsPeriodicTest_D(MaxDim)= (/.true., .true., .false./)
     real:: DomainMin_D(MaxDim) = (/ 3.0, 2.0, 1.0 /)
     real:: DomainMax_D(MaxDim) = (/ 9.0, 6.0, 4.0 /)
@@ -999,6 +1050,7 @@ contains
     real:: Tolerance
 
     integer:: i, j, k, Di, Dj, Dk, iDim, iBlockOut, iProcOut, iCell_D(MaxDim)
+    integer:: iNodeCenter
     real:: Radius, Phi, Xyz_D(MaxDim), Coord_D(MaxDim), Distance_D(MaxDim)
     real:: Good, Good_D(MaxDim)
     real, allocatable:: CellVolumeCart_B(:), CellFaceCart_DB(:,:)
@@ -1019,14 +1071,15 @@ contains
     call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
     call set_tree_root( nRootTest_D(1:nDim))
 
-    call refine_tree_node(3)
+    call find_tree_node((/0.5,0.5,0.5/),iNodeCenter)
+    call refine_tree_node(iNodeCenter)
     call distribute_tree(.true.)
     if(DoTestMe) call show_tree('After distribute_tree')
 
     if(DoTestMe) write(*,*)'Testing create_grid'
     call create_grid
 
-    call show_grid
+    if(iProc==0)call show_grid_proc
 
     if(DoTestMe) write(*,*)'Testing find_grid_block'
     call find_grid_block(DomainMin_D, iProcOut, iBlockOut, &
@@ -1183,7 +1236,7 @@ contains
        call init_geometry(TypeGeometryIn = 'rz')
        call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
        call create_grid
-       call show_grid
+       if(iProc==0)call show_grid_proc
 
        ! Check relative to Cartesian
        Tolerance = 1e-6
@@ -1215,8 +1268,6 @@ contains
        end do
     end if
 
-    ! We should probably have a single option.
-
     if(nDim >= 2)then
        if(DoTestMe) write(*,*)'Testing create_grid in cylindrical geometry'
 
@@ -1233,13 +1284,14 @@ contains
        IsNodeBasedGrid = .false.
        call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
        call create_grid
-       call show_grid
+       if(iProc==0)call show_grid_proc
 
        ! Check relative to generalized coordinate volumes and areas
        Tolerance = 1e-6
        do iBlock = 1, nBlock
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Good = sqrt(sum(Xyz_DGB(1:2,i,j,k,iBlock)**2))*CellVolume_B(iBlock)
+             Good = sqrt(sum(Xyz_DGB(1:2,i,j,k,iBlock)**2)) &
+                  *CellVolume_B(iBlock)
              if(abs( CellVolume_GB(i,j,k,iBlock) - Good) < Tolerance) CYCLE
              write(*,*)NameSub,' ERROR: incorrect cell volume=', &
                   CellVolume_GB(i,j,k,iBlock),' should be', Good, &
@@ -1299,7 +1351,7 @@ contains
        IsNodeBasedGrid = .false.
        call init_grid( DomainMin_D, DomainMax_D )
        call create_grid
-       call show_grid
+       if(iProc==0)call show_grid_proc
 
        if(DoTestMe) write(*,*)'Testing create_grid in rlonlat geometry'
 
@@ -1316,7 +1368,7 @@ contains
        IsNodeBasedGrid = .false.
        call init_grid( DomainMin_D, DomainMax_D )
        call create_grid
-       call show_grid
+       if(iProc==0)call show_grid_proc
 
     end if
 
