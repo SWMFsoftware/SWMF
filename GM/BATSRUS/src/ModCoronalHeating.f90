@@ -1255,7 +1255,8 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: WaveDissipation_V(WaveFirst_:WaveLast_),CoronalHeating
 
-    real :: EwavePlus, EwaveMinus, DissipationRate, FullB_D(3), FullB
+    real :: EwavePlus, EwaveMinus, FullB_D(3), FullB
+    real :: DissipationRatePlus, DissipationRateMinus
     !--------------------------------------------------------------------------
 
     if(UseB0)then
@@ -1268,12 +1269,19 @@ contains
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-    DissipationRate = (Crefl*sqrt(max(EwavePlus,EwaveMinus)) &
+    DissipationRatePlus = (Crefl*sqrt(EwavePlus) &
          + sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
          *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
-    WaveDissipation_V = DissipationRate &
-         *State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+    DissipationRateMinus = (Crefl*sqrt(EwaveMinus) &
+         + sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
+         *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
+
+    WaveDissipation_V(WaveFirst_) = DissipationRatePlus &
+         *State_VGB(WaveFirst_,i,j,k,iBlock)
+
+    WaveDissipation_V(WaveLast_) = DissipationRateMinus &
+         *State_VGB(WaveLast_,i,j,k,iBlock)
 
     CoronalHeating = sum(WaveDissipation_V(:))
 
