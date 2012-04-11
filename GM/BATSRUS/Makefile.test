@@ -712,7 +712,7 @@ test_chromo:
 
 test_chromo_compile:
 	./Config.pl -u=ScChromo -e=MhdWaves -g=6,4,4,1000,1000
-	$(MAKE) BATSRUS
+	$(MAKE) BATSRUS PIDL
 
 test_chromo_rundir:
 	rm -rf ${TESTDIR}
