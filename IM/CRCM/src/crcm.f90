@@ -1118,6 +1118,7 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   fac=0.
   phot=0.
   Ppar_IC=0.
+  eta=0.
 
   ! Some constants for pressure, fac calculations
   rion=re_m+Hiono*1000.                      ! ionosphere distance in meter
