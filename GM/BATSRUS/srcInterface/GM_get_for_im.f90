@@ -154,7 +154,7 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
         ! Exclude open field lines by checking the radial 
         ! distance of the last point on a field line
         if(BufferLine_VI(3,iPoint) > (rBody + 1)*RadiusPlanet)then
-           BufferLine_VI(1,iPoint) = -1              ! set line index = -1
+           BufferLine_VI(1,iStartPoint:iPoint) = -1              ! set line index = -1
            Buffer_IIV(iLat, iLon, 1:2) = NoValue*1e6    ! x, y
            Buffer_IIV(iLat, iLon, 3) = NoValue       ! Bmin
            Buffer_IIV(iLat, iLon, 4:5) = 0.0         ! rho, p
