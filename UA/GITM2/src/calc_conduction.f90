@@ -2,7 +2,8 @@
 subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
 
   use ModSizeGitm
-  use ModGITM, only: dAlt_GB, Latitude, Longitude, dt, Altitude_GB
+  use ModGITM, only: dAlt_GB, Latitude, Longitude, dt, Altitude_GB, &
+       RadialDistance_GB
   use ModConstants
 
   implicit none
@@ -14,7 +15,7 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
   real, intent(out) :: dTdt_cond(nLons, nLats, nAlts)
 
   real, dimension(0:nAlts+1) :: m, du, r, du12, du22, &
-       dl, lou, dlou, di
+       dl, lou, dlou, di, r2
 
   real :: tempold(0:nAlts+1), temp(0:nAlts+1)
   real, dimension(0:nAlts+1) :: a,b,c,d, cp, dp
@@ -28,9 +29,10 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
 
         tempold = Quantity(iLon, iLat, 0:nAlts+1)
 
-        di = diff(iLon,iLat,:)
+        r2 = RadialDistance_GB(iLon,iLat, 0:nAlts+1,iBlock)**2
+        di = diff(iLon,iLat,:)*r2
 
-        m = dt/MulFac(iLon, iLat, 0:nAlts+1)
+        m = dt/(MulFac(iLon, iLat, 0:nAlts+1)*r2)
         du = Altitude_GB(iLon,iLat, 1:nAlts+2,iBlock) - &
              Altitude_GB(iLon,iLat, 0:nAlts+1,iBlock)
         dl = Altitude_GB(iLon,iLat, 0:nAlts+1,iBlock) - &
