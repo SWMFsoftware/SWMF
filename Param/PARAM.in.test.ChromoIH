@@ -80,7 +80,7 @@ float			TypeBcTop
 
 #USER_FLAGS
 F			UseUserInnerBcs
-T			UseUserSource
+F			UseUserSource
 F			UseUserPerturbation
 F			UseUserOuterBcs
 F			UseUserICs
@@ -93,14 +93,10 @@ F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
 
-#USERINPUTBEGIN ------------------------
-
-#WAVEDISSIPATION
-T                       UseWaveDissipation
-3.4e6                   Lmax [m T-1/2]
-25.                     Lratio > 1
-
-#USERINPUTEND ----------------------------
+#CORONALHEATING
+alfvenwavedissipation	TypeCoronalHeating
+1.36e5			LperpSqrtBSi
+0.04			Crefl
 
 #SCHEME
 2			nOrder
@@ -190,7 +186,7 @@ float	   		TypeBcTop
 
 #USER_FLAGS
 T			UseUserInnerBcs
-T			UseUserSource
+F			UseUserSource
 F			UseUserPerturbation	
 T 			UseUserOuterBcs
 T			UseUserICs
@@ -227,12 +223,12 @@ F               	UseExtrapolatedEwave
 1.5e14			NumDensitySi 1e14
 1.5e6			Temperature (K) 1.5e6
 
-#WAVEDISSIPATION
-T                       UseWaveDissipation
-3.4e6                   Lmax [m T-1/2]
-25.                     Lratio > 1
-
 #USERINPUTEND ----------------------------
+
+#CORONALHEATING
+alfvenwavedissipation	TypeCoronalHeating
+1.36e5			LperpSqrtBSi
+0.04			Crefl
 
 #HEATCONDUCTION
 T                       UseHeatConduction
