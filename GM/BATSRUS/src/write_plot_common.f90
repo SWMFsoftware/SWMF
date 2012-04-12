@@ -11,7 +11,7 @@ subroutine write_plot_common(ifile)
   use ModGeometry, ONLY : TypeGeometry,UseCovariant, nGrid, yR_I
   use ModPhysics, ONLY : No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
-  use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5
+  use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5,write_cut_var_hdf5
   use ModIoUnit, ONLY : io_unit_new
   use ModNodes
   use ModNumConst, ONLY : cRadToDeg
@@ -85,7 +85,8 @@ subroutine write_plot_common(ifile)
   character (len=80) :: format
   character (len=19) :: eventDateTime
 
-  logical :: oktest,oktest_me
+  logical :: oktest,oktest_me, isCutFile(nFile), nonCartesian, H5Advance
+
   !---------------------------------------------------------------------------
 
   ! Initialize stuff
@@ -123,6 +124,14 @@ subroutine write_plot_common(ifile)
      write(*,*) plot_type1
      write(*,*) plot_form(ifile)
   end if
+  
+  !! A logical for HDF plotting
+  if(TypeGeometry == 'cartesian' .or. TypeGeometry == 'rz') then
+    nonCartesian = .false.
+  else
+    nonCartesian = .true.
+  end if
+
 
   ! Construct the file name
   ! Plotfile names start with the plot directory and the type infor
@@ -279,8 +288,38 @@ subroutine write_plot_common(ifile)
                 xmin,xmax,ymin,ymax,zmin,zmax, &
                 dxblk,dyblk,dzblk,nBLKcells)
         case('hdf')
-           call write_var_hdf5(PlotVar, nPlotVar, H5Index, iBlk)
-           H5Index = H5Index + 1
+            if(plot_type1(1:3)=='3d_' .or.  (&
+              (plot_type1(1:3)=='z=0' .and. nK == 1))) then
+                call write_var_hdf5(PlotVar, nPlotVar, H5Index, iBlk,&
+                    nonCartesian)
+                H5Index = H5Index+1
+                isCutFile(iFile) = .false.
+            elseif(plot_type1(1:3)=='blk')then
+                if (plot_point(1,ifile)> NodeX_NB(1, 1, 1, iBLK) .and. &
+                   plot_point(1,ifile)<=NodeX_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
+                   plot_point(2,ifile)> NodeY_NB(1, 1, 1, iBLK) .and. &
+                   plot_point(2,ifile)<=NodeY_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
+                   plot_point(3,ifile)> NodeZ_NB(1, 1, 1, iBLK) .and. &
+                   plot_point(3,ifile)<=NodeZ_NB(1+nI,1+nJ,1+nK,iBLK))then
+
+                call write_cut_var_hdf5(ifile,iBLK,H5Index,nplotvar,&
+                plotvar, xmin,xmax,ymin,ymax,zmin,zmax, dxblk,dyblk,&
+                dzblk,nonCartesian, nBLKcells, H5Advance)
+
+                   H5Index = H5Index+1
+                end if
+                    isCutFile(iFile)=.true.
+            else
+                call write_cut_var_hdf5(ifile,iBLK,H5Index,nplotvar,&
+                plotvar, xmin,xmax,ymin,ymax,zmin,zmax, dxblk,dyblk,&
+                dzblk,nonCartesian, nBLKcells, H5Advance)
+   
+                if (H5Advance) then
+                    H5Index = H5Index+1
+                end if
+
+                isCutFile(iFile)=.true.
+            end if
         end select
      end if
 
@@ -304,18 +343,17 @@ subroutine write_plot_common(ifile)
   end do ! iBLK
 
   ! Write the HDF5 output file and return
-  if (plot_form(ifile) == 'hdf') then
-     call get_idl_units(ifile, nPlotVar, plotVarNames, NamePlotUnit_V, &
+  select case(plot_form(ifile))
+  case('hdf')
+    call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
           unitstr_IDL)
+                    
+    call write_plot_hdf5(filename, plotVarNames, NamePlotUnit_V,&
+        nPlotVar,isCutFile(iFile), nonCartesian,plot_dimensional(ifile))
 
-     call write_plot_hdf5(filename, plotVarNames, NamePlotUnit_V,&
-          nPlotVar,xmin, xmax, ymin, ymax, zmin, zmax, nBLKcells)
-
-     RETURN
-  endif
+        RETURN
 
   ! Get the headers that contain variables names and units
-  select case(plot_form(ifile))
   case('tec')
      call get_tec_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
