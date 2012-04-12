@@ -756,6 +756,8 @@ contains
        if (iLineIndex_II(iLon,iLat) == int(StateLine_VI(I_,iPoint)))then
           !if(iLon==5)write(*,*)'!!! Found line for iLat,iLon',iLat,iLon
           !when line index found, fill in output arrays
+          if(iAlt > np) &
+               call CON_stop(NameSub//': iAlt exceeds np. Increase np in fieldpara!')
           Bfield_I(iAlt)     = StateLine_VI(B_,iPoint)
           FieldLength_I(iAlt)= StateLine_VI(S_,iPoint)
           RadialDist_I(iAlt) = StateLine_VI(R_,iPoint)

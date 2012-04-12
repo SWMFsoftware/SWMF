@@ -12,6 +12,8 @@ subroutine trace_dipoleIM(Re,LatStart,nStep,nStepInside,&
   real, parameter :: rBoundary = 2.5
   real    :: Lat, dLat, Length, LatMax, Length1,LatOuter,LatInner 
   integer :: iStep
+
+  character(len=*), parameter :: NameSub='trace_dipoleIM'
   !----------------------------------------------------------------------------
 
   L  = 1.0 / cos(LatStart)**2.0
@@ -49,6 +51,8 @@ subroutine trace_dipoleIM(Re,LatStart,nStep,nStepInside,&
      do iStep = nStepInside+1, nStep-nStepInside
         LineLength_I(iStep) = LineLength_I(iStep) + Length1
      enddo
+     if(RadialDist_I(nStep-nStepInside) > L) &
+          call CON_stop(NameSub//'Radial distance exceeds L!')
      LatOuter = -acos(sqrt(RadialDist_I(nStep - nStepInside)/L))
   else
      ! Continue with other half
