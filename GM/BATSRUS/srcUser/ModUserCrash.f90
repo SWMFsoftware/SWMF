@@ -1074,7 +1074,7 @@ contains
     real    :: x, y, z, r, Weight1, Weight2, Weight3
     real    :: RhoUr, Bphi
 
-    character(len=*), parameter :: NameSub='interpolate_hyades2d'
+    character(len=*), parameter :: NameSub='interpolate_crash2d'
     !-------------------------------------------------------------------------
     if(.not.allocated(iNodeTriangle_II))then
 
