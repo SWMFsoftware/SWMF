@@ -3,7 +3,8 @@
 !==========================================================================
 ! FOR CRCM COUPLING
 !==========================================================================
-subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, nPointLine)
+subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, &
+     nPointLine)
 
   ! Do ray tracing for IM. 
   ! Provide total number of points along rays 
@@ -38,7 +39,7 @@ subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, nPointL
   ! The RB ionosphere radius in normalized units
   Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
   DoExtractUnitSi = .true.
-  
+
   call integrate_ray_accurate(iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
        NameVar)
 
@@ -62,9 +63,11 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   use ModMain, ONLY: Time_Simulation, TypeCoordSystem, &
        DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   use ModGmImCoupling, ONLY: NoValue
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, Ppar_,&
-                           iRho_I, iP_I, MassFluid_I, IonFirst_, IonLast_, nVar
-  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_, UnitRho_, rBody
+  use ModVarIndexes, ONLY: &
+       Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, Ppar_, &
+       iRho_I, iP_I, MassFluid_I, IonFirst_, IonLast_, nVar
+  use ModPhysics, ONLY: No2Si_V, &
+       UnitN_, UnitU_, UnitB_, UnitP_, UnitRho_, rBody
   use ModSolarwind, ONLY: get_solar_wind_point
   use ModConst, ONLY: cProtonMass
 
@@ -76,8 +79,8 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 
   character (len=*), parameter :: NameSub='GM_get_for_im_crcm'
 
-  integer, intent(in)                                :: iSizeIn, jSizeIn, nVarIn
-  real, intent(out), dimension(iSizeIn,jSizeIn,nVarIn) :: Buffer_IIV
+  integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
+  real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
 
   integer, intent(in) :: nPointLine, nVarLine
   real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
@@ -128,7 +131,7 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 
   ! Transformation matrix between CRCM(SM) and GM coordinates
   SmGm_DD = transform_matrix(Time_Simulation,TypeCoordSystem,'SMG')
-          
+
   ! For multifluid coupling
   if(DoMultiFluidIMCoupling) &
        iIonSecond = min(IonFirst_+1, IonLast_)
@@ -140,7 +143,7 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
      iLine =  Buffer_VI(0,iPoint)     ! line index
      iLat = mod(iLine-1, iSizeIn) + 1
      iLon = (iLine-1)/iSizeIn + 1
-     
+
      BufferLine_VI(1,iPoint) = iLine
      BufferLine_VI(2,iPoint) = Buffer_VI(1,iPoint)                 ! Length
      BufferLine_VI(3,iPoint) = sqrt(sum(Buffer_VI(2:4,iPoint)**2)) ! |r|
@@ -153,50 +156,52 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
           .or. iPoint == nPoint)then
         ! Exclude open field lines by checking the radial 
         ! distance of the last point on a field line
-        if(BufferLine_VI(3,iPoint) > rBody*RadiusPlanet)then
-           BufferLine_VI(1,iStartPoint:iPoint) = -1              ! set line index = -1
+        if(BufferLine_VI(3,iPoint) > 1.0001*rBody*RadiusPlanet)then
+           ! set line index to -1. for non-closed field line
+           ! It would be much better not to send the line at all !!!
+           BufferLine_VI(1,iStartPoint:iPoint) = -1
            Buffer_IIV(iLat, iLon, 1:2) = NoValue*1e6    ! x, y
            Buffer_IIV(iLat, iLon, 3) = NoValue       ! Bmin
            Buffer_IIV(iLat, iLon, 4:5) = 0.0         ! rho, p
            if(DoMultiFluidIMCoupling) &
                 Buffer_IIV(iLat, iLon, 7:10) = 0.0
            if(DoAnisoPressureIMCoupling) &
-             Buffer_IIV(iLat, iLon, 7) = 0.0
-           
+                Buffer_IIV(iLat, iLon, 7) = 0.0
+
         else
            ! For closed field lines 
            ! Location of Bmin for this field line
            iLocBmin = minloc(BufferLine_VI(4,iStartPoint:iPoint), dim=1) &
                 + iStartPoint - 1
-           Buffer_IIV(iLat, iLon, 3) = BufferLine_VI(4, iLocBmin)     ! Bmin
-	   
+           Buffer_IIV(iLat, iLon, 3) = BufferLine_VI(4, iLocBmin)    ! Bmin
+
            ! Convert location from GM to SMG coordinates
            XyzBminSm_D = matmul(SmGm_DD, Buffer_VI(2:4,iLocBmin))
            Buffer_IIV(iLat, iLon, 1) = XyzBminSm_D(1) ! x
            Buffer_IIV(iLat, iLon, 2) = XyzBminSm_D(2) ! y
            Buffer_IIV(iLat, iLon, 4) = Buffer_VI(4+Rho_,iLocBmin) &
                 /cProtonMass                          ! rho in [#/m^3]
-           Buffer_IIV(iLat, iLon, 5) = Buffer_VI(4+p_,  iLocBmin)     ! p
+           Buffer_IIV(iLat, iLon, 5) = Buffer_VI(4+p_,  iLocBmin)    ! p
            if(DoMultiFluidIMCoupling)then
-              Buffer_IIV(iLat, iLon, 7:8) &
-                   = Buffer_VI(4+iRho_I(IonFirst_:iIonSecond), iLocBmin) ! HpRho,OpRho
-              Buffer_IIV(iLat, iLon, 9:10) &
-                   = Buffer_VI(4+iP_I(IonFirst_:iIonSecond),   iLocBmin) ! HpP,OpP
+              Buffer_IIV(iLat, iLon, 7:8) &                      ! HpRho, OpRho
+                   = Buffer_VI(4+iRho_I(IonFirst_:iIonSecond), iLocBmin) 
+              Buffer_IIV(iLat, iLon, 9:10) &                         ! HpP,OpP
+                   = Buffer_VI(4+iP_I(IonFirst_:iIonSecond),   iLocBmin) 
            end if
            ! Ppar and HpRho share the same index in buffer_iiv for now
            ! does not work for multifluid MHD with anisotropic pressure
-           if(DoAnisoPressureIMCoupling) &
-	        Buffer_IIV(iLat, iLon, 7) = Buffer_VI(4+Ppar_,  iLocBmin) ! Ppar
+           if(DoAnisoPressureIMCoupling) &                           ! Ppar
+	        Buffer_IIV(iLat, iLon, 7) = Buffer_VI(4+Ppar_,  iLocBmin) 
         end if
 
         ! Set the start point for the next field line
         iStartPoint = iPoint +1
      end if
   end do
-  
+
   deallocate(Buffer_VI)
   call line_clean
- 
+
   ! Send solar wind values in the array of the extra integral
   ! This is a temporary solution. IM should use MHD_SUM_rho and MHD_SUM_p
 
@@ -214,19 +219,20 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   !^CFG END RAYTRACE
 
   ! test only for anisop
- if(iProc == 0 .and. DoTest .and. DoAnisoPressureIMCoupling)then
-    write(NameOut,"(a,f6.1)") 'GM_get_for_IM_t_', Time_Simulation
-    open(UnitTmp_,FILE=NameOut)
-    write(UnitTmp_,"(a)") 'GM_get_for_im_crcm, Buffer_IIV, last index 1:5 and 7 '
-    write(UnitTmp_,"(a)") 'Xeq Yeq Beq rho p ppar'
-    do iLat =iSizeIn,1,-1
-       do iLon =1,jSizeIn
-       write(UnitTmp_,"(100es18.10)") Buffer_IIV(iLat,iLon,1:5), &
-            Buffer_IIV(iLat,iLon,7)
-       enddo
-    enddo
-    close(UnitTmp_)
- end if
+  if(iProc == 0 .and. DoTest .and. DoAnisoPressureIMCoupling)then
+     write(NameOut,"(a,f6.1)") 'GM_get_for_IM_t_', Time_Simulation
+     open(UnitTmp_,FILE=NameOut)
+     write(UnitTmp_,"(a)") &
+          'GM_get_for_im_crcm, Buffer_IIV, last index 1:5 and 7 '
+     write(UnitTmp_,"(a)") 'Xeq Yeq Beq rho p ppar'
+     do iLat =iSizeIn,1,-1
+        do iLon =1,jSizeIn
+           write(UnitTmp_,"(100es18.10)") Buffer_IIV(iLat,iLon,1:5), &
+                Buffer_IIV(iLat,iLon,7)
+        enddo
+     enddo
+     close(UnitTmp_)
+  end if
 
 end subroutine GM_get_for_im_crcm
 
@@ -234,7 +240,7 @@ end subroutine GM_get_for_im_crcm
 subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
 
   ! Subroutine to update and collect satellite locations for IM tracing
-  
+
   !Modules
   use ModProcMH, ONLY: iProc, iComm
   use ModSatelliteFile, ONLY: Satellite_name, Xsatellite, &
@@ -244,12 +250,12 @@ subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
   use ModPhysics, ONLY: No2Si_V, UnitB_
   use ModVarIndexes, ONLY : nVar,Bx_,By_,Bz_
   implicit none
-  
+
   !Arguments
   integer, intent(in)               :: nSats
   real, intent(out)                 :: Buffer_III(4,2,nSats)
   character (len=100), intent(out)  :: Buffer_I(nSats)
-  
+
   !Internal variables
   character (len=*), parameter :: NameSub='GM_get_sat_for_im'
 
@@ -288,9 +294,9 @@ subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
      Bx = StateSat_V(Bx_)+B0Sat_D(1)
      By = StateSat_V(By_)+B0Sat_D(2)
      Bz = StateSat_V(Bz_)+B0Sat_D(3)
-     
+
      B2 = (Bx**2.0 + By**2.0 + Bz**2.0) * (No2Si_V(UnitB_))**2.0 
-     
+
      ! Store results in Buffer_III
      if (iProc == 0) then 
         Buffer_III(1:3,1,iSat)   = Xsatellite(iSat,1:3)
@@ -336,7 +342,7 @@ subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
   if(.not.allocated(RadiusIm_I))then
      if(   nRadius /= Grid_C(IM_) % nCoord_D(1) .or. &
-           nLon    /= Grid_C(IM_) % nCoord_D(2) )then
+          nLon    /= Grid_C(IM_) % nCoord_D(2) )then
         write(*,*)NameSub//' grid sizes do not agree nRadius,nLon,nCells=',&
              nRadius, nLon, Grid_C(IM_) % nCoord_D(1:2)
         call CON_stop(NameSub//' ERROR')
@@ -483,7 +489,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   else
      call integrate_ray_accurate(iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
           'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,HpRhoInvB,OpRhoInvB,HppInvB,OppInvB')
-     ! but not pass Rhoinvb, Pinvb to IM                                        
+     ! but not pass Rhoinvb, Pinvb to IM
   end if
 
   if(iProc==0)then
@@ -540,7 +546,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
      ! Convert the units of the MHD_variables to SI units!!                 
      call process_integrated_data
-     
+
      ! Output after processing
      if(DoTestTec)call write_integrated_data_tec
      if(DoTestIdl)call write_integrated_data_idl
@@ -550,7 +556,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      Buffer_IIV(:,:,Z0x_)     = MHD_Xeq
      Buffer_IIV(:,:,Z0y_)     = MHD_Yeq
      Buffer_IIV(:,:,Z0b_)     = MHD_Beq
-     
+
      if(.not.DoMultiFluidIMCoupling)then
         Buffer_IIV(:,:,RhoInvB_) = MHD_SUM_rho
         Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
@@ -582,8 +588,8 @@ subroutine GM_satinit_for_im(nSats)
 
   !Subroutine Arguments:
   integer,           intent(out) :: nSats
-!--------------------------------------------------------------------------
-  
+  !--------------------------------------------------------------------------
+
   !If IM sat tracing is on, collect the number of satellites to trace.
   !If IM sat tracing is off, set nSats to zero.
   if (DoImSatTrace) then
@@ -599,25 +605,25 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
 
   ! Subroutine to update and collect satellite locations for IM tracing
   ! !!!DTW 2007
-  
+
   !Modules
   use ModProcMH, ONLY: iProc, iComm
   use ModSatelliteFile, ONLY: Satellite_name, Xsatellite, &
        get_satellite_ray, set_satellite_flags
   use ModMPI
-  
+
   implicit none
-  
+
   !Arguments
   integer, intent(in)               :: nSats
   real, intent(out)                 :: Buffer_III(3,2,nSats)
   character (len=100), intent(out)  :: Buffer_I(nSats)
-  
+
   !Internal variables
   character (len=*), parameter :: NameSub='GM_get_sat_for_im'
 
   real :: sat_RayVars(5), sat_RayVarsSum(5)
-  
+
   integer :: iSat, iError
   !--------------------------------------------------------------------------
   ! Store satellite names in Buffer_I
@@ -633,7 +639,7 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
      ! Reduce values from all 
      call MPI_reduce(sat_RayVars, sat_RayVarsSum, 5, MPI_REAL, MPI_SUM, &
           0, iComm, iError)
-     
+
      ! Store results in Buffer_III
      if (iProc == 0) then 
         Buffer_III(:,1,iSat) = Xsatellite(iSat,:)
@@ -649,13 +655,13 @@ end subroutine GM_get_sat_for_im
 subroutine GM_get_multi_for_im(DoMultiFluidIM)
 
   !This subroutine return the logical value of DoMultiFluidIMCoupling        
-  
+
   use ModMain,   ONLY: DoMultiFluidIMCoupling
   implicit none
 
   !Subroutine Arguments:                                                      
   logical,           intent(out) :: DoMultiFluidIM
-!--------------------------------------------------------------------------  
+  !--------------------------------------------------------------------------  
 
   if (DoMultiFluidIMCoupling) then
      DoMultiFluidIM = .true.
