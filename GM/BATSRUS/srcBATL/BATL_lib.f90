@@ -30,6 +30,7 @@ module BATL_lib
   public:: MaxBlock, nBlock
   public:: nI, nJ, nK, nIJK, nIJK_D
   public:: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  public:: nINode, nJNode, nKNode
 
   ! Inherited from BATL_mpi
   public:: init_mpi, clean_mpi, barrier_mpi
