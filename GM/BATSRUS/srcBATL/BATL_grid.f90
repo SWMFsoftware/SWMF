@@ -131,9 +131,9 @@ contains
     allocate(CellVolume_B(MaxBlock))
     allocate(CellVolume_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(Xyz_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(Xyz_DNB(MaxDim,nINode,nJNode,nKNode,MaxBlock))
 
     if(.not.IsCartesian .and. .not. IsRzGeometry) then
-       allocate(Xyz_DNB(MaxDim,nINode,nJNode,nKNode,MaxBlock))
        allocate(FaceNormal_DDFB(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
     end if
 
@@ -222,6 +222,11 @@ contains
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Xyz_DGB(:,i,j,k,iBlock) = CoordMin_DB(:,iBlock) + &
                ( (/i, j, k/) - 0.5 ) * CellSize_DB(:,iBlock)
+       end do; end do; end do
+
+       do k = 1, nKNode; do j = 1, nJNode; do i = 1, nINode
+          Xyz_DNB(:,i,j,k,iBlock) = CoordMin_DB(:,iBlock) + &
+               ( (/i, j, k/) - 1 ) * CellSize_DB(:,iBlock)
        end do; end do; end do
 
        if(IsRzGeometry)then
