@@ -906,7 +906,7 @@ contains
     DtInv = 0.0
 
     ! Calculate time step limit for each block
-    if(IsCartesian .or. IsRzGeometry .and. UseConstantVelocity)then
+    if((IsCartesian .or. IsRzGeometry) .and. UseConstantVelocity)then
        ! Velocity is constant and positive so simply check cellsize per block
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
