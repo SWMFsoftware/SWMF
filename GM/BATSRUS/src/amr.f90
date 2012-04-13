@@ -20,10 +20,9 @@ subroutine amr(DoFullMessagePass)
 
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   use ModUser,          ONLY: user_amr_criteria
-  use ModBatlInterface, ONLY: UseBatlTest
-  use ModParallel, ONLY:nBlockMax_P, MaxBlockDisp_P
-  use ModMessagePass, ONLY: exchange_messages
-  use ModPartSteady, ONLY: UsePartSteady
+  use ModParallel,      ONLY: nBlockMax_P, MaxBlockDisp_P
+  use ModMessagePass,   ONLY: exchange_messages
+  use ModPartSteady,    ONLY: UsePartSteady
 
   implicit none
 
@@ -55,8 +54,7 @@ subroutine amr(DoFullMessagePass)
      if(DoTestMe)write(*,*)NameSub,' starts 2nd order accurate message passing'
 
      if(DoProfileAmr) call timing_start('amr::exchange_true')
-     call exchange_messages(UseOrder2In= .not.UseBatlTest,&
-          DoResChangeOnlyIn=.not.DoFullMessagePass)
+     call exchange_messages(DoResChangeOnlyIn=.not.DoFullMessagePass)
      if(DoProfileAmr) call timing_stop('amr::exchange_true')
 
      if(UsePartSteady)then
@@ -199,8 +197,8 @@ subroutine amr(DoFullMessagePass)
         if(DoProfileAmr) call timing_stop('amr::set_divb')
      end if
 
-     RETURN
-  end if
+     RETURN  ! BATL is done
+  end if     ! UseBatl
 
   ! Ensure ghostcells are up to date.
   call exchange_messages

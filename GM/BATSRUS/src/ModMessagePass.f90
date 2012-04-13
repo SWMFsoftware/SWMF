@@ -25,7 +25,6 @@ contains
 
     use BATL_lib, ONLY: message_pass_cell
     use ModParallel, ONLY: BLKneighborLEV ! we should use BATL:DiNeiLevel_IIIB
-    use ModBatlInterface, ONLY: UseBatlTest
     use ModAMR, ONLY: DoProfileAmr
     use ModMpi
 
@@ -82,13 +81,8 @@ contains
 
     if (UseOrder2) then
        if(UseBatl)then
-          if(UseBatlTest)then
-             call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1,&
-                  DoResChangeOnlyIn=DoResChangeOnlyIn)
-          else
-             call message_pass_cell(nVar, State_VGB,&
-                  DoResChangeOnlyIn=DoResChangeOnlyIn)
-          end if
+          call message_pass_cell(nVar, State_VGB,&
+               DoResChangeOnlyIn=DoResChangeOnlyIn)
           if(.not.DoResChangeOnly) &
                call fix_boundary_ghost_cells(DoRestrictFace)
        else
