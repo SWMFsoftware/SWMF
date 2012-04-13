@@ -54,7 +54,8 @@ subroutine amr(DoFullMessagePass)
      if(DoTestMe)write(*,*)NameSub,' starts 2nd order accurate message passing'
 
      if(DoProfileAmr) call timing_start('amr::exchange_true')
-     call exchange_messages(DoResChangeOnlyIn=.not.DoFullMessagePass)
+     call exchange_messages(UseOrder2In=.true., &
+          DoResChangeOnlyIn=.not.DoFullMessagePass)
      if(DoProfileAmr) call timing_stop('amr::exchange_true')
 
      if(UsePartSteady)then
