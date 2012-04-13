@@ -355,6 +355,8 @@ Contains
 
     if(UseDiatomicMolecules.and.zAv < 0.1)&
          call get_chemical_equilibrium( Te, Na, Population_II(0,1:nMix))
+    !Calculate Coulomb logarithm
+    CoulombLog = max(2.0, 24.0-log(sqrt(zAv*Na*1.0e-6)/Te))
   contains
 
     ! Calculating Z averaged iteratively
