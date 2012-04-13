@@ -83,6 +83,7 @@ subroutine fix_block_geometry(iBLK)
   use ModMain, ONLY : UseBatl, body1,body1_,body2_,ExtraBc_,&
        UseExtraBoundary,DoFixExtraBoundaryOrPole,unusedBLK,ProcTest,BlkTest   
   use ModMain, ONLY : UseBody2                    !^CFG IF SECONDBODY
+  use ModBatlInterface, ONLY: UseBatlTest
   use ModNodes
   use ModGeometry
   use ModNumConst
@@ -124,11 +125,7 @@ subroutine fix_block_geometry(iBLK)
            do i = 1-gcn, nI+gcn
               x_BLK(i,j,k,iBLK) =  (i-1)*dx + xyzStart_BLK(1,iBLK)
               y_BLK(i,j,k,iBLK) =  (j-1)*dy + xyzStart_BLK(2,iBLK)
-              z_BLK(i,j,k,iBLK) =  (k-1)*dz + xyzStart_BLK(3,iBLK)     
-              R_BLK(i,j,k,iBLK) = sqrt( &
-                   x_BLK(i,j,k,iBLK)**2+   &
-                   y_BLK(i,j,k,iBLK)**2+   &
-                   z_BLK(i,j,k,iBLK)**2)
+              z_BLK(i,j,k,iBLK) =  (k-1)*dz + xyzStart_BLK(3,iBLK)
            end do
         end do
      end do
@@ -152,7 +149,7 @@ subroutine fix_block_geometry(iBLK)
            NodeZ_NB(i,j,k,iBLK) = 0.125*sum(z_BLK(i-1:i,j-1:j,k-1:k,iBLK))
         end do; end do; end do
      end if
-  else
+  elseif(.not.UseBatlTest)then
      !Cell center coordinates are calculated directly as the
      !transformed generalized coordinates
      call gen_to_xyz_arr(XyzStart_BLK(:,iBLK),&
@@ -161,9 +158,6 @@ subroutine fix_block_geometry(iBLK)
           x_BLK(:,:,:,iBLK),&
           y_BLK(:,:,:,iBLK),&     
           z_BLK(:,:,:,iBLK))
-
-     R_BLK(:,:,:,iBLK)=sqrt(&
-          x_BLK(:,:,:,iBLK)**2+y_BLK(:,:,:,iBLK)**2+z_BLK(:,:,:,iBLK)**2)
 
      if(UseVertexBasedGrid)then
 
@@ -185,8 +179,6 @@ subroutine fix_block_geometry(iBLK)
              NodeY_NB(:,:,:,iBLK),&
              NodeZ_NB(:,:,:,iBLK))
 
-
-        !
         !Mark the block for fixing the covariant geometry afterwards
         !(when the refinement level of the neighboring blocks are
         !all known). The condition for fixing the block is
@@ -210,6 +202,9 @@ subroutine fix_block_geometry(iBLK)
      call fix_covariant_geometry(iBLK)
 
   end if
+
+  R_BLK(:,:,:,iBLK) = sqrt(&
+       x_BLK(:,:,:,iBLK)**2 + y_BLK(:,:,:,iBLK)**2 + z_BLK(:,:,:,iBLK)**2)
 
   Rmin_BLK(iBLK)  = minval(R_BLK(:,:,:,iBLK))
 

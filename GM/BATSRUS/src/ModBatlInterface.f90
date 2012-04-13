@@ -76,14 +76,21 @@ contains
   !===========================================================================
   subroutine set_batsrus_block(iBlock)
 
-    use BATL_lib, ONLY: iProc, nDim, nI, nJ, nK, &
+    use BATL_lib, ONLY: iProc, nDim, x_, y_, z_, &
+         nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+         nINode, nJNode, nKNode, &
+         Xyz_DGB, Xyz_DNB, CellVolume_GB, &
          CellSize_DB, CoordMin_DB, &
          iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
          iTree_IA, Block_, Proc_, Unset_, &
-         IsRzGeometry, CellFace_DFB
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, XyzStart_BLK, &
+         IsCartesian, IsRzGeometry, CellFace_DFB, FaceNormal_DDFB
+    use ModGeometry, ONLY: &
+         x_BLK, y_BLK, z_BLK, vInv_CB, &
+         dx_BLK, dy_BLK, dz_BLK, XyzStart_BLK, &
          FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
          FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B
+
+    use ModNodes, ONLY: NodeX_NB, NodeY_NB, NodeZ_NB
 
     use ModParallel, ONLY: BLKneighborLEV,  neiLEV, neiBLK, neiPE, &
          neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
@@ -93,8 +100,10 @@ contains
     integer, intent(in):: iBlock
 
     ! Convert from BATL to BATSRUS ordering of subfaces. 
+
     integer, parameter:: iOrder_I(4) = (/1,3,2,4/)
     integer:: iNodeNei, iNodeNei_I(4)
+    integer:: i, j, k
     !-------------------------------------------------------------------------
     BLKneighborLEV(:,:,:,iBlock) = DiLevelNei_IIIB(:,:,:,iBlock)
 
@@ -229,18 +238,68 @@ contains
     dy_BLK(iBlock) = CellSize_DB(2,iBlock)
     dz_BLK(iBlock) = CellSize_DB(3,iBlock)
 
+    if(UseBatlTest)then
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          x_BLK(i,j,k,iBlock) = Xyz_DGB(1,i,j,k,iBlock)
+          y_BLK(i,j,k,iBlock) = Xyz_DGB(2,i,j,k,iBlock)
+          z_BLK(i,j,k,iBlock) = Xyz_DGB(3,i,j,k,iBlock)
+       end do; end do; end do
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          vInv_CB(i,j,k,iBlock) = 1/CellVolume_GB(i,j,k,iBlock)
+       end do; end do; end do
+
+       do k = 1, nKNode; do j = 1, nJNode; do i = 1, nINode
+          NodeX_NB(i,j,k,iBlock) = Xyz_DNB(1,i,j,k,iBlock)
+          NodeY_NB(i,j,k,iBlock) = Xyz_DNB(2,i,j,k,iBlock)
+          NodeZ_NB(i,j,k,iBlock) = Xyz_DNB(3,i,j,k,iBlock)
+
+          if(nK == 1)then
+             NodeX_NB(i,j,2,iBlock) = NodeX_NB(i,j,1,iBlock)
+             NodeY_NB(i,j,2,iBlock) = NodeY_NB(i,j,1,iBlock)
+             NodeZ_NB(i,j,2,iBlock) = NodeZ_NB(i,j,1,iBlock)
+          end if
+       end do; end do; end do
+
+
+    end if
+
     call fix_block_geometry(iBlock)
 
-    if(IsRzGeometry)then
-       ! This is like Cartesian except for the areas in R (=x) and Z (=y)
-       FaceAreaI_DFB(:,:,:,:,iBlock) = 0.0
-       FaceAreaJ_DFB(:,:,:,:,iBlock) = 0.0
-       FaceAreaK_DFB(:,:,:,:,iBlock) = 0.0
-       FaceAreaI_DFB(1,:,:,:,iBlock) = CellFace_DFB(1,:,1:nJ,1:nK,iBlock)
-       FaceAreaJ_DFB(2,:,:,:,iBlock) = CellFace_DFB(2,1:nI,:,1:nK,iBlock)
+    if(.not.IsCartesian .and. UseBatlTest .or. IsRzGeometry)then
        FaceArea2MinI_B(iBlock) = 1e-30
        FaceArea2MinJ_B(iBlock) = 1e-30
        FaceArea2MinK_B(iBlock) = 1e-30
+
+       ! Initialize for ignored dimensions
+       FaceAreaI_DFB(:,:,:,:,iBlock) = 0.0
+       FaceAreaJ_DFB(:,:,:,:,iBlock) = 0.0
+       FaceAreaK_DFB(:,:,:,:,iBlock) = 0.0
+
+       if(IsRzGeometry)then
+          ! This is like Cartesian except for the areas in R (=x) and Z (=y)
+          FaceAreaI_DFB(1,:,:,:,iBlock) = CellFace_DFB(1,:,1:nJ,1:nK,iBlock)
+          FaceAreaJ_DFB(2,:,:,:,iBlock) = CellFace_DFB(2,1:nI,:,1:nK,iBlock)
+       else
+          do k=1, nK; do j=1,nJ; do i=1,nI+1
+             FaceAreaI_DFB(1:nDim,i,j,k,iBlock) = &
+                  FaceNormal_DDFB(:,x_,i,j,k,iBlock)
+          end do; end do; end do
+          if(nDim > 1)then
+             do k=1, nK; do j=1,nJ+1; do i=1,nI
+                FaceAreaJ_DFB(1:nDim,i,j,k,iBlock) = &
+                     FaceNormal_DDFB(:,y_,i,j,k,iBlock)
+             end do; end do; end do
+          end if
+          if(nDim > 2)then
+             do k=1, nK+1; do j=1,nJ; do i=1,nI
+                FaceAreaK_DFB(1:nDim,i,j,k,iBlock) = &
+                     FaceNormal_DDFB(:,z_,i,j,k,iBlock)
+             end do; end do; end do
+          end if
+
+       endif
+
     end if
 
   end subroutine set_batsrus_block
