@@ -8,12 +8,9 @@
  EQUATIONS:   HD+Ionization+Levels+Electron energy+Radiation
  USER MODULE: HYDRO + IONIZATION EQUILIBRIUM + LEVEL SETS 1.20
 
-ModReadParam::read_file: read and broadcast nLine= 472 lines of text
+ModReadParam::read_file: read and broadcast nLine= 482 lines of text
  ----- Starting Session  1  ------
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
-
-#BATL
-T			UseBatl
 
 #PLANET
 NONE			NamePlanet
@@ -107,14 +104,14 @@ Tables/Au_opac_CRASH.dat		NameFile
 real8					TypeFile
 
 #LOOKUPTABLE
-Ay_eos					NameTable
-load					NameCommand
-Tables/Ay_eos_CRASH.dat			NameFile
-real8					TypeFile
+Ay_eos				NameTable
+use param			NameCommand
+Tables/Ay_eos_CRASH.dat		NameFile
+real8				TypeFile
 
 #LOOKUPTABLE
 Ay_opac					NameTable
-load					NameCommand
+use param				NameCommand
 Tables/Ay_opac_CRASH.dat		NameFile
 real8					TypeFile
 
@@ -295,12 +292,12 @@ eint			NameVarControl
 #CONTROLDECREASE
 0.3			RejectStepLevel		RejectStepLevel1
 0.6			ReduceStepLevel		ReduceStepLevel1
-0.8			IncreaseStepLevel		IncreaseStepLevel1
+0.7			IncreaseStepLevel		IncreaseStepLevel1
 
 #CONTROLINCREASE
 1.9			RejectStepLevel		RejectStepLevel2
 1.5			ReduceStepLevel		ReduceStepLevel2
-1.2			IncreaseStepLevel		IncreaseStepLevel2
+1.5			IncreaseStepLevel		IncreaseStepLevel2
 
 #CONTROLFACTOR
 0.7			RejectStepFactor
@@ -308,7 +305,7 @@ eint			NameVarControl
 1.2			IncreaseStepFactor
 
 #CONTROLINIT
-2e-8			TimeStepControlInit		TimesStepControlInit
+2e-8			TimeStepControlInit
 
 #SCHEME
 2			nOrder
@@ -324,12 +321,10 @@ RAW			StringLogfile
 
 #SAVEPLOT
 3			nPlotfile		nPlotFile
-z=0 var idl		PlotString		StringPlot
--20			DnSavePlot
+z=0 all idl		PlotString		StringPlot
+-1			DnSavePlot
 1.e-10			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy Eint p pe level tekev trkev tikev zavg elaser dx		NameVars
-gamma		NamePars
 idl los var		StringPlot ! line of sight plot
 -1			DnSavePlot
 1.0e-10			DtSavePlot
@@ -388,6 +383,7 @@ init_mod_implicit allocated arrays
  |  AMR:  Total number of true cells =  1792
  |  Smallest cell dx:   15.0000000000000000   Largest cell dx:   30.0000000000000000
  |
+ user_action called with action initial condition done
 
     Begin Numerical Simulation
     --------------------------
@@ -437,7 +433,7 @@ init_mod_implicit allocated arrays
  z:                -0.50000000      0.50000000
 
 saved ifile= 1 type=restart    at n_step=      0 time=   0:00:00 h:m:s
-saved ifile= 5 type=z=0_var    at n_step=      0 time=   0:00:00 h:m:s
+saved ifile= 5 type=z=0_all    at n_step=      0 time=   0:00:00 h:m:s
   Message passing for plot files ...
 saved ifile= 6 type=los_var    at n_step=      0 time=   0:00:00 h:m:s
 saved ifile= 7 type=cut_var    at n_step=      0 time=   0:00:00 h:m:s
@@ -446,267 +442,267 @@ saved ifile= 7 type=cut_var    at n_step=      0 time=   0:00:00 h:m:s
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   1.56    100.00         1         1
+BATSRUS                   1.57    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     1.56    100.00         1         1
-write_plot_los            1.26     80.44         1         1
-amr_ics                   0.11      7.08         1         1
-amr_ics_amr               0.06      3.67         1         2
-save_plot                 0.06      3.57         1         2
-amr_ics_set               0.05      3.39         1         2
-user_set_ics              0.05      3.18         2        39
-exch_msgs                 0.04      2.37         2         7
-batl_pass                 0.01      0.92         2        10
-wait_pass                 0.01      0.54         2        13
-local_pass                0.00      0.22         2        26
-save_logfile              0.00      0.18         1         1
-init_pass                 0.00      0.13         2        10
-write_restart_files       0.00      0.12         1         1
+setup                     1.57    100.00         1         1
+write_plot_los            1.10     69.64         1         1
+amr_ics                   0.19     11.94         1         1
+amr_ics_amr               0.11      6.80         1         2
+amr_ics_set               0.08      5.13         1         2
+save_plot                 0.06      3.65         1         2
+user_set_ics              0.05      3.03         2        39
+exch_msgs                 0.04      2.47         2         8
+save_logfile              0.03      1.88         1         1
+batl_pass                 0.02      1.00         2        11
+write_restart_files       0.01      0.89         1         1
+wait_pass                 0.01      0.56         2        14
+local_pass                0.00      0.27         2        28
+init_pass                 0.00      0.14         2        11
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
-Speed is    355.1 c/s/p after      2.5 s at N =       1 (0.0000E+00 s)
+Speed is    362.1 c/s/p after      2.5 s at N =       1 (0.0000E+00 s)
  control_time_step at iter= 2
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999994623752   1.3404037705076028   1.2000000000000000
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999994623752   1.3404037633077168   1.2000000000000000
  control_time_step: Dt, Cfl=   1.1996724278702365E-16   1.9200000000000000E-08
-Speed is    288.0 c/s/p after      5.7 s at N =       2 (1.1997E-16 s)
+Speed is    288.8 c/s/p after      5.6 s at N =       2 (1.1997E-16 s)
  control_time_step at iter= 3
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999995370202   1.6686427527309922   0.9000000000000000
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999995370202   1.6686427459321989   0.9000000000000000
  control_time_step: Dt, Cfl=   1.4394163978590192E-16   1.7280000000000000E-08
-Speed is    294.9 c/s/p after      8.7 s at N =       3 (2.6391E-16 s)
+Speed is    289.7 c/s/p after      8.7 s at N =       3 (2.6391E-16 s)
  control_time_step at iter= 4
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999996567938   1.5374529122308815   0.9000000000000000
- control_time_step: Dt, Cfl=   1.2950857747174410E-16   1.5551999999999999E-08
-Speed is    293.6 c/s/p after     11.8 s at N =       4 (3.9342E-16 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999996567938   1.5374529096108265   0.9000000000000000
+ control_time_step: Dt, Cfl=   1.2950857747185541E-16   1.5551999999999999E-08
+Speed is    287.6 c/s/p after     11.9 s at N =       4 (3.9342E-16 s)
  control_time_step at iter= 5
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999997203828   1.4060824586979126   1.2000000000000000
- control_time_step: Dt, Cfl=   1.1651463463682796E-16   1.8662399999999997E-08
-Speed is    295.6 c/s/p after     14.8 s at N =       5 (5.0993E-16 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999997203828   1.4060824580030165   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.1651463463711407E-16   1.8662399999999997E-08
+Speed is    294.5 c/s/p after     14.9 s at N =       5 (5.0993E-16 s)
  control_time_step at iter= 6
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999996728159   1.4410720351555830   1.2000000000000000
- control_time_step: Dt, Cfl=   1.3976683293199833E-16   2.2394879999999995E-08
-Speed is    294.8 c/s/p after     17.9 s at N =       6 (6.4970E-16 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999996728159   1.4410720353674735   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.3976683293258113E-16   2.2394879999999995E-08
+Speed is    294.0 c/s/p after     18.0 s at N =       6 (6.4970E-16 s)
  control_time_step at iter= 7
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999996154492   1.4618831088203139   1.2000000000000000
- control_time_step: Dt, Cfl=   1.6765474211243326E-16   2.6873855999999993E-08
-Speed is    279.0 c/s/p after     21.1 s at N =       7 (8.1735E-16 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999996154492   1.4618831100757037   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.6765474211360312E-16   2.6873855999999993E-08
+Speed is    305.0 c/s/p after     20.9 s at N =       7 (8.1735E-16 s)
  control_time_step at iter= 8
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999995503862   1.4699263928742681   1.2000000000000000
- control_time_step: Dt, Cfl=   2.0108224113222854E-16   3.2248627199999993E-08
-Speed is    292.8 c/s/p after     24.2 s at N =       8 (1.0184E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999995503862   1.4699263954216688   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.0108224113414557E-16   3.2248627199999993E-08
+Speed is    303.2 c/s/p after     23.9 s at N =       8 (1.0184E-15 s)
  control_time_step at iter= 9
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999994788645   1.4740712179663493   1.2000000000000000
- control_time_step: Dt, Cfl=   2.4113701607486973E-16   3.8698352639999989E-08
-Speed is    294.1 c/s/p after     27.2 s at N =       9 (1.2596E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999994788645   1.4740712213219285   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.4113701607827810E-16   3.8698352639999989E-08
+Speed is    304.1 c/s/p after     26.9 s at N =       9 (1.2596E-15 s)
  control_time_step at iter= 10
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999993890822   1.4728023317891457   1.2000000000000000
- control_time_step: Dt, Cfl=   2.8910744313016092E-16   4.6438023167999985E-08
-Speed is    292.6 c/s/p after     30.3 s at N =      10 (1.5487E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999993890822   1.4728023407867266   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.8910744313625936E-16   4.6438023167999985E-08
+Speed is    286.5 c/s/p after     30.0 s at N =      10 (1.5487E-15 s)
  control_time_step at iter= 11
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999992865558   1.4696244721460034   1.2000000000000000
- control_time_step: Dt, Cfl=   3.4650965448191846E-16   5.5725627801599982E-08
-Speed is    289.4 c/s/p after     33.4 s at N =      11 (1.8952E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999992865558   1.4696244874585858   1.2000000000000000
+ control_time_step: Dt, Cfl=   3.4650965449107634E-16   5.5725627801599982E-08
+Speed is    270.4 c/s/p after     33.3 s at N =      11 (1.8952E-15 s)
  control_time_step at iter= 12
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999991752493   1.4661695472000709   1.2000000000000000
- control_time_step: Dt, Cfl=   4.1514076948595692E-16   6.6870753361919981E-08
-Speed is    291.1 c/s/p after     36.5 s at N =      12 (2.3103E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999991752493   1.4661695692800483   1.2000000000000000
+ control_time_step: Dt, Cfl=   4.1514076949694945E-16   6.6870753361919981E-08
+Speed is    296.6 c/s/p after     36.4 s at N =      12 (2.3103E-15 s)
  control_time_step at iter= 13
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999990540835   1.4593877592373010   1.2000000000000000
- control_time_step: Dt, Cfl=   4.9705186847863946E-16   8.0244904034303972E-08
-Speed is    290.6 c/s/p after     39.6 s at N =      13 (2.8074E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999990540835   1.4593877810107847   1.2000000000000000
+ control_time_step: Dt, Cfl=   4.9705186847673574E-16   8.0244904034303972E-08
+Speed is    297.0 c/s/p after     39.4 s at N =      13 (2.8074E-15 s)
  control_time_step at iter= 14
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999989259666   1.4553235037694421   1.2000000000000000
- control_time_step: Dt, Cfl=   5.9463386738093955E-16   9.6293884841164761E-08
-Speed is    287.1 c/s/p after     42.7 s at N =      14 (3.4020E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999989259666   1.4553235152595572   1.2000000000000000
+ control_time_step: Dt, Cfl=   5.9463386731789674E-16   9.6293884841164761E-08
+Speed is    299.0 c/s/p after     42.4 s at N =      14 (3.4020E-15 s)
  control_time_step at iter= 15
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999987966361   1.4512563185772163   1.2000000000000000
- control_time_step: Dt, Cfl=   7.1051375198863166E-16   1.1555266180939770E-07
-Speed is    291.6 c/s/p after     45.8 s at N =      15 (4.1125E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999987966361   1.4512563249593904   1.2000000000000000
+ control_time_step: Dt, Cfl=   7.1051375171382960E-16   1.1555266180939770E-07
+Speed is    297.6 c/s/p after     45.4 s at N =      15 (4.1125E-15 s)
  control_time_step at iter= 16
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999986847453   1.4431223391461909   1.2000000000000000
- control_time_step: Dt, Cfl=   8.4203417573740078E-16   1.3866319417127723E-07
-Speed is    285.3 c/s/p after     48.9 s at N =      16 (4.9546E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999986847453   1.4431223421048416   1.2000000000000000
+ control_time_step: Dt, Cfl=   8.4203417353881349E-16   1.3866319417127723E-07
+Speed is    297.1 c/s/p after     48.4 s at N =      16 (4.9546E-15 s)
  control_time_step at iter= 17
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999986095446   1.4303923506823923   1.2000000000000000
- control_time_step: Dt, Cfl=   9.8784146646823248E-16   1.6639583300553267E-07
-Speed is    280.5 c/s/p after     52.2 s at N =      17 (5.9424E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999986095446   1.4303923544844588   1.2000000000000000
+ control_time_step: Dt, Cfl=   9.8784146228843463E-16   1.6639583300553267E-07
+Speed is    284.1 c/s/p after     51.6 s at N =      17 (5.9424E-15 s)
  control_time_step at iter= 18
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999985919177   1.4162191343470372   1.2000000000000000
- control_time_step: Dt, Cfl=   1.1488149584503988E-15   1.9967499960663919E-07
-Speed is    285.7 c/s/p after     55.3 s at N =      18 (7.0912E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999985919177   1.4162191306138159   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.1488149505088410E-15   1.9967499960663919E-07
+Speed is    298.3 c/s/p after     54.6 s at N =      18 (7.0912E-15 s)
  control_time_step at iter= 19
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999986657919   1.3998361873625134   1.2000000000000000
- control_time_step: Dt, Cfl=   1.3213352244421808E-15   2.3960999952796703E-07
-Speed is    284.7 c/s/p after     58.5 s at N =      19 (8.4126E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999986657919   1.3998361791015086   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.3213352107948949E-15   2.3960999952796703E-07
+Speed is    304.9 c/s/p after     57.6 s at N =      19 (8.4126E-15 s)
  control_time_step at iter= 20
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999988715208   1.3816452448730610   1.2000000000000000
- control_time_step: Dt, Cfl=   1.5011231103776256E-15   2.8753199943356041E-07
-Speed is    287.4 c/s/p after     61.6 s at N =      20 (9.9137E-15 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999988715208   1.3816452333626179   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.5011230867239757E-15   2.8753199943356041E-07
+Speed is    296.3 c/s/p after     60.6 s at N =      20 (9.9137E-15 s)
  control_time_step at iter= 21
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999992545401   1.3617465507674749   1.2000000000000000
- control_time_step: Dt, Cfl=   1.6850341290390398E-15   3.4503839932027246E-07
-Speed is    285.2 c/s/p after     64.7 s at N =      21 (1.1599E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999992545401   1.3617465374936577   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.6850340903912136E-15   3.4503839932027246E-07
+Speed is    294.5 c/s/p after     63.7 s at N =      21 (1.1599E-14 s)
  control_time_step at iter= 22
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999994410849   1.3409068639336963   1.2000000000000000
- control_time_step: Dt, Cfl=   1.8679333532620402E-15   4.1404607918432696E-07
-Speed is    288.5 c/s/p after     67.9 s at N =      22 (1.3467E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999994410855   1.3409068431467162   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.8679332902320045E-15   4.1404607918432696E-07
+Speed is    295.3 c/s/p after     66.7 s at N =      22 (1.3467E-14 s)
  control_time_step at iter= 23
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999993851834   1.3207585038845138   1.2000000000000000
- control_time_step: Dt, Cfl=   2.0507173647575326E-15   4.9685529502119234E-07
-Speed is    284.4 c/s/p after     71.0 s at N =      23 (1.5517E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999993851840   1.3207584797744742   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.0507172666760127E-15   4.9685529502119234E-07
+Speed is    295.4 c/s/p after     69.8 s at N =      23 (1.5517E-14 s)
  control_time_step at iter= 24
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999993294382   1.3020691280136159   1.2000000000000000
- control_time_step: Dt, Cfl=   2.2334862533407871E-15   5.9622635402543078E-07
-Speed is    282.2 c/s/p after     74.2 s at N =      24 (1.7751E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999993294388   1.3020691044798223   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.2334861039247899E-15   5.9622635402543078E-07
+Speed is    299.2 c/s/p after     72.8 s at N =      24 (1.7751E-14 s)
  control_time_step at iter= 25
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999992725301   1.2851471097157308   1.2000000000000000
- control_time_step: Dt, Cfl=   2.4211162203418967E-15   7.1547162483051692E-07
-Speed is    282.9 c/s/p after     77.4 s at N =      25 (2.0172E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999992725309   1.2851470809684993   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.4211159991184094E-15   7.1547162483051692E-07
+Speed is    275.3 c/s/p after     76.0 s at N =      25 (2.0172E-14 s)
  control_time_step at iter= 26
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999992131353   1.2702937260416920   1.2000000000000000
- control_time_step: Dt, Cfl=   2.6181991000944038E-15   8.5856594979662026E-07
-Speed is    275.7 c/s/p after     80.6 s at N =      26 (2.2790E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999992131366   1.2702936858377516   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.6181987826532872E-15   8.5856594979662026E-07
+Speed is    255.9 c/s/p after     79.5 s at N =      26 (2.2790E-14 s)
  control_time_step at iter= 27
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999991504989   1.2576403494942221   1.2000000000000000
- control_time_step: Dt, Cfl=   2.8273177447125769E-15   1.0302791397559442E-06
-Speed is    286.1 c/s/p after     83.8 s at N =      27 (2.5617E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999991505001   1.2576403164018590   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.8273172933473021E-15   1.0302791397559442E-06
+Speed is    251.7 c/s/p after     83.1 s at N =      27 (2.5617E-14 s)
  control_time_step at iter= 28
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999990819329   1.2476782293287689   1.2000000000000000
- control_time_step: Dt, Cfl=   3.0571433642720774E-15   1.2363349677071330E-06
-Speed is    279.6 c/s/p after     87.0 s at N =      28 (2.8675E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999990819347   1.2476781798238208   1.2000000000000000
+ control_time_step: Dt, Cfl=   3.0571427445262998E-15   1.2363349677071330E-06
+Speed is    287.7 c/s/p after     86.2 s at N =      28 (2.8675E-14 s)
  control_time_step at iter= 29
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999990087014   1.2382895013023254   1.2000000000000000
- control_time_step: Dt, Cfl=   3.3031212497604846E-15   1.4836019612485596E-06
-Speed is    281.3 c/s/p after     90.2 s at N =      29 (3.1978E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999990087035   1.2382894289418769   1.2000000000000000
+ control_time_step: Dt, Cfl=   3.3031203943526208E-15   1.4836019612485596E-06
+Speed is    291.6 c/s/p after     89.3 s at N =      29 (3.1978E-14 s)
  control_time_step at iter= 30
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999989267770   1.2318017696620371   1.2000000000000000
- control_time_step: Dt, Cfl=   3.5790705716111315E-15   1.7803223534982714E-06
-Speed is    282.4 c/s/p after     93.4 s at N =      30 (3.5557E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999989267800   1.2318017014333971   1.2000000000000000
+ control_time_step: Dt, Cfl=   3.5790694228617910E-15   1.7803223534982714E-06
+Speed is    290.8 c/s/p after     92.4 s at N =      30 (3.5557E-14 s)
  control_time_step at iter= 31
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999988396492   1.2252878878961360   1.2000000000000000
- control_time_step: Dt, Cfl=   3.8732932578516340E-15   2.1363868241979254E-06
-Speed is    280.5 c/s/p after     96.6 s at N =      31 (3.9430E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999988396525   1.2252877992506988   1.2000000000000000
+ control_time_step: Dt, Cfl=   3.8732917239775573E-15   2.1363868241979254E-06
+Speed is    289.9 c/s/p after     95.5 s at N =      31 (3.9430E-14 s)
  control_time_step at iter= 32
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999987428699   1.2197258514929250   1.2000000000000000
- control_time_step: Dt, Cfl=   4.2006026057919367E-15   2.5636641890375106E-06
-Speed is    280.0 c/s/p after     99.8 s at N =      32 (4.3631E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999987428732   1.2197257369758430   1.2000000000000000
+ control_time_step: Dt, Cfl=   4.2006006427384813E-15   2.5636641890375106E-06
+Speed is    283.2 c/s/p after     98.7 s at N =      32 (4.3631E-14 s)
  control_time_step at iter= 33
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999986397391   1.2154501418915384   1.2000000000000000
- control_time_step: Dt, Cfl=   4.5500328812553465E-15   3.0763970268450127E-06
-Speed is    267.9 c/s/p after    103.2 s at N =      33 (4.8181E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999986397440   1.2154500268960264   1.2000000000000000
+ control_time_step: Dt, Cfl=   4.5500302766273201E-15   3.0763970268450127E-06
+Speed is    285.7 c/s/p after    101.9 s at N =      33 (4.8181E-14 s)
  control_time_step at iter= 34
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999985328454   1.2103810836644429   1.2000000000000000
- control_time_step: Dt, Cfl=   4.9130286615423575E-15   3.6916764322140150E-06
-Speed is    242.6 c/s/p after    106.9 s at N =      34 (5.3094E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999985328513   1.2103809636009395   1.2000000000000000
+ control_time_step: Dt, Cfl=   4.9130255188343808E-15   3.6916764322140150E-06
+Speed is    275.9 c/s/p after    105.1 s at N =      34 (5.3094E-14 s)
  control_time_step at iter= 35
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999984261443   1.2043551390098692   1.2000000000000000
- control_time_step: Dt, Cfl=   5.2764678875346416E-15   4.4300117186568176E-06
-Speed is    259.8 c/s/p after    110.3 s at N =      35 (5.8370E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999984261504   1.2043550128609855   1.2000000000000000
+ control_time_step: Dt, Cfl=   5.2764644165065632E-15   4.4300117186568176E-06
+Speed is    278.7 c/s/p after    108.3 s at N =      35 (5.8370E-14 s)
  control_time_step at iter= 36
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999983440979   1.1956707006225955   1.2000000000000000
- control_time_step: Dt, Cfl=   5.5583770622251533E-15   5.3160140623881808E-06
-Speed is    271.9 c/s/p after    113.6 s at N =      36 (6.3929E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999983441049   1.1956706343651879   1.2000000000000000
+ control_time_step: Dt, Cfl=   5.5583746830572277E-15   5.3160140623881808E-06
+Speed is    280.9 c/s/p after    111.5 s at N =      36 (6.3929E-14 s)
  control_time_step at iter= 37
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999982906875   1.1843230256628079   1.2000000000000000
- control_time_step: Dt, Cfl=   5.7450803919049861E-15   6.3792168748658166E-06
-Speed is    272.6 c/s/p after    116.9 s at N =      37 (6.9674E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999982906952   1.1843229678882072   1.2000000000000000
+ control_time_step: Dt, Cfl=   5.7450779635052484E-15   6.3792168748658166E-06
+Speed is    284.0 c/s/p after    114.7 s at N =      37 (6.9674E-14 s)
  control_time_step at iter= 38
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999981441200   1.1845213394207950   1.2000000000000000
- control_time_step: Dt, Cfl=   6.2459350094645804E-15   7.6550602498389792E-06
-Speed is    277.1 c/s/p after    120.2 s at N =      38 (7.5920E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999981441299   1.1845209608677587   1.2000000000000000
+ control_time_step: Dt, Cfl=   6.2459288823444697E-15   7.6550602498389792E-06
+Speed is    281.0 c/s/p after    117.9 s at N =      38 (7.5920E-14 s)
  control_time_step at iter= 39
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999979386294   1.1890913205608038   1.2000000000000000
- control_time_step: Dt, Cfl=   6.9476008648401943E-15   9.1860722998067748E-06
-Speed is    273.6 c/s/p after    123.5 s at N =      39 (8.2867E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999979386428   1.1890908401162783   1.2000000000000000
+ control_time_step: Dt, Cfl=   6.9475917544944177E-15   9.1860722998067748E-06
+Speed is    282.9 c/s/p after    121.1 s at N =      39 (8.2867E-14 s)
  control_time_step at iter= 40
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999977004820   1.1940954972822388   1.2000000000000000
- control_time_step: Dt, Cfl=   7.7627314409267967E-15   1.1023286759768130E-05
-Speed is    267.8 c/s/p after    126.8 s at N =      40 (9.0630E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999977004982   1.1940949231007922   1.2000000000000000
+ control_time_step: Dt, Cfl=   7.7627188635528744E-15   1.1023286759768130E-05
+Speed is    278.3 c/s/p after    124.3 s at N =      40 (9.0630E-14 s)
  control_time_step at iter= 41
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999974403766   1.1979748007758824   1.2000000000000000
- control_time_step: Dt, Cfl=   8.6562792637395246E-15   1.3227944111721756E-05
-Speed is    265.7 c/s/p after    130.2 s at N =      41 (9.9286E-14 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999974403970   1.1979741307250529   1.2000000000000000
+ control_time_step: Dt, Cfl=   8.6562625494338553E-15   1.3227944111721756E-05
+Speed is    274.8 c/s/p after    127.6 s at N =      41 (9.9286E-14 s)
  control_time_step at iter= 42
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999971614328   1.2013465054636068   1.2000000000000000
- control_time_step: Dt, Cfl=   9.6186481237897396E-15   1.5873532934066108E-05
-Speed is    265.7 c/s/p after    133.6 s at N =      42 (1.0890E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999971614580   1.2013457244307124   1.2000000000000000
+ control_time_step: Dt, Cfl=   9.6186264853784668E-15   1.5873532934066108E-05
+Speed is    272.8 c/s/p after    130.9 s at N =      42 (1.0890E-13 s)
  control_time_step at iter= 43
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999968737091   1.2028610356275202   1.2000000000000000
- control_time_step: Dt, Cfl=   1.0616647701981977E-14   1.9048239520879328E-05
-Speed is    270.8 c/s/p after    136.9 s at N =      43 (1.1952E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999968737391   1.2028602089092821   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.0616622038053980E-14   1.9048239520879328E-05
+Speed is    274.0 c/s/p after    134.2 s at N =      43 (1.1952E-13 s)
  control_time_step at iter= 44
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999965945457   1.2077944368665736   1.2000000000000000
- control_time_step: Dt, Cfl=   1.1591919174904545E-14   2.2857887425055192E-05
-Speed is    267.4 c/s/p after    140.3 s at N =      44 (1.3111E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999965945813   1.2079320935670943   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.1591891757250385E-14   2.2857887425055192E-05
+Speed is    272.7 c/s/p after    137.5 s at N =      44 (1.3111E-13 s)
  control_time_step at iter= 45
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999963725198   1.2040672112083486   1.2000000000000000
- control_time_step: Dt, Cfl=   1.2378780093116122E-14   2.7429464910066229E-05
-Speed is    261.8 c/s/p after    143.7 s at N =      45 (1.4349E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999963725540   1.2041787487500486   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.2378773151609068E-14   2.7429464910066229E-05
+Speed is    275.8 c/s/p after    140.7 s at N =      45 (1.4349E-13 s)
  control_time_step at iter= 46
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999963407065   1.1865393575350400   1.2000000000000000
- control_time_step: Dt, Cfl=   1.2520318707327621E-14   3.2915357892079476E-05
-Speed is    270.5 c/s/p after    147.0 s at N =      46 (1.5601E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999963407297   1.1868566928188393   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.2520358226215118E-14   3.2915357892079476E-05
+Speed is    273.5 c/s/p after    144.0 s at N =      46 (1.5601E-13 s)
  control_time_step at iter= 47
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999963637056   1.1918268472643865   1.2000000000000000
- control_time_step: Dt, Cfl=   1.2473737476304446E-14   3.9498429470495368E-05
-Speed is    271.7 c/s/p after    150.3 s at N =      47 (1.6849E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999963637332   1.1918484206235442   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.2473768850370838E-14   3.9498429470495368E-05
+Speed is    270.2 c/s/p after    147.3 s at N =      47 (1.6849E-13 s)
  control_time_step at iter= 48
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999962461533   1.2098561315314340   1.2000000000000000
- control_time_step: Dt, Cfl=   1.2908339111290974E-14   4.7398115364594440E-05
-Speed is    267.9 c/s/p after    153.7 s at N =      48 (1.8139E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999962461936   1.2098651425790068   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.2908333502579667E-14   4.7398115364594440E-05
+Speed is    270.9 c/s/p after    150.7 s at N =      48 (1.8139E-13 s)
  control_time_step at iter= 49
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999959970617   1.2075000480036837   1.2000000000000000
- control_time_step: Dt, Cfl=   1.3797583025967037E-14   5.6877738437513324E-05
-Speed is    268.6 c/s/p after    157.0 s at N =      49 (1.9519E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999959971188   1.2075039005002004   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.3797535678333715E-14   5.6877738437513324E-05
+Speed is    272.0 c/s/p after    154.0 s at N =      49 (1.9519E-13 s)
  control_time_step at iter= 50
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999955412141   1.2128750213237960   1.2000000000000000
- control_time_step: Dt, Cfl=   1.5405144334084241E-14   6.8253286125015986E-05
-Speed is    270.1 c/s/p after    160.4 s at N =      50 (2.1060E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999955412878   1.2128756065889652   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.5405061145849360E-14   6.8253286125015986E-05
+Speed is    270.1 c/s/p after    157.3 s at N =      50 (2.1060E-13 s)
  control_time_step at iter= 51
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999949082841   1.2264476430734603   1.2000000000000000
- control_time_step: Dt, Cfl=   1.7634917768972278E-14   8.1903943350019186E-05
-Speed is    267.5 c/s/p after    163.7 s at N =      51 (2.2823E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999949083730   1.2264501290498655   1.2000000000000000
+ control_time_step: Dt, Cfl=   1.7634810722872506E-14   8.1903943350019186E-05
+Speed is    272.8 c/s/p after    160.6 s at N =      51 (2.2823E-13 s)
  control_time_step at iter= 52
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999941334663   1.2424913186208890   1.2000000000000000
- control_time_step: Dt, Cfl=   2.0370748663391525E-14   9.8284732020023017E-05
-Speed is    267.4 c/s/p after    167.1 s at N =      52 (2.4860E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999941335793   1.2424959382739793   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.0370596558480360E-14   9.8284732020023017E-05
+Speed is    245.4 c/s/p after    164.3 s at N =      52 (2.4860E-13 s)
  control_time_step at iter= 53
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999999932155686   1.2590047394739985   1.2000000000000000
- control_time_step: Dt, Cfl=   2.3621604473347094E-14   1.1794167842402761E-04
-Speed is    263.7 c/s/p after    170.5 s at N =      53 (2.7222E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999999932157057   1.2590082892033683   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.3621417261373557E-14   1.1794167842402761E-04
+Speed is    260.0 c/s/p after    167.7 s at N =      53 (2.7222E-13 s)
  control_time_step at iter= 54
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999601766926691   1.2722776173448236   1.2000000000000000
- control_time_step: Dt, Cfl=   2.7380092267360717E-14   1.4153001410883312E-04
-Speed is    265.7 c/s/p after    173.9 s at N =      54 (2.9960E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999601779931083   1.2722810824704283   1.2000000000000000
+ control_time_step: Dt, Cfl=   2.7379841714939299E-14   1.4153001410883312E-04
+Speed is    246.4 c/s/p after    171.4 s at N =      54 (2.9960E-13 s)
  control_time_step at iter= 55
- control_time_step: RelativeChangeMin,Max,Factor=   0.9999225920549774   1.2852371511286051   1.2000000000000000
- control_time_step: Dt, Cfl=   3.1660874391353587E-14   1.6983601693059972E-04
-Speed is    270.0 c/s/p after    177.2 s at N =      55 (3.3127E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9999225936127371   1.2852411773066696   1.2000000000000000
+ control_time_step: Dt, Cfl=   3.1660553624740668E-14   1.6983601693059972E-04
+Speed is    243.4 c/s/p after    175.1 s at N =      55 (3.3126E-13 s)
  control_time_step at iter= 56
- control_time_step: RelativeChangeMin,Max,Factor=   0.9998888312672689   1.2976192015858374   1.2000000000000000
- control_time_step: Dt, Cfl=   3.6589133559750149E-14   2.0380322031671966E-04
-Speed is    264.5 c/s/p after    180.6 s at N =      56 (3.6785E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9998888331734767   1.2976234148313219   1.2000000000000000
+ control_time_step: Dt, Cfl=   3.6588704334428416E-14   2.0380322031671966E-04
+Speed is    232.9 c/s/p after    178.9 s at N =      56 (3.6785E-13 s)
  control_time_step at iter= 57
- control_time_step: RelativeChangeMin,Max,Factor=   0.9998578581158591   1.3095704369947987   1.2000000000000000
- control_time_step: Dt, Cfl=   4.2130372699821413E-14   2.4456386438006356E-04
-Speed is    263.4 c/s/p after    184.0 s at N =      57 (4.0999E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9998578604907644   1.3095753992029970   1.2000000000000000
+ control_time_step: Dt, Cfl=   4.2129799444826678E-14   2.4456386438006356E-04
+Speed is    256.8 c/s/p after    182.4 s at N =      57 (4.0998E-13 s)
  control_time_step at iter= 58
- control_time_step: RelativeChangeMin,Max,Factor=   0.9998281137319734   1.3208604096788608   1.2000000000000000
- control_time_step: Dt, Cfl=   4.8373689138374500E-14   2.9347663725607628E-04
-Speed is    265.1 c/s/p after    187.4 s at N =      58 (4.5836E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9998281167580125   1.3208660542381327   1.2000000000000000
+ control_time_step: Dt, Cfl=   4.8372923288777293E-14   2.9347663725607628E-04
+Speed is    272.6 c/s/p after    185.7 s at N =      58 (4.5836E-13 s)
  control_time_step at iter= 59
- control_time_step: RelativeChangeMin,Max,Factor=   0.9997981415267010   1.3330743084313474   1.2000000000000000
- control_time_step: Dt, Cfl=   5.5390349277319840E-14   3.5217196470729151E-04
-Speed is    266.7 c/s/p after    190.8 s at N =      59 (5.1375E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9997981454886974   1.3247367869933468   1.2000000000000000
+ control_time_step: Dt, Cfl=   5.5389317055871662E-14   3.5217196470729151E-04
+Speed is    270.6 c/s/p after    189.0 s at N =      59 (5.1375E-13 s)
  control_time_step at iter= 60
- control_time_step: RelativeChangeMin,Max,Factor=   0.9997674243572878   1.3638704459671636   1.2000000000000000
- control_time_step: Dt, Cfl=   6.3059370914894194E-14   4.2260635764874982E-04
-Speed is    268.8 c/s/p after    194.1 s at N =      60 (5.7681E-13 s)
+ control_time_step: RelativeChangeMin,Max,Factor=   0.9997674296935788   1.3524334980275277   1.2000000000000000
+ control_time_step: Dt, Cfl=   6.3057958335731325E-14   4.2260635764874982E-04
+Speed is    265.5 c/s/p after    192.4 s at N =      60 (5.7680E-13 s)
 
     Finished Numerical Simulation
     -----------------------------
-   Simulated Time T =   0.57681E-12 (    0.000000 min,     0.000000 hrs)
+   Simulated Time T =   0.57680E-12 (    0.000000 min,     0.000000 hrs)
 saved ifile= 1 type=restart    at n_step=     60 time=   0:00:00 h:m:s
-saved ifile= 5 type=z=0_var    at n_step=     60 time=   0:00:00 h:m:s
+saved ifile= 5 type=z=0_all    at n_step=     60 time=   0:00:00 h:m:s
   Message passing for plot files ...
 saved ifile= 6 type=los_var    at n_step=     60 time=   0:00:00 h:m:s
 saved ifile= 7 type=cut_var    at n_step=     60 time=   0:00:00 h:m:s
@@ -717,37 +713,37 @@ saved ifile= 7 type=cut_var    at n_step=     60 time=   0:00:00 h:m:s
 SORTED TIMING from step       0 to      60    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                 195.42    100.00         1         1
+BATSRUS                 193.60    100.00         1         1
 -------------------------------------------------------------------------------
-advance                 193.45     98.99        60        60
-add_laser_heating       144.73     74.06        60        60
-krylov solver            25.76     13.18        59      1829
-impl_matvec              18.01      9.22        59     18459
-impl_jacobian             8.82      4.51        59      1829
-BoomerAMGSetup            6.14      3.14        59      1829
-expl2impl                 4.94      2.53        59        59
-batl_pass                 1.66      0.85       358     20707
-calc_fluxes               1.56      0.80        60      1680
-calc_facevalues           1.46      0.75        60      1680
-write_plot_los            1.24      0.63         1         1
-update_states             1.21      0.62        60      1680
-exch_msgs                 1.20      0.61       121       300
-local_pass                1.06      0.54       358     41656
-GM_amr                    0.51      0.26        60        60
-init_pass                 0.27      0.14       358     20707
-calc_sources              0.19      0.10        60      1680
-calc_face_bfo             0.17      0.09        60       480
-save_logfile              0.15      0.08        60        60
-send_cons_flux            0.11      0.05        60       120
-buffer_to_state           0.10      0.05       358     20828
-send_recv                 0.09      0.05        60       120
-wait_pass                 0.09      0.05       358     20828
-save_plot                 0.05      0.03         1         2
-calc_fluxes_bfo           0.03      0.02        60       480
-send_pass                 0.03      0.01       358     20828
-recv_pass                 0.02      0.01       358     20828
-barrier-expl1             0.01      0.01        60       120
-barrier-expl2             0.01      0.00        60       120
+advance                 191.66     99.00        60        60
+add_laser_heating       138.55     71.56        60        60
+krylov solver            29.04     15.00        59      1829
+impl_matvec              20.36     10.51        59     18522
+impl_jacobian             9.48      4.90        59      1829
+BoomerAMGSetup            6.52      3.37        59      1829
+expl2impl                 4.61      2.38        59        59
+batl_pass                 1.98      1.02       358     20770
+calc_facevalues           1.60      0.83        60      1680
+calc_fluxes               1.56      0.81        60      1680
+local_pass                1.32      0.68       358     41782
+exch_msgs                 1.26      0.65       121       300
+update_states             1.26      0.65        60      1680
+write_plot_los            1.12      0.58         1         1
+GM_amr                    0.56      0.29        60        60
+init_pass                 0.30      0.16       358     20770
+calc_sources              0.22      0.11        60      1680
+calc_face_bfo             0.20      0.10        60       480
+save_logfile              0.17      0.09        60        60
+wait_pass                 0.14      0.07       358     20891
+send_cons_flux            0.12      0.06        60       120
+buffer_to_state           0.12      0.06       358     20891
+send_recv                 0.10      0.05        60       120
+calc_fluxes_bfo           0.04      0.02        60       480
+save_plot                 0.03      0.02         1         2
+send_pass                 0.03      0.01       358     20891
+recv_pass                 0.02      0.01       358     20891
+barrier-expl2             0.01      0.01        60       120
+barrier-expl1             0.01      0.00        60       120
 write_restart_files       0.00      0.00         1         1
 buffer_to_flux            0.00      0.00        60       120
 -------------------------------------------------------------------------------
