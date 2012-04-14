@@ -129,6 +129,10 @@ subroutine fix_block_geometry(iBLK)
            end do
         end do
      end do
+
+     R_BLK(:,:,:,iBLK) = sqrt(&
+          x_BLK(:,:,:,iBLK)**2 + y_BLK(:,:,:,iBLK)**2 + z_BLK(:,:,:,iBLK)**2)
+
      cV = dx*dy*dz                                  
 
      fAx = dy*dz       !Cell face areas
@@ -158,6 +162,9 @@ subroutine fix_block_geometry(iBLK)
           x_BLK(:,:,:,iBLK),&
           y_BLK(:,:,:,iBLK),&     
           z_BLK(:,:,:,iBLK))
+
+     R_BLK(:,:,:,iBLK) = sqrt(&
+          x_BLK(:,:,:,iBLK)**2 + y_BLK(:,:,:,iBLK)**2 + z_BLK(:,:,:,iBLK)**2)
 
      if(UseVertexBasedGrid)then
 
@@ -203,8 +210,6 @@ subroutine fix_block_geometry(iBLK)
 
   end if
 
-  R_BLK(:,:,:,iBLK) = sqrt(&
-       x_BLK(:,:,:,iBLK)**2 + y_BLK(:,:,:,iBLK)**2 + z_BLK(:,:,:,iBLK)**2)
 
   Rmin_BLK(iBLK)  = minval(R_BLK(:,:,:,iBLK))
 
