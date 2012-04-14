@@ -425,6 +425,8 @@ contains
        FaceArea_D=FaceAreaI_DFB(:,iFaceOut,j,k,iBlock)
        FaceArea2=dot_product(FaceArea_D,FaceArea_D)
 
+       if(FaceArea2 == 0.0) CYCLE
+
        B_D=LeftState_VX(Bx_:Bz_,iFaceOut,j,k)
 
        DeltaBDotFA = (CorrectedFlux_VXB(BnL_,j,k,iFaceIn,iBlock) -&
@@ -456,6 +458,8 @@ contains
        if(.not.all(true_cell(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
        FaceArea_D=FaceAreaJ_DFB(:,i,jFaceOut,k,iBlock)
        FaceArea2=dot_product(FaceArea_D,FaceArea_D)
+
+       if(FaceArea2 == 0.0) CYCLE
 
        B_D=LeftState_VY(Bx_:Bz_,i,jFaceOut,k)
 
@@ -489,6 +493,8 @@ contains
        if(.not.all(true_cell(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
        FaceArea_D=FaceAreaK_DFB(:,i,j,kFaceOut,iBlock)
        FaceArea2=dot_product(FaceArea_D,FaceArea_D)
+
+       if(FaceArea2 == 0.0) CYCLE
 
        B_D=LeftState_VZ(Bx_:Bz_,i,j,kFaceOut)
 
