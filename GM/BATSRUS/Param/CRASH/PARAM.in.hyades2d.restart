@@ -18,12 +18,8 @@ Param/CRASH/GRAY.in
 
 #USERINPUTBEGIN  ----------------------
 
-#USEEOSTABLE
-T
-T
-T
-F
-F
+#EOSTABLE
+T			UseEosTable
 
 #USERINPUTEND    ----------------------
 
