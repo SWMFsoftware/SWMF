@@ -5,15 +5,37 @@
  *      Author: vtenishe
  */
 
+//$Id$
 //the functions define a class that diftributes a variable according to a given distribution function
 
 #ifndef SINGLEVARIABLEDISTRIBUTION_H_
 #define SINGLEVARIABLEDISTRIBUTION_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <emmintrin.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/time.h>
+
+
+
+
+#define _SINGLE_VARIABLE_DISTRIBUTION_ON_    0
+#define _SINGLE_VARIABLE_DISTRIBUTION_OFF_   1
+
 #define _SINGLE_VARIABLE_DISTRIBUTION__DEFAULT__CUMULATIVE_DISTRIBUTION_INTERVAL_  100000
 
 #define _SINGLE_VARIABLE_DISTRIBUTION__INTERPOLATION_MODE__LINEAR_      0
 #define _SIGNEL_VARIABLE_DISTRIBUTOIN__INTERPOLATION_MODE__EXPONENTIAL_ 1
+
+
+#define _SINGLE_VARIABLE_DISTRIBUTION__MEMORY_PREFETCH_ _SINGLE_VARIABLE_DISTRIBUTION_OFF_
+
+
+
 
 class cSingleVariableDistribution {
 private:
@@ -24,15 +46,18 @@ private:
   fProbabilityDistrvidution ProbabilityDistributionFunction;
 
   struct cCumulativeDistributionTable {
-    float x0,x1,p0,p1; //parameters of the probability density distribution
-    float alpha,dF; //gradient of the probability density and increment of the cumiulative distribution
+    double x0,x1,p0,p1; //parameters of the probability density distribution
+    double alpha,dF; //gradient of the probability density and increment of the cumiulative distribution
   } *CumulativeDistributionTable;
 
+public:
   void Init() {
     double F,dF,dx,f1,f2;
     int i,imax,nInterval,nIntegrationStepsPerInterval;
     cCumulativeDistributionTable el;
 
+
+    if (CumulativeDistributionTable!=NULL) exit(__LINE__,__FILE__,"Error: re-initialization of cSingleVariableDistribution object");
 
     DeltaX=xMax-xMin;
     CumulativeDistributionTable=new cCumulativeDistributionTable [nCumulativeDistributionIntervals];
@@ -112,8 +137,6 @@ private:
         if (ProbabilityDensityInterpolationMode==_SINGLE_VARIABLE_DISTRIBUTION__INTERPOLATION_MODE__LINEAR_) {
           el.alpha=(el.p1-el.p0)/(el.x1-el.x0)/DeltaX;
           el.dF=(el.p0+el.p1)*(el.x1-el.x0)*DeltaX/2.0;
-
-          el.dF=(el.p0-el.alpha*(xMin+DeltaX*el.x0))*(el.x1-el.x0)*DeltaX+el.alpha/2.0*((el.x1-el.x0)*DeltaX)*((el.x1+el.x0)*DeltaX+2.0*xMin);
         }
         else exit(__LINE__,__FILE__,"Error: not implemented");
 
@@ -141,9 +164,7 @@ private:
 
     if (ProbabilityDensityInterpolationMode==_SINGLE_VARIABLE_DISTRIBUTION__INTERPOLATION_MODE__LINEAR_) {
       el.alpha=(el.p1-el.p0)/(el.x1-el.x0)/DeltaX;
-      el.dF=(el.p0+el.p1)*dx/2.0;
-
-      //el.dF=(el.p0-el.alpha*el.x0)*(el.x1-el.x0)*DeltaX+el.alpha/2.0*((el.x1-el.x0)*DeltaX)*((el.x1+el.x0)*DeltaX+2.0*xMin);
+      el.dF=(el.p0+el.p1)*(el.x1-el.x0)*DeltaX/2.0;
     }
     else exit(__LINE__,__FILE__,"Error: not implemented");
 
@@ -151,24 +172,29 @@ private:
 
   }
 
-public:
+
 
   cSingleVariableDistribution(double xmin,double xmax,int nintervals,fProbabilityDistrvidution pfunc,int mode) {
-    xMin=xmin,xMax=xmax,nCumulativeDistributionIntervals=nintervals;
+    xMin=xmin,xMax=xmax,DeltaX=0.0,nCumulativeDistributionIntervals=nintervals;
     ProbabilityDistributionFunction=pfunc;
     ProbabilityDensityInterpolationMode=mode;
     CumulativeDistributionTable=NULL;
-
-    Init();
   }
 
   cSingleVariableDistribution(double xmin,double xmax,fProbabilityDistrvidution pfunc,int mode) {
-    cSingleVariableDistribution(xmin,xmax,_SINGLE_VARIABLE_DISTRIBUTION__DEFAULT__CUMULATIVE_DISTRIBUTION_INTERVAL_,pfunc,mode);
+    xMin=xmin,xMax=xmax,DeltaX=0.0,nCumulativeDistributionIntervals=_SINGLE_VARIABLE_DISTRIBUTION__DEFAULT__CUMULATIVE_DISTRIBUTION_INTERVAL_;
+    ProbabilityDistributionFunction=pfunc;
+    ProbabilityDensityInterpolationMode=mode;
+    CumulativeDistributionTable=NULL;
   }
 
   inline double DistributeVariable() {
     int nInterval;
-    double res;
+    double res=0.0;
+
+#if _SINGLE_VARIABLE_DISTRIBUTION__MEMORY_PREFETCH_ == _SINGLE_VARIABLE_DISTRIBUTION_ON_
+    _mm_prefetch(&xMin,_MM_HINT_T0);
+#endif
 
     nInterval=(int)(rnd()*nCumulativeDistributionIntervals);
 
@@ -177,8 +203,18 @@ public:
 
       memcpy(&t,CumulativeDistributionTable+nInterval,sizeof(cCumulativeDistributionTable));
 
-      if (fabs(t.alpha)>0.0) res=t.x0+(-t.p0+sqrt(pow(t.p0,2)+2.0*t.alpha*t.dF*rnd()))/t.alpha;
-      else res=t.x0+rnd()*(t.x1-t.x0);
+      if (fabs(t.alpha)>0.0) {
+        double dx,dp,A,b,c;
+
+        dx=(t.x1-t.x0)*DeltaX;
+        dp=t.p1-t.p0;
+        b=dx*t.p0;
+
+        A=2.0*dx*dp*rnd()*t.dF;
+        c=A/(dx*dp)/(b*b+sqrt(b*b+A));
+        res=xMin+DeltaX*t.x0+dx*c;
+      }
+      else res=xMin+DeltaX*t.x0+rnd()*(t.x1-t.x0)*DeltaX;
     }
     else exit(__LINE__,__FILE__,"Error: not implemented");
 
@@ -193,12 +229,14 @@ public:
     fout=fopen(fname,"w");
     dx=(xMax-xMin)/nCumulativeDistributionIntervals;
 
+    fprintf(fout,"TITLE=\"A single variable distribution function\"\n");
+    fprintf(fout,"VARIABLES=\"x\", \"f(x)\"\n");
 
     //get the norm of the distribution function
     f1=ProbabilityDistributionFunction(xMin);
 
-    for (i=0;i<nCumulativeDistributionIntervals+1;i++) {
-      x=xMin+i*dx;
+    for (i=0;i<nCumulativeDistributionIntervals;i++) {
+      x=xMin+(i+1)*dx;
       f2=ProbabilityDistributionFunction(x);
 
       norm+=0.5*(f1+f2)*dx;
@@ -212,6 +250,28 @@ public:
 
     fclose(fout);
   }
+
+  void fPrintCumulativeDistributionFunction(const char *fname) {
+    FILE *fout;
+    int i;
+    double norm=0.0,summ=0.0;
+
+    fout=fopen(fname,"w");
+    fprintf(fout,"TITLE=\"A single variable cumulative distribution function\"\n");
+    fprintf(fout,"VARIABLES=\"x\", \"F(x)\"\n");
+
+    //get the norm of the distribution function
+    for (i=0;i<nCumulativeDistributionIntervals;i++) norm+=CumulativeDistributionTable[i].dF;
+
+    for (i=0;i<nCumulativeDistributionIntervals;i++) {
+      summ+=CumulativeDistributionTable[i].dF;
+      fprintf(fout,"%e  %e\n",CumulativeDistributionTable[i].x0*DeltaX+xMin,summ/norm);
+    }
+
+    fprintf(fout,"%e  %e\n",xMax,summ/norm);
+    fclose(fout);
+  }
+
 
 };
 
