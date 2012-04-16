@@ -188,13 +188,13 @@ contains
        G11=-1669.05*F1-1585.9*F2
        H11=5077.99*F1+4945.1*F2
     ELSE                                            !2010-2015
+       !   LINEAR EXTRAPOLATION BEYOND 2010:
+       !     Use coefficient of F2 above and DT*(Coeff_F2-Coeff_F1)/5
        !
-       !   LINEAR EXTRAPOLATION BEYOND 2010 BY USING SECULAR VELOCITY COEFFICIENTS:
-       !
-       DT=FLOAT(IY)+FLOAT(jDAY)/366.-2000.
-       G10=29615.-11.4*DT      ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-       G11=-1728.+16.7*DT
-       H11=5186.-28.8*DT
+       DT  = IY + jDAY/365.0 - 2010
+       G10 = 29496.5 - 11.6*DT
+       G11 = -1585.9 + 16.6*DT
+       H11 =  4945.1 - 26.6*DT
     ENDIF
     !
     !  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EzMAG IN GEO COORD.SYSTEM:
