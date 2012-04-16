@@ -73,7 +73,7 @@ endif else begin
 endelse
 
 end
-;==============================================
+;====================================================================
 
 ; This file was updated on July 3rd, 2001 to accurately produce coordinates
 ; in GSM and GSE for data dates January, 2001 to 2005.  Prior to this release
@@ -81,6 +81,7 @@ end
 ; using a previous version of the software, please replace it immediately.
 ; Sorry for any inconvenience this oversight might have caused.
 ; T. Kovalick, Raytheon ITSS
+; Further update up to 2015 by G. Toth and X. Meng.
 ;c--------------------------------------------------------------------
 ;c
       pro SUN,IYR,IDAY,IHOUR,MIN,ISEC,GST,SLONG,SRASN,SDEC,epoch=epoch
@@ -224,7 +225,7 @@ IF N_ELEMENTS(IYE) EQ 0 THEN IYE = 0l
 IF N_ELEMENTS(IDE) EQ 0 THEN IDE = 0l
 IF N_ELEMENTS(IPR) EQ 0 THEN IPR = 0l
 
-FORMAT10 ='(//1X,"****RECOMP WARNS:  YEAR IS OUT OF INTERVAL 1965-2005: IYR=",I4,/,6X,"CALCULATIONS WILL BE DONE FOR IYR=",I4,/)'
+FORMAT10 ='(//1X,"****RECOMP WARNS:  YEAR IS OUT OF INTERVAL 1965-2015: IYR=",I4,/,6X,"CALCULATIONS WILL BE DONE FOR IYR=",I4,/)'
 
 ;C
 ;C  IYE AND IDE ARE THE CURRENT VALUES OF YEAR AND DAY NUMBER
@@ -233,7 +234,7 @@ FORMAT10 ='(//1X,"****RECOMP WARNS:  YEAR IS OUT OF INTERVAL 1965-2005: IYR=",I4
       IDE=IDAY
       IF ((IYR EQ IYE) AND (IDAY EQ IDE))THEN GOTO, JUMP5
       IF(IY LT 1965)THEN IY=1965
-      IF(IY GT 2005)THEN IY=2005
+      IF(IY GT 2015)THEN IY=2015
 ;C
 ;C  WE ARE RESTRICTED BY THE INTERVAL 1965-2005,
 ;C  FOR WHICH THE IGRF COEFFICIENTS ARE KNOWN; IF IYR IS OUTSIDE THIS INTERVAL
@@ -290,16 +291,29 @@ FORMAT10 ='(//1X,"****RECOMP WARNS:  YEAR IS OUT OF INTERVAL 1965-2005: IYR=",I4
 	   G10=29682.*F1+29615.*F2
 	   G11=-1789.*F1-1728.*F2
 	   H11=5318.*F1+5186.*F2
+        ENDIF ELSE IF (IY LT 2005) THEN BEGIN           ;!2000-2005
+           ; Obtained from SWMF/share/Library/src/CON_geopack.f90
+           F2=(FLOAT(IY)+FLOAT(IDAY)/365.-2000.)/5.
+           F1=1.D0-F2
+           G10=29615.*F1+29554.63*F2
+           G11=-1728.*F1-1669.05*F2
+           H11= 5186.*F1+5077.99*F2
+        ENDIF ELSE IF (IY LT 2010) THEN BEGIN           ;!2005-2010
+           ; Obtained from SWMF/share/Library/src/CON_geopack.f90
+           F2=(FLOAT(IY)+FLOAT(IDAY)/365.-2005.)/5.
+           F1=1.D0-F2
+           G10=29554.63*F1+29496.5*F2
+           G11=-1669.05*F1-1585.9*F2
+           H11= 5077.99*F1+4945.1*F2
 ;
-;   LINEAR EXTRAPOLATION BEYOND 2000 BY USING SECULAR VELOCITY COEFFICIENTS:
-;
-	ENDIF ELSE BEGIN				;!2000-2005
-;TJK added use of float and divide by 366 insteaf of 365
-;	   DT=IY+IDAY/365D0-2000.
-           DT=FLOAT(IY)+FLOAT(IDAY)/366.-2000.
-	   G10=29615.-14.6*DT      ;! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-	   G11=-1728.+10.7*DT
-	   H11=5186.-22.5*DT
+;   LINEAR EXTRAPOLATION BEYOND 2010 BY USING SECULAR VELOCITY COEFFICIENTS:
+;      Use coefficient of F2 above and DT*(Coeff_F2-Coeff_F1)/5
+
+	ENDIF ELSE BEGIN				;!2010-2015
+           DT  = FLOAT(IY) + FLOAT(IDAY)/365.-2010.
+	   G10 =  29496.5 - 11.6*DT
+	   G11 =  -1585.9 + 16.6*DT
+	   H11 =   4945.1 - 26.6*DT
 	ENDELSE
 ;C
 ;C  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EzMAG IN GEO COORD.SYSTEM:
