@@ -113,14 +113,11 @@ subroutine calc_timestep
   end if
 
   if(DoTestMe)then
-     write(*,*)'left  VdtFace_x,y,z=',&
-          VdtFace_x(Itest,Jtest,Ktest),&
-          VdtFace_y(Itest,Jtest,Ktest),&
-          VdtFace_z(Itest,Jtest,Ktest)
-     write(*,*)'right VdtFace_x,y,z=',&
-          VdtFace_x(Itest+1,Jtest,Ktest),&
-          VdtFace_y(Itest,Jtest+1,Ktest),&
-          VdtFace_z(Itest,Jtest,Ktest+1)
+     write(*,*)'VdtFace_x(iTest:iTest+1)=', VdtFace_x(Itest:Itest+1,jTest,kTest)
+     if(nJ>1) &
+          write(*,*)'VdtFace_y(jTest:jTest+1)=', VdtFace_y(Itest,Jtest:jTest+1,kTest)
+     if(nK>1) &
+          write(*,*)'VdtFace_z(kTest:kTest+1)=', VdtFace_z(Itest,Jtest,kTest:kTest+1)
      write(*,*)'time_BLK=',time_BLK(Itest,Jtest,Ktest,iBlock)
   end if
 
