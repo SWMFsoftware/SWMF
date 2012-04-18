@@ -60,6 +60,9 @@ cd $PBS_O_WORKDIR
 #setenv MPI_MSGS_PER_PROC 100000
 #setenv MPI_MSGS_MAX      100000
 
+# Seems to be needed for HDF5 plots
+setenv MPI_TYPE_DEPTH 10
+
 # run SWMF (the number of processors is already specified above)
 # the date/time stamp for runlog is only necessary for automated resubmission
 mpiexec SWMF.exe > runlog_`date +%y%m%d%H%M`
