@@ -3241,7 +3241,7 @@ contains
          end if
       end if
 
-      if(UseGammaLaw)then
+      if(UseGammaLaw .and. Gamma_I(iMaterial) > 1.0)then
          if(present(GammaOut)) GammaOut = Gamma_I(iMaterial)
          if(present(PressureOut) .and. present(EinternalIn))then
             pSi = EinternalIn*(Gamma_I(iMaterial) - 1)
