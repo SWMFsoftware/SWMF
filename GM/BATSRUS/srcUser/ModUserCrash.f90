@@ -173,10 +173,6 @@ module ModUser
   logical :: UseGammaLaw = .false.
   real :: Gamma_I(0:MaxMaterial-1) = 5.0/3.0
 
-  ! Fixed average ion charge per material (UQ only !)
-  logical :: UseFixedIonCharge = .false.
-  real :: IonCharge_I(0:MaxMaterial-1) = 1.0
-
   ! Factor to suppress the A.S.S.
   real :: AssFactor = -1.0
 
@@ -235,6 +231,7 @@ contains
     use ModReadParam
     use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I
     use CRASH_ModMultiGroup, ONLY: read_opacity_parameters
+    use ModAdvance,          ONLY: UseElectronPressure
     use ModGeometry,         ONLY: TypeGeometry, UseCovariant
     use ModWaves,            ONLY: FreqMinSI, FreqMaxSI
     use ModConst,            ONLY: cHPlanckEV
@@ -347,18 +344,14 @@ contains
        case("#GAMMALAW") ! UQ only
           call read_var('UseGammaLaw', UseGammaLaw)
           if(UseGammaLaw)then
+             if(.not.UseElectronPressure) call stop_mpi( &
+                  NameSub//" can not use gamma-law without electron pressure")
+             if(UseNLTE) call stop_mpi( &
+                  NameSub//" can not use gamma-law with NLTE EOS")
+
              do iMaterial = 0, nMaterial - 1
                 call read_var('Gamma'//NameMaterial_I(iMaterial), &
                      Gamma_I(iMaterial))
-             end do
-          end if
-
-       case("#FIXEDIONCHARGE") ! UQ only
-          call read_var('UseFixedIonCharge', UseFixedIonCharge)
-          if(UseFixedIonCharge)then
-             do iMaterial = 0, nMaterial - 1
-                call read_var('IonCharge'//NameMaterial_I(iMaterial), &
-                     IonCharge_I(iMaterial))
              end do
           end if
 
@@ -2389,6 +2382,10 @@ contains
     logical,save:: UseNLTESaved = .false.
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
+
+    if(UseGammaLaw .and. (UseMixedCell .or. UseVolumeFraction)) &
+         call stop_mpi(NameSub// &
+         " can not use gamma-law with mixed cell or volume fraction")
     
     ! Pass number of materials and waves=groups to the CRASH EOS library
     nMaterialEos = nMaterial
@@ -2514,14 +2511,6 @@ contains
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
     !-----------------------------------------------------------------------
 
-    if(UseGammaLaw)then
-       ! UQ only
-       call calc_table_gammalaw
-
-       RETURN
-    end if
-
-
     if(iTable == iTablePPerRho)then
        ! Calculate p/e for Xe_, Be_ and Plastic_ for given Rho and e/Rho
        ! Au_ and Ay_ are optional
@@ -2632,48 +2621,6 @@ contains
        write(*,*)NameSub,' iTable=', iTable
        call stop_mpi(NameSub//' invalid value for iTable')
     endif
-
-  contains
-
-    subroutine calc_table_gammalaw
-
-      ! Only for single temperature mode (UseElectronPressure=.false.)
-
-      use ModConst, ONLY: cAtomicMass
-
-      real :: NatomicSi
-      !------------------------------------------------------------------------
-      if(iTable == iTablePPerRho)then
-         ! Calculate p/rho for Xe_, Be_ and Plastic_ for given e/Rho and Rho
-         ! p/rho = e/rho*(gamma-1)
-         do iMaterial = 0, nMaterial-1
-            Value_V(iMaterial+1) = Arg1*(Gamma_I(iMaterial) - 1.0)
-         end do
-      elseif(iTable == iTableThermo)then
-         ! Calculate cV, gamma, HeatCond and Te for Xe_, Be_ and Plastic_
-         ! for given Rho and p/Rho
-         Rho = Arg1
-         p   = Arg2*Rho
-         do iMaterial = 0, nMaterial-1
-            if(UseFixedIonCharge)then
-               NatomicSi = Rho/(cAtomicMass*MassMaterial_I(iMaterial))
-               Te = p/( (1.0+IonCharge_I(iMaterial))*NatomicSi*cBoltzmann )
-            else
-               call eos(iMaterial, Rho, PtotalIn=p, TeOut=Te)
-            end if
-
-            Value_V(Te_   +iMaterial*nThermo) = Te
-            Value_V(Cv_   +iMaterial*nThermo) = p/Te/(Gamma_I(iMaterial)-1)
-            Value_V(Gamma_+iMaterial*nThermo) = Gamma_I(iMaterial)
-            Value_V(Zavg_ +iMaterial*nThermo) = IonCharge_I(iMaterial)
-            Value_V(Cond_ +iMaterial*nThermo) = 0.0
-         end do
-      else
-         write(*,*)NameSub,' iTable=', iTable
-         call stop_mpi(NameSub//' invalid value for iTable')
-      endif
-
-    end subroutine calc_table_gammalaw
 
   end subroutine calc_table_value
   !===========================================================================
@@ -3281,17 +3228,28 @@ contains
                     TeTiRelax=TeTiRelaxOut)
                else
                   EinternalSi = pSi*inv_gm1+&
-                    State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
+                       State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
                   EInternalSi = max(EInternalSi,1e-30)
                   call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalSi,&
-                    EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
-                    TeOut=TeSi, &
-                    CvElectronOut=CvOut, GammaEOut=GammaOut, &
-                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                    TeTiRelax=TeTiRelaxOut)
+                       EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                       TeOut=TeSi, &
+                       CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                       TeTiRelax=TeTiRelaxOut)
                end if
             end if
          end if
+      end if
+
+      if(UseGammaLaw)then
+         if(present(GammaOut)) GammaOut = Gamma_I(iMaterial)
+         if(present(PressureOut) .and. present(EinternalIn))then
+            pSi = EinternalIn*(Gamma_I(iMaterial) - 1)
+            PressureOut = pSi
+         elseif(present(EinternalOut))then
+            EinternalOut = pSi/(Gamma_I(iMaterial) - 1)
+         end if
+         if(present(CvOut)) CvOut = pSi/TeSi/(Gamma_I(iMaterial)-1)
       end if
 
     end subroutine get_electron_thermo
