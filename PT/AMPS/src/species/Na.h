@@ -14,7 +14,7 @@
 //the positive velocity is in the direction out from the sun
 //the acceleration is in teh direction out of the sun
 
-double SodiumRadiationPressureAcceleration__Combi_1997_icarus(double HeliocentricVelocity,double HeliocentricDistance); 
+double SodiumRadiationPressureAcceleration__Combi_1997_icarus(double HeliocentricVelocity,double HeliocentricDistance);
 
 #endif
 

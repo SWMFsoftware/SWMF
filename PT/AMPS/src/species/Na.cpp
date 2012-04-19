@@ -39,7 +39,7 @@ double SodiumRadiationPressureAcceleration__Combi_1997_icarus(double Heliocentri
   static const int sodiumRadiationPressure_TableLength__Combi_1997_icarus=1201;
   static const double sodiumRadiationPressure_HeliocenticVelocity_Min__Combi_1997_icarus=-60.0E3;
   static const double sodiumRadiationPressure_HeliocenticVelocity_Max__Combi_1997_icarus=60.0E3;
-  static const double sodiumRadiationPressure_dHeliocenticVelocity__Combi_1997_icarus=0.01E3;
+  static const double sodiumRadiationPressure_dHeliocenticVelocity__Combi_1997_icarus=0.1E3;
 
   static const double sodiumRadiationPressure_Table__Combi_1997_icarus[sodiumRadiationPressure_TableLength__Combi_1997_icarus]={
     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,     46.4855,
