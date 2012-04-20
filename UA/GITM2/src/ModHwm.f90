@@ -1631,14 +1631,12 @@ subroutine dwm_kpspl3_calc(kp0, dwm_kpspl3)
 
     external :: bspline_calc
 
-    kp = max(kp0, 0.)
-    kp = min(kp,  8.)
+    kp = max(real(kp0), 0.)
+    kp = min(real(kp),  8.)
     call bspline_calc(8,  kp, (/-10., -8., 0., 2., 5., 8., 18., 20./), kpspl, 2, 0)
     dwm_kpspl3(0) = kpspl(0) + kpspl(1)
     dwm_kpspl3(1) = kpspl(2)
     dwm_kpspl3(2) = kpspl(3) + kpspl(4)
-
-    return
 
 end subroutine dwm_kpspl3_calc
 
@@ -1683,13 +1681,11 @@ function dwm_latwgt2(mlat, mlt, kp0, twidth)
     mltrad = mlt * 15.0 * dtor
     sinmlt = sin(mltrad)
     cosmlt = cos(mltrad)
-    kp = max(kp0, 0.)
-    kp = min(kp,  8.)
+    kp = max(real(kp0), 0.)
+    kp = min(real(kp),  8.)
     tlat = coeff(0) + coeff(1)*cosmlt + coeff(2)*sinmlt +   &
            kp*(coeff(3) + coeff(4)*cosmlt + coeff(5)*sinmlt)
     dwm_latwgt2 = 1.0 / ( 1 + exp(-(abs(mlat)-tlat)/twidth) )
-
-    return
 
 end function dwm_latwgt2
 
