@@ -7,7 +7,7 @@ subroutine specify_refinement(DoRefine_B)
 
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: MaxBlock, nBlock, nBlockMax, nI, nJ, nK, UnusedBlk, &
-       BlkTest, Test_String, r_, Phi_, Theta_, x_, y_, z_,UseB0
+       BlkTest, Test_String, r_, Phi_, Theta_, x_, y_, z_, UseB0, UseBatl
   use ModAMR,      ONLY: nArea, AreaType, Area_I, lNameArea
   use ModGeometry, ONLY: dx_BLK, UseCovariant, x_BLK, y_BLK, z_BLK, &
        TypeGeometry,gen_to_r
@@ -20,6 +20,7 @@ subroutine specify_refinement(DoRefine_B)
   use ModGeometry,       ONLY: far_field_BCs_BLK
   use ModMain,           ONLY: DoThinCurrentSheet
   use ModNumConst,       ONLY: cTiny, cRadToDeg
+  use BATL_lib,          ONLY: CoordMin_DB, CoordMax_DB
 
   implicit none
 
@@ -139,10 +140,28 @@ subroutine specify_refinement(DoRefine_B)
 
         ! Check if it is a brick in the generalized coordinates
         if(NameArea == "brick_gen" .and. TypeGeometry /= 'cartesian')then
-           ! Convert corners to generalized coordinates
-           do iCorner = 1, nCorner
-              call xyz_to_gen(CornerOrig_DI(:,iCorner), Corner_DI(:,iCorner))
-           end do
+           ! Get corners in generalized coordinates
+
+           if(UseBatl)then
+              Corner_DI(:,1) = CoordMin_DB(:,iBlock)
+              Corner_DI(:,2) = (/ CoordMax_DB(1,iBlock), &
+                   CoordMin_DB(2,iBlock), CoordMin_DB(3,iBlock) /)
+              Corner_DI(:,3) = (/ CoordMin_DB(1,iBlock), &
+                   CoordMax_DB(2,iBlock), CoordMin_DB(3,iBlock) /)
+              Corner_DI(:,4) = (/ CoordMax_DB(1,iBlock), &
+                   CoordMax_DB(2,iBlock), CoordMin_DB(3,iBlock) /)
+              Corner_DI(:,5) = (/ CoordMin_DB(1,iBlock), &
+                   CoordMin_DB(2,iBlock), CoordMax_DB(3,iBlock) /)
+              Corner_DI(:,6) = (/ CoordMax_DB(1,iBlock), &
+                   CoordMin_DB(2,iBlock), CoordMax_DB(3,iBlock) /)
+              Corner_DI(:,7) = (/ CoordMin_DB(1,iBlock), &
+                   CoordMax_DB(2,iBlock), CoordMax_DB(3,iBlock) /)
+              Corner_DI(:,8) = CoordMax_DB(:,iBlock)
+           else
+              do iCorner = 1, nCorner
+                 call xyz_to_gen(CornerOrig_DI(:,iCorner),Corner_DI(:,iCorner))
+              end do
+           end if
 
            ! Convert angles to degrees and ln(r) to r
            ! Make sure that phi=360 is not 0 but really 360
