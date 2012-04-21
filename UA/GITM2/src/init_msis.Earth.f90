@@ -96,7 +96,7 @@ subroutine init_msis
   real*4 :: hwm_utime, hwm_alt, hwm_lat, hwm_lon, hwm_lst
   real*4 :: hwm_f107a, hwm_f107, hwm_ap(2), qw(2)
 
-  call report("init_msis",1)
+  call report("init_msis",0)
 
   !--------------------------------------------------------------------------
   !

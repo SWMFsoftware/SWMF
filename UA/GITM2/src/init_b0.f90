@@ -16,7 +16,7 @@ subroutine init_b0
   ! We need to fill in the Ghost Cells for the NonChanging Variables, such
   ! as the Magnetic Field:
 
-  call report("init_b0",1)
+  call report("init_b0",0)
   call start_timing("init_b0")
 
   AltMinIono=(2*RadialDistance_GB(1,1,-1,1) - &

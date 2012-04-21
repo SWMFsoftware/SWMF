@@ -19,7 +19,7 @@ subroutine init_grid
   real :: range, lon0, dlFull, dlPart
   integer :: iPoint(-1:nLons+2)
 
-  call report("init_grid",1)
+  call report("init_grid",0)
 
   if (.not. Is1D) then
 

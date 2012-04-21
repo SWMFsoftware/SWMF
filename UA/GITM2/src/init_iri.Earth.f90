@@ -22,7 +22,7 @@ subroutine init_iri
   integer :: iBlock, iAlt, iLat, iLon, iIon
   real :: geo_lat, geo_lon, geo_alt(1), geo_lst
 
-  call report("init_iri",1)
+  call report("init_iri",0)
 
   !--------------------------------------------------------------------------
   !
