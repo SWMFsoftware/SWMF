@@ -40,7 +40,7 @@ subroutine read_potential(infile)
   integer :: i,lu=20
   integer :: csize_rd,d1_rd,d2_rd
 !
-  PRINT *,infile
+!  PRINT *,infile
   open(lu,file=infile,status='old')
   read(lu,"(a)") fname
   read(lu,"(28i3)") ab

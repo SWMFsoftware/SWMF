@@ -29,8 +29,6 @@ subroutine EIE_set_inputs(StringInputLines)
            call read_in_string(EIE_NameOfAuroralModel)
            call read_in_string(EIE_NameOfSolarModel)
 
-           write(*,*) "efield : ",EIE_NameOfEFieldModel
-
            if (index(EIE_NameOfAuroralModel,'IHP') > 0) &
                 EIE_NameOfAuroralModel = 'ihp'
            if (index(EIE_NameOfAuroralModel,'PEM') > 0) &
