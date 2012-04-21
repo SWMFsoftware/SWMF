@@ -422,19 +422,50 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
 end subroutine get_magfield_all
 
-subroutine dipole_to_geo(aLat, aLon, Alt, gLat, gLon)
+subroutine dipole_to_geo(MagLat, MagLon, Alt, gLat, gLon)
 
+  use ModPlanet
+  use ModInputs
   use ModConstants, only: Pi
 
   implicit none
 
   real, intent(out) :: gLat, gLon
-  real, intent(in)  :: aLat, aLon, Alt
+  real, intent(in)  :: MagLat, MagLon, Alt
 
-  real :: LShell
+  real :: LShell, r, x, y, z
+  real :: xt, yt, zt
+  real :: xp, yp, zp
+  real :: xpp, ypp, zpp
+  real :: xy, xz, yz, xyz
+  real :: alat, alon
 
-  LShell = (1.0 / cos(aLat*pi/180.0))**2
-  
+  r = RBody + Alt*1000.0
+
+  alat = MagLat * pi / 180.0
+  alon = MagLon * pi / 180.0
+
+  xpp = r * cos(alat) * cos(alon)
+  ypp = r * cos(alat) * sin(alon)
+  zpp = r * sin(alat)
+
+  call rot_y(xpp, ypp, zpp, xp, yp, zp, MagneticPoleTilt)
+  call rot_z(xp, yp, zp, xt, yt, zt, MagneticPoleRotation)
+
+  x = xt+xDipoleCenter
+  y = yt+yDipoleCenter
+  z = zt+zDipoleCenter
+
+  xy  = sqrt(x**2+y**2)
+  xz  = sqrt(x**2+z**2)
+  yz  = sqrt(y**2+z**2)
+  xyz = sqrt(x**2+y**2+z**2)
+
+!  glat = alat*180.0/pi
+!  glon = alon*180.0/pi
+
+  glat = asin(z/xyz)*180.0/pi
+  gLon = mod(acos(x/xy)*180.0/pi * sign(1.0,y) + 360.0,360.0)
 
 end subroutine dipole_to_geo
 
@@ -449,7 +480,8 @@ subroutine mydipole(GeoLat, GeoLon, GeoAlt, LShell, aLat, aLon, BEast, BNorth, B
   real, intent(in)  :: GeoLat, GeoLon, GeoAlt
   real, intent(out) :: LShell, aLat, aLon, BEast, BNorth, BVertical
 
-  real :: r3, x, y, z, r, Lat, Lon
+  real :: r3, x, y, z, r, Lat, Lon 
+  real :: xmin, ymin, zmin, rs, rmin, xs, ys, zs
 
   real :: xt, yt, zt
   real :: xp,  yp,  zp
@@ -459,17 +491,28 @@ subroutine mydipole(GeoLat, GeoLon, GeoAlt, LShell, aLat, aLon, BEast, BNorth, B
   real :: bxpp, bypp, bzpp
   real :: xypp, xzpp, yzpp, xyzpp
 
-  Lat = GeoLat*pi/180.0
-  Lon = GeoLon*pi/180.0
-  r   = RBody + GeoAlt*1000.0
-
+  Lat  = GeoLat*pi/180.0
+  Lon  = GeoLon*pi/180.0
+  r    = RBody + GeoAlt*1000.0
+  rmin = RBody + AltMinIono*1000.0
+  
   x = r * cos(lat) * cos(lon)
   y = r * cos(lat) * sin(lon)
   z = r * sin(lat)
 
+  xmin = rmin * cos(lat) * cos(lon)
+  ymin = rmin * cos(lat) * sin(lon)
+  zmin = rmin * sin(lat)
+
   xt = x-xDipoleCenter
   yt = y-yDipoleCenter
   zt = z-zDipoleCenter
+
+  xs = xmin-xDipoleCenter
+  ys = ymin-yDipoleCenter
+  zs = zmin-zDipoleCenter
+
+  rs = sqrt(xs**2 + ys**2 + zs**2)
 
   call rot_z(xt, yt, zt, xp, yp, zp, -MagneticPoleRotation)
   call rot_y(xp, yp, zp, xpp, ypp, zpp, -MagneticPoleTilt)
@@ -480,16 +523,13 @@ subroutine mydipole(GeoLat, GeoLon, GeoAlt, LShell, aLat, aLon, BEast, BNorth, B
   xyzpp = sqrt(xpp**2+ypp**2+zpp**2)
 
   r3        = (RBody / xyzpp) ** 3
-  LShell    = max(1.0,xyzpp / RBody / (xypp/xyzpp)**2.0)
+  LShell    = max(1.0,xyzpp / rs / (xypp/xyzpp)**2.0)
   aLat      = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,zpp)
-  aLon      = acos(xpp/xypp)
+  aLon      = acos(xpp/xypp)* sign(1.0,ypp)*180.0/pi
 
   bx = DipoleStrength * r3 * 3 * xpp*zpp/xyzpp**2 
   by = DipoleStrength * r3 * 3 * zpp*ypp/xyzpp**2
   bz = DipoleStrength * r3 /xyzpp**2 * (2*zpp**2 - xypp**2)
-
-!  if (GeoLat == -35.0 .and. GeoAlt == 100.0) &
-!       write(*,*) GeoLat, GeoLon, Lat, Lon, bx*1.0e5, by*1.0e5, bz*1.0e5
 
   call rot_y(bx, by, bz, bxp, byp, bzp, MagneticPoleTilt)
   call rot_z(bxp, byp, bzp, bxpp, bypp, bzpp, MagneticPoleRotation)

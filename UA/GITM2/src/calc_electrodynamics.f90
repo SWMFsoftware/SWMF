@@ -226,19 +226,24 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
               ReferenceAlt = Altitude_GB(1,1,0,1)/1000.0
               AltMinIono = ReferenceAlt
-!              write(*,*) "ReferenceAlt : ",aLat, aLon, ReferenceAlt
 
               call apex_to_geo(date, aLat, aLon, ReferenceAlt, &
                    gLat, gLon, sLat, sLon)
-!              if (i == 5 .and. iProc == 1) &
-!                   write(*,*)alon,alat,glon,glat
+
               GeoLatMC(i,j) = gLat*pi/180.0
               GeoLonMC(i,j) = gLon*pi/180.0
 
            else
 
-              GeoLatMC(i,j) = MagLatMC(i,j)*pi/180.0
-              GeoLonMC(i,j) = MagLonMC(i,j)*pi/180.0
+              aLat = MagLatMC(i,j)
+              aLon = MagLonMC(i,j)
+
+              ReferenceAlt = Altitude_GB(1,1,0,1)/1000.0
+              AltMinIono = ReferenceAlt
+
+              call dipole_to_geo(aLat, aLon, ReferenceAlt, gLat, gLon)
+              GeoLatMC(i,j) = gLat*pi/180.0
+              GeoLonMC(i,j) = gLon*pi/180.0
 
            endif
 
@@ -713,6 +718,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
               SigmaPPMC(i,j) = spp * sinim
               SigmaLLMC(i,j) = sll / sinim
+
               SigmaHHMC(i,j) = shh
               SigmaCCMC(i,j) = scc
               if (MagLatMC(i,j) > 0.0) then
