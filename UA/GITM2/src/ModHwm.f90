@@ -554,8 +554,6 @@ subroutine loadmodel(datafile)
         deallocate(gfs,gfm,gfl,gvbar,gwbar,gzwght,gbz,gbm)
     endif
 
-    write(*,*) "Opening HWM file!"
-
     open(unit=23,file=trim(datafile),form='unformatted',status='old')
     read(23) nbf,maxs,maxm,maxl,maxn,ncomp
     read(23) nlev,p
