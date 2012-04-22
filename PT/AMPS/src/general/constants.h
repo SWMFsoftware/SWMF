@@ -17,6 +17,10 @@
 //length conversion
 #define _MICROMETER_ 1.0E-6
 
+//metric conversion coefficients
+#define _NANO_  1.0E-9
+#define _MICRO_ 1.0E-6
+
 
 //physical constants
 #define Kbol                 1.3806503E-23
