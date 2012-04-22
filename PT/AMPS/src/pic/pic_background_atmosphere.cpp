@@ -717,7 +717,7 @@ for (idim=0;idim<3;idim++) vBackgroundParticle[idim]=0.0;
            }
 
             //check if the model particle should be removed from the system
-            if (true) { //// (KeepBackgroundAtmosphereParticle(modelParticleData)==false) {
+            if (KeepBackgroundAtmosphereParticle(modelParticleData)==false) {
               //the particle should be removed
               long int next,prev;
 

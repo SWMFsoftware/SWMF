@@ -36,7 +36,7 @@ void PIC::Mover::TotalParticleAcceleration_default(double *accl,int spec,long in
 //move all existing particles
 void PIC::Mover::MoveParticles() {
   int s,i,j,k;
-  long int LocalCellNumber,ParticleList,ptr;
+  long int /*LocalCellNumber,*/ ParticleList,ptr;
   double LocalTimeStep;
 
 
@@ -49,7 +49,7 @@ void PIC::Mover::MoveParticles() {
   static int centerNodeIndexTable_Glabal[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
   static int nTotalCenterNodes=-1;
 
-  int centerNodeIndexCounter;
+//  int centerNodeIndexCounter;
 
   if (initTableFlag==false) {
     nTotalCenterNodes=0,initTableFlag=true;
@@ -74,6 +74,9 @@ void PIC::Mover::MoveParticles() {
   memcpy(centerNodeIndexTable,centerNodeIndexTable_Glabal,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(int));
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
+  PIC::Mesh::cDataBlockAMR *block;
+
+  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
 
   //sample the processor load
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
@@ -83,12 +86,16 @@ void PIC::Mover::MoveParticles() {
   //move existing particles
   while (node!=NULL) {
 
-    /*
+    block=node->block;
+    memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
     for (k=0;k<_BLOCK_CELLS_Z_;k++) {
        for (j=0;j<_BLOCK_CELLS_Y_;j++) {
           for (i=0;i<_BLOCK_CELLS_X_;i++) {
-            LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-      */
+            /*LocalCellNumber=*/  PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+            ParticleList=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+            /*
     {
       {
 //        for (LocalCellNumber=nStartCenterNodeIndex,centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;LocalCellNumber+=centerNodeIndexIncrement[centerNodeIndexCounter++]) {
@@ -97,12 +104,12 @@ void PIC::Mover::MoveParticles() {
 
             LocalCellNumber=centerNodeIndexTable[centerNodeIndexCounter];
             ParticleList=node->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
-
+*/
             while (ParticleList!=-1) {
               ptr=ParticleList;
               ParticleList=PIC::ParticleBuffer::GetNext(ParticleList);
               s=PIC::ParticleBuffer::GetI(ptr);
-              LocalTimeStep=node->block->GetLocalTimeStep(s);
+              LocalTimeStep=block->GetLocalTimeStep(s);
 
 //              MoveParticleTimeStep[s](ptr,LocalTimeStep,node);
               _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node);
@@ -126,7 +133,7 @@ void PIC::Mover::MoveParticles() {
 
 
   //update the particle lists (The local processor)
-  PIC::Mesh::cDataCenterNode *cell;
+//  PIC::Mesh::cDataCenterNode *cell;
 
   /*
   node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
@@ -149,6 +156,19 @@ void PIC::Mover::MoveParticles() {
   */
 
   //update the particle lists (The connecting and local processors)
+
+  for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+     for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+        for (i=0;i<_BLOCK_CELLS_X_;i++) {
+
+          //LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+
+          FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
+        }
+     }
+  }
+
+
   for (int thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
     node=(thread==PIC::Mesh::mesh.ThisThread) ? PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread] : PIC::Mesh::mesh.DomainBoundaryLayerNodesList[thread];
 
@@ -156,13 +176,27 @@ void PIC::Mover::MoveParticles() {
 
     while (node!=NULL) {
 
-      /*
+/*
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
          for (j=0;j<_BLOCK_CELLS_Y_;j++) {
             for (i=0;i<_BLOCK_CELLS_X_;i++) {
-              LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
 
-              */
+              //LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+
+              FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
+            }
+         }
+      }
+      */
+
+      block=node->block;
+      memcpy(block->FirstCellParticleTable,block->tempParticleMovingListTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+      memcpy(block->tempParticleMovingListTable,FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
+
+
+
+      /*
       {
         {
 //          for (LocalCellNumber=nStartCenterNodeIndex,centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;LocalCellNumber+=centerNodeIndexIncrement[centerNodeIndexCounter++]) {
@@ -177,6 +211,9 @@ void PIC::Mover::MoveParticles() {
             }
          }
       }
+
+
+      */
 
       node=node->nextNodeThisThread;
     }
@@ -776,21 +813,34 @@ int iTemp,jTemp,kTemp;
 
 
   if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
-  cell=startNode->block->GetCenterNode(LocalCellNumber);
+//  cell=startNode->block->GetCenterNode(LocalCellNumber);
+
+  PIC::Mesh::cDataBlockAMR *block=startNode->block;
+  long int tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
   PIC::ParticleBuffer::SetV(v,ParticleData);
   PIC::ParticleBuffer::SetX(x,ParticleData);
 
+  PIC::ParticleBuffer::SetNext(tempFirstCellParticle,ParticleData);
+  PIC::ParticleBuffer::SetPrev(-1,ParticleData);
+
+  if (tempFirstCellParticle!=-1) PIC::ParticleBuffer::SetPrev(ptr,tempFirstCellParticle);
+  block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=ptr;
+
+
+  /*
   PIC::ParticleBuffer::SetNext(cell->tempParticleMovingList,ParticleData);
   PIC::ParticleBuffer::SetPrev(-1,ParticleData);
 
   if (cell->tempParticleMovingList!=-1) PIC::ParticleBuffer::SetPrev(ptr,cell->tempParticleMovingList);
   cell->tempParticleMovingList=ptr;
-
+*/
 
 
   //=====================  DEBUG =========================
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  cell=startNode->block->GetCenterNode(LocalCellNumber);
+
   if ((cell->Measure<=0.0)&&(startNode->Thread==PIC::Mesh::mesh.ThisThread)) {
     cout << __FILE__<< __LINE__ << endl;
 
@@ -857,7 +907,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
   nCallCounter++;
 
 
-  if (nCallCounter==5053963548) {
+  if (nCallCounter==5053963) {
     cout << __LINE__ << __FILE__<< endl;
   }
   //########## END DEBUG ##########
@@ -1107,22 +1157,35 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
 
   //place it to the local list of particles related to the new block and cell
   if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,newNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
-  cell=newNode->block->GetCenterNode(LocalCellNumber);
+  //cell=newNode->block->GetCenterNode(LocalCellNumber);
+
+  PIC::Mesh::cDataBlockAMR *block=startNode->block;
+  long int tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
   PIC::ParticleBuffer::SetV(v,ParticleData);
   PIC::ParticleBuffer::SetX(x,ParticleData);
 
+  PIC::ParticleBuffer::SetNext(tempFirstCellParticle,ParticleData);
+  PIC::ParticleBuffer::SetPrev(-1,ParticleData);
+
+  if (tempFirstCellParticle!=-1) PIC::ParticleBuffer::SetPrev(ptr,tempFirstCellParticle);
+  block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=ptr;
+
+  /*
   PIC::ParticleBuffer::SetNext(cell->tempParticleMovingList,ParticleData);
   PIC::ParticleBuffer::SetPrev(-1,ParticleData);
 
   if (cell->tempParticleMovingList!=-1) PIC::ParticleBuffer::SetPrev(ptr,cell->tempParticleMovingList);
   cell->tempParticleMovingList=ptr;
+  */
 
 
   //=====================  DEBUG =========================
 
 
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  cell=newNode->block->GetCenterNode(LocalCellNumber);
+
   if ((cell->Measure<=0.0)&&(newNode->Thread==PIC::Mesh::mesh.ThisThread)) {
     cout << __FILE__<< __LINE__ << endl;
     exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
@@ -1322,20 +1385,25 @@ exit(__LINE__,__FILE__,"not implemented");
 
   //place it to the local list of particles related to the new block and cell
   if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,newNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
-  cell=newNode->block->GetCenterNode(LocalCellNumber);
+
+
+  PIC::Mesh::cDataBlockAMR *block=startNode->block;
+  long int tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
   PIC::ParticleBuffer::SetV(vFinal,ParticleData);
   PIC::ParticleBuffer::SetX(xFinal,ParticleData);
 
-  PIC::ParticleBuffer::SetNext(cell->tempParticleMovingList,ParticleData);
+  PIC::ParticleBuffer::SetNext(tempFirstCellParticle,ParticleData);
   PIC::ParticleBuffer::SetPrev(-1,ParticleData);
 
-  if (cell->tempParticleMovingList!=-1) PIC::ParticleBuffer::SetPrev(ptr,cell->tempParticleMovingList);
-  cell->tempParticleMovingList=ptr;
+  if (tempFirstCellParticle!=-1) PIC::ParticleBuffer::SetPrev(ptr,tempFirstCellParticle);
+  block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=ptr;
 
 
   //=====================  DEBUG =========================
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  cell=newNode->block->GetCenterNode(LocalCellNumber);
+
   if ((cell->Measure<=0.0)&&(newNode->Thread==PIC::Mesh::mesh.ThisThread)) {
     cout << __FILE__<< __LINE__ << endl;
     exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
@@ -1412,6 +1480,22 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
     exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
   }
 #endif
+
+
+
+
+  static long int nCall=0;
+
+
+  nCall++;
+
+  /*
+  if ((PIC::ThisThread==3)&&(ptr==46)) {
+    cout << __FILE__ << "@" << __LINE__ << endl;
+  }
+  */
+
+
 //===================== END DEBUG ==================
 
 
@@ -2050,21 +2134,26 @@ exit(__LINE__,__FILE__,"not implemented");
 
 
   if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
-  cell=startNode->block->GetCenterNode(LocalCellNumber);
+
+
+  PIC::Mesh::cDataBlockAMR *block=startNode->block;
+  long int tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
   PIC::ParticleBuffer::SetV(vFinal,ParticleData);
   PIC::ParticleBuffer::SetX(xFinal,ParticleData);
 
-  PIC::ParticleBuffer::SetNext(cell->tempParticleMovingList,ParticleData);
+  PIC::ParticleBuffer::SetNext(tempFirstCellParticle,ParticleData);
   PIC::ParticleBuffer::SetPrev(-1,ParticleData);
 
-  if (cell->tempParticleMovingList!=-1) PIC::ParticleBuffer::SetPrev(ptr,cell->tempParticleMovingList);
-  cell->tempParticleMovingList=ptr;
+  if (tempFirstCellParticle!=-1) PIC::ParticleBuffer::SetPrev(ptr,tempFirstCellParticle);
+  block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=ptr;
 
 
 
   //=====================  DEBUG =========================
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  cell=startNode->block->GetCenterNode(LocalCellNumber);
+
   if ((cell->Measure<=0.0)&&(startNode->Thread==PIC::Mesh::mesh.ThisThread)) {
     cout << __FILE__<< __LINE__ << endl;
 

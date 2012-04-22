@@ -540,7 +540,7 @@ void ElectricallyChargedDust::Interpolate(PIC::Mesh::cDataCenterNode** Interpola
 
   //interpolate the total electric charged and current densities
 #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
-  double chargeTotal=0.0,currentTotal[3]={0.0,0.0,0.0};
+  double chargeTotal=0.0,currentTotal[3]={0.0,0.0,0.0},TotalMeasure=0.0;
 
   for (i=0;i<nInterpolationCoeficients;i++) {
     SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
@@ -548,18 +548,20 @@ void ElectricallyChargedDust::Interpolate(PIC::Mesh::cDataCenterNode** Interpola
     Measure=InterpolationList[i]->Measure;
     if (Measure<=0.0) exit(__LINE__,__FILE__,"Error: non-positive cell volume is found");
 
+    TotalMeasure+=Measure;
+
     chargeTotal+=*((double*)(SamplingBuffer+Sampling::TotalDustElectricChargeDensitySamplingOffset));
     for (idim=0;idim<3;idim++) currentTotal[idim]+=*(idim+(double*)(SamplingBuffer+Sampling::TotalDustElectricCurrentDensitySamplingOffset));
   }
 
 
 
-  if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) chargeTotal/=PIC::LastSampleLength*Measure;
+  if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) chargeTotal/=PIC::LastSampleLength*TotalMeasure;
   *((double*)(CellNodeSamplingBuffer+Sampling::TotalDustElectricChargeDensitySamplingOffset))=chargeTotal;
 
 
   for (idim=0;idim<3;idim++) {
-    if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) currentTotal[idim]/=PIC::LastSampleLength*Measure;
+    if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) currentTotal[idim]/=PIC::LastSampleLength*TotalMeasure;
     *(idim+(double*)(CellNodeSamplingBuffer+Sampling::TotalDustElectricCurrentDensitySamplingOffset))=currentTotal[idim];
   }
 #endif

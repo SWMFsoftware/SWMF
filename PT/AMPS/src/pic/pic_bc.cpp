@@ -11,7 +11,9 @@
 PIC::BC::fBlockInjectionIndicator PIC::BC::BlockInjectionBCindicatior=NULL;
 PIC::BC::fBlockInjectionBC PIC::BC::userDefinedBoundingBlockInjectionFunction=NULL;
 list<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* > PIC::BC::boundingBoxInjectionBlocksList;
-long int PIC::BC::nInjectedParticles=0;
+long int* PIC::BC::nInjectedParticles=NULL;
+double *PIC::BC::ParticleProductionRate=NULL;
+long int PIC::BC::nTotalInjectedParticles=0;
 
 //====================================================
 //create the list of blocks where the injection BCs are applied
@@ -36,7 +38,7 @@ void PIC::BC::InitBoundingBoxInjectionBlockList(cTreeNodeAMR<PIC::Mesh::cDataBlo
 //the function controls the overall execution of the injection boundary conditions
 void PIC::BC::InjectionBoundaryConditions() {
 
-  nInjectedParticles=0;
+//  nInjectedParticles=0;
 
   //model the particle injection through the face of the bounding box
   list<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* >::iterator end,nodeptr;
@@ -50,7 +52,7 @@ void PIC::BC::InjectionBoundaryConditions() {
     node=*nodeptr;
 
     if (node->Thread==PIC::Mesh::mesh.ThisThread) {
-      nInjectedParticles+=userDefinedBoundingBlockInjectionFunction(node);
+      nTotalInjectedParticles+=userDefinedBoundingBlockInjectionFunction(node);
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
       EndTime=MPI_Wtime();
@@ -104,7 +106,7 @@ void PIC::BC::InjectionBoundaryConditions() {
 #endif
 
           Sphere->ProcessedBCflag=true;
-          if (Sphere->InjectionBoundaryCondition!=NULL) nInjectedParticles+=Sphere->InjectionBoundaryCondition((void*)Sphere);
+          if (Sphere->InjectionBoundaryCondition!=NULL) nTotalInjectedParticles+=Sphere->InjectionBoundaryCondition((void*)Sphere);
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
           node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
@@ -121,7 +123,7 @@ void PIC::BC::InjectionBoundaryConditions() {
 #endif
 
           Circle->ProcessedBCflag=true;
-          if (Circle->InjectionBoundaryCondition!=NULL) nInjectedParticles+=Circle->InjectionBoundaryCondition((void*)Circle);
+          if (Circle->InjectionBoundaryCondition!=NULL) nTotalInjectedParticles+=Circle->InjectionBoundaryCondition((void*)Circle);
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
           node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
@@ -138,7 +140,7 @@ void PIC::BC::InjectionBoundaryConditions() {
 #endif
 
           Sphere1D->ProcessedBCflag=true;
-          if (Sphere1D->InjectionBoundaryCondition!=NULL) nInjectedParticles+=Sphere1D->InjectionBoundaryCondition((void*)Sphere1D);
+          if (Sphere1D->InjectionBoundaryCondition!=NULL) nTotalInjectedParticles+=Sphere1D->InjectionBoundaryCondition((void*)Sphere1D);
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
           node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;

@@ -16,11 +16,12 @@ int PIC::ICES::PlasmaPressureOffset=-1;
 int PIC::ICES::PlasmaNumberDensityOffset=-1;
 int PIC::ICES::PlasmaTemperatureOffset=-1;
 int PIC::ICES::PlasmaBulkVelocityOffset=-1;
+int PIC::ICES::DataStatusOffsetSWMF=-1;
 
 int PIC::ICES::TotalAssociatedDataLength=0,PIC::ICES::AssociatedDataOffset=-1;
 
 //offsets of the data loaded from the DSMC results
-int PIC::ICES::NeutralBullVelocityOffset=-1,PIC::ICES::NeutralNumberDensityOffset=-1,PIC::ICES::NeutralTemperatureOffset=-1;
+int PIC::ICES::NeutralBullVelocityOffset=-1,PIC::ICES::NeutralNumberDensityOffset=-1,PIC::ICES::NeutralTemperatureOffset=-1,PIC::ICES::DataStatusOffsetDSMC=-1;
 
 //pre-processor of the data
 PIC::ICES::fDSMCdataPreProcessor PIC::ICES::DSMCdataPreProcessor=NULL;
@@ -35,6 +36,8 @@ void PIC::ICES::SetLocationICES(const char* loc) {
 void PIC::ICES::Init() {
 
 #if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
+  if (ElectricFieldOffset!=-1) exit(__LINE__,__FILE__,"Error: the model is already initialied");
+
   //init the plasma parameters
   if (ElectricFieldOffset==-1) {
     if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
@@ -83,9 +86,16 @@ void PIC::ICES::Init() {
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=3*sizeof(double);
     TotalAssociatedDataLength+=3*sizeof(double);
   }
+
+  //!!The data center associated data can contain only 'double' type data -> memory reserved for DataStatusOffsetSWMF as for double
+  DataStatusOffsetSWMF=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+  PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
+  TotalAssociatedDataLength+=sizeof(double);
 #endif
 
 #if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
+  if (NeutralBullVelocityOffset!=-1) exit(__LINE__,__FILE__,"Error: the model is already initialied");
+
   if (NeutralBullVelocityOffset==-1) {
     if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
 
@@ -109,6 +119,11 @@ void PIC::ICES::Init() {
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
     TotalAssociatedDataLength+=sizeof(double);
   }
+
+  //!!The data center associated data can contain only 'double' type data -> memory reserved for DataStatusOffsetDSMC as for double
+  DataStatusOffsetDSMC=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+  PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
+  TotalAssociatedDataLength+=sizeof(double);
 #endif
 
 
@@ -129,6 +144,9 @@ void PIC::ICES::Init() {
 //retrive the data file from SWMF
 void PIC::ICES::retriveSWMFdata(const char *DataFile) {
   char cCurrentPath[_MAX_STRING_LENGTH_PIC_],command[_MAX_STRING_LENGTH_PIC_],initDirectory[_MAX_STRING_LENGTH_PIC_];
+
+  //check if the model is initialied
+  if (ElectricFieldOffset==-1) exit(__LINE__,__FILE__,"Error: the model is not initialied");
 
   //create the directory for the trajectory file
   sprintf(command,"rm -f -r temp.ICES.thread=%i",PIC::Mesh::mesh.ThisThread);
@@ -226,6 +244,9 @@ void PIC::ICES::retriveSWMFdata(const char *DataFile) {
 void PIC::ICES::retriveDSMCdata(const char *Case,const char *DataFile,const char *MeshFile) {
   char command[_MAX_STRING_LENGTH_PIC_];
 
+  //check if the model if initialied
+  if (NeutralBullVelocityOffset==-1) exit(__LINE__,__FILE__,"Error: the model is already initialied");
+
   //start ICES
   sprintf(command,"%s/DSMC/ices-dsmc -extractdatapoints -grid %s/Data/%s/DSMC/%s -testpointslist icesCellCenterCoordinates.thread=%i -datafile %s/Data/%s/DSMC/%s -dim 2 -symmetry cylindrical",locationICES,   locationICES,Case,MeshFile, PIC::Mesh::mesh.ThisThread,   locationICES,Case,DataFile);
 
@@ -290,6 +311,9 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cD
   PIC::Mesh::cDataCenterNode *CenterNode;
   char str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_],*endptr;
 
+  //check if the model is initialied
+  if (ElectricFieldOffset==-1) exit(__LINE__,__FILE__,"Error: the model is not initialied");
+
 
 #if DIM == 3
   const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
@@ -323,6 +347,7 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cD
       ices.CutInputStr(str1,str);
 
       status=strtol(str1,&endptr,10);
+      dataSWMF.status=status;
 
       if (status==0) {
         //read the row data
@@ -342,6 +367,7 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cD
         ices.CutInputStr(str1,str);
         dataSWMF.swPressure=strtod(str1,&endptr);
       }
+      else dataSWMF.flush();
 
 
       if (startNode->block!=NULL) {
@@ -374,10 +400,12 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cD
         //save the data on the mesh
         offset=CenterNode->GetAssociatedDataBufferPointer();
 
+/*
         if (status!=0) { //check the status of the reading
           ices.error("the point is not found");
           exit(__LINE__,__FILE__,"Error: the extracted point is not found");
         }
+*/
 
         for (idim=0;idim<3;idim++) {
           *(idim+(double*)(offset+ElectricFieldOffset))=dataSWMF.E[idim];
@@ -388,6 +416,8 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cD
         *(double*)(offset+PlasmaPressureOffset)=dataSWMF.swPressure;
         *(double*)(offset+PlasmaNumberDensityOffset)=dataSWMF.swNumberDensity;
         *(double*)(offset+PlasmaTemperatureOffset)=dataSWMF.swTemperature;
+
+        *(int*)(offset+DataStatusOffsetSWMF)=dataSWMF.status;
       }
     }
   }
@@ -411,6 +441,9 @@ void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) 
 
   PIC::Mesh::cDataCenterNode *CenterNode;
   char str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_],*endptr;
+
+  //check if the model if initialied
+  if (NeutralBullVelocityOffset==-1) exit(__LINE__,__FILE__,"Error: the model is already initialied");
 
 
 #if DIM == 3
@@ -445,6 +478,7 @@ void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) 
       ices.CutInputStr(str1,str);
 
       status=strtol(str1,&endptr,10);
+      dataDSMC.status=status;
 
       if (status==0) {
         //read the row data
@@ -459,6 +493,7 @@ void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) 
         ices.CutInputStr(str1,str);
         dataDSMC.neutralNumberDensity=strtod(str1,&endptr);
       }
+      else dataDSMC.flush();
 
 
       if (startNode->block!=NULL) {
@@ -474,10 +509,12 @@ void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) 
         //save the data on the mesh
         offset=CenterNode->GetAssociatedDataBufferPointer();
 
+/*
         if (status!=0) { //check the status of the reading
           ices.error("the point is not found");
           exit(__LINE__,__FILE__,"Error: the extracted point is not found");
         }
+*/
 
         for (idim=0;idim<3;idim++) {
           *(idim+(double*)(offset+NeutralBullVelocityOffset))=dataDSMC.neutralVel[idim];
@@ -485,6 +522,8 @@ void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) 
 
         *(double*)(offset+NeutralNumberDensityOffset)=dataDSMC.neutralNumberDensity;
         *(double*)(offset+NeutralTemperatureOffset)=dataDSMC.neutralTemperature;
+
+        *(int*)(offset+DataStatusOffsetDSMC)=dataDSMC.status;
       }
     }
   }

@@ -200,8 +200,11 @@ void PIC::Parallel::ExchangeParticleData() {
 
 
   //local copy of the block's cells
-  int cellListLength=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::ThisThread]->block->GetCenterNodeListLength();
-  PIC::Mesh::cDataCenterNode *cellList[cellListLength],*cell;
+//  int cellListLength=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::ThisThread]->block->GetCenterNodeListLength();
+
+  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+
+  //PIC::Mesh::cDataCenterNode *cellList[cellListLength],*cell;
 
   //calculate the number of bytes that will be send
   for (To=0;To<PIC::Mesh::mesh.nTotalThreads;To++) if ((PIC::ThisThread!=To)&&(PIC::Mesh::mesh.ParallelSendRecvMap[PIC::ThisThread][To]==true)) {
@@ -210,15 +213,26 @@ void PIC::Parallel::ExchangeParticleData() {
 
       for (sendNode=PIC::Mesh::mesh.DomainBoundaryLayerNodesList[To];sendNode!=NULL;sendNode=sendNode->nextNodeThisThread) {
         CommunicationInitialed_BLOCK_=false;
-        memcpy(cellList,sendNode->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
+
+
+        //memcpy(cellList,sendNode->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
+
+        memcpy(FirstCellParticleTable,sendNode->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
 
         for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
+
+
+
+          /*
           LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
           cell=cellList[LocalCellNumber];
           Particle=cell->FirstCellParticle;
 
+*/
 //          Particle=sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
 
+          Particle=FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
 
           if  (Particle!=-1) {
             if (CommunicationInitialed_BLOCK_==false) {
@@ -296,6 +310,7 @@ void PIC::Parallel::ExchangeParticleData() {
   for (nproc=0;nproc<nSendProc;nproc++) {
       bool CommunicationInitialed_BLOCK_;
       int iCell,jCell,kCell;
+      bool CellParticleTableModified;
 
       To=sendProcList[nproc];
       offset=0;
@@ -305,17 +320,27 @@ void PIC::Parallel::ExchangeParticleData() {
       //send the nodes' data
       for (sendNode=PIC::Mesh::mesh.DomainBoundaryLayerNodesList[To];sendNode!=NULL;sendNode=sendNode->nextNodeThisThread) {
         CommunicationInitialed_BLOCK_=false;
-        memcpy(cellList,sendNode->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
+
+
+        //memcpy(cellList,sendNode->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
+        memcpy(FirstCellParticleTable,sendNode->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+        CellParticleTableModified=false;
 
         for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
+
+          /*
           LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
           cell=cellList[LocalCellNumber];
           Particle=cell->FirstCellParticle;
+          */
 
 //          Particle=sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
 
+          Particle=FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
 
           if  (Particle!=-1) {
+            LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+
             if (CommunicationInitialed_BLOCK_==false) {
 //              PIC::Mesh::mesh.GetAMRnodeID(nodeid,sendNode);
               nodeid=sendNode->AMRnodeID;
@@ -361,9 +386,13 @@ void PIC::Parallel::ExchangeParticleData() {
               Particle=NextParticle;
             }
 
-            sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle=-1;
+//            sendNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle=-1;
+            FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]=-1;
+            CellParticleTableModified=true;
           }
         }
+
+        if (CellParticleTableModified==true) memcpy(sendNode->block->FirstCellParticleTable,FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
       }
 
       //pipe.send(_END_COMMUNICATION_SIGNAL_);
@@ -388,6 +417,7 @@ void PIC::Parallel::ExchangeParticleData() {
   int DataStillToRecieve=nRecvProc;
   MPI_Status status;
   int flag;
+  int iCell,jCell,kCell;
 
   while (DataStillToRecieve!=0) {
 
@@ -422,14 +452,23 @@ void PIC::Parallel::ExchangeParticleData() {
 
          offset+=sizeof(nodeid);
          recvNode=PIC::Mesh::mesh.findAMRnodeWithID(nodeid);
-         memcpy(cellList,recvNode->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
+
+         memcpy(FirstCellParticleTable,recvNode->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+         //memcpy(cellList,recvNode->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
 
          if (recvNode->block==NULL) exit(__LINE__,__FILE__,"Error: the node is not allocated");
          break;
        case _CENTRAL_NODE_NUMBER_SIGNAL_ :
          //pipe.recv(LocalCellNumber,From);
          LocalCellNumber=*((long int*)(buffer+offset));
-         cell=cellList[LocalCellNumber];
+
+         PIC::Mesh::mesh.convertCenterNodeLocalNumber2LocalCoordinates(LocalCellNumber,iCell,jCell,kCell);
+
+         //         cell=cellList[LocalCellNumber];
+
+
+
+
          offset+=sizeof(long int);
 
          break;
@@ -437,8 +476,11 @@ void PIC::Parallel::ExchangeParticleData() {
          //pipe.recv(buffer,PIC::ParticleBuffer::ParticleDataLength,From);
 
 //         newParticle=PIC::ParticleBuffer::GetNewParticle(recvNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle);
+//         newParticle=PIC::ParticleBuffer::GetNewParticle(cell->FirstCellParticle);
 
-         newParticle=PIC::ParticleBuffer::GetNewParticle(cell->FirstCellParticle);
+         newParticle=PIC::ParticleBuffer::GetNewParticle(FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]);
+
+
          PIC::ParticleBuffer::UnPackParticleData(buffer+offset,newParticle);
          recvParticleCounter++;
 
@@ -451,6 +493,12 @@ void PIC::Parallel::ExchangeParticleData() {
 //       pipe.recv(Signal,From);
        Signal=*((int*)(buffer+offset));
        offset+=sizeof(int);
+
+       //if the signal is the "end of the communication" or "new block" -> save the 'FirstCellParticleTable'
+       if ((Signal==_NEW_BLOCK_ID_SIGNAL_)||(Signal==_END_COMMUNICATION_SIGNAL_)) {
+         memcpy(recvNode->block->FirstCellParticleTable,FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+       }
+
      }
 
       //end the part of the receiver

@@ -185,16 +185,17 @@ bool PIC::ColumnIntegration::FindIntegrationLimits(double *x0,double *l,double& 
 }
 
 //====================================================
-double PIC::ColumnIntegration::GetCoulumnIntegral(double *xStart,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* xStartNode,double *l,double IntegrationPathLength,double (*Integrand)(double*,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)) {
-  double res=0.0;
-  double lNormalized[3],c,x[3],dl=0.0,IntegratedPath=0.0,a0=0.0,a1=0.0;
+void PIC::ColumnIntegration::GetCoulumnIntegral(double *ResultVector,int ResultVectorLength,double *xStart,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* xStartNode,double *l,double IntegrationPathLength,void (*Integrand)(double*,int,double*,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)) {
+  double lNormalized[3],c,x[3],dl=0.0,IntegratedPath=0.0,a0[ResultVectorLength],a1[ResultVectorLength];
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* xNode=xStartNode;
-  int idim;
+  int idim,i;
   MPI_Status status;
   int IntegrationFinished=false;
 
   //the ratio between the step of the integration procedure and the local cell size
   static const double IntegrationStep2CellSizeRatio=0.3;
+
+  for (i=0;i<ResultVectorLength;i++) ResultVector[i]=0.0;
 
   //normalize the pointing vector
   for (c=0.0,idim=0;idim<3;idim++) x[idim]=xStart[idim],c+=pow(l[idim],2);
@@ -206,10 +207,10 @@ double PIC::ColumnIntegration::GetCoulumnIntegral(double *xStart,cTreeNodeAMR<PI
 
   //get the first value of the integrand function
   if (xNode->Thread==PIC::ThisThread) {
-    a0=Integrand(x,xNode);
-    if (PIC::ThisThread!=0) MPI_Send(&a0,1,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+    Integrand(a0,ResultVectorLength,x,xNode);
+    if (PIC::ThisThread!=0) MPI_Send(a0,ResultVectorLength,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
   }
-  else if (PIC::ThisThread==0) MPI_Recv(&a0,1,MPI_DOUBLE,xNode->Thread,0,MPI_COMM_WORLD,&status);
+  else if (PIC::ThisThread==0) MPI_Recv(a0,ResultVectorLength,MPI_DOUBLE,xNode->Thread,0,MPI_COMM_WORLD,&status);
 
 
   while ((IntegratedPath<IntegrationPathLength)&&(IntegrationFinished==false)) {
@@ -229,31 +230,37 @@ double PIC::ColumnIntegration::GetCoulumnIntegral(double *xStart,cTreeNodeAMR<PI
     if (xNode==NULL) break;
 
     if (xNode->Thread==PIC::ThisThread) {
-      a1=Integrand(x,xNode);
-      if (PIC::ThisThread!=0) MPI_Send(&a1,1,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+      Integrand(a1,ResultVectorLength,x,xNode);
+      if (PIC::ThisThread!=0) MPI_Send(a1,ResultVectorLength,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
     }
-    else if (PIC::ThisThread==0) MPI_Recv(&a1,1,MPI_DOUBLE,xNode->Thread,0,MPI_COMM_WORLD,&status);
+    else if (PIC::ThisThread==0) MPI_Recv(a1,ResultVectorLength,MPI_DOUBLE,xNode->Thread,0,MPI_COMM_WORLD,&status);
 
 
-    res+=0.5*(a0+a1)*dl;
-    a0=a1,IntegratedPath+=dl;
+    for (i=0;i<ResultVectorLength;i++) {
+      ResultVector[i]+=0.5*(a0[i]+a1[i])*dl;
+      a0[i]=a1[i];
+    }
 
+    IntegratedPath+=dl;
     MPI_Bcast(&IntegratedPath,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
   }
 
-  MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-  return res;
+  MPI_Bcast(ResultVector,ResultVectorLength,MPI_DOUBLE,0,MPI_COMM_WORLD);
 }
 
 
-double PIC::ColumnIntegration::GetCoulumnIntegral(double *x0,double *l,double (*Integrand)(double*,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)) {
+void PIC::ColumnIntegration::GetCoulumnIntegral(double *ResultVector,int ResultVectorLength,double *x0,double *l,void (*Integrand)(double*,int,double*,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)) {
   double IntegrationPathLength,xStart[3],xFinish[3];
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *xStartNode,*xFinishNode;
 
-  if (FindIntegrationLimits(x0,l,IntegrationPathLength,xStart,xStartNode,xFinish,xFinishNode)==false) return 0.0;
+  if (FindIntegrationLimits(x0,l,IntegrationPathLength,xStart,xStartNode,xFinish,xFinishNode)==false) {
+    for (int i=0;i<ResultVectorLength;i++) ResultVector[i]=0.0;
+
+    return;
+  }
   if ((xStartNode==NULL)||(xFinishNode==NULL)) exit(__LINE__,__FILE__,"Error: mehs node is not determined");
 
-  return GetCoulumnIntegral(xStart,xStartNode,l,IntegrationPathLength,Integrand);
+  return GetCoulumnIntegral(ResultVector,ResultVectorLength,xStart,xStartNode,l,IntegrationPathLength,Integrand);
 }
 
 

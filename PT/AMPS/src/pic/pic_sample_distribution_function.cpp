@@ -99,22 +99,30 @@ long int PIC::DistributionFunctionSample::GetSampleDataOffset(int spec,int Sampl
 }
 //====================================================
 //Sample the distribution function
-void PIC::DistributionFunctionSample::SampleDistributionFnction(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* sampleNode) {
+void PIC::DistributionFunctionSample::SampleDistributionFnction() {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
-  long int ptr,nProbe,spec,i,idim,offset;
+  long int ptr,nProbe,spec,idim,offset;
   double LocalParticleWeight,v2;
 
-
+/*
     for (node=NULL,nProbe=0;nProbe<nSamleLocations;nProbe++) if (sampleNode==SampleNodes[nProbe]) {
       node=sampleNode;
       break;
     }
 
     if (node!=NULL) if (node->block!=NULL) {
+    */
+
+  for (node=SampleNodes[0],nProbe=0;nProbe<nSamleLocations;node=SampleNodes[++nProbe]) if (node->block!=NULL) {
       double *v;
       PIC::ParticleBuffer::byte *ParticleData;
+      int i,j,k;
 
-      ptr=node->block->GetCenterNode(SampleLocalCellNumber[nProbe])->FirstCellParticle;
+      PIC::Mesh::mesh.convertCenterNodeLocalNumber2LocalCoordinates(SampleLocalCellNumber[nProbe],i,j,k);
+      ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+//      if (PIC::Mesh::mesh.fingCellIndex(SampleLocalCellNumber[nProbe],i,j,k,node,false)==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
+//      ptr=node->block->GetCenterNode(SampleLocalCellNumber[nProbe])->FirstCellParticle;
 
       while (ptr!=-1) {
         ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);

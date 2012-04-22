@@ -155,6 +155,37 @@ double PIC::VolumeParticleInjection::GetTotalInjectionRate(int spec) {
   return res;
 }
 
+
+double PIC::VolumeParticleInjection::GetTotalTimeStepInjection(int spec) {
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  double res=0.0,totalInjectionPerSecond=0.0,t;
+
+  if (nRegistratedInjectionProcesses==0) return 0.0;
+
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+    t=GetBlockInjectionRate(spec,node->block);
+
+    res+=t*node->block->GetLocalTimeStep(spec);
+    totalInjectionPerSecond+=t;
+  }
+
+
+  //collect the injection rate from all processors
+  double buffer[PIC::nTotalThreads];
+
+  MPI_Gather(&res,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  if (PIC::ThisThread==0) for (int thread=1;thread<PIC::nTotalThreads;thread++) res+=buffer[thread];
+  MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+  MPI_Gather(&totalInjectionPerSecond,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  if (PIC::ThisThread==0) {
+    for (int thread=1;thread<PIC::nTotalThreads;thread++) totalInjectionPerSecond+=buffer[thread];
+    cout << "The total prodiction rate for specie s=" << spec << " is " << totalInjectionPerSecond << " particles per second (" << __FILE__ << "@" << __LINE__ << ")" << endl;
+  }
+
+  return res;
+}
+
 //inject particles
 long int PIC::VolumeParticleInjection::InjectParticle() {
   int iCell,jCell,kCell,nInjectionProcess;

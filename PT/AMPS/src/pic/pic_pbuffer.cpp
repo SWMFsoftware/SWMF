@@ -227,10 +227,10 @@ unsigned long PIC::ParticleBuffer::GetChecksum() {
 //check particle list -> calculate the number of particles stored in the lists and compare with the total number of particles stored in the particle buffer
 void PIC::ParticleBuffer::CheckParticleList() {
   long int nTotalListParticles=0;
-  int i,j,k,LocalCellNumber;
+  int i,j,k; //,LocalCellNumber;
   long int ParticleList;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-  PIC::Mesh::cDataCenterNode *cell;
+//  PIC::Mesh::cDataCenterNode *cell;
 
 
   //the table of increments for accessing the cells in the block
@@ -238,7 +238,7 @@ void PIC::ParticleBuffer::CheckParticleList() {
   static int centerNodeIndexTable_Glabal[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
   static int nTotalCenterNodes=-1;
 
-  int centerNodeIndexCounter;
+//  int centerNodeIndexCounter;
 
   if (initTableFlag==false) {
     nTotalCenterNodes=0,initTableFlag=true;
@@ -264,6 +264,8 @@ void PIC::ParticleBuffer::CheckParticleList() {
   memcpy(centerNodeIndexTable,centerNodeIndexTable_Glabal,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(int));
 
 
+  //the tables of the first particles in the cells
+  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],tempParticleMovingListTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
 
 
   for (int thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
@@ -278,13 +280,17 @@ void PIC::ParticleBuffer::CheckParticleList() {
 
 
     while (node!=NULL) {
-      /*
+
+      memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+      memcpy(tempParticleMovingListTable,node->block->tempParticleMovingListTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
+
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
          for (j=0;j<_BLOCK_CELLS_Y_;j++) {
             for (i=0;i<_BLOCK_CELLS_X_;i++) {
-              LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-              */
+              /*LocalCellNumber=*/   PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
 
+/*
       memcpy(&block,node->block,sizeof(PIC::Mesh::cDataBlockAMR));
 
       {
@@ -294,11 +300,12 @@ void PIC::ParticleBuffer::CheckParticleList() {
               cell=block.GetCenterNode(LocalCellNumber);
 
 //              cell=node->block->GetCenterNode(LocalCellNumber);
+ */
 
-              if (cell!=NULL) {
-                if (cell->tempParticleMovingList!=-1) exit(__LINE__,__FILE__,"Error: the temp list is not empty");
+//              if (cell!=NULL) {
+                if (tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]!=-1) exit(__LINE__,__FILE__,"Error: the temp list is not empty");
 
-                ParticleList=cell->FirstCellParticle;
+                ParticleList=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
                 while (ParticleList!=-1) {
                   ++nTotalListParticles;
@@ -306,7 +313,7 @@ void PIC::ParticleBuffer::CheckParticleList() {
 
                   if (nTotalListParticles>NAllPart) exit(__LINE__,__FILE__,"Error: the list particles' number exeeds the total number of particles stored in the buffer");
                 }
-              }
+//              }
             }
 
             if (DIM==1) break;

@@ -67,3 +67,22 @@
 //the model of the electrically charged dust
 #define _PIC_MODEL__DUST__MODE_ _PIC_MODEL__DUST__MODE__OFF_
 #define _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__OFF_
+
+//include the user defined headers for the physical models
+#define _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE_ _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE__OFF_
+
+//allow prefetch of memory buffers
+#define _PIC_MEMORY_PREFETCH_MODE_ _PIC_MEMORY_PREFETCH_MODE__ON_
+#define _PIC_MEMORY_PREFETCH__CHACHE_LINE_ 64
+
+//execute user defined MPI data exchange function after the syncronizatino point at the particle exchange routine
+#define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_ _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__OFF_ 
+
+//call a user defined function after outputing of the data file to clean all user's sampling buffers
+#define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__OFF_ 
+
+
+
+
+
+

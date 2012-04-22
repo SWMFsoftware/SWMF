@@ -39,6 +39,7 @@ using namespace std;
 #include "ifileopr.h"
 #include "specfunc.h"
 #include "constants.h"
+#include "rnd.h"
 
 //include the appropriate mesh header
 #if DIM == 3
@@ -582,7 +583,7 @@ namespace PIC {
 	    //parameters that defines the parameters of the associated data used for sampling and code running
       static int totalAssociatedDataLength,LocalParticleVolumeInjectionRateOffset;
 
-      long int FirstCellParticle,tempParticleMovingList;
+//      long int FirstCellParticle,tempParticleMovingList;
 
 	    char *associatedDataPointer;
 
@@ -602,7 +603,7 @@ namespace PIC {
 	    void cleanDataBuffer() {
 	      cBasicCenterNode::cleanDataBuffer();
 
-	      FirstCellParticle=-1,tempParticleMovingList=-1;
+//	      FirstCellParticle=-1,tempParticleMovingList=-1;
 
 	      int i,length=totalAssociatedDataLength/sizeof(double);
 	      double *ptr;
@@ -889,6 +890,7 @@ namespace PIC {
       static int LocalTimeStepOffset,LocalParticleWeightOffset,totalAssociatedDataLength;
       char *associatedDataPointer;
 
+      long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],tempParticleMovingListTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
 
       int AssociatedDataLength() {
         return totalAssociatedDataLength;
@@ -927,6 +929,10 @@ namespace PIC {
 
         //clean the base class' data
         cBasicBlockAMR<cDataCornerNode,cDataCenterNode>cleanDataBuffer();
+
+        //clean the Particle Tables
+        length=_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_;
+        for (i=0;i<length;i++) FirstCellParticleTable[i]=-1,tempParticleMovingListTable[i]=-1;
       }
 
 
@@ -1076,6 +1082,7 @@ namespace PIC {
     //paericle weight injection rates
     void InitTotalInjectionRate();
     double GetTotalInjectionRate(int);
+    double GetTotalTimeStepInjection(int spec);
     double GetBlockInjectionRate(int spec,PIC::Mesh::cDataBlockAMR *block);
     double GetCellInjectionRate(int spec,PIC::Mesh::cDataCenterNode *cell);
   }
@@ -1086,6 +1093,9 @@ namespace PIC {
 
     //the minimum number of iteration for output of the datafile
     extern int minIterationNumberForDataOutput;
+
+    //'SaveOutputDataFile' determines weather the data file will be created for a particular species (output of data files can be suppress for particular species, such as external, dust....)
+    extern bool *SaveOutputDataFile;
 
     namespace ExternalSamplingLocalVariables {
 
@@ -1122,36 +1132,6 @@ namespace PIC {
     }
 
 
-    namespace SampleVelocityDistribution {
-
-      struct cVelocityVector {
-        double v[3];
-      };
-
-      struct cSamplePositionVector {
-        double x[DIM];
-      };
-
-      extern cVelocityVector *minSampledVelocity,*maxSampledVelocity,*dVel; //the sampling velocity range and size of the "velocity bin" for each species
-      extern int nVelocitySamplingIntervals; //the total number of "velocity bins" sampled in the distribution function
-      extern vector< pair<PIC::Mesh::cDataBlockAMR*,int> > SamplingPointsList; //the list of the nodes and cells' numbers where the distribution functiho will be sampled
-      extern vector<cSamplePositionVector> SamplingPointsPositions; //the list of the physical locations where the distribution function will be sampled
-
-      //init the internal buffers of the model
-      void Init();
-
-      //add new sampling point
-      void AddSamplingPoint(double *x);
-
-      //set up the velocity distribution limits
-      void SetSamplingLimits(cVelocityVector *minvel,cVelocityVector *maxvel,int nSamplingIntervals);
-
-      //sample the distribution
-      void Sampling();
-
-      //print output file and clear the sampling buffers
-      void PrintOutputFile(char *fname);
-    }
 
     void Sampling();
 
@@ -1281,7 +1261,7 @@ namespace PIC {
 
     void Init(double ProbeLocations[][DIM],int nProbeLocations);
 
-    void SampleDistributionFnction(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* sampleNode);
+    void SampleDistributionFnction();
     void flushSamplingBuffers();
 
     void printDistributionFunction(char *fname,int spec);
@@ -1498,6 +1478,41 @@ namespace PIC {
     }
   }
 
+  namespace ColumnIntegration {
+
+    //define 3 nodes on the surface of a bounding plane; index value: 0 -> xmin component of the coordinate, 1 -> xmax component of the coordinate
+    static const int x0PlaneNodeIndex[6][3]={ {0,0,0},{1,0,0},       {0,0,0},{0,1,0},           {0,0,0},{0,0,1}};
+    static const int x1PlaneNodeIndex[6][3]={ {0,1,0},{1,1,0},       {1,0,0},{1,1,0},           {1,0,0},{1,0,1}};
+    static const int x2PlaneNodeIndex[6][3]={ {0,0,1},{1,0,1},       {0,0,1},{0,1,1},           {0,1,0},{0,1,1}};
+    static const int PlaneNormal[6][3]=     { {1,0,0},{1,0,0},       {0,1,0},{0,1,0},           {0,0,1},{0,0,1}};
+
+    struct cBoundingBoxFace {
+      double x[3];
+      double e0[3];
+      double e1[3];
+      double Normal[3];
+      double e0Length;
+      double e1Length;
+    };
+
+    extern cBoundingBoxFace BoundingBoxFace[6];
+    extern bool InitializedFlag;
+
+    //control initialization of the model
+    extern bool ModelInitFlag;
+
+    void Init();
+    bool FindIntegrationLimits(double *x0,double *l,double& IntegrationPathLength,double *xStart,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &xStartNode,double *xFinish,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &xFinishNode);
+
+//    //get a single integrated value
+//    double GetCoulumnIntegral(double *xStart,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* xStartNode,double *l,double IntegrationPathLength,double (*Integrand)(double*,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*));
+//    double GetCoulumnIntegral(double *x0,double *l,double (*Integrand)(double*,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*));
+
+    //get values for multiple integrals
+    void GetCoulumnIntegral(double *ResultVector,int ResultVectorLength,double *xStart,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* xStartNode,double *l,double IntegrationPathLength,void (*Integrand)(double*,int,double*,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*));
+    void GetCoulumnIntegral(double *ResultVector,int ResultVectorLength,double *x0,double *l,void (*Integrand)(double*,int,double*,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*));
+  }
+
   namespace ICES {
 
      extern char locationICES[_MAX_STRING_LENGTH_PIC_]; //location of the data and the dace cases
@@ -1509,10 +1524,10 @@ namespace PIC {
      extern int TotalAssociatedDataLength,AssociatedDataOffset;
 
      //the offsets for the plasma parameters loaded with ICES
-     extern int ElectricFieldOffset,MagneticFieldOffset,PlasmaPressureOffset,PlasmaNumberDensityOffset,PlasmaTemperatureOffset,PlasmaBulkVelocityOffset;
+     extern int ElectricFieldOffset,MagneticFieldOffset,PlasmaPressureOffset,PlasmaNumberDensityOffset,PlasmaTemperatureOffset,PlasmaBulkVelocityOffset,DataStatusOffsetSWMF;
 
      //the offsets for parameters loaded from the DSMC model
-     extern int NeutralBullVelocityOffset,NeutralNumberDensityOffset,NeutralTemperatureOffset;
+     extern int NeutralBullVelocityOffset,NeutralNumberDensityOffset,NeutralTemperatureOffset,DataStatusOffsetDSMC;
 
      //calcualte the total number of cells in the mesh
      long int getTotalCellNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
@@ -1522,12 +1537,29 @@ namespace PIC {
 
 
      //retrive the SWMF data file
-     struct cDataNodeSWMF {
+     #define _PIC_ICES__STATUS_OK_   0
+
+     class cDataNodeSWMF {
+     public:
        double swNumberDensity,swTemperature,swPressure,E[3],B[3],swVel[3];
+       int status;
+
+       void flush() {
+         swNumberDensity=0.0,swTemperature=0.0,swPressure=0.0;
+         for (int i=0;i<3;i++) E[i]=0.0,B[i]=0.0,swVel[i]=0.0;
+       }
      };
 
-     struct cDataNodeDSMC {
+     class cDataNodeDSMC {
+     public:
        double neutralNumberDensity,neutralTemperature,neutralVel[3];
+       int status;
+
+       void flush() {
+         neutralNumberDensity=0.0,neutralTemperature=0.0;
+
+         for (int i=0;i<3;i++) neutralVel[i]=0.0;
+       }
      };
 
      void retriveSWMFdata(const char *DataFile);
@@ -1695,8 +1727,10 @@ namespace PIC {
     typedef long int (*fBlockInjectionBC)(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
     extern fBlockInjectionBC userDefinedBoundingBlockInjectionFunction;
 
-    //the numbe of injected particles
-    extern long int nInjectedParticles;
+    //the number of injected particles and injection rate
+    extern long int nTotalInjectedParticles;
+    extern long int *nInjectedParticles;
+    extern double *ParticleProductionRate;
 
     void InitBoundingBoxInjectionBlockList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=PIC::Mesh::mesh.rootTree);
 
@@ -1753,12 +1787,35 @@ namespace PIC {
 
         cInternalBoundaryConditionsDescriptor RegisterInternalSphere();
 //        cSurfaceDataSphere* GetSphereSurfaceData(cInternalBoundaryConditionsDescriptor);
-        double* GetCompletedSamplingBuffer(cInternalBoundaryConditionsDescriptor);
-        double* GetCollectingSamplingBuffer(cInternalBoundaryConditionsDescriptor);
+
+
+
+        inline double* GetCompletedSamplingBuffer(cInternalSphericalData* Sphere) {return Sphere->SamplingBuffer+completedCellSampleDataPointerOffset;}
+        inline double* GetCompletedSamplingBuffer(cInternalBoundaryConditionsDescriptor Descriptor) {return GetCompletedSamplingBuffer((cInternalSphericalData*)Descriptor.BoundaryElement);}
+
+        inline double* GetCollectingSamplingBuffer(cInternalSphericalData* Sphere) {return Sphere->SamplingBuffer+collectingCellSampleDataPointerOffset;}
+        inline double* GetCollectingSamplingBuffer(cInternalBoundaryConditionsDescriptor Descriptor) {return GetCollectingSamplingBuffer((cInternalSphericalData*)Descriptor.BoundaryElement);}
+
+
+        //====================================================
+        //the offset of sampling data for a particular specie
+        inline int completeSpecieSamplingDataOffset(int spec,long int SurfaceElement) {
+          return 2*SurfaceElement*TotalSampleSetLength+completedCellSampleDataPointerOffset+SpeciesSampleDataOffset[spec];
+        }
+
+        inline int collectingSpecieSamplingDataOffset(int spec,long int SurfaceElement) {
+          return 2*SurfaceElement*TotalSampleSetLength+collectingCellSampleDataPointerOffset+SpeciesSampleDataOffset[spec];
+        }
+
+
+
+
+//        double* GetCompletedSamplingBuffer(cInternalBoundaryConditionsDescriptor);
+//        double* GetCollectingSamplingBuffer(cInternalBoundaryConditionsDescriptor);
 
         //the offset of the sampling data for a particular specie
-        int completeSpecieSamplingDataOffset(int spec,long int SurfaceElement);
-        int collectingSpecieSamplingDataOffset(int spec,long int SurfaceElement);
+//        int completeSpecieSamplingDataOffset(int spec,long int SurfaceElement);
+//        int collectingSpecieSamplingDataOffset(int spec,long int SurfaceElement);
         int SurfaceElementSamplingSetLength();
         void switchSamplingBuffers();
 
@@ -1957,8 +2014,12 @@ namespace PIC {
 #endif
 
 //inlude headers for the user defined models
-#ifdef _PIC__USER_DEFINED__USER_PHYSICAL_MODEL_LIST_
-#include _PIC__USER_DEFINED__USER_PHYSICAL_MODEL_LIST_
+#if _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE_ == _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE__ON_
+#include "UserDefinition.PIC.PhysicalModelHeaderList.h"
+#elif _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE_ == _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE__OFF_
+//do nothing
+#else
+!!!! ERROR:  The option is unknown !!!!!!
 #endif
 
 

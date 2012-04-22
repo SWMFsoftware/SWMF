@@ -380,7 +380,7 @@ void PIC::Mesh::cDataBlockAMR::sendBoundaryLayerBlockData(CMPI_channel *pipe) {
 void PIC::Mesh::cDataBlockAMR::sendMoveBlockAnotherProcessor(CMPI_channel *pipe) {
   int iCell,jCell,kCell;
   long int LocalCellNumber;
-  PIC::Mesh::cDataCenterNode *cell=NULL;
+//  PIC::Mesh::cDataCenterNode *cell=NULL;
 
   sendBoundaryLayerBlockData(pipe);
 
@@ -403,25 +403,29 @@ void PIC::Mesh::cDataBlockAMR::sendMoveBlockAnotherProcessor(CMPI_channel *pipe)
   const int _END_COMMUNICATION_SIGNAL_=  3;
 
   for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
-    LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
-    cell=GetCenterNode(LocalCellNumber);
-    Particle=cell->FirstCellParticle;
+//    LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+//    cell=GetCenterNode(LocalCellNumber);
+
+    //    Particle=cell->FirstCellParticle;
+    Particle=FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
 
     if  (Particle!=-1) {
+      LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
       pipe->send(_CENTRAL_NODE_NUMBER_SIGNAL_);
       pipe->send(LocalCellNumber);
 
       while (Particle!=-1) {
         PIC::ParticleBuffer::PackParticleData(buffer,Particle);
         pipe->send(_NEW_PARTICLE_SIGNAL_);
-         pipe->send(buffer,PIC::ParticleBuffer::ParticleDataLength);
+        pipe->send(buffer,PIC::ParticleBuffer::ParticleDataLength);
 
         NextParticle=PIC::ParticleBuffer::GetNext(Particle);
         PIC::ParticleBuffer::DeleteParticle(Particle);
         Particle=NextParticle;
       }
 
-      cell->FirstCellParticle=-1;
+     // cell->FirstCellParticle=-1;
+      FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]=-1;
     }
   }
 
@@ -457,14 +461,16 @@ void PIC::Mesh::cDataBlockAMR::recvBoundaryLayerBlockData(CMPI_channel *pipe,int
 
 //recieve all blocks' data when the blocks is moved to another processo
 void PIC::Mesh::cDataBlockAMR::recvMoveBlockAnotherProcessor(CMPI_channel *pipe,int From) {
-  long int LocalCellNumber;
-  PIC::Mesh::cDataCenterNode *cell=NULL;
+  long int LocalCellNumber=-1;
+//  PIC::Mesh::cDataCenterNode *cell=NULL;
+  int i,j,k;
 
   recvBoundaryLayerBlockData(pipe,From);
 
   long int Particle;
+  char buffer[PIC::ParticleBuffer::ParticleDataLength];
 
-  char *buffer=new char[PIC::ParticleBuffer::ParticleDataLength];
+//  char *buffer=new char[PIC::ParticleBuffer::ParticleDataLength];
 
   int Signal;
   const int _CENTRAL_NODE_NUMBER_SIGNAL_=1;
@@ -473,18 +479,22 @@ void PIC::Mesh::cDataBlockAMR::recvMoveBlockAnotherProcessor(CMPI_channel *pipe,
 
 
   pipe->recv(Signal,From);
-  LocalCellNumber=-1,cell=NULL;
+  //LocalCellNumber=-1,cell=NULL;
 
   while (Signal!=_END_COMMUNICATION_SIGNAL_) {
     switch (Signal) {
     case _CENTRAL_NODE_NUMBER_SIGNAL_ :
       pipe->recv(LocalCellNumber,From);
-      cell=GetCenterNode(LocalCellNumber);
+//      cell=GetCenterNode(LocalCellNumber);
+
+      PIC::Mesh::mesh.convertCenterNodeLocalNumber2LocalCoordinates(LocalCellNumber,i,j,k);
       break;
     case _NEW_PARTICLE_SIGNAL_ :
       pipe->recv(buffer,PIC::ParticleBuffer::ParticleDataLength,From);
 
-      Particle=PIC::ParticleBuffer::GetNewParticle(cell->FirstCellParticle);
+//      Particle=PIC::ParticleBuffer::GetNewParticle(cell->FirstCellParticle);
+
+      Particle=PIC::ParticleBuffer::GetNewParticle(FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
       PIC::ParticleBuffer::UnPackParticleData(buffer,Particle);
       break;
     default :
@@ -494,6 +504,6 @@ void PIC::Mesh::cDataBlockAMR::recvMoveBlockAnotherProcessor(CMPI_channel *pipe,
     pipe->recv(Signal,From);
   }
 
-  delete [] buffer;
+//  delete [] buffer;
 }
 

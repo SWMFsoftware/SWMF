@@ -314,7 +314,7 @@ void PIC::Sampling::Sampling() {
 
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
-  PIC::ParticleBuffer::byte *ParticleData;
+  PIC::ParticleBuffer::byte *ParticleData,*ParticleDataNext;
   PIC::Mesh::cDataCenterNode *cell;
   PIC::Mesh::cDataBlockAMR *block;
   char *SamplingData;
@@ -355,6 +355,7 @@ void PIC::Sampling::Sampling() {
 #endif
 
 
+  /*
   //the table of increments for accessing the cells in the block
   static bool initTableFlag=false;
   static int centerNodeIndex[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
@@ -377,13 +378,19 @@ void PIC::Sampling::Sampling() {
       if ((DIM==1)||(DIM==2)) break;
     }
   }
+  */
+
+
+  //the table of cells' particles
+  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+
 
 #if _PIC_SAMPLE_PARTICLE_DATA_MODE_ == _PIC_SAMPLE_PARTICLE_DATA_MODE__BETWEEN_ITERATIONS_
   //go through the 'local nodes'
   while (node!=NULL) {
     block=node->block;
 
-
+    memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
 
 
@@ -401,14 +408,27 @@ void PIC::Sampling::Sampling() {
 
 
 
-
+/*
     {
       {
         for (centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;centerNodeIndexCounter++) {
-            LocalCellNumber=centerNodeIndex[centerNodeIndexCounter];
-            cell=block->GetCenterNode(LocalCellNumber);
-            ptr=cell->FirstCellParticle;
+//            LocalCellNumber=centerNodeIndex[centerNodeIndexCounter];
 
+*/
+
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+      for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
+        for (i=0;i<_BLOCK_CELLS_X_;i++) {
+
+
+
+
+
+
+
+//            cell=block->GetCenterNode(LocalCellNumber);
+//            ptr=cell->FirstCellParticle;
+ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
             //===================    DEBUG ==============================
 
 //            if (cell->Temp_ID==56119) {
@@ -420,11 +440,15 @@ void PIC::Sampling::Sampling() {
 
             if (ptr!=-1) {
 
+            LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+            cell=block->GetCenterNode(LocalCellNumber);
+
             SamplingData=cell->GetAssociatedDataBufferPointer()+/*PIC::Mesh::*/collectingCellSampleDataPointerOffset;
             memcpy((void*)tempSamplingBuffer,(void*)SamplingData,/*PIC::Mesh::*/sampleSetDataLength);
 
-            ptr=cell->FirstCellParticle;
+//            ptr=cell->FirstCellParticle;
             ptrNext=ptr;
+            ParticleDataNext=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
 
             //===================    DEBUG ==============================
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
@@ -437,6 +461,7 @@ void PIC::Sampling::Sampling() {
 
             while (ptrNext!=-1) {
               ptr=ptrNext;
+              ParticleData=ParticleDataNext;
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
               TreeNodeTotalParticleNumber++;
@@ -445,9 +470,27 @@ void PIC::Sampling::Sampling() {
 
 
 
-              ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+//              ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
 
               memcpy((void*)tempParticleData,(void*)ParticleData,/*PIC::ParticleBuffer::*/ParticleDataLength);
+
+              ptrNext=PIC::ParticleBuffer::GetNext((PIC::ParticleBuffer::byte*)tempParticleData);  //ParticleData);
+
+              //================ Prefetch particle data
+              if (ptrNext!=-1) {
+                ParticleDataNext=PIC::ParticleBuffer::GetParticleDataPointer(ptrNext);
+
+#if _PIC_MEMORY_PREFETCH_MODE_ == _PIC_MEMORY_PREFETCH_MODE__ON_
+                int iPrefetch,iPrefetchMax=1+(int)(ParticleDataLength/_PIC_MEMORY_PREFETCH__CHACHE_LINE_);
+
+                for (iPrefetch=0;iPrefetch<iPrefetchMax;iPrefetch++) {
+                  _mm_prefetch(iPrefetch*_PIC_MEMORY_PREFETCH__CHACHE_LINE_+(char*)ptrNext,_MM_HINT_T1);
+                }
+#endif
+              }
+
+
+              //================ End prefetch particle data
 
 
               Speed2=0.0;
@@ -455,7 +498,7 @@ void PIC::Sampling::Sampling() {
               s=PIC::ParticleBuffer::GetI((PIC::ParticleBuffer::byte*)tempParticleData); ///ParticleData);
               v=PIC::ParticleBuffer::GetV((PIC::ParticleBuffer::byte*)tempParticleData); ///ParticleData);
 
-              ptrNext=PIC::ParticleBuffer::GetNext((PIC::ParticleBuffer::byte*)tempParticleData);  //ParticleData);
+
 
 
               LocalParticleWeight=block->GetLocalParticleWeight(s);
@@ -902,7 +945,7 @@ void PIC::Init_BeforeParser() {
     //function 80000006h return the size of the cache line in register ecx [bits 7:0]; ecx [bits 31:16] L2 cache size
 
     __asm {
-      mov eax,80000006h
+      mov eax,0x80000006
       cpuid
 
       mov eax,ecx
@@ -915,7 +958,7 @@ void PIC::Init_BeforeParser() {
     }
 
     if (ThisThread==0) {
-      printf("CPU Manifacturer: INTEL\nCash line size is %i bytes, L2 cache size is %i KB\n",w0,w1);
+      printf("CPU Manifacturer: INTEL\nCash line size is %i bytes, L2 cache size is %i KB\n",(int)w0,(int)w1);
     }
 
   }

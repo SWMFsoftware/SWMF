@@ -157,6 +157,7 @@ PIC::BC::InternalBoundary::Sphere::cSurfaceDataSphere* PIC::BC::InternalBoundary
 }
 */
 
+/*
 double* PIC::BC::InternalBoundary::Sphere::GetCompletedSamplingBuffer(cInternalBoundaryConditionsDescriptor Descriptor) {
 //  return GetSphereSurfaceData(Descriptor)->SamplingBuffer+completedCellSampleDataPointerOffset;
 
@@ -180,6 +181,9 @@ int PIC::BC::InternalBoundary::Sphere::completeSpecieSamplingDataOffset(int spec
 int PIC::BC::InternalBoundary::Sphere::collectingSpecieSamplingDataOffset(int spec,long int SurfaceElement) {
   return 2*SurfaceElement*TotalSampleSetLength+collectingCellSampleDataPointerOffset+SpeciesSampleDataOffset[spec];
 }
+
+
+*/
 
 int PIC::BC::InternalBoundary::Sphere::SurfaceElementSamplingSetLength() {
   return TotalSampleSetLength;

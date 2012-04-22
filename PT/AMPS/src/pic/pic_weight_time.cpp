@@ -84,7 +84,7 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
 
     //calcualte the total volume production rate
 #if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
-    if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) ParticleInjection+=PIC::VolumeParticleInjection::GetTotalInjectionRate(spec);
+    if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) ParticleInjection+=PIC::VolumeParticleInjection::GetTotalTimeStepInjection(spec);
 #endif
 
     //calculate the particle weight
@@ -252,6 +252,23 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
         }
       }
 
+      //in the case of global time step, determine the minimum time step
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+      for (s=0;s<PIC::nTotalSpecies;s++) {
+        double t;
+
+        t=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread]->block->GetLocalTimeStep(s);
+
+        MPI_Gather(&t,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+        if (PIC::ThisThread==0) {
+          for (thread=1;thread<PIC::nTotalThreads;thread++) if (buffer[thread]<t) t=buffer[thread];
+        }
+
+        MPI_Bcast(&t,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread]->block->SetLocalTimeStep(t,s);
+      }
+#endif
 
     }
   }
