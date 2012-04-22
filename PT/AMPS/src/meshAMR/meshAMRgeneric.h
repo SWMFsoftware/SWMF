@@ -831,7 +831,7 @@ public:
 
   inline cCornerNode **GetCornerNodeList() {return cornerNodes;}
 
-  inline int GetCornerNodeListLength() {
+  inline static int GetCornerNodeListLength() {
     #if _MESH_DIMENSION_ == 1
     return 1+_TOTAL_BLOCK_CELLS_X_;
     #elif _MESH_DIMENSION_ == 2
@@ -841,7 +841,7 @@ public:
     #endif
   }
 
-  inline long int getCornerNodeLocalNumber(int i,int j,int k) {
+  inline static long int getCornerNodeLocalNumber(int i,int j,int k) {
     long int nd;
 
     #if _MESH_DIMENSION_ == 1
@@ -855,7 +855,7 @@ public:
     return nd;
   }
 
-  inline long int getCenterNodeLocalNumber(int i,int j,int k) {
+  inline static long int getCenterNodeLocalNumber(int i,int j,int k) {
     long int nd;
 
     #if _MESH_DIMENSION_ == 1
@@ -1130,7 +1130,7 @@ public:
     return nd;
   }
 
-  inline long int getCenterNodeLocalNumber(int i,int j,int k) {
+  inline static long int getCenterNodeLocalNumber(int i,int j,int k) {
     long int nd;
 
     #if _MESH_DIMENSION_ == 1
@@ -1142,6 +1142,18 @@ public:
     #endif
 
     return nd;
+  }
+
+  inline static void convertCenterNodeLocalNumber2LocalCoordinates(int LocalNumber,int &i,int &j, int &k) {
+    k=LocalNumber/(_TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_);
+    LocalNumber-=k*_TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_;
+
+    j=LocalNumber/_TOTAL_BLOCK_CELLS_X_;
+    i=LocalNumber-j*_TOTAL_BLOCK_CELLS_X_;
+
+    i-=_GHOST_CELLS_X_;
+    j-=_GHOST_CELLS_Y_;
+    k-=_GHOST_CELLS_Z_;
   }
 
   long int findCornerNodeIndex(double *x,int &i,int &j,int &k,cTreeNodeAMR<cBlockAMR>* startNode) { 
@@ -2829,12 +2841,25 @@ public:
     Nominator=0.0,Denominator=1.0;
   }
 
-  void Simplify() {
-    long int r;
+  inline void Simplify() {
+    int n,t;
 
-    r=Nominator/Denominator;
+    static const int nPrimeNumberList=168;
+    static const int PrimeNumberList[nPrimeNumberList]={2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139,
+        149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347,
+        349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569,
+        571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797,
+        809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997};
 
-    if (Nominator==r*Denominator) Nominator=r,Denominator=1;
+
+    //check if the fraction can be simplified
+    for (n=0;n<nPrimeNumberList;n++) {
+      t=PrimeNumberList[n];
+
+      while ((Nominator%t==0)&&(Denominator%t==0)) Nominator/=t,Denominator/=t;
+
+      if ((Nominator<t)||(Denominator<t)) break;
+    }
   }
 
 
@@ -2845,11 +2870,7 @@ public:
     temp.Nominator=Nominator*op2.Denominator+op2.Nominator*Denominator;
     temp.Denominator=Denominator*op2.Denominator;
 
-    if (temp.Nominator%temp.Denominator==0) {
-      temp.Nominator/=temp.Denominator;
-      temp.Denominator=1;
-    }
-
+    temp.Simplify();
     return temp;
   }
 
@@ -2857,12 +2878,9 @@ public:
     cFraction temp;
 
     temp.Nominator=Nominator+op2*Denominator;
+    temp.Denominator=Denominator;
 
-    if (temp.Nominator%temp.Denominator==0) {
-      temp.Nominator/=temp.Denominator;
-      temp.Denominator=1;
-    }
-
+    temp.Simplify();
     return temp;
   }
 
@@ -2872,11 +2890,7 @@ public:
     temp.Nominator=Nominator*op2.Denominator-op2.Nominator*Denominator;
     temp.Denominator=Denominator*op2.Denominator;
 
-    if (temp.Nominator%temp.Denominator==0) {
-      temp.Nominator/=temp.Denominator;
-      temp.Denominator=1;
-    }
-
+    temp.Simplify();
     return temp;
   }
 
@@ -2884,18 +2898,21 @@ public:
     Nominator=op2.Nominator;
     Denominator=op2.Denominator;
 
+    Simplify();
     return *this;
   }
 
   cFraction operator += (int op2) {
     Nominator+=op2*Denominator;
 
+    Simplify();
     return *this;
   }
 
   cFraction operator -= (int op2) {
     Nominator-=op2*Denominator;
 
+    Simplify();
     return *this;
   }
 
@@ -2903,6 +2920,7 @@ public:
     Nominator=op2;
     Denominator=1;
 
+    Simplify();
     return *this;
   }
 
@@ -2911,6 +2929,8 @@ public:
 
     temp.Nominator=Nominator*op;
     temp.Denominator=Denominator;
+
+    temp.Simplify();
     return temp;
   }
 
@@ -2920,11 +2940,7 @@ public:
     temp.Nominator=Nominator;
     temp.Denominator=Denominator*op;
 
-    if (temp.Nominator%temp.Denominator==0) {
-      temp.Nominator/=temp.Denominator;
-      temp.Denominator=1;
-    }
-
+    temp.Simplify();
     return temp;
   }
 
@@ -2936,6 +2952,7 @@ public:
       Denominator=1;
     }
 
+    Simplify();
     return *this;
   }
 
@@ -8750,7 +8767,7 @@ if (TmpAllocationCounter==2437) {
           minLoadThread=t;
         }
 
-        if ((maxLoadThread<0.0)||(maxLoadThread<nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure)) {
+        if ((maxLoadMeasure<0.0)||(maxLoadMeasure<nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure)) {
           maxLoadMeasure=nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure;
           maxLoadThread=t;
         }

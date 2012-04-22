@@ -12,6 +12,7 @@
 
 #include "meshAMRdef.h"
 #include "mpichannel.h"
+#include "rnd.h"
 
 
 //=======================================================================
@@ -73,15 +74,23 @@ public:
 #endif
   {
     cleanDataBuffer();
+    SetGeneralSurfaceMeshParameters(nZenithSurfaceElements,nAzimuthalSurfaceElements);
   }
 
 
-  /*
-  void SetGeneralSurfaceMeshParameters(long int nZenithElements,long int nAzimuthalElements) {
+
+  static void SetGeneralSurfaceMeshParameters(long int nZenithElements,long int nAzimuthalElements) {
     nZenithSurfaceElements=nZenithElements,nAzimuthalSurfaceElements=nAzimuthalElements;
+
     dAzimuthalAngle=2.0*Pi/nAzimuthalSurfaceElements;
+
+    #if  _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_COSINE_DISTRIBUTION_
+    dCosZenithAngle=2.0/nZenithSurfaceElements;
+    #elif _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_UNIFORM_DISTRIBUTION_
+    dZenithAngle=Pi/nZenithSurfaceElements;
+    #endif
   }
-  */
+
 
   /*
   void SetSurfaceDataPointer(void *DataPointer) {SurfaceData=DataPointer;}
@@ -148,11 +157,8 @@ public:
   } 
 
 
-  inline void GetSurfaceElementNormal(double *norm,int SurfaceElementNumber) {
-    int nZenithElement,nAzimuthalElement;
+  inline void GetSurfaceElementNormal(double *norm,int nZenithElement,int nAzimuthalElement) {
     double ZenithAngle,AzimuthalAngle;
-
-    GetSurfaceElementIndex(nZenithElement,nAzimuthalElement,SurfaceElementNumber);
 
     AzimuthalAngle=(nAzimuthalElement+0.5)*dAzimuthalAngle;
 
@@ -169,11 +175,60 @@ public:
     norm[2]=cos(ZenithAngle);
   }
 
-  inline void GetSurfaceElementMiddlePoint(double *x,int SurfaceElementNumber) {
+  inline void GetSurfaceElementNormal(double *norm,int SurfaceElementNumber) {
+    int nZenithElement,nAzimuthalElement;
+
+    GetSurfaceElementIndex(nZenithElement,nAzimuthalElement,SurfaceElementNumber);
+    GetSurfaceElementNormal(norm,nZenithElement,nAzimuthalElement);
+  }
+
+
+
+  inline void GetSurfaceElementMiddlePoint(double *x,int nZenithElement,int nAzimuthalElement) {
     int idim;
 
-    GetSurfaceElementNormal(x,SurfaceElementNumber);
+    GetSurfaceElementNormal(x,nZenithElement,nAzimuthalElement);
     for (idim=0;idim<3;idim++) x[idim]=x[idim]*Radius+OriginPosition[idim];
+  }
+
+
+  inline void GetSurfaceElementMiddlePoint(double *x,int SurfaceElementNumber) {
+    int nZenithElement,nAzimuthalElement;
+
+    GetSurfaceElementIndex(nZenithElement,nAzimuthalElement,SurfaceElementNumber);
+    GetSurfaceElementMiddlePoint(x,nZenithElement,nAzimuthalElement);
+  }
+
+  inline void GetSurfaceElementRandomDirection(double *x,int nZenithElement,int nAzimuthalElement) {
+    double ZenithAngle,AzimuthalAngle;
+    double c0,c1;
+
+
+    AzimuthalAngle=(nAzimuthalElement+rnd())*dAzimuthalAngle;
+
+#if _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_COSINE_DISTRIBUTION_
+    c0=1.0-dCosZenithAngle*nZenithElement;
+    c1=1.0-dCosZenithAngle*(nZenithElement+1);
+#elif _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_UNIFORM_DISTRIBUTION_
+    c0=cos(nZenithElement*dZenithAngle);
+    c1=cos((1+nZenithElement)*dZenithAngle);
+#else
+    exit(__LINE__,__FILE__,"Error: wrong option");
+#endif
+
+    ZenithAngle=acos(c0+rnd()*(c1-c0));
+
+    x[0]=sin(ZenithAngle)*cos(AzimuthalAngle);
+    x[1]=sin(ZenithAngle)*sin(AzimuthalAngle);
+    x[2]=cos(ZenithAngle);
+  }
+
+  inline void GetSurfaceElementRandomPoint(double *x,int nZenithElement,int nAzimuthalElement) {
+    GetSurfaceElementRandomDirection(x,nZenithElement,nAzimuthalElement);
+
+    x[0]=Radius*x[0]+OriginPosition[0];
+    x[1]=Radius*x[1]+OriginPosition[1];
+    x[2]=Radius*x[2]+OriginPosition[2];
   }
 
   inline void GetSurfaceElementProjectionIndex(double *x,long int &nZenithElement,long int &nAzimuthalElement) {
