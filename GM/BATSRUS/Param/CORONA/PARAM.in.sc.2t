@@ -121,7 +121,7 @@ spitzer			TypeHeatConduction
 #HEATFLUXREGION
 T			UseHeatFluxRegion
 5.0			rCollisional
-10.0			rCollisionless
+8.0			rCollisionless
 
 #SCHEME
 2			nOrder (1 or 2)

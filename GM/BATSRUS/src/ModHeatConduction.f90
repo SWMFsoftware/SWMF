@@ -542,10 +542,9 @@ contains
     r = sqrt(sum(x_D**2))
     if(r <= rCollisional)then
        heat_cond_factor = 1.0
-    elseif(r >= rCollisionless)then
-       heat_cond_factor = 0.0
     else
-       heat_cond_factor = (rCollisionless - r)/(rCollisionless - rCollisional)
+       heat_cond_factor = &
+            exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
     end if
 
   end function heat_cond_factor
@@ -721,10 +720,8 @@ contains
          r = r_BLK(i,j,k,iBlock)
          if(r <= rCollisional)then
             Factor = 1.0
-         elseif(r >= rCollisionless)then
-            Factor = 0.0
          else
-            Factor = (rCollisionless - r)/(rCollisionless - rCollisional)
+            Factor = exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
          end if
          HeatCoef = Factor*HeatCoef
       end if

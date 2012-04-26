@@ -108,7 +108,7 @@ spitzer			TypeHeatConduction
 #HEATFLUXREGION
 T			UseHeatFluxRegion
 5.0			rCollisional
-10.0			rCollisionless
+8.0			rCollisionless
 
 #TEST
 krylov

@@ -6105,10 +6105,11 @@ applied everywhere.
 
 If UseHeatFluxRegion is true, both the electron and ion heat conduction
 are applied between the inner boundary (either Sun or planet) and
-rCollisional. No heat conduction is applied beyond rCollisionless.
-Between rCollisional and rCollisionless, both the electron and ion heat
-conduction coefficients are reduced as a linear function of the radius
-from its full value at rCollisional to zero at rCollisionless.
+rCollisional. Beyond r=rCollisional, both the electron and ion heat
+conduction coefficients are multiplied by
+\begin{verbatim}
+exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
+\end{verbatim}
 
 The default is UseHeatFluxRegion=.false.
 
