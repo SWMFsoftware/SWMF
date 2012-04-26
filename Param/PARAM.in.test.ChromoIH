@@ -145,7 +145,7 @@ F			UseBody
 1.0                     ElectronTemperatureRatio
 
 #COORDSYSTEM
-HGI                     TypeCoordSystem
+HGR			TypeCoordSystem
 
 #GRIDGEOMETRY
 spherical               TypeGeometry
@@ -237,7 +237,7 @@ spitzer                 TypeHeatConduction
 #HEATFLUXREGION
 T                       UseHeatFluxRegion
 5.0                     rCollisional
-10.0                    rCollisionless
+8.0                    rCollisionless
 
 #USECURLB0
 T			UseCurlB0
