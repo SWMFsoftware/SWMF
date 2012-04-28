@@ -279,11 +279,11 @@ INCLUDE
 IH/restartIN/restart.H
 
 #COORDSYSTEM
-HGC			TypeCoordSystem
+HGR			TypeCoordSystem
 
 #BODY
 T			UseBody
-16.			rBody
+18.			rBody
 3.0E+8			BodyNDim
 3.5E+6			BodyTDim
 
@@ -314,8 +314,8 @@ initial			NameArea
 #GRIDLEVEL
 8			nLevelArea
 shell0			NameArea
-16.0			Radius1
-21.0			Radius2 16.1
+18.0			Radius1
+21.0			Radius2
 
 #GRIDLEVEL
 8			nLevelArea
@@ -331,7 +331,7 @@ buffergrid		TypeBcInner
 2			nRBuff
 64			nPhiBuff
 32			nThetaBuff
-16.0			rBuffMin
+18.0			rBuffMin
 20.0			rBuffMax
 0.0			PhiBuffMin
 360.			PhiBuffMax
