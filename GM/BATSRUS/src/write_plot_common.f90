@@ -11,7 +11,7 @@ subroutine write_plot_common(ifile)
   use ModGeometry, ONLY : TypeGeometry,UseCovariant, nGrid, yR_I
   use ModPhysics, ONLY : No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
-  use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5,write_cut_var_hdf5
+  use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, write_cut_var_hdf5
   use ModIoUnit, ONLY : io_unit_new
   use ModNodes
   use ModNumConst, ONLY : cRadToDeg
@@ -291,7 +291,8 @@ subroutine write_plot_common(ifile)
             if(plot_type1(1:3)=='3d_' .or.  (&
               (plot_type1(1:3)=='z=0' .and. nK == 1))) then
                 call write_var_hdf5(PlotVar, nPlotVar, H5Index, iBlk,&
-                    nonCartesian)
+                  nonCartesian)
+                
                 H5Index = H5Index+1
                 isCutFile(iFile) = .false.
             elseif(plot_type1(1:3)=='blk')then
@@ -348,8 +349,10 @@ subroutine write_plot_common(ifile)
     call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
           unitstr_IDL)
                     
-    call write_plot_hdf5(filename, plotVarNames, NamePlotUnit_V,&
-        nPlotVar,isCutFile(iFile), nonCartesian,plot_dimensional(ifile))
+     call write_plot_hdf5(filename, plotVarNames, NamePlotUnit_V,&
+     nPlotVar,isCutFile(iFile), nonCartesian,plot_dimensional(ifile), xmin,&
+     xmax, ymin, ymax, zmin, zmax)
+
 
         RETURN
 
