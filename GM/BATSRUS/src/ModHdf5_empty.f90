@@ -9,7 +9,8 @@ module ModHdf5
 contains
   !=========================================================================
   subroutine write_plot_hdf5(filename, plotVarNames, plotVarUnits,&
-    nPlotVar, isCutFile, isnonCartesian,plot_dimensional)
+       nPlotVar,isCutFile, nonCartesian,plot_dimensional, xmin, xmax, &
+       ymin, ymax, zmin, zmax)
 
     use ModProcMH, ONLY: iProc
 
@@ -17,8 +18,9 @@ contains
     character(len=80),       intent(in):: filename
     character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
     character(len=lNameVar),  intent(in):: plotVarUnits(nPlotVar)
-    logical, intent(in) :: isCutFile, isnonCartesian,plot_dimensional
-
+    logical, intent(in) :: isCutFile, nonCartesian,plot_dimensional
+    real, intent(in)  ::  xMin, xMax, yMin, yMax, zMin, zMax
+ 
     !----------------------------------------------------------------------
     if(iProc==0) write (*,*) "ERROR: HDF5 plotting is not enabled!"
 
