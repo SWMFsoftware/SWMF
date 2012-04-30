@@ -74,6 +74,7 @@ module ModUser
   real :: RhoDimTube = 1430.0    ! density      [kg/m3]
   real :: RhoDimOutside = 6.5    ! density  of Xe outside tube [kg/m3]
   real :: pDimOutside   = 1.1e5  ! pressure of Xe outside tube [Pa]
+  logical:: UseTubeRadius=.false.! true if tube radius is explicitly set
 
   !Gas parameters:
 
@@ -289,10 +290,12 @@ contains
           call read_var('RhoDimOutside', RhoDimOutside)
           call read_var('pDimOutside',   pDimOutside)
           call read_var('xUniformXe',    xUniformXe)
+          UseTubeRadius = .true.
 
        case("#TUBEDIAMETER")
           call read_var('rInnerTube', rInnerTube)
           call read_var('rOuterTube', rOuterTube)
+          UseTubeRadius = .true.
 
        case('#RHOINSIDE')
           call read_var('RhoDimInside',RhoDimInside)
@@ -3418,12 +3421,31 @@ contains
     ! Then limit the radial distance if necessary
 
     real :: Factor
+    real :: y0, z0, r0, rInner
     !-------------------------------------------------------------------------
     if(UseNozzle)then
        Factor = max(0.0, min(1.0, &
             (x - xStartNozzle)/(xEndNozzle - xStartNozzle)))
-       y = y/(1 + Factor*(yRatioNozzle-1))
-       z = z/(1 + Factor*(zRatioNozzle-1))
+
+       ! Stretch ellipse into circle
+       y0 = y
+       z0 = z
+       y  = y0/(1 + Factor*(yRatioNozzle-1))
+       z  = z0/(1 + Factor*(zRatioNozzle-1))
+
+       if(nK > 1 .and. zRatioNozzle > 0.99 .and. UseTubeRadius &
+            .and. Factor > 0.0)then
+          ! Keep tube width 
+          ! Radial distance of stretched position
+          r = sqrt(y**2 + z**2)
+          if(r > rInnerTube)then
+             r0     = sqrt(y0**2 + z0**2) ! original radial distance
+             rInner = rInnerTube*r0/r     ! rInnerTube shrinks to rInner
+             r = rInnerTube + r0 - rInner ! radius shifted instead of stretched
+             y = r/r0 * y0                ! corresponding Y coordinate
+             z = r/r0 * z0                ! corresponding Z coordinate
+          end if
+       end if
     end if
 
     if(nK > 1)then
