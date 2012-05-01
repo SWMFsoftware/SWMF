@@ -1,3 +1,12 @@
+#MATERIALSTATE
+rho p             StringStateVar
+5    		  nMaterialState
+Pl  1.4  0.01  	  Name, State
+Ay  1.6  0.01     Name, State
+Xe  0.06 0.01     Name, State
+Be  0.3  0.01     Name, State
+Au  23.0 0.01     Name, State
+
 #MATERIALINTERFACE
 9				nSegment
 Be Xe 10.0,  0.0, 10.0, 30.0	Material1 Material2 x1 y1 x2 y2
@@ -9,3 +18,5 @@ Ay Pl 35.0, 20.0, 35.0, 23.0	Material1 Material2 x1 y1 x2 y2
 Ay Pl 35.0, 23.0, 50.0, 23.0	Material1 Material2 x1 y1 x2 y2
 Ay Pl 50.0, 23.0, 50.0, 50.0	Material1 Material2 x1 y1 x2 y2
 Pl Xe 35.0, 20.0,100.0, 20.0	Material1 Material2 x1 y1 x2 y2
+
+
