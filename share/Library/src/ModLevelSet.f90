@@ -18,6 +18,11 @@ module ModLevelSet
   real,    allocatable:: StartSegment_DI(:,:)
   real,    allocatable:: VectorSegment_DI(:,:)
   integer, allocatable:: iLevelSegment_SI(:,:)
+  integer, allocatable:: iStateSegment_SI(:,:)
+
+  integer:: nMaterialState = 0 ! number of different material states
+  character(len=10), allocatable:: NameMaterialState_I(:)
+  real, allocatable:: MaterialState_VI(:,:)  ! state values
 
 contains
 
@@ -30,7 +35,8 @@ contains
          LengthSegment_I(MaxSegment),    &
          StartSegment_DI(2,MaxSegment),  &
          VectorSegment_DI(2,MaxSegment), &
-         iLevelSegment_SI(2,MaxSegment))
+         iLevelSegment_SI(2,MaxSegment), &
+         iStateSegment_SI(2,MaxSegment))
 
   end subroutine init_levelset
 
@@ -38,14 +44,20 @@ contains
 
   subroutine clean_levelset
 
-    nSegment = 0
-
-    if(.not. allocated(LengthSegment_I)) RETURN
-    deallocate(            &
+    if(allocated(LengthSegment_I)) deallocate( &
          LengthSegment_I,  &
          StartSegment_DI,  &
          VectorSegment_DI, &
-         iLevelSegment_SI)
+         iLevelSegment_SI, &
+         iStateSegment_SI)
+
+    nSegment = 0
+
+    if(allocated(NameMaterialState_I)) deallocate( &
+         NameMaterialState_I, &
+         MaterialState_VI)
+
+    nMaterialState = 0
 
   end subroutine clean_levelset
 
@@ -64,22 +76,26 @@ contains
     integer:: i, n, iError
     character(len=100):: StringSegment
     real:: Start_D(2), End_D(2)
-    character(len=2):: NameMaterial1, NameMaterial2
+    character(len=3):: NameMaterial1, NameMaterial2
 
     character(len=*), parameter:: NameSub='read_levelset_param'
     !------------------------------------------------------------------------
     call read_var('nSegment', n)     ! Number of new segments
     do i = 1, n
        nSegment = nSegment + 1
-       call read_var('Material1 Material2 x1 y1 x2 y2', StringSegment)
+       call read_var('Material1 Material2 x1 y1 x2 y2', StringSegment, &
+            IsLowerCase=.true.)
        read(StringSegment,*,IOSTAT=iError) &
             NameMaterial1, NameMaterial2, Start_D, End_D
        if(iError /= 0)call CON_stop(NameSub// &
             ' could not read Material1 Material2 x1 y1 x2 y2 from '// &
             trim(StringSegment))
        
-       iLevelSegment_SI(1,nSegment) = i_level_material(NameMaterial1)
-       iLevelSegment_SI(2,nSegment) = i_level_material(NameMaterial2)
+       iLevelSegment_SI(1,nSegment) = i_level(NameMaterial1(1:2))
+       iLevelSegment_SI(2,nSegment) = i_level(NameMaterial2(1:2))
+
+       iStateSegment_SI(1,nSegment) = i_state(NameMaterial1)
+       iStateSegment_SI(2,nSegment) = i_state(NameMaterial2)
        
        StartSegment_DI(:,nSegment)  = Start_D
        VectorSegment_DI(:,nSegment) = End_D - Start_D
@@ -88,14 +104,14 @@ contains
 
   contains
     !=========================================================================
-    integer function i_level_material(NameMaterial)
+    integer function i_level(NameMaterial)
 
-      character(len=*), intent(in):: NameMaterial
+      character(len=2), intent(in):: NameMaterial
       integer:: iMaterial
       !-----------------------------------------------------------------------
       do iMaterial = 1, nMaterial
          if(NameMaterial == NameMaterial_I(iMaterial)) then
-            i_level_material = MinLevel - 1 + iMaterial
+            i_level = MinLevel - 1 + iMaterial
             RETURN
          end if
       end do
@@ -103,9 +119,89 @@ contains
       call CON_stop(NameSub// &
            ' could not match material name='//NameMaterial)
 
-    end function i_level_material
+    end function i_level
+
+    !=========================================================================
+    integer function i_state(NameMaterial)
+
+      character(len=*), intent(in):: NameMaterial
+      integer:: i
+      !-----------------------------------------------------------------------
+      if(nMaterialState == 0) call CON_stop(NameSub// &
+           ' material states are not defined')
+
+      do i = 1, nMaterialState
+         if(NameMaterial == NameMaterialState_I(i)) then
+            i_state = i
+            RETURN
+         end if
+      end do
+
+      write(*,*) NameSub,': nMaterialState      = ', nMaterialState
+      write(*,*) NameSub,': NameMaterialState_I = ', NameMaterialState_I
+
+      call CON_stop(NameSub// &
+           ' could not match material state name='//NameMaterial)
+
+    end function i_state
 
   end subroutine read_levelset_param
+
+  !===========================================================================
+
+  subroutine read_material_param(nVar, NameVar_V)
+
+    use ModReadParam, ONLY: read_var
+    use ModUtilities, ONLY: split_string
+
+    integer,          intent(in):: nVar
+    character(len=*), intent(in):: NameVar_V(nVar)
+
+    character(len=100):: String
+    character(len=len(NameVar_V)), allocatable:: NameStateVar_I(:)
+    integer, allocatable:: iVar_I(:)
+
+    integer:: i, iVar, nStateVar, iError
+
+    character(len=*), parameter:: NameSub='read_material_param'
+    !------------------------------------------------------------------------
+    allocate(NameStateVar_I(nVar))
+
+    ! Names of non-zero state variables
+    call read_var('StringStateVar', String, IsLowerCase=.true.)
+    call split_string(String, nVar, NameStateVar_I, nStateVar)
+
+    ! Find indexes for corresponding state variables
+    allocate(iVar_I(nStateVar))
+    LOOPSTATE: do i = 1, nStateVar
+       do iVar = 1, nVar
+          if(NameStateVar_I(i) == NameVar_V(iVar))then
+             iVar_I(i) = iVar
+             CYCLE LOOPSTATE
+          end if
+       end do
+       call CON_stop(NameSub//': could not match variable name='// &
+            trim(NameStateVar_I(i)))
+    end do LOOPSTATE
+
+    ! Number of different states in the initial condition
+    call read_var('nMaterialState', nMaterialState) 
+
+    ! Read the values for each material state
+    allocate(NameMaterialState_I(nMaterialState))
+    allocate(MaterialState_VI(nVar,nMaterialState))
+    do i = 1, nMaterialState
+       MaterialState_VI(:,i) = 0.0
+       call read_var('Name, State', String, IsLowerCase=.true.)
+       read(String,*,IOSTAT=iError) &
+            NameMaterialState_I(i), MaterialState_VI(iVar_I,i)
+       if(iError /= 0)call CON_stop(NameSub// &
+            ' could not read Name, State from '//trim(String))
+    end do
+
+    deallocate(NameStateVar_I, iVar_I)
+
+  end subroutine read_material_param
 
   !===========================================================================
 
@@ -210,14 +306,17 @@ contains
 
     integer:: iProc, iError
 
-    integer, parameter:: nI = 100, nJ = 50, nLevel = 5
+    integer, parameter:: nI = 100, nJ = 50, nLevel = 5, nVar = 5
     real, allocatable:: LevelSet_VC(:,:,:)
     real :: Coord_D(2), d
     integer:: i, j, iSegment, iLevel, jLevel
 
     character(len=100):: NameCommand
     character(len=2):: NameMaterial_I(nLevel) = &
-         (/ 'Xe', 'Be', 'Pl', 'Au', 'Ay' /)
+         (/ 'xe', 'be', 'pl', 'au', 'ay' /)
+
+    character(len=3):: NameVar_V(nVar) = &
+         (/ 'rho', 'ux ', 'uy ', 'uz ', 'p  ' /)
 
     character(len=*), parameter:: NameSub = 'test_levelset'
     !----------------------------------------------------------------------
@@ -235,6 +334,8 @@ contains
        select case(NameCommand)
        case("#MATERIALINTERFACE")
           call read_levelset_param(nLevel, NameMaterial_I, MinLevel=1)
+       case("#MATERIALSTATE")
+          call read_material_param(nVar, NameVar_V)
        case default
           call CON_stop(NameSub//': unknown command='//NameCommand)
        end select
