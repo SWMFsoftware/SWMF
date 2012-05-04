@@ -127,6 +127,7 @@ module ModLaserHeating
   real, allocatable, dimension(:)  :: Amplitude_I
 
   logical:: Is3DBeamInRz = .false.
+  logical:: Is3DBeamInXy = .false.
 
   logical:: DoLaserRayTest  = .false.
 
@@ -223,6 +224,10 @@ contains
        Xyz_D = Position_DI(:,iRay)
        if(Is3DBeamInRz)then
           Xyz_D(2) = sqrt(sum(Xyz_D(2:MaxDim)**2))
+          Xyz_D(3) = 0.0
+       end if
+       
+       if(Is3DBeamInXy)then
           Xyz_D(3) = 0.0
        end if
 
@@ -327,6 +332,11 @@ contains
 
           if(Is3DBeamInRz)then
              GradRhoZ_D(3) = GradRhoZ_D(2)*Position_DI(3,iRay)/Xyz_D(2)
+             GradRhoZ_D(2) = GradRhoZ_D(2)*Position_DI(2,iRay)/Xyz_D(2)
+          end if
+          
+          if(Is3DBeamInXy)then
+             GradRhoZ_D(3) = 0.
              GradRhoZ_D(2) = GradRhoZ_D(2)*Position_DI(2,iRay)/Xyz_D(2)
           end if
 
@@ -913,11 +923,12 @@ contains
   !============================================================================
   subroutine get_rays
 
-    use BATL_lib,    ONLY: IsRzGeometry
+    use BATL_lib,    ONLY: IsRzGeometry, IsCartesian
 
     !--------------------------------------------------------------------------
 
     Is3DBeamInRz = TypeBeam == '3d' .and. IsRzGeometry
+    Is3DBeamInXy = TypeBeam == '3d' .and. IsCartesian
 
     if(DoLaserRayTest) nRayPerBeam = 1
 
@@ -950,7 +961,7 @@ contains
 
   subroutine init_beam_3d
 
-    use BATL_lib,    ONLY: IsRzGeometry
+    use BATL_lib,    ONLY: IsRzGeometry, IsCartesian
     use ModConst,    ONLY: cDegToRad
     use ModGeometry, ONLY: y1, y2, z1, z2
 
@@ -996,7 +1007,7 @@ contains
              ! to be at 1.5 rBeam from the central ray:
              ! rDistance is from 0 to 1.5*rBeam
 
-             if(nDim == 3)then
+             if(nDim == 3 .or. IsCartesian)then
                 ! The following is exploited for the beam coordinates y and z:
                 ! range y = [-1.5*rBeam,1.5*rBeam];
                 ! range z = [-1.5*rBeam,1.5*rBeam]
@@ -1037,6 +1048,9 @@ contains
                   .and. zStart >= z1 .and. zStart <= z2
           elseif(IsRzGeometry)then
              IsInside = yStart**2 + zStart**2 <= y2**2
+          elseif(IsCartesian)then
+             IsInside = yStart >= y1 .and. yStart <= y2 &
+                  .and. zStart >= y1 .and. zStart <= y2
           end if
 
           if(rDistance > 1.5*rBeam .and. .not.DoLaserRayTest)then
@@ -1158,10 +1172,11 @@ contains
     use ModGeometry, ONLY: TypeGeometry, y2, minDXvalue
     use ModConst,    ONLY: cDegToRad
 
-    real:: CosTheta, SinTheta,  yCrCentral, yPlane
+    real:: CosTheta, SinTheta,  yCrCentral, yPlane, xPlane
     real:: rDistance, BeamAmplitude
-    integer:: iRay, iBeam
+    integer:: iRay, jRay, iBeam
     integer:: nRayPerHalfBeam
+    logical:: IsInside=.true.
     !--------------------------------------------------------------------------
 
     ! Warning !!! There are two issues with the rz2 beam:
@@ -1172,9 +1187,9 @@ contains
     if(TypeGeometry/='rz')call CON_stop(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
 
-    nRayPerHalfBeam = (nRayPerBeam - 1)/2
+!    nRayPerHalfBeam = (nRayPerBeam - 1)/2
 
-    nRayInside = 0
+!    nRayInside = 0
     do iBeam = 1, nBeam
        cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
 
@@ -1190,53 +1205,68 @@ contains
 
 !!$       do iRay = -nRayPerHalfBeam, nRayPerHalfBeam
        ! The following is conform the H2D strategy for following rays
-       do iRay = 1, nRayPerHalfBeam  !just for beams pointed at the symmetry axix
+       do iRay = 1, nRayPerBeam  !just for beams pointed at the symmetry axix
 
-          !We neglect exp(-2.25)\approx0.1 and chose the beam margin
-          !to be at 1.5 rBeam from the central ray:
+		   xPlane = xStart
 
-          rDistance = iRay * rBeam * 1.5 /nRayPerHalfBeam 
+           if(nRayPerBeam == 1)then
+              rDistance = 0.0
+           else
+              ! We neglect exp(-2.25)\approx0.1 and chose the beam margin
+              ! to be at 1.5 rBeam from the central ray:
+              ! rDistance is from -1.5*rBeam to 1.5*rBeam
+              rDistance = (iRay - 1 - nRayPerBeam/2)* rBeam * 1.5 &
+                   /(nRayPerBeam/2)
+           end if
 
           ! Maps rDistance to laser-entry plane, applies shift set
           ! by yBeam in the PARAM.in file
-          yPlane = yCrCentral + (rDistance + xStart*sinTheta/cosTheta)
+          yPlane = yCrCentral + (rDistance + xStart*sinTheta/(cosTheta))
 
           !Dealing with rays starting outside the computational domain on laser-entry plane:
           ! Substracting minDXvalue from y2 so that the rays do not start on domain boundary
-          if(abs(yPlane) >= y2)then
+          if((yPlane) >= y2)then
              !Do not let rays begin in target past drive surface
              if(sinTheta < 0.0 .and. &
-                  xStart + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta) < 0.0)then
-                xStart = xStart + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta)
+                  (xPlane + (abs(yPlane)-(y2-minDXvalue))*(cosTheta)/(-sinTheta) < 0.0))then
+                xPlane = xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta)
                 yPlane = y2 - (minDXvalue)
              else	
-                CYCLE
+                IsInside=.false.
              endif
           endif
 
 
           if(yPlane <= 0.0)then
              !Do not let rays begin in target past drive surface
-             if(xStart + (yPlane+minDXvalue)*cosTheta/(-sinTheta) < 0.0)then
-                xStart = xStart + (yPlane+minDXvalue)*cosTheta/(-sinTheta)
+             if(xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta) < 0.0)then
+                xPlane = xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta)
                 yPlane = minDXvalue
              else	
-                CYCLE
+                IsInside=.false.
              endif
           endif
 
-          nRayInside = nRayInside + 1
+           if(IsInside)then
+              nRayInside = nRayInside + 1
+              jRay = nRayInside
+           else
+              nRayOutside = nRayOutside + 1
+              jRay = nRayTotal + 1 - nRayOutside
+           end if
 
           if(DoLaserRayTest)then
-             Amplitude_I(nRayInside) = BeamAmplitude
+             Amplitude_I(jRay) = BeamAmplitude
           else
              ! supergaussian spatial profile
-             Amplitude_I(nRayInside) = BeamAmplitude &
+             Amplitude_I(jRay) = BeamAmplitude &
                   *exp(-(abs(rDistance)/rBeam)**SuperGaussianOrder) &
                   *abs(yCrCentral + rDistance)
           end if
 
-          XyzRay_DI(:, nRayInside) = (/xStart, yPlane, 0.0/)
+		  if(.not. IsInside) CYCLE
+
+          XyzRay_DI(:, nRayInside) = (/xPlane, yPlane, 0.0/)
           SlopeRay_DI(:, nRayInside) = &
                (/CosTheta, SinTheta, 0.0/)
 
@@ -1249,6 +1279,7 @@ contains
   subroutine read_laser_heating_param(NameCommand)
 
     use ModReadParam
+    use BATL_lib,		ONLY: IsCartesian
 
     character(len=*), intent(in) :: NameCommand
 
@@ -1268,7 +1299,7 @@ contains
     case('#LASERBEAMS')
        call read_var('TypeBeam',    TypeBeam, IsLowerCase = .true.)
        if(TypeBeam(1:2) == '3d')then
-          if(nDim == 3)then
+          if(nDim == 3 .or. IsCartesian)then
              call read_var('nRayY', nRayY)
              call read_var('nRayZ', nRayZ)
              if(nRayY < 1) call stop_mpi('nRayY should be at least 1')
@@ -1457,6 +1488,10 @@ contains
              Xyz_D(2) = sqrt(sum(Xyz_D(2:MaxDim)**2))
              Xyz_D(3) = 0.0
           end if
+          
+          if(Is3DBeamInXy)then
+             Xyz_D(3) = 0.0
+          end if
 
           ! Find the processor, block and grid cell containing the ray
           call interpolate_grid(Xyz_D, nCell, iCell_II, Weight_I)
@@ -1536,7 +1571,8 @@ contains
     use ModUser, ONLY: user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: message_pass_cell, CellVolume_GB, CoordMin_D, &
-         CoordMax_D, IsRzGeometry
+         CoordMax_D, IsRzGeometry, IsCartesian
+	use ModNumConst, ONLY: cHalfPi
 
     real:: Irradiance, EInternalSi, PressureSi
     integer :: iBlock, i, j, k, iP
@@ -1585,6 +1621,12 @@ contains
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   *Irradiance/CellVolume_GB(i,j,k,iBlock) &
                   *(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
+          elseif(IsCartesian .and. nDim == 2)then
+          ! Assuming circular beam spot. Deals with extent in "Z" direction while 
+          ! maintaining the irradiance of 3D system. 
+             LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
+                  *Irradiance/CellVolume_GB(i,j,k,iBlock) &
+                  *(CoordMax_D(3) - CoordMin_D(3))/(rBeam*cHalfPi)
           else
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   *Irradiance/CellVolume_GB(i,j,k,iBlock)
