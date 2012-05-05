@@ -38,11 +38,12 @@ contains
 
   end subroutine write_var_hdf5
 
-  subroutine write_cut_var_hdf5(iFile, iBlock, H5Index,nPlotVar,PlotVar, &
+  subroutine write_cut_var_hdf5(iFile, plotType, iBlock, H5Index,nPlotVar,PlotVar, &
      xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
      isNonCartesian,nCell,H5Advance)
 
       use ModMain, ONLY : nI, nJ, nK
+      character (len=3), intent(in) :: plotType
       integer, intent(in)   :: iFile, iBlock, H5Index
       integer, intent(in)   :: nPlotVar
       real,    intent(in)   :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
