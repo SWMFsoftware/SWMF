@@ -1967,7 +1967,7 @@ contains
              call get_planck_g_from_temperature(iGroup, Te0Si, EgSI=PlanckSi)
              if(EOverB_VGB(iGroup,i,j,k,iBlock)>0.0)then
                 EOverB_VGB(iGroup,i,j,k,iBlock) = EOverB_VGB(iGroup,i,j,k,iBlock)/&
-                     max(PlanckSi,1.0e-2*EOverB_VGB(iGroup,i,j,k,iBlock))
+                     max(PlanckSi, 0.01*EOverB_VGB(iGroup,i,j,k,iBlock))
              else
                 EOverB_VGB(iGroup,i,j,k,iBlock)=0.0
              end if
