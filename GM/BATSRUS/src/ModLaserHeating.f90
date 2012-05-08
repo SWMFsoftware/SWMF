@@ -78,7 +78,7 @@ module ModLaserHeating
   real:: tPulse = 1.1e-9  ![s]
   real:: IrradianceSi = 3.8e12 ![J/s] !This is the power; rename?
 
-  !Beam geometry: 'rz', '2d', '3d'
+  !Beam geometry: 'rz', '2d', '3d', 'xy'
   character(LEN=3):: TypeBeam='???'
   !\
   ! Geometry of the 'rz'-beam:
@@ -916,12 +916,12 @@ contains
   !============================================================================
   subroutine get_rays
 
-    use BATL_lib,    ONLY: IsRzGeometry, IsCartesian
+    use BATL_lib,    ONLY: IsRzGeometry
 
     !--------------------------------------------------------------------------
 
     Is3DBeamInRz = TypeBeam == '3d' .and. IsRzGeometry
-    Is3DBeamInXy = TypeBeam == '3d' .and. IsCartesian
+    Is3DBeamInXy = TypeBeam == 'xy'
 
     if(DoLaserRayTest) nRayPerBeam = 1
 
@@ -935,7 +935,7 @@ contains
     allocate(Amplitude_I(nRayTotal))
 
     select case(TypeBeam)
-    case('3d')
+    case('3d','xy')
        call init_beam_3d
     case('rz')
        call init_beam_rz
@@ -954,7 +954,7 @@ contains
 
   subroutine init_beam_3d
 
-    use BATL_lib,    ONLY: IsRzGeometry, IsCartesian
+    use BATL_lib,    ONLY: IsRzGeometry
     use ModConst,    ONLY: cDegToRad
     use ModGeometry, ONLY: y1, y2, z1, z2
 
@@ -1000,7 +1000,7 @@ contains
              ! to be at 1.5 rBeam from the central ray:
              ! rDistance is from 0 to 1.5*rBeam
 
-             if(nDim == 3 .or. IsCartesian)then
+             if(nDim == 3 .or. Is3DBeamInXy)then
                 ! The following is exploited for the beam coordinates y and z:
                 ! range y = [-1.5*rBeam,1.5*rBeam];
                 ! range z = [-1.5*rBeam,1.5*rBeam]
@@ -1041,7 +1041,7 @@ contains
                   .and. zStart >= z1 .and. zStart <= z2
           elseif(IsRzGeometry)then
              IsInside = yStart**2 + zStart**2 <= y2**2
-          elseif(IsCartesian)then
+          elseif(Is3DBeamInXy)then
              IsInside = yStart >= y1 .and. yStart <= y2 &
                   .and. zStart >= y1 .and. zStart <= y2
           end if
@@ -1272,7 +1272,6 @@ contains
   subroutine read_laser_heating_param(NameCommand)
 
     use ModReadParam
-    use BATL_lib,		ONLY: IsCartesian
 
     character(len=*), intent(in) :: NameCommand
 
@@ -1291,8 +1290,8 @@ contains
 
     case('#LASERBEAMS')
        call read_var('TypeBeam',    TypeBeam, IsLowerCase = .true.)
-       if(TypeBeam(1:2) == '3d')then
-          if(nDim == 3 .or. IsCartesian)then
+       if(TypeBeam(1:2) == '3d' .or. TypeBeam(1:2) == 'xy')then
+          if(nDim == 3 .or. TypeBeam(1:2) == 'xy')then
              call read_var('nRayY', nRayY)
              call read_var('nRayZ', nRayZ)
              if(nRayY < 1) call stop_mpi('nRayY should be at least 1')
@@ -1612,7 +1611,7 @@ contains
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   *Irradiance/CellVolume_GB(i,j,k,iBlock) &
                   *(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
-          elseif(IsCartesian .and. nDim == 2)then
+          elseif(Is3DBeamInXy .and. nDim == 2)then
              ! Assuming circular beam spot. Deals with extent in "Z" direction
              ! while maintaining the irradiance of 3D system. 
              ! The formula below needs some explanation
