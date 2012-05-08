@@ -227,9 +227,7 @@ contains
           Xyz_D(3) = 0.0
        end if
        
-       if(Is3DBeamInXy)then
-          Xyz_D(3) = 0.0
-       end if
+       if(Is3DBeamInXy) Xyz_D(3) = 0.0
 
        ! Find the processor, block and grid cell containing the ray
        call interpolate_grid(Xyz_D, nCell, iCell_II, Weight_I)
@@ -332,11 +330,6 @@ contains
 
           if(Is3DBeamInRz)then
              GradRhoZ_D(3) = GradRhoZ_D(2)*Position_DI(3,iRay)/Xyz_D(2)
-             GradRhoZ_D(2) = GradRhoZ_D(2)*Position_DI(2,iRay)/Xyz_D(2)
-          end if
-          
-          if(Is3DBeamInXy)then
-             GradRhoZ_D(3) = 0.
              GradRhoZ_D(2) = GradRhoZ_D(2)*Position_DI(2,iRay)/Xyz_D(2)
           end if
 
@@ -1489,9 +1482,7 @@ contains
              Xyz_D(3) = 0.0
           end if
           
-          if(Is3DBeamInXy)then
-             Xyz_D(3) = 0.0
-          end if
+          if(Is3DBeamInXy) Xyz_D(3) = 0.0
 
           ! Find the processor, block and grid cell containing the ray
           call interpolate_grid(Xyz_D, nCell, iCell_II, Weight_I)
@@ -1622,8 +1613,9 @@ contains
                   *Irradiance/CellVolume_GB(i,j,k,iBlock) &
                   *(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
           elseif(IsCartesian .and. nDim == 2)then
-          ! Assuming circular beam spot. Deals with extent in "Z" direction while 
-          ! maintaining the irradiance of 3D system. 
+             ! Assuming circular beam spot. Deals with extent in "Z" direction
+             ! while maintaining the irradiance of 3D system. 
+             ! The formula below needs some explanation
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   *Irradiance/CellVolume_GB(i,j,k,iBlock) &
                   *(CoordMax_D(3) - CoordMin_D(3))/(rBeam*cHalfPi)
