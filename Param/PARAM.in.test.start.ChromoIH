@@ -114,6 +114,16 @@ F			UseHyperbolicDivb
 400.0			SpeedHypDim
 0.1			HypDecay
 
+#RESISTIVITY
+T			UseResistivity
+user			TypeResistivity
+0.0			Eta0Si     ! not used
+
+#RESISTIVITYOPTIONS
+F			UseResistiveFlux
+F			UseJouleHeating
+T			UseHeatExchange
+
 #HEATCONDUCTION
 T			UseHeatConduction
 spitzer			TypeHeatConduction
@@ -255,17 +265,29 @@ float			TypeBcBottom
 float			TypeBcTop
 
 #SAVEPLOT
-2			nPlotFiles
+4			nPlotFiles
 x=0 VAR idl		StringPlot
 5000			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti bx by bz I01 I02 p
+rho ux uy uz ti te bx by bz I01 I02 p
+g rbody
+y=0 VAR idl		StringPlot
+5000			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p
+g rbody
+z=0 VAR idl		StringPlot
+5000			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p
 g rbody
 3d VAR tec
 100000			DnSavePlot
 -1.			DtSavePlot
-rho ux uy uz ti bx by bz I01 I02 p
+rho ux uy uz ti te bx by bz I01 I02 p
 g rbody
 
 #SAVEINITIAL
@@ -376,6 +398,16 @@ alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
 0.04			Crefl
 
+#RESISTIVITY
+T                       UseResistivity
+user                    TypeResistivity
+0.0                     Eta0Si     ! not used
+
+#RESISTIVITYOPTIONS
+F                       UseResistiveFlux
+F                       UseJouleHeating
+T                       UseHeatExchange
+
 #SCHEME
 2			nOrder
 Sokolov			TypeFlux
@@ -415,24 +447,24 @@ x=0 VAR idl		StringPlot
 500 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti bx by bz I01 I02 p sign
+rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
 y=0 VAR idl		StringPlot
 500			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti bx by bz I01 I02 p sign
+rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
 z=0 VAR idl		StringPlot
 500 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti bx by bz I01 I02 p sign
+rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
 3d VAR tec		StringPlot
 4000			DnSavePlot
 -1.			DtSavePlot
-rho ux uy uz ti bx by bz I01 I02 p sign
+rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
 
 #END_COMP IH ---------------------------------------------------------------
