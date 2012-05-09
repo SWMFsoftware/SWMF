@@ -13,6 +13,7 @@ install:
 OBJECTS = \
 	BATL_amr.o \
 	BATL_amr_criteria.o \
+	BATL_amr_geometry.o \
 	BATL_geometry.o \
 	BATL_grid.o \
 	BATL_lib.o  \
