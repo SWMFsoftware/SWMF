@@ -9,6 +9,7 @@ module BATL_lib
   use BATL_grid
   use BATL_amr
   use BATL_amr_criteria
+  use BATL_amr_geometry
   use BATL_pass_cell
   use BATL_pass_face
   use BATL_pass_node
@@ -69,7 +70,10 @@ module BATL_lib
   ! Inherited from BATL_amr_criteria
   public:: set_amr_criteria, clean_amr_criteria, read_amr_criteria
   public:: AmrCrit_IB, DoAmr_B, nAmrCrit, DoCritAmr, DoAutoAmr, DoStrictAmr
-  public:: UseAmrMask, calc_error_amr_criteria, restrict_amr_criteria
+  public:: UseAmrMask, calc_error_amr_criteria, set_amr_geometry
+
+  ! Inherited from BATL_amr_geometry
+  public:: read_amr_geometry
 
   ! Inherited from BATL_pass_cell
   public:: message_pass_cell
@@ -188,8 +192,8 @@ contains
           if(Unused_B(iBlock)) CYCLE
           if(DoRefine_B(iBlock)) iStatusNew_A(iNode_B(iBlock)) = Refine_
        end do
-       call adapt_tree
     end if
+    call adapt_tree
     call distribute_tree(DoMove=.true.)
     call create_grid
     call init_amr

@@ -117,7 +117,7 @@ module BATL_tree
 
   ! New status (refine, coarsen etc) requested for nodes
   integer, public, allocatable :: iStatusNew_A(:)
-  integer,         allocatable :: iStatusAll_A(:) ! needed for MPI_allreduce
+  integer, public, allocatable :: iStatusAll_A(:) ! needed for MPI_allreduce
 
   ! New processor index of a given node after next load balance
   integer, public, allocatable :: iProcNew_A(:)
@@ -490,6 +490,14 @@ contains
        iStatusNew_A(1:nNode) = iStatusAll_A(1:nNode)
     end if
 
+    !if(iProc == 0) then
+    !   do iNode=1,nNode
+    !      if(iStatusAll_A(iNode) == Refine_) then
+    !         print *," Want to Refine node =", iNode
+    !      end if
+    !   end do
+    !end if
+
     ! store the initall list that will not be changed by the proper nesting
     if(.not.DoStrictAmr) then
        allocate(iStatusNew0_A(MaxNode))
@@ -763,6 +771,15 @@ contains
        end do
 
     end do LOOPTRY
+    DnNode = (nNodeUsed - count(iStatusNew_A(1:nNode) == Coarsen_) + &
+         count(iStatusNew_A(1:nNode) == Refine_)*(nChild-1)) &
+         - min(nProc*MaxBlock, MaxTotalBlock) 
+
+    if(iTryAmr > iMaxTryAmr) then
+       iStatusNew_A(1:nNode) = Unset_
+       print *,"!!! WARNING in BATL_tree::adapt_tree: No AMR done"
+       RETURN
+    end if
 
     if(.not.DoStrictAmr) deallocate(iStatusNew0_A)
 

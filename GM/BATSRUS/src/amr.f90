@@ -1,12 +1,12 @@
 !^CFG COPYRIGHT UM
-subroutine amr(DoFullMessagePass)
+subroutine amr(DoFullMessagePass,TypeAmr)
   use ModProcMH
   use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,MaxBlock,&
        unusedBLK,lVerbose,UseB,UseB0, UseBatl, Dt_BLK, nTrueCellsALL, &
        iNewGrid, iNewDecomposition
   use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK,true_cell
   use ModAMR, ONLY : automatic_refinement, RefineLimit_I, CoarsenLimit_I, &
-       nRefineCrit, DoProfileAmr
+       nRefineCrit, DoProfileAmr, refine_criteria_IB
   use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
        nVar, State_VGB, &
        SkippedBlock_ !!!
@@ -27,6 +27,7 @@ subroutine amr(DoFullMessagePass)
   implicit none
 
   logical, intent(in) :: DoFullMessagePass
+  character(3), intent(in) :: TypeAmr
 
   logical:: IsFound
   real :: UserCriteria
@@ -39,8 +40,6 @@ subroutine amr(DoFullMessagePass)
 
   ! Check if we have the same grid as before, store old grid id
   integer, save :: iLastGrid=-1, iLastDecomposition=-1
-
-  real :: refine_criteria(4, nBLK)
 
   integer:: iNode !!!
   integer, allocatable:: iTypeAdvance_A(:) !!!
@@ -67,49 +66,32 @@ subroutine amr(DoFullMessagePass)
                 iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode))
         end do
      end if
+     if(nRefineCrit > 0)then
+        refine_criteria_IB(:,1:nBlockMax) = 0.0
+        if(DoProfileAmr) call timing_start('amr::amr_criteria')
+        call amr_criteria(refine_criteria_IB)
+        if(DoProfileAmr) call timing_stop('amr::amr_criteria')
+        if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
+        call set_amr_criteria(nVar, State_VGB,&
+             nRefineCrit,refine_criteria_IB,TypeAmrIn=TypeAmr)
+        if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
 
-     if(automatic_refinement) then
-
-        if(nRefineCrit > 0)then
-           refine_criteria = 0.0
-           if(DoProfileAmr) call timing_start('amr::amr_criteria')
-           call amr_criteria(refine_criteria)
-           if(DoProfileAmr) call timing_stop('amr::amr_criteria')
-           if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
-           call set_amr_criteria(nVar, State_VGB,&
-                nRefineCrit,refine_criteria,CoarsenLimit_I, RefineLimit_I)
-           if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
-        else
-           if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
-           call set_amr_criteria(nVar, State_VGB)
-           if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
-        end if
-
-        if(DoProfileAmr) call timing_start('amr::regrid_batl')
-        if(UsePartSteady)then
-           call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe, &
-                Used_GB=true_cell, iTypeNode_A=iTypeAdvance_A)
-        else
-           call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe, &
-                Used_GB=true_cell)
-        end if
-        if(DoProfileAmr) call timing_stop('amr::regrid_batl')
      else
-        if(DoProfileAmr) call timing_start('amr::specify_refinement')
-        call specify_refinement(DoRefine_B)
-        if(DoProfileAmr) call timing_stop('amr::specify_refinement')
-
-        if(DoProfileAmr) call timing_start('amr::regrid_batl')
-        if(UsePartSteady)then
-           call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, &
-                DoTestIn=DoTestMe, Used_GB=true_cell, &
-                iTypeNode_A=iTypeAdvance_A)
-        else
-           call regrid_batl(nVar, State_VGB, Dt_BLK, DoRefine_B, &
-                DoTestIn=DoTestMe, Used_GB=true_cell)
-        end if
-        if(DoProfileAmr) call timing_stop('amr::regrid_batl')
+        if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
+        call set_amr_criteria(nVar, State_VGB,TypeAmrIn=TypeAmr)
+        if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
      end if
+
+     if(DoProfileAmr) call timing_start('amr::regrid_batl')
+     if(UsePartSteady)then
+        call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe, &
+             Used_GB=true_cell, iTypeNode_A=iTypeAdvance_A)
+     else
+        call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe, &
+             Used_GB=true_cell)
+     end if
+     if(DoProfileAmr) call timing_stop('amr::regrid_batl')
+
 
      ! This should be eliminated by using iTypeAdvance_A everywhere !!!
      if(UsePartSteady)then

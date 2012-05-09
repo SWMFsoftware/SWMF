@@ -19,8 +19,9 @@ subroutine MH_set_parameters(TypeAction)
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModBlockData, ONLY: clean_block_data
   use ModBatlInterface, ONLY: UseBatlTest
-  use BATL_lib, ONLY: read_amr_criteria, DoCritAmr, DoAutoAmr, DoStrictAmr,&
-       nDimBatl => nDim, BetaProlong
+  use BATL_lib, ONLY: read_amr_criteria, read_amr_geometry, &
+       DoCritAmr, DoAutoAmr, DoStrictAmr,nDimBatl => nDim, BetaProlong,&
+       init_mpi
   use BATL_size, ONLY: nGI, nGJ, nGK
   use ModAMR
   use ModParallel, ONLY : proc_dims
@@ -157,11 +158,18 @@ subroutine MH_set_parameters(TypeAction)
 
   character(len=10) :: NamePrimitive_V(nVar)
 
+  ! Backward compatible with BATSRUS AMR, handling of 
+  !'user' and 'currentsheet' grid paramters names
+  character(len=20) :: NameCritGeo_I(2)
+  integer :: nCritGeo = 0
 
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
 
   iSession = i_session_read()
+
+  ! Initialize BATL
+  call init_mpi(iComm)
 
   if(IsUninitialized)then
      call set_namevar
@@ -776,7 +784,7 @@ subroutine MH_set_parameters(TypeAction)
               ! in by the lookuptable command).
               if (index(plot_string,'TBL')>0&
                    .or.index(plot_string,'tbl')>0) &
-                call read_var('NameLosTable',NameLosTable(ifile))            
+                   call read_var('NameLosTable',NameLosTable(ifile))            
            elseif (index(plot_string,'rfr')>0) then
               ! Refractive radiowave image 
               plot_area='rfr'
@@ -975,201 +983,209 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoSaveBinary',save_binary)
 
      case("#GRIDRESOLUTION","#GRIDLEVEL","#AREARESOLUTION","#AREALEVEL")
-        if(index(NameCommand,"RESOLUTION")>0)then
-           call read_var('AreaResolution', AreaResolution)
+
+        if(UseBatl) then
+           call read_amr_geometry(NameCommand,UseStrictIn=UseStrict, &
+                InitLevelInOut=initial_refine_levels, &
+                InitResInOut=InitialResolution,NameCritOut_I=NameCritGeo_I,&
+                nCritInOut=nCritGeo)
         else
-           call read_var('nLevelArea',nLevelArea)
-           ! Store level as a negative integer resolution.
-           ! This will be converted to resolution in correct_grid_geometry
-           AreaResolution = -nLevelArea
-        end if
-        call read_var('NameArea', NameArea, IsLowerCase=.true.)
 
-        NameArea = adjustl(NameArea)
-
-        if(NameArea(1:4) == 'init')then
-           ! 'init' or 'initial' means that the initial resolution is set,
-           ! and no area is created. 
-           if(AreaResolution > 0)then
-              InitialResolution = AreaResolution
+           if(index(NameCommand,"RESOLUTION")>0)then
+              call read_var('AreaResolution', AreaResolution)
            else
-              initial_refine_levels = nLevelArea
+              call read_var('nLevelArea',nLevelArea)
+              ! Store level as a negative integer resolution.
+              ! This will be converted to resolution in correct_grid_geometry
+              AreaResolution = -nLevelArea
            end if
-           ! No area is created, continue reading the parameters
-           CYCLE READPARAM
-        end if
+           call read_var('NameArea', NameArea, IsLowerCase=.true.)
 
-        nArea = nArea + 1
-        if(nArea > MaxArea)then
-           if(UseStrict)call stop_mpi(NameSub// &
-                ' ERROR: Too many grid areas were defined')
-           if(iProc == 0)then
-              write(*,*)NameSub," nArea = ",nArea
-              write(*,*)NameSub," WARNING: Too many grid areas were defined"
-              write(*,*)NameSub," ignoring command ",NameCommand
+           NameArea = adjustl(NameArea)
+
+           if(NameArea(1:4) == 'init')then
+              ! 'init' or 'initial' means that the initial resolution is set,
+              ! and no area is created. 
+              if(AreaResolution > 0)then
+                 InitialResolution = AreaResolution
+              else
+                 initial_refine_levels = nLevelArea
+              end if
+              ! No area is created, continue reading the parameters
+              CYCLE READPARAM
            end if
-           nArea = MaxArea
-        end if
 
-        Area_I(nArea) % Resolution = AreaResolution
-
-        ! Set the default center to be the origin, 
-        ! the size and radii to be 1, and no rotation
-        Area_I(nArea)%Center_D  = 0.0
-        Area_I(nArea)%Size_D    = 1.0
-        Area_I(nArea)%Radius1   = 1.0
-        Area_I(nArea)%DoRotate  = .false.
-        Area_I(nArea)%Rotate_DD = cUnit_DD
-
-        ! Remove leading spaces
-        NameArea = adjustl(NameArea)
-
-        ! Check for the word rotated in the name
-        i = index(NameArea,'rotated')
-        Area_I(nArea)%DoRotate = i > 0
-        if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+7:len(NameArea))
-
-        ! check for the word stretched in the name
-        i = index(NameArea,'stretched')
-        DoStretchArea = i > 0
-        if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+9:len(NameArea))
-
-        ! Extract character '0' from the name
-        i = index(NameArea,'0')
-        if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+1:len(NameArea))
-
-        DoReadAreaCenter = (i < 1 .and. NameArea(1:3) /= 'box')
-
-        ! Store name
-        Area_I(nArea)%Name = NameArea
-
-        ! These types do not need any more parameters
-        select case(NameArea)
-        case('all','currentsheet','user')
-           CYCLE READPARAM
-        end select
-
-        ! Read center of area if needed
-        if(DoReadAreaCenter)then
-           call read_var("xCenter",Area_I(nArea)%Center_D(1))
-           call read_var("yCenter",Area_I(nArea)%Center_D(2))
-           call read_var("zCenter",Area_I(nArea)%Center_D(3))
-        endif
-
-        select case(NameArea)
-        case("box", "box_gen")
-           call read_var("xMinBox",XyzStartArea_D(1))
-           call read_var("yMinBox",XyzStartArea_D(2))
-           call read_var("zMinBox",XyzStartArea_D(3))
-           call read_var("xMaxBox",XyzEndArea_D(1))
-           call read_var("yMaxBox",XyzEndArea_D(2))
-           call read_var("zMaxBox",XyzEndArea_D(3))
-           ! Convert to center and size information
-           Area_I(nArea)%Center_D = 0.5*   (XyzStartArea_D + XyzEndArea_D)
-           Area_I(nArea)%Size_D   = 0.5*abs(XyzEndArea_D - XyzStartArea_D)
-
-           ! Overwrite name with brick
-           if(NameArea == "box_gen")then
-              Area_I(nArea)%Name = "brick_gen"
-           else
-              Area_I(nArea)%Name = "brick"
+           nArea = nArea + 1
+           if(nArea > MaxArea)then
+              if(UseStrict)call stop_mpi(NameSub// &
+                   ' ERROR: Too many grid areas were defined')
+              if(iProc == 0)then
+                 write(*,*)NameSub," nArea = ",nArea
+                 write(*,*)NameSub," WARNING: Too many grid areas were defined"
+                 write(*,*)NameSub," ignoring command ",NameCommand
+              end if
+              nArea = MaxArea
            end if
-        case("brick", "brick_gen")
-           call read_var("xSize", Area_I(nArea)%Size_D(1))
-           call read_var("ySize", Area_I(nArea)%Size_D(2))
-           call read_var("zSize", Area_I(nArea)%Size_D(3))
 
-           ! Area size is measured from the center: half of brick size
-           Area_I(nArea)%Size_D   = 0.5*Area_I(nArea)%Size_D
+           Area_I(nArea) % Resolution = AreaResolution
 
-        case("shell")
-           call read_area_radii
-           Area_I(nArea)%Size_D = RadiusArea
+           ! Set the default center to be the origin, 
+           ! the size and radii to be 1, and no rotation
+           Area_I(nArea)%Center_D  = 0.0
+           Area_I(nArea)%Size_D    = 1.0
+           Area_I(nArea)%Radius1   = 1.0
+           Area_I(nArea)%DoRotate  = .false.
+           Area_I(nArea)%Rotate_DD = cUnit_DD
 
-        case("sphere")
-           call read_var("Radius", RadiusArea)
-           Area_I(nArea)%Size_D   = RadiusArea
+           ! Remove leading spaces
+           NameArea = adjustl(NameArea)
 
-        case("ringx")
-           call read_var("Height", Area_I(nArea)%Size_D(1))
-           Area_I(nArea)%Size_D(1)     = 0.5*Area_I(nArea)%Size_D(1)
-           call read_area_radii
-           Area_I(nArea)%Size_D(2:3)   = RadiusArea
+           ! Check for the word rotated in the name
+           i = index(NameArea,'rotated')
+           Area_I(nArea)%DoRotate = i > 0
+           if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+7:len(NameArea))
 
-        case("ringy")
-           call read_var("Height", Area_I(nArea)%Size_D(2))
-           Area_I(nArea)%Size_D(2)     = 0.5*Area_I(nArea)%Size_D(2)
-           call read_area_radii
-           Area_I(nArea)%Size_D(1:3:2) = RadiusArea
+           ! check for the word stretched in the name
+           i = index(NameArea,'stretched')
+           DoStretchArea = i > 0
+           if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+9:len(NameArea))
 
-        case("ringz")
-           call read_var("Height", Area_I(nArea)%Size_D(3))
-           Area_I(nArea)%Size_D(3)     = 0.5*Area_I(nArea)%Size_D(3)
-           call read_area_radii
-           Area_I(nArea)%Size_D(1:2)   = RadiusArea
+           ! Extract character '0' from the name
+           i = index(NameArea,'0')
+           if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+1:len(NameArea))
 
-        case("cylinderx")
-           call read_var("Length", Area_I(nArea)%Size_D(1))
-           Area_I(nArea)%Size_D(1)     = 0.5 * Area_I(nArea)%Size_D(1)
-           call read_var("Radius", RadiusArea)
-           Area_I(nArea)%Size_D(2:3)   = RadiusArea
+           DoReadAreaCenter = (i < 1 .and. NameArea(1:3) /= 'box')
 
-        case("cylindery")
-           call read_var("Length", Area_I(nArea)%Size_D(2))
-           Area_I(nArea)%Size_D(2)     = 0.5 * Area_I(nArea)%Size_D(2)
-           call read_var("Radius", RadiusArea)
-           Area_I(nArea)%Size_D(1:3:2) = RadiusArea
+           ! Store name
+           Area_I(nArea)%Name = NameArea
 
-        case("cylinderz")
-           call read_var("Length", Area_I(nArea)%Size_D(3))
-           Area_I(nArea)%Size_D(3)     = 0.5 * Area_I(nArea)%Size_D(3)
-           call read_var("Radius", RadiusArea)
-           Area_I(nArea)%Size_D(1:2)   = RadiusArea
+           ! These types do not need any more parameters
+           select case(NameArea)
+           case('all','currentsheet','user')
+              CYCLE READPARAM
+           end select
 
-        case default
-           if(UseStrict) call stop_mpi(NameSub//&
-                ' ERROR: unknown NameArea='//trim(Area_I(nArea)%Name))
+           ! Read center of area if needed
+           if(DoReadAreaCenter)then
+              call read_var("xCenter",Area_I(nArea)%Center_D(1))
+              call read_var("yCenter",Area_I(nArea)%Center_D(2))
+              call read_var("zCenter",Area_I(nArea)%Center_D(3))
+           endif
 
-           if(iProc == 0) &
-                write(*,*) NameSub//' WARNING: unknown NameArea=' // &
-                trim(Area_I(nArea)%Name) // ', ignoring command ' // &
-                trim(NameCommand)
+           select case(NameArea)
+           case("box", "box_gen")
+              call read_var("xMinBox",XyzStartArea_D(1))
+              call read_var("yMinBox",XyzStartArea_D(2))
+              call read_var("zMinBox",XyzStartArea_D(3))
+              call read_var("xMaxBox",XyzEndArea_D(1))
+              call read_var("yMaxBox",XyzEndArea_D(2))
+              call read_var("zMaxBox",XyzEndArea_D(3))
+              ! Convert to center and size information
+              Area_I(nArea)%Center_D = 0.5*   (XyzStartArea_D + XyzEndArea_D)
+              Area_I(nArea)%Size_D   = 0.5*abs(XyzEndArea_D - XyzStartArea_D)
 
-           nArea = nArea - 1
-           CYCLE READPARAM
-        end select
+              ! Overwrite name with brick
+              if(NameArea == "box_gen")then
+                 Area_I(nArea)%Name = "brick_gen"
+              else
+                 Area_I(nArea)%Name = "brick"
+              end if
+           case("brick", "brick_gen")
+              call read_var("xSize", Area_I(nArea)%Size_D(1))
+              call read_var("ySize", Area_I(nArea)%Size_D(2))
+              call read_var("zSize", Area_I(nArea)%Size_D(3))
 
-        if(DoStretchArea)then
-           ! Read 3 stretch factors for the sizes
-           call read_var('xStretch', xStretchArea)
-           call read_var('yStretch', yStretchArea)
-           call read_var('zStretch', zStretchArea)
+              ! Area size is measured from the center: half of brick size
+              Area_I(nArea)%Size_D   = 0.5*Area_I(nArea)%Size_D
 
-           ! Stretch the x, y, z sizes
-           Area_I(nArea)%Size_D(1) = Area_I(nArea)%Size_D(1)*xStretchArea
-           Area_I(nArea)%Size_D(2) = Area_I(nArea)%Size_D(2)*yStretchArea
-           Area_I(nArea)%Size_D(3) = Area_I(nArea)%Size_D(3)*zStretchArea
+           case("shell")
+              call read_area_radii
+              Area_I(nArea)%Size_D = RadiusArea
 
-           DoStretchArea = .false.
+           case("sphere")
+              call read_var("Radius", RadiusArea)
+              Area_I(nArea)%Size_D   = RadiusArea
+
+           case("ringx")
+              call read_var("Height", Area_I(nArea)%Size_D(1))
+              Area_I(nArea)%Size_D(1)     = 0.5*Area_I(nArea)%Size_D(1)
+              call read_area_radii
+              Area_I(nArea)%Size_D(2:3)   = RadiusArea
+
+           case("ringy")
+              call read_var("Height", Area_I(nArea)%Size_D(2))
+              Area_I(nArea)%Size_D(2)     = 0.5*Area_I(nArea)%Size_D(2)
+              call read_area_radii
+              Area_I(nArea)%Size_D(1:3:2) = RadiusArea
+
+           case("ringz")
+              call read_var("Height", Area_I(nArea)%Size_D(3))
+              Area_I(nArea)%Size_D(3)     = 0.5*Area_I(nArea)%Size_D(3)
+              call read_area_radii
+              Area_I(nArea)%Size_D(1:2)   = RadiusArea
+
+           case("cylinderx")
+              call read_var("Length", Area_I(nArea)%Size_D(1))
+              Area_I(nArea)%Size_D(1)     = 0.5 * Area_I(nArea)%Size_D(1)
+              call read_var("Radius", RadiusArea)
+              Area_I(nArea)%Size_D(2:3)   = RadiusArea
+
+           case("cylindery")
+              call read_var("Length", Area_I(nArea)%Size_D(2))
+              Area_I(nArea)%Size_D(2)     = 0.5 * Area_I(nArea)%Size_D(2)
+              call read_var("Radius", RadiusArea)
+              Area_I(nArea)%Size_D(1:3:2) = RadiusArea
+
+           case("cylinderz")
+              call read_var("Length", Area_I(nArea)%Size_D(3))
+              Area_I(nArea)%Size_D(3)     = 0.5 * Area_I(nArea)%Size_D(3)
+              call read_var("Radius", RadiusArea)
+              Area_I(nArea)%Size_D(1:2)   = RadiusArea
+
+           case default
+              if(UseStrict) call stop_mpi(NameSub//&
+                   ' ERROR: unknown NameArea='//trim(Area_I(nArea)%Name))
+
+              if(iProc == 0) &
+                   write(*,*) NameSub//' WARNING: unknown NameArea=' // &
+                   trim(Area_I(nArea)%Name) // ', ignoring command ' // &
+                   trim(NameCommand)
+
+              nArea = nArea - 1
+              CYCLE READPARAM
+           end select
+
+           if(DoStretchArea)then
+              ! Read 3 stretch factors for the sizes
+              call read_var('xStretch', xStretchArea)
+              call read_var('yStretch', yStretchArea)
+              call read_var('zStretch', zStretchArea)
+
+              ! Stretch the x, y, z sizes
+              Area_I(nArea)%Size_D(1) = Area_I(nArea)%Size_D(1)*xStretchArea
+              Area_I(nArea)%Size_D(2) = Area_I(nArea)%Size_D(2)*yStretchArea
+              Area_I(nArea)%Size_D(3) = Area_I(nArea)%Size_D(3)*zStretchArea
+
+              DoStretchArea = .false.
+           end if
+
+           if(Area_I(nArea) % DoRotate)then
+
+              ! Read 3 angles for the rotation matrix in degrees
+              call read_var('xRotate',xRotateArea)
+              call read_var('yRotate',yRotateArea)
+              call read_var('zRotate',zRotateArea)
+
+              ! Rotation matrix rotates around X, Y and Z axes in this order
+              Area_I(nArea)%Rotate_DD = matmul( matmul( &
+                   rot_matrix_z(-zRotateArea*cDegToRad), &
+                   rot_matrix_y(-yRotateArea*cDegToRad)),&
+                   rot_matrix_x(-xRotateArea*cDegToRad))
+
+              !write(*,*)'Matrix=',Area_I(nArea)%Rotate_DD
+
+           end if
         end if
-
-        if(Area_I(nArea) % DoRotate)then
-
-           ! Read 3 angles for the rotation matrix in degrees
-           call read_var('xRotate',xRotateArea)
-           call read_var('yRotate',yRotateArea)
-           call read_var('zRotate',zRotateArea)
-
-           ! Rotation matrix rotates around X, Y and Z axes in this order
-           Area_I(nArea)%Rotate_DD = matmul( matmul( &
-                rot_matrix_z(-zRotateArea*cDegToRad), &
-                rot_matrix_y(-yRotateArea*cDegToRad)),&
-                rot_matrix_x(-xRotateArea*cDegToRad))
-
-           !write(*,*)'Matrix=',Area_I(nArea)%Rotate_DD
-
-        end if
-
      case("#MESSAGEPASSACROSSPOLE")
         ! NOTE: setting DoFixBodyLevel to false in either #AMRLEVELS or #AMRRESOLUTION
         !       after #MESSAGEPASSACROSSPOLE in PARAM.in will undo this.
@@ -1234,7 +1250,6 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DoAutoRefine',automatic_refinement)
            if (automatic_refinement) then
               if(UseBatl) then
-!!$ call stop_mpi('Use #DOAMR and #AMRTYPE with BATL"')
                  call read_amr_criteria("#AMR")
               else
                  call read_var('PercentCoarsen',percentCoarsen)
@@ -1263,8 +1278,10 @@ subroutine MH_set_parameters(TypeAction)
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
         if(UseBatl) then
+           call read_var('nRefineCrit',nRefineCrit)
+           call init_ModAMR(nRefineCrit)
            call read_amr_criteria(NameCommand, &
-                nCritOut=nRefineCrit, NameCritOut_I=RefineCrit,&
+                nCritInOut=nRefineCrit, NameCritOut_I=RefineCrit,&
                 NameStatVarIn_V= NameVar_V,&
                 nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
            if (UseSunEarth) then
@@ -1274,9 +1291,8 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('InvD2Ray',InvD2Ray)
            end if
         else
-           call read_var('nRefineCrit', nRefineCrit)
-           if(nRefineCrit<0 .or. nRefineCrit>3) call stop_mpi(NameSub// &
-                ' ERROR: nRefineCrit must be 0, 1, 2 or 3')
+           call read_var('nRefineCrit',nRefineCrit)
+           call init_ModAMR(nRefineCrit)
            do i=1,nRefineCrit
               call read_var('TypeRefine', RefineCrit(i), IsLowerCase=.true.)
               if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
@@ -1299,8 +1315,10 @@ subroutine MH_set_parameters(TypeAction)
         DoCritAmr = .true.
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
+        call read_var('nRefineCrit',nRefineCrit)
+        call init_ModAMR(nRefineCrit)
         call read_amr_criteria(NameCommand, &
-             nCritOut=nRefineCrit, NameCritOut_I=RefineCrit,&
+             nCritInOut=nRefineCrit, NameCritOut_I=RefineCrit,&
              NameStatVarIn_V= NameVar_V,&
              nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
         if(nRefineCrit<0 .or. nRefineCrit>3)call stop_mpi(NameSub// &
@@ -2410,11 +2428,17 @@ contains
        TypeNormalization     = "SOLARWIND"
        TypeIoUnit            = "HELIOSPHERIC"
 
-       ! Refinement criteria
-       nRefineCrit    = 3
-       RefineCrit(1)  = 'geometry'
-       RefineCrit(2)  = 'Va'
-       RefineCrit(3)  = 'flux'
+       if(.not.UseBatl) then
+          ! Refinement criteria
+          nRefineCrit    = 3
+          call init_ModAMR(nRefineCrit)
+          RefineCrit(1)  = 'geometry'
+          RefineCrit(2)  = 'Va'
+          RefineCrit(3)  = 'flux'
+       else
+          nRefineCrit = 0
+          call init_ModAMR(nRefineCrit)
+       end if
 
     case('GM')
        ! Body Parameters
@@ -2442,12 +2466,16 @@ contains
        TypeNormalization = "PLANETARY"
        TypeIoUnit        = "PLANETARY"
 
-       ! Refinement Criteria
-       nRefineCrit    = 3
-       RefineCrit(1)  = 'gradlogP'
-       RefineCrit(2)  = 'curlB'
-       RefineCrit(3)  = 'Rcurrents'
-
+       if(.not.UseBatl) then
+          ! Refinement Criteria
+          nRefineCrit    = 3
+          RefineCrit(1)  = 'gradlogP'
+          RefineCrit(2)  = 'curlB'
+          RefineCrit(3)  = 'Rcurrents'
+       else
+          nRefineCrit = 0
+          call init_ModAMR(nRefineCrit)
+       end if
     case('EE')
        ! Body Parameters
        UseGravity = .true.
@@ -2489,6 +2517,11 @@ contains
 
     use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
     use ModImplHypre, ONLY: IsHypreAvailable
+    use ModAMR, ONLY:nRefineCrit,RefineCrit
+
+    character (len=20),dimension(:), allocatable::tmpRefineCrit_I
+    real,dimension(:), allocatable::tmp_I
+    integer :: nCritPhys, nCritAll
 
     ! option and module parameters
     character (len=40) :: Name
@@ -2539,6 +2572,67 @@ contains
           end if
           UseTiming=.false.
        end if
+    end if
+
+
+    ! Backward compatibilety with BATSRUS AMR
+    ! Grid criteria as 'user' and 'currentsheet' are now handeld by
+    ! amr_criteria
+    if(nCritGeo >0) then
+       ! copy RefineCrit
+       if(allocated(tmpRefineCrit_I)) deallocate(tmpRefineCrit_I)
+       nCritPhys= size(RefineCrit)
+       allocate(tmpRefineCrit_I(nCritPhys))
+       tmpRefineCrit_I = RefineCrit
+       nCritAll = nCritPhys+2
+       ! resize and copy back RefineCrit for 'user' and 'currentsheet'
+       if(allocated(RefineCrit)) deallocate(RefineCrit)
+       allocate(RefineCrit(nCritAll))
+       RefineCrit(1:nCritPhys) = tmpRefineCrit_I
+       RefineCrit(nCritPhys+1) = trim(NameCritGeo_I(1))
+       RefineCrit(nCritPhys+2) = trim(NameCritGeo_I(2))
+
+       if(allocated(tmpRefineCrit_I)) deallocate(tmpRefineCrit_I)
+       nRefineCrit = nRefineCrit + nCritGeo
+       !print *," RefineCrit :: ",RefineCrit,nRefineCrit,adjustl(NameCritGeo_I(1)),adjustl(NameCritGeo_I(2))
+       nRefineCrit =nCritAll-1
+
+       ! copy, reasize and copy  back the values into the arrays
+       if(allocated(tmp_I)) deallocate(tmp_I)
+       allocate(tmp_I(nCritPhys+1))
+
+       !print *,"tmp_I : ", shape(tmp_I)," : CoarsenLimit_I ", shape(CoarsenLimit_I)
+       tmp_I =  CoarsenLimit_I
+       deallocate(CoarsenLimit_I)
+       allocate(CoarsenLimit_I(nRefineCrit+1))
+       CoarsenLimit_I(1:nCritPhys+1) = tmp_I
+
+       tmp_I =  RefineLimit_I
+       deallocate(RefineLimit_I)
+       allocate(RefineLimit_I(nRefineCrit+1))
+       RefineLimit_I(1:nCritPhys+1) = tmp_I
+
+       ! Most probably not needed
+       tmp_I(1:nCritPhys) = RefineCritMin_I
+       deallocate(RefineCritMin_I)
+       allocate(RefineCritMin_I(nRefineCrit))
+       RefineCritMin_I(1:nCritPhys) = tmp_I(1:nCritPhys)
+
+       deallocate(tmp_I)
+
+       ! contain no data, no copy needed
+       if(allocated(refine_criteria_IB)) deallocate(refine_criteria_IB)
+       allocate(refine_criteria_IB(nRefineCrit+1,MaxBlock))
+
+
+       !clean unused Arrays
+       if(allocated(refine_criteria_IBP)) deallocate(refine_criteria_IBP)
+       if(allocated(SortIndex_I)) deallocate(SortIndex_I)
+       if(allocated(TypeTransient_I)) deallocate(TypeTransient_I)
+
+       !print *,"correct_parameters :: shape(refine_criteria_IB) = ", shape(refine_criteria_IB)
+
+       nCritGeo = 0
     end if
 
     ! Check flux type selection
@@ -3007,7 +3101,7 @@ contains
   !===========================================================================
   subroutine correct_grid_geometry
 
-    use BATL_lib, ONLY: init_mpi, init_batl, CoordMin_D, CoordMax_D
+    use BATL_lib, ONLY: init_batl, CoordMin_D, CoordMax_D
     use ModBatlInterface, ONLY: set_batsrus_grid
     use ModCovariant, ONLY: yR_I
 
@@ -3137,7 +3231,6 @@ contains
          call set_fake_grid_file
 
     ! Initialize BATL
-    call init_mpi(iComm)
     if(TypeGeometry(1:9)=='spherical') then
        TypeGeometryBatl = 'rlonlat'//TypeGeometry(10:20)
     else

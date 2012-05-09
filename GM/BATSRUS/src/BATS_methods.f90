@@ -57,8 +57,13 @@ contains
          UseRestartInSeries, string_append_iter
 
     use ModMain, ONLY: UseBatl, iteration_number
-    use BATL_lib, ONLY: init_grid_batl, read_tree_file
-    use ModBatlInterface, ONLY: set_batsrus_grid
+    use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
+         set_amr_geometry, nBlock, Unused_B, regrid_batl
+    use ModBatlInterface, ONLY: set_batsrus_grid,set_batsrus_state
+
+    ! Dummy variables, to avoid array size issues with State_VGB in
+    ! set_amr_criteria
+    use ModAdvance, ONLY : nVar, State_VGB
 
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
@@ -88,9 +93,16 @@ contains
                      ' starting initial refinement level, nBlockAll =', &
                      nRefineLevel, nBlockAll
              end if
-             call specify_refinement(local_refine)
-             call init_grid_batl(local_refine)
+
+             call set_amr_criteria(nVar,State_VGB,TypeAmrIn='geo')
+             call init_grid_batl
              call set_batsrus_grid
+             ! need to update node information, maybe not all
+             ! of load balancing
+             do iBlock = 1, nBlock
+                if(Unused_B(iBlock)) CYCLE
+                call set_amr_geometry(iBlock)
+             end do
           else
              if (iProc == 0.and.lVerbose>0) then
                 call write_prefix; write (iUnitOut,*) NameSub, &
@@ -129,6 +141,10 @@ contains
     ! Do not move the data, it is not yet set (2nd false).
     ! There are new blocks (3rd true).
     call load_balance(.not.restart, .false., .true.)
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       call set_amr_geometry(iBlock)
+    end do
 
     if (iProc == 0.and.lVerbose>0)then
        call write_prefix; write (iUnitOut,*) '    total blocks = ',nBlockALL
@@ -180,7 +196,7 @@ contains
           call timing_start('amr_ics_amr')
           if (UseBatl) then
              ! Do physics based AMR with the message passing
-             call amr(.true.)
+             call amr(.true.,'phy')
           else
              ! Do physics based AMR without the message passing
              call amr_physics
@@ -569,7 +585,7 @@ subroutine BATS_amr_refinement
   if(UseConstrainB)call b_face_fine_pass     !^CFG IF CONSTRAINB
 
   ! Do AMR without full initial message passing
-  call amr(.false.)
+  call amr(.false.,'all')
 
   !^CFG IF CONSTRAINB BEGIN
   if(UseConstrainB)then

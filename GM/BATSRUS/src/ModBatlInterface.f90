@@ -310,7 +310,7 @@ contains
     ! Here we should fix B0 and other things
 
     use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B,&
-         restrict_amr_criteria
+         set_amr_geometry
     use ModEnergy, ONLY: calc_energy_ghost
     use ModResistivity,   ONLY: UseResistivity
 
@@ -327,7 +327,7 @@ contains
        call calc_other_soln_vars(iBlock)
        call fix_soln_block(iBlock)
        call calc_energy_ghost(iBlock)
-       call restrict_amr_criteria(iBlock)
+       call set_amr_geometry(iBlock)
        if(UseResistivity) call set_resistivity(iBlock)
     end do
 

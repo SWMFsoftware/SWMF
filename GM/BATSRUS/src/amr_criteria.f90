@@ -1,25 +1,27 @@
 !^CFG COPYRIGHT UM
 subroutine amr_criteria(Crit_IB)
 
-  use ModSize,     ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+  use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, MaxBlock
-  use ModMain,     ONLY: nBlock, UseBatl, UseB0, UseUserAmr, UnusedBlk
-  use ModGeometry, ONLY: &
+  use ModMain,       ONLY: nBlock, UseBatl, UseB0, UseUserAmr, UnusedBlk,&
+       DoThinCurrentSheet, UseUserSpecifyRefinement
+  use ModGeometry,   ONLY: &
        x_BLK, y_BLK, z_BLK, r_BLK, dx_BLK, dy_BLK, dz_BLK, true_cell
-  use ModAdvance,  ONLY: State_VGB, StateOld_VCB, B0_DGB, &
+  use ModAdvance,    ONLY: State_VGB, StateOld_VCB, B0_DGB, &
        Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
-  use ModAMR,      ONLY: nRefineCrit,RefineCrit
-  use ModPhysics,  ONLY: rCurrents
-  use ModPhysics,  ONLY: UseSunEarth
-  use ModUser,     ONLY: user_amr_criteria
-  use ModCurrent,  ONLY: get_current
-  use BATL_lib,    ONLY: DoAmr_B, UseAmrMask
-  use ModNumConst, ONLY: cSqrtTwo, cTiny
+  use ModAMR,        ONLY: nRefineCrit,RefineCrit
+  use ModPhysics,    ONLY: rCurrents
+  use ModPhysics,    ONLY: UseSunEarth
+  use ModUser,       ONLY: user_amr_criteria
+  use ModCurrent,    ONLY: get_current
+  use BATL_lib,      ONLY: DoAmr_B, UseAmrMask
+  use ModNumConst,   ONLY: cSqrtTwo, cTiny
+  use ModVarIndexes, ONLY: SignB_
+  use ModUser,       ONLY: user_specify_refinement
   implicit none
 
-  real, intent(out) :: Crit_IB(4,MaxBlock)
-
-  real :: UserCriteria
+  real, intent(out) :: Crit_IB(nRefineCrit+1,maxBlock)
+  real :: userCriteria
 
   logical :: UseSwitchAMR, IsFound
   integer :: iBlock, iCrit, iVar, i, j, k
@@ -37,6 +39,10 @@ subroutine amr_criteria(Crit_IB)
   real:: Current_D(3)
 
   character(len=*), parameter:: NameSub='amr_criteria'
+
+  ! Needed for the 'currentsheet'
+  real :: rDotB_G(nI,nJ,0:nK+1)
+
   !--------------------------------------------------------------------------
 
   ! initialize all criteria to zero
@@ -50,9 +56,10 @@ subroutine amr_criteria(Crit_IB)
         end if
      end if
 
-     ! set 4th criteria to block radius, used in amr_physics to preserve 
+     ! set last criteria to block radius, used in amr_physics to preserve 
      ! symmetry (not used by BATL !!!)
-     Crit_IB(4,iBlock) = maxval(R_BLK(1:nI,1:nJ,1:nK,iBlock))
+     if(.not.UseBatl)&
+          Crit_IB(nRefineCrit+1,iBlock) = maxval(R_BLK(1:nI,1:nJ,1:nK,iBlock))
 
      ! Initialize values to use below for criteria
      if (UseSunEarth) then
@@ -179,48 +186,130 @@ subroutine amr_criteria(Crit_IB)
            Crit_IB(iCrit,iBlock) = maxval(Var_G(1:nI,1:nJ,1:nK),&
                 MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
 
+        case('currentsheet')
+           if(SignB_>1 .and. DoThinCurrentSheet)then
+
+              if( maxval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))>0.0.and. &
+                   minval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))<0.0) then
+                 Crit_IB(iCrit,iBlock) = 2.0
+              else
+                 Crit_IB(iCrit,iBlock) = -2.0
+              end if
+
+           else
+              ! Calculate BdotR including ghost cells in all directions
+              if(UseB0)then
+                 do k=0, nK+1; do j=1, nJ; do i=1, nI
+                    rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+                         * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
+                         +           y_BLK(i,j,k,iBlock)   &
+                         * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
+                         +           z_BLK(i,j,k,iBlock)   &
+                         * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
+                 end do; end do; end do
+              else
+                 do k=0, nK+1; do j=1, nJ; do i=1, nI
+                    rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+                         * State_VGB(Bx_,i,j,k,iBlock) &
+                         +           y_BLK(i,j,k,iBlock)   &
+                         * State_VGB(By_,i,j,k,iBlock) &
+                         +           z_BLK(i,j,k,iBlock)   &
+                         * State_VGB(Bz_,i,j,k,iBlock)
+                 end do; end do; end do
+              end if
+
+              if(maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny) then
+                 Crit_IB(iCrit,iBlock) = 2.0
+              else
+                 Crit_IB(iCrit,iBlock) = -2.0
+              end if
+
+           end if
         case default
            ! WARNING if we do not find the criteria in the abou list we 
            ! will search for it among 'transient' criteria
-
-           if (UseUserAMR .or. index(RefineCrit(iCrit),'user') > 0 ) then
-              IsFound=.false.
-              call user_amr_criteria(iBlock, &
-                   UserCriteria, RefineCrit(iCrit), IsFound)
-              if (IsFound) then
+           if(UseBatl) then
+              if (UseUserAMR .or. trim(RefineCrit(iCrit))=='user') then
+                 IsFound=.false.
+                 call user_amr_criteria(iBlock, &
+                      UserCriteria, RefineCrit(iCrit), IsFound)
                  Crit_IB(iCrit,iBlock) = userCriteria
-              else            
-                 write(*,*) NameSub, &
-                      ' User refinement criteria=', trim(RefineCrit(iCrit)), &
-                      ' not found in user_amr_criteria in the user module!'
-                 call stop_mpi('Fix user_amr_criteria or PARAM.in!')
+              elseif (UseUserSpecifyRefinement .or. trim(RefineCrit(iCrit)) =='usergeo' ) then
+                 IsFound=.false.
+                 call user_specify_refinement(iBlock, -1, IsFound)
+                 if (IsFound) then
+                    Crit_IB(iCrit,iBlock) = 2.0
+                 else
+                    Crit_IB(iCrit,iBlock) = -2.0
+                 end if
+              else
+                 xxx = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(1,1,1,iBlock))
+                 yyy = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(1,1,1,iBlock))
+                 zzz = 0.5*(z_BLK(nI,nJ,nK,iBlock)+z_BLK(1,1,1,iBlock))
+                 RR = sqrt(xxx**2+yyy**2+zzz**2 )
+                 if (UseSunEarth) then
+                    UseSwitchAMR = RR > RcritAMR
+                 else
+                    UseSwitchAMR = RR > RcritAMR .and. abs(zzz) <= dz_BLK(iBlock)
+                 end if
+                 if (UseSwitchAMR) then
+                    !\
+                    ! Use dynamic refinement if there is a transient event 
+                    !/
+                    call trace_transient(RefineCrit(iCrit),iCrit,iBlock,AMRsort_1)
+                    Crit_IB(iCrit,iBlock) = AMRsort_1
+                    !\              
+                    ! Restrict the refinement to the particular ray Sun-Earth only
+                    ! Only if UseSunEarth == .true.
+                    !/
+                    if (UseSunEarth) then
+                       call refine_sun_earth_cyl(iBlock,xxx,yyy,zzz,AMRsort_2)
+                    else
+                       AMRsort_2 = 1.0
+                    end if
+                    Crit_IB(iCrit,iBlock) = AMRsort_2*Crit_IB(iCrit,iBlock)
+                 end if
               end if
            else
-              xxx = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(1,1,1,iBlock))
-              yyy = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(1,1,1,iBlock))
-              zzz = 0.5*(z_BLK(nI,nJ,nK,iBlock)+z_BLK(1,1,1,iBlock))
-              RR = sqrt(xxx**2+yyy**2+zzz**2 )
-              if (UseSunEarth) then
-                 UseSwitchAMR = RR > RcritAMR
-              else
-                 UseSwitchAMR = RR > RcritAMR .and. abs(zzz) <= dz_BLK(iBlock)
-              end if
-              if (UseSwitchAMR) then
-                 !\
-                 ! Use dynamic refinement if there is a transient event 
-                 !/
-                 call trace_transient(RefineCrit(iCrit),iCrit,iBlock,AMRsort_1)
-                 Crit_IB(iCrit,iBlock) = AMRsort_1
-                 !\              
-                 ! Restrict the refinement to the particular ray Sun-Earth only
-                 ! Only if UseSunEarth == .true.
-                 !/
-                 if (UseSunEarth) then
-                    call refine_sun_earth_cyl(iBlock,xxx,yyy,zzz,AMRsort_2)
-                 else
-                    AMRsort_2 = 1.0
+              if (UseUserAMR .or. index(RefineCrit(iCrit),'user') > 0 ) then
+                 IsFound=.false.
+                 call user_amr_criteria(iBlock, &
+                      UserCriteria, RefineCrit(iCrit), IsFound)
+                 if (IsFound) then
+                    Crit_IB(iCrit,iBlock) = userCriteria
+                 else    
+                    write(*,*) NameSub, &
+                         ' User refinement criteria=', trim(RefineCrit(iCrit)), &
+                         ' not found in user_amr_criteria in the user module!'
+                    call stop_mpi('Fix user_amr_criteria or PARAM.in!')
                  end if
-                 Crit_IB(iCrit,iBlock) = AMRsort_2*Crit_IB(iCrit,iBlock)
+              else
+                 xxx = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(1,1,1,iBlock))
+                 yyy = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(1,1,1,iBlock))
+                 zzz = 0.5*(z_BLK(nI,nJ,nK,iBlock)+z_BLK(1,1,1,iBlock))
+                 RR = sqrt(xxx**2+yyy**2+zzz**2 )
+                 if (UseSunEarth) then
+                    UseSwitchAMR = RR > RcritAMR
+                 else
+                    UseSwitchAMR = RR > RcritAMR .and. abs(zzz) <= dz_BLK(iBlock)
+                 end if
+                 if (UseSwitchAMR) then
+                    !\
+                    ! Use dynamic refinement if there is a transient event 
+                    !/
+                    call trace_transient(RefineCrit(iCrit),iCrit,iBlock,AMRsort_1)
+                    Crit_IB(iCrit,iBlock) = AMRsort_1
+                    !\              
+                    ! Restrict the refinement to the particular ray Sun-Earth only
+                    ! Only if UseSunEarth == .true.
+                    !/
+                    if (UseSunEarth) then
+                       call refine_sun_earth_cyl(iBlock,xxx,yyy,zzz,AMRsort_2)
+                    else
+                       AMRsort_2 = 1.0 
+                    end if
+                    Crit_IB(iCrit,iBlock) = AMRsort_2*Crit_IB(iCrit,iBlock)
+                 end if
               end if
            end if
         end select

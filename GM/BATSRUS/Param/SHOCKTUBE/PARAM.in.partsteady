@@ -31,12 +31,8 @@ NONE			TypeNormalization
 1			nLevel
 initial			NameArea
 
-#GRIDLEVEL
-1			nLevel
-brick0			NameArea
-2.0			xSize
-2.0			ySize
-2.0			zSize
+#AMRINITPHYSICS
+1                       nRefineLevelIC
 
 #DOAMR
 T			DoAmr
