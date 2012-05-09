@@ -11,12 +11,13 @@ subroutine amr_physics
   integer :: nDesiredMax
   integer :: iX,iY,iZ, i1,i2, nDesired, nRefined, nCoarsened, currentBlocks
   integer :: i,j,k,n, iBLK, nSort, nRefineMax, nCoarsenMax, Itmp
-  integer :: iError, SortIndex(4),iChild
+  integer :: iError ,iChild
   real :: percentCoarsenMax=100.0
-  real :: refine_criteria(4, nBLK), Rtmp
+  real ::  Rtmp
   logical :: unique, noNeighbor, stopRefinement, done
   logical :: oktest=.false., oktest_me=.false.
   type (adaptive_block_ptr) :: BlockPtr, tmpBlockPtr
+  integer :: iSortCrit ! index of sorting criteia in 
   !---------------------------------------------------------------------------
   call set_oktest('amr',oktest,oktest_me)
   if(oktest .and. iProc == 0) then
@@ -27,6 +28,9 @@ subroutine amr_physics
   !--------------------------------------------------------------------
   ! Initial error checking and initializations
   !
+  
+  iSortCrit = nRefineCrit+1
+
   if(maxTotalBlocks > nBLK*nProc) then
      if(iProc == 0) then
         call write_myname; write(*,*) &
@@ -41,10 +45,10 @@ subroutine amr_physics
   !--------------------------------------------------------------------
   ! Compute and gather criteria for each block
   !
-  refine_criteria = 0.0
-  call amr_criteria(refine_criteria)
-  call MPI_ALLGATHER(refine_criteria, 4*nBLK, MPI_REAL, &
-       refine_criteria_list, 4*nBLK, MPI_REAL, iComm, iError)
+  refine_criteria_IB = 0.0
+  call amr_criteria(refine_criteria_IB)
+  call MPI_ALLGATHER(refine_criteria_IB, iSortCrit*nBLK, MPI_REAL, &
+       refine_criteria_IBP, iSortCrit*nBLK, MPI_REAL, iComm, iError)
 
 
   !--------------------------------------------------------------------
@@ -63,7 +67,7 @@ subroutine amr_physics
         do n=1,nRefineCrit
            SortB(n,k)=i
            SortP(n,k)=j-1
-           SortC(n,k)=refine_criteria_list(n,i,j)
+           SortC(n,k)=refine_criteria_IBP(n,i,j)
         end do
      end if
   end do; end do
@@ -99,13 +103,13 @@ subroutine amr_physics
   !--------------------------------------------------------------------
   ! Create list of possible refined blocks from sorted lists
   !
-  SortIndex=nSort+1
+  SortIndex_I=nSort+1
   ListToRefine=-1
   k=0
   do i=nSort,1,-1
      do n=1,nRefineCrit
-        if(SortIndex(n)<=i) CYCLE
-        SortIndex(n)=min(i,SortIndex(n))
+        if(SortIndex_I(n)<=i) CYCLE
+        SortIndex_I(n)=min(i,SortIndex_I(n))
 
         !Check to see if block locked for refining
         BlockPtr%ptr => global_block_ptrs(SortB(n,i),SortP(n,i)+1)%ptr
@@ -131,9 +135,9 @@ subroutine amr_physics
            ! Exit loop if criteria is too different
            if(abs(SortC(n,i)-SortC(n,i-i1)) > (SortC(n,i)*1.E-2)) EXIT
            ! Cycle loop if not symmetric point
-           if(abs(refine_criteria_list(4,SortB(n,i   ),SortP(n,i   )+1)- &
-                  refine_criteria_list(4,SortB(n,i-i1),SortP(n,i-i1)+1)) > &
-                 (refine_criteria_list(4,SortB(n,i   ),SortP(n,i   )+1)*1.E-6)) CYCLE
+           if(abs(refine_criteria_IBP(iSortCrit,SortB(n,i   ),SortP(n,i   )+1)- &
+                  refine_criteria_IBP(iSortCrit,SortB(n,i-i1),SortP(n,i-i1)+1)) > &
+                 (refine_criteria_IBP(iSortCrit,SortB(n,i   ),SortP(n,i   )+1)*1.E-6)) CYCLE
 
            !Check to see if block locked for refining
            BlockPtr%ptr => global_block_ptrs(SortB(n,i-i1),SortP(n,i-i1)+1)%ptr
@@ -149,7 +153,7 @@ subroutine amr_physics
               k=k+1
               ListToRefine(1,k) = SortB(n,i-i1)
               ListToRefine(2,k) = SortP(n,i-i1)
-              if(SortIndex(n)==i-i1+1) SortIndex(n)=i-i1
+              if(SortIndex_I(n)==i-i1+1) SortIndex_I(n)=i-i1
            else
            end if
         end do
@@ -175,8 +179,8 @@ subroutine amr_physics
         SortP(1,k)=j-1
         SortC(1,k)=0.
         do n=1,nRefineCrit
-           if(refine_criteria_list(n,i,j) /= 0.0) SortC(1,k) = SortC(1,k) &
-                + refine_criteria_list(n,i,j)/SortC(n,nSort+1)
+           if(refine_criteria_IBP(n,i,j) /= 0.0) SortC(1,k) = SortC(1,k) &
+                + refine_criteria_IBP(n,i,j)/SortC(n,nSort+1)
         end do
      end if
   end do; end do
@@ -205,13 +209,13 @@ subroutine amr_physics
   ! Create list of possible coarsened blocks
   !
   nDesiredMax = int((percentCoarsenMax/100.)*nBlockALL)
-  SortIndex=0
+  SortIndex_I=0
   ListToCoarsen=-1
   k=0
   n=1
   do i=1,nSort
-     if(SortIndex(1)>=i) CYCLE
-     SortIndex(1)=max(i,SortIndex(1))
+     if(SortIndex_I(1)>=i) CYCLE
+     SortIndex_I(1)=max(i,SortIndex_I(1))
 
      ! Do not coarsen blocks with criterion above maximum
      if(SortC(n,i) > CoarsenCritMax) CYCLE
@@ -259,9 +263,9 @@ subroutine amr_physics
            ! Exit loop if criteria is too different
            if(abs(SortC(n,i)-SortC(n,i+i1)) > (SortC(n,i)*1.E-2)) EXIT
            ! Cycle loop if not symmetric point
-           if(abs(refine_criteria_list(4,SortB(n,i   ),SortP(n,i   )+1)- &
-                  refine_criteria_list(4,SortB(n,i+i1),SortP(n,i+i1)+1)) > &
-                 (refine_criteria_list(4,SortB(n,i   ),SortP(n,i   )+1)*1.E-6)) CYCLE
+           if(abs(refine_criteria_IBP(iSortCrit,SortB(n,i   ),SortP(n,i   )+1)- &
+                  refine_criteria_IBP(iSortCrit,SortB(n,i+i1),SortP(n,i+i1)+1)) > &
+                 (refine_criteria_IBP(iSortCrit,SortB(n,i   ),SortP(n,i   )+1)*1.E-6)) CYCLE
 
            !Check to see if block locked for coarsening
            BlockPtr%ptr => global_block_ptrs(SortB(n,i+i1),SortP(n,i+i1)+1)%ptr
@@ -298,7 +302,7 @@ subroutine amr_physics
               k=k+1
               ListToCoarsen(1,k) = SortB(n,i+i1)
               ListToCoarsen(2,k) = SortP(n,i+i1)
-              if(SortIndex(1)==i+i1-1) SortIndex(1)=i+i1
+              if(SortIndex_I(1)==i+i1-1) SortIndex_I(1)=i+i1
            end if
         end do
      end if
@@ -327,9 +331,9 @@ subroutine amr_physics
         if(nCoarsened+7 > nDesired) then
            ! check to see if a few more blocks should be coarsened to preserve symmetry
            do i1=1,nCoarsenMax-i
-              if(abs(refine_criteria_list(4,ListToCoarsen(1,i   ),ListToCoarsen(2,i   )+1)- &
-                   refine_criteria_list(4,ListToCoarsen(1,i+i1),ListToCoarsen(2,i+i1)+1) ) > &
-                   (refine_criteria_list(4,ListToCoarsen(1,i   ),ListToCoarsen(2,i   )+1)*1.E-6)) EXIT
+              if(abs(refine_criteria_IBP(iSortCrit,ListToCoarsen(1,i   ),ListToCoarsen(2,i   )+1)- &
+                   refine_criteria_IBP(iSortCrit,ListToCoarsen(1,i+i1),ListToCoarsen(2,i+i1)+1) ) > &
+                   (refine_criteria_IBP(iSortCrit,ListToCoarsen(1,i   ),ListToCoarsen(2,i   )+1)*1.E-6)) EXIT
               BlockPtr%ptr => global_block_ptrs(ListToCoarsen(1,i+i1),ListToCoarsen(2,i+i1)+1)%ptr
               call FlagBlockCoarsen
            end do
@@ -402,9 +406,9 @@ subroutine amr_physics
         if(nRefined+7 > nDesired) then
            ! check to see if a few more blocks should be refined to preserve symmetry
            do i1=1,nRefineMax-i
-              if(abs(refine_criteria_list(4,ListToRefine(1,i   ),ListToRefine(2,i   )+1)- &
-                   refine_criteria_list(4,ListToRefine(1,i+i1),ListToRefine(2,i+i1)+1) ) > &
-                   (refine_criteria_list(4,ListToRefine(1,i   ),ListToRefine(2,i   )+1)*1.E-6)) EXIT
+              if(abs(refine_criteria_IBP(iSortCrit,ListToRefine(1,i   ),ListToRefine(2,i   )+1)- &
+                   refine_criteria_IBP(iSortCrit,ListToRefine(1,i+i1),ListToRefine(2,i+i1)+1) ) > &
+                   (refine_criteria_IBP(iSortCrit,ListToRefine(1,i   ),ListToRefine(2,i   )+1)*1.E-6)) EXIT
               BlockPtr%ptr => global_block_ptrs(ListToRefine(1,i+i1),ListToRefine(2,i+i1)+1)%ptr
               call FlagBlockRefine
               if(stopRefinement) EXIT

@@ -26,10 +26,6 @@ subroutine allocate_vars
      ! Allocate and initialize global refinement/coarsening criteria and
      ! flagging variables.
      !/
-     allocate( refine_criteria_list(4,nBLK,nProc), stat=ierror )
-     if (ierror > 0) write(*,*) "allocate_vars: PE = ",iProc, &
-          " allocation error: refine_criteria_list"
-     refine_criteria_list = 0.00
 
      allocate( refine_list(nBLK,nProc), stat=ierror )
      if (ierror > 0) write(*,*) "allocate_vars: PE = ",iProc, &

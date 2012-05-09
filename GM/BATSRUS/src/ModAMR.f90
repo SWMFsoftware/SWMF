@@ -33,7 +33,7 @@ module ModAMR
 
   integer :: local_cube(8), local_cubeBLK(8)
 
-  real, dimension(:,:,:), allocatable :: refine_criteria_list
+  real, dimension(:,:,:), allocatable :: refine_criteria_IBP
 
   logical, dimension(:,:), allocatable :: refine_list
   logical, dimension(:,:), allocatable :: coarsen_list
@@ -49,14 +49,17 @@ module ModAMR
   !/
   integer            :: nRefineCrit, MaxTotalBlocks
   real               :: PercentCoarsen, PercentRefine
-  character (len=20) :: RefineCrit(3), TypeTransient_I(3)
-  real               :: CoarsenLimit_I(4)=-1.0, RefineLimit_I(4)=-1.0
+  character (len=20),dimension(:), allocatable:: RefineCrit, TypeTransient_I
+  real, dimension(:), allocatable :: CoarsenLimit_I, RefineLimit_I
 
   ! Refine for criterion n only if it is above RefineCritMin_I(n)
-  real               :: RefineCritMin_I(3) = (/-1.0,-1.0,-1.0/)
+  real, dimension(:), allocatable :: RefineCritMin_I
+  real,dimension(:,:), allocatable :: refine_criteria_IB
   ! Coarsen only if the rescaled (0.0 to 1.0) criterion is below CoarsenCritMax
   real               :: CoarsenCritMax     = 2.0
 
+  integer, dimension(:), allocatable :: SortIndex_I
+  
   !\
   ! Refinement parameters.
   !/
@@ -86,5 +89,49 @@ module ModAMR
   end type AreaType
 
   type(AreaType) :: Area_I(MaxArea)
+
+contains
+  !============================================================================
+  subroutine init_ModAMR(nCrit)
+
+    use ModMain, ONLY: MaxBlock
+    use ModProcMH, ONLY: nProc
+  
+    integer, intent(in) :: nCrit
+    !-----------------------------------------------------------------------
+
+    ! clean for each time we have new refinment criteia
+    call clean_ModAMR
+
+    allocate(RefineCrit(nCrit),&
+         TypeTransient_I(nCrit),&
+         CoarsenLimit_I(NCrit+1),&
+         RefineLimit_I(NCrit+1),&
+         RefineCritMin_I(nCrit),&
+         refine_criteria_IB(nCrit+1,MaxBlock),&
+         refine_criteria_IBP(nCrit+1,MaxBlock,nProc),&
+         SortIndex_I(nCrit+1))
+
+    CoarsenLimit_I      = -1.0
+    RefineLimit_I       = -1.0
+    RefineCritMin_I     = -1.0
+    refine_criteria_IBP = 0.00
+    
+  end subroutine init_ModAMR
+  !============================================================================
+  subroutine clean_ModAMR()
+
+    if(allocated(RefineCrit)) then
+       deallocate(RefineCrit,&
+            TypeTransient_I,&
+            CoarsenLimit_I,&
+            RefineLimit_I,&
+            RefineCritMin_I,&
+            refine_criteria_IB,&
+            refine_criteria_IBP,&
+            SortIndex_I)
+    end if
+  end subroutine clean_ModAMR
+
 
 end module ModAMR
