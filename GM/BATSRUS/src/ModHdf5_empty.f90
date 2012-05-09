@@ -8,7 +8,7 @@ module ModHdf5
 
 contains
   !=========================================================================
-  subroutine write_plot_hdf5(filename, plotVarNames, plotVarUnits,&
+  subroutine write_plot_hdf5(filename, plot_type,plotVarNames, plotVarUnits,&
        nPlotVar,isCutFile, nonCartesian,plot_dimensional, xmin, xmax, &
        ymin, ymax, zmin, zmax)
 
@@ -16,6 +16,7 @@ contains
 
     integer,                 intent(in):: nPlotVar
     character(len=80),       intent(in):: filename
+    character(len=3),        intent(in) :: plot_type
     character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
     character(len=lNameVar),  intent(in):: plotVarUnits(nPlotVar)
     logical, intent(in) :: isCutFile, nonCartesian,plot_dimensional

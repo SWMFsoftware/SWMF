@@ -29,7 +29,6 @@ module ModHdf5
   real, allocatable :: Position_DA(:,:)
   logical :: collectiveWrite
 contains
-
   subroutine write_cut_var_hdf5(iFile, plotType, iBlock, H5Index,nPlotVar,PlotVar, &
        xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
        isNonCartesian,nCell,H5Advance)
@@ -58,7 +57,7 @@ contains
     real,    intent(in)   :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
     real,    intent(in)   :: xMin,xMax,yMin,yMax,zMin,zMax
     logical, intent(in) :: isNonCartesian
-    character (len=3), intent(in) :: plotType
+    character (len=*), intent(in) :: plotType
     real,    intent(inout):: DxBlock,DyBlock,DzBlock
     integer, intent(out)  :: nCell 
     logical, intent(out) :: H5advance
@@ -168,67 +167,69 @@ contains
        nBlocksUsed = 0
        allocate(UsedBlocksTemp(nBlockMax))
        if (isNonCartesian) then
-          if (plotType=="x=0") then
+          if (plotType=='x=0') then
+             !              write (*,*) "allocated x=0"
              nPlotDim = 2
              plotDim = (/1,3,0/)
              arrSize = (/iSizeGlobal, kSizeGlobal, 1/)
+             nodeArrSize = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
           else if(plotType=="y=0)") then
+             !              write (*,*) "allocated y=0"
              nPlotDim = 2
              plotDim = (/1,3,0/)
              arrSize = (/iSizeGlobal, kSizeGlobal, 1/)
-          else if (plotType == "z=0") then
+             nodeArrSize = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
+          else if (plotType=='z=0' )then
+             !              write (*,*) "allocated z=0"
              nPlotDim = 2
              plotDim = (/1,2,0/)
              arrSize = (/iSizeGlobal, jSizeGlobal, 1/)
+             nodeArrSize = (/iSizeGlobal+1, jSizeGlobal+1, 1/)
           end if
        else
           if (iSizeGlobal == 1 .and. jSizeGlobal == 1) then
              nPlotDim = 1
              plotDim = (/3,0,0/)
              arrSize = (/kSizeGlobal,1,1/)
+             nodeArrSize = (/kSizeGlobal+1,1,1/)
           else if (iSizeGlobal == 1 .and. kSizeGlobal == 1) then
              nPlotDim = 1
              plotDim = (/2,0,0/)
              arrSize = (/jSizeGlobal,1,1/)
+             nodeArrSize = (/jSizeGlobal+1,1,1/)
           else if (jSizeGlobal == 1 .and. kSizeGlobal == 1) then
              nPlotDim = 1
              plotDim = (/1,0,0/)
              arrSize = (/iSizeGlobal,1,1/)
+             nodeArrSize = (/iSizeGlobal+1,1,1/)
           else if (iSizeGlobal == 1) then
              nPlotDim = 2
              plotDim = (/2,3,0/)
              arrSize = (/jSizeGlobal,kSizeGlobal,1/)
+             nodeArrSize = (/jSizeGlobal+1,kSizeGlobal+1,1/)
           else if (jSizeGlobal == 1) then
              nPlotDim = 2
              plotDim = (/1,3,0/)
              arrSize = (/iSizeGlobal,kSizeGlobal,1/)
+             nodeArrSize = (/iSizeGlobal+1,kSizeGlobal+1,1/)
           else if (kSizeGlobal == 1) then
              nPlotDim = 2
              plotDim = (/1,2,0/)
              arrSize = (/iSizeGlobal,jSizeGlobal,1/)
+             nodeArrSize = (/iSizeGlobal+1,jSizeGlobal+1,1/)
           else
              nPlotDim = 3
              plotDim = (/1,2,3/)
              arrSize = (/iSizeGlobal,jSizeGlobal,kSizeGlobal/)
+             nodeArrSize = (/iSizeGlobal+1,jSizeGlobal+1,kSizeGlobal+1/)
           end if
        end if
-       allocate(PlotVarIdx(arrSize(1), arrSize(2), arrSize(3),&
-            nBlockMax, nPlotVar))
-       !       allocate(PlotVarIdx(nI, nJ, nK, nBlockMax, nPlotVar))
+       allocate(PlotVarIdx(arrSize(1),arrSize(2), arrSize(3), nBlockMax, nPlotVar))
        PlotVarIdx=-50
-       nodeArrSize(1:3) = arrSize(1:3)
-       do ii = 1, nPlotDim
-          nodeArrSize(ii) = arrSize(ii) + 1
-       end do
        if (isNonCartesian) allocate(plotXYZNodes(nPlotDim, &
             nodeArrSize(1),nodeArrSize(2),nodeArrSize(3),nBlockMax))
-       !             allocate(plotXYZNodes(nodeArrSize(1),nodeArrSize(2),&
-       !                 nodeArrSize(3),nPlotDim,nBlockMax))
-
-
-       !       allocate(cutIndexLimits(6,nBlockMax))
-
     end if
+
     xMin1 = xMin - cHalfMinusTiny*Dx_BLK(iBlock)
     xMax1 = xMax + cHalfMinusTiny*Dx_BLK(iBlock)
     yMin1 = yMin - cHalfMinusTiny*Dy_BLK(iBlock)
@@ -286,15 +287,25 @@ contains
     jMaxN = jMax
     kMaxN = kMax
 
-    do ii = 1, nPlotDim
-       if (plotDim(ii) == 1) then
+    if (isNonCartesian) then
+       if ( plotType(1:3)=='x=0' .or. plotType(1:3)=='y=0') then
           iMaxN = iMax + 1
-       else if (plotDim(ii) == 2) then
-          jMaxN = jMax + 1
-       else if (plotDim(ii) == 3) then
           kMaxN = kMax + 1
+       else if ( plotType(1:3)=='z=0') then
+          iMaxN = iMax + 1
+          jMaxN = jmax + 1
        end if
-    end do
+    else
+       do ii = 1, nPlotDim
+          if (plotDim(ii) == 1) then
+             iMaxN = iMax + 1
+          else if (plotDim(ii) == 2) then
+             jMaxN = jMax + 1
+          else if (plotDim(ii) == 3) then
+             kMaxN = kMax + 1
+          end if
+       end do
+    end if
 
 
     !   if(DoTestMe)then
@@ -327,27 +338,33 @@ contains
     !I have only tried one test case so the problem be bigger than just x=0 cuts
     if (isNonCartesian) then
        do kk=kMin,kMaxN; do jj=jMin,jMaxN; do ii=iMin,iMaxN
-          if (plotType=="x=0") then
+          if (plotType=='x=0') then
+             !              write (*,*) 'x=0'
              i = ii - iMin + 1
              j = kk - kMin + 1
              k = jj - jMin + 1
+             !              write (*,*) i,j,k,ii,jj,kk
              plotXYZNodes(1,i, j, k, H5Index) = &
                   Xyz_DNB(2,ii, jj, kk, iBlock)
              plotXYZNodes(2,i, j, k, H5Index) = &
                   Xyz_DNB(3,ii, jj, kk, iBlock)
-          else if (plotType=="y=0") then
+          else if (plotType=='y=0') then
+             !              write (*,*) 'y=0'
              i = ii - iMin + 1
              j = kk - kMin + 1
              k = jj - jMin + 1
+             !              write (*,*) i,j,k,ii,jj,kk
              plotXYZNodes(1,i, j, k, H5Index) = &
                   Xyz_DNB(1,ii, jj, kk, iBlock)
              plotXYZNodes(2,i, j, k, H5Index) = &
                   Xyz_DNB(3,ii, jj, kk, iBlock)
-
-          else if (plotType=="z=0") then
+             ! 
+          else if (plotType=='z=0') then
+             !              write (*,*) 'z=0'
              i = ii - iMin + 1
              j = jj - jMin + 1
              k = kk - kMin + 1
+             !              write (*,*) i,j,k,ii,jj,kk
              plotXYZNodes(1,i, j, k, H5Index) = &
                   Xyz_DNB(1,ii, jj, kk, iBlock)
              plotXYZNodes(2,i, j, k, H5Index) = &
@@ -356,19 +373,17 @@ contains
           else if (nPlotDim == 3) then
              write (*,*) "NPLOTDIM==3"
           end if
-          do d=1,nPlotDim
-             plotXYZNodes(d,i, j, k, H5Index) = &
-                  Xyz_DNB(plotDim(d),ii, jj, kk, iBlock)
-          end do
           where(abs(PlotXYZNodes(:,:,:,:,H5Index))<1.e-10) &
                PlotXYZNodes(:,:,:,:,H5Index) = 0.
        end do; end do; end do
        do kk=kMin,kMax; do jj=jMin,jMax; do ii=iMin,iMax
-          if ( plotType=="x=0" .or. plotType=="y=0") then
+          if ( plotType=='x=0' .or. plotType=='y=0') then
+             !              write (*,*) "x=0 y=0"
              i = ii - iMin + 1
              j = kk - kMin + 1
              k = jj - jMin + 1
-          else if ( plotType=="z=0") then
+          else if ( plotType=='z=0') then
+             !              write (*,*) 'z=0'
              i = ii - iMin + 1
              j = jj - jMin + 1
              k = kk - kMin + 1
@@ -455,7 +470,7 @@ contains
     ! this plotfile yet
 
 !!! Use nBlock if possible
-
+    !!NODE ORDER TEMPORARILY SWITCHED
     if (.not. allocated(PlotVarIdx)) then
        allocate(PlotVarIdx(nI, nJ, nK, nBlockMax, nPlotVar))
        allocate(UsedBlocksTemp(nBlockMax))
@@ -481,10 +496,9 @@ contains
        if (isNonCartesian) &
             allocate(plotXYZNodes(nPlotDim,1:1+nI,1:1+nJ,1:1+nK,nBlockMax))
     end if
-
     if (isNonCartesian) then  
        do kk = 1, nodeArrSize(3); do jj = 1, nodeArrSize(2); do ii = 1, nodeArrSize(1)
-          plotXYZNodes(1:nPlotDim,ii, kk, jj, H5Index) = &
+          plotXYZNodes(1:nPlotDim,ii, jj, kk, H5Index) = &
                Xyz_DNB(1:nPlotDim,ii, jj, kk, iBlock)
 
        end do; end do; end do
@@ -493,71 +507,21 @@ contains
     !translates iBlk to index for plotfile where unused blocks are skipped  
 !!! Efficient loop ordering: do k = ...; do j = ...; do i = ...
 
-    do iPlot = 1, nPlotVar
-       do kk = 1, nK; do jj = 1, nJ; do ii = 1, nI
-          PlotVarIdx(ii, kk, jj, H5Index, iPlot) = &
-               PlotVar(ii, jj, kk, iPlot)
+    do kk = 1, nK; do jj = 1, nJ; do ii = 1, nI
+       PlotVarIdx(ii, jj, kk, H5Index, 1:nPlotVar) = &
+            PlotVar(ii,jj, kk,1:nPlotVar)
 
 
-       end do; end do; end do
-    end do
+    end do; end do; end do
     UsedBlocksTemp(H5Index) = iBlock
     nBlocksUsed = H5Index
 
 
   end subroutine write_var_hdf5
   !===============================================================           
-
-  logical function sort_test(i, j)
-    use BATL_lib, ONLY : nDim 
-
-    integer, intent(in) :: i,j
-    if(ndim == 3) then
-       sort_test = 0
-       if(Position_DA(3,i) < Position_DA(3,j)) then
-          sort_test = .false.
-       elseif(Position_DA(3,j) < Position_DA(3,i)) then
-          sort_test = .true.
-       else
-          if(Position_DA(2,i) < Position_DA(2,j)) then
-             sort_test = .false.
-          elseif(Position_DA(2,j) < Position_DA(2,i)) then
-             sort_test = .true.
-          else
-             if(Position_DA(1,i) < Position_DA(1,j)) then
-                sort_test = .false.
-             elseif(Position_DA(1,j) < Position_DA(1,i)) then
-                sort_test = .true.
-             end if
-          end if
-       end if
-    elseif(nDim == 2) then
-       if(Position_DA(2,i) < Position_DA(2,j)) then
-          sort_test = .false.
-       elseif(Position_DA(2,j) < Position_DA(2,i)) then
-          sort_test = .true.
-       else
-          if(Position_DA(1,i) < Position_DA(1,j)) then
-             sort_test = .false.
-          elseif(Position_DA(1,j) < Position_DA(1,i)) then
-             sort_test = .true.
-          end if
-       end if
-    elseif(nDim == 1) then
-       if(Position_DA(1,i) < Position_DA(1,j)) then
-          sort_test = .false.
-       elseif(Position_DA(1,j) < Position_DA(1,i)) then
-          sort_test = .true.
-       end if
-
-    else
-       sort_test = .false.
-    end if
-  end function sort_test
-  !=================================================================
   !================================================================
 
-  subroutine write_plot_hdf5(filename, plotVarNames, plotVarUnits,&
+  subroutine write_plot_hdf5(filename, plotType, plotVarNames, plotVarUnits,&
        nPlotVar,isCutFile, nonCartesian,plot_dimensional, xmin, xmax, &
        ymin, ymax, zmin, zmax)!, nBLKcells)
 
@@ -583,12 +547,13 @@ contains
     character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
     character(len=lNameVar),  intent(in):: plotVarUnits(nPlotVar)
     character(len=lNameVar) :: AxisLabels(3)!, AxisLabelsNull(3)
+    character (len=*), intent(in) :: plotType
     real, intent(in)  ::  xMin, xMax, yMin, yMax, zMin, zMax
     !    integer,                 intent(in):: nBLKcells
     logical, intent(in) :: isCutFile, plot_dimensional, nonCartesian
     integer :: offsetPerProc(0:nProc-1), blocksPerProc(0:nProc-1)
     integer :: fileID, error, procIdx, lastCoord, iNode, iLen, iVar, nBlocksUsedMax 
-    integer :: labelLeng, i, ii, PosMinType, iMorton
+    integer :: labelLeng, i, ii, PosMinType, iMorton, nBlocksUsedMin
     integer :: hdfMajor, hdfMinor, hdfRelease, minBlocksUsed
     real, allocatable :: coordinates(:,:), bbox(:,:,:),blockDataExtents(:,:)
     integer, allocatable :: procNum(:),minLogicalExtents(:,:)
@@ -603,6 +568,7 @@ contains
     character (len=4) :: tempstr
     real :: xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
     real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
+    logical :: allProcsWrite
 
     real :: ySqueezed
 
@@ -615,6 +581,7 @@ contains
     if (iProc == 0) write (*,*) '------------------------------------'
     if (iProc == 0) write (*,*) '  opening hdf5 file'
 
+    call barrier_mpi()
     do iVar = 1, nPlotVar
        if (nBlocksUsed > 0) then
           varMin = minval(PlotVarIdx(:,:,:,1:nBlocksUsed,iVar))
@@ -630,8 +597,7 @@ contains
             MPI_MAX, iComm, error)
 
     end do
-    call MPI_Allgather(nBlocksUsed, 1, MPI_INTEGER, blocksPerProc, &
-         1, MPI_INTEGER, iComm, error)
+
 
     !initialize the Fortran Hdf5 library
     call h5open_f(error)
@@ -640,29 +606,25 @@ contains
     !is faster but all processors must call h5dwrite, even in cuts where 
     !some processors write no data.  In newer versions of hdf5 a null
     !write can be called but attempting to do so on older versions will
-    !cause the code to crash.  
-
+    !cause the code to crash. We should be able to do collective for any
+    !hdf5 1.8.x where all procs write data but that didn't work for me 
+    !for some reason so for now collective write mode is restricted to
+    !hdf5 version 1.8.8+
+    !     write (*,*) "write plot error 3"v
     call h5get_libversion_f(hdfMajor, hdfMinor, hdfRelease, error)   
-    if (hdfMajor > 1) then
+    if (hdfmajor > 1) then
        collectiveWrite = .true.
-    else if (hdfMajor == 1) then
-       if (hdfMinor .ge. 8) then
+    else if (hdfmajor == 1 .and. hdfMinor > 8) then
+       collectiveWrite = .true.
+    else if (hdfmajor == 1 .and. hdfMinor == 8) then
+       if (hdfRelease .ge. 8 ) then!.or. allProcsWrite) then
           collectiveWrite = .true.
-       else if (hdfMinor == 6 .or. hdfMinor == 7) then
-          call MPI_allreduce(nBlocksUsed, minBlocksUsed, 1, MPI_INTEGER, &
-               MPI_MIN, iComm, error)
-          if (minBlocksUsed == 0) then
-             collectiveWrite = .false.
-          else 
-             collectiveWrite = .true.
-          end if
        else
           collectiveWrite = .false.
        end if
-    else
+    else 
        collectiveWrite = .false.
     end if
-
 
     ! Open the hdf5 file and write data to it
     !---------------------------------------------------------------------    
@@ -676,6 +638,7 @@ contains
     call MPI_Allgather(nBlocksUsed, 1, MPI_INTEGER, blocksPerProc, &
          1, MPI_INTEGER, iComm, error)
     nBlocksUsedMax = maxval(blocksPerProc)
+    nBlocksUsedMin = minval(blocksPerProc)
     offsetPerProc(0) = 0
     nBlkUsedGlobal = blocksPerProc(0) 
     if (nProc > 1) then
@@ -691,79 +654,15 @@ contains
     allocate(UsedBlocks(nBlocksUsed))
     UsedBlocks(1:nBlocksUsed) = UsedBlocksTemp(1:nBlocksUsed)
     deallocate(UsedBlocksTemp)
-    allocate(UsedNodes(nBlocksUsed))
-    allocate(Position_DA(nPlotDim,nBlkUsedGlobal))
-    UsedNodes(1:nBlocksUsed) = iNode_B(UsedBlocks(1:nBlocksUsed))
-    if (isCutFile) then 
-       allocate(UsedNodesProc(nBlocksUsedMax, 0:nProc-1))
-       if (nBlocksUsed == 0) then
-          call MPI_Allgather((/0/), 1, MPI_INTEGER, UsedNodesProc, &
-               nBlocksUsedMax, MPI_INTEGER, iComm, error)
-       else
-          call MPI_Allgather(UsedNodes, nBlocksUsed, MPI_INTEGER, UsedNodesProc, &
-               nBlocksUsedMax, MPI_INTEGER, iComm, error)
-       end if
-       do procIdx = 0, nProc-1
-          if(blocksPerProc(procIdx) == 0) cycle
-          do iBlk = 1, blocksPerProc(procIdx)
-             iNode = UsedNodesProc(iBlk,procIdx)
-             call get_tree_position(iNode, PositionMin_D, PositionMax_D)
-             i = offsetPerProc(procIdx) + iBlk
-             Position_DA(1:nPlotDim,i) = PositionMin_D(plotDim(1:nPlotDim))
-             Position_DA(1:nPlotDim,i) = PositionMin_D(plotDim(1:nPlotDim))
-          end do
-       end do
-       deallocate(UsedNodesProc)
-    else
-       allocate(NumUnsedBlkTo(nBlockMax,0:nProc-1))
-       NumUnsedBlkTo = 0
-       do procIdx = 0, nProc-1
-          if(Unused_BP(1, procIdx))&
-               NumUnsedBlkTo(1, procIdx) = 1
-          do iBlk = 2, nBlockMax
-             if (Unused_BP(iBlk,procIdx)) then
-                NumUnsedBlkTo(iBlk,procIdx)=NumUnsedBlkTo(iBlk-1,ProcIdx)&
-                     +1
-             else
-                NumUnsedBlkTo(iBlk,procIdx)=NumUnsedBlkTo(iBlk-1,procIdx)
-             end if
-          end do
-       end do
 
-       do procIdx = 0, nProc-1
-          if(Unused_BP(1, procIdx))&
-               NumUnsedBlkTo(1, procIdx) = 1
-          do iBlk = 2, nBlockMax
-             if (Unused_BP(iBlk,procIdx)) then
-                NumUnsedBlkTo(iBlk,procIdx)=NumUnsedBlkTo(iBlk-1,ProcIdx)&
-                     +1
-             else
-                numunsedblkto(iblk,procidx)=numunsedblkto(iblk-1,procidx)
-                call get_tree_position(iNode, PositionMin_D, PositionMax_D)
-                i = offsetPerProc(procIdx) + iBlk - NumUnsedBlkTo(iBlk,procIdx)
-                Position_DA(1:nPlotDim,i) = PositionMin_D(plotDim(1:nPlotDim))
-             end if
-          end do
-       end do
-       !         do iMorton = 1, nNodeUsed
-       !             iNode = iNodeMorton_I(iMorton)
-       !             iBlk = iTree_IA(Block_,iNode)
-       !             procIdx = iTree_IA(Proc_,iNode) 
-       !             i = offsetPerProc(procIdx) + iBlk - NumUnsedBlkTo(iBlk,procIdx)
-       !             call get_tree_position(iNode, PositionMin_D, PositionMax_D)
-       !             Position_DA(1:nPlotDim,i) = PositionMin_D(plotDim(1:nPlotDim))
-       !         end do
-       !    end do
-       deallocate(NumUnsedBlkTo)
+
+    if (nBlocksUsed > 0) then
+       allocate(UsedNodes(nBlocksUsed))
+       UsedNodes(1:nBlocksUsed) = iNode_B(UsedBlocks(1:nBlocksUsed))
+    else 
+       allocate(UsedNodes(1))
+       UsedNodes(1) = 0
     end if
-
-    allocate(VisItIndx(nBlkUsedGlobal))        
-    call sort_quick_func(nBlkUsedGlobal, sort_test, VisItIndx)
-    deallocate(Position_DA)
-    call writeHdf5Rank1Integer(fileID,VisItIndx, nBlkUsedGlobal,&
-         nBlkUsedGlobal, 0,"VisIt Index")
-
-    deallocate(VisItIndx)
 
     allocate(unknownNameArray(nPlotVar))
     do iVar = 1, nPlotVar
@@ -777,43 +676,36 @@ contains
     call write_plot_string(nPlotVar,UnknownNameArray,"plotVarNames",&
          fileID)
 
-
     ! The plugn doesn't need these. However if does use this info to speed some 
     ! things up if it is there.  Perhaps this could be an option in PARAM.in
     allocate (blockDataExtents(2,nBlocksUsed))
-
     do iVar = 1, nPlotVar
        do iBlk = 1, nBlocksUsed
           blockDataExtents(1, iBlk) = minval(PlotVarIdx(:,:,:,iBlk,iVar))
           blockDataExtents(2, iBlk) = maxval(PlotVarIdx(:,:,:,iBlk,iVar))
        end do
-
-       dsname = UnknownNameArray(iVar)
-       do iLen = 1,lNameH5
-          if (UnknownNameArray(iVar)(iLen:iLen) == CHAR(0)) then
-             labelLeng = iLen
-             exit
-          end if
+       dsname = trim(plotVarNames(iVar))//"_Ext"
+       labelLeng = len_trim(UnknownNameArray(iVar)) + 4
+       do iLen = labelLeng + 1,lNameH5+3
+          dsname(iLen:iLen) = CHAR(0)
        end do
-
-       tempstr = "_Ext"
-       dsname(labelLeng:3+labelLeng) = tempstr(1:4)
-
-       call writeHdf5Rank2Real(fileID, blockDataExtents, nBlocksUsed,&
-            nBlkUsedGlobal, offsetPerProc(iProc), trim(dsname), 2)
-
+       if (nBlocksUsed == 0 ) then
+          if (collectiveWrite)&
+               call writeHdf5Rank2Real(fileID, reshape((/0.0,0.0,0.0,0.0/),(/2,2/)), nBlocksUsed,&
+               nBlkUsedGlobal, offsetPerProc(iProc), dsname, 2)
+       else
+          call writeHdf5Rank2Real(fileID, blockDataExtents, nBlocksUsed,&
+               nBlkUsedGlobal, offsetPerProc(iProc), dsname, 2)   
+       end if
     end do
 
     deallocate (blockDataExtents)
-
-
 
     do iVar = 1, nPlotVar
        call writeHdf5Rank4Real(fileID, PlotVarIdx(:,:,:,1:nBlocksUsed,iVar), nBlocksUsed,&
             nBlkUsedGlobal, offsetPerProc(iProc), UnknownNameArray(iVar), &
             arrSize(1), arrSize(2), arrSize(3), .true., globalVarMin(iVar), globalVarMax(iVar))
     end do
-
     allocate(bbox(2,nPlotDim,nBlocksUsed))    
     if (nonCartesian) then
 
@@ -849,7 +741,6 @@ contains
        bbox(1,:,:) = CoordMin_DB(plotDim(1:nPlotDim), UsedBlocks)
        bbox(2,:,:) = CoordMax_DB(plotDim(1:nPlotDim), UsedBlocks) 
     end if
-
     call writeHdf5Rank3Real(fileID, bbox, nBlocksUsed,&
          nBlkUsedGlobal, offsetPerProc(iProc), "bounding box", 2, nPlotDim)
 
@@ -877,14 +768,17 @@ contains
     end do
     deallocate(bbox)
 
-
     call writeHdf5Rank2Real(fileID, coordinates, nBlocksUsed,&
          nBlkUsedGlobal, offsetPerProc(iProc), "coordinates", nPlotDim)
     deallocate(coordinates)
 
-
-    call writeHdf5Rank2Integer(fileID, iTree_IA(plotDim+Coord0_,UsedNodes), nBlocksUsed,&
-         nBlkUsedGlobal, offsetPerProc(iProc), "MinLogicalExtents", nPlotDim)
+    if (nBlocksUsed > 0) then
+       call writeHdf5Rank2Integer(fileID, iTree_IA(plotDim(1:nPlotDim)+Coord0_,UsedNodes), nBlocksUsed,&
+            nBlkUsedGlobal, offsetPerProc(iProc), "MinLogicalExtents", nPlotDim)
+    else if (collectiveWrite .and. nBlocksUsed == 0) then
+       call writeHdf5Rank2Integer(fileID, reshape((/0,0,0,0/),(/2,2/)), nBlocksUsed,&
+            nBlkUsedGlobal, offsetPerProc(iProc), "MinLogicalExtents", nPlotDim)
+    end if
     !
     do iVar = 1, nPlotVar
        UnknownNameArray(iVar) = plotVarUnits(iVar)
@@ -902,15 +796,23 @@ contains
 
     allocate(bbox(2,nPlotDim, nBlocksUsed))
 
+    if (.not. isCutFile .and. nBlocksUsed > 0) then
+       call writeHdf5Rank1Integer(fileID, iMortonNode_A(UsedNodes), &
+            nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"iMortonNode_A")
+    else if (.not. isCutFile .and. collectiveWrite) then
+       call writeHdf5Rank1Integer(fileID, (/0/), &
+            nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"iMortonNode_A")
+    end if
 
-    if (.not. isCutFile)& 
-         call writeHdf5Rank1Integer(fileID, iMortonNode_A(UsedNodes), &
-         nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"iMortonNode_A")
+    if (nBlocksUsed > 0 ) then
+       call writeHdf5Rank1Integer(fileID, iTree_IA(Level_,UsedNodes), &
+            nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"refine level")
+    else if (collectiveWrite) then
+       call writeHdf5Rank1Integer(fileID, (/0/), &
+            nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"refine level")
+    end if
 
-    call writeHdf5Rank1Integer(fileID, iTree_IA(Level_,UsedNodes), &
-         nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"refine level")
     deallocate(usedNodes)
-
     allocate(procNum(nBlocksUsed))
     procNum = iProc
     call writeHdf5Rank1Integer(fileID, procNum,nBlocksUsed, &
@@ -918,26 +820,34 @@ contains
     deallocate(procNum)
 
     deallocate(usedBlocks)
-
     allocate(UnknownNameArray(nPlotDim))
+
+    if (plotType=='x=0') then
+       UnknownNameArray(1) = "Y-Axis"
+       UnknownNameArray(2) = "Z-Axis"
+    else
+       do iVar = 1, nPlotDim
+
+          if (plotDim(iVar) == 1) then
+             UnknownNameArray(iVar) = "X-Axis"
+          else if (plotDim(iVar) == 2) then
+             UnknownNameArray(iVar) = "Y-Axis"
+          else if (plotDim(iVar) == 3) then
+             UnknownNameArray(iVar) = "Z-Axis"
+          end if
+          !The VisIt plugin needs null padded names.
+       end do
+    end if
     do iVar = 1, nPlotDim
-       if (plotDim(iVar) == 1) then
-          UnknownNameArray(iVar) = "X-Axis"
-       else if (plotDim(iVar) == 2) then
-          UnknownNameArray(iVar) = "Y-Axis"
-       else if (plotDim(iVar) == 3) then
-          UnknownNameArray(iVar) = "Z-Axis"
-       end if
-       !The VisIt plugin needs null padded names.
        labelLeng = len_trim(UnknownNameArray(iVar))
        do iLen = labelLeng + 1,lNameH5 
           UnknownNameArray(iVar)(iLen:iLen) = CHAR(0)
        end do
     end do
+
     call write_plot_string(nPlotDim, UnknownNameArray, "Axis Labels",&
          fileID)
     deallocate(UnknownNameArray)
-
     call write_integer_sim_metadata(fileID, nPlotVar)
     call write_real_sim_metadata(FileID,plot_dimensional)
     call write_integer_plot_metadata(fileID, nPlotVar, isCutFile)
@@ -945,7 +855,6 @@ contains
          minCoords(3),maxCoords(3))
     if (iProc == 0) write (*,*) '  closing file'
     !Close the file
-
     call h5garbage_collect_f(error)
     call h5fclose_f(fileID,error)
     !closing the hdf5 interface
@@ -953,8 +862,6 @@ contains
     if (error == -1) write (*,*) 'h5fclose_f failed'
 
     if (iProc == 0) write (*,*) '===================================='
-
-    ! Deallocate the variable array
   end subroutine write_plot_hdf5
   !======================================================================
   !=====================================================================
@@ -979,8 +886,7 @@ contains
     real, intent(in) :: dataBuff(:,:,:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
-    integer, pointer :: nullPointer => NULL( )
-    integer(HSIZE_T) :: nullSize(1) = 1
+    integer(HSIZE_T) :: nullSize(3) = 0
     integer(HSIZE_T) :: openObjs, one
 
     !Set the dimensions of the dataset
@@ -993,7 +899,7 @@ contains
     if (error == -1) &
          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 1")
 
-
+    if (localNumBlocks == 0 .and. (.not. collectiveWrite)) return
     call h5screate_simple_f(rank, dimens3D, dataspace, error) 
     !create the dataset
     call h5dcreate_f(fileID, description, H5T_NATIVE_DOUBLE, dataspace, dataset, error)
@@ -1014,27 +920,18 @@ contains
        if (collectiveWrite) then
           call h5sselect_none_f(memspace,error)
           call h5sselect_none_f(dataspace,error)
-          nullSize(1:rank) = 0
-          call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, nullPointer, nullSize, error,&
-               mem_space_id = memspace,file_space_id = dataspace, &
-               xfer_prp = plist_id)
+       else 
+          return
        end if
-       call h5sclose_f(memspace,error)
-       call h5pclose_f(plist_id, error)
-       call h5sclose_f(dataspace, error)
-       call h5dclose_f(dataset, error)
-       return
-    end if
+    else
+
+       start3D(1:2) = 0
+       start3D(3) = localOffset 
+       stride3D(:) = 1
+       count3D(1:2) = dimens3D(1:2)
+       count3D(3) = localNumBlocks
 
 
-    start3D(1:2) = 0
-    start3D(3) = localOffset 
-    stride3D(:) = 1
-    count3D(1:2) = dimens3D(1:2)
-    count3D(3) = localNumBlocks
-
-
-    if (localNumBlocks > 0 ) then    
        !create the hyperslab.  This will differ on the different processors
        call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start3D, count3D, error, &
             stride = stride3D)
@@ -1047,10 +944,9 @@ contains
        !Write the data
        if (error == -1) &
             call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 3")
-
-       call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens3D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
     end if
+    call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens3D, error, &
+         mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
     if (error == -1) &
          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 5")
 
@@ -1088,8 +984,8 @@ contains
     integer, intent(in) :: dataBuff(:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
-    integer, pointer :: nullPointer => NULL( )
-    integer(HSIZE_T) :: nullSize(1) = 1
+    integer(HSIZE_T) :: nullSize(5) = 0
+    integer(HSIZE_T) ::  one
     !Set the dimensions of the dataset
     rank = 1
     dimens1D(1) = globalNumBlocks
@@ -1097,7 +993,7 @@ contains
     if (error == -1) &
          
          call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 1")
-
+    if (localNumBlocks == 0 .and. (.not. collectiveWrite)) return
 
     call h5screate_simple_f(rank, dimens1D, dataspace, error) 
     !create the dataset
@@ -1110,28 +1006,24 @@ contains
        !nothing = INDEPENDENT  call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
     end if
 
+
     if (localNumBlocks == 0) then
+       one = 0
+       call h5screate_simple_f(1, (/one/), memspace, error)
        if (collectiveWrite) then
-          call h5screate_f(H5S_NULL_F, memspace, error)
+          call h5sselect_none_f(memspace,error)
           call h5sselect_none_f(dataspace,error)
-          call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, nullPointer, nullSize, error,&
-               file_space_id = dataspace, xfer_prp = plist_id)
-          call h5sclose_f(memspace,error)
+       else 
+          return
        end if
-       call h5pclose_f(plist_id, error)
-       call h5sclose_f(dataspace, error)
-       call h5dclose_f(dataset, error)
-       return
-    end if
+    else
+       if (error == -1) &
+            call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 2")
 
-    if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 2")
+       start1D(1) = localOffset 
+       stride1D(:) = 1
+       count1D(1) = localNumBlocks
 
-    start1D(1) = localOffset 
-    stride1D(:) = 1
-    count1D(1) = localNumBlocks
-
-    if (localNumBlocks > 0 ) then    
        !create the hyperslab.  This will differ on the different processors
        call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start1D, count1D, error, &
             stride = stride1D)
@@ -1144,12 +1036,11 @@ contains
        !Write the data
        if (error == -1) &
             call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 4")
-
-       call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, dataBuff, dimens1D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-
-
     end if
+    call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, dataBuff, dimens1D, error, &
+         mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
+
+
     if (error == -1) &
          call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 5")
 
@@ -1185,8 +1076,7 @@ contains
     integer, intent(in) :: dataBuff(:,:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
-    integer, pointer :: nullPointer => NULL( )
-    integer(HSIZE_T) :: one, nullSize(1) = 1
+    integer(HSIZE_T) :: one, nullSize(2) = 0
 
     !Set the dimensions of the dataset
     rank = 2
@@ -1197,7 +1087,7 @@ contains
          
          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 1")
 
-
+    if (localNumBlocks == 0 .and. (.not. collectiveWrite)) return
     call h5screate_simple_f(rank, dimens2D, dataspace, error) 
     !create the dataset
     call h5dcreate_f(fileID, description, H5T_NATIVE_INTEGER, dataspace, dataset, error)
@@ -1209,30 +1099,26 @@ contains
        !         call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
     end if
 
+
     if (localNumBlocks == 0) then
+       one = 0
+       call h5screate_simple_f(1, (/one/), memspace, error)
        if (collectiveWrite) then
-          call h5screate_f(H5S_NULL_F, memspace, error)
+          call h5sselect_none_f(memspace,error)
           call h5sselect_none_f(dataspace,error)
-          call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, nullPointer, nullSize, error,&
-               file_space_id = dataspace, xfer_prp = plist_id)
-          call h5sclose_f(memspace,error)
+       else 
+          return
        end if
-       call h5pclose_f(plist_id, error)
-       call h5sclose_f(dataspace, error)
-       call h5dclose_f(dataset, error)
-       return
-    end if
+    else
+       if (error == -1) &
+            call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 2")
 
-    if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 2")
+       start2d(1) = 0
+       start2D(2) = localOffset 
+       stride2D(:) = 1
+       count2D(1) = dimens2D(1)
+       count2D(2) = localNumBlocks
 
-    start2d(1) = 0
-    start2D(2) = localOffset 
-    stride2D(:) = 1
-    count2D(1) = dimens2D(1)
-    count2D(2) = localNumBlocks
-
-    if (localNumBlocks > 0 ) then    
        !create the hyperslab.  This will differ on the different processors
        call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start2D, count2D, error, &
             stride = stride2D)
@@ -1245,10 +1131,9 @@ contains
        !Write the data
        if (error == -1) &
             call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 4")
-
-       call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, dataBuff, dimens2D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
     end if
+    call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, dataBuff, dimens2D, error, &
+         mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
     if (error == -1) &
          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 5")
 
@@ -1284,7 +1169,6 @@ contains
     real, intent(in) :: dataBuff(:,:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
-    integer, pointer :: nullPointer => NULL( )
     integer(HSIZE_T) :: one, nullSize(1) = 1
 
     !Set the dimensions of the dataset
@@ -1295,7 +1179,7 @@ contains
     if (error == -1) &
          
          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 1")
-
+    if (localNumBlocks == 0 .and. (.not. collectiveWrite)) return
 
     call h5screate_simple_f(rank, dimens2D, dataspace, error) 
     !create the dataset
@@ -1315,27 +1199,19 @@ contains
        if (collectiveWrite) then
           call h5sselect_none_f(memspace,error)
           call h5sselect_none_f(dataspace,error)
-          nullSize(1:rank) = 0
-          call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, nullPointer, nullSize, error,&
-               mem_space_id = memspace,file_space_id = dataspace, &
-               xfer_prp = plist_id)
+       else 
+          return
        end if
-       call h5sclose_f(memspace,error)
-       call h5pclose_f(plist_id, error)
-       call h5sclose_f(dataspace, error)
-       call h5dclose_f(dataset, error)
-       return
-    end if
-    if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 2")
+    else
+       if (error == -1) &
+            call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 2")
 
-    start2d(1) = 0
-    start2D(2) = localOffset 
-    stride2D(:) = 1
-    count2D(1) = dimens2D(1)
-    count2D(2) = localNumBlocks
+       start2d(1) = 0
+       start2D(2) = localOffset 
+       stride2D(:) = 1
+       count2D(1) = dimens2D(1)
+       count2D(2) = localNumBlocks
 
-    if (localNumBlocks > 0 ) then    
        !create the hyperslab.  This will differ on the different processors
        call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start2D, count2D, error, &
             stride = stride2D)
@@ -1348,10 +1224,9 @@ contains
        !Write the data
        if (error == -1) &
             call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 4")
-
-       call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens2D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
     end if
+    call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens2D, error, &
+         mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
     if (error == -1) &
          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 5")
 
@@ -1473,8 +1348,7 @@ contains
     character (len=*), intent(in) :: description
     logical, intent(in) :: minMax
     real, intent(in) :: vMin, vMax
-    integer, pointer :: nullPointer => NULL( )
-    integer(HSIZE_T) :: nullSize(1) = 1
+    integer(HSIZE_T) :: nullSize(4) = 0
     integer(HSIZE_T) :: openObjs, one
 
     !Set the dimensions of the dataset
@@ -1531,27 +1405,18 @@ contains
        if (collectiveWrite) then
           call h5sselect_none_f(memspace,error)
           call h5sselect_none_f(dataspace,error)
-          nullSize(1:rank) = 0
-          call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, nullPointer, nullSize, error,&
-               mem_space_id = memspace,file_space_id = dataspace, &
-               xfer_prp = plist_id)
+       else 
+          return
        end if
-       call h5sclose_f(memspace,error)
-       call h5pclose_f(plist_id, error)
-       call h5sclose_f(dataspace, error)
-       call h5dclose_f(dataset, error)
-       return
-    end if
+    else
+
+       start4D(1:3) = 0
+       start4D(4) = localOffset 
+       stride4D(:) = 1
+       count4D(1:3) = dimens4D(1:3)
+       count4D(4) = localNumBlocks
 
 
-    start4D(1:3) = 0
-    start4D(4) = localOffset 
-    stride4D(:) = 1
-    count4D(1:3) = dimens4D(1:3)
-    count4D(4) = localNumBlocks
-
-
-    if (localNumBlocks > 0 ) then    
        !create the hyperslab.  This will differ on the different processors
        call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start4D, count4D, error, &
             stride = stride4D)
@@ -1564,10 +1429,9 @@ contains
        !Write the data
        if (error == -1) &
             call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 4")
-
-       call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens4D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
     end if
+    call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens4D, error, &
+         mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
     if (error == -1) &
          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 5")
 
@@ -1580,240 +1444,10 @@ contains
          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 6")
 
   end subroutine writeHdf5Rank4Real
+  !==========================================================================
+  !==========================================================================
 
 
-
-  !======================================================================
-  !=====================================================================
-
-  subroutine get_var_extrema_hdf5( iVar, globalVarMin, globalVarMax)
-
-    use ModMpi
-
-    ! Returns the global variable extrema for each unkown.
-
-    integer, intent(in) :: iVar
-    real, intent(out) :: globalVarMin, globalVarMax
-
-    real :: varMin, varMax
-    integer :: error
-    !------------------------------------------------------------------
-
-
-    varMin = huge(varMin)
-    varMax = -huge(varMax)
-
-    varMin = minval(PlotVarIdx(:,:,:,:,iVar))
-    varMax = maxval(PlotVarIdx(:,:,:,:,iVar))
-
-    call MPI_AllReduce(varMin, globalVarMin, 1,&
-         MPI_DOUBLE_PRECISION, MPI_MIN, iComm, error)
-
-    call MPI_AllReduce(varMax, globalVarMax, 1,&
-         MPI_DOUBLE_PRECISION, MPI_MAX, iComm, error)
-
-  end subroutine get_var_extrema_hdf5
-
-  !=================================================================
-  !================================================================
-  ! 
-  !   subroutine write_bounding_box(iProcOffset, fileID)
-  ! 
-  !     use BATL_lib, ONLY : CoordMin_DB, CoordMax_DB, nDim
-  !     use ModProcMH, ONLY : iProc
-  ! 
-  !     integer, intent(in) :: iProcOffset
-  !     integer (HID_T), intent(in) :: fileID
-  ! 
-  !     integer(HID_T) :: dataset, dataspace, attribute, attributeSpace
-  !     integer(HID_T) :: plist_id, memspace
-  ! 
-  !     integer(HSIZE_T) :: start3D(3), stride3D(3), dimens3D(3)
-  ! 
-  !     integer :: error, rank
-  !     integer, pointer :: nullPointer => NULL( )
-  !     integer(HSIZE_T) :: nullSize(1) = 1
-  !     integer(HSIZE_T) :: openObjs, one
-  !     real :: bbox(2,nPlotDim,nBlocksUsed)
-  !     
-  !     rank = 3
-  !     dimens2D(1) = dimens
-  !     dimens2D(2) = globalNumBlocks
-  !     call h5open_f(error)
-  !     if (error == -1) &
-  !          
-  !          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 1")
-  ! 
-  ! 
-  !     call h5screate_simple_f(rank, dimens2D, dataspace, error) 
-  !     !create the dataset
-  !     call h5dcreate_f(fileID, description, H5T_NATIVE_DOUBLE, dataspace, dataset, error)
-  ! 
-  !     call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-  !     if (collectiveWrite) then
-  !         call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
-  !     else
-  ! !         call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-  !     end if
-  ! 
-  ! 
-  !    if (localNumBlocks == 0) then
-  !         one = 0
-  !         call h5screate_simple_f(1, (/one/), memspace, error)
-  !         if (collectiveWrite) then
-  !            call h5sselect_none_f(memspace,error)
-  !            call h5sselect_none_f(dataspace,error)
-  !            nullSize(1:rank) = 0
-  !            call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, nullPointer, nullSize, error,&
-  !                 mem_space_id = memspace,file_space_id = dataspace, &
-  !                 xfer_prp = plist_id)
-  !         end if
-  !         call h5sclose_f(memspace,error)
-  !         call h5pclose_f(plist_id, error)
-  !         call h5sclose_f(dataspace, error)
-  !         call h5dclose_f(dataset, error)
-  !         return
-  !     end if
-  !     if (error == -1) &
-  !          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 2")
-  ! 
-  !     start2d(1) = 0
-  !     start2D(2) = localOffset 
-  !     stride2D(:) = 1
-  !     count2D(1) = dimens2D(1)
-  !     count2D(2) = localNumBlocks
-  ! 
-  !     if (localNumBlocks > 0 ) then    
-  !        !create the hyperslab.  This will differ on the different processors
-  !        call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start2D, count2D, error, &
-  !             stride = stride2D)
-  !        !         !create the memory space
-  !        if (error == -1)& 
-  !             call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 3")
-  ! 
-  !        dimens2D(2) = localNumBlocks
-  !        call h5screate_simple_f(rank, dimens2D, memspace, error)
-  !        !Write the data
-  !        if (error == -1) &
-  !             call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 4")
-  ! 
-  !        call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens2D, error, &
-  !             mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-  !     end if
-  !     if (error == -1) &
-  !          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 5")
-  ! 
-  !     call h5sclose_f(memspace,error)
-  !     call h5pclose_f(plist_id, error)
-  !     call h5sclose_f(dataspace, error)
-  !     call h5dclose_f(dataset, error)
-  ! 
-  !     if (error == -1)& 
-  !          call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 6")
-  ! 
-  ! 
-  ! 
-  !     rank = 3
-  !     dimens3D(1) = 2
-  !     dimens3D(2) = nPlotDim
-  !     dimens3D(3) = nBlkUsedGlobal
-  !      
-  !     call h5screate_simple_f(rank, dimens3D, dataspace, error) 
-  !     call h5dcreate_f(fileID, "bounding box",&
-  !          &H5T_NATIVE_DOUBLE,dataspace, dataset, error)
-  ! 
-  !     call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-  !     if (collectiveWrite) then
-  !         call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
-  !     else
-  ! !          call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-  !     end if
-  !     
-  !    if (nBlocksUsed == 0) then
-  !         one = 0
-  !         call h5screate_simple_f(1, (/one/), memspace, error)
-  !         if (collectiveWrite) then
-  !            call h5sselect_none_f(memspace,error)
-  !            call h5sselect_none_f(dataspace,error)
-  !            nullSize(1:rank) = 0
-  !            call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, nullPointer, nullSize, error,&
-  !                 mem_space_id = memspace,file_space_id = dataspace, &
-  !                 xfer_prp = plist_id)
-  !         end if
-  !         call h5sclose_f(memspace,error)
-  !         call h5pclose_f(plist_id, error)
-  !         call h5sclose_f(dataspace, error)
-  !         call h5dclose_f(dataset, error)
-  !         return
-  !     end if
-  !     bbox(1,:,:) = CoordMin_DB(1:nPlotDim, UsedBlocks)
-  !     bbox(2,:,:) = CoordMax_DB(1:nPlotDim, UsedBlocks) 
-  ! 
-  !     dimens3D(1) = 2        
-  !     dimens3D(3) = nBlocksUsed
-  ! 
-  !     start3D(1) = 0
-  !     start3D(2) = 0
-  !     start3D(3) = iProcOffset
-  ! 
-  !     stride3D(1) = 1
-  !     stride3D(2) = 1
-  !     stride3D(3) = 1
-  ! 
-  !     call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F,&
-  !          start3D, dimens3D, error, stride = stride3D)
-  !     if (error == -1)&
-  !          call stop_mpi(&
-  !          "error in subroutine init_grid. Error marker 1")
-  !     call h5screate_simple_f(rank, dimens3D, memspace, error)
-  ! 
-  !     if (error == -1)&
-  !          call stop_mpi("error in subroutine init_grid. Error marker 2")
-  ! 
-  !     call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, &
-  !          bbox,dimens3D, error, mem_space_id = memspace,&
-  !          file_space_id = dataspace)
-  !     if (error == -1)&
-  !          call stop_mpi(&
-  !          "error in subroutine init_grid. Error marker 3")
-  ! ! 
-  ! !     call h5sclose_f(memspace, error)
-  ! !     if (error == -1)&
-  ! !          call stop_mpi(&
-  ! !          "error in subroutine init_grid. Error marker 4")
-  ! !         start3D(1) = 1
-  ! !         call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F,&
-  ! !              start3D, dimens3D, error, stride = stride3D)
-  ! !         if (error == -1)&
-  ! !              call stop_mpi(&
-  ! !              "error in subroutine init_grid. Error marker 1.1")
-  ! !         call h5screate_simple_f(rank, dimens3D, memspace, error)
-  ! ! 
-  ! !         if (error == -1)&
-  ! !              call stop_mpi("error in subroutine init_grid. Error marker 2.1")
-  ! ! 
-  ! ! 
-  ! !         call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, &
-  ! !              CoordMax_DB(1:nDim, UsedBlocks),&
-  ! !              dimens3D, error, mem_space_id = memspace,&
-  ! !              file_space_id = dataspace)
-  ! !         if (error == -1)&
-  ! !              call stop_mpi(&
-  ! !              "error in subroutine init_grid. Error marker 3.1")
-  ! ! 
-  !          call h5sclose_f(memspace, error)
-  ! !         if (error == -1)&
-  ! !              call stop_mpi(&
-  ! !              "error in subroutine init_grid. Error marker 4.1")
-  ! 
-  ! 
-  !         call h5pclose_f(plist_id, error)
-  !         call h5sclose_f(dataspace, error)
-  !         call h5dclose_f(dataset, error)
-  ! 
-  !  end subroutine write_bounding_box
-  !=======================================================================
-  !=======================================================================
 
   subroutine write_real_plot_metadata(FileID,xmin,xmax,ymin,ymax, zmin,zmax)
 
@@ -2226,5 +1860,57 @@ contains
     call h5aclose_f(attribute, error)
 
   end subroutine write_hdf5_attribute
+
+  !=====================================================================
+  !=====================================================================
+
+
+  logical function sort_test(i, j)
+    integer, intent(in) :: i,j
+
+    if(nPlotDim == 3) then
+       sort_test = 0
+       if(Position_DA(3,i) < Position_DA(3,j)) then
+          sort_test = .false.
+       elseif(Position_DA(3,j) < Position_DA(3,i)) then
+          sort_test = .true.
+       else
+          if(Position_DA(2,i) < Position_DA(2,j)) then
+             sort_test = .false.
+          elseif(Position_DA(2,j) < Position_DA(2,i)) then
+             sort_test = .true.
+          else
+             if(Position_DA(1,i) < Position_DA(1,j)) then
+                sort_test = .false.
+             elseif(Position_DA(1,j) < Position_DA(1,i)) then
+                sort_test = .true.
+             end if
+          end if
+       end if
+    elseif(nPlotDim == 2) then
+       if(Position_DA(2,i) < Position_DA(2,j)) then
+          sort_test = .false.
+       elseif(Position_DA(2,j) < Position_DA(2,i)) then
+          sort_test = .true.
+       else
+          if(Position_DA(1,i) < Position_DA(1,j)) then
+             sort_test = .false.
+          elseif(Position_DA(1,j) < Position_DA(1,i)) then
+             sort_test = .true.
+          end if
+       end if
+    elseif(nPlotDim == 1) then
+       if(Position_DA(1,i) < Position_DA(1,j)) then
+          sort_test = .false.
+       elseif(Position_DA(1,j) < Position_DA(1,i)) then
+          sort_test = .true.
+       end if
+
+    else
+       sort_test = .false.
+    end if
+  end function sort_test
+  !=================================================================
+
 
 end module ModHdf5

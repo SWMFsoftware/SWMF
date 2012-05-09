@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!)^CFG COPYRIGHT UM
 !=============================================================================
 subroutine write_plot_common(ifile)
 
@@ -302,8 +302,7 @@ subroutine write_plot_common(ifile)
                    plot_point(2,ifile)<=NodeY_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
                    plot_point(3,ifile)> NodeZ_NB(1, 1, 1, iBLK) .and. &
                    plot_point(3,ifile)<=NodeZ_NB(1+nI,1+nJ,1+nK,iBLK))then
-
-                 call write_cut_var_hdf5(ifile,plot_type1(1:3),iBLK,H5Index,nplotvar,&
+                 call write_cut_var_hdf5(ifile,plot_type1,iBLK,H5Index,nplotvar,&
                       plotvar, xmin,xmax,ymin,ymax,zmin,zmax, dxblk,dyblk,&
                       dzblk,nonCartesian, nBLKcells, H5Advance)
 
@@ -349,7 +348,7 @@ subroutine write_plot_common(ifile)
      call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
           unitstr_IDL)
 
-     call write_plot_hdf5(filename, plotVarNames, NamePlotUnit_V,&
+     call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, NamePlotUnit_V,&
           nPlotVar,isCutFile(iFile), nonCartesian,plot_dimensional(ifile), xmin,&
           xmax, ymin, ymax, zmin, zmax)
 
