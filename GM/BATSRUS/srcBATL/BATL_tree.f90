@@ -771,10 +771,9 @@ contains
        end do
 
     end do LOOPTRY
-    DnNode = (nNodeUsed - count(iStatusNew_A(1:nNode) == Coarsen_) + &
-         count(iStatusNew_A(1:nNode) == Refine_)*(nChild-1)) &
-         - min(nProc*MaxBlock, MaxTotalBlock) 
 
+    ! Geometry criteria is not coverd by sorting but can also
+    ! demand to many blocks
     if(iTryAmr > iMaxTryAmr) then
        iStatusNew_A(1:nNode) = Unset_
        print *,"!!! WARNING in BATL_tree::adapt_tree: No AMR done"

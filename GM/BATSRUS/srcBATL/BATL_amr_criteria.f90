@@ -205,8 +205,6 @@ contains
        end do
     end if
 
-    DoTestMe = .true.
-
     if(DoTestMe) then
        if(iProc == 0) then
           write(*,"(A17,100(F10.3))") "RefineCritAll_I   : ", RefineCritAll_I
@@ -958,7 +956,7 @@ contains
     integer,           optional, intent(out):: nCritInOut
     character(len=20), optional, intent(out):: NameCritOut_I(:)
     logical,           optional, intent(out):: ReadExtraOut
-    logical :: IsUniqueCritName, UseErrorCrit, ReadExtra
+    logical :: IsUniqueCritName, UseErrorCrit, ReadExtra, DoTestMe=.false.
 
     integer,           optional, intent(in):: nStateVarIn
     character(len=*),  optional, dimension(:), intent(in):: NameStatVarIn_V
@@ -1135,7 +1133,7 @@ contains
           end if
        end if
 
-       if(iProc == 0) then
+       if(DoTestMe .and. iProc == 0) then
           write(*,*) " nCritInOut          = ", nCritInOut
           write(*,*) " nIntCrit            = ", nIntCrit
           write(*,*) " nAmrCritUsed        = ", nAmrCritUsed
