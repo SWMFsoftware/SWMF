@@ -1279,7 +1279,7 @@ subroutine MH_set_parameters(TypeAction)
         automatic_refinement = DoAutoAmr ! for now
         if(UseBatl) then
            call read_var('nRefineCrit',nRefineCrit)
-           call init_ModAMR(nRefineCrit)
+           call init_mod_amr(nRefineCrit)
            call read_amr_criteria(NameCommand, &
                 nCritInOut=nRefineCrit, NameCritOut_I=RefineCrit,&
                 NameStatVarIn_V= NameVar_V,&
@@ -1292,7 +1292,7 @@ subroutine MH_set_parameters(TypeAction)
            end if
         else
            call read_var('nRefineCrit',nRefineCrit)
-           call init_ModAMR(nRefineCrit)
+           call init_mod_amr(nRefineCrit)
            do i=1,nRefineCrit
               call read_var('TypeRefine', RefineCrit(i), IsLowerCase=.true.)
               if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
@@ -1316,7 +1316,7 @@ subroutine MH_set_parameters(TypeAction)
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
         call read_var('nRefineCrit',nRefineCrit)
-        call init_ModAMR(nRefineCrit)
+        call init_mod_amr(nRefineCrit)
         call read_amr_criteria(NameCommand, &
              nCritInOut=nRefineCrit, NameCritOut_I=RefineCrit,&
              NameStatVarIn_V= NameVar_V,&
@@ -2431,13 +2431,13 @@ contains
        if(.not.UseBatl) then
           ! Refinement criteria
           nRefineCrit    = 3
-          call init_ModAMR(nRefineCrit)
+          call init_mod_amr(nRefineCrit)
           RefineCrit(1)  = 'geometry'
           RefineCrit(2)  = 'Va'
           RefineCrit(3)  = 'flux'
        else
           nRefineCrit = 0
-          call init_ModAMR(nRefineCrit)
+          call init_mod_amr(nRefineCrit)
        end if
 
     case('GM')
@@ -2474,7 +2474,7 @@ contains
           RefineCrit(3)  = 'Rcurrents'
        else
           nRefineCrit = 0
-          call init_ModAMR(nRefineCrit)
+          call init_mod_amr(nRefineCrit)
        end if
     case('EE')
        ! Body Parameters

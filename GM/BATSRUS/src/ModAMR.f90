@@ -92,7 +92,7 @@ module ModAMR
 
 contains
   !============================================================================
-  subroutine init_ModAMR(nCrit)
+  subroutine init_mod_amr(nCrit)
 
     use ModMain, ONLY: MaxBlock
     use ModProcMH, ONLY: nProc
@@ -101,7 +101,7 @@ contains
     !-----------------------------------------------------------------------
 
     ! clean for each time we have new refinment criteia
-    call clean_ModAMR
+    call clean_mod_amr
 
     allocate(RefineCrit(nCrit),&
          TypeTransient_I(nCrit),&
@@ -117,9 +117,9 @@ contains
     RefineCritMin_I     = -1.0
     refine_criteria_IBP = 0.00
     
-  end subroutine init_ModAMR
+  end subroutine init_mod_amr
   !============================================================================
-  subroutine clean_ModAMR()
+  subroutine clean_mod_amr
 
     if(allocated(RefineCrit)) then
        deallocate(RefineCrit,&
@@ -131,7 +131,6 @@ contains
             refine_criteria_IBP,&
             SortIndex_I)
     end if
-  end subroutine clean_ModAMR
-
+  end subroutine clean_mod_amr
 
 end module ModAMR
