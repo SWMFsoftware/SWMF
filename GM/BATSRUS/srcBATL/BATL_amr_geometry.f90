@@ -15,36 +15,31 @@ module BATL_amr_geometry
   public clean_amr_geometry
 
   ! compatible with BATSRUS way of doing AMR
-  logical,public :: IsBatsrusAmr = .true. 
+  logical, public :: IsBatsrusAmr = .true. 
 
   ! Masking criteria for use
   ! This belongs more in batl_amr_criteria but also
-  ! needed her so for dependenses its decleard here.
+  ! needed here so it is declared here.
   logical, public, allocatable :: UseCrit_IB(:,:)
   logical, public, allocatable :: UseCrit_I(:)
 
-  ! the number of times we refer to the Criteria in 
-  ! geometry
+  ! We have only two values to decide the criteria
+  ! for geometrick refinment cell size (1) , and AMR level (2)
+  integer, parameter, public :: nCritGeo = 2
+
+  ! number of geometrical criteria actually used
   integer, public :: nCritGeoUsed = 0
-  ! We have only to values to deside the criteria
-  ! for geometrick refinment cell sice,1 , and level, 2
-  integer, parameter,public :: nCritGeo = 2
 
   ! Backward compatibilety with BATSRUS AMR
-  ! Grid criteria as 'user' and 'currentsheet' are now handeld by
-  ! amr_criteria
-  integer,public :: nCritGeoPhys=0
+  ! Grid criteria as 'user' and 'currentsheet' are now handled by amr_criteria
+  integer, public :: nCritGeoPhys=0
 
-  ! we have read in new Data from PARAM.in
-  logical, public :: isNewGeoParam =.false.
+  ! we have read in new data from PARAM.in
+  logical, public :: IsNewGeoParam =.false.
 
-  real    :: InitialResolution = -1.0
-  integer :: initial_refine_levels = 0
-  real    :: AreaResolution=0.0
-  integer :: nLevelArea=0
   integer, parameter :: MaxArea = 100, lNameArea = 20
 
-  type,public :: AreaType 
+  type, public :: AreaType 
      character(len=lNameArea) :: Name
      real                     :: Resolution
      integer                  :: Level
@@ -54,7 +49,7 @@ module BATL_amr_geometry
      real, dimension(3,3)     :: Rotate_DD
   end type AreaType
 
-  type(AreaType),public :: AreaGeo_I(MaxArea)
+  type(AreaType), public :: AreaGeo_I(MaxArea)
 
   ! Choosing with blocks we want to refine is based on a list of criteria 
   ! and a set of upper (refine)  and lower (coarsen) limits. The criteria 
@@ -62,14 +57,20 @@ module BATL_amr_geometry
   ! numerical errors (calc_error_amr_criteria) based on the state variables.
 
   ! Storing All the AMR criteria
-  integer, public            :: nAmrCrit = 0
-  integer,public             :: nAmrCritUsed = 0
-  real, public, allocatable  :: AmrCrit_IB(:,:)
+  integer, public          :: nAmrCrit = 0
+  integer,public           :: nAmrCritUsed = 0
+  real, public, allocatable:: AmrCrit_IB(:,:)
 
-  real, public,allocatable ::CoarsenCritAll_I(:), RefineCritAll_I(:)
-  integer, public, allocatable :: MaxLevelCritAll_I(:),iVarCritAll_I(:)
-  type(AreaType), public,allocatable :: AreaAll_I(:)
+  real,    public, allocatable::CoarsenCritAll_I(:), RefineCritAll_I(:)
+  integer, public, allocatable:: MaxLevelCritAll_I(:), iVarCritAll_I(:)
+  type(AreaType), public, allocatable :: AreaAll_I(:)
 
+  ! Local variables
+
+  real    :: InitialResolution = -1.0
+  integer :: initial_refine_levels = 0
+  real    :: AreaResolution=0.0
+  integer :: nLevelArea=0
 
 contains
   !============================================================================
@@ -81,14 +82,13 @@ contains
 
 
     integer :: iGeo, iVar
-
     !-------------------------------------------------------------------------
 
     nCritGeoPhys = 0
 
     ! Fix resolutions (this depends on domain size set above)
     if(InitialResolution > 0.0) initial_refine_levels = nint( &
-         alog(((CoordMax_D(x_)-CoordMin_D(x_)) / (nRoot_D(x_) * nI))  &
+         alog(((CoordMax_D(x_) - CoordMin_D(x_)) / (nRoot_D(x_) * nI))  &
          / InitialResolution) / alog(2.0) )
 
     do iGeo = 1, nCritGeoUsed
@@ -114,7 +114,8 @@ contains
 
        if(AreaGeo_I(iGeo) % Level  < 0) then
           RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeo)%Level
-          CoarsenCritAll_I(nAmrCritUsed+iGeo) = RefineCritAll_I(nAmrCritUsed+iGeo)-1
+          CoarsenCritAll_I(nAmrCritUsed+iGeo) = &
+               RefineCritAll_I(nAmrCritUsed+iGeo)-1
           iVar = 2
        else
           RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeo)%Resolution 
@@ -123,12 +124,14 @@ contains
        end if
        AreaAll_I(nAmrCritUsed+iGeo)        = AreaGeo_I(iGeo)
 
-       ! this is not speifed by #GRIDLEVEL of #GRIDRESOLVE
-       MaxLevelCritAll_I(nAmrCritUsed+iGeo) = abs(AreaGeo_I(iGeo)%Level)!MaxLevel
+       ! this is not speifed by #GRIDLEVEL of #GRIDRESOLUTION
+       MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
+            abs(AreaGeo_I(iGeo)%Level)!MaxLevel
 
        ! Backward compatibilety with BATSRUS AMR
        if(AreaGeo_I(iGeo) % Name(1:7) == 'usergeo')then
-          MaxLevelCritAll_I(nAmrCritUsed+iGeo) = abs(AreaGeo_I(iGeo)%Level)!MaxLevel
+          MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
+               abs(AreaGeo_I(iGeo)%Level)!MaxLevel
           RefineCritAll_I(nAmrCritUsed+iGeo)   =  1.0
           CoarsenCritAll_I(nAmrCritUsed+iGeo)  = -1.0
           iVar = nCritGeoPhys
@@ -136,7 +139,8 @@ contains
        end if
 
        if(AreaGeo_I(iGeo) % Name(1:4) == 'curr')then
-          MaxLevelCritAll_I(nAmrCritUsed+iGeo) = abs(AreaGeo_I(iGeo)%Level)!MaxLevel
+          MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
+               abs(AreaGeo_I(iGeo)%Level)!MaxLevel
           RefineCritAll_I(nAmrCritUsed+iGeo)   =  1.0
           CoarsenCritAll_I(nAmrCritUsed+iGeo)  = -1.0
           iVar = nCritGeoPhys
@@ -145,7 +149,8 @@ contains
 
        ! All geometrical criteias is a comparson to gird values
        if(nAmrCritUsed  > 0) then
-          iVarCritAll_I(nAmrCritUsed+iGeo) = maxval(iVarCritAll_I(1:nAmrCritUsed))+iVar
+          iVarCritAll_I(nAmrCritUsed+iGeo) = &
+               maxval(iVarCritAll_I(1:nAmrCritUsed))+iVar
        else
           iVarCritAll_I(iGeo) = iVar
        end if
@@ -156,18 +161,17 @@ contains
        iVarCritAll_I = iVarCritAll_I + nCritGeoPhys
     end if
 
-!    nCritGeoUsed = nCritGeoUsed 
-!    if(.not.IsBatsrusAmr) nCritGeoUsed = 0
+    ! if(.not.IsBatsrusAmr) nCritGeoUsed = 0
 
-    if(iProc == 0) then
-       write(*,*) "START init_amr_geometry "
-       write(*,*) "nCritGeoUsed = ",nCritGeoUsed
-       write(*,*) "Area names :: ", AreaGeo_I(1:nCritGeoUsed)%Name
-       write(*,*) "Area resolution :: ", AreaGeo_I(1:nCritGeoUsed)%Resolution
-       write(*,*) "Area level :: ", AreaGeo_I(1:nCritGeoUsed)%Level
-       write(*,*) "nCritGeoPhys :: ",nCritGeoPhys
-       write(*,*) "END init_amr_geometry "
-    end if
+    !if(iProc == 0) then
+    !   write(*,*) "START init_amr_geometry "
+    !   write(*,*) "nCritGeoUsed = ",nCritGeoUsed
+    !   write(*,*) "Area names :: ", AreaGeo_I(1:nCritGeoUsed)%Name
+    !   write(*,*) "Area resolution :: ", AreaGeo_I(1:nCritGeoUsed)%Resolution
+    !   write(*,*) "Area level :: ", AreaGeo_I(1:nCritGeoUsed)%Level
+    !   write(*,*) "nCritGeoPhys :: ",nCritGeoPhys
+    !   write(*,*) "END init_amr_geometry "
+    !end if
 
     IsNewGeoParam =.false.
 
@@ -218,7 +222,7 @@ contains
     character(len=21), parameter :: NameSub = 'apply_amr_geometry'
 
     logical :: DoTest, DoTestMe, DoTestBlock, DoCalcCrit
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     !if(nCritGeoUsed <= 0) RETURN
 
     DoCalcCrit = .true.
@@ -271,10 +275,12 @@ contains
         RETURN
     end if
 
-    ! Check if it is a brick in the generalized coordinates
+    ! Check if it is a brick defined generalized coordinates
     if(NameArea == "brick_gen" .and. TypeGeometry /= 'cartesian')then
 
-       ! Convert angles to degrees and ln(r) to r
+!!! TO BE IMPROVED !!!
+
+       ! Convert angles to degrees and ln(r)/genr to r
        ! Make sure that phi=360 is not 0 but really 360
        select case(TypeGeometry)
        case('rlonlat')
@@ -300,7 +306,7 @@ contains
           where(Corner_DI(Phi_,7:8) < cTiny) Corner_DI(Phi_,7:8) = 360.0
           Corner_DI(Theta_,:) = Corner_DI(Theta_,:)*cRadToDeg
 
-       case('cylindrical', 'axial_torus')
+       case('cylindrical')
           Corner_DI(Phi_,:) = modulo(Corner_DI(Phi_,:)*cRadToDeg, 360.0)
           where(Corner_DI(Phi_,3:4) < cTiny) Corner_DI(Phi_,3:4) = 360.0
           where(Corner_DI(Phi_,7:8) < cTiny) Corner_DI(Phi_,7:8) = 360.0
@@ -311,7 +317,8 @@ contains
 
     ! Shift corner coordinates to the center of area
     do iCorner = 1, nCorner
-       Corner_DI(1:nDim,iCorner) = Corner_DI(1:nDim,iCorner) - Area % Center_D(1:nDim)
+       Corner_DI(1:nDim,iCorner) = &
+            Corner_DI(1:nDim,iCorner) - Area % Center_D(1:nDim)
     end do
 
     ! Rotate corners into the orientation of the area if required
@@ -384,11 +391,9 @@ contains
     if(NameArea == 'brick_gen' .or. IsCartesian .or.  IsRzGeometry)&
          RETURN
 
-    ! Covariant case
-    !    if(.not.UseBlock) RETURN
+    ! Non-cartesian case
     UseBlock = .true.
 
-    ! Check if the covariant block is really inside the area
     ! Check all nodes of the block
     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
 
@@ -466,44 +471,45 @@ contains
     else if( IsRzGeometry .or. IsCylindrical .or. IsSpherical &
          .or. IsAnyAxis .or. IsRLonLat)then
 
-       ! the last cell index is the biggest cell
+       ! the cell with the maximum indexes is the largest cell of the block
 
-       MaxLength =   Xyz_DNB(1,nINode,nJnode,nKNode,Iblock)- &
-            Xyz_DNB(1,nINode-1,nJnode,nKNode,Iblock)
+       MaxLength = Xyz_DNB(1,nINode,nJnode,nKNode,iBlock) &
+            -      Xyz_DNB(1,nINode-1,nJnode,nKNode,iBlock)
 
        if(nDim > 1) MaxLength = max(MaxLength,&
-            Xyz_DNB(2,nINode,nJnode,nKNode,Iblock)-&
-            Xyz_DNB(2,nINode,nJnode-1,nKNode,Iblock))
+            Xyz_DNB(2,nINode,nJnode,nKNode,iBlock)-&
+            Xyz_DNB(2,nINode,nJnode-1,nKNode,iBlock))
 
        if(nDim > 2)   MaxLength = max(MaxLength,&
-            Xyz_DNB(3,nINode,nJnode,nKNode,Iblock)-&
-            Xyz_DNB(3,nINode,nJnode,nKNode,Iblock))
+            Xyz_DNB(3,nINode,nJnode,nKNode,iBlock)-&
+            Xyz_DNB(3,nINode,nJnode,nKNode,iBlock))
     else
 
        do k=2,nKNode; do j=2,nJNode; do i=2,nINode
 
-          MaxLength =   Xyz_DNB(1,i,j,k,Iblock)- &
-               Xyz_DNB(1,i-1,j,k,Iblock)
+          MaxLength = Xyz_DNB(1,i,j,k,iBlock)- &
+               Xyz_DNB(1,i-1,j,k,iBlock)
 
           if(nDim > 1) MaxLength = max(MaxLength,&
-               Xyz_DNB(1,i,j,k,Iblock)- &
-               Xyz_DNB(1,i,j-1,k,Iblock))
+               Xyz_DNB(1,i,j,k,iBlock)- &
+               Xyz_DNB(1,i,j-1,k,iBlock))
 
           if(nDim > 2) MaxLength = max(MaxLength,&
-               Xyz_DNB(1,i,j,k,Iblock)- &
-               Xyz_DNB(1,i,j,k-1,Iblock))
+               Xyz_DNB(1,i,j,k,iBlock)- &
+               Xyz_DNB(1,i,j,k-1,iBlock))
 
        end do; end do ; end do;
 
     end if
 
-    AmrCrit_IB(nAmrCrit-nCritGeo+1:nAmrCrit,iBlock) = (/ MaxLength, -real(iTree_IA(Level_,iNode_B(iBlock)))/)
+    AmrCrit_IB(nAmrCrit-nCritGeo+1:nAmrCrit,iBlock) = &
+         (/ MaxLength, -real(iTree_IA(Level_,iNode_B(iBlock))) /)
 
   end subroutine calc_crit
-  !============================================================================
 
-  subroutine read_amr_geometry(NameCommand,UseStrictIn,InitLevelInOut,InitResInOut,&
-       NameCritOut_I,nCritInOut )
+  !============================================================================
+  subroutine read_amr_geometry(NameCommand, UseStrictIn, &
+       InitLevelInOut, InitResInOut, NameCritOut_I, nCritInOut )
 
     use ModReadParam ,     ONLY: read_var, lStringLine
     use ModNumConst,       ONLY: cUnit_DD,cDegToRad
@@ -637,8 +643,8 @@ contains
        call read_var("yMaxBox",XyzEndArea_D(2))
        call read_var("zMaxBox",XyzEndArea_D(3))
        ! Convert to center and size information
-       AreaGeo_I(nCritGeoUsed)%Center_D = 0.5*   (XyzStartArea_D + XyzEndArea_D)
-       AreaGeo_I(nCritGeoUsed)%Size_D   = 0.5*abs(XyzEndArea_D - XyzStartArea_D)
+       AreaGeo_I(nCritGeoUsed)%Center_D= 0.5*   (XyzStartArea_D + XyzEndArea_D)
+       AreaGeo_I(nCritGeoUsed)%Size_D  = 0.5*abs(XyzEndArea_D - XyzStartArea_D)
 
        ! Overwrite name with brick
        if(NameArea == "box_gen")then
@@ -664,43 +670,49 @@ contains
 
     case("ringx")
        call read_var("Height", AreaGeo_I(nCritGeoUsed)%Size_D(1))
-       AreaGeo_I(nCritGeoUsed)%Size_D(1)     = 0.5*AreaGeo_I(nCritGeoUsed)%Size_D(1)
+       AreaGeo_I(nCritGeoUsed)%Size_D(1)     = &
+            0.5*AreaGeo_I(nCritGeoUsed)%Size_D(1)
        call read_area_radii
        AreaGeo_I(nCritGeoUsed)%Size_D(2:3)   = RadiusArea
 
     case("ringy")
        call read_var("Height", AreaGeo_I(nCritGeoUsed)%Size_D(2))
-       AreaGeo_I(nCritGeoUsed)%Size_D(2)     = 0.5*AreaGeo_I(nCritGeoUsed)%Size_D(2)
+       AreaGeo_I(nCritGeoUsed)%Size_D(2)     = &
+            0.5*AreaGeo_I(nCritGeoUsed)%Size_D(2)
        call read_area_radii
        AreaGeo_I(nCritGeoUsed)%Size_D(1:3:2) = RadiusArea
 
     case("ringz")
        call read_var("Height", AreaGeo_I(nCritGeoUsed)%Size_D(3))
-       AreaGeo_I(nCritGeoUsed)%Size_D(3)     = 0.5*AreaGeo_I(nCritGeoUsed)%Size_D(3)
+       AreaGeo_I(nCritGeoUsed)%Size_D(3)     = &
+            0.5*AreaGeo_I(nCritGeoUsed)%Size_D(3)
        call read_area_radii
        AreaGeo_I(nCritGeoUsed)%Size_D(1:2)   = RadiusArea
 
     case("cylinderx")
        call read_var("Length", AreaGeo_I(nCritGeoUsed)%Size_D(1))
-       AreaGeo_I(nCritGeoUsed)%Size_D(1)     = 0.5 * AreaGeo_I(nCritGeoUsed)%Size_D(1)
+       AreaGeo_I(nCritGeoUsed)%Size_D(1)     = &
+            0.5*AreaGeo_I(nCritGeoUsed)%Size_D(1)
        call read_var("Radius", RadiusArea)
        AreaGeo_I(nCritGeoUsed)%Size_D(2:3)   = RadiusArea
 
     case("cylindery")
        call read_var("Length", AreaGeo_I(nCritGeoUsed)%Size_D(2))
-       AreaGeo_I(nCritGeoUsed)%Size_D(2)     = 0.5 * AreaGeo_I(nCritGeoUsed)%Size_D(2)
+       AreaGeo_I(nCritGeoUsed)%Size_D(2)     = &
+            0.5*AreaGeo_I(nCritGeoUsed)%Size_D(2)
        call read_var("Radius", RadiusArea)
        AreaGeo_I(nCritGeoUsed)%Size_D(1:3:2) = RadiusArea
 
     case("cylinderz")
        call read_var("Length", AreaGeo_I(nCritGeoUsed)%Size_D(3))
-       AreaGeo_I(nCritGeoUsed)%Size_D(3)     = 0.5 * AreaGeo_I(nCritGeoUsed)%Size_D(3)
+       AreaGeo_I(nCritGeoUsed)%Size_D(3)     = &
+            0.5*AreaGeo_I(nCritGeoUsed)%Size_D(3)
        call read_var("Radius", RadiusArea)
        AreaGeo_I(nCritGeoUsed)%Size_D(1:2)   = RadiusArea
 
     case default
-       if(UseStrict) &
-            call CON_stop(NameSub//' ERROR: unknown Name='//trim(AreaGeo_I(nCritGeoUsed)%Name))
+       if(UseStrict) call CON_stop(NameSub// &
+            ' ERROR: unknown Name='//trim(AreaGeo_I(nCritGeoUsed)%Name))
 
        if(iProc == 0) &
             write(*,*) NameSub//' WARNING: unknown NameArea=' // &
@@ -718,9 +730,12 @@ contains
        call read_var('zStretch', zStretchArea)
 
        ! Stretch the x, y, z sizes
-       AreaGeo_I(nCritGeoUsed)%Size_D(1) = AreaGeo_I(nCritGeoUsed)%Size_D(1)*xStretchArea
-       AreaGeo_I(nCritGeoUsed)%Size_D(2) = AreaGeo_I(nCritGeoUsed)%Size_D(2)*yStretchArea
-       AreaGeo_I(nCritGeoUsed)%Size_D(3) = AreaGeo_I(nCritGeoUsed)%Size_D(3)*zStretchArea
+       AreaGeo_I(nCritGeoUsed)%Size_D(1) = &
+            AreaGeo_I(nCritGeoUsed)%Size_D(1)*xStretchArea
+       AreaGeo_I(nCritGeoUsed)%Size_D(2) = &
+            AreaGeo_I(nCritGeoUsed)%Size_D(2)*yStretchArea
+       AreaGeo_I(nCritGeoUsed)%Size_D(3) = &
+            AreaGeo_I(nCritGeoUsed)%Size_D(3)*zStretchArea
 
        DoStretchArea = .false.
     end if
@@ -728,9 +743,9 @@ contains
     if(AreaGeo_I(nCritGeoUsed) % DoRotate)then
 
        ! Read 3 angles for the rotation matrix in degrees
-       call read_var('xRotate',xRotateArea)
-       call read_var('yRotate',yRotateArea)
-       call read_var('zRotate',zRotateArea)
+       call read_var('xRotate', xRotateArea)
+       call read_var('yRotate', yRotateArea)
+       call read_var('zRotate', zRotateArea)
 
        ! Rotation matrix rotates around X, Y and Z axes in this order
        AreaGeo_I(nCritGeoUsed)%Rotate_DD = matmul( matmul( &
@@ -757,9 +772,8 @@ contains
 
     end subroutine read_area_radii
 
-
   end subroutine read_amr_geometry
-  !==========================================================================
+  !===========================================================================
   subroutine clean_amr_geometry
 
     if(allocated(UseCrit_IB)) deallocate(UseCrit_IB)
@@ -771,13 +785,14 @@ contains
     if(allocated(iVarCritAll_I)) deallocate(iVarCritAll_I)
     if(allocated(AreaAll_I)) deallocate(AreaAll_I)
 
-    nCritGeoUsed = 0
-    isNewGeoParam =.true.
-    InitialResolution = -1.0 
+    nCritGeoUsed          = 0
+    IsNewGeoParam         = .true.
+    InitialResolution     = -1.0 
     initial_refine_levels = 0
-    AreaResolution=0.0
-    nAmrCrit = 0
-    nAmrCritUsed = 0
+    AreaResolution        = 0.0
+    nAmrCrit              = 0
+    nAmrCritUsed          = 0
 
   end subroutine clean_amr_geometry
+
 end module BATL_amr_geometry
