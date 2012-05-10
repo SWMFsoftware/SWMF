@@ -60,7 +60,7 @@ contains
     use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
          set_amr_geometry, nBlock, Unused_B, regrid_batl
     use ModBatlInterface, ONLY: set_batsrus_grid,set_batsrus_state
-
+    use ModAMR, ONLY : AmrCriteria_IB, nAmrCriteria, nCritGeo
     ! Dummy variables, to avoid array size issues with State_VGB in
     ! set_amr_criteria
     use ModAdvance, ONLY : nVar, State_VGB
@@ -93,8 +93,14 @@ contains
                      ' starting initial refinement level, nBlockAll =', &
                      nRefineLevel, nBlockAll
              end if
-
-             call set_amr_criteria(nVar,State_VGB,TypeAmrIn='geo')
+             if(nCritGeo > 0) then
+                AmrCriteria_IB(:,1:nBlockMax) = 0.0
+                call amr_criteria(AmrCriteria_IB,'geo')
+                call set_amr_criteria(nVar, State_VGB,&
+                     nAmrCriteria,AmrCriteria_IB,TypeAmrIn='geo')
+             else   
+                call set_amr_criteria(nVar,State_VGB,TypeAmrIn='geo')
+             end if
              call init_grid_batl
              call set_batsrus_grid
              ! need to update node information, maybe not all

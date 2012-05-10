@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine amr_criteria(Crit_IB)
+subroutine amr_criteria(Crit_IB,TypeAmr)
 
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, MaxBlock
@@ -9,18 +9,19 @@ subroutine amr_criteria(Crit_IB)
        x_BLK, y_BLK, z_BLK, r_BLK, dx_BLK, dy_BLK, dz_BLK, true_cell
   use ModAdvance,    ONLY: State_VGB, StateOld_VCB, B0_DGB, &
        Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
-  use ModAMR,        ONLY: nRefineCrit,RefineCrit
+  use ModAMR,        ONLY: nAmrCriteria,RefineCrit,nCritPhys,nCritGeo
   use ModPhysics,    ONLY: rCurrents
   use ModPhysics,    ONLY: UseSunEarth
   use ModUser,       ONLY: user_amr_criteria
   use ModCurrent,    ONLY: get_current
-  use BATL_lib,      ONLY: DoAmr_B, UseAmrMask, Xyz_DGB
+  use BATL_lib,      ONLY: DoAmr_B, UseAmrMask,Xyz_DGB
   use ModNumConst,   ONLY: cSqrtTwo, cTiny
   use ModVarIndexes, ONLY: SignB_
   use ModUser,       ONLY: user_specify_refinement
-  implicit none
+   implicit none
 
-  real, intent(out) :: Crit_IB(nRefineCrit+1,maxBlock)
+  real, intent(out) :: Crit_IB(nAmrCriteria+1,maxBlock)
+  character(len=3), intent(in) :: TypeAmr
   real :: userCriteria
 
   logical :: UseSwitchAMR, IsFound
@@ -43,7 +44,27 @@ subroutine amr_criteria(Crit_IB)
   ! Needed for the 'currentsheet'
   real :: rDotB_G(nI,nJ,0:nK+1)
 
+  integer :: iCritStart,iCritEnd
   !--------------------------------------------------------------------------
+
+  ! Only calculate what needed, for 'usegeo' the stat variables 
+  ! do not need to be set.
+  select case(TypeAmr)
+  case('all')
+     iCritStart = 1
+     iCritEnd   = nAmrCriteria
+  case('geo')
+     iCritStart = max(1,nAmrCriteria-nCritGeo)
+     iCritEnd   = nAmrCriteria
+  case('phy')
+     iCritStart = 1
+     iCritEnd  = nCritPhys
+  case default
+     call stop_mpi(NameSub // &
+          ' ERROR: Unknown TypeAmr = '//TypeAmr)
+  end select
+
+  !print *,"Crit range : ",iCritStart,"<->",iCritEnd,", TypeAmr = ",TypeAmr
 
   ! initialize all criteria to zero
   Crit_IB = 0.0
@@ -59,7 +80,7 @@ subroutine amr_criteria(Crit_IB)
      ! set last criteria to block radius, used in amr_physics to preserve 
      ! symmetry (not used by BATL !!!)
      if(.not.UseBatl)&
-          Crit_IB(nRefineCrit+1,iBlock) = maxval(R_BLK(1:nI,1:nJ,1:nK,iBlock))
+          Crit_IB(nAmrCriteria+1,iBlock) = maxval(R_BLK(1:nI,1:nJ,1:nK,iBlock))
 
      ! Initialize values to use below for criteria
      if (UseSunEarth) then
@@ -80,7 +101,7 @@ subroutine amr_criteria(Crit_IB)
         P_G(i,j,k)    = State_VGB(P_,i,j,k,iBlock)
      end do; end do; end do
 
-     do iCrit = 1, nRefineCrit
+     do iCrit = iCritStart, iCritEnd
         select case(RefineCrit(iCrit))
         case('gradt')
            ! Temperature gradient.
@@ -404,7 +425,7 @@ contains
   !===========================================================================
 
   subroutine trace_transient(NameCrit,iCrit,iBlock,refine_crit)
-    use ModAMR,      ONLY:nRefineCrit,RefineCrit, nRefineLevelIC
+    use ModAMR,      ONLY:nAmrCriteria,RefineCrit, nRefineLevelIC
 
     character(len=*), intent(in) :: NameCrit
 

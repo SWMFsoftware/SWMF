@@ -161,7 +161,6 @@ subroutine MH_set_parameters(TypeAction)
   ! Backward compatible with BATSRUS AMR, handling of 
   !'user' and 'currentsheet' grid paramters names
   character(len=20) :: NameCritGeo_I(2)
-  integer :: nCritGeo = 0
 
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
@@ -969,7 +968,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#PLOTFILENAME")
         call read_var('NameMaxTimeUnit', NameMaxTimeUnit)
 
-
      case("#SAVELOGNAME")
         call read_var('IsLogName_n',IsLogName_n)
         call read_var('IsLogName_e',IsLogName_e)
@@ -1278,10 +1276,10 @@ subroutine MH_set_parameters(TypeAction)
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
         if(UseBatl) then
-           call read_var('nRefineCrit',nRefineCrit)
-           call init_mod_amr(nRefineCrit)
+           call read_var('nAmrCriteria',nAmrCriteria)
+           call init_mod_amr(nAmrCriteria)
            call read_amr_criteria(NameCommand, &
-                nCritInOut=nRefineCrit, NameCritOut_I=RefineCrit,&
+                nCritInOut=nAmrCriteria, NameCritOut_I=RefineCrit,&
                 NameStatVarIn_V= NameVar_V,&
                 nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
            if (UseSunEarth) then
@@ -1291,9 +1289,9 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('InvD2Ray',InvD2Ray)
            end if
         else
-           call read_var('nRefineCrit',nRefineCrit)
-           call init_mod_amr(nRefineCrit)
-           do i=1,nRefineCrit
+           call read_var('nAmrCriteria',nAmrCriteria)
+           call init_mod_amr(nAmrCriteria)
+           do i=1,nAmrCriteria
               call read_var('TypeRefine', RefineCrit(i), IsLowerCase=.true.)
               if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
                  call read_var('TypeTransient_I(i)',TypeTransient_I(i))
@@ -1315,14 +1313,14 @@ subroutine MH_set_parameters(TypeAction)
         DoCritAmr = .true.
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
-        call read_var('nRefineCrit',nRefineCrit)
-        call init_mod_amr(nRefineCrit)
+        call read_var('nAmrCriteria',nAmrCriteria)
+        call init_mod_amr(nAmrCriteria)
         call read_amr_criteria(NameCommand, &
-             nCritInOut=nRefineCrit, NameCritOut_I=RefineCrit,&
+             nCritInOut=nAmrCriteria, NameCritOut_I=RefineCrit,&
              NameStatVarIn_V= NameVar_V,&
              nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
-        if(nRefineCrit<0 .or. nRefineCrit>3)call stop_mpi(NameSub// &
-             ' ERROR: nRefineCrit must be 0, 1, 2 or 3')
+        if(nAmrCriteria<0 .or. nAmrCriteria>3)call stop_mpi(NameSub// &
+             ' ERROR: nAmrCriteria must be 0, 1, 2 or 3')
         if (UseSunEarth) then
            call read_var('xEarth'  ,xEarth)
            call read_var('yEarth'  ,yEarth)
@@ -2430,14 +2428,14 @@ contains
 
        if(.not.UseBatl) then
           ! Refinement criteria
-          nRefineCrit    = 3
-          call init_mod_amr(nRefineCrit)
+          nAmrCriteria    = 3
+          call init_mod_amr(nAmrCriteria)
           RefineCrit(1)  = 'geometry'
           RefineCrit(2)  = 'Va'
           RefineCrit(3)  = 'flux'
        else
-          nRefineCrit = 0
-          call init_mod_amr(nRefineCrit)
+          nAmrCriteria = 0
+          call init_mod_amr(nAmrCriteria)
        end if
 
     case('GM')
@@ -2468,13 +2466,13 @@ contains
 
        if(.not.UseBatl) then
           ! Refinement Criteria
-          nRefineCrit    = 3
+          nAmrCriteria    = 3
           RefineCrit(1)  = 'gradlogP'
           RefineCrit(2)  = 'curlB'
           RefineCrit(3)  = 'Rcurrents'
        else
-          nRefineCrit = 0
-          call init_mod_amr(nRefineCrit)
+          nAmrCriteria = 0
+          call init_mod_amr(nAmrCriteria)
        end if
     case('EE')
        ! Body Parameters
@@ -2506,7 +2504,7 @@ contains
        TypeIoUnit        = "HELIOSPHERIC"
 
        ! Refinement Criteria
-       nRefineCrit = 0
+       nAmrCriteria = 0
 
     end select
 
@@ -2517,11 +2515,11 @@ contains
 
     use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
     use ModImplHypre, ONLY: IsHypreAvailable
-    use ModAMR, ONLY:nRefineCrit,RefineCrit
+    use ModAMR, ONLY:nAmrCriteria,RefineCrit,nCritPhys
 
     character (len=20),dimension(:), allocatable::tmpRefineCrit_I
     real,dimension(:), allocatable::tmp_I
-    integer :: nCritPhys, nCritAll
+    integer ::  nCritAll
 
     ! option and module parameters
     character (len=40) :: Name
@@ -2540,7 +2538,6 @@ contains
 
     if(IsFirstCheck)then
        call correct_grid_geometry
-       IsFirstCheck = .false.
     end if
 
     ! This depends on the grid geometry set above
@@ -2578,51 +2575,52 @@ contains
     ! Backward compatibilety with BATSRUS AMR
     ! Grid criteria as 'user' and 'currentsheet' are now handeld by
     ! amr_criteria
+
+    nCritPhys= nAmrCriteria-nCritGeo
+    if(IsFirstCheck) nCritPhys= size(RefineCrit)
+    !print *,"phys geo amr :: ", nCritPhys,nCritGeo,nAmrCriteria
     if(nCritGeo >0) then
        ! copy RefineCrit
        if(allocated(tmpRefineCrit_I)) deallocate(tmpRefineCrit_I)
-       nCritPhys= size(RefineCrit)
        allocate(tmpRefineCrit_I(nCritPhys))
        tmpRefineCrit_I = RefineCrit
        nCritAll = nCritPhys+2
        ! resize and copy back RefineCrit for 'user' and 'currentsheet'
        if(allocated(RefineCrit)) deallocate(RefineCrit)
        allocate(RefineCrit(nCritAll))
-       RefineCrit(1:nCritPhys) = tmpRefineCrit_I
+       RefineCrit(1:nCritPhys) = tmpRefineCrit_I(1:nCritPhys)
        RefineCrit(nCritPhys+1) = trim(NameCritGeo_I(1))
        RefineCrit(nCritPhys+2) = trim(NameCritGeo_I(2))
 
        if(allocated(tmpRefineCrit_I)) deallocate(tmpRefineCrit_I)
-       nRefineCrit = nRefineCrit + nCritGeo
-       !print *," RefineCrit :: ",RefineCrit,nRefineCrit,adjustl(NameCritGeo_I(1)),adjustl(NameCritGeo_I(2))
-       nRefineCrit =nCritAll-1
+       nAmrCriteria = nAmrCriteria + nCritGeo
+       nAmrCriteria =nCritAll-1
 
        ! copy, reasize and copy  back the values into the arrays
        if(allocated(tmp_I)) deallocate(tmp_I)
        allocate(tmp_I(nCritPhys+1))
 
-       !print *,"tmp_I : ", shape(tmp_I)," : CoarsenLimit_I ", shape(CoarsenLimit_I)
-       tmp_I =  CoarsenLimit_I
+       tmp_I(1:nCritPhys+1) =  CoarsenLimit_I(1:nCritPhys+1)
        deallocate(CoarsenLimit_I)
-       allocate(CoarsenLimit_I(nRefineCrit+1))
+       allocate(CoarsenLimit_I(nAmrCriteria+1))
        CoarsenLimit_I(1:nCritPhys+1) = tmp_I
 
-       tmp_I =  RefineLimit_I
+       tmp_I(1:nCritPhys+1) =  RefineLimit_I(1:nCritPhys+1)
        deallocate(RefineLimit_I)
-       allocate(RefineLimit_I(nRefineCrit+1))
+       allocate(RefineLimit_I(nAmrCriteria+1))
        RefineLimit_I(1:nCritPhys+1) = tmp_I
 
        ! Most probably not needed
-       tmp_I(1:nCritPhys) = RefineCritMin_I
+       tmp_I(1:nCritPhys) = RefineCritMin_I(1:nCritPhys)
        deallocate(RefineCritMin_I)
-       allocate(RefineCritMin_I(nRefineCrit))
+       allocate(RefineCritMin_I(nAmrCriteria))
        RefineCritMin_I(1:nCritPhys) = tmp_I(1:nCritPhys)
 
        deallocate(tmp_I)
 
        ! contain no data, no copy needed
-       if(allocated(refine_criteria_IB)) deallocate(refine_criteria_IB)
-       allocate(refine_criteria_IB(nRefineCrit+1,MaxBlock))
+       if(allocated(AmrCriteria_IB)) deallocate(AmrCriteria_IB)
+       allocate(AmrCriteria_IB(nAmrCriteria+1,MaxBlock))
 
 
        !clean unused Arrays
@@ -2630,9 +2628,6 @@ contains
        if(allocated(SortIndex_I)) deallocate(SortIndex_I)
        if(allocated(TypeTransient_I)) deallocate(TypeTransient_I)
 
-       !print *,"correct_parameters :: shape(refine_criteria_IB) = ", shape(refine_criteria_IB)
-
-       nCritGeo = 0
     end if
 
     ! Check flux type selection
@@ -3095,6 +3090,8 @@ contains
 
     if(DoFixAxis .and. .not. UseUniformAxis) &
          call stop_mpi("DoFixAxis=T only works with UseUniformAxis=T!")
+
+    IsFirstCheck = .false.
 
   end subroutine correct_parameters
 

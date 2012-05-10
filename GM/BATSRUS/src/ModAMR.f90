@@ -47,14 +47,14 @@ module ModAMR
   !\
   ! Refinement criteria parameters
   !/
-  integer            :: nRefineCrit, MaxTotalBlocks
+  integer            :: nAmrCriteria, MaxTotalBlocks
   real               :: PercentCoarsen, PercentRefine
   character (len=20),dimension(:), allocatable:: RefineCrit, TypeTransient_I
   real, dimension(:), allocatable :: CoarsenLimit_I, RefineLimit_I
 
   ! Refine for criterion n only if it is above RefineCritMin_I(n)
   real, dimension(:), allocatable :: RefineCritMin_I
-  real,dimension(:,:), allocatable :: refine_criteria_IB
+  real,dimension(:,:), allocatable :: AmrCriteria_IB
   ! Coarsen only if the rescaled (0.0 to 1.0) criterion is below CoarsenCritMax
   real               :: CoarsenCritMax     = 2.0
 
@@ -71,7 +71,8 @@ module ModAMR
   logical :: automatic_refinement, fix_body_level
   logical :: DoAmr = .false.
   logical :: DoProfileAmr = .false.
-
+  ! Needed by amr_criteria
+  integer :: nCritGeo = 0, nCritPhys = 0
   !\
   ! Variables controlling grid resolution in different areas
   !/
@@ -96,7 +97,7 @@ contains
 
     use ModMain, ONLY: MaxBlock
     use ModProcMH, ONLY: nProc
-  
+
     integer, intent(in) :: nCrit
     !-----------------------------------------------------------------------
 
@@ -108,15 +109,14 @@ contains
          CoarsenLimit_I(NCrit+1),&
          RefineLimit_I(NCrit+1),&
          RefineCritMin_I(nCrit),&
-         refine_criteria_IB(nCrit+1,MaxBlock),&
+         AmrCriteria_IB(nCrit+1,MaxBlock),&
          refine_criteria_IBP(nCrit+1,MaxBlock,nProc),&
          SortIndex_I(nCrit+1))
-
     CoarsenLimit_I      = -1.0
     RefineLimit_I       = -1.0
     RefineCritMin_I     = -1.0
     refine_criteria_IBP = 0.00
-    
+
   end subroutine init_mod_amr
   !============================================================================
   subroutine clean_mod_amr
@@ -127,7 +127,7 @@ contains
             CoarsenLimit_I,&
             RefineLimit_I,&
             RefineCritMin_I,&
-            refine_criteria_IB,&
+            AmrCriteria_IB,&
             refine_criteria_IBP,&
             SortIndex_I)
     end if

@@ -17,7 +17,7 @@ subroutine amr_physics
   logical :: unique, noNeighbor, stopRefinement, done
   logical :: oktest=.false., oktest_me=.false.
   type (adaptive_block_ptr) :: BlockPtr, tmpBlockPtr
-  integer :: iSortCrit ! index of sorting criteia in 
+  integer :: nSortCrit ! index of sorting criteia in 
   !---------------------------------------------------------------------------
   call set_oktest('amr',oktest,oktest_me)
   if(oktest .and. iProc == 0) then
@@ -29,7 +29,7 @@ subroutine amr_physics
   ! Initial error checking and initializations
   !
   
-  iSortCrit = nRefineCrit+1
+  nSortCrit = nAmrCriteria+1
 
   if(maxTotalBlocks > nBLK*nProc) then
      if(iProc == 0) then
@@ -45,10 +45,10 @@ subroutine amr_physics
   !--------------------------------------------------------------------
   ! Compute and gather criteria for each block
   !
-  refine_criteria_IB = 0.0
-  call amr_criteria(refine_criteria_IB)
-  call MPI_ALLGATHER(refine_criteria_IB, iSortCrit*nBLK, MPI_REAL, &
-       refine_criteria_IBP, iSortCrit*nBLK, MPI_REAL, iComm, iError)
+  AmrCriteria_IB = 0.0
+  call amr_criteria(AmrCriteria_IB)
+  call MPI_ALLGATHER(AmrCriteria_IB, nSortCrit*nBLK, MPI_REAL, &
+       refine_criteria_IBP, nSortCrit*nBLK, MPI_REAL, iComm, iError)
 
 
   !--------------------------------------------------------------------
@@ -64,7 +64,7 @@ subroutine amr_physics
      BlockPtr%ptr => global_block_ptrs(i,j)%ptr
      if(associated(BlockPtr%ptr)) then ! ensure block is allocated
         k=k+1
-        do n=1,nRefineCrit
+        do n=1,nAmrCriteria
            SortB(n,k)=i
            SortP(n,k)=j-1
            SortC(n,k)=refine_criteria_IBP(n,i,j)
@@ -77,7 +77,7 @@ subroutine amr_physics
   end if
 
   !Sort criteria lists
-  do n=1,nRefineCrit
+  do n=1,nAmrCriteria
      do j=1,nSort-1
         do i=1,nSort-j
            if(SortC(n,i) > SortC(n,i+1)) then
@@ -107,7 +107,7 @@ subroutine amr_physics
   ListToRefine=-1
   k=0
   do i=nSort,1,-1
-     do n=1,nRefineCrit
+     do n=1,nAmrCriteria
         if(SortIndex_I(n)<=i) CYCLE
         SortIndex_I(n)=min(i,SortIndex_I(n))
 
@@ -135,9 +135,9 @@ subroutine amr_physics
            ! Exit loop if criteria is too different
            if(abs(SortC(n,i)-SortC(n,i-i1)) > (SortC(n,i)*1.E-2)) EXIT
            ! Cycle loop if not symmetric point
-           if(abs(refine_criteria_IBP(iSortCrit,SortB(n,i   ),SortP(n,i   )+1)- &
-                  refine_criteria_IBP(iSortCrit,SortB(n,i-i1),SortP(n,i-i1)+1)) > &
-                 (refine_criteria_IBP(iSortCrit,SortB(n,i   ),SortP(n,i   )+1)*1.E-6)) CYCLE
+           if(abs(refine_criteria_IBP(nSortCrit,SortB(n,i   ),SortP(n,i   )+1)- &
+                  refine_criteria_IBP(nSortCrit,SortB(n,i-i1),SortP(n,i-i1)+1)) > &
+                 (refine_criteria_IBP(nSortCrit,SortB(n,i   ),SortP(n,i   )+1)*1.E-6)) CYCLE
 
            !Check to see if block locked for refining
            BlockPtr%ptr => global_block_ptrs(SortB(n,i-i1),SortP(n,i-i1)+1)%ptr
@@ -178,7 +178,7 @@ subroutine amr_physics
         SortB(1,k)=i
         SortP(1,k)=j-1
         SortC(1,k)=0.
-        do n=1,nRefineCrit
+        do n=1,nAmrCriteria
            if(refine_criteria_IBP(n,i,j) /= 0.0) SortC(1,k) = SortC(1,k) &
                 + refine_criteria_IBP(n,i,j)/SortC(n,nSort+1)
         end do
@@ -263,9 +263,9 @@ subroutine amr_physics
            ! Exit loop if criteria is too different
            if(abs(SortC(n,i)-SortC(n,i+i1)) > (SortC(n,i)*1.E-2)) EXIT
            ! Cycle loop if not symmetric point
-           if(abs(refine_criteria_IBP(iSortCrit,SortB(n,i   ),SortP(n,i   )+1)- &
-                  refine_criteria_IBP(iSortCrit,SortB(n,i+i1),SortP(n,i+i1)+1)) > &
-                 (refine_criteria_IBP(iSortCrit,SortB(n,i   ),SortP(n,i   )+1)*1.E-6)) CYCLE
+           if(abs(refine_criteria_IBP(nSortCrit,SortB(n,i   ),SortP(n,i   )+1)- &
+                  refine_criteria_IBP(nSortCrit,SortB(n,i+i1),SortP(n,i+i1)+1)) > &
+                 (refine_criteria_IBP(nSortCrit,SortB(n,i   ),SortP(n,i   )+1)*1.E-6)) CYCLE
 
            !Check to see if block locked for coarsening
            BlockPtr%ptr => global_block_ptrs(SortB(n,i+i1),SortP(n,i+i1)+1)%ptr
@@ -331,9 +331,9 @@ subroutine amr_physics
         if(nCoarsened+7 > nDesired) then
            ! check to see if a few more blocks should be coarsened to preserve symmetry
            do i1=1,nCoarsenMax-i
-              if(abs(refine_criteria_IBP(iSortCrit,ListToCoarsen(1,i   ),ListToCoarsen(2,i   )+1)- &
-                   refine_criteria_IBP(iSortCrit,ListToCoarsen(1,i+i1),ListToCoarsen(2,i+i1)+1) ) > &
-                   (refine_criteria_IBP(iSortCrit,ListToCoarsen(1,i   ),ListToCoarsen(2,i   )+1)*1.E-6)) EXIT
+              if(abs(refine_criteria_IBP(nSortCrit,ListToCoarsen(1,i   ),ListToCoarsen(2,i   )+1)- &
+                   refine_criteria_IBP(nSortCrit,ListToCoarsen(1,i+i1),ListToCoarsen(2,i+i1)+1) ) > &
+                   (refine_criteria_IBP(nSortCrit,ListToCoarsen(1,i   ),ListToCoarsen(2,i   )+1)*1.E-6)) EXIT
               BlockPtr%ptr => global_block_ptrs(ListToCoarsen(1,i+i1),ListToCoarsen(2,i+i1)+1)%ptr
               call FlagBlockCoarsen
            end do
@@ -406,9 +406,9 @@ subroutine amr_physics
         if(nRefined+7 > nDesired) then
            ! check to see if a few more blocks should be refined to preserve symmetry
            do i1=1,nRefineMax-i
-              if(abs(refine_criteria_IBP(iSortCrit,ListToRefine(1,i   ),ListToRefine(2,i   )+1)- &
-                   refine_criteria_IBP(iSortCrit,ListToRefine(1,i+i1),ListToRefine(2,i+i1)+1) ) > &
-                   (refine_criteria_IBP(iSortCrit,ListToRefine(1,i   ),ListToRefine(2,i   )+1)*1.E-6)) EXIT
+              if(abs(refine_criteria_IBP(nSortCrit,ListToRefine(1,i   ),ListToRefine(2,i   )+1)- &
+                   refine_criteria_IBP(nSortCrit,ListToRefine(1,i+i1),ListToRefine(2,i+i1)+1) ) > &
+                   (refine_criteria_IBP(nSortCrit,ListToRefine(1,i   ),ListToRefine(2,i   )+1)*1.E-6)) EXIT
               BlockPtr%ptr => global_block_ptrs(ListToRefine(1,i+i1),ListToRefine(2,i+i1)+1)%ptr
               call FlagBlockRefine
               if(stopRefinement) EXIT

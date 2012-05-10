@@ -6,7 +6,7 @@ subroutine amr(DoFullMessagePass,TypeAmr)
        iNewGrid, iNewDecomposition
   use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK,true_cell
   use ModAMR, ONLY : automatic_refinement, RefineLimit_I, CoarsenLimit_I, &
-       nRefineCrit, DoProfileAmr, refine_criteria_IB
+       nAmrCriteria, DoProfileAmr, AmrCriteria_IB
   use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
        nVar, State_VGB, &
        SkippedBlock_ !!!
@@ -66,14 +66,14 @@ subroutine amr(DoFullMessagePass,TypeAmr)
                 iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode))
         end do
      end if
-     if(nRefineCrit > 0)then
-        refine_criteria_IB(:,1:nBlockMax) = 0.0
+     if(nAmrCriteria > 0)then
+        AmrCriteria_IB(:,1:nBlockMax) = 0.0
         if(DoProfileAmr) call timing_start('amr::amr_criteria')
-        call amr_criteria(refine_criteria_IB)
+        call amr_criteria(AmrCriteria_IB,TypeAmr)
         if(DoProfileAmr) call timing_stop('amr::amr_criteria')
         if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
         call set_amr_criteria(nVar, State_VGB,&
-             nRefineCrit,refine_criteria_IB,TypeAmrIn=TypeAmr)
+             nAmrCriteria,AmrCriteria_IB,TypeAmrIn=TypeAmr)
         if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
 
      else
