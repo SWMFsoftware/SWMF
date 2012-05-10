@@ -575,11 +575,13 @@ contains
 
 
     !--------------------------------------------------------------------------
-
-    if (iProc == 0) write (*,*) '===================================='
-    if (iProc == 0) write (*,*) 'Writing BATL hdf5 parallel plotfile'
-    if (iProc == 0) write (*,*) '------------------------------------'
-    if (iProc == 0) write (*,*) '  opening hdf5 file'
+!     !If you make changes to the hdf part of this code, uncomment this and 
+!     !the writes at the end and run the code before commiting it to
+!     !make sure that it doesn't cause the writes to to be really slow.
+!     if (iProc == 0) write (*,*) '===================================='
+!     if (iProc == 0) write (*,*) 'Writing BATL hdf5 parallel plotfile'
+!     if (iProc == 0) write (*,*) '------------------------------------'
+!     if (iProc == 0) write (*,*) '  opening hdf5 file'
 
     call barrier_mpi()
     do iVar = 1, nPlotVar
@@ -853,7 +855,9 @@ contains
     call write_integer_plot_metadata(fileID, nPlotVar, isCutFile)
     call write_real_plot_metadata(FileID,minCoords(1),maxCoords(1),minCoords(2),maxCoords(2),&
          minCoords(3),maxCoords(3))
-    if (iProc == 0) write (*,*) '  closing file'
+!   !if one of the hdf routines leaves a dataspace, dataset, proterty list, etc... open
+!   !the code will hang on h5garbage_collect_f
+!    if (iProc == 0) write (*,*) '  closing file'
     !Close the file
     call h5garbage_collect_f(error)
     call h5fclose_f(fileID,error)
@@ -861,7 +865,7 @@ contains
     call h5close_f(error)
     if (error == -1) write (*,*) 'h5fclose_f failed'
 
-    if (iProc == 0) write (*,*) '===================================='
+!     if (iProc == 0) write (*,*) '===================================='
   end subroutine write_plot_hdf5
   !======================================================================
   !=====================================================================
