@@ -14,7 +14,7 @@ subroutine amr_criteria(Crit_IB)
   use ModPhysics,    ONLY: UseSunEarth
   use ModUser,       ONLY: user_amr_criteria
   use ModCurrent,    ONLY: get_current
-  use BATL_lib,      ONLY: DoAmr_B, UseAmrMask
+  use BATL_lib,      ONLY: DoAmr_B, UseAmrMask, Xyz_DGB
   use ModNumConst,   ONLY: cSqrtTwo, cTiny
   use ModVarIndexes, ONLY: SignB_
   use ModUser,       ONLY: user_specify_refinement
@@ -197,24 +197,17 @@ subroutine amr_criteria(Crit_IB)
               end if
 
            else
-              ! Calculate BdotR including ghost cells in all directions
+              ! Calculate BdotR including the ghost cells in 3rd dimension only
               if(UseB0)then
                  do k=0, nK+1; do j=1, nJ; do i=1, nI
-                    rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-                         * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
-                         +           y_BLK(i,j,k,iBlock)   &
-                         * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
-                         +           z_BLK(i,j,k,iBlock)   &
-                         * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
+                    rDotB_G(i,j,k) = sum( Xyz_DGB(:,i,j,k,iBlock) &
+                         * (B0_DGB(:,i,j,k,iBlock) &
+                         +  State_VGB(Bx_:Bz_,i,j,k,iBlock)))
                  end do; end do; end do
               else
                  do k=0, nK+1; do j=1, nJ; do i=1, nI
-                    rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-                         * State_VGB(Bx_,i,j,k,iBlock) &
-                         +           y_BLK(i,j,k,iBlock)   &
-                         * State_VGB(By_,i,j,k,iBlock) &
-                         +           z_BLK(i,j,k,iBlock)   &
-                         * State_VGB(Bz_,i,j,k,iBlock)
+                    rDotB_G(i,j,k) = sum(Xyz_DGB(:,i,j,k,iBlock)   &
+                         * State_VGB(Bx_:Bz_,i,j,k,iBlock))
                  end do; end do; end do
               end if
 
@@ -226,15 +219,16 @@ subroutine amr_criteria(Crit_IB)
 
            end if
         case default
-           ! WARNING if we do not find the criteria in the abou list we 
+           ! WARNING if we do not find the criteria in the above list we 
            ! will search for it among 'transient' criteria
            if(UseBatl) then
-              if (UseUserAMR .or. trim(RefineCrit(iCrit))=='user') then
+              if (UseUserAMR .or. RefineCrit(iCrit) == 'user') then
                  IsFound=.false.
                  call user_amr_criteria(iBlock, &
                       UserCriteria, RefineCrit(iCrit), IsFound)
                  Crit_IB(iCrit,iBlock) = userCriteria
-              elseif (UseUserSpecifyRefinement .or. trim(RefineCrit(iCrit)) =='usergeo' ) then
+              elseif (UseUserSpecifyRefinement .or. &
+                   RefineCrit(iCrit) =='usergeo' ) then
                  IsFound=.false.
                  call user_specify_refinement(iBlock, -1, IsFound)
                  if (IsFound) then
@@ -277,9 +271,10 @@ subroutine amr_criteria(Crit_IB)
                       UserCriteria, RefineCrit(iCrit), IsFound)
                  if (IsFound) then
                     Crit_IB(iCrit,iBlock) = userCriteria
-                 else    
+                 else
                     write(*,*) NameSub, &
-                         ' User refinement criteria=', trim(RefineCrit(iCrit)), &
+                         ' User refinement criteria=', &
+                         trim(RefineCrit(iCrit)),      &
                          ' not found in user_amr_criteria in the user module!'
                     call stop_mpi('Fix user_amr_criteria or PARAM.in!')
                  end if
@@ -482,9 +477,9 @@ contains
        ! refine_crit = abs(|rhoU|-|rhoU|_o)/max(|rhoU|,|rhoU|_o,cTiny)
        ! over all the cells of block iBlock
        !/
-       scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2              + &
+       scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2       + &
             RhoUy_G(1:nI,1:nJ,1:nK)**2 + RhoUz_G(1:nI,1:nJ,1:nK)**2)      - &
-            sqrt(RhoUxOld_C(1:nI,1:nJ,1:nK)**2                                    + &
+            sqrt(RhoUxOld_C(1:nI,1:nJ,1:nK)**2                            + &
             RhoUyOld_C(1:nI,1:nJ,1:nK)**2 + RhoUzOld_C(1:nI,1:nJ,1:nK)**2))
        scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny, &
             sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2 + RhoUy_G(1:nI,1:nJ,1:nK)**2  + &
@@ -496,9 +491,9 @@ contains
        ! refine_crit = abs(|B|-|B|_o)/max(|B|,|B|_o,cTiny)
        ! over all the cells of block iBlock
        !/
-       scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(Bx_G(1:nI,1:nJ,1:nK)**2           + &
-            By_G(1:nI,1:nJ,1:nK)**2 + Bz_G(1:nI,1:nJ,1:nK)**2)      - &
-            sqrt(BxOld_C(1:nI,1:nJ,1:nK)**2                                 + &
+       scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(Bx_G(1:nI,1:nJ,1:nK)**2         + &
+            By_G(1:nI,1:nJ,1:nK)**2 + Bz_G(1:nI,1:nJ,1:nK)**2)           - &
+            sqrt(BxOld_C(1:nI,1:nJ,1:nK)**2                              + &
             ByOld_C(1:nI,1:nJ,1:nK)**2 + BzOld_C(1:nI,1:nJ,1:nK)**2))
        scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny, &
             sqrt(Bx_G(1:nI,1:nJ,1:nK)**2 + By_G(1:nI,1:nJ,1:nK)**2  + &
@@ -506,9 +501,9 @@ contains
             ByOld_C(1:nI,1:nJ,1:nK)**2 + BzOld_C(1:nI,1:nJ,1:nK)**2))
        refine_crit = maxval(scrARR)
     case('meanUB') 
-       scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2              + &
-            RhoUy_G(1:nI,1:nJ,1:nK)**2 + RhoUz_G(1:nI,1:nJ,1:nK)**2)      - &
-            sqrt(RhoUxOld_C(1:nI,1:nJ,1:nK)**2                                    + &
+       scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2        + &
+            RhoUy_G(1:nI,1:nJ,1:nK)**2 + RhoUz_G(1:nI,1:nJ,1:nK)**2)       - &
+            sqrt(RhoUxOld_C(1:nI,1:nJ,1:nK)**2                             + &
             RhoUyOld_C(1:nI,1:nJ,1:nK)**2 + RhoUzOld_C(1:nI,1:nJ,1:nK)**2))
        scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny, &
             sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2 + RhoUy_G(1:nI,1:nJ,1:nK)**2  + &
