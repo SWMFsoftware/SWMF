@@ -400,13 +400,17 @@ the README file is quoted verbatim below.
 \subsection{Pleiades machine at NASA Ames}
 
 Currently on pleiades you should load the following modules
+(includes modules for optional HDF5 output and IDL for visualization)
 \begin{verbatim}
-   module load intel-comp.11.1.072
-   module load mpi/mpt.1.25
+  module load comp-intel/11.1.072
+  module load mpi-sgi/mpt.2.04.10789
+  module load hdf5/1.8.3/intel/mpt
+  module load hdfeos/5.1.12
+  module load idl
 \end{verbatim}
 It is best adding the above statements into the .cshrc file in the 
-home directory.
-Note that ifort 12.0 does not work correctly.
+home directory. 
+Note that ifort 12.0 cannot compile the SWMF code.
 The module versions keep changing. Use
 \begin{verbatim}
    module avail
