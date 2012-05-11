@@ -224,6 +224,9 @@ module ModUser
   !Non LTE array to store E/B ratios
   real, allocatable :: EOverB_VGB(:,:,:,:,:) 
 
+  ! Logical for using ModInitialState
+  logical:: UseInitialStateDefinition = .false.
+
 contains
 
   !============================================================================
@@ -237,10 +240,16 @@ contains
     use ModWaves,            ONLY: FreqMinSI, FreqMaxSI
     use ModConst,            ONLY: cHPlanckEV
     use CRASH_ModInterfaceNLTE, ONLY: read_nlte
+    use ModVarIndexes,       ONLY: nVar, NameVar_V
+    use ModInitialState,     ONLY: init_initial_state, read_initial_state_param
+    use ModUtilities,        ONLY: join_string
+
     integer :: iMaterial
     real :: EnergyPhotonMin, EnergyPhotonMax
     logical :: IsCylindrical
     character (len=100) :: NameCommand
+    character (len=500) :: StringVar
+
     character(len=*), parameter :: NameSub = 'user_read_inputs'
     !------------------------------------------------------------------------
 
@@ -255,6 +264,13 @@ contains
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
+       case("#STATEDEFINITION")
+          UseInitialStateDefinition = .true.
+          call join_string(nVar, NameVar_V(1:nVar), StringVar)
+          call init_initial_state(StringVar, MaterialFirst_, nMaterial)
+          call read_initial_state_param(NameCommand)
+       case("#STATEINTERFACE")
+          call read_initial_state_param(NameCommand)
        case("#CRASH2D")
           call read_var('UseCrash2DFile',  UseCrash2DFile)
           call read_var('NameCrash2DFile', NameCrash2DFile)
@@ -434,6 +450,7 @@ contains
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
     use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
+    use ModInitialState,ONLY: get_initial_state
 
     real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
     real    :: DxyGold = -1.0
@@ -626,8 +643,14 @@ contains
           end if
 
        end if
-       if(nMaterial==5 .and. UseLaserHeating)&
-            call unperturbed_5_materials
+
+       if(UseInitialStateDefinition)then
+          call get_initial_state( (/x, y/), State_VGB(:,i,j,k,iBlock) )
+          call set_initial_temperature
+       elseif(nMaterial==5 .and. UseLaserHeating)then
+          call unperturbed_5_materials
+          call set_initial_temperature
+       end if
 
        ! Multiply level set functions with density unless the 
        ! non-conservative approach is used
@@ -706,21 +729,15 @@ contains
            (500.0 * Si2No_V(UnitTemperature_))**4
 
     end subroutine set_small_radiation_energy
-    !========================================
+    !========================================================================
     subroutine unperturbed_5_materials
-      use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
-      use ModPhysics,     ONLY: cRadiationNo
-      use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
       use ModVarIndexes,  ONLY: RhoUy_
       use ModGeometry,    ONLY: xMin=>x1, x2, y1, y2
 
       real    :: yPl                              ! [um]
       real    :: Distance, DistanceBe, DistancePl ! [um]
-      real    :: Tr = 0.0259                      ! [eV?]
       real    :: xAu, xAy1, xAy2
-      real    :: TrSi, EgSi
-      integer :: iWave
-      !---------------
+      !----------------------------------------------------------------------
 
 
       ! Set boundaries for different materials
@@ -960,13 +977,25 @@ contains
 
       endif
 
-      TeSi = 2.1e6 *(0.025/180.) 
-      Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
-      Ti_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
-
       State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
       State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
       State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
+
+    end subroutine unperturbed_5_materials
+    !=========================================================================
+    subroutine set_initial_temperature
+
+      use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
+      use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
+      use ModPhysics,     ONLY: cRadiationNo
+
+      real    :: Tr = 0.0259                      ! [eV?]
+      real    :: TrSi, EgSi
+      integer :: iWave
+      !---------------------------------------------------------------------
+      TeSi = 2.1e6 *(0.025/180.) 
+      Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+      Ti_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
 
       if (nWave == 1) then
          ! Set small initial radiation-energy density everywhere.
@@ -981,7 +1010,7 @@ contains
          enddo
       endif
 
-    end subroutine unperturbed_5_materials
+    end subroutine set_initial_temperature
 
   end subroutine user_set_ics
 
