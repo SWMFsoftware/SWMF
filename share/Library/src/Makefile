@@ -20,6 +20,7 @@ MODULES = \
 	ModCoordTransform.o\
 	ModExactRS.o\
 	ModFreq.o\
+	ModInitialState.o\
 	ModInterpolate.o\
         ModInterGen.o\
         ModInterWrapper.o\
