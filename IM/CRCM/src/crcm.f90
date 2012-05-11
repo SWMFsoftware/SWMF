@@ -7,8 +7,9 @@ subroutine crcm_run(delta_t)
                             dFactor_I,tFactor_I
   use ModFieldTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
                             ekev,iba,bo,pp,Have, sinA, vel, alscone, iw2
-  use ModGmCrcm,      ONLY: Den_IC,Temp_IC,StateBmin_IIV,AveP_,AveDens_, &
-                            iLatMin,DoMultiFluidGMCoupling,AveDen_I,AveP_I
+  use ModGmCrcm,      ONLY: Den_IC,Temp_IC,Temppar_IC,StateBmin_IIV,&
+                            AveP_,AvePpar_,AveDens_, AveDen_I,AveP_I,iLatMin,&
+                            DoMultiFluidGMCoupling,DoAnisoPressureGMCoupling
   use ModIeCrcm,      ONLY: pot
   use ModCrcmPlot,    ONLY: Crcm_plot, Crcm_plot_fls, DtOutput, DoSavePlot,&
                             DoSaveFlux
@@ -86,6 +87,11 @@ subroutine crcm_run(delta_t)
                       StateBmin_IIV(iLatMin,iLon,AveP_) * FactorTotalDens &
                       / StateBmin_IIV(iLatMin,iLon,AveDens_) &
                       * 6.2415e18 !J-->eV
+                 if(DoAnisoPressureGMCoupling) &
+                      Temppar_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies) * &
+                      StateBmin_IIV(iLatMin,iLon,AvePpar_) * FactorTotalDens &
+                      / StateBmin_IIV(iLatMin,iLon,AveDens_) &
+                      * 6.2415e18 !J-->eV
 !                 Den_IC(iSpecies,iLat,iLon) = dFactor_I(iSpecies) * 1.0e6
 !                 Temp_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies)* 5000.0
               else
@@ -94,6 +100,11 @@ subroutine crcm_run(delta_t)
                       StateBmin_IIV(iLat,iLon,AveDens_)/FactorTotalDens
                  Temp_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies) * &
                       StateBmin_IIV(iLat,iLon,AveP_) * FactorTotalDens &
+                      / StateBmin_IIV(iLat,iLon,AveDens_) &
+                      * 6.2415e18 !J-->eV
+                 if(DoAnisoPressureGMCoupling) &
+                      Temppar_IC(iSpecies,iLat,iLon) = tFactor_I(iSpecies) * &
+                      StateBmin_IIV(iLat,iLon,AvePpar_) * FactorTotalDens &
                       / StateBmin_IIV(iLat,iLon,AveDens_) &
                       * 6.2415e18 !J-->eV  
               endif
@@ -158,7 +169,6 @@ subroutine crcm_run(delta_t)
      IsFirstCall=.false.
   endif
 
-  
 
   ! calculate boundary flux (fb) at the CRCM outer boundary at the equator
   call boundaryIM(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
@@ -523,10 +533,11 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   ! 
   ! Input: nspec,np,nt,iba,Den_IC,Temp_IC,amu,vel,xjac
   ! Output: ib0,f2 (through common block cinitial_f2)
-  Use ModGmCrcm, ONLY: Den_IC, Temp_IC
+  use ModGmCrcm, ONLY: Den_IC, Temp_IC, Temppar_IC, DoAnisoPressureGMCoupling
   use ModCrcm,   ONLY: f2
   use ModCrcmInitialize,   ONLY: IsEmptyInitial
   use ModCrcmGrid,ONLY: nm,nk,MinLonPar,MaxLonPar
+  use ModFieldTrace, ONLY: sinA
   implicit none
 
   integer,parameter :: np1=51,nt1=48,nspec1=1  
@@ -534,7 +545,9 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
  
   integer nspec,np,nt,iba(nt),ib0(nt),n,j,i,k,m
   real amu_I(nspec),vel(nspec,np,nt,nm,nk)
+  real velperp2, velpar2
   real xjac(nspec,np,nm),pi,xmass,chmass,f21,vtchm
+  real Tempperp_IC(nspec,np,nt)
 
   pi=acos(-1.)
 
@@ -545,17 +558,30 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
      ! Set initial f2 to a small number
      f2(:,:,:,:,:)=1.0e-40
   else
-     ! Set initial f2 based on Maxwellian
+     ! Set initial f2 based on Maxwellian or bi-Maxwellian
+     if(DoAnisoPressureGMCoupling) &
+          Tempperp_IC(:,:,:) = (3*Temp_IC(:,:,:) - Temppar_IC(:,:,:))/2.
      do n=1,nspec
         xmass=amu_I(n)*1.673e-27
         chmass=1.6e-19/xmass
         do j=MinLonPar,MaxLonPar
            do i=1,iba(j)
-              f21=Den_IC(n,i,j)/(2.*pi*xmass*Temp_IC(n,i,j)*1.6e-19)**1.5
+              if(DoAnisoPressureGMCoupling)then
+                 f21=Den_IC(n,i,j)/(2.*pi*xmass*Temppar_IC(n,i,j)*1.6e-19)**0.5 &
+                      /(2.*pi*xmass*Tempperp_IC(n,i,j)*1.6e-19)
+              else
+                 f21=Den_IC(n,i,j)/(2.*pi*xmass*Temp_IC(n,i,j)*1.6e-19)**1.5
+              end if
               do k=1,nm
                  do m=1,nk
-                    vtchm=&
-                         -vel(n,i,j,k,m)*vel(n,i,j,k,m)/2./Temp_IC(n,i,j)/chmass
+                    if(DoAnisoPressureGMCoupling)then
+                       velperp2 = (vel(n,i,j,k,m)*sinA(i,j,m))**2
+                       velpar2 = vel(n,i,j,k,m)**2 - velperp2
+                       vtchm = -velpar2/(2*Temppar_IC(n,i,j)*chmass) &
+                            -velperp2/(2*Tempperp_IC(n,i,j)*chmass)
+                    else                    
+                       vtchm = -vel(n,i,j,k,m)**2/(2*Temp_IC(n,i,j)*chmass)
+                    end if
                     f2(n,i,j,k,m)=xjac(n,i,k)*f21*exp(vtchm)
                  end do
               end do
@@ -575,27 +601,45 @@ subroutine boundaryIM(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
   !
   ! Input: nspec,np,nt,nm,nk,iba,irm,amu,xjac,Den_IC,Temp_IC,vel
   ! Output: fb
-  Use ModGmCrcm, ONLY: Den_IC, Temp_IC
+  Use ModGmCrcm, ONLY: Den_IC, Temp_IC, Temppar_IC, DoAnisoPressureGMCoupling
   use ModCrcm,       ONLY: MinLonPar,MaxLonPar
+  use ModFieldTrace, ONLY: sinA
   implicit none
 
   integer nspec,np,nt,nm,nk,iba(nt),irm(nt),j,n,k,m,ib1
   real amu_I(nspec),xjac(nspec,np,nm)
   real vel(nspec,np,nt,nm,nk),fb(nspec,nt,nm,nk),pi,xmass,chmass,fb1,vtchm
+  real velperp2, velpar2
+  real Tempperp_IC(nspec,np,nt)
 
   pi=acos(-1.)
 
+  if(DoAnisoPressureGMCoupling) &
+          Tempperp_IC(:,:,:) = (3*Temp_IC(:,:,:) - Temppar_IC(:,:,:))/2.
+  
   do n=1,nspec
      xmass=amu_I(n)*1.673e-27
      chmass=1.6e-19/xmass
      do j=MinLonPar,MaxLonPar
         ib1=iba(j)+1
         if (ib1.gt.irm(j)) ib1=irm(j)
-        fb1=Den_IC(n,ib1,j)/(2.*pi*xmass*Temp_IC(n,ib1,j)*1.6e-19)**1.5
+        if(DoAnisoPressureGMCoupling)then
+           fb1=Den_IC(n,ib1,j)/(2.*pi*xmass*Temppar_IC(n,ib1,j)*1.6e-19)**0.5 &
+                /(2.*pi*xmass*Tempperp_IC(n,ib1,j)*1.6e-19)
+        else
+           fb1=Den_IC(n,ib1,j)/(2.*pi*xmass*Temp_IC(n,ib1,j)*1.6e-19)**1.5
+        end if
         do k=1,nm
            do m=1,nk
-              vtchm=-vel(n,ib1,j,k,m)*vel(n,ib1,j,k,m)/2./Temp_IC(n,ib1,j)/chmass
-              fb(n,j,k,m)=xjac(n,ib1,k)*fb1*exp(vtchm)
+              if(DoAnisoPressureGMCoupling)then
+                 velperp2 = (vel(n,ib1,j,k,m)*sinA(ib1,j,m))**2
+                 velpar2 = vel(n,ib1,j,k,m)**2 - velperp2
+                 vtchm = -velpar2/(2*Temppar_IC(n,ib1,j)*chmass) &
+                      -velperp2/(2*Tempperp_IC(n,ib1,j)*chmass)
+              else                    
+                 vtchm = -vel(n,ib1,j,k,m)**2/(2*Temp_IC(n,ib1,j)*chmass)
+              end if
+                 fb(n,j,k,m)=xjac(n,ib1,k)*fb1*exp(vtchm)
            enddo
         enddo
      enddo

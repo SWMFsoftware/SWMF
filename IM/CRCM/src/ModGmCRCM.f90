@@ -14,7 +14,8 @@ Module ModGmCrcm
 
   integer,parameter :: nVar=4
   
-  real :: Den_IC(nspec,nLat,nLon) = 0.0, Temp_IC(nspec,nLat,nLon) = 0.0
+  real :: Den_IC(nspec,nLat,nLon) = 0.0, Temp_IC(nspec,nLat,nLon) = 0.0, &
+       Temppar_IC(nspec,nLat,nLon) = 0.0
   integer :: iLatMin=22 !Minimum latitude in MHD boundary
   
   logical :: UseGm                  = .true.
