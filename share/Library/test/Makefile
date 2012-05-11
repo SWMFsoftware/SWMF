@@ -17,7 +17,7 @@ help:
 	@echo "   test_geopack          - test CON_geopack"
 	@echo "   test_interpolate      - test ModInterpolate"
 	@echo "   test_io_unit          - test ModIoUnit"
-	@echo "   test_levelset         - test ModLevelset"
+	@echo "   test_initial_state    - test ModInitialState"
 	@echo "   test_line_extract     - test CON_line_extract"
 	@echo "   test_linear_advection - test ModLinearAdvection"
 	@echo "   test_linear_solver    - test ModLinearSolver"
@@ -48,7 +48,7 @@ test:   test_axes \
 	test_geopack \
 	test_io_unit \
 	test_interpolate \
-	test_levelset \
+	test_initial_state \
 	test_line_extract \
 	test_linear_advection \
 	test_linear_solver \
@@ -225,29 +225,29 @@ test_interpolate:
 	@ls -l test_interpolate.diff
 
 #######################################################################
-OBJ_LEVELSET = \
-	test_levelset.o \
+OBJ_INITIAL_STATE = \
+	test_initial_state.o \
 	../src/ModIoUnit.o \
 	../src/ModMpiInterfaces.o \
 	../src/ModUtilities.o \
 	../src/ModReadParam.o \
 	../src/ModPlotFile.o \
-	../src/ModLevelSet.o
+	../src/ModInitialState.o
 
-test_levelset_exe:
-	@(cd ../src; make ModLevelSet.o)
-	make test_levelset.o
-	${LINK.f90} -o test_levelset.exe ${OBJ_LEVELSET} ${Lflag1}
+test_initial_state_exe:
+	@(cd ../src; make ModInitialState.o)
+	make test_initial_state.o
+	${LINK.f90} -o test_initial_state.exe ${OBJ_INITIAL_STATE} ${Lflag1}
 
-test_levelset:
-	@echo test_levelset starting		>  test_levelset.diff
-	@make test_levelset_exe			>> test_levelset.diff
-	@echo ${MPIRUN} ./test_levelset_exe	>> test_levelset.diff
-	-@(${MPIRUN} ./test_levelset.exe > test_levelset.tmp)
-	-@gunzip -c test_levelset.ref.gz > test_levelset.ref
+test_initial_state:
+	@echo test_initial_state starting		>  test_initial_state.diff
+	@make test_initial_state_exe			>> test_initial_state.diff
+	@echo ${MPIRUN} ./test_initial_state_exe	>> test_initial_state.diff
+	-@(${MPIRUN} ./test_initial_state.exe > test_initial_state.tmp)
+	-@gunzip -c test_initial_state.ref.gz > test_initial_state.ref
 	-@(${SCRIPTDIR}/DiffNum.pl \
-	    test_levelset.out test_levelset.ref >  test_levelset.diff)
-	@ls -l test_levelset.diff
+	    test_initial_state.out test_initial_state.ref >  test_initial_state.diff)
+	@ls -l test_initial_state.diff
 
 #######################################################################
 OBJ_RAY_TRACE = \
@@ -449,7 +449,7 @@ test_utilities:
 	@ls -l test_utilities.diff
 
 distclean: clean
-	rm -rf *.tmp *.diff test*.out test_levelset.ref \
+	rm -rf *.tmp *.diff test*.out test_initial_state.ref \
 		test_process_var_name.log
 
 

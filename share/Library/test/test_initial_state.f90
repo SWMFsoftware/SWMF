@@ -1,6 +1,6 @@
-program test_levelset
+program test_initial_state
 
-  use ModLevelSet, test => test_levelset
+  use ModInitialState, test => test_initial_state
 
   implicit none
 
@@ -10,7 +10,7 @@ program test_levelset
   call test
   call MPI_finalize(iError)
 
-end program test_levelset
+end program test_initial_state
 
 subroutine CON_stop(StringError)
 
