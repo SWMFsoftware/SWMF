@@ -1,5 +1,5 @@
 #STATEDEFINITION
-rho p                             StringStateVar
+     rho       p                  StringStateVar
 6    		                  nMaterialState
 Xe   0.0065    0.00012		  Name, State
 Be1  6.5e-6    1.7491328e-06      Name, State 
