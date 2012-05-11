@@ -1,0 +1,52 @@
+#USERINPUTBEGIN  ----------------------
+
+#STATEDEFINITION
+     rho       p                  StringStateVar
+7    		                  nMaterialState
+M1   0.0065    0.00012		  Name, State
+M21  6.5e-6    1.7491328e-06      Name, State 
+M22  1.85      0.49783012         Name, State
+M31  1.43      0.35375		  Name, State
+M32  0.0065    0.01		  Name, State
+M4  20.0       0.24625032	  Name, State
+M5   1.13      0.41057944	  Name, State
+
+#STATEINTERFACE
+11				         nSegment
+M21 M22   0.0,   0.0,    0.0, 1000.0	 Material1 Material2 x1 y1 x2 y2
+M22 M1   20.0,   0.0,   20.0,  287.5	 Material1 Material2 x1 y1 x2 y2
+M22 M4   20.0, 287.5,   20.0, 1000.0	 Material1 Material2 x1 y1 x2 y2
+M4  M1   20.0, 287.5,  100.0,  287.5	 Material1 Material2 x1 y1 x2 y2
+M4  M5  100.0, 287.5,  100.0, 1000.0	 Material1 Material2 x1 y1 x2 y2
+M5  M1  100.0, 287.5,  300.0,  287.5	 Material1 Material2 x1 y1 x2 y2
+M5  M31 300.0, 287.5,  300.0,  312.5	 Material1 Material2 x1 y1 x2 y2
+M5  M31 300.0, 312.5,  900.0,  312.5	 Material1 Material2 x1 y1 x2 y2
+M5  M32 900.0, 312.5,  900.0, 1000.0	 Material1 Material2 x1 y1 x2 y2
+M32 M31 900.0, 312.5, 5000.0,  312.5	 Material1 Material2 x1 y1 x2 y2
+M31 M1  300.0, 287.5, 5000.0,  287.5	 Material1 Material2 x1 y1 x2 y2
+
+
+STATEDEFINITION
+     rho       p                  StringStateVar
+6    		                  nMaterialState
+Xe   0.0065    0.00012		  Name, State
+Be1  6.5e-6    1.7491328e-06      Name, State 
+Be2  1.85      0.49783012         Name, State
+Pl   1.43      0.35375		  Name, State
+Au  20.0       0.24625032	  Name, State
+Ay   1.13      0.41057944	  Name, State
+
+STATEINTERFACE
+10				         nSegment
+Be1 Be2  0.0,   0.0,    0.0, 1000.0      Material1 Material2 x1 y1 x2 y2
+Be2 Xe  20.0,   0.0,   20.0,  287.5	 Material1 Material2 x1 y1 x2 y2
+Be2 Au  20.0, 287.5,   20.0, 1000.0	 Material1 Material2 x1 y1 x2 y2
+Au  Xe  20.0, 287.5,  100.0,  287.5	 Material1 Material2 x1 y1 x2 y2
+Au  Ay 100.0, 287.5,  100.0, 1000.0	 Material1 Material2 x1 y1 x2 y2
+Ay  Xe 100.0, 287.5,  300.0,  287.5	 Material1 Material2 x1 y1 x2 y2
+Ay  Pl 300.0, 287.5,  300.0,  312.5	 Material1 Material2 x1 y1 x2 y2
+Ay  Pl 300.0, 312.5,  900.0,  312.5	 Material1 Material2 x1 y1 x2 y2
+Ay  Pl 900.0, 312.5,  900.0, 1000.0	 Material1 Material2 x1 y1 x2 y2
+Pl  Xe 300.0, 287.5, 5000.0,  287.5	 Material1 Material2 x1 y1 x2 y2
+
+#USERINPUTEND    ----------------------
