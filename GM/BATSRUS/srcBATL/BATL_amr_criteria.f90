@@ -124,10 +124,10 @@ contains
          min(1,nCritGeoUsed)*nCritGeo
 
     ! Allocate main criteria array
-    if(iProc == 0) then
-       write(*,*) " nIntCrit, nExtCrit,  min(1,nCritGeoUsed)*nCritGeo, nCritGeoPhys = ", &
-            nIntCrit, nExtCrit,  min(1,nCritGeoUsed)*nCritGeo, nCritGeoPhys
-    end if
+    !if(iProc == 0) then
+    !   write(*,*) " nIntCrit, nExtCrit,  min(1,nCritGeoUsed)*nCritGeo, nCritGeoPhys = ", &
+    !        nIntCrit, nExtCrit,  min(1,nCritGeoUsed)*nCritGeo, nCritGeoPhys
+    !end if
 
     if(allocated(AmrCrit_IB)) deallocate(AmrCrit_IB)
     allocate(AmrCrit_IB(nAmrCrit,MaxBlock))
