@@ -1,7 +1,18 @@
 module ModInitialState
 
-  ! Initialize a 2D domain with a finite number of states
-
+  ! Initialize a 2D domain with a finite number of material states.
+  ! An arbitrary subset of the state variables can be set for each state.
+  ! The rest of the variables are set to zero.
+  !
+  ! The material states are separated with an arbitrary number of 
+  ! straight segments. For each segment the name of the material
+  ! state is given for both sides.
+  ! 
+  ! The code can calculate the state for an arbitrary location.
+  ! It can also set the levelset functions based on the distance
+  ! to the closest material interface. Note that interfaces
+  ! between different states but identical material have no effect
+  ! on the levelset function. 
 
   implicit none
 
@@ -22,8 +33,6 @@ module ModInitialState
   integer:: iVarMaterial0         ! Variable index of first material
   integer:: nMaterial             ! Number of different materials
 
-  integer:: MaxSegment            ! Maximum number of segments
-
   integer:: nSegment = 0
   real,    allocatable:: LengthSegment_I(:)
   real,    allocatable:: StartSegment_DI(:,:)
@@ -40,7 +49,7 @@ contains
   !===========================================================================
 
   subroutine init_initial_state(NameVarState, &
-       iVarMaterial1In, nMaterialIn, MaxSegmentIn)
+       iVarMaterial1In, nMaterialIn)
 
     use ModUtilities, ONLY: split_string, lower_case
 
@@ -48,7 +57,6 @@ contains
 
     integer, optional, intent(in):: iVarMaterial1In
     integer, optional, intent(in):: nMaterialIn
-    integer, optional, intent(in):: MaxSegmentIn
 
     integer:: iVar
     integer, parameter:: MaxVar = 100
@@ -78,21 +86,9 @@ contains
     nMaterial = 0
     if(present(nMaterialIn)) nMaterial = nMaterialIn
 
-    MaxSegment = 1000
-    if(present(MaxSegmentIn)) MaxSegment = MaxSegmentIn
-
     if(nMaterial > 0 .and. &
          (iVarMaterial0 < 0 .or. iVarMaterial0 + nMaterial > nVar)) &
          call CON_stop(NameSub//': iVarMaterial0 has impossible value')
-
-    if(MaxSegment < 1) call CON_stop(NameSub//': MaxSegment is too small')
-
-    allocate(                            &
-         LengthSegment_I(MaxSegment),    &
-         StartSegment_DI(2,MaxSegment),  &
-         VectorSegment_DI(2,MaxSegment), &
-         iLevelSegment_SI(2,MaxSegment), &
-         iStateSegment_SI(2,MaxSegment))
 
   end subroutine init_initial_state
 
@@ -151,7 +147,13 @@ contains
        allocate(NameStateVar_I(nVar))
 
        ! Names of non-zero state variables
-       call read_var('StringStateVar', String, IsLowerCase=.true.)
+       if(.not. read_line(String)) call CON_stop(NameSub// &
+            ': could not read state variable names')
+       call lower_case(String)
+
+       ! Remove parameter name "string...." if present.
+       i = index(String, 'string')
+       if(i > 1)String(i:100) = ' '
        call split_string(String, nVar, NameStateVar_I, nStateVar)
 
        ! Find indexes for corresponding state variables
@@ -184,10 +186,18 @@ contains
                ' could not read Name, State from '//trim(String))
        end do
        deallocate(NameStateVar_I, iVar_I)
+
     case("#STATEINTERFACE")
-       call read_var('nSegment', n)     ! Number of new segments
-       do i = 1, n
-          nSegment = nSegment + 1
+       call read_var('nSegment', nSegment)     ! Number of segments
+       if(nSegment < 1) RETURN
+       allocate(                            &
+            LengthSegment_I(nSegment),    &
+            StartSegment_DI(2,nSegment),  &
+            VectorSegment_DI(2,nSegment), &
+            iLevelSegment_SI(2,nSegment), &
+            iStateSegment_SI(2,nSegment))
+
+       do i = 1, nSegment
           if(.not. read_line(String)) call CON_stop(NameSub// &
                ': could not read segment description')
           call lower_case(String)
@@ -197,17 +207,17 @@ contains
                ' could not read Material1 Material2 x1 y1 x2 y2 from '// &
                trim(String))
 
-          iStateSegment_SI(1,nSegment) = i_state(NameMaterial1)
-          iStateSegment_SI(2,nSegment) = i_state(NameMaterial2)
+          iStateSegment_SI(1,i) = i_state(NameMaterial1)
+          iStateSegment_SI(2,i) = i_state(NameMaterial2)
 
           if(nMaterial > 0)then
-             iLevelSegment_SI(1,nSegment) = i_level(NameMaterial1(1:2))
-             iLevelSegment_SI(2,nSegment) = i_level(NameMaterial2(1:2))
+             iLevelSegment_SI(1,i) = i_level(NameMaterial1(1:2))
+             iLevelSegment_SI(2,i) = i_level(NameMaterial2(1:2))
           end if
 
-          StartSegment_DI(:,nSegment)  = Start_D
-          VectorSegment_DI(:,nSegment) = End_D - Start_D
-          LengthSegment_I(nSegment)    = sqrt(sum( (End_D - Start_D)**2 ))
+          StartSegment_DI(:,i)  = Start_D
+          VectorSegment_DI(:,i) = End_D - Start_D
+          LengthSegment_I(i)    = sqrt(sum( (End_D - Start_D)**2 ))
        end do
     case default
        call CON_stop(NameSub//': unknown command='//NameCommand)
