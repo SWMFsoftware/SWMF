@@ -64,6 +64,10 @@ test:   test_axes \
 	@echo ---------------------------------------------------------
 	@ls -l *.diff
 
+distclean: clean
+	rm -rf *.tmp *.diff test*.out test_initial_state.ref \
+		test_process_var_name.log
+
 #######################################################################
 OBJ_TIME_CONVERT = \
 	test_time_convert.o \
@@ -447,11 +451,6 @@ test_utilities:
 	-@(diff test_utilities.tmp test_utilities.log \
 						>  test_utilities.diff)
 	@ls -l test_utilities.diff
-
-distclean: clean
-	rm -rf *.tmp *.diff test*.out test_initial_state.ref \
-		test_process_var_name.log
-
 
 #######################################################################
 
