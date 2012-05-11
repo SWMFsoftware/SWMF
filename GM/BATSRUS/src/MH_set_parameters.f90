@@ -169,7 +169,7 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Initialize BATL
   call init_mpi(iComm)
-
+ 
   if(IsUninitialized)then
      call set_namevar
      call set_defaults
@@ -2576,8 +2576,9 @@ contains
     ! Grid criteria as 'user' and 'currentsheet' are now handeld by
     ! amr_criteria
 
-    nCritPhys= nAmrCriteria-nCritGeo
-    if(IsFirstCheck) nCritPhys= size(RefineCrit)
+    !nCritPhys= nAmrCriteria-nCritGeo
+    if(IsFirstCheck) then
+    nCritPhys= size(RefineCrit)
     !print *,"phys geo amr :: ", nCritPhys,nCritGeo,nAmrCriteria
     if(nCritGeo >0) then
        ! copy RefineCrit
@@ -2628,6 +2629,7 @@ contains
        if(allocated(SortIndex_I)) deallocate(SortIndex_I)
        if(allocated(TypeTransient_I)) deallocate(TypeTransient_I)
 
+    end if
     end if
 
     ! Check flux type selection
