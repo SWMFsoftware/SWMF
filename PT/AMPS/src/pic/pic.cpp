@@ -153,7 +153,7 @@ void PIC::TimeStep() {
       printf("10:\t Send Particles\n");
       printf("11:\t Recv Particles\n");
       printf("12:\t nInjected Particls\n");
-      printf("13:\t Userr Defined MPI Routine - Execution Time\n");
+      printf("13:\t User Defined MPI Routine - Execution Time\n");
 
       printf("1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\n");
 
@@ -607,6 +607,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
   //sample the distrivution function
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
   if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction();
+  if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) PIC::ParticleFluxDistributionSample::SampleDistributionFnction();
 #endif
 
   //Sample size distribution parameters of dust grains
@@ -704,6 +705,11 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
           sprintf(fname,"pic.distribution.%s.s=%i.out=%ld",ChemSymbol,s,DataOutputFileNumber);
           PIC::DistributionFunctionSample::printDistributionFunction(fname,s);
         }
+
+        if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) {
+          sprintf(fname,"pic.flux.%s.s=%i.out=%ld.dat",ChemSymbol,s,DataOutputFileNumber);
+          PIC::ParticleFluxDistributionSample::printMacroscopicParameters(fname,s);
+        }
 #endif
       }
 
@@ -798,6 +804,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
     if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::flushSamplingBuffers();
+    if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) PIC::ParticleFluxDistributionSample::flushSamplingBuffers();
 #endif
 
     //Sample size distribution parameters of dust grains
@@ -958,7 +965,7 @@ void PIC::Init_BeforeParser() {
     }
 
     if (ThisThread==0) {
-      printf("CPU Manifacturer: INTEL\nCash line size is %i bytes, L2 cache size is %i KB\n",(int)w0,(int)w1);
+      printf("CPU Manifacturer: INTEL\nCache line size is %i bytes, L2 cache size is %i KB\n",(int)w0,(int)w1);
     }
 
   }
@@ -979,6 +986,10 @@ void PIC::Init_BeforeParser() {
 
   //init ICES
 #if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
+#define _PIC_INIT_ICES_
+#endif
+
+#if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
 #define _PIC_INIT_ICES_
 #endif
 
