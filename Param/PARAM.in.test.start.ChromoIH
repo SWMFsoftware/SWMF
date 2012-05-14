@@ -108,6 +108,9 @@ F			UseExtrapolatedEwave
 alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
 0.04			Crefl
+T			UseCPRegion
+2.0			rCP
+2.5			rCPefolding
 
 HYPERBOLICDIVB
 F			UseHyperbolicDivb
@@ -232,7 +235,7 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #NONCONSERVATIVE
-F			UseNonConservative
+T			UseNonConservative
 
 #MESSAGEPASS
 all			TypeMessagePass
@@ -397,6 +400,9 @@ F			UseUserUpdateStates
 alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
 0.04			Crefl
+T			UseCPRegion
+2.0			rCP
+2.5			rCPefolding
 
 #RESISTIVITY
 T                       UseResistivity
@@ -415,7 +421,7 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #NONCONSERVATIVE
-F			UseNonConservative
+T			UseNonConservative
 
 #TIMESTEPPING
 2			nStage

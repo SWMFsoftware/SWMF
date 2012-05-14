@@ -97,6 +97,7 @@ F			UseUserUpdateStates
 alfvenwavedissipation	TypeCoronalHeating
 1.36e5			LperpSqrtBSi
 0.04			Crefl
+F			UseCPRegion
 
 #SCHEME
 2			nOrder
@@ -229,6 +230,7 @@ F               	UseExtrapolatedEwave
 alfvenwavedissipation	TypeCoronalHeating
 1.36e5			LperpSqrtBSi
 0.04			Crefl
+F			UseCPRegion
 
 #HEATCONDUCTION
 T                       UseHeatConduction
@@ -237,7 +239,7 @@ spitzer                 TypeHeatConduction
 #HEATFLUXREGION
 T                       UseHeatFluxRegion
 5.0                     rCollisional
-8.0                    rCollisionless
+8.0			rCollisionless
 
 #USECURLB0
 T			UseCurlB0
