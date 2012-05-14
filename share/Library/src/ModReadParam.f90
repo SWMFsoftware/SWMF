@@ -480,12 +480,13 @@ contains
 
   !===========================================================================
 
-  subroutine read_line_param(Type,Name,iError)
+  subroutine read_line_param(Type, Name, iError, DoReadWholeLine)
 
     ! read next line from text
 
     character (len=*), intent(in) :: Type, Name
     integer, optional, intent(out):: iError
+    logical, optional, intent(in) :: DoReadWholeLine
 
     integer :: i, j
     !------------------------------------------------------------------------
@@ -505,15 +506,17 @@ contains
     ! Get rid of leading spaces 
     StringParam = adjustl(StringLine)
 
-    ! Get rid of trailing comments after a TAB character or 3 spaces
-    i=index(StringParam,char(9))
-    j=index(StringParam,'   ')
-    if(i>1.and.j>1)then
-       i = min(i,j)      ! Both TAB and 3 spaces found, take the closer one
-    else
-       i = max(i,j)      ! Take the one that was found (if any)
+    if(.not.present(DoReadWholeLine))then
+       ! Get rid of trailing comments after a TAB character or 3 spaces
+       i=index(StringParam,char(9))
+       j=index(StringParam,'   ')
+       if(i>1.and.j>1)then
+          i = min(i,j)      ! Both TAB and 3 spaces found, take the closer one
+       else
+          i = max(i,j)      ! Take the one that was found (if any)
+       end if
+       if(i>0) StringParam(i:lStringLine)=' '
     end if
-    if(i>0) StringParam(i:lStringLine)=' '
 
     if(len_trim(StringParam)==0)call read_error('missing',Name,iError)
 
@@ -533,7 +536,7 @@ contains
   end subroutine read_echo
 
   !===========================================================================
-  subroutine read_error(Type,Name,iError)
+  subroutine read_error(Type, Name, iError)
 
     ! Print error message for reading error of variable named Name of type Type
 
@@ -567,42 +570,38 @@ contains
 
   !===========================================================================
 
-  subroutine read_string(StringVar,iError,IsUpperCase,IsLowerCase)
-
-    use ModUtilities, ONLY: lower_case, upper_case
+  subroutine read_string(StringVar, iError, IsUpperCase, IsLowerCase, &
+       DoReadWholeLine)
 
     ! Read a string variable
     ! Convert to upper or lower case if required.
     ! Arguments
-    character (len=*), intent(out)  :: StringVar
-    integer, optional, intent(out)  :: iError
-    logical, optional, intent(in)   :: IsUpperCase, IsLowerCase
+    character (len=*), intent(out):: StringVar
+    integer, optional, intent(out):: iError
+    logical, optional, intent(in) :: IsUpperCase, IsLowerCase, DoReadWholeLine
     !-------------------------------------------------------------------------
-    call read_var_c(' ',StringVar,iError)
-    if(present(IsLowerCase))then
-       if(IsLowerCase)call lower_case(StringVar)
-    endif
-    if(present(IsUpperCase))then
-       if(IsUpperCase)call upper_case(StringVar)
-    endif
+    call read_var_c(' ', StringVar, iError, IsLowerCase, IsUpperCase, &
+         DoReadWholeLine)
+
   end subroutine read_string
 
   !===========================================================================
 
-  subroutine read_var_c(Name,StringVar,iError,IsUpperCase,IsLowerCase)
+  subroutine read_var_c(Name, StringVar, iError, &
+       IsUpperCase, IsLowerCase, DoReadWholeLine)
 
     use ModUtilities, ONLY: lower_case, upper_case
 
     ! Read a string variable described by Name.
     ! Convert to upper or lower case if required.
     ! Arguments
-    character (len=*), intent(in)   :: Name
-    character (len=*), intent(out)  :: StringVar
-    integer, optional, intent(out)  :: iError
-    logical, optional, intent(in)   :: IsUpperCase, IsLowerCase
+    character (len=*), intent(in) :: Name
+    character (len=*), intent(out):: StringVar
+    integer, optional, intent(out):: iError
+    logical, optional, intent(in) :: IsUpperCase, IsLowerCase, DoReadWholeLine
     !-------------------------------------------------------------------------
 
-    call read_line_param('character',Name,iError)
+    call read_line_param('character', Name, iError, DoReadWholeLine)
 
     if(DoEcho)call read_echo(Name)
 
@@ -619,24 +618,24 @@ contains
 
   !===========================================================================
  
-  subroutine read_integer(IntVar,iError)
+  subroutine read_integer(IntVar, iError)
     !OUTPUT ARGUMENTS:
-    integer,           intent(out)  :: IntVar
-    integer, optional, intent(out)  :: iError
+    integer,           intent(out):: IntVar
+    integer, optional, intent(out):: iError
     !-------------------------------------------------------------------------
-    call read_var_i(' ',IntVar,iError)
+    call read_var_i(' ', IntVar, iError)
   end subroutine read_integer
 
   !BOP ========================================================================
   !IROUTINE: read_var - read a variable following the command.
   !INTERFACE:
-  subroutine read_var_i(Name,IntVar,iError)
+  subroutine read_var_i(Name, IntVar, iError)
 
     !INPUT ARGUMENTS:
-    character (len=*), intent(in)   :: Name
+    character (len=*), intent(in) :: Name
     !OUTPUT ARGUMENTS:
-    integer,           intent(out)  :: IntVar
-    integer, optional, intent(out)  :: iError
+    integer,           intent(out):: IntVar
+    integer, optional, intent(out):: iError
 
     !DESCRIPTION:
     ! Read a variable from the next line in the buffer.
@@ -654,10 +653,10 @@ contains
     integer :: IntTmp, iReadError
 
     !-------------------------------------------------------------------------
-    call read_line_param('integer',Name,iError)
+    call read_line_param('integer', Name, iError)
 
     read(StringParam,*,iostat=iReadError) IntTmp
-    if(iReadError/=0) call read_error('integer',Name,iError)
+    if(iReadError/=0) call read_error('integer', Name, iError)
     if(DoEcho)        call read_echo(Name)
     IntVar=IntTmp
 
@@ -668,15 +667,15 @@ contains
   subroutine read_real(RealVar,iError)
     ! Read a real variable
     ! Arguments
-    real, intent(out)               :: RealVar
-    integer, optional, intent(out)  :: iError
+    real, intent(out)             :: RealVar
+    integer, optional, intent(out):: iError
     !-------------------------------------------------------------------------
-    call read_var_r(' ',RealVar,iError)
+    call read_var_r(' ', RealVar, iError)
   end subroutine read_real
 
   !===========================================================================
 
-  subroutine read_var_r(Name,RealVar,iError)
+  subroutine read_var_r(Name, RealVar, iError)
 
     ! Read a real variable described by Name
     
@@ -689,7 +688,7 @@ contains
     real :: Numerator, Denominator, RealTmp
     integer :: i, iReadError
     !-------------------------------------------------------------------------
-    call read_line_param('real',Name,iError)
+    call read_line_param('real', Name, iError)
 
     ! Check for fraction
     i = index(StringParam,'/')
@@ -713,32 +712,32 @@ contains
 
   !===========================================================================
 
-  subroutine read_logical(IsLogicVar,iError)
+  subroutine read_logical(IsLogicVar, iError)
     ! Read a logical variable
     ! Arguments
-    logical, intent(out)            :: IsLogicVar
-    integer, optional, intent(out)  :: iError
+    logical, intent(out)          :: IsLogicVar
+    integer, optional, intent(out):: iError
     !-------------------------------------------------------------------------
-    call read_var_l(' ',IsLogicVar,iError)
+    call read_var_l(' ',IsLogicVar, iError)
   end subroutine read_logical
 
   !===========================================================================
 
-  subroutine read_var_l(Name,IsLogicVar,iError)
+  subroutine read_var_l(Name, IsLogicVar, iError)
 
     ! Read a logical variable described by Name
 
     ! Arguments
-    character (len=*), intent(in)   :: Name
-    logical, intent(out)            :: IsLogicVar
-    integer, optional, intent(out)  :: iError
+    character (len=*), intent(in) :: Name
+    logical, intent(out)          :: IsLogicVar
+    integer, optional, intent(out):: iError
 
     ! Local variable
     logical :: IsLogicTmp
     integer :: iReadError
 
     !-------------------------------------------------------------------------
-    call read_line_param('logical',Name,iError)
+    call read_line_param('logical', Name, iError)
 
     read(StringParam,*,iostat=iReadError) IsLogicTmp
     if(iReadError/=0)call read_error('logical',Name,iError)
@@ -803,7 +802,7 @@ contains
   !INTERFACE:
   subroutine read_text(String_I)
     !OUTPUT ARGUMENTS:
-    character(len=lStringLine), intent(out) :: String_I(iLine+1:nLine)
+    character(len=lStringLine), intent(out):: String_I(iLine+1:nLine)
     !EOP
     !BOC
     String_I = StringLine_I(iLine+1:nLine)
