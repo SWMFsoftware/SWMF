@@ -35,7 +35,7 @@ The raw test results are saved into a
 <A HREF=SWMF_TEST_RESULTS>test result archive</A> that contains
 the results per year, month and day.
 
-<h2>Platforms, Fortran compilers and MPI libraries</h2>
+<h2>Platforms, Fortran compilers, MPI and HDF5 libraries</h2>
 
 <table border=1>
   <tr>
@@ -43,20 +43,15 @@ the results per year, month and day.
       <td> platform</td>
       <td>compiler</td>
       <td>MPI library</td>
+      <td>HDF library</td>
       <td>MPI run</td>
-  </tr>
-  <tr>
-      <td><b>grendel/nag</b></td>
-      <td>Linux cluster with dual-core AMD Athlon CPUs</td>
-      <td>NAG F95 v5.1(365)</td>
-      <td>mpich-1.2.7</td>
-      <td>serial run</td>
   </tr>
   <tr>
       <td><b>grid/nag</b></td>
       <td>iMac with quad-core Intel i7 CPU</td>
       <td>NAG F95 v5.1(463) debug mode</td>
       <td>mpich2-1.3.1</td>
+      <td></td>
       <td>mpirun -np 4</td>
   </tr>
   <tr>
@@ -64,6 +59,7 @@ the results per year, month and day.
       <td>iMac with quad-core Intel i7 CPU</td>
       <td>gfortran 4.5.3 debug mode</td>
       <td>openmpi-1.5.4</td>
+      <td></td>
       <td>mpirun -np 4</td>
   </tr>
   <tr>
@@ -71,6 +67,7 @@ the results per year, month and day.
       </td><td>iMac with quad-core Intel i7 CPU</td>
       <td>NAG F95 v5.1(463)</td>
       <td>mpich2-1.3.1</td>
+      <td></td>
       <td>mpirun -np 4</td>
   </tr>
   <tr>
@@ -78,6 +75,7 @@ the results per year, month and day.
       <td>Linux cluster with quad-core CPUs</td>
       <td>NAG F95 v5.1(282)</td>
       <td>openmpi-1.3.2-nag</td>
+      <td></td>
       <td>mpirun -np 2</td>
   </tr>
   <tr>
@@ -85,6 +83,7 @@ the results per year, month and day.
       <td>Linux cluster with quad-core CPUs</td>
       <td>ifort 11.0.074</td>
       <td>openmpi-1.4.3/intel/11.0</td>
+      <td>hdf5/1.8.8-intel-par</td>
       <td>mpirun -np 2</td>
   </tr>
   <tr>
@@ -92,21 +91,16 @@ the results per year, month and day.
       <td>Linux cluster with quad-core CPUs</td>
       <td>pgf90 8.0-6</td>
       <td>openmpi-1.3.2-pgi</td>
+      <td>hdf5/1.8.3-pgi-par</td>
       <td>mpirun -np 2</td>
   </tr>
   <tr>
       <td><b>pleiades/ifort</b></td>
-      <td>SGI ICE system with Xeon CPUs</td>
+      <td>SGI ICE system with Westmere cores</td>
       <td>ifort 11.1.072 (20100414)</td>
-      <td>Intel MPI (mpt.1.25)</td>
-      <td>mpiexec (4 pes)</td>
-  </tr>
-  <tr>
-      <td><b>xena/nag</b></td>
-      <td>Mac OSX cluster with G5 CPUs</td>
-      <td>NAG F95 v5.1(282)</td>
-      <td>mpich-1.2.6</td>
-      <td>mpirun -np 2</td>
+      <td>Intel MPI (mpt.2.04.10789)</td>
+      <td>hdf5/1.8.3/intel/mpt, hdfeos/5.1.12</td>
+      <td>mpiexec (8 pes)</td>
   </tr>
 </table>
 <hr>
