@@ -244,13 +244,14 @@ test_initial_state_exe:
 	${LINK.f90} -o test_initial_state.exe ${OBJ_INITIAL_STATE} ${Lflag1}
 
 test_initial_state:
-	@echo test_initial_state starting		>  test_initial_state.diff
-	@make test_initial_state_exe			>> test_initial_state.diff
-	@echo ${MPIRUN} ./test_initial_state_exe	>> test_initial_state.diff
+	@echo test_initial_state starting	 >  test_initial_state.diff
+	@make test_initial_state_exe		 >> test_initial_state.diff
+	@echo ${MPIRUN} ./test_initial_state_exe >> test_initial_state.diff
 	-@(${MPIRUN} ./test_initial_state.exe > test_initial_state.tmp)
 	-@gunzip -c test_initial_state.ref.gz > test_initial_state.ref
 	-@(${SCRIPTDIR}/DiffNum.pl \
-	    test_initial_state.out test_initial_state.ref >  test_initial_state.diff)
+	    test_initial_state.out test_initial_state.ref \
+						 >  test_initial_state.diff)
 	@ls -l test_initial_state.diff
 
 #######################################################################
