@@ -8,6 +8,7 @@ our $Show;
 our $Help;
 our $ERROR;
 our $WARNING;
+our $Install;
 our %Remaining;   # Arguments not handled by share/Scripts/Config.pl
 
 # Planet variables
@@ -16,6 +17,9 @@ my $Planet;
 my $NewPlanet;
 my $Grid;
 my $NewGrid;
+
+$NewPlanet="EarthHO" if $Install;
+
 # Make sure that config.log exists
 `touch $ConfigLog`;
 
