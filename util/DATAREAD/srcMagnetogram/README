@@ -5,6 +5,7 @@
 
 These are the steps for creating a magnetogram file for SWMF from 
 any raw magnetogram fits file.
+The steps below require IDL to be installed on your machine.
 
 1. If the SWMF is already installed and compiled, skip to step 2. Otherwise,
    in the main SWMF path, type:
@@ -16,7 +17,7 @@ any raw magnetogram fits file.
 This will create the HARMONICS.exe executable in the directory SWMF_path/bin
 and a link to this executable in the current directory.
 
-3. Type:
+3. Rename your magnetogram file by typing:
 	cp your_magnetoram_file.fits fitsfile.fits
 
 4. Convert the fits file to ASCII format by running the idl program 
@@ -32,11 +33,11 @@ can be very long.
 	*fitsfile_tec.dat - a Tecplot file to display the original magnetogram.
 5. Run HARMONICS.exe. This executable can be run in parallel mode for faster 
 computation. This run will generate a file called harmonics.dat that 
-can be used in SWMF. For convenient, it is recommended to rename the file with 
+can be used in SWMF. For convenience, it is recommended to rename the file with 
 the following naming format:
 	cp harmonics.dat CRxxxx_OBS.dat
 where xxxx is the Carrington Rotation number and OBS is the observatory name 
 (MDI,WSO,MWO,GONG etc.)
-6. Move the magnetogram harmonics file to the path defined in the PFSSM flag 
-in PARAM.in file (usually run/SC).
+6. Move the CRxxxx_OBS.dat file to the path defined under the #MAGNETOGRAM command 
+in the PARAM.in file (usually in the run directory you are using).
 
