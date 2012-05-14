@@ -379,7 +379,7 @@ subroutine prolong1_Bface(coarse_sol, iVar, iBLK, fine_sol)
   integer :: i,j,k,i1,j1,k1,ishift,jshift,kshift
   !--------------------------------------------------------------------------
 
-  call get_shifts(iBLK,ishift,jshift,kshift)
+!!!  call get_shifts(iBLK,ishift,jshift,kshift)
 
   ! Assign default solution state to fine block to get corners
   fine_sol=0.0
@@ -493,7 +493,7 @@ subroutine prolong_b_face(Bxf_c,Byf_c,Bzf_c,&
   logical :: oktest, oktest_me
   !--------------------------------------------------------------------------
 
-  call get_shifts(iChild,ishift,jshift,kshift)
+!!!  call get_shifts(iChild,ishift,jshift,kshift)
 
   ! Calculate aspect ratios for a non-cubic cell
   Dx = dx_BLK(iBlock); Dy = dy_BLK(iBlock); Dz = dz_BLK(iBlock)

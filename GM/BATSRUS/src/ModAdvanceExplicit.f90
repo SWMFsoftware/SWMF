@@ -78,12 +78,9 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
      ! Message pass conservative flux corrections.
      call timing_start('send_cons_flux')
-     if(UseBatl)then
-        call message_pass_face(nCorrectedFaceValues, CorrectedFlux_VXB, &
-             CorrectedFlux_VYB, CorrectedFlux_VZB, DoSubtractIn=.false.)
-     else
-        call message_pass_faces_9conserve
-     end if
+     call message_pass_face(nCorrectedFaceValues, CorrectedFlux_VXB, &
+          CorrectedFlux_VYB, CorrectedFlux_VZB, DoSubtractIn=.false.)
+
      call timing_stop('send_cons_flux')
 
      if(DoTestMe)write(*,*)NameSub,' done message pass'
@@ -219,7 +216,7 @@ subroutine update_secondbody
      call fix_block_geometry(globalBLK)
   end do
   
-  call set_body_flag
+  ! call set_body_flag ! OLDAMR
   call exchange_messages
   
 end subroutine update_secondbody

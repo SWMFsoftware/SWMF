@@ -237,17 +237,16 @@ subroutine write_plot_common(ifile)
   nBLKcells=0; nBLKcellsN=0; nBLKcellsS=0
   !! END IDL
 
-  if(UseBATL) then
-     ! To plot the criteria used for AMR we need to 
-     ! recalulate them for the existing grid.
-     do iVar = 1, nPlotVar
-        NamePlotVar = plotvarnames(iVar)
-        if(NamePlotVar(1:4) == 'crit') then
-           call calc_error_amr_criteria(nVar, State_VGB)
-           EXIT
-        end if
-     end do
-  end if
+  ! To plot the criteria used for AMR we need to 
+  ! recalulate them for the existing grid.
+  do iVar = 1, nPlotVar
+     NamePlotVar = plotvarnames(iVar)
+     if(NamePlotVar(1:4) == 'crit') then
+        call calc_error_amr_criteria(nVar, State_VGB)
+        EXIT
+     end if
+  end do
+
   !plot index for hdf5 plots
   H5Index = 1
   ! Compute the plot variables and write them to the disk
@@ -379,26 +378,9 @@ subroutine write_plot_common(ifile)
         PlotXYZNodes_DNB(2,:,:,:,:)=NodeY_NB
         PlotXYZNodes_DNB(3,:,:,:,:)=NodeZ_NB
      else
-        if(useBatl) then
-
-           ! Fixing hanging nodes at resolution change
-           PlotXYZNodes_DNB(:,:,:,:,1:nBlock) = Xyz_DNB(:,:,:,:,1:nBlock)
-           call  set_block_hanging_node(nDim,PlotXYZNodes_DNB)
-
-        else
-           ! This is to avoid rounding errors. May or may not be needed for BATL
-           NodeValue_NB =NodeX_NB(:,:,:,:)                    ! X
-           call pass_and_average_nodes(.true.,NodeValue_NB)
-           PlotXYZNodes_DNB(1,:,:,:,:)=NodeValue_NB
-
-           NodeValue_NB = NodeY_NB(:,:,:,:)                   ! Y
-           call pass_and_average_nodes(.true.,NodeValue_NB)    
-           PlotXYZNodes_DNB(2,:,:,:,:)=NodeValue_NB
-
-           NodeValue_NB = NodeZ_NB(:,:,:,:)                   ! Z
-           call pass_and_average_nodes(.true.,NodeValue_NB)
-           PlotXYZNodes_DNB(3,:,:,:,:)=NodeValue_NB
-        end if
+        ! Fixing hanging nodes at resolution change
+        PlotXYZNodes_DNB(:,:,:,:,1:nBlock) = Xyz_DNB(:,:,:,:,1:nBlock)
+        call  set_block_hanging_node(nDim,PlotXYZNodes_DNB)
 
         ! Make near zero values exactly zero
         do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
@@ -409,19 +391,12 @@ subroutine write_plot_common(ifile)
 
      ! Now pass and average the rest of the values
 
-     if(UseBatl) then
-        ! for BATL we work on all the nplotvarmax variables
-        ! at the same sweep
-        call message_pass_node(nplotvarmax,PlotVarNodes_VNB, &
-             NameOperatorIn='Mean')
-        call set_block_hanging_node(nplotvarmax,PlotVarNodes_VNB)
-     else
-        do i=1,nplotvar
-           NodeValue_NB=PlotVarNodes_VNB(i,:,:,:,:)
-           call pass_and_average_nodes(.true.,NodeValue_NB)
-           PlotVarNodes_VNB(i,:,:,:,:)=NodeValue_NB
-        end do
-     end if
+     ! for BATL we work on all the nplotvarmax variables
+     ! at the same sweep
+     call message_pass_node(nplotvarmax,PlotVarNodes_VNB, &
+          NameOperatorIn='Mean')
+     call set_block_hanging_node(nplotvarmax,PlotVarNodes_VNB)
+
      call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB, &
           PlotXYZNodes_DNB, unitstr_TEC, xmin,xmax,ymin,ymax,zmin,zmax)
      deallocate(PlotXYZNodes_DNB)
@@ -1912,3 +1887,4 @@ subroutine reverse_field(iBlock)
   end do; end do; end do
 
 end subroutine reverse_field
+!==========================================================================

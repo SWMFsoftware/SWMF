@@ -167,7 +167,7 @@ subroutine prolong_ray_after_pass(iface,iBLK)
 
 end subroutine prolong_ray_after_pass
 
-!=============================================================================================
+!==================================================================================
 subroutine ray_pass_old
 
   ! Exchange and update rayface values between blocks direction by direction
@@ -178,8 +178,7 @@ subroutine ray_pass_old
   !           _s subface    (one quarter of a face)
 
   use ModProcMH
-  use ModMain, ONLY : nblockMax,okdebug,unusedBLK,optimize_message_pass,&
-       UseBatl
+  use ModMain, ONLY : nblockMax,okdebug,unusedBLK,optimize_message_pass
   use BATL_lib, ONLY: iNode_B, iTree_IA, Coord0_
   use ModRaytrace
   use ModAMR, ONLY : child2subface
@@ -436,31 +435,26 @@ contains
              neiP=neiPE(1,iface,iBLK)
              neiB=neiBLK(1,iface,iBLK)
              ! Subface index =1,2,3, or 4 with respect to the coarse neighbor
-             if(UseBatl)then
-                ! iSubFace = iSubFace_IA(iFace,iNode_B(iBlk))
-                iNode = iNode_B(iBlk)
-                iSubFace = 0
-                do iDim = 1, nDim
-                   iSideFace = modulo(iTree_IA(Coord0_+iDim,iNode) - 1,2)
+             
+             ! iSubFace = iSubFace_IA(iFace,iNode_B(iBlk))
+             iNode = iNode_B(iBlk)
+             iSubFace = 0
+             do iDim = 1, nDim
+                iSideFace = modulo(iTree_IA(Coord0_+iDim,iNode) - 1,2)
 
-                   if(iDim == (iFace+1)/2) CYCLE
+                if(iDim == (iFace+1)/2) CYCLE
 
-                   if(iSubFace == 0) then
-                      iSubFace = iSideFace + 1
-                   else
-                      iSubFace = iSubFace + 2*iSideFace
-                   end if
+                if(iSubFace == 0) then
+                   iSubFace = iSideFace + 1
+                else
+                   iSubFace = iSubFace + 2*iSideFace
+                end if
 
-                end do
+             end do
 
-                ! Swap subface 2 and 3 for iFace = 1..4 for BATSRUS tradition...
-                if(iFace <= 4 .and. iSubFace >= 2 .and. iSubFace <= 3) &
-                     iSubFace = 5 - iSubFace
-
-             else
-                ichild=BLKneighborCHILD(0,0,0,1,iBLK)
-                isubface=child2subface(ichild,iface)
-             end if
+             ! Swap subface 2 and 3 for iFace = 1..4 for BATSRUS tradition...
+             if(iFace <= 4 .and. iSubFace >= 2 .and. iSubFace <= 3) &
+                  iSubFace = 5 - iSubFace
 
              if(neiP==iProc)then
                 ! Local copy into appropriate subface

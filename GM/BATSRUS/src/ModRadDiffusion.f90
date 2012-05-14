@@ -465,7 +465,6 @@ contains
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
          UseCovariant, TypeGeometry, FaceAreaI_DFB, FaceAreaJ_DFB
     use ModParallel, ONLY: NOBLK, NeiLev
-    use ModMessagePass, ONLY: message_pass_dir
 
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
@@ -712,9 +711,8 @@ contains
     end if
 
     ! Message pass to fill in ghost cells 
-    call message_pass_dir(iDirMin=1,iDirMax=3,Width=1, &
-         SendCorners=.false.,ProlongOrder=1,nVar=nDiff, &
-         Sol_VGB=DiffSemiCoef_VGB,restrictface=.true.)
+    call message_pass_cell(nDiff, DiffSemiCoef_VGB, nWidthIn=1, &
+         nProlongOrderIn=1, DoSendCornerIn=.false., DoRestrictFaceIn=.true.)
 
     do iImplBlock = 1, nImplBLK
        iBlock = impl2iBLK(iImplBlock)

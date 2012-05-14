@@ -78,23 +78,14 @@ contains
 
     use ModSize
     use ModGeometry, ONLY: MaxBoundary
-    use ModMain,     ONLY: UseExtraBoundary, ExtraBC_, UseBatl
+    use ModMain,     ONLY: UseExtraBoundary, ExtraBC_
     use ModProcMH
     !-------------------------------------------------------------------------
 
-    if(UseBatl .and. .not. allocated(iBoundary_GB)) then
+    if(.not. allocated(iBoundary_GB)) then
        allocate(iBoundary_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        iBoundary_GB = domain_
     end if
-
-    if(.not.UseBatl .and. .not.SaveBoundaryCells) then
-       if(iProc==0)write(*,*)&
-            'Do not allocate boundary cell array, if SaveBoundaryCells=',&
-            SaveBoundaryCells
-       return
-    end if
-
-    if(.not.UseBatl .and. allocated(IsBoundaryCell_IGB))return
 
     if(UseExtraBoundary)then
        MinBoundarySaved=ExtraBC_
@@ -108,12 +99,6 @@ contains
     end if
     nBoundarySaved = MaxBoundarySaved - MinBoundarySaved + 1
 
-    if(.not.UseBatl)then 
-       if(.not.allocated(IsBoundaryCell_IGB)) &
-            allocate(IsBoundaryCell_IGB(MinBoundarySaved:MaxBoundarySaved,&
-            1-gcn:nI+gcn, 1-gcn:nJ+gcn,  1-gcn:nK+gcn, nBLK))
-    end if
-
   end subroutine init_mod_boundary_cells
 
 end module ModBoundaryCells
@@ -125,7 +110,7 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
   use ModBoundaryCells, ONLY: MinBoundarySaved, MaxBoundarySaved, &
        IsBoundaryCell_IGB, iBoundary_GB, DomainOp, domain_
   use ModMain, ONLY : nBlock, UnusedBlk, iNewGrid, iNewDecomposition, nOrder,&
-       UseBatl, nI, nJ, nK, body2_, Top_, &
+       nI, nJ, nK, body2_, Top_, &
        BlkTest, iTest, jTest, kTest
   use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB,&
        x_BLK, y_BLK, z_BLK
@@ -151,62 +136,34 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
   ! also has to redo it if the order of the scheme changed.
   ! Depending on what the boundary cell info in the ghost cells is used for,
   ! this condition may have to be revised !!!
-  if(iGridHere==iNewGrid .and. iDecompositionHere==iNewDecomposition &
-       .and. (nOrderHere==nOrder .or. UseBatl)) RETURN
+  if(iGridHere==iNewGrid .and. iDecompositionHere==iNewDecomposition) RETURN
 
   iGridHere=iNewGrid; iDecompositionHere=iNewDecomposition; nOrderHere=nOrder
 
   if(DoTestMe) write(*,*)NameSub,' starting with true_cell(i-2:i+2)=', &
        true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
 
-  if(UseBatl) then
-     call message_pass_cell_scalar(Int_GB=iBoundary_GB, &
-          nProlongOrderIn=1, nCoarseLayerIn=2, &
-          DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-          NameOperatorIn=DomainOp)
+  call message_pass_cell_scalar(Int_GB=iBoundary_GB, &
+       nProlongOrderIn=1, nCoarseLayerIn=2, &
+       DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
+       NameOperatorIn=DomainOp)
 
-     if(DoTestMe) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
-          iBoundary_GB(iTest-2:iTest+2,jTest,kTest,BlkTest)
+  if(DoTestMe) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
+       iBoundary_GB(iTest-2:iTest+2,jTest,kTest,BlkTest)
 
-     do iBlock = 1, nBlock
-        if(unusedBLK(iBlock)) CYCLE
+  do iBlock = 1, nBlock
+     if(unusedBLK(iBlock)) CYCLE
 
-        true_cell(:,:,:,iBlock) = true_cell(:,:,:,iBlock)  &
-             .and. (iBoundary_GB(:,:,:,iBlock) == domain_)
+     true_cell(:,:,:,iBlock) = true_cell(:,:,:,iBlock)  &
+          .and. (iBoundary_GB(:,:,:,iBlock) == domain_)
 
-        body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))   
+     body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))   
 
-        do iBoundary = body2_, Top_
-           IsBoundaryBlock_IB(iBoundary,iBlock)= &
-                any(iBoundary_GB(:,:,:,iBlock) == iBoundary)
-        end do
+     do iBoundary = body2_, Top_
+        IsBoundaryBlock_IB(iBoundary,iBlock)= &
+             any(iBoundary_GB(:,:,:,iBlock) == iBoundary)
      end do
-  else
-     if(DoTestMe) write(*,*) NameSub,': MinBoundarySaved, MaxBoundarySaved=', &
-          MinBoundarySaved, MaxBoundarySaved
-
-     call message_pass_boundary_cells(UseMonotoneRestrict)
-
-     if(DoTestMe) write(*,*) NameSub, ': IsBoundaryCell_IGB = ', &
-          IsBoundaryCell_IGB(:,iTest,jTest,kTest,BlkTest)
-
-     do iBlock = 1, nBlock
-
-        if(unusedBLK(iBlock)) CYCLE
-
-        do iBoundary = MinBoundarySaved, MaxBoundarySaved
-           IsBoundaryBlock_IB(iBoundary,iBlock)=&
-                any(IsBoundaryCell_IGB(iBoundary,:,:,:,iBlock))
-           true_cell(:,:,:,iBlock) = true_cell(:,:,:,iBlock) &
-                .and. .not.IsBoundaryCell_IGB(iBoundary,:,:,:,iBlock)
-        end do
-
-        ! body_BLK: if any cell INCLUDING ghost cells is outside 
-        ! the comp. domain
-        body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))
-
-     end do
-  end if
+  end do
 
   if(DoTestMe) write(*,*) NameSub,' finished with true_cell(i-2:i+2)=', &
        true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)

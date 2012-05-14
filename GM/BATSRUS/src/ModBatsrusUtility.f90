@@ -1334,32 +1334,12 @@ subroutine find_test_cell
   else   ! if a coord_test
      pass_message = .true.
 
-     if(UseBatl)then
-        call find_grid_block( (/ xTest, yTest, zTest /), &
-             ProcTest, BlkTest, IjkTest_D)
-        iTest = IjkTest_D(1)
-        jTest = IjkTest_D(2)
-        kTest = Ijktest_D(3)
-     else
+     call find_grid_block( (/ xTest, yTest, zTest /), &
+          ProcTest, BlkTest, IjkTest_D)
+     iTest = IjkTest_D(1)
+     jTest = IjkTest_D(2)
+     kTest = Ijktest_D(3)
 
-        tmp1_BLK(1:nI,1:nJ,1:nK,1:nBlock)=&
-             abs(x_BLK(1:nI,1:nJ,1:nK,1:nBlock)-Xtest)+&
-             abs(y_BLK(1:nI,1:nJ,1:nK,1:nBlock)-Ytest)+&
-             abs(z_BLK(1:nI,1:nJ,1:nK,1:nBlock)-Ztest)
-
-        qdist=minval_loc_BLK(nProc,tmp1_BLK,loc)
-
-        Itest=loc(1)
-        Jtest=loc(2)
-        Ktest=loc(3)
-        BLKtest=loc(4)
-        iProcTestMe=loc(5)
-     
-        ! Tell everyone which processor contains the test cell
-        ! The others have -1 so MPI_MAX behaves like a broadcast.
-        call MPI_allreduce(iProcTestMe,PROCtest,1,MPI_INTEGER,MPI_MAX,&
-             iComm,iError)
-     end if
      if(iProc==ProcTest) XyzTestCell_D = (/ &
           x_BLK(Itest,Jtest,Ktest,BLKtest), &
           y_BLK(Itest,Jtest,Ktest,BLKtest), &
@@ -1390,13 +1370,11 @@ subroutine find_test_cell
            write(*,*)' FaceAreaJ_D=', FaceAreaJ_DFB(:,iTest,jTest,kTest,BLKtest)
            write(*,*)' FaceAreaK_D=', FaceAreaK_DFB(:,iTest,jTest,kTest,BLKtest)
         end if
-        if(UseBatl)then
-           write(*,'(a,3f12.5,a,f12.5)') &
-                ' CellSize_D=',CellSize_DB(:,BLKtest),&
-                ' CellVolume=',CellVolume_GB(iTest,jTest,kTest,BLKtest)
-           if(.not.IsCartesian) write(*,'(a,3f12.5)') &
-                ' CellFace_D=',CellFace_DFB(:,iTest,jTest,kTest,BLKtest)
-        end if
+        write(*,'(a,3f12.5,a,f12.5)') &
+             ' CellSize_D=',CellSize_DB(:,BLKtest),&
+             ' CellVolume=',CellVolume_GB(iTest,jTest,kTest,BLKtest)
+        if(.not.IsCartesian) write(*,'(a,3f12.5)') &
+             ' CellFace_D=',CellFace_DFB(:,iTest,jTest,kTest,BLKtest)
   	do idir=1,6
   	   select case(neiLEV(idir,BLKtest))
            case(0,1)
@@ -1424,33 +1402,19 @@ end subroutine find_test_cell
 
 !=============================================================================
 
-subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
+subroutine xyz_to_peblk(x, y, z, iPe, iBlock, DoFindCell, i, j, k)
 
-  ! The programm returns the value of iPE and iBlock for
-  ! the given Xyz values. If DoFindCell=.true., 
-  ! the i,j,k values are returned too
+  ! Find the processor (iPe) and block (iBlock) for position x, y, z
+  ! If DoFindCell is true then the cell indexes i, j, k are returned too.
 
-  use ModParallel,ONLY : proc_dims
-  use ModOctree, ONLY: adaptive_block_ptr, octree_roots
-  use ModSize, ONLY: nIJK_D
-  use ModGeometry, ONLY : UseCovariant         
-  use ModGeometry, ONLY : XyzMin_D, XyzMax_D
-  use ModNumConst
-  use ModMain,  ONLY: UseBatl
   use BATL_lib, ONLY: MaxDim, find_grid_block
 
   implicit none
 
-  real, intent(in) :: x,y,z
-  integer, intent(out) :: iPE,iBlock
+  real,    intent(in) :: x, y, z
+  integer, intent(out):: iPE, iBlock
   logical, intent(in) :: DoFindCell
-  integer, intent(out):: iCell,jCell,kCell
-
-  type(adaptive_block_ptr):: Octree
-  real,dimension(3) :: Xyz_D,DXyz_D,XyzCorner_D,XyzCenter_D
-  integer,dimension(3)::IjkRoot_D
-  logical,dimension(3):: IsLowerThanCenter_D
-
+  integer, intent(out):: i, j, k
 
   ! Variables for BATL
   integer:: iCell_D(MaxDim)
@@ -1458,105 +1422,11 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   character(len=*), parameter:: NameSub = 'xyz_to_peblk'
   !----------------------------------------------------------------------
 
-  if(UseBatl)then
+  call find_grid_block( (/x,y,z/), iPe, iBlock, iCell_D)
+  i = iCell_D(1)
+  j = iCell_D(2)
+  k = iCell_D(3)
 
-     call find_grid_block( (/x,y,z/), iPe, iBlock, iCell_D)
-     iCell = iCell_D(1)
-     jCell = iCell_D(2)
-     kCell = iCell_D(3)
-
-     RETURN
-  end if
-
-  nullify(Octree % ptr)
-
-  ! Perform the coordinate transformation, if needed
-                     
-  if(UseCovariant)then                       
-     call xyz_to_gen((/x,y,z/),Xyz_D)
-  else                                       
-     Xyz_D = (/x,y,z/)
-  end if                                     
-
-  !Check if we are within the domain:
-  if(  any(Xyz_D(1:3) < XyzMin_D(1:3)-cTiny) .or. &
-       any(Xyz_D(1:3) > XyzMax_D(1:3)+cTiny) )then
-     write(*,*)NameSub,' Xyz_D   =',Xyz_D
-     write(*,*)NameSub,' XyzMin_D=',XyzMin_D
-     write(*,*)NameSub,' XyzMax_D=',XyzMax_D
-     write(*,*)NameSub,' x,y,z   =',x,y,z
-     if(UseCovariant)write(*,*)NameSub,' UseCovariant is TRUE'
-     call stop_mpi(NameSub//': the point is out of the domain')
-  end if
-
-  !Find the octree root
-  Dxyz_D      = (XyzMax_D-XyzMin_D)/proc_dims
-  IjkRoot_D   = int((Xyz_D-XyzMin_D)/DXyz_D)
-
-  ! Make sure that we remain within the index range
-  ! The int function takes care of values below XyzMin_D
-  ! We fix indices that are too large if any Xyz_D >= XyzMax_D
-  IjkRoot_D   = min(IjkRoot_D, proc_dims-1)
-
-  XyzCorner_D = XyzMin_D + DXyz_D*IjkRoot_D
-
-  Octree % ptr => &
-       octree_roots(IjkRoot_D(1)+1,IjkRoot_D(2)+1,IjkRoot_D(3)+1) % ptr
-
-  ! Descend the octree to find the block containing the point
-  do
-     if(Octree % ptr % used) then
-        iPE    = octree % ptr % PE
-        iBlock = octree % ptr % BLK
-        if(DoFindCell)then
-           DXyz_D = DXyz_D/nIJK_D
-           iCell  = int((Xyz_D(1)-XyzCorner_D(1))/DXyz_D(1))+1
-           jCell  = int((Xyz_D(2)-XyzCorner_D(2))/DXyz_D(2))+1
-           kCell  = int((Xyz_D(3)-XyzCorner_D(3))/DXyz_D(3))+1
-        end if
-        EXIT
-     else
-        DXyz_D = 0.5*DXyz_D
-        XyzCenter_D = XyzCorner_D + DXyz_D
-        IsLowerThanCenter_D = Xyz_D < XyzCenter_D
-        if(IsLowerThanCenter_D(2))then
-           if(.not.IsLowerThanCenter_D(3))then
-              XyzCorner_D(3) = XyzCenter_D(3)
-              if(IsLowerThanCenter_D(1))then
-                 Octree % ptr => Octree % ptr % child(1)%ptr
-              else
-                 XyzCorner_D(1) = XyzCenter_D(1)
-                 Octree % ptr => Octree % ptr % child(2)%ptr
-              end if
-           else
-              if(.not.IsLowerThanCenter_D(1))then
-                 XyzCorner_D(1) = XyzCenter_D(1)
-                 Octree % ptr => Octree % ptr % child(3)%ptr
-              else
-                 Octree % ptr => Octree % ptr % child(4)%ptr
-              end if
-           end if
-        else
-           XyzCorner_D(2) = XyzCenter_D(2)
-           if(IsLowerThanCenter_D(3))then
-              if(IsLowerThanCenter_D(1))then
-                 Octree % ptr => Octree % ptr % child(5)%ptr
-              else
-                 XyzCorner_D(1)=XyzCenter_D(1)
-                 Octree % ptr => Octree % ptr % child(6)%ptr
-              end if
-           else
-              XyzCorner_D(3) = XyzCenter_D(3)
-              if(.not.IsLowerThanCenter_D(1))then
-                 XyzCorner_D(1)=XyzCenter_D(1)
-                 Octree % ptr => Octree % ptr % child(7)%ptr
-              else
-                 Octree % ptr => Octree % ptr % child(8)%ptr
-              end if
-           end if
-        end if
-     end if
-  end do
 end subroutine xyz_to_peblk
 !=============================================================================
 subroutine fill_edge_corner(Array_G)

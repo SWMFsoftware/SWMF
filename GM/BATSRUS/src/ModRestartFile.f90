@@ -8,7 +8,7 @@ module ModRestartFile
   use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
        nBlockAll, nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
-       NameThisComp, UseBatl, iteration_number, DoThinCurrentSheet
+       NameThisComp, iteration_number, DoThinCurrentSheet
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_
   use ModAdvance,    ONLY: State_VGB
   use ModCovariant,  ONLY: NameGridFile
@@ -32,7 +32,6 @@ module ModRestartFile
   public read_restart_parameters
   public write_restart_files 
   public read_restart_files
-  public read_octree_file
   public init_mod_restart_file
   public string_append_iter
 
@@ -169,14 +168,11 @@ contains
        end do
     end if
 
-    if(UseBatl)then
-       write(NameFile,'(a)') trim(NameRestartOutDir)//'octree.rst'
-       if (UseRestartOutSeries) &
-            call string_append_iter(NameFile,iteration_number)
-       call write_tree_file(NameFile)
-    else
-       call write_octree_file
-    end if
+    write(NameFile,'(a)') trim(NameRestartOutDir)//'octree.rst'
+    if (UseRestartOutSeries) &
+         call string_append_iter(NameFile,iteration_number)
+    call write_tree_file(NameFile)
+
     if(iProc==0) call write_restart_header
     select case(TypeRestartOutFile)
     case('block')
@@ -235,7 +231,6 @@ contains
     do iBlock = 1, nBlock
        if (.not.unusedBLK(iBlock)) call fix_block_geometry(iBlock)
     end do
-    if(.not.UseBatl) call set_body_flag
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
@@ -281,11 +276,6 @@ contains
     write(unit_tmp,'(a)')'#CODEVERSION'
     write(unit_tmp,'(f5.2,a35)')CodeVersion,'CodeVersion'
     write(unit_tmp,*)
-    if(UseBatl)then
-       write(unit_tmp,'(a)')'#BATL'
-       write(unit_tmp,'(l1,a39)') UseBatl, 'UseBatl'
-       write(unit_tmp,*)
-    end if
     write(unit_tmp,'(a)')'#USERMODULE'
     write(unit_tmp,'(a)')       NameUserModule
     write(unit_tmp,'(f5.2,a35)')VersionUserModule,'VersionUserModule'
@@ -514,11 +504,8 @@ contains
        DoTest=.false.; DoTestMe=.false.
     end if
     
-    if(UseBatl)then
-       iBlockRestart = iMortonNode_A(iNode_B(iBlock))
-    else
-       iBlockRestart = iBlockRestartALL_A(global_block_number(iBlock))
-    end if
+    iBlockRestart = iMortonNode_A(iNode_B(iBlock))
+
     write(StringDigit,'(i1)') max(5,1+int(alog10(real(iBlockRestart))))
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
@@ -640,11 +627,8 @@ contains
     character:: StringDigit
     !--------------------------------------------------------------------
 
-    if(UseBatl)then
-       iBlockRestart = iMortonNode_A(iNode_B(iBlock))
-    else
-       iBlockRestart = global_block_number(iBlock)
-    end if
+    iBlockRestart = iMortonNode_A(iNode_B(iBlock))
+
     write(StringDigit,'(i1)') max(5,int(1+alog10(real(iBlockRestart))))
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
@@ -770,11 +754,7 @@ contains
 
        if(UnusedBlk(iBlock)) CYCLE
        ! Use the global block index as the record number
-       if(UseBatl)then
-          iMorton = iMortonNode_A(iNode_B(iBlock))
-       else
-          iMorton = iBlockRestartALL_A(global_block_number(iBlock))
-       end if
+       iMorton = iMortonNode_A(iNode_B(iBlock))
 
        if(TypeRestartInFile == 'proc')then
           ! Find the appropriate 'proc' restart file and the record number
@@ -902,11 +882,7 @@ contains
 
        if(UnusedBlk(iBlock)) CYCLE
        ! Use the global block index as the record number
-       if(UseBatl)then
-          iMorton = iMortonNode_A(iNode_B(iBlock))
-       else
-          iMorton = global_block_number(iBlock)
-       end if
+       iMorton = iMortonNode_A(iNode_B(iBlock))
 
        if(TypeRestartOutFile == 'proc')then
           ! Write block into next record and store info for index file
@@ -950,229 +926,6 @@ contains
     close(Unit_Tmp)
 
   end subroutine write_direct_restart_file
-
-  !============================================================================
-
-  subroutine read_octree_file
-    use ModProcMH
-    use ModParallel, ONLY : nBLK,proc_dims
-    use ModOctree
-    use ModIO, ONLY : iUnitOut, write_prefix
-
-    integer :: i,j,k, total_number_of_blocks_needed, BlksPerPE, iError,nError
-    integer, dimension(3) :: r_proc_dims
-    character (len=4), Parameter :: octree_ext=".rst"
-    logical :: isRoot
-    type (adaptive_block_ptr) :: octree
-    !------------------------------------------------------------------------
-
-    NameFile = trim(NameRestartInDir)//"octree"//octree_ext
-    if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
-    open(UNITTMP_, file=NameFile, status="old", form="UNFORMATTED")
-    read(UNITTMP_) r_proc_dims(1),r_proc_dims(2),r_proc_dims(3)
-    read(UNITTMP_) total_number_of_blocks_needed
-
-    if ( (r_proc_dims(1) /= proc_dims(1)) .or. &
-         (r_proc_dims(2) /= proc_dims(2)) .or. &
-         (r_proc_dims(3) /= proc_dims(3)) ) then
-       write(*,*) "read_octree_file: PE = ",iProc, &
-            " Initial processor outlay incorrect, ", &
-            & "proc_dims = ",proc_dims," r_proc_dims = ", &
-            r_proc_dims
-       call stop_mpi('ERROR in read_octree_file')
-    end if
-
-    if (total_number_of_blocks_needed > nProc*nBLK) then
-       write(*,*) "read_octree_file: PE = ",iProc, &
-            " Error, insufficient number of solution blocks, ", &
-            "total_number_of_blocks_needed = ",total_number_of_blocks_needed
-       call stop_mpi('ERROR in read_octree_file')
-    end if
-
-    BlksPerPE = ((total_number_of_blocks_needed-1)/nProc)+1
-    if(iProc==0)then
-       call write_prefix; write(iUnitOut,*) &
-            'Reading restart files with ',total_number_of_blocks_needed, &
-            ' blocks (',BlksPerPE,' per PE)'
-    end if
-
-    do k = 1, proc_dims(3)
-       do j = 1, proc_dims(2)
-          do i = 1, proc_dims(1)
-             isRoot = .true.
-             octree % ptr => octree_roots(i, j, k) % ptr
-             octree % ptr % iRoot = i
-             octree % ptr % jRoot = j
-             octree % ptr % kRoot = k
-             call read_octree_soln_block(octree, BlksPerPE, isRoot)
-          end do
-       end do
-    end do
-
-    close(UNITTMP_)
-
-  end subroutine read_octree_file
-  !============================================================================
-
-  recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
-    use ModProcMH
-    use ModMain, ONLY : nBlockMax, unusedBLK
-    use ModGeometry, ONLY : xyzStart, dxyz
-    use ModAMR, ONLY : local_cube,local_cubeBLK,availableBLKs
-    use ModOctree
-
-    type (adaptive_block_ptr) :: octree
-    integer, intent(inout) :: BlksPerPE
-    integer :: iPE, iBLK, iLEV, childNumber, numberBLK, ii, minPE, iError
-    integer :: iLEVmin, iLEVmax
-    logical, intent(inout) :: isRoot
-    logical :: sol_blk_used
-    type (adaptive_block_ptr) :: child
-    real, dimension(4,3):: xyzends
-
-    integer :: iChild
-    !-------------------------------------------------------------------------
-
-    if (associated(octree % ptr)) then
-       read(UNITTMP_) numberBLK, childNumber, iPE, iBLK, iLEV, sol_blk_used
-
-
-       octree % ptr % number  = numberBLK
-       octree % ptr % child_number = childNumber
-       octree % ptr % used    = sol_blk_used
-       octree % ptr % refine  = .false.
-       octree % ptr % coarsen = .false.
-       octree % ptr % body    = .false.
-       octree % ptr % IsExtraBoundaryOrPole = .false.  
-       octree % ptr % IsOuterBoundary = .false.  
-       iPE = octree % ptr % PE
-       iBLK = octree % ptr % BLK
-
-       if(RestartBlockLevels)then
-          !        if (iProc == 0) &
-          read(UNITTMP_) iLEVmin,iLEVmax
-
-          !        call MPI_BCAST(iLEVmin,    1, MPI_INTEGER, 0, iComm, iError)
-          !        call MPI_BCAST(iLEVmax,    1, MPI_INTEGER, 0, iComm, iError)
-
-          octree % ptr % LEVmin = iLEVmin
-          octree % ptr % LEVmax = iLEVmax
-       end if
-
-       if (octree % ptr % used) then
-          global_block_ptrs(iBLK, iPE+1) % ptr => octree % ptr
-          nBlockMax =  max(nBlockMax, iBLK)
-
-          if (iProc == iPE) unusedBLK(iBLK) = .false.
-
-          if(isRoot) then
-             isRoot = .false.
-          else
-             availableBLKs(0,iPE)=availableBLKs(0,iPE)+1
-          end if
-
-          if(availableBLKs(0,iPE)<=BlksPerPE) then
-             ! grab next from this processor
-             local_cube = iPE
-             local_cubeBLK = availableBLKs(0,iPE)
-          else
-             ! grab next from PE with minimum blocks
-             minPE = iPE
-             do ii=0,nProc-1
-                if(availableBLKs(0,ii)<availableBLKs(0,minPE)) minPE=ii
-             end do
-             local_cube = minPE
-             local_cubeBLK = availableBLKs(0,minPE)
-          end if
-       else
-          local_cube = iPE
-          local_cubeBLK = iBLK
-
-          call refine_octree_block(octree, &
-               local_cube, local_cubeBLK, -1,-1)
-
-          do iChild = 1, 8
-             child % ptr => octree % ptr % child(iChild)%ptr
-             child % ptr % PE  = local_cube(1)
-             child % ptr % BLK = local_cubeBLK(1)
-             call read_octree_soln_block(child, BlksPerPE, isRoot)
-          end do
-       end if
-    end if
-
-  end subroutine read_octree_soln_block
-
-  !============================================================================
-  subroutine write_octree_file
-    use ModProcMH
-    use ModMain, ONLY : nBlockALL
-    use ModParallel, ONLY : proc_dims
-    use ModOctree
-    use ModIO, ONLY : write_prefix, iUnitOut
-
-    integer :: i, j, k
-
-    type (adaptive_block_ptr) :: octree
-
-    character (len=4), Parameter :: octree_ext=".rst"
-    !------------------------------------------------------------------------
-    if (iProc /= 0) RETURN
-
-    call write_prefix; write(iUnitOut,*) '=> Writing restart files ...'
-
-    NameFile = trim(NameRestartOutDir)//"octree"//octree_ext
-    if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
-    open(UNITTMP_, file=NameFile,  status="replace", form="UNFORMATTED")
-    write(UNITTMP_) proc_dims(1),proc_dims(2),proc_dims(3)
-    write(UNITTMP_) nBlockALL
-
-    do k = 1, proc_dims(3)
-       do j = 1, proc_dims(2)
-          do i = 1, proc_dims(1)
-             octree % ptr => octree_roots(i, j, k) % ptr
-             call write_octree_soln_block(octree)
-          end do
-       end do
-    end do
-
-    close(UNITTMP_)
-
-  end subroutine write_octree_file
-
-  !===========================================================================
-  recursive subroutine write_octree_soln_block(octree)
-    use ModProcMH
-    use ModOctree
-
-    type (adaptive_block_ptr) :: octree
-
-    integer :: iPE, iBLK, iLEV, childNumber, numberBLK, icube
-    integer :: iLEVmin, iLEVmax
-    logical :: sol_blk_used
-
-    type (adaptive_block_ptr) :: child
-    !------------------------------------------------------------------------
-    if (associated(octree % ptr)) then
-       numberBLK = octree % ptr % number
-       childNumber = octree % ptr % child_number
-       iPE = octree % ptr % PE
-       iBLK = octree % ptr % BLK
-       iLEV = octree % ptr % LEV
-       sol_blk_used = octree % ptr % used
-       iLEVmin = octree % ptr % LEVmin
-       iLEVmax = octree % ptr % LEVmax
-
-       write(UNITTMP_) numberBLK, childNumber, iPE, iBLK, iLEV, sol_blk_used
-       write(UNITTMP_) iLEVmin,iLEVmax
-       if (.not. octree % ptr % used) then
-          do icube = 1, 8
-             child % ptr => octree % ptr % child(iCube)%ptr
-             call write_octree_soln_block(child)
-          end do
-       end if
-    end if
-
-  end subroutine write_octree_soln_block
 
   !============================================================================
 

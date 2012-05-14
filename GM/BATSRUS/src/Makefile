@@ -28,7 +28,6 @@ MODULES = \
 	ModBlockData.o\
 	ModBoundaryCells.o\
 	ModConserveFlux.o\
-	ModCube.o\
 	ModIonoVelocity.o\
 	ModExtraVariables.o\
 	ModSingleFluid.o\
@@ -57,7 +56,6 @@ MODULES = \
 	ModPartSteady.o\
 	ModPhysics.o\
 	ModPointImplicit.o\
-	ModPolarNeighbor.o\
 	ModProcMH.o\
 	ModRestartFile.o\
 	ModSatelliteFile.o\
@@ -100,32 +98,21 @@ OBJECTS = \
 	allocate_vars.o\
 	amr.o\
 	amr_criteria.o\
-	amr_physics.o\
 	calc_sources.o\
 	calc_timestep.o\
-	coarsen_grid.o\
 	covariant.o\
-	create_soln_blocks.o\
 	explicit.o\
-	find_neighbors.o\
 	fix_axis_cells.o\
 	library.o\
 	load_balance.o\
-	message_pass_cells.o\
-	message_pass_faces.o\
-	message_pass_nodes.o\
-	number_blocks.o\
-	octree.o\
 	potential_force_averages.o\
-	refine_grid.o\
 	rotate.o\
+	set_block_geometry.o\
 	set_b0.o\
 	set_BCs.o\
-	set_block_geometry.o\
 	set_ICs.o\
 	set_outer_BCs.o\
 	set_physics.o\
-	specify_refinement.o\
 	update_states.o\
 	update_states_MHD.o\
 	write_logfile.o\
@@ -138,6 +125,20 @@ OBJECTS = \
 	write_progress.o\
 	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
 	${OBJ10} ${OBJ15}
+
+#	ModCube.o\
+#	ModPolarNeighbor.o\
+#	amr_physics.o\
+#	coarsen_grid.o\
+#	create_soln_blocks.o\
+#	refine_grid.o\
+#	find_neighbors.o\
+#	message_pass_cells.o\
+#	message_pass_faces.o\
+#	message_pass_nodes.o\
+#	number_blocks.o\
+#	octree.o\
+#	specify_refinement.o\
 
 
 # Default user module

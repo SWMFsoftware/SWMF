@@ -333,5 +333,65 @@ contains
 
   end subroutine set_batsrus_state
   !============================================================================
+  subroutine fix_soln_block(iBLK)
+    use ModAdvance, ONLY : State_VGB, nVar
+    use ModPhysics, ONLY : CellState_VI
+    use ModGeometry, ONLY: body_BLK, true_cell
+    use ModMain, ONLY: west_, TypeBC_I, nI, nJ, nK, gcn, body1_
+    use ModParallel, ONLY: neiLwest, NOBLK
+
+    integer, intent(in) :: iBLK
+    integer::iVar,i,j,k
+
+    if(body_BLK(iBLK)) then
+       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+          if(true_cell(i,j,k,iBLK))CYCLE
+          State_VGB(1:nVar,i,j,k,iBLK) = CellState_VI(1:nVar,body1_)
+       end do;end do; end do     
+    end if
+
+    ! For coupled (IH->GM) boundary condition fill in ghost cells
+    ! with the first physical cell, because IH may not couple after AMR
+    if(TypeBc_I(west_)=='coupled' .and. neiLwest(iBLK)==NOBLK)then
+       State_VGB(:,nI+1,:,:,iBLK)   = State_VGB(:,nI,:,:,iBLK)
+       State_VGB(:,nI+2,:,:,iBLK)   = State_VGB(:,nI,:,:,iBLK)
+    endif
+
+  end subroutine fix_soln_block
+
+  !==============================================================================
+
+  subroutine calc_other_soln_vars(iBLK)
+
+    use ModMain
+    use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK, &
+         B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB
+    use ModConserveFlux, ONLY: init_cons_flux
+    use ModImplicit, ONLY: UsePartImplicit             !^CFG IF IMPLICIT
+
+    integer, intent(in) :: iBLK
+
+    if(UseB0)then
+       B0_DGB(:,:,:,:,iBLK) = 0.0
+       B0ResChange_DXSB(:,:,:,:,iBLK) = 0.0
+       B0ResChange_DYSB(:,:,:,:,iBLK) = 0.0
+       B0ResChange_DZSB(:,:,:,:,iBLK) = 0.0
+
+       call set_b0(iBLK)
+    end if
+
+    if(allocated(fbody_x_BLK))then
+       fbody_x_BLK(:,:,:,iBLK) = 0.0
+       fbody_y_BLK(:,:,:,iBLK) = 0.0
+       fbody_z_BLK(:,:,:,iBLK) = 0.0
+    end if
+
+    call init_cons_flux(iBLK)
+
+    globalBLK = iBLK
+
+    if(UseGravity.or.UseRotatingFrame) call body_force_averages
+
+  end subroutine calc_other_soln_vars
 
 end module ModBatlInterface

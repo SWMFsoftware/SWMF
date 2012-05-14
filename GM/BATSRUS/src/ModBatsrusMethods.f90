@@ -53,10 +53,10 @@ contains
     ! Set up problem geometry, blocks, and grid structure.
 
     use ModIO, ONLY: restart
-    use ModRestartFile, ONLY: read_octree_file, NameRestartInDir, &
+    use ModRestartFile, ONLY: NameRestartInDir, &
          UseRestartInSeries, string_append_iter
 
-    use ModMain, ONLY: UseBatl, iteration_number
+    use ModMain, ONLY: iteration_number
     use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
          set_amr_geometry, nBlock, Unused_B, regrid_batl
     use ModBatlInterface, ONLY: set_batsrus_grid,set_batsrus_state
@@ -73,13 +73,7 @@ contains
     integer:: iBlock
     !--------------------------------------------------------------------------
 
-    if(UseBatl)then
-       call set_batsrus_grid
-    else
-       call set_root_block_geometry
-       call build_octree_roots   ! Initialize octree data structure.
-       call find_neighbors       ! Get initial neighbor information.
-    end if
+    call set_batsrus_grid
 
     if (.not.restart) then
        ! Create initial solution block geometry.
@@ -87,54 +81,37 @@ contains
        ! Perform initial refinement of mesh and solution blocks.
        do nRefineLevel = 1, initial_refine_levels
 
-          if(UseBatl)then
-             if (iProc == 0.and.lVerbose>0) then
-                call write_prefix; write (iUnitOut,*) NameSub, &
-                     ' starting initial refinement level, nBlockAll =', &
-                     nRefineLevel, nBlockAll
-             end if
-             if(nCritGeo > 0) then
-                AmrCriteria_IB(:,1:nBlockMax) = 0.0
-                call amr_criteria(AmrCriteria_IB,'geo')
-                call set_amr_criteria(nVar, State_VGB,&
-                     nAmrCriteria,AmrCriteria_IB,TypeAmrIn='geo')
-             else   
-                call set_amr_criteria(nVar,State_VGB,TypeAmrIn='geo')
-             end if
-             call init_grid_batl
-             call set_batsrus_grid
-             ! need to update node information, maybe not all
-             ! of load balancing
-             do iBlock = 1, nBlock
-                if(Unused_B(iBlock)) CYCLE
-                call set_amr_geometry(iBlock)
-             end do
-          else
-             if (iProc == 0.and.lVerbose>0) then
-                call write_prefix; write (iUnitOut,*) NameSub, &
-                     ' starting initial refinement level ', nRefineLevel
-             end if
-             call specify_refinement(local_refine)
-             call refine_grid(local_refine)
+          if (iProc == 0.and.lVerbose>0) then
+             call write_prefix; write (iUnitOut,*) NameSub, &
+                  ' starting initial refinement level, nBlockAll =', &
+                  nRefineLevel, nBlockAll
           end if
+          if(nCritGeo > 0) then
+             AmrCriteria_IB(:,1:nBlockMax) = 0.0
+             call amr_criteria(AmrCriteria_IB,'geo')
+             call set_amr_criteria(nVar, State_VGB,&
+                  nAmrCriteria,AmrCriteria_IB,TypeAmrIn='geo')
+          else   
+             call set_amr_criteria(nVar,State_VGB,TypeAmrIn='geo')
+          end if
+          call init_grid_batl
+          call set_batsrus_grid
+          ! need to update node information, maybe not all
+          ! of load balancing
+          do iBlock = 1, nBlock
+             if(Unused_B(iBlock)) CYCLE
+             call set_amr_geometry(iBlock)
+          end do
        end do
     else
        ! Read initial solution block geometry from octree restart file.
 
-       if(UseBatl)then
-          NameFile = trim(NameRestartInDir)//'octree.rst'
-          if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
-          call read_tree_file(NameFile)
-          call init_grid_batl
-          call set_batsrus_grid
-       else
-          call read_octree_file
-       end if
-    end if
+       NameFile = trim(NameRestartInDir)//'octree.rst'
+       if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
+       call read_tree_file(NameFile)
+       call init_grid_batl
+       call set_batsrus_grid
 
-    if(.not.UseBatl)then
-       ! number blocks and balance load
-       call number_soln_blocks
     end if
 
     ! Set initial block types
@@ -170,7 +147,7 @@ contains
     use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
     use ModRestartFile, ONLY: read_restart_files
     use ModCovariant,   ONLY: UseVertexBasedGrid,do_fix_geometry_at_reschange 
-    use ModMain,        ONLY: UseBatl, iNewGrid, iNewDecomposition 
+    use ModMain,        ONLY: iNewGrid, iNewDecomposition 
     use ModMessagePass, ONLY: exchange_messages
 
     !\
@@ -200,14 +177,9 @@ contains
           end if
 
           call timing_start('amr_ics_amr')
-          if (UseBatl) then
-             ! Do physics based AMR with the message passing
-             call amr(.true.,'phy')
-          else
-             ! Do physics based AMR without the message passing
-             call amr_physics
-             call number_soln_blocks
-          end if
+          ! Do physics based AMR with the message passing
+          call amr(.true.,'phy')
+
           call timing_stop('amr_ics_amr')
        end do
 
@@ -282,10 +254,6 @@ contains
     !^CFG END CONSTRAINB
 
     call exchange_messages(.false.)
-    if(.not. useBATL) then
-       iNewDecomposition = mod(iNewDecomposition+1,10000)
-       iNewGrid = mod( iNewGrid+1, 10000)
-    end if
 
   end subroutine set_initial_conditions
 
@@ -625,8 +593,8 @@ subroutine BATS_init_constrain_b
   use ModCT, ONLY : DoInitConstrainB
   use ModNumConst, ONLY: cTiny
   use ModAdvance, ONLY : Bx_,By_,Bz_,State_VGB,tmp1_BLK
-  use ModMessagePass, ONLY: message_pass_dir
   use ModIO, ONLY: write_prefix, iUnitOut
+  use BATL_lib, ONLY: message_pass_cell
   implicit none
 
   ! Local variables
@@ -638,9 +606,8 @@ subroutine BATS_init_constrain_b
   !--------------------------------------------------------------------------
   DoInitConstrainB=.false.
 
-  call message_pass_dir( &
-       1,3,1,.false.,1,3,Sol_VGB=State_VGB(Bx_:Bz_,:,:,:,:), &
-       restrictface=.true.)
+  call message_pass_cell(3,State_VGB(Bx_:Bz_,:,:,:,:), nWidthIn=1, &
+       nProlongOrderIn=1, DoSendCornerIn=.false., DoRestrictFaceIn=.true.)
 
   do iBlock=1, nBlock
      ! Estimate Bface from the centered B values

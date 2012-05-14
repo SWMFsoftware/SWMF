@@ -18,7 +18,7 @@ subroutine set_BCs(TimeBcIn, DoResChangeOnlyIn)
   logical, allocatable :: IsBodyCell_G(:,:,:)
   !----------------------------------------------------------------------------
 
-  if(UseBatl .and. .not.allocated(IsBodyCell_G))&
+  if(.not.allocated(IsBodyCell_G))&
        allocate(IsBodyCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
   call timing_start(NameSub)
@@ -39,31 +39,11 @@ subroutine set_BCs(TimeBcIn, DoResChangeOnlyIn)
 
   call set_boundary_cells(iBlockBc)
 
-  if(UseBatl) then  
-
-     IsBodyCell_G(:,:,:) = &
-          iBoundary_GB(:,:,:,iBlockBc) >= MinBoundary .and. &
-          iBoundary_GB(:,:,:,iBlockBc) <= MaxBoundary
-
-     call set_face_BCs(IsBodyCell_G, true_cell(:,:,:,iBlockBc) )
-
-  else
-     if(SaveBoundaryCells)then
-        do iBoundary=MinBoundarySaved,MaxBoundarySaved
-           IsBoundaryCell_GI(:,:,:,iBoundary)=&
-                IsBoundaryCell_IGB(iBoundary,:,:,:,iBlockBc)
-        end do
-     end if
-
-     !\
-     ! Apply boundary conditions
-     !/
-     do iBoundary = MinBoundary, MaxBoundary
-        if(IsBoundaryBlock_IB(iBoundary,globalBLK)) call set_face_BCs( &
-             IsBoundaryCell_GI(:,:,:,iBoundary),&
-             true_cell(:,:,:,globalBLK) )
-     end do
-  end if
+  IsBodyCell_G(:,:,:) = &
+       iBoundary_GB(:,:,:,iBlockBc) >= MinBoundary .and. &
+       iBoundary_GB(:,:,:,iBlockBc) <= MaxBoundary
+  
+  call set_face_BCs(IsBodyCell_G, true_cell(:,:,:,iBlockBc) )
 
   if(oktest_me)call write_face_state('Final')
 
@@ -140,8 +120,6 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
   else
      DoTest = .false.; DoTestMe = .false.
   end if
-
-  if(.not.UseBatl) TypeBc = TypeBc_I(iBoundary)
 
   if(TypeBc_I(body1_) == 'polarwind') then
      GmToSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
@@ -359,10 +337,8 @@ contains
     integer :: iIonSecond
     !------------------------------------------------------------------------
 
-    if(UseBatl)then
-       iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
-       TypeBc = TypeBc_I(iBoundary)
-    end if
+    iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
+    TypeBc = TypeBc_I(iBoundary)
 
     ! User defined boundary conditions
     if( index(TypeBc, 'user') > 0 .or. &

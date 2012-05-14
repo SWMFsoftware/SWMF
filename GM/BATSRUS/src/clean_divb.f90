@@ -13,7 +13,7 @@ subroutine clean_divb
   use ModSize
   use ModNumConst
   use ModDivbCleanup
-  use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, unusedblk, UseBatl
+  use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, unusedblk
   use ModAdvance,ONLY: nVar,State_VGB, Bx_, By_, Bz_, P_,tmp1_BLK,tmp2_BLK,&
        Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
   use ModAdvance,ONLY:tmp3_blk=>divB1_GB
@@ -70,12 +70,8 @@ subroutine clean_divb
   Iteration=1                                
 
   do 
-     if(UseBatl) then
-        call message_pass_cell(nVar, State_VGB, nWidthIn=1, &
-             DoSendCornerIn=.false., nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-     else
-        call message_pass_cells8(.true.,.true.,.true.,nVar,State_VGB)    
-     end if
+     call message_pass_cell(nVar, State_VGB, nWidthIn=1, &
+          DoSendCornerIn=.false., nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
      !Get the ghostcell values for MF 
      DivBInt=cZero;DivBTemp=cZero
@@ -145,12 +141,8 @@ subroutine clean_divb
         end if
      end do
 
-     if(UseBatl) then
-        call message_pass_cell(1,tmp2_blk, nWidthIn=1, DoSendCornerIn=.false. ,&
-             nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-     else
-        call message_pass_cells(.true.,.true.,.true.,tmp2_blk)
-     end if
+     call message_pass_cell(1,tmp2_blk, nWidthIn=1, DoSendCornerIn=.false. ,&
+          nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
      !Calculate Dir.A.Dir
      DirDotDir=cZero
@@ -219,13 +211,9 @@ contains
     end do
 
 
-    if(UseBatl) then
-       call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
-            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-    else
-       call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
-       !tmp1 is equal to the inverse of the volume, including the ghostcells 
-    end if
+    !tmp1 is equal to the inverse of the volume, including the ghostcells 
+    call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
+         nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
     do iBlock=1,nBlock
        if (unusedBLK(iBlock)) CYCLE
@@ -299,12 +287,8 @@ contains
           tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=Prec_CB(:,:,:,iBlock)
        end do
 
-       if(UseBatl) then
-          call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
-               nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-       else
-          call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
-       end if
+       call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
+            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
        do iBlock=1,nBlock
           if (unusedBLK(iBlock)) CYCLE
@@ -346,12 +330,8 @@ contains
     end do
     !    if(iProc==0)write(*,*)' Cleanup Initialization second message pass'
 
-    if(UseBatl) then
-       call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
-            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-    else
-       call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
-    end if
+    call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
+         nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
     !Now the elements of diag(Prec_CB)^{1/2} are in tmp1_blk
 
@@ -378,18 +358,12 @@ contains
     end do
     !In tmp1,tmp2 and divB1 are the estimates of gradX, gradY,gradZ correspondenyly
 
-    if(UseBatl) then
-       call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
-            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-       call message_pass_cell(1,tmp2_blk,DoSendCornerIn=.false. ,&
-            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-       call message_pass_cell(1,tmp3_blk,DoSendCornerIn=.false. ,&
-            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-    else
-       call message_pass_cells(.false.,.true.,.true.,tmp1_BLK)
-       call message_pass_cells(.false.,.true.,.true.,tmp2_BLK)
-       call message_pass_cells(.false.,.true.,.true.,tmp3_BLK)
-    end if
+    call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
+         nProlongOrderIn=1, DoRestrictFaceIn=.true.)
+    call message_pass_cell(1,tmp2_blk,DoSendCornerIn=.false. ,&
+         nProlongOrderIn=1, DoRestrictFaceIn=.true.)
+    call message_pass_cell(1,tmp3_blk,DoSendCornerIn=.false. ,&
+         nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
     EstimateForMAMNorm=cZero
     do iBlock=1,nBlock

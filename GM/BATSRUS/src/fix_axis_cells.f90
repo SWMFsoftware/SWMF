@@ -2,7 +2,7 @@ subroutine fix_axis_cells
 
   use ModProcMH, ONLY: iComm
   use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk, iTest, jTest, kTest, &
-       BlkTest, UseBatl
+       BlkTest
   use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
        x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB,&
@@ -56,7 +56,6 @@ subroutine fix_axis_cells
 
   do iBlock = 1, nBlock
      if(unusedBlk(iBlock))CYCLE
-     if(.not.UseBatl .and. .not.far_field_BCs_BLK(iBlock)) CYCLE
 
      if(rMin_BLK(iBlock) < r2FixAxis) then 
         nAxisCell = 2
@@ -67,23 +66,12 @@ subroutine fix_axis_cells
      end if
 
      ! Determine hemisphere
-     if(UseBatl)then
-
-        if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
-           iHemisphere = North_; kMin = nK+1-nAxisCell; kMax = nK; kOut = kMin-1
-        elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
-           iHemisphere = South_; kMin = 1; kMax = nAxisCell; kOut = kMax+1
-        else
-           CYCLE
-        end if
+     if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
+        iHemisphere = North_; kMin = nK+1-nAxisCell; kMax = nK; kOut = kMin-1
+     elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
+        iHemisphere = South_; kMin = 1; kMax = nAxisCell; kOut = kMax+1
      else
-        if( NeiLTop(iBlock) == NOBLK )then
-           iHemisphere = North_; kMin = nK+1-nAxisCell; kMax = nK; kOut = kMin-1
-        elseif( NeiLBot(iBlock) == NOBLK) then
-           iHemisphere = South_; kMin = 1; kMax = nAxisCell; kOut = kMax+1
-        else
-           CYCLE
-        endif
+        CYCLE
      end if
 
      do i=1,nI
@@ -146,23 +134,12 @@ subroutine fix_axis_cells
      end if
 
 
-     if(UseBatl)then
-
-        if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
-           iHemisphere = North_; kMax = nK + 1; kMin = nK + 1 - nAxisCell
-        elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
-           iHemisphere = South_; kMin = 0; kMax = nAxisCell
-        else
-           CYCLE
-        end if
+     if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
+        iHemisphere = North_; kMax = nK + 1; kMin = nK + 1 - nAxisCell
+     elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
+        iHemisphere = South_; kMin = 0; kMax = nAxisCell
      else
-        if( NeiLTop(iBlock) == NOBLK )then
-           iHemisphere = North_; kMax = nK + 1; kMin = nK + 1 - nAxisCell
-        elseif( NeiLBot(iBlock) == NOBLK) then
-           iHemisphere = South_; kMin = 0; kMax = nAxisCell
-        else
-           CYCLE
-        endif
+        CYCLE
      end if
 
      do i = 1, nI

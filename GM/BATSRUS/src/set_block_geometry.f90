@@ -1,88 +1,10 @@
 !^CFG COPYRIGHT UM
-subroutine set_root_block_geometry
-  use ModProcMH
-  use ModSize
-  use ModMain, ONLY : TypeBc_I,unusedBLK,nBlock,nBlockMax,UseBody2
-  use ModMain,ONLY  : Phi_,Theta_,z_             
-  use ModAMR, ONLY : availableBLKs
-  use ModGeometry,ONLY: xyzStart_BLK,dx_BLK,dy_BLK,dz_BLK,&
-       R2_BLK,&                !^CFG IF SECONDBODY
-       TypeGeometry,is_axial_geometry,&          
-       R_BLK,x_BLK,y_BLK,z_BLK,Dxyz,XyzMin_D,XyzMax_D
-  use ModParallel, ONLY: proc_dims,periodic3D
-  use ModMpi
-  implicit none
-
-  integer :: i, j, k, iBLK, iPE
-  real :: dx, dy, dz                         
-
-  ! set the array periodic3D for the periodic boundary
-
-  if(is_axial_geometry())then                     
-     Periodic3D(Phi_)=.true.
-     if(index(TypeGeometry,'spherical')>0)then
-        Periodic3D(Theta_)=.false.
-     else
-        periodic3D(z_)=any(TypeBc_I(bot_:top_)=='periodic')
-     end if
-  else                                          
-     periodic3D(1)=any(TypeBc_I(east_:west_)=='periodic')
-     periodic3D(2)=any(TypeBc_I(south_:north_)=='periodic')
-     periodic3D(3)=any(TypeBc_I(bot_:top_)=='periodic')
-  end if
-
-  xyzStart_BLK = -777777.
-  dx_BLK = -777777.
-  dy_BLK = -777777.
-  dz_BLK = -777777.
-  x_BLK  = -777777.
-  y_BLK  = -777777.
-  z_BLK  = -777777.
-  R_BLK  = -777777.  
-  if(UseBody2) R2_BLK = -777777.           !^CFG IF SECONDBODY
-
-  ! Set the block geometry for all root blocks
-
-  iBLK = 0
-  Dxyz(:) = (XyzMax_D - XyzMin_D)/(nIJK_D*proc_dims)
-  iPE = 0
-  do k = 1, proc_dims(3)
-     do j = 1, proc_dims(2)
-        do i = 1, proc_dims(1)
-           iBLK = iBLK+1
-           if(iBLK > nBLK)then
-              iBLK = 1
-              iPE  = iPE+1
-           end if
-           availableBLKs(0,iPE) = availableBLKs(0,iPE) +1
-           if (iProc == iPE) then
-              unusedBLK(iBLK) = .false.
-
-              dx_BLK(iBLK) = Dxyz(1)  
-              dy_BLK(iBLK) = Dxyz(2)
-              dz_BLK(iBLK) = Dxyz(3)
-              xyzStart_BLK(1,iBLK) = Dxyz(1) * (0.5 + nI*(i-1))+XyzMin_D(1)
-              xyzStart_BLK(2,iBLK) = Dxyz(2) * (0.5 + nJ*(j-1))+XyzMin_D(2)
-              xyzStart_BLK(3,iBLK) = Dxyz(3) * (0.5 + nK*(k-1))+XyzMin_D(3)
-              call fix_block_geometry(iBLK)
-           end if
-        end do
-     end do
-  end do
-
-
-  ! Let every PE know the available blocks on PE 0
-  nBlock    = min(product(proc_dims), nBLK)
-  nBlockMax = nBlock
-
-
-end subroutine set_root_block_geometry
 !==============================================================================
 subroutine fix_block_geometry(iBLK)
 
-  use ModMain, ONLY : UseBatl, body1,body1_,body2_,ExtraBc_,&
+  use ModMain, ONLY: body1,body1_,body2_,ExtraBc_,&
        UseExtraBoundary,DoFixExtraBoundaryOrPole,unusedBLK,ProcTest,BlkTest   
-  use ModMain, ONLY : UseBody2                    !^CFG IF SECONDBODY
+  use ModMain, ONLY: UseBody2                    !^CFG IF SECONDBODY
   use ModBatlInterface, ONLY: UseBatlTest
   use ModNodes
   use ModGeometry
@@ -274,45 +196,24 @@ subroutine fix_block_geometry(iBLK)
   IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
        UseExtraBoundary .and. IsBoundaryCell_GI(:,:,:,ExtraBc_)
 
-  if(UseBatl)then
-     ! Copying  the IsBoundaryCell_GI into the 
-     ! format for iBoundary_GB
-     iBoundary_GB(:,:,:,iBlk) = domain_
-     do iBoundary = body2_, Top_
-        where(IsBoundaryCell_GI(:,:,:,iBoundary))
-           iBoundary_GB(:,:,:,iBlk) = iBoundary
-        end where
-     end do
+  ! Copying  the IsBoundaryCell_GI into the format for iBoundary_GB
+  iBoundary_GB(:,:,:,iBlk) = domain_
+  do iBoundary = body2_, Top_
+     where(IsBoundaryCell_GI(:,:,:,iBoundary))
+        iBoundary_GB(:,:,:,iBlk) = iBoundary
+     end where
+  end do
 
-     ! Alow other places to set true_cell
-     true_cell(1:nI,1:nJ,1:nK,iBLK) = true_cell(1:nI,1:nJ,1:nK,iBLK) &
-          .and. iBoundary_GB(1:nI,1:nJ,1:nK,iBlk) == domain_
-
-  else
-     do iBoundary=ExtraBc_,MaxBoundary
-        if(SaveBoundaryCells.and.iBoundary>=MinBoundarySaved)then
-           IsBoundaryCell_IGB(iBoundary,:,:,:,iBLK)=&
-                IsBoundaryCell_GI(:,:,:,iBoundary)
-           true_cell(1:nI,1:nJ,1:nK,iBLK) = true_cell(1:nI,1:nJ,1:nK,iBLK) &
-                .and. .not.IsBoundaryCell_GI(1:nI,1:nJ,1:nK,iBoundary)
-        else
-           true_cell(:,:,:,iBLK) = true_cell(:,:,:,iBLK) &
-                .and. .not.IsBoundaryCell_GI(:,:,:,iBoundary)
-           IsBoundaryBlock_IB(iBoundary,iBLK)=&
-                any(IsBoundaryCell_GI(:,:,:,iBoundary))
-        end if
-     end do
-  end if
+  ! Alow other places to set true_cell
+  true_cell(1:nI,1:nJ,1:nK,iBLK) = true_cell(1:nI,1:nJ,1:nK,iBLK) &
+       .and. iBoundary_GB(1:nI,1:nJ,1:nK,iBlk) == domain_
 
   BodyFlg_B(iBLK)= BodyFlg_B(iBLK) .and. any(true_cell(:,:,:,iBLK))
 
-  !\
   ! body_BLK: if any cell INCLUDING ghost cells is inside body(ies)
-  !/
   body_BLK(iBLK) = .not. all(true_cell(:,:,:,iBLK))
-  !\
+
   ! TRUE_BLK: if all cells EXCLUDING ghost cells are outside body(ies)
-  !/
   true_BLK(iBLK) = all(true_cell(1:nI,1:nJ,1:nK,iBLK))
 
 contains

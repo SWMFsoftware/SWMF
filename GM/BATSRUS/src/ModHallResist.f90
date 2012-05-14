@@ -802,6 +802,7 @@ contains
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
     use ModParallel, ONLY: NeiLev
     use ModFaceValue,ONLY: correct_monotone_restrict
+    use BATL_lib,    ONLY: message_pass_cell
 
     integer, parameter :: nTest = 2
     integer :: i,j,k,iBlock,iTest
@@ -862,7 +863,7 @@ contains
 
        end do
 
-       call message_pass_cells8(.false., .false., .true.,nVar,State_VGB)
+       call message_pass_cell(nVar,State_VGB)
 
        do iBlock = 1, nBlock
           if(UnusedBlk(iBlock)) CYCLE

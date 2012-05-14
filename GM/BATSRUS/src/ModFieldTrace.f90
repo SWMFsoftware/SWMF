@@ -18,8 +18,8 @@ subroutine ray_trace_accurate
   use ModAdvance,     ONLY: State_VGB, Bx_, Bz_, B0_DGB
   use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, r_BLK, true_cell, &
        XyzMax_D, XyzMin_D, x1, x2, y1, y2, z1, z2, UseCovariant
-  use ModMessagePass, ONLY: message_pass_dir
   use ModMessagePass, ONLY: exchange_messages
+  use BATL_lib, ONLY: message_pass_cell
   use ModMpi
 
   implicit none
@@ -55,8 +55,7 @@ subroutine ray_trace_accurate
   if(okTime)call timing_reset('ray_pass',2)
 
   ! Fill in all ghost cells
-  call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
-       ProlongOrder=1, nVar=nVar, Sol_VGB=State_VGB)
+  call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1)
 
   ! Copy magnetic field into Bxyz_DGB
   do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
@@ -1475,7 +1474,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_, B0_DGB
   use ModProcMH
   use ModMpi
-  use ModMessagePass,    ONLY: message_pass_dir
+  use BATL_lib,          ONLY: message_pass_cell
   use ModNumConst,       ONLY: cDegToRad, cTiny
   use ModCoordTransform, ONLY: sph_to_xyz
   use ModUtilities,      ONLY: check_allocate
@@ -1555,8 +1554,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   call ray_init(iComm)
 
   ! Fill in all ghost cells without monotone restrict
-  call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
-       ProlongOrder=1, nVar=nVar, Sol_VGB=State_VGB)
+  call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1)
 
   ! Copy magnetic field into Bxyz_DGB
   do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
@@ -1972,7 +1970,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use ModMpi
   use ModGeometry,       ONLY: x1, x2, y1, y2, z1, z2, dx_BLK, dy_BLK, dz_BLK
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-  use ModMessagePass,    ONLY: message_pass_dir
+  use BATL_lib,          ONLY: message_pass_cell
   use ModCoordTransform, ONLY: xyz_to_sph
   use ModMessagePass, ONLY: exchange_messages
 
@@ -2015,8 +2013,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   call timing_start(NameSub)
 
   ! Fill in all ghost cells
-  if(DoMessagePass)  call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, &
-       SendCorners=.true., ProlongOrder=2, nVar=nVar, Sol_VGB=State_VGB)
+  call message_pass_cell(nVar, State_VGB)
 
   oktest_ray = .false.
 

@@ -69,15 +69,14 @@ subroutine ray_trace_fast
 
   use ModProcMH
   use ModMain
-  use ModAdvance,  ONLY : Bx_, Bz_, State_VGB
-  use ModParallel, ONLY : NOBLK, neiLEV
-  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, R_BLK, Rmin_BLK, &
+  use ModAdvance,  ONLY: Bx_, Bz_, State_VGB
+  use ModParallel, ONLY: NOBLK, neiLEV
+  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, R_BLK, Rmin_BLK, &
        dx_BLK, dy_BLK, dz_BLK, true_cell
-  use ModMessagePass, ONLY: message_pass_dir
   use ModRaytrace
   use ModMpi
 
-  use BATL_lib, ONLY: message_pass_node
+  use BATL_lib, ONLY: message_pass_cell, message_pass_node
 
   implicit none
 
@@ -145,8 +144,7 @@ subroutine ray_trace_fast
 
   Bxyz_DGB = State_VGB(Bx_:Bz_,:,:,:,:)
   ! Fill in ghost cells
-  call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
-       ProlongOrder=2, nVar=3, Sol_VGB=Bxyz_DGB)
+  call message_pass_cell(3, Bxyz_DGB)
 
   ! Initial values !!! Maybe LOOPRAY would be better??
 
@@ -191,15 +189,9 @@ subroutine ray_trace_fast
   end do ! iBLK
 
   ! Average node values between shared faces
-  if(UseBatl)then
-     call message_pass_node(1,bb_x)
-     call message_pass_node(1,bb_y)
-     call message_pass_node(1,bb_z)
-  else
-     call pass_and_average_nodes(.true.,bb_x)
-     call pass_and_average_nodes(.true.,bb_y)
-     call pass_and_average_nodes(.true.,bb_z)
-  end if
+  call message_pass_node(1,bb_x)
+  call message_pass_node(1,bb_y)
+  call message_pass_node(1,bb_z)
 
   if(oktest_me)write(*,*)'rayface normalized B'
   if(oktime.and.iProc==0)then

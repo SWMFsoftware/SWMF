@@ -3,7 +3,6 @@ module ModAMR
 
   use BATL_lib, ONLY:  unusedBlock_BP => Unused_BP
 
-  use ModCube
   implicit none
   save
 

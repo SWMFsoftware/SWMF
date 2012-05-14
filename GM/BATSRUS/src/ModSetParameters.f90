@@ -36,7 +36,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
   use ModCoordTransform,ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
   use ModReadParam
-  use ModMPCells,       ONLY: iCFExchangeType,DoOneCoarserLayer
+  use ModMessagePass,   ONLY: DoOneCoarserLayer
   use ModFaceValue,     ONLY: &
        UseTvdResChange, UseAccurateResChange, DoLimitMomentum, BetaLimiter, &
        TypeLimiter, read_face_value_param
@@ -351,21 +351,12 @@ subroutine MH_set_parameters(TypeAction)
 
      select case(NameCommand)
 
-     case("#BATL")
-        call read_var('UseBatl', UseBatl)
-        if(UseBatl)then
-           if(nGI /= 2 .or. nGJ /= 2 .or. nGK /= 2) call stop_mpi(NameSub// &
-                ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
-        end if
-
      case("#BATLPROLONG")
         call read_var('BetaProlong',BetaProlong )
-
 
      case("#BATLTEST")
         call read_var('UseBatlTest', UseBatlTest)
         if(UseBatlTest)then
-           UseBatl = .true.
            if(nGI /= 2 .or. nGJ /= 2 .or. nGK /= 2) call stop_mpi(NameSub// &
                 ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
         end if
@@ -982,219 +973,10 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#GRIDRESOLUTION","#GRIDLEVEL","#AREARESOLUTION","#AREALEVEL")
 
-        if(UseBatl) then
-           call read_amr_geometry(NameCommand,UseStrictIn=UseStrict, &
-                InitLevelInOut=initial_refine_levels, &
-                InitResInOut=InitialResolution,NameCritOut_I=NameCritGeo_I,&
-                nCritInOut=nCritGeo)
-        else
-
-           if(index(NameCommand,"RESOLUTION")>0)then
-              call read_var('AreaResolution', AreaResolution)
-           else
-              call read_var('nLevelArea',nLevelArea)
-              ! Store level as a negative integer resolution.
-              ! This will be converted to resolution in correct_grid_geometry
-              AreaResolution = -nLevelArea
-           end if
-           call read_var('NameArea', NameArea, IsLowerCase=.true.)
-
-           NameArea = adjustl(NameArea)
-
-           if(NameArea(1:4) == 'init')then
-              ! 'init' or 'initial' means that the initial resolution is set,
-              ! and no area is created. 
-              if(AreaResolution > 0)then
-                 InitialResolution = AreaResolution
-              else
-                 initial_refine_levels = nLevelArea
-              end if
-              ! No area is created, continue reading the parameters
-              CYCLE READPARAM
-           end if
-
-           nArea = nArea + 1
-           if(nArea > MaxArea)then
-              if(UseStrict)call stop_mpi(NameSub// &
-                   ' ERROR: Too many grid areas were defined')
-              if(iProc == 0)then
-                 write(*,*)NameSub," nArea = ",nArea
-                 write(*,*)NameSub," WARNING: Too many grid areas were defined"
-                 write(*,*)NameSub," ignoring command ",NameCommand
-              end if
-              nArea = MaxArea
-           end if
-
-           Area_I(nArea) % Resolution = AreaResolution
-
-           ! Set the default center to be the origin, 
-           ! the size and radii to be 1, and no rotation
-           Area_I(nArea)%Center_D  = 0.0
-           Area_I(nArea)%Size_D    = 1.0
-           Area_I(nArea)%Radius1   = 1.0
-           Area_I(nArea)%DoRotate  = .false.
-           Area_I(nArea)%Rotate_DD = cUnit_DD
-
-           ! Remove leading spaces
-           NameArea = adjustl(NameArea)
-
-           ! Check for the word rotated in the name
-           i = index(NameArea,'rotated')
-           Area_I(nArea)%DoRotate = i > 0
-           if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+7:len(NameArea))
-
-           ! check for the word stretched in the name
-           i = index(NameArea,'stretched')
-           DoStretchArea = i > 0
-           if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+9:len(NameArea))
-
-           ! Extract character '0' from the name
-           i = index(NameArea,'0')
-           if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+1:len(NameArea))
-
-           DoReadAreaCenter = (i < 1 .and. NameArea(1:3) /= 'box')
-
-           ! Store name
-           Area_I(nArea)%Name = NameArea
-
-           ! These types do not need any more parameters
-           select case(NameArea)
-           case('all','currentsheet','user')
-              CYCLE READPARAM
-           end select
-
-           ! Read center of area if needed
-           if(DoReadAreaCenter)then
-              call read_var("xCenter",Area_I(nArea)%Center_D(1))
-              call read_var("yCenter",Area_I(nArea)%Center_D(2))
-              call read_var("zCenter",Area_I(nArea)%Center_D(3))
-           endif
-
-           select case(NameArea)
-           case("box", "box_gen")
-              call read_var("xMinBox",XyzStartArea_D(1))
-              call read_var("yMinBox",XyzStartArea_D(2))
-              call read_var("zMinBox",XyzStartArea_D(3))
-              call read_var("xMaxBox",XyzEndArea_D(1))
-              call read_var("yMaxBox",XyzEndArea_D(2))
-              call read_var("zMaxBox",XyzEndArea_D(3))
-              ! Convert to center and size information
-              Area_I(nArea)%Center_D = 0.5*   (XyzStartArea_D + XyzEndArea_D)
-              Area_I(nArea)%Size_D   = 0.5*abs(XyzEndArea_D - XyzStartArea_D)
-
-              ! Overwrite name with brick
-              if(NameArea == "box_gen")then
-                 Area_I(nArea)%Name = "brick_gen"
-              else
-                 Area_I(nArea)%Name = "brick"
-              end if
-           case("brick", "brick_gen")
-              call read_var("xSize", Area_I(nArea)%Size_D(1))
-              call read_var("ySize", Area_I(nArea)%Size_D(2))
-              call read_var("zSize", Area_I(nArea)%Size_D(3))
-
-              ! Area size is measured from the center: half of brick size
-              Area_I(nArea)%Size_D   = 0.5*Area_I(nArea)%Size_D
-
-           case("shell")
-              call read_area_radii
-              Area_I(nArea)%Size_D = RadiusArea
-
-           case("sphere")
-              call read_var("Radius", RadiusArea)
-              Area_I(nArea)%Size_D   = RadiusArea
-
-           case("ringx")
-              call read_var("Height", Area_I(nArea)%Size_D(1))
-              Area_I(nArea)%Size_D(1)     = 0.5*Area_I(nArea)%Size_D(1)
-              call read_area_radii
-              Area_I(nArea)%Size_D(2:3)   = RadiusArea
-
-           case("ringy")
-              call read_var("Height", Area_I(nArea)%Size_D(2))
-              Area_I(nArea)%Size_D(2)     = 0.5*Area_I(nArea)%Size_D(2)
-              call read_area_radii
-              Area_I(nArea)%Size_D(1:3:2) = RadiusArea
-
-           case("ringz")
-              call read_var("Height", Area_I(nArea)%Size_D(3))
-              Area_I(nArea)%Size_D(3)     = 0.5*Area_I(nArea)%Size_D(3)
-              call read_area_radii
-              Area_I(nArea)%Size_D(1:2)   = RadiusArea
-
-           case("cylinderx")
-              call read_var("Length", Area_I(nArea)%Size_D(1))
-              Area_I(nArea)%Size_D(1)     = 0.5 * Area_I(nArea)%Size_D(1)
-              call read_var("Radius", RadiusArea)
-              Area_I(nArea)%Size_D(2:3)   = RadiusArea
-
-           case("cylindery")
-              call read_var("Length", Area_I(nArea)%Size_D(2))
-              Area_I(nArea)%Size_D(2)     = 0.5 * Area_I(nArea)%Size_D(2)
-              call read_var("Radius", RadiusArea)
-              Area_I(nArea)%Size_D(1:3:2) = RadiusArea
-
-           case("cylinderz")
-              call read_var("Length", Area_I(nArea)%Size_D(3))
-              Area_I(nArea)%Size_D(3)     = 0.5 * Area_I(nArea)%Size_D(3)
-              call read_var("Radius", RadiusArea)
-              Area_I(nArea)%Size_D(1:2)   = RadiusArea
-
-           case default
-              if(UseStrict) call stop_mpi(NameSub//&
-                   ' ERROR: unknown NameArea='//trim(Area_I(nArea)%Name))
-
-              if(iProc == 0) &
-                   write(*,*) NameSub//' WARNING: unknown NameArea=' // &
-                   trim(Area_I(nArea)%Name) // ', ignoring command ' // &
-                   trim(NameCommand)
-
-              nArea = nArea - 1
-              CYCLE READPARAM
-           end select
-
-           if(DoStretchArea)then
-              ! Read 3 stretch factors for the sizes
-              call read_var('xStretch', xStretchArea)
-              call read_var('yStretch', yStretchArea)
-              call read_var('zStretch', zStretchArea)
-
-              ! Stretch the x, y, z sizes
-              Area_I(nArea)%Size_D(1) = Area_I(nArea)%Size_D(1)*xStretchArea
-              Area_I(nArea)%Size_D(2) = Area_I(nArea)%Size_D(2)*yStretchArea
-              Area_I(nArea)%Size_D(3) = Area_I(nArea)%Size_D(3)*zStretchArea
-
-              DoStretchArea = .false.
-           end if
-
-           if(Area_I(nArea) % DoRotate)then
-
-              ! Read 3 angles for the rotation matrix in degrees
-              call read_var('xRotate',xRotateArea)
-              call read_var('yRotate',yRotateArea)
-              call read_var('zRotate',zRotateArea)
-
-              ! Rotation matrix rotates around X, Y and Z axes in this order
-              Area_I(nArea)%Rotate_DD = matmul( matmul( &
-                   rot_matrix_z(-zRotateArea*cDegToRad), &
-                   rot_matrix_y(-yRotateArea*cDegToRad)),&
-                   rot_matrix_x(-xRotateArea*cDegToRad))
-
-              !write(*,*)'Matrix=',Area_I(nArea)%Rotate_DD
-
-           end if
-        end if
-     case("#MESSAGEPASSACROSSPOLE")
-        ! NOTE: setting DoFixBodyLevel to false in either #AMRLEVELS or #AMRRESOLUTION
-        !       after #MESSAGEPASSACROSSPOLE in PARAM.in will undo this.
-        min_block_level = 0
-        max_block_level = 999
-        fix_body_level = .true.
-        if(iSession==1)then
-           DoSetLevels=.true.
-        else
-           call set_levels
-        end if
+        call read_amr_geometry(NameCommand,UseStrictIn=UseStrict, &
+             InitLevelInOut=initial_refine_levels, &
+             InitResInOut=InitialResolution,NameCritOut_I=NameCritGeo_I,&
+             nCritInOut=nCritGeo)
 
      case("#AMRLEVELS")
         call read_var('MinBlockLevel',min_block_level)
@@ -1246,20 +1028,10 @@ subroutine MH_set_parameters(TypeAction)
         DtAmr = -1.0
         if (DoAmr)then
            call read_var('DoAutoRefine',automatic_refinement)
-           if (automatic_refinement) then
-              if(UseBatl) then
-                 call read_amr_criteria("#AMR")
-              else
-                 call read_var('PercentCoarsen',percentCoarsen)
-                 call read_var('PercentRefine' ,percentRefine)
-                 call read_var('MaxTotalBlocks',MaxTotalBlocks)
-              end if
-           end if
+           if (automatic_refinement) call read_amr_criteria("#AMR")
         end if
 
-     case("#AMRLIMIT", "#AMRTYPE","#AMRAREA")
-        if(.not. UseBatl) call stop_mpi(NameSub// &
-             ' BATL is required for command='//NameCommand)
+     case("#AMRLIMIT", "#AMRTYPE", "#AMRAREA")
         call read_amr_criteria(NameCommand)
 
      case("#DOAMR")
@@ -1275,41 +1047,21 @@ subroutine MH_set_parameters(TypeAction)
         DoCritAmr = .true.
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
-        if(UseBatl) then
-           call read_var('nAmrCriteria',nAmrCriteria)
-           call init_mod_amr(nAmrCriteria)
-           call read_amr_criteria(NameCommand, &
-                nCritInOut=nAmrCriteria, NameCritOut_I=RefineCrit,&
-                NameStatVarIn_V= NameVar_V,&
-                nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
-           if (UseSunEarth) then
-              call read_var('xEarth'  ,xEarth)
-              call read_var('yEarth'  ,yEarth)
-              call read_var('zEarth'  ,zEarth)
-              call read_var('InvD2Ray',InvD2Ray)
-           end if
-        else
-           call read_var('nAmrCriteria',nAmrCriteria)
-           call init_mod_amr(nAmrCriteria)
-           do i=1,nAmrCriteria
-              call read_var('TypeRefine', RefineCrit(i), IsLowerCase=.true.)
-              if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
-                 call read_var('TypeTransient_I(i)',TypeTransient_I(i))
-                 call read_var('UseSunEarth'       ,UseSunEarth)
-              end if
-              if (UseSunEarth) then
-                 call read_var('xEarth'  ,xEarth)
-                 call read_var('yEarth'  ,yEarth)
-                 call read_var('zEarth'  ,zEarth)
-                 call read_var('InvD2Ray',InvD2Ray)
-              end if
-           end do
+        call read_var('nAmrCriteria',nAmrCriteria)
+        call init_mod_amr(nAmrCriteria)
+        call read_amr_criteria(NameCommand, &
+             nCritInOut=nAmrCriteria, NameCritOut_I=RefineCrit,&
+             NameStatVarIn_V= NameVar_V,&
+             nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
+        if (UseSunEarth) then
+           call read_var('xEarth'  ,xEarth)
+           call read_var('yEarth'  ,yEarth)
+           call read_var('zEarth'  ,zEarth)
+           call read_var('InvD2Ray',InvD2Ray)
         end if
-
+        
      case("#AMRCRITERIALEVEL")
 
-        if(.not. UseBatl) call stop_mpi(NameSub// &
-             ' ERROR: #AMRMULTICRITERIA can ONLY be used with BATL')
         DoCritAmr = .true.
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
@@ -1416,29 +1168,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('TypeProlong' ,prolong_type)
 
      case("#MESSAGEPASS","#OPTIMIZE")               
-        call read_var('TypeMessagePass',optimize_message_pass)
-        if(is_axial_geometry().and.index(optimize_message_pass,'all')==0)then
-           if(iProc==0)write(*,'(a)')NameSub// &
-                ' WARNING: message_pass mode='//&
-                trim(optimize_message_pass)// &
-                ' is not implemented for TypeGeometry=',trim(TypeGeometry)
-           if(index(optimize_message_pass,'opt')>0)then
-              optimize_message_pass='allopt'
-           else
-              optimize_message_pass='all'
-           end if
-           if(iProc==0)write(*,'(a)')NameSub// &
-                ' WARNING: message_pass mode='//&
-                trim(optimize_message_pass),' is set.'
-        end if
-        if(optimize_message_pass=='allold' .or.&
-             optimize_message_pass=='oldopt')then
-           if(iProc==0)write(*,'(a)')NameSub// &
-                ' WARNING: message_pass mode='// &
-                trim(optimize_message_pass)// &
-                ' is not available any longer, allopt is set !!!'
-           optimize_message_pass='allopt'
-        end if
+        call read_var('TypeMessagePass', optimize_message_pass)
 
      case('#CLIMIT')
         call face_flux_set_parameters(NameCommand)
@@ -2362,7 +2092,7 @@ contains
     percent_max_p(1)   = 40.
     percent_max_p(2)   = 400.
 
-    optimize_message_pass = 'allopt'
+    optimize_message_pass = 'opt'
 
     plot_dimensional      = .true.
 
@@ -2396,6 +2126,9 @@ contains
        BufferMax_D(Theta_) = 180.
     end if
 
+    nAmrCriteria = 0
+    call init_mod_amr(nAmrCriteria)
+
     !\
     ! Set component dependent defaults
     !/
@@ -2427,18 +2160,6 @@ contains
        TypeNormalization     = "SOLARWIND"
        TypeIoUnit            = "HELIOSPHERIC"
 
-       if(.not.UseBatl) then
-          ! Refinement criteria
-          nAmrCriteria    = 3
-          call init_mod_amr(nAmrCriteria)
-          RefineCrit(1)  = 'geometry'
-          RefineCrit(2)  = 'Va'
-          RefineCrit(3)  = 'flux'
-       else
-          nAmrCriteria = 0
-          call init_mod_amr(nAmrCriteria)
-       end if
-
     case('GM')
        ! Body Parameters
        UseGravity=.false.
@@ -2465,16 +2186,6 @@ contains
        TypeNormalization = "PLANETARY"
        TypeIoUnit        = "PLANETARY"
 
-       if(.not.UseBatl) then
-          ! Refinement Criteria
-          nAmrCriteria    = 3
-          RefineCrit(1)  = 'gradlogP'
-          RefineCrit(2)  = 'curlB'
-          RefineCrit(3)  = 'Rcurrents'
-       else
-          nAmrCriteria = 0
-          call init_mod_amr(nAmrCriteria)
-       end if
     case('EE')
        ! Body Parameters
        UseGravity = .true.
@@ -2503,9 +2214,6 @@ contains
        No2Si_V(UnitU_)   = 6.4e3
        No2Si_V(UnitRho_) = 2.7e-4
        TypeIoUnit        = "HELIOSPHERIC"
-
-       ! Refinement Criteria
-       nAmrCriteria = 0
 
     end select
 
@@ -2579,58 +2287,58 @@ contains
 
     !nCritPhys= nAmrCriteria-nCritGeo
     if(IsFirstCheck) then
-    nCritPhys= size(RefineCrit)
-    !print *,"phys geo amr :: ", nCritPhys,nCritGeo,nAmrCriteria
-    if(nCritGeo >0) then
-       ! copy RefineCrit
-       if(allocated(tmpRefineCrit_I)) deallocate(tmpRefineCrit_I)
-       allocate(tmpRefineCrit_I(nCritPhys))
-       tmpRefineCrit_I = RefineCrit
-       nCritAll = nCritPhys+2
-       ! resize and copy back RefineCrit for 'user' and 'currentsheet'
-       if(allocated(RefineCrit)) deallocate(RefineCrit)
-       allocate(RefineCrit(nCritAll))
-       RefineCrit(1:nCritPhys) = tmpRefineCrit_I(1:nCritPhys)
-       RefineCrit(nCritPhys+1) = trim(NameCritGeo_I(1))
-       RefineCrit(nCritPhys+2) = trim(NameCritGeo_I(2))
+       nCritPhys= size(RefineCrit)
+       !print *,"phys geo amr :: ", nCritPhys,nCritGeo,nAmrCriteria
+       if(nCritGeo >0) then
+          ! copy RefineCrit
+          if(allocated(tmpRefineCrit_I)) deallocate(tmpRefineCrit_I)
+          allocate(tmpRefineCrit_I(nCritPhys))
+          tmpRefineCrit_I = RefineCrit
+          nCritAll = nCritPhys+2
+          ! resize and copy back RefineCrit for 'user' and 'currentsheet'
+          if(allocated(RefineCrit)) deallocate(RefineCrit)
+          allocate(RefineCrit(nCritAll))
+          RefineCrit(1:nCritPhys) = tmpRefineCrit_I(1:nCritPhys)
+          RefineCrit(nCritPhys+1) = trim(NameCritGeo_I(1))
+          RefineCrit(nCritPhys+2) = trim(NameCritGeo_I(2))
 
-       if(allocated(tmpRefineCrit_I)) deallocate(tmpRefineCrit_I)
-       nAmrCriteria = nAmrCriteria + nCritGeo
-       nAmrCriteria =nCritAll-1
+          if(allocated(tmpRefineCrit_I)) deallocate(tmpRefineCrit_I)
+          nAmrCriteria = nAmrCriteria + nCritGeo
+          nAmrCriteria =nCritAll-1
 
-       ! copy, reasize and copy  back the values into the arrays
-       if(allocated(tmp_I)) deallocate(tmp_I)
-       allocate(tmp_I(nCritPhys+1))
+          ! copy, reasize and copy  back the values into the arrays
+          if(allocated(tmp_I)) deallocate(tmp_I)
+          allocate(tmp_I(nCritPhys+1))
 
-       tmp_I(1:nCritPhys+1) =  CoarsenLimit_I(1:nCritPhys+1)
-       deallocate(CoarsenLimit_I)
-       allocate(CoarsenLimit_I(nAmrCriteria+1))
-       CoarsenLimit_I(1:nCritPhys+1) = tmp_I
+          tmp_I(1:nCritPhys+1) =  CoarsenLimit_I(1:nCritPhys+1)
+          deallocate(CoarsenLimit_I)
+          allocate(CoarsenLimit_I(nAmrCriteria+1))
+          CoarsenLimit_I(1:nCritPhys+1) = tmp_I
 
-       tmp_I(1:nCritPhys+1) =  RefineLimit_I(1:nCritPhys+1)
-       deallocate(RefineLimit_I)
-       allocate(RefineLimit_I(nAmrCriteria+1))
-       RefineLimit_I(1:nCritPhys+1) = tmp_I
+          tmp_I(1:nCritPhys+1) =  RefineLimit_I(1:nCritPhys+1)
+          deallocate(RefineLimit_I)
+          allocate(RefineLimit_I(nAmrCriteria+1))
+          RefineLimit_I(1:nCritPhys+1) = tmp_I
 
-       ! Most probably not needed
-       tmp_I(1:nCritPhys) = RefineCritMin_I(1:nCritPhys)
-       deallocate(RefineCritMin_I)
-       allocate(RefineCritMin_I(nAmrCriteria))
-       RefineCritMin_I(1:nCritPhys) = tmp_I(1:nCritPhys)
+          ! Most probably not needed
+          tmp_I(1:nCritPhys) = RefineCritMin_I(1:nCritPhys)
+          deallocate(RefineCritMin_I)
+          allocate(RefineCritMin_I(nAmrCriteria))
+          RefineCritMin_I(1:nCritPhys) = tmp_I(1:nCritPhys)
 
-       deallocate(tmp_I)
+          deallocate(tmp_I)
 
-       ! contain no data, no copy needed
-       if(allocated(AmrCriteria_IB)) deallocate(AmrCriteria_IB)
-       allocate(AmrCriteria_IB(nAmrCriteria+1,MaxBlock))
+          ! contain no data, no copy needed
+          if(allocated(AmrCriteria_IB)) deallocate(AmrCriteria_IB)
+          allocate(AmrCriteria_IB(nAmrCriteria+1,MaxBlock))
 
 
-       !clean unused Arrays
-       if(allocated(refine_criteria_IBP)) deallocate(refine_criteria_IBP)
-       if(allocated(SortIndex_I)) deallocate(SortIndex_I)
-       if(allocated(TypeTransient_I)) deallocate(TypeTransient_I)
+          !clean unused Arrays
+          if(allocated(refine_criteria_IBP)) deallocate(refine_criteria_IBP)
+          if(allocated(SortIndex_I)) deallocate(SortIndex_I)
+          if(allocated(TypeTransient_I)) deallocate(TypeTransient_I)
 
-    end if
+       end if
     end if
 
     ! Check flux type selection
@@ -2752,16 +2460,7 @@ contains
        UseTvdReschange      = .false.
        UseAccurateResChange = .false.
     end if
-    if (UseConstrainB .and. index(optimize_message_pass,'opt') > 0) then
-       if(iProc==0 .and. optimize_message_pass /= 'allopt') then
-          write(*,'(a)')NameSub//&
-               ' WARNING: constrain_B does not work for'// &
-               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting optimize_message_pass = all'
-       end if
-       optimize_message_pass = 'all'
-    endif
+    if (UseConstrainB) optimize_message_pass = 'all'
     if (UseConstrainB .and. DoAmr)then
        if(iProc==0)write(*,'(a)')NameSub//&
             ' WARNING: cannot use AMR with constrained transport'
@@ -2770,32 +2469,13 @@ contains
        DoAmr = .false.
     end if                                            !^CFG END CONSTRAINB
 
-    if ( (UseHallResist &
+    if ( UseHallResist &
          .or. UseResistivity &                       !^CFG IF DISSFLUX
-         ) .and. index(optimize_message_pass,'opt') > 0) then
-       if(iProc==0 .and. optimize_message_pass /= 'allopt') then
-          write(*,'(a)')NameSub//&
-               ' WARNING: Normal or Hall resistivity does not work for'// &
-               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting optimize_message_pass = all'
-       end if
-       optimize_message_pass = 'all'
-    endif
+         ) optimize_message_pass = 'all'
 
     !^CFG IF IMPLICIT BEGIN
-    if ( UseRadDiffusion &
-         .and. (UseFullImplicit .or. UseSemiImplicit) &  
-         .and. index(optimize_message_pass,'opt') > 0) then
-       if(iProc==0 .and. optimize_message_pass /= 'allopt') then
-          write(*,'(a)')NameSub//&
-               ' WARNING: Radiation Flux Limiter does not work for'// &
-               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting optimize_message_pass = all'
-       end if
-       optimize_message_pass = 'all'
-    endif
+    if ( UseRadDiffusion .and. (UseFullImplicit .or. UseSemiImplicit)) &
+         optimize_message_pass = 'all'
     !^CFG END IMPLICIT
 
     !Check for magnetogram
@@ -2827,24 +2507,7 @@ contains
        UseAccurateResChange = .true.
     end if
 
-    if (UseAccurateResChange .and. index(optimize_message_pass,'opt') > 0) then
-       if(iProc==0 .and. optimize_message_pass /= 'allopt') then
-          write(*,'(a)')NameSub//&
-               ' WARNING: Accurate res. change does not work for'// &
-               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting optimize_message_pass = all'
-       end if
-       optimize_message_pass = 'all'
-    endif
-
-    if(UseTvdResChange .and. &
-         optimize_message_pass(1:3)=='all' .and. iCFExchangeType/=2)then
-       if(iProc==0) write(*,'(a)') NameSub// &
-            ' WARNING: TVD limiter at the resolution change' //&
-            ' requires iCFExchangeType=2 in message_pass_cells'
-       call stop_mpi('Correct PARAM.in or message_pass_cells')
-    end if
+    if (UseAccurateResChange) optimize_message_pass = 'all'
 
     ! Check test processor
     if(ProcTest > nProc)then
@@ -2960,10 +2623,6 @@ contains
 
        if(.not.UseSemiImplicit)call stop_mpi(NameSub// &
             ' HYPRE preconditioner only works with semi-implicit scheme')
-
-       if(.not.UseBatl)call stop_mpi(NameSub// &
-            ' HYPRE preconditioner only works BATL.')
-
     endif
 
     if(nKrylovVector > KrylovMatvecMax)then
@@ -3017,20 +2676,6 @@ contains
           write(*,*)NameSub//' setting UseBDF2=.false.'
        end if
        UseBDF2=.false.
-    end if
-
-    if(UsePartImplicit)then
-       select case(optimize_message_pass)
-       case('oldopt','allold')
-          if(iProc==0)then
-             write(*,'(2a)') NameSub//&
-                  ' WARNING: PartImplicit scheme does not work with',&
-                  ' TypeMessagePass=oldopt or allold !!!'
-             if(UseStrict)call stop_mpi('Correct PARAM.in!')
-             write(*,*) NameSub//' setting optimize_message_pass=allopt'
-          end if
-          optimize_message_pass='allopt'
-       end select
     end if
 
     if(UseImplicit .and. UsePartSteady)then
@@ -3509,3 +3154,12 @@ contains
   end subroutine read_area_radii
 
 end subroutine MH_set_parameters
+!=======================================================================
+subroutine set_levels
+  use ModAMR, ONLY: min_block_level, max_block_level
+  use BATL_lib, ONLY: iTree_IA, MinLevel_, MaxLevel_
+
+  iTree_IA(MinLevel_,:) = min_block_level
+  iTree_IA(MaxLevel_,:) = max_block_level
+
+end subroutine set_levels

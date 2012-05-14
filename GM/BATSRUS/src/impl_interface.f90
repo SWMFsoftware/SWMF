@@ -312,7 +312,6 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModResistivity,    ONLY: get_resistivity_rhs
-  use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
   use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
        apply_flux_correction_block
@@ -342,9 +341,9 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
         call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &
              nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
      else
-        call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, &
-             SendCorners=.false., ProlongOrder=1, nVar=nVarSemi, &
-             Sol_VGB=StateSemi_VGB, restrictface=.true.)
+        call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=1, &
+             nProlongOrderIn=1, DoSendCornerIn=.false., &
+             DoRestrictFaceIn=.true.)
      end if
   case('parcond','resistivity')
      call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &
@@ -417,7 +416,6 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModResistivity,    ONLY: get_resistivity_rhs
-  use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB, true_cell
   use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
   use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
@@ -462,9 +460,9 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
         pDotADotPPe = 0.0
 
-        call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, &
-             SendCorners=.false., ProlongOrder=1, nVar=nVarSemi, &
-             Sol_VGB=StateSemi_VGB, restrictface=.true.)
+        call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=1, &
+             nProlongOrderIn=1, DoSendCornerIn=.false., &
+             DoRestrictFaceIn=.true.)
      end if
   case('parcond','resistivity')
      call message_pass_cell(nVarSemi, StateSemi_VGB, nWidthIn=2, &

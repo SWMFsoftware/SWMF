@@ -314,7 +314,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
                  end if
               end if
            end do
-        end if                         
+        end if
 
      elseif((ymax-ymin)<(zmax-zmin))then
         !Y Slice
@@ -395,7 +395,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
                       (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,2,iBLK)) <= 0.0  )then
                     nBlockCuts=nBlockCuts+1
                     BlockCut(iBlockALL)=nBlockCuts
-                 end if              
+                 end if
               end if
               call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
            end do
@@ -449,7 +449,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
                  end if
               end if
            end do
-        end if               
+        end if
 
      else
         !Z Slice
@@ -503,9 +503,9 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
                  do j=1,1+nJ; do i=1,1+nI
                     write(unit_tmp,fmt="(30(E14.6))") &
                          (factor1*NodeXYZ_DN(1:3,i,j,cut1)+ &
-                          factor2*NodeXYZ_DN(1:3,i,j,cut2)), &
+                         factor2*NodeXYZ_DN(1:3,i,j,cut2)), &
                          (factor1*PlotVarNodes_VNB(1:nPlotVar,i,j,cut1,iBLK)+ &
-                          factor2*PlotVarNodes_VNB(1:nPlotVar,i,j,cut2,iBLK))
+                         factor2*PlotVarNodes_VNB(1:nPlotVar,i,j,cut2,iBLK))
                  end do; end do
                  ! Write point connectivity
                  do j=1,nJ; do i=1,nI
@@ -650,9 +650,9 @@ contains
                 factor1=1.-factor2
                 write(unit_tmp,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_DN(:, ic1,jc,kc)+ &
-                      factor2*NodeXYZ_DN(:, ic2,jc,kc)), &
+                     factor2*NodeXYZ_DN(:, ic2,jc,kc)), &
                      (factor1*PlotVarNodes_VNB(1:nPlotVar,ic1,jc,kc,iBLK)+ &
-                      factor2*PlotVarNodes_VNB(1:nPlotVar,ic2,jc,kc,iBLK))
+                     factor2*PlotVarNodes_VNB(1:nPlotVar,ic2,jc,kc,iBLK))
                 if(okdebug)write(*,*)'  i=',ic1,'-',ic2,' j=',jc,' k=',kc
              end if
           end if
@@ -683,9 +683,9 @@ contains
                 factor1=1.-factor2
                 write(unit_tmp,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_DN(:, ic,jc1,kc)+ &
-                      factor2*NodeXYZ_DN(:, ic,jc2,kc)), &
+                     factor2*NodeXYZ_DN(:, ic,jc2,kc)), &
                      (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc1,kc,iBLK)+ &
-                      factor2*PlotVarNodes_VNB(1:nPlotVar,ic,jc2,kc,iBLK))
+                     factor2*PlotVarNodes_VNB(1:nPlotVar,ic,jc2,kc,iBLK))
                 if(okdebug)write(*,*)'  i=',ic,' j=',jc1,'-',jc2,' k=',kc
              end if
           end if
@@ -716,9 +716,9 @@ contains
                 factor1=1.-factor2
                 write(unit_tmp,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_DN(:, ic,jc,kc1)+ &
-                      factor2*NodeXYZ_DN(:, ic,jc,kc2)), &
+                     factor2*NodeXYZ_DN(:, ic,jc,kc2)), &
                      (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc1,iBLK)+ &
-                      factor2*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc2,iBLK))
+                     factor2*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc2,iBLK))
                 if(okdebug)write(*,*)'  i=',ic,' j=',jc,' k=',kc1,'-',kc2
              end if
           end if
@@ -847,3 +847,285 @@ contains
   end subroutine write_auxdata
 
 end subroutine write_plot_tec
+
+!==========================================================================
+subroutine assign_node_numbers
+  use ModProcMH
+  use ModIO, ONLY: write_prefix, iUnitOut
+  use ModMain, ONLY : lVerbose, nBlock, nBlockMax, nBlockALL, UnusedBLK
+  use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
+  use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, x1,x2, y1,y2, z1,z2
+  use ModParallel, ONLY: periodic3D
+  use ModNodes
+  use ModMpi
+  use BATL_lib, ONLY: message_pass_node
+  implicit none
+
+  integer, parameter :: NodesPerBlock=(nI+1)*(nJ+1)*(nK+1)
+  integer :: iBlockStart
+  integer :: i, j, k, iNode, iBLK, iError, iPE, iTag
+  integer :: nOffset, nOffsetPrevious
+  integer, allocatable, dimension(:) :: NodeOffset, NodeOffsetMax, nOffset_P
+  real, allocatable, dimension(:,:,:,:,:) :: IndexNode_VNB
+  logical :: boundary, DoAllReduce=.true.
+  integer :: iStatus(MPI_STATUS_SIZE)
+
+  !-------------------------------------------------------------------------
+
+  ! Write information to the screen
+  if(iProc==0.and.lVerbose>0)then
+     call write_prefix; write(iUnitOut,*)'Starting assign_node_numbers ...'
+  end if
+
+  ! Initialize all node numbers to zero
+  NodeNumberLocal_NB=0
+
+  ! Number of nodes on each block (maximum)
+  nNodeALL=nBlockALL*NodesPerBlock
+
+  ! Count number of used blocks on all processors with rank less than this one
+  iBlockStart = 0
+  if(iProc > 0) iBlockStart = &
+       count(iTypeAdvance_BP(1:nBlockMax,0:iProc-1) /= SkippedBlock_)
+
+  iNode = iBlockStart*NodesPerBlock
+
+  ! Loop to assign local and global node numbers
+  TREE1: do iBlk  = 1, nBlock
+     if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
+     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+        iNode = iNode+1
+        NodeNumberLocal_NB(i,j,k,iBlk)= iNode
+     end do; end do; end do
+  end do TREE1
+  NodeNumberGlobal_NB = NodeNumberLocal_NB
+
+  ! Set logical array
+  NodeUniqueGlobal_NB = NodeNumberGlobal_NB>0
+
+  ! Assign value to internal passing variable and do message pass
+  !  NOTE: convert integer to real for message pass first
+
+
+  ! Done a evel one, with allocate and dealocate. NEED to be fixed
+  allocate(IndexNode_VNB(1,nI+1,nJ+1,nK+1,nBLK))
+  IndexNode_VNB(1,:,:,:,:) = real(NodeNumberGlobal_NB(:,:,:,:))
+  call message_pass_node(1,IndexNode_VNB, &
+       NameOperatorIn='Min')
+  NodeNumberGlobal_NB(:,:,:,:) = nint(IndexNode_VNB(1,:,:,:,:))
+  deallocate(IndexNode_VNB)
+
+  !Allocate memory for storing the node offsets
+  allocate( NodeOffset   (nBlockALL*NodesPerBlock), stat=iError)
+  call alloc_check(iError,"NodeOffset")
+  allocate( NodeOffsetMax(nBlockALL*NodesPerBlock), stat=iError)
+  call alloc_check(iError,"NodeOffsetMax")
+  NodeOffset=0
+
+  ! Loop to compute node offsets
+  nOffset=0
+  TREE2: do iBLK  = 1, nBlock
+     if(iTypeAdvance_B(iBLK) == SkippedBlock_) CYCLE
+     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+        if(NodeNumberLocal_NB(i,j,k,iBLK) > NodeNumberGlobal_NB(i,j,k,iBLK))then
+           nOffset = nOffset+1
+           NodeUniqueGlobal_NB(i,j,k,iBLK) = .false.
+        end if
+        NodeOffset(NodeNumberLocal_NB(i,j,k,iBLK)) = nOffset
+     end do; end do; end do
+  end do TREE2
+
+  ! Collect offsets from all the PEs
+  allocate(nOffset_P(0:nProc-1))
+  call MPI_allgather(nOffset, 1, MPI_INTEGER, nOffset_P, 1, MPI_INTEGER, &
+       iComm, iError)
+
+  ! Add up the offsets on processors with lower rank
+  nOffsetPrevious = 0
+  if(iProc > 0) nOffsetPrevious = sum(nOffset_P(0:iProc-1))
+
+  ! Increase the offset on this processor by nOffsetPrevious
+  do iBLK  = 1, nBlock
+     if(iTypeAdvance_B(iBLK) == SkippedBlock_) CYCLE
+     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+        iNode = NodeNumberLocal_NB(i,j,k,iBLK)
+        NodeOffset(iNode) = NodeOffset(iNode) + nOffsetPrevious
+     end do; end do; end do
+  end do
+
+  ! Gather offsets from all PE-s. NodeOffset was initialized to 0 so MPI_MAX works.
+  if(DoAllReduce)then
+     call MPI_allreduce(NodeOffset,NodeOffsetMax,nBlockALL*NodesPerBlock, &
+          MPI_INTEGER,MPI_MAX,iComm,iError)
+     NodeOffset = NodeOffsetMax
+     nNodeALL   = nNodeALL - sum(nOffset_P)
+  else
+     if(iProc == 0) then
+        do iPE=1,nProc-1
+           iTag = iPE
+           call MPI_recv(NodeOffsetMax,nBlockALL*NodesPerBlock, &
+                MPI_INTEGER,iPE,itag,iComm,iStatus,iError)
+           NodeOffset = max(NodeOffset,NodeOffsetMax)
+        end do
+     else
+        itag = iProc
+        call MPI_send(NodeOffset,nBlockALL*NodesPerBlock, &
+             MPI_INTEGER,0,itag,iComm,iError)
+     end if
+     call MPI_Bcast(NodeOffset,nBlockALL*NodesPerBlock,MPI_Integer,0,iComm,iError)
+  end if
+
+  ! Loop to fix NodeNumberGlobal_NB for offset
+  TREE3: do iBlk  = 1, nBlock
+     if(iTypeAdvance_B(iBLK) == SkippedBlock_) CYCLE
+     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+        NodeNumberGlobal_NB(i,j,k,iBLK) = NodeNumberGlobal_NB(i,j,k,iBLK) &
+             - NodeOffset(NodeNumberGlobal_NB(i,j,k,iBLK))
+        if(NodeNumberGlobal_NB(i,j,k,iBLK)>nNodeALL &
+             .or. NodeNumberGlobal_NB(i,j,k,iBLK)<1)then
+           ! Error in numbering, report values and stop.
+           write(*,*)'ERROR: Global node numbering problem.', &
+                ' PE=',iProc,' BLK=',iBLK,' ijk=',i,j,k
+           write(*,*)'  NodeNumberGlobal_NB=',&
+                NodeNumberGlobal_NB(i,j,k,iBLK)
+           write(*,*)'  NodeOffset           =',&
+                NodeOffset(NodeNumberGlobal_NB(i,j,k,iBLK))
+           write(*,*)'  nBlockALL=',nBlockALL,&
+                ' NodesPerBlock=',NodesPerBlock,&
+                ' unreduced total=',nBlockALL*NodesPerBlock,&
+                ' nNodeALL=',nNodeALL
+           call stop_mpi('message_pass_nodes: error in numbering')
+        end if
+     end do; end do; end do
+  end do TREE3
+
+  ! Deallocate memory when done with it
+  deallocate(NodeOffset, NodeOffsetMax, nOffset_P)
+
+  ! Write information to the screen
+  if(iProc==0)then
+     call write_prefix; write(iUnitOUt,*) &
+          ' nBlockALL=',nBlockALL,' NodesPerBlock=',NodesPerBlock, &
+          ' unreduced total=',nBlockALL*NodesPerBlock,' nNodeALL=',nNodeALL
+  end if
+
+end subroutine assign_node_numbers
+!==========================================================================
+subroutine set_block_hanging_node(nVar,Stat_VNB)
+  !
+  ! This routine will fix hanging nodes by simple interpolation.
+  !
+  use ModProcMH
+  use ModMain, ONLY : nI,nJ,nK,nBLK
+  use ModMain, ONLY : UnusedBLK
+  use ModParallel, ONLY : BLKneighborLEV
+
+  implicit none
+
+  !Subroutine arguements
+  integer, intent(in) :: nVar
+  real, intent(inout):: Stat_VNB(nVar,nI+1,nJ+1,nK+1,nBLK)
+  !Local variables
+  integer :: i,j,k, iBLK,iPE
+  integer :: i1,i2, j1,j2, k1,k2, iOffset,jOffset,kOffset
+  integer :: idir
+  integer, dimension(26,3) :: dLOOP
+
+  !------------------------------------------
+
+  ! face=1-6, edge=7-18, corner=19-26
+  !    1   2   3   4   5   6    7   8   9  10  11  12  13  14  15  16  17  18   19  20  21  22  23  24  25  26
+  !    W   E   N   S   T   B   WN  ES  WS  EN  NT  SB  NB  ST  TW  BE  TE  BW  WNT ESB WNB EST WST ENB WSB ENT
+  data dLOOP / &
+       1, -1,  0,  0,  0,  0,   1, -1,  1, -1,  0,  0,  0,  0,  1, -1, -1,  1,   1, -1,  1, -1,  1, -1,  1, -1, &
+       0,  0,  1, -1,  0,  0,   1, -1, -1,  1,  1, -1,  1, -1,  0,  0,  0,  0,   1, -1,  1, -1, -1,  1, -1,  1, &
+       0,  0,  0,  0,  1, -1,   0,  0,  0,  0,  1, -1, -1,  1,  1, -1,  1, -1,   1, -1, -1,  1,  1, -1, -1,  1 /
+
+  ! Fix hanging nodes
+  iPE=iProc
+  do iBLK=1,nBLK
+     if (UnusedBLK(iBLK)) CYCLE
+
+     ! Just loop over faces and edges, not corners
+     do idir=1,18
+
+        ! If coarser neighbor, fix hanging nodes
+        if(BLKneighborLEV(dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3),iBLK) == 1)then
+
+           select case(dLOOP(idir,1))
+           case( 1)
+              i1=1+nI; i2=1+nI; iOffset=0
+           case(-1)
+              i1=1;    i2=1;    iOffset=0
+           case( 0)
+              i1=2;    i2=nI;   iOffset=1
+           end select
+
+           select case(dLOOP(idir,2))
+           case( 1)
+              j1=1+nJ; j2=1+nJ; jOffset=0
+           case(-1)
+              j1=1;    j2=1;    jOffset=0
+           case( 0)
+              j1=2;    j2=nJ;   jOffset=1
+           end select
+
+           select case(dLOOP(idir,3))
+           case( 1)
+              k1=1+nK; k2=1+nK; kOffset=0
+           case(-1)
+              k1=1;    k2=1;    kOffset=0
+           case( 0)
+              k1=2;    k2=nK;   kOffset=1
+           end select
+
+           ! Correct edge nodes and some interior face nodes
+           do i=i1,i2,2; do j=j1,j2,2; do k=k1,k2,2
+              Stat_VNB(1:nVar,i,j,k,iBLK) = 0.125 * ( &
+                   Stat_VNB(1:nVar,i-iOffset,j-jOffset,k-kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i-iOffset,j-jOffset,k+kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i-iOffset,j+jOffset,k-kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i-iOffset,j+jOffset,k+kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i+iOffset,j-jOffset,k-kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i+iOffset,j-jOffset,k+kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i+iOffset,j+jOffset,k-kOffset,iBLK) + &
+                   Stat_VNB(1:nVar,i+iOffset,j+jOffset,k+kOffset,iBLK) )
+           end do; end do; end do
+
+           ! Add correction of additional interior face nodes
+           if(idir<=6)then
+              if(iOffset==1)then
+                 do i=i1-1,i2+1,2; do j=j1,j2,2; do k=k1,k2,2
+                    Stat_VNB(1:nVar,i,j,k,iBLK) = 0.25 * ( &
+                         Stat_VNB(1:nVar,i,j-jOffset,k-kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i,j-jOffset,k+kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i,j+jOffset,k-kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i,j+jOffset,k+kOffset,iBLK) )
+                 end do; end do; end do
+              end if
+              if(jOffset==1)then
+                 do i=i1,i2,2; do j=j1-1,j2+1,2; do k=k1,k2,2
+                    Stat_VNB(1:nVar,i,j,k,iBLK) = 0.25 * ( &
+                         Stat_VNB(1:nVar,i-iOffset,j,k-kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i-iOffset,j,k+kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i+iOffset,j,k-kOffset,iBLK) + &
+                         Stat_VNB(1:nVar,i+iOffset,j,k+kOffset,iBLK) )
+                 end do; end do; end do
+              end if
+              if(kOffset==1)then
+                 do i=i1,i2,2; do j=j1,j2,2; do k=k1-1,k2+1,2
+                    Stat_VNB(1:nVar,i,j,k,iBLK) = 0.25 * ( &
+                         Stat_VNB(1:nVar,i-iOffset,j-jOffset,k,iBLK) + &
+                         Stat_VNB(1:nVar,i-iOffset,j+jOffset,k,iBLK) + &
+                         Stat_VNB(1:nVar,i+iOffset,j-jOffset,k,iBLK) + &
+                         Stat_VNB(1:nVar,i+iOffset,j+jOffset,k,iBLK) )
+                 end do; end do; end do
+              end if
+           end if
+
+        end if
+     end do
+  end do
+
+end subroutine set_block_hanging_node
+
