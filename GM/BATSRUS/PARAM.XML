@@ -1225,28 +1225,14 @@ Default is -1.0, which means no smoothing.
 !!!!!!!!!!!!!!!!!!!!!!!! GRID GEOMETRY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-<command name="BATL" if="$_IsFirstSession">
-	<parameter name="UseBatl" type="logical" default="F" />
-
-#BATL
-T			UseBatl
-
-Use the Block Adaptive Tree Library (BATL) instead of the original 
-BATSRUS library. This library currently does not support all features yet, 
-so it can only be used in a limited set of applications. For those applications
-it offers several advantages, such as 1D and 2D AMR, and much more efficient
-dynamic grid adaptation, and correct AMR in R-Z geometry.
-</command>
-
 <command name="BATLTEST" if="$_IsFirstSession">
         <parameter name="UseBatlTest" type="logical" default="F" />
 
 #BATLTEST
 T                       UseBatlTest
 
-For testing purposes, switch to a compatibility mode, so that BATL 
-gives the same results as the original BATSRUS. This setting is only
-useful for testing, otherwise it should not be used.
+For testing purposes, switch to BATL geometrical quanitites.
+This setting is only used for development, otherwise it should not be used.
 </command>
 
 <command name="GRID" required="$_IsFirstSession" if="$_IsFirstSession">
@@ -3652,22 +3638,6 @@ for refinement.  Again, stretching, rotation and centering cannot be applied
 to the 'user' area.
 </command>
 
-<command name="MESSAGEPASSACROSSPOLE">
-#MESSAGEPASSACROSSPOLE
-
-This command enables message passing across the poles, which not only affects
-running the code, but also enables accurate tecplot plots as well.
-
-This option is equivalent to setting
-     #AMRLEVELS
-     0
-     999
-     T
-
-Note: if #AMRLEVELS or #AMRRESOLUTION are used after this command, be sure to
-set DoFixBodyLevel to T or it will override this option.
-</command>
-
 <command name="AMRLEVELS">
 	<parameter name="MinBlockLevel" type="integer" min="-1" default="0" />
 	<parameter name="MaxBlockLevel" type="integer" min="-1" default="99" />
@@ -3833,9 +3803,9 @@ Default for DnRefine is -1, i.e. no run time refinement.
 			<option name="User defined" value="user" />
 		</parameter>
 		<parameter name="CoarsenLimit" type="real" min="0" max="1"
-						default="0.5" if="$UseBatl"/>
+							   default="0.5"/>
 		<parameter name="RefineLimit" type="real" min="0" max="1"
-						default="0.5" if="$UseBatl"/>
+							  default="0.5""/>
 		<if expr="$TypeRefine =~ /transient/">
 			<parameter name="TypeTransient" type="string"
 			case="lower" input="select">
@@ -3863,11 +3833,11 @@ Default for DnRefine is -1, i.e. no run time refinement.
 #AMRCRITERIA
 3			nRefineCrit (1 to3)
 gradP			TypeRefine
-0.2			CoarsenLimit  ! Only if UseBatl is true
-0.8			RefineLimit   ! Only if UseBatl is true
+0.2			CoarsenLimit
+0.8			RefineLimit 
 user			TypeRefine
-0.5			CoarsenLimit  ! Only if UseBatl is true
-0.5			RefineLimit   ! Only if UseBatl is true
+0.5			CoarsenLimit
+0.5			RefineLimit 
 Transient		TypeRefine
 Rho_dot			TypeTransient ! Only if 'Transient' or 'transient'
 T			UseSunEarth   ! Only if 'Transient'
@@ -3889,8 +3859,7 @@ Coarsening is done if ALL the criteria allow it and the block
 can be coarsened (a block cannot be coarsened if the block level
 is already at the minimum level, or too many blocks would be coarsened). 
 
-When the BATL library is used (see the #BATL command) then the 
-CoarsenLimit and RefineLimit parameters set the coarsening and 
+The CoarsenLimit and RefineLimit parameters set the coarsening and 
 refinement thresholds for the NORMALIZED (divided by the largest value) 
 criteria. When the BATL library is not used the criteria are sorted by
 their value and a certain per cent of the blocks with the largest/lowest
@@ -4579,77 +4548,21 @@ The default values are CollisionCoefDim=-1 and TauCutOffDim=-1, ie.
 neither collision, nor friction are applied.
 </command>
 
-<command name="PROLONGATION">
-	<parameter name="nOrderProlong" type="integer" min="1" max="2" 
-								default="1" />
-	<parameter name="TypeProlong" type="string" input="select"
-						if="$nOrderProlong==2">
-		<option name="left-right" value="lr" default="T"	/>
-		<option name="central"					/>
-		<option name="minmod"					/>
-		<option name="left-right extrapolate"	value="lr2"	/>
-		<option name="central    extrapolate"	value="central2"/>
-		<option name="minmod     extrapolate"	value="minmod2" />
-	</parameter>
-#PROLONGATION
-2			nOrderProlong (1 or 2 for ghost cells)
-lr			TypeProlong  ! Only for nOrderProlong=2
-
-Default is prolong_order=1. \\
-Possible values for prolong_type:\\
-
-\noindent
-1. in message_pass_dir (used if limiter_type is not 'LSG')
-\begin{verbatim}
-   'lr'          - interpolate only with left and right slopes 
-   'central'	   - interpolate only with central difference slope
-   'minmod' 	   - interpolate only with minmod limited slope
-   'lr2'	   -  like 'lr' but extrapolate when necessary
-   'central2'	   - like 'central' but extrapolate when necessary
-   'minmod2'	   - like 'minmod' but extrapolate when necessary
-   'lr3'         - only experimental
-\end{verbatim}
-
-\noindent
-2. in messagepass_all (used if limiter_type is 'LSG')
-\begin{verbatim}
-   'lr','lr2'		    - left and right slopes (all interpolation)
-   'central','central2'   - central differences (all interpolation)
-   'minmod','minmod2'	    - to be implemented
-\end{verbatim}
-</command>
-
 <command name="MESSAGEPASS" alias="OPTIMIZE">
 	<parameter name="TypeMessagePass" type="string" input="select">
-		<option value="allopt" name="allopt: m_p_cell FACES ONLY"
+		<option value="opt"  name="opt: FACES ONLY"
 								default="T"/>
-		<option value="all"  name="all:  m_p_cell"	             />
-		<option value="opt"  name="opt:  m_p_dir FACES ONLY"	     />
-		<option value="dir"  name="dir:  m_p_dir group by directions"/>
-		<option value="face" name="face: m_p_dir group by faces"     />
-		<option value="min"  name="min:  m_p_dir group by kind/face" />
+		<option value="all"  name="all: ALL GHOST CELLS"     />
 	</parameter>
 #MESSAGEPASS
-allopt			TypeMessagePass
+opt			TypeMessagePass
 
 Default value is shown above.\\
 Possible values for optimize_message_pass:
 \begin{verbatim}
-'dir'		- message_pass_dir: group messages direction by direction
-'face'	- message_pass_dir: group messages face by face
-'min'		- message_pass_dir: send equal, restricted and prolonged 
-				    messages face by face
-
-'opt'		- message_pass_dir: do not send corners, send one layer for
-				    first order, send direction by direction
-
-'all'		- message_pass_cell: corners, edges and faces in single message
-
-'allopt'      - message_pass_cell:  faces only in a single message
+'all'	   - message_pass_cell: corners, edges and faces
+'opt'      - message_pass_cell:  faces only 
 \end{verbatim}
-Constrained transport requires corners, default is 'all'!\\ <!--^CFG IF CONSTRAINB-->
-Diffusive control requires corners, default is 'all'!\\<!--^CFG IF DIVBDIFFUSE-->
-Projection uses message_pass_dir for efficiency!\\<!--^CFG IF PROJECTION-->
 </command>
 
 <command name="RESOLUTIONCHANGE">
