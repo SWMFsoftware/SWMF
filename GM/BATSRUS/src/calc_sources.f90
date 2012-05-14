@@ -22,7 +22,8 @@ subroutine calc_sources
   use ModCovariant,     ONLY: UseCovariant 
   use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
   use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
-       CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC
+       CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
+       QeByQtotal
   use ModRadiativeCooling,ONLY: RadCooling_C,UseRadCooling,&
                               get_radiative_cooling, add_chromosphere_heating
   use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -55,6 +56,7 @@ subroutine calc_sources
   integer:: iBlock
 
   logical :: DoTest, DoTestMe
+
   character(len=*), parameter :: NameSub = 'calc_sources'
   !---------------------------------------------------------------------------
   iBlock = GlobalBlk
@@ -207,12 +209,20 @@ subroutine calc_sources
                 - sum(WaveDissipation_VC(:,i,j,k))
         end do; end do; end do
      end if
-
+     
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + CoronalHeating_C(i,j,k)*gm1
+        if(UseElectronPressure)then
+           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+                + CoronalHeating_C(i,j,k)*gm1*(1.0-QeByQtotal)
+           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+                + CoronalHeating_C(i,j,k)*gm1*QeByQtotal
+        else
+           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + CoronalHeating_C(i,j,k)*gm1
+        end if
         Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
              + CoronalHeating_C(i,j,k)
      end do; end do; end do
+ 
   end if
 
   if(UseRadCooling)then

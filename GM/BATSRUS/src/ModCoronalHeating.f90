@@ -873,6 +873,9 @@ module ModCoronalHeating
   real :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real :: LperpTimesSqrtB
   real :: Crefl = 0.04
+  logical :: UseCPRegion = .true. ! Limit region of counter-propating waves
+  real :: rCP = 2.0
+  real :: rCPefolding = 2.5
 
   ! long scale height heating (Ch = Coronal Hole)
   logical :: DoChHeat = .false.
@@ -882,6 +885,9 @@ module ModCoronalHeating
   !Arrays for the calculated heat function and dissipated wave energy
   real :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
+
+  ! Electron heating is a fraction of the total coronal heating
+  real :: QeByQtotal = 0.4
 
   logical,private:: DoInit = .true. 
 contains
@@ -919,6 +925,11 @@ contains
           UseAlfvenWaveDissipation = .true.
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('Crefl', Crefl)
+          call read_var('UseCPRegion', UseCPRegion)
+          if(UseCPRegion) then
+             call read_var('rCP', rCP)
+             call read_var('rCPefolding', rCPefolding) 
+          end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
@@ -936,6 +947,8 @@ contains
           call read_var('HeatChCgs', HeatChCgs)
           call read_var('DecayLengthCh', DecayLengthCh)
        end if
+    case("#ELECTRONHEATING")
+       call read_var('QeByQtotal', QeByQtotal)
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
             // NameCommand)
@@ -1251,12 +1264,15 @@ contains
     use ModAdvance, ONLY: State_VGB, B0_DGB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
+    use ModGeometry,   ONLY: r_BLK
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: WaveDissipation_V(WaveFirst_:WaveLast_),CoronalHeating
 
     real :: EwavePlus, EwaveMinus, FullB_D(3), FullB
     real :: DissipationRatePlus, DissipationRateMinus
+    real :: FactorCP = 1.0
+    real :: r
     !--------------------------------------------------------------------------
 
     if(UseB0)then
@@ -1269,12 +1285,22 @@ contains
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
+    ! Limit counter-propagating Alfven wave region
+    if(UseCPRegion) then
+        r = r_BLK(i,j,k,iBlock)
+        if(r <= rCP) then
+            FactorCP = 1.0
+        else
+            FactorCP = exp(-((r-rCP)/(rCPefolding-rCP))**2)
+        endif
+    endif
+
     DissipationRatePlus = (Crefl*sqrt(EwavePlus) &
-         + sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
+         + FactorCP*sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
          *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
     DissipationRateMinus = (Crefl*sqrt(EwaveMinus) &
-         + sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
+         + FactorCP*sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
          *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
     WaveDissipation_V(WaveFirst_) = DissipationRatePlus &
