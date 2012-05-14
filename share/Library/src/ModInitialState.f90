@@ -48,8 +48,7 @@ contains
 
   !===========================================================================
 
-  subroutine init_initial_state(NameVarState, &
-       iVarMaterial1In, nMaterialIn)
+  subroutine init_initial_state(NameVarState, iVarMaterial1In, nMaterialIn)
 
     use ModUtilities, ONLY: split_string, lower_case
 
@@ -124,8 +123,8 @@ contains
 
   subroutine read_initial_state_param(NameCommand)
 
-    use ModReadParam, ONLY: read_var, read_line
-    use ModUtilities, ONLY: lower_case, split_string
+    use ModReadParam, ONLY: read_var
+    use ModUtilities, ONLY: split_string
 
     character(len=*), intent(in):: NameCommand
 
@@ -147,9 +146,8 @@ contains
        allocate(NameStateVar_I(nVar))
 
        ! Names of non-zero state variables
-       if(.not. read_line(String)) call CON_stop(NameSub// &
-            ': could not read state variable names')
-       call lower_case(String)
+       call read_var("StringStateVar", String, &
+            IsLowerCase=.true., DoReadWholeLine=.true.)
 
        ! Remove parameter name "string...." if present.
        i = index(String, 'string')
@@ -177,9 +175,8 @@ contains
        allocate(MaterialState_VI(nVar,nMaterialState))
        do i = 1, nMaterialState
           MaterialState_VI(:,i) = 0.0
-          if(.not.read_line(String)) call CON_stop(NameSub// &
-               ': could not read material state')
-          call lower_case(String)
+          call read_var("Name State", String, &
+               IsLowerCase=.true., DoReadWholeLine=.true.)
           read(String,*,IOSTAT=iError) &
                NameMaterialState_I(i), MaterialState_VI(iVar_I,i)
           if(iError /= 0)call CON_stop(NameSub// &
@@ -198,9 +195,8 @@ contains
             iStateSegment_SI(2,nSegment))
 
        do i = 1, nSegment
-          if(.not. read_line(String)) call CON_stop(NameSub// &
-               ': could not read segment description')
-          call lower_case(String)
+          call read_var("State1 State2 x1 y1 x2 y2", String, &
+               IsLowerCase=.true., DoReadWholeLine=.true.)
           read(String,*,IOSTAT=iError) &
                NameMaterial1, NameMaterial2, Start_D, End_D
           if(iError /= 0)call CON_stop(NameSub// &
@@ -383,7 +379,8 @@ contains
   subroutine test_initial_state
 
     use ModPlotFile, ONLY: save_plot_file
-    use ModReadParam, ONLY: read_file, read_init, read_line, read_command
+    use ModReadParam, ONLY: read_file, read_init, read_line, read_command, &
+         read_echo_set
     use ModMpi
 
     integer:: iProc, iError
@@ -402,6 +399,8 @@ contains
 
     character(len=*), parameter:: NameSub = 'test_initial_state'
     !----------------------------------------------------------------------
+    call MPI_COMM_RANK(MPI_COMM_WORLD, iProc, iError)
+
     call init_initial_state(NameVar, iMaterial1, nMaterialTest)
 
     ! Now nVar is set based on the list of variables
@@ -410,6 +409,7 @@ contains
     ! Read in the parameters describing the material interfaces
     call read_file('test_initial_state.in')
     call read_init
+    if(iProc==0)call read_echo_set(.true.)
     do
        if(.not.read_line()) EXIT
        if(.not.read_command(NameCommand)) CYCLE
@@ -440,7 +440,6 @@ contains
 
     end do; end do
 
-    call MPI_COMM_RANK(MPI_COMM_WORLD, iProc, iError)
     if(iProc==0) call save_plot_file('test_initial_state.out', &
          NameVarIn = "x y "//NameVar//" level nSegment", &
          ParamIn_I = (/ nSegment+0.0 /), &
