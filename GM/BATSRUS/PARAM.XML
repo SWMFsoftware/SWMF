@@ -3641,11 +3641,10 @@ to the 'user' area.
 <command name="AMRLEVELS">
 	<parameter name="MinBlockLevel" type="integer" min="-1" default="0" />
 	<parameter name="MaxBlockLevel" type="integer" min="-1" default="99" />
-	<parameter name="DoFixBodyLevel" type="logical" default="F" />
+
 #AMRLEVELS
 0			MinBlockLevel
 99			MaxBlockLevel
-F			DoFixBodyLevel
 
 Set the minimum/maximum levels that can be affected by AMR.  The usage is as
 follows:
@@ -3661,7 +3660,6 @@ MaxBlockLevel .ge.0 Any cell at a level greater than or equal to
 MaxBlockLevel .lt.0 The current grid is ``frozen'' for refinement such that
                       blocks are not allowed to be refined to a size
                       smaller than their current one.
-DoFixBodyLevel = T  Blocks touching the body cannot be coarsened or refined.
 \end{verbatim}
 This command has no effect when DoAutoRefine is .false. in the #AMR command.
 
@@ -3673,11 +3671,10 @@ for AMR.
 <command name="AMRRESOLUTION">
 	<parameter name="DxCellMin" type="real" min="-1" default="0"     />
 	<parameter name="DxCellMax" type="real" min="-1" default="99999" />
-	<parameter name="DoFixBodyLevel"  type="logical" default="F" />
+
 #AMRRESOLUTION
 0.			DxCellMin
 99999.			DxCellMax
-F			DoFixBodyLevel
 
 Serves the same function as AMRLEVELS. The DxCellMin and DxCellMmax
 parameters are converted into MinBlockLevel and MaxBlockLevel 
