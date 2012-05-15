@@ -2,7 +2,6 @@
 module MH_domain_decomposition
 
   use CON_grid_storage, ProcToolkit_ => Pe_
-  use ModMain, ONLY: UseBatl
 
   implicit none
 
@@ -39,8 +38,8 @@ module MH_domain_decomposition
        0,1,1, &
        1,1,1 /), (/3,8/))
 
-  private:: show_domain_decomp, get_batl_tree, pack_octree, &
-       pack_soln_block, MH_get_roots_dd, MH_get_roots_id
+  private:: show_domain_decomp, get_batl_tree, &
+       MH_get_roots_dd, MH_get_roots_id
 
 contains
 
@@ -157,160 +156,44 @@ contains
     ! call show_domain_decomp(DomainDecomposition)
 
   end subroutine get_batl_tree
-  !===========================================================================
-  subroutine pack_octree(DomainDecomposition)
-
-    use ModOctree,ONLY: octree_roots, adaptive_block_ptr
-    use ModParallel,ONLY: proc_dims 
-
-    type(DomainDecompositionType),intent(inout)::DomainDecomposition
-
-    logical::DoCountOnly
-    integer :: i, j, k, l,iRoot
-    type (adaptive_block_ptr) :: Octree
-    !-----------------------------------------------------------------------
-    DoCountOnly=.true. !To enter the loop
-    !Check allocation 
-    do while (DoCountOnly)
-       call check_octree_grid_allocation(DomainDecomposition)
-       DoCountOnly=.false.
-       l=0;iRoot=0
-       DomainDecomposition%nTreeNodes=0
-       do k = 1, proc_dims(3)
-          do j = 1, proc_dims(2)
-             do i = 1, proc_dims(1)
-                Octree % ptr => octree_roots(i, j, k) % ptr
-                iRoot=iRoot+1
-                call pack_soln_block&
-                     (octree,l,iRoot,0,DoCountOnly,DomainDecomposition)
-             end do
-          end do
-       end do
-    end do
-
-    ! call show_domain_decomp(DomainDecomposition)
-
-  end subroutine pack_octree
-  !============================================================================
-  recursive subroutine pack_soln_block( &
-       octree,l,lParent,iChildNumber,DoCountOnly,DomainDecomposition)
-
-    use ModOctree, ONLY:adaptive_block_ptr, iChildOrder_II
-
-    type (adaptive_block_ptr),intent(inout) :: octree
-    integer,intent(inout) :: l
-    integer,intent(in) :: lParent,iChildNumber
-    logical,intent(inout) :: DoCountOnly
-    type(DomainDecompositionType), intent(inout):: DomainDecomposition
-
-    logical:: IsUsedBlock
-    integer:: lOctree, iCube
-
-    type (adaptive_block_ptr) :: child
-    !---------------------------------------------------------------
-
-    if (associated(octree % ptr)) then
-       l=l+1
-       lOctree=l
-       DomainDecomposition%nTreeNodes=l
-       DoCountOnly=DoCountOnly.or.(lOctree>DomainDecomposition%nAllocatedNodes)
-       if(.not.DoCountOnly)then
-          DomainDecomposition%iDecomposition_II(Parent_,lOctree)=lParent
-          DomainDecomposition%iDecomposition_II(MyNumberAsAChild_,lOctree) &
-               =iChildNumber
-       end if
-       IsUsedBlock = octree % ptr % used
-       if (.not.IsUsedBlock) then
-          do iCube = 1, 8
-             if(.not.DoCountOnly)DomainDecomposition%iDecomposition_II(&
-                  iChildOrder_II(iCube,iChildNumber), lOctree)=l+1
-             child % ptr => &
-                  octree % ptr % child(iChildOrder_II(iCube,iChildNumber))%ptr
-             call pack_soln_block(child,l,lOctree,&
-                  iChildOrder_II(iCube,iChildNumber),DoCountOnly,&
-                  DomainDecomposition)
-          end do
-       else
-          if(.not.DoCountOnly)then
-             DomainDecomposition% iDecomposition_II(FirstChild_,lOctree)=None_
-             DomainDecomposition%iDecomposition_II(GlobalBlock_,lOctree) = &
-                  octree % ptr % number
-             DomainDecomposition%iDecomposition_II(ProcToolkit_,lOctree) = &
-                  octree % ptr % PE
-             DomainDecomposition%iDecomposition_II(PELast_,lOctree)=&
-                  octree % ptr % PE
-             DomainDecomposition%iDecomposition_II(BLK_,lOctree) = &
-                  octree % ptr % BLK
-             DomainDecomposition%iDecomposition_II(LEV_,lOctree) = &
-                  octree % ptr % LEV
-             DomainDecomposition%iDecomposition_II(LEVmin_,lOctree) = &
-                  octree % ptr % LEVmin
-             DomainDecomposition%iDecomposition_II(LEVmax_,lOctree) = &
-                  octree % ptr % LEVmax 
-          end if
-       end if
-    end if
-  end subroutine pack_soln_block
   !=====================================================================!
   subroutine MH_get_roots_dd(DomainDecomposition)                         
 
-    use ModSize,ONLY:nDim,nIJK_D
-    use ModParallel,ONLY:periodic3d,proc_dims
-    use ModGeometry,ONLY:XyzMin_D,XyzMax_D
-    use ModCube, ONLY: iShiftChild_DI
+    use ModSize,     ONLY: nDim, nIJK_D
+    use ModParallel, ONLY: periodic3d, proc_dims
+    use ModGeometry, ONLY: XyzMin_D, XyzMax_D
 
     type(DomainDecompositionType),intent(inout)::DomainDecomposition  
     !--------------------------------------------------------------------------
 
-    if(UseBatl)then
-       call get_root_decomposition_dd(&
-            DomainDecomposition,&!Decomposition to be constructed
-            proc_dims  ,&!As in DomainDecompositionType
-            XyzMin_D,&   !As in DomainDecompositionType
-            XyzMax_D,&   !As in DomainDecompositionType
-            nIJK_D,&     !As in DomainDecompositionType
-            IsPeriodic_D=periodic3d,&
-            iShift_DI=iShiftMorton_DI)
-    else
-       call get_root_decomposition_dd(&
-            DomainDecomposition,&!Decomposition to be constructed
-            proc_dims  ,&!As in DomainDecompositionType
-            XyzMin_D,&   !As in DomainDecompositionType
-            XyzMax_D,&   !As in DomainDecompositionType
-            nIJK_D,&     !As in DomainDecompositionType
-            IsPeriodic_D=periodic3d,& 
-            iShift_DI=iShiftChild_DI)       !As in DomainDecompositionType
-    end if
+    call get_root_decomposition_dd(&
+         DomainDecomposition,&!Decomposition to be constructed
+         proc_dims  ,&!As in DomainDecompositionType
+         XyzMin_D,&   !As in DomainDecompositionType
+         XyzMax_D,&   !As in DomainDecompositionType
+         nIJK_D,&     !As in DomainDecompositionType
+         IsPeriodic_D=periodic3d,&
+         iShift_DI=iShiftMorton_DI)
+
   end subroutine MH_get_roots_dd
   !=====================================================================!
   subroutine MH_get_roots_id(GridID_)                         
 
-    use ModSize,ONLY:nDim,nIJK_D
-    use ModParallel,ONLY:periodic3d,proc_dims
-    use ModGeometry,ONLY:XyzMin_D,XyzMax_D
-    use ModCube, ONLY: iShiftChild_DI
+    use ModSize,     ONLY: nDim, nIJK_D
+    use ModParallel, ONLY: periodic3d,proc_dims
+    use ModGeometry, ONLY: XyzMin_D, XyzMax_D
 
     integer, intent(in):: GridID_  
     !-------------------------------------------------------------------------
-    if(UseBatl)then
-       call get_root_decomposition_id(&
-            GridID_,&!Decomposition to be constructed
-            proc_dims  ,&!As in DomainDecompositionType
-            XyzMin_D,&   !As in DomainDecompositionType
-            XyzMax_D,&   !As in DomainDecompositionType
-            nIJK_D,&     !As in DomainDecompositionType
-            IsPeriodic_D=periodic3d,&
-            iShift_DI=iShiftMorton_DI)
-    else
-       call get_root_decomposition_id(&
-            GridID_,&!Decomposition to be constructed
-            proc_dims  ,&!As in DomainDecompositionType
-            XyzMin_D,&   !As in DomainDecompositionType
-            XyzMax_D,&   !As in DomainDecompositionType
-            nIJK_D,&     !As in DomainDecompositionType
-            IsPeriodic_D=periodic3d,& 
-            iShift_DI=iShiftChild_DI)       !As in DomainDecompositionType
-    end if
+    call get_root_decomposition_id(&
+         GridID_,   & !Decomposition to be constructed
+         proc_dims, & !As in DomainDecompositionType
+         XyzMin_D,  & !As in DomainDecompositionType
+         XyzMax_D,  & !As in DomainDecompositionType
+         nIJK_D,    & !As in DomainDecompositionType
+         IsPeriodic_D=periodic3d,&
+         iShift_DI=iShiftMorton_DI)
+
   end subroutine MH_get_roots_id
 
   !==========================================================================
@@ -324,11 +207,8 @@ contains
          iNewDecomposition==iLastDecomposition&
     .and.DomainDecomposition%iRealization/=0)return
 
-    if(UseBatl)then
-       call get_batl_tree(DomainDecomposition)
-    else
-       call pack_octree(DomainDecomposition)                  
-    end if
+    call get_batl_tree(DomainDecomposition)
+
     DomainDecomposition%iRealization=&
          mod(DomainDecomposition%iRealization+1,1000)   
     iLastDecomposition=iNewDecomposition
