@@ -83,8 +83,8 @@ contains
     !   Feb  22, 2002 angles in 2nd coordinate system are redefined
     !
     !------------------------------------------------------------------------
-    use ModNumConst,       ONLY: cPi,cDegToRad
-    use ModCoordTransform, ONLY: rot_matrix_x,rot_matrix_y,rot_matrix_z
+    use ModNumConst,       ONLY: cPi, cDegToRad
+    use ModCoordTransform, ONLY: rot_matrix_y, rot_matrix_z
     implicit none
     real, dimension(3), intent(in) :: R_GL98_D
     real, dimension(3), intent(out) :: B_GL98_D
@@ -96,19 +96,16 @@ contains
     real :: r,cos_theta,sin_theta,cos_phi,sin_phi
     real :: r_1,cos_theta1,sin_theta1,cos_phi1,sin_phi1,lambda
     real :: r_2,cos_theta2,sin_theta2,cos_phi2,sin_phi2
-    real :: dr2dr1,dth2dr1,cos_thmax,sin_thmax,dsin_thmaxdr
-    real :: Br,Btheta,Bphi
-    real :: Br1,Btheta1,Bphi1 
-    real :: Br2,Btheta2,Bphi2
-    real :: Bx_1,By_1,Bz_1
-    real :: Bx_2,By_2,Bz_2
-    real :: Br_r0,Btheta_r0
-    real :: dBr1dr,dBtheta1dr,dBphi1dr
-    real :: dBr_r0dr,dBtheta_r0dr 
-    real :: dBr2dr1,dBtheta2dr1,dBphi2dr1
-    real :: dBr2dr2,dBth2dr2,dBphi2dr2
-    real :: dBr2dth2,dBth2dth2,dBphi2dth2
-    real :: A2,dA2dr,dA2dth, d2A2dr2,d2A2drdth,d2A2dth2
+    real :: dr2dr1,dth2dr1
+    real :: Br,  Btheta, Bphi
+    real :: Br1, Btheta1, Bphi1 
+    real :: Br2, Btheta2, Bphi2
+    real :: Bx_1, By_1, Bz_1
+    real :: Bx_2, By_2, Bz_2
+    real :: dBr2dr1, dBtheta2dr1,dBphi2dr1
+    real :: dBr2dr2, dBth2dr2, dBphi2dr2
+    real :: dBr2dth2, dBth2dth2, dBphi2dth2
+    real :: A2,dA2dr, dA2dth, d2A2dr2, d2A2drdth, d2A2dth2
     real :: pres_1,dpres_1dr1,F_grav,alpha0,ga0r0,delta 
     real, dimension(3) :: R1_GL98_D,B1_GL98_D
     real, dimension(3,3), save :: RotateGL98_DD

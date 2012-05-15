@@ -83,7 +83,6 @@ contains
     real :: B_D(3), B0_D(3), FullBr, FullBrL, FullBrR
     real :: ShearProfileL, ShearProfileR
     real :: UTheta, UPhi
-    integer :: iComm, iError
 
     logical, save :: DoFirst=.true.
     !--------------------------------------------------------------------------

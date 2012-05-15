@@ -171,7 +171,7 @@ contains
     real, intent(out) :: Rho, U_D(3), B_D(3), p
     integer, intent(in) :: n_step,iteration_number
 
-    real :: Rho1, U1_D(3), B1_D(3), p1
+    real :: Rho1, U1_D(3), B1_D(3)
     !--------------------------------------------------------------------------
 
     ! initialize perturbed state variables

@@ -114,7 +114,6 @@ contains
 
   subroutine get_transformed_TD99fluxrope(RFace_D,BFRope_D,UVorT_D,&
        n_step,Iteration_Number,RhoFRope,Time)
-    use ModCoordTransform, ONLY: rot_matrix_x,rot_matrix_y,rot_matrix_z
 
     real, dimension(3), intent(in) :: RFace_D
     real, dimension(3), intent(out) :: BFRope_D,UVorT_D
