@@ -11,6 +11,7 @@ module MH_domain_decomposition
      module procedure MH_get_roots_id
      module procedure MH_get_roots_dd
   end interface
+
   public:: MH_get_root_decomposition
   public:: MH_update_local_decomposition
 
@@ -43,13 +44,13 @@ module MH_domain_decomposition
 
 contains
 
-  !====================================================================
+  !===========================================================================
   subroutine show_domain_decomp(Dd)
     use ModProcMH, ONLY: iProc
 
     type(DomainDecompositionType),intent(in):: Dd
     integer:: iNode, iChild
-    !-----------------------------------------------------------------
+    !-------------------------------------------------------------------------
     if(iProc /= 0) RETURN
 
     write(*,*)'!!! Starting show_domain_decomp'
@@ -91,7 +92,7 @@ contains
     write(*,*)'!!! Done with show_domain_decomp'
 
   end subroutine show_domain_decomp
-  !===================================================================
+  !===========================================================================
   subroutine get_batl_tree(DomainDecomposition)
 
     ! Avoid name conflict with Parent_ in the SWMF coupling toolkit
@@ -100,7 +101,7 @@ contains
     type(DomainDecompositionType),intent(inout)::DomainDecomposition
 
     integer:: iNode, iNodeParent, iChild
-    !------------------------------------------------------------------
+    !-------------------------------------------------------------------------
 
     ! Allocate arrays for nNode sized tree
     DomainDecomposition%nTreeNodes = nNode
@@ -156,7 +157,7 @@ contains
     ! call show_domain_decomp(DomainDecomposition)
 
   end subroutine get_batl_tree
-  !=====================================================================!
+  !===========================================================================
   subroutine MH_get_roots_dd(DomainDecomposition)                         
 
     use ModSize,     ONLY: nDim, nIJK_D
@@ -164,7 +165,7 @@ contains
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D
 
     type(DomainDecompositionType),intent(inout)::DomainDecomposition  
-    !--------------------------------------------------------------------------
+    !-------------------------------------------------------------------------
 
     call get_root_decomposition_dd(&
          DomainDecomposition,&!Decomposition to be constructed
@@ -176,7 +177,7 @@ contains
          iShift_DI=iShiftMorton_DI)
 
   end subroutine MH_get_roots_dd
-  !=====================================================================!
+  !===========================================================================
   subroutine MH_get_roots_id(GridID_)                         
 
     use ModSize,     ONLY: nDim, nIJK_D
@@ -203,16 +204,16 @@ contains
     type(DomainDecompositionType), intent(inout):: DomainDecomposition
     !-----------------------------------------------------------------------
 
-    if(iNewGrid==iLastGrid.and.&
-         iNewDecomposition==iLastDecomposition&
-    .and.DomainDecomposition%iRealization/=0)return
+    if(iNewGrid==iLastGrid .and. iNewDecomposition == iLastDecomposition &
+         .and. DomainDecomposition%iRealization /= 0) &
+         RETURN
 
     call get_batl_tree(DomainDecomposition)
 
-    DomainDecomposition%iRealization=&
-         mod(DomainDecomposition%iRealization+1,1000)   
-    iLastDecomposition=iNewDecomposition
-    iLastGrid=iNewGrid
+    DomainDecomposition%iRealization = &
+         mod(DomainDecomposition%iRealization+1, 1000)
+    iLastDecomposition = iNewDecomposition
+    iLastGrid          = iNewGrid
     call complete_grid(DomainDecomposition)
 
   end subroutine MH_update_local_decomposition
