@@ -3653,7 +3653,6 @@ contains
 
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_
-    use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax
     use ModPhysics,  ONLY: Io2No_V, UnitRho_, UnitU_
     use ModGeometry, ONLY: x_BLK, dx_BLK, MinDxValue
 
@@ -3670,11 +3669,6 @@ contains
     !------------------------------------------------------------------
 
     ! Location of sound wave edges and the tangential discontinuity
-
-    ! Do not refine blocks far from discontinuity (crit=0.0)
-    ! Do not coarsen blocks near discontinuity    (crit=1.0)
-    RefineCritMin_I = 0.5
-    CoarsenCritMax  = 0.5
 
     IsFound = .true.
 

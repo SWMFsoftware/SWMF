@@ -585,7 +585,6 @@ contains
 
     use ModSize,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, Rho_, p_
-    use ModAMR,        ONLY: RefineCritMin_I, CoarsenCritMax
     use ModGeometry,   ONLY: y_Blk, Dy_BLK, Dx_BLK, y1, y2
     use ModPhysics,    ONLY: cRadiationNo
     use ModVarIndexes, ONLY: Rho_, p_, Erad_
@@ -625,11 +624,6 @@ contains
           EXIT LOOPCELL2
        end if
     end do; end do; end do LOOPCELL2
-
-    ! Do not refine blocks far from discontinuity (crit=0.0)
-    ! Do not coarsen blocks near discontinuity    (crit=1.0)
-    RefineCritMin_I = 0.5
-    CoarsenCritMax  = 0.5
 
     IsFound = .true.
 

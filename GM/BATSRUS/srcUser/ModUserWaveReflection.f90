@@ -192,7 +192,6 @@ contains
     use ModGeometry, ONLY : x_BLK, y_BLK, dx_BLK
     use ModPhysics,  ONLY : ShockSlope
     use ModMain,     ONLY : time_simulation
-    use ModAMR,      ONLY : RefineCritMin_I, CoarsenCritMax
 
     ! Variables required by this user subroutine
     character (len=*),intent(in) :: TypeCriteria
@@ -227,11 +226,6 @@ contains
     else
        UserCriteria = 0.0
     endif
-
-    ! Do not refine blocks far from discontinuity (crit=0.0)
-    ! Do not coarsen blocks near discontinuity    (crit=1.0)
-    RefineCritMin_I = 0.5
-    CoarsenCritMax  = 0.5
 
     IsFound = .true.
 

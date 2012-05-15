@@ -3325,8 +3325,7 @@ contains
     use BATL_lib,    ONLY: iNode_B, iTree_IA, Level_
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_
-    use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax, &
-         RefineLimit_I, CoarsenLimit_I
+    use ModAMR,      ONLY: RefineLimit_I, CoarsenLimit_I
     use ModMain,     ONLY: UseLaserHeating
     use ModPhysics,  ONLY: Io2No_V, UnitRho_, UnitU_
     use ModGeometry, ONLY: x_BLK, dx_BLK, MinDxValue
@@ -3347,9 +3346,6 @@ contains
 
     ! Do not refine blocks far from discontinuity (crit=0.0)
     ! Do not coarsen blocks near discontinuity    (crit=1.0)
-    RefineCritMin_I = 0.5
-    CoarsenCritMax  = 0.5
-
     CoarsenLimit_I = 0.4
     RefineLimit_I = 0.6
 

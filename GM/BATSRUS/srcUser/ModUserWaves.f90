@@ -847,7 +847,6 @@ contains
 
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_
-    use ModAMR,      ONLY: RefineCritMin_I, CoarsenCritMax
 
     ! Variables required by this user subroutine
     integer, intent(in)          :: iBlock
@@ -859,12 +858,6 @@ contains
 
     integer:: i, j, k
     !------------------------------------------------------------------
-    ! These settings make sure that sorted refinement works
-    ! such that all blocks with criteria 1 are refined,
-    ! and all blocks with criteria 0 are coarsened if possible.
-    RefineCritMin_I = 0.5
-    CoarsenCritMax  = 0.5
-
     IsFound = .true.
 
     ! If density exceeds RhoMin, refine
