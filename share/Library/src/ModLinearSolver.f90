@@ -742,7 +742,6 @@ contains
     ! Local variables
     integer :: iComm                           ! MPI communicator
     integer :: MaxIter
-    real :: cTolerance
     real :: rDotR, pDotADotP , rDotR0, rDotRMax, Alpha, Beta
 
     ! These arrays used to be automatic 
@@ -1418,8 +1417,6 @@ contains
     !                                 Omit for block tri/penta-diagonal matrix!
     ! this used to be an automatic array
     real, dimension(:), allocatable :: work
-
-    real:: work1
 
     integer :: j
 

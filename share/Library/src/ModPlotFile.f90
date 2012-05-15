@@ -588,7 +588,6 @@ contains
     character(len=100)   :: StringHeaderOut
     real                 :: TimeOut
     integer              :: nStepOut, nDimOut, nParamOut, nVarOut
-    integer              :: n1Out, n2Out
     integer              :: nOut_D(3)
     real                 :: ParamOut_I(100)
     character(len=100)   :: NameVarOut
@@ -596,9 +595,7 @@ contains
     real                 :: CoordMinOut_D(nDimIn), CoordMaxOut_D(nDimIn)
     real                 :: Coord1Out_I(n1In), Coord2Out_I(n2In)
     real                 :: CoordOut_DII(nDimIn, n1In, n2In)
-    real                 :: CoordOut_DIII(nDimIn, n1In, n2In, 1)
     real                 :: VarOut_VII(nVarIn, n1In, n2In)
-    real                 :: VarOut_VIII(nVarIn, n1In, n2In, 1)
 
     ! Tolerance for errors
     real :: Eps

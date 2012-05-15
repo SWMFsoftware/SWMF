@@ -561,7 +561,6 @@ contains
     logical:: IsInside
 
     real :: Result, GoodResult, Result_V(2), GoodResult_V(2)
-    logical :: DoExtrapolate = .false.
 
     character(len=*), parameter:: NameSub=NameMod//"::test_interpolation"
     !----------------------------------------------------------------------

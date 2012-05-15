@@ -128,8 +128,6 @@ contains
 
     character(len=*), intent(in):: NameCommand
 
-    character(len=100):: StringPoint
-
     character(len=100):: String
     real:: Start_D(2), End_D(2)
     character(len=20):: NameMaterial1, NameMaterial2
@@ -137,7 +135,7 @@ contains
     character(len=20), allocatable:: NameStateVar_I(:)
     integer, allocatable:: iVar_I(:)
 
-    integer:: i, n, iVar, nStateVar, iError
+    integer:: i, iVar, nStateVar, iError
 
     character(len=*), parameter:: NameSub='read_initial_state_param'
     !------------------------------------------------------------------------
@@ -283,7 +281,7 @@ contains
     integer:: iLevel        ! Level index on the side of the point
     integer:: jLevel        ! Level index on the opposite side
     real:: Coord_D(2), Segment_D(2), Point_D(2)
-    real:: Length, Projection, Coeff
+    real:: Length, Projection
     real:: d                ! Distance between segment and point
     real:: dNormal          ! Normal distance square between line and point
     real:: dMin             ! Distance to closest segment

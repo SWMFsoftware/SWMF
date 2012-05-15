@@ -225,12 +225,11 @@ contains
     integer,parameter                          :: nGCLeft=1, nGCRight=1     
     integer,parameter                          :: nCell= 80,nStep=40
     integer                                    :: iCell, iStep
-    real                                       :: FrefPlus, FrefMinus
-    real,dimension(nCell),parameter            ::CFL = 0.9
-    real,dimension(1-nGCLeft : nCell+nGCRight) ::  Fplus_I = 0.0,&
+    real,dimension(nCell),parameter            :: CFL = 0.9
+    real,dimension(1-nGCLeft : nCell+nGCRight) :: Fplus_I = 0.0,&
          Fminus_I=0.0 ! solution vectors
     logical                                    :: IsNegativeEnergy
-    character(len=4)                            :: NameStage
+    ! character(len=4)                         :: NameStage
     character(len=40)                          :: FileNameTec
     ! ------------------------------------------------------
     ! Initial condition - create a uniform spectrum

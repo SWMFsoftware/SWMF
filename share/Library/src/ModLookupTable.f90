@@ -77,7 +77,7 @@ contains
     integer,            optional, intent(in):: nParam
     real,               optional, intent(in):: Param_I(:)
 
-    integer :: iTable, iIndex, nTableName
+    integer :: iTable, iIndex
     type(TableType), pointer:: Ptr
 
     character(len=*), parameter:: NameSub = 'init_lookup_table'
@@ -602,7 +602,7 @@ contains
        Arg1Out, DoExtrapolate)
 
     ! Return the array of values Value_V corresponding to the argument
-    ! Arg2In in iTable, with Arg1 being calculated from the condition, that 
+    ! Arg2In in iTable, with Arg1Out calculated from the condition, that 
     ! Value_V(iVal) equals the given value, ValIn.
     !
     ! Use a bilinear interpolation.
@@ -620,7 +620,7 @@ contains
     real, optional, intent(out) :: Arg1Out        ! optional calculated Arg
     logical, optional, intent(in):: DoExtrapolate ! optional extrapolation
 
-    real :: Arg1, Arg2
+    real :: Arg2
     type(TableType), pointer:: Ptr
 
     real    :: Dx1, Dx2, Dy1, Dy2
