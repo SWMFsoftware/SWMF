@@ -109,7 +109,7 @@ contains
 
     ! Identify regions where only one ion fluid is present.
 
-    use ModSize,     ONLY: nI, nJ, nK, MaxBlock
+    use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, p_
     use ModPhysics,  ONLY: g
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
@@ -187,7 +187,7 @@ contains
     real, dimension(nDim)     :: Current_D, FullB_D, Force_D
     real, dimension(nIonFluid):: ForceX_I, ForceY_I, ForceZ_I, ChargeDens_I
     real :: InvElectronDens
-    real :: vInv, GradXPe, GradYPe, GradZPe
+    real :: vInv
 
     ! Alfven Lorentz factor for Boris correction
     real :: Ga2
@@ -331,13 +331,12 @@ contains
     ! 4. user source terms if required.
 
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
-         IsPointImplPerturbed, IsPointImplMatrixSet, DsDu_VVC
+         IsPointImplPerturbed, DsDu_VVC
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, UseB0,&
                           UseBoris => boris_correction, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC, B0_DGB
-    use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
-    use ModGeometry,ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
-    use ModPhysics, ONLY: ElectronCharge, gm1, inv_gm1, &
+    use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK
+    use ModPhysics, ONLY: ElectronCharge, inv_gm1, &
          InvClight2 => Inv_C2light, Si2No_V, No2Si_V, Io2No_V, &
          UnitTemperature_, UnitT_, UnitU_
          
@@ -347,7 +346,7 @@ contains
     use ModSize,           ONLY: nDim
 
     ! Variables for multi-ion MHD
-    real:: InvElectronDens, pAverage, State_V(nVar)
+    real:: InvElectronDens, State_V(nVar)
     real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D
     real, dimension(3) :: Force_D
     real, dimension(nIonFluid) :: &
@@ -358,7 +357,7 @@ contains
     real :: Ga2
 
     integer :: iBlock, i, j, k, iIon, jIon, iRhoUx, iRhoUz, iP, iEnergy
-    real :: CoefBx, CoefBy, CoefBz, Coef, AverageTemp, TemperatureCoef, Heating
+    real :: AverageTemp, TemperatureCoef, Heating
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
     ! Artificial friction
@@ -655,7 +654,7 @@ contains
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
 
     logical :: IsPointImpl_V(nVar)
-    integer :: iVar, iPointImplVar, nPointImplVar,n
+    integer :: iVar, iPointImplVar, nPointImplVar
     !------------------------------------------------------------------------
 
     IsPointImpl_V = .false.
@@ -697,7 +696,7 @@ contains
     !   - take care of conservation of total density and energy
 
     use ModEnergy, ONLY: calc_energy
-    use ModAdvance, ONLY: State_VGB, Energy_GBI, &
+    use ModAdvance, ONLY: State_VGB, &
          Rho_, p_, RhoUx_, RhoUy_, RhoUz_, UseElectronPressure
     use ModPhysics, ONLY: ElectronTemperatureRatio, LowDensityRatio
 

@@ -34,7 +34,6 @@ subroutine MH_set_parameters(TypeAction)
        split_string, join_string
   use CON_planet,       ONLY: get_planet
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
-  use ModCoordTransform,ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
   use ModReadParam
   use ModMessagePass,   ONLY: DoOneCoarserLayer
   use ModFaceValue,     ONLY: &
@@ -44,7 +43,7 @@ subroutine MH_set_parameters(TypeAction)
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
        NameUserModule, VersionUserModule
-  use ModBoundaryCells, ONLY: SaveBoundaryCells,init_mod_boundary_cells
+  use ModBoundaryCells, ONLY: init_mod_boundary_cells
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
   use ModHallResist,    ONLY: &
@@ -61,10 +60,9 @@ subroutine MH_set_parameters(TypeAction)
        read_resistivity_param, init_mod_resistivity      !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I,ChargeIon_I,nIonFluid, iFluid, &
        DoConserveNeutrals, DoOhNeutralBc, &
-       uBcFactor_I, RhoBcFactor_I, RhoNeutralsISW, RhoNeutralsISW_dim, &
-       PNeutralsISW, PNeutralsISW_dim, UxNeutralsISW, UxNeutralsISW_dim, &
-       UyNeutralsISW, UyNeutralsISW_dim, UzNeutralsISW, UzNeutralsISW_dim, &
-       TNeutralsISW, TNeutralsISW_dim, mProtonMass
+       uBcFactor_I, RhoBcFactor_I, RhoNeutralsISW_dim, &
+       UxNeutralsISW_dim, UyNeutralsISW_dim, UzNeutralsISW_dim, &
+       TNeutralsISW_dim, mProtonMass
 
   use ModMultiIon, ONLY: multi_ion_set_parameters
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
@@ -105,7 +103,7 @@ subroutine MH_set_parameters(TypeAction)
   character (len=*), intent(in) :: TypeAction
 
   ! Local variables
-  integer :: ifile, i,j, iError
+  integer :: iFile, i, j
   logical :: IsUninitialized      = .true.
   real :: local_root_dx
 
@@ -141,15 +139,7 @@ subroutine MH_set_parameters(TypeAction)
   logical:: UseUniformAxis = .true.
 
   ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
-  character(len=lStringLine):: NameArea='all'
-  integer :: nLevelArea=0
-  real    :: AreaResolution=0.0, RadiusArea=0.0
   real    :: InitialResolution = -1.0
-  logical :: DoReadAreaCenter=.false.
-  real    :: XyzStartArea_D(3)=0.0, XyzEndArea_D(3)=0.0
-  real    :: xRotateArea=0., yRotateArea=0., zRotateArea=0.
-  logical :: DoStretchArea = .false.
-  real    :: xStretchArea=1.0, yStretchArea=1.0, zStretchArea=1.0
 
   ! Variables for checking the user module
   character (len=lStringLine) :: NameUserModuleRead='?'
@@ -981,7 +971,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#AMRLEVELS")
         call read_var('MinBlockLevel',min_block_level)
         call read_var('MaxBlockLevel',max_block_level)
-        call read_var('DoFixBodyLevel',fix_body_level)
         if(iSession==1)then
            DoSetLevels=.true.
         else
@@ -991,7 +980,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#AMRRESOLUTION")
         call read_var('DxCellMin',min_cell_dx)
         call read_var('DxCellMax',max_cell_dx)
-        call read_var('DoFixBodyLevel',fix_body_level)
         local_root_dx = (XyzMax_D(x_)-XyzMin_D(x_))/real(proc_dims(1)*nI)
         if    (max_cell_dx < -1.E-6) then
            min_block_level = -1
@@ -1473,10 +1461,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DnOutput', dn_output(magfile_))
         call read_var('DtOutput', dt_output(magfile_)) 
         nFile = max(nFile, magfile_) 
-
-     case('#RESCHANGEBOUNDARY')
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('SaveBoundaryCells',SaveBoundaryCells)
 
      case('#VERTEXBASEDGRID')          
         if(.not.is_first_session())CYCLE READPARAM
@@ -2049,7 +2033,6 @@ contains
     max_block_level = 99
     min_cell_dx =     0.
     max_cell_dx = 99999.
-    fix_body_level = .false.
 
     percentCoarsen = 0.
     percentRefine  = 0.
@@ -2237,7 +2220,6 @@ contains
 
     real    :: BetaProlongOrig = 0.0
     logical :: IsFirstCheck = .true.
-    integer :: iArea
     !---------------------------------------------------------------------
 
     !\
@@ -2256,16 +2238,6 @@ contains
     if(InitialResolution > 0.0) initial_refine_levels = nint( &
          alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (proc_dims(x_) * nI))  &
          / InitialResolution) / alog(2.0) )
-
-    do iArea = 1, nArea
-       AreaResolution = Area_I(iArea) % Resolution
-       if(AreaResolution > 0.0) CYCLE
-       ! Convert back to integer area
-       nLevelArea = nint(abs(AreaResolution))
-       ! Set actual resolution
-       Area_I(iArea) % Resolution = (XyzMax_D(x_)-XyzMin_D(x_)) &
-            / (proc_dims(x_) * nI * 2.0**nLevelArea)
-    end do
 
     if(UseTiming)then
        call timing_version(IsOn,Name,Version)
@@ -2320,22 +2292,13 @@ contains
           allocate(RefineLimit_I(nAmrCriteria+1))
           RefineLimit_I(1:nCritPhys+1) = tmp_I
 
-          ! Most probably not needed
-          tmp_I(1:nCritPhys) = RefineCritMin_I(1:nCritPhys)
-          deallocate(RefineCritMin_I)
-          allocate(RefineCritMin_I(nAmrCriteria))
-          RefineCritMin_I(1:nCritPhys) = tmp_I(1:nCritPhys)
-
           deallocate(tmp_I)
 
           ! contain no data, no copy needed
           if(allocated(AmrCriteria_IB)) deallocate(AmrCriteria_IB)
           allocate(AmrCriteria_IB(nAmrCriteria+1,MaxBlock))
 
-
           !clean unused Arrays
-          if(allocated(refine_criteria_IBP)) deallocate(refine_criteria_IBP)
-          if(allocated(SortIndex_I)) deallocate(SortIndex_I)
           if(allocated(TypeTransient_I)) deallocate(TypeTransient_I)
 
        end if
@@ -2531,17 +2494,6 @@ contains
             'Do not use covariant with divB diffusion')   !^CFG IF DIVBDIFFUSE
     else
        UseVertexBasedGrid = .false.
-    end if
-
-    if(SaveBoundaryCells)then
-       if(.not. index(optimize_message_pass,'all')>0)then
-          if(iProc==0)&
-               write(*,'(a)')NameSub//&
-               'SaveBoundaryCells does not work '&
-               //'with message_pass option='//optimize_message_pass//&
-               ', set SaveBoundaryCells to F'
-          SaveBoundaryCells=.false.
-       end if
     end if
 
     if(UseB0)call allocate_b0_arrays
@@ -2746,9 +2698,8 @@ contains
   !===========================================================================
   subroutine correct_grid_geometry
 
-    use BATL_lib, ONLY: init_batl, CoordMin_D, CoordMax_D
-    use ModBatlInterface, ONLY: set_batsrus_grid
     use ModCovariant, ONLY: yR_I
+    use BATL_lib, ONLY: init_batl
 
     character(len=20):: TypeGeometryBatl
     !-----------------------------------------------------------------------
@@ -2840,14 +2791,6 @@ contains
     ! No resolution change along symmetry axis 
 !!! Seems to fix extra boundary as well, but it does not in the end !!!
     if(is_axial_geometry()) DoFixExtraBoundaryOrPole = .true.
-
-    ! Boundary cells are saved by default for spherical and cylindrical
-    ! geometry (needed if a box is cut out of the sphere/cylinder)
-    ! May be overwritten by the #RESCHANGEBOUNDARY command
-    if(i_line_command("#RESCHANGEBOUNDARY", iSessionIn = 1) < 0) then
-       if(TypeGeometry(1:9) == 'spherical' .or. TypeGeometry == 'cylindrical')&
-            SaveBoundaryCells = .true.
-    end if
 
     ! Set default MaxBoundary if it was not set by #FACEBOUNDARY command
     if(i_line_command("#FACEBOUNDARY", iSessionIn = 1) < 0)then
@@ -3136,22 +3079,6 @@ contains
     end if                          !^CFG END CONSTRAINB
 
   end subroutine set_extra_parameters
-
-  !==========================================================================
-  subroutine read_area_radii
-
-    real :: Radius1, Radius2
-
-    ! Read inner and outer radii for areas shell and ring
-    call read_var("Radius1", Radius1)
-    call read_var("Radius2", Radius2)
-
-    ! Set outer size of the area
-    RadiusArea = max(Radius1, Radius2)
-    ! Normalize inner radius to the outer size
-    Area_I(nArea)%Radius1  = min(Radius1, Radius2) / RadiusArea
-
-  end subroutine read_area_radii
 
 end subroutine MH_set_parameters
 !=======================================================================

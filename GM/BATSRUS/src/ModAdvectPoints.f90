@@ -62,7 +62,7 @@ end subroutine advect_points
 subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 
   use ModMain,    ONLY: nBlock
-  use ModAdvance, ONLY: nVar, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
+  use ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_
   use ModProcMH,  ONLY: nProc, iComm
   use ModMpi
 
@@ -166,7 +166,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   use ModNumConst
   use ModVarIndexes, ONLY : nVar, Bx_, By_, Bz_
   use ModProcMH
-  use ModMain, ONLY : nI, nJ, nK, nIJK_D, nBlock, unusedBLK, BlkTest
+  use ModMain, ONLY : nI, nJ, nK, nIJK_D, unusedBLK
   use ModAdvance, ONLY : State_VGB, StateOld_VCB
   use ModGeometry, ONLY : XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry, ONLY : UseCovariant     
@@ -194,9 +194,6 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   ! Maximum index for state variable and number of state variables
   integer :: iStateMax, nState
 
-  ! Shall we calculate the current
-  logical :: DoCurrent
-
   ! Position in generalized coordinates
   real :: Xyz_D(3)
 
@@ -213,11 +210,13 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   real    :: WeightX,WeightY,WeightZ,WeightXyz
 
   ! Dimension, cell, block index and MPI error code
-  integer :: iDim,i,j,k,iLo,jLo,kLo,iHi,jHi,kHi,iBlock,iError
+  integer :: iDim,i,j,k,iLo,jLo,kLo,iHi,jHi,kHi,iBlock
 
   ! Testing
-  logical :: DoTest,DoTestMe
+  logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
+  call set_oktest('get_point_data', DoTest, DoTestMe)
+
   ! Calculate maximum index and the number of state variables
   iStateMax = min(iVarMax, nVar)
   nState    = iStateMax - iVarMin + 1
@@ -237,12 +236,6 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   ! Loop through all blocks
   BLOCK: do iBlock = iBlockMin, iBlockMax
      if(unusedBLK(iBlock)) CYCLE
-
-!     if(iBlock == BlkTest)then
-!        call set_oktest('get_point_data', DoTest, DoTestMe)
-!     else
-        DoTest = .false.; DoTestMe = .false.
-!     end if
 
      if(DoTestMe)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
 
@@ -419,7 +412,7 @@ subroutine advect_test
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nI, nJ, nK, nBlock, Dt
   use ModAdvance,  ONLY: StateOld_VCB, State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_
-  use ModGeometry, ONLY: x2, x_BLK, y_BLK, z_BLK
+  use ModGeometry, ONLY: x2, x_BLK, z_BLK
   use ModNumConst, ONLY: cTwoPi
   use ModIoUnit,   ONLY: UnitTmp_
   implicit none

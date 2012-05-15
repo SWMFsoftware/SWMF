@@ -56,12 +56,8 @@ module ModBoundaryCells
   implicit none
   SAVE
 
-  logical::SaveBoundaryCells=.false.
-  logical::ResetBody2Cells=.false.
-  integer::MinBoundarySaved=-777,MaxBoundarySaved=-777,nBoundarySaved=0
-  logical,allocatable,dimension(:,:,:,:,:)::IsBoundaryCell_IGB
   ! iBoundary_GB contains the index of the boundary that the cell belongs to.
-  integer , allocatable :: iBoundary_GB(:,:,:,:)
+  integer, allocatable :: iBoundary_GB(:,:,:,:)
 
   ! Cells inside domain have index domain_ that is smaller than smallest 
   ! boundary index (body2_ = -2)
@@ -76,28 +72,13 @@ contains
   !===========================================================================
   subroutine init_mod_boundary_cells
 
-    use ModSize
-    use ModGeometry, ONLY: MaxBoundary
-    use ModMain,     ONLY: UseExtraBoundary, ExtraBC_
-    use ModProcMH
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     !-------------------------------------------------------------------------
 
     if(.not. allocated(iBoundary_GB)) then
        allocate(iBoundary_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        iBoundary_GB = domain_
     end if
-
-    if(UseExtraBoundary)then
-       MinBoundarySaved=ExtraBC_
-    else
-       MinBoundarySaved=ExtraBC_+1
-    end if
-    MaxBoundarySaved=MaxBoundary
-    if(MaxBoundarySaved < MinBoundarySaved)then
-       if(iProc==0)write(*,*)'Only Extra and Outer boundary cells can be saved'
-       SaveBoundaryCells=.false.
-    end if
-    nBoundarySaved = MaxBoundarySaved - MinBoundarySaved + 1
 
   end subroutine init_mod_boundary_cells
 
@@ -107,13 +88,11 @@ end module ModBoundaryCells
 
 subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
 
-  use ModBoundaryCells, ONLY: MinBoundarySaved, MaxBoundarySaved, &
-       IsBoundaryCell_IGB, iBoundary_GB, DomainOp, domain_
+  use ModBoundaryCells, ONLY: iBoundary_GB, DomainOp, domain_
   use ModMain, ONLY : nBlock, UnusedBlk, iNewGrid, iNewDecomposition, nOrder,&
-       nI, nJ, nK, body2_, Top_, &
+       body2_, Top_, &
        BlkTest, iTest, jTest, kTest
-  use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB,&
-       x_BLK, y_BLK, z_BLK
+  use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB
   !use ModProcMH, ONLY: iProc
   use BATL_lib, ONLY: message_pass_cell_scalar
 
@@ -121,7 +100,6 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
 
   logical, intent(in):: UseMonotoneRestrict
 
-  integer:: i,j,k
   integer:: iBlock, iBoundary
   integer:: iGridHere=-1, iDecompositionHere=-1, nOrderHere=-1
 

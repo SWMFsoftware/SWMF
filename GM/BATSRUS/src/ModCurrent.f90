@@ -274,8 +274,7 @@ contains
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock, &
          Test_String
-    use ModPhysics,        ONLY: rCurrents,UnitB_,Si2No_V, UnitJ_,No2Si_V, &
-         No2Io_V
+    use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use ModProcMH,         ONLY: iProc, iComm
     use ModNumConst,       ONLY: cHalfPi, cTwoPi, cPi
@@ -310,7 +309,7 @@ contains
 
     integer :: i, j, iHemisphere, iError
     real    :: Phi, Theta, Xyz_D(3),XyzIn_D(3),B0_D(3)
-    real    :: b_D(3), b, bRcurrents,Fac, Jr_D(3),bUnit_D(3)
+    real    :: b_D(3), bRcurrents,Fac, Jr_D(3),bUnit_D(3)
     real    :: bIn_D(3), bIn
     real    :: GmSmg_DD(3,3)
     real    :: State_V(Bx_-1:nVar+3)

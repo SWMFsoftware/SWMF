@@ -19,7 +19,6 @@ contains
     use ModVarIndexes
     use ModAdvance, ONLY : State_VGB,divB1_GB
     use ModGeometry, ONLY : far_field_BCs_BLK        
-    use ModBoundaryCells,ONLY:SaveBoundaryCells
     use ModPhysics, ONLY : ShockSlope
     use ModFaceValue,ONLY: UseAccurateResChange
     use ModEnergy,   ONLY: calc_energy_ghost, correctP

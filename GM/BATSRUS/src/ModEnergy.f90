@@ -594,12 +594,11 @@ contains
     ! at a reasonable value (this also excludes negative pressure)
 
     use ModProcMH
-    use ModMain, ONLY : nI,nJ,nK,Itest,Jtest,Ktest,BLKtest
-    use ModVarIndexes,ONLY:&
-         rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,nVar
-    use ModAdvance, ONLY : State_VGB, Energy_GBI
-    use ModPhysics, ONLY : gm1, inv_gm1, Pratio_hi, Pratio_lo
-    use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, true_cell
+    use ModMain,       ONLY: nI,nJ,nK,Itest,Jtest,Ktest,BLKtest
+    use ModVarIndexes, ONLY: rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_, P_
+    use ModAdvance,    ONLY: State_VGB, Energy_GBI
+    use ModPhysics,    ONLY: gm1, inv_gm1, Pratio_hi, Pratio_lo
+    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
     implicit none
 
     integer, intent(in) :: iBlock

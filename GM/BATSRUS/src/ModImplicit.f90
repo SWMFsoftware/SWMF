@@ -316,11 +316,8 @@ contains
   !============================================================================
   subroutine init_mod_implicit
 
-    use ModUtilities,  ONLY: check_allocate
     use ModVarIndexes, ONLY: nWave
     use ModLinearSolver, ONLY: Bilu_
-
-    integer :: iError
 
     character(len=*), parameter:: NameSub = 'init_mod_implicit'
     !----------------------------------------------------------------------

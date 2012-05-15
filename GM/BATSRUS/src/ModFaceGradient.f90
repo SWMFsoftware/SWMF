@@ -688,7 +688,6 @@ contains
 
     ! calculate the cell face gradient of Scalar_G
 
-    use ModAdvance,    ONLY: State_VGB
     use ModCovariant,  ONLY: UseCovariant, IsRzGeometry
     use ModGeometry,   ONLY: Dx_Blk, Dy_Blk, Dz_Blk
     use ModMain,       ONLY: x_, y_, z_

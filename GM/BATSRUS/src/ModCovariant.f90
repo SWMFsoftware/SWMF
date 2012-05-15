@@ -237,7 +237,6 @@ contains
   !-------------------------------------------------------------!
   subroutine read_grid_file(NameFile)
     use ModIoUnit, ONLY: io_unit_new
-    use ModIO, ONLY: iUnitOut
 
     character (LEN=*), intent(in) :: NameFile
 

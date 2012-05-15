@@ -704,8 +704,6 @@ contains
   !===========================================================================
   subroutine set_cell_values_x
 
-    use ModMain, ONLY: Test_String
-
     iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
 
     if(UseCovariant)then
@@ -920,7 +918,7 @@ contains
     real :: dB0_D(3)
 
     real :: GradPe_D(3)
-    real :: InvElectronDens, Coef
+    real :: InvElectronDens
     integer :: i, j, k
     real :: NatomicSi, TeSi
     !-----------------------------------------------------------------------
@@ -2131,7 +2129,7 @@ contains
 
     subroutine get_mhd_flux
 
-      use ModPhysics, ONLY: inv_gm1, g, inv_c2LIGHT
+      use ModPhysics, ONLY: inv_gm1, inv_c2LIGHT
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
       use ModWaves
 
@@ -2142,7 +2140,7 @@ contains
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
       integer :: iVar
 
-      real :: InvElectronDens, StateTmp_V(nVar), UxPlus, UyPlus, UzPlus, UnPlus
+      real :: InvElectronDens, UxPlus, UyPlus, UzPlus, UnPlus
       real, dimension(nIonFluid) :: ChargeDens_I, Ux_I, Uy_I, Uz_I, RhoUn_I
       !-----------------------------------------------------------------------
 
@@ -2460,10 +2458,10 @@ contains
 
   subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I)
 
-    use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
+    use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUz, iP
     use ModMain, ONLY: Climit
     use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
-         GammaWave, WaveEnergy, UseAlfvenWaves
+         GammaWave, UseAlfvenWaves
 
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
@@ -2473,7 +2471,6 @@ contains
 
     real :: CmaxDt_I(nFluid)
     real :: UnLeft, UnRight                         !^CFG IF AWFLUX
-    integer :: iVar
     !--------------------------------------------------------------------------
 
     do iFluid = iFluidMin, iFluidMax

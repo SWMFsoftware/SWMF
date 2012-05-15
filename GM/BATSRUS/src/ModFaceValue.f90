@@ -34,7 +34,6 @@ module ModFaceValue
 
   ! Parameters for limiting the variable divided by density 
   logical :: UseScalarToRhoRatioLtd = .false.
-  logical :: NameV
   integer :: nVarLimitRatio
   integer, allocatable :: iVarLimitRatio_I(:)
 
@@ -2188,7 +2187,7 @@ contains
 
     ! For debugging
     use ModProcMH, ONLY: iProc
-    use ModMain, ONLY: VarTest, ProcTest, BlkTest, iTest, jTest, kTest
+    use ModMain, ONLY: VarTest, ProcTest, BlkTest, jTest, kTest
 
     integer, intent(in) :: iBLK
     integer             :: i, j, k

@@ -115,7 +115,6 @@ contains
          cBoltzmann, cTwoPi
     use ModImplicit, ONLY: UseSemiImplicit, TypeSemiImplicit, nVarSemi
     use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
-    use ModVarIndexes, ONLY: nVar
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'init_mod_resistivity'
@@ -176,8 +175,7 @@ contains
 
     use ModConst,   ONLY: cProtonMass, cElectronCharge
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitRho_, UnitTemperature_
-    use ModAdvance, ONLY: State_VGB, Rho_, P_, Bx_, By_, Bz_, &
-         B0_DGB
+    use ModAdvance, ONLY: State_VGB, Rho_, P_, Bx_, Bz_, B0_DGB
     use ModMain, ONLY: UseB0
 
     ! Compute Spitzer-type, classical resistivity 
@@ -327,8 +325,8 @@ contains
     use ModMain,       ONLY: Cfl, x_
     use ModGeometry,   ONLY: true_cell, IsRzGeometry, y_BLK
     use ModCurrent,    ONLY: get_current
-    use ModPhysics,    ONLY: gm1, inv_gm1, IonMassPerCharge
-    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_, Energy_, Bz_
+    use ModPhysics,    ONLY: gm1, IonMassPerCharge
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_, Bz_
     use ModAdvance,    ONLY: time_blk, State_VGB, Source_VC, &
          UseElectronPressure, UseAnisoPressure
 
@@ -415,7 +413,7 @@ contains
     use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk
     use ModMain,         ONLY: MaxImplBlk
     use ModNumConst,     ONLY: i_DD
-    use ModVarIndexes,   ONLY: nVar, Bx_, Bz_
+    use ModVarIndexes,   ONLY: Bx_, Bz_
 
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)

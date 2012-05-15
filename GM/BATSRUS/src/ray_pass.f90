@@ -181,7 +181,6 @@ subroutine ray_pass_old
   use ModMain, ONLY : nblockMax,okdebug,unusedBLK,optimize_message_pass
   use BATL_lib, ONLY: iNode_B, iTree_IA, Coord0_
   use ModRaytrace
-  use ModAMR, ONLY : child2subface
   use ModParallel, ONLY : NOBLK,neiLEV,neiBLK,neiPE,BLKneighborCHILD
   use ModMpi
   implicit none

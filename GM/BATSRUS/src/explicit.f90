@@ -161,7 +161,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      if(UseConstrainB .and. iStage==nStage)then    !^CFG IF CONSTRAINB BEGIN
         call timing_start('constrain_B')
         ! Correct for consistency at resolution changes
-        call correct_VxB
+        !call correct_VxB
 
         ! Update face centered and cell centered magnetic fields
         do iBlock = 1, nBlock

@@ -240,10 +240,10 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP,&
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_,&
        State_VGB
-  use ModGeometry, ONLY: True_Blk, true_cell
-  use ModGeometry, ONLY: UseCovariant
+  use ModGeometry,   ONLY: True_Blk, true_cell
+  use ModGeometry,   ONLY: UseCovariant
   use ModPartSteady, ONLY: UsePartSteady
-  use ModAMR, ONLY : availableBLKs, UnusedBlock_BP
+  use ModAMR,        ONLY: UnusedBlock_BP
   use ModParallel
   use ModIO, ONLY: write_prefix, iUnitOut
   use ModMpi

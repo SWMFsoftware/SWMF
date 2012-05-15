@@ -8,7 +8,7 @@ contains
   !===========================================================================
   subroutine set_batsrus_grid
 
-    use BATL_lib, ONLY: nNodeUsed, nBlock, MaxBlock, Unused_B, Unused_BP, &
+    use BATL_lib, ONLY: nNodeUsed, nBlock, Unused_B, Unused_BP, &
          iProc, iComm, iNodeMorton_I, iTree_IA, Block_, Proc_,&
          IsNewDecomposition, IsNewTree
     use ModParallel, ONLY: iBlock_A, iProc_A
@@ -76,7 +76,7 @@ contains
   !===========================================================================
   subroutine set_batsrus_block(iBlock)
 
-    use BATL_lib, ONLY: iProc, nDim, x_, y_, z_, &
+    use BATL_lib, ONLY: nDim, x_, y_, z_, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nINode, nJNode, nKNode, &
          Xyz_DGB, Xyz_DNB, CellVolume_GB, &
@@ -341,8 +341,8 @@ contains
     use ModParallel, ONLY: neiLwest, NOBLK
 
     integer, intent(in) :: iBLK
-    integer::iVar,i,j,k
-
+    integer:: i, j, k
+    !--------------------------------------------------------------------------
     if(body_BLK(iBLK)) then
        do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
           if(true_cell(i,j,k,iBLK))CYCLE
@@ -359,7 +359,7 @@ contains
 
   end subroutine fix_soln_block
 
-  !==============================================================================
+  !============================================================================
 
   subroutine calc_other_soln_vars(iBLK)
 
@@ -367,9 +367,9 @@ contains
     use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK, &
          B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB
     use ModConserveFlux, ONLY: init_cons_flux
-    use ModImplicit, ONLY: UsePartImplicit             !^CFG IF IMPLICIT
 
     integer, intent(in) :: iBLK
+    !-------------------------------------------------------------------------
 
     if(UseB0)then
        B0_DGB(:,:,:,:,iBLK) = 0.0

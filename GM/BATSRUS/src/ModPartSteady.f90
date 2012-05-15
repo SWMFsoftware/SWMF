@@ -9,7 +9,7 @@ module ModPartSteady
 
   use ModProcMH
   use ModVarIndexes, ONLY: nVar
-  use ModSize,       ONLY: MaxBlock, nI, nJ, nK, nIJK
+  use ModSize,       ONLY: MaxBlock, nI, nJ, nK
   use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, UnusedBLK, &
        East_, Top_, time_accurate,  n_step, lVerbose
   use ModAMR,        ONLY: UnusedBlock_BP

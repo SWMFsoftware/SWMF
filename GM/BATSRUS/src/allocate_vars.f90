@@ -1,13 +1,12 @@
 !^CFG COPYRIGHT UM
 subroutine allocate_vars
-  use ModProcMH
-  use ModMain, ONLY : unusedBLK
-  use ModAMR
-  use ModParallel
-  use ModMpi
+  use ModProcMH, ONLY: nProc
+  use ModSize, ONLY: MaxBlock
+  use ModParallel, ONLY: iBlock_A, iProc_A, iBlockRestartALL_A, &
+       nBlockMax_P, MaxBlockDisp_P
   implicit none
 
-  integer :: iPE, iBLK, ierror, jProc
+  integer :: jProc
   integer :: MaxBlockALL
 
   !\

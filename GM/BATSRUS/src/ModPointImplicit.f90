@@ -108,7 +108,7 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModKind,    ONLY: nByteReal
     use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, nStage, time_accurate, &
-         iTest, jTest, kTest, ProcTest, BlkTest, Test_String,VarTest
+         iTest, jTest, kTest, ProcTest, BlkTest, Test_String
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk, &
          DoReplaceDensity
     use ModGeometry,ONLY: True_Blk, True_Cell

@@ -14,7 +14,7 @@ module ModConserveFlux
        RightState_VX, RightState_VY, RightState_VZ, &
        uDotArea_XI, uDotArea_YI, uDotArea_ZI
 
-  use ModGeometry,  ONLY: UseCovariant, Body_Blk, true_cell
+  use ModGeometry,  ONLY: UseCovariant, true_cell
   use ModCovariant, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &

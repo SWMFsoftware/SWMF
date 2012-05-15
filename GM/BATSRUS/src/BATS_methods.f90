@@ -1,20 +1,16 @@
 ! This file contains the top level methods for BATSRUS
 
 subroutine BATS_setup
+
   use ModMpi
   use ModProcMH
-  use ModIoUnit, ONLY: UNITTMP_
   use ModMain
-  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
   use ModCT, ONLY : DoInitConstrainB               !^CFG IF CONSTRAINB
-  use ModImplicit, ONLY : UsePartImplicit,n_prev   !^CFG IF IMPLICIT
   use ModIO
   use ModAMR, ONLY : &
-       DnAmr, initial_refine_levels, nRefineLevelIC, nRefineLevel,&
-       automatic_refinement
+       initial_refine_levels, nRefineLevelIC, nRefineLevel
   use ModAdvance, ONLY : iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModNumConst
-  use ModRestartFile, ONLY : UseRestartInSeries  
 
   implicit none
 
@@ -58,8 +54,8 @@ contains
 
     use ModMain, ONLY: iteration_number
     use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
-         set_amr_geometry, nBlock, Unused_B, regrid_batl
-    use ModBatlInterface, ONLY: set_batsrus_grid,set_batsrus_state
+         set_amr_geometry, nBlock, Unused_B
+    use ModBatlInterface, ONLY: set_batsrus_grid
     use ModAMR, ONLY : AmrCriteria_IB, nAmrCriteria, nCritGeo
     ! Dummy variables, to avoid array size issues with State_VGB in
     ! set_amr_criteria
@@ -68,7 +64,6 @@ contains
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
     character(len=100) :: NameFile
-    logical :: local_refine(nBLK)
 
     integer:: iBlock
     !--------------------------------------------------------------------------
@@ -147,7 +142,6 @@ contains
     use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
     use ModRestartFile, ONLY: read_restart_files
     use ModCovariant,   ONLY: UseVertexBasedGrid,do_fix_geometry_at_reschange 
-    use ModMain,        ONLY: iNewGrid, iNewDecomposition 
     use ModMessagePass, ONLY: exchange_messages
 
     !\
@@ -157,7 +151,7 @@ contains
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = &
          NameSub//'::set_initial_conditions'
-    integer :: iLevel, iError,iBlock
+    integer :: iLevel, iBlock
     !-------------------------------------------------------------------------
     if(.not.restart .and. nRefineLevelIC>0)then
        call timing_start('amr_ics')
@@ -265,7 +259,6 @@ contains
          save_magnetometer_data, open_magnetometer_output_file
     ! Local variables
     character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
-    logical :: delete_file
     integer :: iSat
 
     if (iProc == 0) then
@@ -295,7 +288,7 @@ subroutine BATS_init_session
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
   use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
-  use ModHallResist, ONLY: UseHallResist, init_hall_resist,test_face_current, &
+  use ModHallResist, ONLY: UseHallResist, init_hall_resist, &
        UseBiermannBattery
   use ModImplicit, ONLY: UseSemiImplicit, &                !^CFG IF IMPLICIT
        TypeSemiImplicit, UseFullImplicit                   !^CFG IF IMPLICIT
@@ -336,7 +329,6 @@ subroutine BATS_init_session
        call BATS_init_constrain_b              !^CFG IF CONSTRAINB
 
   if(UseHallResist .or. UseBiermannBattery)call init_hall_resist
-  !call test_face_current
 
   if(UseHeatConduction .or. UseIonHeatConduction) & !^CFG IF  IMPLICIT BEGIN
        call init_heat_conduction
@@ -361,26 +353,24 @@ subroutine BATS_init_session
      call BATS_save_files('NORMAL')
   end if
 
-
 end subroutine BATS_init_session
 
 !============================================================================
 
 subroutine BATS_advance(TimeSimulationLimit)
-  !\
+
   ! Advance solution with one time step
-  !/
+
   use ModKind
   use ModProcMH
   use ModMain
   use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
   use ModAmr, ONLY: DnAmr, DoAmr
   use ModPhysics, ONLY : No2Si_V, UnitT_
-  use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, State_VGB
+  use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
-  use ModImplicit, ONLY: UseImplicit, UseFullImplicit, &   !^CFG IF IMPLICIT
-       UseSemiImplicit                                     !^CFG IF IMPLICIT
+  use ModImplicit, ONLY: UseImplicit, UseSemiImplicit    !^CFG IF IMPLICIT
   use ModIonoVelocity, ONLY: apply_iono_velocity
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
   use ModLaserHeating,    ONLY: add_laser_heating
@@ -394,8 +384,6 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   ! Local variables
   character(len=*), parameter :: NameSub = 'BATS_advance'
-
-  integer      :: iBlock
 
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
@@ -522,17 +510,15 @@ end subroutine BATS_advance
 
 !=============================================================================
 subroutine BATS_amr_refinement
-  !\
+
   ! Adaptive Mesh Refinement (AMR):
   ! Refine and coarsen the solution grid (on the fly) as needed.
-  !/
 
   use ModProcMH
   use ModIO, ONLY: iUnitOut, write_prefix
   use ModMain, ONLY: lVerbose, x_, y_, z_
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
-  use ModCT, ONLY : DoInitConstrainB               !^CFG IF CONSTRAINB
-  use ModImplicit, ONLY : UsePartImplicit,n_prev   !^CFG IF IMPLICIT
+  use ModImplicit, ONLY : n_prev                   !^CFG IF IMPLICIT
   use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
   use ModAMR, ONLY : nRefineLevel, automatic_refinement
   use ModNumConst, ONLY: cTiny
@@ -544,7 +530,6 @@ subroutine BATS_amr_refinement
   character(len=*), parameter :: NameSub = 'BATS_amr_refinement '
   real    :: divbmax_now
   real, external :: maxval_loc_abs_BLK
-  integer :: ifile
   integer :: iLoc_I(5)  ! full location index
   !--------------------------------------------------------------------------
 
@@ -556,7 +541,7 @@ subroutine BATS_amr_refinement
   ! BDF2 scheme should not use previous step after AMR  !^CFG IF IMPLICIT
   n_prev = -100                                         !^CFG IF IMPLICIT
 
-  if(UseConstrainB)call b_face_fine_pass     !^CFG IF CONSTRAINB
+  !if(UseConstrainB)call b_face_fine_pass     !^CFG IF CONSTRAINB
 
   ! Do AMR without full initial message passing
   call amr(.false.,'all')
@@ -592,7 +577,7 @@ subroutine BATS_init_constrain_b
   use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
   use ModCT, ONLY : DoInitConstrainB
   use ModNumConst, ONLY: cTiny
-  use ModAdvance, ONLY : Bx_,By_,Bz_,State_VGB,tmp1_BLK
+  use ModAdvance, ONLY : Bx_, Bz_, State_VGB, tmp1_BLK
   use ModIO, ONLY: write_prefix, iUnitOut
   use BATL_lib, ONLY: message_pass_cell
   implicit none
@@ -669,14 +654,12 @@ end subroutine BATS_init_constrain_b
 subroutine BATS_select_blocks
 
   use ModProcMH
-  use ModMain, ONLY: lVerbose
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
   use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
   implicit none
 
   !LOCAL VARIABLES:
   character(len=*), parameter :: NameSub = 'BATS_select_blocks'
-  integer :: iError
   !--------------------------------------------------------------------------
 
   ! Select and load balance blocks for partially implicit/steady scheme
@@ -813,7 +796,7 @@ contains
     use ModGmGeoindices, ONLY: DoWriteIndices, write_geoindices
     use ModMessagePass, ONLY: exchange_messages
 
-    integer :: iFileLoop, iSat
+    integer :: iSat
 
     ! Backup location for the Time_Simulation variable.
     ! Time_Simulation is used in steady-state runs as a loop parameter
