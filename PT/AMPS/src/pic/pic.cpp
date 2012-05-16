@@ -706,10 +706,12 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
           PIC::DistributionFunctionSample::printDistributionFunction(fname,s);
         }
 
+
         if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) {
           sprintf(fname,"pic.flux.%s.s=%i.out=%ld.dat",ChemSymbol,s,DataOutputFileNumber);
           PIC::ParticleFluxDistributionSample::printMacroscopicParameters(fname,s);
         }
+
 #endif
       }
 
