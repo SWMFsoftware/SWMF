@@ -1270,7 +1270,7 @@ contains
     real, intent(out) :: WaveDissipation_V(WaveFirst_:WaveLast_),CoronalHeating
 
     real :: EwavePlus, EwaveMinus, FullB_D(3), FullB
-    real :: DissipationRatePlus, DissipationRateMinus
+    real :: DissipationRate
     real :: FactorCP = 1.0
     real :: r
     !--------------------------------------------------------------------------
@@ -1295,19 +1295,12 @@ contains
         endif
     endif
 
-    DissipationRatePlus = (Crefl*sqrt(EwavePlus) &
+    DissipationRate = (Crefl*sqrt(EwavePlus+EwaveMinus) &
          + FactorCP*sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
          *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
-    DissipationRateMinus = (Crefl*sqrt(EwaveMinus) &
-         + FactorCP*sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
-         *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
-
-    WaveDissipation_V(WaveFirst_) = DissipationRatePlus &
-         *State_VGB(WaveFirst_,i,j,k,iBlock)
-
-    WaveDissipation_V(WaveLast_) = DissipationRateMinus &
-         *State_VGB(WaveLast_,i,j,k,iBlock)
+    WaveDissipation_V(WaveFirst_:WaveLast_) = DissipationRate &
+         *State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
 
     CoronalHeating = sum(WaveDissipation_V(:))
 
