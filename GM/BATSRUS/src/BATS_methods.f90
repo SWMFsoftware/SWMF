@@ -10,7 +10,8 @@ subroutine BATS_setup
   use ModAMR, ONLY : &
        initial_refine_levels, nRefineLevelIC, nRefineLevel
   use ModAdvance, ONLY : iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
-  use ModNumConst
+  use ModParallel, ONLY: init_mod_parallel
+!  use ModNumConst
 
   implicit none
 
@@ -22,7 +23,7 @@ subroutine BATS_setup
   !---------------------------------------------------------------------------
 
   ! Allocate and initialize variables dependent on number of PEs
-  call allocate_vars  
+  call init_mod_parallel
 
   if(.not.IsStandAlone)call write_progress(0)
 

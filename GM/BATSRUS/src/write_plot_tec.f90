@@ -8,13 +8,12 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
   !
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, nBlock, &
-       nBlockALL,nBlockMax, time_accurate,n_step,&
+       nBlockALL, nBlockMax, time_accurate,n_step,&
        nOrder, UseRotatingBc, BlkTest, ProcTest, &
        TypeCoordSystem, CodeVersion, nTrueCellsALL
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
   use ModCovariant, ONLY: UseCovariant, TypeGeometry      
-  use ModParallel, ONLY : iBlock_A, iProc_A
   use ModPhysics, ONLY : No2Io_V, UnitX_, &
        ThetaTilt, Rbody, boris_cLIGHT_factor, BodyNDim_I, g
   use ModAdvance, ONLY : FluxType, iTypeAdvance_B, SkippedBlock_
@@ -22,6 +21,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
   use ModIO
   use ModNodes
   use ModNumConst, ONLY : cRadToDeg
+  use BATL_lib, ONLY: nNodeUsed, iNodeMorton_I, iTree_IA, Block_, Proc_
   use ModMpi
   implicit none
 
@@ -34,7 +34,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
   real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
 
   ! Local Variables
-  integer :: i,j,k, cut1,cut2, iPE,iBLK, iBlockALL, nBlockCuts, iError
+  integer :: i,j,k, cut1,cut2, iPE,iBLK, iBlockAll, iNode, nBlockCuts, iError
   real :: CutValue, factor1,factor2
   logical :: oktest,oktest_me
   integer, allocatable, dimension(:) :: BlockCut
@@ -126,9 +126,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
         call write_auxdata
      end if
      !================================= 1d ============================
-     do iBlockALL  = 1, nBlockALL
-        iBLK = iBlock_A(iBlockALL)
-        iPE  = iProc_A(iBlockALL)
+     do iBlockAll = 1, nNodeUsed
+        iNode = iNodeMorton_I(iBlockAll)
+        iBlk  = iTree_IA(Block_,iNode)
+        iPE   = iTree_IA(Proc_,iNode)
         if(iProc==iPE)then
            ! Write point values
            call fill_NodeXYZ
@@ -188,9 +189,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
         if(plot_type1(1:3) == 'x=0') CutValue = 0.
         if(.not.UseCovariant)then             
            ! First loop to count nodes and cells        
-           do iBlockALL  = 1, nBlockALL
-              iBLK = iBlock_A(iBlockALL)
-              iPE  = iProc_A(iBlockALL)
+           do iBlockAll = 1, nNodeUsed
+              iNode = iNodeMorton_I(iBlockAll)
+              iBlk  = iTree_IA(Block_,iNode)
+              iPE   = iTree_IA(Proc_,iNode)
               if(iProc==iPE)then
                  if ( CutValue> PlotXYZNodes_DNB(1,1   ,1,1,iBLK) .and. &
                       CutValue<=PlotXYZNodes_DNB(1,1+nI,1,1,iBLK)  )then
@@ -212,9 +214,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
               call write_auxdata
            end if
            ! Now loop to write values
-           do iBlockALL  = 1, nBlockALL
-              iBLK = iBlock_A(iBlockALL)
-              iPE  = iProc_A(iBlockALL)
+           do iBlockAll = 1, nNodeUsed
+              iNode = iNodeMorton_I(iBlockAll)
+              iBlk  = iTree_IA(Block_,iNode)
+              iPE   = iTree_IA(Proc_,iNode)
               if(iProc==iPE)then
                  if ( CutValue> PlotXYZNodes_DNB(1,1   ,1,1,iBLK) .and. &
                       CutValue<=PlotXYZNodes_DNB(1,1+nI,1,1,iBLK) )then
@@ -252,9 +255,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
            end do
         else if(index(TypeGeometry,'spherical') > 0) then 
            ! First loop to count nodes and cells        
-           do iBlockALL  = 1, nBlockALL
-              iBLK = iBlock_A(iBlockALL)
-              iPE  = iProc_A(iBlockALL)
+           do iBlockAll = 1, nNodeUsed
+              iNode = iNodeMorton_I(iBlockAll)
+              iBlk  = iTree_IA(Block_,iNode)
+              iPE   = iTree_IA(Proc_,iNode)
               if(iProc==iPE)then
                  if ( (CutValue - PlotXYZNodes_DNB(1,1,1   ,2,iBLK))* &
                       (CutValue - PlotXYZNodes_DNB(1,1,1+nJ,2,iBLK)) <= 0.0  )then
@@ -276,9 +280,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
               call write_auxdata
            end if
            ! Now loop to write values
-           do iBlockALL  = 1, nBlockALL
-              iBLK = iBlock_A(iBlockALL)
-              iPE  = iProc_A(iBlockALL)
+           do iBlockAll = 1, nNodeUsed
+              iNode = iNodeMorton_I(iBlockAll)
+              iBlk  = iTree_IA(Block_,iNode)
+              iPE   = iTree_IA(Proc_,iNode)
               if(iProc==iPE)then
                  if ( (CutValue - PlotXYZNodes_DNB(1,1,1   ,2,iBLK))* &
                       (CutValue - PlotXYZNodes_DNB(1,1,1+nJ,2,iBLK)) <= 0.0  )then
@@ -322,9 +327,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
         if(plot_type1(1:3) == 'y=0') CutValue = 0.
         if(.not.UseCovariant)then                   
            ! First loop to count nodes and cells
-           do iBlockALL  = 1, nBlockALL
-              iBLK = iBlock_A(iBlockALL)
-              iPE  = iProc_A(iBlockALL)
+           do iBlockAll = 1, nNodeUsed
+              iNode = iNodeMorton_I(iBlockAll)
+              iBlk  = iTree_IA(Block_,iNode)
+              iPE   = iTree_IA(Proc_,iNode)
               if(iProc==iPE)then
                  if ( CutValue> PlotXYZNodes_DNB(2,1,1   ,1,iBLK) .and. &
                       CutValue<=PlotXYZNodes_DNB(2,1,1+nJ,1,iBLK)  )then
@@ -346,9 +352,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
               call write_auxdata
            end if
            ! Now loop to write values
-           do iBlockALL  = 1, nBlockALL
-              iBLK = iBlock_A(iBlockALL)
-              iPE  = iProc_A(iBlockALL)
+           do iBlockAll = 1, nNodeUsed
+              iNode = iNodeMorton_I(iBlockAll)
+              iBlk  = iTree_IA(Block_,iNode)
+              iPE   = iTree_IA(Proc_,iNode)
               if(iProc==iPE)then
                  if ( CutValue> PlotXYZNodes_DNB(2,1,1   ,1,iBLK) .and. &
                       CutValue<=PlotXYZNodes_DNB(2,1,1+nJ,1,iBLK)  )then
@@ -387,9 +394,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
         else if(TypeGeometry == 'spherical_lnr' .or. & 
              TypeGeometry == 'spherical' .or. TypeGeometry == 'spherical_genr') then 
            ! First loop to count nodes and cells
-           do iBlockALL  = 1, nBlockALL
-              iBLK = iBlock_A(iBlockALL)
-              iPE  = iProc_A(iBlockALL)
+           do iBlockAll = 1, nNodeUsed
+              iNode = iNodeMorton_I(iBlockAll)
+              iBlk  = iTree_IA(Block_,iNode)
+              iPE   = iTree_IA(Proc_,iNode)
               if(iProc==iPE)then
                  if ( (CutValue - PlotXYZNodes_DNB(2,1,1   ,2,iBLK))* &
                       (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,2,iBLK)) <= 0.0  )then
@@ -411,9 +419,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
               call write_auxdata
            end if
            ! Now loop to write values
-           do iBlockALL  = 1, nBlockALL
-              iBLK = iBlock_A(iBlockALL)
-              iPE  = iProc_A(iBlockALL)
+           do iBlockAll = 1, nNodeUsed
+              iNode = iNodeMorton_I(iBlockAll)
+              iBlk  = iTree_IA(Block_,iNode)
+              iPE   = iTree_IA(Proc_,iNode)
               if(iProc==iPE)then
                  if ( (CutValue - PlotXYZNodes_DNB(2,1,1   ,2,iBLK))* &
                       (CutValue - PlotXYZNodes_DNB(2,1,1+nJ,2,iBLK)) <= 0.0  )then
@@ -456,9 +465,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
         CutValue = 0.5*(zmin+zmax)
         if(plot_type1(1:3) == 'z=0') CutValue = 0.
         ! First loop to count nodes and cells
-        do iBlockALL  = 1, nBlockALL
-           iBLK = iBlock_A(iBlockALL)
-           iPE  = iProc_A(iBlockALL)
+        do iBlockAll = 1, nNodeUsed
+           iNode = iNodeMorton_I(iBlockAll)
+           iBlk  = iTree_IA(Block_,iNode)
+           iPE   = iTree_IA(Proc_,iNode)
            if(iProc==iPE)then
               if ( CutValue> PlotXYZNodes_DNB(3,1,1,1   ,iBLK) .and. &
                    CutValue<=PlotXYZNodes_DNB(3,1,1,1+nK,iBLK)  )then
@@ -480,9 +490,10 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
            call write_auxdata
         end if
         ! Now loop to write values
-        do iBlockALL  = 1, nBlockALL
-           iBLK = iBlock_A(iBlockALL)
-           iPE  = iProc_A(iBlockALL)
+        do iBlockAll = 1, nNodeUsed
+           iNode = iNodeMorton_I(iBlockAll)
+           iBlk  = iTree_IA(Block_,iNode)
+           iPE   = iTree_IA(Proc_,iNode)
            if(iProc==iPE)then
               if ( CutValue> PlotXYZNodes_DNB(3,1,1,1   ,iBLK) .and. &
                    CutValue<=PlotXYZNodes_DNB(3,1,1,1+nK,iBLK)  )then

@@ -13,7 +13,6 @@ module ModRestartFile
   use ModAdvance,    ONLY: State_VGB
   use ModCovariant,  ONLY: NameGridFile
   use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
-  use ModParallel,   ONLY: iBlockRestartALL_A
   use ModIO,         ONLY: Restart_Bface                    !^CFG IF CONSTRAINB
   use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK !^CFG IF CONSTRAINB
   use ModMain,       ONLY: UseConstrainB                    !^CFG IF CONSTRAINB

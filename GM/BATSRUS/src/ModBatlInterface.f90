@@ -11,7 +11,6 @@ contains
     use BATL_lib, ONLY: nNodeUsed, nBlock, Unused_B, Unused_BP, &
          iProc, iComm, iNodeMorton_I, iTree_IA, Block_, Proc_,&
          IsNewDecomposition, IsNewTree
-    use ModParallel, ONLY: iBlock_A, iProc_A
 
     use ModMain, ONLY: nBlockAll, nBlockBats => nBlock, nBlockMax, &
          iNewGrid, iNewDecomposition
@@ -25,7 +24,7 @@ contains
     use ModMpi
     use ModIO, ONLY: restart
 
-    integer:: iBlock, iError, iMorton, iNode
+    integer:: iBlock, iError, iNode
     real   :: DxMin, DxMax
     !-------------------------------------------------------------------------
 
@@ -44,12 +43,6 @@ contains
        nBlockBats = nBlock
        call MPI_ALLREDUCE(nBlock, nBlockMax, 1, MPI_INTEGER, MPI_MAX, &
             iComm, iError)
-
-       do iMorton = 1, nNodeUsed
-          iNode = iNodeMorton_I(iMorton)
-          iBlock_A(iMorton) = iTree_IA(Block_,iNode)
-          iProc_A(iMorton) = iTree_IA(Proc_,iNode)
-       end do
 
        if(.not.UsePartSteady)then
           where(Unused_BP(1:nBlockMax,:))

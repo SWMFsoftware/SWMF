@@ -95,7 +95,6 @@ OBJECTS = \
 	BATS_methods.o \
 	MH_set_parameters.o\
 	advect_points.o\
-	allocate_vars.o\
 	amr.o\
 	amr_criteria.o\
 	calc_sources.o\
