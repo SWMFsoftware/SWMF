@@ -171,9 +171,6 @@ all			TypeMessagePass
 #RESCHANGE
 T			UseAccurateResChange
 
-#RESCHANGEBOUNDARY
-T			SaveBoundaryCells
-
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
