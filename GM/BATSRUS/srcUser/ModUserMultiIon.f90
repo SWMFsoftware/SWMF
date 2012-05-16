@@ -46,7 +46,6 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam
     use ModNumConst, ONLY : cTwoPi,cDegToRad
-    implicit none
 
     character (len=100) :: NameCommand
     !-------------------------------------------------------------------------
@@ -363,7 +362,6 @@ contains
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope
     use ModNumconst, ONLY: cOne,cPi, cTwoPi
-    implicit none
 
     real,dimension(nVar):: state_I,KxTemp_I,KyTemp_I
     real :: SinSlope, CosSlope

@@ -53,7 +53,6 @@ module ModUser
        IMPLEMENTED7 => user_calc_sources,               &
        IMPLEMENTED8 => user_update_states,              &
        IMPLEMENTED9 => user_specify_refinement,         &
-       IMPLEMENTED10=> user_set_boundary_cells,         &
        IMPLEMENTED11=> user_set_outerbcs,               &
        IMPLEMENTED12=> user_set_plot_var
 
@@ -540,7 +539,6 @@ contains
     use ModCoronalHeating,ONLY:UseExponentialHeating,&
          DecayLengthExp,HeatingAmplitudeCGS,WSAT0,DoOpenClosedHeat
     use ModRadiativeCooling
-    implicit none
 
     integer :: i, j, k, iBlock, iError
     logical :: oktest, oktest_me
@@ -775,24 +773,6 @@ contains
   
   !============================================================================
   
-  subroutine user_set_boundary_cells(iBLK)
-    
-    use ModGeometry,      ONLY: ExtraBC_, IsBoundaryCell_GI, r_Blk
-    use ModBoundaryCells, ONLY: SaveBoundaryCells
-    use ModPhysics,       ONLY: rBody
-    
-    integer, intent(in) :: iBLK
-    
-    character (len=*), parameter :: Name='user_set_boundary_cells'
-    !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = r_Blk(:,:,:,iBLK) < rBody
-    
-    if(SaveBoundaryCells) return
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
-    
-  end subroutine user_set_boundary_cells
-  
-  !=====================================================================
   subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
     
     use ModAdvance,  ONLY: Rho_, P_, State_VGB
@@ -833,7 +813,6 @@ contains
          UnitTemperature_
     use ModAdvance,  ONLY: State_VGB, Rho_, p_
     
-    implicit none
     
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar

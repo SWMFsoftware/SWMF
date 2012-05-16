@@ -958,7 +958,6 @@ contains
     use ModConst
     use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
          XyzStart_BLK,TypeGeometry
-    implicit none
 
     real, parameter :: TINY=1.0E-12 
     real :: hh, theta, phi, dR, dtheta, dphi, dH, Hscale, HCO2, HO, grav
@@ -1742,18 +1741,13 @@ contains
   subroutine user_set_boundary_cells(iBlock)
 
     use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, x_Blk, x2
-    use ModBoundaryCells, ONLY: SaveBoundaryCells
 
-    implicit none
 
     integer, intent(in):: iBlock
 
     character (len=*), parameter :: Name='user_set_boundary_cells'
     !--------------------------------------------------------------------------
     IsBoundaryCell_GI(:,:,:,ExtraBc_) = x_Blk(:,:,:,iBlock) > x2
-
-    if(SaveBoundaryCells) return
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
 
   end subroutine user_set_boundary_cells
 
@@ -2347,7 +2341,6 @@ case('co2pflx')
     use ModMain
     use ModPhysics 
     use ModNumConst
-    implicit none
   
     real, intent(in) :: X1,Y1,Z1
     real, intent(out), dimension(3) :: B1
@@ -2414,7 +2407,6 @@ case('co2pflx')
 !===============================================================================================================================
 
 subroutine MarsB0(r,theta, phi, bb)
-    implicit none  
     
     integer, parameter:: nMax=62
     real, intent(in) :: r, theta, phi

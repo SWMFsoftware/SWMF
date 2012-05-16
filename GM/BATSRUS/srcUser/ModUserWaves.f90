@@ -91,7 +91,6 @@ contains
     ! use ModPhysics,  ONLY: Si2No_V, Io2Si_V,Io2No_V,&
     !      UnitRho_, UnitU_, UnitP_, UnitN_, UnitX_
     use ModNumConst,  ONLY: cTwoPi,cDegToRad
-    implicit none
 
     character (len=100) :: NameCommand
     !-------------------------------------------------------------------------

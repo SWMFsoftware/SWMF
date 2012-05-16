@@ -13,7 +13,6 @@ module ModUser
        IMPLEMENTED7 => user_set_plot_var,               &
        IMPLEMENTED8 => user_set_outerbcs,               &
        IMPLEMENTED9 => user_face_bcs,                   &
-       IMPLEMENTED10=> user_set_boundary_cells,         &
        IMPLEMENTED11=> user_set_resistivity,            &
        IMPLEMENTED12=> user_update_states,              &
        IMPLEMENTED13=> user_initial_perturbation
@@ -1450,23 +1449,6 @@ contains
     if(Hyp_>1) VarsGhostFace_V(Hyp_) = 0.0
 
   end subroutine user_face_bcs
-  !============================================================================
-  subroutine user_set_boundary_cells(iBLK)
-
-    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, r_Blk
-    use ModBoundaryCells, ONLY: SaveBoundaryCells
-    use ModPhysics,       ONLY: rBody
-
-    integer, intent(in) :: iBLK
-
-    character (len=*), parameter :: Name='user_set_boundary_cells'
-    !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = r_Blk(:,:,:,iBLK) < rBody
-
-    if(SaveBoundaryCells) RETURN
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
-
-  end subroutine user_set_boundary_cells
   !============================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)
 

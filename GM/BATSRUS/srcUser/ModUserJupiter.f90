@@ -31,7 +31,6 @@ contains
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
         GLOBALBLK
     use ModProcMH,   ONLY: iProc
-    implicit none
 
     logical :: oktest,oktest_me
     !------------------------------------------------------------------------  
@@ -79,7 +78,6 @@ contains
     use ModPhysics
     use ModProcMH, ONLY: iProc
 
-    implicit none
 
     ! Variables required by this user subroutine
     integer :: i,j,k
@@ -363,7 +361,6 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
-    implicit none
   
     integer:: i
     character (len=100) :: NameCommand

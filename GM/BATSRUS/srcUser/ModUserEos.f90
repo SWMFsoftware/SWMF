@@ -22,7 +22,6 @@ contains
     use ModPhysics
     use ModEnergy,    ONLY: calc_energy_cell
     use CRASH_ModEos, ONLY: eos
-    implicit none
 
     integer,intent(in):: iStage,iBlock
     integer:: i,j,k

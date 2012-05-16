@@ -10,8 +10,7 @@ module ModUser
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_initial_perturbation,       &
        IMPLEMENTED6 => user_get_log_var,                &
-       IMPLEMENTED8 => user_update_states,              &
-       IMPLEMENTED10=> user_set_boundary_cells       
+       IMPLEMENTED8 => user_update_states
   
   include 'user_module.h' !list of public methods
   
@@ -33,7 +32,6 @@ contains
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut,NamePlotDir
 
-    implicit none
 
     character (len=100) :: NameCommand
     !--------------------------------------------------------------------------
@@ -79,7 +77,6 @@ contains
     use ModGeometry
     use ModProcMH
 
-    implicit none
 
     logical :: oktest,oktest_me
 
@@ -102,7 +99,6 @@ contains
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: inv_gm1,BodyTDim_I
     use ModGeometry
-    implicit none
 
     integer :: i,j,k,iBLK
     logical :: oktest,oktest_me
@@ -123,7 +119,6 @@ contains
      use ModSize
      use ModAdvance
      use ModWaves,   ONLY: UseWavePressure
-    implicit none
 
     integer,intent(in)           :: iStage,iBlock
     real                         :: DensCell,PresCell,GammaCell,Beta,WavePres
@@ -158,7 +153,6 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModWaves
 
-    implicit none
     
     real, allocatable,dimension(:,:) :: Cut_II ! Array to store log variables
     integer                          :: nCell,nRow,iRow 
@@ -254,7 +248,6 @@ contains
        
     use ModVarIndexes
 
-    implicit none
      
     real, intent(out)           :: LogFreqCutOff
     integer, intent(in)         :: i,j,k,iBLK
@@ -271,7 +264,6 @@ contains
     use ModVarIndexes
     use ModNumConst, ONLY: cPi
     use ModWaves,    ONLY: FreqMinSI, DeltaLogFrequency
-    implicit none
     
     integer                    :: iFreq
     real                       :: LogFreqMin
@@ -302,7 +294,6 @@ contains
          AlfvenWavePlusFirst_,&
          AlfvenWaveMinusFirst_
     
-    implicit none
     integer                    :: i,j,k,iBLK, iWave
     character(len=*),parameter :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
@@ -350,23 +341,6 @@ contains
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
   end subroutine user_get_log_var
- !===========================================================================
-  subroutine user_set_boundary_cells(iBLK)
-    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, r_Blk
-    use ModBoundaryCells, ONLY: SaveBoundaryCells
-    use ModPhysics,       ONLY: rBody
-    implicit none
-
-    integer, intent(in):: iBLK
-
-    character (len=*), parameter :: Name='user_set_boundary_cells'
-    !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = r_Blk(:,:,:,iBLK) < rBody
-
-    if(SaveBoundaryCells) return
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
-
-  end subroutine user_set_boundary_cells
 
 end module ModUser
 

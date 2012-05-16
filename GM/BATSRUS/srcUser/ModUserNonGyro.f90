@@ -49,7 +49,6 @@ contains
   subroutine user_read_inputs
     use ModProcMH,    ONLY: iProc
     use ModReadParam
-    implicit none
 
     character (len=100) :: NameCommand
     !-------------------------------------------------------------------------
@@ -230,7 +229,6 @@ contains
     use ModConst
     use ModMpi
 
-    implicit none
 
     integer :: iPE, iPEmax, iBLK, iBLKmax
 
@@ -349,7 +347,6 @@ contains
     use ModConst
     use ModMpi
 
-    implicit none
 
     integer :: iPE, iPEmax, iBLK, iBLKtemp, iBLKmax
     integer :: iBLKtemp1, iBLKtemp2

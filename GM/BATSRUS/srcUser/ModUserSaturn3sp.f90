@@ -83,7 +83,6 @@ contains
     use ModAdvance,  ONLY: State_VGB, rhoH_, rhoH2O_, rhoN_
     use ModPhysics,  ONLY: BodyRho_I, sw_rho, rBody
     use ModNumConst, ONLY: cTiny
-    implicit none
 
     integer :: iBlock
     !--------------------------------------------------------------------------
@@ -148,7 +147,6 @@ contains
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
         GLOBALBLK
     use ModProcMH,   ONLY: iProc
-    implicit none
 
     logical :: oktest,oktest_me
     !------------------------------------------------------------------------  
@@ -203,7 +201,6 @@ contains
     use ModProcMH, ONLY: iProc
     use CON_axes
   
-    implicit none
   
     ! Variables required by this user subroutine
     integer :: i,j,k
@@ -709,7 +706,6 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
-    implicit none
   
     integer:: i
     character (len=100) :: NameCommand

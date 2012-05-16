@@ -1560,7 +1560,6 @@ contains
     use ModMain
     use ModPhysics 
     use ModNumConst
-    implicit none
   
     real, intent(in) :: X1,Y1,Z1
     real, intent(out), dimension(3) :: B1
@@ -1625,7 +1624,6 @@ contains
   end subroutine user_get_b0
   !===========================================================================
   subroutine MarsB0(r,theta, phi, bb)
-    implicit none  
     
     integer, parameter:: nMax=62
     real, intent(in) :: r, theta, phi
@@ -1840,7 +1838,6 @@ contains
     use ModConst
     use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
          XyzStart_BLK,TypeGeometry
-    implicit none
     
     real, parameter :: TINY=1.0E-12 
     real :: hh, theta, phi, dR, dtheta, dphi, dH, Hscale, HCO2, HO, grav

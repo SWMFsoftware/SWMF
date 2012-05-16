@@ -10,8 +10,7 @@ module ModUser
        IMPLEMENTED6 => user_get_log_var,                &
        IMPLEMENTED7 => user_get_b0,                     &
        IMPLEMENTED8 => user_update_states,              &
-       IMPLEMENTED9 => user_specify_refinement,         &
-       IMPLEMENTED10=> user_set_boundary_cells
+       IMPLEMENTED9 => user_specify_refinement
 
   include 'user_module.h' !list of public methods
 
@@ -28,7 +27,6 @@ contains
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,g
     use ModProcMH,      ONLY: iProc
-    implicit none
     !--------------------------------------------------------------------------
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -60,7 +58,6 @@ contains
     use ModNumConst,   ONLY: cTolerance,cTiny,cTwoPi, cZero
     use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
          iFace, jFace, kFace, iSide, iBlockBc,iBoundary
-    implicit none
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
@@ -505,24 +502,6 @@ contains
     DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
 
   end subroutine user_specify_refinement
-
-  !============================================================================
-  subroutine user_set_boundary_cells(iBLK)
-
-    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, r_Blk
-    use ModBoundaryCells, ONLY: SaveBoundaryCells
-    use ModPhysics,       ONLY: rBody
-
-    integer, intent(in):: iBLK
-
-    character (len=*), parameter :: Name='user_set_boundary_cells'
-    !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = r_Blk(:,:,:,iBLK) < rBody
-
-    if(SaveBoundaryCells) return
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
-
-  end subroutine user_set_boundary_cells
 
 end module ModUser
 

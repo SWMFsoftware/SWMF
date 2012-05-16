@@ -485,7 +485,6 @@ contains
     use ModPhysics,  ONLY: rBody
     use ModCoordTransform, ONLY: rot_xyz_sph
 
-    implicit none    
     integer :: iBlock    
 
     integer :: i,j,k

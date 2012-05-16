@@ -34,7 +34,6 @@ contains
     use ModMain
     use ModPhysics
     use ModVarIndexes
-    implicit none
 
     real :: Qqpmag, Oopmag, Gsun
     real :: Mbody_dim

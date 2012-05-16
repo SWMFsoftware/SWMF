@@ -9,7 +9,6 @@
 !========================================================================
 module ModUser
   use ModUserEmpty,               &
-       IMPLEMENTED1 => user_set_boundary_cells, &
        IMPLEMENTED2 => user_read_inputs,        &
        IMPLEMENTED3 => user_set_ics,            &
        IMPLEMENTED4 => user_face_bcs
@@ -34,7 +33,6 @@ contains
     use ModReadParam, ONLY: read_line, read_command, read_var
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
-    implicit none
 
     character(len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
@@ -91,7 +89,6 @@ contains
     use ModPhysics,     ONLY: rBody
     use ModVarIndexes
 
-    implicit none
 
     integer   :: i,j,k,iBlock
     real      :: x, y, z, r, State_V(nVar)
@@ -161,7 +158,6 @@ contains
                                  UnitX_, UnitN_, UnitB_, UnitU_, UnitRho_, &
                                  UnitP_, UnitTemperature_, UnitT_
 
-    implicit none 
 
     real,intent(in)  :: x, y, z, r
     real,intent(out) :: State_V(nVar)
@@ -283,23 +279,6 @@ contains
     !VarsGhostFace_V(Rho_) =  2.0*State_V(Rho_) - VarsTrueFace_V(Rho_)
   
   end subroutine user_face_bcs
-  !========================================================================
-  subroutine user_set_boundary_cells(iBLK)
-
-    ! Set the boundary cell information IsBoundaryCell_GI(:,:,:,ExtraBc_) 
-    ! for a sphere of radius rBody around the origin.
-    ! Allow resolution change.
-
-    use ModGeometry
-    use ModBoundaryCells,ONLY:SaveBoundaryCells
-    use ModPhysics,ONLY:rBody
-    implicit none
-    integer, intent(in):: iBLK
-
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = R_BLK(:,:,:,iBLK)<rBody
-    if(SaveBoundaryCells)return
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
-  end subroutine user_set_boundary_cells
 
 end module ModUser
 

@@ -1968,8 +1968,6 @@ contains
     use ModSize, ONLY:MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature
 
-    implicit none
-
     integer, intent(in):: iStage,iBlock
 
     integer:: i, j, k, iP, iGroup

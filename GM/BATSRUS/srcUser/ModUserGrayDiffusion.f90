@@ -304,7 +304,6 @@ contains
          UnitP_, UnitEnergyDens_
     use ModEnergy,  ONLY: calc_energy_cell
 
-    implicit none
 
     integer, intent(in):: iStage,iBlock
 

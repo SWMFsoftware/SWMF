@@ -1409,19 +1409,11 @@ case('solarmin')
 
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, x_Blk, x2
-    use ModBoundaryCells, ONLY: SaveBoundaryCells
-
-    implicit none
+    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, x_Blk, x2
 
     integer, intent(in):: iBlock
-
-    character (len=*), parameter :: Name='user_set_boundary_cells'
     !--------------------------------------------------------------------------
     IsBoundaryCell_GI(:,:,:,ExtraBc_) = x_Blk(:,:,:,iBlock) > x2
-
-    if(SaveBoundaryCells) return
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
 
   end subroutine user_set_boundary_cells
 

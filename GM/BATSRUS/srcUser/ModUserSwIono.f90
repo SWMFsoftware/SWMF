@@ -67,7 +67,6 @@ contains
     use ModAdvance,  ONLY: State_VGB, rhoion_, rhosw_
     use ModPhysics,  ONLY: BodyRho_I, sw_rho, rBody
     use ModNumConst, ONLY: cTiny
-    implicit none
 
     integer :: iBlock
     !--------------------------------------------------------------------------

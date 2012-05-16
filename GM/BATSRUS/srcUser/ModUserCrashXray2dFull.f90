@@ -2247,7 +2247,6 @@ contains
     use ModAdjoint, ONLY: DoAdjoint, AdjUserUpdate1_, & ! ADJOINT SPECIFIC
          AdjUserUpdate2_, store_block_buffer            ! ADJOINT SPECIFIC
 
-    implicit none
 
     integer, intent(in):: iStage,iBlock
 
@@ -2317,7 +2316,6 @@ contains
     use ModEnergy,   ONLY: calc_energy_cell_adjoint
     use ModAdjoint
 
-    implicit none
 
     integer, intent(in):: iStage,iBlock
 

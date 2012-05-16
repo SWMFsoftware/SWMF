@@ -1,7 +1,7 @@
 
 !^CFG COPYRIGHT UM
 !==============================================================================
-Module ModUser
+module ModUser
 
   ! User Module for Solar Corona with a spectrum of Alfven waves
   ! Description (Oran, Jun 20, 2010)
@@ -73,7 +73,6 @@ Module ModUser
   ! -----------------------------------------------------------------------------------------------
   ! 6. user_specify_refinement : improve refinement in the current sheet region.
   ! -----------------------------------------------------------------------------------------------
-  ! 7. user_set_boundary_cells :required when "extra" boundary conditions are used.
   ! -----------------------------------------------------------------------------------------------
   ! 8. user_set_plot_var : implement plot varaibles related to Alfven waves.
   !                        'wpres' - total wave pressure (summed over spectrum).
@@ -91,7 +90,6 @@ Module ModUser
        IMPLEMENTED4 => user_get_log_var,                &
        IMPLEMENTED5 => user_update_states,              &
        IMPLEMENTED6 => user_specify_refinement,         &
-       IMPLEMENTED7 => user_set_boundary_cells,         &
        IMPLEMENTED8 => user_set_plot_var
 
   include 'user_module.h' !list of public methods
@@ -299,7 +297,6 @@ contains
     use ModMultifluid,        ONLY: MassIon_I
     use ModLdem,              ONLY: useLdem, get_ldem_moments
 
-    implicit none
 
     integer, intent(in)  :: i, j, k, iBlock
     real, intent(out)    :: Density, Pressure
@@ -355,7 +352,6 @@ contains
     use ModExpansionFactors, ONLY: CoronalT0Dim
     use ModWaves,            ONLY: UseWavePressureLtd
 
-    implicit none
 
     integer :: i, j, k, iBLK, iVar
     integer :: IterCount
@@ -620,7 +616,6 @@ contains
            AlfvenWaveMinusFirst_,AlfvenWaveMinusLast_, &
            FrequencySi_W
 
-      implicit none
 
       integer, intent(in)                              :: nWaveHalf
       real                                             :: x, y, z, dxHalf, dyHalf,dzHalf
@@ -710,7 +705,6 @@ contains
            FrequencySi_W
 
 
-      implicit none
 
       integer,intent(in)                               :: nWaveHalf
       real, allocatable,dimension(:,:)                 :: Cut_II ! Array for output
@@ -882,7 +876,6 @@ contains
       use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, R_BLK
       use ModPhysics,    ONLY: No2Si_V, UnitB_, UnitRho_, UnitU_, UnitP_
       use ModConst,      ONLY: cMu
-      implicit none
 
       integer,intent(in)         :: i, j, k, iBLK
       logical,intent(in)         :: UseUr
@@ -966,28 +959,6 @@ contains
     DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
 
   end subroutine user_specify_refinement
-
-  !============================================================================
-  subroutine user_set_boundary_cells(iBLK)
-
-    ! user_set_boundary_cells :required when "extra" boundary conditions are used.
-    ! --------------------------------------------------------------------------
-
-    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, r_Blk
-    use ModBoundaryCells, ONLY: SaveBoundaryCells
-    use ModPhysics,       ONLY: rBody
-    implicit none
-
-    integer, intent(in):: iBLK
-
-    character (len=*), parameter :: Name='user_set_boundary_cells'
-    !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = r_Blk(:,:,:,iBLK) < rBody
-
-    if(SaveBoundaryCells) return
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
-
-  end subroutine user_set_boundary_cells
 
 end module ModUser
 

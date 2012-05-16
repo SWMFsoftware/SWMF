@@ -33,7 +33,6 @@ contains
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
          GLOBALBLK
     use ModProcMH,   ONLY: iProc
-    implicit none
 
     logical :: oktest,oktest_me
     !------------------------------------------------------------------------  
@@ -82,7 +81,6 @@ contains
     use ModProcMH, ONLY: iProc
     use CON_axes
 
-    implicit none
 
     ! Variables required by this user subroutine
     integer :: i,j,k
@@ -576,7 +574,6 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
-    implicit none
 
     integer:: i
     character (len=100) :: NameCommand
@@ -616,19 +613,10 @@ contains
   !============================================================================
 
   subroutine user_set_boundary_cells(iBlock)
-    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, x_Blk, x2
-    use ModBoundaryCells, ONLY: SaveBoundaryCells
-
-    implicit none
-
+    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, x_Blk, x2
     integer, intent(in):: iBlock
-
-    character (len=*), parameter :: Name='user_set_boundary_cells'
     !--------------------------------------------------------------------------
     IsBoundaryCell_GI(:,:,:,ExtraBc_) = x_Blk(:,:,:,iBlock) > x2
-
-    if(SaveBoundaryCells) return
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
 
   end subroutine user_set_boundary_cells
 

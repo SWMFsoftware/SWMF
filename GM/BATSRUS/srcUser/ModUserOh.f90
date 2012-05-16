@@ -5,7 +5,6 @@
 
 module ModUser
   use ModUserEmpty,               &
-       IMPLEMENTED1 => user_set_boundary_cells,&
        IMPLEMENTED2 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
@@ -17,24 +16,6 @@ module ModUser
   !number of blocks intersected by the inner boundary
 contains
 
-
-  subroutine user_set_boundary_cells(iBLK)
-
-    ! Set the boundary cell information IsBoundaryCell_GI(:,:,:,ExtraBc_) 
-    ! for a sphere of radius 1 around the origin.
-    ! Allow resolution change.
-
-    use ModGeometry
-    use ModBoundaryCells,ONLY:SaveBoundaryCells
-    use ModPhysics,ONLY:rBody
-    implicit none
-    integer, intent(in):: iBLK
-
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = R_BLK(:,:,:,iBLK)<rBody
-    if(SaveBoundaryCells)return
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
-  end subroutine user_set_boundary_cells
-  !----------------------------------------------------------
   subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
        xCenter,yCenter,zCenter,rCenter,                        &
        minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
@@ -44,7 +25,6 @@ contains
     use ModAdvance,ONLY:State_VGB,Bx_,By_,Bz_
     use ModGeometry
     use ModPhysics,ONLY:rBody
-    implicit none
     logical,intent(out) :: refineBlock, found
     integer, intent(in) :: lev
     real, intent(in)    :: DxBlock

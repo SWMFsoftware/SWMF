@@ -25,8 +25,6 @@
 !
 !specify refinement: refine a current sheet
 !
-!set_boundary_cells: to use the "extra" inner boundary
-!
 !set_outer_BC: set the boundary values for temperature as needed for the 
 !parallel heat conduction
 !
@@ -52,7 +50,6 @@ module ModUser
        IMPLEMENTED8 => user_calc_sources,               &
        IMPLEMENTED9 => user_update_states,              &
        IMPLEMENTED10=> user_specify_refinement,         &
-       IMPLEMENTED11=> user_set_boundary_cells,         &
        IMPLEMENTED12=> user_set_outerbcs,               &
        IMPLEMENTED13=> user_set_plot_var,               &
        IMPLEMENTED14=> user_material_properties
@@ -567,7 +564,6 @@ contains
     use ModCoronalHeating,ONLY:UseExponentialHeating,&
          DecayLengthExp,HeatingAmplitudeCGS,WSAT0,DoOpenClosedHeat
     use ModRadiativeCooling
-    implicit none
 
     integer :: i, j, k, iBlock, iError
     logical :: oktest, oktest_me
@@ -819,24 +815,6 @@ contains
   
   !============================================================================
   
-  subroutine user_set_boundary_cells(iBLK)
-    
-    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, r_Blk
-    use ModBoundaryCells, ONLY: SaveBoundaryCells
-    use ModPhysics,       ONLY: rBody
-    
-    integer, intent(in) :: iBLK
-    
-    character (len=*), parameter :: Name='user_set_boundary_cells'
-    !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = r_Blk(:,:,:,iBLK) < rBody
-    
-    if(SaveBoundaryCells) return
-    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
-    
-  end subroutine user_set_boundary_cells
-  
-  !=====================================================================
   subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
     
     use ModAdvance,  ONLY: Rho_, P_, State_VGB
@@ -876,7 +854,6 @@ contains
     use ModPhysics, ONLY: No2Si_V, UnitT_,UnitEnergyDens_
     use ModAdvance,  ONLY: State_VGB
     
-    implicit none
     
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
