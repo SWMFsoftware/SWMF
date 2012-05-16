@@ -85,9 +85,6 @@ mc			TypeLimiter mc
 #TVDRESCHANGE
 T			UseTvdResChange
 
-#RESCHANGEBOUNDARY
-T			SaveBoundaryCells
-
 #DIVB
 T
 F

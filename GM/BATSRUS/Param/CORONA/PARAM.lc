@@ -197,9 +197,6 @@ mc                      TypeLimiter
 #TVDRESCHANGE
 T                       UseTvdResChange
 
-#RESCHANGEBOUNDARY
-T
-
 #TIMESTEPPING
 2                       nStage
 0.80                    CflExpl
