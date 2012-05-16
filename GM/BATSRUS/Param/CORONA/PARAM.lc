@@ -93,18 +93,12 @@ T			Usebody
 1.5E+8			BodyNDim
 3.0E+6			BodyTDim
 
-#EXTRABOUNDARY
-T			UseExtraBoundary
-user			TypeBc_I(ExtraBc_)
-T			DoFixExtaBoundary
-
-#BODY
-F			Usebody
+#INNERBOUNDARY
+user			TypeBcInner
 
 #FACEBOUNDARY
-0			MinBoundary
-0			MaxBoundary
-F			DoFixOuterBoundary
+-1			MinBoundary
+-1			MaxBoundary
 
 #PLASMA
 1.0			MassFluid

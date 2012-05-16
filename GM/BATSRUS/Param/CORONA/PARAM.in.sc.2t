@@ -53,7 +53,7 @@ F			UseUserUpdateStates
 
 #USECURLB0
 T			UseCurlB0
-0.0			rCurrentFreeB0
+2.5			rCurrentFreeB0
 
 READPOTENTIALFIELD
 T			UseMagnetogram
@@ -146,8 +146,8 @@ RAW			StringLogfile
 -1.			DtSaveLogfile
 
 #FACEBOUNDARY
-0			MinBoundary
-0			MaxBoundary
+-1			MinBoundary
+-1			MaxBoundary
 
 #OUTERBOUNDARY
 float			TypeBcEast

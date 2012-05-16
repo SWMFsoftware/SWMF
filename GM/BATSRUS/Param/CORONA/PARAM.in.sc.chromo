@@ -28,9 +28,6 @@ T			UseBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
-#BODY
-F			UseBody
-
 #STARTTIME
 2011			iYear
 2			iMonth
@@ -177,15 +174,12 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#EXTRABOUNDARY
-T			UseExtraBoundary
-user			TypeBc_I(ExtraBc_)
-T			DoFixExtraBoundary
+#INNERBOUNDARY
+user			TypeBcInner
 
 #FACEBOUNDARY
-0			MinBoundary
-0			MaxBoundary
-F			DoFixOuterBoundary
+-1			MinBoundary
+-1			MaxBoundary
 
 #OUTERBOUNDARY
 user			TypeBcEast   user for spherical and user_outerbcs

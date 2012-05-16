@@ -32,13 +32,8 @@ T                       UseBody
 6.0E+8                  BodyNDim
 3.0E+6                  BodyTDim
 
-#BODY
-F                       UseBody
-
-#EXTRABOUNDARY
-T			UseExtraBoundary
-user			TypeBc_I(ExtraBc_)
-F			DoFixExtraBoundar
+#INNERBOUNDARY
+user			TypeBcInner
 
 #USECURLB0
 T

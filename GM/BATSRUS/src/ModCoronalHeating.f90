@@ -1287,22 +1287,22 @@ contains
 
     ! Limit counter-propagating Alfven wave region
     if(UseCPRegion) then
-        r = r_BLK(i,j,k,iBlock)
-        if(r <= rCP) then
-            FactorCP = 1.0
-        else
-            FactorCP = exp(-((r-rCP)/(rCPefolding-rCP))**2)
-        endif
+       r = r_BLK(i,j,k,iBlock)
+       if(r <= rCP) then
+          FactorCP = 1.0
+       else
+          FactorCP = exp(-((r-rCP)/(rCPefolding-rCP))**2)
+       endif
     endif
 
     DissipationRate = (Crefl*sqrt(EwavePlus+EwaveMinus) &
          + FactorCP*sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
          *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
-    WaveDissipation_V(WaveFirst_:WaveLast_) = DissipationRate &
+    WaveDissipation_V = DissipationRate &
          *State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
 
-    CoronalHeating = sum(WaveDissipation_V(:))
+    CoronalHeating = sum(WaveDissipation_V)
 
   end subroutine calc_alfven_wave_dissipation
   
