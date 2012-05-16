@@ -91,9 +91,6 @@ SOKOLOV			TypeFlux
 mc			TypeLimiter
 1.2			LimiterBeta
 
-#RESCHANGEBOUNDARY
-T			DoSaveBoundaryCells
-
 #TIMESTEPPING
 2                       nStage
 0.80                    CflExpl
@@ -255,9 +252,6 @@ z=0 MHD tec		StringPlot
 3d MHD tec		StringPlot
 8000                    DnSavePlot
 -1.0			DtSavePlot
-
-#RESCHANGEBOUNDARY
-T			DoSaveBoundaryCells
 
 #END_COMP IH   ----------------------------------------
 

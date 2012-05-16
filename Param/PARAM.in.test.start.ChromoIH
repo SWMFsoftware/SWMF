@@ -243,9 +243,6 @@ all			TypeMessagePass
 #RESCHANGE
 T			UseAccurateResChange
 
-#RESCHANGEBOUNDARY
-T			SaveBoundaryCells
-
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
@@ -377,9 +374,6 @@ float			TypeBcTop
 
 #RESCHANGE
 T			UseAccurateResChange
-
-#RESCHANGEBOUNDARY
-T			SaveBoundaryCells
 
 #USER_FLAGS
 F			UseUserInnerBcs

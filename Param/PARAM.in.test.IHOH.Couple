@@ -138,9 +138,6 @@ z=0 VAR idl
 rho ux uy uz bx by bz p rhoexact rhoerr
 g rbody
 
-#RESCHANGEBOUNDARY
-F
-
 #END_COMP IH -----------------------------------------------------------------
 
 #BEGIN_COMP OH ---------------------------------------------------------------
@@ -258,9 +255,6 @@ mc3
 #TIMESTEPPING
 2                       nStage (1 or 2)
 0.80                    CflExpl
-
-#RESCHANGEBOUNDARY
-T
 
 #DIVB
 T
