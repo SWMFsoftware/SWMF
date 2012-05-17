@@ -2033,7 +2033,7 @@ void GetMeshTreeStatistics(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
     nBlocksPerProcessor=new long int [nTotalThreads];
 
     for (thread=0;thread<nTotalThreads;thread++) nAllocatedBlocks=0,nBlocksPerProcessor[thread]=0;
-    nAllocatedBlocks=0,*nBlocksPerProcessor=NULL,nAllocatedBlocksUpperTreeBranches=0,nAllocatedBoundaryLayerBlocks=0;
+    nAllocatedBlocks=0,nAllocatedBlocksUpperTreeBranches=0,nAllocatedBoundaryLayerBlocks=0;
   }
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
@@ -2062,7 +2062,7 @@ void GetMeshTreeStatistics(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
 
   if (startNode==rootTree) {
 #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
-    long int *buffer=new long int [nTotalThreads];
+    long int buffer[nTotalThreads];
     int i;
     MPI_Status status;
 
@@ -2100,7 +2100,6 @@ void GetMeshTreeStatistics(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
       }
     }
 
-    delete [] buffer;
     delete [] nBlocksPerProcessor;
 
     nBlocksPerProcessor=NULL;
