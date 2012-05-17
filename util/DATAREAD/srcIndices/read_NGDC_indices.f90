@@ -10,9 +10,9 @@ subroutine read_NGDC_Indices(iOutputError)
 
   integer, intent(out) :: iOutputError
 
-  integer :: ierror, year, month, i, j, npts, npts_hpi, k
+  integer :: ierror, i, j, npts, npts_hpi, k
   integer :: input_coor_system, iday 
-  logical :: done, found
+  logical :: done
 
   ! One line of input
   character (len=100) :: line

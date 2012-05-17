@@ -6,10 +6,9 @@ subroutine Insert_into_Indices_Array(array, label_)
   implicit none
 
   real, dimension(6,MaxIndicesEntries), intent(in) :: array
-  real, dimension(MaxIndicesEntries) :: index_value
   integer, intent(in) :: label_
 
-  real*8 :: time_now, dt_min
+  real*8 :: time_now
   integer, dimension(7) :: itime
 
   integer :: iStart, iEnd, i, j, nPts, nPtsSub

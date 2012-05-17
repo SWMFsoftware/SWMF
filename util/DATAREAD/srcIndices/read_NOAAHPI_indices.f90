@@ -10,9 +10,9 @@ subroutine read_NOAAHPI_Indices(iOutputError)
 
   integer, intent(out) :: iOutputError
 
-  integer :: ierror, year, month, i, j, npts, npts_hpi, k
-  integer :: idir, input_coor_system, iday, datatype
-  logical :: done, found
+  integer :: ierror, i, j, npts, npts_hpi, k
+  integer :: datatype
+  logical :: done
 
   ! One line of input
   character (len=100) :: line
@@ -22,8 +22,6 @@ subroutine read_NOAAHPI_Indices(iOutputError)
   real (Real8_), dimension(MaxIndicesEntries) :: ut_new, ut_keep, ut_tmp
   real, dimension(MaxIndicesEntries)   :: data_new, data_keep, data_tmp
 
-  real :: xgse, ygse, zgse, xgsm, ygsm, zgsm
-  real (Real8_) :: time_now
 
   integer, dimension(7) :: itime
 
@@ -90,7 +88,7 @@ contains
   subroutine read_values
 
     logical :: done_inner
-    real :: missing, missingPlusTol, missingMinusTol
+    real :: missing
     integer :: iYear
 
     done_inner = .false.

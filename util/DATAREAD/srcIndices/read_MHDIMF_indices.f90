@@ -9,20 +9,15 @@ subroutine read_MHDIMF_Indices(iOutputError)
 
   integer, intent(out) :: iOutputError
 
-  integer :: ierror, year, month, iIMF, iSW, j, npts, npts_hpi, k
-  integer :: idir, input_coor_system, iday 
-  logical :: done, found, done_inner
+  integer :: ierror, iIMF, iSW, j, npts
+  logical :: done, done_inner
 
   ! One line of input
   character (len=100) :: line
 
-  real, dimension(6,MaxIndicesEntries) :: tmp
 
-  real (Real8_), dimension(MaxIndicesEntries) :: ut_new, ut_keep, ut_tmp
-  real, dimension(MaxIndicesEntries)   :: data_new, data_keep, data_tmp
 
-  real :: xgse, ygse, zgse, xgsm, ygsm, zgsm
-  real (Real8_) :: time_now, TimeDelay
+  real (Real8_) :: TimeDelay
 
   integer, dimension(7) :: itime
   !------------------------------------------------------------------------
