@@ -3,8 +3,7 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModGeometry, ONLY : R_BLK,vInv_CB,RMin_BLK,body_BLK,true_cell, &
-       x_BLK, y_BLK, z_BLK
+  use ModGeometry, ONLY :vInv_CB
   use ModPhysics
   use ModNumConst
   use ModKind, ONLY: Real8_
@@ -31,10 +30,10 @@ subroutine update_states_MHD(iStage,iBlock)
        FullBxOld, FullByOld, FullBzOld, Ux, Uy, Uz, UxOld, UyOld, UzOld,&
        Bx, By, Bz, BxOld, ByOld, BzOld, B0x, B0y, B0z, RhoUx, RhoUy, RhoUz,&
        mBorisMinusRhoUxOld, mBorisMinusRhoUyOld, mBorisMinusRhoUzOld,&
-       Rho, RhoInv, eCorr, p, r
+       Rho, RhoInv, eCorr
   real:: DtFactor
   real:: DtLocal
-  real:: B0_DC(3,nI,nJ,nK), State_V(nVar)
+  real:: B0_DC(3,nI,nJ,nK)
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
   !--------------------------------------------------------------------------

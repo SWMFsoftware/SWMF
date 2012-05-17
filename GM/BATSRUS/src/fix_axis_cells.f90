@@ -8,7 +8,6 @@ subroutine fix_axis_cells
        x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB,&
        r_to_gen
   use ModEnergy, ONLY: calc_energy_point
-  use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_
   use ModNumConst, ONLY: cHalfPi
   use ModMpi

@@ -7,12 +7,8 @@ subroutine set_physics_constants
 
   use ModProcMH
   use ModAMR
-  use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzMin_D, XyzMax_D
-  use ModGeometry, ONLY: is_axial_geometry              
-  use ModIO,       ONLY: plot_range, plot_dx, plot_, nPlotFile
   use ModMain
   use ModPhysics
-  use CON_axes,    ONLY: get_axes
   use CON_planet,  ONLY: get_planet, NamePlanet
   use ModVarIndexes
   use ModMultiFluid
@@ -24,7 +20,7 @@ subroutine set_physics_constants
   real :: MassBody2Si                 !^CFG IF SECONDBODY
   real :: pCoef
 
-  integer :: i, iBoundary, iArea, iFile
+  integer :: i, iBoundary
 
   character (len=*), parameter :: NameSub = "set_physics_constants"
 
@@ -357,7 +353,6 @@ end subroutine set_physics_constants
 
 subroutine set_units
 
-  use ModProcMH, ONLY:iProc
   use ModMain
   use ModPhysics
   use ModVarIndexes

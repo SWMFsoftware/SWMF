@@ -8,20 +8,18 @@ subroutine write_plot_common(ifile)
   use ModProcMH
   use ModMain
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,true_cell
-  use ModGeometry, ONLY : TypeGeometry,UseCovariant, nGrid, yR_I
+  use ModGeometry, ONLY : TypeGeometry, nGrid, yR_I
   use ModPhysics, ONLY : No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, write_cut_var_hdf5
   use ModIoUnit, ONLY : io_unit_new
   use ModNodes
   use ModNumConst, ONLY : cRadToDeg
-  use ModParallel, ONLY: proc_dims
   use ModMpi
   use ModUtilities, ONLY: lower_case, split_string
   use BATL_lib, ONLY: message_pass_node, calc_error_amr_criteria, Xyz_DNB,&
        message_pass_node
   use ModAdvance, ONLY : State_VGB
-  use ModMultiFluid, ONLY: extract_fluid_name
   use ModVarIndexes, ONLY: SignB_
 
   implicit none
@@ -64,11 +62,11 @@ subroutine write_plot_common(ifile)
   character (len=20) :: TypeForm
 
   ! Indices and coordinates
-  integer :: iBLK,i,j,k,l,iVar, H5Index, iLen, labelLeng, nUnit
+  integer :: iBLK,i,j,k,l,iVar, H5Index
   integer :: ntheta, nphi
   real :: xmin,xmax,ymin,ymax,zmin,zmax
   real :: rplot
-  real :: dxblk,dyblk,dzblk,dxblk_out
+  real :: dxblk,dyblk,dzblk
 
   real :: dxPEmin(3),dxGLOBALmin(3)
   integer :: nPEcells, nBLKcells, nGLOBALcells
@@ -715,8 +713,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   real, allocatable :: J_DG(:,:,:,:)
 
   integer :: iVar, itmp, jtmp, jVar, iIon
-  integer :: i,j,k,l, ip1,im1,jp1,jm1,kp1,km1
-  real :: xfactor,yfactor,zfactor
+  integer :: i,j,k
 
   integer:: iDir, Di, Dj, Dk
   real :: Jx, Jy, Jz
@@ -1412,7 +1409,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
 
   character (len=10)  :: String, NamePlotVar, NameVar
 
-  integer :: iVar, i,j,k, jVar
+  integer :: iVar, jVar
   logical :: DoTest,DoTestMe
   !---------------------------------------------------------------------------
   if(iBLK==BlkTest.and.iProc==ProcTest)then

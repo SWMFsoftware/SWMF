@@ -56,7 +56,7 @@ subroutine proj_cg(rhs,qx,iter,tol,typestop,info)
 
   ! Local variables
 
-  integer :: i,itr,matv
+  integer ::itr,matv
   real :: rho,rhonew,res,res0,bet,alf,assumedzero
 
   logical :: oktest, oktest_me

@@ -2,11 +2,11 @@ module ModImplHypre
 
   use ModKind,   ONLY: Int8_
   use BATL_size, ONLY: nDim, nI, nJ, nK, nIJK, nIJK_D, iRatio, jRatio, kRatio
-  use BATL_lib,  ONLY: iProc, nNode, nNodeUsed, iNode_B, iMortonNode_A, &
+  use BATL_lib,  ONLY: iProc, iNode_B, &
        iNodeNei_IIIB, DiLevelNei_IIIB, Unset_, iComm, &
        nRoot_D, MaxCoord_I, IsPeriodic_D, iTree_IA, &
        Proc_, Coord0_, Coord1_, Coord2_, Coord3_, Level_
-  use ModImplicit, ONLY: impl2iBlk, MAT, nImplBlock => nImplBlk, &
+  use ModImplicit, ONLY: impl2iBlk, nImplBlock => nImplBlk, &
        nStencil, Stencil1_, Stencil2_, Stencil3_, Stencil4_, Stencil5_, &
        Stencil6_, Stencil7_
 
@@ -103,7 +103,7 @@ contains
     integer:: iLevel, DiLevel, iNode, jNode
     integer:: iCoord_D(nDim), jCoord_D(nDim), iCoord0_D(nDim), jCoord0_D(nDim)
 
-    integer:: iImplBlock, iBlock, iError, iPart, jPart, iPrintLevel
+    integer:: iImplBlock, iBlock, iError, iPart, jPart
 
     integer:: iReduce, jReduce, iSide, jSide, kSide, i, j, k
     integer:: iSideMe, jSideMe, kSideMe, iSideMax, jSideMax, kSideMax
@@ -622,7 +622,7 @@ contains
 
     ! Set the maxtrix elements corresponding to iImplBlock
 
-    use ModMain, ONLY: TypeBc_I, ProcTest
+    use ModMain, ONLY: TypeBc_I
 
     integer, intent(in):: iImplBlock
     real,    intent(inout):: Jacobian_CI(nI,nJ,nK,nStencil)

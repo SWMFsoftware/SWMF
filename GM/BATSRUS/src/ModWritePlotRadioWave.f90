@@ -13,7 +13,6 @@ subroutine write_plot_radiowave(iFile)
 
   use ModProcMH, ONLY: iProc
   use ModMain, ONLY: Time_Accurate, n_Step, Time_Simulation
-  use ModPhysics, ONLY: UnitX_, NO2IO_V
   use ModNumConst
   use ModConst
   use ModIO
@@ -43,7 +42,7 @@ subroutine write_plot_radiowave(iFile)
   ! The result of the emissivity integration
   integer :: nFreq
   ! Number of frequencies read from StringRadioFrequency_I(iFile)
-  integer :: i, j, iFreq, iPixel, jPixel
+  integer :: i, iFreq, iPixel, jPixel
   real :: XPixel, XPixelSize, YPixel, YPixelSize, nRay
   real :: XLower, YLower, XUpper, YUpper
   real :: ImagePlaneDiagRadius, RadiusCr, DensityCr
@@ -318,7 +317,7 @@ subroutine parse_freq_string(StringRadioFrequency, Value_I, strValue_I, nValue)
   integer, intent(out) :: nValue
   character(len=*), intent(out) :: strValue_I(nPlotRfrFreqMax)
   character(len=50) :: cTmp, StrScale
-  integer :: i, j, lenStr, iChar, iTmp
+  integer :: i, lenStr, iChar, iTmp
 
 
   lenStr = len(trim(StringRadioFrequency))

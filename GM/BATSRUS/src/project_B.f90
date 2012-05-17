@@ -496,7 +496,7 @@ end subroutine proj_gradient
 !=============================================================================
 ! Calculate boundary values for phi for dimensions idimmin..idimmax
 subroutine proj_boundphi(phi,idimmin,idimmax)
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK,prolong_order
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
   use ModMain, ONLY : UseConstrainB                   !^CFG IF CONSTRAINB
   use ModGeometry, ONLY : body_BLK, true_cell
   use ModParallel, ONLY : NOBLK,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth

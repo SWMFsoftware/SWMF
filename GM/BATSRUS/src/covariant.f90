@@ -14,7 +14,7 @@ subroutine gen_to_xyz_arr(&
 
   use ModNumConst
   use ModCovariant,ONLY:TypeGeometry,rTorusLarge,rTorusSmall,&
-                        gen_to_r, r_to_gen
+                        gen_to_r
   use ModMain,     ONLY:nDim,R_,Phi_,Theta_,x_,y_,z_
   implicit none
   real,intent(in):: GenCoord111_D(nDim),dGen1,dGen2,dGen3
@@ -865,8 +865,7 @@ end subroutine fix_geometry_at_reschange
 subroutine fix_covariant_geometry(iBLK)
   use ModCovariant
   use ModNodes,ONLY:NodeX_NB,NodeY_NB,NodeZ_NB
-  use ModGeometry,ONLY: vInv_CB,XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK, &
-       x_BLK,y_BLK,z_BLK
+  use ModGeometry,ONLY: vInv_CB,XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModMain,ONLY:x_,y_,z_
   implicit none
   integer,intent(in)::iBLK
@@ -1034,12 +1033,12 @@ subroutine fix_rz_geometry(iBlock)
 
   use ModCovariant
   use ModNodes,ONLY:NodeY_NB
-  use ModGeometry,ONLY: vInv_CB, dz_BLK, y_BLK, dy_BLK, dx_BLK
+  use ModGeometry,ONLY: vInv_CB, y_BLK
   use ModSize
   implicit none
   integer,intent(in)::iBlock
   
-  integer :: i, j, k
+  integer :: j
   
   character(LEN=*),parameter::NameSub='fix_rz_geometry'
   !---------------------------------------------------!

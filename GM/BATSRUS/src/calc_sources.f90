@@ -5,14 +5,12 @@ subroutine calc_sources
   use ModMain
   use ModVarIndexes
   use ModGeometry,      ONLY: dx_BLK, dy_BLK, dz_BLK, R_BLK,&
-       body_BLK, Rmin_BLK, vInv_CB, y_BLK, true_cell, &
+       vInv_CB, y_BLK, true_cell, &
        IsRzGeometry
   use ModAdvance
-  use ModParallel,      ONLY: NOBLK, neiLEV, &
-       neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModPhysics
   use ModNumConst
-  use ModUser,          ONLY: user_calc_sources,user_material_properties
+  use ModUser,          ONLY: user_calc_sources
   use ModCoordTransform
   use ModImplicit,      ONLY: UseFullImplicit            !^CFG IF IMPLICIT
   use ModRadDiffusion,  ONLY: calc_source_rad_diffusion  !^CFG IF IMPLICIT
@@ -29,26 +27,24 @@ subroutine calc_sources
   use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
                               UseChromosphereHeating
   use ModFaceFlux,      ONLY: Pe_G
-  use ModHallResist,    ONLY: UseBiermannBattery, UseHallResist, &
+  use ModHallResist,    ONLY: UseBiermannBattery, &
        IonMassPerCharge_G
   implicit none
 
-  integer :: i, j, k, iDim, iVar
+  integer :: i, j, k, iVar
   real :: Pe, DivU
-  real :: Coef, GammaMinus1
+  real :: Coef
 
   ! Variable for div B diffusion
-  real :: Dr
 
   real,dimension(3)::CurlB0CrossB_D
 
   ! Variables needed for Boris source terms also used for div(u)
-  real :: FullB_DC(nDim,nI,nJ,nK),FullBx, FullBy, FullBz, Ux, Uy, Uz, RhoInv
+  real :: FullB_DC(nDim,nI,nJ,nK), RhoInv
   real :: E_D(3), DivE
 
   ! Varibles needed for anisotropic pressure
   real :: b_D(3), GradU_DD(3,3), bDotGradparU
-  logical :: IsFirehose, IsMirror 
 
   ! Electron temperature in K:
   real :: TeSi_C(nI,nJ,nK)
@@ -732,7 +728,7 @@ subroutine calc_divb(iBlock)
   use ModMain,       ONLY: nI,nJ,nK
   use ModVarIndexes, ONLY: Bx_,By_,Bz_
   use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK 
-  use ModAdvance,    ONLY: DivB1_GB,State_VGB, &
+  use ModAdvance,    ONLY: DivB1_GB, &
        LeftState_VX, RightState_VX, &
        LeftState_VY, RightState_VY, &
        LeftState_VZ, RightState_VZ

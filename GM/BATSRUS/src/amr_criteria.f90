@@ -25,7 +25,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
   real :: userCriteria
 
   logical :: UseSwitchAMR, IsFound
-  integer :: iBlock, iCrit, iVar, i, j, k
+  integer :: iBlock, iCrit, i, j, k
   real :: xxx,yyy,zzz,RR, RcritAMR,AMRsort_1,AMRsort_2
 
   real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: &
@@ -374,7 +374,7 @@ end subroutine cartesian_gradient
 !===========================================================================
 
 subroutine trace_transient(NameCrit,iCrit,iBlock,refine_crit)
- use ModAMR,      ONLY:nAmrCriteria,RefineCrit, nRefineLevelIC
+ use ModAMR,      ONLY: nRefineLevelIC
 
  character(len=*), intent(in) :: NameCrit
 

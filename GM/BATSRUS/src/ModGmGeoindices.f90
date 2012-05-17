@@ -121,12 +121,12 @@ contains
   !===========================================================================
   subroutine write_geoindices
 
-    use ModMain,  ONLY: n_step, time_simulation
-    use ModProcMH,ONLY: iProc, iComm
+    use ModMain,  ONLY: n_step
+    use ModProcMH,ONLY: iProc
     use ModUtilities, ONLY: flush_unit
     use ModMpi
 
-    integer :: i, iError, iTime_I(7)
+    integer :: iTime_I(7)
 
     character(len=*), parameter :: NameSub='write_geoindices'
     logical :: DoTest, DoTestMe
@@ -169,8 +169,8 @@ contains
     use ModMpi
     use ModGroundMagPerturb, ONLY: ground_mag_perturb, ground_mag_perturb_fac
 
-    integer :: i, iError, nTmpMag
-    real, dimension(3,3)       :: SmgToGsm_DD, GsmToSmg_DD, XyzToSph_DD
+    integer :: i, iError
+    real, dimension(3,3)       :: SmgToGsm_DD, GsmToSmg_DD
     real, dimension(3, nKpMag) :: Bmag_DI, Bfac_DI, Bsum_DI=0.0, XyzGsm_DI
     real :: deltaH
     character(len=*), parameter :: NameSub='calc_kp'

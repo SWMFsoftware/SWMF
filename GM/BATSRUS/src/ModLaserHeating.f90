@@ -7,16 +7,15 @@ module ModLaserHeating
   ! deposited near the critical density.
 
   use BATL_lib,    ONLY: nDim
-  use ModProcMH,   ONLY: iProc, nProc, iComm
+  use ModProcMH,   ONLY: iProc, iComm
   use ModAdvance,  ONLY: State_VGB
   use ModVarIndexes
   use ModConst
   use ModMpi
   use ModCoordTransform
-  use ModPhysics,  ONLY: No2Si_V, Si2No_V, UnitRho_, UnitX_
+  use ModPhysics,  ONLY: No2Si_V, UnitRho_, UnitX_
   use ModMain,     ONLY: TypeBC_I, UseLaserHeating
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D
-  use ModIOUnit,   ONLY: UnitTmp_
 
   implicit none
 
@@ -65,14 +64,11 @@ module ModLaserHeating
 
   logical, parameter:: DoVerbose = .false.
 
-  integer:: iRay
 
-  character(LEN=100)::NameFile
 
   !The laser pulse is assumed to have the linear raise front
   !and linear decay with the constant irradiance within the
   !pulse,  at  t_raise < t < tPulse - tDecay
-  real:: tStart = 0.0     ![s] - allows for nonzero start
   real:: tRaise = 1.0e-10 ![s]
   real:: tDecay = 1.0e-10 ![s]
   real:: tPulse = 1.1e-9  ![s]
@@ -187,7 +183,7 @@ contains
     ! Also, it provides appropriate step, DeltaSNew_I, conceivably dependent
     ! on the numeric grid size
 
-    use ModProcMH, ONLY: iProc, nProc, iComm
+    use ModProcMH, ONLY: nProc, iComm
     use ModPhysics, ONLY:No2Si_V, UnitRho_
     use BATL_lib, ONLY: nDim, MaxDim, CellSize_DB, interpolate_grid
     use ModUser, ONLY: user_material_properties
@@ -1168,7 +1164,6 @@ contains
     real:: CosTheta, SinTheta,  yCrCentral, yPlane, xPlane
     real:: rDistance, BeamAmplitude
     integer:: iRay, jRay, iBeam
-    integer:: nRayPerHalfBeam
     logical:: IsInside=.true.
     !--------------------------------------------------------------------------
 
@@ -1561,7 +1556,7 @@ contains
     use ModUser, ONLY: user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: message_pass_cell, CellVolume_GB, CoordMin_D, &
-         CoordMax_D, IsRzGeometry, IsCartesian
+         CoordMax_D, IsRzGeometry
 	use ModNumConst, ONLY: cHalfPi
 
     real:: Irradiance, EInternalSi, PressureSi

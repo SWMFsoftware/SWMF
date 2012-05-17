@@ -8,7 +8,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY: State_VGB, Erad_
+  use ModAdvance, ONLY: State_VGB
   use ModParallel, ONLY: NOBLK, NeiLev
   use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary, TypeGeometry, &
        XyzMin_D, IsRzGeometry
@@ -389,7 +389,6 @@ subroutine BC_fixed_B
   use ModSetOuterBC
   use ModVarIndexes, ONLY: Bx_, Bz_
   use ModAdvance,    ONLY: State_VGB,B0_DGB
-  use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
   
   !character(len=*), parameter:: NameSub = 'BC_fixed_B'
   !logical :: DoTest, DoTestMe
@@ -411,11 +410,10 @@ subroutine BC_solar_wind(time_now)
 
   use ModVarIndexes
   use ModSetOuterBC
-  use ModGeometry,   ONLY:x_BLK, z_BLK,y_BLK, x2
+  use ModGeometry,   ONLY: z_BLK,y_BLK, x2
   use ModAdvance,    ONLY: State_VGB, B0_DGB
   use ModMultiFluid, ONLY: &
        iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
-  use ModPhysics,    ONLY: LowDensityRatio
   use ModSolarwind,  ONLY: get_solar_wind_point
   use ModMain,       ONLY: UseB0
   
@@ -471,7 +469,7 @@ end subroutine BC_solar_wind
 subroutine BC_solar_wind_buffer
 
   use ModGeometry, ONLY: z_BLK, y_BLK
-  use ModVarIndexes, ONLY: Bx_, By_, Bz_
+  use ModVarIndexes, ONLY: Bx_, Bz_
   use ModAdvance, ONLY : State_VGB, B0_DGB
   use ModSetOuterBC
 

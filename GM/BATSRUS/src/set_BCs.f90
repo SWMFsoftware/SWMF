@@ -4,9 +4,9 @@ subroutine set_BCs(TimeBcIn, DoResChangeOnlyIn)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY:&
-       IsBoundaryCell_GI , IsBoundaryBlock_IB,true_cell,MinBoundary,MaxBoundary
+        true_cell,MinBoundary,MaxBoundary
   use ModBoundaryCells
-  use ModFaceBc, ONLY: TimeBc, DoResChangeOnly, iBlockBc, iBoundary
+  use ModFaceBc, ONLY: TimeBc, DoResChangeOnly, iBlockBc
 
   implicit none
 
@@ -14,7 +14,6 @@ subroutine set_BCs(TimeBcIn, DoResChangeOnlyIn)
   logical, intent (in) :: DoResChangeOnlyIn
   logical :: oktest, oktest_me
   character(len=*), parameter:: NameSub='set_bcs'
-  integer :: i, j, k
   logical, allocatable :: IsBodyCell_G(:,:,:)
   !----------------------------------------------------------------------------
 
@@ -94,7 +93,6 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
        Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_
   use ModSolarwind, ONLY: get_solar_wind_point
   use CON_axes, ONLY: transform_matrix
-  use ModBoundaryCells, ONLY: iBoundary_GB
 
 
   implicit none
@@ -105,8 +103,7 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
   integer :: i,j,k
 
   ! Variables used for polar wind boundary condition
-  real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta, bUnit_D(3)
-  logical :: IsPolarFace
+  real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta
 
   ! External function for ionosphere    !^CFG IF IONOSPHERE
   real, external :: logvar_ionosphere   !^CFG IF IONOSPHERE
@@ -301,7 +298,7 @@ contains
 
   subroutine set_face_bc(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
-    use ModPhysics, ONLY : rBody, xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
+    use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
     use ModPhysics, ONLY : FaceState_VI,Si2No_V,No2Si_V,UnitX_,UnitN_,UnitU_, &
          UnitTemperature_, UnitJ_, UnitPoynting_,OrbitPeriod, &
          UseOutflowPressure, pOutflow

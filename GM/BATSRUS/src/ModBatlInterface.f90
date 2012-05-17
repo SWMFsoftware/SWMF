@@ -9,7 +9,7 @@ contains
   subroutine set_batsrus_grid
 
     use BATL_lib, ONLY: nNodeUsed, nBlock, Unused_B, Unused_BP, &
-         iProc, iComm, iNodeMorton_I, iTree_IA, Block_, Proc_,&
+         iProc, iComm,&
          IsNewDecomposition, IsNewTree
 
     use ModMain, ONLY: nBlockAll, nBlockBats => nBlock, nBlockMax, &
@@ -24,7 +24,7 @@ contains
     use ModMpi
     use ModIO, ONLY: restart
 
-    integer:: iBlock, iError, iNode
+    integer:: iBlock, iError
     real   :: DxMin, DxMax
     !-------------------------------------------------------------------------
 

@@ -623,14 +623,14 @@ contains
 
   subroutine get_coronal_heat_factor
 
-    use ModAdvance,     ONLY: State_VGB, B0_DGB, Bx_, Bz_
-    use ModGeometry,    ONLY: vInv_CB, true_BLK, true_cell, fAz_BLK, z_BLK
+    use ModAdvance,     ONLY: State_VGB, Bz_
+    use ModGeometry,    ONLY: vInv_CB, true_BLK, true_cell, fAz_BLK
     use ModMagnetogram, ONLY: nTheta, nPhi, dSinTheta, dPhi, &
          get_magnetogram_field
     use ModMain,        ONLY: nI, nJ, nK, nBlock, UnusedBLK, Time_Simulation
     use ModMpi,         ONLY: MPI_REAL, MPI_SUM
     use ModNumConst,    ONLY: cHalfPi
-    use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitB_, UnitT_, &
+    use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_, &
          UnitEnergyDens_, rBody
     use ModProcMH,      ONLY: nProc, iComm
 
@@ -639,7 +639,7 @@ contains
     real :: UnsignedFluxCgs, dAreaCgs
     real :: HeatFunction, HeatFunctionVolume, HeatFunctionVolumePe
     real :: x, y, z, Theta, Phi, SinTheta, CosTheta, SinPhi, CosPhi
-    real :: FullB_D(3), B0_D(3), BrSi, BrCgs, SumUnsignedBrCgs
+    real :: B0_D(3), BrSi, BrCgs, SumUnsignedBrCgs
     real :: BzCgs(1:nI,1:nJ), SumUnsignedBzCgs, UnsignedFluxCgsPe
     real    :: TotalCoronalHeating = -1.0, TimeUpdateLast = -1.0
     logical :: DoFirst = .true.
@@ -982,8 +982,8 @@ contains
     use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitEnergyDens_, UnitT_, &
          No2Io_V, UnitB_,UnitRho_,UnitX_,UnitU_
     use ModExpansionFactors, ONLY: UMin
-    use ModMain,       ONLY: x_, y_, z_, UseB0
-    use ModVarIndexes, ONLY: Bx_, By_, Bz_,Rho_,RhoUx_,RhoUz_
+    use ModMain,       ONLY: x_, z_, UseB0
+    use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,RhoUx_,RhoUz_
     use ModAdvance,    ONLY: State_VGB, B0_DGB
 
     integer, intent(in) :: i, j, k, iBlock
@@ -1111,8 +1111,8 @@ contains
     use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitEnergyDens_, UnitT_, &
          No2Io_V, UnitB_,UnitRho_,UnitX_,UnitU_
     use ModExpansionFactors, ONLY: UMin
-    use ModMain,       ONLY: x_, y_, z_, UseB0
-    use ModVarIndexes, ONLY: Bx_, By_, Bz_,Rho_,RhoUx_,RhoUz_
+    use ModMain,       ONLY: x_, z_, UseB0
+    use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,RhoUx_,RhoUz_
     use ModAdvance,    ONLY: State_VGB, B0_DGB
 
     integer, intent(in) :: iBlock

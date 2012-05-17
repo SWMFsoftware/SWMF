@@ -237,7 +237,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
 
   character(len=*), parameter :: NameSub='follow_ray'
 
-  logical :: DoTest = .false., DoTestMe = .false.
+  logical :: DoTest = .false.
   !-----------------------------------------------------------------------
 
   ! call set_oktest(NameSub, DoTest, DoTestMe)
@@ -1673,10 +1673,8 @@ end subroutine integrate_ray_accurate
 subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
 
   use CON_ray_trace,     ONLY: ray_init
-  use CON_planet_field,  ONLY: map_planet_field
   use CON_axes,          ONLY: transform_matrix
   use CON_line_extract,  ONLY: line_init, line_collect
-  use CON_planet,        ONLY: DipoleStrength
   use ModRaytrace
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
        UseB0, UnusedBlk, DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
@@ -1684,8 +1682,6 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use ModAdvance,        ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_, B0_DGB
   use ModProcMH
   use ModMpi
-  use ModNumConst,       ONLY: cDegToRad, cTiny
-  use ModCoordTransform, ONLY: sph_to_xyz
   use ModUtilities,      ONLY: check_allocate
   use ModGeometry,       ONLY: XyzMax_D, XyzMin_D, x1, x2, y1, y2, z1, z2, &
        UseCovariant
@@ -1705,7 +1701,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   ! points sent in.
 
   real    :: Xyz_D(3)
-  integer :: iPt, iRay
+  integer :: iPt
   integer :: iProcFound, iBlockFound, i, j, k, iBlock
   integer :: nStateVar, iIonSecond
   integer :: iError
@@ -2256,7 +2252,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
        CpuTimeStartRay, oktest_ray, &
        nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
-  use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, B0_DGB
+  use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_, B0_DGB
   use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK, UseB0
   use ModPhysics,  ONLY: rBody
   use ModGeometry, ONLY: XyzMax_D, XyzMin_D, Dx_BLK, Dy_BLK, Dz_BLK
@@ -2650,12 +2646,11 @@ subroutine lcb_plot(iFile)
   use CON_planet_field,  ONLY: map_planet_field
   use CON_axes,          ONLY: transform_matrix
   use ModIoUnit,         ONLY: UnitTmp_
-  use ModAdvance,        ONLY: nVar, Ux_, Uz_, Bx_, Bz_
+  use ModAdvance,        ONLY: nVar
   use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, time_accurate, n_step
-  use ModNumConst,       ONLY: cRadToDeg, cDegToRad
+  use ModNumConst,       ONLY: cDegToRad
   use ModProcMH,         ONLY: iProc, iComm
   use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_, rBody
-  use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
   use ModIO,             ONLY: StringDateOrTime, NamePlotDir, plot_range, plot_type
   use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII, InvB_,RhoInvB_,pInvB_
   use ModMpi
@@ -2664,10 +2659,10 @@ subroutine lcb_plot(iFile)
   integer, intent(in) :: iFile
 
   character (len=*), parameter :: NameSub='lcb_plot'
-  character (len=80) :: FileName,stmp
+  character (len=80) :: FileName
   integer, parameter :: nPts=11, nD=6
   integer :: i,j,k, nLine, iStart,iMid,iEnd, jStart,jMid,jEnd, iLon, nLon, iD, iLC
-  integer :: iPoint, nPoint, nVarOut, iHemisphere, nFile, iError, nTP, iDirZ
+  integer :: iPoint, nPoint, nVarOut, iHemisphere, iError, nTP, iDirZ
   real :: PlotVar_V(0:4+nVar)
   real :: Radius, RadiusIono, Lon, zL,zU, zUs=40., xV,yV, Integrals(3)
   real :: XyzIono_D(3), Xyz_D(3)
@@ -2908,12 +2903,12 @@ subroutine ieb_plot(iFile)
   use CON_planet_field,  ONLY: map_planet_field
   use CON_axes,          ONLY: transform_matrix
   use ModIoUnit,         ONLY: UnitTmp_
-  use ModAdvance,        ONLY: nVar, Ux_, Uz_, Bx_, Bz_
+  use ModAdvance,        ONLY: nVar
   use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, time_accurate, n_step
-  use ModNumConst,       ONLY: cRadToDeg, cDegToRad
-  use ModProcMH,         ONLY: iProc, iComm
-  use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, rBody
-  use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
+  use ModNumConst,       ONLY: cDegToRad
+  use ModProcMH,         ONLY: iProc
+  use ModPhysics,        ONLY: Si2No_V, UnitX_, rBody
+  use ModCoordTransform, ONLY: sph_to_xyz
   use ModIO,             ONLY: StringDateOrTime, NamePlotDir
   use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII
   implicit none
@@ -2928,7 +2923,7 @@ subroutine ieb_plot(iFile)
   integer :: iPoint, nPoint, nVarOut, iHemisphere, nFile
   real :: PlotVar_V(0:4+nVar)
   real :: Radius, Lat,Lon, Theta,Phi, LonOC
-  real :: XyzIono_D(3), RtpIono_D(3), Xyz_D(3)
+  real :: XyzIono_D(3), Xyz_D(3)
   real :: Gsm2Smg_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
   real :: Smg2Gsm_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
   real, allocatable :: PlotVar_VI(:,:), IE_lat(:), IE_lon(:)

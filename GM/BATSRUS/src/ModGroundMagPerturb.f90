@@ -4,8 +4,7 @@ module ModGroundMagPerturb
 
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
-  use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, cross_product, &
-       xyz_to_sph
+  use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, cross_product
   use ModConst,          ONLY: cHalfPi, cDegToRad
 
   implicit none
@@ -41,7 +40,6 @@ contains
     use ModSize,           ONLY: nI, nJ, nK, nBLK, gcn
     use ModGeometry,       ONLY: x_BLK, y_BLK, z_BLK, R_BLK, &
          x1, x2, y1, y2, z1, z2
-    use ModAdvance,        ONLY: Tmp1_BLK
     use ModMain,           ONLY: x_, y_, z_, r_, phi_, theta_, &
          unusedBLK, nBlock, Time_Simulation, TypeCoordSystem
     use ModNumConst,       ONLY: cPi
@@ -52,7 +50,7 @@ contains
     real,    intent(in), dimension(3,nMag) :: Xyz_DI
     real,    intent(out),dimension(3,nMag) :: MagPerturb_DI
     integer  :: i,j,k,iBLK,iMag
-    real     :: Re = 6378000.00, r3, x, y, z, XyzSph_DD(3,3), GsmtoSmg_DD(3,3)
+    real     :: r3, XyzSph_DD(3,3), GsmtoSmg_DD(3,3)
     real, dimension(3):: Xyz_D,Xyz_BLK, Temp_D, Current_D, MagPerturb_D, TmpSph_D
     real, external    :: integrate_BLK
     real, allocatable, dimension(:,:,:,:) :: Temp_BLK_x,Temp_BLK_y,Temp_BLK_z
@@ -140,8 +138,7 @@ contains
     use ModProcMH,         ONLY: iProc, nProc, iComm
     use ModMain,           ONLY: Time_Simulation, phi_, theta_, r_
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
-    use ModNumConst,       ONLY: cPi, cTwoPi, cRadToDeg
-    use ModConst,          ONLY: cMu
+    use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
     use ModMpi
 
@@ -153,9 +150,9 @@ contains
     real, parameter       :: rIonosphere = 1.01725 ! rEarth + iono_height
     integer, parameter    :: nTheta =181, nPhi =181,nCuts = 800
 
-    integer               :: i, j, k, iHemisphere, iError
+    integer               :: k, iHemisphere, iError
     integer               :: iTheta,iPhi,iLine,iMag
-    real                  :: dR_Trace, Theta, Phi, Jr, r_tmp
+    real                  :: dR_Trace, Theta, Phi, r_tmp
     real                  :: dL, dS, dTheta, dPhi ,iLat, SinTheta
     real                  :: b, Fac, bRcurrents,JrRcurrents
     real, dimension(3, 3) :: XyzSph_DD
@@ -280,7 +277,7 @@ contains
     ! One line of input
     character (len=100) :: Line
     character(len=3) :: iMagName
-    real             :: iMagmLat, iMagmLon, Xyz_D(3)
+    real             :: iMagmLat, iMagmLon
     real, dimension(Max_MagnetometerNumber)      :: MagmLat_I, MagmLon_I
 
     integer          :: iMag
@@ -421,19 +418,18 @@ contains
 
     use ModProcMH,ONLY: iProc, nProc, iComm
     use CON_axes, ONLY: transform_matrix
-    use ModMain,  ONLY: x_, y_, z_, n_step, time_simulation,&
+    use ModMain,  ONLY: n_step, time_simulation,&
          TypeCoordSystem
     use ModUtilities, ONLY: flush_unit
-    use ModNumConst, ONLY: cTwoPi
     use ModMpi
 
     integer           :: iMag, iTime_I(7), iError
     !year,month,day,hour,minute,second,msecond
-    real, dimension(3):: Xyz_D,  TmpGmSph_D,TmpFacSph_D, &
+    real, dimension(3):: Xyz_D, &
          MagVarFac_D, MagVarGm_D
     real, dimension(3,nMagnetometer):: MagPerturbGmSph_DI, MagPerturbFacSph_DI,&
          MagGsmXyz_DI, MagSmgXyz_DI, MagVarSum_DI
-    real:: XyzSph_DD(3,3), MagtoGsm_DD(3,3), GsmtoSmg_DD(3,3)
+    real:: MagtoGsm_DD(3,3), GsmtoSmg_DD(3,3)
     !--------------------------------------------------------
 
     ! Matrix between two coordinates

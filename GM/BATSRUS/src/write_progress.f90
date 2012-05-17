@@ -7,7 +7,6 @@ subroutine write_progress(inopt)
   use ModIO, ONLY: iUnitOut, write_prefix
   use ModUser, ONLY: NameUserModule, VersionUserModule
   use ModVarIndexes, ONLY: NameEquation
-  Use ModConst, ONLY: cSecondPerDay
   implicit none
 
   integer, intent(in) :: inopt

@@ -1,11 +1,11 @@
 !^CFG COPYRIGHT UM
 subroutine amr(DoFullMessagePass,TypeAmr)
   use ModProcMH
-  use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,MaxBlock,&
+  use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
        unusedBLK, lVerbose, UseB, UseB0, Dt_BLK, nTrueCellsALL, &
        iNewGrid, iNewDecomposition
-  use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK,true_cell
-  use ModAMR, ONLY : automatic_refinement, RefineLimit_I, CoarsenLimit_I, &
+  use ModGeometry, ONLY : minDXvalue,maxDXvalue,true_cell
+  use ModAMR, ONLY : &
        nAmrCriteria, DoProfileAmr, AmrCriteria_IB
   use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
        nVar, State_VGB, &
@@ -15,12 +15,9 @@ subroutine amr(DoFullMessagePass,TypeAmr)
   use ModMpi
 
   use BATL_lib,         ONLY: regrid_batl, set_amr_criteria, &
-       Unused_B, iNode_B, iStatusNew_A, Refine_, Coarsen_, &
        MaxNode, nNode, iTree_IA, Status_, Used_, Proc_, Block_ !!!
 
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
-  use ModUser,          ONLY: user_amr_criteria
-  use ModParallel,      ONLY: nBlockMax_P, MaxBlockDisp_P
   use ModMessagePass,   ONLY: exchange_messages
   use ModPartSteady,    ONLY: UsePartSteady
 
@@ -29,11 +26,7 @@ subroutine amr(DoFullMessagePass,TypeAmr)
   logical, intent(in) :: DoFullMessagePass
   character(3), intent(in) :: TypeAmr
 
-  logical:: IsFound
-  real :: UserCriteria
-  integer :: iBlock, iError
-  real :: minDX, maxDX    
-  logical :: DoRefine_B(nBLK)
+  integer :: iBlock
 
   logical :: DoTest, DoTestMe
   character(len=*), parameter:: NameSub = 'amr'

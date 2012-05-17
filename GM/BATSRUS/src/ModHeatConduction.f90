@@ -310,7 +310,7 @@ contains
   subroutine get_heat_cond_coef(iDim, iFace, jFace, kFace, iBlock, &
        State_V, Normal_D, HeatCond_D)
 
-    use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
+    use ModAdvance,      ONLY: UseIdealEos, UseElectronPressure
     use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
     use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: cTolerance
@@ -457,7 +457,7 @@ contains
   subroutine get_ion_heat_cond_coef(iDim, iFace, jFace, kFace, iBlock, &
        State_V, Normal_D, HeatCond_D)
 
-    use ModAdvance,    ONLY: State_VGB, UseIdealEos
+    use ModAdvance,    ONLY: UseIdealEos
     use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
     use ModMain,       ONLY: UseB0
     use ModNumConst,   ONLY: cTolerance
@@ -573,7 +573,6 @@ contains
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iImplBlock, iP
     real :: DtLocal
-    real :: HeatCond_DD(3,3)
     real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
 
     integer, parameter :: jMin1 = 1 - min(1,nJ-1), jMax1 = nJ + min(1,nJ-1)
@@ -670,7 +669,7 @@ contains
 
     subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock, HeatCond_DD)
 
-      use ModAdvance,    ONLY: State_VGB, UseIdealEos, UseElectronPressure
+      use ModAdvance,    ONLY: UseIdealEos
       use ModB0,         ONLY: B0_DGB
       use ModGeometry,   ONLY: r_BLK
       use ModMain,       ONLY: UseB0
@@ -678,7 +677,7 @@ contains
       use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
            UnitEnergyDens_, UnitU_, UnitX_
       use ModUser,       ONLY: user_material_properties
-      use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_, p_, Pe_
+      use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_
       use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
 
       real, intent(in) :: State_V(nVar)

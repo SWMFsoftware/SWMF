@@ -66,7 +66,7 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
   use ModRaytrace, ONLY : ray
   use ModPhysics,  ONLY : Si2No_V, UnitB_, UnitP_, UnitRho_, PolarRho_I, PolarP_I
   use ModGeometry, ONLY : R_BLK, z_BLK
-  use ModAdvance,  ONLY : State_VGB, B0_DGB, RhoUz_, Rho_, Bx_, By_, Bz_, p_, Ppar_
+  use ModAdvance,  ONLY : State_VGB, B0_DGB, RhoUz_, Bx_, Bz_
   use ModMultiFluid, ONLY : IonFirst_, IonLast_, iFluid
   implicit none
 
@@ -304,10 +304,10 @@ subroutine apply_im_pressure
 
   use ModMain,    ONLY: nI, nJ, nK, nBlock, iNewGrid, TauCoupleIm, &
        time_accurate, Dt, DoCoupleImPressure,DoCoupleImDensity, unusedBLK
-  use ModAdvance, ONLY: State_VGB, Energy_GBI, UseAnisoPressure
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, &
+  use ModAdvance, ONLY: State_VGB, UseAnisoPressure
+  use ModVarIndexes, ONLY: &
        Ppar_
-  use ModPhysics, ONLY: Si2No_V, UnitT_, inv_gm1
+  use ModPhysics, ONLY: Si2No_V, UnitT_
   use ModImPressure
   use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
        iRhoUx_I, iRhoUy_I, iRhoUz_I, iFluid

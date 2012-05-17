@@ -3,10 +3,10 @@ subroutine calc_timestep
   use ModProcMH
   use ModMain
   use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
-       DoFixAxis, rFixAxis, r2FixAxis, State_VGB, Rho_, FluxType, NormB0_CB, &
+       DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
        UseElectronPressure
   use ModGeometry, ONLY: true_cell, true_BLK, vInv_CB, rMin_BLK, TypeGeometry
-  use ModGeometry, ONLY: y_BLK, TypeGeometry
+  use ModGeometry, ONLY: TypeGeometry
   use ModParallel, ONLY: NeiLEast, NeiLBot, NeiLTop, NOBLK
   use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
        CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC
@@ -153,7 +153,7 @@ end subroutine calc_timestep
 subroutine set_global_timestep(TimeSimulationLimit)
   use ModProcMH
   use ModMain
-  use ModAdvance,  ONLY: time_BLK,State_VGB,rho_,Bx_,By_,Bz_,P_,&
+  use ModAdvance,  ONLY: time_BLK,State_VGB,rho_,Bx_,Bz_,P_,&
        iTypeAdvance_B, ExplBlock_
   use ModAdvance,  ONLY: B0_DGB
   use ModGeometry, ONLY: true_cell,true_BLK,dx_BLK,XyzStart_BLK

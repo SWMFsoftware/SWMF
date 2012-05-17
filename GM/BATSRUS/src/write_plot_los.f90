@@ -49,7 +49,7 @@ subroutine write_plot_los(iFile)
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, unusedBLK, &
        time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
-       x_,y_,z_,R_,Phi_,Theta_,Body1,body1_, StartTime
+       x_,y_,z_,Body1,body1_, StartTime
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK, &
        XyzStart_BLK, TypeGeometry, IsBoundaryBlock_IB, nMirror_D
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
@@ -65,7 +65,6 @@ subroutine write_plot_los(iFile)
   use ModNodes, ONLY: NodeX_NB,NodeY_NB,NodeZ_NB
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
-  use ModVarIndexes, ONLY: nVar
 
   implicit none
 
@@ -139,11 +138,11 @@ subroutine write_plot_los(iFile)
   logical :: UseEuv,UseSxr
   real,dimension(3,8) :: Xyz_DN, BBoxVertex_DN
 
-  integer :: iMid1,iMid2,iMid3,ii,jj,kk
+  integer :: iMid1,iMid2,iMid3,ii
   real :: dlength
   real :: FixedXyzBlockCenter_D(3) ! XyzBlockcenter changes, so need fixed one
 
-  real :: rFac,rNodeMax,rNodeMin,CosAngle,CosAngleMin !BBox stuff
+  real ::rNodeMax,rNodeMin,CosAngle,CosAngleMin !BBox stuff
   logical :: AlignedZ = .false.
 
   integer :: iTableEUV = -1, iTableSXR= -1
@@ -814,7 +813,7 @@ contains
     integer :: iIntersect, nIntersect 
 
     ! indexes for sorting by distance
-    integer :: iSort, iSort_I(MaxIntersect) 
+    integer :: iSort_I(MaxIntersect) 
     integer :: iSide, iSign
 
     ! the axial (X) and squared radial (Y**2) coordinates of the block faces
@@ -1126,7 +1125,6 @@ contains
 
     logical, dimension(2) :: IsPoleNS
     logical :: IsIntersect, IsAllBehind
-    real, dimension(8,3) :: cell_vertex_V
     !------------------------------------------------------------------------
     ! essentially a more general version of the cartesian version
     ! except this time made each part into its own subroutine
@@ -1498,7 +1496,7 @@ contains
 
   subroutine dimensionalize_plotvar_los
 
-    use ModPhysics, ONLY : No2Io_V, No2Si_V, UnitX_, UnitRho_
+    use ModPhysics, ONLY : No2Si_V, UnitX_, UnitRho_
     !--------------------------------------------------------------------------
 
     do iVar = 1, nPlotVar
@@ -1786,7 +1784,7 @@ contains
     real :: Coeff1,Coeff2,Coeff3
     real :: Discr
     real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
-    logical :: IsOuter, IsGoodSolution1, IsGoodSolution2
+    logical :: IsGoodSolution1, IsGoodSolution2
     real :: rInside2
     !----------------------------
 

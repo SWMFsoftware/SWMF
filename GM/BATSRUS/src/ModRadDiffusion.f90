@@ -170,9 +170,9 @@ contains
     use ModImplicit,    ONLY: UseFullImplicit, &
          UseSemiImplicit, UseSplitSemiImplicit, TypeSemiImplicit, &
          nVarSemi, iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
-    use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_, &
+    use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, &
          cRadiationNo
-    use ModVarIndexes,  ONLY: nVar, nWave, WaveFirst_
+    use ModVarIndexes,  ONLY: nWave, WaveFirst_
     use ModWaves,       ONLY: UseWavePressure, GammaWave
 
     integer :: iVarImpl
@@ -458,7 +458,7 @@ contains
          UseSplitSemiImplicit, iTeImpl, iTrImplFirst, iTrImplLast, ImplCoeff
     use ModMain,     ONLY: x_, y_, nI, nJ, nK, MaxImplBlk, Dt
     use ModNumConst, ONLY: i_DD
-    use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, UnitN_, UnitP_, &
+    use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, UnitN_, &
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_, &
          No2Si_V
     use ModUser,     ONLY: user_material_properties
@@ -469,11 +469,11 @@ contains
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
-    integer :: iImplBlock, iBlock, i, j, k, iVar, iVarImpl
+    integer :: iImplBlock, iBlock, i, j, k
     real :: OpacityPlanckSi_W(nWave), OpacityRosselandSi_W(nWave)
     real :: OpacityPlanck_W(nWave), CvSi, Cv, TeSi, Te
     real :: HeatCondSi, HeatCond, TeTiRelaxSi
-    real :: Grad2ByErad2, DiffRad, InvDx2, InvDy2, InvDz2
+    real :: InvDx2, InvDy2, InvDz2
     real :: InvDx, InvDy
     real :: NatomicSi, Natomic, Zav, CveSi, Cve, Cvi, Ti
     real :: TeTiCoef, TeTiCoefPrime
@@ -1015,7 +1015,6 @@ contains
 
   subroutine set_rad_outflow_bc(iSide, iBlock, iImplBlock, State_VG, IsLinear)
 
-    use ModAdvance,  ONLY: State_VGB
     use ModImplicit, ONLY: nVarSemi
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
     use ModMain,     ONLY: nI, nJ, nK
@@ -1101,7 +1100,7 @@ contains
 
     use BATL_lib,        ONLY: store_face_flux, IsCartesian, CellFace_DB, &
          CellFace_DFB, CellSize_DB
-    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_size,       ONLY: MinI, MaxI
     use ModFaceGradient, ONLY: set_block_field3
     use ModGeometry,     ONLY: vInv_CB
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, FluxImpl_VXB, FluxImpl_VYB, &
@@ -1118,7 +1117,7 @@ contains
 
     real :: InvDcoord_D(MaxDim)
     real :: Area, EnergyExchange
-    integer :: iDim, i, j, k, Di, Dj, Dk, iDiff, iRelax, iPoint, iVar
+    integer :: iDim, i, j, k, Di, Dj, Dk, iDiff, iRelax, iVar
 
     real :: StateImpl1_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real :: StateImpl_G(-1:nI+2,-1:nJ+2,-1:nK+2)
@@ -1523,7 +1522,7 @@ contains
          CellFace_DB, CellFace_DFB
     use ModGeometry, ONLY: vInv_CB, dx_BLK, dy_BLK, dz_BLK, &
          fAx_BLK, fAy_BLK, fAz_BLK
-    use ModImplicit, ONLY: TypeSemiImplicit, iTeImpl, UseFullImplicit, &
+    use ModImplicit, ONLY: iTeImpl, UseFullImplicit, &
          UseSemiImplicit, nVarSemi, nStencil, Stencil1_, Stencil2_, &
          Stencil3_, Stencil4_, Stencil5_, Stencil6_, Stencil7_, UseNoOverlap
     use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
@@ -1533,7 +1532,7 @@ contains
     integer, intent(in) :: iBlock
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
-    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax, iPoint
+    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax
     real :: DiffLeft, DiffRight, RelaxCoef, PlanckWeight
     real :: InvDcoord_D(MaxDim), AreaLeft, AreaRight
     real :: Dxyz_D(MaxDim), Area_D(MaxDim), Coeff0, Coeff
@@ -1789,7 +1788,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModEnergy,     ONLY: calc_energy_cell
-    use ModImplicit,   ONLY: nw, iTeImpl, iTrImplFirst, iTrImplLast, &
+    use ModImplicit,   ONLY: nw, iTeImpl, iTrImplFirst, &
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
     use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
     use ModPhysics,    ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
@@ -1800,7 +1799,7 @@ contains
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(inout) :: StateImpl_VG(nw,nI,nJ,nK)
 
-    integer :: i, j, k, iVarImpl, iVar, iPoint, iWave
+    integer :: i, j, k, iVarImpl, iVar, iWave
     real :: Einternal, EinternalSi, PressureSi
     real :: PeSi, Ee, EeSi
     real :: Relaxation

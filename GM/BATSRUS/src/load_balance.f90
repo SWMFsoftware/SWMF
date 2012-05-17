@@ -2,12 +2,11 @@
 
 module ModLoadBalance
 
-  use ModProcMH, ONLY: iProc
   use ModMain, ONLY: UseConstrainB, UseB0, UseGravity, UseRotatingFrame, UseIM
   use BATL_size, ONLY: nI, nJ, nK, nIJK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
-       n_block_data, use_block_data, set_block_data, clean_block_data
+       n_block_data, use_block_data, set_block_data
   use ModImplicit, ONLY: UseBDF2, n_prev, ImplOld_VCB, nW  !^CFG IF IMPLICIT
   use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK        !^CFG IF CONSTRAINB
   use ModRaytrace, ONLY: ray                               !^CFG IF RCM
@@ -238,17 +237,13 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModMain
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
   use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP,&
-       SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_,&
+       SkippedBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_,&
        State_VGB
   use ModGeometry,   ONLY: True_Blk, true_cell
-  use ModGeometry,   ONLY: UseCovariant
   use ModPartSteady, ONLY: UsePartSteady
   use ModAMR,        ONLY: UnusedBlock_BP
   use ModParallel
-  use ModIO, ONLY: write_prefix, iUnitOut
   use ModMpi
-  use ModEnergy, ONLY: calc_energy_ghost
-  use ModConserveFlux, ONLY: init_cons_flux
 
   use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, Used_,&
        regrid_batl, IsCartesian, IsRzGeometry
@@ -284,32 +279,23 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   integer :: nType
 
   ! Index for block type
-  integer :: iType
 
   ! Global block index for the various block types
-  integer :: iBlockALL_I(MaxType)
 
   ! Number of blocks for each type
-  integer :: nBlockALL_I(MaxType)
 
   ! Conversion from iTypeAdvance (including body block info) to iType
   integer :: iType_I(-ImplBlock_:ImplBlock_)
 
   ! load balance distribute each type
-  integer :: nBlock_PI(0:nProc-1,MaxType), iProcTo_I(MaxType)
-  integer :: iProcStart, iProcStop, iProcExtraBlock
 
   ! Number of blocks moved around
-  integer :: nBlockMoved
 
   integer :: iError
-  integer :: iBlockALL, iBlock
+  integer :: iBlock
 
-  integer :: iBlockFrom, iProcFrom, iBlockTo, iProcTo, iTry
 
-  logical :: SkippedAnyBlock
 
-  logical :: DoFixVar_B(MaxBlock)
 
   ! BATL related variables
   integer:: iNode
@@ -450,7 +436,6 @@ subroutine select_stepping(DoPartSelect)
 
   logical, intent(in) :: DoPartSelect
 
-  integer :: nBlockExpl, nBlockImpl
   integer :: iError
   logical :: oktest, oktest_me
   !---------------------------------------------------------------------------

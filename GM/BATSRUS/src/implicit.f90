@@ -97,7 +97,7 @@ subroutine advance_impl
 
   real, external :: minval_BLK, minval_loc_BLK
 
-  integer :: iVar, iw, implBLK, iBLK, KrylovMatVec, info
+  integer :: iw, implBLK, iBLK, KrylovMatVec, info
   integer :: NewtonIter
   integer :: iError
   real    :: KrylovError, dwnrm, local_wnrm(nw), coef1
@@ -117,7 +117,7 @@ subroutine advance_impl
 
   external impl_matvec, impl_matvec_free, impl_preconditioner
 
-  integer :: i, j, k, n, iBlock, iLoc_I(5)
+  integer :: i, j, k, iBlock, iLoc_I(5)
   !----------------------------------------------------------------------------
 
   NameSub(1:2) = NameThisComp

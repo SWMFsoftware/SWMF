@@ -109,7 +109,6 @@ contains
   !==============================
 
   subroutine check_cooling_param
-    use ModPhysics,ONLY: Si2No_V, UnitTemperature_
     use ModLookupTable, ONLY: i_lookup_table
     !-----------------------
 
@@ -120,7 +119,7 @@ contains
   !==============================
   subroutine get_radiative_cooling(i, j, k, iBlock, TeSiIn, RadiativeCooling)
 
-    use ModPhysics,       ONLY: Si2No_V, No2Si_V, UnitN_
+    use ModPhysics,       ONLY: No2Si_V, UnitN_
     use ModVarIndexes,    ONLY: Rho_
     use ModAdvance,       ONLY: State_VGB
 
@@ -155,7 +154,6 @@ contains
   end subroutine get_radiative_cooling
   !============================================================
   real function radiative_cooling(TeSiIn, NumberDensCgs)
-    use ModMultiFluid,    ONLY: MassIon_I
     use ModPhysics,       ONLY: Si2No_V, UnitT_, &
          UnitEnergyDens_
     use ModLookupTable,   ONLY: interpolate_lookup_table
@@ -258,7 +256,7 @@ contains
   subroutine add_chromosphere_heating(TeSi_C,iBlock)
     use ModGeometry, ONLY: r_BLK
     use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
-    use ModPhysics,  ONLY: UnitX_, Si2No_V, UnitEnergyDens_, UnitT_
+    use ModPhysics,  ONLY: UnitX_, Si2No_V
     use ModCoronalHeating, ONLY: CoronalHeating_C
     
     real,    intent(in):: TeSi_C(1:nI,1:nJ,1:nK)

@@ -192,7 +192,7 @@ end subroutine impl_matvec_free
 !=============================================================================
 subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
 
-  use ModImplicit, ONLY: JacobiPrec_I, MAT, nVarSemi, nI, nJ, nwIJK, nIJK, &
+  use ModImplicit, ONLY: MAT, nVarSemi, nI, nJ, nwIJK, nIJK, &
        nImplBlk, PrecondType, Stencil1_, Stencil2_, Stencil3_, Stencil4_, &
        Stencil5_, Stencil6_, Stencil7_, PrecondType
   use ModLinearSolver, ONLY: Lhepta, Uhepta, multiply_dilu

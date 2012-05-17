@@ -31,8 +31,6 @@ subroutine set_b0_cell(iBlock)
   integer, intent(in) :: iBlock
 
   integer :: i,j,k
-  real :: B0_D(3)
-  real :: x,y,z
 
   logical :: oktest, oktest_me
   
@@ -75,11 +73,10 @@ subroutine set_b0_source(iBlock)
   integer, intent(in) :: iBlock
 
   integer :: i,j,k
-  real,dimension(3):: B0_D,RefXyzStart_D,RefDXyz_D
+  real,dimension(3)::RefXyzStart_D,RefDXyz_D
   real,dimension(nDim,0:1,0:1,0:1)::RefB0_DIII
   real ::x,y,z
   ! inverse of Dx, Dy, Dz                              
-  real:: DxInv, DyInv, DzInv                                   
 
 
   logical :: oktest, oktest_me
@@ -426,7 +423,7 @@ subroutine get_b0_multipole(X0,Y0,Z0,B0)
   real, intent(out), dimension(3) :: B0
 
   integer :: i, j, k, l
-  real :: R0, rr, rr_inv, rr2_inv, rr3_inv, rr5_inv, rr7_inv, rr9_inv
+  real :: R0, rr, rr_inv, rr2_inv, rr3_inv, rr5_inv, rr7_inv
   real, dimension(3) :: xxt, bb
   real :: Dp, temp1, temp2
 
@@ -641,14 +638,13 @@ end subroutine update_b0
 
 !===========================================================================
 subroutine get_coronal_b0(xInput,yInput,zInput,B0_D)
-  use ModPhysics,     ONLY: Io2No_V,Si2No_V,UnitB_
+  use ModPhysics,     ONLY:Si2No_V,UnitB_
   use ModMagnetogram, ONLY: get_magnetogram_field
   implicit none
 
   real, intent(in):: xInput,yInput,zInput
   real, intent(out), dimension(3):: B0_D
 
-  real :: B_D(3)
   !--------------------------------------------------------------------------
 
   call get_magnetogram_field(xInput,yInput,zInput,B0_D)

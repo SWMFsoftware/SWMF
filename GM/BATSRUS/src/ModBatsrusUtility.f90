@@ -537,7 +537,7 @@ real function maxval_loc_BLK(qnum,qa,loc)
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
-  use ModGeometry, ONLY : true_BLK,true_cell
+  use ModGeometry, ONLY :true_cell
   use ModMpi
   implicit none
 
@@ -1297,15 +1297,13 @@ subroutine find_test_cell
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,r_BLK,dx_BLK,dy_BLK,dz_BLK,vInv_CB, &
        UseCovariant, FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModParallel, ONLY : NOBLK, neiLEV,neiPE,neiBLK
-  use ModAdvance,  ONLY : tmp1_BLK
   use ModMpi
   use BATL_lib, ONLY: CellSize_DB, CellFace_DFB, CellVolume_GB, IsCartesian, &
        MaxDim, find_grid_block
   implicit none
 
-  real :: qdist, qdist_min
   logical :: pass_message
-  integer :: loc(5), IjkTest_D(MaxDim), idir, iError, iProcTestMe
+  integer :: IjkTest_D(MaxDim), idir, iError
   real, external :: minval_loc_BLK
   !----------------------------------------------------------------------------
 
@@ -1500,7 +1498,7 @@ end subroutine get_date_time
 subroutine get_time_string
 
   use ModIO,   ONLY: StringDateOrTime, NameMaxTimeUnit
-  use ModMain, ONLY: StartTime, Time_Simulation, n_step
+  use ModMain, ONLY: StartTime, Time_Simulation
   use ModTimeConvert, ONLY: TimeType, time_real_to_int
   implicit none
 

@@ -117,7 +117,7 @@ contains
 
     real :: dS,dSMax
     real,dimension(nDim) :: R_D !The vector r,phi,theta
-    real,dimension(nDim) :: BTemp_D,BSun_D,BSS_D
+    real,dimension(nDim) ::BSun_D,BSS_D
     real,dimension(nDim) :: RSS_D,RSun_D,RPlusEnd_D,RMinusEnd_D
     integer :: iR,iPhi,iTheta
     integer :: iBcast, iStart, nSize, iError,iIteration

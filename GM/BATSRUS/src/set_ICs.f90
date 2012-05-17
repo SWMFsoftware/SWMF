@@ -3,9 +3,8 @@ subroutine set_ics
 
   use ModMain
   use ModAdvance
-  use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
+  use ModGeometry, ONLY :x_BLK,y_BLK,true_cell
   use ModIO, ONLY : restart
-  use ModImplicit,ONLY: UsePartImplicit             !^CFG IF IMPLICIT
   use ModPhysics
   use ModUser, ONLY: user_set_ics
   use ModMultiFluid

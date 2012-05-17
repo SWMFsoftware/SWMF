@@ -17,7 +17,7 @@ subroutine ray_pass_new
 
   implicit none
 
-  integer :: i,j, iBLK, iface
+  integer :: iBLK, iface
 
 !  do i=1,3; do j=1,2
 
@@ -181,7 +181,7 @@ subroutine ray_pass_old
   use ModMain, ONLY : nblockMax,okdebug,unusedBLK,optimize_message_pass
   use BATL_lib, ONLY: iNode_B, iTree_IA, Coord0_
   use ModRaytrace
-  use ModParallel, ONLY : NOBLK,neiLEV,neiBLK,neiPE,BLKneighborCHILD
+  use ModParallel, ONLY : NOBLK,neiLEV,neiBLK,neiPE
   use ModMpi
   implicit none
 
@@ -194,7 +194,7 @@ subroutine ray_pass_old
   integer :: iface, otherface, iside
 
   ! number of subfaces (1 or 4), subface (1..nsubface) and child (1..8) index
-  integer ::  nsubface, isubface, ichild
+  integer ::  nsubface, isubface
 
   ! Array ranges for outgoing, incoming, restricted and subfaces
   integer :: imin_o,imax_o,jmin_o,jmax_o,kmin_o,kmax_o

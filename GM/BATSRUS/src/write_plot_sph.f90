@@ -21,7 +21,7 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
 
   ! Local variables
   ! Indices and coordinates
-  integer :: i,j,k,ii,iVar
+  integer :: i,j,iVar
   integer :: i1,j1,k1,i2,j2,k2
   real :: x,y,z,xx,yy,zz
   real :: dx1,dy1,dz1,dx2,dy2,dz2
@@ -30,7 +30,6 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
   real :: theta_out, phi_out
   real :: PointVar(nPlotvarMax)
 
-  integer :: write_out_unit
 
   logical :: oktest,oktest_me
   !---------------------------------------------------------------------------

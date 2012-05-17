@@ -92,7 +92,7 @@ contains
     use ModAdvance, ONLY: Rho_, p_, &
          State_VGB, StateOld_VCB, Energy_GBI, EnergyOld_CBI, time_BLK
     use ModPhysics, ONLY: No2Si_V, UnitT_
-    use ModProcMH,  ONLY: iProc, nProc, iComm
+    use ModProcMH,  ONLY: nProc, iComm
     use ModMpi
 
     integer:: iBlock, i, j, k, iError

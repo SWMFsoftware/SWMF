@@ -81,7 +81,7 @@ contains
 
     integer :: iFile
     character(len=100):: StringSatellite
-    character (len=3) :: satellite_var, satellite_form
+    character (len=3) :: satellite_var
     character(len=*), parameter :: NameSub = 'read_satellite_parameters'
     !------------------------------------------------------------------------
     select case(NameCommand)
@@ -426,7 +426,7 @@ contains
     integer, intent(in) :: iSat
     integer :: iPE,iPEtmp, iBLK, iBLKtemp
     real    :: xSat,ySat,zSat
-    integer :: i,j,k, iError
+    integer :: iError
     real,dimension(nDim)::GenOut_D
     logical :: DoTest, DoTestMe
 
@@ -490,15 +490,11 @@ contains
 
   subroutine set_satellite_positions(iSat)
     use ModProcMH
-    use ModMain, ONLY : nI,nJ,nK,n_step,nBlockMax,StartTime,time_simulation, &
-         time_accurate
-    use ModGeometry, ONLY : x1,x2,y1,y2,z1,z2,XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
-    use ModGeometry, ONLY : TypeGeometry               
+    use ModMain, ONLY :time_simulation
     use ModNumConst
 
     integer, intent(in) :: iSat
-    integer :: i, iBLK
-    real    :: xSat,ySat,zSat
+    integer :: i
     real    :: dtime
 
     logical :: DoTest, DoTestMe
@@ -592,7 +588,7 @@ contains
 
     use ModRaytrace
     use ModMpi
-    use ModMain,       ONLY: nI, nJ, nK, nBlock
+    use ModMain,       ONLY: nI, nJ, nK
     use ModGeometry,   ONLY: XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK, UseCovariant
 
     integer, intent(in) :: iSatIn
@@ -724,12 +720,12 @@ contains
   subroutine GM_trace_sat(SatXyz_D,SatRay_D)
     
     use ModProcMH,    ONLY: iComm, iProc
-    use ModRayTrace,  ONLY: NameVectorField, DoExtractState, DoExtractUnitSi, &
+    use ModRayTrace,  ONLY: DoExtractState, DoExtractUnitSi, &
          rIonosphere
     use ModVarIndexes,ONLY: nVar
-    use ModMain,      ONLY: n_step,time_accurate,time_simulation,TypeCoordSystem
+    use ModMain,      ONLY:time_simulation,TypeCoordSystem
     use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
-    use ModNumConst,  ONLY: cTiny, cRadToDeg
+    use ModNumConst,  ONLY: cRadToDeg
     use CON_axes,     ONLY: transform_matrix
     use CON_planet_field, ONLY: map_planet_field
     use ModPhysics,   ONLY: rBody
@@ -739,13 +735,12 @@ contains
     real, intent(out)   :: SatRay_D(3)
     real :: SatXyzIono_D(3),SatXyzEnd_D(3),SatXyzEnd2_D(3),B2
     
-    character(len=100) :: NameFile, NameStart, NameVar, StringTitle
-    integer            :: nLineFile, nStateVar, nPlotVar
-    integer            :: iPoint, nPoint, iPointNext, nPoint1
+    integer            :: nStateVar
+    integer            :: nPoint
     
     real, pointer :: PlotVar_VI(:,:)
     
-    integer :: iPlotFile, iLine, nLine, nVarOut, iHemisphere
+    integer :: nLine, nVarOut, iHemisphere
     
     logical :: IsParallel = .true., IsOpen=.true.
     

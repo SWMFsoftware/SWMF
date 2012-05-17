@@ -4,8 +4,8 @@ module ModRestartFile
 
   use ModProcMH,     ONLY: iProc, nProc, iComm
   use ModIO,         ONLY: Unit_Tmp, nFile, Dt_Output, Dn_Output, Restart_, &
-       restart, save_restart_file, write_prefix, iUnitOut
-  use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
+       restart, save_restart_file
+  use ModMain,       ONLY: nI, nJ, nK, &
        nBlockAll, nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
        NameThisComp, iteration_number, DoThinCurrentSheet
@@ -991,7 +991,6 @@ contains
     ! Read MagPerturb_II from restart file on processor 0
 
     use ModIO,          ONLY: Unit_Tmp
-    use ModProcMH,      ONLY: iProc
     use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_II, IsFirstCalc
 
     integer            :: i, j, nMagTmp, iSizeTmp

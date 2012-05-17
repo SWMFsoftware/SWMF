@@ -56,7 +56,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
   ! Convert data structure Var_VGB of the implicit code to the explicit code
 
   use ModMain
-  use ModAdvance, ONLY : State_VGB, Energy_GBI, nVar
+  use ModAdvance, ONLY : State_VGB, Energy_GBI
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use ModImplicit
   use ModRadDiffusion,   ONLY: get_impl_rad_diff_state
@@ -67,7 +67,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
   integer,intent(in) :: imin,imax,jmin,jmax,kmin,kmax
   real, intent(out)  :: Var_VGB(nw,imin:imax,jmin:jmax,kmin:kmax,MaxImplBLK)
 
-  integer :: implBLK, iBLK, iVar
+  integer :: implBLK, iBLK
   logical :: DoTest, DoTestMe
 
   character(len=*), parameter:: NameSub = 'explicit2implicit'
@@ -138,7 +138,6 @@ subroutine impl2expl(Var_VC, iBLK)
 
   real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
   integer, intent(in) :: iBLK
-  integer :: iVar
   !---------------------------------------------------------------------------
 
   call timing_start('impl2expl')
@@ -303,7 +302,6 @@ end subroutine set_semi_impl_range
 !==============================================================================
 subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
-  use ModProcMH, ONLY: iProc
   use ModImplicit, ONLY: StateSemi_VGB, nw, nVarSemi, nImplBlk, impl2iblk, &
        TypeSemiImplicit, iVarSemiMin, iVarSemiMax, nVarSemi, &
        FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, UseAccurateRadiation
@@ -321,7 +319,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   real, intent(in)  :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
   real, intent(out) :: Rhs_VCB(nVarSemi,nI,nJ,nK,MaxImplBlk)
 
-  integer :: iImplBlock, iBlock, i, j, k, iVar
+  integer :: iImplBlock, iBlock, i, j, k
 
   character(len=*), parameter:: NameSub = 'get_semi_impl_rhs'
   !------------------------------------------------------------------------
@@ -409,10 +407,10 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
        FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, &
        nImplBlk, impl2iblk, &
        TypeSemiImplicit, UseSplitSemiImplicit, &
-       iVarSemiMin, iVarSemiMax, iVarSemi, nVarSemi, &
+       iVarSemi, nVarSemi, &
        ImplCoeff, DconsDsemi_VCB, KrylovType, UseAccurateRadiation
   use ModMain, ONLY: dt, time_accurate, Cfl
-  use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
+  use ModSize, ONLY: nI, nJ, nK
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModResistivity,    ONLY: get_resistivity_rhs
@@ -588,7 +586,7 @@ subroutine get_semi_impl_jacobian
 
   implicit none
 
-  integer :: iImplBlock, iBlock, i, j, k, iStencil, iVar, jVar
+  integer :: iImplBlock, iBlock, i, j, k, iStencil, iVar
   real    :: Coeff, DtLocal
 
   integer:: nStepLast = -1
@@ -659,7 +657,7 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
 
   use ModRadDiffusion, ONLY: set_rad_outflow_bc
   use ModImplicit, ONLY: UseSplitSemiImplicit, iVarSemiMin, iVarSemiMax, &
-       StateSemi_VGB, iTrImplFirst, iTrImplLast, iEradImpl
+       StateSemi_VGB, iTrImplFirst, iTrImplLast
   use ModMain,     ONLY: TypeBc_I
   use ModParallel, ONLY: NOBLK, NeiLev
   use ModUser,     ONLY: user_set_outerbcs
@@ -671,7 +669,7 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
   logical, intent(in) :: IsLinear
 
   logical :: IsFound
-  integer :: i, j, k, iVar
+  integer :: iVar
   character(len=20), parameter :: TypeUserBc = 'usersemi'
   character(len=20), parameter :: TypeUserBcLinear = 'usersemilinear'
   character(len=*),  parameter :: NameSub = 'get_semi_implicit_bc'
@@ -880,7 +878,7 @@ contains
 
     integer, intent(in) :: iSide
 
-    integer :: Dn, iVar
+    integer :: Dn
     !--------------------------------------------------------------------------
 
     ! If the shock is not tilted, there is nothing to do
@@ -929,7 +927,6 @@ subroutine getsource(iBLK,Var_VCB,SourceImpl_VC)
   real, intent(out)   :: SourceImpl_VC(nw,nI,nJ,nK)
 
   logical :: qUseDivbSource
-  integer::iVar, iFluid
   !--------------------------------------------------------------------------
 
   call timing_start('getsource')
@@ -971,7 +968,7 @@ subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
        set_block_values, set_cell_values, get_physical_flux, &
        HallJx, HallJy, HallJz, UseHallGradPe, DoTestCell
   use ModHallResist, ONLY: UseHallResist, HallJ_CD
-  use ModMultiFluid, ONLY: iFluid, nFluid, iP_I, iP
+  use ModMultiFluid, ONLY: nFluid, iP_I
   use ModImplicit,   ONLY: UseImplicitEnergy
 
   implicit none

@@ -132,7 +132,7 @@ subroutine update_check(iStage)
   use ModImplicit, ONLY: UsePartImplicit !^CFG IF IMPLICIT
   use ModAdvance
   use ModPhysics
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,true_cell
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,true_cell
   use ModNumConst, ONLY: cTiny
   use ModMpi
   use ModEnergy

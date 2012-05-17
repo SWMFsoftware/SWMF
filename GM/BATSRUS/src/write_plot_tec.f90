@@ -7,9 +7,9 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
   !       etc.
   !
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, nBlock, &
-       nBlockALL, nBlockMax, time_accurate,n_step,&
-       nOrder, UseRotatingBc, BlkTest, ProcTest, &
+  use ModMain, ONLY : nI,nJ,nK, nBlock, &
+       nBlockALL, time_accurate,n_step,&
+       nOrder, UseRotatingBc, &
        TypeCoordSystem, CodeVersion, nTrueCellsALL
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
@@ -45,7 +45,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
 
   integer :: iTime0_I(7),iTime_I(7)
 
-  integer ic,ic1,ic2, jc,jc1,jc2, kc,kc1,kc2, nCuts, nCutsTotal
+  integer::ic1,ic2,jc1,jc2,kc1,kc2, nCuts, nCutsTotal
   real :: XarbP,YarbP,ZarbP, XarbNormal,YarbNormal,ZarbNormal, Xp,Yp,Zp
   real, dimension(3,1:nI+1,1:nJ+1,1:nK+1) :: NodeXYZ_DN
   logical :: okdebug
@@ -863,10 +863,8 @@ end subroutine write_plot_tec
 subroutine assign_node_numbers
   use ModProcMH
   use ModIO, ONLY: write_prefix, iUnitOut
-  use ModMain, ONLY : lVerbose, nBlock, nBlockMax, nBlockALL, UnusedBLK
+  use ModMain, ONLY : lVerbose, nBlock, nBlockMax, nBlockALL
   use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
-  use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, x1,x2, y1,y2, z1,z2
-  use ModParallel, ONLY: periodic3D
   use ModNodes
   use ModMpi
   use BATL_lib, ONLY: message_pass_node
@@ -878,7 +876,7 @@ subroutine assign_node_numbers
   integer :: nOffset, nOffsetPrevious
   integer, allocatable, dimension(:) :: NodeOffset, NodeOffsetMax, nOffset_P
   real, allocatable, dimension(:,:,:,:,:) :: IndexNode_VNB
-  logical :: boundary, DoAllReduce=.true.
+  logical :: DoAllReduce=.true.
   integer :: iStatus(MPI_STATUS_SIZE)
 
   !-------------------------------------------------------------------------

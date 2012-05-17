@@ -10,14 +10,13 @@ contains
   ! moved form file exchange_messages.f90 
   subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In)
     use ModProcMH
-    use ModMain, ONLY : nI, nJ, nK, gcn, nBlockMax, nBlock, unusedBLK, &
-         TypeBc_I, time_loop, UseB, &
+    use ModMain, ONLY : nBlock, unusedBLK, &
+         TypeBc_I, time_loop, &
          UseConstrainB,&              !^CFG IF CONSTRAINB 
          UseProjection,&              !^CFG IF PROJECTION
-         UseDivbDiffusion,&           !^CFG IF DIVBDIFFUSE
          time_simulation,nOrder,prolong_order,optimize_message_pass
     use ModVarIndexes
-    use ModAdvance, ONLY : State_VGB,divB1_GB
+    use ModAdvance, ONLY : State_VGB
     use ModGeometry, ONLY : far_field_BCs_BLK        
     use ModPhysics, ONLY : ShockSlope
     use ModFaceValue,ONLY: UseAccurateResChange
@@ -32,7 +31,7 @@ contains
 
     integer :: iBlock
     logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
-    logical :: DoCorners, DoFaces
+    logical :: DoFaces
     logical :: UseOrder2=.false.
     integer :: nWidth, nCoarseLayer
     logical :: DoResChangeOnly

@@ -2,14 +2,13 @@
 !==============================================================================
 subroutine fix_block_geometry(iBLK)
 
-  use ModMain, ONLY: body1,body1_,body2_,ExtraBc_,&
-       UseExtraBoundary,DoFixExtraBoundaryOrPole,unusedBLK,ProcTest,BlkTest   
+  use ModMain, ONLY:body1_,body2_,ExtraBc_,&
+       UseExtraBoundary,DoFixExtraBoundaryOrPole,ProcTest,BlkTest   
   use ModMain, ONLY: UseBody2                    !^CFG IF SECONDBODY
   use ModBatlInterface, ONLY: UseBatlTest
   use ModNodes
   use ModGeometry
   use ModNumConst
-  use ModPhysics, ONLY : Rbody
   use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
   use ModParallel, ONLY : periodic3D
   use ModBoundaryCells
@@ -18,7 +17,7 @@ subroutine fix_block_geometry(iBLK)
   integer, intent(in) :: iBLK
 
   integer :: i,j,k, iBoundary
-  real :: dx,dy,dz,fAx,fAy,fAz,cV,VInv
+  real :: dx,dy,dz,fAx,fAy,fAz,cV
   real,dimension(nDim)::XyzOfNode111_D               
 
   logical:: DoTest, DoTestMe
@@ -286,8 +285,7 @@ subroutine set_boundary_cells(iBLK)
   use ModProcMH
   use ModMain
   use ModPhysics,  ONLY: Rbody
-  use ModGeometry, ONLY: R_BLK, IsBoundaryBlock_IB, IsBoundaryCell_GI, &
-       MinBoundary,MaxBoundary
+  use ModGeometry, ONLY: R_BLK, IsBoundaryBlock_IB, IsBoundaryCell_GI
   use ModPhysics,  ONLY: Rbody2                            !^CFG IF SECONDBODY
   use ModGeometry, ONLY: R2_BLK                            !^CFG IF SECONDBODY
   use ModGeometry,ONLY:x1,x2,y1,y2,z1,z2,x_BLK,y_BLK,z_BLK 

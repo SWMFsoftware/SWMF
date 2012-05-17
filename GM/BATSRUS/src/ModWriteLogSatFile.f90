@@ -385,7 +385,7 @@ contains
     use ModUtilities, ONLY: lower_case
     use ModCurrent,   ONLY: get_current
     use ModWaves,     ONLY: UseWavePressure
-    use BATL_lib, ONLY: message_pass_cell_scalar, message_pass_cell
+    use BATL_lib, ONLY: message_pass_cell
 
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
@@ -909,7 +909,7 @@ contains
          MassIon_I
     implicit none
 
-    integer :: jVar, jFluid
+    integer :: jVar
     character(len=10) :: NameVar, NameLogVarLower
 
     !-------------------------------------------------------------------------
