@@ -28,7 +28,6 @@ contains
 
   subroutine read_ldem(NamePlotDir)
 
-    use ModConst,       ONLY: cProtonMass
     use ModNumConst,    ONLY: cDegToRad, cRadToDeg, cHalfPi, cTwoPi
     !use ModPhysics,     ONLY: AverageIonCharge, Si2No_V, No2Si_V, UnitN_, &
     !     UnitTemperature_
