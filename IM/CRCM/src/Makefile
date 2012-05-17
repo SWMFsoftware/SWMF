@@ -84,6 +84,4 @@ CRCM_orig:
 	-L${LIBDIR} -lTIMING -lSHARE -lNOMPI
 
 distclean: clean
-	rm -f Makefile.DEPEND Makefile.RULES
-	cp ModEarthHO.f90 ModPlanet.f90
-	cp ModGrid_default.f90 ModGrid.f90
+	rm -f ModPlanet.f90 ModGrid.f90

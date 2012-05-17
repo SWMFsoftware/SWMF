@@ -9,6 +9,7 @@ INSTALLFILES =  src/Makefile.DEPEND \
 
 install: 
 	touch ${INSTALLFILES}
+	Config.pl -EarthHO -GridDefault
 
 #
 #       General Housekeeping
@@ -68,18 +69,14 @@ clean:
 	@(if [ -d util ];  then cd util;  make clean; fi);
 	@(if [ -d share ]; then cd share; make clean; fi);
 
-distclean: 
-	rm -f config.log
-	cp src/ModEarthHO.f90 src/ModPlanet.f90
-	cp src/ModGrid_default.f90 src/ModGrid.f90
+distclean:
 	./Config.pl -uninstall
 
 allclean:
 	@touch ${INSTALLFILES}
-	@cd src; make distclean
-	rm -f config.log
+	cd src; make distclean
 	cd srcInterface; make distclean
-	rm -f *~
+	rm -f config.log *~
 
 #
 #       Create run directories

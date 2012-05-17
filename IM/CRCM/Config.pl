@@ -59,10 +59,6 @@ exit 0;
 
 sub get_settings{
 
-    #Define defaults
-    $Planet='EarthHO';
-    $Grid='GridDefault';
-    
     open(FILE, $ConfigLog) or 
 	die "$ERROR could not open $ConfigLog\n";
     
