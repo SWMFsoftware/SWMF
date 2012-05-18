@@ -22,7 +22,7 @@ subroutine read_ih_buffer(yIn,zIn,State_V)
   real, intent(in) :: yIn, zIn
   real, intent(out):: State_V(nVar)
 
-  real :: Xyz_D(3), GmIh_DD(3,3), Yz_D(2), y, z
+  real :: GmIh_DD(3,3), Yz_D(2), y, z
   real, save :: GmIh_II(2,2), TimeSimLast = -1.0
   integer :: I1, I2, J1, J2
   !---------------------------------------------------------------------------
@@ -95,9 +95,8 @@ subroutine GM_put_from_ih_buffer( &
      NameCoordIn, nYIn, nZIn, yMinIn, yMaxIn, zMinIn, zMaxIn, Buffer_VII)
 
   use ModVarIndexes
-  use ModPhysics, ONLY: Si2No_V, No2Io_V, UnitX_,UnitRho_,UnitU_,UnitB_,UnitP_
+  use ModPhysics, ONLY: Si2No_V, UnitX_,UnitRho_,UnitU_,UnitB_,UnitP_
   use ModMain, ONLY: TypeBc_I, west_
-  use ModKind, ONLY: Real8_
   use ModIhBuffer
 
   implicit none
