@@ -236,7 +236,7 @@ contains
           x_BLK(i,j,k,iBlock) = Xyz_DGB(1,i,j,k,iBlock)
           y_BLK(i,j,k,iBlock) = Xyz_DGB(2,i,j,k,iBlock)
           z_BLK(i,j,k,iBlock) = Xyz_DGB(3,i,j,k,iBlock)
-          r_BLK(:,:,:,iBlock) = sqrt(sum(Xyz_DGB(1:nDim,i,j,k,iBlock)**2))
+          r_BLK(i,j,k,iBlock) = sqrt(sum(Xyz_DGB(1:nDim,i,j,k,iBlock)**2))
        end do; end do; end do
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
