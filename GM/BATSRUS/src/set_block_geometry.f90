@@ -34,108 +34,109 @@ subroutine fix_block_geometry(iBLK)
   ! Assign cell centered coordinates.
   !/--------------------------------
 
+  if(.not.UseBatlTest)then
+     if(.not.UseCovariant)then                  
+        dx = dx_BLK(iBLK)
+        dy = dy_BLK(iBLK)
+        dz = dz_BLK(iBLK)
 
-  if(.not.UseCovariant)then                  
-     dx = dx_BLK(iBLK)
-     dy = dy_BLK(iBLK)
-     dz = dz_BLK(iBLK)
-
-     ! This case is the normal one using a spherical Radius.
-     do k = 1-gcn, nK+gcn
-        do j = 1-gcn, nJ+gcn
-           do i = 1-gcn, nI+gcn
-              x_BLK(i,j,k,iBLK) =  (i-1)*dx + xyzStart_BLK(1,iBLK)
-              y_BLK(i,j,k,iBLK) =  (j-1)*dy + xyzStart_BLK(2,iBLK)
-              z_BLK(i,j,k,iBLK) =  (k-1)*dz + xyzStart_BLK(3,iBLK)
+        ! This case is the normal one using a spherical Radius.
+        do k = 1-gcn, nK+gcn
+           do j = 1-gcn, nJ+gcn
+              do i = 1-gcn, nI+gcn
+                 x_BLK(i,j,k,iBLK) =  (i-1)*dx + xyzStart_BLK(1,iBLK)
+                 y_BLK(i,j,k,iBLK) =  (j-1)*dy + xyzStart_BLK(2,iBLK)
+                 z_BLK(i,j,k,iBLK) =  (k-1)*dz + xyzStart_BLK(3,iBLK)
+              end do
            end do
         end do
-     end do
 
-     R_BLK(:,:,:,iBLK) = sqrt(&
-          x_BLK(:,:,:,iBLK)**2 + y_BLK(:,:,:,iBLK)**2 + z_BLK(:,:,:,iBLK)**2)
+        R_BLK(:,:,:,iBLK) = sqrt(&
+             x_BLK(:,:,:,iBLK)**2 + y_BLK(:,:,:,iBLK)**2 + z_BLK(:,:,:,iBLK)**2)
 
-     cV = dx*dy*dz                                  
+        cV = dx*dy*dz                                  
 
-     fAx = dy*dz       !Cell face areas
-     fAy = dz*dx 
-     fAz = dx*dy 
+        fAx = dy*dz       !Cell face areas
+        fAy = dz*dx 
+        fAz = dx*dy 
 
-     fAx_BLK(iBLK) = fAx                           
-     fAy_BLK(iBLK) = fAy
-     fAz_BLK(iBLK) = fAz
-     cV_BLK(iBLK) = cV                               
-     vInv_CB(:,:,:,iBLK) = 1.0/cV                
+        fAx_BLK(iBLK) = fAx                           
+        fAy_BLK(iBLK) = fAy
+        fAz_BLK(iBLK) = fAz
+        cV_BLK(iBLK) = cV                               
+        vInv_CB(:,:,:,iBLK) = 1.0/cV                
 
-     !Calculate the node coordinates
-     if(allocated(NodeX_NB))then
-        do i=1,1+nI; do j=1,1+nJ; do k=1,1+nK
-           NodeX_NB(i,j,k,iBLK) = 0.125*sum(x_BLK(i-1:i,j-1:j,k-1:k,iBLK))
-           NodeY_NB(i,j,k,iBLK) = 0.125*sum(y_BLK(i-1:i,j-1:j,k-1:k,iBLK))
-           NodeZ_NB(i,j,k,iBLK) = 0.125*sum(z_BLK(i-1:i,j-1:j,k-1:k,iBLK))
-        end do; end do; end do
-     end if
-  elseif(.not.UseBatlTest)then
-     !Cell center coordinates are calculated directly as the
-     !transformed generalized coordinates
-     call gen_to_xyz_arr(XyzStart_BLK(:,iBLK),&
-          dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
-          1-gcn,nI+gcn,1-gcn,nJ+gcn,1-gcn,nK+gcn,&
-          x_BLK(:,:,:,iBLK),&
-          y_BLK(:,:,:,iBLK),&     
-          z_BLK(:,:,:,iBLK))
-
-     R_BLK(:,:,:,iBLK) = sqrt(&
-          x_BLK(:,:,:,iBLK)**2 + y_BLK(:,:,:,iBLK)**2 + z_BLK(:,:,:,iBLK)**2)
-
-     if(UseVertexBasedGrid)then
-
-        !Node coordinates are calculated directly, not derived from
-        !the cell centered x,y,z_BLK. In general case there is no close 
-        !relation between the node coordinates and the "cell center" 
-        !coordinates
-
-
-        XyzOfNode111_D(1)=XyzStart_BLK(1,iBLK)-dx_BLK(iBLK)*0.5
-        XyzOfNode111_D(2)=XyzStart_BLK(2,iBLK)-dy_BLK(iBLK)*0.5
-        XyzOfNode111_D(3)=XyzStart_BLK(3,iBLK)-dz_BLK(iBLK)*0.5
-
-
-        call gen_to_xyz_arr(XyzOfNode111_D,&
-             dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
-             1,1+nI,1,1+nJ,1,1+nK,&
-             NodeX_NB(:,:,:,iBLK),&
-             NodeY_NB(:,:,:,iBLK),&
-             NodeZ_NB(:,:,:,iBLK))
-
-        !Mark the block for fixing the covariant geometry afterwards
-        !(when the refinement level of the neighboring blocks are
-        !all known). The condition for fixing the block is
-        !any(OldLevel_IIIB(:,:,:,iBLK)/=NeiLev_BLK(:,:,:,iBLK).and.
-        !(OldLevel_IIIB(:,:,:,iBLK)==-1.or.NeiLev_BLK(:,:,:,iBLK).  
-        !To force the fix procedure for the given block set
-
-        OldLevel_IIIB(:,:,:,iBLK)=0
-
+        !Calculate the node coordinates
+        if(allocated(NodeX_NB))then
+           do i=1,1+nI; do j=1,1+nJ; do k=1,1+nK
+              NodeX_NB(i,j,k,iBLK) = 0.125*sum(x_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+              NodeY_NB(i,j,k,iBLK) = 0.125*sum(y_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+              NodeZ_NB(i,j,k,iBLK) = 0.125*sum(z_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+           end do; end do; end do
+        end if
      else
+        !Cell center coordinates are calculated directly as the
+        !transformed generalized coordinates
+        call gen_to_xyz_arr(XyzStart_BLK(:,iBLK),&
+             dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
+             1-gcn,nI+gcn,1-gcn,nJ+gcn,1-gcn,nK+gcn,&
+             x_BLK(:,:,:,iBLK),&
+             y_BLK(:,:,:,iBLK),&     
+             z_BLK(:,:,:,iBLK))
 
-        !Node coordinates are calculated as the for the point
-        !of the faces intersection
+        R_BLK(:,:,:,iBLK) = sqrt(&
+             x_BLK(:,:,:,iBLK)**2 + y_BLK(:,:,:,iBLK)**2 + z_BLK(:,:,:,iBLK)**2)
 
-        call calc_node_coords_covar
+        if(UseVertexBasedGrid)then
+
+           !Node coordinates are calculated directly, not derived from
+           !the cell centered x,y,z_BLK. In general case there is no close 
+           !relation between the node coordinates and the "cell center" 
+           !coordinates
+
+
+           XyzOfNode111_D(1)=XyzStart_BLK(1,iBLK)-dx_BLK(iBLK)*0.5
+           XyzOfNode111_D(2)=XyzStart_BLK(2,iBLK)-dy_BLK(iBLK)*0.5
+           XyzOfNode111_D(3)=XyzStart_BLK(3,iBLK)-dz_BLK(iBLK)*0.5
+
+
+           call gen_to_xyz_arr(XyzOfNode111_D,&
+                dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
+                1,1+nI,1,1+nJ,1,1+nK,&
+                NodeX_NB(:,:,:,iBLK),&
+                NodeY_NB(:,:,:,iBLK),&
+                NodeZ_NB(:,:,:,iBLK))
+
+           !Mark the block for fixing the covariant geometry afterwards
+           !(when the refinement level of the neighboring blocks are
+           !all known). The condition for fixing the block is
+           !any(OldLevel_IIIB(:,:,:,iBLK)/=NeiLev_BLK(:,:,:,iBLK).and.
+           !(OldLevel_IIIB(:,:,:,iBLK)==-1.or.NeiLev_BLK(:,:,:,iBLK).  
+           !To force the fix procedure for the given block set
+
+           OldLevel_IIIB(:,:,:,iBLK)=0
+
+        else
+
+           !Node coordinates are calculated as the for the point
+           !of the faces intersection
+
+           call calc_node_coords_covar
+
+        end if
+        !Face area vectors and cell volumes are expressed 
+        !in terms of the node coordinates
+
+        call fix_covariant_geometry(iBLK)
 
      end if
-     !Face area vectors and cell volumes are expressed 
-     !in terms of the node coordinates
-
-     call fix_covariant_geometry(iBLK)
+     Rmin_BLK(iBLK)  = minval(R_BLK(:,:,:,iBLK))
 
   end if
 
-
-  Rmin_BLK(iBLK)  = minval(R_BLK(:,:,:,iBLK))
-
   if (UseBody2) then                        !^CFG IF SECONDBODY BEGIN
      ! calculate the radius as measured from the second body
+     ! Note that the second body can move
      R2_BLK(:,:,:,iBLK) = sqrt( &
           (x_BLK(:,:,:,iBLK)-xBody2)**2 + &
           (y_BLK(:,:,:,iBLK)-yBody2)**2 + &

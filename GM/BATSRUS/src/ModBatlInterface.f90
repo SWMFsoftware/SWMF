@@ -72,14 +72,16 @@ contains
     use BATL_lib, ONLY: nDim, x_, y_, z_, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nINode, nJNode, nKNode, &
-         Xyz_DGB, Xyz_DNB, CellVolume_GB, &
+         Xyz_DGB, Xyz_DNB, CellVolume_B, CellVolume_GB, &
          CellSize_DB, CoordMin_DB, &
+         CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
          iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
          iTree_IA, Block_, Proc_, Unset_, &
-         IsCartesian, IsRzGeometry, CellFace_DFB, FaceNormal_DDFB
+         IsCartesian, IsRzGeometry
     use ModGeometry, ONLY: &
-         x_BLK, y_BLK, z_BLK, r_BLK, vInv_CB, &
-         dx_BLK, dy_BLK, dz_BLK, XyzStart_BLK, &
+         XyzStart_BLK, &
+         x_BLK, y_BLK, z_BLK, r_BLK, rMin_BLK, Cv_BLK, vInv_CB, &
+         dx_BLK, dy_BLK, dz_BLK, fax_BLK, fay_BLK, faz_BLK, &
          FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
          FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B
 
@@ -239,6 +241,8 @@ contains
           r_BLK(i,j,k,iBlock) = sqrt(sum(Xyz_DGB(1:nDim,i,j,k,iBlock)**2))
        end do; end do; end do
 
+       Rmin_BLK(iBlock) = minval(r_BLK(:,:,:,iBlock))
+
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           vInv_CB(i,j,k,iBlock) = 1/CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
@@ -255,6 +259,12 @@ contains
           end if
        end do; end do; end do
 
+       if(IsCartesian)then
+          fAx_BLK(iBlock) = CellFace_DB(1,iBlock)
+          fAy_BLK(iBlock) = CellFace_DB(2,iBlock)
+          fAz_BLK(iBlock) = CellFace_DB(3,iBlock)
+          cV_BLK(iBlock)  = CellVolume_B(iBlock)
+       end if
 
     end if
 
@@ -317,8 +327,7 @@ contains
        if(iAmrChange_B(iBlock) < AmrMoved_) CYCLE
 
        ! Update all kinds of extra block variables
-       call calc_other_soln_vars(iBlock)
-       call fix_soln_block(iBlock)
+       call calc_other_vars(iBlock)
        call calc_energy_ghost(iBlock)
        call set_amr_geometry(iBlock)
        if(UseResistivity) call set_resistivity(iBlock)
@@ -326,65 +335,61 @@ contains
 
   end subroutine set_batsrus_state
   !============================================================================
-  subroutine fix_soln_block(iBLK)
-    use ModAdvance, ONLY : State_VGB, nVar
-    use ModPhysics, ONLY : CellState_VI
-    use ModGeometry, ONLY: body_BLK, true_cell
-    use ModMain, ONLY: west_, TypeBC_I, nI, nJ, nK, gcn, body1_
-    use ModParallel, ONLY: neiLwest, NOBLK
+  subroutine calc_other_vars(iBlock)
 
-    integer, intent(in) :: iBLK
+    use ModAdvance,  ONLY: State_VGB, nVar, &
+         fbody_x_BLK, fbody_y_BLK, fbody_z_BLK, &
+         B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB
+    use ModPhysics,  ONLY : CellState_VI
+    use ModGeometry, ONLY: body_BLK, true_cell
+    use ModMain,     ONLY: west_, TypeBC_I, body1_, UseB0, UseGravity, &
+         UseRotatingFrame, globalBLK
+    use ModParallel, ONLY: neiLwest, NOBLK
+    use ModConserveFlux, ONLY: init_cons_flux
+    use BATL_size, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+
+    integer, intent(in) :: iBlock
+
     integer:: i, j, k
     !--------------------------------------------------------------------------
-    if(body_BLK(iBLK)) then
-       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
-          if(true_cell(i,j,k,iBLK))CYCLE
-          State_VGB(1:nVar,i,j,k,iBLK) = CellState_VI(1:nVar,body1_)
+    ! Initialize variables for flux conservation
+    call init_cons_flux(iBlock)
+
+    ! Set B0
+    if(UseB0)then
+       B0_DGB(:,:,:,:,iBlock) = 0.0
+       B0ResChange_DXSB(:,:,:,:,iBlock) = 0.0
+       B0ResChange_DYSB(:,:,:,:,iBlock) = 0.0
+       B0ResChange_DZSB(:,:,:,:,iBlock) = 0.0
+
+       call set_b0(iBlock)
+    end if
+
+    ! Initialize and set body forces
+    if(allocated(fbody_x_BLK))then
+       fbody_x_BLK(:,:,:,iBlock) = 0.0
+       fbody_y_BLK(:,:,:,iBlock) = 0.0
+       fbody_z_BLK(:,:,:,iBlock) = 0.0
+    end if
+
+    globalBLK = iBlock
+    if(UseGravity.or.UseRotatingFrame) call body_force_averages
+
+    ! Set values inside body
+    if(body_BLK(iBlock)) then
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          if(true_cell(i,j,k,iBlock)) CYCLE
+          State_VGB(1:nVar,i,j,k,iBlock) = CellState_VI(1:nVar,body1_)
        end do;end do; end do     
     end if
 
     ! For coupled (IH->GM) boundary condition fill in ghost cells
     ! with the first physical cell, because IH may not couple after AMR
-    if(TypeBc_I(west_)=='coupled' .and. neiLwest(iBLK)==NOBLK)then
-       State_VGB(:,nI+1,:,:,iBLK)   = State_VGB(:,nI,:,:,iBLK)
-       State_VGB(:,nI+2,:,:,iBLK)   = State_VGB(:,nI,:,:,iBLK)
+    if(TypeBc_I(west_)=='coupled' .and. neiLwest(iBlock)==NOBLK)then
+       State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+       State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
     endif
 
-  end subroutine fix_soln_block
-
-  !============================================================================
-
-  subroutine calc_other_soln_vars(iBLK)
-
-    use ModMain
-    use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK, &
-         B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB
-    use ModConserveFlux, ONLY: init_cons_flux
-
-    integer, intent(in) :: iBLK
-    !-------------------------------------------------------------------------
-
-    if(UseB0)then
-       B0_DGB(:,:,:,:,iBLK) = 0.0
-       B0ResChange_DXSB(:,:,:,:,iBLK) = 0.0
-       B0ResChange_DYSB(:,:,:,:,iBLK) = 0.0
-       B0ResChange_DZSB(:,:,:,:,iBLK) = 0.0
-
-       call set_b0(iBLK)
-    end if
-
-    if(allocated(fbody_x_BLK))then
-       fbody_x_BLK(:,:,:,iBLK) = 0.0
-       fbody_y_BLK(:,:,:,iBLK) = 0.0
-       fbody_z_BLK(:,:,:,iBLK) = 0.0
-    end if
-
-    call init_cons_flux(iBLK)
-
-    globalBLK = iBLK
-
-    if(UseGravity.or.UseRotatingFrame) call body_force_averages
-
-  end subroutine calc_other_soln_vars
+  end subroutine calc_other_vars
 
 end module ModBatlInterface
