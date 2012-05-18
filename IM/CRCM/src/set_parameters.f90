@@ -5,7 +5,7 @@ subroutine CRCM_set_parameters(NameAction)
   use ModCrcmInitialize, ONLY: IsEmptyInitial
   use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot, DoSaveFlux
   use ModFieldTrace,     ONLY: UseEllipse
-  use ModCrcm,           ONLY: UseMcLimiter, BetaLimiter, time
+  use ModCrcm,           ONLY: UseMcLimiter, BetaLimiter, time, Pmin
   use ModCrcmRestart,    ONLY: IsRestart
   implicit none
 
@@ -50,6 +50,10 @@ subroutine CRCM_set_parameters(NameAction)
         call read_var('UseMcLimiter', UseMcLimiter)
         if(UseMcLimiter) call read_var('BetaLimiter', BetaLimiter)
 
+     ! minimum pressure in nPa passed to GM
+     case('#MINIMUMPRESSURETOGM')   
+        call read_var('MinimumPressureToGM', Pmin)
+        
      case('#TIMESIMULATION')
         call read_var('TimeSimulation',time)
      

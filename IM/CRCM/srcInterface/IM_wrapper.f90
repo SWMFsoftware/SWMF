@@ -280,7 +280,7 @@ subroutine IM_put_from_gm_crcm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,&
   StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
 
 ! for anisopressure coupling 
-  if(DoTest)then
+  if(DoTest .and. DoAnisoPressureGMCoupling)then
      write(NameOut,"(a,f6.1)") 'StateBmin_t_',tSimulation
      open(UnitTmp_,FILE=NameOut)
      write(UnitTmp_,"(a)") 'IM_put_from_gm_crcm, StateBmin_IIV, last index 1:5 and 7 '
@@ -431,7 +431,7 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   !use CON_time, ONLY : get_time
   use ModCrcmGrid,  ONLY: iSize=>np, jSize=>nt, iProc
-  use ModCrcm,      ONLY: Pressure_IC=>phot, Ppar_IC, Bmin_C, Time
+  use ModCrcm,      ONLY: Pressure_IC=>phot, Ppar_IC, Bmin_C, Time, Pmin
   use ModGmCrcm,    ONLY: Den_IC, iLatMin, DoMultiFluidGMCoupling, &
        DoAnisoPressureGMCoupling
   use ModFieldTrace,ONLY: iba
@@ -510,19 +510,21 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
            Buffer_IIV(i,j,Odens_) = -1.
         end if
      else
-        Buffer_IIV(i,j,pres_) = sum(Pressure_IC(:,i,j))*1e-9
+        ! make sure pressure passed to GM is not lower than Pmin [nPa]
+        ! to avoid too low GM pressure 
+        Buffer_IIV(i,j,pres_) = max(sum(Pressure_IC(:,i,j)), Pmin)*1e-9
         Buffer_IIV(i,j,dens_) = &
              sum(Den_IC (1:nspec-1,i,j)*cProtonMass*amu_I(1:nspec-1))
         if(DoAnisoPressureGMCoupling)then
-           Buffer_IIV(i,j,parpres_) = sum(Ppar_IC(:,i,j))*1e-9
+           Buffer_IIV(i,j,parpres_) = max(sum(Ppar_IC(:,i,j)), Pmin)*1e-9
            ! fill minimum B  
            Buffer_IIV(i,j,bmin_) = Bmin_C(i,j)
         end if
         if(DoMultiFluidGMCoupling)then
-           Buffer_IIV(i,j,Hpres_) = Pressure_IC(1,i,j)*1e-9
+           Buffer_IIV(i,j,Hpres_) = max(Pressure_IC(1,i,j), Pmin)*1e-9
            Buffer_IIV(i,j,Hdens_) = &
                 Den_IC (1,i,j)*cProtonMass*amu_I(1)
-           Buffer_IIV(i,j,Opres_) = Pressure_IC(2,i,j)*1e-9
+           Buffer_IIV(i,j,Opres_) = max(Pressure_IC(2,i,j), Pmin)*1e-9
            Buffer_IIV(i,j,Odens_) = &
                 Den_IC (2,i,j)*cProtonMass*amu_I(2)
            
