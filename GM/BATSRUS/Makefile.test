@@ -38,6 +38,18 @@ test:
 	-@($(MAKE) test_func)
 	@ls -l *.diff
 
+test_sph:
+	@rm -f *.diff
+	-@($(MAKE) test_coronasph)
+	-@($(MAKE) test_chromo)
+	-@($(MAKE) test_earthsph)
+	-@($(MAKE) test_titan)
+	-@($(MAKE) test_mars)
+	-@($(MAKE) test_marsfluids)
+	-@($(MAKE) test_venus)
+	-@($(MAKE) test_mercurysph)
+	@ls -l *.diff
+
 # !!! NOTE: In the above list "test_func" should be the last test
 
 # All tests are done in this directory:
@@ -132,11 +144,11 @@ test_fluxemergence_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_restart; \
 				mv runlog_restart RESULTS/run_restart
 
-test_fluxemergence_check:	
-	${SCRIPTDIR}/DiffNum.pl -t \
+test_fluxemergence_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t \
 		Param/FLUXEMERGENCE/TestOutput/log_fluxemergence.log \
 		${TESTDIR}/RESULTS/run_restart/EE/log_n000011.log \
-		> test_fluxemergence.diff
+		> test_fluxemergence.diff)
 	ls -l test_fluxemergence.diff
 
 ### SHOCK TUBE TEST ###
@@ -164,9 +176,10 @@ test_shocktube_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shocktube_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
 		${TESTDIR}/RESULT/GM/cut_*t25.6*.out \
-		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out > test_shocktube.diff
+		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out \
+		> test_shocktube.diff)
 	ls -l test_shocktube.diff
 
 ### PART STEADY TEST ###
@@ -194,10 +207,10 @@ test_partsteady_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_partsteady_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
 		${TESTDIR}/RESULT/GM/cut_*t25.6*.out \
 		Param/SHOCKTUBE/TestOutput/partsteady_ref.out \
-		> test_partsteady.diff
+		> test_partsteady.diff)
 	ls -l test_partsteady.diff
 
 
@@ -226,9 +239,9 @@ test_hallmhd_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_hallmhd_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-7 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-7 \
 	  Param/SHOCKTUBE/TestOutput/hall_ref.out \
-	  ${TESTDIR}/RESULT/GM/cut_*0118.out > test_hallmhd.diff
+	  ${TESTDIR}/RESULT/GM/cut_*0118.out > test_hallmhd.diff)
 	ls -l test_hallmhd.diff
 
 ### TWOFLUID MHD TEST ###
@@ -256,9 +269,9 @@ test_twofluidmhd_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_twofluidmhd_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
 	  Param/SHOCKTUBE/TestOutput/twofluid_ref.out \
-	  ${TESTDIR}/RESULT/GM/cut_mhd_1_t00000020*.out > test_twofluidmhd.diff
+	  ${TESTDIR}/RESULT/GM/cut_mhd_1_t00000020*.out > test_twofluidmhd.diff)
 	ls -l test_twofluidmhd.diff
 
 ### MULTI FLUID TEST ###
@@ -286,9 +299,9 @@ test_multifluid_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_multifluid_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 	  Param/MULTIFLUID/TestOutput/cut_t25.out \
-	  ${TESTDIR}/RESULT/GM/cut_*025_n*.out > test_multifluid.diff
+	  ${TESTDIR}/RESULT/GM/cut_*025_n*.out > test_multifluid.diff)
 	ls -l test_multifluid.diff
 
 ### TEST MAGNETOMETER ###
@@ -316,10 +329,10 @@ test_magnetometer_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_magnetometer_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		Param/MAGNETOMETER/TestOutput/GM_mag_n00000000.mag \
 		${TESTDIR}/RESULTS/GM/GM_mag_n00000000.mag \
-		> test_magnetometer.diff	
+		> test_magnetometer.diff)
 	ls -l test_magnetometer.diff
 
 ### MULTI ION TEST ###
@@ -347,9 +360,9 @@ test_multiion_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_multiion_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		Param/MULTIION/TestOutput/cut_t2.out \
-		${TESTDIR}/RESULTS/GM/cut_*t02.*.out > test_multiion.diff
+		${TESTDIR}/RESULTS/GM/cut_*t02.*.out > test_multiion.diff)
 	ls -l test_multiion.diff
 
 ### MHD WITH MULTIPLE IONS TEST ###
@@ -377,10 +390,10 @@ test_mhdions_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_mhdions_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
 		Param/MHDIONS/TestOutput/cut_mhd_t10m.out \
 		${TESTDIR}/RESULTS/GM/cut_mhd_1_t00001000*.out \
-		> test_mhdions.diff
+		> test_mhdions.diff)
 	ls -l test_mhdions.diff
 
 ### NONCONSERVATIVE MHD TEST ###
@@ -408,10 +421,10 @@ test_mhdnoncons_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_mhdnoncons_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
 		Param/MHDNONCONS/TestOutput/cut_mhd_t10m.out \
 		${TESTDIR}/RESULTS/GM/cut_mhd_1_t00001000*.out \
-		> test_mhdnoncons.diff
+		> test_mhdnoncons.diff)
 	ls -l test_mhdnoncons.diff
 
 ### CRASH RELATED TESTS ###############################################
@@ -442,9 +455,9 @@ test_eosgodunov_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_eosgodunov_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
 	  Param/CRASH/TestOutput/eosgodunov.out \
-	  ${TESTDIR}/RESULT/GM/cut_*500.0*.out > test_eosgodunov.diff
+	  ${TESTDIR}/RESULT/GM/cut_*500.0*.out > test_eosgodunov.diff)
 	ls -l test_eosgodunov.diff
 
 ### LEVELSET TEST ###
@@ -473,9 +486,9 @@ test_levelset_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_levelset_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
 		Param/CRASH/TestOutput/log_levelset.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_levelset.diff
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_levelset.diff)
 	ls -l test_levelset.diff
 
 ### HYADES2D TEST ###
@@ -516,9 +529,9 @@ test_hyades2d_restart:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
 
 test_hyades2d_check:
-	${SCRIPTDIR}/DiffNum.pl -r=1e-5 -t \
+	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-5 -t \
 		Param/CRASH/TestOutput/log_hyades2d.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_hyades2d.diff
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_hyades2d.diff)
 	ls -l test_hyades2d.diff
 
 ### LASER PACKAGE TEST ###
@@ -548,9 +561,9 @@ test_laserpackage_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_laserpackage_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=2e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=2e-5 \
 		Param/CRASH/TestOutput/log_laserpackage.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_laserpackage.diff
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_laserpackage.diff)
 	ls -l test_laserpackage.diff
 
 
@@ -581,9 +594,9 @@ test_mixedcell_run:
 	#cd ${TESTDIR}; ./PostProc.pl -M
 
 test_mixedcell_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
 		Param/CRASH/TestOutput/cut_mixedcell.idl \
-		${TESTDIR}/IO2/cut_400_ns.idl > test_mixedcell.diff
+		${TESTDIR}/IO2/cut_400_ns.idl > test_mixedcell.diff)
 	ls -l test_mixedcell.diff
 
 ### GRAY-DIFFUSION TEST ###
@@ -612,9 +625,9 @@ test_graydiffusion_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_graydiffusion_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-4 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-4 \
 		Param/CRASH/TestOutput/log_graydiffusion.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_graydiffusion.diff
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_graydiffusion.diff)
 	ls -l test_graydiffusion.diff
 
 ### END OF CRASH RELATED TESTS #############################################
@@ -647,9 +660,9 @@ test_corona_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_corona_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
 		Param/CORONA/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/SC/log_n000001.log > test_corona.diff
+		${TESTDIR}/RESULTS/SC/log_n000001.log > test_corona.diff)
 	ls -l test_corona.diff
 
 # TEST SPHERICAL GRID FOR CORONA
@@ -680,9 +693,9 @@ test_coronasph_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_coronasph_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
 		Param/CORONA/TestOutput/log_n000001.sph \
-		${TESTDIR}/RESULTS/SC/log_n000001.log > test_coronasph.diff
+		${TESTDIR}/RESULTS/SC/log_n000001.log > test_coronasph.diff)
 	ls -l test_coronasph.diff
 
 ### STANDALONE TWO-TEMPERATURE SOLAR CORONA TESTS ###
@@ -714,9 +727,9 @@ test_corona_2t_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_corona_2t_check:
-	${SCRIPTDIR}/DiffNum.pl -t \
+	-@(${SCRIPTDIR}/DiffNum.pl -t \
 		Param/CORONA/TestOutput/log_n000000.sc.2t \
-		${TESTDIR}/RESULTS/SC/log_n000000.log > test_corona_2t.diff
+		${TESTDIR}/RESULTS/SC/log_n000000.log > test_corona_2t.diff)
 	ls -l test_corona_2t.diff
 
 ### STANDALONE CHROMOSPHERE SOLAR CORONA TESTS ###
@@ -747,9 +760,9 @@ test_chromo_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	
 test_chromo_check:
-	${SCRIPTDIR}/DiffNum.pl -t -a=1e-27 -r=1e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -a=1e-27 -r=1e-5 \
 		Param/CORONA/TestOutput/log_n000000.sc.chromo \
-		${TESTDIR}/RESULTS/SC/log_n000000.log > test_chromo.diff
+		${TESTDIR}/RESULTS/SC/log_n000000.log > test_chromo.diff)
 	ls -l test_chromo.diff
 
 ### STANDALONE OUTER HELIOSPHERE TESTS ###
@@ -779,9 +792,9 @@ test_outerhelio_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_outerhelio_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
 		Param/OUTERHELIO/TestOutput/log_n000000.log \
-		${TESTDIR}/RESULTS/OH/log_n000000.log > test_outerhelio.diff
+		${TESTDIR}/RESULTS/OH/log_n000000.log > test_outerhelio.diff)
 	ls -l test_outerhelio.diff
 
 ### FUNCTIONALITY TEST SUITE ###
@@ -841,9 +854,9 @@ test_titan_run:
 	cd ${TESTDIR}; rm -rf TitanTest; ./PostProc.pl -M -o TitanTest
 
 test_titan_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/TITAN/TestOutput/log_n000001.log \
-		${TESTDIR}/TitanTest/GM/log_n000001.log > test_titan.diff
+		${TESTDIR}/TitanTest/GM/log_n000001.log > test_titan.diff)
 	ls -l test_titan.diff
 
 test_titan_restart:
@@ -873,9 +886,9 @@ test_titan_restart_check:
 	cd ${TESTDIR}/TitanTest; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/TITAN/TestOutput/log_n000001.log \
-		${TESTDIR}/TitanTest/log_all.log > test_titan_restart.diff
+		${TESTDIR}/TitanTest/log_all.log > test_titan_restart.diff)
 	ls -l test_titan*.diff
 
 ### TESTS FOR MODELING MARS ###
@@ -909,9 +922,9 @@ test_mars_run:
 	cd ${TESTDIR}; rm -rf MarsTest; ./PostProc.pl -M -o MarsTest
 
 test_mars_check:
-	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		Param/MARS/TestOutput/log_n000001.log \
-		${TESTDIR}/MarsTest/GM/log_n000001.log > test_mars.diff
+		${TESTDIR}/MarsTest/GM/log_n000001.log > test_mars.diff)
 	ls -l test_mars.diff
 
 ### TESTS FOR MODELING MARSFLUIDS ###
@@ -945,9 +958,9 @@ test_marsfluids_run:
 	cd ${TESTDIR}; rm -rf MarsFluidsTest; ./PostProc.pl -M -o MarsFluidsTest
 
 test_marsfluids_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/MARSFLUIDS/TestOutput/log_n000001.log \
-		${TESTDIR}/MarsFluidsTest/GM/log_n000001.log > test_marsfluids.diff
+		${TESTDIR}/MarsFluidsTest/GM/log_n000001.log > test_marsfluids.diff)
 	ls -l test_marsfluids.diff
 
 test_marsfluids_restart:
@@ -978,9 +991,10 @@ test_marsfluids_restart_check:
 	cd ${TESTDIR}/MarsFluidsTest; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -10 RestartRead/GM/log_n000011.log >> log_all.log
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/MARSFLUIDS/TestOutput/log_n000001.log \
-		${TESTDIR}/MarsFluidsTest/log_all.log > test_marsfluids_restart.diff
+		${TESTDIR}/MarsFluidsTest/log_all.log \
+		> test_marsfluids_restart.diff)
 	ls -l test_marsfluids*.diff
 
 
@@ -1015,9 +1029,9 @@ test_venus_run:
 	cd ${TESTDIR}; rm -rf VenusTest; ./PostProc.pl -M -o VenusTest
 
 test_venus_check:
-	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-17 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-17 \
 		Param/VENUS/TestOutput/log_n000001.log \
-		${TESTDIR}/VenusTest/GM/log_n000001.log > test_venus.diff
+		${TESTDIR}/VenusTest/GM/log_n000001.log > test_venus.diff)
 	ls -l test_venus.diff
 
 test_venus_restart:
@@ -1047,9 +1061,9 @@ test_venus_restart_check:
 	cd ${TESTDIR}/VenusTest; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/VENUS/TestOutput/log_n000001.log \
-		${TESTDIR}/VenusTest/log_all.log > test_venus_restart.diff
+		${TESTDIR}/VenusTest/log_all.log > test_venus_restart.diff)
 	ls -l test_venus*.diff
 
 ### TESTS FOR MODELING SATURN ###
@@ -1082,9 +1096,9 @@ test_saturn_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_saturn_check:
-	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-17 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-17 \
 		Param/SATURN/TestOutput/log_n000001.log \
-		${TESTDIR}/RESULTS/GM/log_n000001.log > test_saturn.diff
+		${TESTDIR}/RESULTS/GM/log_n000001.log > test_saturn.diff)
 	ls -l test_saturn.diff
 
 ### TESTS FOR MODELING MERCURY ###
@@ -1157,9 +1171,9 @@ test_comet_run:
 	cd ${TESTDIR}; rm -rf CometTest; ./PostProc.pl -M -o CometTest
 
 test_comet_check:
-	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-10 \
 		Param/COMET/TestOutput/log_n000001.log \
-		${TESTDIR}/CometTest/GM/log_n000001.log > test_comet.diff
+		${TESTDIR}/CometTest/GM/log_n000001.log > test_comet.diff)
 	ls -l test_comet.diff
 
 ### TESTS FOR MODELING EARTH WITH SPHERICAL GRID ###
@@ -1277,7 +1291,7 @@ test_anisotropic_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_anisotropic_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-	  Param/ANISOPRESSURE/TestOutput/alfven_ref.out \
-	  ${TESTDIR}/RESULT/GM/cut_*t03*.out > test_anisotropic.diff
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+	    Param/ANISOPRESSURE/TestOutput/alfven_ref.out \
+	    ${TESTDIR}/RESULT/GM/cut_*t03*.out > test_anisotropic.diff)
 	ls -l test_anisotropic.diff
