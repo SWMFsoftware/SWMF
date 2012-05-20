@@ -42,6 +42,8 @@ Remove unused variables from a certain file:
 my $source;
 foreach $source (@ARGV){
 
+    next if $source eq "MpiTemplate.f90";
+
     `touch $source`;
     
     my $object = $source;
