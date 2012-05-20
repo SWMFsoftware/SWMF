@@ -10,26 +10,28 @@ TESTMACHINE = `hostname | sed -e 's/\..*//; s/[0-9]*$$//'`
 
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
-	@echo "    test MPIRUN=               (run all tests serially)"
-	@echo "    test MPIRUN='mpirun -np 3' (run test with mpirun -np 3)"
-	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
-	@echo "    test_share_library         (run test share/Library only)"
-	@echo "    test_comp                  (run component tests only)"
-	@echo "    test_lc                    (run LC/BATSRUS only)"
-	@echo "    test_pw                    (run PW/PWOM test only)"
-	@echo "    test_ps                    (run PW/DGCPM test only)"
-	@echo "    test_rb                    (run RB/RBE test only)"
-	@echo "    test_esmf                  (run ESMF_SWMF test only)"
-	@echo "    test_ccmc                  (run CCMC test only)"
-	@echo "    test1                      (run GM-IE-PW test only)"
-	@echo "    test2                      (run SC-IH test only )"
-	@echo "    test3                      (run GM-IE-IM test only)"
-	@echo "    test4                      (run GM-IE-HEIDI test only)"
-	@echo "    test5                      (run EE-SC test only)"
-	@echo "    test6                      (run GM-IE-CRCM test only)"
-	@echo "    test7                      (run IH-OH test only)"
-	@echo "    test8		      (run multifluid GM-IM coupling test only)"
-	@echo "    test9		      (run Chromo SC-IH coupling test only)"
+	@echo "    test MPIRUN=               (run tests serially)"
+	@echo "    test KEEP=y                (run tests and keep run directories)"
+	@echo "    test MPIRUN='mpirun -np 3' (run tests with mpirun -np 3)"
+	@echo "    test MPIRUN='mpiexec'      (run tests with mpiexec)"
+	@echo "    test_share_library         (run share/Library tests)"
+	@echo "    test_comp                  (run component tests)"
+	@echo "    test_lc                    (run LC/BATSRUS test)"
+	@echo "    test_pw                    (run PW/PWOM test)"
+	@echo "    test_ps                    (run PW/DGCPM test)"
+	@echo "    test_rb                    (run RB/RBE test)"
+	@echo "    test_esmf                  (run ESMF_SWMF test)"
+	@echo "    test_ccmc                  (run CCMC test)"
+	@echo "    test1                      (run GM-IE-PW test)"
+	@echo "    test2                      (run SC-IH test )"
+	@echo "    test3                      (run GM-IE-IM test)"
+	@echo "    test4                      (run GM-IE-HEIDI test)"
+	@echo "    test5                      (run EE-SC test)"
+	@echo "    test6                      (run GM-IE-CRCM test)"
+	@echo "    test7                      (run IH-OH test)"
+	@echo "    test8		      (run multifluid GM-IM coupling test)"
+	@echo "    test9		      (run Chromo SC-IH coupling test)"
+	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 test:
 	@rm -f *.diff
@@ -93,8 +95,8 @@ test_pw:
 	@echo "test_pw_run..." >> test_pw.diff
 	${MAKE} test_pw_run
 	@echo "test_pw_check..." >> test_pw.diff
-
 	${MAKE} test_pw_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_pw_compile:
 	./Config.pl -v=Empty,PW/PWOM -o=PW:Earth
@@ -130,6 +132,7 @@ test_ps:
 	${MAKE} test_ps_run
 	@echo "test_ps_check..." >> test_ps.diff
 	${MAKE} test_ps_check	
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ps_compile:
 	./Config.pl -v=Empty,PS/DGCPM
@@ -142,7 +145,6 @@ test_ps_rundir:
 	cp Param/LAYOUT.in.test.PS ${TESTDIR}/LAYOUT.in
 	cp ${PSDIR}/Input/a1001_dgcpm.in ${TESTDIR}/PS/Input/
 	cp ${PSDIR}/Input/a1001_kp.in ${TESTDIR}/PS/Input/
-
 
 test_ps_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -167,6 +169,7 @@ test_rb:
 	${MAKE} test_rb_run
 	@echo "test_rb_check..." >> test_rb.diff
 	${MAKE} test_rb_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_rb_compile:
 	./Config.pl -v=Empty,RB/RBE,GM/BATSRUS
@@ -211,6 +214,7 @@ test1:
 	@echo "test1_check..." >> test1_ie.diff
 	@echo "test1_check..." >> test1_pw.diff
 	${MAKE} test1_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test1_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
@@ -274,6 +278,7 @@ test2:
 	@echo "test2_check..." >> test2_sc.diff
 	@echo "test2_check..." >> test2_ih.diff
 	${MAKE} test2_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test2_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
@@ -330,6 +335,7 @@ test3:
 	@echo "test3_check..." >> test3_ie.diff
 	@echo "test3_check..." >> test3_im_rcm.diff
 	${MAKE} test3_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test3_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
@@ -409,6 +415,7 @@ test4:
 	@echo "test4_check..." >> test4_ie.diff
 	@echo "test4_check..." >> test4_im_heidi.diff
 	${MAKE} test4_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test4_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
@@ -450,6 +457,7 @@ test5:
 	${MAKE} test5_run
 	@echo "test5_check..." >> test5_ee.diff
 	${MAKE} test5_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test5_compile:
 	./Config.pl -v=Empty,EE/BATSRUS
@@ -507,6 +515,7 @@ test6:
 	@echo "test6_check..." >> test6_ie.diff
 	@echo "test6_check..." >> test6_im_crcm.diff
 	${MAKE} test6_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test6_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CRCM
@@ -563,6 +572,7 @@ test7:
 	@echo "test7_check..." >> test7_ih.diff
 	@echo "test7_check..." >> test7_oh.diff
 	${MAKE} test7_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
@@ -615,6 +625,7 @@ test8:
 	@echo "test8_check..." >> test8_ie.diff
 	@echo "test8_check..." >> test8_im_rcm_multi.diff
 	${MAKE} test8_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test8_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
@@ -688,6 +699,7 @@ test9:
 	@echo "test9_check..." >> test9_sc_chromo.diff
 	@echo "test9_check..." >> test9_ih.diff
 	${MAKE} test9_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
@@ -729,6 +741,7 @@ test_lc:
 	${MAKE} test_lc_run
 	@echo "test_lc_check..." >> test_lc.diff
 	${MAKE} test_lc_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_lc_compile:
 	./Config.pl -v=Empty,LC/BATSRUS
@@ -760,6 +773,7 @@ test_sc_waves:
 	${MAKE} test_sc_waves_compile
 	@echo "test_sc_rundir..." >> test_sc_waves.diff
 	${MAKE} test_sc_waves_rundir
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_sc_waves_compile:
 	rm -f SC/BATSRUS/src/Makefile
@@ -789,6 +803,7 @@ test_esmf:
 	${MAKE} test_esmf_run
 	@echo "test_esmf_check..." >> test_esmf.diff
 	${MAKE} test_esmf_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_esmf_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
@@ -842,6 +857,7 @@ test_ccmc:
 	${MAKE} test_ccmc_run
 	@echo "test_ccmc_check..." >> test_ccmc.diff
 	${MAKE} test_ccmc_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 ccmc_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
@@ -904,6 +920,7 @@ test_ramscb:
 	@echo "test_ramscb_check..." >> test_ramscb_ie.diff
 	@echo "test_ramscb_check..." >> test_ramscb_im.diff
 	${MAKE} test_ramscb_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ramscb_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
