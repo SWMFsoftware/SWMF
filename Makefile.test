@@ -189,10 +189,10 @@ test_rb_run:
 test_rb_check:
 	gunzip -c ${RBDIR}/data/output/2002f296_e.fls.gz \
 		> ${TESTDIR}/2002f296_e.fls.ref
-	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/RB/plots/2002f296_e.fls \
 		${TESTDIR}/2002f296_e.fls.ref \
-		> test_rb.diff
+		> test_rb.diff)
 	ls -l test_rb.diff
 
 ### Test1: PW+IE+GM ###
