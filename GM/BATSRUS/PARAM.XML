@@ -5697,21 +5697,30 @@ T			UseConstantTau
 10			TauInstabilitySi (only read if UseConstantTau is true)
 100			TauGlobalSi
 
+Set parameters for the pressure relaxation term.
+
 If UseConstantTau is set to false, use the growth-rate based relaxation time. 
 This is the default and also recommended.
 
 If UseConstantTau is set to true, TauInstabilitySi provides the relaxation time 
-in seconds for the relaxation term to restrict the pressure anisotropy in 
-unstable regions. Within the time, the parallel pressure is pushed towards 
-plasma instability limits. The default value is -1, i.e. do not apply the 
-relaxation term due to instabilities. If applied, a typical value for 
-magnetospheric simulations is 10 seconds.
+in seconds to restrict the pressure anisotropy in unstable regions. Within the 
+time, the parallel pressure is pushed towards plasma instability limits. 
+The default value is -1, i.e, do not apply the pressure relaxation due to
+instabilities. If applied, a typical value for magnetospheric simulations 
+is 10 seconds.
+ 
+TauGlobalSi provides the global pressure relaxation time in seconds 
+applied in the whole domain. Within the time, the parallel pressure 
+is pushed towards the total scalar pressure. In the presence of both 
+the instability and global relaxation, the one that changes pressure 
+more will be used for the pressure relaxation term.
+The default value for TauGlobalSi is -1, i.e. do not apply the global 
+relaxation. The example shows a recommended value for magnetospheric simulations.
 
-TauGlobalSi provides the global pressure relaxation time in seconds applied
-in the whole domain. Within the time, the parallel pressure is pushed towards
-the total scalar pressure. The default value is -1, i.e. do not apply 
-the global relaxation term. The example shows a recommended value for 
-magnetospheric simulations.
+When UseConstantTau = T and TauInstabilitySi = -1, the pressure relaxation 
+term is not applied, thus TauGlobalSi is meaningless in this case.
+
+
 </command>
 
 <command name="EXTRAINTERNALENERGY">
