@@ -871,6 +871,10 @@ subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         if (imod.eq.3) call MHD_trace(xlati1,phi(j),re,i,j,np, &
              npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
 
+        if (npf1.eq.0) then             ! open field line
+           irm(j)=i-1
+           exit LATITUDE                   ! do next j                 
+        endif
         
         if (i==iLatTest .and. j==iLonTest) then
            write(*,*) npf1,xlati1*180.0/3.14,xmlt1,ro1
@@ -899,12 +903,6 @@ subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         !yo(i,j)=ya(ieq)
         !if (iout.ge.1) gridoc(i,j)=0.
         !if (iout.eq.0) gridoc(i,j)=1.
-        
-        
-        if (npf1.eq.0) then             ! open field line
-           irm(j)=i-1
-           exit LATITUDE                   ! do next j                 
-        endif
         
         if (xmlt1.gt.xmltlim.and.xmlt1.lt.(24.-xmltlim).and.&
              abs(xmlt1-xmlt(j)).gt.xmltlim) then   ! big warping in mlt
