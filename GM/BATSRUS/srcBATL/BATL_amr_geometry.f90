@@ -61,8 +61,9 @@ module BATL_amr_geometry
   integer,public           :: nAmrCritUsed = 0
   real, public, allocatable:: AmrCrit_IB(:,:)
 
-  real,    public, allocatable::CoarsenCritAll_I(:), RefineCritAll_I(:)
-  integer, public, allocatable:: MaxLevelCritAll_I(:), iVarCritAll_I(:)
+  real,    public, allocatable:: CoarsenCritAll_I(:), RefineCritAll_I(:)
+  integer, public, allocatable:: iVarCritAll_I(:),idxMaxGeoCrit_I(:)
+  real,    public, allocatable:: MaxLevelCritAll_I(:)
   type(AreaType), public, allocatable :: AreaAll_I(:)
 
   ! Local variables
@@ -82,6 +83,7 @@ contains
 
 
     integer :: iGeo, iVar
+    logical :: DoTestMe = .false.
     !-------------------------------------------------------------------------
 
     nCritGeoPhys = 0
@@ -93,7 +95,7 @@ contains
 
     do iGeo = 1, nCritGeoUsed
        AreaResolution = AreaGeo_I(iGeo) % Resolution
-       
+
        if(AreaResolution <= 0.0) then
           ! Convert back to integer area
           nLevelArea = ceiling(abs(AreaResolution))
@@ -106,7 +108,7 @@ contains
                alog(((CoordMax_D(x_)-CoordMin_D(x_)) / (nRoot_D(x_) * nI))  &
                / AreaResolution) / alog(2.0) )
        end if
-       
+
     end do
 
     do iGeo = 1, nCritGeoUsed
@@ -117,42 +119,26 @@ contains
           CoarsenCritAll_I(nAmrCritUsed+iGeo) = &
                RefineCritAll_I(nAmrCritUsed+iGeo)-1
           iVar = 2
+          MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
+               -abs(AreaGeo_I(iGeo)%Level)
        else
           RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeo)%Resolution 
           CoarsenCritAll_I(nAmrCritUsed+iGeo) = AreaGeo_I(iGeo)%Resolution/2.0
           iVar = 1
+          MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
+               abs(AreaGeo_I(iGeo)%Resolution)
        end if
        AreaAll_I(nAmrCritUsed+iGeo)        = AreaGeo_I(iGeo)
-
-       ! this is not speifed by #GRIDLEVEL of #GRIDRESOLUTION
-       MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
-            abs(AreaGeo_I(iGeo)%Level)!MaxLevel
-
-       ! Backward compatibilety with BATSRUS AMR
-       if(AreaGeo_I(iGeo) % Name(1:7) == 'usergeo')then
-          MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
-               abs(AreaGeo_I(iGeo)%Level)!MaxLevel
-          RefineCritAll_I(nAmrCritUsed+iGeo)   =  1.0
-          CoarsenCritAll_I(nAmrCritUsed+iGeo)  = -1.0
-          iVar = nCritGeoPhys
-          nCritGeoPhys = nCritGeoPhys +1
-       end if
-
-       if(AreaGeo_I(iGeo) % Name(1:4) == 'curr')then
-          MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
-               abs(AreaGeo_I(iGeo)%Level)!MaxLevel
-          RefineCritAll_I(nAmrCritUsed+iGeo)   =  1.0
-          CoarsenCritAll_I(nAmrCritUsed+iGeo)  = -1.0
-          iVar = nCritGeoPhys
-          nCritGeoPhys = nCritGeoPhys +1
-       end if
 
        ! All geometrical criteias is a comparson to gird values
        if(nAmrCritUsed  > 0) then
           iVarCritAll_I(nAmrCritUsed+iGeo) = &
                maxval(iVarCritAll_I(1:nAmrCritUsed))+iVar
+          idxMaxGeoCrit_I(nAmrCritUsed+iGeo) = &
+               maxval(iVarCritAll_I(1:nAmrCritUsed))+iVar
        else
-          iVarCritAll_I(iGeo) = iVar
+          iVarCritAll_I(iGeo) = iVar   
+          idxMaxGeoCrit_I(nAmrCritUsed+iGeo) = iVar
        end if
 
     end do
@@ -161,24 +147,24 @@ contains
        iVarCritAll_I = iVarCritAll_I + nCritGeoPhys
     end if
 
-    ! if(.not.IsBatsrusAmr) nCritGeoUsed = 0
-
-    !if(iProc == 0) then
-    !   write(*,*) "START init_amr_geometry "
-    !   write(*,*) "nCritGeoUsed = ",nCritGeoUsed
-    !   write(*,*) "Area names :: ", AreaGeo_I(1:nCritGeoUsed)%Name
-    !   write(*,*) "Area resolution :: ", AreaGeo_I(1:nCritGeoUsed)%Resolution
-    !   write(*,*) "Area level :: ", AreaGeo_I(1:nCritGeoUsed)%Level
-    !   write(*,*) "nCritGeoPhys :: ",nCritGeoPhys
-    !   write(*,*) "END init_amr_geometry "
-    !end if
+    
+    if(DoTestMe .and. iProc == 0) then
+       write(*,*) "START init_amr_geometry "
+       write(*,*) "nCritGeoUsed = ",nCritGeoUsed
+       write(*,*) "Area names :: ", AreaGeo_I(1:nCritGeoUsed)%Name
+       write(*,*) "Area resolution :: ", AreaGeo_I(1:nCritGeoUsed)%Resolution
+       write(*,*) "Area level :: ", AreaGeo_I(1:nCritGeoUsed)%Level
+       write(*,*) "nCritGeoPhys :: ",nCritGeoPhys
+       write(*,*) "END init_amr_geometry "
+    end if
 
     IsNewGeoParam =.false.
 
   end subroutine init_amr_geometry
 
   !============================================================================
-  subroutine apply_amr_geometry(iBlock, Area, UseBlock,DoCalcCritIn)
+  subroutine apply_amr_geometry(iBlock, Area, UseBlock,DoCalcCritIn,&
+       user_amr_geometry)
 
     !DESCRIPTION:
     ! Set DoRefine_B to .true. for blocks touching the predefined areas
@@ -193,13 +179,21 @@ contains
     ! currentsheet,                not suported
 
     use BATL_geometry, ONLY: gen_to_radius,r_, Phi_, Theta_,TypeGeometry,&
-                             IsRzGeometry, IsCartesian
+         IsRzGeometry, IsCartesian
     use BATL_grid,     ONLY: Xyz_DNB
     use BATL_size,     ONLY: nINode,nJNode,nKNode,nDim
     use ModNumConst,   ONLY: cTiny, cRadToDeg
     use BATL_grid,     ONLY: CoordMin_DB, CoordMax_DB
     use BATL_tree,     ONLY: iNode_B
     implicit none
+
+    interface
+       subroutine user_amr_geometry(iBlock, iArea, DoRefine)
+         integer, intent(in) :: iBlock, iArea
+         logical,intent(out) :: DoRefine
+       end subroutine user_amr_geometry
+    end interface
+    optional :: user_amr_geometry
 
     integer, intent(in)       :: iBlock
     type(AreaType),intent(in) :: Area
@@ -229,7 +223,7 @@ contains
     if(present(DoCalcCritIn)) DoCalcCrit =  DoCalcCritIn
 
 
-    if(DoCalcCrit .and. nCritGeoUsed > 0) call calc_crit(iBlock)
+    if(DoCalcCrit) call calc_crit(iBlock)
 
     DoTestMe = .false.
 
@@ -264,15 +258,17 @@ contains
     case('all','initial')
        UseBlock = .true.
     case('usergeo')
-       UseBlock = .true.  
-    case('currentsheet')
-       UseBlock = .true.  
+       if(present(user_amr_geometry)) then
+          call user_amr_geometry(iBlock, -1, UseBlock)
+       else
+          call CON_stop(NameSub //' ERROR: need user_amr_geometry')
+       end if
     case default
        IsSpecialArea = .false.
     end select
 
     if(IsSpecialArea)then
-        RETURN
+       RETURN
     end if
 
     ! Check if it is a brick defined generalized coordinates
@@ -468,35 +464,20 @@ contains
 
     if(IsCartesian) then
        MaxLength = maxval(CellSize_DB(1:nDim,iBlock))
-    else if( IsRzGeometry .or. IsCylindrical .or. IsSpherical &
-         .or. IsAnyAxis .or. IsRLonLat)then
-
-       ! the cell with the maximum indexes is the largest cell of the block
-
-       MaxLength = Xyz_DNB(1,nINode,nJnode,nKNode,iBlock) &
-            -      Xyz_DNB(1,nINode-1,nJnode,nKNode,iBlock)
-
-       if(nDim > 1) MaxLength = max(MaxLength,&
-            Xyz_DNB(2,nINode,nJnode,nKNode,iBlock)-&
-            Xyz_DNB(2,nINode,nJnode-1,nKNode,iBlock))
-
-       if(nDim > 2)   MaxLength = max(MaxLength,&
-            Xyz_DNB(3,nINode,nJnode,nKNode,iBlock)-&
-            Xyz_DNB(3,nINode,nJnode,nKNode,iBlock))
     else
-
        do k=2,nKNode; do j=2,nJNode; do i=2,nINode
 
-          MaxLength = Xyz_DNB(1,i,j,k,iBlock)- &
-               Xyz_DNB(1,i-1,j,k,iBlock)
+          MaxLength = max(MaxLength,&
+               Xyz_DNB(1,i,j,k,iBlock)- &
+               Xyz_DNB(1,i-1,j,k,iBlock))
 
           if(nDim > 1) MaxLength = max(MaxLength,&
-               Xyz_DNB(1,i,j,k,iBlock)- &
-               Xyz_DNB(1,i,j-1,k,iBlock))
+               Xyz_DNB(2,i,j,k,iBlock)- &
+               Xyz_DNB(2,i,j-1,k,iBlock))
 
           if(nDim > 2) MaxLength = max(MaxLength,&
-               Xyz_DNB(1,i,j,k,iBlock)- &
-               Xyz_DNB(1,i,j,k-1,iBlock))
+               Xyz_DNB(3,i,j,k,iBlock)- &
+               Xyz_DNB(3,i,j,k-1,iBlock))
 
        end do; end do ; end do;
 
@@ -509,7 +490,7 @@ contains
 
   !============================================================================
   subroutine read_amr_geometry(NameCommand, UseStrictIn, &
-       InitLevelInOut, InitResInOut, NameCritOut_I, nCritInOut )
+       InitLevelInOut, InitResInOut)
 
     use ModReadParam ,     ONLY: read_var, lStringLine
     use ModNumConst,       ONLY: cUnit_DD,cDegToRad
@@ -519,11 +500,6 @@ contains
     logical, optional, intent(in)    :: UseStrictIn
     integer, optional, intent(inout) :: InitLevelInOut 
     real,    optional, intent(inout) :: InitResInOut 
-
-    ! variables needed for backward compabilety for 'user' and 'currentsheet'
-    ! type of "geomtric" criteria
-    character(len=20), optional, intent(out):: NameCritOut_I(2)
-    integer,           optional, intent(inout):: nCritInOut
 
     character(len=lStringLine):: NameArea='all'
     real    :: RadiusArea=0.0
@@ -615,16 +591,35 @@ contains
     select case(NameArea)
     case('all')
        return
-    case('currentsheet','user')
-       if(NameArea =='user') then
-          NameArea ='usergeo'
-          AreaGeo_I(nCritGeoUsed)%Name = NameArea
-       end if
-       nCritGeoPhys = nCritGeoPhys+1
-       NameCritOut_I(nCritGeoPhys) = NameArea
-       if(present(nCritInOut))&
-            nCritInOut =  nCritGeoPhys
+    case("user")
+       NameArea ='usergeo'
+       AreaGeo_I(nCritGeoUsed)%Name = NameArea
        return
+    case('currentsheet')
+       write(*,*) "OLD PARAM.in FILE!!!!!"
+       write(*,*) ""
+       write(*,*) ""
+       write(*,*) ""
+       write(*,*) ""
+       write(*,*)"#AMRCRITERIARESOLUTION"
+       write(*,*)"1                       nCriteria "
+       write(*,*)"currentsheet            TypeCriteria"
+       write(*,*)"0.5                     CoarsenLimit"
+       write(*,*)"0.5                     RefineLimit"
+       write(*,*)"0.2                     MinResolution"
+       write(*,*) ""
+       write(*,*) "or"
+       write(*,*) ""
+       write(*,*)"#AMRCRITERIALEVEL"
+       write(*,*)"1                       nCriteria"
+       write(*,*)"currentsheet            TypeCriteria"
+       write(*,*)"0.5                     CoarsenLimit"
+       write(*,*)"0.5                     RefineLimit"
+       write(*,*)"5                       MaxLevel"
+       write(*,*) ""
+       write(*,*) "and set right number of criteria and level/resolution."
+
+       call stop_mpi('ERROR::  use aboue option in PARAM.in')
     end select
 
     ! Read center of area if needed

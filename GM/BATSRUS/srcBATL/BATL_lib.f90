@@ -89,10 +89,17 @@ module BATL_lib
 
 contains
   !============================================================================
-  subroutine init_batl(&
-       CoordMinIn_D, CoordMaxIn_D, MaxBlockIn, &
+  subroutine init_batl(CoordMinIn_D, CoordMaxIn_D, MaxBlockIn, &
        TypeGeometryIn, IsPeriodicIn_D, nRootIn_D, UseRadiusIn, UseDegreeIn, &
-       rGenIn_I, UseUniformAxisIn)
+       rGenIn_I, UseUniformAxisIn,user_amr_geometry)
+
+    interface
+       subroutine user_amr_geometry(iBlock, iArea, DoRefine)
+         integer, intent(in) :: iBlock, iArea
+         logical,intent(out) :: DoRefine
+       end subroutine user_amr_geometry
+    end interface
+    optional :: user_amr_geometry
 
     integer, intent(in):: MaxBlockIn         ! max number of blocks/processor
     real,    intent(in):: CoordMinIn_D(nDim) ! min (gen) coordinates of domain
@@ -155,7 +162,7 @@ contains
     call distribute_tree(DoMove=.true.)
     call create_grid
     call init_amr
-    call init_amr_criteria
+    call init_amr_criteria(user_amr_geometry=user_amr_geometry)
     IsBatlInitialized = .true.
 
   end subroutine init_batl

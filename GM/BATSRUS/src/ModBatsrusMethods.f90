@@ -57,10 +57,10 @@ contains
     use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
          set_amr_geometry, nBlock, Unused_B
     use ModBatlInterface, ONLY: set_batsrus_grid
-    use ModAMR, ONLY : AmrCriteria_IB, nAmrCriteria, nCritGeo
     ! Dummy variables, to avoid array size issues with State_VGB in
     ! set_amr_criteria
     use ModAdvance, ONLY : nVar, State_VGB
+    use ModUser,    ONLY : user_specify_refinement
 
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
@@ -82,21 +82,16 @@ contains
                   ' starting initial refinement level, nBlockAll =', &
                   nRefineLevel, nBlockAll
           end if
-          if(nCritGeo > 0) then
-             AmrCriteria_IB(:,1:nBlockMax) = 0.0
-             call amr_criteria(AmrCriteria_IB,'geo')
-             call set_amr_criteria(nVar, State_VGB,&
-                  nAmrCriteria,AmrCriteria_IB,TypeAmrIn='geo')
-          else   
-             call set_amr_criteria(nVar,State_VGB,TypeAmrIn='geo')
-          end if
+          call set_amr_criteria(nVar, State_VGB,TypeAmrIn='geo',&
+               user_amr_geometry=user_specify_refinement)
           call init_grid_batl
           call set_batsrus_grid
           ! need to update node information, maybe not all
           ! of load balancing
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
-             call set_amr_geometry(iBlock)
+             call set_amr_geometry(iBlock,&
+                  user_amr_geometry=user_specify_refinement)
           end do
        end do
     else
@@ -122,7 +117,8 @@ contains
     call load_balance(.not.restart, .false., .true.)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       call set_amr_geometry(iBlock)
+       call set_amr_geometry(iBlock,&
+            user_amr_geometry=user_specify_refinement)
     end do
 
     if (iProc == 0.and.lVerbose>0)then

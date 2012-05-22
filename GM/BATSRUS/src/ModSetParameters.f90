@@ -42,7 +42,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
-       NameUserModule, VersionUserModule
+       NameUserModule, VersionUserModule, user_specify_refinement
   use ModBoundaryCells, ONLY: init_mod_boundary_cells
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
@@ -147,10 +147,6 @@ subroutine MH_set_parameters(TypeAction)
   integer :: iSession, iPlotFile, iVar
 
   character(len=10) :: NamePrimitive_V(nVar)
-
-  ! Backward compatible with BATSRUS AMR, handling of 
-  !'user' and 'currentsheet' grid paramters names
-  character(len=20) :: NameCritGeo_I(2)
 
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
@@ -965,8 +961,7 @@ subroutine MH_set_parameters(TypeAction)
 
         call read_amr_geometry(NameCommand,UseStrictIn=UseStrict, &
              InitLevelInOut=initial_refine_levels, &
-             InitResInOut=InitialResolution,NameCritOut_I=NameCritGeo_I,&
-             nCritInOut=nCritGeo)
+             InitResInOut=InitialResolution)
 
      case("#AMRLEVELS")
         call read_var('MinBlockLevel',min_block_level)
@@ -1048,7 +1043,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('InvD2Ray',InvD2Ray)
         end if
         
-     case("#AMRCRITERIALEVEL")
+     case("#AMRCRITERIALEVEL","#AMRCRITERIARESOLUTION")
 
         DoCritAmr = .true.
         DoAutoAmr = .true.
@@ -2034,8 +2029,6 @@ contains
     min_cell_dx =     0.
     max_cell_dx = 99999.
 
-    percentCoarsen = 0.
-    percentRefine  = 0.
     maxTotalBlocks = nBLK*nProc
 
     DnAmr=-1
@@ -2207,7 +2200,6 @@ contains
 
     use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
     use ModImplHypre, ONLY: IsHypreAvailable
-    use ModAMR, ONLY:nAmrCriteria,RefineCrit,nCritPhys
 
     character (len=20),dimension(:), allocatable::tmpRefineCrit_I
     real,dimension(:), allocatable::tmp_I
@@ -2249,58 +2241,6 @@ contains
              write(*,*)'setting UseTiming=.false.'
           end if
           UseTiming=.false.
-       end if
-    end if
-
-
-    ! Backward compatibilety with BATSRUS AMR
-    ! Grid criteria as 'user' and 'currentsheet' are now handeld by
-    ! amr_criteria
-
-    !nCritPhys= nAmrCriteria-nCritGeo
-    if(IsFirstCheck) then
-       nCritPhys= size(RefineCrit)
-       !print *,"phys geo amr :: ", nCritPhys,nCritGeo,nAmrCriteria
-       if(nCritGeo >0) then
-          ! copy RefineCrit
-          if(allocated(tmpRefineCrit_I)) deallocate(tmpRefineCrit_I)
-          allocate(tmpRefineCrit_I(nCritPhys))
-          tmpRefineCrit_I = RefineCrit
-          nCritAll = nCritPhys+2
-          ! resize and copy back RefineCrit for 'user' and 'currentsheet'
-          if(allocated(RefineCrit)) deallocate(RefineCrit)
-          allocate(RefineCrit(nCritAll))
-          RefineCrit(1:nCritPhys) = tmpRefineCrit_I(1:nCritPhys)
-          RefineCrit(nCritPhys+1) = trim(NameCritGeo_I(1))
-          RefineCrit(nCritPhys+2) = trim(NameCritGeo_I(2))
-
-          if(allocated(tmpRefineCrit_I)) deallocate(tmpRefineCrit_I)
-          nAmrCriteria = nAmrCriteria + nCritGeo
-          nAmrCriteria =nCritAll-1
-
-          ! copy, reasize and copy  back the values into the arrays
-          if(allocated(tmp_I)) deallocate(tmp_I)
-          allocate(tmp_I(nCritPhys+1))
-
-          tmp_I(1:nCritPhys+1) =  CoarsenLimit_I(1:nCritPhys+1)
-          deallocate(CoarsenLimit_I)
-          allocate(CoarsenLimit_I(nAmrCriteria+1))
-          CoarsenLimit_I(1:nCritPhys+1) = tmp_I
-
-          tmp_I(1:nCritPhys+1) =  RefineLimit_I(1:nCritPhys+1)
-          deallocate(RefineLimit_I)
-          allocate(RefineLimit_I(nAmrCriteria+1))
-          RefineLimit_I(1:nCritPhys+1) = tmp_I
-
-          deallocate(tmp_I)
-
-          ! contain no data, no copy needed
-          if(allocated(AmrCriteria_IB)) deallocate(AmrCriteria_IB)
-          allocate(AmrCriteria_IB(nAmrCriteria+1,MaxBlock))
-
-          !clean unused Arrays
-          if(allocated(TypeTransient_I)) deallocate(TypeTransient_I)
-
        end if
     end if
 
@@ -2700,7 +2640,7 @@ contains
 
     use ModCovariant, ONLY: yR_I
     use BATL_lib, ONLY: init_batl
-
+    use ModUser,    ONLY : user_specify_refinement
     character(len=20):: TypeGeometryBatl
     !-----------------------------------------------------------------------
 
@@ -2828,7 +2768,8 @@ contains
     call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
          TypeGeometryBatl, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
          proc_dims(1:nDimBatl), UseRadiusIn=.false., UseDegreeIn=.false.,&
-         RgenIn_I = exp(yR_I), UseUniformAxisIn=UseUniformAxis)
+         RgenIn_I = exp(yR_I), UseUniformAxisIn=UseUniformAxis,&
+         user_amr_geometry=user_specify_refinement)
 
     ! Fix grid size in ignored directions
     if(nDimBatl == 1)then

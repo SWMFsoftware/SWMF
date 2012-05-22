@@ -316,6 +316,7 @@ contains
          set_amr_geometry
     use ModEnergy, ONLY: calc_energy_ghost
     use ModResistivity,   ONLY: UseResistivity
+    use ModUser,    ONLY : user_specify_refinement
 
     integer:: iBlock
     !-------------------------------------------------------------------------
@@ -329,7 +330,8 @@ contains
        ! Update all kinds of extra block variables
        call calc_other_vars(iBlock)
        call calc_energy_ghost(iBlock)
-       call set_amr_geometry(iBlock)
+       call set_amr_geometry(iBlock,&
+            user_amr_geometry=user_specify_refinement)
        if(UseResistivity) call set_resistivity(iBlock)
     end do
 

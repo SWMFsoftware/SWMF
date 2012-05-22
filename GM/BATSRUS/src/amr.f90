@@ -20,6 +20,7 @@ subroutine amr(DoFullMessagePass,TypeAmr)
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
   use ModMessagePass,   ONLY: exchange_messages
   use ModPartSteady,    ONLY: UsePartSteady
+  use ModUser,          ONLY: user_specify_refinement
 
   implicit none
 
@@ -66,12 +67,14 @@ subroutine amr(DoFullMessagePass,TypeAmr)
      if(DoProfileAmr) call timing_stop('amr::amr_criteria')
      if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
      call set_amr_criteria(nVar, State_VGB,&
-          nAmrCriteria,AmrCriteria_IB,TypeAmrIn=TypeAmr)
+          nAmrCriteria,AmrCriteria_IB,TypeAmrIn=TypeAmr,&
+          user_amr_geometry=user_specify_refinement)
      if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
 
   else
      if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
-     call set_amr_criteria(nVar, State_VGB,TypeAmrIn=TypeAmr)
+     call set_amr_criteria(nVar, State_VGB,TypeAmrIn=TypeAmr,&
+          user_amr_geometry=user_specify_refinement)
      if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
   end if
 
