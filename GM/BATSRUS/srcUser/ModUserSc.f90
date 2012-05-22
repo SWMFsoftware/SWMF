@@ -9,8 +9,7 @@ module ModUser
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_get_log_var,                &
        IMPLEMENTED7 => user_get_b0,                     &
-       IMPLEMENTED8 => user_update_states,              &
-       IMPLEMENTED9 => user_specify_refinement
+       IMPLEMENTED8 => user_update_states
 
   include 'user_module.h' !list of public methods
 
@@ -464,44 +463,5 @@ contains
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
   end subroutine user_get_log_var
-  
-  !===========================================================================
-
-  subroutine user_specify_refinement(iBlock, iArea, DoRefine)
-
-    use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
-    use ModNumConst, ONLY: cTiny
-    use ModMain,     ONLY: x_, y_, z_,time_loop
-
-    integer, intent(in) :: iBlock, iArea
-    logical,intent(out) :: DoRefine
-
-    real :: rDotB_G(1:nI,1:nJ,0:nK+1)
-    integer :: i,j,k
-    character (len=*), parameter :: NameSub = 'user_specify_refinement'
-    !-------------------------------------------------------------------
-    if(.not.time_loop.or.far_field_BCs_BLK(iBlock))then
-       DoRefine = .false.
-       RETURN
-    end if
-
-    ! Calculate r.B in all physical cells and ghost cells 
-    ! in the Z/Theta direction to find current sheet 
-    ! passing between blocks
-    do k=0, nK+1; do j=1, nJ; do i=1, nI
-       rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-            * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
-            +              y_BLK(i,j,k,iBlock)   &
-            * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
-            +              z_BLK(i,j,k,iBlock)   &
-            * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
-    end do; end do; end do;
-
-    DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
-
-  end subroutine user_specify_refinement
-
 end module ModUser
 

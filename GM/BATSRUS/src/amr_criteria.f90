@@ -9,7 +9,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
        x_BLK, y_BLK, z_BLK, r_BLK, dx_BLK, dy_BLK, dz_BLK, true_cell
   use ModAdvance,    ONLY: State_VGB, StateOld_VCB, B0_DGB, &
        Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
-  use ModAMR,        ONLY: nAmrCriteria,RefineCrit,nCritPhys,nCritGeo
+  use ModAMR,        ONLY: nAmrCriteria,RefineCrit
   use ModPhysics,    ONLY: rCurrents
   use ModPhysics,    ONLY: UseSunEarth
   use ModUser,       ONLY: user_amr_criteria
@@ -20,7 +20,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
   use ModUser,       ONLY: user_specify_refinement
   implicit none
 
-  real, intent(out) :: Crit_IB(nAmrCriteria+1,maxBlock)
+  real, intent(out) :: Crit_IB(nAmrCriteria,maxBlock)
   character(len=3), intent(in) :: TypeAmr
   real :: userCriteria
 
@@ -46,25 +46,6 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
 
   integer :: iCritStart,iCritEnd
   !--------------------------------------------------------------------------
-
-  ! Only calculate what needed, for 'usegeo' the stat variables 
-  ! do not need to be set.
-  select case(TypeAmr)
-  case('all')
-     iCritStart = 1
-     iCritEnd   = nAmrCriteria
-  case('geo')
-     iCritStart = max(1,nAmrCriteria-nCritGeo)
-     iCritEnd   = nAmrCriteria
-  case('phy')
-     iCritStart = 1
-     iCritEnd  = nCritPhys
-  case default
-     call stop_mpi(NameSub // &
-          ' ERROR: Unknown TypeAmr = '//TypeAmr)
-  end select
-
-  !print *,"Crit range : ",iCritStart,"<->",iCritEnd,", TypeAmr = ",TypeAmr
 
   ! initialize all criteria to zero
   Crit_IB = 0.0
@@ -94,7 +75,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
         P_G(i,j,k)    = State_VGB(P_,i,j,k,iBlock)
      end do; end do; end do
 
-     do iCrit = iCritStart, iCritEnd
+     do iCrit = 1,nAmrCriteria
         select case(RefineCrit(iCrit))
         case('gradt')
            ! Temperature gradient.
@@ -226,9 +207,9 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
               end if
 
               if(maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny) then
-                 Crit_IB(iCrit,iBlock) = 2.0
+                 Crit_IB(iCrit,iBlock) = 1.0
               else
-                 Crit_IB(iCrit,iBlock) = -2.0
+                 Crit_IB(iCrit,iBlock) = 0.0
               end if
 
            end if
@@ -240,15 +221,6 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
               call user_amr_criteria(iBlock, &
                    UserCriteria, RefineCrit(iCrit), IsFound)
               Crit_IB(iCrit,iBlock) = userCriteria
-           elseif (UseUserSpecifyRefinement .or. &
-                RefineCrit(iCrit) =='usergeo' ) then
-              IsFound=.false.
-              call user_specify_refinement(iBlock, -1, IsFound)
-              if (IsFound) then
-                 Crit_IB(iCrit,iBlock) = 2.0
-              else
-                 Crit_IB(iCrit,iBlock) = -2.0
-              end if
            else
               xxx = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(1,1,1,iBlock))
               yyy = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(1,1,1,iBlock))

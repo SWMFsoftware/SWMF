@@ -97,9 +97,13 @@ box_gen			NameArea
 360.0			LonMax
 +45.0			LatMax
 
-#GRIDLEVEL
-3			nLevelArea
-currentsheet		NameArea
+#AMRCRITERIALEVEL
+1                       nCriteria 
+currentsheet            TypeCriteria
+0.5                     CoarsenLimit
+0.5                     RefineLimit
+3                       MaxLevel
+
 
 #BODY
 T			UseBody

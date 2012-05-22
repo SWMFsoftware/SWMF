@@ -19,6 +19,9 @@ shell0			NameArea
 1.0			Radius1
 1.1			Radius2
 
-#GRIDRESOLUTION
-0.2			Resolution
-user			NameArea
+#AMRCRITERIARESOLUTION
+1                       nCriteria 
+currentsheet            TypeCriteria
+0.5                     CoarsenLimit
+0.5                     RefineLimit
+0.2                     MinResolution

@@ -88,9 +88,12 @@ shell0                  NameArea
 1.0                     Radius1
 1.1                     Radius2
 
-#GRIDRESOLUTION
-0.8                    Resolution
-user                    NameArea
+#AMRCRITERIALEVEL
+1                       nCriteria 
+currentsheet            TypeCriteria
+0.5                     CoarsenLimit
+0.5                     RefineLimit
+4                       MinResolution
 
 #GRIDLEVEL
 20			nLevlel
@@ -99,7 +102,6 @@ sphere                  NameArea
  0.1710101              yCenterSphere
 -0.1736482              zCenterSphere  
 1.0                      rSphere
-
 
 #GRIDLEVEL
 2			nLevelArea
@@ -143,6 +145,7 @@ z=0 MHD idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
+
 
 #STOP
 70			MaxIteration

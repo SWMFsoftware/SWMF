@@ -1110,37 +1110,6 @@ contains
 
        RETURN
     end if
-    
-    ! Check if current sheet passess through this block
-    ! (i.e. if B.r changes sign)
-    if(SignB_>1 .and. DoThinCurrentSheet)then
-       DoRefine = &
-            maxval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))>0.0.and. &
-            minval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))<0.0
-    else
-
-       if(UseB0)then
-          do k=0, nK+1; do j=1, nJ; do i=1, nI
-             rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-                  * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
-                  +           y_BLK(i,j,k,iBlock)   &
-                  * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
-                  +           z_BLK(i,j,k,iBlock)   &
-                  * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
-          end do; end do; end do
-       else
-          do k=0, nK+1; do j=1, nJ; do i=1, nI
-             rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-                  * State_VGB(Bx_,i,j,k,iBlock) &
-                  +           y_BLK(i,j,k,iBlock)   &
-                  * State_VGB(By_,i,j,k,iBlock) &
-                  +           z_BLK(i,j,k,iBlock)   &
-                  * State_VGB(Bz_,i,j,k,iBlock)
-          end do; end do; end do
-       end if
-       DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny 
-
-    end if
   
     ! Do gradual refinement along R if required
     if(DoRefineGradualSheet) then
