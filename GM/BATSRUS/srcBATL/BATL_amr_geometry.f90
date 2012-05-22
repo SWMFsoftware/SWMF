@@ -598,28 +598,30 @@ contains
     case('currentsheet')
        write(*,*) "OLD PARAM.in FILE!!!!!"
        write(*,*) ""
+       write(*,*) &
+            "Use one of the following commands for current sheet refinement:"
        write(*,*) ""
        write(*,*) ""
-       write(*,*) ""
-       write(*,*)"#AMRCRITERIARESOLUTION"
-       write(*,*)"1                       nCriteria "
-       write(*,*)"currentsheet            TypeCriteria"
-       write(*,*)"0.5                     CoarsenLimit"
-       write(*,*)"0.5                     RefineLimit"
-       write(*,*)"0.2                     MinResolution"
+       write(*,*) "#AMRCRITERIARESOLUTION"
+       write(*,*) "1                       nCriteria "
+       write(*,*) "currentsheet            TypeCriteria"
+       write(*,*) "0.5                     CoarsenLimit"
+       write(*,*) "0.5                     RefineLimit"
+       write(*,*) "0.2                     MinResolution"
        write(*,*) ""
        write(*,*) "or"
        write(*,*) ""
-       write(*,*)"#AMRCRITERIALEVEL"
-       write(*,*)"1                       nCriteria"
-       write(*,*)"currentsheet            TypeCriteria"
-       write(*,*)"0.5                     CoarsenLimit"
-       write(*,*)"0.5                     RefineLimit"
-       write(*,*)"5                       MaxLevel"
+       write(*,*) "#AMRCRITERIALEVEL"
+       write(*,*) "1                       nCriteria"
+       write(*,*) "currentsheet            TypeCriteria"
+       write(*,*) "0.5                     CoarsenLimit"
+       write(*,*) "0.5                     RefineLimit"
+       write(*,*) "5                       MaxLevel"
        write(*,*) ""
-       write(*,*) "and set right number of criteria and level/resolution."
+       write(*,*) &
+            "with the desired level/resolution values and additional criteria" 
 
-       call stop_mpi('ERROR::  use aboue option in PARAM.in')
+       call CON_stop(NameSub//': fix PARAM.in file')
     end select
 
     ! Read center of area if needed
