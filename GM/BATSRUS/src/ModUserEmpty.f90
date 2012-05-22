@@ -108,6 +108,9 @@ contains
 
     character(len=*), parameter :: NameSub = 'user_specify_refinement'
     !-------------------------------------------------------------------
+    
+    ! Can ONLY depend om geometric criteias, only called when grid change
+
     call stop_user(NameSub)
   end subroutine user_specify_refinement
 
