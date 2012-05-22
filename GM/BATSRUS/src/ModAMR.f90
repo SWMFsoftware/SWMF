@@ -10,9 +10,7 @@ module ModAMR
 
   ! Refinement criteria parameters
   integer          :: nAmrCriteria, MaxTotalBlocks
-  real             :: PercentCoarsen, PercentRefine
-  real, allocatable:: CoarsenLimit_I(:), RefineLimit_I(:)
-  character(len=20), allocatable:: RefineCrit(:), TypeTransient_I(:)
+  character(len=20), allocatable:: RefineCrit(:)!, TypeTransient_I(:)
 
   real, allocatable:: AmrCriteria_IB(:,:)
 
@@ -25,9 +23,6 @@ module ModAMR
   logical :: automatic_refinement
   logical :: DoAmr = .false.
   logical :: DoProfileAmr = .false.
-
-  ! Needed by amr_criteria
-  integer :: nCritGeo = 0, nCritPhys = 0
 
 contains
   !============================================================================
@@ -42,13 +37,7 @@ contains
     call clean_mod_amr
 
     allocate(RefineCrit(nCrit),              &
-         TypeTransient_I(nCrit),             &
-         CoarsenLimit_I(nCrit+1),            &
-         RefineLimit_I(nCrit+1),             &
-         AmrCriteria_IB(nCrit+1,MaxBlock))
-
-    CoarsenLimit_I      = -1.0
-    RefineLimit_I       = -1.0
+         AmrCriteria_IB(nCrit,MaxBlock))
 
   end subroutine init_mod_amr
   !============================================================================
@@ -56,9 +45,6 @@ contains
 
     if(allocated(RefineCrit)) deallocate( &
          RefineCrit,&
-         TypeTransient_I,&
-         CoarsenLimit_I,&
-         RefineLimit_I,&
          AmrCriteria_IB)
 
   end subroutine clean_mod_amr
