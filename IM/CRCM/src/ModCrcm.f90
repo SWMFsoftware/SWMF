@@ -9,7 +9,7 @@ Module ModCrcm
   real    :: Time = 0.0
   logical :: UseMcLimiter=.false.
   real    :: BetaLimiter = 1.5
-  real    :: Pmin = -1.
+  real    :: Pmin = 1e-2
   real, allocatable:: SDtime(:,:,:,:), f2(:,:,:,:,:)
   real, allocatable:: phot(:,:,:), Ppar_IC(:,:,:), Pressure_IC(:,:,:)
   real, allocatable:: FAC_C(:,:)
