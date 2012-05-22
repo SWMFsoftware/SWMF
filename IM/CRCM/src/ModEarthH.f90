@@ -24,10 +24,10 @@ Module ModCrcmPlanet
   real, dimension(nspec) :: tFactor_I =(/1.0,0.128205/)
 
   !set plot parameters
-  character(len=200), parameter :: & 
+  character(len=300), parameter :: & 
        NamePlotVar='x y P[nP] HpP[nP] eP[nP] Phot[nP] '&
        //'HpPhot[nP] ePhot[nP] Pparhot[nP] HpPparhot[nP] ePparhot[nP] '&
-       // 'N[/m3] HpN[/m3] eN[/m3] Beq[T] Vol[m3/Wb] Pot[Volts] FAC[Amp/m2] g'
+       // 'N[/m3] HpN[/m3] eN[/m3] Beq[T] Vol[m3/Wb] Pot[Volts] FAC[Amp/m2] g rbody'
 
   integer, dimension(nspec+1) :: iPplot_I    =(/1,2,3/) 
   integer, dimension(nspec+1) :: iPhotplot_I =(/4,5,6/) 

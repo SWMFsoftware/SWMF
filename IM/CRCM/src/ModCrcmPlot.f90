@@ -40,7 +40,7 @@ contains
     character(len=20)   :: NamePlotEq  = 'IM/plots/CRCMeq.outs'
     character(len=22)   :: NamePlotIono= 'IM/plots/CRCMiono.outs'
     character(len=6)    :: TypePosition  ! 'rewind' or 'append'
-    real, parameter     :: Gamma = 5./3.
+    real, parameter     :: Gamma = 5./3., rBody = 1.0
     logical             :: IsFirstCall = .true.
     !--------------------------------------------------------------------------
     
@@ -132,14 +132,14 @@ contains
          TypeFileIn=TypePlot,StringHeaderIn = NameHeader,                 &
          NameVarIn = NamePlotVar, nStepIn= nint(Time/Dt),TimeIn=Time,     &
          nDimIn=2,CoordIn_DII=Coord_DII,                                  &
-         VarIn_IIV = PlotState_IIV, ParamIn_I = (/Gamma/))
+         VarIn_IIV = PlotState_IIV, ParamIn_I = (/Gamma, rBody/))
 
     ! ionospheric plot
     call save_plot_file(NamePlotIono, TypePositionIn=TypePosition,        &
          TypeFileIn=TypePlot,StringHeaderIn = NameHeader,                 &
          NameVarIn = NamePlotVar, nStepIn= nint(Time/Dt),TimeIn=Time,     &
          nDimIn=2,CoordIn_DII=CoordIono_DII,                              &
-         VarIn_IIV = PlotState_IIV, ParamIn_I = (/Gamma/))
+         VarIn_IIV = PlotState_IIV, ParamIn_I = (/Gamma, rBody/))
     
     deallocate(Coord_DII, CoordIono_DII, PlotState_IIV)
 
