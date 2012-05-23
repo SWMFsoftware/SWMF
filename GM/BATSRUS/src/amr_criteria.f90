@@ -4,7 +4,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, MaxBlock
   use ModMain,       ONLY: nBlock, UseB0, UseUserAmr, UnusedBlk,&
-       DoThinCurrentSheet, UseUserSpecifyRefinement
+       DoThinCurrentSheet
   use ModGeometry,   ONLY: &
        x_BLK, y_BLK, z_BLK, r_BLK, dx_BLK, dy_BLK, dz_BLK, true_cell
   use ModAdvance,    ONLY: State_VGB, StateOld_VCB, B0_DGB, &
