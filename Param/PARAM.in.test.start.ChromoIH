@@ -79,7 +79,7 @@ F			UseUserSource
 F			UseUserPerturbation
 T			UseUserOuterBcs
 T			UseUserICs
-T			UseUserSpecifyRefinement
+F			UseUserSpecifyRefinement
 T			UseUserLogFiles
 T			UseUserWritePlot
 F			UseUserAMR
@@ -210,9 +210,12 @@ box_gen			NameArea
 360.0			LonMax
 90.0			LatMax
 
-#GRIDLEVEL
-5			nLevelArea
-user			NameArea
+#AMRCRITERIALEVEL
+1			nCriteria
+currentsheet		TypeCriteria
+0.5			CoarsenLimit
+0.5			RefineLimit
+5			MinResolution
 
 #GRIDLEVEL
 5			nLevelArea
