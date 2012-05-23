@@ -20,13 +20,13 @@ module BATL_geometry
 
   ! Cartesian, cylindrical or spherical coordinates
   logical, public:: IsCartesian       = .true.  ! Cartesian grid
-  logical, public:: IsRzGeometry      = .false. ! RZ geometry (x is symmetry axis)
-  logical, public:: IsRoundCube       = .false. ! square/cube stretched to be roun
-  logical, public:: IsCylindrical     = .false. ! cylindrical: r, phi, z (in 3D)
+  logical, public:: IsRzGeometry      = .false. ! RZ geometry (x is symm. axis)
+  logical, public:: IsRoundCube       = .false. ! square/cube stretched
+  logical, public:: IsCylindrical     = .false. ! cylindrical: r, phi, z
   logical, public:: IsSpherical       = .false. ! spherical: r, theta, phi
   logical, public:: IsRLonLat         = .false. ! spherical: r, lon, lat
   logical, public:: IsCylindricalAxis = .false. ! r=0 boundary for cylindrical
-  logical, public:: IsSphericalAxis   = .false. ! theta=0 and theta=pi boundaries
+  logical, public:: IsSphericalAxis   = .false. ! theta=0 and pi boundaries
   logical, public:: IsLatitudeAxis    = .false. ! |lat|=pi/2 boundaries
   logical, public:: IsAnyAxis         = .false. ! true if any of the above 3 is
   logical, public:: IsLogRadius       = .false. ! logarithmic radial coordinate
@@ -73,10 +73,11 @@ contains
     !
     ! IsPeriodic_D defines periodicity for each dimension
     !
-    ! RgenIn_I defines a mapping from a general index space to the radial coordinate.
-    ! The index space is mapped to the 0-1 interval so the first element
-    ! RgenIn_I corresponds to 0.0, and the last element to 1.0. The interpolation
-    ! is done in log(R), so we get a logarithmic radial grid within each interval.
+    ! RgenIn_I defines a mapping from a general index space to the radial 
+    ! coordinate. The index space is mapped to the 0-1 interval so the 
+    ! first element RgenIn_I corresponds to 0.0, and the last element to 1.0. 
+    ! The interpolation is done in log(R), so we get a logarithmic radial 
+    ! grid within each interval.
 
     character(len=*), parameter:: NameSub = 'init_geometry'
     !-----------------------------------------------------------------------
