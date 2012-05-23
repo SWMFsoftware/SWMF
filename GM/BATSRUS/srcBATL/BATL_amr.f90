@@ -2,6 +2,9 @@
 
 module BATL_amr
 
+  use BATL_tree, ONLY: iAmrChange_B, &
+       AmrRemoved_, AmrMoved_, AmrRefined_, AmrCoarsened_
+
   implicit none
 
   SAVE
@@ -14,11 +17,6 @@ module BATL_amr
 
   ! Parameter of slope limiter used by prolongation
   real, public:: BetaProlong = 1.0
-
-  ! Status change due to AMR is registered in this 
-  integer, public, allocatable:: iAmrChange_B(:)
-  integer, public, parameter  :: AmrRemoved_ = -1, &
-       AmrUnchanged_ = 0, AmrMoved_ = 1, AmrRefined_ = 2, AmrCoarsened_ = 3
 
   ! For non-Cartesian grids refinement can be fully conservative or simple
   ! The current conservative algorithm works well for the BATL advection 
@@ -35,15 +33,8 @@ contains
 
   subroutine init_amr
 
-    use BATL_size, ONLY: MaxBlock
     use BATL_geometry, ONLY: IsRzGeometry
     !-------------------------------------------------------------------------
-
-    if(.not.allocated(iAmrChange_B)) &
-         allocate(iAmrChange_B(MaxBlock))
-
-    ! Initialize iAmrChange_B
-    iAmrChange_B = AmrUnchanged_
 
     ! Set UseSimpleRefinement based on geometry. 
     ! The current curvilinear algorithm is only good for RZ geometry.
@@ -234,7 +225,8 @@ contains
                 CYCLE
              end if
 
-             iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrCoarsened_)
+             iBlockRecv = &
+                  i_block_available(iProcRecv, iNodeRecv, AmrCoarsened_)
 
              do iChild = Child1_, ChildLast_
                 iNodeSend = iTree_IA(iChild,iNodeRecv)
@@ -308,7 +300,8 @@ contains
                    CYCLE LOOPNODE
                 end if
 
-                iBlockRecv = i_block_available(iProcRecv, iNodeRecv, AmrRefined_)
+                iBlockRecv = &
+                     i_block_available(iProcRecv, iNodeRecv, AmrRefined_)
 
                 if(iProc == iProcSend) call send_refined_block
                 if(iProc == iProcRecv) call recv_refined_block

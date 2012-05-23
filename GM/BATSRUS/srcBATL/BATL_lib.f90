@@ -48,6 +48,8 @@ module BATL_lib
        Coord0_, Coord1_, Coord2_, Coord3_, Used_
   public:: write_tree_file, read_tree_file
   public:: IsNewDecomposition, IsNewTree
+  public:: iAmrChange_B
+  public:: AmrRemoved_, AmrUnchanged_, AmrMoved_, AmrRefined_, AmrCoarsened_
 
   ! Inherited from BATL_geometry
   public:: TypeGeometry, IsCartesian, IsRzGeometry, IsSpherical, IsRLonLat, &
@@ -63,8 +65,6 @@ module BATL_lib
   public:: find_grid_block, interpolate_grid
 
   ! Inherited from BATL_amr
-  public:: iAmrChange_B
-  public:: AmrRemoved_, AmrUnchanged_, AmrMoved_, AmrRefined_, AmrCoarsened_
   public:: BetaProlong
 
   ! Inherited from BATL_amr_criteria
@@ -204,6 +204,8 @@ contains
     call distribute_tree(DoMove=.true.)
     call create_grid
     call init_amr
+
+
   end subroutine init_grid_batl
 
   !============================================================================
@@ -365,9 +367,18 @@ contains
          pack_extra_data=pack_extra_data, &
          unpack_extra_data=unpack_extra_data)
 
+    ! This logical tells find_neighbor (called by move_tree) to check 
+    ! if the neighbor levels of a block (otherwise not affected by AMR) changed
+    DoCheckResChange = nDim == 3 .and. IsNodeBasedGrid .and. &
+         .not. (IsCartesian .or. IsRzGeometry)
+
     ! Finalize the tree information and compact the tree
     if(DoTest)write(*,*) NameSub,' call move_tree'
     call move_tree(iTypeNode_A)
+
+    ! Fix 3D curvilinear grid at resolution changes so that faces match
+    if(DoCheckResChange) call fix_grid_res_change
+    DoCheckResChange = .false.
 
     if(DoTest)write(*,*) NameSub,' finished'
 

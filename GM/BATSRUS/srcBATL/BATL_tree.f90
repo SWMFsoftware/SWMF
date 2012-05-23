@@ -31,7 +31,7 @@ module BATL_tree
 
   ! DoStrictAmr :  true if we want the program to stop because we can not
   ! refine/coarsen all the blocks we want
-  logical,public :: DoStrictAmr = .true.
+  logical, public :: DoStrictAmr = .true.
 
   ! nDesiredRefine and nDesiredCoarsen set the number of blocks that we
   ! wish to refine/coarsen but may not happen (e.g. DoSoftAmrCrit = .true.)
@@ -170,6 +170,14 @@ module BATL_tree
   ! The number of root nodes in all dimensions, and altogether
   integer, public :: nRoot_D(MaxDim) = 0, nRoot = 0
 
+  ! Status change due to AMR is registered in this array
+  integer, public, allocatable:: iAmrChange_B(:)
+  integer, public, parameter  :: AmrRemoved_ = -1, AmrUnchanged_ = 0, &
+       AmrNeiChanged_ = 1, AmrMoved_ = 2, AmrRefined_ = 3, AmrCoarsened_ = 4
+
+  ! Check for changes in resolution change
+  logical, public:: DoCheckResChange = .false.
+
   ! Local variables -----------------------------------------------
   character(len=*), parameter:: NameMod = "BATL_tree"
 
@@ -227,6 +235,7 @@ contains
     allocate(Unused_BP(MaxBlock,0:nProc-1));            Unused_BP      = .true.
     allocate(iNodeNei_IIIB(0:3,0:3,0:3,MaxBlock));      iNodeNei_IIIB  = Unset_
     allocate(DiLevelNei_IIIB(-1:1,-1:1,-1:1,MaxBlock)); DiLevelNei_IIIB= Unset_
+    allocate(iAmrChange_B(MaxBlock));                   iAmrChange_B   = Unset_
 
     ! Initialize minimum and maximum levels of refinement
     iTree_IA(MinLevel_,:) = 0;
@@ -258,7 +267,7 @@ contains
          iStatusNew_A, iStatusAll_A, &
          iProcNew_A, iNodeNew_A, &
          iNode_B, Unused_B, Unused_BP, &
-         iNodeNei_IIIB, DiLevelNei_IIIB)
+         iNodeNei_IIIB, DiLevelNei_IIIB, iAmrChange_B)
 
     if(allocated(iRank_A))        deallocate(iRank_A)
     call set_tree_param(UseUniformAxisIn=.false.)
@@ -1079,6 +1088,8 @@ contains
     integer :: iNode, iLevel, i, j, k, Di, Dj, Dk, jNode
     real :: Scale_D(MaxDim), x, y, z, y0, z0
 
+    integer:: DiLevelNeiOld_III(-1:1,-1:1,-1:1)
+
     logical, parameter :: DoTestMe = .false.
     !-----------------------------------------------------------------------
     iNode = iNode_B(iBlock)
@@ -1097,6 +1108,8 @@ contains
        write(*,*)'scaled coordinates=', &
             iTree_IA(Coord1_:CoordLast_, iNode)*Scale_D
     end if
+
+    if(DoCheckResChange) DiLevelNeiOld_III = DiLevelNei_IIIB(:,:,:,iBlock)
 
     ! Fill in self-referring info
     iNodeNei_IIIB(1:2,1:2,1:2,iBlock) = iNode
@@ -1201,6 +1214,23 @@ contains
           end do
        end do
     end do
+
+    ! Check here if there is a need to redo faces of this block
+    if(DoCheckResChange)then
+       ! Blocks that were created or moved are fine
+       if(iAmrChange_B(iBlock) >= AmrMoved_) RETURN
+       do k=-1,1; do j=-1,1; do i=-1,1
+          ! Ignore corners
+          if(abs(i) + abs(j) + abs(k) == 3) CYCLE
+          ! Check if a coarser neighbor has been created or eliminated
+          if(DiLevelNei_IIIB(i,j,k,iBlock) /= DiLevelNeiOld_III(i,j,k) &
+              .and. (DiLevelNei_IIIB(i,j,k,iBlock) == 1 &
+              .or.   DiLevelNeiOld_III(i,j,k) == 1)) then
+             iAmrChange_B(iBlock) = AmrNeiChanged_
+             RETURN
+          end if
+       end do; end do; end do
+    end if
 
   end subroutine find_neighbor
 
