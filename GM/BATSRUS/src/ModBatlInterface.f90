@@ -2,7 +2,7 @@ module ModBatlInterface
 
   implicit none
 
-  logical, public :: UseBatlTest = .false.
+  logical, public :: UseBatlTest = .true.
 
 contains
   !===========================================================================
