@@ -1222,6 +1222,7 @@ contains
        do k=-1,1; do j=-1,1; do i=-1,1
           ! Ignore corners
           if(abs(i) + abs(j) + abs(k) == 3) CYCLE
+
           ! Check if a coarser neighbor has been created or eliminated
           if(DiLevelNei_IIIB(i,j,k,iBlock) /= DiLevelNeiOld_III(i,j,k) &
               .and. (DiLevelNei_IIIB(i,j,k,iBlock) == 1 &

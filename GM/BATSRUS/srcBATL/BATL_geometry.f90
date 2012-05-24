@@ -19,7 +19,8 @@ module BATL_geometry
   character(len=20), public:: TypeGeometry = 'cartesian'
 
   ! Cartesian, cylindrical or spherical coordinates
-  logical, public:: IsCartesian       = .true.  ! Cartesian grid
+  logical, public:: IsCartesianGrid   = .true.  ! Cartesian grid
+  logical, public:: IsCartesian       = .true.  ! Normal Cartesian geometry
   logical, public:: IsRzGeometry      = .false. ! RZ geometry (x is symm. axis)
   logical, public:: IsRoundCube       = .false. ! square/cube stretched
   logical, public:: IsCylindrical     = .false. ! cylindrical: r, phi, z
@@ -98,6 +99,9 @@ contains
 
     IsLogRadius   = index(TypeGeometry,'lnr')  > 0
     IsGenRadius   = index(TypeGeometry,'genr') > 0
+
+    ! Grid is Cartesian (even in RZ geometry)
+    IsCartesianGrid = IsCartesian .or. IsRzGeometry
 
     r_ = -1; Phi_ = -1; Theta_ = -1; Lon_ = -1; Lat_ = -1
     if(IsRzGeometry)then

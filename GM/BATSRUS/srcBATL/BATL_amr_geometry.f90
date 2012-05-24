@@ -179,7 +179,7 @@ contains
     ! currentsheet,                not suported
 
     use BATL_geometry, ONLY: gen_to_radius,r_, Phi_, Theta_,TypeGeometry,&
-         IsRzGeometry, IsCartesian
+         IsCartesianGrid
     use BATL_grid,     ONLY: Xyz_DNB
     use BATL_size,     ONLY: nINode,nJNode,nKNode,nDim
     use ModNumConst,   ONLY: cTiny, cRadToDeg
@@ -215,7 +215,7 @@ contains
 
     character(len=21), parameter :: NameSub = 'apply_amr_geometry'
 
-    logical :: DoTest, DoTestMe, DoTestBlock, DoCalcCrit
+    logical :: DoTestMe, DoTestBlock, DoCalcCrit
     !--------------------------------------------------------------------------
     !if(nCritGeoUsed <= 0) RETURN
 
@@ -267,12 +267,10 @@ contains
        IsSpecialArea = .false.
     end select
 
-    if(IsSpecialArea)then
-       RETURN
-    end if
+    if(IsSpecialArea) RETURN
 
-    ! Check if it is a brick defined generalized coordinates
-    if(NameArea == "brick_gen" .and. TypeGeometry /= 'cartesian')then
+    ! Check if it is a brick defined in generalized coordinates
+    if(NameArea == "brick_gen" .and. .not.IsCartesianGrid)then
 
 !!! TO BE IMPROVED !!!
 
@@ -384,8 +382,7 @@ contains
 
     if(DoRefine) UseBlock = .true.
 
-    if(NameArea == 'brick_gen' .or. IsCartesian .or.  IsRzGeometry)&
-         RETURN
+    if(NameArea == 'brick_gen' .or. IsCartesianGrid) RETURN
 
     ! Non-cartesian case
     UseBlock = .true.
@@ -448,10 +445,10 @@ contains
 
   !============================================================================
   subroutine calc_crit(iBlock)
+
     use BATL_grid,     ONLY: Xyz_DNB,CellSize_DB
     use BATL_size,     ONLY: nINode,nJNode,nKNode,nDim
-    use BATL_geometry, ONLY: IsRzGeometry, IsCartesian, IsCylindrical, &
-                             IsSpherical,IsAnyAxis, IsRLonLat!, TypeGeometry,
+    use BATL_geometry, ONLY: IsCartesian
     use BATL_tree,     ONLY: iNode_B, iTree_IA, Level_
 
     integer, intent(in) :: iBlock

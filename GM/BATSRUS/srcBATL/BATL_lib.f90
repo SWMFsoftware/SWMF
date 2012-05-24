@@ -52,9 +52,10 @@ module BATL_lib
   public:: AmrRemoved_, AmrUnchanged_, AmrMoved_, AmrRefined_, AmrCoarsened_
 
   ! Inherited from BATL_geometry
-  public:: TypeGeometry, IsCartesian, IsRzGeometry, IsSpherical, IsRLonLat, &
-       IsCylindrical, IsPeriodic_D, IsNodeBasedGrid, IsLogRadius, IsGenRadius,&
-       nRgen, LogRgen_I, &
+  public:: TypeGeometry, IsCartesianGrid, IsCartesian, IsRzGeometry, &
+       IsSpherical, IsRLonLat, IsCylindrical, &
+       IsPeriodic_D, IsNodeBasedGrid, &
+       IsLogRadius, IsGenRadius, nRgen, LogRgen_I, &
        x_, y_, z_, r_, Phi_, Theta_, Lon_, Lat_
 
   ! Inherited from BATL_grid
@@ -369,8 +370,8 @@ contains
 
     ! This logical tells find_neighbor (called by move_tree) to check 
     ! if the neighbor levels of a block (otherwise not affected by AMR) changed
-    DoCheckResChange = nDim == 3 .and. IsNodeBasedGrid .and. &
-         .not. (IsCartesian .or. IsRzGeometry)
+    DoCheckResChange = nDim == 3 .and. IsNodeBasedGrid &
+         .and. .not.IsCartesianGrid
 
     ! Finalize the tree information and compact the tree
     if(DoTest)write(*,*) NameSub,' call move_tree'

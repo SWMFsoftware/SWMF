@@ -268,7 +268,6 @@ contains
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
          MaxBlock,nBlock
     use BATL_tree, ONLY: Unused_B
-    use BATL_mpi, ONLY: iProc
 
     interface
        subroutine user_amr_geometry(iBlock, iArea, DoRefine)
@@ -383,7 +382,7 @@ contains
     ! criteria list itself. The refinement criteria will overrule the 
     ! percentage refinement.
 
-    use BATL_mpi, ONLY: iComm, iProc, nProc
+    use BATL_mpi, ONLY: iComm, nProc
     use ModMpi
     use BATL_size, ONLY: nBlock
     use ModSort, ONLY: sort_quick
@@ -767,7 +766,6 @@ contains
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
 	 nI, nJ, nK, MaxDim, nDim, MaxBlock, nBlock
     use BATL_tree, ONLY: Unused_B
-    use BATL_mpi, ONLY: iProc
 
     integer,  intent(in)   :: nVar
     real,    intent(in) :: &                            ! state variables
@@ -904,10 +902,9 @@ contains
 
   subroutine apply_unsorted_criteria
 
-    use BATL_mpi,  ONLY: iProc 
     use BATL_size, ONLY: nBlock
     use BATL_tree, ONLY: iStatusNew_A, Refine_, Coarsen_, &
-         Unused_B, iNode_B, iTree_IA, Level_, iNode_B
+         Unused_B, iNode_B, iNode_B
 
     integer:: iBlock, iCrit, iVarCrit
     ! number of blocks set out for refining and coarsning
@@ -1251,7 +1248,6 @@ contains
 
     use BATL_grid, ONLY: Xyz_DGB
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nDim
-    use BATL_mpi, ONLY: iProc
 
     interface
        subroutine user_amr_geometry(iBlock, iArea, DoRefine)
@@ -1323,46 +1319,47 @@ contains
   end subroutine clean_amr_criteria
 
   !============================================================================
-  subroutine test_amr_criteria()
-    use BATL_size, ONLY : MaxBlock,nBlock, iRatio, jRatio, kRatio
-    use BATL_mpi, ONLY: iProc, nProc
-    use BATL_tree, ONLY: init_tree, set_tree_root, find_tree_node, &
-         refine_tree_node, distribute_tree, clean_tree, Unused_B, iNode_B, &
-         nNode, show_tree, iStatusNew_A, &
-         Coarsen_, Unset_, adapt_tree, move_tree, distribute_tree
-    use BATL_grid, ONLY: init_grid, create_grid, clean_grid, CellSize_DB
-    use BATL_geometry, ONLY: init_geometry
-    use BATL_amr, ONLY: do_amr, init_amr
-    use BATL_size, ONLY: MaxDim, nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
-         nI, nJ, nK 
-    ! For Random generation
-    integer :: jSeed
-    logical :: IsFirst
-    integer, parameter :: iMPLIER=16807, &
-         iMODLUS=2147483647, &
-         iMOBYMP=127773, &
-         iMOMDMP=2836
+  subroutine test_amr_criteria
 
-    integer, parameter:: MaxBlockTest            = 50
-    integer, parameter:: nRootTest_D(MaxDim)     = (/3,3,3/)
-    logical, parameter:: IsPeriodicTest_D(MaxDim)= .false.
-    real, parameter:: DomainMin_D(MaxDim) = (/ -24.0, -24.0, -24.0 /)
-    real, parameter:: DomainMax_D(MaxDim) = (/ 24.0, 24.0, 24.0 /)
-    integer :: iNode, iBlock
-
-    real, allocatable :: Criterias_IB(:,:),AllCriterias_IBP(:,:,:)
-    real, allocatable :: PreCriterias_IB(:,:)
-    real, allocatable :: RefineLevel_I(:), CoursenLevel_I(:)
-    logical, allocatable :: Used_GB(:,:,:,:)
-
-    integer :: nCritExt = 4
-    integer, allocatable :: iA_I(:)
-    real, allocatable :: TestState_VGB(:,:,:,:,:)
-    integer :: nVar =3
-    integer :: i,j,k,iVar
-    logical:: DoTestMe
-    character(len=*), parameter :: NameSub = 'test_amr_criteria'
-    !-----------------------------------------------------------------------
+!!$    use BATL_size, ONLY : MaxBlock,nBlock, iRatio, jRatio, kRatio
+!!$    use BATL_mpi, ONLY: iProc, nProc
+!!$    use BATL_tree, ONLY: init_tree, set_tree_root, find_tree_node, &
+!!$         refine_tree_node, distribute_tree, clean_tree, Unused_B, iNode_B, &
+!!$         nNode, show_tree, iStatusNew_A, &
+!!$         Coarsen_, Unset_, adapt_tree, move_tree, distribute_tree
+!!$    use BATL_grid, ONLY: init_grid, create_grid, clean_grid, CellSize_DB
+!!$    use BATL_geometry, ONLY: init_geometry
+!!$    use BATL_amr, ONLY: do_amr, init_amr
+!!$    use BATL_size, ONLY: MaxDim, nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
+!!$         nI, nJ, nK 
+!!$    ! For Random generation
+!!$    integer :: jSeed
+!!$    logical :: IsFirst
+!!$    integer, parameter :: iMPLIER=16807, &
+!!$         iMODLUS=2147483647, &
+!!$         iMOBYMP=127773, &
+!!$         iMOMDMP=2836
+!!$
+!!$    integer, parameter:: MaxBlockTest            = 50
+!!$    integer, parameter:: nRootTest_D(MaxDim)     = (/3,3,3/)
+!!$    logical, parameter:: IsPeriodicTest_D(MaxDim)= .false.
+!!$    real, parameter:: DomainMin_D(MaxDim) = (/ -24.0, -24.0, -24.0 /)
+!!$    real, parameter:: DomainMax_D(MaxDim) = (/ 24.0, 24.0, 24.0 /)
+!!$    integer :: iNode, iBlock
+!!$
+!!$    real, allocatable :: Criterias_IB(:,:),AllCriterias_IBP(:,:,:)
+!!$    real, allocatable :: PreCriterias_IB(:,:)
+!!$    real, allocatable :: RefineLevel_I(:), CoursenLevel_I(:)
+!!$    logical, allocatable :: Used_GB(:,:,:,:)
+!!$
+!!$    integer :: nCritExt = 4
+!!$    integer, allocatable :: iA_I(:)
+!!$    real, allocatable :: TestState_VGB(:,:,:,:,:)
+!!$    integer :: nVar =3
+!!$    integer :: i,j,k,iVar
+!!$    logical:: DoTestMe
+!!$    character(len=*), parameter :: NameSub = 'test_amr_criteria'
+!!$    !-----------------------------------------------------------------------
 !!$    DoTestMe = iProc == 0
 !!$
 !!$    write(*,*) " Temural not testing :: test_amr_criteria"
@@ -1425,14 +1422,14 @@ contains
 !!$
 !!$    call set_amr_criteria(nVar,TestState_VGB)
 !!$
-    !do iBlock = 1, nBlock
-    !   if(Unused_B(iBlock)) CYCLE
-    !   write(*,'(i6,f16.12)') iNode_B(iBlock),AmrCrit_IB(1,iBlock)
-    !end do
-    ! 
-    !do iNode = 1, nNode-1
-    !   print *,iNode, iRank_A(iNode)
-    !end do
+!!$    !do iBlock = 1, nBlock
+!!$    !   if(Unused_B(iBlock)) CYCLE
+!!$    !   write(*,'(i6,f16.12)') iNode_B(iBlock),AmrCrit_IB(1,iBlock)
+!!$    !end do
+!!$    ! 
+!!$    !do iNode = 1, nNode-1
+!!$    !   print *,iNode, iRank_A(iNode)
+!!$    !end do
 !!$
 !!$    do iNode = 2, nNode-1
 !!$       if(iRank_A(iNode-1) > iRank_A(iNode)) then
@@ -1526,13 +1523,13 @@ contains
 !!$       end if
 !!$    end do
 !!$
-   ! Using any becouse of the ghost cells
-   ! do iBlock = 1, nBlock
-   !    if(Unused_B(iBlock)) CYCLE
-   !    write(*,*) iNode_B(iBlock), &
-   !         any(DoAmr_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock))
-   ! end do
-
+!!$   ! Using any becouse of the ghost cells
+!!$   ! do iBlock = 1, nBlock
+!!$   !    if(Unused_B(iBlock)) CYCLE
+!!$   !    write(*,*) iNode_B(iBlock), &
+!!$   !         any(DoAmr_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock))
+!!$   ! end do
+!!$
 !!$
 !!$    UseAmrMask = .false.
 !!$    deallocate(AmrBox_DII)
@@ -1648,16 +1645,16 @@ contains
 !!$            8, 28, 27,  9, 26, 10, 25, 11, 12, 24, 13, 23, 22, 15, 21, &
 !!$            16, 17, 20, 19, 18 /)
 !!$
-       !do iBlock = 1, nBlock
-       !   if(Unused_B(iBlock)) CYCLE
-       !   print *,"Criterias_IB(1,iBlock) = ", &
-       !        AmrCrit_IB(1:2,iBlock), iNode_B(iBlock)
-       !end do
-
-       
-       !do iNode = 1, nNode-1
-       !   print *,iRank_A(iNode)," :: ", iA_I(iNode) 
-       !end do
+!!$       !do iBlock = 1, nBlock
+!!$       !   if(Unused_B(iBlock)) CYCLE
+!!$       !   print *,"Criterias_IB(1,iBlock) = ", &
+!!$       !        AmrCrit_IB(1:2,iBlock), iNode_B(iBlock)
+!!$       !end do
+!!$
+!!$       
+!!$       !do iNode = 1, nNode-1
+!!$       !   print *,iRank_A(iNode)," :: ", iA_I(iNode) 
+!!$       !end do
 !!$
 !!$       do iNode = 1, nNode-1, 2
 !!$          if(iRank_A(iNode) /= iA_I(iNode)) &
@@ -1774,46 +1771,46 @@ contains
 !!$    deallocate(RefineLevel_I,CoursenLevel_I)
 !!$    call clean_grid
 !!$    call clean_tree
-
-  contains
-
-    ! The saudo random number generator is for testing performense in
-    ! parallel sorting
-    subroutine srand(iSeed)
-      integer, intent(in) :: iSeed
-      jSeed = iSeed
-      IsFirst = .true.
-    end subroutine srand
-
-    real function rand()
-      !  A pseudo-random number generator implemented to make sure that 
-      !  all platform reproduce the same sequence for testing and compering.
-      !  The algorithm is based on "Integer Version 2" given in :
-      !
-      !       Park, Steven K. and Miller, Keith W., "Random Number Generators: 
-      !       Good Ones are Hard to Find", Communications of the ACM, 
-      !       October, 1988.
-
-      integer :: nHvalue,nLvalue,nTestv
-      integer, save :: nExtn
-
-      if(IsFirst) then
-         nExtn=jSeed
-         IsFirst = .false.
-      end if
-
-      nHvalue = nExtn/iMOBYMP
-      nLvalue = mod(nExtn,iMOBYMP)
-      nTestv = iMPLIER*nLvalue - iMOMDMP*nHvalue
-      if(nTestv > 0) then
-         nExtn = nTestv
-      else
-         nExtn = nTestv + iMODLUS
-      end if
-
-      rand = real(nExtn)/real(iMODLUS)
-
-    end function rand
+!!$
+!!$  contains
+!!$
+!!$    ! The saudo random number generator is for testing performense in
+!!$    ! parallel sorting
+!!$    subroutine srand(iSeed)
+!!$      integer, intent(in) :: iSeed
+!!$      jSeed = iSeed
+!!$      IsFirst = .true.
+!!$    end subroutine srand
+!!$
+!!$    real function rand()
+!!$      !  A pseudo-random number generator implemented to make sure that 
+!!$      !  all platform reproduce the same sequence for testing and compering.
+!!$      !  The algorithm is based on "Integer Version 2" given in :
+!!$      !
+!!$      !       Park, Steven K. and Miller, Keith W., "Random Number Generators: 
+!!$      !       Good Ones are Hard to Find", Communications of the ACM, 
+!!$      !       October, 1988.
+!!$
+!!$      integer :: nHvalue,nLvalue,nTestv
+!!$      integer, save :: nExtn
+!!$
+!!$      if(IsFirst) then
+!!$         nExtn=jSeed
+!!$         IsFirst = .false.
+!!$      end if
+!!$
+!!$      nHvalue = nExtn/iMOBYMP
+!!$      nLvalue = mod(nExtn,iMOBYMP)
+!!$      nTestv = iMPLIER*nLvalue - iMOMDMP*nHvalue
+!!$      if(nTestv > 0) then
+!!$         nExtn = nTestv
+!!$      else
+!!$         nExtn = nTestv + iMODLUS
+!!$      end if
+!!$
+!!$      rand = real(nExtn)/real(iMODLUS)
+!!$
+!!$    end function rand
 
   end subroutine test_amr_criteria
 

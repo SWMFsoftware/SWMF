@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 module BATL_pass_cell
 
-  use BATL_geometry, ONLY: IsCartesian, IsRzGeometry, IsRoundCube, &
+  use BATL_geometry, ONLY: IsCartesianGrid, IsRoundCube, &
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
 
@@ -875,14 +875,6 @@ contains
                                 InvIjkRatioRestr * &
                                 sum(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2, &
                                 iBlockSend))
-
-                           ! The above average is exact for linear functions
-                           ! on Cartesian grids. For testing purposes 
-                           ! apply exact solution to test the rest of the code
-                           ! For serial execution only (iBlockRecv is local)
-                           !if(.not.(IsCartesian .or. IsRzGeometry)) &
-                           !     State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
-                           !     Xyz_DGB(iVar,iR,jR,kR,iBlockRecv) !!!
                         end do
                      end if
                   end do
@@ -970,7 +962,7 @@ contains
       !------------------------------------------------------------------------
 
       UseSimpleWeights = nDim == 1 .or. nDimAmr < nDim &
-           .or. IsCartesian .or. IsRzGeometry .or. IsRoundCube
+           .or. IsCartesianGrid .or. IsRoundCube
 
       ! Loop through the subfaces or subedges
       do kSide = (1-kDir)/2, 1-(1+kDir)/2, 3-kRatio
@@ -1416,7 +1408,7 @@ contains
          nIJK_D, iRatio_D
     use BATL_tree, ONLY: init_tree, set_tree_root, find_tree_node, &
          refine_tree_node, distribute_tree, show_tree, clean_tree, &
-         Unused_B, DiLevelNei_IIIB, iNode_B, iNodeNei_IIIB
+         Unused_B, DiLevelNei_IIIB, iNode_B
     use BATL_grid, ONLY: init_grid, create_grid, clean_grid, &
          Xyz_DGB, CellSize_DB, CoordMin_DB
     use BATL_geometry, ONLY: init_geometry, z_, IsPeriodic_D

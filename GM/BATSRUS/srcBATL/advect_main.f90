@@ -168,7 +168,7 @@ contains
   !===========================================================================
   real function exact_density(Xyz_D)
 
-    use BATL_lib,    ONLY: IsCartesian, IsRzGeometry, IsPeriodic_D
+    use BATL_lib,    ONLY: IsCartesianGrid, IsRzGeometry, IsPeriodic_D
     use ModNumConst, ONLY: cHalfPi
     use ModCoordTransform, ONLY: rot_matrix_z
 
@@ -194,7 +194,7 @@ contains
     end if
 
     ! Take periodicity into account for Cartesian and RZ geometries only
-    if(IsCartesian .or. IsRzGeometry) then
+    if(IsCartesianGrid) then
        DomainSize_D = DomainMax_D(1:nDim) - DomainMin_D(1:nDim)
        where(IsPeriodic_D(1:nDim))
           XyzShift_D = modulo(XyzShift_D - DomainMin_D(1:nDim), DomainSize_D) &
@@ -892,7 +892,8 @@ contains
   subroutine advance_explicit
 
     use BATL_lib, ONLY: message_pass_cell, nBlock, Unused_B, &
-         IsCartesian, IsRzGeometry, CellSize_DB, CellVolume_B, CellVolume_GB, &
+         IsCartesianGrid, IsCartesian, &
+         CellSize_DB, CellVolume_B, CellVolume_GB, &
          iComm, nProc, store_face_flux, apply_flux_correction
     use ModNumConst, ONLY: i_DD
     use ModMpi
@@ -906,7 +907,7 @@ contains
     DtInv = 0.0
 
     ! Calculate time step limit for each block
-    if((IsCartesian .or. IsRzGeometry) .and. UseConstantVelocity)then
+    if((IsCartesianGrid) .and. UseConstantVelocity)then
        ! Velocity is constant and positive so simply check cellsize per block
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
