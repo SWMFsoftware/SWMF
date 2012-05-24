@@ -16,6 +16,7 @@ module BATL_grid
   public :: create_grid
   public :: create_grid_block
   public :: fix_grid_res_change
+  public :: average_grid_node
   public :: find_grid_block
   public :: interpolate_grid
   public :: test_grid
@@ -134,7 +135,7 @@ contains
     allocate(Xyz_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(Xyz_DNB(MaxDim,nINode,nJNode,nKNode,MaxBlock))
 
-    if(.not.IsCartesian .and. .not. IsRzGeometry) then
+    if(.not.IsCartesianGrid) then
        allocate(FaceNormal_DDFB(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
     end if
 
@@ -231,7 +232,7 @@ contains
        CellFace_DB(:,iBlock) = CellVolume_B(iBlock) / CellSize_DB(:,iBlock)
     end if
 
-    if(IsCartesian .or. IsRzGeometry)then
+    if(IsCartesianGrid)then
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Xyz_DGB(:,i,j,k,iBlock) = CoordMin_DB(:,iBlock) + &
@@ -318,8 +319,10 @@ contains
             Xyz_DNB(:,:,:,:,iBlock) = Xyz_DN(:,1:nINode,1:nJNode,1:nKNode)
 
        ! Correct node positions at the resolution changes if required
-       if(nDim==3 .and. present(DoFixFace) .or. present(DoFaceOnly)) &
-            call fix_hanging_node
+       if(nDim==3 .and. present(DoFixFace) .or. present(DoFaceOnly))then
+          call average_grid_node(iBlock, MaxDim, &
+               Xyz_DN(:,1:nINode,1:nJNode,1:nKNode))
+       end if
 
        if(IsNodeBasedGrid)then
 
@@ -504,109 +507,6 @@ contains
     end if
 
   contains
-    !==========================================================================
-    subroutine fix_hanging_node
-
-      ! Move nodes on the fine side of resolution change to the plane
-      ! defined by the coarse side. This ensures that the sum of the
-      ! faces form closed surfaces, so that a uniform flow is preserved.
-
-      ! This routine does the same as the Tecplot node fix in BATS-R-US.
-
-      integer :: i, j, k
-      integer :: i1, i2, j1, j2, k1, k2, Di, Dj, Dk
-      integer :: iDir, jDir, kDir, nDir
-      !----------------------------------------------------------------------
-      ! Loop over neighbor directions and set index ranges
-      do kDir = -1,1
-         select case(kDir)
-         case( 1)
-            k1=1+nK; k2=1+nK; Dk=0
-         case(-1)
-            k1=1;    k2=1;    Dk=0
-         case( 0)
-            k1=2;    k2=nK;   Dk=1
-         end select
-         do jDir = -1,1
-            select case(jDir)
-            case( 1)
-               j1=1+nJ; j2=1+nJ; Dj=0
-            case(-1)
-               j1=1;    j2=1;    Dj=0
-            case( 0)
-               j1=2;    j2=nJ;   Dj=1
-            end select
-            do iDir = -1,1
-
-               ! Check number of non-zero directions (1:face, 2:edge, 3:corner)
-               nDir = abs(iDir) + abs(jDir) + abs(kDir)
-
-               ! ignore corners
-               if(nDir == 3) CYCLE
-
-               ! Check if there is any coarser neighbor
-               if(DiLevelNei_IIIB(iDir,jDir,kDir,iBlock) /= 1) CYCLE
-
-               select case(iDir)
-               case( 1)
-                  i1=1+nI; i2=1+nI; Di=0
-               case(-1)
-                  i1=1;    i2=1;    Di=0
-               case( 0)
-                  i1=2;    i2=nI;   Di=1
-               end select
-
-               ! Correct edge nodes and some interior face nodes
-               do k=k1,k2,2; do j=j1,j2,2; do i=i1,i2,2
-                  Xyz_DN(:,i,j,k) = 0.125 * ( &
-                       Xyz_DN(:,i-Di,j-Dj,k-Dk) + &
-                       Xyz_DN(:,i-Di,j-Dj,k+Dk) + &
-                       Xyz_DN(:,i-Di,j+Dj,k-Dk) + &
-                       Xyz_DN(:,i-Di,j+Dj,k+Dk) + &
-                       Xyz_DN(:,i+Di,j-Dj,k-Dk) + &
-                       Xyz_DN(:,i+Di,j-Dj,k+Dk) + &
-                       Xyz_DN(:,i+Di,j+Dj,k-Dk) + &
-                       Xyz_DN(:,i+Di,j+Dj,k+Dk) )
-               end do; end do; end do
-
-               ! Done with edge neighbors
-               if(nDir == 2) CYCLE
-
-               ! Add correction of additional interior face nodes
-               if(Di==1)then
-                  do k=k1,k2,2; do j=j1,j2,2; do i=i1-1,i2+1,2
-                     Xyz_DN(:,i,j,k) = 0.25 * ( &
-                          Xyz_DN(:,i,j-Dj,k-Dk) + &
-                          Xyz_DN(:,i,j-Dj,k+Dk) + &
-                          Xyz_DN(:,i,j+Dj,k-Dk) + &
-                          Xyz_DN(:,i,j+Dj,k+Dk) )
-                  end do; end do; end do
-               end if
-               if(Dj==1)then
-                  do k=k1,k2,2; do j=j1-1,j2+1,2; do i=i1,i2,2 
-                     Xyz_DN(:,i,j,k) = 0.25 * ( &
-                          Xyz_DN(:,i-Di,j,k-Dk) + &
-                          Xyz_DN(:,i-Di,j,k+Dk) + &
-                          Xyz_DN(:,i+Di,j,k-Dk) + &
-                          Xyz_DN(:,i+Di,j,k+Dk) )
-                  end do; end do; end do
-               end if
-               if(Dk==1)then
-                  do k=k1-1,k2+1,2; do j=j1,j2,2; do i=i1,i2,2
-                     Xyz_DN(:,i,j,k) = 0.25 * ( &
-                          Xyz_DN(:,i-Di,j-Dj,k) + &
-                          Xyz_DN(:,i-Di,j+Dj,k) + &
-                          Xyz_DN(:,i+Di,j-Dj,k) + &
-                          Xyz_DN(:,i+Di,j+Dj,k) )
-                  end do; end do; end do
-               end if
-
-            end do
-         end do
-      end do
-
-    end subroutine fix_hanging_node
-
     !=========================================================================
     subroutine calc_analytic_face
 
@@ -795,6 +695,113 @@ contains
 
   end subroutine create_grid_block
 
+  !==========================================================================
+  subroutine average_grid_node(iBlock, nVar, Var_VN)
+
+    integer, intent(in)   :: iBlock
+    integer, intent(in)   :: nVar
+    real,    intent(inout):: Var_VN(nVar,nINode,nJNode,nKNode)
+
+    ! Move nodes on the fine side of resolution change to the plane
+    ! defined by the coarse side. This ensures that the sum of the
+    ! faces form closed surfaces, so that a uniform flow is preserved.
+
+    ! This routine does the same as the Tecplot node fix in BATS-R-US.
+
+    integer :: i, j, k
+    integer :: i1, i2, j1, j2, k1, k2, Di, Dj, Dk
+    integer :: iDir, jDir, kDir, nDir
+    !----------------------------------------------------------------------
+    ! Loop over neighbor directions and set index ranges
+    do kDir = -1,1
+       select case(kDir)
+       case( 1)
+          k1=1+nK; k2=1+nK; Dk=0
+       case(-1)
+          k1=1;    k2=1;    Dk=0
+       case( 0)
+          k1=2;    k2=nK;   Dk=1
+       end select
+       do jDir = -1,1
+          select case(jDir)
+          case( 1)
+             j1=1+nJ; j2=1+nJ; Dj=0
+          case(-1)
+             j1=1;    j2=1;    Dj=0
+          case( 0)
+             j1=2;    j2=nJ;   Dj=1
+          end select
+          do iDir = -1,1
+
+             ! Check number of non-zero directions (1:face, 2:edge, 3:corner)
+             nDir = abs(iDir) + abs(jDir) + abs(kDir)
+
+             ! ignore corners
+             if(nDir == 3) CYCLE
+
+             ! Check if there is any coarser neighbor
+             if(DiLevelNei_IIIB(iDir,jDir,kDir,iBlock) /= 1) CYCLE
+
+             select case(iDir)
+             case( 1)
+                i1=1+nI; i2=1+nI; Di=0
+             case(-1)
+                i1=1;    i2=1;    Di=0
+             case( 0)
+                i1=2;    i2=nI;   Di=1
+             end select
+
+             ! Correct edge nodes and some interior face nodes
+             do k=k1,k2,2; do j=j1,j2,2; do i=i1,i2,2
+                Var_VN(:,i,j,k) = 0.125 * ( &
+                     Var_VN(:,i-Di,j-Dj,k-Dk) + &
+                     Var_VN(:,i-Di,j-Dj,k+Dk) + &
+                     Var_VN(:,i-Di,j+Dj,k-Dk) + &
+                     Var_VN(:,i-Di,j+Dj,k+Dk) + &
+                     Var_VN(:,i+Di,j-Dj,k-Dk) + &
+                     Var_VN(:,i+Di,j-Dj,k+Dk) + &
+                     Var_VN(:,i+Di,j+Dj,k-Dk) + &
+                     Var_VN(:,i+Di,j+Dj,k+Dk) )
+             end do; end do; end do
+
+             ! Done with edge neighbors
+             if(nDir == 2) CYCLE
+
+             ! Add correction of additional interior face nodes
+             if(Di==1)then
+                do k=k1,k2,2; do j=j1,j2,2; do i=i1-1,i2+1,2
+                   Var_VN(:,i,j,k) = 0.25 * ( &
+                        Var_VN(:,i,j-Dj,k-Dk) + &
+                        Var_VN(:,i,j-Dj,k+Dk) + &
+                        Var_VN(:,i,j+Dj,k-Dk) + &
+                        Var_VN(:,i,j+Dj,k+Dk) )
+                end do; end do; end do
+             end if
+             if(Dj==1)then
+                do k=k1,k2,2; do j=j1-1,j2+1,2; do i=i1,i2,2 
+                   Var_VN(:,i,j,k) = 0.25 * ( &
+                        Var_VN(:,i-Di,j,k-Dk) + &
+                        Var_VN(:,i-Di,j,k+Dk) + &
+                        Var_VN(:,i+Di,j,k-Dk) + &
+                        Var_VN(:,i+Di,j,k+Dk) )
+                end do; end do; end do
+             end if
+             if(Dk==1)then
+                do k=k1-1,k2+1,2; do j=j1,j2,2; do i=i1,i2,2
+                   Var_VN(:,i,j,k) = 0.25 * ( &
+                        Var_VN(:,i-Di,j-Dj,k) + &
+                        Var_VN(:,i-Di,j+Dj,k) + &
+                        Var_VN(:,i+Di,j-Dj,k) + &
+                        Var_VN(:,i+Di,j+Dj,k) )
+                end do; end do; end do
+             end if
+
+          end do
+       end do
+    end do
+
+  end subroutine average_grid_node
+
   !===========================================================================
   subroutine fix_grid_res_change
 
@@ -802,7 +809,7 @@ contains
     !------------------------------------------------------------------------
     LOOPBLOCK: do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
-       
+
        if(iAmrChange_B(iBlock) == AmrNeiChanged_)then
           call create_grid_block(iBlock, DoFaceOnly=.true.)
        elseif(iAmrChange_B(iBlock) >= AmrMoved_)then
@@ -824,8 +831,7 @@ contains
 
     integer:: iBlock
     !------------------------------------------------------------------------
-    if(nDim == 3 .and. IsNodeBasedGrid .and. &
-         .not. (IsCartesian .or. IsRzGeometry))then
+    if(nDim == 3 .and. IsNodeBasedGrid .and. .not. IsCartesianGrid)then
        do iBlock = 1, nBlock
           if(Unused_B(iBlock))CYCLE
           call create_grid_block(iBlock, DoFixFace=.true.)
@@ -939,7 +945,7 @@ contains
     character(len=*), parameter:: NameSub = 'find_grid_block'
     !------------------------------------------------------------------------
     ! Convert to generalized coordinates if necessary
-    if(IsCartesian .or. IsRzGeometry)then
+    if(IsCartesianGrid)then
        Coord_D = XyzIn_D
     else
        call xyz_to_coord(XyzIn_D, Coord_D)
@@ -990,7 +996,7 @@ contains
     character(len=*), parameter:: NameSub='BATL_grid::interpolate_grid'
     !------------------------------------------------------------------------   
     ! Convert to generalized coordinates if necessary
-    if(IsCartesian .or. IsRzGeometry)then
+    if(IsCartesianGrid)then
        Coord_D = Xyz_D
     else
        call xyz_to_coord(Xyz_D, Coord_D)
@@ -1171,7 +1177,7 @@ contains
                + ( iCell_D(1:nDim) - 0.5 )*CellSize_D
 
           Weight_D = 1 - InvSize_D*abs((Coord_D(1:nDim) - CoordCell_D))
-          
+
           Weight = product(Weight_D)
 
           ! Ignore cells with 0 weight
@@ -1312,7 +1318,7 @@ contains
           write(*,*) 'Error: DomainMax_D, Xyz_D=', &
                DomainMax_D, Xyz_D
           write(*,*) 'iProcOut, iBlockOut, iCell_D = ',&
-                 iProcOut, iBlockOut, iCell_D
+               iProcOut, iBlockOut, iCell_D
        end if
     end if
 
@@ -1347,7 +1353,7 @@ contains
           iBlock = iCell_II(0,iCell)
           iCell_D = 1
           iCell_D(1:nDim) = iCell_II(1:nDim,iCell)
-          
+
           ! Interpolate the coordinates to check order of accuracy
           ! Note: Using array syntax in combination with the indirect
           ! iCell_D index fails with optimization for NAG v5.1
@@ -1452,7 +1458,7 @@ contains
                 Radius = 0.5*sum(abs(Xyz_DGB(2,i-Di:i,j-Dj:j,k,iBlock)))
                 if(abs(CellFace_DFB(iDim,i,j,k,iBlock) - &
                      Radius*CellFaceCart_DB(iDim,iBlock)) &
-                      < Tolerance) CYCLE
+                     < Tolerance) CYCLE
                 write(*,*)NameSub,' ERROR: incorrect face area=', &
                      CellFace_DFB(iDim,i,j,k,iBlock),' should be', &
                      Radius*CellFaceCart_DB(iDim,iBlock), &
@@ -1571,7 +1577,7 @@ contains
     if(DoTestMe) write(*,*)'Testing clean_grid'
     call clean_grid
     call clean_tree
-    
+
   end subroutine test_grid
 
 end module BATL_grid
