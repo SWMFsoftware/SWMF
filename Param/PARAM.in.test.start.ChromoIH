@@ -215,7 +215,7 @@ box_gen			NameArea
 currentsheet		TypeCriteria
 0.5			CoarsenLimit
 0.5			RefineLimit
-5			MinResolution
+5			MaxLevel
 
 #GRIDLEVEL
 5			nLevelArea
