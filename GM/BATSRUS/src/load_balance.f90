@@ -246,7 +246,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModMpi
 
   use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, Used_,&
-       regrid_batl, IsCartesian, IsRzGeometry
+       regrid_batl, IsCartesianGrid
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state, UseBatlTest
 
   ! Temporary
@@ -400,7 +400,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   call find_test_cell
 
   ! This is a temporary solution for backward compatibility
-  if(.not.UseBatlTest .and. .not.(IsCartesian.or.IsRzGeometry) &
+  if(.not.UseBatlTest .and. .not.IsCartesianGrid &
        .and. DoMoveCoord .and. UseVertexBasedGrid)then
      do iBlock=1, nBlock
         if(do_fix_geometry_at_reschange(iBlock)) &       

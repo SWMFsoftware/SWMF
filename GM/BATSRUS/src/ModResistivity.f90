@@ -110,7 +110,7 @@ contains
 
   subroutine init_mod_resistivity
 
-    use BATL_lib,    ONLY: IsCartesian, IsRzGeometry
+    use BATL_lib,    ONLY: IsCartesianGrid
     use ModConst,    ONLY: cLightSpeed, cElectronCharge, cElectronMass, cEps, &
          cBoltzmann, cTwoPi
     use ModImplicit, ONLY: UseSemiImplicit, TypeSemiImplicit, nVarSemi
@@ -152,9 +152,9 @@ contains
                FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
                Eta_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
 
-          if(.not.(IsCartesian.or.IsRzGeometry)) &
-               call stop_mpi(NameSub//': semi-implicit resistivity not '// &
-               'yet implemented for non-cartesian')
+          if(.not.IsCartesianGrid) call stop_mpi(NameSub//&
+               ': semi-implicit resistivity not '// &
+               'yet implemented for non-cartesian grids')
        end if
 
        if(DoTestMe)then
