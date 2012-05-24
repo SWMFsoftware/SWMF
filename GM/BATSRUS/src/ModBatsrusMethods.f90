@@ -134,6 +134,7 @@ contains
 
   subroutine set_initial_conditions
 
+    use ModBatlInterface,ONLY: UseBatlTest
     use ModUser,        ONLY: user_initial_perturbation, user_action
     use ModIO,          ONLY: restart
     use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
@@ -193,7 +194,7 @@ contains
        call read_restart_files
        !Vertex based geometry at the resolution interfaces 
        !should be fixed while setting the block geometry
-       if(UseVertexBasedGrid)then
+       if(UseVertexBasedGrid .and. .not.UseBatlTest)then
           Do iBlock=1,nBlockMax
              if(do_fix_geometry_at_reschange(iBlock))&
                   call fix_geometry_at_reschange(iBlock)

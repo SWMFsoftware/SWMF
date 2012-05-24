@@ -266,6 +266,8 @@ subroutine fix_pole(iBlock)
 end subroutine fix_pole
 !=======================================================================
 subroutine fix_geometry_at_reschange(iBlock)
+
+  use ModBatlInterface, ONLY: UseBatlTest
   use ModCovariant
   use ModNodes,ONLY:NodeX_NB,NodeY_NB,NodeZ_NB
   use ModGeometry,ONLY: vInv_CB,XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
@@ -290,6 +292,9 @@ subroutine fix_geometry_at_reschange(iBlock)
   character(LEN=*),parameter::NameSub='fix_geometry_at_reschange'
 
   integer::i,j,k,iDim
+  !------------------------------------------------------------------------
+  if(UseBatlTest)call stop_mpi(NameSub// &
+       ' should not be called with UseBatlTest=T')
 
   DXyzRef_D(x_)=dx_BLK(iBlock)*cHalf
   DXyzRef_D(y_)=dy_BLK(iBlock)*cHalf
