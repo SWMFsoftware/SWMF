@@ -71,8 +71,7 @@ contains
 
     use BATL_lib, ONLY: nDim, x_, y_, z_, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         nINode, nJNode, nKNode, &
-         Xyz_DGB, Xyz_DNB, CellVolume_B, CellVolume_GB, &
+         Xyz_DGB, CellVolume_B, CellVolume_GB, &
          CellSize_DB, CoordMin_DB, &
          CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
          iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
@@ -84,8 +83,6 @@ contains
          dx_BLK, dy_BLK, dz_BLK, fax_BLK, fay_BLK, faz_BLK, &
          FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
          FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B
-
-    use ModNodes, ONLY: NodeX_NB, NodeY_NB, NodeZ_NB
 
     use ModParallel, ONLY: BLKneighborLEV,  neiLEV, neiBLK, neiPE, &
          neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
@@ -247,18 +244,6 @@ contains
           vInv_CB(i,j,k,iBlock) = 1/CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
 
-       do k = 1, nKNode; do j = 1, nJNode; do i = 1, nINode
-          NodeX_NB(i,j,k,iBlock) = Xyz_DNB(1,i,j,k,iBlock)
-          NodeY_NB(i,j,k,iBlock) = Xyz_DNB(2,i,j,k,iBlock)
-          NodeZ_NB(i,j,k,iBlock) = Xyz_DNB(3,i,j,k,iBlock)
-
-          if(nK == 1)then
-             NodeX_NB(i,j,2,iBlock) = NodeX_NB(i,j,1,iBlock)
-             NodeY_NB(i,j,2,iBlock) = NodeY_NB(i,j,1,iBlock)
-             NodeZ_NB(i,j,2,iBlock) = NodeZ_NB(i,j,1,iBlock)
-          end if
-       end do; end do; end do
-
        if(IsCartesian)then
           fAx_BLK(iBlock) = CellFace_DB(1,iBlock)
           fAy_BLK(iBlock) = CellFace_DB(2,iBlock)
@@ -348,7 +333,7 @@ contains
          UseRotatingFrame, globalBLK
     use ModParallel, ONLY: neiLwest, NOBLK
     use ModConserveFlux, ONLY: init_cons_flux
-    use BATL_size, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_size, ONLY: nI, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     integer, intent(in) :: iBlock
 
