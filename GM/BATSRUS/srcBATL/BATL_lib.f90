@@ -63,7 +63,7 @@ module BATL_lib
   public:: Xyz_DGB, Xyz_DNB
   public:: CellFace_DB, CellFace_DFB, FaceNormal_DDFB
   public:: CellVolume_B, CellVolume_GB
-  public:: find_grid_block, interpolate_grid
+  public:: find_grid_block, interpolate_grid, average_grid_node
 
   ! Inherited from BATL_amr
   public:: BetaProlong
