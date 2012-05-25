@@ -450,7 +450,7 @@ contains
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
     use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
-    use ModInitialState,ONLY: get_initial_state, clean_initial_state
+    use ModInitialState,ONLY: get_initial_state
 
     real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
     real    :: DxyGold = -1.0
@@ -714,11 +714,6 @@ contains
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*RadiationScaleFactor
 
     end do; end do; end do
-
-    if(UseInitialStateDefinition)then
-       call clean_initial_state
-       UseInitialStateDefinition = .false.
-    end if
 
     call timing_stop(NameSub)
   contains
@@ -1175,6 +1170,7 @@ contains
   subroutine user_action(NameAction)
 
     use ModProcMH, ONLY: iProc
+    use ModInitialState, ONLY: clean_initial_state
 
     character(len=*), intent(in):: NameAction
 
@@ -1191,6 +1187,11 @@ contains
        if(allocated(DataHyadesMesh_VC)) deallocate( &
             DataHyadesMesh_VC, DataHyades_VC, &
             CoordHyades_DC, CoordHyadesMesh_DC)
+
+       if(UseInitialStateDefinition)then
+          call clean_initial_state
+          UseInitialStateDefinition = .false.
+       end if
     end select
 
   end subroutine user_action
