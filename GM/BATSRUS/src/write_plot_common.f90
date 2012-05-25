@@ -12,13 +12,13 @@ subroutine write_plot_common(ifile)
   use ModPhysics, ONLY : No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, write_cut_var_hdf5
-  use ModIoUnit, ONLY : io_unit_new
+  use ModIoUnit, ONLY: io_unit_new
   use ModNodes
-  use ModNumConst, ONLY : cRadToDeg
+  use ModNumConst, ONLY: cRadToDeg
   use ModMpi
   use ModUtilities, ONLY: lower_case, split_string
   use BATL_lib, ONLY: message_pass_node, calc_error_amr_criteria, Xyz_DNB,&
-       message_pass_node
+       message_pass_node, average_grid_node, IsCartesianGrid
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
 
@@ -83,7 +83,7 @@ subroutine write_plot_common(ifile)
   character (len=80) :: format
   character (len=19) :: eventDateTime
 
-  logical :: oktest,oktest_me, isCutFile(nFile), nonCartesian, H5Advance
+  logical :: oktest,oktest_me, isCutFile(nFile), H5Advance
 
   !---------------------------------------------------------------------------
 
@@ -122,14 +122,6 @@ subroutine write_plot_common(ifile)
      write(*,*) plot_type1
      write(*,*) plot_form(ifile)
   end if
-
-  !! A logical for HDF plotting
-  if(TypeGeometry == 'cartesian' .or. TypeGeometry == 'rz') then
-     nonCartesian = .false.
-  else
-     nonCartesian = .true.
-  end if
-
 
   ! Construct the file name
   ! Plotfile names start with the plot directory and the type infor
@@ -288,7 +280,7 @@ subroutine write_plot_common(ifile)
            if(plot_type1(1:3)=='3d_' .or.  (&
                 (plot_type1(1:3)=='z=0' .and. nK == 1))) then
               call write_var_hdf5(PlotVar, nPlotVar, H5Index, iBlk,&
-                   nonCartesian)
+                   .not.IsCartesianGrid)
 
               H5Index = H5Index+1
               isCutFile(iFile) = .false.
@@ -299,9 +291,10 @@ subroutine write_plot_common(ifile)
                    plot_point(2,ifile)<=NodeY_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
                    plot_point(3,ifile)> NodeZ_NB(1, 1, 1, iBLK) .and. &
                    plot_point(3,ifile)<=NodeZ_NB(1+nI,1+nJ,1+nK,iBLK))then
-                 call write_cut_var_hdf5(ifile,plot_type1,iBLK,H5Index,nplotvar,&
-                      plotvar, xmin,xmax,ymin,ymax,zmin,zmax, dxblk,dyblk,&
-                      dzblk,nonCartesian, nBLKcells, H5Advance)
+                 call write_cut_var_hdf5(ifile,plot_type1,iBLK,H5Index, &
+                      nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
+                      dxblk, dyblk, dzblk, &
+                      .not.IsCartesianGrid, nBLKcells, H5Advance)
 
                  H5Index = H5Index+1
               end if
@@ -309,7 +302,7 @@ subroutine write_plot_common(ifile)
            else
               call write_cut_var_hdf5(ifile, plot_type1(1:3), iBLK,H5Index,nplotvar,&
                    plotvar, xmin,xmax,ymin,ymax,zmin,zmax, dxblk,dyblk,&
-                   dzblk,nonCartesian, nBLKcells, H5Advance)
+                   dzblk, .not.IsCartesianGrid, nBLKcells, H5Advance)
 
               if (H5Advance) then
                  H5Index = H5Index+1
@@ -345,10 +338,9 @@ subroutine write_plot_common(ifile)
      call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
           unitstr_IDL)
 
-     call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, NamePlotUnit_V,&
-          nPlotVar,isCutFile(iFile), nonCartesian,plot_dimensional(ifile), xmin,&
-          xmax, ymin, ymax, zmin, zmax)
-
+     call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
+          NamePlotUnit_V, nPlotVar, IsCutFile(iFile), .not.IsCartesianGrid, &
+          plot_dimensional(ifile), xmin, xmax, ymin, ymax, zmin, zmax)
 
      RETURN
 
@@ -368,21 +360,15 @@ subroutine write_plot_common(ifile)
      ! with "non-hanging" nodes.
      ! Specifically, this fixes many grid problems for spherical plots, 
      ! but doesn't hurt cartesian.
-     allocate(PlotXYZNodes_DNB(3,1:1+nI,1:1+nJ,1:1+nK,nBLK))
+     allocate(PlotXYZNodes_DNB(3,nINode,nJNode,nKNode,MaxBlock))
+     PlotXYZNodes_DNB(:,:,:,:,1:nBlock) = Xyz_DNB(:,:,:,:,1:nBlock)
 
-     if(TypeGeometry == 'cartesian' .or. TypeGeometry == 'rz')then
-        ! the periodicity in the z-direction for the cylinder should go ???
-        PlotXYZNodes_DNB(1,:,:,:,:)=NodeX_NB
-        PlotXYZNodes_DNB(2,:,:,:,:)=NodeY_NB
-        PlotXYZNodes_DNB(3,:,:,:,:)=NodeZ_NB
-     else
-        ! Fixing hanging nodes at resolution change
-        PlotXYZNodes_DNB(:,:,:,:,1:nBlock) = Xyz_DNB(:,:,:,:,1:nBlock)
-        call  set_block_hanging_node(nDim,PlotXYZNodes_DNB)
-
-        ! Make near zero values exactly zero
+     if(.not.IsCartesianGrid)then
         do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
-           where(abs(PlotXYZNodes_DNB(:,:,:,:,iBlk))<1.e-10) &
+           ! Fixing hanging nodes at resolution change
+           call  average_grid_node(iBlk, nDim, PlotXYZNodes_DNB(:,:,:,:,iBlk))
+           ! Make near zero values exactly zero
+           where(abs(PlotXYZNodes_DNB(:,:,:,:,iBlk)) < 1e-10) &
                 PlotXYZNodes_DNB(:,:,:,:,iBlk) = 0.
         end do
      end if
@@ -391,14 +377,17 @@ subroutine write_plot_common(ifile)
 
      ! for BATL we work on all the nplotvarmax variables
      ! at the same sweep
-     call message_pass_node(nplotvarmax,PlotVarNodes_VNB, &
+     call message_pass_node(nPlotvarMax, PlotVarNodes_VNB, &
           NameOperatorIn='Mean')
-     call set_block_hanging_node(nplotvarmax,PlotVarNodes_VNB)
 
-     call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB, &
-          PlotXYZNodes_DNB, unitstr_TEC, xmin,xmax,ymin,ymax,zmin,zmax)
-     deallocate(PlotXYZNodes_DNB)
-     deallocate(PlotVarNodes_VNB)
+     do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
+        call average_grid_node(iBlk, nPlotvarMax, PlotVarNodes_VNB(:,:,:,:,iBlk))
+     end do
+
+     call write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
+          PlotXYZNodes_DNB, unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax)
+
+     deallocate(PlotXYZNodes_DNB, PlotVarNodes_VNB)
   end if
 
   if(plot_form(iFile) == 'idl' .and. .not. IsSphPlot .and. nPeCells == 0)then
