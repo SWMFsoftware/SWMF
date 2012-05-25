@@ -6,13 +6,17 @@ module ModHdf5
   implicit none
   SAVE
 
+  ! These parameters are needed if there is no HDF5 module
+  !integer,parameter:: Hsize_t=4,hid_t=4,H5T_NATIVE_INTEGER=4,H5T_NATIVE_CHARACTER=1
+  !integer,parameter:: H5P_DEFAULT_F=8,H5S_ALL_F=8,H5FD_MPIO_COLLECTIVE_F=8,H5S_SELECT_SET_F=8
+  !integer,parameter:: H5P_DATASET_XFER_F=8,H5T_NATIVE_DOUBLE=8,H5F_ACC_TRUNC_F=8,H5P_FILE_ACCESS_F=1
 
   private ! except
   public write_var_hdf5
   public write_cut_var_hdf5
   public write_plot_hdf5
 
-  real,  allocatable :: PlotVarIdx(:,:,:,:,:)
+  real,    allocatable :: PlotVarIdx(:,:,:,:,:)
   real,    allocatable :: plotXYZNodes(:,:,:,:,:)
 
   integer, allocatable :: UsedBlocks(:)
@@ -26,7 +30,6 @@ module ModHdf5
 
   integer :: nBlocksUsed, nBlkUsedGlobal, iBlk ,arrSize(3), nodeArrSize(3)
   integer :: iSizeGlobal, jSizeGlobal, kSizeGlobal, nPlotDim, plotDim(3) 
-  real, allocatable :: Position_DA(:,:)
   logical :: collectiveWrite
 contains
   subroutine write_cut_var_hdf5(iFile, plotType, iBlock, H5Index,nPlotVar,PlotVar, &
@@ -36,17 +39,15 @@ contains
     ! Save all cells within plotting range, for each processor
 
     use ModProcMH
-    use ModMain, ONLY: nI, nJ, nK, PROCtest, BLKtest, test_string, &
+    use ModMain, ONLY: nI, nJ, nK, &
          x_, y_, z_, Phi_, nBlockMax, unusedBLK
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, Dx_BLK, Dy_BLK, Dz_BLK,&
-         x1, x2, y1, y2, z1, z2, XyzStart_BLK, XyzMin_D, XyzMax_D
+    use ModGeometry, ONLY: Dx_BLK, Dy_BLK, Dz_BLK,&
+         XyzStart_BLK
     use ModIO
     use ModNumConst
     use ModCovariant, ONLY: is_axial_geometry          
-    use ModPhysics, ONLY : No2Io_V, UnitX_
     use ModMpi
-    use ModNodes, ONLY: NodeX_NB,NodeY_NB,NodeZ_NB
-    use BATL_lib, ONLY : nDim, Xyz_DNB
+    use BATL_lib, ONLY : Xyz_DNB
 
     implicit none
 
@@ -64,22 +65,19 @@ contains
 
     ! Local variables
     ! Indices and coordinates
-    integer :: iVar, i, j, k, i2, j2, k2, iMin, iMax, jMin, jMax, kMin, kMax
+    integer :: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     integer ::  iMaxN,jMaxN, kMaxN
-    integer :: ii, jj, kk, iSize, jSize, kSize, d
-    integer :: nRestrict, nRestrictX, nRestrictY, nRestrictZ
-    integer :: sizePlotBlkI, sizePlotBlkJ, sizePlotBlkK, error
-    real :: x,y,z,Dx,Restrict
+    integer :: ii, jj, kk, iSize, jSize, kSize
+    integer :: error
+    real ::Dx
     real :: xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
     real :: DxBlockOut
-    real :: Plot_V(nPlotVarMax)
 
     real :: ySqueezed
 
     real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
 
     character(len=*), parameter :: NameSub = 'write_plot_idl'
-    logical :: DoTest, DoTestMe
 
 
     if (.not. allocated(PlotVarIdx)) then
@@ -450,10 +448,7 @@ contains
   subroutine write_var_hdf5(PlotVar, nPlotVar, H5Index, iBlock,&
        isNonCartesian)
     use ModMain, only : nBlockMax, nI,nJ,nK
-    use BATL_lib, ONLY : nDim, Xyz_DNB, Xyz_DGB
-    use ModNodes, ONLY: NodeX_NB,NodeY_NB,NodeZ_NB
-    use ModCoordTransform, only : xyz_to_sph, sph_to_xyz
-    use ModSort, only : sort_quick_func
+    use BATL_lib, ONLY : nDim, Xyz_DNB
 
 
     !  Handles adding one block of variable data that for plotting
@@ -462,8 +457,7 @@ contains
     integer, intent(in) :: nPlotVar, H5Index, iBlock
     real, intent(in) :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
     logical, intent(in) :: isNonCartesian
-    integer:: i,j,k, ii, jj, kk, iPlot, error, ijkIndex(3,nI*nJ*nK), &
-         iCell, cellIndex(nI*nJ*nK)
+    integer:: ii, jj, kk
 
     !----------------------------------------------------------------------
     ! Allocate the storage array if it has not been allocated for
@@ -525,20 +519,13 @@ contains
        nPlotVar,isCutFile, nonCartesian,plot_dimensional, xmin, xmax, &
        ymin, ymax, zmin, zmax)!, nBLKcells)
 
-    use BATL_tree, only: iNode_B, iTree_IA, Coord0_, Coord1_, Coord2_, Coord3_,&
-         Level_,iMortonNode_A, MaxNode, get_tree_position, nNodeUsed,&
-         Block_, Proc_,iNodeMorton_I, Unused_BP
+    use BATL_tree, only: iNode_B, iTree_IA, Coord0_,&
+         Level_,iMortonNode_A
     use BATL_lib, only : CoordMin_DB, CoordMax_DB
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, Dx_BLK, Dy_BLK, Dz_BLK,&
-         x1, x2, y1, y2, z1, z2, XyzStart_BLK, XyzMin_D, XyzMax_D
     !  use ModIO
     use ModNumConst
     use ModMpi
-    use ModMain, only : Phi_,nI,nJ,nK, nBlockMax,x_, y_, z_
-    use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK,XyzStart_BLK,&
-         XyzMin_D, XyzMax_D
-    use ModSort, only : sort_quick_func
-    use BATL_lib, ONLY : CoordMin_DB, nDim, MaxDim
+    use BATL_lib, ONLY : CoordMin_DB, MaxDim
     use BATL_mpi, only : barrier_mpi
 
 
@@ -546,31 +533,22 @@ contains
     character(len=80),       intent(in):: filename
     character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
     character(len=lNameVar),  intent(in):: plotVarUnits(nPlotVar)
-    character(len=lNameVar) :: AxisLabels(3)!, AxisLabelsNull(3)
     character (len=*), intent(in) :: plotType
     real, intent(in)  ::  xMin, xMax, yMin, yMax, zMin, zMax
     !    integer,                 intent(in):: nBLKcells
     logical, intent(in) :: isCutFile, plot_dimensional, nonCartesian
     integer :: offsetPerProc(0:nProc-1), blocksPerProc(0:nProc-1)
-    integer :: fileID, error, procIdx, lastCoord, iNode, iLen, iVar, nBlocksUsedMax 
-    integer :: labelLeng, i, ii, PosMinType, iMorton, nBlocksUsedMin
-    integer :: hdfMajor, hdfMinor, hdfRelease, minBlocksUsed
+    integer :: fileID, error, procIdx, iLen, iVar, nBlocksUsedMax 
+    integer :: labelLeng, i, nBlocksUsedMin
+    integer :: hdfMajor, hdfMinor, hdfRelease
     real, allocatable :: coordinates(:,:), bbox(:,:,:),blockDataExtents(:,:)
-    integer, allocatable :: procNum(:),minLogicalExtents(:,:)
-    integer, allocatable :: VisItIndx(:)
-    integer, allocatable :: NumUnsedBlkTo(:,:),UsedNodesProc(:,:)
-    integer(HSIZE_T) :: openObjs
-    real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim), varMin, varMax
+    integer, allocatable :: procNum(:)
+    real :: varMin, varMax
     real :: globalVarMin(nPlotVar), globalVarMax(nPlotVar)
-    real :: minCoords(3), maxCoords(3), dSize(3)
-    real :: domainHasRoomFor
+    real :: minCoords(3), maxCoords(3)
     character (len=lnamevar+4) :: dsname
-    character (len=4) :: tempstr
-    real :: xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
     real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
-    logical :: allProcsWrite
 
-    real :: ySqueezed
 
 
 
@@ -879,8 +857,8 @@ contains
     integer, intent(in) :: nIplot,nJplot
     integer :: error
     integer(HID_T) :: dataset, plist_id
-    integer(HSIZE_T) :: dimens3D(3), dimens1D(1)
-    integer(HID_T) :: dataspace, attributeSpace, attribute
+    integer(HSIZE_T) :: dimens3D(3)
+    integer(HID_T) :: dataspace
     integer(HID_T) :: memspace
     integer(HSIZE_T) :: start3D(3)
     integer(HSIZE_T) :: stride3D(3)
@@ -890,8 +868,7 @@ contains
     real, intent(in) :: dataBuff(:,:,:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
-    integer(HSIZE_T) :: nullSize(3) = 0
-    integer(HSIZE_T) :: openObjs, one
+    integer(HSIZE_T) :: one
 
     !Set the dimensions of the dataset
 
@@ -974,7 +951,7 @@ contains
 
     implicit none
 
-    integer :: rank, dimens
+    integer :: rank
     integer :: error
     integer(HID_T) :: dataset, plist_id
     integer(HSIZE_T) :: dimens1D(2)
@@ -988,7 +965,6 @@ contains
     integer, intent(in) :: dataBuff(:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
-    integer(HSIZE_T) :: nullSize(5) = 0
     integer(HSIZE_T) ::  one
     !Set the dimensions of the dataset
     rank = 1
@@ -1080,7 +1056,7 @@ contains
     integer, intent(in) :: dataBuff(:,:)
     integer, intent(in) :: localOffset
     character (len=*), intent(in) :: description
-    integer(HSIZE_T) :: one, nullSize(2) = 0
+    integer(HSIZE_T) :: one
 
     !Set the dimensions of the dataset
     rank = 2
@@ -1290,7 +1266,7 @@ contains
     integer (HID_T) :: dataType, dataset, dataspace
     integer (HSIZE_T) :: sizeString, dimens1D(1) 
 
-    integer :: error, rank, iLen, iVar, labelleng
+    integer :: error, rank
 
     rank = 1  
     dimens1d(1) = nPlotVar
@@ -1352,8 +1328,7 @@ contains
     character (len=*), intent(in) :: description
     logical, intent(in) :: minMax
     real, intent(in) :: vMin, vMax
-    integer(HSIZE_T) :: nullSize(4) = 0
-    integer(HSIZE_T) :: openObjs, one
+    integer(HSIZE_T) :: one
 
     !Set the dimensions of the dataset
 
@@ -1458,16 +1433,11 @@ contains
     use ModMain, only : Time_Simulation, CodeVersion
     use ModProcMH, only : iProc
     use BATL_lib, only : nLevel, nDim
-    use ModPhysics, ONLY : No2Io_V, UnitX_
-    use ModIO, only : plot_range
-    use ModGeometry, only : XyzMin_D, XyzMax_D, x1,x2,y1,y2,z1,z2
 
     integer (HID_T), intent(in) :: fileID
-    integer(HID_T) :: dataset, dataspace, attribute, attributeSpace
-    integer :: levelFactorArray(0:nLevel, nBlocksUsed)
-    integer :: minLogicalExtents(ndim,nBlocksUsed)
+    integer(HID_T) :: dataset, dataspace
     integer(HSIZE_T) :: dimens1D(1)
-    integer :: error, rank, iData, i
+    integer :: error, rank, iData
 
     real, intent(in) :: xmin,xmax,ymin,ymax, zmin,zmax
 
@@ -1516,16 +1486,13 @@ contains
   subroutine write_real_sim_metadata(FileID,plot_dimensional)
 
     use ModMain, only : Time_Simulation, CodeVersion
-    use ModProcMH, only : iProc
     use BATL_lib, only : nLevel, nDim
-    use ModGeometry, only : XyzMin_D, XyzMax_D, x1,x2,y1,y2,z1,z2
+    use ModGeometry, only : x1,x2,y1,y2,z1,z2
     use ModPhysics, ONLY : No2Io_V, UnitX_
 
     integer (HID_T), intent(in) :: fileID
     logical, intent (in) :: plot_dimensional
-    integer(HID_T) :: dataset, dataspace, attribute, attributeSpace
-    integer :: levelFactorArray(0:nLevel, nBlocksUsed)
-    integer :: minLogicalExtents(ndim,nBlocksUsed)
+    integer(HID_T) :: dataset, dataspace
     integer(HSIZE_T) :: dimens1D(1)
     integer :: error, rank, iData
 
@@ -1600,8 +1567,8 @@ contains
 
   subroutine write_integer_plot_metadata(fileID,nPlotVar,isCutFile)
 
-    use ModProcMH, only : nProc, iProc
-    use BATL_lib, only : nDim, nDimAmr, nLevel, IsPeriodic_D 
+    use ModProcMH, only : nProc
+    use BATL_lib, only : nDimAmr, nLevel, IsPeriodic_D 
     use ModMain, only : n_step
     use ModGeometry, ONLY : TypeGeometry
     integer (HID_T), intent(in) :: fileID, nPlotVar
@@ -1735,17 +1702,15 @@ contains
     !Not read by plugin at this time  Only exists so that one looking at
     !the file may know something about the simulation that created it
 
-    use ModProcMH, only : nProc, iProc
-    use BATL_lib, only : nDim, nDimAmr, nLevel, IsPeriodic_D 
+    use ModProcMH, only : nProc
+    use BATL_lib, only : nDim, nDimAmr, nLevel
     use ModMain, only : n_step, nI, nJ, nK
-    use ModGeometry, ONLY : TypeGeometry
     integer (HID_T), intent(in) :: fileID, nPlotVar
     integer(HID_T) :: dataset, dataspace
     integer(HSIZE_T) :: dimens1D(1)
 
-    integer :: error, rank, i, iData
+    integer :: error, rank, iData
     integer :: IntegerMetaData(8)
-    integer :: FFV = 1 ! file format version
     iData = 1
 
     IntegerMetaData(iData) = nI
@@ -1869,51 +1834,51 @@ contains
   !=====================================================================
 
 
-  logical function sort_test(i, j)
-    integer, intent(in) :: i,j
-
-    if(nPlotDim == 3) then
-       sort_test = 0
-       if(Position_DA(3,i) < Position_DA(3,j)) then
-          sort_test = .false.
-       elseif(Position_DA(3,j) < Position_DA(3,i)) then
-          sort_test = .true.
-       else
-          if(Position_DA(2,i) < Position_DA(2,j)) then
-             sort_test = .false.
-          elseif(Position_DA(2,j) < Position_DA(2,i)) then
-             sort_test = .true.
-          else
-             if(Position_DA(1,i) < Position_DA(1,j)) then
-                sort_test = .false.
-             elseif(Position_DA(1,j) < Position_DA(1,i)) then
-                sort_test = .true.
-             end if
-          end if
-       end if
-    elseif(nPlotDim == 2) then
-       if(Position_DA(2,i) < Position_DA(2,j)) then
-          sort_test = .false.
-       elseif(Position_DA(2,j) < Position_DA(2,i)) then
-          sort_test = .true.
-       else
-          if(Position_DA(1,i) < Position_DA(1,j)) then
-             sort_test = .false.
-          elseif(Position_DA(1,j) < Position_DA(1,i)) then
-             sort_test = .true.
-          end if
-       end if
-    elseif(nPlotDim == 1) then
-       if(Position_DA(1,i) < Position_DA(1,j)) then
-          sort_test = .false.
-       elseif(Position_DA(1,j) < Position_DA(1,i)) then
-          sort_test = .true.
-       end if
-
-    else
-       sort_test = .false.
-    end if
-  end function sort_test
+  !logical function sort_test(i, j)
+  !  integer, intent(in) :: i,j
+  !
+  !  if(nPlotDim == 3) then
+  !     sort_test = 0
+  !     if(Position_DA(3,i) < Position_DA(3,j)) then
+  !        sort_test = .false.
+  !     elseif(Position_DA(3,j) < Position_DA(3,i)) then
+  !        sort_test = .true.
+  !     else
+  !        if(Position_DA(2,i) < Position_DA(2,j)) then
+  !           sort_test = .false.
+  !        elseif(Position_DA(2,j) < Position_DA(2,i)) then
+  !           sort_test = .true.
+  !        else
+  !           if(Position_DA(1,i) < Position_DA(1,j)) then
+  !              sort_test = .false.
+  !           elseif(Position_DA(1,j) < Position_DA(1,i)) then
+  !              sort_test = .true.
+  !           end if
+  !        end if
+  !     end if
+  !  elseif(nPlotDim == 2) then
+  !     if(Position_DA(2,i) < Position_DA(2,j)) then
+  !        sort_test = .false.
+  !     elseif(Position_DA(2,j) < Position_DA(2,i)) then
+  !        sort_test = .true.
+  !     else
+  !        if(Position_DA(1,i) < Position_DA(1,j)) then
+  !           sort_test = .false.
+  !        elseif(Position_DA(1,j) < Position_DA(1,i)) then
+  !           sort_test = .true.
+  !        end if
+  !     end if
+  !  elseif(nPlotDim == 1) then
+  !     if(Position_DA(1,i) < Position_DA(1,j)) then
+  !        sort_test = .false.
+  !     elseif(Position_DA(1,j) < Position_DA(1,i)) then
+  !        sort_test = .true.
+  !     end if
+  !
+  !  else
+  !     sort_test = .false.
+  !  end if
+  !end function sort_test
   !=================================================================
 
 
