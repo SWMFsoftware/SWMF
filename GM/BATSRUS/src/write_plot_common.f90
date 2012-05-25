@@ -1,4 +1,4 @@
-!)^CFG COPYRIGHT UM
+!^CFG COPYRIGHT UM
 !=============================================================================
 subroutine write_plot_common(ifile)
 
@@ -13,12 +13,12 @@ subroutine write_plot_common(ifile)
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, write_cut_var_hdf5
   use ModIoUnit, ONLY: io_unit_new
-  use ModNodes
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
   use ModUtilities, ONLY: lower_case, split_string
-  use BATL_lib, ONLY: message_pass_node, calc_error_amr_criteria, Xyz_DNB,&
-       message_pass_node, average_grid_node, IsCartesianGrid
+  use BATL_lib, ONLY: message_pass_node, calc_error_amr_criteria, &
+       message_pass_node, average_grid_node, find_grid_block, &
+       IsCartesianGrid, Xyz_DNB
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
 
@@ -62,7 +62,7 @@ subroutine write_plot_common(ifile)
   character (len=20) :: TypeForm
 
   ! Indices and coordinates
-  integer :: iBLK,i,j,k,l,iVar, H5Index
+  integer :: iBLK,i,j,k,l,iVar, H5Index, iProcFound, iBlockFound
   integer :: ntheta, nphi
   real :: xmin,xmax,ymin,ymax,zmin,zmax
   real :: rplot
@@ -241,7 +241,12 @@ subroutine write_plot_common(ifile)
   H5Index = 1
   ! Compute the plot variables and write them to the disk
   PlotVarBlk=0
-  do iBLK=1,nBlockMax
+
+  ! Find the processor and block indexes for the 'blk' plot
+  if(plot_type1(1:3)=='blk') &
+       call find_grid_block(plot_point(:,iFile), iProcFound, iBlockFound)
+
+  do iBLK=1, nBlockMax
      if(unusedBLK(iBLK))CYCLE
 
      if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
@@ -262,16 +267,9 @@ subroutine write_plot_common(ifile)
         select case(plot_form(ifile))
         case('tec')
            call plotvar_to_plotvarnodes
-           if(plot_type1(1:3)=='blk')then
-              if ( plot_point(1,ifile)> NodeX_NB(1   ,1   ,1   ,iBLK) .and. &
-                   plot_point(1,ifile)<=NodeX_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
-                   plot_point(2,ifile)> NodeY_NB(1   ,1   ,1   ,iBLK) .and. &
-                   plot_point(2,ifile)<=NodeY_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
-                   plot_point(3,ifile)> NodeZ_NB(1   ,1   ,1   ,iBLK) .and. &
-                   plot_point(3,ifile)<=NodeZ_NB(1+nI,1+nJ,1+nK,iBLK) )then
-                 PlotVarBlk=PlotVar
-              end if
-           end if
+           if(plot_type1(1:3)=='blk' &
+                .and. iProc == iProcFound .and. iBlk==iBlockFound) &
+                PlotVarBlk = PlotVar
         case('idl')
            call write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
                 xmin,xmax,ymin,ymax,zmin,zmax, &
@@ -285,12 +283,7 @@ subroutine write_plot_common(ifile)
               H5Index = H5Index+1
               isCutFile(iFile) = .false.
            elseif(plot_type1(1:3)=='blk')then
-              if (plot_point(1,ifile)> NodeX_NB(1, 1, 1, iBLK) .and. &
-                   plot_point(1,ifile)<=NodeX_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
-                   plot_point(2,ifile)> NodeY_NB(1, 1, 1, iBLK) .and. &
-                   plot_point(2,ifile)<=NodeY_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
-                   plot_point(3,ifile)> NodeZ_NB(1, 1, 1, iBLK) .and. &
-                   plot_point(3,ifile)<=NodeZ_NB(1+nI,1+nJ,1+nK,iBLK))then
+              if(iProc == iProcFound .and. iBlk==iBlockFound)then
                  call write_cut_var_hdf5(ifile,plot_type1,iBLK,H5Index, &
                       nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
                       dxblk, dyblk, dzblk, &
@@ -298,17 +291,16 @@ subroutine write_plot_common(ifile)
 
                  H5Index = H5Index+1
               end if
-              isCutFile(iFile)=.true.
+              IsCutFile(iFile)=.true.
            else
-              call write_cut_var_hdf5(ifile, plot_type1(1:3), iBLK,H5Index,nplotvar,&
-                   plotvar, xmin,xmax,ymin,ymax,zmin,zmax, dxblk,dyblk,&
-                   dzblk, .not.IsCartesianGrid, nBLKcells, H5Advance)
+              call write_cut_var_hdf5(ifile, plot_type1(1:3), iBLK,H5Index, &
+                   nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
+                   dxblk, dyblk, dzblk, .not.IsCartesianGrid, nBLKcells, &
+                   H5Advance)
 
-              if (H5Advance) then
-                 H5Index = H5Index+1
-              end if
+              if (H5Advance) H5Index = H5Index+1
 
-              isCutFile(iFile)=.true.
+              IsCutFile(iFile)=.true.
            end if
         end select
      end if
@@ -381,7 +373,8 @@ subroutine write_plot_common(ifile)
           NameOperatorIn='Mean')
 
      do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
-        call average_grid_node(iBlk, nPlotvarMax, PlotVarNodes_VNB(:,:,:,:,iBlk))
+        call average_grid_node(iBlk, nPlotvarMax, &
+             PlotVarNodes_VNB(:,:,:,:,iBlk))
      end do
 
      call write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
@@ -518,13 +511,13 @@ subroutine write_plot_common(ifile)
   call stop_mpi(NameSub//": error in opening or writing file")
 
 contains
-
+  !=========================================================================
   subroutine plotvar_to_plotvarnodes
     integer :: ii,jj,kk
-    integer, dimension(0:nI+2, 0:nJ+2, 0:nK+2, nplotvarmax) :: nodeCount
-    real,    dimension(0:nI+2, 0:nJ+2, 0:nK+2, nplotvarmax) :: nodeV
-    real :: rr
-
+    integer :: nodeCount(0:nI+2,0:nJ+2,0:nK+2,nplotvarmax)
+    real    :: nodeV(0:nI+2,0:nJ+2,0:nK+2,nplotvarmax)
+    real    :: r2, r2Min
+    !-----------------------------------------------------------------------
     if(.not.allocated(PlotVarNodes_VNB)) then 
        allocate(&
             PlotVarNodes_VNB(nplotvarmax,1:1+nI,1:1+nJ,1:1+nK,nBLK))
@@ -548,27 +541,25 @@ contains
        end do
     end do; end do; end do
 
+    if(body1) r2Min = (0.51*min(1.0, Rbody))**2
+
     ! Store NodeV (per block info) into PlotVarNodes
     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1  ! Node loop
-       ! Inefficient code, sqrt should be avoided !!!
 
-       rr=sqrt( &
-            NodeX_NB(i,j,k,iBLK)**2+ &
-            NodeY_NB(i,j,k,iBLK)**2+ &
-            NodeZ_NB(i,j,k,iBLK)**2)
-       do iVar=1,nplotvar
+       if(body1) r2 = sum(Xyz_DNB(:,i,j,k,iBlk)**2)
+
+       do iVar = 1, nplotvar
           if (nodeCount(i,j,k,iVar) > 0) then
              PlotVarNodes_VNB(iVar,i,j,k,iBLK) = &
-                  nodeV(i,j,k,iVar)/real(nodeCount(i,j,k,iVar))
+                  nodeV(i,j,k,iVar)/nodeCount(i,j,k,iVar)
+
              ! This will zero out values otherwise true with plotvar_useBody
              ! The intent of plotvar_useBody is to fill nodes inside of the 
              ! body with values for plotting. However, when allowed to go all 
              ! the way to the origin, B traces will continuously loop through 
              ! the body and out. Setting the values to 0 inside 0.51 fixes it.
              if(plotvar_useBody(iVar) .and. body1)then
-                if(rr < 0.51*Rbody .and. rr < 0.51) then
-                   PlotVarNodes_VNB(iVar,i,j,k,iBLK) = 0.00
-                end if
+                if(r2 < r2Min) PlotVarNodes_VNB(iVar,i,j,k,iBLK) = 0.0
              end if
           else
              PlotVarNodes_VNB(iVar,i,j,k,iBLK) = plotvar_inBody(iVar)

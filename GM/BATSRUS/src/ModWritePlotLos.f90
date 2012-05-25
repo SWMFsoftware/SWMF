@@ -49,7 +49,7 @@ subroutine write_plot_los(iFile)
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, unusedBLK, &
        time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
-       x_,y_,z_,Body1,body1_, StartTime
+       Body1,body1_, StartTime
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK, &
        XyzStart_BLK, TypeGeometry, IsBoundaryBlock_IB, nMirror_D
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
@@ -62,9 +62,9 @@ subroutine write_plot_los(iFile)
   use ModCoordTransform, ONLY : rot_matrix_z, cross_product
   use ModUtilities, ONLY: lower_case, split_string, join_string
   use ModPlotFile, ONLY: save_plot_file
-  use ModNodes, ONLY: NodeX_NB,NodeY_NB,NodeZ_NB
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
+  use BATL_lib, ONLY: Xyz_DNB
 
   implicit none
 
@@ -633,9 +633,7 @@ contains
        ! want middle node indexes to find center
        iMid1 = nI/2 + 1; iMid2 = nJ/2 + 1; iMid3 = nK/2 + 1         
 
-       XyzBlockCenter_D(x_) = NodeX_NB(iMid1,iMid2,iMid3,iBLK)
-       XyzBlockCenter_D(y_) = NodeY_NB(iMid1,iMid2,iMid3,iBLK)
-       XyzBlockCenter_D(z_) = NodeZ_NB(iMid1,iMid2,iMid3,iBLK)
+       XyzBlockCenter_D = Xyz_DNB(:,iMid1,iMid2,iMid3,iBLK)
 
        if(iMirror == 2) XyzBlockCenter_D(1) = -XyzBlockCenter_D(1)
        if(jMirror == 2) XyzBlockCenter_D(2) = -XyzBlockCenter_D(2)
@@ -1531,25 +1529,17 @@ contains
     ! also wrote it explicitly so its easy to see which vertex is which
 
     integer, intent(in) :: i1,i2,j1,j2,k1,k2
-    integer :: i,j,k
     real, dimension(3,8), intent(out) :: Vertex_DN
+    !----------------------------------------------------------------------
 
-    i=i1; j=j1; k=k1
-    Vertex_DN(:, 1) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
-    i=i1; j=j1; k=k2
-    Vertex_DN(:, 2) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
-    i=i1; j=j2; k=k1
-    Vertex_DN(:, 3) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
-    i=i1; j=j2; k=k2
-    Vertex_DN(:, 4) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
-    i=i2; j=j1; k=k1
-    Vertex_DN(:, 5) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
-    i=i2; j=j1; k=k2
-    Vertex_DN(:, 6) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
-    i=i2; j=j2; k=k1
-    Vertex_DN(:, 7) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
-    i=i2; j=j2; k=k2
-    Vertex_DN(:, 8) = (/NodeX_NB(i,j,k,iBLK),NodeY_NB(i,j,k,iBLK),NodeZ_NB(i,j,k,iBLK)/)
+    Vertex_DN(:,1) = Xyz_DNB(:,i1,j1,k1,iBlk)
+    Vertex_DN(:,2) = Xyz_DNB(:,i1,j1,k2,iBlk)
+    Vertex_DN(:,3) = Xyz_DNB(:,i1,j2,k1,iBlk)
+    Vertex_DN(:,4) = Xyz_DNB(:,i1,j2,k2,iBlk)
+    Vertex_DN(:,5) = Xyz_DNB(:,i2,j1,k1,iBlk)
+    Vertex_DN(:,6) = Xyz_DNB(:,i2,j1,k2,iBlk)
+    Vertex_DN(:,7) = Xyz_DNB(:,i2,j2,k1,iBlk)
+    Vertex_DN(:,8) = Xyz_DNB(:,i2,j2,k2,iBlk)
 
   end subroutine generate_vertex_vectors
 

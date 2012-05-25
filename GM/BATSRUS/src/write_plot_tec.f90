@@ -17,11 +17,11 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
   use ModPhysics, ONLY : No2Io_V, UnitX_, &
        ThetaTilt, Rbody, boris_cLIGHT_factor, BodyNDim_I, g
   use ModAdvance, ONLY : FluxType, iTypeAdvance_B, SkippedBlock_
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
   use ModIO
-  use ModNodes
+  use ModNodes, ONLY: nNodeAll, NodeNumberGlobal_NB, NodeUniqueGlobal_NB
   use ModNumConst, ONLY : cRadToDeg
-  use BATL_lib, ONLY: nNodeUsed, iNodeMorton_I, iTree_IA, Block_, Proc_
+  use BATL_lib, ONLY: nNodeUsed, iNodeMorton_I, iTree_IA, Block_, Proc_, &
+       Xyz_DGB, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block
   use ModMpi
   implicit none
 
@@ -76,44 +76,33 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
 
   select case(plot_type1(1:3))
   case('blk')
-     do iBLK = 1, nBlock
-        if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
-        if ( plot_point(1,ifile)> PlotXYZNodes_DNB(1,1   ,1   ,1   ,iBLK) .and. &
-             plot_point(1,ifile)<=PlotXYZNodes_DNB(1,1+nI,1+nJ,1+nK,iBLK) .and. &
-             plot_point(2,ifile)> PlotXYZNodes_DNB(2,1   ,1   ,1   ,iBLK) .and. &
-             plot_point(2,ifile)<=PlotXYZNodes_DNB(2,1+nI,1+nJ,1+nK,iBLK) .and. &
-             plot_point(3,ifile)> PlotXYZNodes_DNB(3,1   ,1   ,1   ,iBLK) .and. &
-             plot_point(3,ifile)<=PlotXYZNodes_DNB(3,1+nI,1+nJ,1+nK,iBLK) )then
-           write(unit_tmp,'(a)')'TITLE="BATSRUS: BLK Only, '//textDateTime//'"'
-           write(unit_tmp,'(a)')trim(unitstr_TEC)
-           write(unit_tmp,'(a,i8,a,i8,a,i8,a)') &
-                'ZONE T="BLK Only '//textNandT//'", I=',nI+4,&
-                ', J=',nJ+4,', K=',nK+4,', F=POINT'
-           call write_auxdata
-           !DEBUGBLK
-           write(stmp,'(i12)')iBLK
-           write(unit_tmp,'(a,a,a)') 'AUXDATA DEBUGBLK="',trim(adjustl(stmp)),'"'
-           !DEBUGPROC
-           write(stmp,'(i12)')iProc
-           write(unit_tmp,'(a,a,a)') 'AUXDATA DEBUGPROC="',trim(adjustl(stmp)),'"'
-           ! Write cell values
-           do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
-              if (plot_dimensional(ifile)) then
-                 write(unit_tmp,fmt="(30(E14.6))") &
-                      x_BLK(i,j,k,iBLK)*No2Io_V(UnitX_), &
-                      y_BLK(i,j,k,iBLK)*No2Io_V(UnitX_), &
-                      z_BLK(i,j,k,iBLK)*No2Io_V(UnitX_), &
-                      PlotVarBlk(i,j,k,1:nPlotVar)
-              else
-                 write(unit_tmp,fmt="(30(E14.6))") &
-                      x_BLK(i,j,k,iBLK), &
-                      y_BLK(i,j,k,iBLK), &
-                      z_BLK(i,j,k,iBLK), &
-                      PlotVarBlk(i,j,k,1:nPlotVar)
-              end if
-           end do; end do; end do
+     call find_grid_block(plot_point(:,iFile), iPE, iBlk)
+     if(iPE /= iProc) RETURN
+           
+     write(unit_tmp,'(a)')'TITLE="BATSRUS: BLK Only, '//textDateTime//'"'
+     write(unit_tmp,'(a)')trim(unitstr_TEC)
+     write(unit_tmp,'(a,i8,a,i8,a,i8,a)') &
+          'ZONE T="BLK Only '//textNandT//'", I=',nI+4,&
+          ', J=',nJ+4,', K=',nK+4,', F=POINT'
+     call write_auxdata
+     !DEBUGBLK
+     write(stmp,'(i12)')iBLK
+     write(unit_tmp,'(a,a,a)') 'AUXDATA DEBUGBLK="',trim(adjustl(stmp)),'"'
+     !DEBUGPROC
+     write(stmp,'(i12)')iProc
+     write(unit_tmp,'(a,a,a)') 'AUXDATA DEBUGPROC="',trim(adjustl(stmp)),'"'
+     ! Write cell values
+     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+        if (plot_dimensional(ifile)) then
+           write(unit_tmp,fmt="(30(E14.6))") &
+                Xyz_DGB(:,i,j,k,iBLK)*No2Io_V(UnitX_), &
+                PlotVarBlk(i,j,k,1:nPlotVar)
+        else
+           write(unit_tmp,fmt="(30(E14.6))") &
+                Xyz_DGB(:,i,j,k,iBLK), &
+                PlotVarBlk(i,j,k,1:nPlotVar)
         end if
-     end do
+     end do; end do; end do
   case('1d_')
      if(iProc==0)then
         ! Write file header
