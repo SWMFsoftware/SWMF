@@ -154,7 +154,7 @@ contains
     character(len=*), parameter:: NameSub = 'BATL_geometry::xyz_to_coord'
     !----------------------------------------------------------------------
 
-    if(IsCartesian .or. IsRzGeometry)then
+    if(IsCartesianGrid)then
        CoordOut_D = XyzIn_D
        RETURN
     elseif(IsCylindrical)then
@@ -205,7 +205,7 @@ contains
     character(len=*), parameter:: NameSub = 'BATL_geometry::coord_to_xyz'
     !----------------------------------------------------------------------
 
-    if(IsCartesian .or. IsRzGeometry)then
+    if(IsCartesianGrid)then
        XyzOut_D = CoordIn_D
        RETURN
     endif
