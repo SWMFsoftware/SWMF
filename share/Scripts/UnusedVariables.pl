@@ -65,7 +65,7 @@ foreach $source (@ARGV){
 
 	print if $Debug;
 
-	die "error compiling original $source: $_" if /^\s*Error/;
+	die "error compiling original $source: $_" if /^\s*(Fatal )?Error/;
 
 	next unless s/^Warning: $source, line (\d+): //;
 	my $nline = $1;
