@@ -63,9 +63,6 @@ module ModUser
   real    :: yRatioNozzle = 0.0
   real    :: zRatioNozzle = 0.0
 
-  ! Beryllium disk parameters
-  real :: WidthBeDisk = 20.0     ! Width of the beryllium disk [micron]
-
   ! Wall parameters
   logical:: UseTube = .false.
   real :: xEndTube   =   40.0    ! x coordinate of tube ending
@@ -293,9 +290,6 @@ contains
           call read_var('EnergyPhotonMax', EnergyPhotonMax)  ! in eV
           FreqMinSi = EnergyPhotonMin/cHPlanckEV
           FreqMaxSi = EnergyPhotonMax/cHPlanckEV
-
-       case("#BERYLLIUMDISK")
-          call read_var('WidthBerylliumDisk', WidthBeDisk)
 
        case("#TUBE")
           UseTube = .true.
