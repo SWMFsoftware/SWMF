@@ -211,8 +211,8 @@ subroutine aurora(iBlock)
 
            iED = 1
 
-           factor = 1.0
-!           factor = 0.4
+!           factor = 1.0
+           factor = 0.4
 !           factor = 1.0
 
            do k = 1, nAlts
