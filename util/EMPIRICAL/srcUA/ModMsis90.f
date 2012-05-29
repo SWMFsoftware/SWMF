@@ -913,11 +913,12 @@ Ce        Only calculate nodes if input changed
        IF(V1.EQ.1..OR.ALAST.GE.ZN2(1)) THEN
         TGN2(1)=TGN1(2)
         TN2(1)=TN1(5)
-        TN2(2)=PMA(1,1)*PAVGM(1)/(1.-SW(20)*GLOB6S(PMA(1,1)))
-        TN2(3)=PMA(1,2)*PAVGM(2)/(1.-SW(20)*GLOB6S(PMA(1,2)))
-        TN2(4)=PMA(1,3)*PAVGM(3)/(1.-SW(20)*SW(22)*GLOB6S(PMA(1,3)))
-        TGN2(2)=PAVGM(9)*PMA(1,10)*(1.+SW(20)*SW(22)*GLOB6S(PMA(1,10)))
-     $  *TN2(4)*TN2(4)/(PMA(1,3)*PAVGM(3))**2
+        TN2(2)=PMA(1,1)*PAVGM(1)/(1.-SW(20)*GLOB6S(PMA(1,1),sec))
+        TN2(3)=PMA(1,2)*PAVGM(2)/(1.-SW(20)*GLOB6S(PMA(1,2),sec))
+        TN2(4)=PMA(1,3)*PAVGM(3)/(1.-SW(20)*SW(22)*GLOB6S(PMA(1,3),sec))
+        TGN2(2)=PAVGM(9)*PMA(1,10)*
+     $       (1.+SW(20)*SW(22)*GLOB6S(PMA(1,10),sec))
+     $       *TN2(4)*TN2(4)/(PMA(1,3)*PAVGM(3))**2
         TN3(1)=TN2(4)
        ENDIF
        IF(ALT.GE.ZN3(1)) GOTO 6
@@ -928,11 +929,11 @@ C         Inverse temperature a linear function of spherical harmonics
 Ce        Only calculate nodes if input changed
         IF(V1.EQ.1..OR.ALAST.GE.ZN3(1)) THEN
          TGN3(1)=TGN2(2)
-         TN3(2)=PMA(1,4)*PAVGM(4)/(1.-SW(22)*GLOB6S(PMA(1,4)))
-         TN3(3)=PMA(1,5)*PAVGM(5)/(1.-SW(22)*GLOB6S(PMA(1,5)))
-         TN3(4)=PMA(1,6)*PAVGM(6)/(1.-SW(22)*GLOB6S(PMA(1,6)))
-         TN3(5)=PMA(1,7)*PAVGM(7)/(1.-SW(22)*GLOB6S(PMA(1,7)))
-         TGN3(2)=PMA(1,8)*PAVGM(8)*(1.+SW(22)*GLOB6S(PMA(1,8)))
+         TN3(2)=PMA(1,4)*PAVGM(4)/(1.-SW(22)*GLOB6S(PMA(1,4),sec))
+         TN3(3)=PMA(1,5)*PAVGM(5)/(1.-SW(22)*GLOB6S(PMA(1,5),sec))
+         TN3(4)=PMA(1,6)*PAVGM(6)/(1.-SW(22)*GLOB6S(PMA(1,6),sec))
+         TN3(5)=PMA(1,7)*PAVGM(7)/(1.-SW(22)*GLOB6S(PMA(1,7),sec))
+         TGN3(2)=PMA(1,8)*PAVGM(8)*(1.+SW(22)*GLOB6S(PMA(1,8),sec))
      $   *TN3(5)*TN3(5)/(PMA(1,7)*PAVGM(7))**2
         ENDIF
     6   CONTINUE
@@ -1208,6 +1209,7 @@ C
 C              To get current values of SW: CALL TRETRV(SW)
 C
       LOGICAL METER
+      real realday
       DIMENSION ZN1(5)
       COMMON/GTS3C/TLB,S,DB04,DB16,DB28,DB32,DB40,DB48,DB01,ZA,T0,Z0
      & ,G0,RL,DD,DB14,TR12
@@ -1258,11 +1260,11 @@ Ce       Lower thermosphere temp variations not significant for
 Ce        density above 300 km
        IF(ALT.LT.300.) THEN
         IF(V2.EQ.1..OR.ALAST.GE.300.) THEN
-         TN1(2)=PTM(7)*PTL(1,1)/(1.-SW(18)*GLOB6S(PTL(1,1)))
-         TN1(3)=PTM(3)*PTL(1,2)/(1.-SW(18)*GLOB6S(PTL(1,2)))
-         TN1(4)=PTM(8)*PTL(1,3)/(1.-SW(18)*GLOB6S(PTL(1,3)))
-         TN1(5)=PTM(5)*PTL(1,4)/(1.-SW(18)*SW(20)*GLOB6S(PTL(1,4)))
-         TGN1(2)=PTM(9)*PMA(1,9)*(1.+SW(18)*SW(20)*GLOB6S(PMA(1,9)))
+         TN1(2)=PTM(7)*PTL(1,1)/(1.-SW(18)*GLOB6S(PTL(1,1),sec))
+         TN1(3)=PTM(3)*PTL(1,2)/(1.-SW(18)*GLOB6S(PTL(1,2),sec))
+         TN1(4)=PTM(8)*PTL(1,3)/(1.-SW(18)*GLOB6S(PTL(1,3),sec))
+         TN1(5)=PTM(5)*PTL(1,4)/(1.-SW(18)*SW(20)*GLOB6S(PTL(1,4),sec))
+         TGN1(2)=PTM(9)*PMA(1,9)*(1.+SW(18)*SW(20)*GLOB6S(PMA(1,9),sec))
      $   *TN1(5)*TN1(5)/(PTM(5)*PTL(1,4))**2
         ENDIF
        ELSE
@@ -1285,8 +1287,9 @@ C       N2 variation factor at Zlb
      & AP,PD(1,3))
 C        Variation of turbopause height
       DAY=MOD(YRD,1000.)
+      realday = day + sec/86400.0
       ZHF=PDL(25,2)
-     $    *(1.+SW(5)*PDL(25,1)*SIN(DGTR*GLAT)*COS(DR*(DAY-PT(14))))
+     $    *(1.+SW(5)*PDL(25,1)*SIN(DGTR*GLAT)*COS(DR*(realDAY-PT(14))))
 C
       YRD=IYD
       T(1)=TINF
@@ -1550,6 +1553,9 @@ C-----------------------------------------------------------------------
 C       CALCULATE G(L) FUNCTION 
 C       Upper Thermosphere Parameters
       REAL LAT, LONG,LONGL
+
+      real realday
+
       DIMENSION P(150),SV(25),AP(7)
       COMMON/TTEST/TINF,GB,ROUT,T(15)
       COMMON/CSW/SW(25),ISW,SWC(25)
@@ -1558,7 +1564,7 @@ C       Upper Thermosphere Parameters
       SAVE
       DATA DGTR/1.74533E-2/,DR/1.72142E-2/, XL/1000./,TLL/1000./
       DATA SW9/1./,DAYL/-1./,P14/-1000./,P18/-1000./,P32/-1000./
-      DATA HR/.2618/,SR/7.2722E-5/,SV/25*1./,NSW/14/,P39/-1000./
+      DATA HR/.2617994/,SR/7.2722E-5/,SV/25*1./,NSW/14/,P39/-1000./
       DATA LONGL/-999./
 C       3hr Magnetica activity functions
       G0(A)=(A-4.+(P(26)-1.)*(A-4.+(EXP(-ABS(P(25))*(A-4.))-1.)/ABS(P(25
@@ -1576,6 +1582,7 @@ C
       IF(SW(9).LT.0) SW9=-1.
       IYR = YRD/1000.
       DAY = YRD - IYR*1000.
+      realday = day + sec/86400.0
       XLONG=LONG
       IF(XL.EQ.LAT)   GO TO 15
 C          CALCULATE LEGENDRE POLYNOMIALS
@@ -1626,10 +1633,14 @@ C     PLG(9,2) = (15.*C*PLG(8,2)-8.*PLG(7,2))/7.
         SLONG=SIN(DGTR*LONG)
       ENDIF
       LONGL=LONG
-      IF(DAY.NE.DAYL.OR.P(14).NE.P14) CD14=COS(DR*(DAY-P(14)))
-      IF(DAY.NE.DAYL.OR.P(18).NE.P18) CD18=COS(2.*DR*(DAY-P(18)))
-      IF(DAY.NE.DAYL.OR.P(32).NE.P32) CD32=COS(DR*(DAY-P(32)))
-      IF(DAY.NE.DAYL.OR.P(39).NE.P39) CD39=COS(2.*DR*(DAY-P(39)))
+c      IF(DAY.NE.DAYL.OR.P(14).NE.P14) CD14=COS(DR*(realDAY-P(14)))
+c      IF(DAY.NE.DAYL.OR.P(18).NE.P18) CD18=COS(2.*DR*(realDAY-P(18)))
+c      IF(DAY.NE.DAYL.OR.P(32).NE.P32) CD32=COS(DR*(realDAY-P(32)))
+c      IF(DAY.NE.DAYL.OR.P(39).NE.P39) CD39=COS(2.*DR*(realDAY-P(39)))
+      CD14=COS(DR*(realDAY-P(14)))
+      CD18=COS(2.*DR*(realDAY-P(18)))
+      CD32=COS(DR*(realDAY-P(32)))
+      CD39=COS(2.*DR*(realDAY-P(39)))
       DAYL = DAY
       P14 = P(14)
       P18 = P(18)
@@ -1792,9 +1803,10 @@ C        SW FOR MAIN TERMS, SWC FOR CROSS TERMS
   200 CONTINUE
       END SUBROUTINE TSELEC
 C-----------------------------------------------------------------------
-      FUNCTION GLOB6S(P)
+      FUNCTION GLOB6S(P,sec)
 C      VERSION OF GLOBE FOR LOWER ATMOSPHERE 1/17/90
       REAL LONG
+      real realDAY
       COMMON/LPOLY/PLG(9,4),CTLOC,STLOC,C2TLOC,S2TLOC,C3TLOC,S3TLOC,
      $ IYR,DAY,DF,DFA,APD,APDF,APT(4),LONG,CLONG,SLONG
       COMMON/CSW/SW(25),ISW,SWC(25)
@@ -1805,10 +1817,18 @@ C      VERSION OF GLOBE FOR LOWER ATMOSPHERE 1/17/90
       DO 10 J=1,14
         T(J)=0.
    10 CONTINUE
-      IF(DAY.NE.DAYL.OR.P32.NE.P(32)) CD32=COS(DR*(DAY-P(32)))
-      IF(DAY.NE.DAYL.OR.P18.NE.P(18)) CD18=COS(2.*DR*(DAY-P(18)))       
-      IF(DAY.NE.DAYL.OR.P14.NE.P(14)) CD14=COS(DR*(DAY-P(14)))
-      IF(DAY.NE.DAYL.OR.P39.NE.P(39)) CD39=COS(2.*DR*(DAY-P(39)))
+      realday = day + sec/86400.0
+      write(*,*) "HERE!!!!", sec, realday
+      
+c      IF(DAY.NE.DAYL.OR.P32.NE.P(32)) CD32=COS(DR*(DAY-P(32)))
+c      IF(DAY.NE.DAYL.OR.P18.NE.P(18)) CD18=COS(2.*DR*(DAY-P(18)))       
+c      IF(DAY.NE.DAYL.OR.P14.NE.P(14)) CD14=COS(DR*(DAY-P(14)))
+c      IF(DAY.NE.DAYL.OR.P39.NE.P(39)) CD39=COS(2.*DR*(DAY-P(39)))
+
+      CD32=COS(DR*(realDAY-P(32)))
+      CD18=COS(2.*DR*(realDAY-P(18)))       
+      CD14=COS(DR*(realDAY-P(14)))
+      CD39=COS(2.*DR*(realDAY-P(39)))
       DAYL=DAY
       P32=P(32)
       P18=P(18)
@@ -1860,10 +1880,10 @@ C       MAGNETIC ACTIVITY
    40 CONTINUE
       IF(SW(10).EQ.0.OR.SW(11).EQ.0.OR.LONG.LE.-1000.) GO TO 49
 C        LONGITUDINAL
-      T(11)= (1.+PLG(2,1)*(P(81)*SWC(5)*COS(DR*(DAY-P(82)))
-     $           +P(86)*SWC(6)*COS(2.*DR*(DAY-P(87))))
-     $        +P(84)*SWC(3)*COS(DR*(DAY-P(85)))
-     $           +P(88)*SWC(4)*COS(2.*DR*(DAY-P(89))))
+      T(11)= (1.+PLG(2,1)*(P(81)*SWC(5)*COS(DR*(realDAY-P(82)))
+     $           +P(86)*SWC(6)*COS(2.*DR*(realDAY-P(87))))
+     $        +P(84)*SWC(3)*COS(DR*(realDAY-P(85)))
+     $           +P(88)*SWC(4)*COS(2.*DR*(realDAY-P(89))))
      $ *((P(65)*PLG(3,2)+P(66)*PLG(5,2)+P(67)*PLG(7,2)
      $   +P(75)*PLG(2,2)+P(76)*PLG(4,2)+P(77)*PLG(6,2)
      $    )*CLONG
