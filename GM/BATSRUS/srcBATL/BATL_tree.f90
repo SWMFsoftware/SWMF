@@ -214,7 +214,7 @@ contains
 
     ! Initialize max number of blocks for all processors
     ! (may be reduced in BATL_amr_criteria)
-    MaxTotalBlock = nProc*MaxBlock
+    MaxTotalBlock = min(MaxTotalBlock,nProc*MaxBlock)
 
     ! During AMR we may need extra nodes. So use 2/(nChild-1) instead of 1/...
     MaxNode  = ceiling(nProc*MaxBlock*(1 + 2.0/(nChild - 1)))
@@ -501,8 +501,13 @@ contains
 
     !if(iProc == 0) then
     !   do iNode=1,nNode
-    !      if(iStatusAll_A(iNode) == Refine_) then
+    !      if(iStatusNew_A(iNode) == Refine_) then
     !         print *," Want to Refine node =", iNode
+    !      end if
+    !   end do
+    !   do iNode=1,nNode
+    !      if(iStatusNew_A(iNode) == Coarsen_) then
+    !         print *," Want to Coarsen node =", iNode
     !      end if
     !   end do
     !end if
@@ -785,7 +790,7 @@ contains
     ! demand to many blocks
     if(iTryAmr > iMaxTryAmr) then
        iStatusNew_A(1:nNode) = Unset_
-       print *,"!!! WARNING in BATL_tree::adapt_tree: No AMR done"
+       write(*,*)"   BATL_tree::adapt_tree: No Geometric AMR done"
        RETURN
     end if
 
