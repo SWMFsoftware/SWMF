@@ -133,10 +133,10 @@ contains
     nAmrCrit =  nIntCrit + nExtCrit + nCritGeo
      
     ! Allocate main criteria array
-    if(iProc == 0) then
-       write(*,*) " nIntCrit, nExtCrit, nCritGeo, nCritGeoPhys,nCritGeoUsed = ", &
-            nIntCrit, nExtCrit, nCritGeo, nCritGeoPhys,nCritGeoUsed
-   end if
+    !if(iProc == 0) then
+    !   write(*,*) " nIntCrit, nExtCrit, nCritGeo, nCritGeoPhys,nCritGeoUsed = ", &
+    !        nIntCrit, nExtCrit, nCritGeo, nCritGeoPhys,nCritGeoUsed
+    !end if
 
     if(allocated(AmrCrit_IB)) deallocate(AmrCrit_IB)
     allocate(AmrCrit_IB(nAmrCrit,MaxBlock))
@@ -999,10 +999,6 @@ contains
     case("#AMRCRITERIA", "#AMRCRITERIALEVEL", "#AMRCRITERIARESOLUTION")
 
        !DoTestMe = .true.
-
-       ! Turn off old BATSRUS behavior when using 
-       ! #AMRCRITERIALEVEL
-       IsBatsrusAmr = .not. IsLevel
 
        !call read_var('nCrit', nCrit)
        nCrit       = nCritInOut
