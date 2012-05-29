@@ -194,6 +194,27 @@ foreach my $Dir (sort keys %PlotDir){
 	warn "$WARNING: no files were found in $PlotDir\n";
     }
 }
+#############################################################
+sub readrunlog{
+    ## Read runlog and print out init time and runtime 
+    ## without init time
+    my ($runlog) = @_;
+    my (@timearray);
+    open(INPUT , "<", glob("$runlog/runlog*"))
+    	or die "Could not open runfile: $!\n";
+    while(<INPUT>){
+	if(/.*BATSRUS\s+(\d+\.\d+).*/){
+	   @timearray = (@timearray,$1);
+	}elsif(/.*BATSRUS\s*1\s*1\s+(.*?)\s+/){
+	   @timearray = (@timearray,$1);
+	}   
+    }
+    close(INPUT);
+    if($#timearray > 0){
+    	print "RUNLOG TIMINGS (init, run ...) @timearray[0] @timearray[$#timearray] \n";
+    }
+}
+#############################################################
 
 # Copy and move some input and output files if present
 if(-f $ParamIn){
@@ -202,12 +223,15 @@ if(-f $ParamIn){
 }else{
     warn "$WARNING: no $ParamIn file was found\n";
 }
+
 if(-f "runlog"){
     print "$INFO: mv runlog $NameOutput/\n";
     `mv runlog $NameOutput`;
+    readrunlog($NameOutput);
 }elsif(glob("runlog_[0-9]*")){
     print "$INFO: mv runlog_[0-9]* $NameOutput/\n";
     `mv runlog_[0-9]* $NameOutput`;
+    readrunlog($NameOutput);
 }else{
     warn "$WARNING: no $RunLog file was found\n";
 }
