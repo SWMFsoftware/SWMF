@@ -318,8 +318,6 @@ subroutine calc_chemistry(iBlock)
               ! N2+
               ! ----------------------------------------------------------
 
-              ! Solar EUV
-
               Reaction = EuvIonRateS(iLon,iLat,iAlt,iN2P_,iBlock) * &
                    Neutrals(iN2_)
 
@@ -488,7 +486,6 @@ subroutine calc_chemistry(iBlock)
 
               Reaction = EuvIonRateS(iLon,iLat,iAlt,iO2P_,iBlock) * &
                    Neutrals(iO2_)
-
            
               IonSources(iO2P_)   = IonSources(iO2P_)   + Reaction
               NeutralLosses(iO2_) = NeutralLosses(iO2_) + Reaction
@@ -629,10 +626,13 @@ subroutine calc_chemistry(iBlock)
                    Ions(ie_)
            
               if (UseNeutralConstituent(iO_1D_)) then
-                 NeutralSources(iO_3P_)    = NeutralSources(iO_3P_) + 0.22*Reaction * 2.0
-                 NeutralSources(iO_3P_)    = NeutralSources(iO_3P_) + 0.42*Reaction
+                 NeutralSources(iO_3P_) = NeutralSources(iO_3P_) + 0.22*Reaction * 2.0
+                 NeutralSources(iO_3P_) = NeutralSources(iO_3P_) + 0.42*Reaction
                  NeutralSources(iO_1D_) = NeutralSources(iO_1D_) + 0.42*Reaction
                  NeutralSources(iO_1D_) = NeutralSources(iO_1D_) + 0.31*Reaction * 2.0
+                 ! This really should be 0.05 to O(1D) and O(1S)
+                 NeutralSources(iO_1D_) = NeutralSources(iO_1D_) + 0.05*Reaction
+                 NeutralSources(iO_3P_) = NeutralSources(iO_3P_) + 0.05*Reaction
 
                  ChemicalHeatingSub = &
                       ChemicalHeatingSub + &
@@ -1594,9 +1594,9 @@ subroutine calc_chemistry(iBlock)
                  Emission(iE6300_) = Emission(iE6300_) + Reaction              
                  
                  
-                 ! ------------                                                             
+                 ! ------------                                           
                  ! O(1D) -> O(3P) + 6364A                                               
-                 ! ------------                                                             
+                 ! ------------                                           
                  
                  rr = 0.0022
                  
@@ -1609,9 +1609,9 @@ subroutine calc_chemistry(iBlock)
                  
                  Emission(iE6364_) = Emission(iE6364_) + Reaction
                  
-                 ! ------------                                                            
+                 ! ------------                                          
                  ! O(1D) + e -> O(3P) + e
-                 ! ------------                                                            
+                 ! ------------                                             
                  
                  rr = 2.6e-17 * te22m05
                  
@@ -1664,7 +1664,7 @@ subroutine calc_chemistry(iBlock)
                       Neutrals(iO_1D_) * &
                       Neutrals(iO2_)
                  
-                 !We create and loose the same amount of O2                              
+                 ! We create and loose the same amount of O2
                  NeutralSources(iO_3P_) = NeutralSources(iO_3P_) + Reaction
                  NeutralLosses(iO_1D_) = NeutralLosses(iO_1D_) + Reaction
                  
@@ -1762,10 +1762,10 @@ subroutine calc_chemistry(iBlock)
                  enddo
               endif
               
-              if (UseNeutralConstituent(iO_1D_)) then
-                 NeutralSources(iO_1D_) = NeutralSources(iO_1D_) / y2
-                 NeutralLosses(iO_1D_) = NeutralLosses(iO_1D_) / y2
-              endif
+!              if (UseNeutralConstituent(iO_1D_)) then
+!                 NeutralSources(iO_1D_) = NeutralSources(iO_1D_) / y2
+!                 NeutralLosses(iO_1D_) = NeutralLosses(iO_1D_) / y2
+!              endif
 
 !!!              tln = DtSub * NeutralLosses
 !!!              tsn = DtSub * NeutralSources + 0.25*Neutrals
@@ -1801,6 +1801,7 @@ subroutine calc_chemistry(iBlock)
 !!!                 if (Ions(iIon) + &
 !!!                      (IonSources(iIon) - IonLosses(iIon)) * DtSub < 0.0) then
                     ! Take Implicit time step
+              Ions(ie_) = 0.0
               do iIon = 1, nIons-1
                  ionso = IonSources(iIon)
                  ionlo = IonLosses(iIon)/Ions(iIon)
@@ -1813,7 +1814,7 @@ subroutine calc_chemistry(iBlock)
 
 
                  ! sum for e-
-                 Ions(nIons) = Ions(nIons) + Ions(iIon)
+                 Ions(ie_) = Ions(ie_) + Ions(iIon)
 
 !                 if (Ions(iIon) < 0.0) then
 !!!                 if (isnan(Ions(iIon))) then
