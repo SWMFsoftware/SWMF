@@ -975,32 +975,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#AMRRESOLUTION")
         call read_var('DxCellMin',min_cell_dx)
         call read_var('DxCellMax',max_cell_dx)
-        local_root_dx = (XyzMax_D(x_)-XyzMin_D(x_))/real(proc_dims(1)*nI)
-        if    (max_cell_dx < -1.E-6) then
-           min_block_level = -1
-        elseif(max_cell_dx <  1.E-6) then
-           min_block_level = 99
-        else
-           do j=1,99
-              min_block_level = j-1
-              if ( local_root_dx/(2**j) < max_cell_dx) EXIT
-           end do
-        end if
-        if    (min_cell_dx < -1.E-6) then
-           max_block_level = -1
-        elseif(min_cell_dx <  1.E-6) then
-           max_block_level = 99
-        else
-           do j=1,99
-              max_block_level = j-1
-              if ( local_root_dx/(2**j) < min_cell_dx) EXIT
-           end do
-        end if
-        if(iSession==1)then
-           DoSetLevels=.true.
-        else
-           call set_levels
-        end if
+        ! See also end of correct_parameters
 
      case("#DOAMRPROFILE")
         call read_var('DoAmrPofile',DoProfileAmr)
@@ -1629,7 +1604,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseBody',body1)
         if(body1)then
            call read_var('rBody', rBody)
-           if(NameThisComp=='GM') &
+           if(NameThisComp=='GM')&
                 call read_var('rCurrents' ,Rcurrents)
            do iFluid = IonFirst_, nFluid
               call read_var('BodyNDim', BodyNDim_I(iFluid))
