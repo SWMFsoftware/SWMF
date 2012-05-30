@@ -1818,7 +1818,6 @@ C      VERSION OF GLOBE FOR LOWER ATMOSPHERE 1/17/90
         T(J)=0.
    10 CONTINUE
       realday = day + sec/86400.0
-      write(*,*) "HERE!!!!", sec, realday
       
 c      IF(DAY.NE.DAYL.OR.P32.NE.P(32)) CD32=COS(DR*(DAY-P(32)))
 c      IF(DAY.NE.DAYL.OR.P18.NE.P(18)) CD18=COS(2.*DR*(DAY-P(18)))       
