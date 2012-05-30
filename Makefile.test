@@ -845,21 +845,6 @@ test_esmf_check:
 # Use Config.pl -install -compiler=pgf90
 # Modify the line in test_ccmc_run (see below) 
 
-test_ccmc_small:
-	@echo "test_ccmc_compile_small..." > test_ccmc_small.diff
-	${MAKE} ccmc_compile_small
-	@echo "test_ccmc_rundir_small..." >> test_ccmc_small.diff
-	${MAKE} test_ccmc_rundir_small
-	@echo "test_ccmc_run..." >> test_ccmc_small.diff
-	${MAKE} test_ccmc_run
-	@echo "test_ccmc_restart_rundir_small..." >> test_ccmc_small.diff
-	${MAKE} test_ccmc_restart_rundir_small
-	@echo "test_ccmc_run..." >> test_ccmc_small.diff
-	${MAKE} test_ccmc_run
-	@echo "test_ccmc_check_small..." >> test_ccmc_small.diff
-	${MAKE} test_ccmc_check_small
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
 test_ccmc:
 	@echo "test_ccmc_compile..." > test_ccmc.diff
 	${MAKE} ccmc_compile
@@ -881,24 +866,7 @@ ccmc_compile:
 	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd
 	${MAKE} SWMF PIDL
 
-ccmc_compile_small: 
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
-	./Config.pl -g=GM:6,6,6,800,1
-	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd
-	${MAKE} SWMF PIDL
 	
-	
-test_ccmc_rundir_small:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp -r Param/CCMC ${TESTDIR}/Param_ccmc
-	cd ${TESTDIR}; \
-		cp -f Param_ccmc/LAYOUT.in_v8.01_init LAYOUT.in; \
-		cp -f Param_ccmc/PARAM.in_v8.01_init_small PARAM.in; \
-		${SCRIPTDIR}/replace_amrinit.pl; \
-		cp SWMF.exe SWMF_run_test.exe; \
-		rm -f SWMF.exe
-
 test_ccmc_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
@@ -922,12 +890,6 @@ test_ccmc_run:
 # Here shortened(hostname) is the hostname with deleted number figures (no 0-9)
 # For example: for lanai1 this would be lanai.bat
 
-test_ccmc_restart_rundir_small:
-	cd ${TESTDIR}; \
-		cp -f Param_ccmc/LAYOUT.in_v8.01_RBE_restart LAYOUT.in; \
-		cp -f Param_ccmc/PARAM.in_v8.01_RBE_restart_small PARAM.in; \
-		${SCRIPTDIR}/replace_amrinit.pl; \
-		./Restart.pl 
 
 test_ccmc_restart_rundir:
 	cd ${TESTDIR}; \
@@ -936,17 +898,64 @@ test_ccmc_restart_rundir:
 		${SCRIPTDIR}/replace_amrinit.pl; \
 		./Restart.pl 
 
-test_ccmc_check_small:
-	${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
-		${TESTDIR}/GM/IO2/log_n000400.log \
-		Param/CCMC/test_GM_small.log > test_ccmc_small.diff
-	ls -l test_ccmc_small.diff
-
 test_ccmc_check:
 	${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
 		${TESTDIR}/GM/IO2/log_n002000.log \
 		Param/CCMC/test_GM.log > test_ccmc.diff
 	ls -l test_ccmc.diff
+
+
+
+#### ccmc_small #######
+test_ccmc_small:
+	@echo "test_ccmc_small_compile..." > test_ccmc_small.diff
+	${MAKE} test_ccmc_small_compile
+	@echo "test_ccmc_small_rundir..." >> test_ccmc_small.diff
+	${MAKE} test_ccmc_small_rundir
+	@echo "test_ccmc_small_run..." >> test_ccmc_small.diff
+	${MAKE} test_ccmc_small_run
+	@echo "test_ccmc_small_restart_rundir..." >> test_ccmc_small.diff
+	${MAKE} test_ccmc_small_restart_rundir
+	@echo "test_ccmc_small_run..." >> test_ccmc_small.diff
+	${MAKE} test_ccmc_small_run
+	@echo "test_ccmc_small_check..." >> test_ccmc_small.diff
+	${MAKE} test_ccmc_small_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_ccmc_small_compile: 
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
+	./Config.pl -g=GM:6,6,6,800,1
+	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd
+	${MAKE} SWMF PIDL
+
+
+test_ccmc_small_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp -r Param/CCMC ${TESTDIR}/Param_ccmc
+	cd ${TESTDIR}; \
+		cp -f Param_ccmc/LAYOUT.in_v8.01_init LAYOUT.in; \
+		cp -f Param_ccmc/PARAM.in_v8.01_init_small PARAM.in; \
+		${SCRIPTDIR}/replace_amrinit.pl; \
+		cp SWMF.exe SWMF_run_test.exe; \
+		rm -f SWMF.exe
+
+test_ccmc_small_restart_rundir:
+	cd ${TESTDIR}; \
+		cp -f Param_ccmc/LAYOUT.in_v8.01_RBE_restart LAYOUT.in; \
+		cp -f Param_ccmc/PARAM.in_v8.01_RBE_restart_small PARAM.in; \
+		${SCRIPTDIR}/replace_amrinit.pl; \
+		./Restart.pl 
+
+test_ccmc_small_run:
+	$(MAKE)  test_ccmc_run
+
+test_ccmc_small_check:
+	${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
+		${TESTDIR}/GM/IO2/log_n000400.log \
+		Param/CCMC/test_GM_small.log > test_ccmc_small.diff
+	ls -l test_ccmc_small.diff
+
 
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 
