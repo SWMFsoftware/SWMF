@@ -81,11 +81,6 @@ module ModUser
   ! Allow overwriting the Xe state inside the tube for x > xUniformXe > 0
   real :: xUniformXe = -1.0
 
-  ! Description of gold washer around the tube
-  logical :: UseGold = .false.
-  real :: WidthGold  = 50.0      ! width   [micron]
-  real :: RhoDimGold = 20000.0   ! density [kg/m3]
-
   ! Use conservative or non-conservative levelsets
   logical :: UseNonConsLevelSet = .true.
 
@@ -310,11 +305,6 @@ contains
        case('#RHOINSIDE')
           call read_var('RhoDimInside',RhoDimInside)
 
-       case("#GOLD")
-          call read_var('UseGold',    UseGold)
-          call read_var('WidthGold',  WidthGold)
-          call read_var('RhoDimGold', RhoDimGold)
-
        case("#LEVELSET")
           call read_var('UseNonConsLevelSet', UseNonConsLevelSet)
 
@@ -480,7 +470,7 @@ contains
 
     end if
 
-    if(UseElectronPressure .and. (UseTube .or. UseGold))then
+    if(UseElectronPressure .and. UseTube)then
        call stop_mpi(NameSub //" electron energy does not yet work " &
             //"with plastic tube or gold washer")
     end if
@@ -538,28 +528,6 @@ contains
              call set_small_radiation_energy
           end if
        end if ! UseTube
-
-       ! Distance from gold washer xEndTube < x < xEndTube + WidthGold
-       if(UseGold) then
-
-          DxyGold = &
-               min(x - xEndTube, xEndTube + WidthGold - x, r - rOuterTube)
-
-          ! Set density of gold washer (if present)
-          if(DxyGold > 0.0) then
-
-             State_VGB(Rho_,i,j,k,iBlock) = RhoDimGold*Io2No_V(UnitRho_)
-             State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-             call set_small_radiation_energy
-             DxyGold = min(x - xEndTube, r - rOuterTube)
-             if(nDimHyades == 2)then
-                State_VGB(LevelPl_,i,j,k,iBlock) = rOuterTube - r 
-                State_VGB(LevelXe_,i,j,k,iBlock) = DxyGold
-             end if
-          end if
-
-       end if ! UseGold
 
        ! Create sound wave by making a pressure hump (for testing)
        if(UseWave .and. x > xStartWave .and. x < xEndWave) &
