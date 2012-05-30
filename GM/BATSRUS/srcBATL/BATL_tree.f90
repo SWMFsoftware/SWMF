@@ -62,7 +62,7 @@ module BATL_tree
   integer, public :: iMaxTryAmr = 100
 
   ! Input parameter
-  integer, public :: MaxTotalBlock
+  integer, public :: MaxTotalBlock = 0
 
   ! Number of children per node
   integer, public, parameter :: nChild = 2**nDimAmr
@@ -212,9 +212,14 @@ contains
     ! Store tree size and maximum number of blocks/processor
     MaxBlock = MaxBlockIn
 
-    ! Initialize max number of blocks for all processors
-    ! (may be reduced in BATL_amr_criteria)
-    MaxTotalBlock = min(MaxTotalBlock,nProc*MaxBlock)
+    ! Initialize max number of blocks for all processors.
+    if(MaxTotalBlock <= 0)then
+       MaxTotalBlock = nProc*MaxBlock
+    else
+       ! MaxTotalBlock was set by the #AMRLIMIT command in 
+       ! BATL_amr_criteria::read_amr_criteria
+       MaxTotalBlock = min(MaxTotalBlock, nProc*MaxBlock)
+    end if
 
     ! During AMR we may need extra nodes. So use 2/(nChild-1) instead of 1/...
     MaxNode  = ceiling(nProc*MaxBlock*(1 + 2.0/(nChild - 1)))
