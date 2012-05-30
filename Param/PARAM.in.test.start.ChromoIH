@@ -329,7 +329,7 @@ T			UseBody
  250.0			zMax
 
 #GRIDLEVEL
-4.0			nLevelArea
+4			nLevelArea
 all			NameArea
 
 #GRIDLEVEL
@@ -342,9 +342,12 @@ shell0			NameArea
 18.0			Radius1
 21.0			Radius2
 
-#GRIDLEVEL
-8			nLevelArea
-currentsheet		NameArea
+#AMRCRITERIALEVEL
+1			nCriteria
+currentsheet		TypeCriteria
+0.5			CoarsenLimit
+0.5			RefineLimit
+8			MaxLevel
 
 #THINCURRENTSHEET
 T			DoThinCurrentSheet

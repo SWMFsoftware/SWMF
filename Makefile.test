@@ -704,9 +704,9 @@ test9:
 
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesHyp
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesHypSignB
-	./Config.pl -g=SC:6,4,4,1200,1,IH:4,4,4,4500,1
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
+	./Config.pl -g=SC:6,4,4,1200,1200,IH:4,4,4,4500,1
 	${MAKE} SWMF PIDL
 
 test9_rundir:
@@ -721,12 +721,12 @@ test9_run:
 
 test9_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/SC/log_n000001.log \
-		output/test9/SC_log_n000001.log \
+		${TESTDIR}/RESULTS/SC/log_n000000.log \
+		output/test9/SC_log_n000000.log \
 		> test9_sc_chromo.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IH/log_n000001.log \
-		output/test9/IH_log_n000001.log \
+		${TESTDIR}/RESULTS/IH/log_n000000.log \
+		output/test9/IH_log_n000000.log \
 		> test9_ih.diff)
 	ls -l test9*.diff
 
