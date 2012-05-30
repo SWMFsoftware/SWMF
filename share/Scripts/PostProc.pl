@@ -198,21 +198,23 @@ foreach my $Dir (sort keys %PlotDir){
 sub readrunlog{
     ## Read runlog and print out init time and runtime 
     ## without init time
-    my ($runlog) = @_;
     my (@timearray);
-    open(INPUT , "<", glob("$runlog/runlog*"))
-    	or die "Could not open runfile: $!\n";
-    while(<INPUT>){
-	if(/.*BATSRUS\s+(\d+\.\d+).*/){
-	   @timearray = (@timearray,$1);
-	}elsif(/.*BATSRUS\s*1\s*1\s+(.*?)\s+/){
-	   @timearray = (@timearray,$1);
+    my ($runlogfile);
+    foreach $runlogfile (glob("runlog*")){
+      open(INPUT , "<", $runlogfile)
+      	or die "Could not open runfile: $!\n";
+      while(<INPUT>){
+	if(/.*(BATSRUS|SWMF)\s+(\d+\.\d+).*/){
+	   @timearray = (@timearray,$2);
+	}elsif(/.*(BATSRUS|SWMF)\s*1\s*1\s+(.*?)\s+/){
+	   @timearray = (@timearray,$2);
 	}   
-    }
-    close(INPUT);
-    if($#timearray > 0){
+      }
+      close(INPUT);
+      if($#timearray > 0){
     	print "RUNLOG TIMINGS (init, run ...) @timearray[0] @timearray[$#timearray] \n";
-    }
+      }
+   }
 }
 #############################################################
 
@@ -224,14 +226,14 @@ if(-f $ParamIn){
     warn "$WARNING: no $ParamIn file was found\n";
 }
 
+readrunlog();
+
 if(-f "runlog"){
     print "$INFO: mv runlog $NameOutput/\n";
     `mv runlog $NameOutput`;
-    readrunlog($NameOutput);
 }elsif(glob("runlog_[0-9]*")){
     print "$INFO: mv runlog_[0-9]* $NameOutput/\n";
     `mv runlog_[0-9]* $NameOutput`;
-    readrunlog($NameOutput);
 }else{
     warn "$WARNING: no $RunLog file was found\n";
 }
