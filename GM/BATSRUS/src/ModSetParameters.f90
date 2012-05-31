@@ -2490,6 +2490,10 @@ contains
 
        if(.not.UseSemiImplicit)call stop_mpi(NameSub// &
             ' HYPRE preconditioner only works with semi-implicit scheme')
+
+       if(KrylovType == "CG")call stop_mpi(NameSub// &
+            ' HYPRE preconditioner does not work with CG. Use GMRES in #KRYLOV command')
+
     endif
 
     if(nKrylovVector > KrylovMatvecMax)then
