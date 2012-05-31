@@ -33,8 +33,8 @@ contains
     else
        iComm = iCommIn
     end if
-    call MPI_COMM_RANK (iComm, iProc, iError)
-    call MPI_COMM_SIZE (iComm, nProc, iError)
+    call MPI_comm_rank(iComm, iProc, iError)
+    call MPI_comm_size(iComm, nProc, iError)
 
   end subroutine init_mpi
   !==========================================================================
