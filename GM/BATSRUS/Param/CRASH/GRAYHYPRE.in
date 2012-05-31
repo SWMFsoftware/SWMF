@@ -1,0 +1,30 @@
+#LOOKUPTABLE
+Opacity(rho,T)          NameTable
+load                    NameCommand
+table_opacities.out     NameFile
+ascii                   TypeFile
+
+#SEMIIMPLICIT
+T                       UseSemiImplicit
+radiation               TypeSemiImplicit
+
+#KRYLOV
+gmres			TypeKrylov
+nul			TypeInitKrylov
+1.0e-8                  ErrorMaxKrylov
+100                     MaxMatvecKrylov
+
+#PRECONDITIONER
+left			TypePrecondSide
+HYPRE			TypePrecond
+0			DnInitHypreAmg
+
+#RADIATION
+T                       UseGrayDiffusion
+T                       UseRadFluxLimiter
+larsen                  TypeRadFluxLimiter
+300.0			TradMinSi
+
+#TEST
+krylov			StringTest
+

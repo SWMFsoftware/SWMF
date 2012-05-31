@@ -1,0 +1,36 @@
+#USERINPUTBEGIN  ----------------------
+
+#OPACITY
+T                       UseExcitation
+F                       UseCoulombCorrection
+T                       DoStateElimination
+
+#GROUPRANGE
+0.1                     EnergyPhotonMin
+20000.0                 EnergyPhotonMax
+
+#USERINPUTEND    ----------------------
+
+#SEMIIMPLICIT
+T                       UseSemiImplicit
+radcondsplit            TypeSemiImplicit
+
+#KRYLOV
+gmres                      TypeKrylov
+nul                     TypeInitKrylov
+1.0e-8                  ErrorMaxKrylov
+100                     MaxMatvecKrylov
+
+#PRECONDITIONER
+left                    TypePrecondSide (left, symmetric, right)
+HYPRE                   TypePrecond
+0			DnInitHypreAmg
+
+#RADIATION
+T                       UseGrayDiffusion
+T                       UseRadFluxLimiter
+larsen                  TypeRadFluxLimiter
+300.0			TradMinSi
+
+#ELECTRONPRESSURE
+1.0                     PeMinSi
