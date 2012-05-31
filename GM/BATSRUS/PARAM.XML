@@ -2069,9 +2069,9 @@ preconditioners are implemented to always use left preconditioning.
 The TypePrecond parameter can be set to JACOBI, GS, DILU, BILU or MBILU
 or HYPRE. The HYPRE preconditioner can only be used if the HYPRE library
 has been checked out into the util/ directory and Config.pl -hypre has 
-been set. The HYPRE preconditioning only works with BATL switched on, 
-and only with the semi-implicit scheme solving for 1 variable at a time 
-(split semi-implicit scheme). 
+been set. The HYPRE preconditioning only works with the semi-implicit 
+scheme solving for 1 variable at a time (split semi-implicit scheme)
+and currently it does not work with the CG scheme (see #KRYLOV command).
 
 The simplest Jacobi preconditioner is mainly useful for code development 
 purposes. The Gauss-Seidel (GS) preconditioner gives better performance
@@ -2098,16 +2098,18 @@ time steps. Setting it to 0 gives the minimum number of Krylov iterations,
 but the time spent on setting up the AMG may become substantial. Setting it
 to a larger value will reduce the time spent on AMG setup, but it will 
 increase the number of Krylov iterations. The optimal value depends on the
-problem as well as on the number of processors.
+problem as well as on the number of processors. If there is more than 
+one semi-implicit variable, then DnInitHypreAmg=0 is almost certainly the
+best choice.
 
 Default parameters are shown by the first example.
 </command>
 
 <command name="KRYLOV">
-	<parameter name="TypeKrylov" type="string" input="select">
-		<option name="gmres"	default="T"	/>
-		<option name="bicgstab" 		/>
-		<option name="cg" 			/>
+	<parameter name="TypeKrylov" type="string" input="select" case="upper">
+		<option name="GMRES"	default="T"	/>
+		<option name="BICGSTAB" 		/>
+		<option name="CG" 			/>
 	</parameter>
 	<parameter name="TypeInitKrylov" type="string" input="select">
                 <option name="0" 	value="nul" default="T"	/>
@@ -2120,17 +2122,53 @@ Default parameters are shown by the first example.
 	<parameter name="MaxMatvecKrylov" type="integer" min="1"
 							default="100" />
 #KRYLOV
-gmres           TypeKrylov  (gmres, bicgstab, cg)
+GMRES           TypeKrylov  (GMRES, BICGSTAB, CG)
 nul             TypeInitKrylov (nul, old, explicit, scaled)
 0.001           ErrorMaxKrylov
 100             MaxMatvecKrylov
 
-Default values are shown. Initial guess for the Krylov type iterative scheme
+Default values are shown. 
+
+The TypeKrylov parameter selects the iterative Krylov solver.
+The GMRES solver is the most robust and it converges the fastest 
+among all Krylov solvers. It uses one matrix-vector product per iteration.
+On the other hand it needs to store one copy of the vector of the unknowns 
+per iteration. GMRES also has to invert an NxN matrix in the N-th iteration.
+This means that GMRES is the optimal choice if the
+number of iterations is relatively small, typically less than 100. 
+This is almost always true when the HYPRE preconditioner is used
+(see the #PRECONDITIONER command). 
+
+BICGSTAB is a robust Krylov scheme that only uses 4 copies of the unknown 
+vector, and it uses two  matrix-vector products per iteration.
+It usually requires somewhat more matrix-vector products than GMRES to
+achieve the same accuracy (defined by the tolerance ErrorMaxKrylov).
+On the other hand all iterations have the same computational cost.
+
+The preconditioned Conjugate Gradient (CG) scheme only
+works for symmetric matrices. It only uses two copies of the unknown vector. 
+For symmetric matrices it is more efficient than BiCGSTAB. 
+In case many iterations are needed, it is more efficient than GMRES.
+The CG scheme currently does not work together with the HYPRE preconditioner. 
+
+Initial guess for the Krylov type iterative scheme
 can be 0 ('nul'), the previous solution ('old'), the explicit solution
 ('explicit'), or the scaled explicit solution ('scaled'). The iterative
 scheme stops if the required accuracy is achieved or the maximum number
 of matrix-vector multiplications is exceeded.
+
+The ErrorMaxKrylov parameter defines the relative accuracy of the solution.
+The iteration stops when the residual (measured in the second norm)
+drops below the initial residual times ErrorMaxKrylov.
+
+The MaxMatvecKrylov parameter limits the number of Krylov iterations.
+It also defines the maximum number of copies of the unknown vector
+for the GMRES solver, although this can be overwritten with the
+#KRYLOVSIZE command (see the description for more detail). 
+If the Krylov solver does not succeed in achieving the desired accuracy 
+within the maximum number of iterations, an error message is printed.
 </command>
+
 <command name="KRYLOVSIZE">
 	<parameter name="nKrylovVector" type="integer" min="1" 
 						default="$MaxMatvecKrylov"/>
@@ -3785,7 +3823,7 @@ Default for DnRefine is -1, i.e. no run time refinement.
 								default="0" />
 	<for from="1" to="$nRefineCrit">
 		<parameter name="TypeRefine" type="string" case="lower"
-		input="select">
+			input="select">
 			<option name="grad T"		value="gradt"        />
 			<option name="grad P"		value="gradp"        />
 			<option name="grad log(Rho)"	value="gradlogrho"   />
@@ -3802,20 +3840,17 @@ Default for DnRefine is -1, i.e. no run time refinement.
 		<parameter name="CoarsenLimit" type="real" min="0" max="1"
 							   default="0.5"/>
 		<parameter name="RefineLimit" type="real" min="0" max="1"
-							  default="0.5""/>
-		<if expr="$TypeRefine =~ /transient/">
+							  default="0.5"/>
+		<if expr="$TypeRefine=~/transient/">
 			<parameter name="TypeTransient" type="string"
-			case="lower" input="select">
-				<option name='P_dot' value='p_dot'/>
-				<option name='T_dot' value='t_dot'/>
-				<option name='Rho_dot' 		default="T"
-						value='rho_dot'/>
-				<option name='RhoU_dot' 
-						value='rhou_dot'/>
-				<option name='Rho_2nd_1'
-						value='rho_2nd_1'/>
-				<option name='Rho_2nd_2'
-						value='rho_2nd_2'/>
+				case="lower" input="select">
+				<option name="Rho_dot"   value="rho_dot"
+								default="T"/>
+				<option name="P_dot"     value="p_dot"/>
+				<option name="T_dot"     value="t_dot"/>
+				<option name="RhoU_dot"  value="rhou_dot"/>
+				<option name="Rho_2nd_1" value="rho_2nd_1"/>
+				<option name="Rho_2nd_2" value="rho_2nd_2"/>
 			</parameter>
 			<parameter name="UseSunEarth" type="logical" 
 								default="F"/>
