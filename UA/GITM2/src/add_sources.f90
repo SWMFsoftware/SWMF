@@ -48,7 +48,8 @@ subroutine add_sources
            + JouleHeating &
            ) &
            + Conduction &
-           + ChemicalHeatingRate
+           + ChemicalHeatingRate &
+           + UserHeatingRate(1:nLons, 1:nLats, 1:nAlts, iBlock)
 
      !-------------------------------------------
      ! This is an example of a user output:
