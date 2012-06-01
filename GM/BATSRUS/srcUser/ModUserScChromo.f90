@@ -36,7 +36,7 @@ module ModUser
   real    :: ExpFactorInvMin = 1e-3
 
   ! Input parameters controling wave dissipation
-  logical :: UseWaveDissipation = .false.
+  logical :: UseUserWaveDissipation = .false.
   real    :: DissipationScaleFactorSi = 0.0  ! unit = m*T^0.5
   real    :: DissipationScaleFactor = 0.0
   real    :: LkolIo = 0.0, Lkol, Lcp, Lratio = 0.0
@@ -113,9 +113,9 @@ contains
           call read_var('DipoleStrengthSi',DipoleStrengthSi)
           call read_var('DipoleTiltDeg',DipoleTiltDeg)
 
-       case("#WAVEDISSIPATION")
-          call read_var('UseWaveDissipation', UseWaveDissipation)
-          if(UseWaveDissipation) then 
+       case("#USERWAVEDISSIPATION")
+          call read_var('UseUserWaveDissipation', UseUserWaveDissipation)
+          if(UseUserWaveDissipation) then 
              call read_var('LkolIo', LkolIo)
              call read_var('Lratio', Lratio)
           end if
@@ -201,7 +201,7 @@ contains
        tChromo = tChromoSi*Si2No_V(UnitTemperature_)
     end if
 
-    if(UseWaveDissipation)then
+    if(UseUserWaveDissipation)then
        ! Reference dissipation length: 
        ! Lcp - used for counter propogating wave dissipation
        ! Lkol - used for Kolmogorov dissipation
@@ -655,7 +655,7 @@ contains
     real    :: DtInvWavePlus, DtInvWaveMinus, Vdt_Source, Vdt
 
     ! varaibles for wave dissipation
-    real    :: WaveDissipationPlus, WaveDissipationMinus
+    real    :: WaveDissipation_V(WaveFirst_:WaveLast_)
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !------------------------------------------------------------------------- 
@@ -667,26 +667,25 @@ contains
        !\
        ! Calculate coronal heating due to wave dissipation
        !/         
-       if(UseWaveDissipation)then
+       if(UseUserWaveDissipation)then
           CoronalHeating =  0.0
-          call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-               WaveDissipationPlus,  &
-               WaveDissipationMinus) 
+          call user_calc_alfven_wave_dissipation(i, j, k, iBlock, &
+               WaveDissipation_V)
 
-          CoronalHeating = WaveDissipationPlus + WaveDissipationMinus
+          CoronalHeating = sum(WaveDissipation_V)
 
           ! Remove wave energy from state variables
           Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
-               - WaveDissipationPlus
+               - WaveDissipation_V(WaveFirst_)
           Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
-               - WaveDissipationMinus
+               - WaveDissipation_V(WaveLast_)
        end if
       
 
        ! Limit time step according to size of source terms:
-       DtInvWavePlus = WaveDissipationPlus/ &
+       DtInvWavePlus = WaveDissipation_V(WaveFirst_)/ &
             max(State_VGB(WaveFirst_,i,j,k,iBlock),1e-30)
-       DtInvWaveMinus = WaveDissipationMinus/ &
+       DtInvWaveMinus = WaveDissipation_V(WaveLast_)/ &
             max(State_VGB(WaveLast_,i,j,k,iBlock),1e-30)
        
        Vdt_Source = 2.0*max(DtInvWavePlus, DtInvWaveMinus)/&
@@ -730,9 +729,8 @@ contains
 
   end subroutine user_calc_sources
   !============================================================================
-  subroutine calc_alfven_wave_dissipation(i,j,k,iBlock, &
-       WaveDissipationPlus, WaveDissipationMinus, &
-       DissipationLengthKol, DissipationLengthCp )
+  subroutine user_calc_alfven_wave_dissipation(i,j,k,iBlock, WaveDissipation_V, &
+       DissipationLength)
 
     use ModAdvance,        ONLY: State_VGB, B0_DGB
     use ModMain,           ONLY: UseB0
@@ -740,13 +738,14 @@ contains
     use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, WaveFirst_, WaveLast_
 
     integer,intent(in)        :: i, j, k, iBlock
-    real,intent(out)          :: WaveDissipationPlus, WaveDissipationMinus
-    real,intent(out),optional :: DissipationLengthKol, DissipationLengthCp
+    real,intent(out)          :: WaveDissipation_V(WaveFirst_:WaveLast_)
+    real,intent(out),optional :: DissipationLength
     
     real    :: WaveEnergyPlus, WaveEnergyMinus, FullB_D(3), FullB
+    real    :: WaveDissipationPlus, WaveDissipationMinus
     real    :: WavePressure, LocalDissipationFactor
 
-    character (len=*), parameter :: NameSub = 'calc_alfven_wave_dissipation'
+    character (len=*), parameter :: NameSub = 'user_calc_alfven_wave_dissipation'
     !------------------------------------------------------------------------- 
     if(UseB0)then
        FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -756,10 +755,8 @@ contains
     FullB = sqrt(sum(FullB_D**2))
     
     ! Ouput dissipation lengths in units of length for plotting
-    if(present(DissipationLengthKol)) &
-         DissipationLengthKol = Lkol/sqrt(FullB)
-    if(present(DissipationLengthCp)) &
-         DissipationLengthCp = DissipationLengthKol/Lratio
+    if(present(DissipationLength)) &
+         DissipationLength = Lcp/(sqrt(FullB)*Lratio)
 
     ! Local Dissipation factor, dimensions length/sqrt(density/B)  
     LocalDissipationFactor = &
@@ -783,7 +780,10 @@ contains
          (1. +  Lratio*sqrt(WaveEnergyPlus/WavePressure)) * &
          WaveEnergyMinus**1.5
     
-  end subroutine calc_alfven_wave_dissipation
+    WaveDissipation_V(WaveFirst_) = WaveDissipationPlus
+    WaveDissipation_V(WaveLast_) = WaveDissipationMinus
+
+  end subroutine user_calc_alfven_wave_dissipation
   ! ===================================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
@@ -933,11 +933,12 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB, StateOld_VCB
-    use ModMain,       ONLY: UseB0
-    use ModNumConst,   ONLY: cTolerance
+    use ModConst,      ONLY: rSun
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, UnitX_
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, By_, Bz_, RhoUx_, RhoUy_, RhoUz_, &
-         WaveFirst_, WaveLast_
+                             WaveFirst_, WaveLast_
+    use ModCoronalHeating,  ONLY: calc_alfven_wave_dissipation, &
+                                  UseAlfvenWaveDissipation
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -951,7 +952,7 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k
-    real    :: WaveDissipPlus,WaveDissipMinus,LengthKol,LengthCp
+    real    :: WaveDissipation_V(WaveFirst_:WaveLast_), CoronalHeating, Lperp
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -959,42 +960,39 @@ contains
 
     select case(NameVar)
 
-    case('disstot','dissplus','dissminus','lkol','lcp')
+    case('disstot','dissplus','dissminus','lperp')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          call calc_alfven_wave_dissipation(i,j,k,iBlock,&
-               WaveDissipPlus, WaveDissipMinus,LengthKol,LengthCp)
-
+          if(UseUserWaveDissipation) then
+             call user_calc_alfven_wave_dissipation(i,j,k,iBlock,&
+                  WaveDissipation_V,Lperp)
+          elseif (UseAlfvenWaveDissipation) then
+             call calc_alfven_wave_dissipation(i,j,k,iBlock, &
+                  WaveDissipation_V, CoronalHeating, Lperp)
+          end if
           select case(NameVar)
           case('dissplus')
-             PlotVar_G(i,j,k) = max(1e-30,WaveDissipPlus* &
+             PlotVar_G(i,j,k) = max(1e-30,WaveDissipation_V(WaveFirst_)* &
                   No2Si_V(UnitEnergyDens_))
              NameIdlUnit = '[J/m3]'
              NameTecUnit = '[J/m3]'
 
           case('dissminus')
-             PlotVar_G(i,j,k) = max(1e-30,WaveDissipMinus* &
+             PlotVar_G(i,j,k) = max(1e-30,WaveDissipation_V(WaveLast_)* &
                   No2Si_V(UnitEnergyDens_))
              NameIdlUnit = '[J/m3]'
              NameTecUnit = '[J/m3]'
 
           case('disstot')
-             PlotVar_G(i,j,k) = max(1e-30,&
-                  (WaveDissipPlus + WaveDissipMinus)* &
+             PlotVar_G(i,j,k) = max(1e-30, sum(WaveDissipation_V)* &
                   No2Si_V(UnitEnergyDens_))
              NameIdlUnit = '[J/m3]'
              NameTecUnit = '[J/m3]'
+             
+          case('lperp')
+             PlotVar_G(i,j,k) = Lperp * No2Si_V(UnitX_)/rSun 
+             NameIdlUnit = '[Rs]'
+             NameTecUnit = '[Rs]'
 
-          case('lkol')
-             PlotVar_G(i,j,k) = LengthKol * No2Si_V(UnitX_)
-             NameIdlUnit = '[m]'
-             NameTecUnit = '[m]'
-             NameTecVar  = 'Lkol'
-
-          case('lcp')
-             PlotVar_G(i,j,k) = LengthKol * No2Si_V(UnitX_)
-             NameIdlUnit = '[m]'
-             NameTecUnit = '[m]'
-             NameTecVar  = 'Lcp'
           end select
 
        end do; end do ; end do

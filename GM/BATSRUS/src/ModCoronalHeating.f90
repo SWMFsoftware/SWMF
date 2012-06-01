@@ -1259,7 +1259,7 @@ contains
   !============================================================================
 
   subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, WaveDissipation_V, &
-       CoronalHeating)
+       CoronalHeating, LperpEffective)
 
     use ModAdvance, ONLY: State_VGB, B0_DGB
     use ModMain, ONLY: UseB0
@@ -1267,7 +1267,8 @@ contains
     use ModGeometry,   ONLY: r_BLK
 
     integer, intent(in) :: i, j, k, iBlock
-    real, intent(out) :: WaveDissipation_V(WaveFirst_:WaveLast_),CoronalHeating
+    real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), CoronalHeating
+    real, intent(out), optional ::  LperpEffective
 
     real :: EwavePlus, EwaveMinus, FullB_D(3), FullB
     real :: DissipationRate
@@ -1298,6 +1299,10 @@ contains
     DissipationRate = (Crefl*sqrt(EwavePlus+EwaveMinus) &
          + FactorCP*sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
          *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
+
+    ! Ouput dissipation lengths in units of length for plotting
+    if(present(LperpEffective)) &
+         LperpEffective = FactorCP*sqrt(FullB)/LperpTimesSqrtB
 
     WaveDissipation_V = DissipationRate &
          *State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
