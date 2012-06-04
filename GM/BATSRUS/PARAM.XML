@@ -3191,13 +3191,13 @@ syntax e.g:
 #LOOKUPTABLE
 euv                     NameTable
 load                    NameCommand
-LC/Param/ResEIT.dat     NameFile
+LC/Param/los_Eit.dat     NameFile
 ascii                   TypeFile
 
 #LOOKUPTABLE
 sxr                     NameTable
 load                    NameCommand
-LC/Param/ResSXT.dat     NameFile
+LC/Param/los_Sxt.dat     NameFile
 ascii                   TypeFile
 \end{verbatim}
 
