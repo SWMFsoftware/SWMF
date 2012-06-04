@@ -1302,7 +1302,7 @@ contains
 
     ! Ouput dissipation lengths in units of length for plotting
     if(present(LperpEffective)) &
-         LperpEffective = FactorCP*sqrt(FullB)/LperpTimesSqrtB
+         LperpEffective = LperpTimesSqrtB/(FactorCP*sqrt(FullB))
 
     WaveDissipation_V = DissipationRate &
          *State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
