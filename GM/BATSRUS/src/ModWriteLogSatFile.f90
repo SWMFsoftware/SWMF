@@ -46,10 +46,12 @@ subroutine write_logfile(iSatIn,iFile)
   integer :: iError
 
   ! Event date for filename
-  character (len=80) :: format
-  character (len=19) :: eventDateTime
+  character(len=80) :: format
+  character(len=19) :: eventDateTime
+
+  character(len=*), parameter :: NameSub = 'write_logfile'
   !---------------------------------------------------------------------------
-  call set_oktest('write_logfile',DoTest,DoTestMe)
+  call set_oktest(NameSub,DoTest,DoTestMe)
 
   DoWritePosition = .false.
 
@@ -105,7 +107,7 @@ subroutine write_logfile(iSatIn,iFile)
   ! than MaxLogVar.  If it is not write a warning message and truncate the
   ! list.
   if (nLogVar + nFluxVar*nLogR > MaxLogVar) then
-     write(*,*)'Warning in write_logfile: Number of logfile variables exceeds '
+     write(*,*)'Warning in ', NameSub, ': Number of logfile variables exceeds '
      write(*,*)'the array dimensions.  Truncating list - recompile with larger'
      write(*,*)'array dimensions'
      if (nLogVar >= MaxLogVar) then
@@ -205,13 +207,16 @@ subroutine write_logfile(iSatIn,iFile)
 
   call set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSatIn)
 
+  ! this write statement seems to be necessary for NAG compiler in debugging mode
+  if(DoTestMe) &
+       write(*,*) NameSub, ' set_logvar finished'
+
   if(nProc > 0)then
      ! Collect LogVar_I from all processors
      call MPI_reduce(LogVar_I, LogVarSum_I, nLogTot, MPI_REAL, MPI_SUM, 0, &
           iComm, iError)
      if(iProc == 0)LogVar_I = LogVarSum_I
   end if
-
 
   ! WRITE OUT THE LINE INTO THE LOGFILE OR THE SATELLITE FILE
   if(iProc==0) then
@@ -312,8 +317,8 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
      write(*,*)'LogR_I:',LogR_I(1:nLogR)
   end if
 
-  LogVar_I(1:nLogTot) = 0.0
-  tmp1_BLK=1.00
+  LogVar_I = 0.0
+  tmp1_BLK = 1.0
   DomainVolume  =integrate_BLK(nProc,tmp1_BLK)
 
   ! Obtain data to calculate log variables
@@ -325,8 +330,10 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
      else
         B0Sat_D=0.00
      end if
+
      call get_point_data(0.0,xSatellite(iSat,:),1,nBlock,1,nVar+3,StateSat_V)
      call collect_satellite_data(xSatellite(iSat,:),StateSat_V)
+
      if (UseRotatingFrame) then
         StateSat_V(rhoUx_)=StateSat_V(rhoUx_) &
                 - StateSat_V(rho_)*OMEGAbody*xSatellite(iSat,y_)
