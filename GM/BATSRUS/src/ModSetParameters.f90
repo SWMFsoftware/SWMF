@@ -1299,8 +1299,10 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DtExchangeRay',    DtExchangeRay)
            call read_var('DnRaytrace',       DnRaytrace)
         end if
+     case("#RAYTRACELIMIT")
+        call read_var('RayLengthMax', RayLengthMax)
      case("#IE")
-        call read_var('DoTraceIE',DoTraceIE)
+        call read_var('DoTraceIE', DoTraceIE)
         !                                              ^CFG END RAYTRACE
 
      case("#IECOUPLING")

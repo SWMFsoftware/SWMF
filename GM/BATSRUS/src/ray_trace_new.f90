@@ -35,12 +35,6 @@ subroutine ray_trace_accurate
   call set_oktest('ray_trace',okTest,okTestMe)
 
   ! Initialize constants
-  if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
-     RayLengthMax = 4.*sum(XyzMax_D - XyzMin_D)
-  else
-     RayLengthMax = 4.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
-  end if
-
   DoTraceRay     = .true.
   DoMapRay       = .false.
   DoIntegrateRay = .false.
@@ -1526,11 +1520,6 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   ! Initialize some basic variables
   R_raytrace      = rBody
   R2_raytrace     = R_raytrace**2
-  if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
-     RayLengthMax = 4.*sum(XyzMax_D - XyzMin_D)
-  else
-     RayLengthMax = 4.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
-  end if
 
   DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
   DoExtractRay   = index(NameVar, '_I') > 0
@@ -1654,7 +1643,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   ! Do remaining rays obtained from other PE-s
   call finish_ray
 
-  if(DoTest.and.iLatTest<=nLat.and.iLonTest<=nLon) &
+  if(DoTest .and. DoIntegrateRay .and. iLatTest<=nLat .and. iLonTest<=nLon) &
        write(*,*)NameSub,' iProc, RayIntegral_VII=',&
        iProc, RayIntegral_VII(:,iLatTest,iLonTest)
 
@@ -1722,11 +1711,6 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   ! Initialize some basic variables
   R_raytrace      = rBody
   R2_raytrace     = R_raytrace**2
-  if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
-     RayLengthMax = 4.*sum(XyzMax_D - XyzMin_D)
-  else
-     RayLengthMax = 4.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
-  end if
 
   DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
   DoExtractRay   = index(NameVar, '_I') > 0
@@ -1954,7 +1938,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use ModMain, ONLY: x_, y_, z_, nI, nJ, nK, UnusedBlk
   use CON_ray_trace, ONLY: ray_init
   use CON_axes, ONLY: transform_matrix
-  use ModRaytrace, ONLY: oktest_ray, R_raytrace, R2_raytrace, RayLengthMax, &
+  use ModRaytrace, ONLY: oktest_ray, R_raytrace, R2_raytrace, &
        DoIntegrateRay, DoExtractRay, DoTraceRay, DoMapRay, &
        DoExtractState, DoExtractUnitSi, DoExtractBGradB1, bGradB1_DGB, &
        RayMap_DSII, RayMapLocal_DSII, &
@@ -2016,7 +2000,6 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   ! Initialize some basic variables
   R_raytrace   = rBody
   R2_raytrace  = R_raytrace**2
-  RayLengthMax = 2.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
 
   DoIntegrateRay = .false.
   DoExtractRay   = .true.
@@ -2250,7 +2233,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   use ModProcMH,   ONLY: iProc, iComm
   use ModRayTrace, ONLY: DoTraceRay, DoMapRay, DoIntegrateRay, DoExtractRay, &
        CpuTimeStartRay, oktest_ray, &
-       nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
+       nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_, B0_DGB
   use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK, UseB0
@@ -2280,7 +2263,6 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   oktest_ray = .false.
   R_raytrace   = rBody
   R2_raytrace  = R_raytrace**2
-  RayLengthMax = 2*sum(XyzMax_D - XyzMin_D)
 
   DoTraceRay     = .false.
   DoMapRay       = .false.

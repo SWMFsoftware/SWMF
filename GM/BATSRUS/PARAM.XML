@@ -4979,6 +4979,17 @@ The ray tracing is always redone if the grid changes due to an AMR.
 Default values are UseAccurateIntegral = .true. (if there is magnetic field), 
 UseAccurateTrace = .false., DtExchangeRay = 0.1 and DnRaytrace=1.
 </command>
+
+<command name="RAYTRACELIMIT">
+	<parameter name="RayLengthMax" type="real" default="100"/>
+
+#RAYTRACELIMIT
+50			RayLengthMax
+
+RayLengthMax provides the maximum length in planet radius for tracing a ray. 
+This avoid tracing extremely long field lines that are not used later.
+The default is 100 planet radius.
+</command>
 <!-- ^CFG END RAYTRACE -->
 
 <command name="IE">

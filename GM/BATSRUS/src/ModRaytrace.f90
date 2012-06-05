@@ -79,7 +79,7 @@ module ModRaytrace
   logical :: UsePreferredInterpolation
 
   ! Maximum length of ray
-  real :: RayLengthMax
+  real :: RayLengthMax = 100.
 
   ! Testing
   logical :: oktest_ray=.false.
