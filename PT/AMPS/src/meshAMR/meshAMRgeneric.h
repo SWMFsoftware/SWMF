@@ -755,7 +755,10 @@ public:
     static const int nMaxCenterNodes=_TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_*_TOTAL_BLOCK_CELLS_Z_;
     #endif
 
-    if ((nd<0)||(nd>=nMaxCenterNodes)) exit(__LINE__,__FILE__,"The value is outside of the limit");
+    if ((nd<0)||(nd>=nMaxCenterNodes)) {
+      printf("nd=%ld\n",nd);
+      exit(__LINE__,__FILE__,"The value is outside of the limit");
+    }
 
     #if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
     return centerNodes[nd];
@@ -6276,7 +6279,7 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
                 }
               }
               else if (ConnectivityListMode==_AMR_CONNECTIVITY_LIST_MODE_GLOBAL_NODE_NUMBER_) {
-                long int nodeno;
+                long int nodeno=0;
 
                 if (cornerNode!=NULL) nodeno=cornerNode->nodeDescriptor.nodeno;
 

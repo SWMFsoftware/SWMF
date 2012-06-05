@@ -260,7 +260,15 @@ public:
     if (nAzimuthalElement==nAzimuthalSurfaceElements) --nAzimuthalElement;
 
     #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
-    if ((nZenithElement<0)||(nZenithElement>=nZenithSurfaceElements)||(nAzimuthalElement<0)||(nAzimuthalElement>=nAzimuthalSurfaceElements)) exit(__LINE__,__FILE__,"Error: 'nZenithElement' or 'nAzimuthalElement' are outside of the range ");
+    static unsigned long int FunctionCallCounter=0;
+
+    if ((nZenithElement<0)||(nZenithElement>=nZenithSurfaceElements)||(nAzimuthalElement<0)||(nAzimuthalElement>=nAzimuthalSurfaceElements)) {
+      printf("Error: out of range\n nZenithElement=%ld, nAzimuthalElement=%ld (%s@%i)\n",nZenithElement,nAzimuthalElement,__FILE__,__LINE__);
+      printf("x=%e, %e, %e\nCallCounter=%ld\n",x[0],x[1],x[2],FunctionCallCounter);
+      exit(__LINE__,__FILE__,"Error: 'nZenithElement' or 'nAzimuthalElement' are outside of the range ");
+    }
+
+    FunctionCallCounter++;
     #endif
   }
 
