@@ -138,7 +138,7 @@ void PIC::ParticleFluxDistributionSample::SampleDistributionFnction() {
 
         v2=(v[0]*v[0])+(v[1]*v[1])+(v[2]*v[2]);
         speed=sqrt(v2);
-        cosPitchAngle=((v[0]*l[0])+(v[1]*l[1])+(v[2]*l[2]))/speed;
+        cosPitchAngle=-((v[0]*l[0])+(v[1]*l[1])+(v[2]*l[2]))/speed;
 
         if (cosPitchAngle>cosMaxSamplingConeAngle) {
           //the particle is within the cone of sample -> calculate the flux and sample the particle's properties
@@ -172,12 +172,14 @@ void PIC::ParticleFluxDistributionSample::SampleDistributionFnction() {
 //====================================================
 //print macroscopic parameters into a file
 void PIC::ParticleFluxDistributionSample::printMacroscopicParameters(char *fname,int spec) {
-  int nProbe;
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
+  int nProbe,thread;
+//  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
   FILE *fout=NULL;
   CMPI_channel pipe(1000000);
   char str[_MAX_STRING_LENGTH_PIC_];
 
+
+  //Print the distribution of fluxes
   if (PIC::Mesh::mesh.ThisThread==0) {
     pipe.openRecvAll();
 
@@ -185,32 +187,126 @@ void PIC::ParticleFluxDistributionSample::printMacroscopicParameters(char *fname
     fout=fopen(str,"w");
 
     printf("printing output file: %s.........         ",str);
-    fprintf(fout,"\"TITLE=Distribution function at x=%e",SamplingLocations[nProbe][0]);
+    fprintf(fout,"\"TITLE=Flux distribution");
 
     fprintf(fout,"\"\nVARIABLES=\"Sample Point\", \"Flux\" \n");
   }
   else pipe.openSend(0);
 
-
-  struct cDataExchengeBuffer {
-    double flux;
-  } dataExchengeBuffer;
+  double TotalFluxBuffer;
 
 
-  for (node=SampleNodes[0],nProbe=0;nProbe<nSamleLocations;node=SampleNodes[++nProbe]) {
-    if (node->Thread==PIC::ThisThread) {
-      dataExchengeBuffer.flux=SamplingFlux[nProbe][spec];
-
-      if (node->Thread!=0) pipe.send((char*)&dataExchengeBuffer,sizeof(cDataExchengeBuffer));
-    }
+//  for (node=SampleNodes[0],nProbe=0;nProbe<nSamleLocations;node=SampleNodes[++nProbe]) {
+  for (nProbe=0;nProbe<nSamleLocations;nProbe++) {
+    TotalFluxBuffer=SamplingFlux[nProbe][spec];
 
     if (PIC::ThisThread==0) {
-      if (node->Thread!=0) pipe.recv((char*)&dataExchengeBuffer,sizeof(cDataExchengeBuffer),node->Thread);
+      for (thread=1;thread<PIC::nTotalThreads;thread++) TotalFluxBuffer+=pipe.recv<double>(thread);
 
       fprintf(fout,"%i ",nProbe);
-      fprintf(fout,"%e ",dataExchengeBuffer.flux);
+      fprintf(fout,"%e ",TotalFluxBuffer/PIC::LastSampleLength);
 
       fprintf(fout,"\n");
+    }
+    else {
+      pipe.send(TotalFluxBuffer);
+    }
+  }
+
+
+  //Print energy end velocity distribution of the sampled particles
+  FILE *fout_v=NULL,*fout_v2=NULL;
+  double vnorm[nSamleLocations],v2norm[nSamleLocations],fv,fv2;
+  int voffset,v2offset,i;
+
+  voffset=GetSampleDataOffset(_NA_SPEC_,Sample_Speed_Offset);
+  v2offset=GetSampleDataOffset(_NA_SPEC_,Sample_V2_Offset);
+
+  if (PIC::Mesh::mesh.ThisThread==0) {
+    sprintf(str,"%s.f(v).dat",fname);
+    fout_v=fopen(str,"w");
+    fprintf(fout_v,"VARIABLES=\"v\"");
+    for (nProbe=0;nProbe<nSamleLocations;nProbe++) fprintf(fout_v,", \"f(v,Sampling Set=%i)\"",nProbe);
+    fprintf(fout_v,"\n");
+
+    sprintf(str,"%s.f(v2).dat",fname);
+    fout_v2=fopen(str,"w");
+    fprintf(fout_v2,"VARIABLES=\"v^2\"");
+    for (nProbe=0;nProbe<nSamleLocations;nProbe++) fprintf(fout_v2,", \"f(v^2,Sampling Set=%i)\"",nProbe);
+    fprintf(fout_v2,"\n");
+
+
+
+    //calculate the normal of distrinutions
+//    for (node=SampleNodes[0],nProbe=0;nProbe<nSamleLocations;node=SampleNodes[++nProbe]) {
+    for (nProbe=0;nProbe<nSamleLocations;nProbe++) {
+      vnorm[nProbe]=0.0,v2norm[nProbe]=0.0;
+
+      for (i=0;i<nSampledFunctionPoints-1;i++) {
+        vnorm[nProbe]=0.5*(SamplingBuffer[nProbe][voffset+i]+SamplingBuffer[nProbe][voffset+i+1])*dSpeed;
+        v2norm[nProbe]=0.5*(SamplingBuffer[nProbe][v2offset+i]+SamplingBuffer[nProbe][v2offset+i+1])*dV2;
+      }
+
+      for (thread=1;thread<PIC::nTotalThreads;thread++) {
+        vnorm[nProbe]+=pipe.recv<double>(thread);
+        v2norm[nProbe]+=pipe.recv<double>(thread);
+      }
+
+      if (vnorm[nProbe]==0.0) vnorm[nProbe]=1.0;
+      if (v2norm[nProbe]==0.0) v2norm[nProbe]=1.0;
+    }
+
+    //output the distribution function
+    for (i=0;i<nSampledFunctionPoints;i++) {
+      fprintf(fout_v,"%e ",i*dSpeed);
+      fprintf(fout_v2,"%e ",i*dV2);
+
+//      for (node=SampleNodes[0],nProbe=0;nProbe<nSamleLocations;node=SampleNodes[++nProbe]) {
+      for (nProbe=0;nProbe<nSamleLocations;nProbe++) {
+        fv=SamplingBuffer[nProbe][voffset+i];
+        fv2=SamplingBuffer[nProbe][v2offset+i];
+
+        for (thread=1;thread<PIC::nTotalThreads;thread++) {
+          fv+=pipe.recv<double>(thread);
+          fv2+=pipe.recv<double>(thread);
+        }
+
+        fprintf(fout_v,"%e ",fv/vnorm[nProbe]);
+        fprintf(fout_v2,"%e ",fv2/v2norm[nProbe]);
+      }
+
+      fprintf(fout_v,"\n");
+      fprintf(fout_v2,"\n");
+    }
+
+    fclose(fout_v);
+    fclose(fout_v2);
+  }
+  else {
+    //calcualte the normal of the distribution function
+//    for (node=SampleNodes[0],nProbe=0;nProbe<nSamleLocations;node=SampleNodes[++nProbe]) {
+    for (nProbe=0;nProbe<nSamleLocations;nProbe++) {
+      vnorm[nProbe]=0.0,v2norm[nProbe]=0.0;
+
+      for (i=0;i<nSampledFunctionPoints-1;i++) {
+        vnorm[nProbe]=0.5*(SamplingBuffer[nProbe][voffset+i]+SamplingBuffer[nProbe][voffset+i+1])*dSpeed;
+        v2norm[nProbe]=0.5*(SamplingBuffer[nProbe][v2offset+i]+SamplingBuffer[nProbe][v2offset+i+1])*dV2;
+      }
+
+      pipe.send(vnorm[nProbe]);
+      pipe.send(v2norm[nProbe]);
+    }
+
+    //output the distribution function
+    for (i=0;i<nSampledFunctionPoints;i++) {
+//      for (node=SampleNodes[0],nProbe=0;nProbe<nSamleLocations;node=SampleNodes[++nProbe]) {
+      for (nProbe=0;nProbe<nSamleLocations;nProbe++) {
+        fv=SamplingBuffer[nProbe][voffset+i];
+        fv2=SamplingBuffer[nProbe][v2offset+i];
+
+        pipe.send(fv);
+        pipe.send(fv2);
+      }
     }
   }
 

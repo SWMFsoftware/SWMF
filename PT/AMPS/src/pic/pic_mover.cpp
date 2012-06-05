@@ -2096,6 +2096,10 @@ exit(__LINE__,__FILE__,"not implemented");
 
         if (code==_PARTICLE_DELETED_ON_THE_FACE_) return _PARTICLE_LEFT_THE_DOMAIN_;;
       }
+      break;
+
+    default:
+      exit(__LINE__,__FILE__,"Error: the option is not recognized");
     }
   }
 

@@ -417,7 +417,7 @@ void PIC::Parallel::ExchangeParticleData() {
   int DataStillToRecieve=nRecvProc;
   MPI_Status status;
   int flag;
-  int iCell,jCell,kCell;
+  int iCell=-10,jCell=-10,kCell=-10;
 
   while (DataStillToRecieve!=0) {
 

@@ -121,6 +121,14 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
   //==============================  DEBUGGER ===============
            if (nInterpolationCoeficients!=0) Measure=InterpolationList[0]->Measure;
 
+           static long int nCallCounter=0;
+
+           if (nCallCounter==1838530) {
+             cout << __FILE__ << "@" << __LINE__ << endl;
+           }
+
+           nCallCounter++;
+
   //============================== END DEBUGGER ============
 
 
@@ -339,7 +347,7 @@ void PIC::Mesh::switchSamplingBuffers() {
 //init set and set up the computational mesh
 void PIC::Mesh::Init(double* xMin,double* xMax,fLocalMeshResolution ResolutionFunction) {
 
-  for (int idim=0;idim<DIM;idim++) xmin[idim]=xMin[idim],xmax[idim]=xmax[idim];
+  for (int idim=0;idim<DIM;idim++) xmin[idim]=xMin[idim],xmax[idim]=xMax[idim];
 
   LocalMeshResolution=ResolutionFunction;
   mesh.init(xMin,xMax,LocalMeshResolution);
@@ -463,7 +471,7 @@ void PIC::Mesh::cDataBlockAMR::recvBoundaryLayerBlockData(CMPI_channel *pipe,int
 void PIC::Mesh::cDataBlockAMR::recvMoveBlockAnotherProcessor(CMPI_channel *pipe,int From) {
   long int LocalCellNumber=-1;
 //  PIC::Mesh::cDataCenterNode *cell=NULL;
-  int i,j,k;
+  int i=-10,j=-10,k=-10;
 
   recvBoundaryLayerBlockData(pipe,From);
 

@@ -7,8 +7,8 @@
 
 //$Id$
 
-//#include "pic.h"
-
+#include "pic.h"
+#include "constants.h"
 
 
 
@@ -16,7 +16,7 @@
 
 
 
-
+using namespace std;
 
 
 
@@ -46,6 +46,7 @@
 /*-------------------------------- The model -------------------------------------------*/
 
 namespace ElectricallyChargedDust {
+
 
 
 

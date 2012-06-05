@@ -1268,7 +1268,47 @@ namespace PIC {
   }
 
 
+  //sample and output the particle's distribution of particle's flux
+  namespace ParticleFluxDistributionSample {
+    //the init flag
+    extern bool SamplingInitializedFlag;
 
+    //the modes for sampling of the v^2 and the absolute value of velocity
+    extern const int _LINEAR_SAMPLING_SCALE_,_LOGARITHMIC_SAMPLING_SCALE_;
+    extern int v2SamplingMode,speedSamplingMode;
+
+    //the range of the velocity scale and the number of nodes in the sample
+    extern double vMax,vMin;
+    extern long int nSampledFunctionPoints;
+    extern double dV2,dSpeed;
+
+    //the sampling buffers
+    extern double **SamplingBuffer;
+    extern double **SamplingFlux;
+
+    //sampling data offsets
+    extern int Sample_Speed_Offset,Sample_V2_Offset,SampleDataLength;
+
+    //get the offset to the beginig of the sampling data for a particular samplePoint, spec,.....
+    long int GetSampleDataOffset(int spec,int nInterval);
+
+    //sampling  locations
+    extern double **SamplingLocations;
+    extern double **SamplingPointingDirections;
+    extern double maxSamplingConeAngle,cosMaxSamplingConeAngle;
+
+    extern int nSamleLocations;
+    extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>** SampleNodes;
+    extern long int *SampleLocalCellNumber;
+
+    void Init(double ProbeLocations[][DIM],double ProbeDirections[][DIM],double maxConeAngles,int nProbeLocations);
+
+    void SampleDistributionFnction();
+    void flushSamplingBuffers();
+
+    void printDistributionFunction(char *fname,int spec);
+    void printMacroscopicParameters(char *fname,int spec);
+  }
 
 
   //procedures for distribution of particle velocities

@@ -113,7 +113,7 @@ void PIC::DistributionFunctionSample::SampleDistributionFnction() {
     if (node!=NULL) if (node->block!=NULL) {
     */
 
-  for (node=SampleNodes[0],nProbe=0;nProbe<nSamleLocations;node=SampleNodes[++nProbe]) if (node->block!=NULL) {
+  for (node=SampleNodes[0],nProbe=0;nProbe<nSamleLocations;node=SampleNodes[++nProbe]) if (node->Thread==PIC::ThisThread) {
       double *v;
       PIC::ParticleBuffer::byte *ParticleData;
       int i,j,k;

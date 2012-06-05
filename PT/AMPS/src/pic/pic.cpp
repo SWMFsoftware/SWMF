@@ -456,6 +456,25 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
               cout << __FILE__<< __LINE__ << endl;
               exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
             }
+
+/*
+            double *xcell=cell->GetX();
+            if (sqrt(pow(xcell[0],2)+pow(xcell[1],2)+pow(xcell[2],2))<2200.0E3) {
+//              exit(__LINE__,__FILE__,"Error: inside the planet");
+              cout << __FILE__ << "@" << __LINE__ << "Cell in inside the body: x=" << sqrt(pow(xcell[0],2)+pow(xcell[1],2)+pow(xcell[2],2)) << ", i="  <<   i << ", j=" << j << ", k=" << k << "ptr=" << ptr << endl;
+
+              double xpart[3];
+              PIC::ParticleBuffer::GetX(xpart,ptr);
+              cout << __FILE__ << "@" << __LINE__ << ", x=" << xpart[0] <<"  " << xpart[1] << "  " << xpart[2] << endl;
+
+              double *x0Sphere,radiusSphere;
+
+              ((cInternalSphericalData*)PIC::Mesh::mesh.InternalBoundaryList.begin()->BoundaryElement)->GetSphereGeometricalParameters(x0Sphere,radiusSphere);
+              cout << __FILE__ << "@" << __LINE__ << x0Sphere[0] << "  " << x0Sphere[1] << "  " << x0Sphere[2] << "  "  << radiusSphere << endl;
+
+//              cout << __FILE__ << "@" << __LINE__ << pow(pow(x[0]-x0Sphere[0],2)+pow(x[1]-x0Sphere[1],2)+pow(x[2]-x0Sphere[2],2))
+            }
+*/
 #endif
             //===================   END DEBUG ==============================
 
@@ -491,6 +510,45 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
 
               //================ End prefetch particle data
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__SAMPLING__PARTICLE_COORDINATES_ == _PIC_DEBUGGER_MODE_ON_
+              //check position of the particle:
+              //the particle must be within the computational domain and outside of the internal boundarues
+              list<cInternalBoundaryConditionsDescriptor>::iterator InternalBoundaryListIterator;
+
+              for (InternalBoundaryListIterator=PIC::Mesh::mesh.InternalBoundaryList.begin();InternalBoundaryListIterator!=PIC::Mesh::mesh.InternalBoundaryList.end();InternalBoundaryListIterator++) {
+                cInternalBoundaryConditionsDescriptor InternalBoundaryDescriptor;
+                double x[3];
+                double *x0Sphere,radiusSphere;
+
+                PIC::ParticleBuffer::GetX(x,ptr);
+                InternalBoundaryDescriptor=*InternalBoundaryListIterator;
+
+                switch (InternalBoundaryDescriptor.BondaryType) {
+                case _INTERNAL_BOUNDARY_TYPE_SPHERE_:
+                  #if DIM == 3
+                  ((cInternalSphericalData*)(InternalBoundaryDescriptor.BoundaryElement))->GetSphereGeometricalParameters(x0Sphere,radiusSphere);
+
+                  if (pow(x[0]-x0Sphere[0],2)+pow(x[1]-x0Sphere[1],2)+pow(x[2]-x0Sphere[2],2)<pow(radiusSphere-PIC::Mesh::mesh.EPS,2)) {
+                    cout << __FILE__ << "@" << __LINE__ << "Sphere: x0=" << x0Sphere[0] << ", " << x0Sphere[1] << ", " << x0Sphere[2] << ", R=" << radiusSphere << endl;
+                    cout << __FILE__ << "@" << __LINE__ << "Particle Position: x=" << x[0] << ", " << x[1] << ", " << x[2] << endl;
+                    cout << __FILE__ << "@" << __LINE__ << "Particle Distance from the center of the sphere: " << sqrt(pow(x[0]-x0Sphere[0],2)+pow(x[1]-x0Sphere[1],2)+pow(x[2]-x0Sphere[2],2)) << endl;
+
+                    exit(__LINE__,__FILE__,"Error: particle inside spherical body");
+                  }
+                  #endif
+
+
+                  break;
+                default:
+                  exit(__LINE__,__FILE__,"Error: not implemented");
+                }
+
+                for (idim=0;idim<DIM;idim++) if ((x[idim]<node->xmin[idim])||(x[idim]>node->xmax[idim])) exit(__LINE__,__FILE__,"Error: particle is outside of the block");
+              }
+#endif
+#endif
 
 
               Speed2=0.0;
@@ -928,7 +986,23 @@ void PIC::Init_BeforeParser() {
   }
 
 
+  /*-----------------------------------  The assembly code is not compiled with gcc 4.6: BEGIN  ---------------------------------
+
   //check the type of the CPU and the size of the cash line
+  int CacheLineSize = -1;
+
+  asm ( "mov $5, %%eax\n\t"   // EAX=80000005h: L1 Cache and TLB Identifiers
+        "cpuid\n\t"
+        "mov %%eax, %0"       // eax into CacheLineSize
+        : "=r"(CacheLineSize)   // output
+        :                     // no input
+        : "%eax"              // clobbered register
+       );
+
+  if (ThisThread==0) printf("Cache line size if %i bytes\n",CacheLineSize);
+
+
+
   char VendorSign[13];
 //  char *VendorSign_dword1=VendorSign+4,*VendorSign_dword2=VendorSign+8;
   unsigned int w0,w1,w2;
@@ -979,6 +1053,8 @@ void PIC::Init_BeforeParser() {
     cout << "Unknown type of CPU: the vendor string is \"" << VendorSign <<"\"" << endl;
     exit(__LINE__,__FILE__,"Error: unknown processor");
   }
+
+  -----------------------------------  The assembly code is not compiled with gcc 4.6: END  ---------------------------------*/
 
   //init sections of the particle solver
 
