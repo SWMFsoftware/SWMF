@@ -70,8 +70,8 @@ contains
 !    integer :: iLatTest = 51, iLonTest=27
 
     integer :: imax
-    real :: R_12,R_24,xmltr,xBoundary(ip),MajorAxis,MinorAxis,&
-            MajorAxis2,MinorAxis2, sin2, Req2, xo1,xc, xCenter,rell2
+    real :: R_12,R_24,xmltr,xBoundary(ip),BufferSend_I(ip),MajorAxis,MinorAxis,&
+            MajorAxis2,MinorAxis2,sin2,Req2,xo1,xc,xCenter,rell2
     real, parameter :: LengthMax = 50.0
     integer :: iError
     !--------------------------------------------------------------------------
@@ -414,6 +414,7 @@ contains
     enddo
     
     ! Find iba
+    xBoundary = 0.0
     if (UseEllipse) then
        R_24=rb                 ! boundary distance at midnight
        do j=MinLonPar,MaxLonPar
@@ -421,18 +422,22 @@ contains
           xmltr=xmlto(imax,j)*pi/12.
           xBoundary(j)=-ro(imax,j)*cos(xmltr)
        enddo
+
        !When nProc>1 gather xBoundary to all procs
-       if (nProc>1) &
-            call MPI_ALLGATHERV(xBoundary(MinLonPar:MaxLonPar),nLonPar, &
-            MPI_REAL, xBoundary, nLonPar_P, nLonBefore_P, MPI_REAL, iComm, &
-            iError)
+       if (nProc>1)then
+          BufferSend_I(:) = xBoundary(:)
+          call MPI_ALLGATHERV(BufferSend_I(MinLonPar:MaxLonPar), nLonPar, &
+               MPI_REAL, xBoundary, nLonPar_P, nLonBefore_P, MPI_REAL, iComm, &
+               iError)
+       end if
+
        R_12=0.95*maxval(xBoundary)    ! boundary distance at noon
        MajorAxis=0.5*(R_12+R_24)      ! major axis
        MinorAxis=min(R_12,R_24)       ! minor axis
        xCenter=0.5*(R_12-R_24)        ! center on x-axis
        MajorAxis2=MajorAxis*MajorAxis
        MinorAxis2=MinorAxis*MinorAxis
-       do j=1,ip
+       do j=MinLonPar,MaxLonPar
           find_ib: do i=irm(j),1,-1
              xmltr=xmlto(i,j)*pi/12.
              sin2=sin(xmltr)*sin(xmltr)
