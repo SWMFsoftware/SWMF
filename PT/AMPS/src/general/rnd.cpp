@@ -7,7 +7,8 @@
 
 #include "rnd.h"
 
-int RandomNumberGenerator::rndLastSeed=0;
+
+unsigned long int RandomNumberGenerator::rndLastSeed=0;
 
 void rnd_seed(int seed) {
   int thread;

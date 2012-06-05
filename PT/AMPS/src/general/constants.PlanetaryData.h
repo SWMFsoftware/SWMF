@@ -24,10 +24,10 @@
 /*--------------------------   MERCURY  -----------------------------*/
 #define _MERCURY__MASS_ 3.3022E23
 #define _MERCURY__RADIUS_ 2439.7E3
-#define _MERCUTY__APHELION_ 0.466697*_AU_
-#define _MERCURY__PERIHELION_ 0.307499*_AU_
-#define _MERCURY__SIDEREAL_ORBITAL_PERIOD_ 87.969*24.0*3600.0
-#define _MERCURY__SIDERIAL_ROTATIONAL_PERIOD_ 1407.6*24.0*3600.0
+#define _MERCUTY__APHELION_ (0.466697*_AU_)
+#define _MERCURY__PERIHELION_ (0.307499*_AU_)
+#define _MERCURY__SIDEREAL_ORBITAL_PERIOD_ (87.969*24.0*3600.0)
+#define _MERCURY__SIDERIAL_ROTATIONAL_PERIOD_ (1407.6*24.0*3600.0)
 
 /*--------------------------   END MERCURY  -----------------------------*/
 

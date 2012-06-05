@@ -96,7 +96,7 @@ public:
       recvptr=new long int[TotalThreadsNumber];
       RecvDataLength=new long int[TotalThreadsNumber];
     }
-    catch (bad_alloc) {exit(__LINE__,"Error: CMPI_channel::CMPI_channel(long) cannot allocate buffer");} 
+    catch (bad_alloc &ba) {exit(__LINE__,"Error: CMPI_channel::CMPI_channel(long) cannot allocate buffer");}
  
     for (int thread=0;thread<TotalThreadsNumber;thread++) recvBuffer[thread]=NULL,recvptr[thread]=0,RecvDataLength[thread]=0; 
   };
@@ -151,7 +151,7 @@ public:
     try {
       sendBuffer=new char[max_MPIbuffer_size];
     }
-    catch (bad_alloc) {
+    catch (bad_alloc &ba) {
       char msg[200]; 
 
       sprintf(msg,"Error: CMPI_channel::openSend cannot allocate send buffer, need %ld bytes\n", max_MPIbuffer_size);
@@ -230,7 +230,7 @@ public:
     try {
       recvBuffer[thread]=new char[max_MPIbuffer_size];
     }
-    catch (bad_alloc) {
+    catch (bad_alloc &ba) {
       char msg[200];
 
       sprintf(msg,"Error: CMPI_channel::openRecv cannot allocate recv buffer, need %ld bytes\n", max_MPIbuffer_size);
