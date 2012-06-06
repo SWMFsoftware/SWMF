@@ -390,7 +390,7 @@ contains
                 nDenNuSpecies_CBI(i,j,k,iBlock,:)=0.0
              end if
           end do; end do; end do
-          !    call neutral_density_averages
+          
           do k=1,nK; do j=1,nJ; do i=1,nI
              nu_BLK(i,j,k,iBlock)=&
                   sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:nNuSPecies))*nu0
@@ -727,7 +727,7 @@ contains
           nDenNuSpecies_CBI(i,j,k,iBlock,:)=0.0
        end if
     end do; end do; end do
-!    call neutral_density_averages
+
     do k=1,nK; do j=1,nJ; do i=1,nI
        nu_BLK(i,j,k,iBlock)=&
             sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:nNuSPecies))*nu0
@@ -1172,119 +1172,7 @@ contains
 
   end subroutine user_set_plot_var1
 
-  !====================================================================
-  subroutine neutral_density_averages
-    use ModMain
-    use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, true_cell,vInv_CB, R_BLK
-    use ModNumConst
-    use ModPhysics, ONLY : cTolerance
-    use ModCovariant, ONLY : FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
-    integer :: i,j,k,iNu
-    real:: FaceArea_DS(3,east_:top_),VInv
-
-    real ::  density_IS(6,nNuSpecies),x,y,z,R0, factor
-    ! real :: neutral_density
-    ! Note: using true_cell to replace an Rbody test does not apply here
-    !----------------------------------------------------------------
-
-    do k=1,nK; do j=1,nJ;  do i=1,nI  
-       VInv=vInv_CB(i,j,k,globalBLK)
-
-       if(.not.true_cell(i,j,k,globalBLK))cycle
-       !-------------------East----------------------------------
-       x = 0.5*(x_BLK(i-1,j,k,globalBLK) + x_BLK(i,j,k,globalBLK))
-       y = 0.5*(y_BLK(i-1,j,k,globalBLK) + y_BLK(i,j,k,globalBLK))
-       z = 0.5*(z_BLK(i-1,j,k,globalBLK) + z_BLK(i,j,k,globalBLK))
-       R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
-       FaceArea_DS(:,East_)= FaceAreaI_DFB(:,i,j,k,globalBLK)
-       factor = (FaceArea_DS(1,East_)*x+ &
-            FaceArea_DS(2,East_)*y+ &
-            FaceArea_DS(3,East_)*z)/R0
-       do iNu = 1, nNuSpecies 
-          density_IS(East_,iNu) = neutral_density(R0,iNu)*factor
-       end do
-
-       !-------------------West----------------------------------
-       x = 0.5*(x_BLK(i+1,j,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = 0.5*(y_BLK(i+1,j,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = 0.5*(z_BLK(i+1,j,k,globalBLK)+z_BLK(i,j,k,globalBLK))
-       R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
-       FaceArea_DS(:,West_)= FaceAreaI_DFB(:,i+1,j,k,globalBLK)
-       factor = (FaceArea_DS(1,West_)*x+ &
-            FaceArea_DS(2,West_)*y+ &
-            FaceArea_DS(3,West_)*z)/R0     
-       do iNu = 1, nNuSpecies 
-          density_IS(West_,iNu) =-neutral_density(R0,iNu)*factor
-       end do
-
-       !-------------------South----------------------------------
-       x = 0.5*(x_BLK(i,j-1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = 0.5*(y_BLK(i,j-1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = 0.5*(z_BLK(i,j-1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
-       R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
-       FaceArea_DS(:,South_)=FaceAreaJ_DFB(:,i,j,k,globalBLK)
-       factor = (FaceArea_DS(1,South_)*x+ &
-            FaceArea_DS(2,South_)*y+ &
-            FaceArea_DS(3,South_)*z)/R0  
-       do iNu = 1, nNuSpecies 
-          density_IS(South_,iNu) = neutral_density(R0,iNu)*factor
-       end do
-
-       !-------------------North----------------------------------
-       x = 0.5*(x_BLK(i,j+1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = 0.5*(y_BLK(i,j+1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = 0.5*(z_BLK(i,j+1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
-       R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
-       FaceArea_DS(:,North_)=FaceAreaJ_DFB(:,i,j+1,k,globalBLK)
-       factor = (FaceArea_DS(1,North_)*x+ &
-            FaceArea_DS(2,North_)*y+ &
-            FaceArea_DS(3,North_)*z)/R0     
-       do iNu = 1, nNuSpecies 
-          density_IS(North_,iNu) = -neutral_density(R0,iNu)*factor
-       end do
-
-       !-------------------Bot----------------------------------
-       x = 0.5*(x_BLK(i,j,k-1,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = 0.5*(y_BLK(i,j,k-1,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = 0.5*(z_BLK(i,j,k-1,globalBLK)+z_BLK(i,j,k,globalBLK))
-       R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
-       FaceArea_DS(:,Bot_)= FaceAreaK_DFB(:,i,j,k,globalBLK)
-       factor = (FaceArea_DS(1,Bot_)*x+ &
-            FaceArea_DS(2,Bot_)*y+ &
-            FaceArea_DS(3,Bot_)*z)/R0
-       do iNu = 1, nNuSpecies 
-          density_IS(Bot_,iNu) = neutral_density(R0,iNu)*factor
-       end do
-
-       !-------------------Top----------------------------------
-       x = 0.5*(x_BLK(i,j,k+1,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = 0.5*(y_BLK(i,j,k+1,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = 0.5*(z_BLK(i,j,k+1,globalBLK)+z_BLK(i,j,k,globalBLK))
-       R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
-       FaceArea_DS(:,Top_)= FaceAreaK_DFB(:,i,j,k+1,globalBLK)
-       factor = (FaceArea_DS(1,Top_)*x+ &
-            FaceArea_DS(2,Top_)*y+ &
-            FaceArea_DS(3,Top_)*z)/R0 
-       do iNu = 1, nNuSpecies 
-          density_IS(Top_,iNu) = -neutral_density(R0,iNu)*factor
-       end do
-
-       !-------------------SUM----------------------------------
-       do iNu = 1, nNuSpecies 
-          nDenNuSpecies_CBI(i,j,k,globalBLK,iNu)=VInv* &
-               sum(density_IS(:,iNu))&
-               *HNuSpecies_I(iNu)*BodynDenNuSpecies_I(iNu)
-          if(nDenNuSpecies_CBI(i,j,k,globalBLK,iNu)<0)then
-             write(*,*)'wrong sign, i,j,k,golablBLK, iNu',&
-                  i,j,k,globalBLK,iNu, R_BLK(i,j,k,globalBLK)
-          end if
-       end do
-
-    end do; end do ;end do 
-
-  end subroutine neutral_density_averages
-
-  !==============================================================================
+  !============================================================================
   real function neutral_density(R0,iNu)
     !  use ModUser, ONLY : BodynDenNuSpecies_I, HNuSpecies_I
     use ModPhysics, ONLY : Rbody
