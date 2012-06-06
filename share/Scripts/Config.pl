@@ -571,7 +571,17 @@ sub set_hdf5_{
 	&shell_command("cp $infile $outfile");
     }
 
-}
+    my @files = glob("${DIR}/share/Library/src/ModHdf5Utils_orig.f90");
+    foreach my $file (@files){
+	my $outfile = $file;
+	$outfile =~ s/_orig//;
+	my $infile  = $file;
+	$infile =~ s/_orig/_empty/ if $Hdf5 eq "no";
+	print "set_hdf5_: cp $infile $outfile\n";
+	&shell_command("cp $infile $outfile");
+    }
+    }
+
 
 ##############################################################################
 

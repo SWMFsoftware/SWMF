@@ -49,7 +49,7 @@ subroutine write_plot_los(iFile)
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, unusedBLK, &
        time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
-       Body1,body1_, StartTime
+       Body1,body1_, StartTime, CodeVersion
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK, &
        XyzStart_BLK, TypeGeometry, IsBoundaryBlock_IB, nMirror_D
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
@@ -117,7 +117,8 @@ subroutine write_plot_los(iFile)
 
   character (LEN=500) :: allnames, StringHeadLine
   character (LEN=500) :: unitstr_TEC, unitstr_IDL
-  character (LEN=4) :: file_extension
+  character (LEN=10) :: unitList_HDF(nPlotVarLosMax)
+  character (LEN=5) :: file_extension !changed to LEN=5 to make room for .batl
   character (LEN=40) :: file_format
 
   ! extra variables needed for auxiliarry data writing with tec output
@@ -300,8 +301,11 @@ subroutine write_plot_los(iFile)
      call get_TEC_los_variables(ifile,nPlotVar,plotvarnames,unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
   case('idl')
-     call get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL)
+     call get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL, unitList_HDF)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
+  case('hdf')
+     call get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL, unitList_HDF)
+     if(oktest .and. iProc==0) write(*,*)unitList_HDF
   end select
 
   if(UseTableGen) then
@@ -399,8 +403,8 @@ subroutine write_plot_los(iFile)
   end do       ! iBLK loop
 
   if(DoTiming)call timing_stop('los_block_loop')
-
-  ! add up the pixels from all PE-s to the root node and save LOS file 
+  !   if(plot_form(iFile) .ne. 'hdf') then
+  !       ! add up the pixels from all PE-s to root proc
   if(nProc > 1)then
      call MPI_REDUCE(ImagePe_VII, Image_VII, nPix*nPix*nPlotVar, &
           MPI_REAL, MPI_SUM, 0, iComm, iError)
@@ -419,6 +423,8 @@ subroutine write_plot_los(iFile)
         file_extension='.dat'
      case('idl')
         file_extension='.out'
+     case('hdf')
+        file_extension='.batl'
      end select
 
      if (ifile-plot_ > 9) then
@@ -561,12 +567,100 @@ subroutine write_plot_los(iFile)
              CoordMinIn_D = (/-aPix, -aPix/), &
              CoordMaxIn_D = (/+aPix, +aPix/), &
              VarIn_VII = Image_VII)
+     case('hdf')
+
+        if(plot_dimensional(iFile)) call dimensionalize_plotvar_los
+
+        if(DoTiming)call timing_start('los_save_plot')
+
+        file_extension='.batl'
+
+        if (ifile-plot_ > 9) then
+           file_format='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a)'
+        else
+           file_format='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
+        end if
+
+        if(time_accurate)then
+           call get_time_string
+           write(filename,file_format) &
+                trim(plot_type1)//"_",&
+                ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,&
+                file_extension
+        else
+           write(filename,file_format) &
+                trim(plot_type1)//"_",&
+                ifile-plot_,"_n",n_step,file_extension
+        end if
+
+
+
+        ! description of file contains units, physics and dimension
+        StringHeadLine = 'LOS integrals_var22'
+        ! Write Auxilliary header info, which is useful for EUV images.
+        ! Makes it easier to identify, and automatically process synthetic 
+        ! images from different instruments/locations
+        if (UseTableGen) then
+
+           write(FormatTime,*)&
+                '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
+           call get_date_time_start(iTime0_I)
+           call get_date_time(iTime_I)
+           write(TextDateTime0,FormatTime) iTime0_I
+           write(TextDateTime ,FormatTime) iTime_I
+
+           ! TIMEEVENT and TIMEEVENTSTART
+           StringHeadLine = trim(StringHeadline)// &
+                '_TIMEEVENT='//trim(TextDateTime)// &
+                '_TIMEEVENTSTART='//TextDateTime0
+
+           ! TIMESECONDSABSOLUTE    
+           ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
+           write(StringTmp,'(E20.13)')StartTime+Time_Simulation
+           StringHeadLine = trim(StringHeadLine)//&
+                '_TIMESECONDSABSOLUTE='//adjustl(StringTmp)
+
+           ! ITER
+           write(StringTmp,'(i12)')n_step
+           write(StringHeadLine,'(a)')trim(StringHeadLine)//'_ITER='//&
+                adjustl(StringTmp)
+
+           ! NAMELOSTABLE
+           StringHeadLine = trim(StringHeadLine)//'_NAMELOSTABLE='//&
+                NameLosTable(iFile)
+
+           ! HGIXYZ
+           write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
+           write(StringHeadLine,'(a)')trim(StringHeadLine)//'_HGIXYZ='//&
+                adjustl(StringTmp)
+
+        endif
+
+        ! set the size of plot image
+        aPix = rSizeImage 
+        if (plot_dimensional(ifile)) aPix = aPix * No2Io_V(UnitX_)
+        ! Write
+        call save_plot_file(filename, &
+             TypeFileIn = 'hdf5', &
+             StringHeaderIn = StringHeadLine, &
+             nStepIn = n_step, &
+             TimeIn = time_simulation, &
+             ParamIn_I = eqpar(1:neqpar), &
+             NameVarIn = allnames, &
+             PlotVarNameList = PlotVarNames,&
+             hdfUnits = unitList_HDF(1:nPlotVar),&
+             nDimIn = 2, & 
+             CoordMinIn_D = (/-aPix, -aPix/), &
+             CoordMaxIn_D = (/+aPix, +aPix/), &
+             VarIn_VII = Image_VII,&
+             CodeVersionAtt = CodeVersion, &
+             mpiComm = MPI_COMM_SELF,&!iComm,&
+             numProcs = 1,&
+             iProcL = 0) 
 
      end select
-
-     if(DoTiming)call timing_stop('los_save_plot')
-
   end if  ! iProc==0
+  if(DoTiming)call timing_stop('los_save_plot')
 
   call barrier_mpi
 
@@ -2069,7 +2163,7 @@ subroutine get_TEC_los_variables(iFile,nPlotVar,plotvarnames,unitstr_TEC)
 end subroutine get_TEC_los_variables
 
 !==============================================================================
-subroutine get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL)
+subroutine get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL, units_HDF)
 
   use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
   use ModIO, ONLY : plot_dimensional
@@ -2081,6 +2175,7 @@ subroutine get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL)
   integer, intent(in) :: iFile,NPlotVar
   character (len=20), intent(in) :: plotvarnames(NPlotVar)
   character (len=79), intent(out) :: unitstr_IDL 
+  character (len=10), intent(out) :: units_HDF(nPlotVar) 
   character (len=20) :: s
 
   integer :: iVar
@@ -2097,6 +2192,9 @@ subroutine get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL)
           trim(NameIdlUnit_V(UnitX_))
   else
      write(unitstr_IDL,'(a)') 'normalized variables'
+     do iVar = 1, nPlotVar
+        units_HDF = 'normalized'
+     end do
   end if
 
   if (plot_dimensional(ifile)) then
@@ -2110,37 +2208,45 @@ subroutine get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL)
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//&
                 trim(NameIdlUnit_V(UnitX_))
+           units_HDF(iVar) = trim(NameIdlUnit_V(UnitX_))
         case('rho')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//'[m^-^2]'
+           units_HDF(iVar) = '[m^-^2]'
         case('vlos','Vlos','ulos','Ulos')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//&
                 trim(NameIdlUnit_V(UnitU_))
+           units_HDF(iVar) = trim(NameIdlUnit_V(UnitU_))
         case('wl')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//'[m^-^2]'
+           units_HDF(iVar) = '[m^-^2]'
         case('pb')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//'[m^-^2]'
+           units_HDF(iVar) = '[m^-^2]'
         case('euv171')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//'euv171 [DN/S]'
+           units_HDF(iVar) = 'euv171 [DN/S]'
         case('euv195')
            write(unitstr_IDL,'(a)') & 
-                trim(unitstr_IDL)//' '//'euv195 [DN/S]'
+                trim(unitstr_IDL)//' '//'euv195 [dn/s]'
+           units_HDF(iVar) = 'euv195 [dn/s]'
         case('euv284')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//'euv284 [DN/S]'
+           units_HDF(iVar) = 'euv284 [DN/S]'
         case('sxr')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//'sxr [DN/S]'
-
+           units_HDF(iVar) = 'sxr [DN/S]'
            ! DEFAULT FOR A BAD SELECTION
         case default
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//'" Dflt"'
-
+           units_HDF(iVar) = 'Dflt'
         end select
 
      end do

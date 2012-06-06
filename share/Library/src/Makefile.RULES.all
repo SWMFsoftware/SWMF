@@ -20,3 +20,7 @@ $Compiler eq "f95"
 # Use LINK.f90 (usually mpif90) so the mpif.h header file can be included
 1
 	${LINK.f90} ${Cflag0} ModMpiOrig.f90
+
+#Special rule to compile HDF5 code
+$Hdf5 eq "yes"
+	h5pfc ${Cflag2} ModHdf5Utils.f90

@@ -38,7 +38,7 @@ module ModPlotFile
 
   use ModIoUnit,    ONLY: UnitTmp_
   use ModKind,  ONLY: Real4_
-
+  use ModHdf5Utils, ONLY: losHdf5PlotWrite
   implicit none
 
   private ! except
@@ -55,14 +55,15 @@ contains
 
   subroutine save_plot_file(NameFile, TypePositionIn, &
        TypeFileIn, StringHeaderIn, nStepIn, TimeIn, &
-       ParamIn_I, NameVarIn, &
+       ParamIn_I, NameVarIn, PlotVarNameList, hdfUnits,&
        IsCartesianIn, &
        nDimIn,&
        CoordMinIn_D, CoordMaxIn_D, &
        Coord1In_I, Coord2In_I, Coord3In_I, &
        CoordIn_I, CoordIn_DII, CoordIn_DIII,&
        VarIn_VI, VarIn_VII, VarIn_VIII, &
-       VarIn_IV, VarIn_IIV, VarIn_IIIV)
+       VarIn_IV, VarIn_IIV, VarIn_IIIV, mpiComm, codeVersionAtt,&
+       iProcL, numProcs)
 
     character(len=*),           intent(in):: NameFile       ! Name of plot file
     character(len=*), optional, intent(in):: TypePositionIn ! asis/rewind/append
@@ -72,6 +73,8 @@ contains
     real,             optional, intent(in):: TimeIn         ! simulation time  
     real,             optional, intent(in):: ParamIn_I(:)   ! parameters
     character(len=*), optional, intent(in):: NameVarIn      ! list of names
+    character(len=*), optional, intent(in):: PlotVarNameList(:) !
+    character(len=*), optional, intent(in):: hdfUnits(:) !
     logical,          optional, intent(in):: IsCartesianIn  ! Cartesian grid?
     integer,          optional, intent(in):: nDimIn         ! grid dimensions
     real,             optional, intent(in):: CoordIn_I(:)   ! coords in 1D
@@ -88,20 +91,27 @@ contains
     real,             optional, intent(in):: VarIn_IV(:,:)  ! variables in 1D
     real,             optional, intent(in):: VarIn_IIV(:,:,:)            ! 2D
     real,             optional, intent(in):: VarIn_IIIV(:,:,:,:)         ! 3D
+    real,             optional, intent(in):: codeVersionAtt ! Code version for .batl metadata
+    integer,          optional, intent(in):: mpiComm    !hdf5 needs to know iComm
+    integer,          optional, intent(in):: numProcs    !hdf5 spreads the write acrost all procs
+    integer,          optional, intent(in):: iProcL    !hdf5 spreads the write acrost all procs
 
     character(len=10)  :: TypePosition
     character(len=10)  :: TypeStatus
     character(len=20)  :: TypeFile
     character(len=500) :: StringHeader
     character(len=500) :: NameVar
-    integer            :: nStep, nDim, nParam, nVar, n1, n2, n3
-    real               :: Time, Coord
-    logical            :: IsCartesian
-    real, allocatable  :: Param_I(:), Coord_ID(:,:), Var_IV(:,:)
+    integer :: nStep, nDim, nParam, nVar, n1, n2, n3, nCells, nBlkD(3), iBlk,nBlkUsedGlobal
+    integer :: pMin(3),pMax(3), nBlkXYZ(3), offset, iG,jG,kG
+    integer, allocatable:: nBlocksPerProc(:), procBlkOffset(:), iCoordMin(:,:)
+    real               :: Time, Coord, r1, cellDxDyDz(3), blockdXdYdZ(3)
+    logical            :: IsCartesian, allProcsWrite, doneSearching
+    real, allocatable  :: Param_I(:), Coord_ID(:,:), Var_IV(:,:),hdf5VarIn(:,:,:,:,:),coordinateH5Block(:,:,:)
     real(Real4_), allocatable:: Param4_I(:), Coord4_ID(:,:), Var4_I(:)
 
-    integer :: n_D(0:MaxDim)
+    integer :: n_D(0:MaxDim), i1,i2,i3,ii,jj,kk, iBlkG, blockSize, procIdx
     integer :: i, j, k, i_D(3), iDim, iVar, n, nDimOut, iError
+    logical  :: procSplitSuccess(3)
 
     character(len=*), parameter:: NameSub = 'save_plot_file'
     !---------------------------------------------------------------------
@@ -133,7 +143,7 @@ contains
        allocate(Param_I(1))
        Param_I(1) = 0.0
     end if
-    
+
     ! Figure out grid dimensions and number of variables       
     n_D = 1
     ! For VI, VII, VIII types
@@ -146,7 +156,7 @@ contains
     elseif(present(VarIn_VIII))then
        nDim = 3
        n_D(0:3) = shape(VarIn_VIII) 
-    ! For IV, IIV, IIIV types 
+       ! For IV, IIV, IIIV types 
     elseif(present(VarIn_IV))then
        nDim = 1
        n_D(0:1) = shape(VarIn_IV)
@@ -161,7 +171,7 @@ contains
        n_D = cshift(n_D, -1)        ! shift nVar/n_D(3) to n_D(0)
     else
        call CON_stop(NameSub // &
-       'none of VarIn_VI/VarIn_IV,VarIn_VII/VarIn_IIV,VarIn_VIII/VarIn_IIIV are present')
+            'none of VarIn_VI/VarIn_IV,VarIn_VII/VarIn_IIV,VarIn_VIII/VarIn_IIIV are present')
     endif
 
     ! Extract information
@@ -169,6 +179,8 @@ contains
     n1   = n_D(1)
     n2   = n_D(2)
     n3   = n_D(3)
+
+
 
     ! The plot dimension may be different from the dimensionality of VarIn
     if(present(nDimIn))then
@@ -181,7 +193,7 @@ contains
           n_D(1:3) = (/ n1, n3, 1/)
        end if
     end if
-    
+
     IsCartesian = .true.
     if(present(IsCartesianIn)) IsCartesian = IsCartesianIn
 
@@ -205,53 +217,196 @@ contains
     end if
 
     ! Allocate arrays with a shape that is convenient for saving data
-    allocate(Coord_ID(n1*n2*n3,nDim), Var_IV(n1*n2*n3,nVar))
-
-    ! Fill in the 2D coordinate array using the available information
-    do iDim = 1, nDim
-       n = 0
-       do k = 1, n3; do j = 1, n2; do i = 1, n1
-          n = n + 1
-          Coord = huge(1.0)
-          if(present(CoordIn_I))    Coord = CoordIn_I(i)
-          if(present(CoordIn_DII))  Coord = CoordIn_DII(iDim,i,j)
-          if(present(CoordIn_DIII)) Coord = CoordIn_DIII(iDim,i,j,k)
-          if(present(Coord1In_I) .and. iDim==1) Coord = Coord1In_I(i)
-          if(present(Coord2In_I) .and. iDim==2) Coord = Coord2In_I(j)
-          if(present(Coord3In_I) .and. iDim==3) Coord = Coord3In_I(k)
-          if(present(CoordMinIn_D)) then
-             i_D = (/i, j, k/)
-             Coord = CoordMinIn_D(iDim) + (i_D(iDim)-1)* &
-                  ((CoordMaxIn_D(iDim) - CoordMinIn_D(iDim))/(n_D(iDim)-1))
+    if(TypeFile == 'hdf5') then
+       !   VisIt is much much faster if you give it blocks so it can parallelize and 
+       !   on some machines hdf5 is faster in parallel.
+       !   this routine can be called in serial or parallel for hdf5.  Just calling it
+       !   with iproc = 0 seems to be the best thing for now.
+       do j=1,20
+          i = 21-j
+          procSplitSuccess(1) = .true.
+          if (n1 > 1) then
+             r1 = mod(real(n1), real(i))
+             if (r1 == 0) then 
+                procSplitSuccess(1) = .true.
+             else
+                procSplitSuccess(1) = .false.
+             end if
           end if
-          Coord_ID(n, iDim) = Coord
-       end do; end do; end do; 
-    end do
+          procSplitSuccess(2) = .true.
+          if (n1 > 1) then
+             r1 = mod(real(n2), real(i))
+             if (r1 == 0) then 
+                procSplitSuccess(2) = .true.
+             else
+                procSplitSuccess(2) = .false.
+             end if
+          end if
+          procSplitSuccess(3) = .true.
+          if (n3 > 1) then
+             r1 = mod(real(n3), real(i))
+             if (r1 == 0) then 
+                procSplitSuccess(3) = .true.
+             else
+                procSplitSuccess(3) = .false.
+             end if
+          end if
+          if (procSplitSuccess(1) .and. procSplitSuccess(2) .and. procSplitSuccess(3)) then
+             doneSearching = .true.
+          else 
+             doneSearching = .false.
+          end if
+          if (doneSearching) then
+             blockSize = i
+             exit
+          end if
+       end do
+       do i = 1,nDimOut
+          if(n_D(i) .le. 1) then
+             nBlkD(i) = 1
+          else 
+             nBlkD(i) = blockSize
+          end if
+       end do
+       nBlkUsedGlobal = (n_D(1)/nBlkD(1))*(n_D(2)/nBlkD(2))!*(n_D(3)/nBlkD(3))
+       do i = 1,nDimOut
+          if (i>nDim) then
+             nBlkXYZ(i) = 1
+             n_D(i) = 1
+          else
+             nBlkXYZ(i) = n_D(i)/nBLKD(1)
+          end if
+       end do
+       nBlkD(3) = 1
+       n_D(3) = 1
+       nBlkXYZ(3) = 1
+       !         nBlkUsedGlobal = n1/nBlkD(1)*n2/nBlkD(2)*n3/nBlkD(3)
+       do i = 1,nDimOut
+          blockdXdYdZ(i) = (CoordMaxIn_D(i) - CoordMinIn_D(i))/nBlkXYZ(i)
+       end do
+       allocate(nBlocksPerProc(0:numProcs-1))
+       if (numProcs>1) then
+          if(nBlkUsedGlobal >  numProcs) then 
+             allProcsWrite=.true.
+             i=0
+             do procIdx = 0, numProcs-2 
+                nBlocksPerProc(procIdx) = floor(real(nBlkUsedGlobal/numProcs))
+                i=i+floor(real(nBlkUsedGlobal/numProcs))
+             end do
+             nBlocksPerProc(numProcs-1) = nBlkUsedGlobal - i
+          else if(nBlkUsedGlobal .le. numProcs) then
+             nBlocksPerProc = 0
+             allProcsWrite = .false.
+             do procIdx = 0, nBlkUsedGlobal-1
+                nBlocksPerProc(procIdx) = 1
+             end do
+             if (nBlkUsedGlobal == numProcs) allProcsWrite=.true.
+          end if
+       else
+          allProcsWrite = .true.
+          nBlocksPerProc=nBlkUsedGlobal
+       end if
+       allocate(procBlkOffset(0:numProcs)) 
+       procBlkOffset(0) = 0
+       do procIdx = 1, numProcs-1
+          procBlkOffset(procIdx) = procBlkOffset(procIdx-1) + nBlocksPerProc(procIdx-1)
+       end do
+       allocate(hdf5VarIn(nBlkD(1),nBlkD(2),1,nBlocksPerProc(iProcL), nVar))
+       allocate(coordinateh5Block(2,nDim,nBlocksPerProc(iProcL)))
+       allocate(iCoordMin(nDim, nBlocksPerProc(iProcL)))
+       iBlk = 0
+       iBlkG = 0
+       do kk=1,1; do jj=1,nBlkXyz(2); do ii=1,nBlkXyz(1);
+          iBlkG = iBlkG +1
+          if (iBlkG > procBlkOffset(iProcL) .and. iBlkG .le. procBlkOffset(iProcL) + nBlocksPerProc(iProcL)) then
+             iBlk = iBlk + 1
+             do k = 1, 1; do j = 1, nBlkD(2); do i = 1,nBlkD(1)
+                iG = (ii - 1)*nBlkD(1)+i
+                jG = (jj - 1)*nBlkD(2)+j
+                kG = (kk - 1)*nBlkD(3)+k
+                if(present(VarIn_VI))   hdf5VarIn(i,1,1,iBlk, 1:nVar) = VarIn_VI(1:nVar,iG)
+                if(present(VarIn_VII))  hdf5VarIn(i,j,1,iBlk, 1:nVar) = VarIn_VII(1:nVar,iG,jG)
+                if(present(VarIn_VIII)) hdf5VarIn(i,j,k,iBlk, 1:nVar) = VarIn_VIII(1:nVar,iG,jG,kG)
+                if(present(VarIn_IV))   hdf5VarIn(i,1,1,iBlk, 1:nVar) = VarIn_IV(iG,1:nVar)
+                if(present(VarIn_IIV))  hdf5VarIn(i,j,1,iBlk, 1:nVar) = VarIn_IIV(iG,jG,1:nVar)
+                if(present(VarIn_IIIV)) hdf5VarIn(i,j,k,iBlk, 1:nVar) = VarIn_IIIV(iG,jG,kG,1:nVar)
+             end do; end do; end do;
+             do iDim = 1,nDim
+                if(iDim==1) then
+                   iCoordMin(iDim, iBlk) = (ii-1)*nBlkD(iDim)
+                   coordinateh5Block(1, iDim, iBlk) = blockdXDyDz(iDim)*(ii-1) + CoordMinIn_D(iDim)
+                   coordinateh5Block(2, iDim, iBlk) = blockdXDyDz(iDim)*ii+ CoordMinIn_D(iDim)
+                else if(iDim==2) then
+                   iCoordMin(2, iBlk) = (jj-1)*nBlkD(2)
+                   coordinateh5Block(1, iDim, iBlk) = blockdXDyDz(iDim)*(jj-1)+ CoordMinIn_D(iDim)
+                   coordinateh5Block(2, iDim, iBlk) = blockdXDyDz(iDim)*jj+ CoordMinIn_D(iDim)
+                else if(iDim==3) then 
+                   iCoordMin(iDim, iBlk) = (kk-1)*nBlkD(iDim)
+                   coordinateh5Block(1, iDim, iBlk) = blockdXDyDz(iDim)*(kk-1)+ CoordMinIn_D(iDim)
+                   coordinateh5Block(2, iDim, iBlk) = blockdXDyDz(iDim)*kk+ CoordMinIn_D(iDim)
+                end if
+             end do
+          end if
+       end do; end do; end do;
+    else
+       allocate(Coord_ID(n1*n2*n3,nDim), Var_IV(n1*n2*n3,nVar))
+       ! Fill in the 2D coordinate array using the available information
+       do iDim = 1, nDim
+          n = 0
+          do k = 1, n3; do j = 1, n2; do i = 1, n1
+             n = n + 1
+             Coord = huge(1.0)
+             if(present(CoordIn_I))    Coord = CoordIn_I(i)
+             if(present(CoordIn_DII))  Coord = CoordIn_DII(iDim,i,j)
+             if(present(CoordIn_DIII)) Coord = CoordIn_DIII(iDim,i,j,k)
+             if(present(Coord1In_I) .and. iDim==1) Coord = Coord1In_I(i)
+             if(present(Coord2In_I) .and. iDim==2) Coord = Coord2In_I(j)
+             if(present(Coord3In_I) .and. iDim==3) Coord = Coord3In_I(k)
+             if(present(CoordMinIn_D)) then
+                i_D = (/i, j, k/)
+                Coord = CoordMinIn_D(iDim) + (i_D(iDim)-1)* &
+                     ((CoordMaxIn_D(iDim) - CoordMinIn_D(iDim))/(n_D(iDim)-1))
+             end if
+             Coord_ID(n, iDim) = Coord
+          end do; end do; end do; 
+       end do
 
-    ! Check if all coordinates were set
-    if(any(Coord_ID == huge(1.0))) call CON_stop(NameSub // & 
-        ' coordinates were not defined')
+       ! Check if all coordinates were set
+       if(any(Coord_ID == huge(1.0))) call CON_stop(NameSub // & 
+            ' coordinates were not defined')
 
-    ! Fill in the 2D variable array using the available information
-    Var_IV = huge(1.0)
-    do iVar = 1, nVar
-       n = 0
-       do k = 1, n3; do j = 1, n2; do i = 1,n1
-          n = n + 1
-          if(present(VarIn_VI))   Var_IV(n,iVar) = VarIn_VI(iVar,i)
-          if(present(VarIn_VII))  Var_IV(n,iVar) = VarIn_VII(iVar,i,j)
-          if(present(VarIn_VIII)) Var_IV(n,iVar) = VarIn_VIII(iVar,i,j,k)
-          if(present(VarIn_IV))   Var_IV(n,iVar) = VarIn_IV(i,iVar)
-          if(present(VarIn_IIV))  Var_IV(n,iVar) = VarIn_IIV(i,j,iVar)
-          if(present(VarIn_IIIV)) Var_IV(n,iVar) = VarIn_IIIV(i,j,k,iVar)
-       end do; end do; end do; 
-    end do
+       ! Fill in the 2D variable array using the available information
+       Var_IV = huge(1.0)
+       do iVar = 1, nVar
+          n = 0
+          do k = 1, n3; do j = 1, n2; do i = 1,n1
+             n = n + 1
+             if(present(VarIn_VI))   Var_IV(n,iVar) = VarIn_VI(iVar,i)
+             if(present(VarIn_VII))  Var_IV(n,iVar) = VarIn_VII(iVar,i,j)
+             if(present(VarIn_VIII)) Var_IV(n,iVar) = VarIn_VIII(iVar,i,j,k)
+             if(present(VarIn_IV))   Var_IV(n,iVar) = VarIn_IV(i,iVar)
+             if(present(VarIn_IIV))  Var_IV(n,iVar) = VarIn_IIV(i,j,iVar)
+             if(present(VarIn_IIIV)) Var_IV(n,iVar) = VarIn_IIIV(i,j,k,iVar)
+          end do; end do; end do; 
+       end do
 
-    ! Check if all variables were set
-    if(any(Var_IV == huge(1.0))) call CON_stop(NameSub // & 
-         ' variables were not defined')
+       ! Check if all variables were set
+       if(any(Var_IV == huge(1.0))) call CON_stop(NameSub // & 
+            ' variables were not defined')
+    end if
 
     select case(TypeFile)
+    case('hdf5')
+       call losHdf5PlotWrite(NameFile,TypePosition, TypeStatus, StringHeader,&
+            nStep,nBlocksPerProc(iProcL),nBlkUsedGlobal, procBlkOffset(iProcL), Time, nDimOut, nParam, nVar,&
+            nBlkD(1:nDim), NameVar, PlotVarNameList,hdfUnits, CoordMinIn_D, CoordMaxIn_D, &
+            iCoordMin, coordinateH5Block, hdf5VarIn, codeVersionAtt, mpiComm, iProcL, numProcs)
+       deallocate(procBlkOffset)
+       deallocate(iCoordMin)
+       deallocate(coordinateH5Block)
+       deallocate(hdf5VarIn)
+       deallocate(nBlocksPerProc)
+       deallocate(Param_I)
     case('formatted', 'ascii')
        open(UnitTmp_, file=NameFile, &
             position = TypePosition, status=TypeStatus, iostat=iError)
@@ -272,7 +427,8 @@ contains
           n = n + 1
           write(UnitTmp_, "(100es18.10)") Coord_ID(n,:), Var_IV(n, :) 
        end do; end do; end do
-
+       close(UnitTmp_)
+       deallocate(Param_I, Coord_ID, Var_IV)
     case('real8')
        open(UnitTmp_, file=NameFile, form='unformatted', &
             position = TypePosition, status=TypeStatus, iostat=iError)
@@ -289,6 +445,8 @@ contains
        do iVar = 1, nVar
           write(UnitTmp_) Var_IV(:,iVar)
        end do
+       close(UnitTmp_)
+       deallocate(Param_I, Coord_ID, Var_IV)
     case('real4')
        open(UnitTmp_, file=NameFile, form='unformatted', &
             position = TypePosition, status=TypeStatus, iostat=iError)
@@ -314,12 +472,14 @@ contains
           write(UnitTmp_) Var4_I
        end do
        deallocate(Var4_I)
+       close(UnitTmp_)
     case default
        call CON_stop(NameSub // ' unknown TypeFile =' // trim(TypeFile))
+       close(UnitTmp_)
+       deallocate(Param_I, Coord_ID, Var_IV)
     end select
-    close(UnitTmp_)
 
-    deallocate(Param_I, Coord_ID, Var_IV)
+
 
   end subroutine save_plot_file
 
@@ -391,10 +551,10 @@ contains
     !---------------------------------------------------------------------
     iUnit = UnitTmp_
     if(present(iUnitIn)) iUnit = iUnitIn
-    
+
     TypeFile = 'ascii'
     if(present(TypeFileIn)) TypeFile = TypeFileIn
-    
+
     if(DoReadHeader) call read_header
     DoReadHeader = .false.
 
@@ -402,7 +562,7 @@ contains
     if(.not. (present(VarOut_VI) .or. present(VarOut_VII) &
          .or. present(VarOut_VIII).or. present(VarOut_IV)&
          .or. present(VarOut_IIV).or. present(VarOut_IIIV))) RETURN
-    
+
     ! If data is read, next header needs to be read
     DoReadHeader = .true.
 
@@ -575,12 +735,12 @@ contains
     integer, parameter:: nTest = 15
     character(len=5)  :: TypeFileIn_I(nTest) = &
          (/ 'ascii', 'real8', 'real4', 'ascii', 'real8', 'real4', &
-            'ascii', 'real8', 'real4', 'ascii', 'real8', 'real4', &
-            'ascii', 'real8', 'real4' /)
+         'ascii', 'real8', 'real4', 'ascii', 'real8', 'real4', &
+         'ascii', 'real8', 'real4' /)
     logical           :: IsCartesianIn_I(nTest) = &
          (/ .true.,   .true., .true.,  .false.,   .false., .false.,&
-            .true.,   .true., .true.,  .false.,   .false., .false.,&
-            .true., .false., .false. /)
+         .true.,   .true., .true.,  .false.,   .false., .false.,&
+         .true., .false., .false. /)
 
     ! Input and output of tests
     character(len=80)    :: NameFile
@@ -694,30 +854,30 @@ contains
                nDimIn         = nDimIn,         &
                CoordIn_DIII   = CoordIn_DIII,   &
                VarIn_VIII     = VarIn_VIII)
-       
+
        end select
-       
+
        if(iTest == 13 .or. iTest == 14 .or. iTest == 15)then
           ! Read header and data separately
           call read_plot_file(NameFile,        &
-            TypeFileIn      = TypeFileIn,      &
-            StringHeaderOut = StringHeaderOut, &
-            nStepOut        = nStepOut,        &
-            TimeOut         = TimeOut,         &
-            nDimOut         = nDimOut,         &
-            nParamOut       = nParamOut,       &
-            nVarOut         = nVarOut,         &
-            ParamOut_I      = ParamOut_I,      &
-            NameVarOut      = NameVarOut,      &
-            IsCartesianOut  = IsCartesianOut)
+               TypeFileIn      = TypeFileIn,      &
+               StringHeaderOut = StringHeaderOut, &
+               nStepOut        = nStepOut,        &
+               TimeOut         = TimeOut,         &
+               nDimOut         = nDimOut,         &
+               nParamOut       = nParamOut,       &
+               nVarOut         = nVarOut,         &
+               ParamOut_I      = ParamOut_I,      &
+               NameVarOut      = NameVarOut,      &
+               IsCartesianOut  = IsCartesianOut)
           call read_plot_file(NameFile,        &
-            TypeFileIn      = TypeFileIn,      &
-            CoordOut_DII    = CoordOut_DII,    &
-            Coord1Out_I     = Coord1Out_I,     &
-            Coord2Out_I     = Coord2Out_I,     &
-            CoordMinOut_D   = CoordMinOut_D,   &
-            CoordMaxOut_D   = CoordMaxOut_D,   &
-            VarOut_VII      = VarOut_VII)
+               TypeFileIn      = TypeFileIn,      &
+               CoordOut_DII    = CoordOut_DII,    &
+               Coord1Out_I     = Coord1Out_I,     &
+               Coord2Out_I     = Coord2Out_I,     &
+               CoordMinOut_D   = CoordMinOut_D,   &
+               CoordMaxOut_D   = CoordMaxOut_D,   &
+               VarOut_VII      = VarOut_VII)
        else
           call read_plot_file(NameFile,        &
                TypeFileIn      = TypeFileIn,      &
@@ -768,79 +928,79 @@ contains
           write(*,*)'ParamIn=', ParamIn_I,' ParamOut=', ParamOut_I(1:nParamIn)
           call CON_stop(NameSub)
        end if
-       
+
        if(IsCartesianOut .neqv. IsCartesianIn)then
           write(*,*)'IsCartesianIn, Out=', IsCartesianIn, IsCartesianOut
           call CON_stop(NameSub)
        end if
- 
+
        if(NameVarOut /= NameVarIn)then
-             write(*,*)'NameVarIn=', NameVarIn,' NameVarOut=', NameVarOut
-             call CON_stop(NameSub)
-          end if
-       
+          write(*,*)'NameVarIn=', NameVarIn,' NameVarOut=', NameVarOut
+          call CON_stop(NameSub)
+       end if
+
        !To simplify, replace the 3D input array with 2D 
        if(iTest > 6)then
           CoordIn_DII = CoordIn_DIII(:,:,1,:)
           VarIn_VII = VarIn_VIII(:,:,1,:)
-       end if 
+       end if
        do j = 1, n2In; do i = 1, n1In
           if(any(abs(CoordIn_DII(:,i,j) - CoordOut_DII(:,i,j)) > Eps))then
-              write(*,*)'i,j=', i, j
-              write(*,*)'CoordIn =', CoordIn_DII(:,i,j)
-              write(*,*)'CoordOut=', CoordOut_DII(:,i,j)
-              call CON_stop(NameSub)
-           end if
-           if(abs(CoordIn_DII(1,i,j) - Coord1Out_I(i)) > Eps )then
-              write(*,*)'i,j=', i, j
-              write(*,*)'CoordIn(1)=', CoordIn_DII(1,i,j)
-              write(*,*)'Coord1Out =', Coord1Out_I(i)
-              call CON_stop(NameSub)
-           end if
-           if(abs(CoordIn_DII(2,i,j) - Coord2Out_I(j)) > Eps )then
-              write(*,*)'i,j=', i, j
-              write(*,*)'CoordIn(2)=', CoordIn_DII(2,i,j)
-              write(*,*)'Coord2Out =', Coord2Out_I(j)
-              call CON_stop(NameSub)
-           end if
-           if(any(abs(VarIn_VII(:,i,j) - VarOut_VII(:,i,j)) > Eps))then
-              write(*,*)'i,j=', i, j
-              write(*,*)'VarIn =', VarIn_VII(:,i,j)
-              write(*,*)'VarOut=', VarOut_VII(:,i,j)
-              call CON_stop(NameSub)
-           end if
-           if(any(abs(VarIn_IIV(i,j,:) - VarOut_VII(:,i,j)) > Eps))then
-              write(*,*)'i,j=', i, j
-              write(*,*)'VarIn =', VarIn_IIV(i,j,:)
-              write(*,*)'VarOut=', VarOut_VII(:,i,j)
-              call CON_stop(NameSub)
-           end if
-        end do; end do
+             write(*,*)'i,j=', i, j
+             write(*,*)'CoordIn =', CoordIn_DII(:,i,j)
+             write(*,*)'CoordOut=', CoordOut_DII(:,i,j)
+             call CON_stop(NameSub)
+          end if
+          if(abs(CoordIn_DII(1,i,j) - Coord1Out_I(i)) > Eps )then
+             write(*,*)'i,j=', i, j
+             write(*,*)'CoordIn(1)=', CoordIn_DII(1,i,j)
+             write(*,*)'Coord1Out =', Coord1Out_I(i)
+             call CON_stop(NameSub)
+          end if
+          if(abs(CoordIn_DII(2,i,j) - Coord2Out_I(j)) > Eps )then
+             write(*,*)'i,j=', i, j
+             write(*,*)'CoordIn(2)=', CoordIn_DII(2,i,j)
+             write(*,*)'Coord2Out =', Coord2Out_I(j)
+             call CON_stop(NameSub)
+          end if
+          if(any(abs(VarIn_VII(:,i,j) - VarOut_VII(:,i,j)) > Eps))then
+             write(*,*)'i,j=', i, j
+             write(*,*)'VarIn =', VarIn_VII(:,i,j)
+             write(*,*)'VarOut=', VarOut_VII(:,i,j)
+             call CON_stop(NameSub)
+          end if
+          if(any(abs(VarIn_IIV(i,j,:) - VarOut_VII(:,i,j)) > Eps))then
+             write(*,*)'i,j=', i, j
+             write(*,*)'VarIn =', VarIn_IIV(i,j,:)
+             write(*,*)'VarOut=', VarOut_VII(:,i,j)
+             call CON_stop(NameSub)
+          end if
+       end do; end do
 
-        if(abs(CoordMinOut_D(1) -  minval(CoordIn_DII(1,:,:))) >Eps)then
-           write(*,*)'CoordMinOut_D(1)     =',CoordMinOut_D(1)
-           write(*,*)'minval(CoordIn_DII(1)=',minval(CoordIn_DII(1,:,:))
-           call CON_stop(NameSub)
-        end if
-        if(abs(CoordMinOut_D(2) -  minval(CoordIn_DII(2,:,:))) > Eps)then
-           write(*,*)'CoordMinOut_D(2)     =',CoordMinOut_D(2)
-           write(*,*)'minval(CoordIn_DII(2)=',minval(CoordIn_DII(2,:,:))
-           call CON_stop(NameSub)
-        end if
-        if(abs(CoordMaxOut_D(1) -  maxval(CoordIn_DII(1,:,:))) > Eps )then
-           write(*,*)'CoordMaxOut_D(1)     =',CoordMaxOut_D(1)
-           write(*,*)'maxval(CoordIn_DII(1)=',maxval(CoordIn_DII(1,:,:))
-           call CON_stop(NameSub)
-        end if
-        if(abs(CoordMaxOut_D(2) - maxval(CoordIn_DII(2,:,:))) >Eps)then
-           write(*,*)'CoordMaxOut_D(2)     =',CoordMaxOut_D(2)
-           write(*,*)'maxval(CoordIn_DII(2)=',maxval(CoordIn_DII(2,:,:))
-           call CON_stop(NameSub)
-        end if
+       if(abs(CoordMinOut_D(1) -  minval(CoordIn_DII(1,:,:))) >Eps)then
+          write(*,*)'CoordMinOut_D(1)     =',CoordMinOut_D(1)
+          write(*,*)'minval(CoordIn_DII(1)=',minval(CoordIn_DII(1,:,:))
+          call CON_stop(NameSub)
+       end if
+       if(abs(CoordMinOut_D(2) -  minval(CoordIn_DII(2,:,:))) > Eps)then
+          write(*,*)'CoordMinOut_D(2)     =',CoordMinOut_D(2)
+          write(*,*)'minval(CoordIn_DII(2)=',minval(CoordIn_DII(2,:,:))
+          call CON_stop(NameSub)
+       end if
+       if(abs(CoordMaxOut_D(1) -  maxval(CoordIn_DII(1,:,:))) > Eps )then
+          write(*,*)'CoordMaxOut_D(1)     =',CoordMaxOut_D(1)
+          write(*,*)'maxval(CoordIn_DII(1)=',maxval(CoordIn_DII(1,:,:))
+          call CON_stop(NameSub)
+       end if
+       if(abs(CoordMaxOut_D(2) - maxval(CoordIn_DII(2,:,:))) >Eps)then
+          write(*,*)'CoordMaxOut_D(2)     =',CoordMaxOut_D(2)
+          write(*,*)'maxval(CoordIn_DII(2)=',maxval(CoordIn_DII(2,:,:))
+          call CON_stop(NameSub)
+       end if
 
-     end do
+    end do
 
-     ! Test using defaults for 2D input array
+    ! Test using defaults for 2D input array
     NameFile = 'test_plot_file16.out'       
     call save_plot_file(NameFile, VarIn_VII=VarIn_VII, CoordIn_DII=CoordIn_DII)
 
@@ -864,7 +1024,7 @@ contains
     ! Test using defaults for 3D input array
     NameFile = 'test_plot_file17.out'       
     call save_plot_file(NameFile,nDimIn = nDimIn, VarIn_VIII = VarIn_VIII,&
-                        CoordIn_DIII = CoordIn_DIII)
+         CoordIn_DIII = CoordIn_DIII)
 
     ! Read header info
     call read_plot_file(NameFile, &
@@ -882,8 +1042,8 @@ contains
        write(*,*) 'n1In, n2In=', n1In, n2In
        write(*,*) 'nOut_D    =',nOut_D
        call CON_stop(NameSub)
-    end if    
-    
+    end if
+
 
     ! Now that we have the dimensions, we could allocate coordinate and
     ! variable arrays and read them

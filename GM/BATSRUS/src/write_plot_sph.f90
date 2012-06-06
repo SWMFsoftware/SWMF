@@ -69,21 +69,21 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
      do j=1,nphi
         phi_plot = (j-1)*dphi_plot
 
-       
-!!SAVE  The following code was originally used to write out the spherical plot
-!!SAVE  files in a tilted frame which is the same as the ionosphere frame.
-!!SAVE  In order to allow spherical and x,y,z cuts and 3d files to exist in
-!!SAVE  the same coordiate system, this is changed so that the spherical plots
-!!SAVE  are written in the BATSRUS cartesian system.
-!!SAVE
-!!SAVE        ! get the coordinates in the tilted frame (same as the ionosphere)
-!!SAVE        x = rplot*sin(theta_plot)*cos(phi_plot)
-!!SAVE        y = rplot*sin(theta_plot)*sin(phi_plot)
-!!SAVE        z = rplot*cos(theta_plot)
-!!SAVE        xyz(1) = x; xyz(2) = y; xyz(3) = z
-!!SAVE        ! rotate these into the correct magnetospheric coordinates
-!!SAVE        call Rotate_into_Magneto(xyz, ThetaTilt)
-!!SAVE        x = xyz(1); y = xyz(2); z = xyz(3)
+
+        !!SAVE  The following code was originally used to write out the spherical plot
+        !!SAVE  files in a tilted frame which is the same as the ionosphere frame.
+        !!SAVE  In order to allow spherical and x,y,z cuts and 3d files to exist in
+        !!SAVE  the same coordiate system, this is changed so that the spherical plots
+        !!SAVE  are written in the BATSRUS cartesian system.
+        !!SAVE
+        !!SAVE        ! get the coordinates in the tilted frame (same as the ionosphere)
+        !!SAVE        x = rplot*sin(theta_plot)*cos(phi_plot)
+        !!SAVE        y = rplot*sin(theta_plot)*sin(phi_plot)
+        !!SAVE        z = rplot*cos(theta_plot)
+        !!SAVE        xyz(1) = x; xyz(2) = y; xyz(3) = z
+        !!SAVE        ! rotate these into the correct magnetospheric coordinates
+        !!SAVE        call Rotate_into_Magneto(xyz, ThetaTilt)
+        !!SAVE        x = xyz(1); y = xyz(2); z = xyz(3)
 
         ! get the cartesian coordinate from the spherical coordinates
         x = rplot*sin(theta_plot)*cos(phi_plot)
@@ -95,7 +95,7 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
              y >= yy1 .and. y < yy2 .and. &
              z >= zz1 .and. z < zz2 ) then
 
-           !compute the interpolated values at the current location.
+       !compute the interpolated values at the current location.
 
            PointVar=0.0
 
@@ -118,14 +118,14 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
            do iVar=1,nPlotVar
               PointVar(iVar) = &
                    dx1*(   dy1*(   dz1*PlotVar(i2,j2,k2,iVar)+&
-                                   dz2*PlotVar(i2,j2,k1,iVar))+&
-                           dy2*(   dz1*PlotVar(i2,j1,k2,iVar)+&
-                                   dz2*PlotVar(i2,j1,k1,iVar)))+&
+                   dz2*PlotVar(i2,j2,k1,iVar))+&
+                   dy2*(   dz1*PlotVar(i2,j1,k2,iVar)+&
+                   dz2*PlotVar(i2,j1,k1,iVar)))+&
                    dx2*(   dy1*(   dz1*PlotVar(i1,j2,k2,iVar)+&
-                                   dz2*PlotVar(i1,j2,k1,iVar))+&
-                           dy2*(   dz1*PlotVar(i1,j1,k2,iVar)+&
-                                   dz2*PlotVar(i1,j1,k1,iVar)))
-           end do 
+                   dz2*PlotVar(i1,j2,k1,iVar))+&
+                   dy2*(   dz1*PlotVar(i1,j1,k2,iVar)+&
+                   dz2*PlotVar(i1,j1,k1,iVar)))
+           end do
 
            rplot_out = rplot
            if (plot_dimensional(ifile)) rplot_out = rplot_out*No2Io_V(UnitX_)
@@ -136,8 +136,8 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
               nBLKcellsN=nBLKcellsN+1
               select case(plot_form(ifile))
               case('tec')
-                    write(unit_tmp,'(i7,i7, 30(E14.6))')&
-                         i,j,x,y,z,theta_out,phi_out,PointVar(1:nplotvar)
+                 write(unit_tmp,'(i7,i7, 30(E14.6))')&
+                      i,j,x,y,z,theta_out,phi_out,PointVar(1:nplotvar)
               case('idl')
                  dxblk = 1.0  ! just chosen to get the scaling right.  
                  ! since this is R and R is constant.
@@ -148,6 +148,8 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
                     write(unit_tmp,'(20(1pe13.5))')&
                          dxblk,rplot_out,theta_out,phi_out,PointVar(1:nplotvar)
                  endif
+              case('hdf')
+!                  call hdf5_sph_plot(i,j,x,y,z,theta_out,phi_out,PointVar(1:nplotvar))
               end select
            end if
            if (theta_plot >= (cPi/2.0-.1*dtheta_plot)) then
@@ -167,6 +169,9 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
                     write(unit_tmp2,'(20(1pe13.5))')&
                          dxblk,rplot_out,theta_out,phi_out,PointVar(1:nplotvar)
                  endif
+              case('hdf')
+!                  call hdf5_sph_plot(i,j,x,y,z,theta_out,phi_out,PointVar(1:nplotvar))
+
               end select
            end if
 
@@ -176,7 +181,7 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
   end do
 
 contains
-  
+
   real function minmod(x,y)
     real, intent(in) :: x,y
     minmod = max(cZero,min(abs(x),sign(cOne,x)*y))

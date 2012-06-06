@@ -46,6 +46,7 @@ MODULES = \
 	CON_line_extract.o\
 	CON_planet.o\
 	CON_planet_field.o\
+	ModHdf5Utils.o\
 	CON_ray_trace.o
 
 DEPEND:

@@ -16,7 +16,7 @@ subroutine write_plot_common(ifile)
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
   use ModUtilities, ONLY: lower_case, split_string
-  use BATL_lib, ONLY: calc_error_amr_criteria, &
+  use BATL_lib, ONLY: message_pass_node, calc_error_amr_criteria, &
        message_pass_node, average_grid_node, find_grid_block, &
        IsCartesianGrid, Xyz_DNB
   use ModAdvance, ONLY : State_VGB
@@ -346,10 +346,29 @@ subroutine write_plot_common(ifile)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
   end select
 
-  ! Write files for tecplot format
+  ! Write files for new tecplot format
   if(plot_form(ifile)=='tec' .and. .not.IsSphPlot)then
+     ! Fix of XYZ to be sure that "hanging" nodes are precisely on plane 
+     ! with "non-hanging" nodes.
+     ! Specifically, this fixes many grid problems for spherical plots, 
+     ! but doesn't hurt cartesian.
+     allocate(PlotXYZNodes_DNB(3,nINode,nJNode,nKNode,MaxBlock))
+     PlotXYZNodes_DNB(:,:,:,:,1:nBlock) = Xyz_DNB(:,:,:,:,1:nBlock)
 
-     ! Pass and average the plot variables
+     if(.not.IsCartesianGrid)then
+        do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
+           ! Fixing hanging nodes at resolution change
+           call  average_grid_node(iBlk, nDim, PlotXYZNodes_DNB(:,:,:,:,iBlk))
+           ! Make near zero values exactly zero
+           where(abs(PlotXYZNodes_DNB(:,:,:,:,iBlk)) < 1e-10) &
+                PlotXYZNodes_DNB(:,:,:,:,iBlk) = 0.
+        end do
+     end if
+
+     ! Now pass and average the rest of the values
+
+     ! for BATL we work on all the nplotvarmax variables
+     ! at the same sweep
      call message_pass_node(nPlotvarMax, PlotVarNodes_VNB, &
           NameOperatorIn='Mean')
 
@@ -358,30 +377,10 @@ subroutine write_plot_common(ifile)
              PlotVarNodes_VNB(:,:,:,:,iBlk))
      end do
 
-     if(IsCartesianGrid)then
-        call write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
-             Xyz_DNB, unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax)
-     else
-        ! Fix "hanging" nodes so they lie precisely on the same plane 
-        ! as "non-hanging" nodes. This is needed for non-Cartesian grids.
+     call write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
+          PlotXYZNodes_DNB, unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax)
 
-        allocate(PlotXYZNodes_DNB(3,nINode,nJNode,nKNode,MaxBlock))
-        PlotXYZNodes_DNB(:,:,:,:,1:nBlock) = Xyz_DNB(:,:,:,:,1:nBlock)
-
-        do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
-           ! Fixing hanging nodes at resolution change
-           call  average_grid_node(iBlk, nDim, PlotXYZNodes_DNB(:,:,:,:,iBlk))
-           ! Make near zero values exactly zero
-           where(abs(PlotXYZNodes_DNB(:,:,:,:,iBlk)) < 1e-10) &
-                PlotXYZNodes_DNB(:,:,:,:,iBlk) = 0.
-        end do
-        call write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
-             PlotXYZNodes_DNB, unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax)
-
-        deallocate(PlotXYZNodes_DNB)
-     end if
-
-     deallocate(PlotVarNodes_VNB)
+     deallocate(PlotXYZNodes_DNB, PlotVarNodes_VNB)
   end if
 
   if(plot_form(iFile) == 'idl' .and. .not. IsSphPlot .and. nPeCells == 0)then
@@ -515,29 +514,28 @@ contains
   !=========================================================================
   subroutine plotvar_to_plotvarnodes
     integer :: ii,jj,kk
-    integer :: nCell_NV(nI+1,nJ+1,nK+1,nPlotvarMax)
-    real    :: PlotVar_NV(nI+1,nJ+1,nK+1,nPlotvarMax)
+    integer :: nodeCount(0:nI+2,0:nJ+2,0:nK+2,nplotvarmax)
+    real    :: nodeV(0:nI+2,0:nJ+2,0:nK+2,nplotvarmax)
     real    :: r2, r2Min
     !-----------------------------------------------------------------------
     if(.not.allocated(PlotVarNodes_VNB)) then 
-       allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBLK))
+       allocate(&
+            PlotVarNodes_VNB(nplotvarmax,1:1+nI,1:1+nJ,1:1+nK,nBLK))
        PlotVarNodes_VNB = 0.0
     end if
 
     ! Initialize values
-    nCell_NV = 0; PlotVar_NV = 0.0
+    nodeCount = 0; nodeV = 0.00
 
-    ! Add physical cell values in neighboring nodes (ignore ghost cells).
-    ! Count the number of cells contributing to the node value.
-    ! Then message_pass_node will do the averaging at block boundaries.
+    ! Cell loop now skips ghost cells.  message_pass_nodes does average.
     do k=1,nK; do j=1,nJ; do i=1,nI  ! Cell loop
-       do iVar = 1, nPlotvar
+       do iVar=1,nplotvar
           if ( true_cell(i,j,k,iBLK) .or. plotvar_useBody(iVar) )then
              do kk=0,1; do jj=0,1; do ii=0,1
-                nCell_NV(i+ii,j+jj,k+kk,iVar) = &
-                     nCell_NV(i+ii,j+jj,k+kk,iVar) + 1
-                PlotVar_NV(i+ii,j+jj,k+kk,iVar) = &
-                     PlotVar_NV(i+ii,j+jj,k+kk,iVar)     + plotvar(i,j,k,iVar)
+                nodeCount(i+ii,j+jj,k+kk,iVar) = &
+                     nodeCount(i+ii,j+jj,k+kk,iVar) + 1
+                nodeV(i+ii,j+jj,k+kk,iVar) = &
+                     nodeV(i+ii,j+jj,k+kk,iVar)     + plotvar(i,j,k,iVar)
              end do; end do; end do
           end if
        end do
@@ -545,15 +543,15 @@ contains
 
     if(body1) r2Min = (0.51*min(1.0, Rbody))**2
 
-    ! Store PlotVar_NV (per block info) into PlotVarNodes_VNB
+    ! Store NodeV (per block info) into PlotVarNodes
     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1  ! Node loop
 
        if(body1) r2 = sum(Xyz_DNB(:,i,j,k,iBlk)**2)
 
        do iVar = 1, nplotvar
-          if (nCell_NV(i,j,k,iVar) > 0) then
+          if (nodeCount(i,j,k,iVar) > 0) then
              PlotVarNodes_VNB(iVar,i,j,k,iBLK) = &
-                  PlotVar_NV(i,j,k,iVar)/nCell_NV(i,j,k,iVar)
+                  nodeV(i,j,k,iVar)/nodeCount(i,j,k,iVar)
 
              ! This will zero out values otherwise true with plotvar_useBody
              ! The intent of plotvar_useBody is to fill nodes inside of the 
@@ -900,8 +898,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
         ! Calculationg all the currents only ones per block
         if(DoCurrent) then
-           ! Note that the current in the ghost cells are not 
-           ! needed for Tecplot output. Maybe needed for HDF (!).
            do k=1,nK; do j=1,nJ; do i=1,nI
               call  get_current(i, j, k, iBLK, J_DG(1:3,i,j,k))
            end do;end do;end do
