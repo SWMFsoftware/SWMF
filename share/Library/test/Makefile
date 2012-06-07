@@ -235,6 +235,7 @@ OBJ_INITIAL_STATE = \
 	../src/ModMpiInterfaces.o \
 	../src/ModUtilities.o \
 	../src/ModReadParam.o \
+	../src/ModHdf5Utils.o \
 	../src/ModPlotFile.o \
 	../src/ModInitialState.o
 
@@ -389,6 +390,7 @@ OBJ_PLOT_FILE = \
 	../src/ModIoUnit.o \
 	../src/ModMpi.o \
 	../src/ModUtilities.o \
+	../src/ModHdf5Utils.o \
 	../src/ModPlotFile.o
 
 test_plot_file_exe:
@@ -415,6 +417,7 @@ OBJ_LOOKUP_TABLE = \
 	../src/ModReadParam.o \
 	../src/ModInterpolate.o \
 	../src/ModUtilities.o \
+	../src/ModHdf5Utils.o \
 	../src/ModPlotFile.o \
 	../src/ModLookupTable.o
 
