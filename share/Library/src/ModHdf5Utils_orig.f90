@@ -65,7 +65,7 @@ contains
     call hdf5_init_file(fileID, fileName, mpiComm)
     if(fileID == -1) then
        write (*,*)  "Error: unable to initialize file"
-       call stop_mpi("unable to initialize hdf5 file")
+       call CON_stop("unable to initialize hdf5 file")
     end if
     do iVar = 1, nVar
        UnknownNameArray(iVar) = trim(PlotVarNameList(iVar))
@@ -175,7 +175,7 @@ contains
     call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, &
          RealMetaData,dimens1D, error, H5S_ALL_F, H5S_ALL_F, H5P_DEFAULT_F)
     if (error == -1)&
-         call stop_mpi(&
+         call CON_stop(&
          "error in subroutine init_grid. Error marker 3")
     call write_hdf5_attribute("Code Version", dataset, H5T_NATIVE_DOUBLE,&
          realAtt=CodeVersion)
@@ -246,7 +246,7 @@ contains
     call h5dwrite_f(dataset,H5T_NATIVE_INTEGER,IntegerMetaData,dimens1D,&
          error, H5S_ALL_F, H5S_ALL_F, H5P_DEFAULT_F)
     if (error == -1)&
-         call stop_mpi(&
+         call CON_stop(&
          "error in subroutine init_grid. Error marker 3")
     write (*,*) "closing file"
     call h5sclose_f(dataspace, error)
@@ -293,7 +293,7 @@ contains
     dimens3D(3) = globalNumBlocks
     call h5open_f(error)
     if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Rank3Real. Error marker 1")
+         call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 1")
 
     !     if (localNumBlocks == 0 .and. (.not. collectiveWrite)) return
     call h5screate_simple_f(rank, dimens3D, dataspace, error) 
@@ -308,7 +308,7 @@ contains
     end if
 
     if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Rank3Real. Error marker 2")
+         call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 2")
 
     if (localNumBlocks == 0) then
        if (collectiveWrite) then
@@ -336,18 +336,18 @@ contains
             stride = stride3D)
        !         !create the memory space
        if (error == -1)& 
-            call stop_mpi("error in subroutine writeHdf5Rank3Real. Error marker 3")
+            call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 3")
 
        dimens3D(3) = localNumBlocks
        call h5screate_simple_f(rank, dimens3D, memspace, error)
        !Write the data
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank3Real. Error marker 3")
+            call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 3")
 
        call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens3D, error, &
             mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank3Real. Error marker 5")
+            call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 5")
     end if
     call h5sclose_f(memspace,error)
     call h5pclose_f(plist_id, error)
@@ -355,7 +355,7 @@ contains
     call h5dclose_f(dataset, error)
 
     if (error == -1)& 
-         call stop_mpi("error in subroutine writeHdf5Rank3Real. Error marker 6")
+         call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 6")
 
   end subroutine writeHdf5Rank3Real
 
@@ -389,7 +389,7 @@ contains
     dimens1D(1) = globalNumBlocks
     call h5open_f(error)
     if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Rank1Integer. Error marker 1")
+         call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 1")
 
     call h5screate_simple_f(rank, dimens1D, dataspace, error) 
     !create the dataset
@@ -417,7 +417,7 @@ contains
        end if
     else
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank1Integer. Error marker 2")
+            call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 2")
 
        start1D(1) = localOffset 
        stride1D(:) = 1
@@ -428,20 +428,20 @@ contains
             stride = stride1D)
        !         !create the memory space
        if (error == -1)& 
-            call stop_mpi("error in subroutine writeHdf5Rank1Integer. Error marker 3")
+            call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 3")
 
        dimens1D(1) = localNumBlocks
        call h5screate_simple_f(rank, dimens1D, memspace, error)
        !Write the data
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank1Integer. Error marker 4")
+            call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 4")
 
        call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, dataBuff, dimens1D, error, &
             mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
 
 
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank1Integer. Error marker 5")
+            call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 5")
     end if
     call h5sclose_f(memspace,error)
     call h5pclose_f(plist_id, error)
@@ -449,7 +449,7 @@ contains
     call h5dclose_f(dataset, error)
 
     if (error == -1)& 
-         call stop_mpi("error in subroutine writeHdf5Rank1Integer. Error marker 6")
+         call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 6")
 
   end subroutine writeHdf5Rank1Integer
 
@@ -484,7 +484,7 @@ contains
     dimens1D(1) = globalNumBlocks
     call h5open_f(error)
     if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 1")
+         call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 1")
 
     call h5screate_simple_f(rank, dimens1D, dataspace, error) 
     !create the dataset
@@ -519,7 +519,7 @@ contains
        end if
     else
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 2")
+            call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 2")
 
        start1D(1) = localOffset 
        stride1D(:) = 1
@@ -530,20 +530,20 @@ contains
             stride = stride1D)
        !         !create the memory space
        if (error == -1)& 
-            call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 3")
+            call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 3")
 
        dimens1D(1) = localNumBlocks
        call h5screate_simple_f(rank, dimens1D, memspace, error)
        !Write the data
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 4")
+            call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 4")
 
        call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens1D, error, &
             mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
 
 
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 5")
+            call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 5")
     end if
     call h5sclose_f(memspace,error)
     call h5pclose_f(plist_id, error)
@@ -551,7 +551,7 @@ contains
     call h5dclose_f(dataset, error)
 
     if (error == -1)& 
-         call stop_mpi("error in subroutine writeHdf5Rank1Real. Error marker 6")
+         call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 6")
 
   end subroutine writeHdf5Rank1Real
 
@@ -587,7 +587,7 @@ contains
     call h5open_f(error)
     if (error == -1) &
          
-         call stop_mpi("error in subroutine writeHdf5Rank2Integer. Error marker 1")
+         call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 1")
 
     !     if (localNumBlocks == 0 .and. (.not. collectiveWrite)) return
     call h5screate_simple_f(rank, dimens2D, dataspace, error) 
@@ -616,7 +616,7 @@ contains
        end if
     else
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank2Integer. Error marker 2")
+            call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 2")
 
        start2d(1) = 0
        start2D(2) = localOffset 
@@ -629,18 +629,18 @@ contains
             stride = stride2D)
        !         !create the memory space
        if (error == -1)& 
-            call stop_mpi("error in subroutine writeHdf5Rank2Integer. Error marker 3")
+            call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 3")
 
        dimens2D(2) = localNumBlocks
        call h5screate_simple_f(rank, dimens2D, memspace, error)
        !Write the data
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank2Integer. Error marker 4")
+            call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 4")
 
        call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, dataBuff, dimens2D, error, &
             mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank2Integer. Error marker 5")
+            call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 5")
     end if
 
     call h5sclose_f(memspace,error)
@@ -649,7 +649,7 @@ contains
     call h5dclose_f(dataset, error)
 
     if (error == -1)& 
-         call stop_mpi("error in subroutine writeHdf5Rank2Integer. Error marker 6")
+         call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 6")
 
   end subroutine writeHdf5Rank2Integer
 
@@ -685,7 +685,7 @@ contains
     call h5open_f(error)
     if (error == -1) &
          
-         call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 1")
+         call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 1")
     !     if (localNumBlocks == 0 .and. (.not. collectiveWrite)) return
 
     call h5screate_simple_f(rank, dimens2D, dataspace, error) 
@@ -714,7 +714,7 @@ contains
        end if
     else
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 2")
+            call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 2")
 
        start2d(1) = 0
        start2D(2) = localOffset 
@@ -727,18 +727,18 @@ contains
             stride = stride2D)
        !         !create the memory space
        if (error == -1)& 
-            call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 3")
+            call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 3")
 
        dimens2D(2) = localNumBlocks
        call h5screate_simple_f(rank, dimens2D, memspace, error)
        !Write the data
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 4")
+            call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 4")
 
        call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens2D, error, &
             mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 5")
+            call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 5")
     end if
 
     call h5sclose_f(memspace,error)
@@ -747,7 +747,7 @@ contains
     call h5dclose_f(dataset, error)
 
     if (error == -1)& 
-         call stop_mpi("error in subroutine writeHdf5Rank2Real. Error marker 6")
+         call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 6")
 
   end subroutine writeHdf5Rank2Real
 
@@ -779,7 +779,7 @@ contains
          access_prp = accTemplate)
     CALL h5pclose_f(accTemplate, error)
     if (error == -1) &
-         call stop_mpi(&
+         call CON_stop(&
          "error in subroutine hdf5_init_file. Error marker 1")
 
     if (error == -1) fileID = -1
@@ -808,18 +808,18 @@ contains
     call h5tcopy_f(H5T_NATIVE_CHARACTER, datatype, error)
     call h5tset_size_f(datatype, sizeString, error)
     if (error == -1) &
-         call stop_mpi(&
+         call CON_stop(&
          "error in subroutine writeHdf5Header. Error marker 10")
     call h5screate_simple_f(rank, dimens1D, dataspace, error)
     call h5dcreate_f(&
          fileID, description, datatype, dataspace, dataset, error)
     if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Header. Error marker 11")
+         call CON_stop("error in subroutine writeHdf5Header. Error marker 11")
 
     call h5dwrite_f(dataset, datatype, databuff, dimens1D, error, H5S_ALL_F,&
          H5S_ALL_F, H5P_DEFAULT_F)
     if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Header. Error marker 11")
+         call CON_stop("error in subroutine writeHdf5Header. Error marker 11")
 
 
 
@@ -828,7 +828,7 @@ contains
     call h5dclose_f(dataset, error)
 
     if (error == -1)& 
-         call stop_mpi(&
+         call CON_stop(&
          "error in subroutine writeHdf5Header. Error marker 13")
   end subroutine write_plot_string
 
@@ -870,7 +870,7 @@ contains
     dimens4D(4) = globalNumBlocks
     call h5open_f(error)
     if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Rank4Real. Error marker 1")
+         call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 1")
 
 
     call h5screate_simple_f(rank, dimens4D, dataspace, error) 
@@ -885,7 +885,7 @@ contains
     end if
 
     if (error == -1) &
-         call stop_mpi("error in subroutine writeHdf5Rank4Real. Error marker 2")
+         call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 2")
 
     if (minMax) then
        call write_hdf5_attribute("minimum", dataset, H5T_NATIVE_DOUBLE, realAtt = vMin)
@@ -918,17 +918,17 @@ contains
             stride = stride4D)
        !         !create the memory space
        if (error == -1)& 
-            call stop_mpi("error in subroutine writeHdf5Rank4Real. Error marker 3")
+            call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 3")
 
        dimens4D(4) = localNumBlocks
        call h5screate_simple_f(rank, dimens4D, memspace, error)
        !Write the data
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank4Real. Error marker 4")
+            call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 4")
        call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens4D, error, &
             mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
        if (error == -1) &
-            call stop_mpi("error in subroutine writeHdf5Rank4Real. Error marker 5")
+            call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 5")
     end if
 
     call h5sclose_f(memspace,error)
@@ -937,7 +937,7 @@ contains
     call h5dclose_f(dataset, error)
 
     if (error == -1)& 
-         call stop_mpi("error in subroutine writeHdf5Rank4Real. Error marker 6")
+         call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 6")
 
   end subroutine writeHdf5Rank4Real
 
