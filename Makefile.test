@@ -283,6 +283,7 @@ test2:
 
 test2_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -o=SC:u=Sc,e=MhdCorona -o=IH:u=Ih,e=Mhd
 	./Config.pl -g=SC:4,4,4,3200,1,IH:8,8,8,400,1
 	${MAKE} SWMF PIDL EARTH_TRAJ
 
