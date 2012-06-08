@@ -12,9 +12,9 @@ spherical_lnr		TypeGeometry
 -64.                    z1
  64.                    z2
 
-#LIMITGENCOORD1
-0.248073                rMin = alog(1.281553)
-4.88234			rMax = alog(sqrt(64^2+96^2+64^2))
+#LIMITRADIUS
+1.2815534821		RadiusMin
+131.9390403		RadiusMax
 
 #GRIDLEVEL
 1			nLevelArea
