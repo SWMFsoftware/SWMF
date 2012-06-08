@@ -15,9 +15,6 @@ Halley
 #IOUNITS
 PLANETARY
 
-#DIPOLE
-0.0			DipoleStrength
-
 #ROTATION 
 F
 
@@ -60,12 +57,6 @@ T                       UseBody (rest of parameters read if true)
 .0                     rCurrents
 5.0e4                     BodyRhoDim (/ccm) density for fixed BC for rho_BLK
 200.0                 BodyTDim (K) temperature for fixed BC for P_BLK
-
-#DIPOLE
-0.0
-F
-0.
-0.
 
 #USERFLAGS
 F            			UseUserInnerBcs

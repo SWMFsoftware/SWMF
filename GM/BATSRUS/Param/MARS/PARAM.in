@@ -7,14 +7,8 @@ SOLARWIND		TypeNormalization
 #DESCRIPTION
 Mars test
 
-#VERTEXBASEDGRID
-F			UseVertexBasedGrid
-
 #PLANET
 Mars			NamePlanet
-
-#DIPOLE
-0.0			DipoleStrength
 
 #ROTATION 
 F			UseRotation
@@ -27,9 +21,9 @@ T			UseGravity
 Param/MARS/Grid
 
 #TESTXYZ
-1.2
-0.1
-0.1
+1.2			xTest
+0.1			yTest
+0.1			zTest
 
 #BODY
 T			UseBody

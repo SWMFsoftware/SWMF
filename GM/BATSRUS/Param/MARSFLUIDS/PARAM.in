@@ -7,9 +7,6 @@ SOLARWIND
 #DESCRIPTION
 Mars test
 
-#COVARIANTGEOMETRY
-spherical_lnr		TypeGeometry
-
 #PLANET
 Mars			NamePlanet
 
@@ -19,6 +16,9 @@ F			UseRotation
 #GRAVITY
 T			UseGravity
 0			iDirGravity
+
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
 
 #GRID
 2                     nRootBlockX
@@ -33,21 +33,21 @@ T			UseGravity
 
 #LIMITRADIUS
 1.029884232197		rMin
-32.9849					rMax = sqrt(24^2+16^2+16^2)
+32.9849			rMax = sqrt(24^2+16^2+16^2)
 
 #GRIDLEVEL
 3			nLevelArea
-initial					NameArea
+initial			NameArea
 
 #GRIDLEVEL
 1			nLevelArea
-sphere0					NameArea
-1.7							Radius = 1.5*rBody
+sphere0			NameArea
+1.7			Radius
 
 GRIDLEVEL
 3			nLevelArea
-sphere0					NameArea
-1.3							Radius = 1.3*rBody
+sphere0			NameArea
+1.3			Radius
 
 #POINTIMPLICIT
 T			UsePointImplicit	

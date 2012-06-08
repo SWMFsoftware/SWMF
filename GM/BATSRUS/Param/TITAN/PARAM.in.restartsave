@@ -7,17 +7,8 @@ SOLARWIND
 #DESCRIPTION
 Titan test
 
-#VERTEXBASEDGRID
-T			UseVertexBasedGrid
-
-#COVARIANTGEOMETRY
-spherical_lnr		TypeGeometry
-
 #PLANET
 Titan			NamePlanet
-
-#DIPOLE
-0.0			DipoleStrength
 
 #ROTATION 
 F			UseRotation

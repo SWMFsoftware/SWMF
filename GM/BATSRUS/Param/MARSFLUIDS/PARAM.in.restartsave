@@ -7,19 +7,8 @@ SOLARWIND
 #DESCRIPTION
 Mars test
 
-#VERTEXBASEDGRID
-T			UseVertexBasedGrid
-
-#COVARIANTGEOMETRY
-spherical_lnr		TypeGeometry
-
-
 #PLANET
 Mars			NamePlanet
-
-#DIPOLE
-0.0			DipoleStrength
-
 
 #ROTATION 
 F			UseRotation
@@ -28,6 +17,8 @@ F			UseRotation
 T			UseGravity
 0			iDirGravity
 
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
 
 #GRID
 2			nRootBlockX
