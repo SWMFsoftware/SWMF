@@ -214,7 +214,7 @@ if($NewPrecision and $NewPrecision ne $Precision){
 &set_mpi_ if $NewMpi and $NewMpi ne $Mpi;
 
 # Link with HDF5 library is required
-&set_hdf5_ if $NewHdf5 and $NewHdf5 ne $Hdf5;
+&set_hdf5_ if $Install or $NewHdf5 and $NewHdf5 ne $Hdf5;
 
 # Link with HYPRE library is required
 &set_hypre_ if $NewHypre and $NewHypre ne $Hypre;
@@ -537,6 +537,8 @@ sub set_hypre_{
 ##############################################################################
 
 sub set_hdf5_{
+
+    $NewHdf5="no" if $Install and not $NewHdf5;
 
     # Check if HDF5 module is loaded
     if($NewHdf5 eq "yes" and not `which $H5pfc`){
