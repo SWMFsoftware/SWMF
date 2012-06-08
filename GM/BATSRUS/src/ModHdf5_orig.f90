@@ -922,84 +922,42 @@ contains
     RealMetaData(iData) = Time_Simulation
     iData = iData + 1
     if (isXZero) then
-       if (plot_dimensional) then
-          RealMetaData(iData) = y1*No2Io_V(UnitX_)
+          RealMetaData(iData) = y1
           iData = iData + 1
-          RealMetaData(iData) = y2*No2Io_V(UnitX_)
+          RealMetaData(iData) = y2
           iData = iData + 1
-          RealMetaData(iData) = z1*No2Io_V(UnitX_)
+          RealMetaData(iData) = z1
           iData = iData + 1
-          RealMetaData(iData) = z2*No2Io_V(UnitX_)
-          iData = iData + 1
-          RealMetaData(iData) = 0.0
-          iData = iData + 1
-          RealMetaData(iData) = 0.0
-          iData = iData + 1
-       else
-          RealMetaData(iData) = y1!*No2Io_V(UnitX_)
-          iData = iData + 1
-          RealMetaData(iData) = y2!*No2Io_V(UnitX_)
-          iData = iData + 1
-          RealMetaData(iData) = z1!*No2Io_V(UnitX_)
-          iData = iData + 1
-          RealMetaData(iData) = z2!*No2Io_V(UnitX_)
+          RealMetaData(iData) = z2
           iData = iData + 1
           RealMetaData(iData) = 0.0
           iData = iData + 1
           RealMetaData(iData) = 0.0
           iData = iData + 1
-       end if
     else
-
-       if (plot_dimensional) then
-          do i=1,3
-             if (plotDim(i) == 1) then
-                RealMetaData(iData) = x1*No2Io_V(UnitX_)
-                iData = iData + 1
-                RealMetaData(iData) = x2*No2Io_V(UnitX_)
-                iData = iData + 1
-             else if(plotDim(i) == 2) then
-                RealMetaData(iData) = y1*No2Io_V(UnitX_)
-                iData = iData + 1
-                RealMetaData(iData) = y2*No2Io_V(UnitX_)
-                iData = iData + 1
-             else if(plotDim(i) == 3) then
-                RealMetaData(iData) = z1*No2Io_V(UnitX_)
-                iData = iData + 1
-                RealMetaData(iData) = z2*No2Io_V(UnitX_)
-                iData = iData + 1
-             else if (plotDim(i) == 0) then
-                RealMetaData(iData) = 0.0
-                iData = iData + 1
-                RealMetaData(iData) = 0.0
-                iData = iData + 1
-             end if
-          end do
-       else
-          do i=1,3
-             if (plotDim(i) == 1) then
-                RealMetaData(iData) = x1
-                iData = iData + 1
-                RealMetaData(iData) = x2
-                iData = iData + 1
-             else if(plotDim(i) == 2) then
-                RealMetaData(iData) = y1
-                iData = iData + 1
-                RealMetaData(iData) = y2
-                iData = iData + 1
-             else if(plotDim(i) == 3) then
-                RealMetaData(iData) = z1
-                iData = iData + 1
-                RealMetaData(iData) = z2
-                iData = iData + 1
-             else if (plotDim(i) == 0) then
-                RealMetaData(iData) = 0.0
-                iData = iData + 1
-                RealMetaData(iData) = 0.0
-                iData = iData + 1
-             end if
-          end do
-       end if
+      do i=1,3
+         if (plotDim(i) == 1) then
+            RealMetaData(iData) = x1
+            iData = iData + 1
+            RealMetaData(iData) = x2
+            iData = iData + 1
+         else if(plotDim(i) == 2) then
+            RealMetaData(iData) = y1
+            iData = iData + 1
+            RealMetaData(iData) = y2
+            iData = iData + 1
+         else if(plotDim(i) == 3) then
+            RealMetaData(iData) = z1
+            iData = iData + 1
+            RealMetaData(iData) = z2
+            iData = iData + 1
+         else if (plotDim(i) == 0) then
+            RealMetaData(iData) = 0.0
+            iData = iData + 1
+            RealMetaData(iData) = 0.0
+            iData = iData + 1
+         end if
+      end do
     end if
     iData = iData -1
 
