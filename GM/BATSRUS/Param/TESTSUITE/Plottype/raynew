@@ -7,6 +7,10 @@ T			UseAccurateTrace
 0.1			DtExchangeRay
 1			DnRaytrace
 
+This is only needed for plotting with accurate raytrace
+#RAYTRACELIMIT
+4000.0			RayLengthMax
+
 #SAVEPLOT
 8                       nPlotFiles
 y=0 ray idl             StringPlot
