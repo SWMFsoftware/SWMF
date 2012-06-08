@@ -1,6 +1,4 @@
-#UPSTREAM_INPUT_FILE
-T                                                     UseUpstreamInputFile
-GM/Param/TESTSUITE/Inputfiles/IMF_varying.dat            UpstreamFileName
-0.0                                                   Satellite_Y_Pos
-0.0                                                   Satellite_Z_Pos
+#SOLARWINDFILE
+T                                                     UseSolarWindFile
+GM/Param/TESTSUITE/Inputfiles/IMF_varying.dat            NameSolarWindFile
 
