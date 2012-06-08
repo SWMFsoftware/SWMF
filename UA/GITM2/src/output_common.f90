@@ -237,7 +237,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('3DION')
 
-     nvars_to_write = 8+nIons+6+4+1
+     nvars_to_write = 8+nIons+6+4+4+1
      call output_3dion(iBlock)
 
   case ('3DTHM')
@@ -586,10 +586,14 @@ contains
 
           write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "Ed1"
           write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "Ed2"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "je1"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Je1"
           write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "Je2"
           write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Magnetic Latitude"
           write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "Magnetic Longitude"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "B.F. East"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "B.F. North"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+10, " ", "B.F. Vertical"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+11, " ", "B.F. Magnitude"          
           write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "Potential"
           write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "E.F. East"
           write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "E.F. North"
@@ -933,6 +937,7 @@ subroutine output_3dion(iBlock)
 		je2(iLon,iLat,iAlt), &
                 mLatitude(iLon,iLat,iAlt,iBlock), &
                 mLongitude(iLon,iLat,iAlt,iBlock), &
+                B0(iLon,iLat,iAlt,:,iBlock), &  !Geomagnetic B0(nLons,nLats,nAlts,4[iEast_,iNorth_,iUp_,iMag_],nBlocks)
                 potential(iLon,iLat,iAlt,iBlock), &
                 EField(iLon,iLat,iAlt,:), &  ! EField(Lon,lat,alt,3)
                 sqrt(sum(EField(iLon,iLat,iAlt,:)**2))   ! magnitude of E.F.
