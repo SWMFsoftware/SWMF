@@ -606,7 +606,8 @@ sub set_optimization_{
 
 sub create_makefile_rules{
 
-    my @InFile = glob("src*/$MakefileRules.all */*/src*/$MakefileRules.all");
+    my @InFile = glob("src*/$MakefileRules.all */*/src*/$MakefileRules.all ".
+		      "../../share/Library/src*/$MakefileRules.all");
 
     return unless @InFile;
 
@@ -627,7 +628,7 @@ sub create_makefile_rules{
     my $InFile;
     foreach $InFile (@InFile){
 
-	$InFile =~ /([\w,\/]*)\//;
+	$InFile =~ /([\w\.\/]*)\//;
 	my $SrcDir = $1;
 
 	# Open Makefile.RULES.all for reading
