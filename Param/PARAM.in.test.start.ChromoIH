@@ -210,7 +210,7 @@ box_gen			NameArea
 360.0			LonMax
 90.0			LatMax
 
-#AMRCRITERIALEVEL
+AMRCRITERIALEVEL
 1			nCriteria
 currentsheet		TypeCriteria
 0.5			CoarsenLimit
@@ -342,7 +342,7 @@ shell0			NameArea
 18.0			Radius1
 21.0			Radius2
 
-#AMRCRITERIALEVEL
+AMRCRITERIALEVEL
 1			nCriteria
 currentsheet		TypeCriteria
 0.5			CoarsenLimit
