@@ -1154,9 +1154,9 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
   use ModMain,           ONLY: nI,nJ,nK,nBLK,nBlock,unusedBLK,&
        optimize_message_pass
   use ModGeometry,       ONLY: x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK, &
-       r_BLK, XyzStart_Blk
+       r_BLK, XyzStart_Blk, TypeGeometry
+  use BATL_lib,          ONLY: IsCartesianGrid, IsRLonLat
   use ModNumConst
-  use ModCovariant, ONLY: TypeGeometry             
   use ModInterpolate, ONLY: trilinear
   implicit none
 
@@ -1202,7 +1202,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
      call stop_mpi('ERROR in calc_sphere: Invalid action='//TypeAction)
   end select
 
-  if(index(TypeGeometry,'spherical') > 0)then         
+  if(IsRlonLat)then         
      ! For spherical geometry it is sufficient to 
      ! interpolate in the radial direction
 
@@ -1251,10 +1251,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
            Result = min(Average, Result)
         end select
      end do
-  elseif(TypeGeometry /= 'cartesian')then
-     call stop_mpi('ERROR in calc_sphere: Not implemented for geometry=' &
-          //TypeGeometry)
-  else                                                     
+  elseif(IsCartesianGrid)then
      ! Get the angular resolution from the input parameter nTheta
      MaxPhi = 2*nTheta
      dTheta = cPi/nTheta
@@ -1372,6 +1369,9 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
            end do
         end do
      end do
+  else
+     call stop_mpi('ERROR in calc_sphere: Not implemented for geometry=' &
+          //TypeGeometry)
   end if                                           
   ! deallocate(x_II, y_II, z_I, SinTheta_I)
 
@@ -1639,14 +1639,11 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
   ! This subroutine integrates all the state variables at the same time
   ! for the processor only.
 
-  use ModProcMH
-  use ModAdvance,   ONLY: State_VGB, P_
-  use ModMain,      ONLY: nI, nJ, nK, nBlock, MaxBlock, UnusedBLK
-  use ModVarIndexes,ONLY: nVar
-  use ModGeometry,  ONLY: cV_BLK, true_BLK, true_cell 
-  use ModGeometry,  ONLY: UseCovariant                
-  use ModGeometry,  ONLY: 
-  use ModNumConst
+  use ModAdvance,   ONLY: nVar, State_VGB, P_
+  use ModGeometry,  ONLY: true_BLK, true_cell 
+  use BATL_lib, ONLY: nI, nJ, nK, nBlock, MaxBlock, Unused_B, &
+       IsCartesian, CellVolume_B, CellVolume_GB
+
   implicit none 
 
   ! Arguments
@@ -1654,35 +1651,54 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
   real, intent(out) :: Pressure_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)
 
   ! Local variables:
-  integer :: iBlock, iVar
-
+  integer :: i, j, k, iBlock, iVar
+  real    :: CellVolume
   logical :: DoTest, DoTestMe
-
+  character(len=*), parameter:: NameSub = 'integrate_domain'
   !---------------------------------------------------------------------------
-  if(UseCovariant)then                            
-     call integrate_domain_covar(Sum_V, Pressure_GB)
-     return
-  end if                                          
-  call set_oktest('integrate_domain',DoTest, DoTestMe)
-  call timing_start('int_domain')
-  Sum_V = cZero
-                                                     
-  do iBlock = 1, nBlock
-     if(UnusedBLK(iBlock)) CYCLE
-     if(true_BLK(iBlock)) then
-        do iVar=1,nVar
-           Sum_V(iVar) = Sum_V(iVar) + &
-                sum(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock))*cV_BLK(iBlock)
-        end do
-     else
-        do iVar=1,nVar
-           Sum_V(iVar) = Sum_V(iVar) + sum(&
-                State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock),&
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))*cV_BLK(iBlock)
-        end do
-     end if
-     Pressure_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)
-  end do
-  call timing_stop('int_domain')
+  call set_oktest(NameSub, DoTest, DoTestMe)
+  call timing_start(NameSub)
+
+  Sum_V = 0.0
+
+  if(IsCartesian)then                            
+     do iBlock = 1, nBlock
+        if(Unused_B(iBlock)) CYCLE
+        if(true_BLK(iBlock)) then
+           do iVar=1,nVar
+              Sum_V(iVar) = Sum_V(iVar) + CellVolume_B(iBlock)* &
+                   sum(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock))
+           end do
+        else
+           do iVar=1,nVar
+              Sum_V(iVar) = Sum_V(iVar) + CellVolume_B(iBlock)* &
+                   sum(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock),&
+                   MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+           end do
+        end if
+        Pressure_GB(1:nI,1:nJ,1:nK,iBlock)= State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)
+     end do
+  else
+     do iBlock = 1, nBlock
+        if(Unused_B(iBlock)) CYCLE
+        if(true_BLK(iBlock)) then
+           do k=1,nK; do j=1,nJ; do i=1,nI
+              CellVolume = CellVolume_GB(i,j,k,iBlock)
+              Sum_V = Sum_V + CellVolume_GB(i,j,k,iBlock)* &
+                   State_VGB(:,i,j,k,iBlock)
+           end do; end do; end do
+        else
+           do k=1,nK; do j=1,nJ; do i=1,nI
+              if(.not.true_cell(i,j,k,iBlock))CYCLE
+              Sum_V = Sum_V + CellVolume_GB(i,j,k,iBlock)* &
+                   State_VGB(:,i,j,k,iBlock)
+           end do; end do; end do
+        end if
+        Pressure_GB(1:nI,1:nJ,1:nK,iBlock)= State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)
+     end do
+  end if
+  
+  call timing_stop(NameSub)
+
 end subroutine integrate_domain
 
