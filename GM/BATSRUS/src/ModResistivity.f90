@@ -323,7 +323,8 @@ contains
   subroutine calc_resistivity_source(iBlock)
 
     use ModMain,       ONLY: Cfl, x_
-    use ModGeometry,   ONLY: true_cell, IsRzGeometry, y_BLK
+    use ModGeometry,   ONLY: true_cell
+    use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB
     use ModCurrent,    ONLY: get_current
     use ModPhysics,    ONLY: gm1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_, Bz_
@@ -395,7 +396,7 @@ contains
 
           ! Source[Bphi] = -eta*Jz / radius
           Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
-               - Eta_GB(i,j,k,iBlock)*Current_D(x_)/y_BLK(i,j,k,iBlock)
+               - Eta_GB(i,j,k,iBlock)*Current_D(x_)/Xyz_DGB(2,i,j,k,iBlock)
        end if
     end do; end do; end do
 

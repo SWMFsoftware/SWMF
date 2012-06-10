@@ -5,10 +5,10 @@ subroutine fix_axis_cells
        BlkTest
   use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
-       x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB,&
-       r_to_gen
+       x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB
   use ModEnergy, ONLY: calc_energy_point
-  use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_
+  use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
+       IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, radius_to_gen
   use ModNumConst, ONLY: cHalfPi
   use ModMpi
 
@@ -37,12 +37,12 @@ subroutine fix_axis_cells
           Energy_GBI(iTest,jTest,kTest,BlkTest,:)
   end if
 
-  if(TypeGeometry == 'cylindrical')then
+  if(IsCylindrical)then
      call fix_axis_cells_cyl
      RETURN
   end if
 
-  if(TypeGeometry(1:3) /= 'sph') &
+  if(.not.IsRLonLat) &
        call stop_mpi(NameSub//': invalid geometry='//TypeGeometry)
 
   ! Maximum number of cells along the axis
@@ -73,10 +73,10 @@ subroutine fix_axis_cells
         CYCLE
      end if
 
-     do i=1,nI
+     do i = 1, nI
         r = r_Blk(i,1,1,iBlock)
-        if(TypeGeometry == 'spherical_lnr') r = alog(r)
-        if(TypeGeometry == 'spherical_genr') r = r_to_gen(r)
+        if(IsLogRadius) r = alog(r)
+        if(IsGenRadius) call radius_to_gen(r)
         iR = ceiling( (r - XyzMin_D(1))/MinDxValue + 0.1)
 
         ! Average small cells in the kMin:kMax ring(s)
@@ -143,8 +143,8 @@ subroutine fix_axis_cells
 
      do i = 1, nI
         r = r_Blk(i,1,1,iBlock)
-        if(TypeGeometry == 'spherical_lnr') r = alog(r)
-        if(TypeGeometry == 'spherical_genr') r = r_to_gen(r)
+        if(IsLogRadius) r = alog(r)
+        if(IsGenRadius) call radius_to_gen(r)
         iR = ceiling( (r - XyzMin_D(1))/MinDxValue + 0.1)
 
         InvVolume= 1.0/SumBuffer_VIII(Volume_,iR,Geom_,iHemisphere)

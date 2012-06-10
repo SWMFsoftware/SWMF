@@ -10,7 +10,6 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
        DoCalcElectricField
   use ModParallel,  ONLY: neiLev
   use ModGeometry,  ONLY: Body_BLK
-  use ModCovariant, ONLY: is_axial_geometry 
   use ModBlockData, ONLY: set_block_data
   use ModImplicit,  ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   use ModPhysics,   ONLY: No2Si_V, UnitT_
@@ -19,7 +18,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
        CorrectedFlux_VYB, CorrectedFlux_VZB
   use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
   use ModMessagePass, ONLY: exchange_messages
-  use BATL_lib, ONLY: message_pass_face
+  use BATL_lib, ONLY: message_pass_face, IsAnyAxis
 
   implicit none
 
@@ -147,7 +146,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
      call barrier_mpi2('expl2')
 
-     if(is_axial_geometry() .and. DoFixAxis) call fix_axis_cells
+     if(IsAnyAxis .and. DoFixAxis) call fix_axis_cells
 
      ! Check for allowable update percentage change.
      if(UseUpdateCheck)then

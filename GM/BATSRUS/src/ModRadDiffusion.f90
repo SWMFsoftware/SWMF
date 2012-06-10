@@ -449,7 +449,8 @@ contains
 
   subroutine get_impl_rad_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
-    use BATL_lib,    ONLY: message_pass_cell
+    use BATL_lib,    ONLY: message_pass_cell, IsCartesian, IsRzGeometry, &
+         CellFace_DFB
     use BATL_size,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,  ONLY: State_VGB, UseElectronPressure, nWave, WaveFirst_, &
          WaveLast_
@@ -462,8 +463,7 @@ contains
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_, &
          No2Si_V
     use ModUser,     ONLY: user_material_properties
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
-         UseCovariant, TypeGeometry, FaceAreaI_DFB, FaceAreaJ_DFB
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, TypeGeometry
     use ModParallel, ONLY: NOBLK, NeiLev
 
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
@@ -770,7 +770,7 @@ contains
           end if
        end if
 
-       if(.not.UseCovariant)then
+       if(IsCartesian)then
           Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
           do iDim = 1, nDim
              ! FaceYZ/dx = Volume/dx^2
@@ -784,13 +784,13 @@ contains
              enddo; enddo; enddo
           end do
 
-       elseif(TypeGeometry == 'rz')then
+       elseif(IsRzGeometry)then
 
           InvDx = 1.0/Dx_Blk(iBlock)
           do k=1,nK; do j=1,nJ; do i=1,nI+1
              do iDiff = 1, nDiff
                 DiffCoef_VFDB(iDiff,i,j,k,x_,iBlock) = &
-                     InvDx*FaceAreaI_DFB(x_,i,j,k,iBlock) &
+                     InvDx*CellFace_DFB(x_,i,j,k,iBlock) &
                      *DiffCoef_VFDB(iDiff,i,j,k,x_,iBlock)
              end do
           end do; end do; end do
@@ -799,12 +799,12 @@ contains
           do k=1,nK; do j=1,nJ+1; do i=1,nI
              do iDiff = 1, nDiff
                 DiffCoef_VFDB(iDiff,i,j,k,y_,iBlock) = &
-                     InvDy*FaceAreaJ_DFB(y_,i,j,k,iBlock) &
+                     InvDy*CellFace_DFB(y_,i,j,k,iBlock) &
                      *DiffCoef_VFDB(iDiff,i,j,k,y_,iBlock)
              end do
           end do; end do; end do
        else
-          call stop_mpi(NameSub//': unimplemented TypeGeometry=//TypeGeometry')
+          call stop_mpi(NameSub//': unimplemented TypeGeometry='//TypeGeometry)
        end if
     end do
 
