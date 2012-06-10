@@ -174,9 +174,9 @@ contains
     use ModAdvance, ONLY: State_VGB, Source_VC, B0_DGB, &
          bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
     use ModPhysics, ONLY: InvClight2 => Inv_C2light, ElectronTemperatureRatio
-    use ModGeometry,ONLY: UseCovariant, dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
-         FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
     use ModCoordTransform, ONLY: cross_product
+    use BATL_lib,   ONLY: IsCartesianGrid, FaceNormal_DDFB, CellVolume_GB, &
+         CellSize_DB
 
     integer, intent(in) :: iBlock
 
@@ -213,7 +213,7 @@ contains
 
        DoTestCell = DoTestMe .and. iTest==i .and. jTest==j .and. kTest==k 
        
-       vInv = vInv_CB(i,j,k,iBlock)
+       vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
 
        State_V = State_VGB(:,i,j,k,iBlock)
 
@@ -241,24 +241,24 @@ contains
        if(UseMultiIon .and. &
             (UseElectronPressure .or. ElectronTemperatureRatio > 0.0))then
 
-          if(UseCovariant)then
+          if(IsCartesianGrid)then
+             ! Gradient of Pe in Cartesian/RZ case
+             Force_D(x_) = Force_D(x_) &
+                  - (Pe_X(i+1,j,k) - Pe_X(i,j,k))/CellSize_DB(x_,iBlock)
+             Force_D(y_) = Force_D(y_) &
+                  - (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/CellSize_DB(y_,iBlock)
+             Force_D(z_) = Force_D(z_) &
+                  - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/CellSize_DB(z_,iBlock)
+          else
              ! grad Pe = (1/Volume)*Integral P_e dAreaVector over cell surface
 
              Force_D = Force_D - vInv* &
-                  ( Pe_X(i+1,j,k)*FaceAreaI_DFB(:,i+1,j,k,iBlock) &
-                  - Pe_X(i  ,j,k)*FaceAreaI_DFB(:,i  ,j,k,iBlock) &
-                  + Pe_Y(i,j+1,k)*FaceAreaJ_DFB(:,i,j+1,k,iBlock) &
-                  - Pe_Y(i,j  ,k)*FaceAreaJ_DFB(:,i,j  ,k,iBlock) &
-                  + Pe_Z(i,j,k+1)*FaceAreaK_DFB(:,i,j,k+1,iBlock) &
-                  - Pe_Z(i,j,k  )*FaceAreaK_DFB(:,i,j,k  ,iBlock) )
-          else
-             ! Gradient of Pe in Cartesian case
-             Force_D(x_) = Force_D(x_) &
-                  - (Pe_X(i+1,j,k) - Pe_X(i,j,k))/dx_BLK(iBlock)
-             Force_D(y_) = Force_D(y_) &
-                  - (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/dy_BLK(iBlock)
-             Force_D(z_) = Force_D(z_) &
-                  - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/dz_BLK(iBlock)
+                  ( Pe_X(i+1,j,k)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
+                  - Pe_X(i  ,j,k)*FaceNormal_DDFB(:,1,i  ,j,k,iBlock) &
+                  + Pe_Y(i,j+1,k)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
+                  - Pe_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock) &
+                  + Pe_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                  - Pe_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
           end if
           if(DoTestCell)write(*,*)NameSub,': after grad Pe, Force_D=', Force_D
 
