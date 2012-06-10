@@ -52,9 +52,8 @@ contains
          XyzStart_BLK
     use ModIO
     use ModNumConst
-    use ModCovariant, ONLY: is_axial_geometry          
     use ModMpi
-    use BATL_lib, ONLY : Xyz_DNB
+    use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical
 
     implicit none
 
@@ -106,7 +105,7 @@ contains
           zMin1 = zMin - cHalfMinusTiny*Dz_BLK(iBlk)
           zMax1 = zMax + cHalfMinusTiny*Dz_BLK(iBlk)
 
-          if(is_axial_geometry())then                 
+          if(IsRLonLat .or. IsCylindrical)then                 
              ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
              ySqueezed = mod(xyzStart_BLK(Phi_,iBlk),cPi)
              ! Make sure that small angles are moved to Pi degrees for y=0 cut
