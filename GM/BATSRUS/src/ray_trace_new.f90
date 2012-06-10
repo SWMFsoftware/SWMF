@@ -16,8 +16,7 @@ subroutine ray_trace_accurate
   use CON_ray_trace,  ONLY: ray_init
   use ModMain
   use ModAdvance,     ONLY: State_VGB, Bx_, Bz_, B0_DGB
-  use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, r_BLK, true_cell, &
-       XyzMax_D, XyzMin_D, x1, x2, y1, y2, z1, z2, UseCovariant
+  use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, r_BLK, true_cell
   use ModMessagePass, ONLY: exchange_messages
   use BATL_lib, ONLY: message_pass_cell
   use ModMpi
@@ -546,11 +545,12 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   use ModProcMH
   use ModNumConst, ONLY: cTiny
   use ModMain, ONLY: TypeCoordSystem, nI, nJ, nK
-  use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D,  UseCovariant, &
+  use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
        Dx_BLK, Dy_BLK, Dz_BLK, rMin_BLK, x_BLK,y_BLK,z_BLK, x1,x2,y1,y2,z1,z2
   use CON_planet, ONLY: DipoleStrength
   use ModMain,    ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   use ModMultiFLuid
+  use BATL_lib, ONLY: IsCartesianGrid, xyz_to_coord
   implicit none
 
   ! Arguments
@@ -643,7 +643,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
        XyzCur_D,XyzStart_BLK(:,iBlock),Dxyz_D)
 
   ! Set flag if checking on the ionosphere is necessary
-  if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
+  if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
      DoCheckInnerBc = Rmin_BLK(iBlock) < R_raytrace + sum(Dxyz_D)
   else
      DoCheckInnerBc = Rmin_BLK(iBlock) < 1.2*R_raytrace
@@ -662,13 +662,13 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   ! Go out to the block interface at the edges of the computational domain
   where(XyzStart_BLK(:,iBlock)+Dxyz_D*(xmax-1.0) > XyzMax_D)xmax = xmax - 0.5
   where(XyzStart_BLK(:,iBlock)+Dxyz_D*(xmin-1.0) < XyzMin_D)xmin = xmin + 0.5
-  if(UseCovariant)then
+  if(.not.IsCartesianGrid)then
      xmin(2)=0.0;  xmax(2)=nJ+1.0
      xmin(3)=0.0;  xmax(3)=nK+1.0
   end if
 
   ! Step size limits
-  if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
+  if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
      dlMax = 1.0
      dlMin = 0.05
      dlTiny= 1.e-6
@@ -706,7 +706,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
 
      ! Half step
      call interpolate_b(IjkIni_D, b_D, bNormIni_D)
-     if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
+     if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
         IjkMid_D = IjkIni_D + 0.5*dl*bNormIni_D
         XyzMid_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(IjkMid_D - 1.)
      else
@@ -784,7 +784,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
            dl = sign(max(dlMin,abs(dl)/(dxRel+0.001)),dl)
 
            ! New mid point using the reduced dl
-           if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
+           if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
               IjkMid_D = IjkIni_D + 0.5*dl*bNormIni_D
               XyzMid_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(IjkMid_D - 1.)
            else
@@ -845,7 +845,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
 
      ! Update position after the full step
      if(.not.IsWall)then
-        if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
+        if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
            IjkCur_D = IjkIni_D + bNormMid_D*dl
            XyzCur_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(IjkCur_D - 1.)
         else
@@ -864,7 +864,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
      nSegment = nSegment + 1
 
      ! Step size in MH units  !!! Use simpler formula for cubic cells ???
-     if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
+     if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
         dLength = abs(dl)*sqrt( sum((bNormMid_D*Dxyz_D)**2) )
      else
         dLength = sqrt( (abs(XyzCur_D(1)-XyzIni_D(1)))**2 &
@@ -1042,7 +1042,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
      ! Check if the ray hit the wall of the control volume
      if(any(IjkCur_D<xmin) .or. any(IjkCur_D>xmax))then
         ! Compute generalized coords without pole or edge wrapping
-        call xyz_to_gen(XyzCur_D,Gen_D)
+        call xyz_to_coord(XyzCur_D,Gen_D)
 
         if(any(Gen_D < XyzMin_D) .or. any(Gen_D > XyzMax_D))then
            iFace = ray_open_
@@ -1054,7 +1054,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
         EXIT FOLLOW
      end if
 
-     if(UseCovariant)then
+     if(.not.IsCartesianGrid)then
         ! Can also hit wall if spherical before reaching xmin,xmax
         if(  XyzCur_D(1)<x1 .or. XyzCur_D(2)<y1 .or. XyzCur_D(3)<z1 .or. &
              XyzCur_D(1)>x2 .or. XyzCur_D(2)>y2 .or. XyzCur_D(3)>z2 )then
@@ -1126,7 +1126,7 @@ contains
 
     ! Set bNorm_D only if the magnetic field is not very small. 
     ! Otherwise continue in the previous direction.
-    if(.not.UseOldMethodOfRayTrace .or. UseCovariant)then
+    if(.not.(UseOldMethodOfRayTrace .and. IsCartesianGrid))then
        AbsB = sqrt(sum(b_D**2))
        if(AbsB > cTiny) bNorm_D = b_D/AbsB
        RETURN
@@ -1472,8 +1472,6 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModNumConst,       ONLY: cDegToRad, cTiny
   use ModCoordTransform, ONLY: sph_to_xyz
   use ModUtilities,      ONLY: check_allocate
-  use ModGeometry,       ONLY: XyzMax_D, XyzMin_D, x1, x2, y1, y2, z1, z2, &
-       UseCovariant
   use CON_line_extract,  ONLY: line_init, line_collect
   use CON_planet,        ONLY: DipoleStrength
   use ModMultiFluid
@@ -1672,8 +1670,6 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use ModProcMH
   use ModMpi
   use ModUtilities,      ONLY: check_allocate
-  use ModGeometry,       ONLY: XyzMax_D, XyzMin_D, x1, x2, y1, y2, z1, z2, &
-       UseCovariant
   use ModMultiFluid
   implicit none
 
@@ -1948,7 +1944,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, B0_DGB
   use ModProcMH,  ONLY: iProc, iComm
   use ModMpi
-  use ModGeometry,       ONLY: x1, x2, y1, y2, z1, z2, dx_BLK, dy_BLK, dz_BLK
+  use ModGeometry,       ONLY: dx_BLK, dy_BLK, dz_BLK
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use BATL_lib,          ONLY: message_pass_cell
   use ModCoordTransform, ONLY: xyz_to_sph
@@ -2238,7 +2234,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_, B0_DGB
   use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK, UseB0
   use ModPhysics,  ONLY: rBody
-  use ModGeometry, ONLY: XyzMax_D, XyzMin_D, Dx_BLK, Dy_BLK, Dz_BLK
+  use ModGeometry, ONLY: Dx_BLK, Dy_BLK, Dz_BLK
   use ModMpi,      ONLY: MPI_WTIME
 
   implicit none
@@ -2572,23 +2568,22 @@ end subroutine write_plot_line
 
 !============================================================================
 
-subroutine xyz_to_ijk(XyzIn_D,IjkOut_D,iBlock,XyzRef_D,GenRef_D,dGen_D)
+subroutine xyz_to_ijk(XyzIn_D, IjkOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
   use ModNumConst,  ONLY: cPi, cHalfPi, cTwoPi
-  use ModCovariant, ONLY: TypeGeometry
+  use ModGeometry,  ONLY: TypeGeometry
   use ModMain,      ONLY: Phi_,Theta_,x_,y_,z_, nJ
+  use BATL_lib,     ONLY: IsCartesianGrid, IsRLonLat, xyz_to_coord
   implicit none
 
-  integer          ,intent(in)  :: iBlock
-  real,dimension(3),intent(in)  :: XyzIn_D,XyzRef_D,GenRef_D,dGen_D
-  real,dimension(3),intent(out) :: IjkOut_D
-  real,dimension(3)             :: Gen_D
-
-  select case(TypeGeometry)
-  case('cartesian')
+  integer,intent(in) :: iBlock
+  real,   intent(in) :: XyzIn_D(3), XyzRef_D(3), GenRef_D(3), dGen_D(3)
+  real,   intent(out):: IjkOut_D(3)
+  real:: Gen_D(3)
+  !--------------------------------------------------------------------------
+  if(IsCartesianGrid)then
      Gen_D=XyzIn_D
-
-  case('spherical','spherical_lnr','spherical_genr')   
-     call xyz_to_gen(XyzIn_D,Gen_D)
+  elseif(IsRLonLat)then
+     call xyz_to_coord(XyzIn_D, Gen_D)
 
      ! Did I cross the pole?
      if( (XyzIn_D(x_)*XyzRef_D(x_) + XyzIn_D(y_)*XyzRef_D(y_)) < 0.)then
@@ -2607,14 +2602,9 @@ subroutine xyz_to_ijk(XyzIn_D,IjkOut_D,iBlock,XyzRef_D,GenRef_D,dGen_D)
      elseif((-Gen_D(Phi_)+GenRef_D(Phi_))/dGen_D(Phi_) > 1*nJ)then 
         Gen_D(Phi_)=Gen_D(Phi_)+cTwoPi
      end if
-
-  case('axial_torus')
-     call stop_mpi('xyz_to_gen_ray2: cannot handle TypeGeometry='//TypeGeometry)
-
-  case default
-     call stop_mpi('xyz_to_gen_ray2: unknown TypeGeometry='//TypeGeometry)
-
-  end select
+  else
+     call stop_mpi('xyz_to_ijk: cannot handle TypeGeometry='//TypeGeometry)
+  end if
 
   ! Gen_D is set, now compute Ijk
   IjkOut_D = (Gen_D - GenRef_D)/dGen_D + 1.
