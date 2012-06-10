@@ -330,7 +330,7 @@ contains
     use ModPhysics,  ONLY : CellState_VI
     use ModGeometry, ONLY: body_BLK, true_cell
     use ModMain,     ONLY: west_, TypeBC_I, body1_, UseB0, UseGravity, &
-         UseRotatingFrame, globalBLK
+         UseRotatingFrame
     use ModParallel, ONLY: neiLwest, NOBLK
     use ModConserveFlux, ONLY: init_cons_flux
     use BATL_size, ONLY: nI, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -359,8 +359,7 @@ contains
        fbody_z_BLK(:,:,:,iBlock) = 0.0
     end if
 
-    globalBLK = iBlock
-    if(UseGravity.or.UseRotatingFrame) call body_force_averages
+    if(UseGravity.or.UseRotatingFrame) call set_potential_force(iBlock)
 
     ! Set values inside body
     if(body_BLK(iBlock)) then

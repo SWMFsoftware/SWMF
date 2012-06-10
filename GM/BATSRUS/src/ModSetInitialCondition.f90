@@ -58,7 +58,7 @@ subroutine set_ics
      ! If used, initialize solution variables and parameters.
      !/
      if(UseB0)call set_b0(iBlock)
-     call body_force_averages
+     call set_potential_force(iBlock)
 
      if(.not.restart)then
 
