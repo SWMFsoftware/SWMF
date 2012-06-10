@@ -46,7 +46,7 @@ module ModHallResist
   real, public :: xSizeBoxHall=-1.0, ySizeBoxHall=-1.0, zSizeBoxHall=-1.0
   real, public :: DxSizeBoxHall=-1.0, DySizeBoxHall=-1.0, DzSizeBoxHall=-1.0
 
-  ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
+  ! Jacobian matrix for general grid: Dgencoord/Dcartesian
   real, public :: DgenDxyz_DDFD(nDim, nDim,1:nI+1, 1:nJ+1, 1:nK+1, nDim)
   real, public :: DgenDxyz_DDC(nDim, nDim, nI, nJ, nK)
 
@@ -214,9 +214,8 @@ contains
   !============================================================================
 
   subroutine set_block_jacobian_face(iBlock)
-    use ModMain, ONLY: x_, y_, z_
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModCoordTransform, ONLY: inverse_matrix
+    use BATL_lib, ONLY: Xyz_DGB
 
     integer, intent(in):: iBlock
 
@@ -245,11 +244,9 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    ! Calculate the dCovariant/dCartesian matrix
+    ! Calculate the dGencoord/dCartesian matrix
 
-    Xyz_DG(x_,:,:,:) = x_BLK(:,:,:,iBlock)
-    Xyz_DG(y_,:,:,:) = y_BLK(:,:,:,iBlock)
-    Xyz_DG(z_,:,:,:) = z_BLK(:,:,:,iBlock)
+    Xyz_DG(:,:,:,:) = Xyz_DGB(:,:,:,:,iBlock)
 
     do k=-1,nK+2; do j=-1,nJ+2; do i=1,nI
        TransGrad_DDG(:,1,i,j,k)=  &
@@ -324,7 +321,8 @@ contains
   !============================================================================
   subroutine set_block_sph_jacobian_face(iBlock)
     use ModMain,     ONLY: x_, y_, z_, r_, Theta_, Phi_
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, TypeGeometry
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLk
+    use BATL_lib,    ONLY: IsLogRadius
 
     integer, intent(in):: iBlock
 
@@ -404,7 +402,7 @@ contains
                 DgenDxyz_DD(r_, y_)     = y*InvR
 
                 ! If radial coordinate is logarithmic, multiply by extra 1/r
-                if(TypeGeometry=='spherical_lnr') &
+                if(IsLogRadius) &
                      DgenDxyz_DD(r_, :) = DgenDxyz_DD(r_, :)*InvR
                 
                 ! dPhi/..
@@ -442,13 +440,13 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    ! Calculate the dCovariant/dCartesian matrix
+    ! Calculate the dCartesian/dGencoord matrix
     
     InvDx1Half = InvDx*0.5
     InvDx2Half = InvDy*0.5
     InvDx3Half = InvDz*0.5
 
-    ! Get the dCartesian/dCovariant matrix with finite differences
+    ! Get the dCartesian/dGencoord matrix with finite differences
     do k=1,nK; do j=1,nJ; do i=1,nI
        DxyzDgen_DD(x_,1) = InvDx1Half &
             *(x_BLK(i+1,j,k,iBlock) - x_BLK(i-1,j,k,iBlock))
@@ -484,8 +482,8 @@ contains
     use ModProcMH,       ONLY: iProc
     use ModMain,         ONLY: nI, nJ, nK, x_, y_, z_, &
          iTest, jTest, kTest, BlkTest, ProcTest
-    use ModGeometry,     ONLY: Dx_BLK, Dy_BLK, Dz_BLK, y_BLK
-    use ModCovariant,    ONLY: UseCovariant, IsRzGeometry
+    use BATL_lib,        ONLY: IsCartesianGrid, IsRzGeometry, &
+         CellSize_DB, Xyz_DGB
     use ModParallel,     ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
     use ModVarIndexes,   ONLY: Bx_, Bz_
@@ -517,23 +515,14 @@ contains
 
     Jx = 0.0; Jy = 0.0; Jz = 0.0
 
-    InvDx = 1.0/dx_Blk(iBlock)
-    InvDy = 1.0/dy_Blk(iBlock)
-    InvDz = 1.0/dz_Blk(iBlock)
+    InvDx = 1.0/CellSize_DB(x_,iBlock)
+    InvDy = 1.0/CellSize_DB(y_,iBlock)
+    InvDz = 1.0/CellSize_DB(z_,iBlock)
 
     if( IsNewBlockCurrent ) then
        b_DG = State_VGB(bx_:bz_,:,:,:,iBlock)
        call set_block_field3(iBlock, 3, b1_DG, b_DG)
-       if(UseCovariant .and. .not.IsRzGeometry)then
-          !call timing_start('set_block_jac')
-          !call set_block_jacobian_cell(iBlock) ! Fast but not accurate
-          !if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr') then
-          !   call set_block_sph_jacobian_face(iBlock) !optimized for spherical
-          !else
-             call set_block_jacobian_face(iBlock)      !general
-          !end if
-          !call timing_stop('set_block_jac')
-       end if                                          
+       if(.not.IsCartesianGrid) call set_block_jacobian_face(iBlock)
 
        IsNewBlockCurrent = .false.
     end if
@@ -631,10 +620,10 @@ contains
        end if
     end if
 
-    if(UseCovariant .and. .not.IsRzGeometry)then
-       call calc_covariant_j
-    else                              
+    if(IsCartesianGrid)then
        call calc_cartesian_j
+    else
+       call calc_gencoord_j
     end if                             
 
     if(DoTestMe)then
@@ -677,7 +666,7 @@ contains
 
          ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
          if(IsRzGeometry) Jx = Jx + 0.5*(b_DG(z_,i,j,k)+b_DG(z_,i-1,j,k)) &
-              /y_BLK(i,j,k,iBlock)
+              /Xyz_DGB(2,i,j,k,iBlock)
 
       case(y_)
          Jx = + InvDy*(b_DG(z_,i,j,k) - b_DG(z_,i,j-1,k)) &
@@ -699,12 +688,12 @@ contains
 
          ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
          if(IsRzGeometry)then
-            if(y_BLK(i,j-1,k,iBlock)<0.0)then
+            if(Xyz_DGB(2,i,j-1,k,iBlock)<0.0)then
                ! Just for bookkeeping. It's effect is zeroed by zero face area
-               Jx = Jx + b_DG(z_,i,j,k)/y_BLK(i,j,k,iBlock)
+               Jx = Jx + b_DG(z_,i,j,k)/Xyz_DGB(2,i,j,k,iBlock)
             else
                Jx = Jx + (b_DG(z_,i,j,k)+b_DG(z_,i,j-1,k)) &
-                    /(y_BLK(i,j,k,iBlock)+y_BLK(i,j-1,k,iBlock))
+                    /(Xyz_DGB(2,i,j,k,iBlock) + Xyz_DGB(2,i,j-1,k,iBlock))
             end if
          end if
 
@@ -727,7 +716,7 @@ contains
               - Cy*(b_DG(x_,i,jR,k-1) + b_DG(x_,i,jR,k)) 
 
          ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
-         if(IsRzGeometry) Jx = Jx + b_DG(z_,i,j,k)/y_BLK(i,j,k,iBlock)
+         if(IsRzGeometry) Jx = Jx + b_DG(z_,i,j,k)/Xyz_DGB(2,i,j,k,iBlock)
 
       case default
          write(*,*)'Error in get_face_current: iDir=',iDir
@@ -738,12 +727,12 @@ contains
 
     
     !==========================================================================
-    subroutine calc_covariant_j
+    subroutine calc_gencoord_j
 
       real :: DbDgen_DD(nDim, nDim)
       !-----------------------------------------------------------------------
 
-      ! Calculate the partial derivatives dB/dCovariant
+      ! Calculate the partial derivatives dB/dCoord
       select case(iDir)
       case(x_)
          DbDgen_DD(:,1) = InvDx*(b_DG(:,i,j,k) - b_DG(:,i-1,j,k))
@@ -786,7 +775,7 @@ contains
       Jz =   sum(DbDgen_DD(y_,:)*DgenDxyz_DDFD(:,x_,i,j,k,iDir)) &
            - sum(DbDgen_DD(x_,:)*DgenDxyz_DDFD(:,y_,i,j,k,iDir))
 
-    end subroutine calc_covariant_j
+    end subroutine calc_gencoord_j
 
   end subroutine get_face_current
 
@@ -797,12 +786,11 @@ contains
     use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk, x_, y_, z_, &
          east_, west_, south_, north_, bot_, top_
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, nVar
-    use ModCovariant,ONLY: UseCovariant                
-    use ModGeometry, ONLY: TypeGeometry                
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModParallel, ONLY: NeiLev
     use ModFaceValue,ONLY: correct_monotone_restrict
-    use BATL_lib,    ONLY: message_pass_cell
+    use BATL_lib,    ONLY: message_pass_cell, IsCartesianGrid, IsRLonLat, &
+         CellSize_DB
 
     integer, parameter :: nTest = 2
     integer :: i,j,k,iBlock,iTest
@@ -839,8 +827,7 @@ contains
                   + 400*x_BLK(:,:,:,iBlock)*y_BLK(:,:,:,iBlock) &
                   + 500*x_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock) &
                   + 600*y_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock)
-             if(TypeGeometry == 'spherical' .or.&     
-                  TypeGeometry == 'spherical_lnr')then
+             if(IsRlonLat)then
                 State_VGB(Bx_,:,:,:,iBlock) = &
                      y_BLK(:,:,:,iBlock)
                 State_VGB(By_,:,:,:,iBlock) = z_BLK(:,:,:,iBlock)
@@ -941,17 +928,16 @@ contains
          JyGood =   3 +   5*x +   6*y - 100 - 400*y - 500*z
          JzGood =  10 +  40*y +  50*z -   2 -   4*x -   6*z
 
-         if(UseCovariant)then                
-            if(  TypeGeometry == 'spherical' .or. &
-                 TypeGeometry == 'spherical_lnr')then
+         if(IsCartesianGrid)then                
+            Tolerance = 1.e-6
+         else
+            if(IsRlonLat)then
                ! This is an easier test
                JxGood = -1.0
                JyGood =  0.0
                JzGood = -1.0
             end if
             Tolerance = 5.e-3
-         else                               
-            Tolerance = 1.e-6
          end if                              
 
       case(2)
@@ -959,10 +945,10 @@ contains
          JyGood = 0.06*z - 2.0 *x
          JzGood = 0.2 *x - 0.04*y
 
-         if(UseCovariant)then                
-            Tolerance = 1.e-1
-         else                               
+         if(IsCartesianGrid)then                
             Tolerance = 5e-2
+         else
+            Tolerance = 1.e-1
          end if                              
       end select
 
@@ -978,8 +964,7 @@ contains
               x,y,z
          write(*,*)'x,y,z (i,j,k-1)=', &
               x_BLK(i,j,k-1,iBlock),y_BLK(i,j,k-1,iBlock),z_BLK(i,j,k-1,iBlock)
-         write(*,*)'dx,dy,dz=',&
-              dx_BLK(iBlock), dy_BLK(iBlock), dz_BLK(iBlock)
+         write(*,*)'dx,dy,dz=', CellSize_DB(:,iBlock)
          write(*,*)'Bad  Jx,Jy,Jz =',Jx,Jy,Jz
          write(*,*)'Good Jx,Jy,Jz =',JxGood,JyGood,JzGood
          write(*,*)'NeiLev=',NeiLev(:,iBlock)

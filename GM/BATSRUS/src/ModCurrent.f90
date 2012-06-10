@@ -16,7 +16,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
     use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK, &
          x_BLK, y_BLK, z_BLK, true_BLK
-    use ModCovariant,ONLY: UseCovariant, IsRzGeometry
+    use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
@@ -154,10 +154,10 @@ contains
        end if
     end if
 
-    if(UseCovariant .and. .not.IsRzGeometry)then
-       call calc_covariant_j
-    else
+    if(IsCartesianGrid)then
        call calc_cartesian_j
+    else
+       call calc_gencoord_j
     end if
 
   contains
@@ -198,14 +198,14 @@ contains
 
     !==========================================================================
 
-    subroutine calc_covariant_j
+    subroutine calc_gencoord_j
 
       use ModCoordTransform, ONLY: inverse_matrix
 
       real :: DxyzDcoord_DD(3,3), DcoordDxyz_DD(3,3), DbDcoord_DD(3,3)
       !------------------------------------------------------------------------
 
-      ! Get the dCartesian/dCovariant matrix with central difference
+      ! Get the dCartesian/dGencoord matrix with central difference
       DxyzDcoord_DD(x_,1) = InvDx2 &
            *(x_BLK(i+1,j,k,iBlock) - x_BLK(i-1,j,k,iBlock))
       DxyzDcoord_DD(y_,1) = InvDx2 &
@@ -229,7 +229,7 @@ contains
 
       DcoordDxyz_DD = inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
 
-      ! Calculate the partial derivatives dB/dCovariant using central
+      ! Calculate the partial derivatives dB/dGencoord using central
       ! difference. At resolution changes with neighboring coarse blocks, we
       ! switch to one-sided difference to avoid using the ghost cells.
       DbDcoord_DD(:,1) = &
@@ -262,7 +262,7 @@ contains
            + sum(DbDcoord_DD(y_,:)*DcoordDxyz_DD(:,x_)) &
            - sum(DbDcoord_DD(x_,:)*DcoordDxyz_DD(:,y_))
 
-    end subroutine calc_covariant_j
+    end subroutine calc_gencoord_j
 
   end subroutine get_current
 

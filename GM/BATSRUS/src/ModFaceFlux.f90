@@ -10,10 +10,8 @@ module ModFaceFlux
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, UseNeutralFluid
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
-
-  use ModGeometry,   ONLY: UseCovariant, &                
-       FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &     
-       FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B  
+  use BATL_lib,      ONLY: IsCartesianGrid, IsCartesian, IsRzGeometry, &
+       CellFace_DFB, FaceNormal_DDFB
 
   use ModB0, ONLY:B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
 
@@ -92,7 +90,7 @@ module ModFaceFlux
   real :: B0x = 0.0, B0y = 0.0, B0z = 0.0
   real :: DiffBb = 0.0 !     (1/4)(BnL-BnR)^2
   real :: DeltaBnL = 0.0, DeltaBnR = 0.0
-  real :: Area = 0.0, Area2 = 0.0, AreaX, AreaY, AreaZ, Area2Min = 0.0
+  real :: Area = 0.0, Area2 = 0.0, AreaX, AreaY, AreaZ
 
   ! Allow diffusion across the pole
   logical:: UsePoleDiffusion = .false.
@@ -177,45 +175,7 @@ contains
     ! Also store the transformation for rotating back.
     ! Current implementation is for a single ion fluid.
 
-    if(UseCovariant)then                           
-       if(Normal_D(z_) < 0.5)then
-          ! Tangent1 = Normal x (0,0,1)
-          Tangent1_D(x_) =  Normal_D(y_)
-          Tangent1_D(y_) = -Normal_D(x_)
-          Tangent1_D(z_) = 0.0
-          ! Tangent2 = Normal x Tangent1
-          Tangent2_D(x_) =  Normal_D(z_)*Normal_D(x_)
-          Tangent2_D(y_) =  Normal_D(z_)*Normal_D(y_)
-          Tangent2_D(z_) = -Normal_D(x_)**2 - Normal_D(y_)**2
-       else
-          ! Tangent1 = Normal x (1,0,0)
-          Tangent1_D(x_) = 0.0
-          Tangent1_D(y_) =  Normal_D(z_)
-          Tangent1_D(z_) = -Normal_D(y_)
-          ! Tangent2 = Normal x Tangent1
-          Tangent2_D(x_) = -Normal_D(y_)**2 - Normal_D(z_)**2
-          Tangent2_D(y_) =  Normal_D(x_)*Normal_D(y_)
-          Tangent2_D(z_) =  Normal_D(x_)*Normal_D(z_)
-       end if
-       ! B0 on the face
-       B0n   = sum(Normal_D  *(/B0x, B0y, B0z/))
-       B0t1  = sum(Tangent1_D*(/B0x, B0y, B0z/))
-       B0t2  = sum(Tangent2_D*(/B0x, B0y, B0z/))
-       ! Left face
-       UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
-       Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
-       Ut2L  = sum(Tangent2_D*StateLeft_V(Ux_:Uz_))
-       B1nL  = sum(Normal_D  *StateLeft_V(Bx_:Bz_))
-       B1t1L = sum(Tangent1_D*StateLeft_V(Bx_:Bz_))
-       B1t2L = sum(Tangent2_D*StateLeft_V(Bx_:Bz_))
-       ! Right face
-       UnR   = sum(Normal_D  *StateRight_V(Ux_:Uz_))
-       Ut1R  = sum(Tangent1_D*StateRight_V(Ux_:Uz_))
-       Ut2R  = sum(Tangent2_D*StateRight_V(Ux_:Uz_))
-       B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
-       B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
-       B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
-    else                                                
+    if(IsCartesianGrid)then
        select case (iDimFace)
        case (x_) ! x face
           ! B0 on the face
@@ -275,7 +235,46 @@ contains
           B1t1R =  StateRight_V(Bx_)
           B1t2R =  StateRight_V(By_)
        end select
+    else
+       if(Normal_D(z_) < 0.5)then
+          ! Tangent1 = Normal x (0,0,1)
+          Tangent1_D(x_) =  Normal_D(y_)
+          Tangent1_D(y_) = -Normal_D(x_)
+          Tangent1_D(z_) = 0.0
+          ! Tangent2 = Normal x Tangent1
+          Tangent2_D(x_) =  Normal_D(z_)*Normal_D(x_)
+          Tangent2_D(y_) =  Normal_D(z_)*Normal_D(y_)
+          Tangent2_D(z_) = -Normal_D(x_)**2 - Normal_D(y_)**2
+       else
+          ! Tangent1 = Normal x (1,0,0)
+          Tangent1_D(x_) = 0.0
+          Tangent1_D(y_) =  Normal_D(z_)
+          Tangent1_D(z_) = -Normal_D(y_)
+          ! Tangent2 = Normal x Tangent1
+          Tangent2_D(x_) = -Normal_D(y_)**2 - Normal_D(z_)**2
+          Tangent2_D(y_) =  Normal_D(x_)*Normal_D(y_)
+          Tangent2_D(z_) =  Normal_D(x_)*Normal_D(z_)
+       end if
+       ! B0 on the face
+       B0n   = sum(Normal_D  *(/B0x, B0y, B0z/))
+       B0t1  = sum(Tangent1_D*(/B0x, B0y, B0z/))
+       B0t2  = sum(Tangent2_D*(/B0x, B0y, B0z/))
+       ! Left face
+       UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
+       Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
+       Ut2L  = sum(Tangent2_D*StateLeft_V(Ux_:Uz_))
+       B1nL  = sum(Normal_D  *StateLeft_V(Bx_:Bz_))
+       B1t1L = sum(Tangent1_D*StateLeft_V(Bx_:Bz_))
+       B1t2L = sum(Tangent2_D*StateLeft_V(Bx_:Bz_))
+       ! Right face
+       UnR   = sum(Normal_D  *StateRight_V(Ux_:Uz_))
+       Ut1R  = sum(Tangent1_D*StateRight_V(Ux_:Uz_))
+       Ut2R  = sum(Tangent2_D*StateRight_V(Ux_:Uz_))
+       B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
+       B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
+       B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
     end if                                          
+
   end subroutine rotate_state_vectors
   !==========================================================================
   subroutine rotate_flux_vector(FluxRot_V, Flux_V)
@@ -283,27 +282,7 @@ contains
     real, intent(inout):: Flux_V(:)
 
     ! Rotate n,t1,t2 components back to x,y,z components
-    if(UseCovariant)then                             
-       Flux_V(RhoUx_) = Normal_D(x_)  *FluxRot_V(RhoUn_)  &
-            +           Tangent1_D(x_)*FluxRot_V(RhoUt1_) &
-            +           Tangent2_D(x_)*FluxRot_V(RhoUt2_)
-       Flux_V(RhoUy_) = Normal_D(y_)  *FluxRot_V(RhoUn_)  &
-            +           Tangent1_D(y_)*FluxRot_V(RhoUt1_) &
-            +           Tangent2_D(y_)*FluxRot_V(RhoUt2_)
-       Flux_V(RhoUz_) = Normal_D(z_)  *FluxRot_V(RhoUn_)  &
-            +           Tangent1_D(z_)*FluxRot_V(RhoUt1_) &
-            +           Tangent2_D(z_)*FluxRot_V(RhoUt2_)
-
-       Flux_V(Bx_   ) = Normal_D(x_)  *FluxRot_V(B1n_)  &
-            +           Tangent1_D(x_)*FluxRot_V(B1t1_) &
-            +           Tangent2_D(x_)*FluxRot_V(B1t2_)
-       Flux_V(By_   ) = Normal_D(y_)  *FluxRot_V(B1n_)  &
-            +           Tangent1_D(y_)*FluxRot_V(B1t1_) &
-            +           Tangent2_D(y_)*FluxRot_V(B1t2_)
-       Flux_V(Bz_   ) = Normal_D(z_)  *FluxRot_V(B1n_)  &
-            +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
-            +           Tangent2_D(z_)*FluxRot_V(B1t2_)
-    else                                             
+    if(IsCartesianGrid)then                             
        select case (iDimFace)
        case (x_)
           Flux_V(RhoUx_ ) = FluxRot_V(RhoUn_)
@@ -327,6 +306,26 @@ contains
           Flux_V(By_    ) = FluxRot_V(B1t2_)
           Flux_V(Bz_    ) = FluxRot_V(B1n_)
        end select
+    else
+       Flux_V(RhoUx_) = Normal_D(x_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(x_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(x_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUy_) = Normal_D(y_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(y_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(y_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUz_) = Normal_D(z_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(z_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(z_)*FluxRot_V(RhoUt2_)
+
+       Flux_V(Bx_   ) = Normal_D(x_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(x_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(x_)*FluxRot_V(B1t2_)
+       Flux_V(By_   ) = Normal_D(y_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(y_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(y_)*FluxRot_V(B1t2_)
+       Flux_V(Bz_   ) = Normal_D(z_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(z_)*FluxRot_V(B1t2_)
     end if                                           
 
   end subroutine rotate_flux_vector
@@ -665,7 +664,7 @@ contains
     iDimFace   = iDim
 
     ! For generalized coordinates the values below are calculated cell by cell
-    if(UseCovariant) RETURN    
+    if(.not.IsCartesian) RETURN    
 
     ! Calculate face normal and area vectors for Cartesian grid
     Normal_D = 0.0; Normal_D(iDim) = 1.0
@@ -706,16 +705,21 @@ contains
 
     iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
 
-    if(UseCovariant)then
+    if(.not.IsCartesian)then
 
-       AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlockFace)
-       AreaY = FaceAreaI_DFB(y_, iFace, jFace, kFace, iBlockFace)
-       AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlockFace)
+       if(IsRzGeometry)then
+          AreaX = CellFace_DFB(1,iFace,jFace,kFace,iBlockFace)
+          AreaY = 0.0
+          AreaZ = 0.0
+       else
+          AreaX = FaceNormal_DDFB(x_, 1, iFace, jFace, kFace, iBlockFace)
+          AreaY = FaceNormal_DDFB(y_, 1, iFace, jFace, kFace, iBlockFace)
+          AreaZ = FaceNormal_DDFB(z_, 1, iFace, jFace, kFace, iBlockFace)
+       end if
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
-       if(Area2 < 0.5*FaceArea2MinI_B(iBlockFace))then
+       if(Area2 < 1e-30)then
 
-          if(DoTestCell)write(*,*)'Area2, FaceArea2MinI_B=', &
-               Area2, FaceArea2MinI_B(iBlockFace)
+          if(DoTestCell)write(*,*)'set_cell_values_x: Area2=', Area2
 
           ! The face is at the pole
           Normal_D(x_)= &
@@ -730,8 +734,6 @@ contains
           Normal_D = Normal_D / sqrt(sum(Normal_D**2))
           Area =0.0
           Area2=0.0
-          ! Store this in case pole diffusion is required
-          Area2Min = FaceArea2MinI_B(iBlockFace)
        else
           Area = sqrt(Area2)
           Normal_D=(/AreaX, AreaY, AreaZ/)/Area
@@ -747,15 +749,21 @@ contains
 
     iLeft = iFace; jLeft = jFace - 1; kLeft = kFace
 
-    if(UseCovariant)then                   
-       AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlockFace)
-       AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlockFace)
-       AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlockFace)
-       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
-       if(Area2 < 0.5*FaceArea2MinJ_B(iBlockFace))then
+    if(.not.IsCartesian)then
 
-          if(DoTestCell)write(*,*)'Area2, FaceArea2MinJ_B=', &
-               Area2, FaceArea2MinJ_B(iBlockFace)
+       if(IsRzGeometry)then
+          AreaX = 0.0
+          AreaY = CellFace_DFB(2,iFace,jFace,kFace,iBlockFace)
+          AreaZ = 0.0
+       else
+          AreaX = FaceNormal_DDFB(x_, 2, iFace, jFace, kFace, iBlockFace)
+          AreaY = FaceNormal_DDFB(y_, 2, iFace, jFace, kFace, iBlockFace)
+          AreaZ = FaceNormal_DDFB(z_, 2, iFace, jFace, kFace, iBlockFace)
+       end if
+       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
+       if(Area2 < 1e-30)then
+
+          if(DoTestCell)write(*,*)'set_cell_values_y: Area2=', Area2
 
           !The face is at the pole
           Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
@@ -768,8 +776,6 @@ contains
                sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
           Area = 0.0
           Area2= 0.0
-          ! Store this in case pole diffusion is required
-          Area2Min = FaceArea2MinJ_B(iBlockFace)
        else
           Area = sqrt(Area2)
           Normal_D = (/AreaX, AreaY, AreaZ/)/Area
@@ -787,15 +793,15 @@ contains
 
     iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
 
-    if(UseCovariant)then                  
-       AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlockFace)
-       AreaY = FaceAreaK_DFB(y_, iFace, jFace, kFace, iBlockFace)
-       AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlockFace)
-       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
-       if(Area2 < 0.5*FaceArea2MinK_B(iBlockFace))then
+    if(.not.IsCartesian)then
 
-          if(DoTestCell)write(*,*)'Area2, FaceArea2MinK_B=', &
-               Area2, FaceArea2MinK_B(iBlockFace)
+       AreaX = FaceNormal_DDFB(x_, 3, iFace, jFace, kFace, iBlockFace)
+       AreaY = FaceNormal_DDFB(y_, 3, iFace, jFace, kFace, iBlockFace)
+       AreaZ = FaceNormal_DDFB(z_, 3, iFace, jFace, kFace, iBlockFace)
+       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
+       if(Area2 < 1e-30)then
+
+          if(DoTestCell)write(*,*)'set_cell_values_z: Area2 = ', Area2
 
           !The face is at the pole
           Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
@@ -808,8 +814,6 @@ contains
                sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
           Area = 0.0
           Area2= 0.0
-          ! Store this in case pole diffusion is required
-          Area2Min = FaceArea2MinK_B(iBlockFace)
        else
           Area = sqrt(Area2)
           Normal_D = (/AreaX, AreaY, AreaZ/)/Area
@@ -830,7 +834,7 @@ contains
     real :: r
     !--------------------------------------------------------------------
 
-    if(DoTestCell .and. UseCovariant) &
+    if(DoTestCell .and. .not.IsCartesian) &
          write(*,*)'Area2,AreaX,AreaY,AreaZ,Normal_D=', &
          Area2, AreaX, AreaY, AreaZ, Normal_D
 
@@ -864,7 +868,7 @@ contains
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
          + Eta_GB(iRight,jRight,kRight,iBlockFace))  !^CFG END DISSFLUX
 
-    if(UseCovariant)then
+    if(.not.IsCartesian)then
        NormalX = Normal_D(x_); NormalY = Normal_D(y_); NormalZ = Normal_D(z_)
        AreaX = Area*NormalX; AreaY = Area*NormalY; AreaZ = Area*NormalZ
 
@@ -1150,10 +1154,6 @@ contains
 
     ! Multiply Flux by Area. This is needed in div Flux in update_states_MHD
     Flux_V = Flux_V*Area
-
-    ! Add diffusive flux across the pole if required
-    if(Area == 0.0 .and. UsePoleDiffusion) Flux_V = Flux_V &
-         - 0.5*sqrt(Area2Min)*Cmax*(StateRightCons_V - StateLeftCons_V)
 
     ! Increase maximum speed with resistive diffusion speed if necessary
     if(Eta > 0.0) CmaxDt = CmaxDt + 2*Eta*InvDxyz !^CFG IF DISSFLUX
@@ -2811,7 +2811,7 @@ contains
       end if                                         !^CFG IF AWFLUX
 
       if(DoTestCell)then
-         if(UseCovariant)then
+         if(.not.IsCartesian)then
             write(*,*)NameSub,' AreaX,Y,Z =',AreaX, AreaY, AreaZ
             write(*,*)NameSub,' Area,Area2=',Area, Area2
             write(*,*)NameSub,' InvRho, RhoU_D=',InvRho, RhoU_D

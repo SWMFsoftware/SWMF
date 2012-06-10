@@ -16,7 +16,7 @@ module ModFaceGradient
   public :: get_face_curl
   public :: set_block_jacobian_face
 
-  ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
+  ! Jacobian matrix for general grid: Dgencoord/Dcartesian
   real, public :: DcoordDxyz_DDFD(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,nDim)
 
 contains
@@ -601,7 +601,7 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    ! Calculate the dCovariant/dCartesian matrix
+    ! Calculate the dGencoord/dCartesian matrix
 
     InvDx = 1.0/Dx_Blk(iBlock)
     InvDy = 1.0/Dy_Blk(iBlock)
@@ -688,7 +688,7 @@ contains
 
     ! calculate the cell face gradient of Scalar_G
 
-    use ModCovariant,  ONLY: UseCovariant, IsRzGeometry
+    use BATL_lib,      ONLY: IsCartesianGrid
     use ModGeometry,   ONLY: Dx_Blk, Dy_Blk, Dz_Blk
     use ModMain,       ONLY: x_, y_, z_
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
@@ -710,7 +710,7 @@ contains
 
     if(IsNewBlock)then
        call set_block_field3(iBlock, 1, Scalar1_G, Scalar_G)
-       if(UseCovariant .and. .not.IsRzGeometry) &
+       if(.not.IsCartesianGrid) &
             call set_block_jacobian_face(iBlock)
 
        IsNewBlock = .false.
@@ -841,9 +841,9 @@ contains
     end select
 
     ! multiply by the coordinate transformation matrix to obtain the
-    ! cartesian gradient from the partial derivatives dScalar/dCovariant
-    if(UseCovariant .and. .not.IsRzGeometry) &
-         FaceGrad_D = matmul(FaceGrad_D,DcoordDxyz_DDFD(:,:,i,j,k,iDir))
+    ! cartesian gradient from the partial derivatives dScalar/dGencoord
+    if(.not.IsCartesianGrid) &
+         FaceGrad_D = matmul(FaceGrad_D, DcoordDxyz_DDFD(:,:,i,j,k,iDir))
 
   end subroutine get_face_gradient
 
@@ -854,7 +854,7 @@ contains
 
     use ModMain,      ONLY: x_, y_, z_
     use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK
-    use ModCovariant, ONLY: UseCovariant, IsRzGeometry                
+    use BATL_lib,     ONLY: IsCartesianGrid, IsRzGeometry
     use ModParallel,  ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
 
@@ -875,9 +875,7 @@ contains
 
     if(IsNewBlock)then
        call set_block_field3(iBlock, 3, Vector1_DG, Vector_DG)
-       if(UseCovariant .and. .not. IsRzGeometry) &
-            call set_block_jacobian_face(iBlock)
-
+       if(.not. IsCartesianGrid) call set_block_jacobian_face(iBlock)
        IsNewBlock = .false.
     end if
 
@@ -956,10 +954,10 @@ contains
        kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
     end if
 
-    if(UseCovariant .and. .not.IsRzGeometry)then               
-       call calc_covariant_curl
-    else
+    if(IsCartesianGrid)then
        call calc_cartesian_curl
+    else
+       call calc_gencoord_curl
     end if                             
 
   contains
@@ -1068,12 +1066,12 @@ contains
 
     !==========================================================================
 
-    subroutine calc_covariant_curl
+    subroutine calc_gencoord_curl
 
       real :: DvectorDcoord_DD(nDim,nDim)
       !------------------------------------------------------------------------
 
-      ! Calculate the partial derivatives dVector/dCovariant
+      ! Calculate the partial derivatives dVector/dCoord
       select case(iDir)
       case(x_)
          DvectorDcoord_DD(:,1) = &
@@ -1139,7 +1137,7 @@ contains
            + sum(DvectorDcoord_DD(y_,:)*DcoordDxyz_DDFD(:,x_,i,j,k,iDir)) &
            - sum(DvectorDcoord_DD(x_,:)*DcoordDxyz_DDFD(:,y_,i,j,k,iDir))
 
-    end subroutine calc_covariant_curl
+    end subroutine calc_gencoord_curl
 
   end subroutine get_face_curl
 
