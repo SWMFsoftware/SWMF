@@ -247,10 +247,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
   use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, Used_,&
        regrid_batl, IsCartesianGrid
-  use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state, UseBatlTest
-
-  ! Temporary
-  use ModCovariant,ONLY: UseVertexBasedGrid, do_fix_geometry_at_reschange
+  use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
 
   implicit none
 
@@ -292,13 +289,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   ! Number of blocks moved around
 
   integer :: iError
-  integer :: iBlock
-
-
-
-
-  ! BATL related variables
   integer:: iNode
+
+  ! We should switch to these variables instead of _BP indexes !!!
   integer, allocatable:: iTypeAdvance_A(:), iTypeBalance_A(:)
 
   logical:: DoTest, DoTestMe
@@ -398,15 +391,6 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
        iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
 
   call find_test_cell
-
-  ! This is a temporary solution for backward compatibility
-  if(.not.UseBatlTest .and. .not.IsCartesianGrid &
-       .and. DoMoveCoord .and. UseVertexBasedGrid)then
-     do iBlock=1, nBlock
-        if(do_fix_geometry_at_reschange(iBlock)) &       
-             call fix_geometry_at_reschange(iBlock) 
-     end do
-  end if
 
 end subroutine load_balance
 

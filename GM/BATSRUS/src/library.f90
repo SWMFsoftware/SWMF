@@ -361,57 +361,64 @@ real function integrate_BLK(qnum,qa)
   ! Do for each processor separately if qnum=1, otherwise add them all
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
-  use ModGeometry, ONLY : cV_BLK,true_BLK,true_cell 
-  use ModGeometry, ONLY : UseCovariant      
+  use ModGeometry, ONLY : true_BLK, true_cell 
+  use BATL_lib, ONLY: IsCartesian, CellVolume_GB, CellVolume_B, Unused_B, &
+       nI, nJ, nK, nBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
   use ModMpi
   implicit none 
 
   ! Arguments
 
   integer, intent(in) :: qnum
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: qa
+  real,    intent(in) :: qa(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables:
   real    :: qsum, qsum_all
   integer :: iBLK, iError
 
   logical :: oktest, oktest_me
-  real,external:: integrate_BLK_covar  
   !---------------------------------------------------------------------------
-  if(UseCovariant)then
-     integrate_BLK=integrate_BLK_covar(qnum,qa)
-     return
-  end if                               
   call set_oktest('integrate_BLK',oktest, oktest_me)
 
   qsum=0.0
-                                                     
-  do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+
+  if(IsCartesian)then
+     do iBLK = 1, nBlock
+        if(Unused_B(iBLK)) CYCLE
         if(true_BLK(iBLK)) then
-           qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBLK)*&
-                cV_BLK(iBLK))
+           qsum = qsum + CellVolume_B(iBLK)* &
+                sum(qa(1:nI,1:nJ,1:nK,iBLK))
         else
-           qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBLK)*&
-                cV_BLK(iBLK), &
+           qsum = qsum + CellVolume_B(iBLK)* &
+                sum( qa(1:nI,1:nJ,1:nK,iBLK), &
                 MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
         end if
-     end if
-  end do
-                                                    
+     end do
+  else
+     do iBLK = 1, nBlock
+        if(Unused_B(iBLK)) CYCLE
+        if(true_BLK(iBLK)) then
+           qsum=qsum + sum(CellVolume_GB(1:nI,1:nJ,1:nK,iBLK)* &
+                qa(1:nI,1:nJ,1:nK,iBLK))
+        else
+           qsum=qsum + sum(CellVolume_GB(1:nI,1:nJ,1:nK,iBLK)* &
+                qa(1:nI,1:nJ,1:nK,iBLK), &
+                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
+        end if
+     end do
+  end if
+
   if(qnum>1)then
      call MPI_allreduce(qsum, qsum_all, 1,  MPI_REAL, MPI_SUM, &
           iComm, iError)
-     integrate_BLK=qsum_all
+     integrate_BLK = qsum_all
      if(oktest)write(*,*)'me,sum,sum_all:',iProc,qsum,qsum_all
   else
-     integrate_BLK=qsum
+     integrate_BLK = qsum
      if(oktest)write(*,*)'me,qsum:',iProc,qsum
   end if
+
 end function integrate_BLK    
-
-
 
 !=============================================================================
 
@@ -1294,43 +1301,39 @@ subroutine find_test_cell
 
   use ModProcMH
   use ModMain
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,r_BLK,dx_BLK,dy_BLK,dz_BLK,vInv_CB, &
-       UseCovariant, FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
-  use ModParallel, ONLY : NOBLK, neiLEV,neiPE,neiBLK
+  use ModParallel, ONLY: NOBLK, neiLEV, neiPE, neiBLK
+  use ModGeometry, ONLY: r_BLK
+  use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, CellFace_DFB, CellVolume_GB, &
+       IsCartesian, MaxDim, find_grid_block
   use ModMpi
-  use BATL_lib, ONLY: CellSize_DB, CellFace_DFB, CellVolume_GB, IsCartesian, &
-       MaxDim, find_grid_block
+
   implicit none
 
-  logical :: pass_message
-  integer :: IjkTest_D(MaxDim), idir, iError
-  real, external :: minval_loc_BLK
+  logical :: DoBroadcast
+  integer :: IjkTest_D(MaxDim), iDir, iError
   !----------------------------------------------------------------------------
 
-  pass_message = .false.
+  DoBroadcast = .false.
 
   if(.not.coord_test)then
-     if(iProc==PROCtest)then
-        if(1<=BLKtest.and.BLKtest<=nBlock)then
+     if(iProc == ProcTest)then
+        if(1 <= BLKtest .and. BLKtest <= nBlock)then
            if(unusedBLK(BLKtest))then
               if(lVerbose>0) write(*,*)'Test cell is in an unused block'
            else
-              XyzTestCell_D = (/ &
-                   x_BLK(Itest,Jtest,Ktest,BLKtest), &
-                   y_BLK(Itest,Jtest,Ktest,BLKtest), &
-                   z_BLK(Itest,Jtest,Ktest,BLKtest) /)
-              pass_message = .true.
+              XyzTestCell_D = Xyz_DGB(:,Itest,Jtest,Ktest,BLKtest)
+              DoBroadcast = .true.
            end if
         else
            if(lVerbose>0) write(*,*)'BLKtest=',BLKtest,&
                 ' is out of 1..nBlock=',nBlock
         end if
      end if
-     call MPI_Bcast(pass_message,1,MPI_LOGICAL,PROCtest,iComm,iError)
-     if (.not. pass_message) RETURN
+     call MPI_Bcast(DoBroadcast,1,MPI_LOGICAL,PROCtest,iComm,iError)
+     if (.not. DoBroadcast) RETURN
 
   else   ! if a coord_test
-     pass_message = .true.
+     DoBroadcast = .true.
 
      call find_grid_block( (/ xTest, yTest, zTest /), &
           ProcTest, BlkTest, IjkTest_D)
@@ -1338,43 +1341,29 @@ subroutine find_test_cell
      jTest = IjkTest_D(2)
      kTest = Ijktest_D(3)
 
-     if(iProc==ProcTest) XyzTestCell_D = (/ &
-          x_BLK(Itest,Jtest,Ktest,BLKtest), &
-          y_BLK(Itest,Jtest,Ktest,BLKtest), &
-          z_BLK(Itest,Jtest,Ktest,BLKtest) /)
+     if(iProc==ProcTest) XyzTestCell_D = Xyz_DGB(:,Itest,Jtest,Ktest,BLKtest)
+
   end if
-  if (pass_message) then
+  if (DoBroadcast) then
 
-     call MPI_Bcast(XyzTestCell_D,3,MPI_REAL,PROCtest,iComm,iError)
+     call MPI_Bcast(XyzTestCell_D, 3, MPI_REAL, ProcTest, iComm, iError)
 
-     if(iProc==PROCtest .and. UseTestCell .and. lVerbose>0)then
+     if(iProc == ProcTest .and. UseTestCell .and. lVerbose>0)then
         write(*,*)
         write(*,*)'Selected test cell:'
         write(*,'(a,i4,a,i4,a,i4,a,i8,a,i5)')&
              'I=',Itest,' J=',Jtest,' K=',Ktest,&
              ' BLK=',BLKtest,' PE=',PROCtest
         write(*,'(a,f12.5,a,f12.5,a,f12.5,a,f12.5)') &
-             'x=',x_BLK(Itest,Jtest,Ktest,BLKtest),&
-             ' y=',y_BLK(Itest,Jtest,Ktest,BLKtest),&
-             ' z=',z_BLK(Itest,Jtest,Ktest,BLKtest),&
+             'x,y,z=',Xyz_DGB(:,Itest,Jtest,Ktest,BLKtest), &
              ' r=',r_BLK(iTest,jTest,kTest,BLKtest)
-        write(*,'(a,f12.5,a,f12.5,a,f12.5,a,f12.5)') &
-             'dx=',      dx_BLK(BLKtest),&
-             ' dy=',     dy_BLK(BLKtest),&
-             ' dz=',     dz_BLK(BLKtest),&
-             ' Volume=', 1./vInv_CB(iTest,jTest,kTest,BLKtest)
-        if(UseCovariant)then
-           write(*,*)' FaceAreaI_D=', FaceAreaI_DFB(:,iTest,jTest,kTest,BLKtest)
-           write(*,*)' FaceAreaJ_D=', FaceAreaJ_DFB(:,iTest,jTest,kTest,BLKtest)
-           write(*,*)' FaceAreaK_D=', FaceAreaK_DFB(:,iTest,jTest,kTest,BLKtest)
-        end if
         write(*,'(a,3f12.5,a,f12.5)') &
              ' CellSize_D=',CellSize_DB(:,BLKtest),&
              ' CellVolume=',CellVolume_GB(iTest,jTest,kTest,BLKtest)
         if(.not.IsCartesian) write(*,'(a,3f12.5)') &
              ' CellFace_D=',CellFace_DFB(:,iTest,jTest,kTest,BLKtest)
-  	do idir=1,6
-  	   select case(neiLEV(idir,BLKtest))
+  	do iDir = 1, 6
+  	   select case(neiLEV(iDir,BLKtest))
            case(0,1)
               write(*,'(a,i2,a,i2,a,i5,a,i8)')&
                    'idir=',idir,' neiLEV=',neiLEV(idir,BLKtest),&
@@ -1387,7 +1376,7 @@ subroutine find_test_cell
                    ' neiBLK=',neiBLK(:,idir,BLKtest)
   	   case(NOBLK)
   	      write(*,'(a,i2,a,i5)')&
-                   'idir=',idir,' neiLEV=',neiLEV(idir,BLKtest)
+                   'idir=',iDir,' neiLEV=',neiLEV(iDir,BLKtest)
   	   end select
   	end do
   	write(*,*)

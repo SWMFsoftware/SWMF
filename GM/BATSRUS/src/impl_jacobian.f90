@@ -56,14 +56,15 @@ subroutine impl_jacobian(implBLK,JAC)
   use ModMain
   use ModNumConst, ONLY: i_DD
   use ModvarIndexes
-  use ModAdvance, ONLY : B0_DX, B0_DY,B0_DZ,set_b0_face,&
+  use ModAdvance, ONLY: B0_DX, B0_DY,B0_DZ, set_b0_face,&
        time_BLK
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell, &
-       FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
   use ModRadDiffusion, ONLY: add_jacobian_rad_diff
-  use ModGeometry, ONLY: vInv_CB, UseCovariant
+  use ModGeometry, ONLY: true_cell, vInv_CB
+  use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, &
+       FaceNormal_DDFB, CellSize_DB
+
   implicit none
 
   integer, intent(in) :: implBLK
@@ -82,6 +83,7 @@ subroutine impl_jacobian(implBLK,JAC)
 
   logical :: oktest, oktest_me
 
+  real :: Dxyz(nDim)
   real :: FluxLeft_VFD(nW,nI+1,nJ+1,nK+1,nDim) ! Unperturbed left flux
   real :: FluxRight_VFD(nW,nI,nJ,nK,nDim)      ! Unperturbed right flux
   real :: FluxEpsLeft_VF(nW,nI+1,nJ+1,nK+1)    ! Perturbed left flux
@@ -104,7 +106,7 @@ subroutine impl_jacobian(implBLK,JAC)
   ! Extract state for this block
   Impl_VC = Impl_VGB(1:nw,1:nI,1:nJ,1:nK,implBLK)
   iBLK = impl2iBLK(implBLK)
-  dxyz(1)=dx_BLK(iBLK); dxyz(2)=dy_BLK(iBLK); dxyz(3)=dz_BLK(iBLK)
+  Dxyz = CellSize_DB(:,iBlk)
   if(UseB0)then
      call set_b0_face(iBLK)
      B0_DFD(:,1:nI+1,1:nJ  ,1:nK  ,x_)=B0_DX(:,1:nI+1,1:nJ,1:nK)
@@ -255,21 +257,12 @@ subroutine impl_jacobian(implBLK,JAC)
                 .or.  (iW >= Bx_    .and. iW <= Bz_   ) &
                 .or.  (iw == E_ .and. UseImplicitEnergy) &
                 ) )then
-              if(UseCovariant .and. jw>=Bx_ .and. jw<=Bz_)then
+              if(.not.IsCartesianGrid .and. jw>=Bx_ .and. jw<=Bz_)then
                  ! The source terms are always multiplied by coeff
                  coeff=-0.5*wnrm(jw)/wnrm(iw)
                  ! Get the corresponding face area
-                 select case(iDim)
-                 case(x_)
-                    FaceArea_F(i1:nI,j1:nJ,k1:nK) = &
-                         FaceAreaI_DFB(jw-B_,i1:nI,j1:nJ,k1:nK,iBLK)
-                 case(y_)
-                    FaceArea_F(i1:nI,j1:nJ,k1:nK) = &
-                         FaceAreaJ_DFB(jw-B_,i1:nI,j1:nJ,k1:nK,iBLK)
-                 case(z_)
-                    FaceArea_F(i1:nI,j1:nJ,k1:nK) = &
-                         FaceAreaK_DFB(jw-B_,i1:nI,j1:nJ,k1:nK,iBlk)
-                 end select
+                 FaceArea_F(i1:nI,j1:nJ,k1:nK) = &
+                      FaceNormal_DDFB(jw-B_,iDim,i1:nI,j1:nJ,k1:nK,iBLK)
 
                  ! Relative to the right face flux Q is shifted to the left
                  dfdwLface(i1:nI,j1:nJ,k1:nK)=dfdwLface(i1:nI,j1:nJ,k1:nK)+ &
@@ -341,8 +334,13 @@ subroutine impl_jacobian(implBLK,JAC)
   end if
 
   ! Add extra terms for Hall resistivity
-  if(UseHallResist .and. .not. UseCovariant)call impl_hall_resist
-  if(UseHallResist .and.       UseCovariant)call impl_hall_resist_general
+  if(UseHallResist)then
+     if(IsCartesianGrid)then
+        call impl_hall_resist
+     else
+        call impl_hall_resist_general
+     end if
+  end if
 
   if(UseRadDiffusion) call add_jacobian_rad_diff(iBLK, JAC)
 
@@ -398,17 +396,9 @@ contains
     UseDivbSource=.false.
 
     ! Calculate div B for middle cell contribution to Powell's source terms
-    if(UseCovariant)then
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          divb(i,j,k) = 0.5*vInv_CB(i,j,k,iBlk)*( &
-               sum(Impl_VGB(Bx_:Bz_,i+1,j,k,implBLK)*FaceAreaI_DFB(:,i+1,j,k,iBlk))&
-               -sum(Impl_VGB(Bx_:Bz_,i-1,j,k,implBLK)*FaceAreaI_DFB(:,i,j,k,iBlk))+&
-               sum(Impl_VGB(Bx_:Bz_,i,j+1,k,implBLK)*FaceAreaJ_DFB(:,i,j+1,k,iBlk))&
-               -sum(Impl_VGB(Bx_:Bz_,i,j-1,k,implBLK)*FaceAreaJ_DFB(:,i,j,k,iBlk))+&
-               sum(Impl_VGB(Bx_:Bz_,i,j,k+1,implBLK)*FaceAreaK_DFB(:,i,j,k+1,iBlk))&
-               -sum(Impl_VGB(Bx_:Bz_,i,j,k-1,implBLK)*FaceAreaK_DFB(:,i,j,k,iBlk))) 
-       end do; end do; end do
-   else
+    if(IsCartesianGrid)then
+       if(IsRzGeometry)call CON_stop('impl_divbsrc_init not working for RZ')
+
        divb=0.5*&
             ((Impl_VGB(Bx_,2:nI+1,1:nJ,1:nK,implBLK)           &
             -Impl_VGB(Bx_,0:nI-1,1:nJ,1:nK,implBLK))/dxyz(x_) &
@@ -416,6 +406,22 @@ contains
             -Impl_VGB(By_,1:nI,0:nJ-1,1:nK,implBLK))/dxyz(y_) &
             +(Impl_VGB(Bz_,1:nI,1:nJ,2:nK+1,implBLK)           &
             -Impl_VGB(Bz_,1:nI,1:nJ,0:nK-1,implBLK))/dxyz(z_))
+    else
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          divb(i,j,k) = 0.5*vInv_CB(i,j,k,iBlk)*(     &
+               sum (Impl_VGB(Bx_:Bz_,i+1,j,k,implBLK) &
+               *    FaceNormal_DDFB(:,1,i+1,j,k,iBlk))&
+               -sum(Impl_VGB(Bx_:Bz_,i-1,j,k,implBLK) &
+               *    FaceNormal_DDFB(:,1,i,j,k,iBlk))  &
+               +sum(Impl_VGB(Bx_:Bz_,i,j+1,k,implBLK) &
+               *    FaceNormal_DDFB(:,2,i,j+1,k,iBlk))&
+               -sum(Impl_VGB(Bx_:Bz_,i,j-1,k,implBLK) &
+               *    FaceNormal_DDFB(:,2,i,j,k,iBlk))  &
+               +sum(Impl_VGB(Bx_:Bz_,i,j,k+1,implBLK) &
+               *    FaceNormal_DDFB(:,3,i,j,k+1,iBlk))&
+               -sum(Impl_VGB(Bx_:Bz_,i,j,k-1,implBLK) &
+               *    FaceNormal_DDFB(:,3,i,j,k,iBlk))) 
+       end do; end do; end do
     end if
 
     ! Make sure that sPowell_VC is defined for all indexes
@@ -540,7 +546,27 @@ contains
 
     InvDx2 = 0.5/Dxyz(x_); InvDy2 = 0.5/Dxyz(y_); InvDz2 = 0.5/Dxyz(z_)
 
-    if(UseCovariant)then                      
+    if(IsCartesianGrid)then
+
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          HallJ_CD(i,j,k,x_) = &
+               +InvDy2*(Impl_VGB(Bz_,i,j+1,k,implBLK)-Impl_VGB(Bz_,i,j-1,k,implBLK)) &
+               -InvDz2*(Impl_VGB(By_,i,j,k+1,implBLK)-Impl_VGB(By_,i,j,k-1,implBLK))
+       end do; end do; end do
+
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          HallJ_CD(i,j,k,y_) = &
+               +InvDz2*(Impl_VGB(Bx_,i,j,k+1,implBLK)-Impl_VGB(Bx_,i,j,k-1,implBLK)) &
+               -InvDx2*(Impl_VGB(Bz_,i+1,j,k,implBLK)-Impl_VGB(Bz_,i-1,j,k,implBLK))
+       end do; end do; end do
+
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          HallJ_CD(i,j,k,z_) = &
+               +InvDx2*(Impl_VGB(By_,i+1,j,k,implBLK)-Impl_VGB(By_,i-1,j,k,implBLK)) &
+               -InvDy2*(Impl_VGB(Bx_,i,j+1,k,implBLK)-Impl_VGB(Bx_,i,j-1,k,implBLK))
+       end do; end do; end do
+
+    else                                        
 
        call set_block_jacobian_cell(iBlk)
 
@@ -567,26 +593,6 @@ contains
                sum(DbDgen_DD(y_,:)*DgenDxyz_DDC(:,x_,i,j,k)) - &
                sum(DbDgen_DD(x_,:)*DgenDxyz_DDC(:,y_,i,j,k))
 
-       end do; end do; end do
-
-    else                                        
-
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          HallJ_CD(i,j,k,x_) = &
-               +InvDy2*(Impl_VGB(Bz_,i,j+1,k,implBLK)-Impl_VGB(Bz_,i,j-1,k,implBLK)) &
-               -InvDz2*(Impl_VGB(By_,i,j,k+1,implBLK)-Impl_VGB(By_,i,j,k-1,implBLK))
-       end do; end do; end do
-
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          HallJ_CD(i,j,k,y_) = &
-               +InvDz2*(Impl_VGB(Bx_,i,j,k+1,implBLK)-Impl_VGB(Bx_,i,j,k-1,implBLK)) &
-               -InvDx2*(Impl_VGB(Bz_,i+1,j,k,implBLK)-Impl_VGB(Bz_,i-1,j,k,implBLK))
-       end do; end do; end do
-
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          HallJ_CD(i,j,k,z_) = &
-               +InvDx2*(Impl_VGB(By_,i+1,j,k,implBLK)-Impl_VGB(By_,i-1,j,k,implBLK)) &
-               -InvDy2*(Impl_VGB(Bx_,i,j+1,k,implBLK)-Impl_VGB(Bx_,i,j-1,k,implBLK))
        end do; end do; end do
 
     end if                                    
@@ -780,6 +786,7 @@ contains
          BxPerN_G, ByPerN_G, BzPerN_G
 
     use ModNumConst,   ONLY: iLeviCivita_III
+    use BATL_lib, ONLY: FaceNormal_DDFB
 
     ! Notation follows the Toth et. al. Hall MHD on Block Adaptive Grids paper
 
@@ -791,7 +798,7 @@ contains
     
     real :: Coeff, Term, TermSub, TermSup
 
-    real :: BPerN_CD(nI,nJ,nK,3), Area_DDF(3, 3, nI+1, nJ+1, nK+1)
+    real :: BPerN_CD(nI,nJ,nK,3)
     !-------------------------------------------------------------------------
 
     call set_block_jacobian_cell(iBlk)
@@ -799,10 +806,6 @@ contains
     BPerN_CD(:,:,:,1) = BxPerN_G(1:nI,1:nJ,1:nK)
     BPerN_CD(:,:,:,2) = ByPerN_G(1:nI,1:nJ,1:nK)
     BPerN_CD(:,:,:,3) = BzPerN_G(1:nI,1:nJ,1:nK)
-
-    Area_DDF(:,1,:,1:nJ,1:nK) = FaceAreaI_DFB(:,:,:,:,iBlk)
-    Area_DDF(:,2,1:nI,:,1:nK) = FaceAreaJ_DFB(:,:,:,:,iBlk)
-    Area_DDF(:,3,1:nI,1:nJ,:) = FaceAreaK_DFB(:,:,:,:,iBlk)
 
     do kDim = 1,3; do lDim = 1,3
        if(kDim == lDim) CYCLE
@@ -840,29 +843,8 @@ contains
                         *(BPerN_CD(i,j,k,iDim)*jklEpsilon &
                         - BPerN_CD(i,j,k,jDim)*iklEpsilon)
 
-                   TermSub = Area_DDF(iDim,iFace,i ,j ,k )*Term
-                   TermSup = Area_DDF(iDim,iFace,i2,j2,k2)*Term
-
-                   !if(iBlk==1.and.jB==Bz_.and.lB==Bx_.and. &
-                   !     i==4.and.j==4.and.k==1.and.iSub==4)then
-                   !
-                   !if(iBlk==1.and.jB==By_.and.lB==Bz_.and.iFace==1.and.&
-                   !     iDim==1.and.kDim==1.and.i==2.and.j==2.and.k==2)then
-                   !
-                   !   write(*,*)'i2,j2,k2=',i2,j2,k2
-                   !   write(*,*)'vInv,Area1,Area2=',vInv_CB(i,j,k,iBlk),&
-                   !        Area_DDF(iDim,iFace,i ,j ,k ), &
-                   !        Area_DDF(iDim,iFace,i2,j2,k2)
-                   !
-                   !   write(*,*)'Tks=',DgenDxyz_DDC(kDim,iFace,i,j,k)
-                   !   write(*,*)'Coeff,BPerN(iDim),BPerN(jDim)=',&
-                   !        Coeff,BPerN_CD(i,j,k,iDim),BPerN_CD(i,j,k,jDim)
-                   !
-                   !   write(*,*)'jklEpsilon, iklEpsilon=',&
-                   !        jklEpsilon, iklEpsilon
-                   !
-                   !   write(*,*)'TermSub=',TermSub
-                   !end if
+                   TermSub = FaceNormal_DDFB(iDim,iFace,i ,j ,k ,iBlk)*Term
+                   TermSup = FaceNormal_DDFB(iDim,iFace,i2,j2,k2,iBlk)*Term
 
                    ! Exclude boundaries
                    if(  iFace==1.and.i>1 .or. &
