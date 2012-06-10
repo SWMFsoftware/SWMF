@@ -109,7 +109,9 @@ LIBOBJECTS = \
 SWMFLIB = ${LIBDIR}/libSWMF.a
 
 # SWMFLIB is a single library that contains all SWMF object files
-SWMFLIB: TMP_DIRS
+# Note that TMP_DIRS should not be done with parallel make !
+SWMFLIB:
+	make TMP_DIRS
 	rm -f ${SWMFLIB}
 	${AR} ${SWMFLIB} Tmp_*/*.o
 	@rm -rf Tmp_*
@@ -128,8 +130,9 @@ EXEOBJECT = swmf.o
 
 # Linking SWMF.exe from the libSWMF.a library fails on Mac OSX.
 # As a work around we load the object files directly from Tmp_*
-
-SWMFEXE: TMP_DIRS
+# Note that TMP_DIRS should not be done with parallel make !
+SWMFEXE:
+	make TMP_DIRS
 	@$(MAKE) ${EXEOBJECT}
 	${LINK.f90} -o ${SWMFEXE} ${EXEOBJECT} Tmp_*/*.o ${LBLAS} ${Lflag1} \
 		${HYPRELIB}
