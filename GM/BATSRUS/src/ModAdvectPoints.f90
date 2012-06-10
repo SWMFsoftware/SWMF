@@ -168,9 +168,9 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, nIJK_D, unusedBLK
   use ModAdvance, ONLY : State_VGB, StateOld_VCB
-  use ModGeometry, ONLY : XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
-  use ModGeometry, ONLY : UseCovariant     
   use ModParallel, ONLY : NeiLev
+  use ModGeometry, ONLY: XyzStart_BLK
+  use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, xyz_to_coord
 
   implicit none
 
@@ -222,13 +222,11 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   nState    = iStateMax - iVarMin + 1
 
   ! Convert to generalized coordinates if necessary
-
-  if(UseCovariant)then                
-     call xyz_to_gen(XyzIn_D,Xyz_D)
-  else                                
+  if(IsCartesianGrid)then
      Xyz_D = XyzIn_D
-  end if                              
- 
+  else
+     call xyz_to_coord(XyzIn_D, Xyz_D)
+  end if
 
   ! Set state and weight to zero, so MPI_reduce will add it up right
   StateCurrent_V = cZero
@@ -240,9 +238,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
      if(DoTestMe)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
 
      ! Put cell size of current block into an array
-     Dxyz_D(1)=Dx_BLK(iBlock)
-     Dxyz_D(2)=Dy_BLK(iBlock)
-     Dxyz_D(3)=Dz_BLK(iBlock)
+     Dxyz_D = CellSize_DB(:,iBlock)
 
      ! Set buffer zone according to relative size of neighboring block
      do iDim = 1, 3
@@ -296,8 +292,8 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
      if(DoTest)then
         write(*,*)'Point found at iProc,iBlock,iLo,jLo,kLo=',&
              iProc,iBlock,IjkLo_D
-        write(*,*)'iProc, XyzStart_BLK,Dx_BLK=',iProc, &
-             XyzStart_BLK(:,iBlock),dx_BLK(iBlock)
+        write(*,*)'iProc, XyzStart_BLK,Dx=', iProc, &
+             XyzStart_BLK(:,iBlock), Dxyz_D(1)
      end if
 
      ! Set the index range for the physical cells
@@ -353,6 +349,8 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
 
 contains
 
+  !!! THIS SHOULD BE ALL REPLACED BY call get_current !!!
+
   !============================================================================
   subroutine add_current
 
@@ -367,43 +365,141 @@ contains
 
     if(prolong_order==1)then
        ! Avoid the ghost cells at resolution changes
-       if(i==1 .and.DxyzLo_D(1)/=Dxyz_D(1))iLo=1
-       if(i==nI.and.DxyzHi_D(1)/=Dxyz_D(1))iHi=nI
-       if(j==1 .and.DxyzLo_D(2)/=Dxyz_D(2))jLo=1
-       if(j==nJ.and.DxyzHi_D(2)/=Dxyz_D(2))jHi=nJ
-       if(k==1 .and.DxyzLo_D(3)/=Dxyz_D(3))kLo=1
-       if(k==nK.and.DxyzHi_D(3)/=Dxyz_D(3))kHi=nK
+       if(i==1  .and. DxyzLo_D(1)/=Dxyz_D(1)) iLo = 1
+       if(i==nI .and. DxyzHi_D(1)/=Dxyz_D(1)) iHi = nI
+       if(j==1  .and. DxyzLo_D(2)/=Dxyz_D(2)) jLo = 1
+       if(j==nJ .and. DxyzHi_D(2)/=Dxyz_D(2)) jHi = nJ
+       if(k==1  .and. DxyzLo_D(3)/=Dxyz_D(3)) kLo = 1
+       if(k==nK .and. DxyzHi_D(3)/=Dxyz_D(3)) kHi = nK
     end if
 
     DxInv = 1/((iHi-iLo)*Dxyz_D(1))
     DyInv = 1/((jHi-jLo)*Dxyz_D(2))
     DzInv = 1/((kHi-kLo)*Dxyz_D(3))
 
-    if(UseCovariant)then                          
-       call covariant_curlb(i,j,k,iBlock,Current_D,.not.body_BLK(iBlock))
-    else                                          
+    if(IsCartesianGrid)then
        Current_D(1) = &
-            (State_VGB(Bz_,i,jHi,k,iBlock)-State_VGB(Bz_,i,jLo,k,iBlock))*DyInv- &
-            (State_VGB(By_,i,j,kHi,iBlock)-State_VGB(By_,i,j,kLo,iBlock))*DzInv
+            ( State_VGB(Bz_,i,jHi,k,iBlock)          &
+            - State_VGB(Bz_,i,jLo,k,iBlock))*DyInv - &
+            ( State_VGB(By_,i,j,kHi,iBlock)          &
+            - State_VGB(By_,i,j,kLo,iBlock))*DzInv
 
        Current_D(2) = &
-            (State_VGB(Bx_,i,j,kHi,iBlock)-State_VGB(Bx_,i,j,kLo,iBlock))*DzInv- &
-            (State_VGB(Bz_,iHi,j,k,iBlock)-State_VGB(Bz_,iLo,j,k,iBlock))*DxInv
+            ( State_VGB(Bx_,i,j,kHi,iBlock)          &
+            - State_VGB(Bx_,i,j,kLo,iBlock))*DzInv - &
+            ( State_VGB(Bz_,iHi,j,k,iBlock)          &
+            - State_VGB(Bz_,iLo,j,k,iBlock))*DxInv
 
        Current_D(3) = &
-            (State_VGB(By_,iHi,j,k,iBlock)-State_VGB(By_,iLo,j,k,iBlock))*DxInv- &
-            (State_VGB(Bx_,i,jHi,k,iBlock)-State_VGB(Bx_,i,jLo,k,iBlock))*DyInv
-
-    end if                                       
-    
+            ( State_VGB(By_,iHi,j,k,iBlock)          &
+            - State_VGB(By_,iLo,j,k,iBlock))*DxInv - &
+            ( State_VGB(Bx_,i,jHi,k,iBlock)          &
+            - State_VGB(Bx_,i,jLo,k,iBlock))*DyInv
+    else
+       call get_gencoord_curlb(i,j,k,iBlock,Current_D,.not.body_BLK(iBlock))
+    end if
 
     StateCurrent_V(nState+1:nState+3) = StateCurrent_V(nState+1:nState+3) &
          + WeightXyz * Current_D
 
   end subroutine add_current
 
-end subroutine get_point_data
+  !===========================================================================
+  subroutine get_gencoord_curlb(i,j,k,iBLK,CurlB_D,IsTrueBlock)
 
+    use ModGeometry, ONLY: true_cell
+    use ModAdvance,  ONLY: State_VGB, Bx_, Bz_
+    use BATL_lib,    ONLY: FaceNormal_DDFB, CellVolume_GB
+
+    implicit none
+
+    integer, intent(in) :: i, j, k, iBLK
+    logical, intent(in) :: IsTrueBlock
+    real,    intent(out):: CurlB_D(3)
+
+    real:: B_D(3)
+    real:: MagneticField_DS(3,6), FaceArea_DS(3,6)
+    !--------------------------------------------------------------------------
+
+    FaceArea_DS(:,1:2) = FaceNormal_DDFB(:,1,i:i+1,j,k,iBLK)
+    FaceArea_DS(:,3:4) = FaceNormal_DDFB(:,2,i,j:j+1,k,iBLK)
+    FaceArea_DS(:,5:6) = FaceNormal_DDFB(:,3,i,j,k:k+1,iBLK)   
+
+    if(IsTrueBlock)then
+       MagneticField_DS(:,1) = -State_VGB(Bx_:Bz_,i-1,j,k,iBLK)
+       MagneticField_DS(:,2) = +State_VGB(Bx_:Bz_,i+1,j,k,iBLK)
+       MagneticField_DS(:,3) = -State_VGB(Bx_:Bz_,i,j-1,k,iBLK)
+       MagneticField_DS(:,4) = +State_VGB(Bx_:Bz_,i,j+1,k,iBLK)
+       MagneticField_DS(:,5) = -State_VGB(Bx_:Bz_,i,j,k-1,iBLK)
+       MagneticField_DS(:,6) = +State_VGB(Bx_:Bz_,i,j,k+1,iBLK)
+    else
+       ! Initialize to zero if there are too many non-true cells to use
+       CurlB_D = 0.0
+       if(.not.true_cell(i,j,k,iBLK)) RETURN
+
+       B_D = State_VGB(Bx_:Bz_,i,j,k,iBLK)
+
+       ! Input from I faces
+       if(.not.(true_cell(i-1,j,k,iBLK).or.true_cell(i+1,j,k,iBLK))) RETURN
+
+       if(true_cell(i-1,j,k,iBLK))then
+          ! Interpolation. Sign changes because of lower edge
+          MagneticField_DS(:,1) = -(+State_VGB(Bx_:Bz_,i-1,j,k,iBLK)+B_D)
+       else
+          ! Extrapolation ? !!! Looks incorrect.
+          MagneticField_DS(:,1) = -(-State_VGB(Bx_:Bz_,i+1,j,k,iBLK)+2*B_D)
+       end if
+       if(true_cell(i+1,j,k,iBLK))then
+          MagneticField_DS(:,2) = +(+State_VGB(Bx_:Bz_,i+1,j,k,iBLK)+B_D)
+       else
+          MagneticField_DS(:,2) = +(-State_VGB(Bx_:Bz_,i-1,j,k,iBLK)+2*B_D)
+       end if
+
+       ! Input from J faces
+       if(.not.(true_cell(i,j-1,k,iBLK).or.true_cell(i,j+1,k,iBLK))) RETURN
+
+       if(true_cell(i,j-1,k,iBLK))then
+          MagneticField_DS(:,3) = -(+State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+B_D)
+       else
+          MagneticField_DS(:,3) = -(-State_VGB(Bx_:Bz_,i,j+1,k,iBLK)+2*B_D)
+       end if
+       if(true_cell(i,j+1,k,iBLK))then
+          MagneticField_DS(:,4) = +(+State_VGB(Bx_:Bz_,i,j+1,k,iBLK)+B_D)
+       else
+          MagneticField_DS(:,4) = +(-State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+2*B_D)
+       end if
+
+       ! Input from K faces
+       if(.not.(true_cell(i,j,k-1,iBLK).or.true_cell(i,j,k+1,iBLK))) RETURN
+
+       if(true_cell(i,j,k-1,iBLK))then
+          MagneticField_DS(:,5) = -(+State_VGB(Bx_:Bz_,i,j,k-1,iBLK)+B_D)
+       else
+          MagneticField_DS(:,5) = -(-State_VGB(Bx_:Bz_,i,j,k+1,iBLK)+2*B_D)
+       end if
+       if(true_cell(i,j,k+1,iBLK))then
+          MagneticField_DS(:,6) = +(+State_VGB(Bx_:Bz_,i,j,k+1,iBLK)+B_D)
+       else
+          MagneticField_DS(:,6) = +(-State_VGB(Bx_:Bz_,i,j,k-1,iBLK)+2*B_D)
+       end if
+    end if
+
+    ! Integrate B x dA over the surface
+    CurlB_D(1) = sum(FaceArea_DS(2,:)*MagneticField_DS(3,:) &
+         -           FaceArea_DS(3,:)*MagneticField_DS(2,:) )
+
+    CurlB_D(2) = sum(FaceArea_DS(3,:)*MagneticField_DS(1,:) &
+         -           FaceArea_DS(1,:)*MagneticField_DS(3,:) )
+
+    CurlB_D(3) = sum(FaceArea_DS(1,:)*MagneticField_DS(2,:) &
+         -           FaceArea_DS(2,:)*MagneticField_DS(1,:))
+
+    ! Divide by volume and 2 for the averaging
+    CurlB_D = CurlB_D*0.5/CellVolume_GB(i,j,k,iBLK)
+
+  end subroutine get_gencoord_curlb
+
+end subroutine get_point_data
 !==============================================================================
 subroutine advect_test
 
