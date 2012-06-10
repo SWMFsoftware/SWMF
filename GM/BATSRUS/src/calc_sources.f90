@@ -5,8 +5,7 @@ subroutine calc_sources
   use ModMain
   use ModVarIndexes
   use ModGeometry,      ONLY: dx_BLK, dy_BLK, dz_BLK, R_BLK,&
-       vInv_CB, y_BLK, true_cell, &
-       IsRzGeometry
+       vInv_CB, y_BLK, true_cell
   use ModAdvance
   use ModPhysics
   use ModNumConst
@@ -17,7 +16,6 @@ subroutine calc_sources
   use ModMultiFluid
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
-  use ModCovariant,     ONLY: UseCovariant 
   use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
   use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
        CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
@@ -29,6 +27,8 @@ subroutine calc_sources
   use ModFaceFlux,      ONLY: Pe_G
   use ModHallResist,    ONLY: UseBiermannBattery, &
        IonMassPerCharge_G
+  use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry
+  
   implicit none
 
   integer :: i, j, k, iVar
@@ -326,11 +326,28 @@ subroutine calc_sources
      end if
   end if
 
+
+  ! We consider two cases: curl(B0) is zero analytically or non-zero
+  ! These are distinguished by UseCurlB0 being true or fales.
+  !
+  ! Momentum equation has the Lorentz force J x B
+  !     = (curl B1) x (B1 + B0)     if curl B0 = 0
+  !     = (curl B1+B0) x (B1 + B0)  if curl B0 is not 0
+  !
+  ! Conservative fluxes add the divergence of the Maxwell tensor
+  !     div(B1^2 + B1.B0 - B1 B1 - B1 B0 - B0 B1)
+  ! 
+  ! Deviations between these two are
+  !   -B1 div(B1)       - usual div B source
+  !   -B1 div(B0)       - div(B0) source
+  !   -curl(B0) x B1    - remove this if curl B0 = 0
+  !   +curl(B0) x B0    - add this if curl B0 is not 0
+  
   if(UseB .and. UseDivbSource)then
-     if(UseCovariant)then   
-        call calc_divb_source_covar
-     else                   
+     if(IsCartesianGrid)then
         call calc_divb_source
+     else
+        call calc_divb_source_gencoord
      end if
 
      if(DoTestMe)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,BlkTest)
@@ -347,6 +364,8 @@ subroutine calc_sources
 
         if(.not. IsMhd) CYCLE
 
+        ! -B1 div(B1)       - usual div B source
+
         Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) -&
              DivB1_GB(i,j,k,iBlock)* &
              State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -356,23 +375,40 @@ subroutine calc_sources
              State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))*RhoInv
      end do;end do;end do
 
+     if(DoTestMe)call write_source('After divb source')
+
      if (UseB0Source) then
+
+        !   -B1 div(B0)     - div(B0) source
+        ! -curl(B0) x B1    - remove this term (in case curl B0 should be 0) 
+        !                     have to undo this if curl B0 is actually not 0
+
         do k=1,nK; do j=1,nJ; do i=1,nI
            if(.not.true_cell(i,j,k,iBlock)) CYCLE
            Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
                 - State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_CB(i,j,k,iBlock) &
-                + cross_product( &
-                State_VGB(Bx_:Bz_,i,j,k,iBlock), CurlB0_DCB(:,i,j,k,iBlock))
+                - cross_product( &
+                CurlB0_DCB(:,i,j,k,iBlock), State_VGB(Bx_:Bz_,i,j,k,iBlock))
         end do; end do; end do
+
+        if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUz_)then 
+           write(*,*)'DivB0_CB  =',DivB0_CB(iTest,jTest,kTest,BlkTest)
+           write(*,*)'CurlB0_DCB=',CurlB0_DCB(:,iTest,jTest,kTest,BlkTest)
+           call write_source('After B0 source')
+        end if
      end if
   else
      if(UseB)call calc_divb(iBlock)
   end if
 
   if(UseB .and. UseCurlB0)then
+
+     !   +curl(B0) x B1    - undo source term above
+     !   +curl(B0) x B0    - add this since curl B0 is not 0
      do k=1,nK; do j=1,nJ; do i=1,nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
-        if(R_BLK(i,j,k,iBlock)<rCurrentFreeB0)CYCLE
+        if(R_BLK(i,j,k,iBlock) < rCurrentFreeB0)CYCLE
+
         CurlB0CrossB_D = cross_product(&
              CurlB0_DCB(:,i,j,k,iBlock),&
              State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
@@ -420,6 +456,7 @@ subroutine calc_sources
      call select_fluid
      ! Add gravity and/or centrifugal force
      if(UseGravity .or. UseRotatingFrame) then
+
         Source_VC(iRhoUx,:,:,:) = Source_VC(iRhoUx,:,:,:) + &
              State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)* &
              fbody_x_BLK(:,:,:,iBlock)
@@ -438,8 +475,9 @@ subroutine calc_sources
              fbody_z_BLK(:,:,:,iBlock)) 
 
         if(DoTestMe.and. &
-             (VarTest==Energy_ .or. VarTest>=iRhoUx .and. VarTest<=iRhoUz)) &
-             call write_source('After gravity')
+             (VarTest==Energy_ .or. VarTest>=iRhoUx .and. VarTest<=iRhoUz))then
+           call write_source('After gravity')
+        end if
      end if
 
      ! Add Coriolis forces
@@ -558,7 +596,8 @@ contains
        if(nK > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
             + dB1nTop + dB1nBot
 
-       ! Momentum source term from B0 only needed for div(B^2/2 - BB) discretization
+       ! Momentum source term from B0 only needed for div(B^2/2 - BB) 
+       ! discretization
        if(.not.(IsMhd.and.UseB0)) CYCLE
 
        Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
@@ -585,103 +624,97 @@ contains
 
   end subroutine calc_divb_source
   !===========================================================================
-  subroutine calc_divb_source_covar
+  subroutine calc_divb_source_gencoord
 
-    use ModCovariant, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
+    use BATL_lib, ONLY: FaceNormal_DDFB
     real :: FaceArea_D(3), vInvHalf
     real :: B1nJumpL, B1nJumpR, DivBInternal_C(1:nI,1:nJ,1:nK)
     integer :: i,j,k
+    character(len=*), parameter:: NameSub = 'calc_divb_source_gencoord'
     !------------------------------------------------------------------------
     
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
-       VInvHalf=vInv_CB(i,j,k,iBlock)*cHalf
-       FaceArea_D=FaceAreaI_DFB(:,i,j,k,iBlock)
+       VInvHalf=vInv_CB(i,j,k,iBlock)*0.5
+       FaceArea_D = FaceNormal_DDFB(:,1,i,j,k,iBlock)
        B1nJumpL =VInvHalf*&
-            (FaceArea_D(1)*(RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))+&
-            FaceArea_D(2)*(RightState_VX(By_,i,j,k)-LeftState_VX(By_,i,j,k))+&
-            FaceArea_D(3)*(RightState_VX(Bz_,i,j,k)-LeftState_VX(Bz_,i,j,k)))
-       DivBInternal_C(i,j,k)=&
-            -(FaceArea_D(1)*RightState_VX(Bx_,i,j,k)+&
-            FaceArea_D(2)*RightState_VX(By_,i,j,k)+&
-            FaceArea_D(3)*RightState_VX(Bz_,i,j,k))
+            sum(FaceArea_D*(RightState_VX(Bx_:Bz_,i,j,k) &
+            -               LeftState_VX(Bx_:Bz_,i,j,k)))
+       DivBInternal_C(i,j,k) = &
+            -sum(FaceArea_D*RightState_VX(Bx_:Bz_,i,j,k))
 
-       FaceArea_D=FaceAreaI_DFB(:,i+1,j,k,iBlock)
+       FaceArea_D = FaceNormal_DDFB(:,1,i+1,j,k,iBlock)
        B1nJumpR =  VInvHalf*&
-            (FaceArea_D(1)*(RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))+&
-            FaceArea_D(2)*(RightState_VX(By_,i+1,j,k)-LeftState_VX(By_,i+1,j,k))+&
-            FaceArea_D(3)*(RightState_VX(Bz_,i+1,j,k)-LeftState_VX(Bz_,i+1,j,k)))
-       DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k)+&
-            (FaceArea_D(1)*LeftState_VX(Bx_,i+1,j,k)+&
-            FaceArea_D(2)*LeftState_VX(By_,i+1,j,k)+&
-            FaceArea_D(3)*LeftState_VX(Bz_,i+1,j,k))
+            sum(FaceArea_D*(RightState_VX(Bx_:Bz_,i+1,j,k) &
+            -            LeftState_VX(Bx_:Bz_,i+1,j,k)))
+
+       DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
+            + sum(FaceArea_D*LeftState_VX(Bx_:Bz_,i+1,j,k))
 
        DivB1_GB(i,j,k,iBlock)  = B1nJumpL + B1nJumpR
 
        if(.not.IsMhd) CYCLE
 
-       Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
+       Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
             - B0_DX(:,i,j,k)*B1nJumpL   &
             - B0_DX(:,i+1,j,k)*B1nJumpR
 
     end do; end do; end do
 
+    if(DoTestMe)write(*,*)NameSub,' after i divbint, divb1=', &
+         DivBInternal_C(iTest,jTest,kTest), DivB1_GB(iTest,jTest,kTest,BlkTest)
+
     do k=1,nK; do j=1,nJ; do i=1,nI 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
-       VInvHalf=vInv_CB(i,j,k,iBlock)*cHalf
-       FaceArea_D=FaceAreaJ_DFB(:,i,j,k,iBlock)
+       VInvHalf=vInv_CB(i,j,k,iBlock)*0.5
+       FaceArea_D = FaceNormal_DDFB(:,2,i,j,k,iBlock)
        B1nJumpL = VInvHalf*&
-            (FaceArea_D(1)*(RightState_VY(Bx_,i,j,k)-LeftState_VY(Bx_,i,j,k))+&
-            FaceArea_D(2)*(RightState_VY(By_,i,j,k)-LeftState_VY(By_,i,j,k))+&
-            FaceArea_D(3)*(RightState_VY(Bz_,i,j,k)-LeftState_VY(Bz_,i,j,k)))
-       DivBInternal_C(i,j,k)=DivBInternal_C(i,j,k)-&
-            (FaceArea_D(1)*RightState_VY(Bx_,i,j,k)+&
-            FaceArea_D(2)*RightState_VY(By_,i,j,k)+&
-            FaceArea_D(3)*RightState_VY(Bz_,i,j,k))
+            sum(FaceArea_D*(RightState_VY(Bx_:Bz_,i,j,k) &
+            -               LeftState_VY(Bx_:Bz_,i,j,k)))
+       DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
+            - sum(FaceArea_D*RightState_VY(Bx_:Bz_,i,j,k))
 
-       FaceArea_D=FaceAreaJ_DFB(:,i,j+1,k,iBlock)
+       FaceArea_D =  FaceNormal_DDFB(:,2,i,j+1,k,iBlock)
        B1nJumpR = VInvHalf*&
-            (FaceArea_D(1)*(RightState_VY(Bx_,i,j+1,k)-LeftState_VY(Bx_,i,j+1,k))+&
-            FaceArea_D(2)*(RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))+&
-            FaceArea_D(3)*(RightState_VY(Bz_,i,j+1,k)-LeftState_VY(Bz_,i,j+1,k)))
-       DivBInternal_C(i,j,k)=DivBInternal_C(i,j,k)+&
-            (FaceArea_D(1)*LeftState_VY(Bx_,i,j+1,k)+&
-            FaceArea_D(2)*LeftState_VY(By_,i,j+1,k)+&
-            FaceArea_D(3)*LeftState_VY(Bz_,i,j+1,k))
+            sum(FaceArea_D*(RightState_VY(Bx_:Bz_,i,j+1,k) &
+            -               LeftState_VY(Bx_:Bz_,i,j+1,k)))
+
+       DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
+            + sum(FaceArea_D*LeftState_VY(Bx_:Bz_,i,j+1,k))
 
        DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
             + B1nJumpL + B1nJumpR
 
        if(.not.IsMhd) CYCLE
 
-       Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k)&
+       Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k)&
             -B0_DY(:,i,j,k)*B1nJumpL &
             -B0_DY(:,i,j+1,k)*B1nJumpR
+
     end do; end do; end do
+
+    if(DoTestMe)write(*,*)NameSub,' after j divbint, divb1=', &
+         DivBInternal_C(iTest,jTest,kTest), DivB1_GB(iTest,jTest,kTest,BlkTest)
 
     do k=1,nK; do j=1,nJ; do i=1,nI 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
-       VInvHalf=vInv_CB(i,j,k,iBlock)*cHalf
-       FaceArea_D=FaceAreaK_DFB(:,i,j,k,iBlock)
+       VInvHalf = vInv_CB(i,j,k,iBlock)*0.5
+       FaceArea_D = FaceNormal_DDFB(:,3,i,j,k,iBlock)
        B1nJumpL = VInvHalf*&
-            (FaceArea_D(1)*(RightState_VZ(Bx_,i,j,k)-LeftState_VZ(Bx_,i,j,k))+&
-            FaceArea_D(2)*(RightState_VZ(By_,i,j,k)-LeftState_VZ(By_,i,j,k))+&
-            FaceArea_D(3)*(RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k)))
-       DivBInternal_C(i,j,k)=DivBInternal_C(i,j,k)-&
-            (FaceArea_D(1)*RightState_VZ(Bx_,i,j,k)+&
-            FaceArea_D(2)*RightState_VZ(By_,i,j,k)+&
-            FaceArea_D(3)*RightState_VZ(Bz_,i,j,k))
+            sum(FaceArea_D*(RightState_VZ(Bx_:Bz_,i,j,k) &
+            -                LeftState_VZ(Bx_:Bz_,i,j,k)))
 
-       FaceArea_D=FaceAreaK_DFB(:,i,j,k+1,iBlock)
+       DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
+            - sum(FaceArea_D*RightState_VZ(Bx_:Bz_,i,j,k))
+
+       FaceArea_D = FaceNormal_DDFB(:,3,i,j,k+1,iBlock)
        B1nJumpR = VInvHalf*&
-            (FaceArea_D(1)*(RightState_VZ(Bx_,i,j,k+1)-LeftState_VZ(Bx_,i,j,k+1))+&
-            FaceArea_D(2)*(RightState_VZ(By_,i,j,k+1)-LeftState_VZ(By_,i,j,k+1))+&
-            FaceArea_D(3)*(RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1)))
-       DivBInternal_C(i,j,k)=(DivBInternal_C(i,j,k)+&
-            (FaceArea_D(1)*LeftState_VZ(Bx_,i,j,k+1)+&
-            FaceArea_D(2)*LeftState_VZ(By_,i,j,k+1)+&
-            FaceArea_D(3)*LeftState_VZ(Bz_,i,j,k+1)))*&
-            vInv_CB(i,j,k,iBlock)
+            sum(FaceArea_D*(RightState_VZ(Bx_:Bz_,i,j,k+1) &
+            -               LeftState_VZ(Bx_:Bz_,i,j,k+1)))
+
+       DivBInternal_C(i,j,k) = (DivBInternal_C(i,j,k) + &
+            sum(FaceArea_D*LeftState_VZ(Bx_:Bz_,i,j,k+1))) &
+            *vInv_CB(i,j,k,iBlock)
 
        DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
             + B1nJumpL + B1nJumpR
@@ -693,20 +726,27 @@ contains
             -B0_DZ(:,i,j,k+1)*B1nJumpR
     end do; end do; end do
 
+    if(DoTestMe)write(*,*)NameSub,' after k divbint, divb1=', &
+         DivBInternal_C(iTest,jTest,kTest), DivB1_GB(iTest,jTest,kTest,BlkTest)
+
     do k=1,nK; do j=1,nJ; do i=1,nI 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock)+&
             DivBInternal_C(i,j,k)
     end do; end do; end do
 
+    if(DoTestMe)write(*,*)NameSub,' final divb1=', &
+         DivB1_GB(iTest,jTest,kTest,BlkTest)
+
     if((.not.IsMhd).or.(.not.UseB0))RETURN
 
     do k=1,nK; do j=1,nJ; do i=1,nI 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
-       Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
-            -DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)            
+       Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
+            - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)            
     end do; end do; end do
-  end subroutine calc_divb_source_covar
+
+  end subroutine calc_divb_source_gencoord
   !===========================================================================
 
   subroutine write_source(String)
