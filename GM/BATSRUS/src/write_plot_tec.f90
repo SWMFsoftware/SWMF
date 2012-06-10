@@ -13,14 +13,14 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
        TypeCoordSystem, CodeVersion, nTrueCellsALL
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
-  use ModCovariant, ONLY: UseCovariant, TypeGeometry      
   use ModPhysics, ONLY : No2Io_V, UnitX_, &
        ThetaTilt, Rbody, boris_cLIGHT_factor, BodyNDim_I, g
   use ModAdvance, ONLY : FluxType, iTypeAdvance_B, SkippedBlock_
   use ModIO
   use ModNodes, ONLY: nNodeAll, NodeNumberGlobal_NB, NodeUniqueGlobal_NB
   use ModNumConst, ONLY : cRadToDeg
-  use BATL_lib, ONLY: nNodeUsed, iNodeMorton_I, iTree_IA, Block_, Proc_, &
+  use BATL_lib, ONLY: IsCartesianGrid, IsRLonLat, &
+       nNodeUsed, iNodeMorton_I, iTree_IA, Block_, Proc_, &
        Xyz_DGB, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block
   use ModMpi
   implicit none
@@ -176,7 +176,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
         !X Slice
         CutValue = 0.5*(xmin+xmax)
         if(plot_type1(1:3) == 'x=0') CutValue = 0.
-        if(.not.UseCovariant)then             
+        if(IsCartesianGrid)then             
            ! First loop to count nodes and cells        
            do iBlockAll = 1, nNodeUsed
               iNode = iNodeMorton_I(iBlockAll)
@@ -242,7 +242,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
                  end if
               end if
            end do
-        else if(index(TypeGeometry,'spherical') > 0) then 
+        elseif(IsRLonLat)then
            ! First loop to count nodes and cells        
            do iBlockAll = 1, nNodeUsed
               iNode = iNodeMorton_I(iBlockAll)
@@ -314,7 +314,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
         !Y Slice
         CutValue = 0.5*(ymin+ymax)
         if(plot_type1(1:3) == 'y=0') CutValue = 0.
-        if(.not.UseCovariant)then                   
+        if(IsCartesianGrid)then                   
            ! First loop to count nodes and cells
            do iBlockAll = 1, nNodeUsed
               iNode = iNodeMorton_I(iBlockAll)
@@ -380,8 +380,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
                  end if
               end if
            end do
-        else if(TypeGeometry == 'spherical_lnr' .or. & 
-             TypeGeometry == 'spherical' .or. TypeGeometry == 'spherical_genr') then 
+        else if(IsRLonLat) then 
            ! First loop to count nodes and cells
            do iBlockAll = 1, nNodeUsed
               iNode = iNodeMorton_I(iBlockAll)

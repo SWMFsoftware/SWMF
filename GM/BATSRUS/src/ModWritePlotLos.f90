@@ -1279,6 +1279,7 @@ contains
     use ModUser,        ONLY: user_set_plot_var
     use ModParallel,    ONLY: NeiLWest, NeiLEast, NOBLK
     use ModVarIndexes,  ONLY: Pe_, p_
+    use BATL_lib,       ONLY: xyz_to_coord
 
     real, intent(in) :: XyzStart_D(3), XyzEnd_D(3)
 
@@ -1399,7 +1400,7 @@ contains
 
        elseif(IsSphGeometry) then
           ! get gen coord of los (note XyzStart_D is already in gen. coord)
-          call xyz_to_gen(XyzBlockSign_D*XyzLos_D, GenLos_D)
+          call xyz_to_coord(XyzBlockSign_D*XyzLos_D, GenLos_D)
           CoordNorm_D = (GenLos_D - XyzBlockStart_D)/CellSize_D + 1
 
           ! need to know if no block neighbor 
@@ -1644,7 +1645,7 @@ contains
     ! subroutine to find general plane interections for finding if los interescts
     ! a block
 
-    !--- in covariant geometry the face normals do not have only one
+    !--- in non-cartesian geometry the face normals do not have only one
     !--- component so need to use a more general intersection
     !--- calculation, do this here
 
