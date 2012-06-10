@@ -134,17 +134,13 @@ contains
 
   subroutine set_initial_conditions
 
-    use ModBatlInterface,ONLY: UseBatlTest
     use ModUser,        ONLY: user_initial_perturbation, user_action
     use ModIO,          ONLY: restart
     use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
     use ModRestartFile, ONLY: read_restart_files
-    use ModCovariant,   ONLY: UseVertexBasedGrid,do_fix_geometry_at_reschange 
     use ModMessagePass, ONLY: exchange_messages
 
-    !\
     ! Set intial conditions for solution in each block.
-    !/
 
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = &
@@ -185,35 +181,17 @@ contains
     ! nRefineLevelIC has done its work, reset to zero
     nRefineLevelIC = 0
 
-
-    !\
-    ! Read initial data for solution blocks
-    ! from restart files as necessary.
-    !/
-    if(restart)then
-       call read_restart_files
-       !Vertex based geometry at the resolution interfaces 
-       !should be fixed while setting the block geometry
-       if(UseVertexBasedGrid .and. .not.UseBatlTest)then
-          Do iBlock=1,nBlockMax
-             if(do_fix_geometry_at_reschange(iBlock))&
-                  call fix_geometry_at_reschange(iBlock)
-          end Do
-       end if
-    end if
+    ! Read initial data from restart files as necessary.
+    if(restart) call read_restart_files
 
     do globalBLK = 1, nBlockMax
-       !\
-       ! Initialize solution block.
-       !/
+       ! Initialize solution blocks
        call set_ICs
     end do
 
     call user_action('initial condition done')
 
-    !\
     ! Allow the user to add a perturbation to the initial condition.
-    !/
     if (UseUserPerturbation) then
        call user_initial_perturbation
        UseUserPerturbation=.false.
