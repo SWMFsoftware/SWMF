@@ -101,7 +101,8 @@ test_pw:
 
 test_pw_compile:
 	./Config.pl -v=Empty,PW/PWOM -o=PW:Earth
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test_pw_rundir:
 	rm -rf ${TESTDIR}
@@ -175,7 +176,8 @@ test_rb:
 test_rb_compile:
 	./Config.pl -v=Empty,RB/RBE,GM/BATSRUS
 	./Config.pl -g=GM:8,8,8,770,1 -o=GM:e=Mhd,u=Default
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test_rb_rundir:
 	rm -rf ${TESTDIR}
@@ -220,7 +222,8 @@ test1:
 test1_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,PW:Earth
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test1_rundir:
 	rm -rf ${TESTDIR}
@@ -285,7 +288,8 @@ test2_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=Sc,e=MhdCorona -o=IH:u=Ih,e=Mhd
 	./Config.pl -g=SC:4,4,4,3200,1,IH:8,8,8,400,1
-	${MAKE} SWMF PIDL EARTH_TRAJ
+	${MAKE} SWMF
+	make PIDL EARTH_TRAJ
 
 test2_rundir:
 	rm -rf ${TESTDIR}
@@ -342,7 +346,8 @@ test3:
 test3_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test3_rundir:
 	rm -rf ${TESTDIR}
@@ -422,7 +427,8 @@ test4:
 test4_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test4_rundir:
 	rm -rf ${TESTDIR}
@@ -464,7 +470,8 @@ test5:
 test5_compile:
 	./Config.pl -v=Empty,EE/BATSRUS
 	./Config.pl -g=EE:10,10,10,500,1
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test5_rundir:
 	rm -rf ${TESTDIR}
@@ -522,7 +529,8 @@ test6:
 test6_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CRCM
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,IM:EarthHO
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test6_rundir:
 	rm -rf ${TESTDIR}
@@ -580,7 +588,8 @@ test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
 	./Config.pl -g=IH:4,4,4,3000,1,OH:4,4,4,3000,1
 	./Config.pl -o=IH:u=Waves,e=Mhd -o=OH:u=Waves,e=Mhd
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test7_rundir:
 	rm -rf ${TESTDIR}
@@ -632,7 +641,8 @@ test8:
 test8_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=MhdIons
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test8_rundir:
 	rm -rf ${TESTDIR}
@@ -708,7 +718,8 @@ test9_compile:
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
 	./Config.pl -g=SC:6,4,4,1200,1200,IH:4,4,4,4500,1
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test9_rundir:
 	rm -rf ${TESTDIR}
@@ -749,7 +760,8 @@ test_lc_compile:
 	./Config.pl -v=Empty,LC/BATSRUS
 	cd LC/BATSRUS; ./Config.pl -u=Lc -e=Mhd
 	./Config.pl -g=LC:6,4,4,3000,1
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test_lc_rundir:
 	rm -rf ${TESTDIR}
@@ -865,7 +877,8 @@ ccmc_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
 	./Config.pl -g=GM:6,6,6,3800,1
 	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 	
 test_ccmc_rundir:
@@ -927,7 +940,8 @@ test_ccmc_small_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
 	./Config.pl -g=GM:6,6,6,800,1
 	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 
 test_ccmc_small_rundir:
@@ -982,7 +996,8 @@ test_ramscb:
 test_ramscb_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
-	${MAKE} SWMF PIDL
+	${MAKE} SWMF
+	make PIDL
 
 test_ramscb_rundir:
 	rm -rf ${TESTDIR}
