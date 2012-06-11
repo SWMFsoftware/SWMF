@@ -577,8 +577,7 @@ contains
     end if
 
     ! Normalize coordinates to the cell center indexes
-    !!! This should be + 0.5 !!! To be fixed
-    Xyz_D = (Xyz_D - CoordMin_DB(:,iBLK)) / CellSize_DB(:,iBlk) - 0.5
+    Xyz_D = (Xyz_D - CoordMin_DB(:,iBLK)) / CellSize_DB(:,iBlk) + 0.5
 
     ! Set location assuming point is inside block.
     i1 = floor(Xyz_D(1))
