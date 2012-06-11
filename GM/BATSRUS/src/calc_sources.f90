@@ -27,7 +27,7 @@ subroutine calc_sources
   use ModFaceFlux,      ONLY: Pe_G
   use ModHallResist,    ONLY: UseBiermannBattery, &
        IonMassPerCharge_G
-  use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry
+  use BATL_lib, ONLY: IsCartesian, IsRzGeometry
   
   implicit none
 
@@ -343,7 +343,7 @@ subroutine calc_sources
   !   +curl(B0) x B0    - add this if curl B0 is not 0
   
   if(UseB .and. UseDivbSource)then
-     if(IsCartesianGrid)then
+     if(IsCartesian)then
         call calc_divb_source
      else
         call calc_divb_source_gencoord
@@ -560,8 +560,9 @@ contains
     DyInvHalf = 0.5/Dy_BLK(iBlock)
     DzInvHalf = 0.5/Dz_BLK(iBlock)
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
        dB1nEast = DxInvHalf*&
             (RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))
 
@@ -615,7 +616,7 @@ contains
     ! Momentum source term from B0 only needed for true MHD equations
     if(.not.(IsMhd .and. UseB0)) RETURN
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k)  - &
             DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
@@ -631,9 +632,10 @@ contains
     integer :: i,j,k
     character(len=*), parameter:: NameSub = 'calc_divb_source_gencoord'
     !------------------------------------------------------------------------
-    
-    do k=1,nK; do j=1,nJ; do i=1,nI
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
        VInvHalf=vInv_CB(i,j,k,iBlock)*0.5
        FaceArea_D = FaceNormal_DDFB(:,1,i,j,k,iBlock)
        B1nJumpL =VInvHalf*&
@@ -663,7 +665,7 @@ contains
     if(DoTestMe)write(*,*)NameSub,' after i divbint, divb1=', &
          DivBInternal_C(iTest,jTest,kTest), DivB1_GB(iTest,jTest,kTest,BlkTest)
 
-    do k=1,nK; do j=1,nJ; do i=1,nI 
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        VInvHalf=vInv_CB(i,j,k,iBlock)*0.5
        FaceArea_D = FaceNormal_DDFB(:,2,i,j,k,iBlock)
@@ -695,40 +697,43 @@ contains
     if(DoTestMe)write(*,*)NameSub,' after j divbint, divb1=', &
          DivBInternal_C(iTest,jTest,kTest), DivB1_GB(iTest,jTest,kTest,BlkTest)
 
-    do k=1,nK; do j=1,nJ; do i=1,nI 
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
-       VInvHalf = vInv_CB(i,j,k,iBlock)*0.5
-       FaceArea_D = FaceNormal_DDFB(:,3,i,j,k,iBlock)
-       B1nJumpL = VInvHalf*&
-            sum(FaceArea_D*(RightState_VZ(Bx_:Bz_,i,j,k) &
-            -                LeftState_VZ(Bx_:Bz_,i,j,k)))
+    if(nDim == 3)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI 
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-            - sum(FaceArea_D*RightState_VZ(Bx_:Bz_,i,j,k))
+          VInvHalf = vInv_CB(i,j,k,iBlock)*0.5
+          FaceArea_D = FaceNormal_DDFB(:,3,i,j,k,iBlock)
+          B1nJumpL = VInvHalf*&
+               sum(FaceArea_D*(RightState_VZ(Bx_:Bz_,i,j,k) &
+               -                LeftState_VZ(Bx_:Bz_,i,j,k)))
 
-       FaceArea_D = FaceNormal_DDFB(:,3,i,j,k+1,iBlock)
-       B1nJumpR = VInvHalf*&
-            sum(FaceArea_D*(RightState_VZ(Bx_:Bz_,i,j,k+1) &
-            -               LeftState_VZ(Bx_:Bz_,i,j,k+1)))
+          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
+               - sum(FaceArea_D*RightState_VZ(Bx_:Bz_,i,j,k))
 
-       DivBInternal_C(i,j,k) = (DivBInternal_C(i,j,k) + &
-            sum(FaceArea_D*LeftState_VZ(Bx_:Bz_,i,j,k+1))) &
-            *vInv_CB(i,j,k,iBlock)
+          FaceArea_D = FaceNormal_DDFB(:,3,i,j,k+1,iBlock)
+          B1nJumpR = VInvHalf*&
+               sum(FaceArea_D*(RightState_VZ(Bx_:Bz_,i,j,k+1) &
+               -               LeftState_VZ(Bx_:Bz_,i,j,k+1)))
 
-       DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
-            + B1nJumpL + B1nJumpR
+          DivBInternal_C(i,j,k) = (DivBInternal_C(i,j,k) + &
+               sum(FaceArea_D*LeftState_VZ(Bx_:Bz_,i,j,k+1))) &
+               *vInv_CB(i,j,k,iBlock)
 
-       if(.not.IsMhd) CYCLE
+          DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
+               + B1nJumpL + B1nJumpR
 
-       Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k)&
-            -B0_DZ(:,i,j,k)*B1nJumpL &
-            -B0_DZ(:,i,j,k+1)*B1nJumpR
-    end do; end do; end do
+          if(.not.IsMhd) CYCLE
+
+          Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k)&
+               -B0_DZ(:,i,j,k)*B1nJumpL &
+               -B0_DZ(:,i,j,k+1)*B1nJumpR
+       end do; end do; end do
+    end if
 
     if(DoTestMe)write(*,*)NameSub,' after k divbint, divb1=', &
          DivBInternal_C(iTest,jTest,kTest), DivB1_GB(iTest,jTest,kTest,BlkTest)
 
-    do k=1,nK; do j=1,nJ; do i=1,nI 
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock)+&
             DivBInternal_C(i,j,k)
@@ -739,7 +744,7 @@ contains
 
     if((.not.IsMhd).or.(.not.UseB0))RETURN
 
-    do k=1,nK; do j=1,nJ; do i=1,nI 
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
             - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)            
