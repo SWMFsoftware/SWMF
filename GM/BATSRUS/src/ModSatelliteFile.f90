@@ -43,7 +43,6 @@ module ModSatelliteFile
   ! Local variables
   character(len=100) :: NameFile_I(MaxSatelliteFile)
   logical:: IsOpen_I(MaxSatelliteFile) = .false.
-  logical:: SatelliteInBLK(MaxSatelliteFile, MaxBlock)= .false.
   logical:: UseSatelliteFile(MaxSatelliteFile)   = .true.
   integer:: Satellite_Npts(MaxSatelliteFile)
   integer,public:: iCurrent_satellite_position(MaxSatelliteFile)=1
@@ -416,73 +415,28 @@ contains
   !==========================================================================
 
   subroutine set_satellite_flags(iSat)
-    use ModProcMH
-    use ModMain, ONLY : nDim,nI,nJ,nK,nBlockMax,PROCtest,unusedBLK
-    use ModGeometry, ONLY : XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
-    use ModGeometry, ONLY : UseCovariant               
-    use ModNumConst
-    use ModMpi
+
+    use BATL_lib, ONLY: find_grid_block
 
     integer, intent(in) :: iSat
-    integer :: iPE,iPEtmp, iBLK, iBLKtemp
-    real    :: xSat,ySat,zSat
-    integer :: iError
-    real,dimension(nDim)::GenOut_D
     logical :: DoTest, DoTestMe
 
+    character(len=*), parameter:: NameSub = 'set_satellite_flags'
     !--------------------------------------------------------------------------
-    call set_oktest('set_satellite_flags',DoTest, DoTestMe)
+    call set_oktest(NameSub, DoTest, DoTestMe)
 
-    if (DoTestMe) &
-         write(*,*)'Starting set_satellite_flags',&
-         nSatellite,', call set_satellite_positions'
+    if (DoTestMe) write(*,*) NameSub,' starting for iSat=', iSat
 
     call set_satellite_positions(iSat)
     if(.not.DoTrackSatellite_I(iSat)) RETURN !Position is not defined
 
-    if(UseCovariant)then                  
-       call xyz_to_gen(XSatellite(iSat,:),GenOut_D)
-       xSat=GenOut_D(1)
-       ySat=GenOut_D(2)
-       zSat=GenOut_D(3)
-    else                                   
-       xSat=XSatellite(iSat,1)
-       ySat=XSatellite(iSat,2)
-       zSat=XSatellite(iSat,3)
-    end if
+    call find_grid_block(XSatellite(iSat,:), &
+         iPEsatellite(iSat), iBLKsatellite(iSat))
 
-    iPE = -1
-    iBLKtemp = -1
+    if (iPEsatellite(iSat) < 0) DoTrackSatellite_I(iSat) = .false.
 
-    do iBLK = 1, nBlockMax
-
-       SatelliteInBLK(isat,iBLK) =.not.unusedBLK(iBLK).and.&
-            xSat >  XyzStart_BLK(1,iBLK) - cHalf*dx_BLK(iBLK) .and. &
-            xSat <= XyzStart_BLK(1,iBLK) + (nI-cHalf)*dx_BLK(iBLK) .and. &
-            ySat >  XyzStart_BLK(2,iBLK) - cHalf*dy_BLK(iBLK) .and. &
-            ySat <= XyzStart_BLK(2,iBLK) + (nJ-cHalf)*dy_BLK(iBLK) .and. &
-            zSat >  XyzStart_BLK(3,iBLK) - cHalf*dz_BLK(iBLK) .and. &
-            zSat <= XyzStart_BLK(3,iBLK) + (nK-cHalf)*dz_BLK(iBLK)
-
-       if(SatelliteInBLK(isat,iBLK))then 
-          iPE = iProc
-          iBLKtemp = iBLK
-       end if
-
-    end do
-
-    call MPI_ALLREDUCE(iPE, iPEtmp, 1, MPI_INTEGER, MPI_MAX, iComm, iError)
-    iPEsatellite(isat) = iPEtmp
-
-    if (iPEsatellite(isat) >= 0) call MPI_Bcast(iBLKtemp, &
-         1, MPI_INTEGER, iPEsatellite(isat), iComm, iError)
-    iBLKsatellite(isat) = iBLKtemp
-
-    if (iPEsatellite(isat) == -1) DoTrackSatellite_I(isat) = .false.
-
-    if (DoTestMe) write(*,*)'set_satellite_flags (Proc',PROCtest,')(isat=', &
-         isat,'): iPE,iBLK,TrackSatellite:', &
-         iPEsatellite(isat),iBLKsatellite(isat),DoTrackSatellite_I(isat) 
+    if (DoTestMe) write(*,*)'set_satellite_flags iPE,iBLK,TrackSatellite=', &
+         iPEsatellite(iSat), iBLKsatellite(iSat), DoTrackSatellite_I(iSat) 
 
   end subroutine set_satellite_flags
 
@@ -499,6 +453,7 @@ contains
 
     logical :: DoTest, DoTestMe
 
+    character(len=*), parameter:: NameSub = 'set_satellite_positions'
     !--------------------------------------------------------------------------
     if (iProc==0) &
          call set_oktest('set_satellite_positions',DoTest, DoTestMe)
@@ -540,6 +495,7 @@ contains
        call satellite_trajectory_formula(iSat)
 
     end if
+
   end subroutine set_satellite_positions
 
   !============================================================================
@@ -588,18 +544,18 @@ contains
 
     use ModRaytrace
     use ModMpi
-    use ModMain,       ONLY: nI, nJ, nK
-    use ModGeometry,   ONLY: XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK, UseCovariant
+    use BATL_size,ONLY: nI, nJ, nK
+    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, CoordMin_DB, xyz_to_coord
 
     integer, intent(in) :: iSatIn
     real,    intent(out):: SatRayVar_I(5)
 
     character(len=*), parameter :: NameSub = 'get_satellite_ray'
     integer  :: iDir, iBLK, iDim
-    real     :: Xyz_D(3),  Dxyz_D(3), RayVars(3,2,nI,nJ,nK)
+    real     :: Xyz_D(3), RayVars(3,2,nI,nJ,nK)
     real     :: Dx1, Dx2, Dy1, Dy2, Dz1, Dz2
     integer  :: i1, i2, j1, j2, k1, k2, iNear, jNear, kNear
-    integer  :: i, j, k  ! Used in the FORALL statement
+    integer  :: i, j, k
 
     !--------------------------------------------------------------------------
 
@@ -614,20 +570,15 @@ contains
     iBLK = iBLKSatellite(iSatIn)
     if (iBLK == 0) RETURN
 
-    Dxyz_D(1) = dx_BLK(iBLK)
-    Dxyz_D(2) = dy_BLK(iBLK)
-    Dxyz_D(3) = dz_BLK(iBLK)
-
-    if (UseCovariant) then 
-       call xyz_to_gen(Xsatellite(iSatIn,:),Xyz_D)
-    else
+    if (IsCartesianGrid) then 
        Xyz_D = Xsatellite(iSatIn,:)
-    endif
+    else
+       call xyz_to_coord(Xsatellite(iSatIn,:), Xyz_D)
+    end if
 
-    ! Normalize coordinates
-    do iDim=1,3
-       Xyz_D(iDim) = (Xyz_D(iDim) - XyzStart_BLK(iDim,iBLK)) / Dxyz_D(iDim)
-    end do
+    ! Normalize coordinates to the cell center indexes
+    !!! This should be + 0.5 !!! To be fixed
+    Xyz_D = (Xyz_D - CoordMin_DB(:,iBLK)) / CellSize_DB(:,iBlk) - 0.5
 
     ! Set location assuming point is inside block.
     i1 = floor(Xyz_D(1))
