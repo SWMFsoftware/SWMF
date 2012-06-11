@@ -4,14 +4,12 @@ module ModUser
   ! This is the user module for Venus
 
   use ModSize
-  use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_,&
-       MassSpecies_V,SpeciesFirst_,SpeciesLast_  
-  use ModPhysics, ONLY: BodyTDim_I
+  use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_,&
+       MassSpecies_V
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED4 => user_set_boundary_cells,         &
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_init_point_implicit,        &
@@ -33,11 +31,9 @@ module ModUser
   real :: rPointImplicit = 2.0
 
   ! Venus stuff
-  logical ::  UseMultiSpecies=.true.
   integer, parameter :: MaxSpecies=4, MaxNuSpecies=3,  &
        MaxReactions=10
-  integer :: nSpecies=4, nNuSpecies=3, &
-       nReactions=10
+  integer :: nSpecies=4, nNuSpecies=3
   real,  dimension(1:nI, 1:nJ, 1:nK, nBLK,MaxNuSpecies) :: &
        nDenNuSpecies_CBI    !number density of neutral Species
 
@@ -86,9 +82,6 @@ module ModUser
        Op_  =3, &
        CO2p_=4
 
-  character (len=10), dimension(MaxSpecies):: &
-       ion_name_I=(/'Hp  ', 'O2p ', 'Op  ','CO2p'/)
-
   real, dimension(MaxSpecies)::  &
        MassSpecies_I=(/1., 32., 16., 44. /)  !atm
 
@@ -105,7 +98,7 @@ module ModUser
   real, dimension(MaxNuSpecies)::CrossSection_I,&
        CrossSectionDim_I=(/2.6e-17,1.5e-17,0.0/)
   real:: Productrate0,Optdep
-  real, dimension(MaxNuSpecies)::  NuMassSpecies_I=(/44,16,1/)
+
   !  NuMassSpecies_I(CO2_)=44	!atm
   !  NuMassSpecies_I(O_)=16	!atm
 
@@ -217,9 +210,7 @@ contains
   !============================================================================
   
   subroutine user_calc_sources
-    use ModAdvance,  ONLY: Source_VC,Energy_
-    use ModNumConst, ONLY: cZero
-    use ModVarIndexes, ONLY: rhoUx_, rhoUy_, rhoUz_
+    use ModAdvance,  ONLY: Source_VC
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
          GLOBALBLK
     use ModProcMH,   ONLY: iProc
@@ -266,22 +257,17 @@ contains
   !=========================================================================
 
   subroutine user_impl_source
-    use ModPointImplicit, ONLY: UsePointImplicit_B, &
-         iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
-    use ModPhysics, ONLY: inv_gm1
-    use ModAdvance, ONLY: State_VGB, Source_VC
-    use ModGeometry,ONLY: r_BLK
+    use ModMain,    ONLY: GlobalBlk
+    use ModAdvance, ONLY: Source_VC
     use ModNumConst,ONLY: cZero
-    use ModVarIndexes,ONLY: Rho_, RhoHp_, RhoO2p_, RhoOp_, RhoCO2p_, &
+    use ModVarIndexes,ONLY: Rho_, &
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
     use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     !    use ModAdvance,  ONLY: Source_VC,Energy_
     !    use ModNumConst, ONLY: cZero
     logical :: oktest,oktest_me
-    integer :: iBlock, i, j, k
-    real    :: Coef
+    integer :: iBlock
     !--------------------------------------------------------------------
 
     if(iProc==PROCtest .and. globalBLK==BLKtest)then
@@ -337,20 +323,19 @@ contains
   !========================================================================
 
   subroutine user_sources
-    use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest, &
+    use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, &
          iNewGrid, iNewDecomposition, UnusedBlk, nBlock
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
-    use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_
-    use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
+    use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_
+    use ModGeometry, ONLY: x_BLK,R_BLK,&
          vInv_CB
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
-    use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit
+    use ModPointImplicit, ONLY: UsePointImplicit_B
 
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies, iBlock
     real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate,kTi, kTe
-    real :: alt!, Te_dim = 300.0
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps
     logical:: oktest,oktest_me
     real :: SourceLossMax, vdtmin, chalf=0.5
@@ -683,14 +668,11 @@ contains
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
+    use ModGeometry, ONLY :x_BLK,R_BLK,true_cell
     use ModIO, ONLY : restart
     use ModPhysics
 
-    real :: Rmax, SinSlope, CosSlope,CosSZA
-    real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
-         XFace, YFace, ZFace
-    integer:: iBoundary
+    real ::CosSZA
     logical::okTestMe=.false., okTest=.false.
     integer :: iBlock, i, j, k
     !--------------------------------------------------------------------
@@ -1018,42 +1000,11 @@ contains
   end subroutine set_multiSp_ICs
 
   !========================================================================
-  subroutine user_set_boundary_cells(iBLK)
-    use ModGeometry
-    use ModMain	
-
-    integer,intent(in)::iBLK
-    !-----------------------------------------------------------------------
-    !  SHOULD define IsBoundaryCell_GI(:,:,:,ExtraBc_) using
-    !  a boundary condition for iBLK block
-    !  EXAMPLE: OUTER SPHERICAL BOUNDARY of radius of 100.
-    !  IsBoundaryCell_GI(:,:,:,ExtraBc_) = R_BLK(:,:,:,iBLK)<100.
-    if (index(TypeGeometry,'spherical')>0)then
-       if(XyzStart_BLK(Theta_,iBLK)<dz_BLK(iBLK))then
-          !	IsBoundaryCell_GI(:,:,1-gcn:0,ExtraBc_)=.true.
-          !	IsBoundaryCell_GI(1:nI,1:nJ,1-gcn:0,ExtraBc_)=.false.
-
-          !	IsBoundaryCell_GI(:,:,1-gcn:0,ExtraBc_)=.true.
-          IsBoundaryCell_GI(nI+1:nI+gcn,:,1-gcn:0,ExtraBc_)=.true.
-          IsBoundaryCell_GI(1-gcn:0,:,1-gcn:0,ExtraBc_)=.true.	
-       elseif(XyzStart_BLK(Theta_,iBLK)+nK*dz_BLK(iBLK)>cPi)then
-          !        IsBoundaryCell_GI(:,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          !        IsBoundaryCell_GI(1:nI,1:nJ,nK+1:nK+gcn,ExtraBc_)=.false.
-
-          !        IsBoundaryCell_GI(:,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          IsBoundaryCell_GI(nI+1:nI+gcn,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          IsBoundaryCell_GI(1-gcn:0,:,nK+1:nK+gcn,ExtraBc_)=.true.
-       end if
-    end if
-  end subroutine user_set_boundary_cells
-
-  !========================================================================
 
   subroutine user_face_bcs(VarsGhostFace_V)
 
-    use ModSize,       ONLY: West_, North_, Top_
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
-    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim
+    use ModPhysics,    ONLY: SW_rho
     use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V
 
     real, intent(out):: VarsGhostFace_V(nVar)
@@ -1124,7 +1075,6 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModSize,       ONLY: nI, nJ, nK
-    use ModVarIndexes, ONLY: RhoHp_, RhoCO2p_, RhoO2p_, RhoOp_ 
     use ModPhysics,    ONLY: No2Io_V, UnitN_, NameTecUnit_V, NameIdlUnit_V
     use ModAdvance,    ONLY: State_VGB, Rho_
 
@@ -1190,8 +1140,7 @@ contains
 
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
-         dx_BLK,dy_BLK,dz_BLK
+    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModMain,       ONLY: unusedBLK
     use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
          rhoUx_,rhoUy_,rhoUz_
@@ -1244,21 +1193,20 @@ contains
   !===========================================================================
 
   subroutine user_set_resistivity(iBlock, Eta_G)
-    use ModPhysics,  ONLY: No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
-         UnitN_, UnitTemperature_, UnitX_,UnitT_, Rbody
+    use ModPhysics,  ONLY: No2Si_V, Si2No_V, &
+         UnitTemperature_, UnitX_,UnitT_, Rbody
     use ModProcMH,   ONLY: iProc
-    use ModMain, ONLY: ProcTest, BlkTest, iTest,jTest,kTest, &
-         UnUsedBlk, nBlockMax
+    use ModMain, ONLY: ProcTest, BlkTest, iTest,jTest,kTest
     use ModAdvance,  ONLY: State_VGB
-    use ModGeometry, ONLY: Rmin_BLK, R_BLK
+    use ModGeometry, ONLY: Rmin_BLK
     use ModResistivity, ONLY: Eta0Si
 
     integer, intent(in) :: iBlock
     real,intent(out) :: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
 
-    real   :: Te_dim, tx1, txp1, hh
+    real   :: Te_dim
     real   :: loc_c(3), NumDenNeutral_V(3), Eta0
-    integer:: i, j, k, nte, n
+    integer:: i, j, k
     logical:: oktest, oktest_me=.true.
     !---------------------------------------------------------------------
     if(iProc==PROCtest .and. iBlock == BlkTest)then

@@ -228,7 +228,6 @@ contains
     use CRASH_ModEos,        ONLY: read_eos_parameters, NameMaterial_I
     use CRASH_ModMultiGroup, ONLY: read_opacity_parameters
     use ModAdvance,          ONLY: UseElectronPressure
-    use ModGeometry,         ONLY: TypeGeometry, UseCovariant
     use ModWaves,            ONLY: FreqMinSI, FreqMaxSI
     use ModConst,            ONLY: cHPlanckEV
     use CRASH_ModInterfaceNLTE, ONLY: read_nlte
@@ -323,13 +322,6 @@ contains
                   "implementation needs 3 materials, including plastic")
           end if
 
-       case("#CYLINDRICAL")
-          call read_var('IsCylindrical', IsCylindrical)
-          if(IsCylindrical)then
-             UseCovariant = .true.  ; TypeGeometry = 'rz'
-          else
-             UseCovariant = .false. ; TypeGeometry = 'cartesian'
-          end if
        case("#EOS", "#MATERIAL", "#EOSTABLE", "#OPACITYTABLE", &
             "#USEEOSTABLE", "#USEOPACTABLE")
           call read_eos_parameters(nMaterial, NameCommand)
@@ -1842,10 +1834,11 @@ contains
     use ModAdvance, ONLY: State_VGB, UseElectronPressure
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo, No2Si_V, UnitEnergyDens_
-    use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
+    use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK
     use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_, Te0_
     use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_, Au_, Ay_
     use BATL_size,    ONLY: nI, nJ, nK, MinI, MaxI
+    use BATL_lib,     ONLY: IsRzGeometry
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -1965,7 +1958,7 @@ contains
     case('usersphere10')
        ! Test function for LOS images: sphere with "density" 
        !    100 - r^2 inside r=10, and 0 outside.
-       if(TypeGeometry == 'rz')then
+       if(IsRzGeometry)then
           ! In R-Z geometry the "sphere" is a circle in the X-Y plane
           PlotVar_G = max(0.0, &
                100 - x_BLK(:,:,:,iBlock)**2 - y_BLK(:,:,:,iBlock)**2)
