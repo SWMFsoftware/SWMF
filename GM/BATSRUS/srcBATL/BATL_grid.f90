@@ -135,7 +135,7 @@ contains
     allocate(Xyz_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(Xyz_DNB(MaxDim,nINode,nJNode,nKNode,MaxBlock))
 
-    if(.not.IsCartesianGrid) then
+    if(.not.IsCartesian) then
        allocate(FaceNormal_DDFB(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
     end if
 
@@ -263,6 +263,14 @@ contains
                   *0.5*abs(sum(Xyz_DGB(2,1,j-1:j,1,iBlock)))
           end do
           CellFace_DFB(3,:,:,:,iBlock) = CellFace_DB(3,iBlock)
+
+          FaceNormal_DDFB(1,1,:,:nJ,:nK,iBlock) = &
+               CellFace_DFB(1,:,:nJ,:nK,iBlock)
+          FaceNormal_DDFB(2,1,:,:nJ,:nK,iBlock) = 0.0
+
+          FaceNormal_DDFB(1,2,:nI,:,:nK,iBlock) = 0.0
+          FaceNormal_DDFB(2,2,:nI,:,:nK,iBlock) = &
+               CellFace_DFB(2,:nI,:,:nK,iBlock)
        else
           ! Also useful for Cartesian to keep code simple
           CellVolume_GB(:,:,:,iBlock) = CellVolume_B(iBlock)
