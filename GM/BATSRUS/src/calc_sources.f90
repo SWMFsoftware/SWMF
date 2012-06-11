@@ -289,22 +289,21 @@ subroutine calc_sources
              / y_BLK(i,j,k,iBlock)
 
         if(UseB .and. .not.UseMultiIon)then
-           !!!if(useB0)call stop_mpi('RZ geometry is not implemented for B0')
+           b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+           if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
 
            ! Source[mr] = (B^2/2-Bphi**2)/radius
            Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-                + (0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2) &
-                -  State_VGB(Bz_,i,j,k,iBlock)**2) / y_BLK(i,j,k,iBlock)
+                + (0.5*sum(b_D**2) - b_D(z_)**2) / y_BLK(i,j,k,iBlock)
 
            ! Source[mphi]=Bphi*Br/radius
            Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
-                + State_VGB(Bz_,i,j,k,iBlock)*State_VGB(By_,i,j,k,iBlock) &
-                / y_BLK(i,j,k,iBlock)
+                + b_D(z_)*b_D(y_) / y_BLK(i,j,k,iBlock)
 
            ! Source[Bphi]=((Bphi*mr-Br*mphi)/rho)/radius
            Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
-                + (State_VGB(Bz_,i,j,k,iBlock)*State_VGB(RhoUy_,i,j,k,iBlock) &
-                -  State_VGB(By_,i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock))&
+                + (b_D(z_)*State_VGB(RhoUy_,i,j,k,iBlock) &
+                -  b_D(y_)*State_VGB(RhoUz_,i,j,k,iBlock))&
                 /State_VGB(Rho_,i,j,k,iBlock)/y_BLK(i,j,k,iBlock)
         end if
      end do; end do; end do
