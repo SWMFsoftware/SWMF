@@ -1038,7 +1038,7 @@ contains
 
        ! Turn off old BATSRUS behavior when using 
        ! #AMRCRITERIALEVEL
-       IsBatsrusAmr = .not.( IsLevel .or. IsRes)
+       IsBatsrusAmr = .true. !.not.( IsLevel .or. IsRes)
 
        nIntCrit = 1
        nCritInOut = 1
