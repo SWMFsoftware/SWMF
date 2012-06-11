@@ -44,7 +44,7 @@ program PostIDL
   integer :: i, j, k, imin, imax, jmin, jmax, kmin, kmax, nx, ny, nz, iw
 
   integer :: idim, icutdim(3), ndim, nspecialpar
-  real    :: xcut(3), specialpar(3)
+  real    :: specialpar(3)
   character (LEN=5), dimension(3)            :: coord
   character (LEN=5), dimension(3), parameter :: &
        coord_xyz=(/'x    ','y    ','z    '/), &
