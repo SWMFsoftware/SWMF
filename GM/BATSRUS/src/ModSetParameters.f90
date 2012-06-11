@@ -2175,6 +2175,7 @@ contains
   !=========================================================================
   subroutine correct_parameters
 
+    use ModMultiFluid, ONLY: UseMultiIon
     use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
     use ModImplHypre, ONLY: IsHypreAvailable
 
@@ -2398,6 +2399,13 @@ contains
 
     IsRzGeometry = TypeGeometry=='rz'
     if(TypeGeometry=='rz') UseVertexBasedGrid = .false.
+
+    if(IsRzGeometry .and. UseB)then
+       if(UseMultiIon) &
+            call stop_mpi('RZ geometry is not implemented for multi-ion')
+       if(UseHallResist) &
+            call stop_mpi('RZ geometry is not implemented for Hall-MHD')
+    end if
 
     if(UseCovariant)then                               
        call allocate_face_area_vectors

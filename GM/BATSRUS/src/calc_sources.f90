@@ -288,7 +288,7 @@ subroutine calc_sources
              * State_VGB(iRhoUy_I,i,j,k,iBlock)/State_VGB(iRho_I,i,j,k,iBlock)&
              / y_BLK(i,j,k,iBlock)
 
-        if(UseB .and. .not.UseMultiIon)then
+        if(UseB)then
            b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
            if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
 
