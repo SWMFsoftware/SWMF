@@ -21,6 +21,9 @@ T			UseAccurateTrace
 0.1			DtExchangeRay
 1			DnRaytrace
 
+#RAYTRACELIMIT
+4000.0			RayLengthMax
+
 #GRID
 2			nRootBlockX
 2			nRootBlockY
