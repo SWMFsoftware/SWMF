@@ -281,8 +281,8 @@ contains
 
     ! Calculate div(B0) and curl(B0) for block iBlock
 
-    use BATL_lib, ONLY: IsCartesian, &
-         CellSize_DB, FaceNormal_DDFB, CellVolume_GB
+    use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
+         CellSize_DB, FaceNormal_DDFB, CellVolume_GB, Xyz_DGB
     use ModCoordTransform, ONLY: cross_product
 
     integer, intent(in):: iBlock
@@ -362,6 +362,12 @@ contains
           CurlB0_DC(:,i,j,k) = CurlB0_DC(:,i,j,k)/CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
 
+       if(IsRzGeometry)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             CurlB0_DC(z_,i,j,k) = CurlB0_DC(z_,i,j,k) &
+                  + B0_DGB(x_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
+          end do; end do; end do
+       end if
     endif
 
   end subroutine set_b0_source
