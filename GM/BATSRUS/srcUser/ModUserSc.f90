@@ -282,6 +282,8 @@ contains
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: inv_gm1,BodyTDim_I
     use ModGeometry
+    use ModNumConst,  ONLY: cTolerance
+    use BATL_lib, ONLY: IsCartesianGrid, CoordMax_D
 
     integer :: i,j,k,iBLK
     logical :: oktest,oktest_me
@@ -292,14 +294,11 @@ contains
 
     iBLK = globalBLK
 
-    select case(TypeGeometry)
-    case('cartesian')
-       Rmax = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
-    case('spherical_lnr')
-       Rmax = max(2.1E+01,exp(XyzMax_D(1)))
-    case('spherical_genr')
-       Rmax = max(2.1E+01,gen_to_r(XyzMax_D(1)))
-    end select
+    if(IsCartesianGrid)then
+       Rmax = max(21.0, sqrt(sum(CoordMax_D**2)))
+    else
+       Rmax = max(21.0, RadiusMax)
+    end if
 
     ! The sqrt is for backward compatibility with older versions of the Sc
     U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
