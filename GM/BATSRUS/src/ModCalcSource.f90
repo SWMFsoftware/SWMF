@@ -8,14 +8,14 @@ module ModCalcSource
   private !except
 
   ! Public methods
-  public :: calc_sources
+  public :: calc_source
   public :: get_tesi_c
 
 contains
 
   !============================================================================
 
-  subroutine calc_sources
+  subroutine calc_source(iBlock)
 
     use ModProcMH
     use ModMain
@@ -41,13 +41,16 @@ contains
          UseChromosphereHeating
     use ModFaceFlux,      ONLY: Pe_G
     use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
-    use BATL_lib, ONLY: IsCartesian, IsRzGeometry
+    use ModB0,            ONLY: set_b0_source
+    use BATL_lib,         ONLY: IsCartesian, IsRzGeometry
+
+    integer, intent(in):: iBlock
 
     integer :: i, j, k, iVar
     real :: Pe, DivU
     real :: Coef
 
-    ! Variable for div B diffusion
+    ! Variable for B0 source term
 
     real :: CurlB0CrossB_D(3)
 
@@ -61,13 +64,11 @@ contains
     ! Electron temperature in K:
     real :: TeSi_C(nI,nJ,nK)
 
-    integer:: iBlock
-
     logical :: DoTest, DoTestMe
 
-    character(len=*), parameter :: NameSub = 'ModCalcSource::calc_sources'
+    character(len=*), parameter :: NameSub = 'calc_source'
     !--------------------------------------------------------------------------
-    iBlock = GlobalBlk
+    GlobalBlk = iBlock !!! Only NEEDED for two routines below
 
     if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
@@ -304,7 +305,7 @@ contains
           Source_VC(iRhoUz_I,i,j,k) = Source_VC(iRhoUz_I,i,j,k) &
                - State_VGB(iRhoUz_I,i,j,k,iBlock) &
                * State_VGB(iRhoUy_I,i,j,k,iBlock) &
-               /State_VGB(iRho_I,i,j,k,iBlock)/y_BLK(i,j,k,iBlock)
+               /(State_VGB(iRho_I,i,j,k,iBlock)*y_BLK(i,j,k,iBlock))
 
           if(UseB)then
              ! Source[mr] = (B^2/2-Bphi**2)/radius
@@ -364,9 +365,8 @@ contains
        end if
     end if
 
-
     ! We consider two cases: curl(B0) is zero analytically or non-zero
-    ! These are distinguished by UseCurlB0 being true or failes.
+    ! These are distinguished by UseCurlB0 being true or false.
     !
     ! Momentum equation has the Lorentz force J x B
     !     = (curl B1) x (B1 + B0)     if curl B0 = 0
@@ -380,6 +380,8 @@ contains
     !   -B1 div(B0)       - div(B0) source
     !   -curl(B0) x B1    - remove this if curl B0 = 0
     !   +curl(B0) x B0    - add this if curl B0 is not 0
+
+    if(UseB0) call set_b0_source(iBlock)
 
     if(UseB .and. UseDivbSource)then
        if(IsCartesian)then
@@ -424,14 +426,14 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
              Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
-                  - State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_CB(i,j,k,iBlock) &
+                  - State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_C(i,j,k) &
                   - cross_product( &
-                  CurlB0_DCB(:,i,j,k,iBlock), State_VGB(Bx_:Bz_,i,j,k,iBlock))
+                  CurlB0_DC(:,i,j,k), State_VGB(Bx_:Bz_,i,j,k,iBlock))
           end do; end do; end do
 
           if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUz_)then 
-             write(*,*)'DivB0_CB  =',DivB0_CB(iTest,jTest,kTest,BlkTest)
-             write(*,*)'CurlB0_DCB=',CurlB0_DCB(:,iTest,jTest,kTest,BlkTest)
+             write(*,*)'DivB0_C  =',DivB0_C(iTest,jTest,kTest)
+             write(*,*)'CurlB0_DC=',CurlB0_DC(:,iTest,jTest,kTest)
              call write_source('After B0 source')
           end if
        end if
@@ -440,18 +442,18 @@ contains
     end if
 
     if(UseB .and. UseCurlB0)then
-
-       !   +curl(B0) x B1    - undo source term above
-       !   +curl(B0) x B0    - add this since curl B0 is not 0
+       
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           if(R_BLK(i,j,k,iBlock) < rCurrentFreeB0)CYCLE
 
-          CurlB0CrossB_D = cross_product(&
-               CurlB0_DCB(:,i,j,k,iBlock),&
+          ! +curl(B0) x B1    - undo source term above
+          ! +curl(B0) x B0    - add this since curl B0 is not 0
+          CurlB0CrossB_D = cross_product( CurlB0_DC(:,i,j,k),&
                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
           Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
                + CurlB0CrossB_D
+          ! Energy equation source term is u.(curl(B0)xB)
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
                + sum(CurlB0CrossB_D*State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))&
                /State_VGB(rho_,i,j,k,iBlock)
@@ -547,7 +549,7 @@ contains
        ! Add stiff momentum source terms (uPlus - Uion) and artificial friction
        ! Explicit evaluation of these source terms is for code development only
        if (.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) &
-            call multi_ion_source_impl
+            call multi_ion_source_impl   !!! PASS iBlock !!!
 
        if(DoTestMe) call write_source('After MultiIon sources')
     end if
@@ -581,7 +583,7 @@ contains
     end if
 
     if(UseUserSource)then
-       call user_calc_sources
+       call user_calc_sources !!! PASS iBlock !!!
        if(DoTestMe) call write_source('After user sources')
     end if
 
@@ -696,7 +698,7 @@ contains
 
          DivB1_GB(i,j,k,iBlock)  = B1nJumpL + B1nJumpR
 
-         if(.not.IsMhd) CYCLE
+         if(.not.(IsMhd .and. UseB0)) CYCLE
 
          Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
               - B0_DX(:,i,j,k)*B1nJumpL   &
@@ -729,7 +731,7 @@ contains
          DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
               + B1nJumpL + B1nJumpR
 
-         if(.not.IsMhd) CYCLE
+         if(.not.(IsMhd .and. UseB0)) CYCLE
 
          Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k)&
               -B0_DY(:,i,j,k)*B1nJumpL &
@@ -766,7 +768,7 @@ contains
             DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
                  + B1nJumpL + B1nJumpR
 
-            if(.not.IsMhd) CYCLE
+            if(.not.(IsMhd .and. UseB0)) CYCLE
 
             Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k)&
                  -B0_DZ(:,i,j,k)*B1nJumpL &
@@ -786,7 +788,7 @@ contains
       if(DoTestMe)write(*,*)NameSub,' final divb1=', &
            DivB1_GB(iTest,jTest,kTest,BlkTest)
 
-      if((.not.IsMhd).or.(.not.UseB0))RETURN
+      if(.not.(IsMhd .and. UseB0)) RETURN
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI 
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -803,7 +805,7 @@ contains
            Source_VC(VarTest,iTest,jTest,kTest) 
     end subroutine write_source
 
-  end subroutine calc_sources
+  end subroutine calc_source
 
   !============================================================================
 
