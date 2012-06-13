@@ -99,67 +99,6 @@ subroutine fix_block_geometry(iBLK)
   ! TRUE_BLK: if all cells EXCLUDING ghost cells are outside body(ies)
   true_BLK(iBLK) = all(true_cell(1:nI,1:nJ,1:nK,iBLK))
 
-contains
-  !===========================================================================
-  subroutine calc_node_coords_covar
-    implicit none
-    real,dimension(3,3):: A_DD, A1_DD
-    real,dimension(3)  :: B_D
-    real               :: DetInv
-    !------------------------------------------------------------------------
-    do i=0,nI; do j=0,nJ; do k=0,nK
-
-       A_DD(1,1)=x_BLK(i+1,j,k,iBLK)-x_BLK(i,j,k,iBLK)
-       A_DD(1,2)=y_BLK(i+1,j,k,iBLK)-y_BLK(i,j,k,iBLK)
-       A_DD(1,3)=z_BLK(i+1,j,k,iBLK)-z_BLK(i,j,k,iBLK)
-
-       A_DD(2,1)=x_BLK(i,j+1,k,iBLK)-x_BLK(i,j,k,iBLK)
-       A_DD(2,2)=y_BLK(i,j+1,k,iBLK)-y_BLK(i,j,k,iBLK)
-       A_DD(2,3)=z_BLK(i,j+1,k,iBLK)-z_BLK(i,j,k,iBLK)
-
-       A_DD(3,1)=x_BLK(i,j,k+1,iBLK)-x_BLK(i,j,k,iBLK)
-       A_DD(3,2)=y_BLK(i,j,k+1,iBLK)-y_BLK(i,j,k,iBLK)
-       A_DD(3,3)=z_BLK(i,j,k+1,iBLK)-z_BLK(i,j,k,iBLK)
-
-       DetInv = 1.0/det(A_DD)
-
-       B_D(1)=0.5*(R_BLK(i+1,j,k,iBLK)-R_BLK(i,j,k,iBLK))*&
-            (R_BLK(i+1,j,k,iBLK)+R_BLK(i,j,k,iBLK))
-       B_D(2)=0.5*(R_BLK(i,j+1,k,iBLK)-R_BLK(i,j,k,iBLK))*&
-            (R_BLK(i,j+1,k,iBLK)+R_BLK(i,j,k,iBLK))
-       B_D(3)=0.5*(R_BLK(i,j,k+1,iBLK)-R_BLK(i,j,k,iBLK))*&
-            (R_BLK(i,j,k+1,iBLK)+R_BLK(i,j,k,iBLK))
-
-       A1_DD(:,2:3)=A_DD(:,2:3)
-       A1_DD(:,1)=B_D
-
-       NodeX_NB(i+1,j+1,k+1,iBLK) = det(A1_DD)*DetInv
-
-       A1_DD(:,1)=A_DD(:,1)
-       A1_DD(:,3)=A_DD(:,3)
-       A1_DD(:,2)=B_D
-
-       NodeY_NB(i+1,j+1,k+1,iBLK) = det(A1_DD)*DetInv
-
-       A1_DD(:,1:2)=A_DD(:,1:2)
-       A1_DD(:,3)=B_D
-
-       NodeZ_NB(i+1,j+1,k+1,iBLK) = det(A1_DD)*DetInv
-    end do; end do; end do
-
-  end subroutine calc_node_coords_covar
-  !===========================================================================
-  real function det(A_DD)
-    implicit none
-    real,dimension(3,3),intent(in)::A_DD
-    det=A_DD(1,1)*(A_DD(2,2)*A_DD(3,3)-&
-         A_DD(3,2)*A_DD(2,3))-&
-         A_DD(1,2)*(A_DD(2,1)*A_DD(3,3)-&
-         A_DD(2,3)*A_DD(3,1))+&
-         A_DD(1,3)*(A_DD(2,1)*A_DD(3,2)-&
-         A_DD(2,2)*A_DD(3,1))
-  end function det
-
 end subroutine fix_block_geometry
 
 !=============================================================================
