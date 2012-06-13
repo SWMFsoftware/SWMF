@@ -1094,19 +1094,15 @@ for these components.
 	<parameter name="UseExtraBoundary" type="logical" default="F"/>
 	<if expr="$UseExtraBoundary">
 		<parameter name="TypeExtraBoundary" type="string"/>
-		<parameter name="DoFixExtraBoundary" type="logical" 
-							default="F"/>
 	</if>
 
 #EXTRABOUNDARY
 T		UseExtraBoundary
 user		TypeExtraBoundary
-F		DoFixExtraboundary
 
-It UseExtraBoundary is true, the user can define an extra boundary
-condition in the user files. The TypeExtraBoundary can be used
-to select a certain type. The DoFixExtraboundary controls
-if resolution change is allowed.
+If UseExtraBoundary is true, the user can define an extra boundary
+condition in the user files. The TypeExtraBoundary parameter can be used
+to select from multiple boundary conditions implemented in the user module.
 </command>
 
 <command name="FACEBOUNDARY" if="$_IsFirstSession">
@@ -1114,12 +1110,9 @@ if resolution change is allowed.
 							default="-1" />
 	<parameter name="MaxFaceBoundary" type="integer" min="-2" max="6"
 							default="0" />
-	<parameter name="DoFixOuterBoundary" type="logical" default="F"
-					if="$MaxFaceBoundary&gt;0" />
 #FACEBOUNDARY
 6		MinFaceBoundary
 -2		MaxFaceBoundary
-F		DoFixOuterBoundary (read if MaxFaceBoundary is > 0)
 
 General notes: face based boundary conditions are 1st order accurate 
 in general, while cell based boundary conditions can be 2nd order accurate.
@@ -1225,20 +1218,10 @@ Default is -1.0, which means no smoothing.
 !!!!!!!!!!!!!!!!!!!!!!!! GRID GEOMETRY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-<command name="BATLTEST" if="$_IsFirstSession">
-        <parameter name="UseBatlTest" type="logical" default="F" />
-
-#BATLTEST
-T                       UseBatlTest
-
-For testing purposes, switch to BATL geometrical quanitites.
-This setting is only used for development, otherwise it should not be used.
-</command>
-
 <command name="GRID" required="$_IsFirstSession" if="$_IsFirstSession">
-	<parameter name="nRootBlockX" type="integer" min="1"  default="2" />
-	<parameter name="nRootBlockY" type="integer" min="1"  default="1" />
-	<parameter name="nRootBlockZ" type="integer" min="1"  default="1" />
+	<parameter name="nRootBlock1" type="integer" min="1"  default="2" />
+	<parameter name="nRootBlock2" type="integer" min="1"  default="1" />
+	<parameter name="nRootBlock3" type="integer" min="1"  default="1" />
 	<parameter name="xMin"   type="real"             default="-192.0" />
 	<parameter name="xMax"   type="real" min="$xMin" default="  64.0" />
 	<parameter name="yMin"   type="real"             default=" -64.0" />
@@ -1246,9 +1229,9 @@ This setting is only used for development, otherwise it should not be used.
 	<parameter name="zMin"   type="real"             default=" -64.0" />
 	<parameter name="zMax"   type="real" min="$zMin" default="  64.0" />
 #GRID
-2                       nRootBlockX
-1                       nRootBlockY
-1                       nRootBlockZ
+2                       nRootBlock1
+1                       nRootBlock2
+1                       nRootBlock3
 -224.                   xMin	   
  32.                    xMax	   
 -64.                    yMin	   
@@ -1256,13 +1239,13 @@ This setting is only used for development, otherwise it should not be used.
 -64.                    zMin	   
  64.                    zMax
 
-The nRootBlockX, nRootBlockY and nRootBlockZ parameters define the 
+The nRootBlock1, nRootBlock2 and nRootBlock3 parameters define the 
 number of blocks of the base grid, i.e. the roots of the octree. 
 By varying these parameters, one can setup a grid which is elongated
 in some direction. The xMin, ..., zMax parameters define a brick shaped
 computational domain. An inner boundary may be cut out from the domain
 with the #BODY and/or #LIMITRADIUS commands. It is also possible to define 
-a shperical, cylindrical or toroidl computational domain using 
+a shperical, cylindrical computational domain using 
 the #GRIDGEOMETRY and the #LIMITRADIUS commands.
 
 There are no default values, the grid size must always be given in the
@@ -1341,42 +1324,37 @@ The default is component dependent:
 "GSM" for GM, "HGR" for SC and LC, and "HGI" for IH and OH.
 </command>
 
-<command name="GRIDGEOMETRY" alias="COVARIANTGEOMETRY" if="$_IsFirstSession">
+<command name="GRIDGEOMETRY" if="$_IsFirstSession">
 	<parameter name="TypeGeometry" type="string" input="select">
 		<option name="cartesian" default="T"	/>
+		<option name="rz"                       />
 		<option name="cylindrical"		/>
+		<option name="cylindrical_lnr"		/>
+		<option name="cylindrical_genr"		/>
 		<option name="spherical"		/>
 		<option name="spherical_lnr"		/>
-		<option name="rz"                       />
-		<option name="axial_torus"		/>
+		<option name="spherical_genr"		/>
 	</parameter>
 #GRIDGEOMETRY
 spherical_lnr			TypeGeometry
 		
 This command determines the geometry of the grid. Possible values
-are cartesian, cylindrical, spherical, spherical_lnr (spherical
-with a logarithmic radial coordinate, and axial (axially symmetric
-toroidal grid). 
+are cartesian, RZ geometry, cylindrical and spherical. The cylindrical
+and spherical grids can have logarithmic (cylindrical_lnr and spherical_lnr)
+or arbitrarily stretched (spherical_genr, cylindrical_genr) radial coordinates.
 
-The only example of a 2D grid is the "rz" geometry which is axially symmetric.
+The "RZ" geometry is a 2D grid with axial symmetry.
 In our particular implementation the "X" axis is the axis of symmetry, 
 and the "Y" axis is used for the radial direction.
-The "rz" geometry is implemented for the hydro and MHD equations.
-
-BATSRUS uses a Cartesian geometry by default. Setting this command
-allows using more complicated grids. Note that setting "cartesian"
-is not identical with not setting the command at all, because
-the code will use the general formulas. The results should be essentially
-identical though, but the code may run somewhat slower. 
 
 The spherical coordinates are ordered as r, longitude, latitude. The longitude
 is between 0 and 360 degrees, the latitude is between -90 and 90 degrees. The
-cylindrical and toroidal coordinates are r, phi, z with phi between 0 and 360 
-degrees. The toroidal radial coordinate is the radial distance relative to
-the large radius of the torus (see the #TORUSSIZE command).
+cylindrical coordinates are r, phi, z with phi between 0 and 360 degrees. 
+
+The default is Cartesian geometry.
 </command>
 
-<command name="LIMITRADIUS" alias="LIMITGENCOORD1" if="$_IsFirstSession">
+<command name="LIMITRADIUS" if="$_IsFirstSession">
 	<parameter name="rMin" type="real" default="0"/>
 	<parameter name="rMax" type="real" min="$rMin" default="1000"/>
 #LIMITRADIUS
@@ -1386,8 +1364,7 @@ the large radius of the torus (see the #TORUSSIZE command).
 Note: 
 for the #LIMITRADIUS command the linear radii can and should be given even
 if TypeGeometry is 'spherical_lnr' with a logarithmic radius 
-(see command #GRIDGEOMETRY). The #LIMITGENCOORD1 command sets the
-first generalized coordinate directly.
+(see command #GRIDGEOMETRY). 
 
 This command allows setting the mimimum and maximum values for the 
 first generalized coordinate (usually the radius). Setting rMin to
@@ -1396,7 +1373,7 @@ or the axis of the cylindrical grid.
 
 The rMax parameter can be used to choose a spherical or cylinrical domain 
 instead of the brick defined by the #GRID. To achieve this, rMax has to be
-set to a radius that fits insid the brick defined by #GRID.
+set to a radius that fits inside the brick defined by #GRID.
 
 By default the inner radius is set to the radius of the inner body 
 (if it is present, see the #BODY command) and the outer radius is set 
@@ -1404,42 +1381,6 @@ to the largest radial distance of the eight corners of the domain defined
 by the #GRID command. If there is no inner body, the default inner radius
 is set to 0.0 for spherical and cylindrical grids, 
 and to 1.0 for logarithmic spherical grid.
-</command>
-
-<command name="TORUSSIZE">
-	<parameter name="rTorusLarge" type="real" min="0" default="6.0"/>
-	<parameter name="rTorusSmall" type="real" min="0" default="0.5"/>
-#TORUSSIZE
-6.0		rTorusLarge
-0.5		rTorusSmall
-
-This command sets the large and small radii for a toroidal grid
-(see the #GRID command). The default values are shown.
-</command>
-
-<command name="VERTEXBASEDGRID" if="$_IsFirstSession and $_IsStandAlone">
-	<parameter name="UseVertexBasedGrid"    type="logical" default="T"/>
-
-#VERTEXBASEDGRID
-F                         UseVertexBasedGrid
-
-For a vertex-based logically cartesian (spherical, cylindircal) grid 
-(UseVertexBasedGrid=.true.) the node coordinates are defined
-in terms of an arbitrary pointwide transformation of nodes of an 
-original cartesian (spherical,cylindrical) block adaptive grid.
-Advantage: the possiblity to use the arbitrary transformation.
-Disadvantages: the cell center coordinates can not be definied unambigously
-and the difference of the state variables across the face does not evaluate
-the gradient in the direction, normal to this face (stricly speaking).
-Cell-centered grids are used if UseVertexBasedGrid=.false. (default value)
-Advantage: for some particular geometries (spherical, cylindrical) the 
-control volumes are the Voronoy cells (any face is perpendicular to the line
-connecting the centers of the neighboring cells). 
-Disadvantages: even in these particular cases it is not easy to properly 
-define the face area vectors at the resolution change. More general 
-cell-centered grid either is not logically cartesian, or does not consist of 
-the Voronoy cells only.
-
 </command>
 
 <command name="UNIFORMAXIS" if="$_IsFirstSession">
