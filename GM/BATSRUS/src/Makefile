@@ -12,15 +12,35 @@ include ../Makefile.conf
 include Makefile.DEPEND
 include Makefile.RULES
 
-# CONFIGURABLE MODULES
+# CONFIGURABLE OBJECT FILES
 
-MOD1 = ModCT.o       #^CFG IF CONSTRAINB
-MOD2 = ModImplicit.o ModImplHypre.o ModRadDiffusion.o ModHeatConduction.o #^CFG IF IMPLICIT
-MOD3 = ModRaytrace.o #^CFG IF RAYTRACE
-MOD4 = ModProject.o  #^CFG IF PROJECTION
-HEATING = ModCoronalHeating.o ModRadiativeCooling.o 
+OBJ1 = ModCT.o constrain_B.o #				  ^CFG IF CONSTRAINB
 
-MODULES = \
+#                                                     ^CFG IF IMPLICIT BEGIN
+OBJ2=   ModImplicit.o \
+        ModImplHypre.o \
+        ModRadDiffusion.o \
+        ModHeatConduction.o \
+        implicit.o\
+	impl_interface.o\
+	impl_jacobian.o\
+	impl_matvec.o\
+	impl_newton.o
+#                                                     ^CFG END IMPLICIT
+
+OBJ3= ModRaytrace.o ray_trace_new.o ray_trace.o ray_pass.o #^CFG IF RAYTRACE
+
+OBJ4= get_im_pressure.o #			            ^CFG IF RCM
+
+OBJ5= ModProject.o project_B.o proj_cg.o proj_bicgstab.o #  ^CFG IF PROJECTION
+
+OBJ6= set_resistivity.o ModResistivity.o #                  ^CFG IF DISSFLUX
+
+OBJ7= clean_divb.o #					  ^CFG IF DIVBDIFFUSE
+
+# OBJECT FILES FOR LIBRARY / EXECUTABLE
+
+OBJECTS = \
 	ModAdvance.o\
 	ModAMR.o\
 	ModB0.o\
@@ -29,6 +49,7 @@ MODULES = \
 	ModBoundaryCells.o\
 	ModCalcSource.o\
 	ModConserveFlux.o\
+	ModCoronalHeating.o \
 	ModIonoVelocity.o\
 	ModExtraVariables.o\
 	ModSingleFluid.o\
@@ -37,7 +58,6 @@ MODULES = \
 	ModEnergy.o\
 	ModEquation.o\
 	ModCharacteristic.o\
-	ModCovariant.o\
 	ModCurrent.o\
 	ModExpansionFactors.o \
 	ModFaceFlux.o\
@@ -58,6 +78,7 @@ MODULES = \
 	ModPhysics.o\
 	ModPointImplicit.o\
 	ModProcMH.o\
+	ModRadiativeCooling.o \
 	ModRestartFile.o\
 	ModSatelliteFile.o\
 	ModSize.o\
@@ -67,39 +88,13 @@ MODULES = \
 	ModUser.o \
 	ModWaves.o \
 	ModHdf5.o \
-	${HEATING} \
-	${MOD1}	${MOD2}	${MOD3} ${MOD4}
-
-# OBJECT FILES FOR MAIN EXECUTABLE
-
-# CONFIGURABLE OBJECTS				^CFG IF CONFIGURE
-
-OBJ1=constrain_B.o #				^CFG IF CONSTRAINB
-
-#^CFG IF IMPLICIT BEGIN
-OBJ2=   implicit.o\
-	impl_interface.o\
-	impl_jacobian.o\
-	impl_matvec.o\
-	impl_newton.o
-#^CFG END IMPLICIT
-
-OBJ3=ray_trace_new.o ray_trace.o ray_pass.o #	^CFG IF RAYTRACE
-OBJ3B=get_im_pressure.o #			^CFG IF RCM
-OBJ4=project_B.o proj_cg.o proj_bicgstab.o #	^CFG IF PROJECTION
-
-OBJ10=  set_resistivity.o ModResistivity.o #^CFG IF DISSFLUX
-
-OBJ15=clean_divb.o                          #^CFG IF DIVBDIFFUSE
-
-OBJECTS = \
+	${MOD1}	${MOD2}	${MOD3} ${MOD4} \
 	BATS_methods.o \
 	MH_set_parameters.o\
 	advect_points.o\
 	amr.o\
 	amr_criteria.o\
 	calc_timestep.o\
-	covariant.o\
 	explicit.o\
 	fix_axis_cells.o\
 	library.o\
@@ -122,23 +117,7 @@ OBJECTS = \
 	write_plot_sph.o \
 	write_plot_radiowave.o \
 	write_progress.o\
-	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
-	${OBJ10} ${OBJ15}
-
-#	ModCube.o\
-#	ModPolarNeighbor.o\
-#	amr_physics.o\
-#	coarsen_grid.o\
-#	create_soln_blocks.o\
-#	refine_grid.o\
-#	find_neighbors.o\
-#	message_pass_cells.o\
-#	message_pass_faces.o\
-#	message_pass_nodes.o\
-#	number_blocks.o\
-#	octree.o\
-#	specify_refinement.o\
-
+	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ4} ${OBJ5} ${OBJ6} ${OBJ7}
 
 # Default user module
 ModUser.f90:
@@ -147,8 +126,7 @@ ModUser.f90:
 ############################################################################
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
-		${MODULES} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
 
 #
 #	Making executables and libraries
@@ -167,9 +145,9 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${LIBBATL} ${MODULES} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${LIBBATL} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	cp -f ${LIBBATL} ${MY_LIB}
-	${AR} ${MY_LIB} ${MODULES} ${OBJECTS}
+	${AR} ${MY_LIB} ${OBJECTS}
 
 # Object files not included into the library
 OBJECTS_EXE = main.o
