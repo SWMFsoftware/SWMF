@@ -7,9 +7,8 @@ subroutine write_plot_common(ifile)
 
   use ModProcMH
   use ModMain
-  use ModGeometry, ONLY : XyzMin_D,XyzMax_D,true_cell
-  use ModGeometry, ONLY : TypeGeometry, nGrid, yR_I
-  use ModPhysics, ONLY : No2Io_V, UnitX_, rBody, ThetaTilt
+  use ModGeometry, ONLY: XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I
+  use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, write_cut_var_hdf5
   use ModIoUnit, ONLY: io_unit_new
@@ -493,8 +492,8 @@ subroutine write_plot_common(ifile)
            if(save_binary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
            write(unit_tmp,'(a)')TypeGeometry
            if(index(TypeGeometry,'genr') > 0)then
-              write(Unit_tmp,'(i8,    " nRgen"  )') nGrid
-              write(Unit_tmp,'(es13.5," LogRgen")') yR_I
+              write(Unit_tmp,'(i8,    " nRgen"  )') size(LogRGen_I)
+              write(Unit_tmp,'(es13.5," LogRgen")') LogRGen_I
            end if
            write(unit_tmp,'(a)')TypeIdlFile_I(ifile)
         end select
@@ -679,7 +678,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
   use ModWaves, ONLY: UseWavePressure
   use ModLaserHeating, ONLY: LaserHeating_CB
-  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit
+  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, IsCartesian, Xyz_DGB
   use ModCurrent, ONLY: get_current
   implicit none
 
@@ -891,14 +890,14 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('pperp')
         PlotVar(:,:,:,iVar) = (3*State_VGB(iP,:,:,:,iBLK) & 
              -State_VGB(Ppar_,:,:,:,iBLK))/2.0
-     case('jx','jy', 'jz')
+     case('jx','jy', 'jz', 'jr')
 
         if(.not. allocated(J_DG))then
            allocate(J_DG(1:3,-1:nI+2,-1:nJ+2,-1:nK+2))
            J_DG = 0.0
         end if
 
-        ! Calculationg all the currents only ones per block
+        ! Calculationg all the currents only once per block
         if(DoCurrent) then
            ! Note that the current in the ghost cells are not 
            ! needed for Tecplot output. Maybe needed for HDF (!).
@@ -918,6 +917,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         case('jz')
            PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
                 J_DG(3,0:nI+1,0:nJ+1,0:nK+1)
+        case('jr')
+           do k = 1,nK; do j = 1, nJ; do i = 1, nI
+              PlotVar(i,j,k,iVar) = &
+                   sum(J_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlk))
+           end do; end do; end do
         end select
 
      case('jxe','jye','jze','jxw','jyw','jzw', &
@@ -1046,32 +1050,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
              + State_VGB(By_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) &
              + State_VGB(Bz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
              ) / R_BLK(:,:,:,iBLK)                                 
-     case('jr')
-        if(UseCovariant)then                       
-           call covar_curlbr_plotvar(iBLK,PlotVar(:,:,:,iVar))  
-        else                                       
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &  
-                0.5 / R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) * &
-                ( ( &
-                ( State_VGB(Bz_,0:nI+1, 1:nJ+2, 0:nK+1,iBLK) & 
-                - State_VGB(Bz_,0:nI+1,-1:nJ  , 0:nK+1,iBLK))/dy_BLK(iBLK) - &
-                ( State_VGB(By_,0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-                - State_VGB(By_,0:nI+1, 0:nJ+1,-1:nK  ,iBLK))/dz_BLK(iBLK)   &
-                ) * x_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
-                + ( &
-                ( State_VGB(Bx_, 0:nI+1,0:nJ+1, 1:nK+2,iBLK) &
-                - State_VGB(Bx_, 0:nI+1,0:nJ+1,-1:nK  ,iBLK))/dz_BLK(iBLK) - &
-                ( State_VGB(Bz_, 1:nI+2,0:nJ+1, 0:nK+1,iBLK) &
-                - State_VGB(Bz_,-1:nI  ,0:nJ+1, 0:nK+1,iBLK))/dx_BLK(iBLK)   &
-                ) * y_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
-                + ( &
-                ( State_VGB(By_, 1:nI+2, 0:nJ+1,0:nK+1,iBLK) &
-                - State_VGB(By_,-1:nI  , 0:nJ+1,0:nK+1,iBLK))/dx_BLK(iBLK) - &
-                ( State_VGB(Bx_, 0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
-                - State_VGB(Bx_, 0:nI+1,-1:nJ  ,0:nK+1,iBLK))/dy_BLK(iBLK)   &
-                ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )     
-           continue
-        end if
      case('er')
         PlotVar(:,:,:,iVar)=( ( State_VGB(iRhoUz,:,:,:,iBLK)* &
              FullB_DG(y_,:,:,:) &
@@ -1118,9 +1096,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
              + tmp1Var*State_VGB(iRhoUz,:,:,:,iBLK)*Z_BLK(:,:,:,iBLK) &   
              )/(State_VGB(iRho,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('divb','divb_cd','divb_ct')
-        if(UseCovariant)&                            
-             call stop_mpi('When UseCovariant=T use absdivb indstead of divb')
-
+        if(.not.IsCartesian)call stop_mpi( &
+             NameSub//': for non cartesian grids only absdivb works')
 
         if(String == 'divb_cd' .or. (String == 'divb' &
              .and..not.UseConstrainB &               !^CFG IF CONSTRAINB
@@ -1355,7 +1332,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            EXIT
         end do
         if(jVar > nVar) then
-           call user_set_plot_var(iBLK, NamePlotVar, plot_dimensional(Plot_+iPlotFile), &
+           call user_set_plot_var(iBLK, &
+                NamePlotVar, plot_dimensional(Plot_+iPlotFile), &
                 PlotVar(:,:,:,iVar), &                
                 plotvar_inBody(iVar), plotvar_useBody(iVar), &
                 NameVarUserTec_I(iVar), NameUnitUserTec_I(iVar), &
