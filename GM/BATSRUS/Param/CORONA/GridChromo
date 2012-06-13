@@ -25,7 +25,6 @@ Param/CORONA/grid_TR.dat
 #LIMITRADIUS
 1.0			rMin
 24.0			rMax
-
 ----------------------------------------------------
 #GRIDLEVEL
 2			nLevelArea 4
@@ -40,10 +39,6 @@ box_gen			NameArea
 1.7			rMax
 360.0			LonMax
 90.0			LatMax
-
-#GRIDLEVEL
-5			nLevelArea
-user			NameArea
 
 #AMRCRITERIALEVEL
 1                       nCriteria 

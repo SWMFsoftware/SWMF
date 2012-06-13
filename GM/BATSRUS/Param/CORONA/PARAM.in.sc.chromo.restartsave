@@ -37,6 +37,64 @@ T			UseBody
 0			iSecond
 0.0			FracSecond
 
+#FIXAXIS
+F                       UsePoleDiffusion
+T                       DoFixAxis
+8.0                     rFixAxis
+0.0                     r2FixAxis
+
+turn these off when restarting
+---------------------------------------------------
+#GRIDGEOMETRY
+spherical_genr
+Param/CORONA/grid_TR.dat
+
+! Use a true sphere, so box is made much larger
+#GRID
+1                       nRootBlockX
+2                       nRootBlockY
+1                       nRootBlockZ
+-100.0                  xMin
+ 100.0                  xMax
+-100.0                  yMin
+ 100.0                  yMax
+-100.0                  zMin
+ 100.0                  zMax
+
+#LIMITRADIUS
+1.0                     rMin
+24.0                    rMax
+
+----------------------------------------------------
+#GRIDLEVEL
+2                       nLevelArea 4
+all                     NameArea
+
+#GRIDLEVEL
+5                       nLevelArea
+box_gen                 NameArea
+1.0                     rMin
+0.0                     LonMin
+-90.0                   LatMin
+1.7                     rMax
+360.0                   LonMax
+90.0                    LatMax
+
+#GRIDLEVEL
+5                       nLevelArea
+user                    NameArea
+
+#AMRCRITERIALEVEL
+1                       nCriteria
+currentsheet            TypeCriteria
+0.5                     CoarsenLimit
+0.5                     RefineLimit
+5                       MaxLevel
+
+#GRIDLEVEL
+2                       nLevelArea 5
+initial                 NameArea
+
 READPOTENTIALFIELD
 T			UseMagnetogram
 potentialfield.out	NamePotentialFieldFile
@@ -139,9 +197,6 @@ T			DoExtendTransitionRegion
 3.0e5			TeModSi
 1.0e1			DeltaTeModSi
 
-#INCLUDE
-GridChromo
-
 #AMR
 40			DnRefine 40000
 F			DoAutoRefine
@@ -213,5 +268,5 @@ g rbody
 T			DoSaveInitial
 
 #STOP
-50			MaxIteration 60000
+25			MaxIteration 60000
 -1.0			tSimulationMax
