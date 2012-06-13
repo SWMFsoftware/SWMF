@@ -16,27 +16,14 @@ Module ModNodes
   integer, allocatable :: NodeNumberGlobal_NB(:,:,:,:)
   logical, allocatable :: NodeUniqueGlobal_NB(:,:,:,:)
 
-  !\
-  ! Block node-centered MHD solution and location
-  !/
-  real, allocatable :: NodeX_NB(:,:,:,:)
-  real, allocatable :: NodeY_NB(:,:,:,:)
-  real, allocatable :: NodeZ_NB(:,:,:,:)
-  real, allocatable :: NodeValue_NB(:,:,:,:)
-
 contains
   !============================================================================
   subroutine init_mod_nodes
-
 
     if(allocated(NodeNumberLocal_NB)) return
     allocate(NodeNumberLocal_NB(1:nI+1,1:nJ+1,1:nK+1,nBLK))
     allocate(NodeNumberGlobal_NB(1:nI+1,1:nJ+1,1:nK+1,nBLK))
     allocate(NodeUniqueGlobal_NB(1:nI+1,1:nJ+1,1:nK+1,nBLK))
-    allocate(NodeX_NB(1:nI+1,1:nJ+1,1:nK+1,nBLK))
-    allocate(NodeY_NB(1:nI+1,1:nJ+1,1:nK+1,nBLK))
-    allocate(NodeZ_NB(1:nI+1,1:nJ+1,1:nK+1,nBLK))
-    allocate(NodeValue_NB(1:nI+1,1:nJ+1,1:nK+1,nBLK))
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_nodes allocated arrays'
@@ -50,10 +37,6 @@ contains
     deallocate(NodeNumberLocal_NB)
     deallocate(NodeNumberGlobal_NB)
     deallocate(NodeUniqueGlobal_NB)
-    deallocate(NodeX_NB)
-    deallocate(NodeY_NB)
-    deallocate(NodeZ_NB)
-    deallocate(NodeValue_NB)
 
     if(iProc==0)then
        call write_prefix
