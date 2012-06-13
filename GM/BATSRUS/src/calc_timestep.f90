@@ -12,6 +12,7 @@ subroutine calc_timestep
        CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC
   use ModRadiativeCooling, ONLY: UseRadCooling, &
        get_radiative_cooling, add_chromosphere_heating
+  use ModCalcSource, ONLY: get_tesi_c
   use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
        UseChromosphereHeating
   use ModPhysics, ONLY: inv_gm1

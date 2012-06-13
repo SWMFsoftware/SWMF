@@ -4,15 +4,16 @@
 subroutine advance_expl(DoCalcTimestep, iStageMax)
 
   use ModMain
-  use ModFaceFlux,  ONLY: calc_face_flux
-  use ModFaceValue, ONLY: calc_face_value
-  use ModAdvance,   ONLY: UseUpdateCheck, DoFixAxis,set_b0_face, &
+  use ModFaceFlux,   ONLY: calc_face_flux
+  use ModFaceValue,  ONLY: calc_face_value
+  use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis,set_b0_face, &
        DoCalcElectricField
-  use ModParallel,  ONLY: neiLev
-  use ModGeometry,  ONLY: Body_BLK
-  use ModBlockData, ONLY: set_block_data
-  use ModImplicit,  ONLY: UsePartImplicit           !^CFG IF IMPLICIT
-  use ModPhysics,   ONLY: No2Si_V, UnitT_
+  use ModParallel,   ONLY: neiLev
+  use ModGeometry,   ONLY: Body_BLK
+  use ModBlockData,  ONLY: set_block_data
+  use ModImplicit,   ONLY: UsePartImplicit           !^CFG IF IMPLICIT
+  use ModPhysics,    ONLY: No2Si_V, UnitT_
+  use ModCalcSource, ONLY: calc_sources
   use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
        nCorrectedFaceValues, CorrectedFlux_VXB, &
        CorrectedFlux_VYB, CorrectedFlux_VZB

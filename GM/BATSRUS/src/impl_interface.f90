@@ -918,6 +918,7 @@ subroutine getsource(iBLK,Var_VCB,SourceImpl_VC)
   use ModMain
   use ModVarIndexes
   use ModAdvance, ONLY : Source_VC  ! To communicate to calc_sources
+  use ModCalcSource, ONLY: calc_sources
   use ModImplicit, ONLY : nw, UseImplicitEnergy
 
   implicit none

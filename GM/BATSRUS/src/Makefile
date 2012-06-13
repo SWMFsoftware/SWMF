@@ -27,6 +27,7 @@ MODULES = \
 	ModBatlInterface.o\
 	ModBlockData.o\
 	ModBoundaryCells.o\
+	ModCalcSource.o\
 	ModConserveFlux.o\
 	ModIonoVelocity.o\
 	ModExtraVariables.o\
@@ -97,7 +98,6 @@ OBJECTS = \
 	advect_points.o\
 	amr.o\
 	amr_criteria.o\
-	calc_sources.o\
 	calc_timestep.o\
 	covariant.o\
 	explicit.o\
