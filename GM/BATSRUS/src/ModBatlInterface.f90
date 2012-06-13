@@ -2,8 +2,6 @@ module ModBatlInterface
 
   implicit none
 
-  logical, public :: UseBatlTest = .true.
-
 contains
   !===========================================================================
   subroutine set_batsrus_grid
@@ -69,20 +67,18 @@ contains
   !===========================================================================
   subroutine set_batsrus_block(iBlock)
 
-    use BATL_lib, ONLY: nDim, x_, y_, z_, &
+    use BATL_lib, ONLY: nDim, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          Xyz_DGB, CellVolume_B, CellVolume_GB, &
          CellSize_DB, CoordMin_DB, &
-         CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
+         CellFace_DB, CellFace_DFB, &
          iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
          iTree_IA, Block_, Proc_, Unset_, &
          IsCartesian, IsRzGeometry
     use ModGeometry, ONLY: &
          XyzStart_BLK, &
          x_BLK, y_BLK, z_BLK, r_BLK, rMin_BLK, Cv_BLK, vInv_CB, &
-         dx_BLK, dy_BLK, dz_BLK, fax_BLK, fay_BLK, faz_BLK, &
-         FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
-         FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B
+         dx_BLK, dy_BLK, dz_BLK, fax_BLK, fay_BLK, faz_BLK
 
     use ModParallel, ONLY: BLKneighborLEV,  neiLEV, neiBLK, neiPE, &
          neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
@@ -230,66 +226,27 @@ contains
     dy_BLK(iBlock) = CellSize_DB(2,iBlock)
     dz_BLK(iBlock) = CellSize_DB(3,iBlock)
 
-    if(UseBatlTest)then
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          x_BLK(i,j,k,iBlock) = Xyz_DGB(1,i,j,k,iBlock)
-          y_BLK(i,j,k,iBlock) = Xyz_DGB(2,i,j,k,iBlock)
-          z_BLK(i,j,k,iBlock) = Xyz_DGB(3,i,j,k,iBlock)
-          r_BLK(i,j,k,iBlock) = sqrt(sum(Xyz_DGB(1:nDim,i,j,k,iBlock)**2))
-       end do; end do; end do
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       x_BLK(i,j,k,iBlock) = Xyz_DGB(1,i,j,k,iBlock)
+       y_BLK(i,j,k,iBlock) = Xyz_DGB(2,i,j,k,iBlock)
+       z_BLK(i,j,k,iBlock) = Xyz_DGB(3,i,j,k,iBlock)
+       r_BLK(i,j,k,iBlock) = sqrt(sum(Xyz_DGB(1:nDim,i,j,k,iBlock)**2))
+    end do; end do; end do
 
-       Rmin_BLK(iBlock) = minval(r_BLK(:,:,:,iBlock))
+    Rmin_BLK(iBlock) = minval(r_BLK(:,:,:,iBlock))
 
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          vInv_CB(i,j,k,iBlock) = 1/CellVolume_GB(i,j,k,iBlock)
-       end do; end do; end do
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       vInv_CB(i,j,k,iBlock) = 1/CellVolume_GB(i,j,k,iBlock)
+    end do; end do; end do
 
-       if(IsCartesian)then
-          fAx_BLK(iBlock) = CellFace_DB(1,iBlock)
-          fAy_BLK(iBlock) = CellFace_DB(2,iBlock)
-          fAz_BLK(iBlock) = CellFace_DB(3,iBlock)
-          cV_BLK(iBlock)  = CellVolume_B(iBlock)
-       end if
-
+    if(IsCartesian)then
+       fAx_BLK(iBlock) = CellFace_DB(1,iBlock)
+       fAy_BLK(iBlock) = CellFace_DB(2,iBlock)
+       fAz_BLK(iBlock) = CellFace_DB(3,iBlock)
+       cV_BLK(iBlock)  = CellVolume_B(iBlock)
     end if
 
     call fix_block_geometry(iBlock)
-
-    if(.not.IsCartesian .and. UseBatlTest .or. IsRzGeometry)then
-       FaceArea2MinI_B(iBlock) = 1e-30
-       FaceArea2MinJ_B(iBlock) = 1e-30
-       FaceArea2MinK_B(iBlock) = 1e-30
-
-       ! Initialize for ignored dimensions
-       FaceAreaI_DFB(:,:,:,:,iBlock) = 0.0
-       FaceAreaJ_DFB(:,:,:,:,iBlock) = 0.0
-       FaceAreaK_DFB(:,:,:,:,iBlock) = 0.0
-
-       if(IsRzGeometry)then
-          ! This is like Cartesian except for the areas in R (=x) and Z (=y)
-          FaceAreaI_DFB(1,:,:,:,iBlock) = CellFace_DFB(1,:,1:nJ,1:nK,iBlock)
-          FaceAreaJ_DFB(2,:,:,:,iBlock) = CellFace_DFB(2,1:nI,:,1:nK,iBlock)
-       else
-          do k=1, nK; do j=1,nJ; do i=1,nI+1
-             FaceAreaI_DFB(1:nDim,i,j,k,iBlock) = &
-                  FaceNormal_DDFB(:,x_,i,j,k,iBlock)
-          end do; end do; end do
-          if(nDim > 1)then
-             do k=1, nK; do j=1,nJ+1; do i=1,nI
-                FaceAreaJ_DFB(1:nDim,i,j,k,iBlock) = &
-                     FaceNormal_DDFB(:,y_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-          if(nDim > 2)then
-             do k=1, nK+1; do j=1,nJ; do i=1,nI
-                FaceAreaK_DFB(1:nDim,i,j,k,iBlock) = &
-                     FaceNormal_DDFB(:,z_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-
-       endif
-
-    end if
 
   end subroutine set_batsrus_block
   !============================================================================
@@ -297,6 +254,8 @@ contains
 
     ! Here we should fix B0 and other things
 
+    use ModMain, ONLY: UseB0
+    use ModB0, ONLY: set_b0_reschange
     use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B,&
          set_amr_geometry
     use ModEnergy, ONLY: calc_energy_ghost
@@ -304,7 +263,11 @@ contains
     use ModUser,    ONLY : user_specify_refinement
 
     integer:: iBlock
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'set_batsrus_state'
     !-------------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -319,6 +282,8 @@ contains
             user_amr_geometry=user_specify_refinement)
        if(UseResistivity) call set_resistivity(iBlock)
     end do
+
+    if(UseB0)call set_b0_reschange
 
   end subroutine set_batsrus_state
   !============================================================================
@@ -343,14 +308,7 @@ contains
     call init_cons_flux(iBlock)
 
     ! Set B0
-    if(UseB0)then
-       B0_DGB(:,:,:,:,iBlock) = 0.0
-       B0ResChange_DXSB(:,:,:,:,iBlock) = 0.0
-       B0ResChange_DYSB(:,:,:,:,iBlock) = 0.0
-       B0ResChange_DZSB(:,:,:,:,iBlock) = 0.0
-
-       call set_b0(iBlock)
-    end if
+    if(UseB0) call set_b0_cell(iBlock)
 
     ! Initialize and set body forces
     if(allocated(fbody_x_BLK))then
