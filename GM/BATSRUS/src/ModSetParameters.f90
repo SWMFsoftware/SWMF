@@ -1863,6 +1863,12 @@ subroutine MH_set_parameters(TypeAction)
      case("#CME", "#ARCH", "#TD99FLUXROPE", "#GL98FLUXROPE", "#SHEARFLOW")
         call EEE_set_parameters(NameCommand)
 
+     case("#STAR")
+        UseStar=.true.
+        call read_var('RadiusStar', RadiusStar)
+        call read_var('MassStar', MassStar)
+        call read_var('RotationPeriodStar', RotationPeriodStar)        
+
      case default
         if(iProc==0) then
            write(*,*) NameSub // ' WARNING: unknown #COMMAND ' // &

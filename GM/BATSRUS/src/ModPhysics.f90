@@ -200,4 +200,8 @@ module ModPhysics
   ! Some strange logical used in calc_heat_flux
   logical :: UseDefaultUnits = .false.
 
+  ! Use Stellar parameters
+  logical :: UseStar = .false.
+  real :: RadiusStar,MassStar,RotationPeriodStar
+
 end module ModPhysics

@@ -3,7 +3,7 @@
 ! set_physics_constants set normalizations, physical constants, 
 ! module (GM/IH/OH/SC/LC) dependent physical parameters
 !/
-subroutine set_physics_constants
+subroutine set_physics_constants 
 
   use ModProcMH
   use ModAMR
@@ -43,9 +43,15 @@ subroutine set_physics_constants
         NamePlanetRadius = 'km'
      end if
   case("LC","SC","IH","OH")
-     rPlanetSi   = rSun
-     MassBodySi  = mSun
-     RotPeriodSi = RotationPeriodSun
+     if(UseStar) then
+        rPlanetSi   = RadiusStar*rSun
+        MassBodySi  = MassStar*mSun
+        RotPeriodSi = RotationPeriodStar
+     else
+        rPlanetSi   = rSun
+        MassBodySi  = mSun
+        RotPeriodSi = RotationPeriodSun
+     endif
      SW_n_dim    = BodyNDim_I(IonFirst_)  ! Needed for SOLARWIND normalization only
      SW_T_dim    = BodyTDim_I(IonFirst_)  ! Needed for SOLARWIND normalization only
   case('EE')
