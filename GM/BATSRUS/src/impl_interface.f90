@@ -917,8 +917,8 @@ subroutine getsource(iBLK,Var_VCB,SourceImpl_VC)
 
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY : Source_VC  ! To communicate to calc_sources
-  use ModCalcSource, ONLY: calc_sources
+  use ModAdvance, ONLY : Source_VC  ! To communicate to calc_source
+  use ModCalcSource, ONLY: calc_source
   use ModImplicit, ONLY : nw, UseImplicitEnergy
 
   implicit none
@@ -936,11 +936,10 @@ subroutine getsource(iBLK,Var_VCB,SourceImpl_VC)
   UseDivbSource  = .false.
   
   call impl2expl(Var_VCB,iBLK)
-  globalBLK = iBLK
 
   !!! Explicit time dependence  t+ImplCoeff*dt !!!
   !call calc_point_sources(t+ImplCoeff*dt)
-  call calc_sources
+  call calc_source(iBlk)
 
   SourceImpl_VC = Source_VC(1:nVar,:,:,:)
   

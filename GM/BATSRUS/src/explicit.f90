@@ -13,7 +13,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModBlockData,  ONLY: set_block_data
   use ModImplicit,   ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   use ModPhysics,    ONLY: No2Si_V, UnitT_
-  use ModCalcSource, ONLY: calc_sources
+  use ModCalcSource, ONLY: calc_source
   use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
        nCorrectedFaceValues, CorrectedFlux_VXB, &
        CorrectedFlux_VYB, CorrectedFlux_VZB
@@ -111,7 +111,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
         ! Compute source terms for each cell.
         call timing_start('calc_sources')
-        call calc_sources
+        call calc_source(GlobalBlk)
         call timing_stop('calc_sources')
 
         ! Calculate time step (both local and global
