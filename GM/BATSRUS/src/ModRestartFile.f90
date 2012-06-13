@@ -337,7 +337,7 @@ contains
        write(unit_tmp,'(a)')'#GRIDGEOMETRY'
        write(unit_tmp,'(a20,a20)')TypeGeometry,'TypeGeometry'
        if(TypeGeometry == 'spherical_genr') &
-         write(unit_tmp,'(a20,a20)')NameGridFile,'NameGridFile' 
+         write(unit_tmp,'(a100,a100)')NameGridFile,'NameGridFile' 
        write(unit_tmp,*)
        write(unit_tmp,'(a)')'#VERTEXBASEDGRID'
        write(unit_tmp,'(l1,a39)') UseVertexBasedGrid,'UseVertexBasedGrid'
