@@ -11,8 +11,7 @@ module ModRestartFile
        NameThisComp, iteration_number, DoThinCurrentSheet
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_
   use ModAdvance,    ONLY: State_VGB
-  use ModCovariant,  ONLY: NameGridFile
-  use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
+  use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK, NameGridFile
   use ModIO,         ONLY: Restart_Bface                    !^CFG IF CONSTRAINB
   use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK !^CFG IF CONSTRAINB
   use ModMain,       ONLY: UseConstrainB                    !^CFG IF CONSTRAINB
@@ -22,7 +21,8 @@ module ModRestartFile
   use ModIoUnit,     ONLY: UnitTmp_
   use ModGmGeoindices, ONLY: DoWriteIndices
 
-  use BATL_lib,      ONLY: write_tree_file, iMortonNode_A, iNode_B
+  use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B, &
+       IsCartesian, IsCartesianGrid, IsGenRadius
 
   implicit none
 
@@ -252,9 +252,8 @@ contains
          nBlockAll, Body1, Time_Accurate, iStartTime_I, IsStandAlone
     use ModMain,       ONLY: UseBody2,UseOrbit            !^CFG IF SECONDBODY
     use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
-    use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
-    use ModGeometry, ONLY: XyzMin_D, XyzMax_D, &             
-         TypeGeometry, UseCovariant, UseVertexBasedGrid      
+    use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzMin_D, XyzMax_D, &
+         RadiusMin, RadiusMax, TypeGeometry
     use ModParallel, ONLY: proc_dims
     use ModUser,     ONLY: NameUserModule, VersionUserModule
     use ModPhysics
@@ -333,14 +332,10 @@ contains
     write(unit_tmp,'(a)')'#TIMESIMULATION'
     write(unit_tmp,'(es22.15,a18)')time_simulation,'tSimulation'
     write(unit_tmp,*)
-    if(UseCovariant)then                        
+    if(.not.IsCartesian)then                        
        write(unit_tmp,'(a)')'#GRIDGEOMETRY'
-       write(unit_tmp,'(a20,a20)')TypeGeometry,'TypeGeometry'
-       if(TypeGeometry == 'spherical_genr') &
-         write(unit_tmp,'(a100,a100)')NameGridFile,'NameGridFile' 
-       write(unit_tmp,*)
-       write(unit_tmp,'(a)')'#VERTEXBASEDGRID'
-       write(unit_tmp,'(l1,a39)') UseVertexBasedGrid,'UseVertexBasedGrid'
+       write(unit_tmp,'(a20,a20)')TypeGeometry, 'TypeGeometry'
+       if(IsGenRadius) write(unit_tmp,'(a100)')NameGridFile
        write(unit_tmp,*)
     end if
     write(unit_tmp,'(a)')'#GRID'
@@ -354,10 +349,10 @@ contains
     write(unit_tmp,'(es22.15,a18)')z1,'zMin'
     write(unit_tmp,'(es22.15,a18)')z2,'zMax'
     write(unit_tmp,*)
-    if(UseCovariant)then                        
-       write(unit_tmp,'(a)')'#LIMITGENCOORD1'                   
-       write(unit_tmp,'(es22.15,a18)')XyzMin_D(1),'XyzMin_D(1)' 
-       write(unit_tmp,'(es22.15,a18)')XyzMax_D(1),'XyzMax_D(1)' 
+    if(.not.IsCartesianGrid .and. RadiusMin > 0.0 .and. RadiusMax > 0.0)then
+       write(unit_tmp,'(a)')'#LIMITRADIUS'
+       write(unit_tmp,'(es22.15,a18)') RadiusMin, 'RadiusMin' 
+       write(unit_tmp,'(es22.15,a18)') RadiusMax, 'RadiusMax' 
        write(unit_tmp,*)
     end if                                      
     write(unit_tmp,'(a)')'#COORDSYSTEM'
