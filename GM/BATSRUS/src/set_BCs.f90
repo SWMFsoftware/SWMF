@@ -136,6 +136,8 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
   ! Apply body BCs as required.
   !/                            
 
+  B0Face_D = 0.0
+
   do k = kMinFaceX, kMaxFaceX
      do j = jMinFaceX, jMaxFaceX
         do i = 1, nIFace
@@ -162,7 +164,7 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               FaceCoords_D(x_) = 0.5*sum(x_BLK(i-1:i,j,k,iBlockBc))
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i-1:i,j,k,iBlockBc))
               FaceCoords_D(z_) = 0.5*sum(z_BLK(i-1:i,j,k,iBlockBc))
-              B0Face_D = B0_DX(:,i,j,k)
+              if(UseB0)B0Face_D = B0_DX(:,i,j,k)
 
               VarsTrueFace_V= LeftState_VX(:,i,j,k)
 
@@ -183,7 +185,7 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               FaceCoords_D(x_) = 0.5*sum(x_BLK(i-1:i,j,k,iBlockBc))
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i-1:i,j,k,iBlockBc))
               FaceCoords_D(z_) = 0.5*sum(z_BLK(i-1:i,j,k,iBlockBc))
-              B0Face_D = B0_DX(:,i,j,k)
+              if(UseB0)B0Face_D = B0_DX(:,i,j,k)
 
               VarsTrueFace_V = RightState_VX(:,i,j,k)
 
@@ -212,7 +214,7 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j-1:j,k,iBlockBc))
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j-1:j,k,iBlockBc))
               FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j-1:j,k,iBlockBc))
-              B0Face_D     = B0_DY(:,i,j,k)
+              if(UseB0)B0Face_D = B0_DY(:,i,j,k)
 
               VarsTrueFace_V = LeftState_VY(:,i,j,k)
 
@@ -232,7 +234,7 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j-1:j,k,iBlockBc))
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j-1:j,k,iBlockBc))
               FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j-1:j,k,iBlockBc))
-              B0Face_D = B0_DY(:,i,j,k)
+              if(UseB0)B0Face_D = B0_DY(:,i,j,k)
 
               VarsTrueFace_V = RightState_VY(:,i,j,k)
 
@@ -261,7 +263,7 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               FaceCoords_D(x_)= 0.5*sum(x_BLK(i,j,k-1:k,iBlockBc))
               FaceCoords_D(y_)= 0.5*sum(y_BLK(i,j,k-1:k,iBlockBc))
               FaceCoords_D(z_)= 0.5*sum(z_BLK(i,j,k-1:k,iBlockBc))
-              B0Face_D = B0_DZ(:,i,j,k)
+              if(UseB0)B0Face_D = B0_DZ(:,i,j,k)
 
               VarsTrueFace_V =  LeftState_VZ(:,i,j,k)
 
@@ -281,7 +283,7 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
               FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j,k-1:k,iBlockBc))
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j,k-1:k,iBlockBc))
               FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j,k-1:k,iBlockBc))
-              B0Face_D = B0_DZ(:,i,j,k)
+              if(UseB0)B0Face_D = B0_DZ(:,i,j,k)
 
               VarsTrueFace_V =  RightState_VZ(:,i,j,k)
 
