@@ -7,10 +7,9 @@ subroutine MH_set_parameters(TypeAction)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : init_mod_geometry, TypeGeometry, nMirror_D, &
-       UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & 
-       allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,&
-       x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary,r_to_gen,&
-       read_grid_file, set_fake_grid_file, NameGridFile, IsRzGeometry
+       x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
+       MinBoundary,MaxBoundary,&
+       read_gen_radial_grid, set_gen_radial_grid, NameGridFile
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
   use ModImplHypre, ONLY: hypre_read_param              !^CFG IF IMPLICIT
@@ -18,11 +17,10 @@ subroutine MH_set_parameters(TypeAction)
   use ModProject                                        !^CFG IF PROJECTION
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModBlockData, ONLY: clean_block_data
-  use ModBatlInterface, ONLY: UseBatlTest
   use BATL_lib, ONLY: read_amr_criteria, read_amr_geometry, &
        DoCritAmr, DoAutoAmr, DoStrictAmr,nDimBatl => nDim, BetaProlong,&
-       init_mpi
-  use BATL_size, ONLY: nGI, nGJ, nGK
+       init_mpi, IsCartesianGrid, IsCartesian, IsRzGeometry, &
+       IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
   use ModAMR
   use ModParallel, ONLY : proc_dims
   use ModRaytrace                                       !^CFG IF RAYTRACE
@@ -42,7 +40,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
-       NameUserModule, VersionUserModule, user_specify_refinement
+       NameUserModule, VersionUserModule
   use ModBoundaryCells, ONLY: init_mod_boundary_cells
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
@@ -131,9 +129,6 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Variables for checking/reading #STARTTIME command
   real (Real8_)         :: StartTimeCheck = -1.0_Real8_
-
-  ! Variables for #LIMITGENCOORD1 or #LIMITRADIUS
-  real :: Coord1Min = -1.0, Coord1Max = -1.0
 
   ! Variable for #UNIFORMAXIS
   logical:: UseUniformAxis = .true.
@@ -227,10 +222,11 @@ subroutine MH_set_parameters(TypeAction)
 
         ! Obtain some planet parameters
         if(DipoleStrengthSi == 0.0 .and. .not. UseUserB0 )then
-           DoUpdateB0 = .false.
+           UseB0       = .false.
+           UseB0Source = .false.
+           UseCurlB0   = .false.
+           DoUpdateB0  = .false.
            Dt_UpdateB0 = -1.0
-
-           UseB0 = .false.
         else
            call get_planet( &
                 DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
@@ -340,12 +336,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#BATLPROLONG")
         call read_var('BetaProlong',BetaProlong )
 
-     case("#BATLTEST")
-        call read_var('UseBatlTest', UseBatlTest)
-        if(UseBatlTest)then
-           if(nGI /= 2 .or. nGJ /= 2 .or. nGK /= 2) call stop_mpi(NameSub// &
-                ' ERROR: nGI..nGK must be 2 in srcBATL/BATL_size.f90')
-        end if
      case("#COMPONENT")
         call read_var('NameComp', NameCompRead)
         if(NameThisComp /= NameCompRead)then
@@ -804,7 +794,7 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
                    .and. plot_area /= 'eqr' &        !^CFG IF RAYTRACE
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
-              if(is_axial_geometry())plot_dx(1,ifile)=-1.0 
+              if(.not.IsCartesianGrid)plot_dx(1,ifile)=-1.0 
 
               ! Extract the type of idl plot file: default is real4
               TypeIdlFile_I(iFile) = 'real4' 
@@ -1218,17 +1208,17 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#USEB0")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseB0'   ,UseB0)
+        call read_var('UseB0', UseB0)
 
      case("#DIVBSOURCE")
         if(.not.UseB0)CYCLE READPARAM
-	call read_var('UseB0Source'   ,UseB0Source)
+	call read_var('UseB0Source', UseB0Source)
 
      case("#USECURLB0")
         if(.not.UseB0)CYCLE READPARAM
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseCurlB0',UseCurlB0)
-        if(UseCurlB0)call read_var('rCurrentFreeB0',rCurrentFreeB0)
+        call read_var('UseCurlB0', UseCurlB0)
+        if(UseCurlB0)call read_var('rCurrentFreeB0', rCurrentFreeB0)
 
      case("#PROJECTION")                              !^CFG IF PROJECTION BEGIN
         if(.not.UseB)CYCLE READPARAM
@@ -1434,18 +1424,13 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DtOutput', dt_output(magfile_)) 
         nFile = max(nFile, magfile_) 
 
-     case('#VERTEXBASEDGRID')          
+     case("#GRIDGEOMETRY")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseVertexBasedGrid',UseVertexBasedGrid)
-
-     case("#GRIDGEOMETRY", "#COVARIANTGEOMETRY")
-        if(.not.is_first_session())CYCLE READPARAM
-        UseCovariant=.true.
         call read_var('TypeGeometry', TypeGeometry, IsLowerCase=.true.)
         ! need to read in the general grid file      
         if(TypeGeometry == 'spherical_genr') then
            call read_var('NameGridFile',NameGridFile)
-           call read_grid_file(NameGridFile)
+           call read_gen_radial_grid(NameGridFile)
         end if
 
      case("#GRIDSYMMETRY")
@@ -1457,10 +1442,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('IsMirrorZ', IsMirrorZ)
         if(IsMirrorZ) nMirror_D(3) = 2
 
-     case("#LIMITRADIUS", "#LIMITGENCOORD1")
+     case("#LIMITRADIUS")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('Coord1Min', Coord1Min)
-        call read_var('Coord1Max', Coord1Max)
+        call read_var('RadiusMin', RadiusMin)
+        call read_var('RadiusMax', RadiusMax)
 
      case("#UNIFORMAXIS")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1471,10 +1456,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoFixAxis',DoFixAxis)
         call read_var('rFixAxis',rFixAxis)
         call read_var('r2FixAxis',r2FixAxis)
-
-     case('#TORUSSIZE')
-        call read_var('rTorusLarge',rTorusLarge)
-        call read_var('rTorusSmall',rTorusSmall)
 
      case("#GRID")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1570,21 +1551,18 @@ subroutine MH_set_parameters(TypeAction)
 
      case('#USERBOUNDARY', '#EXTRABOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseExtraBoundary',UseExtraBoundary)
+        call read_var('UseExtraBoundary', UseExtraBoundary)
         if(UseExtraBoundary)then
            call read_var('TypeBc_I(ExtraBc_)', TypeBc_I(ExtraBc_))      
            ! Backward compatibility
            if (TypeBc_I(ExtraBc_) == 'coronatoih') &
                 TypeBc_I(ExtraBc_)= 'buffergrid'
-           call read_var('DoFixExtraBoundary', DoFixExtraBoundaryOrPole)
         end if
 
      case("#FACEBOUNDARY")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('MinBoundary',MinBoundary)
         call read_var('MaxBoundary',MaxBoundary)
-        if(MaxBoundary>=East_)&
-             call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
 
      case("#SOLARWIND")
         !if(.not.is_first_session())CYCLE READPARAM
@@ -1865,8 +1843,8 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#STAR")
         UseStar=.true.
-        call read_var('RadiusStar', RadiusStar)
-        call read_var('MassStar', MassStar)
+        call read_var('RadiusStar',         RadiusStar)
+        call read_var('MassStar',           MassStar)
         call read_var('RotationPeriodStar', RotationPeriodStar)        
 
      case default
@@ -2185,10 +2163,6 @@ contains
     use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
     use ModImplHypre, ONLY: IsHypreAvailable
 
-    character (len=20),dimension(:), allocatable::tmpRefineCrit_I
-    real,dimension(:), allocatable::tmp_I
-    integer ::  nCritAll
-
     ! option and module parameters
     character (len=40) :: Name
     real               :: Version
@@ -2203,9 +2177,7 @@ contains
     !/
     if (iProc==0) write (*,*) ' '
 
-    if(IsFirstCheck)then
-       call correct_grid_geometry
-    end if
+    if(IsFirstCheck) call correct_grid_geometry
 
     ! This depends on the grid geometry set above
     call correct_plot_range
@@ -2403,9 +2375,6 @@ contains
        procTEST=0
     end if
 
-    IsRzGeometry = TypeGeometry=='rz'
-    if(TypeGeometry=='rz') UseVertexBasedGrid = .false.
-
     if(IsRzGeometry .and. UseB)then
        if(UseMultiIon) &
             call stop_mpi('RZ geometry is not implemented for multi-ion')
@@ -2413,23 +2382,16 @@ contains
             call stop_mpi('RZ geometry is not implemented for Hall-MHD')
     end if
 
-    if(UseCovariant)then                               
-       call allocate_face_area_vectors
-       if(UseVertexBasedGrid) call allocate_old_levels
-
+    if(.not.IsCartesian)then
        if(UseProjection)call stop_mpi(&                   !^CFG IF PROJECTION
-            'Do not use covariant with projection')       !^CFG IF PROJECTION
+            'Only Cartesian works with projection')       !^CFG IF PROJECTION
        if(UseConstrainB)call stop_mpi(&                   !^CFG IF CONSTRAINB
-            'Do not use covariant with constrain B')      !^CFG IF CONSTRAINB
+            'Only Cartesian works with constrain B')      !^CFG IF CONSTRAINB
        if(UseDivBDiffusion)call stop_mpi(&                !^CFG IF DIVBDIFFUSE
-            'Do not use covariant with divB diffusion')   !^CFG IF DIVBDIFFUSE
-    else
-       UseVertexBasedGrid = .false.
+            'Only Cartesian works with divB diffusion')   !^CFG IF DIVBDIFFUSE
     end if
 
-    if(UseB0)call allocate_b0_arrays
-    if(UseB0Source.or.UseCurlB0)call allocate_b0_source_arrays
-    if(UseCurlB0)call allocate_b0_norm
+    if(UseB0)call init_mod_b0
 
     if(UseHyperbolicDivb)then
        if(.false.&
@@ -2633,36 +2595,15 @@ contains
   !===========================================================================
   subroutine correct_grid_geometry
 
-    use ModCovariant, ONLY: yR_I
-    use BATL_lib, ONLY: init_batl
-    use ModUser,    ONLY : user_specify_refinement
+    use ModGeometry, ONLY: LogRGen_I
+    use BATL_lib, ONLY: init_batl, CoordMin_D, CoordMax_D
+    use ModUser,  ONLY : user_specify_refinement
     character(len=20):: TypeGeometryBatl
     !-----------------------------------------------------------------------
 
     if(i_line_command("#GRID", iSessionIn = 1) < 0) &
          call stop_mpi(NameSub // &
          ' #GRID command must be specified in the first session!')
-
-    ! Check number of processors
-    if( is_axial_geometry())then
-       if( mod(proc_dims(Phi_),2) == 1 ) then
-          if(iProc == 0)write(*,*) NameSub, &
-               ' For axial symmetru nRootBlock2 must be even!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          proc_dims(Phi_) = proc_dims(Phi_) + 1
-          if(iProc == 0) write(*,*)NameSub, &
-               ' nRootBlock2 is increased by 1 to ',proc_dims(Phi_)
-       end if
-       if( proc_dims(Theta_) == 1 ) then
-          if(iProc==0) write(*,*) NameSub, &
-               ' WARNING: there must be at least two blocks along latitude', &
-               ' after initial refinement!'
-          ! if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          ! proc_dims(Theta_) = 2
-          ! if(iProc==0) write(*,*)NameSub, &
-          !      ' nRootBlock3 is increased to 2'
-       end if
-    end if
 
     if(product(proc_dims) > nBLK*nProc .and. iProc==0)then
        write(*,*)'Root blocks will not fit on all processors, check nBLK'
@@ -2672,9 +2613,9 @@ contains
     end if
 
     ! Set XyzMin_D, XyzMax_D based on 
-    ! #GRID, #GRIDGEOMETRY, and #LIMITGENCOORD/#LIMITRADIUS
+    ! #GRID, #GRIDGEOMETRY, and #LIMITRADIUS
     select case(TypeGeometry)
-    case('cartesian')
+    case('cartesian', 'round')
        XyzMin_D = (/x1, y1, z1/)
        XyzMax_D = (/x2, y2, z2/)
     case('rz')
@@ -2688,44 +2629,27 @@ contains
        XyzMax_D = (/ &
             sqrt(max(x1**2,x2**2) + max(y1**2,y2**2) + max(z1**2,z2**2)), &
             cTwoPi, cHalfPi /)
-       if(TypeGeometry == 'spherical_lnr') XyzMax_D(R_)=log(XyzMax_D(R_))
-       if(TypeGeometry == 'spherical_genr') XyzMax_D(R_)=r_to_gen(XyzMax_D(R_))
-    case('cylindrical')
+    case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
        !            R,   Phi, Z
        XyzMin_D = (/0.0, 0.0, z1/) 
        XyzMax_D = (/sqrt(max(x1**2,x2**2) + max(y1**2,y2**2)), cTwoPi, 0.0/)
-    case('axial_torus')
-       !                R,       Phi,     Z
-       XyzMin_D = (/ x2-(z2-z1), 0.0,    z1/)
-       XyzMax_D = (/ x2,         cTwoPi, z2/)
     end select
 
-    if(i_line_command("#LIMITGENCOORD1", iSessionIn = 1) > 0)then
-       XyzMin_D(1) = Coord1Min
-       XyzMax_D(1) = Coord1Max
-    elseif(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then 
-       if(index(TypeGeometry,'lnr')>0)then
-          if(Coord1Min <= 0.0 .and. iProc == 0)call stop_mpi(NameSub// &
-               ' Coord1Min must be positive in #LIMITRADIUS command!')
-          XyzMin_D(1) = log(Coord1Min)
-          XyzMax_D(1) = log(Coord1Max)
-       else if (index(TypeGeometry,'genr')>0)then
-          XyzMin_D(1) = r_to_gen(Coord1Min)
-          XyzMax_D(1) = r_to_gen(Coord1Max)
-       else
-          XyzMin_D(1) = Coord1Min
-          XyzMax_D(1) = Coord1Max
-       end if
-    elseif(Body1 .and. rBody > 0.0)then
-       ! Set inner boundary to match rBody for spherical coordinates
-       if(TypeGeometry == 'spherical'    ) XyzMin_D(1) = rBody
-       if(TypeGeometry == 'spherical_lnr') XyzMin_D(1) = log(rBody)
-       if(TypeGeometry == 'spherical_genr') XyzMin_D(1) = r_to_gen(rBody)
-    end if
+    !if(index(TypeGeometry,'_lnr')>0) XyzMax_D(R_)=log(XyzMax_D(R_))
+    !if(index(TypeGeometry,'_genr')>0) call radius_to_gen(XyzMax_D(R_))
 
-    ! No resolution change along symmetry axis 
-!!! Seems to fix extra boundary as well, but it does not in the end !!!
-    if(is_axial_geometry()) DoFixExtraBoundaryOrPole = .true.
+    if(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then 
+       XyzMin_D(1) = RadiusMin
+       XyzMax_D(1) = RadiusMax
+    else
+       if(Body1 .and. rBody > 0.0)then
+          ! Set inner boundary to match rBody for spherical coordinates
+          if(TypeGeometry(1:3)=='sph' .or. TypeGeometry(1:3)=='cyl') &
+               XyzMin_D(1) = rBody
+       end if
+       RadiusMin = XyzMin_D(1)
+       RadiusMax = XyzMax_D(1)
+    end if
 
     ! Set default MaxBoundary if it was not set by #FACEBOUNDARY command
     if(i_line_command("#FACEBOUNDARY", iSessionIn = 1) < 0)then
@@ -2750,8 +2674,7 @@ contains
     MaxBoundary = min(MaxBoundary, Top_)
     MinBoundary = max(MinBoundary, body2_)
 
-    if(TypeGeometry /= 'spherical_genr') &
-         call set_fake_grid_file
+    if(index(TypeGeometry,'_genr') < 1) call set_gen_radial_grid
 
     ! Initialize BATL
     if(TypeGeometry(1:9)=='spherical') then
@@ -2762,9 +2685,15 @@ contains
 
     call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
          TypeGeometryBatl, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
-         proc_dims(1:nDimBatl), UseRadiusIn=.false., UseDegreeIn=.false.,&
-         RgenIn_I = exp(yR_I), UseUniformAxisIn=UseUniformAxis,&
+         proc_dims(1:nDimBatl), UseRadiusIn=.true., UseDegreeIn=.false.,&
+         RgenIn_I = exp(LogRGen_I), UseUniformAxisIn=UseUniformAxis,&
          user_amr_geometry=user_specify_refinement)
+
+    if(IsLogRadius .or. IsGenRadius)then
+       ! Overwrite radial coordinates if necessary
+       XyzMin_D(1) = CoordMin_D(1)
+       XyzMax_D(1) = CoordMax_D(1)
+    end if
 
     ! Fix grid size in ignored directions
     if(nDimBatl == 1)then
@@ -2782,9 +2711,9 @@ contains
 
   subroutine correct_plot_range
 
-    use ModGeometry, ONLY : XyzMin_D, XyzMax_D, nIJK_D
-    use ModParallel, ONLY : proc_dims
-    use ModCovariant, ONLY : TypeGeometry
+    use ModGeometry, ONLY: XyzMin_D, XyzMax_D, nIJK_D
+    use ModParallel, ONLY: proc_dims
+    use BATL_lib,    ONLY: radius_to_gen
     use ModIO
 
     implicit none
@@ -2821,8 +2750,7 @@ contains
        ! Fix plot range for sph, x=0, y=0, z=0 areas
        select case(plot_area)
        case('sph')
-          select case(TypeGeometry)
-          case('cartesian', 'rz')                        
+          if(IsCartesianGrid)then
              plot_dx(1,ifile) = 1.0    ! set to match write_plot_sph
              plot_dx(2:3,ifile) = 1.0  ! angular resolution in degrees
              plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
@@ -2830,23 +2758,21 @@ contains
              plot_range(4,ifile)= 90.0 + 0.5*plot_dx(2,ifile)
              plot_range(5,ifile)= 0.   - 0.5*plot_dx(3,ifile)
              plot_range(6,ifile)= 360.0- 0.5*plot_dx(3,ifile)
-          case('spherical', 'spherical_lnr', 'spherical_genr')
+          elseif(IsRLonLat)then
              plot_dx(1,ifile) = -1.0
-             if(TypeGeometry == 'spherical_lnr') &
-                  plot_range(1,ifile) = log(plot_range(1,ifile))
-             if(TypeGeometry == 'spherical_genr') &
-                  plot_range(1,ifile) = r_to_gen(plot_range(1,ifile))
+             if(IsLogRadius) plot_range(1,ifile) = log(plot_range(1,ifile))
+             if(IsGenRadius) call radius_to_gen(plot_range(1,ifile))
              plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
              do i=Phi_,Theta_
                 plot_range(2*i-1,ifile) = XyzMin_D(i)
                 plot_range(2*i,ifile)   = XyzMax_D(i)  
              end do
              plot_area='r=r' ! to disable the write_plot_sph routine
-          case default
+          else
              call stop_mpi(NameSub// &
                   ' Sph-plot is not implemented for geometry= '&
                   //TypeGeometry)
-          end select
+          end if
 
           ! There is nothing else to do for sph area
           CYCLE PLOTFILELOOP
@@ -2854,11 +2780,11 @@ contains
        case('x=0')
           plot_range(1:5:2, iFile) = XyzMin_D
           plot_range(2:6:2, iFile) = XyzMax_D
-          if( plot_form(iFile)=='tec' .or. .not.is_axial_geometry() )then
+          if( plot_form(iFile)=='tec' .or. IsCartesianGrid )then
              ! Limit plot range along x direction to be very small
              plot_range(1, iFile) = -SmallSize_D(x_)
              plot_range(2, iFile) = +SmallSize_D(x_)
-             if(index(TypeGeometry,'spherical') > 0) then
+             if(IsRlonLat) then
                 plot_range(1, iFile) = XyzMin_D(x_)
                 plot_range(2, iFile) = XyzMin_D(x_)+SmallSize_D(x_)
              end if
@@ -2871,7 +2797,7 @@ contains
        case('y=0')
           plot_range(1:5:2, iFile) = XyzMin_D
           plot_range(2:6:2, iFile) = XyzMax_D
-          if(plot_form(iFile) == 'idl' .and. is_axial_geometry()) then
+          if(plot_form(iFile) == 'idl' .and. (IsRLonLat.or.IsCylindrical)) then
              ! Limit plot range in Phi direction to be small around 180 degs
              plot_range(3, iFile) = cPi - SmallSize_D(y_)
              plot_range(4, iFile) = cPi + SmallSize_D(y_)
@@ -2908,10 +2834,7 @@ contains
 
        ! Regular grid is not (yet) working in generalized coordinates
        ! because multiple pieces are used in the domain for x=0 and y=0 area
-!!! does Tecplot care about plot_dx and plot_range ???
-!!!ddz:  YES, plot_range is important.  Changed x=0 for spherical above and some
-!!!      logic in write_plot_tec.f90 as well.
-       if(is_axial_geometry() .and. plot_form(iFile) == 'idl') &
+       if(plot_form(iFile) == 'idl' .and. .not.IsCartesianGrid) &
             plot_dx(1, iFile) = -1.0
 
        ! For plot_dx = 0.0 or -1.0 there is no need to adjust cut range
