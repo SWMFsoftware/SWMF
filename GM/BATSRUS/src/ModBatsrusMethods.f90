@@ -35,7 +35,6 @@ subroutine BATS_setup
 
   call initialize_files
 
-
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
 
   call write_runtime_values
@@ -139,6 +138,8 @@ contains
     use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
     use ModRestartFile, ONLY: read_restart_files
     use ModMessagePass, ONLY: exchange_messages
+    use ModMain,        ONLY: UseB0
+    use ModB0,          ONLY: set_b0_reschange
 
     ! Set intial conditions for solution in each block.
 
@@ -149,7 +150,7 @@ contains
     !-------------------------------------------------------------------------
     if(.not.restart .and. nRefineLevelIC>0)then
        call timing_start('amr_ics')
-       do iLevel=1,nRefineLevelIC
+       do iLevel=1, nRefineLevelIC
           call timing_start('amr_ics_set')
           do globalBLK = 1, nBlockMax
              call set_ICs
@@ -211,6 +212,9 @@ contains
        ! The coordinates of the blocks are only known now
        if(DoSetLevels) call set_levels
     end if
+
+    ! Fix face centered B0 at resolution changes
+    if(UseB0)call set_b0_reschange
 
     !^CFG IF CONSTRAINB BEGIN
     ! Ensure zero divergence for the CT scheme

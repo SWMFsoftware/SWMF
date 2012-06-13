@@ -10,356 +10,42 @@
 !/
 
 !============================================================================
-subroutine set_b0(iBlock)
-
-  implicit none
-  integer, intent(in) :: iBlock
-
-  call set_b0_cell(iBlock)
-  call set_b0_source(iBlock)
-
-end subroutine set_b0
-!============================================================================
 subroutine set_b0_cell(iBlock)
-  use ModProcMH
-  use ModMain
-  use ModB0
+
+
+  ! Cell center values are calculated through all the block
+
+  use ModProcMH, ONLY: iProc
+  use ModMain,   ONLY: ProcTest, BlkTest, iTest, jTest, kTest
+  use ModB0,     ONLY: B0_DGB
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
-  use ModNumConst
+  use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+
   implicit none
 
   integer, intent(in) :: iBlock
 
-  integer :: i,j,k
+  integer :: i, j, k
 
-  logical :: oktest, oktest_me
-  
-
+  logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   if(iProc==PROCtest.and.iBlock==BLKtest)then
-     call set_oktest('set_b0_cell',oktest,oktest_me)
+     call set_oktest('set_b0_cell',DoTest,DoTestMe)
   else
-     oktest=.false.; oktest_me=.false.
+     DoTest=.false.; DoTestMe=.false.
   endif
 
-
-
-  !\
-  ! Cell center values are calculated through all the block
-  !/
-  do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+  do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
      call get_b0(x_BLK(i,j,k,iBlock),&
           y_BLK(i,j,k,iBlock),&
           z_BLK(i,j,k,iBlock),&
           B0_DGB(:,i,j,k,iBlock))
   end do; end do; end do
 
-  if(oktest_me)write(*,*)'B0*Cell_BLK=',&
+  if(DoTestMe)write(*,*)'B0*Cell_BLK=',&
        B0_DGB(:,Itest,Jtest,Ktest,BLKtest)
+
 end subroutine set_b0_cell
-
-!============================================================================
-subroutine set_b0_source(iBlock)
-  use ModProcMH
-  use ModMain
-  use ModB0
-  use ModGeometry, ONLY : &       
-       dx_BLK,dy_BLK,dz_BLK,XyzStart_BLK
-  use ModGeometry, ONLY : UseCovariant                
-  use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
-  use ModNumConst
-  implicit none
-
-  integer, intent(in) :: iBlock
-
-  integer :: i,j,k
-  real,dimension(3)::RefXyzStart_D,RefDXyz_D
-  real,dimension(nDim,0:1,0:1,0:1)::RefB0_DIII
-  real ::x,y,z
-  ! inverse of Dx, Dy, Dz                              
-
-
-  logical :: oktest, oktest_me
-
-  !--------------------------------------------------------------------------
- 
-  if(iProc==PROCtest.and.iBlock==BLKtest)then
-     call set_oktest('set_b0_face',oktest,oktest_me)
-  else
-     oktest=.false.; oktest_me=.false.
-  endif
-
-
-  if(UseCovariant)then                   
-     call calc_b0source_covar(iBlock)         
-     return
-  end if                                 
-
-
-  RefDXyz_D(x_)=cHalf*dx_BLK(iBlock)
-  RefDXyz_D(y_)=cHalf*dy_BLK(iBlock)
-  RefDXyz_D(z_)=cHalf*dz_BLK(iBlock)
-  RefXyzStart_D(:)=XyzStart_BLK(:,iBlock)-cHalf*RefDXyz_D(:)
- 
-  if (neiLeast(iBlock)==-1) then
-     if(oktest_me .and. Itest==1)then
-        call set_b0_face(iBlock)
-          write(*,*)'Before correcting east refinement: B0*Face_x_BLK=',&
-          B0_DX(:,Itest,Jtest,Ktest)
-     end if
-     call correct_b0_face(East_)
-  end if
-
-  if(neiLwest(iBlock)==-1) then
-     if(oktest_me .and. Itest==nIFace)then
-        call set_b0_face(iBlock)
-          write(*,*)'Before correcting west refinement: B0*Face_x_BLK=',&
-          B0_DX(:,Itest,Jtest,Ktest)
-     end if
-     call correct_b0_face(West_)
-  end if
-  if (neiLsouth(iBlock)==-1) then
-     if(oktest_me .and. jTest==1)then
-        call set_b0_face(iBlock)
-          write(*,*)'Before correcting south refinement: B0*Face_y_BLK=',&
-          B0_DY(:,Itest,Jtest,Ktest)
-     end if
-     call correct_b0_face(South_)
-  end if
-
-  if(neiLnorth(iBlock)==-1) then
-     if(oktest_me .and. jTest==nJFace)then
-        call set_b0_face(iBlock)
-          write(*,*)'Before correcting north refinement: B0*Face_y_BLK=',&
-          B0_DY(:,Itest,Jtest,Ktest)
-     end if
-     call correct_b0_face(North_)
-  end if
-
-  if (neiLbot(iBlock)==-1) then
-     if(oktest_me .and. kTest==1)then
-        call set_b0_face(iBlock)
-          write(*,*)'Before correcting bot refinement: B0*Face_z_BLK=',&
-          B0_DZ(:,Itest,Jtest,Ktest)
-     end if
-     call correct_b0_face(Bot_)
-  end if
-
-  if(neiLtop(iBlock)==-1) then 
-
-     if(oktest_me .and. kTest==nKFace)then
-        call set_b0_face(iBlock)
-          write(*,*)'Before correcting top refinement: B0*Face_z_BLK=',&
-          B0_DZ(:,Itest,Jtest,Ktest)
-     end if
-     call correct_b0_face(Top_)
-  end if
-
-  if(oktest_me)then
-     write(*,*)'B0*Face_x_BLK=',&
-          B0_DX(:,Itest,Jtest,Ktest)
-     write(*,*)'B0*Face_y_BLK=',&
-          B0_DY(:,Itest,Jtest,Ktest)
-     write(*,*)'B0*Face_z_BLK=',&
-          B0_DZ(:,Itest,Jtest,Ktest)
-  end if
-
-  call set_b0_matrix(iBlock)
- 
-
-contains
-  !===========================================================================
-  subroutine correct_b0_face(iSide)
-    implicit none
-    integer,intent(in)::iSide
-    integer::iFace,jFace,kFace,iDim
-    !-------------------------------------------------------------------------
-    select case(iSide)
-    case(East_,West_)
-       iFace=1+nI*(iSide-East_)
-       do k=1,nK; do j=1,nJ
-          call get_refined_b0(2*iFace-3,2*j-2,2*k-2)
-          do iDim=1,nDim
-             B0ResChange_DXSB(iDim,j,k,iSide,iBlock) = 0.125 * &
-                  sum(RefB0_DIII(iDim,:,:,:))
-          end do
-       end do; end do
-    case(South_,North_)
-       jFace=1+nJ*(iSide-South_)
-       do k=1,nK; do i=1,nI
-          call get_refined_b0(2*i-2,2*jFace-3,2*k-2)
-          do iDim=1,nDim
-             B0ResChange_DYSB(iDim,i,k,iSide,iBlock) = 0.125 * &
-                  sum(RefB0_DIII(iDim,:,:,:))
-          end do
-       end do; end do
-    case(Bot_,Top_)
-       kFace=1+nK*(iSide-Bot_)
-       do j=1,nJ; do i=1,nI
-          call get_refined_b0(2*i-2,2*j-2,2*kFace-3)
-          do iDim=1,nDim
-             B0ResChange_DZSB(iDim,i,j,iSide,iBlock) = 0.125 * &
-                  sum(RefB0_DIII(iDim,:,:,:))
-          end do
-       end do; end do
-    end select
-  end subroutine correct_b0_face
-  !===========================================================================
-  subroutine get_refined_b0(iRef,jRef,kRef)
-    integer,intent(in)::iRef,jRef,kRef
-    integer::i2,j2,k2
-    !-------------------------------------------------------------------------
-    do k2=0,1; do j2=0,1; do i2=0,1
-       x=RefXyzStart_D(x_)+(iRef+i2)*RefDXyz_D(x_)
-       y=RefXyzStart_D(y_)+(jRef+j2)*RefDXyz_D(y_)
-       z=RefXyzStart_D(z_)+(kRef+k2)*RefDXyz_D(z_)
-       call get_b0(x,y,z,RefB0_DIII(:,i2,j2,k2))
-    end do; end do; end do	
-  end subroutine get_refined_b0
-end subroutine set_b0_source
-
-!============================================================================
-subroutine set_b0_matrix(iBlock)
-
-  ! Calculate the elements of the B0 Source term
-
-  use ModProcMH
-  use ModMain
-  use ModNumConst
-  use ModB0
-  use ModAdvance, ONLY  : &
-       CurlB0_DCB,DivB0_CB, NormB0_CB                      
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,true_cell
-  use ModNumConst
-  implicit none
-
-  integer, intent(in) :: iBlock
-
-  integer :: i,j,k,iDir,jDir
-
-  ! inverse of Dx, Dy, Dz
-  real :: DxInv, DyInv, DzInv
-
-  logical :: oktest, oktest_me
-  real::CurlB02,CurlB02_DD(3,3),B0Nabla_DD(3,3)
-  real:: eigenvalue_max
-  external eigenvalue_max
-  !--------------------------------------------------------------------------
-
-  if(iProc==PROCtest.and.iBlock==BLKtest)then
-     call set_oktest('set_b0_matrix',oktest,oktest_me)
-  else
-     oktest=.false.; oktest_me=.false.
-  endif
-
-!  if(.not.allocated(CurlB0_DCB))then                !^CFG UNCOMMENT IF DYNAMIC
-!       allocate(CurlB0_DCB(3,nI,nJ,nK,MaxBlock),&   !^CFG UNCOMMENT IF DYNAMIC
-!                DivB0_CB(nI,nJ,nK,MaxBlock))        !^CFG UNCOMMENT IF DYNAMIC
-!  if(UseCurlB0)allocate(NormB0_CB(nI,nJ,nK,MaxBlock)!^CFG UNCOMMENT IF DYNAMIC
-!  end if                                            !^CFG UNCOMMENT IF DYNAMIC
-  if(.not.UseB0)call stop_mpi('Illegal call for calc_B0_matrix')
-  if((.not.UseB0Source).and.(.not.UseCurlB0))return
-  DxInv = cOne/dx_BLK(iBlock)
-  DyInv = cOne/dy_BLK(iBlock)
-  DzInv = cOne/dz_BLK(iBlock)
-  call set_b0_face(iBlock)
-  ! face areas
-  do k=1,nK; do j=1,nJ; do i=1,nI
-     DivB0_CB(i,j,k,iBlock)= &
-          DxInv*(B0_DX(x_,i+1,j,k)-B0_DX(x_,i,j,k))+&
-          DyInv*(B0_DY(y_,i,j+1,k)-B0_DY(y_,i,j,k))+&
-          DzInv*(B0_DZ(z_,i,j,k+1)-B0_DZ(z_,i,j,k))   
-  
-     CurlB0_DCB(z_,i,j,k,iBlock) = &
-          DxInv*(B0_DX(y_,i+1,j,k)-B0_DX(y_,i,j,k))-&
-          DyInv*(B0_DY(x_,i,j+1,k)-B0_DY(x_,i,j,k))
-
-     CurlB0_DCB(y_,i,j,k,iBlock) = &
-          -DxInv*(B0_DX(z_,i+1,j,k)-B0_DX(z_,i,j,k))+&
-           DzInv*(B0_DZ(x_,i,j,k+1)-B0_DZ(x_,i,j,k))
-     CurlB0_DCB(x_,i,j,k,iBlock) = & 
-          DyInv*(B0_DY(z_,i,j+1,k)-B0_DY(z_,i,j,k))-&
-          DzInv*(B0_DZ(y_,i,j,k+1)-B0_DZ(y_,i,j,k))
-     if(.not.UseCurlB0)CYCLE
-     CurlB02=sum(CurlB0_DCB(:,i,j,k,iBlock)**2)
-     if(CurlB02==cZero.or..not.true_cell(i,j,k,iBlock))then
-        NormB0_CB(i,j,k,iBlock)=cZero
-     else
-        CurlB02_DD=CurlB02*cUnit_DD
-        do jDir=1,3
-           do iDir=1,3
-              CurlB02_DD(iDir,jDir)=CurlB02_DD(iDir,jDir)-&
-                   CurlB0_DCB(iDir,i,j,k,iBlock)*&
-                   CurlB0_DCB(jDir,i,j,k,iBlock)
-           end do
-        end do
-        B0Nabla_DD(x_,:)=DxInv*(B0_DX(:,i+1,j,k)-B0_DX(:,i,j,k))
-        B0Nabla_DD(y_,:)=DyInv*(B0_DY(:,i,j+1,k)-B0_DY(:,i,j,k))
-        B0Nabla_DD(z_,:)=DzInv*(B0_DZ(:,i,j,k+1)-B0_DZ(:,i,j,k))
-        B0Nabla_DD=B0Nabla_DD-DivB0_CB(i,j,k,iBlock)*cUnit_DD
-        NormB0_CB(i,j,k,iBlock)= sqrt(sqrt(eigenvalue_max(&
-             matmul(transpose(B0Nabla_DD),matmul(&
-                              CurlB02_DD,&
-                              B0Nabla_DD))               )&
-                                     )    )
-     end if
-  end do; end do; end do
-
-end subroutine set_b0_matrix
-
-!============================================================================
-real function eigenvalue_max(A_DD)
-  use ModNumConst
-  !Returns the maximum eigenvalue of a SYMMETRIC matrix
-  !Good only for express estimates of the spectral radius 
-  implicit none
-  real,dimension(3,3),intent(in)::A_DD
-  real::Lambda, DetF, F_DD(3,3),FPrime_DDD(3,3,3)
-  integer::i,iIteration
-  real::Tolerance
-  !-----------------------------------------------------------
-  Lambda=cZero
-  !Upper estimate for a spectral radius
-  do i=1,3
-     Lambda=max(Lambda,sum(abs(A_DD(i,:))))
-  end do
-  if(Lambda==cZero)then
-     eigenvalue_max=cZero
-     return
-  end if
-  Tolerance=(0.1*Lambda)**3
-
-  F_DD=A_DD-Lambda*cUnit_DD
-  DetF=det(F_DD) 
-  iIteration=0
-  do while (abs(DetF).gt.Tolerance)
-     iIteration=iIteration+1
-     do i=1,3
-        FPrime_DDD(:,:,i)=F_DD
-        FPrime_DDD(:,i,i)=cZero
-        FPrime_DDD(i,:,i)=cZero
-        FPrime_DDD(i,i,i)=cOne
-     end do
-     Lambda=Lambda+DetF/&
-          (det(FPrime_DDD(:,:,1))+det(FPrime_DDD(:,:,2))+det(FPrime_DDD(:,:,3)))
-     if(iIteration==10)exit
-     F_DD=A_DD-Lambda*cUnit_DD
-     DetF=det(F_DD)
-  end do
-  eigenvalue_max=Lambda
-contains
-  real function det(A_DD)
-    implicit none
-    real,dimension(3,3),intent(in)::A_DD
-    det=A_DD(1,1)*(A_DD(2,2)*A_DD(3,3)-&
-         A_DD(3,2)*A_DD(2,3))-&
-         A_DD(1,2)*(A_DD(2,1)*A_DD(3,3)-&
-         A_DD(2,3)*A_DD(3,1))+&
-         A_DD(1,3)*(A_DD(2,1)*A_DD(3,2)-&
-         A_DD(2,2)*A_DD(3,1))
-  end function det
-end function eigenvalue_max
-
 
 !============================================================================
 
@@ -557,10 +243,7 @@ subroutine add_b0_body2(X0,Y0,Z0,B0)
   rr2_inv=rr_inv*rr_inv
   rr3_inv=rr_inv*rr2_inv
 
-  !\
   ! Add dipole field of the second body
-  !/
-
   Dp = sum(BdpBody2_D*Xyz_D)*3*rr2_inv
 
   B0 = B0 + (Dp*Xyz_D - BdpBody2_D)*rr3_inv
@@ -581,6 +264,7 @@ subroutine update_b0
   use ModNumConst,      ONLY: cRadToDeg
   use ModIO,            ONLY: iUnitOut, write_prefix
   use ModEnergy,        ONLY: calc_energy_ghost
+  use ModB0,            ONLY: set_b0_reschange
 
   implicit none
 
@@ -614,7 +298,7 @@ subroutine update_b0
      State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
           + B0_DGB(:,:,:,:,iBlock)
 
-     call set_b0(iBlock)
+     call set_b0_cell(iBlock)
 
      ! Split total B again using new B0
      State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
@@ -633,7 +317,12 @@ subroutine update_b0
      call calc_energy_ghost(iBlock)
 
   end do
+
+  ! Recalculate B0 face values at resolution changes
+  call set_b0_reschange
+
   call timing_stop(NameSub)
+
 end subroutine update_b0
 
 !===========================================================================
@@ -644,9 +333,7 @@ subroutine get_coronal_b0(xInput,yInput,zInput,B0_D)
 
   real, intent(in):: xInput,yInput,zInput
   real, intent(out), dimension(3):: B0_D
-
   !--------------------------------------------------------------------------
-
   call get_magnetogram_field(xInput,yInput,zInput,B0_D)
   B0_D = B0_D*Si2No_V(UnitB_)
 

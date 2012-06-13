@@ -57,7 +57,7 @@ subroutine set_ics
      !\
      ! If used, initialize solution variables and parameters.
      !/
-     if(UseB0)call set_b0(iBlock)
+     if(UseB0)call set_b0_cell(iBlock)
      call set_potential_force(iBlock)
 
      if(.not.restart)then

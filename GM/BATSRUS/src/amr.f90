@@ -21,7 +21,7 @@ subroutine amr(DoFullMessagePass,TypeAmr)
   use ModMessagePass,   ONLY: exchange_messages
   use ModPartSteady,    ONLY: UsePartSteady
   use ModUser,          ONLY: user_specify_refinement
-
+  
   implicit none
 
   logical, intent(in) :: DoFullMessagePass
@@ -158,16 +158,6 @@ subroutine amr(DoFullMessagePass,TypeAmr)
   if(DoProfileAmr) call timing_start('amr::exchange_false')
   call exchange_messages(UseOrder2In=.false.)
   if(DoProfileAmr) call timing_stop('amr::exchange_false')
-
-  if(UseB0)then
-     ! Correct B0 face at newly created and removed resolution changes
-     if(DoProfileAmr) call timing_start('amr::set_b0_source')
-     do iBlock = 1, nBlock
-        if (unusedBLK(iBlock)) CYCLE
-        call set_b0_source(iBlock)
-     end do
-     if(DoProfileAmr) call timing_stop('amr::set_b0_source')
-  end if
 
   ! Reset divb (it is undefined in newly created/moved blocks)
   if(UseB)then
