@@ -103,7 +103,7 @@ contains
 
     if(DoMoveExtraData)then
        if(UseB0)then
-          ! B0*Cell
+          ! Cell centered B0_DGB
           do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
              Buffer_I(iData+1:iData+3) = B0_DGB(:,i,j,k,iBlock)
              iData = iData+3
@@ -182,7 +182,7 @@ contains
 
     if(DoMoveExtraData)then
        if(UseB0)then
-          ! B0*Cell
+          ! Cell centered B0_DGB
           do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
              B0_DGB(:,i,j,k,iBlock) = Buffer_I(iData+1:iData+3)
              iData = iData+3
@@ -412,10 +412,10 @@ subroutine select_stepping(DoPartSelect)
   use ModGeometry, ONLY : Rmin_BLK
   use ModImplicit, ONLY : UseImplicit, UseFullImplicit, UsePartImplicit, &
        UseSemiImplicit, ImplCritType, ExplCFL, rImplicit
-  use ModIO,       ONLY : write_prefix, iUnitOut
-  use ModB0,ONLY:set_b0_face
+  use ModIO,       ONLY: write_prefix, iUnitOut
+  use ModB0,       ONLY: set_b0_face
   use ModMpi
-  use ModParallel, ONLY:nBlockMax_P, MaxBlockDisp_P
+  use ModParallel, ONLY: nBlockMax_P, MaxBlockDisp_P
   implicit none
 
   logical, intent(in) :: DoPartSelect

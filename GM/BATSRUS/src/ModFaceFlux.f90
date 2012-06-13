@@ -13,7 +13,7 @@ module ModFaceFlux
   use BATL_lib,      ONLY: IsCartesianGrid, IsCartesian, IsRzGeometry, &
        CellFace_DFB, FaceNormal_DDFB
 
-  use ModB0, ONLY:B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
+  use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
 
   use ModAdvance, ONLY:&
        LeftState_VX,  LeftState_VY,  LeftState_VZ,  & ! input: left  face state
@@ -509,9 +509,9 @@ contains
          call set_cell_values_x
 
          if(UseB0)then
-            B0x = B0_DX(x_,iFace, jFace, kFace)
-            B0y = B0_DX(y_,iFace, jFace, kFace)
-            B0z = B0_DX(z_,iFace, jFace, kFace)
+            B0x = B0_DX(x_,iFace,jFace,kFace)
+            B0y = B0_DX(y_,iFace,jFace,kFace)
+            B0z = B0_DX(z_,iFace,jFace,kFace)
          end if
 
          if(UseRS7.and..not.IsBoundary)then
