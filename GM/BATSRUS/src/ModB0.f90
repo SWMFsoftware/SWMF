@@ -10,6 +10,7 @@ module ModB0
   
   use ModSize
 
+  use ModMain, ONLY: UseConstrainB
   use ModMain, ONLY: UseB0, UseB0Source, UseCurlB0 !!! should be here
 
   implicit none
@@ -38,9 +39,6 @@ module ModB0
 contains
   !===========================================================================
   subroutine init_mod_b0
-
-    use ModMain, ONLY: UseConstrainB
-    !------------------------------------------------------------------------
 
     if(.not.allocated(B0_DGB))then
        allocate( &
@@ -95,18 +93,25 @@ contains
     !-------------------------------------------------------------------------
     if(.not.UseB0) RETURN
 
-    ! Face averages (X)
-    B0_DX = 0.5*(B0_DGB(:,0:nI  ,1:nJ,1:nK,iBlock) &
-         +       B0_DGB(:,1:nI+1,1:nJ,1:nK,iBlock))
+    ! Average cell centered B0_DGB to the face centered B0_DX,Y,Z arrays
+    if(UseConstrainB)then
+       B0_DX = 0.5*(B0_DGB(:,0:nI  ,0:nJ+1,0:nK+1,iBlock) &
+            +       B0_DGB(:,1:nI+1,0:nJ+1,0:nK+1,iBlock))
 
-    ! Face averages (Y)
-    B0_DY = 0.5*(B0_DGB(:,1:nI,0:nJ  ,1:nK,iBlock) &
-         +       B0_DGB(:,1:nI,1:nJ+1,1:nK,iBlock))
+       B0_DY = 0.5*(B0_DGB(:,0:nI+1,0:nJ  ,0:nK+1,iBlock) &
+            +       B0_DGB(:,0:nI+1,1:nJ+1,0:nK+1,iBlock))
 
-    ! Face averages (Z)
-    B0_DZ = 0.5*(B0_DGB(:,1:nI,1:nJ,0:nK  ,iBlock) &
-         +       B0_DGB(:,1:nI,1:nJ,1:nK+1,iBlock))
-
+       B0_DZ = 0.5*(B0_DGB(:,0:nI+1,0:nJ+1,0:nK  ,iBlock) &
+            +       B0_DGB(:,0:nI+1,0:nJ+1,1:nK+1,iBlock))
+       
+    else
+       B0_DX = 0.5*(B0_DGB(:,0:nI  ,1:nJ,1:nK,iBlock) &
+            +       B0_DGB(:,1:nI+1,1:nJ,1:nK,iBlock))
+       B0_DY = 0.5*(B0_DGB(:,1:nI,0:nJ  ,1:nK,iBlock) &
+            +       B0_DGB(:,1:nI,1:nJ+1,1:nK,iBlock))
+       B0_DZ = 0.5*(B0_DGB(:,1:nI,1:nJ,0:nK  ,iBlock) &
+            +       B0_DGB(:,1:nI,1:nJ,1:nK+1,iBlock))
+    end if
     ! Correct B0 at resolution changes
     if(NeiLev(1,iBlock) == -1) &
          B0_DX(:,1   ,1:nJ,1:nK) = B0ResChange_DXSB(:,:,:,1,iBlock)
