@@ -163,13 +163,13 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   ! is based on trilinear interpolation, but it is generalized for
   ! trapezoidal hexahedrons.
 
-  use ModNumConst
-  use ModVarIndexes, ONLY : nVar, Bx_, By_, Bz_
-  use ModProcMH
-  use ModMain, ONLY : nI, nJ, nK, nIJK_D, unusedBLK
-  use ModAdvance, ONLY : State_VGB, StateOld_VCB
-  use ModParallel, ONLY : NeiLev
+  use ModProcMH, ONLY: iProc
+  use ModVarIndexes, ONLY: nVar
+  use ModMain, ONLY: nI, nJ, nK, nIJK_D, unusedBLK
+  use ModAdvance, ONLY: State_VGB, StateOld_VCB
+  use ModParallel, ONLY: NeiLev
   use ModGeometry, ONLY: XyzStart_BLK
+  use ModCurrent, ONLY: get_current
   use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, xyz_to_coord
 
   implicit none
@@ -212,6 +212,9 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   ! Dimension, cell, block index and MPI error code
   integer :: iDim,i,j,k,iLo,jLo,kLo,iHi,jHi,kHi,iBlock
 
+  ! Current at the cell center
+  real:: Current_D(3)
+
   ! Testing
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
@@ -229,7 +232,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   end if
 
   ! Set state and weight to zero, so MPI_reduce will add it up right
-  StateCurrent_V = cZero
+  StateCurrent_V = 0.0
 
   ! Loop through all blocks
   BLOCK: do iBlock = iBlockMin, iBlockMax
@@ -337,7 +340,12 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
                       State_VGB(iVarMin:iStateMax,i,j,k,iBlock)
 
                  ! The current is always based on the new state
-                 if(iVarMax == nVar + 3)call add_current
+                 if(iVarMax == nVar + 3)then
+                    call get_current(i, j, k, iBlock, Current_D)
+                    StateCurrent_V(nState+1:nState+3) = &
+                         StateCurrent_V(nState+1:nState+3) &
+                         + WeightXyz * Current_D
+                 end if
 
                  if(DoTest)write(*,*)'Contribution iProc,i,j,k,WeightXyz=',&
                       iProc,i,j,k,WeightXyz
@@ -346,158 +354,6 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
         end do
      end do
   end do BLOCK
-
-contains
-
-  !!! THIS SHOULD BE ALL REPLACED BY call get_current !!!
-
-  !============================================================================
-  subroutine add_current
-
-    ! Add current to the current part of StateCurrent
-    use ModMain, ONLY: prolong_order
-    use ModGeometry,ONLY:body_BLK
-    real :: Current_D(3)
-    real :: DxInv, DyInv, DzInv
-    integer :: iLo,iHi,jLo,jHi,kLo,kHi
-
-    iLo=i-1; jLo=j-1; kLo=k-1; iHi=i+1; jHi=j+1; kHi=k+1
-
-    if(prolong_order==1)then
-       ! Avoid the ghost cells at resolution changes
-       if(i==1  .and. DxyzLo_D(1)/=Dxyz_D(1)) iLo = 1
-       if(i==nI .and. DxyzHi_D(1)/=Dxyz_D(1)) iHi = nI
-       if(j==1  .and. DxyzLo_D(2)/=Dxyz_D(2)) jLo = 1
-       if(j==nJ .and. DxyzHi_D(2)/=Dxyz_D(2)) jHi = nJ
-       if(k==1  .and. DxyzLo_D(3)/=Dxyz_D(3)) kLo = 1
-       if(k==nK .and. DxyzHi_D(3)/=Dxyz_D(3)) kHi = nK
-    end if
-
-    DxInv = 1/((iHi-iLo)*Dxyz_D(1))
-    DyInv = 1/((jHi-jLo)*Dxyz_D(2))
-    DzInv = 1/((kHi-kLo)*Dxyz_D(3))
-
-    if(IsCartesianGrid)then
-       Current_D(1) = &
-            ( State_VGB(Bz_,i,jHi,k,iBlock)          &
-            - State_VGB(Bz_,i,jLo,k,iBlock))*DyInv - &
-            ( State_VGB(By_,i,j,kHi,iBlock)          &
-            - State_VGB(By_,i,j,kLo,iBlock))*DzInv
-
-       Current_D(2) = &
-            ( State_VGB(Bx_,i,j,kHi,iBlock)          &
-            - State_VGB(Bx_,i,j,kLo,iBlock))*DzInv - &
-            ( State_VGB(Bz_,iHi,j,k,iBlock)          &
-            - State_VGB(Bz_,iLo,j,k,iBlock))*DxInv
-
-       Current_D(3) = &
-            ( State_VGB(By_,iHi,j,k,iBlock)          &
-            - State_VGB(By_,iLo,j,k,iBlock))*DxInv - &
-            ( State_VGB(Bx_,i,jHi,k,iBlock)          &
-            - State_VGB(Bx_,i,jLo,k,iBlock))*DyInv
-    else
-       call get_gencoord_curlb(i,j,k,iBlock,Current_D,.not.body_BLK(iBlock))
-    end if
-
-    StateCurrent_V(nState+1:nState+3) = StateCurrent_V(nState+1:nState+3) &
-         + WeightXyz * Current_D
-
-  end subroutine add_current
-
-  !===========================================================================
-  subroutine get_gencoord_curlb(i,j,k,iBLK,CurlB_D,IsTrueBlock)
-
-    use ModGeometry, ONLY: true_cell
-    use ModAdvance,  ONLY: State_VGB, Bx_, Bz_
-    use BATL_lib,    ONLY: FaceNormal_DDFB, CellVolume_GB
-
-    implicit none
-
-    integer, intent(in) :: i, j, k, iBLK
-    logical, intent(in) :: IsTrueBlock
-    real,    intent(out):: CurlB_D(3)
-
-    real:: B_D(3)
-    real:: MagneticField_DS(3,6), FaceArea_DS(3,6)
-    !--------------------------------------------------------------------------
-
-    FaceArea_DS(:,1:2) = FaceNormal_DDFB(:,1,i:i+1,j,k,iBLK)
-    FaceArea_DS(:,3:4) = FaceNormal_DDFB(:,2,i,j:j+1,k,iBLK)
-    FaceArea_DS(:,5:6) = FaceNormal_DDFB(:,3,i,j,k:k+1,iBLK)   
-
-    if(IsTrueBlock)then
-       MagneticField_DS(:,1) = -State_VGB(Bx_:Bz_,i-1,j,k,iBLK)
-       MagneticField_DS(:,2) = +State_VGB(Bx_:Bz_,i+1,j,k,iBLK)
-       MagneticField_DS(:,3) = -State_VGB(Bx_:Bz_,i,j-1,k,iBLK)
-       MagneticField_DS(:,4) = +State_VGB(Bx_:Bz_,i,j+1,k,iBLK)
-       MagneticField_DS(:,5) = -State_VGB(Bx_:Bz_,i,j,k-1,iBLK)
-       MagneticField_DS(:,6) = +State_VGB(Bx_:Bz_,i,j,k+1,iBLK)
-    else
-       ! Initialize to zero if there are too many non-true cells to use
-       CurlB_D = 0.0
-       if(.not.true_cell(i,j,k,iBLK)) RETURN
-
-       B_D = State_VGB(Bx_:Bz_,i,j,k,iBLK)
-
-       ! Input from I faces
-       if(.not.(true_cell(i-1,j,k,iBLK).or.true_cell(i+1,j,k,iBLK))) RETURN
-
-       if(true_cell(i-1,j,k,iBLK))then
-          ! Interpolation. Sign changes because of lower edge
-          MagneticField_DS(:,1) = -(+State_VGB(Bx_:Bz_,i-1,j,k,iBLK)+B_D)
-       else
-          ! Extrapolation ? !!! Looks incorrect.
-          MagneticField_DS(:,1) = -(-State_VGB(Bx_:Bz_,i+1,j,k,iBLK)+2*B_D)
-       end if
-       if(true_cell(i+1,j,k,iBLK))then
-          MagneticField_DS(:,2) = +(+State_VGB(Bx_:Bz_,i+1,j,k,iBLK)+B_D)
-       else
-          MagneticField_DS(:,2) = +(-State_VGB(Bx_:Bz_,i-1,j,k,iBLK)+2*B_D)
-       end if
-
-       ! Input from J faces
-       if(.not.(true_cell(i,j-1,k,iBLK).or.true_cell(i,j+1,k,iBLK))) RETURN
-
-       if(true_cell(i,j-1,k,iBLK))then
-          MagneticField_DS(:,3) = -(+State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+B_D)
-       else
-          MagneticField_DS(:,3) = -(-State_VGB(Bx_:Bz_,i,j+1,k,iBLK)+2*B_D)
-       end if
-       if(true_cell(i,j+1,k,iBLK))then
-          MagneticField_DS(:,4) = +(+State_VGB(Bx_:Bz_,i,j+1,k,iBLK)+B_D)
-       else
-          MagneticField_DS(:,4) = +(-State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+2*B_D)
-       end if
-
-       ! Input from K faces
-       if(.not.(true_cell(i,j,k-1,iBLK).or.true_cell(i,j,k+1,iBLK))) RETURN
-
-       if(true_cell(i,j,k-1,iBLK))then
-          MagneticField_DS(:,5) = -(+State_VGB(Bx_:Bz_,i,j,k-1,iBLK)+B_D)
-       else
-          MagneticField_DS(:,5) = -(-State_VGB(Bx_:Bz_,i,j,k+1,iBLK)+2*B_D)
-       end if
-       if(true_cell(i,j,k+1,iBLK))then
-          MagneticField_DS(:,6) = +(+State_VGB(Bx_:Bz_,i,j,k+1,iBLK)+B_D)
-       else
-          MagneticField_DS(:,6) = +(-State_VGB(Bx_:Bz_,i,j,k-1,iBLK)+2*B_D)
-       end if
-    end if
-
-    ! Integrate B x dA over the surface
-    CurlB_D(1) = sum(FaceArea_DS(2,:)*MagneticField_DS(3,:) &
-         -           FaceArea_DS(3,:)*MagneticField_DS(2,:) )
-
-    CurlB_D(2) = sum(FaceArea_DS(3,:)*MagneticField_DS(1,:) &
-         -           FaceArea_DS(1,:)*MagneticField_DS(3,:) )
-
-    CurlB_D(3) = sum(FaceArea_DS(1,:)*MagneticField_DS(2,:) &
-         -           FaceArea_DS(2,:)*MagneticField_DS(1,:))
-
-    ! Divide by volume and 2 for the averaging
-    CurlB_D = CurlB_D*0.5/CellVolume_GB(i,j,k,iBLK)
-
-  end subroutine get_gencoord_curlb
 
 end subroutine get_point_data
 !==============================================================================
