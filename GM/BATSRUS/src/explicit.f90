@@ -19,6 +19,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
        CorrectedFlux_VYB, CorrectedFlux_VZB
   use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
   use ModMessagePass, ONLY: exchange_messages
+  use ModTimeStepControl, ONLY: calc_timestep
   use BATL_lib, ONLY: message_pass_face, IsAnyAxis
 
   implicit none
@@ -118,7 +119,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         ! for the block) used in multi-stage update
         ! for steady state calculations.
         if (.not.time_accurate .and. iStage == 1 &
-             .and. DoCalcTimestep) call calc_timestep
+             .and. DoCalcTimestep) call calc_timestep(GlobalBlk)
 
         ! Update solution state in each cell.
         call timing_start('update_states')
@@ -139,7 +140,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         ! for the block) used in multi-stage update
         ! for time accurate calculations.
         if (time_accurate .and. iStage == nStage .and. DoCalcTimestep) &
-             call calc_timestep
+             call calc_timestep(GlobalBlk)
 
      end do ! Multi-block solution update loop.
 

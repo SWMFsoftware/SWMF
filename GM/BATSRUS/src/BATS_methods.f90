@@ -356,6 +356,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModLaserHeating,    ONLY: add_laser_heating
   use ModVarIndexes, ONLY: Te0_
   use ModMessagePass, ONLY: exchange_messages
+  use ModTimeStepControl, ONLY: set_global_timestep
 
   implicit none
 

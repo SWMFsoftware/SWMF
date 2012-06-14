@@ -94,7 +94,6 @@ OBJECTS = \
 	advect_points.o\
 	amr.o\
 	amr_criteria.o\
-	calc_timestep.o\
 	explicit.o\
 	fix_axis_cells.o\
 	library.o\

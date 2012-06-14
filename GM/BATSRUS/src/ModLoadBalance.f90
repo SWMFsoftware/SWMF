@@ -416,6 +416,7 @@ subroutine select_stepping(DoPartSelect)
   use ModB0,       ONLY: set_b0_face
   use ModMpi
   use ModParallel, ONLY: nBlockMax_P, MaxBlockDisp_P
+  use ModTimeStepControl, ONLY: calc_timestep
   implicit none
 
   logical, intent(in) :: DoPartSelect
@@ -489,7 +490,7 @@ subroutine select_stepping(DoPartSelect)
               call set_b0_face(globalBLK)
               call calc_face_value(.false., GlobalBlk)
               call calc_face_flux(.false., GlobalBlk)
-              call calc_timestep
+              call calc_timestep(GlobalBlk)
            end if
 
            ! If the smallest allowed timestep is below the fixed DtFixed
