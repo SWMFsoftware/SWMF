@@ -523,7 +523,7 @@ contains
 
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
 
-    real :: x_D(nDim), r
+    real :: x_D(MaxDim), r
     !--------------------------------------------------------------------------
     select case(iDir)
     case(1)
