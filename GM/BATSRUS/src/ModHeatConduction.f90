@@ -519,25 +519,22 @@ contains
 
   real function heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
 
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+    use BATL_lib,    ONLY: Xyz_DGB
 
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
 
-    real :: x_D(3), r
+    real :: x_D(nDim), r
     !--------------------------------------------------------------------------
     select case(iDir)
     case(1)
-       x_D(1) = 0.5*sum(x_BLK(iFace-1:iFace,jFace,kFace,iBlock))
-       x_D(2) = 0.5*sum(y_BLK(iFace-1:iFace,jFace,kFace,iBlock))
-       x_D(3) = 0.5*sum(z_BLK(iFace-1:iFace,jFace,kFace,iBlock))
+       x_D = 0.5*(Xyz_DGB(:,iFace-1,jFace,kFace,iBlock) &
+            +     Xyz_DGB(:,iFace  ,jFace,kFace,iBlock))
     case(2)
-       x_D(1) = 0.5*sum(x_BLK(iFace,jFace-1:jFace,kFace,iBlock))
-       x_D(2) = 0.5*sum(y_BLK(iFace,jFace-1:jFace,kFace,iBlock))
-       x_D(3) = 0.5*sum(z_BLK(iFace,jFace-1:jFace,kFace,iBlock))
+       x_D = 0.5*(Xyz_DGB(:,iFace,jFace-1,kFace,iBlock) &
+            +     Xyz_DGB(:,iFace,jFace  ,kFace,iBlock))
     case(3)
-       x_D(1) = 0.5*sum(x_BLK(iFace,jFace,kFace-1:kFace,iBlock))
-       x_D(2) = 0.5*sum(y_BLK(iFace,jFace,kFace-1:kFace,iBlock))
-       x_D(3) = 0.5*sum(z_BLK(iFace,jFace,kFace-1:kFace,iBlock))
+       x_D = 0.5*(Xyz_DGB(:,iFace,jFace,kFace-1,iBlock) &
+            +     Xyz_DGB(:,iFace,jFace,kFace  ,iBlock))
     end select
     r = sqrt(sum(x_D**2))
     if(r <= rCollisional)then
@@ -758,10 +755,9 @@ contains
 
   subroutine get_heat_conduction_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
-    use BATL_lib,        ONLY: store_face_flux
+    use BATL_lib,        ONLY: store_face_flux, CellVolume_GB
     use ModAdvance,      ONLY: UseElectronPressure, UseIdealEos
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModGeometry,     ONLY: vInv_CB
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, FluxImpl_VXB, FluxImpl_VYB, &
          FluxImpl_VZB
     use ModMain,         ONLY: nI, nJ, nK
@@ -803,9 +799,9 @@ contains
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k) - vInv_CB(i,j,k,iBlock) &
-               *(FluxImpl_VFD(:,i+Di,j+Dj,k+Dk,iDim) &
-               - FluxImpl_VFD(:,i,j,k,iDim))
+          Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k) &
+               -(FluxImpl_VFD(:,i+Di,j+Dj,k+Dk,iDim) &
+               - FluxImpl_VFD(:,i,j,k,iDim))/CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     end do
 
@@ -832,11 +828,10 @@ contains
 
     use ModAdvance,      ONLY: UseElectronPressure, UseIdealEos
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModGeometry,     ONLY: vInv_CB
     use ModImplicit,     ONLY: iTeImpl, nVarSemi, UseNoOverlap
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
-    use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB
+    use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
 
     integer, parameter:: nStencil = 2*nDim + 1
 
@@ -844,7 +839,7 @@ contains
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
     integer :: i, j, k, iDim, Di, Dj, Dk
-    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyz_D(nDim)
+    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
     !--------------------------------------------------------------------------
 
     ! Contributions due to electron-ion energy exchange
@@ -863,22 +858,18 @@ contains
     do iDim = 1, nDim
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.IsCartesianGrid)then
-             InvDxyz_D = DcoordDxyz_DDFD(iDim,:nDim,i,j,k,iDim) &
-                  *InvDcoord_D(iDim)
-             DiffLeft = vInv_CB(i,j,k,iBlock) &
-                  *sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyz_D)
-
-             InvDxyz_D = DcoordDxyz_DDFD(iDim,:nDim,i+Di,j+Dj,k+Dk,iDim) &
-                  *InvDcoord_D(iDim)
-             DiffRight = vInv_CB(i,j,k,iBlock) &
-                  *sum(HeatCond_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyz_D)
+          Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
+          if(IsCartesianGrid)then
+             DiffLeft = Coeff*HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)
+             DiffRight = Coeff*HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
           else
-             DiffLeft = vInv_CB(i,j,k,iBlock) &
-                  *HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)*InvDcoord_D(iDim)
-             DiffRight = vInv_CB(i,j,k,iBlock) &
-                  *HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock) &
-                  *InvDcoord_D(iDim)
+             InvDxyzVol_D = DcoordDxyz_DDFD(iDim,:nDim,i,j,k,iDim)*Coeff
+             DiffLeft = sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyzVol_D)
+
+             InvDxyzVol_D = DcoordDxyz_DDFD(iDim,:nDim,i+Di,j+Dj,k+Dk,iDim) &
+                  *Coeff
+             DiffRight = &
+                  sum(HeatCond_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyzVol_D)
           end if
 
           Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &

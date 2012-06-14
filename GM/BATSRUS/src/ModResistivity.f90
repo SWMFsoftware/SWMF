@@ -285,7 +285,6 @@ contains
     use ModCurrent,  ONLY: get_current
     use ModAdvance,  ONLY: State_VGB, B0_DGB
     use ModVarIndexes, ONLY: Bx_, Bz_
-    !use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
     use ModMain, ONLY: UseB0
 
     integer, intent(in) :: iBlock
@@ -474,9 +473,9 @@ contains
 
   subroutine get_resistivity_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
-    use BATL_lib,        ONLY: store_face_flux, IsRzGeometry, CellSize_DB
+    use BATL_lib,        ONLY: store_face_flux, IsRzGeometry, &
+         Xyz_DGB, CellSize_DB, CellVolume_GB
     use ModFaceGradient, ONLY: get_face_curl
-    use ModGeometry,     ONLY: vInv_CB, y_BLK
     use ModImplicit,     ONLY: nVarSemi, FluxImpl_VXB, FluxImpl_VYB, &
          FluxImpl_VZB
     use ModNumConst,     ONLY: i_DD
@@ -535,9 +534,9 @@ contains
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k) - vInv_CB(i,j,k,iBlock) &
-               *(FluxImpl_VFD(:,i+Di,j+Dj,k+Dk,iDim) &
-               - FluxImpl_VFD(:,i,j,k,iDim))
+          Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k) &
+               -(FluxImpl_VFD(:,i+Di,j+Dj,k+Dk,iDim) &
+               - FluxImpl_VFD(:,i,j,k,iDim))/CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     end do
 
@@ -552,11 +551,11 @@ contains
                - StateImpl_VG(BzImpl_,i,j-1,k) )*InvDy2
 
           ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
-          Jx = Jx + StateImpl_VG(BzImpl_,i,j,k)/y_BLK(i,j,k,iBlock)
+          Jx = Jx + StateImpl_VG(BzImpl_,i,j,k)/Xyz_DGB(y_,i,j,k,iBlock)
 
           ! in rz-geonetry: Rhs[Bphi] = -eta*Jz / radius
           Rhs_VC(BzImpl_,i,j,k) = Rhs_VC(BzImpl_,i,j,k) &
-               - Eta_GB(i,j,k,iBlock)*Jx/y_BLK(i,j,k,iBlock)
+               - Eta_GB(i,j,k,iBlock)*Jx/Xyz_DGB(y_,i,j,k,iBlock)
        end do; end do; end do
     end if
 
@@ -566,8 +565,7 @@ contains
 
   subroutine add_jacobian_resistivity(iBlock, Jacobian_VVCI)
 
-    use BATL_lib,        ONLY: CellSize_DB
-    use ModGeometry,     ONLY: vInv_CB
+    use BATL_lib,        ONLY: CellSize_DB, CellVolume_GB
     use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap
     use ModNumConst,     ONLY: i_DD
 
@@ -575,7 +573,7 @@ contains
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iB
-    real :: DiffLeft, DiffRight, InvDcoord_D(nDim)
+    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
     !--------------------------------------------------------------------------
 
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
@@ -589,10 +587,10 @@ contains
 
              iB = iDir
 
-             DiffLeft = vInv_CB(i,j,k,iBlock) &
-                  *Eta_DFDB(iDim,i,j,k,iDim,iBlock)*InvDcoord_D(iDim)
-             DiffRight = vInv_CB(i,j,k,iBlock) &
-                  *Eta_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDcoord_D(iDim)
+             Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
+
+             DiffLeft = Coeff*Eta_DFDB(iDim,i,j,k,iDim,iBlock)
+             DiffRight = Coeff*Eta_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
 
              Jacobian_VVCI(iB,iB,i,j,k,1) = &
                   Jacobian_VVCI(iB,iB,i,j,k,1) - (DiffLeft + DiffRight)
