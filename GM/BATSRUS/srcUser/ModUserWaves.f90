@@ -719,7 +719,7 @@ contains
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
-    use ModSetOuterBC
+    use ModCellBoundary
     use ModVarIndexes
 
     integer, intent(in) :: iBlock, iSide

@@ -20,7 +20,6 @@ module ModUser
   use ModSize,     ONLY: nI, nJ, nK, gcn, nBLK
   use ModMain
   use ModPhysics
-  use ModSetOuterBC
   use ModAdvance,  ONLY : State_VGB
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, r_BLK, true_cell
   use ModVarIndexes
@@ -246,8 +245,7 @@ contains
     use ModMain
     use ModVarIndexes
     use ModAdvance
-    use ModPhysics  
-    use ModSetOuterBC
+    use ModPhysics
     use ModProcMH
     use ModFaceBc, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V, &
          iFace, jFace, kFace, iBlockBc
@@ -432,7 +430,6 @@ contains
 
     use ModMain
     use ModVarIndexes
-    use ModSetOuterBC
     use ModProcMH
     use ModAdvance, ONLY : State_VGB
     use ModMultiFluid
