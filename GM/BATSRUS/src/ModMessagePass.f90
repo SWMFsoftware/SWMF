@@ -9,6 +9,8 @@ module ModMessagePass
 contains
   ! moved form file exchange_messages.f90 
   subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In)
+
+    use ModCellBoundary, ONLY: set_outer_BCs
     use ModProcMH
     use ModMain, ONLY : nBlock, unusedBLK, &
          TypeBc_I, time_loop, &

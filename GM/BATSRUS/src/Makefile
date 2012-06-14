@@ -48,6 +48,7 @@ OBJECTS = \
 	ModBlockData.o\
 	ModBoundaryCells.o\
 	ModCalcSource.o\
+	ModCellBoundary.o\
 	ModConserveFlux.o\
 	ModCoronalHeating.o \
 	ModIonoVelocity.o\
@@ -104,7 +105,6 @@ OBJECTS = \
 	set_b0.o\
 	set_BCs.o\
 	set_ICs.o\
-	set_outer_BCs.o\
 	set_physics.o\
 	update_states.o\
 	update_states_MHD.o\
