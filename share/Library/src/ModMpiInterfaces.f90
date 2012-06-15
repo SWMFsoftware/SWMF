@@ -72,7 +72,8 @@ module ModMPiInterfaces
     mpi_allgatherv_r3, &
     mpi_allgatherv_r4, &
     mpi_allgatherv_l0, &
-    mpi_allgatherv_l1
+    mpi_allgatherv_l1, &
+    mpi_allgatherv_l2
   end interface
 
   interface mpi_allreduce
@@ -746,6 +747,24 @@ contains
        call mpi_allgatherv(sendbuf, sendcount, sendtype,      &
           recvbuf, recvcounts, displs, recvtype, comm, ierror)
      end subroutine mpi_allgatherv_l1
+
+
+     subroutine mpi_allgatherv_l2(sendbuf, sendcount, sendtype,      &
+          recvbuf, recvcounts, displs, recvtype, comm, ierror) 
+       logical, intent(in) :: sendbuf(:,:)
+       logical, intent(out) :: recvbuf(:,:)
+       integer, intent(in) :: sendcount
+       integer, intent(in) :: sendtype
+       integer, intent(in) :: recvcounts(:)
+       integer, intent(in) :: displs(:)
+       integer, intent(in) :: recvtype
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_allgatherv
+
+       call mpi_allgatherv(sendbuf, sendcount, sendtype,      &
+          recvbuf, recvcounts, displs, recvtype, comm, ierror)
+     end subroutine mpi_allgatherv_l2
 
 
      subroutine mpi_allreduce_i0(sendbuf, recvbuf, count, datatype,  &
