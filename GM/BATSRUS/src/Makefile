@@ -87,6 +87,7 @@ OBJECTS = \
 	ModTimeStepControl.o \
 	ModUserEmpty.o \
 	ModUser.o \
+	user_interface.o \
 	ModWaves.o \
 	ModHdf5.o \
 	${MOD1}	${MOD2}	${MOD3} ${MOD4} \
