@@ -20,8 +20,7 @@ contains
     use ModProcMH
     use ModMain
     use ModVarIndexes
-    use ModGeometry,      ONLY: dx_BLK, dy_BLK, dz_BLK, R_BLK,&
-         vInv_CB, y_BLK, true_cell
+    use ModGeometry,      ONLY: R_BLK, true_cell
     use ModAdvance
     use ModPhysics
     use ModUser,          ONLY: user_calc_sources
@@ -42,7 +41,8 @@ contains
     use ModFaceFlux,      ONLY: Pe_G
     use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
     use ModB0,            ONLY: set_b0_source
-    use BATL_lib,         ONLY: IsCartesian, IsRzGeometry
+    use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
+         Xyz_DGB, CellSize_DB, CellVolume_GB
 
     integer, intent(in):: iBlock
 
@@ -98,13 +98,15 @@ contains
                 GradU_DD(x_,:) = (0.5*(LeftState_VX(Ux_:Uz_,i+1,j,k) &
                      + RightState_VX(Ux_:Uz_,i+1,j,k))               &
                      - 0.5*(LeftState_VX(Ux_:Uz_,i,j,k)              &
-                     + RightState_VX(Ux_:Uz_,i,j,k)))/dx_BLK(iBlock)
+                     + RightState_VX(Ux_:Uz_,i,j,k))) &
+                     /CellSize_DB(x_,iBlock)
                 if(nJ > 1) then
                    GradU_DD(y_,:) = &
                         ( 0.5*(LeftState_VY(Ux_:Uz_,i,j+1,k)  &
                         +     RightState_VY(Ux_:Uz_,i,j+1,k)) &
                         - 0.5*(LeftState_VY(Ux_:Uz_,i,j,k)    &
-                        +     RightState_VY(Ux_:Uz_,i,j,k)))/dy_BLK(iBlock)
+                        +     RightState_VY(Ux_:Uz_,i,j,k)))  &
+                        /CellSize_DB(y_,iBlock)
                 else
                    GradU_DD(y_,:) = 0.0
                 end if
@@ -113,7 +115,8 @@ contains
                         ( 0.5*(LeftState_VZ(Ux_:Uz_,i,j,k+1) &
                         +     RightState_VZ(Ux_:Uz_,i,j,k+1)) &
                         - 0.5*(LeftState_VZ(Ux_:Uz_,i,j,k) &
-                        +     RightState_VZ(Ux_:Uz_,i,j,k)))/dz_BLK(iBlock)
+                        +     RightState_VZ(Ux_:Uz_,i,j,k))) &
+                        /CellSize_DB(z_,iBlock)
                 else
                    GradU_DD(z_,:) = 0.0
                 end if
@@ -145,7 +148,7 @@ contains
                   uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid)
              if(nK > 1) DivU = DivU + &
                   uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
-             DivU = vInv_CB(i,j,k,iBlock)*DivU
+             DivU = DivU/CellVolume_GB(i,j,k,iBlock)
              if(UseAnisoPressure)then
                 Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
                      - (State_VGB(iP,i,j,k,iBlock) &
@@ -177,7 +180,7 @@ contains
           DivU            = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
           if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) -uDotArea_YI(i,j,k,1)
           if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) -uDotArea_ZI(i,j,k,1)
-          DivU = vInv_CB(i,j,k,iBlock)*DivU
+          DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           ! Store div U so it can be used in ModWaves
           DivU_C(i,j,k) = DivU
@@ -193,7 +196,7 @@ contains
           if(IsRzGeometry) &
                Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
                + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
-               *(GammaWave - 1)/y_BLK(i,j,k,iBlock)
+               *(GammaWave - 1)/Xyz_DGB(y_,i,j,k,iBlock)
        end do; end do; end do
     end if
 
@@ -262,7 +265,7 @@ contains
                + uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_)
           if(nK > 1) DivU = DivU &
                + uDotArea_ZI(i,j,k+1,eFluid_) - uDotArea_ZI(i,j,k,eFluid_)
-          DivU = vInv_CB(i,j,k,iBlock)*DivU
+          DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           Pe = State_VGB(Pe_,i,j,k,iBlock)
 
@@ -274,7 +277,7 @@ contains
              ! equation. The "radial" direction is along the Y axis
              ! NOTE: here we have to use signed radial distance!
              if(IsRzGeometry) Source_VC(RhoUy_,i,j,k) = &
-                  Source_VC(RhoUy_,i,j,k) + Pe/y_BLK(i,j,k,iBlock)
+                  Source_VC(RhoUy_,i,j,k) + Pe/Xyz_DGB(y_,i,j,k,iBlock)
           end if
        end do; end do; end do
        if(DoTestMe.and.VarTest==Pe_)call write_source('After Pe div Ue')
@@ -299,24 +302,24 @@ contains
                + (State_VGB(iP_I,i,j,k,iBlock) &
                +  State_VGB(iRhoUz_I,i,j,k,iBlock)**2 &
                /  State_VGB(iRho_I,i,j,k,iBlock)) &
-               / y_BLK(i,j,k,iBlock)
+               / Xyz_DGB(y_,i,j,k,iBlock)
 
           ! Source[mphi] = (-mphi*mr/rho)/radius
           Source_VC(iRhoUz_I,i,j,k) = Source_VC(iRhoUz_I,i,j,k) &
                - State_VGB(iRhoUz_I,i,j,k,iBlock) &
                * State_VGB(iRhoUy_I,i,j,k,iBlock) &
-               /(State_VGB(iRho_I,i,j,k,iBlock)*y_BLK(i,j,k,iBlock))
+               /(State_VGB(iRho_I,i,j,k,iBlock)*Xyz_DGB(y_,i,j,k,iBlock))
 
           if(UseB)then
              ! Source[mr] = (B^2/2-Bphi**2)/radius
              Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
                   + (0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2) &
-                  -  State_VGB(Bz_,i,j,k,iBlock)**2) / y_BLK(i,j,k,iBlock)
+                  -  State_VGB(Bz_,i,j,k,iBlock)**2) / Xyz_DGB(y_,i,j,k,iBlock)
 
              ! Source[mphi]=Bphi*Br/radius
              Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
                   + State_VGB(Bz_,i,j,k,iBlock)*State_VGB(By_,i,j,k,iBlock) &
-                  / y_BLK(i,j,k,iBlock)
+                  / Xyz_DGB(y_,i,j,k,iBlock)
 
              ! Source[Bphi]=((Bphi*mr-Br*mphi)/rho)/radius
              Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
@@ -324,7 +327,7 @@ contains
                   *   State_VGB(RhoUy_,i,j,k,iBlock) &
                   -  State_VGB(By_,i,j,k,iBlock) &
                   *   State_VGB(RhoUz_,i,j,k,iBlock))&
-                  /State_VGB(Rho_,i,j,k,iBlock)/y_BLK(i,j,k,iBlock)
+                  /State_VGB(Rho_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
           end if
           if(UseB .and. UseB0)then
              ! Source[mr] = (B0.B1 - 2 B0phi * Bphi)/radius
@@ -332,19 +335,19 @@ contains
                   + (sum(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
                   *      B0_DGB(:,i,j,k,iBlock)) &
                   - 2.0*State_VGB(Bz_,i,j,k,iBlock)*B0_DGB(z_,i,j,k,iBlock)) &
-                  / y_BLK(i,j,k,iBlock)
+                  / Xyz_DGB(y_,i,j,k,iBlock)
 
              ! Source[mphi] = (B0phi * Br + Bphi * B0r)/radius
              Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
                   + (B0_DGB(z_,i,j,k,iBlock)*State_VGB(By_,i,j,k,iBlock) &
                   +  B0_DGB(y_,i,j,k,iBlock)*State_VGB(Bz_,i,j,k,iBlock)) &
-                  / y_BLK(i,j,k,iBlock)
+                  / Xyz_DGB(y_,i,j,k,iBlock)
 
              ! Source[Bphi]=((B0phi * mr - B0r * mphi)/rho)/radius
              Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
                   + (B0_DGB(z_,i,j,k,iBlock)*State_VGB(RhoUy_,i,j,k,iBlock) &
                   -  B0_DGB(y_,i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock))&
-                  /State_VGB(Rho_,i,j,k,iBlock)/y_BLK(i,j,k,iBlock)
+                  /State_VGB(Rho_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
           end if
        end do; end do; end do
 
@@ -359,8 +362,8 @@ contains
              ! Source[Bphi] = [ 1/(q_e*n_e) * (dP_e/dZ) ] / radius
              Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
                   + IonMassPerCharge_G(i,j,k)/State_VGB(Rho_,i,j,k,iBlock) &
-                  /y_Blk(i,j,k,iBlock) &
-                  *0.5*(Pe_G(i+1,j,k) - Pe_G(i-1,j,k))/Dx_Blk(iBlock)
+                  /Xyz_DGB(y_,i,j,k,iBlock) &
+                  *0.5*(Pe_G(i+1,j,k) - Pe_G(i-1,j,k))/CellSize_DB(x_,iBlock)
           end do; end do; end do
        end if
     end if
@@ -477,10 +480,10 @@ contains
                State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))/&
                State_VGB(rho_,i,j,k,iBlock)
           ! Calculate divergence of electric field 
-          DivE = vInv_CB(i,j,k,iBlock)*&
-               (EDotFA_X(i+1,j,k)-EDotFA_X(i,j,k)+&
-               EDotFA_Y(i,j+1,k) -EDotFA_Y(i,j,k)+&
-               EDotFA_Z(i,j,k+1) -EDotFA_Z(i,j,k))
+          DivE = (EDotFA_X(i+1,j,k) - EDotFA_X(i,j,k) &
+               +  EDotFA_Y(i,j+1,k) - EDotFA_Y(i,j,k) &
+               +  EDotFA_Z(i,j,k+1) - EDotFA_Z(i,j,k)) &
+               /CellVolume_GB(i,j,k,iBlock)
 
           Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
                + Coef*DivE*E_D 
@@ -575,7 +578,7 @@ contains
           DivU            =        uDotArea_XI(i+1,j,k,1) -uDotArea_XI(i,j,k,1)
           if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) -uDotArea_YI(i,j,k,1)
           if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) -uDotArea_ZI(i,j,k,1)
-          DivU = vInv_CB(i,j,k,iBlock)*DivU
+          DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           Source_VC(SignB_,i,j,k) = Source_VC(SignB_,i,j,k) &
                + State_VGB(SignB_,i,j,k,iBlock)*DivU
@@ -598,9 +601,9 @@ contains
       real:: dB1nEast, dB1nWest, dB1nSouth, dB1nNorth, dB1nTop, dB1nBot
       !------------------------------------------------------------------------
 
-      DxInvHalf = 0.5/Dx_BLK(iBlock)
-      DyInvHalf = 0.5/Dy_BLK(iBlock)
-      DzInvHalf = 0.5/Dz_BLK(iBlock)
+      DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
+      DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
+      DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -680,7 +683,7 @@ contains
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-         VInvHalf=vInv_CB(i,j,k,iBlock)*0.5
+         VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
          FaceArea_D = FaceNormal_DDFB(:,1,i,j,k,iBlock)
          B1nJumpL =VInvHalf*&
               sum(FaceArea_D*(RightState_VX(Bx_:Bz_,i,j,k) &
@@ -712,7 +715,7 @@ contains
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI 
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-         VInvHalf=vInv_CB(i,j,k,iBlock)*0.5
+         VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
          FaceArea_D = FaceNormal_DDFB(:,2,i,j,k,iBlock)
          B1nJumpL = VInvHalf*&
               sum(FaceArea_D*(RightState_VY(Bx_:Bz_,i,j,k) &
@@ -747,7 +750,7 @@ contains
          do k = 1, nK; do j = 1, nJ; do i = 1, nI 
             if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-            VInvHalf = vInv_CB(i,j,k,iBlock)*0.5
+            VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
             FaceArea_D = FaceNormal_DDFB(:,3,i,j,k,iBlock)
             B1nJumpL = VInvHalf*&
                  sum(FaceArea_D*(RightState_VZ(Bx_:Bz_,i,j,k) &
@@ -763,7 +766,7 @@ contains
 
             DivBInternal_C(i,j,k) = (DivBInternal_C(i,j,k) + &
                  sum(FaceArea_D*LeftState_VZ(Bx_:Bz_,i,j,k+1))) &
-                 *vInv_CB(i,j,k,iBlock)
+                 /CellVolume_GB(i,j,k,iBlock)
 
             DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
                  + B1nJumpL + B1nJumpR
@@ -815,9 +818,10 @@ contains
     ! Compute divB using averaged and conservatively corrected 
     ! left and right values
 
+    use BATL_lib,      ONLY: CellSize_DB
     use ModMain,       ONLY: nI, nJ, nK
+    use ModSize,       ONLY: x_, y_, z_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_
-    use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK 
     use ModAdvance,    ONLY: DivB1_GB, &
          LeftState_VX, RightState_VX, &
          LeftState_VY, RightState_VY, &
@@ -829,9 +833,9 @@ contains
     real   :: DivB, InvDx, InvDy, InvDz
     !--------------------------------------------------------------------------
 
-    InvDx            = 1/dx_BLK(iBlock)
-    if(nJ > 1) InvDy = 1/dy_BLK(iBlock)
-    if(nK > 1) InvDz = 1/dz_BLK(iBlock)
+    InvDx            = 1/CellSize_DB(x_,iBlock)
+    if(nJ > 1) InvDy = 1/CellSize_DB(y_,iBlock)
+    if(nK > 1) InvDz = 1/CellSize_DB(z_,iBlock)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        DivB = InvDx* &
