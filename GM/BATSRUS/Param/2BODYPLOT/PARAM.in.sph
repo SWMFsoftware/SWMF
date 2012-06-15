@@ -1,0 +1,146 @@
+#ECHO
+T			DoEcho
+
+#STRICT
+T
+
+#DESCRIPTION
+Spherical test run based on May 4 1998 storm
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#STARTTIME
+1998			iYear
+05			iMonth
+04			iDay
+02			iHour
+00			iMinute
+00			iSecond
+
+#GRID
+4			nRootBlockX
+4			nRootBlockY
+4			nRootBlockZ
+-8.			xMin
+ 8.			xMax
+-8.			yMin
+ 8.			yMax
+-8.			zMin
+ 8.			zMax
+
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
+
+#UNIFORMAXIS
+F                       UseUniformAxis
+
+#PLANET
+mercury
+
+#BODY
+T			UseBody (rest of parameters read if true)
+1.0			rBody (user units)
+1.0			rCurrents (only read for GM component)
+1.0			BodyNDim (/cc) for fluid 1
+1.0			BodyTDim (K)   for fluid 1
+
+#GRIDLEVEL
+6
+initial
+
+#AMRREGION
+tail                    NameRegion
+box                     NameArea
+-16.0                    xMinBox
+-1.0                    yMinBox
+-1.0                    zMinBox
+-1.0                    xMaxBox
+1.0                     yMaxBox
+1.0                     zMaxBox
+
+#AMRCRITERIARESOLUTION
+1                       nCriteria
+dx +tail                TypeCriteria
+0.2                     RefineTo
+0.001                   CoursenFrom
+
+#ROTATION 
+F                       UseRotation
+
+#TIMESTEPPING
+2			nStage
+0.40			CflExlp
+
+#OUTERBOUNDARY
+outflow			TypeBcEast
+vary			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
+
+#INNERBOUNDARY
+reflect                 TyepBcInner
+
+USERFLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+T                       UseUserInitSession
+T                       UseUserUpdateStates
+
+#SCHEME
+2			nOrder
+Sokolov			TypeFlux
+mc3
+1.5
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+dt rho mx my mz p bx by bz pmin pmax status
+
+#SAVEPLOT
+2                      DnSavePlot
+y=0 var idl             PlotString
+10                      DnSavePlot
+-1.0                    DtSavePlot
+-1                      DxSavePlot
+rho ux uy uz b1x b1y b1z bx by bz p jx jy jz 
+g rbody
+3d var tec
+10
+-1
+rho ux uy uz b1x b1y b1z bx by bz p jx jy jz
+g rbody
+
+#SAVEINITIAL
+T
+
+#SOLARWIND
+5.0                     SwNDim  [n/cc]
+25000.0                 SwTDim  [K]
+-400.0                  SwUxDim [km/s]
+0.0                     SwUyDim [km/s]
+0.0                     SwUzDim [km/s]
+0.0                     SwBxDim [nT]
+0.0                     SwByDim [nT]
+-5.0                    SwBzDim [nT]
+
+
+#STOP
+10                      MaxIteration
+-1.			tSimulationMax
+
+#END
