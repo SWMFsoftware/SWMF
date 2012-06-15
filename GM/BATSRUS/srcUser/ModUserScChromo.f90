@@ -167,7 +167,7 @@ contains
   !============================================================================
   subroutine user_init_session
 
-    use ModMain,           ONLY: UseB0, UseMagnetogram, UseUserPerturbation
+    use ModMain,           ONLY: UseMagnetogram, UseUserPerturbation
     use ModProcMH,         ONLY: iProc
     use ModReadParam,      ONLY: i_session_read
     use ModIO,             ONLY: write_prefix, iUnitOut
@@ -331,7 +331,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
-    use ModMain,       ONLY: globalBLK, UseB0, unusedBLK
+    use ModMain,       ONLY: globalBLK, unusedBLK
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyP_I, BodyNDim_I, UnitU_, UnitN_, AverageIonCharge
@@ -472,14 +472,8 @@ contains
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
 
-       if(UseB0)then
-          State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
-          Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
-       else
-          call get_coronal_b0(x, y, z, B_D)
-          State_VGB(Bx_:Bz_,i,j,k,iBlock) = B_D
- 	  Br = sum(B_D*r_D)
-       end if
+       State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+       Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
        if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
 
        if (UseChromoBc) then
@@ -1140,7 +1134,7 @@ contains
     ! modifies ghost cells in the r direction
     
     use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure
-    use ModMain,       ONLY: East_, UseB0, UseUSerInnerBcs
+    use ModMain,       ONLY: East_, UseUSerInnerBcs
     use ModGeometry,   ONLY: TypeGeometry, x_BLK, y_BLK, z_BLK, r_BLK
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, WaveFirst_, WaveLast_, &
                              Bx_, Bz_, Ux_, Uz_
@@ -1303,7 +1297,7 @@ contains
 
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
-    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK, UseB0
+    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge, BodyRho_I, &
                               BodyTDim_I, Si2No_V, UnitTemperature_, UnitN_
@@ -1330,23 +1324,12 @@ contains
     ! Magnetic field
     !/
     ! Float tangential B, reflect radial B
-    if(UseB0)then
-       B1_D  = VarsTrueFace_V(Bx_:Bz_)
-       B1r_D = sum(rUnit_D*B1_D)*rUnit_D
-       B1t_D = B1_D - B1r_D
-       VarsGhostFace_V(Bx_:Bz_) = B1t_D
-       FullBGhost_D = B0Face_D + VarsGhostFace_V(Bx_:Bz_)
-       FullBTrue_D  = B0Face_D + VarsTrueFace_V(Bx_:Bz_)
-    else
-       call get_coronal_b0(FaceCoords_D(x_), FaceCoords_D(y_), &
-            FaceCoords_D(z_), B0_D)
-       B1_D  = VarsTrueFace_V(Bx_:Bz_) - B0_D 
-       B1r_D = sum(rUnit_D*B1_D)*rUnit_D
-       B1t_D = B1_D - B1r_D
-       VarsGhostFace_V(Bx_:Bz_) = B1t_D + B0_D
-       FullBGhost_D = VarsGhostFace_V(Bx_:Bz_)
-       FullBTrue_D  = VarsTrueFace_V(Bx_:Bz_)
-    end if
+    B1_D  = VarsTrueFace_V(Bx_:Bz_)
+    B1r_D = sum(rUnit_D*B1_D)*rUnit_D
+    B1t_D = B1_D - B1r_D
+    VarsGhostFace_V(Bx_:Bz_) = B1t_D
+    FullBGhost_D = B0Face_D + VarsGhostFace_V(Bx_:Bz_)
+    FullBTrue_D  = B0Face_D + VarsTrueFace_V(Bx_:Bz_)
     FullBr = sum(FullBGhost_D*rUnit_D)
 
     ! Density

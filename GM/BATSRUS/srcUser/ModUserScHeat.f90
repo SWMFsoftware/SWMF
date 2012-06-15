@@ -125,7 +125,7 @@ contains
     use ModExpansionFactors, ONLY: WSAspeed_N
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModLdem,        ONLY: read_ldem, UseLdem
-    use ModMain,        ONLY: NameThisComp, UseB0, UseMagnetogram
+    use ModMain,        ONLY: NameThisComp
     use ModMultiFluid,  ONLY: MassIon_I
     use ModNumConst,    ONLY: cTwoPi
     use ModPhysics,     ONLY: ElectronTemperatureRatio, AverageIonCharge, &
@@ -169,8 +169,6 @@ contains
 
     DissipationScaleFactor = DissipationScaleFactorSi*Si2No_V(UnitX_) &
          *sqrt(Si2No_V(UnitB_))
-
-    if(.not.UseB0)UseMagnetogram=.false.
 
     ! electron heat conduct coefficient for single charged ions
     ! = 9.2e-12 W/(m*K^(7/2))
@@ -232,7 +230,7 @@ contains
           y = r*cos(Theta)*sin(Phi)
           z = r*sin(Theta)
 
-          call get_coronal_b0(x, y, z, B0_D)
+          call get_b0(x, y, z, B0_D)
           Br = (x*B0_D(1)+y*B0_D(2)+z*B0_D(3))/r
           Btot = sqrt(sum(B0_D**2))
           call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
@@ -392,7 +390,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
-    use ModMain,       ONLY: nI, nJ, nK, globalBLK, UseB0
+    use ModMain,       ONLY: nI, nJ, nK, globalBLK
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyTDim_I, UnitU_, AverageIonCharge
@@ -402,7 +400,7 @@ contains
     integer :: i, j, k, iBlock
     integer :: IterCount
     real :: x, y, z, r, RhoBase, Rho, NumDensIon, NumDensElectron
-    real :: Tcorona, Tbase, Temperature, B_D(3)
+    real :: Tcorona, Tbase, Temperature
     real :: Ur, Ur0, Ur1, del, Ubase, rTransonic, Uescape, Usound
 
     real, parameter :: Epsilon = 1.0e-6
@@ -485,12 +483,7 @@ contains
        State_VGB(RhoUx_,i,j,k,iBlock) = Rho*Ur*x/r *Usound
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
-       if(UseB0)then
-          State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
-       else
-          call get_coronal_b0(x, y, z, B_D)
-          State_VGB(Bx_:Bz_,i,j,k,iBlock) = B_D
-       end if
+       State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
        State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 1.0e-12 !0.0
        NumDensIon = Rho/MassIon_I(1)
        NumDensElectron = NumDensIon*AverageIonCharge
@@ -817,7 +810,7 @@ contains
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
          iSide, iFace, jFace, kFace
-    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK, UseB0, &
+    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK, &
          UseHeatConduction
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge
@@ -837,24 +830,12 @@ contains
     U_D   = VarsTrueFace_V(Ux_:Uz_)
     VarsGhostFace_V(Ux_:Uz_) = -U_D
 
-    if(UseB0)then
-       B1_D  = VarsTrueFace_V(Bx_:Bz_)
-       B1r_D = sum(Runit_D*B1_D)*Runit_D
-       B1t_D = B1_D - B1r_D
-       VarsGhostFace_V(Bx_:Bz_) = B1t_D !- B1r_D
-       FullB_D = B0Face_D + B1t_D
-       B0tot = sqrt(sum(B0Face_D**2))
-    else
-       call get_coronal_b0(FaceCoords_D(x_), FaceCoords_D(y_), &
-            FaceCoords_D(z_), B0_D)
-       B1_D  = VarsTrueFace_V(Bx_:Bz_) - B0_D
-       B1r_D = sum(Runit_D*B1_D)*Runit_D
-       B1t_D = B1_D - B1r_D
-       VarsGhostFace_V(Bx_:Bz_) = B1t_D + B0_D
-       FullB_D = VarsGhostFace_V(Bx_:Bz_)
-       B0tot = sqrt(sum(B0_D**2))
- 
-    end if
+    B1_D  = VarsTrueFace_V(Bx_:Bz_)
+    B1r_D = sum(Runit_D*B1_D)*Runit_D
+    B1t_D = B1_D - B1r_D
+    VarsGhostFace_V(Bx_:Bz_) = B1t_D !- B1r_D
+    FullB_D = B0Face_D + B1t_D
+    B0tot = sqrt(sum(B0Face_D**2))
     FullBr = sum(Runit_D*FullB_D)
 
     call get_plasma_parameters_base(FaceCoords_D, RhoBase, Tbase)
