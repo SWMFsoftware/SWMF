@@ -54,7 +54,7 @@ contains
 
     use ModMain, ONLY: iteration_number
     use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
-         set_amr_geometry, nBlock, Unused_B
+         set_amr_geometry, nBlock, Unused_B,init_amr_criteria
     use ModBatlInterface, ONLY: set_batsrus_grid
     ! Dummy variables, to avoid array size issues with State_VGB in
     ! set_amr_criteria
@@ -72,6 +72,8 @@ contains
 
     if (.not.restart) then
        ! Create initial solution block geometry.
+       ! Set all Arrays for AMR
+       call init_amr_criteria(user_amr_geometry=user_specify_refinement)
 
        ! Perform initial refinement of mesh and solution blocks.
        do nRefineLevel = 1, initial_refine_levels
@@ -101,6 +103,8 @@ contains
        call read_tree_file(NameFile)
        call init_grid_batl
        call set_batsrus_grid
+       ! Set all Arrays for AMR
+       call init_amr_criteria(user_amr_geometry=user_specify_refinement)
 
     end if
 
@@ -277,7 +281,6 @@ subroutine BATS_init_session
   use ModUser, ONLY: user_initial_perturbation
   use ModRestartFile, ONLY: UseRestartOutSeries
   use ModMessagePass, ONLY: exchange_messages
-
   implicit none
 
   ! Local variables

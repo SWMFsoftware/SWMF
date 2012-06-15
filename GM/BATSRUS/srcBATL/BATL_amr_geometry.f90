@@ -21,7 +21,7 @@ module BATL_amr_geometry
   ! This belongs more in batl_amr_criteria but also
   ! needed here so it is declared here.
   logical, public, allocatable :: UseCrit_IB(:,:)
-  logical, public, allocatable :: UseCrit_I(:)
+  logical, public, allocatable :: UseCrit_B(:)
 
   ! We have only two values to decide the criteria
   ! for geometrick refinment cell size (1) , and AMR level (2)
@@ -29,6 +29,9 @@ module BATL_amr_geometry
 
   ! number of geometrical criteria actually used
   integer, public :: nCritGeoUsed = 0
+  integer, public :: nCritGeoBackword = 0
+  !Number of geometric criterias 
+  integer, public :: nCritDxLevel = 0
 
   ! Backward compatibilety with BATSRUS AMR
   ! Grid criteria as 'user' and 'currentsheet' are now handled by amr_criteria
@@ -37,9 +40,10 @@ module BATL_amr_geometry
   ! we have read in new data from PARAM.in
   logical, public :: IsNewGeoParam =.false.
 
-  integer, parameter :: MaxArea = 100, lNameArea = 20
+  integer, public, parameter :: MaxArea = 100, lNameArea = 20
 
   type, public :: AreaType 
+     character(len=lNameArea) :: NameRegion
      character(len=lNameArea) :: Name
      real                     :: Resolution
      integer                  :: Level
@@ -49,7 +53,8 @@ module BATL_amr_geometry
      real, dimension(3,3)     :: Rotate_DD
   end type AreaType
 
-  type(AreaType), public :: AreaGeo_I(MaxArea)
+  ! index zero contains the 'all' area
+  type(AreaType), public :: AreaGeo_I(0:MaxArea)
 
   ! Choosing with blocks we want to refine is based on a list of criteria 
   ! and a set of upper (refine)  and lower (coarsen) limits. The criteria 
@@ -64,7 +69,10 @@ module BATL_amr_geometry
   real,    public, allocatable:: CoarsenCritAll_I(:), RefineCritAll_I(:)
   integer, public, allocatable:: iVarCritAll_I(:),idxMaxGeoCrit_I(:)
   real,    public, allocatable:: MaxLevelCritAll_I(:)
-  type(AreaType), public, allocatable :: AreaAll_I(:)
+  !type(AreaType), public, allocatable :: AreaAll_I(:)
+  integer,    public, allocatable:: iAreaIdx_II(:,:)
+  ! Storing names of areas for each criteria given by #AMRCRITERIA.....
+  integer, public, allocatable :: nAreaPerCritAll_I(:)
 
   ! Local variables
 
@@ -81,10 +89,10 @@ contains
     use BATL_geometry,     ONLY: x_
     use BATL_tree,         ONLY: nRoot_D
 
-
-    integer :: iGeo, iVar
+    integer :: iGeo, iVar,iGeoAll
     logical :: DoTestMe = .false.
     !-------------------------------------------------------------------------
+
 
     nCritGeoPhys = 0
 
@@ -111,31 +119,33 @@ contains
 
     end do
 
-    do iGeo = 1, nCritGeoUsed
+    iGeo =0
+    do iGeoAll = 1, nCritGeoUsed
        iVar = 1
-
-       if(AreaGeo_I(iGeo) % Level  < 0) then
-          RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeo)%Level
+       !exclude areas given by #AREAREGION
+       if( AreaGeo_I(iGeoAll) % NameRegion .ne. "NULL") CYCLE
+       iGeo = iGeo+1
+       if(AreaGeo_I(iGeoAll) % Level  < 0) then
+          RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeoAll)%Level
           CoarsenCritAll_I(nAmrCritUsed+iGeo) = &
                RefineCritAll_I(nAmrCritUsed+iGeo)-1
           iVar = 2
           MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
                -abs(AreaGeo_I(iGeo)%Level)
        else
-          RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeo)%Resolution 
-          CoarsenCritAll_I(nAmrCritUsed+iGeo) = AreaGeo_I(iGeo)%Resolution/2.0
+          RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeoAll)%Resolution 
+          CoarsenCritAll_I(nAmrCritUsed+iGeo) = AreaGeo_I(iGeoAll)%Resolution/2.0
           iVar = 1
           MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
                abs(AreaGeo_I(iGeo)%Resolution)
        end if
-       AreaAll_I(nAmrCritUsed+iGeo)        = AreaGeo_I(iGeo)
 
        ! All geometrical criteias is a comparson to gird values
        if(nAmrCritUsed  > 0) then
           iVarCritAll_I(nAmrCritUsed+iGeo) = &
-               maxval(iVarCritAll_I(1:nAmrCritUsed))+iVar
+               maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel))+iVar
           idxMaxGeoCrit_I(nAmrCritUsed+iGeo) = &
-               maxval(iVarCritAll_I(1:nAmrCritUsed))+iVar
+               maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel))+iVar
        else
           iVarCritAll_I(iGeo) = iVar   
           idxMaxGeoCrit_I(nAmrCritUsed+iGeo) = iVar
@@ -147,14 +157,32 @@ contains
        iVarCritAll_I = iVarCritAll_I + nCritGeoPhys
     end if
 
-    
-    if(DoTestMe .and. iProc == 0) then
+    iGeo = 1
+    do iGeoAll = 1, nCritGeoUsed
+       if( AreaGeo_I(iGeoAll) % NameRegion .ne. "NULL") CYCLE
+       iAreaIdx_II(1,nAmrCritUsed+iGeo) = iGeoAll
+       nAreaPerCritAll_I(nAmrCritUsed+iGeo) = 1
+       iGeo = iGeo+1
+    end do
+
+
+     if(DoTestMe .and. iProc == 0) then
        write(*,*) "START init_amr_geometry "
-       write(*,*) "nCritGeoUsed = ",nCritGeoUsed
-       write(*,*) "Area names :: ", AreaGeo_I(1:nCritGeoUsed)%Name
-       write(*,*) "Area resolution :: ", AreaGeo_I(1:nCritGeoUsed)%Resolution
-       write(*,*) "Area level :: ", AreaGeo_I(1:nCritGeoUsed)%Level
-       write(*,*) "nCritGeoPhys :: ",nCritGeoPhys
+       write(*,*) "nCritGeoUsed     = ",nCritGeoUsed
+       do iGeoAll = 0, nCritGeoUsed
+          write(*,*) "--------------------"
+          write(*,*) "Area namesRegion :: ", AreaGeo_I(iGeoAll)%NameRegion
+          write(*,*) "Area names       :: ", AreaGeo_I(iGeoAll)%Name
+          write(*,*) "Area resolution  :: ", AreaGeo_I(iGeoAll)%Resolution
+          write(*,*) "Area level       :: ", AreaGeo_I(iGeoAll)%Level
+          write(*,*) "Area Center_D    :: ", AreaGeo_I(iGeoAll)%Center_D(1:3)
+          write(*,*) "Area Size_D      :: ", AreaGeo_I(iGeoAll)%Size_D(1:3)
+          write(*,*) "Area Radius1     :: ", AreaGeo_I(iGeoAll)%Radius1
+          write(*,*) "Area DoRotate    :: ", AreaGeo_I(iGeoAll)%DoRotate
+          write(*,*) "Area Rotate_DD   :: ", AreaGeo_I(iGeoAll)%Rotate_DD(1:3,1:3)
+          write(*,*) "--------------------"
+       end do
+       write(*,*) "nCritGeoPhys     :: ",nCritGeoPhys
        write(*,*) "END init_amr_geometry "
     end if
 
@@ -228,8 +256,6 @@ contains
     DoTestMe = .false.
 
     UseBlock = .false.
-
-    DoTestBlock = DoTestMe .and. iNode_B(iBlock) == 191
 
     ! Blocks outer corners
     Corner_DI(:,1) = CoordMin_DB(:,iBlock)
@@ -505,7 +531,7 @@ contains
     real    :: xRotateArea=0., yRotateArea=0., zRotateArea=0.
     logical :: DoStretchArea = .false.
     real    :: xStretchArea=1.0, yStretchArea=1.0, zStretchArea=1.0
-
+    character(len=lNameArea) :: NameRegion
     integer :: i
     logical :: UseStrict
 
@@ -516,14 +542,19 @@ contains
 
     UseStrict = .true.
     if(present(UseStrictIn)) UseStrict = UseStrictIn
-
-    if(index(NameCommand,"RESOLUTION")>0)then
-       call read_var('AreaResolution', AreaResolution)
+    NameRegion ="NULL"
+    if(NameCommand == "#AMRREGION") then
+       call read_var('NameRegion',NameRegion)
+       AreaResolution = 0
     else
-       call read_var('nLevelArea',nLevelArea)
-       ! Store level as a negative integer resolution.
-       ! This will be converted to resolution in correct_grid_geometry
-       AreaResolution = -nLevelArea
+       if(index(NameCommand,"RESOLUTION")>0)then
+          call read_var('AreaResolution', AreaResolution)
+       else
+          call read_var('nLevelArea',nLevelArea)
+          ! Store level as a negative integer resolution.
+          ! This will be converted to resolution in correct_grid_geometry
+          AreaResolution = -nLevelArea
+       end if
     end if
     call read_var('NameArea', NameArea, IsLowerCase=.true.)
 
@@ -544,6 +575,8 @@ contains
     end if
 
     nCritGeoUsed = nCritGeoUsed + 1
+    if(NameRegion == "NULL") nCritGeoBackword = nCritGeoBackword + 1
+
     if(nCritGeoUsed > MaxArea)then
        if(UseStrict) &
             call CON_stop(NameSub//' ERROR: Too many grid areas were defined')
@@ -556,7 +589,7 @@ contains
     end if
 
     AreaGeo_I(nCritGeoUsed) % Resolution = AreaResolution
-
+    AreaGeo_I(nCritGeoUsed) % NameRegion = NameRegion
     ! Set the default center to be the origin, 
     ! the size and radii to be 1, and no rotation
     AreaGeo_I(nCritGeoUsed)%Center_D  = 0.0
@@ -593,31 +626,32 @@ contains
        AreaGeo_I(nCritGeoUsed)%Name = NameArea
        return
     case('currentsheet')
-       write(*,*) "OLD PARAM.in FILE!!!!!"
-       write(*,*) ""
-       write(*,*) &
-            "Use one of the following commands for current sheet refinement:"
-       write(*,*) ""
-       write(*,*) ""
-       write(*,*) "#AMRCRITERIARESOLUTION"
-       write(*,*) "1                       nCriteria "
-       write(*,*) "currentsheet            TypeCriteria"
-       write(*,*) "0.5                     CoarsenLimit"
-       write(*,*) "0.5                     RefineLimit"
-       write(*,*) "0.2                     MinResolution"
-       write(*,*) ""
-       write(*,*) "or"
-       write(*,*) ""
-       write(*,*) "#AMRCRITERIALEVEL"
-       write(*,*) "1                       nCriteria"
-       write(*,*) "currentsheet            TypeCriteria"
-       write(*,*) "0.5                     CoarsenLimit"
-       write(*,*) "0.5                     RefineLimit"
-       write(*,*) "5                       MaxLevel"
-       write(*,*) ""
-       write(*,*) &
-            "with the desired level/resolution values and additional criteria" 
-
+       if(iProc == 0) then
+          write(*,*) "OLD PARAM.in FILE!!!!!"
+          write(*,*) ""
+          write(*,*) &
+               "Use one of the following commands for current sheet refinement:"
+          write(*,*) ""
+          write(*,*) ""
+          write(*,*) "#AMRCRITERIARESOLUTION"
+          write(*,*) "1                       nCriteria "
+          write(*,*) "currentsheet            TypeCriteria"
+          write(*,*) "0.5                     CoarsenLimit"
+          write(*,*) "0.5                     RefineLimit"
+          write(*,*) "0.2                     MinResolution"
+          write(*,*) ""
+          write(*,*) "or"
+          write(*,*) ""
+          write(*,*) "#AMRCRITERIALEVEL"
+          write(*,*) "1                       nCriteria"
+          write(*,*) "currentsheet            TypeCriteria"
+          write(*,*) "0.5                     CoarsenLimit"
+          write(*,*) "0.5                     RefineLimit"
+          write(*,*) "5                       MaxLevel"
+          write(*,*) ""
+          write(*,*) &
+               "with the desired level/resolution values and additional criteria" 
+       end if
        call CON_stop(NameSub//': fix PARAM.in file')
     end select
 
@@ -771,15 +805,15 @@ contains
   subroutine clean_amr_geometry
 
     if(allocated(UseCrit_IB)) deallocate(UseCrit_IB)
-    if(allocated(UseCrit_I)) deallocate(UseCrit_I)
+    if(allocated(UseCrit_B)) deallocate(UseCrit_B)
     if(allocated(AmrCrit_IB)) deallocate(AmrCrit_IB)
     if(allocated(CoarsenCritAll_I)) deallocate(CoarsenCritAll_I)
     if(allocated(RefineCritAll_I)) deallocate(RefineCritAll_I)
     if(allocated(MaxLevelCritAll_I)) deallocate(MaxLevelCritAll_I)
     if(allocated(iVarCritAll_I)) deallocate(iVarCritAll_I)
-    if(allocated(AreaAll_I)) deallocate(AreaAll_I)
+    !if(allocated(AreaAll_I)) deallocate(AreaAll_I)
 
-    nCritGeoUsed          = 0
+    !nCritGeoUsed          = 0
     IsNewGeoParam         = .true.
     InitialResolution     = -1.0 
     initial_refine_levels = 0

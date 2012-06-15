@@ -14,7 +14,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
   use ModPhysics,    ONLY: UseSunEarth
   use ModUser,       ONLY: user_amr_criteria
   use ModCurrent,    ONLY: get_current
-  use BATL_lib,      ONLY: DoAmr_B, UseAmrMask,Xyz_DGB
+  use BATL_lib,      ONLY: DoAmr_B, UseAmrMask,Xyz_DGB,masked_amr_criteria
   use ModNumConst,   ONLY: cSqrtTwo, cTiny
   use ModVarIndexes, ONLY: SignB_
   use ModUser,       ONLY: user_specify_refinement
@@ -51,7 +51,8 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
   Crit_IB = 0.0
   do iBlock = 1, nBlock
      if (unusedBLK(iBlock)) CYCLE
-
+     if (masked_amr_criteria(iBlock)) CYCLE
+     
      if(UseAmrMask) then
         if(.not.DoAmr_B(iBlock)) CYCLE
      end if
@@ -76,6 +77,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
      end do; end do; end do
 
      do iCrit = 1,nAmrCriteria
+
         select case(RefineCrit(iCrit))
         case('gradt')
            ! Temperature gradient.
@@ -186,9 +188,9 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
 
               if( maxval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))>0.0.and. &
                    minval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))<0.0) then
-                 Crit_IB(iCrit,iBlock) = 2.0
+                 Crit_IB(iCrit,iBlock) = 1.0
               else
-                 Crit_IB(iCrit,iBlock) = -2.0
+                 Crit_IB(iCrit,iBlock) = 0.0
               end if
 
            else
