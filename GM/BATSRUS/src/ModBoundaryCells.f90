@@ -1,3 +1,17 @@
+module ModSetOuterBc
+  implicit none
+
+  SAVE
+
+  integer :: imin1g,imax1g,imin2g,imax2g,imin1p,imax1p,imin2p,imax2p
+  integer :: jmin1g,jmax1g,jmin2g,jmax2g,jmin1p,jmax1p,jmin2p,jmax2p
+  integer :: kmin1g,kmax1g,kmin2g,kmax2g,kmin1p,kmax1p,kmin2p,kmax2p
+  integer :: iBLK
+
+end module ModSetOuterBc
+
+!============================================================================
+
 module ModFaceBc
 
   ! Variables shared by subroutines set_BCs.f90 and user_face_bcs in ModUser

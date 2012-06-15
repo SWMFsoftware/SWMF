@@ -2,6 +2,7 @@
 !==============================================================================
 module ModCellBoundary
 
+  use ModSetOuterBc
   implicit none
 
   SAVE
@@ -10,11 +11,6 @@ module ModCellBoundary
 
   ! Public methods
   public :: set_outer_BCs
-
-  integer :: imin1g,imax1g,imin2g,imax2g,imin1p,imax1p,imin2p,imax2p
-  integer :: jmin1g,jmax1g,jmin2g,jmax2g,jmin1p,jmax1p,jmin2p,jmax2p
-  integer :: kmin1g,kmax1g,kmin2g,kmax2g,kmin1p,kmax1p,kmin2p,kmax2p
-  integer :: iBLK
 
 contains
 
