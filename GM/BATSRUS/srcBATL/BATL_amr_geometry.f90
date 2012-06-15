@@ -241,9 +241,10 @@ contains
     real :: Xyz_D(3)
     real, dimension(nINode,nJNode,nKNode):: x_N, y_N, z_N, R2_N
 
-    character(len=21), parameter :: NameSub = 'apply_amr_geometry'
+    character(len=*), parameter:: NameSub = 'apply_amr_geometry'
+    logical, parameter:: DoTestBlock = .false.
 
-    logical :: DoTestMe, DoTestBlock, DoCalcCrit
+    logical :: DoCalcCrit
     !--------------------------------------------------------------------------
     !if(nCritGeoUsed <= 0) RETURN
 
@@ -252,8 +253,6 @@ contains
 
 
     if(DoCalcCrit) call calc_crit(iBlock)
-
-    DoTestMe = .false.
 
     UseBlock = .false.
 
