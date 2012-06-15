@@ -794,9 +794,11 @@ contains
     ! Geometry criteria is not coverd by sorting but can also
     ! demand to many blocks
     if(iTryAmr > iMaxTryAmr) then
-       iStatusNew_A(1:nNode) = Unset_
-       write(*,*)"   BATL_tree::adapt_tree: No Geometric AMR done"
-       RETURN
+       where(iStatusNew_A(1:nNode) == Refine_ )
+          iStatusNew_A(1:nNode) = Unset_
+       end where
+       write(*,*)"   BATL_tree::adapt_tree: No refinment done"
+       if(.not. any(iStatusNew_A(1:nNode) == Coarsen_))RETURN
     end if
 
     if(.not.DoStrictAmr) deallocate(iStatusNew0_A)
