@@ -41,12 +41,8 @@ T                       DoFixAxis
 8.0                     rFixAxis
 0.0                     r2FixAxis
 
-#GRIDLEVEL
-2                       nLevelArea 4
-all                     NameArea
-
-#GRIDLEVEL
-5                       nLevelArea
+#AMRREGION
+shell1
 box_gen                 NameArea
 1.0                     rMin
 0.0                     LonMin
@@ -55,20 +51,23 @@ box_gen                 NameArea
 360.0                   LonMax
 90.0                    LatMax
 
-#GRIDLEVEL
-5                       nLevelArea
-user                    NameArea
-
-#AMRCRITERIALEVEL
-1                       nCriteria
+#AMRCRITERIARESOLUTION
+3                       nCriteria
+Level +shell1           TypeCriteria
+2                       RefineTo
+3                       CoursenFrom
 currentsheet            TypeCriteria
 0.5                     CoarsenLimit
 0.5                     RefineLimit
-5                       MaxLevel
+0.01                    MaxResolution
+Level                   TypeCriteria
+2                       RefineTo
+3                       CoursenFrom
 
-#GRIDLEVEL
+GRIDLEVEL
 2                       nLevelArea 5
 initial                 NameArea
+
 
 READPOTENTIALFIELD
 T			UseMagnetogram
@@ -172,9 +171,11 @@ T			DoExtendTransitionRegion
 3.0e5			TeModSi
 1.0e1			DeltaTeModSi
 
-#AMR
-40			DnRefine 40000
-F			DoAutoRefine
+#DOAMR
+T
+40
+-1
+T
 
 #TIMEACCURATE
 F			DoTimeAccurate

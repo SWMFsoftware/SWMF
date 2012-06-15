@@ -9,19 +9,22 @@
 -24.0			zMin
  24.0			zMax
 
-#GRIDLEVEL
-2			nLevelArea
-all			NameArea
-
-#GRIDLEVEL
-10			nLevel
+#AMRREGION
+shell1                  NameRegion
 shell0			NameArea
 1.0			Radius1
 1.1			Radius2
 
 #AMRCRITERIARESOLUTION
-1                       nCriteria 
+2                       nCriteria 
 currentsheet            TypeCriteria
 0.5                     CoarsenLimit
 0.5                     RefineLimit
 0.2                     MinResolution
+Level +shell1           TypeCriteria
+10                      RefineTo
+11                      CoursenFrom
+Level                   TypeCriteria
+2                       RefineTo
+3                       CoursenFrom
+

@@ -78,24 +78,50 @@ float	   		TypeBcTop
 -24.0                   zMin
  24.0                   zMax
 
-#GRIDLEVEL
+GRIDLEVEL
 2                       nLevelArea
 all                     NameArea
 
-#GRIDLEVEL
+GRIDLEVEL
 4                       nLevel
 shell0                  NameArea
 1.0                     Radius1
 1.1                     Radius2
+i
+
+#AMRREGION              
+shell1                  NameArea
+shell0                  NameArea
+1.0                     Radius1
+1.1                     Radius2
+
+#AMRREGION              
+shell2                  NameArea
+sphere                  NameArea
+-0.9698463              xCenterSphere
+ 0.1710101              yCenterSphere
+-0.1736482              zCenterSphere  
+1.0                     rSphere
+
 
 #AMRCRITERIALEVEL
-1                       nCriteria 
+4                       nCriteria 
 currentsheet            TypeCriteria
 0.5                     CoarsenLimit
 0.5                     RefineLimit
 4                       MinResolution
+Level                   TypeCriteria
+2                       RefineTo
+3                       CoursenFrom
+Level +shell1           TypeCriteria
+4                       RefineTo
+5                       CoursenFrom
+Level +shell2           TypeCriteria
+20                      RefineTo
+21                      CoursenFrom
 
-#GRIDLEVEL
+
+GRIDLEVEL
 20			nLevlel
 sphere                  NameArea
 -0.9698463              xCenterSphere

@@ -142,8 +142,14 @@ T			DoExtendTransitionRegion
 #INCLUDE
 GridChromo
 
-#AMR
-40			DnRefine 40000
+#DOAMR
+T
+40
+-1
+T
+
+AMR
+5			DnRefine 40000
 F			DoAutoRefine
 
 #TIMEACCURATE

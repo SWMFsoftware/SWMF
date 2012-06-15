@@ -87,8 +87,8 @@ spherical_lnr		TypeGeometry
 0			nLevelArea
 initial			NameArea
 
-#GRIDLEVEL
-3			nLevelArea
+#AMRREGION
+shell1                  NameRegion 
 box_gen			NameArea
 1.0			rMin
 0.0			LonMin
@@ -98,11 +98,14 @@ box_gen			NameArea
 +45.0			LatMax
 
 #AMRCRITERIALEVEL
-1                       nCriteria 
+2                       nCriteria 
 currentsheet            TypeCriteria
 0.5                     CoarsenLimit
 0.5                     RefineLimit
 3                       MaxLevel
+Level +shell1           TypeCriteria
+3                       RefineTo
+4                       CoursenFrom
 
 
 #BODY

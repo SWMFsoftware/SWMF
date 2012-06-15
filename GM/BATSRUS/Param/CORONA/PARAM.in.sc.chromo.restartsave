@@ -66,12 +66,8 @@ Param/CORONA/grid_TR.dat
 24.0                    rMax
 
 ----------------------------------------------------
-#GRIDLEVEL
-2                       nLevelArea 4
-all                     NameArea
-
-#GRIDLEVEL
-5                       nLevelArea
+#AMRREGION
+shell1
 box_gen                 NameArea
 1.0                     rMin
 0.0                     LonMin
@@ -80,16 +76,18 @@ box_gen                 NameArea
 360.0                   LonMax
 90.0                    LatMax
 
-#GRIDLEVEL
-5                       nLevelArea
-user                    NameArea
-
-#AMRCRITERIALEVEL
-1                       nCriteria
+#AMRCRITERIARESOLUTION
+3                       nCriteria
+Level +shell1           TypeCriteria
+2                       RefineTo
+3                       CoursenFrom
 currentsheet            TypeCriteria
 0.5                     CoarsenLimit
 0.5                     RefineLimit
-5                       MaxLevel
+0.01                    MaxResolution
+Level                   TypeCriteria
+2                       RefineTo
+3                       CoursenFrom
 
 #GRIDLEVEL
 2                       nLevelArea 5
@@ -197,7 +195,13 @@ T			DoExtendTransitionRegion
 3.0e5			TeModSi
 1.0e1			DeltaTeModSi
 
-#AMR
+#DOAMR
+T                       DoAmr
+40                      dnAmr
+-1                      dtAmr
+T                       IsStrictAmr
+
+AMR
 40			DnRefine 40000
 F			DoAutoRefine
 
