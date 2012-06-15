@@ -5,8 +5,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
        x_, y_, z_, MaxBlock
   use ModMain,       ONLY: nBlock, UseB0, UseUserAmr, UnusedBlk,&
        DoThinCurrentSheet
-  use ModGeometry,   ONLY: &
-       x_BLK, y_BLK, z_BLK, r_BLK, dx_BLK, dy_BLK, dz_BLK, true_cell
+  use ModGeometry,   ONLY: r_BLK, true_cell
   use ModAdvance,    ONLY: State_VGB, StateOld_VCB, B0_DGB, &
        Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
   use ModAMR,        ONLY: nAmrCriteria,RefineCrit
@@ -14,7 +13,8 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
   use ModPhysics,    ONLY: UseSunEarth
   use ModUser,       ONLY: user_amr_criteria
   use ModCurrent,    ONLY: get_current
-  use BATL_lib,      ONLY: DoAmr_B, UseAmrMask,Xyz_DGB,masked_amr_criteria
+  use BATL_lib,      ONLY: DoAmr_B, UseAmrMask, Xyz_DGB, CellSize_DB, &
+       masked_amr_criteria
   use ModNumConst,   ONLY: cSqrtTwo, cTiny
   use ModVarIndexes, ONLY: SignB_
   use ModUser,       ONLY: user_specify_refinement
@@ -26,7 +26,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
 
   logical :: UseSwitchAMR, IsFound
   integer :: iBlock, iCrit, i, j, k
-  real :: xxx,yyy,zzz,RR, RcritAMR,AMRsort_1,AMRsort_2
+  real :: Xyz_D(3), RR, RcritAMR,AMRsort_1,AMRsort_2
 
   real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: &
        Var_G, Rho_G, RhoUx_G, RhoUy_G, RhoUz_G, Bx_G, By_G, Bz_G, P_G
@@ -59,8 +59,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
 
      ! Initialize values to use below for criteria
      if (UseSunEarth) then
-        RcritAMR = 1 + &
-             1.5*cSqrtTwo*max(dx_BLK(iBlock), dy_BLK(iBlock), dz_BLK(iBlock))
+        RcritAMR = 1 + 1.5*cSqrtTwo*maxval(CellSize_DB(:,iBlock))
      else
         RcritAMR = 0.0
      end if
@@ -224,14 +223,14 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
                    UserCriteria, RefineCrit(iCrit), IsFound)
               Crit_IB(iCrit,iBlock) = userCriteria
            else
-              xxx = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(1,1,1,iBlock))
-              yyy = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(1,1,1,iBlock))
-              zzz = 0.5*(z_BLK(nI,nJ,nK,iBlock)+z_BLK(1,1,1,iBlock))
-              RR = sqrt(xxx**2+yyy**2+zzz**2 )
+              Xyz_D = 0.5*(Xyz_DGB(:,nI,nJ,nK,iBlock) &
+                   +       Xyz_DGB(:,1,1,1,iBlock))
+              RR = sqrt(sum(Xyz_D**2))
               if (UseSunEarth) then
                  UseSwitchAMR = RR > RcritAMR
               else
-                 UseSwitchAMR = RR > RcritAMR .and. abs(zzz) <= dz_BLK(iBlock)
+                 UseSwitchAMR = RR > RcritAMR .and. &
+                      abs(Xyz_D(z_)) <= CellSize_DB(z_,iBlock)
               end if
               if (UseSwitchAMR) then
                  !\
@@ -244,7 +243,8 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
                  ! Only if UseSunEarth == .true.
                  !/
                  if (UseSunEarth) then
-                    call refine_sun_earth_cyl(iBlock,xxx,yyy,zzz,AMRsort_2)
+                    call refine_sun_earth_cyl(iBlock, &
+                         Xyz_D(x_), Xyz_D(y_), Xyz_D(z_), AMRsort_2)
                  else
                     AMRsort_2 = 1.0
                  end if
@@ -278,8 +278,9 @@ contains
   !============================================================================
   subroutine cartesian_gradient(iBlock, Var_G, GradX_C,GradY_C,GradZ_C)
 
-    use ModGeometry, ONLY: &
-         body_blk, true_cell, fAX_BLK, fAY_BLK, fAZ_BLK, vInv_CB
+    use ModGeometry, ONLY: body_blk, true_cell
+    use ModSize,  ONLY: x_, y_, z_
+    use BATL_lib, ONLY: CellFace_DB, CellVolume_GB
 
     integer,intent(in) :: iBlock
 
@@ -287,18 +288,20 @@ contains
     real, intent(out):: GradX_C(nI,nJ,nK), GradY_C(nI,nJ,nK), GradZ_C(nI,nJ,nK)
  
     real:: OneTrue_G(0:nI+1,0:nJ+1,0:nK+1)
-
+    real:: VInvHalf
     integer :: i, j, k
     !--------------------------------------------------------------------------
 
     if(.not.body_blk(iBlock)) then
        do k=1,nK; do j=1,nJ; do i=1,nI
-          GradX_C(i,j,k) = 0.5*fAX_BLK(iBlock)*&
-               (Var_G(i+1,j,k) - Var_G(i-1,j,k))*vInv_CB(i,j,k,iBlock)
-          GradY_C(i,j,k) = 0.5*fAY_BLK(iBlock)*&
-               (Var_G(i,j+1,k) - Var_G(i,j-1,k))*vInv_CB(i,j,k,iBlock)
-          GradZ_C(i,j,k) = 0.5*fAZ_BLK(iBlock)*&
-               (Var_G(i,j,k+1) - Var_G(i,j,k-1))*vInv_CB(i,j,k,iBlock)
+          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
+
+          GradX_C(i,j,k) = CellFace_DB(x_,iBlock)*&
+               (Var_G(i+1,j,k) - Var_G(i-1,j,k))*VInvHalf
+          GradY_C(i,j,k) = CellFace_DB(y_,iBlock)*&
+               (Var_G(i,j+1,k) - Var_G(i,j-1,k))*VInvHalf
+          GradZ_C(i,j,k) = CellFace_DB(z_,iBlock)*&
+               (Var_G(i,j,k+1) - Var_G(i,j,k-1))*VInvHalf
        end do; end do; end do
     else
        where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
@@ -315,32 +318,34 @@ contains
        !/
        !
        do k=1,nK; do j=1,nJ; do i=1,nI
-          GradX_C(i,j,k) = 0.5*fAX_BLK(iBlock)*&
+          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
+
+          GradX_C(i,j,k) = CellSize_DB(x_,iBlock)*&
                OneTrue_G(i,j,k)*(&
                (Var_G(i+1,j,k) - Var_G(i,j,k))*&
                OneTrue_G(i+1,j,k)*&
                (2.0 - OneTrue_G(i-1,j,k)) + &
                (Var_G(i,j,k)-Var_G(i-1,j,k))*&
                OneTrue_G(i-1,j,k)*&
-               (2.0 - OneTrue_G(i+1,j,k)) )*vInv_CB(i,j,k,iBlock)
+               (2.0 - OneTrue_G(i+1,j,k)) )*VInvHalf
 
-          GradY_C(i,j,k) = 0.5*fAY_BLK(iBlock)*&
+          GradY_C(i,j,k) = CellSize_DB(y_,iBlock)*&
                OneTrue_G(i,j,k)*(&
                (Var_G(i,j+1,k) - Var_G(i,j,k))*&
                OneTrue_G(i,j+1,k)*&
                (2.0 - OneTrue_G(i,j-1,k))+&
                (Var_G(i,j,k)-Var_G(i,j-1,k))*&
                OneTrue_G(i,j-1,k)*&
-               (2.0 - OneTrue_G(i,j+1,k)) )*vInv_CB(i,j,k,iBlock)
+               (2.0 - OneTrue_G(i,j+1,k)) )*VInvHalf
 
-          GradZ_C(i,j,k) = 0.5*fAZ_BLK(iBlock)*&
+          GradZ_C(i,j,k) = CellSize_DB(z_,iBlock)*&
                OneTrue_G(i,j,k)*(&
                (Var_G(i,j,k+1)-Var_G(i,j,k))*&
                OneTrue_G(i,j,k+1)*&
                (2.0 - OneTrue_G(i,j,k-1))+&
                (Var_G(i,j,k)-Var_G(i,j,k-1))*&
                OneTrue_G(i,j,k-1)*&
-               (2.0 - OneTrue_G(i,j,k+1)) )*vInv_CB(i,j,k,iBlock)
+               (2.0 - OneTrue_G(i,j,k+1)) )*VInvHalf
        end do; end do; end do
     end if
 
