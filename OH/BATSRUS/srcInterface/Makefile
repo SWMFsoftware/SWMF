@@ -20,7 +20,8 @@ OBJECTS = \
 	OH_put_from_mh.o\
 	OH_wrapper.o
 
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src -I../srcBATL
+SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
+	-I../src -I../srcBATL
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
