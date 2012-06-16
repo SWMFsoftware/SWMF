@@ -22,11 +22,11 @@ nul                     TypeInitKrylov
 200                     MaxMatvecKrylov
 
 #PRECONDITIONER
-left                    TypePrecondSide (left, symmetric, right)
-dilu                    TypePrecond (MBILU)
+left                    TypePrecondSide
+dilu                    TypePrecond
 
 #RADIATION
-T                       UseGrayDiffusion
+T                       UseRadDiffusion
 T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
 300.0			TradMinSi

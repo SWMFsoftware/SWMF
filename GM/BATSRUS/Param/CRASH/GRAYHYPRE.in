@@ -20,7 +20,7 @@ HYPRE			TypePrecond
 0			DnInitHypreAmg
 
 #RADIATION
-T                       UseGrayDiffusion
+T                       UseRadDiffusion
 T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
 300.0			TradMinSi

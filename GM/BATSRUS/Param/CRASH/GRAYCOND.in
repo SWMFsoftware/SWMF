@@ -6,7 +6,7 @@ ascii                   TypeFile
 
 #SEMIIMPLICIT
 T                       UseSemiImplicit
-radcond               TypeSemiImplicit
+radcond                 TypeSemiImplicit
 
 #KRYLOV
 cg			TypeKrylov
@@ -19,7 +19,7 @@ left			TypePrecondSide
 dilu			TypePrecond
 
 #RADIATION
-T                       UseGrayDiffusion
+T                       UseRadDiffusion
 T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
 300.0			TradMinSi

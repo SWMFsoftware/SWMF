@@ -9,18 +9,18 @@ T                       UseSemiImplicit
 radcondsplit            TypeSemiImplicit
 
 #KRYLOV
-gmres                      TypeKrylov
+gmres                   TypeKrylov
 nul                     TypeInitKrylov
 1.0e-8                  ErrorMaxKrylov
 100                     MaxMatvecKrylov
 
 #PRECONDITIONER
-left                    TypePrecondSide (left, symmetric, right)
+left                    TypePrecondSide
 HYPRE                   TypePrecond
 0			DnInitHypreAmg
 
 #RADIATION
-T                       UseGrayDiffusion
+T                       UseRadDiffusion
 T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
 300.0			TradMinSi
