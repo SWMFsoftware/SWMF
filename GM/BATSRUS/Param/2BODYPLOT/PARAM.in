@@ -52,66 +52,25 @@ T                       UseBody
 -128.			zMin
  128.			zMax
 
-#AMRREGION
-nearbody                NameRegion
-sphere0                 NameArea
-4.0                     Radius
-
-#AMRREGION              
-reconectionregion       NameRegion
-box                     NameArea
--200.0			xMinBox
--6.0			yMinBox
--6.0			zMinBox
-20.0			xMaxBox
-6.0			yMaxBox
-6.0			zMaxBox
-
-Test that max level or resolution is not pased and
-physics criteias not activated for initial refinment.
-J2 values is non physical
-
-
-#AMRCRITERIALEVEL
-4		 			nCriteria
-J2 +reconectionregion -nearbody		TypeCriteria
-2.0e-20					CoarsenLimit
-1.0e-10					RefubeLimit
-22					MaxLevel
-J2 					TypeCriteria
-2.0e-20					CoarsenLimit
-1.0e-10					RefubeLimit
-21					MaxLevel
-Level +reconectionregion -nearbody	TypeCriteria
-3					RefineTo
-4					CoursenFrom
-dx +nearbody		    		TypeCriteria
-4.0					RefineTo
-2.0					CoursenFrom
-
-#GRIDLEVEL
-7
-initial
-
-GRIDRESOLUTION
+#GRIDRESOLUTION
 2.0                     Resolution
 initial                 NameArea
 
 
 !refine inside 1.5*rcurrents, rcurrents = 3.5
-GRIDRESOLUTION
+#GRIDRESOLUTION
 1/8                     Resolution
 sphere0                 NameArea
  5.25                   rSphere
 
 !refine inner magnetosphere
-GRIDRESOLUTION
+#GRIDRESOLUTION
 1.0                     Resolution
 sphere0                 NameArea
 17.5                    rSphere
 
 !refine body2
-GRIDRESOLUTION
+#GRIDRESOLUTION
 1/8                     Resolution
 box                     NameArea
 -6.0                    xMinBox
@@ -122,7 +81,7 @@ box                     NameArea
 26.0                    zMaxBox
 
 !refine the magnetotail
-GRIDRESOLUTION
+#GRIDRESOLUTION
 4.0                     Resolution
 box                     NameArea
 -224.0                  xMinBox
@@ -132,7 +91,7 @@ box                     NameArea
   64.0                  yMaxBox
   64.0                  zMaxBox
 
-GRIDRESOLUTION
+#GRIDRESOLUTION
 2.0                     Resolution
 box                     NameArea
  -96.0                  xMinBox
@@ -142,7 +101,7 @@ box                     NameArea
   32.0                  yMaxBox
   32.0                  zMaxBox
 
-GRIDRESOLUTION
+#GRIDRESOLUTION
 1.0                     Resolution
 box                     NameArea
  -48.0                  xMinBox
@@ -152,7 +111,7 @@ box                     NameArea
   16.0                  yMaxBox
   16.0                  zMaxBox
 
-GRIDRESOLUTION
+#GRIDRESOLUTION
 1/2                     Resolution
 box                     NameArea
  -32.0                  xMinBox
@@ -162,7 +121,7 @@ box                     NameArea
    8.0                  yMaxBox
    8.0                  zMaxBox
 
-GRIDRESOLUTION
+#GRIDRESOLUTION
 1/4                     Resolution
 box                     NameArea
  -32.0                  xMinBox
@@ -181,7 +140,7 @@ float                   TypeBcNorth
 float                   TypeBcBottom
 float                   TypeBcTop
 
-SECONDBODY
+#SECONDBODY
 T                       UseBody2   ! Rest of the parameters read if .true.
 2.0                     rBody2 
 0.                      xBody2
@@ -192,7 +151,7 @@ T                       UseBody2   ! Rest of the parameters read if .true.
 35000.0                 TDimBody2 (K) temperature for fixed BC for P_BLK
 F			UseOrbit
 
-DIPOLEBODY2
+#DIPOLEBODY2
 0.0                     BdpDimBody2x [nT]
 0.0                     BdpDimBody2y [nT]
 -1200.0                 BdpDimBody2z [nT]
@@ -219,33 +178,24 @@ GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
 1			nOrder
 Rusanov			TypeFlux
 
-#SAVEINITIAL
-T                       DoSaveIntial
-
-#SAVEPLOT
-2
-3d FUL tec
--1
-50
-y=0 FUL idl
--1
-10.
--1.
-
 #END_COMP GM ###############################################################
 
 
 #STOP
 -1			MaxIteration
-300.0			tSimulationMax
-
+5.0			tSimulationMax
 
 #RUN ##########################################################################
 
+STOP
+-1			MaxIteration
+10.0			tSimulationMax
+
+!Changing stop command because AMR at 150 iterations differs on some machines
 
 #STOP
--1			MaxIteration
-301.6			tSimulationMax
+145			MaxIteration
+-1.0			tSimulationMax
 
 #BEGIN_COMP GM ################################################################
 
@@ -258,20 +208,18 @@ T                       DoAutoRefine
 
 #DOAMR
 T                       DoAmr
--1                       dnAmr
-1                      dtAmr
+30                      dnAmr
+-1                      dtAmr
 F                       IsStrictAmr
 
 #AMRLIMIT
 10.                     percentCoarsen
-10.                     percentRefine
-2000                    MaxBlcokALL
+4.29                    percentRefine
+800                     MaxBlcokALL
 1.e-8                   DiffCriteriaLevel
 
-AMRCRITERIA will ignore geometric criterias
-
 #AMRCRITERIA
-5                       nRefineCric)
+3                       nRefineCric)
 curlB                   TypeRefine
 -1                      CoarsenLimit
 -1                      RefineLimit
@@ -281,12 +229,6 @@ gradlogP                TypeRefine
 Rcurrents               TypeRefine
 -1             		CoarsenLimit
 -1             		RefineLimit
-Level +reconectionregion -nearbody	TypeCriteria
-20					RefineTo
-21					CoursenFrom
-dx +nearbody		    		TypeCriteria
-0.02					RefineTo
-0.01					CoursenFrom
 
 #SCHEME
 2			nOrder
@@ -299,91 +241,14 @@ minmod			TypeLimiter
 
 #SAVEPLOT
 2                       nPlotFile
-3d FUL tec              StringPlot
--1                       DnSavePlot
-1.			DtSavePlot
-y=0 FUL idl             StringPlot
--1                       DnSavePlot
-1.                     DtSavePlot
+y=0 FUL tec             StringPlot
+-1                      DnSavePlot
+10.			DtSavePlot
+y=0 FUL idl_ascii       StringPlot
+-1                      DnSavePlot
+10.                     DtSavePlot
 -1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
 
-
-
 #END_COMP GM ###############################################################
 
-#RUN ##########################################################################
 
-
-#STOP
--1			MaxIteration
-306			tSimulationMax
-
-#BEGIN_COMP GM ################################################################
-
-
-#DOAMR
-T                       DoAmr
-1                       dnAmr
--1                      dtAmr
-T                       IsStrictAmr
-
-#AMRCRITERIALEVEL
-2
-Level +reconectionregion -nearbody	TypeCriteria
-3					RefineTo
-4					CoursenFrom
-dx +nearbody		    		TypeCriteria
-4.0					RefineTo
-2.0					CoursenFrom
-
-
-#END_COMP GM ###############################################################
-
-#RUN ##########################################################################
-#STOP
--1			MaxIteration
-308			tSimulationMax
-
-#BEGIN_COMP GM ################################################################
-
-
-#DOAMR
-T                       DoAmr
-1                       dnAmr
--1                      dtAmr
-T                       IsStrictAmr
-
-#AMRLIMIT
-0.                      percentCoarsen
-0.                      percentRefine
-4000                    MaxBlcokALL
-1.e-8                   DiffCriteriaLevel
-
-#AMRREGION
-errorarea               NameRegion
-box                     NameArea
-0.0                   xMinBox
--10.0                   yMinBox
--10.0                   zMinBox
-32.0                   xMaxBox
- 10.0                   yMaxBox
- 10.0                   zMaxBox
-
-
-#AMRCRITERIARESOLUTION
-3
-Level +reconectionregion -nearbody	TypeCriteria
-3					RefineTo
-4					CoursenFrom
-dx +nearbody		    		TypeCriteria
-2.0					RefineTo
-1.0					CoursenFrom
-error p +errorarea -nearbody            TypeCriteria
-0.025                                   CoarsenLimit
-0.1                                     RefineLimit
-0.5                                     MinResolution
-1.0e-1                                  SmallError
-
-#END
-
-#END_COMP GM ###############################################################
