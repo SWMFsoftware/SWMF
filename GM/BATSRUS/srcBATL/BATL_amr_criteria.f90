@@ -156,11 +156,10 @@ contains
     end if
 
     nAmrCrit =  nIntCrit + nExtCrit +nCritGeo
-
+    !print *," nAmrCrit =  nIntCrit + nExtCrit +nCritGeo : ", nIntCrit,nExtCrit,nCritGeo
     if(allocated(AmrCrit_IB)) deallocate(AmrCrit_IB)
     allocate(AmrCrit_IB(nAmrCrit,MaxBlock))
     AmrCrit_IB = -1.0
-
 
     ! Merging Data form Geometical and Physical refinment parameters
     !if(iProc == 0) print *," nAmrCritUsed, nCritGeoBackword = ",nAmrCritUsed, nCritGeoBackword
@@ -1089,8 +1088,6 @@ contains
     DoSortAmrCrit = .not. DoStrictAmr
     select case(NameCommand)
     case("#AMRCRITERIA", "#AMRCRITERIALEVEL", "#AMRCRITERIARESOLUTION")
-
-       DoTestMe = .false.
 
        nCrit       = nCritInOut
        nCritMax    = nCritInOut
