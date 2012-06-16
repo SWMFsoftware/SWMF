@@ -3,6 +3,15 @@
 ### TESTS FOR THE STAND-ALONE BATSRUS ###
 $
 # !!! NOTE: In the list below "test_func" should be the last test
+
+TIMINGFILE =./.test_file_timing.txt
+STARTTIME  =rm $(TIMINGFILE); date +%s |xargs printf >$(TIMINGFILE);printf "*-1+">>$(TIMINGFILE);
+ENDTIME   = date +%s >>$(TIMINGFILE); cat $(TIMINGFILE) | bc;
+
+timing:
+	-@if([ "${TIMING}" ]); then $(STARTTIME) fi
+	-@if([ "${TIMING}" ]); then $(ENDTIME) fi
+
 test: 
 	@rm -f *.diff
 	-@($(MAKE) test_fluxemergence)
