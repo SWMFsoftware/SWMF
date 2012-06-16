@@ -901,8 +901,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         if(DoCurrent) then
            ! Note that the current in the ghost cells are not 
            ! needed for Tecplot output. Maybe needed for HDF (!).
-           do k=1,nK; do j=1,nJ; do i=1,nI
-              call  get_current(i, j, k, iBLK, J_DG(1:3,i,j,k))
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              call  get_current(i, j, k, iBLK, J_DG(:,i,j,k))
            end do;end do;end do
            DoCurrent = .false.
         end if
@@ -920,7 +920,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         case('jr')
            do k = 1,nK; do j = 1, nJ; do i = 1, nI
               PlotVar(i,j,k,iVar) = &
-                   sum(J_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlk))
+                   sum(J_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlk)) &
+                   / max(1e-30, r_BLK(i,j,k,iBlk))
            end do; end do; end do
         end select
 
