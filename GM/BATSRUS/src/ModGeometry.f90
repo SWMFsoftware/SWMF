@@ -16,7 +16,6 @@ module ModGeometry
   !/
   real :: x1, x2, y1, y2, z1, z2
   real :: DomainVolume = -1.0
-  real :: dxyz(3)
   real :: xyzStart(3)
   real :: xyzStart_BLK(3,MaxBlock)
   real :: XyzMin_D(3)

@@ -624,15 +624,16 @@ contains
   subroutine get_coronal_heat_factor
 
     use ModAdvance,     ONLY: State_VGB, Bz_
-    use ModGeometry,    ONLY: vInv_CB, true_BLK, true_cell, fAz_BLK
+    use ModGeometry,    ONLY: true_BLK, true_cell
     use ModMagnetogram, ONLY: nTheta, nPhi, dSinTheta, dPhi, &
          get_magnetogram_field
-    use ModMain,        ONLY: nI, nJ, nK, nBlock, UnusedBLK, Time_Simulation
+    use ModMain,        ONLY: nI, nJ, nK, nBlock, UnusedBLK, Time_Simulation,z_
     use ModMpi,         ONLY: MPI_REAL, MPI_SUM
     use ModNumConst,    ONLY: cHalfPi
     use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_, &
          UnitEnergyDens_, rBody
     use ModProcMH,      ONLY: nProc, iComm
+    use BATL_lib,       ONLY: CellFace_DB, CellVolume_GB
 
     integer :: i, j, k, iBlock
     integer :: iTheta, iPhi, iError
@@ -690,7 +691,7 @@ contains
        do iBlock = 1, nBlock 
           if(unusedBLK(iBlock)) cycle
           if(true_BLK(iBlock)) then
-             dAreaCgs = fAz_BLK(iBlock)*No2Si_V(UnitX_)**2*1e4
+             dAreaCgs = CellFace_DB(z_,iBlock)*No2Si_V(UnitX_)**2*1e4
              
              call get_photosphere_field(iBlock, UnsignedFluxHeight, &
                   State_VGB(Bz_,1:nI,1:nJ,0:nK+1,iBlock), BzCgs)
@@ -720,14 +721,14 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call get_heat_function(i, j, k, iBlock, HeatFunction)
              HeatFunctionVolume = HeatFunctionVolume &
-                  + HeatFunction/vInv_CB(i,j,k,iBlock)
+                  + HeatFunction*CellVolume_GB(i,j,k,iBlock)
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(true_cell(i,j,k,iBlock))then
                 call get_heat_function(i, j, k, iBlock, HeatFunction)
                 HeatFunctionVolume = HeatFunctionVolume &
-                     + HeatFunction/vInv_CB(i,j,k,iBlock)
+                     + HeatFunction*CellVolume_GB(i,j,k,iBlock)
              end if
           end do; end do; end do
        end if
@@ -763,9 +764,10 @@ contains
 
   subroutine get_heat_function(i, j, k, iBlock, HeatFunction)
 
-    use ModMain, ONLY: UseB0
+    use ModMain, ONLY: UseB0, z_
     use ModAdvance, ONLY: State_VGB, B0_DGB, Bx_, Bz_
-    use ModGeometry, ONLY: r_BLK, z_BLK
+    use ModGeometry, ONLY: r_BLK
+    use BATL_lib, ONLY: Xyz_DGB
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: HeatFunction
@@ -784,7 +786,7 @@ contains
     if(DtUpdateFlux <= 0.0)then
        HeatFunction = Bmagnitude*exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
     else
-       if(z_BLK(i,j,k,iBlock)<UnsignedFluxHeight)then
+       if(Xyz_DGB(z_,i,j,k,iBlock)<UnsignedFluxHeight)then
           HeatFunction = 0.0
        else
           HeatFunction = Bmagnitude
@@ -795,10 +797,11 @@ contains
 
   !===========================================================================
   subroutine get_photosphere_field(iBlock, z_cut, Bz_V, BzCgs)
-    use ModMain,      ONLY: nI, nJ, nK
-    use ModGeometry,  ONLY: XyzStart_BLK, dz_BLK
+
+    use ModMain,      ONLY: nI, nJ, nK, z_
     use ModInterpolate, ONLY: find_cell
     use ModPhysics,   ONLY: No2Si_V, UnitB_
+    use BATL_lib,     ONLY: CoordMin_DB, CoordMax_DB, CellSize_DB
 
     integer, intent(in) :: iBlock
     real, intent(in)    :: z_cut, Bz_V(1:nI, 1:nJ, 0:nK+1)
@@ -807,14 +810,14 @@ contains
     integer :: iLeft
     !--------------------------------------------------------------------------
 
-    MinZ = XyzStart_BLK(3,iBlock) - 0.5*dz_BLK(iBlock)
-    MaxZ = MinZ + nK*dz_BLK(iBlock)
+    MinZ = CoordMin_DB(z_,iBlock)
+    MaxZ = CoordMax_DB(z_,iBlock)
 
     BzCgs = 0.0
-    if((UnsignedFluxHeight.gt.MaxZ).or.(UnsignedFluxHeight.lt.MinZ))&
+    if((UnsignedFluxHeight > MaxZ).or.(UnsignedFluxHeight < MinZ))&
          return
 
-    iZ = (UnsignedFluxHeight - MinZ)/dz_BLK(iBlock) + 0.5
+    iZ = (UnsignedFluxHeight - MinZ)/CellSize_DB(z_,iBlock) + 0.5
     call find_cell(0, nK+1, iZ, iLeft, DxLeft)
     
     BzCgs = ((1.0 - DxLeft)*Bz_V(1:nI, 1:nJ, iLeft) + &
@@ -978,13 +981,14 @@ contains
   !=========================================================================
   subroutine get_cell_heating(i, j, k, iBlock, CoronalHeating)
 
-    use ModGeometry,       ONLY: r_BLK, x_BLK, y_BLK, z_BLK
+    use ModGeometry,       ONLY: r_BLK
     use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitEnergyDens_, UnitT_, &
          No2Io_V, UnitB_,UnitRho_,UnitX_,UnitU_
     use ModExpansionFactors, ONLY: UMin
     use ModMain,       ONLY: x_, z_, UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,RhoUx_,RhoUz_
     use ModAdvance,    ONLY: State_VGB, B0_DGB
+    use BATL_lib,      ONLY: Xyz_DGB
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: CoronalHeating
@@ -1047,10 +1051,8 @@ contains
                QHeatSI=QHeatSI)
        else
           UminIfOpen = UMin*1.05
-          call get_bernoulli_integral(x_BLK( i, j, k, iBlock)/&
-               R_BLK( i, j, k, iBlock),&
-               y_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock),&
-               z_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock), UFinal)
+          call get_bernoulli_integral( &
+               Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock), UFinal)
           call Cranmer_heating_function(&
                RSI=RSI,      &
                RhoSI  = RhoSI,&
@@ -1070,10 +1072,8 @@ contains
        ! Interpolate between 1.05 and 1.10 for smoothness
        UminIfOpen = UMin*1.05
        UmaxIfOpen = UMin*1.1
-       call get_bernoulli_integral(x_BLK( i, j, k, iBlock)/&
-            R_BLK( i, j, k, iBlock),&
-            y_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock),&
-            z_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock), UFinal)
+       call get_bernoulli_integral( &
+            Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock), UFinal)
        if(UFinal <= UminIfOpen) then
           Weight = 0.0
        else if (UFinal >= UmaxIfOpen) then
@@ -1107,13 +1107,14 @@ contains
   
   subroutine get_block_heating(iBlock)
 
-    use ModGeometry,       ONLY: r_BLK, x_BLK, y_BLK, z_BLK
+    use ModGeometry,       ONLY: r_BLK
     use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitEnergyDens_, UnitT_, &
          No2Io_V, UnitB_,UnitRho_,UnitX_,UnitU_
     use ModExpansionFactors, ONLY: UMin
     use ModMain,       ONLY: x_, z_, UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,RhoUx_,RhoUz_
     use ModAdvance,    ONLY: State_VGB, B0_DGB
+    use BATL_lib,      ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock
 
@@ -1187,10 +1188,8 @@ contains
                   QHeatSI=QHeatSI)
           else
              
-             call get_bernoulli_integral(x_BLK( i, j, k, iBlock)/&
-                  R_BLK( i, j, k, iBlock),&
-                  y_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock),&
-                  z_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock), UFinal)
+             call get_bernoulli_integral( &
+                  Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock), UFinal)
              call Cranmer_heating_function(&
                   RSI=RSI,      &
                   RhoSI  = RhoSI,&
@@ -1213,10 +1212,8 @@ contains
        UminIfOpen = UMin*1.05
        UmaxIfOpen = UMin*1.1
        do k=1,nK; do j=1,nJ; do i=1,nI
-          call get_bernoulli_integral(x_BLK( i, j, k, iBlock)/&
-               R_BLK( i, j, k, iBlock),&
-               y_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock),&
-               z_BLK( i, j, k, iBlock)/R_BLK( i, j, k, iBlock), UFinal)
+          call get_bernoulli_integral( &
+               Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock), UFinal)
           if(UFinal <= UminIfOpen) then
              Weight = 0.0
           else if (UFinal >= UmaxIfOpen) then

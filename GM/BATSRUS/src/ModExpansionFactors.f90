@@ -578,12 +578,13 @@ subroutine set_empirical_model(TypeRead,BodyT0)
 
 end subroutine set_empirical_model
 !====================================================================
-subroutine get_bernoulli_integral(xInput,yInput,zInput,Output)
+subroutine get_bernoulli_integral(XyzIn_D, Output)
   use ModExpansionFactors
   implicit none
-  real, intent(in)  :: xInput,yInput,zInput
+  real, intent(in)  :: XyzIn_D(3)
   real, intent(out) :: Output
-  call get_interpolated(WSASpeed_N,xInput,yInput,zInput,Output)
+
+  call get_interpolated(WSASpeed_N,XyzIn_D(1),XyzIn_D(2),XyzIn_D(3),Output)
 end subroutine get_bernoulli_integral
 
 !==========================================================================
@@ -624,7 +625,7 @@ subroutine get_gamma_emp(xx,yy,zz,gammaOut)
 
      gammaOut=gammaSS+(RR-R1)*(gammaIH-gammaSS)/(R2-R1)
   else
-     call get_bernoulli_integral(xx,yy,zz,Uf)
+     call get_bernoulli_integral((/xx,yy,zz/), Uf)
      BernoulliFactor=(cHalf*Uf**2+cSunGravitySI)/&
           (CoronalT0Dim*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
           *(R1-RR)*&
@@ -670,7 +671,7 @@ subroutine get_total_wave_energy_dens(X,Y,Z,&
   end if
 
   !v_\infty from WSA model:
-  call get_bernoulli_integral(X,Y,Z,Uf)
+  call get_bernoulli_integral((/X,Y,Z/), Uf)
 
   !An expansion factor
   call get_interpolated(ExpansionFactorInv_N,X,Y,Z,ExpansionFactorInv)

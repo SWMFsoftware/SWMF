@@ -61,9 +61,9 @@ subroutine impl_jacobian(implBLK,JAC)
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
   use ModRadDiffusion, ONLY: add_jacobian_rad_diff
-  use ModGeometry, ONLY: true_cell, vInv_CB
+  use ModGeometry, ONLY: true_cell
   use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, &
-       FaceNormal_DDFB, CellSize_DB
+       FaceNormal_DDFB, CellSize_DB, CellVolume_GB
 
   implicit none
 
@@ -232,9 +232,9 @@ subroutine impl_jacobian(implBLK,JAC)
 
            ! Divide flux*area by volume
            dfdwLface(i1:i2,j1:j2,k1:k2) = dfdwLface(i1:i2,j1:j2,k1:k2) &
-                *vInv_CB(1:nI, 1:nJ, 1:nK, iBlk)
+                /CellVolume_GB(1:nI, 1:nJ, 1:nK, iBlk)
            dfdwRface( 1:nI, 1:nJ, 1:nK) = dfdwRface( 1:nI, 1:nJ, 1:nK) &
-                *vInv_CB(1:nI, 1:nJ, 1:nK, iBlk)
+                /CellVolume_GB(1:nI, 1:nJ, 1:nK, iBlk)
 
            !DEBUG
            !if(idim==3.and.iw==4.and.jw==2)&
@@ -268,12 +268,12 @@ subroutine impl_jacobian(implBLK,JAC)
                  dfdwLface(i1:nI,j1:nJ,k1:nK)=dfdwLface(i1:nI,j1:nJ,k1:nK)+ &
                       coeff*sPowell_VC(iw,i1:nI,j1:nJ,k1:nK) &
                       *FaceArea_F(i1:nI,j1:nJ,k1:nK) &
-                      *vInv_CB(i1:nI,j1:nJ,k1:nK,iBlk)
+                      /CellVolume_GB(i1:nI,j1:nJ,k1:nK,iBlk)
 
                  dfdwRface(i1:nI,j1:nJ,k1:nK)=dfdwRface(i1:nI,j1:nJ,k1:nK)+ &
                       coeff*sPowell_VC(iw, 1:i3, 1:j3, 1:k3) &
                       *FaceArea_F(i1:nI,j1:nJ,k1:nK) &
-                      *vInv_CB(1:i3,1:j3,1:k3,iBlk)
+                      /CellVolume_GB(1:i3,1:j3,1:k3,iBlk)
 
               elseif(jw==B_+idim)then
                  ! The source terms are always multiplied by coeff
@@ -408,7 +408,7 @@ contains
             -Impl_VGB(Bz_,1:nI,1:nJ,0:nK-1,implBLK))/dxyz(z_))
     else
        do k=1,nK; do j=1,nJ; do i=1,nI
-          divb(i,j,k) = 0.5*vInv_CB(i,j,k,iBlk)*(     &
+          divb(i,j,k) = 0.5/CellVolume_GB(i,j,k,iBlk)*( &
                sum (Impl_VGB(Bx_:Bz_,i+1,j,k,implBLK) &
                *    FaceNormal_DDFB(:,1,i+1,j,k,iBlk))&
                -sum(Impl_VGB(Bx_:Bz_,i-1,j,k,implBLK) &
@@ -838,8 +838,8 @@ contains
 
                    ! Area(iFace)/V*T_ks*(Bi/n*jklEpsilon - Bj/n*iklEpsilon)
 
-                   Term = Coeff *vInv_CB(i,j,k,iBlk) &
-                        *DgenDxyz_DDC(kDim,iFace,i,j,k) / dxyz(iFace) &
+                   Term = Coeff*DgenDxyz_DDC(kDim,iFace,i,j,k) &
+                        / (CellVolume_GB(i,j,k,iBlk)*dxyz(iFace)) &
                         *(BPerN_CD(i,j,k,iDim)*jklEpsilon &
                         - BPerN_CD(i,j,k,jDim)*iklEpsilon)
 

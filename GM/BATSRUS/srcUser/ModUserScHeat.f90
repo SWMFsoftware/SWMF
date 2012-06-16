@@ -298,7 +298,7 @@ contains
 
     Runit_D = x_D/sqrt(sum(x_D**2))
 
-    call get_bernoulli_integral(Runit_D(1), Runit_D(2), Runit_D(3), Ufinal)
+    call get_bernoulli_integral(Runit_D, Ufinal)
     Uratio = Ufinal/Umin
 
     ! This is the temperature variation.
@@ -330,6 +330,7 @@ contains
     real :: RhoBase, Tbase, TbaseSi, HeatFluxSi, WaveEnergyDensSi
     real :: VAlfvenSi
     real :: RhoV
+    real :: Xyz_D(3)
     real, parameter :: Umax = 8e5 ! 800 km/s
     real, parameter :: AreaRatio = (cAU/rSun)**2
     !--------------------------------------------------------------------------
@@ -340,7 +341,8 @@ contains
     ! Bernoulli equation.
     call get_interpolated(ExpansionFactorInv_N, x, y, z, ExpansionFactorInv)
  
-    call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase) 
+    Xyz_D = (/x, y, z/)
+    call get_plasma_parameters_base(Xyz_D, RhoBase, Tbase) 
 
     Ewave = 0.0
      
@@ -363,7 +365,7 @@ contains
        end if
 
        !v_\infty from WSA model:
-       call get_bernoulli_integral(x, y, z, Uf)
+       call get_bernoulli_integral(Xyz_D, Uf)
        Uratio = Umax/Uf
 
        ! contrast ratio between mass flux in high and slow speed wind is here

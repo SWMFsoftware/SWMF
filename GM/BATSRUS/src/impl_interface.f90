@@ -310,9 +310,8 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModResistivity,    ONLY: get_resistivity_rhs
-  use ModGeometry, ONLY: vInv_CB
   use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
-       apply_flux_correction_block
+       apply_flux_correction_block, CellVolume_GB
 
   implicit none
 
@@ -392,7 +391,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         Rhs_VCB(:,i,j,k,iImplBlock) = Rhs_VCB(:,i,j,k,iImplBlock) &
-             / vInv_CB(i,j,k,iBlock)
+             *CellVolume_GB(i,j,k,iBlock)
      end do; end do; end do
   end do
 
@@ -414,10 +413,10 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModResistivity,    ONLY: get_resistivity_rhs
-  use ModGeometry, ONLY: vInv_CB, true_cell
+  use ModGeometry, ONLY: true_cell
   use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
   use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
-       apply_flux_correction_block
+       apply_flux_correction_block, CellVolume_GB
   implicit none
 
   integer, intent(in):: MaxN
@@ -497,7 +496,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
            do k = 1, nK; do j = 1, nJ; do i = 1, nI
               if(.not.true_cell(i,j,k,iBlock)) CYCLE
               if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
-              Volume = 1.0/vInv_CB(i,j,k,iBlock)
+              Volume = CellVolume_GB(i,j,k,iBlock)
               n = n + 1
               pDotADotPPe = pDotADotPPe +  &
                    Volume*x_I(n)**2*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)&
@@ -507,7 +506,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
            do k = 1, nK; do j = 1, nJ; do i = 1, nI
               if(.not.true_cell(i,j,k,iBlock)) CYCLE
               if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
-              Volume = 1.0/vInv_CB(i,j,k,iBlock)
+              Volume = CellVolume_GB(i,j,k,iBlock)
               do iVar = 1, nVarSemi
                  n = n + 1
                  pDotADotPPe = pDotADotPPe +  &
@@ -543,7 +542,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
            if(.not.true_cell(i,j,k,iBlock)) CYCLE
            if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
-           Volume = 1.0/vInv_CB(i,j,k,iBlock)
+           Volume = CellVolume_GB(i,j,k,iBlock)
            n = n + 1
            y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock) &
                 /DtLocal - ImplCoeff * ResImpl_VCB(1,i,j,k,iImplBlock))
@@ -552,7 +551,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
            if(.not.true_cell(i,j,k,iBlock)) CYCLE
            if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
-           Volume = 1.0/vInv_CB(i,j,k,iBlock)
+           Volume = CellVolume_GB(i,j,k,iBlock)
            do iVar = 1, nVarSemi
               n = n + 1
               y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
@@ -580,9 +579,10 @@ subroutine get_semi_impl_jacobian
   use ModHeatConduction, ONLY: add_jacobian_heat_cond
   use ModResistivity,    ONLY: add_jacobian_resistivity
   use ModMain, ONLY: nI, nJ, nK, Dt, n_step, time_accurate, Cfl
-  use ModGeometry, ONLY: vInv_CB, true_cell
+  use ModGeometry, ONLY: true_cell
   use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix, &
        DoInitHypreAmg
+  use BATL_lib, ONLY: CellVolume_GB
 
   implicit none
 
@@ -614,7 +614,7 @@ subroutine get_semi_impl_jacobian
 
      ! Form A = Volume*(1/dt - ImplCoeff*dR/dU) (symmetrized for sake of CG)
      do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        Coeff = - ImplCoeff / vInv_CB(i,j,k,iBlock)
+        Coeff = - ImplCoeff*CellVolume_GB(i,j,k,iBlock)
         MAT(:, :, i, j, k, iStencil, iImplBlock) = &
              Coeff * MAT(:, :, i, j, k, iStencil, iImplBlock)
      end do; end do; end do; end do
@@ -622,7 +622,7 @@ subroutine get_semi_impl_jacobian
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
         if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
-        Coeff = 1.0/(DtLocal*vInv_CB(i,j,k,iBlock))
+        Coeff = CellVolume_GB(i,j,k,iBlock)/DtLocal
         if(UseSplitSemiImplicit)then
            MAT(1,1,i,j,k,1,iImplBlock) = &
                 Coeff*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock) &
@@ -1158,9 +1158,10 @@ subroutine getdt_courant(qdt)
   use ModProcMH
   use ModMain
   use ModAdvance, ONLY : B0_DGB
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell,true_BLK,vInv_CB
+  use ModGeometry, ONLY : true_cell, true_BLK
   use ModImplicit
   use ModMpi
+  use BATL_lib, ONLY: CellVolume_GB
   implicit none
 
   real, intent(out) :: qdt
@@ -1175,8 +1176,8 @@ subroutine getdt_courant(qdt)
   ! First calculate max(cmax/dx) for each cell and dimension
   qdt_local=0.0
   do implBLK=1,nImplBLK; 
-     iBLK=impl2iBLK(implBLK); 
-     dxyz(x_)=dx_BLK(iBLK); dxyz(y_)=dy_BLK(iBLK); dxyz(z_)=dz_BLK(iBLK)
+     iBLK=impl2iBLK(implBLK);
+
      if(UseB0)then
         B0_DC = B0_DGB(:,1:nI,1:nJ,1:nK,iBLK)
      else
@@ -1192,7 +1193,8 @@ subroutine getdt_courant(qdt)
            where(.not.true_cell(1:nI,1:nJ,1:nK,iBLK))cmax=0.0
         end if
 
-        qdt_local=max(qdt_local,maxval(cmax*vInv_CB(:,:,:,iBlk)))
+        qdt_local = &
+             max(qdt_local,maxval(cmax/CellVolume_GB(1:nI,1:nJ,1:nK,iBlk)))
 
         if(DoTestMe)write(*,*)'getdt_courant idim,dx,cmax,1/qdt=',&
              idim,cmax(Itest,Jtest,Ktest),qdt_local

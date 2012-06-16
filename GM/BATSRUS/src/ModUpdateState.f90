@@ -3,7 +3,6 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModGeometry, ONLY :vInv_CB
   use ModPhysics
   use ModNumConst
   use ModKind, ONLY: Real8_
@@ -18,7 +17,7 @@ subroutine update_states_MHD(iStage,iBlock)
        update_wave_group_advection
   use ModResistivity,   ONLY: UseResistivity, &          !^CFG IF DISSFLUX
        calc_resistivity_source                           !^CFG IF DISSFLUX
-
+  use BATL_lib, ONLY: CellVolume_GB
   implicit none
 
   integer, intent(in) :: iStage, iBlock
@@ -74,10 +73,10 @@ subroutine update_states_MHD(iStage,iBlock)
      DtLocal=DtFactor*time_BLK(i,j,k,iBlock)
      Source_VC(:,i,j,k) = &
           DtLocal* (Source_VC(:,i,j,k) + &
-          vInv_CB(i,j,k,iBlock) * &
           ( Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k) &
           + Flux_VY(:,i,j,k) - Flux_VY(:,i,j+1,k) &
-          + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) )) 
+          + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) ) &
+          /CellVolume_GB(i,j,k,iBlock) ) 
   end do; end do; end do
 
   if(UseMultiIon .and. DoRestrictMultiIon)call multi_ion_set_restrict(iBlock)

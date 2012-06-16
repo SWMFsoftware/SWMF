@@ -2,13 +2,14 @@ subroutine fix_axis_cells
 
   use ModProcMH, ONLY: iComm
   use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk, iTest, jTest, kTest, &
-       BlkTest
+       BlkTest, x_, y_
   use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
-       x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB
+       r_BLK, rMin_BLK, far_field_bcs_blk
   use ModEnergy, ONLY: calc_energy_point
   use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
-       IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, radius_to_gen
+       IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius, radius_to_gen, &
+       Xyz_DGB, CellVolume_GB
   use ModNumConst, ONLY: cHalfPi
   use ModMpi
 
@@ -81,7 +82,7 @@ subroutine fix_axis_cells
 
         ! Average small cells in the kMin:kMax ring(s)
         do k=kMin, kMax; 
-           Volume = 1.0/vInv_CB(i,1,k,iBlock)
+           Volume = CellVolume_GB(i,1,k,iBlock)
            Buffer_VIII(Volume_,iR,Geom_,iHemisphere) = &
                 Buffer_VIII(Volume_,iR,Geom_,iHemisphere) + nJ*Volume
            do j=1,nJ
@@ -93,8 +94,8 @@ subroutine fix_axis_cells
 
         ! Calculate moments of the values of the kOut ring
         do j = 1, nJ
-           x = x_BLK(i,j,kOut,iBlock)
-           y = y_BLK(i,j,kOut,iBlock)
+           x = Xyz_DGB(x_,i,j,kOut,iBlock)
+           y = Xyz_DGB(y_,i,j,kOut,iBlock)
            State_V = State_VGB(:,i,j,kOut,iBlock)
 
            Buffer_VIII(:,iR,SumXLeft_,iHemisphere) = &
@@ -172,8 +173,8 @@ subroutine fix_axis_cells
         do k = kMin, kMax; do j = 1, nJ
 
            State_VGB(:,i,j,k ,iBlock) = State_V &
-                + dStateDx_V*x_BLK(i,j,k,iBlock) &
-                + dStateDy_V*y_BLK(i,j,k,iBlock)
+                + dStateDx_V*Xyz_DGB(x_,i,j,k,iBlock) &
+                + dStateDy_V*Xyz_DGB(y_,i,j,k,iBlock)
 
            call calc_energy_point(i,j,k ,iBlock)
         end do; end do
@@ -195,13 +196,14 @@ end subroutine fix_axis_cells
 subroutine fix_axis_cells_cyl
 
   use ModProcMH, ONLY: iComm
-  use ModMain, ONLY: nJ, nK, nBlock, UnusedBlk
+  use ModMain, ONLY: nJ, nK, nBlock, UnusedBlk, x_, y_, z_
   use ModAdvance, ONLY: nVar, State_VGB, r2FixAxis
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MinDxValue, &
-       rMin_Blk, x_Blk, y_Blk, z_Blk, Dx_Blk, Dz_Blk, vInv_CB
+       rMin_Blk
   use ModEnergy, ONLY: calc_energy_point
   use ModParallel, ONLY: NeiLEast, NOBLK
   use ModMpi
+  use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, CellVolume_GB
   implicit none
 
   real, allocatable:: Buffer_VII(:,:,:), SumBuffer_VII(:,:,:)
@@ -218,7 +220,7 @@ subroutine fix_axis_cells_cyl
   !--------------------------------------------------------------------------
 
   ! Maximum number of cells along the axis
-  MinDzValue = MinDxValue*dz_Blk(1)/dx_Blk(1)
+  MinDzValue = MinDxValue*CellSize_DB(z_,1)/CellSize_DB(x_,1)
   nZ = nint((XyzMax_D(3)-XyzMin_D(3))/MinDzValue)
   allocate(Buffer_VII(nVar, nZ, 1:Geom_), SumBuffer_VII(nVar, nZ, 1:Geom_))
 
@@ -233,14 +235,14 @@ subroutine fix_axis_cells_cyl
 
   do iBlock = 1, nBlock
      if(unusedBlk(iBlock)) CYCLE
-     if(rMin_BLK(iBlock) > dx_BLK(iBlock)) CYCLE
+     if(rMin_BLK(iBlock) > CellSize_DB(x_,iBlock)) CYCLE
 
      do k=1,nK
-        z = z_Blk(1,1,k,iBlock)
+        z = Xyz_DGB(z_,1,1,k,iBlock)
         iZ = ceiling( (z - XyzMin_D(3))/MinDzValue + 0.1)
 
         do i=1, nAxisCell
-           Volume = 1.0/vInv_CB(i,1,k,iBlock)
+           Volume = CellVolume_GB(i,1,k,iBlock)
            Buffer_VII(Volume_,iZ,Geom_) = Buffer_VII(Volume_,iZ,Geom_) &
                 + nJ*Volume
            do j=1,nJ
@@ -249,8 +251,8 @@ subroutine fix_axis_cells_cyl
            end do
         end do
         do j=1,nJ
-           x       = x_BLK(nAxisCell+1,j,k,iBlock)
-           y       = y_BLK(nAxisCell+1,j,k,iBlock)
+           x       = Xyz_DGB(x_,nAxisCell+1,j,k,iBlock)
+           y       = Xyz_DGB(y_,nAxisCell+1,j,k,iBlock)
            State_V = State_VGB(:,nAxisCell+1,j,k,iBlock)
 
            Buffer_VII(:,iZ,SumXLeft_) = Buffer_VII(:,iZ,SumXLeft_) &
@@ -277,7 +279,7 @@ subroutine fix_axis_cells_cyl
      if(unusedBlk(iBlock) .or. NeiLeast(iBlock) /= NOBLK) CYCLE
 
      do k=1,nK
-        z = z_Blk(1,1,k,iBlock)
+        z = Xyz_DGB(z_,1,1,k,iBlock)
         iZ = ceiling( (z - XyzMin_D(3))/MinDzValue + 0.1)
 
         InvVolume = 1.0/SumBuffer_VII(Volume_,iZ,Geom_)
@@ -305,8 +307,8 @@ subroutine fix_axis_cells_cyl
         do j=1, nJ; do i=1, nAxisCell
 
            State_VGB(:,i,j,k,iBlock) = State_V &
-                + dStateDx_V*x_BLK(i,j,k,iBlock) &
-                + dStateDy_V*y_BLK(i,j,k,iBlock)
+                + dStateDx_V*Xyz_DGB(x_,i,j,k,iBlock) &
+                + dStateDy_V*Xyz_DGB(y_,i,j,k,iBlock)
 
            call calc_energy_point(i,j,k,iBlock)
         end do; end do

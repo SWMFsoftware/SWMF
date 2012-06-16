@@ -290,17 +290,17 @@ contains
     ! This subroutine computes the cell values for density and pressure 
     ! assuming an isothermal atmosphere
 
-    use ModGeometry,          ONLY: x_BLK, y_BLK, z_BLK, R_BLK
+    use ModGeometry,          ONLY: R_BLK
     use ModPhysics,           ONLY: GBody, BodyRho_I, Si2No_V, UnitTemperature_, UnitN_, &
                                     AverageIonCharge
     use ModExpansionFactors,  ONLY: UMin, CoronalT0Dim
     use ModMultifluid,        ONLY: MassIon_I
     use ModLdem,              ONLY: useLdem, get_ldem_moments
-
+    use BATL_lib,             ONLY: Xyz_DGB
 
     integer, intent(in)  :: i, j, k, iBlock
     real, intent(out)    :: Density, Pressure
-    real :: Temperature, x_D(3), Ne, Te
+    real :: Temperature, Ne, Te
 
     ! Variables used for WSA-based boundary conditions
     real :: UFinal       !The solar wind speed at the far end of the Parker spiral
@@ -309,16 +309,13 @@ contains
     !--------------------------------------------------------------------------
     if(UseLdem)then
        ! Tomography based boundary conditions
-       x_D = (/x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock),z_BLK(i,j,k,iBlock)/)
-       call get_ldem_moments(x_D, Ne, Te)
+       call get_ldem_moments(Xyz_DGB(:,i,j,k,iBlock), Ne, Te)
        Density = Ne*Si2No_V(UnitN_)*MassIon_I(1)/AverageIonCharge
        Temperature = Te*Si2No_V(UnitTemperature_)
     else
        ! WSA based boundary conditions
        call get_bernoulli_integral(&
-            x_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
-            y_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
-            z_BLK(i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
+            Xyz_DGB(:, i, j, k, iBlock)/R_BLK(i, j, k, iBlock),&
             UFinal)
 
        URatio=UFinal/UMin

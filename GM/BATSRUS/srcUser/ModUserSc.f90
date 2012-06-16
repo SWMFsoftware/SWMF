@@ -184,6 +184,7 @@ contains
     use ModNumConst
     use ModPhysics,    ONLY: GBody,BodyRho_I,Si2No_V,UnitTemperature_
     use ModExpansionFactors,  ONLY: UMin,CoronalT0Dim
+    use BATL_lib,      ONLY: Xyz_DGB
 
     integer, intent(in)  :: iCell,jCell,kCell,iBlock
     real, intent(out)    :: DensCell,PresCell,GammaCell
@@ -199,11 +200,8 @@ contains
          y_BLK(iCell,jCell,kCell,iBlock), &
          z_BLK(iCell,jCell,kCell,iBlock), &
          GammaCell)
-    call get_bernoulli_integral( &
-         x_BLK(iCell,jCell,kCell,iBlock)/r_BLK(iCell,jCell,kCell,iBlock), &
-         y_BLK(iCell,jCell,kCell,iBlock)/r_BLK(iCell,jCell,kCell,iBlock), &
-         z_BLK(iCell,jCell,kCell,iBlock)/r_BLK(iCell,jCell,kCell,iBlock), &
-         UFinal)
+    call get_bernoulli_integral(Xyz_DGB(:,iCell,jCell,kCell,iBlock) &
+         /r_BLK(iCell,jCell,kCell,iBlock), UFinal)
     URatio = UFinal/UMin
 
     ! In coronal holes the temperature is reduced 
