@@ -6,8 +6,9 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModMain
   use ModFaceFlux,   ONLY: calc_face_flux
   use ModFaceValue,  ONLY: calc_face_value
-  use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis,set_b0_face, &
+  use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, &
        DoCalcElectricField
+  use ModB0,         ONLY: set_b0_face
   use ModParallel,   ONLY: neiLev
   use ModGeometry,   ONLY: Body_BLK
   use ModBlockData,  ONLY: set_block_data

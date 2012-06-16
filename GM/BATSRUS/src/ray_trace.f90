@@ -70,6 +70,7 @@ subroutine ray_trace_fast
   use ModProcMH
   use ModMain
   use ModAdvance,  ONLY: Bx_, Bz_, State_VGB
+  use ModB0,       ONLY: get_b0
   use ModParallel, ONLY: NOBLK, neiLEV
   use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, R_BLK, Rmin_BLK, &
        dx_BLK, dy_BLK, dz_BLK, true_cell
@@ -995,7 +996,7 @@ contains
     xx(2)=y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(qx(2)-1.)
     xx(3)=z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(qx(3)-1.)
     if(UseB0)then
-       call get_b0(xx(1),xx(2),xx(3),qb)
+       call get_b0(xx, qb)
     else
        qb=0.00
     end if
@@ -1098,7 +1099,7 @@ contains
     !-------------------------------------------------------------------------
 
     ! Get B0
-    call get_b0(qx(1),qx(2),qx(3),qb)
+    call get_b0(qx, qb)
 
     ! Take aspect ratio of cells into account
     qb(1)=qb(1)/dx_BLK(iBLK)
@@ -1667,10 +1668,14 @@ contains
 
   end subroutine do_integration
 
+  !==========================================================================
+
   subroutine interpolate_bbN(qx,qb,qbD,qrD,qpD)
 
     ! Obtain normalized bb field at normalized location qx and put it into qb
-    use ModAdvance,ONLY:nVar
+    use ModAdvance, ONLY: nVar
+    use ModB0,      ONLY: get_b0
+
     real, intent(in) :: qx(3)
     real, intent(out):: qb(3),qbD,qrD,qpD
     real,dimension(nVar)::Aux_V
@@ -1682,7 +1687,7 @@ contains
     xx(2)=y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(qx(2)-1.)
     xx(3)=z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(qx(3)-1.)
 
-    call get_b0(xx(1),xx(2),xx(3),qb)
+    call get_b0(xx, qb)
 
     ! Determine cell indices corresponding to location qx
 

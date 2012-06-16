@@ -164,7 +164,7 @@ contains
 
        if(DoTestMe)write(*,*) NameSub, ' after multispecies correct=', &
             State_VGB(VarTest,iTest,jTest,kTest,iBlock)
-    
+
     end if
 
     if( IsMhd .and. &
@@ -405,7 +405,7 @@ subroutine fix_anisotropy
      if(UnusedBlk(iBlock)) CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
-        
+
         ! Avoid Pperp < 0
         State_VGB(Ppar_,i,j,k,iBlock) = &
              min(3*State_VGB(p_,i,j,k,iBlock),State_VGB(Ppar_,i,j,k,iBlock)) 
@@ -439,7 +439,7 @@ subroutine fix_anisotropy
            ! firehose
            ! by how much the instability limit is exceeded
            PparOverLimit = Ppar - Pperp - B2              ! Delta pf
-        
+
            ! Calc firehose relaxation time based on the maximum 
            ! growth rate calculated from eqn (2) of Hall [1981]
            ! with theta = 0 and ppar < 4*pperp 
@@ -448,7 +448,7 @@ subroutine fix_anisotropy
            if(.not. UseConstantTau) &
                 TauInstability = 2.0*InvGyroFreq* &
                 sqrt(max(3.0*Ppar*(Pperp-0.25*Ppar),1e-8))/PparOverLimit
-              
+
            Dp = min(Dp, -DtCell*PparOverLimit/(DtCell + TauInstability))
 
         else 
@@ -478,7 +478,7 @@ subroutine fix_anisotropy
               ! observations in the magnetosphere and theories 
               if(.not. UseConstantTau) &
                    TauInstability = 100*InvGyroFreq
-              
+
               Dp = max(Dp, DtCell*PparOverLimit/(DtCell + TauInstability))
            end if
         end if
@@ -488,4 +488,78 @@ subroutine fix_anisotropy
 
 end subroutine fix_anisotropy
 
+
+!============================================================================
+
+subroutine update_b0
+
+  use ModMain,          ONLY: nBlock, unusedBLK, &
+       time_simulation, NameThisComp
+  use ModPhysics,       ONLY: ThetaTilt
+  use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB
+  use ModGeometry,      ONLY: true_cell, body_BLK
+  use CON_axes,         ONLY: get_axes
+  use ModNumConst,      ONLY: cRadToDeg
+  use ModIO,            ONLY: iUnitOut, write_prefix
+  use ModEnergy,        ONLY: calc_energy_ghost
+  use ModB0,            ONLY: B0_DGB, set_b0_cell, set_b0_reschange
+
+  implicit none
+
+  character(len=*), parameter :: NameSub = 'update_b0'
+  logical :: DoTest, DoTestMe
+  integer :: iBlock
+  !==========================================================================
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  ! Update ThetaTilt
+  if(NameThisComp=='GM') &
+       call get_axes(Time_Simulation, MagAxisTiltGsmOut=ThetaTilt)
+
+  if (DoTestMe) then
+     if(NameThisComp=='GM')then
+        call write_prefix; write(iUnitOut,*) &
+             "update_b0 at tSimulation, TiltGsm=", &
+             Time_Simulation, ThetaTilt*cRadToDeg
+     else
+        call write_prefix; write(iUnitOut,*) &
+             "update_b0 at tSimulation=",Time_Simulation
+     end if
+  end if
+  call timing_start(NameSub)
+
+  do iBlock=1,nBlock
+     if(unusedBLK(iBlock)) CYCLE
+
+     ! Save total magnetic field into Bx_BLK,By_BLK,Bz_BLK
+     State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
+          + B0_DGB(:,:,:,:,iBlock)
+
+     call set_b0_cell(iBlock)
+
+     ! Split total B again using new B0
+     State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
+          - B0_DGB(:,:,:,:,iBlock)
+
+     ! Set B1 to 0 inside bodies
+     if(Body_BLK(iBlock))then
+        where(.not.true_cell(:,:,:,iBlock))
+           State_VGB(Bx_,:,:,:,iBlock)=0.0
+           State_VGB(By_,:,:,:,iBlock)=0.0
+           State_VGB(Bz_,:,:,:,iBlock)=0.0
+        end where
+     end if
+
+     ! Recalculate energy
+     call calc_energy_ghost(iBlock)
+
+  end do
+
+  ! Recalculate B0 face values at resolution changes
+  call set_b0_reschange
+
+  call timing_stop(NameSub)
+
+end subroutine update_b0
 

@@ -43,7 +43,7 @@ module ModPhysics
   !\
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
   !/
-  real :: Bdp,Bdpx,Bdpy,Bdpz,DipoleStrengthSi =0.0 ! the dipole moment of B0
+  real :: Bdp, DipoleStrengthSi=0.0 ! the dipole moment of B0
   real, dimension(1:3,1:3) :: Qqp  =0.0   ! the quadrupole moment of B0
   real, dimension(1:3,1:3,1:3) :: Oop=0   ! the octupole moment of B0
 

@@ -271,8 +271,8 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
        UseRotatingFrame,UseB0
   use ModPhysics,    ONLY: rCurrents, inv_gm1, OMEGABody
   use ModVarIndexes
-  use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, &
-       B0_DGB, State_VGB, Energy_GBI, DivB1_GB
+  use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, State_VGB, Energy_GBI, DivB1_GB
+  use ModB0, ONLY:  B0_DGB, get_b0
   use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,x1,x2,y1,y2,z1,z2, &
        DomainVolume
   use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
@@ -325,10 +325,9 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   if(iSat>=1)then
      ! Satellites need B0 and the state at the satellite position
      if(UseB0)then
-        call get_b0(xSatellite(iSat,1),xSatellite(iSat,2),xSatellite(iSat,3),&
-             B0Sat_D)
+        call get_b0(xSatellite(iSat,:), B0Sat_D)
      else
-        B0Sat_D=0.00
+        B0Sat_D = 0.0
      end if
 
      call get_point_data(0.0,xSatellite(iSat,:),1,nBlock,1,nVar+3,StateSat_V)

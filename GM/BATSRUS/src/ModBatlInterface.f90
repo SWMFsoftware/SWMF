@@ -290,9 +290,9 @@ contains
   subroutine calc_other_vars(iBlock)
 
     use ModAdvance,  ONLY: State_VGB, nVar, &
-         fbody_x_BLK, fbody_y_BLK, fbody_z_BLK, &
-         B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB
-    use ModPhysics,  ONLY : CellState_VI
+         fbody_x_BLK, fbody_y_BLK, fbody_z_BLK
+    use ModB0,       ONLY: set_b0_cell
+    use ModPhysics,  ONLY: CellState_VI
     use ModGeometry, ONLY: body_BLK, true_cell
     use ModMain,     ONLY: west_, TypeBC_I, body1_, UseB0, UseGravity, &
          UseRotatingFrame

@@ -175,8 +175,9 @@ contains
 
     use ModConst,   ONLY: cProtonMass, cElectronCharge
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitRho_, UnitTemperature_
-    use ModAdvance, ONLY: State_VGB, Rho_, P_, Bx_, Bz_, B0_DGB
-    use ModMain, ONLY: UseB0
+    use ModAdvance, ONLY: State_VGB, Rho_, P_, Bx_, Bz_
+    use ModB0,      ONLY: B0_DGB
+    use ModMain,    ONLY: UseB0
 
     ! Compute Spitzer-type, classical resistivity 
 
@@ -189,9 +190,9 @@ contains
 
     Coef =((cProtonMass/cElectronCharge)*No2Si_V(UnitB_)/No2Si_V(UnitRho_))**2
     if(UseB0)then
-       B0_DG=B0_DGB(:,:,:,:,iBlock)
+       B0_DG = B0_DGB(:,:,:,:,iBlock)
     else
-       B0_DG=0.00
+       B0_DG = 0.0
     end if
     do k=-1, nK+2; do j=-1, nJ+2; do i=-1, nI+2
 
@@ -283,7 +284,8 @@ contains
     ! Eta = 0 if j' < jInvbCrit
 
     use ModCurrent,  ONLY: get_current
-    use ModAdvance,  ONLY: State_VGB, B0_DGB
+    use ModAdvance,  ONLY: State_VGB
+    use ModB0,       ONLY: B0_DGB
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMain, ONLY: UseB0
 

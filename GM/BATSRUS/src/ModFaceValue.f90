@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 module ModFaceValue
 
-  use ModSize, ONLY: nI, nJ, nK
+  use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
   use ModVarIndexes
 
   implicit none
@@ -666,7 +666,7 @@ contains
 
     real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full,& !^CFG IF BORISCORR
          uBC2Inv,Ga2Boris                           !^CFG IF BORISCORR
-    real:: B0_DG(3,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
+    real:: B0_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     logical::DoTest,DoTestMe
     character(len=*), parameter :: NameSub = 'calc_face_value'
@@ -838,7 +838,7 @@ contains
                 end do
              end if
           else if(UseTvdResChange)then
-             do iSide=east_,top_
+             do iSide=1,6
                 if(neilev(iSide,iBlock) == +1)call get_face_tvd(iSide)
              end do
           else
@@ -1431,7 +1431,7 @@ contains
       integer, intent(in):: iSideIn
 
       select case(iSideIn)
-      case(east_)
+      case(1)
          do k=1,nK,2; do j=1,nJ,2
             if(  all(true_cell(-1:2,j:j+1,k:k+1,iBlock)) .and. &
                  all(true_cell(0,j-2:j+3,k-2:k+3,iBlock)) ) then
@@ -1458,7 +1458,7 @@ contains
                     IsTrueFine2_II   = true_cell( 2,j:j+1,k:k+1,iBlock))
             end if
          end do; end do
-      case(west_)
+      case(2)
          do k=1,nK,2; do j=1,nJ,2
             if(  all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
                  all(true_cell(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
@@ -1485,7 +1485,7 @@ contains
                     IsTrueFine2_II      =true_cell(nI-1,j:j+1,k:k+1,iBlock))
             end if
          end do; end do
-      case(south_)
+      case(3)
          do k=1,nK,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,-1:2,k:k+1,iBlock)) .and. &
                  all(true_cell(i-2:i+3,0,k-2:k+3,iBlock)) ) then
@@ -1512,7 +1512,7 @@ contains
                     IsTrueFine2_II      =true_cell(i:i+1, 2,k:k+1,iBlock))
             end if
          end do; end do
-      case(north_)
+      case(4)
          do k=1,nK,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)) .and. &
                  all(true_cell(i-2:i+3,nJ+1,k-2:k+3,iBlock)) ) then
@@ -1539,7 +1539,7 @@ contains
                     IsTrueFine2_II      =true_cell(i:i+1,nJ-1,k:k+1,iBlock))
             end if
          end do; end do
-      case(bot_)
+      case(5)
          do j=1,nJ,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,j:j+1,-1:2,iBlock)) .and. &
                  all(true_cell(i-2:i+3,j-2:j+3,0,iBlock)) ) then
@@ -1566,7 +1566,7 @@ contains
                     IsTrueFine2_II      =true_cell(i:i+1,j:j+1, 2,iBlock))
             end if
          end do; end do
-      case(top_)
+      case(6)
          do j=1,nJ,2; do i=1,nI,2
             if(  all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)) .and. &
                  all(true_cell(i-2:i+3,j-2:j+3,nK+1,iBlock)) ) then
@@ -1648,7 +1648,7 @@ contains
                  FineToCoarseF_VI= LeftState_VX(:,nI+1,j:j+1,1)   ,&
                  FineF_VI        =RightState_VX(:,nI  ,j:j+1,1))
          end do
-      case(south_)
+      case(3)
          do i=1,nI,2
             call accurate_reschange2d(&
                  Coarse2_V       = Primitive_VG(:,i,-1,1)         ,&
@@ -1659,7 +1659,7 @@ contains
                  FineToCoarseF_VI=RightState_VY(:,i:i+1,1,1)      ,&
                  FineF_VI        = LeftState_VY(:,i:i+1,2,1))
          end do
-      case(north_)
+      case(4)
          do i=1,nI,2
             call accurate_reschange2d(&
                  Coarse2_V       = Primitive_VG(:,i,nJ+2,1)       ,&
@@ -1677,7 +1677,7 @@ contains
       integer,intent(in)::iSideIn
 
       select case(iSideIn)
-      case(east_)
+      case(1)
          do k=1,nK,2; do j=1,nJ,2
             if(.not.all(true_cell(-1:2,j:j+1,k:k+1,iBlock)))then
                call tvd_reschange_body(& 
@@ -1703,7 +1703,7 @@ contains
                     FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1))
             end if
          end do; end do
-      case(west_)
+      case(2)
          do k=1,nK,2; do j=1,nJ,2
             if(.not.all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
                call tvd_reschange_body(& 
@@ -1729,7 +1729,7 @@ contains
                     FineF_VII       =RightState_VX(:,nI,j:j+1,k:k+1))
             end if
          end do; end do
-      case(south_)
+      case(3)
          do k=1,nK,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,-1:2,k:k+1,iBlock)))then
                call tvd_reschange_body(& 
@@ -1755,7 +1755,7 @@ contains
                     FineF_VII       = LeftState_VY(:,i:i+1,2,k:k+1))
             end if
          end do; end do
-      case(north_)
+      case(4)
          do k=1,nK,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
                call tvd_reschange_body(& 
@@ -1781,7 +1781,7 @@ contains
                     FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)) 
             end if
          end do; end do
-      case(bot_)
+      case(5)
          do j=1,nJ,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,j:j+1,-1:2,iBlock)))then
                call tvd_reschange_body(& 
@@ -1807,7 +1807,7 @@ contains
                     FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))  
             end if
          end do; end do
-      case(top_)
+      case(6)
          do j=1,nJ,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
                call tvd_reschange_body(& 

@@ -3,6 +3,7 @@ subroutine set_ics
 
   use ModMain
   use ModAdvance
+  use ModB0, ONLY: set_b0_cell
   use ModGeometry, ONLY :x_BLK,y_BLK,true_cell
   use ModIO, ONLY : restart
   use ModPhysics
@@ -26,13 +27,6 @@ subroutine set_ics
      call set_oktest(NameSub, DoTest, DoTestMe)
   else
      DoTest = .false.; DoTestMe = .false.
-  end if
-
-  if(UseB0)then
-     B0_DGB(:,:,:,:,iBlock) = 0.00
-     B0ResChange_DXSB(:,:,:,:,iBlock) = 0.00
-     B0ResChange_DYSB(:,:,:,:,iBlock) = 0.00
-     B0ResChange_DZSB(:,:,:,:,iBlock) = 0.00
   end if
 
   time_BLK(:,:,:,iBlock) = 0.00

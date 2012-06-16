@@ -103,7 +103,6 @@ OBJECTS = \
 	potential_force_averages.o\
 	rotate.o\
 	set_block_geometry.o\
-	set_b0.o\
 	set_BCs.o\
 	set_ICs.o\
 	set_physics.o\

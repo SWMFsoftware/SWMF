@@ -40,7 +40,7 @@ contains
          UseChromosphereHeating
     use ModFaceFlux,      ONLY: Pe_G
     use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
-    use ModB0,            ONLY: set_b0_source
+    use ModB0,            ONLY: set_b0_source, DivB0_C, CurlB0_DC
     use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB
 

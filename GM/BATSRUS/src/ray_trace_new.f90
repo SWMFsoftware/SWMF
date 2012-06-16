@@ -1227,6 +1227,7 @@ contains
     use ModAdvance, ONLY: State_VGB, nVar, &
          Rho_, RhoUx_, RhoUz_, Ux_, Uz_, p_, Bx_, Bz_, Ppar_
     use ModMain, ONLY: UseB0
+    use ModB0,   ONLY: get_b0
     use ModRaytrace, ONLY: DoExtractBGradB1, bGradB1_DGB
     use ModInterpolate, ONLY: trilinear
 
@@ -1280,7 +1281,7 @@ contains
 
        ! Add B0 to the magnetic field
        if(UseB0)then
-          call get_b0(Xyz_D(1),Xyz_D(2),Xyz_D(3),B0_D)
+          call get_b0(Xyz_D, B0_D)
           State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + B0_D
        end if
 

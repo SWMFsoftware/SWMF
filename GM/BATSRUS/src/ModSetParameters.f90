@@ -6,6 +6,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModProcMH
   use ModMain
   use ModAdvance
+  use ModB0, ONLY: init_mod_b0
   use ModGeometry, ONLY : init_mod_geometry, TypeGeometry, nMirror_D, &
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
        MinBoundary,MaxBoundary,&
@@ -241,6 +242,7 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_geometry
      call init_mod_boundary_cells
      call init_mod_nodes
+     if(UseB0)         call init_mod_b0
      if(UseRaytrace)   call init_mod_raytrace  !^CFG IF RAYTRACE
      if(UseConstrainB) call init_mod_ct        !^CFG IF CONSTRAINB
      if(UseImplicit.or.UseSemiImplicit) &      !^CFG IF IMPLICIT
@@ -2391,8 +2393,6 @@ contains
        if(UseDivBDiffusion)call stop_mpi(&                !^CFG IF DIVBDIFFUSE
             'Only Cartesian works with divB diffusion')   !^CFG IF DIVBDIFFUSE
     end if
-
-    if(UseB0)call init_mod_b0
 
     if(UseHyperbolicDivb)then
        if(.false.&

@@ -171,8 +171,9 @@ contains
 
     use ModMain,    ONLY: nDim, nI, nJ, nK, x_, y_, z_, &
          UseB0, UseBoris => boris_correction, UseBorisSimple
-    use ModAdvance, ONLY: State_VGB, Source_VC, B0_DGB, &
+    use ModAdvance, ONLY: State_VGB, Source_VC, &
          bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
+    use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: InvClight2 => Inv_C2light, ElectronTemperatureRatio
     use ModCoordTransform, ONLY: cross_product
     use BATL_lib,   ONLY: IsCartesianGrid, FaceNormal_DDFB, CellVolume_GB, &
@@ -334,7 +335,8 @@ contains
          IsPointImplPerturbed, DsDu_VVC
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, UseB0,&
                           UseBoris => boris_correction, UseBorisSimple
-    use ModAdvance, ONLY: State_VGB, Source_VC, B0_DGB
+    use ModAdvance, ONLY: State_VGB, Source_VC
+    use ModB0,      ONLY: B0_DGB
     use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK
     use ModPhysics, ONLY: ElectronCharge, inv_gm1, &
          InvClight2 => Inv_C2light, Si2No_V, No2Si_V, Io2No_V, &

@@ -56,8 +56,8 @@ subroutine impl_jacobian(implBLK,JAC)
   use ModMain
   use ModNumConst, ONLY: i_DD
   use ModvarIndexes
-  use ModAdvance, ONLY: B0_DX, B0_DY,B0_DZ, set_b0_face,&
-       time_BLK
+  use ModAdvance, ONLY: time_BLK
+  use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, set_b0_face
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
   use ModRadDiffusion, ONLY: add_jacobian_rad_diff

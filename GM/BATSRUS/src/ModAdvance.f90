@@ -3,7 +3,7 @@ module ModAdvance
 
   use ModSize
   use ModVarIndexes
-  use ModB0
+  use ModB0,         ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
   use ModMain,       ONLY: UseB, UseRotatingFrame, UseGravity
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc, nProc
