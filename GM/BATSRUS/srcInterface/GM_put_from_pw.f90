@@ -263,17 +263,17 @@ end subroutine GM_put_from_pw
 
 subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
-  use CON_coupler, ONLY: PW_, Grid_C
-  use CON_axes, ONLY: transform_matrix
-  use ModMain, ONLY: TypeCoordSystem, Time_Simulation, x_, y_, z_
-  use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_, &
+  use CON_coupler,       ONLY: PW_, Grid_C
+  use CON_axes,          ONLY: transform_matrix
+  use ModMain,           ONLY: TypeCoordSystem, Time_Simulation
+  use ModVarIndexes,     ONLY: Rho_, Ux_, Uy_, Uz_, &
        SpeciesFirst_, SpeciesLast_, UseMultiSpecies, IsMhd
-  use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, &
+  use ModMultiFluid,     ONLY: UseMultiIon, nIonFluid, &
        iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
-      
   use ModPwGrid
-  use ModTriangulate, ONLY: find_triangle
-  use ModPhysics, ONLY: No2Io_V, UnitU_, UnitRho_
+  use ModTriangulate,    ONLY: find_triangle
+  use ModPhysics,        ONLY: No2Io_V, UnitU_, UnitRho_
+  use ModB0,             ONLY: get_b0
   use CON_planet_field,  ONLY: map_planet_field
 
   implicit none
@@ -370,7 +370,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   if (.not.IsTriangleFound) RETURN
 
   ! Calculate field aligned momentum vector
-  call get_b0(CoordIn_D(x_), CoordIn_D(y_), CoordIn_D(z_), B0_D)
+  call get_b0(CoordIn_D, B0_D)
   B0_D = B0_D / sqrt(sum(B0_D**2))
 
   ! Make sure unit vector is pointing outward

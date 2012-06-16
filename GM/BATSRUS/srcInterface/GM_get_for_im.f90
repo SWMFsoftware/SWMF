@@ -242,13 +242,14 @@ subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
   ! Subroutine to update and collect satellite locations for IM tracing
 
   !Modules
-  use ModProcMH, ONLY: iProc, iComm
-  use ModSatelliteFile, ONLY: Satellite_name, Xsatellite, &
-       gm_trace_sat
-  use ModMain,   ONLY: UseB0, nBlock
+  use ModProcMH,        ONLY: iProc, iComm
+  use ModSatelliteFile, ONLY: Satellite_name, Xsatellite, gm_trace_sat
+  use ModMain,          ONLY: UseB0, nBlock
+  use ModPhysics,       ONLY: No2Si_V, UnitB_
+  use ModVarIndexes,    ONLY: nVar, Bx_, By_, Bz_
+  use ModB0,            ONLY: get_b0
   use ModMPI
-  use ModPhysics, ONLY: No2Si_V, UnitB_
-  use ModVarIndexes, ONLY : nVar,Bx_,By_,Bz_
+
   implicit none
 
   !Arguments
@@ -283,8 +284,7 @@ subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
      call GM_trace_sat(xSatellite(iSat,1:3),SatRay_D)
      ! Determine magnetic field magnitude at satellite B=B0+B1
      if(UseB0)then
-        call get_b0(xSatellite(iSat,1),xSatellite(iSat,2),xSatellite(iSat,3),&
-             B0Sat_D)
+        call get_b0(xSatellite(iSat,:), B0Sat_D)
      else
         B0Sat_D=0.00
      end if
