@@ -281,6 +281,9 @@ subroutine BATS_init_session
   use ModUser, ONLY: user_initial_perturbation
   use ModRestartFile, ONLY: UseRestartOutSeries
   use ModMessagePass, ONLY: exchange_messages
+  use ModUser,    ONLY : user_specify_refinement
+  use BATL_lib,    ONLY: init_amr_criteria
+
   implicit none
 
   ! Local variables
@@ -335,6 +338,9 @@ subroutine BATS_init_session
   if (UseRestartOutSeries)then
      call BATS_save_files('NORMAL')
   end if
+
+  ! Set all Arrays for AMR
+  call init_amr_criteria(user_amr_geometry=user_specify_refinement)
 
 end subroutine BATS_init_session
 
