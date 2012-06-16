@@ -11,18 +11,17 @@ end Module ModDivbCleanup
 subroutine clean_divb
   use ModProcMH
   use ModSize
-  use ModNumConst
+  use ModNumConst, ONLY: cTiny
   use ModDivbCleanup
   use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, unusedblk
   use ModAdvance,ONLY: nVar,State_VGB, Bx_, By_, Bz_, P_,tmp1_BLK,tmp2_BLK,&
        Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
   use ModAdvance,ONLY:tmp3_blk=>divB1_GB
-  use ModGeometry,ONLY:vInv_CB,true_blk,&
-       FaX_BLK,FaY_BLK,FaZ_BLK,body_blk,true_cell
+  use ModGeometry, ONLY: true_blk, body_blk, true_cell
   use ModParallel, ONLY : NOBLK, neiLEV
   use ModPhysics,ONLY:gm1
   use ModMpi
-  use BATL_lib, ONLY: message_pass_cell
+  use BATL_lib, ONLY: message_pass_cell, CellFace_DB, CellVolume_GB
   implicit none
 
   integer::i,j,k,iBlock
@@ -74,10 +73,10 @@ subroutine clean_divb
           DoSendCornerIn=.false., nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
      !Get the ghostcell values for MF 
-     DivBInt=cZero;DivBTemp=cZero
+     DivBInt = 0.0;DivBTemp = 0.0
      do iBlock=1,nBlock
-        Residual_GB(:,:,:,iBlock)=cZero
-        if(Iteration==1) Dir_GB(:,:,:,iBlock)=cZero 
+        Residual_GB(:,:,:,iBlock) = 0.0
+        if(Iteration==1) Dir_GB(:,:,:,iBlock) = 0.0
         !Initialize the vector "Dir"
 
         if(unusedBLK(iBlock))CYCLE
@@ -124,7 +123,7 @@ subroutine clean_divb
      DivBInt(ResDotOne_)=-OneDotMDotOneInv*DivBTemp(ResDotOne_)
 
      !Below we divide per Res.M.Res, so now we get inverse of it
-     DivBInt(ResDotM1DotRes_)=cOne/DivBInt(ResDotM1DotRes_)
+     DivBInt(ResDotM1DotRes_)=1.0/DivBInt(ResDotM1DotRes_)
      do iBlock=1,nBlock
         if(unusedBLK(iBlock))CYCLE
         if(true_blk(iBlock))then
@@ -145,20 +144,20 @@ subroutine clean_divb
           nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
      !Calculate Dir.A.Dir
-     DirDotDir=cZero
+     DirDotDir = 0.0
      do iBlock=1,nBlock
         if(unusedBLK(iBlock))CYCLE
         call v_grad_phi(tmp2_blk,iBlock)
-        DirDotDir=DirDotDir+&
-             sum(vInv_CB(:,:,:,iBlock)*&
-             (vDotGradX_C**2+vDotGradY_C**2+vDotGradZ_C**2))
+        DirDotDir = DirDotDir + &
+             sum( (vDotGradX_C**2+vDotGradY_C**2+vDotGradZ_C**2) &
+             /CellVolume_GB(1:nI,1:nJ,1:nK,iBlock) )
      end do
      if(nProc>1)then
         call MPI_allreduce(DirDotDir,DirDotDirInv, 1,  MPI_REAL, MPI_SUM, &
              iComm, iError)
-        DirDotDirInv=cOne/DirDotDirInv
+        DirDotDirInv = 1.0/DirDotDirInv
      else
-        DirDotDirInv=cOne/DirDotDir
+        DirDotDirInv = 1.0/DirDotDir
      end if
 
      if(oktest .and. iProc==0) write(*,*)'Effective diffusion coefficient = ',&
@@ -174,19 +173,19 @@ subroutine clean_divb
 
         State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) = &
              State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)-&
-             vDotGradX_C*vInv_CB(:,:,:,iBlock)*DirDotDirInv
+             vDotGradX_C*DirDotDirInv/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
         State_VGB(By_,1:nI,1:nJ,1:nK,iBlock) = &
              State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)-&
-             vDotGradY_C*vInv_CB(:,:,:,iBlock)*DirDotDirInv
+             vDotGradY_C*DirDotDirInv/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
         State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)=&
              State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)-&
-             vDotGradZ_C*vInv_CB(:,:,:,iBlock)*DirDotDirInv
+             vDotGradZ_C*DirDotDirInv/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
         if(DoConservative)&
              State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)=& 
              State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)+&
-             cHalf*gm1*DirDotDirInv*DirDotDirInv*&
-             (vDotGradX_C**2+vDotGradY_C**2+vDotGradZ_C**2)*&
-             vInv_CB(:,:,:,iBlock)**2
+             0.5*gm1*DirDotDirInv*DirDotDirInv*&
+             (vDotGradX_C**2+vDotGradY_C**2+vDotGradZ_C**2) &
+             /CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)**2
      end do
      Iteration=Iteration+1   
      if(Iteration>nCleanDivb)EXIT    
@@ -195,7 +194,7 @@ subroutine clean_divb
   call timing_stop('clean_divb')
 
 contains
-  !=============================================================================
+  !============================================================================
   subroutine init_divb_cleanup
     !    use ModAdvance,ONLY: DivB1_GB
     implicit none
@@ -203,13 +202,14 @@ contains
     integer::i,j,k,iBlock,iError,iLimit
     real,dimension(0:nI+1,0:nJ+1,0:nK+1)::Q_G
     real::EstimateForMAMNorm,OneDotMDotOne 
-    real:: divb_diffcoeff
-    tmp1_blk=cZero;Prec_CB=cZero
+    real:: divb_diffcoeff, VInvHalf
+    !--------------------------------------------------------------------------
+    tmp1_blk = 0.0; Prec_CB = 0.0
+
     do iBlock=1,nBlock
        if(unusedBLK(iBlock))CYCLE
-       tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=vInv_CB(:,:,:,iBlock)
+       tmp1_blk(1:nI,1:nJ,1:nK,iBlock) = 1/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
     end do
-
 
     !tmp1 is equal to the inverse of the volume, including the ghostcells 
     call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
@@ -218,40 +218,48 @@ contains
     do iBlock=1,nBlock
        if (unusedBLK(iBlock)) CYCLE
 
-       Q_G=cOne
+       Q_G = 1.0
 
        if(any(NeiLev(:,iBlock)/=0))then
           if(NeiLev(East_,iBlock)==NoBLK)then
-             tmp1_blk(0,1:nJ,1:nK,iBlock)=vInv_CB(1,:,:,iBlock) 
+             tmp1_blk(0,1:nJ,1:nK,iBlock) = &
+                  1.0/CellVolume_GB(1,1:nJ,1:nK,iBlock)
              !to define somehow tmp1 in the outer ghostcells
 
           elseif(abs(NeiLev(East_,iBlock))==1)then           
              Q_G(0,:,:)=4.0**NeiLev(East_,iBlock)
-             !if the neighboring block is coarser, the input from FA^2 should be multipled by four
-             !If the neighborig block is finer, the input from FA^2  should be multiplied by 1/4
+             !if the neighboring block is coarser,
+             !  the input from FA^2 should be multipled by four
+             !If the neighborig block is finer,
+             !  the input from FA^2  should be multiplied by 1/4
           end if
           if(NeiLev(West_,iBlock)==NoBLK)then
-             tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=vInv_CB(nI,:,:,iBlock)
+             tmp1_blk(nI+1,1:nJ,1:nK,iBlock) = &
+                  1.0/CellVolume_GB(nI,1:nJ,1:nK,iBlock)
           elseif(abs(NeiLev(West_,iBlock))==1)then
              Q_G(nI+1,:,:)=4.0**NeiLev(West_,iBlock)
           end if
           if(NeiLev(South_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,0,1:nK,iBlock)=vInv_CB(:,1,:,iBlock)
+             tmp1_blk(1:nI,0,1:nK,iBlock) = &
+                  1.0/CellVolume_GB(1:nI,1,1:nK,iBlock)
           elseif(abs(NeiLev(South_,iBlock))==1)then
              Q_G(:,0,:)=4.0**NeiLev(South_,iBlock)
           end if
           if(NeiLev(North_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=vInv_CB(:,nJ,:,iBlock)
+             tmp1_blk(1:nI,nJ+1,1:nK,iBlock) = &
+                  1.0/CellVolume_GB(1:nI,nJ,1:nK,iBlock)
           elseif(abs(NeiLev(North_,iBlock))==1)then
              Q_G(:,nJ+1,:)=4.0**NeiLev(North_,iBlock)
           end if
           if(NeiLev(Bot_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,1:nJ,0,iBlock)=vInv_CB(:,:,1,iBlock)
+             tmp1_blk(1:nI,1:nJ,0,iBlock) = &
+                  1.0/CellVolume_GB(1:nI,1:nJ,1,iBlock)
           elseif(abs(NeiLev(Bot_,iBlock))==1)then
              Q_G(:,:,0)=4.0**NeiLev(Bot_,iBlock)
           end if
           if(NeiLev(Top_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=vInv_CB(:,:,nK,iBlock)
+             tmp1_blk(1:nI,1:nJ,nK+1,iBlock) = &
+                  1.0/CellVolume_GB(1:nI,1:nJ,nK,iBlock)
           elseif(abs(NeiLev(Top_,iBlock))==1)then
              Q_G(:,:,nK+1)=4.0**NeiLev(Top_,iBlock)
           end if
@@ -259,13 +267,13 @@ contains
        Prec_CB(:,:,:,iBlock)=4.0/(&
             (Q_G(2:nI+1,1:nJ,1:nK)*tmp1_blk(2:nI+1,1:nJ,1:nK,iBlock)+& 
             Q_G(0:nI-1,1:nJ,1:nK)*tmp1_blk(0:nI-1,1:nJ,1:nK,iBlock))& 
-            *FaX_BLK(iBlock)**2+&
+            *CellFace_DB(x_,iBlock)**2+&
             (Q_G(1:nI,2:nJ+1,1:nK)*tmp1_blk(1:nI,2:nJ+1,1:nK,iBlock)+&
             Q_G(1:nI,0:nJ-1,1:nK)*tmp1_blk(1:nI,0:nJ-1,1:nK,iBlock))&
-            *FaY_BLK(iBlock)**2+&
+            *CellFace_DB(y_,iBlock)**2+&
             (Q_G(1:nI,1:nJ,2:nK+1)*tmp1_blk(1:nI,1:nJ,2:nK+1,iBlock)+&
             Q_G(1:nI,1:nJ,0:nK-1)*tmp1_blk(1:nI,1:nJ,0:nK-1,iBlock))&
-            *FaZ_BLK(iBlock)**2)
+            *CellFace_DB(z_,iBlock)**2)
     end do
     do iLimit=1,2
        do iBlock=1,nBlock
@@ -337,21 +345,24 @@ contains
 
     do iBlock=1,nBlock
        if (unusedBLK(iBlock)) CYCLE
+
        Q_G=tmp1_blk(0:nI+1,0:nJ+1,0:nK+1,iBlock)
-       tmp1_BLK(:,:,:,iBlock)=cZero
-       tmp2_BLK(:,:,:,iBlock)=cZero
-       tmp3_BLK(:,:,:,iBlock)=cZero
+       tmp1_BLK(:,:,:,iBlock) = 0.0
+       tmp2_BLK(:,:,:,iBlock) = 0.0
+       tmp3_BLK(:,:,:,iBlock) = 0.0
+
        do k=1,nK;do j=1,nJ;do i=1,nI
-          tmp1_BLK(i,j,k,iBlock)= &
-               cHalf*FaX_BLK(iBlock)*vInv_CB(i,j,k,iBlock)*(&
+          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
+          tmp1_BLK(i,j,k,iBlock) = &
+               CellFace_DB(x_,iBlock)*VInvHalf*(&
                Q_G(i+1,j,k)+&
                Q_G(i-1,j,k))
-          tmp2_BLK(i,j,k,iBlock)=&
-               cHalf*FaY_BLK(iBlock)*vInv_CB(i,j,k,iBlock)*(&
+          tmp2_BLK(i,j,k,iBlock) = &
+               CellFace_DB(y_,iBlock)*VInvHalf*(&
                Q_G(i,j+1,k)+&
                Q_G(i,j-1,k))
-          tmp3_BLK(i,j,k,iBlock)=&
-               cHalf*FaZ_BLK(iBlock)*vInv_CB(i,j,k,iBlock)*(&
+          tmp3_BLK(i,j,k,iBlock) = &
+               CellFace_DB(z_,iBlock)*VInvHalf*(&
                Q_G(i,j,k+1)+&
                Q_G(i,j,k-1))
        end do;end do; end do
@@ -365,19 +376,19 @@ contains
     call message_pass_cell(1,tmp3_blk,DoSendCornerIn=.false. ,&
          nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
-    EstimateForMAMNorm=cZero
+    EstimateForMAMNorm = 0.0
     do iBlock=1,nBlock
        if(unusedBLK(iBlock))CYCLE
        EstimateForMAMNorm=max(EstimateForMAMNorm,&
             maxval(sqrt(Prec_CB(:,:,:,iBlock))*&
-            cHalf*(&
-            fAX_BLK(iBlock)*&
+            0.5*( &
+            CellFace_DB(x_,iBlock)*&
             (tmp1_blk(2:nI+1, 1:nJ, 1:nK,iBlock)+&
             tmp1_blk(0:nI-1, 1:nJ, 1:nK,iBlock))&
-            +fAY_BLK(iBlock)*&
+            +CellFace_DB(y_,iBlock)*&
             (tmp2_blk(1:nI, 2:nJ+1, 1:nK,iBlock)+&
             tmp2_blk(1:nI, 0:nJ-1, 1:nK,iBlock))&
-            +fAZ_BLK(iBlock)*&
+            +CellFace_DB(z_,iBlock)*&
             (tmp3_blk(1:nI, 1:nJ, 2:nK+1,iBlock)+&
             tmp3_blk(1:nI, 1:nJ, 0:nK-1,iBlock)) ) ))
     end do
@@ -392,23 +403,23 @@ contains
     if(iProc==0)write(*,*)"Divb diffusion coefficient is: ",divb_diffcoeff
 
     !Compute 1/sum(M_i)
-    OneDotMDotOne=cZero
+    OneDotMDotOne = 0.0
     do iBlock=1,nBlock
        if (unusedBLK(iBlock)) CYCLE
        !     Prec_CB(:,:,:,iBlock)=Prec_CB(:,:,:,iBlock)*divb_diffcoeff
        if(true_blk(iBlock))then
-          OneDotMDotOne=OneDotMDotOne+sum(cOne/Prec_CB(:,:,:,iBlock))
+          OneDotMDotOne=OneDotMDotOne+sum(1.0/Prec_CB(:,:,:,iBlock))
        elseif(any(true_cell(1:nI,1:nJ,1:nK,iBlock)))then
-          OneDotMDotOne=OneDotMDotOne+sum(cOne/Prec_CB(:,:,:,iBlock)&
+          OneDotMDotOne=OneDotMDotOne+sum(1.0/Prec_CB(:,:,:,iBlock)&
                ,MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
        end if
     end do
     if(nProc>1)then
        call MPI_allreduce(OneDotMDotOne,OneDotMDotOneInv, 1,  MPI_REAL, MPI_SUM, &
             iComm, iError)
-       OneDotMDotOneInv=cOne/OneDotMDotOneInv
+       OneDotMDotOneInv = 1.0/OneDotMDotOneInv
     else
-       OneDotMDotOneInv=cOne/OneDotMDotOne
+       OneDotMDotOneInv = 1.0/OneDotMDotOne
     end if
     if(iProc==0)write(*,*)' init_divb_cleanup finishes with OneDotMDotOneInv=',OneDotMDotOneInv
     !    write(*,*)'Maxval loc and minval loc of Prec_CB=', &
@@ -419,7 +430,7 @@ contains
   subroutine v_grad_phi(Phi_GB,iBlock)
     integer,intent(in)::iBlock
     real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK),intent(inout)::Phi_GB
-    vDotGradX_C=cZero;vDotGradY_C=cZero;vDotGradZ_C=cZero
+    vDotGradX_C = 0.0;vDotGradY_C = 0.0;vDotGradZ_C = 0.0
 !!! Apply continuous solution at east and west
     !    if (NeiLev(East_,iBlock)==NOBLK)&
     !         Phi_GB(0   ,1:nJ,1:nK,iBlock) = Phi_GB(1 ,1:nJ,1:nK,iBlock)
@@ -457,30 +468,30 @@ contains
           where(.not.true_cell(i,j,k-1:k+1:2,iBlock))&
                Phi_GB(i,j,k-1:k+1:2,iBlock)=-BoundaryCoef*Phi_GB(i,j,k,iBlock)
           vDotGradX_C(i,j,k)=&
-               cHalf*FaX_BLK(iBlock)*(&
+               0.5*CellFace_DB(x_,iBlock)*(&
                Phi_GB(i+1,j,k,iBlock)-&
                Phi_GB(i-1,j,k,iBlock))
           vDotGradY_C(i,j,k)=&
-               cHalf*FaY_BLK(iBlock)*(&
+               0.5*CellFace_DB(y_,iBlock)*(&
                Phi_GB(i,j+1,k,iBlock)-&
                Phi_GB(i,j-1,k,iBlock))
           vDotGradZ_C(i,j,k)=&
-               cHalf*FaZ_BLK(iBlock)*(&
+               0.5*CellFace_DB(z_,iBlock)*(&
                Phi_GB(i,j,k+1,iBlock)-&
                Phi_GB(i,j,k-1,iBlock))
        end do;end do;end do
     else
        do k=1,nK;do j=1,nJ;do i=1,nI
           vDotGradX_C(i,j,k)=&
-               cHalf*FaX_BLK(iBlock)*(&
+               0.5*CellFace_DB(x_,iBlock)*(&
                Phi_GB(i+1,j,k,iBlock)-&
                Phi_GB(i-1,j,k,iBlock))
           vDotGradY_C(i,j,k)=&
-               cHalf*FaY_BLK(iBlock)*(&
+               0.5*CellFace_DB(y_,iBlock)*(&
                Phi_GB(i,j+1,k,iBlock)-&
                Phi_GB(i,j-1,k,iBlock))
           vDotGradZ_C(i,j,k)=&
-               cHalf*FaZ_BLK(iBlock)*(&
+               0.5*CellFace_DB(z_,iBlock)*(&
                Phi_GB(i,j,k+1,iBlock)-&
                Phi_GB(i,j,k-1,iBlock))
        end do;end do;end do
@@ -490,11 +501,10 @@ end subroutine clean_divb
 !===================================================================
 subroutine div_3d_b1(iBlock,VecX_G,VecY_G,VecZ_G,Out_G)     
 use ModSize
-use ModGeometry,ONLY:body_blk, true_cell, &
-    fAX_BLK, fAY_BLK, fAZ_BLK
-use ModParallel,ONLY:neilev,NOBLK
+use ModGeometry, ONLY: body_blk, true_cell
+use ModParallel, ONLY: neilev, NOBLK
 use ModDivbCleanup, ONLY: BoundaryCoef
-use ModNumConst
+use BATL_lib, ONLY: CellFace_DB
 implicit none
 
 integer,intent(in) :: iBlock
@@ -512,29 +522,29 @@ integer :: i, j, k
 ! With this modification DivB[grad Phi] is a symmetric positive definite 
 ! operator!
 !/
-Out_G=cZero
+Out_G = 0.0
 if(.not.(body_blk(iBlock).or.any(neilev(:,iBlock)==NOBLK)))then 
   do k=1,nK; do j=1,nJ; do i=1,nI
-     Out_G(i,j,k) = - cHalf*(&
-          fAX_BLK(iBlock)*&
+     Out_G(i,j,k) = - 0.5*(&
+          CellFace_DB(x_,iBlock)*&
           (VecX_G(i+1, j, k)-VecX_G(i-1,j,k))&
-          +fAY_BLK(iBlock)*&
+          +CellFace_DB(y_,iBlock)*&
           (VecY_G(i ,j+1, k)-VecY_G(i,j-1,k))&
-          +fAZ_BLK(iBlock)*&
+          +CellFace_DB(z_,iBlock)*&
           (VecZ_G(i, j, k+1)-VecZ_G(i,j,k-1)) )
   end do; end do; end do
 else
   where(true_cell(0:nI+1, 0:nJ+1, 0:nK+1,iBlock)) 
-     OneTrue_G=cOne
+     OneTrue_G = 1.0
   elsewhere
-     OneTrue_G=cZero
+     OneTrue_G = 0.0
   end where
-  if(neilev(East_ ,iBlock)==NOBLK) OneTrue_G(0   ,:,:)=cZero
-  if(neilev(West_ ,iBlock)==NOBLK) OneTrue_G(nI+1,:,:)=cZero
-  if(neilev(South_,iBlock)==NOBLK) OneTrue_G(:,0   ,:)=cZero
-  if(neilev(North_,iBlock)==NOBLK) OneTrue_G(:,nJ+1,:)=cZero
-  if(neilev(Bot_  ,iBlock)==NOBLK) OneTrue_G(:,:,0   )=cZero
-  if(neilev(Top_  ,iBlock)==NOBLK) OneTrue_G(:,:,nK+1)=cZero
+  if(neilev(East_ ,iBlock)==NOBLK) OneTrue_G(0   ,:,:) = 0.0
+  if(neilev(West_ ,iBlock)==NOBLK) OneTrue_G(nI+1,:,:) = 0.0
+  if(neilev(South_,iBlock)==NOBLK) OneTrue_G(:,0   ,:) = 0.0
+  if(neilev(North_,iBlock)==NOBLK) OneTrue_G(:,nJ+1,:) = 0.0
+  if(neilev(Bot_  ,iBlock)==NOBLK) OneTrue_G(:,:,0   ) = 0.0
+  if(neilev(Top_  ,iBlock)==NOBLK) OneTrue_G(:,:,nK+1) = 0.0
   !
   !\
   ! Where .not.true_cell, all the gradients are zero
@@ -543,29 +553,28 @@ else
   !/
   !
   do k=1,nK; do j=1,nJ; do i=1,nI
-     Out_G(i,j,k) = - cHalf*OneTrue_G(i,j,k)*&
-                                  (+&
-          fAX_BLK(iBlock)*&
+     Out_G(i,j,k) = - 0.5*OneTrue_G(i,j,k)*(+&
+          CellFace_DB(x_,iBlock)*&
           (VecX_G(i+1,j,k)-&
           BoundaryCoef*(VecX_G(i+1,j,k)-VecX_G(i,j,k))*&
-          (cOne-OneTrue_G(i+1,j,k))-&
+          (1.0-OneTrue_G(i+1,j,k))-&
           VecX_G(i-1,j,k)-&
           BoundaryCoef*(VecX_G(i,j,k)-VecX_G(i-1,j,k))*&
-          (cOne-OneTrue_G(i-1,j,k)))+&
-          fAY_BLK(iBlock)*&
+          (1.0-OneTrue_G(i-1,j,k)))+&
+          CellFace_DB(y_,iBlock)*&
           (VecY_G(i,j+1,k)-&
           BoundaryCoef*(VecY_G(i,j+1,k)-VecY_G(i,j,k))*&
-          (cOne-OneTrue_G(i,j+1,k))-&
+          (1.0-OneTrue_G(i,j+1,k))-&
           VecY_G(i,j-1,k)-&
           BoundaryCoef*(VecY_G(i,j,k)-VecY_G(i,j-1,k))*&
-          (cOne-OneTrue_G(i,j-1,k)))+&
-          fAZ_BLK(iBlock)*&
+          (1.0-OneTrue_G(i,j-1,k)))+&
+          CellFace_DB(z_,iBlock)*&
           (VecZ_G(i,j,k+1)-&
           BoundaryCoef*(VecZ_G(i,j,k+1)-VecZ_G(i,j,k))*&
-          (cOne-OneTrue_G(i,j,k+1))-&
+          (1.0-OneTrue_G(i,j,k+1))-&
           VecZ_G(i,j,k-1)-&
           BoundaryCoef*(VecZ_G(i,j,k)-VecZ_G(i,j,k-1))*&
-          (cOne-OneTrue_G(i,j,k-1))) &
+          (1.0-OneTrue_G(i,j,k-1))) &
           )
   end do; end do; end do
 end if
