@@ -1,0 +1,389 @@
+#ECHO
+T
+
+#PROGRESS
+1			DnShowProgressShort
+100			DnShowProgressLong
+
+#DESCRIPTION
+Run GM and test 2Body plots
+
+#PLANET
+EARTH
+
+#SAVERESTART
+F
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#STARTTIME
+2000			iYear
+3			iMonth
+21			iDay
+10			iHour
+45			iMinute
+0			iSecond
+0.0			FracSecond
+
+#IDEALAXES
+! align rotation and magnetic axes with z axis
+
+#ROTATION
+F			UseRotation
+
+#BEGIN_COMP GM #############################################################
+
+#MAGNETOSPHERE
+T                       UseBody
+2.5                     rBody
+3.5                     rCurrents
+10.0			BodyRhoDim
+25000.0			BodyTDim
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-224.			xMin
+  32.			xMax
+-128.			yMin
+ 128.			yMax
+-128.			zMin
+ 128.			zMax
+
+#AMRREGION
+nearbody                NameRegion
+sphere0                 NameArea
+4.0                     Radius
+
+#AMRREGION              
+reconectionregion       NameRegion
+box                     NameArea
+-200.0			xMinBox
+-6.0			yMinBox
+-6.0			zMinBox
+20.0			xMaxBox
+6.0			yMaxBox
+6.0			zMaxBox
+
+Test that max level or resolution is not pased and
+physics criteias not activated for initial refinment.
+J2 values is non physical
+
+
+#AMRCRITERIALEVEL
+4		 			nCriteria
+J2 +reconectionregion -nearbody		TypeCriteria
+2.0e-20					CoarsenLimit
+1.0e-10					RefubeLimit
+22					MaxLevel
+J2 					TypeCriteria
+2.0e-20					CoarsenLimit
+1.0e-10					RefubeLimit
+21					MaxLevel
+Level +reconectionregion -nearbody	TypeCriteria
+3					RefineTo
+4					CoursenFrom
+dx +nearbody		    		TypeCriteria
+4.0					RefineTo
+2.0					CoursenFrom
+
+#GRIDLEVEL
+7
+initial
+
+GRIDRESOLUTION
+2.0                     Resolution
+initial                 NameArea
+
+
+!refine inside 1.5*rcurrents, rcurrents = 3.5
+GRIDRESOLUTION
+1/8                     Resolution
+sphere0                 NameArea
+ 5.25                   rSphere
+
+!refine inner magnetosphere
+GRIDRESOLUTION
+1.0                     Resolution
+sphere0                 NameArea
+17.5                    rSphere
+
+!refine body2
+GRIDRESOLUTION
+1/8                     Resolution
+box                     NameArea
+-6.0                    xMinBox
+-6.0                    yMinBox
+14.0                    zMinBox
+ 6.0                    xMaxBox
+ 6.0                    yMaxBox
+26.0                    zMaxBox
+
+!refine the magnetotail
+GRIDRESOLUTION
+4.0                     Resolution
+box                     NameArea
+-224.0                  xMinBox
+ -64.0                  yMinBox
+ -64.0                  zMinBox
+  32.0                  xMaxBox
+  64.0                  yMaxBox
+  64.0                  zMaxBox
+
+GRIDRESOLUTION
+2.0                     Resolution
+box                     NameArea
+ -96.0                  xMinBox
+ -32.0                  yMinBox
+ -32.0                  zMinBox
+  32.0                  xMaxBox
+  32.0                  yMaxBox
+  32.0                  zMaxBox
+
+GRIDRESOLUTION
+1.0                     Resolution
+box                     NameArea
+ -48.0                  xMinBox
+ -16.0                  yMinBox
+ -16.0                  zMinBox
+  32.0                  xMaxBox
+  16.0                  yMaxBox
+  16.0                  zMaxBox
+
+GRIDRESOLUTION
+1/2                     Resolution
+box                     NameArea
+ -32.0                  xMinBox
+  -8.0                  yMinBox
+  -8.0                  zMinBox
+  32.0                  xMaxBox
+   8.0                  yMaxBox
+   8.0                  zMaxBox
+
+GRIDRESOLUTION
+1/4                     Resolution
+box                     NameArea
+ -32.0                  xMinBox
+  -8.0                  yMinBox
+  -4.0                  zMinBox
+   8.0                  xMaxBox
+   8.0                  yMaxBox
+   4.0                  zMaxBox
+
+
+#OUTERBOUNDARY
+outflow                 TypeBcEast
+vary                    TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+SECONDBODY
+T                       UseBody2   ! Rest of the parameters read if .true.
+2.0                     rBody2 
+0.                      xBody2
+0.                      yBody2
+20.                     zBody2
+3.0                     rCurrents2  !This is unused currently 
+20.0                    RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
+35000.0                 TDimBody2 (K) temperature for fixed BC for P_BLK
+F			UseOrbit
+
+DIPOLEBODY2
+0.0                     BdpDimBody2x [nT]
+0.0                     BdpDimBody2y [nT]
+-1200.0                 BdpDimBody2z [nT]
+
+#INNERBOUNDARY
+ionosphere		TypeBcInner
+fixed			TypeBcBody2
+
+#SAVELOGFILE
+T
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#TIMESTEPPING
+1			nStage
+0.6			CflExpl
+
+#SOLARWINDFILE
+T                                                     UseUpstreamInputFile
+GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#SAVEINITIAL
+T                       DoSaveIntial
+
+#SAVEPLOT
+2
+3d FUL tec
+-1
+50
+y=0 FUL idl
+-1
+10.
+-1.
+
+#END_COMP GM ###############################################################
+
+
+#STOP
+-1			MaxIteration
+300.0			tSimulationMax
+
+
+#RUN ##########################################################################
+
+
+#STOP
+-1			MaxIteration
+301.6			tSimulationMax
+
+#BEGIN_COMP GM ################################################################
+
+AMR
+30                      DnRefine
+T                       DoAutoRefine 
+10.                     PercentCoarsen
+30.                     PercentRefine
+800                     MaxTotalBlocks
+
+#DOAMR
+T                       DoAmr
+-1                       dnAmr
+1                      dtAmr
+F                       IsStrictAmr
+
+#AMRLIMIT
+10.                     percentCoarsen
+10.                     percentRefine
+2000                    MaxBlcokALL
+1.e-8                   DiffCriteriaLevel
+
+AMRCRITERIA will ignore geometric criterias
+
+#AMRCRITERIA
+5                       nRefineCric)
+curlB                   TypeRefine
+-1                      CoarsenLimit
+-1                      RefineLimit
+gradlogP                TypeRefine
+-1 	                CoarsenLimit
+-1         	        RefineLimit
+Rcurrents               TypeRefine
+-1             		CoarsenLimit
+-1             		RefineLimit
+Level +reconectionregion -nearbody	TypeCriteria
+20					RefineTo
+21					CoursenFrom
+dx +nearbody		    		TypeCriteria
+0.02					RefineTo
+0.01					CoursenFrom
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+minmod			TypeLimiter
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SAVEPLOT
+2                       nPlotFile
+3d FUL tec              StringPlot
+-1                       DnSavePlot
+1.			DtSavePlot
+y=0 FUL idl             StringPlot
+-1                       DnSavePlot
+1.                     DtSavePlot
+-1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+
+
+
+#END_COMP GM ###############################################################
+
+#RUN ##########################################################################
+
+
+#STOP
+-1			MaxIteration
+306			tSimulationMax
+
+#BEGIN_COMP GM ################################################################
+
+
+#DOAMR
+T                       DoAmr
+1                       dnAmr
+-1                      dtAmr
+T                       IsStrictAmr
+
+#AMRCRITERIALEVEL
+2
+Level +reconectionregion -nearbody	TypeCriteria
+3					RefineTo
+4					CoursenFrom
+dx +nearbody		    		TypeCriteria
+4.0					RefineTo
+2.0					CoursenFrom
+
+
+#END_COMP GM ###############################################################
+
+#RUN ##########################################################################
+#STOP
+-1			MaxIteration
+308			tSimulationMax
+
+#BEGIN_COMP GM ################################################################
+
+
+#DOAMR
+T                       DoAmr
+1                       dnAmr
+-1                      dtAmr
+T                       IsStrictAmr
+
+#AMRLIMIT
+0.                      percentCoarsen
+0.                      percentRefine
+4000                    MaxBlcokALL
+1.e-8                   DiffCriteriaLevel
+
+#AMRREGION
+errorarea               NameRegion
+box                     NameArea
+0.0                   xMinBox
+-10.0                   yMinBox
+-10.0                   zMinBox
+32.0                   xMaxBox
+ 10.0                   yMaxBox
+ 10.0                   zMaxBox
+
+
+#AMRCRITERIARESOLUTION
+3
+Level +reconectionregion -nearbody	TypeCriteria
+3					RefineTo
+4					CoursenFrom
+dx +nearbody		    		TypeCriteria
+2.0					RefineTo
+1.0					CoursenFrom
+error p +errorarea -nearbody            TypeCriteria
+0.025                                   CoarsenLimit
+0.1                                     RefineLimit
+0.5                                     MinResolution
+1.0e-1                                  SmallError
+
+#END
+
+#END_COMP GM ###############################################################
