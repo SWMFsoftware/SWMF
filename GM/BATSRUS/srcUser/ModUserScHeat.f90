@@ -205,9 +205,10 @@ contains
          UnitEnergyDens_, UnitB_, UnitRho_
     use ModPlotFile,    ONLY: save_plot_file
     use ModWaves,       ONLY: GammaWave
+    use ModB0,          ONLY: get_b0
 
     integer :: iPhi, iTheta
-    real :: r, Theta, Phi, x, y, z
+    real :: r, Theta, Phi, Xyz_D(3)
     real :: RhoBase, Tbase, Br, Btot, B0_D(3)
     real :: Ewave, DeltaU, HeatFlux
     real, allocatable :: Coord_DII(:,:,:), State_VII(:,:,:)
@@ -226,17 +227,17 @@ contains
           Coord_DII(1,iPhi,iTheta) = Phi*cRadToDeg
           Coord_DII(2,iPhi,iTheta) = Theta*cRadToDeg
 
-          x = r*cos(Theta)*cos(Phi)
-          y = r*cos(Theta)*sin(Phi)
-          z = r*sin(Theta)
+          Xyz_D = &
+               (/ r*cos(Theta)*cos(Phi), r*cos(Theta)*sin(Phi), r*sin(Theta)/)
 
-          call get_b0(x, y, z, B0_D)
-          Br = (x*B0_D(1)+y*B0_D(2)+z*B0_D(3))/r
+          call get_b0(Xyz_D, B0_D)
+          Br   = sum(Xyz_D*B0_D)/r
           Btot = sqrt(sum(B0_D**2))
-          call get_plasma_parameters_base((/x, y, z/), RhoBase, Tbase)
+          call get_plasma_parameters_base(Xyz_D, RhoBase, Tbase)
 
           HeatFlux = 0.0
-          call get_wave_energy(x, y, z, Br, Btot, HeatFlux, Ewave)
+          call get_wave_energy(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
+               Br, Btot, HeatFlux, Ewave)
           ! Root mean square amplitude of the velocity fluctuation
           ! This assumes equipartition (of magnetic and velocity fluctuations)
           DeltaU = sqrt(Ewave/RhoBase)
