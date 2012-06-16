@@ -76,21 +76,35 @@ box_gen                 NameArea
 360.0                   LonMax
 90.0                    LatMax
 
+#AMRREGION
+shell2
+box_gen                 NameArea
+1.0                     rMin
+0.0                     LonMin
+-90.0                   LatMin
+2.0                     rMax
+360.0                   LonMax
+90.0                    LatMax
+
 #AMRCRITERIARESOLUTION
-3                       nCriteria
+4                       nCriteria
 Level +shell1           TypeCriteria
-2                       RefineTo
-3                       CoursenFrom
-currentsheet            TypeCriteria
+4                       RefineTo
+5                       CoursenFrom
+currentsheet +shell2 -shell1     TypeCriteria
 0.5                     CoarsenLimit
 0.5                     RefineLimit
-0.01                    MaxResolution
+0.1                     MaxResolution
 Level                   TypeCriteria
 2                       RefineTo
 3                       CoursenFrom
+currentsheet -shell2    TypeCriteria
+0.5                     CoarsenLimit
+0.5                     RefineLimit
+0.001                   MaxResolution
 
 #GRIDLEVEL
-2                       nLevelArea 5
+4                       nLevelArea 5
 initial                 NameArea
 
 READPOTENTIALFIELD

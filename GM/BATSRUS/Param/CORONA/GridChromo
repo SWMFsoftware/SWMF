@@ -36,7 +36,6 @@ box_gen                 NameArea
 360.0                   LonMax
 90.0                    LatMax
 
-
 #AMRREGION
 shell2
 box_gen                 NameArea
@@ -50,8 +49,8 @@ box_gen                 NameArea
 #AMRCRITERIARESOLUTION
 4                       nCriteria
 Level +shell1           TypeCriteria
-5                       RefineTo
-6                       CoursenFrom
+4                       RefineTo
+5                       CoursenFrom
 currentsheet +shell2 -shell1     TypeCriteria
 0.5                     CoarsenLimit
 0.5                     RefineLimit
@@ -65,6 +64,6 @@ currentsheet -shell2    TypeCriteria
 0.001                   MaxResolution
 
 #GRIDLEVEL
-2                       nLevelArea 5
+4                       nLevelArea 5
 initial                 NameArea
 
