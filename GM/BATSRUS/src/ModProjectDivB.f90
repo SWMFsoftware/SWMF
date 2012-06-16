@@ -13,12 +13,12 @@ subroutine project_B
   use ModMain, ONLY : nI,nJ,nK,nBLK,Itest,Jtest,Ktest,BLKtest
   use ModVarIndexes,ONLY: Bx_,Bz_,P_
   use ModAdvance, ONLY : State_VGB
-  use ModGeometry, ONLY : true_cell, x_BLK, y_BLK, z_BLK
+  use ModGeometry, ONLY : true_cell
   use ModProject
   use ModMain, ONLY : UseConstrainB                   !^CFG IF CONSTRAINB
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK  !^CFG IF CONSTRAINB
   use ModMessagePass, ONLY: exchange_messages
-
+  use BATL_lib, ONLY: Xyz_DGB
   implicit none
 
   ! Local variables
@@ -160,9 +160,7 @@ subroutine project_B
         if(iProc==loc(5))write(*,*)&
              'Project_B: resid,max(abs(divB)),loc,X,Y,Z=',&
              resid, divbmax_now, loc, &
-             x_BLK(loc(1),loc(2),loc(3),loc(4)),&
-             y_BLK(loc(1),loc(2),loc(3),loc(4)),&
-             z_BLK(loc(1),loc(2),loc(3),loc(4))
+             Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
      else
         if(oktest_me)write(*,*)'Project_B: resid,max(abs(divB))',&
              resid, divbmax_now
@@ -170,9 +168,7 @@ subroutine project_B
      pmin_new   =minval_loc_BLK(nProc,State_VGB(P_,:,:,:,:),loc)
      if(pmin_new<0.5*pmin_old)then
         if(iProc==loc(5))write(*,*)'Project_B: min(p),loc,X,Y,Z=',&
-             pmin_new,loc,x_BLK(loc(1),loc(2),loc(3),loc(4)),&
-             y_BLK(loc(1),loc(2),loc(3),loc(4)),&
-             z_BLK(loc(1),loc(2),loc(3),loc(4))
+             pmin_new,loc,Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
      else
         if(oktest_me)write(*,*)'Project_B: new min(p)',pmin_new
      endif
@@ -215,13 +211,13 @@ end subroutine project_B
 subroutine proj_get_divB(proj_divB)
   ! Calculate div B using simple finite differences
   ! Do corrections for mesh refinement
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK, x_, y_, z_
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : State_VGB
-  use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK
   use ModProject
   use ModMain, ONLY : UseConstrainB                       !^CFG IF CONSTRAINB
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK      !^CFG IF CONSTRAINB
+  use BATL_lib, ONLY: CellSize_DB
   implicit none
 
   ! Argument
@@ -240,19 +236,19 @@ subroutine proj_get_divB(proj_divB)
         if(unusedBLK(iBLK)) CYCLE
 
         proj_divB(1:nI,1:nJ,1:nK,iBLK)= &
-           (Bxface_BLK(2:nI+1,1:nJ  ,1:nK  ,iBLK)              &
-           -Bxface_BLK(1:nI  ,1:nJ  ,1:nK  ,iBLK))/dx_BLK(iBLK)&
-          +(Byface_BLK(1:nI  ,2:nJ+1,1:nK  ,iBLK)              &
-           -Byface_BLK(1:nI  ,1:nJ  ,1:nK  ,iBLK))/dy_BLK(iBLK)&
-          +(Bzface_BLK(1:nI  ,1:nJ  ,2:nK+1,iBLK)              &
-           -Bzface_BLK(1:nI  ,1:nJ  ,1:nK  ,iBLK))/dz_BLK(iBLK)
+           (Bxface_BLK(2:nI+1,1:nJ  ,1:nK  ,iBLK)                      &
+           -Bxface_BLK(1:nI  ,1:nJ  ,1:nK  ,iBLK))/CellSize_DB(x_,iBLK)&
+          +(Byface_BLK(1:nI  ,2:nJ+1,1:nK  ,iBLK)                      &
+           -Byface_BLK(1:nI  ,1:nJ  ,1:nK  ,iBLK))/CellSize_DB(y_,iBLK)&
+          +(Bzface_BLK(1:nI  ,1:nJ  ,2:nK+1,iBLK)                      &
+           -Bzface_BLK(1:nI  ,1:nJ  ,1:nK  ,iBLK))/CellSize_DB(z_,iBLK)
      end do
   else                                       !^CFG END CONSTRAINB
      do iBLK=1,nBlock
         if(unusedBLK(iBLK))CYCLE
-        DxInvHalf = 0.5/dx_BLK(iBLK);
-        DyInvHalf = 0.5/dy_BLK(iBLK);
-        DzInvHalf = 0.5/dz_BLK(iBLK);
+        DxInvHalf = 0.5/CellSize_DB(x_,iBLK);
+        DyInvHalf = 0.5/CellSize_DB(y_,iBLK);
+        DzInvHalf = 0.5/CellSize_DB(z_,iBLK);
         do k=1,nK; do j=1,nJ; do i=1,nI
            proj_divb(i,j,k,iBLK) = &
                 DxInvHalf* &
@@ -362,11 +358,12 @@ end subroutine proj_poisson
 !=============================================================================
 ! Calculate Laplace phi
 subroutine proj_matvec(phi,laplace_phi)
-  use ModMain, ONLY : nBLK,nBlock,unusedBLK,nI,nJ,nK
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,true_cell,body_BLK
+  use ModMain, ONLY : nBLK,nBlock,unusedBLK,nI,nJ,nK, x_, y_, z_
+  use ModGeometry, ONLY : true_cell,body_BLK
   use ModProject
   use ModMain, ONLY : UseConstrainB          !^CFG IF CONSTRAINB
   use ModCT                                  !^CFG IF CONSTRAINB
+  use BATL_lib, ONLY: CellSize_DB
   implicit none
 
   ! Arguments
@@ -404,19 +401,21 @@ subroutine proj_matvec(phi,laplace_phi)
               end where
 
               laplace_phi(i,j,k,iBLK)= &
-                   (phiC(1,0,0)+phiC(-1,0,0)-2*phiC(0,0,0))/dx_BLK(iBLK)**2 +&
-                   (phiC(0,1,0)+phiC(0,-1,0)-2*phiC(0,0,0))/dy_BLK(iBLK)**2 +&
-                   (phiC(0,0,1)+phiC(0,0,-1)-2*phiC(0,0,0))/dz_BLK(iBLK)**2
-
+                   (phiC(1,0,0)+phiC(-1,0,0)-2*phiC(0,0,0)) &
+                   /CellSize_DB(x_,iBLK)**2 + &
+                   (phiC(0,1,0)+phiC(0,-1,0)-2*phiC(0,0,0)) &
+                   /CellSize_DB(y_,iBLK)**2 + &
+                   (phiC(0,0,1)+phiC(0,0,-1)-2*phiC(0,0,0)) &
+                   /CellSize_DB(z_,iBLK)**2
            end do; end do; end do
         else
            laplace_phi(1:nI,1:nJ,1:nK,iBLK)= &
                 (phi(2:nI+1,1:nJ,1:nK,iBLK)+phi(0:nI-1,1:nJ,1:nK,iBLK) &
-                -2*phi(1:nI,1:nJ,1:nK,iBLK))/dx_BLK(iBLK)**2 +         &
+                -2*phi(1:nI,1:nJ,1:nK,iBLK))/CellSize_DB(x_,iBLK)**2 + &
                 (phi(1:nI,2:nJ+1,1:nK,iBLK)+phi(1:nI,0:nJ-1,1:nK,iBLK) &
-                -2*phi(1:nI,1:nJ,1:nK,iBLK))/dy_BLK(iBLK)**2 +         &
+                -2*phi(1:nI,1:nJ,1:nK,iBLK))/CellSize_DB(y_,iBLK)**2 + &
                 (phi(1:nI,1:nJ,2:nK+1,iBLK)+phi(1:nI,1:nJ,0:nK-1,iBLK) &
-                -2*phi(1:nI,1:nJ,1:nK,iBLK))/dz_BLK(iBLK)**2
+                -2*phi(1:nI,1:nJ,1:nK,iBLK))/CellSize_DB(z_,iBLK)**2
         endif
 
      end do
@@ -446,8 +445,8 @@ end subroutine proj_matvec
 !=============================================================================
 ! Calculate gradient of phi in direction idim for real cells only
 subroutine proj_gradient(idim,phi,dphi)
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
-  use ModGeometry, ONLY : fAx_BLK,fAy_BLK,fAz_BLK,vInv_CB
+  use ModMain, ONLY : nI, nJ, nK, nBLK, nBlock, unusedBLK, x_, y_, z_
+  use BATL_lib, ONLY: CellFace_DB, CellVolume_B
   implicit none
 
   ! Arguments
@@ -474,14 +473,17 @@ subroutine proj_gradient(idim,phi,dphi)
      if(unusedBLK(iBLK))CYCLE
      select case(idim)
      case(1)
-        dphi(1:nI,1:nJ,1:nK,iBLK) = 0.5*vInv_CB(:,:,:,iBLK)*fAx_BLK(iBLK)* &
+        dphi(1:nI,1:nJ,1:nK,iBLK) = &
+             0.5/CellVolume_B(iBLK)*CellFace_DB(x_,iBLK)* &
              (phi(2:nI+1,1:nJ,1:nK,iBLK)-phi(0:nI-1,1:nJ,1:nK,iBLK))
      case(2)
-        dphi(1:nI,1:nJ,1:nK,iBLK) = 0.5*vInv_CB(:,:,:,iBLK)*fAy_BLK(iBLK)* &
+        dphi(1:nI,1:nJ,1:nK,iBLK) = &
+             0.5/CellVolume_B(iBLK)*CellFace_DB(y_,iBLK)* &
              (phi(1:nI,2:nJ+1,1:nK,iBLK)-phi(1:nI,0:nJ-1,1:nK,iBLK))
 
      case(3)
-        dphi(1:nI,1:nJ,1:nK,iBLK) = 0.5*vInv_CB(:,:,:,iBLK)*fAz_BLK(iBLK)* &
+        dphi(1:nI,1:nJ,1:nK,iBLK) = &
+             0.5/CellVolume_B(iBLK)*CellFace_DB(z_,iBLK)* &
              (phi(1:nI,1:nJ,2:nK+1,iBLK)-phi(1:nI,1:nJ,0:nK-1,iBLK))
      end select
   end do ! All blocks are done
@@ -559,11 +561,12 @@ subroutine proj_correction(phi)
        nBlock,unusedBLK
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance,    ONLY : State_VGB
-  use ModGeometry,   ONLY : dx_BLK,dy_BLK,dz_BLK,true_cell
+  use ModGeometry,   ONLY : true_cell
   use ModProject
   use ModMain, ONLY : UseConstrainB             !^CFG IF CONSTRAINB
   use ModCT                                     !^CFG IF CONSTRAINB
   use ModEnergy, ONLY: calc_energy_cell         !^CFG IF CONSTRAINB
+  use BATL_lib, ONLY: CellSize_DB
   implicit none
 
   ! Arguments
@@ -592,15 +595,15 @@ subroutine proj_correction(phi)
 
         BxFace_BLK(1:nI+1,1:nJ,1:nK,iBLK)=BxFace_BLK(1:nI+1,1:nJ,1:nK,iBLK) &
              -(phi(1:nI+1,1:nJ,1:nK,iBLK)-phi(0:nI,1:nJ,1:nK,iBLK)) &
-             /dx_BLK(iBLK)
+             /CellSize_DB(x_,iBLK)
 
         ByFace_BLK(1:nI,1:nJ+1,1:nK,iBLK)=ByFace_BLK(1:nI,1:nJ+1,1:nK,iBLK) &
              -(phi(1:nI,1:nJ+1,1:nK,iBLK)-phi(1:nI,0:nJ,1:nK,iBLK)) &
-             /dy_BLK(iBLK)
+             /CellSize_DB(y_,iBLK)
 
         BzFace_BLK(1:nI,1:nJ,1:nK+1,iBLK)=BzFace_BLK(1:nI,1:nJ,1:nK+1,iBLK) &
              -(phi(1:nI,1:nJ,1:nK+1,iBLK)-phi(1:nI,1:nJ,0:nK,iBLK)) &
-             /dz_BLK(iBLK)
+             /CellSize_DB(z_,iBLK)
 
         if(oktest_me.and.BLKtest==iBLK)write(*,*)'before bound_Bface Bzface=',&
              BzFace_BLK(Itest,Jtest,Ktest,BLKtest), &
@@ -621,9 +624,9 @@ subroutine proj_correction(phi)
   else                                       !^CFG END CONSTRAINB
      do iBLK = 1, nBlock
         if(unusedBLK(iBLK)) CYCLE
-        DxInvHalf = 0.5/dx_BLK(iBLK);
-        DyInvHalf = 0.5/dy_BLK(iBLK);
-        DzInvHalf = 0.5/dz_BLK(iBLK);
+        DxInvHalf = 0.5/CellSize_DB(x_,iBLK);
+        DyInvHalf = 0.5/CellSize_DB(y_,iBLK);
+        DzInvHalf = 0.5/CellSize_DB(z_,iBLK);
         do k=1,nK; do j=1,nJ; do i=1,nI
            if(.not.true_cell(i,j,k,iBLK)) CYCLE
            State_VGB(Bx_,i,j,k,iBLK) = State_VGB(Bx_,i,j,k,iBLK) - &
