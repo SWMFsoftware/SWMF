@@ -37,7 +37,8 @@ OBJECTS = \
 	ModRadioWaveRaytracing.o\
 	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PW)
 
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src -I../srcBATL -I${CRASHDIR}
+SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
+	-I../src -I../srcBATL -I${CRASHDIR}
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
