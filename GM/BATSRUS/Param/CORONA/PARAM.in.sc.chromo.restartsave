@@ -104,7 +104,7 @@ currentsheet -shell2    TypeCriteria
 0.001                   MaxResolution
 
 #GRIDLEVEL
-4                       nLevelArea 5
+2                       nLevelArea 5
 initial                 NameArea
 
 READPOTENTIALFIELD
