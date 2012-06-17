@@ -252,10 +252,6 @@ g rbody
 rho ux uy uz ti bx by bz I01 I02 p
 g rbody
 
-
-#SAVEINITIAL
-T			DoSaveInitial
-
 #STOP
 25			MaxIteration 60000
 -1.0			tSimulationMax

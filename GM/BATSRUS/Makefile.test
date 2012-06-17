@@ -800,36 +800,28 @@ test_chromo_check:
 	ls -l test_chromo.diff
 
 test_chromo_restart:
-	@echo "test_chromo_restart_save..." > test_chromo_restart.diff
-	$(MAKE) test_chromo_restart_save
-	@echo "test_chromo_restart_read..." >> test_chromo_restart.diff
-	$(MAKE) test_chromo_restart_read
+	@echo "test_chromo_restart_run..." >> test_chromo_restart.diff
+	$(MAKE) test_chromo_restart_run
 	@echo "test_chromo_restart_check..." >> test_chromo_restart.diff
 	$(MAKE) test_chromo_restart_check
 
-test_chromo_restart_save:
-	
+test_chromo_restart_run:
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.chromo.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf ChromoTest/RestartSave RESTART_chromo
-	cd ${TESTDIR}; ./PostProc.pl -M -o ChromoTest/RestartSave
-
-test_chromo_restart_read:
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.chromo.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ./Restart.pl -i ChromoTest/RestartSave/RESTART
+	rm -rf ${TESTDIR}/RESTART_n000025
+	cd ${TESTDIR}; ./Restart.pl
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf ChromoTest/RestartRead
-	cd ${TESTDIR}; ./PostProc.pl -M -o ChromoTest/RestartRead
+	cd ${TESTDIR}; rm -rf RESULTS_RESTART
+	cd ${TESTDIR}; ./PostProc.pl -cat -M -o RESULTS_RESTART
 
 test_chromo_restart_check:
-	cd ${TESTDIR}/ChromoTest; \
-		cp RestartSave/SC/log_n000000.log log_all.log; \
-		tail -25 RestartRead/SC/log_n000025.log >> log_all.log
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+		${TESTDIR}/RESULTS_RESTART/SC/log_n000000.log \
 		Param/CORONA/TestOutput/log_n000000.sc.chromo \
-		${TESTDIR}/ChromoTest/log_all.log > test_chromo_restart.diff)
+		 > test_chromo_restart.diff)
 	ls -l test_chromo*.diff
 
 
