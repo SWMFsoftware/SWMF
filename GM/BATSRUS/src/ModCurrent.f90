@@ -9,9 +9,14 @@ module ModCurrent
 contains
   !============================================================================
 
-  subroutine get_current(i, j, k, iBlock, Current_D)
+  subroutine get_current(i, j, k, iBlock, Current_D, nOrderResChange)
 
     ! Calculate the current in a cell of a block
+    ! Avoid using ghost cells at resolution changes.
+    ! Avoid using cells inside the body.
+    ! If the optional argument nOrderReschange is present and equals 1,
+    ! then use first order scheme at resolution changes,
+    ! otherwise use second order scheme when possible.
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
     use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK, &
@@ -24,9 +29,12 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Current_D(3)
 
-    integer :: iL, iR, jL, jR, kL, kR
-    real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
-    real :: InvDx2, InvDy2, InvDz2
+    integer, optional, intent(in):: nOrderResChange
+
+    logical:: UseFirstOrder
+    integer:: iL, iR, jL, jR, kL, kR
+    real   :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
+    real   :: InvDx2, InvDy2, InvDz2
     !--------------------------------------------------------------------------
 
     ! Exclude body cells
@@ -35,6 +43,9 @@ contains
 
        RETURN
     endif
+
+    UseFirstOrder = .false.
+    if(present(nOrderReschange)) UseFirstOrder = nOrderResChange == 1
 
     InvDx2 = 0.5/Dx_Blk(iBlock)
     InvDy2 = 0.5/Dy_Blk(iBlock)
@@ -45,10 +56,18 @@ contains
     Ax = -InvDx2; Bx = 0.0; Cx = +InvDx2
     ! Avoid the ghost cells at resolution changes by using
     ! second-order one-sided difference
-    if(i==1 .and. NeiLeast(iBlock)==1)then
-       iL = i+1; iR = i+2; Ax = 4.0*InvDx2; Bx =-3.0*InvDx2; Cx =-InvDx2
-    elseif(i==nI .and. NeiLwest(iBlock)==1)then
-       iL = i-1; iR = i-2; Ax =-4.0*InvDx2; Bx = 3.0*InvDx2; Cx = InvDx2
+    if(i==1 .and. abs(NeiLeast(iBlock))==1)then
+       if(UseFirstOrder)then
+          iL = i; Ax = -2*InvDx2; Cx = 2*InvDx2
+       else
+          iL = i+1; iR = i+2; Ax = 4*InvDx2; Bx =-3*InvDx2; Cx =-InvDx2
+       end if
+    elseif(i==nI .and. abs(NeiLwest(iBlock))==1)then
+       if(UseFirstOrder)then
+          iR = i; Ax = -2*InvDx2; Cx = 2*InvDx2
+       else
+          iL = i-1; iR = i-2; Ax =-4*InvDx2; Bx = 3*InvDx2; Cx = InvDx2
+       end if
     end if
 
     ! For y direction
@@ -59,10 +78,18 @@ contains
     else
        jR = j+1; jL = j-1;
        Ay = -InvDy2; By = 0.0; Cy = +InvDy2
-       if(j==1 .and. NeiLsouth(iBlock)==1)then
-          jL = j+1; jR = j+2; Ay = 4.0*InvDy2; By =-3.0*InvDy2; Cy =-InvDy2
-       elseif(j==nJ .and. NeiLnorth(iBlock)==1)then
-          jL = j-1; jR = j-2; Ay =-4.0*InvDy2; By = 3.0*InvDy2; Cy = InvDy2
+       if(j==1 .and. abs(NeiLsouth(iBlock))==1)then
+          if(UseFirstOrder)then
+             jL = j; Ay = -2*InvDy2; Cy = 2*InvDy2
+          else
+             jL = j+1; jR = j+2; Ay = 4*InvDy2; By = -3*InvDy2; Cy = -InvDy2
+          end if
+       elseif(j==nJ .and. abs(NeiLnorth(iBlock))==1)then
+          if(UseFirstOrder)then
+             jR = j; Ay = -2*InvDy2; Cy = 2*InvDy2
+          else
+             jL = j-1; jR = j-2; Ay = -4*InvDy2; By = 3*InvDy2; Cy = InvDy2
+          end if
        end if
     end if
 
@@ -74,10 +101,18 @@ contains
     else
        kR = k+1; kL = k-1
        Az = -InvDz2; Bz = 0.0; Cz = +InvDz2
-       if(k==1 .and. NeiLbot(iBlock)==1)then
-          kL = k+1; kR = k+2; Az = 4.0*InvDz2; Bz =-3.0*InvDz2; Cz =-InvDz2
-       elseif(k==nK .and. NeiLtop(iBlock)==1)then
-          kL = k-1; kR = k-2; Az =-4.0*InvDz2; Bz = 3.0*InvDz2; Cz = InvDz2
+       if(k==1 .and. abs(NeiLbot(iBlock))==1)then
+          if(UseFirstOrder)then
+             kL = k; Az = -2*InvDz2; Cz = 2*InvDz2
+          else
+             kL = k+1; kR = k+2; Az = 4*InvDz2; Bz =-3*InvDz2; Cz =-InvDz2
+          end if
+       elseif(k==nK .and. abs(NeiLtop(iBlock))==1)then
+          if(UseFirstOrder)then
+             kR = k; Az = -2*InvDz2; Cz = 2*InvDz2
+          else
+             kL = k-1; kR = k-2; Az = -4*InvDz2; Bz = 3*InvDz2; Cz = InvDz2
+          end if
        end if
     end if
 
@@ -165,7 +200,6 @@ contains
     subroutine calc_cartesian_j
 
       !------------------------------------------------------------------------
-
       Current_D(x_) = &
            + Ay*State_VGB(Bz_,i,jL,k ,iBlock) &
            + By*State_VGB(Bz_,i,j ,k ,iBlock) &
@@ -229,9 +263,7 @@ contains
 
       DcoordDxyz_DD = inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
 
-      ! Calculate the partial derivatives dB/dGencoord using central
-      ! difference. At resolution changes with neighboring coarse blocks, we
-      ! switch to one-sided difference to avoid using the ghost cells.
+      ! Calculate the partial derivatives dB/dGencoord
       DbDcoord_DD(:,1) = &
            + Ax*State_VGB(Bx_:Bz_,iL,j,k,iBlock) &
            + Bx*State_VGB(Bx_:Bz_,i ,j,k,iBlock) &
@@ -247,7 +279,7 @@ contains
            + Bz*State_VGB(Bx_:Bz_,i,j,k ,iBlock) &
            + Cz*State_VGB(Bx_:Bz_,i,j,kR,iBlock)
 
-      ! Jx = Dbz/Dy - Dby/Dz
+      ! Jx = Dbz/Dy - Dby/Dz = Dbz/Dcoord.Dcoord/Dy - DBy/Dcoord.Dccord/dz
       Current_D(x_) = &
            + sum(DbDcoord_DD(z_,:)*DcoordDxyz_DD(:,y_)) &
            - sum(DbDcoord_DD(y_,:)*DcoordDxyz_DD(:,z_))
