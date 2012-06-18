@@ -50,6 +50,10 @@ module BATL_amr_criteria
   ! Need to init if PARAM.in was read (again)
   logical :: isNewPhysParam = .false.
 
+
+  ! Used for combination of sorted and not sorted criteria
+  logical :: DidUnsortedAMR = .false.
+
   ! Try to make geometric dependence for refinement/coarsening
   logical,public :: &
        DoGeometryAmr = .false., &
@@ -165,35 +169,38 @@ contains
     !if(iProc == 0) print *," nAmrCritUsed, nCritGeoBackword = ",nAmrCritUsed, nCritGeoBackword
     nCrit = nAmrCritUsed + nCritGeoBackword
 
-    if(allocated(RefineCritAll_I))&
-         deallocate(RefineCritAll_I,CoarsenCritAll_I,&
-         iVarCritAll_I,MaxLevelCritAll_I,&
-         idxMaxGeoCrit_I,iAreaIdx_II,nAreaPerCritAll_I)
+    if(allocated(RefineCritAll_I))then
+         deallocate(RefineCritAll_I,&
+                    CoarsenCritAll_I,&
+                    iVarCritAll_I,&
+                    MaxLevelCritAll_I,&
+                    idxMaxGeoCrit_I,&
+                    iAreaIdx_II,&
+                    nAreaPerCritAll_I)
+    endif
     allocate(RefineCritAll_I(nCrit),&
-         CoarsenCritAll_I(nCrit),iVarCritAll_I(nCrit),&
-         MaxLevelCritAll_I(nCrit),&
-         idxMaxGeoCrit_I(nCrit),iAreaIdx_II(MaxArea,nCrit),&
-         nAreaPerCritAll_I(nCrit))
+             CoarsenCritAll_I(nCrit),&
+             iVarCritAll_I(nCrit),&
+             MaxLevelCritAll_I(nCrit),&
+             idxMaxGeoCrit_I(nCrit),&
+             iAreaIdx_II(MaxArea,nCrit),&
+             nAreaPerCritAll_I(nCrit))
 
     iVarCritAll_I = 0
 
     if(nAmrCritUsed > 0 ) then
-       do iCrit=1,nAmrCritUsed
-          !Copy physics based criterias, from read_amr_criteia
-          RefineCritAll_I(iCrit)   = RefineCritPhys_I(iCrit)
-          CoarsenCritAll_I(iCrit)  = CoarsenCritPhys_I(iCrit)
-          MaxLevelCritAll_I(iCrit) = MaxLevelCritPhys_I(iCrit)
-          iVarCritAll_I(iCrit)     = iVarCritPhys_I(iCrit)
-          nAreaPerCritAll_I(iCrit) = nAreaPerCritPhys_I(iCrit)
-       end do
+       !Copy physics based criterias, from read_amr_criteia
+       RefineCritAll_I(1:nAmrCritUsed)   = RefineCritPhys_I(1:nAmrCritUsed)
+       CoarsenCritAll_I(1:nAmrCritUsed)  = CoarsenCritPhys_I(1:nAmrCritUsed)
+       MaxLevelCritAll_I(1:nAmrCritUsed) = MaxLevelCritPhys_I(1:nAmrCritUsed)
+       iVarCritAll_I(1:nAmrCritUsed)     = iVarCritPhys_I(1:nAmrCritUsed)
+       nAreaPerCritAll_I(1:nAmrCritUsed) = nAreaPerCritPhys_I(1:nAmrCritUsed)
 
        ! fixing indexing as "physics" criteria comes first
        do iCrit=1,nAmrCritUsed
           idxMaxGeoCrit_I(iCrit)   = max(0,maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel))) +&
                idxMaxGeoCritPhys_I(iCrit)
        end do
-
-
     end if
 
     ! Copy over Geometry based criterias
@@ -414,6 +421,7 @@ contains
             nCritStart = nPhysCritUsed-nCritDxLevel +1
             nCritEnd   = nAmrCritUsed
             call apply_unsorted_criteria
+            DidUnsortedAMR = .true.
          end if
          ! Physical criterias
          nCritStart = 1
@@ -423,6 +431,8 @@ contains
          ! refine only based on criteria
          call apply_unsorted_criteria
       end if
+
+      DidUnsortedAMR = .false.
 
     end subroutine set_amr_criteria
   !===========================================================================
@@ -439,7 +449,7 @@ contains
     use BATL_size, ONLY: nBlock
     use ModSort, ONLY: sort_quick
     use BATL_tree, ONLY: Unused_BP,iStatusNew_A, Refine_, Coarsen_, &
-         iNode_B, nNode, nNodeUsed, diffRange,Unused_B
+         Unset_, iNode_B, nNode, nNodeUsed, diffRange,Unused_B
 
     ! Array containing all criteria for all blocks gathered
     real, allocatable :: AllCrit_II(:,:)
@@ -782,11 +792,19 @@ contains
     do iSort = nNodeSort, nNodeSort-max(nDesiredRefine,nNodeRefine)+1, -1
        iStatusNew_A(iRank_A(iSort)) = Refine_
     end do
-    
-    do iSort = 1, max(nDesiredCoarsen, nNodeCoarsen)
-       if(iStatusNew_A(iRank_A(iSort)) /= Refine_) &
-            iStatusNew_A(iRank_A(iSort)) =  Coarsen_
-    end do
+   
+    if(DidUnsortedAMR) then
+       ! Do not coarsen blocks not in the sorted list
+       do iSort = max(nDesiredCoarsen, nNodeCoarsen),nNodeSort
+         if(iStatusNew_A(iRank_A(iSort)) ==  Coarsen_)&
+             iStatusNew_A(iRank_A(iSort)) = Unset_
+       end do
+    else
+       do iSort = 1, max(nDesiredCoarsen, nNodeCoarsen)
+         if(iStatusNew_A(iRank_A(iSort)) /= Refine_) &
+             iStatusNew_A(iRank_A(iSort)) =  Coarsen_
+       end do
+    end if
 
     deallocate(iSortToNode_I)
     deallocate(AllRank_II)
@@ -1467,10 +1485,18 @@ contains
     integer :: iCrit
     !--------------------------------------------------------
 
-    !FUTURE :: get mask for a single criteria
+    if(present(iCritExtIn)) then
+      masked_amr_criteria = .false.
+      ! loop over physics criterias
+      do iCrit=nIntCrit+1,nIntCrit+nPhysCritUsed-nCritDxLevel
+        if(iVarCritAll_I(iCrit) == nIntCrit+iCritExtIn) &
+           masked_amr_criteria = masked_amr_criteria .or. UseCrit_IB(iCrit,iBlock)
+      end do
+      masked_amr_criteria = .not. masked_amr_criteria
+    else
+      masked_amr_criteria = .not. any(UseCrit_IB(nIntCrit+1:nIntCrit+nPhysCritUsed-nCritDxLevel,iBlock))
+    end if 
 
-     masked_amr_criteria = .not. any(UseCrit_IB(nIntCrit+1:nIntCrit+nPhysCritUsed-nCritDxLevel,iBlock))
- 
   end function masked_amr_criteria
   !============================================================================
 
