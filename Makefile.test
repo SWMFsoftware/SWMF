@@ -22,6 +22,7 @@ test_help:
 	@echo "    test_rb                    (run RB/RBE test)"
 	@echo "    test_esmf                  (run ESMF_SWMF test)"
 	@echo "    test_ccmc                  (run CCMC test)"
+	@echo "    test_ccmc_small            (run small version of CCMC test)"
 	@echo "    test1                      (run GM-IE-PW test)"
 	@echo "    test2                      (run SC-IH test )"
 	@echo "    test3                      (run GM-IE-IM test)"
@@ -837,16 +838,16 @@ test_esmf_run:
 test_esmf_check:
 	perl -ne 'print if /error/i' ${TESTDIR}/PET*.ESMF_LogFile \
 		> test_esmf.diff
-	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-12 \
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-12 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		ESMF/ESMF_SWMF/output/log_n000001.log \
-		>> test_esmf.diff
+		>> test_esmf.diff)
 	gunzip -c ESMF/ESMF_SWMF/output/it000321_104510_000.idl.gz \
 		> ${TESTDIR}/it000321_104510_000.idl.ref
-	${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-4 \
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-4 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		${TESTDIR}/it000321_104510_000.idl.ref \
-		>> test_esmf.diff
+		>> test_esmf.diff)
 	ls -l test_esmf.diff
 
 #### FOR CCMC ONLY #######################
@@ -966,9 +967,9 @@ test_ccmc_small_run:
 	$(MAKE)  test_ccmc_run
 
 test_ccmc_small_check:
-	${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
 		${TESTDIR}/GM/IO2/log_n000400.log \
-		Param/CCMC/test_GM_small.log > test_ccmc_small.diff
+		Param/CCMC/test_GM_small.log > test_ccmc_small.diff)
 	ls -l test_ccmc_small.diff
 
 
