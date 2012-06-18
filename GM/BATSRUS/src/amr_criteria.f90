@@ -77,6 +77,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
 
      do iCrit = 1,nAmrCriteria
 
+        if (masked_amr_criteria(iBlock,iCritExtIn=iCrit)) CYCLE
         select case(RefineCrit(iCrit))
         case('gradt')
            ! Temperature gradient.
