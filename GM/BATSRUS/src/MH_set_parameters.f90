@@ -6,7 +6,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModB0, ONLY: init_mod_b0
+  use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
+       read_b0_param, init_mod_b0
   use ModGeometry, ONLY : init_mod_geometry, TypeGeometry, nMirror_D, &
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
        MinBoundary,MaxBoundary,&
@@ -227,10 +228,10 @@ subroutine MH_set_parameters(TypeAction)
            UseB0Source = .false.
            UseCurlB0   = .false.
            DoUpdateB0  = .false.
-           Dt_UpdateB0 = -1.0
+           DtUpdateB0  = -1.0
         else
            call get_planet( &
-                DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
+                DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = DtUpdateB0)
         end if
 
      end if
@@ -1193,6 +1194,10 @@ subroutine MH_set_parameters(TypeAction)
         ! reinitialize constrained transport if needed   !^CFG IF CONSTRAINB
         DoInitConstrainB = .true.                        !^CFG IF CONSTRAINB
 
+     case("#USEB0", "#DIVBSOURCE", "#USECURLB0")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_b0_param(NameCommand)
+
      case("#HYPERBOLICDIVB")
         if(.not.UseB)CYCLE READPARAM
         if(Hyp_ == 1)then
@@ -1208,20 +1213,6 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('HypDecay'   ,HypDecay)
            end if
         endif
-
-     case("#USEB0")
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseB0', UseB0)
-
-     case("#DIVBSOURCE")
-        if(.not.UseB0)CYCLE READPARAM
-	call read_var('UseB0Source', UseB0Source)
-
-     case("#USECURLB0")
-        if(.not.UseB0)CYCLE READPARAM
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseCurlB0', UseCurlB0)
-        if(UseCurlB0)call read_var('rCurrentFreeB0', rCurrentFreeB0)
 
      case("#PROJECTION")                              !^CFG IF PROJECTION BEGIN
         if(.not.UseB)CYCLE READPARAM
@@ -1726,8 +1717,8 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#HELIOUPDATEB0")
         if(.not.UseB0)CYCLE READPARAM
-        call read_var('DtUpdateB0',dt_updateb0)
-        DoUpdateB0 = dt_updateb0 > 0.0
+        call read_var('DtUpdateB0', DtUpdateB0)
+        DoUpdateB0 = DtUpdateB0 > 0.0
 
      case("#HELIODIPOLE")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1961,7 +1952,7 @@ contains
     ! Do not update B0 for LC, SC or IH by default
     if(NameThisComp /= 'GM')then
        DoUpdateB0 = .false.
-       Dt_UpdateB0 = -1.0
+       DtUpdateB0 = -1.0
     end if
 
     ! Initialize StartTime to the default values

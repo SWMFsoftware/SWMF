@@ -2624,10 +2624,10 @@ contains
 
     subroutine get_mhd_speed
 
-      use ModMain,    ONLY: UseCurlB0
-      use ModPhysics, ONLY: g, Inv_C2Light, ElectronPressureRatio
+      use ModB0,       ONLY: UseCurlB0
+      use ModPhysics,  ONLY: g, Inv_C2Light, ElectronPressureRatio
       use ModNumConst, ONLY: cPi
-      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, &
+      use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure
 
       real :: RhoU_D(3)

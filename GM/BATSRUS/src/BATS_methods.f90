@@ -366,6 +366,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModVarIndexes, ONLY: Te0_
   use ModMessagePass, ONLY: exchange_messages
   use ModTimeStepControl, ONLY: set_global_timestep
+  use ModB0, ONLY: DoUpdateB0, DtUpdateB0
 
   implicit none
 
@@ -460,10 +461,10 @@ subroutine BATS_advance(TimeSimulationLimit)
        iProc,n_step,Time_Simulation
 
   if (DoUpdateB0) then
-     ! dB0/dt term is added at the dt_updateB0 frequency
+     ! dB0/dt term is added at the DtUpdateB0 frequency
 
-     if ( int(Time_Simulation/dt_UpdateB0) >  &
-          int((Time_Simulation - Dt*No2Si_V(UnitT_))/dt_UpdateB0)) &
+     if ( int(Time_Simulation/DtUpdateB0) >  &
+          int((Time_Simulation - Dt*No2Si_V(UnitT_))/DtUpdateB0)) &
           call update_b0
   end if
 

@@ -8,10 +8,9 @@ module ModB0
   ! It is often constant in time dB0/dt = 0, but not necessarily.
   ! This module provides data and methods for B0.
 
-  use ModSize
-
-  use ModMain, ONLY: UseConstrainB
-  use ModMain, ONLY: UseB0, UseB0Source, UseCurlB0 !!! should be here
+  use BATL_size, ONLY: MaxDim, nDim, MaxBlock, nI, nJ, nK, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  use ModMain, ONLY: UseB, UseB0, UseConstrainB
 
   implicit none
   SAVE
@@ -20,12 +19,26 @@ module ModB0
 
   public:: init_mod_b0      ! initialize B0 module
   public:: clean_mod_b0     ! clean B0 module
-  public:: set_b0_param     ! set UseB0, UseB0Source, UseCurlB0
+  public:: read_b0_param    ! read UseB0, UseB0Source, UseCurlB0
   public:: set_b0_cell      ! set cell centered B0_DGB
   public:: set_b0_reschange ! make face centered B0 consistent at res.change
   public:: set_b0_face      ! set face centered B0_DX,Y,Z
   public:: set_b0_source    ! set DivB0 and CurlB0
   public:: get_b0           ! get B0 at an arbitrary point
+
+  ! If B0 varies with time it should be update at some frequency
+  logical, public:: DoUpdateB0  = UseB
+  real,    public:: DtUpdateB0  = 0.0001
+
+  ! Use source terms related to finite div(B0) and curl(B0)
+  logical, public:: UseB0Source = UseB
+
+  ! Use source terms related to finite curl(B0) for non-force-free B0 field
+  ! If UseCurlB0 is true, then UseB0Source must be true!
+  logical, public:: UseCurlB0 = .false.
+
+  ! Radius within which the B0 field is curl free (analytically)
+  real, public:: rCurrentFreeB0 = -1.0
 
   ! Cell-centered B0 field vector
   real, public, allocatable:: B0_DGB(:,:,:,:,:)
@@ -47,25 +60,42 @@ module ModB0
 
 contains
   !===========================================================================
-  subroutine set_b0_param(NameCommand)
+  subroutine read_b0_param(NameCommand)
+
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in):: NameCommand
 
-    character(len=*), parameter:: NameSub = 'set_b0_param'
+    character(len=*), parameter:: NameSub = 'read_b0_param'
     !------------------------------------------------------------------------
 
+    select case(NameCommand)
+    case("#USEB0")
+       call read_var('UseB0', UseB0)
 
-  end subroutine set_b0_param
+    case("#DIVBSOURCE")
+       call read_var('UseB0Source', UseB0Source)
+       
+    case("#USECURLB0")
+       call read_var('UseCurlB0', UseCurlB0)
+       if(UseCurlB0)call read_var('rCurrentFreeB0', rCurrentFreeB0)
+
+    case default
+       call stop_mpi(NameSub//': unknown command='//NameCommand)
+    end select
+
+    if(UseCurlB0) UseB0Source = .true.
+
+  end subroutine read_b0_param
   !===========================================================================
   subroutine init_mod_b0
 
     if(.not.allocated(B0_DGB))then
        allocate( &
-            B0_DGB(nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
-            B0ResChange_DXSB(nDim,nJ,nK,1:2,MaxBlock),           &
-            B0ResChange_DYSB(nDim,nI,nK,3:4,MaxBlock),           &
-            B0ResChange_DZSB(nDim,nI,nJ,5:6,MaxBlock))
+            B0_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
+            B0ResChange_DXSB(MaxDim,nJ,nK,1:2,MaxBlock),           &
+            B0ResChange_DYSB(MaxDim,nI,nK,3:4,MaxBlock),           &
+            B0ResChange_DZSB(MaxDim,nI,nJ,5:6,MaxBlock))
        B0_DGB           = 0.0
        B0ResChange_DXSB = 0.0
        B0ResChange_DYSB = 0.0
@@ -139,7 +169,9 @@ contains
 
     ! Calculate the face centered B0 for block iBlock
 
-    use ModParallel, ONLY : NeiLev
+    use ModParallel, ONLY: NeiLev
+    use BATL_lib,    ONLY: nDim
+
     integer,intent(in)::iBlock
     !-------------------------------------------------------------------------
     if(.not.UseB0) RETURN
@@ -158,10 +190,14 @@ contains
     else
        B0_DX = 0.5*(B0_DGB(:,0:nI  ,1:nJ,1:nK,iBlock) &
             +       B0_DGB(:,1:nI+1,1:nJ,1:nK,iBlock))
-       B0_DY = 0.5*(B0_DGB(:,1:nI,0:nJ  ,1:nK,iBlock) &
-            +       B0_DGB(:,1:nI,1:nJ+1,1:nK,iBlock))
-       B0_DZ = 0.5*(B0_DGB(:,1:nI,1:nJ,0:nK  ,iBlock) &
-            +       B0_DGB(:,1:nI,1:nJ,1:nK+1,iBlock))
+
+       if(nDim >= 2) &
+            B0_DY = 0.5*(B0_DGB(:,1:nI,0:nJ  ,1:nK,iBlock) &
+            +            B0_DGB(:,1:nI,1:nJ+1,1:nK,iBlock))
+
+       if(nDim >= 3) &
+            B0_DZ = 0.5*(B0_DGB(:,1:nI,1:nJ,0:nK  ,iBlock) &
+               +         B0_DGB(:,1:nI,1:nJ,1:nK+1,iBlock))
     end if
     ! Correct B0 at resolution changes
     if(NeiLev(1,iBlock) == -1) &
@@ -187,7 +223,7 @@ contains
     ! vectors are parallel with each other (see algorithm in BATL_grid).
 
     use BATL_lib, ONLY: nDim, nBlock, Unused_B, DiLevelNei_IIIB, &
-         IsCartesian, CellFace_DB, CellFace_DFB, message_pass_face
+         IsCartesian, CellFace_DFB, message_pass_face
 
     integer:: i, j, k, iBlock
     real:: Coef
@@ -206,7 +242,8 @@ contains
 
     ! For Cartesian grid take 1/8-th of the contributing fine B0 values.
     ! For non-Cartesian grid the averaged cell values are weighted by face area
-    if(IsCartesian) Coef = 0.125
+    if(IsCartesian .and. nDim==2) Coef = 0.25
+    if(IsCartesian .and. nDim==3) Coef = 0.125
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -337,6 +374,7 @@ contains
 
     ! Calculate div(B0) and curl(B0) for block iBlock
 
+    use ModSize,  ONLY: x_, y_, z_
     use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
          CellSize_DB, FaceNormal_DDFB, CellVolume_GB, Xyz_DGB
     use ModCoordTransform, ONLY: cross_product
@@ -348,55 +386,71 @@ contains
 
     character(len=*), parameter:: NameSub = 'set_b0_source'
     !-----------------------------------------------------------------------
-    if(.not.(UseB0 .and. (UseB0Source .or. UseCurlB0))) RETURN
+    if(.not.(UseB0 .and. UseB0Source)) RETURN
 
     ! set B0_DX, B0_DY, B0_DZ for this block
     call set_b0_face(iBlock)
 
     if(IsCartesian)then
-       ! Cartesian case
-       DxInv = 1/CellSize_DB(x_,iBlock)
-       DyInv = 1/CellSize_DB(y_,iBlock)
-       DzInv = 1/CellSize_DB(z_,iBlock)
+       if(nDim == 2)then
+          DxInv = 1/CellSize_DB(x_,iBlock)
+          DyInv = 1/CellSize_DB(y_,iBlock)
 
-       if(UseB0Source)then
+          do j = 1, nJ; do i = 1, nI
+             DivB0_C(i,j,k)= &
+                  DxInv*(B0_DX(x_,i+1,j,k) - B0_DX(x_,i,j,k)) + &
+                  DyInv*(B0_DY(y_,i,j+1,k) - B0_DY(y_,i,j,k))
+
+             CurlB0_DC(x_,i,j,k) = & 
+                  +DyInv*(B0_DY(z_,i,j+1,k) - B0_DY(z_,i,j,k))
+
+             CurlB0_DC(y_,i,j,k) = &
+                  -DxInv*(B0_DX(z_,i+1,j,k) - B0_DX(z_,i,j,k))
+
+             CurlB0_DC(z_,i,j,k) = &
+                  DxInv*(B0_DX(y_,i+1,j,k) - B0_DX(y_,i,j,k)) - &
+                  DyInv*(B0_DY(x_,i,j+1,k) - B0_DY(x_,i,j,k))
+
+          end do; end do
+       else
+          DxInv = 1/CellSize_DB(x_,iBlock)
+          DyInv = 1/CellSize_DB(y_,iBlock)
+          DzInv = 1/CellSize_DB(z_,iBlock)
+
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              DivB0_C(i,j,k)= &
                   DxInv*(B0_DX(x_,i+1,j,k) - B0_DX(x_,i,j,k)) + &
                   DyInv*(B0_DY(y_,i,j+1,k) - B0_DY(y_,i,j,k)) + &
                   DzInv*(B0_DZ(z_,i,j,k+1) - B0_DZ(z_,i,j,k))
+
+             CurlB0_DC(x_,i,j,k) = & 
+                  DyInv*(B0_DY(z_,i,j+1,k) - B0_DY(z_,i,j,k)) - &
+                  DzInv*(B0_DZ(y_,i,j,k+1) - B0_DZ(y_,i,j,k))
+
+             CurlB0_DC(y_,i,j,k) = &
+                  DzInv*(B0_DZ(x_,i,j,k+1) - B0_DZ(x_,i,j,k)) - &
+                  DxInv*(B0_DX(z_,i+1,j,k) - B0_DX(z_,i,j,k))
+
+             CurlB0_DC(z_,i,j,k) = &
+                  DxInv*(B0_DX(y_,i+1,j,k) - B0_DX(y_,i,j,k)) - &
+                  DyInv*(B0_DY(x_,i,j+1,k) - B0_DY(x_,i,j,k))
+
           end do; end do; end do
        end if
-
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          CurlB0_DC(z_,i,j,k) = &
-               DxInv*(B0_DX(y_,i+1,j,k) - B0_DX(y_,i,j,k)) - &
-               DyInv*(B0_DY(x_,i,j+1,k) - B0_DY(x_,i,j,k))
-
-          CurlB0_DC(y_,i,j,k) = &
-               DzInv*(B0_DZ(x_,i,j,k+1) - B0_DZ(x_,i,j,k)) - &
-               DxInv*(B0_DX(z_,i+1,j,k) - B0_DX(z_,i,j,k))
-
-          CurlB0_DC(x_,i,j,k) = & 
-               DyInv*(B0_DY(z_,i,j+1,k) - B0_DY(z_,i,j,k)) - &
-               DzInv*(B0_DZ(y_,i,j,k+1) - B0_DZ(y_,i,j,k))
-       end do; end do; end do
     else
-       if(UseB0Source)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             DivB0_C(i,j,k) = &
-                  + sum(FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*B0_DX(:,i+1,j,k)) &
-                  - sum(FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*B0_DX(:,i  ,j,k)) &
-                  + sum(FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*B0_DY(:,i,j+1,k)) &
-                  - sum(FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*B0_DY(:,i,j  ,k))
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          DivB0_C(i,j,k) = &
+               + sum(FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*B0_DX(:,i+1,j,k)) &
+               - sum(FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*B0_DX(:,i  ,j,k)) &
+               + sum(FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*B0_DY(:,i,j+1,k)) &
+               - sum(FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*B0_DY(:,i,j  ,k))
 
-             if(nDim == 3) DivB0_C(i,j,k) = DivB0_C(i,j,k) &
-                  + sum(FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*B0_DZ(:,i,j,k+1)) &
-                  - sum(FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*B0_DZ(:,i,j,k  ))
+          if(nDim == 3) DivB0_C(i,j,k) = DivB0_C(i,j,k) &
+               + sum(FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*B0_DZ(:,i,j,k+1)) &
+               - sum(FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*B0_DZ(:,i,j,k  ))
 
-             DivB0_C(i,j,k) = DivB0_C(i,j,k)/CellVolume_GB(i,j,k,iBlock)
-          end do; end do; end do
-       end if
+          DivB0_C(i,j,k) = DivB0_C(i,j,k)/CellVolume_GB(i,j,k,iBlock)
+       end do; end do; end do
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           CurlB0_DC(:,i,j,k) =                                          &
@@ -609,19 +663,5 @@ contains
 
   end subroutine add_b0_body2
   !^CFG END SECONDBODY
-
-!!!  !===========================================================================
-!!!  subroutine get_coronal_b0(Xyz_D, B0_D)
-!!!
-!!!    use ModPhysics,     ONLY: Si2No_V,UnitB_
-!!!    use ModMagnetogram, ONLY: get_magnetogram_field
-!!!
-!!!    real, intent(in) :: Xyz_D(3)
-!!!    real, intent(out):: B0_D(3)
-!!!    !--------------------------------------------------------------------------
-!!!    call get_magnetogram_field(Xyz_D, B0_D)
-!!!    B0_D = B0_D*Si2No_V(UnitB_)
-!!!
-!!!  end subroutine get_coronal_b0
 
 end module ModB0

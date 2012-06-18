@@ -79,13 +79,8 @@ Module ModMain
   ! names of NameVar_V (except for the fluid energies)
   character(len=500) :: NameVarCouple
 
-  !\
-  ! Parameters for the B0 field
-  !/
   ! Intrinsic field B0 may or may not be used if UseB is true.
   logical :: UseB0        = UseB
-  logical :: DoUpdateB0   = UseB
-  real    :: Dt_UpdateB0  = 0.0001
 
   !\
   ! Coronal magnetic field (magnetogram + EE generator)
@@ -164,7 +159,6 @@ Module ModMain
   logical :: UseDivbDiffusion = .false.
   logical :: UseProjection    = .false.
   logical :: UseConstrainB    = .false.
-  logical :: UseB0Source      = UseB
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0, SpeedHyp2 = 1.0
   real    :: HypDecay = 0.1
@@ -182,14 +176,6 @@ Module ModMain
   !\
   ! Source terms
   !/
-
-  !\
-  ! If the B0 filed is not assumed to be curl free (like in a tokamak or 
-  ! in the solar corona beyond the source surface, the curl B0 x B force
-  ! should be included to the momentum equation
-  !/
-  logical::UseCurlB0=.false.
-  real::rCurrentFreeB0=-1.0
 
   ! Logicals for adding radiation diffusion and heat conduction
   logical :: UseRadDiffusion = .false.
