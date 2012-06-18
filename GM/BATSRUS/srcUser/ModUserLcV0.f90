@@ -127,8 +127,8 @@ contains
           call read_var('UseUserB0', UseUserB0)
           if(UseUserB0)then
              call set_parameters_magnetogram("#MAGNETOGRAM")
-             call read_var('dt_UpdateB0', dt_UpdateB0)
-             DoUpdateB0 = dt_updateb0 > 0.0
+             !!! call read_var('dt_UpdateB0', dt_UpdateB0)
+             !!! DoUpdateB0 = dt_updateb0 > 0.0
           end if
 
        case("#CORONALHEATING")
