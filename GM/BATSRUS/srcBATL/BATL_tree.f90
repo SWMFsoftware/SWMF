@@ -736,9 +736,11 @@ contains
        ! then we abort refining/coarsening
        if(.not.allocated(iRank_A) .and. DnNode > 0) then
           if(iProc==0) write(*,*)'!!! WARNING in ',NameSub, &
-               ': Need ', DnNode,' more blocks in total! Skipping AMR !!!'
-          iStatusNew_A(1:nNode) = Unset_
-          RETURN
+               ': Need ', DnNode,' more blocks in total! Skipping refinment !!!'
+          where(iStatusNew_A(1:nNode) == Refine_ )
+            iStatusNew_A(1:nNode) = Unset_
+          end where
+          EXIT LOOPTRY
        end if
 
        ! exit if we have enough space for all the new blocks
