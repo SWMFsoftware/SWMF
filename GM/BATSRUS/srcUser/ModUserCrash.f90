@@ -1775,7 +1775,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
          IsConserv_CB, UseNonConservative, UseElectronPressure
-    use ModGeometry,   ONLY: vInv_CB
+    use BATL_lib,      ONLY: CellVolume_GB
     use ModPhysics,    ONLY: g
     use ModVarIndexes, ONLY: p_, Pe_
 
@@ -1797,7 +1797,7 @@ contains
        DivU            =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
        if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
        if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
-       DivU = vInv_CB(i,j,k,iBlock)*DivU
+       DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
 
        ! Add Level*div(u) as a source term so level sets beome advected scalars
