@@ -190,7 +190,7 @@ sub make_rundir{
 sub submit_run{
     my $rundir = shift;
     my $job    = shift;
-    &shell("cd $rundir; qsub $job") if $IsPfe;
+    &shell("cd $rundir; qsub $job") if $IsPfe or $IsJaguar;
     &shell("cd $rundir; msub $job | tail -1 > ${job}id") if $IsHera or $IsUbgl;
 }
 ###############################################################################
@@ -211,6 +211,8 @@ sub edit_jobscript{
 	    s/(^\#PBS -l select)=\d+/$1=$nNode/;
 	    s/(^\#PBS -q) normal/$1 wide/ if $nCore >= 1024;
 	    s/(^\#PBS -q) wide/$1 normal/ if $nCore <  1024;
+	}elsif($IsJaguar){
+	    s/(^\#PBS -l size)=\d+/$1=$nCore/;
 	}elsif($IsHera){
 	    my $nNode = int($nCore/16+0.99);
 	    s/(\#MSUB -l nodes)=\d+/$1=$nNode/;
