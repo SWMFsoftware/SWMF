@@ -8,7 +8,7 @@ subroutine GM_set_param(CompInfo, TypeAction)
   use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
   use ModMain, ONLY : CodeVersion, NameThisComp, &
        time_accurate, StartTime, iStartTime_I, UseRotatingBc
-  use ModB0, ONLY: DtUpdateB0, DoUpdateB0, 
+  use ModB0, ONLY: DtUpdateB0, DoUpdateB0
   use CON_physics, ONLY: get_time, get_planet
   use ModTimeConvert, ONLY: time_real_to_int
 
