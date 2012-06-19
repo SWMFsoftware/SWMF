@@ -16,6 +16,7 @@ my %Compiler = (
 		"nyx-login-amd"       => "pgf90",
 		"hera"                => "mpiifort",
 		"ubgl"                => "mpxlf90,mpxlc",
+		"jaguarpf-ext"        => "ftn",
 		);
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
