@@ -25,17 +25,13 @@ module BATL_amr_geometry
 
   ! We have only two values to decide the criteria
   ! for geometrick refinment cell size (1) , and AMR level (2)
-  integer, parameter, public :: nCritGeo = 2
+  integer, parameter, public :: nGeoCrit = 2
 
   ! number of geometrical criteria actually used
   integer, public :: nCritGeoUsed = 0
   integer, public :: nCritGeoBackword = 0
-  !Number of geometric criterias 
+  !Number of geometric criterias from AMRCRITERIALEVEL/RESOLUTION
   integer, public :: nCritDxLevel = 0
-
-  ! Backward compatibilety with BATSRUS AMR
-  ! Grid criteria as 'user' and 'currentsheet' are now handled by amr_criteria
-  integer, public :: nCritGeoPhys=0
 
   ! we have read in new data from PARAM.in
   logical, public :: IsNewGeoParam =.false.
@@ -67,8 +63,8 @@ module BATL_amr_geometry
   real, public, allocatable:: AmrCrit_IB(:,:)
 
   real,    public, allocatable:: CoarsenCritAll_I(:), RefineCritAll_I(:)
-  integer, public, allocatable:: iVarCritAll_I(:),idxMaxGeoCrit_I(:)
-  real,    public, allocatable:: MaxLevelCritAll_I(:)
+  integer, public, allocatable:: iVarCritAll_I(:),iResolutionLimit_I(:)
+  real,    public, allocatable:: ResolutionLimit_I(:)
   !type(AreaType), public, allocatable :: AreaAll_I(:)
   integer,    public, allocatable:: iAreaIdx_II(:,:)
   ! Storing names of areas for each criteria given by #AMRCRITERIA.....
@@ -92,9 +88,6 @@ contains
     integer :: iGeo, iVar,iGeoAll
     logical :: DoTestMe = .false.
     !-------------------------------------------------------------------------
-
-
-    nCritGeoPhys = 0
 
     ! Fix resolutions (this depends on domain size set above)
     if(InitialResolution > 0.0) initial_refine_levels = nint( &
@@ -130,13 +123,13 @@ contains
           CoarsenCritAll_I(nAmrCritUsed+iGeo) = &
                RefineCritAll_I(nAmrCritUsed+iGeo)-1
           iVar = 2
-          MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
+          ResolutionLimit_I(nAmrCritUsed+iGeo) = &
                -abs(AreaGeo_I(iGeo)%Level)
        else
           RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeoAll)%Resolution 
           CoarsenCritAll_I(nAmrCritUsed+iGeo) = AreaGeo_I(iGeoAll)%Resolution/2.0
           iVar = 1
-          MaxLevelCritAll_I(nAmrCritUsed+iGeo) = &
+          ResolutionLimit_I(nAmrCritUsed+iGeo) = &
                abs(AreaGeo_I(iGeo)%Resolution)
        end if
 
@@ -144,19 +137,17 @@ contains
        if(nAmrCritUsed  > 0) then
           iVarCritAll_I(nAmrCritUsed+iGeo) = &
                maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel))+iVar
-          idxMaxGeoCrit_I(nAmrCritUsed+iGeo) = &
+          iResolutionLimit_I(nAmrCritUsed+iGeo) = &
                maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel))+iVar
        else
           iVarCritAll_I(iGeo) = iVar   
-          idxMaxGeoCrit_I(nAmrCritUsed+iGeo) = iVar
+          iResolutionLimit_I(nAmrCritUsed+iGeo) = iVar
        end if
 
     end do
 
-    if(nAmrCritUsed  == 0)  then
-       iVarCritAll_I = iVarCritAll_I + nCritGeoPhys
-    end if
 
+    ! Add geometric info for BATSRUS amr type of params
     iGeo = 1
     do iGeoAll = 1, nCritGeoUsed
        if( AreaGeo_I(iGeoAll) % NameRegion .ne. "NULL") CYCLE
@@ -182,7 +173,6 @@ contains
           write(*,*) "Area Rotate_DD   :: ", AreaGeo_I(iGeoAll)%Rotate_DD(1:3,1:3)
           write(*,*) "--------------------"
        end do
-       write(*,*) "nCritGeoPhys     :: ",nCritGeoPhys
        write(*,*) "END init_amr_geometry "
     end if
 
@@ -505,7 +495,7 @@ contains
 
     end if
 
-    AmrCrit_IB(nAmrCrit-nCritGeo+1:nAmrCrit,iBlock) = &
+    AmrCrit_IB(nAmrCrit-nGeoCrit+1:nAmrCrit,iBlock) = &
          (/ MaxLength, -real(iTree_IA(Level_,iNode_B(iBlock))) /)
 
   end subroutine calc_crit
@@ -808,7 +798,7 @@ contains
     if(allocated(AmrCrit_IB)) deallocate(AmrCrit_IB)
     if(allocated(CoarsenCritAll_I)) deallocate(CoarsenCritAll_I)
     if(allocated(RefineCritAll_I)) deallocate(RefineCritAll_I)
-    if(allocated(MaxLevelCritAll_I)) deallocate(MaxLevelCritAll_I)
+    if(allocated(ResolutionLimit_I)) deallocate(ResolutionLimit_I)
     if(allocated(iVarCritAll_I)) deallocate(iVarCritAll_I)
     !if(allocated(AreaAll_I)) deallocate(AreaAll_I)
 
