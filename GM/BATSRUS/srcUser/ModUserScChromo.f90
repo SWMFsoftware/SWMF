@@ -9,13 +9,12 @@ module ModUser
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_get_log_var,                &
        IMPLEMENTED5 => user_calc_sources,               &
-       IMPLEMENTED6 => user_specify_refinement,         &
-       IMPLEMENTED7 => user_set_plot_var,               &
-       IMPLEMENTED8 => user_set_outerbcs,               &
-       IMPLEMENTED9 => user_face_bcs,                   &
-       IMPLEMENTED11=> user_set_resistivity,            &
-       IMPLEMENTED12=> user_update_states,              &
-       IMPLEMENTED13=> user_initial_perturbation
+       IMPLEMENTED6 => user_set_plot_var,               &
+       IMPLEMENTED7 => user_set_outerbcs,               &
+       IMPLEMENTED8 => user_face_bcs,                   &
+       IMPLEMENTED9 => user_set_resistivity,            &
+       IMPLEMENTED10=> user_update_states,              &
+       IMPLEMENTED11=> user_initial_perturbation
 
   include 'user_module.h' !list of public methods
 
@@ -926,13 +925,18 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB, StateOld_VCB
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB,&
+                             StateOld_VCB
     use ModConst,      ONLY: rSun
-    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, UnitX_
-    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, By_, Bz_, RhoUx_, RhoUy_, RhoUz_, &
-                             WaveFirst_, WaveLast_
+    use ModMain,       ONLY: UseB0, UseRotatingFrame
+    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
+                             UnitX_, UnitU_, UnitB_, OmegaBody
+    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, By_, Bz_, RhoUx_, RhoUy_, &
+                             RhoUz_, WaveFirst_, WaveLast_
     use ModCoronalHeating,  ONLY: calc_alfven_wave_dissipation, &
                                   UseAlfvenWaveDissipation
+    use ModCoordTransform,  ONLY: xyz_to_sph
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -947,6 +951,9 @@ contains
 
     integer :: i, j, k
     real    :: WaveDissipation_V(WaveFirst_:WaveLast_), CoronalHeating, Lperp
+    real    :: U_D(3), B_D(3), x, y, z, r, phi, theta
+    real    :: sintheta, sinphi, costheta, cosphi
+    integer,parameter :: x_ =1, y_ =2, z_ =3
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -955,6 +962,8 @@ contains
     select case(NameVar)
 
     case('disstot','dissplus','dissminus','lperp')
+       NameIdlUnit = 'J/m3'
+       NameTecUnit = '[J/m3]'
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
           if(UseUserWaveDissipation) then
              call user_calc_alfven_wave_dissipation(i,j,k,iBlock,&
@@ -967,32 +976,25 @@ contains
           case('dissplus')
              PlotVar_G(i,j,k) = max(1e-30,WaveDissipation_V(WaveFirst_)* &
                   No2Si_V(UnitEnergyDens_))
-             NameIdlUnit = '[J/m3]'
-             NameTecUnit = '[J/m3]'
 
           case('dissminus')
              PlotVar_G(i,j,k) = max(1e-30,WaveDissipation_V(WaveLast_)* &
                   No2Si_V(UnitEnergyDens_))
-             NameIdlUnit = '[J/m3]'
-             NameTecUnit = '[J/m3]'
 
           case('disstot')
              PlotVar_G(i,j,k) = max(1e-30, sum(WaveDissipation_V)* &
                   No2Si_V(UnitEnergyDens_))
-             NameIdlUnit = '[J/m3]'
-             NameTecUnit = '[J/m3]'
              
           case('lperp')
              PlotVar_G(i,j,k) = Lperp * No2Si_V(UnitX_)/rSun 
-             NameIdlUnit = '[Rs]'
+             NameIdlUnit = 'Rs'
              NameTecUnit = '[Rs]'
-
           end select
-
        end do; end do ; end do
 
     case('te')
        NameIdlUnit = 'K'
+       NameTecUnit = '[K]'
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
           if(UseElectronPressure)then
              PlotVar_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
@@ -1005,10 +1007,86 @@ contains
 
     case('ti')
        NameIdlUnit = 'K'
+       NameTecUnit = '[K]'
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
           PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
                /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
        end do; end do; end do
+       
+    ! Vector components in spherical coordinates
+    case('u_r','uphi','utheta')
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          !calculate angles
+          call xyz_to_sph(x_BLK(i,j,k,iBlock), &
+                          y_BLK(i,j,k,iBlock), &
+                          z_BLK(i,j,k,iBlock), r, theta, phi)
+          sinphi = sin(phi)
+          cosphi = cos(phi)
+          costheta = cos(theta)
+          sintheta = sin(theta)
+          
+          ! tranform to non rotating frame if needed
+          U_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/ &
+               State_VGB(Rho_,i,j,k,iBlock)
+          if(UseRotatingFrame) then
+             U_D(x_) = U_D(x_) - OmegaBody*y_BLK(i,j,k,iBlock)
+             U_D(y_) = U_D(y_) + OmegaBody*x_BLK(i,j,k,iBlock)
+          end if
+          U_D = 1e-3*No2Si_V(UnitU_)*U_D
+
+          select case(NameVar)
+          case('u_r')
+             PlotVar_G(i,j,k) = U_D(x_)*sintheta*cosphi + &
+                                U_D(y_)*sintheta*sinphi + &
+                                U_D(z_)*costheta
+
+          case('utheta')
+             PlotVar_G(i,j,k) = U_D(x_)*costheta*cosphi + &
+                                U_D(y_)*costheta*sinphi - &
+                                U_D(z_)*sintheta
+
+          case('uphi')
+             PlotVar_G(i,j,k) =-U_D(x_)*sinphi + U_D(y_)*cosphi
+          end select
+       end do; end do; end do 
+       NameIdlUnit = 'km/s'
+       NameTecUnit = '[km/s]'
+
+    case('b_r','bphi','btheta')
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          call xyz_to_sph(x_BLK(i,j,k,iBlock), &
+                          y_BLK(i,j,k,iBlock), &
+                          z_BLK(i,j,k,iBlock), r, theta, phi)
+          sinphi = sin(phi)
+          cosphi = cos(phi)
+          costheta = cos(theta)
+          sintheta = sin(theta)
+
+          if(UseB0) then
+             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + &
+                  B0_DGB(:,i,j,k,iBlock)
+          else
+             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          end if
+          B_D = 1e4*No2Si_V(UnitB_)*B_D
+
+          select case(NameVar)
+          case('b_r')
+             PlotVar_G(i,j,k) = B_D(x_)*sintheta*cosphi + &
+                                B_D(y_)*sintheta*sinphi + &
+                                B_D(z_)*costheta
+
+          case('btheta')
+             PlotVar_G(i,j,k) = B_D(x_)*costheta*cosphi + &
+                                B_D(y_)*costheta*sinphi - &
+                                B_D(z_)*sintheta
+
+          case('bphi')
+             PlotVAr_G(i,j,k) =-B_D(x_)*sinphi + B_D(y_)*cosphi
+          end select
+       end do; end do; end do 
+       NameIdlUnit = 'G'
+       NameTecUnit = '[G]'
 
     case('rhoerr')
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1078,55 +1156,6 @@ contains
     PlotVarBody    = 0.0
 
   end subroutine user_set_plot_var
-  !============================================================================
-  subroutine user_specify_refinement(iBlock, iArea, DoRefine)
-
-    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB, SignB_
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
-    use ModNumConst, ONLY: cTiny
-    use ModMain,     ONLY: x_, y_, z_, time_loop, UseB0, iNewGrid, &
-                           DoThinCurrentSheet
-    use ModPhysics,  ONLY: rBody
-
-    integer, intent(in) :: iBlock, iArea
-    logical,intent(out) :: DoRefine
-
-    real :: rDotB_G(1:nI,1:nJ,0:nK+1), r_G(1:nI,1:nJ,1:nK), rMin=0.0
-    integer       :: i, j, k
-    integer, save :: iLevel = 0, iLastGrid = -1
-    character (len=*), parameter :: NameSub = 'user_specify_refinement'
-    !--------------------------------------------------------------------------
-
-    if(.not.time_loop)then
-       DoRefine = .false.
-
-       RETURN
-    end if
-  
-    ! Do gradual refinement along R if required
-    if(DoRefineGradualSheet) then
-       if(iNewGrid > iLastGrid ) then
-          iLevel = iLevel + 1
-          iLastGrid = iNewGrid
-       end if
-
-       if (iLevel > nLevelGradual) then
-          DoRefine = .false.
-          RETURN
-       end if
-
-       if(rRefine_I(iLevel) > rRefine_I(iLevel-1)) then
-          do k=1,nK ; do j=1,nJ ; do i=1,nI
-             r_G(i,j,k) = sqrt(x_BLK(i,j,k,iBlock)**2 + &
-                  y_BLK(i,j,k,iBlock)**2 + &
-                  z_BLK(i,j,k,iBlock)**2)
-          end do; end do; end do
-          rMin = minval(r_G)
-          if (rMin < rRefine_I(iLevel)) DoRefine = .false.
-       end if
-    end if
-
-  end subroutine user_specify_refinement
   !============================================================================
   subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
 
