@@ -64,16 +64,13 @@ contains
   !===========================================================================
 
   subroutine user_specify_refinement(iBlk, iArea, DoRefine)
-    !use ModSize,     ONLY: nI, nJ, nK
+
     use ModMain,     ONLY: body1, UseRotatingBc
-    !use ModGeometry, ONLY: XyzMin_D, XyzMax_D, XyzStart_BLK, &
-    !     , TypeGeometry, x1, x2, x_BLK, y_BLK, z_BLK
     use ModPhysics,  ONLY: rBody, rCurrents
-    use ModAMR,      ONLY: nRefineLevel
     use ModNumConst, ONLY: cPi, cTiny
     use BATL_lib,    ONLY: Xyz_DGB, Xyz_DNB,nI, nJ, nK, MinI, MaxI, MinJ, &
          MaxJ, MinK, MaxK, CellSize_DB, CoordMin_DB, TypeGeometry,&
-         CoordMin_D,CoordMax_D
+         CoordMin_D, CoordMax_D, nLevel
 
     integer, intent(in) :: iBlk, iArea
     logical,intent(out) :: DoRefine
@@ -99,7 +96,7 @@ contains
     !--------------------------------------------------------------------------
     call set_oktest('initial_refinement',oktest,oktest_me)
 
-    lev = nRefineLevel
+    lev = nLevel ! from BATL_lib
     DoRefine = .false.
 
     XyzStart_D(:) = CoordMin_DB(:,iBLK) + 0.5*CellSize_DB(:,iBLK)
