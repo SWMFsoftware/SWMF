@@ -593,6 +593,8 @@ contains
           end do
        end do
 
+       if(isort == 0) CYCLE
+
        nNodeSort = iSort
        nNodeSortMax = max(nNodeSort,nNodeSortMax)
 
@@ -701,6 +703,8 @@ contains
           iSort = iSort+1
           Rank_I(iSort) = iRank_I(k) + Rank_I(k)
           iIdxSort_II(iSort,1) = iNode_I(k)
+          CritSort_II(iSort,1) = &
+                AllCrit_II(iResolutionLimit_I(iStartCrit),iBlock+nRecivDisp_P(iProces))
        end do
     end do
     nNodeSort = iSort
@@ -764,6 +768,7 @@ contains
     ! Give iStatusNew_A based on the iRank_A and number of blocks we want for
     ! refinment and coarsning
     do iSort = nNodeSort, nNodeSort-max(nDesiredRefine,nNodeRefine)+1, -1
+       if( maxval(ResolutionLimit_I(iStartCrit:iEndCrit)) >= CritSort_II(iIdxSort_II(iSort,iTotalCrit),1)) CYCLE
        iStatusNew_A(iRank_A(iSort)) = Refine_
     end do
    
@@ -773,12 +778,12 @@ contains
          if(iStatusNew_A(iRank_A(iSort)) ==  Coarsen_)&
              iStatusNew_A(iRank_A(iSort)) = Unset_
        end do
-    else
+   else
        do iSort = 1, max(nDesiredCoarsen, nNodeCoarsen)
-         if(iStatusNew_A(iRank_A(iSort)) /= Refine_) &
+         if(iStatusNew_A(iRank_A(iSort)) /= Refine_)&
              iStatusNew_A(iRank_A(iSort)) =  Coarsen_
        end do
-    end if
+   end if
 
     deallocate(iSortToNode_I)
     deallocate(AllRank_II)
