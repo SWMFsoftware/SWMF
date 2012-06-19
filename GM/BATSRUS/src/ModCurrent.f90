@@ -9,7 +9,8 @@ module ModCurrent
 contains
   !============================================================================
 
-  subroutine get_current(i, j, k, iBlock, Current_D, nOrderResChange)
+  subroutine get_current(i, j, k, iBlock, Current_D, nOrderResChange, &
+       DoIgnoreBody)
 
     ! Calculate the current in a cell of a block
     ! Avoid using ghost cells at resolution changes.
@@ -31,6 +32,8 @@ contains
 
     integer, optional, intent(in):: nOrderResChange
 
+    logical, optional, intent(in):: DoIgnoreBody
+
     logical:: UseFirstOrder
     integer:: iL, iR, jL, jR, kL, kR
     real   :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
@@ -38,7 +41,7 @@ contains
     !--------------------------------------------------------------------------
 
     ! Exclude body cells
-    if(.not.True_Cell(i,j,k,iBlock))then
+    if(.not.True_Cell(i,j,k,iBlock) .and. .not.present(DoIgnoreBody))then
        Current_D = 0.0
 
        RETURN
@@ -118,7 +121,7 @@ contains
 
     ! Use first-order one-sided difference near the body if needed.
     ! If even first-order fails, then set the current to zero and exit.
-    if(.not.true_BLK(iBlock))then
+    if(.not.true_BLK(iBlock) .and. .not.present(DoIgnoreBody))then
        if(.not.True_Cell(iL,j,k,iBlock).and..not.True_Cell(iR,j,k,iBlock))then
           Current_D = 0.0
           RETURN
