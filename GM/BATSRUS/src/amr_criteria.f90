@@ -13,8 +13,7 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
   use ModPhysics,    ONLY: UseSunEarth
   use ModUser,       ONLY: user_amr_criteria
   use ModCurrent,    ONLY: get_current
-  use BATL_lib,      ONLY: DoAmr_B, UseAmrMask, Xyz_DGB, CellSize_DB, &
-       masked_amr_criteria
+  use BATL_lib,      ONLY: Xyz_DGB, CellSize_DB, masked_amr_criteria
   use ModNumConst,   ONLY: cSqrtTwo, cTiny
   use ModVarIndexes, ONLY: SignB_
   use ModUser,       ONLY: user_specify_refinement
@@ -53,10 +52,6 @@ subroutine amr_criteria(Crit_IB,TypeAmr)
      if (unusedBLK(iBlock)) CYCLE
      if (masked_amr_criteria(iBlock)) CYCLE
      
-     if(UseAmrMask) then
-        if(.not.DoAmr_B(iBlock)) CYCLE
-     end if
-
      ! Initialize values to use below for criteria
      if (UseSunEarth) then
         RcritAMR = 1 + 1.5*cSqrtTwo*maxval(CellSize_DB(:,iBlock))

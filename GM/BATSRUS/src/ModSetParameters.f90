@@ -983,7 +983,7 @@ subroutine MH_set_parameters(TypeAction)
            if (automatic_refinement) call read_amr_criteria("#AMR")
         end if
 
-     case("#AMRLIMIT", "#AMRTYPE", "#AMRAREA")
+     case("#AMRLIMIT", "#AMRTYPE")
         call read_amr_criteria(NameCommand)
 
      case("#DOAMR")

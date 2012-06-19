@@ -72,8 +72,8 @@ module BATL_lib
 
   ! Inherited from BATL_amr_criteria
   public:: set_amr_criteria, clean_amr_criteria, read_amr_criteria
-  public:: AmrCrit_IB, DoAmr_B, nAmrCrit, DoCritAmr, DoAutoAmr, DoStrictAmr
-  public:: UseAmrMask, calc_error_amr_criteria, set_amr_geometry
+  public:: AmrCrit_IB, nAmrCrit, DoCritAmr, DoAutoAmr, DoStrictAmr
+  public:: calc_error_amr_criteria, set_amr_geometry
   public:: masked_amr_criteria,init_amr_criteria
 
   ! Inherited from BATL_amr_geometry
