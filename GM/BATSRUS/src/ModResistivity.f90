@@ -15,9 +15,7 @@ module ModResistivity
 
   public:: read_resistivity_param
   public:: init_mod_resistivity
-  public:: spitzer_resistivity
-  public:: anomalous_resistivity
-  public:: raeder_resistivity
+  public:: set_resistivity
   public:: mask_resistivity
   public:: calc_resistivity_source
   public:: get_impl_resistivity_state
@@ -30,7 +28,7 @@ module ModResistivity
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
   real, public              :: Eta0, Eta0Si=0.0
-  
+
   ! Local variables
   logical            :: UseJouleHeating  = .true.
   logical            :: UseHeatExchange  = .true.
@@ -65,7 +63,7 @@ contains
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in):: NameCommand
-    
+
     character(len=*), parameter:: NameSub = 'read_resistivity_param'
     !------------------------------------------------------------------------
     select case(NameCommand)
@@ -164,10 +162,36 @@ contains
                Eta0, Eta0Anom, EtaMaxAnom
           write(*,*)NameSub, ': jCritInv = ', jCritInv
        end if
-       
+
     end if
 
   end subroutine init_mod_resistivity
+
+  !===========================================================================
+
+  subroutine set_resistivity(iBlock)
+
+    integer, intent(in) :: iBlock
+    character (len=*), parameter :: NameSub = 'set_resistivity'
+    !--------------------------------------------------------------------------
+    select case(TypeResistivity)
+    case('constant')
+       Eta_GB(:,:,:,iBlock) = Eta0
+    case('spitzer')
+       call spitzer_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+    case('anomalous')
+       call anomalous_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+    case('raeder')
+       call raeder_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+    case('user')
+       call user_set_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+    case default
+       call stop_mpi(NameSub//' : invalid TypeResistivity='//TypeResistivity)
+    end select
+
+    call mask_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+
+  end subroutine set_resistivity
 
   !===========================================================================
 

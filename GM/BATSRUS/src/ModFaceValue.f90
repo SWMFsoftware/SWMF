@@ -2179,7 +2179,6 @@ contains
     use ModVarIndexes, ONLY: DefaultState_V, nVar, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
-    use ModAMR,        ONLY: unusedBlock_BP
     use ModParallel,   ONLY: neiLEV, &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
          neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth, &
@@ -2188,6 +2187,8 @@ contains
     ! For debugging
     use ModProcMH, ONLY: iProc
     use ModMain, ONLY: VarTest, ProcTest, BlkTest, jTest, kTest
+
+    use BATL_lib,  ONLY: unusedBlock_BP => Unused_BP
 
     integer, intent(in) :: iBLK
     integer             :: i, j, k

@@ -10,7 +10,8 @@ module ModLoadBalance
   use ModImplicit, ONLY: UseBDF2, n_prev, ImplOld_VCB, nW  !^CFG IF IMPLICIT
   use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK        !^CFG IF CONSTRAINB
   use ModRaytrace, ONLY: ray                               !^CFG IF RCM
-  use ModAdvance, ONLY: nVar, fbody_x_BLK, fbody_y_BLK, fbody_z_BLK
+  use ModAdvance, ONLY: nVar
+  use ModCalcSource, ONLY: PotentialForce_DCB
   use ModB0, ONLY: B0_DGB
   use ModIo, ONLY: log_vars
 
@@ -106,18 +107,14 @@ contains
           ! Cell centered B0_DGB
           do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
              Buffer_I(iData+1:iData+3) = B0_DGB(:,i,j,k,iBlock)
-             iData = iData+3
+             iData = iData + 3
           end do; end do; end do
        end if
-       ! fbody*
+       ! PotentialForce
        if(UseGravity .or. UseRotatingFrame)then
           do k=1,nK; do j=1,nJ; do i=1,nI
-             iData = iData+1
-             Buffer_I(iData) = fBody_x_BLK(i,j,k,iBlock)
-             iData = iData+1
-             Buffer_I(iData) = fBody_y_BLK(i,j,k,iBlock)
-             iData = iData+1
-             Buffer_I(iData) = fBody_z_BLK(i,j,k,iBlock)
+             Buffer_I(iData+1:iData+3) = PotentialForce_DCB(:,i,j,k,iBlock)
+             iData = iData + 3
           end do; end do; end do
        end if
 
@@ -188,15 +185,11 @@ contains
              iData = iData+3
           end do; end do; end do
        end if
-       ! fbody*
+       ! PotentialForce
        if(UseGravity .or. UseRotatingFrame)then
           do k=1,nK; do j=1,nJ; do i=1,nI
-             iData = iData+1
-             fBody_x_BLK(i,j,k,iBlock) = Buffer_I(iData)
-             iData = iData+1
-             fBody_y_BLK(i,j,k,iBlock) = Buffer_I(iData)
-             iData = iData+1
-             fBody_z_BLK(i,j,k,iBlock) = Buffer_I(iData)
+             PotentialForce_DCB(:,i,j,k,iBlock) = Buffer_I(iData+1:iData+3)
+             iData = iData + 3
           end do; end do; end do
        end if
 
@@ -241,7 +234,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
        State_VGB
   use ModGeometry,   ONLY: True_Blk, true_cell
   use ModPartSteady, ONLY: UsePartSteady
-  use ModAMR,        ONLY: UnusedBlock_BP
+  use BATL_lib,      ONLY: Unused_BP
   use ModParallel
   use ModMpi
 
@@ -387,7 +380,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   end if
 
   ! When load balancing is done Skipped and Unused blocks coincide
-  UnusedBlock_BP(1:nBlockMax,:) = &
+  Unused_BP(1:nBlockMax,:) = &
        iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
 
   call find_test_cell

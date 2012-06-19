@@ -9,7 +9,11 @@ module ModCalcSource
 
   ! Public methods
   public :: calc_source
+  public :: set_potential_force
   public :: get_tesi_c
+
+  ! Block cell-centered body forces
+  real, public, allocatable :: PotentialForce_DCB(:,:,:,:,:)
 
 contains
 
@@ -446,7 +450,7 @@ contains
     end if
 
     if(UseB .and. UseCurlB0)then
-       
+
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           if(R_BLK(i,j,k,iBlock) < rCurrentFreeB0)CYCLE
@@ -501,22 +505,14 @@ contains
        ! Add gravity and/or centrifugal force
        if(UseGravity .or. UseRotatingFrame) then
 
-          Source_VC(iRhoUx,:,:,:) = Source_VC(iRhoUx,:,:,:) + &
-               State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)* &
-               fbody_x_BLK(:,:,:,iBlock)
-          Source_VC(iRhoUy,:,:,:) = Source_VC(iRhoUy,:,:,:) + &
-               State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)* &
-               fbody_y_BLK(:,:,:,iBlock)
-          Source_VC(iRhoUz,:,:,:) = Source_VC(iRhoUz,:,:,:) + &
-               State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)* &
-               fbody_z_BLK(:,:,:,iBlock)
-          Source_VC(Energy_,:,:,:) = Source_VC(Energy_,:,:,:) + &
-               (State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock)* &
-               fbody_x_BLK(:,:,:,iBlock) + & 
-               State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock)* &
-               fbody_y_BLK(:,:,:,iBlock) + &
-               State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)* &
-               fbody_z_BLK(:,:,:,iBlock)) 
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Source_VC(iRhoUx:iRhoUz,i,j,k) = Source_VC(iRhoUx:iRhoUz,i,j,k) &
+                  + State_VGB(iRho,i,j,k,iBlock) &
+                  * PotentialForce_DCB(:,i,j,k,iBlock)
+             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
+                  sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)* &
+                  PotentialForce_DCB(:,i,j,k,iBlock))
+          end do; end do; end do
 
           if(DoTestMe.and. &
                (VarTest==Energy_ .or. VarTest>=iRhoUx.and.VarTest<=iRhoUz))then
@@ -903,5 +899,161 @@ contains
        end do; end do; end do
     end if
   end subroutine get_tesi_c
+
+  !============================================================================
+
+  subroutine set_potential_force(iBlock)
+
+    ! Calculate and store gravitational and centrifugal forces
+
+    use ModSize, ONLY: nI, nJ, nK, x_, y_, z_, MaxBlock, MaxDim
+    use ModMain, ONLY: UseGravity, UseRotatingFrame
+    use ModGeometry, ONLY: true_cell
+    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB, &
+         FaceNormal_DDFB, Xyz_DGB
+
+    integer, intent(in):: iBlock
+
+    integer :: i,j,k
+
+    real:: DxInv, DyInv, DzInv
+    real:: Potential_S(6), Xyz_D(3)
+    real:: FaceArea_DS(3,6), VInv
+
+    character(len=*), parameter:: NameSub = 'set_potential_force'
+    !--------------------------------------------------------------------------
+    if(.not.UseGravity .and. .not.UseRotatingFrame) RETURN
+
+    if(.not.allocated(PotentialForce_DCB))then
+       allocate(PotentialForce_DCB(MaxDim,nI,nJ,nK,MaxBlock))
+       PotentialForce_DCB = 0.0
+    end if
+
+    if(IsCartesianGrid)then
+       DxInv = 1.0/CellSize_DB(x_,iBlock)                        
+       DyInv = 1.0/CellSize_DB(y_,iBlock)
+       DzInv = 1.0/CellSize_DB(z_,iBlock)                        
+    end if
+
+    do k=1,nK; do j=1,nJ;  do i=1,nI  
+       if(.not.true_cell(i,j,k,iBlock))CYCLE
+
+       Xyz_D = 0.5*(Xyz_DGB(:,i-1,j,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock))
+       Potential_S(1) = GravityForcePotential(Xyz_D) &
+            + CentrifugalForcePotential(Xyz_D)
+
+       Xyz_D = 0.5*(Xyz_DGB(:,i+1,j,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock))
+       Potential_S(2) = -GravityForcePotential(Xyz_D) &
+            - CentrifugalForcePotential(Xyz_D)
+
+       Xyz_D = 0.5*(Xyz_DGB(:,i,j-1,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock))
+       Potential_S(3) = GravityForcePotential(Xyz_D) &
+            + CentrifugalForcePotential(Xyz_D)
+
+       Xyz_D = 0.5*(Xyz_DGB(:,i,j+1,k,iBlock) + Xyz_DGB(:,i,j,k,iBlock))
+       Potential_S(4) = -GravityForcePotential(Xyz_D) &
+            - CentrifugalForcePotential(Xyz_D)
+
+       Xyz_D = 0.5*(Xyz_DGB(:,i,j,k-1,iBlock) + Xyz_DGB(:,i,j,k,iBlock))
+       Potential_S(5) = GravityForcePotential(Xyz_D) &
+            + CentrifugalForcePotential(Xyz_D)
+
+       Xyz_D = 0.5*(Xyz_DGB(:,i,j,k+1,iBlock) + Xyz_DGB(:,i,j,k,iBlock))
+       Potential_S(6) = -GravityForcePotential(Xyz_D) &
+            - CentrifugalForcePotential(Xyz_D)
+
+       if(IsCartesianGrid)then    
+
+          PotentialForce_DCB(x_,i,j,k,iBlock) = &
+               (Potential_S(1)  + Potential_S(2))*DxInv 
+          PotentialForce_DCB(y_,i,j,k,iBlock) = &
+               (Potential_S(3) + Potential_S(4))*DyInv   
+          PotentialForce_DCB(z_,i,j,k,iBlock) = &
+               (Potential_S(5) + Potential_S(6))*DzInv
+
+       else                                    
+          VInv = 1.0/CellVolume_GB(i,j,k,iBlock)
+
+          FaceArea_DS(:,1:2) = FaceNormal_DDFB(:,1,i:i+1,j,k,iBlock)
+          FaceArea_DS(:,3:4) = FaceNormal_DDFB(:,2,i,j:j+1,k,iBlock)
+          FaceArea_DS(:,5:6) = FaceNormal_DDFB(:,3,i,j,k:k+1,iBlock)
+
+          PotentialForce_DCB(x_,i,j,k,iBlock) = VInv*&
+               sum(FaceArea_DS(1,:)*Potential_S)
+          PotentialForce_DCB(y_,i,j,k,iBlock) = VInv*&
+               sum(FaceArea_DS(2,:)*Potential_S)
+          PotentialForce_DCB(z_,i,j,k,iBlock) = VInv*&
+               sum(FaceArea_DS(3,:)*Potential_S)
+
+       end if
+
+    end do; end do ;end do 
+
+  contains
+
+    !==========================================================================
+    real function GravityForcePotential(Xyz_D)
+
+      use ModMain, ONLY : UseGravity, GravityDir
+      use ModMain, ONLY : UseBody2                !^CFG IF SECONDBODY
+      use ModPhysics, ONLY : Gbody, cTolerance
+      use ModPhysics, ONLY : Gbody2,xBody2,yBody2,zBody2  !^CFG IF SECONDBODY
+
+      real, intent(in) :: Xyz_D(3)
+      real :: R0
+      !-----------------------------------------------------------------------
+      if(.not.UseGravity)then
+         GravityForcePotential=0.0
+      else
+         select case(GravityDir)
+         case(1,2,3)
+            GravityForcePotential=-Gbody*Xyz_D(GravityDir)
+         case(0)
+            R0 = sqrt(sum(Xyz_D**2) + cTolerance**2)
+            GravityForcePotential = Gbody/R0
+         case default
+            write(*,*)'Impossible value for GravityDir=',GravityDir
+            call stop_mpi(NameSub)
+         end select
+
+         !^CFG IF SECONDBODY BEGIN
+         !\
+         ! if there is a second body for which gravity is important 
+         ! include it's contribution  here in the following if block
+         !
+         ! Note that the second body IGNORES the gravity direction and
+         ! only does gravity radially towards the body.
+         !/
+         if (UseBody2) then
+            r0=sqrt(sum( (Xyz_D - (/xBody2,yBody2, zBody2/))**2) &
+                 + cTolerance**2)
+            GravityForcePotential = GravityForcePotential + GBody2/r0
+         end if
+         !^CFG IF SECONDBODY END
+      end if
+
+    end function GravityForcePotential
+    !==========================================================================
+    real function  CentrifugalForcePotential(Xyz_D)
+
+      ! Evaluates the non-dimensional centrifugal force potential
+      ! at location Xyz_D for a coordinate system rotating around the Z axis.
+
+      use ModMain
+      use ModPhysics, ONLY : OmegaBody
+
+      real, intent(in) :: Xyz_D(3)
+      !------------------------------------------------------------------------
+
+      if(UseRotatingFrame)then
+         CentrifugalForcePotential = &
+              -OmegaBody**2 *0.5*(Xyz_D(1)**2 + Xyz_D(2)**2)
+      else
+         CentrifugalForcePotential = 0.0
+      end if
+
+    end function CentrifugalForcePotential
+
+  end subroutine set_potential_force
 
 end module ModCalcSource

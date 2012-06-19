@@ -19,10 +19,10 @@ module ModConserveFlux
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
        neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth, &
        neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth
-  use ModAmr, ONLY: UnusedBlock_BP
   use BATL_lib, ONLY: &
        IsCartesianGrid, IsCartesian, IsRzGeometry, &
-       CellFace_DFB, FaceNormal_DDFB
+       CellFace_DFB, FaceNormal_DDFB, UnusedBlock_BP => Unused_BP
+
 
   implicit none
 

@@ -26,7 +26,6 @@ contains
 
     use BATL_lib, ONLY: message_pass_cell
     use ModParallel, ONLY: BLKneighborLEV ! we should use BATL:DiNeiLevel_IIIB
-    use ModAMR, ONLY: DoProfileAmr
     use ModMpi
 
     logical, optional, intent(in) :: DoResChangeOnlyIn, UseOrder2In
@@ -116,8 +115,6 @@ contains
             call fix_boundary_ghost_cells(DoRestrictFace)
     end if
 
-    if(DoProfileAmr) call timing_start('E and P')
-
     do iBlock = 1, nBlock
        if (unusedBLK(iBlock)) CYCLE
 
@@ -134,8 +131,6 @@ contains
 
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
     end do
-
-    if(DoProfileAmr) call timing_stop('E and P')
 
     call timing_stop('exch_msgs')
     if(DoTime)call timing_show('exch_msgs',1)

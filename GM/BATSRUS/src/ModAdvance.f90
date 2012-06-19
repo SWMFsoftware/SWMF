@@ -92,13 +92,6 @@ module ModAdvance
   real, allocatable :: Ez_CB(:,:,:,:)
 
   !\
-  ! Block cell-centered body forces
-  !/
-  real, allocatable :: fbody_x_BLK(:,:,:,:)
-  real, allocatable :: fbody_y_BLK(:,:,:,:)
-  real, allocatable :: fbody_z_BLK(:,:,:,:)
-
-  !\
   ! Local cell-centered source terms and divB.
   !/
   real :: Source_VC(nVar+nFluid, nI, nJ, nK)
@@ -184,11 +177,6 @@ contains
        allocate(Ey_CB(nI,nJ,nK,MaxBlock))
        allocate(Ez_CB(nI,nJ,nK,MaxBlock))
     end if
-    if((UseGravity .or. UseRotatingFrame).and. .not.allocated(fbody_x_BLK))then
-       allocate(fbody_x_BLK(nI,nJ,nK,MaxBlock))
-       allocate(fbody_y_BLK(nI,nJ,nK,MaxBlock))
-       allocate(fbody_z_BLK(nI,nJ,nK,MaxBlock))
-    end if
 
     if(allocated(State_VGB)) RETURN
 
@@ -228,8 +216,6 @@ contains
     if(allocated(time_BLK))        deallocate(time_BLK)
     if(allocated(DivB1_GB))        deallocate(DivB1_GB)
     if(allocated(Ex_CB))           deallocate(Ex_CB, Ey_CB, Ez_CB)
-    if(allocated(fbody_x_BLK))     deallocate(fbody_x_BLK, fbody_y_BLK, &
-         fbody_z_BLK)
     if(allocated(iTypeAdvance_BP)) deallocate(iTypeAdvance_BP)
 
     if(iProc==0)then

@@ -12,12 +12,13 @@ module ModPartSteady
   use ModSize,       ONLY: MaxBlock, nI, nJ, nK
   use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, UnusedBLK, &
        East_, Top_, time_accurate,  n_step, lVerbose
-  use ModAMR,        ONLY: UnusedBlock_BP
   use ModGeometry,   ONLY: Dx_BLK, MinDxValue
   use ModParallel,   ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
   use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, &
        State_VGB, StateOld_VCB
+  use BATL_lib,      ONLY: UnusedBlock_BP => Unused_BP
+
   use ModMpi
 
   implicit none

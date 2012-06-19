@@ -40,7 +40,7 @@ module ModFaceFlux
        get_heat_flux, get_ion_heat_flux
   !^CFG END IMPLICIT
 
-  use ModResistivity, ONLY: &                    !^CFG IF DISSFLUX
+  use ModResistivity, ONLY: set_resistivity, &   !^CFG IF DISSFLUX
        UseResistivity, UseResistiveFlux, Eta_GB  !^CFG IF DISSFLUX
 
   use ModVarIndexes

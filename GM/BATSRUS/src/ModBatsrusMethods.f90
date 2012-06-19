@@ -11,7 +11,6 @@ subroutine BATS_setup
        initial_refine_levels, nRefineLevelIC, nRefineLevel
   use ModAdvance, ONLY : iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModParallel, ONLY: init_mod_parallel
-!  use ModNumConst
 
   implicit none
 
@@ -144,6 +143,7 @@ contains
     use ModMessagePass, ONLY: exchange_messages
     use ModMain,        ONLY: UseB0
     use ModB0,          ONLY: set_b0_reschange
+    use ModAMR,         ONLY: do_amr
 
     ! Set intial conditions for solution in each block.
 
@@ -171,7 +171,7 @@ contains
 
           call timing_start('amr_ics_amr')
           ! Do physics based AMR with the message passing
-          call amr(.true.,'phy')
+          call do_amr(.true.,'phy')
 
           call timing_stop('amr_ics_amr')
        end do
@@ -354,12 +354,12 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModProcMH
   use ModMain
   use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
-  use ModAmr, ONLY: DnAmr, DoAmr
+  use ModAmr, ONLY: DnAmr, DoAmr, nRefineLevel, automatic_refinement, do_amr
   use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
-  use ModImplicit, ONLY: UseImplicit, UseSemiImplicit    !^CFG IF IMPLICIT
+  use ModImplicit, ONLY: UseImplicit, UseSemiImplicit, n_prev !^CFG IF IMPLICIT
   use ModIonoVelocity, ONLY: apply_iono_velocity
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
   use ModLaserHeating,    ONLY: add_laser_heating
@@ -480,7 +480,13 @@ subroutine BATS_advance(TimeSimulationLimit)
         if (time_accurate) call write_timeaccurate
      end if
 
-     call BATS_amr_refinement
+     if (.not. automatic_refinement) nRefineLevel = nRefineLevel + 1
+
+     ! BDF2 scheme should not use previous step after AMR  !^CFG IF IMPLICIT
+     n_prev = -100                                         !^CFG IF IMPLICIT
+
+     ! Do AMR without full initial message passing
+     call do_amr(.false.,'all')
 
      ! Output timing after AMR.
      call timing_stop(NameThisComp//'_amr')
@@ -498,66 +504,6 @@ subroutine BATS_advance(TimeSimulationLimit)
   call BATS_save_files('NORMAL')
 
 end subroutine BATS_advance
-
-!=============================================================================
-subroutine BATS_amr_refinement
-
-  ! Adaptive Mesh Refinement (AMR):
-  ! Refine and coarsen the solution grid (on the fly) as needed.
-
-  use ModProcMH
-  use ModIO, ONLY: iUnitOut, write_prefix
-  use ModMain, ONLY: lVerbose, x_, y_, z_
-  use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
-  use ModImplicit, ONLY : n_prev                   !^CFG IF IMPLICIT
-  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
-  use ModAMR, ONLY : nRefineLevel, automatic_refinement
-  use ModNumConst, ONLY: cTiny
-  use ModAdvance, ONLY : tmp1_BLK
-
-  implicit none
-
-  !LOCAL VARIABLES:
-  character(len=*), parameter :: NameSub = 'BATS_amr_refinement '
-  real    :: divbmax_now
-  real, external :: maxval_loc_abs_BLK
-  integer :: iLoc_I(5)  ! full location index
-  !--------------------------------------------------------------------------
-
-  !\
-  ! Perform the AMR.
-  !/
-  if (.not. automatic_refinement) nRefineLevel = nRefineLevel + 1
-
-  ! BDF2 scheme should not use previous step after AMR  !^CFG IF IMPLICIT
-  n_prev = -100                                         !^CFG IF IMPLICIT
-
-  !if(UseConstrainB)call b_face_fine_pass     !^CFG IF CONSTRAINB
-
-  ! Do AMR without full initial message passing
-  call amr(.false.,'all')
-
-  !^CFG IF CONSTRAINB BEGIN
-  if(UseConstrainB)then
-     !Check for divb
-     call proj_get_divb(tmp1_BLK)
-
-     divbmax_now=maxval_loc_abs_BLK(nProc,tmp1_BLK,iLoc_I)
-     if(iProc == 0.and.lVerbose>0)then
-        call write_prefix; write(iUnitOut,*)
-        call write_prefix; write(iUnitOut,*) NameSub, &
-             ' maximum of |div B| after AMR=',divbmax_now
-        call write_prefix; write(iUnitOut,*)
-     end if
-     if(iProc==iLoc_I(5).and.divbmax_now>cTiny)write(*,*)&
-          NameSub,' WARNING divB,loc,x,y,z=',divbmax_now,iLoc_I,&
-          x_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4)),&
-          y_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4)),&
-          z_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4))
-  end if
-  !^CFG END CONSTRAINB
-
-end subroutine BATS_amr_refinement
 
 !^CFG IF CONSTRAINB BEGIN
 !============================================================================

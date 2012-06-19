@@ -11,6 +11,7 @@ subroutine set_ics
   use ModMultiFluid
   use ModEnergy, ONLY: calc_energy_ghost
   use ModConserveFlux, ONLY: init_cons_flux
+  use ModCalcSource, ONLY: set_potential_force
 
   implicit none
 
@@ -30,12 +31,6 @@ subroutine set_ics
   end if
 
   time_BLK(:,:,:,iBlock) = 0.00
-
-  if(UseGravity .or. UseRotatingFrame)then
-     fbody_x_BLK(:,:,:,iBlock) = 0.00
-     fbody_y_BLK(:,:,:,iBlock) = 0.00
-     fbody_z_BLK(:,:,:,iBlock) = 0.00
-  end if
 
   Flux_VX = 0.0
   Flux_VY = 0.0

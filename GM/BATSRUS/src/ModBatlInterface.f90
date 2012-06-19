@@ -259,7 +259,7 @@ contains
     use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B,&
          set_amr_geometry
     use ModEnergy, ONLY: calc_energy_ghost
-    use ModResistivity,   ONLY: UseResistivity
+    use ModResistivity, ONLY: UseResistivity, set_resistivity
     use ModUser,    ONLY : user_specify_refinement
 
     integer:: iBlock
@@ -289,8 +289,7 @@ contains
   !============================================================================
   subroutine calc_other_vars(iBlock)
 
-    use ModAdvance,  ONLY: State_VGB, nVar, &
-         fbody_x_BLK, fbody_y_BLK, fbody_z_BLK
+    use ModAdvance,  ONLY: State_VGB, nVar
     use ModB0,       ONLY: set_b0_cell
     use ModPhysics,  ONLY: CellState_VI
     use ModGeometry, ONLY: body_BLK, true_cell
@@ -298,6 +297,7 @@ contains
          UseRotatingFrame
     use ModParallel, ONLY: neiLwest, NOBLK
     use ModConserveFlux, ONLY: init_cons_flux
+    use ModCalcSource, ONLY: set_potential_force
     use BATL_size, ONLY: nI, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     integer, intent(in) :: iBlock
@@ -309,13 +309,6 @@ contains
 
     ! Set B0
     if(UseB0) call set_b0_cell(iBlock)
-
-    ! Initialize and set body forces
-    if(allocated(fbody_x_BLK))then
-       fbody_x_BLK(:,:,:,iBlock) = 0.0
-       fbody_y_BLK(:,:,:,iBlock) = 0.0
-       fbody_z_BLK(:,:,:,iBlock) = 0.0
-    end if
 
     if(UseGravity.or.UseRotatingFrame) call set_potential_force(iBlock)
 

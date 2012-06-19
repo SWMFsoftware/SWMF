@@ -84,7 +84,6 @@ subroutine advance_impl
   use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModImplicit
   use ModPointImplicit, ONLY: UsePointImplicit
-  use ModAMR, ONLY : UnusedBlock_BP
   use ModNumConst
   use ModLinearSolver, ONLY: gmres, bicgstab, cg, prehepta, &
        Uhepta, Lhepta, multiply_dilu
@@ -92,6 +91,7 @@ subroutine advance_impl
   use ModEnergy, ONLY: calc_old_pressure, calc_old_energy
   use ModImplHypre, ONLY: hypre_preconditioner, hypre_initialize
   use ModMessagePass, ONLY: exchange_messages
+  use BATL_lib, ONLY : Unused_BP
 
   implicit none
 
@@ -181,9 +181,9 @@ subroutine advance_impl
      if(.not.UsePartImplicit2)then
         ! Select unusedBLK = not explicit blocks
         iNewDecomposition=mod(iNewDecomposition+1, 10000)
-        UnusedBlock_BP(1:nBlockMax,:) = &
+        Unused_BP(1:nBlockMax,:) = &
              iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_
-        UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+        UnusedBLK(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
      end if
 
      ! advance explicit blocks, calc timestep 
@@ -193,18 +193,18 @@ subroutine advance_impl
      if(.not.UsePartImplicit2)then
         ! update ghost cells for the implicit blocks to time level n+1
         iNewDecomposition=mod(iNewDecomposition+1, 10000)
-        UnusedBlock_BP(1:nBlockMax,:) = &
+        Unused_BP(1:nBlockMax,:) = &
              iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
-        UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+        UnusedBLK(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
      end if
 
      call exchange_messages
 
      ! The implicit scheme is only applied on implicit blocks
      iNewDecomposition=mod(iNewDecomposition+1, 10000)
-     UnusedBlock_BP(1:nBlockMax,:) = &
+     Unused_BP(1:nBlockMax,:) = &
           iTypeAdvance_BP(1:nBlockMax,:) /= ImplBlock_
-     UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+     UnusedBLK(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
   end if
 
   !\
@@ -388,9 +388,9 @@ subroutine advance_impl
      else
         iNewDecomposition=mod(iNewDecomposition-1, 10000)
      end if
-     UnusedBlock_BP(1:nBlockMax,:) = &
+     Unused_BP(1:nBlockMax,:) = &
           iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
-     UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+     UnusedBLK(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
   endif
 
   ! Exchange messages, so ghost cells of all blocks are updated

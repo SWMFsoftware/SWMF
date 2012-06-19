@@ -34,7 +34,7 @@ OBJ4= get_im_pressure.o #			            ^CFG IF RCM
 
 OBJ5= ModProject.o project_B.o proj_cg.o proj_bicgstab.o #  ^CFG IF PROJECTION
 
-OBJ6= set_resistivity.o ModResistivity.o #                  ^CFG IF DISSFLUX
+OBJ6= ModResistivity.o #                                  ^CFG IF DISSFLUX
 
 OBJ7= clean_divb.o #					  ^CFG IF DIVBDIFFUSE
 
@@ -90,17 +90,13 @@ OBJECTS = \
 	user_interface.o \
 	ModWaves.o \
 	ModHdf5.o \
-	${MOD1}	${MOD2}	${MOD3} ${MOD4} \
 	BATS_methods.o \
 	MH_set_parameters.o\
 	advect_points.o\
-	amr.o\
-	amr_criteria.o\
 	explicit.o\
 	fix_axis_cells.o\
 	library.o\
 	load_balance.o\
-	potential_force_averages.o\
 	rotate.o\
 	set_block_geometry.o\
 	set_BCs.o\
