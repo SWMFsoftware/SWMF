@@ -21,12 +21,14 @@ print "Machine=$Machine\n" if $Verbose;
 my $IsHera;
 my $IsPfe;
 my $IsUbgl;
+my $IsJaguar;
 
 $IsHera = 1  if $Machine eq "hera";
 $IsUbgl = 1  if $Machine eq "ubgl";
 $IsPfe  = 1  if $Machine eq "pfe";
+$IsJaguar = 1 if $Machine eq "jaguarpf-ext";
 
-die "Unknown machine=$Machine\n" unless $IsHera or $IsPfe or $IsUbgl;
+die "Unknown machine=$Machine\n" unless $IsHera or $IsPfe or $IsUbgl or $IsJaguar;
 
 # Number of nodes and cores to run on
 my $nNode;
