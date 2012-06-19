@@ -48,11 +48,6 @@ module ModUser
   real    :: nCoronaSi = 0.0, tCoronaSi = 0.0
   real    :: DipoleTiltDeg = 0.0
 
-  ! Current sheet refinement 
-  real,allocatable    :: rRefine_I(:)
-  logical :: DoRefineGradualSheet = .false.
-  integer :: nLevelGradual = 0
-
   ! Input parameters for two-temperature effects
   real    :: TeFraction, TiFraction
   real    :: QeByQtotal = 0.0
@@ -129,16 +124,6 @@ contains
           call read_var('nCoronaSi', nCoronaSi)
           call read_var('tCoronaSi', tCoronaSi)
 
-       case("#REFINEGRADUALSHEET")
-          call read_var('DoRefineGradualSheet', DoRefineGradualSheet)
-          call read_var('nLevelGradual'     , nLevelGradual)
-          if (DoRefineGradualSheet .and. nLevelGradual > 0) then
-             allocate(rRefine_I(0:nLevelGradual))
-             rRefine_I(0) = rBody
-             do iLevel = 1, nLevelGradual
-                call read_var('rRefine', rRefine_I(iLevel))
-             end do
-          end if
        case('#ELECTRONHEATING')
           ! Steven Cranmer his electron heating fraction (Apj 2009)
           call read_var('QeByQtotal', QeByQtotal)
