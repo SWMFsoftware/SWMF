@@ -41,46 +41,8 @@ T                       DoFixAxis
 8.0                     rFixAxis
 0.0                     r2FixAxis
 
-#AMRREGION
-shell1
-box_gen                 NameArea
-1.0                     rMin
-0.0                     LonMin
--90.0                   LatMin
-1.7                     rMax
-360.0                   LonMax
-90.0                    LatMax
-
-#AMRREGION
-shell2
-box_gen                 NameArea
-1.0                     rMin
-0.0                     LonMin
--90.0                   LatMin
-2.0                     rMax
-360.0                   LonMax
-90.0                    LatMax
-
-#AMRCRITERIARESOLUTION
-4                       nCriteria
-Level +shell1           TypeCriteria
-4                       RefineTo
-5                       CoursenFrom
-currentsheet +shell2 -shell1     TypeCriteria
-0.5                     CoarsenLimit
-0.5                     RefineLimit
-0.1                     MaxResolution
-Level                   TypeCriteria
-2                       RefineTo
-3                       CoursenFrom
-currentsheet -shell2    TypeCriteria
-0.5                     CoarsenLimit
-0.5                     RefineLimit
-0.001                   MaxResolution
-
-#GRIDLEVEL
-2                       nLevelArea 5
-initial                 NameArea
+#INCLUDE
+GridChromo
 
 READPOTENTIALFIELD
 T			UseMagnetogram

@@ -90,13 +90,13 @@ shell0                  NameArea
 i
 
 #AMRREGION              
-shell1                  NameArea
-shell0                  NameArea
+SurfaceShell            NameRegion
+shell0                  TypeRegion
 1.0                     Radius1
 1.1                     Radius2
 
 #AMRREGION              
-shell2                  NameArea
+InnerSphere             NameArea
 sphere                  NameArea
 -0.9698463              xCenterSphere
  0.1710101              yCenterSphere
@@ -112,13 +112,13 @@ currentsheet            TypeCriteria
 4                       MinResolution
 Level                   TypeCriteria
 2                       RefineTo
-3                       CoursenFrom
-Level +shell1           TypeCriteria
+2                       CoursenTo
+Level +SurfaceShell     TypeCriteria
 4                       RefineTo
-5                       CoursenFrom
-Level +shell2           TypeCriteria
+4                       CoursenTo
+Level +InnerSphere      TypeCriteria
 20                      RefineTo
-21                      CoursenFrom
+20                      CoursenTo
 
 
 GRIDLEVEL

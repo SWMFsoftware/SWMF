@@ -51,7 +51,7 @@ initial
 
 #AMRREGION
 tail                    NameRegion
-box                     NameArea
+box                     TypeRegion
 -16.0                    xMinBox
 -1.0                    yMinBox
 -1.0                    zMinBox

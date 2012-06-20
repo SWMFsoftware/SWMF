@@ -89,7 +89,7 @@ initial			NameArea
 
 #AMRREGION
 shell1                  NameRegion 
-box_gen			NameArea
+box_gen			TypeRgion
 1.0			rMin
 0.0			LonMin
 -45.0			LatMin
@@ -105,7 +105,7 @@ currentsheet            TypeCriteria
 3                       MaxLevel
 Level +shell1           TypeCriteria
 3                       RefineTo
-4                       CoursenFrom
+3                       CoursenTo
 
 
 #BODY

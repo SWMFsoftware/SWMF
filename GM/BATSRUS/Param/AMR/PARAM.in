@@ -54,12 +54,12 @@ T                       UseBody
 
 #AMRREGION
 nearbody                NameRegion
-sphere0                 NameArea
+sphere0                 TypeRegion
 4.0                     Radius
 
 #AMRREGION              
 reconectionregion       NameRegion
-box                     NameArea
+box                     TypeRegion
 -200.0			xMinBox
 -6.0			yMinBox
 -6.0			zMinBox
@@ -84,7 +84,7 @@ J2 					TypeCriteria
 21					MaxLevel
 Level +reconectionregion -nearbody	TypeCriteria
 3					RefineTo
-4					CoursenFrom
+3					CoursenTo
 dx +nearbody		    		TypeCriteria
 4.0					RefineTo
 2.0					CoursenFrom
@@ -283,7 +283,7 @@ Rcurrents               TypeRefine
 -1             		RefineLimit
 Level +reconectionregion -nearbody	TypeCriteria
 20					RefineTo
-21					CoursenFrom
+20					CoursenTo
 dx +nearbody		    		TypeCriteria
 0.02					RefineTo
 0.01					CoursenFrom
@@ -331,7 +331,7 @@ T                       IsStrictAmr
 2
 Level +reconectionregion -nearbody	TypeCriteria
 3					RefineTo
-4					CoursenFrom
+3					CoursenTo
 dx +nearbody		    		TypeCriteria
 4.0					RefineTo
 2.0					CoursenFrom
@@ -361,11 +361,11 @@ T                       IsStrictAmr
 
 #AMRREGION
 errorarea               NameRegion
-box                     NameArea
-0.0                   xMinBox
+box                     TypeRegion
+0.0                     xMinBox
 -10.0                   yMinBox
 -10.0                   zMinBox
-32.0                   xMaxBox
+32.0                    xMaxBox
  10.0                   yMaxBox
  10.0                   zMaxBox
 
@@ -374,7 +374,7 @@ box                     NameArea
 3
 Level +reconectionregion -nearbody	TypeCriteria
 3					RefineTo
-4					CoursenFrom
+3					CoursenTo
 dx +nearbody		    		TypeCriteria
 2.0					RefineTo
 1.0					CoursenFrom
