@@ -533,11 +533,12 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   ! 
   ! Input: nspec,np,nt,iba,Den_IC,Temp_IC,amu,vel,xjac
   ! Output: ib0,f2 (through common block cinitial_f2)
+  use ModIoUnit, ONLY: UnitTmp_
   use ModGmCrcm, ONLY: Den_IC, Temp_IC, Temppar_IC, DoAnisoPressureGMCoupling
   use ModCrcm,   ONLY: f2
-  use ModCrcmInitialize,   ONLY: IsEmptyInitial
+  use ModCrcmInitialize,   ONLY: IsEmptyInitial, IsDataInitial, IsGmInitial
   use ModCrcmGrid,ONLY: nm,nk,MinLonPar,MaxLonPar
-  use ModFieldTrace, ONLY: sinA
+  use ModFieldTrace, ONLY: sinA,ro, ekev,pp,iw2,irm
   implicit none
 
   integer,parameter :: np1=51,nt1=48,nspec1=1  
@@ -549,6 +550,12 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   real xjac(nspec,np,nm),pi,xmass,chmass,f21,vtchm
   real Tempperp_IC(nspec,np,nt)
 
+  ! Variables needed for data initialization 
+  integer :: il, ie, iunit
+  real, allocatable :: roi(:), ei(:), fi(:,:)
+  real :: roii, e1,x, fluxi,psd2
+  
+  character(11) :: NameFile='quiet_x.fin'
   pi=acos(-1.)
 
   ib0=iba
@@ -557,7 +564,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   if (IsEmptyInitial) then
      ! Set initial f2 to a small number
      f2(:,:,:,:,:)=1.0e-40
-  else
+  elseif(IsGmInitial) then
      ! Set initial f2 based on Maxwellian or bi-Maxwellian
      if(DoAnisoPressureGMCoupling) &
           Tempperp_IC(:,:,:) = (3*Temp_IC(:,:,:) - Temppar_IC(:,:,:))/2.
@@ -588,6 +595,55 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
            end do
         end do
      end do
+  elseif(IsDataInitial) then
+     do n=1,nspec
+        !set the file name, open it and read it
+        if(n==1) NameFile='quiet_h.fin'
+        if(n==2 .and. n /= nspec) then 
+           NameFile='quiet_o.fin'
+        else
+           if(n==1) NameFile='quiet_e.fin'
+        endif
+        if (n==nspec) NameFile='quiet_e.fin'
+        open(unit=UnitTmp_,file='IM/'//NameFile,status='old')
+        read(UnitTmp_,*) il,ie
+        allocate (roi(il),ei(ie),fi(il,ie))
+        read(UnitTmp_,*) iunit   ! 1=flux in (cm2 s sr keV)^-1, 2=in (cm2 s MeV)^-1
+        read(UnitTmp_,*) roi
+        read(UnitTmp_,*) ei      ! ei in keV
+        read(UnitTmp_,*) fi
+        close(UnitTmp_)
+        if(iunit.eq.2) fi(:,:)=fi(:,:)/4./pi/1000. !con.To(cm^2 s sr keV)^-1\
+        
+        
+        ei(:)=log10(ei(:))                      ! take log of ei 
+        fi(:,:)=log10(fi(:,:))                  ! take log of fi
+        
+        
+        !interpolate data from quiet.fin files to CRCM grid
+        do j=MinLonPar,MaxLonPar
+           do i=1,irm(j)
+              roii=ro(i,j)
+              do m=1,nk
+                 do k=1,iw2(m)
+                    e1=log10(ekev(i,j,k,m)) 
+                    if (e1.le.ei(ie)) then
+                       if (e1.lt.ei(1)) e1=ei(1)    ! flat dist. at low E
+                       if (roii.lt.roi(1)) roii=roi(1) ! flat dist @ lowL
+                       if (roii.gt.roi(il)) roii=roi(il) ! flat @ high L
+                       call lintp2IM(roi,ei,fi,il,ie,roii,e1,x)
+                       fluxi=10.**x          ! flux in (cm^2 s sr keV)^-1
+                       psd2=fluxi/(1.6e19*pp(n,i,j,k,m))/pp(n,i,j,k,m)
+                       f2(n,i,j,k,m)=psd2*xjac(n,i,k)*1.e20*1.e19  
+                    endif
+                 enddo                            ! end of k loop
+              enddo                               ! end of m loop
+              
+           enddo                                  ! end of i loop
+        enddo                                     ! end of j loop
+        deallocate (roi,ei,fi)
+        !f2(:,1,:,:,:)=f2(:,2,:,:,:)
+     enddo                                        ! end of n loop
   end if
 end subroutine initial_f2
 
@@ -1480,6 +1536,7 @@ subroutine lintp2aIM(x,y,v,nx,ny,x1,y1,v1)
   endif
 
   x1d(1:nx)=x(1:nx,j)
+
   call locate1IM(x1d,nx,x1,i)
   i1=i+1
   if (i.eq.0.or.i1.gt.nx) then
@@ -1491,6 +1548,7 @@ subroutine lintp2aIM(x,y,v,nx,ny,x1,y1,v1)
   endif
 
   x1d(1:nx)=x(1:nx,j1)
+  
   call locate1IM(x1d,nx,x1,i2)
   i3=i2+1
   if (i2.eq.0.or.i3.gt.nx) then
@@ -1508,6 +1566,36 @@ subroutine lintp2aIM(x,y,v,nx,ny,x1,y1,v1)
   v1=q00*v(i,j)+q01*v(i2,j1)+q10*v(i1,j)+q11*v(i3,j1)
 
 end subroutine lintp2aIM
+
+!-------------------------------------------------------------------------------
+subroutine lintp2IM(x,y,v,nx,ny,x1,y1,v1)
+!-------------------------------------------------------------------------------
+!  Routine does 2-D interpolation.  x and y must be increasing or decreasing
+!  monotonically
+!
+  real x(nx),y(ny),v(nx,ny)
+  
+  call locate1IM(x,nx,x1,i)
+  if (i.gt.(nx-1)) i=nx-1      ! extrapolation if out of range
+  if (i.lt.1) i=1              ! extrapolation if out of range
+  i1=i+1
+  a=(x1-x(i))/(x(i1)-x(i))
+  
+  call locate1IM(y,ny,y1,j)
+  if (j.gt.(ny-1)) j=ny-1      ! extrapolation if out of range
+  if (j.lt.1) j=1              ! extrapolation if out of range
+  j1=j+1
+  b=(y1-y(j))/(y(j1)-y(j))
+  
+  q00=(1.-a)*(1.-b)
+  q01=(1.-a)*b
+  q10=a*(1.-b)
+  q11=a*b
+  v1=q00*v(i,j)+q01*v(i,j1)+q10*v(i1,j)+q11*v(i1,j1)
+  
+  return
+end subroutine lintp2IM
+
 
 
 !--------------------------------------------------------------------------

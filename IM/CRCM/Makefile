@@ -88,6 +88,7 @@ rundir:
 			ln -s ${EMPIRICALIEDIR}/data EIE;\
 		fi;)
 	cd ${RUNDIR}/IM; \
+		cp ${IMDIR}/data/quiet*fin . ;\
 		mkdir plots restartIN restartOUT
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \

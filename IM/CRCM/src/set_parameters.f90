@@ -2,11 +2,12 @@ subroutine CRCM_set_parameters(NameAction)
 
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModReadParam
-  use ModCrcmInitialize, ONLY: IsEmptyInitial
+  use ModCrcmInitialize, ONLY: IsEmptyInitial,IsDataInitial, IsGmInitial
   use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot, DoSaveFlux
   use ModFieldTrace,     ONLY: UseEllipse
   use ModCrcm,           ONLY: UseMcLimiter, BetaLimiter, time, Pmin
   use ModCrcmRestart,    ONLY: IsRestart
+  use ModCrcmPlanet,     ONLY: nspec
   implicit none
 
   character (len=100)           :: NameCommand
@@ -33,7 +34,12 @@ subroutine CRCM_set_parameters(NameAction)
 
      case('#INITIALF2')
         call read_var('IsEmptyInitial',IsEmptyInitial)
-
+        call read_var('IsGmInitial',   IsGmInitial)
+        call read_var('IsDataInitial', IsDataInitial)
+        
+        !IsDataInitial only works with EarthHO or EarthH configurations
+        if (nspec > 3 .and. IsDataInitial) &
+             call CON_STOP('IsDataInitial only works with EarthHO or EarthH')  
      case('#TYPEBOUNDARY')
         call read_var('TypeBoundary',TypeBoundary)
         if(TypeBoundary == 'Ellipse') then

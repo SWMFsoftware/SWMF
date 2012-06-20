@@ -194,6 +194,9 @@ circle                  TypeBoundary
 
 #INITIALF2
 F			IsEmptyF2
+T			IsGmInitial
+F			IsDataInitial
+
 
 #END_COMP IM   ----------------------------------------
 
