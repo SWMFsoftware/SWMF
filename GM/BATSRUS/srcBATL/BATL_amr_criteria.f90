@@ -992,9 +992,6 @@ contains
 
           iVarCrit = iVarCritAll_I(iCrit)
 
-          if(AmrCrit_IB(iResolutionLimit_I(iCrit),iBlock) < ResolutionLimit_I(iCrit))&
-               CYCLE
-
           if(AmrCrit_IB(iVarCrit,iBlock) > RefineCritAll_I(iCrit) .and. &
                AmrCrit_IB(iResolutionLimit_I(iCrit),iBlock) > ResolutionLimit_I(iCrit))then
              iStatusNew_A(iNode_B(iBlock)) = Refine_
@@ -1113,7 +1110,7 @@ contains
 
           IsUniqueCritName = .true.
           !find index of the criteria from its name
-          call read_var('CritName', CritName, IsLowerCase=.true.)
+          call read_var('TypeCriteria', CritName, IsLowerCase=.true.)
 
           call split_string(CritName,nMaxComponents, CritName_I, nCritArgs)
 
@@ -1216,23 +1213,23 @@ contains
           end select
           select case(CritName)
           case('level')
-             call read_var('RefineCrit',RefineCritPhys_I(nCrit-nCritDxLevel))
-             call read_var('CoarsenCrit',CoarsenCritPhys_I(nCrit-nCritDxLevel))
+             call read_var('RefineTo',RefineCritPhys_I(nCrit-nCritDxLevel))
+             call read_var('CoursenTo',CoarsenCritPhys_I(nCrit-nCritDxLevel))
              RefineCritPhys_I(nCrit-nCritDxLevel) = -RefineCritPhys_I(nCrit-nCritDxLevel)
-             CoarsenCritPhys_I(nCrit-nCritDxLevel) = -CoarsenCritPhys_I(nCrit-nCritDxLevel)
+             CoarsenCritPhys_I(nCrit-nCritDxLevel) = -(CoarsenCritPhys_I(nCrit-nCritDxLevel)+1)
              MaxLevelCritPhys_I(nCrit-nCritDxLevel) = -MaxLevel 
              if(IsRes) MaxLevelCritPhys_I(nCrit-nCritDxLevel) = 0.0 
              nCritDxLevel = nCritDxLevel+1
           case('dx')
-             call read_var('RefineCrit',RefineCritPhys_I(nCrit-nCritDxLevel))
-             call read_var('CoarsenCrit',CoarsenCritPhys_I(nCrit-nCritDxLevel))
+             call read_var('RefineTo',RefineCritPhys_I(nCrit-nCritDxLevel))
+             call read_var('CoarsenFrom',CoarsenCritPhys_I(nCrit-nCritDxLevel))
              MaxLevelCritPhys_I(nCrit-nCritDxLevel) = -MaxLevel
              if(IsRes)  MaxLevelCritPhys_I(nCrit-nCritDxLevel) = 0.0
              nCritDxLevel = nCritDxLevel+1
           case default   
-             call read_var('CoarsenCrit',CoarsenCritPhys_I(iCritPhy))
-             call read_var('RefineCrit',RefineCritPhys_I(iCritPhy))
-             if(IsLevel .or. IsRes) call read_var('MaxLevelCrit',MaxLevelCritPhys_I(iCritPhy))
+             call read_var('CoarsenLimit',CoarsenCritPhys_I(iCritPhy))
+             call read_var('RefineLimit',RefineCritPhys_I(iCritPhy))
+             if(IsLevel .or. IsRes) call read_var('MaxResolution',MaxLevelCritPhys_I(iCritPhy))
              if(IsLevel) MaxLevelCritPhys_I(iCritPhy) = -1.0*MaxLevelCritPhys_I(iCritPhy)
           end select
        end do

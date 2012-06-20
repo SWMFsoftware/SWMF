@@ -999,7 +999,7 @@ subroutine MH_set_parameters(TypeAction)
         DoCritAmr = .true.
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
-        call read_var('nAmrCriteria',nAmrCriteria)
+        call read_var('nCriteria',nAmrCriteria)
         call init_mod_amr(nAmrCriteria)
         call read_amr_criteria(NameCommand, &
              nCritInOut=nAmrCriteria, NameCritOut_I=RefineCrit,&
@@ -1017,14 +1017,14 @@ subroutine MH_set_parameters(TypeAction)
         DoCritAmr = .true.
         DoAutoAmr = .true.
         automatic_refinement = DoAutoAmr ! for now
-        call read_var('nAmrCriteria',nAmrCriteria)
+        call read_var('nCriteria',nAmrCriteria)
         call init_mod_amr(nAmrCriteria)
         call read_amr_criteria(NameCommand, &
              nCritInOut=nAmrCriteria, NameCritOut_I=RefineCrit,&
              NameStatVarIn_V= NameVar_V,&
              nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
-        if(nAmrCriteria<0 .or. nAmrCriteria>3)call stop_mpi(NameSub// &
-             ' ERROR: nAmrCriteria must be 0, 1, 2 or 3')
+        if(nAmrCriteria<0)call stop_mpi(NameSub// &
+             ' ERROR: nAmrCriteria must be positiv.')
         if (UseSunEarth) then
            call read_var('xEarth'  ,xEarth)
            call read_var('yEarth'  ,yEarth)

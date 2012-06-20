@@ -533,7 +533,7 @@ contains
     if(present(UseStrictIn)) UseStrict = UseStrictIn
     NameRegion ="NULL"
     if(NameCommand == "#AMRREGION") then
-       call read_var('NameRegion',NameRegion)
+       call read_var('NameRegion',NameRegion, IsLowerCase=.true.)
        AreaResolution = 0
     else
        if(index(NameCommand,"RESOLUTION")>0)then
@@ -545,7 +545,7 @@ contains
           AreaResolution = -nLevelArea
        end if
     end if
-    call read_var('NameArea', NameArea, IsLowerCase=.true.)
+    call read_var('TypeRegion', NameArea, IsLowerCase=.true.)
 
     ! Remove leading spaces
     NameArea = adjustl(NameArea)
