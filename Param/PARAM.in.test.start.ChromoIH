@@ -223,7 +223,7 @@ initial			NameArea
 T			DoAmr
 50001			DnAmr
 -1.0			DtAmr
-F			IsStrictAmr
+T			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage
@@ -533,7 +533,7 @@ F			UseComp
 T			DoAmr
 1001			DnAmr
 -1.0			DtAmr
-F			IsStrictAmr
+T			IsStrictAmr
 
 #END_COMP IH   ----------------------------------------------------------------
 
