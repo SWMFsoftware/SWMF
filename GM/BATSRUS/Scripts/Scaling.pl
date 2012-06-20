@@ -185,6 +185,17 @@ sub make_rundir{
     &shell("make rundir RUNDIR=$Rundir");
     &shell("gunzip -c dataCRASH/input/$HyadesFile.gz > $Rundir/$HyadesFile");
     &shell("cp $ParamFile $Rundir/PARAM.in");
+
+    if($IsJaguar){
+	&shell("cp Param/CRASH/START.in $Rundir/START.in");
+	&shell("cp Param/CRASH/3D.in $Rundir/3D.in");
+	@ARGV = ("$Rundir/PARAM.in");
+	while(<>){
+	    s/^Param\/CRASH\/START.in/START.in/;
+	    s/^Param\/CRASH\/3D.in/3D.in/;
+	    print;
+	}
+    }
 }
 ###############################################################################
 sub submit_run{
