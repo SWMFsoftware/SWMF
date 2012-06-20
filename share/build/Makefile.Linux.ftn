@@ -8,8 +8,8 @@ SHELL=/bin/sh
 #       Linux specific part of Makefile
 #
 
-COMPILE.f77     = ${CUSTOMPATH_F}ifort
-COMPILE.f90     = ${CUSTOMPATH_F}ifort
+COMPILE.f77     = ${CUSTOMPATH_F}ftn
+COMPILE.f90     = ${CUSTOMPATH_F}ftn
 LINK.f90	= ${CUSTOMPATH_F}ftn
 AR = ar -rs
 
