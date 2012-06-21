@@ -1041,9 +1041,9 @@ contains
     integer :: iCrit,iAmrBox,iCritName,nCrit,iIntCrit,iStatVar
 
     ! Number and name of criteria to be used by BATSRUS 
-    integer,           optional, intent(out):: nCritInOut
-    character(len=20), optional, intent(out):: NameCritOut_I(:)
-    logical,           optional, intent(out):: ReadExtraOut
+    integer,           optional, intent(inout) :: nCritInOut
+    character(len=20), optional, intent(out)   :: NameCritOut_I(:)
+    logical,           optional, intent(out)   :: ReadExtraOut
     logical :: IsUniqueCritName, UseErrorCrit, ReadExtra, DoTestMe=.false.
 
     integer,           optional, intent(in):: nStateVarIn
