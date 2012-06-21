@@ -85,6 +85,7 @@ help:
 	@echo '    nompirun    (make SWMF and run it without MPI)'
 	@echo ' '
 	@echo '    clean       (remove files: *~ *.o *.kmo *.mod *.T *.lst core)'
+	@echo '    cleanclones (remove src/Makefile-s from BATSRUS clones)
 	@echo '    distclean   (equivalent to: Config.pl -uninstall)'
 	@echo '    dist        (create source distribution tar file)'
 	@echo ' '
@@ -311,6 +312,11 @@ allclean: ENV_CHECK rmdir
 	@echo Uninstallation/distclean succeeded
 	@echo
 
+cleanclones: ENV_CHECK
+	mv GM/BATSRUS/src/Makefile GM/BATSRUS/src/Makefile.safe
+	rm -f ??/BATSRUS/src/Makefile
+	mv GM/BATSRUS/src/Makefile.safe GM/BATSRUS/src/Makefile
+
 dist:
 	@echo ' '
 	@echo ' NOTE: All "run" or other created directories not included!'
@@ -405,7 +411,6 @@ ETAGS = etags
 
 tags:	ENV_CHECK
 	-$(ETAGS) ./*/*/*/*.[fF]90 ./*/*/*/*.[fF] ./*/*/*/*.for
-
 
 #^CMP IF EE BEGIN
 #
