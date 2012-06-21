@@ -10,8 +10,8 @@
  24.0			zMax
 
 #AMRREGION
-shell1                  NameRegion
-shell0			NameArea
+InnerShell              NameRegion
+shell0			TypeRegion
 1.0			Radius1
 1.1			Radius2
 
@@ -21,10 +21,10 @@ currentsheet            TypeCriteria
 0.5                     CoarsenLimit
 0.5                     RefineLimit
 0.2                     MinResolution
-Level +shell1           TypeCriteria
+Level +InnerShell       TypeCriteria
 10                      RefineTo
-11                      CoursenFrom
+10                      CoursenTo
 Level                   TypeCriteria
 2                       RefineTo
-3                       CoursenFrom
+2                       CoursenTo
 
