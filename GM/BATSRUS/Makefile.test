@@ -141,6 +141,7 @@ test_fluxemergence_rundir:
 	cd ${TESTDIR}; cp ../data/FLUXEMERGENCE/*.dat* .
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/Grid.* .
 	cd ${TESTDIR}; gunzip *.gz
+	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.1D PARAM.in
 
 test_fluxemergence_run:
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.1D PARAM.in
