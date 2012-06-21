@@ -197,8 +197,8 @@ SC/Param/grid_TR.dat
 
 ----------------------------------------------------
 #AMRREGION
-shell1			NameRegion
-shell0			NameArea
+InnerShell		NameRegion
+shell0			TypeRegion
 1.0			Radius1
 1.7			Radius2
 
@@ -206,10 +206,10 @@ shell0			NameArea
 3			nCriteria
 Level			TypeCriteria
 2			RefineTo
-3			CoarsenFrom
-Level +shell1		TypeCriteria
+2			CoarsenTo
+Level +InnerShell		TypeCriteria
 5     			RefineTo
-6			CoarsenFrom
+5			CoarsenTo
 currentsheet		TypeCriteria
 0.5			CoarsenLimit
 0.5			RefineLimit
@@ -327,8 +327,8 @@ T			UseBody
  250.0			zMax
 
 #AMRREGION
-shell1			NameRegion
-shell0			NameArea
+OuterShell	  	NameRegion
+shell0			TypeRegion
 18.0			Radius1
 21.0			Radius2
 
@@ -336,10 +336,10 @@ shell0			NameArea
 3			nCriteria
 Level			TypeCriteria
 4			RefineTo
-5			CoarsenFrom
-Level +shell1		TypeCriteria
+4			CoarsenTo
+Level +OuterShell	TypeCriteria
 5     			RefineTo
-6			CoarsenFrom
+5			CoarsenTo
 currentsheet		TypeCriteria
 0.5			CoarsenLimit
 0.5			RefineLimit
