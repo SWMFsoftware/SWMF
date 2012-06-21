@@ -341,8 +341,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
 
                  ! The current is always based on the new state
                  if(iVarMax == nVar + 3)then
-                    call get_current(i, j, k, iBlock, Current_D, &
-                         nOrderResChange=1, DoIgnoreBody = .true.)
+                    call get_current(i, j, k, iBlock, Current_D)
                     StateCurrent_V(nState+1:nState+3) = &
                          StateCurrent_V(nState+1:nState+3) &
                          + WeightXyz * Current_D
