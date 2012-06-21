@@ -440,6 +440,9 @@ contains
     real, allocatable :: AllRank_II(:,:)
     ! tranlsate sorting continous index to iNode_I index
     integer, allocatable :: iSortToNode_I(:)
+    ! will have value 0: unset, 1:refine and -1:coursen to count
+    ! the number of nodes to refine and/or coursen by criteria
+    integer, allocatable ::nAmrTag(:)
     integer :: iCrit, iBlock, iProces, k
     integer :: iCritSort, iSort,iVarCrit,nNodeSortMax,iNodeSort
     integer :: iError
@@ -487,9 +490,12 @@ contains
     allocate(iNode_I(nBlockMax*nProc))
     allocate(AllRank_II(nBlockMax*nProc,2))
     allocate(iSortToNode_I(nBlockMax*nProc))
+    allocate(nAmrTag(nBlockMax*nProc))
+    
     iNode_I = 0
     iSortToNode_I = -1
     AllRank_II =0
+    nAmrTag = 0
 
     ! Set up the displacement and size for collecting the data for 
     ! AllCrit_II
@@ -657,16 +663,20 @@ contains
                   .and. iIdxSort_II(iCritSort,iHelpCrit) /= 1) then
                 ! Satisfies refinement threshold and not yet marked for refinement
 
+                ! tag for refinment
+                nAmrTag(iNodeSort) = 1 
+
                 ! Shift up the rank above sorted values                
                 Rank_I(iNodeSort) = Rank_I(iNodeSort) + nTotBlocks+1
 
-                ! If node was originally marked for coarsening, 
-                ! now there is one fewer node to be coarsened
-                if(iIdxSort_II(iCritSort,iHelpCrit) == -1) &
-                     nNodeCoarsen = nNodeCoarsen - 1
+
+!                ! If node was originally marked for coarsening, 
+!                ! now there is one fewer node to be coarsened
+!                if(iIdxSort_II(iCritSort,iHelpCrit) == -1) &
+!                     nNodeCoarsen = nNodeCoarsen - 1
 
                 ! Noe node is marked fore refinement
-                nNodeRefine = nNodeRefine +1
+                !nNodeRefine = nNodeRefine +1
                 iIdxSort_II(iCritSort,iHelpCrit) = 1
 
              else if(CritSort_II(iCritSort,1) < CoarsenCritAll_I(iCrit) &
@@ -677,11 +687,15 @@ contains
                 Rank_I(iNodeSort) = -Rank_I(iNodeSort)-nTotBlocks-1
 
                 ! Now node is marked for coarsening
-                nNodeCoarsen = nNodeCoarsen +1
+                !nNodeCoarsen = nNodeCoarsen +1
+                nAmrTag(iNodeSort) = -1 
                 iIdxSort_II(iCritSort,iHelpCrit) = -1 
              end if
           end do
        end if
+
+      nNodeCoarsen = count(nAmrTag == -1)
+      nNodeRefine  = count(nAmrTag == 1)
 
     end do
 
@@ -793,6 +807,7 @@ contains
     deallocate(nBlock_P, nReciveCont_P, nRecivDisp_P)
     deallocate(iRank_I, Rank_I)
     deallocate(nRank_I)
+    deallocate(nAmrTag)
 
 
   end subroutine sort_amr_criteria
