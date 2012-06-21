@@ -54,7 +54,7 @@ test_run:
 	cd ${TESTDIR}; ./crcm.exe > runlog 
 
 test_check:
-	gunzip -c data/output/2002f296_e.fls.standalone.gz \
+	gunzip -c output/2002f296_e.fls.standalone.gz \
 		> ${TESTDIR}/RB/2002f296_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/RB/plots/2002f296_e.fls \
@@ -88,7 +88,7 @@ rundir:
 			ln -s ${EMPIRICALIEDIR}/data EIE;\
 		fi;)
 	cd ${RUNDIR}/IM; \
-		cp ${IMDIR}/data/quiet*fin . ;\
+		cp ${IMDIR}/input/quiet*fin . ;\
 		mkdir plots restartIN restartOUT
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
