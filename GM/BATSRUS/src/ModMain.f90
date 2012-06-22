@@ -111,6 +111,10 @@ Module ModMain
   ! Identifiers for the grid and decomposition changes
   integer :: iNewGrid=0, iNewDecomposition=0
 
+  ! Number of geometric based refinements performed
+  ! (needed by the CCMC user module only!)
+  integer:: nRefineLevel = 0
+
   ! nBlock is a maximum block index number used on the given processor
   ! nBlockMax is a maximum of nBlock over all the processors, 
   ! nBlockALL is total number of blocks used.

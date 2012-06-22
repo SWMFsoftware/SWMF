@@ -7,9 +7,8 @@ subroutine BATS_setup
   use ModMain
   use ModCT, ONLY : DoInitConstrainB               !^CFG IF CONSTRAINB
   use ModIO
-  use ModAMR, ONLY : &
-       initial_refine_levels, nRefineLevelIC, nRefineLevel
-  use ModAdvance, ONLY : iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
+  use ModAMR,      ONLY: initial_refine_levels, nRefineLevelIC
+  use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModParallel, ONLY: init_mod_parallel
 
   implicit none
@@ -53,7 +52,7 @@ contains
 
     use ModMain, ONLY: iteration_number
     use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
-         set_amr_geometry, nBlock, Unused_B,init_amr_criteria
+         set_amr_geometry, nBlock, Unused_B, init_amr_criteria
     use ModBatlInterface, ONLY: set_batsrus_grid
     ! Dummy variables, to avoid array size issues with State_VGB in
     ! set_amr_criteria
@@ -354,7 +353,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModProcMH
   use ModMain
   use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
-  use ModAmr, ONLY: DnAmr, DoAmr, nRefineLevel, automatic_refinement, do_amr
+  use ModAmr, ONLY: DnAmr, DoAmr, automatic_refinement, do_amr
   use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
