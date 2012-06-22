@@ -63,23 +63,27 @@ contains
   end subroutine set_spher_buffer_grid
 end module ModBuffer
 
-!=============================================================!
+!==============================================================================
 
 subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModBuffer
-  use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_,&
-                           TypeCoordSystem, Time_Simulation, DoThinCurrentSheet
-  use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure
-  use ModVarIndexes, ONLY: Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
-                           WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
-                           UseMultiSpecies, SignB_
-  use CON_coupler,   ONLY: Grid_C, DoCoupleVar_V, iVar_V, nVarCouple,&
-                           Bfield_, ElectronPressure_, AnisoPressure_, Wave_,&
-                           MultiFluid_, MultiSpecie_, &
-                           RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
-                           BxCouple_, BzCouple_, PeCouple_, PparCouple_, &
-                           WaveFirstCouple_, WaveLastCouple_, &
-                           UseGlobalMpiCoupler
+  use ModMain,       ONLY: &
+       MaxDim, R_, Phi_, Theta_, x_, y_, z_,&
+       TypeCoordSystem, Time_Simulation, DoThinCurrentSheet
+  use ModAdvance,    ONLY: &
+       UseElectronPressure, UseAnisoPressure
+  use ModVarIndexes, ONLY: &
+       Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
+       WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
+       UseMultiSpecies, SignB_
+  use CON_coupler,   ONLY: &
+       Grid_C, DoCoupleVar_V, iVar_V, nVarCouple,&
+       Bfield_, ElectronPressure_, AnisoPressure_, Wave_,&
+       MultiFluid_, MultiSpecie_, &
+       RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
+       BxCouple_, BzCouple_, PeCouple_, PparCouple_, &
+       WaveFirstCouple_, WaveLastCouple_, &
+       UseGlobalMpiCoupler
   use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
   use ModPhysics,    ONLY: UnitEnergyDens_
@@ -87,14 +91,14 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   implicit none
 
   integer,intent(in)              :: nVar
-  real,intent(in)                 :: XyzTarget_D(nDim)
+  real,intent(in)                 :: XyzTarget_D(MaxDim)
   real,dimension(nVar),intent(out)::State_V
-  real,dimension(nDim)            ::Sph_D
+  real,dimension(MaxDim)            ::Sph_D
 
   character (len=3) :: TypeCoordSource
-  real, save        :: SourceTarget_DD(nDim, nDim)
+  real, save        :: SourceTarget_DD(MaxDim, MaxDim)
   real              :: TimeSimulationLast = -1.0
-  real              :: XyzSource_D(nDim)
+  real              :: XyzSource_D(MaxDim)
 
   !---------------------------------------------------------------------------
   if(DoInit)then
@@ -128,8 +132,8 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
      Buffer_V=point_state_v(&
           NameBuffer,&
           nVarCouple,&
-          nDim,    &
-          Sph_D,   &
+          MaxDim,    &
+          Sph_D,     &
           LocalBufferGD,&
           bilinear_interpolation)
   end if

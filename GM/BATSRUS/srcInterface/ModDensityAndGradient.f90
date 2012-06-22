@@ -7,7 +7,7 @@ module ModDensityAndGradient
   use MH_domain_decomposition
   use CON_global_message_pass
   use CON_integrator
-  use ModMain, ONLY: nDim
+  use ModMain, ONLY: MaxDim
   use ModProcMH, ONLY: iProc,iComm
   use ModMpi
   !DESCRIPTION:
@@ -68,7 +68,7 @@ contains
          interpolate=interpolation_fix_reschange)
    
     call global_message_pass(Router=Router,&
-         nVar=nDim+1+1,&
+         nVar=MaxDim+1+1,&
          fill_buffer=get_density_local,&
          apply_buffer=put_density_value)
 
@@ -117,9 +117,9 @@ contains
     State_V(3)= Weight*(&
          State_VGB(rho_,i,j,k+1,iBlock)-State_VGB(rho_,i,j,k-1,iBlock))&
          /(2*Dz_BLK(iBlock))
-    State_V(nDim+1)= Weight*&
+    State_V(MaxDim+1)= Weight*&
          State_VGB(rho_,i,j,k,iBlock)
-    State_V(nDim+1+1)=Weight*&
+    State_V(MaxDim+1+1)=Weight*&
          min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
     do iGet=iGetStart+1,iGetStart+nPartial-1
        i      = Get%iCB_II(1,iGet)
@@ -136,14 +136,14 @@ contains
        State_V(3)= State_V(3)+Weight*(&
             State_VGB(rho_,i,j,k+1,iBlock)-State_VGB(rho_,i,j,k-1,iBlock))&
             /Dz_BLK(iBlock)
-       State_V(nDim+1)  = State_V(nDim+1)+Weight*&
+       State_V(MaxDim+1)  = State_V(MaxDim+1)+Weight*&
             State_VGB(rho_,i,j,k,iBlock)
-       State_V(nDim+1+1)= State_V(nDim+1+1)+Weight*&
+       State_V(MaxDim+1+1)= State_V(MaxDim+1+1)+Weight*&
             min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
 
     end do
     !Convert density to SI
-    State_V(1:nDim+1) = State_V(1:nDim+1) * No2Si_V(UnitRho_)
+    State_V(1:MaxDim+1) = State_V(1:MaxDim+1) * No2Si_V(UnitRho_)
   end subroutine get_density_local
 
   !====================================================================
@@ -171,18 +171,18 @@ contains
     !the transformation coefficient is 1.0e-3
     if(DoAdd)then
        GradDensity_DI(:,iCell)= GradDensity_DI(:,iCell)+&
-            Buff_I(1:nDim) * 1.0e-3
+            Buff_I(1:MaxDim) * 1.0e-3
        Density_I(iCell)= Density_I(iCell)+&
-            Buff_I(nDim+1) * 1.0e-3
+            Buff_I(MaxDim+1) * 1.0e-3
        DeltaSNew_I(iCell) = DeltaSNew_I(iCell)+&
-            Buff_I(nDim+1+1)
+            Buff_I(MaxDim+1+1)
     else
        GradDensity_DI(:,iCell)= &
-            Buff_I(1:nDim)  * 1.0e-3
+            Buff_I(1:MaxDim)  * 1.0e-3
        Density_I(iCell)= &
-            Buff_I(nDim+1)  * 1.0e-3
+            Buff_I(MaxDim+1)  * 1.0e-3
        DeltaSNew_I(iCell) = &
-            Buff_I(nDim+1+1)
+            Buff_I(MaxDim+1+1)
     end if
   end subroutine put_density_value
 end module ModDensityAndGradient

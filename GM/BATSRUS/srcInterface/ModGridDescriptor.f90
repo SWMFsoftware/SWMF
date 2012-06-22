@@ -160,7 +160,7 @@ contains
   !===========================================================================
   subroutine MH_get_roots_dd(DomainDecomposition)                         
 
-    use ModSize,     ONLY: nDim, nIJK_D
+    use ModSize,     ONLY: nIJK_D
     use ModParallel, ONLY: periodic3d, proc_dims
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D
 
@@ -180,7 +180,7 @@ contains
   !===========================================================================
   subroutine MH_get_roots_id(GridID_)                         
 
-    use ModSize,     ONLY: nDim, nIJK_D
+    use ModSize,     ONLY: nIJK_D
     use ModParallel, ONLY: periodic3d,proc_dims
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D
 

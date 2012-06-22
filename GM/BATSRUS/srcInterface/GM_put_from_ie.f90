@@ -197,7 +197,7 @@ subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
 
   !USES:
   use ModIonoPotential
-  use ModMain,           ONLY: TypeCoordSystem, nDim
+  use ModMain,           ONLY: TypeCoordSystem, MaxDim
   use CON_axes,          ONLY: transform_matrix
   use ModCoordTransform, ONLY: xyz_to_dir, cross_product
   use CON_planet_field,  ONLY: map_planet_field
@@ -205,12 +205,12 @@ subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
   implicit none
 
   !INPUT ARGUMENTS:
-  real, intent(in)    :: tSimulation    ! Simulation time
-  real, intent(in)    :: Xyz_D(nDim)    ! Position vector
-  real, intent(in)    :: b_D(nDim)      ! Magnetic field 
+  real, intent(in)    :: tSimulation      ! Simulation time
+  real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
+  real, intent(in)    :: b_D(MaxDim)      ! Magnetic field 
 
   !OUTPUT ARGUMENTS:
-  real, intent(out)   :: u_D(nDim)      ! Velocity vector
+  real, intent(out)   :: u_D(MaxDim)      ! Velocity vector
 
 
   !DESCRIPTION:
@@ -228,14 +228,14 @@ subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
   ! the fact that the electric field is orthogonal to the magnetic field.
   !EOP
 
-  real :: XyzIono_D(nDim)      ! Mapped point on the ionosphere
+  real :: XyzIono_D(MaxDim)    ! Mapped point on the ionosphere
   real :: Theta, Phi           ! Mapped point colatitude, longitude
   real :: ThetaNorm, PhiNorm   ! Normalized colatitude, longitude
   real :: Dist1, Dist2         ! Distance from ionosphere grid point
 
   real :: dPotential_D(2)      ! Gradient of potential at the mapped position
   real :: DdirDxyz_DD(2,3)     ! Jacobian matrix between Theta, Phi and Xyz_D
-  real :: eField_D(nDim)       ! Electric field
+  real :: eField_D(MaxDim)     ! Electric field
   real :: B2                   ! Magnetic field squared
 
   integer :: iTheta, iPhi, iHemisphere
@@ -310,29 +310,29 @@ end subroutine calc_inner_bc_velocity
 subroutine calc_inner_bc_velocity1(tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
   use ModIonoPotential
-  use ModMain,           ONLY: TypeCoordSystem, nDim
+  use ModMain,           ONLY: TypeCoordSystem, MaxDim
   use CON_axes,          ONLY: transform_matrix
   use ModCoordTransform, ONLY: xyz_to_dir, cross_product
   use CON_planet_field,  ONLY: map_planet_field
 
   implicit none
   real, intent(in)    :: tSimulation
-  real, intent(in)    :: Xyz_D(nDim)    ! Position vector
-  real, intent(in)    :: B1_D(nDim)     ! Magnetic field perturbation
-  real, intent(in)    :: B0_D(nDim)     ! Magnetic field of planet
-  real, intent(out)   :: u_D(nDim)      ! Velocity vector (output)
+  real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
+  real, intent(in)    :: B1_D(MaxDim)     ! Magnetic field perturbation
+  real, intent(in)    :: B0_D(MaxDim)     ! Magnetic field of planet
+  real, intent(out)   :: u_D(MaxDim)      ! Velocity vector (output)
 
   real, parameter :: Epsilon = 0.01 ! Perturbation of X, Y or Z
 
-  real :: XyzEpsilon_D(nDim)       ! Points shifted by Epsilon
-  real :: XyzIono_D(nDim)          ! Mapped point on the ionosphere
+  real :: XyzEpsilon_D(MaxDim)     ! Points shifted by Epsilon
+  real :: XyzIono_D(MaxDim)        ! Mapped point on the ionosphere
   real :: Theta, Phi               ! Mapped point colatitude, longitude
   real :: ThetaNorm, PhiNorm       ! Normalized colatitude, longitude
   real :: Dist1, Dist2             ! Distance from ionosphere grid point
 
-  real :: Potential_DI(nDim, 2)    ! Potential at the shifted positions
-  real :: eField_D(nDim)           ! Electric field
-  real :: b_D(nDim)                ! Magnetic field
+  real :: Potential_DI(MaxDim, 2)  ! Potential at the shifted positions
+  real :: eField_D(MaxDim)         ! Electric field
+  real :: b_D(MaxDim)              ! Magnetic field
   real :: B2                       ! Magnetic field squared
 
   integer :: iDim, iSide, iTheta, iPhi, iHemisphere
@@ -340,7 +340,7 @@ subroutine calc_inner_bc_velocity1(tSimulation,Xyz_D,B1_D,B0_D,u_D)
   character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity1'
   logical :: DoTest, DoTestMe
   real :: tSimulationLast=-1.0
-  real, save :: SmgGm_DD(nDim,nDim)
+  real, save :: SmgGm_DD(MaxDim,MaxDim)
   !-------------------------------------------------------------------------
 
   call set_oktest(NameSub, DoTest, DoTestMe)
@@ -355,7 +355,7 @@ subroutine calc_inner_bc_velocity1(tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
   ! Map points to obtain potential
   do iSide = 1, 2
-     do iDim = 1, nDim
+     do iDim = 1, MaxDim
 
         ! Perturb the iDim coordinate
         XyzEpsilon_D = Xyz_D
@@ -443,14 +443,14 @@ subroutine map_inner_bc_jouleheating(tSimulation, Xyz_D, JouleHeating)
   
   use ModIonoPotential
   use ModCoordTransform, ONLY: xyz_to_dir
-  use ModMain,           ONLY: TypeCoordSystem,nDim
+  use ModMain,           ONLY: TypeCoordSystem, MaxDim
   use CON_axes,          ONLY: transform_matrix
  
   implicit none
 
  !INPUT ARGUMENTS:
   real, intent(in)    :: tSimulation    ! Simulation time
-  real, intent(in)    :: Xyz_D(nDim)    ! Position vector
+  real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
   real, intent(out)   :: JouleHeating
   real :: Theta, Phi           ! Mapped point colatitude, longitude
   real :: ThetaNorm, PhiNorm   ! Normalized colatitude, longitude
