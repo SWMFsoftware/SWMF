@@ -73,7 +73,6 @@ OBJECTS = \
 	ModMain.o\
 	ModMessagePass.o\
 	ModNodes.o\
-	ModOctree.o\
 	ModParallel.o\
 	ModPartSteady.o\
 	ModPhysics.o\
