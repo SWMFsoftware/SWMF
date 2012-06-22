@@ -73,7 +73,7 @@ contains
          IsCartesian, IsRzGeometry
     use ModGeometry, ONLY: &
          XyzStart_BLK, &
-         x_BLK, y_BLK, z_BLK, r_BLK, rMin_BLK, Cv_BLK, vInv_CB, &
+         x_BLK, y_BLK, z_BLK, r_BLK, rMin_BLK, Cv_BLK, &
          dx_BLK, dy_BLK, dz_BLK, fax_BLK, fay_BLK, faz_BLK
 
     use ModParallel, ONLY: BLKneighborLEV,  neiLEV, neiBLK, neiPE, &
@@ -230,10 +230,6 @@ contains
     end do; end do; end do
 
     Rmin_BLK(iBlock) = minval(r_BLK(:,:,:,iBlock))
-
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       vInv_CB(i,j,k,iBlock) = 1/CellVolume_GB(i,j,k,iBlock)
-    end do; end do; end do
 
     if(IsCartesian)then
        fAx_BLK(iBlock) = CellFace_DB(1,iBlock)

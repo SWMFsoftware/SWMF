@@ -34,8 +34,6 @@ module ModGeometry
   real, dimension(MaxBlock) :: Rmin2_BLK
   real, dimension(MaxBlock) :: fAx_BLK, fAy_BLK, fAz_BLK, cV_BLK
 
-  real, allocatable :: vInv_CB(:,:,:,:)
- 
 
   ! Variables describing cells inside boundaries
   !true when at least one cell in the block (including ghost cells) is not true
@@ -71,8 +69,7 @@ contains
   !============================================================================
   subroutine init_mod_geometry
 
-    if(allocated(vInv_CB)) return
-    allocate(vInv_CB(nI,nJ,nK,MaxBlock))
+    if(allocated(true_cell)) return
     allocate(true_cell(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(x_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(y_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
@@ -88,10 +85,9 @@ contains
   !============================================================================
   subroutine clean_mod_geometry
 
-    if(.not.allocated(vInv_CB)) RETURN
+    if(.not.allocated(true_cell)) RETURN
 
-    deallocate(vInv_CB)
-    if(allocated(true_cell)) deallocate(true_cell)
+    deallocate(true_cell)
     if(allocated(x_BLK))     deallocate(x_BLK)
     if(allocated(y_BLK))     deallocate(y_BLK)
     if(allocated(z_BLK))     deallocate(z_BLK)

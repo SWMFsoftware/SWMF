@@ -678,7 +678,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
   use ModWaves, ONLY: UseWavePressure
   use ModLaserHeating, ONLY: LaserHeating_CB
-  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, IsCartesian, Xyz_DGB, iNode_B
+  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, IsCartesian, &
+       Xyz_DGB, iNode_B, CellSize_DB
   use ModCurrent, ONLY: get_current
   implicit none
 
@@ -1104,13 +1105,16 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
              .and..not.UseConstrainB &               !^CFG IF CONSTRAINB
              ))then
            ! Div B from central differences
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*vInv_CB(1,1,1,iBLK)*(  &
-                fAx_BLK(iBLK)*(State_VGB(Bx_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-  &
-                State_VGB(Bx_,-1:nI,0:nJ+1,0:nK+1,iBLK))+ &
-                fAy_BLK(iBLK)*(State_VGB(By_,0:nI+1,1:nJ+2,0:nK+1,iBLK)-  &
-                State_VGB(By_,0:nI+1,-1:nJ,0:nK+1,iBLK))+ &
-                fAz_BLK(iBLK)*(State_VGB(Bz_,0:nI+1,0:nJ+1,1:nk+2,iBLK)-  &
-                State_VGB(Bz_,0:nI+1,0:nJ+1,-1:nK,iBLK)))
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(  &
+                ( State_VGB(Bx_,1:nI+2,0:nJ+1,0:nK+1,iBLK) &
+                - State_VGB(Bx_,-1:nI,0:nJ+1,0:nK+1,iBLK)) &
+                /CellSize_DB(x_,iBLK) + &
+                ( State_VGB(By_,0:nI+1,1:nJ+2,0:nK+1,iBLK) &
+                - State_VGB(By_,0:nI+1,-1:nJ,0:nK+1,iBLK)) &
+                /CellSize_DB(y_,iBLK) + &
+                ( State_VGB(Bz_,0:nI+1,0:nJ+1,1:nk+2,iBLK) &
+                - State_VGB(Bz_,0:nI+1,0:nJ+1,-1:nK,iBLK)) &
+                /CellSize_DB(z_,iBLK) )
         else if(UseConstrainB)then                   !^CFG IF CONSTRAINB BEGIN
            ! Div B from face fluxes
            PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)= &
