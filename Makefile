@@ -85,7 +85,7 @@ help:
 	@echo '    nompirun    (make SWMF and run it without MPI)'
 	@echo ' '
 	@echo '    clean       (remove files: *~ *.o *.kmo *.mod *.T *.lst core)'
-	@echo '    cleanclones (remove src/Makefile-s from BATSRUS clones)
+	@echo '    cleanclones (remove src/Makefile-s from BATSRUS clones)'
 	@echo '    distclean   (equivalent to: Config.pl -uninstall)'
 	@echo '    dist        (create source distribution tar file)'
 	@echo ' '
