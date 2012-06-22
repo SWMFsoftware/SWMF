@@ -299,11 +299,10 @@ contains
     use ModAdvance, ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
-    use ModGeometry, ONLY: vInv_CB
     use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_
     use ModEnergy,  ONLY: calc_energy_cell
-
+    use BATL_lib, ONLY: CellVolume_GB
 
     integer, intent(in):: iStage,iBlock
 
@@ -319,7 +318,7 @@ contains
           DivU          =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
           if(nJ>1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
           if(nK>1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
-          DivU = vInv_CB(i,j,k,iBlock)*DivU
+          DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, GammaOut=GammaEos)

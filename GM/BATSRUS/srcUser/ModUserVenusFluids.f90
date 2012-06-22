@@ -206,14 +206,15 @@ contains
          UnitT_,UnitN_,ElectronPressureRatio
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
          VdtFace_y,VdtFace_z
-    use ModGeometry,ONLY: r_BLK,x_BLK,y_BLK,z_BLK,R_BLK,&
-         vInv_CB
+    use ModGeometry,ONLY: r_BLK,x_BLK,y_BLK,z_BLK,R_BLK
     use ModNumConst,ONLY: cZero,cHalf,cOne,cTolerance
 !!$    use ModVarIndexes,ONLY: Rho_, HpRho_, O2pRho_, OpRho_, CO2pRho_, &
 !!$         RhoUx_, RhoUy_, RhoUz_, HpP_,O2pP_,OpP_,CO2pP_, P_, Energy_, Bx_, By_, Bz_
     use ModVarIndexes
     use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
+    use BATL_lib, ONLY: CellVolume_GB
+
     !    use ModAdvance,  ONLY: Source_VC,Energy_
     !    use ModNumConst, ONLY: cZero
     integer :: iBlock, i, j, k,iSpecies,iFluid
@@ -541,7 +542,7 @@ contains
        MaxSLSpecies_CB(i,j,k,iBlock)=maxval(abs(SiSpecies_I(1:nIonFluid)+&
             LiSpecies_I(1:nIonFluid) ) /&
             (State_VGB(iRhoIon_I(1:nIonFluid), i,j,k, iBlock)+1e-20))&
-            /vInv_CB(i,j,k,iBlock)
+            *CellVolume_GB(i,j,k,iBlock)
 
        if(.not.UsePointImplicit_B(iBlock) )then
            !sum of the (loss term/atom mass) due to recombination                                                  \
@@ -549,7 +550,7 @@ contains
            SourceLossMax = 10.0*maxval(abs(SiSpecies_I(1:nSpecies)-&
                 LiSpecies_I(1:nSpecies) ) /&
                 (State_VGB(iRhoIon_I(1:nIonFluid), i,j,k, iBlock)+1e-20))&
-                /vInv_CB(i,j,k,iBlock)
+                *CellVolume_GB(i,j,k,iBlock)
            vdtmin=min(VdtFace_x(i,j,k),VdtFace_y(i,j,k),VdtFace_z(i,j,k))
 
 

@@ -104,11 +104,11 @@ contains
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0_DGB
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
-    use ModGeometry,ONLY: vInv_CB
     use ModPhysics, ONLY: ElectronCharge, gm1, inv_gm1, &
          Si2No_V, No2Si_V, UnitTemperature_, UnitT_
     use ModMain,    ONLY: x_, y_, z_
     use ModCoordTransform, ONLY: cross_product
+    use BATL_lib, ONLY: CellVolume_GB
 
     ! Variables for multi-ion MHD
     real    :: InvCharge, NumDens, InvNumDens, pAverage, State_V(nVar)
@@ -196,10 +196,11 @@ contains
 
        ! Add the Hall velocity -J/(e n)
        if(index(Test_String,'newj') > 0)then
-          Current_D = vInv_CB(i,j,k,globalBLK)*&
+          Current_D = &
                ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
                + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
-               + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
+               + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k)) &
+               /CellVolume_GB(i,j,k,globalBLK)
        else
           call get_current(i,j,k,GlobalBlk,Current_D)
        end if

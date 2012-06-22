@@ -445,13 +445,13 @@ contains
     use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest 
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_
-    use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
-         vInv_CB
+    use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModConst,    ONLY: cHalf,cOne,cTolerance
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
 !    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit
+    use BATL_lib, ONLY: CellVolume_GB
 
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies, iBlock
@@ -664,14 +664,14 @@ contains
        MaxSLSpecies_CB(i,j,k,iBlock)=maxval(abs(SiSpecies_I(1:nSpecies)+&
             LiSpecies_I(1:nSpecies) ) /&
             (State_VGB(rho_+1:rho_+MaxSpecies, i,j,k, iBlock)+1e-20))&
-            /vInv_CB(i,j,k,iBlock)
+            *CellVolume_GB(i,j,k,iBlock)
 
        if(.not.UsePointImplicit_B(iBlock) )then
           !sum of the (loss term/atom mass) due to recombination             
           SourceLossMax = 10.0*maxval(abs(SiSpecies_I(1:nSpecies)-&
                LiSpecies_I(1:nSpecies) ) /&
                (State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)+1e-20))&
-               /vInv_CB(i,j,k,iBlock)
+               *CellVolume_GB(i,j,k,iBlock)
           vdtmin=min(VdtFace_x(i,j,k),VdtFace_y(i,j,k),VdtFace_z(i,j,k))
           if(SourceLossMax > Vdtmin) then
              !UsePointImplicit_B(iBlock)=.true.                              

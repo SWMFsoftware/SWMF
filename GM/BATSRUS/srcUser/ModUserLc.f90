@@ -530,7 +530,6 @@ contains
     use ModMain, ONLY: nI ,nJ , nK, nBLK, unusedBLK, x_, y_, z_
     use ModProcMH,    ONLY: iProc, iComm
     use ModPhysics,   ONLY: No2Si_V, UnitX_, UnitEnergyDens_, UnitT_, rBody
-    use ModGeometry,   ONLY: vInv_CB
     use ModCoronalHeating, ONLY: TotalCoronalHeatingCgs, &
          UseUnsignedFluxModel, get_coronal_heat_factor
     use ModProcMH,      ONLY: iProc
@@ -539,6 +538,7 @@ contains
     use ModCoronalHeating,ONLY:UseExponentialHeating,&
          DecayLengthExp,HeatingAmplitudeCGS,WSAT0,DoOpenClosedHeat
     use ModRadiativeCooling
+    use BATL_lib, ONLY: CellVolume_GB
 
     integer :: i, j, k, iBlock, iError
     logical :: oktest, oktest_me
@@ -571,7 +571,7 @@ contains
 
           ! Multiply by cell volume and add to sum
           TotalHeatingProc = TotalHeatingProc + CoronalHeating &
-               / vInv_CB(i, j, k, iBlock)
+               *CellVolume_GB(i,j,k,iBlock)
 
        end do; end do; end do
 
@@ -617,10 +617,11 @@ contains
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, Rho_, p_, Energy_, &
          VdtFace_x, VdtFace_y, VdtFace_z
-    use ModGeometry,       ONLY: r_BLK, vInv_CB
+    use ModGeometry,       ONLY: r_BLK
     use ModMain,           ONLY: nI, nJ, nK, GlobalBlk
     use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          inv_gm1
+    use BATL_lib, ONLY: CellVolume_GB
 
     integer :: i, j, k, iBlock
 
@@ -644,7 +645,7 @@ contains
        TimeInvRad  = abs(RadCooling_c(i,j,k)/ Einternal)
        TimeInvHeat = abs(CoronalHeating_C(i,j,k)   / Einternal)
 
-       Vdt_MaxSource = (TimeInvRad + TimeInvHeat) / vInv_CB(i,j,k,iBlock)
+       Vdt_MaxSource = (TimeInvRad + TimeInvHeat)*CellVolume_GB(i,j,k,iBlock)
 
        !**** NOTE This Is a CELL CENTERED TIMESCALE since sources are cell
        ! centered. For now, add to lefthand VdtFace, knowing that calc timestep 

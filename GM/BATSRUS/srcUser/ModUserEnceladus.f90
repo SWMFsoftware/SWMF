@@ -66,7 +66,7 @@ contains
          No2Si_V, Si2No_V, No2Io_V, Io2No_V,UnitN_, UnitT_,UnitTemperature_,&
          UnitX_, UnitRhoU_, UnitU_
     use ModProcMH,   ONLY: iProc
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, R_BLK, vInv_CB 
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, R_BLK
     use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data, &
          MaxBlockData
 

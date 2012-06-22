@@ -520,11 +520,12 @@ contains
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
          B0_DGB, VdtFace_x, VdtFace_y, VdtFace_z
-    use ModGeometry,       ONLY: r_BLK, vInv_CB
+    use ModGeometry,       ONLY: r_BLK
     use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, UseB0
     use ModPhysics,        ONLY: gm1, rBody
     use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, Energy_, p_, Pe_, &
          WaveFirst_, WaveLast_
+    use BATL_lib, ONLY: CellVolume_GB
 
     integer :: i, j, k, iBlock, iWave
     real :: CoronalHeating
@@ -558,7 +559,7 @@ contains
              DtInvWave  = abs(WaveDissipation &
                /max(State_VGB(iWave,i,j,k,iBlock),1e-30))
 
-             Vdt_Source = 2.0*DtInvWave/vInv_CB(i,j,k,iBlock)
+             Vdt_Source = 2.0*DtInvWave*CellVolume_GB(i,j,k,iBlock)
 
              Vdt = min(VdtFace_x(i,j,k),VdtFace_y(i,j,k),VdtFace_z(i,j,k))
 

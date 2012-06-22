@@ -225,6 +225,7 @@ contains
     use ModPhysics,   ONLY: Si2No_V,UnitU_,UnitRho_,UnitP_,UnitB_
     use ModGeometry
     use ModEnergy,    ONLY: calc_energy_cell
+    use BATL_lib, ONLY: CellVolume_GB
 
     integer :: i,j,k,iBLK
     logical :: oktest,oktest_me
@@ -259,7 +260,7 @@ contains
           !\
           ! Calculate the mass added to the eruptive event
           !/
-          Mass = Mass + Rho/vInv_CB(i,j,k,iBLK)
+          Mass = Mass + Rho*CellVolume_GB(i,j,k,iBLK)
        end do; end do; end do
 
        !\

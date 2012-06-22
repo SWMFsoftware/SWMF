@@ -620,12 +620,13 @@ contains
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
          B0_DGB, VdtFace_x, VdtFace_y, VdtFace_z
-    use ModGeometry,       ONLY: r_BLK, vInv_CB
+    use ModGeometry,       ONLY: r_BLK
     use ModMain,           ONLY: GlobalBlk
     use ModPhysics,        ONLY: gm1, rBody, UnitTemperature_, No2Si_V
     use ModVarIndexes,     ONLY: Rho_, Energy_, p_, Pe_, WaveFirst_, WaveLast_
     use ModMultifluid,     ONLY: MassIon_I
     use ModCoronalHeating, ONLY: HeatFactor
+    use BATL_lib, ONLY: CellVolume_GB
 
     integer :: i, j, k, iBlock
     real    :: TemperatureSi, FullB
@@ -666,8 +667,8 @@ contains
        DtInvWaveMinus = WaveDissipation_V(WaveLast_)/ &
             max(State_VGB(WaveLast_,i,j,k,iBlock),1e-30)
        
-       Vdt_Source = 2.0*max(DtInvWavePlus, DtInvWaveMinus)/&
-            vInv_CB(i,j,k,iBlock)
+       Vdt_Source = 2.0*max(DtInvWavePlus, DtInvWaveMinus) &
+            *CellVolume_GB(i,j,k,iBlock)
 
        Vdt = min(VdtFace_x(i,j,k),VdtFace_y(i,j,k),VdtFace_z(i,j,k))
 
