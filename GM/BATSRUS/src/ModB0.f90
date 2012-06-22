@@ -376,7 +376,7 @@ contains
 
     use ModSize,  ONLY: x_, y_, z_
     use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
-         CellSize_DB, FaceNormal_DDFB, CellVolume_GB, Xyz_DGB
+         CellSize_DB, CellFace_DFB, FaceNormal_DDFB, CellVolume_GB, Xyz_DGB
     use ModCoordTransform, ONLY: cross_product
 
     integer, intent(in):: iBlock
@@ -396,6 +396,7 @@ contains
           DxInv = 1/CellSize_DB(x_,iBlock)
           DyInv = 1/CellSize_DB(y_,iBlock)
 
+          k = 1
           do j = 1, nJ; do i = 1, nI
              DivB0_C(i,j,k)= &
                   DxInv*(B0_DX(x_,i+1,j,k) - B0_DX(x_,i,j,k)) + &
@@ -437,6 +438,27 @@ contains
 
           end do; end do; end do
        end if
+    elseif(IsRzGeometry)then
+       k = 1
+       do j = 1, nJ; do i = 1, nI
+          DivB0_C(i,j,k)= ( &
+               + CellFace_DFB(x_,i+1,j,k,iBlock)*B0_DX(x_,i+1,j,k)   &
+               - CellFace_DFB(x_,i  ,j,k,iBlock)*B0_DX(x_,i  ,j,k)   &
+               + CellFace_DFB(y_,i,j+1,k,iBlock)*B0_DY(y_,i,j+1,k)   &
+               - CellFace_DFB(y_,i,j  ,k,iBlock)*B0_DY(y_,i,j  ,k) ) &
+               /CellVolume_GB(i,j,k,iBlock)
+
+          CurlB0_DC(x_,i,j,k) = &
+               +DyInv*(B0_DY(z_,i,j+1,k) - B0_DY(z_,i,j,k)) &
+               + B0_DGB(z_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
+
+          CurlB0_DC(y_,i,j,k) = &
+               -DxInv*(B0_DX(z_,i+1,j,k) - B0_DX(z_,i,j,k))
+
+          CurlB0_DC(z_,i,j,k) = &
+               DxInv*(B0_DX(y_,i+1,j,k) - B0_DX(y_,i,j,k)) - &
+               DyInv*(B0_DY(x_,i,j+1,k) - B0_DY(x_,i,j,k))
+       end do; end do
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           DivB0_C(i,j,k) = &
@@ -471,13 +493,6 @@ contains
 
           CurlB0_DC(:,i,j,k) = CurlB0_DC(:,i,j,k)/CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
-
-       if(IsRzGeometry)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             CurlB0_DC(z_,i,j,k) = CurlB0_DC(z_,i,j,k) &
-                  + B0_DGB(x_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
-          end do; end do; end do
-       end if
     endif
 
   end subroutine set_b0_source
