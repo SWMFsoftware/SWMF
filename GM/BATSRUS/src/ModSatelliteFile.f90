@@ -244,7 +244,7 @@ contains
   subroutine read_satellite_input_files
 
     use ModProcMH,      ONLY: iProc, iComm
-    use ModMain,        ONLY: nDim, lVerbose, TypeCoordSystem, StartTime
+    use ModMain,        ONLY: MaxDim, lVerbose, TypeCoordSystem, StartTime
     use CON_axes,       ONLY: transform_matrix
     use ModTimeConvert, ONLY: time_int_to_real
     use ModIo,          ONLY: iUnitOut, write_prefix
@@ -258,7 +258,7 @@ contains
     character (len=100) :: line
 
     integer      :: iTime_I(7)
-    real         :: Xyz_D(nDim)
+    real         :: Xyz_D(MaxDim)
     real(Real8_) :: DateTime
     integer      :: MaxPoint
     real, allocatable:: Time_I(:), Xyz_DI(:,:)
@@ -306,7 +306,7 @@ contains
     call MPI_Bcast(MaxPoint, 1, MPI_INTEGER, 0, iComm, iError)
 
     ! allocate arrays depending on number of points
-    allocate(Time_I(MaxPoint), Xyz_DI(nDim, MaxPoint))
+    allocate(Time_I(MaxPoint), Xyz_DI(MaxDim, MaxPoint))
     allocate(XSatellite_traj(nSatellite, MaxPoint, 3))
     allocate(Satellite_Time(nSatellite, MaxPoint))
 
@@ -389,7 +389,7 @@ contains
        call MPI_Bcast(Time_I, nPoint, MPI_REAL, 0, iComm, iError)
 
        ! Tell the other processors the coordinates
-       call MPI_Bcast(Xyz_DI, nDim*nPoint, MPI_REAL, 0, iComm, iError)
+       call MPI_Bcast(Xyz_DI, MaxDim*nPoint, MPI_REAL, 0, iComm, iError)
 
        ! Store time and positions for satellite iSat on all PE-s
 

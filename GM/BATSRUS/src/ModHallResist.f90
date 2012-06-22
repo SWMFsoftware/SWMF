@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 module ModHallResist
 
-  use ModSize, ONLY: nI, nJ, nK, nDim
+  use ModSize, ONLY: nI, nJ, nK, MaxDim
 
   implicit none
 
@@ -47,8 +47,8 @@ module ModHallResist
   real, public :: DxSizeBoxHall=-1.0, DySizeBoxHall=-1.0, DzSizeBoxHall=-1.0
 
   ! Jacobian matrix for general grid: Dgencoord/Dcartesian
-  real, public :: DgenDxyz_DDFD(nDim, nDim,1:nI+1, 1:nJ+1, 1:nK+1, nDim)
-  real, public :: DgenDxyz_DDC(nDim, nDim, nI, nJ, nK)
+  real, public :: DgenDxyz_DDFD(MaxDim,MaxDim,nI+1,nJ+1,nK+1,MaxDim)
+  real, public :: DgenDxyz_DDC(MaxDim,MaxDim,nI,nJ,nK)
 
   ! Public methods
   public :: init_hall_resist, get_face_current, hall_factor, test_face_current
@@ -74,7 +74,7 @@ contains
   !============================================================================
   subroutine init_hall_resist
     use ModConst,   ONLY: cMu, cElectronCharge
-    use ModSize,    ONLY: nI, nJ, nK, nDim
+    use ModSize,    ONLY: nI, nJ, nK, MaxDim
     use ModPhysics, ONLY: IonMassPerCharge, Si2No_V, No2Si_V, UnitX_, &
          UnitRho_, UnitT_, UnitB_
 
@@ -100,7 +100,7 @@ contains
     end if
 
     if(.not.allocated(HallJ_CD)) allocate(&
-         HallJ_CD(nI,nJ,nK,nDim), &
+         HallJ_CD(nI,nJ,nK,MaxDim), &
          BxPerN_G(0:nI+1,0:nJ+1,0:nK+1),&
          ByPerN_G(0:nI+1,0:nJ+1,0:nK+1),&
          BzPerN_G(0:nI+1,0:nJ+1,0:nK+1),&
@@ -220,13 +220,13 @@ contains
     integer, intent(in):: iBlock
 
     ! Dxyz/Dgen matrix for one cell
-    real:: DxyzDgen_DD(nDim, nDim)
+    real:: DxyzDgen_DD(MaxDim,MaxDim)
 
     ! Transverse gradients
-    real:: TransGrad_DDG(nDim, nDim, -1:nI+2, -1:nJ+2, -1:nK+2)
+    real:: TransGrad_DDG(MaxDim,MaxDim,-1:nI+2,-1:nJ+2,-1:nK+2)
 
     ! Cell center coordinates for this block
-    real:: Xyz_DG(nDim, -1:nI+2, -1:nJ+2, -1:nK+2)
+    real:: Xyz_DG(MaxDim,-1:nI+2,-1:nJ+2,-1:nK+2)
 
     ! Indexes
     integer:: i, j, k
@@ -253,6 +253,7 @@ contains
             ( dp1* (Xyz_DG(:,i+1,j,k) - Xyz_DG(:,i-1,j,k)) &
             + dp2* (Xyz_DG(:,i+2,j,k) - Xyz_DG(:,i-2,j,k)))
     end do; end do; end do
+
     do k=-1,nK+2; do j=1,nJ; do i=-1,nI+2
        TransGrad_DDG(:,2,i,j,k)=  &
             ( dp1* (Xyz_DG(:,i,j+1,k) - Xyz_DG(:,i,j-1,k)) &
@@ -327,7 +328,7 @@ contains
     integer, intent(in):: iBlock
 
     ! Dxyz/Dgen matrix for one cell
-    real:: DgenDxyz_DD(nDim, nDim)
+    real:: DgenDxyz_DD(MaxDim, MaxDim)
 
     ! Indexes
     integer:: i, j, k, Di, Dj, Dk, iL, jL, kL, iDir
@@ -343,7 +344,7 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    DIRECTION: do iDir = 1, nDim
+    DIRECTION: do iDir = 1, MaxDim
        select case(iDir)
        case(x_)
           Di = 1; Dj = 0; Dk = 0
@@ -432,7 +433,7 @@ contains
 
     integer, intent(in):: iBlock
     real:: InvDx1Half, InvDx2Half, InvDx3Half
-    real:: DxyzDgen_DD(nDim, nDim)
+    real:: DxyzDgen_DD(MaxDim, MaxDim)
     integer:: i,j,k
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='set_block_jacobian'
@@ -729,7 +730,7 @@ contains
     !==========================================================================
     subroutine calc_gencoord_j
 
-      real :: DbDgen_DD(nDim, nDim)
+      real :: DbDgen_DD(MaxDim,MaxDim)
       !-----------------------------------------------------------------------
 
       ! Calculate the partial derivatives dB/dCoord

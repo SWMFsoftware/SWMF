@@ -2,7 +2,7 @@
 !==============================================================================
 module ModFaceGradient
 
-  use ModSize, ONLY: nDim, nI, nJ, nK, jRatio, kRatio, InvIjkRatio
+  use ModSize, ONLY: MaxDim, nI, nJ, nK, jRatio, kRatio, InvIjkRatio
 
   implicit none
   save
@@ -17,7 +17,7 @@ module ModFaceGradient
   public :: set_block_jacobian_face
 
   ! Jacobian matrix for general grid: Dgencoord/Dcartesian
-  real, public :: DcoordDxyz_DDFD(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,nDim)
+  real, public :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
 contains
 
@@ -574,13 +574,13 @@ contains
     integer, intent(in):: iBlock
 
     ! Dxyz/Dcoord matrix for one cell
-    real:: DxyzDcoord_DD(nDim,nDim)
+    real:: DxyzDcoord_DD(MaxDim,MaxDim)
 
     ! Transverse gradients
-    real:: TransGrad_DDG(nDim,nDim,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real:: TransGrad_DDG(MaxDim,MaxDim,-1:nI+2,-1:nJ+2,-1:nK+2)
 
     ! Cell center coordinates for this block
-    real:: Xyz_DG(nDim,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real:: Xyz_DG(MaxDim,-1:nI+2,-1:nJ+2,-1:nK+2)
 
     ! Inverse of cell size
     real :: InvDx, InvDy, InvDz
@@ -1068,7 +1068,7 @@ contains
 
     subroutine calc_gencoord_curl
 
-      real :: DvectorDcoord_DD(nDim,nDim)
+      real :: DvectorDcoord_DD(MaxDim,MaxDim)
       !------------------------------------------------------------------------
 
       ! Calculate the partial derivatives dVector/dCoord

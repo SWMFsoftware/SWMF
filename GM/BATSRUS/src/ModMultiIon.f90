@@ -109,10 +109,10 @@ contains
 
     ! Identify regions where only one ion fluid is present.
 
-    use ModSize,     ONLY: nI, nJ, nK
+    use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, p_
     use ModPhysics,  ONLY: g
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+    use BATL_lib,    ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock
 
@@ -136,16 +136,16 @@ contains
           
        IsMultiIon_CB(i,j,k,iBlock) = .not. &
             (RhoUx < 0.0 .and. RhoUx**2 > MachNumberMultiIon**2*g*p*Rho &
-            .and. y_BLK(i,j,k,iBlock)**2 + z_BLK(i,j,k,iBlock)**2 > &
-            -ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock))
+            .and. sum(Xyz_DGB(x_:y_,i,j,k,iBlock)**2) > &
+            -ParabolaWidthMultiIon * Xyz_DGB(x_,i,j,k,iBlock))
 
        if(DoTestMe .and. i == iTest .and. j == jTest .and. k == kTest) then
           write(*,*) NameSub,'Rho, p, RhoUx =',Rho, p, RhoUx
           write(*,*) NameSub,'RhoUx**2, MachNumberMultiIon*g*p*Rho=', &
                RhoUx**2, MachNumberMultiIon*g*p*Rho
           write(*,*) NameSub,'y**2, z**2, -ParabolaWidthMultiIon*x=', &
-               y_BLK(i,j,k,iBlock)**2 , z_BLK(i,j,k,iBlock)**2, &
-                -ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock)
+               Xyz_DGB(x_:y_,i,j,k,iBlock)**2, &
+                -ParabolaWidthMultiIon * Xyz_DGB(x_,i,j,k,iBlock)
           write(*,*) NameSub, ' IsMultiIon_CB=',  IsMultiIon_CB(i,j,k,iBlock) 
        end if
 
@@ -169,7 +169,7 @@ contains
     !    or can be a fixed fraction (ElectronTemperatureRatio) of the total 
     !    pressure.
 
-    use ModMain,    ONLY: nDim, nI, nJ, nK, x_, y_, z_, &
+    use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, &
          UseB0, UseBoris => boris_correction, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
@@ -185,7 +185,7 @@ contains
     ! all the individual ion momentum equations as -n_i/n_e * grad Pe
 
     real :: State_V(nVar)
-    real, dimension(nDim)     :: Current_D, FullB_D, Force_D
+    real, dimension(MaxDim)   :: Current_D, FullB_D, Force_D
     real, dimension(nIonFluid):: ForceX_I, ForceY_I, ForceZ_I, ChargeDens_I
     real :: InvElectronDens
     real :: vInv
@@ -337,7 +337,7 @@ contains
                           UseBoris => boris_correction, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0,      ONLY: B0_DGB
-    use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK
+    use BATL_lib,   ONLY: Xyz_DGB
     use ModPhysics, ONLY: ElectronCharge, inv_gm1, &
          InvClight2 => Inv_C2light, Si2No_V, No2Si_V, Io2No_V, &
          UnitTemperature_, UnitT_, UnitU_
@@ -345,7 +345,7 @@ contains
     use ModMain,    ONLY: x_, y_, z_
     use ModCoordTransform, ONLY: cross_product
     use ModNumConst,       ONLY: iLeviCivita_III
-    use ModSize,           ONLY: nDim
+    use ModSize,           ONLY: MaxDim
 
     ! Variables for multi-ion MHD
     real:: InvElectronDens, State_V(nVar)
@@ -450,8 +450,7 @@ contains
        if(AverageTemp <= 0.0)then
           write(*,*)'ERROR: AverageTemp =',AverageTemp
           write(*,*)'i,j,k,iBlock,iProc =',i,j,k,iBlock,iProc
-          write(*,*)'x,y,z              =', &
-               x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
+          write(*,*)'x,y,z              =',Xyz_DGB(:,i,j,k,iBlock)
           write(*,*)'iRhoIon_I          =',iRhoIon_I
           write(*,*)'RhoIon_I           =',State_V(iRhoIon_I)
           write(*,*)'MassIon_I          =',MassIon_I
@@ -503,9 +502,9 @@ contains
 
           ! Set corresponding matrix element
           if (IsAnalyticJacobian .and. UsePointImplicit) then
-             do kDim = 1,nDim
+             do kDim = 1, MaxDim
                 iUk = iUxIon_I(iIon) + kDim - 1
-                do iDim = 1,nDim
+                do iDim = 1, MaxDim
                    if(kDim == iDim) CYCLE
                    jDim = 6 - kDim - iDim
                    SignedB = iLeviCivita_III(iDim, jDim, kDim)*FullB_D(jDim)
@@ -582,10 +581,10 @@ contains
                         * Du2 ** (nPowerCutOff - 1)
 
                    ! Add dFriction/d(RhoU) elements to the Jacobian
-                   do kDim = 1,nDim
+                   do kDim = 1, MaxDim
                       ! k component of RhoU^iIon
                       iUk = iUxIon_I(iIon) + kDim - 1
-                      do iDim = 1,nDim
+                      do iDim = 1, MaxDim
 
                          ! dFriction^iIon_k/d(RhoU^iIon_i) = -CoefJacobian
                          !  *(2*n*du_i*du_k/rho^iIon + delta_ik*du^2/rho^iIon)

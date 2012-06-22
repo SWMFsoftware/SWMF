@@ -20,7 +20,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModBlockData, ONLY: clean_block_data
   use BATL_lib, ONLY: read_amr_criteria, read_amr_geometry, &
-       DoCritAmr, DoAutoAmr, DoStrictAmr,nDimBatl => nDim, BetaProlong,&
+       DoCritAmr, DoAutoAmr, DoStrictAmr, BetaProlong,&
        init_mpi, IsCartesianGrid, IsCartesian, IsRzGeometry, &
        IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
   use ModAMR
@@ -2004,7 +2004,7 @@ contains
        JacobianEps   = 1.E-6
     end if                            !^CFG END IMPLICIT
 
-    UseDivbSource   =  UseB .and. nDimBatl > 1
+    UseDivbSource   =  UseB .and. nDim > 1
     UseDivbDiffusion= .false.         !^CFG IF DIVBDIFFUSE
     UseProjection   = .false.         !^CFG IF PROJECTION
     UseConstrainB   = .false.         !^CFG IF CONSTRAINB
@@ -2675,9 +2675,9 @@ contains
        TypeGeometryBatl = TypeGeometry
     end if
 
-    call init_batl(XyzMin_D(1:nDimBatl), XyzMax_D(1:nDimBatl), MaxBlock, &
-         TypeGeometryBatl, TypeBc_I(1:2*nDimBatl-1:2) == 'periodic', &
-         proc_dims(1:nDimBatl), UseRadiusIn=.true., UseDegreeIn=.false.,&
+    call init_batl(XyzMin_D(1:nDim), XyzMax_D(1:nDim), MaxBlock, &
+         TypeGeometryBatl, TypeBc_I(1:2*nDim-1:2) == 'periodic', &
+         proc_dims(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
          RgenIn_I = exp(LogRGen_I), UseUniformAxisIn=UseUniformAxis,&
          user_amr_geometry=user_specify_refinement)
 
@@ -2688,11 +2688,11 @@ contains
     end if
 
     ! Fix grid size in ignored directions
-    if(nDimBatl == 1)then
+    if(nDim == 1)then
        y1 = -0.5; XyzMin_D(2) = -0.5
        y2 = +0.5; XyzMax_D(2) = +0.5
     end if
-    if(nDimBatl < 3)then
+    if(nDim < 3)then
        z1 = -0.5; XyzMin_D(3) = -0.5
        z2 = +0.5; XyzMax_D(3) = +0.5
     end if

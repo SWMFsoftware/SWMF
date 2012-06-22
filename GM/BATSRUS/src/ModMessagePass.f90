@@ -140,17 +140,20 @@ contains
   end subroutine exchange_messages
 
   !============================================================================
-  ! moved form file exchange_messages.f90 
   subroutine fill_in_from_buffer(iBlock)
-    use ModGeometry,ONLY:R_BLK,x_BLK,y_BLK,z_BLK
-    use ModMain,ONLY:nI,nJ,nK,gcn,rBuffMin,rBuffMax,nDim,x_,y_,z_
-    use ModAdvance,ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
-    use ModProcMH,ONLY:iProc
+  
+    use ModGeometry,ONLY: R_BLK
+    use ModMain,    ONLY: rBuffMin, rBuffMax
+    use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
+    use ModProcMH,  ONLY: iProc
+    use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
     implicit none
     integer,intent(in)::iBlock
-    integer::i,j,k
-    real::X_D(nDim)
-    logical::DoWrite=.true.
+
+    integer:: i, j, k
+    logical:: DoWrite=.true.
+    !------------------------------------------------------------------------
+
     if(DoWrite)then
        DoWrite=.false.
        if(iProc==0)then
@@ -158,24 +161,19 @@ contains
        end if
     end if
 
-    do k=1-gcn,nK+gcn
-       do j=1-gcn,nJ+gcn
-          do i=1-gcn,nI+gcn
-             if(R_BLK(i,j,k,iBlock)>rBuffMax.or.R_BLK(i,j,k,iBlock)<rBuffMin)&
-                  CYCLE
-             X_D(x_)=x_BLK(i,j,k,iBlock)
-             X_D(y_)=y_BLK(i,j,k,iBlock)
-             X_D(z_)=z_BLK(i,j,k,iBlock)
-             !Get interpolated values from buffer grid:
-             call get_from_spher_buffer_grid(&
-                  X_D,nVar,State_VGB(:,i,j,k,iBlock))
-             !Transform primitive variables to conservative ones:
-             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
-                  State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
-                  State_VGB(rho_   ,i,j,k,iBlock)
-          end do
-       end do
-    end do
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       if(R_BLK(i,j,k,iBlock) > rBuffMax .or. R_BLK(i,j,k,iBlock) < rBuffMin)&
+            CYCLE
+       !Get interpolated values from buffer grid:
+       call get_from_spher_buffer_grid(&
+            Xyz_DGB(:,i,j,k,iBlock), nVar, State_VGB(:,i,j,k,iBlock))
+
+       !Transform primitive variables to conservative ones:
+       State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+            State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
+
+    end do; end do; end do
+
   end subroutine fill_in_from_buffer
 
 end module ModMessagePass

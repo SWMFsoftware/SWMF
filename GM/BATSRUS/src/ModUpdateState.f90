@@ -334,9 +334,9 @@ contains
           !           = DeltaRhoU + RhoU_old + B^2/(rho*c^2) RhoU_old
           !           = DeltaRhoU + RhoUBorisSimple_old 
           !           = RhoUBorisSimple_new
-          State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBlock) = &
-               State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBlock) + &
-               StateOld_VCB(rhoUx_:rhoU_+nDim,i,j,k,iBlock)*ga2_Boris
+          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = &
+               State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) + &
+               StateOld_VCB(rhoUx_:rhoUz_,i,j,k,iBlock)*ga2_Boris
 
 
           ! Convert RhoUBorisSimple_new to 
@@ -350,8 +350,8 @@ contains
           gA2_Boris = rhoc2/(fullBB + rhoc2)
 
           ! rhoU = 1/[1+BB/(rho c^2)]* rhoU_BorisSimple
-          State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBlock) = gA2_Boris * &
-               State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBlock)
+          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = gA2_Boris * &
+               State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)
 
        end do; end do; end do
 

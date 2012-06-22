@@ -60,7 +60,7 @@ contains
     real :: CurlB0CrossB_D(3)
 
     ! Variables needed for Boris source terms also used for div(u)
-    real :: FullB_DC(nDim,nI,nJ,nK), RhoInv
+    real :: FullB_DC(MaxDim,nI,nJ,nK), RhoInv
     real :: E_D(3), DivE
 
     ! Varibles needed for anisotropic pressure

@@ -115,10 +115,10 @@ contains
   !==========================================================================
   subroutine set_expansion_factors
 
-    real :: dS,dSMax
-    real,dimension(nDim) :: R_D !The vector r,phi,theta
-    real,dimension(nDim) ::BSun_D,BSS_D
-    real,dimension(nDim) :: RSS_D,RSun_D,RPlusEnd_D,RMinusEnd_D
+    real:: dS,dSMax
+    real:: R_D(3) !The vector r,phi,theta
+    real:: BSun_D(3), BSS_D(3)
+    real:: RSS_D(3), RSun_D(3), RPlusEnd_D(3) ,RMinusEnd_D(3)
     integer :: iR,iPhi,iTheta
     integer :: iBcast, iStart, nSize, iError,iIteration
     real,allocatable,dimension(:,:) :: Phi_IJ,Theta_IJ
@@ -422,9 +422,9 @@ contains
          /( (cHalf*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass)-cOne )
   contains
     !==========================================================================
-    subroutine advance_line_point(RInOut_D,Dir)
-      real,intent(inout),dimension(nDim) :: RInOut_D
-      real,intent(in) :: Dir
+    subroutine advance_line_point(RInOut_D, Dir)
+      real,intent(inout):: RInOut_D(3)
+      real,intent(in)   :: Dir
       dS=0.25*min(dR,dPhi,dSinTheta,cOne)*2.0**(iIteration/ (20&
            &*max(nR,nPhi,nTheta)))
       !To avoid the line bouncing near null points
@@ -444,9 +444,10 @@ contains
     function f_d(RIn_D)
       ! This fucnction calculates the value of 
       ! F(i)= B(i)/|B|/(1,r*sin(colatitude),r)
-      real,dimension(nDim) :: f_d
-      real,dimension(nDim),intent(in) :: RIn_D
-      real,parameter :: cTol= 1.0e-10
+      real :: f_d(3)
+      real, intent(in) :: RIn_D(3)
+
+      real, parameter :: cTol= 1.0e-10
 
       !Get the vector (B_r,B_phi,B_theta)
       call interpolate_field(RIn_D,f_d)
@@ -484,8 +485,8 @@ contains
     real, intent(out) :: Output
     real :: Rin_PFSSM,Theta_PFSSM,Phi_PFSSM
     
-    integer :: Node_D(nDim)
-    real :: Res_D(nDim)
+    integer :: Node_D(3)
+    real :: Res_D(3)
     
     real :: Weight_III(0:1,0:1,0:1)
     real :: R_PFSSM

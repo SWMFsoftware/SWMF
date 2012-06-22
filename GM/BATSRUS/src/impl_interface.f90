@@ -962,7 +962,7 @@ subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
 
   use ModVarIndexes,ONLY: nFluid, nVar, Energy_
   use ModProcMH,   ONLY: iProc
-  use ModMain,     ONLY: nDim, x_, y_, z_, &
+  use ModMain,     ONLY: MaxDim, x_, y_, z_, &
        ProcTest, BlkTest,iTest,jTest,kTest
   use ModFaceFlux, ONLY: nFlux, iFace, jFace, kFace, Area, &
        set_block_values, set_cell_values, get_physical_flux, &
@@ -975,7 +975,7 @@ subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
 
   integer, intent(in):: nI,nJ,nK,idim,iBlock
   real, intent(in)   :: StateCons_VC(nVar,nI,nJ,nK)
-  real, intent(in)   :: B0_DC(nDim,nI,nJ,nK)
+  real, intent(in)   :: B0_DC(MaxDim,nI,nJ,nK)
   real, intent(out)  :: Flux_VC(nVar,nI,nJ,nK)
 
   real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
@@ -1043,7 +1043,7 @@ end subroutine get_face_flux
 subroutine get_cmax_face(Var_VF,B0_DF,qnI,qnJ,qnK,iDim,iBlock,Cmax)
 
   use ModProcMH,   ONLY: iProc
-  use ModMain,     ONLY: nDim, x_, y_, z_, ProcTest, BlkTest,iTest,jTest,kTest
+  use ModMain,     ONLY: MaxDim, x_, y_, z_, ProcTest, BlkTest,iTest,jTest,kTest
   use ModImplicit, ONLY: nw
   use ModFaceFlux, ONLY: DoTestCell, iFace, jFace, kFace, Area, &
        set_block_values, set_cell_values, get_speed_max, nFluid, &
@@ -1054,7 +1054,7 @@ subroutine get_cmax_face(Var_VF,B0_DF,qnI,qnJ,qnK,iDim,iBlock,Cmax)
 
   integer, intent(in):: qnI,qnJ,qnK,idim,iBlock
   real, intent(in)   :: Var_VF(nw,qnI,qnJ,qnK)
-  real, intent(in)   :: B0_DF(ndim,qnI,qnJ,qnK)
+  real, intent(in)   :: B0_DF(MaxDim,qnI,qnJ,qnK)
   real, intent(out)  :: Cmax(qnI,qnJ,qnK)
 
   real :: Primitive_V(nw), Cmax_I(nFluid)
@@ -1166,7 +1166,7 @@ subroutine getdt_courant(qdt)
 
   real, intent(out) :: qdt
 
-  real :: cmax(nI,nJ,nK), B0_DC(nDim,nI,nJ,nK), qdt_local
+  real :: cmax(nI,nJ,nK), B0_DC(MaxDim,nI,nJ,nK), qdt_local
   integer :: idim, implBLK, iBLK, iError
 
   logical :: DoTest, DoTestMe
@@ -1184,7 +1184,7 @@ subroutine getdt_courant(qdt)
         B0_DC = 0.0
      end if
 
-     do idim=1,ndim
+     do iDim = 1, nDim
 
         call get_cmax_face(Impl_VGB(1:nw,1:nI,1:nJ,1:nK,implBLK),B0_DC,&
              nI, nJ, nK, iDim, iBlk, Cmax)

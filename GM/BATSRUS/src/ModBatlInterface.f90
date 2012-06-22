@@ -6,12 +6,10 @@ contains
   !===========================================================================
   subroutine set_batsrus_grid
 
-    use BATL_lib, ONLY: nNodeUsed, nBlock, Unused_B, Unused_BP, &
-         iProc, iComm,&
+    use BATL_lib, ONLY: nBlock, Unused_B, Unused_BP, iProc, iComm, &
          IsNewDecomposition, IsNewTree
 
-    use ModMain, ONLY: nBlockAll, nBlockBats => nBlock, nBlockMax, &
-         iNewGrid, iNewDecomposition
+    use ModMain, ONLY: nBlockMax, iNewGrid, iNewDecomposition
 
     use ModPartSteady, ONLY: UsePartSteady
 
@@ -37,8 +35,6 @@ contains
        IsNewDecomposition = .false.
        IsNewTree          = .false.
 
-       nBlockAll  = nNodeUsed
-       nBlockBats = nBlock
        call MPI_ALLREDUCE(nBlock, nBlockMax, 1, MPI_INTEGER, MPI_MAX, &
             iComm, iError)
 

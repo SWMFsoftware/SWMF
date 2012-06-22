@@ -369,7 +369,7 @@ subroutine write_plot_common(ifile)
 
         do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
            ! Fixing hanging nodes at resolution change
-           call  average_grid_node(iBlk, nDim, PlotXYZNodes_DNB(:,:,:,:,iBlk))
+           call  average_grid_node(iBlk, 3, PlotXYZNodes_DNB(:,:,:,:,iBlk))
            ! Make near zero values exactly zero
            where(abs(PlotXYZNodes_DNB(:,:,:,:,iBlk)) < 1e-10) &
                 PlotXYZNodes_DNB(:,:,:,:,iBlk) = 0.
@@ -678,7 +678,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
   use ModWaves, ONLY: UseWavePressure
   use ModLaserHeating, ONLY: LaserHeating_CB
-  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, IsCartesian, Xyz_DGB
+  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, IsCartesian, Xyz_DGB, iNode_B
   use ModCurrent, ONLY: get_current
   implicit none
 
@@ -1285,11 +1285,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         if(UsePointImplicit_B(iBLK))&
              PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)+0.5        
      case('proc')
-        PlotVar(:,:,:,iVar)=iProc
+        PlotVar(:,:,:,iVar) = iProc
      case('blk','block')
-        PlotVar(:,:,:,iVar)=iBLK
-     case('blkall')
-        PlotVar(:,:,:,iVar)=global_block_number(iBLK)
+        PlotVar(:,:,:,iVar) = iBLK
+     case('node')
+        PlotVar(:,:,:,iVar) = iNode_B(iBLK)
      case('child')
         PlotVar(:,:,:,iVar)=BLKneighborCHILD(0,0,0,1,iBLK)
      case('hall')

@@ -75,7 +75,7 @@ subroutine impl_jacobian(implBLK,JAC)
   real, dimension(nI+1,nJ+1,nK+1)             :: dfdwLface, dfdwRface
   real, dimension(nw,nI,nJ,nK)                :: s_VC, sEps_VC, sPowell_VC
   real :: DivB(nI,nJ,nK)
-  real :: B0_DFD(nDim,nI+1,nJ+1,nK+1,nDim), Cmax_DF(nDim,nI+1,nJ+1,nK+1)
+  real :: B0_DFD(MaxDim,nI+1,nJ+1,nK+1,MaxDim), Cmax_DF(MaxDim,nI+1,nJ+1,nK+1)
 
   real   :: qeps, coeff
   logical:: divbsrc, UseDivbSource0
@@ -83,9 +83,9 @@ subroutine impl_jacobian(implBLK,JAC)
 
   logical :: oktest, oktest_me
 
-  real :: Dxyz(nDim)
-  real :: FluxLeft_VFD(nW,nI+1,nJ+1,nK+1,nDim) ! Unperturbed left flux
-  real :: FluxRight_VFD(nW,nI,nJ,nK,nDim)      ! Unperturbed right flux
+  real :: Dxyz(MaxDim)
+  real :: FluxLeft_VFD(nW,nI+1,nJ+1,nK+1,MaxDim) ! Unperturbed left flux
+  real :: FluxRight_VFD(nW,nI,nJ,nK,MaxDim)      ! Unperturbed right flux
   real :: FluxEpsLeft_VF(nW,nI+1,nJ+1,nK+1)    ! Perturbed left flux
   real :: FluxEpsRight_VF(nW,nI,nJ,nK)         ! Perturbed right flux
   real :: FaceArea_F(nI, nJ, nK)               ! Only the inner faces
@@ -122,7 +122,7 @@ subroutine impl_jacobian(implBLK,JAC)
   JAC=0.0
 
   ! Initialize reference flux and the cmax array
-  do idim=1,ndim
+  do iDim = 1, nDim
 
      i1 = 1+i_DD(1,idim); j1= 1+i_DD(2,idim); k1= 1+i_DD(3,idim)
      i2 =nI+i_DD(1,idim); j2=nJ+i_DD(2,idim); k2=nK+i_DD(3,idim);
@@ -140,7 +140,7 @@ subroutine impl_jacobian(implBLK,JAC)
      call get_cmax_face(                            &
           0.5*(Impl_VGB(1:nw, 1:i2, 1:j2, 1:k2,implBLK)+ &
           Impl_VGB(1:nw,i1:nI,j1:nJ,k1:nK,implBLK)),     &
-          B0_DFD(1:ndim,1:i2,1:j2,1:k2,idim),       &
+          B0_DFD(:,1:i2,1:j2,1:k2,idim),       &
           i2,j2,k2,idim,iBlk,Cmax_DF(idim,1:i2,1:j2,1:k2))
 
      ! cmax always occurs as -ImplCoeff*0.5/dx*cmax
@@ -172,7 +172,7 @@ subroutine impl_jacobian(implBLK,JAC)
      coeff=qeps*wnrm(jw)
      ImplEps_VC(jw,:,:,:)=Impl_VC(jw,:,:,:) + coeff
 
-     do idim=1,ndim
+     do idim = 1, nDim
         ! Index limits for faces and shifted centers
         i1 = 1+i_DD(1,idim); j1= 1+i_DD(2,idim); k1= 1+i_DD(3,idim)
         i2 =nI+i_DD(1,idim); j2=nJ+i_DD(2,idim); k2=nK+i_DD(3,idim);

@@ -321,9 +321,9 @@ contains
     real, parameter:: PressureJumpLimit=0.0, DensityJumpLimit=0.1
     real, parameter:: LatitudeCap = 55.0
 
-    real:: uRot_D(nDim), uIono_D(nDim)
+    real:: uRot_D(MaxDim), uIono_D(MaxDim)
     real:: FaceState_V(nVar), State_V(Bx_:nVar+3)
-    real:: bDotR, Brefl_D(nDim), Borig_D(nDim)
+    real:: bDotR, Brefl_D(MaxDim), Borig_D(MaxDim)
     real:: bDotU, rInv
     real:: CosTheta, SinTheta, CosPhi, SinPhi
     real:: UrTrue, UtTrue, BpTrue, BrGhost, BtGhost, BpGhost

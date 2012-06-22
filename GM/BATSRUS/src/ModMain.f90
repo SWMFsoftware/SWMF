@@ -8,7 +8,8 @@ Module ModMain
   use ModVarIndexes
 
   ! Logigal array for the blocks used (=.false.) on the given processor
-  use BATL_lib, ONLY: UnusedBLK => Unused_B
+  ! Total number of used blocks on all processors
+  use BATL_lib, ONLY: UnusedBLK => Unused_B, nBlockAll => nNodeUsed
 
   implicit none
 
@@ -115,18 +116,14 @@ Module ModMain
   ! (needed by the CCMC user module only!)
   integer:: nRefineLevel = 0
 
-  ! nBlock is a maximum block index number used on the given processor
-  ! nBlockMax is a maximum of nBlock over all the processors, 
-  ! nBlockALL is total number of blocks used.
-  
-  integer :: nBlockMax, nBlock, nBlockALL
-  integer :: nBlockExplALL, nBlockImplALL
+  ! nBlockMax is a maximum block index over all processors
+  integer :: nBlockMax
+
+  ! Number of explicitly and implicitly advanced blocks
+  integer :: nBlockExplAll, nBlockImplAll
 
   ! The index of the block currently being dealt with.
   integer :: GlobalBLK
-
-  ! Unique index of blocks for all the processors
-  integer, dimension(nBLK) :: global_block_number
 
   ! Parameters for block location among eight subcubes.
   ! T=top, B=bottom, S=south, N=north, E=east, W=west

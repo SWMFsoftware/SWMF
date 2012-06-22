@@ -1,13 +1,12 @@
 !^CFG COPYRIGHT UM
 module ModSize
   
-  use BATL_size, nDimBatl => nDim, MaxBlockBatl => MaxBlock, &
-       nBlockBatl => nBlock
+  use BATL_size, MaxBlockBatl => MaxBlock
 
   implicit none
 
-  ! number of dimensions and ghostcells. KEEP FIXED AT 3 and 2 for NOW!
-  integer, parameter :: nDim=3, gcn=2
+  ! number of ghostcells. KEEP FIXED AT 2 for NOW!
+  integer, parameter :: gcn=2
 
   !\
   ! Block parameters.

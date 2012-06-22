@@ -58,8 +58,9 @@ contains
   end subroutine set_adiabatic_law_4_waves
   !===================================  
   subroutine adiabatic_law_4_wave_state(State_V, Xyz_D, B0_D)
+
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Ew_, Rho_
-    use ModMain, ONLY: nDim, UseB0
+    use ModMain, ONLY: UseB0
     use ModWaves
 
     !Input and output parameters:   
@@ -70,10 +71,10 @@ contains
     !If UseAlfvenWaves, the Plus or Minus waves are intialized, depending on
     !the sign of {\bf B}\cdot{\bf r}, therefore, we need the following 
     !parameters:
-    real, intent(in), dimension(nDim):: Xyz_D, B0_D
+    real, intent(in):: Xyz_D(3), B0_D(3)
 
 
-    real:: BTotal_D(nDim), EWaveTotal
+    real:: BTotal_D(3), EWaveTotal
     !--------------------------------------------------------!
 
     EWaveTotal = cAdiabaticLaw * sqrt(State_V(Rho_))

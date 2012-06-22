@@ -226,7 +226,7 @@ contains
   !============================================================================
   subroutine set_wave_state(EWaveTotal, State_V, Xyz_D, B0_D)
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Ew_
-    use ModMain, ONLY: nDim, UseB0
+    use ModMain, ONLY: MaxDim, UseB0
 
     !Input and output parameters:
 
@@ -239,9 +239,9 @@ contains
     !If UseAlfvenWaves, the Plus or Minus waves are intialized, depending on
     !the sign of {\bf B}\cdot{\bf r}, therefore, we need the following optional
     !parameters:
-    real, intent(in), optional, dimension(nDim):: Xyz_D, B0_D
+    real, intent(in), optional:: Xyz_D(MaxDim), B0_D(MaxDim)
 
-    real:: BTotal_D(nDim)
+    real:: BTotal_D(MaxDim)
     !-------------------------------------------------------------------------
     if(UseAlfvenWaves)then
 
