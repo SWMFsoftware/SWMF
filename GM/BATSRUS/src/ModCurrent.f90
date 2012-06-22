@@ -20,9 +20,8 @@ contains
     ! otherwise use second order scheme when possible.
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
-    use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK, &
-         x_BLK, y_BLK, z_BLK, true_BLK
-    use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry
+    use ModGeometry, ONLY: True_Cell, true_BLK
+    use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
@@ -50,9 +49,9 @@ contains
     UseFirstOrder = .false.
     if(present(nOrderReschange)) UseFirstOrder = nOrderResChange == 1
 
-    InvDx2 = 0.5/Dx_Blk(iBlock)
-    InvDy2 = 0.5/Dy_Blk(iBlock)
-    InvDz2 = 0.5/Dz_Blk(iBlock)
+    InvDx2 = 0.5/CellSize_DB(x_,iBlock)
+    InvDy2 = 0.5/CellSize_DB(y_,iBlock)
+    InvDz2 = 0.5/CellSize_DB(z_,iBlock)
 
     ! Central difference
     iR = i+1; iL = i-1;
@@ -229,7 +228,7 @@ contains
 
       ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
       if(IsRzGeometry) Current_D(x_) = Current_D(x_) &
-           + State_VGB(Bz_,i,j,k,iBlock)/y_BLK(i,j,k,iBlock)
+           + State_VGB(Bz_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
 
     end subroutine calc_cartesian_j
 
@@ -243,26 +242,14 @@ contains
       !------------------------------------------------------------------------
 
       ! Get the dCartesian/dGencoord matrix with central difference
-      DxyzDcoord_DD(x_,1) = InvDx2 &
-           *(x_BLK(i+1,j,k,iBlock) - x_BLK(i-1,j,k,iBlock))
-      DxyzDcoord_DD(y_,1) = InvDx2 &
-           *(y_BLK(i+1,j,k,iBlock) - y_BLK(i-1,j,k,iBlock))
-      DxyzDcoord_DD(z_,1) = InvDx2 &
-           *(z_BLK(i+1,j,k,iBlock) - z_BLK(i-1,j,k,iBlock))
+      DxyzDcoord_DD(:,1) = InvDx2 &
+           *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
 
-      DxyzDcoord_DD(x_,2) = InvDy2 &
-           *(x_BLK(i,j+1,k,iBlock) - x_BLK(i,j-1,k,iBlock))
-      DxyzDcoord_DD(y_,2) = InvDy2 &
-           *(y_BLK(i,j+1,k,iBlock) - y_BLK(i,j-1,k,iBlock))
-      DxyzDcoord_DD(z_,2) = InvDy2 &
-           *(z_BLK(i,j+1,k,iBlock) - z_BLK(i,j-1,k,iBlock))
+      DxyzDcoord_DD(:,2) = InvDy2 &
+           *(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock))
 
-      DxyzDcoord_DD(x_,3) = InvDz2 &
-           *(x_BLK(i,j,k+1,iBlock) - x_BLK(i,j,k-1,iBlock))
-      DxyzDcoord_DD(y_,3) = InvDz2 &
-           *(y_BLK(i,j,k+1,iBlock) - y_BLK(i,j,k-1,iBlock))
-      DxyzDcoord_DD(z_,3) = InvDz2 &
-           *(z_BLK(i,j,k+1,iBlock) - z_BLK(i,j,k-1,iBlock))
+      DxyzDcoord_DD(:,3) = InvDz2 &
+           *(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
 
       DcoordDxyz_DD = inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
 

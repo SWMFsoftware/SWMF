@@ -568,8 +568,8 @@ contains
   subroutine set_block_jacobian_face(iBlock)
 
     use ModMain, ONLY: x_, y_, z_
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, Dx_Blk, Dy_Blk, Dz_Blk
     use ModCoordTransform, ONLY: inverse_matrix
+    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
 
     integer, intent(in):: iBlock
 
@@ -578,9 +578,6 @@ contains
 
     ! Transverse gradients
     real:: TransGrad_DDG(MaxDim,MaxDim,-1:nI+2,-1:nJ+2,-1:nK+2)
-
-    ! Cell center coordinates for this block
-    real:: Xyz_DG(MaxDim,-1:nI+2,-1:nJ+2,-1:nK+2)
 
     ! Inverse of cell size
     real :: InvDx, InvDy, InvDz
@@ -603,38 +600,34 @@ contains
 
     ! Calculate the dGencoord/dCartesian matrix
 
-    InvDx = 1.0/Dx_Blk(iBlock)
-    InvDy = 1.0/Dy_Blk(iBlock)
-    InvDz = 1.0/Dz_Blk(iBlock)
-
-    Xyz_DG(x_,:,:,:) = x_BLK(:,:,:,iBlock)
-    Xyz_DG(y_,:,:,:) = y_BLK(:,:,:,iBlock)
-    Xyz_DG(z_,:,:,:) = z_BLK(:,:,:,iBlock)
+    InvDx = 1.0/CellSize_DB(x_,iBlock)
+    InvDy = 1.0/CellSize_DB(y_,iBlock)
+    InvDz = 1.0/CellSize_DB(z_,iBlock)
 
     do k=-1,nK+2; do j=-1,nJ+2; do i=1,nI
        TransGrad_DDG(:,1,i,j,k)=  &
-            ( dp1* (Xyz_DG(:,i+1,j,k) - Xyz_DG(:,i-1,j,k)) &
-            + dp2* (Xyz_DG(:,i+2,j,k) - Xyz_DG(:,i-2,j,k)))
+            ( dp1* (Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)) &
+            + dp2* (Xyz_DGB(:,i+2,j,k,iBlock) - Xyz_DGB(:,i-2,j,k,iBlock)))
     end do; end do; end do
 
     do k=-1,nK+2; do j=1,nJ; do i=-1,nI+2
        TransGrad_DDG(:,2,i,j,k)=  &
-            ( dp1* (Xyz_DG(:,i,j+1,k) - Xyz_DG(:,i,j-1,k)) &
-            + dp2* (Xyz_DG(:,i,j+2,k) - Xyz_DG(:,i,j-2,k)))
+            ( dp1* (Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
+            + dp2* (Xyz_DGB(:,i,j+2,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
     end do; end do; end do
 
     do k=1,nK; do j=-1,nJ+2; do i=-1,nI+2
        TransGrad_DDG(:,3,i,j,k)=  &
-            ( dp1* (Xyz_DG(:,i,j,k+1) - Xyz_DG(:,i,j,k-1)) &
-            + dp2* (Xyz_DG(:,i,j,k+2) - Xyz_DG(:,i,j,k-2)))
+            ( dp1* (Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
+            + dp2* (Xyz_DGB(:,i,j,k+2,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
     end do; end do; end do
 
     ! coord1 face
     do k=1,nK; do j=1,nJ; do i=1,nI+1
        ! DxyzDcoord along coord1 face
        DxyzDcoord_DD(:,1) = InvDx* &
-            (  fp1*(Xyz_DG(:,i  ,j,k) - Xyz_DG(:,i-1,j,k)) &
-            +  fp2*(Xyz_DG(:,i+1,j,k) - Xyz_DG(:,i-2,j,k)))
+            (  fp1*(Xyz_DGB(:,i  ,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)) &
+            +  fp2*(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-2,j,k,iBlock)))
        DxyzDcoord_DD(:,2) = InvDy* &
             ( ap1*( TransGrad_DDG(:,2,i  ,j,k) + TransGrad_DDG(:,2,i-1,j,k)) &
             + ap2*( TransGrad_DDG(:,2,i+1,j,k) + TransGrad_DDG(:,2,i-2,j,k)))
@@ -652,8 +645,8 @@ contains
             ( ap1*( TransGrad_DDG(:,1,i,j  ,k) + TransGrad_DDG(:,1,i,j-1,k)) &
             + ap2*( TransGrad_DDG(:,1,i,j+1,k) + TransGrad_DDG(:,1,i,j-2,k)))
        DxyzDcoord_DD(:,2) = InvDy* &
-            (  fp1*(Xyz_DG(:,i,j  ,k) - Xyz_DG(:,i,j-1,k)) &
-            +  fp2*(Xyz_DG(:,i,j+1,k) - Xyz_DG(:,i,j-2,k)))
+            (  fp1*(Xyz_DGB(:,i,j  ,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
+            +  fp2*(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
        DxyzDcoord_DD(:,3) = InvDz* &
             ( ap1*( TransGrad_DDG(:,3,i,j  ,k) + TransGrad_DDG(:,3,i,j-1,k)) &
             + ap2*( TransGrad_DDG(:,3,i,j+1,k) + TransGrad_DDG(:,3,i,j-2,k)))
@@ -672,8 +665,8 @@ contains
             ( ap1*( TransGrad_DDG(:,2,i,j,k  ) + TransGrad_DDG(:,2,i,j,k-1)) &
             + ap2*( TransGrad_DDG(:,2,i,j,k+1) + TransGrad_DDG(:,2,i,j,k-2)))
        DxyzDcoord_DD(:,3) = InvDz* &
-            (  fp1*(Xyz_DG(:,i,j,k  ) - Xyz_DG(:,i,j,k-1)) &
-            +  fp2*(Xyz_DG(:,i,j,k+1) - Xyz_DG(:,i,j,k-2)))
+            (  fp1*(Xyz_DGB(:,i,j,k  ,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
+            +  fp2*(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
 
        DcoordDxyz_DDFD(:,:,i,j,k,3) = &
             inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
@@ -689,10 +682,10 @@ contains
     ! calculate the cell face gradient of Scalar_G
 
     use BATL_lib,      ONLY: IsCartesianGrid
-    use ModGeometry,   ONLY: Dx_Blk, Dy_Blk, Dz_Blk
     use ModMain,       ONLY: x_, y_, z_
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
+    use BATL_lib,      ONLY: CellSize_DB
 
     integer, intent(in) :: iDir, i, j, k, iBlock
     logical, intent(inout) :: IsNewBlock
@@ -704,9 +697,9 @@ contains
     Real :: InvDx, InvDy, InvDz
     real :: Scalar1_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     !--------------------------------------------------------------------------
-    InvDx = 1.0/Dx_Blk(iBlock)
-    InvDy = 1.0/Dy_Blk(iBlock)
-    InvDz = 1.0/Dz_Blk(iBlock)
+    InvDx = 1.0/CellSize_DB(x_,iBlock)
+    InvDy = 1.0/CellSize_DB(y_,iBlock)
+    InvDz = 1.0/CellSize_DB(z_,iBlock)
 
     if(IsNewBlock)then
        call set_block_field3(iBlock, 1, Scalar1_G, Scalar_G)
@@ -853,10 +846,10 @@ contains
        FaceCurl_D)
 
     use ModMain,      ONLY: x_, y_, z_
-    use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK
     use BATL_lib,     ONLY: IsCartesianGrid, IsRzGeometry
     use ModParallel,  ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
+    use BATL_lib,     ONLY: CellSize_DB
 
     integer, intent(in) :: iDir, i, j, k, iBlock
     logical, intent(inout) :: IsNewBlock
@@ -869,9 +862,9 @@ contains
     real :: Vector1_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
     !--------------------------------------------------------------------------
 
-    InvDx = 1.0/dx_Blk(iBlock)
-    InvDy = 1.0/dy_Blk(iBlock)
-    InvDz = 1.0/dz_Blk(iBlock)
+    InvDx = 1.0/CellSize_DB(x_,iBlock)
+    InvDy = 1.0/CellSize_DB(y_,iBlock)
+    InvDz = 1.0/CellSize_DB(z_,iBlock)
 
     if(IsNewBlock)then
        call set_block_field3(iBlock, 3, Vector1_DG, Vector_DG)
@@ -966,7 +959,7 @@ contains
 
     subroutine calc_cartesian_curl
 
-      use ModGeometry, ONLY: y_BLK
+      use BATL_lib, ONLY: Xyz_DGB
       !------------------------------------------------------------------------
       select case(iDir)
       case(x_)
@@ -998,7 +991,7 @@ contains
          ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
          if(IsRzGeometry) FaceCurl_D(x_) = FaceCurl_D(x_) &
               + 0.5*(Vector_DG(z_,i,j,k) + Vector_DG(z_,i-1,j,k)) &
-              / y_BLK(i,j,k,iBlock)
+              / Xyz_DGB(y_,i,j,k,iBlock)
 
       case(y_)
          FaceCurl_D(x_) = &
@@ -1025,14 +1018,14 @@ contains
 
          ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
          if(IsRzGeometry)then
-            if(y_BLK(i,j-1,k,iBlock)<0.0)then
+            if(Xyz_DGB(y_,i,j-1,k,iBlock)<0.0)then
                ! Just for bookkeeping. It's effect is zeroed by zero face area
                FaceCurl_D(x_) = FaceCurl_D(x_) &
-                    + Vector_DG(z_,i,j,k)/y_BLK(i,j,k,iBlock)
+                    + Vector_DG(z_,i,j,k)/Xyz_DGB(y_,i,j,k,iBlock)
             else
                FaceCurl_D(x_) = FaceCurl_D(x_) &
                     + (Vector_DG(z_,i,j,k) + Vector_DG(z_,i,j-1,k)) &
-                    / (y_BLK(i,j,k,iBlock) + y_BLK(i,j-1,k,iBlock))
+                    / (Xyz_DGB(y_,i,j,k,iBlock) + Xyz_DGB(y_,i,j-1,k,iBlock))
             end if
          end if
 
