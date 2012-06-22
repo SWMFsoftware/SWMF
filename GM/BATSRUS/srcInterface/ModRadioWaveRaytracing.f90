@@ -8,9 +8,8 @@ module ModRadioWaveRaytracing
        GradDensity_DI, Density_I, DeltaSNew_I, EnergyDeposition_I
   use ModPhysics, ONLY : No2Si_V, UnitRho_, UnitX_
   use ModProcMH, ONLY: iProc
-!  use ModMain,ONLY: UseLaserPackage
 !  use ModAbsorption, ONLY: AbsorptionCoeff_I
-  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, nDim
+  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MaxDim
   use ModMain,     ONLY: TypeBC_I
 
   implicit none
@@ -145,19 +144,19 @@ contains !=========================================================
     
 
     real :: HalfDeltaS                        ! DeltaS halved
-    real :: DielPerm, DielPermHalfBack, Dens2DensCr, Dens2DensCr1, Dens2DensCr2
+    real :: DielPerm, DielPermHalfBack, Dens2DensCr
     real :: Coef, Curv, Curv1
     real :: LCosAl ! L*cos(Alpha),   
     ! where L is inverse grad of \epsilon, Alpha is the incidence angle
     real :: GradDielPermSqr, GradEpsDotSlope
-    real :: ParabLen, GradDielPerm
+    real :: ParabLen
     real, save :: &
          Tolerance=0.1, ToleranceSqr=1.0e-2, DensityCrInv=1, StepMin=1
     
     integer, save :: nCall=0
     integer:: iRay, iDim
 
-    character(LEN=20),save:: TypeBoundaryDown_D(nDim), TypeBoundaryUp_D(nDim)
+    character(LEN=20),save:: TypeBoundaryDown_D(MaxDim), TypeBoundaryUp_D(MaxDim)
     !---------------
 
     if (IsNewEntry) then
@@ -178,7 +177,7 @@ contains !=========================================================
        
        ! One (ten-thousandth) hundredth of average step 
        StepMin = 1e-2*sum(DeltaS_I)/nRay
-       do iDim=1,nDim
+       do iDim=1,MaxDim
           TypeBoundaryDown_D(iDim) = trim(TypeBc_I(2*iDim-1))
           TypeBoundaryUp_D(iDim)   = trim(TypeBc_I(2*iDim))
        end do
@@ -214,17 +213,6 @@ contains !=========================================================
     IsBehindCr_I = Density_I>= DensityCr.and..not.UnusedRay_I
     UnusedRay_I = UnusedRay_I .or. IsBehindCr_I ! "bad rays" are done
     
-    !In solving the laser deposition energy the total remnant energy 
-    !should be deposited if the ray pamatrates through the critical surface
-    ! if(UseLaserPackage)then
-    !    where( IsBehindCr_I)
-    !       EnergyDeposition_I = Intensity_I
-    !       Intensity_I = 0.0
-    !    endwhere
-    ! end if
-
-  
-
     do iRay = 1, nRay
 
        if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
@@ -246,10 +234,6 @@ contains !=========================================================
        !Check positivity:
        if( DielPermHalfBack<=0.0)then
           IsBehindCr_I(iRay) = .true.
-          ! if(UseLaserPackage)then
-          !    EnergyDeposition_I(iRay) = Intensity_I(iRay)
-          !    Intensity_I(iRay) = 0.0
-          ! end if
           CYCLE
        end if
 
@@ -272,21 +256,9 @@ contains !=========================================================
              DeltaS_I(iRay) = 0.99 * &
                   DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr))
              Position_DI(:,iRay) = PositionHalfBack_D
-             ! if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
-          !if(UseLaserPackage)then
-          !   !Check if the absorption is too high
-          !   if(AbsorptionCoeff_I(iRay) * DeltaS_I(iRay)>=0.5)then
-          !      DeltaS_I(iRay) =  max(&
-          !           cHalf/AbsorptionCoeff_I(iRay),&
-          !           StepMin)
-          !      Position_DI(:,iRay) = PositionHalfBack_D
-          !      if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
-          !      CYCLE
-          !   end if
-          !end if
-          !
+
           ! Test if some of the next points can get into the prohibited
           ! part of space with "negative" dielectric permittivity
           !
@@ -306,7 +278,6 @@ contains !=========================================================
                   cHalf*Tolerance*DistanceToCritSurf_I(iRay),&
                   StepMin)
              Position_DI(:,iRay) = PositionHalfBack_D
-             ! if(UseLaserPackage)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
 
@@ -377,7 +348,6 @@ contains !=========================================================
 
 
           ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
-          ! if(.not.UseLaserPackage)then
           Intensity_I(iRay) = Intensity_I(iRay)  &
                + ParabLen*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
           ! else
@@ -418,23 +388,8 @@ contains !=========================================================
 
           Position_DI(:,iRay) = Position_DI(:,iRay) &
                + Slope_DI(:,iRay)*HalfDeltaS
-          ! if(UseLaserPackage)then
-          !    EnergyDeposition_I(iRay) = Intensity_I(iRay) *  &
-          !         DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)
-          !    if(EnergyDeposition_I(iRay)>=Intensity_I(iRay))then
-          !       !Mark this ray as if it in behind the critical surface
-          !       EnergyDeposition_I(iRay) = Intensity_I(iRay)
-          !       Intensity_I(iRay) = 0.0
-          !       UnusedRay_I(iRay) = .true.
-          !       IsBehindCr_I(iRay) = .true.
-          !       CYCLE
-          !    end if
-          !    Intensity_I(iRay) = Intensity_I(iRay) * &
-          !         (1 - DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)) 
-          ! else
           Intensity_I(iRay) = Intensity_I(iRay) &
                + DeltaS_I(iRay)*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
-          ! end if
        end if
 
        call check_bc
@@ -497,7 +452,7 @@ contains !=========================================================
     !==================
     subroutine check_bc
       integer::iDim
-      do iDim = 1, nDim
+      do iDim = 1, MaxDim
          if(Position_DI(iDim, iRay) < XyzMin_D(iDim))then
             if(TypeBoundaryDown_D(iDim)=='reflect')then
                Position_DI(iDim, iRay) = &
