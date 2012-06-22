@@ -21,7 +21,7 @@ module ModConserveFlux
        neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth
   use BATL_lib, ONLY: &
        IsCartesianGrid, IsCartesian, IsRzGeometry, &
-       CellFace_DFB, FaceNormal_DDFB, UnusedBlock_BP => Unused_BP
+       CellFace_DFB, FaceNormal_DDFB, Unused_BP
 
 
   implicit none
@@ -284,10 +284,10 @@ contains
     end if
 
     if (neiLeast(iBlock)==-1)then
-       if ( .not.unusedBlock_BP(neiBeast(1,iBlock),neiPeast(1,iBlock)).and.&
-            .not.unusedBlock_BP(neiBeast(2,iBlock),neiPeast(2,iBlock)).and.&
-            .not.unusedBlock_BP(neiBeast(3,iBlock),neiPeast(3,iBlock)).and.&
-            .not.unusedBlock_BP(neiBeast(4,iBlock),neiPeast(4,iBlock)))then
+       if ( .not.Unused_BP(neiBeast(1,iBlock),neiPeast(1,iBlock)).and.&
+            .not.Unused_BP(neiBeast(2,iBlock),neiPeast(2,iBlock)).and.&
+            .not.Unused_BP(neiBeast(3,iBlock),neiPeast(3,iBlock)).and.&
+            .not.Unused_BP(neiBeast(4,iBlock),neiPeast(4,iBlock)))then
           lFaceTo=1
           lFaceFrom=1
           call apply_corrected_flux_x
@@ -295,10 +295,10 @@ contains
     end if
 
     if (neiLwest(iBlock)==-1) then
-       if ( .not.unusedBlock_BP(neiBwest(1,iBlock),neiPwest(1,iBlock)).and.&
-            .not.unusedBlock_BP(neiBwest(2,iBlock),neiPwest(2,iBlock)).and.&
-            .not.unusedBlock_BP(neiBwest(3,iBlock),neiPwest(3,iBlock)).and.&
-            .not.unusedBlock_BP(neiBwest(4,iBlock),neiPwest(4,iBlock)))then
+       if ( .not.Unused_BP(neiBwest(1,iBlock),neiPwest(1,iBlock)).and.&
+            .not.Unused_BP(neiBwest(2,iBlock),neiPwest(2,iBlock)).and.&
+            .not.Unused_BP(neiBwest(3,iBlock),neiPwest(3,iBlock)).and.&
+            .not.Unused_BP(neiBwest(4,iBlock),neiPwest(4,iBlock)))then
           lFaceTo=nI+1
           lFaceFrom=2
           call apply_corrected_flux_x
@@ -306,10 +306,10 @@ contains
     end if
 
     if (nDim > 1 .and. neiLsouth(iBlock)==-1) then
-       if(.not.unusedBlock_BP(neiBsouth(1,iBlock),neiPsouth(1,iBlock)).and.&
-            .not.unusedBlock_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)).and.&
-            .not.unusedBlock_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)).and.&
-            .not.unusedBlock_BP(neiBsouth(4,iBlock),neiPsouth(4,iBlock)))then
+       if(.not.Unused_BP(neiBsouth(1,iBlock),neiPsouth(1,iBlock)).and.&
+            .not.Unused_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)).and.&
+            .not.Unused_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)).and.&
+            .not.Unused_BP(neiBsouth(4,iBlock),neiPsouth(4,iBlock)))then
           lFaceTo=1
           lFaceFrom=1
           call apply_corrected_flux_y
@@ -317,10 +317,10 @@ contains
     end if
 
     if (nDim > 1 .and. neiLnorth(iBlock)==-1) then
-       if ( .not.unusedBlock_BP(neiBnorth(1,iBlock),neiPnorth(1,iBlock)).and.&
-            .not.unusedBlock_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)).and.&
-            .not.unusedBlock_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)).and.&
-            .not.unusedBlock_BP(neiBnorth(4,iBlock),neiPnorth(4,iBlock)))then
+       if ( .not.Unused_BP(neiBnorth(1,iBlock),neiPnorth(1,iBlock)).and.&
+            .not.Unused_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)).and.&
+            .not.Unused_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)).and.&
+            .not.Unused_BP(neiBnorth(4,iBlock),neiPnorth(4,iBlock)))then
           lFaceTo=nJ+1
           lFaceFrom=2
           call apply_corrected_flux_y
@@ -328,10 +328,10 @@ contains
     end if
 
     if (nDim > 2 .and. neiLbot(iBlock)==-1) then
-       if ( .not.unusedBlock_BP(neiBbot(1,iBlock),neiPbot(1,iBlock)).and. &
-            .not.unusedBlock_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)).and. &
-            .not.unusedBlock_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)).and. &
-            .not.unusedBlock_BP(neiBbot(4,iBlock),neiPbot(4,iBlock)))then
+       if ( .not.Unused_BP(neiBbot(1,iBlock),neiPbot(1,iBlock)).and. &
+            .not.Unused_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)).and. &
+            .not.Unused_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)).and. &
+            .not.Unused_BP(neiBbot(4,iBlock),neiPbot(4,iBlock)))then
           lFaceTo=1
           lFaceFrom=1
           call apply_corrected_flux_z
@@ -339,10 +339,10 @@ contains
     end if
 
     if (nDim > 2 .and. neiLtop(iBlock)==-1) then
-       if ( .not.unusedBlock_BP(neiBtop(1,iBlock),neiPtop(1,iBlock)).and. &
-            .not.unusedBlock_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)).and. &
-            .not.unusedBlock_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)).and. &
-            .not.unusedBlock_BP(neiBtop(4,iBlock),neiPtop(4,iBlock))) then
+       if ( .not.Unused_BP(neiBtop(1,iBlock),neiPtop(1,iBlock)).and. &
+            .not.Unused_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)).and. &
+            .not.Unused_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)).and. &
+            .not.Unused_BP(neiBtop(4,iBlock),neiPtop(4,iBlock))) then
           lFaceTo=nK+1
           lFaceFrom=2
           call apply_corrected_flux_z

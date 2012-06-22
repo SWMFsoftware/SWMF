@@ -1,8 +1,6 @@
 !^CFG COPYRIGHT UM
 module ModAMR
 
-  use BATL_lib, ONLY:  unusedBlock_BP => Unused_BP
-
   implicit none
   save
 

@@ -2183,12 +2183,11 @@ contains
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
          neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth, &
          neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth
+    use BATL_lib,  ONLY: Unused_BP
 
     ! For debugging
     use ModProcMH, ONLY: iProc
     use ModMain, ONLY: VarTest, ProcTest, BlkTest, jTest, kTest
-
-    use BATL_lib,  ONLY: unusedBlock_BP => Unused_BP
 
     integer, intent(in) :: iBLK
     integer             :: i, j, k
@@ -2220,10 +2219,10 @@ contains
     end if
 
     if(neiLnorth(iBLK) == -1)then
-       if(     .not.unusedBlock_BP(neiBnorth(1,iBLK),neiPnorth(1,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBnorth(2,iBLK),neiPnorth(2,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBnorth(3,iBLK),neiPnorth(3,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBnorth(4,iBLK),neiPnorth(4,iBLK)))then
+       if(     .not.Unused_BP(neiBnorth(1,iBLK),neiPnorth(1,iBLK)) &
+            .and. .not.Unused_BP(neiBnorth(2,iBLK),neiPnorth(2,iBLK)) &
+            .and. .not.Unused_BP(neiBnorth(3,iBLK),neiPnorth(3,iBLK)) &
+            .and. .not.Unused_BP(neiBnorth(4,iBLK),neiPnorth(4,iBLK)))then
           do k=1,nK;do i=1,nI
              State_VGB(1:nVar,i,nJ+1,k,iBLK) =&
                   State_VGB(1:nVar,i,nJ+1,k,iBLK) + cThird*( &
@@ -2236,10 +2235,10 @@ contains
        end if
     end if
     if(neiLsouth(iBLK) == -1)then
-       if(        .not.unusedBlock_BP(neiBsouth(1,iBLK),neiPsouth(1,iBLK)) & 
-            .and. .not.unusedBlock_BP(neiBsouth(2,iBLK),neiPsouth(2,iBLK)) & 
-            .and. .not.unusedBlock_BP(neiBsouth(3,iBLK),neiPsouth(3,iBLK)) & 
-            .and. .not.unusedBlock_BP(neiBsouth(4,iBLK),neiPsouth(4,iBLK)))then
+       if(        .not.Unused_BP(neiBsouth(1,iBLK),neiPsouth(1,iBLK)) & 
+            .and. .not.Unused_BP(neiBsouth(2,iBLK),neiPsouth(2,iBLK)) & 
+            .and. .not.Unused_BP(neiBsouth(3,iBLK),neiPsouth(3,iBLK)) & 
+            .and. .not.Unused_BP(neiBsouth(4,iBLK),neiPsouth(4,iBLK)))then
           do k=1,nK;do i=1,nI
              State_VGB(1:nVar,i,0,k,iBLK) = &
                   State_VGB(1:nVar,i,0,k,iBLK) + cThird*( &
@@ -2252,10 +2251,10 @@ contains
        end if
     end if
     if(neiLeast(iBLK) == -1)then
-       if(     .not.unusedBlock_BP(neiBeast(1,iBLK),neiPeast(1,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBeast(2,iBLK),neiPeast(2,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBeast(3,iBLK),neiPeast(3,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBeast(4,iBLK),neiPeast(4,iBLK)))then
+       if(     .not.Unused_BP(neiBeast(1,iBLK),neiPeast(1,iBLK)) &
+            .and. .not.Unused_BP(neiBeast(2,iBLK),neiPeast(2,iBLK)) &
+            .and. .not.Unused_BP(neiBeast(3,iBLK),neiPeast(3,iBLK)) &
+            .and. .not.Unused_BP(neiBeast(4,iBLK),neiPeast(4,iBLK)))then
           do k=1,nK;do j=1,nJ
              State_VGB(1:nVar,0,j,k,iBLK) = &
                   State_VGB(1:nVar,0,j,k,iBLK) + cThird*(&
@@ -2268,10 +2267,10 @@ contains
        end if
     end if
     if(neiLwest(iBLK) == -1)then
-       if(        .not.unusedBlock_BP(neiBwest(1,iBLK),neiPwest(1,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBwest(2,iBLK),neiPwest(2,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBwest(3,iBLK),neiPwest(3,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBwest(4,iBLK),neiPwest(4,iBLK)))then
+       if(        .not.Unused_BP(neiBwest(1,iBLK),neiPwest(1,iBLK)) &
+            .and. .not.Unused_BP(neiBwest(2,iBLK),neiPwest(2,iBLK)) &
+            .and. .not.Unused_BP(neiBwest(3,iBLK),neiPwest(3,iBLK)) &
+            .and. .not.Unused_BP(neiBwest(4,iBLK),neiPwest(4,iBLK)))then
           do k=1,nK;do j=1,nJ
              State_VGB(1:nVar,nI+1,j,k,iBLK) = &
                   State_VGB(1:nVar,nI+1,j,k,iBLK) + cThird*( &
@@ -2284,10 +2283,10 @@ contains
        end if
     end if
     if(neiLtop(iBLK) == -1)then
-       if(        .not.unusedBlock_BP(neiBtop(1,iBLK),neiPtop(1,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBtop(2,iBLK),neiPtop(2,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBtop(3,iBLK),neiPtop(3,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBtop(4,iBLK),neiPtop(4,iBLK)))then
+       if(        .not.Unused_BP(neiBtop(1,iBLK),neiPtop(1,iBLK)) &
+            .and. .not.Unused_BP(neiBtop(2,iBLK),neiPtop(2,iBLK)) &
+            .and. .not.Unused_BP(neiBtop(3,iBLK),neiPtop(3,iBLK)) &
+            .and. .not.Unused_BP(neiBtop(4,iBLK),neiPtop(4,iBLK)))then
           do j=1,nJ;do i=1,nI
              State_VGB(1:nVar,i,j,nK+1,iBLK) = &
                   State_VGB(1:nVar,i,j,nK+1,iBLK) + cThird*(&
@@ -2300,10 +2299,10 @@ contains
        end if
     end if
     if(neiLbot(iBLK) == -1)then
-       if(        .not.unusedBlock_BP(neiBbot(1,iBLK),neiPbot(1,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBbot(2,iBLK),neiPbot(2,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBbot(3,iBLK),neiPbot(3,iBLK)) &
-            .and. .not.unusedBlock_BP(neiBbot(4,iBLK),neiPbot(4,iBLK)))then
+       if(        .not.Unused_BP(neiBbot(1,iBLK),neiPbot(1,iBLK)) &
+            .and. .not.Unused_BP(neiBbot(2,iBLK),neiPbot(2,iBLK)) &
+            .and. .not.Unused_BP(neiBbot(3,iBLK),neiPbot(3,iBLK)) &
+            .and. .not.Unused_BP(neiBbot(4,iBLK),neiPbot(4,iBLK)))then
           do j=1,nJ;do i=1,nI
              State_VGB(1:nVar,i,j,0,iBLK) = &
                   State_VGB(1:nVar,i,j,0,iBLK) + cThird*( &

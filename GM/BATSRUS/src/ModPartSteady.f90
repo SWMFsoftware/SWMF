@@ -10,14 +10,14 @@ module ModPartSteady
   use ModProcMH
   use ModVarIndexes, ONLY: nVar
   use ModSize,       ONLY: MaxBlock, nI, nJ, nK
-  use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, UnusedBLK, &
-       East_, Top_, time_accurate,  n_step, lVerbose
+  use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, &
+       time_accurate, n_step, lVerbose
   use ModGeometry,   ONLY: Dx_BLK, MinDxValue
   use ModParallel,   ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
   use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, &
        State_VGB, StateOld_VCB
-  use BATL_lib,      ONLY: UnusedBlock_BP => Unused_BP
+  use BATL_lib,      ONLY: Unused_B, Unused_BP
 
   use ModMpi
 
@@ -54,25 +54,25 @@ contains
     if(DoDebug)write(*,*)'part_steady_switch called with IsOn=',IsOn
 
     if(IsOn)then
-       ! Select UnusedBLK to be skipped or steady
-       UnusedBlock_BP(1:nBlockMax,:) = &
+       ! Make block unused if it is skipped or steady
+       Unused_BP(1:nBlockMax,:) = &
             iTypeAdvance_BP(1:nBlockMax,:) <= SteadyBlock_
 
        ! Change the decomposition index
        iNewDecomposition=mod(iNewDecomposition+1, 10000)
     else
        ! Restore the original unused blocks
-       UnusedBlock_BP(1:nBlockMax,:) = &
+       Unused_BP(1:nBlockMax,:) = &
             iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
 
        ! Restore the decomposition index
        iNewDecomposition = mod(iNewDecomposition-1, 10000)
     end if
-    ! Update local UnusedBLK array
-    UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+    ! Update local Unused_B array
+    Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
 
     if(DoDebug)write(*,*)'part_steady_switch nBlockMax, nUnused=',&
-         nBlockMax, count(UnusedBLK(1:nBlockMax))
+         nBlockMax, count(Unused_B(1:nBlockMax))
 
   end subroutine part_steady_switch
 
@@ -173,7 +173,7 @@ contains
        if(DoDebug)write(*,*)'part_steady checking iBlock=',iBlock
 
        ! Check all faces and subfaces
-       FACES: do iFace = East_, Top_
+       FACES: do iFace = 1, 6
 
           if(NeiLev(iFace,iBlock) == NOBLK) CYCLE FACES
           if(NeiLev(iFace,iBlock) == -1)then
