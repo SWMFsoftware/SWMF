@@ -258,7 +258,7 @@ test1_check:
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test1/GM_log_n000001.log \
 		> test1_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-6 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test1/IE.log \
 		> test1_ie.diff)
