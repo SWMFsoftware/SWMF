@@ -55,7 +55,7 @@ contains
          UnitB_,UnitU_,UnitRho_,UnitP_,No2Si_V,UnitX_,rBody, &
          xBody2,yBody2,zBody2,OrbitPeriod,FaceState_VI
     use ModNumConst,   ONLY: cTolerance,cTiny,cTwoPi, cZero
-    use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
+    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
          iFace, jFace, kFace, iSide, iBlockBc,iBoundary
 
     real, intent(out):: VarsGhostFace_V(nVar)

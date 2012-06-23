@@ -436,7 +436,7 @@ contains
     use ModMain, ONLY: x_, y_, z_
     use ModVarIndexes
     use ModPhysics, ONLY: BodyRho_I, BodyP_I, Io2No_V, UnitU_
-    use ModFaceBc,  ONLY: FaceCoords_D, B0Face_D, VarsTrueFace_V
+    use ModFaceBoundary, ONLY: FaceCoords_D, B0Face_D, VarsTrueFace_V
 
     real, intent(out):: VarsGhostFace_V(nVar)
 

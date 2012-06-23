@@ -1310,7 +1310,7 @@ case('solarmin')
     use ModProcMH,   ONLY: iProc
     use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_,HpP_,O2pP_,OpP_,CO2pP_,iRhoUx_I,iRhoUy_I,iRhoUz_I
     use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim,ElectronPressureRatio,FaceState_VI
-    use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V, iFace,jFace,kFace, iBoundary
+    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, iFace,jFace,kFace, iBoundary
     
 
     real, intent(out):: VarsGhostFace_V(nVar)

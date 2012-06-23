@@ -1311,7 +1311,7 @@ contains
   subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
-    use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
+    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
     use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge, BodyRho_I, &

@@ -51,6 +51,7 @@ OBJECTS = \
 	ModCellBoundary.o\
 	ModConserveFlux.o\
 	ModCoronalHeating.o \
+	ModFaceBoundary.o \
 	ModIonoVelocity.o\
 	ModExtraVariables.o\
 	ModSingleFluid.o\
@@ -98,7 +99,6 @@ OBJECTS = \
 	load_balance.o\
 	rotate.o\
 	set_block_geometry.o\
-	set_BCs.o\
 	set_ICs.o\
 	set_physics.o\
 	update_states.o\

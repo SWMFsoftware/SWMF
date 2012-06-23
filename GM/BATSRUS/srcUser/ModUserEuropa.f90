@@ -264,7 +264,7 @@ contains
     use ModSize,       ONLY: nDim,West_,North_,Top_
     use ModVarIndexes
     use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim, BodyNDim_I
-    use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V
+    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V
 
     real, intent(out):: VarsGhostFace_V(nVar)
 

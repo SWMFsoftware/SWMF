@@ -262,7 +262,7 @@ contains
   subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModMain,        ONLY: x_, y_, z_
-    use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V
+    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V
     use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uz_
 
     real, intent(out) :: VarsGhostFace_V(nVar)

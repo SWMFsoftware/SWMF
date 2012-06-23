@@ -1326,7 +1326,7 @@ contains
 
     use ModAdvance,  ONLY: nVar
     use ModPhysics,  ONLY: SW_rho, SW_p, SW_T_dim
-    use ModFaceBc,   ONLY: VarsTrueFace_V, FaceCoords_D
+    use ModFaceBoundary, ONLY: VarsTrueFace_V, FaceCoords_D
 
     real, intent(out):: VarsGhostFace_V(nVar)
 

@@ -238,7 +238,7 @@ contains
     use ModAdvance
     use ModPhysics  
     use ModProcMH
-    use ModFaceBc, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V, &
+    use ModFaceBoundary, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V, &
          iFace, jFace, kFace, iBlockBc
 
     use ModCoordTransform, ONLY: rot_xyz_sph

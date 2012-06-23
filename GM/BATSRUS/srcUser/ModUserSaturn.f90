@@ -625,7 +625,7 @@ contains
 
     use ModSize, ONLY: x_
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_
-    use ModFaceBc, ONLY: TimeBc, iFace, jFace, kFace, FaceCoords_D
+    use ModFaceBoundary, ONLY: TimeBc, iFace, jFace, kFace, FaceCoords_D
     use ModSolarwind, ONLY: get_solar_wind_point
     use ModB0, ONLY: B0_DX
 

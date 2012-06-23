@@ -666,7 +666,7 @@ contains
 
     use ModMain,    ONLY: x_, y_, z_, iTest, jTest, kTest, BlkTest
     use ModAdvance, ONLY: Ux_, Uy_, Uz_, By_, Bz_, State_VGB
-    use ModFaceBc,  ONLY: FaceCoords_D, TimeBc, &
+    use ModFaceBoundary,  ONLY: FaceCoords_D, TimeBc, &
          VarsTrueFace_V, iFace, jFace, kFace, iBlockBc, iSide
 
     real, intent(out):: VarsGhostFace_V(nVar)

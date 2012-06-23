@@ -1373,7 +1373,7 @@ contains
     use ModMain,       ONLY: UseRotatingBc
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
     use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim
-    use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V
+    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
