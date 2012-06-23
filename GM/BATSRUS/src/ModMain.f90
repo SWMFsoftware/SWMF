@@ -7,6 +7,9 @@ Module ModMain
   use ModSize
   use ModVarIndexes
 
+  ! The ifort compiler cannot find nBlock through ModSize
+  use BATL_size, ONLY: nBlock
+
   ! Logigal array for the blocks used (=.false.) on the given processor
   ! Total number of used blocks on all processors
   use BATL_lib, ONLY: UnusedBLK => Unused_B, nBlockAll => nNodeUsed
