@@ -50,7 +50,7 @@ subroutine write_plot_los(iFile)
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, unusedBLK, &
        time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
        Body1,body1_, StartTime, CodeVersion
-  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK, &
+  use ModGeometry, ONLY: &
        XyzStart_BLK, TypeGeometry, IsBoundaryBlock_IB, nMirror_D
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
        UnitTemperature_
@@ -64,7 +64,7 @@ subroutine write_plot_los(iFile)
   use ModPlotFile, ONLY: save_plot_file
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
-  use BATL_lib, ONLY: Xyz_DNB
+  use BATL_lib, ONLY: Xyz_DNB, Xyz_DGB, CellSize_DB
 
   implicit none
 
@@ -386,7 +386,7 @@ subroutine write_plot_los(iFile)
 
      if (unusedBLK(iBLK)) CYCLE
 
-     CellSize_D = (/ dx_BLK(iBlk), dy_BLK(iBlk), dz_BLK(iBlk) /)
+     CellSize_D = CellSize_DB(:,iBlk)
 
      do iMirror = 1, nMirror_D(1)
         XyzBlockSign_D(1) = 3 - 2*iMirror
@@ -680,21 +680,19 @@ contains
 
        if(IsRzGeometry)then
           ! Exclude blocks that do not intersect the Z=0 plane 
-          if(nK > 1 .and. &
-               .not. (z_BLK(1,1,0,iBLK)<0 .and. z_BLK(1,1,nK,iBLK)>0)) RETURN
+          if(nK > 1 .and. .not.(Xyz_DGB(z_,1,1,0,iBLK)<0 &
+               .and.            Xyz_DGB(z_,1,1,nK,iBLK)>0)) RETURN
           ! Exclude blocks below the Y=0 plane
-          if(y_BLK(1,nJ,1,iBLK)<0) RETURN
+          if(Xyz_DGB(y_,1,nJ,1,iBLK)<0) RETURN
        end if
 
        rBlockSize = 0.5*sqrt(&
-            ((nI+1)*dx_BLK(iBLK))**2 + &
-            ((nJ+1)*dy_BLK(iBLK))**2 + &
-            ((nK+1)*dz_BLK(iBLK))**2)
+            ((nI+1)*CellSize_DB(x_,iBLK))**2 + &
+            ((nJ+1)*CellSize_DB(y_,iBLK))**2 + &
+            ((nK+1)*CellSize_DB(z_,iBLK))**2)
 
        !position of the block center
-       XyzBlockCenter_D(1) = 0.5*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
-       XyzBlockCenter_D(2) = 0.5*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
-       XyzBlockCenter_D(3) = 0.5*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
+       XyzBlockCenter_D = 0.5*(Xyz_DGB(:,nI,nJ,nK,iBLK)+Xyz_DGB(:,1,1,1,iBLK))
 
        if(iMirror == 2) XyzBlockCenter_D(1) = -XyzBlockCenter_D(1)
        if(jMirror == 2) XyzBlockCenter_D(2) = -XyzBlockCenter_D(2)
@@ -931,22 +929,22 @@ contains
     r2Min        = sum(XyzPix_D(2:3)**2) - DistRmin**2
 
     ! The radial distance of the outer face of the block
-    r2_S(2) = (0.5*(y_BLK(1,nJ,1,iBLK) + y_BLK(1,nJ+1,1,iBLK)))**2
+    r2_S(2) = (0.5*(Xyz_DGB(y_,1,nJ,1,iBLK) + Xyz_DGB(y_,1,nJ+1,1,iBLK)))**2
 
     ! Return if the outer radius is smaller than the closest approach
     if(r2_s(2) < r2Min) RETURN
 
     ! The radial distance of the inner face of the block
-    r2_S(1) = (0.5*(y_BLK(1, 0,1,iBLK) + y_BLK(1,   1,1,iBLK)))**2
+    r2_S(1) = (0.5*(Xyz_DGB(y_,1, 0,1,iBLK) + Xyz_DGB(y_,1,   1,1,iBLK)))**2
 
     ! The X positions of the left and right faces of the block
     if(iMirror == 1) then
-       x_S(1) = 0.5*(x_BLK( 0,1,1,iBLK) + x_BLK(   1,1,1,iBLK))
-       x_S(2) = 0.5*(x_BLK(nI,1,1,iBLK) + x_BLK(nI+1,1,1,iBLK))
+       x_S(1) = 0.5*(Xyz_DGB(x_, 0,1,1,iBLK) + Xyz_DGB(x_,   1,1,1,iBLK))
+       x_S(2) = 0.5*(Xyz_DGB(x_,nI,1,1,iBLK) + Xyz_DGB(x_,nI+1,1,1,iBLK))
     else
        ! Swap signs and order of faces for mirror images
-       x_S(1) = -0.5*(x_BLK(nI,1,1,iBLK) + x_BLK(nI+1,1,1,iBLK))
-       x_S(2) = -0.5*(x_BLK( 0,1,1,iBLK) + x_BLK(   1,1,1,iBLK))
+       x_S(1) = -0.5*(Xyz_DGB(x_,nI,1,1,iBLK) + Xyz_DGB(x_,nI+1,1,1,iBLK))
+       x_S(2) = -0.5*(Xyz_DGB(x_, 0,1,1,iBLK) + Xyz_DGB(x_,   1,1,1,iBLK))
     end if
 
     ! Initialize intersection arrays
@@ -1035,12 +1033,12 @@ contains
     !face_location(2,3) = x1, y1, z1---x2, y2, z2 
 
     !Determine the location of the block faces
-    xx1 = 0.50*(x_BLK( 0, 0, 0,iBLK)+x_BLK(   1,   1  , 1,iBLK))
-    xx2 = 0.50*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(nI+1,nJ+1,nK+1,iBLK))
-    yy1 = 0.50*(y_BLK( 0, 0, 0,iBLK)+y_BLK(   1,   1,   1,iBLK))
-    yy2 = 0.50*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(nI+1,nJ+1,nK+1,iBLK))
-    zz1 = 0.50*(z_BLK( 0, 0, 0,iBLK)+z_BLK(   1,   1,   1,iBLK))
-    zz2 = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(nI+1,nJ+1,nK+1,iBLK))
+    xx1 = 0.50*(Xyz_DGB(x_, 0, 0, 0,iBLK)+Xyz_DGB(x_,   1,   1  , 1,iBLK))
+    xx2 = 0.50*(Xyz_DGB(x_,nI,nJ,nK,iBLK)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBLK))
+    yy1 = 0.50*(Xyz_DGB(y_, 0, 0, 0,iBLK)+Xyz_DGB(y_,   1,   1,   1,iBLK))
+    yy2 = 0.50*(Xyz_DGB(y_,nI,nJ,nK,iBLK)+Xyz_DGB(y_,nI+1,nJ+1,nK+1,iBLK))
+    zz1 = 0.50*(Xyz_DGB(z_, 0, 0, 0,iBLK)+Xyz_DGB(z_,   1,   1,   1,iBLK))
+    zz2 = 0.50*(Xyz_DGB(z_,nI,nJ,nK,iBLK)+Xyz_DGB(z_,nI+1,nJ+1,nK+1,iBLK))
 
     ! Swap signs and order of faces for mirror images
     if(iMirror == 2) then
