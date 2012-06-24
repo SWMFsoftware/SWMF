@@ -11,7 +11,7 @@ module ModFaceBoundary
   private ! except
 
   ! Public methods
-  public :: set_BCs
+  public :: set_face_boundary
 
   ! True if only boundaries at resolution changes are updated
   logical, public :: DoResChangeOnly
@@ -20,7 +20,8 @@ module ModFaceBoundary
   character(len=20), public :: TypeBc
 
   ! Negative iBoundary indicates which body we are computing for.
-  ! Positive iBoundary numerates the sides for the outer BCs.
+  ! Zero corresponds to the user defined extra boundary.
+  ! Positive iBoundary indexes the outer boundaries from 1 to 2*nDim.
   integer, public :: iBoundary
 
   ! Index of the face
@@ -41,20 +42,22 @@ module ModFaceBoundary
 contains
 
   !============================================================================
-  subroutine set_BCs(iBlock, TimeBcIn, DoResChangeOnlyIn)
+  subroutine set_face_boundary(iBlock, TimeBcIn, DoResChangeOnlyIn)
 
-    use ModProcMH
-    use ModMain
-    use ModAdvance
+    use ModProcMH, ONLY: iProc
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModMain, ONLY: ProcTest, BlkTest, iTest, jTest, kTest, VarTest
+    use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
+         RightState_VX, RightState_VY, RightState_VZ
     use ModGeometry, ONLY: true_cell, MinBoundary, MaxBoundary
-    use ModBoundaryCells
+    use ModBoundaryCells, ONLY: iBoundary_GB
 
     integer, intent(in) :: iBlock
     real,    intent(in) :: TimeBcIn
     logical, intent(in) :: DoResChangeOnlyIn
 
     logical :: oktest, oktest_me
-    character(len=*), parameter:: NameSub='set_bcs'
+    character(len=*), parameter:: NameSub='set_face_boundary'
     logical, allocatable :: IsBodyCell_G(:,:,:)
     !--------------------------------------------------------------------------
 
@@ -82,7 +85,7 @@ contains
          iBoundary_GB(:,:,:,iBlockBc) >= MinBoundary .and. &
          iBoundary_GB(:,:,:,iBlockBc) <= MaxBoundary
 
-    call set_face_BCs(IsBodyCell_G, true_cell(:,:,:,iBlockBc) )
+    call set_face_bc(IsBodyCell_G, true_cell(:,:,:,iBlockBc) )
 
     if(oktest_me)call write_face_state('Final')
 
@@ -94,36 +97,40 @@ contains
 
       character(len=*), intent(in):: String
 
-      write(*,*)NameSub,' ',String,' face states:'
-      write(*,*)'east  VarL_x,VarR_x=',&
+      write(*,*) NameSub,' ',String,' face states:'
+      write(*,*) 'VarL_x, VarR_x(iTest)  =',&
            LeftState_VX(VarTest,  Itest, Jtest, Ktest),  &
            RightState_VX(VarTest, Itest, Jtest, Ktest)
-      write(*,*)'west  VarL_x,VarR_x=',&
+      write(*,*) 'VarL_x, VarR_x(iTest+1)=',&
            LeftState_VX(VarTest,  Itest+1, Jtest, Ktest), &
            RightState_VX(VarTest, Itest+1, Jtest, Ktest)
-      write(*,*)'south VarL_y,VarR_y=',&
+      write(*,*) 'VarL_y, VarR_y(jTest)  =',&
            LeftState_VY(VarTest,  Itest, Jtest, Ktest),  &
            RightState_VY(VarTest, Itest, Jtest, Ktest)
-      write(*,*)'north VarL_y,VarR_y=',&
+      write(*,*) 'VarL_y, VarR_y(jTest+1)=',&
            LeftState_VY(VarTest,  Itest, Jtest+1, Ktest), &
            RightState_VY(VarTest, Itest, Jtest+1, Ktest)
-      write(*,*)'bot   VarL_z,VarR_z=',&
+      write(*,*) 'VarL_z, VarR_z(kTest)  =',&
            LeftState_VZ(VarTest,  Itest, Jtest, Ktest), &
            RightState_VZ(VarTest, Itest, Jtest, Ktest)
-      write(*,*)'top   VarL_z,VarR_z=',&
+      write(*,*) 'VarL_z, VarR_z(kTest+1)=',&
            LeftState_VZ(VarTest,  Itest, Jtest, Ktest+1), &
            RightState_VZ(VarTest, Itest, Jtest, Ktest+1)
 
     end subroutine write_face_state
 
-  end subroutine set_BCs
+  end subroutine set_face_boundary
 
   !============================================================================
 
-  subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
+  subroutine set_face_bc(IsBodyCell_G, IsTrueCell_G)
 
     use ModMain
-    use ModAdvance
+    use ModProcMH, ONLY: iProc
+    use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
+    use ModAdvance, ONLY: UseAnisoPressure, &
+         LeftState_VX, LeftState_VY, LeftState_VZ, &
+         RightState_VX, RightState_VY, RightState_VZ
     use ModParallel, ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModNumConst
@@ -146,7 +153,7 @@ contains
     real, external :: logvar_ionosphere   !^CFG IF IONOSPHERE
     real:: RhoCpcp
 
-    character (len=*), parameter :: NameSub = 'set_face_bcs'
+    character (len=*), parameter :: NameSub = 'set_face_bc'
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
     if(iBlockBc==BLKtest.and.iProc==PROCtest)then
@@ -170,7 +177,7 @@ contains
     !^CFG END IONOSPHERE
 
     !\
-    ! Apply body BCs as required.
+    ! Apply body boundary conditions as required.
     !/                            
 
     B0Face_D = 0.0
@@ -196,7 +203,7 @@ contains
                   ((i == nIFace .and. neiLwest(iBlockBc)==+1) .or. &
                   (i == 1       .and. neiLeast(iBlockBc)==+1)) )) then
 
-                iSide = West_
+                iSide = 2
 
                 FaceCoords_D = 0.5*(Xyz_DGB(:,i-1,j,k,iBlockBc) &
                      +              Xyz_DGB(:,i  ,j,k,iBlockBc))
@@ -205,7 +212,7 @@ contains
 
                 VarsTrueFace_V= LeftState_VX(:,i,j,k)
 
-                call set_face_bc(i-1,j,k,i,j,k)
+                call set_face(i-1,j,k,i,j,k)
 
                 RightState_VX(:,i,j,k) = VarsGhostFace_V
 
@@ -217,7 +224,7 @@ contains
                   (i == 1         .and. neiLeast(iBlockBc)==+1) .or. &
                   (i == nIFace    .and. neiLwest(iBlockBc)==+1)  )) then
 
-                iSide = East_
+                iSide = 1
 
                 FaceCoords_D = 0.5*(Xyz_DGB(:,i-1,j,k,iBlockBc) &
                      +              Xyz_DGB(:,i  ,j,k,iBlockBc))
@@ -226,7 +233,7 @@ contains
 
                 VarsTrueFace_V = RightState_VX(:,i,j,k)
 
-                call set_face_bc(i,j,k,i-1,j,k)
+                call set_face(i,j,k,i-1,j,k)
 
                 LeftState_VX(:,i,j,k) = VarsGhostFace_V
              end if
@@ -246,7 +253,7 @@ contains
                   (j == nJFace .and. neiLnorth(iBlockBc)==+1) .or. &
                   (j == 1      .and. neiLsouth(iBlockBc)==+1) )) then
 
-                iSide = North_
+                iSide = 4
 
                 FaceCoords_D = 0.5*(Xyz_DGB(:,i,j-1,k,iBlockBc) &
                      +              Xyz_DGB(:,i,j  ,k,iBlockBc))
@@ -255,7 +262,7 @@ contains
 
                 VarsTrueFace_V = LeftState_VY(:,i,j,k)
 
-                call set_face_bc(i,j-1,k,i,j,k)
+                call set_face(i,j-1,k,i,j,k)
 
                 RightState_VY(:,i,j,k) = VarsGhostFace_V           
              end if
@@ -266,7 +273,7 @@ contains
                   (j ==1       .and. neiLsouth(iBlockBc)==+1) .or. &
                   (j == nJFace .and. neiLnorth(iBlockBc)==+1) )) then
 
-                iSide = South_
+                iSide = 3
 
                 FaceCoords_D = 0.5*(Xyz_DGB(:,i,j-1,k,iBlockBc) &
                      +              Xyz_DGB(:,i,j  ,k,iBlockBc))
@@ -275,7 +282,7 @@ contains
 
                 VarsTrueFace_V = RightState_VY(:,i,j,k)
 
-                call set_face_bc(i,j,k,i,j-1,k)
+                call set_face(i,j,k,i,j-1,k)
 
                 LeftState_VY(:,i,j,k) = VarsGhostFace_V
              end if
@@ -295,7 +302,7 @@ contains
                   (k == nKFace .and. neiLtop(iBlockBc)==+1) .or. &
                   (k == 1       .and. neiLbot(iBlockBc)==+1)) ) then
 
-                iSide = Top_
+                iSide = 6
 
                 FaceCoords_D = 0.5*(Xyz_DGB(:,i,j,k-1,iBlockBc) &
                      +              Xyz_DGB(:,i,j,k  ,iBlockBc))
@@ -304,7 +311,7 @@ contains
 
                 VarsTrueFace_V =  LeftState_VZ(:,i,j,k)
 
-                call set_face_bc(i,j,k-1,i,j,k)
+                call set_face(i,j,k-1,i,j,k)
 
                 RightState_VZ(:,i,j,k) = VarsGhostFace_V
              end if
@@ -315,7 +322,7 @@ contains
                   (k == 1         .and. neiLbot(iBlockBc)==+1) .or. &
                   (k == nKFace .and. neiLtop(iBlockBc)==+1))  ) then
 
-                iSide = Bot_
+                iSide = 5
 
                 FaceCoords_D = 0.5*(Xyz_DGB(:,i,j,k-1,iBlockBc) &
                      +              Xyz_DGB(:,i,j,k  ,iBlockBc))
@@ -324,7 +331,7 @@ contains
 
                 VarsTrueFace_V =  RightState_VZ(:,i,j,k)
 
-                call set_face_bc(i,j,k,i,j,k-1)
+                call set_face(i,j,k,i,j,k-1)
 
                 LeftState_VZ(:,i,j,k) = VarsGhostFace_V
 
@@ -335,7 +342,7 @@ contains
 
   contains
 
-    subroutine set_face_bc(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
+    subroutine set_face(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
       use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
       use ModPhysics, ONLY : FaceState_VI,Si2No_V,No2Si_V,UnitX_,UnitN_, &
@@ -378,7 +385,7 @@ contains
       ! User defined boundary conditions
       if( index(TypeBc, 'user') > 0 .or. &
            (UseUserInnerBCs .and. iBoundary <= body1_) .or. &
-           (UseUserOuterBCs .and. iBoundary >= east_ ) )then
+           (UseUserOuterBCs .and. iBoundary >= 1 ) )then
          iFace = i; jFace = j; kFace = k
          call user_face_bcs(VarsGhostFace_V)
          return
@@ -463,11 +470,11 @@ contains
          case(body1_, body2_)
             bDotR   = 2*sum(Borig_D*FaceCoords_D)/sum(FaceCoords_D**2)
             Brefl_D = FaceCoords_D*bDotR
-         case(east_, west_)  
+         case(1, 2)  
             Brefl_D = (/ 2*Borig_D(x_), 0.0, 0.0 /)
-         case(south_, north_)                                                 
+         case(3, 4)                                                 
             Brefl_D = (/ 0.0, 2*Borig_D(y_), 0.0 /)
-         case(bot_, top_)                                                     
+         case(5, 6)                                                     
             Brefl_D = (/ 0.0, 0.0, 2*Borig_D(z_) /)
          end select
 
@@ -780,7 +787,7 @@ contains
             ! somehow.
 
             if (DoOhNeutralBc) then   
-               ! Get face_bcs for neutrals in the outerheliosphere
+               ! Get face BCs for neutrals in the outerheliosphere
                ! (based on M. Opher)
                ! Pop I is going through the inner BCs
 
@@ -878,8 +885,8 @@ contains
                  //TypeBc) 
          end select
       end if
-    end subroutine set_face_bc
+    end subroutine set_face
 
-  end subroutine set_face_BCs
+  end subroutine set_face_bc
 
 end module ModFaceBoundary

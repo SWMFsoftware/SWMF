@@ -10,7 +10,7 @@ contains
   ! moved form file exchange_messages.f90 
   subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In)
 
-    use ModCellBoundary, ONLY: set_outer_BCs
+    use ModCellBoundary, ONLY: set_cell_boundary
     use ModProcMH
     use ModMain, ONLY : nBlock, unusedBLK, &
          TypeBc_I, time_loop, &
@@ -72,7 +72,7 @@ contains
        do iBlock = 1, nBlock
           if (unusedBLK(iBlock)) CYCLE
           if (far_field_BCs_BLK(iBlock) .and. prolong_order==2)&
-               call set_outer_BCs(iBlock,time_simulation,.false.)        
+               call set_cell_boundary(iBlock,time_simulation,.false.)        
           if(UseConstrainB)call correctP(iBlock)   !^CFG IF CONSTRAINB
           if(UseProjection)call correctP(iBlock)   !^CFG IF PROJECTION
        end do
@@ -124,7 +124,7 @@ contains
        if(.not.DoResChangeOnly &
             .or. any(abs(BLKneighborLEV(:,:,:,iBlock)) == 1) )then
           if (far_field_BCs_BLK(iBlock)) &
-               call set_outer_BCs(iBlock, time_simulation, .false.) 
+               call set_cell_boundary(iBlock, time_simulation, .false.) 
           if(time_loop.and. any(TypeBc_I=='buffergrid'))&
                call fill_in_from_buffer(iBlock)
        end if

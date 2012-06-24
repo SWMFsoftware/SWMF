@@ -4,7 +4,7 @@
 subroutine advance_expl(DoCalcTimestep, iStageMax)
 
   use ModMain
-  use ModFaceBoundary, ONLY: set_BCs
+  use ModFaceBoundary, ONLY: set_face_boundary
   use ModFaceFlux,   ONLY: calc_face_flux
   use ModFaceValue,  ONLY: calc_face_value
   use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, &
@@ -63,7 +63,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         call calc_face_value(.true.,GlobalBlk)
         call timing_stop('calc_face_bfo')
 
-        if(body_BLK(globalBLK))call set_BCs(globalBLK, Time_Simulation, .true.)
+        if(body_BLK(globalBLK))call set_face_boundary(globalBLK, Time_Simulation, .true.)
 
         ! Compute interface fluxes for each fine grid cell face at
         ! block edges with resolution changes.
@@ -100,7 +100,8 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         call calc_face_value(.false., GlobalBlk)
         call timing_stop('calc_facevalues')
 
-        if(body_BLK(globalBLK))call set_BCs(globalBLK, Time_Simulation,.false.)
+        if(body_BLK(globalBLK)) &
+             call set_face_boundary(globalBLK, Time_Simulation,.false.)
 
         ! Compute interface fluxes for each cell.
         call timing_start('calc_fluxes')

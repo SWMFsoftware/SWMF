@@ -10,12 +10,12 @@ module ModCellBoundary
   private ! except
 
   ! Public methods
-  public :: set_outer_BCs
+  public :: set_cell_boundary
 
 contains
 
   !============================================================================
-  subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
+  subroutine set_cell_boundary(iBlock, time_now, DoSetEnergy)
 
     ! Set ghost cells values rho, U, B, and P for iBLK. 
     ! Set E if DoSetEnergy is true.
@@ -42,7 +42,7 @@ contains
 
     logical :: DoTest, DoTestMe, IsFound
 
-    character(len=*), parameter :: NameSub = 'set_outer_bcs'
+    character(len=*), parameter :: NameSub = 'set_cell_boundary'
     !--------------------------------------------------------------------------
     iBLK=iBlock
     if(iBLK==BLKtest.and.iProc==PROCtest)then
@@ -244,7 +244,7 @@ contains
        end do
     end if
 
-  end subroutine set_outer_BCs
+  end subroutine set_cell_boundary
 
   !============================================================================
   subroutine BC_cont(iVarStart,iVarLast)
