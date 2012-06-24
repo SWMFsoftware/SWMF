@@ -15,22 +15,22 @@ subroutine user_set_boundary_cells(iBlock)
 end subroutine user_set_boundary_cells
 
 !=====================================================================
-subroutine user_face_bcs(VarsGhostFace_V)
+subroutine user_set_face_boundary(VarsGhostFace_V)
 
   use ModAdvance, ONLY: nVar
-  use ModUser, ONLY: user_sub => user_face_bcs
+  use ModUser, ONLY: user_sub => user_set_face_boundary
   implicit none
 
   real, intent(out):: VarsGhostFace_V(nVar)
   !-------------------------------------------------------------------
   call user_sub(VarsGhostFace_V)
 
-end subroutine user_face_bcs
+end subroutine user_set_face_boundary
 
 !=====================================================================
-subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
+subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
-  use ModUser, ONLY: user_sub => user_set_outerbcs
+  use ModUser, ONLY: user_sub => user_set_cell_boundary
   implicit none
 
   integer,          intent(in)  :: iBlock, iSide
@@ -39,7 +39,7 @@ subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
   !-------------------------------------------------------------------
   call user_sub(iBlock,iSide, TypeBc, IsFound)
 
-end subroutine user_set_outerbcs
+end subroutine user_set_cell_boundary
 
 !=====================================================================
 subroutine user_initial_perturbation

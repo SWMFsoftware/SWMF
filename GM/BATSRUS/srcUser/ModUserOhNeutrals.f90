@@ -27,9 +27,9 @@ module ModUser
   use ModMultiFluid
   use ModUserEmpty,                                     &
        IMPLEMENTED1  => user_read_inputs,               &
-       IMPLEMENTED2  => user_face_bcs,                  &
+       IMPLEMENTED2  => user_set_face_boundary,                  &
        IMPLEMENTED3  => user_normalization,             &
-       IMPLEMENTED4  => user_set_outerbcs,              &
+       IMPLEMENTED4  => user_set_cell_boundary,              &
        IMPLEMENTED5  => user_set_ics,                   &
        IMPLEMENTED6  => user_initial_perturbation,      &
        IMPLEMENTED8  => user_action,                    & 
@@ -240,7 +240,7 @@ contains
   end subroutine user_read_inputs
 
   !==========================================================================
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModMain
     use ModVarIndexes
@@ -264,7 +264,7 @@ contains
     real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='user_face_bcs'
+    character(len=*), parameter:: NameSub='user_set_face_boundary'
     !-------------------------------------------------------------------
 
     if(iBoundary /= body1_) &
@@ -397,7 +397,7 @@ contains
        write(*,*) NameSub,'Pop3=',VarsGhostFace_V(Ne3Rho_:Ne3P_)
     end if
 
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
   !-------------------------------------------------------------------
   subroutine user_normalization
@@ -424,7 +424,7 @@ contains
   end subroutine user_normalization
   !-------------------------------------------------------------------
 
-  subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     ! The ISM enters at the east boundary (negative x)
 
@@ -470,7 +470,7 @@ contains
        State_VGB(iVar,i,:,:,iBlock) = State_VGB(iVar,3,:,:,iBlock)
     end do; end do
 
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
 
   !=====================================================================
 

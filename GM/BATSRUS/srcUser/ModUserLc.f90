@@ -48,12 +48,12 @@ module ModUser
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_initial_perturbation,       &
-       IMPLEMENTED5 => user_face_bcs,                   &
+       IMPLEMENTED5 => user_set_face_boundary,                   &
        IMPLEMENTED6 => user_get_log_var,                &
        IMPLEMENTED7 => user_calc_sources,               &
        IMPLEMENTED8 => user_update_states,              &
        IMPLEMENTED9 => user_specify_refinement,         &
-       IMPLEMENTED11=> user_set_outerbcs,               &
+       IMPLEMENTED11=> user_set_cell_boundary,               &
        IMPLEMENTED12=> user_set_plot_var
 
 
@@ -251,7 +251,7 @@ contains
 
   !============================================================================
 
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModAdvance,     ONLY: State_VGB, WaveFirst_, WaveLast_
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
@@ -388,7 +388,7 @@ contains
     end function calc_reb_density
 
 
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
   !============================================================================
 
@@ -765,7 +765,7 @@ contains
   
   !============================================================================
   
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
     
     use ModAdvance,  ONLY: Rho_, P_, State_VGB
     use ModGeometry, ONLY: TypeGeometry
@@ -775,7 +775,7 @@ contains
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
     
-    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !-------------------------------------------------------------------
     
     ! This routine used only for setting the inner r ghost cells for
@@ -793,7 +793,7 @@ contains
     endif
     
     IsFound = .true.
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
   
   !===========================================================================
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &

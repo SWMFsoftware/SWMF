@@ -28,7 +28,7 @@ contains
     use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary, XyzMin_D
     use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsRlonLat
     use ModPhysics
-    use ModUser, ONLY: user_set_outerBCs
+    use ModUser, ONLY: user_set_cell_boundary
     use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModEnergy, ONLY: calc_energy
 
@@ -221,7 +221,7 @@ contains
        case default
           IsFound=.false.
           if(UseUserOuterBcs .or. TypeBc_I(iSide) == 'user')&
-               call user_set_outerBCs(iBLK,iSide,TypeBc_I(iSide),IsFound)
+               call user_set_cell_boundary(iBLK,iSide,TypeBc_I(iSide),IsFound)
 
           if(.not. IsFound) call stop_mpi( &
                NameSub // ': unknown TypeBc_I=' //TypeBc_I(iSide))

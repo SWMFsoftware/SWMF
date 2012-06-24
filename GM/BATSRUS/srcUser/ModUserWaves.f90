@@ -30,8 +30,8 @@ module ModUser
        IMPLEMENTED2 => user_set_ics,                    &
        IMPLEMENTED3 => user_get_log_var,                &
        IMPLEMENTED4 => user_get_b0,                     &
-       IMPLEMENTED5 => user_face_bcs,                   &
-       IMPLEMENTED6 => user_set_outerbcs,               &
+       IMPLEMENTED5 => user_set_face_boundary,                   &
+       IMPLEMENTED6 => user_set_cell_boundary,               &
        IMPLEMENTED7 => user_amr_criteria,               &
        IMPLEMENTED8 => user_set_plot_var
 
@@ -662,7 +662,7 @@ contains
 
   !=====================================================================
 
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModMain,    ONLY: x_, y_, z_, iTest, jTest, kTest, BlkTest
     use ModAdvance, ONLY: Ux_, Uy_, Uz_, By_, Bz_, State_VGB
@@ -701,11 +701,11 @@ contains
 
     end do
 
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
   !=====================================================================
 
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     use ModSize,     ONLY: nI, nJ, nK
     use ModPhysics,  ONLY: ShockSlope, Si2No_V, Io2Si_V,&
@@ -731,7 +731,7 @@ contains
     real    :: OmegaSun, phi, UxAligned, UyAligned
 
     !    logical :: DoTest = .false.
-    character (len=*), parameter :: Name='user_set_outerbcs'
+    character (len=*), parameter :: Name='user_set_cell_boundary'
     !-------------------------------------------------------------------------
 
     !    DoTest = iBlock == BlkTest
@@ -838,7 +838,7 @@ contains
        end if
     end if
 
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
 
   !============================================================================
 

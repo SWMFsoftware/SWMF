@@ -9,7 +9,7 @@ module ModUser
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_material_properties,        &
        IMPLEMENTED7 => user_update_states,              &
-       IMPLEMENTED8 => user_set_outerbcs,               &
+       IMPLEMENTED8 => user_set_cell_boundary,               &
        IMPLEMENTED9 => user_amr_criteria
 
   include 'user_module.h' !list of public methods
@@ -238,7 +238,7 @@ contains
 
   !===========================================================================
 
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
     use ModImplicit,   ONLY: StateSemi_VGB, iEradImpl
@@ -251,7 +251,7 @@ contains
 
     integer :: j, k
 
-    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !-------------------------------------------------------------------------
 
     if(.not. (iSide==1 .or. iSide==2) )then
@@ -289,7 +289,7 @@ contains
 
     IsFound = .true.
 
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
 
   !===========================================================================
 

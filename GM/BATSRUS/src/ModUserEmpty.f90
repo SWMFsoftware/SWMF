@@ -23,29 +23,29 @@ contains
   end subroutine user_set_boundary_cells
 
   !=====================================================================
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModAdvance, ONLY: nVar
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
-    character(len=*), parameter :: NameSub = 'user_face_bcs' 
+    character(len=*), parameter :: NameSub = 'user_set_face_boundary' 
     !-------------------------------------------------------------------
     call stop_user(NameSub)
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
   !=====================================================================
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    character(len=*), parameter :: NameSub = 'user_set_outerbcs'
+    character(len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !-------------------------------------------------------------------
     IsFound = .false.
     call stop_user(NameSub)
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
 
   !=====================================================================
   subroutine user_initial_perturbation

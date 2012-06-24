@@ -10,7 +10,7 @@ module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED5 => user_face_bcs,                   &
+       IMPLEMENTED5 => user_set_face_boundary,                   &
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED8 => user_update_states,              &
@@ -1001,7 +1001,7 @@ contains
 
   !========================================================================
 
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
     use ModPhysics,    ONLY: SW_rho
@@ -1066,7 +1066,7 @@ contains
     !   VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2*v_phi
     !end if
 
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
   !====================================================================
 

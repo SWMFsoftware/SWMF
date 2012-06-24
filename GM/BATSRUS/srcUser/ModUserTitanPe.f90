@@ -11,7 +11,7 @@ module ModUser
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_set_boundary_cells,         &
-       IMPLEMENTED5 => user_face_bcs,                   &
+       IMPLEMENTED5 => user_set_face_boundary,                   &
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED8 => user_set_plot_var,               & 
@@ -1322,7 +1322,7 @@ contains
 
   !========================================================================
 
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModAdvance,  ONLY: nVar
     use ModPhysics,  ONLY: SW_rho, SW_p, SW_T_dim
@@ -1412,7 +1412,7 @@ contains
     !   VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_)  + 2*v_phi
     !end if
 
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
   !============================================================================
   real function neutral_density(R0,iNu)

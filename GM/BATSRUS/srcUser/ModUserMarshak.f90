@@ -5,7 +5,7 @@ module ModUser
        IMPLEMENTED1 => user_init_session,               &
        IMPLEMENTED2 => user_read_inputs,                &
        IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED4 => user_set_outerbcs,               &
+       IMPLEMENTED4 => user_set_cell_boundary,               &
        IMPLEMENTED5 => user_update_states,              &
        IMPLEMENTED6 => user_set_plot_var,               &
        IMPLEMENTED7 => user_material_properties
@@ -135,7 +135,7 @@ contains
 
   !============================================================================
 
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Dx_Blk
@@ -149,7 +149,7 @@ contains
 
     real :: Coef
 
-    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
 
     select case(iSide)
@@ -196,7 +196,7 @@ contains
 
     IsFound = .true.
 
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
 
   !============================================================================
 

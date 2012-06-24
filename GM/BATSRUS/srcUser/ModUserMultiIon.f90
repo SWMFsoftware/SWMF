@@ -8,7 +8,7 @@ module ModUser
        IMPLEMENTED2 => user_calc_sources,               &
        IMPLEMENTED3 => user_init_point_implicit,        &
        IMPLEMENTED4 => user_set_ics,                    &
-       IMPLEMENTED5 => user_face_bcs
+       IMPLEMENTED5 => user_set_face_boundary
 
   use ModMultiFluid
 
@@ -431,7 +431,7 @@ contains
   end subroutine user_set_ics
 
   !=====================================================================
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModMain, ONLY: x_, y_, z_
     use ModVarIndexes
@@ -474,7 +474,7 @@ contains
 
     VarsGhostFace_V(Bx_:Bz_)  = VarsTrueFace_V(Bx_:Bz_)
 
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
 
 end module ModUser

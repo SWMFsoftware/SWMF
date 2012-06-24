@@ -387,7 +387,7 @@ contains
            (UseUserInnerBCs .and. iBoundary <= body1_) .or. &
            (UseUserOuterBCs .and. iBoundary >= 1 ) )then
          iFace = i; jFace = j; kFace = k
-         call user_face_bcs(VarsGhostFace_V)
+         call user_set_face_boundary(VarsGhostFace_V)
          return
       end if
 

@@ -660,7 +660,7 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
        StateSemi_VGB, iTrImplFirst, iTrImplLast
   use ModMain,     ONLY: TypeBc_I
   use ModParallel, ONLY: NOBLK, NeiLev
-  use ModUser,     ONLY: user_set_outerbcs
+  use ModUser,     ONLY: user_set_cell_boundary
   use BATL_size,   ONLY: nI, nJ, nK, nDim
 
   implicit none
@@ -695,12 +695,12 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      elseif(TypeBc_I(1) == 'user')then
         if(IsLinear)then
            StateSemi_VGB(:,0,:,:,iBlock) = 0.0
-           call user_set_outerbcs(iBlock, 1, TypeUserBcLinear, IsFound)
+           call user_set_cell_boundary(iBlock, 1, TypeUserBcLinear, IsFound)
         else
            IsFound = .false.
-           call user_set_outerbcs(iBlock, 1, TypeUserBc, IsFound)
+           call user_set_cell_boundary(iBlock, 1, TypeUserBc, IsFound)
            if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=1 in user_set_outerbcs')
+                //TypeUserBc//' on iSide=1 in user_set_cell_boundary')
         end if
      elseif(TypeBc_I(1) == 'reflect')then
         StateSemi_VGB(:,0,:,:,iBlock) = StateSemi_VGB(:,1,:,:,iBlock)
@@ -726,12 +726,12 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      elseif(TypeBc_I(2) == 'user')then
         if(IsLinear)then
            StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
-           call user_set_outerbcs(iBlock, 2, TypeUserBcLinear, IsFound)
+           call user_set_cell_boundary(iBlock, 2, TypeUserBcLinear, IsFound)
         else
            IsFound = .false.
-           call user_set_outerbcs(iBlock, 2, TypeUserBc, IsFound)
+           call user_set_cell_boundary(iBlock, 2, TypeUserBc, IsFound)
            if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=2 in user_set_outerbcs')
+                //TypeUserBc//' on iSide=2 in user_set_cell_boundary')
         end if
      elseif(TypeBc_I(2) == 'reflect')then
         StateSemi_VGB(:,nI+1,:,:,iBlock) = StateSemi_VGB(:,nI,:,:,iBlock)
@@ -757,12 +757,12 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      elseif(TypeBc_I(3) == 'user')then
         if(IsLinear)then
            StateSemi_VGB(:,:,0,:,iBlock) =  0.0
-           call user_set_outerbcs(iBlock, 3, TypeUserBcLinear, IsFound)
+           call user_set_cell_boundary(iBlock, 3, TypeUserBcLinear, IsFound)
         else
            IsFound = .false.
-           call user_set_outerbcs(iBlock, 3, TypeUserBc, IsFound)
+           call user_set_cell_boundary(iBlock, 3, TypeUserBc, IsFound)
            if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=3 in user_set_outerbcs')
+                //TypeUserBc//' on iSide=3 in user_set_cell_boundary')
         end if
      elseif(TypeBc_I(3) == 'reflect')then
         StateSemi_VGB(:,:,0,:,iBlock) = StateSemi_VGB(:,:,1,:,iBlock)
@@ -790,12 +790,12 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      elseif(TypeBc_I(4) == 'user')then
         if(IsLinear)then
            StateSemi_VGB(:,:,nJ+1,:,iBlock) = 0.0
-           call user_set_outerbcs(iBlock, 4, TypeUserBcLinear, IsFound)
+           call user_set_cell_boundary(iBlock, 4, TypeUserBcLinear, IsFound)
         else
            IsFound = .false.
-           call user_set_outerbcs(iBlock, 4, TypeUserBc, IsFound)
+           call user_set_cell_boundary(iBlock, 4, TypeUserBc, IsFound)
            if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=4 in user_set_outerbcs')
+                //TypeUserBc//' on iSide=4 in user_set_cell_boundary')
         end if
      elseif(TypeBc_I(4) == 'reflect')then
         StateSemi_VGB(:,:,nJ+1,:,iBlock) = StateSemi_VGB(:,:,nJ,:,iBlock)
@@ -823,12 +823,12 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      elseif(TypeBc_I(5) == 'user')then
         if(IsLinear)then
            StateSemi_VGB(:,:,:,0,iBlock) = 0.0
-           call user_set_outerbcs(iBlock, 5, TypeUserBcLinear, IsFound)
+           call user_set_cell_boundary(iBlock, 5, TypeUserBcLinear, IsFound)
         else
            IsFound = .false.
-           call user_set_outerbcs(iBlock, 5, TypeUserBc, IsFound)
+           call user_set_cell_boundary(iBlock, 5, TypeUserBc, IsFound)
            if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=5 in user_set_outerbcs')
+                //TypeUserBc//' on iSide=5 in user_set_cell_boundary')
         end if
      elseif(TypeBc_I(5) == 'reflect')then
         StateSemi_VGB(:,:,:,0,iBlock) = StateSemi_VGB(:,:,:,1,iBlock)
@@ -854,12 +854,12 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
      elseif(TypeBc_I(6) == 'user')then
         if(IsLinear)then
            StateSemi_VGB(:,:,:,nK+1,iBlock) = 0.0
-           call user_set_outerbcs(iBlock, 6, TypeUserBcLinear, IsFound)
+           call user_set_cell_boundary(iBlock, 6, TypeUserBcLinear, IsFound)
         else
            IsFound = .false.
-           call user_set_outerbcs(iBlock, 6, TypeUserBc, IsFound)
+           call user_set_cell_boundary(iBlock, 6, TypeUserBc, IsFound)
            if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=6 in user_set_outerbcs')
+                //TypeUserBc//' on iSide=6 in user_set_cell_boundary')
         end if
      elseif(TypeBc_I(6) == 'reflect')then
         StateSemi_VGB(:,:,:,nK+1,iBlock) = StateSemi_VGB(:,:,:,nK,iBlock)

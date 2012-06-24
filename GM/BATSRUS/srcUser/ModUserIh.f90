@@ -4,14 +4,14 @@
 ! 02 Oct. 2010 by R. Oran:
 ! Added user_read_inputs, user_set_ics to allow testing of different
 ! initial conditions.
-! 10 Feb 2010 by R. Oran : added Parker initial conditions, user_face_bcs.
+! 10 Feb 2010 by R. Oran : added Parker initial conditions, user_set_face_boundary.
 !                          Removed IC's options that are  now in ModUserWaves.f90 
 !========================================================================
 module ModUser
   use ModUserEmpty,               &
        IMPLEMENTED2 => user_read_inputs,        &
        IMPLEMENTED3 => user_set_ics,            &
-       IMPLEMENTED4 => user_face_bcs
+       IMPLEMENTED4 => user_set_face_boundary
  
   include 'user_module.h' !list of public methods
 
@@ -259,7 +259,7 @@ contains
       
   end subroutine get_parker_sln_cell
   !============================================================================
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModMain,        ONLY: x_, y_, z_
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V
@@ -278,7 +278,7 @@ contains
 
     !VarsGhostFace_V(Rho_) =  2.0*State_V(Rho_) - VarsTrueFace_V(Rho_)
   
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
 end module ModUser
 

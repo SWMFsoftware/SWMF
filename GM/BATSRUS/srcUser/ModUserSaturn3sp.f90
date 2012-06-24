@@ -12,7 +12,7 @@ Module ModUser
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_init_session,               &
        IMPLEMENTED2 => user_set_ics,                    &
-       IMPLEMENTED3 => user_set_outerbcs,               &
+       IMPLEMENTED3 => user_set_cell_boundary,               &
        IMPLEMENTED4 => user_read_inputs,                &
        IMPLEMENTED5 => user_calc_sources
 
@@ -102,7 +102,7 @@ contains
 
 
   !=====================================================================
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc,found)
+  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc,found)
 
   use ModMain,      ONLY : time_simulation
   use ModMain,      ONLY : time_accurate
@@ -115,7 +115,7 @@ contains
     character (len=20),intent(in) :: TypeBc
     real :: time_now
 
-    character (len=*), parameter :: Name='user_set_outerbcs'
+    character (len=*), parameter :: Name='user_set_cell_boundary'
 
     time_now = time_simulation
 
@@ -139,7 +139,7 @@ contains
 
     found = .true.
 
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
 
   !=====================================================================
   subroutine user_calc_sources

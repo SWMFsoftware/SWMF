@@ -8,7 +8,7 @@ module ModUser
        IMPLEMENTED3 => user_init_point_implicit,        &
        IMPLEMENTED4 => user_init_session,               &
        IMPLEMENTED5 => user_read_inputs,                &
-       IMPLEMENTED6 => user_face_bcs,                   &
+       IMPLEMENTED6 => user_set_face_boundary,                   &
        IMPLEMENTED7 => user_set_plot_var,               &
        IMPLEMENTED8 => user_get_log_var,                &
        IMPLEMENTED9 => user_set_boundary_cells,         &    
@@ -1638,7 +1638,7 @@ contains
   end subroutine user_set_ICs
 
   !============================================================================
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModSize,       ONLY: nDim,West_,North_,Top_	
     use ModMain,       ONLY: UseRotatingBc, iTest, jTest, kTest, ProcTest, &
@@ -1656,7 +1656,7 @@ contains
     real:: cosSZA 
     real:: uDotR_I(nFluid), bDotR
     integer:: i,j,k
-    character (len=*), parameter :: NameSub = 'user_face_bcs'
+    character (len=*), parameter :: NameSub = 'user_set_face_boundary'
     logical:: DoTest, DoTestMe, DoTestCell
     !-------------------------------------------------------------------------
 
@@ -1735,7 +1735,7 @@ contains
        VarsGhostFace_V(iRhoUz_I) = VarsGhostFace_V(iRhoUz_I) + 2*v_phi(3)
     end if
 
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
   !========================================================================
 

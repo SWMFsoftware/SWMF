@@ -6,8 +6,8 @@
   public :: VersionUserModule  
   public :: NameUserModule  
   public :: user_set_boundary_cells
-  public :: user_face_bcs
-  public :: user_set_outerbcs
+  public :: user_set_face_boundary
+  public :: user_set_cell_boundary
   public :: user_initial_perturbation
   public :: user_set_ics
   public :: user_init_session

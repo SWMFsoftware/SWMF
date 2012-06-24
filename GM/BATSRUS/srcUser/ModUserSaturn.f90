@@ -7,7 +7,7 @@ Module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_calc_sources,               &
        IMPLEMENTED3 => user_set_boundary_cells,         &
-       IMPLEMENTED4 => user_face_bcs
+       IMPLEMENTED4 => user_set_face_boundary
 
   include 'user_module.h' !list of public methods
 
@@ -621,7 +621,7 @@ contains
   end subroutine user_set_boundary_cells
 
   !============================================================================
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModSize, ONLY: x_
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_
@@ -634,7 +634,7 @@ contains
     call get_solar_wind_point(TimeBc, FaceCoords_D(x_), VarsGhostFace_V)
     VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0_DX(:,iFace, jFace, kFace)
 
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
 end module ModUser
 

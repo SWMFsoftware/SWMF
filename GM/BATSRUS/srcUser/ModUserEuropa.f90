@@ -8,7 +8,7 @@ module ModUser
        IMPLEMENTED2 => user_read_inputs,   &
        IMPLEMENTED3 => user_calc_sources,  &
        IMPLEMENTED4 => user_update_states, &
-       IMPLEMENTED5 => user_face_bcs
+       IMPLEMENTED5 => user_set_face_boundary
       
 
   include 'user_module.h' !list of public methods
@@ -255,11 +255,11 @@ contains
 
 
   !========================================================================
-  !  SUBROUTINE user_face_bcs(VarsGhostFace_V)
+  !  SUBROUTINE user_set_face_boundary(VarsGhostFace_V)
   !========================================================================
 
   ! This is the comet version!!
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModSize,       ONLY: nDim,West_,North_,Top_
     use ModVarIndexes
@@ -282,7 +282,7 @@ contains
        VarsGhostFace_V(RhoUx_:RhoUz_) = 0.0
        ! VarsGhostFace_V(Bx_:Bz_) = 0.0 float mag. field
     endif
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
 
 

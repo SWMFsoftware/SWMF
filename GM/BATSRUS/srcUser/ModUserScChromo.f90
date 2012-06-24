@@ -10,8 +10,8 @@ module ModUser
        IMPLEMENTED4 => user_get_log_var,                &
        IMPLEMENTED5 => user_calc_sources,               &
        IMPLEMENTED6 => user_set_plot_var,               &
-       IMPLEMENTED7 => user_set_outerbcs,               &
-       IMPLEMENTED8 => user_face_bcs,                   &
+       IMPLEMENTED7 => user_set_cell_boundary,               &
+       IMPLEMENTED8 => user_set_face_boundary,                   &
        IMPLEMENTED9 => user_set_resistivity,            &
        IMPLEMENTED10=> user_update_states,              &
        IMPLEMENTED11=> user_initial_perturbation
@@ -1143,7 +1143,7 @@ contains
 
   end subroutine user_set_plot_var
   !============================================================================
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     ! Fill ghost cells inside body for spherical grid - this subroutine only 
     ! modifies ghost cells in the r direction
@@ -1167,10 +1167,10 @@ contains
     real    :: NumDensIon, NumDensElectron
     real :: Runit_D(3)
 
-    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
     if(iSide /= East_ .or. TypeGeometry(1:9) /='spherical') &
-         call CON_stop('Wrong iSide in user_set_outerBCs')
+         call CON_stop('Wrong iSide in user_set_cell_boundary')
 
     IsFound = .true.
 
@@ -1306,9 +1306,9 @@ contains
        end if
     end do; end do
 
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
   !============================================================================
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
@@ -1327,7 +1327,7 @@ contains
     real,dimension(3) :: FullBGhost_D, FullBTrue_D
     real              :: RhoTrue, RhoGhost, Ur
    
-    character (len=*), parameter :: NameSub = 'user_face_bcs'
+    character (len=*), parameter :: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
     ! Check that extrapolated wave inner BC's were not chosen - can only be performed
     ! while using ghost-cells based BC's (see set_outerbc for a spherical grid)
@@ -1413,7 +1413,7 @@ contains
 
     if(Hyp_>1) VarsGhostFace_V(Hyp_) = 0.0
 
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
   !============================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)
 

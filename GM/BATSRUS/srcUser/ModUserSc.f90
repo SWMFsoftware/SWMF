@@ -6,7 +6,7 @@ module ModUser
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_initial_perturbation,       &
-       IMPLEMENTED5 => user_face_bcs,                   &
+       IMPLEMENTED5 => user_set_face_boundary,                   &
        IMPLEMENTED6 => user_get_log_var,                &
        IMPLEMENTED7 => user_get_b0,                     &
        IMPLEMENTED8 => user_update_states
@@ -44,7 +44,7 @@ contains
   end subroutine user_init_session
 
   !============================================================================
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
     use EEE_ModMain,   ONLY: EEE_get_state_BC
     use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, &
@@ -145,7 +145,7 @@ contains
        kCell  = kFace-1
     case default
        write(*,*)'ERROR: iSide = ',iSide
-       call stop_mpi('incorrect iSide value in user_face_bcs')
+       call stop_mpi('incorrect iSide value in user_set_face_boundary')
     end select
 
     call get_plasma_parameters_cell(iCell,jCell,kCell,iBlockBc,&
@@ -170,7 +170,7 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
             + 2*OmegaBody*FaceCoords_D(x_)
     end if
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
   !============================================================================
 

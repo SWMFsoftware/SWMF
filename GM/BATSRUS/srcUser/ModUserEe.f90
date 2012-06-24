@@ -17,7 +17,7 @@ module ModUser
        IMPLEMENTED2 => user_init_session,              &
        IMPLEMENTED3 => user_set_ICs,                   &
        IMPLEMENTED4 => user_initial_perturbation,      &
-       IMPLEMENTED5 => user_set_outerbcs,              &
+       IMPLEMENTED5 => user_set_cell_boundary,              &
        IMPLEMENTED6 => user_calc_sources,              &
        IMPLEMENTED7 => user_update_states,             &
        IMPLEMENTED8 => user_set_plot_var,              &
@@ -415,7 +415,7 @@ contains
   end subroutine user_initial_perturbation
 
   !==========================================================================
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
     use ModVarIndexes!, ONLY: rho_, rhoUz_, Bz_, p_, Erad_, ExtraEInt_
     use ModPhysics,    ONLY: UnitEnergyDens_, inv_gm1, Si2No_V
     use ModGeometry,   ONLY: dz_BLK
@@ -428,7 +428,7 @@ contains
     integer :: i, j, k
     real :: EinternalSi
 
-    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !------------------------------------------------------------------------
 
     select case(iSide)
@@ -487,7 +487,7 @@ contains
        end select
     end select
 
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
   !==========================================================================
   subroutine user_calc_sources
     use ModAdvance,     ONLY: Source_VC, State_VGB

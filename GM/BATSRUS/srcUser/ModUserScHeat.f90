@@ -9,8 +9,8 @@ module ModUser
        IMPLEMENTED4 => user_get_log_var,                &
        IMPLEMENTED5 => user_calc_sources,               &
        IMPLEMENTED6 => user_set_plot_var,               &
-       IMPLEMENTED7 => user_set_outerbcs,               &
-       IMPLEMENTED8 => user_face_bcs,                   &
+       IMPLEMENTED7 => user_set_cell_boundary,               &
+       IMPLEMENTED8 => user_set_face_boundary,                   &
        IMPLEMENTED9 => user_set_resistivity,            &
        IMPLEMENTED10=> user_update_states
 
@@ -744,7 +744,7 @@ contains
 
   !============================================================================
 
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     ! Fill one layer of ghost cells with the temperature for heat conduction
 
@@ -764,10 +764,10 @@ contains
     real :: x_D(3)
     real :: RhoBase, Tbase, NumDensIon, NumDensElectron
 
-    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
 
-    if(iSide /= East_) call stop_mpi('Wrong iSide in user_set_outerBCs')
+    if(iSide /= East_) call stop_mpi('Wrong iSide in user_set_cell_boundary')
 
     IsFound = .true.
 
@@ -804,11 +804,11 @@ contains
 
     end do; end do
 
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
 
   !============================================================================
 
-  subroutine user_face_bcs(VarsGhostFace_V)
+  subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use BATL_size,      ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
@@ -926,7 +926,7 @@ contains
 
     end subroutine get_boundary_heatflux
 
-  end subroutine user_face_bcs
+  end subroutine user_set_face_boundary
 
   !============================================================================
 

@@ -7,7 +7,7 @@ module ModUser
   use ModUserEmpty,                                      &
        IMPLEMENTED1  => user_update_states,              &
        IMPLEMENTED2  => user_calc_sources,               &
-       IMPLEMENTED3  => user_set_outerbcs,               &
+       IMPLEMENTED3  => user_set_cell_boundary,               &
        IMPLEMENTED4  => user_read_inputs,                &
        IMPLEMENTED5  => user_set_plot_var,               &
        IMPLEMENTED6  => user_init_session,               &
@@ -374,7 +374,7 @@ contains
 
   end subroutine user_read_inputs
   !============================================================================
-  subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModSize, ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Erad_
@@ -400,7 +400,7 @@ contains
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
 
     real :: Dx
 
@@ -717,7 +717,7 @@ contains
        endif
     end if
 
-  end subroutine user_set_outerbcs
+  end subroutine user_set_cell_boundary
 
   !============================================================================
   subroutine user_set_ics
