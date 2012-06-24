@@ -1,4 +1,5 @@
 !^CFG COPYRIGHT UM
+!==============================================================================
 module ModFaceBoundary
 
   use ModVarIndexes, ONLY: nVar
@@ -7,48 +8,55 @@ module ModFaceBoundary
 
   SAVE
 
-  ! True if only boundaries at resolution changes are updated                      
-  logical:: DoResChangeOnly
+  private ! except
 
-  ! The type and index of the boundary                                             
-  character(len=20) :: TypeBc
+  ! Public methods
+  public :: set_BCs
 
-  ! Negative iBoundary indicates which body we are computing for.                  
-  ! Positive iBoundary numerates the sides for the outer BCs.                      
-  integer:: iBoundary
+  ! True if only boundaries at resolution changes are updated
+  logical, public :: DoResChangeOnly
 
-  ! Index of the face                                                              
-  integer:: iFace, jFace, kFace, iBlockBc
+  ! The type and index of the boundary
+  character(len=20), public :: TypeBc
 
-  ! The side of the cell defined with respect to the cell inside the domain        
-  integer :: iSide
+  ! Negative iBoundary indicates which body we are computing for.
+  ! Positive iBoundary numerates the sides for the outer BCs.
+  integer, public :: iBoundary
 
-  ! The values on the physical side and the ghost cell side of the boudary         
-  real:: VarsTrueFace_V(nVar), VarsGhostFace_V(nVar)
+  ! Index of the face
+  integer, public :: iFace, jFace, kFace, iBlockBc
 
-  ! The coordinates of the face center and the B0 field at that point              
-  real :: FaceCoords_D(3), B0Face_D(3)
+  ! The side of the cell defined with respect to the cell inside the domain
+  integer, public :: iSide
 
-  ! The time at which the (time dependent) boundary condition is calculated        
-  real :: TimeBc
+  ! The values on the physical side and the ghost cell side of the boudary
+  real, public :: VarsTrueFace_V(nVar), VarsGhostFace_V(nVar)
+
+  ! The coordinates of the face center and the B0 field at that point
+  real, public :: FaceCoords_D(3), B0Face_D(3)
+
+  ! The time at which the (time dependent) boundary condition is calculated
+  real, public :: TimeBc
 
 contains
 
+  !============================================================================
   subroutine set_BCs(iBlock, TimeBcIn, DoResChangeOnlyIn)
+
     use ModProcMH
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY:&
-         true_cell,MinBoundary,MaxBoundary
+    use ModGeometry, ONLY: true_cell, MinBoundary, MaxBoundary
     use ModBoundaryCells
 
-    integer,  intent(in) :: iBlock
-    real,     intent(in) :: TimeBcIn
-    logical, intent (in) :: DoResChangeOnlyIn
+    integer, intent(in) :: iBlock
+    real,    intent(in) :: TimeBcIn
+    logical, intent(in) :: DoResChangeOnlyIn
+
     logical :: oktest, oktest_me
     character(len=*), parameter:: NameSub='set_bcs'
     logical, allocatable :: IsBodyCell_G(:,:,:)
-    !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     if(.not.allocated(IsBodyCell_G))&
          allocate(IsBodyCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
@@ -110,23 +118,24 @@ contains
 
   end subroutine set_BCs
 
-  !=============================================================================
+  !============================================================================
 
   subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
 
     use ModMain
-    use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
     use ModAdvance
-    use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
+    use ModParallel, ONLY: &
+         neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModNumConst
     use ModPhysics, ONLY: PolarRho_I, PolarU_I, PolarP_I, PolarTheta, &
          UseCpcpBc, Rho0Cpcp, RhoPerCpcp, &
          Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_
     use ModSolarwind, ONLY: get_solar_wind_point
     use CON_axes, ONLY: transform_matrix
+    use BATL_lib, ONLY: Xyz_DGB
 
-    logical, dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn), intent(in) :: &
-         IsBodyCell_G, IsTrueCell_G 
+    logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
+         IsBodyCell_G, IsTrueCell_G
 
     integer :: i,j,k
 
@@ -139,7 +148,7 @@ contains
 
     character (len=*), parameter :: NameSub = 'set_face_bcs'
     logical :: DoTest, DoTestMe
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(iBlockBc==BLKtest.and.iProc==PROCtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
@@ -189,9 +198,9 @@ contains
 
                 iSide = West_
 
-                FaceCoords_D(x_) = 0.5*sum(x_BLK(i-1:i,j,k,iBlockBc))
-                FaceCoords_D(y_) = 0.5*sum(y_BLK(i-1:i,j,k,iBlockBc))
-                FaceCoords_D(z_) = 0.5*sum(z_BLK(i-1:i,j,k,iBlockBc))
+                FaceCoords_D = 0.5*(Xyz_DGB(:,i-1,j,k,iBlockBc) &
+                     +              Xyz_DGB(:,i  ,j,k,iBlockBc))
+
                 if(UseB0)B0Face_D = B0_DX(:,i,j,k)
 
                 VarsTrueFace_V= LeftState_VX(:,i,j,k)
@@ -210,9 +219,9 @@ contains
 
                 iSide = East_
 
-                FaceCoords_D(x_) = 0.5*sum(x_BLK(i-1:i,j,k,iBlockBc))
-                FaceCoords_D(y_) = 0.5*sum(y_BLK(i-1:i,j,k,iBlockBc))
-                FaceCoords_D(z_) = 0.5*sum(z_BLK(i-1:i,j,k,iBlockBc))
+                FaceCoords_D = 0.5*(Xyz_DGB(:,i-1,j,k,iBlockBc) &
+                     +              Xyz_DGB(:,i  ,j,k,iBlockBc))
+
                 if(UseB0)B0Face_D = B0_DX(:,i,j,k)
 
                 VarsTrueFace_V = RightState_VX(:,i,j,k)
@@ -239,9 +248,9 @@ contains
 
                 iSide = North_
 
-                FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j-1:j,k,iBlockBc))
-                FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j-1:j,k,iBlockBc))
-                FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j-1:j,k,iBlockBc))
+                FaceCoords_D = 0.5*(Xyz_DGB(:,i,j-1,k,iBlockBc) &
+                     +              Xyz_DGB(:,i,j  ,k,iBlockBc))
+
                 if(UseB0)B0Face_D = B0_DY(:,i,j,k)
 
                 VarsTrueFace_V = LeftState_VY(:,i,j,k)
@@ -259,9 +268,9 @@ contains
 
                 iSide = South_
 
-                FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j-1:j,k,iBlockBc))
-                FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j-1:j,k,iBlockBc))
-                FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j-1:j,k,iBlockBc))
+                FaceCoords_D = 0.5*(Xyz_DGB(:,i,j-1,k,iBlockBc) &
+                     +              Xyz_DGB(:,i,j  ,k,iBlockBc))
+
                 if(UseB0)B0Face_D = B0_DY(:,i,j,k)
 
                 VarsTrueFace_V = RightState_VY(:,i,j,k)
@@ -288,9 +297,9 @@ contains
 
                 iSide = Top_
 
-                FaceCoords_D(x_)= 0.5*sum(x_BLK(i,j,k-1:k,iBlockBc))
-                FaceCoords_D(y_)= 0.5*sum(y_BLK(i,j,k-1:k,iBlockBc))
-                FaceCoords_D(z_)= 0.5*sum(z_BLK(i,j,k-1:k,iBlockBc))
+                FaceCoords_D = 0.5*(Xyz_DGB(:,i,j,k-1,iBlockBc) &
+                     +              Xyz_DGB(:,i,j,k  ,iBlockBc))
+
                 if(UseB0)B0Face_D = B0_DZ(:,i,j,k)
 
                 VarsTrueFace_V =  LeftState_VZ(:,i,j,k)
@@ -308,9 +317,9 @@ contains
 
                 iSide = Bot_
 
-                FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j,k-1:k,iBlockBc))
-                FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j,k-1:k,iBlockBc))
-                FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j,k-1:k,iBlockBc))
+                FaceCoords_D = 0.5*(Xyz_DGB(:,i,j,k-1,iBlockBc) &
+                     +              Xyz_DGB(:,i,j,k  ,iBlockBc))
+
                 if(UseB0)B0Face_D = B0_DZ(:,i,j,k)
 
                 VarsTrueFace_V =  RightState_VZ(:,i,j,k)
@@ -329,10 +338,9 @@ contains
     subroutine set_face_bc(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
       use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
-      use ModPhysics, ONLY : FaceState_VI,Si2No_V,No2Si_V,UnitX_,UnitN_,UnitU_, &
-           UnitTemperature_, UnitJ_, UnitPoynting_,OrbitPeriod, &
+      use ModPhysics, ONLY : FaceState_VI,Si2No_V,No2Si_V,UnitX_,UnitN_, &
+           UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_,OrbitPeriod, &
            UseOutflowPressure, pOutflow
-      use ModUser, ONLY: user_face_bcs
       use ModMain
       use ModMultiFluid
       use CON_planet_field, ONLY: get_planet_field, map_planet_field
@@ -355,7 +363,8 @@ contains
       real:: CosTheta, SinTheta, CosPhi, SinPhi
       real:: UrTrue, UtTrue, BpTrue, BrGhost, BtGhost, BpGhost
       real:: Ub_V(2), b, b1,b4,bFace_D(3), JouleHeating, FluxIono, FluxPw
-      real:: bUnit_D(3), GseToGeo_D(3), XyzMap_D(3), SmgFaceCoords_D(3), GeoFaceCoords_D(3)
+      real:: bUnit_D(3), GseToGeo_D(3), XyzMap_D(3), SmgFaceCoords_D(3), &
+           GeoFaceCoords_D(3)
       logical:: IsPolarFace
       real:: SinLatitudeCap, zCap, eCap, ePar, &
            TheTmp,DtTmp,DaTmp, Cosx, Jlocal_D(3), Jpar
@@ -409,12 +418,10 @@ contains
               sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+cTolerance**2)
          SinPhi   = FaceCoords_D(y_)/ &
               sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+cTolerance**2)
-         BdotU    = dot_product(VarsTrueFace_V(Bx_:Bz_),        &
-              VarsTrueFace_V(Ux_:Uz_))/       &
-              (dot_product(VarsTrueFace_V(Ux_:Uz_),        &
-              VarsTrueFace_V(Ux_:Uz_))+cTolerance**2)
-         UrTrue   = dot_product(VarsTrueFace_V(Ux_:Uz_),        &
-              FaceCoords_D(x_:z_))*RInv
+         BdotU    = sum(VarsTrueFace_V(Bx_:Bz_)*VarsTrueFace_V(Ux_:Uz_)) &
+              /(sum(VarsTrueFace_V(Ux_:Uz_)*VarsTrueFace_V(Ux_:Uz_)) &
+              + cTolerance**2)
+         UrTrue   = sum(VarsTrueFace_V(Ux_:Uz_)*FaceCoords_D(x_:z_))*RInv
          UtTrue   = ((VarsTrueFace_V(Ux_)*FaceCoords_D(x_)+     &
               VarsTrueFace_V(Uy_)*FaceCoords_D(y_))*    &
               FaceCoords_D(z_)-VarsTrueFace_V(Uz_)*     &
@@ -452,9 +459,9 @@ contains
          Borig_D = VarsTrueFace_V(Bx_:Bz_)
          if(TypeBc == 'reflectb') Borig_D = Borig_D + B0Face_D
 
-         select case(iBoundary)                                                 
+         select case(iBoundary)
          case(body1_, body2_)
-            bDotR   = 2*dot_product(Borig_D, FaceCoords_D)/sum(FaceCoords_D**2)
+            bDotR   = 2*sum(Borig_D*FaceCoords_D)/sum(FaceCoords_D**2)
             Brefl_D = FaceCoords_D*bDotR
          case(east_, west_)  
             Brefl_D = (/ 2*Borig_D(x_), 0.0, 0.0 /)
@@ -536,7 +543,8 @@ contains
                     min(abs(FaceState_V(Ppar_) - VarsTrueFace_V(Ppar_)),&
                     PressureJumpLimit*VarsTrueFace_V(Ppar_))
             else
-               ! Use floating BC for pressure (correct for zero radial velocity)
+               ! Use floating BC for pressure
+               ! (correct for zero radial velocity)
                VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
                if(UseAnisoPressure) &
                     VarsGhostFace_V(Ppar_) = VarsTrueFace_V(Ppar_)
@@ -575,7 +583,7 @@ contains
                      else 
                         GeoFaceCoords_D = FaceCoords_D
                      endif
-                     GseToGeo_D = matmul(transform_matrix(TimeBc, 'GSE', 'GEO'),&
+                     GseToGeo_D = matmul(transform_matrix(TimeBc,'GSE','GEO'),&
                           (/0,0,1/))
 
                      ! For the cap region (refer to Tom Moore 2003?)
@@ -712,11 +720,13 @@ contains
                      VarsGhostFace_V(iP_I(iIonSecond))   =  2./3. * eCap * &
                           cElectronCharge / cBoltzmann &
                           * Si2No_V(UnitTemperature_)  &
-                          * VarsGhostFace_V(iRho_I(iIonSecond))/MassFluid_I(iIonSecond)
+                          * VarsGhostFace_V(iRho_I(iIonSecond)) &
+                          /MassFluid_I(iIonSecond)
                      VarsGhostFace_V(iP_I(IonFirst_))   =  2./3. * eCap * &
                           cElectronCharge / cBoltzmann & 
                           * Si2No_V(UnitTemperature_)  &
-                          * VarsGhostFace_V(iRho_I(IonFirst_))/MassFluid_I(IonFirst_)
+                          * VarsGhostFace_V(iRho_I(IonFirst_)) &
+                          /MassFluid_I(IonFirst_)
 
                      ! for the 'all' fluid
                      VarsGhostFace_V(Rho_) = sum(VarsGhostFace_V( &
@@ -737,8 +747,8 @@ contains
                           iP_I(IonFirst_:iIonSecond)))
 
                   else
-                     call stop_mpi( &
-                          'ionosphereoutflow should have IE coupled and multifluids')
+                     call stop_mpi('ionosphereoutflow should have IE '// &
+                          'coupled and multifluids')
                   end if
                end if ! polar cap region
             end if ! ionosphereoutflow type of innerboundary
@@ -766,7 +776,8 @@ contains
 
          if(.not. IsFullyCoupledFluid .and. nFluid > 1) then
             ! Only variable associated with the main MHD plasma are passed
-            ! through the buffer grid. BC's for fluids must be specified somehow.
+            ! through the buffer grid. BC's for fluids must be specified
+            ! somehow.
 
             if (DoOhNeutralBc) then   
                ! Get face_bcs for neutrals in the outerheliosphere
@@ -789,7 +800,7 @@ contains
                      VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
                           VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
                   else
-                     VarsGhostFace_V(iRho_I(iFluid)) = VarsGhostFace_V(Rho_) * &
+                     VarsGhostFace_V(iRho_I(iFluid)) = VarsGhostFace_V(Rho_)* &
                           RhoBcFactor_I(iFluid)
                      VarsGhostFace_V(iP_I(iFluid)) = VarsGhostFace_V(p_) *  &
                           RhoBcFactor_I(iFluid)
@@ -801,7 +812,8 @@ contains
             else 
                ! If this component is multyfluid and coupled to a single-fluid,
                ! stop with an error
-               call CON_stop(NameSub//': BCs for multifluid must be specified.')
+               call CON_stop( &
+                    NameSub//': BCs for multifluid must be specified.')
             end if
          end if
 
@@ -830,10 +842,11 @@ contains
 
          ! Subtract the radial component of the velocity (no outflow/inflow)
          uIono_D = uIono_D &
-              - FaceCoords_D * sum(FaceCoords_D * uIono_D) / sum(FaceCoords_D**2)
+              - FaceCoords_D * sum(FaceCoords_D*uIono_D) / sum(FaceCoords_D**2)
 
          select case(TypeBc)
-         case('reflect','linetied','polarwind','ionosphere','ionospherefloat', 'ionosphereoutflow')
+         case('reflect','linetied','polarwind','ionosphere', &
+              'ionospherefloat', 'ionosphereoutflow')
             VarsGhostFace_V(iUx_I) = 2*uIono_D(x_) + VarsGhostFace_V(iUx_I)
             VarsGhostFace_V(iUy_I) = 2*uIono_D(y_) + VarsGhostFace_V(iUy_I)
             VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) + VarsGhostFace_V(iUz_I)
@@ -849,7 +862,8 @@ contains
 
          !\
          ! The program is called which calculates the cartesian corotation 
-         ! velocity vector uRot_D as a function of the radius-vector "FaceCoords"
+         ! velocity vector uRot_D as a function of the radius-vector
+         ! "FaceCoords"
          !/
          call calc_corotation_velocities(FaceCoords_D, uRot_D)
 
