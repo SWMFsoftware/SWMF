@@ -73,7 +73,6 @@ contains
 
     character(len=*), parameter :: NameSub = 'calc_source'
     !--------------------------------------------------------------------------
-    GlobalBlk = iBlock !!! Only NEEDED for two routines below
 
     if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)

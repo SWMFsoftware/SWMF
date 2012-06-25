@@ -125,9 +125,6 @@ Module ModMain
   ! Number of explicitly and implicitly advanced blocks
   integer :: nBlockExplAll, nBlockImplAll
 
-  ! The index of the block currently being dealt with.
-  integer :: GlobalBLK
-
   ! Parameters for block location among eight subcubes.
   ! T=top, B=bottom, S=south, N=north, E=east, W=west
   integer, parameter :: &

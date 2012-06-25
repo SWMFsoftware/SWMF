@@ -52,28 +52,28 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
      call barrier_mpi2('expl1')
 
-     do globalBLK = 1, nBlock
-        if (unusedBLK(globalBLK)) CYCLE
-        if(all(neiLev(:,globalBLK)/=1)) CYCLE
+     do iBlock = 1, nBlock
+        if (unusedBLK(iBlock)) CYCLE
+        if(all(neiLev(:,iBlock)/=1)) CYCLE
         ! Calculate interface values for L/R states of each 
         ! fine grid cell face at block edges with resolution changes
         !   and apply BCs for interface states as needed.
-        call set_b0_face(globalBLK)
+        call set_b0_face(iBlock)
         call timing_start('calc_face_bfo')
-        call calc_face_value(.true.,GlobalBlk)
+        call calc_face_value(.true.,iBlock)
         call timing_stop('calc_face_bfo')
 
-        if(body_BLK(globalBLK))call set_face_boundary(globalBLK, Time_Simulation, .true.)
+        if(body_BLK(iBlock))call set_face_boundary(iBlock, Time_Simulation, .true.)
 
         ! Compute interface fluxes for each fine grid cell face at
         ! block edges with resolution changes.
 
         call timing_start('calc_fluxes_bfo')
-        call calc_face_flux(.true., GlobalBlk)
+        call calc_face_flux(.true., iBlock)
         call timing_stop('calc_fluxes_bfo')
 
         ! Save conservative flux correction for this solution block
-        call save_cons_flux(GlobalBlk)
+        call save_cons_flux(iBlock)
         
      end do
 
@@ -89,53 +89,53 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      if(DoTestMe)write(*,*)NameSub,' done message pass'
 
      ! Multi-block solution update.
-     do globalBLK = 1, nBlock
+     do iBlock = 1, nBlock
 
-        if (unusedBLK(globalBLK)) CYCLE
+        if (unusedBLK(iBlock)) CYCLE
 
         ! Calculate interface values for L/R states of each face
         !   and apply BCs for interface states as needed.
-        call set_b0_face(globalBLK)
+        call set_b0_face(iBlock)
         call timing_start('calc_facevalues')
-        call calc_face_value(.false., GlobalBlk)
+        call calc_face_value(.false., iBlock)
         call timing_stop('calc_facevalues')
 
-        if(body_BLK(globalBLK)) &
-             call set_face_boundary(globalBLK, Time_Simulation,.false.)
+        if(body_BLK(iBlock)) &
+             call set_face_boundary(iBlock, Time_Simulation,.false.)
 
         ! Compute interface fluxes for each cell.
         call timing_start('calc_fluxes')
-        call calc_face_flux(.false., GlobalBlk)
+        call calc_face_flux(.false., iBlock)
         call timing_stop('calc_fluxes')
 
         ! Enforce flux conservation by applying corrected fluxes
         ! to each coarse grid cell face at block edges with 
         ! resolution changes.
-        call apply_cons_flux(GlobalBlk)
+        call apply_cons_flux(iBlock)
 
         ! Compute source terms for each cell.
         call timing_start('calc_sources')
-        call calc_source(GlobalBlk)
+        call calc_source(iBlock)
         call timing_stop('calc_sources')
 
         ! Calculate time step (both local and global
         ! for the block) used in multi-stage update
         ! for steady state calculations.
         if (.not.time_accurate .and. iStage == 1 &
-             .and. DoCalcTimestep) call calc_timestep(GlobalBlk)
+             .and. DoCalcTimestep) call calc_timestep(iBlock)
 
         ! Update solution state in each cell.
         call timing_start('update_states')
-        call update_states(iStage,globalBLK)
+        call update_states(iStage,iBlock)
         call timing_stop('update_states')
 
         if(DoCalcElectricField .and. iStage == nStage) &
-             call calc_electric_field(globalBLK)
+             call calc_electric_field(iBlock)
 
         if(UseConstrainB .and. iStage==nStage)then    !^CFG IF CONSTRAINB BEGIN
            call timing_start('constrain_B')
-           call get_VxB(GlobalBlk)
-           call bound_VxB(GlobalBlk)
+           call get_VxB(iBlock)
+           call bound_VxB(iBlock)
            call timing_stop('constrain_B')
         end if                                        !^CFG END CONSTRAINB
 
@@ -143,7 +143,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         ! for the block) used in multi-stage update
         ! for time accurate calculations.
         if (time_accurate .and. iStage == nStage .and. DoCalcTimestep) &
-             call calc_timestep(GlobalBlk)
+             call calc_timestep(iBlock)
 
      end do ! Multi-block solution update loop.
 
@@ -203,21 +203,23 @@ end subroutine advance_expl
 !===========================================================================
 
 subroutine update_secondbody
-  use ModMain,     ONLY: time_simulation,globalBLK,nBlock
+  use ModMain,     ONLY: time_simulation, nBlock
   use ModConst,    ONLY: cTwoPi
   use ModPhysics,  ONLY: xBody2,yBody2,OrbitPeriod,PhaseBody2,DistanceBody2
   use ModMessagePass, ONLY: exchange_messages
 
   implicit none
+
+  integer :: iBlock
   !-------------------------------------------------------------------------
 
   ! Update second body coordinates
   xBody2 = DistanceBody2*cos(cTwoPi*Time_Simulation/OrbitPeriod+PhaseBody2)
   yBody2 = DistanceBody2*sin(cTwoPi*Time_Simulation/OrbitPeriod+PhaseBody2)
 
-  do globalBLK = 1, nBlock
-     call set_boundary_cells(globalBLK)
-     call fix_block_geometry(globalBLK)
+  do iBlock = 1, nBlock
+     call set_boundary_cells(iBlock)
+     call fix_block_geometry(iBlock)
   end do
   
   ! call set_body_flag ! OLDAMR
