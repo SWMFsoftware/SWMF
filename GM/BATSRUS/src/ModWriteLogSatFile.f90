@@ -10,8 +10,8 @@ subroutine write_logfile(iSatIn,iFile)
   use ModIO
   use ModIoUnit, ONLY   : io_unit_new
   use ModUtilities, ONLY: flush_unit, split_string
-  use ModSatelliteFile, ONLY: Satellite_Name, Satellite_First_Write, &
-       iUnitSat_I, Sat_Time, Satellite_Vars, DoTrackSatellite_I, xSatellite
+  use ModSatelliteFile, ONLY: NameSat_I, IsFirstWriteSat_I, &
+       iUnitSat_I, TimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
   use ModMpi
   implicit none
 
@@ -38,7 +38,7 @@ subroutine write_logfile(iSatIn,iFile)
   character (LEN=100) :: StringTime
 
   logical :: DoWritePosition
-  logical :: DoTest,DoTestMe
+  logical :: DoTest, DoTestMe
   real :: pmin, pmax
   real, external :: maxval_loc_BLK, minval_loc_BLK
   integer :: loc(5)
@@ -51,7 +51,7 @@ subroutine write_logfile(iSatIn,iFile)
 
   character(len=*), parameter :: NameSub = 'write_logfile'
   !---------------------------------------------------------------------------
-  call set_oktest(NameSub,DoTest,DoTestMe)
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   DoWritePosition = .false.
 
@@ -97,9 +97,9 @@ subroutine write_logfile(iSatIn,iFile)
   elseif (iSatIn>=1) then
      iSat = iSatIn
      if (.not. DoTrackSatellite_I(iSat)) return
-     call split_string(satellite_vars(satellite_+iSat),MaxLogVar, &
+     call split_string(StringSatVar_I(iSat),MaxLogVar, &
           NameLogVar_I,nLogVar)
-     StringTime = sat_time(satellite_+iSat)
+     StringTime = TimeSat_I(iSat)
      DoWritePosition = .true.
   end if
 
@@ -133,7 +133,7 @@ subroutine write_logfile(iSatIn,iFile)
      if (iSatIn == 0) then
         Xyz_D = XyzTestCell_D
      elseif (iSatIn >= 1) then
-        Xyz_D = XSatellite(iSat,1:3)
+        Xyz_D = XyzSat_DI(:,iSat)
      end if
   end if
 
@@ -148,7 +148,7 @@ subroutine write_logfile(iSatIn,iFile)
      end if
   end do
 
-  if(DoTestMe.and.n_step==1)then
+  if(DoTestMe .and. n_step <= 1)then
      write(*,*)'nLogVar,nFluxVar,nLogR,nLogTot:',  &
           nLogVar,nFluxVar,nLogR,nLogTot
      write(*,*)'NameLogVar_I:',NameLogVar_I(1:nLogVar)
@@ -196,11 +196,11 @@ subroutine write_logfile(iSatIn,iFile)
         iUnit = unit_log
      elseif (iSatIn >= 1) then
         iUnit = iUnitSat_I(iSat)
-        if (Satellite_first_write(iSat)) then
+        if (IsFirstWriteSat_I(iSat)) then
            write(iUnit,'(a)')  &
-                'Satellite data for Satellite: '//trim(Satellite_name(isat))
+                'Satellite data for Satellite: '//trim(NameSat_I(isat))
            write(iUnit,'(a)')trim(NameAll)
-           Satellite_first_write(iSat)=.false.
+           IsFirstWriteSat_I(iSat)=.false.
         end if
      end if
   endif
@@ -277,7 +277,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
        DomainVolume
   use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
   use ModSatelliteFile, ONLY: get_satellite_ray !^CFG  IF RAYTRACE
-  use ModSatelliteFile, ONLY: xSatellite
+  use ModSatelliteFile, ONLY: XyzSat_DI
   use ModIO
   use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid
 
@@ -298,7 +298,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   integer :: iError
   real :: r
 
-  logical :: DoTest,DoTestMe
+  logical :: DoTest, DoTestMe
 
   ! StateSat_V contains the weight (0), the state (1:nVar), 
   ! and the currents (nVar+1:nVar+3) at the position of the satellite
@@ -325,19 +325,19 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   if(iSat>=1)then
      ! Satellites need B0 and the state at the satellite position
      if(UseB0)then
-        call get_b0(xSatellite(iSat,:), B0Sat_D)
+        call get_b0(XyzSat_DI(:,iSat), B0Sat_D)
      else
         B0Sat_D = 0.0
      end if
 
-     call get_point_data(0.0,xSatellite(iSat,:),1,nBlock,1,nVar+3,StateSat_V)
-     call collect_satellite_data(xSatellite(iSat,:),StateSat_V)
+     call get_point_data(0.0,XyzSat_DI(:,iSat),1,nBlock,1,nVar+3,StateSat_V)
+     call collect_satellite_data(XyzSat_DI(:,iSat),StateSat_V)
 
      if (UseRotatingFrame) then
         StateSat_V(rhoUx_)=StateSat_V(rhoUx_) &
-                - StateSat_V(rho_)*OMEGAbody*xSatellite(iSat,y_)
+                - StateSat_V(rho_)*OmegaBody*XyzSat_DI(y_,iSat)
         StateSat_V(rhoUy_)=StateSat_V(rhoUy_) &
-                + StateSat_V(rho_)*OMEGAbody*xSatellite(iSat,x_)
+                + StateSat_V(rho_)*OmegaBody*XyzSat_DI(x_,iSat)
      end if
 
      !^CFG IF RAYTRACE BEGIN

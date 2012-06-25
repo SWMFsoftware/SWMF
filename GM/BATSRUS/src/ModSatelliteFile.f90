@@ -2,7 +2,6 @@
 !==============================================================================
 module ModSatelliteFile
   use ModSize,   ONLY: MaxBlock
-  use ModIO,     ONLY: MaxFile   !!! may not be needed
 
   implicit none
   save
@@ -18,40 +17,41 @@ module ModSatelliteFile
   logical, public :: DoSaveSatelliteData = .false. ! save satellite data?
   integer, public :: nSatellite = 0                ! number of satellites
 
-  integer, parameter :: MaxSatelliteFile=300
+  integer, parameter :: MaxSatellite=300
 
-  real, public :: TimeSatStart_I(MaxSatelliteFile) = 0.
-  real, public :: TimeSatEnd_I(MaxSatelliteFile) = 0.
+  real, public :: TimeSatStart_I(MaxSatellite) = 0.
+  real, public :: TimeSatEnd_I(MaxSatellite) = 0.
 
   ! These variables are public for write_logfile only !!! Should be improved
   ! Names and unit numbers for satellite files
-  character(len=50), public:: Satellite_name(MaxSatelliteFile)
-  integer, public:: iUnitSat_I(MaxSatelliteFile) = -1
-  logical, public:: Satellite_first_write(MaxSatelliteFile) = .true.
+  character(len=50), public:: NameSat_I(MaxSatellite)
+  integer, public:: iUnitSat_I(MaxSatellite) = -1
+  logical, public:: IsFirstWriteSat_I(MaxSatellite) = .true.
 
   ! current positions
-  real, public:: XSatellite(MaxSatelliteFile, 3) 
+  real, public:: XyzSat_DI(3,MaxSatellite) 
 
   ! variables to control time output format 
-  character(len=100), public :: sat_time(MaxFile) !!! should be indexed by iSat
+  character(len=100), public :: TimeSat_I(MaxSatellite)
 
   ! variables to write to the satellite files
-  character(len=100), public :: satellite_vars(MaxFile) !!! should be indexed by iSat
+  character(len=500), public :: StringSatVar_I(MaxSatellite)
 
-  logical, public:: DoTrackSatellite_I(MaxSatelliteFile) = .false.
+  logical, public:: DoTrackSatellite_I(MaxSatellite) = .false.
+
+  integer,public:: iCurrent_satellite_position(MaxSatellite)=1
 
   ! Local variables
-  character(len=100) :: NameFile_I(MaxSatelliteFile)
-  logical:: IsOpen_I(MaxSatelliteFile) = .false.
-  logical:: UseSatelliteFile(MaxSatelliteFile)   = .true.
-  integer:: Satellite_Npts(MaxSatelliteFile)
-  integer,public:: iCurrent_satellite_position(MaxSatelliteFile)=1
-  integer:: iPEsatellite(MaxSatelliteFile)
-  integer:: iBLKsatellite(MaxSatelliteFile)
-  real, allocatable   :: XSatellite_traj(:, :, :)
-  real, allocatable   :: Satellite_Time(:, :)
+  character(len=100) :: NameFile_I(MaxSatellite)
+  logical:: IsOpen_I(MaxSatellite) = .false.
+  logical:: UseSatFile_I(MaxSatellite)   = .true.
+  integer:: nPointTraj_I(MaxSatellite)
+  integer:: iProcSat_I(MaxSatellite)
+  integer:: iBlockSat_I(MaxSatellite)
+  real, allocatable   :: XyzSat_DII(:,:,:)
+  real, allocatable   :: TimeSat_II(:, :)
 
-  character(len=3)  :: TypeSatCoord_I(MaxSatelliteFile)
+  character(len=3)  :: TypeSatCoord_I(MaxSatellite)
 
   ! Time limits (in seconds) for satellite trajectory cut 
   ! for .not. time_accurate session.
@@ -78,7 +78,7 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
-    integer :: iFile
+    integer :: iSat, iFile
     character(len=100):: StringSatellite
     character (len=3) :: satellite_var
     character(len=*), parameter :: NameSub = 'read_satellite_parameters'
@@ -89,51 +89,51 @@ contains
        if(nSatellite <= 0) RETURN
        if(iProc==0) call check_dir(NamePlotDir)
        nFile = max(nFile, Satellite_ + nSatellite)
-       if (nFile > MaxFile .or. nSatellite > MaxSatelliteFile)&
+       if (nFile > MaxFile .or. nSatellite > MaxSatellite)&
             call stop_mpi(&
             'The number of output files is too large in #SATELLITE:'&
-            //' nFile > MaxFile .or. nSatellite > MaxSatelliteFile')
+            //' nFile > MaxFile .or. nSatellite > MaxSatellite')
 
-       do iFile = Satellite_+1, satellite_ + nSatellite
+       do iSat = 1, nSatellite
+          iFile = Satellite_ + iSat
           call read_var('StringSatellite', StringSatellite)
           ! Satellite output frequency
           ! Note that we broke with tradition here so that the
           ! dt_output will always we read!  This may be changed
           ! in later distributions
-          call read_var('DnOutput',dn_output(ifile))
-          call read_var('DtOutput',dt_output(ifile))
-
+          call read_var('DnOutput', dn_output(iFile))
+          call read_var('DtOutput', dt_output(iFile))
 
           ! Satellite inputfile name or the satellite name
           call read_var('NameTrajectoryFile',&
-               Satellite_name(ifile-satellite_))
+               NameSat_I(iSat))
           if(index(StringSatellite,'eqn')>0 &
                .or. index(StringSatellite,'Eqn')>0 .or. &
                index(StringSatellite,'EQN')>0 ) then
-             UseSatelliteFile(ifile-satellite_) = .false.
+             UseSatFile_I(iSat) = .false.
           else
-             UseSatelliteFile(ifile-satellite_) = .true.
+             UseSatFile_I(iSat) = .true.
           end if
 
           ! Satellite variables
           if(index(StringSatellite,'VAR')>0 .or. &
                index(StringSatellite,'var')>0 )then
              satellite_var='var'
-             plot_dimensional(ifile)= index(StringSatellite,'VAR')>0
-             sat_time(ifile) = 'step date'
-             call read_var('NameSatelliteVars',satellite_vars(ifile))
+             plot_dimensional(iFile) = index(StringSatellite,'VAR')>0
+             TimeSat_I(iSat) = 'step date'
+             call read_var('NameSatelliteVars',StringSatVar_I(iSat))
           elseif(index(StringSatellite,'MHD')>0 .or. &
                index(StringSatellite,'mhd')>0)then
              satellite_var='mhd'
-             plot_dimensional(ifile)= index(StringSatellite,'MHD')>0
-             sat_time(ifile) = 'step date'
-             satellite_vars(ifile)=NamePrimitiveVar//' jx jy jz'
+             plot_dimensional(iFile)= index(StringSatellite,'MHD')>0
+             TimeSat_I(iSat) = 'step date'
+             StringSatVar_I(iSat)=NamePrimitiveVar//' jx jy jz'
           elseif(index(StringSatellite,'FUL')>0 .or. &
                index(StringSatellite,'ful')>0)then
              satellite_var='ful'
              plot_dimensional(ifile)= index(StringSatellite,'FUL')>0
-             sat_time(ifile) = 'step date'
-             satellite_vars(ifile)=&
+             TimeSat_I(iSat) = 'step date'
+             StringSatVar_I(iSat)=&
                   NamePrimitiveVar//' b1x b1y b1z e jx jy jz'
           else
              call stop_mpi(&
@@ -145,38 +145,34 @@ contains
           !Add ray-tracing variables if 'ray' is present.
           if (index(StringSatellite,'ray')>0 .or. &
                index(StringSatellite,'RAY')>0) then
-             satellite_vars(ifile) = trim(satellite_vars(ifile)) // &
+             StringSatVar_I(iSat) = trim(StringSatVar_I(iSat)) // &
                   ' theta1 phi1 status theta2 phi2'
           endif
 
-          plot_type(ifile) = "satellite"
+          plot_type(iFile) = "satellite"
 
           ! Determine the time output format to use in the 
           ! satellite files.  This is loaded by default above, 
           ! but can be input in the log_string line.
           if(index(StringSatellite,'none')>0) then
-             sat_time(ifile) = 'none'
+             TimeSat_I(iSat) = 'none'
           elseif((index(StringSatellite,'step')>0) .or. &
                (index(StringSatellite,'date')>0) .or. &
                (index(StringSatellite,'time')>0)) then
-             sat_time(ifile) = ''
+             TimeSat_I(iSat) = ''
              if(index(StringSatellite,'step')>0) &
-                  sat_time(ifile) = 'step'
+                  TimeSat_I(iSat) = 'step'
              if(index(StringSatellite,'date')>0) &
-                  write(sat_time(ifile),'(a)') &
-                  sat_time(ifile)(1:len_trim(sat_time(ifile)))&
-                  //' date'
+                  TimeSat_I(iSat) = trim(TimeSat_I(iSat))//' date'
              if(index(StringSatellite,'time')>0) &
-                  write(sat_time(ifile),'(a)') &
-                  sat_time(ifile)(1:len_trim(sat_time(ifile)))&
-                  //' time'
+                  TimeSat_I(iSat) = trim(TimeSat_I(iSat))//' time'
           end if
 
        end do
     case('#STEADYSTATESATELLITE')
-       do iFile = 1, nSatellite
-          call read_var('SatelliteTimeStart', TimeSatStart_I(ifile))
-          call read_var('SatelliteTimeEnd',   TimeSatEnd_I(ifile))
+       do iSat = 1, nSatellite
+          call read_var('SatelliteTimeStart', TimeSatStart_I(iSat))
+          call read_var('SatelliteTimeEnd',   TimeSatEnd_I(iSat))
        end do
     case default
        call stop_mpi(NameSub//' unknown command='//NameCommand)
@@ -201,21 +197,21 @@ contains
 
     select case(TypeStatus)
     case('open')
-       l1 = index(Satellite_name(iSat), '/', back=.true.) + 1
-       l2 = index(Satellite_name(iSat), '.') - 1
+       l1 = index(NameSat_I(iSat), '/', back=.true.) + 1
+       l2 = index(NameSat_I(iSat), '.') - 1
        if (l1-1 <= 0) l1 = 1
-       if (l2+1 <= 0) l2 = len_trim(Satellite_name(iSat))
+       if (l2+1 <= 0) l2 = len_trim(NameSat_I(iSat))
 
        if(n_step < 1000000)then
           write(NameFile_I(iSat),'(a,i6.6,a)')trim(NamePlotDir)//&
-               'sat_'//Satellite_Name(iSat)(l1:l2)//'_n',n_step,'.sat'
+               'sat_'//NameSat_I(iSat)(l1:l2)//'_n',n_step,'.sat'
        else
           write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir)//&
-               'sat_'//Satellite_Name(iSat)(l1:l2)//'_n',n_step,'.sat'
+               'sat_'//NameSat_I(iSat)(l1:l2)//'_n',n_step,'.sat'
        end if
        if(DoTestMe) then
           write(*,*) NameSub,': satellitename:', &
-               Satellite_name(iSat), 'status =', TypeStatus
+               NameSat_I(iSat), 'status =', TypeStatus
           write(*,*) 'iSat,l1,l2: ', iSat, l1, l2
           write(*,*) NameSub,': NameFile_I(iSat):', NameFile_I(iSat)
        end if
@@ -276,8 +272,8 @@ contains
     MaxPoint = 0
     if(iProc == 0)then
        SATELLITES1: do iSat=1, nSatellite
-          if(.not.UseSatelliteFile(iSat)) CYCLE SATELLITES1
-          NameFile = Satellite_Name(iSat)
+          if(.not.UseSatFile_I(iSat)) CYCLE SATELLITES1
+          NameFile = NameSat_I(iSat)
           open(UnitTmp_, file=NameFile, status="old", iostat = iError)
           if (iError /= 0) call stop_mpi(NameSub // &
                ' ERROR1: unable to open file ' // trim(NameFile))
@@ -307,18 +303,18 @@ contains
 
     ! allocate arrays depending on number of points
     allocate(Time_I(MaxPoint), Xyz_DI(MaxDim, MaxPoint))
-    allocate(XSatellite_traj(nSatellite, MaxPoint, 3))
-    allocate(Satellite_Time(nSatellite, MaxPoint))
+    allocate(XyzSat_DII(3, nSatellite, MaxPoint))
+    allocate(TimeSat_II(nSatellite, MaxPoint))
 
     ! Read the trajectories
     SATELLITES: do iSat=1, nSatellite
 
-       if(.not.UseSatelliteFile(iSat)) CYCLE SATELLITES
+       if(.not.UseSatFile_I(iSat)) CYCLE SATELLITES
 
        ! Read file on the root processor
        if (iProc == 0) then
 
-          NameFile = Satellite_Name(iSat)
+          NameFile = NameSat_I(iSat)
 
           if(lVerbose>0)then
              call write_prefix; write(iUnitOut,*) NameSub, &
@@ -383,7 +379,7 @@ contains
 
        ! Tell the number of points to the other processors
        call MPI_Bcast(nPoint, 1, MPI_INTEGER, 0, iComm, iError)
-       Satellite_Npts(iSat) = nPoint
+       nPointTraj_I(iSat) = nPoint
 
        ! Tell the other processors the satellite time
        call MPI_Bcast(Time_I, nPoint, MPI_REAL, 0, iComm, iError)
@@ -393,17 +389,17 @@ contains
 
        ! Store time and positions for satellite iSat on all PE-s
 
-       Satellite_Time(iSat, 1:nPoint) = Time_I(1:nPoint)
+       TimeSat_II(iSat, 1:nPoint) = Time_I(1:nPoint)
        do i = 1, nPoint
-          xSatellite_traj(iSat, i, :) = Xyz_DI(:, i)
+          XyzSat_DII(:, iSat, i) = Xyz_DI(:, i)
        end do
 
        if(DoTest)then
           nPoint = min(10,nPoint)
-          write(*,*) NameSub,': tSat=', Satellite_Time( iSat, 1:nPoint)
-          write(*,*) NameSub,': xSat=', xSatellite_traj(iSat, 1:nPoint,1)
-          write(*,*) NameSub,': ySat=', xSatellite_traj(iSat, 1:nPoint,2)
-          write(*,*) NameSub,': zSat=', xSatellite_traj(iSat, 1:nPoint,3)
+          write(*,*) NameSub,': tSat=', TimeSat_II(iSat,1:nPoint)
+          write(*,*) NameSub,': xSat=', XyzSat_DII(1,iSat,1:nPoint)
+          write(*,*) NameSub,': ySat=', XyzSat_DII(2,iSat,1:nPoint)
+          write(*,*) NameSub,': zSat=', XyzSat_DII(3,iSat,1:nPoint)
        end if
 
     end do SATELLITES
@@ -430,13 +426,13 @@ contains
     call set_satellite_positions(iSat)
     if(.not.DoTrackSatellite_I(iSat)) RETURN !Position is not defined
 
-    call find_grid_block(XSatellite(iSat,:), &
-         iPEsatellite(iSat), iBLKsatellite(iSat))
+    call find_grid_block(XyzSat_DI(:,iSat), &
+         iProcSat_I(iSat), iBlockSat_I(iSat))
 
-    if (iPEsatellite(iSat) < 0) DoTrackSatellite_I(iSat) = .false.
+    if (iProcSat_I(iSat) < 0) DoTrackSatellite_I(iSat) = .false.
 
     if (DoTestMe) write(*,*)'set_satellite_flags iPE,iBLK,TrackSatellite=', &
-         iPEsatellite(iSat), iBLKsatellite(iSat), DoTrackSatellite_I(iSat) 
+         iProcSat_I(iSat), iBlockSat_I(iSat), DoTrackSatellite_I(iSat) 
 
   end subroutine set_satellite_flags
 
@@ -458,21 +454,21 @@ contains
     if (iProc==0) &
          call set_oktest('set_satellite_positions',DoTest, DoTestMe)
 
-    if (UseSatelliteFile(iSat)) then
+    if (UseSatFile_I(iSat)) then
 
-       if (Satellite_Npts(iSat) > 0) then
+       if (nPointTraj_I(iSat) > 0) then
 
           i = icurrent_satellite_position(iSat)
 
-          do while ((i < Satellite_Npts(iSat)) .and.   &
-               (Satellite_Time(iSat,i) < Time_Simulation))
+          do while ((i < nPointTraj_I(iSat)) .and.   &
+               (TimeSat_II(iSat,i) < Time_Simulation))
              i = i + 1
           enddo
 
           icurrent_satellite_position(iSat) = i
 
-          if ((i == Satellite_Npts(iSat).and. &
-               Satellite_Time(iSat,i) <= Time_Simulation ).or.(i==1)) then 
+          if (i == nPointTraj_I(iSat) .and. &
+               TimeSat_II(iSat,i) <= Time_Simulation .or. i==1) then 
 
              DoTrackSatellite_I(iSat) = .false.
 
@@ -480,11 +476,11 @@ contains
 
              DoTrackSatellite_I(iSat) = .true.
 
-             dTime = 1.0 - (Satellite_Time(iSat,i) - Time_Simulation) / &
-                  (Satellite_Time(iSat,i) - Satellite_Time(iSat,i-1) + 1.0e-6)
+             dTime = 1.0 - (TimeSat_II(iSat,i) - Time_Simulation) / &
+                  (TimeSat_II(iSat,i) - TimeSat_II(iSat,i-1) + 1.0e-6)
 
-             xSatellite(iSat,:) = dTime * xSatellite_traj(iSat,i,:) + &
-                  (1.0 - dTime) * xSatellite_traj(iSat,i-1,:) 
+             XyzSat_DI(:,iSat) = dTime * XyzSat_DII(:,iSat,i) + &
+                  (1.0 - dTime) * XyzSat_DII(:,iSat,i-1) 
 
           endif
 
@@ -505,9 +501,9 @@ contains
     integer, intent(in) :: iSat
     character (len=100) :: name_string
     real :: Xvect(3)
-
-    name_string = trim(Satellite_name(iSat))
-    Xvect(:) = XSatellite(iSat,:)
+    !-------------------------------------------------------------------------
+    name_string = trim(NameSat_I(iSat))
+    Xvect(:) = XyzSat_DI(:,iSat)
 
     ! Case should be for a specific satellite.  The trajectories can depend
     ! on the 'real' time so that the satellite knows where it is at.  For
@@ -552,7 +548,7 @@ contains
 
     character(len=*), parameter :: NameSub = 'get_satellite_ray'
     integer  :: iDir, iBLK, iDim
-    real     :: Xyz_D(3), RayVars(3,2,nI,nJ,nK)
+    real     :: Coord_D(3), RayVars(3,2,nI,nJ,nK)
     real     :: Dx1, Dx2, Dy1, Dy2, Dz1, Dz2
     integer  :: i1, i2, j1, j2, k1, k2, iNear, jNear, kNear
     integer  :: i, j, k
@@ -560,49 +556,49 @@ contains
     !--------------------------------------------------------------------------
 
     ! Only use this if we're on the correct node.
-    if (iProc /= iPEsatellite(iSatIn)) then
+    if (iProc /= iProcSat_I(iSatIn)) then
        do iDim=1,5
           SatRayVar_I(iDim) = 0.0
        enddo
        RETURN
     endif
 
-    iBLK = iBLKSatellite(iSatIn)
+    iBLK = iBlockSat_I(iSatIn)
     if (iBLK == 0) RETURN
 
     if (IsCartesianGrid) then 
-       Xyz_D = Xsatellite(iSatIn,:)
+       Coord_D = XyzSat_DI(:,iSatIn)
     else
-       call xyz_to_coord(Xsatellite(iSatIn,:), Xyz_D)
+       call xyz_to_coord(XyzSat_DI(:,iSatIn), Coord_D)
     end if
 
     ! Normalize coordinates to the cell center indexes
-    Xyz_D = (Xyz_D - CoordMin_DB(:,iBLK)) / CellSize_DB(:,iBlk) + 0.5
+    Coord_D = (Coord_D - CoordMin_DB(:,iBLK)) / CellSize_DB(:,iBlk) + 0.5
 
     ! Set location assuming point is inside block.
-    i1 = floor(Xyz_D(1))
-    j1 = floor(Xyz_D(2))  
-    k1 = floor(Xyz_D(3))
-    i2 = ceiling(Xyz_D(1))
-    j2 = ceiling(Xyz_D(2))
-    k2 = ceiling(Xyz_D(3))
+    i1 = floor(Coord_D(1))
+    j1 = floor(Coord_D(2))  
+    k1 = floor(Coord_D(3))
+    i2 = ceiling(Coord_D(1))
+    j2 = ceiling(Coord_D(2))
+    k2 = ceiling(Coord_D(3))
 
-    ! If Xyz_D is outside of block, change i,j,k in order to extrapolate.
-    if(any( Xyz_D < 1) .or. any(Xyz_D > (/nI, nJ, nK/))) then
+    ! If Coord_D is outside of block, change i,j,k in order to extrapolate.
+    if(any( Coord_D < 1) .or. any(Coord_D > (/nI, nJ, nK/))) then
        i1 = min(nI-1, max(1, i1));   i2 = i1 + 1
        j1 = min(nJ-1, max(1, j1));   j2 = j1 + 1
        k1 = min(nK-1, max(1, k1));   k2 = k1 + 1
     endif
 
     ! Set interpolation weights
-    Dx1 = Xyz_D(1) - i1; Dx2 = 1.0 - Dx1
-    Dy1 = Xyz_D(2) - j1; Dy2 = 1.0 - Dy1
-    Dz1 = Xyz_D(3) - k1; Dz2 = 1.0 - Dz1
+    Dx1 = Coord_D(1) - i1; Dx2 = 1.0 - Dx1
+    Dy1 = Coord_D(2) - j1; Dy2 = 1.0 - Dy1
+    Dz1 = Coord_D(3) - k1; Dz2 = 1.0 - Dz1
 
     ! Calculate the nearest point.
-    iNear = min( nI, max(nint(Xyz_D(1)),1) )
-    jNear = min( nJ, max(nint(Xyz_D(2)),1) )
-    kNear = min( nK, max(nint(Xyz_D(3)),1) )
+    iNear = min( nI, max(nint(Coord_D(1)),1) )
+    jNear = min( nJ, max(nint(Coord_D(2)),1) )
+    kNear = min( nK, max(nint(Coord_D(3)),1) )
 
     ! Copy ray tracing values to new array so allow changing of values.
     RayVars = ray(1:3,1:2,1:nI,1:nJ,1:nK,iBLK)
@@ -667,7 +663,7 @@ contains
   end subroutine get_satellite_ray
   !============================================================================
   
-  subroutine GM_trace_sat(SatXyz_D,SatRay_D)
+  subroutine GM_trace_sat(SatXyz_D, SatRay_D)
     
     use ModProcMH,    ONLY: iComm, iProc
     use ModRayTrace,  ONLY: DoExtractState, DoExtractUnitSi, &
