@@ -4,7 +4,7 @@ subroutine set_ics(iBlock)
   use ModMain
   use ModAdvance
   use ModB0, ONLY: set_b0_cell
-  use ModGeometry, ONLY :x_BLK,y_BLK,true_cell
+  use ModGeometry, ONLY: true_cell
   use ModIO, ONLY : restart
   use ModPhysics
   use ModUser, ONLY: user_set_ics
@@ -12,6 +12,7 @@ subroutine set_ics(iBlock)
   use ModEnergy, ONLY: calc_energy_ghost
   use ModConserveFlux, ONLY: init_cons_flux
   use ModCalcSource, ONLY: set_potential_force
+  use BATL_lib, ONLY: Xyz_DGB
 
   implicit none
 
@@ -79,8 +80,8 @@ subroutine set_ics(iBlock)
            elseif(.not.UseShockTube)then
               State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
            else
-              if( (x_BLK(i,j,k,iBlock)-ShockPosition) &
-                   < -ShockSlope*y_BLK(i,j,k,iBlock))then
+              if( (Xyz_DGB(x_,i,j,k,iBlock)-ShockPosition) &
+                   < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
                  ! Set all variables first
                  State_VGB(:,i,j,k,iBlock)   = ShockLeft_V
 

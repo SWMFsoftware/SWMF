@@ -51,7 +51,7 @@ contains
     real,    intent(out),dimension(3,nMag) :: MagPerturb_DI
     integer  :: i,j,k,iBLK,iMag
     real     :: r3, XyzSph_DD(3,3), GsmtoSmg_DD(3,3)
-    real, dimension(3):: Xyz_D,Xyz_BLK, Temp_D, Current_D, MagPerturb_D, TmpSph_D
+    real, dimension(3):: Xyz_D, Temp_D, Current_D, MagPerturb_D, TmpSph_D
     real, external    :: integrate_BLK
     real, allocatable, dimension(:,:,:,:) :: Temp_BLK_x,Temp_BLK_y,Temp_BLK_z
 
