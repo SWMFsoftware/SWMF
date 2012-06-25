@@ -414,7 +414,7 @@ subroutine select_stepping(DoPartSelect)
 
   logical, intent(in) :: DoPartSelect
 
-  integer :: iError
+  integer :: iBlock, iError
   logical :: oktest, oktest_me
   !---------------------------------------------------------------------------
   call set_oktest('select_stepping',oktest,oktest_me)
@@ -468,8 +468,8 @@ subroutine select_stepping(DoPartSelect)
              'ImplCritType=dt is only valid in time_accurate mode')
 
         ! Set implicitBLK based on the time step.
-        do globalBLK=1,nBlockMax
-           if(unusedBLK(globalBLK)) CYCLE
+        do iBlock=1,nBlockMax
+           if(unusedBLK(iBlock)) CYCLE
 
            ! Obtain the time step based on CFL condition
 
@@ -480,16 +480,16 @@ subroutine select_stepping(DoPartSelect)
            if(n_step==0 .and. time_loop)then
               ! For first iteration in the time loop
               ! calculate stable time step
-              call set_b0_face(globalBLK)
-              call calc_face_value(.false., GlobalBlk)
-              call calc_face_flux(.false., GlobalBlk)
-              call calc_timestep(GlobalBlk)
+              call set_b0_face(iBlock)
+              call calc_face_value(.false., iBlock)
+              call calc_face_flux(.false., iBlock)
+              call calc_timestep(iBlock)
            end if
 
            ! If the smallest allowed timestep is below the fixed DtFixed
            ! then only implicit scheme will work
-           if(dt_BLK(globalBLK)*explCFL <= DtFixed) &
-                iTypeAdvance_B(globalBLK) = ImplBlock_
+           if(dt_BLK(iBlock)*explCFL <= DtFixed) &
+                iTypeAdvance_B(iBlock) = ImplBlock_
         end do
 
         if(oktest_me)write(*,*)&
