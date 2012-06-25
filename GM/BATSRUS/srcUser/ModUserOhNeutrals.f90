@@ -728,10 +728,6 @@ contains
     Io2Si_V(UnitDivB_)        = 1.0E-2                    ! Gauss/cm
     Io2Si_V(UnitAngle_)       = cRadToDeg                 ! degrees
 
-    ! if(globalBLK==100) then
-    !  write(*,*) 'Io2Si_V(UnitX_)',Io2Si_V(UnitX_)
-    ! end if
-
     Si2Io_V = 1/Io2Si_V
     No2Io_V = No2Si_V*Si2Io_V
     Io2No_V = 1/No2Io_V

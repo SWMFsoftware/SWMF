@@ -813,8 +813,8 @@ contains
     use BATL_size,      ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
-         iSide, iFace, jFace, kFace
-    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK, &
+         iSide, iFace, jFace, kFace, iBlockBc
+    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, &
          UseHeatConduction
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge
@@ -894,7 +894,7 @@ contains
       real :: FaceGrad_D(3)
       integer :: iBlock, iDir, i, j, k
       !------------------------------------------------------------------------
-      iBlock = GlobalBLK
+      iBlock = iBlockBc
 
       if(iSide==1 .or. iSide==2)then
          iDir = x_

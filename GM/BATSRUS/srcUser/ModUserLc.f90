@@ -255,8 +255,8 @@ contains
 
     use ModAdvance,     ONLY: State_VGB, WaveFirst_, WaveLast_
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
-         iSide, iFace, jFace, kFace
-    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK, &
+         iSide, iFace, jFace, kFace, iBlockBc
+    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, &
          nI, nJ, nK, East_, West_, South_, North_, Bot_, Top_
     use ModNumConst,    ONLY: cTolerance
     use ModPhysics,     ONLY: OmegaBody, BodyRho_I, BodyTDim_I, &
@@ -339,7 +339,7 @@ contains
 
       !--------------------------------------------------------------------------
 
-      iBlock = GlobalBLK
+      iBlock = iBlockBc
 
       ! need to get direction for face gradient calc
       ! also put left cell centered heating call here (since index depends on

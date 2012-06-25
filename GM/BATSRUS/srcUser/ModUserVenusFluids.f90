@@ -1308,12 +1308,12 @@ case('solarmin')
 
     use ModSize,       ONLY: nDim,West_,North_,Top_	
     use ModMain,       ONLY: UseRotatingBc, iTest, jTest, kTest, ProcTest, &
-         BlkTest, GLOBALBLK, ExtraBc_, Body1_
+         BlkTest, ExtraBc_, Body1_
     use ModProcMH,   ONLY: iProc
     use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_,HpP_,O2pP_,OpP_,CO2pP_,iRhoUx_I,iRhoUy_I,iRhoUz_I
     use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim,ElectronPressureRatio,FaceState_VI
-    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, iFace,jFace,kFace, iBoundary
-    
+    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, &
+         iFace, jFace, kFace, iBoundary, iBlockBc
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
@@ -1326,7 +1326,7 @@ case('solarmin')
     logical:: DoTest, DoTestMe, DoTestCell
     !-------------------------------------------------------------------------
 
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlockBc==BLKtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
