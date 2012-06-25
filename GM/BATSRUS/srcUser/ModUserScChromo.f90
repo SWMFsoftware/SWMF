@@ -716,6 +716,8 @@ contains
     use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, UnitB_
     use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, WaveFirst_, WaveLast_
 
+    use BATL_lib, ONLY: Xyz_DGB
+
     integer,intent(in)        :: i, j, k, iBlock
     real,intent(out)          :: WaveDissipation_V(WaveFirst_:WaveLast_)
     real,intent(out),optional :: DissipationLength
@@ -737,6 +739,13 @@ contains
     if(present(DissipationLength)) &
          DissipationLength = Lcp/(sqrt(FullB)*Lratio)
 
+    if(State_VGB(Rho_,i,j,k,iBlock) < 0.0)then
+       write(*,*) NameSub,' Rho=',State_VGB(Rho_,i,j,k,iBlock)
+       write(*,*) NameSub,': i,j,k,iBlock=',i,j,k,iBlock
+       write(*,*) NameSub,': x,y,z=', Xyz_DGB(:,i,j,k,iBlock)
+       call stop_mpi(NameSub//' negative density')
+    end if
+
     ! Local Dissipation factor, dimensions length/sqrt(density/B)  
     LocalDissipationFactor = &
          sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/Lkol
@@ -750,7 +759,16 @@ contains
     ! and dissipation due to counter propagating waves
     ! Note the use of Lratio > 1, which in effect makes the dissipation length of counter
     ! propagating waves smaller than the Kolmogorov length.
-    
+
+    if(WavePressure <= 0.0 &
+         .or. WaveEnergyPlus < 0.0 .or. WaveEnergyMinus < 0.0)then
+       write(*,*) NameSub,' WavePressure, WaveEnergyPlus, WaveEnergyMinus=',&
+            WavePressure, WaveEnergyPlus, WaveEnergyMinus
+       write(*,*) NameSub,': i,j,k,iBlock=',i,j,k,iBlock
+       write(*,*) NameSub,': x,y,z=', Xyz_DGB(:,i,j,k,iBlock)
+       call stop_mpi(NameSub//' negative wave energy')
+    end if
+
     WaveDissipationPlus =  LocalDissipationFactor * &
          (1. + Lratio*sqrt(WaveEnergyMinus/WavePressure)) * &
          WaveEnergyPlus**1.5
