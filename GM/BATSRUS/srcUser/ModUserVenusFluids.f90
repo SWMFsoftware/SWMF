@@ -1421,36 +1421,34 @@ case('solarmin')
   end subroutine user_set_boundary_cells
 
   !========================================================================
- subroutine user_get_log_var(VarValue, TypeVar, Radius)
-     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
-          dx_BLK,dy_BLK,dz_BLK
-     use ModMain
-     use ModVarIndexes
-     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
-     use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+  subroutine user_get_log_var(VarValue, TypeVar, Radius)
+    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModMain
+    use ModVarIndexes
+    use ModAdvance,    ONLY: State_VGB,tmp1_BLK
+    use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
 
-     real, intent(out)            :: VarValue
-     character (len=*), intent(in):: TypeVar
-     real, intent(in), optional :: Radius
+    real, intent(out)            :: VarValue
+    character (len=*), intent(in):: TypeVar
+    real, intent(in), optional :: Radius
 
-     real, external :: calc_sphere
-     real ::mass,value1,value2
-     integer:: i,j,k,iBLK
-     character (len=*), parameter :: Name='user_get_log_var'
-     logical:: oktest=.false.,oktest_me
+    real, external :: calc_sphere
+    real ::mass,value1,value2
+    integer:: i,j,k,iBLK
+    logical:: oktest, oktest_me
 
-!---------------------------------------------------------------------------
-     write(*,*)'user_get_log_var called'
-     call set_oktest('user_get_log_var',oktest,oktest_me)
-     if(oktest)write(*,*)'in user_get_log_var: TypeVar=',TypeVar
+    character(len=*), parameter :: NameSub='user_get_log_var'
+    !---------------------------------------------------------------------------
+    call set_oktest(NameSub,oktest,oktest_me)
+    if(oktest_me)write(*,*)NameSub,': TypeVar=',TypeVar
 
-     select case(TypeVar)
-        
-case('hplflx')
+    select case(TypeVar)
+
+    case('hplflx')
        mass=1.0
        !write(*,*)'hola 2'
        do iBLK=1,nBLK
-         ! write(*,*)'iBlock=',iBLK
+          ! write(*,*)'iBlock=',iBLK
           if (unusedBLK(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              !write(*,*)'i,j,k=',i,j,k
@@ -1463,15 +1461,15 @@ case('hplflx')
              tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
-      VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-      VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
 
-      case('hprflx')
+    case('hprflx')
        mass=1.0
        !write(*,*)'hola 2'
        do iBLK=1,nBLK
-         ! write(*,*)'iBlock=',iBLK
+          ! write(*,*)'iBlock=',iBLK
           if (unusedBLK(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              !write(*,*)'i,j,k=',i,j,k
@@ -1484,14 +1482,14 @@ case('hplflx')
              tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
-      VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-      VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
 
-       case('hpflx')
+    case('hpflx')
        mass=1.0
        do iBLK=1,nBLK
-         ! write(*,*)'iBlock=',iBLK
+          ! write(*,*)'iBlock=',iBLK
           if (unusedBLK(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              !write(*,*)'i,j,k=',i,j,k
@@ -1504,10 +1502,10 @@ case('hplflx')
              !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
-      VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-      VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
-      case('oplflx')
+    case('oplflx')
        mass=16.0
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
@@ -1522,7 +1520,7 @@ case('hplflx')
           end do; end do; end do
        end do
        VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-      VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
 
     case('oprflx')
@@ -1540,9 +1538,9 @@ case('hplflx')
           end do; end do; end do
        end do
        VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-      VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
-      case('opflx')
+    case('opflx')
        mass=16.0
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
@@ -1557,12 +1555,12 @@ case('hplflx')
           end do; end do; end do
        end do
        VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-      VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
 
 
 
-      case('o2prflx')
+    case('o2prflx')
        mass=32.0
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
@@ -1580,7 +1578,7 @@ case('hplflx')
        VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
 
-       case('o2plflx')
+    case('o2plflx')
        mass=32.0
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
@@ -1614,7 +1612,7 @@ case('hplflx')
        VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
        VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
-        case('co2plflx')
+    case('co2plflx')
        mass=44.0
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
@@ -1628,11 +1626,11 @@ case('hplflx')
              tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
-      VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-   VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
 
-case('co2prflx')
+    case('co2prflx')
        mass=44.0
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
@@ -1646,11 +1644,11 @@ case('co2prflx')
              !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
-      VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-   VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
 
-case('co2pflx')
+    case('co2pflx')
        mass=44.0
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
@@ -1660,20 +1658,20 @@ case('co2pflx')
                   +State_VGB(CO2pRhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
                   +State_VGB(CO2pRhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)
-            !if(x_BLK(i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-            ! tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
+             !if(x_BLK(i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             ! tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
-      VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-   VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
 
-   case default
-       call stop_mpi('wrong logvarname')
+    case default
+       call stop_mpi(NameSub//': wrong logvarname='//TypeVar)
     end select
 
-   
- end subroutine user_get_log_var
+
+  end subroutine user_get_log_var
 
  !============================================================================
 
