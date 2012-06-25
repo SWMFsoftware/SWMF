@@ -155,8 +155,8 @@ contains
        call timing_start('amr_ics')
        do iLevel=1, nRefineLevelIC
           call timing_start('amr_ics_set')
-          do globalBLK = 1, nBlockMax
-             call set_ICs
+          do iBlock = 1, nBlockMax
+             call set_ICs(iBlock)
           end do
           call timing_stop('amr_ics_set')
 
@@ -188,9 +188,9 @@ contains
     ! Read initial data from restart files as necessary.
     if(restart) call read_restart_files
 
-    do globalBLK = 1, nBlockMax
+    do iBlock = 1, nBlockMax
        ! Initialize solution blocks
-       call set_ICs
+       call set_ICs(iBlock)
     end do
 
     call user_action('initial condition done')

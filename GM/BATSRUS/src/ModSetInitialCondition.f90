@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine set_ics
+subroutine set_ics(iBlock)
 
   use ModMain
   use ModAdvance
@@ -15,14 +15,15 @@ subroutine set_ics
 
   implicit none
 
+  integer, intent(in) :: iBlock
+
   real   :: SinSlope, CosSlope, Rot_II(2,2)
   real   :: ShockLeft_V(nVar), ShockRight_V(nVar)
-  integer:: i, j, k, iBlock, iVar
+  integer:: i, j, k, iVar
 
   character(len=*), parameter:: NameSub = 'set_ics'
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
-  iBlock = GlobalBlk
 
   if(iProc == ProcTest .and. iBlock == BlkTest)then
      call set_oktest(NameSub, DoTest, DoTestMe)
