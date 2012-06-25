@@ -11,7 +11,7 @@ subroutine GM_put_from_ih(nPartial,&
      nVar)
   !USES:
   use CON_router, ONLY: IndexPtrType, WeightPtrType
-  use ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,&
+  use ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUz_,Bx_,Bz_,P_,&
        B0_DGB
   use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitRhoU_, UnitP_, UnitB_
 
@@ -35,7 +35,7 @@ subroutine GM_put_from_ih(nPartial,&
   character (len=*), parameter :: NameSub='GM_put_from_ih.f90'
 
   real,dimension(nVar)::State_V
-  integer::iPut, i, j, k, iBlock
+  integer:: i, j, k, iBlock
 
   !The meaning of state intdex in buffer and in model can be 
   !different. Below are the conventions for buffer:

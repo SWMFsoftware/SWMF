@@ -198,7 +198,6 @@ subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
   !USES:
   use ModIonoPotential
   use ModMain,           ONLY: TypeCoordSystem, MaxDim
-  use CON_axes,          ONLY: transform_matrix
   use ModCoordTransform, ONLY: xyz_to_dir, cross_product
   use CON_planet_field,  ONLY: map_planet_field
 
@@ -241,7 +240,7 @@ subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
   integer :: iTheta, iPhi, iHemisphere
 
   character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity'
-  logical :: DoTest = .false., DoTestMe = .false.
+  logical :: DoTestMe = .false.
   !-------------------------------------------------------------------------
 
   ! call set_oktest(NameSub, DoTest, DoTestMe)

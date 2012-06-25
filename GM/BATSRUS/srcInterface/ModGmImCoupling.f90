@@ -8,13 +8,12 @@ module ModGmImCoupling
   use CON_coupler, ONLY: Grid_C, IM_, ncells_decomposition_d
 
   use ModProcMH
-  use ModMain, ONLY: nI,nJ,nK,n_step,nBlockMax,unusedBLK, &
-       DoMultiFluidIMCoupling,DoAnisoPressureIMCoupling
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
-  use ModRaytrace, ONLY : ray,rayface
+  use ModMain, ONLY: n_step, &
+       DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   use ModPhysics, ONLY: No2Si_V, Si2No_V, &
        UnitP_, UnitRho_, UnitTemperature_, UnitB_, &
        Bdp, DipoleStrengthSi, rCurrents, rBody
+
   implicit none
 
   character(len=*), parameter :: NameMod='ModGmImCoupling'

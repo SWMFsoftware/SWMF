@@ -42,7 +42,7 @@ contains
     use ModIO,ONLY:write_prefix,iUnitOut
     use ModProcMH,ONLY:iProc
     real,intent(in)::tStart,tFinal
-    integer::iError,iPoint,iCompLine,lComp
+    integer::iCompLine,lComp
     !------------------------------------
     if(DoSkip)return
     call timing_start('lagrangian_grid')

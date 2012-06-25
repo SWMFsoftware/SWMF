@@ -19,7 +19,6 @@ contains
   !============================================================================
 
   subroutine init_mod_field_aligned_current(iSize,jSize)
-    use ModProcMH,         ONLY: iProc, iComm
     integer, intent(in) :: iSize, jSize
 
     if(allocated(FieldAlignedCurrent_II)) RETURN
@@ -53,9 +52,9 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
        init_mod_field_aligned_current!, calc_field_aligned_current
   use ModRaytrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
        InvB_, RhoInvB_, pInvB_, xEnd_, yEnd_, zEnd_, CLOSEDRAY, GmSm_DD
-  use ModNumConst, ONLY: cRadToDeg, cDegToRad
-  use ModProcMH,         ONLY: iProc, iComm
-  use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_,rCurrents, UnitJ_
+  use ModNumConst, ONLY: cRadToDeg
+  use ModProcMH,         ONLY: iProc
+  use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
   use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
   implicit none
 
@@ -64,10 +63,10 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
   integer, intent(in) :: iSize, jSize, nVar
   real, intent(out), dimension(iSize, jSize, nVar) :: Buffer_IIV
   integer :: i, j
-  real :: Radius,iError, Phi, Theta, LatBoundary
+  real :: Radius, Phi, Theta, LatBoundary
   real, allocatable, dimension(:), save :: IE_lat, IE_lon
   real, allocatable, dimension(:,:,:)   :: bSm_DII 
-  real :: XyzIono_D(3), RtpIono_D(3), Xyz_D(3), Lat,Lon, dLat,dLon
+  real :: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest, DoTestMe)

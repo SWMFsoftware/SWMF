@@ -25,7 +25,6 @@ contains
     use CON_coupler, ONLY: Grid_C, IE_
 
     integer, intent(in) :: iSize, jSize
-    real :: rPlanet, IonoHeight
     character(len=*), parameter :: NameSub='init_mod_ie_grid'
     !-------------------------------------------------------------------------
 

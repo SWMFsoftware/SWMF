@@ -6,7 +6,6 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
   use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, rCurrents
   use ModPwGrid
-  use ModPhysics, ONLY: rBody
   use ModNumConst, ONLY: cTwoPi,cHalfPi
   use ModTriangulate,ONLY:calc_triangulation
   use CON_axes, ONLY: transform_matrix
@@ -25,8 +24,8 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   logical, save :: DoInitialize = .true.
 
   integer :: i, iLine, iHemisphere
-  real    :: SinThetaOuter, GmPw_DD(3,3), Theta, Phi, XyzPw_D(3), Factor, &
-       SinThetaOuter1,SinThetaOuter2,tmp1_array(nFieldLine),tmp2_array(nFieldLine)
+  real    :: GmPw_DD(3,3), Theta, Phi, XyzPw_D(3), &
+       SinThetaOuter1,SinThetaOuter2,tmp1_array(nFieldLine)
   integer :: Tmp_array(nFieldLine)
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------

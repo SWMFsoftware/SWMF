@@ -8,7 +8,7 @@ module ModDensityAndGradient
   use CON_global_message_pass
   use CON_integrator
   use ModMain, ONLY: MaxDim
-  use ModProcMH, ONLY: iProc,iComm
+  use ModProcMH, ONLY:iComm
   use ModMpi
   !DESCRIPTION:
   !This file is an instantiation of the general advance_vector routine
@@ -23,7 +23,7 @@ module ModDensityAndGradient
   implicit none
   private !Except
   logical,save::DoInit=.true.
-  character(LEN=10),save::NameVector,NameMask
+  character(LEN=10),save::NameVector
   type(RouterType),save::Router
   type(GridDescriptorType),save::LineGrid,MhGrid
   type(DomainDecompositionType),save::LineDD
@@ -86,7 +86,7 @@ contains
   subroutine get_density_local(&
        nPartial,iGetStart,Get,W,State_V,nVar)
     !USES:
-    use ModAdvance,ONLY: State_VGB,StateOld_VCB, &
+    use ModAdvance,ONLY: State_VGB, &
          rho_
     use ModGeometry,ONLY:Dx_BLK,Dy_BLK,Dz_BLK
     use ModPhysics, ONLY : No2Si_V, UnitRho_

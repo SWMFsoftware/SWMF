@@ -3,15 +3,11 @@
 module ModGmRbCoupling
 
   use ModMpi
-  use ModNumConst, ONLY: cRadToDeg, cDegToRad
   use CON_coupler, ONLY: Grid_C, RB_, ncells_decomposition_d
+  use ModProcMH, ONLY: iProc
+  use ModMain, ONLY: n_step
+  use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitRho_, UnitTemperature_
 
-  use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,n_step,nBlockMax,unusedBLK
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
-  use ModRaytrace, ONLY : ray,rayface
-  use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitRho_, UnitTemperature_, &
-       UnitB_, Bdp, rCurrents, rBody
   implicit none
 
   character (len=*), parameter :: NameMod='ModGmRbCoupling'
@@ -54,7 +50,7 @@ contains
 
     integer, intent(in) :: iSizeIn, jSizeIn
     character(len=*), parameter:: NameSub=NameMod//'::allocate_gm_rb'
-
+    !--------------------------------------------------------------------------
     iSize = iSizeIn
     jSize = jSizeIn
 
@@ -118,8 +114,9 @@ contains
 
   !============================================================================
   subroutine write_integrated_data_tec
+
     use ModIoUnit, ONLY: UNITTMP_
-    CHARACTER (LEN=80) :: filename
+    character(LEN=80) :: filename
     integer :: j2, nCall=0
     real :: tmpT, tmpV1,tmpV2, lonShift
     !-------------------------------------------------------------------------
@@ -162,7 +159,7 @@ contains
 
   !============================================================================
   subroutine write_integrated_data_idl
-    use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_,UnitRho_
+    use ModPhysics, ONLY: No2Si_V, UnitB_
     use ModIoUnit, ONLY: UNITTMP_
     use ModMain,   ONLY: time_simulation
     CHARACTER (LEN=100) :: filename

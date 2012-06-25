@@ -259,7 +259,6 @@ subroutine GM_finalize(TimeSimulation)
 
   character(len=*), parameter :: NameSub='GM_finalize'
 
-  integer :: iError
   !----------------------------------------------------------------------------
   ! We are not advancing in time any longer
   time_loop = .false.

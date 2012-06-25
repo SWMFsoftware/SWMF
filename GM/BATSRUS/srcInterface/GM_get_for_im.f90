@@ -67,7 +67,7 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
        Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, Ppar_, &
        iRho_I, iP_I, MassFluid_I, IonFirst_, IonLast_, nVar
   use ModPhysics, ONLY: No2Si_V, &
-       UnitN_, UnitU_, UnitB_, UnitP_, UnitRho_, rBody
+       UnitN_, UnitU_, UnitB_, UnitP_, rBody
   use ModSolarwind, ONLY: get_solar_wind_point
   use ModConst, ONLY: cProtonMass
 
@@ -88,9 +88,7 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 
   integer :: nVarExtract, nPoint, iPoint, iStartPoint
   real, allocatable :: Buffer_VI(:,:)
-  real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p
 
-  logical :: DoTestTec, DoTestIdl
   logical :: DoTest, DoTestMe
 
   integer :: iLat,iLon,iLine,iLocBmin
@@ -242,7 +240,7 @@ subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
   ! Subroutine to update and collect satellite locations for IM tracing
 
   !Modules
-  use ModProcMH,        ONLY: iProc, iComm
+  use ModProcMH,        ONLY: iProc
   use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, gm_trace_sat
   use ModMain,          ONLY: UseB0, nBlock
   use ModPhysics,       ONLY: No2Si_V, UnitB_
@@ -260,11 +258,11 @@ subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
   !Internal variables
   character (len=*), parameter :: NameSub='GM_get_sat_for_im'
 
-  real :: sat_RayVars(5), sat_RayVarsSum(5),SatRay_D(3)
+  real ::SatRay_D(3)
 
   real :: StateSat_V(0:nVar+3), B0Sat_D(3)  
   real :: Bx,By,Bz,B2
-  integer :: iSat, iError
+  integer :: iSat
   !--------------------------------------------------------------------------
   ! Store satellite names in Buffer_I
   if (iProc == 0) then
@@ -316,9 +314,8 @@ subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
   ! and the number of variables to pass to IM
 
   use ModProcMH, ONLY: iProc
-  use ModPhysics, ONLY: rBody
   use ModMain, ONLY: Time_Simulation, TypeCoordSystem
-  use ModVarIndexes, ONLY: NamePrimitiveVar, Rho_, Ux_, Uz_, Bx_, Bz_, p_
+  use ModVarIndexes, ONLY: NamePrimitiveVar, Bx_, Bz_
   use CON_line_extract, ONLY: line_get, line_clean
   use CON_coupler, ONLY: Grid_C, IM_
   use CON_axes,         ONLY: transform_matrix

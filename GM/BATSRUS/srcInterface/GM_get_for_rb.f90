@@ -52,7 +52,6 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   use ModMain, ONLY: Time_Simulation
 
   use ModGmRbCoupling, ONLY: &
-       RB_lat, RB_lon, &
        write_integrated_data_tec, write_integrated_data_idl, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p, NoValue
 
@@ -62,7 +61,7 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
                            MassFluid_I, IonFirst_, nVar
 
-  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_,UnitRho_
+  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_
   use ModSolarwind, ONLY: get_solar_wind_point
 
   use CON_line_extract, ONLY: line_get, line_clean
@@ -80,7 +79,6 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 
   integer :: nVarExtract, nPoint, iPoint
   real, allocatable :: Buffer_VI(:,:)
-  real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p
 
   logical :: DoTestTec, DoTestIdl
   logical :: DoTest, DoTestMe
@@ -191,7 +189,6 @@ subroutine GM_satinit_for_rb(nSats)
   !Module variables to use:
   use ModMain,   ONLY: DoRbSatTrace
   use ModSatelliteFile, ONLY: nSatellite
-  use ModProcMH, ONLY: iProc
 
   implicit none
 
@@ -215,9 +212,9 @@ subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
   ! Subroutine to update and collect satellite locations for RB tracing
   
   !Modules
-  use ModProcMH,        ONLY: iProc, iComm
+  use ModProcMH,        ONLY: iProc
   use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, &
-       get_satellite_ray, set_satellite_flags, gm_trace_sat
+       gm_trace_sat
   use ModMain,          ONLY: UseB0, nBlock
   use ModPhysics,       ONLY: No2Si_V, UnitB_
   use ModVarIndexes,    ONLY: nVar, Bx_, By_, Bz_
@@ -234,11 +231,11 @@ subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
   !Internal variables
   character (len=*), parameter :: NameSub='GM_get_sat_for_rb'
 
-  real :: sat_RayVars(5), sat_RayVarsSum(5),SatRay_D(3)
+  real ::SatRay_D(3)
 
   real :: StateSat_V(0:nVar+3), B0Sat_D(3)  
   real :: Bx,By,Bz,B2
-  integer :: iSat, iError
+  integer :: iSat
   !--------------------------------------------------------------------------
   ! Store satellite names in Buffer_I
   if (iProc == 0) then

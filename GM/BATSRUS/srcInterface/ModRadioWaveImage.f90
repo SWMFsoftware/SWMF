@@ -95,8 +95,6 @@ contains !=========================================================
     real, dimension(nYPixel,nXPixel) :: ObservToIntSphere2_II  
     ! Squared distance from the radiotelescope to the integration sphere
     real, dimension(3,nYPixel,nXPixel) :: Position_DII        ! 
-    real, dimension(nYPixel,nXPixel) :: XPosition_II, YPosition_II
-    real, dimension(nYPixel,nXPixel) :: ZPosition_II, SolarDistSqr_II
     real, dimension(nYPixel*nXPixel) :: SolarDistSqr_I
     real :: XPixelDel, YPixelDel    
     real :: SlopeUnscaled_D(3)
@@ -106,16 +104,13 @@ contains !=========================================================
     real, dimension(nXPixel*nYPixel) :: Intensity_I, RayPath_I,DeltaS_I
     logical, dimension(nXPixel*nYPixel) :: RayFlag_I         
     !.true. if a ray is OK; .false. otherwise
-    logical, save :: NewEntry = .true.
     ! Must be set to .true. before a call to ray_path() with new value of nRay
-    real :: OneAU = 215.0, Tolerance = 0.01, DeltaS = 1.0
-    real :: MaxRayPath = 60.
+    real :: Tolerance = 0.01, DeltaS = 1.0
     real :: DensityCr 
-    real :: XPixel, YPixel, SolarDistMin, MinRayPath
-    real ::  PercentRayLeft, rIntegrationSqr
-    integer :: nRay, nIteration, i, j, iRay, nRayInsideIntSphere
+    real :: MinRayPath
+    real :: rIntegrationSqr
+    integer :: nRay, nIteration, i, j, nRayInsideIntSphere
     integer, dimension(nXPixel*nYPixel) :: RayInsideIntSphere_I
-    logical :: deb = .false.
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
     logical, save :: DoAllocate = .true.
     !------------------------------------
