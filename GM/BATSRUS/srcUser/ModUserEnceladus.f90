@@ -55,13 +55,13 @@ contains
 
   !===========================================================================
 
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
     use ModVarIndexes
     use BATL_size,  ONLY: nI, nJ, nK, nIJK
     use ModAdvance, ONLY: State_VGB, Source_VC, Energy_
     use ModProcMH,   ONLY: iProc
-    use ModMain, ONLY: GlobalBlk, ProcTest, BlkTest, iTest, jTest, kTest 
+    use ModMain, ONLY: ProcTest, BlkTest, iTest, jTest, kTest 
     use ModPhysics, ONLY: Rbody, inv_gm1, gm1, &
          No2Si_V, Si2No_V, No2Io_V, Io2No_V,UnitN_, UnitT_,UnitTemperature_,&
          UnitX_, UnitRhoU_, UnitU_
@@ -70,9 +70,11 @@ contains
     use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data, &
          MaxBlockData
 
+    integer, intent(in) :: iBlock
+
     character (len=*), parameter :: Name='user_calc_sources'
 
-    integer::iBlock,i,j,k,h,iBlockLast=-1
+    integer::i,j,k,h,iBlockLast=-1
     real:: R0, R0_Si
 
     ! to convert from eV to Kelvins 1eV=1.1604e+4 K
@@ -98,7 +100,6 @@ contains
     real,parameter::nu0=5.4745e-10!this is in cm^3/s
 
     !------------------------------------------------------------------
-    iBlock = globalBLK
     !write(*,*)'iBlock',iBlock
 
 !!$
@@ -299,7 +300,7 @@ contains
 
 
     !Now I am making a test to see if the source terms
-    !write(*,*) 'I just went through the loop in user_source for the block number',GLOBALBLK
+    !write(*,*) 'I just went through the loop in user_source for the block number',iBlock
     !Do I need to do stop_user?
     ! call stop_user(Name)
 
@@ -307,16 +308,17 @@ contains
 
   !==========================================================================
   subroutine enceladus_input(iBlock)
-    use ModMain, ONLY: GLOBALBLK  
+
     use ModInterpolate, ONLY: trilinear
     use ModPhysics
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, R_BLK
-    !-------------------------------------------------------------------------
+
+    integer, intent(in) :: iBlock
+
     integer,parameter::imax=49
     integer,parameter::jmax=49
     integer,parameter::kmax=49
     character(2000)::line
-    integer::iBlock
     real,dimension(0:imax,0:jmax,0:kmax)::density
     !real,dimension(0:26)::Impact,Te
     real::Xyz_D(3)
@@ -324,8 +326,8 @@ contains
     real,parameter::dx_dim=120.0e3!the step in m
 
     integer::m,n,p,i,j,k,h
-    !===================================================================
-    iBlock=globalBLK
+    !-------------------------------------------------------------------------
+
     open(130, file='DensityH2O.dat ', status='old')
     do m=0,1
        read(130,'(a)')line

@@ -123,7 +123,7 @@ subroutine set_ics
         !/
         if(UseConstrainB)call constrain_ics(iBlock) !^CFG IF CONSTRAINB
 
-        if(UseUserICs) call user_set_ics
+        if(UseUserICs) call user_set_ics(iBlock)
 
      end if ! not restart
 

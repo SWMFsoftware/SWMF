@@ -179,9 +179,9 @@ contains
     end do
   end subroutine user_read_inputs
   !============================================================================
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
-    use ModMain,     ONLY: globalBLK, unusedBLK, TypeCoordSystem, GravitySi
+    use ModMain,     ONLY: unusedBLK, TypeCoordSystem, GravitySi
     use ModGeometry, ONLY: x1, x2, y1, y2, x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, &
          Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
@@ -194,11 +194,13 @@ contains
     use ModSize,     ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
 
+    integer, intent(in) :: iBlock
+
     real,dimension(nVar):: State_V,KxTemp_V,KyTemp_V
     real                :: SinSlope, CosSlope, Input2SiUnitX, OmegaSun
     real                :: rFromSphereCenter, rSphereCenterInit
     real                :: xCell, yCell, zCell
-    integer             :: i, j, k, iBlock
+    integer             :: i, j, k
 
     real :: RhoLeft, RhoRight, pLeft
 
@@ -207,7 +209,6 @@ contains
 
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-    iBlock = globalBLK
 
     if(UseUserInputUnitX) then
        select case(TypeInputUnitX)

@@ -82,50 +82,53 @@ contains
   !========================================================================
   !  SUBROUTINE user_set_ICs
   !========================================================================
-  subroutine user_set_ICs
+  subroutine user_set_ICs(iBlock)
 
-    use ModMain, ONLY: globalBLK,BlkTest,iTest,jTest,kTest
+    use ModMain, ONLY: BlkTest,iTest,jTest,kTest
     use ModPhysics
     use ModNumConst
     use ModGeometry,ONLY: R_BLK, x_BLK, y_BLK, z_BLK
+
+    integer, intent(in) :: iBlock
+
     integer :: i,j,k
     real :: theta
     
     ! neutral density in SI units
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! angle of cell position relative to ram direction 
-       theta=acos((-SW_Ux*x_BLK(i,j,k,globalBLK)-SW_Uy*y_BLK(i,j,k,globalBLK)&
-            -SW_Uz*z_BLK(i,j,k,globalBLK))/R_BLK(i,j,k,globalBLK)/&
+       theta=acos((-SW_Ux*x_BLK(i,j,k,iBlock)-SW_Uy*y_BLK(i,j,k,iBlock)&
+            -SW_Uz*z_BLK(i,j,k,iBlock))/R_BLK(i,j,k,iBlock)/&
             (SW_Ux**2+SW_Uy**2+SW_Uz**2)**0.5)
 
        if(distr==0) then
           ! uniform neutral density distribution
           if(theta<=cPi/2) then
              ! ram side
-             Neutral_BLK(i,j,k,globalBLK) = 2*dn*n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
+             Neutral_BLK(i,j,k,iBlock) = 2*dn*n0*exp(-(R_BLK(i,j,k,iBlock) - Rbody)&
                   /(H/rPlanetSi))
           else
              ! wake side
-             Neutral_BLK(i,j,k,globalBLK) = 2*(1-dn)*n0*exp(-(R_BLK(i,j,k,globalBLK) - Rbody)&
+             Neutral_BLK(i,j,k,iBlock) = 2*(1-dn)*n0*exp(-(R_BLK(i,j,k,iBlock) - Rbody)&
                   /(H/rPlanetSi))
           end if
        else if(distr==1) then
           ! cosine neutral density distribution
           if(theta<=cPi/2) then
              ! ram side (100%), normalization factor 1/4
-             Neutral_BLK(i,j,k,globalBLK) = 4*cos(theta)*n0*exp(-(R_BLK(i,j,k,globalBLK)&
+             Neutral_BLK(i,j,k,iBlock) = 4*cos(theta)*n0*exp(-(R_BLK(i,j,k,iBlock)&
                   - Rbody)/(H/rPlanetSi))
           else
              ! wake side is set to 0
-             Neutral_BLK(i,j,k,globalBLK) = 0
+             Neutral_BLK(i,j,k,iBlock) = 0
           end if
        end if
 
-       if(globalBLK==BlkTest.and.k==kTest.and.j==jTest.and.i==iTest) then
-          write(*,*)'X= ',x_BLK(i,j,k,globalBLK),'Y= ',y_BLK(i,j,k,globalBLK),&
-               'Z= ',z_BLK(i,j,k,globalBLK)
+       if(iBlock==BlkTest.and.k==kTest.and.j==jTest.and.i==iTest) then
+          write(*,*)'X= ',x_BLK(i,j,k,iBlock),'Y= ',y_BLK(i,j,k,iBlock),&
+               'Z= ',z_BLK(i,j,k,iBlock)
           write(*,*)'SW_Ux= ',SW_Ux,'SW_Uy= ',SW_Uy,'SW_Uz= ',SW_Uz
-          write(*,*)'theta= ',theta,'n= ',Neutral_BLK(i,j,k,globalBLK)
+          write(*,*)'theta= ',theta,'n= ',Neutral_BLK(i,j,k,iBlock)
        end if
     end do;  end do;  end do
 
@@ -140,36 +143,38 @@ contains
   !========================================================================
   !  SUBROUTINE user_calc_sources
   !========================================================================
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+    use ModMain,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
     use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModPhysics
     use ModProcMH
 
+    integer, intent(in) :: iBlock
+
     real, dimension(1:nI,1:nJ,1:nK) :: ux, uy, uz, uxyz, ne !!, Te
     real, dimension(1:nI,1:nJ,1:nK) :: Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,Sp,SE 
 
     integer :: i,j,k
 
-    ux=State_VGB(rhoUx_,1:nI,1:nJ,1:nK,globalBLK) / &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)
-    uy=State_VGB(rhoUy_,1:nI,1:nJ,1:nK,globalBLK) / &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)
-    uz=State_VGB(rhoUz_,1:nI,1:nJ,1:nK,globalBLK) / &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)
+    ux=State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock) / &
+          State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+    uy=State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock) / &
+          State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+    uz=State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock) / &
+          State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
 
     uxyz = ux*ux+uy*uy+uz*uz
 
     ! ne is the electron density in SI units
-    ne = State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)*No2SI_V(UnitN_)/mi_mean
+    ne = State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*No2SI_V(UnitN_)/mi_mean
 
     ! Electron temperature calculated from pressure assuming Te=Ti to calculate a more 
     ! appropriate ion-electron recombination rate. p=nkT with n=ne+ni and ne=ni (quasi-neutrality)
-    !Te=State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK) * NO2SI_V(UnitP_) * mi_mean * cProtonMass / &
-    !     ( 2.0 * NO2SI_V(UnitRho_) * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK) )
+    !Te=State_VGB(p_,1:nI,1:nJ,1:nK,iBlock) * NO2SI_V(UnitP_) * mi_mean * cProtonMass / &
+    !     ( 2.0 * NO2SI_V(UnitRho_) * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) )
 
     ! Set the source arrays for this block to zero
     Srho   = 0.0
@@ -183,31 +188,31 @@ contains
     SE     = 0.0
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       Srho(i,j,k) = Neutral_BLK(i,j,k,globalBLK)*nNorm*mi_mean*v*vNorm &   !! newly ionized neutrals
-            - alpha*alphaNorm*State_VGB(rho_,i,j,k,globalBLK)*ne(i,j,k)*Si2No_V(UnitN_) !! loss due to recombination
+       Srho(i,j,k) = Neutral_BLK(i,j,k,iBlock)*nNorm*mi_mean*v*vNorm &   !! newly ionized neutrals
+            - alpha*alphaNorm*State_VGB(rho_,i,j,k,iBlock)*ne(i,j,k)*Si2No_V(UnitN_) !! loss due to recombination
        
-       SrhoUx(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK)*( &
-            Neutral_BLK(i,j,k,globalBLK)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
+       SrhoUx(i,j,k) = - State_VGB(rho_,i,j,k,iBlock)*( &
+            Neutral_BLK(i,j,k,iBlock)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
             + alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*ux(i,j,k)          !! loss due to recombination
 
-       SrhoUy(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK)*( &
-            Neutral_BLK(i,j,k,globalBLK)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
+       SrhoUy(i,j,k) = - State_VGB(rho_,i,j,k,iBlock)*( &
+            Neutral_BLK(i,j,k,iBlock)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
             + alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*uy(i,j,k)          !! loss due to recombination
 
-       SrhoUz(i,j,k) = - State_VGB(rho_,i,j,k,globalBLK)*( &
-            Neutral_BLK(i,j,k,globalBLK)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
+       SrhoUz(i,j,k) = - State_VGB(rho_,i,j,k,iBlock)*( &
+            Neutral_BLK(i,j,k,iBlock)*nNorm*kin*kinNorm  &               !! loss due to charge exchange
             + alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*uz(i,j,k)          !! loss due to recombination
 
-       SP(i,j,k) = 1/3*(v*vNorm*mi_mean + kin*kinNorm*State_VGB(rho_,i,j,k,globalBLK))* &
-            Neutral_BLK(i,j,k,globalBLK)*nNorm*uxyz(i,j,k)  &               !! newly generated ions
-            - State_VGB(p_,i,j,k,globalBLK)*kin *kinNorm* &
-            Neutral_BLK(i,j,k,globalBLK)*nNorm &                            !! loss due to charge exchange
-            - State_VGB(p_,i,j,k,globalBLK)*alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_) !! loss due to recombination
+       SP(i,j,k) = 1/3*(v*vNorm*mi_mean + kin*kinNorm*State_VGB(rho_,i,j,k,iBlock))* &
+            Neutral_BLK(i,j,k,iBlock)*nNorm*uxyz(i,j,k)  &               !! newly generated ions
+            - State_VGB(p_,i,j,k,iBlock)*kin *kinNorm* &
+            Neutral_BLK(i,j,k,iBlock)*nNorm &                            !! loss due to charge exchange
+            - State_VGB(p_,i,j,k,iBlock)*alpha*alphaNorm*ne(i,j,k)*Si2No_V(UnitN_) !! loss due to recombination
 
-       SE(i,j,k) = - 0.5*State_VGB(rho_,i,j,k,globalBLK)*( &
-            kin*kinNorm*Neutral_BLK(i,j,k,globalBLK)*nNorm &                !! loss due to charge exchange
+       SE(i,j,k) = - 0.5*State_VGB(rho_,i,j,k,iBlock)*( &
+            kin*kinNorm*Neutral_BLK(i,j,k,iBlock)*nNorm &                !! loss due to charge exchange
             + alpha *alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*uxyz(i,j,k) &     !! loss due to recombination
-            - inv_gm1*(kin*kinNorm - alpha *alphaNorm)*State_VGB(p_,i,j,k,globalBLK)
+            - inv_gm1*(kin*kinNorm - alpha *alphaNorm)*State_VGB(p_,i,j,k,iBlock)
     end do;  end do;  end do
 
     Source_VC(rho_   ,:,:,:) = Srho   + Source_VC(rho_   ,:,:,:)

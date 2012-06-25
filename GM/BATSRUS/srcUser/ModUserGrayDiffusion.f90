@@ -158,25 +158,25 @@ contains
 
   !==========================================================================
 
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_Blk, y_Blk
-    use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, x_, y_
+    use ModMain,       ONLY: nI, nJ, nK, x_, y_
     use ModPhysics,    ONLY: ShockSlope, No2Si_V, Si2No_V, &
          UnitTemperature_, UnitEnergyDens_, inv_gm1, cRadiationNo
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Erad_, &
          ExtraEint_, p_
 
-    integer :: iBlock, i, j, k, iCell
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k, iCell
     real :: x, Weight1, Weight2
     real :: Rho, Ux, Tgas, Trad, p, Erad, RhoU_D(3)
     real :: SinSlope, CosSlope, Rot_II(2,2)
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
-
-    iBlock = GlobalBlk
 
     ! Calculate sin and cos from the tangent = ShockSlope
     SinSlope = ShockSlope/sqrt(1.0+ShockSlope**2)

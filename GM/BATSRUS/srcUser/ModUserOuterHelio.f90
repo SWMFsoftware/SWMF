@@ -502,15 +502,14 @@ contains
 
   !=====================================================================
 
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
-    use ModMain,  ONLY: globalBLK    
     use ModVarIndexes    
     use ModAdvance,  ONLY: State_VGB    
     use ModPhysics,  ONLY: rBody
     use ModCoordTransform, ONLY: rot_xyz_sph
 
-    integer :: iBlock    
+    integer, intent(in) :: iBlock
 
     integer :: i,j,k
 
@@ -527,7 +526,6 @@ contains
     character(len=*), parameter:: NameSub = 'user_set_ics'
     logical :: DoTest, DoTestMe, DoTestCell
     !--------------------------------------------------------------------------
-    iBlock = globalBLK
 
     if(iProc == ProcTest .and. iBlock == BlkTest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
@@ -921,7 +919,7 @@ contains
 
   !====================================================================
 
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
     !\
     ! Calculates the charge exchange cross sections for the neutrals
     ! This subroutine calculate the charge exchange between the ionized 
@@ -969,6 +967,8 @@ contains
     use ModPhysics
     use ModNumConst
 
+    integer, intent(in) :: iBlock
+
     character (len=*), parameter :: Name='user_calc_sources'
 
     real :: cth
@@ -984,7 +984,7 @@ contains
 
     logical:: UseSourceNe2P = .true., UseEnergySource = .true.
 
-    integer :: i, j, k, iBlock
+    integer :: i, j, k
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'user_calc_sources'
@@ -992,8 +992,6 @@ contains
     ! Do not provide explicit source term when point-implicit scheme is used
     ! IsPointImplSource is true only when called from ModPointImplicit
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
-
-    iBlock = GlobalBlk
 
     if(iBlock == BLKtest .and. iProc == PROCtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)

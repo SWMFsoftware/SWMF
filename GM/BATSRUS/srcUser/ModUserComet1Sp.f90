@@ -186,10 +186,10 @@ contains
 
 
   !========================================================================
-  subroutine user_set_ICs
+  subroutine user_set_ICs(iBlock)
   !========================================================================
 
-    use ModMain, ONLY: nBlock, UnusedBlk, ProcTest, body1_, globalBLK
+    use ModMain, ONLY: nBlock, UnusedBlk, ProcTest, body1_
     use ModProcMH, ONLY: iProc
     use ModPhysics
     use ModNumConst
@@ -197,13 +197,13 @@ contains
     use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModIO,ONLY:restart
 
-    integer :: iBlock
+    integer, intent(in) :: iBlock
     logical :: oktest, oktest_me
 
-  real :: Theta, Phi, xR, xTheta,xPhi, unr_o, unr_i, unr0
-  integer, parameter :: jTh_axis=4
-  integer :: i,j,k
-  integer:: iR, jTheta, kPhi, iRp1,jThetap1,kPhip1, jTh_axr, &
+    real :: Theta, Phi, xR, xTheta,xPhi, unr_o, unr_i, unr0
+    integer, parameter :: jTh_axis=4
+    integer :: i,j,k
+    integer:: iR, jTheta, kPhi, iRp1,jThetap1,kPhip1, jTh_axr, &
 	kPhi_conj, kPhip1_conj
 
 
@@ -253,21 +253,21 @@ contains
 
   do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
 
-     if( R_BLK(i,j,k,globalBLK) < 7.0E8/NO2SI_V(UnitX_) .and.  &
-		R_BLK(i,j,k,globalBLK) > 2000.0/NO2SI_V(UnitX_) )then     !interpolate
+     if( R_BLK(i,j,k,iBlock) < 7.0E8/NO2SI_V(UnitX_) .and.  &
+		R_BLK(i,j,k,iBlock) > 2000.0/NO2SI_V(UnitX_) )then     !interpolate
 
-        iR = int( (NR_neutral-1)/6.*log10(R_BLK(i,j,k,globalBLK)*NO2SI_V(UnitX_)/1E3) ) + 1
+        iR = int( (NR_neutral-1)/6.*log10(R_BLK(i,j,k,iBlock)*NO2SI_V(UnitX_)/1E3) ) + 1
         iR = max(iR,1)
         iR = min(iR, NR_neutral-1)
 	iRp1 = iR+1
-        Theta = acos( x_BLK(i,j,k,globalBLK)/R_BLK(i,j,k,globalBLK) )/cPi
+        Theta = acos( x_BLK(i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
         jTheta = int( Theta*(NTheta_neutral-1) ) + 1
 	jThetap1 = jTheta+1
-        Phi = acos( y_BLK(i,j,k,globalBLK)/sqrt( &
-		y_BLK(i,j,k,globalBLK)*y_BLK(i,j,k,globalBLK)+ &
-		z_BLK(i,j,k,globalBLK)*z_BLK(i,j,k,globalBLK) )+cTiny8/1E3 )
-	Phi = Phi*sign( cOne,z_BLK(i,j,k,globalBLK) ) + &
-		cPi*( cOne-sign(cOne,z_BLK(i,j,k,globalBLK)) )
+        Phi = acos( y_BLK(i,j,k,iBlock)/sqrt( &
+		y_BLK(i,j,k,iBlock)*y_BLK(i,j,k,iBlock)+ &
+		z_BLK(i,j,k,iBlock)*z_BLK(i,j,k,iBlock) )+cTiny8/1E3 )
+	Phi = Phi*sign( cOne,z_BLK(i,j,k,iBlock) ) + &
+		cPi*( cOne-sign(cOne,z_BLK(i,j,k,iBlock)) )
         Phi = Phi / cTwoPi
         kPhi = int( Phi*(NPhi_neutral-1) ) + 1
 
@@ -276,7 +276,7 @@ contains
         kPhi_conj   = mod( kPhi  +(NPhi_neutral-1)/2,NPhi_neutral )+1
         kPhip1_conj = mod( kPhip1+(NPhi_neutral-1)/2,NPhi_neutral )+1
 
-        xR = ( R_BLK(i,j,k,globalBLK)*NO2SI_V(UnitX_)-NeutralN(iR,jTheta,kPhi,NR_) )/ &
+        xR = ( R_BLK(i,j,k,iBlock)*NO2SI_V(UnitX_)-NeutralN(iR,jTheta,kPhi,NR_) )/ &
 		( NeutralN(iRp1,jTheta,kPhi,NR_)-NeutralN(iR,jTheta,kPhi,NR_) )
         xPhi = ( Phi*360.-NeutralN(iR,jTheta,kPhi,NPhi_) )/ &
 		( NeutralN(iR,jTheta,kPhip1,NPhi_)-NeutralN(iR,jTheta,kPhi,NPhi_) )
@@ -285,7 +285,7 @@ contains
 !	if( .true. ) then
            xTheta = ( Theta*180.-NeutralN(iR,jTheta,kPhi,NTh_) )/ &
                 ( NeutralN(iR,jThetap1,kPhi,NTh_)-NeutralN(iR,jTheta,kPhi,NTh_) )
-           Neutral_BLK(i,j,k,globalBLK,:)= &
+           Neutral_BLK(i,j,k,iBlock,:)= &
 	     ( (NeutralN(iR  ,jTheta  ,kPhi  ,7:10)*(cOne-xPhi)+ 	        &
 		NeutralN(iR  ,jTheta  ,kPhip1,7:10)*      xPhi)*(cOne-xTheta)+  &
                (NeutralN(iR  ,jThetap1,kPhi  ,7:10)*(cOne-xPhi)+ 		&
@@ -304,12 +304,12 @@ contains
                 NeutralN(iRp1,jTh_axis,1,8)*NeutralN(iRp1,jTh_axis,1,8) + &
                 NeutralN(iRp1,jTh_axis,1,9)*NeutralN(iRP1,jTh_axis,1,9) )
 	   unr0 = unr_i*(cOne-xR)+unr_o*xR
-           Neutral_BLK(i,j,k,globalBLK,1) = unr0*cos(Theta*cPi)
-           Neutral_BLK(i,j,k,globalBLK,2) = unr0*sin(Theta*cPi)*cos(Phi*cTwoPi)
-           Neutral_BLK(i,j,k,globalBLK,3) = unr0*sin(Theta*cPi)*sin(Phi*cTwoPi)
+           Neutral_BLK(i,j,k,iBlock,1) = unr0*cos(Theta*cPi)
+           Neutral_BLK(i,j,k,iBlock,2) = unr0*sin(Theta*cPi)*cos(Phi*cTwoPi)
+           Neutral_BLK(i,j,k,iBlock,3) = unr0*sin(Theta*cPi)*sin(Phi*cTwoPi)
            xTheta =  (NeutralN(iR,jTh_axis,kPhi,NTh_)-Theta*180.)* &
 		cHalf/NeutralN(iR,jTh_axis,kPhi,NTh_)
-           Neutral_BLK(i,j,k,globalBLK,4) =   &
+           Neutral_BLK(i,j,k,iBlock,4) =   &
              ( (NeutralN(iR  ,jTh_axis,kPhi       ,10)*(cOne-xPhi)+ 		   &
                 NeutralN(iR  ,jTh_axis,kPhip1     ,10)*   xPhi)*(cOne-xTheta)+     &
                (NeutralN(iR  ,jTh_axis,kPhi_conj  ,10)*(cOne-xPhi)+ 		   &
@@ -318,7 +318,7 @@ contains
                 NeutralN(iRp1,jTh_axis,kPhip1     ,10)*      xPhi)*(cOne-xTheta)+  &
                (NeutralN(iRp1,jTh_axis,kPhi_conj  ,10)*(cOne-xPhi)+ 		   &
 		NeutralN(iRp1,jTh_axis,kPhip1_conj,10)*      xPhi)*xTheta )*xR
-	   Neutral_BLK(i,j,k,globalBLK,4) = Neutral_BLK(i,j,k,globalBLK,4) * &
+	   Neutral_BLK(i,j,k,iBlock,4) = Neutral_BLK(i,j,k,iBlock,4) * &
 		( cOne+1.5*(NeutralN(iR,jTh_axis,kPhi,NTh_)/180.-Theta) )
 	else
            unr_i = sqrt( &
@@ -330,12 +330,12 @@ contains
                 NeutralN(iRp1,jTh_axr,1,8)*NeutralN(iRp1,jTh_axr,1,8) + &
                 NeutralN(iRp1,jTh_axr,1,9)*NeutralN(iRp1,jTh_axr,1,9) )
            unr0 = unr_i*(cOne-xR)+unr_o*xR
-           Neutral_BLK(i,j,k,globalBLK,1) = unr0*cos(Theta*cPi)
-           Neutral_BLK(i,j,k,globalBLK,2) = unr0*sin(Theta*cPi)*cos(Phi*cTwoPi)
-           Neutral_BLK(i,j,k,globalBLK,3) = unr0*sin(Theta*cPi)*sin(Phi*cTwoPi)
+           Neutral_BLK(i,j,k,iBlock,1) = unr0*cos(Theta*cPi)
+           Neutral_BLK(i,j,k,iBlock,2) = unr0*sin(Theta*cPi)*cos(Phi*cTwoPi)
+           Neutral_BLK(i,j,k,iBlock,3) = unr0*sin(Theta*cPi)*sin(Phi*cTwoPi)
            xTheta = (Theta*180.-NeutralN(iR,jTh_axr,kPhi,NTh_))*cHalf/ &
 		NeutralN(iR,jTh_axis+1,kPhi,NTh_)
-           Neutral_BLK(i,j,k,globalBLK,4) =  &
+           Neutral_BLK(i,j,k,iBlock,4) =  &
              ( (NeutralN(iR  ,jTh_axr,kPhi       ,10)*(cOne-xPhi)+ 		  &
                 NeutralN(iR  ,jTh_axr,kPhip1     ,10)*      xPhi)*(cOne-xTheta)+  &
                (NeutralN(iR  ,jTh_axr,kPhi_conj  ,10)*(cOne-xPhi)+ 		  &
@@ -344,42 +344,42 @@ contains
                 NeutralN(iRp1,jTh_axr,kPhip1     ,10)*      xPhi)*(cOne-xTheta)+  &
                (NeutralN(iRp1,jTh_axr,kPhi_conj  ,10)*(cOne-xPhi)+ 		  &
 		NeutralN(iRp1,jTh_axr,kPhip1_conj,10)*      xPhi)*      xTheta )*xR
-          Neutral_BLK(i,j,k,globalBLK,4) = Neutral_BLK(i,j,k,globalBLK,4) * &
+          Neutral_BLK(i,j,k,iBlock,4) = Neutral_BLK(i,j,k,iBlock,4) * &
                 ( cOne+1.2*(NeutralN(iR,jTh_axr,kPhi,NTh_)/180.-Theta) )
 	endif
 
-     else if( R_BLK(i,j,k,globalBLK) > 7.0E8/NO2SI_V(UnitX_)) then	!Extrapolate beyond 10^6km
+     else if( R_BLK(i,j,k,iBlock) > 7.0E8/NO2SI_V(UnitX_)) then	!Extrapolate beyond 10^6km
 
-        Theta = acos( x_BLK(i,j,k,globalBLK)/R_BLK(i,j,k,globalBLK) )/cPi
+        Theta = acos( x_BLK(i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
         jTheta = int( Theta*(NTheta_neutral-1) ) + 1
         jTheta = max(jTheta,jTh_axis)          ! temperary boundary solution
         jTheta = min(jTheta, NTheta_neutral-jTh_axis)
-        Phi = acos( y_BLK(i,j,k,globalBLK)/sqrt( &
-		y_BLK(i,j,k,globalBLK)*y_BLK(i,j,k,globalBLK)+ &
-		z_BLK(i,j,k,globalBLK)*z_BLK(i,j,k,globalBLK))+cTiny8/1E3 )
-        Phi = Phi*sign( cOne,z_BLK(i,j,k,globalBLK) )
-        Phi = ( Phi + cPi*(cOne-sign(cOne,z_BLK(i,j,k,globalBLK))) ) / cTwoPi
+        Phi = acos( y_BLK(i,j,k,iBlock)/sqrt( &
+		y_BLK(i,j,k,iBlock)*y_BLK(i,j,k,iBlock)+ &
+		z_BLK(i,j,k,iBlock)*z_BLK(i,j,k,iBlock))+cTiny8/1E3 )
+        Phi = Phi*sign( cOne,z_BLK(i,j,k,iBlock) )
+        Phi = ( Phi + cPi*(cOne-sign(cOne,z_BLK(i,j,k,iBlock))) ) / cTwoPi
         kPhi = int( Phi*(NPhi_neutral-1) ) + 1
         kPhi = max(kPhi,1)
 
-        Neutral_BLK(i,j,k,globalBLK,1:3)= NeutralN(NR_Neutral-2,jTheta,kPhi,7:9)
-        Neutral_BLK(i,j,k,globalBLK,4)= .8*NeutralN(NR_Neutral-2,jTheta,kPhi,10)/ &
-		R_BLK(i,j,k,globalBLK)/R_BLK(i,j,k,globalBLK)* &
-		exp( -R_BLK(i,j,k,globalBLK)*NO2SI_V(UnitX_)*ionization_rate/ &
-		sqrt(Neutral_BLK(i,j,k,globalBLK,1)*Neutral_BLK(i,j,k,globalBLK,1) + &
-		     Neutral_BLK(i,j,k,globalBLK,2)*Neutral_BLK(i,j,k,globalBLK,2) + &
-		     Neutral_BLK(i,j,k,globalBLK,3)*Neutral_BLK(i,j,k,globalBLK,3)) )
+        Neutral_BLK(i,j,k,iBlock,1:3)= NeutralN(NR_Neutral-2,jTheta,kPhi,7:9)
+        Neutral_BLK(i,j,k,iBlock,4)= .8*NeutralN(NR_Neutral-2,jTheta,kPhi,10)/ &
+		R_BLK(i,j,k,iBlock)/R_BLK(i,j,k,iBlock)* &
+		exp( -R_BLK(i,j,k,iBlock)*NO2SI_V(UnitX_)*ionization_rate/ &
+		sqrt(Neutral_BLK(i,j,k,iBlock,1)*Neutral_BLK(i,j,k,iBlock,1) + &
+		     Neutral_BLK(i,j,k,iBlock,2)*Neutral_BLK(i,j,k,iBlock,2) + &
+		     Neutral_BLK(i,j,k,iBlock,3)*Neutral_BLK(i,j,k,iBlock,3)) )
 
      else	!Extrapolate within 3km
 if(.false.) then
-        Theta = acos( x_BLK(i,j,k,globalBLK)/R_BLK(i,j,k,globalBLK) )/cPi
+        Theta = acos( x_BLK(i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
         jTheta = int( Theta*(NTheta_neutral-1) ) + 1
         jThetap1 = jTheta+1
-        Phi = acos( y_BLK(i,j,k,globalBLK)/sqrt( &
-		y_BLK(i,j,k,globalBLK)*y_BLK(i,j,k,globalBLK)+ &
-		z_BLK(i,j,k,globalBLK)*z_BLK(i,j,k,globalBLK))+cTiny8/1E3 )
-        Phi = Phi*sign( cOne,z_BLK(i,j,k,globalBLK) ) + &
-		cPi*( cOne-sign(cOne,z_BLK(i,j,k,globalBLK)) )
+        Phi = acos( y_BLK(i,j,k,iBlock)/sqrt( &
+		y_BLK(i,j,k,iBlock)*y_BLK(i,j,k,iBlock)+ &
+		z_BLK(i,j,k,iBlock)*z_BLK(i,j,k,iBlock))+cTiny8/1E3 )
+        Phi = Phi*sign( cOne,z_BLK(i,j,k,iBlock) ) + &
+		cPi*( cOne-sign(cOne,z_BLK(i,j,k,iBlock)) )
         Phi = Phi / cTwoPi
         kPhi = int( Phi*(NPhi_neutral-1) ) + 1
         kPhi = max(kPhi,1)
@@ -392,7 +392,7 @@ if(.false.) then
         if(jTheta>=jTh_axis .and. jtheta<=(NTheta_neutral-jTh_axis)) then
            xTheta = ( Theta*180.-NeutralN(2,jTheta,kPhi,NTh_) )/ &
                 ( NeutralN(2,jThetap1,kPhi,NTh_)-NeutralN(2,jTheta,kPhi,NTh_) )
-           Neutral_BLK(i,j,k,globalBLK,:) = &
+           Neutral_BLK(i,j,k,iBlock,:) = &
              ( (NeutralN(2,jTheta  ,kPhi  ,7:10)*(cOne-xPhi)+ 		&
                 NeutralN(2,jTheta  ,kPhip1,7:10)*  xPhi)*(cOne-xTheta)+ &
                (NeutralN(2,jThetap1,kPhi  ,7:10)*(cOne-xPhi)+ 		&
@@ -400,7 +400,7 @@ if(.false.) then
         elseif( jtheta<jTh_axis ) then
            xTheta = (NeutralN(2,jTh_axis,kPhi,NTh_)-Theta*180.)*cHalf/ &
 		     NeutralN(2,jTh_axis,kPhi,NTh_)
-           Neutral_BLK(i,j,k,globalBLK,:) = &
+           Neutral_BLK(i,j,k,iBlock,:) = &
              ( (NeutralN(2,jTh_axis,kPhi       ,7:10)*(cOne-xPhi)+ 	    &
                 NeutralN(2,jTh_axis,kPhip1     ,7:10)* xPhi)*(cOne-xTheta)+ &
                (NeutralN(2,jTh_axis,kPhi_conj  ,7:10)*(cOne-xPhi)+ 	    &
@@ -408,7 +408,7 @@ if(.false.) then
         else
            xTheta = (Theta*180.-NeutralN(2,jTh_axr,kPhi,NTh_))* &
 		cHalf/NeutralN(2,jTh_axis+1,kPhi,NTh_)
-           Neutral_BLK(i,j,k,globalBLK,:) = &
+           Neutral_BLK(i,j,k,iBlock,:) = &
              ( (NeutralN(2,jTh_axr,kPhi       ,7:10)*(cOne-xPhi)+ 	    &
                 NeutralN(2,jTh_axr,kPhip1     ,7:10)*  xPhi)*(cOne-xTheta)+ &
                (NeutralN(2,jTh_axr,kPhi_conj  ,7:10)*(cOne-xPhi)+ 	    &
@@ -417,24 +417,24 @@ if(.false.) then
 
 endif
 
-!write(*,*) '3rd choice', R_BLK(i,j,k,globalBLK)
-        Neutral_BLK(i,j,k,globalBLK,1:3)= cOne
-        Neutral_BLK(i,j,k,globalBLK,4) = 40.*1E9*mbar
+!write(*,*) '3rd choice', R_BLK(i,j,k,iBlock)
+        Neutral_BLK(i,j,k,iBlock,1:3)= cOne
+        Neutral_BLK(i,j,k,iBlock,4) = 40.*1E9*mbar
      end if
 
-     Neutral_BLK(i,j,k,globalBLK,4) = max( Neutral_BLK(i,j,k,globalBLK,4), 50000.0 )
+     Neutral_BLK(i,j,k,iBlock,4) = max( Neutral_BLK(i,j,k,iBlock,4), 50000.0 )
 
   end do;  end do;  end do
 
-  Neutral_BLK(:,:,:,globalBLK,4) = Neutral_BLK(:,:,:,globalBLK,4)*17
-!  Neutral_BLK(:,:,:,globalBLK,4) = Neutral_BLK(:,:,:,globalBLK,4)/22.
+  Neutral_BLK(:,:,:,iBlock,4) = Neutral_BLK(:,:,:,iBlock,4)*17
+!  Neutral_BLK(:,:,:,iBlock,4) = Neutral_BLK(:,:,:,iBlock,4)/22.
 
 
 !!!now Neutral_BLK(v) is dimensionless, while n is still dimensional!!!
-    Neutral_BLK(:,:,:,globalBLK,1:3) = &
-	Neutral_BLK(:,:,:,globalBLK,1:3)/NO2SI_V(UnitU_)
+    Neutral_BLK(:,:,:,iBlock,1:3) = &
+	Neutral_BLK(:,:,:,iBlock,1:3)/NO2SI_V(UnitU_)
 
-!write(*,*) 'set_ICs ', Neutral_BLK(2,2,2,globalBLK, :)
+!write(*,*) 'set_ICs ', Neutral_BLK(2,2,2,iBlock, :)
 
      endif
   end subroutine user_set_ICs
@@ -464,7 +464,7 @@ endif
   !========================================================================
   !  SUBROUTINE user_calc_sources
   !========================================================================
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
     ! Evaluate the explicit or implicit or both source terms.
     ! If there is no explicit source term, the subroutine user_expl_source 
@@ -472,27 +472,31 @@ endif
 
     use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
 
+    integer, intent(in) :: iBlock
+
     if(.not.UsePointImplicit)then
        ! Add all source terms if we do not use the point implicit scheme
-       call user_expl_source
-       call user_impl_source
+       call user_expl_source(iBlock)
+       call user_impl_source(iBlock)
     elseif(IsPointImplSource)then
        ! Add implicit sources only
-       call user_impl_source
+       call user_impl_source(iBlock)
     else
        ! Add explicit sources only
-       call user_expl_source
+       call user_expl_source(iBlock)
     end if
 
   end subroutine user_calc_sources
   !==========================================================================
-  subroutine user_expl_source
+  subroutine user_expl_source(iBlock)
+
+    integer, intent(in) :: iBlock
 
     ! Here come the explicit source terms
 
   end subroutine user_expl_source
   !==========================================================================
-  subroutine user_impl_source
+  subroutine user_impl_source(iBlock)
   
     ! This is a test and example for using point implicit source terms
     ! Apply friction relative to some medium at rest
@@ -501,7 +505,7 @@ endif
     use ModPointImplicit, ONLY: &
          UsePointImplicit, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
 
-    use ModMain,    ONLY: GlobalBlk,nI,nJ,nK,n_step,iTest,jTest,kTest,BlkTest
+    use ModMain,    ONLY: nI,nJ,nK,n_step,iTest,jTest,kTest,BlkTest
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
     use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
@@ -509,7 +513,9 @@ endif
     use ModPhysics
     use ModProcMH
 
-    integer :: iBlock, i, j, k
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
     real    :: Coef
 
     integer, save :: step = 0
@@ -528,8 +534,6 @@ endif
 	,sMasseta, Losse, chargexchg, Unx, Uny, Unz, ux, uy, uz
 
     !-------------------------------------------------------------------------
-
-    iBlock = GlobalBlk
 
     if (FirstCall) then
        FirstCall = .False.
@@ -564,21 +568,21 @@ endif
     ! In this example a simple friction term is added to the momentum and 
     ! energy equtaions.
 
-    ux=State_VGB(rhoUx_,1:nI,1:nJ,1:nK,globalBLK) / &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)
-    uy=State_VGB(rhoUy_,1:nI,1:nJ,1:nK,globalBLK) / &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)
-    uz=State_VGB(rhoUz_,1:nI,1:nJ,1:nK,globalBLK) / &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)
+    ux=State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock) / &
+          State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+    uy=State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock) / &
+          State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+    uz=State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock) / &
+          State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
     usqr = ux*ux+uy*uy+uz*uz
-    Rkm = R_BLK(1:nI,1:nJ,1:nK,globalBLK)*NO2SI_V(UnitX_)/1E3	!km unit
+    Rkm = R_BLK(1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitX_)/1E3	!km unit
     logR = log10(Rkm)
 
     if (jpattern == 50 ) then
        sMass = cZero
        lambda= 1.80000*1E6
-       where(R_BLK(1:nI,1:nJ,1:nK,globalBLK)<6.) &
-	  sMass = Qprod*(R_BLK(1:nI,1:nJ,1:nK,globalBLK)*NO2SI_V(UnitX_)/lambda)**(-3.5)
+       where(R_BLK(1:nI,1:nJ,1:nK,iBlock)<6.) &
+	  sMass = Qprod*(R_BLK(1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitX_)/lambda)**(-3.5)
 
     else
        lambda = Unr/ionization_rate
@@ -595,12 +599,12 @@ endif
        end do ;  end do ; end do
 
        sMass = Qprod * mbar * fi * &
-          exp(-R_BLK(1:nI,1:nJ,1:nK,globalBLK)*NO2SI_V(UnitX_)/lambda) / &
-          (4.0*cPi*lambda*R_BLK(1:nI,1:nJ,1:nK,globalBLK)**2*NO2SI_V(UnitX_)**2)
+          exp(-R_BLK(1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitX_)/lambda) / &
+          (4.0*cPi*lambda*R_BLK(1:nI,1:nJ,1:nK,iBlock)**2*NO2SI_V(UnitX_)**2)
 
     !yingdong 060705 neutral num density
        if(ReadNeutral) sMass = fi * ionization_rate * &
-	  Neutral_BLK(1:nI,1:nJ,1:nK,globalBLK,4)
+	  Neutral_BLK(1:nI,1:nJ,1:nK,iBlock,4)
 
      ! sMass(amu/s/m^3)/NO2SI_V(UnitN_)*NO2SI_V(UnitT_) 
        sMass = sMass/NO2SI_V(UnitN_)*NO2SI_V(UnitT_)
@@ -608,7 +612,7 @@ endif
      ! eta is already non-dimensional
        eta = kin/mbar/fi/ionization_rate*NO2SI_V(UnitN_)
 ! added yingdong Aug22,03 for increased hydrogen CX.
-!       chargexchg = eta* ( 1.+exp(11.*R_BLK(1:nI,1:nJ,1:nK,globalBLK)* &
+!       chargexchg = eta* ( 1.+exp(11.*R_BLK(1:nI,1:nJ,1:nK,iBlock)* &
 !                       NO2SI_V(UnitX_)/12./lambda)/6. )
         chargexchg = eta        !original term
 !********   modification Apr 03 yingdong for Barrelley /end ***********
@@ -618,13 +622,13 @@ endif
     endif
 
      ! ne is the dimensionless electron density
-    ne = State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)*NO2SI_V(UnitN_)/mbar
+    ne = State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitN_)/mbar
 
      ! Calculate electron temperature from pressure
      ! assuming Te=Ti
      ! for comet borrelly
-!    Te=State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK) * NO2SI_V(UnitP_) * mbar * cProtonMass / &
-!          ( 2.0 * unitSI_rho * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK) )
+!    Te=State_VGB(p_,1:nI,1:nJ,1:nK,iBlock) * NO2SI_V(UnitP_) * mbar * cProtonMass / &
+!          ( 2.0 * unitSI_rho * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) )
 
     ! Standard Profile
     where  (rkm <= 1584.893) 
@@ -658,12 +662,12 @@ endif
      	!** and 9 degree towards the +z in the xz plane                      ***
      	!** the vector components of this vector are hard coded here         ***
 
-	jtheta = ( X_BLK(i,j,k,globalBLK)*x_jet+Y_BLK(i,j,k,globalBLK)*y_jet+ &
-			Z_BLK(i,j,k,globalBLK)*z_jet ) / R_BLK(i,j,k,globalBLK)
+	jtheta = ( X_BLK(i,j,k,iBlock)*x_jet+Y_BLK(i,j,k,iBlock)*y_jet+ &
+			Z_BLK(i,j,k,iBlock)*z_jet ) / R_BLK(i,j,k,iBlock)
 	if (jpattern /= 6 ) jtheta = dmax1(cZero, jtheta)
 	jtheta = dmin1(cOne,  jtheta)		!jtheta = cos(theta) now
 
-	if ( X_BLK(i,j,k,globalBLK) >= cZero ) then
+	if ( X_BLK(i,j,k,iBlock) >= cZero ) then
 	  sMassdn = sMass(i,j,k)*Qprod_day
 	else
 	  sMassdn = sMass(i,j,k)*Qprod_nit
@@ -685,14 +689,14 @@ endif
               sMassj = sMassdn+sMass(i,j,k)*Qprod_jet*jtheta
               jtheta = dacos(jtheta)
               sMass(i,j,k) = sMassj+sMass(i,j,k)*Qprod_jeta* &
-		exp(jet_ln2*jtheta*jtheta)*.5*( 1.-tanh((.15-R_BLK(i,j,k,globalBLK))*64.) )
+		exp(jet_ln2*jtheta*jtheta)*.5*( 1.-tanh((.15-R_BLK(i,j,k,iBlock))*64.) )
 	endif
 
     end do ;  end do ; end do 
 
     if (jpattern == 50 ) then
 	Losse = cZero
-	sMasseta = sMass*ionization_rate*state_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)
+	sMasseta = sMass*ionization_rate*state_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
 !	sMasseta = sMass*ionization_rate
 !        sMasseta = 0.
     else
@@ -714,38 +718,38 @@ endif
 
      if( jpattern == 3 ) then		!shade by body
 	do k=1,nK ;   do j=1,nJ ;    do i=1,nI
-          rcyl=sqrt( Z_BLK(i,j,k,globalBLK)**2 + Y_BLK(i,j,k,globalBLK)**2 )
-          if ( X_BLK(i,j,k,globalBLK) <= cZero .and. rcyl <= Rbody )  sMass(i,j,k) = 0.
+          rcyl=sqrt( Z_BLK(i,j,k,iBlock)**2 + Y_BLK(i,j,k,iBlock)**2 )
+          if ( X_BLK(i,j,k,iBlock) <= cZero .and. rcyl <= Rbody )  sMass(i,j,k) = 0.
 	end do; end do; end do
      end if
 
-     term1 = sMass+sMasseta*State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)
+     term1 = sMass+sMasseta*State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
      term2 = sMasseta+Losse
 
      if( jpattern == 7 ) then           !debug pattern
         do k=1,nK ;   do j=1,nJ ;    do i=1,nI
-          if ( R_BLK(i,j,k,globalBLK) <= 3.e-4 .and. y_BLK(i,j,k,globalBLK) >= -1.e-5 .and. &
-            R_BLK(i,j,k,globalBLK) >= 8.e-5 .and. abs(z_BLK(i,j,k,globalBLK)) <= 2.e-5 &
-                .and. z_BLK(i,j,k,globalBLK) >= -1.e-6 .and. n_step == 4001 ) &
+          if ( R_BLK(i,j,k,iBlock) <= 3.e-4 .and. y_BLK(i,j,k,iBlock) >= -1.e-5 .and. &
+            R_BLK(i,j,k,iBlock) >= 8.e-5 .and. abs(z_BLK(i,j,k,iBlock)) <= 2.e-5 &
+                .and. z_BLK(i,j,k,iBlock) >= -1.e-6 .and. n_step == 4001 ) &
               write(*,*) 'xyzr, smass, Losse, Losse*rho, sMasseta, term1, term2,', &
                 ' term2*rhou, p', &
-                X_BLK(i,j,k,globalBLK), Y_BLK(i,j,k,globalBLK), Z_BLK(i,j,k,globalBLK), &
-                R_BLK(i,j,k,globalBLK), sMass(i,j,k), Losse(i,j,k), &
-                Losse(i,j,k)*State_VGB(rho_,i,j,k,globalBLK), sMasseta(i,j,k), term1(i,j,k), &
-                term2(i,j,k), term2(i,j,k)*State_VGB(rhoUx_,i,j,k,globalBLK), usqr(i,j,k), &
-                State_VGB(p_,i,j,k,globalBLK)
+                X_BLK(i,j,k,iBlock), Y_BLK(i,j,k,iBlock), Z_BLK(i,j,k,iBlock), &
+                R_BLK(i,j,k,iBlock), sMass(i,j,k), Losse(i,j,k), &
+                Losse(i,j,k)*State_VGB(rho_,i,j,k,iBlock), sMasseta(i,j,k), term1(i,j,k), &
+                term2(i,j,k), term2(i,j,k)*State_VGB(rhoUx_,i,j,k,iBlock), usqr(i,j,k), &
+                State_VGB(p_,i,j,k,iBlock)
         end do; end do; end do
      end if
 
      Source_VC(rho_,:,:,:) = Source_VC(rho_,:,:,:) + &
-	(sMass - Losse*State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK))
+	(sMass - Losse*State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock))
 
      if(ReadNeutral) then       ! yingdong 060605 neutral profile
-        Unx = Neutral_BLK(1:nI,1:nJ,1:nK,globalBLK,1)
-        Uny = Neutral_BLK(1:nI,1:nJ,1:nK,globalBLK,2)
-        Unz = Neutral_BLK(1:nI,1:nJ,1:nK,globalBLK,3)
+        Unx = Neutral_BLK(1:nI,1:nJ,1:nK,iBlock,1)
+        Uny = Neutral_BLK(1:nI,1:nJ,1:nK,iBlock,2)
+        Unz = Neutral_BLK(1:nI,1:nJ,1:nK,iBlock,3)
 
-!write(*,*) 'user_src ',  Neutral_BLK(2,2,2,globalBLK,:)
+!write(*,*) 'user_src ',  Neutral_BLK(2,2,2,iBlock,:)
 
         do k=1,nK ;   do j=1,nJ ;    do i=1,nI
           unr = Unx(i,j,k)*Unx(i,j,k) + Uny(i,j,k)*Uny(i,j,k) +  &
@@ -754,39 +758,39 @@ endif
 
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
                 ( term1(i,j,k)* (0.5*unr) -  &
-                term2(i,j,k)*(0.5*State_VGB(rho_,i,j,k,globalBLK)* &
-                usqr(i,j,k) + 1.5*State_VGB(p_,i,j,k,globalBLK)) )	!Pi->P
-!           usqr(i,j,k) + cHalf*1.5*State_VGB(p_,i,j,k,globalBLK)) )
+                term2(i,j,k)*(0.5*State_VGB(rho_,i,j,k,iBlock)* &
+                usqr(i,j,k) + 1.5*State_VGB(p_,i,j,k,iBlock)) )	!Pi->P
+!           usqr(i,j,k) + cHalf*1.5*State_VGB(p_,i,j,k,iBlock)) )
         end do; enddo; enddo
 
      else
-        Unx=Unr/NO2SI_V(UnitU_)*X_BLK(1:nI,1:nJ,1:nK,globalBLK)/ &
-          R_BLK(1:nI,1:nJ,1:nK,globalBLK)
-        Uny=Unr/NO2SI_V(UnitU_)*Y_BLK(1:nI,1:nJ,1:nK,globalBLK)/ &
-          R_BLK(1:nI,1:nJ,1:nK,globalBLK)
-        Unz=Unr/NO2SI_V(UnitU_)*Z_BLK(1:nI,1:nJ,1:nK,globalBLK)/ &
-          R_BLK(1:nI,1:nJ,1:nK,globalBLK)
+        Unx=Unr/NO2SI_V(UnitU_)*X_BLK(1:nI,1:nJ,1:nK,iBlock)/ &
+          R_BLK(1:nI,1:nJ,1:nK,iBlock)
+        Uny=Unr/NO2SI_V(UnitU_)*Y_BLK(1:nI,1:nJ,1:nK,iBlock)/ &
+          R_BLK(1:nI,1:nJ,1:nK,iBlock)
+        Unz=Unr/NO2SI_V(UnitU_)*Z_BLK(1:nI,1:nJ,1:nK,iBlock)/ &
+          R_BLK(1:nI,1:nJ,1:nK,iBlock)
 
      	Source_VC(Energy_,:,:,:) = Source_VC(Energy_,:,:,:) + &
 	  ( term1*(0.5*(Unr/NO2SI_V(UnitU_))**2) - &
-          term2*(0.5*State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)* &
-          usqr + 1.5*State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK)) )	!Pi->P
-!          usqr + cHalf*1.5*State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK)) )
+          term2*(0.5*State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)* &
+          usqr + 1.5*State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)) )	!Pi->P
+!          usqr + cHalf*1.5*State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)) )
 
     endif
     Source_VC(rhoUx_,:,:,:) = Source_VC(rhoUx_,:,:,:) + &
-	( term1*Unx - term2*State_VGB(rhoUx_,1:nI,1:nJ,1:nK,globalBLK) )
+	( term1*Unx - term2*State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock) )
     Source_VC(rhoUy_,:,:,:) = Source_VC(rhoUy_,:,:,:) + &
-	( term1*Uny - term2*State_VGB(rhoUy_,1:nI,1:nJ,1:nK,globalBLK) )
+	( term1*Uny - term2*State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock) )
     Source_VC(rhoUz_,:,:,:) = Source_VC(rhoUz_,:,:,:) + &
-	( term1*Unz - term2*State_VGB(rhoUz_,1:nI,1:nJ,1:nK,globalBLK) )
+	( term1*Unz - term2*State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock) )
     Source_VC(p_,:,:,:) = Source_VC(p_,:,:,:) + term1* &
         1.0/3.0*( (Unx-ux)**2+(Uny-uy)**2+(Unz-uz)**2 ) - &
-        term2*State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK)	!Pi->P
-!          term2*State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK)*cHalf
+        term2*State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)	!Pi->P
+!          term2*State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)*cHalf
 
 !     open(unit=321,file='Source_VCs.log',status='old', action ='write', position='append')
-!     if(globalBLK==BLKtest) then
+!     if(iBlock==BLKtest) then
 !        do k=1,nK ;  
 !           do j=1,nJ ;    
 !              do i=1,nI ;
@@ -832,14 +836,14 @@ endif
 		Unz(i,j,k)*Unz(i,j,k)
 !note: this unr is unr*unr*dimensionless
           DsDu_VVC(5,1,i,j,k) = sMasseta(i,j,k)*1.0/3.0*(unr-usqr(i,j,k)) + &
-             sMass(i,j,k)*2.0*1.0/3.0/State_VGB(rho_,i,j,k,globalBLK)* &
+             sMass(i,j,k)*2.0*1.0/3.0/State_VGB(rho_,i,j,k,iBlock)* &
              ( Unx(i,j,k)*ux(i,j,k) + Uny(i,j,k)*uy(i,j,k) + &
 	     Unz(i,j,k)*uz(i,j,k) - usqr(i,j,k) )
 	enddo; enddo; enddo
 
       else
         DsDu_VVC(5,1,:,:,:) = sMasseta*1.0/3.0*(unr*unr/NO2SI_V(UnitU_)/NO2SI_V(UnitU_)-usqr) + &
-             sMass*2.0*1.0/3.0/State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)*( &
+             sMass*2.0*1.0/3.0/State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*( &
              Unx*ux+Uny*uy+Unz*uz-usqr)
 
       endif

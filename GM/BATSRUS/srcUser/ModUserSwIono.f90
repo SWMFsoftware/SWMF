@@ -61,16 +61,15 @@ contains
   end subroutine user_init_session
 
   !=====================================================================
-  subroutine user_set_ics
-    use ModMain,     ONLY: globalBLK
+  subroutine user_set_ics(iBlock)
+
     use ModGeometry, ONLY: r_BLK
     use ModAdvance,  ONLY: State_VGB, rhoion_, rhosw_
     use ModPhysics,  ONLY: BodyRho_I, sw_rho, rBody
     use ModNumConst, ONLY: cTiny
 
-    integer :: iBlock
+    integer, intent(in) :: iBlock
     !--------------------------------------------------------------------------
-    iBlock = globalBLK
 
     where(r_BLK(:,:,:,iBlock)<2.0*Rbody)
        State_VGB(rhoion_,:,:,:,iBlock) = BodyRho_I(1)

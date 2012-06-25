@@ -118,7 +118,8 @@ contains
 
     integer, intent(in) :: iBlock
     interface
-       subroutine calc_point_impl_source
+       subroutine calc_point_impl_source(iBlock)
+         integer, intent(in) :: iBlock
        end subroutine calc_point_impl_source
 
        subroutine init_point_implicit
@@ -229,7 +230,7 @@ contains
     Source_VC = 0.0
     DsDu_VVC  = 0.0
 
-    call calc_point_impl_source
+    call calc_point_impl_source(iBlock)
 
     ! Calculate (part of) Jacobean numerically if necessary
     if(.not.IsPointImplMatrixSet)then
@@ -269,7 +270,7 @@ contains
 
           ! Calculate perturbed source
           Source_VC = 0.0
-          call calc_point_impl_source
+          call calc_point_impl_source(iBlock)
 
           if(IsAsymmetric)then
 
@@ -288,7 +289,7 @@ contains
 
              ! Calculate perturbed source
              Source_VC = 0.0
-             call calc_point_impl_source
+             call calc_point_impl_source(iBlock)
 
              ! Calculate dS/dU matrix elements with symmetric differencing
              do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)

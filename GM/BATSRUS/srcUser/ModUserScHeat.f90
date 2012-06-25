@@ -387,20 +387,22 @@ contains
 
   !============================================================================
 
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
     ! The isothermal parker wind solution is used as initial condition
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
-    use ModMain,       ONLY: nI, nJ, nK, globalBLK
+    use ModMain,       ONLY: nI, nJ, nK
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyTDim_I, UnitU_, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
          WaveFirst_, WaveLast_
 
-    integer :: i, j, k, iBlock
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
     integer :: IterCount
     real :: x, y, z, r, RhoBase, Rho, NumDensIon, NumDensElectron
     real :: Tcorona, Tbase, Temperature
@@ -408,8 +410,6 @@ contains
 
     real, parameter :: Epsilon = 1.0e-6
     !--------------------------------------------------------------------------
-
-    iBlock = globalBLK
 
     ! Initially, the electron and ion temperature are at 1.5e6(K) in the corona
     Tcorona = 1.5e6*Si2No_V(UnitTemperature_)
@@ -516,26 +516,26 @@ contains
 
   !============================================================================
 
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
          B0_DGB, VdtFace_x, VdtFace_y, VdtFace_z
     use ModGeometry,       ONLY: r_BLK
-    use ModMain,           ONLY: nI, nJ, nK, GlobalBlk, UseB0
+    use ModMain,           ONLY: nI, nJ, nK, UseB0
     use ModPhysics,        ONLY: gm1, rBody
     use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, Energy_, p_, Pe_, &
          WaveFirst_, WaveLast_
     use BATL_lib, ONLY: CellVolume_GB
 
-    integer :: i, j, k, iBlock, iWave
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k, iWave
     real :: CoronalHeating
     real :: DissipationLength, WaveDissipation, FullB_D(3), FullB
     real :: DtInvWave, Vdt_Source, Vdt
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
-
-    iBlock = globalBlk
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(r_BLK(i,j,k,iBlock) < rBody) CYCLE

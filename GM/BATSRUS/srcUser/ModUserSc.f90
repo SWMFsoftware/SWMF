@@ -274,9 +274,9 @@ contains
 
   !============================================================================
 
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
-    use ModMain,      ONLY: globalBLK,nI,nJ,nK
+    use ModMain,      ONLY: nI,nJ,nK
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: inv_gm1,BodyTDim_I
@@ -284,14 +284,14 @@ contains
     use ModNumConst,  ONLY: cTolerance
     use BATL_lib, ONLY: IsCartesianGrid, CoordMax_D
 
-    integer :: i,j,k,iBLK
+    integer, intent(in) :: iBlock
+
+    integer :: i,j,k
     logical :: oktest,oktest_me
     real :: Dens_BLK,Pres_BLK,Gamma_BLK
     real :: x,y,z,R,ROne,Rmax,U0
     !--------------------------------------------------------------------------
     call set_oktest('user_set_ics',oktest,oktest_me)
-
-    iBLK = globalBLK
 
     if(IsCartesianGrid)then
        Rmax = max(21.0, sqrt(sum(CoordMax_D**2)))
@@ -302,26 +302,26 @@ contains
     ! The sqrt is for backward compatibility with older versions of the Sc
     U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
 
-    State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = 1.0e-31
+    State_VGB(:,1:nI,1:nJ,1:nK,iBlock) = 1.0e-31
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       x = x_BLK(i,j,k,iBLK)
-       y = y_BLK(i,j,k,iBLK)
-       z = z_BLK(i,j,k,iBLK)
-       R = max(R_BLK(i,j,k,iBLK),cTolerance)
+       x = x_BLK(i,j,k,iBlock)
+       y = y_BLK(i,j,k,iBlock)
+       z = z_BLK(i,j,k,iBlock)
+       R = max(R_BLK(i,j,k,iBlock),cTolerance)
        ROne = max(1.0,R)
-       State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
-       call get_plasma_parameters_cell(i,j,k,iBLK,&
+       State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+       call get_plasma_parameters_cell(i,j,k,iBlock,&
             Dens_BLK,Pres_BLK,Gamma_BLK)
-       State_VGB(rho_,i,j,k,iBLK) = Dens_BLK
-       State_VGB(P_,i,j,k,iBLK)   = Pres_BLK
-       State_VGB(RhoUx_,i,j,k,iBLK) = Dens_BLK &
+       State_VGB(rho_,i,j,k,iBlock) = Dens_BLK
+       State_VGB(P_,i,j,k,iBlock)   = Pres_BLK
+       State_VGB(RhoUx_,i,j,k,iBlock) = Dens_BLK &
             *U0*((ROne-1.0)/(Rmax-1.0))*x/R
-       State_VGB(RhoUy_,i,j,k,iBLK) = Dens_BLK &
+       State_VGB(RhoUy_,i,j,k,iBlock) = Dens_BLK &
             *U0*((ROne-1.0)/(Rmax-1.0))*y/R
-       State_VGB(RhoUz_,i,j,k,iBLK) = Dens_BLK &
+       State_VGB(RhoUz_,i,j,k,iBlock) = Dens_BLK &
             *U0*((ROne-1.0)/(Rmax-1.0))*z/R
-       State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK &
+       State_VGB(Ew_,i,j,k,iBlock) = Pres_BLK &
             *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
     end do; end do; end do
 

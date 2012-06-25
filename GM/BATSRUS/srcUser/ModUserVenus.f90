@@ -209,40 +209,42 @@ contains
 
   !============================================================================
   
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
+
     use ModAdvance,  ONLY: Source_VC
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
-         GLOBALBLK
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, &
          IsPointImplSource
     use ModPhysics, ONLY: Rbody
     use ModGeometry,ONLY: R_BLK
-    
+
+    integer, intent(in):: iBlock
+
     logical :: oktest,oktest_me
     !------------------------------------------------------------------------  
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('user_calc_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
     end if
     if(UsePointImplicit)&
-         UsePointImplicit_B(globalBLK) = &
-         R_BLK(1,1,1,globalBLK) <= rPointImplicit &
-         .and. R_BLK(nI,1,1,globalBLK) > rBody
+         UsePointImplicit_B(iBlock) = &
+         R_BLK(1,1,1,iBlock) <= rPointImplicit &
+         .and. R_BLK(nI,1,1,iBlock) > rBody
 
-    if(.not.(UsePointImplicit .and. UsePointImplicit_B(globalBLK)) )then
+    if(.not.(UsePointImplicit .and. UsePointImplicit_B(iBlock)) )then
        ! Add all source terms if we do not use the point implicit 
        ! scheme for the Block
-       call user_expl_source
-       call user_impl_source
+       call user_expl_source(iBlock)
+       call user_impl_source(iBlock)
 
     elseif(IsPointImplSource)then
        ! Add implicit sources only
-       call user_impl_source
+       call user_impl_source(iBlock)
     else
        ! Add explicit sources only
-       call user_expl_source
+       call user_expl_source(iBlock)
     end if
 
     if(oktest_me)then
@@ -256,8 +258,8 @@ contains
   end subroutine user_calc_sources
   !=========================================================================
 
-  subroutine user_impl_source
-    use ModMain,    ONLY: GlobalBlk
+  subroutine user_impl_source(iBlock)
+
     use ModAdvance, ONLY: Source_VC
     use ModNumConst,ONLY: cZero
     use ModVarIndexes,ONLY: Rho_, &
@@ -266,17 +268,17 @@ contains
     use ModProcMH,   ONLY: iProc
     !    use ModAdvance,  ONLY: Source_VC,Energy_
     !    use ModNumConst, ONLY: cZero
+
+    integer, intent(in) :: iBlock
+
     logical :: oktest,oktest_me
-    integer :: iBlock
     !--------------------------------------------------------------------
 
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('user_imp_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
     end if
-    
-    iBlock = GlobalBlk
      
     Srho   = cZero
     SrhoSpecies=cZero
@@ -294,7 +296,7 @@ contains
        write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
     end if
 
-    call user_sources
+    call user_sources(iBlock)
     Source_VC(rho_       ,:,:,:) = Srho+Source_VC(rho_,:,:,:)
     Source_VC(rho_+1:rho_+MaxSpecies,:,:,:) = &
          SrhoSpecies+Source_VC(rho_+1:rho_+MaxSpecies,:,:,:)
@@ -311,10 +313,11 @@ contains
 
   !===========================================================================
 
-  subroutine user_expl_source
-    !    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+  subroutine user_expl_source(iBlock)
+    !    use ModMain,    ONLY: nI, nJ, nK
     !    use ModPointImplicit,ONLY: UsePointImplicit, UsePointImplicit_B
 
+    integer, intent(in) :: iBlock
     !---------------------------------------------------------------------
     ! Here come the explicit source terms
 
@@ -322,8 +325,9 @@ contains
 
   !========================================================================
 
-  subroutine user_sources
-    use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, &
+  subroutine user_sources(iBlock)
+
+    use ModMain, ONLY: PROCTEST,BLKTEST, &
          iNewGrid, iNewDecomposition, UnusedBlk, nBlock
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_
@@ -333,15 +337,16 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit_B
     use BATL_lib, ONLY: CellVolume_GB
 
+    integer, intent(in) :: iBlock
     ! Variables required by this user subroutine
-    integer:: i,j,k,iSpecies, iBlock
+    integer:: i,j,k,iSpecies
     real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate,kTi, kTe
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps
     logical:: oktest,oktest_me
     real :: SourceLossMax, vdtmin, chalf=0.5
 
 
-    integer:: iLastGrid = -1, iLastDecomposition = -1
+    integer:: iLastGrid = -1, iLastDecomposition = -1, iBlockLoop
     !
     !\
     ! Variable meanings:
@@ -359,39 +364,39 @@ contains
        iLastDecomposition = iNewDecomposition
 
        if(iProc==0) write(*,*)'Calculating neutral density for Venus'
-       
-       do iBlock=1, nBlock
-          if(UnusedBlk(iBlock)) CYCLE
+
+       do iBlockLoop = 1, nBlock
+          if(UnusedBlk(iBlockLoop)) CYCLE
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(R_BLK(i,j,k,iBlock)<= Rbody)then
-                nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
+             if(R_BLK(i,j,k,iBlockLoop)<= Rbody)then
+                nDenNuSpecies_CBI(i,j,k,iBlockLoop,:)=&
                      BodynDenNuSpecies_I(:)
-             else if(R_BLK(i,j,k,iBlock)< 2.0) then
-                nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
+             else if(R_BLK(i,j,k,iBlockLoop)< 2.0) then
+                nDenNuSpecies_CBI(i,j,k,iBlockLoop,:)=&
                      BodynDenNuSpecies_I(:)* & 
-                     exp(-(R_BLK(i,j,k,iBlock)-Rbody)&
+                     exp(-(R_BLK(i,j,k,iBlockLoop)-Rbody)&
                      /HNuSpecies_I(:))
              else
-                nDenNuSpecies_CBI(i,j,k,iBlock,:)=0.0
+                nDenNuSpecies_CBI(i,j,k,iBlockLoop,:)=0.0
              end if
           end do; end do; end do
           
           do k=1,nK; do j=1,nJ; do i=1,nI
-             nu_BLK(i,j,k,iBlock)=&
-                  sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:nNuSPecies))*nu0
+             nu_BLK(i,j,k,iBlockLoop)=&
+                  sum(nDenNuSpecies_CBI(i,j,k,iBlockLoop,1:nNuSPecies))*nu0
           end do; end do; end do
           ! calculate optical depth and producation rate
           do k=1,nK; do j=1,nJ; do i=1,nI
-             cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-                  x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
+             cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlockLoop)))*&
+                  x_BLK(i,j,k,iBlockLoop)/max(R_BLK(i,j,k,iBlockLoop),1.0e-3)&
                   +5.0e-4
-             Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
+             Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlockLoop,1:MaxNuSpecies)*&
                   CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
                   6.0e-3)/cosSZA
-             if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then 
-                Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
+             if( Optdep<11.5 .and. x_BLK(i,j,k,iBlockLoop) > 0.0) then 
+                Productrate_CB(i,j,k,iBlockLoop) = max(exp(-Optdep), 1.0e-5)
              else
-                Productrate_CB(i,j,k,iBlock) = 1.0e-5
+                Productrate_CB(i,j,k,iBlockLoop) = 1.0e-5
              end if
 
           end do; end do; end do
@@ -400,9 +405,7 @@ contains
        end do
     end if
 
-    iBlock = globalBlk
-
-    if (iProc==PROCtest.and.globalBLK==BLKtest) then
+    if (iProc==PROCtest.and.iBlock==BLKtest) then
        call set_oktest('user_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
@@ -664,7 +667,8 @@ contains
 
   !========================================================================
 
-  subroutine user_set_ICs
+  subroutine user_set_ICs(iBlock)
+
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
@@ -672,18 +676,18 @@ contains
     use ModIO, ONLY : restart
     use ModPhysics
 
+    integer, intent(in) :: iBlock
+
     real ::CosSZA
     logical::okTestMe=.false., okTest=.false.
-    integer :: iBlock, i, j, k
+    integer :: i, j, k
     !--------------------------------------------------------------------
 
-    if(globalBLK==BLKtest .and. iProc==PROCtest)then
+    if(iBlock==BLKtest .and. iProc==PROCtest)then
        call set_oktest('user_set_ics',oktest,oktestme)
     else
        oktest=.false.; oktestme=.false.
     endif
-
-    iBlock = GlobalBlk
 
     if(okTestMe)then
        write(*,*)'BodynDenNuSpecies_I(:)=',&
@@ -757,8 +761,8 @@ contains
 
           else
              State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
-             State_VGB(Bx_:Bz_,i,j,k,globalBLK)   = 0.0
-             State_VGB(Ux_:Uz_,i,j,k,globalBLK)   = 0.0
+             State_VGB(Bx_:Bz_,i,j,k,iBlock)   = 0.0
+             State_VGB(Ux_:Uz_,i,j,k,iBlock)   = 0.0
 
           end if
        end do;end do; end do;

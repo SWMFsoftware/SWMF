@@ -172,9 +172,8 @@ contains
 
   !===========================================================================
   
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
-    use ModMain,ONLY: globalBLK
     use ModAdvance,    ONLY: State_VGB
     use ModMain,       ONLY: UnUsedBlk, nBlockMax
     use ModGeometry,   ONLY: R_BLK, Rmin_BLK
@@ -189,13 +188,11 @@ contains
     use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP,iEnergy, &
          iRho, iRhoUx, iRhoUy, iRhoUz
 
-    integer :: iBlock,i,j,k
+    integer, intent(in) :: iBlock
+
+    integer :: i,j,k
     character (len=*), parameter :: NameSub = 'user_set_ics'
     !-------------------------------------------------------------------
-    !The routine is called for each block, the number of block should
-    !be passed to the routine using globalBLK
-
-    iBlock = globalBLK
 
     if(Rmin_BLK(iBlock) > PlanetRadius) return
 

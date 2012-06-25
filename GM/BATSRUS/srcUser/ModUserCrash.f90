@@ -412,10 +412,10 @@ contains
   end subroutine user_read_inputs
 
   !============================================================================
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
     use ModProcMH,      ONLY: iProc
-    use ModMain,        ONLY: GlobalBlk, nI, nJ, nK, UseRadDiffusion
+    use ModMain,        ONLY: nI, nJ, nK, UseRadDiffusion
     use ModMain,        ONLY: UseLaserHeating
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
@@ -428,15 +428,16 @@ contains
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
     use ModInitialState,ONLY: get_initial_state
 
+    integer, intent(in) :: iBlock
+
     real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
     real    :: DxyGold = -1.0
     real    :: TeSi, PeSi, Natomic, NatomicSi, RhoSi, pSi, p, Te
 
-    integer :: iBlock, i, j, k, iMaterial, iP
+    integer :: i, j, k, iMaterial, iP
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
-    iBlock = GlobalBlk
 
     if(UseCrash2dFile)then
 
@@ -1769,9 +1770,9 @@ contains
 
   !============================================================================
 
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
-    use ModMain,       ONLY: nI, nJ, nK, GlobalBlk
+    use ModMain,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
          IsConserv_CB, UseNonConservative, UseElectronPressure
@@ -1779,7 +1780,9 @@ contains
     use ModPhysics,    ONLY: g
     use ModVarIndexes, ONLY: p_, Pe_
 
-    integer :: i, j, k, iBlock, iP
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k, iP
     real :: DivU, GammaEos
     logical :: IsConserv
 
@@ -1789,8 +1792,6 @@ contains
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
-
-    iBlock = globalBlk
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        ! Note that the velocity of the first (and only) fluid is used

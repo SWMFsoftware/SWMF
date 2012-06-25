@@ -309,20 +309,22 @@ contains
 
   end subroutine get_wave_energy_base
   !============================================================================
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
     ! The isothermal parker wind solution is used as initial condition
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
-    use ModMain,       ONLY: globalBLK, unusedBLK
+    use ModMain,       ONLY: unusedBLK
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyP_I, BodyNDim_I, UnitU_, UnitN_, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
          WaveFirst_, WaveLast_, Hyp_
 
-    integer :: i, j, k, iBlock
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
     real :: x, y, z, r, Rho, NumDensIon, NumDensElectron, Temperature
     real :: RhoCorona, tCorona, uCorona, rCorona, TemperatureGradient
     real :: B_D(3), r_D(3), Br
@@ -333,7 +335,6 @@ contains
     real, parameter :: Epsilon = 1.0e-6
     character (len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-    iBlock = globalBLK
 
     ! Initially, density, electron and ion temperature are at coronal
     ! values starting from just above the boundary
@@ -616,19 +617,20 @@ contains
 
   end subroutine write_b0
   !============================================================================
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
          B0_DGB, VdtFace_x, VdtFace_y, VdtFace_z
     use ModGeometry,       ONLY: r_BLK
-    use ModMain,           ONLY: GlobalBlk
     use ModPhysics,        ONLY: gm1, rBody, UnitTemperature_, No2Si_V
     use ModVarIndexes,     ONLY: Rho_, Energy_, p_, Pe_, WaveFirst_, WaveLast_
     use ModMultifluid,     ONLY: MassIon_I
     use ModCoronalHeating, ONLY: HeatFactor
     use BATL_lib, ONLY: CellVolume_GB
 
-    integer :: i, j, k, iBlock
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
     real    :: TemperatureSi, FullB
     real    :: CoronalHeating, RadiativeCooling, MagneticHeating
     real    :: DtInvWavePlus, DtInvWaveMinus, Vdt_Source, Vdt
@@ -638,7 +640,6 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !------------------------------------------------------------------------- 
-    iBlock = globalBlk
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(r_BLK(i,j,k,iBlock) < rBody) CYCLE
@@ -1330,7 +1331,7 @@ contains
 
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
-    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, GlobalBLK
+    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge, BodyRho_I, &
                               BodyTDim_I, Si2No_V, UnitTemperature_, UnitN_

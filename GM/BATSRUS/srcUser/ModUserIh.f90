@@ -80,21 +80,21 @@ contains
 
   end subroutine user_read_inputs
   !========================================================================
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
     
-    use ModMain,        ONLY: globalBLK, unusedBLK   
+    use ModMain,        ONLY: unusedBLK   
     use ModSize,        ONLY: nI, nJ, nK, gcn
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,     ONLY: State_VGB
     use ModPhysics,     ONLY: rBody
     use ModVarIndexes
 
+    integer, intent(in) :: iBlock
 
-    integer   :: i,j,k,iBlock
+    integer   :: i,j,k
     real      :: x, y, z, r, State_V(nVar)
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !----------------------------------------------------------------------
-    iBlock = globalBLK
   
     if (unusedBLK(iBlock)) RETURN
   

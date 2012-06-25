@@ -190,10 +190,9 @@ contains
   end subroutine user_init_session
 
   !========================================================================
-  subroutine user_set_ICs
+  subroutine user_set_ICs(iBlock)
     !========================================================================
 
-    use ModMain, ONLY: globalBLK
     use ModPhysics, ONLY: CellState_VI
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: nVar
@@ -202,6 +201,8 @@ contains
     use ModNumConst
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitU_
 
+    integer, intent(in) :: iBlock
+
     integer :: i,j,k, iVar
     !--------------------------------------------------------------------------
 
@@ -209,48 +210,48 @@ contains
 
     if(.not.restart)then
        do iVar=1,nVar
-          State_VGB(iVar,:,:,:,globalBLK)   = CellState_VI(iVar,1)
+          State_VGB(iVar,:,:,:,iBlock)   = CellState_VI(iVar,1)
        end do
     end if
 
     !define neutral speed array, necessary for special neutral distribution types only
-    UNeu_BLK(:,:,:,globalBLK,1) = Unr* &
-         x_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)/ &
-         R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)
-    UNeu_BLK(:,:,:,globalBLK,2) = Unr* &
-         y_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)/ &
-         R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)
-    UNeu_BLK(:,:,:,globalBLK,3) = Unr* &
-         z_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)/ &
-         R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)
-    UNeu_BLK(:,:,:,globalBLK,:) = &
-         UNeu_BLK(:,:,:,globalBLK,:)/No2Si_V(UnitU_)
+    UNeu_BLK(:,:,:,iBlock,1) = Unr* &
+         x_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)/ &
+         R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)
+    UNeu_BLK(:,:,:,iBlock,2) = Unr* &
+         y_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)/ &
+         R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)
+    UNeu_BLK(:,:,:,iBlock,3) = Unr* &
+         z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)/ &
+         R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)
+    UNeu_BLK(:,:,:,iBlock,:) = &
+         UNeu_BLK(:,:,:,iBlock,:)/No2Si_V(UnitU_)
 
     !define neutral density array, necessary for special neutral distribution types only
-    NNeu_BLK(:,:,:,globalBLK,H2O_) = Qprod * &	!!!Number Density!!!
-         exp(-R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)*No2Si_V(UnitX_)/lambda)/ &
-         (4*cPi*Unr*R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)**2*No2Si_V(UnitX_)**2)
+    NNeu_BLK(:,:,:,iBlock,H2O_) = Qprod * &	!!!Number Density!!!
+         exp(-R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)*No2Si_V(UnitX_)/lambda)/ &
+         (4*cPi*Unr*R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)**2*No2Si_V(UnitX_)**2)
     !minor species using estimation only [combi96,Haberli96], despite of chemistry/scale hight.
-    NNeu_BLK(:,:,:,globalBLK,OH_ ) = NNeu_BLK(:,:,:,globalBLK,H2O_)/30.
-    NNeu_BLK(:,:,:,globalBLK,O_  ) = NNeu_BLK(:,:,:,globalBLK,H2O_)/100.
-    NNeu_BLK(:,:,:,globalBLK,CO_ ) = NNeu_BLK(:,:,:,globalBLK,H2O_)/6.
-    NNeu_BLK(:,:,:,globalBLK,H2_ ) = NNeu_BLK(:,:,:,globalBLK,H2O_)/500.
+    NNeu_BLK(:,:,:,iBlock,OH_ ) = NNeu_BLK(:,:,:,iBlock,H2O_)/30.
+    NNeu_BLK(:,:,:,iBlock,O_  ) = NNeu_BLK(:,:,:,iBlock,H2O_)/100.
+    NNeu_BLK(:,:,:,iBlock,CO_ ) = NNeu_BLK(:,:,:,iBlock,H2O_)/6.
+    NNeu_BLK(:,:,:,iBlock,H2_ ) = NNeu_BLK(:,:,:,iBlock,H2O_)/500.
     if ( jpattern == 22 ) then		!uniform estimated H density
-       NNeu_BLK(:,:,:,globalBLK,H_) = Qprod * &
-            exp(-R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)* &
+       NNeu_BLK(:,:,:,iBlock,H_) = Qprod * &
+            exp(-R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)* &
             No2Si_V(UnitX_)/lambda/12.)/ &
-            (4*cPi*Unr*R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)**2* &
+            (4*cPi*Unr*R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)**2* &
             No2Si_V(UnitX_)**2 * 6)
     else		!Haser model for H density, should be used for other species later, esp. O and OH.
-       NNeu_BLK(:,:,:,globalBLK,H_) = Qprod * 1.e7/(1.e5-1.e7)* &
-            ( exp(-R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)* &
+       NNeu_BLK(:,:,:,iBlock,H_) = Qprod * 1.e7/(1.e5-1.e7)* &
+            ( exp(-R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)* &
             No2Si_V(UnitX_)/lambda*10.) - &
-            exp(-R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)* &
+            exp(-R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)* &
             No2Si_V(UnitX_)/lambda/12.) )/ &
-            (4*cPi*Unr*R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)**2* &
+            (4*cPi*Unr*R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)**2* &
             No2Si_V(UnitX_)**2 * 6)
     endif
-    if(nNuSpecies < 2) NNeu_BLK(:,:,:,globalBLK,2:MaxNuSpecies) = cTiny
+    if(nNuSpecies < 2) NNeu_BLK(:,:,:,iBlock,2:MaxNuSpecies) = cTiny
 
   end subroutine user_set_ICs
 
@@ -281,7 +282,7 @@ contains
   !========================================================================
   !  SUBROUTINE user_calc_sources
   !========================================================================
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
     ! Evaluate the explicit or implicit or both source terms.
     ! If there is no explicit source term, the subroutine user_expl_source 
@@ -290,42 +291,49 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
     use ModVarIndexes, ONLY: UseMultiSpecies
 
+    integer, intent(in) :: iBlock
+
     if(.not.UsePointImplicit)then
        ! Add all source terms if we do not use the point implicit scheme
-       call user_expl_source
+       call user_expl_source(iBlock)
        if(.not. UseMultiSpecies)then
-	  call user_impl_source_sgl
+	  call user_impl_source_sgl(iBlock)
        else
-	  call user_impl_source_multi
+	  call user_impl_source_multi(iBlock)
        endif
     elseif(IsPointImplSource)then
        ! Add implicit sources only
        if(.not. UseMultiSpecies)then
-	  call user_impl_source_sgl
+	  call user_impl_source_sgl(iBlock)
        else
-	  call user_impl_source_multi
+	  call user_impl_source_multi(iBlock)
        endif
     else
        ! Add explicit sources only
-       call user_expl_source
+       call user_expl_source(iBlock)
     end if
 
   end subroutine user_calc_sources
   !==========================================================================
-  subroutine user_expl_source
+  subroutine user_expl_source(iBlock)
+
+    integer, intent(in) :: iBlock
 
     ! Here come the explicit source terms
     ! The energy source is only needed in the explicit source term.
 
   end subroutine user_expl_source
   !==========================================================================
-  subroutine user_impl_source_sgl
+  subroutine user_impl_source_sgl(iBlock)
+
+    integer, intent(in) :: iBlock
+
   end subroutine user_impl_source_sgl
 
   !========================================================================
   !  SUBROUTINE user_impl_source_multi
   !========================================================================
-  subroutine user_impl_source_multi
+  subroutine user_impl_source_multi(iBlock)
 
     ! This is a test and example for using point implicit source terms
     ! Note that the energy is a dependent variable in the
@@ -335,13 +343,15 @@ contains
     use ModPointImplicit, ONLY: &
          UsePointImplicit, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
 
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, n_step, BlkTest, &
+    use ModMain,    ONLY: nI, nJ, nK, n_step, BlkTest, &
          iTest, jTest, kTest, PROCTest
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModVarIndexes
     use ModPhysics
     use ModProcMH
+
+    integer, intent(in) :: iBlock
 
     integer :: i, j, k, m
     real :: eta, usqr, Unsqr, totalNumRho, Te, alphaTe, fi, &
@@ -354,18 +364,18 @@ contains
 
     do k=1,nK ;   do j=1,nJ ;    do i=1,nI
 
-       State_VGB(rho_,i,j,k,globalBLK) = &	!essential for pt-implicit
-            sum( State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK) )
+       State_VGB(rho_,i,j,k,iBlock) = &	!essential for pt-implicit
+            sum( State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) )
 
-       nn_I(1:MaxSpecies) = NNeu_BLK(i,j,k,globalBLK,1:MaxSpecies)*No2Si_V(UnitT_)
-       ni_I(1:MaxSpecies) = State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK) &
+       nn_I(1:MaxSpecies) = NNeu_BLK(i,j,k,iBlock,1:MaxSpecies)*No2Si_V(UnitT_)
+       ni_I(1:MaxSpecies) = State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) &
             /MassSpecies_V(SpeciesFirst_:SpeciesLast_)
        ! use of nSpecies is an example of how to change this into
        ! nSpecies version instead of 6 species version
        totalNumRho = sum(ni_I(1:nSpecies))
 
        !The following is for the special impact ionization and recombination Te [gombosi96].
-       Rkm  = R_BLK(i,j,k,globalBLK)*No2Si_V(UnitX_)/1E3	!km unit
+       Rkm  = R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)/1E3	!km unit
        logR = log10(Rkm)
        if (jpattern == 10 .or. jpattern == 11 ) then    ! jpattern= 0, regular comet[Gombosi97]
           if (rkm >= 5000. .and. rkm < 10000.) then     ! jpattern=10, Comet Halley[Gombosi96]
@@ -391,7 +401,7 @@ contains
 	     Te = 1.e5
           endif
        else
-	  Te = State_VGB(p_,i,j,k,globalBLK)*No2Si_V(UnitP_) / &
+	  Te = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_) / &
                ( 2*No2Si_V(UnitN_)*cBoltzmann*totalNumRho )
        endif	!jpattern
 
@@ -476,12 +486,12 @@ contains
             CxRate_I(COp_OH__OHp_CO_  )*nn_I(OH_ )
 
        Loss_I = ( Loss_I + AlphaN_I ) * &		!*ms*ns
-            State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k, globalBLK)
+            State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k, iBlock)
 
        !define special charge exchange loss term
        Loss_H3Op = ( CxRate_I(H2Op_H2O__H3Op_OH_)*nn_I(H2O_) + &
             CxRate_I(H2Op_H2__H3Op_H_ )*nn_I(H2_ ) ) * &
-            State_VGB(rhoH2Op_,i,j,k, globalBLK)
+            State_VGB(rhoH2Op_,i,j,k, iBlock)
        NumLoss_H3Op = ( CxRate_I(H2Op_H2O__H3Op_OH_)*nn_I(H2O_) + &
             CxRate_I(H2Op_H2__H3Op_H_ )*nn_I(H2_ ) ) * ni_I(H2Op_)
 
@@ -489,11 +499,11 @@ contains
        totalSourceRho  = sum( Source_I )
        totalLossRho    = sum( Loss_I   )
        totalNumLoss    = sum( Loss_I / MassSpecies_V )
-       collisn         = State_VGB(rho_,i,j,k, globalBLK)*kin*nn_I(H2O_)
+       collisn         = State_VGB(rho_,i,j,k, iBlock)*kin*nn_I(H2O_)
 
-       Un   = UNeu_BLK(i,j,k,globalBLK,1:3)
-       U    = State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK)/ &
-            State_VGB(rho_,i,j,k,globalBLK)
+       Un   = UNeu_BLK(i,j,k,iBlock,1:3)
+       U    = State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)/ &
+            State_VGB(rho_,i,j,k,iBlock)
        unsqr= dot_product( Un, Un )
        usqr = dot_product( U , U  )
 
@@ -510,15 +520,15 @@ contains
        Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + &
             (1.0/3.0)*(totalSourceRho-Source_H3Op+collisn)* &
             dot_product( (Un-U) , (Un-U) ) - &
-            cHalf  *State_VGB(p_,i,j,k,globalBLK)/totalNumRho* &
+            cHalf  *State_VGB(p_,i,j,k,iBlock)/totalNumRho* &
             ( (totalNumLoss-NumLoss_H3Op+collisn/mbar) + sum(AlphaN_I/MassSpecies_V* &
-            State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k, globalBLK)) )
+            State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k, iBlock)) )
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
             cHalf*( (totalSourceRho-Source_H3Op+collisn)*Unsqr - &
             (totalLossRho-Loss_H3Op+collisn)*usqr - &
-            inv_gm1*State_VGB(p_,i,j,k,globalBLK)/totalNumRho* &
+            inv_gm1*State_VGB(p_,i,j,k,iBlock)/totalNumRho* &
             ((totalNumLoss-NumLoss_H3Op+collisn/mbar) + sum(AlphaN_I/MassSpecies_V* &
-            State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k, globalBLK))) )
+            State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k, iBlock))) )
 
        ! source energy for explicit, p for implicit
     end do; enddo; enddo

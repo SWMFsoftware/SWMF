@@ -93,23 +93,25 @@ contains
      
    end subroutine user_initial_perturbation
   !============================================================================
-  subroutine user_set_ics
-    use ModMain,      ONLY: globalBLK,nI,nJ,nK
+  subroutine user_set_ics(iBlock)
+
+    use ModMain,      ONLY: nI,nJ,nK
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: inv_gm1,BodyTDim_I
     use ModGeometry
 
-    integer :: i,j,k,iBLK
+    integer, intent(in) :: iBlock
+
+    integer :: i,j,k
     logical :: oktest,oktest_me
     !--------------------------------------------------------------------------
     call set_oktest('user_set_ics',oktest,oktest_me)
-    iBLK = globalBLK
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
-       State_VGB(Uy_:Uz_,i,j,k,iBLK) = 0.0
-       State_VGB(Ux_,i,j,k,iBLK) = real(i)
+       State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+       State_VGB(Uy_:Uz_,i,j,k,iBlock) = 0.0
+       State_VGB(Ux_,i,j,k,iBlock) = real(i)
     end do; end do; end do
 
   end subroutine user_set_ics

@@ -28,15 +28,17 @@ Module ModUser
 contains
 
   !=====================================================================
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
+
     use ModAdvance, ONLY: Source_VC
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
-         GLOBALBLK
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
+
+    integer, intent(in) :: iBlock
 
     logical :: oktest,oktest_me
     !------------------------------------------------------------------------  
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('user_calc_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
@@ -53,7 +55,7 @@ contains
     SP     = 0.0
     SE     = 0.0
 
-    call user_sources
+    call user_sources(iBlock)
 
     Source_VC(rho_   ,:,:,:) = Srho   + Source_VC(rho_   ,:,:,:)
     Source_VC(rhoUx_ ,:,:,:) = SrhoUx + Source_VC(rhoUx_ ,:,:,:)
@@ -69,9 +71,9 @@ contains
 
 
   !=====================================================================
-  subroutine user_sources
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
-         GLOBALBLK
+  subroutine user_sources(iBlock)
+
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: x_Blk, y_Blk, z_Blk, r_Blk, rMin_Blk
@@ -81,6 +83,7 @@ contains
     use ModProcMH, ONLY: iProc
     use CON_axes
 
+    integer, intent(in) :: iBlock
 
     ! Variables required by this user subroutine
     integer :: i,j,k
@@ -115,7 +118,7 @@ contains
     real, dimension(3,3) :: SMG_GSE_mat
 
     !---------------------------------------------------------------------------
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('user_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
@@ -138,7 +141,7 @@ contains
 
        SMG_GSE_mat = transform_matrix(0.0, 'GSE','SMG')
 
-       if (Rmin_BLK(globalBLK) > 45.0)return
+       if (Rmin_BLK(iBlock) > 45.0)return
 
        do k = 1, nK
           do j = 1, nJ
@@ -150,9 +153,9 @@ contains
                 ! velocities in the GSE coordinate system where GM/BATSRUS works.
                 ! this makes life a little complicated.
 
-                xGSE(1) = x_BLK(i,j,k,globalBLK)
-                xGSE(2) = y_BLK(i,j,k,globalBLK)
-                xGSE(3) = z_BLK(i,j,k,globalBLK)
+                xGSE(1) = x_BLK(i,j,k,iBlock)
+                xGSE(2) = y_BLK(i,j,k,iBlock)
+                xGSE(3) = z_BLK(i,j,k,iBlock)
                 xSMG = matmul(SMG_GSE_mat,xGSE)
 
 
@@ -167,12 +170,12 @@ contains
 
                 if (((xSMG(3) < 2.0) .and.    &
                      (xSMG(3) > -2.0)) .and.  &
-                     (R_Blk(i,j,k,globalBLK) < 14.0) .and.    &
-                     (R_BLK(i,j,k,globalBLK) > 3.0)) then
+                     (R_Blk(i,j,k,iBlock) < 14.0) .and.    &
+                     (R_BLK(i,j,k,iBlock) > 3.0)) then
 
-                   Ux  = State_VGB(rhoUx_,i,j,k,globalBLK)/State_VGB(rho_,i,j,k,globalBLK)
-                   Uy  = State_VGB(rhoUy_,i,j,k,globalBLK)/State_VGB(rho_,i,j,k,globalBLK)
-                   Uz  = State_VGB(rhoUz_,i,j,k,globalBLK)/State_VGB(rho_,i,j,k,globalBLK)
+                   Ux  = State_VGB(rhoUx_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
+                   Uy  = State_VGB(rhoUy_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
+                   Uz  = State_VGB(rhoUz_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
                    Usq = sqrt(Ux**2 + Uy**2 + Uz**2)
 
 
@@ -359,7 +362,7 @@ contains
                    ! rate.
 
 
-                   nElec = State_VGB(rho_,i,j,k,globalBLK)*No2Io_V(UnitRho_)/16.6
+                   nElec = State_VGB(rho_,i,j,k,iBlock)*No2Io_V(UnitRho_)/16.6
 
                    ! We now need the electron temperature to calculate some 
                    ! of the ionization rates.  The electron temperature that 
@@ -372,8 +375,8 @@ contains
 
                    Tfrac = 1.0/15.0;
 
-                   Telectron = (16.6*cProtonMass/cBoltzmann)*(State_VGB(p_,i,j,k,globalBLK)*     &
-                        No2Si_V(UnitP_))/(State_VGB(rho_,i,j,k,globalBLK)*No2Si_V(UnitRho_))* &
+                   Telectron = (16.6*cProtonMass/cBoltzmann)*(State_VGB(p_,i,j,k,iBlock)*     &
+                        No2Si_V(UnitP_))/(State_VGB(rho_,i,j,k,iBlock)*No2Si_V(UnitRho_))* &
                         Tfrac
                    EVelectron = cBoltzmann/cElectronCharge*Telectron
                    LogEVelectron = Log(EVelectron)
@@ -411,48 +414,48 @@ contains
                    ! now load the source terms into the right hand side
 
                    Srho(i,j,k)   = Srho(i,j,k)                                        &  
-                        + (rhodot-Alpha_rec*State_VGB(rho_,i,j,k,globalBLK))  
+                        + (rhodot-Alpha_rec*State_VGB(rho_,i,j,k,iBlock))  
                    SrhoUx(i,j,k) = SrhoUx(i,j,k)                                      &
-                        + (rhodot + CXsource*State_VGB(rho_,i,j,k,globalBLK))*unx &
+                        + (rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*unx &
                         - (CXsource + Alpha_rec)*                          &
-                        State_VGB(rhoUx_,i,j,k,globalBLK)                    
+                        State_VGB(rhoUx_,i,j,k,iBlock)                    
                    SrhoUy(i,j,k) = SrhoUy(i,j,k)                                      &
-                        + (rhodot + CXsource*State_VGB(rho_,i,j,k,globalBLK))*uny &
+                        + (rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*uny &
                         - (CXsource + Alpha_rec)*                          &
-                        State_VGB(rhoUy_,i,j,k,globalBLK)                    
+                        State_VGB(rhoUy_,i,j,k,iBlock)                    
                    SrhoUz(i,j,k) = SrhoUz(i,j,k)                                      &  
                         - (CXsource + Alpha_rec)*                          &
-                        State_VGB(rhoUz_,i,j,k,globalBLK)                    
+                        State_VGB(rhoUz_,i,j,k,iBlock)                    
                    SE(i,j,k)     = SE(i,j,k)                                               & 
-                        + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,globalBLK))*unsq &
+                        + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*unsq &
                         - (CXsource + Alpha_rec)*                               &
-                        (0.5*usq*State_VGB(rho_,i,j,k,globalBLK)                  &
-                        + 1.5*State_VGB(p_,i,j,k,globalBLK))                  &
-                        + 1.5*CXsource*State_VGB(p_,i,j,k,globalBLK)*Tfrac             
+                        (0.5*usq*State_VGB(rho_,i,j,k,iBlock)                  &
+                        + 1.5*State_VGB(p_,i,j,k,iBlock))                  &
+                        + 1.5*CXsource*State_VGB(p_,i,j,k,iBlock)*Tfrac             
                    SP(i,j,k)     = SP(i,j,k)                                                 & 
-                        + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,globalBLK))*urelsq &
-                        - 1.5*CXsource*State_VGB(p_,i,j,k,globalBLK)*(1.0-Tfrac)         &
-                        - 1.5*Alpha_rec*State_VGB(p_,i,j,k,globalBLK)                  
+                        + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*urelsq &
+                        - 1.5*CXsource*State_VGB(p_,i,j,k,iBlock)*(1.0-Tfrac)         &
+                        - 1.5*Alpha_rec*State_VGB(p_,i,j,k,iBlock)                  
 
 
                    ! Output to look at rates
-                   if (oktest_me .and. globalBLK==BLKtest  .and. &
+                   if (oktest_me .and. iBlock==BLKtest  .and. &
                         i==Itest .and. j==Jtest .and. k==Ktest ) then
                       write(*,*) '----------Inner Torus Mass Loading Rates-------------------------'
                       write(*,'(a,3(1X,E13.5))') 'X, Y, Z:', &
-                           X_BLK(i,j,k,globalBLK), Y_BLK(i,j,k,globalBLK), Z_BLK(i,j,k,globalBLK)
-                      write(*,'(a,5(1X,i6))')    'i,j,k,globalBLK,iProc:', &
-                           i,j,k,globalBLK,iProc
+                           X_BLK(i,j,k,iBlock), Y_BLK(i,j,k,iBlock), Z_BLK(i,j,k,iBlock)
+                      write(*,'(a,5(1X,i6))')    'i,j,k,iBlock,iProc:', &
+                           i,j,k,iBlock,iProc
                       write(*,'(a,3(1X,E13.5))') 'Telectron, EVelectron, LogEVelectron:', &
                            Telectron, EVelectron, LogEVelectron
                       write(*,'(a,3(1X,E13.5))') 'rhodot, CXsource, Alpha_rec (unnormalized):', &
                            rhodot/rhodotNorm, CXsource/CXNorm,Alpha_rec/CXNorm
                       write(*,'(a,4(1X,E13.5))') 'rho(amu/cc),nElec(1/cc),un,usq(km/s):', &
-                           State_VGB(rho_,i,j,k,globalBLK)*No2Io_V(UnitRho_), nElec, un*No2Io_V(UnitU_), usq*No2Io_V(UnitU_)
+                           State_VGB(rho_,i,j,k,iBlock)*No2Io_V(UnitRho_), nElec, un*No2Io_V(UnitU_), usq*No2Io_V(UnitU_)
                       write(*,'(a,3(1X,E13.5))') 'rhodot, CXsource, Alpha_rec (normalized):', &
                            rhodot, CXsource,Alpha_rec
                       write(*,'(a,4(1X,E13.5))') 'rho, nElec, un, usq (normalized):', &
-                           State_VGB(rho_,i,j,k,globalBLK), nElec/No2Io_V(UnitRho_), un, usq
+                           State_VGB(rho_,i,j,k,iBlock), nElec/No2Io_V(UnitRho_), un, usq
                       write(*,*) '-----------------------------------------------------------------'
                    end if
 
@@ -472,10 +475,10 @@ contains
 
                 if (Dtorus < 10.0) then
 
-                   usq = (State_VGB(rhoUx_,i,j,k,globalBLK)**2 +   &
-                        State_VGB(rhoUy_,i,j,k,globalBLK)**2 +   &
-                        State_VGB(rhoUz_,i,j,k,globalBLK)**2 ) / &
-                        (State_VGB(rho_,i,j,k,globalBLK)**2)
+                   usq = (State_VGB(rhoUx_,i,j,k,iBlock)**2 +   &
+                        State_VGB(rhoUy_,i,j,k,iBlock)**2 +   &
+                        State_VGB(rhoUz_,i,j,k,iBlock)**2 ) / &
+                        (State_VGB(rho_,i,j,k,iBlock)**2)
 
 
                    ! compute the cylindrical radius for later use
@@ -516,8 +519,8 @@ contains
 
                    Tfrac = 1.0/2.0;
 
-                   Telectron = (mn*cProtonMass/cBoltzmann)*(State_VGB(p_,i,j,k,globalBLK)*       &
-                        No2Si_V(UnitP_))/(State_VGB(rho_,i,j,k,globalBLK)*No2Si_V(UnitRho_))* &
+                   Telectron = (mn*cProtonMass/cBoltzmann)*(State_VGB(p_,i,j,k,iBlock)*       &
+                        No2Si_V(UnitP_))/(State_VGB(rho_,i,j,k,iBlock)*No2Si_V(UnitRho_))* &
                         Tfrac
                    EVelectron = cBoltzmann/cElectronCharge*Telectron
                    LogEVelectron = Log(EVelectron)
@@ -536,26 +539,26 @@ contains
                    ! is the number density in cm^-3.
 
                    Lterm = alphaE*(No2Si_V(UnitT_))*   &
-                        (No2Io_V(UnitRho_)*State_VGB(rho_,i,j,k,globalBLK)/mn)
+                        (No2Io_V(UnitRho_)*State_VGB(rho_,i,j,k,iBlock)/mn)
 
-                   part1 = rhodot + rhodot*eta*State_VGB(rho_,i,j,k,globalBLK)
+                   part1 = rhodot + rhodot*eta*State_VGB(rho_,i,j,k,iBlock)
                    part2 = rhodot*eta + Lterm
 
                    ! now load the source terms into the right hand side
 
-                   Srho(i,j,k)   = Srho(i,j,k)   + (rhodot - Lterm*State_VGB(rho_,i,j,k,globalBLK))
+                   Srho(i,j,k)   = Srho(i,j,k)   + (rhodot - Lterm*State_VGB(rho_,i,j,k,iBlock))
 
                    SrhoUx(i,j,k) = SrhoUx(i,j,k) + (part1*(-OMEGAtitan_orbit*No2Si_V(UnitT_)*  &
-                        Y_BLK(i,j,k,globalBLK)) -  &
-                        part2*State_VGB(rhoUx_,i,j,k,globalBLK))  
+                        Y_BLK(i,j,k,iBlock)) -  &
+                        part2*State_VGB(rhoUx_,i,j,k,iBlock))  
                    SrhoUy(i,j,k) = SrhoUy(i,j,k) + (part1*(OMEGAtitan_orbit*No2Si_V(UnitT_)*   &
-                        X_BLK(i,j,k,globalBLK)) -   &
-                        part2*State_VGB(rhoUy_,i,j,k,globalBLK))   
+                        X_BLK(i,j,k,iBlock)) -   &
+                        part2*State_VGB(rhoUy_,i,j,k,iBlock))   
                    SrhoUz(i,j,k) = SrhoUz(i,j,k) + (part1*(0.0) - &
-                        part2*State_VGB(rhoUz_,i,j,k,globalBLK))  
+                        part2*State_VGB(rhoUz_,i,j,k,iBlock))  
                    SE(i,j,k)     = SE(i,j,k)     + (part1*0.5*unsq -   &
-                        part2*((0.5*State_VGB(rho_,i,j,k,globalBLK)*usq)+ &
-                        ((3./2.)*State_VGB(p_,i,j,k,globalBLK))))  
+                        part2*((0.5*State_VGB(rho_,i,j,k,iBlock)*usq)+ &
+                        ((3./2.)*State_VGB(p_,i,j,k,iBlock))))  
 
                 end if    ! end calculation of source terms inside the torus.
 

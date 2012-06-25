@@ -465,42 +465,44 @@ contains
 
   !============================================================================
 
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
+
     use ModAdvance,  ONLY: Source_VC,Energy_
     use ModNumConst, ONLY: cZero
     use ModVarIndexes, ONLY: rhoUx_, rhoUy_, rhoUz_
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
-         GLOBALBLK
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, &
          IsPointImplSource
     use ModPhysics, ONLY: Rbody
     use ModGeometry,ONLY: R_BLK
 
+    integer, intent(in) :: iBlock
+
     logical :: oktest,oktest_me
     !------------------------------------------------------------------------  
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('user_calc_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
     end if
     if(UsePointImplicit)&
-         UsePointImplicit_B(globalBLK) = &
-         R_BLK(1,1,1,globalBLK) <= rPointImplicit &
-         .and. R_BLK(nI,1,1,globalBLK) > rBody
+         UsePointImplicit_B(iBlock) = &
+         R_BLK(1,1,1,iBlock) <= rPointImplicit &
+         .and. R_BLK(nI,1,1,iBlock) > rBody
 
-    if(.not.(UsePointImplicit .and. UsePointImplicit_B(globalBLK)) )then
+    if(.not.(UsePointImplicit .and. UsePointImplicit_B(iBlock)) )then
        ! Add all source terms if we do not use the point implicit 
        ! scheme for the Block
-       call user_expl_source
-       call user_impl_source
+       call user_expl_source(iBlock)
+       call user_impl_source(iBlock)
 
     elseif(IsPointImplSource)then
        ! Add implicit sources only
-       call user_impl_source
+       call user_impl_source(iBlock)
     else
        ! Add explicit sources only
-       call user_expl_source
+       call user_expl_source(iBlock)
     end if
 
     if(oktest_me)then
@@ -514,9 +516,9 @@ contains
 
   !==========================================================================
 
-  subroutine user_sources
+  subroutine user_sources(iBlock)
 
-    use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest 
+    use ModMain, ONLY: PROCTEST,BLKTEST, iTest,jTest,kTest 
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
          Rmin_BLK
@@ -527,8 +529,10 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit
     use BATL_lib, ONLY: CellVolume_GB
 
+    integer, intent(in) :: iBlock
+
     ! Variables required by this user subroutine
-    integer:: i,j,k,iSpecies,iBlock,iBlockLast = -1
+    integer:: i,j,k,iSpecies,iBlockLast = -1
     real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate,kTi, kTe
     real :: alt
     real :: totalPSNumRho=0.0,totalIMPNumRho=0.0, totalRLNumRhox=0.0, temps
@@ -553,7 +557,6 @@ contains
     !/
     !--------------------------------------------------------------------------
     !
-    iBlock = globalBlk
 
     if (iProc==PROCtest.and.iBlock==BLKtest) then
        call set_oktest('user_sources',oktest,oktest_me)
@@ -1032,13 +1035,16 @@ contains
 
   !======================================================================
 
-  subroutine user_set_ICs
+  subroutine user_set_ICs(iBlock)
+
     use ModProcMH, ONLY : iProc
-    use ModMain, ONLY: GlobalBLK,Body1_,ProcTest,itest,jtest,ktest,BLKtest
+    use ModMain, ONLY: Body1_,ProcTest,itest,jtest,ktest,BLKtest
     use ModAdvance
     use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
     use ModIO, ONLY : restart
     use ModPhysics
+
+    integer, intent(in) :: iBlock
 
     real :: SinSlope, CosSlope,CosSZA, coef, hh
     real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
@@ -1056,21 +1062,21 @@ contains
        !/
 
        do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
-          if (R_BLK(i,j,k,globalBLK)< Rbody) then
-             State_VGB(:,i,j,k,globalBLK)   =  CellState_VI(:,body1_)
+          if (R_BLK(i,j,k,iBlock)< Rbody) then
+             State_VGB(:,i,j,k,iBlock)   =  CellState_VI(:,body1_)
           else
-             State_VGB(:,i,j,k,globalBLK)   = CellState_VI(:,1)
-             State_VGB(Bx_:Bz_,i,j,k,globalBLK)=0.0
+             State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
+             State_VGB(Bx_:Bz_,i,j,k,iBlock)=0.0
           end if
        end do;end do; end do;
 
        coefy=BodyRhoSpecies_dim_II(:,1)/tmp_ion(:,1)           
 
        do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
-          cosSZA=(x_BLK(i,j,k,globalBLK)*SX0 &
-               + y_BLK(i,j,k,globalBLK)*SY0 &
-               + z_BLK(i,j,k,globalBLK)*SZ0)&
-               /max(R_BLK(i,j,k,globalBLK),1.0e-3)
+          cosSZA=(x_BLK(i,j,k,iBlock)*SX0 &
+               + y_BLK(i,j,k,iBlock)*SY0 &
+               + z_BLK(i,j,k,iBlock)*SZ0)&
+               /max(R_BLK(i,j,k,iBlock),1.0e-3)
 
           ! Make sure these are set (printed in testing)
           dtm   = -1.0
@@ -1099,11 +1105,11 @@ contains
              end if
           end if
 
-          if (R_BLK(i,j,k,globalBLK)< Rbody)then
-             State_VGB(rho_+1:rho_+nSpecies,i,j,k,globalBLK)=&
+          if (R_BLK(i,j,k,iBlock)< Rbody)then
+             State_VGB(rho_+1:rho_+nSpecies,i,j,k,iBlock)=&
                   BodyRhoSpecies_I(1:nSpecies)*coefx
           else
-             hh = (R_BLK(i,j,k,globalBLK)-1.00)*2575.0
+             hh = (R_BLK(i,j,k,iBlock)-1.00)*2575.0
              n= int((hh -725.0)/10.0+1.0)
 
              if(n<1) then 
@@ -1111,85 +1117,85 @@ contains
              else if(n> num_Ri-1) then
                 n = num_Ri-1
              end if
-             State_VGB(rho_+1:rho_+nSpecies,i,j,k,globalBLK)=&
+             State_VGB(rho_+1:rho_+nSpecies,i,j,k,iBlock)=&
                   tmp_ion(:,n)+&
                   (tmp_ion(:,n+1)-tmp_ion(:,n))*&
                   (hh-tmp_hR(n))/(tmp_hR(n+1)-tmp_hR(n))
 
-             State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)= &
-                  State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)&
+             State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock)= &
+                  State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock)&
                   *coefx*MassSpecies_V(SpeciesFirst_:SpeciesLast_)/No2Io_V(UnitN_)
 
-             State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)=&
-                  max(0.0,State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK))
-             State_VGB(rhoLp_,i,j,k,globalBLK)= SW_Lp
-             State_VGB(rhoMp_,i,j,k,globalBLK)=&
-                  State_VGB(rhoMp_,i,j,k,globalBLK)*&
-                  (Rbody/R_BLK(i,j,k,globalBLK))**2+ &
+             State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock)=&
+                  max(0.0,State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock))
+             State_VGB(rhoLp_,i,j,k,iBlock)= SW_Lp
+             State_VGB(rhoMp_,i,j,k,iBlock)=&
+                  State_VGB(rhoMp_,i,j,k,iBlock)*&
+                  (Rbody/R_BLK(i,j,k,iBlock))**2+ &
                   SW_Mp
 
           end if
 
-          State_VGB(rho_,i,j,k,globalBLK)   =&
-               sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,globalBLK))
+          State_VGB(rho_,i,j,k,iBlock)   =&
+               sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
           
-          !if (R_BLK(i,j,k,globalBLK)< 2.0*Rbody)&
-          State_VGB(Bx_:Bz_,i,j,k,globalBLK)=0.0
+          !if (R_BLK(i,j,k,iBlock)< 2.0*Rbody)&
+          State_VGB(Bx_:Bz_,i,j,k,iBlock)=0.0
           
-          !State_VGB(ux_:uz_,i,j,k,globalBLK)   = 0.0
+          !State_VGB(ux_:uz_,i,j,k,iBlock)   = 0.0
           !&
           !               CellState_VI(ux_:Uz_,1)/CellState_VI(rho_,1)&
-          !               *State_VGB(rho_,i,j,k,globalBLK)
-          State_VGB(P_,i,j,k,globalBLK)= &
-               sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)&
+          !               *State_VGB(rho_,i,j,k,iBlock)
+          State_VGB(P_,i,j,k,iBlock)= &
+               sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock)&
                /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*KTp0
           
           if(UseElectronPressure)then
-             State_VGB(P_,i,j,k,globalBLK)= State_VGB(P_,i,j,k,globalBLK)/2.0
-             State_VGB(Pe_,i,j,k,globalBLK)= State_VGB(P_,i,j,k,globalBLK)
+             State_VGB(P_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock)/2.0
+             State_VGB(Pe_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock)
           end if
 
-          if(R_BLK(i,j,k,globalBLK).gt.8.0)then
-             State_VGB(P_,i,j,k,globalBLK)= SW_p
-          elseif(R_BLK(i,j,k,globalBLK).gt.2.0)then
-             a = (R_BLK(i,j,k,globalBLK)-2.0)/6.0
-             State_VGB(P_,i,j,k,globalBLK)=SW_p*a+ &
-                  State_VGB(P_,i,j,k,globalBLK)*(1-a)
+          if(R_BLK(i,j,k,iBlock).gt.8.0)then
+             State_VGB(P_,i,j,k,iBlock)= SW_p
+          elseif(R_BLK(i,j,k,iBlock).gt.2.0)then
+             a = (R_BLK(i,j,k,iBlock)-2.0)/6.0
+             State_VGB(P_,i,j,k,iBlock)=SW_p*a+ &
+                  State_VGB(P_,i,j,k,iBlock)*(1-a)
           end if
 
           if(UseElectronPressure)then
-             if(R_BLK(i,j,k,globalBLK).gt.8.0)then
-                State_VGB(P_,i,j,k,globalBLK)= SW_pi
-                State_VGB(Pe_,i,j,k,globalBLK)= SW_pe
-             elseif(R_BLK(i,j,k,globalBLK).gt.2.0)then
-                a = (R_BLK(i,j,k,globalBLK)-2.0)/6.0
-                State_VGB(P_,i,j,k,globalBLK)=SW_pi*a+ &
-                     State_VGB(P_,i,j,k,globalBLK)*(1-a)
-                State_VGB(Pe_,i,j,k,globalBLK)=SW_pe*a+ &
-                     State_VGB(Pe_,i,j,k,globalBLK)*(1-a)
+             if(R_BLK(i,j,k,iBlock).gt.8.0)then
+                State_VGB(P_,i,j,k,iBlock)= SW_pi
+                State_VGB(Pe_,i,j,k,iBlock)= SW_pe
+             elseif(R_BLK(i,j,k,iBlock).gt.2.0)then
+                a = (R_BLK(i,j,k,iBlock)-2.0)/6.0
+                State_VGB(P_,i,j,k,iBlock)=SW_pi*a+ &
+                     State_VGB(P_,i,j,k,iBlock)*(1-a)
+                State_VGB(Pe_,i,j,k,iBlock)=SW_pe*a+ &
+                     State_VGB(Pe_,i,j,k,iBlock)*(1-a)
              end if
           end if
 
           if(oktest_me.and.&
-               globalBLK==Blktest.and.i==itest.and.j==jtest.and.k==ktest)then
+               iBlock==Blktest.and.i==itest.and.j==jtest.and.k==ktest)then
              write(*,*)'itest,jtest,ktest,blktest=',&
                   itest,jtest,ktest,blktest
              write(*,*)'coefx=', coefx
              write(*,*)'coefy=',coefy
              write(*,*)'cosSZA=', cosSZA
              write(*,*)'n=',n
-             write(*,*)'rhoSpecies_GBI(i,j,k,globalBLK,1:nSpecies)=',&
-                  State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)
+             write(*,*)'rhoSpecies_GBI(i,j,k,iBlock,1:nSpecies)=',&
+                  State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock)
              write(*,*)'CosSZAB_I(:)',CosSZAB_I
              write(*,*)'dtm, dtmp1,m=',dtm, dtmp1,m
-             write(*,*)'p_BLK(testcell)=',State_VGB(P_,i,j,k,globalBLK)
+             write(*,*)'p_BLK(testcell)=',State_VGB(P_,i,j,k,iBlock)
              write(*,*)'tmp_ion(:,n)=',tmp_ion(:,n)
              !call stop_mpi('test')
           end if
 
        end do; end do; end do
 
-       time_BLK(:,:,:,globalBLK) = 0.00
+       time_BLK(:,:,:,iBlock) = 0.00
 
     end if
 
@@ -1671,8 +1677,7 @@ contains
     use ModMain, ONLY: Body1_
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_, B_
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
-         GLOBALBLK
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
 
 
@@ -1849,7 +1854,7 @@ contains
 
   !============================================================================
 
-  subroutine user_impl_source
+  subroutine user_impl_source(iBlock)
 
     ! This is a test and example for using point implicit source terms
     ! Apply friction relative to some medium at rest
@@ -1858,7 +1863,7 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit_B, &
          iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
 
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+    use ModMain,    ONLY: nI, nJ, nK
     use ModPhysics, ONLY: inv_gm1
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModGeometry,ONLY: r_BLK
@@ -1869,19 +1874,19 @@ contains
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
 
+    integer, intent(in) :: iBlock
+
     logical :: oktest,oktest_me
-    integer :: iBlock, i, j, k
+    integer :: i, j, k
     real    :: Coef
     !    real, dimension(nI,nJ,nK) :: InvRho_C, Ux_C, Uy_C, Uz_C
     !-------------------------------------------------------------------------
 
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('user_imp_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
     end if
-
-    iBlock = GlobalBlk
 
     Srho   = cZero
     SrhoSpecies=cZero
@@ -1927,10 +1932,11 @@ contains
 
   !===========================================================================
 
-  subroutine user_expl_source
-    !    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+  subroutine user_expl_source(iBlock)
+    !    use ModMain,    ONLY: nI, nJ, nK
     !    use ModPointImplicit,ONLY: UsePointImplicit, UsePointImplicit_B
 
+    integer, intent(in) :: iBlock
     !---------------------------------------------------------------------
     ! Here come the explicit source terms
 

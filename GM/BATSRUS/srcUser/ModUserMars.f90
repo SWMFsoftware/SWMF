@@ -302,42 +302,44 @@ contains
 
   end subroutine user_init_point_implicit
   !========================================================================
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
+
     use ModAdvance,  ONLY: Source_VC,Energy_
     use ModNumConst, ONLY: cZero
     use ModVarIndexes, ONLY: rhoUx_, rhoUy_, rhoUz_
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
-         GLOBALBLK
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, &
          IsPointImplSource
     use ModPhysics, ONLY: Rbody
     use ModGeometry,ONLY: R_BLK
     
+    integer, intent(in) :: iBlock
+
     logical :: oktest,oktest_me
     !------------------------------------------------------------------------  
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('user_calc_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
     end if
     if(UsePointImplicit)&
-         UsePointImplicit_B(globalBLK) = &
-         R_BLK(1,1,1,globalBLK) <= rPointImplicit &
-         .and. R_BLK(nI,1,1,globalBLK) > rBody
+         UsePointImplicit_B(iBlock) = &
+         R_BLK(1,1,1,iBlock) <= rPointImplicit &
+         .and. R_BLK(nI,1,1,iBlock) > rBody
 
-    if(.not.(UsePointImplicit .and. UsePointImplicit_B(globalBLK)) )then
+    if(.not.(UsePointImplicit .and. UsePointImplicit_B(iBlock)) )then
        ! Add all source terms if we do not use the point implicit 
        ! scheme for the Block
-       call user_expl_source
-       call user_impl_source
+       call user_expl_source(iBlock)
+       call user_impl_source(iBlock)
 
     elseif(IsPointImplSource)then
        ! Add implicit sources only
-       call user_impl_source
+       call user_impl_source(iBlock)
     else
        ! Add explicit sources only
-       call user_expl_source
+       call user_expl_source(iBlock)
     end if
 
     if(oktest_me)then
@@ -351,10 +353,11 @@ contains
   end subroutine user_calc_sources
 
   !=========================================================================
-  subroutine user_impl_source
+  subroutine user_impl_source(iBlock)
+
     use ModPointImplicit, ONLY: UsePointImplicit_B, &
          iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+    use ModMain,    ONLY: nI, nJ, nK
     use ModPhysics, ONLY: inv_gm1
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModGeometry,ONLY: r_BLK
@@ -365,19 +368,20 @@ contains
     use ModProcMH,   ONLY: iProc
     !    use ModAdvance,  ONLY: Source_VC,Energy_
     !    use ModNumConst, ONLY: cZero
+
+    integer, intent(in) :: iBlock
+
     logical :: oktest,oktest_me
-    integer :: iBlock, i, j, k
+    integer :: i, j, k
     real    :: Coef
     !--------------------------------------------------------------------
     
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('user_imp_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
     end if
     
-    iBlock = GlobalBlk
-     
     Srho   = cZero
     SrhoSpecies=cZero
     SrhoUx = cZero
@@ -394,7 +398,7 @@ contains
        write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
     end if
 
-    call user_sources
+    call user_sources(iBlock)
     Source_VC(rho_       ,:,:,:) = Srho+Source_VC(rho_,:,:,:)
     Source_VC(rho_+1:rho_+MaxSpecies,:,:,:) = &
          SrhoSpecies+Source_VC(rho_+1:rho_+MaxSpecies,:,:,:)
@@ -411,10 +415,11 @@ contains
 
   !===========================================================================
 
-  subroutine user_expl_source
-    !    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+  subroutine user_expl_source(iBlock)
+    !    use ModMain,    ONLY: nI, nJ, nK
     !    use ModPointImplicit,ONLY: UsePointImplicit, UsePointImplicit_B
 
+    integer, intent(in) :: iBlock
     !---------------------------------------------------------------------
     ! Here come the explicit source terms
 
@@ -441,8 +446,9 @@ contains
   ! must be loaded.  If using only conservative SE must be loaded.  The safe
   ! approach is to load both.
   !/
-  subroutine user_sources
-    use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest 
+  subroutine user_sources(iBlock)
+
+    use ModMain, ONLY: PROCTEST,BLKTEST, iTest,jTest,kTest 
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_
     use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK
@@ -453,8 +459,10 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit
     use BATL_lib, ONLY: CellVolume_GB
 
+    integer, intent(in) :: iBlock
+
     ! Variables required by this user subroutine
-    integer:: i,j,k,iSpecies, iBlock
+    integer:: i,j,k,iSpecies
     real :: inv_rho, inv_rho2, uu2,Productrate,kTi,kTe
     real :: alt, Te_dim = 300.0, temp
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps
@@ -473,7 +481,6 @@ contains
     !/
     !---------------------------------------------------------------------------
     !
-    iBlock = globalBlk
 
     if (iProc==PROCtest.and.iBlock==BLKtest) then
        call set_oktest('user_sources',oktest,oktest_me)
@@ -803,7 +810,8 @@ contains
 
   !===========================================================================
 
-  subroutine user_set_ICs
+  subroutine user_set_ICs(iBlock)
+
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
@@ -812,13 +820,15 @@ contains
     use ModPhysics
     use ModNumConst
 
+    integer, intent(in) :: iBlock
+
     real :: Rmax, SinSlope, CosSlope,CosSZA
     real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
          XFace, YFace, ZFace
     integer :: i,j,k
     logical::okTestMe=.false., okTest=.false.
     !-------------------------------------------------------------------------
-    if(globalBLK==BLKtest .and. iProc==PROCtest)then
+    if(iBlock==BLKtest .and. iProc==PROCtest)then
        call set_oktest('user_set_ics',oktest,oktestme)
     else
        oktest=.false.; oktestme=.false.
@@ -836,16 +846,16 @@ contains
     
     !calculate neutral density
     do k=1,nK; do j=1,nJ; do i=1,nI
-       if(R_BLK(i,j,k,globalBLK)<= Rbody)then
-          nDenNuSpecies_CBI(i,j,k,globalBLK,:)=&
+       if(R_BLK(i,j,k,iBlock)<= Rbody)then
+          nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
                BodynDenNuSpecies_I(:)
-       else if(R_BLK(i,j,k,globalBLK)< 3.0) then
-          nDenNuSpecies_CBI(i,j,k,globalBLK,:)=&
+       else if(R_BLK(i,j,k,iBlock)< 3.0) then
+          nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
                BodynDenNuSpecies_I(:)* & 
-               exp(-(R_BLK(i,j,k,globalBLK)-Rbody)&
+               exp(-(R_BLK(i,j,k,iBlock)-Rbody)&
                /HNuSpecies_I(:))
        else
-          nDenNuSpecies_CBI(i,j,k,globalBLK,:)=0.0
+          nDenNuSpecies_CBI(i,j,k,iBlock,:)=0.0
        end if
     end do; end do; end do
 
@@ -859,16 +869,16 @@ contains
 
     ! calculate optical depth and producation rate
     do k=1,nK; do j=1,nJ; do i=1,nI
-       cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
-            x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)&
+       cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
+            x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
             +5.0e-4
-       Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,globalBLK,1:MaxNuSpecies)*&
+       Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
             CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
             6.0e-3)/cosSZA
-       if( Optdep<11.5 .and. x_BLK(i,j,k,globalBLK) > 0.0) then 
-          Productrate_CB(i,j,k,globalBLK) = max(exp(-Optdep), 1.0e-5)
+       if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then 
+          Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
        else
-          Productrate_CB(i,j,k,globalBLK) = 1.0e-5
+          Productrate_CB(i,j,k,iBlock) = 1.0e-5
        end if
 
     end do; end do; end do
@@ -884,39 +894,39 @@ contains
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(UseHotO) then
-          nu_BLK(i,j,k,globalBLK)=&
-               sum(nDenNuSpecies_CBI(i,j,k,globalBLK,:))*nu0
+          nu_BLK(i,j,k,iBlock)=&
+               sum(nDenNuSpecies_CBI(i,j,k,iBlock,:))*nu0
 
-          nDenNuSpecies_CBI(i,j,k,globalBLK,O_)= &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,O_)+ &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,Ox_)
+          nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
           
-          nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)= &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)+ &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,CO2x_)
+          nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2x_)
           
-          nDenNuSpecies_CBI(i,j,k,globalBLK,O_)= &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,O_)+ &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,Oh_)+&
-               nDenNuSpecies_CBI(i,j,k,globalBLK,Ohx_)
+          nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)+&
+               nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)
           
-          nDenNuSpecies_CBI(i,j,k,globalBLK,H_)= &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,H_)+ &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,Hx_)
+          nDenNuSpecies_CBI(i,j,k,iBlock,H_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,H_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,Hx_)
 
        else
-          nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)= &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)+ &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,CO2x_)
+          nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2x_)
           
-          nDenNuSpecies_CBI(i,j,k,globalBLK,O_)= &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,O_)+ &
-               nDenNuSpecies_CBI(i,j,k,globalBLK,Ox_)
+          nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
+               nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
           
-          nu_BLK(i,j,k,globalBLK)=(nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)+&
-               nDenNuSpecies_CBI(i,j,k,globalBLK,O_))*nu0
+          nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
           
-          nDenNuSpecies_CBI(i,j,k,globalBLK,H_)= 1.0e-5
+          nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
           
        end if
 
@@ -924,52 +934,52 @@ contains
 
 
     if(UseMarsAtm)then
-       if(maxval(R_BLK(:,:,:,globalBLK))<3.0*Rbody) call Mars_input
+       if(maxval(R_BLK(:,:,:,iBlock))<3.0*Rbody) call Mars_input(iBlock)
  
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(UseHotO) then
-             nDenNuSpecies_CBI(i,j,k,globalBLK,Oh_)= &
-                  nDenNuSpecies_CBI(i,j,k,globalBLK,Oh_)+&
-                  nDenNuSpecies_CBI(i,j,k,globalBLK,Ohx_)
+             nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)= &
+                  nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)+&
+                  nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)
              
-             nDenNuSpecies_CBI(i,j,k,globalBLK,O_)= &
-                  nDenNuSpecies_CBI(i,j,k,globalBLK,O_)+ &
-                  nDenNuSpecies_CBI(i,j,k,globalBLK,Oh_)
+             nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
+                  nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
+                  nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)
              
-             nu_BLK(i,j,k,globalBLK)=(nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)+&
-                  nDenNuSpecies_CBI(i,j,k,globalBLK,O_)+&
-                  nDenNuSpecies_CBI(i,j,k,globalBLK,H_) )*nu0
+             nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
+                  nDenNuSpecies_CBI(i,j,k,iBlock,O_)+&
+                  nDenNuSpecies_CBI(i,j,k,iBlock,H_) )*nu0
           else
               
-             nu_BLK(i,j,k,globalBLK)=(nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)+&
-                  nDenNuSpecies_CBI(i,j,k,globalBLK,O_))*nu0
+             nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
+                  nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
              
-             nDenNuSpecies_CBI(i,j,k,globalBLK,H_)= 1.0e-5
+             nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
              
           end if
           
-          Ionizationrate_CBI(i,j,k,globalBLK,CO2_)=&
-               Ionizationrate_CBI(i,j,k,globalBLK,CO2_)*&
-               nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)
-          Ionizationrate_CBI(i,j,k,globalBLK,O_)=&
-               Ionizationrate_CBI(i,j,k,globalBLK,O_)*&
-               nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
+          Ionizationrate_CBI(i,j,k,iBlock,CO2_)=&
+               Ionizationrate_CBI(i,j,k,iBlock,CO2_)*&
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
+          Ionizationrate_CBI(i,j,k,iBlock,O_)=&
+               Ionizationrate_CBI(i,j,k,iBlock,O_)*&
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_)
           
        end do; end do; end do 
     else
        do k=1,nK; do j=1,nJ; do i=1,nI
-          Ionizationrate_CBI(i,j,k,globalBLK,O_)= &
+          Ionizationrate_CBI(i,j,k,iBlock,O_)= &
                Rate_I(O_hv__Op_em_)&
-               *nDenNuSpecies_CBI(i,j,k,globalBLK,O_)&
-               *Productrate_CB(i,j,k,globalBLK)
+               *nDenNuSpecies_CBI(i,j,k,iBlock,O_)&
+               *Productrate_CB(i,j,k,iBlock)
 
-          Ionizationrate_CBI(i,j,k,globalBLK,CO2_)= &
+          Ionizationrate_CBI(i,j,k,iBlock,CO2_)= &
                Rate_I(CO2_hv__CO2p_em_)&
-               *nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)&
-               *Productrate_CB(i,j,k,globalBLK)
+               *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)&
+               *Productrate_CB(i,j,k,iBlock)
        end do;end do; end do
     end if
-    nu1_BLK(:,:,:,globalBLK)=nu_BLK(:,:,:,globalBLK)
+    nu1_BLK(:,:,:,iBlock)=nu_BLK(:,:,:,iBlock)
     
     if(okTestMe)then
        write(*,*)'usehoto=',UseHotO
@@ -986,30 +996,30 @@ contains
     end if
 
     do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
-       if (R_BLK(i,j,k,globalBLK)< Rbody) then
-          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
-               x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)+&
+       if (R_BLK(i,j,k,iBlock)< Rbody) then
+          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
+               x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
-          State_VGB(:,i,j,k,globalBLK)   =  CellState_VI(:,body1_)
-          !           State_VGB(rhoOp_,i,j,k,globalBLK)= 0.0
-          !           State_VGB(rhoO2p_,i,j,k,globalBLK)= 0.0
-          !           State_VGB(rhoCO2p_,i,j,k,globalBLK)= 0.0
+          State_VGB(:,i,j,k,iBlock)   =  CellState_VI(:,body1_)
+          !           State_VGB(rhoOp_,i,j,k,iBlock)= 0.0
+          !           State_VGB(rhoO2p_,i,j,k,iBlock)= 0.0
+          !           State_VGB(rhoCO2p_,i,j,k,iBlock)= 0.0
           
-          State_VGB(rhoOp_,i,j,k,globalBLK)= &
+          State_VGB(rhoOp_,i,j,k,iBlock)= &
                CellState_VI(rhoOp_,body1_)*cosSZA
-          State_VGB(rhoO2p_,i,j,k,globalBLK)= &
+          State_VGB(rhoO2p_,i,j,k,iBlock)= &
                CellState_VI(rhoOp_,body1_)*sqrt(cosSZA)
-          State_VGB(rhoCO2p_,i,j,k,globalBLK)= &
+          State_VGB(rhoCO2p_,i,j,k,iBlock)= &
                CellState_VI(rhoOp_,body1_)*cosSZA
-          State_VGB(rho_,i,j,k,globalBLK)  = &
-               sum( State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,globalBLK))
-          State_VGB(P_,i,j,k,globalBLK) = &
-               max(SW_p, sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,globalBLK)&
+          State_VGB(rho_,i,j,k,iBlock)  = &
+               sum( State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
+          State_VGB(P_,i,j,k,iBlock) = &
+               max(SW_p, sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock)&
                /MassSpecies_I(1:MaxSpecies))*kTp0 )
           
        else
-          State_VGB(:,i,j,k,globalBLK)   = CellState_VI(:,1)
-          State_VGB(Ux_:bz_,i,j,k,globalBLK)   =0.0          
+          State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
+          State_VGB(Ux_:bz_,i,j,k,iBlock)   =0.0          
        end if
     end do;end do; end do;
     
@@ -1019,36 +1029,36 @@ contains
     
     do k=1,nK; do j=1,nJ; do i=1,nI
        
-       if (true_cell(i,j,k,globalBLK).and. &
-            R_BLK(i,j,k,globalBLK)<1.5*Rbody) then
+       if (true_cell(i,j,k,iBlock).and. &
+            R_BLK(i,j,k,iBlock)<1.5*Rbody) then
           
-          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
-               x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)+&
+          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
+               x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
           
-          State_VGB(rhoCO2p_,i,j,k,globalBLK)= &
-               Ionizationrate_CBI(i,j,k,globalBLK,CO2_) &
-               /nDenNuSpecies_CBI(i,j,k,globalBLK,O_)   &
+          State_VGB(rhoCO2p_,i,j,k,iBlock)= &
+               Ionizationrate_CBI(i,j,k,iBlock,CO2_) &
+               /nDenNuSpecies_CBI(i,j,k,iBlock,O_)   &
                /(Rate_I(CO2p_O__O2p_CO_)+Rate_I(CO2p_O__Op_CO2_))
           
-          State_VGB(rhoOp_,i,j,k,globalBLK)= &
-               (Ionizationrate_CBI(i,j,k,globalBLK,O_) &
+          State_VGB(rhoOp_,i,j,k,iBlock)= &
+               (Ionizationrate_CBI(i,j,k,iBlock,O_) &
                +Rate_I(CO2p_O__Op_CO2_)                &
-               *State_VGB(rhoCO2p_,i,j,k,globalBLK)    &
-               *nDenNuSpecies_CBI(i,j,k,globalBLK,O_)) &
-               /(nDenNuSpecies_CBI(i,j,k,globalBLK, CO2_)+4.0e6)&
+               *State_VGB(rhoCO2p_,i,j,k,iBlock)    &
+               *nDenNuSpecies_CBI(i,j,k,iBlock,O_)) &
+               /(nDenNuSpecies_CBI(i,j,k,iBlock, CO2_)+4.0e6)&
                /Rate_I(Op_CO2__O2p_CO_)
           
-          State_VGB(rhoO2p_,i,j,k,globalBLK)= &
-               SQRT((nDenNuSpecies_CBI(i,j,k,globalBLK,O_)*&
-               State_VGB(rhoCO2p_,i,j,k,globalBLK)*&
+          State_VGB(rhoO2p_,i,j,k,iBlock)= &
+               SQRT((nDenNuSpecies_CBI(i,j,k,iBlock,O_)*&
+               State_VGB(rhoCO2p_,i,j,k,iBlock)*&
                Rate_I(CO2p_O__O2p_CO_)+&
-               nDenNuSpecies_CBI(i,j,k,globalBLK, CO2_)*&
-               State_VGB(rhoOp_,i,j,k,globalBLK)*&
+               nDenNuSpecies_CBI(i,j,k,iBlock, CO2_)*&
+               State_VGB(rhoOp_,i,j,k,iBlock)*&
                Rate_I(Op_CO2__O2p_CO_)+1e-10)/Rate_I(O2p_em__O_O_))
           
-          State_VGB(rhoO2p_:rhoCO2p_,i,j,k,globalBLK)=&
-               State_VGB(rhoO2p_:rhoCO2p_,i,j,k,globalBLK)*&
+          State_VGB(rhoO2p_:rhoCO2p_,i,j,k,iBlock)=&
+               State_VGB(rhoO2p_:rhoCO2p_,i,j,k,iBlock)*&
                MassSpecies_I(O2p_:CO2p_)
           
        end if !(true_cell?)
@@ -1057,16 +1067,16 @@ contains
     
     do k=1,nK; do j=1,nJ; do i=1,nI
        
-       if(.not.true_cell(i,j,k,globalBLK))CYCLE 
-       State_VGB(rho_,i,j,k,globalBLK)   =&
-            sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,globalBLK))
-       State_VGB(P_,i,j,k,globalBLK)= &
-            max(SW_p, sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,globalBLK)&
+       if(.not.true_cell(i,j,k,iBlock))CYCLE 
+       State_VGB(rho_,i,j,k,iBlock)   =&
+            sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
+       State_VGB(P_,i,j,k,iBlock)= &
+            max(SW_p, sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock)&
             /MassSpecies_I(1:MaxSpecies))*kTp0)
     end do; end do; end do
     
     
-    time_BLK(:,:,:,globalBLK) = 0.00
+    time_BLK(:,:,:,iBlock) = 0.00
     
     if(okTestMe)then
        write(*,*)'initial set up'
@@ -1714,12 +1724,15 @@ contains
   end subroutine user_get_log_var
 
   !============================================================================
-  subroutine Mars_Input
+  subroutine Mars_Input(iBlock)
+
     use ModMain
     use ModPhysics
     use ModConst
     use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
          XyzStart_BLK,TypeGeometry
+
+    integer, intent(in) :: iBlock
     
     real, parameter :: TINY=1.0E-12 
     real :: hh, theta, phi, dR, dtheta, dphi, dH, Hscale, HCO2, HO, grav
@@ -1730,9 +1743,9 @@ contains
     logical:: oktest, oktestme=.true.
     !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp ----- 
     
-    dR=dx_BLK(globalBLK)
-    dPhi=dy_BLK(globalBLK)
-    dTheta=dz_BLK(globalBLK)
+    dR=dx_BLK(iBlock)
+    dPhi=dy_BLK(iBlock)
+    dTheta=dz_BLK(iBlock)
 
     select case(TypeGeometry)                                   
     case('cartesian')                                           
@@ -1740,17 +1753,17 @@ contains
        
     case('spherical','spherical_lnr')
        ! at least part of the block is outside the body 
-       if (R_BLK(nI,1,1,globalBLK) >= Rbody) then  
+       if (R_BLK(nI,1,1,iBlock) >= Rbody) then  
           
           do k=1,nK
-             Theta = (k-1)*dTheta  + xyzStart_BLK(Theta_,globalBLK)      
+             Theta = (k-1)*dTheta  + xyzStart_BLK(Theta_,iBlock)      
              !Theta =  180*(0.5-Theta/cPi) !don't need anymore, already co-latitude
              kLat=int((theta+87.5)/5.0+1.0)
              kp1=min(kLat+1, NLat)
              kLat = max(kLat,1)
              
              do j=1,nJ  
-                Phi = (j-1)*dPhi  + xyzStart_BLK(Phi_,globalBLK)
+                Phi = (j-1)*dPhi  + xyzStart_BLK(Phi_,iBlock)
                 if(phi>cPi)then 
                    phi=phi-2*cPi
                 end if
@@ -1760,24 +1773,24 @@ contains
                 jLong=max(jLong,1)
                 
                 do i=nI,1,-1                    
-                   hh = (R_BLK(i,j,k,globalBLK)-1.00)*3396.00
-                   !                 write(*,*)'hh=', hh, i,j,k,globalBLK
+                   hh = (R_BLK(i,j,k,iBlock)-1.00)*3396.00
+                   !                 write(*,*)'hh=', hh, i,j,k,iBlock
                    xLong=0.2*(Phi-Long_I(jLong))
                    xLat=0.2*(Theta-Lat_I(kLat))
                    if(hh.le.100.0)then  !inside the body
-                      tempNuSpecies_CBI(i,j,k,globalBLK)= &
-                           tempNuSpecies_CBI(i+1,j,k,globalBLK)
-                      nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)=&
-                           nDenNuSpecies_CBI(i+1,j,k,globalBLK,CO2_)
-                      nDenNuSpecies_CBI(i,j,k,globalBLK,O_)= &
-                           nDenNuSpecies_CBI(i+1,j,k,globalBLK,O_)
+                      tempNuSpecies_CBI(i,j,k,iBlock)= &
+                           tempNuSpecies_CBI(i+1,j,k,iBlock)
+                      nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=&
+                           nDenNuSpecies_CBI(i+1,j,k,iBlock,CO2_)
+                      nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
+                           nDenNuSpecies_CBI(i+1,j,k,iBlock,O_)
                       
                       !                    tempICO2p=max(tempICO2p,TINY)
                       !                    tempIOP=max(tempIOp,TINY)
-                      Ionizationrate_CBI(i,j,k,globalBLK,CO2_)=&
-                           Ionizationrate_CBI(i+1,j,k,globalBLK,CO2_)
-                      Ionizationrate_CBI(i,j,k,globalBLK,O_)=&
-                           Ionizationrate_CBI(i+1,j,k,globalBLK,O_)
+                      Ionizationrate_CBI(i,j,k,iBlock,CO2_)=&
+                           Ionizationrate_CBI(i+1,j,k,iBlock,CO2_)
+                      Ionizationrate_CBI(i,j,k,iBlock,O_)=&
+                           Ionizationrate_CBI(i+1,j,k,iBlock,O_)
                    elseif(hh.le.Alt_I(NAlt))then
                       iAlt=int((hh -100.0)/10.0+1.0)
                       ip1=min(iAlt+1,NAlt)
@@ -1786,7 +1799,7 @@ contains
                       end if
                       xalt=0.1*(hh-Alt_I(iAlt))
                       !interpolate
-                      tempNuSpecies_CBI(i,j,k,globalBLK)=          &
+                      tempNuSpecies_CBI(i,j,k,iBlock)=          &
                            ((Temp(jLong,kLat,iAlt)*(1-xLong)       &
                            + xLong*Temp(jp1, kLat, ialt))*(1-xLat) &
                            +(Temp(jLong,kp1,iAlt)*(1-xLong)        &
@@ -1796,13 +1809,13 @@ contains
                            +(Temp(jLong,kp1,ip1)*(1-xLong)         &
                            + xLong*Temp(jp1, kp1, ip1))*xLat)*xAlt
                     
-                      nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)=&         
+                      nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=&         
                            ((Den_CO2(jLong,kLat,iAlt)*(1-xLong)+xLong*Den_CO2(jp1, kLat, ialt))*(1-xLat)+&
                            (Den_CO2(jLong,kp1,iAlt)*(1-xLong)+xLong*Den_CO2(jp1, kp1, ialt))*xLat)*(1-xAlt)+&
                            ((Den_CO2(jLong,kLat,ip1)*(1-xLong)+xLong*Den_CO2(jp1, kLat, ip1))*(1-xLat)+&
                            (Den_CO2(jLong,kp1,ip1)*(1-xLong)+xLong*Den_CO2(jp1, kp1, ip1))*xLat)*xAlt
                        
-                      nDenNuSpecies_CBI(i,j,k,globalBLK,O_)=&
+                      nDenNuSpecies_CBI(i,j,k,iBlock,O_)=&
                            ((Den_O(jLong,kLat,iAlt)*(1-xLong)+xLong*Den_O(jp1, kLat, ialt))*(1-xLat)+&
                            (Den_O(jLong,kp1,iAlt)*(1-xLong)+xLong*Den_O(jp1, kp1, ialt))*xLat)*(1-xAlt)+&
                            ((Den_O(jLong,kLat,ip1)*(1-xLong)+xLong*Den_O(jp1, kLat, ip1))*(1-xLat)+&
@@ -1822,14 +1835,14 @@ contains
                       
                       tempICO2p=max(tempICO2p,TINY)
                       tempIOP=max(tempIOp,TINY)
-                      !                   Ionizationrate_CBI(i,j,k,globalBLK,CO2_)=tempICO2p*nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)
-                      !                   Ionizationrate_CBI(i,j,k,globalBLK,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
-                      Ionizationrate_CBI(i,j,k,globalBLK,CO2_)=tempICO2p
-                      Ionizationrate_CBI(i,j,k,globalBLK,O_)=tempIOP
+                      !                   Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
+                      !                   Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+                      Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p
+                      Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP
                    else  !hh.gt.Alt_I(NAlt)
                       
                       dH= hh - Alt_I(NAlt)
-                      tempNuSpecies_CBI(i,j,k,globalBLK)= &
+                      tempNuSpecies_CBI(i,j,k,iBlock)= &
                            (Temp(jLong,kLat,NAlt)*(1-xLong)+xLong*Temp(jp1, kLat,NAlt))*(1-xLat)+&
                            (Temp(jLong,kp1,NAlt)*(1-xLong)+xLong*Temp(jp1,kp1,NAlt))*xLat
                       
@@ -1841,30 +1854,30 @@ contains
                            (IOp(jLong,kLat,NAlt)*(1-xLong)+xLong*IOp(jp1, kLat, NAlt))*(1-xLat)+&
                            (IOp(jLong,kp1,NAlt)*(1-xLong)+xLong*IOp(jp1, kp1, NAlt))*xLat
                       
-                      ! grav=3.72/R_BLK(i,j,k,globalBLK)/R_BLK(i,j,k,globalBLK)
+                      ! grav=3.72/R_BLK(i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
                       grav=3.72/(1.0+300.0/3396.0)/(1.0+300.0/3396.0)
                       
                       Hscale=cBoltzmann*&
-                           tempNuSpecies_CBI(i,j,k,globalBLK)/grav/cProtonMass!in m unit
+                           tempNuSpecies_CBI(i,j,k,iBlock)/grav/cProtonMass!in m unit
                       
                       HCO2= Hscale/NuMassSpecies_I(CO2_)/1.0e3
                       HO= Hscale/NuMassSpecies_I(O_)/1.0e3
                       
-                      nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)=&
+                      nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=&
                            ((Den_CO2(jLong,kLat,NAlt)*(1-xLong)+xLong*Den_CO2(jp1, kLat,Nalt))*(1-xLat)+&
                            (Den_CO2(jLong,kp1,NAlt)*(1-xLong)+xLong*Den_CO2(jp1,kp1,Nalt))*xLat)&
                            *exp(-dH/HCO2)
-                      nDenNuSpecies_CBI(i,j,k,globalBLK,O_)=&
+                      nDenNuSpecies_CBI(i,j,k,iBlock,O_)=&
                            ((Den_O(jLong,kLat,NAlt)*(1-xLong)+xLong*Den_O(jp1, kLat,Nalt))*(1-xLat)+&
                            (Den_O(jLong,kp1,NAlt)*(1-xLong)+xLong*Den_O(jp1,kp1,Nalt))*xLat)&
                            *exp(-dH/HO)
                       
                       tempICO2p=max(tempICO2p,TINY)
                       tempIOP=max(tempIOp,TINY)
-                      !                    Ionizationrate_CBI(i,j,k,globalBLK,CO2_)=tempICO2p*nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)
-                      !                    Ionizationrate_CBI(i,j,k,globalBLK,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
-                      Ionizationrate_CBI(i,j,k,globalBLK,CO2_)=tempICO2p
-                      Ionizationrate_CBI(i,j,k,globalBLK,O_)=tempIOP
+                      !                    Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
+                      !                    Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+                      Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p
+                      Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP
 
                    end if !hh.lt.or.gt.300km
                 end do
@@ -1878,18 +1891,18 @@ contains
     end select
     if(oktestme)then
        write(*,*)'Mars input end', &
-            dR,dPhi,dTheta, globalBLK, &
-            maxval(nDenNuSpecies_CBI(nI,:,:,globalBLK,CO2_)),&
-            minval(nDenNuSpecies_CBI(nI,:,:,globalBLK,CO2_)),&
-            maxval(R_BLK(nI,:,:,globalBLK)),&
-            minval(R_BLK(1,:,:,globalBLK))
+            dR,dPhi,dTheta, iBlock, &
+            maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,CO2_)),&
+            minval(nDenNuSpecies_CBI(nI,:,:,iBlock,CO2_)),&
+            maxval(R_BLK(nI,:,:,iBlock)),&
+            minval(R_BLK(1,:,:,iBlock))
        write(*,*)'Mars input end2',&
-            globalBLK, maxval(nDenNuSpecies_CBI(nI,:,:,globalBLK,O_)),&
-            minval(nDenNuSpecies_CBI(nI,:,:,globalBLK,O_)),&
-            maxval(Ionizationrate_CBI(nI,:,:,globalBLK,CO2_)),&
-            minval(Ionizationrate_CBI(nI,:,:,globalBLK,O_)),&
-            maxval(R_BLK(nI,:,:,globalBLK)),&
-            minval(R_BLK(1,:,:,globalBLK))
+            iBlock, maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,O_)),&
+            minval(nDenNuSpecies_CBI(nI,:,:,iBlock,O_)),&
+            maxval(Ionizationrate_CBI(nI,:,:,iBlock,CO2_)),&
+            minval(Ionizationrate_CBI(nI,:,:,iBlock,O_)),&
+            maxval(R_BLK(nI,:,:,iBlock)),&
+            minval(R_BLK(1,:,:,iBlock))
     end if
   end subroutine Mars_input
                    

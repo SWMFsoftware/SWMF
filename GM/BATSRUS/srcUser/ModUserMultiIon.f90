@@ -91,7 +91,7 @@ contains
 
   end subroutine user_read_inputs
   !==========================================================================
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
     ! Evaluate the explicit or implicit or both source terms.
     ! If there is no explicit source term, the subroutine user_expl_source 
@@ -100,7 +100,7 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, Test_String, BlkTest, ProcTest
+    use ModMain,    ONLY: nI, nJ, nK, Test_String, BlkTest, ProcTest
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0_DGB
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
@@ -110,13 +110,15 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use BATL_lib, ONLY: CellVolume_GB
 
+    integer, intent(in) :: iBlock
+
     ! Variables for multi-ion MHD
     real    :: InvCharge, NumDens, InvNumDens, pAverage, State_V(nVar)
     real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D, uPlusHallU_D
     real, dimension(3) :: Current_D, Force_D
     real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
 
-    integer :: iBlock, i, j, k, jFluid, iFirstIons
+    integer :: i, j, k, jFluid, iFirstIons
     real :: CoefBx, CoefBy, CoefBz, Coef, AverageTemp, TemperatureCoef, Heating
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
@@ -124,8 +126,6 @@ contains
     logical :: DoTest, DoTestMe
     !-----------------------------------------------------------------------
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
-
-    iBlock = GlobalBlk
 
     if(iProc == ProcTest .and. iBlock == BlkTest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
@@ -158,7 +158,7 @@ contains
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Extract conservative variables
-       State_V = State_VGB(:,i,j,k,globalBLK)
+       State_V = State_VGB(:,i,j,k,iBlock)
 
        if(TypeFluid_I(1) == 'ion')then
           ! Get first fluid quantities
@@ -175,7 +175,7 @@ contains
        end if
 
        ! Total magnetic field
-       FullB_D = State_V(Bx_:Bz_) + B0_DGB(:,i,j,k,globalBLK)
+       FullB_D = State_V(Bx_:Bz_) + B0_DGB(:,i,j,k,iBlock)
        ! calculate number densities
        NumDens_I  = State_V(iRhoIon_I) / MassFluid_I(1:nIonFluid)
        NumDens    = sum(NumDens_I)
@@ -200,9 +200,9 @@ contains
                ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
                + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
                + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k)) &
-               /CellVolume_GB(i,j,k,globalBLK)
+               /CellVolume_GB(i,j,k,iBlock)
        else
-          call get_current(i,j,k,GlobalBlk,Current_D)
+          call get_current(i,j,k,iBlock,Current_D)
        end if
        uPlusHallU_D = uPlus_D - InvNumDens*InvCharge*Current_D
 
@@ -356,8 +356,8 @@ contains
   end subroutine user_init_point_implicit
 
   !=====================================================================
-  subroutine user_set_ics
-    use ModMain,     ONLY: globalBLK
+  subroutine user_set_ics(iBlock)
+
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, rho_, p_
     use ModProcMH,   ONLY: iProc
@@ -368,7 +368,6 @@ contains
     real :: SinSlope, CosSlope
     integer :: i, j, k, iBlock
     !--------------------------------------------------------------------------
-    iBlock = globalBLK
 
     select case(UserProblem)
     case('wave')

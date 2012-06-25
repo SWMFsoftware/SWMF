@@ -313,7 +313,7 @@ contains
 
   !===========================================================================
 
-  subroutine multi_ion_source_impl
+  subroutine multi_ion_source_impl(iBlock)
 
     ! Add 'stiff' source terms specific to multi-ion MHD:
     !
@@ -333,7 +333,7 @@ contains
 
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplPerturbed, DsDu_VVC
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, UseB0,&
+    use ModMain,    ONLY: nI, nJ, nK, UseB0,&
                           UseBoris => boris_correction, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0,      ONLY: B0_DGB
@@ -347,6 +347,8 @@ contains
     use ModNumConst,       ONLY: iLeviCivita_III
     use ModSize,           ONLY: MaxDim
 
+    integer, intent(in) :: iBlock
+
     ! Variables for multi-ion MHD
     real:: InvElectronDens, State_V(nVar)
     real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D
@@ -358,7 +360,7 @@ contains
     ! Alfven Lorentz factor for Boris correction
     real :: Ga2
 
-    integer :: iBlock, i, j, k, iIon, jIon, iRhoUx, iRhoUz, iP, iEnergy
+    integer :: i, j, k, iIon, jIon, iRhoUx, iRhoUz, iP, iEnergy
     real :: AverageTemp, TemperatureCoef, Heating
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
@@ -376,8 +378,6 @@ contains
     !-----------------------------------------------------------------------
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
-    iBlock = GlobalBlk
-
     if(iProc == ProcTest .and. iBlock == BlkTest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
@@ -387,7 +387,7 @@ contains
 
     ! Add user defined point implicit source terms here
     ! Explicit user sources are added in calc_sources
-    if(UsePointImplicit .and. UseUserSource) call user_calc_sources
+    if(UsePointImplicit .and. UseUserSource) call user_calc_sources(iBlock)
 
     ! Do not evaluate multi-ion sources in the numerical Jacobian calculation
     ! (needed for the user source terms) 

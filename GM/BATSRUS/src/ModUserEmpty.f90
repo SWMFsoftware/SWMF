@@ -65,15 +65,12 @@ contains
   end subroutine user_initial_perturbation
 
   !=====================================================================
-  subroutine user_set_ics
-    use ModMain,ONLY: globalBLK
+  subroutine user_set_ics(iBlock)
+
+    integer, intent(in) :: iBlock
 
     character(len=*), parameter :: NameSub = 'user_set_ics'
-    integer::iBlock
     !-------------------------------------------------------------------
-    ! The routine is called for each block indexed by globalBLK
-    iBlock = globalBLK  
-
     call stop_user(NameSub)
   end subroutine user_set_ics
 
@@ -174,15 +171,12 @@ contains
 
   !====================================================================
 
-  subroutine user_calc_sources
-    use ModMain,ONLY: globalBLK
+  subroutine user_calc_sources(iBlock)
 
-    integer::iBlock
+    integer, intent(in) :: iBlock
+
     character(len=*), parameter :: NameSub = 'user_calc_sources'
     !-------------------------------------------------------------------
-    ! The routine is called for each block indexed by globalBLK
-    iBlock = globalBLK
-
     call stop_user(NameSub)
   end subroutine user_calc_sources
 

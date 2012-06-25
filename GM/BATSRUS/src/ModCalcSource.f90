@@ -549,7 +549,7 @@ contains
        ! Add stiff momentum source terms (uPlus - Uion) and artificial friction
        ! Explicit evaluation of these source terms is for code development only
        if (.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) &
-            call multi_ion_source_impl   !!! PASS iBlock !!!
+            call multi_ion_source_impl(iBlock)
 
        if(DoTestMe) call write_source('After MultiIon sources')
     end if
@@ -583,7 +583,7 @@ contains
     end if
 
     if(UseUserSource)then
-       call user_calc_sources !!! PASS iBlock !!!
+       call user_calc_sources(iBlock)
        if(DoTestMe) call write_source('After user sources')
     end if
 

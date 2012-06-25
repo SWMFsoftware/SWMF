@@ -99,20 +99,21 @@ contains
 
   !============================================================================
 
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
     use ModConst,      ONLY: cKevToK
-    use ModMain,       ONLY: GlobalBlk, nI, nJ, nK
+    use ModMain,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: inv_gm1, cRadiationNo, Si2No_V, UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Erad_, ExtraEint_, p_
 
-    integer :: i, j, k, iBlock
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
     real :: Temperature, Pressure
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !--------------------------------------------------------------------------
-    iBlock = GlobalBlk
 
     select case(TypeProblem)
     case('suolson')

@@ -84,7 +84,8 @@ contains
 
   !============================================================================
 
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
+
     use ModMain
     use ModVarIndexes
     use ModAdvance
@@ -95,6 +96,8 @@ contains
     use ModProcMH
     use ModPhysics
     use ModParallel
+
+    integer, intent(in) :: iBlock
 
     ! User declared local variables go here
     integer :: i,j,k, jj
@@ -138,9 +141,9 @@ contains
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       xt = x_BLK(i,j,k,globalBLK)
-       yt = abs(y_BLK(i,j,k,globalBLK))
-       zt = z_BLK(i,j,k,globalBLK)
+       xt = x_BLK(i,j,k,iBlock)
+       yt = abs(y_BLK(i,j,k,iBlock))
+       zt = z_BLK(i,j,k,iBlock)
 
        if( yt > yLineMax) CYCLE
 
@@ -171,8 +174,8 @@ contains
           Source_VC(Bx_,i,j,k)     = Source_VC(Bx_,i,j,k) + dBxDt
           Source_VC(Bz_,i,j,k)     = Source_VC(Bz_,i,j,k) + dBzDt
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               + State_VGB(Bx_,i,j,k,globalBlk)*dBxDt &
-               + State_VGB(Bz_,i,j,k,globalBlk)*dBzDt
+               + State_VGB(Bx_,i,j,k,iBlock)*dBxDt &
+               + State_VGB(Bz_,i,j,k,iBlock)*dBzDt
 
           !Source_VC(Bx_,i,j,k) = Source_VC(Bx_,i,j,k) &
           !     - Ey*tanh(zzz)*InvWidthZ*Cos_Thet_0(jj)
@@ -202,8 +205,8 @@ contains
           Source_VC(Bx_,i,j,k)     = Source_VC(Bx_,i,j,k) + dBxDt
           Source_VC(Bz_,i,j,k)     = Source_VC(Bz_,i,j,k) + dBzDt
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               + State_VGB(Bx_,i,j,k,globalBlk)*dBxDt &
-               + State_VGB(Bz_,i,j,k,globalBlk)*dBzDt
+               + State_VGB(Bx_,i,j,k,iBlock)*dBxDt &
+               + State_VGB(Bz_,i,j,k,iBlock)*dBzDt
 
           !Source_VC(Bx_,i,j,k) = Source_VC(Bx_,i,j,k) &
           !     - Ey*tanh(zzz)*InvWidthZ*Cos_Thet_1(jj)

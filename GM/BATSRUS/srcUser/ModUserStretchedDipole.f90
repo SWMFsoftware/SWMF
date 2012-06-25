@@ -15,9 +15,9 @@ module ModUser
 contains
 
   !=============================================================================
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
-    use ModMain,       ONLY: nI, nJ, nK, globalBLK, ProcTest
+    use ModMain,       ONLY: nI, nJ, nK, ProcTest
     use ModProcMH,     ONLY: iProc
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
@@ -25,7 +25,9 @@ contains
     use ModPhysics,    ONLY: Bdp
     use ModB0,         ONLY: B0_DGB
 
-    integer :: i, j, k, iBlock 
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
     logical :: oktest, oktest_me
     real    :: x, y, z, a, b
 
@@ -41,8 +43,6 @@ contains
     else
        oktest=.false.; oktest_me=.false.
     end if
-
-    iBlock = globalBLK
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        x = x_BLK(i,j,k,iBlock)

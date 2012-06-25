@@ -114,22 +114,23 @@ contains
 
   !============================================================================
 
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
     use ModConst,      ONLY: cKEVToK
-    use ModMain,       ONLY: GlobalBlk, nI, nJ, nK
+    use ModMain,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: cRadiationNo, inv_gm1, g, No2Si_V, Si2No_V, &
          UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, ExtraEint_, p_, &
          nWave, WaveFirst_, WaveLast_
 
-    integer :: i, j, k, iBlock
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
     real :: Rho, Temperature, Pressure, Erad, Trad, ExtraEint
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !--------------------------------------------------------------------------
-    iBlock = GlobalBlk
 
     select case(TypeProblem)
     case('lightfront')

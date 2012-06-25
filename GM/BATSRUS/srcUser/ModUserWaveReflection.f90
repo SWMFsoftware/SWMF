@@ -79,22 +79,23 @@ contains
 
   !=====================================================================
 
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
-    use ModMain,     ONLY: nI, nJ, nK, globalBLK, nBlock
+    use ModMain,     ONLY: nI, nJ, nK, nBlock
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK
     use ModAdvance,  ONLY: State_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, P_, Bx_, By_, Bz_
     use ModPhysics,  ONLY: ShockSlope, Shock_Lstate, Shock_Rstate, g
     use ModNumConst, ONLY: cPi
 
+    integer, intent(in) :: iBlock
+
     real :: Potential_G(-1:nI+2,-1:nJ+2)
     real :: xRot_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real :: Perturb_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real :: pTotal
-    integer :: i, j, k, iBlock
+    integer :: i, j, k
     !--------------------------------------------------------------------------
-    iBlock = globalBLK
 
     ! Redo rotated state so that div B = 0 if necessary
     if(ShockSlope /= 0.0 .and. .not. IsSmooth)then

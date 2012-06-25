@@ -392,18 +392,20 @@ contains
 
   !============================================================================
 
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB, WaveFirst_, WaveLast_, B0_DGB
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
-    use ModMain,       ONLY: nI, nJ, nK, globalBLK
+    use ModMain,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyTDim_I, No2Si_V, UnitU_, UnitN_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_
     use ModWaves,       ONLY: UseAlfvenWaves
     use ModAlfvenWaveHeating, ONLY: adiabatic_law_4_wave_state
 
-    integer :: i, j, k, iBlock
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
 
     ! Variables for IC using Parker Isothermal Wind Solution
     ! Parker part copied from ModUserScHeat.f90 on 9/20/2009
@@ -435,8 +437,6 @@ contains
     ! #BODY command, instead it sets the coronal Te to 1.5 MK everywhere.
     ! It DOES however, set the base density of the coronal part according to 
     ! BodyRho_I(1)
-
-    iBlock = globalBLK
 
     T0 = 3.0e6*Si2No_V(UnitTemperature_)
     rBase = rBody
@@ -613,18 +613,19 @@ contains
   end subroutine user_initial_perturbation
   !============================================================================
 
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, Rho_, p_, Energy_, &
          VdtFace_x, VdtFace_y, VdtFace_z
     use ModGeometry,       ONLY: r_BLK
-    use ModMain,           ONLY: nI, nJ, nK, GlobalBlk
+    use ModMain,           ONLY: nI, nJ, nK
     use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          inv_gm1
     use BATL_lib, ONLY: CellVolume_GB
 
-    integer :: i, j, k, iBlock
+    integer, intent(in) :: iBlock
 
+    integer :: i, j, k
 
     ! variables for checking timestep control
     logical, parameter :: DoCalcTime = .true.
@@ -633,7 +634,6 @@ contains
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
 
-    iBlock = globalBlk
     ! Add this in for tentative timestep control from large source terms
     ! need this because radiative loss term becomes INSANELY large at
     ! Chromospheric densities

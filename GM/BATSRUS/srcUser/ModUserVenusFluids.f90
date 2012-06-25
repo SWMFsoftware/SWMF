@@ -196,12 +196,12 @@ module ModUser
 contains
 
   !============================================================================
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
     use ModPointImplicit, ONLY: UsePointImplicit_B,UsePointImplicit,&
          IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, iNewGrid, iNewDecomposition, &
-         PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest
+    use ModMain,    ONLY: nI, nJ, nK, iNewGrid, iNewDecomposition, &
+         PROCTEST,BLKTEST, iTest,jTest,kTest
     use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_,Si2No_V, No2Io_V, No2Si_V, LowDensityRatio,&
          UnitT_,UnitN_,ElectronPressureRatio
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
@@ -217,7 +217,10 @@ contains
 
     !    use ModAdvance,  ONLY: Source_VC,Energy_
     !    use ModNumConst, ONLY: cZero
-    integer :: iBlock, i, j, k,iSpecies,iFluid
+
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k,iSpecies,iFluid
     real    :: Coef,SourcesLossMax,vdtmin
     real :: inv_rho,inv_rho2,uu2,Productrate,kTi,kTe
     real    :: NumDens, InvNumDens
@@ -237,8 +240,6 @@ contains
 
     integer :: iLastGrid=-100, iLastDecomposition=-100
     !--------------------------------------------------------------------
-
-    iBlock = GlobalBlk
 
     !write(*,*)'nDenNuSpecies_CBI(1, 1, 1, iBlock, MaxNuSpecies=',nDenNuSpecies_CBI(1, 1, 1, iBlock, 1)
     if( nDenNuSpecies_CBI(1, 1, 1, iBlock, 1) < 0.0 & 
@@ -296,16 +297,16 @@ contains
 
 
       do k=1,nK; do j=1,nJ; do i=1,nI
-             cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
-                  x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-4)&
+             cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
+                  x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
                   +1.0e-4
-             Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,globalBLK,1:MaxNuSpecies)*&
+             Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
                   CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
                   6.0e-3)/cosSZA
-             if( Optdep<11.5 .and. x_BLK(i,j,k,globalBLK) > 0.0) then
-                Productrate_CB(i,j,k,globalBLK) = max(exp(-Optdep), 1.0e-30)
+             if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then
+                Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-30)
              else
-                Productrate_CB(i,j,k,globalBLK) = 1.0e-30
+                Productrate_CB(i,j,k,iBlock) = 1.0e-30
              end if
 
           end do; end do; end do
@@ -406,9 +407,9 @@ contains
           ImpIOn_I(Op_)=exp(B0+B1*X1+B2*X2+B3*X3+B4*X4)&
                *No2Io_V(UnitT_)*No2Io_V(UnitN_)
           ImpIon_I(Hp_)=ImpIon_I(Hp_)*&
-               nDenNuSpecies_CBI(i,j,k,globalBLK,H_)
+               nDenNuSpecies_CBI(i,j,k,iBlock,H_)
           ImpIon_I(Op_)=ImpIon_I(Op_)*&
-               nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_)
           ImpIon_I=ImpIon_I*NumDens
 
 
@@ -1027,7 +1028,7 @@ case('solarmin')
   ! options in BATSRUS.
   ! The variables specific to the problem are loaded from ModUser
 
-  subroutine user_set_ICs
+  subroutine user_set_ICs(iBlock)
 
     use ModProcMH, ONLY : iProc
     use ModMain
@@ -1036,6 +1037,8 @@ case('solarmin')
     use ModIO, ONLY : restart
     use ModPhysics
     use ModNumConst
+
+    integer, intent(in) :: iBlock
 
     real :: Rmax, SinSlope, CosSlope, tempo
     real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
@@ -1048,13 +1051,13 @@ case('solarmin')
     character (len=*), parameter :: NameSub = 'user_set_ics'
     logical:: DoTest, DoTestMe, DoTestCell
     !-------------------------------------------------------------------------
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
     end if
 
-    call set_neutral_density(globalBlk)
+    call set_neutral_density(iBlock)
 
     if(DoTestMe)then
        write(*,*)'in set_ics'
@@ -1070,33 +1073,32 @@ case('solarmin')
 
     ! calculate optical depth and producation rate                                                                                                             
   !  do k=1,nK; do j=1,nJ; do i=1,nI
-      ! cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
-      !      x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)&
+      ! cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
+      !      x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
       !      +5.0e-4
 
-     !  Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,globalBLK,1:MaxNuSpecies)*&
+     !  Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
      !       CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
      !       6.0e-3)/cosSZA
-     !  if( Optdep<11.5 .and. x_BLK(i,j,k,globalBLK) > 0.0) then
-     !     Productrate_CB(i,j,k,globalBLK) = max(exp(-Optdep), 1.0e-5)
+     !  if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then
+     !     Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
      !  else
-     !     Productrate_CB(i,j,k,globalBLK) = 1.0e-5
+     !     Productrate_CB(i,j,k,iBlock) = 1.0e-5
      !  end if
 
 !    end do; end do; end do
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-          iBlock=globalBLK
-           !  cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
-           !       x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-4)&
+           !  cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
+           !       x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
            !       +1.0e-4
-           !  Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,globalBLK,1:MaxNuSpecies)*&
+           !  Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
            !       CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
            !       6.0e-3)/cosSZA
-           !  if( Optdep<11.5 .and. x_BLK(i,j,k,globalBLK) > 0.0) then
-           !     Productrate_CB(i,j,k,globalBLK) = max(exp(-Optdep), 1.0e-30)
+           !  if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then
+           !     Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-30)
            !  else
-           !     Productrate_CB(i,j,k,globalBLK) = 1.0e-30
+           !     Productrate_CB(i,j,k,iBlock) = 1.0e-30
            !  end if
 
            Optdep=HNuSpecies_I(CO2_)*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)*&
@@ -1160,34 +1162,34 @@ case('solarmin')
        end if
           end do; end do; end do
 
-    nu1_BLK(:,:,:,globalBLK)=nu_BLK(:,:,:,globalBLK)
+    nu1_BLK(:,:,:,iBlock)=nu_BLK(:,:,:,iBlock)
     do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
-       if (R_BLK(i,j,k,globalBLK)< Rbody) then
-          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
-               x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)+&
+       if (R_BLK(i,j,k,iBlock)< Rbody) then
+          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
+               x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
-          State_VGB(:,i,j,k,globalBLK)   =  CellState_VI(:,body1_)
-          State_VGB(OpRho_,i,j,k,globalBLK)= &
+          State_VGB(:,i,j,k,iBlock)   =  CellState_VI(:,body1_)
+          State_VGB(OpRho_,i,j,k,iBlock)= &
                CellState_VI(OpRho_,body1_)*cosSZA
-          State_VGB(O2pRho_,i,j,k,globalBLK)= &
+          State_VGB(O2pRho_,i,j,k,iBlock)= &
                CellState_VI(OpRho_,body1_)*sqrt(cosSZA)
-          State_VGB(CO2pRho_,i,j,k,globalBLK)= &
+          State_VGB(CO2pRho_,i,j,k,iBlock)= &
                CellState_VI(OpRho_,body1_)*cosSZA
-          State_VGB(rho_,i,j,k,globalBLK)  = &
-               sum( State_VGB(iRho_I(2:nFluid),i,j,k,globalBLK))
+          State_VGB(rho_,i,j,k,iBlock)  = &
+               sum( State_VGB(iRho_I(2:nFluid),i,j,k,iBlock))
 
-          State_VGB(iPIon_I,i,j,k,globalBLK) = Ti_body*State_VGB(iRhoIon_I,i,j,k,globalBLK) &
+          State_VGB(iPIon_I,i,j,k,iBlock) = Ti_body*State_VGB(iRhoIon_I,i,j,k,iBlock) &
                /MassIon_I 
-          State_VGB(P_,i,j,k,globalBLK) = &
-               max(SW_p,sum(State_VGB(iPIon_I,i,j,k,globalBLK))*(1+ElectronPressureRatio))
+          State_VGB(P_,i,j,k,iBlock) = &
+               max(SW_p,sum(State_VGB(iPIon_I,i,j,k,iBlock))*(1+ElectronPressureRatio))
        else
 
-          State_VGB(:,i,j,k,globalBLK)   = CellState_VI(:,1)
+          State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
 
           !write(*,*)'CellState_VI(HpRho_,1_)=',CellState_VI(HpRho_,1)
-          !write(*,*)'State_VGB(HpRho_,i,j,k,globalBLK)=',State_VGB(HpRho_,i,j,k,globalBLK)
-!!$           write(*,*)'State_VGB(rho_,i,j,k,globalBLK)=',State_VGB(rho_,i,j,k,globalBLK)
-          State_VGB(Ux_:bz_,i,j,k,globalBLK)   =0.0
+          !write(*,*)'State_VGB(HpRho_,i,j,k,iBlock)=',State_VGB(HpRho_,i,j,k,iBlock)
+!!$           write(*,*)'State_VGB(rho_,i,j,k,iBlock)=',State_VGB(rho_,i,j,k,iBlock)
+          State_VGB(Ux_:bz_,i,j,k,iBlock)   =0.0
        end if
        
 
@@ -1196,11 +1198,11 @@ case('solarmin')
     !if(DoTestMe)then
        !write(*,*)'!!!!in set_ics 0 '
  !      write(*,*)'State_VGB(iRhoIon_I)=',State_VGB(iRhoIon_I,iTest,jTest,kTest,BLKtest)
-       !write(*,*)'nDenNuSpecies_CBI(i,j,k,globalBLK,:)=',nDenNuSpecies_CBI(iTest,jTest,kTest,globalBLK,:)
+       !write(*,*)'nDenNuSpecies_CBI(i,j,k,iBlock,:)=',nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,:)
        !write(*,*)'Rate_I=',Rate_I
-       !write(*,*)'Ionizationrate_CBI(i,j,k,globalBLK,CO2_)=',Ionizationrate_CBI(iTest,jTest,kTest,globalBLK,:)
+       !write(*,*)'Ionizationrate_CBI(i,j,k,iBlock,CO2_)=',Ionizationrate_CBI(iTest,jTest,kTest,iBlock,:)
      !         write(*,*)'State_VGB(iRhoIon_I)=',State_VGB(iRhoIon_I,iTest,jTest,kTest,BLKtest)
-      ! write(*,*)'State_VGB(iPIon_I(1:nIonFluid),i,j,k,globalBLK)==',State_VGB(iPIon_I(1:nIonFluid),iTest,jTest,kTest,BLKtest)
+      ! write(*,*)'State_VGB(iPIon_I(1:nIonFluid),i,j,k,iBlock)==',State_VGB(iPIon_I(1:nIonFluid),iTest,jTest,kTest,BLKtest)
       ! write(*,*)'sum(State_VGB(iRhoIon_I))=',sum(State_VGB(iRhoIon_I,iTest,jTest,kTest,BLKtest))
       ! write(*,*)'State_VGB(Rho_)=',State_VGB(Rho_,iTest,jTest,kTest,BLKtest)
    ! end if
@@ -1211,50 +1213,50 @@ case('solarmin')
 !!$         CellState_VI(:,body1_),'cell_state_VI(:,1)=',CellState_VI(:,1)
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       State_VGB(iRhoUx_I,i,j,k,globalBLK) = 0.0
-       State_VGB(iRhoUy_I,i,j,k,globalBLK) = 0.0
-       State_VGB(iRhoUz_I,i,j,k,globalBLK) = 0.0
+       State_VGB(iRhoUx_I,i,j,k,iBlock) = 0.0
+       State_VGB(iRhoUy_I,i,j,k,iBlock) = 0.0
+       State_VGB(iRhoUz_I,i,j,k,iBlock) = 0.0
 
 
 
-       if (.not. (true_cell(i,j,k,globalBLK).and. &
-            R_BLK(i,j,k,globalBLK)<1.5*Rbody) ) CYCLE
+       if (.not. (true_cell(i,j,k,iBlock).and. &
+            R_BLK(i,j,k,iBlock)<1.5*Rbody) ) CYCLE
 
 
-       cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
-            x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)+&
+       cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
+            x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
             1.0e-3
 
-       State_VGB(CO2pRho_,i,j,k,globalBLK)= &
-            Ionizationrate_CBI(i,j,k,globalBLK,CO2_) &
-            /nDenNuSpecies_CBI(i,j,k,globalBLK,O_)   &
+       State_VGB(CO2pRho_,i,j,k,iBlock)= &
+            Ionizationrate_CBI(i,j,k,iBlock,CO2_) &
+            /nDenNuSpecies_CBI(i,j,k,iBlock,O_)   &
             /(Rate_I(CO2p_O__O2p_CO_)+Rate_I(CO2p_O__Op_CO2_))
 
-       !write(*,*)'State_VGB(CO2pRho_,i,j,k,globalBLK)',State_VGB(CO2pRho_,i,j,k,globalBLK)
+       !write(*,*)'State_VGB(CO2pRho_,i,j,k,iBlock)',State_VGB(CO2pRho_,i,j,k,iBlock)
 
-       State_VGB(OpRho_,i,j,k,globalBLK)= &
-            (Ionizationrate_CBI(i,j,k,globalBLK,O_) &
+       State_VGB(OpRho_,i,j,k,iBlock)= &
+            (Ionizationrate_CBI(i,j,k,iBlock,O_) &
             +Rate_I(CO2p_O__Op_CO2_)                &
-            *State_VGB(CO2pRho_,i,j,k,globalBLK)    &
-            *nDenNuSpecies_CBI(i,j,k,globalBLK,O_)) &
-            /(nDenNuSpecies_CBI(i,j,k,globalBLK, CO2_)+4.0e6)&
+            *State_VGB(CO2pRho_,i,j,k,iBlock)    &
+            *nDenNuSpecies_CBI(i,j,k,iBlock,O_)) &
+            /(nDenNuSpecies_CBI(i,j,k,iBlock, CO2_)+4.0e6)&
             /Rate_I(Op_CO2__O2p_CO_)
 
-       !write(*,*)'State_VGB(OpRho_,i,j,k,globalBLK)',State_VGB(OpRho_,i,j,k,globalBLK)
+       !write(*,*)'State_VGB(OpRho_,i,j,k,iBlock)',State_VGB(OpRho_,i,j,k,iBlock)
 
-       State_VGB(O2pRho_,i,j,k,globalBLK)= &
-            SQRT((nDenNuSpecies_CBI(i,j,k,globalBLK,O_)*&
-            State_VGB(CO2pRho_,i,j,k,globalBLK)*&
+       State_VGB(O2pRho_,i,j,k,iBlock)= &
+            SQRT((nDenNuSpecies_CBI(i,j,k,iBlock,O_)*&
+            State_VGB(CO2pRho_,i,j,k,iBlock)*&
             Rate_I(CO2p_O__O2p_CO_)+&
-            nDenNuSpecies_CBI(i,j,k,globalBLK, CO2_)*&
-            State_VGB(OpRho_,i,j,k,globalBLK)*&
+            nDenNuSpecies_CBI(i,j,k,iBlock, CO2_)*&
+            State_VGB(OpRho_,i,j,k,iBlock)*&
             Rate_I(Op_CO2__O2p_CO_)+1e-10)/Rate_I(O2p_em__O_O_))
 
-       !write(*,*)'State_VGB(O2pRho_,i,j,k,globalBLK)',State_VGB(O2pRho_,i,j,k,globalBLK)
+       !write(*,*)'State_VGB(O2pRho_,i,j,k,iBlock)',State_VGB(O2pRho_,i,j,k,iBlock)
 
        ! Convert to mass densities
-       State_VGB(iRho_I(2:nFluid),i,j,k,globalBLK)=&
-            State_VGB(iRho_I(2:nFluid),i,j,k,globalBLK)*&
+       State_VGB(iRho_I(2:nFluid),i,j,k,iBlock)=&
+            State_VGB(iRho_I(2:nFluid),i,j,k,iBlock)*&
             MassIon_I
 
     end do; end do; end do
@@ -1264,38 +1266,38 @@ case('solarmin')
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       if(.not.true_cell(i,j,k,globalBLK))CYCLE
+       if(.not.true_cell(i,j,k,iBlock))CYCLE
 
        !IC for velocity
-       State_VGB(iRhoUx_I,i,j,k,globalBLK) = 0.0
-       State_VGB(iRhoUy_I,i,j,k,globalBLK) = 0.0
-       State_VGB(iRhoUz_I,i,j,k,globalBLK) = 0.0
+       State_VGB(iRhoUx_I,i,j,k,iBlock) = 0.0
+       State_VGB(iRhoUy_I,i,j,k,iBlock) = 0.0
+       State_VGB(iRhoUz_I,i,j,k,iBlock) = 0.0
 
 
-       State_VGB(rho_,i,j,k,globalBLK)   =&
-            sum(State_VGB(iRhoIon_I,i,j,k,globalBLK))
+       State_VGB(rho_,i,j,k,iBlock)   =&
+            sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
 
        do q=1,nSpecies
           !write(*,*)'I got to the low density ratio'
-          if(State_VGB(iRhoIon_I(q),i,j,k,globalBLK) < &
-               LowDensityRatio* State_VGB(Rho_,i,j,k,globalBLK))then
-             State_VGB(iRhoIon_I(q),i,j,k,globalBLK)= LowDensityRatio*&
-                  State_VGB(Rho_,i,j,k,globalBLK)
+          if(State_VGB(iRhoIon_I(q),i,j,k,iBlock) < &
+               LowDensityRatio* State_VGB(Rho_,i,j,k,iBlock))then
+             State_VGB(iRhoIon_I(q),i,j,k,iBlock)= LowDensityRatio*&
+                  State_VGB(Rho_,i,j,k,iBlock)
           end if
        end do
 
-       State_VGB(rho_,i,j,k,globalBLK)   =&
-            sum(State_VGB(iRhoIon_I,i,j,k,globalBLK))
+       State_VGB(rho_,i,j,k,iBlock)   =&
+            sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
 
-       State_VGB(P_,i,j,k,globalBLK) = &
-            max(SW_p,(sum(State_VGB(iRhoIon_I,i,j,k,globalBLK)/(MassIon_I)))*Ti_body*(1+ElectronPressureRatio))
+       State_VGB(P_,i,j,k,iBlock) = &
+            max(SW_p,(sum(State_VGB(iRhoIon_I,i,j,k,iBlock)/(MassIon_I)))*Ti_body*(1+ElectronPressureRatio))
 
-       State_VGB(iPIon_I,i,j,k,globalBLK)=State_VGB(P_,i,j,k,globalBLK)&
-            /(sum(State_VGB(iRhoIon_I,i,j,k,globalBLK)/(MassIon_I)))*&
-            State_VGB(iRhoIon_I,i,j,k,globalBLK)/MassIon_I/(1+ElectronPressureRatio)
+       State_VGB(iPIon_I,i,j,k,iBlock)=State_VGB(P_,i,j,k,iBlock)&
+            /(sum(State_VGB(iRhoIon_I,i,j,k,iBlock)/(MassIon_I)))*&
+            State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I/(1+ElectronPressureRatio)
 
-       Temp_I=State_VGB(iPIon_I,i,j,k,globalBLK)/&
-            (State_VGB(iRhoIon_I,i,j,k,globalBLK)/MassIon_I)
+       Temp_I=State_VGB(iPIon_I,i,j,k,iBlock)/&
+            (State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
 
     end do; end do; end do
 
@@ -1683,8 +1685,7 @@ case('co2pflx')
     use ModMain, ONLY: Body1_
     use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
-         GLOBALBLK
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModSize, ONLY: nI, nJ, nK
     use ModMultiFluid
@@ -1830,7 +1831,7 @@ case('co2pflx')
                /HNuSpecies_I)
           
        else
-          nDenNuSpecies_CBI(i,j,k,globalBLK,:)=0.0
+          nDenNuSpecies_CBI(i,j,k,iBlock,:)=0.0
 
        end if
 
@@ -1864,16 +1865,16 @@ case('co2pflx')
 !    end do; end do; end do
 
  do k=1,nK; do j=1,nJ; do i=1,nI
-             !cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
-             !     x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-4)&
+             !cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
+             !     x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
              !     +1.0e-4
-             !Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,globalBLK,1:MaxNuSpecies)*&
+             !Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
              !     CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
              !     6.0e-3)/cosSZA
-             !if( Optdep<11.5 .and. x_BLK(i,j,k,globalBLK) > 0.0) then
-             !   Productrate_CB(i,j,k,globalBLK) = max(exp(-Optdep), 1.0e-30)
+             !if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then
+             !   Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-30)
              !else
-             !   Productrate_CB(i,j,k,globalBLK) = 1.0e-30
+             !   Productrate_CB(i,j,k,iBlock) = 1.0e-30
              !end if
 
                        Optdep=HNuSpecies_I(CO2_)*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)*&

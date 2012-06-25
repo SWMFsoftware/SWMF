@@ -26,15 +26,17 @@ Module ModUser
 contains
 
   !=====================================================================
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
+
     use ModAdvance, ONLY: Source_VC
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
-        GLOBALBLK
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
+
+    integer, intent(in) :: iBlock
 
     logical :: oktest,oktest_me
     !------------------------------------------------------------------------  
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('user_calc_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
@@ -51,7 +53,7 @@ contains
     SP     = 0.0
     SE     = 0.0
 
-    call user_sources
+    call user_sources(iBlock)
 
     Source_VC(rho_   ,:,:,:) = Srho   + Source_VC(rho_   ,:,:,:)
     Source_VC(rhoUx_ ,:,:,:) = SrhoUx + Source_VC(rhoUx_ ,:,:,:)
@@ -67,9 +69,9 @@ contains
 
 
   !=====================================================================
-  subroutine user_sources
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
-         GLOBALBLK
+  subroutine user_sources(iBlock)
+
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: x_Blk, y_Blk, z_Blk, r_Blk, rMin_Blk
@@ -78,6 +80,7 @@ contains
     use ModPhysics
     use ModProcMH, ONLY: iProc
 
+    integer, intent(in) :: iBlock
 
     ! Variables required by this user subroutine
     integer :: i,j,k
@@ -107,9 +110,9 @@ contains
 
     !---------------------------------------------------------------------------
     if (.not. UseMassLoading) RETURN
-    if (Rmin_BLK(globalBLK) > 15.0)return
+    if (Rmin_BLK(iBlock) > 15.0)return
 
-    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('user_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
@@ -124,21 +127,21 @@ contains
        ! Velocities, distances and scale heights are normalized
        ! (unitless).
 
-       if (((Z_BLK(i,j,k,globalBLK) < 6.0) .and.     &
-            (Z_BLK(i,j,k,globalBLK) > -6.0)) .and.   &
-            (R_Blk(i,j,k,globalBLK) < 15.0) .and.     &
-            (R_BLK(i,j,k,globalBLK) > 3.0)) then
+       if (((Z_BLK(i,j,k,iBlock) < 6.0) .and.     &
+            (Z_BLK(i,j,k,iBlock) > -6.0)) .and.   &
+            (R_Blk(i,j,k,iBlock) < 15.0) .and.     &
+            (R_BLK(i,j,k,iBlock) > 3.0)) then
 
 
-          Ux  = State_VGB(rhoUx_,i,j,k,globalBLK)/State_VGB(rho_,i,j,k,globalBLK)
-          Uy  = State_VGB(rhoUy_,i,j,k,globalBLK)/State_VGB(rho_,i,j,k,globalBLK)
-          Uz  = State_VGB(rhoUz_,i,j,k,globalBLK)/State_VGB(rho_,i,j,k,globalBLK)
+          Ux  = State_VGB(rhoUx_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
+          Uy  = State_VGB(rhoUy_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
+          Uz  = State_VGB(rhoUz_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
           Usq = sqrt(Ux**2 + Uy**2 + Uz**2)
 
 
           ! compute the cylindrical radius for later use
-          Rxy = sqrt(X_BLK(i,j,k,globalBLK)**2 + &
-               Y_BLK(i,j,k,globalBLK)**2)   
+          Rxy = sqrt(X_BLK(i,j,k,iBlock)**2 + &
+               Y_BLK(i,j,k,iBlock)**2)   
 
           ! The neutral velocity is taken to be the orbital velocity
           ! Note that Gbody/r**2 is a unitless acceleration.  So Gbody/r
@@ -148,8 +151,8 @@ contains
 
           Unsq = abs(Gbody)/Rxy
           Un = sqrt(unsq)
-          Unx = -un*Y_BLK(i,j,k,globalBLK)/Rxy
-          Uny =  un*X_BLK(i,j,k,globalBLK)/Rxy
+          Unx = -un*Y_BLK(i,j,k,iBlock)/Rxy
+          Uny =  un*X_BLK(i,j,k,iBlock)/Rxy
           Unz =  0.0
 
           Urelsq = (unx-Ux)**2 + (uny-Uy)**2 + (unz-Uz)**2
@@ -188,7 +191,7 @@ contains
           ! Hz = .176327*Rxy
           ! the scale height is 5 degree or Hz = tan(5*pi/180)*Rxy 
           Hz = .087489*Rxy
-          rhodot = rhodot*exp(-(Z_BLK(i,j,k,globalBLK)**2)/Hz**2) 
+          rhodot = rhodot*exp(-(Z_BLK(i,j,k,iBlock)**2)/Hz**2) 
 
           ! now get everything normalized - note that rhodot is in 
           ! units particles/cm^3/s.  To get a unitless rhodot we simply 
@@ -218,10 +221,10 @@ contains
           ! currently under investigation and in dispute with referees.
 
           alphaCOROTATE = 1.0
-          sinTheta = Rxy/R_BLK(i,j,k,globalBLK)
-          uCOR = alphaCOROTATE*OMEGAbody*R_BLK(i,j,k,globalBLK)*sinTheta
-          xHat = -Y_BLK(i,j,k,globalBLK)/Rxy
-          yHat =  X_BLK(i,j,k,globalBLK)/Rxy
+          sinTheta = Rxy/R_BLK(i,j,k,iBlock)
+          uCOR = alphaCOROTATE*OMEGAbody*R_BLK(i,j,k,iBlock)*sinTheta
+          xHat = -Y_BLK(i,j,k,iBlock)/Rxy
+          yHat =  X_BLK(i,j,k,iBlock)/Rxy
           ! ScorotateUx = rhodot*(uCOR-un)*xHat
           ! ScorotateUy = rhodot*(uCOR-un)*yHat
           ! ScorotateUz = 0.0
@@ -235,51 +238,51 @@ contains
           ! now load the source terms into the right hand side
 
           Srho(i,j,k)   = Srho(i,j,k) +                                      & 
-               (rhodot-Alpha_rec*State_VGB(rho_,i,j,k,globalBLK))  
+               (rhodot-Alpha_rec*State_VGB(rho_,i,j,k,iBlock))  
           SrhoUx(i,j,k) = SrhoUx(i,j,k)                                      &
-               + (rhodot + CXsource*State_VGB(rho_,i,j,k,globalBLK))*unx &
+               + (rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*unx &
                - (CXsource + Alpha_rec)*                          &
-               State_VGB(rhoUx_,i,j,k,globalBLK)                    &
+               State_VGB(rhoUx_,i,j,k,iBlock)                    &
                + ScorotateUx					        
           SrhoUy(i,j,k) = SrhoUy(i,j,k)                                      &
-               + (rhodot + CXsource*State_VGB(rho_,i,j,k,globalBLK))*uny &
+               + (rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*uny &
                - (CXsource + Alpha_rec)*                          &
-               State_VGB(rhoUy_,i,j,k,globalBLK)                    &
+               State_VGB(rhoUy_,i,j,k,iBlock)                    &
                + ScorotateUy					        
           SrhoUz(i,j,k) = SrhoUz(i,j,k)                                      &  
                - (CXsource + Alpha_rec)*                          &
-               State_VGB(rhoUz_,i,j,k,globalBLK)                    &
+               State_VGB(rhoUz_,i,j,k,iBlock)                    &
                + ScorotateUz
           SE(i,j,k)     = SE(i,j,k)                                               & 
-               + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,globalBLK))*unsq &
+               + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*unsq &
                - (CXsource + Alpha_rec)*                               &
-               (0.5*usq*State_VGB(rho_,i,j,k,globalBLK)                  &
-               + 1.5*State_VGB(p_,i,j,k,globalBLK))                 &
-               + 1.5*CXsource*State_VGB(p_,i,j,k,globalBLK)*Tfrac             &
+               (0.5*usq*State_VGB(rho_,i,j,k,iBlock)                  &
+               + 1.5*State_VGB(p_,i,j,k,iBlock))                 &
+               + 1.5*CXsource*State_VGB(p_,i,j,k,iBlock)*Tfrac             &
                + ScorotateE  
           SP(i,j,k)     = SP(i,j,k)                                                 &
-               + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,globalBLK))*urelsq &
-               - 1.5*CXsource*State_VGB(p_,i,j,k,globalBLK)*(1.0-Tfrac)         &
-               - 1.5*Alpha_rec*State_VGB(p_,i,j,k,globalBLK)                  
+               + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*urelsq &
+               - 1.5*CXsource*State_VGB(p_,i,j,k,iBlock)*(1.0-Tfrac)         &
+               - 1.5*Alpha_rec*State_VGB(p_,i,j,k,iBlock)                  
 
           ! Output to look at rates
-          if (oktest_me .and. globalBLK==BLKtest  .and. &
+          if (oktest_me .and. iBlock==BLKtest  .and. &
                i==Itest .and. j==Jtest .and. k==Ktest ) then
              write(*,*) '----------Inner Torus Mass Loading Rates-------------------------'
              write(*,'(a,3(1X,E13.5))') 'X, Y, Z:', &
-                  X_BLK(i,j,k,globalBLK), Y_BLK(i,j,k,globalBLK), Z_BLK(i,j,k,globalBLK)
-             write(*,'(a,5(1X,i6))')    'i,j,k,globalBLK,iProc:', &
-                  i,j,k,globalBLK,iProc
+                  X_BLK(i,j,k,iBlock), Y_BLK(i,j,k,iBlock), Z_BLK(i,j,k,iBlock)
+             write(*,'(a,5(1X,i6))')    'i,j,k,iBlock,iProc:', &
+                  i,j,k,iBlock,iProc
              write(*,'(a,3(1X,E13.5))') 'rhodot(unnormalized):', &
                   rhodot/rhodotNorm
              write(*,'(a,4(1X,E13.5))') 'rho(amu/cc),un,usq(km/s):', &
-                  State_VGB(rho_,i,j,k,globalBLK)*&
+                  State_VGB(rho_,i,j,k,iBlock)*&
                   No2Io_V(UnitRho_),un*No2Io_V(UnitU_),&
                   usq*No2Io_V(UnitU_)
              write(*,'(a,3(1X,E13.5))') 'rhodot (normalized):', &
                   rhodot
              write(*,'(a,4(1X,E13.5))') 'rho, un, usq (normalized):', &
-                  State_VGB(rho_,i,j,k,globalBLK), un, usq
+                  State_VGB(rho_,i,j,k,iBlock), un, usq
              write(*,*) '-----------------------------------------------------------------'
           end if
 
@@ -297,17 +300,17 @@ contains
           L0 = 7.5419
           Hr1 = .79922
 
-          L   = R_BLK(i,j,k,globalBLK)**3/Rxy**2;
+          L   = R_BLK(i,j,k,iBlock)**3/Rxy**2;
 
           gradP_external   = -(2.0*P1*(L-L0)/Hr1**2)*exp(-(L-L0)**2/Hr1**2)
           gradP_external_X = gradP_external* &
-               (3*X_BLK(i,j,k,globalBLK)*R_BLK(i,j,k,globalBLK)/Rxy**2 &
-               - 2*X_BLK(i,j,k,globalBLK)*R_BLK(i,j,k,globalBLK)**3/Rxy**4)
+               (3*X_BLK(i,j,k,iBlock)*R_BLK(i,j,k,iBlock)/Rxy**2 &
+               - 2*X_BLK(i,j,k,iBlock)*R_BLK(i,j,k,iBlock)**3/Rxy**4)
           gradP_external_Y = gradP_external* &
-               (3*Y_BLK(i,j,k,globalBLK)*R_BLK(i,j,k,globalBLK)/Rxy**2 &
-               - 2*Y_BLK(i,j,k,globalBLK)*R_BLK(i,j,k,globalBLK)**3/Rxy**4)
+               (3*Y_BLK(i,j,k,iBlock)*R_BLK(i,j,k,iBlock)/Rxy**2 &
+               - 2*Y_BLK(i,j,k,iBlock)*R_BLK(i,j,k,iBlock)**3/Rxy**4)
           gradP_external_Z = gradP_external* &
-               (3*Z_BLK(i,j,k,globalBLK)*R_BLK(i,j,k,globalBLK)/Rxy**2)
+               (3*Z_BLK(i,j,k,iBlock)*R_BLK(i,j,k,iBlock)/Rxy**2)
 
           ! now get everything normalized - note that gradP_external is in Pascal/Rj.
           ! To get a unitless gradP_external we simply need to divide 
@@ -323,12 +326,12 @@ contains
           ! F' = F - F.b
 
           ! First compute the B unit vector b
-          Bmag = sqrt(State_VGB(Bx_,i,j,k,globalBLK)**2 + &
-               State_VGB(By_,i,j,k,globalBLK)**2 + &
-               State_VGB(Bz_,i,j,k,globalBLK)**2 ) 
-          xHat = State_VGB(Bx_,i,j,k,globalBLK)/Bmag
-          yHat = State_VGB(By_,i,j,k,globalBLK)/Bmag
-          zHat = State_VGB(Bz_,i,j,k,globalBLK)/Bmag
+          Bmag = sqrt(State_VGB(Bx_,i,j,k,iBlock)**2 + &
+               State_VGB(By_,i,j,k,iBlock)**2 + &
+               State_VGB(Bz_,i,j,k,iBlock)**2 ) 
+          xHat = State_VGB(Bx_,i,j,k,iBlock)/Bmag
+          yHat = State_VGB(By_,i,j,k,iBlock)/Bmag
+          zHat = State_VGB(Bz_,i,j,k,iBlock)/Bmag
 
           ! now compute the F.b
           FdotB = gradP_external_x*xHat + &

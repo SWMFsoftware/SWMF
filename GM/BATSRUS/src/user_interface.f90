@@ -52,12 +52,14 @@ subroutine user_initial_perturbation
 end subroutine user_initial_perturbation
 
 !=====================================================================
-subroutine user_set_ics
+subroutine user_set_ics(iBlock)
 
   use ModUser, ONLY: user_sub => user_set_ics
   implicit none
+
+  integer, intent(in) :: iBlock
   !-------------------------------------------------------------------
-  call user_sub
+  call user_sub(iBlock)
 
 end subroutine user_set_ics
 
@@ -165,12 +167,14 @@ end subroutine user_set_plot_var
 
 !====================================================================
 
-subroutine user_calc_sources
+subroutine user_calc_sources(iBlock)
 
   use ModUser, ONLY: user_sub => user_calc_sources
   implicit none
+
+  integer, intent(in) :: iBlock
   !-------------------------------------------------------------------
-  call user_sub
+  call user_sub(iBlock)
 
 end subroutine user_calc_sources
 

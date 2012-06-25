@@ -47,7 +47,7 @@ contains
   end subroutine user_read_inputs
 
   !==========================================================================
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
     ! Evaluate the explicit or implicit or both source terms.
     ! If there is no explicit source term, the subroutine user_expl_source 
@@ -55,22 +55,23 @@ contains
 
     use ModPointImplicit, ONLY:  UsePointImplicit, UsePointImplicit_B, &
          IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+    use ModMain,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Energy_
     use ModGeometry,ONLY: r_BLK, rMin_BLK
 
-    integer :: iBlock, i, j, k
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
     real    :: Coef
     !-----------------------------------------------------------------------
-    iBlock = GlobalBlk
 
     ! Only blocks within radius rFriction need to be point implicit
     UsePointImplicit_B(iBlock) = rMin_BLK(iBlock) < rFriction
 
     ! Check if point implicit scheme is on (part implicit may switch it off)
     ! Also check if this particular block is point implicit or not
-    if(.not.(UsePointImplicit .and. UsePointImplicit_B(globalBLK)))then
+    if(.not.(UsePointImplicit .and. UsePointImplicit_B(iBlock)))then
        ! Add all source terms if we do not use the point implicit scheme
        call user_expl_source
        call user_impl_source

@@ -289,20 +289,21 @@ contains
 
   !============================================================================
 
-  subroutine user_calc_sources
+  subroutine user_calc_sources(iBlock)
 
-    use ModMain,       ONLY: nI, nJ, nK, GlobalBlk
+    use ModMain,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
     use ModPhysics,    ONLY: g
     use ModVarIndexes, ONLY: Pe_
     use BATL_lib, ONLY: CellVolume_GB
 
-    integer :: i, j, k, iBlock, iP
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k, iP
     real :: DivU
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
-    iBlock = globalBlk
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        ! Note that the velocity of the first (and only) fluid is used
@@ -366,22 +367,23 @@ contains
 
   !============================================================================
 
-  subroutine user_set_ics
+  subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_Blk, y_Blk
-    use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, Time_Simulation, x_, y_
+    use ModMain,       ONLY: nI, nJ, nK, Time_Simulation, x_, y_
     use ModPhysics,    ONLY: ShockSlope, cRadiationNo, inv_gm1
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, p_, ExtraEint_, Pe_
 
-    integer :: iBlock, i, j, k, iCell
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k, iCell
     real :: x, y
     real :: r, Weight1, Weight2, Rho, Te, Ur, p, RhoU_D(2)
     real :: SinSlope, CosSlope, Rot_II(2,2), Ee, Pe, Ti, Ux
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !--------------------------------------------------------------------------
-    iBlock = GlobalBlk
 
     select case(TypeProblem)
     case('gaussian')

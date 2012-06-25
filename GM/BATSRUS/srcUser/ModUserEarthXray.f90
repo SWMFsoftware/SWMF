@@ -77,18 +77,18 @@ contains
   end subroutine user_init_session
 
   !=====================================================================
-  subroutine user_set_ics
-    use ModMain,     ONLY: globalBLK, time_simulation, dt
+  subroutine user_set_ics(iBlock)
+
+    use ModMain,     ONLY: time_simulation, dt
     use ModGeometry, ONLY: r_BLK
     use ModAdvance,  ONLY: State_VGB, rhoion_, rhosw_
     use ModPhysics,  ONLY: BodyRho_I, sw_rho, rBody
     use ModBlockData,ONLY: put_block_data
 
-    integer :: iBlock,iBlockLast = -1
+    integer, intent(in) :: iBlock
 
-
+    integer :: iBlockLast = -1
     !--------------------------------------------------------------------------
-    iBlock = globalBLK
 
     where(r_BLK(:,:,:,iBlock)<2.0*Rbody)
        State_VGB(rhoion_,:,:,:,iBlock) = BodyRho_I(1)
@@ -252,7 +252,7 @@ contains
     use ModMain, ONLY: Body1_, time_simulation,x_,y_,z_
     use ModAdvance
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, GLOBALBLK
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModBlockData,ONLY: get_block_data, put_block_data, use_block_data
 
