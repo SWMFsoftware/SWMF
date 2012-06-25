@@ -24,8 +24,7 @@ contains
     use ModFaceValue,ONLY: UseAccurateResChange
     use ModEnergy,   ONLY: calc_energy_ghost, correctP
 
-    use BATL_lib, ONLY: message_pass_cell
-    use ModParallel, ONLY: BLKneighborLEV ! we should use BATL:DiNeiLevel_IIIB
+    use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB
     use ModMpi
 
     logical, optional, intent(in) :: DoResChangeOnlyIn, UseOrder2In
@@ -122,7 +121,7 @@ contains
        ! from the ghost cells inside the domain, so the outer 
        ! boundary condition have to be reapplied.
        if(.not.DoResChangeOnly &
-            .or. any(abs(BLKneighborLEV(:,:,:,iBlock)) == 1) )then
+            .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
           if (far_field_BCs_BLK(iBlock)) &
                call set_cell_boundary(iBlock, time_simulation, .false.) 
           if(time_loop.and. any(TypeBc_I=='buffergrid'))&

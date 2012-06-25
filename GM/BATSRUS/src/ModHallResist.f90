@@ -484,9 +484,9 @@ contains
     use ModMain,         ONLY: nI, nJ, nK, x_, y_, z_, &
          iTest, jTest, kTest, BlkTest, ProcTest
     use BATL_lib,        ONLY: IsCartesianGrid, IsRzGeometry, &
-         CellSize_DB, Xyz_DGB
+         CellSize_DB, Xyz_DGB, DiLevelNei_IIIB
     use ModParallel,     ONLY: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot, BlkNeighborLev
+         neiLnorth, neiLtop, neiLbot
     use ModVarIndexes,   ONLY: Bx_, Bz_
     implicit none
 
@@ -534,22 +534,22 @@ contains
     if(i==1)then
        if(NeiLeast(iBlock)==-1 &
             .or. (iDir==y_ .and. &
-            (j==1    .and. BlkNeighborLev(-1,-1,0, iBlock)==-1) .or. &
-            (j==nJ+1 .and. BlkNeighborLev(-1, 1,0, iBlock)==-1)) &
+            (j==1    .and. DiLevelNei_IIIB(-1,-1,0, iBlock)==-1) .or. &
+            (j==nJ+1 .and. DiLevelNei_IIIB(-1, 1,0, iBlock)==-1)) &
             .or. (iDir==z_ .and. &
-            (k==1    .and. BlkNeighborLev(-1, 0,-1, iBlock)==-1) .or. &
-            (k==nK+1 .and. BlkNeighborLev(-1, 0, 1, iBlock)==-1))&
+            (k==1    .and. DiLevelNei_IIIB(-1, 0,-1, iBlock)==-1) .or. &
+            (k==nK+1 .and. DiLevelNei_IIIB(-1, 0, 1, iBlock)==-1))&
             ) then
           iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
        end if
     elseif(i==nI)then
        if(NeiLwest(iBlock)==-1 &
             .or. (iDir==y_ .and. &
-            (j==1    .and. BlkNeighborLev( 1,-1, 0, iBlock)==-1) .or. &
-            (j==nJ+1 .and. BlkNeighborLev( 1, 1, 0, iBlock)==-1)) &
+            (j==1    .and. DiLevelNei_IIIB( 1,-1, 0, iBlock)==-1) .or. &
+            (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0, iBlock)==-1)) &
             .or. (iDir==z_ .and. &
-            (k==1    .and. BlkNeighborLev( 1, 0,-1, iBlock)==-1) .or. &
-            (k==nK+1 .and. BlkNeighborLev( 1, 0, 1, iBlock)==-1))&
+            (k==1    .and. DiLevelNei_IIIB( 1, 0,-1, iBlock)==-1) .or. &
+            (k==nK+1 .and. DiLevelNei_IIIB( 1, 0, 1, iBlock)==-1))&
             ) then
           iL = i-1; iR = i-2; Ax=-InvDx; Bx=0.75*InvDx; Cx=0.25*InvDx
        end if
@@ -566,22 +566,22 @@ contains
        if(j==1)then
           if(NeiLsouth(iBlock)==-1 &
                .or. (iDir==x_ .and. &
-               (i==1    .and. BlkNeighborLev(-1,-1,0, iBlock)==-1) .or. &
-               (i==nI+1 .and. BlkNeighborLev( 1,-1,0, iBlock)==-1)) &
+               (i==1    .and. DiLevelNei_IIIB(-1,-1,0, iBlock)==-1) .or. &
+               (i==nI+1 .and. DiLevelNei_IIIB( 1,-1,0, iBlock)==-1)) &
                .or. (iDir==z_ .and. &
-               (k==1    .and. BlkNeighborLev( 0,-1,-1, iBlock)==-1) .or. &
-               (k==nK+1 .and. BlkNeighborLev( 0,-1, 1, iBlock)==-1))&
+               (k==1    .and. DiLevelNei_IIIB( 0,-1,-1, iBlock)==-1) .or. &
+               (k==nK+1 .and. DiLevelNei_IIIB( 0,-1, 1, iBlock)==-1))&
                )then
              jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
           end if
        elseif(j==nJ)then
           if(NeiLnorth(iBlock)==-1 &
                .or. (iDir==x_ .and. &
-               (i==1    .and. BlkNeighborLev(-1, 1,0, iBlock)==-1) .or. &
-               (i==nI+1 .and. BlkNeighborLev( 1, 1,0, iBlock)==-1)) &
+               (i==1    .and. DiLevelNei_IIIB(-1, 1,0, iBlock)==-1) .or. &
+               (i==nI+1 .and. DiLevelNei_IIIB( 1, 1,0, iBlock)==-1)) &
                .or. (iDir==z_ .and. &
-               (k==1    .and. BlkNeighborLev( 0, 1,-1, iBlock)==-1) .or. &
-               (k==nK+1 .and. BlkNeighborLev( 0, 1, 1, iBlock)==-1))&
+               (k==1    .and. DiLevelNei_IIIB( 0, 1,-1, iBlock)==-1) .or. &
+               (k==nK+1 .and. DiLevelNei_IIIB( 0, 1, 1, iBlock)==-1))&
                )then
              jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
           end if
@@ -599,22 +599,22 @@ contains
        if(k==1)then
           if(NeiLbot(iBlock)==-1 &
                .or. (iDir==x_ .and. &
-               (i==1    .and. BlkNeighborLev(-1,0,-1, iBlock)==-1) .or. &
-               (i==nI+1 .and. BlkNeighborLev( 1,0,-1, iBlock)==-1)) &
+               (i==1    .and. DiLevelNei_IIIB(-1,0,-1, iBlock)==-1) .or. &
+               (i==nI+1 .and. DiLevelNei_IIIB( 1,0,-1, iBlock)==-1)) &
                .or. (iDir==y_ .and. &
-               (j==1    .and. BlkNeighborLev( 0,-1,-1, iBlock)==-1) .or. &
-               (j==nJ+1 .and. BlkNeighborLev( 0, 1,-1, iBlock)==-1))&
+               (j==1    .and. DiLevelNei_IIIB( 0,-1,-1, iBlock)==-1) .or. &
+               (j==nJ+1 .and. DiLevelNei_IIIB( 0, 1,-1, iBlock)==-1))&
                )then
              kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
           end if
        elseif(k==nK)then
           if(NeiLtop(iBlock)==-1 &
                .or. (iDir==x_ .and. &
-               (i==1    .and. BlkNeighborLev(-1,0, 1, iBlock)==-1) .or. &
-               (i==nI+1 .and. BlkNeighborLev( 1,0, 1, iBlock)==-1)) &
+               (i==1    .and. DiLevelNei_IIIB(-1,0, 1, iBlock)==-1) .or. &
+               (i==nI+1 .and. DiLevelNei_IIIB( 1,0, 1, iBlock)==-1)) &
                .or. (iDir==y_ .and. &
-               (j==1    .and. BlkNeighborLev( 0,-1,1, iBlock)==-1) .or. &
-               (j==nJ+1 .and. BlkNeighborLev( 0, 1,1, iBlock)==-1))&
+               (j==1    .and. DiLevelNei_IIIB( 0,-1,1, iBlock)==-1) .or. &
+               (j==nJ+1 .and. DiLevelNei_IIIB( 0, 1,1, iBlock)==-1))&
                )then
              kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
           end if

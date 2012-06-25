@@ -76,7 +76,7 @@ contains
          x_BLK, y_BLK, z_BLK, r_BLK, rMin_BLK, Cv_BLK, &
          dx_BLK, dy_BLK, dz_BLK, fax_BLK, fay_BLK, faz_BLK
 
-    use ModParallel, ONLY: BLKneighborLEV,  neiLEV, neiBLK, neiPE, &
+    use ModParallel, ONLY: neiLEV, neiBLK, neiPE, &
          neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
          neiBeast, neiBwest, neiBsouth, neiBnorth, neiBbot, neiBtop, &
          neiPeast, neiPwest, neiPsouth, neiPnorth, neiPbot, neiPtop
@@ -89,14 +89,12 @@ contains
     integer:: iNodeNei, iNodeNei_I(4)
     integer:: i, j, k
     !-------------------------------------------------------------------------
-    BLKneighborLEV(:,:,:,iBlock) = DiLevelNei_IIIB(:,:,:,iBlock)
-
-    neiLeast(iBlock)  = BLKneighborLEV(-1,0,0,iBlock)
-    neiLwest(iBlock)  = BLKneighborLEV(+1,0,0,iBlock)
-    neiLsouth(iBlock) = BLKneighborLEV(0,-1,0,iBlock)
-    neiLnorth(iBlock) = BLKneighborLEV(0,+1,0,iBlock)
-    neiLbot(iBlock)   = BLKneighborLEV(0,0,-1,iBlock)
-    neiLtop(iBlock)   = BLKneighborLEV(0,0,+1,iBlock)
+    neiLeast(iBlock)  = DiLevelNei_IIIB(-1,0,0,iBlock)
+    neiLwest(iBlock)  = DiLevelNei_IIIB(+1,0,0,iBlock)
+    neiLsouth(iBlock) = DiLevelNei_IIIB(0,-1,0,iBlock)
+    neiLnorth(iBlock) = DiLevelNei_IIIB(0,+1,0,iBlock)
+    neiLbot(iBlock)   = DiLevelNei_IIIB(0,0,-1,iBlock)
+    neiLtop(iBlock)   = DiLevelNei_IIIB(0,0,+1,iBlock)
 
     neiLEV(1,iBlock)  = neiLeast(iBlock)
     neiLEV(2,iBlock)  = neiLwest(iBlock)

@@ -36,10 +36,6 @@ module ModParallel
 
   integer, dimension(4,east_:top_,MaxBlock) :: neiPE, neiBLK
 
-  integer, dimension( -1:1, -1:1, -1:1, 4, MaxBlock) :: &
-       BLKneighborPE=NOBLK, BLKneighborBLK=NOBLK, BLKneighborCHILD=NOBLK
-  integer, dimension( -1:1, -1:1, -1:1, MaxBlock) :: BLKneighborLEV=NOBLK
-
   ! used by mpi_allgatherv for a more efficient replacment of mpi_allgather
   integer, allocatable :: nBlockMax_P(:), MaxBlockDisp_P(:)
 

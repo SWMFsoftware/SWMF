@@ -1164,7 +1164,7 @@ end subroutine constrain_ICs
 !   use ModProcMH
 !   use ModMain
 !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE, &
-!        BLKneighborPE,BLKneighborBLK,BLKneighborLEV,BLKneighborCHILD
+!        BLKneighborPE,BLKneighborBLK,DiLevelNei_IIIB,BLKneighborCHILD
 !   use ModCT, ONLY : VxB_x,VxB_y,VxB_z
 !   use ModAMR, ONLY : child2subface,child2subedge
 !   use ModMpi
@@ -1703,8 +1703,8 @@ end subroutine constrain_ICs
 !     do q_edge=-1,1,2
 !        d_edge(sidedir)=q_edge; d_side(sidedir)=q_edge
 ! 
-!        if(BLKneighborLEV(d_edge(1),d_edge(2),d_edge(3),iBLK)==1 .and. &
-!           BLKneighborLEV(d_side(1),d_side(2),d_side(3),iBLK)==1)then
+!        if(DiLevelNei_IIIB(d_edge(1),d_edge(2),d_edge(3),iBLK)==1 .and. &
+!           DiLevelNei_IIIB(d_side(1),d_side(2),d_side(3),iBLK)==1)then
 ! 
 !           if(q_edge==-1)then
 !              isedge=1;                   iredge=nIJK_D(sidedir)+1; iedge=2
@@ -1767,8 +1767,8 @@ end subroutine constrain_ICs
 !     d_edge=0; d_edge(sidedir)=2*iedge-3; d_edge(facedir)=rface-iface
 !     d_side=0; d_side(sidedir)=2*iedge-3;
 ! 
-!     if(BLKneighborLEV(d_edge(1),d_edge(2),d_edge(3),iBLK)==-1 .and. &
-!        BLKneighborLEV(d_side(1),d_side(2),d_side(3),iBLK)== 0)then
+!     if(DiLevelNei_IIIB(d_edge(1),d_edge(2),d_edge(3),iBLK)==-1 .and. &
+!        DiLevelNei_IIIB(d_side(1),d_side(2),d_side(3),iBLK)== 0)then
 ! 
 !        if(iedge==1)then
 !           iredge=1

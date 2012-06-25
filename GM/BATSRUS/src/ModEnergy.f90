@@ -411,9 +411,9 @@ contains
 
   !===========================================================================
 
-  subroutine calc_energy_ghost(iBlock,DoResChangeOnlyIn)
+  subroutine calc_energy_ghost(iBlock, DoResChangeOnlyIn)
 
-    use ModParallel, ONLY: BLKneighborLEV
+    use BATL_lib, ONLY: DiLevelNei_IIIB
 
     integer, intent(in) :: iBlock
     logical, optional, intent(in) :: DoResChangeOnlyIn
@@ -426,36 +426,36 @@ contains
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
 
     if( DoResChangeOnly ) then
-       if( .not.any(abs(BLKneighborLEV(-1:1,-1:1,-1:1,iBlock)) == 1) ) RETURN
+       if( .not.any(abs(DiLevelNei_IIIB(-1:1,-1:1,-1:1,iBlock)) == 1) ) RETURN
     end if
 
 !!$    !------------------- for calculation on ghost cells only ----------------
 !!$    if( DoResChangeOnly ) then
 !!$       
-!!$       if( any(abs(BLKneighborLEV(-1,:,:,iBlock)) == 1) ) then
+!!$       if( any(abs(DiLevelNei_IIIB(-1,:,:,iBlock)) == 1) ) then
 !!$          !call limit_pressure(-1,0,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
 !!$          call calc_energy(-1,0,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
 !!$       end if
 !!$
-!!$       if( any(abs(BLKneighborLEV(1,:,:,iBlock)) == 1) ) then
+!!$       if( any(abs(DiLevelNei_IIIB(1,:,:,iBlock)) == 1) ) then
 !!$          !call limit_pressure(nI+1,nI+2,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
 !!$          call calc_energy(nI+1,nI+2,-1,nJ+2,-1,nK+2,iBlock,1,nFluid)
 !!$       end if
 !!$
-!!$       if( any(abs(BLKneighborLEV(:,-1,:,iBlock)) == 1) ) then
+!!$       if( any(abs(DiLevelNei_IIIB(:,-1,:,iBlock)) == 1) ) then
 !!$          !call limit_pressure(-1,nI+2,-1,0,-1,nK+2,iBlock,1,nFluid)
 !!$          call calc_energy(-1,nI+2,-1,0,-1,nK+2,iBlock,1,nFluid)
 !!$       end if
 !!$
-!!$       if( any(abs(BLKneighborLEV(:,1,:,iBlock)) == 1) ) then
+!!$       if( any(abs(DiLevelNei_IIIB(:,1,:,iBlock)) == 1) ) then
 !!$          !call limit_pressure(-1,nI+2,nJ+1,nJ+2,-1,nK+2,iBlock,1,nFluid)
 !!$          call calc_energy(-1,nI+2,nJ+1,nJ+2,-1,nK+2,iBlock,1,nFluid)
 !!$       end if
-!!$       if( any(abs(BLKneighborLEV(:,:,-1,iBlock)) == 1) ) then
+!!$       if( any(abs(DiLevelNei_IIIB(:,:,-1,iBlock)) == 1) ) then
 !!$          !call limit_pressure(-1,nI+2,-1,nJ+2,-1,0,iBlock,1,nFluid)
 !!$          call calc_energy(-1,nI+2,-1,nJ+2,-1,0,iBlock,1,nFluid)
 !!$       end if
-!!$       if( any(abs(BLKneighborLEV(:,:,1,iBlock)) == 1) ) then
+!!$       if( any(abs(DiLevelNei_IIIB(:,:,1,iBlock)) == 1) ) then
 !!$          !call limit_pressure(-1,nI+2,-1,nJ+2,nK+1,nK+2,iBlock,1,nFluid)
 !!$          call calc_energy(-1,nI+2,-1,nJ+2,nK+1,nK+2,iBlock,1,nFluid)
 !!$       end if

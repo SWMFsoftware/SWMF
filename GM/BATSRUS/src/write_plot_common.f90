@@ -658,7 +658,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
        Ex_CB, Ey_CB, Ez_CB, iTypeAdvance_B
   use ModGeometry
-  use ModParallel, ONLY : BLKneighborCHILD
   use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
        AverageIonCharge, ElectronTemperatureRatio, &
        RhoBody2, pBody2, xBody2, yBody2, zBody2, rBody2
@@ -1294,8 +1293,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar) = iBLK
      case('node')
         PlotVar(:,:,:,iVar) = iNode_B(iBLK)
-     case('child')
-        PlotVar(:,:,:,iVar)=BLKneighborCHILD(0,0,0,1,iBLK)
      case('hall')
         if(UseHallResist)then
            do k=1,nK; do j=1,nJ; do i=1,nI
