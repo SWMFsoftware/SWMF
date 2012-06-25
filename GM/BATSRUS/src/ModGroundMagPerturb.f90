@@ -37,14 +37,14 @@ contains
     ! This subroutine is used to calculate the ground magnetic perturbations, 
     ! at given point in GM cells.
 
-    use ModSize,           ONLY: nI, nJ, nK, nBLK, gcn
-    use ModGeometry,       ONLY: x_BLK, y_BLK, z_BLK, R_BLK, &
-         x1, x2, y1, y2, z1, z2
+    use ModSize,           ONLY: nI, nJ, nK, nBLK
+    use ModGeometry,       ONLY: R_BLK, x1, x2, y1, y2, z1, z2
     use ModMain,           ONLY: x_, y_, z_, r_, phi_, theta_, &
          unusedBLK, nBlock, Time_Simulation, TypeCoordSystem
     use ModNumConst,       ONLY: cPi
     use ModCurrent,        ONLY: get_current
     use CON_axes,          ONLY: transform_matrix
+    use BATL_lib,          ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
 
     integer, intent(in)                    :: nMag
     real,    intent(in), dimension(3,nMag) :: Xyz_DI
@@ -58,9 +58,9 @@ contains
     !--------------------------------------------------------------------
 
     if(.not.allocated(Temp_BLK_x))&
-         allocate(Temp_BLK_x(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK), &
-         Temp_BLK_y(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK), &
-         temp_BLK_z(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK))
+         allocate(Temp_BLK_x(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
+         Temp_BLK_y(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
+         temp_BLK_z(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
 
     Temp_BLK_x = 0.0
     Temp_BLK_y = 0.0
@@ -78,12 +78,12 @@ contains
           if (unusedBLK(iBLK))cycle
           do k=1, nK; do j=1, nJ; do i=1, nI
              if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
-                  x_BLK(i+1,j,k,iBLK) > x2 .or.      &
-                  x_BLK(i-1,j,k,iBLK) < x1 .or.      &
-                  y_BLK(i,j+1,k,iBLK) > y2 .or.      &
-                  y_BLK(i,j-1,k,iBLK) < y1 .or.      &
-                  z_BLK(i,j,k+1,iBLK) > z2 .or.      &
-                  z_BLK(i,j,k-1,iBLK) < z1 ) then
+                  Xyz_DGB(x_,i+1,j,k,iBLK) > x2 .or.      &
+                  Xyz_DGB(x_,i-1,j,k,iBLK) < x1 .or.      &
+                  Xyz_DGB(y_,i,j+1,k,iBLK) > y2 .or.      &
+                  Xyz_DGB(y_,i,j-1,k,iBLK) < y1 .or.      &
+                  Xyz_DGB(z_,i,j,k+1,iBLK) > z2 .or.      &
+                  Xyz_DGB(z_,i,j,k-1,iBLK) < z1 ) then
                 Temp_BLK_x(i,j,k,iBLK)=0.0
                 Temp_BLK_y(i,j,k,iBLK)=0.0
                 Temp_BLK_z(i,j,k,iBLK)=0.0
@@ -91,13 +91,10 @@ contains
              end if
              
              call get_current(i,j,k,iBLK,Current_D)
-             
-             Xyz_BLK = (/x_BLK(i,j,k,iBLK),y_BLK(i,j,k,iBLK), &
-                  z_BLK(i,j,k,iBLK)/)
 
-             r3 = (sqrt(sum((Xyz_D-Xyz_BLK)**2)))**3
+             r3 = (sqrt(sum((Xyz_D-Xyz_DGB(:,i,j,k,iBLK))**2)))**3
 
-             Temp_D = cross_product(Current_D, Xyz_D-Xyz_BLK)/r3 
+             Temp_D = cross_product(Current_D, Xyz_D-Xyz_DGB(:,i,j,k,iBLK))/r3 
 
              Temp_BLK_x(i,j,k,iBLK) = Temp_D(1)
              Temp_BLK_y(i,j,k,iBLK) = Temp_D(2)
