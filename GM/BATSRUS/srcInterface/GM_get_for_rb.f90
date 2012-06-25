@@ -216,7 +216,7 @@ subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
   
   !Modules
   use ModProcMH,        ONLY: iProc, iComm
-  use ModSatelliteFile, ONLY: Satellite_name, Xsatellite, &
+  use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, &
        get_satellite_ray, set_satellite_flags, gm_trace_sat
   use ModMain,          ONLY: UseB0, nBlock
   use ModPhysics,       ONLY: No2Si_V, UnitB_
@@ -242,7 +242,7 @@ subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
   !--------------------------------------------------------------------------
   ! Store satellite names in Buffer_I
   if (iProc == 0) then
-     Buffer_I = Satellite_name(1:nSats)
+     Buffer_I = NameSat_I(1:nSats)
   end if
 
   do iSat=1, nSats
@@ -255,15 +255,15 @@ subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
      !     0, iComm, iError)
      !
      !write(*,*) 'sat_RayVars',sat_RayVars
-     call GM_trace_sat(xSatellite(iSat,1:3),SatRay_D)
+     call GM_trace_sat(XyzSat_DI(1:3,iSat),SatRay_D)
      ! Determine magnetic field magnitude at satellite B=B0+B1
      if(UseB0)then
-        call get_b0(xSatellite(iSat,:), B0Sat_D)
+        call get_b0(XyzSat_DI(:,iSat), B0Sat_D)
      else
         B0Sat_D=0.00
      end if
-     call get_point_data(0.0,xSatellite(iSat,:),1,nBlock,1,nVar+3,StateSat_V)
-     call collect_satellite_data(xSatellite(iSat,:),StateSat_V)
+     call get_point_data(0.0,XyzSat_DI(:,iSat),1,nBlock,1,nVar+3,StateSat_V)
+     call collect_satellite_data(XyzSat_DI(:,iSat),StateSat_V)
 
      Bx = StateSat_V(Bx_)+B0Sat_D(1)
      By = StateSat_V(By_)+B0Sat_D(2)
@@ -273,7 +273,7 @@ subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
      
      ! Store results in Buffer_III
      if (iProc == 0) then 
-        Buffer_III(1:3,1,iSat)   = Xsatellite(iSat,1:3)
+        Buffer_III(1:3,1,iSat)   = XyzSat_DI(1:3,iSat)
         !Buffer_III(1:3,2,iSat) = sat_RayVarsSum(1:3)
         Buffer_III(1:3,2,iSat) = SatRay_D
         Buffer_III(4,2,iSat)   = B2
