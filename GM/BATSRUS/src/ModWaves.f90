@@ -270,11 +270,12 @@ contains
 
   subroutine update_wave_group_advection(iBlock)
     use ModAdvance,           ONLY: State_VGB, time_blk
-    use ModGeometry,          ONLY: true_cell, x_BLK, y_BLK, z_BLK
+    use ModGeometry,          ONLY: true_cell
     use ModLinearAdvection,   ONLY: advance_lin_advection_plus, &
          advance_lin_advection_minus
     use ModMain,              ONLY: CFL
-    Use ModFaceValue,         ONLY:BetaLimiter
+    Use ModFaceValue,         ONLY: BetaLimiter
+    use BATL_lib,             ONLY: Xyz_DGB
 
     integer,intent(in)    ::iBlock
 
@@ -393,8 +394,7 @@ contains
       use ModVarIndexes, ONLY: nVar, NameVar_V
       integer:: iVar
       !-----------------------------------------------------------------------
-      write(*,*) 'Negative energy density in xyz=',&
-           x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock), &
+      write(*,*) 'Negative energy density in xyz=',Xyz_DGB(:,i,j,k,iBlock), &
            ' ijk=', i, j, k, ' iBlock=',iBlock
       write(*,*)'Var      State_VGB(iVar,i,j,k,iBlock)'
 

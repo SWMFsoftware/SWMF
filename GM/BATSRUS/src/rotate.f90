@@ -52,10 +52,11 @@ subroutine transform_to_hgi
   ! ux = ux - OmegaBody*y
   ! uy = uy + OmegaBody*x
 
-  use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk
+  use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk, x_, y_
   use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_
-  use ModGeometry, ONLY: x_BLK, y_BLK, true_cell
+  use ModGeometry, ONLY: true_cell
   use ModPhysics,  ONLY: OmegaBody
+  use BATL_lib,    ONLY: Xyz_DGB
   implicit none
   integer :: i,j,k,iBlock
   !---------------------------------------------------------------------------
@@ -65,10 +66,10 @@ subroutine transform_to_hgi
      do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
         if(.not.True_Cell(i,j,k,iBlock)) CYCLE
         State_VGB(RhoUx_,i,j,k,iBlock) = State_VGB(RhoUx_,i,j,k,iBlock) - &
-             State_VGB(Rho_,i,j,k,iBlock)*OmegaBody*y_BLK(i,j,k,iBlock)
+             State_VGB(Rho_,i,j,k,iBlock)*OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
 
         State_VGB(RhoUy_,i,j,k,iBlock) = State_VGB(RhoUy_,i,j,k,iBlock) + &
-             State_VGB(Rho_,i,j,k,iBlock)*OmegaBody*x_BLK(i,j,k,iBlock)
+             State_VGB(Rho_,i,j,k,iBlock)*OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
 
      end do; end do; end do
   end do

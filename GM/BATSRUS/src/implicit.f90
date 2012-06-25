@@ -80,7 +80,6 @@ subroutine advance_impl
   use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI, &
        time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
-  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
   use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModImplicit
   use ModPointImplicit, ONLY: UsePointImplicit
@@ -91,7 +90,7 @@ subroutine advance_impl
   use ModEnergy, ONLY: calc_old_pressure, calc_old_energy
   use ModImplHypre, ONLY: hypre_preconditioner, hypre_initialize
   use ModMessagePass, ONLY: exchange_messages
-  use BATL_lib, ONLY : Unused_BP
+  use BATL_lib, ONLY : Unused_BP, Xyz_DGB
 
   implicit none
 
@@ -438,8 +437,7 @@ subroutine advance_impl
         if(iLoc_I(5) == iProc)then
            i = iLoc_I(1); j = iLoc_I(2); k = iLoc_I(3); iBlock = iLoc_I(4)
            write(*,*) 'pRhoRelativeMin is at i,j,k,iBlock,iProc = ',iLoc_I
-           write(*,*) 'x,y,z =', x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), &
-                z_BLK(i,j,k,iBlock)
+           write(*,*) 'x,y,z =', Xyz_DGB(:,i,j,k,iBlock)
            write(*,*) 'RhoOld,pOld=', StateOld_VCB((/Rho_,P_/),i,j,k,iBlock)
            write(*,*) 'RhoNew,pNew=', State_VGB((/Rho_,P_/),i,j,k,iBlock)
            write(*,*) 'pRhoRelativeMin=', pRhoRelativeMin
