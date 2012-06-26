@@ -16,7 +16,6 @@ module ModUser
 
   use ModMultiFluid
 
-  use ModNumConst, ONLY: cSqrtHalf, cDegToRad
 
 
   use ModAdvance, ONLY: Pe_, UseElectronPressure
@@ -33,7 +32,6 @@ module ModUser
 
   character (len=10) :: SolarCond='solarmax  '
 
-  real    :: CollisionCoefDim = 1.0, CollisionCoef
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 4.0
 
@@ -42,8 +40,7 @@ module ModUser
   !logical ::  UseMultiSpecies=.true.
   integer, parameter :: MaxSpecies=nIonFluid, MaxNuSpecies=9,  &
        MaxReactions=11, nNuSpecies = 3
-  integer :: nSpecies=4, &
-       nReactions=10
+  integer :: nSpecies=4
 
   real, allocatable:: nDenNuSpecies_CBI(:,:,:,:,:), &
        TempNuSpecies_CBI(:,:,:,:),  Productrate_CB(:,:,:,:),  &
@@ -84,10 +81,7 @@ module ModUser
        Op_  =3, &
        CO2p_=4
 
-  character (len=10), dimension(nIonFluid):: &
-       ion_name_I=(/'Hp  ', 'O2p ', 'Op  ','CO2p'/)
-
-   real, dimension(nNuSpecies)::  &
+  real, dimension(nNuSpecies)::  &
         MassNeutral_I=(/44., 16., 1. /)  !atm
 
   !  MassSpecies_I(Hp_)=1	 !atm
@@ -135,7 +129,7 @@ module ModUser
        em_=-1 ,&
        hv_=-2   
 
-  real :: TNu_body_dim = 300.0, TNu_body, Tnu, Tnu_dim ! neutral temperature 
+  real :: TNu_body_dim = 300.0, TNu_body  ! neutral temperature 
   real :: Ti_body_dim=300.0, Ti_body  !ion temperature at the body
   
 
@@ -172,8 +166,6 @@ module ModUser
   logical :: UseIssiC=.false.
   logical :: UseIssiA=.false.
   logical :: UseImpactIon=.false.
-  real, dimension(32,nIonFluid)::Impact_ION,Impact_ION_dim=0.0 
-  real, dimension(32):: Temp_dim
   logical :: UseChargeEx=.true.
   !logical ::InitSession= .false.
 
@@ -198,15 +190,14 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModPointImplicit, ONLY: UsePointImplicit_B,UsePointImplicit,&
-         IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
+         IsPointImplSource
     use ModMain,    ONLY: nI, nJ, nK, iNewGrid, iNewDecomposition, &
          PROCTEST,BLKTEST, iTest,jTest,kTest
-    use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_,Si2No_V, No2Io_V, No2Si_V, Io2No_V,&
-         LowDensityRatio,UnitT_,UnitN_,ElectronPressureRatio
+    use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_, No2Io_V, No2Si_V, Io2No_V,&
+         UnitT_,UnitN_,ElectronPressureRatio
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
          VdtFace_y,VdtFace_z
     use ModGeometry,ONLY: r_BLK,x_BLK,y_BLK,z_BLK,R_BLK
-    use ModNumConst,ONLY: cZero,cHalf,cOne,cTolerance
 !!$    use ModVarIndexes,ONLY: Rho_, HpRho_, O2pRho_, OpRho_, CO2pRho_, &
 !!$         RhoUx_, RhoUy_, RhoUz_, HpP_,O2pP_,OpP_,CO2pP_, P_, Energy_, Bx_, By_, Bz_
     use ModVarIndexes
@@ -218,27 +209,26 @@ contains
 
     !    use ModAdvance,  ONLY: Source_VC,Energy_
     !    use ModNumConst, ONLY: cZero
-    integer :: i, j, k,iSpecies,iFluid,n
-    real    :: Coef,SourcesLossMax,vdtmin
+    integer :: i, j, k,iFluid,n
+    real    ::vdtmin
     real :: inv_rho,inv_rho2,uu2,Productrate,kTi,kTe
     real    :: NumDens, InvNumDens
-    real, dimension(nIonFluid) :: NumDens_I, InvRho_I,InvRho2_I,uu2_I,&
-         Ux_I, Uy_I, Uz_I, Temp_I,temps_I,&
+    real, dimension(nIonFluid) :: NumDens_I, InvRho_I,uu2_I,&
+         Temp_I,&
          LossNumRho_I, SourceNumRho_I, Lossx_I,LossNumx_I,&
          RLNumRhox_I, tmp_I, tmp_nu_I,col_ii_I
 
     real :: col_ei, col_en,col_ei_I(nIonFluid), col_en_I(3),averagemass,&
          meovmi=5.44471e-4 !me/mi=9.109e-31/1.673e-27
-    real :: alt, Te_dim = 300.0, tmp, num=4.0e-11, cosSZA
+    real :: Te_dim = 300.0, tmp, cosSZA
     real::  totalLossRho,totalSourceRho, totalLossNumRho, &
          totalSourceNumRho, totalLossx, totalLossNumx, SourceLossMax,&
          totalIMPNumRho
-    real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps, testvar
-    real :: X1, X2, X3, X4, Alt0
+    real :: totalPSNumRho=0.0,totalRLNumRhox=0.0
+    real :: X1, X2, X3, X4
     real :: A0=-1143.33, A1=323.767, A2=-35.0431, A3=1.69073, A4=-0.0306575
     real :: B0=-1233.29, B1=347.764, B2=-37.4128, B3=1.79337, B4=-0.0322777
     real :: IonNeuRate_II(1:nIonFluid,1:nNuSpecies)
-    real ::IonIonRate_II(1:nIonFluid,1:nIonFluid)
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     logical :: DoTest, DoTestMe, DoTestCell
 
@@ -958,7 +948,7 @@ contains
     use ModMain
     use ModPhysics
     use ModConst
-    use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
+    use ModGeometry,ONLY:R_BLK,dx_BLK,dy_BLK,dz_BLK,&
          XyzStart_BLK,TypeGeometry
 
     integer, intent(in) :: iBlock
@@ -967,9 +957,9 @@ contains
     real :: hh, theta, phi, dR, dtheta, dphi, dH, Hscale, HCO2, HO, grav
     real:: tempICO2p, tempIOp
     real:: xLat, xLong,xAlt
-    integer :: i,j,k,n, m
+    integer :: i,j,k
     integer:: iAlt, jLong, kLat, ip1,jp1,kp1
-    logical:: oktest=.false., oktestme=.false.
+    logical:: oktestme=.false.
     !-----------------------------------------------------------------------
     !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp ----- 
 
@@ -1143,9 +1133,7 @@ contains
     use ModIO
     use ModPhysics
 
-    real :: Productrate
-    integer :: n
-    logical::oktest=.false., oktestme=.false.
+    logical::oktest=.false.
     !---------------------------------------------------------------
   
     select case(SolarCond)
@@ -1435,22 +1423,17 @@ contains
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
-    use ModIO, ONLY : restart
+    use ModGeometry, ONLY :x_BLK,R_BLK,true_cell
     use ModPhysics
     use ModNumConst
 
     integer, intent(in) :: iBlock
 
-    real :: Rmax, SinSlope, CosSlope,CosSZA, tempo
-    real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
-         XFace, YFace, ZFace
-    real :: temp1,temp2,temp3
+    real ::CosSZA
     integer :: i,j,k,q
     real, dimension(nIonFluid)::Temp_I
-    integer:: iBoundary
     character (len=*), parameter :: NameSub = 'user_set_ics'
-    logical:: DoTest, DoTestMe, DoTestCell
+    logical:: DoTest, DoTestMe
     !-------------------------------------------------------------------------
     if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
@@ -1648,8 +1631,8 @@ contains
     use ModMain,       ONLY: UseRotatingBc, iTest, jTest, kTest, ProcTest, &
          BlkTest, ExtraBc_, Body1_
     use ModProcMH,   ONLY: iProc
-    use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_,HpP_,O2pP_,OpP_,CO2pP_,iRhoUx_I,iRhoUy_I,iRhoUz_I
-    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim,ElectronPressureRatio,FaceState_VI
+    use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_,iRhoUx_I,iRhoUy_I,iRhoUz_I
+    use ModPhysics,    ONLY: SW_rho,ElectronPressureRatio,FaceState_VI
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, &
          iFace, jFace, kFace, iBoundary, iBlockBc
 
@@ -1658,8 +1641,7 @@ contains
     real:: XFace,YFace,ZFace,rFace,rFace2
     real:: v_phi(3)
     real:: cosSZA 
-    real:: uDotR_I(nFluid), bDotR
-    integer:: i,j,k
+    real:: uDotR_I(nFluid)
     character (len=*), parameter :: NameSub = 'user_set_face_boundary'
     logical:: DoTest, DoTestMe, DoTestCell
     !-------------------------------------------------------------------------
@@ -1758,8 +1740,7 @@ contains
 
   !========================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
-         dx_BLK,dy_BLK,dz_BLK
+    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModMain
     use ModVarIndexes
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
@@ -1770,7 +1751,7 @@ contains
     real, intent(in), optional :: Radius
 
     real, external :: calc_sphere
-    real ::mass,value1,value2
+    real ::mass
     integer:: i,j,k,iBLK
     character (len=*), parameter :: NameSub='user_get_log_var'
     logical:: oktest=.false.,oktest_me
@@ -2011,11 +1992,8 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModPhysics, ONLY: rBody, No2Io_V, UnitRho_, BodyRho_I,UnitT_,UnitN_
-    use ModMain, ONLY: Body1_
-    use ModAdvance, ONLY: State_VGB
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
+    use ModPhysics, ONLY: No2Io_V, BodyRho_I,UnitN_
+    use ModMain, ONLY: ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModSize, ONLY: nI, nJ, nK
     use ModMultiFluid
@@ -2033,7 +2011,7 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
 
-    integer :: iVar, i, j, k, iIon
+    integer :: iVar, iIon
     logical :: oktest,oktest_me
 
     !-------------------------------------------------------------------
@@ -2105,15 +2083,14 @@ contains
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
-    use ModIO, ONLY : restart
+    use ModGeometry, ONLY :x_BLK,R_BLK
     use ModPhysics
     use ModNumConst
 
     integer, intent(in):: iBlock
 
-    real :: Rmax,CosSZA
-    integer:: i, j, k, q,n
+    real ::CosSZA
+    integer:: i, j, k
     character (len=*), parameter :: NameSub = 'set_neutral_density'
     logical:: DoTest, DoTestMe, DoTestCell
 
@@ -2412,7 +2389,7 @@ subroutine MarsB0(r,theta, phi, bb)
     !real :: Rlgndr, dRlgndr
     integer :: NN, n, m, im
     real :: dRnm, signsx, Rmm
-    real :: xtcos,xtsin,xtabs, xx
+    real :: xtcos,xtsin
     real, dimension(0:nMax-1) :: xpcos, xpsin
     real :: a, arr, arrn, arrm, somx2, fact, temp
     real,dimension(0:nMax,0:nMax) :: Rnm
