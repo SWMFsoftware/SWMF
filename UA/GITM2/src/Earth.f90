@@ -86,8 +86,8 @@ subroutine calc_planet_sources(iBlock)
      !  [NO] cooling 
      ! [Reference: Kockarts,G., G.R.L.,VOL.7, PP.137-140,Feberary 1980 ]
  
-     Omega = 6.5e-17 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock) /      &
-          (6.5e-17 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock) + 13.3)
+     Omega = 3.6e-17 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock) /      &
+          (3.6e-17 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock) + 13.3)
 
      ! We need to check this out. I don't like the first / sign....
 
