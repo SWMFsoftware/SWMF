@@ -2,7 +2,7 @@
 
 module ModLoadBalance
 
-  use ModMain, ONLY: UseConstrainB, UseB0, UseGravity, UseRotatingFrame, UseIM
+  use ModMain, ONLY: UseConstrainB, UseB0, UseIM
   use BATL_size, ONLY: nI, nJ, nK, nIJK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
@@ -11,7 +11,6 @@ module ModLoadBalance
   use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK        !^CFG IF CONSTRAINB
   use ModRaytrace, ONLY: ray                               !^CFG IF RCM
   use ModAdvance, ONLY: nVar
-  use ModCalcSource, ONLY: PotentialForce_DCB
   use ModB0, ONLY: B0_DGB
   use ModIo, ONLY: log_vars
 
@@ -56,8 +55,6 @@ contains
     if(DoMoveExtraData)then
        if(UseB0) &
             nBuffer = nBuffer + 3*nCellGhost
-       if(UseGravity .or. UseRotatingFrame) &
-            nBuffer = nBuffer + 3*nIJK
     end if
     if(MaxBlockData > 0) &
          nBuffer = nBuffer + MaxBlockData
@@ -107,13 +104,6 @@ contains
           ! Cell centered B0_DGB
           do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
              Buffer_I(iData+1:iData+3) = B0_DGB(:,i,j,k,iBlock)
-             iData = iData + 3
-          end do; end do; end do
-       end if
-       ! PotentialForce
-       if(UseGravity .or. UseRotatingFrame)then
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             Buffer_I(iData+1:iData+3) = PotentialForce_DCB(:,i,j,k,iBlock)
              iData = iData + 3
           end do; end do; end do
        end if
@@ -185,14 +175,6 @@ contains
              iData = iData+3
           end do; end do; end do
        end if
-       ! PotentialForce
-       if(UseGravity .or. UseRotatingFrame)then
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             PotentialForce_DCB(:,i,j,k,iBlock) = Buffer_I(iData+1:iData+3)
-             iData = iData + 3
-          end do; end do; end do
-       end if
-
     end if ! DoMoveExtraData
 
     if(UseBDF2 .and. n_prev > 0)then            !^CFG IF IMPLICIT BEGIN
