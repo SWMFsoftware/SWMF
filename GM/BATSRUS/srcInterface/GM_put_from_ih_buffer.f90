@@ -96,7 +96,7 @@ subroutine GM_put_from_ih_buffer( &
 
   use ModVarIndexes
   use ModPhysics, ONLY: Si2No_V, UnitX_,UnitRho_,UnitU_,UnitB_,UnitP_
-  use ModMain, ONLY: TypeBc_I, 2
+  use ModMain, ONLY: TypeBc_I
   use ModIhBuffer
 
   implicit none

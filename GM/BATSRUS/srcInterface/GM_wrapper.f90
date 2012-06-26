@@ -199,7 +199,7 @@ end subroutine GM_print_variables
 subroutine GM_init_session(iSession, TimeSimulation)
 
   use ModProcMH,   ONLY: iProc
-  use ModMain,     ONLY: Time_Simulation, UseIe, UsePw, TypeBC_I, 2, body1_
+  use ModMain,     ONLY: Time_Simulation, UseIe, UsePw, TypeBC_I, body1_
   use ModMain,     ONLY: UseIM                            !^CFG IF RCM
   use CON_physics, ONLY: get_time
   use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_
