@@ -356,7 +356,7 @@ end function sum_BLK
 !=============================================================================
 real function integrate_BLK(qnum,qa)              
 
-  ! Return the volume integral of qa, ie. sum(qa*cV_BLK) 
+  ! Return the volume integral of qa, ie. sum(qa*CellVolume_B)
   ! for all used blocks and true cells
   ! Do for each processor separately if qnum=1, otherwise add them all
 

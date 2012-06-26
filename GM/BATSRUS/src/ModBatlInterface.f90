@@ -73,7 +73,7 @@ contains
          IsCartesian, IsRzGeometry
     use ModGeometry, ONLY: &
          XyzStart_BLK, &
-         x_BLK, y_BLK, z_BLK, r_BLK, rMin_BLK, Cv_BLK, &
+         x_BLK, y_BLK, z_BLK, r_BLK, rMin_BLK, &
          dx_BLK, dy_BLK, dz_BLK, fax_BLK, fay_BLK, faz_BLK
 
     use ModParallel, ONLY: neiLEV, neiBLK, neiPE, &
@@ -233,7 +233,6 @@ contains
        fAx_BLK(iBlock) = CellFace_DB(1,iBlock)
        fAy_BLK(iBlock) = CellFace_DB(2,iBlock)
        fAz_BLK(iBlock) = CellFace_DB(3,iBlock)
-       cV_BLK(iBlock)  = CellVolume_B(iBlock)
     end if
 
     call fix_block_geometry(iBlock)
