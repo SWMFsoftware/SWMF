@@ -68,7 +68,7 @@ end module ModBuffer
 subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModBuffer
   use ModMain,       ONLY: &
-       MaxDim, R_, Phi_, Theta_, x_, y_, z_,&
+       MaxDim, x_, y_, z_,&
        TypeCoordSystem, Time_Simulation, DoThinCurrentSheet
   use ModAdvance,    ONLY: &
        UseElectronPressure, UseAnisoPressure
@@ -123,7 +123,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
 
   ! Convert to left handed spherical coordinates !!!
   call xyz_to_spherical(XyzSource_D(x_),XyzSource_D(y_),XyzSource_D(z_),&
-       Sph_D(R_),Sph_D(Phi_),Sph_D(Theta_))
+       Sph_D(1),Sph_D(2),Sph_D(3))
 
   ! Get the target state from the spherical buffer grid
   if(UseGlobalMpiCoupler) then       
