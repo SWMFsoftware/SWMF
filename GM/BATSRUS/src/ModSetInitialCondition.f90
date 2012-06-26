@@ -11,7 +11,6 @@ subroutine set_ics(iBlock)
   use ModMultiFluid
   use ModEnergy, ONLY: calc_energy_ghost
   use ModConserveFlux, ONLY: init_cons_flux
-  use ModCalcSource, ONLY: set_potential_force
   use BATL_lib, ONLY: Xyz_DGB
 
   implicit none
@@ -49,7 +48,6 @@ subroutine set_ics(iBlock)
      ! If used, initialize solution variables and parameters.
      !/
      if(UseB0)call set_b0_cell(iBlock)
-     call set_potential_force(iBlock)
 
      if(.not.restart)then
 
@@ -120,9 +118,23 @@ subroutine set_ics(iBlock)
 
         end do; end do; end do
 
-        !\
-        ! Initialize solution quantities
-        !/
+        if(index(test_string,'ADDROTATIONALVELOCITY') > 0)then
+           ! For testing purposes add rotational velocity
+           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+              do iFluid = 1, nFluid
+                 call select_fluid
+                 State_VGB(iRhoUx,i,j,k,iBlock) = &
+                      State_VGB(iRhoUx,i,j,k,iBlock) &
+                      + State_VGB(iRho,i,j,k,iBlock) &
+                      *OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
+                 State_VGB(iRhoUy,i,j,k,iBlock) = &
+                      State_VGB(iRhoUy,i,j,k,iBlock) &
+                      - State_VGB(iRho,i,j,k,iBlock) &
+                      *OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
+              end do
+           end do; end do; end do
+        end if
+
         if(UseConstrainB)call constrain_ics(iBlock) !^CFG IF CONSTRAINB
 
         if(UseUserICs) call user_set_ics(iBlock)
