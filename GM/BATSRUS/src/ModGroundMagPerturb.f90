@@ -11,13 +11,16 @@ module ModGroundMagPerturb
   save
 
   private ! except
-  
+
   public:: read_mag_input_file
   public:: open_magnetometer_output_file
   public:: close_magnetometer_output_file
   public:: write_magnetometers
   public:: ground_mag_perturb
   public:: ground_mag_perturb_fac
+
+  ! These are not always set this way in ModSize
+  integer, parameter:: r_=1, phi_=2, theta_=3
 
   logical,            public:: save_magnetometer_data = .false.
   character(len=100), public:: MagInputFile
@@ -39,7 +42,7 @@ contains
 
     use ModSize,           ONLY: nI, nJ, nK, nBLK
     use ModGeometry,       ONLY: R_BLK, x1, x2, y1, y2, z1, z2
-    use ModMain,           ONLY: x_, y_, z_, r_, phi_, theta_, &
+    use ModMain,           ONLY: x_, y_, z_, &
          Unused_B, nBlock, Time_Simulation, TypeCoordSystem
     use ModNumConst,       ONLY: cPi
     use ModCurrent,        ONLY: get_current
@@ -68,7 +71,7 @@ contains
     !\
     ! Calculate the magnetic perturbations in cartesian coordinates
     !/
-          
+
     GsmtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
 
     do iMag = 1, nMag
@@ -89,7 +92,7 @@ contains
                 Temp_BLK_z(i,j,k,iBLK)=0.0
                 CYCLE
              end if
-             
+
              call get_current(i,j,k,iBLK,Current_D)
 
              r3 = (sqrt(sum((Xyz_D-Xyz_DGB(:,i,j,k,iBLK))**2)))**3
@@ -108,7 +111,7 @@ contains
 
        ! Convert to SMG coordinates
        MagPerturb_D = matmul(GsmtoSmg_DD, MagPerturb_DI(:,iMag))
-      
+
        ! Transform to spherical coordinates (r,theta,phi) components
        Xyz_D = matmul(GsmtoSmg_DD, Xyz_DI(:,iMag))
 
@@ -131,9 +134,9 @@ contains
 
   !=====================================================================
   subroutine ground_mag_perturb_fac(nMag, Xyz_DI, MagPerturb_DI)
-    
+
     use ModProcMH,         ONLY: iProc, nProc, iComm
-    use ModMain,           ONLY: Time_Simulation, phi_, theta_, r_
+    use ModMain,           ONLY: Time_Simulation
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use ModNumConst,       ONLY: cPi, cTwoPi
     use ModCurrent,        ONLY: calc_field_aligned_current
@@ -178,91 +181,91 @@ contains
     where(abs(FacRcurrents_II) * No2Io_V(UnitJ_) < 1.0E-4 &
          .or. abs(FacRcurrents_II) * No2Io_V(UnitJ_) >  1.0e3)&
          FacRcurrents_II = 0.0
-    
+
     iLine=-1
     do iTheta = 1, nTheta
        Theta = (iTheta-1) * dTheta
        if(iTheta==1 .or. iTheta == nTheta)Theta = 1.0E-4
        SinTheta = sin(Theta)          
-        
+
        do iPhi=1, nPhi
-             Phi = (iPhi-1) * dPhi
-             
-             ! if the FAC is under certain threshold, do nothing
-             if (FacRcurrents_II(iTheta,iPhi) ==0.0)CYCLE
+          Phi = (iPhi-1) * dPhi
 
-             iLine = iLine +1
-             ! do parallel computation among the processors
-             if(mod(iLine,nProc) /= iProc)CYCLE
-             
-             call sph_to_xyz(rCurrents,Theta,Phi,XyzRcurrents_D)
+          ! if the FAC is under certain threshold, do nothing
+          if (FacRcurrents_II(iTheta,iPhi) ==0.0)CYCLE
 
-             ! extract the field aligned current and B field
-             JrRcurrents = FacRcurrents_II(iTheta,iPhi)
+          iLine = iLine +1
+          ! do parallel computation among the processors
+          if(mod(iLine,nProc) /= iProc)CYCLE
 
-             bRcurrents_D= bRcurrents_DII(:,iTheta,iPhi)
-             bRcurrents = sqrt(sum(bRcurrents_D**2))
+          call sph_to_xyz(rCurrents,Theta,Phi,XyzRcurrents_D)
 
-             do k=1,nCuts
-                
-                r_tmp = rCurrents - dR_Trace * k
-                ! get next position along the field line
-                call map_planet_field(Time_Simulation,XyzRcurrents_D,'SMG NORM', &
-                     r_tmp, XyzTmp_D,iHemisphere)
+          ! extract the field aligned current and B field
+          JrRcurrents = FacRcurrents_II(iTheta,iPhi)
 
-                ! get the B field at this position
-                call get_planet_field(Time_Simulation, XyzTmp_D,'SMG NORM',B_D)
-                B_D = B_D *Si2No_V(UnitB_)
-                b = sqrt(sum(B_D**2))
+          bRcurrents_D= bRcurrents_DII(:,iTheta,iPhi)
+          bRcurrents = sqrt(sum(bRcurrents_D**2))
 
-                ! get the field alinged current at this position
-                Fac = b/bRcurrents * JrRcurrents
-                ! get the (x,y,z) components of the Jr
-                j_D = Fac * B_D/b
+          do k=1,nCuts
 
-                ! the length of the field line between two cuts
-                iLat = abs(asin(XyzTmp_D(3)/sqrt(sum(XyzTmp_D**2))))
-                dL = dR_Trace * sqrt(1+3*(sin(iLat))**2)/(2*sin(iLat))
-                ! the cross section area by conversation of magnetic flux
-                dS = bRcurrents/ b * rCurrents**2 * SinTheta * dTheta *dPhi
+             r_tmp = rCurrents - dR_Trace * k
+             ! get next position along the field line
+             call map_planet_field(Time_Simulation,XyzRcurrents_D,'SMG NORM', &
+                  r_tmp, XyzTmp_D,iHemisphere)
 
-                do iMag=1,nMag
-                   Xyz_D = Xyz_DI(:,iMag)
+             ! get the B field at this position
+             call get_planet_field(Time_Simulation, XyzTmp_D,'SMG NORM',B_D)
+             B_D = B_D *Si2No_V(UnitB_)
+             b = sqrt(sum(B_D**2))
 
-                   if(Xyz_D(3) > 0 .and. Theta > cHalfPi &
-                        .or. Xyz_D(3) < 0 .and. Theta < cHalfPi) CYCLE
+             ! get the field alinged current at this position
+             Fac = b/bRcurrents * JrRcurrents
+             ! get the (x,y,z) components of the Jr
+             j_D = Fac * B_D/b
 
-                   ! Do the Biot-Savart integral JxR/|R|^3 dV for all the magnetometers
-                   temp_D = cross_product(j_D, Xyz_D-XyzTmp_D) & 
-                        * dL * dS /(sqrt(sum((XyzTmp_D-Xyz_D)**2)))**3
-                   
-                   MagPerturb_DI(:,iMag)=MagPerturb_DI(:,iMag)+temp_D/(4*cPi)
-                end do
+             ! the length of the field line between two cuts
+             iLat = abs(asin(XyzTmp_D(3)/sqrt(sum(XyzTmp_D**2))))
+             dL = dR_Trace * sqrt(1+3*(sin(iLat))**2)/(2*sin(iLat))
+             ! the cross section area by conversation of magnetic flux
+             dS = bRcurrents/ b * rCurrents**2 * SinTheta * dTheta *dPhi
 
+             do iMag=1,nMag
+                Xyz_D = Xyz_DI(:,iMag)
+
+                if(Xyz_D(3) > 0 .and. Theta > cHalfPi &
+                     .or. Xyz_D(3) < 0 .and. Theta < cHalfPi) CYCLE
+
+                ! Do the Biot-Savart integral JxR/|R|^3 dV for all the magnetometers
+                temp_D = cross_product(j_D, Xyz_D-XyzTmp_D) & 
+                     * dL * dS /(sqrt(sum((XyzTmp_D-Xyz_D)**2)))**3
+
+                MagPerturb_DI(:,iMag)=MagPerturb_DI(:,iMag)+temp_D/(4*cPi)
              end do
+
           end do
        end do
+    end do
 
-        do iMag=1, nMag
-         if (Xyz_DI(1,iMag) == 0.0 .and. Xyz_DI(2,iMag) == 0.0 &
-              .and. Xyz_DI(3,iMag) == 0.0) then 
-         else
-            ! Transform to spherical coordinates (r,theta,phi) components
-            XyzSph_DD = rot_xyz_sph(Xyz_DI(:,iMag))
-            TmpSph_D = matmul(MagPerturb_DI(:,iMag), XyzSph_DD)
-            
-            ! Transform to spherical coordinates (north, east, down) components
-            MagPerturb_DI(1,iMag)  = -TmpSph_D(phi_) 
-            MagPerturb_DI(2,iMag)  =  TmpSph_D(theta_) 
-            MagPerturb_DI(3,iMag)  = -TmpSph_D(r_) 
-         end if
+    do iMag=1, nMag
+       if (Xyz_DI(1,iMag) == 0.0 .and. Xyz_DI(2,iMag) == 0.0 &
+            .and. Xyz_DI(3,iMag) == 0.0) then 
+       else
+          ! Transform to spherical coordinates (r,theta,phi) components
+          XyzSph_DD = rot_xyz_sph(Xyz_DI(:,iMag))
+          TmpSph_D = matmul(MagPerturb_DI(:,iMag), XyzSph_DD)
 
-        end do
+          ! Transform to spherical coordinates (north, east, down) components
+          MagPerturb_DI(1,iMag)  = -TmpSph_D(phi_) 
+          MagPerturb_DI(2,iMag)  =  TmpSph_D(theta_) 
+          MagPerturb_DI(3,iMag)  = -TmpSph_D(r_) 
+       end if
 
-     end subroutine ground_mag_perturb_fac
+    end do
+
+  end subroutine ground_mag_perturb_fac
   !================================================================
-     subroutine read_mag_input_file
-    
+  subroutine read_mag_input_file
+
     use ModProcMH, ONLY: iProc, iComm
     use ModMain, ONLY: lVerbose
     use ModIO, ONLY: FileName, Unit_Tmp, iUnitOut, Write_prefix
@@ -433,12 +436,12 @@ contains
     MagtoGsm_DD = transform_matrix(Time_Simulation, &
          MagInCoord, TypeCoordSystem)
     GsmtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
-    
+
     !\
     ! Transform the Radius position into cartesian coordinates. 
     ! Transform the magnetometer position from MagInCorrd to GSM/SM
     !/
-    
+
     do iMag=1,nMagnetometer
        ! (360,360) is for the station at the center of the planet
        if ( nint(PosMagnetometer_II(1,iMag)) == 360 .and. &
@@ -465,7 +468,7 @@ contains
 
     call ground_mag_perturb_fac(nMagnetometer, &
          MagSmgXyz_DI, MagPerturbFacSph_DI)
-     
+
     !\
     ! Collect the variables from all the PEs
     !/
@@ -478,24 +481,24 @@ contains
        call MPI_reduce(MagPerturbFacSph_DI, MagVarSum_DI, 3*nMagnetometer, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
        if(iProc==0)MagPerturbFacSph_DI = MagVarSum_DI
-     end if
-    
-     !\
-     ! Write variables
-     !/
-     if(iProc==0)then      
+    end if
+
+    !\
+    ! Write variables
+    !/
+    if(iProc==0)then      
        do iMag=1,nMagnetometer
-    
+
           call get_date_time(iTime_I)
-          
+
           !normalize the variable to I/O unit...
           MagVarGm_D  = MagPerturbGMSph_DI( :,iMag) * No2Io_V(UnitB_)
           MagVarFac_D = MagPerturbFacSph_DI(:,iMag) * No2Io_V(UnitB_)
-         
+
           write(iUnitMag,'(i8)',ADVANCE='NO') n_step
           write(iUnitMag,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
           write(iUnitMag,'(1X,i2)', ADVANCE='NO')  iMag
-          
+
           ! Write position of magnetometer in SGM Coords
           write(iUnitMag,'(3es13.5)',ADVANCE='NO') &
                MagSmgXyz_DI(:,iMag)*rPlanet_I(Earth_)
@@ -503,14 +506,14 @@ contains
           write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagVarGm_D
           ! Write the FACs' perturbations
           write(iUnitMag, '(3es13.5)') MagVarFac_D
-          
+
        end do
        call flush_unit(iUnitMag)
     end if
 
- end subroutine write_magnetometers
- 
- !=====================================================================
+  end subroutine write_magnetometers
+
+  !=====================================================================
 
   subroutine close_magnetometer_output_file
 
