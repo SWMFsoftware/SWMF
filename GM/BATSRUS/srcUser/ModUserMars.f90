@@ -4,8 +4,7 @@ module ModUser
   ! This is the user module for Mars 
 
   use ModSize
-  use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_,&
-       MassSpecies_V,SpeciesFirst_,SpeciesLast_  
+  use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -33,11 +32,9 @@ module ModUser
   real :: rPointImplicit = 2.0
 
   ! Mars stuff
-  logical ::  UseMultiSpecies=.true.
   integer, parameter :: MaxSpecies=4, MaxNuSpecies=8,  &
        MaxReactions=10
-  integer :: nSpecies=4, nNuSpecies=3, &
-       nReactions=10
+  integer :: nSpecies=4
   real,  dimension(1:nI, 1:nJ, 1:nK, nBLK,MaxNuSpecies) :: &
        nDenNuSpecies_CBI    !number density of neutral Species
   real,  dimension(1:nI, 1:nJ, 1:nK, nBLK) :: &
@@ -88,9 +85,6 @@ module ModUser
        Op_  =3, &
        CO2p_=4
 
-  character (len=10), dimension(MaxSpecies):: &
-       ion_name_I=(/'Hp  ', 'O2p ', 'Op  ','CO2p'/)
-
   real, dimension(MaxSpecies)::  &
        MassSpecies_I=(/1., 32., 16., 44. /)  !atm
 
@@ -131,9 +125,9 @@ module ModUser
        em_=-1 ,&
        hv_=-2   
 
-  real :: TNu_body_dim = 300.0, kTn, Tnu, Tnu_dim ! neutral temperature 
-  real :: Ti_body_dim=300.0, kTi0  !ion temperature at the body
-  real :: Tp_body_dim=600.0, kTp0  !dimensionless temperature 
+  real :: TNu_body_dim = 300.0, kTn  ! neutral temperature 
+  real :: kTi0  !ion temperature at the body
+  real :: kTp0  !dimensionless temperature 
   !of new created ions / plasma (Tp_body=2.0*Ti_body)
 
   real :: Te_new_dim=1000., KTe0
@@ -152,7 +146,7 @@ module ModUser
   logical :: UseTempCont=.false.
   logical :: UseSolarMax=.false.
   logical :: UseImpactIon=.false.
-  real, dimension(32,MaxSpecies)::Impact_ION,Impact_ION_dim=0.0 
+  real, dimension(32,MaxSpecies)::Impact_ION_dim=0.0 
   real, dimension(32):: Temp_dim
   logical :: UseChargeEx=.true.
 
@@ -304,9 +298,7 @@ contains
   !========================================================================
   subroutine user_calc_sources(iBlock)
 
-    use ModAdvance,  ONLY: Source_VC,Energy_
-    use ModNumConst, ONLY: cZero
-    use ModVarIndexes, ONLY: rhoUx_, rhoUy_, rhoUz_
+    use ModAdvance,  ONLY: Source_VC
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, &
@@ -355,14 +347,9 @@ contains
   !=========================================================================
   subroutine user_impl_source(iBlock)
 
-    use ModPointImplicit, ONLY: UsePointImplicit_B, &
-         iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: nI, nJ, nK
-    use ModPhysics, ONLY: inv_gm1
-    use ModAdvance, ONLY: State_VGB, Source_VC
-    use ModGeometry,ONLY: r_BLK
+    use ModAdvance, ONLY: Source_VC
     use ModNumConst,ONLY: cZero
-    use ModVarIndexes,ONLY: Rho_, RhoHp_, RhoO2p_, RhoOp_, RhoCO2p_, &
+    use ModVarIndexes,ONLY: Rho_, &
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
     use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
@@ -372,8 +359,6 @@ contains
     integer, intent(in) :: iBlock
 
     logical :: oktest,oktest_me
-    integer :: i, j, k
-    real    :: Coef
     !--------------------------------------------------------------------
     
     if(iProc==PROCtest .and. iBlock==BLKtest)then
@@ -448,15 +433,14 @@ contains
   !/
   subroutine user_sources(iBlock)
 
-    use ModMain, ONLY: PROCTEST,BLKTEST, iTest,jTest,kTest 
+    use ModMain, ONLY: PROCTEST,BLKTEST
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
-    use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_
-    use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK
-    use ModConst,    ONLY: cHalf,cOne,cTolerance
+    use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_
+    use ModGeometry, ONLY:R_BLK
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
 !    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
-    use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit
+    use ModPointImplicit, ONLY: UsePointImplicit_B
     use BATL_lib, ONLY: CellVolume_GB
 
     integer, intent(in) :: iBlock
@@ -464,7 +448,7 @@ contains
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies
     real :: inv_rho, inv_rho2, uu2,Productrate,kTi,kTe
-    real :: alt, Te_dim = 300.0, temp
+    real :: temp
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps
     logical:: oktest,oktest_me
     real :: SourceLossMax, vdtmin
@@ -815,16 +799,13 @@ contains
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
-    use ModIO, ONLY : restart
+    use ModGeometry, ONLY :x_BLK,R_BLK,true_cell
     use ModPhysics
     use ModNumConst
 
     integer, intent(in) :: iBlock
 
-    real :: Rmax, SinSlope, CosSlope,CosSZA
-    real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
-         XFace, YFace, ZFace
+    real ::CosSZA
     integer :: i,j,k
     logical::okTestMe=.false., okTest=.false.
     !-------------------------------------------------------------------------
@@ -1107,7 +1088,6 @@ contains
     use ModIO
     use ModPhysics
 
-    real :: Productrate
     logical::oktest=.true., oktestme=.false.
     !---------------------------------------------------------------
     if(oktestme)then
@@ -1379,10 +1359,9 @@ contains
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModSize,       ONLY: nDim,2,4,6	
     use ModMain,       ONLY: UseRotatingBc
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
-    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim
+    use ModPhysics,    ONLY: SW_rho
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V
 
     real, intent(out):: VarsGhostFace_V(nVar)
@@ -1390,7 +1369,7 @@ contains
     real:: XFace,YFace,ZFace,rFace,rFace2
     real:: v_phi(3)
     real:: cosSZA 
-    real:: uDotR, bDotR
+    real:: uDotR
     !--------------------------------------------------------------------------
 
     XFace = FaceCoords_D(1)
@@ -1523,7 +1502,7 @@ contains
     !real :: Rlgndr, dRlgndr
     integer :: NN, n, m, im
     real :: dRnm, signsx, Rmm
-    real :: xtcos,xtsin,xtabs, xx
+    real :: xtcos,xtsin
     real, dimension(0:nMax-1) :: xpcos, xpsin
     real :: a, arr, arrn, arrm, somx2, fact, temp
     real,dimension(0:nMax,0:nMax) :: Rnm
@@ -1637,8 +1616,7 @@ contains
 !=====================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
-         dx_BLK,dy_BLK,dz_BLK
+    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModMain,       ONLY: Unused_B
     use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
          rhoUx_,rhoUy_,rhoUz_
@@ -1729,7 +1707,7 @@ contains
     use ModMain
     use ModPhysics
     use ModConst
-    use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
+    use ModGeometry,ONLY:R_BLK,dx_BLK,dy_BLK,dz_BLK,&
          XyzStart_BLK,TypeGeometry
 
     integer, intent(in) :: iBlock
@@ -1738,9 +1716,9 @@ contains
     real :: hh, theta, phi, dR, dtheta, dphi, dH, Hscale, HCO2, HO, grav
     real:: tempICO2p, tempIOp
     real:: xLat, xLong,xAlt
-    integer :: i,j,k,n, m
+    integer :: i,j,k
     integer:: iAlt, jLong, kLat, ip1,jp1,kp1
-    logical:: oktest, oktestme=.true.
+    logical:: oktestme=.true.
     !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp ----- 
     
     dR=dx_BLK(iBlock)

@@ -1645,7 +1645,6 @@ contains
   !============================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModSize,       ONLY: nDim,2,4,6	
     use ModMain,       ONLY: UseRotatingBc, iTest, jTest, kTest, ProcTest, &
          BlkTest, ExtraBc_, Body1_
     use ModProcMH,   ONLY: iProc
