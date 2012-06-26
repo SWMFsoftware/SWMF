@@ -3,9 +3,9 @@ subroutine update_states(iStage,iBlock)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
   use ModUser, ONLY: user_update_states
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
+  use BATL_lib, ONLY: Xyz_DGB
 
   implicit none
 
@@ -79,9 +79,9 @@ subroutine update_states(iStage,iBlock)
   if(index(test_string,'fixothers')>0) then
      if(oktest_me)write(*,*)'Fix others!!!'
      do k=1,nK; do j=1,nJ; do i=1,nI
-        if(  abs(x_BLK(i,j,k,iBlock)-Xtest)+ &
-             abs(y_BLK(i,j,k,iBlock)-Ytest)+ &
-             abs(z_BLK(i,j,k,iBlock)-Ztest) < 1.1 ) CYCLE
+        if(  abs(Xyz_DGB(x_,i,j,k,iBlock)-Xtest)+ &
+             abs(Xyz_DGB(y_,i,j,k,iBlock)-Ytest)+ &
+             abs(Xyz_DGB(z_,i,j,k,iBlock)-Ztest) < 1.1 ) CYCLE
 
         State_VGB(:,i,j,k,iBlock)  = StateOld_VCB(:,i,j,k,iBlock)
         Energy_GBI(i,j,k,iBlock,:) = EnergyOld_CBI(i,j,k,iBlock,:)
@@ -132,12 +132,13 @@ subroutine update_check(iStage)
   use ModImplicit, ONLY: UsePartImplicit !^CFG IF IMPLICIT
   use ModAdvance
   use ModPhysics
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,true_cell
+  use ModGeometry, ONLY : true_cell
   use ModNumConst, ONLY: cTiny
   use ModMpi
   use ModEnergy
   use ModMultiFluid, ONLY: IsMhd
   use ModMultiIon,   ONLY: DoRestrictMultiIon, IsMultiIon_CB
+  use BATL_lib, ONLY: Xyz_DGB
 
   implicit none
 
@@ -259,9 +260,7 @@ subroutine update_check(iStage)
                             write(*,format)NameSub//' nStep=',n_step,&
                             ' max p drop=',pChangeMax_I(1),&
                             '% at x,y,z=',&
-                            x_BLK(i,j,k,iBlock),&
-                            y_BLK(i,j,k,iBlock),&
-                            z_BLK(i,j,k,iBlock)
+                            Xyz_DGB(:,i,j,k,iBlock)
 
 
                        if(pChangeMax_I(2) > percent_max_p(2) .and. &
@@ -273,9 +272,7 @@ subroutine update_check(iStage)
                             ' max p increase=',&
                             pChangeMax_I(2), &
                             '% at x,y,z=',&
-                            x_BLK(i,j,k,iBlock),&
-                            y_BLK(i,j,k,iBlock),&
-                            z_BLK(i,j,k,iBlock)
+                            Xyz_DGB(:,i,j,k,iBlock)
                             
                        CYCLE
                     end if
@@ -289,9 +286,7 @@ subroutine update_check(iStage)
                          ' max '//trim(NameVar_V(iVar))//' drop=', &
                          RhoChangeMax_I(1), &
                          '% at x,y,z=',&
-                         x_BLK(i,j,k,iBlock),&
-                         y_BLK(i,j,k,iBlock),&
-                         z_BLK(i,j,k,iBlock)
+                         Xyz_DGB(:,i,j,k,iBlock)
 
                     if(RhoChangeMax_I(2) > percent_max_rho(2) .and. &
                          1e-4 > abs(RhoChangeMax_I(2) - 100*abs( &
@@ -302,9 +297,7 @@ subroutine update_check(iStage)
                          ' max '//trim(NameVar_V(iVar))//' increase=',&
                          RhoChangeMax_I(2), &
                          '% at x,y,z=',&
-                         x_BLK(i,j,k,iBlock),&
-                         y_BLK(i,j,k,iBlock),&
-                         z_BLK(i,j,k,iBlock)
+                         Xyz_DGB(:,i,j,k,iBlock)
                  end do
               end do; end do; end do
            end do
@@ -485,9 +478,7 @@ subroutine update_check(iStage)
                    /StateOld_VCB(Rho_,i,j,k,iBlock) ) )-&
                    PercentChangeMax(1))<cTiny*PercentChangeMax(1))&
                    write(*,*)'Maximum decrease in density at X Y Z=',&
-                   x_BLK(i,j,k,iBlock), &
-                   y_BLK(i,j,k,iBlock), &
-                   z_BLK(i,j,k,iBlock),&
+                   Xyz_DGB(:,i,j,k,iBlock),&
                    ': rho_old = ',StateOld_VCB(Rho_,i,j,k,iBlock),&
                    ' rho_new = ',State_VGB(Rho_,i,j,k,iBlock)
                  
@@ -497,9 +488,7 @@ subroutine update_check(iStage)
                    /StateOld_VCB(Rho_,i,j,k,iBlock) ) )-&
                    PercentChangeMax(2))<cTiny*PercentChangeMax(2))&
                    write(*,*)'Maximum increase in density at the point',&
-                   x_BLK(i,j,k,iBlock), &
-                   y_BLK(i,j,k,iBlock), &
-                   z_BLK(i,j,k,iBlock),&
+                   Xyz_DGB(:,i,j,k,iBlock),&
                    'is: rho_old = ',&
                    StateOld_VCB(Rho_,i,j,k,iBlock),&
                    'rho_new=',State_VGB(Rho_,i,j,k,iBlock)
@@ -511,9 +500,7 @@ subroutine update_check(iStage)
                    PercentChangeMax(3))<cTiny*PercentChangeMax(3))&
                    write(*,*)'Maximum decrease in',NameVar_V(p_), &
                    'at the point',&
-                   x_BLK(i,j,k,iBlock), &
-                   y_BLK(i,j,k,iBlock), &
-                   z_BLK(i,j,k,iBlock),&
+                   Xyz_DGB(:,i,j,k,iBlock),&
                    'is: valeu_old = ',StateOld_VCB(P_,i,j,k,iBlock),&
                    'value_new=',State_VGB(p_,i,j,k,iBlock)
               if (abs(100. * abs( max( 0., &
@@ -523,9 +510,7 @@ subroutine update_check(iStage)
                    PercentChangeMax(4))<cTiny*PercentChangeMax(4))&
                    write(*,*)'Maximum increase in',NameVar_V(p_), &
                    'at the point',&
-                   x_BLK(i,j,k,iBlock), &
-                   y_BLK(i,j,k,iBlock), &
-                   z_BLK(i,j,k,iBlock),&
+                   Xyz_DGB(:,i,j,k,iBlock),&
                    'is: value_old = ',StateOld_VCB(p_,i,j,k,iBlock),&
                    'value_new=',State_VGB(p_,i,j,k,iBlock)
            end do; end do; end do
@@ -559,9 +544,7 @@ subroutine update_check(iStage)
            write (*,'(a,3i3,2i5,i3,a,3f12.4,/,5x,a,a,es12.4)') &
                 ' I J K iBlock iProc iVar=',i_D,iBlock,iProc,iVar, &
                 ' X Y Z=', &
-                x_BLK(i,j,k,iBlock), &
-                y_BLK(i,j,k,iBlock), &
-                z_BLK(i,j,k,iBlock), &
+                Xyz_DGB(:,i,j,k,iBlock), &
                 ' Var='//trim(NameVar_V(iVar)), &
                 ' Value=', State_VGB(iVar,i,j,k,iBlock)
            IsNegative = .true.
@@ -812,6 +795,7 @@ subroutine select_conservative
   use ModMain
   use ModAdvance
   use ModGeometry
+  use BATL_lib, ONLY: Xyz_DGB
   implicit none
 
   integer :: iBlock, iCrit, i, j, k
@@ -962,9 +946,9 @@ subroutine select_conservative
         case('parabola')
            ! Switch to non-conservative behind a parabola inside the bow shock
            IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .and. &
-                x_BLK(1:nI,1:nJ,1:nK,iBlock) > xParabolaConserv - &
-                ( y_BLK(1:nI,1:nJ,1:nK,iBlock)**2 &
-                + z_BLK(1:nI,1:nJ,1:nK,iBlock)**2 ) / yParabolaConserv
+                Xyz_DGB(x_,1:nI,1:nJ,1:nK,iBlock) > xParabolaConserv - &
+                ( Xyz_DGB(y_,1:nI,1:nJ,1:nK,iBlock)**2 &
+                + Xyz_DGB(z_,1:nI,1:nJ,1:nK,iBlock)**2 ) / yParabolaConserv
         case default
            CYCLE
         end select

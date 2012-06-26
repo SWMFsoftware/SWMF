@@ -531,7 +531,7 @@ subroutine update_b0
   do iBlock=1,nBlock
      if(unusedBLK(iBlock)) CYCLE
 
-     ! Save total magnetic field into Bx_BLK,By_BLK,Bz_BLK
+     ! Save total magnetic field into Bx, By ,Bz
      State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
           + B0_DGB(:,:,:,:,iBlock)
 
