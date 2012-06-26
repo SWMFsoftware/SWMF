@@ -104,6 +104,8 @@ foreach $source (@ARGV){
 
 	$line = $lines[$ilast-1];
 
+	next if $line =~ /IMPLEMENTED/; # do not remove these in ModUser
+
 	print "original line $ilast:$line";
 
         # remove variable, variable = initial, variable(dimensions)
