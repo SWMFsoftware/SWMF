@@ -66,10 +66,10 @@ contains
     use BATL_lib, ONLY: nDim, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          Xyz_DGB, CellVolume_B, CellVolume_GB, &
-         CellSize_DB, CoordMin_DB, &
-         CellFace_DB, CellFace_DFB, &
+         CellSize_DB, CoordMin_DB, CellFace_DB, &
          iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
          iTree_IA, Block_, Proc_, Unset_
+
     use ModGeometry, ONLY: &
          XyzStart_BLK, &
          x_BLK, y_BLK, z_BLK, r_BLK, rMin_BLK, &
@@ -275,11 +275,9 @@ contains
     use ModB0,       ONLY: set_b0_cell
     use ModPhysics,  ONLY: CellState_VI
     use ModGeometry, ONLY: body_BLK, true_cell
-    use ModMain,     ONLY: west_, TypeBC_I, body1_, UseB0, UseGravity, &
-         UseRotatingFrame
+    use ModMain,     ONLY: west_, TypeBC_I, body1_, UseB0
     use ModParallel, ONLY: neiLwest, NOBLK
     use ModConserveFlux, ONLY: init_cons_flux
-    use ModCalcSource, ONLY: set_potential_force
     use BATL_size, ONLY: nI, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     integer, intent(in) :: iBlock
@@ -291,8 +289,6 @@ contains
 
     ! Set B0
     if(UseB0) call set_b0_cell(iBlock)
-
-    if(UseGravity.or.UseRotatingFrame) call set_potential_force(iBlock)
 
     ! Set values inside body
     if(body_BLK(iBlock)) then
