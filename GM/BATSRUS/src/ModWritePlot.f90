@@ -1688,10 +1688,8 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameTecVar = 'PE #'
      case('blk')
         NameTecVar = 'Block #'
-     case('blkall')
-        NameTecVar = 'blkall'
-     case('child')
-        NameTecVar = 'Child #'
+     case('node')
+        NameTecVar = 'Node #'
      case('ew','erad')
         NameTecVar = String
         NameUnit   = NameTecUnit_V(UnitEnergydens_)
@@ -1803,7 +1801,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
      case('status','f1x','f1y','f1z','f2x','f2y','f2z')
         NameUnit = '--'                          !^CFG END RAYTRACE
         ! GRID INFORMATION
-     case('proc','blk','blkall','child','impl','evolve')
+     case('proc','blk','node','impl','evolve')
         NameUnit = '1'
      case('dt', 'dtblk')
         NameUnit = NameIdlUnit_V(UnitT_)
