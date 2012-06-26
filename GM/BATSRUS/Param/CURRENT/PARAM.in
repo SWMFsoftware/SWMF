@@ -1,0 +1,168 @@
+#ECHO
+T			DoEcho
+
+VERBOSE
+100
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+PLANET
+NONE			NamePlanet
+
+#GRAVITY
+T			UseGravity
+0			iDirGravity
+
+#IOUNITS
+NONE			NameIoUnits
+
+#NORMALIZATION
+NONE			NameNormalization
+
+#BODY
+T                       UseBody (rest of parameters read if true)
+1.5                     rBody (user units)
+2.0                     rCurrents (only read for GM component)
+1.0                     BodyNDim (/cc) for fluid 1
+3.0                     BodyTDim (K)   for fluid 1
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#GRID
+10			nRootBlockX
+2			nRootBlockY
+2			nRootBlockZ
+-10.0			xMin
+ 10.0			xMax
+-2.0			yMin
+ 2.0			yMax
+-2.0			zMin
+ 2.0			zMax
+
+#GRIDLEVEL
+1			nLevel
+initial			NameArea
+
+#GRIDLEVEL
+1			nLevel
+brick0			NameArea
+2.0			xSize
+2.0			ySize
+2.0			zSize
+
+#SHOCKTUBE
+1.0			rho (left state)
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+3.0			p
+1.0			rho (right state)
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+3.0			P
+
+
+#USERFLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN -----------------
+
+#WAVE
+6			By
+40.0			Width
+0.1			Amplitude
+5.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+7			Bz
+40.0			Width
+0.1			Amplitude
+5.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+90.0			Phase
+
+#USERINPUTEND ---------------------
+
+#OUTERBOUNDARY
+periodic	xMinBc
+periodic	xMaxBc
+float		yMinBc
+float		yMaxBc
+float		zMinBc
+float		zMaxBc
+
+#TIMESTEPPING
+2		nStage
+0.8		CflExpl
+
+#SCHEME
+2		nOrder
+Rusanov		TypeFlux
+mc3		TypeLimiter
+1.5		LimiterBeta
+
+#SAVELOGFILE
+T		DoSaveLogfile
+raw		StringLogfile
+1		DnSaveLogfile
+-1.		DtSaveLogfile
+
+#SAVERESTART
+F		DoSaverestart
+
+#PLOTFILENAME
+second		NameMaxTimeUnit
+
+#SAVEINITIAL
+T		DoSaveInitial
+
+#SAVEPLOT
+2		nPlotfile
+y=0 mhd idl	PlotString
+10              DnSavePlot
+-1.0             DtSavePlot
+0.0             DxSavePlot
+z=0 mhd idl	PlotString
+10              DnSavePlot
+-1.0             DtSavePlot
+-1.0             DxSavePlot
+
+#SATELLITE
+1		nSatellite
+FUL time      	StringSat
+1   		DnSaveSat
+0.01		DtSaveSat
+sat.dat		NameTrajFile
+
+#STEADYSTATESATELLITE
+0.0		TimeStart
+10.0		TimeEnd
+
+#STOP
+0		MaxIteration
+-1.0		tSimulationMax

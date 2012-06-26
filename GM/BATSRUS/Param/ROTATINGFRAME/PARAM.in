@@ -1,0 +1,137 @@
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+check equilibrium in rotating frame
+
+#COMPONENT
+SC			NameComponent
+
+#COORDSYSTEM
+HGR                     TypeCoordSystem
+
+#BODY
+F
+
+T                       UseBody
+1.0                     rBody
+3.0E+8                  BodyNDim
+3.5E+6                  BodyTDim
+
+#GRAVITY
+F
+
+#TESTXYZ
+10.0			xTest
+0.0001			yTest
+0.0001			zTest
+
+#TESTVAR
+2			RhoUx
+
+#TEST
+ADDROTATIONALVELOCITY update_states calc_source
+
+! Should work with conservative energy and non-conservative pressure equation (trivial)
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+0			nConserativeCrit
+
+#SAVERESTART
+F			DoSaveRestart
+
+GRIDGEOMETRY
+spherical		TypeGeometry
+
+LIMITRADIUS
+1.0			RadiusMin
+16.0			RadiusMax
+
+#GRID
+2			nRootBlockX
+2			nRootBlockY
+2			nRootBlockZ
+-16.                    xMin
++16.                    xMax
+-16.0                   yMin
++16.0                   yMax
+-16.0                   zMin
++16.0                   zMax
+
+#GRIDLEVEL
+2			nLevel
+initial			NameArea
+
+#GRIDLEVEL
+3			Resolution
+sphere0			NameArea
+5.0			Radius
+
+SHOCKTUBE
+5.0153927e-16   rho
+0.              Ux (Un)
+0.              Uy (Ut1)
+0.              Uz (Ut2)
+0.              Bx (Bn)
+0.              By (Bt1)
+0.              Bz (Bt2)
+0.14485762      P
+5.0153927e-16   rho (right state)
+0.              Ux (Un)
+0.              Uy (Ut1)
+0.              Uz (Ut2)
+0.              Bx (Bn)
+0.              By (Bt1)
+0.              Bz (Bt2)
+0.14485762      P
+
+#INNERBOUNDARY
+float			TypeBcInner
+
+#OUTERBOUNDARY
+none			TypeBcEast
+none			TypeBcWest
+none			TypeBcSouth
+none			TypeBcNorth
+none			TypeBcBottom
+none			TypeBcTop
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExlp
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.5			BetaLimiter
+
+#RESCHANGE
+T			UseAccuateResChange
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+3                       nPlotFiles
+x=0 FUL idl             StringPlot
+1                       DnSavePlot
+-1.			DtSavePlot
+-1.0			Dx
+y=0 FUL idl             StringPlot
+1                       DnSavePlot
+-1.			DtSavePlot
+-1.0			Dx
+z=0 FUL idl             StringPlot
+1                       DnSavePlot
+-1.			DtSavePlot
+-1.0			Dx
+
+#STOP
+10			MaxIteration
+-1.0			tSimulationMax
