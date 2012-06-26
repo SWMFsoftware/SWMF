@@ -69,12 +69,11 @@ contains
          CellSize_DB, CoordMin_DB, &
          CellFace_DB, CellFace_DFB, &
          iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
-         iTree_IA, Block_, Proc_, Unset_, &
-         IsCartesian, IsRzGeometry
+         iTree_IA, Block_, Proc_, Unset_
     use ModGeometry, ONLY: &
          XyzStart_BLK, &
          x_BLK, y_BLK, z_BLK, r_BLK, rMin_BLK, &
-         dx_BLK, dy_BLK, dz_BLK, fax_BLK, fay_BLK, faz_BLK
+         dx_BLK, dy_BLK, dz_BLK
 
     use ModParallel, ONLY: neiLEV, neiBLK, neiPE, &
          neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
@@ -228,12 +227,6 @@ contains
     end do; end do; end do
 
     Rmin_BLK(iBlock) = minval(r_BLK(:,:,:,iBlock))
-
-    if(IsCartesian)then
-       fAx_BLK(iBlock) = CellFace_DB(1,iBlock)
-       fAy_BLK(iBlock) = CellFace_DB(2,iBlock)
-       fAz_BLK(iBlock) = CellFace_DB(3,iBlock)
-    end if
 
     call fix_block_geometry(iBlock)
 

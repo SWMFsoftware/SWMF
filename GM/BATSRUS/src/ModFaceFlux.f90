@@ -8,10 +8,10 @@ module ModFaceFlux
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, UseNeutralFluid
-  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
+  use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
   use BATL_lib,      ONLY: IsCartesianGrid, IsCartesian, IsRzGeometry, &
-       CellFace_DFB, FaceNormal_DDFB
+       CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB
 
   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
 
@@ -670,19 +670,15 @@ contains
     Normal_D = 0.0; Normal_D(iDim) = 1.0
     NormalX = Normal_D(x_); NormalY = Normal_D(y_); NormalZ = Normal_D(z_)
 
+    Area = CellFace_DB(iDim,iBlockFace)
+    InvDxyz = 1./CellSize_DB(iDim,iBlockFace)
     select case(iDim)
     case(x_)
-       Area    = fAx_BLK(iBlockFace)
        AreaX   = Area; AreaY = 0.0; AreaZ = 0.0
-       InvDxyz = 1./dx_BLK(iBlockFace)
     case(y_)
-       Area    = fAy_BLK(iBlockFace)
        AreaY   = Area; AreaX = 0.0; AreaZ = 0.0
-       InvDxyz = 1./dy_BLK(iBlockFace)
     case(z_)
-       Area    = fAz_BLK(iBlockFace)
        AreaZ   = Area; AreaX = 0.0; AreaY = 0.0
-       InvDxyz = 1./dz_BLK(iBlockFace)
     end select
     Area2 = Area**2
 
@@ -3490,31 +3486,31 @@ subroutine calc_electric_field(iBlock)
   use ModSize,       ONLY: nI, nJ, nK
   use ModVarIndexes, ONLY: Bx_,By_,Bz_
   use ModAdvance,    ONLY: Flux_VX, Flux_VY, Flux_VZ, Ex_CB, Ey_CB, Ez_CB
-  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK 
- 
+  use BATL_lib,      ONLY: CellFace_DB
+
   implicit none
   integer, intent(in) :: iBlock
   !------------------------------------------------------------------------
   ! E_x=(fy+fy-fz-fz)/4
-  Ex_CB(:,:,:,iBlock) = - 0.25*(                              &
-       ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                      &
-       + Flux_VY(Bz_,1:nI,2:nJ+1,1:nK  )) / fAy_BLK(iBlock) - &
-       ( Flux_VZ(By_,1:nI,1:nJ  ,1:nK  )                      &
-       + Flux_VZ(By_,1:nI,1:nJ  ,2:nK+1)) / fAz_BLK(iBlock) )
+  Ex_CB(:,:,:,iBlock) = - 0.25*(                                    &
+       ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                            &
+       + Flux_VY(Bz_,1:nI,2:nJ+1,1:nK  )) / CellFace_DB(2,iBlock) - &
+       ( Flux_VZ(By_,1:nI,1:nJ  ,1:nK  )                            &
+       + Flux_VZ(By_,1:nI,1:nJ  ,2:nK+1)) / CellFace_DB(3,iBlock) )
 
   ! E_y=(fz+fz-fx-fx)/4
-  Ey_CB(:,:,:,iBlock) = - 0.25*(                              &
-       ( Flux_VZ(Bx_,1:nI  ,1:nJ,1:nK  )                      &
-       + Flux_VZ(Bx_,1:nI  ,1:nJ,2:nK+1)) / fAz_BLK(iBlock) - &
-       ( Flux_VX(Bz_,1:nI  ,1:nJ,1:nK  )                      &
-       + Flux_VX(Bz_,2:nI+1,1:nJ,1:nK  )) / fAx_BLK(iBlock) )
+  Ey_CB(:,:,:,iBlock) = - 0.25*(                                    &
+       ( Flux_VZ(Bx_,1:nI  ,1:nJ,1:nK  )                            &
+       + Flux_VZ(Bx_,1:nI  ,1:nJ,2:nK+1)) / CellFace_DB(3,iBlock) - &
+       ( Flux_VX(Bz_,1:nI  ,1:nJ,1:nK  )                            &
+       + Flux_VX(Bz_,2:nI+1,1:nJ,1:nK  )) / CellFace_DB(1,iBlock) )
 
   ! E_z=(fx+fx-fy-fy)/4
-  Ez_CB(:,:,:,iBlock) = - 0.25*(                              &
-       ( Flux_VX(By_,1:nI  ,1:nJ  ,1:nK)                      &
-       + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / fAx_BLK(iBlock) - &
-       ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                      &
-       + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / fAy_BLK(iBlock))
+  Ez_CB(:,:,:,iBlock) = - 0.25*(                                    &
+       ( Flux_VX(By_,1:nI  ,1:nJ  ,1:nK)                            &
+       + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / CellFace_DB(1,iBlock) - &
+       ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                            &
+       + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / CellFace_DB(2,iBlock))
 
 end subroutine calc_electric_field
 

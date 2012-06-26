@@ -615,7 +615,8 @@ contains
 
     use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk
     use ModAdvance,  ONLY: By_, State_VGB
-    use ModGeometry, ONLY: z2, z1, dx_BLK, dy_BLK, fay_BLK, y_BLK
+    use ModGeometry, ONLY: z2, z1, dx_BLK, dy_BLK, y_BLK
+    use BATL_lib,    ONLY: CellFace_DB
 
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: TypeVar
@@ -640,7 +641,7 @@ contains
           k2 = k1 + 1
           dy1 = abs(y_BLK(1,k1,1,iBlock))/dy_BLK(iBlock)
           dy2 = 1.0 - dy1
-          Flux = fay_BLK(iBlock)*HalfInvWidth* &
+          Flux = CellFace_DB(2,iBlock)*HalfInvWidth* &
                ( dy2*sum(abs(State_VGB(By_,1:nI,k1,1:nK,iBlock))) &
                + dy1*sum(abs(State_VGB(By_,1:nI,k2,1:nK,iBlock))))
           if(k1==0 .or. k2==nJ+1) Flux = 0.5*Flux

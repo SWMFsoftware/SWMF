@@ -32,7 +32,6 @@ module ModGeometry
 
   real, dimension(MaxBlock) :: dx_BLK, dy_BLK, dz_BLK, Rmin_BLK
   real, dimension(MaxBlock) :: Rmin2_BLK
-  real, dimension(MaxBlock) :: fAx_BLK, fAy_BLK, fAz_BLK
 
 
   ! Variables describing cells inside boundaries
