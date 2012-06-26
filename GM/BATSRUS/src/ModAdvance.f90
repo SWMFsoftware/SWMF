@@ -207,7 +207,7 @@ contains
 
   subroutine clean_mod_advance
 
-    if(allocated(State_VGB))        deallocate(State_VGB)
+    if(allocated(State_VGB))       deallocate(State_VGB)
     if(allocated(Energy_GBI))      deallocate(Energy_GBI)
     if(allocated(StateOld_VCB))    deallocate(StateOld_VCB)
     if(allocated(EnergyOld_CBI))   deallocate(EnergyOld_CBI)

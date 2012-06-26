@@ -35,7 +35,7 @@ module ModRaytrace
   ! The minimum number of time steps between two ray traces on the same grid
   integer      :: DnRaytrace = 1
 
-  ! Named parameters for ray status (must be less than east_=1)
+  ! Named parameters for ray status (must be less than 1=1)
   integer, parameter :: &
        ray_iono_ = 0, &
        ray_block_=-1, &

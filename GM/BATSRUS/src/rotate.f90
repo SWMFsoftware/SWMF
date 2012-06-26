@@ -52,7 +52,7 @@ subroutine transform_to_hgi
   ! ux = ux - OmegaBody*y
   ! uy = uy + OmegaBody*x
 
-  use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk, x_, y_
+  use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B, x_, y_
   use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_
   use ModGeometry, ONLY: true_cell
   use ModPhysics,  ONLY: OmegaBody
@@ -62,7 +62,7 @@ subroutine transform_to_hgi
   !---------------------------------------------------------------------------
   
   do iBlock=1, nBlock
-     if(UnusedBlk(iBlock))CYCLE
+     if(Unused_B(iBlock))CYCLE
      do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
         if(.not.True_Cell(i,j,k,iBlock)) CYCLE
         State_VGB(RhoUx_,i,j,k,iBlock) = State_VGB(RhoUx_,i,j,k,iBlock) - &

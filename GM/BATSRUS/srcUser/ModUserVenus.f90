@@ -328,7 +328,7 @@ contains
   subroutine user_sources(iBlock)
 
     use ModMain, ONLY: PROCTEST,BLKTEST, &
-         iNewGrid, iNewDecomposition, UnusedBlk, nBlock
+         iNewGrid, iNewDecomposition, Unused_B, nBlock
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_
     use ModGeometry, ONLY: x_BLK,R_BLK
@@ -366,7 +366,7 @@ contains
        if(iProc==0) write(*,*)'Calculating neutral density for Venus'
 
        do iBlockLoop = 1, nBlock
-          if(UnusedBlk(iBlockLoop)) CYCLE
+          if(Unused_B(iBlockLoop)) CYCLE
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(R_BLK(i,j,k,iBlockLoop)<= Rbody)then
                 nDenNuSpecies_CBI(i,j,k,iBlockLoop,:)=&
@@ -640,7 +640,7 @@ contains
     integer::iBoundary
     !--------------------------------------------------------------------------
     !For Outer Boundaries
-    do iBoundary=East_,Top_
+    do iBoundary=1,6
        FaceState_VI(rhoHp_,iBoundary)    = SW_rho
        FaceState_VI(rhoO2p_,iBoundary)   = cTiny8
        FaceState_VI(rhoOp_,iBoundary)    = cTiny8
@@ -655,8 +655,8 @@ contains
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(rhoHp_:rhoCO2p_,body1_) = BodyRhoSpecies_I
     FaceState_VI(P_,body1_)=BodyP_I(1)
-    CellState_VI(:,body1_:Top_)=FaceState_VI(:,body1_:Top_)
-    do iBoundary=body1_,Top_  
+    CellState_VI(:,body1_:6)=FaceState_VI(:,body1_:6)
+    do iBoundary=body1_,6  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
@@ -1145,7 +1145,7 @@ contains
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
-    use ModMain,       ONLY: unusedBLK
+    use ModMain,       ONLY: Unused_B
     use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
          rhoUx_,rhoUy_,rhoUz_
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
@@ -1177,7 +1177,7 @@ contains
     end select
 
     do iBLK=1,nBLK
-       if (unusedBLK(iBLK)) CYCLE
+       if (Unused_B(iBLK)) CYCLE
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           tmp1_BLK(i,j,k,iBLK) = State_VGB(index,i,j,k,iBLK)* &
                (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &

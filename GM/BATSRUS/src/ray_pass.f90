@@ -10,7 +10,7 @@ end subroutine ray_pass
 !=============================================================================
 subroutine ray_pass_new
 
-  use ModMain, ONLY : nBlock,unusedBLK
+  use ModMain, ONLY : nBlock,Unused_B
   use ModParallel, ONLY : neiLEV
   use ModRaytrace, ONLY: RayFace
   use BATL_lib, ONLY: message_pass_node
@@ -28,7 +28,7 @@ subroutine ray_pass_new
   call message_pass_node(6, RayFace, 'max')
 
   do iBLK=1,nBlock
-     if(unusedBLK(iBLK))cycle
+     if(Unused_B(iBLK))cycle
      do iface=1,6
         if(neiLEV(iface,iBLK)==1)call prolong_ray_after_pass(iface,iBLK)
      end do
@@ -178,7 +178,7 @@ subroutine ray_pass_old
   !           _s subface    (one quarter of a face)
 
   use ModProcMH
-  use ModMain, ONLY : nblockMax,okdebug,unusedBLK,optimize_message_pass
+  use ModMain, ONLY : nblockMax,okdebug,Unused_B,optimize_message_pass
   use BATL_lib, ONLY: iNode_B, iTree_IA, Coord0_
   use ModRaytrace
   use ModParallel, ONLY : NOBLK,neiLEV,neiBLK,neiPE
@@ -260,7 +260,7 @@ subroutine ray_pass_old
   if(oktest_me)write(*,*)'ray_pass starting prolongation'
 
   do iBLK=1,nBlockMax
-     if(unusedBLK(iBLK))cycle
+     if(Unused_B(iBLK))cycle
 
      do iface=1,6
         if(neiLEV(iface,iBLK)==1)call prolong_ray
@@ -306,7 +306,7 @@ contains
        end if
 
        do iBLK = 1,nBlockMax
-          if(unusedBLK(iBLK))CYCLE
+          if(Unused_B(iBLK))CYCLE
           ! Post non-blocking receive for opposite face of neighbor block
           neiL=neiLEV(otherface,iBLK)
           select case(neiL)
@@ -381,7 +381,7 @@ contains
             iProc,iface
 
        do iBLK=1,nBlockMax
-          if(unusedBLK(iBLK))CYCLE
+          if(Unused_B(iBLK))CYCLE
           neiL=neiLEV(iface,iBLK)
 
           if(okdebug.and.oktest)write(*,*)&
@@ -551,7 +551,7 @@ contains
             'setranges_ray for buf2ray done: me, iface=',iProc, iface
 
        do iBLK = 1,nBlockMax
-          if(unusedBLK(iBLK))CYCLE
+          if(Unused_B(iBLK))CYCLE
           select case(neiLEV(otherface,iBLK))
           case(0)
              if(okdebug.and.oktest)&

@@ -2758,7 +2758,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK
     use ModVarIndexes, ONLY: Rho_
     use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_, Au_, Ay_
-    use ModMain,       ONLY: nI, nJ, nK, nBlock, UnusedBlk
+    use ModMain,       ONLY: nI, nJ, nK, nBlock, Unused_B
     use ModGeometry,   ONLY: DomainVolume
 
     real, external :: integrate_BLK
@@ -2788,13 +2788,13 @@ contains
        tmp1_BLK(:,:,:,1:nBlock) = 0.0
        if(UseMixedCell)then
           do iBlock = 1, nBlock
-             if(unusedBLK(iBlock)) CYCLE
+             if(Unused_B(iBlock)) CYCLE
              tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = MassMaterial_I(iMaterial) &
                   *State_VGB(iLevel,1:nI,1:nJ,1:nK,iBlock)
           end do
        else
           do iBlock = 1, nBlock
-             if(unusedBLK(iBlock)) CYCLE
+             if(Unused_B(iBlock)) CYCLE
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(iMaterial == &
                      maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock),1) - 1) &

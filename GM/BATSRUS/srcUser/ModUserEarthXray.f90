@@ -37,7 +37,6 @@ contains
 
     use ModVarIndexes
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, BodyRho_I
-    use ModSize, ONLY: east_, west_, south_, north_, bot_, top_
     use ModMain, ONLY: body1_
     use BATL_size, ONLY: nIJK
     use ModBlockData, ONLY: MaxBlockData
@@ -68,7 +67,7 @@ contains
     ! used for only some outerboundary cases (fixed, for example) and
     ! are ignored for vary and other types.  We code them as in set_physics
     ! just to be safe.
-    do iBoundary=east_,top_
+    do iBoundary=1,6
        FaceState_VI(rhosw_, iBoundary)  = SW_rho
        FaceState_VI(rhoion_, iBoundary) = cTiny*sw_rho
     end do

@@ -53,7 +53,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      call barrier_mpi2('expl1')
 
      do iBlock = 1, nBlock
-        if (unusedBLK(iBlock)) CYCLE
+        if (Unused_B(iBlock)) CYCLE
         if(all(neiLev(:,iBlock)/=1)) CYCLE
         ! Calculate interface values for L/R states of each 
         ! fine grid cell face at block edges with resolution changes
@@ -91,7 +91,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      ! Multi-block solution update.
      do iBlock = 1, nBlock
 
-        if (unusedBLK(iBlock)) CYCLE
+        if (Unused_B(iBlock)) CYCLE
 
         ! Calculate interface values for L/R states of each face
         !   and apply BCs for interface states as needed.
@@ -169,7 +169,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
         ! Update face centered and cell centered magnetic fields
         do iBlock = 1, nBlock
-           if(unusedBLK(iBlock))CYCLE
+           if(Unused_B(iBlock))CYCLE
            call constrain_B(iBlock)
            call Bface2Bcenter(iBlock)
         end do
@@ -190,7 +190,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   end do STAGELOOP  ! Multi-stage solution update loop.
 
   do iBlock = 1, nBlock
-     if(.not.UnusedBlk(iBlock)) call set_block_data(iBlock)
+     if(.not.Unused_B(iBlock)) call set_block_data(iBlock)
   end do
 
   if(UsePartImplicit)call timing_stop('advance_expl') !^CFG IF IMPLICIT

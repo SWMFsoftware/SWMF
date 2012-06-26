@@ -5,7 +5,7 @@ subroutine set_BLK(qa,qb)
 
   ! Set qa=qb for all used blocks, where qb is a scalar
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   implicit none
 
@@ -20,7 +20,7 @@ subroutine set_BLK(qa,qb)
   !---------------------------------------------------------------------------
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK))then
            qa(1:nI,1:nJ,1:nK,iBLK)=qb
         else
@@ -37,7 +37,7 @@ subroutine eq_BLK(qa,qb)
 
   ! Do qa=qb for all used blocks
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   implicit none
 
@@ -53,7 +53,7 @@ subroutine eq_BLK(qa,qb)
   !---------------------------------------------------------------------------
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK))then
            qa(1:nI,1:nJ,1:nK,iBLK)= qb(1:nI,1:nJ,1:nK,iBLK)
         else
@@ -71,7 +71,7 @@ subroutine add_BLK(qa,qb)
 
   ! Do qa=qa+qb for all used blocks
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   implicit none
 
@@ -87,7 +87,7 @@ subroutine add_BLK(qa,qb)
   !---------------------------------------------------------------------------
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK))then
            qa(1:nI,1:nJ,1:nK,iBLK)= &
                 qa(1:nI,1:nJ,1:nK,iBLK)+qb(1:nI,1:nJ,1:nK,iBLK)
@@ -106,7 +106,7 @@ subroutine sub_BLK(qa,qb)
 
   ! Do qa=qa-qb for all used blocks
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   implicit none
 
@@ -122,7 +122,7 @@ subroutine sub_BLK(qa,qb)
   !---------------------------------------------------------------------------
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK))then
            qa(1:nI,1:nJ,1:nK,iBLK)= &
                 qa(1:nI,1:nJ,1:nK,iBLK)-qb(1:nI,1:nJ,1:nK,iBLK)
@@ -141,7 +141,7 @@ subroutine eq_plus_BLK(qa,qb,qc)
 
   ! Do qa=qb+qc for all used blocks
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   implicit none
 
@@ -157,7 +157,7 @@ subroutine eq_plus_BLK(qa,qb,qc)
   !---------------------------------------------------------------------------
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK))then
            qa(1:nI,1:nJ,1:nK,iBLK)= &
                 qb(1:nI,1:nJ,1:nK,iBLK)+qc(1:nI,1:nJ,1:nK,iBLK)
@@ -177,7 +177,7 @@ subroutine add_times_BLK(qa,qb,qc)
 
   ! Do qa=qa+qb*qc for all used blocks, where qb is a scalar
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   implicit none
 
@@ -195,7 +195,7 @@ subroutine add_times_BLK(qa,qb,qc)
   !---------------------------------------------------------------------------
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK))then
            qa(1:nI,1:nJ,1:nK,iBLK)= &
                 qa(1:nI,1:nJ,1:nK,iBLK)+qb*qc(1:nI,1:nJ,1:nK,iBLK)
@@ -215,7 +215,7 @@ subroutine eq_plus_times_BLK(qa,qb,qc,qd)
 
   ! Do qa=qb+qc*qd for all used blocks, where qc is a scalar
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   implicit none
 
@@ -234,7 +234,7 @@ subroutine eq_plus_times_BLK(qa,qb,qc,qd)
   !---------------------------------------------------------------------------
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK))then
            qa(1:nI,1:nJ,1:nK,iBLK)= &
                 qb(1:nI,1:nJ,1:nK,iBLK)+qc*qd(1:nI,1:nJ,1:nK,iBLK)
@@ -254,7 +254,7 @@ real function dot_product_BLK(qa,qb)
   ! Return qa.qb=sum(qa*qb) for all used blocks
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   use ModMpi
   implicit none
@@ -276,7 +276,7 @@ real function dot_product_BLK(qa,qb)
   qproduct=0.0
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK)) then
            qproduct=qproduct + &
                 sum(qa(1:nI,1:nJ,1:nK,iBLK)*qb(1:nI,1:nJ,1:nK,iBLK))
@@ -308,7 +308,7 @@ real function sum_BLK(qnum,qa)
   ! Do for each processor separately if qnum=1, otherwise add them all
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   use ModMpi
   implicit none
@@ -331,7 +331,7 @@ real function sum_BLK(qnum,qa)
   qsum=0.0
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK)) then
            qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBLK))
         else
@@ -429,7 +429,7 @@ real function minval_BLK(qnum,qa)
   ! return the minimum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   use ModMpi
   implicit none
@@ -453,7 +453,7 @@ real function minval_BLK(qnum,qa)
   qminval=1.e+30
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK)) then
            qminval=min(qminval, minval(qa(1:nI,1:nJ,1:nK,iBLK)))
         else
@@ -486,7 +486,7 @@ real function maxval_BLK(qnum,qa)
   ! return the maximum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   use ModMpi
   implicit none
@@ -510,7 +510,7 @@ real function maxval_BLK(qnum,qa)
   qmaxval=-1.e+30
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK)) then
            qmaxval=max(qmaxval, maxval(qa(1:nI,1:nJ,1:nK,iBLK)))
         else
@@ -543,7 +543,7 @@ real function maxval_loc_BLK(qnum,qa,loc)
   ! return the maximum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY :true_cell
   use ModMpi
   implicit none
@@ -579,7 +579,7 @@ real function maxval_loc_BLK(qnum,qa,loc)
   loc=-1
   if (qmaxval == qmaxval_all) then
      BLKLOOP: do iBLK=1,nBlock
-        if(unusedBLK(iBLK)) CYCLE
+        if(Unused_B(iBLK)) CYCLE
         do k=1,nK; do j=1,nJ; do i=1,nI
            if(.not.true_cell(i,j,k,iBLK)) CYCLE
            if(qa(i,j,k,iBLK)==qmaxval)then
@@ -602,7 +602,7 @@ real function maxval_loc_abs_BLK(qnum,qa,loc)
   ! return the maximum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_cell
   use ModMpi
   implicit none
@@ -638,7 +638,7 @@ real function maxval_loc_abs_BLK(qnum,qa,loc)
   loc=-1
   if (qmaxval == qmaxval_all) then
      BLKLOOP: do iBLK=1,nBlock
-        if(unusedBLK(iBLK)) CYCLE
+        if(Unused_B(iBLK)) CYCLE
         do k=1,nK; do j=1,nJ; do i=1,nI
            if(.not.true_cell(i,j,k,iBLK)) CYCLE
            if(abs(qa(i,j,k,iBLK))==qmaxval)then
@@ -661,7 +661,7 @@ real function minval_loc_BLK(qnum,qa,loc)
   ! return the minimum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_cell
   use ModMpi
   implicit none
@@ -697,7 +697,7 @@ real function minval_loc_BLK(qnum,qa,loc)
   loc=-1
   if (qminval == qminval_all) then
      BLKLOOP:do iBLK=1,nBlock
-        if(unusedBLK(iBLK)) CYCLE
+        if(Unused_B(iBLK)) CYCLE
         do k=1,nK; do j=1,nJ; do i=1,nI
            if(.not.true_cell(i,j,k,iBLK)) CYCLE
            if(qa(i,j,k,iBLK)==qminval)then
@@ -721,7 +721,7 @@ real function maxval_abs_BLK(qnum,qa)
   ! return the maximum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModGeometry, ONLY : true_cell,true_BLK
   use ModMpi
   implicit none
@@ -745,7 +745,7 @@ real function maxval_abs_BLK(qnum,qa)
   qmaxval=-1.0
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         if(true_BLK(iBLK)) then
            qmaxval=max(qmaxval, maxval(abs(qa(1:nI,1:nJ,1:nK,iBLK))))
         else
@@ -782,7 +782,7 @@ real function maxval_abs_ALL(qnum,qa)
   ! return the minimum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModMpi
   implicit none
 
@@ -806,7 +806,7 @@ real function maxval_abs_ALL(qnum,qa)
   qmaxval=-1.0
 
   do iBLK=1,nBlock
-     if(.not.unusedBLK(iBLK)) then
+     if(.not.Unused_B(iBLK)) then
         qmaxval=max(qmaxval, maxval(abs(qa(:,:,:,iBLK))))
      end if
   end do
@@ -1318,7 +1318,7 @@ subroutine find_test_cell
   if(.not.coord_test)then
      if(iProc == ProcTest)then
         if(1 <= BLKtest .and. BLKtest <= nBlock)then
-           if(unusedBLK(BLKtest))then
+           if(Unused_B(BLKtest))then
               if(lVerbose>0) write(*,*)'Test cell is in an unused block'
            else
               XyzTestCell_D = Xyz_DGB(:,Itest,Jtest,Ktest,BLKtest)

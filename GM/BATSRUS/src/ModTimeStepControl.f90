@@ -283,7 +283,7 @@ contains
           DtMinPE = minval(Dt_BLK(1:nBlock),&
                MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
        else                                             !^CFG END IMPLICIT
-          DtMinPE = minval(Dt_BLK(1:nBlock), MASK=.not.UnusedBlk(1:nBlock))
+          DtMinPE = minval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock))
        end if                                           !^CFG IF IMPLICIT
 
        ! Set Dt to minimum time step over all the PE-s
@@ -291,7 +291,7 @@ contains
 
        if(DoTest .and. DtMinPE==Dt)then
           do iBlock = 1, nBlock
-             if(UnusedBlk(iBlock)) CYCLE
+             if(Unused_B(iBlock)) CYCLE
              if(Dt_BLK(iBlock)==Dt)then
                 write(*,*)'Time step Dt=',Dt,'=', Dt*No2Si_V(UnitT_),&
                      ' s  is controlled by block with PE, iBlock=', &
@@ -340,7 +340,7 @@ contains
          Dt=(1+cTiny)*(TimeSimulationLimit-Time_Simulation)*Si2No_V(UnitT_)/Cfl
 
     do iBlock = 1, nBlock
-       if (UnusedBlk(iBlock)) CYCLE
+       if (Unused_B(iBlock)) CYCLE
 
        time_BLK(:,:,:,iBlock) = Dt
 
@@ -365,7 +365,7 @@ contains
 
   subroutine control_time_step
 
-    use ModMain,    ONLY: nBlock, nI, nJ, nK, UnusedBlk, Dt, Cfl, CflOrig, &
+    use ModMain,    ONLY: nBlock, nI, nJ, nK, Unused_B, Dt, Cfl, CflOrig, &
          DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation
     use ModAdvance, ONLY: Rho_, p_, &
          State_VGB, StateOld_VCB, Energy_GBI, EnergyOld_CBI, time_BLK
@@ -393,7 +393,7 @@ contains
     RelativeChangeMax = 1e-6
 
     do iBlock = 1, nBlock
-       if(UnusedBlk(iBlock)) CYCLE
+       if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           VarRatio_I = State_VGB(iVarControl_I,i,j,k,iBlock) &
                /    StateOld_VCB(iVarControl_I,i,j,k,iBlock)
@@ -422,7 +422,7 @@ contains
 !!! n_prev = -1
        ! Reset the state variable, the energy and set time_BLK variable to 0
        do iBlock = 1, nBlock
-          if(UnusedBlk(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           State_VGB(:,1:nI,1:nJ,1:nK,iBlock)  = StateOld_VCB(:,:,:,:,iBlock)
           Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:) = EnergyOld_CBI(:,:,:,iBlock,:)
           time_BLK(1:nI,1:nJ,1:nK,iBlock)     = 0.0

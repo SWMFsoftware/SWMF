@@ -19,7 +19,7 @@ contains
 
   subroutine user_initial_perturbation
 
-    use ModMain,     ONLY: nBlock, UnusedBlk, ProcTest
+    use ModMain,     ONLY: nBlock, Unused_B, ProcTest
     use ModProcMH,   ONLY: iProc
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, y1, y2, z1, z2
@@ -44,7 +44,7 @@ contains
     end if
 
     do iBlock = 1, nBlock
-       if (unusedBLK(iBlock)) CYCLE
+       if (Unused_B(iBlock)) CYCLE
 
        !Perturbation in Ux = 
        !    Ux0 * exp(-(x/xWidthUx)**2) * cos(ky*y) * cos(kz*z)

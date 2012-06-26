@@ -1,7 +1,7 @@
 subroutine fix_axis_cells
 
   use ModProcMH, ONLY: iComm
-  use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk, iTest, jTest, kTest, &
+  use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, iTest, jTest, kTest, &
        BlkTest, x_, y_
   use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
@@ -20,7 +20,6 @@ subroutine fix_axis_cells
   integer, parameter :: Sum_=1, SumXLeft_=2, SumXRight_=3, &
        SumYLeft_=4, SumYRight_=5, Geom_=6
   integer, parameter :: Volume_=1, SumX_=2, SumX2_=3
-  integer, parameter :: North_=1, South_=2
   integer :: i, j, k, kMin, kMax, kOut, iBlock, iHemisphere, iR, nR, iError
   integer :: iVar, nAxisCell
   real :: r, x, y, Volume, InvVolume, SumX, SumXAvg, InvSumX2, dLeft, dRight
@@ -32,7 +31,7 @@ subroutine fix_axis_cells
   call set_oktest(NameSub, DoTest, DoTestMe)
 
   if(DoTestMe)then
-     if(.not.UnusedBlk(BlkTest)) &
+     if(.not.Unused_B(BlkTest)) &
           write(*,*) NameSub,' initial state, energy=', &
           State_VGB(:,iTest,jTest,kTest,BlkTest), &
           Energy_GBI(iTest,jTest,kTest,BlkTest,:)
@@ -48,14 +47,14 @@ subroutine fix_axis_cells
 
   ! Maximum number of cells along the axis
   nR = nint((XyzMax_D(1)-XyzMin_D(1))/MinDxValue)
-  allocate(Buffer_VIII(nVar, nR, 1:Geom_, North_:South_), &
-       SumBuffer_VIII(nVar, nR, 1:Geom_, North_:South_))
+  allocate(Buffer_VIII(nVar, nR, 1:Geom_, 1:2), &
+       SumBuffer_VIII(nVar, nR, 1:Geom_, 1:2))
 
   Buffer_VIII    = 0.0
   SumBuffer_VIII = 0.0
 
   do iBlock = 1, nBlock
-     if(unusedBlk(iBlock))CYCLE
+     if(Unused_B(iBlock))CYCLE
 
      if(rMin_BLK(iBlock) < r2FixAxis) then 
         nAxisCell = 2
@@ -67,9 +66,9 @@ subroutine fix_axis_cells
 
      ! Determine hemisphere
      if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
-        iHemisphere = North_; kMin = nK+1-nAxisCell; kMax = nK; kOut = kMin-1
+        iHemisphere = 1; kMin = nK+1-nAxisCell; kMax = nK; kOut = kMin-1
      elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
-        iHemisphere = South_; kMin = 1; kMax = nAxisCell; kOut = kMax+1
+        iHemisphere = 2; kMin = 1; kMax = nAxisCell; kOut = kMax+1
      else
         CYCLE
      end if
@@ -123,7 +122,7 @@ subroutine fix_axis_cells
 
   ! Overwrite cells around the axis with a linear slope
   do iBlock = 1, nBlock
-     if(unusedBlk(iBlock) .or. .not. far_field_BCs_BLK(iBlock)) CYCLE
+     if(Unused_B(iBlock) .or. .not. far_field_BCs_BLK(iBlock)) CYCLE
 
      if(rMin_BLK(iBlock) < r2FixAxis) then 
         nAxisCell = 2
@@ -135,9 +134,9 @@ subroutine fix_axis_cells
 
 
      if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
-        iHemisphere = North_; kMax = nK + 1; kMin = nK + 1 - nAxisCell
+        iHemisphere = 1; kMax = nK + 1; kMin = nK + 1 - nAxisCell
      elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
-        iHemisphere = South_; kMin = 0; kMax = nAxisCell
+        iHemisphere = 2; kMin = 0; kMax = nAxisCell
      else
         CYCLE
      end if
@@ -185,7 +184,7 @@ subroutine fix_axis_cells
   deallocate(Buffer_VIII, SumBuffer_VIII)
 
   if(DoTestMe)then
-     if(.not.UnusedBlk(BlkTest)) &
+     if(.not.Unused_B(BlkTest)) &
           write(*,*) NameSub,' final state, energy=', &
           State_VGB(:,iTest,jTest,kTest,BlkTest), &
           Energy_GBI(iTest,jTest,kTest,BlkTest,:)
@@ -196,7 +195,7 @@ end subroutine fix_axis_cells
 subroutine fix_axis_cells_cyl
 
   use ModProcMH, ONLY: iComm
-  use ModMain, ONLY: nJ, nK, nBlock, UnusedBlk, x_, y_, z_
+  use ModMain, ONLY: nJ, nK, nBlock, Unused_B, x_, y_, z_
   use ModAdvance, ONLY: nVar, State_VGB, r2FixAxis
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MinDxValue, &
        rMin_Blk
@@ -234,7 +233,7 @@ subroutine fix_axis_cells_cyl
   end if
 
   do iBlock = 1, nBlock
-     if(unusedBlk(iBlock)) CYCLE
+     if(Unused_B(iBlock)) CYCLE
      if(rMin_BLK(iBlock) > CellSize_DB(x_,iBlock)) CYCLE
 
      do k=1,nK
@@ -276,7 +275,7 @@ subroutine fix_axis_cells_cyl
        MPI_SUM, iComm, iError)
 
   do iBlock = 1, nBlock
-     if(unusedBlk(iBlock) .or. NeiLeast(iBlock) /= NOBLK) CYCLE
+     if(Unused_B(iBlock) .or. NeiLeast(iBlock) /= NOBLK) CYCLE
 
      do k=1,nK
         z = Xyz_DGB(z_,1,1,k,iBlock)

@@ -446,12 +446,12 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
      case("#OUTERBOUNDARY")
-        call read_var('TypeBcEast'  ,TypeBc_I(east_))  
-        call read_var('TypeBcWest'  ,TypeBc_I(west_))
-        call read_var('TypeBcSouth' ,TypeBc_I(south_))
-        call read_var('TypeBcNorth' ,TypeBc_I(north_))
-        call read_var('TypeBcBottom',TypeBc_I(bot_))
-        call read_var('TypeBcTop'   ,TypeBc_I(top_))    
+        call read_var('TypeBcEast'  ,TypeBc_I(1))  
+        call read_var('TypeBcWest'  ,TypeBc_I(2))
+        call read_var('TypeBcSouth' ,TypeBc_I(3))
+        call read_var('TypeBcNorth' ,TypeBc_I(4))
+        call read_var('TypeBcBottom',TypeBc_I(5))
+        call read_var('TypeBcTop'   ,TypeBc_I(6))    
 
      case("#INNERBOUNDARY")
         call read_var('TypeBcInner',TypeBc_I(body1_))
@@ -2081,7 +2081,7 @@ contains
        rConserv             = -1.
 
        ! Boundary Conditions
-       TypeBc_I(east_:top_)  = 'float'
+       TypeBc_I(1:6)  = 'float'
        TypeBc_I(body1_)      = 'unknown'
        BodyTDim_I            = 2.85E06    ! K
        BodyNDim_I(IonFirst_) = 1.50E8     ! /cc  protons
@@ -2106,9 +2106,9 @@ contains
        rConserv             = 2*rBody
 
        ! Boundary Conditions and Normalization
-       TypeBc_I(east_)        ='outflow'
-       TypeBc_I(west_)        ='inflow'
-       TypeBc_I(south_:top_)  ='fixed'
+       TypeBc_I(1)        ='outflow'
+       TypeBc_I(2)        ='inflow'
+       TypeBc_I(3:6)  ='fixed'
        TypeBc_I(body1_)='ionosphere'
        BodyTDim_I    = 25000.0          ! K
        BodyNDim_I    = 5.0              ! /cc
@@ -2132,9 +2132,9 @@ contains
        rConserv           = -1.
 
        ! Boundary Conditions and Normalization
-       TypeBc_I(East_:North_) = 'periodic'
-       TypeBc_I(Bot_)         = 'fixvalue'
-       TypeBc_I(Top_)         = 'no_inflow'
+       TypeBc_I(1:4) = 'periodic'
+       TypeBc_I(5)         = 'fixvalue'
+       TypeBc_I(6)         = 'no_inflow'
        TypeBc_I(body1_)       = 'unknown'
        BodyTDim_I    = 25000.0          ! K
        BodyNDim_I    = 5.0              ! /cc
@@ -2646,11 +2646,11 @@ contains
     ! Set default MaxBoundary if it was not set by #FACEBOUNDARY command
     if(i_line_command("#FACEBOUNDARY", iSessionIn = 1) < 0)then
        ! Use all face based BCs by default for spherical geometry
-       if(TypeGeometry(1:9) == 'spherical')   MaxBoundary = Top_
+       if(TypeGeometry(1:9) == 'spherical')   MaxBoundary = 6
 
        ! Use face based boundaries by default for cylindrical geometry 
        ! except for top and bottom 
-       if(TypeGeometry == 'cylindrical') MaxBoundary = North_
+       if(TypeGeometry == 'cylindrical') MaxBoundary = 4
     end if
 
     ! Make sure MinBoundary and MaxBoundary cover face only boundaries
@@ -2663,7 +2663,7 @@ contains
        MinBoundary = min(ExtraBc_, MinBoundary)
        MaxBoundary = max(ExtraBc_, MaxBoundary)
     end if
-    MaxBoundary = min(MaxBoundary, Top_)
+    MaxBoundary = min(MaxBoundary, 6)
     MinBoundary = max(MinBoundary, body2_)
 
     if(index(TypeGeometry,'_genr') < 1) call set_gen_radial_grid

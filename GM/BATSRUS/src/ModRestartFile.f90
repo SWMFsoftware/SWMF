@@ -6,7 +6,7 @@ module ModRestartFile
   use ModIO,         ONLY: Unit_Tmp, nFile, Dt_Output, Dn_Output, Restart_, &
        restart, save_restart_file
   use ModMain,       ONLY: nI, nJ, nK, &
-       nBlockAll, nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
+       nBlockAll, nBlock, Unused_B, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
        NameThisComp, iteration_number, DoThinCurrentSheet
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_
@@ -163,7 +163,7 @@ contains
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
-          if (.not.unusedBLK(iBlock)) call reverse_field(iBlock)
+          if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
     end if
 
@@ -176,7 +176,7 @@ contains
     select case(TypeRestartOutFile)
     case('block')
        do iBlock = 1, nBlock
-          if (.not.unusedBLK(iBlock)) call write_restart_file(iBlock)
+          if (.not.Unused_B(iBlock)) call write_restart_file(iBlock)
        end do
     case('proc')
        allocate(iFileMorton_I(nBlockAll), iRecMorton_I(nBlockAll))
@@ -195,7 +195,7 @@ contains
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
-          if (.not.unusedBLK(iBlock)) call reverse_field(iBlock)
+          if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
     end if
 
@@ -214,7 +214,7 @@ contains
     select case(TypeRestartInFile)
     case('block')
        do iBlock = 1, nBlock
-          if (.not.unusedBLK(iBlock)) call read_restart_file(iBlock)
+          if (.not.Unused_B(iBlock)) call read_restart_file(iBlock)
        end do
     case('proc')
        allocate(iFileMorton_I(nBlockAll), iRecMorton_I(nBlockAll))
@@ -228,12 +228,12 @@ contains
     end select
 
     do iBlock = 1, nBlock
-       if (.not.unusedBLK(iBlock)) call fix_block_geometry(iBlock)
+       if (.not.Unused_B(iBlock)) call fix_block_geometry(iBlock)
     end do
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
-          if (.not.unusedBLK(iBlock)) call reverse_field(iBlock)
+          if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
     end if
 
@@ -746,7 +746,7 @@ contains
 
     do iBlock = 1, nBlock
 
-       if(UnusedBlk(iBlock)) CYCLE
+       if(Unused_B(iBlock)) CYCLE
        ! Use the global block index as the record number
        iMorton = iMortonNode_A(iNode_B(iBlock))
 
@@ -874,7 +874,7 @@ contains
 
     do iBlock = 1, nBlock
 
-       if(UnusedBlk(iBlock)) CYCLE
+       if(Unused_B(iBlock)) CYCLE
        ! Use the global block index as the record number
        iMorton = iMortonNode_A(iNode_B(iBlock))
 

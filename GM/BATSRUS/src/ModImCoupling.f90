@@ -303,7 +303,7 @@ end subroutine get_im_pressure
 subroutine apply_im_pressure
 
   use ModMain,    ONLY: nI, nJ, nK, nBlock, iNewGrid, TauCoupleIm, &
-       time_accurate, Dt, DoCoupleImPressure,DoCoupleImDensity, unusedBLK
+       time_accurate, Dt, DoCoupleImPressure,DoCoupleImDensity, Unused_B
   use ModAdvance, ONLY: State_VGB, UseAnisoPressure
   use ModVarIndexes, ONLY: &
        Ppar_
@@ -376,7 +376,7 @@ subroutine apply_im_pressure
   end if
 
   do iBlock = 1, nBlock
-     if(unusedBLK(iBlock)) CYCLE
+     if(Unused_B(iBlock)) CYCLE
      
      call get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
      if(all(pIm_IC < 0.0)) CYCLE  ! Nothing to do

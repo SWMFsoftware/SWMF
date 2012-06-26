@@ -180,7 +180,7 @@ contains
   !==========================================================================
   subroutine user_set_ICs(iBlock)
 
-    use ModMain,       ONLY: ProcTest, unusedBLK
+    use ModMain,       ONLY: ProcTest, Unused_B
     use ModProcMH,     ONLY: iProc
     use ModAdvance,    ONLY: State_VGB
     use ModVarIndexes
@@ -203,7 +203,7 @@ contains
        oktest=.false.; oktest_me=.false.
     end if
 
-    if (unusedBLK(iBlock)) RETURN
+    if (Unused_B(iBlock)) RETURN
 
     if(UseUniformInitialState)then
        call set_uniform_ICs(iBlock)
@@ -332,7 +332,7 @@ contains
 
   subroutine user_initial_perturbation
     use ModEnergy,   only: calc_energy_cell
-    use ModMain,     ONLY: unusedBlk, nBlockMax
+    use ModMain,     ONLY: Unused_B, nBlockMax
     use ModGeometry, ONLY: z_BLK,y_BLK,x_BLK
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics
@@ -345,7 +345,7 @@ contains
     !-----------------------------------------------------------------------   
     rasq = ra_rope*ra_rope
     do iBlock = 1, nBlockMax
-       if( UnusedBlk(iBlock) ) CYCLE
+       if( Unused_B(iBlock) ) CYCLE
        do k=1,nK
           ! Add initial magnetic field 
           if(UseCoronalField)then

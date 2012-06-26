@@ -211,7 +211,7 @@ end subroutine project_B
 subroutine proj_get_divB(proj_divB)
   ! Calculate div B using simple finite differences
   ! Do corrections for mesh refinement
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK, x_, y_, z_
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B, x_, y_, z_
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : State_VGB
   use ModProject
@@ -233,7 +233,7 @@ subroutine proj_get_divB(proj_divB)
 
   if(UseConstrainB)then                      !^CFG IF CONSTRAINB BEGIN
      do iBLK=1,nBlock
-        if(unusedBLK(iBLK)) CYCLE
+        if(Unused_B(iBLK)) CYCLE
 
         proj_divB(1:nI,1:nJ,1:nK,iBLK)= &
            (Bxface_BLK(2:nI+1,1:nJ  ,1:nK  ,iBLK)                      &
@@ -245,7 +245,7 @@ subroutine proj_get_divB(proj_divB)
      end do
   else                                       !^CFG END CONSTRAINB
      do iBLK=1,nBlock
-        if(unusedBLK(iBLK))CYCLE
+        if(Unused_B(iBLK))CYCLE
         DxInvHalf = 0.5/CellSize_DB(x_,iBLK);
         DyInvHalf = 0.5/CellSize_DB(y_,iBLK);
         DzInvHalf = 0.5/CellSize_DB(z_,iBLK);
@@ -358,7 +358,7 @@ end subroutine proj_poisson
 !=============================================================================
 ! Calculate Laplace phi
 subroutine proj_matvec(phi,laplace_phi)
-  use ModMain, ONLY : nBLK,nBlock,unusedBLK,nI,nJ,nK, x_, y_, z_
+  use ModMain, ONLY : nBLK,nBlock,Unused_B,nI,nJ,nK, x_, y_, z_
   use ModGeometry, ONLY : true_cell,body_BLK
   use ModProject
   use ModMain, ONLY : UseConstrainB          !^CFG IF CONSTRAINB
@@ -384,7 +384,7 @@ subroutine proj_matvec(phi,laplace_phi)
 
   if(UseConstrainB)then                      !^CFG IF CONSTRAINB BEGIN
      do iBLK=1,nBlock
-        if(unusedBLK(iBLK))CYCLE
+        if(Unused_B(iBLK))CYCLE
 
         if(body_BLK(iBLK))then
            ! If some cells are inside the body, phi should have zero gradient
@@ -445,7 +445,7 @@ end subroutine proj_matvec
 !=============================================================================
 ! Calculate gradient of phi in direction idim for real cells only
 subroutine proj_gradient(idim,phi,dphi)
-  use ModMain, ONLY : nI, nJ, nK, nBLK, nBlock, unusedBLK, x_, y_, z_
+  use ModMain, ONLY : nI, nJ, nK, nBLK, nBlock, Unused_B, x_, y_, z_
   use BATL_lib, ONLY: CellFace_DB, CellVolume_B
   implicit none
 
@@ -470,7 +470,7 @@ subroutine proj_gradient(idim,phi,dphi)
   !dphi=0.0
 
   do iBLK=1,nBlock
-     if(unusedBLK(iBLK))CYCLE
+     if(Unused_B(iBLK))CYCLE
      select case(idim)
      case(1)
         dphi(1:nI,1:nJ,1:nK,iBLK) = &
@@ -498,7 +498,7 @@ end subroutine proj_gradient
 !=============================================================================
 ! Calculate boundary values for phi for dimensions idimmin..idimmax
 subroutine proj_boundphi(phi,idimmin,idimmax)
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
   use ModMain, ONLY : UseConstrainB                   !^CFG IF CONSTRAINB
   use ModGeometry, ONLY : body_BLK, true_cell
   use ModParallel, ONLY : NOBLK,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
@@ -520,7 +520,7 @@ subroutine proj_boundphi(phi,idimmin,idimmax)
        DoSendCornerIn=.false., DoRestrictFaceIn = .true.)
 
   do iBLK=1,nBlock
-     if(unusedBLK(iBLK))CYCLE
+     if(Unused_B(iBLK))CYCLE
 
      if(neiLeast(iBLK) ==NOBLK)phi(-1:0     ,:,:,iBLK)=0.0
      if(neiLwest(iBLK) ==NOBLK)phi(nI+1:nI+2,:,:,iBLK)=0.0
@@ -558,7 +558,7 @@ end subroutine proj_boundphi
 ! Correct B field by gradient of phi
 subroutine proj_correction(phi)
   use ModMain, ONLY : nI,nJ,nK,nBLK,Itest,Jtest,Ktest,BLKtest, &
-       nBlock,unusedBLK
+       nBlock,Unused_B
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance,    ONLY : State_VGB
   use ModGeometry,   ONLY : true_cell
@@ -591,7 +591,7 @@ subroutine proj_correction(phi)
           true_cell(Itest,Jtest,Ktest+1,BLKtest)
 
      do iBLK=1,nBlock
-        if(unusedBLK(iBLK)) CYCLE
+        if(Unused_B(iBLK)) CYCLE
 
         BxFace_BLK(1:nI+1,1:nJ,1:nK,iBLK)=BxFace_BLK(1:nI+1,1:nJ,1:nK,iBLK) &
              -(phi(1:nI+1,1:nJ,1:nK,iBLK)-phi(0:nI,1:nJ,1:nK,iBLK)) &
@@ -623,7 +623,7 @@ subroutine proj_correction(phi)
 
   else                                       !^CFG END CONSTRAINB
      do iBLK = 1, nBlock
-        if(unusedBLK(iBLK)) CYCLE
+        if(Unused_B(iBLK)) CYCLE
         DxInvHalf = 0.5/CellSize_DB(x_,iBLK);
         DyInvHalf = 0.5/CellSize_DB(y_,iBLK);
         DzInvHalf = 0.5/CellSize_DB(z_,iBLK);

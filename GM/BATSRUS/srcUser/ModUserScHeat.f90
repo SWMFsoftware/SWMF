@@ -596,7 +596,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK, B0_DGB, UseElectronPressure
     use ModIO,         ONLY: write_myname
-    use ModMain,       ONLY: unusedBLK, nBlock, x_, y_, z_, UseB0
+    use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
     use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_
 
@@ -615,7 +615,7 @@ contains
     select case(TypeVar)
     case('eint')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           if(UseElectronPressure)then
              tmp1_BLK(:,:,:,iBlock) = &
                   State_VGB(p_,:,:,:,iBlock) + State_VGB(Pe_,:,:,:,iBlock)
@@ -627,7 +627,7 @@ contains
 
     case('emag')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           if(UseB0)then
              tmp1_BLK(:,:,:,iBlock) = & 
                   ( B0_DGB(x_,:,:,:,iBlock) + State_VGB(Bx_,:,:,:,iBlock))**2 &
@@ -750,7 +750,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk
-    use ModMain,       ONLY: x_, y_, z_, nJ, nK, East_
+    use ModMain,       ONLY: x_, y_, z_, nJ, nK
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_
@@ -767,7 +767,7 @@ contains
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
 
-    if(iSide /= East_) call stop_mpi('Wrong iSide in user_set_cell_boundary')
+    if(iSide /= 1) call stop_mpi('Wrong iSide in user_set_cell_boundary')
 
     IsFound = .true.
 

@@ -266,7 +266,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModProcMH
   use ModNumConst
   use ModMPI
-  use ModMain, ONLY: n_step,Dt,Cfl,unusedBLK,nI,nJ,nK,nBlock,UseUserLogFiles,&
+  use ModMain, ONLY: n_step,Dt,Cfl,Unused_B,nI,nJ,nK,nBlock,UseUserLogFiles,&
        iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
        UseRotatingFrame,UseB0
   use ModPhysics,    ONLY: rCurrents, inv_gm1, OMEGABody
@@ -419,7 +419,7 @@ contains
        LogVar_I(iVarTot) = maxval_BLK(nProc,tmp2_BLK)/nProc
     case('ux')
        do iBLK=1,nBlock
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
                State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK) / &
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
@@ -427,7 +427,7 @@ contains
        LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('uy')
        do iBLK=1,nBlock
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
                State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK) / &
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
@@ -435,7 +435,7 @@ contains
        LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('uz')
        do iBLK=1,nBlock
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
                State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK) / &
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
@@ -443,7 +443,7 @@ contains
        LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekinx')
        do iBLK=1,nBlock
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
                State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
@@ -451,7 +451,7 @@ contains
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekiny')
        do iBLK=1,nBlock
-          if (unusedBLK(iBLK)) cycle
+          if (Unused_B(iBLK)) cycle
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
                State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
@@ -459,7 +459,7 @@ contains
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekinz')
        do iBLK=1,nBlock
-          if (unusedBLK(iBLK)) cycle
+          if (Unused_B(iBLK)) cycle
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
                State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
@@ -467,7 +467,7 @@ contains
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekin')
        do iBLK=1,nBlock
-          if (unusedBLK(iBLK)) cycle
+          if (Unused_B(iBLK)) cycle
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
                (State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK)**2+&
                State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK)**2+&
@@ -484,7 +484,7 @@ contains
 
        ! calculate the total/maximum current either into or out of the body
        do iBLK = 1, nBlock
-          if(unusedBLK(iBLK))cycle
+          if(Unused_B(iBLK))cycle
 
           do k=1,nK; do j=1,nJ; do i=1,nI
              ! Calculate radial current
@@ -499,7 +499,7 @@ contains
        call message_pass_cell(1,tmp1_BLK, nWidthIn=1)
 
        do iBLK = 1, nBlock
-          if(unusedBLK(iBLK))cycle
+          if(Unused_B(iBLK))cycle
           !now modify tmp1 according to the case we want
           select case(NameLogVar)
           case('jin')
@@ -543,7 +543,7 @@ contains
 
        ! Calculate 
        do iBLK = 1, nBlock
-          if(unusedBLK(iBLK))cycle           
+          if(Unused_B(iBLK))cycle           
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
                   x_BLK(i+1,j,k,iBLK) > x2 .or.      &
@@ -572,7 +572,7 @@ contains
 
        ! Calculate 
        do iBLK=1,nBlock
-          if(unusedBLK(iBLK))cycle           
+          if(Unused_B(iBLK))cycle           
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
                   x_BLK(i+1,j,k,iBLK) > x2 .or.      &
@@ -681,7 +681,7 @@ contains
           i = 3; j = 1
        end select
        do iBlk = 1, nBlock
-          if(unusedBLK(iBLK)) CYCLE
+          if(Unused_B(iBLK)) CYCLE
           tmp1_BLK(1:nI,1:nJ,1:nK,iBlk) = ray(i,j,1:nI,1:nJ,1:nK,iBlk)
        end do
        LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
@@ -728,7 +728,7 @@ contains
           iVarTot = iVarTot + 1
           r = LogR_I(iR)
           do iBLK=1,nBlock
-             if(unusedBLK(iBLK)) CYCLE
+             if(Unused_B(iBLK)) CYCLE
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                 tmp1_BLK(i,j,k,iBLK) = &
                      (State_VGB(iRhoUx,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
@@ -757,7 +757,7 @@ contains
           iVarTot = iVarTot + 1
           r = LogR_I(iR)
           do iBLK=1,nBlock
-             if(unusedBLK(iBLK)) CYCLE
+             if(Unused_B(iBLK)) CYCLE
              FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              if(UseB0)FullB_DG = FullB_DG &
                   +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
@@ -779,7 +779,7 @@ contains
           iVarTot = iVarTot + 1
           r = LogR_I(iR)           
           do iBLK=1,nBlock
-             if(unusedBLK(iBLK))cycle
+             if(Unused_B(iBLK))cycle
              FullB_DG = State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              if(UseB0)FullB_DG = FullB_DG &
                   +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)           
@@ -801,7 +801,7 @@ contains
           iVarTot = iVarTot + 1
           r = LogR_I(iR)
           do iBLK=1,nBlock
-             if(unusedBLK(iBLK))CYCLE
+             if(Unused_B(iBLK))CYCLE
              FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              if(UseB0)FullB_DG = FullB_DG &
                   +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
@@ -832,7 +832,7 @@ contains
           iVarTot = iVarTot+1
           r = LogR_I(iR)
           do iBLK = 1,nBlock
-             if(unusedBLK(iBLK))CYCLE
+             if(Unused_B(iBLK))CYCLE
              FullB_DG = State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              if(UseB0)FullB_DG = FullB_DG + B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
@@ -1150,7 +1150,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
   ! over the surface of a sphere centered at the origin radius Radius.  
   ! The resolution in the colatitude is determined by the nTheta parameter.
 
-  use ModMain,           ONLY: nI,nJ,nK,nBLK,nBlock,unusedBLK,&
+  use ModMain,           ONLY: nI,nJ,nK,nBLK,nBlock,Unused_B,&
        optimize_message_pass
   use ModGeometry,       ONLY: x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK, &
        r_BLK, XyzStart_Blk, TypeGeometry
@@ -1206,7 +1206,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
      ! interpolate in the radial direction
 
      do iBlock = 1, nBlock
-        if (unusedBLK(iBlock)) CYCLE
+        if (Unused_B(iBlock)) CYCLE
         rMin = cHalf*(R_BLK( 0, 1, 1,iBlock) + R_BLK( 1, 1, 1,iBlock))
         if(rMin > Radius) CYCLE
         rMax = cHalf*(R_BLK(NI, 1, 1,iBlock) + R_BLK(NI+1,1,1,iBlock))
@@ -1286,7 +1286,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
      ! Sum all cells within range
      do iBlock = 1, nBlock
 
-        if (unusedBLK(iBlock)) CYCLE
+        if (Unused_B(iBlock)) CYCLE
 
         ! get the max and min radial distance for this block so that 
         ! we can check whether or not this block contibutes to the sum.
@@ -1401,7 +1401,7 @@ real function integrate_circle(Radius,z,Array_GB)
   ! for the z axis is defined by the radius Radius and the z position is
   ! is given by z.  
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK,optimize_message_pass
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B,optimize_message_pass
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,Dx_BLK,Dy_BLK,Dz_BLK,XyzStart_Blk
   use ModNumConst
   use ModInterpolate, ONLY: trilinear
@@ -1440,7 +1440,7 @@ real function integrate_circle(Radius,z,Array_GB)
 
   do iBlock = 1, nBlock
 
-     if (unusedBLK(iBlock)) CYCLE
+     if (Unused_B(iBlock)) CYCLE
      ! get the max and min radial (cylindrical) distance for this block so 
      ! that we can check whether or not this block contibutes to the sum.
 

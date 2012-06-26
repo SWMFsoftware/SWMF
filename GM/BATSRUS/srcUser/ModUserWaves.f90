@@ -181,7 +181,7 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModMain,     ONLY: unusedBLK, TypeCoordSystem, GravitySi
+    use ModMain,     ONLY: Unused_B, TypeCoordSystem, GravitySi
     use ModGeometry, ONLY: x1, x2, y1, y2, x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, &
          Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
@@ -613,7 +613,7 @@ contains
   !=====================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk
+    use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B
     use ModAdvance,  ONLY: By_, State_VGB
     use ModGeometry, ONLY: z2, z1, dx_BLK, dy_BLK, y_BLK
     use BATL_lib,    ONLY: CellFace_DB
@@ -632,7 +632,7 @@ contains
     select case(TypeVar)
     case('byflux')
        do iBlock = 1, nBlock
-          if(unusedBlk(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           y1 = y_BLK(1,0,1,iBlock)
           y2 = y_BLK(1,nJ+1,1,iBlock)
 

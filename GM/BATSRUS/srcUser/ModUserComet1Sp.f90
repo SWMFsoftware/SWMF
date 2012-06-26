@@ -189,7 +189,7 @@ contains
   subroutine user_set_ICs(iBlock)
   !========================================================================
 
-    use ModMain, ONLY: nBlock, UnusedBlk, ProcTest, body1_
+    use ModMain, ONLY: nBlock, Unused_B, ProcTest, body1_
     use ModProcMH, ONLY: iProc
     use ModPhysics
     use ModNumConst

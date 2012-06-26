@@ -79,8 +79,8 @@ subroutine write_runtime_values()
   !------------------------------------------------------------------------
 
   ! Find new min and max dx
-  DxMin = minval(dx_BLK, MASK=(.not.unusedBLK))
-  DxMax = maxval(dx_BLK, MASK=(.not.unusedBLK))
+  DxMin = minval(dx_BLK, MASK=(.not.Unused_B))
+  DxMax = maxval(dx_BLK, MASK=(.not.Unused_B))
   call MPI_allreduce(DxMin, minDXvalue, 1, MPI_REAL, MPI_MIN, iComm, iError)
   call MPI_allreduce(DxMax, maxDXvalue, 1, MPI_REAL, MPI_MAX, iComm, iError)
   call count_true_cells
@@ -338,7 +338,7 @@ subroutine count_true_cells
 
   nTrueCells=0
   do iBlk=1,nBlockMax  ! Block loop
-     if(unusedBLK(iBlk))CYCLE
+     if(Unused_B(iBlk))CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI  ! Cell loop
         if(true_cell(i,j,k,iBlk)) nTrueCells=nTrueCells+1
      end do; end do; end do

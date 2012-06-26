@@ -628,7 +628,7 @@ contains
     use ModGeometry,    ONLY: true_BLK, true_cell
     use ModMagnetogram, ONLY: nTheta, nPhi, dSinTheta, dPhi, &
          get_magnetogram_field
-    use ModMain,        ONLY: nI, nJ, nK, nBlock, UnusedBLK, Time_Simulation,z_
+    use ModMain,        ONLY: nI, nJ, nK, nBlock, Unused_B, Time_Simulation,z_
     use ModMpi,         ONLY: MPI_REAL, MPI_SUM
     use ModNumConst,    ONLY: cHalfPi
     use ModPhysics,     ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_, &
@@ -690,7 +690,7 @@ contains
          Time_Simulation - TimeUpdateLast > DtUpdateFlux ) then
        UnsignedFluxCgs = 0.0
        do iBlock = 1, nBlock 
-          if(unusedBLK(iBlock)) cycle
+          if(Unused_B(iBlock)) cycle
           if(true_BLK(iBlock)) then
              dAreaCgs = CellFace_DB(z_,iBlock)*No2Si_V(UnitX_)**2*1e4
              
@@ -716,7 +716,7 @@ contains
 
     HeatFunctionVolume = 0
     do iBlock = 1, nBlock
-       if(unusedBLK(iBlock)) CYCLE
+       if(Unused_B(iBlock)) CYCLE
 
        if(true_BLK(iBlock)) then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI

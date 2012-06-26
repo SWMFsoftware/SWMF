@@ -166,7 +166,7 @@ contains
     integer::iBoundary
     !--------------------------------------------------------------------------
     !For Outer Boundaries
-    do iBoundary=East_,Top_
+    do iBoundary=1,6
        FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary) = cTiny8
        FaceState_VI(rhoHp_,iBoundary) = SW_rho
     end do

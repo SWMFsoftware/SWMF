@@ -98,7 +98,7 @@ subroutine bound_VxB(iBlock)
   if(neiLwest(iBlock)==NOBLK)then
      ! fixed inflow!
      !VxB_x(nI  ,:,:,iBlock)=SW_Uy*SW_Bz-SW_Uz*SW_Uy
-     select case(TypeBc_I(west_))
+     select case(TypeBc_I(2))
      case('inflow','vary','fixed')
         VxB_y(nI+1,:,:,iBlock)=SW_Uz*SW_Bx-SW_Ux*SW_Bz
         VxB_z(nI+1,:,:,iBlock)=SW_Ux*SW_By-SW_Uy*SW_Bx
@@ -462,7 +462,7 @@ end subroutine bound_Bface
 !        Bxf_c, Byf_c, Bzf_c
 ! 
 !   ! Did we have finer neighbors before prolongation
-!   logical, intent(in) :: IsFinerNei_E(east_:top_)
+!   logical, intent(in) :: IsFinerNei_E(1:6)
 ! 
 !   ! Normal B components from finer neighbors 
 !   ! on the shared subfaces (index Q) on two sides (index S)
@@ -622,23 +622,23 @@ end subroutine bound_Bface
 ! 
 !   ! Correct normal components on faces which were shared with a finer block
 !   ! before the AMR so that we get a consistent normal flux
-!   if(IsFinerNei_E(east_).and.iShift==0)  Bxf_f(   1,1:nJ,1:nK)=&
-!        BxFaceFine_XQS(:,:,child2subface(iChild,east_),1)
+!   if(IsFinerNei_E(1).and.iShift==0)  Bxf_f(   1,1:nJ,1:nK)=&
+!        BxFaceFine_XQS(:,:,child2subface(iChild,1),1)
 ! 
-!   if(IsFinerNei_E(west_).and.iShift>0)   Bxf_f(nI+1,1:nJ,1:nK)=&
-!        BxFaceFine_XQS(:,:,child2subface(iChild,west_),2)
+!   if(IsFinerNei_E(2).and.iShift>0)   Bxf_f(nI+1,1:nJ,1:nK)=&
+!        BxFaceFine_XQS(:,:,child2subface(iChild,2),2)
 ! 
-!   if(IsFinerNei_E(south_).and.jShift==0) Byf_f(1:nI,   1,1:nK)=&
-!        ByFaceFine_YQS(:,:,child2subface(iChild,south_),1)
+!   if(IsFinerNei_E(3).and.jShift==0) Byf_f(1:nI,   1,1:nK)=&
+!        ByFaceFine_YQS(:,:,child2subface(iChild,3),1)
 ! 
-!   if(IsFinerNei_E(north_).and.jShift>0)  Byf_f(1:nI,nJ+1,1:nK)=&
-!        ByFaceFine_YQS(:,:,child2subface(iChild,north_),2)
+!   if(IsFinerNei_E(4).and.jShift>0)  Byf_f(1:nI,nJ+1,1:nK)=&
+!        ByFaceFine_YQS(:,:,child2subface(iChild,4),2)
 ! 
-!   if(IsFinerNei_E(bot_).and.kShift==0)   Bzf_f(1:nI,1:nJ,1)=&
-!        BzFaceFine_ZQS(:,:,child2subface(iChild,bot_),1)
+!   if(IsFinerNei_E(5).and.kShift==0)   Bzf_f(1:nI,1:nJ,1)=&
+!        BzFaceFine_ZQS(:,:,child2subface(iChild,5),1)
 ! 
-!   if(IsFinerNei_E(top_).and.kShift>0)    Bzf_f(1:nI,1:nJ,nK+1)=&
-!        BzFaceFine_ZQS(:,:,child2subface(iChild,top_),2)
+!   if(IsFinerNei_E(6).and.kShift>0)    Bzf_f(1:nI,1:nJ,nK+1)=&
+!        BzFaceFine_ZQS(:,:,child2subface(iChild,6),2)
 ! 
 !   if(oktest_me)then
 !      ! Check if the corrected fine B fluxes add up to the coarse B flux
@@ -1028,7 +1028,7 @@ subroutine constrain_ICs(iBlock)
   integer, intent(in) :: iBlock
   !---------------------------------------------------------------------------
 
-  if(unusedBLK(iBlock))then
+  if(Unused_B(iBlock))then
      BxFace_BLK(:,:,:,iBlock)=0.0
      ByFace_BLK(:,:,:,iBlock)=0.0
      BzFace_BLK(:,:,:,iBlock)=0.0
@@ -1281,7 +1281,7 @@ end subroutine constrain_ICs
 !        end if
 ! 
 !        do iBLK = 1,nBlockMax
-!           if(unusedBLK(iBLK))CYCLE
+!           if(Unused_B(iBLK))CYCLE
 ! 
 !           ! Post non-blocking receive for opposite face of neighbor block
 !           neiL=neiLEV(rface,iBLK)
@@ -1364,7 +1364,7 @@ end subroutine constrain_ICs
 !             iProc,iface
 ! 
 !        do iBLK=1,nBlockMax
-!           if(unusedBLK(iBLK))CYCLE
+!           if(Unused_B(iBLK))CYCLE
 ! 
 !           ! Check if neighbouring block is coarser
 !           neiL=neiLEV(iface,iBLK)
@@ -1482,7 +1482,7 @@ end subroutine constrain_ICs
 !        call setranges
 ! 
 !        do iBLK = 1,nBlockMax
-!           if(unusedBLK(iBLK))CYCLE
+!           if(Unused_B(iBLK))CYCLE
 ! 
 !           neiL=neiLEV(rface,iBLK)
 !           if(neiL==0)then
@@ -1793,7 +1793,7 @@ end subroutine constrain_ICs
 ! 
 !   ! Set B*FaceFine_*SB from finer face
 !   use ModProcMH
-!   use ModMain, ONLY : nBLock,unusedBLK,BLKtest
+!   use ModMain, ONLY : nBLock,Unused_B,BLKtest
 !   use ModCT
 !   use ModAMR, ONLY : child2subface
 !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE,BLKneighborCHILD
@@ -1823,10 +1823,10 @@ end subroutine constrain_ICs
 !   ! or copy for local blocks
 !   !/
 !   do iBlock=1,nBlock
-!      if(unusedBLK(iBlock)) CYCLE
+!      if(Unused_B(iBlock)) CYCLE
 ! !!!     if(.not.refine_list(iBlock,iProc)) CYCLE
 ! 
-!      do iFace=east_,top_
+!      do iFace=1,6
 !         if(neiLEV(iFace,iBlock)==-1)then
 !            do iSubFace=1,4
 !               iProcNei =neiPE(iSubFace,iFace,iBlock)
@@ -1849,9 +1849,9 @@ end subroutine constrain_ICs
 !   ! Send blocking messages with Rsend (ready to receive)
 !   !/
 !   do iBlock=1,nBlock
-!      if(unusedBLK(iBlock)) CYCLE
+!      if(Unused_B(iBlock)) CYCLE
 ! 
-!      do iFace=east_,top_
+!      do iFace=1,6
 !         if(neiLEV(iFace,iBlock)/=1) CYCLE
 !         iBlockNei=neiBLK(1,iFace,iBlock)
 !         iProcNei =neiPE(1,iFace,iBlock)
@@ -1876,19 +1876,19 @@ end subroutine constrain_ICs
 ! 
 !     iTag=100*iBlock+10*iFace+iSubFace
 !     select case(iFace)
-!     case(east_,west_)
+!     case(1,2)
 !        iSize=nJ*nK
-!        iSide=iFace-east_+1
+!        iSide=iFace-1+1
 !        call MPI_irecv(BxFaceFine_XQSB(1,1,iSubFace,iSide,iBlock), iSize, &
 !             MPI_REAL, iProcNei, iTag, iComm, request, iError)
-!     case(south_,north_)
+!     case(3,4)
 !        iSize=nI*nK
-!        iSide=iFace-south_+1
+!        iSide=iFace-3+1
 !        call MPI_irecv(ByFaceFine_YQSB(1,1,iSubFace,iSide,iBlock), iSize, &
 !             MPI_REAL, iProcNei, iTag, iComm, request, iError)
-!     case(bot_,top_)
+!     case(5,6)
 !        iSize=nI*nJ
-!        iSide=iFace-bot_+1
+!        iSide=iFace-5+1
 !        call MPI_irecv(BzFaceFine_ZQSB(1,1,iSubFace,iSide,iBlock), iSize, &
 !             MPI_REAL, iProcNei, iTag, iComm, request, iError)
 !     end select
@@ -1902,35 +1902,35 @@ end subroutine constrain_ICs
 !     ! write(*,*)'send_b_face_fine: me,iBlock,iFace=',iProc,iBlock,iFace
 ! 
 !     select case(iFace)
-!     case(east_)
+!     case(1)
 !        iSize=nJ*nK
 !        allocate(Buffer(nJ,nK))
-!        iFaceOther=west_
+!        iFaceOther=2
 !        Buffer=BxFace_BLK(1,1:nJ,1:nK,iBlock)
-!     case(west_)
+!     case(2)
 !        iSize=nJ*nK
 !        allocate(Buffer(nJ,nK))
-!        iFaceOther=east_
+!        iFaceOther=1
 !        Buffer=BxFace_BLK(nI+1,1:nJ,1:nK,iBlock)
-!     case(south_)
+!     case(3)
 !        iSize=nI*nK
 !        allocate(Buffer(nI,nK))
-!        iFaceOther=north_
+!        iFaceOther=4
 !        Buffer=ByFace_BLK(1:nI,1,1:nK,iBlock)
-!     case(north_)
+!     case(4)
 !        iSize=nI*nK
 !        allocate(Buffer(nI,nK))
-!        iFaceOther=south_
+!        iFaceOther=3
 !        Buffer=ByFace_BLK(1:nI,nJ+1,1:nK,iBlock)
-!     case(bot_)
+!     case(5)
 !        iSize=nI*nJ
 !        allocate(Buffer(nI,nJ))
-!        iFaceOther=top_
+!        iFaceOther=6
 !        Buffer=BzFace_BLK(1:nI,1:nJ,1,iBlock)
-!     case(top_)
+!     case(6)
 !        iSize=nI*nJ
 !        allocate(Buffer(nI,nJ))
-!        iFaceOther=bot_
+!        iFaceOther=5
 !        Buffer=BzFace_BLK(1:nI,1:nJ,nK+1,iBlock)
 !     end select
 ! 
@@ -1954,22 +1954,22 @@ end subroutine constrain_ICs
 !          write(*,*)'copy from iBlockNei=',iBlockNei,' to iBlock=',iBlock
 ! 
 !     select case(iFace)
-!     case(east_)
+!     case(1)
 !        BxFaceFine_XQSB(:,:,iSubFace,1,iBlock)=&
 !             BxFace_BLK(nI+1,1:nJ,1:nK,iBlockNei)
-!     case(west_)
+!     case(2)
 !        BxFaceFine_XQSB(:,:,iSubFace,2,iBlock)=&
 !             BxFace_BLK(   1,1:nJ,1:nK,iBlockNei)
-!     case(south_)
+!     case(3)
 !        ByFaceFine_YQSB(:,:,iSubFace,1,iBlock)=&
 !             ByFace_BLK(1:nI,nJ+1,1:nK,iBlockNei)
-!     case(north_)
+!     case(4)
 !        ByFaceFine_YQSB(:,:,iSubFace,2,iBlock)=&
 !             ByFace_BLK(1:nI,   1,1:nK,iBlockNei)
-!     case(bot_)
+!     case(5)
 !        BzFaceFine_ZQSB(:,:,iSubFace,1,iBlock)=&
 !             BzFace_BLK(1:nI,1:nJ,nK+1,iBlockNei)
-!     case(top_)
+!     case(6)
 !        BzFaceFine_ZQSB(:,:,iSubFace,2,iBlock)=&
 !             BzFace_BLK(1:nI,1:nJ,   1,iBlockNei)
 !     end select

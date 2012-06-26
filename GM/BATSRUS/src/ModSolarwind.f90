@@ -583,7 +583,7 @@ contains
 
     if(nData <= 0 .or. .not.UseSolarwindFile)then
        ! Use fixed boundary conditon if there is no input data
-       SolarWind_V = FaceState_VI(:,east_)
+       SolarWind_V = FaceState_VI(:,1)
        RETURN
     end if
 

@@ -12,7 +12,7 @@ contains
 
     use ModCellBoundary, ONLY: set_cell_boundary
     use ModProcMH
-    use ModMain, ONLY : nBlock, unusedBLK, &
+    use ModMain, ONLY : nBlock, Unused_B, &
          TypeBc_I, time_loop, &
          UseConstrainB,&              !^CFG IF CONSTRAINB 
          UseProjection,&              !^CFG IF PROJECTION
@@ -69,7 +69,7 @@ contains
     !if(prolong_order==2)then     !^CFG IF NOT PROJECTION
     if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
-          if (unusedBLK(iBlock)) CYCLE
+          if (Unused_B(iBlock)) CYCLE
           if (far_field_BCs_BLK(iBlock) .and. prolong_order==2)&
                call set_cell_boundary(iBlock,time_simulation,.false.)        
           if(UseConstrainB)call correctP(iBlock)   !^CFG IF CONSTRAINB
@@ -115,7 +115,7 @@ contains
     end if
 
     do iBlock = 1, nBlock
-       if (unusedBLK(iBlock)) CYCLE
+       if (Unused_B(iBlock)) CYCLE
 
        ! The corner ghost cells outside the domain are updated
        ! from the ghost cells inside the domain, so the outer 

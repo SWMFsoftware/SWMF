@@ -2,7 +2,7 @@
 ! to .true. for this user module to be effective.
 
 !========================================================================
-Module ModUser
+module ModUser
   use ModNumConst, ONLY: cHalf,cTwo,cThree,&
        cFour,cE1,cHundred,cHundredth,cZero,&
        cOne,cTiny
@@ -40,7 +40,6 @@ contains
   use ModVarIndexes
   use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, BodyRho_I
   use ModNumConst, ONLY: cTiny
-  use ModSize, ONLY: east_, west_, south_, north_, bot_, top_
   use ModMain, ONLY: body1_
   integer :: iBoundary
 
@@ -67,7 +66,7 @@ contains
     ! used for only some outerboundary cases (fixed, for example) and
     ! are ignored for vary and other types.  We code them as in set_physics
     ! just to be safe.
-    do iBoundary=east_,top_
+    do iBoundary = 1, 6
        FaceState_VI(RhoH_, iBoundary)   = SW_rho
        FaceState_VI(RhoH2O_, iBoundary) = cTiny*sw_rho
        FaceState_VI(RhoN_, iBoundary)   = cTiny*sw_rho

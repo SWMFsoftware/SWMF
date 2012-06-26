@@ -234,7 +234,7 @@ contains
   subroutine show_progress
 
     use ModIo,      ONLY: dn_progress1, dn_progress2
-    use ModMain,    ONLY: nI, nJ, nK, nBlock, unusedBLK, n_step, Dt
+    use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, n_step, Dt
     use ModPhysics, ONLY: Si2No_V, UnitT_
 
     real(Real8_), external :: timing_func_d
@@ -254,14 +254,14 @@ contains
        CpuTimeAdvance=timing_func_d('sum',1,'advance','BATSRUS')
        if (.not.time_accurate) then
           write(*,'(a,f9.1,a,f9.1,a,i8)') 'Speed is',&
-               nI*nJ*nK*count(.not.unusedBLK(1:nBlock)) &
+               nI*nJ*nK*count(.not.Unused_B(1:nBlock)) &
                /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
                CpuTimeBATSRUS,&
                ' s at N =',n_step
        else
           write(*,'(a,f9.1,a,f9.1,a,i8,a,1p,e10.4,a)') 'Speed is',&
-               nI*nJ*nK*count(.not.unusedBLK(1:nBlock)) &
+               nI*nJ*nK*count(.not.Unused_B(1:nBlock)) &
                /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
                CpuTimeBATSRUS,&

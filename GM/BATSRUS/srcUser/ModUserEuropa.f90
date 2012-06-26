@@ -266,7 +266,7 @@ contains
   ! This is the comet version!!
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModSize,       ONLY: nDim,West_,North_,Top_
+    use ModSize,       ONLY: nDim,2,4,6
     use ModVarIndexes
     use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim, BodyNDim_I
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V

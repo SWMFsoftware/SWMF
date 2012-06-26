@@ -175,7 +175,7 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModMain,       ONLY: UnUsedBlk, nBlockMax
+    use ModMain,       ONLY: Unused_B, nBlockMax
     use ModGeometry,   ONLY: R_BLK, Rmin_BLK
     use ModSize
     use ModVarIndexes, ONLY: Rho_, rhoUx_, rhoU_, P_,Bx_,Bz_
@@ -218,7 +218,7 @@ contains
 
     use CON_planet,    ONLY: RadiusPlanet, MassPlanet
     use ModAdvance,    ONLY: State_VGB
-    use ModMain,       ONLY: UnUsedBlk, nBlockMax
+    use ModMain,       ONLY: Unused_B, nBlockMax
     use ModGeometry,   ONLY: X_BLK, Y_BLK, Z_BLK, R_BLK, Rmin_BLK
     use ModSize
     use ModPhysics,    ONLY: Si2No_V,UnitRho_ 

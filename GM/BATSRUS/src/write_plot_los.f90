@@ -47,7 +47,7 @@ subroutine write_plot_los(iFile)
   !                         and Soft-Xray synthesis capability 
 
   use ModProcMH
-  use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, unusedBLK, &
+  use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
        time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
        Body1,body1_, StartTime, CodeVersion
   use ModGeometry, ONLY: &
@@ -384,7 +384,7 @@ subroutine write_plot_los(iFile)
   ! loop over blocks
   do iBLK = 1, nBlock
 
-     if (unusedBLK(iBLK)) CYCLE
+     if (Unused_B(iBLK)) CYCLE
 
      CellSize_D = CellSize_DB(:,iBlk)
 

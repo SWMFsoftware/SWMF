@@ -165,7 +165,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
 
   use ModProcMH, ONLY: iProc
   use ModVarIndexes, ONLY: nVar
-  use ModMain, ONLY: nI, nJ, nK, nIJK_D, unusedBLK
+  use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B
   use ModAdvance, ONLY: State_VGB, StateOld_VCB
   use ModParallel, ONLY: NeiLev
   use ModGeometry, ONLY: XyzStart_BLK
@@ -236,7 +236,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
 
   ! Loop through all blocks
   BLOCK: do iBlock = iBlockMin, iBlockMax
-     if(unusedBLK(iBlock)) CYCLE
+     if(Unused_B(iBlock)) CYCLE
 
      if(DoTestMe)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
 

@@ -178,11 +178,11 @@ subroutine advance_impl
      end if
 
      if(.not.UsePartImplicit2)then
-        ! Select unusedBLK = not explicit blocks
+        ! Select Unused_B = not explicit blocks
         iNewDecomposition=mod(iNewDecomposition+1, 10000)
         Unused_BP(1:nBlockMax,:) = &
              iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_
-        UnusedBLK(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
+        Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
      end if
 
      ! advance explicit blocks, calc timestep 
@@ -194,7 +194,7 @@ subroutine advance_impl
         iNewDecomposition=mod(iNewDecomposition+1, 10000)
         Unused_BP(1:nBlockMax,:) = &
              iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
-        UnusedBLK(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
+        Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
      end if
 
      call exchange_messages
@@ -203,7 +203,7 @@ subroutine advance_impl
      iNewDecomposition=mod(iNewDecomposition+1, 10000)
      Unused_BP(1:nBlockMax,:) = &
           iTypeAdvance_BP(1:nBlockMax,:) /= ImplBlock_
-     UnusedBLK(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
+     Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
   end if
 
   !\
@@ -381,7 +381,7 @@ subroutine advance_impl
 
   ! Make explicit part available again for partially explicit scheme
   if(UsePartImplicit)then
-     ! Restore unusedBLK
+     ! Restore Unused_B
      if(.not.UsePartImplicit2)then
         iNewDecomposition=mod(iNewDecomposition-3, 10000)
      else
@@ -389,7 +389,7 @@ subroutine advance_impl
      end if
      Unused_BP(1:nBlockMax,:) = &
           iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
-     UnusedBLK(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
+     Unused_B(1:nBlockMax) = Unused_BP(1:nBlockMax,iProc)
   endif
 
   ! Exchange messages, so ghost cells of all blocks are updated
@@ -423,7 +423,7 @@ subroutine advance_impl
 
      ! Calculate the largest relative drop in density or pressure
      do iBLK = 1, nBlock
-        if(UnusedBlk(iBLK)) CYCLE
+        if(Unused_B(iBLK)) CYCLE
            ! Check p and rho
            tmp1_BLK(1:nI,1:nJ,1:nK,iBLK)=&
                 min(State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) / &
@@ -453,7 +453,7 @@ subroutine advance_impl
         n_prev = -1
         ! Reset the state variable, the energy and set time_BLK variable to 0
         do iBLK = 1,nBlock
-           if(UnusedBlk(iBLK)) CYCLE
+           if(Unused_B(iBLK)) CYCLE
            State_VGB(:,1:nI,1:nJ,1:nK,iBLK)  = StateOld_VCB(:,:,:,:,iBLK)
            Energy_GBI(1:nI,1:nJ,1:nK,iBLK,:) = EnergyOld_CBI(:,:,:,iBLK,:)
            time_BLK(1:nI,1:nJ,1:nK,iBLK)     = 0.0

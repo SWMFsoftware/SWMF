@@ -12,7 +12,7 @@ Module ModMain
 
   ! Logigal array for the blocks used (=.false.) on the given processor
   ! Total number of used blocks on all processors
-  use BATL_lib, ONLY: UnusedBLK => Unused_B, nBlockAll => nNodeUsed
+  use BATL_lib, ONLY: Unused_B, nBlockAll => nNodeUsed
 
   implicit none
 
@@ -101,7 +101,7 @@ Module ModMain
   integer, parameter :: ExtraBc_ =  0
 
   ! Inner and outer boundary conditions
-  character (len=20) :: TypeBc_I(body2_:top_) = 'float'
+  character (len=20) :: TypeBc_I(body2_:6) = 'float'
 
   ! Logicals for bodies
   logical :: Body1    = .false.
@@ -124,18 +124,6 @@ Module ModMain
 
   ! Number of explicitly and implicitly advanced blocks
   integer :: nBlockExplAll, nBlockImplAll
-
-  ! Parameters for block location among eight subcubes.
-  ! T=top, B=bottom, S=south, N=north, E=east, W=west
-  integer, parameter :: &
-       LOC_TSE=1, &
-       LOC_TSW=2, &
-       LOC_BSW=3, &
-       LOC_BSE=4, &
-       LOC_BNE=5, &
-       LOC_BNW=6, &
-       LOC_TNW=7, &
-       LOC_TNE=8
 
   ! Variable for setting AMR levels
   logical :: DoSetLevels = .false.

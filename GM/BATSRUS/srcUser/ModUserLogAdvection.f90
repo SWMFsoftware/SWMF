@@ -73,7 +73,7 @@ contains
   end subroutine user_read_inputs
   !============================================================================
   subroutine user_initial_perturbation
-    use ModMain, ONLY: nBLK,unusedBLK,x_,y_,z_,n_step
+    use ModMain, ONLY: nBLK,Unused_B,x_,y_,z_,n_step
     use ModGeometry
     use ModProcMH
 
@@ -147,7 +147,7 @@ contains
    subroutine write_spectrogram
    
     use ModProcMH
-    use ModMain,   ONLY: iteration_number, nBLK,unusedBLK,nBlockALL
+    use ModMain,   ONLY: iteration_number, nBLK,Unused_B,nBlockALL
     use ModSize,   ONLY: nI,nJ,nK
     use ModGeometry, ONLY: x_BLK,y_BLK, z_BLK, dz_BLK,dx_BLK
     use ModIoUnit, ONLY: io_unit_new
@@ -171,7 +171,7 @@ contains
     !/
     nCell=0
     do iBLK=1,nBLK
-       if(unusedBLK(iBLK)) CYCLE
+       if(Unused_B(iBLK)) CYCLE
        do k=1,nK ; do j=1,nJ ; do i=1,nI
           x=x_BLK(i,j,k,iBLK)
           dx=dx_BLK(iBLK)
@@ -195,7 +195,7 @@ contains
     else
        iRow=1
        do iBLK=1,nBLK
-          !if(unusedBLK(iBLK)) CYCLE
+          !if(Unused_B(iBLK)) CYCLE
           do k=1,nK ; do j=1,nJ ; do i=1,nI
              x=x_BLK(i,j,k,iBLK)
              y=y_BLK(i,j,k,iBLK)
@@ -288,7 +288,7 @@ contains
   !===================================================================
   subroutine init_wave_spectrum
   
-    use ModMain,        ONLY: unusedBLK,nBLK
+    use ModMain,        ONLY: Unused_B,nBLK
     use ModVarIndexes
     use ModAdvance,     ONLY: State_VGB
     use ModSize,        ONLY: nI,nJ,nK

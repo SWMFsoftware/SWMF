@@ -783,7 +783,7 @@ contains
     integer::iBoundary
     !--------------------------------------------------------------------------
     !For Outer Boundaries
-    do iBoundary=East_,Top_
+    do iBoundary=1,6
        FaceState_VI(rhoHp_,iBoundary)    = SW_rho
        FaceState_VI(rhoO2p_,iBoundary)   = cTiny8
        FaceState_VI(rhoOp_,iBoundary)    = cTiny8
@@ -798,8 +798,8 @@ contains
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(rhoHp_:rhoCO2p_,body1_) = BodyRhoSpecies_I
     FaceState_VI(P_,body1_)=BodyP_I(1)
-    CellState_VI(:,body1_:Top_)=FaceState_VI(:,body1_:Top_)
-    do iBoundary=body1_,Top_  
+    CellState_VI(:,body1_:6)=FaceState_VI(:,body1_:6)
+    do iBoundary=body1_,6  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
@@ -1379,7 +1379,7 @@ contains
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModSize,       ONLY: nDim,West_,North_,Top_	
+    use ModSize,       ONLY: nDim,2,4,6	
     use ModMain,       ONLY: UseRotatingBc
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
     use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim
@@ -1639,7 +1639,7 @@ contains
 
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
          dx_BLK,dy_BLK,dz_BLK
-    use ModMain,       ONLY: unusedBLK
+    use ModMain,       ONLY: Unused_B
     use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
          rhoUx_,rhoUy_,rhoUz_
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
@@ -1661,7 +1661,7 @@ contains
     case('hpflx')
        mass=1.0
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoHp_,i,j,k,iBLK)* &
                   (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
@@ -1675,7 +1675,7 @@ contains
     case('opflx')
        mass=16.
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoOp_,i,j,k,iBLK)* &
                   (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
@@ -1688,7 +1688,7 @@ contains
     case('o2pflx')
        mass=32.
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoO2p_,i,j,k,iBLK)*&
                   (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
@@ -1702,7 +1702,7 @@ contains
     case('co2pflx')
        mass=44.
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoCO2p_,i,j,k,iBLK)*&
                   (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &

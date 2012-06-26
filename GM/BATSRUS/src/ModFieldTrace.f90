@@ -51,7 +51,7 @@ subroutine ray_trace_accurate
   call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1)
 
   ! Copy magnetic field into Bxyz_DGB
-  do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
+  do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
      Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
      ! Add B0
      if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
@@ -71,7 +71,7 @@ subroutine ray_trace_accurate
   CpuTimeStartRay = MPI_WTIME();
   do k = 1, nK; do j = 1, nJ; do i = 1, nI
      do iBlock = 1, nBlock
-        if(unusedBLK(iBlock))CYCLE
+        if(Unused_B(iBlock))CYCLE
 
         oktest_ray = okTest .and. &
              x_BLK(i,j,k,iBlock)==xTest .and. &
@@ -103,7 +103,7 @@ subroutine ray_trace_accurate
 
   ! Convert x, y, z to latitude and longitude, and status
   do iBlock=1,nBlock
-     if(unusedBLK(iBlock)) CYCLE
+     if(Unused_B(iBlock)) CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
 
         call xyz_to_latlonstatus(ray(:,:,i,j,k,iBlock))
@@ -1357,7 +1357,7 @@ subroutine ray_trace_sorted
   ! open field lines can be found very fast. It works well for simple problems,
   ! but it does not seem to improve the performance for realistic grids
 
-  use ModMain, ONLY: MaxBlock, nBlock, nI, nJ, nK, unusedBLK
+  use ModMain, ONLY: MaxBlock, nBlock, nI, nJ, nK, Unused_B
   use ModPhysics, ONLY: SW_Bx, SW_By, SW_Bz
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D, XyzStart_BLK
   use ModSort, ONLY: sort_quick
@@ -1398,7 +1398,7 @@ subroutine ray_trace_sorted
   end if
 
   do iBlock=1,nBlock
-     if(unusedBLK(iBlock))then
+     if(Unused_B(iBlock))then
         SortFunc_B(iBlock) = -10000.0
      else
         SortFunc_B(iBlock) = sum(Weight_D*&
@@ -1463,7 +1463,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use CON_planet_field, ONLY: map_planet_field
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace
-  use ModMain,    ONLY: nBlock, UnusedBlk, Time_Simulation, TypeCoordSystem, &
+  use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, TypeCoordSystem, &
        UseB0, DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   use ModPhysics, ONLY: rBody
   use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_, B0_DGB
@@ -1545,7 +1545,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1)
 
   ! Copy magnetic field into Bxyz_DGB
-  do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
+  do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
      Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
      ! Add B0
      if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
@@ -1665,7 +1665,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use CON_line_extract,  ONLY: line_init, line_collect
   use ModRaytrace
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
-       UseB0, UnusedBlk, DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
+       UseB0, Unused_B, DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   use ModPhysics,        ONLY: rBody
   use ModAdvance,        ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_, B0_DGB
   use ModProcMH
@@ -1730,7 +1730,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
 
-  do iBlock = 1, nBlock; if(UnusedBLK(iBlock))CYCLE
+  do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
      Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
      ! Add B0
      if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
@@ -1932,7 +1932,7 @@ end subroutine plot_ray_equator
 subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
      DoMessagePass)
 
-  use ModMain, ONLY: x_, y_, z_, nI, nJ, nK, UnusedBlk
+  use ModMain, ONLY: x_, y_, z_, nI, nJ, nK, Unused_B
   use CON_ray_trace, ONLY: ray_init
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace, ONLY: oktest_ray, R_raytrace, R2_raytrace, &
@@ -2006,7 +2006,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   if(DoExtractBGradB1)then
      allocate(bGradB1_DGB(3,0:nI+1,0:nJ+1,0:nK+1,nBlock))
      do iBlock = 1, nBlock
-        if(UnusedBlk(iBlock)) CYCLE
+        if(Unused_B(iBlock)) CYCLE
         do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1; 
            b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
            if(UseB0) b_D = b_D +  B0_DGB(:,i,j,k,iBlock)
@@ -2044,7 +2044,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   call ray_init(iComm)
 
   ! Copy magnetic field into Bxyz_DGB
-  do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
+  do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
      Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
      ! Add B0
      if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
@@ -2233,7 +2233,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
        nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_, B0_DGB
-  use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK, UseB0
+  use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0
   use ModPhysics,  ONLY: rBody
   use ModGeometry, ONLY: Dx_BLK, Dy_BLK, Dz_BLK
   use ModMpi,      ONLY: MPI_WTIME
@@ -2273,7 +2273,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   select case(NameVectorField)
   case('B')
      ! Copy magnetic field into Bxyz_DGB
-     do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
+     do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
         Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
         ! Add B0
         if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
@@ -2281,7 +2281,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
      end do
   case('U')
      ! Store momentum field (same as velocity field after normalization)
-     do iBlock = 1, nBlock; if(unusedBLK(iBlock))CYCLE
+     do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
         Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)
      end do
   case('J')
@@ -2290,7 +2290,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
 !!! call get_current_D for cell centers
 !!! call message_pass_cell(Bxyz_DGB...)
 !!! outer boundaries???
-     do iBlock = 1, nBlock; if(unusedBLK(iBlock)) CYCLE
+     do iBlock = 1, nBlock; if(Unused_B(iBlock)) CYCLE
         Dx2Inv = 0.5/Dx_BLK(iBlock)
         Dy2Inv = 0.5/Dy_BLK(iBlock)
         Dz2Inv = 0.5/Dz_BLK(iBlock)

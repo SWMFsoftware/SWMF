@@ -275,7 +275,7 @@ contains
     use ModB0,       ONLY: set_b0_cell
     use ModPhysics,  ONLY: CellState_VI
     use ModGeometry, ONLY: body_BLK, true_cell
-    use ModMain,     ONLY: west_, TypeBC_I, body1_, UseB0
+    use ModMain,     ONLY: TypeBC_I, body1_, UseB0
     use ModParallel, ONLY: neiLwest, NOBLK
     use ModConserveFlux, ONLY: init_cons_flux
     use BATL_size, ONLY: nI, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -300,7 +300,7 @@ contains
 
     ! For coupled (IH->GM) boundary condition fill in ghost cells
     ! with the first physical cell, because IH may not couple after AMR
-    if(TypeBc_I(west_)=='coupled' .and. neiLwest(iBlock)==NOBLK)then
+    if(TypeBc_I(2)=='coupled' .and. neiLwest(iBlock)==NOBLK)then
        State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
        State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
     endif

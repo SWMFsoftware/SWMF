@@ -257,7 +257,7 @@ contains
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
          iSide, iFace, jFace, kFace, iBlockBc
     use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, &
-         nI, nJ, nK, East_, West_, South_, North_, Bot_, Top_
+         nI, nJ, nK, 1, 2, 3, 4, 5, 6
     use ModNumConst,    ONLY: cTolerance
     use ModPhysics,     ONLY: OmegaBody, BodyRho_I, BodyTDim_I, &
          UnitTemperature_, Si2No_V, No2Si_V, UnitN_, UnitEnergyDens_, &
@@ -344,13 +344,13 @@ contains
       ! need to get direction for face gradient calc
       ! also put left cell centered heating call here (since index depends on
       ! the direction)
-      if(iSide==East_ .or. iSide==West_) then 
+      if(iSide==1 .or. iSide==2) then 
          iDir = x_
          call get_cell_heating(iFace-1, jFace, kFace, iBlock, CoronalHeatingLeft)
-      elseif(iSide==South_ .or. iSide==North_) then 
+      elseif(iSide==3 .or. iSide==4) then 
          iDir = y_
          call get_cell_heating(iFace, jFace-1, kFace, iBlock, CoronalHeatingLeft)
-      elseif(iSide==Bot_ .or. iSide==Top_) then
+      elseif(iSide==5 .or. iSide==6) then
          iDir = z_
          call get_cell_heating(iFace, jFace, kFace-1, iBlock, CoronalHeatingLeft)
       else
@@ -527,7 +527,7 @@ contains
   !============================================================================
 
   subroutine user_initial_perturbation
-    use ModMain, ONLY: nI ,nJ , nK, nBLK, unusedBLK, x_, y_, z_
+    use ModMain, ONLY: nI ,nJ , nK, nBLK, Unused_B, x_, y_, z_
     use ModProcMH,    ONLY: iProc, iComm
     use ModPhysics,   ONLY: No2Si_V, UnitX_, UnitEnergyDens_, UnitT_, rBody
     use ModCoronalHeating, ONLY: TotalCoronalHeatingCgs, &
@@ -563,7 +563,7 @@ contains
 
 
     do iBlock=1,nBLK
-       if(unusedBLK(iBlock))CYCLE
+       if(Unused_B(iBlock))CYCLE
        do k=1,nK; do j=1,nJ; do i=1,nI
 
           ! Calc heating (Energy/Volume/Time) for the cell 
@@ -679,7 +679,7 @@ contains
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
     
     use ModIO,         ONLY: write_myname
-    use ModMain,       ONLY: unusedBLK, nBlock, x_, y_, z_
+    use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_ 
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK, B0_DGB
     use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_, &
@@ -702,14 +702,14 @@ contains
     select case(TypeVar)
     case('eint')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = State_VGB(P_,:,:,:,iBlock)
        end do
        VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
        
     case('emag')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = & 
                ( B0_DGB(x_,:,:,:,iBlock) + State_VGB(Bx_,:,:,:,iBlock))**2 &
                +(B0_DGB(y_,:,:,:,iBlock) + State_VGB(By_,:,:,:,iBlock))**2 &
@@ -769,7 +769,6 @@ contains
     
     use ModAdvance,  ONLY: Rho_, P_, State_VGB
     use ModGeometry, ONLY: TypeGeometry
-    use ModSize,     ONLY: East_
     
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
@@ -785,11 +784,11 @@ contains
     ! uses ghost cells! If face gradient was checking values other than
     ! P/rho, would need to set those as well!
     
-    if(iSide==East_) then
+    if(iSide==1) then
        State_VGB(Rho_,-1:0,:,:,iBlock) = BoundaryRho
        State_VGB(P_  ,-1:0,:,:,iBlock) = BoundaryRho * BoundaryTe/TeFraction
     else
-       call stop_mpi('For TR Model ONLY East_ (low R) user boundary can be used')
+       call stop_mpi('For TR Model ONLY 1 (low R) user boundary can be used')
     endif
     
     IsFound = .true.

@@ -40,7 +40,7 @@ contains
     use ModSize,           ONLY: nI, nJ, nK, nBLK
     use ModGeometry,       ONLY: R_BLK, x1, x2, y1, y2, z1, z2
     use ModMain,           ONLY: x_, y_, z_, r_, phi_, theta_, &
-         unusedBLK, nBlock, Time_Simulation, TypeCoordSystem
+         Unused_B, nBlock, Time_Simulation, TypeCoordSystem
     use ModNumConst,       ONLY: cPi
     use ModCurrent,        ONLY: get_current
     use CON_axes,          ONLY: transform_matrix
@@ -75,7 +75,7 @@ contains
        Xyz_D = Xyz_DI(:,iMag)
 
        do iBLK=1, nBlock
-          if (unusedBLK(iBLK))cycle
+          if (Unused_B(iBLK))cycle
           do k=1, nK; do j=1, nJ; do i=1, nI
              if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
                   Xyz_DGB(x_,i+1,j,k,iBLK) > x2 .or.      &

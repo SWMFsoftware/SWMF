@@ -50,9 +50,8 @@ end module ModBoundaryCells
 subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
 
   use ModBoundaryCells, ONLY: iBoundary_GB, DomainOp, domain_
-  use ModMain, ONLY : nBlock, UnusedBlk, iNewGrid, iNewDecomposition, nOrder,&
-       body2_, Top_, &
-       BlkTest, iTest, jTest, kTest
+  use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, nOrder,&
+       body2_, BlkTest, iTest, jTest, kTest
   use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB
   !use ModProcMH, ONLY: iProc
   use BATL_lib, ONLY: message_pass_cell_scalar
@@ -91,14 +90,14 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
        iBoundary_GB(iTest-2:iTest+2,jTest,kTest,BlkTest)
 
   do iBlock = 1, nBlock
-     if(unusedBLK(iBlock)) CYCLE
+     if(Unused_B(iBlock)) CYCLE
 
      true_cell(:,:,:,iBlock) = true_cell(:,:,:,iBlock)  &
           .and. (iBoundary_GB(:,:,:,iBlock) == domain_)
 
      body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))   
 
-     do iBoundary = body2_, Top_
+     do iBoundary = body2_, 6
         IsBoundaryBlock_IB(iBoundary,iBlock)= &
              any(iBoundary_GB(:,:,:,iBlock) == iBoundary)
      end do

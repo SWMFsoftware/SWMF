@@ -39,7 +39,7 @@ subroutine set_ics(iBlock)
 
   call init_cons_flux(iBlock)
 
-  if(unusedBLK(iBlock))then  
+  if(Unused_B(iBlock))then  
      do iVar=1,nVar
         State_VGB(iVar,:,:,:,iBlock) = DefaultState_V(iVar)
      end do
@@ -141,7 +141,7 @@ subroutine set_ics(iBlock)
 
      end if ! not restart
 
-  end if ! unusedBLK
+  end if ! Unused_B
   !\
   ! Compute energy from set values above.
   !/

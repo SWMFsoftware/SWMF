@@ -153,7 +153,7 @@ subroutine ray_trace_fast
   ray=NORAY
 
   do iBLK=1,nBlockMax
-     if(unusedBLK(iBLK))then
+     if(Unused_B(iBLK))then
         ! rayface in unused blocks is assigned to NORAY-1.
         rayface(:,:,:,:,:,iBLK)=NORAY-1.
         CYCLE
@@ -163,19 +163,19 @@ subroutine ray_trace_fast
      rayface(:,:,2:nI,2:nJ,2:nK,iBLK)=OPENRAY
      
      ! Set rayface=OPENRAY at outer boundaries
-     if(neiLEV(east_ ,iBLK)==NOBLK)rayface(:,:,   1,:,:,iBLK)=OPENRAY
-     if(neiLEV(west_ ,iBLK)==NOBLK)rayface(:,:,nI+1,:,:,iBLK)=OPENRAY
-     if(neiLEV(south_,iBLK)==NOBLK)rayface(:,:,:,   1,:,iBLK)=OPENRAY
-     if(neiLEV(north_,iBLK)==NOBLK)rayface(:,:,:,nJ+1,:,iBLK)=OPENRAY
-     if(neiLEV(bot_  ,iBLK)==NOBLK)rayface(:,:,:,:,   1,iBLK)=OPENRAY
-     if(neiLEV(top_  ,iBLK)==NOBLK)rayface(:,:,:,:,nK+1,iBLK)=OPENRAY
+     if(neiLEV(1 ,iBLK)==NOBLK)rayface(:,:,   1,:,:,iBLK)=OPENRAY
+     if(neiLEV(2 ,iBLK)==NOBLK)rayface(:,:,nI+1,:,:,iBLK)=OPENRAY
+     if(neiLEV(3,iBLK)==NOBLK)rayface(:,:,:,   1,:,iBLK)=OPENRAY
+     if(neiLEV(4,iBLK)==NOBLK)rayface(:,:,:,nJ+1,:,iBLK)=OPENRAY
+     if(neiLEV(5  ,iBLK)==NOBLK)rayface(:,:,:,:,   1,iBLK)=OPENRAY
+     if(neiLEV(6  ,iBLK)==NOBLK)rayface(:,:,:,:,nK+1,iBLK)=OPENRAY
 
   end do
   if(oktest_me)write(*,*)'ray_trace initialized ray and rayface arrays'
 
   ! Interpolate the B1 field to the nodes
   do iBLK=1, nBlockMax
-     if(unusedBLK(iBLK))CYCLE
+     if(Unused_B(iBLK))CYCLE
 
      do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1;
         bb_x(i,j,k,iBLK)=sum(Bxyz_DGB(x_,i-1:i,j-1:j,k-1:k,iBLK))*0.125
@@ -216,19 +216,19 @@ subroutine ray_trace_fast
      ray(:,:,:,:,:,1:nBlockMax)=rayface(:,:,:,:,:,1:nBlockMax)
 
      do iBLK=1,nBlockMax
-        if(unusedBLK(iBLK))CYCLE
+        if(Unused_B(iBLK))CYCLE
 
         ! Flag cells inside the ionosphere if necessary
         check_inside=Rmin_BLK(iBLK)<R_raytrace
 
         do iz=1,nK+1
            ! Exclude outer boundaries
-           if(neiLEV(bot_,iBLK)==NOBLK.and.iz==   1)CYCLE
-           if(neiLEV(top_,iBLK)==NOBLK.and.iz==nK+1)CYCLE
+           if(neiLEV(5,iBLK)==NOBLK.and.iz==   1)CYCLE
+           if(neiLEV(6,iBLK)==NOBLK.and.iz==nK+1)CYCLE
            do iy=1,nJ+1
               ! Exclude outer boundaries
-              if(neiLEV(south_,iBLK)==NOBLK.and.iy==   1)CYCLE
-              if(neiLEV(north_,iBLK)==NOBLK.and.iy==nJ+1)CYCLE
+              if(neiLEV(3,iBLK)==NOBLK.and.iy==   1)CYCLE
+              if(neiLEV(4,iBLK)==NOBLK.and.iy==nJ+1)CYCLE
 
               ! Exclude inside points
               if(iz>1.and.iz<nK+1.and.iy>1.and.iy<nJ+1)then
@@ -241,8 +241,8 @@ subroutine ray_trace_fast
 
               do ix=1,nI+1,i_stride
                  ! Exclude outer boundaries
-                 if(neiLEV(east_,iBLK)==NOBLK.and.ix==   1)CYCLE
-                 if(neiLEV(west_,iBLK)==NOBLK.and.ix==nI+1)CYCLE
+                 if(neiLEV(1,iBLK)==NOBLK.and.ix==   1)CYCLE
+                 if(neiLEV(2,iBLK)==NOBLK.and.ix==nI+1)CYCLE
 
                  !oktest_ray = oktest_me .and. BLKtest==iBLK .and. &
                  !     ix==Itest.and.iy==Jtest.and.iz==Ktest
@@ -276,11 +276,11 @@ subroutine ray_trace_fast
                        rayend_ind(1,iray,ix,iy,iz,iBLK)=iface
                        if(iface>0)then
                           select case(iface)
-                          case(east_,west_)
+                          case(1,2)
                              rayend_ind(2:3,iray,ix,iy,iz,iBLK)=(/j1,k1/)
-                          case(south_,north_)
+                          case(3,4)
                              rayend_ind(2:3,iray,ix,iy,iz,iBLK)=(/i1,k1/)
-                          case(top_,bot_)
+                          case(6,5)
                              rayend_ind(2:3,iray,ix,iy,iz,iBLK)=(/i1,j1/)
                           end select
                           rayend_pos(:,iray,ix,iy,iz,iBLK)=weight
@@ -295,27 +295,27 @@ subroutine ray_trace_fast
                        iface=rayend_ind(1,iray,ix,iy,iz,iBLK)
                        if(iface>0)then
                           select case(iface)
-                          case(east_)
+                          case(1)
                              i1=1; i2=1
                              j1=rayend_ind(2,iray,ix,iy,iz,iBLK); j2=j1+1
                              k1=rayend_ind(3,iray,ix,iy,iz,iBLK); k2=k1+1
-                          case(west_)
+                          case(2)
                              i1=nI+1; i2=i1
                              j1=rayend_ind(2,iray,ix,iy,iz,iBLK); j2=j1+1
                              k1=rayend_ind(3,iray,ix,iy,iz,iBLK); k2=k1+1
-                          case(south_)
+                          case(3)
                              j1=1; j2=1
                              i1=rayend_ind(2,iray,ix,iy,iz,iBLK); i2=i1+1
                              k1=rayend_ind(3,iray,ix,iy,iz,iBLK); k2=k1+1
-                          case(north_)
+                          case(4)
                              j1=nJ+1; j2=nJ+1
                              i1=rayend_ind(2,iray,ix,iy,iz,iBLK); i2=i1+1
                              k1=rayend_ind(3,iray,ix,iy,iz,iBLK); k2=k1+1
-                          case(bot_)
+                          case(5)
                              k1=1; k2=1
                              i1=rayend_ind(2,iray,ix,iy,iz,iBLK); i2=i1+1
                              j1=rayend_ind(3,iray,ix,iy,iz,iBLK); j2=j1+1
-                          case(top_)
+                          case(6)
                              k1=nK+1; k2=k1
                              i1=rayend_ind(2,iray,ix,iy,iz,iBLK); i2=i1+1
                              j1=rayend_ind(3,iray,ix,iy,iz,iBLK); j2=j1+1
@@ -372,7 +372,7 @@ subroutine ray_trace_fast
 !!$\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 !!$!     if(ray_iter==0)then
 !!$        do iBLK=1,nBlockMax
-!!$           if(unusedBLK(iBLK))CYCLE
+!!$           if(Unused_B(iBLK))CYCLE
 !!$           do iz=1,nK+1; do iy=1,nJ+1; do ix=1,nI+1
 !!$              call print_test(ray_iter)
 !!$           end do; end do; end do
@@ -396,7 +396,7 @@ subroutine ray_trace_fast
      if(Done)then
         Done_me = .true.
         do iBLK=1,nBlockMax
-           if(unusedBLK(iBLK))CYCLE
+           if(Unused_B(iBLK))CYCLE
            Done_me = all(rayface(1,:,:,:,:,iBLK) > LOOPRAY) !!! NORAY)
            if(.not.Done_me)EXIT
         end do
@@ -415,7 +415,7 @@ subroutine ray_trace_fast
 
 !!$\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 !!$  do iBLK=1,nBlockMax
-!!$     if(unusedBLK(iBLK))CYCLE
+!!$     if(Unused_B(iBLK))CYCLE
 !!$     do iz=1,nK+1; do iy=1,nJ+1; do ix=1,nI+1
 !!$        call print_test(999)
 !!$     end do; end do; end do
@@ -426,7 +426,7 @@ subroutine ray_trace_fast
   if(oktest_me)then
      write(*,*)'ray_trace finished after ',ray_iter,' iterations'
      do iBLK=1,nBlockMax
-        if(unusedBLK(iBLK))CYCLE
+        if(Unused_B(iBLK))CYCLE
         do iray=1,2
            if(any(rayface(1,iray,1:nI,1:nJ,1:nK,iBLK)<BODYRAY))then
               loc=minloc(rayface(1,iray,1:nI,1:nJ,1:nK,iBLK))
@@ -453,7 +453,7 @@ subroutine ray_trace_fast
   ! Assign face ray values to cell centers
   do iBLK=1,nBlockMax
 
-     if(unusedBLK(iBLK))CYCLE
+     if(Unused_B(iBLK))CYCLE
 
      ! Set flag if checking on the ionosphere is necessary
      check_inside=Rmin_BLK(iBLK)<R_raytrace
@@ -505,7 +505,7 @@ subroutine ray_trace_fast
   if(oktest)then
      ! Check for unassigned cell centers
      do iBLK=1,nBlockMax
-        if(unusedBLK(iBLK))CYCLE
+        if(Unused_B(iBLK))CYCLE
         do iray=1,2
            if(any(ray(1,iray,1:nI,1:nJ,1:nK,iBLK)<BODYRAY))then
               loc=minloc(ray(1,iray,1:nI,1:nJ,1:nK,iBLK))
@@ -524,7 +524,7 @@ subroutine ray_trace_fast
 
   ! Convert x, y, z to latitude and longitude, and status
   do iBLK=1,nBlockMax
-     if(unusedBLK(iBLK)) CYCLE
+     if(Unused_B(iBLK)) CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
         call xyz_to_latlonstatus(ray(:,:,i,j,k,iBLK))
      end do; end do; end do
@@ -555,7 +555,7 @@ contains
 
        ! Find position
        do iBLK=1,nBlockMax
-          if(unusedBLK(iBLK))CYCLE
+          if(Unused_B(iBLK))CYCLE
           do ix=1,nI+1
              if(abs(x_BLK(ix,1,1,iBLK)-0.5*dx_BLK(iBLK)-xTest)>0.01)CYCLE
              do iy=1,nJ+1
@@ -1168,8 +1168,8 @@ contains
        if(oktest_ray)write(*,*)&
             'assign_ray finished with qray on ionosphere, qray=',qray
        return
-    case(east_,west_)
-       if(iface==east_)then
+    case(1,2)
+       if(iface==1)then
           i1=1
        else
           i1=nI+1
@@ -1180,8 +1180,8 @@ contains
        d1=x(2)-j1+0.5
        e1=x(3)-k1+0.5
 
-    case(south_,north_)
-       if(iface==south_)then
+    case(3,4)
+       if(iface==3)then
           j1=1
        else
           j1=nJ+1
@@ -1192,9 +1192,9 @@ contains
        d1=x(1)-i1+0.5
        e1=x(3)-k1+0.5
 
-    case(bot_,top_)
+    case(5,6)
        ! The ray hit the bot or top wall
-       if(iface==bot_)then
+       if(iface==5)then
           k1=1
        else
           k1=nK+1
@@ -1224,11 +1224,11 @@ contains
     if(surface_point)then
        if((ix==i1.or.ix==i2).and.(iy==j1.or.iy==j2).and.(iz==k1.or.iz==k2))then
           select case(iface)
-          case(east_,west_)
+          case(1,2)
              weight(iy-j1+2*(iz-k1)+1)=0.
-          case(south_,north_)
+          case(3,4)
              weight(ix-i1+2*(iz-k1)+1)=0.
-          case(bot_,top_)
+          case(5,6)
              weight(ix-i1+2*(iy-j1)+1)=0.
           end select
           ! Normalize weights

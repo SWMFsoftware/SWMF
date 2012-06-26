@@ -990,7 +990,7 @@ contains
        write(*,*)'electrontemperatureratio=', ElectronTemperatureRatio
     end if
 
-    do iBoundary=East_,Top_
+    do iBoundary=1,6
        FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary)  = cTiny8/1.0e5     
        if(UseElectronPressure)then
           sw_pe=SW_P*ElectronTemperatureRatio
@@ -1018,14 +1018,14 @@ contains
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(SpeciesFirst_:SpeciesLast_,body1_) = BodyRhoSpecies_I
 
-    CellState_VI(:,body1_:Top_)=FaceState_VI(:,body1_:Top_)
-    do iBoundary=body1_,Top_  
+    CellState_VI(:,body1_:6)=FaceState_VI(:,body1_:6)
+    do iBoundary=body1_,6  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
     write(*,*)'CellState_VI, body1_=',CellState_VI(:,body1_)
-    write(*,*)'CellState_VI, top_=',CellState_VI(:,Top_)
-    write(*,*)'CellState_VI, east_=',CellState_VI(:,East_)    
+    write(*,*)'CellState_VI, 6=',CellState_VI(:,6)
+    write(*,*)'CellState_VI, 1=',CellState_VI(:,1)    
     write(*,*)'sw_pi=', sw_pi, '  sw_pe=',sw_pe 
     write(*,*)'BodyRhoSpecies_I=', BodyRhoSpecies_I
     write(*,*)'BodyP_I=', BodyP_I
@@ -1784,7 +1784,7 @@ contains
 
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
          dx_BLK,dy_BLK,dz_BLK
-    use ModMain,       ONLY: unusedBLK
+    use ModMain,       ONLY: Unused_B
     use ModVarIndexes
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
     use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
@@ -1830,7 +1830,7 @@ contains
     end select
 
     do iBLK=1,nBLK
-       if (unusedBLK(iBLK)) CYCLE
+       if (Unused_B(iBLK)) CYCLE
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           tmp1_BLK(i,j,k,iBLK) = State_VGB(index,i,j,k,iBLK)* &
                (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
@@ -1949,7 +1949,7 @@ contains
          UnitN_, UnitTemperature_, UnitX_,UnitT_, Rbody
     use ModProcMH,   ONLY: iProc
     use ModMain, ONLY: ProcTest, BlkTest, iTest,jTest,kTest, &
-         UnUsedBlk, nBlockMax
+         Unused_B, nBlockMax
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Rmin_BLK, R_BLK
     use ModResistivity, ONLY: Eta0Si

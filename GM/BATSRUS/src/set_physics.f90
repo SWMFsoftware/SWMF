@@ -208,7 +208,7 @@ subroutine set_physics_constants
 
   ! Here the arrays of the FACE VALUE are formed
   ! Initialization
-  do iBoundary=body2_,Top_
+  do iBoundary=body2_,6
      FaceState_VI(:,iBoundary)=DefaultState_V(1:nVar)
   end do
 
@@ -243,23 +243,23 @@ subroutine set_physics_constants
   !For Outer Boundaries (if SW_* are set)
   if(SW_rho > 0.0)then
 
-     FaceState_VI(Rho_, East_:Top_) = SW_rho
-     FaceState_VI(Ux_,  East_:Top_) = SW_Ux
-     FaceState_VI(Uy_,  East_:Top_) = SW_Uy
-     FaceState_VI(Uz_,  East_:Top_) = SW_Uz
-     FaceState_VI(Bx_,  East_:Top_) = SW_Bx
-     FaceState_VI(By_,  East_:Top_) = SW_By
-     FaceState_VI(Bz_,  East_:Top_) = SW_Bz
-     FaceState_VI(P_,   East_:Top_) = SW_p
+     FaceState_VI(Rho_, 1:6) = SW_rho
+     FaceState_VI(Ux_,  1:6) = SW_Ux
+     FaceState_VI(Uy_,  1:6) = SW_Uy
+     FaceState_VI(Uz_,  1:6) = SW_Uz
+     FaceState_VI(Bx_,  1:6) = SW_Bx
+     FaceState_VI(By_,  1:6) = SW_By
+     FaceState_VI(Bz_,  1:6) = SW_Bz
+     FaceState_VI(P_,   1:6) = SW_p
 
-     if(UseElectronPressure) FaceState_VI(Pe_, East_:Top_) = SW_p
+     if(UseElectronPressure) FaceState_VI(Pe_, 1:6) = SW_p
 
-     if(UseAnisoPressure) FaceState_VI(Ppar_, East_:Top_) = SW_p
+     if(UseAnisoPressure) FaceState_VI(Ppar_, 1:6) = SW_p
 
      if (UseMultiSpecies) then
-        FaceState_VI(SpeciesFirst_, East_:Top_) = &
+        FaceState_VI(SpeciesFirst_, 1:6) = &
              SW_rho*(1 - LowDensityRatio * (SpeciesLast_-SpeciesFirst_))
-        FaceState_VI(SpeciesFirst_+1:SpeciesLast_, East_:Top_) = &
+        FaceState_VI(SpeciesFirst_+1:SpeciesLast_, 1:6) = &
              LowDensityRatio*Sw_rho
      endif
 
@@ -270,27 +270,27 @@ subroutine set_physics_constants
 
         iFluid=IonFirst_
         call select_fluid
-        FaceState_VI(iRho, East_:Top_) = &
+        FaceState_VI(iRho, 1:6) = &
              SW_Rho*(1-LowDensityRatio*(nFluid-IonFirst_))
-        FaceState_VI(iUx,  East_:Top_) = SW_Ux
-        FaceState_VI(iUy,  East_:Top_) = SW_Uy
-        FaceState_VI(iUz,  East_:Top_) = SW_Uz
+        FaceState_VI(iUx,  1:6) = SW_Ux
+        FaceState_VI(iUy,  1:6) = SW_Uy
+        FaceState_VI(iUz,  1:6) = SW_Uz
         ! Use solar wind temperature and reduced density to get pressure
-        FaceState_VI(iP,   East_:Top_) = SW_p/pCoef*(1.0-LowDensityRatio*(nFluid-IonFirst_))
+        FaceState_VI(iP,   1:6) = SW_p/pCoef*(1.0-LowDensityRatio*(nFluid-IonFirst_))
 
         do iFluid = IonFirst_+1, nFluid
            call select_fluid
-           FaceState_VI(iRho, East_:Top_) = SW_Rho*LowDensityRatio
-           FaceState_VI(iUx,  East_:Top_) = SW_Ux
-           FaceState_VI(iUy,  East_:Top_) = SW_Uy
-           FaceState_VI(iUz,  East_:Top_) = SW_Uz
+           FaceState_VI(iRho, 1:6) = SW_Rho*LowDensityRatio
+           FaceState_VI(iUx,  1:6) = SW_Ux
+           FaceState_VI(iUy,  1:6) = SW_Uy
+           FaceState_VI(iUz,  1:6) = SW_Uz
            ! Use solar wind temperature and reduced density to get pressure 
-           FaceState_VI(iP,   East_:Top_) = SW_p/pCoef &
+           FaceState_VI(iP,   1:6) = SW_p/pCoef &
                 *LowDensityRatio*MassIon_I(1)/MassFluid_I(iFluid)
         end do
         ! Fix total pressure if necessary (density and temperature are kept)
         ! the min(2,nFluid) instead of 2 is needed so it compiles with gfortran
-        if(UseMultiIon .and. IsMhd) FaceState_VI(P_,East_:Top_) = &
+        if(UseMultiIon .and. IsMhd) FaceState_VI(P_,1:6) = &
              pCoef*sum(FaceState_VI(iP_I(min(2,nFluid):nFluid),1))
      end if
   end if

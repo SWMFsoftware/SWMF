@@ -96,7 +96,7 @@ subroutine GM_put_from_ih_buffer( &
 
   use ModVarIndexes
   use ModPhysics, ONLY: Si2No_V, UnitX_,UnitRho_,UnitU_,UnitB_,UnitP_
-  use ModMain, ONLY: TypeBc_I, west_
+  use ModMain, ONLY: TypeBc_I, 2
   use ModIhBuffer
 
   implicit none
@@ -125,7 +125,7 @@ subroutine GM_put_from_ih_buffer( &
      allocate(State_VII(nVar,nY,nZ))
 
      ! Make sure that GM uses the IH buffer
-     TypeBc_I(west_) = 'ihbuffer'
+     TypeBc_I(2) = 'ihbuffer'
 
      ! Debugging
      !write(*,*)'!!! NameCoord, nY, nZ=',NameCoord,nY,nZ

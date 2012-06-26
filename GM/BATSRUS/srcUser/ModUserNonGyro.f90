@@ -271,7 +271,7 @@ contains
 
        BLOCKS: do iBLK = 1,nBlockMax
 
-          if (unusedBLK(iBLK)) CYCLE BLOCKS
+          if (Unused_B(iBLK)) CYCLE BLOCKS
 
           ! Check if block is within the search region
           if ( x_BLK(nI,1,1,iBLK) > xLineMin .and. &
@@ -386,7 +386,7 @@ contains
 
        BLOCKS: do iBLK = 1,nBlock
 
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
 
           if ( x_BLK(nI,1,1,iBLK) > xLineMin .and. &
                x_BLK(nI,1,1,iBLK) < xLineMax1 .and. &

@@ -13,7 +13,7 @@ subroutine clean_divb
   use ModSize
   use ModNumConst, ONLY: cTiny
   use ModDivbCleanup
-  use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, unusedblk
+  use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, Unused_B
   use ModAdvance,ONLY: nVar,State_VGB, Bx_, By_, Bz_, P_,tmp1_BLK,tmp2_BLK,&
        Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
   use ModAdvance,ONLY:tmp3_blk=>divB1_GB
@@ -79,7 +79,7 @@ subroutine clean_divb
         if(Iteration==1) Dir_GB(:,:,:,iBlock) = 0.0
         !Initialize the vector "Dir"
 
-        if(unusedBLK(iBlock))CYCLE
+        if(Unused_B(iBlock))CYCLE
         call div_3d_b1(iBlock,&
              State_VGB(Bx_,:,:,:,iBlock),&
              State_VGB(By_,:,:,:,iBlock),&
@@ -125,7 +125,7 @@ subroutine clean_divb
      !Below we divide per Res.M.Res, so now we get inverse of it
      DivBInt(ResDotM1DotRes_)=1.0/DivBInt(ResDotM1DotRes_)
      do iBlock=1,nBlock
-        if(unusedBLK(iBlock))CYCLE
+        if(Unused_B(iBlock))CYCLE
         if(true_blk(iBlock))then
            Dir_GB(1:nI,1:nJ,1:nK,iBlock)=Dir_GB(1:nI,1:nJ,1:nK,iBlock)+&
                 DivBInt(ResDotM1DotRes_)*(Residual_GB(1:nI,1:nJ,1:nK,iBlock)+&
@@ -146,7 +146,7 @@ subroutine clean_divb
      !Calculate Dir.A.Dir
      DirDotDir = 0.0
      do iBlock=1,nBlock
-        if(unusedBLK(iBlock))CYCLE
+        if(Unused_B(iBlock))CYCLE
         call v_grad_phi(tmp2_blk,iBlock)
         DirDotDir = DirDotDir + &
              sum( (vDotGradX_C**2+vDotGradY_C**2+vDotGradZ_C**2) &
@@ -168,7 +168,7 @@ subroutine clean_divb
           min(DirDotDirInv,0.99/DivBInt(ResDotM1DotRes_))
 
      do iBlock=1,nBlock
-        if (unusedBLK(iBlock)) CYCLE
+        if (Unused_B(iBlock)) CYCLE
         call v_grad_phi(Dir_GB,iBlock)
 
         State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) = &
@@ -207,7 +207,7 @@ contains
     tmp1_blk = 0.0; Prec_CB = 0.0
 
     do iBlock=1,nBlock
-       if(unusedBLK(iBlock))CYCLE
+       if(Unused_B(iBlock))CYCLE
        tmp1_blk(1:nI,1:nJ,1:nK,iBlock) = 1/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
     end do
 
@@ -216,52 +216,52 @@ contains
          nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
     do iBlock=1,nBlock
-       if (unusedBLK(iBlock)) CYCLE
+       if (Unused_B(iBlock)) CYCLE
 
        Q_G = 1.0
 
        if(any(NeiLev(:,iBlock)/=0))then
-          if(NeiLev(East_,iBlock)==NoBLK)then
+          if(NeiLev(1,iBlock)==NoBLK)then
              tmp1_blk(0,1:nJ,1:nK,iBlock) = &
                   1.0/CellVolume_GB(1,1:nJ,1:nK,iBlock)
              !to define somehow tmp1 in the outer ghostcells
 
-          elseif(abs(NeiLev(East_,iBlock))==1)then           
-             Q_G(0,:,:)=4.0**NeiLev(East_,iBlock)
+          elseif(abs(NeiLev(1,iBlock))==1)then           
+             Q_G(0,:,:)=4.0**NeiLev(1,iBlock)
              !if the neighboring block is coarser,
              !  the input from FA^2 should be multipled by four
              !If the neighborig block is finer,
              !  the input from FA^2  should be multiplied by 1/4
           end if
-          if(NeiLev(West_,iBlock)==NoBLK)then
+          if(NeiLev(2,iBlock)==NoBLK)then
              tmp1_blk(nI+1,1:nJ,1:nK,iBlock) = &
                   1.0/CellVolume_GB(nI,1:nJ,1:nK,iBlock)
-          elseif(abs(NeiLev(West_,iBlock))==1)then
-             Q_G(nI+1,:,:)=4.0**NeiLev(West_,iBlock)
+          elseif(abs(NeiLev(2,iBlock))==1)then
+             Q_G(nI+1,:,:)=4.0**NeiLev(2,iBlock)
           end if
-          if(NeiLev(South_,iBlock)==NoBLK)then
+          if(NeiLev(3,iBlock)==NoBLK)then
              tmp1_blk(1:nI,0,1:nK,iBlock) = &
                   1.0/CellVolume_GB(1:nI,1,1:nK,iBlock)
-          elseif(abs(NeiLev(South_,iBlock))==1)then
-             Q_G(:,0,:)=4.0**NeiLev(South_,iBlock)
+          elseif(abs(NeiLev(3,iBlock))==1)then
+             Q_G(:,0,:)=4.0**NeiLev(3,iBlock)
           end if
-          if(NeiLev(North_,iBlock)==NoBLK)then
+          if(NeiLev(4,iBlock)==NoBLK)then
              tmp1_blk(1:nI,nJ+1,1:nK,iBlock) = &
                   1.0/CellVolume_GB(1:nI,nJ,1:nK,iBlock)
-          elseif(abs(NeiLev(North_,iBlock))==1)then
-             Q_G(:,nJ+1,:)=4.0**NeiLev(North_,iBlock)
+          elseif(abs(NeiLev(4,iBlock))==1)then
+             Q_G(:,nJ+1,:)=4.0**NeiLev(4,iBlock)
           end if
-          if(NeiLev(Bot_,iBlock)==NoBLK)then
+          if(NeiLev(5,iBlock)==NoBLK)then
              tmp1_blk(1:nI,1:nJ,0,iBlock) = &
                   1.0/CellVolume_GB(1:nI,1:nJ,1,iBlock)
-          elseif(abs(NeiLev(Bot_,iBlock))==1)then
-             Q_G(:,:,0)=4.0**NeiLev(Bot_,iBlock)
+          elseif(abs(NeiLev(5,iBlock))==1)then
+             Q_G(:,:,0)=4.0**NeiLev(5,iBlock)
           end if
-          if(NeiLev(Top_,iBlock)==NoBLK)then
+          if(NeiLev(6,iBlock)==NoBLK)then
              tmp1_blk(1:nI,1:nJ,nK+1,iBlock) = &
                   1.0/CellVolume_GB(1:nI,1:nJ,nK,iBlock)
-          elseif(abs(NeiLev(Top_,iBlock))==1)then
-             Q_G(:,:,nK+1)=4.0**NeiLev(Top_,iBlock)
+          elseif(abs(NeiLev(6,iBlock))==1)then
+             Q_G(:,:,nK+1)=4.0**NeiLev(6,iBlock)
           end if
        end if
        Prec_CB(:,:,:,iBlock)=4.0/(&
@@ -277,19 +277,19 @@ contains
     end do
     do iLimit=1,2
        do iBlock=1,nBlock
-          if(unusedBLK(iBlock))CYCLE
+          if(Unused_B(iBlock))CYCLE
           if(any(NeiLev(:,iBlock)==NoBLK))then
-             if(NeiLev(East_,iBlock)==NoBLK)&
+             if(NeiLev(1,iBlock)==NoBLK)&
                   tmp1_blk(0,1:nJ,1:nK,iBlock)=Prec_CB(1,:,:,iBlock)
-             if(NeiLev(West_,iBlock)==NoBLK)&
+             if(NeiLev(2,iBlock)==NoBLK)&
                   tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=Prec_CB(nI,:,:,iBlock)
-             if(NeiLev(South_,iBlock)==NoBLK)&
+             if(NeiLev(3,iBlock)==NoBLK)&
                   tmp1_blk(1:nI,0,1:nK,iBlock)=Prec_CB(:,1,:,iBlock)
-             if(NeiLev(North_,iBlock)==NoBLK)&
+             if(NeiLev(4,iBlock)==NoBLK)&
                   tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=Prec_CB(:,nJ,:,iBlock)
-             if(NeiLev(Bot_,iBlock)==NoBLK)&
+             if(NeiLev(5,iBlock)==NoBLK)&
                   tmp1_blk(1:nI,1:nJ,0,iBlock)=Prec_CB(:,:,1,iBlock)
-             if(NeiLev(Top_,iBlock)==NoBLK)&
+             if(NeiLev(6,iBlock)==NoBLK)&
                   tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=Prec_CB(:,:,nK,iBlock)
           end if
           tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=Prec_CB(:,:,:,iBlock)
@@ -299,7 +299,7 @@ contains
             nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
        do iBlock=1,nBlock
-          if (unusedBLK(iBlock)) CYCLE
+          if (Unused_B(iBlock)) CYCLE
 
           do k=1,nK;do j=1,nJ;do i=1,nI
              Prec_CB(i,j,k,iBlock)=min(&
@@ -319,19 +319,19 @@ contains
     !For the grid, which is at least partially uniform cartesian,
     !this coefficient equals 1
     do iBlock=1,nBlock
-       if (unusedBLK(iBlock)) CYCLE
+       if (Unused_B(iBlock)) CYCLE
        if(any(NeiLev(:,iBlock)==NoBLK))then
-          if(NeiLev(East_,iBlock)==NoBLK)&
+          if(NeiLev(1,iBlock)==NoBLK)&
                tmp1_blk(0,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(1,:,:,iBlock))
-          if(NeiLev(West_,iBlock)==NoBLK)&
+          if(NeiLev(2,iBlock)==NoBLK)&
                tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(nI,:,:,iBlock))
-          if(NeiLev(South_,iBlock)==NoBLK)&
+          if(NeiLev(3,iBlock)==NoBLK)&
                tmp1_blk(1:nI,0,1:nK,iBlock)=sqrt(Prec_CB(:,1,:,iBlock))
-          if(NeiLev(North_,iBlock)==NoBLK)&
+          if(NeiLev(4,iBlock)==NoBLK)&
                tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=sqrt(Prec_CB(:,nJ,:,iBlock))
-          if(NeiLev(Bot_,iBlock)==NoBLK)&
+          if(NeiLev(5,iBlock)==NoBLK)&
                tmp1_blk(1:nI,1:nJ,0,iBlock)=sqrt(Prec_CB(:,:,1,iBlock))
-          if(NeiLev(Top_,iBlock)==NoBLK)&
+          if(NeiLev(6,iBlock)==NoBLK)&
                tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=sqrt(Prec_CB(:,:,nK,iBlock))
        end if
        tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=sqrt(Prec_CB(:,:,:,iBlock))
@@ -344,7 +344,7 @@ contains
     !Now the elements of diag(Prec_CB)^{1/2} are in tmp1_blk
 
     do iBlock=1,nBlock
-       if (unusedBLK(iBlock)) CYCLE
+       if (Unused_B(iBlock)) CYCLE
 
        Q_G=tmp1_blk(0:nI+1,0:nJ+1,0:nK+1,iBlock)
        tmp1_BLK(:,:,:,iBlock) = 0.0
@@ -378,7 +378,7 @@ contains
 
     EstimateForMAMNorm = 0.0
     do iBlock=1,nBlock
-       if(unusedBLK(iBlock))CYCLE
+       if(Unused_B(iBlock))CYCLE
        EstimateForMAMNorm=max(EstimateForMAMNorm,&
             maxval(sqrt(Prec_CB(:,:,:,iBlock))*&
             0.5*( &
@@ -405,7 +405,7 @@ contains
     !Compute 1/sum(M_i)
     OneDotMDotOne = 0.0
     do iBlock=1,nBlock
-       if (unusedBLK(iBlock)) CYCLE
+       if (Unused_B(iBlock)) CYCLE
        !     Prec_CB(:,:,:,iBlock)=Prec_CB(:,:,:,iBlock)*divb_diffcoeff
        if(true_blk(iBlock))then
           OneDotMDotOne=OneDotMDotOne+sum(1.0/Prec_CB(:,:,:,iBlock))
@@ -432,31 +432,31 @@ contains
     real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK),intent(inout)::Phi_GB
     vDotGradX_C = 0.0;vDotGradY_C = 0.0;vDotGradZ_C = 0.0
 !!! Apply continuous solution at east and west
-    !    if (NeiLev(East_,iBlock)==NOBLK)&
+    !    if (NeiLev(1,iBlock)==NOBLK)&
     !         Phi_GB(0   ,1:nJ,1:nK,iBlock) = Phi_GB(1 ,1:nJ,1:nK,iBlock)
-    !    if (NeiLev(West_,iBlock)==NOBLK)&
+    !    if (NeiLev(2,iBlock)==NOBLK)&
     !         Phi_GB(nI+1,1:nJ,1:nK,iBlock) = Phi_GB(nI,1:nJ,1:nK,iBlock)
 !!! Apply shearing at north and south
-    !    if (NeiLev(South_,iBlock)==NOBLK)&
+    !    if (NeiLev(3,iBlock)==NOBLK)&
     !         Phi_GB(1:nI,0   ,1:nK,iBlock) = Phi_GB(0:nI-1,2 ,1:nK,iBlock)
-    !    if (NeiLev(North_,iBlock)==NOBLK)&
+    !    if (NeiLev(4,iBlock)==NOBLK)&
     !         Phi_GB(1:nI,nJ+1,1:nK,iBlock) = Phi_GB(2:nI+1,nJ-1,1:nK,iBlock)
 !!! Apply translation invariant solution at bottom and top
-    !    if (NeiLev(Bot_,iBlock)==NOBLK)&
+    !    if (NeiLev(5,iBlock)==NOBLK)&
     !         Phi_GB(1:nI,1:nJ,0   ,iBlock) = Phi_GB(1:nI,1:nJ,1 ,iBlock)
-    !    if (NeiLev(Top_,iBlock)==NOBLK)&
+    !    if (NeiLev(6,iBlock)==NOBLK)&
     !         Phi_GB(1:nI,1:nJ,nK+1,iBlock) = Phi_GB(1:nI,1:nJ,nK,iBlock)
-    if (NeiLev(East_,iBlock)==NOBLK)&
+    if (NeiLev(1,iBlock)==NOBLK)&
          Phi_GB(0   ,1:nJ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1 ,1:nJ,1:nK,iBlock)
-    if (NeiLev(West_,iBlock)==NOBLK)&
+    if (NeiLev(2,iBlock)==NOBLK)&
          Phi_GB(nI+1,1:nJ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(nI,1:nJ,1:nK,iBlock)
-    if (NeiLev(South_,iBlock)==NOBLK)&
+    if (NeiLev(3,iBlock)==NOBLK)&
          Phi_GB(1:nI,0   ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1 ,1:nK,iBlock)
-    if (NeiLev(North_,iBlock)==NOBLK)&
+    if (NeiLev(4,iBlock)==NOBLK)&
          Phi_GB(1:nI,nJ+1,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1:nI,nJ,1:nK,iBlock)
-    if (NeiLev(Bot_,iBlock)==NOBLK)&
+    if (NeiLev(5,iBlock)==NOBLK)&
          Phi_GB(1:nI,1:nJ,0   ,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1:nJ,1 ,iBlock)
-    if (NeiLev(Top_,iBlock)==NOBLK)&
+    if (NeiLev(6,iBlock)==NOBLK)&
          Phi_GB(1:nI,1:nJ,nK+1,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1:nJ,nK,iBlock)
     if(body_blk(iBlock))then
        do k=1,nK;do j=1,nJ;do i=1,nI
@@ -539,12 +539,12 @@ else
   elsewhere
      OneTrue_G = 0.0
   end where
-  if(neilev(East_ ,iBlock)==NOBLK) OneTrue_G(0   ,:,:) = 0.0
-  if(neilev(West_ ,iBlock)==NOBLK) OneTrue_G(nI+1,:,:) = 0.0
-  if(neilev(South_,iBlock)==NOBLK) OneTrue_G(:,0   ,:) = 0.0
-  if(neilev(North_,iBlock)==NOBLK) OneTrue_G(:,nJ+1,:) = 0.0
-  if(neilev(Bot_  ,iBlock)==NOBLK) OneTrue_G(:,:,0   ) = 0.0
-  if(neilev(Top_  ,iBlock)==NOBLK) OneTrue_G(:,:,nK+1) = 0.0
+  if(neilev(1 ,iBlock)==NOBLK) OneTrue_G(0   ,:,:) = 0.0
+  if(neilev(2 ,iBlock)==NOBLK) OneTrue_G(nI+1,:,:) = 0.0
+  if(neilev(3,iBlock)==NOBLK) OneTrue_G(:,0   ,:) = 0.0
+  if(neilev(4,iBlock)==NOBLK) OneTrue_G(:,nJ+1,:) = 0.0
+  if(neilev(5  ,iBlock)==NOBLK) OneTrue_G(:,:,0   ) = 0.0
+  if(neilev(6  ,iBlock)==NOBLK) OneTrue_G(:,:,nK+1) = 0.0
   !
   !\
   ! Where .not.true_cell, all the gradients are zero

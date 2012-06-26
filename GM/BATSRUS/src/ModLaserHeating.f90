@@ -1546,7 +1546,7 @@ contains
 
     use ModSize, ONLY: nI, nJ, nK
     use ModPhysics, ONLY: Si2No_V, UnitEnergydens_, UnitX_, UnitT_
-    use ModMain, ONLY: Time_Simulation, dt, nBlock, UnusedBLK
+    use ModMain, ONLY: Time_Simulation, dt, nBlock, Unused_B
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, UseElectronPressure, UseIdealEos
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, &
@@ -1571,7 +1571,7 @@ contains
 
     if(DoLaserRayTest)then
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           do k=1, nK; do j=1, nJ; do i=1, nI
              ! Denominator 50.0 is the distance to the critical surface.
              ! The beryllium is initially weakly ionized (Z=1), so that
@@ -1597,7 +1597,7 @@ contains
          call stop_mpi(NameSub//' does not work with non-conservative')
 
     do iBlock = 1, nBlock
-       if(UnusedBLK(iBlock))CYCLE
+       if(Unused_B(iBlock))CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(IsRzGeometry)then

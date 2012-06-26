@@ -315,7 +315,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
-    use ModMain,       ONLY: unusedBLK
+    use ModMain,       ONLY: Unused_B
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyP_I, BodyNDim_I, UnitU_, UnitN_, AverageIonCharge
@@ -502,7 +502,7 @@ contains
     use ModProcMH,     ONLY: iProc
     use ModIoUnit,     ONLY: UNITTMP_
     use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, rho_, p_, Bx_, Bz_
-    use ModMain,       ONLY: iteration_number, unusedBLK, nBlock
+    use ModMain,       ONLY: iteration_number, Unused_B, nBlock
     use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,    ONLY: State_VGB
 
@@ -568,7 +568,7 @@ contains
 
     use ModProcMH,     ONLY: iProc
     use ModIoUnit,     ONLY: UNITTMP_
-    use ModMain,       ONLY: iteration_number, unusedBLK, nBlock
+    use ModMain,       ONLY: iteration_number, Unused_B, nBlock
     use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,    ONLY: B0_DGB
 
@@ -787,7 +787,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK, B0_DGB, UseElectronPressure
     use ModIO,         ONLY: write_myname
-    use ModMain,       ONLY: unusedBLK, nBlock, x_, y_, z_, UseB0
+    use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
     use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_
 
@@ -812,7 +812,7 @@ contains
 
     case('eint')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           if(UseElectronPressure)then
              tmp1_BLK(:,:,:,iBlock) = &
                   State_VGB(p_,:,:,:,iBlock) + State_VGB(Pe_,:,:,:,iBlock)
@@ -824,7 +824,7 @@ contains
 
     case('emag')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           if(UseB0)then
              tmp1_BLK(:,:,:,iBlock) = & 
                   ( B0_DGB(x_,:,:,:,iBlock) + State_VGB(Bx_,:,:,:,iBlock))**2 &
@@ -840,7 +840,7 @@ contains
 
     case('b')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           if(UseB0)then
              tmp1_BLK(:,:,:,iBlock) = &
                   sqrt(sum((B0_DGB(:,:,:,:,iBlock) + State_VGB(Bx_:Bz_,:,:,:,iBlock))**2))
@@ -852,7 +852,7 @@ contains
 
     case('b0')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           if(UseB0)then
              tmp1_BLK(:,:,:,iBlock) = & 
                   sqrt(sum(B0_DGB(:,:,:,:,iBlock)**2)) 
@@ -864,7 +864,7 @@ contains
 
     case('b1')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = &
                sqrt(sum(State_VGB(Bx_:Bz_,:,:,:,iBlock)**2))
        end do
@@ -872,42 +872,42 @@ contains
 
     case('bx0')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = B0_DGB(1,:,:,:,iBlock)
        end do
        VarValue = integrate_BLK(1,tmp1_BLK)
 
     case('by0')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = B0_DGB(2,:,:,:,iBlock)
        end do
        VarValue = integrate_BLK(1,tmp1_BLK)
 
     case('bz0')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = B0_DGB(3,:,:,:,iBlock)
        end do
        VarValue = integrate_BLK(1,tmp1_BLK)
 
     case('bx1')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)
        end do
        VarValue = integrate_BLK(1,tmp1_BLK)
 
     case('by1')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = State_VGB(By_,:,:,:,iBlock)
        end do
        VarValue = integrate_BLK(1,tmp1_BLK)
 
     case('bz1')
        do iBlock = 1, nBlock
-          if(unusedBLK(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock)
        end do
        VarValue = integrate_BLK(1,tmp1_BLK)
@@ -1168,7 +1168,7 @@ contains
     ! modifies ghost cells in the r direction
     
     use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure
-    use ModMain,       ONLY: East_, UseUSerInnerBcs
+    use ModMain,       ONLY: UseUserInnerBcs
     use ModGeometry,   ONLY: TypeGeometry, x_BLK, y_BLK, z_BLK, r_BLK
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, WaveFirst_, WaveLast_, &
                              Bx_, Bz_, Ux_, Uz_
@@ -1188,7 +1188,7 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
-    if(iSide /= East_ .or. TypeGeometry(1:9) /='spherical') &
+    if(iSide /= 1 .or. TypeGeometry(1:9) /='spherical') &
          call CON_stop('Wrong iSide in user_set_cell_boundary')
 
     IsFound = .true.

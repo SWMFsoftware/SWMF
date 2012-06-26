@@ -32,7 +32,7 @@ contains
   subroutine apply_iono_velocity
 
     use ModMain,    ONLY: nI, nJ, nK, nBlock, time_accurate, time_simulation, &
-         Dt, UnusedBlk, UseB0, UseRotatingBc
+         Dt, Unused_B, UseB0, UseRotatingBc
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, r_BLK, Rmin_BLK
     use ModB0,      ONLY: B0_DGB
@@ -67,7 +67,7 @@ contains
     end if
 
     do iBlock = 1, nBlock
-       if(unusedBLK(iBlock)) CYCLE
+       if(Unused_B(iBlock)) CYCLE
        if(rMin_BLK(iBlock) > rCoupleUiono) CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI

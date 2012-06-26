@@ -83,7 +83,7 @@ subroutine fix_block_geometry(iBLK)
 
   ! Copying  the IsBoundaryCell_GI into the format for iBoundary_GB
   iBoundary_GB(:,:,:,iBlk) = domain_
-  do iBoundary = body2_, Top_
+  do iBoundary = body2_, 6
      where(IsBoundaryCell_GI(:,:,:,iBoundary))
         iBoundary_GB(:,:,:,iBlk) = iBoundary
      end where
@@ -134,18 +134,18 @@ subroutine set_boundary_cells(iBLK)
 
 
 
-  if(IsBoundaryBlock_IB(East_,iBLK)) &
-       IsBoundaryCell_GI(:,:,:,East_)=x_BLK(:,:,:,iBLK)<x1  
-  if(IsBoundaryBlock_IB(West_,iBLK)) &
-       IsBoundaryCell_GI(:,:,:,West_)=x_BLK(:,:,:,iBLK)>x2 
-  if(IsBoundaryBlock_IB(South_,iBLK)) &
-       IsBoundaryCell_GI(:,:,:,South_)= y_BLK(:,:,:,iBLK)<y1
-  if(IsBoundaryBlock_IB(North_,iBLK)) &
-       IsBoundaryCell_GI(:,:,:,North_)= y_BLK(:,:,:,iBLK)>y2 
-  if(IsBoundaryBlock_IB(Bot_,iBLK)) &
-       IsBoundaryCell_GI(:,:,:,Bot_)= z_BLK(:,:,:,iBLK)<z1
-  if(IsBoundaryBlock_IB(Top_,iBLK)) &
-       IsBoundaryCell_GI(:,:,:,Top_)= z_BLK(:,:,:,iBLK)>z2  
+  if(IsBoundaryBlock_IB(1,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,1)=x_BLK(:,:,:,iBLK)<x1  
+  if(IsBoundaryBlock_IB(2,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,2)=x_BLK(:,:,:,iBLK)>x2 
+  if(IsBoundaryBlock_IB(3,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,3)= y_BLK(:,:,:,iBLK)<y1
+  if(IsBoundaryBlock_IB(4,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,4)= y_BLK(:,:,:,iBLK)>y2 
+  if(IsBoundaryBlock_IB(5,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,5)= z_BLK(:,:,:,iBLK)<z1
+  if(IsBoundaryBlock_IB(6,iBLK)) &
+       IsBoundaryCell_GI(:,:,:,6)= z_BLK(:,:,:,iBLK)>z2  
 
 
 end subroutine set_boundary_cells

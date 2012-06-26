@@ -58,7 +58,7 @@ contains
 
     use ModProcMH
     use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
-         unusedBLK, lVerbose, UseB, UseB0, Dt_BLK, nTrueCellsALL, &
+         Unused_B, lVerbose, UseB, UseB0, Dt_BLK, nTrueCellsALL, &
          iNewGrid, iNewDecomposition
     use ModGeometry, ONLY : minDXvalue,maxDXvalue,true_cell
     use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
@@ -224,7 +224,7 @@ contains
 
     use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          x_, y_, z_, MaxBlock
-    use ModMain,       ONLY: nBlock, UseB0, UseUserAmr, UnusedBlk,&
+    use ModMain,       ONLY: nBlock, UseB0, UseUserAmr, Unused_B,&
          DoThinCurrentSheet
     use ModGeometry,   ONLY: r_BLK, true_cell
     use ModAdvance,    ONLY: State_VGB, StateOld_VCB, B0_DGB, &
@@ -268,7 +268,7 @@ contains
     ! initialize all criteria to zero
     Crit_IB = 0.0
     do iBlock = 1, nBlock
-       if (unusedBLK(iBlock)) CYCLE
+       if (Unused_B(iBlock)) CYCLE
        if (masked_amr_criteria(iBlock)) CYCLE
 
        ! Initialize values to use below for criteria

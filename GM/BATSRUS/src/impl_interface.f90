@@ -874,7 +874,6 @@ contains
 
     use ModNumConst, ONLY: cTiny
     use ModPhysics, ONLY: ShockSlope
-    use ModSize, ONLY: south_, north_
 
     integer, intent(in) :: iSide
 
@@ -896,10 +895,10 @@ contains
             'ShockSlope <= 1 should be the inverse of a round number!')
        select case(iSide)
           ! Shift parallel to X by 1, but copy from distance Dn in Y
-       case(south_)
+       case(3)
           StateSemi_VGB(:,1:nI,0,:,iBlock) = &
                StateSemi_VGB(:,0:nI-1,Dn,:,iBlock)
-       case(north_)
+       case(4)
           StateSemi_VGB(:,1:nI,nJ+1,:,iBlock) = &
                StateSemi_VGB(:,2:nI+1,nJ+1-Dn,:,iBlock)
        end select

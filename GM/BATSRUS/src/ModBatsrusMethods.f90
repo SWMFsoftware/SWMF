@@ -107,7 +107,7 @@ contains
     end if
 
     ! Set initial block types
-    where(.not.UnusedBlk) iTypeAdvance_B = ExplBlock_
+    where(.not.Unused_B) iTypeAdvance_B = ExplBlock_
     call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 

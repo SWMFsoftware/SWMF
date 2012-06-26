@@ -3,7 +3,7 @@ module ModPhysics
 
   use ModNumConst, ONLY: cDegToRad
   use ModConst
-  use ModMain, ONLY:body2_,Top_
+  use ModMain, ONLY: body2_
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_
   implicit none
   save
@@ -151,7 +151,7 @@ module ModPhysics
   real :: ShockPosition = 0.0, ShockSlope = 0.0
 
   ! State for the boundary conditions
-  real,dimension(nVar,body2_:Top_):: FaceState_VI, CellState_VI
+  real,dimension(nVar,body2_:6):: FaceState_VI, CellState_VI
 
   !\
   ! Position of Earth for Dynamic AMR purposes, including

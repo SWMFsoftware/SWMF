@@ -46,7 +46,7 @@ contains
   !============================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
     use EEE_ModMain,   ONLY: EEE_get_state_BC
-    use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
+    use ModSize,       ONLY: MaxDim
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, &
          n_step, Iteration_Number,body2_,UseOrbit
     use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
@@ -65,8 +65,8 @@ contains
     real:: DensCell,PresCell,GammaCell,TBase,B1dotR  
     real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D
 
-    real :: RhoCME,UCME_D(nDim),BCME_D(nDim),pCME
-    real :: BCMEn,BCMEn_D(nDim),UCMEn,UCMEn_D(nDim),UCMEt_D(nDim)
+    real :: RhoCME,UCME_D(MaxDim),BCME_D(MaxDim),pCME
+    real :: BCMEn,BCMEn_D(MaxDim),UCMEn,UCMEn_D(MaxDim),UCMEt_D(MaxDim)
     !--------------------------------------------------------------------------
 
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
@@ -131,17 +131,17 @@ contains
     !/
     iCell = iFace; jCell = jFace; kCell = kFace
     select case(iSide)
-    case(East_)
+    case(1)
        iCell  = iFace
-    case(West_)
+    case(2)
        iCell  = iFace-1
-    case(South_)
+    case(3)
        jCell  = jFace
-    case(North_)
+    case(4)
        jCell  = jFace-1
-    case(Bot_)
+    case(5)
        kCell  = kFace
-    case(Top_)
+    case(6)
        kCell  = kFace-1
     case default
        write(*,*)'ERROR: iSide = ',iSide
@@ -219,7 +219,7 @@ contains
 
   subroutine user_initial_perturbation
     use EEE_ModMain,  ONLY: EEE_get_state_init
-    use ModMain, ONLY: nI,nJ,nK,nBLK,unusedBLK,x_,y_,z_,n_step,iteration_number
+    use ModMain, ONLY: nI,nJ,nK,nBLK,Unused_B,x_,y_,z_,n_step,iteration_number
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: Si2No_V,UnitU_,UnitRho_,UnitP_,UnitB_
@@ -229,14 +229,14 @@ contains
 
     integer :: i,j,k,iBLK
     logical :: oktest,oktest_me
-    real :: x_D(nDim),Rho,B_D(nDim),p
+    real :: x_D(MaxDim),Rho,B_D(MaxDim),p
 
     real :: Mass=0.0
     !--------------------------------------------------------------------------
     call set_oktest('user_initial_perturbation',oktest,oktest_me)
 
     do iBLK=1,nBLK
-       if(unusedBLK(iBLK))CYCLE
+       if(Unused_B(iBLK))CYCLE
        do k=1,nK; do j=1,nJ; do i=1,nI
 
           x_D(x_) = x_BLK(i,j,k,iBLK)
@@ -393,7 +393,7 @@ contains
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
 
     use ModIO,         ONLY: write_myname
-    use ModMain,       ONLY: unusedBLK,nBLK,x_,y_,z_
+    use ModMain,       ONLY: Unused_B,nBLK,x_,y_,z_
     use ModVarIndexes, ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0_DGB
@@ -416,7 +416,7 @@ contains
     select case(TypeVar)
     case('em_t','Em_t','em_r','Em_r')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           tmp1_BLK(:,:,:,iBLK) = & 
                (B0_DGB(x_,:,:,:,iBLK)+State_VGB(Bx_,:,:,:,iBLK))**2+&
                (B0_DGB(y_,:,:,:,iBLK)+State_VGB(By_,:,:,:,iBLK))**2+&
@@ -425,7 +425,7 @@ contains
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
     case('ek_t','Ek_t','ek_r','Ek_r')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           tmp1_BLK(:,:,:,iBLK) = &
                (State_VGB(rhoUx_,:,:,:,iBLK)**2 +&
                State_VGB(rhoUy_,:,:,:,iBLK)**2 +&
@@ -435,19 +435,19 @@ contains
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
     case('et_t','Et_t','et_r','Et_r')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           tmp1_BLK(:,:,:,iBLK) = State_VGB(P_,:,:,:,iBLK)
        end do
        VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
     case('ew_t','Ew_t','ew_r','Ew_r')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           tmp1_BLK(:,:,:,iBLK) = State_VGB(Ew_,:,:,:,iBLK)
        end do
        VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
     case('ms_t','Ms_t')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
+          if (Unused_B(iBLK)) CYCLE
           tmp1_BLK(:,:,:,iBLK) = &
                State_VGB(rho_,:,:,:,iBLK)/R_BLK(:,:,:,iBLK)
        end do

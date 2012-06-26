@@ -784,8 +784,7 @@ contains
 
   subroutine test_face_current
 
-    use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk, x_, y_, z_, &
-         east_, west_, south_, north_, bot_, top_
+    use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B, x_, y_, z_
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, nVar
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModParallel, ONLY: NeiLev
@@ -803,7 +802,7 @@ contains
     do iTest = 1, nTest
 
        do iBlock = 1, nBlock
-          if(UnusedBlk(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
 
           select case(iTest)
           case(1)                          
@@ -854,7 +853,7 @@ contains
        call message_pass_cell(nVar,State_VGB)
 
        do iBlock = 1, nBlock
-          if(UnusedBlk(iBlock)) CYCLE
+          if(Unused_B(iBlock)) CYCLE
 
           IsNewBlockCurrent = .true.
 
@@ -895,20 +894,20 @@ contains
       ! Face center coordinates
       select case(NameDir)
       case('x')
-         if(i==1   .and.neiLEV(east_,iBlock)==-1) RETURN
-         if(i==nI+1.and.neiLEV(west_,iBlock)==-1) RETURN
+         if(i==1   .and.neiLEV(1,iBlock)==-1) RETURN
+         if(i==nI+1.and.neiLEV(2,iBlock)==-1) RETURN
          x = 0.5*(x_BLK(i-1,j,k,iBlock) + x_BLK(i,j,k,iBlock))
          y = 0.5*(y_BLK(i-1,j,k,iBlock) + y_BLK(i,j,k,iBlock))
          z = 0.5*(z_BLK(i-1,j,k,iBlock) + z_BLK(i,j,k,iBlock))
      case('y')
-         if(j==1   .and.neiLEV(south_,iBlock)==-1) RETURN
-         if(j==nJ+1.and.neiLEV(north_,iBlock)==-1) RETURN
+         if(j==1   .and.neiLEV(3,iBlock)==-1) RETURN
+         if(j==nJ+1.and.neiLEV(4,iBlock)==-1) RETURN
          x = 0.5*(x_BLK(i,j-1,k,iBlock) + x_BLK(i,j,k,iBlock))
          y = 0.5*(y_BLK(i,j-1,k,iBlock) + y_BLK(i,j,k,iBlock))
          z = 0.5*(z_BLK(i,j-1,k,iBlock) + z_BLK(i,j,k,iBlock))
       case('z')
-         if(k==1   .and.neiLEV(bot_,iBlock)==-1) RETURN
-         if(k==nK+1.and.neiLEV(top_,iBlock)==-1) RETURN
+         if(k==1   .and.neiLEV(5,iBlock)==-1) RETURN
+         if(k==nK+1.and.neiLEV(6,iBlock)==-1) RETURN
          x = 0.5*(x_BLK(i,j,k-1,iBlock) + x_BLK(i,j,k,iBlock))
          y = 0.5*(y_BLK(i,j,k-1,iBlock) + y_BLK(i,j,k,iBlock))
          z = 0.5*(z_BLK(i,j,k-1,iBlock) + z_BLK(i,j,k,iBlock))

@@ -101,9 +101,9 @@ contains
     ! Do not apply cell boundary conditions at the pole 
     ! This is either handled by message passing or supercell
     if(IsRLonLat) then
-       iLast = West_
+       iLast = 2
     else
-       iLast = Top_
+       iLast = 6
     end if
 
     ! Do not work on ignored directions
@@ -129,22 +129,22 @@ contains
        kmin1p=-1; kmax1p=nK+2; kmin2p=-1; kmax2p=nK+2
 
        select case(iSide)
-       case(east_)
+       case(1)
           imin1g=0; imax1g=0; imin2g=-1; imax2g=-1
           imin1p=1; imax1p=1; imin2p= 2; imax2p= 2
-       case(west_)
+       case(2)
           imin1g=nI+1; imax1g=nI+1; imin2g=nI+2; imax2g=nI+2
           imin1p=nI  ; imax1p=nI  ; imin2p=nI-1; imax2p=nI-1
-       case(south_)
+       case(3)
           jmin1g=0; jmax1g=0; jmin2g=-1; jmax2g=-1
           jmin1p=1; jmax1p=1; jmin2p= 2; jmax2p= 2
-       case(north_)
+       case(4)
           jmin1g=nJ+1; jmax1g=nJ+1; jmin2g=nJ+2; jmax2g=nJ+2
           jmin1p=nJ  ; jmax1p=nJ  ; jmin2p=nJ-1; jmax2p=nJ-1
-       case(bot_)
+       case(5)
           kmin1g=0; kmax1g=0; kmin2g=-1; kmax2g=-1
           kmin1p=1; kmax1p=1; kmin2p= 2; kmax2p= 2
-       case(top_)
+       case(6)
           kmin1g=nK+1; kmax1g=nK+1; kmin2g=nK+2; kmax2g=nK+2
           kmin1p=nK  ; kmax1p=nK  ; kmin2p=nK-1; kmax2p=nK-1
        end select
@@ -165,23 +165,23 @@ contains
           !^CFG END IMPLICIT
        case('raeder')
           call BC_cont(1,nVar)
-          if(iSide==north_.or.iSide==south_)then
+          if(iSide==4.or.iSide==3)then
              call BC_fixed(By_,By_,DefaultState_V)
-          elseif(iSide==bot_.or.iSide==top_)then
+          elseif(iSide==5.or.iSide==6)then
              call BC_fixed(Bz_,Bz_,DefaultState_V)
           end if
        case('reflect')
           ! Scalars are symmetric
           call BC_symm(1,nVar)
           ! Normal vector components are mirror symmetric
-          if(iSide==east_.or.iSide==west_)then
+          if(iSide==1.or.iSide==2)then
              do iFluid = 1, nFluid
                 call BC_asymm(iRhoUx_I(iFluid), iRhoUx_I(iFluid))
              end do
              if(UseB)call BC_asymm(Bx_,Bx_)
           endif
-          if(iSide==south_.or.iSide==north_)then
-             if(IsRzGeometry.and.XyzMin_D(2)==0.0.and.iSide==south_)then
+          if(iSide==3.or.iSide==4)then
+             if(IsRzGeometry.and.XyzMin_D(2)==0.0.and.iSide==3)then
                 do iFluid = 1, nFluid
                    call BC_asymm(iRhoUy_I(iFluid), iRhoUz_I(iFluid))
                 end do
@@ -193,7 +193,7 @@ contains
                 if(UseB)call BC_asymm(By_,By_)
              end if
           endif
-          if(iSide==bot_.or.iSide==top_)then
+          if(iSide==5.or.iSide==6)then
              do iFluid = 1, nFluid
                 call BC_asymm(iRhoUz_I(iFluid), iRhoUz_I(iFluid))
              end do
@@ -282,7 +282,7 @@ contains
 
     integer :: iVar, Dn
     !--------------------------------------------------------------------------
-    ! For the corners or bot_ and top_ fill with unsheared data first
+    ! For the corners or 5 and 6 fill with unsheared data first
     call BC_cont(iVarStart,iVarLast)
 
     ! If the shock is not tilted, there is nothing to do
@@ -298,13 +298,13 @@ contains
                call stop_mpi('ShockSlope > 1 should be a round number!')
           select case(iSide)
              ! Shift parallel to Y by 1 but copy from distance Dn in X
-          case(east_)
+          case(1)
              State_VGB(iVar,imin1g,jmin1g+1:jmax1g,kmin1g:kmax1g,iBLK) = &
                   State_VGB(iVar,imin1g+Dn,jmin1p:jmax1p-1,kmin1p:kmax1p,iBLK)
 
              State_VGB(iVar,imin2g,jmin2g+1:jmax2g,kmin2g:kmax2g,iBLK) = &
                   State_VGB(iVar,imin2g+Dn,jmin1p:jmax1p-1,kmin1p:kmax1p,iBLK)
-          case(west_)
+          case(2)
              State_VGB(iVar,imin1g,jmin1g:jmax1g-1,kmin1g:kmax1g,iBLK) = &
                   State_VGB(iVar,imin1g-Dn,jmin1p+1:jmax1p,kmin1p:kmax1p,iBLK)
 
@@ -312,12 +312,12 @@ contains
                   State_VGB(iVar,imin2g-Dn,jmin1p+1:jmax1p,kmin1p:kmax1p,iBLK)
 
              ! Shift parallel to X by Dn and 2*Dn
-          case(south_)
+          case(3)
              State_VGB(iVar,imin1g+Dn:imax1g,jmin1g,kmin1g:kmax1g,iBLK) = &
                   State_VGB(iVar,imin1p:imax1p-Dn,jmin1p,kmin1p:kmax1p,iBLK)
              State_VGB(iVar,imin2g+2*Dn:imax2g,jmin2g,kmin2g:kmax2g,iBLK) = &
                   State_VGB(iVar,imin1p:imax1p-2*Dn,jmin1p,kmin1p:kmax1p,iBLK)
-          case(north_)
+          case(4)
              State_VGB(iVar,imin1g:imax1g-Dn,jmin1g,kmin1g:kmax1g,iBLK) = &
                   State_VGB(iVar,imin1p+Dn:imax1g,jmin1p,kmin1p:kmax1p,iBLK)
              State_VGB(iVar,imin2g:imax2g-2*Dn,jmin2g,kmin2g:kmax2g,iBLK) = &
@@ -330,25 +330,25 @@ contains
                'ShockSlope < 1 should be the inverse of a round number!')
           select case(iSide)
              ! Shift parallel to Y by Dn
-          case(east_)
+          case(1)
              State_VGB(iVar,imin1g,jmin1g+Dn:jmax1g,kmin1g:kmax1g,iBLK) = &
                   State_VGB(iVar,imin1p,jmin1p:jmax1p-Dn,kmin1p:kmax1p,iBLK)
 
              State_VGB(iVar,imin2g,jmin2g+2*Dn:jmax2g,kmin2g:kmax2g,iBLK) = &
                   State_VGB(iVar,imin1p,jmin1p:jmax1p-2*Dn,kmin1p:kmax1p,iBLK)
-          case(west_)
+          case(2)
              State_VGB(iVar,imin1g,jmin1g:jmax1g-Dn,kmin1g:kmax1g,iBLK) = &
                   State_VGB(iVar,imin1p,jmin1p+Dn:jmax1p,kmin1p:kmax1p,iBLK)
              State_VGB(iVar,imin2g,jmin2g:jmax2g-2*Dn,kmin2g:kmax2g,iBLK) = &
                   State_VGB(iVar,imin1p,jmin1p+2*Dn:jmax1p,kmin1p:kmax1p,iBLK)
 
              ! Shift parallel to X by 1, but copy from distance Dn in Y
-          case(south_)
+          case(3)
              State_VGB(iVar,imin1g+1:imax1g,jmin1g,kmin1g:kmax1g,iBLK) = &
                   State_VGB(iVar,imin1p:imax1p-1,jmin1g+Dn,kmin1p:kmax1p,iBLK)
              State_VGB(iVar,imin2g+1:imax2g,jmin2g,kmin2g:kmax2g,iBLK) = &
                   State_VGB(iVar,imin1p:imax1p-1,jmin2g+Dn,kmin1p:kmax1p,iBLK)
-          case(north_)
+          case(4)
              State_VGB(iVar,imin1g:imax1g-1,jmin1g,kmin1g:kmax1g,iBLK) = &
                   State_VGB(iVar,imin1p+1:imax1p,jmin1g-Dn,kmin1p:kmax1p,iBLK)
              State_VGB(iVar,imin2g:imax2g-1,jmin2g,kmin2g:kmax2g,iBLK) = &

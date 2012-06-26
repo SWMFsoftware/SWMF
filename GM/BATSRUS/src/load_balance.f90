@@ -451,7 +451,7 @@ subroutine select_stepping(DoPartSelect)
 
         ! Set implicitBLK based on the time step.
         do iBlock=1,nBlockMax
-           if(unusedBLK(iBlock)) CYCLE
+           if(Unused_B(iBlock)) CYCLE
 
            ! Obtain the time step based on CFL condition
 
@@ -481,7 +481,7 @@ subroutine select_stepping(DoPartSelect)
      case('r','R')
         ! implicitly treated blocks are within rImplicit and not Unused
         where(rMin_BLK(1:nBlockMax) <= rImplicit .and. &
-             .not.UnusedBLK(1:nBlockMax)) &
+             .not.Unused_B(1:nBlockMax)) &
              iTypeAdvance_B(1:nBlockMax) = ImplBlock_
      case('test')
         if(iProc==PROCtest) iTypeAdvance_B(BLKtest) = ImplBlock_

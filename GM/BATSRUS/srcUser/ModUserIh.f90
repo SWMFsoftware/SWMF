@@ -82,7 +82,7 @@ contains
   !========================================================================
   subroutine user_set_ics(iBlock)
     
-    use ModMain,        ONLY: unusedBLK   
+    use ModMain,        ONLY: Unused_B   
     use ModSize,        ONLY: nI, nJ, nK, gcn
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,     ONLY: State_VGB
@@ -96,7 +96,7 @@ contains
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !----------------------------------------------------------------------
   
-    if (unusedBLK(iBlock)) RETURN
+    if (Unused_B(iBlock)) RETURN
   
     if(UseParkerIcs) then
        do k=1-gcn,nK+gcn ; do j=1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn

@@ -47,7 +47,7 @@ contains
 
     use ModProcMH
     use ModMain, ONLY: nI, nJ, nK, &
-         x_, y_, z_, Phi_, nBlockMax, unusedBLK
+         x_, y_, z_, Phi_, nBlockMax, Unused_B
     use ModGeometry, ONLY: Dx_BLK, Dy_BLK, Dz_BLK,&
          XyzStart_BLK
     use ModIO
@@ -116,7 +116,7 @@ contains
              ySqueezed = xyzStart_BLK(y_,iBlk)
           end if
 
-          if( unusedBLK(iBLK) .or. xyzStart_BLK(x_,iBlk) > xMax1.or.&
+          if( Unused_B(iBLK) .or. xyzStart_BLK(x_,iBlk) > xMax1.or.&
                xyzStart_BLK(x_,iBlk)+(nI-1)*Dx_BLK(iBlk) < xMin1.or.&
                ySqueezed > yMax1.or.&
                ySqueezed+(nJ-1)*Dy_BLK(iBlk) < yMin1.or.&  

@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 module ModParallel
-  use ModSize, ONLY: MaxBlock, east_, top_
+  use ModSize, ONLY: MaxBlock
   implicit none
   save
 
@@ -22,7 +22,7 @@ module ModParallel
   integer, dimension(MaxBlock) :: &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
 
-  integer, dimension(east_:top_,MaxBlock):: neiLEV
+  integer, dimension(1:6,MaxBlock):: neiLEV
 
   !\
   ! Neighbor processor and block numbers (a value of NOBLK
@@ -34,7 +34,7 @@ module ModParallel
        neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth, &
        neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth
 
-  integer, dimension(4,east_:top_,MaxBlock) :: neiPE, neiBLK
+  integer, dimension(4,1:6,MaxBlock) :: neiPE, neiBLK
 
   ! used by mpi_allgatherv for a more efficient replacment of mpi_allgather
   integer, allocatable :: nBlockMax_P(:), MaxBlockDisp_P(:)

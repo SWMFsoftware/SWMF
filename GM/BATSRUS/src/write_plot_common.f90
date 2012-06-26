@@ -246,7 +246,7 @@ subroutine write_plot_common(ifile)
        call find_grid_block(plot_point(:,iFile), iProcFound, iBlockFound)
 
   do iBLK=1, nBlockMax
-     if(unusedBLK(iBLK))CYCLE
+     if(Unused_B(iBLK))CYCLE
 
      if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
 
@@ -352,7 +352,7 @@ subroutine write_plot_common(ifile)
      call message_pass_node(nPlotvarMax, PlotVarNodes_VNB, &
           NameOperatorIn='Mean')
 
-     do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
+     do iBlk = 1, nBlock; if(Unused_B(iBlk)) CYCLE
         call average_grid_node(iBlk, nPlotvarMax, &
              PlotVarNodes_VNB(:,:,:,:,iBlk))
      end do
@@ -367,7 +367,7 @@ subroutine write_plot_common(ifile)
         allocate(PlotXYZNodes_DNB(3,nINode,nJNode,nKNode,MaxBlock))
         PlotXYZNodes_DNB(:,:,:,:,1:nBlock) = Xyz_DNB(:,:,:,:,1:nBlock)
 
-        do iBlk = 1, nBlock; if(UnusedBlk(iBlk)) CYCLE
+        do iBlk = 1, nBlock; if(Unused_B(iBlk)) CYCLE
            ! Fixing hanging nodes at resolution change
            call  average_grid_node(iBlk, 3, PlotXYZNodes_DNB(:,:,:,:,iBlk))
            ! Make near zero values exactly zero

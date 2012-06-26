@@ -385,7 +385,7 @@ subroutine fix_anisotropy
   !/
 
   use ModVarIndexes, ONLY: Bx_, Bz_, Ppar_, p_
-  use ModMain,    ONLY: nI, nJ, nK, nBlock, UnusedBlk, UseB0, &
+  use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0, &
        time_accurate, Cfl, dt
   use ModB0,      ONLY: B0_DGB
   use ModAdvance, ONLY: State_VGB, time_BLK
@@ -401,7 +401,7 @@ subroutine fix_anisotropy
   integer:: i, j, k, iBlock
   !---------------------------------------------------------------------------
   do iBlock = 1, nBlock
-     if(UnusedBlk(iBlock)) CYCLE
+     if(Unused_B(iBlock)) CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
@@ -492,7 +492,7 @@ end subroutine fix_anisotropy
 
 subroutine update_b0
 
-  use ModMain,          ONLY: nBlock, unusedBLK, &
+  use ModMain,          ONLY: nBlock, Unused_B, &
        time_simulation, NameThisComp
   use ModPhysics,       ONLY: ThetaTilt
   use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB
@@ -529,7 +529,7 @@ subroutine update_b0
   call timing_start(NameSub)
 
   do iBlock=1,nBlock
-     if(unusedBLK(iBlock)) CYCLE
+     if(Unused_B(iBlock)) CYCLE
 
      ! Save total magnetic field into Bx, By ,Bz
      State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &

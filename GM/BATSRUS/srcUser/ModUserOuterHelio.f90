@@ -683,7 +683,7 @@ contains
     !-------------------------------------------------------------------
     do iBlock = 1, nBlock
 
-       if( UnusedBlk(iBlock) ) CYCLE
+       if( Unused_B(iBlock) ) CYCLE
 
        State_VGB(Ne2Rho_,:,:,:,iBlock) = RhoBcFactor_I(3) * &
             State_VGB(Rho_,:,:,:,iBlock)

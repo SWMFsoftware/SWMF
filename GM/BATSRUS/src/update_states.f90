@@ -106,14 +106,14 @@ end subroutine update_states
 subroutine update_te0
   use ModPhysics, ONLY: UnitTemperature_,Si2No_V
   use ModAdvance, ONLY: State_VGB,  nI, nJ, nK
-  use ModMain,    ONLY: nBlock, unusedBLK
+  use ModMain,    ONLY: nBlock, Unused_B
   use ModUser,    ONLY: user_material_properties
   use ModVarIndexes, ONLY: Te0_
   real:: Te0Si
   integer:: i, j, k, iBlock
   !-------------------------------------------------------------------------
   do iBlock = 1, nBlock
-     if(unusedBLK(iBlock))CYCLE
+     if(Unused_B(iBlock))CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
         call user_material_properties(State_VGB(:,i,j,k,iBlock), &
              i,j,k,iBlock, TeOut=Te0SI)
@@ -186,7 +186,7 @@ subroutine update_check(iStage)
         percent_chg_rho = 0.1
         percent_chg_p   = 0.1
         do iBlock = 1, nBlockMax
-           if (unusedBLK(iBlock)) CYCLE
+           if (Unused_B(iBlock)) CYCLE
            if (num_checks == 1) then
               do k=1,nK; do j=1,nJ; do i=1,nI
                  do iVar = 1, nVar
@@ -240,7 +240,7 @@ subroutine update_check(iStage)
                 MPI_REAL, MPI_MAX, iComm, iError)
 
            do iBlock = 1, nBlockMax
-              if (unusedBLK(iBlock)) CYCLE
+              if (Unused_B(iBlock)) CYCLE
               do k=1,nK; do j=1,nJ; do i=1,nI
                  do iVar = 1, nVar
                     if (DefaultState_V(iVar) <= cTiny) CYCLE
@@ -322,7 +322,7 @@ subroutine update_check(iStage)
         dt = dt * time_fraction
         report_tf = report_tf*time_fraction
         do iBlock = 1, nBlockMax
-           if (unusedBLK(iBlock)) CYCLE
+           if (Unused_B(iBlock)) CYCLE
            if(UseB0)then
               B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
            else
@@ -357,7 +357,7 @@ subroutine update_check(iStage)
      report_tf = 1.
      PercentChangePE = cZero
      do iBlock = 1, nBlockMax
-        if (unusedBLK(iBlock)) CYCLE
+        if (Unused_B(iBlock)) CYCLE
         if(UseB0)then
            B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
         else
@@ -469,7 +469,7 @@ subroutine update_check(iStage)
      end if
      if(oktest3) then
         do iBlock = 1,nBlockMax
-           if(unusedBLK(iBlock))cycle
+           if(Unused_B(iBlock))cycle
            do k=1,nK;do j=1,nJ; do i=1,nI
               if(.not.true_cell(i,j,k,iBlock))cycle
               if (abs(100. * abs( min( 0., &
@@ -525,7 +525,7 @@ subroutine update_check(iStage)
   ! Check for positivity of variables
   IsNegative = .false.
   do iBlock = 1, nBlockMax
-     if (unusedBLK(iBlock)) CYCLE
+     if (Unused_B(iBlock)) CYCLE
      do iVar = 1, nVar
         ! Ignore variables that do not have to be positive
         if(DefaultState_V(iVar) < cTiny) CYCLE
@@ -831,7 +831,7 @@ subroutine select_conservative
      IsConserv_CB = .false.
 
      do iBlock = 1, nBlock
-        if( UnusedBlk(iBlock) ) CYCLE
+        if( Unused_B(iBlock) ) CYCLE
 
         if(UseElectronPressure)then
            do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
@@ -933,7 +933,7 @@ subroutine select_conservative
   endif
 
   do iBlock = 1, nBlock
-     if( UnusedBlk(iBlock) ) CYCLE
+     if( Unused_B(iBlock) ) CYCLE
 
      ! Apply geometry based criteria
      ! Any of these can switch from conservative to non-conservative
