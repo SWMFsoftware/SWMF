@@ -124,7 +124,7 @@ module ModLaserHeating
 
   logical:: Is3DBeamInRz = .false.
   logical:: Is3DBeamInXy = .false.
-
+  logical:: Is3DBeamIn1D = .false.
   logical:: DoLaserRayTest  = .false.
 
 contains
@@ -224,6 +224,9 @@ contains
        end if
        
        if(Is3DBeamInXy) Xyz_D(3) = 0.0
+
+       if(Is3DBeamIn1D) Xyz_D(2:3) = 0.0
+
 
        ! Find the processor, block and grid cell containing the ray
        call interpolate_grid(Xyz_D, nCell, iCell_II, Weight_I)
@@ -918,6 +921,7 @@ contains
 
     Is3DBeamInRz = TypeBeam == '3d' .and. IsRzGeometry
     Is3DBeamInXy = TypeBeam == 'xy'
+    Is3DBeamIn1D = TypeBeam == '1d'
 
     if(DoLaserRayTest) nRayPerBeam = 1
 
@@ -931,7 +935,7 @@ contains
     allocate(Amplitude_I(nRayTotal))
 
     select case(TypeBeam)
-    case('3d','xy')
+    case('3d','xy', '1d')
        call init_beam_3d
     case('rz')
        call init_beam_rz
@@ -996,7 +1000,7 @@ contains
              ! to be at 1.5 rBeam from the central ray:
              ! rDistance is from 0 to 1.5*rBeam
 
-             if(nDim == 3 .or. Is3DBeamInXy)then
+             if(nDim == 3 .or. Is3DBeamInXy .or. Is3DBeamIn1D)then
                 ! The following is exploited for the beam coordinates y and z:
                 ! range y = [-1.5*rBeam,1.5*rBeam];
                 ! range z = [-1.5*rBeam,1.5*rBeam]
@@ -1040,6 +1044,10 @@ contains
           elseif(Is3DBeamInXy)then
              IsInside = yStart >= y1 .and. yStart <= y2 &
                   .and. zStart >= y1 .and. zStart <= y2
+          elseif(Is3DBeamIn1D)then
+             IsInside = .true.
+!             IsInside = yStart >= y1 .and. yStart <= y2 &
+!                  .and. zStart >= z1 .and. zStart <= z2
           end if
 
           if(rDistance > 1.5*rBeam .and. .not.DoLaserRayTest)then
@@ -1478,6 +1486,8 @@ contains
           
           if(Is3DBeamInXy) Xyz_D(3) = 0.0
 
+          if(Is3DBeamIn1D) Xyz_D(2:3) = 0.0
+
           ! Find the processor, block and grid cell containing the ray
           call interpolate_grid(Xyz_D, nCell, iCell_II, Weight_I)
 
@@ -1557,7 +1567,7 @@ contains
     use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: message_pass_cell, CellVolume_GB, CoordMin_D, &
          CoordMax_D, IsRzGeometry, Xyz_DGB, x_
-    use ModNumConst, ONLY: cHalfPi
+	use ModNumConst, ONLY: cHalfPi, cPi
 
     real:: Irradiance, EInternalSi, PressureSi
     integer :: iBlock, i, j, k, iP
@@ -1613,6 +1623,13 @@ contains
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   *Irradiance/CellVolume_GB(i,j,k,iBlock) &
                   *(CoordMax_D(3) - CoordMin_D(3))/(rBeam*cHalfPi)
+          elseif(Is3DBeamIn1D .and. nDim == 1)then
+             ! Assuming circular beam spot. Deals with extent in "Y and Z"
+             ! directions while maintaining the irradiance of 3D system. 
+             ! The formula below needs some explanation
+             LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
+                  *Irradiance/CellVolume_GB(i,j,k,iBlock) &
+                  *(CoordMax_D(3) - CoordMin_D(3))*(CoordMax_D(2) - CoordMin_D(2))/(cPi*rBeam**2)
           else
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   *Irradiance/CellVolume_GB(i,j,k,iBlock)
