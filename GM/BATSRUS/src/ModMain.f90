@@ -235,6 +235,9 @@ Module ModMain
   character(len=30):: NameTimingFile
   integer:: dn_timing = -2
 
+  ! Optimize MPI variables
+  logical :: UseOptimizeMpi = .false.
+
   !\
   ! Stopping conditions. These variables are only used in stand alone mode.
   !/

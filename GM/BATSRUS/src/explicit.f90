@@ -50,7 +50,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      ! If heating model depends on global B topology, update here
      if(UseUnsignedFluxModel) call get_coronal_heat_factor
 
-     call barrier_mpi2('expl1')
+     if(.not.UseOptimizeMpi) call barrier_mpi2('expl1')
 
      do iBlock = 1, nBlock
         if (Unused_B(iBlock)) CYCLE
@@ -149,7 +149,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
      if(DoTestMe)write(*,*)NameSub,' done update blocks'
 
-     call barrier_mpi2('expl2')
+     if(.not.UseOptimizeMpi) call barrier_mpi2('expl2')
 
      if(IsAnyAxis .and. DoFixAxis) call fix_axis_cells
 

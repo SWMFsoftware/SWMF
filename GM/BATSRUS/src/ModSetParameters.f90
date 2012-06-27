@@ -445,6 +445,9 @@ subroutine MH_set_parameters(TypeAction)
            TimingStyle  = TimingStyle(1:4)
         end if
 
+     case("#OPTIMIZEMPI")
+        call read_var('UseOptimizeMpi', UseOptimizeMpi)
+
      case("#OUTERBOUNDARY")
         call read_var('TypeBcEast'  ,TypeBc_I(1))  
         call read_var('TypeBcWest'  ,TypeBc_I(2))
