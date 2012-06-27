@@ -1743,25 +1743,25 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#BUFFERGRID")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('nRBuff',        nRBuff)
-        call read_var('nPhiBuff',      nPhiBuff)
-        call read_var('nThetaBuff',    nThetaBuff)
-        call read_var('rBuffMin',      BufferMin_D(R_))
-        call read_var('rBuffMax',      BufferMax_D(R_))
-        call read_var('PhiBuffMin',    BufferMin_D(Phi_))
-        call read_var('PhiBuffMax',    BufferMax_D(Phi_))
-        call read_var('LatBuffMin',  BufferMin_D(Theta_))
-        call read_var('LatBuffMax',  BufferMax_D(Theta_))
+        call read_var('nRBuff',      nRBuff)
+        call read_var('nPhiBuff',    nPhiBuff)
+        call read_var('nThetaBuff',  nThetaBuff)
+        call read_var('rBuffMin',    BufferMin_D(BuffR_))
+        call read_var('rBuffMax',    BufferMax_D(BuffR_))
+        call read_var('PhiBuffMin',  BufferMin_D(BuffPhi_))
+        call read_var('PhiBuffMax',  BufferMax_D(BuffPhi_))
+        call read_var('LatBuffMin',  BufferMin_D(BuffTheta_))
+        call read_var('LatBuffMax',  BufferMax_D(BuffTheta_))
         ! Update rBuffMin, rBuffMax 
         ! in case #HELIOBUFFERGRID was not used
-        rBuffMin = BufferMin_D(R_)
-        rBuffMax = BufferMax_D(R_)
+        rBuffMin = BufferMin_D(BuffR_)
+        rBuffMax = BufferMax_D(BuffR_)
 
         ! Convert degrees to radians, latitude to co-latitude
-        BufferMin_D(Phi_)   = BufferMin_D(Phi_) * cDegToRad
-        BufferMax_D(Phi_)   = BufferMax_D(Phi_) * cDegToRad
-        BufferMin_D(Theta_) = cHalfPi - BufferMin_D(Theta_) * cDegToRad
-        BufferMax_D(Theta_) = cHalfPi - BufferMax_D(Theta_) * cDegToRad
+        BufferMin_D(BuffPhi_)   = BufferMin_D(BuffPhi_) * cDegToRad
+        BufferMax_D(BuffPhi_)   = BufferMax_D(BuffPhi_) * cDegToRad
+        BufferMin_D(BuffTheta_) = cHalfPi - BufferMin_D(BuffTheta_) * cDegToRad
+        BufferMax_D(BuffTheta_) = cHalfPi - BufferMax_D(BuffTheta_) * cDegToRad
 
      case("#THINCURRENTSHEET")
         call read_var('DoThinCurrentSheet', DoThinCurrentSheet)
@@ -2049,12 +2049,12 @@ contains
 
     ! Default limits for  buffergrid boundary conditions
     if (any(TypeBc_I(body1_:ExtraBc_)=='buffergrid')) then
-       BufferMin_D(R_)     = 19.
-       BufferMin_D(Phi_)   = 0.
-       BufferMin_D(Theta_) = 0.
-       BufferMax_D(R_)     = 21.
-       BufferMax_D(Phi_)   = 360.
-       BufferMax_D(Theta_) = 180.
+       BufferMin_D(BuffR_)     = 19.
+       BufferMin_D(BuffPhi_)   = 0.
+       BufferMin_D(BuffTheta_) = 0.
+       BufferMax_D(BuffR_)     = 21.
+       BufferMax_D(BuffPhi_)   = 360.
+       BufferMax_D(BuffTheta_) = 180.
     end if
 
     nAmrCriteria = 0
