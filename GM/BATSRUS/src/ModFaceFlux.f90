@@ -717,7 +717,6 @@ contains
           if(DoTestCell)write(*,*)'set_cell_values_x: Area2=', Area2
 
           ! The face is at the pole
-          Normal_D = Normal_D / sqrt(sum(Normal_D**2))
           Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
                -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
           Normal_D=Normal_D/sqrt(sum(Normal_D**2))
