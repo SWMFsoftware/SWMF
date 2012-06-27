@@ -34,10 +34,11 @@ contains
     use ModMain,    ONLY: nI, nJ, nK, nBlock, time_accurate, time_simulation, &
          Dt, Unused_B, UseB0, UseRotatingBc
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
-    use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, r_BLK, Rmin_BLK
+    use ModGeometry,ONLY: r_BLK, Rmin_BLK
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: Si2No_V, UnitT_, rBody
     use ModEnergy,  ONLY: calc_energy_cell
+    use BATL_lib,   ONLY: Xyz_DGB
 
     real :: Factor, RhoUdotB
     real, dimension(3) :: Xyz_D, Uiono_D, Urot_D, RhoUiono_D, RhoU_D, b_D
@@ -75,8 +76,7 @@ contains
           if( r_BLK(i,j,k,iBlock) > rCoupleUiono) CYCLE
           if( r_BLK(i,j,k,iBlock) < rBody) CYCLE
 
-          Xyz_D = (/ x_BLK(i,j,k,iBlock), &
-               y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock) /)
+          Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
 
           b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
           

@@ -680,6 +680,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, IsCartesian, &
        Xyz_DGB, iNode_B, CellSize_DB
   use ModCurrent, ONLY: get_current
+  use ModCoordTransform, ONLY: cross_product
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
@@ -690,7 +691,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
   character (len=10)  :: String, NamePlotVar, NameVar
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2) :: tmp1Var, tmp2Var
+  real:: tmp1Var, tmp2Var
   real, allocatable :: J_DG(:,:,:,:)
 
   integer :: iVar, itmp, jtmp, jVar, iIon
@@ -761,25 +762,23 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         plotvar_inBody(iVar) = BodyRho_I(iFluid)
         ! If Body2 is used, then see if it is in block and use other those values
         if(UseBody2)then
-           if( x_BLK(   0,   0,   0,iBLK)>(xBody2-rBody2) .and. &
-                x_BLK(nI+1,nJ+1,nK+1,iBLK)<(xBody2+rBody2) .and. &
-                y_BLK(   0,   0,   0,iBLK)>(yBody2-rBody2) .and. &
-                y_BLK(nI+1,nJ+1,nK+1,iBLK)<(yBody2+rBody2) .and. &
-                z_BLK(   0,   0,   0,iBLK)>(zBody2-rBody2) .and. &
-                z_BLK(nI+1,nJ+1,nK+1,iBLK)<(zBody2+rBody2) ) &
-                plotvar_inBody(iVar) = RhoBody2
+           if(rMin2_BLK(iBlk) < rBody2) plotvar_inBody(iVar) = RhoBody2
         end if
      case('rhoux','mx')
         if (UseRotatingFrame) then
-           PlotVar(:,:,:,iVar)=State_VGB(iRhoUx,:,:,:,iBLK) &
-                - State_VGB(iRho,:,:,:,iBLK)*OMEGAbody*y_BLK(:,:,:,iBLK)
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              PlotVar(i,j,k,iVar)=State_VGB(iRhoUx,i,j,k,iBLK) &
+                   - State_VGB(iRho,i,j,k,iBLK)*OmegaBody*Xyz_DGB(y_,i,j,k,iBLK)
+           end do; end do; end do
         else
            PlotVar(:,:,:,iVar)=State_VGB(iRhoUx,:,:,:,iBLK)
         end if
      case('rhouy','my')
         if (UseRotatingFrame) then
-           PlotVar(:,:,:,iVar)=State_VGB(iRhoUy,:,:,:,iBLK) &
-                + State_VGB(iRho,:,:,:,iBLK)*OMEGAbody*x_BLK(:,:,:,iBLK)
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              PlotVar(i,j,k,iVar)=State_VGB(iRhoUy,i,j,k,iBLK) &
+                + State_VGB(iRho,i,j,k,iBLK)*OmegaBody*Xyz_DGB(x_,i,j,k,iBLK)
+           end do; end do; end do
         else
            PlotVar(:,:,:,iVar)=State_VGB(iRhoUy,:,:,:,iBLK)
         end if
@@ -823,14 +822,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         plotvar_inBody(iVar) = BodyP_I(iFluid)
         ! If Body2 is used, then see if it is in block and use other those values
         if(UseBody2)then
-           if(  (xBody2+rBody2)>x_BLK(   0,   0,   0,iBLK) .and. &
-                (xBody2-rBody2)<x_BLK(nI+1,nJ+1,nK+1,iBLK) .and. &
-                (ybody2+rBody2)>y_BLK(   0,   0,   0,iBLK) .and. &
-                (ybody2-rBody2)<y_BLK(nI+1,nJ+1,nK+1,iBLK) .and. &
-                (zBody2+rBody2)>x_BLK(0   ,   0,   0,iBLK) .and. &
-                (zBody2-rBody2)<z_BLK(nI+1,nJ+1,nK+1,iBLK) )then
-              plotvar_inBody(iVar) = pBody2
-           end if
+           if(rMin2_BLK(iBlk) < rBody2) plotvar_inBody(iVar) = pBody2
         end if
 
         ! EXTRA MHD variables
@@ -862,18 +854,22 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
              /(1+AverageIonCharge*ElectronTemperatureRatio)
      case('ux')
         if (UseRotatingFrame) then
-           PlotVar(:,:,:,iVar) = &
-                State_VGB(iRhoUx,:,:,:,iBLK)/State_VGB(iRho,:,:,:,iBLK) &
-                - OMEGAbody*y_BLK(:,:,:,iBLK)
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              PlotVar(i,j,k,iVar) = &
+                   State_VGB(iRhoUx,i,j,k,iBLK)/State_VGB(iRho,i,j,k,iBLK) &
+                   - OmegaBody*Xyz_DGB(y_,i,j,k,iBLK)
+           end do; end do; end do
         else
            PlotVar(:,:,:,iVar) = &
                 State_VGB(iRhoUx,:,:,:,iBLK)/State_VGB(iRho,:,:,:,iBLK)
         end if
      case('uy')
         if (UseRotatingFrame) then
-           PlotVar(:,:,:,iVar) = &
-                State_VGB(iRhoUy,:,:,:,iBLK)/State_VGB(iRho,:,:,:,iBLK) &
-                + OMEGAbody*x_BLK(:,:,:,iBLK)
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              PlotVar(i,j,k,iVar) = &
+                   State_VGB(iRhoUy,i,j,k,iBLK)/State_VGB(iRho,i,j,k,iBLK) &
+                   + OmegaBody*Xyz_DGB(x_,i,j,k,iBLK)
+           end do; end do; end do
         else
            PlotVar(:,:,:,iVar) = &
                 State_VGB(iRhoUy,:,:,:,iBLK) / State_VGB(iRho,:,:,:,iBLK)
@@ -1025,77 +1021,56 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         ! Radial component variables
 
      case('ur')
-        PlotVar(:,:,:,iVar) = &
-             ( State_VGB(iRhoUx,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
-             + State_VGB(iRhoUy,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
-             + State_VGB(iRhoUz,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
-             ) / (State_VGB(iRho,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           PlotVar(i,j,k,iVar) = sum( &
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK)*Xyz_DGB(:,i,j,k,iBLK) &
+                ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
+        end do; end do; end do
      case('rhour','mr')
-        PlotVar(:,:,:,iVar) = &
-             ( State_VGB(iRhoUx,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
-             + State_VGB(iRhoUy,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
-             + State_VGB(iRhoUz,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
-             ) / R_BLK(:,:,:,iBLK)
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           PlotVar(i,j,k,iVar) = sum( &
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK)*Xyz_DGB(:,i,j,k,iBLK) &
+                ) / R_BLK(i,j,k,iBLK)
+        end do; end do; end do
      case('br')
         plotvar_useBody(iVar) = .true.
-        PlotVar(:,:,:,iVar)=( &
-             FullB_DG(x_,:,:,:) &
-             *X_BLK(:,:,:,iBLK)                         &  
-             +FullB_DG(y_,:,:,:) &
-             *Y_BLK(:,:,:,iBLK)                         &
-             +FullB_DG(z_,:,:,:) &
-             *Z_BLK(:,:,:,iBLK) ) / R_BLK(:,:,:,iBLK) 
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           PlotVar(i,j,k,iVar) = sum( &
+                FullB_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBLK) &
+                ) / R_BLK(i,j,k,iBLK) 
+        end do; end do; end do
      case('b1r')
-        PlotVar(:,:,:,iVar)= &
-             ( State_VGB(Bx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) &
-             + State_VGB(By_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) &
-             + State_VGB(Bz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
-             ) / R_BLK(:,:,:,iBLK)                                 
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           PlotVar(i,j,k,iVar) = sum( &
+                State_VGB(Bx_:Bz_,i,j,k,iBLK)*Xyz_DGB(:,i,j,k,iBLK) &
+                ) / R_BLK(i,j,k,iBLK) 
+        end do; end do; end do
      case('er')
-        PlotVar(:,:,:,iVar)=( ( State_VGB(iRhoUz,:,:,:,iBLK)* &
-             FullB_DG(y_,:,:,:) &
-             -State_VGB(iRhoUy,:,:,:,iBLK)* &
-             FullB_DG(z_,:,:,:)) &
-             *x_BLK(:,:,:,iBLK) &
-             +( State_VGB(iRhoUx,:,:,:,iBLK)* &
-             FullB_DG(z_,:,:,:) &
-             -State_VGB(iRhoUz,:,:,:,iBLK)* &
-             FullB_DG(x_,:,:,:)) &
-             *y_BLK(:,:,:,iBLK) &
-             +( State_VGB(iRhoUy,:,:,:,iBLK)* &
-             FullB_DG(x_,:,:,:) &
-             -State_VGB(iRhoUx,:,:,:,iBLK)* &
-             FullB_DG(y_,:,:,:)) &
-             *z_BLK(:,:,:,iBLK) )/State_VGB(iRho,:,:,:,iBLK) 
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           PlotVar(i,j,k,iVar)= sum( &
+                Xyz_DGB(:,i,j,k,iBLK) &
+                *cross_product(FullB_DG(:,i,j,k), &
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlk))) &
+                / (State_VGB(iRho,i,j,k,iBLK)*r_BLK(i,j,k,iBlk))
+        end do; end do; end do
      case('pvecr')
-        tmp1Var = &
-             FullB_DG(x_,:,:,:)**2 + &
-             FullB_DG(y_,:,:,:)**2 + &
-             FullB_DG(z_,:,:,:)**2 
-        tmp2Var = &
-             FullB_DG(x_,:,:,:)* &
-             State_VGB(iRhoUx,:,:,:,iBLK) + &
-             FullB_DG(y_,:,:,:)* &
-             State_VGB(iRhoUy,:,:,:,iBLK) + &
-             FullB_DG(z_,:,:,:)* &
-             State_VGB(iRhoUz,:,:,:,iBLK) 
-        PlotVar(:,:,:,iVar)=( ( tmp1Var*State_VGB(iRhoUx,:,:,:,iBLK) &
-             -tmp2Var*FullB_DG(x_,:,:,:))*X_BLK(:,:,:,iBLK) &
-             +( tmp1Var*State_VGB(iRhoUy,:,:,:,iBLK) &
-             -  tmp2Var*FullB_DG(y_,:,:,:))*Y_BLK(:,:,:,iBLK) &  
-             +( tmp1Var*State_VGB(iRhoUz,:,:,:,iBLK) &
-             -  tmp2Var*FullB_DG(z_,:,:,:))*Z_BLK(:,:,:,iBLK) )&   
-             /(State_VGB(iRho,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           tmp1Var = sum(FullB_DG(:,i,j,k)**2)
+           tmp2Var = sum(FullB_DG(:,i,j,k)* &
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK))
+           PlotVar(i,j,k,iVar) = sum ( &
+                Xyz_DGB(:,i,j,k,iBLK) &
+                *( tmp1Var*State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK) &
+                -  tmp2Var*FullB_DG(:,i,j,k) ) &
+                ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
+        end do; end do; end do
      case('b2ur')
-        tmp1Var = &
-             FullB_DG(x_,:,:,:)**2 + &
-             FullB_DG(y_,:,:,:)**2 + &
-             FullB_DG(z_,:,:,:)**2 
-        PlotVar(:,:,:,iVar)=0.5* &
-             ( tmp1Var*State_VGB(iRhoUx,:,:,:,iBLK)*X_BLK(:,:,:,iBLK) &
-             + tmp1Var*State_VGB(iRhoUy,:,:,:,iBLK)*Y_BLK(:,:,:,iBLK) &  
-             + tmp1Var*State_VGB(iRhoUz,:,:,:,iBLK)*Z_BLK(:,:,:,iBLK) &   
-             )/(State_VGB(iRho,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           PlotVar(i,j,k,iVar)=0.5*sum(FullB_DG(:,i,j,k)**2) &
+                *sum( State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK) &
+                *     Xyz_DGB(:,i,j,k,iBLK) &
+                ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
+        end do; end do; end do
      case('divb','divb_cd','divb_ct')
         if(.not.IsCartesian)call stop_mpi( &
              NameSub//': for non cartesian grids only absdivb works')
@@ -1295,7 +1270,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar) = iNode_B(iBLK)
      case('hall')
         if(UseHallResist)then
-           do k=1,nK; do j=1,nJ; do i=1,nI
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
               PlotVar(i,j,k,iVar) = hall_factor(0,i,j,k,iBlk)
            end do; end do; end do
         else
@@ -1311,7 +1286,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('ew','erad')
         if(Ew_ == 1)then
            if(UseWavePressure)then
-              do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                  PlotVar(i,j,k,iVar) = &
                       sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK))
               end do; end do; end do

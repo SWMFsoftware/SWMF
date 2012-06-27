@@ -1019,10 +1019,12 @@ subroutine constrain_ICs(iBlock)
   use ModMain
   use ModVarIndexes
   use ModAdvance, ONLY : State_VGB
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,body_BLK,true_cell
+  use ModGeometry, ONLY : body_BLK, true_cell
   use ModIO, ONLY : restart
   use ModPhysics, ONLY : SW_Bx,SW_By,SW_Bz
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
+  use BATL_lib, ONLY: Xyz_DGB
+
   implicit none
 
   integer, intent(in) :: iBlock
@@ -1035,7 +1037,7 @@ subroutine constrain_ICs(iBlock)
   else
 
      if(.not.restart)then
-        where(x_BLK(:,:,:,iBlock)<16.)
+        where(Xyz_DGB(x_,:,:,:,iBlock)<16.)
            ! Cancel B field at x<16Re to avoid non-zero initial divB
            ! x=16 is a good choice because it is a power of 2 so it is 
            ! a block boundary for all block sizes. 
@@ -1056,9 +1058,9 @@ subroutine constrain_ICs(iBlock)
 
 
      if(index(test_string,'testCTcoarse')>0)then
-        State_VGB(Bx_,:,:,:,iBlock)=   x_BLK(:,:,:,iBlock)
-        State_VGB(By_,:,:,:,iBlock)=   y_BLK(:,:,:,iBlock)
-        State_VGB(Bz_,:,:,:,iBlock)=-2*z_BLK(:,:,:,iBlock)
+        State_VGB(Bx_,:,:,:,iBlock)=   Xyz_DGB(x_,:,:,:,iBlock)
+        State_VGB(By_,:,:,:,iBlock)=   Xyz_DGB(y_,:,:,:,iBlock)
+        State_VGB(Bz_,:,:,:,iBlock)=-2*Xyz_DGB(z_,:,:,:,iBlock)
         if(body_BLK(iBlock))then
            where(.not.true_cell(:,:,:,iBlock))
               State_VGB(Bx_,:,:,:,iBlock)=0.

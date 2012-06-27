@@ -1552,12 +1552,12 @@ contains
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModVarIndexes, ONLY: Pe_
-    use ModGeometry, ONLY: x1, x_BLK
+    use ModGeometry, ONLY: x1
     use ModUser, ONLY: user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: message_pass_cell, CellVolume_GB, CoordMin_D, &
-         CoordMax_D, IsRzGeometry
-	use ModNumConst, ONLY: cHalfPi
+         CoordMax_D, IsRzGeometry, Xyz_DGB, x_
+    use ModNumConst, ONLY: cHalfPi
 
     real:: Irradiance, EInternalSi, PressureSi
     integer :: iBlock, i, j, k, iP
@@ -1576,7 +1576,7 @@ contains
              ! Denominator 50.0 is the distance to the critical surface.
              ! The beryllium is initially weakly ionized (Z=1), so that
              ! the electron density is like the mass density a linear profile.
-             State_VGB(Rho_,i,j,k,iBlock) = (x_BLK(i,j,k,iBlock) - x1)/50.0 &
+             State_VGB(Rho_,i,j,k,iBlock) = (Xyz_DGB(x_,i,j,k,iBlock) - x1)/50.0 &
                   *DensityCrSI*Si2No_V(UnitRho_)
           end do; end do; end do
        end do

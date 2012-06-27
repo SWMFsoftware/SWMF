@@ -364,7 +364,8 @@ subroutine advect_test
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nI, nJ, nK, nBlock, Dt
   use ModAdvance,  ONLY: StateOld_VCB, State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_
-  use ModGeometry, ONLY: x2, x_BLK, z_BLK
+  use ModGeometry, ONLY: x2
+  use BATL_lib,    ONLY: Xyz_DGB, x_, z_
   use ModNumConst, ONLY: cTwoPi
   use ModIoUnit,   ONLY: UnitTmp_
   implicit none
@@ -388,8 +389,8 @@ subroutine advect_test
   ! Rotation with Omega=1 around the Z axis
   State_VGB(Rho_,:,:,:,1:nBlock)   = 1.0
   State_VGB(RhoUy_,:,:,:,1:nBlock) = 0.0
-  State_VGB(RhoUx_,:,:,:,1:nBlock) = -z_BLK(:,:,:,1:nBlock)
-  State_VGB(RhoUz_,:,:,:,1:nBlock) = +x_BLK(:,:,:,1:nBlock)
+  State_VGB(RhoUx_,:,:,:,1:nBlock) = -Xyz_DGB(z_,:,:,:,1:nBlock)
+  State_VGB(RhoUz_,:,:,:,1:nBlock) = +Xyz_DGB(x_,:,:,:,1:nBlock)
 
   ! Initial Time
   Time = 0.0
@@ -410,8 +411,8 @@ subroutine advect_test
      StateOld_VCB(Rho_:RhoUz_,:,:,:,1:nBlock) = &
           State_VGB(Rho_:RhoUz_,1:nI,1:nJ,1:nK,1:nBlock)
 
-     State_VGB(RhoUx_,:,:,:,1:nBlock) = -(z_BLK(:,:,:,1:nBlock) - Time*Uz)
-     State_VGB(RhoUz_,:,:,:,1:nBlock) = +(x_BLK(:,:,:,1:nBlock) - Time*Ux)
+     State_VGB(RhoUx_,:,:,:,1:nBlock) = -(Xyz_DGB(z_,:,:,:,1:nBlock) - Time*Uz)
+     State_VGB(RhoUz_,:,:,:,1:nBlock) = +(Xyz_DGB(x_,:,:,:,1:nBlock) - Time*Ux)
 
      ! Rotation
      call advect_points(nPoint, Xyz_DI)

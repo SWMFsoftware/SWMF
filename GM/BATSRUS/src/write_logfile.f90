@@ -5,7 +5,6 @@ subroutine write_logfile(iSatIn,iFile)
   use ModMain
   use ModVarIndexes
   use ModAdvance, ONLY  : State_VGB, tmp1_BLK
-  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
   use ModPhysics, ONLY  : Si2Io_V, Si2No_V, UnitT_
   use ModIO
   use ModIoUnit, ONLY   : io_unit_new
@@ -13,6 +12,8 @@ subroutine write_logfile(iSatIn,iFile)
   use ModSatelliteFile, ONLY: NameSat_I, IsFirstWriteSat_I, &
        iUnitSat_I, TimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
   use ModMpi
+  use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
+
   implicit none
 
   ! Arguments
@@ -63,17 +64,14 @@ subroutine write_logfile(iSatIn,iFile)
      if(index(test_string,'show_pmin')>0)then
         pMin = minval_loc_BLK(nProc,tmp1_BLK,loc)
         if(loc(5)==iProc)write(*,*)'pmin, loc, x, y, z=',pmin,loc, &
-             x_BLK(loc(1),loc(2),loc(3),loc(4)),&
-             y_BLK(loc(1),loc(2),loc(3),loc(4)),&
-             z_BLK(loc(1),loc(2),loc(3),loc(4))
+             Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
      end if
 
      if(index(test_string,'show_pmax')>0)then
         pMax = maxval_loc_BLK(nProc,tmp1_BLK,loc)
         if(loc(5)==iProc)write(*,*)'pmax, loc, x, y, z=',pmax,loc, &
-             x_BLK(loc(1),loc(2),loc(3),loc(4)),&
-             y_BLK(loc(1),loc(2),loc(3),loc(4)),&
-             z_BLK(loc(1),loc(2),loc(3),loc(4))
+             Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
+
      end if
   end if
 
@@ -264,7 +262,7 @@ end subroutine write_logfile
 subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
 
   use ModProcMH
-  use ModNumConst
+  use ModNumConst, ONLY: cPi
   use ModMPI
   use ModMain, ONLY: n_step,Dt,Cfl,Unused_B,nI,nJ,nK,nBlock,UseUserLogFiles,&
        iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
@@ -273,12 +271,12 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, State_VGB, Energy_GBI, DivB1_GB
   use ModB0, ONLY:  B0_DGB, get_b0
-  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,x1,x2,y1,y2,z1,z2, &
+  use ModGeometry,   ONLY: R_BLK,x1,x2,y1,y2,z1,z2, &
        DomainVolume
   use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
   use ModSatelliteFile, ONLY: get_satellite_ray !^CFG  IF RAYTRACE
   use ModSatelliteFile, ONLY: XyzSat_DI
-  use ModIO
+  use ModIO, ONLY: write_myname
   use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid
 
   implicit none
@@ -391,7 +389,7 @@ contains
     use ModUtilities, ONLY: lower_case
     use ModCurrent,   ONLY: get_current
     use ModWaves,     ONLY: UseWavePressure
-    use BATL_lib, ONLY: message_pass_cell
+    use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
 
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
@@ -448,7 +446,7 @@ contains
                State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
+       LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekiny')
        do iBLK=1,nBlock
           if (Unused_B(iBLK)) cycle
@@ -456,7 +454,7 @@ contains
                State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
+       LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekinz')
        do iBLK=1,nBlock
           if (Unused_B(iBLK)) cycle
@@ -464,7 +462,7 @@ contains
                State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
+       LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekin')
        do iBLK=1,nBlock
           if (Unused_B(iBLK)) cycle
@@ -474,7 +472,7 @@ contains
                State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK)**2)&
                /State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
-       LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/DomainVolume
+       LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
 
     case('jin','jout','jinmax','joutmax')
 
@@ -489,10 +487,8 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              ! Calculate radial current
              call get_current(i,j,k,iBlk,Current_D)
-             tmp1_BLK(i,j,k,iBLK) = ( &
-                  Current_D(x_)*x_BLK(i,j,k,iBLK)+ &
-                  Current_D(y_)*y_BLK(i,j,k,iBLK)+ &
-                  Current_D(z_)*z_BLK(i,j,k,iBLK) ) / r_BLK(i,j,k,iBLK)
+             tmp1_BLK(i,j,k,iBLK) = &
+                  sum(Current_D*Xyz_DGB(:,i,j,k,iBLK)) / r_BLK(i,j,k,iBLK)
           end do; end do; end do
        end do
 
@@ -546,19 +542,19 @@ contains
           if(Unused_B(iBLK))cycle           
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
-                  x_BLK(i+1,j,k,iBLK) > x2 .or.      &
-                  x_BLK(i-1,j,k,iBLK) < x1 .or.      &
-                  y_BLK(i,j+1,k,iBLK) > y2 .or.      &
-                  y_BLK(i,j-1,k,iBLK) < y1 .or.      &
-                  z_BLK(i,j,k+1,iBLK) > z2 .or.      &
-                  z_BLK(i,j,k-1,iBLK) < z1 ) then
+                  Xyz_DGB(x_,i+1,j,k,iBLK) > x2 .or.      &
+                  Xyz_DGB(x_,i-1,j,k,iBLK) < x1 .or.      &
+                  Xyz_DGB(y_,i,j+1,k,iBLK) > y2 .or.      &
+                  Xyz_DGB(y_,i,j-1,k,iBLK) < y1 .or.      &
+                  Xyz_DGB(z_,i,j,k+1,iBLK) > z2 .or.      &
+                  Xyz_DGB(z_,i,j,k-1,iBLK) < z1 ) then
                 tmp1_BLK(i,j,k,iBLK)=0.0
                 CYCLE
              end if
              call get_current(i,j,k,iBlk,Current_D)
              tmp1_BLK(i,j,k,iBLK) = ( &
-                  -Current_D(x_)*y_BLK(i,j,k,iBLK) &
-                  +Current_D(y_)*x_BLK(i,j,k,iBLK) ) / r_BLK(i,j,k,iBLK)**3
+                  -Current_D(x_)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +Current_D(y_)*Xyz_DGB(x_,i,j,k,iBLK) ) / r_BLK(i,j,k,iBLK)**3
           end do; end do; end do
        end do
        ! The /4pi is part of the Biot-Savart formula
@@ -575,17 +571,17 @@ contains
           if(Unused_B(iBLK))cycle           
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
-                  x_BLK(i+1,j,k,iBLK) > x2 .or.      &
-                  x_BLK(i-1,j,k,iBLK) < x1 .or.      &
-                  y_BLK(i,j+1,k,iBLK) > y2 .or.      &
-                  y_BLK(i,j-1,k,iBLK) < y1 .or.      &
-                  z_BLK(i,j,k+1,iBLK) > z2 .or.      &
-                  z_BLK(i,j,k-1,iBLK) < z1 ) then
+                  Xyz_DGB(x_,i+1,j,k,iBLK) > x2 .or.      &
+                  Xyz_DGB(x_,i-1,j,k,iBLK) < x1 .or.      &
+                  Xyz_DGB(y_,i,j+1,k,iBLK) > y2 .or.      &
+                  Xyz_DGB(y_,i,j-1,k,iBLK) < y1 .or.      &
+                  Xyz_DGB(z_,i,j,k+1,iBLK) > z2 .or.      &
+                  Xyz_DGB(z_,i,j,k-1,iBLK) < z1 ) then
                 tmp1_BLK(i,j,k,iBLK)=0.0
                 CYCLE
              end if
              tmp1_BLK(i,j,k,iBLK) = &
-                  z_BLK(i,j,k,iBLK) * DivB1_GB(i,j,k,iBLK) &
+                  Xyz_DGB(z_,i,j,k,iBLK) * DivB1_GB(i,j,k,iBLK) &
                   / r_BLK(i,j,k,iBLK)**3
           end do; end do; end do
        end do
@@ -731,10 +727,8 @@ contains
              if(Unused_B(iBLK)) CYCLE
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                 tmp1_BLK(i,j,k,iBLK) = &
-                     (State_VGB(iRhoUx,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                     +State_VGB(iRhoUy,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                     +State_VGB(iRhoUz,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
-                     )/R_BLK(i,j,k,iBLK)
+                     sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK)*Xyz_DGB(:,i,j,k,iBLK)) &
+                     /r_BLK(i,j,k,iBLK)
              end do; end do; end do
           end do
           LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
@@ -762,11 +756,9 @@ contains
              if(UseB0)FullB_DG = FullB_DG &
                   +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                tmp1_BLK(i,j,k,iBLK) = ( &
-                     FullB_DG(x_,i,j,k)*x_BLK(i,j,k,iBLK) + &
-                     FullB_DG(y_,i,j,k)*y_BLK(i,j,k,iBLK) + &
-                     FullB_DG(z_,i,j,k)*z_BLK(i,j,k,iBLK) &
-                     ) / R_BLK(i,j,k,iBLK)
+                tmp1_BLK(i,j,k,iBLK) = &
+                     sum(FullB_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBLK)) &
+                     / R_BLK(i,j,k,iBLK)
              end do; end do; end do
           end do
 
@@ -787,10 +779,8 @@ contains
                 tmp1_BLK(i,j,k,iBLK) = &
                      sum(FullB_DG(:,i,j,k)**2)
                 tmp1_BLK(i,j,k,iBLK) = 0.5*tmp1_BLK(i,j,k,iBLK)* &
-                     ( State_VGB(iRhoUx,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                     + State_VGB(iRhoUy,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                     + State_VGB(iRhoUz,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
-                     ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
+                     sum( State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK)*Xyz_DGB(:,i,j,k,iBLK)) &
+                     / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
              end do; end do; end do
           end do
           LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
@@ -806,16 +796,11 @@ contains
              if(UseB0)FullB_DG = FullB_DG &
                   +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                RhoUx = State_VGB(iRhoUx,i,j,k,iBLk)
-                RhoUy = State_VGB(iRhoUy,i,j,k,iBLk)
-                RhoUz = State_VGB(iRhoUz,i,j,k,iBLk)
                 bDotb = sum(FullB_DG(:,i,j,k)**2)
-                bDotU = FullB_DG(x_,i,j,k)*RhoUx +&
-                     FullB_DG(y_,i,j,k)*RhoUy + FullB_DG(z_,i,j,k)*RhoUz
-                tmp1_BLK(i,j,k,iBLk) = ( &
-                     ( bDotb*rhoUx - bDotU*FullB_DG(x_,i,j,k))*X_BLK(i,j,k,iBLk)+&
-                     ( bDotb*rhoUy - bDotU*FullB_DG(y_,i,j,k))*Y_BLK(i,j,k,iBLk)+&
-                     ( bDotb*rhoUz - bDotU*FullB_DG(z_,i,j,k))*Z_BLK(i,j,k,iBLk) &
+                bDotU = sum(FullB_DG(:,i,j,k)*State_VGB(iRhoUx:iRhoUz,i,j,k,iBLk))
+                tmp1_BLK(i,j,k,iBLk) = &
+                     sum( (bDotb*State_VGB(iRhoUx:iRhoUz,i,j,k,iBLk) &
+                     -     bDotU*FullB_DG(:,i,j,k))*Xyz_DGB(:,i,j,k,iBLk) &
                      ) / (State_VGB(iRho,i,j,k,iBLk)*R_BLK(i,j,k,iBLk))
              end do; end do; end do
           end do
@@ -843,8 +828,8 @@ contains
                 RhoUy = State_VGB(iRhoUy,i,j,k,iBLk)
                 RhoUz = State_VGB(iRhoUz,i,j,k,iBLk)
                 tmp1_BLK(i,j,k,iBLK) = &
-                     ( (RhoUy*Bz-RhoUz*By)*y_BLK(i,j,k,iBLK) &
-                     - (RhoUz*Bx-RhoUx*Bz)*x_BLK(i,j,k,iBLK) &
+                     ( (RhoUy*Bz-RhoUz*By)*Xyz_DGB(y_,i,j,k,iBLK) &
+                     - (RhoUz*Bx-RhoUx*Bz)*Xyz_DGB(x_,i,j,k,iBLK) &
                      ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK)) 
              end do; end do; end do
           end do
@@ -905,15 +890,11 @@ contains
 
   !==========================================================================
   subroutine set_sat_var
-    use ModProcMH
-    use ModNumConst
-    use ModVarIndexes
-    use ModIO
+
     use ModUtilities, ONLY: lower_case
     use ModPhysics, ONLY:  AverageIonCharge, ElectronTemperatureRatio
     use ModMultiFluid, ONLY: UseMultiIon, IsMhd, iFluid, iRho, iP, iRhoIon_I, &
          MassIon_I
-    implicit none
 
     integer :: jVar
     character(len=10) :: NameVar, NameLogVarLower
@@ -1152,10 +1133,10 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
 
   use ModMain,           ONLY: nI,nJ,nK,nBLK,nBlock,Unused_B,&
        optimize_message_pass
-  use ModGeometry,       ONLY: x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK, &
-       r_BLK, XyzStart_Blk, TypeGeometry
-  use BATL_lib,          ONLY: IsCartesianGrid, IsRLonLat
-  use ModNumConst
+  use ModGeometry,       ONLY: r_BLK, XyzStart_Blk, TypeGeometry
+  use BATL_lib,  ONLY: IsCartesianGrid, IsRLonLat, Xyz_DGB, x_, y_, z_, &
+       CellSize_DB, Theta_, Phi_
+  use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
   use ModInterpolate, ONLY: trilinear
   implicit none
 
@@ -1207,15 +1188,15 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
 
      do iBlock = 1, nBlock
         if (Unused_B(iBlock)) CYCLE
-        rMin = cHalf*(R_BLK( 0, 1, 1,iBlock) + R_BLK( 1, 1, 1,iBlock))
+        rMin = 0.5*(R_BLK( 0, 1, 1,iBlock) + R_BLK( 1, 1, 1,iBlock))
         if(rMin > Radius) CYCLE
-        rMax = cHalf*(R_BLK(NI, 1, 1,iBlock) + R_BLK(NI+1,1,1,iBlock))
+        rMax = 0.5*(R_BLK(NI, 1, 1,iBlock) + R_BLK(NI+1,1,1,iBlock))
         if(rMax <= Radius) CYCLE
 
         ! Set temporary array
         Array_G = Array_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock)
 
-        dTheta = dz_BLK(iBlock); dPhi=dy_BLK(iBlock)
+        dTheta = CellSize_DB(Theta_,iBlock); dPhi=CellSize_DB(Phi_,iBlock)
         dArea0 = Radius**2 *dPhi *dTheta
 
         ! Find the radial index just after Radius
@@ -1233,8 +1214,8 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
         case('integrate')
            ! Integrate in theta
            do k = 1, nK
-              SinTheta = sqrt(x_BLK(1,1,k,iBlock)**2 + y_BLK(1,1,k,iBlock)**2)&
-                   /r_BLK(1,1,k,iBlock)
+              SinTheta = sqrt(sum(Xyz_DGB(x_:y_,1,1,k,iBlock)**2)) &
+                   / r_BLK(1,1,k,iBlock)
               ! Integrate in Phi by adding up 1..nJ and interpolate in R
               Average = Dr * sum( Array_G(i2, 1:nJ, k)) + &
                    (1-Dr)  * sum( Array_G(i1, 1:nJ, k))
@@ -1254,7 +1235,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
      ! Get the angular resolution from the input parameter nTheta
      MaxPhi = 2*nTheta
      dTheta = cPi/nTheta
-     dArea0 = Radius**2 * 2 * sin(cHalf*dTheta)
+     dArea0 = Radius**2 * 2 * sin(0.5*dTheta)
 
      if (DoTestMe) write(*,*) 'nTheta,MaxPhi,dTheta[deg]:',nTheta,MaxPhi,&
           dTheta*cRadToDeg
@@ -1264,7 +1245,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
      !       SinTheta_I(nTheta) )
      !
      !  do i = 1, nTheta
-     !     Theta         = (i - cHalf)*dTheta
+     !     Theta         = (i - 0.5)*dTheta
      !     SinTheta      = sin(Theta)
      !     SinTheta_I(i) = SinTheta
      !     z_I(i)        = Radius*cos(Theta)
@@ -1291,12 +1272,12 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
         ! get the max and min radial distance for this block so that 
         ! we can check whether or not this block contibutes to the sum.
 
-        xMin = cHalf*(x_BLK( 0, 0, 0,iBlock) + x_BLK(   1,   1  , 1,iBlock))
-        xMax = cHalf*(x_BLK(nI,nJ,nK,iBlock) + x_BLK(nI+1,nJ+1,nK+1,iBlock))
-        yMin = cHalf*(y_BLK( 0, 0, 0,iBlock) + y_BLK(   1,   1,   1,iBlock))
-        yMax = cHalf*(y_BLK(nI,nJ,nK,iBlock) + y_BLK(nI+1,nJ+1,nK+1,iBlock))
-        zMin = cHalf*(z_BLK( 0, 0, 0,iBlock) + z_BLK(   1,   1,   1,iBlock))
-        zMax = cHalf*(z_BLK(nI,nJ,nK,iBlock) + z_BLK(nI+1,nJ+1,nK+1,iBlock))
+        xMin = 0.5*(Xyz_DGB(x_, 0, 0, 0,iBlock) + Xyz_DGB(x_,   1,   1  , 1,iBlock))
+        xMax = 0.5*(Xyz_DGB(x_,nI,nJ,nK,iBlock) + Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBlock))
+        yMin = 0.5*(Xyz_DGB(y_, 0, 0, 0,iBlock) + Xyz_DGB(y_,   1,   1,   1,iBlock))
+        yMax = 0.5*(Xyz_DGB(y_,nI,nJ,nK,iBlock) + Xyz_DGB(y_,nI+1,nJ+1,nK+1,iBlock))
+        zMin = 0.5*(Xyz_DGB(z_, 0, 0, 0,iBlock) + Xyz_DGB(z_,   1,   1,   1,iBlock))
+        zMax = 0.5*(Xyz_DGB(z_,nI,nJ,nK,iBlock) + Xyz_DGB(z_,nI+1,nJ+1,nK+1,iBlock))
 
         if( minmod(xMin,xMax)**2+minmod(yMin,yMax)**2+minmod(zMin,zMax)**2 &
              > Radius**2) &
@@ -1305,7 +1286,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
              < Radius**2) &
              CYCLE
 
-        InvDxyz_D = 1.0/(/ Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock) /)
+        InvDxyz_D = 1 / CellSize_DB(:,iBlock)
 
         ! Set temporary array
         Array_G = Array_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock)
@@ -1318,7 +1299,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
         do i = 1, nTheta
 
            ! Check if z is inside the block
-           Theta = dTheta*(i-cHalf)
+           Theta = dTheta*(i-0.5)
            z     = Radius*cos(Theta)
            if(z <  zMin) CYCLE
            if(z >= zMax) CYCLE
@@ -1381,7 +1362,7 @@ contains
 
   real function minmod(x,y)
     real, intent(in) :: x,y
-    minmod = max(cZero,min(abs(x),sign(cOne,x)*y))
+    minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
   end function minmod
 
   real function maxmod(x,y)
@@ -1402,8 +1383,9 @@ real function integrate_circle(Radius,z,Array_GB)
   ! is given by z.  
 
   use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B,optimize_message_pass
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,Dx_BLK,Dy_BLK,Dz_BLK,XyzStart_Blk
-  use ModNumConst
+  use ModGeometry, ONLY : XyzStart_Blk
+  use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_, CellSize_DB
+  use ModNumConst, ONLY: cTwoPi
   use ModInterpolate, ONLY: trilinear
   implicit none
 
@@ -1444,15 +1426,15 @@ real function integrate_circle(Radius,z,Array_GB)
      ! get the max and min radial (cylindrical) distance for this block so 
      ! that we can check whether or not this block contibutes to the sum.
 
-     zMin = 0.5*(z_BLK( 0, 0, 0,iBlock)+z_BLK(   1,   1,   1,iBlock))
-     zMax = 0.5*(z_BLK(nI,nJ,nK,iBlock)+z_BLK(nI+1,nJ+1,nK+1,iBlock))
+     zMin = 0.5*(Xyz_DGB(z_, 0, 0, 0,iBlock)+Xyz_DGB(z_,   1,   1,   1,iBlock))
+     zMax = 0.5*(Xyz_DGB(z_,nI,nJ,nK,iBlock)+Xyz_DGB(z_,nI+1,nJ+1,nK+1,iBlock))
 
      if(z < zMin .or. z >= zMax ) CYCLE
 
-     xMin = 0.5*(x_BLK( 0, 0, 0,iBlock)+x_BLK(   1,   1  , 1,iBlock))
-     xMax = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(nI+1,nJ+1,nK+1,iBlock))
-     yMin = 0.5*(y_BLK( 0, 0, 0,iBlock)+y_BLK(   1,   1,   1,iBlock))
-     yMax = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(nI+1,nJ+1,nK+1,iBlock))
+     xMin = 0.5*(Xyz_DGB(x_, 0, 0, 0,iBlock)+Xyz_DGB(x_,   1,   1  , 1,iBlock))
+     xMax = 0.5*(Xyz_DGB(x_,nI,nJ,nK,iBlock)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBlock))
+     yMin = 0.5*(Xyz_DGB(y_, 0, 0, 0,iBlock)+Xyz_DGB(y_,   1,   1,   1,iBlock))
+     yMax = 0.5*(Xyz_DGB(y_,nI,nJ,nK,iBlock)+Xyz_DGB(y_,nI+1,nJ+1,nK+1,iBlock))
 
      if( minmod(xMin,xMax)**2 + minmod(yMin,yMax)**2 > Radius**2) CYCLE
      if( maxmod(xMin,xMax)**2 + maxmod(yMin,yMax)**2 < Radius**2) CYCLE
@@ -1461,7 +1443,7 @@ real function integrate_circle(Radius,z,Array_GB)
 
      if(index(optimize_message_pass,'opt')>0) call fill_edge_corner(Array_G)
 
-     InvDxyz_D = 1.0/(/ Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock) /)
+     InvDxyz_D = 1 / CellSize_DB(:,iBlock)
 
      do i = 1, nPhi
         Phi = (i-0.5)*dPhi
@@ -1494,7 +1476,7 @@ contains
 
   real function minmod(x,y)
     real, intent(in) :: x,y
-    minmod = max(cZero,min(abs(x),sign(cOne,x)*y))
+    minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
   end function minmod
 
   real function maxmod(x,y)
@@ -1566,13 +1548,13 @@ subroutine satellite_test
   use ModVarIndexes
   use ModMain,     ONLY: nBlock,xTest,yTest,zTest
   use ModAdvance,  ONLY: State_VGB
-  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+  use BATL_lib,    ONLY: Xyz_DGB, x_, y_, z_
   implicit none
   real :: State_V(0:nVar+3)
 
-  State_VGB(Bx_,:,:,:,:) = y_BLK
-  State_VGB(By_,:,:,:,:) = z_BLK
-  State_VGB(Bz_,:,:,:,:) = x_BLK
+  State_VGB(Bx_,:,:,:,:) = Xyz_DGB(y_,:,:,:,:)
+  State_VGB(By_,:,:,:,:) = Xyz_DGB(z_,:,:,:,:)
+  State_VGB(Bz_,:,:,:,:) = Xyz_DGB(x_,:,:,:,:)
 
   call get_point_data(0.0,(/xTest,yTest,zTest/),1,nBlock,1,nVar+3,State_V)
   call collect_satellite_data((/xTest,yTest,zTest/),State_V)

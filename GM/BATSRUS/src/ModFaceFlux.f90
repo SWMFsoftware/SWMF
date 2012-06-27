@@ -8,10 +8,9 @@ module ModFaceFlux
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, UseNeutralFluid
-  use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK
-  use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
+  use ModGeometry,   ONLY: true_cell
   use BATL_lib,      ONLY: IsCartesianGrid, IsCartesian, IsRzGeometry, &
-       CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB
+       Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB
 
   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
 
@@ -718,16 +717,10 @@ contains
           if(DoTestCell)write(*,*)'set_cell_values_x: Area2=', Area2
 
           ! The face is at the pole
-          Normal_D(x_)= &
-               x_BLK(iFace, jFace, kFace, iBlockFace)-&
-               x_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D(y_)= &
-               y_BLK(iFace, jFace, kFace, iBlockFace)-&
-               y_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D(z_)= &
-               z_BLK(iFace, jFace, kFace, iBlockFace)-&
-               z_BLK(iLeft, jLeft, kLeft, iBlockFace)
           Normal_D = Normal_D / sqrt(sum(Normal_D**2))
+          Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
+               -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
+          Normal_D=Normal_D/sqrt(sum(Normal_D**2))
           Area =0.0
           Area2=0.0
        else
@@ -762,14 +755,9 @@ contains
           if(DoTestCell)write(*,*)'set_cell_values_y: Area2=', Area2
 
           !The face is at the pole
-          Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
-                       x_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D(y_)=y_BLK(iFace, jFace, kFace, iBlockFace)-&
-                       y_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D(z_)=z_BLK(iFace, jFace, kFace, iBlockFace)-&
-                       z_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D=Normal_D/&
-               sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
+          Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
+               -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
+          Normal_D=Normal_D/sqrt(sum(Normal_D**2))
           Area = 0.0
           Area2= 0.0
        else
@@ -800,14 +788,10 @@ contains
           if(DoTestCell)write(*,*)'set_cell_values_z: Area2 = ', Area2
 
           !The face is at the pole
-          Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
-                       x_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D(y_)=y_BLK(iFace, jFace, kFace, iBlockFace)-&
-                       y_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D(z_)=z_BLK(iFace, jFace, kFace, iBlockFace)-&
-                       z_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D=Normal_D/&
-               sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
+          Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
+               -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
+          Normal_D=Normal_D/sqrt(sum(Normal_D**2))
+
           Area = 0.0
           Area2= 0.0
        else
@@ -870,13 +854,9 @@ contains
 
        ! InvDxyz is needed for the time step limit of the explicit evaluation
        ! of the diffusion operator
-       InvDxyz = 1.0/sqrt(  &
-            ( x_BLK(iRight,jRight,kRight, iBlockFace)          &
-            - x_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 +    &
-            ( y_BLK(iRight,jRight,kRight, iBlockFace)          &
-            - y_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 +    &
-            ( z_BLK(iRight,jRight,kRight, iBlockFace)          &
-            - z_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 )
+       InvDxyz = 1.0/sqrt( sum( &
+            ( Xyz_DGB(:,iRight,jRight,kRight, iBlockFace)          &
+            - Xyz_DGB(:,iLeft, jLeft  ,kLeft, iBlockFace))**2) )
     end if
 
     if(UseClimit)then
@@ -2876,9 +2856,7 @@ contains
          write(*,*)NameSub,' idim,i,j,k,BlockFace,iProc=', &
               iDimFace, iFace, jFace, kFace, iBlockFace, iProc
          write(*,*)NameSub,' xyz(right)=', &
-              x_BLK(iFace,jFace,kFace,iBlockFace), &
-              y_BLK(iFace,jFace,kFace,iBlockFace), &
-              z_BLK(iFace,jFace,kFace,iBlockFace)
+              Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
          call stop_mpi(NameSub//' negative soundspeed squared')
       end if
 
@@ -3035,9 +3013,7 @@ subroutine roe_solver(Flux_V)
   !if(aL<0.0)then
   !   write(*,*)'NEGATIVE aL Me, iDir, i, j, k, iBlockFace',&
   !        aL,iProc,iDimFace,i,j,k,&
-  !        x_BLK(i,j,k,iBlockFace),&
-  !        y_BLK(i,j,k,iBlockFace),&
-  !        z_BLK(i,j,k,iBlockFace)
+  !        Xyz_DGB(:,i,j,k,iBlockFace)
   !   call stop_mpi
   !end if
 

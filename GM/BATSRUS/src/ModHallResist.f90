@@ -320,116 +320,11 @@ contains
   end subroutine set_block_jacobian_face
 
   !============================================================================
-  subroutine set_block_sph_jacobian_face(iBlock)
-    use ModMain,     ONLY: x_, y_, z_, r_, Theta_, Phi_
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLk
-    use BATL_lib,    ONLY: IsLogRadius
-
-    integer, intent(in):: iBlock
-
-    ! Dxyz/Dgen matrix for one cell
-    real:: DgenDxyz_DD(MaxDim, MaxDim)
-
-    ! Indexes
-    integer:: i, j, k, Di, Dj, Dk, iL, jL, kL, iDir
-
-    ! All coordinates refer to the face
-    real :: x, y, z
-    real :: r, InvR, InvR2, zInvR2
-    real :: Rxy, InvRxy, Rxy2, InvRxy2
-
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='set_block_sph_jacobian_face'
-    !--------------------------------------------------------------------------
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
-
-    DIRECTION: do iDir = 1, MaxDim
-       select case(iDir)
-       case(x_)
-          Di = 1; Dj = 0; Dk = 0
-       case(y_)
-          Di = 0; Dj = 1; Dk = 0
-       case(z_)
-          Di = 0; Dj = 0; Dk = 1
-       end select
-
-       ! This element is always zero
-       DgenDxyz_DD(Phi_,z_) =  0.0
-
-       THETA: do k = 1, nK+1
-          kL = k - Dk
-
-          RADIUS: do i = 1, nI+1
-             iL = i - Di
-
-             ! Vertical coordinate depends on R (i) and Theta (k) only
-             z = 0.5*(z_BLK(iL,1,kL,iBlock) + z_BLK(i,1,k,iBlock))
-
-             ! The radial distance of the face depends on R and Theta only
-             ! so use an arbitrary index for Phi (j=1):
-             x = 0.5*(x_BLK(iL,1-Dj,kL,iBlock) + x_BLK(i,1,k,iBlock))
-             y = 0.5*(y_BLK(iL,1-Dj,kL,iBlock) + y_BLK(i,1,k,iBlock))
-
-             r = sqrt(x**2 + y**2 + z**2)
-
-             InvR  = 1.0/r
-             InvR2 = InvR**2
-             zInvR2 = z*InvR2
-
-             Rxy2   = r**2 - z**2
-             if(Rxy2 > 0.0)then
-                Rxy    = sqrt(Rxy2)
-                InvRxy = 1.0/Rxy
-             else
-                ! On the Z axis InvRxy is not needed
-                Rxy    = 0.0
-                InvRxy = 1.0
-             end if
-             InvRxy2 = InvRxy**2
-
-             ! These elements do not depend on Phi:
-             DgenDxyz_DD(r_    ,z_) = z*InvR
-             DgenDxyz_DD(Theta_,z_) = InvR2*Rxy
-             
-             PHI: do j = 1, nJ+1
-                jL = j - Dj
-
-                x = 0.5*(x_BLK(iL,jL,kL,iBlock) + x_BLK(i,j,k,iBlock))
-                y = 0.5*(y_BLK(iL,jL,kL,iBlock) + y_BLK(i,j,k,iBlock))
-
-                ! dRadius/..
-                DgenDxyz_DD(r_, x_)     = x*InvR
-                DgenDxyz_DD(r_, y_)     = y*InvR
-
-                ! If radial coordinate is logarithmic, multiply by extra 1/r
-                if(IsLogRadius) &
-                     DgenDxyz_DD(r_, :) = DgenDxyz_DD(r_, :)*InvR
-                
-                ! dPhi/..
-                DgenDxyz_DD(Phi_, x_)   = -y*InvRxy2
-                DgenDxyz_DD(Phi_, y_)   =  x*InvRxy2
-
-                ! dTheta/..
-                DgenDxyz_DD(Theta_, x_) = -x*InvRxy*zInvR2
-                DgenDxyz_DD(Theta_, y_) = -y*InvRxy*zInvR2
-
-                ! Store the matrix
-                DgenDxyz_DDFD(:,:,i,j,k,iDir) = DgenDxyz_DD      
-
-             end do PHI
-          end do RADIUS
-       end do THETA
-    end do DIRECTION
- 
-  end subroutine set_block_sph_jacobian_face
-
-  !============================================================================
 
   subroutine set_block_jacobian_cell(iBlock)
     use ModMain, ONLY: x_, y_, z_
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModCoordTransform, ONLY: inverse_matrix
+    use BATL_lib, ONLY: Xyz_DGB
 
     integer, intent(in):: iBlock
     real:: InvDx1Half, InvDx2Half, InvDx3Half
@@ -449,24 +344,14 @@ contains
 
     ! Get the dCartesian/dGencoord matrix with finite differences
     do k=1,nK; do j=1,nJ; do i=1,nI
-       DxyzDgen_DD(x_,1) = InvDx1Half &
-            *(x_BLK(i+1,j,k,iBlock) - x_BLK(i-1,j,k,iBlock))
-       DxyzDgen_DD(y_,1) = InvDx1Half &
-            *(y_BLK(i+1,j,k,iBlock) - y_BLK(i-1,j,k,iBlock))
-       DxyzDgen_DD(z_,1) = InvDx1Half &
-            *(z_BLK(i+1,j,k,iBlock) - z_BLK(i-1,j,k,iBlock))
-       DxyzDgen_DD(x_,2) = InvDx2Half &
-            *(x_BLK(i,j+1,k,iBlock) - x_BLK(i,j-1,k,iBlock))
-       DxyzDgen_DD(y_,2) = InvDx2Half &
-            *(y_BLK(i,j+1,k,iBlock) - y_BLK(i,j-1,k,iBlock))
-       DxyzDgen_DD(z_,2) = InvDx2Half &
-            *(z_BLK(i,j+1,k,iBlock) - z_BLK(i,j-1,k,iBlock))
-       DxyzDgen_DD(x_,3) = InvDx3Half &
-            *(x_BLK(i,j,k+1,iBlock) - x_BLK(i,j,k-1,iBlock))
-       DxyzDgen_DD(y_,3) = InvDx3Half &
-            *(y_BLK(i,j,k+1,iBlock) - y_BLK(i,j,k-1,iBlock))
-       DxyzDgen_DD(z_,3) = InvDx3Half &
-            *(z_BLK(i,j,k+1,iBlock) - z_BLK(i,j,k-1,iBlock))
+       DxyzDgen_DD(:,1) = InvDx1Half &
+            *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
+
+       DxyzDgen_DD(:,2) = InvDx2Half &
+            *(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock))
+
+       DxyzDgen_DD(:,3) = InvDx3Half &
+            *(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
 
        DgenDxyz_DDC(:,:,i,j,k) = &
             inverse_matrix(DxyzDgen_DD, DoIgnoreSingular=.true.)
@@ -786,11 +671,10 @@ contains
 
     use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B, x_, y_, z_
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, nVar
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModParallel, ONLY: NeiLev
     use ModFaceValue,ONLY: correct_monotone_restrict
     use BATL_lib,    ONLY: message_pass_cell, IsCartesianGrid, IsRLonLat, &
-         CellSize_DB
+         Xyz_DGB, CellSize_DB
 
     integer, parameter :: nTest = 2
     integer :: i,j,k,iBlock,iTest
@@ -807,45 +691,45 @@ contains
           select case(iTest)
           case(1)                          
              State_VGB(Bx_,:,:,:,iBlock) = &
-                  + 1*x_BLK(:,:,:,iBlock) &
-                  + 2*y_BLK(:,:,:,iBlock) &
-                  + 3*z_BLK(:,:,:,iBlock) &
-                  + 4*x_BLK(:,:,:,iBlock)*y_BLK(:,:,:,iBlock) &
-                  + 5*x_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock) &
-                  + 6*y_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock)
+                  + 1*Xyz_DGB(x_,:,:,:,iBlock) &
+                  + 2*Xyz_DGB(y_,:,:,:,iBlock) &
+                  + 3*Xyz_DGB(z_,:,:,:,iBlock) &
+                  + 4*Xyz_DGB(x_,:,:,:,iBlock)*Xyz_DGB(y_,:,:,:,iBlock) &
+                  + 5*Xyz_DGB(x_,:,:,:,iBlock)*Xyz_DGB(z_,:,:,:,iBlock) &
+                  + 6*Xyz_DGB(y_,:,:,:,iBlock)*Xyz_DGB(z_,:,:,:,iBlock)
              State_VGB(By_,:,:,:,iBlock) = &
-                  + 10*x_BLK(:,:,:,iBlock) &
-                  + 20*y_BLK(:,:,:,iBlock) &
-                  + 30*z_BLK(:,:,:,iBlock) &
-                  + 40*x_BLK(:,:,:,iBlock)*y_BLK(:,:,:,iBlock) &
-                  + 50*x_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock) &
-                  + 60*y_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock)
+                  + 10*Xyz_DGB(x_,:,:,:,iBlock) &
+                  + 20*Xyz_DGB(y_,:,:,:,iBlock) &
+                  + 30*Xyz_DGB(z_,:,:,:,iBlock) &
+                  + 40*Xyz_DGB(x_,:,:,:,iBlock)*Xyz_DGB(y_,:,:,:,iBlock) &
+                  + 50*Xyz_DGB(x_,:,:,:,iBlock)*Xyz_DGB(z_,:,:,:,iBlock) &
+                  + 60*Xyz_DGB(y_,:,:,:,iBlock)*Xyz_DGB(z_,:,:,:,iBlock)
              State_VGB(Bz_,:,:,:,iBlock) = &
-                  + 100*x_BLK(:,:,:,iBlock) &
-                  + 200*y_BLK(:,:,:,iBlock) &
-                  + 300*z_BLK(:,:,:,iBlock) &
-                  + 400*x_BLK(:,:,:,iBlock)*y_BLK(:,:,:,iBlock) &
-                  + 500*x_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock) &
-                  + 600*y_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock)
+                  + 100*Xyz_DGB(x_,:,:,:,iBlock) &
+                  + 200*Xyz_DGB(y_,:,:,:,iBlock) &
+                  + 300*Xyz_DGB(z_,:,:,:,iBlock) &
+                  + 400*Xyz_DGB(x_,:,:,:,iBlock)*Xyz_DGB(y_,:,:,:,iBlock) &
+                  + 500*Xyz_DGB(x_,:,:,:,iBlock)*Xyz_DGB(z_,:,:,:,iBlock) &
+                  + 600*Xyz_DGB(y_,:,:,:,iBlock)*Xyz_DGB(z_,:,:,:,iBlock)
              if(IsRlonLat)then
                 State_VGB(Bx_,:,:,:,iBlock) = &
-                     y_BLK(:,:,:,iBlock)
-                State_VGB(By_,:,:,:,iBlock) = z_BLK(:,:,:,iBlock)
+                     Xyz_DGB(y_,:,:,:,iBlock)
+                State_VGB(By_,:,:,:,iBlock) = Xyz_DGB(z_,:,:,:,iBlock)
                 State_VGB(Bz_,:,:,:,iBlock) = 0.0
              end if                                    
           case(2)
              State_VGB(Bx_,:,:,:,iBlock) = 1.0 + &
-                  0.01*x_BLK(:,:,:,iBlock)**2 + &
-                  0.02*y_BLK(:,:,:,iBlock)**2 + &
-                  0.03*z_BLK(:,:,:,iBlock)**2
+                  0.01*Xyz_DGB(x_,:,:,:,iBlock)**2 + &
+                  0.02*Xyz_DGB(y_,:,:,:,iBlock)**2 + &
+                  0.03*Xyz_DGB(z_,:,:,:,iBlock)**2
              State_VGB(By_,:,:,:,iBlock) = 10.0 + &
-                  0.1*x_BLK(:,:,:,iBlock)**2 + &
-                  0.2*y_BLK(:,:,:,iBlock)**2 + &
-                  0.3*z_BLK(:,:,:,iBlock)**2
+                  0.1*Xyz_DGB(x_,:,:,:,iBlock)**2 + &
+                  0.2*Xyz_DGB(y_,:,:,:,iBlock)**2 + &
+                  0.3*Xyz_DGB(z_,:,:,:,iBlock)**2
              State_VGB(Bz_,:,:,:,iBlock) = 100.0 + &
-                  1.0*x_BLK(:,:,:,iBlock)**2 + &
-                  2.0*y_BLK(:,:,:,iBlock)**2 + &
-                  3.0*z_BLK(:,:,:,iBlock)**2
+                  1.0*Xyz_DGB(x_,:,:,:,iBlock)**2 + &
+                  2.0*Xyz_DGB(y_,:,:,:,iBlock)**2 + &
+                  3.0*Xyz_DGB(z_,:,:,:,iBlock)**2
           end select
 
        end do
@@ -896,24 +780,24 @@ contains
       case('x')
          if(i==1   .and.neiLEV(1,iBlock)==-1) RETURN
          if(i==nI+1.and.neiLEV(2,iBlock)==-1) RETURN
-         x = 0.5*(x_BLK(i-1,j,k,iBlock) + x_BLK(i,j,k,iBlock))
-         y = 0.5*(y_BLK(i-1,j,k,iBlock) + y_BLK(i,j,k,iBlock))
-         z = 0.5*(z_BLK(i-1,j,k,iBlock) + z_BLK(i,j,k,iBlock))
+         x = 0.5*(Xyz_DGB(x_,i-1,j,k,iBlock) + Xyz_DGB(x_,i,j,k,iBlock))
+         y = 0.5*(Xyz_DGB(y_,i-1,j,k,iBlock) + Xyz_DGB(y_,i,j,k,iBlock))
+         z = 0.5*(Xyz_DGB(z_,i-1,j,k,iBlock) + Xyz_DGB(z_,i,j,k,iBlock))
      case('y')
          if(j==1   .and.neiLEV(3,iBlock)==-1) RETURN
          if(j==nJ+1.and.neiLEV(4,iBlock)==-1) RETURN
-         x = 0.5*(x_BLK(i,j-1,k,iBlock) + x_BLK(i,j,k,iBlock))
-         y = 0.5*(y_BLK(i,j-1,k,iBlock) + y_BLK(i,j,k,iBlock))
-         z = 0.5*(z_BLK(i,j-1,k,iBlock) + z_BLK(i,j,k,iBlock))
+         x = 0.5*(Xyz_DGB(x_,i,j-1,k,iBlock) + Xyz_DGB(x_,i,j,k,iBlock))
+         y = 0.5*(Xyz_DGB(y_,i,j-1,k,iBlock) + Xyz_DGB(y_,i,j,k,iBlock))
+         z = 0.5*(Xyz_DGB(z_,i,j-1,k,iBlock) + Xyz_DGB(z_,i,j,k,iBlock))
       case('z')
          if(k==1   .and.neiLEV(5,iBlock)==-1) RETURN
          if(k==nK+1.and.neiLEV(6,iBlock)==-1) RETURN
-         x = 0.5*(x_BLK(i,j,k-1,iBlock) + x_BLK(i,j,k,iBlock))
-         y = 0.5*(y_BLK(i,j,k-1,iBlock) + y_BLK(i,j,k,iBlock))
-         z = 0.5*(z_BLK(i,j,k-1,iBlock) + z_BLK(i,j,k,iBlock))
+         x = 0.5*(Xyz_DGB(x_,i,j,k-1,iBlock) + Xyz_DGB(x_,i,j,k,iBlock))
+         y = 0.5*(Xyz_DGB(y_,i,j,k-1,iBlock) + Xyz_DGB(y_,i,j,k,iBlock))
+         z = 0.5*(Xyz_DGB(z_,i,j,k-1,iBlock) + Xyz_DGB(z_,i,j,k,iBlock))
          !avoid pole
-         if(x_BLK(i,j,k-2,iBlock)*x_BLK(i,j,k,iBlock) < 0.0 ) return
-         if(x_BLK(i,j,k,iBlock)*x_BLK(i,j,k+1,iBlock) < 0.0 ) return
+         if(Xyz_DGB(x_,i,j,k-2,iBlock)*Xyz_DGB(x_,i,j,k,iBlock) < 0.0 ) return
+         if(Xyz_DGB(x_,i,j,k,iBlock)*Xyz_DGB(x_,i,j,k+1,iBlock) < 0.0 ) return
 
       end select
 
@@ -958,12 +842,9 @@ contains
 
          write(*,*)'Face=',NameDir
          write(*,*)'iTest, i,j,k,iBlock=',iTest, i,j,k,iBlock
-         write(*,*)'x,y,z (i,j,k)=', &
-              x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
-         write(*,*)'x,y,z (face)=', &
-              x,y,z
-         write(*,*)'x,y,z (i,j,k-1)=', &
-              x_BLK(i,j,k-1,iBlock),y_BLK(i,j,k-1,iBlock),z_BLK(i,j,k-1,iBlock)
+         write(*,*)'x,y,z (i,j,k)=', Xyz_DGB(:,i,j,k,iBlock)
+         write(*,*)'x,y,z (face)=', x,y,z
+         write(*,*)'x,y,z (i,j,k-1)=', Xyz_DGB(:,i,j,k-1,iBlock)
          write(*,*)'dx,dy,dz=', CellSize_DB(:,iBlock)
          write(*,*)'Bad  Jx,Jy,Jz =',Jx,Jy,Jz
          write(*,*)'Good Jx,Jy,Jz =',JxGood,JyGood,JzGood
@@ -979,7 +860,7 @@ contains
 
   real function hall_factor(iDir, iFace, jFace, kFace , iBlock)
 
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+    use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_
 
     integer, intent(in)::iDir, iFace, jFace, kFace, iBlock 
 
@@ -989,21 +870,21 @@ contains
     !--------------------------------------------------------------
     select case(iDir)
     case(0)  !for cell center
-       x = x_BLK(iFace,jFace,kFace,iBlock)
-       y = y_BLK(iFace,jFace,kFace,iBlock)
-       z = z_BLK(iFace,jFace,kFace,iBlock)       
+       x = Xyz_DGB(x_,iFace,jFace,kFace,iBlock)
+       y = Xyz_DGB(y_,iFace,jFace,kFace,iBlock)
+       z = Xyz_DGB(z_,iFace,jFace,kFace,iBlock)       
     case(1)
-       x = 0.5*sum(x_BLK(iFace-1:iFace,jFace,kFace,iBlock))
-       y = 0.5*sum(y_BLK(iFace-1:iFace,jFace,kFace,iBlock))
-       z = 0.5*sum(z_BLK(iFace-1:iFace,jFace,kFace,iBlock))
+       x = 0.5*sum(Xyz_DGB(x_,iFace-1:iFace,jFace,kFace,iBlock))
+       y = 0.5*sum(Xyz_DGB(y_,iFace-1:iFace,jFace,kFace,iBlock))
+       z = 0.5*sum(Xyz_DGB(z_,iFace-1:iFace,jFace,kFace,iBlock))
     case(2)
-       x = 0.5*sum(x_BLK(iFace,jFace-1:jFace,kFace,iBlock))
-       y = 0.5*sum(y_BLK(iFace,jFace-1:jFace,kFace,iBlock))
-       z = 0.5*sum(z_BLK(iFace,jFace-1:jFace,kFace,iBlock))
+       x = 0.5*sum(Xyz_DGB(x_,iFace,jFace-1:jFace,kFace,iBlock))
+       y = 0.5*sum(Xyz_DGB(y_,iFace,jFace-1:jFace,kFace,iBlock))
+       z = 0.5*sum(Xyz_DGB(z_,iFace,jFace-1:jFace,kFace,iBlock))
     case(3)
-       x = 0.5*sum(x_BLK(iFace,jFace,kFace-1:KFace,iBlock))
-       y = 0.5*sum(y_BLK(iFace,jFace,kFace-1:KFace,iBlock))
-       z = 0.5*sum(z_BLK(iFace,jFace,kFace-1:KFace,iBlock))
+       x = 0.5*sum(Xyz_DGB(x_,iFace,jFace,kFace-1:KFace,iBlock))
+       y = 0.5*sum(Xyz_DGB(y_,iFace,jFace,kFace-1:KFace,iBlock))
+       z = 0.5*sum(Xyz_DGB(z_,iFace,jFace,kFace-1:KFace,iBlock))
     end select
 
     HallFactor = 1.0

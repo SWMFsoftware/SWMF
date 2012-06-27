@@ -72,8 +72,8 @@ subroutine ray_trace_fast
   use ModAdvance,  ONLY: Bx_, Bz_, State_VGB
   use ModB0,       ONLY: get_b0
   use ModParallel, ONLY: NOBLK, neiLEV
-  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, R_BLK, Rmin_BLK, &
-       dx_BLK, dy_BLK, dz_BLK, true_cell
+  use ModGeometry, ONLY: R_BLK, Rmin_BLK, true_cell
+  use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
   use ModRaytrace
   use ModMpi
 
@@ -247,16 +247,9 @@ subroutine ray_trace_fast
                  !oktest_ray = oktest_me .and. BLKtest==iBLK .and. &
                  !     ix==Itest.and.iy==Jtest.and.iz==Ktest
 
-                 !oktest_ray = oktest .and. &
-                 !     abs(x_BLK(ix,iy,iz,iBLK)-0.5*dx_BLK(iBLK)-xTest)<0.01 .and.&
-                 !     abs(y_BLK(ix,iy,iz,iBLK)-0.5*dy_BLK(iBLK)-yTest)<0.01 .and.&
-                 !     abs(z_BLK(ix,iy,iz,iBLK)-0.5*dz_BLK(iBLK)-zTest)<0.01
-
                  if(oktest_ray)write(*,*)'TESTING RAY: me,iBLK,ix,iy,iz,xx',&
                       iProc,iBLK,ix,iy,iz,&
-                      x_BLK(ix,iy,iz,iBLK)-0.5*dx_BLK(iBLK),&
-                      y_BLK(ix,iy,iz,iBLK)-0.5*dy_BLK(iBLK),&
-                      z_BLK(ix,iy,iz,iBLK)-0.5*dz_BLK(iBLK)
+                      Xyz_DGB(:,ix,iy,iz,iBLK)-0.5*CellSize_DB(:,iBLK)
 
                  ! Debug
                  !                  if(oktest_me) then
@@ -433,9 +426,7 @@ subroutine ray_trace_fast
               write(*,*)'LOOPRAYFACE: iray,me,loc,value,x,y,z=',&
                    iray,iProc,loc,iBLK,&
                    minval(rayface(1,iray,1:nI,1:nJ,1:nK,iBLK)),&
-                   x_BLK(loc(1),loc(2),loc(3),iBLK)-0.5*dx_BLK(iBLK),&
-                   y_BLK(loc(1),loc(2),loc(3),iBLK)-0.5*dy_BLK(iBLK),&
-                   z_BLK(loc(1),loc(2),loc(3),iBLK)-0.5*dz_BLK(iBLK)
+                   Xyz_DGB(:,loc(1),loc(2),loc(3),iBLK)-0.5*CellSize_DB(:,iBLK)
            end if
         end do
      end do
@@ -512,9 +503,7 @@ subroutine ray_trace_fast
               write(*,*)'LOOPRAY: iray,me,loc,value,x,y,z=',&
                    iray,iProc,loc,iBLK,&
                    minval(ray(1,iray,1:nI,1:nJ,1:nK,iBLK)),&
-                   x_BLK(loc(1),loc(2),loc(3),iBLK),&
-                   y_BLK(loc(1),loc(2),loc(3),iBLK),&
-                   z_BLK(loc(1),loc(2),loc(3),iBLK)
+                   Xyz_DGB(:,loc(1),loc(2),loc(3),iBLK)
            end if
         end do
      end do
@@ -557,19 +546,18 @@ contains
        do iBLK=1,nBlockMax
           if(Unused_B(iBLK))CYCLE
           do ix=1,nI+1
-             if(abs(x_BLK(ix,1,1,iBLK)-0.5*dx_BLK(iBLK)-xTest)>0.01)CYCLE
+             if(abs(Xyz_DGB(x_,ix,1,1,iBLK)-0.5*CellSize_DB(x_,iBLK)-xTest)>0.01)CYCLE
              do iy=1,nJ+1
-                if(abs(y_BLK(1,iy,1,iBLK)-0.5*dy_BLK(iBLK)-yTest)>0.01)CYCLE
+                if(abs(Xyz_DGB(y_,1,iy,1,iBLK)-0.5*CellSize_DB(y_,iBLK)-yTest)>0.01)CYCLE
                 do iz=1,nK+1
-                   if(abs(z_BLK(1,1,iz,iBLK)-0.5*dz_BLK(iBLK)-zTest)>0.01)&
+                   if(abs(Xyz_DGB(z_,1,1,iz,iBLK)-0.5*CellSize_DB(z_,iBLK)-zTest)>0.01)&
                         CYCLE
 
                    ! Print information
 
                    write(*,*)'iProc,iBLK,ix,iy,iz=',iProc,iBLK,ix,iy,iz
-                   write(*,*)' x,y,z_BLK(1,1,1),dx_BLK=',&
-                        x_BLK(1,1,1,iBLK),y_BLK(1,1,1,iBLK),&
-                        z_BLK(1,1,1,iBLK),dx_BLK(iBLK)
+                   write(*,*)' x,y,z_BLK(1,1,1),dx=',&
+                        Xyz_DGB(:,1,1,1,iBLK), CellSize_DB(x_,iBLK)
 
                    iPos_D=rayend_ind(:,iray,ix,iy,iz,iBLK)
                    if(iPos_D(1)>0)then
@@ -591,9 +579,7 @@ contains
                            rayface(1,iray,jX:kX,jY:kY,jZ:kZ,iBLK)
                       write(*,*)' jX,kX,jY,kY,jZ,kZ=',jX,kX,jY,kY,jZ,kZ
                       write(*,*)' x,y,z(End)=',&
-                           x_BLK(jx,jy,jz,iBLK)-0.5*dx_BLK(iBLK),&
-                           y_BLK(jx,jy,jz,iBLK)-0.5*dy_BLK(iBLK),&
-                           z_BLK(jx,jy,jz,iBLK)-0.5*dz_BLK(iBLK)
+                           Xyz_DGB(:,jx,jy,jz,iBLK)-0.5*CellSize_DB(:,iBLK)
                    else
                       write(*,*)' rayend_ind=',iPos_D
                    end if
@@ -610,14 +596,11 @@ contains
   subroutine print_test(inInt)
     integer, intent(in) :: inInt
 
-    if(  abs(  4.0-(x_BLK(ix,iy,iz,iBLK)-0.5*dx_BLK(iBLK)))<0.01 .and. &
-         abs(  6.0-(y_BLK(ix,iy,iz,iBLK)-0.5*dy_BLK(iBLK)))<0.01 .and. &
-         abs( -6.5-(z_BLK(ix,iy,iz,iBLK)-0.5*dz_BLK(iBLK)))<0.01 )then
-       write(*,'(i3,a,i3,a,i4,a,3i2,3(a,f9.2),a,6i3,a,6f10.3)') inInt, &
+    if(  all(abs( (/4.0,6.0,-6.5/) &
+         - Xyz_DGB(:,ix,iy,iz,iBLK) + 0.5*CellSize_DB(:,iBLK)) < 0.01))then
+       write(*,'(i3,a,i3,a,i4,a,3i2,a,3f9.2,a,6i3,a,6f10.3)') inInt, &
             ' DEBUG LOOPRAYFACE: PE=',iProc,' BLK=',iBLK,' loc=',ix,iy,iz,&
-            ' x=',x_BLK(ix,iy,iz,iBLK)-0.5*dx_BLK(iBLK), &
-            ' y=',y_BLK(ix,iy,iz,iBLK)-0.5*dy_BLK(iBLK), &
-            ' z=',z_BLK(ix,iy,iz,iBLK)-0.5*dz_BLK(iBLK), &
+            ' x,y,z=',Xyz_DGB(:,ix,iy,iz,iBLK)-0.5*CellSize_DB(:,iBLK), &
             '   rayend_ind=',rayend_ind(:,:,ix,iy,iz,iBLK), &
             '   rayface=',rayface(:,:,ix,iy,iz,iBLK)
     end if
@@ -697,10 +680,8 @@ contains
        if(check_inside)then
           ! Convert x to real coordinates xx
 
-          xx(1)=x_BLK(1,1,1,iBLK)+dx_BLK(iBLK)*(x(1)-1.)
-          xx(2)=y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(x(2)-1.)
-          xx(3)=z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(x(3)-1.)
-
+          xx = Xyz_DGB(:,1,1,1,iBLK) + CellSize_DB(:,iBLK)*(x - 1.)
+ 
           r2=sum(xx**2)
 
           if(r2<=R2_raytrace)then
@@ -717,9 +698,8 @@ contains
                         iProc,iBLK,xx
                 else
                    r=sqrt(r2)
-                   xx_ini(1)=x_BLK(1,1,1,iBLK)+dx_BLK(iBLK)*(x_ini(1)-1.)
-                   xx_ini(2)=y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(x_ini(2)-1.)
-                   xx_ini(3)=z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(x_ini(3)-1.)
+                   xx_ini = Xyz_DGB(:,1,1,1,iBLK) + CellSize_DB(:,iBLK)*(x_ini-1.)
+
                    r_ini=sqrt(sum(xx_ini**2))
                    ! Interpolate to the surface linearly along last segment
                    xx=(xx*(r_ini-rIonosphere)+xx_ini*(rIonosphere-r)) &
@@ -766,9 +746,7 @@ contains
                 write(*,*)'me,iBLK,x_mid=',iProc,iBLK,x_mid
                 write(*,*)'ray points outwards: me,iBLK,dl,xx=', &
                      iProc,iBLK,dl,&
-                     x_BLK(1,1,1,iBLK)+dx_BLK(iBLK)*(x_mid(1)-1.),&
-                     y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(x_mid(2)-1.),&
-                     z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(x_mid(3)-1.)
+                     Xyz_DGB(:,1,1,1,iBLK) + CellSize_DB(:,iBLK)*(x_mid - 1.)
              end if
              RETURN
           end if
@@ -868,9 +846,7 @@ contains
           if(oktest_ray)then
              write(*,*)'CLOSED LOOP at me,iBLK,ix,iy,iz,x,xx=',&
                   iProc,iBLK,ix,iy,iz,x,&
-                  x_BLK(1,1,1,iBLK)+dx_BLK(iBLK)*(x(1)-1.),&
-                  y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(x(2)-1.),&
-                  z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(x(3)-1.)
+                  Xyz_DGB(:,1,1,1,iBLK) + CellSize_DB(:,iBLK)*(x - 1.)
           end if
 
           qface=ray_loop_
@@ -881,9 +857,7 @@ contains
 
     if(oktest_ray)write(*,*)'Finished follow_ray at me,iBLK,nsegment,qface,x,xx=',&
          iProc,iBLK,nsegment,qface,x,&
-         x_BLK(1,1,1,iBLK)+dx_BLK(iBLK)*(x(1)-1.),&
-         y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(x(2)-1.),&
-         z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(x(3)-1.)
+         Xyz_DGB(:,1,1,1,iBLK) + CellSize_DB(:,iBLK)*(x - 1.)
 
   end function follow_ray
 
@@ -992,9 +966,8 @@ contains
 
     ! Get B0 values for location
 
-    xx(1)=x_BLK(1,1,1,iBLK)+dx_BLK(iBLK)*(qx(1)-1.)
-    xx(2)=y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(qx(2)-1.)
-    xx(3)=z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(qx(3)-1.)
+    xx = Xyz_DGB(:,1,1,1,iBLK) + CellSize_DB(:,iBLK)*(qx - 1.)
+
     if(UseB0)then
        call get_b0(xx, qb)
     else
@@ -1014,9 +987,9 @@ contains
 
     ! Add in node interpolated B1 values and take aspect ratios into account
 
-    qb(1)=(qb(1)+interpolate_bb1_node(bb_x))/dx_BLK(iBLK)
-    qb(2)=(qb(2)+interpolate_bb1_node(bb_y))/dy_BLK(iBLK)
-    qb(3)=(qb(3)+interpolate_bb1_node(bb_z))/dz_BLK(iBLK)
+    qb(1)=(qb(1)+interpolate_bb1_node(bb_x))/CellSize_DB(x_,iBLK)
+    qb(2)=(qb(2)+interpolate_bb1_node(bb_y))/CellSize_DB(y_,iBLK)
+    qb(3)=(qb(3)+interpolate_bb1_node(bb_z))/CellSize_DB(z_,iBLK)
 
     ! Normalize
     qbD=sqrt(qb(1)**2 + qb(2)**2 + qb(3)**2)
@@ -1102,9 +1075,7 @@ contains
     call get_b0(qx, qb)
 
     ! Take aspect ratio of cells into account
-    qb(1)=qb(1)/dx_BLK(iBLK)
-    qb(2)=qb(2)/dy_BLK(iBLK)
-    qb(3)=qb(3)/dz_BLK(iBLK)
+    qb = qb / CellSize_DB(:,iBLK)
 
     if(sum(abs(qb))==0.0)then
        write(*,*)'GM_ERROR in ray_trace::evaluate_bb: qb==0 at qx=',qx
@@ -1424,7 +1395,8 @@ subroutine integrate_ray(dbg,iBLK,x_0,y_0,z_0,fvol,rvol,pvol)
 
   use ModProcMH
   use ModAdvance, ONLY : rho_, Bx_, Bz_, P_, State_VGB
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,Rmin_BLK,dx_BLK,dy_BLK,dz_BLK
+  use ModGeometry, ONLY : Rmin_BLK
+  use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
   use ModRaytrace
   implicit none
 
@@ -1509,9 +1481,7 @@ subroutine integrate_ray(dbg,iBLK,x_0,y_0,z_0,fvol,rvol,pvol)
      nsegment=0
 
      ! Initial position
-     x(1)=1.+(x_0-x_BLK(1,1,1,iBLK))/dx_BLK(iBLK)
-     x(2)=1.+(y_0-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)
-     x(3)=1.+(z_0-z_BLK(1,1,1,iBLK))/dz_BLK(iBLK)
+     x = 1.+( (/x_0, y_0, z_0/) - Xyz_DGB(:,1,1,1,iBLK))/CellSize_DB(:,iBLK)
 
      end_inside=.false.
      local_fvol=0.; local_rvol=0.; local_pvol=0.
@@ -1542,9 +1512,7 @@ contains
        ! Check if we are inside the ionosphere
        if(check_inside)then
           ! Convert x to real coordinates xx
-          xx(1)=x_BLK(1,1,1,iBLK)+dx_BLK(iBLK)*(x(1)-1.)
-          xx(2)=y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(x(2)-1.)
-          xx(3)=z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(x(3)-1.)
+          xx = Xyz_DGB(:,1,1,1,iBLK) + CellSize_DB(:,iBLK)*(x - 1.)
 
           r2=sum(xx**2)
 
@@ -1605,19 +1573,17 @@ contains
 
        x=x_ini+b_mid*dl
        ! dl/|B| for a cubic cell (dx=dy=dz)
-       ! amount2add = abs( dl * dx_BLK(iBLK))/bNORM
+       ! amount2add = abs( dl * CellSize_DB(x_,iBLK))/bNORM
 
        ! dl/|B| for a cell with arbitrary aspect ratio
        amount2add = abs(dl) * sqrt( &
-            (b_mid(1)*dx_BLK(iBLK))**2 + &
-            (b_mid(2)*dy_BLK(iBLK))**2 + &
-            (b_mid(3)*dz_BLK(iBLK))**2) / bNORM
+            sum( (b_mid*CellSize_DB(:,iBLK))**2 )) / bNORM
        local_fvol=local_fvol+amount2add
        local_rvol=local_rvol+amount2add*rNORM
        local_pvol=local_pvol+amount2add*pNORM
 
        if(dbg)then
-          write(*,*)'  take step:',dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),dl
+          write(*,*)'  take step:',CellSize_DB(:,iBLK), dl
           write(*,*)'    b_mid=',b_mid,' bNORM=',bNORM,' b_ini=',b_ini
           write(*,*)'  take step and add:',amount2add,rNORM,pNORM
        end if
@@ -1643,9 +1609,7 @@ contains
           x=x-dl_back*b_mid
           ! dl/|B| for arbitrary aspect ratio
           amount2add = abs(dl_back) * sqrt( &
-               (dx_BLK(iBLK)*b_mid(1))**2 + &
-               (dy_BLK(iBLK)*b_mid(2))**2 + &
-               (dz_BLK(iBLK)*b_mid(3))**2) / bNORM
+               sum( (CellSize_DB(:,iBLK)*b_mid)**2 )) / bNORM
           local_fvol=local_fvol-amount2add
           local_rvol=local_rvol-amount2add*rNORM
           local_pvol=local_pvol-amount2add*pNORM
@@ -1683,9 +1647,7 @@ contains
 
     ! Get B0 values for location
 
-    xx(1)=x_BLK(1,1,1,iBLK)+dx_BLK(iBLK)*(qx(1)-1.)
-    xx(2)=y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(qx(2)-1.)
-    xx(3)=z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(qx(3)-1.)
+    xx = Xyz_DGB(:,1,1,1,iBLK) + CellSize_DB(:,iBLK)*(qx - 1.)
 
     call get_b0(xx, qb)
 
@@ -1699,8 +1661,7 @@ contains
        write(*,*)'interpolate_bbN: iProc, i1,j1,k1=',iProc,i1,j1,k1
        write(*,*)'interpolate_bbN: iProc, iBLK, qx=',iProc,iBLK, qx
        write(*,*)'interpolate_bbN: iProc, x,y,z(1,1,1),dx=',&
-            x_BLK(1,1,1,iBLK),y_BLK(1,1,1,iBLK),z_BLK(1,1,1,iBLK),&
-            dx_BLK(iBLK)
+            Xyz_DGB(:,1,1,1,iBLK), CellSize_DB(x_,iBLK)
        write(*,*)'interpolate_bbN: iProc, x_0,y_0,z_0=',x_0,y_0,z_0
        call stop_mpi('ERROR in interpolate_bbN: location out of bounds')
     endif
@@ -1724,9 +1685,7 @@ contains
     ! Normalize
     if(qbD>smallB)then
        ! Take aspect ratio of cells into account
-       qb(1)=qb(1)/dx_BLK(iBLK)
-       qb(2)=qb(2)/dy_BLK(iBLK)
-       qb(3)=qb(3)/dz_BLK(iBLK)
+       qb = qb/CellSize_DB(:,iBLK)
        qb=qb/sqrt(sum(qb**2))
     else
        qb=0.

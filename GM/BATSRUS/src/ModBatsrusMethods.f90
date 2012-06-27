@@ -25,7 +25,7 @@ subroutine BATS_setup
 
   if(.not.IsStandAlone)call write_progress(0)
 
-  call grid_setup   ! Restart reads integer only (no X_BLK or dx_BLK)
+  call grid_setup   ! Restart reads info integer only
 
   call set_initial_conditions ! Restart reads all real data
 
@@ -510,12 +510,11 @@ end subroutine BATS_advance
 subroutine BATS_init_constrain_b
   use ModProcMH
   use ModMain, ONLY: lVerbose, x_, y_, z_, nBlock
-  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
   use ModCT, ONLY : DoInitConstrainB
   use ModNumConst, ONLY: cTiny
   use ModAdvance, ONLY : Bx_, Bz_, State_VGB, tmp1_BLK
   use ModIO, ONLY: write_prefix, iUnitOut
-  use BATL_lib, ONLY: message_pass_cell
+  use BATL_lib, ONLY: Xyz_DGB, message_pass_cell
   implicit none
 
   ! Local variables
@@ -550,9 +549,7 @@ subroutine BATS_init_constrain_b
      if(iProc==iLoc_I(5))then
         call write_prefix; write(iUnitOut,*) NameSub, &
              ' divB,loc,x,y,z=',divbmax_now,iLoc_I,&
-             x_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4)),&
-             y_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4)),&
-             z_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4))
+             Xyz_DGB(:,iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4))
      end if
 
      if(iProc == 0.and.lVerbose>0)then
@@ -576,9 +573,7 @@ subroutine BATS_init_constrain_b
      if(iProc==iLoc_I(5).and.divbmax_now>cTiny)then
         call write_prefix; write(iUnitOut,*) NameSub, &
              ' divB,loc,x,y,z=',divbmax_now,iLoc_I,&
-             x_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4)),&
-             y_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4)),&
-             z_BLK(iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4))
+             Xyz_DGB(:,iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4))
      end if
   end if
 

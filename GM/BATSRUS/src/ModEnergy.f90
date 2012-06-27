@@ -598,7 +598,8 @@ contains
     use ModVarIndexes, ONLY: rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_, P_
     use ModAdvance,    ONLY: State_VGB, Energy_GBI
     use ModPhysics,    ONLY: gm1, inv_gm1, Pratio_hi, Pratio_lo
-    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
+    use ModGeometry,   ONLY: true_cell
+    use BATL_lib,      ONLY: Xyz_DGB
     implicit none
 
     integer, intent(in) :: iBlock
@@ -689,9 +690,7 @@ contains
           loc=minloc(P_old)
           write(*,*)'Negative P at me,iBLK,I,J,K,x,y,z,val',&
                iProc,iBlock,loc,&
-               x_BLK(loc(1),loc(2),loc(3),iBlock),&
-               y_BLK(loc(1),loc(2),loc(3),iBlock),&
-               z_BLK(loc(1),loc(2),loc(3),iBlock),&
+               Xyz_DGB(:,loc(1),loc(2),loc(3),iBlock), &
                P_old(loc(1),loc(2),loc(3))
        end if
        call error_report('Negative P in exchange msgs, min(P)', &

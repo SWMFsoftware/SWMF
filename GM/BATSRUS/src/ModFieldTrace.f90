@@ -16,9 +16,9 @@ subroutine ray_trace_accurate
   use CON_ray_trace,  ONLY: ray_init
   use ModMain
   use ModAdvance,     ONLY: State_VGB, Bx_, Bz_, B0_DGB
-  use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, r_BLK, true_cell
+  use ModGeometry,    ONLY: r_BLK, true_cell
   use ModMessagePass, ONLY: exchange_messages
-  use BATL_lib, ONLY: message_pass_cell
+  use BATL_lib, ONLY: Xyz_DGB, message_pass_cell
   use ModMpi
 
   implicit none
@@ -74,9 +74,7 @@ subroutine ray_trace_accurate
         if(Unused_B(iBlock))CYCLE
 
         oktest_ray = okTest .and. &
-             x_BLK(i,j,k,iBlock)==xTest .and. &
-             y_BLK(i,j,k,iBlock)==yTest .and. &
-             z_BLK(i,j,k,iBlock)==zTest
+             all(Xyz_DGB(:,i,j,k,iBlock)==(/ xTest, yTest, zTest/))
 
         do iRay=1,2
 
@@ -91,8 +89,7 @@ subroutine ray_trace_accurate
            if(oktest_ray)write(*,*)'calling follow_ray iProc,iRay=',iProc,iRay
 
            ! Follow ray in direction iRay
-           call follow_ray(iRay, (/i,j,k,iBlock/), (/ x_BLK(i,j,k,iBlock), &
-                y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock) /) )
+           call follow_ray(iRay, (/i,j,k,iBlock/), Xyz_DGB(:,i,j,k,iBlock))
 
         end do             ! iRay
      end do          ! iBlock
@@ -546,11 +543,11 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   use ModNumConst, ONLY: cTiny
   use ModMain, ONLY: TypeCoordSystem, nI, nJ, nK
   use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
-       Dx_BLK, Dy_BLK, Dz_BLK, rMin_BLK, x_BLK,y_BLK,z_BLK, x1,x2,y1,y2,z1,z2
+       Dx_BLK, Dy_BLK, Dz_BLK, rMin_BLK, x1,x2,y1,y2,z1,z2
   use CON_planet, ONLY: DipoleStrength
   use ModMain,    ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   use ModMultiFLuid
-  use BATL_lib, ONLY: IsCartesianGrid, xyz_to_coord
+  use BATL_lib, ONLY: IsCartesianGrid, xyz_to_coord, Xyz_DGB, CellSize_DB
   implicit none
 
   ! Arguments
@@ -635,7 +632,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
        iProc,iBlock,iRay,XyzInOut_D
 
   ! Store local block deltas
-  Dxyz_D  = (/Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock)/)
+  Dxyz_D  = CellSize_DB(:,iBlock)
 
   ! Convert initial position to block coordinates
   XyzCur_D = XyzInOut_D
@@ -673,9 +670,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
      dlMin = 0.05
      dlTiny= 1.e-6
   else
-     dlMax =( abs(x_BLK(nI,nJ,nK,iBlock)-x_BLK(1,1,1,iBlock)) &
-          +   abs(y_BLK(nI,nJ,nK,iBlock)-y_BLK(1,1,1,iBlock)) &
-          +   abs(z_BLK(nI,nJ,nK,iBlock)-z_BLK(1,1,1,iBlock)) ) &
+     dlMax = sum(abs(Xyz_DGB(:,nI,nJ,nK,iBlock)-Xyz_DGB(:,1,1,1,iBlock))) &
           /(nI + nJ + nK - 3)
      dlMin = dlMax*0.05
      dlTiny= dlMax*1.e-6
@@ -1143,6 +1138,8 @@ contains
 
   subroutine interpolate_xyz(IjkIn_D,XyzOut_D)
 
+    !!! We should use share/Library/src/ModInterpolate !!!
+
     ! Interpolate X/Y/Z at normalized location IjkIn_D 
     ! and return the result in XyzOut_D.
 
@@ -1163,20 +1160,20 @@ contains
 
     ! Interpolate the magnetic field
     XyzOut_D(1) = &
-         +dx1*(dy1*(dz1*x_BLK(i2,j2,k2,iBlock)+dz2*x_BLK(i2,j2,k1,iBlock))  &
-         +     dy2*(dz1*x_BLK(i2,j1,k2,iBlock)+dz2*x_BLK(i2,j1,k1,iBlock))) &
-         +dx2*(dy1*(dz1*x_BLK(i1,j2,k2,iBlock)+dz2*x_BLK(i1,j2,k1,iBlock))  &
-         +     dy2*(dz1*x_BLK(i1,j1,k2,iBlock)+dz2*x_BLK(i1,j1,k1,iBlock)))
+         +dx1*(dy1*(dz1*Xyz_DGB(x_,i2,j2,k2,iBlock)+dz2*Xyz_DGB(x_,i2,j2,k1,iBlock))  &
+         +     dy2*(dz1*Xyz_DGB(x_,i2,j1,k2,iBlock)+dz2*Xyz_DGB(x_,i2,j1,k1,iBlock))) &
+         +dx2*(dy1*(dz1*Xyz_DGB(x_,i1,j2,k2,iBlock)+dz2*Xyz_DGB(x_,i1,j2,k1,iBlock))  &
+         +     dy2*(dz1*Xyz_DGB(x_,i1,j1,k2,iBlock)+dz2*Xyz_DGB(x_,i1,j1,k1,iBlock)))
     XyzOut_D(2) = &
-         +dx1*(dy1*(dz1*y_BLK(i2,j2,k2,iBlock)+dz2*y_BLK(i2,j2,k1,iBlock))  &
-         +     dy2*(dz1*y_BLK(i2,j1,k2,iBlock)+dz2*y_BLK(i2,j1,k1,iBlock))) &
-         +dx2*(dy1*(dz1*y_BLK(i1,j2,k2,iBlock)+dz2*y_BLK(i1,j2,k1,iBlock))  &
-         +     dy2*(dz1*y_BLK(i1,j1,k2,iBlock)+dz2*y_BLK(i1,j1,k1,iBlock)))
+         +dx1*(dy1*(dz1*Xyz_DGB(y_,i2,j2,k2,iBlock)+dz2*Xyz_DGB(y_,i2,j2,k1,iBlock))  &
+         +     dy2*(dz1*Xyz_DGB(y_,i2,j1,k2,iBlock)+dz2*Xyz_DGB(y_,i2,j1,k1,iBlock))) &
+         +dx2*(dy1*(dz1*Xyz_DGB(y_,i1,j2,k2,iBlock)+dz2*Xyz_DGB(y_,i1,j2,k1,iBlock))  &
+         +     dy2*(dz1*Xyz_DGB(y_,i1,j1,k2,iBlock)+dz2*Xyz_DGB(y_,i1,j1,k1,iBlock)))
     XyzOut_D(3) = &
-         +dx1*(dy1*(dz1*z_BLK(i2,j2,k2,iBlock)+dz2*z_BLK(i2,j2,k1,iBlock))  &
-         +     dy2*(dz1*z_BLK(i2,j1,k2,iBlock)+dz2*z_BLK(i2,j1,k1,iBlock))) &
-         +dx2*(dy1*(dz1*z_BLK(i1,j2,k2,iBlock)+dz2*z_BLK(i1,j2,k1,iBlock))  &
-         +     dy2*(dz1*z_BLK(i1,j1,k2,iBlock)+dz2*z_BLK(i1,j1,k1,iBlock)))
+         +dx1*(dy1*(dz1*Xyz_DGB(z_,i2,j2,k2,iBlock)+dz2*Xyz_DGB(z_,i2,j2,k1,iBlock))  &
+         +     dy2*(dz1*Xyz_DGB(z_,i2,j1,k2,iBlock)+dz2*Xyz_DGB(z_,i2,j1,k1,iBlock))) &
+         +dx2*(dy1*(dz1*Xyz_DGB(z_,i1,j2,k2,iBlock)+dz2*Xyz_DGB(z_,i1,j2,k1,iBlock))  &
+         +     dy2*(dz1*Xyz_DGB(z_,i1,j1,k2,iBlock)+dz2*Xyz_DGB(z_,i1,j1,k1,iBlock)))
 
   end subroutine interpolate_xyz
 
