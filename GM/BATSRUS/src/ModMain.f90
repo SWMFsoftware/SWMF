@@ -11,8 +11,10 @@ Module ModMain
   use BATL_size, ONLY: nBlock
 
   ! Logigal array for the blocks used (=.false.) on the given processor
+  use BATL_tree, ONLY: Unused_B
+
   ! Total number of used blocks on all processors
-  use BATL_lib, ONLY: Unused_B, nBlockAll => nNodeUsed
+  use BATL_lib, ONLY: nBlockAll => nNodeUsed
 
   implicit none
 
