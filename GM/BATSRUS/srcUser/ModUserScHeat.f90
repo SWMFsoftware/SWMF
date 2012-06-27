@@ -320,6 +320,7 @@ contains
     use ModExpansionFactors
     use ModMultiFluid, ONLY: MassIon_I
     use ModNumConst,   ONLY: cTolerance
+    use ModConst,      ONLY: cAu
     use ModPhysics,    ONLY: g, inv_gm1, rBody, AverageIonCharge, &
          Si2No_V, No2Si_V, UnitU_, UnitTemperature_, UnitEnergyDens_, UnitB_
 
