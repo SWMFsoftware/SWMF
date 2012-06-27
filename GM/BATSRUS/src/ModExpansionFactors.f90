@@ -2,14 +2,21 @@
 module ModExpansionFactors
   use ModMpi
   use ModIoUnit,   ONLY: io_unit_new
-  use ModMagnetogram
-  use ModConst
+  use ModMagnetogram, ONLY: nR, nRExt, nPhi, nTheta, nThetaPerProc, &
+       Sin_Latitude, Colatitude, r_latitude, &
+       h_pfssm, ro_pfssm, rs_pfssm, phi_shift, &
+       Dr, Dphi, Dinv_D, dSinTheta, interpolate_field, correct_angles
+  use ModConst, ONLY: cGravitation, mSun, rSun, cProtonMass, cBoltzmann, &
+       cRadToDeg, cDegToRad, cSecondPerHour, cTiny
 
   !Dependecies to be removed
   use ModProcMH,   ONLY: iProc,nProc,iComm
   use ModIO, ONLY: iUnitOut, write_prefix
   implicit none
   save
+
+  ! Named indexes for local use only
+  integer, parameter:: r_=1, Phi_=2, Theta_=3
 
   !Gravity potential, m^2/s^2
   real,parameter :: cSunGravitySI=cGravitation*mSun/Rsun
@@ -135,17 +142,17 @@ contains
     allocate(ThetaB_N(-nRExt:nR,0:nPhi,0:nTheta))
 
     !Initalize arrays:
-    ExpansionFactorInv_N=cZero
-    FiskFactor_N=cZero
-    ThetaB_N=cZero
+    ExpansionFactorInv_N=0.0
+    FiskFactor_N=0.0
+    ThetaB_N=0.0
 
     if(allocated(Phi_IJ))deallocate(Phi_IJ)
     allocate(Phi_IJ(0:nPhi,0:nTheta))
     if(allocated(Theta_IJ))deallocate(Theta_IJ)
     allocate(Theta_IJ(0:nPhi,0:nTheta))
 
-    Phi_IJ=cZero
-    Theta_IJ=cZero
+    Phi_IJ=0.0
+    Theta_IJ=0.0
     do iTheta=0,nTheta
        do iPhi=0,nPhi
           Phi_IJ(iPhi,iTheta)=iPhi*dPhi
@@ -154,7 +161,7 @@ contains
     end do
 
 
-    dSMax=cHalf*(Rs_PFSSM-Ro_PFSSM)
+    dSMax=0.5*(Rs_PFSSM-Ro_PFSSM)
 
     !Loop by theta, each processor treats a separate part of the grid
     do iTheta=iProc*nThetaPerProc,(iProc+1)*nThetaPerProc-1 
@@ -195,8 +202,8 @@ contains
              ! closed, the inv_expansion factor and Fisk factor are 
              ! set to zero. 
              if(abs(RPlusEnd_D(R_)-RMinusEnd_D(R_)) <= dSMax)then
-                ExpansionFactorInv_N(iR,iPhi,iTheta) = cZero
-                FiskFactor_N(iR,iPhi,iTheta) = cZero
+                ExpansionFactorInv_N(iR,iPhi,iTheta) = 0.0
+                FiskFactor_N(iR,iPhi,iTheta) = 0.0
                 ! 
              else
                 ! Check which end of the field line is at the
@@ -275,7 +282,7 @@ contains
              ! closed, the inv_expansion factor and Fisk factor are 
              ! set to zero.                
              if(abs(RPlusEnd_D(R_)-RMinusEnd_D(R_)) <= dSMax)then
-                ThetaB_N(iR,iPhi,iTheta) = cZero
+                ThetaB_N(iR,iPhi,iTheta) = 0.0
              else
                 ! Check which end of the field line is at the
                 ! photosphere
@@ -291,8 +298,8 @@ contains
                    RSun_D = RPlusEnd_D
                 end if
                 ! Get ThetaB_N for the grid point
-                ThetaB_N(iR,iPhi,iTheta)= theta_b(RSun_D(Phi_)&
-                     &,RSun_D(Theta_))
+                ThetaB_N(iR,iPhi,iTheta)= &
+                     theta_b(RSun_D(Phi_), RSun_D(Theta_))
              end if
           end do
        end do
@@ -313,13 +320,13 @@ contains
     ! Get WSA speed
     if(allocated(WSAspeed_N))deallocate(WSAspeed_N)
     allocate(WSAspeed_N(-nRExt:nR,0:nPhi,0:nTheta)) 
-    WSAspeed_N=cZero
+    WSAspeed_N=0.0
 
     ! Calculate WSA speed distribution using eq. 1 in Arge et al.
     ! 2004:
     !WSAspeed_N(:,:,:)=(265.0+&
     !     1.5*ExpansionFactorInv_N(:,:,:)**(1.0/3.0)/&
-    !     ( cOne+ExpansionFactorInv_N(:,:,:) )**(1.0/3.0)* &
+    !     ( 1.0+ExpansionFactorInv_N(:,:,:) )**(1.0/3.0)* &
     !     (5.9-1.5*exp( 1.0-(ThetaB_N(:,:,:)/7.0)**(5.0/2.0) ) &
     !     )**(7.0/2.0) ) &    !km/s so far
     !     *1.0E3                 !To get the result in SI
@@ -392,7 +399,7 @@ contains
 
     if(allocated(Fiskspeed_N))deallocate(Fiskspeed_N)
     allocate(Fiskspeed_N(-nRExt:nR,0:nPhi,0:nTheta)) 
-    Fiskspeed_N=cZero
+    Fiskspeed_N=0.0
 
     ! Calculate Fisk final speed using the eq.:
     ! u_f=sqrt(2*(Q-G))
@@ -404,7 +411,7 @@ contains
     Fiskspeed_N(:,:,:)=100.0!FiskFactor_N(:,:,:)
 
     !Fiskspeed_N(:,:,:)=sqrt(max(2.0* (cFiskQ*& !m^2/s 
-    !     max(FiskFactor_N(:,:,:)**2,cHalf**2)/cLoopTemp &
+    !     max(FiskFactor_N(:,:,:)**2,0.5**2)/cLoopTemp &
     !     &-cSunGravitySI),(265.0*1.0E3)**2))
 
     ! Finding the minimum value of the final speed
@@ -418,17 +425,17 @@ contains
     end select
 
     ! Finding the maximum surface value of gamma (related to the minimum speed)
-    gammaSS=( (cHalf*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass) ) &
-         /( (cHalf*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass)-cOne )
+    gammaSS=( (0.5*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass) ) &
+         /( (0.5*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass)-1.0 )
   contains
     !==========================================================================
     subroutine advance_line_point(RInOut_D, Dir)
       real,intent(inout):: RInOut_D(3)
       real,intent(in)   :: Dir
-      dS=0.25*min(dR,dPhi,dSinTheta,cOne)*2.0**(iIteration/ (20&
+      dS=0.25*min(dR,dPhi,dSinTheta,1.0)*2.0**(iIteration/ (20&
            &*max(nR,nPhi,nTheta)))
       !To avoid the line bouncing near null points
-      RInOut_D=RInOut_D+Dir*dS*f_d( RInOut_D+Dir*dS*cHalf&
+      RInOut_D=RInOut_D+Dir*dS*f_d( RInOut_D+Dir*dS*0.5&
            &*f_d(RInOut_D))
       call correct_angles(RInOut_D)
     end subroutine advance_line_point
@@ -455,7 +462,7 @@ contains
       !Divide by the metric coefficients, to obtain
       !the vector ||B|| d (r,phi,theta)/dS along the field line
 
-      f_d=f_d/(/cOne,RIn_D(R_)*max(sin(RIn_D(Theta_)),cTol),&
+      f_d=f_d/(/1.0,RIn_D(R_)*max(sin(RIn_D(Theta_)),cTol),&
            & RIn_D(R_)/)
 
       !Divide by some scale, to limit the displacement within the
@@ -500,7 +507,7 @@ contains
     ! Avoid calculating inside a critical radius = 0.5*Rsun
     !/
     if (Rin_PFSSM <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
-       Output= cZero
+       Output= 0.0
        RETURN
     end if
     Theta_PFSSM = acos(zInput/Rin_PFSSM)
@@ -544,17 +551,17 @@ contains
     
     if(Node_D(Theta_)>=nTheta)then
        Node_D(Theta_)=nTheta-1
-       Res_D(Theta_)=cOne
+       Res_D(Theta_)=1.0
     elseif(Node_D(Theta_)<=-1)then
        Node_D(Theta_)=0
-       Res_D(Theta_)=cZero
+       Res_D(Theta_)=0.0
     end if
     
-    Weight_III(0,:,:)=cOne-Res_D(R_)
+    Weight_III(0,:,:)=1.0-Res_D(R_)
     Weight_III(1,:,:)=Res_D(R_)
-    Weight_III(:,0,:)=Weight_III(:,0,:)*(cOne-Res_D(Phi_))
+    Weight_III(:,0,:)=Weight_III(:,0,:)*(1.0-Res_D(Phi_))
     Weight_III(:,1,:)=Weight_III(:,1,:)*Res_D(Phi_)
-    Weight_III(:,:,0)=Weight_III(:,:,0)*(cOne-Res_D(Theta_))
+    Weight_III(:,:,0)=Weight_III(:,:,0)*(1.0-Res_D(Theta_))
     Weight_III(:,:,1)=Weight_III(:,:,1)*Res_D(Theta_)
     
     Output= sum(Weight_III*Array_N( Node_D(R_):Node_D(R_)+1,&
@@ -627,13 +634,13 @@ subroutine get_gamma_emp(xx,yy,zz,gammaOut)
      gammaOut=gammaSS+(RR-R1)*(gammaIH-gammaSS)/(R2-R1)
   else
      call get_bernoulli_integral((/xx,yy,zz/), Uf)
-     BernoulliFactor=(cHalf*Uf**2+cSunGravitySI)/&
+     BernoulliFactor=(0.5*Uf**2+cSunGravitySI)/&
           (CoronalT0Dim*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
           *(R1-RR)*&
           & (Ro_PFSSM/RR)**nPowerIndex/ (R1-Ro_PFSSM)+ GammaSS&
-          &/(GammaSS-cOne)*(cOne- (R1-RR)*(Ro_PFSSM/RR)&
+          &/(GammaSS-1.0)*(1.0- (R1-RR)*(Ro_PFSSM/RR)&
           &**nPowerIndex/ (R1-Ro_PFSSM))
-     gammaOut = BernoulliFactor/(BernoulliFactor-cOne)
+     gammaOut = BernoulliFactor/(BernoulliFactor-1.0)
   end if
 
 end subroutine get_gamma_emp
@@ -677,7 +684,7 @@ subroutine get_total_wave_energy_dens(X,Y,Z,&
   !An expansion factor
   call get_interpolated(ExpansionFactorInv_N,X,Y,Z,ExpansionFactorInv)
 
-  WaveEnergyDensSi = (cHalf * Uf**2 + cSunGravitySI - g/(g - 1.0)*&
+  WaveEnergyDensSi = (0.5 * Uf**2 + cSunGravitySI - g/(g - 1.0)*&
           cBoltzmann/cProtonMass*&
           CoronalT0Dim/min(Uf/UMin, 2.0) )& !This is a modulated Tc
           * RhoV/&
