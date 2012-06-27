@@ -64,9 +64,8 @@ contains
   subroutine set_batsrus_block(iBlock)
 
     use BATL_lib, ONLY: nDim, &
-         nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         Xyz_DGB, CellVolume_B, CellVolume_GB, &
-         CellSize_DB, CoordMin_DB, CellFace_DB, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+         Xyz_DGB, CellSize_DB, CoordMin_DB, &
          iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
          iTree_IA, Block_, Proc_, Unset_
 
@@ -273,9 +272,9 @@ contains
 
     use ModAdvance,  ONLY: State_VGB, nVar
     use ModB0,       ONLY: set_b0_cell
-    use ModPhysics,  ONLY: CellState_VI
-    use ModGeometry, ONLY: body_BLK, true_cell
-    use ModMain,     ONLY: TypeBC_I, body1_, UseB0
+    use ModPhysics,  ONLY: CellState_VI, rBody2
+    use ModGeometry, ONLY: body_BLK, true_cell, R2_BLK
+    use ModMain,     ONLY: TypeBC_I, body1_, UseB0, UseBody2, body2_
     use ModParallel, ONLY: neiLwest, NOBLK
     use ModConserveFlux, ONLY: init_cons_flux
     use BATL_size, ONLY: nI, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -295,7 +294,14 @@ contains
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           if(true_cell(i,j,k,iBlock)) CYCLE
           State_VGB(1:nVar,i,j,k,iBlock) = CellState_VI(1:nVar,body1_)
-       end do;end do; end do     
+       end do;end do; end do
+    end if
+
+    if(UseBody2)then
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          if(R2_Blk(i,j,k,iBlock) > rBody2) CYCLE
+          State_VGB(1:nVar,i,j,k,iBlock) = CellState_VI(1:nVar,body2_)
+       end do;end do; end do
     end if
 
     ! For coupled (IH->GM) boundary condition fill in ghost cells

@@ -4,7 +4,7 @@ subroutine set_ics(iBlock)
   use ModMain
   use ModAdvance
   use ModB0, ONLY: set_b0_cell
-  use ModGeometry, ONLY: true_cell
+  use ModGeometry, ONLY: true_cell, R2_BLK
   use ModIO, ONLY : restart
   use ModPhysics
   use ModUser, ONLY: user_set_ics
@@ -72,9 +72,13 @@ subroutine set_ics(iBlock)
         end if
 
         ! Loop through all the cells
-        do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
            if(.not.true_cell(i,j,k,iBlock))then
               State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,body1_)
+              if(UseBody2)then
+                 if(R2_BLK(i,j,k,iBlock) < rBody2) &
+                      State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,body2_)
+              end if
            elseif(.not.UseShockTube)then
               State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
            else
