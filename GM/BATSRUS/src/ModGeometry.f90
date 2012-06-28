@@ -43,9 +43,8 @@ module ModGeometry
 
   ! true cells are cells that are not inside a body
   logical, allocatable :: true_cell(:,:,:,:)
-  logical,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,body2_:6):: &
-       IsBoundaryCell_GI
-  logical,dimension(body2_:6,MaxBlock):: IsBoundaryBlock_IB 
+  logical :: IsBoundaryCell_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,body2_:6)
+  logical :: IsBoundaryBlock_IB(body2_:6,MaxBlock) 
   integer :: MinBoundary=6, MaxBoundary=body2_                    
   logical :: far_field_BCs_BLK(MaxBlock)
 

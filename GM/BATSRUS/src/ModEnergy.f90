@@ -2,9 +2,12 @@ module ModEnergy
 
   use ModProcMH,     ONLY: iProc
   use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
-  use ModMultiFluid
-  use ModSize,       ONLY: nI, nJ, nK, gcn, MaxBlock
-  use ModAdvance,    ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
+  use ModMultiFluid, ONLY: nFluid, iFluid, nIonFluid, IonLast_, &
+       iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, DoConserveNeutrals, &
+       select_fluid
+  use ModSize,       ONLY: nI, nJ, nK
+  use ModAdvance,    ONLY: State_VGB, Bx_, By_, Bz_, IsMhd, &
+       Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
        UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
   use ModPhysics,    ONLY: Gm1, Inv_Gm1, pMin_I
   use ModVarIndexes, ONLY: Pe_, WaveFirst_, WaveLast_

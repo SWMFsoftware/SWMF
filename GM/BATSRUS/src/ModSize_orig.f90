@@ -6,9 +6,6 @@ module ModSize
 
   implicit none
 
-  ! number of ghostcells. KEEP FIXED AT 2 for NOW!
-  integer, parameter :: gcn=2
-
   ! Maximum number of blocks per processor (set by Config.pl)
   integer, parameter :: MaxBlock = 400
 

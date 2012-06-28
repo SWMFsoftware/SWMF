@@ -374,7 +374,7 @@ end subroutine bound_Bface
 !   implicit none
 ! 
 !   integer, intent(in) :: iVar, iBLK
-!   real, dimension (1-gcn:nI+gcn,1-gcn:nJ+gcn, 1-gcn:nK+gcn) :: &
+!   real, dimension (MinI:MaxI,MinJ:MaxJ, MinK:MaxK) :: &
 !        coarse_sol,fine_sol
 ! 
 !   integer :: i,j,k,i1,j1,k1,ishift,jshift,kshift
@@ -458,7 +458,7 @@ end subroutine bound_Bface
 !   implicit none
 ! 
 !   ! Coarse face centered B field components
-!   real, intent(in),  dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn) :: &
+!   real, intent(in),  dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: &
 !        Bxf_c, Byf_c, Bzf_c
 ! 
 !   ! Did we have finer neighbors before prolongation
@@ -477,7 +477,7 @@ end subroutine bound_Bface
 !   integer, intent(in) :: iBlock
 ! 
 !   ! Fine face centered B field components produced by prolongation
-!   real, intent(out), dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn) :: &
+!   real, intent(out), dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: &
 !        Bxf_f, Byf_f, Bzf_f
 ! 
 !   integer :: i,j,k,i1,j1,k1,ishift,jshift,kshift
@@ -853,9 +853,9 @@ end subroutine bound_Bface
 !   implicit none
 ! 
 !   integer,intent(in)::iVar
-!   real, intent(inout), dimension (1-gcn:nI+gcn, &
-!        1-gcn:nJ+gcn, &
-!        1-gcn:nK+gcn,nBLK) :: sol_BLK
+!   real, intent(inout), dimension (MinI:MaxI, &
+!        MinJ:MaxJ, &
+!        MinK:MaxK,nBLK) :: sol_BLK
 ! 
 !   real, dimension(1:nI/2+1, 1:nJ/2+1, 1:nK/2+1, 8) ::&
 !        restricted_soln_blks
@@ -926,7 +926,7 @@ end subroutine bound_Bface
 !   implicit none
 ! 
 !   integer, intent(in) :: iVar
-!   real, intent(in) :: fine_sol(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
+!   real, intent(in) :: fine_sol(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 !   real, intent(out):: coarse_sol(1:nI/2+1,1:nJ/2+1,1:nK/2+1)
 ! 
 !   !---------------------------------------------------------------------------
@@ -966,7 +966,7 @@ end subroutine bound_Bface
 ! 
 !   real, intent(in)   :: r_sol(1:nI/2+1,1:nJ/2+1,1:nK/2+1,8)
 !   integer, intent(in):: iVar
-!   real, intent(out)  :: coarse_sol(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
+!   real, intent(out)  :: coarse_sol(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 ! 
 !   integer :: dI, dJ, dK
 ! 

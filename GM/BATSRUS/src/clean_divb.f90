@@ -26,9 +26,9 @@ subroutine clean_divb
 
   integer::i,j,k,iBlock
   logical::DoConservative=.false.
-  real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)::DivBV_G
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)::DivBV_G
   real:: DivBInt(2),DivBTemp(2)
-  integer,parameter::ResDotM1DotRes_=2,ResDotOne_=1
+  integer, parameter::ResDotM1DotRes_=2,ResDotOne_=1
 
   !Conjugated gradients algorithm, see
   !http://netlib2.cs.utk.edu/linalg/old_html_templates/subsection2.6.3.1.html
@@ -429,7 +429,7 @@ contains
   !============================================================================                         
   subroutine v_grad_phi(Phi_GB,iBlock)
     integer,intent(in)::iBlock
-    real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK),intent(inout)::Phi_GB
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK),intent(inout)::Phi_GB
     vDotGradX_C = 0.0;vDotGradY_C = 0.0;vDotGradZ_C = 0.0
 !!! Apply continuous solution at east and west
     !    if (NeiLev(1,iBlock)==NOBLK)&
@@ -508,9 +508,9 @@ use BATL_lib, ONLY: CellFace_DB
 implicit none
 
 integer,intent(in) :: iBlock
-real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn),intent(in)::&
+real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(in)::&
     VecX_G,VecY_G,VecZ_G
-real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn),intent(out)::Out_G
+real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(out)::Out_G
 
 real, dimension(0:nI+1, 0:nJ+1, 0:nK+1) :: OneTrue_G
 
