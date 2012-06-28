@@ -87,14 +87,14 @@ contains
     logical,save :: dbg=.false.,lastWasPrep=.false.
 
     nfgp=ngr+1
-    ts=sqrt(Te_in)
-    at32s= aSaha*Te_in*ts/Ne_in
+    ts=sqrt(Te_in)/Ne_in
+    at32s= aSaha*Te_in*ts
     if(at32s.le.A_LTE_limit) then
        ubar=log(at32s)	! thus Tz/Te will be  1
        return
     end if
     QJ=log(at32s)
-    betapm= (b_CovR/Gaunt/aSaha)*at32s*Te_in**2        
+    betapm= (b_CovR/Gaunt)*Ts*Te_in**3        
 
 
     !	     --------
@@ -140,7 +140,7 @@ contains
             +Auger_B*betapm				&
             +bu3					)
        rm=frad/s*(du/duu)
-       if(rm.le.smallR) exit		! 080712 ! ? save CPU
+!dont       if(rm.le.smallR) exit		! 080712 ! ? save CPU
        rm=max(rm,smallR)
        duu=du
        ubar=(ubar+u*rm)/(one+rm)
@@ -214,7 +214,7 @@ contains
             +Auger_B*betapm				&
             +bu3					)
        rm=frad/s*(du/duu)
-       if(rm.le.smallR) exit		! 080712 ! ? save CPU
+!dont       if(rm.le.smallR) exit		! 080712 ! ? save CPU
        rm=max(rm,smallR)
        duu=du
        ubar=(ubar+u*rm)/(one+rm)
