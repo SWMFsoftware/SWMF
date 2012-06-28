@@ -19,7 +19,7 @@
 !==============================================================================
 module ModUser
 
-  use ModSize,     ONLY: nI, nJ, nK, gcn, nBLK
+  use ModSize,     ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBLK
   use ModMain
   use ModPhysics
   use ModAdvance,  ONLY : State_VGB
@@ -536,7 +536,7 @@ contains
     ! Make sure that OmegaSun and ParkerTilt are set
     if(OmegaSun == 0.0)call set_omega_parker_tilt
 
-    do i=1-gcn,nI+gcn; do j=1-gcn,nJ+gcn; do k=1-gcn,nK+gcn
+    do i=MinI,MaxI; do j=MinJ,MaxJ; do k=MinK,MaxK
 
        if(.not. true_cell(i,j,k,iBlock)) CYCLE
 

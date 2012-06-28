@@ -6,7 +6,7 @@ Module ModUser
   use ModNumConst, ONLY: cHalf,cTwo,cThree,&
        cFour,cE1,cHundred,cHundredth,cZero,&
        cOne,cTiny
-  use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
+  use ModSize,     ONLY: nI,nJ,nK
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_init_session,               &
        IMPLEMENTED2 => user_set_ics,                    &

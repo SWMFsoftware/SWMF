@@ -1163,7 +1163,7 @@ case('solarmin')
           end do; end do; end do
 
     nu1_BLK(:,:,:,iBlock)=nu_BLK(:,:,:,iBlock)
-    do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+    do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
        if (R_BLK(i,j,k,iBlock)< Rbody) then
           cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
                x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&

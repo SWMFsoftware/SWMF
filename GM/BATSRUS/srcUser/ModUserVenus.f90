@@ -737,7 +737,7 @@ contains
 
     if(.not.restart)then
 
-       do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+       do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
           if (R_BLK(i,j,k,iBlock)< 1.0) then
              cosSZA=(0.5+sign(0.5,x_BLK(i,j,k,iBlock)))*&
                   x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
@@ -1230,7 +1230,7 @@ contains
     Eta0 = Eta0Si * Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
     
     
-    do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; 
+    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI; 
        totalNumRho=sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock) &
             /MassSpecies_V(rho_+1:rho_+MaxSpecies))
        
@@ -1284,7 +1284,7 @@ contains
     ! prescribed minimum. If it is set it to the minimum value
     !/
 
-    do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; 
+    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI; 
        totalNumRho=sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock) &
             /MassSpecies_V(rho_+1:rho_+MaxSpecies))
        kTe= State_VGB(p_,i,j,k,iBlock)/(totalNumRho+1.0e-8)/2.0

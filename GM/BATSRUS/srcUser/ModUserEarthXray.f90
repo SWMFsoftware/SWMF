@@ -5,7 +5,7 @@
 !========================================================================
 module ModUser
   use ModNumConst, ONLY: cTiny
-  use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK,MaxBlock
+  use ModSize,     ONLY: nI,nJ,nK,MaxBlock
   use ModVarIndexes, ONLY: nVar
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, n_step
   use ModProcMH, ONLY: iProc

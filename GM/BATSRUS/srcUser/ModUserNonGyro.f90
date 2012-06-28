@@ -2,7 +2,7 @@
 
 module ModUser
 
-  use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
+  use ModSize,     ONLY: nI,nJ,nK
   use ModPhysics,  ONLY: ElectronCharge
 
   use ModUserEmpty, &

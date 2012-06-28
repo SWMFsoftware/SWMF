@@ -8,7 +8,7 @@ module ModUser
        cOne,cTiny
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_, Energy_, &
        rhoUx_,rhoUy_,rhoUz_
-  use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
+  use ModSize,     ONLY: nI,nJ,nK
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_init_session,               &
        IMPLEMENTED2 => user_set_ics,                    &

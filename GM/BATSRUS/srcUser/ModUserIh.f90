@@ -83,7 +83,7 @@ contains
   subroutine user_set_ics(iBlock)
     
     use ModMain,        ONLY: Unused_B   
-    use ModSize,        ONLY: nI, nJ, nK, gcn
+    use ModSize,        ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, r_BLK
     use ModAdvance,     ONLY: State_VGB
     use ModPhysics,     ONLY: rBody
@@ -99,7 +99,7 @@ contains
     if (Unused_B(iBlock)) RETURN
   
     if(UseParkerIcs) then
-       do k=1-gcn,nK+gcn ; do j=1-gcn,nJ+gcn ; do i=1-gcn,nI+gcn
+       do k=MinK,MaxK ; do j=MinJ,MaxJ ; do i=MinI,MaxI
 
           ! make variable names a little shorter
           x = x_BLK(i,j,k,iBlock)
@@ -119,7 +119,7 @@ contains
     end if
 
   end subroutine user_set_ics
- !============================================================================
+  !============================================================================
   subroutine get_parker_sln_cell(x, y, z, r, State_V)
 
     ! Set state to the steady state adiabatic Parker spiral solution.     
