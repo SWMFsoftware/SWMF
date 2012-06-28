@@ -6,6 +6,8 @@ module ModUserEmpty
   ! (included) in the srcUser/ModUser*.f90 files for routines that the user 
   ! does not wish to implement.
 
+  use ModSize, ONLY: x_, y_, z_
+
   implicit none
 
   private :: stop_user
