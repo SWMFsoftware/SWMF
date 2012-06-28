@@ -9,8 +9,7 @@ module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED4 => user_set_boundary_cells,         &
-       IMPLEMENTED5 => user_set_face_boundary,                   &
+       IMPLEMENTED5 => user_set_face_boundary,          &
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED9 => user_get_b0,                     &
@@ -976,7 +975,7 @@ contains
        write(*,*)''
     end if
 
-    do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+    do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
        if (R_BLK(i,j,k,iBlock)< Rbody) then
           cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
                x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
@@ -1323,39 +1322,7 @@ contains
     end if
   end subroutine set_multiSp_ICs
 
-  !========================================================================
-
-  subroutine user_set_boundary_cells(iBLK)
-    use ModGeometry
-    use ModMain	
-    use ModNumConst	
-
-    integer,intent(in)::iBLK
-    !-----------------------------------------------------------------------
-    !  SHOULD define IsBoundaryCell_GI(:,:,:,ExtraBc_) using
-    !  a boundary condition for iBLK block
-    !  EXAMPLE: OUTER SPHERICAL BOUNDARY of radius of 100.
-    !  IsBoundaryCell_GI(:,:,:,ExtraBc_) = R_BLK(:,:,:,iBLK)<100.
-    if (index(TypeGeometry,'spherical')>0)then
-       if(XyzStart_BLK(Theta_,iBLK)<dz_BLK(iBLK))then
-          !	IsBoundaryCell_GI(:,:,1-gcn:0,ExtraBc_)=.true.
-          !	IsBoundaryCell_GI(1:nI,1:nJ,1-gcn:0,ExtraBc_)=.false.
-
-          !	IsBoundaryCell_GI(:,:,1-gcn:0,ExtraBc_)=.true.
-          IsBoundaryCell_GI(nI+1:nI+gcn,:,1-gcn:0,ExtraBc_)=.true.
-          IsBoundaryCell_GI(1-gcn:0,:,1-gcn:0,ExtraBc_)=.true.	
-       elseif(XyzStart_BLK(Theta_,iBLK)+nK*dz_BLK(iBLK)>cPi)then
-          !        IsBoundaryCell_GI(:,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          !        IsBoundaryCell_GI(1:nI,1:nJ,nK+1:nK+gcn,ExtraBc_)=.false.
-
-          !        IsBoundaryCell_GI(:,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          IsBoundaryCell_GI(nI+1:nI+gcn,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          IsBoundaryCell_GI(1-gcn:0,:,nK+1:nK+gcn,ExtraBc_)=.true.
-       end if
-    end if
-  end subroutine user_set_boundary_cells
-
-  !========================================================================
+  !============================================================================
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 

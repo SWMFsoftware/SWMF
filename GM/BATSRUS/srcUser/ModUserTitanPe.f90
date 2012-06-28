@@ -10,8 +10,7 @@ module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED4 => user_set_boundary_cells,         &
-       IMPLEMENTED5 => user_set_face_boundary,                   &
+       IMPLEMENTED5 => user_set_face_boundary,          &
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED8 => user_set_plot_var,               & 
@@ -1061,7 +1060,7 @@ contains
        ! Initialize solution quantities.
        !/
 
-       do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+       do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
           if (R_BLK(i,j,k,iBlock)< Rbody) then
              State_VGB(:,i,j,k,iBlock)   =  CellState_VI(:,body1_)
           else
@@ -1072,7 +1071,7 @@ contains
 
        coefy=BodyRhoSpecies_dim_II(:,1)/tmp_ion(:,1)           
 
-       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           cosSZA=(x_BLK(i,j,k,iBlock)*SX0 &
                + y_BLK(i,j,k,iBlock)*SY0 &
                + z_BLK(i,j,k,iBlock)*SZ0)&
@@ -1293,40 +1292,7 @@ contains
 
   end subroutine set_multiSp_ICs
 
-  !========================================================================
-  subroutine user_set_boundary_cells(iBLK)
-
-    !  Allows to define boundary conditions at the user defined boundary.
-    use ModGeometry
-    use ModMain, ONLY: Theta_ 	
-    use ModNumConst	
-
-    integer,intent(in)::iBLK
-    !-----------------------------------------------------------------------
-    !  SHOULD define IsBoundaryCell_GI(:,:,:,ExtraBc_) using
-    !  a boundary condition for iBLK block
-    !  EXAMPLE: OUTER SPHERICAL BOUNDARY of radius of 100.
-    !  IsBoundaryCell_GI(:,:,:,ExtraBc_) = R_BLK(:,:,:,iBLK)<100.
-    if (index(TypeGeometry,'spherical')>0)then
-       if(XyzStart_BLK(Theta_,iBLK)<dz_BLK(iBLK))then
-          !	IsBoundaryCell_GI(:,:,1-gcn:0,ExtraBc_)=.true.
-          !	IsBoundaryCell_GI(1:nI,1:nJ,1-gcn:0,ExtraBc_)=.false.
-
-          !	IsBoundaryCell_GI(:,:,1-gcn:0,ExtraBc_)=.true.
-          IsBoundaryCell_GI(nI+1:nI+gcn,:,1-gcn:0,ExtraBc_)=.true.
-          IsBoundaryCell_GI(1-gcn:0,:,1-gcn:0,ExtraBc_)=.true.	
-       elseif(XyzStart_BLK(Theta_,iBLK)+nK*dz_BLK(iBLK)>cPi)then
-          !        IsBoundaryCell_GI(:,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          !        IsBoundaryCell_GI(1:nI,1:nJ,nK+1:nK+gcn,ExtraBc_)=.false.
-
-          !        IsBoundaryCell_GI(:,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          IsBoundaryCell_GI(nI+1:nI+gcn,:,nK+1:nK+gcn,ExtraBc_)=.true.
-          IsBoundaryCell_GI(1-gcn:0,:,nK+1:nK+gcn,ExtraBc_)=.true.
-       end if
-    end if
-  end subroutine user_set_boundary_cells
-
-  !========================================================================
+  !===========================================================================
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
@@ -1978,7 +1944,7 @@ contains
     Eta0 = Eta0Si * Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
 
-    do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; 
+    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI; 
        totalNumRho=sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock) &
             /MassSpecies_V(rho_+1:rho_+MaxSpecies))
 
