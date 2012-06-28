@@ -2174,7 +2174,17 @@ contains
     !/
     if (iProc==0) write (*,*) ' '
 
-    if(IsFirstCheck) call correct_grid_geometry
+    if(IsFirstCheck)then
+       call correct_grid_geometry
+
+       if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
+          ! Extend face index range in the orthogonal direction
+          ! This is needed for the current CT scheme implementation
+          iMinFace = 0; iMaxFace = nI+1
+          jMinFace = 0; jMaxFace = nJ+1
+          kMinFace = 0; kMaxFace = nK+1
+       end if                          !^CFG END CONSTRAINB
+    end if
 
     ! This depends on the grid geometry set above
     call correct_plot_range
@@ -2201,7 +2211,6 @@ contains
     select case(FluxType)
     case('ROE','Roe')                                !^CFG IF ROEFLUX BEGIN
        FluxType='Roe'
-       UseRS7 = .true.
        if(UseAlfvenWaves .or. UseWavePressure)then
           if(iProc==0) write(*,'(a)')NameSub // &
                'Wave transport and wave pressure do not work with ' // &
@@ -2262,7 +2271,6 @@ contains
        FluxTypeImpl = FluxType
     case('ROE','Roe')                                !^CFG IF ROEFLUX BEGIN
        FluxTypeImpl='Roe'
-       UseRS7 = .true.
     case('ROEOLD','RoeOld')
        FluxTypeImpl='RoeOld'                         !^CFG END ROEFLUX
     case('RUSANOV','TVDLF','Rusanov')                !^CFG IF RUSANOVFLUX
@@ -2922,15 +2930,6 @@ contains
 !!! momentum limiting fails for multiion: to be debugged
     if(UseMultiIon)DoLimitMomentum = .false.
 !!!
-
-    if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
-       jMinFaceX=0; jMaxFaceX=nJ+1
-       kMinFaceX=0; kMaxFaceX=nK+1
-       iMinFaceY=0; iMaxFaceY=nI+1
-       kMinFaceY=0; kMaxFaceY=nK+1
-       iMinFaceZ=0; iMaxFaceZ=nI+1
-       jMinFaceZ=0; jMaxFaceZ=nJ+1
-    end if                          !^CFG END CONSTRAINB
 
   end subroutine set_extra_parameters
 
