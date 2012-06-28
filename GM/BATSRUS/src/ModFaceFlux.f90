@@ -22,7 +22,7 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area !^CFG IF BORISCORR
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
-       UseRS7, UseIdealEos, UseElectronPressure,  &
+       UseIdealEos, UseElectronPressure, &
        eFluid_                           ! index for electron fluid (nFluid+1)
 
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
@@ -139,6 +139,15 @@ module ModFaceFlux
   ! Limit propagation speeds to reduce numerical diffusion
   logical :: UseClimit = .false.
   real    :: ClimitDim = -1.0, rClimit = -1.0
+
+  !  One of the two possible ways to treat the MHD-like systems
+  !  (partially symmetrizable, following the Godunov definition).
+  !  If the UseRS7=.true. then the 7 waves Riemann Solver (RS) with 
+  !  continuous  normal component of the magnetic field across the face.
+  !  The number of jumps in the physical variables across the face is equal
+  !  to the number of waves, resulting in the the well-posed solution of
+  !  the Riemann problem. This approach is an alternative to the 8-wave scheme
+  logical:: UseRS7 = .false.
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
@@ -331,13 +340,11 @@ contains
   !===========================================================================
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
 
-    use ModAdvance,  ONLY: UseRS7,TypeFlux => FluxType
+    use ModAdvance,  ONLY: TypeFlux => FluxType
     use ModParallel, ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModMain, ONLY: nIFace, nJFace, nKFace, &
-         jMinFaceX, jMaxFaceX, kMinFaceX, kMaxFaceX, &
-         iMinFaceY, iMaxFaceY, kMinFaceY,kMaxFaceY, &
-         iMinFaceZ,iMaxFaceZ, jMinFaceZ, jMaxFaceZ, &
+         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
          UseHyperbolicDivb
 
     logical, intent(in) :: DoResChangeOnly
@@ -400,11 +407,11 @@ contains
        if(nK > 1 .and. neiLtop(iBlock)   == 1) &
             call get_flux_z(1,nI,1,nJ,nKFace,nKFace)
     else
-       call get_flux_x(1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
+       call get_flux_x(1, nIFace, jMinFace, jMaxFace, kMinFace, kMaxFace)
        if(nJ > 1) &
-            call get_flux_y(iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
+            call get_flux_y(iMinFace, iMaxFace, 1, nJFace, kMinFace ,kMaxFace)
        if(nK > 1) &
-            call get_flux_z(iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
+            call get_flux_z(iMinFace, iMaxFace, jMinFace, jMaxFace, 1, nKFace)
     end if
 
   contains
@@ -536,10 +543,14 @@ contains
 
          VdtFace_x(iFace, jFace, kFace)       = CmaxDt*Area
          uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
-         bCrossArea_DX(:, iFace, jFace, kFace)= bCrossArea_D
-         EDotFA_X(iFace, jFace, kFace)        = Enormal*Area !^CFG IF BORISCORR
 
-         if(UseMultiIon) Pe_X(iFace, jFace, kFace) = Pe
+         if(UseB .and. UseBoris) &                       !^CFG IF BORISCORR
+              EDotFA_X(iFace,jFace,kFace) = Enormal*Area !^CFG IF BORISCORR
+
+         if(UseB .and. UseMultiIon) Pe_X(iFace, jFace, kFace) = Pe
+
+         if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
+              bCrossArea_DX(:,iFace,jFace,kFace) = bCrossArea_D
 
       end do; end do; end do
     end subroutine get_flux_x
@@ -590,10 +601,14 @@ contains
 
          VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
          uDotArea_YI(iFace, jFace, kFace, :)  = Unormal_I*Area
-         bCrossArea_DY(:, iFace, jFace, kFace)= bCrossArea_D
-         EDotFA_Y(iFace, jFace, kFace)        = Enormal*Area !^CFG IF BORISCORR
 
-         if(UseMultiIon) Pe_Y(iFace, jFace, kFace) = Pe
+         if(UseB .and. UseBoris) &                       !^CFG IF BORISCORR
+              EDotFA_Y(iFace,jFace,kFace) = Enormal*Area !^CFG IF BORISCORR
+
+         if(UseB .and. UseMultiIon) Pe_Y(iFace,jFace,kFace) = Pe
+
+         if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
+              bCrossArea_DY(:,iFace,jFace,kFace) = bCrossArea_D
 
       end do; end do; end do
 
@@ -645,10 +660,14 @@ contains
 
          VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
          uDotArea_ZI(iFace, jFace, kFace, :)  = Unormal_I*Area
-         bCrossArea_DZ(:, iFace, jFace, kFace)= bCrossArea_D
-         EDotFA_Z(iFace, jFace, kFace)        = Enormal*Area !^CFG IF BORISCORR
+         
+         if(UseB .and. UseBoris) &                       !^CFG IF BORISCORR  
+              EDotFA_Z(iFace,jFace,kFace) = Enormal*Area !^CFG IF BORISCORR
 
-         if(UseMultiIon) Pe_Z(iFace, jFace, kFace) = Pe
+         if(UseB .and. UseMultiIon) Pe_Z(iFace,jFace,kFace) = Pe
+
+         if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
+              bCrossArea_DZ(:,iFace,jFace,kFace)= bCrossArea_D
 
       end do; end do; end do
     end subroutine get_flux_z
