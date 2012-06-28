@@ -182,8 +182,8 @@ contains
 
     B0Face_D = 0.0
 
-    do k = kMinFaceX, kMaxFaceX
-       do j = jMinFaceX, jMaxFaceX
+    do k = kMinFace, kMaxFace
+       do j = jMinFace, jMaxFace
           do i = 1, nIFace
              !\
              ! Apply BCs at X-direction faces as necessary.
@@ -241,9 +241,9 @@ contains
        end do !end j loop
     end do !end k loop
 
-    do k = kMinFaceY,kMaxFaceY
+    do k = kMinFace, kMaxFace
        do j = 1 , nJFace
-          do i = iMinFaceY, iMaxFaceY
+          do i = iMinFace, iMaxFace
              !\
              ! Apply BCs at Y-direction faces as necessary.
              !/
@@ -291,8 +291,8 @@ contains
     end do !end k loop
 
     do k = 1, nKFace
-       do j = jMinFaceZ,jMaxFaceZ
-          do i = iMinFaceZ,iMaxFaceZ
+       do j = jMinFace, jMaxFace
+          do i = iMinFace, iMaxFace
              !\
              ! Apply BCs at Z-direction faces as necessary.
              !/

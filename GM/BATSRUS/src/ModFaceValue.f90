@@ -639,9 +639,7 @@ contains
     use ModMultiFluid, ONLY: nIonFluid
     use ModMain,     ONLY: nOrder, prolong_order, BlkTest, UseB0, &
          UseConstrainB, nIFace, nJFace, nKFace, &
-         jMinFaceX, jMaxFaceX, kMinFaceX, kMaxFaceX,&
-         iMinFaceY, iMaxFaceY, kMinFaceY, kMaxFaceY,&
-         iMinFaceZ, iMaxFaceZ, jMinFaceZ, jMaxFaceZ
+         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
 
     use ModGeometry, ONLY : true_cell,body_BLK
     use ModPhysics, ONLY: GammaWave
@@ -710,29 +708,29 @@ contains
        else
           B0_DG=0.00
        end if
-       do k=kMinFaceX,kMaxFaceX
-          do j=jMinFaceX,jMaxFaceX
+       do k = kMinFace, kMaxFace
+          do j = jMinFace, jMaxFace
              do i=1-nOrder,nI+nOrder
                 call calc_primitives_boris    !needed for x-faces
              end do
           end do
        end do
        if(nJ > 1)then
-          do k=kMinFaceY,kMaxFaceY; do i=iMinFaceY,iMaxFaceY
-             do j=1-nOrder,jMinFaceX-1
+          do k = kMinFace, kMaxFace; do i = iMinFace, iMaxFace
+             do j=1-nOrder,jMinFace-1
                 call calc_primitives_boris    ! additional calculations for 
              end do                           ! y -faces
-             do j=jMaxFaceX+1,nJ+nOrder
+             do j=jMaxFace+1,nJ+nOrder
                 call calc_primitives_boris    ! additional calculations for 
              end do	                      ! y-faces
           end do; end do
        end if
        if(nK > 1)then
-          do j=jMinFaceZ,jMaxFaceZ; do i=iMinFaceZ,iMaxFaceZ
-             do k=1-nOrder,kMinFaceX-1
+          do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
+             do k=1-nOrder,kMinFace-1
                 call calc_primitives_boris    ! additional calculations for 
              end do                           ! z-faces
-             do k=kMaxFaceX+1,nK+nOrder
+             do k=kMaxFace+1,nK+nOrder
                 call calc_primitives_boris    ! additional calculations for 
              end do	                      ! z-faces
           end do; end do
@@ -743,29 +741,29 @@ contains
              call calc_primitives_MHD         !needed for x-faces
           end do; end do; end do
        else
-          do k=kMinFaceX,kMaxFaceX
-             do j=jMinFaceX,jMaxFaceX
+          do k=kMinFace,kMaxFace
+             do j=jMinFace,jMaxFace
                 do i=1-nOrder,nI+nOrder
                    call calc_primitives_MHD   !needed for x-faces
                 end do
              end do
           end do
           if(nJ > 1)then
-             do k=kMinFaceY,kMaxFaceY; do i=iMinFaceY,iMaxFaceY
-                do j=1-nOrder,jMinFaceX-1
+             do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
+                do j=1-nOrder,jMinFace-1
                    call calc_primitives_MHD   ! additional calculations for 
                 end do                        ! y -faces
-                do j=jMaxFaceX+1,nJ+nOrder
+                do j=jMaxFace+1,nJ+nOrder
                    call calc_primitives_MHD   ! additional calculations for 
                 end do	                      ! y-faces
              end do; end do
           end if
           if(nK > 1)then
-             do j=jMinFaceZ,jMaxFaceZ; do i=iMinFaceZ,iMaxFaceZ
-                do k=1-nOrder,kMinFaceX-1
+             do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
+                do k=1-nOrder,kMinFace-1
                    call calc_primitives_MHD   ! additional calculations for 
                 end do                        ! z-faces
-                do k=kMaxFaceX+1,nK+nOrder
+                do k=kMaxFace+1,nK+nOrder
                    call calc_primitives_MHD   ! additional calculations for 
                 end do	                      ! z-faces
              end do; end do
@@ -783,11 +781,11 @@ contains
        !/
        if (.not.DoResChangeOnly) then
           call get_faceX_first(&
-               1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
+               1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
           if(nJ > 1) call get_faceY_first(&
-               iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
+               iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
           if(nK > 1) call get_faceZ_first(&
-               iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
+               iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
        else
           if(neiLeast(iBlock)==+1)&
                call get_faceX_first(1,1,1,nJ,1,nK)
@@ -812,11 +810,11 @@ contains
 
        if (.not.DoResChangeOnly)then
           call get_faceX_second(&
-               1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
+               1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
           if(nJ > 1) call get_faceY_second(&
-               iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
+               iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
           if(nK > 1) call get_faceZ_second(&
-               iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
+               iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
        end if
 
        if(prolong_order==1 &
@@ -887,12 +885,12 @@ contains
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call logfaceZ_to_faceZ(1,nI,1,nJ,nKFace,nKFace)
           else
-             call logfaceX_to_faceX(1,nIFace,jMinFaceX,jMaxFaceX, &
-                  kMinFaceX,kMaxFaceX)
-             if(nJ > 1) call logfaceY_to_faceY(iMinFaceY,iMaxFaceY,1,nJFace, &
-                  kMinFaceY,kMaxFaceY)
-             if(nK > 1) call logfaceZ_to_faceZ(iMinFaceZ,iMaxFaceZ, &
-                  jMinFaceZ,jMaxFaceZ,1,nKFace)
+             call logfaceX_to_faceX(1,nIFace,jMinFace,jMaxFace, &
+                  kMinFace,kMaxFace)
+             if(nJ > 1) call logfaceY_to_faceY(iMinFace,iMaxFace,1,nJFace, &
+                  kMinFace,kMaxFace)
+             if(nK > 1) call logfaceZ_to_faceZ(iMinFace,iMaxFace, &
+                  jMinFace,jMaxFace,1,nKFace)
           end if
        end if
 
@@ -911,12 +909,12 @@ contains
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call ratio_to_scalar_faceZ(1,nI,1,nJ,nKFace,nKFace)
           else
-             call ratio_to_scalar_faceX(1,nIFace,jMinFaceX,jMaxFaceX, &
-                  kMinFaceX,kMaxFaceX)
-             if(nJ > 1) call ratio_to_scalar_faceY(iMinFaceY,iMaxFaceY,1,nJFace, &
-                  kMinFaceY,kMaxFaceY)
-             if(nK > 1) call ratio_to_scalar_faceZ(iMinFaceZ,iMaxFaceZ, &
-                  jMinFaceZ,jMaxFaceZ,1,nKFace)
+             call ratio_to_scalar_faceX(1,nIFace,jMinFace,jMaxFace, &
+                  kMinFace,kMaxFace)
+             if(nJ > 1) call ratio_to_scalar_faceY(iMinFace,iMaxFace,1,nJFace, &
+                  kMinFace,kMaxFace)
+             if(nK > 1) call ratio_to_scalar_faceZ(iMinFace,iMaxFace, &
+                  jMinFace,jMaxFace,1,nKFace)
           end if
        end if
 
@@ -935,12 +933,12 @@ contains
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call ptotal_to_p_faceZ(1,nI,1,nJ,nKFace,nKFace)
           else
-             call ptotal_to_p_faceX(1,nIFace,jMinFaceX,jMaxFaceX, &
-                  kMinFaceX,kMaxFaceX)
-             if(nJ > 1) call ptotal_to_p_faceY(iMinFaceY,iMaxFaceY,1,nJFace, &
-                  kMinFaceY,kMaxFaceY)
-             if(nK > 1) call ptotal_to_p_faceZ(iMinFaceZ,iMaxFaceZ, &
-                  jMinFaceZ,jMaxFaceZ,1,nKFace)
+             call ptotal_to_p_faceX(1,nIFace,jMinFace,jMaxFace, &
+                  kMinFace,kMaxFace)
+             if(nJ > 1) call ptotal_to_p_faceY(iMinFace,iMaxFace,1,nJFace, &
+                  kMinFace,kMaxFace)
+             if(nK > 1) call ptotal_to_p_faceZ(iMinFace,iMaxFace, &
+                  jMinFace,jMaxFace,1,nKFace)
           end if
        end if
 
