@@ -150,10 +150,7 @@ contains
        if(present(RO_in)) goto 102
        ro=(Ni/avogadro)*atoMass
     else
-       if(.not.present(RO_in)) then
-       !   if(.not.ROgiven .and. .not.NIgiven) goto 102
-       end if
-       !	 if(NIgiven .or. ROgiven) goto 104
+       if(.not.present(RO_in))goto 102
        ro=RO_in
        Ni=avogadro*(ro/atoMass)
     end if
@@ -306,7 +303,8 @@ contains
     if(present(Et_out)) Et_out=ee
     if(present(Pe_out)) Pe_out=pe
     if(present(Pt_out)) Pt_out=pe
-    if(present(Cv_out)) Cv_out=Cv
+    if(present(Cv_out)) &
+       Cv_out = Cv * Tz/Te + 1.50 * (zbar+zion)*(1-Tz/Te)*kbr_E 
     ! call set_RO_Ni()	! reset ROgiven and NIgiven to .false.
     ! to make sure that "set_RO_NI" is called before NLTE_EOS if
     ! option arguments  "ro" and "Natom" are not used 
@@ -480,16 +478,24 @@ contains
     implicit none
     integer,intent(IN) :: ng                 !The dimension of array EOverB
     real,dimension(0:ng),intent(in) :: hnug  !The group boundaries, in eV
-    real,dimension(ng),intent(in) :: eg_o_bg !Input array of EOverB
+    real,dimension(*),intent(in) :: eg_o_bg !Input array of EOverB
     integer :: i
 
-    if(ng.ne.ng_rad) then
+    if(ng.ne.ng_rad.and.ng>0) then
        call prep_projE(hnug,ng)
+       ng_rad = ng
+       hnu_rad(0:ng_rad)=hnug(0:ng)
+    elseif(ng==0)then
+       ng_rad = ng
+       write(*,*)
+       write(*,'(a)')'-W- RADIOM activated with NG=0'
+       write(*,*)
     end if
-    ng_rad=ng
-    hnu_rad(0:ng_rad)=hnug(0:ng)
-    EoB(1:ng_Rad)=eg_o_bg(1:ng_Rad)
-
+    if(ng>0)then
+       EoB(1:ng_Rad)=eg_o_bg(1:ng_Rad)
+    else
+       EoB(1)=eg_o_bg(1)
+    end if
   end subroutine setErad
   !-------
 
