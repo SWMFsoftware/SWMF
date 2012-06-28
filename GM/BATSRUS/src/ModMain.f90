@@ -1,8 +1,6 @@
 !^CFG COPYRIGHT UM
 Module ModMain
-  !\
-  ! Get values of nBLK, nI, nJ, nK, and gcn from ModSize
-  !/
+
   use ModKind
   use ModSize
   use ModVarIndexes
@@ -137,13 +135,11 @@ Module ModMain
   integer, parameter :: nJFace=nJ+1
   integer, parameter :: nKFace=nK+1  
 
+  ! Limits in the orthogonal directions
   integer:: &
-       jMinFaceX=1, jMaxFaceX=nJ,&
-       kMinFaceX=1, kMaxFaceX=nK,&
-       iMinFaceY=1, iMaxFaceY=nI,&
-       kMinFaceY=1, kMaxFaceY=nK,&
-       iMinFaceZ=1, iMaxFaceZ=nI,&
-       jMinFaceZ=1, jMaxFaceZ=nJ
+       iMinFace = 1, iMaxFace = nI, &
+       jMinFace = 1, jMaxFace = nJ, &
+       kMinFace = 1, kMaxFace = nK
 
   !\
   ! How to deal with div B = 0
