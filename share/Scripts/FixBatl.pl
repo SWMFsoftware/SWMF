@@ -48,14 +48,13 @@ s/\-1\s([,:])\s*n([ijk])\s*\+2/Min$2$1Max$2/gi;
 # z_BLK( --> Xyz_DGB(z_,
 s/\b([xyz]_)blk\(/Xyz_DGB\($1,/gi;
 
-# x_BLK, y_BLK, z_BLK --> Xyz_DGB
-s/\bx_blk\s*,\s*y_blk\s*,\s*z_blk/Xyz_DGB/i;
+# use ... x_BLK, y_BLK, z_BLK --> use ... Xyz_DGB
+s/^(\s*use.*)\bx_blk\b(\s*,\s*y_blk)?(\s*,\s*z_blk)?/$1Xyz_DGB/i;
 
 # dx_BLK( --> CellSize_DB(x_,
 # dy_BLK( --> CellSize_DB(x_,
 # dz_BLK( --> CellSize_DB(x_,
 s/\bd([xyz]_)blk\(/CellSize_DB\($1,/gi;
 
-# dx_BLK, dy_BLK, dz_BLK --> CellSize_DB
-s/\bdx_blk\s*,\s*dy_blk\s*,\s*dz_blk/CellSize_DB/i;
-
+# use ... dx_BLK, dy_BLK, dz_BLK --> use ... CellSize_DB
+s/^(\s*use.*)\bdx_blk\b(\s*,\s*dy_blk)?(\s*,\s*dz_blk)?/$1CellSize_DB/i;
