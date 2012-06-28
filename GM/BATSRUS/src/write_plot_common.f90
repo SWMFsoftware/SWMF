@@ -1093,11 +1093,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            ! Div B from face fluxes
            PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)= &
                 (Bxface_BLK(1:nI+2  ,0:nJ+1  ,0:nK+1  ,iBLK)              &
-                -Bxface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/dx_BLK(iBLK)&
+                -Bxface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/CellSize_DB(x_,iBLK)&
                 +(Byface_BLK(0:nI+1  ,1:nJ+2  ,0:nK+1  ,iBLK)              &
-                -Byface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/dy_BLK(iBLK)&
+                -Byface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/CellSize_DB(y_,iBLK)&
                 +(Bzface_BLK(0:nI+1  ,0:nJ+1  ,1:nk+2  ,iBLK)              &
-                -Bzface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/dz_BLK(iBLK)
+                -Bzface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/CellSize_DB(z_,iBLK)
            !                                         !^CFG END CONSTRAINB
         else
            ! Cell corner centered div B from cell centers
@@ -1109,7 +1109,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                 -State_VGB(Bx_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 -State_VGB(Bx_,-1:nI   ,-1:nJ   ,0:nK+1  ,iBLK)  &
                 -State_VGB(Bx_,-1:nI   ,0:nJ+1  ,-1:nK   ,iBLK)  &
-                -State_VGB(Bx_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dx_BLK(iBLK) &
+                -State_VGB(Bx_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/CellSize_DB(x_,iBLK) &
                 +(State_VGB(By_,0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(By_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(By_,0:nI+1  ,0:nJ+1  ,-1:nK   ,iBLK)  &
@@ -1117,7 +1117,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                 -State_VGB(By_,0:nI+1  ,-1:nJ   ,0:nK+1  ,iBLK)  &
                 -State_VGB(By_,-1:nI   ,-1:nJ   ,0:nK+1  ,iBLK)  &
                 -State_VGB(By_,0:nI+1  ,-1:nJ   ,-1:nK   ,iBLK)  &
-                -State_VGB(By_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dy_BLK(iBLK) &
+                -State_VGB(By_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/CellSize_DB(y_,iBLK) &
                 +(State_VGB(Bz_,0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(Bz_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(Bz_,0:nI+1  ,-1:nJ   ,0:nK+1  ,iBLK)  &
@@ -1125,7 +1125,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                 -State_VGB(Bz_,0:nI+1  ,0:nJ+1  ,-1:nK   ,iBLK)  &
                 -State_VGB(Bz_,-1:nI   ,0:nJ+1  ,-1:nK   ,iBLK)  &
                 -State_VGB(Bz_,0:nI+1  ,-1:nJ   ,-1:nK   ,iBLK)  &
-                -State_VGB(Bz_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dz_BLK(iBLK))
+                -State_VGB(Bz_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/CellSize_DB(z_,iBLK))
         endif
         if(.not.true_BLK(iBLK))then
            where(.not.true_cell(:,:,:,iBLK))PlotVar(:,:,:,iVar)=0.0
@@ -1233,11 +1233,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         if(allocated(AmrCrit_IB) .and. nAmrCrit >= 9) &
              PlotVar(:,:,:,iVar) = AmrCrit_IB(9,iBlk)
      case('dx')
-        PlotVar(:,:,:,iVar) = dx_BLK(iBLK)
+        PlotVar(:,:,:,iVar) = CellSize_DB(x_,iBLK)
      case('dy')
-        PlotVar(:,:,:,iVar) = dy_BLK(iBLK)
+        PlotVar(:,:,:,iVar) = CellSize_DB(y_,iBLK)
      case('dz')
-        PlotVar(:,:,:,iVar) = dz_BLK(iBLK)
+        PlotVar(:,:,:,iVar) = CellSize_DB(z_,iBLK)
      case('dt')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=time_BLK(1:nI,1:nJ,1:nK,iBLK)
      case('dtblk')

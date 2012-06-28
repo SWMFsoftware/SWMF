@@ -139,7 +139,7 @@ contains
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     use ModAdvance,  ONLY: State_VGB
-    use ModGeometry, ONLY: Dx_Blk
+    use ModGeometry, ONLY: CellSize_DB
     use ModImplicit, ONLY: StateSemi_VGB, TypeSemiImplicit, iEradImpl
     use ModMain,     ONLY: nI, nJ, nK
     use ModPhysics,  ONLY: cRadiationNo
@@ -164,13 +164,13 @@ contains
           ! Set temperature in case we use radcond
           StateSemi_VGB(:,0,:,:,iBlock) = 0.0
           ! Marshak boundary conditions
-          Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
+          Coef = 2.0/(3.0*SpecificOpacity*Density*CellSize_DB(x_,iBlock))
           StateSemi_VGB(iEradImpl,0,1:nJ,1:nK,iBlock) = &
                (cRadiationNo*TradBc**4 &
                + StateSemi_VGB(iEradImpl,1,1:nJ,1:nK,iBlock)&
                *(Coef - 0.5) )/(Coef + 0.5)
        case('usersemilinear')
-          Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
+          Coef = 2.0/(3.0*SpecificOpacity*Density*CellSize_DB(x_,iBlock))
           StateSemi_VGB(iEradImpl,0,1:nJ,1:nK,iBlock) = &
                StateSemi_VGB(iEradImpl,1,1:nJ,1:nK,iBlock) &
                *(Coef - 0.5)/(Coef + 0.5)
@@ -185,7 +185,7 @@ contains
           ! Set temperature in case we use radcond
           StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
           ! zero radiation influx boundary conditions
-          Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
+          Coef = 2.0/(3.0*SpecificOpacity*Density*CellSize_DB(x_,iBlock))
           StateSemi_VGB(iEradImpl,nI+1,1:nJ,1:nK,iBlock) = &
                StateSemi_VGB(iEradImpl,nI,1:nJ,1:nK,iBlock) &
                *(Coef - 0.5)/(Coef + 0.5)

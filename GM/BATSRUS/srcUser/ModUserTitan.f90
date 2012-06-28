@@ -4,7 +4,7 @@ module ModUser
   ! This is the user module for Titan
 
   use ModSize
-  use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_,&
+  use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, Bz_,&
        rhoLp_,rhoMp_,MassSpecies_V,SpeciesFirst_,SpeciesLast_, MassFluid_I
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -32,7 +32,7 @@ module ModUser
 
   integer, parameter :: MaxSpecies=7
 
-  integer :: nSpecies=7, nNuSpecies=10, nReactions=25
+  integer :: nSpecies=7, nNuSpecies=10
 
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 2.5
@@ -111,7 +111,7 @@ module ModUser
   character (len=10), dimension(MaxSpecies):: &
        ion_name_I
 
-  real, dimension(MaxNuSpecies)::  NuMassSpecies_I, &
+  real, dimension(MaxNuSpecies):: &
        HNuSpecies_I, BodynDenNuSpdim_I,&
        BodynDenNuSpecies_I   
 
@@ -194,7 +194,7 @@ contains
          fileNeuDen, fileSZA, fileIonDen60deg
     integer:: i, j
     integer:: unit_tmp = 15
-    real::tmp_SZA, tmp_ne,tmp_alt
+    real:: tmp_ne,tmp_alt
     !--------------------------------------------------------------------------
 
     do
@@ -437,9 +437,7 @@ contains
 
   subroutine user_calc_sources(iBlock)
 
-    use ModAdvance,  ONLY: Source_VC,Energy_
-    use ModNumConst, ONLY: cZero
-    use ModVarIndexes, ONLY: rhoUx_, rhoUy_, rhoUz_
+    use ModAdvance,  ONLY: Source_VC
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, &
@@ -490,21 +488,19 @@ contains
 
     use ModMain, ONLY: PROCTEST,BLKTEST, iTest,jTest,kTest 
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
-    use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK, &
-         Rmin_BLK
+    use ModGeometry, ONLY:R_BLK
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
     use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data, &
          MaxBlockData
-    use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit
+    use ModPointImplicit, ONLY: UsePointImplicit_B
     use BATL_lib, ONLY: CellVolume_GB
 
     integer, intent(in) :: iBlock
 
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies,iBlockLast = -1
-    real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate,kTi, kTe
-    real :: alt
+    real :: inv_rho, inv_rho2, uu2,kTi, kTe
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps
     logical:: oktest,oktest_me
     real :: SourceLossMax, vdtmin
@@ -885,23 +881,19 @@ contains
 
   subroutine user_set_ICs(iBlock)
 
-    use ModProcMH, ONLY : iProc
-    use ModMain, ONLY: Body1_,ProcTest,itest,jtest,ktest,BLKtest
+    use ModMain, ONLY: Body1_,itest,jtest,ktest,BLKtest
     use ModAdvance
-    use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
+    use ModGeometry, ONLY :Xyz_DGB,R_BLK
     use ModIO, ONLY : restart
     use ModPhysics
 
     integer, intent(in) :: iBlock
 
-    real :: SinSlope, CosSlope,CosSZA, coef, hh
-    real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
-         XFace, YFace, ZFace
+    real ::CosSZA, hh
     integer :: i,j,k,n, m
-    integer:: iBoundary
     real :: dtm, dtmp1
     real,dimension(1:MaxSpecies) :: coefx, coefy
-    logical :: oktest_me=.true., oktest
+    logical :: oktest_me=.true.
     !-------------------------------------------------------------------------
 
     if(.not.restart)then
@@ -921,9 +913,9 @@ contains
        coefy=BodyRhoSpecies_dim_II(:,1)/tmp_ion(:,1)           
 
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          cosSZA=(x_BLK(i,j,k,iBlock)*SX0 &
-               + y_BLK(i,j,k,iBlock)*SY0 &
-               + z_BLK(i,j,k,iBlock)*SZ0)&
+          cosSZA=(Xyz_DGB(x_,i,j,k,iBlock)*SX0 &
+               + Xyz_DGB(y_,i,j,k,iBlock)*SY0 &
+               + Xyz_DGB(z_,i,j,k,iBlock)*SZ0)&
                /max(R_BLK(i,j,k,iBlock),1.0e-3)
 
           ! Make sure these are set (printed in testing)
@@ -1039,9 +1031,8 @@ contains
     use ModIO
     use ModPhysics
 
-    real :: Productrate
     integer:: iSpecies
-    logical:: oktest_me=.false.,oktest=.false.
+    logical:: oktest_me=.false.
     !---------------------------------------------------------------
 
 !    write(*,*)'cPi=', cPi
@@ -1126,13 +1117,11 @@ contains
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModAdvance,  ONLY: nVar
-    use ModPhysics,  ONLY: SW_rho, SW_p, SW_T_dim
     use ModFaceBoundary, ONLY: VarsTrueFace_V, FaceCoords_D
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
     real:: XFace,YFace,ZFace, rFace, rFace2
-    real:: v_phi(3)
     real:: cosSZA
     real,dimension(1:MaxSpecies) :: coefx
     real :: dtm, dtmp1
@@ -1317,9 +1306,9 @@ contains
        dhn = hh - tmp_hR(n)
        dhnp1 = tmp_hR(n+1) - hh
 
-       cosS0=(x_BLK(i,j,k,iBlock)*SX0  & 
-            + y_BLK(i,j,k,iBlock)*SY0  &
-            + z_BLK(i,j,k,iBlock)*SZ0 )&
+       cosS0=(Xyz_DGB(x_,i,j,k,iBlock)*SX0  & 
+            + Xyz_DGB(y_,i,j,k,iBlock)*SY0  &
+            + Xyz_DGB(z_,i,j,k,iBlock)*SZ0 )&
             /max(R_BLK(i,j,k,iBlock),1.0e-3)
 
        if (cosS0 < CosSZA_I(NumSZA)) then
@@ -1455,7 +1444,7 @@ contains
     use ModPhysics, ONLY: rBody, No2Io_V, UnitB_
     use ModMain, ONLY: Body1_
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_, B_
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
+    use ModGeometry, ONLY: Xyz_DGB, r_BLK, IsBoundaryBlock_IB
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
 
@@ -1520,7 +1509,7 @@ contains
     i=i+1
     do k=-1,nK+2; do j=-1,nJ+2
        Xyz_D = &
-            (/ x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)/)
+            (/ Xyz_DGB(x_,i,j,k,iBlock), Xyz_DGB(y_,i,j,k,iBlock), Xyz_DGB(z_,i,j,k,iBlock)/)
        r= r_BLK(i,j,k,iBlock)
        NormXyz_D = Xyz_D/r
 
@@ -1557,8 +1546,7 @@ contains
   !=====================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
-         dx_BLK,dy_BLK,dz_BLK
+    use ModGeometry,   ONLY: Xyz_DGB, R_BLK
     use ModMain,       ONLY: Unused_B
     use ModVarIndexes
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
@@ -1608,9 +1596,9 @@ contains
        if (Unused_B(iBLK)) CYCLE
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           tmp1_BLK(i,j,k,iBLK) = State_VGB(index,i,j,k,iBLK)* &
-               (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-               +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-               +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+               (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+               +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+               +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
        end do; end do; end do
     end do
@@ -1635,16 +1623,11 @@ contains
     ! Apply friction relative to some medium at rest
     ! The friction force is proportional to the velocity and the density.
 
-    use ModPointImplicit, ONLY: UsePointImplicit_B, &
-         iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
 
-    use ModMain,    ONLY: nI, nJ, nK
-    use ModPhysics, ONLY: inv_gm1
-    use ModAdvance, ONLY: State_VGB, Source_VC
-    use ModGeometry,ONLY: r_BLK
+    use ModAdvance, ONLY: Source_VC
     use ModNumConst, ONLY: cZero
-    use ModVarIndexes, ONLY: Rho_, RhoLp_, RhoMp_, RhoH1p_, RhoH2p_, &
-         RhoMHCp_ , RhoHHCp_, RhoHNIp_ , RhoUx_, RhoUy_, RhoUz_, P_, &
+    use ModVarIndexes, ONLY: Rho_, &
+          RhoUx_, RhoUy_, RhoUz_, P_, &
          Energy_, Bx_, By_, Bz_
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
@@ -1652,8 +1635,6 @@ contains
     integer, intent(in) :: iBlock
 
     logical :: oktest,oktest_me
-    integer :: i, j, k
-    real    :: Coef
     !    real, dimension(nI,nJ,nK) :: InvRho_C, Ux_C, Uy_C, Uz_C
     !-------------------------------------------------------------------------
 
@@ -1722,8 +1703,7 @@ contains
     use ModPhysics,  ONLY: No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
          UnitN_, UnitTemperature_, UnitX_,UnitT_, Rbody
     use ModProcMH,   ONLY: iProc
-    use ModMain, ONLY: ProcTest, BlkTest, iTest,jTest,kTest, &
-         Unused_B, nBlockMax
+    use ModMain, ONLY: ProcTest, BlkTest, iTest,jTest,kTest
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Rmin_BLK, R_BLK
     use ModResistivity, ONLY: Eta0Si
@@ -1813,4 +1793,4 @@ contains
 
   end subroutine user_set_resistivity
 
-end Module ModUser
+end module ModUser

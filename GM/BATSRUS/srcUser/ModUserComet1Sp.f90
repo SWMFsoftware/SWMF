@@ -194,7 +194,7 @@ contains
     use ModPhysics
     use ModNumConst
     use ModVarIndexes, ONLY: Bx_, By_, Bz_
-    use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,ONLY: Xyz_DGB,R_BLK
     use ModIO,ONLY:restart
 
     integer, intent(in) :: iBlock
@@ -260,14 +260,14 @@ contains
         iR = max(iR,1)
         iR = min(iR, NR_neutral-1)
 	iRp1 = iR+1
-        Theta = acos( x_BLK(i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
+        Theta = acos( Xyz_DGB(x_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
         jTheta = int( Theta*(NTheta_neutral-1) ) + 1
 	jThetap1 = jTheta+1
-        Phi = acos( y_BLK(i,j,k,iBlock)/sqrt( &
-		y_BLK(i,j,k,iBlock)*y_BLK(i,j,k,iBlock)+ &
-		z_BLK(i,j,k,iBlock)*z_BLK(i,j,k,iBlock) )+cTiny8/1E3 )
-	Phi = Phi*sign( cOne,z_BLK(i,j,k,iBlock) ) + &
-		cPi*( cOne-sign(cOne,z_BLK(i,j,k,iBlock)) )
+        Phi = acos( Xyz_DGB(y_,i,j,k,iBlock)/sqrt( &
+		Xyz_DGB(y_,i,j,k,iBlock)*Xyz_DGB(y_,i,j,k,iBlock)+ &
+		Xyz_DGB(z_,i,j,k,iBlock)*Xyz_DGB(z_,i,j,k,iBlock) )+cTiny8/1E3 )
+	Phi = Phi*sign( cOne,Xyz_DGB(z_,i,j,k,iBlock) ) + &
+		cPi*( cOne-sign(cOne,Xyz_DGB(z_,i,j,k,iBlock)) )
         Phi = Phi / cTwoPi
         kPhi = int( Phi*(NPhi_neutral-1) ) + 1
 
@@ -350,15 +350,15 @@ contains
 
      else if( R_BLK(i,j,k,iBlock) > 7.0E8/NO2SI_V(UnitX_)) then	!Extrapolate beyond 10^6km
 
-        Theta = acos( x_BLK(i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
+        Theta = acos( Xyz_DGB(x_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
         jTheta = int( Theta*(NTheta_neutral-1) ) + 1
         jTheta = max(jTheta,jTh_axis)          ! temperary boundary solution
         jTheta = min(jTheta, NTheta_neutral-jTh_axis)
-        Phi = acos( y_BLK(i,j,k,iBlock)/sqrt( &
-		y_BLK(i,j,k,iBlock)*y_BLK(i,j,k,iBlock)+ &
-		z_BLK(i,j,k,iBlock)*z_BLK(i,j,k,iBlock))+cTiny8/1E3 )
-        Phi = Phi*sign( cOne,z_BLK(i,j,k,iBlock) )
-        Phi = ( Phi + cPi*(cOne-sign(cOne,z_BLK(i,j,k,iBlock))) ) / cTwoPi
+        Phi = acos( Xyz_DGB(y_,i,j,k,iBlock)/sqrt( &
+		Xyz_DGB(y_,i,j,k,iBlock)*Xyz_DGB(y_,i,j,k,iBlock)+ &
+		Xyz_DGB(z_,i,j,k,iBlock)*Xyz_DGB(z_,i,j,k,iBlock))+cTiny8/1E3 )
+        Phi = Phi*sign( cOne,Xyz_DGB(z_,i,j,k,iBlock) )
+        Phi = ( Phi + cPi*(cOne-sign(cOne,Xyz_DGB(z_,i,j,k,iBlock))) ) / cTwoPi
         kPhi = int( Phi*(NPhi_neutral-1) ) + 1
         kPhi = max(kPhi,1)
 
@@ -372,14 +372,14 @@ contains
 
      else	!Extrapolate within 3km
 if(.false.) then
-        Theta = acos( x_BLK(i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
+        Theta = acos( Xyz_DGB(x_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
         jTheta = int( Theta*(NTheta_neutral-1) ) + 1
         jThetap1 = jTheta+1
-        Phi = acos( y_BLK(i,j,k,iBlock)/sqrt( &
-		y_BLK(i,j,k,iBlock)*y_BLK(i,j,k,iBlock)+ &
-		z_BLK(i,j,k,iBlock)*z_BLK(i,j,k,iBlock))+cTiny8/1E3 )
-        Phi = Phi*sign( cOne,z_BLK(i,j,k,iBlock) ) + &
-		cPi*( cOne-sign(cOne,z_BLK(i,j,k,iBlock)) )
+        Phi = acos( Xyz_DGB(y_,i,j,k,iBlock)/sqrt( &
+		Xyz_DGB(y_,i,j,k,iBlock)*Xyz_DGB(y_,i,j,k,iBlock)+ &
+		Xyz_DGB(z_,i,j,k,iBlock)*Xyz_DGB(z_,i,j,k,iBlock))+cTiny8/1E3 )
+        Phi = Phi*sign( cOne,Xyz_DGB(z_,i,j,k,iBlock) ) + &
+		cPi*( cOne-sign(cOne,Xyz_DGB(z_,i,j,k,iBlock)) )
         Phi = Phi / cTwoPi
         kPhi = int( Phi*(NPhi_neutral-1) ) + 1
         kPhi = max(kPhi,1)
@@ -508,7 +508,7 @@ endif
     use ModMain,    ONLY: nI,nJ,nK,n_step,iTest,jTest,kTest,BlkTest
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
-    use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,ONLY: Xyz_DGB,R_BLK
 
     use ModPhysics
     use ModProcMH
@@ -662,12 +662,12 @@ endif
      	!** and 9 degree towards the +z in the xz plane                      ***
      	!** the vector components of this vector are hard coded here         ***
 
-	jtheta = ( X_BLK(i,j,k,iBlock)*x_jet+Y_BLK(i,j,k,iBlock)*y_jet+ &
-			Z_BLK(i,j,k,iBlock)*z_jet ) / R_BLK(i,j,k,iBlock)
+	jtheta = ( Xyz_DGB(X_,i,j,k,iBlock)*x_jet+Xyz_DGB(Y_,i,j,k,iBlock)*y_jet+ &
+			Xyz_DGB(Z_,i,j,k,iBlock)*z_jet ) / R_BLK(i,j,k,iBlock)
 	if (jpattern /= 6 ) jtheta = dmax1(cZero, jtheta)
 	jtheta = dmin1(cOne,  jtheta)		!jtheta = cos(theta) now
 
-	if ( X_BLK(i,j,k,iBlock) >= cZero ) then
+	if ( Xyz_DGB(X_,i,j,k,iBlock) >= cZero ) then
 	  sMassdn = sMass(i,j,k)*Qprod_day
 	else
 	  sMassdn = sMass(i,j,k)*Qprod_nit
@@ -718,8 +718,8 @@ endif
 
      if( jpattern == 3 ) then		!shade by body
 	do k=1,nK ;   do j=1,nJ ;    do i=1,nI
-          rcyl=sqrt( Z_BLK(i,j,k,iBlock)**2 + Y_BLK(i,j,k,iBlock)**2 )
-          if ( X_BLK(i,j,k,iBlock) <= cZero .and. rcyl <= Rbody )  sMass(i,j,k) = 0.
+          rcyl=sqrt( Xyz_DGB(Z_,i,j,k,iBlock)**2 + Xyz_DGB(Y_,i,j,k,iBlock)**2 )
+          if ( Xyz_DGB(X_,i,j,k,iBlock) <= cZero .and. rcyl <= Rbody )  sMass(i,j,k) = 0.
 	end do; end do; end do
      end if
 
@@ -728,12 +728,12 @@ endif
 
      if( jpattern == 7 ) then           !debug pattern
         do k=1,nK ;   do j=1,nJ ;    do i=1,nI
-          if ( R_BLK(i,j,k,iBlock) <= 3.e-4 .and. y_BLK(i,j,k,iBlock) >= -1.e-5 .and. &
-            R_BLK(i,j,k,iBlock) >= 8.e-5 .and. abs(z_BLK(i,j,k,iBlock)) <= 2.e-5 &
-                .and. z_BLK(i,j,k,iBlock) >= -1.e-6 .and. n_step == 4001 ) &
+          if ( R_BLK(i,j,k,iBlock) <= 3.e-4 .and. Xyz_DGB(y_,i,j,k,iBlock) >= -1.e-5 .and. &
+            R_BLK(i,j,k,iBlock) >= 8.e-5 .and. abs(Xyz_DGB(z_,i,j,k,iBlock)) <= 2.e-5 &
+                .and. Xyz_DGB(z_,i,j,k,iBlock) >= -1.e-6 .and. n_step == 4001 ) &
               write(*,*) 'xyzr, smass, Losse, Losse*rho, sMasseta, term1, term2,', &
                 ' term2*rhou, p', &
-                X_BLK(i,j,k,iBlock), Y_BLK(i,j,k,iBlock), Z_BLK(i,j,k,iBlock), &
+                Xyz_DGB(X_,i,j,k,iBlock), Xyz_DGB(Y_,i,j,k,iBlock), Xyz_DGB(Z_,i,j,k,iBlock), &
                 R_BLK(i,j,k,iBlock), sMass(i,j,k), Losse(i,j,k), &
                 Losse(i,j,k)*State_VGB(rho_,i,j,k,iBlock), sMasseta(i,j,k), term1(i,j,k), &
                 term2(i,j,k), term2(i,j,k)*State_VGB(rhoUx_,i,j,k,iBlock), usqr(i,j,k), &
@@ -764,11 +764,11 @@ endif
         end do; enddo; enddo
 
      else
-        Unx=Unr/NO2SI_V(UnitU_)*X_BLK(1:nI,1:nJ,1:nK,iBlock)/ &
+        Unx=Unr/NO2SI_V(UnitU_)*Xyz_DGB(X_,1:nI,1:nJ,1:nK,iBlock)/ &
           R_BLK(1:nI,1:nJ,1:nK,iBlock)
-        Uny=Unr/NO2SI_V(UnitU_)*Y_BLK(1:nI,1:nJ,1:nK,iBlock)/ &
+        Uny=Unr/NO2SI_V(UnitU_)*Xyz_DGB(Y_,1:nI,1:nJ,1:nK,iBlock)/ &
           R_BLK(1:nI,1:nJ,1:nK,iBlock)
-        Unz=Unr/NO2SI_V(UnitU_)*Z_BLK(1:nI,1:nJ,1:nK,iBlock)/ &
+        Unz=Unr/NO2SI_V(UnitU_)*Xyz_DGB(Z_,1:nI,1:nJ,1:nK,iBlock)/ &
           R_BLK(1:nI,1:nJ,1:nK,iBlock)
 
      	Source_VC(Energy_,:,:,:) = Source_VC(Energy_,:,:,:) + &

@@ -379,13 +379,13 @@ contains
     use ModSize, ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Erad_
     use ModImplicit, ONLY: StateSemi_VGB
-    use ModGeometry, ONLY: dx_BLK
+    use ModGeometry, ONLY: CellSize_DB
 ! esm [
     use ModImplicit, ONLY: iEradImpl
     use ModPhysics, ONLY: cRadiationNo, Si2No_V, UnitTemperature_, &
          No2Si_V, UnitEnergyDens_
     use ModMain, ONLY: Time_Simulation
-    use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
+    use ModGeometry,    ONLY: Xyz_DGB
 
     use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
@@ -417,7 +417,7 @@ contains
 
     ! Mixed boundary condition for Erad: 
     ! assume a linear profile to a fixed value at some distance
-    Dx = dx_BLK(iBlock)
+    Dx = CellSize_DB(x_,iBlock)
 
 ! esm [
 
@@ -461,8 +461,8 @@ contains
 
           do j = 1, nJ
 
-!             if (y_BLK(1,j,1,iBlock) <= rInnerTube) then
-             if (y_BLK(1,j,1,iBlock) <= 400.0) then
+!             if (Xyz_DGB(y_,1,j,1,iBlock) <= rInnerTube) then
+             if (Xyz_DGB(y_,1,j,1,iBlock) <= 400.0) then
                 ! 400 um mimics Omega spot diameter of 800-820 um.
 
                 if ((Time_Simulation > 0.0).and.(Time_Simulation < 0.1e-9)) then
@@ -547,8 +547,8 @@ contains
 
                 ! Outside of laser spot...
 
-!             elseif ((y_BLK(1,j,1,iBlock) > rInnerTube).and. &
-             elseif ((y_BLK(1,j,1,iBlock) > 400.).and. &
+!             elseif ((Xyz_DGB(y_,1,j,1,iBlock) > rInnerTube).and. &
+             elseif ((Xyz_DGB(y_,1,j,1,iBlock) > 400.).and. &
                   (Time_Simulation <= time_f + 0.1e-9)) then
 
 ! gray                StateSemi_VGB(iEradImpl,0,j,:,iBlock) = &
@@ -564,8 +564,8 @@ contains
                 enddo
 
 
-!             elseif ((y_BLK(1,j,1,iBlock) > rInnerTube).and. &
-             elseif ((y_BLK(1,j,1,iBlock) > 400.).and. &
+!             elseif ((Xyz_DGB(y_,1,j,1,iBlock) > rInnerTube).and. &
+             elseif ((Xyz_DGB(y_,1,j,1,iBlock) > 400.).and. &
                   (Time_Simulation > time_f + 0.1e-9)) then
                 !  Use flat BCs.
 ! gray                StateSemi_VGB(iEradImpl,0,j,:,iBlock) = &
@@ -611,7 +611,7 @@ contains
           if ((iVarSemi > 1).and.(iVarSemi < nWave+2)) then
              do j = 1, nJ
 
-                if (y_BLK(1,j,1,iBlock) <= 400.0) then
+                if (Xyz_DGB(y_,1,j,1,iBlock) <= 400.0) then
                    ! 400 um mimics Omega spot diameter of 800-820 um.
 
                    if ((Time_Simulation > 0.0).and.(Time_Simulation < 0.1e-9)) then
@@ -669,7 +669,7 @@ contains
 
                    ! Outside of laser spot...
 
-                elseif ((y_BLK(1,j,1,iBlock) > 400.).and. &
+                elseif ((Xyz_DGB(y_,1,j,1,iBlock) > 400.).and. &
                      (Time_Simulation <= time_f + 0.1e-9)) then
 
                    call get_energy_g_from_temperature(iVarSemi-1, & 
@@ -678,7 +678,7 @@ contains
                         EgSi*Si2No_V(UnitEnergyDens_)
 
 
-                elseif ((y_BLK(1,j,1,iBlock) > 400.).and. &
+                elseif ((Xyz_DGB(y_,1,j,1,iBlock) > 400.).and. &
                      (Time_Simulation > time_f + 0.1e-9)) then
                    !  Use flat BCs.
 
@@ -730,7 +730,7 @@ contains
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes,  ONLY: Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
          Pe_, Erad_, WaveFirst_, WaveLast_
-    use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
+    use ModGeometry,    ONLY: Xyz_DGB
     use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
 ! esm [
@@ -792,9 +792,9 @@ contains
     ! Set level set functions, internal energy, and other values
     do k=1, nK; do j=1, nJ; do i=1, nI 
 
-       x = x_BLK(i,j,k,iBlock)
-       y = y_BLK(i,j,k,iBlock)
-       z = z_BLK(i,j,k,iBlock)
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
 
        if(UseNozzle) call set_nozzle_yz(x,y,z)
 
@@ -884,7 +884,7 @@ contains
              xBe = xBeHyades
           else
              ! Be - Xe interface is at the shock defined by #SHOCKPOSITION
-             xBe = ShockPosition - ShockSlope*y_BLK(i,j,k,iBlock)
+             xBe = ShockPosition - ShockSlope*Xyz_DGB(y_,i,j,k,iBlock)
           end if
 
           ! Distance from Be disk: positive for x < xBe
@@ -1899,7 +1899,7 @@ contains
     use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModAdvance,    ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          Erad_, UseElectronPressure
-    use ModGeometry,   ONLY: x_BLK
+    use ModGeometry,   ONLY: Xyz_DGB
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
          UnitP_, cRadiationNo, UnitEnergyDens_
     use ModMain,       ONLY: UseRadDiffusion
@@ -1915,7 +1915,7 @@ contains
     !-------------------------------------------------------------------------
     do i = MinI, MaxI
        ! Find the Hyades points around this position
-       x = x_Blk(i,1,1,iBlock)
+       x = Xyz_DGB(x_,i,1,1,iBlock)
 
        do iCell=1, nCellHyades
           if(DataHyades_VC(iXHyades, iCell) >= x) EXIT
@@ -2000,7 +2000,7 @@ contains
     use ModSize,        ONLY: nI, nJ, nK
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          Erad_, UseElectronPressure
-    use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
+    use ModGeometry,    ONLY: Xyz_DGB, y2
     use ModTriangulate, ONLY: calc_triangulation, mesh_triangulation, &
          find_triangle
     use ModMain,        ONLY: UseRadDiffusion
@@ -2069,9 +2069,9 @@ contains
     do j = 1, nJ; do i = 1, nI; do k = 1, nk
 
        if(k == 1 .or. IsThreeDim)then
-          x = x_Blk(i,j,k,iBlock)
-          y = y_Blk(i,j,k,iBlock)
-          z = z_Blk(i,j,k,iBlock)
+          x = Xyz_DGB(x_,i,j,k,iBlock)
+          y = Xyz_DGB(y_,i,j,k,iBlock)
+          z = Xyz_DGB(z_,i,j,k,iBlock)
 
           if(UseNozzle) call set_nozzle_yz(x, y, z)
 
@@ -2310,7 +2310,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
-    use ModGeometry, ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
+    use ModGeometry, ONLY: vInv_CB, Xyz_DGB
     use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModEnergy,   ONLY: calc_energy_cell_adjoint
@@ -2558,7 +2558,7 @@ contains
     use ModAdvance, ONLY: State_VGB, UseElectronPressure
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo, No2Si_V, UnitEnergyDens_
-    use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
+    use ModGeometry, ONLY: r_BLK, Xyz_DGB, TypeGeometry
     use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
     use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_, Au_, Ay_
     use BATL_size,    ONLY: nI, nJ, nK, MinI, MaxI
@@ -2677,7 +2677,7 @@ contains
        if(TypeGeometry == 'rz')then
           ! In R-Z geometry the "sphere" is a circle in the X-Y plane
           PlotVar_G = max(0.0, &
-               100 - x_BLK(:,:,:,iBlock)**2 - y_BLK(:,:,:,iBlock)**2)
+               100 - Xyz_DGB(x_,:,:,:,iBlock)**2 - Xyz_DGB(y_,:,:,:,iBlock)**2)
        else
           ! In Cartesian geometry it is real sphere
           PlotVar_G = max(0.0, 100 - r_BLK(:,:,:,iBlock)**2)
@@ -3623,7 +3623,7 @@ contains
     subroutine lookup_error(String, Arg1, Arg2, iArg)
 
       use ModProcMH, ONLY: iProc
-      use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+      use ModGeometry, ONLY: Xyz_DGB
       use ModVarIndexes, ONLY: ExtraEint_
 
       character(len=*),  intent(in) :: String
@@ -3636,7 +3636,7 @@ contains
 
       write(*,*)'ERROR at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
       write(*,*)'ERROR at x,y,z=', &
-           x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
+           Xyz_DGB(x_,i,j,k,iBlock), Xyz_DGB(y_,i,j,k,iBlock), Xyz_DGB(z_,i,j,k,iBlock)
       write(*,*)'ERROR pressure, ExtraEint=', State_V(p_)*No2Si_V(UnitP_), &
            State_V(ExtraEint_)*No2Si_V(UnitP_)
       write(*,*)'ERROR State_V=', State_V
@@ -3652,7 +3652,7 @@ contains
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_
     use ModPhysics,  ONLY: Io2No_V, UnitRho_, UnitU_
-    use ModGeometry, ONLY: x_BLK, dx_BLK, MinDxValue
+    use ModGeometry, ONLY: Xyz_DGB, CellSize_DB, MinDxValue
 
     ! Variables required by this user subroutine
     integer, intent(in)          :: iBlock
@@ -3673,9 +3673,9 @@ contains
     UserCriteria = 0.0
 
     ! If block is beyond xMaxAmr, do not refine
-    if(x_BLK(1,1,1,iBlock) >= xMaxAmr) RETURN
+    if(Xyz_DGB(x_,1,1,1,iBlock) >= xMaxAmr) RETURN
 
-    if( (dx_BLK(iBlock) - MinDxValue) > 1e-6)then
+    if( (CellSize_DB(x_,iBlock) - MinDxValue) > 1e-6)then
        iMin = 0; iMax = nI+1; jMin = 0; jMax = nJ+1; kMin = 0; kMax = nK+1
     else
        iMin = -1; iMax = nI+2; jMin = -1; jMax = nJ+2; kMin = -1; kMax = nK+2

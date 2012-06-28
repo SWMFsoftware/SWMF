@@ -206,7 +206,7 @@ contains
          UnitT_,UnitN_,ElectronPressureRatio
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
          VdtFace_y,VdtFace_z
-    use ModGeometry,ONLY: r_BLK,x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,ONLY: r_BLK,Xyz_DGB,R_BLK
     use ModNumConst,ONLY: cZero,cHalf,cOne,cTolerance
 !!$    use ModVarIndexes,ONLY: Rho_, HpRho_, O2pRho_, OpRho_, CO2pRho_, &
 !!$         RhoUx_, RhoUy_, RhoUz_, HpP_,O2pP_,OpP_,CO2pP_, P_, Energy_, Bx_, By_, Bz_
@@ -282,13 +282,13 @@ contains
     !chemistry etc
 
 !    do k=1,nK; do j=1,nJ; do i=1,nI
-!       cosSZA=(0.5+sign(0.5,x_BLK(i,j,k,iBlock)))*&
-!            x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
+!       cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
+!            Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
 !            +5.0e-4
  !      Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
  !           CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
  !           6.0e-3)/cosSZA
- !      if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then
+ !      if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then
  !         Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
  !      else
  !         Productrate_CB(i,j,k,iBlock) = 1.0e-5
@@ -297,13 +297,13 @@ contains
 
 
       do k=1,nK; do j=1,nJ; do i=1,nI
-             cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-                  x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
+             cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+                  Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
                   +1.0e-4
              Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
                   CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
                   6.0e-3)/cosSZA
-             if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then
+             if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then
                 Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-30)
              else
                 Productrate_CB(i,j,k,iBlock) = 1.0e-30
@@ -456,8 +456,8 @@ contains
 
        if(kTi <= 0.0)then
           write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
-          write(*,*)'xyz=',x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
-               z_BLK(i,j,k,iBlock)
+          write(*,*)'xyz=',Xyz_DGB(x_,i,j,k,iBlock),Xyz_DGB(y_,i,j,k,iBlock), &
+               Xyz_DGB(z_,i,j,k,iBlock)
           write(*,*)'NumDens_I=',NumDens_I
           write(*,*)'NumDens=',NumDens
           write(*,*)'State_VGB(iPIon_I,i,j,k,iBlock)=',State_VGB(iPIon_I,i,j,k,iBlock)
@@ -1033,7 +1033,7 @@ case('solarmin')
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
+    use ModGeometry, ONLY : x2,y2,z2,Xyz_DGB,R_BLK,true_cell
     use ModIO, ONLY : restart
     use ModPhysics
     use ModNumConst
@@ -1073,14 +1073,14 @@ case('solarmin')
 
     ! calculate optical depth and producation rate                                                                                                             
   !  do k=1,nK; do j=1,nJ; do i=1,nI
-      ! cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-      !      x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
+      ! cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+      !      Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
       !      +5.0e-4
 
      !  Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
      !       CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
      !       6.0e-3)/cosSZA
-     !  if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then
+     !  if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then
      !     Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
      !  else
      !     Productrate_CB(i,j,k,iBlock) = 1.0e-5
@@ -1089,13 +1089,13 @@ case('solarmin')
 !    end do; end do; end do
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-           !  cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-           !       x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
+           !  cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+           !       Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
            !       +1.0e-4
            !  Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
            !       CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
            !       6.0e-3)/cosSZA
-           !  if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then
+           !  if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then
            !     Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-30)
            !  else
            !     Productrate_CB(i,j,k,iBlock) = 1.0e-30
@@ -1103,7 +1103,7 @@ case('solarmin')
 
            Optdep=HNuSpecies_I(CO2_)*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)*&
             CrossSection_I(CO2_)
-       cosSZA = X_BLK(i,j,k,iBlock) /R_BLK(i,j,k,iBlock)
+       cosSZA = Xyz_DGB(X_,i,j,k,iBlock) /R_BLK(i,j,k,iBlock)
        if(UseChapman)then            
           if(Optdep > 13.8) then 
              Productrate_CB(i,j,k,iBlock) = 1.0e-6*&
@@ -1148,13 +1148,13 @@ case('solarmin')
        else  !old way of optical depth calculation, 
           !production rate drops to 1.0e-5 for SZA > 90
           
-          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-               x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-5)&
+          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+               Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-5)&
                +1.0e-5
           Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
                CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
                6.0e-3)/cosSZA
-          if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then 
+          if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then 
              Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
           else
              Productrate_CB(i,j,k,iBlock) = 1.0e-30
@@ -1165,8 +1165,8 @@ case('solarmin')
     nu1_BLK(:,:,:,iBlock)=nu_BLK(:,:,:,iBlock)
     do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
        if (R_BLK(i,j,k,iBlock)< Rbody) then
-          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-               x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
+          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+               Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
           State_VGB(:,i,j,k,iBlock)   =  CellState_VI(:,body1_)
           State_VGB(OpRho_,i,j,k,iBlock)= &
@@ -1223,8 +1223,8 @@ case('solarmin')
             R_BLK(i,j,k,iBlock)<1.5*Rbody) ) CYCLE
 
 
-       cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-            x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
+       cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+            Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
             1.0e-3
 
        State_VGB(CO2pRho_,i,j,k,iBlock)= &
@@ -1412,17 +1412,17 @@ case('solarmin')
 
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, x_Blk, x2
+    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
 
     integer, intent(in):: iBlock
     !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = x_Blk(:,:,:,iBlock) > x2
+    IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
 
   end subroutine user_set_boundary_cells
 
   !========================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,   ONLY: Xyz_DGB,R_BLK
     use ModMain
     use ModVarIndexes
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
@@ -1453,11 +1453,11 @@ case('solarmin')
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              !write(*,*)'i,j,k=',i,j,k
              tmp1_BLK(i,j,k,iBLK) = State_VGB(HpRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(x_BLK(i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             if(Xyz_DGB(x_,i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1474,11 +1474,11 @@ case('solarmin')
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              !write(*,*)'i,j,k=',i,j,k
              tmp1_BLK(i,j,k,iBLK) = State_VGB(HpRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(x_BLK(i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1494,11 +1494,11 @@ case('solarmin')
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              !write(*,*)'i,j,k=',i,j,k
              tmp1_BLK(i,j,k,iBLK) =&
-                  (State_VGB(HpRhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(HpRhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(HpRhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(HpRhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(HpRhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(HpRhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)
-             !if(x_BLK(i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             !if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1511,11 +1511,11 @@ case('solarmin')
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(OpRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(x_BLK(i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             if(Xyz_DGB(x_,i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1529,11 +1529,11 @@ case('solarmin')
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(OpRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(x_BLK(i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1546,11 +1546,11 @@ case('solarmin')
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) =  &
-                  (State_VGB(OpRhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(OpRhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(OpRhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(OpRhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(OpRhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(OpRhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)
-             !if(x_BLK(i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             !if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1566,11 +1566,11 @@ case('solarmin')
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(O2pRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(x_BLK(i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1584,11 +1584,11 @@ case('solarmin')
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(O2pRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(x_BLK(i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             if(Xyz_DGB(x_,i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1601,11 +1601,11 @@ case('solarmin')
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) =  &
-                  (State_VGB(O2pRhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(O2pRhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(O2pRhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(O2pRhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(O2pRhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(O2pRhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)
-             !if(x_BLK(i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             !if(Xyz_DGB(x_,i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1618,11 +1618,11 @@ case('solarmin')
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(CO2pRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(x_BLK(i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             if(Xyz_DGB(x_,i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1636,11 +1636,11 @@ case('solarmin')
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(CO2pRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(x_BLK(i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1654,11 +1654,11 @@ case('solarmin')
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) =  &
-                  (State_VGB(CO2pRhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(CO2pRhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(CO2pRhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(CO2pRhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(CO2pRhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(CO2pRhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)
-             !if(x_BLK(i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
+             !if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
              ! tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
           end do; end do; end do
        end do
@@ -1682,7 +1682,7 @@ case('solarmin')
     use ModPhysics, ONLY: rBody, No2Io_V, UnitRho_, BodyRho_I,UnitT_,UnitN_
     use ModMain, ONLY: Body1_
     use ModAdvance, ONLY: State_VGB
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
+    use ModGeometry, ONLY: Xyz_DGB, r_BLK, IsBoundaryBlock_IB
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModSize, ONLY: nI, nJ, nK
@@ -1777,7 +1777,7 @@ case('solarmin')
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
+    use ModGeometry, ONLY : x2,y2,z2,Xyz_DGB,R_BLK,true_cell
     use ModIO, ONLY : restart
     use ModPhysics
     use ModNumConst
@@ -1846,15 +1846,15 @@ case('solarmin')
 
     ! calculate optical depth and producation rate
   !  do k=1,nK; do j=1,nJ; do i=1,nI
-  !     cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-  !          x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
+  !     cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+  !          Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
   !          +5.0e-4
 
 
  !      Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
  !           CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
  !           6.0e-3)/cosSZA        
- !      if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then 
+ !      if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then 
  !         Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
  !      else
  !         Productrate_CB(i,j,k,iBlock) = 1.0e-5
@@ -1863,13 +1863,13 @@ case('solarmin')
 !    end do; end do; end do
 
  do k=1,nK; do j=1,nJ; do i=1,nI
-             !cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-             !     x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
+             !cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+             !     Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
              !     +1.0e-4
              !Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
              !     CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
              !     6.0e-3)/cosSZA
-             !if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then
+             !if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then
              !   Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-30)
              !else
              !   Productrate_CB(i,j,k,iBlock) = 1.0e-30
@@ -1878,7 +1878,7 @@ case('solarmin')
                        Optdep=HNuSpecies_I(CO2_)*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)*&
                   CrossSection_I(CO2_)
 
-             cosSZA = X_BLK(i,j,k,iBlock) /R_BLK(i,j,k,iBlock)
+             cosSZA = Xyz_DGB(X_,i,j,k,iBlock) /R_BLK(i,j,k,iBlock)
              if(UseChapman)then            
                 if(Optdep > 13.8) then 
                    Productrate_CB(i,j,k,iBlock) = 1.0e-6*&
@@ -1922,13 +1922,13 @@ case('solarmin')
              else  !old way of optical depth calculation, 
                 !production rate drops to 1.0e-5 for SZA > 90
                 
-                cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-                     x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-5)&
+                cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+                     Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-5)&
                      +1.0e-5
                 Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
                      CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
                      6.0e-3)/cosSZA
-                if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then 
+                if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then 
                    Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
                 else
                    Productrate_CB(i,j,k,iBlock) = 1.0e-30

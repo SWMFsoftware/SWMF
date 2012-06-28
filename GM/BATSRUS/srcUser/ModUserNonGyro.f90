@@ -141,9 +141,9 @@ contains
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       xt = x_BLK(i,j,k,iBlock)
-       yt = abs(y_BLK(i,j,k,iBlock))
-       zt = z_BLK(i,j,k,iBlock)
+       xt = Xyz_DGB(x_,i,j,k,iBlock)
+       yt = abs(Xyz_DGB(y_,i,j,k,iBlock))
+       zt = Xyz_DGB(z_,i,j,k,iBlock)
 
        if( yt > yLineMax) CYCLE
 
@@ -274,15 +274,15 @@ contains
           if (Unused_B(iBLK)) CYCLE BLOCKS
 
           ! Check if block is within the search region
-          if ( x_BLK(nI,1,1,iBLK) > xLineMin .and. &
-               x_BLK(nI,1,1,iBLK) < xLineMax .and. &
-               YYR(jj) >= y_BLK(1,1,1,iBLK)  - 0.5*dy_BLK(iBLK) .and. &
-               YYR(jj) <  y_BLK(1,nJ,1,iBLK) + 0.5*dy_BLK(iBLK) .and. &
-               0.25*dz_BLK(iBLK) >=z_BLK(1,1,1,iBLK)  - 0.5*dz_BLK(iBLK) .and.&
-               0.25*dz_BLK(iBLK) < z_BLK(1,1,nK,iBLK) + 0.5*dz_BLK(iBLK) ) then
+          if ( Xyz_DGB(x_,nI,1,1,iBLK) > xLineMin .and. &
+               Xyz_DGB(x_,nI,1,1,iBLK) < xLineMax .and. &
+               YYR(jj) >= Xyz_DGB(y_,1,1,1,iBLK)  - 0.5*CellSize_DB(y_,iBLK) .and. &
+               YYR(jj) <  Xyz_DGB(y_,1,nJ,1,iBLK) + 0.5*CellSize_DB(y_,iBLK) .and. &
+               0.25*CellSize_DB(z_,iBLK) >=Xyz_DGB(z_,1,1,1,iBLK)  - 0.5*CellSize_DB(z_,iBLK) .and.&
+               0.25*CellSize_DB(z_,iBLK) < Xyz_DGB(z_,1,1,nK,iBLK) + 0.5*CellSize_DB(z_,iBLK) ) then
 
              ! Find the j index corresponding to YYR
-             yj1 = (YYR(jj)-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)  + 1
+             yj1 = (YYR(jj)-Xyz_DGB(y_,1,1,1,iBLK))/CellSize_DB(y_,iBLK)  + 1
              j1  = max(1,floor(yj1))
 
              do i=nI,1,-1
@@ -292,7 +292,7 @@ contains
                      B0_DGB(z_,i-1,j1,1,iBLK) + &
                      State_VGB(Bz_,i-1,j1,1,iBLK) <=0.) then
                    
-                   XX0max  = x_BLK(i,j1,1,iBLK)
+                   XX0max  = Xyz_DGB(x_,i,j1,1,iBLK)
                    iX      = i
                    iBLKmax = iBLK
                    jY      = j1
@@ -388,15 +388,15 @@ contains
 
           if (Unused_B(iBLK)) CYCLE
 
-          if ( x_BLK(nI,1,1,iBLK) > xLineMin .and. &
-               x_BLK(nI,1,1,iBLK) < xLineMax1 .and. &
-               x_BLK(nI,1,1,iBLK) < XX0(jj) - 2. .and. &
-               YYR(jj) >= y_BLK(1,1,1,iBLK) - 0.5*dy_BLK(iBLK) .and. &
-               YYR(jj) < y_BLK(1,nJ,1,iBLK) + 0.5*dy_BLK(iBLK) .and. &
-               0.25*dz_BLK(iBLK) >=z_BLK(1,1,1,iBLK) - 0.5*dz_BLK(iBLK) .and. &
-               0.25*dz_BLK(iBLK) < z_BLK(1,1,nK,iBLK) + 0.5*dz_BLK(iBLK) ) then
+          if ( Xyz_DGB(x_,nI,1,1,iBLK) > xLineMin .and. &
+               Xyz_DGB(x_,nI,1,1,iBLK) < xLineMax1 .and. &
+               Xyz_DGB(x_,nI,1,1,iBLK) < XX0(jj) - 2. .and. &
+               YYR(jj) >= Xyz_DGB(y_,1,1,1,iBLK) - 0.5*CellSize_DB(y_,iBLK) .and. &
+               YYR(jj) < Xyz_DGB(y_,1,nJ,1,iBLK) + 0.5*CellSize_DB(y_,iBLK) .and. &
+               0.25*CellSize_DB(z_,iBLK) >=Xyz_DGB(z_,1,1,1,iBLK) - 0.5*CellSize_DB(z_,iBLK) .and. &
+               0.25*CellSize_DB(z_,iBLK) < Xyz_DGB(z_,1,1,nK,iBLK) + 0.5*CellSize_DB(z_,iBLK) ) then
 
-             yj1=(YYR(jj)-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)+1.
+             yj1=(YYR(jj)-Xyz_DGB(y_,1,1,1,iBLK))/CellSize_DB(y_,iBLK)+1.
              j1=max(1,floor(yj1))
 
              do i=nI,1,-1
@@ -406,7 +406,7 @@ contains
                      B0_DGB(z_,i-1,j1,1,iBLK) + &
                      State_VGB(Bz_,i-1,j1,1,iBLK) <=0) then
 
-                   XX0max  = x_BLK(i,j1,1,iBLK)
+                   XX0max  = Xyz_DGB(x_,i,j1,1,iBLK)
                    iX      = i
                    iBLKmax = iBLK
                    jY      = j1
@@ -453,7 +453,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_, Rho_, RhoUx_, RhoUz_, p_, &
          B0_DGB
     use ModMain,ONLY:x_,y_,z_
-    use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk
+    use ModGeometry, ONLY: CellSize_DB
 
     integer, intent(in) :: i, j, k, iBlock
 
@@ -463,19 +463,19 @@ contains
     dBzDx = ((State_VGB(Bz_,i+1,j,k,iBlock) &
          +      B0_DGB(z_,i+1,j,k,iBlock))  &
          -   (State_VGB(Bz_,i-1,j,k,iBlock) &
-         +      B0_DGB(z_,i-1,j,k,iBlock))) / (2*Dx_BLK(iBlock))
+         +      B0_DGB(z_,i-1,j,k,iBlock))) / (2*CellSize_DB(x_,iBlock))
 
     ! dBx/dz
     dBxDz = ((State_VGB(Bx_,i,j,k+1,iBlock) &
          +      B0_DGB(x_,i,j,k+1,iBlock))  &
          -   (State_VGB(Bx_,i,j,k-1,iBlock) &
-         +      B0_DGB(x_,i,j,k-1,iBlock))) / (2*Dz_BLK(iBlock))
+         +      B0_DGB(x_,i,j,k-1,iBlock))) / (2*CellSize_DB(z_,iBlock))
 
     ! d(Vx)/dx
     dVxDx = (State_VGB(RhoUx_,i+1,j,1,iBlock) &
          /   State_VGB(Rho_  ,i+1,j,1,iBlock) &
          -   State_VGB(RhoUx_,i-1,j,1,iBlock) &
-         /   State_VGB(Rho_  ,i-1,j,1,iBlock)) / (2*Dx_BLK(iBlock))
+         /   State_VGB(Rho_  ,i-1,j,1,iBlock)) / (2*CellSize_DB(x_,iBlock))
 
     ! IonSpeed = sqrt(2*P/Rho)
     IonSpeed = sqrt(2*State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))
@@ -483,11 +483,11 @@ contains
     Efield = IonMassPerCharge*IonSpeed*dVxDx
 
     ! WidthX = sqrt(IonMassPerCharge*sqrt(2*p/rho) / (dBz/dx))
-    WidthX = 4*dx_BLK(iBlock)
+    WidthX = 4*CellSize_DB(x_,iBlock)
     if (dBzDx > 0) WidthX = max(WidthX, sqrt(IonMassPerCharge*IonSpeed/dBzDx))
 
     ! WidthZ = max(4*Dz, sqrt(IonMassPerCharge/(dBx/dz) * sqrt(2*p/rho)))
-    WidthZ = 4*dz_BLK(iBlock)
+    WidthZ = 4*CellSize_DB(z_,iBlock)
     if (dBxDz > 0) WidthZ = max(WidthZ, sqrt(IonMassPerCharge*IonSpeed/dBxDz))
 
     RecParam_I(dBzDx_)    = dBzDx
@@ -504,24 +504,24 @@ contains
     !BY = State_VGB(By_,:,:,:,iBlock)+B0yCell_BLK(:,:,:,iBlock)
     !BZ = State_VGB(Bz_,:,:,:,iBlock)+B0zCell_BLK(:,:,:,iBlock)
     !        B2(:,:,:) = BX**2+BY**2+BZ**2
-    !Jyy=0.5*((BX(i,j,2)-BX(i,j,0))/dz_BLK(iBlock) - &
-    !     (BZ(i+1,j,1)-BZ(i-1,j,1))/dx_BLK(iBlock))
-    !Jxx=0.5*((BZ(i,j+1,1)-BZ(i,j-1,1))/dy_BLK(iBlock)     - &
-    !     (BY(i,j,2)-BY(i,j,0))/dz_BLK(iBlock))
+    !Jyy=0.5*((BX(i,j,2)-BX(i,j,0))/CellSize_DB(z_,iBlock) - &
+    !     (BZ(i+1,j,1)-BZ(i-1,j,1))/CellSize_DB(x_,iBlock))
+    !Jxx=0.5*((BZ(i,j+1,1)-BZ(i,j-1,1))/CellSize_DB(y_,iBlock)     - &
+    !     (BY(i,j,2)-BY(i,j,0))/CellSize_DB(z_,iBlock))
     !Jxy=sqrt(Jyy**2+Jxx**2)
     !CosThet=Jyy/Jxy
     !SinThet=Jxx/Jxy
-    !BzPr=(BZ(i+1,j,1)-BZ(i-1,j,1))/(2.*dx_BLK(iBlock))*CosThet-&
-    !        (BZ(i,j+1,1)-BZ(i,j-1,1))/(2.*dy_BLK(iBlock))*SinThet
+    !BzPr=(BZ(i+1,j,1)-BZ(i-1,j,1))/(2.*CellSize_DB(x_,iBlock))*CosThet-&
+    !        (BZ(i,j+1,1)-BZ(i,j-1,1))/(2.*CellSize_DB(y_,iBlock))*SinThet
     !
     !Rho3 = State_VGB(rho_,i,j-1,1,iBlock)
     !Rho4 = State_VGB(rho_,i,j+1,1,iBlock)
     !VYPRX=(State_VGB(rhoUy_,i+1,j,1,iBlock)/Rho2 - &
-    !     State_VGB(rhoUy_,i-1,j,1,iBlock)/Rho1)/(2.*dx_BLK(iBlock)) 
+    !     State_VGB(rhoUy_,i-1,j,1,iBlock)/Rho1)/(2.*CellSize_DB(x_,iBlock)) 
     !VXPRY=(State_VGB(rhoUx_,i,j+1,1,iBlock)/Rho4 - &
-    !     State_VGB(rhoUx_,i,j-1,1,iBlock)/Rho3)/(2.*dy_BLK(iBlock))
+    !     State_VGB(rhoUx_,i,j-1,1,iBlock)/Rho3)/(2.*CellSize_DB(y_,iBlock))
     !VYPRY=(State_VGB(rhoUy_,i,j+1,1,iBlock)/Rho4 - &
-    !     State_VGB(rhoUy_,i,j-1,1,iBlock)/Rho3)/(2.*dy_BLK(iBlock))
+    !     State_VGB(rhoUy_,i,j-1,1,iBlock)/Rho3)/(2.*CellSize_DB(y_,iBlock))
     !RecParam_I(2)=VXPRX*CosThet**2-CosThet*SinThet*(VYPRX+VXPRY) &
     !       +VYPRY*SinThet**2
     !write(*,*)'VXPRX=',VXPRX,'VYPRX=',VYPRY,'VXPRY=',VXPRY, &

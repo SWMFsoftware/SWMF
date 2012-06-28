@@ -84,7 +84,7 @@ contains
     
     use ModMain,        ONLY: Unused_B   
     use ModSize,        ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, r_BLK
+    use ModGeometry,    ONLY: Xyz_DGB, r_BLK
     use ModAdvance,     ONLY: State_VGB
     use ModPhysics,     ONLY: rBody
     use ModVarIndexes
@@ -102,9 +102,9 @@ contains
        do k=MinK,MaxK ; do j=MinJ,MaxJ ; do i=MinI,MaxI
 
           ! make variable names a little shorter
-          x = x_BLK(i,j,k,iBlock)
-          y = y_BLK(i,j,k,iBlock)
-          z = z_BLK(i,j,k,iBlock)
+          x = Xyz_DGB(x_,i,j,k,iBlock)
+          y = Xyz_DGB(y_,i,j,k,iBlock)
+          z = Xyz_DGB(z_,i,j,k,iBlock)
           r = r_BLK(i,j,k,iBlock)
 
           if (r .le. rBody) CYCLE

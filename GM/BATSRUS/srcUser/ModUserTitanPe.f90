@@ -519,7 +519,7 @@ contains
 
     use ModMain, ONLY: PROCTEST,BLKTEST, iTest,jTest,kTest 
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
-    use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
+    use ModGeometry, ONLY: Xyz_DGB,R_BLK,&
          Rmin_BLK
     use ModProcMH,   ONLY: iProc
     use ModPhysics
@@ -1039,7 +1039,7 @@ contains
     use ModProcMH, ONLY : iProc
     use ModMain, ONLY: Body1_,ProcTest,itest,jtest,ktest,BLKtest
     use ModAdvance
-    use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
+    use ModGeometry, ONLY : x2,y2,z2,Xyz_DGB,R_BLK,true_cell
     use ModIO, ONLY : restart
     use ModPhysics
 
@@ -1072,9 +1072,9 @@ contains
        coefy=BodyRhoSpecies_dim_II(:,1)/tmp_ion(:,1)           
 
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          cosSZA=(x_BLK(i,j,k,iBlock)*SX0 &
-               + y_BLK(i,j,k,iBlock)*SY0 &
-               + z_BLK(i,j,k,iBlock)*SZ0)&
+          cosSZA=(Xyz_DGB(x_,i,j,k,iBlock)*SX0 &
+               + Xyz_DGB(y_,i,j,k,iBlock)*SY0 &
+               + Xyz_DGB(z_,i,j,k,iBlock)*SZ0)&
                /max(R_BLK(i,j,k,iBlock),1.0e-3)
 
           ! Make sure these are set (printed in testing)
@@ -1495,9 +1495,9 @@ contains
        dhn = hh - tmp_hR(n)
        dhnp1 = tmp_hR(n+1) - hh
 
-       cosS0=(x_BLK(i,j,k,iBlock)*SX0  & 
-            + y_BLK(i,j,k,iBlock)*SY0  &
-            + z_BLK(i,j,k,iBlock)*SZ0 )&
+       cosS0=(Xyz_DGB(x_,i,j,k,iBlock)*SX0  & 
+            + Xyz_DGB(y_,i,j,k,iBlock)*SY0  &
+            + Xyz_DGB(z_,i,j,k,iBlock)*SZ0 )&
             /max(R_BLK(i,j,k,iBlock),1.0e-3)
 
        if (cosS0 < CosSZA_I(NumSZA)) then
@@ -1642,7 +1642,7 @@ contains
     use ModPhysics, ONLY: rBody, No2Io_V, UnitB_
     use ModMain, ONLY: Body1_
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_, B_
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
+    use ModGeometry, ONLY: Xyz_DGB, r_BLK, IsBoundaryBlock_IB
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
 
@@ -1711,7 +1711,7 @@ contains
     i=i+1
     do k=-1,nK+2; do j=-1,nJ+2
        Xyz_D = &
-            (/ x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)/)
+            (/ Xyz_DGB(x_,i,j,k,iBlock), Xyz_DGB(y_,i,j,k,iBlock), Xyz_DGB(z_,i,j,k,iBlock)/)
        r= r_BLK(i,j,k,iBlock)
        NormXyz_D = Xyz_D/r
 
@@ -1748,7 +1748,7 @@ contains
   !=====================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
+    use ModGeometry,   ONLY: Xyz_DGB,R_BLK,&
          dx_BLK,dy_BLK,dz_BLK
     use ModMain,       ONLY: Unused_B
     use ModVarIndexes
@@ -1799,9 +1799,9 @@ contains
        if (Unused_B(iBLK)) CYCLE
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           tmp1_BLK(i,j,k,iBLK) = State_VGB(index,i,j,k,iBLK)* &
-               (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-               +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-               +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+               (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+               +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+               +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
        end do; end do; end do
     end do

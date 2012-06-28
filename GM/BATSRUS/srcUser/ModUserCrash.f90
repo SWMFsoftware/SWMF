@@ -17,10 +17,10 @@ module ModUser
        IMPLEMENTED10 => user_set_resistivity,            &
        IMPLEMENTED11 => user_action
 
-  use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
+  use ModMain, ONLY: &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates, &
        UseUserLogFiles
-  use ModSize, ONLY: nI, nJ, nK
+  use ModSize, ONLY: x_, y_, z_, nI, nJ, nK
 
   use ModVarIndexes, ONLY: nMaterial, MaterialFirst_, MaterialLast_, Pe_
   use CRASH_ModEos, ONLY: MassMaterial_I => cAtomicMassCRASH_I, &
@@ -237,7 +237,6 @@ contains
 
     integer :: iMaterial
     real :: EnergyPhotonMin, EnergyPhotonMax
-    logical :: IsCylindrical
     character (len=100) :: NameCommand
     character (len=500) :: StringVar
 
@@ -414,16 +413,14 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModProcMH,      ONLY: iProc
     use ModMain,        ONLY: nI, nJ, nK, UseRadDiffusion
-    use ModMain,        ONLY: UseLaserHeating
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
-         UnitTemperature_, UnitN_, UnitX_, PeMin, ExtraEintMin
+         UnitTemperature_, UnitN_, PeMin, ExtraEintMin
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes,  ONLY: Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
          Pe_, Erad_, WaveFirst_, WaveLast_
-    use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
+    use ModGeometry,    ONLY: Xyz_DGB
     use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
     use ModInitialState,ONLY: get_initial_state
@@ -431,7 +428,6 @@ contains
     integer, intent(in) :: iBlock
 
     real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
-    real    :: DxyGold = -1.0
     real    :: TeSi, PeSi, Natomic, NatomicSi, RhoSi, pSi, p, Te
 
     integer :: i, j, k, iMaterial, iP
@@ -471,9 +467,9 @@ contains
     ! Set level set functions, internal energy, and other values
     do k=1, nK; do j=1, nJ; do i=1, nI 
 
-       x = x_BLK(i,j,k,iBlock)
-       y = y_BLK(i,j,k,iBlock)
-       z = z_BLK(i,j,k,iBlock)
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
 
        call set_yzr(x, y, z, r)
 
@@ -535,7 +531,7 @@ contains
              xBe = xBeHyades
           else
              ! Be - Xe interface is at the shock defined by #SHOCKPOSITION
-             xBe = ShockPosition - ShockSlope*y_BLK(i,j,k,iBlock)
+             xBe = ShockPosition - ShockSlope*Xyz_DGB(y_,i,j,k,iBlock)
           end if
 
           ! Distance from Be disk: positive for x < xBe
@@ -685,7 +681,7 @@ contains
     subroutine set_initial_temperature
 
       use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
-      use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
+      use ModVarIndexes,  ONLY: nWave, WaveFirst_
       use ModPhysics,     ONLY: cRadiationNo
 
       real    :: Tr = 0.0259                      ! [eV?]
@@ -784,9 +780,8 @@ contains
 
     use ModProcMH,      ONLY: iProc
     use ModSize,        ONLY: nI, nJ, nK
-    use ModMain,        ONLY: nBlock
     use ModAdvance,     ONLY: State_VGB, RhoUy_, RhoUz_, By_, Bz_, UseB
-    use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
+    use ModGeometry,    ONLY: Xyz_DGB
     use ModTriangulate, ONLY: calc_triangulation, find_triangle
 
     integer, intent(in) :: iBlock
@@ -823,9 +818,9 @@ contains
     ! Interpolate points 
     do j = 1, nJ; do i = 1, nI; do k = 1, nk
 
-       x = x_Blk(i,j,k,iBlock)
-       y = y_Blk(i,j,k,iBlock)
-       z = z_Blk(i,j,k,iBlock)
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
 
        call set_yzr(x, y, z, r, rMax)
 
@@ -900,7 +895,6 @@ contains
   subroutine read_hyades_file
 
     use ModAdvance,    ONLY: UseElectronPressure
-    use ModIoUnit,     ONLY: UnitTmp_
     use ModPhysics,    ONLY: Si2No_V, Io2No_V, UnitX_, UnitRho_, UnitU_, &
          UnitP_, UnitTemperature_, UnitEnergyDens_
     use ModPlotFile,   ONLY: read_plot_file
@@ -1335,9 +1329,9 @@ contains
     use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
     use ModAdvance,    ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          Erad_, UseElectronPressure
-    use ModGeometry,   ONLY: x_BLK
+    use ModGeometry,   ONLY: Xyz_DGB
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
-         UnitP_, cRadiationNo, UnitEnergyDens_
+         cRadiationNo, UnitEnergyDens_
     use ModMain,       ONLY: UseRadDiffusion
     use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
 
@@ -1351,7 +1345,7 @@ contains
     !-------------------------------------------------------------------------
     do i = MinI, MaxI
        ! Find the Hyades points around this position
-       x = x_Blk(i,1,1,iBlock)
+       x = Xyz_DGB(x_,i,1,1,iBlock)
 
        do iCell=1, nCellHyades
           if(DataHyades_VC(iXHyades, iCell) >= x) EXIT
@@ -1436,12 +1430,12 @@ contains
     use ModSize,        ONLY: nI, nJ, nK
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          Erad_, UseElectronPressure
-    use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
+    use ModGeometry,    ONLY: Xyz_DGB, y2
     use ModTriangulate, ONLY: calc_triangulation, mesh_triangulation, &
          find_triangle
     use ModMain,        ONLY: UseRadDiffusion
     use ModPhysics,     ONLY: cRadiationNo, No2Si_V, Si2No_V, &
-         UnitTemperature_, UnitP_, UnitEnergyDens_
+         UnitTemperature_, UnitEnergyDens_
     use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
 
     integer, intent(in) :: iBlock
@@ -1504,9 +1498,9 @@ contains
     ! Interpolate points 
     do j = 1, nJ; do i = 1, nI; do k = 1, nk
 
-       x = x_Blk(i,j,k,iBlock)
-       y = y_Blk(i,j,k,iBlock)
-       z = z_Blk(i,j,k,iBlock)
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
 
        call set_yzr(x, y, z, r, rMax=y2)
 
@@ -1834,10 +1828,10 @@ contains
     use ModConst,   ONLY: cKtoKev, cBoltzmann
     use ModAdvance, ONLY: State_VGB, UseElectronPressure
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
-         UnitTemperature_, cRadiationNo, No2Si_V, UnitEnergyDens_
-    use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK
-    use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_, Te0_
-    use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_, Au_, Ay_
+         UnitTemperature_, cRadiationNo, No2Si_V
+    use ModGeometry, ONLY: r_BLK, Xyz_DGB
+    use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
+    use CRASH_ModEos, ONLY: Xe_, Be_, Plastic_, Au_, Ay_
     use BATL_size,    ONLY: nI, nJ, nK, MinI, MaxI
     use BATL_lib,     ONLY: IsRzGeometry
 
@@ -1852,11 +1846,11 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    real    :: p, Rho, pSi, RhoSi, TeSi, WaveEnergy
+    real    :: WaveEnergy
     real    :: PiSi, TiSi, NatomicSi
     real    :: OpacityPlanckSi_W(nWave)
     real    :: OpacityRosselandSi_W(nWave)
-    integer :: i, j, k, iMaterial, iLevel, iWave, iVar
+    integer :: i, j, k, iMaterial, iLevel, iWave
 
     ! Do not use MinJ,MinK,MaxJ,MaxK here to avoid pgf90 compilation error...
     integer, parameter:: jMin = 1 - 2*min(1,nJ-1), jMax = nJ + 2*min(1,nJ-1)
@@ -1962,7 +1956,7 @@ contains
        if(IsRzGeometry)then
           ! In R-Z geometry the "sphere" is a circle in the X-Y plane
           PlotVar_G = max(0.0, &
-               100 - x_BLK(:,:,:,iBlock)**2 - y_BLK(:,:,:,iBlock)**2)
+               100 - Xyz_DGB(x_,:,:,:,iBlock)**2 - Xyz_DGB(y_,:,:,:,iBlock)**2)
        else
           ! In Cartesian geometry it is real sphere
           PlotVar_G = max(0.0, 100 - r_BLK(:,:,:,iBlock)**2)
@@ -2101,9 +2095,9 @@ contains
     use ModProcMH,      ONLY: iProc, iComm
     use ModVarIndexes,  ONLY: Rho_, UnitUser_V, Te0_
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
-    use ModPhysics,     ONLY: cRadiationNo, Si2No_V, UnitTemperature_, &
+    use ModPhysics,     ONLY: &
          No2Io_V, UnitX_
-    use ModConst,       ONLY: cKevToK, cHPlanckEV
+    use ModConst,       ONLY: cHPlanckEV
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI, DoAdvectWaves
     use ModIo,          ONLY: restart
     use CRASH_ModMultiGroup, ONLY: nGroup, IsLogMultiGroupGrid
@@ -2378,12 +2372,12 @@ contains
 
     use CRASH_ModEos,  ONLY: eos, Xe_, Be_, Plastic_
     use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature
-    use ModMain,       ONLY: nI, nJ, nK
+    use ModMain,       ONLY: nI
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, UnitEnergyDens_, &
-         inv_gm1, g, Si2No_V, cRadiationNo, UnitTemperature_
+    use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, &
+         inv_gm1
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
-         WaveFirst_, WaveLast_, Pe_, ExtraEint_
+         Pe_, ExtraEint_
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cAtomicMass
     use CRASH_ModInterfaceNLTE, ONLY: NLTE_EOS
@@ -2424,8 +2418,8 @@ contains
     real :: Level_I(3), LevelLeft, LevelRight
 
     ! multi-group variables
-    integer :: iWave, iVar
-    real :: EgSi, PlanckSi, Te
+    integer :: iWave
+    real :: PlanckSi
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------------
@@ -2995,7 +2989,7 @@ contains
     subroutine lookup_error(String, Arg1, Arg2, iArg)
 
       use ModProcMH, ONLY: iProc
-      use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+      use ModGeometry, ONLY: Xyz_DGB
       use ModVarIndexes, ONLY: ExtraEint_
 
       character(len=*),  intent(in) :: String
@@ -3008,7 +3002,7 @@ contains
 
       write(*,*)'ERROR at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
       write(*,*)'ERROR at x,y,z=', &
-           x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
+           Xyz_DGB(x_,i,j,k,iBlock), Xyz_DGB(y_,i,j,k,iBlock), Xyz_DGB(z_,i,j,k,iBlock)
       write(*,*)'ERROR pressure, ExtraEint=', State_V(p_)*No2Si_V(UnitP_), &
            State_V(ExtraEint_)*No2Si_V(UnitP_)
       write(*,*)'ERROR State_V=', State_V
@@ -3021,12 +3015,14 @@ contains
   !===========================================================================
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
+    ! Set UserCriteria = 1.0 for refinement, 0.0 for coarsening.
+
     use BATL_lib,    ONLY: iNode_B, iTree_IA, Level_
     use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_
+    use ModAdvance,  ONLY: State_VGB, Rho_
     use ModMain,     ONLY: UseLaserHeating
-    use ModPhysics,  ONLY: Io2No_V, UnitRho_, UnitU_
-    use ModGeometry, ONLY: x_BLK, dx_BLK, MinDxValue
+    use ModPhysics,  ONLY: Io2No_V, UnitRho_
+    use ModGeometry, ONLY: Xyz_DGB, CellSize_DB, MinDxValue
 
     ! Variables required by this user subroutine
     integer, intent(in)          :: iBlock
@@ -3039,23 +3035,17 @@ contains
     real   :: RhoMin
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax, nLevel, iNode
     !------------------------------------------------------------------
-
-    ! Location of sound wave edges and the tangential discontinuity
-
-    ! Do not refine blocks far from discontinuity (crit=0.0)
-    ! Do not coarsen blocks near discontinuity    (crit=1.0)
-
     IsFound = .true.
 
     UserCriteria = 0.0
 
     ! If block is beyond xMaxAmr, do not refine
-    if(x_BLK(1,1,1,iBlock) >= xMaxAmr) RETURN
+    if(Xyz_DGB(x_,1,1,1,iBlock) >= xMaxAmr) RETURN
 
     iNode = iNode_B(iBlock)
     nLevel = iTree_IA(Level_,iNode)
 
-    if( (dx_BLK(iBlock) - MinDxValue) > 1e-6)then
+    if( (CellSize_DB(x_,iBlock) - MinDxValue) > 1e-6)then
        iMin = 0; iMax = nI+1; jMin = 0; jMax = nJ+1; kMin = 0; kMax = nK+1
     else
        iMin = -1; iMax = nI+2; jMin = -1; jMax = nJ+2; kMin = -1; kMax = nK+2
@@ -3079,7 +3069,7 @@ contains
        ! Refine all beryllium to the right of x = -5 micron
        if(any(maxloc(State_VGB(LevelXe_:LevelMax, &
             iMin:iMax,jMin:jMax,kMin:kMax,iBlock),1)-1 == Be_) &
-            .and. x_BLK(nI,nJ,nK,iBlock)+0.5*dx_BLK(iBlock) > -5.0)then
+            .and. Xyz_DGB(x_,nI,nJ,nK,iBlock)+0.5*CellSize_DB(x_,iBlock) > -5.0)then
           if(nLevel >= nLevelBeryllium) UserCriteria = 0.5
           RETURN
        end if
@@ -3199,7 +3189,7 @@ contains
 
   subroutine user_set_resistivity(iBlock, Eta_G)
     ! This subrountine set the eta for every block
-    use ModAdvance,    ONLY: State_VGB, Bz_
+    use ModAdvance,    ONLY: State_VGB
     use ModConst,      ONLY: cBoltzmann, cElectronCharge, cMu
     use ModPhysics,    ONLY: Si2No_V, UnitX_, UnitT_
     use ModSize,       ONLY: nI, nJ, nK

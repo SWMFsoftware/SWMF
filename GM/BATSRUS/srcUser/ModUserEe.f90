@@ -10,7 +10,8 @@
 !=========================================================================
 
 module ModUser
-  use ModSize,        ONLY: nI,nJ,nK,MinI,MaxI,MinJ,MaxJ,MinK,MaxK,MaxBlock
+  use ModSize, ONLY: x_, y_, z_, &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
   use ModUserEmpty ,                                   &
        IMPLEMENTED1 => user_read_inputs,               &
        IMPLEMENTED2 => user_init_session,              &
@@ -145,8 +146,6 @@ contains
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
     use ModPhysics,     ONLY: No2Si_V, UnitX_, Si2No_V, UnitRho_, UnitP_, &
          UnitEnergyDens_
-    use ModMultiFluid,  ONLY: MassIon_I
-    use ModConst,       ONLY: cProtonMass, cBoltzmann
     use ModGeometry,    ONLY: z1
 
     real :: InitialState(1:4)
@@ -229,7 +228,7 @@ contains
       use ModLookupTable, ONLY: interpolate_lookup_table
       use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitP_, inv_gm1, &
            UnitEnergyDens_, UnitX_, No2Si_V
-      use ModGeometry,    ONLY: z_BLK
+      use ModGeometry,    ONLY: Xyz_DGB
 
       integer, intent(in) :: iBlock
 
@@ -275,11 +274,11 @@ contains
                State_VGB(rho_,i,j,k,iBlock) = Rho
                State_VGB(rho_,i,j,k,iBlock) = Rho*(1 - &
                     (1-inv_g1)*2.73e2*1.67e-27/(1.38e-23*InitialTemperature)* &
-                    (min(z_BLK(i,j,k,iBlock), z0) - z0)&
+                    (min(Xyz_DGB(z_,i,j,k,iBlock), z0) - z0)&
                     *No2Si_V(UnitX_))**inv_g1m1
                State_VGB(p_,i,j,k,iBlock) = p*(1 - &
                     (1-inv_g1)*2.73e2*1.67e-27/(1.38e-23*InitialTemperature)* &
-                    (min(z_BLK(i,j,k,iBlock), z0) - z0)*No2Si_V(UnitX_))** &
+                    (min(Xyz_DGB(z_,i,j,k,iBlock), z0) - z0)*No2Si_V(UnitX_))** &
                     (1+inv_g1m1)
                State_VGB(ExtraEInt_,i,j,k,iBlock) = 0.0
             end if
@@ -292,8 +291,8 @@ contains
 
       use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitU_, UnitEnergyDens_,&
            UnitP_, UnitX_, No2Si_V
-      use ModGeometry,    ONLY: z_BLK
       use ModLookupTable, ONLY: interpolate_lookup_table
+      use ModGeometry,    ONLY: Xyz_DGB
 
       integer, intent(in) :: iBlock
 
@@ -306,7 +305,7 @@ contains
          ! interpolate the tabular data of reference initial state and get
          ! an relaxed initial state
          call interpolate_lookup_table(iTableInitialState, &
-              z_BLK(1,1,k,iBlock)*No2Si_V(UnitX_), Const, InitialState, &
+              Xyz_DGB(z_,1,1,k,iBlock)*No2Si_V(UnitX_), Const, InitialState, &
               DoExtrapolate = .false.)
 
          InitialRho    = InitialState(1)
@@ -333,7 +332,7 @@ contains
   subroutine user_initial_perturbation
     use ModEnergy,   only: calc_energy_cell
     use ModMain,     ONLY: Unused_B, nBlockMax
-    use ModGeometry, ONLY: z_BLK,y_BLK,x_BLK
+    use ModGeometry, ONLY: Xyz_DGB
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics
     use ModVarIndexes
@@ -349,8 +348,8 @@ contains
        do k=1,nK
           ! Add initial magnetic field 
           if(UseCoronalField)then
-             if(z_BLK(4,4,k,iBlock) < z_photo)then
-                prof = (1 - tanh(z_BLK(4,4,k,iBlock) - z_photo))/2.
+             if(Xyz_DGB(z_,4,4,k,iBlock) < z_photo)then
+                prof = (1 - tanh(Xyz_DGB(z_,4,4,k,iBlock) - z_photo))/2.
                 State_VGB(Bx_,:,:,k,iBlock) = &
                      State_VGB(Bx_,:,:,k,iBlock) + &
                      InitialBx*1.e-4*Si2No_V(UnitB_)*prof
@@ -363,7 +362,7 @@ contains
           end if
           ! Add random perturbation to energy and pressure values of 
           ! cells below the photosphere height                  
-          if(UseEnergyPert.and.(z_BLK(4,4,k,iBlock) < z_photo ))then
+          if(UseEnergyPert.and.(Xyz_DGB(z_,4,4,k,iBlock) < z_photo ))then
              do j=1, nJ; do i=1,nI
                 call random_number(RandomChange)
                 RandomChange = (RandomChange-0.5)*2
@@ -386,8 +385,8 @@ contains
           !/
           if(UseRope)then
              do j=1,nJ ; do i = 1, nI
-                rsq = (y_BLK(i,j,k,iBlock) - x2c_rope)**2 + &
-                     (z_BLK(i,j,k,iBlock) - x3c_rope)**2
+                rsq = (Xyz_DGB(y_,i,j,k,iBlock) - x2c_rope)**2 + &
+                     (Xyz_DGB(z_,i,j,k,iBlock) - x3c_rope)**2
                 if(rsq < rasq**1.5e1)then
                    prof = b0_rope*exp(-rsq/rasq)
                 else
@@ -399,15 +398,15 @@ contains
                      State_VGB(Bx_,i,j,k,iBlock) + prof
                 State_VGB(By_,i,j,k,iBlock) = &
                      State_VGB(By_,i,j,k,iBlock) &
-                     - prof*qfac_rope*(z_BLK(i,j,k,iBlock) - x3c_rope)/ra_rope
+                     - prof*qfac_rope*(Xyz_DGB(z_,i,j,k,iBlock) - x3c_rope)/ra_rope
                 State_VGB(Bz_,i,j,k,iBlock) = &
                      State_VGB(Bz_,i,j,k,iBlock) + &
-                     prof*qfac_rope*(y_BLK(i,j,k,iBlock) - x2c_rope)/ra_rope
+                     prof*qfac_rope*(Xyz_DGB(y_,i,j,k,iBlock) - x2c_rope)/ra_rope
                 State_VGB(P_,i,j,k,iBlock) = &
                      State_VGB(p_,i,j,k,iBlock)*(1.+dp_ratio)
                 State_VGB(rho_,i,j,k,iBlock) = &
                      State_VGB(rho_,i,j,k,iBlock)*(1. + &
-                     exp(-(x_BLK(i,j,k,iBlock)/lamb_rope)**2)*&
+                     exp(-(Xyz_DGB(x_,i,j,k,iBlock)/lamb_rope)**2)*&
                      dp_ratio*buoyancy_rope)
                 if(State_VGB(p_,i,j,k,iBlock)<=0.)&
                      State_VGB(p_,i,j,k,iBlock)=1.e-10
@@ -424,8 +423,8 @@ contains
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
     use ModVarIndexes!, ONLY: rho_, rhoUz_, Bz_, p_, Erad_, ExtraEInt_
     use ModPhysics,    ONLY: UnitEnergyDens_, inv_gm1, Si2No_V
-    use ModGeometry,   ONLY: dz_BLK
     use ModAdvance,    ONLY: State_VGB
+    use ModGeometry,   ONLY: CellSize_DB
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
@@ -463,9 +462,9 @@ contains
           State_VGB(Bz_,:,:,0,iBlock) = State_VGB(Bz_,:,:,1,iBlock)
           State_VGB(Bz_,:,:,-1,iBlock) = State_VGB(Bz_,:,:,1,iBlock)
           State_VGB(p_,:,:,0,iBlock) =  State_VGB(p_,:,:,2,iBlock) + &
-               State_VGB(rho_,:,:,1,iBlock)*2.0*dZ_BLK(iBlock)
+               State_VGB(rho_,:,:,1,iBlock)*2.0*CellSize_DB(Z_,iBlock)
           State_VGB(p_,:,:,-1,iBlock) = State_VGB(p_,:,:,1,iBlock) + &
-               State_VGB(rho_,:,:,0,iBlock)*2.0*dZ_BLK(iBlock)
+               State_VGB(rho_,:,:,0,iBlock)*2.0*CellSize_DB(Z_,iBlock)
           do k = -1, 0; do j = -1, nJ+2; do i = -1, nI+2 
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   EinternalOut = EinternalSi)
@@ -498,9 +497,9 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModAdvance,     ONLY: Source_VC, State_VGB
-    use ModGeometry,    ONLY: z_BLK
     use ModPhysics,     ONLY: No2Si_V,UnitEnergyDens_,UnitT_
     use ModVarIndexes,  ONLY: Energy_, rhoUz_
+    use ModGeometry,    ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock
 
@@ -515,13 +514,13 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(UseVerticalDamping) call get_vertical_damping( &
             State_VGB(:,i,j,k,iBlock), &
-            z_BLK(i,j,k,iBlock),DampingRhoUz, DampingEnergy)
+            Xyz_DGB(z_,i,j,k,iBlock),DampingRhoUz, DampingEnergy)
        if(UseThinRadiation)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                TeOut=TeSi)
           call get_radiative_cooling(&
                State_VGB(:,i,j,k,iBlock), TeSi, &
-               z_BLK(i,j,k,iBlock), RadiativeCooling)
+               Xyz_DGB(z_,i,j,k,iBlock), RadiativeCooling)
        end if
 
        EInternalSource = RadiativeCooling

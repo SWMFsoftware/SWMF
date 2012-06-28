@@ -65,7 +65,7 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
        dLatSmoothIm, UseB0
   use ModRaytrace, ONLY : ray
   use ModPhysics,  ONLY : Si2No_V, UnitB_, UnitP_, UnitRho_, PolarRho_I, PolarP_I
-  use ModGeometry, ONLY : R_BLK, z_BLK
+  use ModGeometry, ONLY : R_BLK, Xyz_DGB, z_
   use ModAdvance,  ONLY : State_VGB, B0_DGB, RhoUz_, Bx_, Bz_
   use ModMultiFluid, ONLY : IonFirst_, IonLast_, iFluid
   implicit none
@@ -286,8 +286,8 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
      ! and the cell is within radius rFixPolarRegion and flow points outward
      ! then nudge the pressure (and density) towards the "polarregion" values
      if(pIm_IC(1,i,j,k) < 0.0 .and. DoFixPolarRegion .and. &
-          R_BLK(i,j,k,iBlock) < rFixPolarRegion &
-          .and. z_BLK(i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock) > 0.0)then
+          R_BLK(i,j,k,iBlock) < rFixPolarRegion .and. &
+          Xyz_DGB(z_,i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock) > 0)then
         do iFluid = 1, nIons
            pIm_IC(iFluid,i,j,k) = PolarP_I(iFluid)
            RhoIm_IC(iFluid,i,j,k) = PolarRho_I(iFluid)

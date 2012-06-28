@@ -393,7 +393,7 @@ contains
     ! The isothermal parker wind solution is used as initial condition
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
+    use ModGeometry,   ONLY: Xyz_DGB, r_Blk, true_cell
     use ModMain,       ONLY: nI, nJ, nK
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
@@ -430,9 +430,9 @@ contains
     Ubase = rTransonic**2*exp(1.5 - 2.0*rTransonic)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       x = x_BLK(i,j,k,iBlock)
-       y = y_BLK(i,j,k,iBlock)
-       z = z_BLK(i,j,k,iBlock)
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
        r = r_BLK(i,j,k,iBlock)
 
        ! The electron and ion temperature are initially equal to
@@ -750,7 +750,7 @@ contains
     ! Fill one layer of ghost cells with the temperature for heat conduction
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk
+    use ModGeometry,   ONLY: Xyz_DGB
     use ModMain,       ONLY: x_, y_, z_, nJ, nK
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: AverageIonCharge
@@ -777,9 +777,9 @@ contains
     end if
 
     do k = -1, nK+2; do j = -1, nJ+2
-       x_D(x_) = 0.5*sum(x_Blk(0:1,j,k,iBlock))
-       x_D(y_) = 0.5*sum(y_Blk(0:1,j,k,iBlock))
-       x_D(z_) = 0.5*sum(z_Blk(0:1,j,k,iBlock))
+       x_D(x_) = 0.5*sum(Xyz_DGB(x_,0:1,j,k,iBlock))
+       x_D(y_) = 0.5*sum(Xyz_DGB(y_,0:1,j,k,iBlock))
+       x_D(z_) = 0.5*sum(Xyz_DGB(z_,0:1,j,k,iBlock))
 
        call get_plasma_parameters_base(x_D, RhoBase, Tbase)
 

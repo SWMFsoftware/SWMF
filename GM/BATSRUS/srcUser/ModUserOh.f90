@@ -42,8 +42,8 @@ contains
        if(.not.time_loop)then
           !refine to have resolution not worse 4.0 and
           !refine the body intersecting blocks
-          refineBlock=minR<=rBody.or.dx_BLK(iBLK)>4.01
-       elseif(dx_BLK(iBLK)<0.40.or.far_field_BCs_BLK(iBLK))then
+          refineBlock=minR<=rBody.or.CellSize_DB(x_,iBLK)>4.01
+       elseif(CellSize_DB(x_,iBLK)<0.40.or.far_field_BCs_BLK(iBLK))then
           refineBlock=.false. !Do not refine body or outer boundary
        else
           !refine heliosheath
@@ -51,21 +51,21 @@ contains
           do k=0,nK+1;do j=1,nJ
              BDotRMin=min( BDotRMin,minval(&
                   State_VGB(Bx_,1:nI,j,k,iBLK)*&
-                  x_BLK(1:nI,j,k,iBLK)+&
+                  Xyz_DGB(x_,1:nI,j,k,iBLK)+&
                   State_VGB(By_,1:nI,j,k,iBLK)*&
-                  y_BLK(1:nI,j,k,iBLK)+&
+                  Xyz_DGB(y_,1:nI,j,k,iBLK)+&
                   State_VGB(Bz_,1:nI,j,k,iBLK)*&
-                  z_BLK(1:nI,j,k,iBLK)))
+                  Xyz_DGB(z_,1:nI,j,k,iBLK)))
           end do;end do
           BDotRMax=cZero
           do k=0,nK+1;do j=1,nJ
              BDotRMax=max( BDotRMax,maxval(&
                   State_VGB(Bx_,1:nI,j,k,iBLK)*&
-                  x_BLK(1:nI,j,k,iBLK)+&
+                  Xyz_DGB(x_,1:nI,j,k,iBLK)+&
                   State_VGB(By_,1:nI,j,k,iBLK)*&
-                  y_BLK(1:nI,j,k,iBLK)+&
+                  Xyz_DGB(y_,1:nI,j,k,iBLK)+&
                   State_VGB(Bz_,1:nI,j,k,iBLK)*&
-                  z_BLK(1:nI,j,k,iBLK)))
+                  Xyz_DGB(z_,1:nI,j,k,iBLK)))
           end do;end do
           refineBlock=BDotRMin<-cTiny.and.&
                BDotRMax>cTiny

@@ -394,7 +394,7 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB, WaveFirst_, WaveLast_, B0_DGB
-    use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
+    use ModGeometry,   ONLY: Xyz_DGB, r_Blk, true_cell
     use ModMain,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          BodyRho_I, BodyTDim_I, No2Si_V, UnitU_, UnitN_
@@ -457,9 +457,9 @@ contains
     Ubase = rTransonic**2*exp(1.5 - 2.0*rTransonic)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       x = x_BLK(i,j,k,iBlock)
-       y = y_BLK(i,j,k,iBlock)
-       z = z_BLK(i,j,k,iBlock)
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
        r = max(r_BLK(i,j,k,iBlock),1.0)
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
@@ -515,9 +515,9 @@ contains
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
        if(UseAlfvenWaves)call adiabatic_law_4_wave_state(&
             State_VGB(:, i, j, k, iBlock),&
-            (/x_BLK(i, j, k, iBlock), &
-              y_BLK(i, j, k, iBlock), &
-              z_BLK(i, j, k, iBlock)/), &
+            (/Xyz_DGB(x_,i, j, k, iBlock), &
+              Xyz_DGB(y_,i, j, k, iBlock), &
+              Xyz_DGB(z_,i, j, k, iBlock)/), &
               B0_DGB(:, i, j, k, iBlock))
     end do; end do; end do
 

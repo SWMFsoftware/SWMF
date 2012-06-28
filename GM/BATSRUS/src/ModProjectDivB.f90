@@ -135,7 +135,7 @@ subroutine project_B
   !     (phi(Itest+2,Jtest,Ktest,BLKtest)+phi(Itest-2,Jtest,Ktest,BLKtest) &
   !     +phi(Itest,Jtest+2,Ktest,BLKtest)+phi(Itest,Jtest-2,Ktest,BLKtest) &
   !     +phi(Itest,Jtest,Ktest-2,BLKtest)+phi(Itest,Jtest,Ktest-2,BLKtest) &
-  !     -6*phi(Itest,Jtest,Ktest,BLKtest))/dx_BLK(BLKtest)**2/4
+  !     -6*phi(Itest,Jtest,Ktest,BLKtest))/CellSize_DB(x_,BLKtest)**2/4
 
   ! Correct B field: B'=B-dB where dB=grad(phi) 
   call proj_correction(phi)

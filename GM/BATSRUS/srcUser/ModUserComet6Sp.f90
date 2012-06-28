@@ -197,7 +197,7 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: nVar
     use ModIO,ONLY: restart
-    use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,ONLY: Xyz_DGB,R_BLK
     use ModNumConst
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitU_
 
@@ -216,13 +216,13 @@ contains
 
     !define neutral speed array, necessary for special neutral distribution types only
     UNeu_BLK(:,:,:,iBlock,1) = Unr* &
-         x_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)/ &
+         Xyz_DGB(x_,0:nI+1,0:nJ+1,0:nK+1,iBlock)/ &
          R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)
     UNeu_BLK(:,:,:,iBlock,2) = Unr* &
-         y_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)/ &
+         Xyz_DGB(y_,0:nI+1,0:nJ+1,0:nK+1,iBlock)/ &
          R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)
     UNeu_BLK(:,:,:,iBlock,3) = Unr* &
-         z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)/ &
+         Xyz_DGB(z_,0:nI+1,0:nJ+1,0:nK+1,iBlock)/ &
          R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)
     UNeu_BLK(:,:,:,iBlock,:) = &
          UNeu_BLK(:,:,:,iBlock,:)/No2Si_V(UnitU_)
@@ -346,7 +346,7 @@ contains
     use ModMain,    ONLY: nI, nJ, nK, n_step, BlkTest, &
          iTest, jTest, kTest, PROCTest
     use ModAdvance, ONLY: State_VGB, Source_VC
-    use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,ONLY: Xyz_DGB,R_BLK
     use ModVarIndexes
     use ModPhysics
     use ModProcMH
@@ -547,7 +547,7 @@ contains
     use ModPhysics, ONLY: cBoltzmann, No2Si_V, UnitN_, UnitP_
     use CON_planet,  ONLY: NamePlanet
     use ModEnergy
-    use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK
+    use ModGeometry,ONLY: Xyz_DGB
     use ModProcMH
 
     integer,intent(in):: iStage,iBlock

@@ -20,7 +20,7 @@ contains
     use ModMain,       ONLY: nI, nJ, nK, ProcTest
     use ModProcMH,     ONLY: iProc
     use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
+    use ModGeometry,   ONLY: Xyz_DGB
     use ModVarIndexes, ONLY: Bx_,By_,Bz_
     use ModPhysics,    ONLY: Bdp
     use ModB0,         ONLY: B0_DGB
@@ -45,9 +45,9 @@ contains
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       x = x_BLK(i,j,k,iBlock)
-       y = y_BLK(i,j,k,iBlock)
-       z = z_BLK(i,j,k,iBlock)
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
        !\
        ! The dipole field is stretched by alpha factor in the z direction and
        ! beta in the y direction.

@@ -21,7 +21,7 @@ module ModUser
   use ModMain
   use ModPhysics
   use ModAdvance,  ONLY : State_VGB
-  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, r_BLK, true_cell
+  use ModGeometry, ONLY : Xyz_DGB, r_BLK, true_cell
   use ModVarIndexes
   use ModProcMH
   use ModMultiFluid
@@ -514,9 +514,9 @@ contains
 
        DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
 
-       x = x_BLK(i,j,k,iBlock)
-       y = y_BLK(i,j,k,iBlock)
-       z = z_BLK(i,j,k,iBlock)
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
        r = r_BLK(i,j,k,iBlock)
 
        XyzSph_DD = rot_xyz_sph(x,y,z)

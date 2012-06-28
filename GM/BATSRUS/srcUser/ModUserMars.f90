@@ -798,7 +798,7 @@ contains
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY :x_BLK,R_BLK,true_cell
+    use ModGeometry, ONLY :Xyz_DGB,R_BLK,true_cell
     use ModPhysics
     use ModNumConst
 
@@ -849,13 +849,13 @@ contains
 
     ! calculate optical depth and producation rate
     do k=1,nK; do j=1,nJ; do i=1,nI
-       cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-            x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
+       cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+            Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
             +5.0e-4
        Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
             CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
             6.0e-3)/cosSZA
-       if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then 
+       if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then 
           Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
        else
           Productrate_CB(i,j,k,iBlock) = 1.0e-5
@@ -977,8 +977,8 @@ contains
 
     do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
        if (R_BLK(i,j,k,iBlock)< Rbody) then
-          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-               x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
+          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+               Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
           State_VGB(:,i,j,k,iBlock)   =  CellState_VI(:,body1_)
           !           State_VGB(rhoOp_,i,j,k,iBlock)= 0.0
@@ -1012,8 +1012,8 @@ contains
        if (true_cell(i,j,k,iBlock).and. &
             R_BLK(i,j,k,iBlock)<1.5*Rbody) then
           
-          cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-               x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
+          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+               Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
           
           State_VGB(rhoCO2p_,i,j,k,iBlock)= &
@@ -1583,7 +1583,7 @@ contains
 !=====================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,   ONLY: Xyz_DGB,R_BLK
     use ModMain,       ONLY: Unused_B
     use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
          rhoUx_,rhoUy_,rhoUz_
@@ -1609,9 +1609,9 @@ contains
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoHp_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
           end do; end do; end do          
        end do
@@ -1623,9 +1623,9 @@ contains
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoOp_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
           end do; end do; end do          
        end do
@@ -1636,9 +1636,9 @@ contains
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoO2p_,i,j,k,iBLK)*&
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
           end do; end do; end do          
        end do
@@ -1650,9 +1650,9 @@ contains
           if (Unused_B(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoCO2p_,i,j,k,iBLK)*&
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
           end do; end do; end do          
        end do
@@ -1674,7 +1674,7 @@ contains
     use ModMain
     use ModPhysics
     use ModConst
-    use ModGeometry,ONLY:R_BLK,dx_BLK,dy_BLK,dz_BLK,&
+    use ModGeometry,ONLY:R_BLK,CellSize_DB,&
          XyzStart_BLK,TypeGeometry
 
     integer, intent(in) :: iBlock
@@ -1688,9 +1688,9 @@ contains
     logical:: oktestme=.true.
     !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp ----- 
     
-    dR=dx_BLK(iBlock)
-    dPhi=dy_BLK(iBlock)
-    dTheta=dz_BLK(iBlock)
+    dR=CellSize_DB(x_,iBlock)
+    dPhi=CellSize_DB(y_,iBlock)
+    dTheta=CellSize_DB(z_,iBlock)
 
     select case(TypeGeometry)                                   
     case('cartesian')                                           

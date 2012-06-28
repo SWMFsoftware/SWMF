@@ -76,7 +76,7 @@ contains
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
-    use ModGeometry, ONLY: x_Blk, y_Blk, z_Blk, r_Blk, rMin_Blk
+    use ModGeometry, ONLY: Xyz_DGB, r_Blk, rMin_Blk
     use ModConst
     use ModPlanetConst
     use ModPhysics
@@ -153,9 +153,9 @@ contains
                 ! velocities in the GSE coordinate system where GM/BATSRUS works.
                 ! this makes life a little complicated.
 
-                xGSE(1) = x_BLK(i,j,k,iBlock)
-                xGSE(2) = y_BLK(i,j,k,iBlock)
-                xGSE(3) = z_BLK(i,j,k,iBlock)
+                xGSE(1) = Xyz_DGB(x_,i,j,k,iBlock)
+                xGSE(2) = Xyz_DGB(y_,i,j,k,iBlock)
+                xGSE(3) = Xyz_DGB(z_,i,j,k,iBlock)
                 xSMG = matmul(SMG_GSE_mat,xGSE)
 
 
@@ -443,7 +443,7 @@ contains
                         i==Itest .and. j==Jtest .and. k==Ktest ) then
                       write(*,*) '----------Inner Torus Mass Loading Rates-------------------------'
                       write(*,'(a,3(1X,E13.5))') 'X, Y, Z:', &
-                           X_BLK(i,j,k,iBlock), Y_BLK(i,j,k,iBlock), Z_BLK(i,j,k,iBlock)
+                           Xyz_DGB(X_,i,j,k,iBlock), Xyz_DGB(Y_,i,j,k,iBlock), Xyz_DGB(Z_,i,j,k,iBlock)
                       write(*,'(a,5(1X,i6))')    'i,j,k,iBlock,iProc:', &
                            i,j,k,iBlock,iProc
                       write(*,'(a,3(1X,E13.5))') 'Telectron, EVelectron, LogEVelectron:', &
@@ -549,10 +549,10 @@ contains
                    Srho(i,j,k)   = Srho(i,j,k)   + (rhodot - Lterm*State_VGB(rho_,i,j,k,iBlock))
 
                    SrhoUx(i,j,k) = SrhoUx(i,j,k) + (part1*(-OMEGAtitan_orbit*No2Si_V(UnitT_)*  &
-                        Y_BLK(i,j,k,iBlock)) -  &
+                        Xyz_DGB(Y_,i,j,k,iBlock)) -  &
                         part2*State_VGB(rhoUx_,i,j,k,iBlock))  
                    SrhoUy(i,j,k) = SrhoUy(i,j,k) + (part1*(OMEGAtitan_orbit*No2Si_V(UnitT_)*   &
-                        X_BLK(i,j,k,iBlock)) -   &
+                        Xyz_DGB(X_,i,j,k,iBlock)) -   &
                         part2*State_VGB(rhoUy_,i,j,k,iBlock))   
                    SrhoUz(i,j,k) = SrhoUz(i,j,k) + (part1*(0.0) - &
                         part2*State_VGB(rhoUz_,i,j,k,iBlock))  
@@ -616,10 +616,10 @@ contains
   !============================================================================
 
   subroutine user_set_boundary_cells(iBlock)
-    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, x_Blk, x2
+    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
     integer, intent(in):: iBlock
     !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = x_Blk(:,:,:,iBlock) > x2
+    IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
 
   end subroutine user_set_boundary_cells
 

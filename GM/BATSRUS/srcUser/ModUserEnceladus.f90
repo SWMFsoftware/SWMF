@@ -66,7 +66,7 @@ contains
          No2Si_V, Si2No_V, No2Io_V, Io2No_V,UnitN_, UnitT_,UnitTemperature_,&
          UnitX_, UnitRhoU_, UnitU_
     use ModProcMH,   ONLY: iProc
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, R_BLK
+    use ModGeometry, ONLY: Xyz_DGB, R_BLK
     use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data, &
          MaxBlockData
 
@@ -311,7 +311,7 @@ contains
 
     use ModInterpolate, ONLY: trilinear
     use ModPhysics
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, R_BLK
+    use ModGeometry, ONLY: Xyz_DGB, R_BLK
 
     integer, intent(in) :: iBlock
 
@@ -342,12 +342,12 @@ contains
     end do
     dx=dx_dim*Si2No_V(UnitX_)
     do k=1,nK; do j=1,nJ;do i=1,nI
-       Xyz_D(1)=x_BLK(i,j,k,iBlock)/dx+25.0
-       Xyz_D(2)=y_BLK(i,j,k,iBlock)/dx+25.0
-       Xyz_D(3)=z_BLK(i,j,k,iBlock)/dx+25.0
-       !x_BLK_Si=x_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)
-       !y_BLK_Si=y_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)
-       !z_BLK_Si=z_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)
+       Xyz_D(1)=Xyz_DGB(x_,i,j,k,iBlock)/dx+25.0
+       Xyz_D(2)=Xyz_DGB(y_,i,j,k,iBlock)/dx+25.0
+       Xyz_D(3)=Xyz_DGB(z_,i,j,k,iBlock)/dx+25.0
+       !x_BLK_Si=Xyz_DGB(x_,i,j,k,iBlock)*No2Si_V(UnitX_)
+       !y_BLK_Si=Xyz_DGB(y_,i,j,k,iBlock)*No2Si_V(UnitX_)
+       !z_BLK_Si=Xyz_DGB(z_,i,j,k,iBlock)*No2Si_V(UnitX_)
        if (any(Xyz_D<(/0, 0, 0/)) .or. &
             any(Xyz_D>(/iMax,jMax,kMax/)))then
           NumDenNeutral_VC(i,j,k)=0.0

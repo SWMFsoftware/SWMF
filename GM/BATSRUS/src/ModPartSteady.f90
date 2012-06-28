@@ -9,10 +9,10 @@ module ModPartSteady
 
   use ModProcMH
   use ModVarIndexes, ONLY: nVar
-  use ModSize,       ONLY: MaxBlock, nI, nJ, nK
+  use ModSize,       ONLY: MaxBlock, nI, nJ, nK, x_
   use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, &
        time_accurate, n_step, lVerbose
-  use ModGeometry,   ONLY: Dx_BLK, MinDxValue
+  use ModGeometry,   ONLY: CellSize_DB, MinDxValue
   use ModParallel,   ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
   use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, &
@@ -119,7 +119,7 @@ contains
        if(time_accurate)then
           ! Take into account the cell size difference between blocks
           ! so that the same FLUX has the same effect (dU/dt=dF/dx)
-          dStateLimit = MinDxValue / Dx_BLK(iBlock)
+          dStateLimit = MinDxValue / CellSize_DB(x_,iBlock)
        else
           ! The local time step takes care of most of the cell size differences
           ! Ideally one should use Limit = min(dx)/dx*dtcell/min(dtcell)

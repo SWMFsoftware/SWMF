@@ -30,11 +30,12 @@ module ModUser
        IMPLEMENTED2 => user_set_ics,                    &
        IMPLEMENTED3 => user_get_log_var,                &
        IMPLEMENTED4 => user_get_b0,                     &
-       IMPLEMENTED5 => user_set_face_boundary,                   &
-       IMPLEMENTED6 => user_set_cell_boundary,               &
+       IMPLEMENTED5 => user_set_face_boundary,          &
+       IMPLEMENTED6 => user_set_cell_boundary,          &
        IMPLEMENTED7 => user_amr_criteria,               &
        IMPLEMENTED8 => user_set_plot_var
 
+  use ModSize,       ONLY: x_, y_, z_
   use ModVarIndexes, ONLY: nVar
 
   include 'user_module.h' !list of public methods
@@ -181,17 +182,17 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModMain,     ONLY: Unused_B, TypeCoordSystem, GravitySi
-    use ModGeometry, ONLY: x1, x2, y1, y2, x_BLK, y_BLK, z_BLK, r_BLK
+    use ModMain,     ONLY: TypeCoordSystem, GravitySi
+    use ModGeometry, ONLY: x1, x2, y1, y2, Xyz_DGB
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, &
-         Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
+         Bx_, By_, rho_, Ppar_, p_, Pe_, &
          UseElectronPressure, UseAnisoPressure
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, &
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
-         rPlanetSi, rBody, UnitT_,OmegaBody
+         rPlanetSi, rBody, UnitT_
     use ModNumconst, ONLY: cHalfPi, cPi, cTwoPi, cDegToRad
-    use ModSize,     ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
 
     integer, intent(in) :: iBlock
@@ -242,18 +243,18 @@ contains
        RhoLeft  = ShockLeftState_V(Rho_)
        RhoRight = ShockRightState_V(Rho_)
        pLeft    = ShockLeftState_V(p_)
-       where(x_BLK(:,:,:,iBlock) <= 0.0)
+       where(Xyz_DGB(x_,:,:,:,iBlock) <= 0.0)
           State_VGB(p_,:,:,:,iBlock) = pLeft &
-               + (x_BLK(:,:,:,iBlock) - x1)*RhoLeft*GravitySi
+               + (Xyz_DGB(x_,:,:,:,iBlock) - x1)*RhoLeft*GravitySi
        elsewhere
           State_VGB(p_,:,:,:,iBlock) = pLeft &
-               + (x_BLK(:,:,:,iBlock)*RhoRight - x1*RhoLeft)*GravitySi
+               + (Xyz_DGB(x_,:,:,:,iBlock)*RhoRight - x1*RhoLeft)*GravitySi
        end where
        ! Perturb velocity
-       where(abs(x_BLK(:,:,:,iBlock)) < Width)
+       where(abs(Xyz_DGB(x_,:,:,:,iBlock)) < Width)
           State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(Rho_,:,:,:,iBlock) &
-               * Amplitude * cos(cHalfPi*x_BLK(:,:,:,iBlock)/Width)**2 &
-               * sin(cTwoPi*(y_BLK(:,:,:,iBlock))/(y2-y1))
+               * Amplitude * cos(cHalfPi*Xyz_DGB(x_,:,:,:,iBlock)/Width)**2 &
+               * sin(cTwoPi*(Xyz_DGB(y_,:,:,:,iBlock))/(y2-y1))
        endwhere
 
     case('AdvectSphere')
@@ -299,9 +300,9 @@ contains
 
        if (DoInitSphere) then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             xCell = x_BLK(i,j,k,iBlock)
-             yCell = y_BLK(i,j,k,iBlock)
-             zCell = z_BLK(i,j,k,iBlock)
+             xCell = Xyz_DGB(x_,i,j,k,iBlock)
+             yCell = Xyz_DGB(y_,i,j,k,iBlock)
+             zCell = Xyz_DGB(z_,i,j,k,iBlock)
              rFromSphereCenter = sqrt((xCell - xSphereCenterInit)**2 + &
                                       (yCell - ySphereCenterInit)**2 + &
                                       (zCell - zSphereCenterInit)**2)
@@ -334,10 +335,10 @@ contains
 
           OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
           State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(RhoUx_,:,:,:,iBlock) &
-               + State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*y_BLK(:,:,:,iBlock)
+               + State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*Xyz_DGB(y_,:,:,:,iBlock)
 
           State_VGB(RhoUy_,:,:,:,iBlock) = State_VGB(RhoUy_,:,:,:,iBlock) &
-               - State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*x_BLK(:,:,:,iBlock)
+               - State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*Xyz_DGB(x_,:,:,:,iBlock)
 
        end if
 
@@ -389,19 +390,19 @@ contains
        end if
 
        do iVar=1,nVar
-          where(abs( x_BLK(:,:,:,iBlock) + ShockSlope*y_BLK(:,:,:,iBlock) ) &
+          where(abs( Xyz_DGB(x_,:,:,:,iBlock) + ShockSlope*Xyz_DGB(y_,:,:,:,iBlock) ) &
                < Width_V(iVar) )   &
                State_VGB(iVar,:,:,:,iBlock) =        &
                State_VGB(iVar,:,:,:,iBlock)          &
                + Ampl_V(iVar)*cos(Phase_V(iVar)      &
-               + KxWave_V(iVar)*x_BLK(:,:,:,iBlock)  &
-               + KyWave_V(iVar)*y_BLK(:,:,:,iBlock)  &
-               + KzWave_V(iVar)*z_BLK(:,:,:,iBlock))**iPower_V(iVar)
+               + KxWave_V(iVar)*Xyz_DGB(x_,:,:,:,iBlock)  &
+               + KyWave_V(iVar)*Xyz_DGB(y_,:,:,:,iBlock)  &
+               + KzWave_V(iVar)*Xyz_DGB(z_,:,:,:,iBlock))**iPower_V(iVar)
        end do
 
     case('GEM')
        !write(*,*)'GEM problem set up'
-       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(y_BLK(:,:,:,iBlock)/Lambda0)
+       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(Xyz_DGB(y_,:,:,:,iBlock)/Lambda0)
 
        ! Modify pressure(s) to balance magnetic pressure
        if(UseElectronPressure) then
@@ -431,8 +432,8 @@ contains
        Ly = y2 - y1
        !set intial perturbation
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          x = x_BLK(i,j,k,iBlock)
-          y = y_BLK(i,j,k,iBlock)
+          x = Xyz_DGB(x_,i,j,k,iBlock)
+          y = Xyz_DGB(y_,i,j,k,iBlock)
           ! Apply perturbation on x
           x = x + GemEps*(x-x1)*(x-x2)
           State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) &
@@ -459,8 +460,8 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModVarIndexes, ONLY: RhoUx_, RhoUy_, RhoUz_, p_, Rho_
     use ModConst,      ONLY: RotationPeriodSun
-    use ModNumConst,   ONLY: cPi, cTwoPi
-    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
+    use ModNumConst,   ONLY: cTwoPi
+    use ModGeometry,   ONLY: Xyz_DGB
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -514,10 +515,10 @@ contains
 
           if (TypeCoordSystem =='HGC') then
              RhoU_D(1) = State_VGB(RhoUx_,i,j,k,iBlock) &
-                  - State_VGB(Rho_,i,j,k,iBlock)*OmegaSun*y_BLK(i,j,k,iBlock)
+                  - State_VGB(Rho_,i,j,k,iBlock)*OmegaSun*Xyz_DGB(y_,i,j,k,iBlock)
 
              RhoU_D(2) = State_VGB(RhoUy_,i,j,k,iBlock) &
-                  + State_VGB(Rho_,i,j,k,iBlock)*OmegaSun*x_BLK(i,j,k,iBlock)
+                  + State_VGB(Rho_,i,j,k,iBlock)*OmegaSun*Xyz_DGB(x_,i,j,k,iBlock)
 
           elseif (TypeCoordSystem == 'HGI') then 
              RhoU_D(1) = State_VGB(RhoUx_,i,j,k,iBlock) 
@@ -542,7 +543,7 @@ contains
     subroutine calc_analytic_sln_sphere(iBlock,RhoExact_G,RhoError_G)
 
       use ModMain,       ONLY: time_simulation, TypeCoordSystem
-      use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
+      use ModGeometry,   ONLY: Xyz_DGB
       use ModNumConst,   ONLY: cPi, cTwoPi
       use ModConst,      ONLY: RotationPeriodSun
       use ModAdvance,    ONLY: State_VGB
@@ -566,9 +567,9 @@ contains
       phi = OmegaSun*t*Si2No_V(UnitT_)
       do k=-1,nK+2 ; do j= -1,nJ+2 ; do i= -1,nI+2
 
-         x = x_BLK(i,j,k,iBlock)
-         y = y_BLK(i,j,k,iBlock)
-         z = z_BLK(i,j,k,iBlock)
+         x = Xyz_DGB(x_,i,j,k,iBlock)
+         y = Xyz_DGB(y_,i,j,k,iBlock)
+         z = Xyz_DGB(z_,i,j,k,iBlock)
 
          ! Find current location of sphere center
          xSphereCenter = xSphereCenterInit + &
@@ -615,8 +616,8 @@ contains
 
     use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B
     use ModAdvance,  ONLY: By_, State_VGB
-    use ModGeometry, ONLY: z2, z1, dx_BLK, dy_BLK, y_BLK
-    use BATL_lib,    ONLY: CellFace_DB
+    use ModGeometry, ONLY: z2, z1
+    use BATL_lib,    ONLY: CellFace_DB, CellSize_DB, Xyz_DGB
 
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: TypeVar
@@ -633,13 +634,13 @@ contains
     case('byflux')
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          y1 = y_BLK(1,0,1,iBlock)
-          y2 = y_BLK(1,nJ+1,1,iBlock)
+          y1 = Xyz_DGB(y_,1,0,1,iBlock)
+          y2 = Xyz_DGB(y_,1,nJ+1,1,iBlock)
 
           if(y1*y2 > 0) CYCLE
-          k1 = -y1/dy_BLK(iBlock)
+          k1 = -y1/CellSize_DB(y_,iBlock)
           k2 = k1 + 1
-          dy1 = abs(y_BLK(1,k1,1,iBlock))/dy_BLK(iBlock)
+          dy1 = abs(Xyz_DGB(y_,1,k1,1,iBlock))/CellSize_DB(y_,iBlock)
           dy2 = 1.0 - dy1
           Flux = CellFace_DB(2,iBlock)*HalfInvWidth* &
                ( dy2*sum(abs(State_VGB(By_,1:nI,k1,1:nK,iBlock))) &
@@ -666,10 +667,9 @@ contains
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModMain,    ONLY: x_, y_, z_, iTest, jTest, kTest, BlkTest
-    use ModAdvance, ONLY: Ux_, Uy_, Uz_, By_, Bz_, State_VGB
+    use ModMain,    ONLY: x_, y_, z_, BlkTest
     use ModFaceBoundary,  ONLY: FaceCoords_D, TimeBc, &
-         VarsTrueFace_V, iFace, jFace, kFace, iBlockBc, iSide
+         iBlockBc
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
@@ -710,16 +710,16 @@ contains
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     use ModSize,     ONLY: nI, nJ, nK
-    use ModPhysics,  ONLY: ShockSlope, Si2No_V, Io2Si_V,&
-         Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
-         rPlanetSi, rBody, UnitT_,OmegaBody
-    use ModNumconst, ONLY: cPi, cTwoPi, cDegToRad
-    use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
+    use ModPhysics,  ONLY: Si2No_V, Io2Si_V,&
+         Io2No_V, UnitRho_, UnitU_, UnitP_, UnitN_,&
+         UnitT_
+    use ModNumconst, ONLY: cTwoPi, cDegToRad
+    use ModConst,    ONLY: cProtonMass, RotationPeriodSun
 
-    use ModMain,     ONLY: Time_Simulation, iTest, jTest, kTest, BlkTest, &
+    use ModMain,     ONLY: Time_Simulation, &
          TypeCoordSystem
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, x1, x2, y1, y2, z1, z2, &
+    use ModGeometry, ONLY: Xyz_DGB, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
     use ModSetOuterBc
     use ModVarIndexes
@@ -763,9 +763,9 @@ contains
        do i=-1,nI+2
           do j=-1,nJ+2
              do k=-1,nK+2
-                x = x_BLK(i,j,k,iBlk)
-                y = y_BLK(i,j,k,iBlk)
-                z = z_BLK(i,j,k,iBlk)
+                x = Xyz_DGB(x_,i,j,k,iBlk)
+                y = Xyz_DGB(y_,i,j,k,iBlk)
+                z = Xyz_DGB(z_,i,j,k,iBlk)
                 r = r_BLK(i,j,k,iBLK)
                 r = alog(r)
 
@@ -823,10 +823,10 @@ contains
 
           ! Now transform velocity field to a rotating frame
           State_VGB(RhoUx_,:,:,:,iBlk) = State_VGB(RhoUx_,:,:,:,iBlk) &
-               + State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*y_BLK(:,:,:,iBlk)
+               + State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*Xyz_DGB(y_,:,:,:,iBlk)
 
           State_VGB(RhoUy_,:,:,:,iBlk) = State_VGB(RhoUy_,:,:,:,iBlk) &
-               - State_VGB(Rho_,:,:,:,iBlk)*OmegaSun*x_BLK(:,:,:,iBlk)
+               - State_VGB(Rho_,:,:,:,iBlk)*OmegaSun*Xyz_DGB(x_,:,:,:,iBlk)
 
 
           ! set the rest of state variables

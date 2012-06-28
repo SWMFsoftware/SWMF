@@ -87,7 +87,7 @@ contains
     use ModMain, ONLY: BlkTest,iTest,jTest,kTest
     use ModPhysics
     use ModNumConst
-    use ModGeometry,ONLY: R_BLK, x_BLK, y_BLK, z_BLK
+    use ModGeometry,ONLY: R_BLK, Xyz_DGB
 
     integer, intent(in) :: iBlock
 
@@ -97,8 +97,8 @@ contains
     ! neutral density in SI units
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! angle of cell position relative to ram direction 
-       theta=acos((-SW_Ux*x_BLK(i,j,k,iBlock)-SW_Uy*y_BLK(i,j,k,iBlock)&
-            -SW_Uz*z_BLK(i,j,k,iBlock))/R_BLK(i,j,k,iBlock)/&
+       theta=acos((-SW_Ux*Xyz_DGB(x_,i,j,k,iBlock)-SW_Uy*Xyz_DGB(y_,i,j,k,iBlock)&
+            -SW_Uz*Xyz_DGB(z_,i,j,k,iBlock))/R_BLK(i,j,k,iBlock)/&
             (SW_Ux**2+SW_Uy**2+SW_Uz**2)**0.5)
 
        if(distr==0) then
@@ -125,8 +125,8 @@ contains
        end if
 
        if(iBlock==BlkTest.and.k==kTest.and.j==jTest.and.i==iTest) then
-          write(*,*)'X= ',x_BLK(i,j,k,iBlock),'Y= ',y_BLK(i,j,k,iBlock),&
-               'Z= ',z_BLK(i,j,k,iBlock)
+          write(*,*)'X= ',Xyz_DGB(x_,i,j,k,iBlock),'Y= ',Xyz_DGB(y_,i,j,k,iBlock),&
+               'Z= ',Xyz_DGB(z_,i,j,k,iBlock)
           write(*,*)'SW_Ux= ',SW_Ux,'SW_Uy= ',SW_Uy,'SW_Uz= ',SW_Uz
           write(*,*)'theta= ',theta,'n= ',Neutral_BLK(i,j,k,iBlock)
        end if
@@ -148,7 +148,7 @@ contains
     use ModMain,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
-    use ModGeometry,ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,ONLY: Xyz_DGB,R_BLK
     use ModPhysics
     use ModProcMH
 

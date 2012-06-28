@@ -6,7 +6,7 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
   ! Save all cells within plotting range, for each processor
 
   use ModPhysics, ONLY : No2Io_V, UnitX_
-  use ModGeometry, ONLY: nI,nJ,nK, x_BLK,y_BLK,z_BLK, dx_BLK,dy_BLK,dz_BLK 
+  use ModGeometry, ONLY: nI,nJ,nK, Xyz_DGB, CellSize_DB 
   use ModMain,     ONLY: BlkTest
   use ModNumConst
   use ModIO
@@ -45,12 +45,12 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
 
   ! get the max and min radial distance for this block so that we can check
   ! whether or not this block contibutes to the plot.
-  xx1 = 0.50*(x_BLK( 0, 0, 0,iBLK)+x_BLK(   1,   1  , 1,iBLK))
-  xx2 = 0.50*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(nI+1,nJ+1,nK+1,iBLK))
-  yy1 = 0.50*(y_BLK( 0, 0, 0,iBLK)+y_BLK(   1,   1,   1,iBLK))
-  yy2 = 0.50*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(nI+1,nJ+1,nK+1,iBLK))
-  zz1 = 0.50*(z_BLK( 0, 0, 0,iBLK)+z_BLK(   1,   1,   1,iBLK))
-  zz2 = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(nI+1,nJ+1,nK+1,iBLK))
+  xx1 = 0.50*(Xyz_DGB(x_, 0, 0, 0,iBLK)+Xyz_DGB(x_,   1,   1  , 1,iBLK))
+  xx2 = 0.50*(Xyz_DGB(x_,nI,nJ,nK,iBLK)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBLK))
+  yy1 = 0.50*(Xyz_DGB(y_, 0, 0, 0,iBLK)+Xyz_DGB(y_,   1,   1,   1,iBLK))
+  yy2 = 0.50*(Xyz_DGB(y_,nI,nJ,nK,iBLK)+Xyz_DGB(y_,nI+1,nJ+1,nK+1,iBLK))
+  zz1 = 0.50*(Xyz_DGB(z_, 0, 0, 0,iBLK)+Xyz_DGB(z_,   1,   1,   1,iBLK))
+  zz2 = 0.50*(Xyz_DGB(z_,nI,nJ,nK,iBLK)+Xyz_DGB(z_,nI+1,nJ+1,nK+1,iBLK))
   minRblk = sqrt(&
        minmod(xx1,xx2)**2 + minmod(yy1,yy2)**2 + minmod(zz1,zz2)**2)
   maxRblk = sqrt((max(abs(xx1),abs(xx2)))**2 + &
@@ -100,9 +100,9 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
            PointVar=0.0
 
            ! Convert to normalized coordinates (index and position are the same)
-           xx=(x-x_BLK(1,1,1,iBLK))/dx_BLK(iBLK)+1.
-           yy=(y-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)+1.
-           zz=(z-z_BLK(1,1,1,iBLK))/dz_BLK(iBLK)+1.
+           xx=(x-Xyz_DGB(x_,1,1,1,iBLK))/CellSize_DB(x_,iBLK)+1.
+           yy=(y-Xyz_DGB(y_,1,1,1,iBLK))/CellSize_DB(y_,iBLK)+1.
+           zz=(z-Xyz_DGB(z_,1,1,1,iBLK))/CellSize_DB(z_,iBLK)+1.
 
            ! Determine cell indices corresponding to location qx
            i1=floor(xx); i2=i1+1

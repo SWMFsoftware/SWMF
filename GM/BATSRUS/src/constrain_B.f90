@@ -168,7 +168,7 @@ subroutine constrain_B(iBlock)
 
   use ModSize
   use ModMain, ONLY : Dt,BLKtest,iTest,jTest,kTest
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK
+  use ModGeometry, ONLY : CellSize_DB
   use ModCT, ONLY : VxB_x,VxB_y,VxB_z,Bxface_BLK,Byface_BLK,Bzface_BLK
   implicit none
 
@@ -201,29 +201,29 @@ subroutine constrain_B(iBlock)
        Bxface_BLK(1:nI+1,1:nJ,1:nK,iBlock) + qdt*(    &
        +(VxB_z(1:nI+1,2:nJ+1,1:nK  ,iBlock)           &
         -VxB_z(1:nI+1,1:nJ  ,1:nK  ,iBlock))          &
-                                                    /dy_BLK(iBlock)  &
+                                                    /CellSize_DB(y_,iBlock)  &
        -(VxB_y(1:nI+1,1:nJ  ,2:nK+1,iBlock)           &
         -VxB_y(1:nI+1,1:nJ  ,1:nK  ,iBlock))          &
-                                                    /dz_BLK(iBlock))
+                                                    /CellSize_DB(z_,iBlock))
   ! dBy/dt=d(VxB_x)/dz-d(VxB_z)/dx
   Byface_BLK(1:nI,1:nJ+1,1:nK,iBlock)=                &
        Byface_BLK(1:nI,1:nJ+1,1:nK,iBlock) + qdt*(    &
        +(VxB_x(1:nI  ,1:nJ+1,2:nK+1,iBlock)           &
         -VxB_x(1:nI  ,1:nJ+1,1:nK  ,iBlock))          &
-                                                    /dz_BLK(iBlock)  &
+                                                    /CellSize_DB(z_,iBlock)  &
        -(VxB_z(2:nI+1,1:nJ+1,1:nK  ,iBlock)           &
         -VxB_z(1:nI  ,1:nJ+1,1:nK  ,iBlock))          &
-                                                    /dx_BLK(iBlock))
+                                                    /CellSize_DB(x_,iBlock))
 
   ! dBz/dt=d(VxB_y)/dx-d(VxB_x)/dy
   Bzface_BLK(1:nI,1:nJ,1:nK+1,iBlock)=                &
        Bzface_BLK(1:nI,1:nJ,1:nK+1,iBlock) + qdt*(    &
        +(VxB_y(2:nI+1,1:nJ  ,1:nK+1,iBlock)           &
         -VxB_y(1:nI  ,1:nJ  ,1:nK+1,iBlock))          &
-                                                    /dx_BLK(iBlock)  &
+                                                    /CellSize_DB(x_,iBlock)  &
        -(VxB_x(1:nI  ,2:nJ+1,1:nK+1,iBlock)           &
         -VxB_x(1:nI  ,1:nJ  ,1:nK+1,iBlock))          &
-                                                    /dy_BLK(iBlock))
+                                                    /CellSize_DB(y_,iBlock))
   if(oktest_me)then
      write(*,*)'constrain_b: final face centered B'
      write(*,*)'BxfaceL,R=',&
@@ -497,7 +497,7 @@ end subroutine bound_Bface
 ! !!!  call get_shifts(iChild,ishift,jshift,kshift)
 ! 
 !   ! Calculate aspect ratios for a non-cubic cell
-!   Dx = dx_BLK(iBlock); Dy = dy_BLK(iBlock); Dz = dz_BLK(iBlock)
+!   Dx = CellSize_DB(x_,iBlock); Dy = CellSize_DB(y_,iBlock); Dz = CellSize_DB(z_,iBlock)
 !   DxDy8Inv = Dx/(8*Dy); DxDz8Inv = Dx/(8*Dz)
 !   DyDx8Inv = Dy/(8*Dx); DyDz8Inv = Dy/(8*Dz)
 !   DzDx8Inv = Dz/(8*Dx); DzDy8Inv = Dz/(8*Dy)

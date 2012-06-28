@@ -5,6 +5,7 @@ module ModGeometry
   use ModMain,       ONLY: UseBody2, body2_, ExtraBc_
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc
+  use BATL_lib,      ONLY: Xyz_DGB, CellSize_DB
 
   implicit none
   SAVE
@@ -28,11 +29,7 @@ module ModGeometry
   !\
   ! Other block solution and geometry parameters.
   !/
-  real :: minDXvalue, maxDXvalue
-
-  real, dimension(MaxBlock) :: dx_BLK, dy_BLK, dz_BLK, Rmin_BLK
-  real, dimension(MaxBlock) :: Rmin2_BLK
-
+  real:: minDXvalue, maxDXvalue
 
   ! Variables describing cells inside boundaries
   !true when at least one cell in the block (including ghost cells) is not true
@@ -48,12 +45,12 @@ module ModGeometry
   integer :: MinBoundary=6, MaxBoundary=body2_                    
   logical :: far_field_BCs_BLK(MaxBlock)
 
-  ! Block cell coordinates
-  real, allocatable :: x_BLK(:,:,:,:)
-  real, allocatable :: y_BLK(:,:,:,:)
-  real, allocatable :: z_BLK(:,:,:,:)
+  ! Radial distance from origin and second body
   real, allocatable :: R_BLK(:,:,:,:)
   real, allocatable :: R2_BLK(:,:,:,:)
+
+  ! Smallest value of r_BLK and r2_BLK within a block
+  real:: Rmin_BLK(MaxBlock), Rmin2_BLK(MaxBlock)
 
   ! ADDED FOR general r grid in spherical geometry!
   ! Main Idea is to have a tabulated function that maps
@@ -69,9 +66,6 @@ contains
 
     if(allocated(true_cell)) return
     allocate(true_cell(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(x_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(y_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(z_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(R_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     if(UseBody2) allocate(R2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     if(iProc==0)then
@@ -86,9 +80,6 @@ contains
     if(.not.allocated(true_cell)) RETURN
 
     deallocate(true_cell)
-    if(allocated(x_BLK))     deallocate(x_BLK)
-    if(allocated(y_BLK))     deallocate(y_BLK)
-    if(allocated(z_BLK))     deallocate(z_BLK)
     if(allocated(R_BLK))     deallocate(R_BLK)
     if(allocated(R2_BLK))    deallocate(R2_BLK)
     if(allocated(LogRGen_I)) deallocate(LogRGen_I)

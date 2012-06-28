@@ -13,7 +13,7 @@ contains
 
     use ModPartSteady, ONLY: UsePartSteady
 
-    use ModGeometry, ONLY: dx_BLK, MinDxValue, MaxDxValue
+    use ModGeometry, ONLY: CellSize_DB, MinDxValue, MaxDxValue
 
     use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_
@@ -52,8 +52,10 @@ contains
           call set_batsrus_block(iBlock)
        end do
 
-       DxMin = minval(dx_BLK(1:nBlock), MASK=(.not.Unused_B(1:nBlock)))
-       DxMax = maxval(dx_BLK(1:nBlock), MASK=(.not.Unused_B(1:nBlock)))
+       ! There must be a better way doing this !!!
+       ! We could get the min and max level of all used blocks from iTree_IA.
+       DxMin = minval(CellSize_DB(1,1:nBlock), MASK=(.not.Unused_B(1:nBlock)))
+       DxMax = maxval(CellSize_DB(1,1:nBlock), MASK=(.not.Unused_B(1:nBlock)))
        call MPI_allreduce(DxMin, minDXvalue,1,MPI_REAL,MPI_MIN,iComm,iError)
        call MPI_allreduce(DxMax, maxDXvalue,1,MPI_REAL,MPI_MAX,iComm,iError)
 
@@ -70,9 +72,7 @@ contains
          iTree_IA, Block_, Proc_, Unset_
 
     use ModGeometry, ONLY: &
-         XyzStart_BLK, &
-         x_BLK, y_BLK, z_BLK, r_BLK, rMin_BLK, &
-         dx_BLK, dy_BLK, dz_BLK
+         XyzStart_BLK, r_BLK, rMin_BLK
 
     use ModParallel, ONLY: neiLEV, neiBLK, neiPE, &
          neiLeast, neiLwest, neiLsouth, neiLnorth, neiLbot, neiLtop, &
@@ -214,14 +214,7 @@ contains
 
     XyzStart_BLK(:,iBlock) = CoordMin_DB(:,iBlock) + 0.5*CellSize_DB(:,iBlock)
 
-    dx_BLK(iBlock) = CellSize_DB(1,iBlock)
-    dy_BLK(iBlock) = CellSize_DB(2,iBlock)
-    dz_BLK(iBlock) = CellSize_DB(3,iBlock)
-
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       x_BLK(i,j,k,iBlock) = Xyz_DGB(1,i,j,k,iBlock)
-       y_BLK(i,j,k,iBlock) = Xyz_DGB(2,i,j,k,iBlock)
-       z_BLK(i,j,k,iBlock) = Xyz_DGB(3,i,j,k,iBlock)
        r_BLK(i,j,k,iBlock) = sqrt(sum(Xyz_DGB(1:nDim,i,j,k,iBlock)**2))
     end do; end do; end do
 

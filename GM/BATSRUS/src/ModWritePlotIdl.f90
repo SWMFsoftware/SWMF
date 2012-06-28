@@ -8,7 +8,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   use ModProcMH
   use ModMain, ONLY: nI, nJ, nK, PROCtest, BLKtest, test_string, &
        x_, y_, z_, Phi_
-  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, Dx_BLK, Dy_BLK, Dz_BLK,&
+  use ModGeometry, ONLY: Xyz_DGB, CellSize_DB,&
        x1, x2, y1, y2, z1, z2, XyzStart_BLK, XyzMin_D, XyzMax_D
   use ModPhysics, ONLY : No2Io_V, UnitX_
   use ModIO
@@ -54,7 +54,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      ! Save all cells of block including ghost cells
 
      nCell=0
-     DxBlock=Dx_BLK(iBlock); DyBlock=Dy_BLK(iBlock); DzBlock=Dz_BLK(iBlock)
+     DxBlock=CellSize_DB(x_,iBlock); DyBlock=CellSize_DB(y_,iBlock); DzBlock=CellSize_DB(z_,iBlock)
      DxBlockOut = DxBlock
      if (plot_dimensional(iFile)) DxBlockOut = DxBlock*No2Io_V(UnitX_)
 
@@ -71,13 +71,13 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
         nCell=nCell+1
         if (plot_dimensional(iFile)) then
-           x = x_BLK(i,j,k,iBlock)*No2Io_V(UnitX_)
-           y = y_BLK(i,j,k,iBlock)*No2Io_V(UnitX_)
-           z = z_BLK(i,j,k,iBlock)*No2Io_V(UnitX_)
+           x = Xyz_DGB(x_,i,j,k,iBlock)*No2Io_V(UnitX_)
+           y = Xyz_DGB(y_,i,j,k,iBlock)*No2Io_V(UnitX_)
+           z = Xyz_DGB(z_,i,j,k,iBlock)*No2Io_V(UnitX_)
         else
-           x = x_BLK(i,j,k,iBlock)
-           y = y_BLK(i,j,k,iBlock)
-           z = z_BLK(i,j,k,iBlock)
+           x = Xyz_DGB(x_,i,j,k,iBlock)
+           y = Xyz_DGB(y_,i,j,k,iBlock)
+           z = Xyz_DGB(z_,i,j,k,iBlock)
         end if
         if(save_binary)then
            write(unit_tmp)DxBlockOut,x,y,z,PlotVar(i,j,k,1:nPlotVar)
@@ -96,12 +96,12 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   end if
 
   ! The range for the cell centers is Dx/2 wider
-  xMin1 = xMin - cHalfMinusTiny*Dx_BLK(iBlock)
-  xMax1 = xMax + cHalfMinusTiny*Dx_BLK(iBlock)
-  yMin1 = yMin - cHalfMinusTiny*Dy_BLK(iBlock)
-  yMax1 = yMax + cHalfMinusTiny*Dy_BLK(iBlock)
-  zMin1 = zMin - cHalfMinusTiny*Dz_BLK(iBlock)
-  zMax1 = zMax + cHalfMinusTiny*Dz_BLK(iBlock)
+  xMin1 = xMin - cHalfMinusTiny*CellSize_DB(x_,iBlock)
+  xMax1 = xMax + cHalfMinusTiny*CellSize_DB(x_,iBlock)
+  yMin1 = yMin - cHalfMinusTiny*CellSize_DB(y_,iBlock)
+  yMax1 = yMax + cHalfMinusTiny*CellSize_DB(y_,iBlock)
+  zMin1 = zMin - cHalfMinusTiny*CellSize_DB(z_,iBlock)
+  zMax1 = zMax + cHalfMinusTiny*CellSize_DB(z_,iBlock)
 
   nCell = 0
   if(IsRLonLat .or. IsCylindrical)then                 
@@ -120,22 +120,22 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
           xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
      write(*,*) NameSub, 'xyzStart_BLK=',iBlock,xyzStart_BLK(:,iBlock)
      write(*,*) NameSub, 'ySqueezed =',ySqueezed
-     write(*,*) NameSub, 'xyzEnd=',xyzStart_BLK(x_,iBlock)+(nI-1)*Dx_BLK(iBlock),&
-          ySqueezed+(nJ-1)*Dy_BLK(iBlock),&
-          xyzStart_BLK(z_,iBlock)+(nK-1)*Dz_BLK(iBlock)
+     write(*,*) NameSub, 'xyzEnd=',xyzStart_BLK(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock),&
+          ySqueezed+(nJ-1)*CellSize_DB(y_,iBlock),&
+          xyzStart_BLK(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock)
   end if
 
   ! If block is fully outside of cut then cycle
   if(  xyzStart_BLK(x_,iBlock) > xMax1.or.&
-       xyzStart_BLK(x_,iBlock)+(nI-1)*Dx_BLK(iBlock) < xMin1.or.&
+       xyzStart_BLK(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock) < xMin1.or.&
        ySqueezed > yMax1.or.&
-       ySqueezed+(nJ-1)*Dy_BLK(iBlock) < yMin1.or.&  
+       ySqueezed+(nJ-1)*CellSize_DB(y_,iBlock) < yMin1.or.&  
        xyzStart_BLK(z_,iBlock) > zMax1.or.&
-       xyzStart_BLK(z_,iBlock)+(nK-1)*Dz_BLK(iBlock) < zMin1)&
+       xyzStart_BLK(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock) < zMin1)&
        RETURN
 
   Dx = plot_Dx(1,iFile)
-  DxBlock=Dx_BLK(iBlock); DyBlock=Dy_BLK(iBlock); DzBlock=Dz_BLK(iBlock)
+  DxBlock=CellSize_DB(x_,iBlock); DyBlock=CellSize_DB(y_,iBlock); DzBlock=CellSize_DB(z_,iBlock)
 
   ! Calculate index limits of cells inside cut
   iMin = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
@@ -162,9 +162,9 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      DxBlockOut = DxBlock
      if (plot_dimensional(iFile))DxBlockOut = DxBlockOut*No2Io_V(UnitX_)
      do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
-        x = x_BLK(i,j,k,iBlock)
-        y = y_BLK(i,j,k,iBlock)
-        z = z_BLK(i,j,k,iBlock)
+        x = Xyz_DGB(x_,i,j,k,iBlock)
+        y = Xyz_DGB(y_,i,j,k,iBlock)
+        z = Xyz_DGB(z_,i,j,k,iBlock)
 
         if(x<x1 .or. x>x2 .or. y<y1 .or. y>y2 .or. z<z1 .or. z>z2) CYCLE
 
@@ -215,9 +215,9 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
            j2=j+nRestrictY-1
            do i=iMin,iMax,nRestrictX
               i2=i+nRestrictX-1
-              x = 0.5*(x_BLK(i,j,k,iBlock)+x_BLK(i2,j2,k2,iBlock))
-              y = 0.5*(y_BLK(i,j,k,iBlock)+y_BLK(i2,j2,k2,iBlock))
-              z = 0.5*(z_BLK(i,j,k,iBlock)+z_BLK(i2,j2,k2,iBlock))
+              x = 0.5*(Xyz_DGB(x_,i,j,k,iBlock)+Xyz_DGB(x_,i2,j2,k2,iBlock))
+              y = 0.5*(Xyz_DGB(y_,i,j,k,iBlock)+Xyz_DGB(y_,i2,j2,k2,iBlock))
+              z = 0.5*(Xyz_DGB(z_,i,j,k,iBlock)+Xyz_DGB(z_,i2,j2,k2,iBlock))
 
               if(x<x1 .or. x>x2 .or. y<y1 .or. y>y2 .or. z<z1 .or. z>z2) &
                    CYCLE

@@ -219,7 +219,7 @@ contains
     use CON_planet,    ONLY: RadiusPlanet, MassPlanet
     use ModAdvance,    ONLY: State_VGB
     use ModMain,       ONLY: Unused_B, nBlockMax
-    use ModGeometry,   ONLY: X_BLK, Y_BLK, Z_BLK, R_BLK, Rmin_BLK
+    use ModGeometry,   ONLY: Xyz_DGB, R_BLK, Rmin_BLK
     use ModSize
     use ModPhysics,    ONLY: Si2No_V,UnitRho_ 
     use ModVarIndexes, ONLY: nVar, Rho_, RhoU_, RhoUx_, RhoUz_, Bx_, Bz_, p_
@@ -248,8 +248,8 @@ contains
           if(R_BLK(i-1,j,k,iBlock) > PlanetRadius ) CYCLE
           if(R_BLK(i,j,k,iBlock) <= PlanetRadius ) CYCLE
 
-          r_D  = (/ x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), &
-               z_BLK(i,j,k,iBlock) /) / r_BLK(i,j,k,iBlock)
+          r_D  = (/ Xyz_DGB(x_,i,j,k,iBlock), Xyz_DGB(y_,i,j,k,iBlock), &
+               Xyz_DGB(z_,i,j,k,iBlock) /) / r_BLK(i,j,k,iBlock)
 
           RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
           if(RhoUr > 0.0) then

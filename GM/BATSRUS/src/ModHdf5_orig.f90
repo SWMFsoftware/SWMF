@@ -48,7 +48,7 @@ contains
     use ModProcMH
     use ModMain, ONLY: nI, nJ, nK, &
          x_, y_, z_, Phi_, nBlockMax, Unused_B
-    use ModGeometry, ONLY: Dx_BLK, Dy_BLK, Dz_BLK,&
+    use ModGeometry, ONLY: CellSize_DB,&
          XyzStart_BLK
     use ModIO
     use ModNumConst
@@ -98,12 +98,12 @@ contains
        jSize = 0
        kSize = 0
        do iBlk = 1, nBlockMax
-          xMin1 = xMin - cHalfMinusTiny*Dx_BLK(iBlk)
-          xMax1 = xMax + cHalfMinusTiny*Dx_BLK(iBlk)
-          yMin1 = yMin - cHalfMinusTiny*Dy_BLK(iBlk)
-          yMax1 = yMax + cHalfMinusTiny*Dy_BLK(iBlk)
-          zMin1 = zMin - cHalfMinusTiny*Dz_BLK(iBlk)
-          zMax1 = zMax + cHalfMinusTiny*Dz_BLK(iBlk)
+          xMin1 = xMin - cHalfMinusTiny*CellSize_DB(x_,iBlk)
+          xMax1 = xMax + cHalfMinusTiny*CellSize_DB(x_,iBlk)
+          yMin1 = yMin - cHalfMinusTiny*CellSize_DB(y_,iBlk)
+          yMax1 = yMax + cHalfMinusTiny*CellSize_DB(y_,iBlk)
+          zMin1 = zMin - cHalfMinusTiny*CellSize_DB(z_,iBlk)
+          zMax1 = zMax + cHalfMinusTiny*CellSize_DB(z_,iBlk)
 
           if(IsRLonLat .or. IsCylindrical)then                 
              ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
@@ -117,18 +117,18 @@ contains
           end if
 
           if( Unused_B(iBLK) .or. xyzStart_BLK(x_,iBlk) > xMax1.or.&
-               xyzStart_BLK(x_,iBlk)+(nI-1)*Dx_BLK(iBlk) < xMin1.or.&
+               xyzStart_BLK(x_,iBlk)+(nI-1)*CellSize_DB(x_,iBlk) < xMin1.or.&
                ySqueezed > yMax1.or.&
-               ySqueezed+(nJ-1)*Dy_BLK(iBlk) < yMin1.or.&  
+               ySqueezed+(nJ-1)*CellSize_DB(y_,iBlk) < yMin1.or.&  
                xyzStart_BLK(z_,iBlk) > zMax1.or.&
-               xyzStart_BLK(z_,iBlk)+(nK-1)*Dz_BLK(iBlk) < zMin1) then
+               xyzStart_BLK(z_,iBlk)+(nK-1)*CellSize_DB(z_,iBlk) < zMin1) then
 
              CYCLE
 
           else
 
              Dx = plot_Dx(1,iFile)
-             DxBlock=Dx_BLK(iBlk); DyBlock=Dy_BLK(iBlk); DzBlock=Dz_BLK(iBlk)
+             DxBlock=CellSize_DB(x_,iBlk); DyBlock=CellSize_DB(y_,iBlk); DzBlock=CellSize_DB(z_,iBlk)
 
              ! Calculate index limits of cells inside cut
              i = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlk))/DxBlock)+2)
@@ -235,12 +235,12 @@ contains
             nodeArrSize(1),nodeArrSize(2),nodeArrSize(3),nBlockMax))
     end if
 
-    xMin1 = xMin - cHalfMinusTiny*Dx_BLK(iBlock)
-    xMax1 = xMax + cHalfMinusTiny*Dx_BLK(iBlock)
-    yMin1 = yMin - cHalfMinusTiny*Dy_BLK(iBlock)
-    yMax1 = yMax + cHalfMinusTiny*Dy_BLK(iBlock)
-    zMin1 = zMin - cHalfMinusTiny*Dz_BLK(iBlock)
-    zMax1 = zMax + cHalfMinusTiny*Dz_BLK(iBlock)
+    xMin1 = xMin - cHalfMinusTiny*CellSize_DB(x_,iBlock)
+    xMax1 = xMax + cHalfMinusTiny*CellSize_DB(x_,iBlock)
+    yMin1 = yMin - cHalfMinusTiny*CellSize_DB(y_,iBlock)
+    yMax1 = yMax + cHalfMinusTiny*CellSize_DB(y_,iBlock)
+    zMin1 = zMin - cHalfMinusTiny*CellSize_DB(z_,iBlock)
+    zMax1 = zMax + cHalfMinusTiny*CellSize_DB(z_,iBlock)
 
     nCell = 0
     if(isNonCartesian)then                 
@@ -259,24 +259,24 @@ contains
     !           xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
     !      write(*,*) NameSub, 'xyzStart_BLK=',iBlock,xyzStart_BLK(:,iBlock)
     !      write(*,*) NameSub, 'ySqueezed =',ySqueezed
-    !      write(*,*) NameSub, 'xyzEnd=',xyzStart_BLK(x_,iBlock)+(nI-1)*Dx_BLK(iBlock),&
-    !           ySqueezed+(nJ-1)*Dy_BLK(iBlock),&
-    !           xyzStart_BLK(z_,iBlock)+(nK-1)*Dz_BLK(iBlock)
+    !      write(*,*) NameSub, 'xyzEnd=',xyzStart_BLK(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock),&
+    !           ySqueezed+(nJ-1)*CellSize_DB(y_,iBlock),&
+    !           xyzStart_BLK(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock)
     !   end if
     ! 
     ! If block is fully outside of cut then cycle
     if(  xyzStart_BLK(x_,iBlock) > xMax1.or.&
-         xyzStart_BLK(x_,iBlock)+(nI-1)*Dx_BLK(iBlock) < xMin1.or.&
+         xyzStart_BLK(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock) < xMin1.or.&
          ySqueezed > yMax1.or.&
-         ySqueezed+(nJ-1)*Dy_BLK(iBlock) < yMin1.or.&  
+         ySqueezed+(nJ-1)*CellSize_DB(y_,iBlock) < yMin1.or.&  
          xyzStart_BLK(z_,iBlock) > zMax1.or.&
-         xyzStart_BLK(z_,iBlock)+(nK-1)*Dz_BLK(iBlock) < zMin1) then
+         xyzStart_BLK(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock) < zMin1) then
        H5Advance = .false.
        RETURN
     end if
 
     Dx = plot_Dx(1,iFile)
-    DxBlock=Dx_BLK(iBlock); DyBlock=Dy_BLK(iBlock); DzBlock=Dz_BLK(iBlock)
+    DxBlock=CellSize_DB(x_,iBlock); DyBlock=CellSize_DB(y_,iBlock); DzBlock=CellSize_DB(z_,iBlock)
 
     ! Calculate index limits of cells inside cut
     iMin = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)

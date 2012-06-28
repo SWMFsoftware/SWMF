@@ -74,7 +74,7 @@ contains
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
-    use ModGeometry, ONLY: x_Blk, y_Blk, z_Blk, r_Blk, rMin_Blk
+    use ModGeometry, ONLY: Xyz_DGB, r_Blk, rMin_Blk
     use ModConst
     use ModPlanetConst
     use ModPhysics
@@ -127,8 +127,8 @@ contains
        ! Velocities, distances and scale heights are normalized
        ! (unitless).
 
-       if (((Z_BLK(i,j,k,iBlock) < 6.0) .and.     &
-            (Z_BLK(i,j,k,iBlock) > -6.0)) .and.   &
+       if (((Xyz_DGB(Z_,i,j,k,iBlock) < 6.0) .and.     &
+            (Xyz_DGB(Z_,i,j,k,iBlock) > -6.0)) .and.   &
             (R_Blk(i,j,k,iBlock) < 15.0) .and.     &
             (R_BLK(i,j,k,iBlock) > 3.0)) then
 
@@ -140,8 +140,8 @@ contains
 
 
           ! compute the cylindrical radius for later use
-          Rxy = sqrt(X_BLK(i,j,k,iBlock)**2 + &
-               Y_BLK(i,j,k,iBlock)**2)   
+          Rxy = sqrt(Xyz_DGB(X_,i,j,k,iBlock)**2 + &
+               Xyz_DGB(Y_,i,j,k,iBlock)**2)   
 
           ! The neutral velocity is taken to be the orbital velocity
           ! Note that Gbody/r**2 is a unitless acceleration.  So Gbody/r
@@ -151,8 +151,8 @@ contains
 
           Unsq = abs(Gbody)/Rxy
           Un = sqrt(unsq)
-          Unx = -un*Y_BLK(i,j,k,iBlock)/Rxy
-          Uny =  un*X_BLK(i,j,k,iBlock)/Rxy
+          Unx = -un*Xyz_DGB(Y_,i,j,k,iBlock)/Rxy
+          Uny =  un*Xyz_DGB(X_,i,j,k,iBlock)/Rxy
           Unz =  0.0
 
           Urelsq = (unx-Ux)**2 + (uny-Uy)**2 + (unz-Uz)**2
@@ -191,7 +191,7 @@ contains
           ! Hz = .176327*Rxy
           ! the scale height is 5 degree or Hz = tan(5*pi/180)*Rxy 
           Hz = .087489*Rxy
-          rhodot = rhodot*exp(-(Z_BLK(i,j,k,iBlock)**2)/Hz**2) 
+          rhodot = rhodot*exp(-(Xyz_DGB(Z_,i,j,k,iBlock)**2)/Hz**2) 
 
           ! now get everything normalized - note that rhodot is in 
           ! units particles/cm^3/s.  To get a unitless rhodot we simply 
@@ -223,8 +223,8 @@ contains
           alphaCOROTATE = 1.0
           sinTheta = Rxy/R_BLK(i,j,k,iBlock)
           uCOR = alphaCOROTATE*OMEGAbody*R_BLK(i,j,k,iBlock)*sinTheta
-          xHat = -Y_BLK(i,j,k,iBlock)/Rxy
-          yHat =  X_BLK(i,j,k,iBlock)/Rxy
+          xHat = -Xyz_DGB(Y_,i,j,k,iBlock)/Rxy
+          yHat =  Xyz_DGB(X_,i,j,k,iBlock)/Rxy
           ! ScorotateUx = rhodot*(uCOR-un)*xHat
           ! ScorotateUy = rhodot*(uCOR-un)*yHat
           ! ScorotateUz = 0.0
@@ -270,7 +270,7 @@ contains
                i==Itest .and. j==Jtest .and. k==Ktest ) then
              write(*,*) '----------Inner Torus Mass Loading Rates-------------------------'
              write(*,'(a,3(1X,E13.5))') 'X, Y, Z:', &
-                  X_BLK(i,j,k,iBlock), Y_BLK(i,j,k,iBlock), Z_BLK(i,j,k,iBlock)
+                  Xyz_DGB(X_,i,j,k,iBlock), Xyz_DGB(Y_,i,j,k,iBlock), Xyz_DGB(Z_,i,j,k,iBlock)
              write(*,'(a,5(1X,i6))')    'i,j,k,iBlock,iProc:', &
                   i,j,k,iBlock,iProc
              write(*,'(a,3(1X,E13.5))') 'rhodot(unnormalized):', &
@@ -304,13 +304,13 @@ contains
 
           gradP_external   = -(2.0*P1*(L-L0)/Hr1**2)*exp(-(L-L0)**2/Hr1**2)
           gradP_external_X = gradP_external* &
-               (3*X_BLK(i,j,k,iBlock)*R_BLK(i,j,k,iBlock)/Rxy**2 &
-               - 2*X_BLK(i,j,k,iBlock)*R_BLK(i,j,k,iBlock)**3/Rxy**4)
+               (3*Xyz_DGB(X_,i,j,k,iBlock)*R_BLK(i,j,k,iBlock)/Rxy**2 &
+               - 2*Xyz_DGB(X_,i,j,k,iBlock)*R_BLK(i,j,k,iBlock)**3/Rxy**4)
           gradP_external_Y = gradP_external* &
-               (3*Y_BLK(i,j,k,iBlock)*R_BLK(i,j,k,iBlock)/Rxy**2 &
-               - 2*Y_BLK(i,j,k,iBlock)*R_BLK(i,j,k,iBlock)**3/Rxy**4)
+               (3*Xyz_DGB(Y_,i,j,k,iBlock)*R_BLK(i,j,k,iBlock)/Rxy**2 &
+               - 2*Xyz_DGB(Y_,i,j,k,iBlock)*R_BLK(i,j,k,iBlock)**3/Rxy**4)
           gradP_external_Z = gradP_external* &
-               (3*Z_BLK(i,j,k,iBlock)*R_BLK(i,j,k,iBlock)/Rxy**2)
+               (3*Xyz_DGB(Z_,i,j,k,iBlock)*R_BLK(i,j,k,iBlock)/Rxy**2)
 
           ! now get everything normalized - note that gradP_external is in Pascal/Rj.
           ! To get a unitless gradP_external we simply need to divide 

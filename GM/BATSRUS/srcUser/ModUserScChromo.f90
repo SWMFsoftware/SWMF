@@ -1,7 +1,9 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
 module ModUser
+
   use ModMain, ONLY: nI, nJ,nK
+  use ModSize, ONLY: x_, y_, z_
 
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -36,8 +38,6 @@ module ModUser
 
   ! Input parameters controling wave dissipation
   logical :: UseUserWaveDissipation = .false.
-  real    :: DissipationScaleFactorSi = 0.0  ! unit = m*T^0.5
-  real    :: DissipationScaleFactor = 0.0
   real    :: LkolIo = 0.0, Lkol, Lcp, Lratio = 0.0
 
   ! variables for magnetic (unsigned flux) heating
@@ -61,9 +61,8 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam, ONLY: read_line, read_command, read_var
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
-    use ModPhysics,   ONLY: DipoleStrengthSi, rBody
+    use ModPhysics,   ONLY: DipoleStrengthSi
 
-    integer :: iLevel
     character (len=100) :: NameCommand
 
     character(len=*), parameter :: NameSub = 'user_read_inputs'
@@ -153,7 +152,6 @@ contains
 
     use ModMain,           ONLY: UseMagnetogram, UseUserPerturbation
     use ModProcMH,         ONLY: iProc
-    use ModReadParam,      ONLY: i_session_read
     use ModIO,             ONLY: write_prefix, iUnitOut
     use ModWaves,          ONLY: UseWavePressure, UseAlfvenWaves
     use ModAdvance,        ONLY: UseElectronPressure
@@ -165,7 +163,6 @@ contains
                                  Si2No_V, UnitTemperature_, UnitN_, UnitX_, UnitB_, &
                                  SinThetaTilt, CosThetaTilt
 
-    real            :: HeatCondParSi
     real, parameter :: CoulombLog = 20.0
     character (len=*),parameter :: NameSub = 'uset_init_session'
     !--------------------------------------------------------------------------
@@ -314,11 +311,10 @@ contains
     ! The isothermal parker wind solution is used as initial condition
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
-    use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
-    use ModMain,       ONLY: Unused_B
+    use ModGeometry,   ONLY: Xyz_DGB, r_Blk
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
-         BodyRho_I, BodyP_I, BodyNDim_I, UnitU_, UnitN_, AverageIonCharge
+         UnitU_, UnitN_, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
          WaveFirst_, WaveLast_, Hyp_
 
@@ -327,7 +323,7 @@ contains
     integer :: i, j, k
     real :: x, y, z, r, Rho, NumDensIon, NumDensElectron, Temperature
     real :: RhoCorona, tCorona, uCorona, rCorona, TemperatureGradient
-    real :: B_D(3), r_D(3), Br
+    real :: r_D(3), Br
     ! variables for iterative Parker solution
     integer :: IterCount
     real :: Ur, Ur0, Ur1, del, rTransonic, Uescape, Usound
@@ -356,9 +352,9 @@ contains
     uCorona = rTransonic**2*exp(1.5 - 2.0*rTransonic)
 
     do k = -1, nK+2 ; do j = -1, nJ+2 ; do i = -1, nI+2
-       x = x_BLK(i,j,k,iBlock)
-       y = y_BLK(i,j,k,iBlock)
-       z = z_BLK(i,j,k,iBlock)
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
        r = r_BLK(i,j,k,iBlock)
        r_D = (/x,y,z/)
 
@@ -481,9 +477,6 @@ contains
   !============================================================================
   subroutine user_update_states(iStage, iBlock)
 
-    use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, r_BLK
-    use ModVarIndexes, ONLY: nVar
 
     integer, intent(in) :: iStage, iBlock
 
@@ -502,8 +495,8 @@ contains
     use ModProcMH,     ONLY: iProc
     use ModIoUnit,     ONLY: UNITTMP_
     use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, rho_, p_, Bx_, Bz_
-    use ModMain,       ONLY: iteration_number, Unused_B, nBlock
-    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, r_BLK
+    use ModMain,       ONLY: iteration_number, nBlock
+    use ModGeometry,   ONLY: Xyz_DGB, r_BLK
     use ModAdvance,    ONLY: State_VGB
 
     integer            :: iBLK, i ,j ,k
@@ -534,12 +527,12 @@ contains
           ! Advance in the r direction
           do i=-1,nI+2
 
-             x=x_BLK(i,j,k,iBLK)
+             x=Xyz_DGB(x_,i,j,k,iBLK)
              ! Extract data in the x=0 plane only
              if (abs(X) > 0.1) CYCLE
              
-             y = y_BLK(i,j,k,iBLK)
-             z = z_BLK(i,j,k,iBLK)
+             y = Xyz_DGB(y_,i,j,k,iBLK)
+             z = Xyz_DGB(z_,i,j,k,iBLK)
              r = r_BLK(i,j,k,iBLK)
              x_D = (/x,y,z/)
              
@@ -568,8 +561,8 @@ contains
 
     use ModProcMH,     ONLY: iProc
     use ModIoUnit,     ONLY: UNITTMP_
-    use ModMain,       ONLY: iteration_number, Unused_B, nBlock
-    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, r_BLK
+    use ModMain,       ONLY: iteration_number, nBlock
+    use ModGeometry,   ONLY: Xyz_DGB, r_BLK
     use ModAdvance,    ONLY: B0_DGB
 
     integer            :: iBlock, i ,j ,k
@@ -595,12 +588,12 @@ contains
        ! Advance in the r direction
        do k=-1,nK+2 ; do i=-1,nI+2
 
-          x=x_BLK(i,j,k,iBlock)
+          x=Xyz_DGB(x_,i,j,k,iBlock)
           ! Extract data in the x=0 plane only
           if (abs(X) > 0.1) CYCLE
              
-          y = y_BLK(i,j,k,iBlock)
-          z = z_BLK(i,j,k,iBlock)
+          y = Xyz_DGB(y_,i,j,k,iBlock)
+          z = Xyz_DGB(z_,i,j,k,iBlock)
           r = r_BLK(i,j,k,iBlock)
              
           B0_x = B0_DGB(1,i,j,k,iBlock)
@@ -620,10 +613,10 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModAdvance,        ONLY: State_VGB, Source_VC, UseElectronPressure, &
-         B0_DGB, VdtFace_x, VdtFace_y, VdtFace_z
+         VdtFace_x, VdtFace_y, VdtFace_z
     use ModGeometry,       ONLY: r_BLK
     use ModPhysics,        ONLY: gm1, rBody, UnitTemperature_, No2Si_V
-    use ModVarIndexes,     ONLY: Rho_, Energy_, p_, Pe_, WaveFirst_, WaveLast_
+    use ModVarIndexes,     ONLY: Rho_, p_, Pe_, WaveFirst_, WaveLast_
     use ModMultifluid,     ONLY: MassIon_I
     use ModCoronalHeating, ONLY: HeatFactor
     use BATL_lib, ONLY: CellVolume_GB
@@ -632,7 +625,7 @@ contains
 
     integer :: i, j, k
     real    :: TemperatureSi, FullB
-    real    :: CoronalHeating, RadiativeCooling, MagneticHeating
+    real    :: CoronalHeating, MagneticHeating
     real    :: DtInvWavePlus, DtInvWaveMinus, Vdt_Source, Vdt
 
     ! varaibles for wave dissipation
@@ -714,7 +707,6 @@ contains
 
     use ModAdvance,        ONLY: State_VGB, B0_DGB
     use ModMain,           ONLY: UseB0
-    use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, UnitB_
     use ModVarIndexes,     ONLY: Rho_, Bx_, Bz_, WaveFirst_, WaveLast_
 
     use BATL_lib, ONLY: Xyz_DGB
@@ -936,7 +928,7 @@ contains
     use ModMain,       ONLY: UseB0, UseRotatingFrame
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
                              UnitX_, UnitU_, UnitB_, OmegaBody
-    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
+    use ModGeometry,   ONLY: Xyz_DGB
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, By_, Bz_, RhoUx_, RhoUy_, &
                              RhoUz_, WaveFirst_, WaveLast_
     use ModCoronalHeating,  ONLY: calc_alfven_wave_dissipation, &
@@ -956,7 +948,7 @@ contains
 
     integer :: i, j, k
     real    :: WaveDissipation_V(WaveFirst_:WaveLast_), CoronalHeating, Lperp
-    real    :: U_D(3), B_D(3), x, y, z, r, phi, theta
+    real    :: U_D(3), B_D(3), r, phi, theta
     real    :: sintheta, sinphi, costheta, cosphi
     integer,parameter :: x_ =1, y_ =2, z_ =3
 
@@ -1022,9 +1014,9 @@ contains
     case('u_r','uphi','utheta')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
           !calculate angles
-          call xyz_to_sph(x_BLK(i,j,k,iBlock), &
-                          y_BLK(i,j,k,iBlock), &
-                          z_BLK(i,j,k,iBlock), r, theta, phi)
+          call xyz_to_sph(Xyz_DGB(x_,i,j,k,iBlock), &
+                          Xyz_DGB(y_,i,j,k,iBlock), &
+                          Xyz_DGB(z_,i,j,k,iBlock), r, theta, phi)
           sinphi = sin(phi)
           cosphi = cos(phi)
           costheta = cos(theta)
@@ -1034,8 +1026,8 @@ contains
           U_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/ &
                State_VGB(Rho_,i,j,k,iBlock)
           if(UseRotatingFrame) then
-             U_D(x_) = U_D(x_) - OmegaBody*y_BLK(i,j,k,iBlock)
-             U_D(y_) = U_D(y_) + OmegaBody*x_BLK(i,j,k,iBlock)
+             U_D(x_) = U_D(x_) - OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
+             U_D(y_) = U_D(y_) + OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
           end if
           U_D = 1e-3*No2Si_V(UnitU_)*U_D
 
@@ -1059,9 +1051,9 @@ contains
 
     case('b_r','bphi','btheta')
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          call xyz_to_sph(x_BLK(i,j,k,iBlock), &
-                          y_BLK(i,j,k,iBlock), &
-                          z_BLK(i,j,k,iBlock), r, theta, phi)
+          call xyz_to_sph(Xyz_DGB(x_,i,j,k,iBlock), &
+                          Xyz_DGB(y_,i,j,k,iBlock), &
+                          Xyz_DGB(z_,i,j,k,iBlock), r, theta, phi)
           sinphi = sin(phi)
           cosphi = cos(phi)
           costheta = cos(theta)
@@ -1169,7 +1161,7 @@ contains
     
     use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure
     use ModMain,       ONLY: UseUserInnerBcs
-    use ModGeometry,   ONLY: TypeGeometry, x_BLK, y_BLK, z_BLK, r_BLK
+    use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, WaveFirst_, WaveLast_, &
                              Bx_, Bz_, Ux_, Uz_
     use ModMultiFluid, ONLY: MassIon_I
@@ -1221,8 +1213,8 @@ contains
        end do; end do; end do
 
        do k = -1, nK+2; do j = -1, nJ+2
-          Runit_D = (/ x_BLK(1,j,k,iBlock), y_BLK(1,j,k,iBlock), &
-               z_BLK(1,j,k,iBlock) /) / r_BLK(1,j,k,iBlock)
+          Runit_D = (/ Xyz_DGB(x_,1,j,k,iBlock), Xyz_DGB(y_,1,j,k,iBlock), &
+               Xyz_DGB(z_,1,j,k,iBlock) /) / r_BLK(1,j,k,iBlock)
 
           Br1_D = sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
           Bt1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) - Br1_D
@@ -1243,9 +1235,9 @@ contains
        ! Update B1 in ghost cells (r direction only
        ! Reflect normal component, float tangential component 
        do i= 1,0,-1
-          x = x_BLK(i,j,k,iBlock)
-          y = y_BLK(i,j,k,iBlock)
-          z = z_BLK(i,j,k,iBlock)
+          x = Xyz_DGB(x_,i,j,k,iBlock)
+          y = Xyz_DGB(y_,i,j,k,iBlock)
+          z = Xyz_DGB(z_,i,j,k,iBlock)
           r = r_BLK(i,j,k,iBlock)
           r_D = (/x,y,z/)
           rUnit_DG(:,i) = r_D/r             
@@ -1329,22 +1321,21 @@ contains
   !============================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModAdvance,     ONLY: State_VGB, UseElectronPressure
+    use ModAdvance,     ONLY: UseElectronPressure
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
-    use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame
+    use ModMain,        ONLY: x_, y_, UseRotatingFrame
     use ModMultiFluid,  ONLY: MassIon_I
-    use ModPhysics,     ONLY: OmegaBody, AverageIonCharge, BodyRho_I, &
-                              BodyTDim_I, Si2No_V, UnitTemperature_, UnitN_
-    use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, &
+    use ModPhysics,     ONLY: OmegaBody, AverageIonCharge
+    use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, Bz_, p_, &
          WaveFirst_, WaveLast_, Pe_,Hyp_
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
     real :: RhoBase, NumDensIon, NumDensElectron, Tbase, FullBr, EwaveBase
-    real,dimension(3) :: U_D, B0_D, B1_D, B1t_D, B1r_D
+    real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D
     real,dimension(3) :: bUnitGhost_D, bUnitTrue_D, rUnit_D
     real,dimension(3) :: FullBGhost_D, FullBTrue_D
-    real              :: RhoTrue, RhoGhost, Ur
+    real              :: RhoTrue, RhoGhost
    
     character (len=*), parameter :: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------

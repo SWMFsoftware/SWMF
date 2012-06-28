@@ -11,7 +11,7 @@ module ModRestartFile
        NameThisComp, iteration_number, DoThinCurrentSheet
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_
   use ModAdvance,    ONLY: State_VGB
-  use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK, NameGridFile
+  use ModGeometry,   ONLY: CellSize_DB, xyzStart_BLK, NameGridFile
   use ModIO,         ONLY: Restart_Bface                    !^CFG IF CONSTRAINB
   use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK !^CFG IF CONSTRAINB
   use ModMain,       ONLY: UseConstrainB                    !^CFG IF CONSTRAINB
@@ -524,9 +524,7 @@ contains
        tSimulationRead   = Time8
 
        read(unit_tmp, iostat = iError) Dxyz8_D, Xyz8_D
-       Dx_BLK(iBlock) = Dxyz8_D(1)
-       Dy_BLK(iBlock) = Dxyz8_D(2)
-       Dz_BLK(iBlock) = Dxyz8_D(3)
+       CellSize_DB(:,iBlock) = Dxyz8_D
        XyzStart_BLK(:,iBlock) = Xyz8_D
 
        read(Unit_tmp, iostat = iError) State8_CV
@@ -552,9 +550,7 @@ contains
        tSimulationRead   = Time4
 
        read(unit_tmp, iostat = iError) Dxyz4_D, Xyz4_D
-       Dx_BLK(iBlock) = Dxyz4_D(1)
-       Dy_BLK(iBlock) = Dxyz4_D(2)
-       Dz_BLK(iBlock) = Dxyz4_D(3)
+       CellSize_DB(:,iBlock) = Dxyz4_D
        XyzStart_BLK(:,iBlock) = Xyz4_D
 
        read(Unit_tmp, iostat = iError) State4_CV
@@ -586,11 +582,11 @@ contains
 
     call calc_energy_cell(iBlock)
 
-    if(Dx_BLK(iBlock) < 0 .or. Dy_BLK(iBlock) < 0 .or. Dz_BLK(iBlock) < 0 &
-         .or. Dt_BLK(iBlock) < 0 .or. tSimulationRead < 0)then
+    if(any(CellSize_DB(:,iBlock) < 0  &
+         .or. Dt_BLK(iBlock) < 0 .or. tSimulationRead < 0))then
        write(*,*)NameSub,': corrupt restart data!!!'
        write(*,*)'iBlock  =', iBlock
-       write(*,*)'Dxyz    =', Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock)
+       write(*,*)'Dxyz    =', CellSize_DB(:,iBlock)
        write(*,*)'Dt,tSim =', Dt_BLK(iBlock), tSimulationRead
        write(*,*)'XyzStart=', XyzStart_BLK(:,iBlock)
        write(*,*)'State111=', State_VGB(1:nVar,1,1,1,iBlock)
@@ -600,8 +596,7 @@ contains
     if(DoTestMe)then
        write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock
        write(*,*)NameSub,': dt,tSimRead =',dt_BLK(iBlock),tSimulationRead
-       write(*,*)NameSub,': dx,dy,dz_BLK=',&
-            dx_BLK(iBlock),dy_BLK(iBlock),dz_BLK(iBlock)
+       write(*,*)NameSub,': dx,dy,dz_BLK=', CellSize_DB(:,iBlock)
        write(*,*)NameSub,': xyzStart_BLK=',xyzStart_BLK(:,iBlock)
        write(*,*)NameSub,': State_VGB   =', &
             State_VGB(:,Itest,Jtest,Ktest,iBlock)
@@ -632,10 +627,8 @@ contains
 
     open(unit_tmp, file=NameFile, status="replace", form='UNFORMATTED')
 
-    write(Unit_tmp)  dt_BLK(iBlock),time_Simulation
-    write(Unit_tmp) &
-         dx_BLK(iBlock),dy_BLK(iBlock),dz_BLK(iBlock),&
-         xyzStart_BLK(:,iBlock)
+    write(Unit_tmp) dt_BLK(iBlock),time_Simulation
+    write(Unit_tmp) CellSize_DB(:,iBlock), xyzStart_BLK(:,iBlock)
     write(Unit_tmp) &
          ( State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock), iVar=1,nVar)
     if(UseConstrainB)then                            !^CFG iF CONSTRAINB BEGIN
@@ -670,8 +663,7 @@ contains
 
     ! Calculate the record length for the first block
     inquire (IOLENGTH = lRecord ) &
-         Dt_BLK(1), Dx_BLK(1), Dy_BLK(1), Dz_BLK(1),&
-         XyzStart_BLK(:,1), &
+         Dt_BLK(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
          State_VGB(1:nVar,1:nI,1:nJ,1:nK,1)
 
     if(DoRead .and. Restart_Bface .or. &         !^CFG iF CONSTRAINB BEGIN
@@ -799,9 +791,7 @@ contains
                read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC
           
           Dt_BLK(iBlock) = Dt4
-          Dx_BLK(iBlock) = Dxyz4_D(1)
-          Dy_BLK(iBlock) = Dxyz4_D(2)
-          Dz_BLK(iBlock) = Dxyz4_D(3)
+          CellSize_DB(:,iBlock)  = Dxyz4_D
           XyzStart_BLK(:,iBlock) = Xyz4_D
           State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock) = State4_VC
 
@@ -832,21 +822,18 @@ contains
                read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC
 
           Dt_BLK(iBlock) = Dt8
-          Dx_BLK(iBlock) = Dxyz8_D(1)
-          Dy_BLK(iBlock) = Dxyz8_D(2)
-          Dz_BLK(iBlock) = Dxyz8_D(3)
+          CellSize_DB(:,iBLock) = Dxyz8_D
           XyzStart_BLK(:,iBlock) = Xyz8_D
           State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock) = State8_VC
        end if
 
-       if(Dx_BLK(iBlock) < 0 .or. Dy_BLK(iBlock) < 0 .or. Dz_BLK(iBlock) < 0 &
-            .or. Dt_BLK(iBlock) < 0)then
+       if(any(CellSize_DB(:,iBLock) < 0) .or. Dt_BLK(iBlock) < 0)then
           write(*,*)NameSub,': corrupt restart data!!!'
-          write(*,*)'iBlock  =',iBlock
-          write(*,*)'Dxyz    =',Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock)
+          write(*,*)'iBlock  =', iBlock
+          write(*,*)'Dxyz    =', CellSize_DB(:,iBLock)
           write(*,*)'Dt      =', Dt_BLK(iBlock)
-          write(*,*)'XyzStart=',XyzStart_BLK(:,iBlock)
-          write(*,*)'State111=',State_VGB(1:nVar,1,1,1,iBlock)
+          write(*,*)'XyzStart=', XyzStart_BLK(:,iBlock)
+          write(*,*)'State111=', State_VGB(1:nVar,1,1,1,iBlock)
           call stop_mpi(NameSub//': corrupt restart data!!!')
        end if
     end do
@@ -891,7 +878,7 @@ contains
        if(UseConstrainB)then                          !^CFG IF CONSTRAINB BEGIN
           ! Save face centered magnetic field 
           write(Unit_tmp, rec=iRec)  Dt_BLK(iBlock),&
-               Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock),&
+               CellSize_DB(:,iBLock), &
                XyzStart_BLK(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
                BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock),&
@@ -903,7 +890,7 @@ contains
           ! Save previous time step for sake of BDF2 scheme
           write(Unit_tmp, rec=iRec) &
                Dt_BLK(iBlock), &
-               Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock), &
+               CellSize_DB(:,iBLock), &
                XyzStart_BLK(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
                (ImplOld_VCB(iVar,:,:,:,iBlock), iVar = 1, nVar)
@@ -912,7 +899,7 @@ contains
 
        write(Unit_tmp, rec=iRec) &
             Dt_BLK(iBlock), &
-            Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock), &
+            CellSize_DB(:,iBLock), &
             XyzStart_BLK(:,iBlock), &
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
     end do

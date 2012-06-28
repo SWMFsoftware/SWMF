@@ -82,7 +82,7 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModMain,     ONLY: nI, nJ, nK, nBlock
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK
+    use ModGeometry, ONLY: Xyz_DGB, CellSize_DB
     use ModAdvance,  ONLY: State_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, P_, Bx_, By_, Bz_
     use ModPhysics,  ONLY: ShockSlope, Shock_Lstate, Shock_Rstate, g
@@ -110,18 +110,18 @@ contains
 
        Potential_G = &
             Shock_Lstate(Bx_)* &
-            (CosSlope*Y_BLK(:,:,1,iBlock)-SinSlope*x_BLK(:,:,1,iBlock)) &
+            (CosSlope*Xyz_DGB(Y_,:,:,1,iBlock)-SinSlope*Xyz_DGB(x_,:,:,1,iBlock)) &
             -Shock_Lstate(By_)*min(0., &
-            CosSlope*x_BLK(:,:,1,iBlock) + SinSlope*Y_BLK(:,:,1,iBlock)) &
+            CosSlope*Xyz_DGB(x_,:,:,1,iBlock) + SinSlope*Xyz_DGB(Y_,:,:,1,iBlock)) &
             -Shock_Rstate(By_)*max(0., &
-            CosSlope*x_BLK(:,:,1,iBlock) + SinSlope*Y_BLK(:,:,1,iBlock))
+            CosSlope*Xyz_DGB(x_,:,:,1,iBlock) + SinSlope*Xyz_DGB(Y_,:,:,1,iBlock))
 
        ! B = curl A so Bx = dA_z/dy and By = -dAz/dx
        do j=1,nJ; do i=1,nI
           State_VGB(Bx_,i,j,:,iBlock) = &
-               +(Potential_G(i,j+1)-Potential_G(i,j-1)) / (2*Dy_BLK(iBlock))
+               +(Potential_G(i,j+1)-Potential_G(i,j-1)) / (2*CellSize_DB(y_,iBlock))
           State_VGB(By_,i,j,:,iBlock) = &
-               -(Potential_G(i+1,j)-Potential_G(i-1,j)) / (2*Dx_BLK(iBlock))
+               -(Potential_G(i+1,j)-Potential_G(i-1,j)) / (2*CellSize_DB(x_,iBlock))
        end do; end do
 
        ! Recalculate pressure
@@ -140,7 +140,7 @@ contains
     end if
 
     ! Apply perturbation
-    xRot_G = x_BLK(:,:,:,iBlock)+ShockSlope*Y_BLK(:,:,:,iBlock)
+    xRot_G = Xyz_DGB(x_,:,:,:,iBlock)+ShockSlope*Xyz_DGB(Y_,:,:,:,iBlock)
 
     if(IsSmooth)then
        ! Smooth perturbation with sin^2 profile starting at xRot = xLeft
@@ -190,7 +190,7 @@ contains
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
     use ModSize,     ONLY : nI, nJ, nK
-    use ModGeometry, ONLY : x_BLK, y_BLK, dx_BLK
+    use ModGeometry, ONLY : Xyz_DGB, CellSize_DB
     use ModPhysics,  ONLY : ShockSlope
     use ModMain,     ONLY : time_simulation
 
@@ -202,8 +202,8 @@ contains
 
     real :: xCenter, yCenter, xShifted, x_I(5), Distance
     !------------------------------------------------------------------
-    xCenter = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(1,1,1,iBlock))
-    yCenter = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(1,1,1,iBlock))
+    xCenter = 0.5*(Xyz_DGB(x_,nI,nJ,nK,iBlock)+Xyz_DGB(x_,1,1,1,iBlock))
+    yCenter = 0.5*(Xyz_DGB(y_,nI,nJ,nK,iBlock)+Xyz_DGB(y_,1,1,1,iBlock))
     xShifted = xCenter + ShockSlope*yCenter
 
     !write(*,*)'xLeft,xRight,Ux,cSoundX=',xLeft,xRight,Ux,cSoundX
@@ -222,7 +222,7 @@ contains
 
     Distance = minval(abs(x_I - xShifted))
 
-    if(Distance <= nI/2*dx_BLK(iBlock) + DistanceMin)then
+    if(Distance <= nI/2*CellSize_DB(x_,iBlock) + DistanceMin)then
        UserCriteria = 1.0
     else
        UserCriteria = 0.0

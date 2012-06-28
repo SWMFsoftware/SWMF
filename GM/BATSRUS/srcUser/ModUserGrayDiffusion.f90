@@ -1,6 +1,8 @@
 !^CFG COPYRIGHT UM
 !============================================================================
 module ModUser
+  use ModSize, ONLY: x_, y_
+
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -161,10 +163,10 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: x_Blk, y_Blk
+    use ModGeometry,   ONLY: Xyz_DGB
     use ModMain,       ONLY: nI, nJ, nK, x_, y_
-    use ModPhysics,    ONLY: ShockSlope, No2Si_V, Si2No_V, &
-         UnitTemperature_, UnitEnergyDens_, inv_gm1, cRadiationNo
+    use ModPhysics,    ONLY: ShockSlope, &
+         inv_gm1, cRadiationNo
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Erad_, &
          ExtraEint_, p_
 
@@ -187,7 +189,7 @@ contains
 
     do j = 1, nJ; do i = 1, nI
        
-       x = x_Blk(i,j,0,iBlock)*CosSlope + y_Blk(i,j,0,iBlock)*SinSlope - X0
+       x = Xyz_DGB(x_,i,j,0,iBlock)*CosSlope + Xyz_DGB(y_,i,j,0,iBlock)*SinSlope - X0
 
        do iCell = 1, nCellLowrie
           if(xLowrie_C(iCell) >= x) EXIT
@@ -249,7 +251,6 @@ contains
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    integer :: j, k
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !-------------------------------------------------------------------------
@@ -373,12 +374,12 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use BATL_size,     ONLY: nI, nJ, nK, nG, MinI, MaxI
+    use BATL_size,     ONLY: nI, nJ, nK, MinI, MaxI
     use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: x_Blk, y_Blk
+    use ModGeometry,   ONLY: Xyz_DGB
     use ModMain,       ONLY: Time_Simulation
-    use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitT_, &
-         UnitTemperature_, UnitEnergyDens_, ShockSlope, cRadiationNo
+    use ModPhysics,    ONLY: Si2No_V, UnitT_, &
+         ShockSlope, cRadiationNo
     use ModVarIndexes, ONLY: p_, Rho_, Erad_
 
     integer,          intent(in)   :: iBlock
@@ -426,7 +427,7 @@ contains
 
        do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
 
-          x = x_Blk(i,j,k,iBlock)*CosSlope + y_Blk(i,j,k,iBlock)*SinSlope
+          x = Xyz_DGB(x_,i,j,k,iBlock)*CosSlope + Xyz_DGB(y_,i,j,k,iBlock)*SinSlope
           x = x - U0*Time_Simulation*Si2No_V(UnitT_) - X0
 
           do iCell = 1, nCellLowrie
@@ -583,7 +584,7 @@ contains
 
     use ModSize,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, Rho_, p_
-    use ModGeometry,   ONLY: y_Blk, Dy_BLK, Dx_BLK, y1, y2
+    use ModGeometry,   ONLY: Xyz_DGB, CellSize_DB, y1, y2
     use ModPhysics,    ONLY: cRadiationNo
     use ModVarIndexes, ONLY: Rho_, p_, Erad_
 
@@ -606,7 +607,7 @@ contains
     LOOPCELL: do k = 1, nK; do j=1, nJ; do i = -1, nI+2
        Temperature = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
        if(Temperature > TemperatureMin &
-            .and. abs(y_Blk(i,j,k,iBlock)) < DyRefine)then
+            .and. abs(Xyz_DGB(y_,i,j,k,iBlock)) < DyRefine)then
           UserCriteria = 1.0
           EXIT LOOPCELL
        end if
@@ -616,8 +617,8 @@ contains
     LOOPCELL2: do k = 1, nK; do j=1, nJ; do i = 0, nI+1
        TradL = sqrt(sqrt(State_VGB(Erad_,i-1,j,k,iBlock)/cRadiationNo))
        TradR = sqrt(sqrt(State_VGB(Erad_,i+1,j,k,iBlock)/cRadiationNo))
-       DTradDx = (TradR - TradL)*0.5/Dx_Blk(iBlock)
-       if(DTradDx > DTradDxMin .and. abs(y_Blk(i,j,k,iBlock)) < DyRefine)then
+       DTradDx = (TradR - TradL)*0.5/CellSize_DB(x_,iBlock)
+       if(DTradDx > DTradDxMin .and. abs(Xyz_DGB(y_,i,j,k,iBlock)) < DyRefine)then
           UserCriteria = 1.0
           EXIT LOOPCELL2
        end if

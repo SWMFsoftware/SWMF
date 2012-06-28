@@ -149,7 +149,7 @@ contains
     use ModProcMH
     use ModMain,   ONLY: iteration_number, nBLK,Unused_B,nBlockALL
     use ModSize,   ONLY: nI,nJ,nK
-    use ModGeometry, ONLY: x_BLK,y_BLK, z_BLK, dz_BLK,dx_BLK
+    use ModGeometry, ONLY: Xyz_DGB, dz_BLK,CellSize_DB
     use ModIoUnit, ONLY: io_unit_new
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
@@ -173,10 +173,10 @@ contains
     do iBLK=1,nBLK
        if(Unused_B(iBLK)) CYCLE
        do k=1,nK ; do j=1,nJ ; do i=1,nI
-          x=x_BLK(i,j,k,iBLK)
-          dx=dx_BLK(iBLK)
-          z=z_BLK(i,j,k,iBLK)
-          dz=dz_BLK(iBLK)
+          x=Xyz_DGB(x_,i,j,k,iBLK)
+          dx=CellSize_DB(x_,iBLK)
+          z=Xyz_DGB(z_,i,j,k,iBLK)
+          dz=CellSize_DB(z_,iBLK)
           if((z< dz) .and. (z >=0.0) .and. (x<dx) .and. (x>=0.0)) then
              nCell=nCell+1
           end if
@@ -197,11 +197,11 @@ contains
        do iBLK=1,nBLK
           !if(Unused_B(iBLK)) CYCLE
           do k=1,nK ; do j=1,nJ ; do i=1,nI
-             x=x_BLK(i,j,k,iBLK)
-             y=y_BLK(i,j,k,iBLK)
-             z=z_BLK(i,j,k,iBLK)
-             dx=dx_BLK(iBLK)
-             dz=dz_BLK(iBLK)
+             x=Xyz_DGB(x_,i,j,k,iBLK)
+             y=Xyz_DGB(y_,i,j,k,iBLK)
+             z=Xyz_DGB(z_,i,j,k,iBLK)
+             dx=CellSize_DB(x_,iBLK)
+             dz=CellSize_DB(z_,iBLK)
              if((z< dz) .and. (z >=0.0) .and. (x<dx) .and. (x>=0.0)) then
                 do iFreq=1,nWaveHalf
                    IwPlusSi  = State_VGB(AlfvenWavePlusFirst_+iFreq-1,i,j,k,iBLK)

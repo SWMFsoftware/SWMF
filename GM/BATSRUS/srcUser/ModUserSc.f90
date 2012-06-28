@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
 module ModUser
-  use ModReadParam, ONLY: lStringLine
+  use ModSize,      ONLY: x_, y_, z_
   use ModUserEmpty,                                     &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
@@ -47,14 +47,13 @@ contains
   subroutine user_set_face_boundary(VarsGhostFace_V)
     use EEE_ModMain,   ONLY: EEE_get_state_BC
     use ModSize,       ONLY: MaxDim
-    use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, &
+    use ModMain,       ONLY:x_,y_,z_, UseRotatingFrame, &
          n_step, Iteration_Number,body2_,UseOrbit
-    use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
-    use ModAdvance,    ONLY: State_VGB
+    use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,Bz_,P_
     use ModPhysics,    ONLY: inv_gm1,OmegaBody,Si2No_V, &
-         UnitB_,UnitU_,UnitRho_,UnitP_,No2Si_V,UnitX_,rBody, &
-         xBody2,yBody2,zBody2,OrbitPeriod,FaceState_VI
-    use ModNumConst,   ONLY: cTolerance,cTiny,cTwoPi, cZero
+         UnitB_,UnitU_,UnitRho_,UnitP_,No2Si_V,UnitX_, &
+         xBody2,yBody2,OrbitPeriod,FaceState_VI
+    use ModNumConst,   ONLY:cTwoPi, cZero
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
          iFace, jFace, kFace, iSide, iBlockBc,iBoundary
 
@@ -180,7 +179,7 @@ contains
     ! This subroutine computes the cell values for density and pressure 
     ! assuming an isothermal atmosphere
     
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,   ONLY: Xyz_DGB,R_BLK
     use ModNumConst
     use ModPhysics,    ONLY: GBody,BodyRho_I,Si2No_V,UnitTemperature_
     use ModExpansionFactors,  ONLY: UMin,CoronalT0Dim
@@ -196,9 +195,9 @@ contains
     !--------------------------------------------------------------------------
 
     call get_gamma_emp( &
-         x_BLK(iCell,jCell,kCell,iBlock), &
-         y_BLK(iCell,jCell,kCell,iBlock), &
-         z_BLK(iCell,jCell,kCell,iBlock), &
+         Xyz_DGB(x_,iCell,jCell,kCell,iBlock), &
+         Xyz_DGB(y_,iCell,jCell,kCell,iBlock), &
+         Xyz_DGB(z_,iCell,jCell,kCell,iBlock), &
          GammaCell)
     call get_bernoulli_integral(Xyz_DGB(:,iCell,jCell,kCell,iBlock) &
          /r_BLK(iCell,jCell,kCell,iBlock), UFinal)
@@ -222,7 +221,7 @@ contains
     use ModMain, ONLY: nI,nJ,nK,nBLK,Unused_B,x_,y_,z_,n_step,iteration_number
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
-    use ModPhysics,   ONLY: Si2No_V,UnitU_,UnitRho_,UnitP_,UnitB_
+    use ModPhysics,   ONLY: Si2No_V,UnitRho_,UnitP_,UnitB_
     use ModGeometry
     use ModEnergy,    ONLY: calc_energy_cell
     use BATL_lib, ONLY: CellVolume_GB
@@ -239,9 +238,9 @@ contains
        if(Unused_B(iBLK))CYCLE
        do k=1,nK; do j=1,nJ; do i=1,nI
 
-          x_D(x_) = x_BLK(i,j,k,iBLK)
-          x_D(y_) = y_BLK(i,j,k,iBLK)
-          x_D(z_) = z_BLK(i,j,k,iBLK)
+          x_D(x_) = Xyz_DGB(x_,i,j,k,iBLK)
+          x_D(y_) = Xyz_DGB(y_,i,j,k,iBLK)
+          x_D(z_) = Xyz_DGB(z_,i,j,k,iBLK)
 
           call EEE_get_state_init(x_D,Rho,B_D,p, &
                n_step,iteration_number)
@@ -305,9 +304,9 @@ contains
     State_VGB(:,1:nI,1:nJ,1:nK,iBlock) = 1.0e-31
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       x = x_BLK(i,j,k,iBlock)
-       y = y_BLK(i,j,k,iBlock)
-       z = z_BLK(i,j,k,iBlock)
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
        R = max(R_BLK(i,j,k,iBlock),cTolerance)
        ROne = max(1.0,R)
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
@@ -331,7 +330,7 @@ contains
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
 
     use EEE_ModMain,    ONLY: EEE_get_B0
-    use ModPhysics,     ONLY: Io2No_V,Si2No_V,UnitB_
+    use ModPhysics,     ONLY:Si2No_V,UnitB_
     use ModMagnetogram, ONLY: get_magnetogram_field
 
     real, intent(in):: xInput,yInput,zInput
@@ -356,7 +355,6 @@ contains
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB, B0_DGB
-    use ModMain,    ONLY: nStage
     use ModPhysics, ONLY: inv_gm1
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
@@ -364,7 +362,7 @@ contains
 
     integer,intent(in):: iStage,iBlock
     integer:: i,j,k
-    real:: DensCell,PresCell,GammaCell,Beta
+    real:: DensCell,PresCell,GammaCell
     !------------------------------------------------------------------------
     call update_states_MHD(iStage, iBlock)
 
@@ -398,7 +396,7 @@ contains
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0_DGB
     use ModPhysics,    ONLY: inv_gm1,&
-         No2Si_V,UnitEnergydens_,UnitX_,UnitU_,UnitRho_
+         No2Si_V,UnitEnergydens_,UnitX_,UnitRho_
 
     real, intent(out):: VarValue
     character (LEN=10), intent(in):: TypeVar 

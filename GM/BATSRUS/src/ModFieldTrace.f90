@@ -181,7 +181,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   use CON_ray_trace, ONLY: ray_exchange, ray_get, ray_put
 
   use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, ProcTest
-  use ModGeometry, ONLY: XyzStart_BLK, Dx_BLK
+  use ModGeometry, ONLY: XyzStart_BLK, CellSize_DB
   use ModProcMH
   use ModKind
 
@@ -400,7 +400,7 @@ contains
              write(*,*)'ERROR for iStart_D    =',iStart_D
              write(*,*)'ERROR for XyzRay_D    =',XyzRay_D
              write(*,*)'XyzStart_BLK, Dx_BLK  =',XyzStart_BLK(:,jBlock),&
-                  Dx_BLK(jBlock)
+                  CellSize_DB(x_,jBlock)
              call stop_mpi(&
                   'GM_ERROR in follow_ray: continues in same BLOCK')
           end if
@@ -543,7 +543,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   use ModNumConst, ONLY: cTiny
   use ModMain, ONLY: TypeCoordSystem, nI, nJ, nK
   use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
-       Dx_BLK, Dy_BLK, Dz_BLK, rMin_BLK, x1,x2,y1,y2,z1,z2
+       rMin_BLK, x1,x2,y1,y2,z1,z2
   use CON_planet, ONLY: DipoleStrength
   use ModMain,    ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   use ModMultiFLuid
@@ -1942,7 +1942,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, B0_DGB
   use ModProcMH,  ONLY: iProc, iComm
   use ModMpi
-  use ModGeometry,       ONLY: dx_BLK, dy_BLK, dz_BLK
+  use ModGeometry,       ONLY: CellSize_DB
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use BATL_lib,          ONLY: message_pass_cell
   use ModCoordTransform, ONLY: xyz_to_sph
@@ -2012,17 +2012,17 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
            bGradB1_DGB(1,i,j,k,iBlock) = 0.5*sum(b_D *  &
                 ( State_VGB(Bx_:Bz_,i+1,j,k,iBlock)     &
                 - State_VGB(Bx_:Bz_,i-1,j,k,iBlock))) / &
-                dx_BLK(iBlock)
+                CellSize_DB(x_,iBlock)
 
            bGradB1_DGB(2,i,j,k,iBlock) = 0.5*sum(b_D *  &
                 ( State_VGB(Bx_:Bz_,i,j+1,k,iBlock)     & 
                 - State_VGB(Bx_:Bz_,i,j-1,k,iBlock))) / &
-                dy_BLK(iBlock)
+                CellSize_DB(y_,iBlock)
 
            bGradB1_DGB(3,i,j,k,iBlock) = 0.5*sum(b_D * &
                 ( State_VGB(Bx_:Bz_,i,j,k+1,iBlock) &
                 - State_VGB(Bx_:Bz_,i,j,k+1,iBlock))) / &
-                dz_BLK(iBlock)
+                CellSize_DB(z_,iBlock)
 
         end do; end do; end do
      end do
@@ -2232,7 +2232,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_, B0_DGB
   use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0
   use ModPhysics,  ONLY: rBody
-  use ModGeometry, ONLY: Dx_BLK, Dy_BLK, Dz_BLK
+  use ModGeometry, ONLY: CellSize_DB, x_, y_, z_
   use ModMpi,      ONLY: MPI_WTIME
 
   implicit none
@@ -2288,9 +2288,9 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
 !!! call message_pass_cell(Bxyz_DGB...)
 !!! outer boundaries???
      do iBlock = 1, nBlock; if(Unused_B(iBlock)) CYCLE
-        Dx2Inv = 0.5/Dx_BLK(iBlock)
-        Dy2Inv = 0.5/Dy_BLK(iBlock)
-        Dz2Inv = 0.5/Dz_BLK(iBlock)
+        Dx2Inv = 0.5/CellSize_DB(x_,iBlock)
+        Dy2Inv = 0.5/CellSize_DB(y_,iBlock)
+        Dz2Inv = 0.5/CellSize_DB(z_,iBlock)
 
         do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
            Bxyz_DGB(1,i,j,k,iBlock) = &

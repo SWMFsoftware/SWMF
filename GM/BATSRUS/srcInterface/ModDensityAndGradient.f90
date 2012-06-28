@@ -86,10 +86,9 @@ contains
   subroutine get_density_local(&
        nPartial,iGetStart,Get,W,State_V,nVar)
     !USES:
-    use ModAdvance,ONLY: State_VGB, &
-         rho_
-    use ModGeometry,ONLY:Dx_BLK,Dy_BLK,Dz_BLK
-    use ModPhysics, ONLY : No2Si_V, UnitRho_
+    use ModAdvance,ONLY: State_VGB, rho_
+    use ModGeometry,ONLY: CellSize_DB, x_, y_, z_
+    use ModPhysics, ONLY: No2Si_V, UnitRho_
     use CON_router
     !INPUT ARGUMENTS:
     integer,intent(in)::nPartial,iGetStart,nVar
@@ -110,17 +109,18 @@ contains
     Weight = W%Weight_I(iGetStart)
     State_V(1)= Weight*(&
          State_VGB(rho_,i+1,j,k,iBlock)-State_VGB(rho_,i-1,j,k,iBlock))&
-         /(2*Dx_BLK(iBlock))
+         /(2*CellSize_DB(x_,iBlock))
     State_V(2)= Weight*(&
          State_VGB(rho_,i,j+1,k,iBlock)-State_VGB(rho_,i,j-1,k,iBlock))&
-         /(2*Dy_BLK(iBlock))
+         /(2*CellSize_DB(y_,iBlock))
     State_V(3)= Weight*(&
          State_VGB(rho_,i,j,k+1,iBlock)-State_VGB(rho_,i,j,k-1,iBlock))&
-         /(2*Dz_BLK(iBlock))
+         /(2*CellSize_DB(z_,iBlock))
     State_V(MaxDim+1)= Weight*&
          State_VGB(rho_,i,j,k,iBlock)
     State_V(MaxDim+1+1)=Weight*&
-         min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
+         minval(CellSize_DB(:,iBlock))
+    
     do iGet=iGetStart+1,iGetStart+nPartial-1
        i      = Get%iCB_II(1,iGet)
        j      = Get%iCB_II(2,iGet)
@@ -129,17 +129,17 @@ contains
        Weight = W%Weight_I(iGet)
        State_V(1)= State_V(1)+Weight*(&
             State_VGB(rho_,i+1,j,k,iBlock)-State_VGB(rho_,i-1,j,k,iBlock))&
-            /Dx_BLK(iBlock)
+            /CellSize_DB(x_,iBlock)
        State_V(2)= State_V(2)+Weight*(&
             State_VGB(rho_,i,j+1,k,iBlock)-State_VGB(rho_,i,j-1,k,iBlock))&
-            /Dy_BLK(iBlock)
+            /CellSize_DB(y_,iBlock)
        State_V(3)= State_V(3)+Weight*(&
             State_VGB(rho_,i,j,k+1,iBlock)-State_VGB(rho_,i,j,k-1,iBlock))&
-            /Dz_BLK(iBlock)
+            /CellSize_DB(z_,iBlock)
        State_V(MaxDim+1)  = State_V(MaxDim+1)+Weight*&
             State_VGB(rho_,i,j,k,iBlock)
        State_V(MaxDim+1+1)= State_V(MaxDim+1+1)+Weight*&
-            min(Dx_BLK(iBlock),Dy_BLK(iBlock),Dz_BLK(iBlock))
+            minval(CellSize_DB(:,iBlock))
 
     end do
     !Convert density to SI

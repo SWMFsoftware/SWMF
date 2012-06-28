@@ -331,7 +331,7 @@ contains
          iNewGrid, iNewDecomposition, Unused_B, nBlock
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_
-    use ModGeometry, ONLY: x_BLK,R_BLK
+    use ModGeometry, ONLY: Xyz_DGB,R_BLK
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
     use ModPointImplicit, ONLY: UsePointImplicit_B
@@ -387,13 +387,13 @@ contains
           end do; end do; end do
           ! calculate optical depth and producation rate
           do k=1,nK; do j=1,nJ; do i=1,nI
-             cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlockLoop)))*&
-                  x_BLK(i,j,k,iBlockLoop)/max(R_BLK(i,j,k,iBlockLoop),1.0e-3)&
+             cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlockLoop)))*&
+                  Xyz_DGB(x_,i,j,k,iBlockLoop)/max(R_BLK(i,j,k,iBlockLoop),1.0e-3)&
                   +5.0e-4
              Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlockLoop,1:MaxNuSpecies)*&
                   CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
                   6.0e-3)/cosSZA
-             if( Optdep<11.5 .and. x_BLK(i,j,k,iBlockLoop) > 0.0) then 
+             if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlockLoop) > 0.0) then 
                 Productrate_CB(i,j,k,iBlockLoop) = max(exp(-Optdep), 1.0e-5)
              else
                 Productrate_CB(i,j,k,iBlockLoop) = 1.0e-5
@@ -672,7 +672,7 @@ contains
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
-    use ModGeometry, ONLY :x_BLK,R_BLK,true_cell
+    use ModGeometry, ONLY :Xyz_DGB,R_BLK,true_cell
     use ModIO, ONLY : restart
     use ModPhysics
 
@@ -721,13 +721,13 @@ contains
 
     ! calculate optical depth and producation rate
     do k=1,nK; do j=1,nJ; do i=1,nI
-       cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,iBlock)))*&
-            x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
+       cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+            Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
             +5.0e-4
        Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
             CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
             6.0e-3)/cosSZA
-       if( Optdep<11.5 .and. x_BLK(i,j,k,iBlock) > 0.0) then 
+       if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then 
           Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
        else
           Productrate_CB(i,j,k,iBlock) = 1.0e-5
@@ -739,8 +739,8 @@ contains
 
        do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
           if (R_BLK(i,j,k,iBlock)< 1.0) then
-             cosSZA=(0.5+sign(0.5,x_BLK(i,j,k,iBlock)))*&
-                  x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
+             cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
+                  Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                   1.0e-3
              State_VGB(:,i,j,k,iBlock)   =  CellState_VI(:,body1_)
              !           State_VGB(rhoOp_,i,j,k,iBlock)= 0.0
@@ -776,8 +776,8 @@ contains
           if (true_cell(i,j,k,iBlock).and. &
                R_BLK(i,j,k,iBlock)<1.2*Rbody) then
 
-             cosSZA=(0.5+sign(0.5,x_BLK(i,j,k,iBlock)))*&
-                  x_BLK(i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
+             cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
+                  Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                   1.0e-3
 
              State_VGB(rhoCO2p_,i,j,k,iBlock)= Rate_I(CO2_hv__CO2p_em_)*&
@@ -1144,7 +1144,7 @@ contains
 
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModGeometry,   ONLY: Xyz_DGB,R_BLK
     use ModMain,       ONLY: Unused_B
     use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
          rhoUx_,rhoUy_,rhoUz_
@@ -1180,9 +1180,9 @@ contains
        if (Unused_B(iBLK)) CYCLE
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           tmp1_BLK(i,j,k,iBLK) = State_VGB(index,i,j,k,iBLK)* &
-               (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-               +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-               +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+               (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
+               +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
+               +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
                )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
        end do; end do; end do
     end do

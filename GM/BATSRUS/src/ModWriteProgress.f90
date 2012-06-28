@@ -59,7 +59,7 @@ subroutine write_runtime_values()
   use ModProcMH,    ONLY: iProc, nProc, iComm
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModAdvance,   ONLY: FluxType
-  use ModGeometry,  ONLY: x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue,dx_BLK
+  use ModGeometry,  ONLY: x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue
   use ModParallel,  ONLY: proc_dims
   use ModImplicit,  ONLY: UseSplitSemiImplicit, &     !^CFG IF IMPLICIT
        UseImplicit, UseSemiImplicit, TypeSemiImplicit !^CFG IF IMPLICIT
@@ -79,10 +79,6 @@ subroutine write_runtime_values()
   !------------------------------------------------------------------------
 
   ! Find new min and max dx
-  DxMin = minval(dx_BLK, MASK=(.not.Unused_B))
-  DxMax = maxval(dx_BLK, MASK=(.not.Unused_B))
-  call MPI_allreduce(DxMin, minDXvalue, 1, MPI_REAL, MPI_MIN, iComm, iError)
-  call MPI_allreduce(DxMax, maxDXvalue, 1, MPI_REAL, MPI_MAX, iComm, iError)
   call count_true_cells
 
   if (iProc /= 0 .or. lVerbose<=0) RETURN

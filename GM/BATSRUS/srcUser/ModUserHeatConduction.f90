@@ -370,7 +370,7 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: x_Blk, y_Blk
+    use ModGeometry,   ONLY: Xyz_DGB
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation, x_, y_
     use ModPhysics,    ONLY: ShockSlope, cRadiationNo, inv_gm1
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, p_, ExtraEint_, Pe_
@@ -398,8 +398,8 @@ contains
 
     case('rmtv')
        do j=-1,nJ+2; do i=-1,nI+2
-          x = x_Blk(i,j,0,iBlock)
-          y = y_Blk(i,j,0,iBlock)
+          x = Xyz_DGB(x_,i,j,0,iBlock)
+          y = Xyz_DGB(y_,i,j,0,iBlock)
           r = sqrt(x**2+y**2)
 
           do iCell = 1, nCellRef
@@ -452,7 +452,7 @@ contains
 
        do j = -1, nJ + 2; do i = -1, nI+2
 
-          x = x_Blk(i,j,0,iBlock)*CosSlope + y_Blk(i,j,0,iBlock)*SinSlope - x0
+          x = Xyz_DGB(x_,i,j,0,iBlock)*CosSlope + Xyz_DGB(y_,i,j,0,iBlock)*SinSlope - x0
 
           do iCell = 1, nCellRef
              if(rRef_C(iCell) >= x) EXIT
@@ -517,7 +517,7 @@ contains
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: x_Blk, y_Blk
+    use ModGeometry,   ONLY: Xyz_DGB
     use ModImplicit,   ONLY: StateSemi_VGB
     use ModMain,       ONLY: nI, nJ
     use ModVarIndexes, ONLY: Rho_, RhoUx_, p_
@@ -596,7 +596,7 @@ contains
           select case(iSide)
           case(2) ! z-direction in rz-geometry
              do j = -1, nJ+2; do i = nI+1, nI+2
-                r = sqrt(x_Blk(i,j,1,iBlock)**2+y_Blk(i,j,1,iBlock)**2)
+                r = sqrt(Xyz_DGB(x_,i,j,1,iBlock)**2+Xyz_DGB(y_,i,j,1,iBlock)**2)
                 State_VGB(Rho_,i,j,:,iBlock) = 1.0/r**(19.0/9.0)
                 State_VGB(RhoUx_:p_-1,i,j,:,iBlock) = &
                      State_VGB(RhoUx_:p_-1,nI,j,:,iBlock)
@@ -604,7 +604,7 @@ contains
              end do; end do
           case(4) ! r-direction in rz-geometry
              do j = nJ+1, nJ+2; do i = -1, nI+2
-                r = sqrt(x_Blk(i,j,1,iBlock)**2+y_Blk(i,j,1,iBlock)**2)
+                r = sqrt(Xyz_DGB(x_,i,j,1,iBlock)**2+Xyz_DGB(y_,i,j,1,iBlock)**2)
                 State_VGB(Rho_,i,j,:,iBlock) = 1.0/r**(19.0/9.0)
                 State_VGB(RhoUx_:p_-1,i,j,:,iBlock) = &
                      State_VGB(RhoUx_:p_-1,i,nJ,:,iBlock)
@@ -696,7 +696,7 @@ contains
 
   subroutine get_temperature_gaussian(i, iBlock, Temperature)
 
-    use ModGeometry, ONLY: x_Blk
+    use ModGeometry, ONLY: Xyz_DGB
     use ModMain,     ONLY: Time_Simulation
     use ModNumConst, ONLY: cPi
 
@@ -708,7 +708,7 @@ contains
 
     Spread = 4.0*HeatConductionCoef*Time_Simulation
     Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
-         *exp(-x_Blk(i,1,1,iBlock)**2/Spread)
+         *exp(-Xyz_DGB(x_,i,1,1,iBlock)**2/Spread)
 
   end subroutine get_temperature_gaussian
 
@@ -734,7 +734,7 @@ contains
 
   subroutine get_temperature_rz(i, j, iBlock, Temperature)
 
-    use ModGeometry, ONLY: x_Blk, y_Blk, y2
+    use ModGeometry, ONLY: Xyz_DGB, y2
     use ModMain,     ONLY: Time_Simulation
     use ModNumConst, ONLY: cPi
 
@@ -746,11 +746,11 @@ contains
 
     Lambda = -(3.831705970/y2)**2
     Spread = 4.0*HeatConductionCoef*Time_Simulation
-    r = abs(y_BLK(i,j,1,iBlock))
+    r = abs(Xyz_DGB(y_,i,j,1,iBlock))
     Temperature = Tmin + AmplitudeTemperature &
          *exp(Lambda*HeatConductionCoef*Time_Simulation) &
          *bessj0(sqrt(-Lambda)*r) &
-         /(sqrt(cPi*Spread))*exp(-x_Blk(i,j,1,iBlock)**2/Spread)
+         /(sqrt(cPi*Spread))*exp(-Xyz_DGB(x_,i,j,1,iBlock)**2/Spread)
 
   end subroutine get_temperature_rz
 
@@ -788,7 +788,7 @@ contains
 
   subroutine get_temperature_parcond(i, j, iBlock, Temperature)
 
-    use ModGeometry, ONLY: x_Blk, y_Blk
+    use ModGeometry, ONLY: Xyz_DGB
     use ModMain,     ONLY: Time_Simulation
     use ModNumConst, ONLY: cPi
 
@@ -798,8 +798,8 @@ contains
     real :: x, y, xx, yy, Spread, Spread0
     !--------------------------------------------------------------------------
 
-    x = x_Blk(i,j,0,iBlock)
-    y = y_Blk(i,j,0,iBlock)
+    x = Xyz_DGB(x_,i,j,0,iBlock)
+    y = Xyz_DGB(y_,i,j,0,iBlock)
     xx = (Bx*x+By*y)/sqrt(Bx**2+By**2)
     yy = (Bx*y-By*x)/sqrt(Bx**2+By**2)
 
@@ -820,7 +820,7 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB, UseIdealEos, UseElectronPressure
-    use ModGeometry,   ONLY: x_Blk, y_Blk
+    use ModGeometry,   ONLY: Xyz_DGB
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, UnitT_, ShockSlope, &
          ElectronTemperatureRatio
@@ -875,8 +875,8 @@ contains
 
     case('rmtv')
        do j=-1,nJ+2; do i=-1,nI+2
-          x = x_Blk(i,j,0,iBlock)
-          y = y_Blk(i,j,0,iBlock)
+          x = Xyz_DGB(x_,i,j,0,iBlock)
+          y = Xyz_DGB(y_,i,j,0,iBlock)
           r = sqrt(x**2+y**2)
 
           do iCell = 1, nCellFin
@@ -942,7 +942,7 @@ contains
 
           do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
 
-             x = x_Blk(i,j,k,iBlock)*CosSlope + y_Blk(i,j,k,iBlock)*SinSlope
+             x = Xyz_DGB(x_,i,j,k,iBlock)*CosSlope + Xyz_DGB(y_,i,j,k,iBlock)*SinSlope
              x = x - u0*Time_Simulation*Si2No_V(UnitT_) - x0
 
              do iCell = 1, nCellRef

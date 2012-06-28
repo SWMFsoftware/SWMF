@@ -250,7 +250,7 @@ contains
     use ModPhysics
     use ModMain, ONLY: Body1_, time_simulation,x_,y_,z_
     use ModAdvance
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
+    use ModGeometry, ONLY: Xyz_DGB, r_BLK, IsBoundaryBlock_IB
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModBlockData,ONLY: get_block_data, put_block_data, use_block_data

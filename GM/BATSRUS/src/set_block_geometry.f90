@@ -5,11 +5,15 @@ subroutine fix_block_geometry(iBlock)
   use ModMain, ONLY: body1_, body2_, ExtraBc_,&
        UseExtraBoundary, ProcTest, BlkTest   
   use ModMain, ONLY: UseBody2                    !^CFG IF SECONDBODY
-  use ModGeometry ! , ONLY: true_cell, dx_blk, dy_blk, dz_blk
+  use ModGeometry, ONLY: MinBoundary, MaxBoundary, IsBoundaryBlock_IB, &
+       IsBoundaryCell_GI, R2_BLK, Rmin2_BLK, Body_BLK, &
+       far_field_BCs_BLK, true_blk, true_cell
   use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
-  use ModParallel, ONLY : periodic3D
   use ModBoundaryCells
-  use BATL_lib, ONLY: Xyz_DGB
+  use BATL_lib, ONLY: iProc, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
+       Xyz_DGB, CellSize_DB, &
+       CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
+
   implicit none
 
   integer, intent(in) :: iBlock
@@ -29,33 +33,25 @@ subroutine fix_block_geometry(iBlock)
   if (UseBody2) then                        !^CFG IF SECONDBODY BEGIN
      ! calculate the radius as measured from the second body
      ! Note that the second body can move
-     R2_BLK(:,:,:,iBlock) = sqrt( &
-          (Xyz_DGB(x_,:,:,:,iBlock)-xBody2)**2 + &
-          (Xyz_DGB(y_,:,:,:,iBlock)-yBody2)**2 + &
-          (Xyz_DGB(z_,:,:,:,iBlock)-zBody2)**2)
+     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+        R2_BLK(i,j,k,iBlock) = sqrt( &
+          sum( (Xyz_DGB(:,i,j,k,iBlock)- (/xBody2, yBody2, zBody2/))**2 ))
+     end do; end do; end do
      Rmin2_BLK(iBlock) = minval(R2_BLK(:,:,:,iBlock))
   else
      Rmin2_BLK(iBlock) = 0.0
   end if                                    !^CFG END SECONDBODY
 
-  far_field_BCs_BLK(iBlock) = &
-       (((xyzStart_BLK(1,iBlock)-dx_BLK(iBlock))<XyzMin_D(1).or.&
-       (xyzStart_BLK(1,iBlock)+nI*dx_BLK(iBlock))>XyzMax_D(1)) &
-       .and. .not.periodic3D(1)) .or. &
-       (((xyzStart_BLK(2,iBlock)-dy_BLK(iBlock))<XyzMin_D(2).or.&
-       (xyzStart_BLK(2,iBlock)+nJ*dy_BLK(iBlock))>XyzMax_D(2)) &
-       .and. .not.periodic3D(2)).or. &
-       (((xyzStart_BLK(3,iBlock)-dz_BLK(iBlock))<XyzMin_D(3).or.&
-       (xyzStart_BLK(3,iBlock)+nK*dz_BLK(iBlock))>XyzMax_D(3)) &
-       .and. .not.periodic3D(3))  
-
+  far_field_BCs_BLK(iBlock) = any( .not. IsPeriodic_D .and.   &
+       (    CoordMin_DB(:,iBlock) <= CoordMin_D + 1e-12       &
+       .or. CoordMax_DB(:,iBlock) >= CoordMax_D - 1e-12) )
 
   if(DoTestMe)then
      write(*,*)NameSub,': far_field_bcs_blk=',far_field_bcs_BLK(iBlock)
-     write(*,*)NameSub,': xyzStart_BLK=',xyzStart_BLK(:,BlkTest)
-     write(*,*)NameSub,': dx,dy,dz= ',dx_BLK(BlkTest),dy_BLK(iBlock),dz_BLK(iBlock)
-     write(*,*)NameSub,': xyzmin=',XyzMin_D(:)
-     write(*,*)NameSub,': xyzmax=',XyzMax_D(:)
+     write(*,*)NameSub,': CoordMin_DB=', CoordMin_DB(:,iBlock)
+     write(*,*)NameSub,': CellSize_D = ',CellSize_DB(:,iBlock)
+     write(*,*)NameSub,': CoordMin_D =', CoordMin_D
+     write(*,*)NameSub,': CoordMax_D =', CoordMax_D
   end if
 
   !\

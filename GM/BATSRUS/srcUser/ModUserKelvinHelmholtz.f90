@@ -22,7 +22,7 @@ contains
     use ModMain,     ONLY: nBlock, Unused_B, ProcTest
     use ModProcMH,   ONLY: iProc
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, y1, y2, z1, z2
+    use ModGeometry, ONLY: Xyz_DGB, y1, y2, z1, z2
     use ModNumConst, ONLY: cTwoPi
     use ModEnergy,   ONLY: calc_energy_ghost
 
@@ -49,16 +49,16 @@ contains
        !Perturbation in Ux = 
        !    Ux0 * exp(-(x/xWidthUx)**2) * cos(ky*y) * cos(kz*z)
 
-       where(abs(x_BLK(:,:,:,iBlock))<xWidthUx)            &
+       where(abs(Xyz_DGB(x_,:,:,:,iBlock))<xWidthUx)            &
             State_VGB(RhoUx_,:,:,:,iBlock)=                   &
-            AmplUx*exp(-(x_BLK(:,:,:,iBlock)/xWidthUx)**2)   &
-            *cos(yWaveUx*cTwoPi/(y2-y1)*y_BLK(:,:,:,iBlock)) &
-            *cos(zWaveUx*cTwoPi/(z2-z1)*z_BLK(:,:,:,iBlock)) &
+            AmplUx*exp(-(Xyz_DGB(x_,:,:,:,iBlock)/xWidthUx)**2)   &
+            *cos(yWaveUx*cTwoPi/(y2-y1)*Xyz_DGB(y_,:,:,:,iBlock)) &
+            *cos(zWaveUx*cTwoPi/(z2-z1)*Xyz_DGB(z_,:,:,:,iBlock)) &
             *State_VGB(Rho_,:,:,:,iBlock)
 
        ! Shear flow in Uy= Uy0 * tanh(x/xWidthUy)
        State_VGB(RhoUy_,:,:,:,iBlock) = &
-            AmplUy*tanh(x_BLK(:,:,:,iBlock)/xWidthUy) &
+            AmplUy*tanh(Xyz_DGB(x_,:,:,:,iBlock)/xWidthUy) &
             * State_VGB(Rho_,:,:,:,iBlock)
 
        call calc_energy_ghost(iBlock)

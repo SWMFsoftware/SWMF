@@ -358,7 +358,7 @@ contains
   !=====================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+    use ModGeometry, ONLY: Xyz_DGB
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, rho_, p_
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope
@@ -401,26 +401,26 @@ contains
        end if
 
        do iVar=1,nVar
-          where(abs(x_BLK(:,:,:,iBlock))<Width_I(iVar))   &          
+          where(abs(Xyz_DGB(x_,:,:,:,iBlock))<Width_I(iVar))   &          
                State_VGB(iVar,:,:,:,iBlock)=              &
                State_VGB(iVar,:,:,:,iBlock)               &
                + Ampl_I(iVar)*cos(Phase_I(iVar)           &
-               + KxWave_I(iVar)*x_BLK(:,:,:,iBlock)       &
-               + KyWave_I(iVar)*y_BLK(:,:,:,iBlock)       &
-               + KzWave_I(iVar)*z_BLK(:,:,:,iBlock))
+               + KxWave_I(iVar)*Xyz_DGB(x_,:,:,:,iBlock)       &
+               + KyWave_I(iVar)*Xyz_DGB(y_,:,:,:,iBlock)       &
+               + KzWave_I(iVar)*Xyz_DGB(z_,:,:,:,iBlock))
        end do
 
     case('GEM')
 !       write(*,*)'GEM problem set up'
-       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(z_BLK(:,:,:,iBlock)/lamda0)
+       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(Xyz_DGB(z_,:,:,:,iBlock)/lamda0)
        State_VGB(p_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock) &
             +0.5*(B0**2-State_VGB(Bx_,:,:,:,iBlock)**2)
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
        !!!set intial perturbation
        State_VGB(Bx_,:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)-  Ay* cPi/ Lz &
-            *cos(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*sin(cPi*z_BLK(:,:,:,iBlock)/Lz)
+            *cos(cTwoPi*Xyz_DGB(x_,:,:,:,iBlock)/Lx)*sin(cPi*Xyz_DGB(z_,:,:,:,iBlock)/Lz)
        State_VGB(Bz_,:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock)+ Ay* cTwoPi/ Lx &
-            *sin(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*cos(cPi*z_BLK(:,:,:,iBlock)/Lz)
+            *sin(cTwoPi*Xyz_DGB(x_,:,:,:,iBlock)/Lx)*cos(cPi*Xyz_DGB(z_,:,:,:,iBlock)/Lz)
        
     case default
        if(iProc==0) call stop_mpi( &
