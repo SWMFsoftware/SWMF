@@ -27,7 +27,7 @@ MODULE CRASH_M_projE
   !\
   ! Minimal and maximal values for E/T_e ratio
   !/
-  real,parameter :: Umin=1d-2, Umax=1d2
+  real,parameter :: Umin=1d-2, Umax=1.50d2
   !\
   ! Number of grid points per a decimal order
   !/ 
@@ -72,7 +72,7 @@ MODULE CRASH_M_projE
   integer,save :: last_ctrb(0:mxOut),first_ctrb(1:mxOut+1)
   real,save :: coef_ctrb(mxContrib)
   integer,save :: ctrb_to1(mxContrib),ctrb_to2(mxContrib)
-  logical,save :: dbgProj =.false.
+  logical,save :: dbgProj =.false.,verboseE=.false.
 
   !-------
 contains
@@ -112,10 +112,21 @@ contains
     real :: c
     logical :: dbg
     !------------
+    if(nbE==-2)then
+       VerboseE = .true.
+       return
+    elseif(nbE==-3)then
+       VerboseE = .false.
+       return
+    end if
     dbg=dbgProj
     ! 
     if(dbg)write(*,*)'___ prep_projE ____  nbE=',nbE &
          ,'  E(0,',nbE,')=',Ein(0),Ein(nbE)
+    if(nbe<=1)then
+       write(*,*)' -E- cannot use RADIOM w/ ng.group=',nbe
+       call CON_stop('Stopped')
+    end if
     nbIn=nbE
     lgdu=log(Umax/Umin)/nbUout
     rdu=exp(lgdu)
@@ -300,6 +311,15 @@ contains
        goto 110
     end if
     !
+    if(Ulast<10)then
+       write(*,*) '-W- revise group binning,Ulast(='&
+            ,Ulast,') found<10 for Te=',Te
+    elseif(Ufirst>1)then
+       if(VerboseE)&
+            write(*,*)' -W- revise group bining, Ufirst=',&
+            Ufirst,') found >1 for Te=',Te
+    end if
+    !
     Uaft=max(Umin,Ulast)
     Uaft=min(Uaft,Umax)
     Naft=log(Umax/Uaft)/lgdu
@@ -356,6 +376,11 @@ contains
        n1=1
        n2=nbContrib
     end if
+    if(nBef>1)then
+       SPOut(1:nBef)=1.0
+       UOut(1:nBef) = EOut(1:nBef)/Te
+    end if
+
     !	
     IF(dbg) THEN
        write(*,*)'Ufirst,Ulast=',Ufirst,Ulast
