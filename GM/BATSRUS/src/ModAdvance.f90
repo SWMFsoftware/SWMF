@@ -4,7 +4,10 @@ module ModAdvance
   use ModSize
   use ModVarIndexes
   use ModB0,         ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
-  use ModMain,       ONLY: UseB, UseRotatingFrame, UseGravity
+  use ModMultiFluid, ONLY: UseMultiIon
+  use ModMain,       ONLY: UseB, UseRotatingFrame, UseGravity, &
+       boris_correction, &
+       iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc, nProc
 
@@ -27,16 +30,6 @@ module ModAdvance
   logical:: UseWavePressure = .false.
 
   logical:: DoCalcElectricField = .false.
-
-  !\ One of the two possible ways to treat the MHD-like systems
-  !  (oartially symmetrizable, following the Godunov definition).
-  !  If the UseRS7=.true. then the 7 waves Riemann Solver (RS) with 
-  !  continuous  normal component of the magnetic field across the face.
-  !  The number of jumps in the physical variables across the face is equal
-  !  to the number of waves, resulting in the the well-posed solution os
-  !  the Riemann problem. This approach is alternative to the 8-wave scheme
-
-  logical::UseRS7
 
   ! Update check parameters
   logical :: UseUpdateCheck
@@ -95,55 +88,33 @@ module ModAdvance
   ! Local cell-centered source terms and divB.
   !/
   real :: Source_VC(nVar+nFluid, nI, nJ, nK)
-  real :: Theat0(nI,nJ,nK)
+  
   real, allocatable :: DivB1_GB(:,:,:,:)
 
-  !\
-  ! X Face local MHD solution array definitions.
-  !/
-  ! These are primitive variables (velocity)
-  real :: LeftState_VX(nVar,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
-  real :: RightState_VX(nVar,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
+  ! Face centered variables for the current block
 
-  real :: EDotFA_X(2-gcn:nI+gcn,0:nJ+1,0:nK+1)    !^CFG IF BORISCORR
-  real :: VdtFace_X(2-gcn:nI+gcn,0:nJ+1,0:nK+1)   ! V/dt Face X
+  ! Primitive variables (velocity) extrapolated from left and right
+  real, allocatable:: LeftState_VX(:,:,:,:), RightState_VX(:,:,:,:)
+  real, allocatable:: LeftState_VY(:,:,:,:), RightState_VY(:,:,:,:)
+  real, allocatable:: LeftState_VZ(:,:,:,:), RightState_VZ(:,:,:,:)
+
+  ! V/dt for CFL time step limit
+  real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
+
+  ! Electric field . area vector for div(E) in Boris correction
+  real, allocatable:: &                                  !^CFG IF BORISCORR
+       EDotFA_X(:,:,:), EDotFA_Y(:,:,:), EDotFA_Z(:,:,:) !^CFG IF BORISCORR
 
   ! Fluxes are for conservative variables (momentum)
-  real :: Flux_VX(nVar+nFluid,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
+  real, allocatable:: Flux_VX(:,:,:,:), Flux_VY(:,:,:,:), Flux_VZ(:,:,:,:)
 
-  real :: uDotArea_XI(2-gcn:nI+gcn,0:nJ+1,0:nK+1,nFluid+1)
+  ! Velocity . area vector for div(U) in various source terms. Per fluid.
+  real, allocatable:: &
+       uDotArea_XI(:,:,:,:), uDotArea_YI(:,:,:,:), uDotArea_ZI(:,:,:,:)
 
-  real :: bCrossArea_DX(3,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
-
-  !\
-  ! Y Face local MHD solution array definitions.
-  !/
-  real :: LeftState_VY(nVar,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
-  real :: RightState_VY(nVar,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
-
-  real :: EDotFA_Y(0:nI+1,2-gcn:nJ+gcn,0:nK+1)    !^CFG IF BORISCORR
-  real :: VdtFace_Y(0:nI+1,2-gcn:nJ+gcn,0:nK+1)   ! V/dt Face Y
-
-  real :: Flux_VY(nVar+nFluid,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
-
-  real :: uDotArea_YI(0:nI+1,2-gcn:nJ+gcn,0:nK+1,nFluid+1)
-
-  real :: bCrossArea_DY(3,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
-
-  !\
-  ! Z Face local MHD solution array definitions.
-  !/
-  real :: LeftState_VZ(nVar,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
-  real :: RightState_VZ(nVar,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
-
-  real :: EDotFA_Z(0:nI+1,0:nJ+1,2-gcn:nK+gcn)    !^CFG IF BORISCORR
-  real :: VdtFace_z(0:nI+1,0:nJ+1,2-gcn:nK+gcn)   ! V/dt Face Z
-
-  real :: Flux_VZ(nVar+nFluid,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
-
-  real :: uDotArea_ZI(0:nI+1,0:nJ+1,2-gcn:nK+gcn,nFluid+1)
-
-  real :: bCrossArea_DZ(3,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
+  ! Magnetic field cross area vector for J x B source term in multi-ion MHD
+  real, allocatable:: &
+       bCrossArea_DX(:,:,:,:), bCrossArea_DY(:,:,:,:), bCrossArea_DZ(:,:,:,:)
 
   !\
   ! Merge cells around the polar axis in spherical geometry
@@ -178,6 +149,19 @@ contains
        allocate(Ez_CB(nI,nJ,nK,MaxBlock))
     end if
 
+    if(UseB .and. (UseMultiIon .or. .not.IsMhd) &
+         .and. .not. allocated(bCrossArea_DX))then
+       allocate(bCrossArea_DX(MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+       allocate(bCrossArea_DY(MaxDim,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+       allocate(bCrossArea_DZ(MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    end if
+
+    if(UseB .and. boris_correction .and. .not.allocated(EDotFA_X))then
+       allocate(EDotFA_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+       allocate(EDotFA_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+       allocate(EDotFA_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    end if
+
     if(allocated(State_VGB)) RETURN
 
     ! The arrays below are allocated at the beginning (if at all)
@@ -193,6 +177,28 @@ contains
     allocate(tmp2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(time_BLK(nI,nJ,nK,MaxBlock))
     allocate(iTypeAdvance_BP(MaxBlock,0:nProc-1))
+
+    ! The current implementation of the constrained transport scheme
+    ! requires fluxes between ghost cells. Should be eliminated, and then
+    ! all faces would be allocated to the usual nI+1,nJ,nK and permutations.
+    allocate(LeftState_VX(nVar,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    allocate(RightState_VX(nVar,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    allocate(VdtFace_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    allocate(Flux_VX(nVar+nFluid,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    allocate(uDotArea_XI(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nFluid+1))
+
+    allocate(LeftState_VY(nVar,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+    allocate(RightState_VY(nVar,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+    allocate(VdtFace_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+    allocate(Flux_VY(nVar+nFluid,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+    allocate(uDotArea_YI(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nFluid+1))
+
+    allocate(LeftState_VZ(nVar,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    allocate(RightState_VZ(nVar,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    allocate(VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
+
     iTypeAdvance_B  = SkippedBlock_
     iTypeAdvance_BP = SkippedBlock_
 
@@ -215,8 +221,28 @@ contains
     if(allocated(tmp2_BLK))        deallocate(tmp2_BLK)
     if(allocated(time_BLK))        deallocate(time_BLK)
     if(allocated(DivB1_GB))        deallocate(DivB1_GB)
-    if(allocated(Ex_CB))           deallocate(Ex_CB, Ey_CB, Ez_CB)
     if(allocated(iTypeAdvance_BP)) deallocate(iTypeAdvance_BP)
+    if(allocated(LeftState_VX))    deallocate(LeftState_VX, RightState_VX)
+    if(allocated(LeftState_VY))    deallocate(LeftState_VY, RightState_VY)
+    if(allocated(LeftState_VZ))    deallocate(LeftState_VZ, RightState_VZ)
+    if(allocated(VdtFace_X))       deallocate(VdtFace_X)
+    if(allocated(VdtFace_Y))       deallocate(VdtFace_Y)
+    if(allocated(VdtFace_Z))       deallocate(VdtFace_Z)
+    if(allocated(Flux_VX))         deallocate(Flux_VX)
+    if(allocated(Flux_VY))         deallocate(Flux_VY)
+    if(allocated(Flux_VZ))         deallocate(Flux_VZ)
+    if(allocated(uDotArea_XI))     deallocate(uDotArea_XI)
+    if(allocated(uDotArea_YI))     deallocate(uDotArea_YI)
+    if(allocated(uDotArea_ZI))     deallocate(uDotArea_ZI)
+    if(allocated(bCrossArea_DX))   deallocate(bCrossArea_DX)
+    if(allocated(bCrossArea_DY))   deallocate(bCrossArea_DY)
+    if(allocated(bCrossArea_DZ))   deallocate(bCrossArea_DZ)
+    if(allocated(EDotFA_X))        deallocate(EDotFA_X)
+    if(allocated(EDotFA_Y))        deallocate(EDotFA_Y)
+    if(allocated(EDotFA_Z))        deallocate(EDotFA_Z)
+    if(allocated(Ex_CB))           deallocate(Ex_CB)
+    if(allocated(Ey_CB))           deallocate(Ey_CB)
+    if(allocated(Ez_CB))           deallocate(Ez_CB)
 
     if(iProc==0)then
        call write_prefix
