@@ -214,8 +214,8 @@ contains
 
     if(UseSemiImplicit.and..not.allocated(HeatCond_DFDB))then
        allocate( &
-            State1_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2), &
-            State2_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2), &
+            State1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+            State2_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
             HeatCond_DDG(MaxDim,MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
             HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
@@ -756,6 +756,7 @@ contains
   subroutine get_heat_conduction_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
     use BATL_lib,        ONLY: store_face_flux, CellVolume_GB
+    use ModSize,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: UseElectronPressure, UseIdealEos
     use ModFaceGradient, ONLY: get_face_gradient
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, FluxImpl_VXB, FluxImpl_VYB, &
@@ -764,7 +765,7 @@ contains
     use ModNumConst,     ONLY: i_DD
 
     integer, intent(in) :: iBlock
-    real, intent(inout) :: StateImpl_VG(nVarSemi,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 

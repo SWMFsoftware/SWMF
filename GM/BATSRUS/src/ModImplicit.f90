@@ -394,7 +394,7 @@ contains
     if(UseSemiImplicit) allocate(DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBLK))
 
     ! Arrays for split implicit variables
-    allocate(StateSemi_VGB(nVarSemi,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
+    allocate(StateSemi_VGB(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(ResExpl_VCB(nVarSemi,nI,nJ,nK,MaxImplBLK))
     allocate(ResImpl_VCB(nVarSemi,nI,nJ,nK,MaxImplBLK))
 

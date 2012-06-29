@@ -191,7 +191,7 @@ module ModUser
   real    :: DpWave     =  100.0
 
   ! electron and ion temperatures read from Hyades input
-  real :: Te_G(-1:nI+2,-1:nJ+2,-1:nK+2), Ti_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+  real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), Ti_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
   ! Temperature limit for cold plastic (30,000K is a good limit)
   real:: TeMaxColdPlSi = -1.0
@@ -1838,7 +1838,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -3030,8 +3030,8 @@ contains
     character (len=*),intent(in) :: TypeCriteria
     logical ,intent(inout)       :: IsFound
 
-    logical:: IsXe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
-    logical:: IsAu_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    logical:: IsXe_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    logical:: IsAu_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real   :: RhoMin
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax, nLevel, iNode
     !------------------------------------------------------------------
@@ -3195,7 +3195,7 @@ contains
     use ModSize,       ONLY: nI, nJ, nK
 
     integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
+    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
 
     integer :: i, j, k
     real :: TeSi, EtaCoef, HeatCondSi
@@ -3206,7 +3206,7 @@ contains
     EtaCoef = (cBoltzmann/cElectronCharge)**2 &
          *Si2No_V(UnitX_)**2/(cMu*Si2No_V(UnitT_))
 
-    do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+    do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
        call user_material_properties(State_VGB(:,i,j,k,iBlock), TeOut=TeSi, &
             HeatCondOut=HeatCondSi)
 

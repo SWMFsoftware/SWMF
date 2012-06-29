@@ -258,7 +258,7 @@ contains
     integer,          intent(in) :: iBlock
     character(len=*), intent(in) :: NameVar
     logical,          intent(in) :: IsDimensional
-    real,             intent(out):: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out):: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out):: PlotVarBody
     logical,          intent(out):: UsePlotVarBody
     character(len=*), intent(out):: NameTecVar

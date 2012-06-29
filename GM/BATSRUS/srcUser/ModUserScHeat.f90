@@ -670,7 +670,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -689,7 +689,7 @@ contains
     select case(NameVar)
     case('te')
        NameIdlUnit = 'K'
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           if(UseElectronPressure)then
              PlotVar_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
@@ -701,13 +701,13 @@ contains
 
     case('ti')
        NameIdlUnit = 'K'
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
                /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
        end do; end do; end do
 
     case('deltabperb')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           if(UseB0)then
              FullB = sqrt(sum((B0_DGB(:,i,j,k,iBlock) &
                   + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2))
@@ -719,7 +719,7 @@ contains
        end do; end do; end do
 
     case('beta')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           if(UseB0)then
              FullB2 = sum((B0_DGB(:,i,j,k,iBlock) &
                   + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
@@ -776,7 +776,7 @@ contains
        RETURN
     end if
 
-    do k = -1, nK+2; do j = -1, nJ+2
+    do k = MinK,MaxK; do j = MinJ,MaxJ
        x_D(x_) = 0.5*sum(Xyz_DGB(x_,0:1,j,k,iBlock))
        x_D(y_) = 0.5*sum(Xyz_DGB(y_,0:1,j,k,iBlock))
        x_D(z_) = 0.5*sum(Xyz_DGB(z_,0:1,j,k,iBlock))
@@ -939,7 +939,7 @@ contains
     use ModVarIndexes, ONLY: Rho_, Pe_
 
     integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     integer :: i, j, k
     real :: Te, TeSi
@@ -947,7 +947,7 @@ contains
     character (len=*), parameter :: NameSub = 'user_set_resistivity'
     !--------------------------------------------------------------------------
 
-    do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+    do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
        Te = TeFraction*State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
        TeSi = Te*No2Si_V(UnitTemperature_)
 

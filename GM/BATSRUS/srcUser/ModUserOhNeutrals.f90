@@ -653,7 +653,7 @@ contains
        State_VGB(Ne2P_,:,:,:,iBlock) = RhoNe2Factor * &
             State_VGB(p_,:,:,:,iBlock)
 
-       call calc_energy(-1, nI+2, -1, nJ+2, -1, nK+2, iBlock, Ne2_, Ne2_)
+       call calc_energy(MinI,MaxI, MinJ,MaxJ, MinK,MaxK, iBlock, Ne2_, Ne2_)
     end do
 
   end subroutine user_initial_perturbation
@@ -803,7 +803,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar

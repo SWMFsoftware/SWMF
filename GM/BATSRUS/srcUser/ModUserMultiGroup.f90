@@ -165,7 +165,7 @@ contains
        ExtraEint = 0.0
     end select
 
-    do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+    do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
        State_VGB(Rho_,i,j,k,iBlock) = Rho
        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
        State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = Erad
@@ -407,7 +407,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -431,29 +431,29 @@ contains
     IsFound = .true.
     select case(NameVar)
     case('planck')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           PlotVar_G(i,j,k) = cRadiationNo &
                *(State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))**4
        end do; end do; end do
     case('bfinal')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           PlotVar_G(i,j,k) = cRadiationNo*TeFinal**4
        end do; end do; end do
     case('tkev')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           PlotVar_G(i,j,k) = &
                State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock) &
                *No2Si_V(UnitTemperature_)*cKToKev
        end do; end do; end do
     case('trkev')
        NameIdlUnit = 'KeV'
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           PlotVar_G(i,j,k) = sqrt(sqrt(sum( &
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))/cRadiationNo)) &
                *No2Si_V(UnitTemperature_)*cKToKev
        end do; end do; end do
     case('etotal')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                EinternalOut = EinternalSi)
           PlotVar_G(i,j,k) = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))&

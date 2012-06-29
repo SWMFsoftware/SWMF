@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 module ModHallResist
 
-  use ModSize, ONLY: nI, nJ, nK, MaxDim
+  use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxDim
 
   implicit none
 
@@ -56,7 +56,8 @@ module ModHallResist
   public :: set_ion_mass_per_charge_point
   public :: set_block_jacobian_cell           
 
-  real, public :: b_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
+  ! Magnetic field with 3rd order accurate ghost cells
+  real:: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
   ! Inverse of cell size
   real :: InvDx, InvDy, InvDz
@@ -223,10 +224,10 @@ contains
     real:: DxyzDgen_DD(MaxDim,MaxDim)
 
     ! Transverse gradients
-    real:: TransGrad_DDG(MaxDim,MaxDim,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real:: TransGrad_DDG(MaxDim,MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Cell center coordinates for this block
-    real:: Xyz_DG(MaxDim,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real:: Xyz_DG(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Indexes
     integer:: i, j, k
@@ -248,19 +249,19 @@ contains
 
     Xyz_DG(:,:,:,:) = Xyz_DGB(:,:,:,:,iBlock)
 
-    do k=-1,nK+2; do j=-1,nJ+2; do i=1,nI
+    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=1,nI
        TransGrad_DDG(:,1,i,j,k)=  &
             ( dp1* (Xyz_DG(:,i+1,j,k) - Xyz_DG(:,i-1,j,k)) &
             + dp2* (Xyz_DG(:,i+2,j,k) - Xyz_DG(:,i-2,j,k)))
     end do; end do; end do
 
-    do k=-1,nK+2; do j=1,nJ; do i=-1,nI+2
+    do k=MinK,MaxK; do j=1,nJ; do i=MinI,MaxI
        TransGrad_DDG(:,2,i,j,k)=  &
             ( dp1* (Xyz_DG(:,i,j+1,k) - Xyz_DG(:,i,j-1,k)) &
             + dp2* (Xyz_DG(:,i,j+2,k) - Xyz_DG(:,i,j-2,k)))
     end do; end do; end do
 
-    do k=1,nK; do j=-1,nJ+2; do i=-1,nI+2
+    do k=1,nK; do j=MinJ,MaxJ; do i=MinI,MaxI
        TransGrad_DDG(:,3,i,j,k)=  &
             ( dp1* (Xyz_DG(:,i,j,k+1) - Xyz_DG(:,i,j,k-1)) &
             + dp2* (Xyz_DG(:,i,j,k+2) - Xyz_DG(:,i,j,k-2)))
@@ -385,7 +386,7 @@ contains
     integer :: iL, iR, jL, jR, kL, kR
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
 
-    real :: b1_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real :: b1_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     logical :: DoTest, DoTestMe
     integer :: i1,j1,k1

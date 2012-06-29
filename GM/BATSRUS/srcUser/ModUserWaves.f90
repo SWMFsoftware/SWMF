@@ -466,7 +466,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -474,7 +474,7 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    real,dimension(-1:nI+2, -1:nJ+2, -1:nK+2):: RhoExact_G, RhoError_G
+    real,dimension(MinI:MaxI, MinJ:MaxJ, MinK:MaxK):: RhoExact_G, RhoError_G
     real    :: FlowSpeedCell, Pressure, Density, OmegaSun
     real    :: RhoU_D(3)
     integer :: i, j, k
@@ -509,7 +509,7 @@ contains
        ! plot Mach number
        OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
 
-       do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
+       do k=MinK,MaxK ; do j=MinJ,MaxJ ; do i=MinI,MaxI
           Pressure = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
           Density = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
 
@@ -551,7 +551,7 @@ contains
       use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitX_, UnitU_,UnitT_
 
       integer,intent(in)  :: iBlock
-      real,dimension(-1:nI+2,-1:nJ+2,-1:nK+2),intent(out)::RhoExact_G,&
+      real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(out)::RhoExact_G,&
            RhoError_G
       real    :: x, y, z, t
       real    :: xSphereCenter, ySphereCenter, zSphereCenter
@@ -565,7 +565,7 @@ contains
       t = time_simulation
       OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
       phi = OmegaSun*t*Si2No_V(UnitT_)
-      do k=-1,nK+2 ; do j= -1,nJ+2 ; do i= -1,nI+2
+      do k=MinK,MaxK ; do j= MinJ,MaxJ ; do i= MinI,MaxI
 
          x = Xyz_DGB(x_,i,j,k,iBlock)
          y = Xyz_DGB(y_,i,j,k,iBlock)
@@ -760,9 +760,9 @@ contains
     end if
 
     if (DoWave) then
-       do i=-1,nI+2
-          do j=-1,nJ+2
-             do k=-1,nK+2
+       do i=MinI,MaxI
+          do j=MinJ,MaxJ
+             do k=MinK,MaxK
                 x = Xyz_DGB(x_,i,j,k,iBlk)
                 y = Xyz_DGB(y_,i,j,k,iBlk)
                 z = Xyz_DGB(z_,i,j,k,iBlk)

@@ -22,12 +22,12 @@ subroutine proj_cg(rhs,qx,iter,tol,typestop,info)
 
   ! Arguments
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
        intent(inout) :: rhs
   !        on input:  right-hand side vector.
   !        on output: residual vector.
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
        intent(out):: qx
   !        on output: solution vector.
 
@@ -61,9 +61,9 @@ subroutine proj_cg(rhs,qx,iter,tol,typestop,info)
 
   logical :: oktest, oktest_me
 
-  ! Functions:
+  ! external Functions:
 
-  real :: dot_product_BLK, maxval_abs_BLK
+  real :: maxval_abs_BLK
 
   !---------------------------------------------------------------------------
 

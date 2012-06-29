@@ -387,17 +387,17 @@ contains
 
     select case(TypeProblem)
     case('gaussian')
-       do i = -1, nI+2
+       do i = MinI,MaxI
           call get_state_gaussian(i, iBlock)
        end do
 
     case('rz')
-       do j=-1,nJ+2; do i=-1,nI+2
+       do j=MinJ,MaxJ; do i=MinI,MaxI
           call get_state_rz(i, j, iBlock)
        end do; end do
 
     case('rmtv')
-       do j=-1,nJ+2; do i=-1,nI+2
+       do j=MinJ,MaxJ; do i=MinI,MaxI
           x = Xyz_DGB(x_,i,j,0,iBlock)
           y = Xyz_DGB(y_,i,j,0,iBlock)
           r = sqrt(x**2+y**2)
@@ -434,7 +434,7 @@ contains
 
           p = Rho*Te
 
-          do k=-1,nK+2
+          do k=MinK,MaxK
              State_VGB(Rho_,i,j,k,iBlock) = Rho
              State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = RhoU_D
              State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
@@ -450,7 +450,7 @@ contains
        ! Set rotational matrix
        Rot_II = reshape( (/CosSlope, SinSlope, -SinSlope, CosSlope/), (/2,2/) )
 
-       do j = -1, nJ + 2; do i = -1, nI+2
+       do j = MinJ,MaxJ; do i = MinI,MaxI
 
           x = Xyz_DGB(x_,i,j,0,iBlock)*CosSlope + Xyz_DGB(y_,i,j,0,iBlock)*SinSlope - x0
 
@@ -488,7 +488,7 @@ contains
           RhoU_D(1) = Rho*(Ux + U0)
           RhoU_D(2) = 0.0
 
-          do k = -1, nk+2
+          do k = Mink,Maxk
              State_VGB(:,i,j,k,iBlock) = 0.0
              State_VGB(Rho_,i,j,k,iBlock) = Rho
              State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = &
@@ -502,7 +502,7 @@ contains
        end do; end do
 
     case('parcond', 'parcondsemi')
-       do j=-1,nJ+2; do i=-1,nI+2
+       do j=MinJ,MaxJ; do i=MinI,MaxI
           call get_state_parcond(i, j, iBlock)
        end do; end do
 
@@ -562,11 +562,11 @@ contains
        case('user')
           select case(iSide)
           case(1)
-             do j = -1, nJ+2; do i = -1, 0
+             do j = MinJ,MaxJ; do i = -1, 0
                 call get_state_rz(i, j, iBlock)
              end do; end do
           case(2)
-             do j = -1, nJ+2; do i = nI+1, nI+2
+             do j = MinJ,MaxJ; do i = nI+1, nI+2
                 call get_state_rz(i, j, iBlock)
              end do; end do
           end select
@@ -595,7 +595,7 @@ contains
        case('user')
           select case(iSide)
           case(2) ! z-direction in rz-geometry
-             do j = -1, nJ+2; do i = nI+1, nI+2
+             do j = MinJ,MaxJ; do i = nI+1, nI+2
                 r = sqrt(Xyz_DGB(x_,i,j,1,iBlock)**2+Xyz_DGB(y_,i,j,1,iBlock)**2)
                 State_VGB(Rho_,i,j,:,iBlock) = 1.0/r**(19.0/9.0)
                 State_VGB(RhoUx_:p_-1,i,j,:,iBlock) = &
@@ -603,7 +603,7 @@ contains
                 State_VGB(p_,i,j,:,iBlock) = State_VGB(Rho_,i,j,:,iBlock)*Tmin
              end do; end do
           case(4) ! r-direction in rz-geometry
-             do j = nJ+1, nJ+2; do i = -1, nI+2
+             do j = nJ+1, nJ+2; do i = MinI,MaxI
                 r = sqrt(Xyz_DGB(x_,i,j,1,iBlock)**2+Xyz_DGB(y_,i,j,1,iBlock)**2)
                 State_VGB(Rho_,i,j,:,iBlock) = 1.0/r**(19.0/9.0)
                 State_VGB(RhoUx_:p_-1,i,j,:,iBlock) = &
@@ -625,19 +625,19 @@ contains
        case('user')
           select case(iSide)
           case(1)
-             do j = -1, nJ+2; do i = -1, 0
+             do j = MinJ,MaxJ; do i = -1, 0
                 call get_state_parcond(i, j, iBlock)
              end do; end do
           case(2)
-             do j = -1, nJ+2; do i = nI+1, nI+2
+             do j = MinJ,MaxJ; do i = nI+1, nI+2
                 call get_state_parcond(i, j, iBlock)
              end do; end do
           case(3)
-             do j = -1, 0; do i = -1, nI+2
+             do j = -1, 0; do i = MinI,MaxI
                 call get_state_parcond(i, j, iBlock)
              end do; end do
           case(4)
-             do j = nJ+1, nJ+2; do i = -1, nI+2
+             do j = nJ+1, nJ+2; do i = MinI,MaxI
                 call get_state_parcond(i, j, iBlock)
              end do; end do
           end select
@@ -829,7 +829,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -854,7 +854,7 @@ contains
     case('gaussian')
        select case(NameVar)
        case('t0','temp0')
-          do i=-1,nI+2
+          do i=MinI,MaxI
              call get_temperature_gaussian(i, iBlock, Temperature)
              PlotVar_G(i,:,:) = Temperature
           end do
@@ -865,7 +865,7 @@ contains
     case('rz')
        select case(NameVar)
        case('t0','temp0')
-          do j=-1,nJ+2; do i=-1,nI+2
+          do j=MinJ,MaxJ; do i=MinI,MaxI
              call get_temperature_rz(i, j, iBlock, Temperature)
              PlotVar_G(i,j,:) = Temperature
           end do; end do
@@ -874,7 +874,7 @@ contains
        end select
 
     case('rmtv')
-       do j=-1,nJ+2; do i=-1,nI+2
+       do j=MinJ,MaxJ; do i=MinI,MaxI
           x = Xyz_DGB(x_,i,j,0,iBlock)
           y = Xyz_DGB(y_,i,j,0,iBlock)
           r = sqrt(x**2+y**2)
@@ -911,13 +911,13 @@ contains
 
           select case(NameVar)
           case('rho0')
-             PlotVar_G(i,j,-1:nK+2) = Rho
+             PlotVar_G(i,j,MinK:MaxK) = Rho
           case('t0','temp0')
-             PlotVar_G(i,j,-1:nK+2) = Temperature
+             PlotVar_G(i,j,MinK:MaxK) = Temperature
           case('ux0')
-             PlotVar_G(i,j,-1:nK+2) = U_D(1)
+             PlotVar_G(i,j,MinK:MaxK) = U_D(1)
           case('uy0')
-             PlotVar_G(i,j,-1:nK+2) = U_D(2)
+             PlotVar_G(i,j,MinK:MaxK) = U_D(2)
           case default
              IsFound = .false.
           end select
@@ -929,7 +929,7 @@ contains
           PlotVar_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
 
        case('te')
-          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   TeOut=TeSi)
              PlotVar_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
@@ -940,7 +940,7 @@ contains
           SinSlope = ShockSlope/sqrt(1.0+ShockSlope**2)
           CosSlope =        1.0/sqrt(1.0+ShockSlope**2)
 
-          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
 
              x = Xyz_DGB(x_,i,j,k,iBlock)*CosSlope + Xyz_DGB(y_,i,j,k,iBlock)*SinSlope
              x = x - u0*Time_Simulation*Si2No_V(UnitT_) - x0
@@ -1002,13 +1002,13 @@ contains
     case('parcond', 'parcondsemi')
        select case(NameVar)
        case('te0')
-          do j=-1,nJ+2; do i=-1,nI+2
+          do j=MinJ,MaxJ; do i=MinI,MaxI
              call get_temperature_parcond(i, j, iBlock, Te)
              PlotVar_G(i,j,:) = Te
           end do; end do
        case('te')
           if(UseIdealEos)then
-             do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+             do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
                 if(UseElectronPressure)then
                    PlotVar_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
                         /State_VGB(Rho_,i,j,k,iBlock)
@@ -1019,7 +1019,7 @@ contains
                 end if
              end do; end do; end do
           else
-             do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+             do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      TeOut = PlotVar_G(i,j,k))
                 PlotVar_G(i,j,k) = PlotVar_G(i,j,k)*Si2No_V(UnitTemperature_)

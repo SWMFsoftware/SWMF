@@ -465,7 +465,7 @@ contains
                State_VGB(rho_,:,:,1,iBlock)*2.0*CellSize_DB(Z_,iBlock)
           State_VGB(p_,:,:,-1,iBlock) = State_VGB(p_,:,:,1,iBlock) + &
                State_VGB(rho_,:,:,0,iBlock)*2.0*CellSize_DB(Z_,iBlock)
-          do k = -1, 0; do j = -1, nJ+2; do i = -1, nI+2 
+          do k = -1, 0; do j = MinJ,MaxJ; do i = MinI,MaxI 
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   EinternalOut = EinternalSi)
              State_VGB(ExtraEint_,i,j,k,iBlock) = EinternalSi* &
@@ -663,7 +663,7 @@ contains
     integer,          intent(in) :: iBlock
     character(len=*), intent(in) :: NameVar
     logical,          intent(in) :: IsDimensional
-    real,             intent(out):: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out):: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out):: PlotVarBody
     logical,          intent(out):: UsePlotVarBody
     character(len=*), intent(out):: NameTecVar

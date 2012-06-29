@@ -1452,7 +1452,7 @@ contains
     integer,          intent(in) :: iBlock
     character(len=*), intent(in) :: NameVar
     logical,          intent(in) :: IsDimensional
-    real,             intent(out):: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out):: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out):: PlotVarBody
     logical,          intent(out):: UsePlotVarBody
     character(len=*), intent(out):: NameTecVar
@@ -1507,7 +1507,7 @@ contains
     if(r_BLK(i,1,1,iBlock)>rBody) RETURN
 
     i=i+1
-    do k=-1,nK+2; do j=-1,nJ+2
+    do k=MinK,MaxK; do j=MinJ,MaxJ
        Xyz_D = &
             (/ Xyz_DGB(x_,i,j,k,iBlock), Xyz_DGB(y_,i,j,k,iBlock), Xyz_DGB(z_,i,j,k,iBlock)/)
        r= r_BLK(i,j,k,iBlock)
@@ -1709,7 +1709,7 @@ contains
     use ModResistivity, ONLY: Eta0Si
 
     integer, intent(in) :: iBlock
-    real,intent(out) :: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
+    real,intent(out) :: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
 
     real   :: Te_dim, tx1, txp1, hh
     real   :: loc_c(3), NumDenNeutral_V(3), Eta0

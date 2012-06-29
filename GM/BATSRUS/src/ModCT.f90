@@ -40,15 +40,15 @@ contains
 
 
     if(allocated(Bxface_BLK)) return
-    allocate(Bxface_BLK(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
-    allocate(Byface_BLK(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
-    allocate(Bzface_BLK(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
+    allocate(Bxface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
+    allocate(Byface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
+    allocate(Bzface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
     allocate(BxFaceFine_XQSB(nJ,nK,4,2,nBLK))
     allocate(ByFaceFine_YQSB(nI,nK,4,2,nBLK))
     allocate(BzFaceFine_ZQSB(nI,nJ,4,2,nBLK))
-    allocate(VxB_x(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
-    allocate(VxB_y(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
-    allocate(VxB_z(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
+    allocate(VxB_x(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
+    allocate(VxB_y(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
+    allocate(VxB_z(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_ct allocated arrays'

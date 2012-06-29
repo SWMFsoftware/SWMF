@@ -834,7 +834,7 @@ subroutine select_conservative
         if( Unused_B(iBlock) ) CYCLE
 
         if(UseElectronPressure)then
-           do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+           do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
               State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
                    + State_VGB(Pe_,i,j,k,iBlock)
            end do; end do; end do
@@ -915,7 +915,7 @@ subroutine select_conservative
         end do ! iCrit
 
         if(UseElectronPressure)then
-           do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+           do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
               State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
                    - State_VGB(Pe_,i,j,k,iBlock)
            end do; end do; end do

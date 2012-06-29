@@ -1305,7 +1305,7 @@ contains
     real :: Temp            ! Electron Temp at the point
     real :: MuGas = 0.5    ! mean molecular wieght of plasma
     real :: LogTemp, LogNe, rConv, ResponseFactor, EuvResponse(3), SxrResponse(2)
-    real :: Temp_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real :: Temp_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! this is so can modify amount of block sent to interpolation routine
     integer :: iMin, iMax
@@ -1415,17 +1415,17 @@ contains
        if(UseRho)then
           if(nK == 1)then
              Rho = bilinear(State_VGB(Rho_,:,:,1,iBlk), &
-                  -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
+                  MinI,MaxI, MinJ,MaxJ, CoordNorm_D(1:2))
           elseif (IsSphGeometry) then
              iMin = -1; iMax = nI+2
              if (IsNoBlockInner) iMin=1
              if (IsNoBlockOuter) iMax=nI
              Rho = trilinear(State_VGB(Rho_,iMin:iMax,:,:,iBlk), &
-                  iMin, iMax, -1, nJ+2, -1, nK+2,&
+                  iMin, iMax, MinJ,MaxJ, MinK,MaxK,&
                   CoordNorm_D, DoExtrapolate=.true.)
           else
              Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
-                  -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
+                  MinI,MaxI, MinJ,MaxJ, MinK,MaxK, CoordNorm_D)
           end if
        end if
 
@@ -1436,14 +1436,14 @@ contains
           ! this.
 
           if(nK == 1)then
-             Temp = bilinear(Temp_G(:,:,1), -1, nI+2, -1, nJ+2, &
+             Temp = bilinear(Temp_G(:,:,1), MinI,MaxI, MinJ,MaxJ, &
                   CoordNorm_D(1:2))
           else if (IsSphGeometry) then
              Temp = trilinear(Temp_G(iMin:iMax,:,:), &
-                  iMin, iMax, -1, nJ+2, -1, nK+2, &
+                  iMin, iMax, MinJ,MaxJ, MinK,MaxK, &
                   CoordNorm_D, DoExtrapolate=.true.)
           else
-             Temp = trilinear(Temp_G(:,:,:), -1, nI+2, -1, nJ+2, -1, nK+2, &
+             Temp = trilinear(Temp_G(:,:,:), MinI,MaxI, MinJ,MaxJ, MinK,MaxK, &
                   CoordNorm_D)
           end if
 
@@ -1553,7 +1553,7 @@ contains
                 iBlockLast = iBlk
                 iVarLast   = iVar
                 if(.not.allocated(PlotVar_GV)) &
-                     allocate(PlotVar_GV(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar))
+                     allocate(PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar))
                 call user_set_plot_var(iBlk, NameVar, &
                      plot_dimensional(iFile), &
                      PlotVar_GV(:,:,:,iVar), &
@@ -1568,10 +1568,10 @@ contains
              ! Interpolate value
              if(nK == 1)then
                 Value = bilinear(PlotVar_GV(:,:,1,iVar), &
-                     -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
+                     MinI,MaxI, MinJ,MaxJ, CoordNorm_D(1:2))
              else
                 Value = trilinear(PlotVar_GV(:,:,:,iVar), &
-                     -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
+                     MinI,MaxI, MinJ,MaxJ, MinK,MaxK, CoordNorm_D)
              end if
           end select
 

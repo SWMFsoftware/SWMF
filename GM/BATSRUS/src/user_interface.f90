@@ -143,14 +143,15 @@ subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
      PlotVar_G, PlotVarBody, UsePlotVarBody, &
      NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-  use ModSize, ONLY: nI, nJ, nK
+  use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModUser, ONLY: user_sub => user_set_plot_var
   implicit none
 
   integer,          intent(in)   :: iBlock
   character(len=*), intent(in)   :: NameVar
   logical,          intent(in)   :: IsDimensional
-  real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+  real,             intent(out)  :: &
+       PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   real,             intent(out)  :: PlotVarBody
   logical,          intent(out)  :: UsePlotVarBody
   character(len=*), intent(inout):: NameTecVar

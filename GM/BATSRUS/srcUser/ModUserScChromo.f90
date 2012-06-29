@@ -351,7 +351,7 @@ contains
 
     uCorona = rTransonic**2*exp(1.5 - 2.0*rTransonic)
 
-    do k = -1, nK+2 ; do j = -1, nJ+2 ; do i = -1, nI+2
+    do k = MinK,MaxK ; do j = MinJ,MaxJ ; do i = MinI,MaxI
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
        z = Xyz_DGB(z_,i,j,k,iBlock)
@@ -525,7 +525,7 @@ contains
             maxval(r_BLK(:,:,:,iBLK)) > 1.) then
 
           ! Advance in the r direction
-          do i=-1,nI+2
+          do i=MinI,MaxI
 
              x=Xyz_DGB(x_,i,j,k,iBLK)
              ! Extract data in the x=0 plane only
@@ -586,7 +586,7 @@ contains
     j = 4
     do iBlock = 1, nBlock
        ! Advance in the r direction
-       do k=-1,nK+2 ; do i=-1,nI+2
+       do k=MinK,MaxK ; do i=MinI,MaxI
 
           x=Xyz_DGB(x_,i,j,k,iBlock)
           ! Extract data in the x=0 plane only
@@ -938,7 +938,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -961,7 +961,7 @@ contains
     case('disstot','dissplus','dissminus','lperp')
        NameIdlUnit = 'J/m3'
        NameTecUnit = '[J/m3]'
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           if(UseUserWaveDissipation) then
              call user_calc_alfven_wave_dissipation(i,j,k,iBlock,&
                   WaveDissipation_V,Lperp)
@@ -992,7 +992,7 @@ contains
     case('te')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           if(UseElectronPressure)then
              PlotVar_G(i,j,k) = TeFraction*State_VGB(Pe_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
@@ -1005,14 +1005,14 @@ contains
     case('ti')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
                /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
        end do; end do; end do
        
     ! Vector components in spherical coordinates
     case('u_r','uphi','utheta')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           !calculate angles
           call xyz_to_sph(Xyz_DGB(x_,i,j,k,iBlock), &
                           Xyz_DGB(y_,i,j,k,iBlock), &
@@ -1050,7 +1050,7 @@ contains
        NameTecUnit = '[km/s]'
 
     case('b_r','bphi','btheta')
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           call xyz_to_sph(Xyz_DGB(x_,i,j,k,iBlock), &
                           Xyz_DGB(y_,i,j,k,iBlock), &
                           Xyz_DGB(z_,i,j,k,iBlock), r, theta, phi)
@@ -1200,7 +1200,7 @@ contains
        State_VGB(Rho_,-1,:,:,iBlock) = &
             2.*State_VGB(Rho_,0,:,:,iBlock)  - State_VGB(rho_,1,:,:,iBlock)
 
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, 0
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = -1, 0
           NumDensIon = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
           NumDensElectron = NumDensIon*AverageIonCharge
           if(UseElectronPressure)then
@@ -1212,7 +1212,7 @@ contains
           end if
        end do; end do; end do
 
-       do k = -1, nK+2; do j = -1, nJ+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ
           Runit_D = (/ Xyz_DGB(x_,1,j,k,iBlock), Xyz_DGB(y_,1,j,k,iBlock), &
                Xyz_DGB(z_,1,j,k,iBlock) /) / r_BLK(1,j,k,iBlock)
 
@@ -1230,7 +1230,7 @@ contains
     ! Safety
     if (UseUserInnerBcs) RETURN
 
-    do k = -1,nK+2 ; do j = -1,nJ+2
+    do k = MinK,MaxK ; do j = MinJ,MaxJ
 
        ! Update B1 in ghost cells (r direction only
        ! Reflect normal component, float tangential component 
@@ -1432,7 +1432,7 @@ contains
     use ModVarIndexes, ONLY: Rho_, Pe_
 
     integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     integer :: i, j, k
     real :: Te, TeSi
@@ -1440,7 +1440,7 @@ contains
     character (len=*), parameter :: NameSub = 'user_set_resistivity'
     !--------------------------------------------------------------------------
 
-    do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+    do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
        Te = TeFraction*State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
        TeSi = Te*No2Si_V(UnitTemperature_)
 

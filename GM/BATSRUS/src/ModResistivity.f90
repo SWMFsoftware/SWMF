@@ -133,7 +133,7 @@ contains
          *CoulombLogarithm
 
     if(.not.allocated(Eta_GB))then
-       allocate(Eta_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
+       allocate(Eta_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
        if(TypeResistivity == 'constant')then
           Eta_GB = Eta0
@@ -206,9 +206,9 @@ contains
     ! Compute Spitzer-type, classical resistivity 
 
     integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,    intent(out):: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
 
-    real :: EtaSi, Coef, B0_DG(3,-1:nI+2, -1:nJ+2, -1:nK+2)
+    real :: EtaSi, Coef, B0_DG(3,MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     integer :: i, j, k
     !-------------------------------------------------------------------------
 
@@ -218,7 +218,7 @@ contains
     else
        B0_DG = 0.0
     end if
-    do k=-1, nK+2; do j=-1, nJ+2; do i=-1, nI+2
+    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
 
        ! EtaSi = EtaPerpSpitzer/Te^1.5 in SI units
        EtaSi = EtaPerpSpitzerSi &
@@ -246,7 +246,7 @@ contains
     use ModCurrent, ONLY: get_current
 
     integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,    intent(out):: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
 
     real :: Current_D(3), AbsJ
     integer :: i, j, k
@@ -276,7 +276,7 @@ contains
     ! Mask Eta_G if required
 
     integer, intent(in)   :: iBlock
-    real,    intent(inout):: Eta_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,    intent(inout):: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
 
     integer:: i, j, k
     real:: r
@@ -314,7 +314,7 @@ contains
     use ModMain, ONLY: UseB0
 
     integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     real :: Current_D(3), AbsJ, AbsB, JInvB, b_D(3)
     integer :: i, j, k, l, m, n
@@ -508,7 +508,7 @@ contains
     use ModSize,         ONLY: x_, y_, z_
 
     integer, intent(in) :: iBlock
-    real, intent(inout) :: StateImpl_VG(nVarSemi,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 

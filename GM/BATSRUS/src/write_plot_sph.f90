@@ -16,7 +16,7 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
   integer, intent(in)  :: iFile, iBLK,nTheta,nPhi
   integer, intent(in)  :: nPlotvar
   integer, intent(out) :: nBlkCellsN,nBlkCellsS
-  real, intent(in)     :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvar)
+  real, intent(in)     :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nplotvar)
   real, intent(in)     :: rPlot
 
   ! Local variables

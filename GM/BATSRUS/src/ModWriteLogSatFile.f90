@@ -1131,10 +1131,11 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
   ! over the surface of a sphere centered at the origin radius Radius.  
   ! The resolution in the colatitude is determined by the nTheta parameter.
 
-  use ModMain,           ONLY: nI,nJ,nK,nBLK,nBlock,Unused_B,&
-       optimize_message_pass
+  use ModMain,           ONLY: optimize_message_pass
   use ModGeometry,       ONLY: r_BLK, XyzStart_Blk, TypeGeometry
-  use BATL_lib,  ONLY: IsCartesianGrid, IsRLonLat, Xyz_DGB, x_, y_, z_, &
+  use BATL_lib,  ONLY: nI, nJ, nK, Unused_B, &
+       MinI, MaxI, MinJ, MaxJ, Mink, MaxK, nBlock, MaxBlock, &
+       IsCartesianGrid, IsRLonLat, Xyz_DGB, x_, y_, z_, &
        CellSize_DB, Theta_, Phi_
   use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
   use ModInterpolate, ONLY: trilinear
@@ -1142,10 +1143,10 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
 
   ! Arguments
 
-  character (len=*), intent(in) :: TypeAction
-  integer, intent(in)           :: nTheta
-  real, intent(in)              :: Radius 
-  real, intent(in)              :: Array_GB(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK)
+  character(len=*), intent(in) :: TypeAction
+  integer, intent(in):: nTheta
+  real,    intent(in):: Radius 
+  real,    intent(in):: Array_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables
   real :: Result, Darea0, Darea, Average 
@@ -1382,16 +1383,17 @@ real function integrate_circle(Radius,z,Array_GB)
   ! for the z axis is defined by the radius Radius and the z position is
   ! is given by z.  
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B,optimize_message_pass
-  use ModGeometry, ONLY : XyzStart_Blk
-  use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_, CellSize_DB
+  use ModMain,  ONLY: optimize_message_pass
+  use ModGeometry, ONLY: XyzStart_Blk
   use ModNumConst, ONLY: cTwoPi
   use ModInterpolate, ONLY: trilinear
+  use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
+       nBlock, MaxBlock, Unused_B, Xyz_DGB, x_, y_, z_, CellSize_DB
   implicit none
 
   ! Arguments
 
-  real, intent(in) :: Array_GB(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK)
+  real, intent(in) :: Array_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
   real, intent(in) :: Radius, z 
 
   ! Local variables
@@ -1622,14 +1624,15 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
 
   use ModAdvance,   ONLY: nVar, State_VGB, P_
   use ModGeometry,  ONLY: true_BLK, true_cell 
-  use BATL_lib, ONLY: nI, nJ, nK, nBlock, MaxBlock, Unused_B, &
+  use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
+       nI, nJ, nK, nBlock, MaxBlock, Unused_B, &
        IsCartesian, CellVolume_B, CellVolume_GB
 
   implicit none 
 
   ! Arguments
   real, intent(out) :: Sum_V(nVar)
-  real, intent(out) :: Pressure_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)
+  real, intent(out) :: Pressure_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables:
   integer :: i, j, k, iBlock, iVar

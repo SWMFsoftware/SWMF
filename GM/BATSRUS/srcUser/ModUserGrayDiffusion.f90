@@ -385,7 +385,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -604,7 +604,7 @@ contains
     UserCriteria = 0.0
 
     ! capture the embedded hydro shock
-    LOOPCELL: do k = 1, nK; do j=1, nJ; do i = -1, nI+2
+    LOOPCELL: do k = 1, nK; do j=1, nJ; do i = MinI,MaxI
        Temperature = State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
        if(Temperature > TemperatureMin &
             .and. abs(Xyz_DGB(y_,i,j,k,iBlock)) < DyRefine)then

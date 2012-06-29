@@ -90,9 +90,9 @@ contains
 
     integer, intent(in) :: iBlock
 
-    real :: Potential_G(-1:nI+2,-1:nJ+2)
-    real :: xRot_G(-1:nI+2,-1:nJ+2,-1:nK+2)
-    real :: Perturb_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real :: Potential_G(MinI:MaxI,MinJ:MaxJ)
+    real :: xRot_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real :: Perturb_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real :: pTotal
     integer :: i, j, k
     !--------------------------------------------------------------------------

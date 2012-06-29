@@ -264,8 +264,8 @@ contains
     allocate(bb_x(1:nI+1,1:nJ+1,1:nK+1,nBLK))
     allocate(bb_y(1:nI+1,1:nJ+1,1:nK+1,nBLK))
     allocate(bb_z(1:nI+1,1:nJ+1,1:nK+1,nBLK))
-    allocate(Bxyz_DGB(3,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))
-    allocate(Extra_VGB(nExtraIntegral,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK))  
+    allocate(Bxyz_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
+    allocate(Extra_VGB(nExtraIntegral,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))  
     allocate(RayIntegral_V(1:nLocalIntegral))
 
     if(DoInitRay)then

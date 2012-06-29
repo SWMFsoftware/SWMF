@@ -1087,7 +1087,7 @@ contains
     integer,          intent(in) :: iBlock
     character(len=*), intent(in) :: NameVar
     logical,          intent(in) :: IsDimensional
-    real,             intent(out):: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out):: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out):: PlotVarBody
     logical,          intent(out):: UsePlotVarBody
     character(len=*), intent(out):: NameTecVar
@@ -1206,7 +1206,7 @@ contains
     use ModResistivity, ONLY: Eta0Si
 
     integer, intent(in) :: iBlock
-    real,intent(out) :: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
+    real,intent(out) :: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
 
     real   :: Te_dim
     real   :: loc_c(3), NumDenNeutral_V(3), Eta0

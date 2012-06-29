@@ -22,7 +22,7 @@ subroutine project_B
   implicit none
 
   ! Local variables
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: &
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK) :: &
        proj_divb, &                  ! original error to be projected out
        phi                           ! Scalar field in the Poisson problem
 
@@ -222,7 +222,7 @@ subroutine proj_get_divB(proj_divB)
 
   ! Argument
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(out) :: proj_divb
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(out) :: proj_divb
 
   ! Local variables
   integer :: iBLK, i, j, k
@@ -275,7 +275,7 @@ subroutine proj_poisson(rhs,tolerance,typestop,matvecmax,&
 
   ! Arguments
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(inout):: rhs
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(inout):: rhs
   !    on input: the right hand side of the Poisson equation
   !    on output: the residual
 
@@ -305,7 +305,7 @@ subroutine proj_poisson(rhs,tolerance,typestop,matvecmax,&
   real, intent(out)    :: resid
   ! The residual after the iterations
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(out):: phi
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(out):: phi
   !    The solution
 
   ! Local variables
@@ -368,14 +368,14 @@ subroutine proj_matvec(phi,laplace_phi)
 
   ! Arguments
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(inout) :: phi
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(inout) :: phi
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(out) :: laplace_phi
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(out) :: laplace_phi
 
   ! Local variables
 
   integer :: idim, iBLK
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: dphi,ddphi
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK) :: dphi,ddphi
   integer :: i,j,k
   real, dimension(-1:1,-1:1,-1:1) :: phiC
   !---------------------------------------------------------------------------
@@ -445,15 +445,17 @@ end subroutine proj_matvec
 !=============================================================================
 ! Calculate gradient of phi in direction idim for real cells only
 subroutine proj_gradient(idim,phi,dphi)
-  use ModMain, ONLY : nI, nJ, nK, nBLK, nBlock, Unused_B, x_, y_, z_
+  use ModSize, ONLY: x_, y_, z_, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nBlock, MaxBlock
+  use ModMain, ONLY : Unused_B
   use BATL_lib, ONLY: CellFace_DB, CellVolume_B
   implicit none
 
   ! Arguments
   integer, intent(in) :: idim
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: phi
+  real, intent(in) :: phi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(out) :: dphi
+  real, intent(out) :: dphi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables
   integer :: iBLK
@@ -492,7 +494,6 @@ subroutine proj_gradient(idim,phi,dphi)
 
 !!! CORRECT dphi FOR MESH REFINEMENT EFFECTS
 
-  return
 end subroutine proj_gradient
 
 !=============================================================================
@@ -508,7 +509,7 @@ subroutine proj_boundphi(phi,idimmin,idimmax)
   implicit none
 
   ! Arguments
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
        intent(inout) :: phi
   integer, intent(in):: idimmin,idimmax
 
@@ -570,7 +571,7 @@ subroutine proj_correction(phi)
   implicit none
 
   ! Arguments
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(inout) :: phi
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(inout) :: phi
 
   ! Local variables
   integer :: iBLK, i, j, k

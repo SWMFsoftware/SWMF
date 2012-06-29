@@ -21,7 +21,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
 
   integer, intent(in)   :: iFile, iBlock
   integer, intent(in)   :: nPlotVar
-  real,    intent(in)   :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
+  real,    intent(in)   :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
   real,    intent(in)   :: xMin,xMax,yMin,yMax,zMin,zMax
   real,    intent(inout):: DxBlock,DyBlock,DzBlock
   integer, intent(out)  :: nCell
@@ -68,7 +68,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      plot_Dx(2,iFile)=DyBlock
      plot_Dx(3,iFile)=DzBlock
 
-     do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
         nCell=nCell+1
         if (plot_dimensional(iFile)) then
            x = Xyz_DGB(x_,i,j,k,iBlock)*No2Io_V(UnitX_)

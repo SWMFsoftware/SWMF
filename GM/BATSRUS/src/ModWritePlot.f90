@@ -34,8 +34,8 @@ subroutine write_plot_common(ifile)
   integer, parameter:: lNameVar = 10
 
   ! Plot variables
-  real :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
-  real :: PlotVarBlk(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
+  real :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nplotvarmax)
+  real :: PlotVarBlk(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nplotvarmax)
   real :: PlotVar_inBody(nplotvarmax)
   logical :: PlotVar_useBody(nplotvarmax)
   real, allocatable :: PlotVarNodes_VNB(:,:,:,:,:)
@@ -685,7 +685,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
   character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-  real, intent(inout) :: plotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
+  real, intent(inout) :: plotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
   real, intent(out)   :: plotvar_inBody(nPlotVar)
   logical, intent(out):: plotvar_useBody(nPlotVar)
 
@@ -699,7 +699,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
   integer:: iDir, Di, Dj, Dk
   real :: Jx, Jy, Jz
-  real ::FullB_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
+  real ::FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
   logical :: IsFound
 
@@ -889,7 +889,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('jx','jy', 'jz', 'jr')
 
         if(.not. allocated(J_DG))then
-           allocate(J_DG(1:3,-1:nI+2,-1:nJ+2,-1:nK+2))
+           allocate(J_DG(1:3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
            J_DG = 0.0
         end if
 
@@ -1333,17 +1333,18 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
      plotvar, plotvar_inBody)
 
   use ModProcMH
-  use ModMain, ONLY : nI, nJ, nK, BlkTest, ProcTest
+  use ModMain, ONLY: BlkTest, ProcTest
   use ModPhysics
   use ModVarIndexes, ONLY: NameVar_V, UnitUser_V, DefaultState_V   
   use ModUtilities,  ONLY: lower_case
   use ModMultiFluid, ONLY: extract_fluid_name
+  use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
   character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-  real, intent(inout) :: plotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
+  real, intent(inout) :: plotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
   real, intent(inout) :: plotVar_inBody(nPlotVar)
 
   character (len=10)  :: String, NamePlotVar, NameVar

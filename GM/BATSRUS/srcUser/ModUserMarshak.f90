@@ -119,7 +119,7 @@ contains
     case('suolson')
        Temperature = 1.0e-5*cKevToK*Si2No_V(UnitTemperature_)
        Pressure = Density*Temperature
-       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
           State_VGB(Rho_,i,j,k,iBlock) = Density
           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
           State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Temperature**4
@@ -214,7 +214,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar

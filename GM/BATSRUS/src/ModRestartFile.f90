@@ -5,7 +5,8 @@ module ModRestartFile
   use ModProcMH,     ONLY: iProc, nProc, iComm
   use ModIO,         ONLY: Unit_Tmp, nFile, Dt_Output, Dn_Output, Restart_, &
        restart, save_restart_file
-  use ModMain,       ONLY: nI, nJ, nK, &
+  use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  use ModMain,       ONLY: &
        nBlockAll, nBlock, Unused_B, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
        NameThisComp, iteration_number, DoThinCurrentSheet
@@ -513,7 +514,7 @@ contains
          ' read_restart_file could not open: '//trim(NameFile))
 
     ! Fill in ghost cells
-    do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
        State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V(1:nVar)
     end do;end do;end do
 
@@ -759,7 +760,7 @@ contains
        if(DoTestMe) write(*,*) NameSub,' iBlock, iRec=', iBlock, iRec
 
        ! Fill in ghost cells
-       do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V(1:nVar)
        end do; end do; end do
 

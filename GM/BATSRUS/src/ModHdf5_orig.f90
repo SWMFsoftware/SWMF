@@ -1,6 +1,7 @@
 module ModHdf5
 
   use ModProcMH, ONLY: iProc, nProc, iComm 
+  use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use hdf5
   use ModHdf5Utils
 
@@ -61,7 +62,7 @@ contains
 
     integer, intent(in)   :: iFile, iBlock, H5Index
     integer, intent(in)   :: nPlotVar
-    real,    intent(in)   :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
+    real,    intent(in)   :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
     real,    intent(in)   :: xMin,xMax,yMin,yMax,zMin,zMax
     logical, intent(in) :: isNonCartesian
     character (len=*), intent(in) :: plotType
@@ -493,7 +494,7 @@ contains
     !  in the next plotfile.
 
     integer, intent(in) :: nPlotVar, H5Index, iBlock
-    real, intent(in) :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
+    real, intent(in) :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
     logical, intent(in) :: isNonCartesian
     integer:: ii, jj, kk
 

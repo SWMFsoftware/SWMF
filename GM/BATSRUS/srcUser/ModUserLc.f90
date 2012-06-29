@@ -88,7 +88,7 @@ module ModUser
   logical :: IsNewBlockTeCalc(nBLK) = .true.
   ! cell centered electron temperature for entire block
   ! put here so not always re-computed during boundary calculation
-  real :: Te_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
+  real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
 
 contains
 
@@ -807,7 +807,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -833,7 +833,7 @@ contains
        !Allways use lower case !!
        
     case('qheat')
-       do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
+       do k=MinK,MaxK ; do j=MinJ,MaxJ ; do i=MinI,MaxI
           call get_cell_heating(i, j, k, iBlock, CoronalHeating)
           PlotVar_G(i,j,k) = CoronalHeating
        end do; end do ; end do
@@ -843,7 +843,7 @@ contains
        NameIdlUnit = '[erg/cm^3/s]'
        
     case('qrad')
-       do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
+       do k=MinK,MaxK ; do j=MinJ,MaxJ ; do i=MinI,MaxI
           AuxTeSi = TeFraction * State_VGB(P_,i,j,k,iBlock) &
             / State_VGB(Rho_,i,j,k,iBlock) *No2Si_V(UnitTemperature_)
 

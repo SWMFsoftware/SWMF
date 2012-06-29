@@ -38,11 +38,11 @@ subroutine proj_bicgstab(rhs,qx,iter,tol,typestop,info)
 
   ! Arguments
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(inout) :: rhs
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(inout) :: rhs
   !        on input:  right-hand side vector.
   !        on output: residual vector.
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(out):: qx
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(out):: qx
   !       on output: solution vector.
 
   integer, intent(inout) :: iter
@@ -87,7 +87,7 @@ subroutine proj_bicgstab(rhs,qx,iter,tol,typestop,info)
 
   ! Local variables (2 vectors are needed in addition to tmp1_BLK=r and tmp2_BLK=u:
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK):: &
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK):: &
        bicg_r1, bicg_u1
 
   real :: rwork(2,7)
@@ -101,9 +101,9 @@ subroutine proj_bicgstab(rhs,qx,iter,tol,typestop,info)
 
   logical :: oktest, oktest_me
 
-  ! Functions:
+  ! External function:
 
-  real :: dot_product_BLK, maxval_abs_BLK
+  real :: maxval_abs_BLK
 
   !---------------------------------------------------------------------------
   call set_oktest('proj_bicgstab',oktest, oktest_me)

@@ -2,7 +2,8 @@
 !==============================================================================
 module ModFaceGradient
 
-  use ModSize, ONLY: MaxDim, nI, nJ, nK, jRatio, kRatio, InvIjkRatio
+  use ModSize, ONLY: MaxDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+       jRatio, kRatio, InvIjkRatio
 
   implicit none
   save
@@ -33,8 +34,8 @@ contains
     use BATL_lib, ONLY: DiLevelNei_IIIB
 
     integer, intent(in) :: iBlock, nVar
-    real, intent(inout) :: Field1_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2)
-    real, intent(inout) :: Field_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(inout) :: Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real, intent(inout) :: Field_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     real, parameter :: c0 = 0.5, p0 = 1./6., F1 = 1./3.
 
@@ -288,8 +289,8 @@ contains
     use BATL_lib, ONLY: DiLevelNei_IIIB
 
     integer, intent(in) :: iBlock, nVar
-    real, intent(inout) :: Field1_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2)
-    real, intent(inout) :: Field_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(inout) :: Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real, intent(inout) :: Field_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     real,parameter :: C1 = 8./15., F1 = 2./3., F2 = -1./5.
     real,parameter :: p0 = 5./32., m0 =-3./32., c0= 15./16.
@@ -579,7 +580,7 @@ contains
     real:: DxyzDcoord_DD(MaxDim,MaxDim)
 
     ! Transverse gradients
-    real:: TransGrad_DDG(MaxDim,MaxDim,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real:: TransGrad_DDG(MaxDim,MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Inverse of cell size
     real :: InvDx, InvDy, InvDz
@@ -606,19 +607,19 @@ contains
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
 
-    do k=-1,nK+2; do j=-1,nJ+2; do i=1,nI
+    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=1,nI
        TransGrad_DDG(:,1,i,j,k)=  &
             ( dp1* (Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)) &
             + dp2* (Xyz_DGB(:,i+2,j,k,iBlock) - Xyz_DGB(:,i-2,j,k,iBlock)))
     end do; end do; end do
 
-    do k=-1,nK+2; do j=1,nJ; do i=-1,nI+2
+    do k=MinK,MaxK; do j=1,nJ; do i=MinI,MaxI
        TransGrad_DDG(:,2,i,j,k)=  &
             ( dp1* (Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
             + dp2* (Xyz_DGB(:,i,j+2,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
     end do; end do; end do
 
-    do k=1,nK; do j=-1,nJ+2; do i=-1,nI+2
+    do k=1,nK; do j=MinJ,MaxJ; do i=MinI,MaxI
        TransGrad_DDG(:,3,i,j,k)=  &
             ( dp1* (Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
             + dp2* (Xyz_DGB(:,i,j,k+2,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
@@ -691,13 +692,13 @@ contains
 
     integer, intent(in) :: iDir, i, j, k, iBlock
     logical, intent(inout) :: IsNewBlock
-    real, intent(inout) :: Scalar_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(inout) :: Scalar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out) :: FaceGrad_D(3)
 
     integer :: iL, iR, jL, jR, kL, kR
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     Real :: InvDx, InvDy, InvDz
-    real :: Scalar1_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real :: Scalar1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
@@ -855,13 +856,13 @@ contains
 
     integer, intent(in) :: iDir, i, j, k, iBlock
     logical, intent(inout) :: IsNewBlock
-    real, intent(inout) :: Vector_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(inout) :: Vector_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out)  :: FaceCurl_D(3)
 
     integer :: iL, iR, jL, jR, kL, kR
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     Real :: InvDx, InvDy, InvDz
-    real :: Vector1_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real :: Vector1_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !--------------------------------------------------------------------------
 
     InvDx = 1.0/CellSize_DB(x_,iBlock)

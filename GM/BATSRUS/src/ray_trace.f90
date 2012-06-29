@@ -556,7 +556,7 @@ contains
                    ! Print information
 
                    write(*,*)'iProc,iBLK,ix,iy,iz=',iProc,iBLK,ix,iy,iz
-                   write(*,*)' x,y,z_BLK(1,1,1),dx=',&
+                   write(*,*)' x,y,Xyz_DGB(z_,1,1,1),dx=',&
                         Xyz_DGB(:,1,1,1,iBLK), CellSize_DB(x_,iBLK)
 
                    iPos_D=rayend_ind(:,iray,ix,iy,iz,iBLK)
@@ -899,7 +899,7 @@ contains
 
   real function interpolate_bb1(qbb)
 
-    real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
          intent(in):: qbb
 
     !-------------------------------------------------------------------------
@@ -920,7 +920,7 @@ contains
   !==========================================================================
   function interpolate_bb_v(nVar,qbb)
     integer,intent(in)::nVar
-    real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
+    real, dimension(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
          intent(in):: qbb
     real, dimension(nVar)::interpolate_bb_v
 
@@ -1695,7 +1695,7 @@ contains
   !==========================================================================
   function interpolate_bb_v(nVar,qbb)
     integer,intent(in)::nVar
-    real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
+    real, dimension(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
          intent(in):: qbb
     real, dimension(nVar)::interpolate_bb_v
 

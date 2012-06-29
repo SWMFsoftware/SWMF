@@ -1,7 +1,9 @@
 module ModFaceFlux
 
   use ModProcMH,     ONLY: iProc
-  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit, &
+  use ModSize,       ONLY: x_, y_, z_, nI, nJ, nK, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  use ModMain,       ONLY: UseB, UseB0, cLimit, &
        iTest, jTest, kTest, ProcTest, BlkTest, DimTest
   use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction, &
        UseIonHeatConduction, DoThinCurrentSheet
@@ -115,7 +117,7 @@ module ModFaceFlux
   ! Variables needed for Biermann battery term
   logical :: UseHallGradPe = .false., IsNewBlockGradPe = .true.
   real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
-  real, save :: Pe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+  real, allocatable, save :: Pe_G(:,:,:)
 
   ! Variables for diffusion solvers (radiation diffusion, heat conduction)
   real :: DiffCoef, EradFlux, RadDiffCoef, HeatFlux, IonHeatFlux, &
@@ -945,9 +947,13 @@ contains
     if(UseHallGradPe)then
 
        if(IsNewBlockGradPe)then
+
+          if(.not.allocated(Pe_G)) &
+               allocate(Pe_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+
           ! Obtain electron pressure
           if(.not.UseIdealEos .and. .not.UseElectronPressure)then
-             do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+             do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
                 call user_material_properties(State_VGB(:,i,j,k,iBlockFace), &
                      i, j, k, iBlockFace, TeOut=TeSi, NatomicOut=NatomicSi)
                 ! Single temperature mode: electron temperature is the same

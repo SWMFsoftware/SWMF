@@ -1,358 +1,5 @@
 !^CFG COPYRIGHT UM
 !==== Simple subroutines and functions that operate on all used blocks ========
-!^CFG IF PROJECTION BEGIN
-subroutine set_BLK(qa,qb)
-
-  ! Set qa=qb for all used blocks, where qb is a scalar
-
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModGeometry, ONLY : true_BLK,true_cell
-  implicit none
-
-  ! Arguments
-
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(out) :: qa
-  real, intent(in) :: qb
-
-  ! Local variables:
-  integer:: iBLK
-
-  !---------------------------------------------------------------------------
-
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK))then
-           qa(1:nI,1:nJ,1:nK,iBLK)=qb
-        else
-           where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
-                qa(1:nI,1:nJ,1:nK,iBLK)=qb
-        end if
-     end if
-  end do
-
-end subroutine set_BLK
-
-!=============================================================================
-subroutine eq_BLK(qa,qb)
-
-  ! Do qa=qb for all used blocks
-
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModGeometry, ONLY : true_BLK,true_cell
-  implicit none
-
-  ! Arguments
-
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK):: qa,qb
-  intent(out) :: qa
-  intent(in)  :: qb
-
-  ! Local variables:
-  integer:: iBLK
-
-  !---------------------------------------------------------------------------
-
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK))then
-           qa(1:nI,1:nJ,1:nK,iBLK)= qb(1:nI,1:nJ,1:nK,iBLK)
-        else
-           where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
-                qa(1:nI,1:nJ,1:nK,iBLK)= qb(1:nI,1:nJ,1:nK,iBLK)
-        end if
-
-     end if
-  end do
-
-end subroutine eq_BLK
-
-!=============================================================================
-subroutine add_BLK(qa,qb)
-
-  ! Do qa=qa+qb for all used blocks
-
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModGeometry, ONLY : true_BLK,true_cell
-  implicit none
-
-  ! Arguments
-
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: qa, qb
-  intent(inout) :: qa
-  intent(in)    :: qb
-
-  ! Local variables:
-  integer:: iBLK
-
-  !---------------------------------------------------------------------------
-
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK))then
-           qa(1:nI,1:nJ,1:nK,iBLK)= &
-                qa(1:nI,1:nJ,1:nK,iBLK)+qb(1:nI,1:nJ,1:nK,iBLK)
-        else
-           where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
-                qa(1:nI,1:nJ,1:nK,iBLK)= &
-                qa(1:nI,1:nJ,1:nK,iBLK)+qb(1:nI,1:nJ,1:nK,iBLK)
-        end if
-     end if
-  end do
-
-end subroutine add_BLK
-
-!=============================================================================
-subroutine sub_BLK(qa,qb)
-
-  ! Do qa=qa-qb for all used blocks
-
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModGeometry, ONLY : true_BLK,true_cell
-  implicit none
-
-  ! Arguments
-
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: qa, qb
-  intent(inout) :: qa
-  intent(in)    :: qb
-
-  ! Local variables:
-  integer:: iBLK
-
-  !---------------------------------------------------------------------------
-
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK))then
-           qa(1:nI,1:nJ,1:nK,iBLK)= &
-                qa(1:nI,1:nJ,1:nK,iBLK)-qb(1:nI,1:nJ,1:nK,iBLK)
-        else
-           where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
-                qa(1:nI,1:nJ,1:nK,iBLK)= &
-                qa(1:nI,1:nJ,1:nK,iBLK)-qb(1:nI,1:nJ,1:nK,iBLK)
-        end if
-     end if
-  end do
-
-end subroutine sub_BLK
-
-!=============================================================================
-subroutine eq_plus_BLK(qa,qb,qc)
-
-  ! Do qa=qb+qc for all used blocks
-
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModGeometry, ONLY : true_BLK,true_cell
-  implicit none
-
-  ! Arguments
-
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: qa,qb,qc
-  intent(out) :: qa
-  intent(in)  :: qb,qc
-
-  ! Local variables:
-  integer:: iBLK
-
-  !---------------------------------------------------------------------------
-
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK))then
-           qa(1:nI,1:nJ,1:nK,iBLK)= &
-                qb(1:nI,1:nJ,1:nK,iBLK)+qc(1:nI,1:nJ,1:nK,iBLK)
-        else
-           where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
-                qa(1:nI,1:nJ,1:nK,iBLK)= &
-                qb(1:nI,1:nJ,1:nK,iBLK)+qc(1:nI,1:nJ,1:nK,iBLK)
-        end if
-     end if
-  end do
-
-
-end subroutine eq_plus_BLK
-
-!=============================================================================
-subroutine add_times_BLK(qa,qb,qc)
-
-  ! Do qa=qa+qb*qc for all used blocks, where qb is a scalar
-
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModGeometry, ONLY : true_BLK,true_cell
-  implicit none
-
-  ! Arguments
-
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: qa,qc
-  intent(inout) :: qa
-  intent(in)    :: qc
-
-  real, intent(in) :: qb
-
-  ! Local variables:
-  integer:: iBLK
-
-  !---------------------------------------------------------------------------
-
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK))then
-           qa(1:nI,1:nJ,1:nK,iBLK)= &
-                qa(1:nI,1:nJ,1:nK,iBLK)+qb*qc(1:nI,1:nJ,1:nK,iBLK)
-        else
-           where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
-                qa(1:nI,1:nJ,1:nK,iBLK)= &
-                qa(1:nI,1:nJ,1:nK,iBLK)+qb*qc(1:nI,1:nJ,1:nK,iBLK)
-        end if
-     end if
-  end do
-
-
-end subroutine add_times_BLK
-
-!=============================================================================
-subroutine eq_plus_times_BLK(qa,qb,qc,qd)
-
-  ! Do qa=qb+qc*qd for all used blocks, where qc is a scalar
-
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModGeometry, ONLY : true_BLK,true_cell
-  implicit none
-
-  ! Arguments
-
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: qa,qb,qd
-  intent(inout) :: qa
-  intent(in)    :: qb
-  intent(inout) :: qd
-
-  real, intent(in) :: qc
-
-  ! Local variables:
-  integer:: iBLK
-
-  !---------------------------------------------------------------------------
-
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK))then
-           qa(1:nI,1:nJ,1:nK,iBLK)= &
-                qb(1:nI,1:nJ,1:nK,iBLK)+qc*qd(1:nI,1:nJ,1:nK,iBLK)
-        else
-           where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
-                qa(1:nI,1:nJ,1:nK,iBLK)= &
-                qb(1:nI,1:nJ,1:nK,iBLK)+qc*qd(1:nI,1:nJ,1:nK,iBLK)
-        end if
-     end if
-  end do
-
-end subroutine eq_plus_times_BLK
-
-!=============================================================================
-real function dot_product_BLK(qa,qb)
-
-  ! Return qa.qb=sum(qa*qb) for all used blocks
-
-  use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModGeometry, ONLY : true_BLK,true_cell
-  use ModMpi
-  implicit none
-
-  ! Arguments
-
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: qa,qb
-
-  ! Local variables:
-  real    :: qproduct, qproduct_all
-  integer :: iBLK, iError
-
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('dot_product_BLK',oktest, oktest_me)
-
-  qproduct=0.0
-
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK)) then
-           qproduct=qproduct + &
-                sum(qa(1:nI,1:nJ,1:nK,iBLK)*qb(1:nI,1:nJ,1:nK,iBLK))
-        else
-           qproduct=qproduct + &
-                sum(qa(1:nI,1:nJ,1:nK,iBLK)*qb(1:nI,1:nJ,1:nK,iBLK),&
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
-        end if
-     end if
-  end do
-
-  if(nProc>1)then
-     call MPI_allreduce(qproduct, qproduct_all, 1,  MPI_REAL, MPI_SUM, &
-          iComm, iError)
-     dot_product_BLK=qproduct_all
-     if(oktest)write(*,*)'me,product,product_all:',&
-          iProc,qproduct,qproduct_all
-  else
-     dot_product_BLK=qproduct
-     if(oktest)write(*,*)'me,qproduct:',iProc,qproduct
-  end if
-
-end function dot_product_BLK
-
-!=============================================================================
-real function sum_BLK(qnum,qa)
-
-  ! Return sum(qa) for all used blocks and true cells
-  ! Do for each processor separately if qnum=1, otherwise add them all
-
-  use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModGeometry, ONLY : true_BLK,true_cell
-  use ModMpi
-  implicit none
-
-  ! Arguments
-
-  integer, intent(in) :: qnum
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: qa
-
-  ! Local variables:
-  real    :: qsum, qsum_all
-  integer :: iBLK, iError
-
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('sum_BLK',oktest, oktest_me)
-
-  qsum=0.0
-
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK)) then
-           qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBLK))
-        else
-           qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBLK), &
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
-        end if
-     end if
-  end do
-
-  if(qnum>1)then
-     call MPI_allreduce(qsum, qsum_all, 1,  MPI_REAL, MPI_SUM, &
-          iComm, iError)
-     sum_BLK=qsum_all
-     if(oktest)write(*,*)'me,sum,sum_all:',iProc,qsum,qsum_all
-  else
-     sum_BLK=qsum
-     if(oktest)write(*,*)'me,qsum:',iProc,qsum
-  end if
-
-end function sum_BLK
-!^CFG END PROJECTION
 !=============================================================================
 real function integrate_BLK(qnum,qa)              
 
@@ -429,7 +76,9 @@ real function minval_BLK(qnum,qa)
   ! return the minimum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
+  use ModSize, ONLY: &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, MaxBlock
+  use ModMain, ONLY: Unused_B
   use ModGeometry, ONLY : true_BLK,true_cell
   use ModMpi
   implicit none
@@ -438,7 +87,7 @@ real function minval_BLK(qnum,qa)
 
   integer, intent(in) :: qnum
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: qa
+  real, intent(in) :: qa(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables:
   real    :: qminval, qminval_all
@@ -486,8 +135,10 @@ real function maxval_BLK(qnum,qa)
   ! return the maximum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModGeometry, ONLY : true_BLK,true_cell
+  use ModSize, ONLY: &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, MaxBlock
+  use ModMain, ONLY: Unused_B
+  use ModGeometry, ONLY: true_BLK,true_cell
   use ModMpi
   implicit none
 
@@ -495,7 +146,7 @@ real function maxval_BLK(qnum,qa)
 
   integer, intent(in) :: qnum
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: qa
+  real, intent(in) :: qa(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables:
   real    :: qmaxval, qmaxval_all
@@ -543,7 +194,9 @@ real function maxval_loc_BLK(qnum,qa,loc)
   ! return the maximum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
+  use ModSize, ONLY: &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, MaxBlock
+  use ModMain, ONLY: Unused_B
   use ModGeometry, ONLY :true_cell
   use ModMpi
   implicit none
@@ -552,7 +205,7 @@ real function maxval_loc_BLK(qnum,qa,loc)
 
   integer, intent(in) :: qnum
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: qa
+  real, intent(in) :: qa(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   integer, intent(out):: loc(5)
 
@@ -602,7 +255,9 @@ real function maxval_loc_abs_BLK(qnum,qa,loc)
   ! return the maximum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
+  use ModSize, ONLY: &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, MaxBlock
+  use ModMain, ONLY: Unused_B
   use ModGeometry, ONLY : true_cell
   use ModMpi
   implicit none
@@ -611,7 +266,7 @@ real function maxval_loc_abs_BLK(qnum,qa,loc)
 
   integer, intent(in) :: qnum
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: qa
+  real, intent(in) :: qa(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   integer, intent(out):: loc(5)
 
@@ -661,7 +316,9 @@ real function minval_loc_BLK(qnum,qa,loc)
   ! return the minimum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
+  use ModSize, ONLY: &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, MaxBlock
+  use ModMain, ONLY: Unused_B
   use ModGeometry, ONLY : true_cell
   use ModMpi
   implicit none
@@ -670,7 +327,7 @@ real function minval_loc_BLK(qnum,qa,loc)
 
   integer, intent(in) :: qnum
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: qa
+  real, intent(in) :: qa(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   integer, intent(out):: loc(5)
 
@@ -721,7 +378,9 @@ real function maxval_abs_BLK(qnum,qa)
   ! return the maximum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
+  use ModSize, ONLY: &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, MaxBlock
+  use ModMain, ONLY: Unused_B
   use ModGeometry, ONLY : true_cell,true_BLK
   use ModMpi
   implicit none
@@ -730,7 +389,7 @@ real function maxval_abs_BLK(qnum,qa)
 
   integer, intent(in) :: qnum
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: qa
+  real, intent(in) :: qa(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables:
   real    :: qmaxval, qmaxval_all
@@ -782,7 +441,9 @@ real function maxval_abs_ALL(qnum,qa)
   ! return the minimum for all processors.
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
+  use ModSize, ONLY: &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, MaxBlock
+  use ModMain, ONLY: Unused_B
   use ModMpi
   implicit none
 
@@ -790,8 +451,7 @@ real function maxval_abs_ALL(qnum,qa)
 
   integer, intent(in) :: qnum
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
-       intent(in) :: qa
+  real, intent(in):: qa(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables:
   real    :: qmaxval, qmaxval_all

@@ -166,7 +166,8 @@ contains
 
     use ModAdvance,     ONLY: nWave, UseElectronPressure
     use ModMain,        ONLY: UseRadDiffusion
-    use ModSize,        ONLY: nI, nJ, nK, MaxBlock
+    use ModSize,        ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+         MaxBlock
     use ModImplicit,    ONLY: UseFullImplicit, &
          UseSemiImplicit, UseSplitSemiImplicit, TypeSemiImplicit, &
          nVarSemi, iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
@@ -193,7 +194,7 @@ contains
     end if
 
     if(UseFullImplicit)then
-       allocate(Erad_WG(1,-1:nI+2,-1:nJ+2,-1:nK+2))
+       allocate(Erad_WG(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
        nDiff = 1
        allocate(iDiff_I(nDiff))
@@ -203,11 +204,11 @@ contains
 
     if(UseSemiImplicit)then
 
-       allocate(Erad_WG(nWave,-1:nI+2,-1:nJ+2,-1:nK+2))
-       allocate(Erad1_WG(nWave,-1:nI+2,-1:nJ+2,-1:nK+2))
+       allocate(Erad_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+       allocate(Erad1_WG(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
-       allocate(Te_G(-1:nI+2,-1:nJ+2,-1:nK+2))
-       allocate(Te1_G(-1:nI+2,-1:nJ+2,-1:nK+2))
+       allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+       allocate(Te1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
        ! Default to zero, unless reset
        iTeImpl = 0; iTrImplFirst = 0; iTrImplLast = 0;
@@ -289,7 +290,7 @@ contains
           PointImpl_VCB = 0.0
        end if
 
-       allocate(DiffSemiCoef_VGB(nDiff,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
+       allocate(DiffSemiCoef_VGB(nDiff,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        DiffSemiCoef_VGB = 0.0
 
        if(UseAccurateRadiation) &
@@ -1012,10 +1013,11 @@ contains
     use ModImplicit, ONLY: nVarSemi
     use ModMain,     ONLY: nI, nJ, nK
     use ModPhysics,  ONLY: Clight
-    use ModSize,     ONLY: x_, y_, z_
+    use ModSize,     ONLY: x_, y_, z_, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+
 
     integer, intent(in) :: iSide, iBlock, iImplBlock
-    real, intent(inout) :: State_VG(nVarSemi,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(inout) :: State_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     logical, intent(in) :: IsLinear
 
     integer :: iVar, i, j, k, iDiff
@@ -1094,7 +1096,7 @@ contains
 
     use BATL_lib,        ONLY: store_face_flux, IsCartesian, CellFace_DB, &
          CellFace_DFB, CellSize_DB, CellVolume_GB
-    use BATL_size,       ONLY: MinI, MaxI
+    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModFaceGradient, ONLY: set_block_field3
     use ModImplicit,     ONLY: nVarSemi, iTeImpl, FluxImpl_VXB, FluxImpl_VYB, &
          FluxImpl_VZB
@@ -1104,7 +1106,7 @@ contains
     use ModNumConst,     ONLY: i_DD
 
     integer, intent(in) :: iBlock
-    real, intent(inout) :: StateImpl_VG(nVarSemi,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 
@@ -1112,8 +1114,8 @@ contains
     real :: Area, EnergyExchange
     integer :: iDim, i, j, k, Di, Dj, Dk, iDiff, iRelax, iVar
 
-    real :: StateImpl1_G(-1:nI+2,-1:nJ+2,-1:nK+2)
-    real :: StateImpl_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real :: StateImpl1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real :: StateImpl_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     integer, parameter:: &
          jMin = 1 - 2*min(1,nJ-1), jMax = nJ + 2*min(1,nJ-1), &

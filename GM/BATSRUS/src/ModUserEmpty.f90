@@ -6,7 +6,8 @@ module ModUserEmpty
   ! (included) in the srcUser/ModUser*.f90 files for routines that the user 
   ! does not wish to implement.
 
-  use ModSize, ONLY: x_, y_, z_
+  ! These constants are provided for convenience
+  use ModSize, ONLY: x_, y_, z_, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
   implicit none
 
@@ -157,7 +158,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -238,7 +239,7 @@ contains
     use ModSize
 
     integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
+    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
     character(len=*), parameter :: NameSub = 'user_set_resistivity'
 
     !-------------------------------------------------------------------

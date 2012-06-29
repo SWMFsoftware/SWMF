@@ -30,10 +30,10 @@ contains
   subroutine write_var_hdf5(PlotVar_GI, nPlotVar, iBlockH5, iBlock, &
        IsNonCartesian)
 
-    use ModMain, ONLY : nI, nJ, nK
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     integer, intent(in) :: nPlotVar, iBlockH5, iBlock
-    real, intent(in) :: PlotVar_GI(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
+    real, intent(in) :: PlotVar_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
     logical, intent(in) :: IsNonCartesian
     !----------------------------------------------------------------------
 
@@ -43,11 +43,11 @@ contains
      xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
      isNonCartesian,nCell,H5Advance)
 
-      use ModMain, ONLY : nI, nJ, nK
+      use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
       character (len=3), intent(in) :: plotType
       integer, intent(in)   :: iFile, iBlock, H5Index
       integer, intent(in)   :: nPlotVar
-      real,    intent(in)   :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
+      real,    intent(in)   :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
       real,    intent(in)   :: xMin,xMax,yMin,yMax,zMin,zMax
       logical, intent(in) :: isNonCartesian
       real,    intent(inout):: DxBlock,DyBlock,DzBlock

@@ -53,7 +53,7 @@ module ModFaceValue
   logical:: IsTrueCell_I(-1:MaxIJK+2)
 
   !primitive variables
-  real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2):: Primitive_VG
+  real, dimension(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK):: Primitive_VG
 
   integer :: iVar
 
@@ -737,7 +737,7 @@ contains
        end if
     else                                         !^CFG END BORISCORR
        if(UseAccurateResChange)then
-          do k=-1,nK+2; do j=-1, nJ+2; do i=-1, nI+2
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
              call calc_primitives_MHD         !needed for x-faces
           end do; end do; end do
        else
