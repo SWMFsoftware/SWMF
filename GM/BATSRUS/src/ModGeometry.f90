@@ -5,7 +5,7 @@ module ModGeometry
   use ModMain,       ONLY: UseBody2, body2_, ExtraBc_
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc
-  use BATL_lib,      ONLY: Xyz_DGB, CellSize_DB
+  use BATL_grid,     ONLY: Xyz_DGB, CellSize_DB
 
   implicit none
   SAVE
