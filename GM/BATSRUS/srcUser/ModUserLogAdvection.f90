@@ -149,7 +149,7 @@ contains
     use ModProcMH
     use ModMain,   ONLY: iteration_number, nBLK,Unused_B,nBlockALL
     use ModSize,   ONLY: nI,nJ,nK
-    use ModGeometry, ONLY: Xyz_DGB, dz_BLK,CellSize_DB
+    use ModGeometry, ONLY: Xyz_DGB, CellSize_DB
     use ModIoUnit, ONLY: io_unit_new
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB

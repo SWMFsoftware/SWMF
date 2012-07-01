@@ -1748,8 +1748,7 @@ contains
   !=====================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModGeometry,   ONLY: Xyz_DGB,R_BLK,&
-         dx_BLK,dy_BLK,dz_BLK
+    use ModGeometry,   ONLY: Xyz_DGB, R_BLK
     use ModMain,       ONLY: Unused_B
     use ModVarIndexes
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
