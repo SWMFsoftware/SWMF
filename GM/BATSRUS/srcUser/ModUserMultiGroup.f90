@@ -396,7 +396,6 @@ contains
     use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature
     use ModAdvance,    ONLY: State_VGB
     use ModConst,      ONLY: cKtoKev, cKEV
-    use ModGeometry,   ONLY: dy_BLK, dz_BLK
     use ModIo,         ONLY: NamePlotDir
     use ModIoUnit,     ONLY: io_unit_new
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation, n_step
