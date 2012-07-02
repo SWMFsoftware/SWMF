@@ -448,16 +448,20 @@ contains
                - CellFace_DFB(y_,i,j  ,k,iBlock)*B0_DY(y_,i,j  ,k) ) &
                /CellVolume_GB(i,j,k,iBlock)
 
-          CurlB0_DC(x_,i,j,k) = &
-               +DyInv*(B0_DY(z_,i,j+1,k) - B0_DY(z_,i,j,k)) &
-               + B0_DGB(z_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
+          CurlB0_DC(x_,i,j,k) = ( &
+               + CellFace_DFB(y_,i,j+1,k,iBlock)*B0_DY(z_,i,j+1,k)   &
+               - CellFace_DFB(y_,i,j  ,k,iBlock)*B0_DY(z_,i,j  ,k) ) &
+               /CellVolume_GB(i,j,k,iBlock)
 
           CurlB0_DC(y_,i,j,k) = &
                -DxInv*(B0_DX(z_,i+1,j,k) - B0_DX(z_,i,j,k))
 
           CurlB0_DC(z_,i,j,k) = &
-               DxInv*(B0_DX(y_,i+1,j,k) - B0_DX(y_,i,j,k)) - &
-               DyInv*(B0_DY(x_,i,j+1,k) - B0_DY(x_,i,j,k))
+               DxInv*(B0_DX(y_,i+1,j,k) - B0_DX(y_,i,j,k)) - ( &
+               + CellFace_DFB(y_,i,j+1,k,iBlock)*B0_DY(x_,i,j+1,k)   &
+               - CellFace_DFB(y_,i,j  ,k,iBlock)*B0_DY(x_,i,j  ,k) ) &
+               /CellVolume_GB(i,j,k,iBlock) &
+               + B0_DGB(x_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
        end do; end do
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
