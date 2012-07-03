@@ -22,7 +22,7 @@ subroutine update_states_MHD(iStage,iBlock)
 
   integer, intent(in) :: iStage, iBlock
 
-  integer :: i,j,k, iVar
+  integer :: i, j, k
 
   ! These variables have to be double precision for accurate Boris scheme
   real(Real8_) :: FullBx, FullBy, FullBz, fullBB, rhoc2, UdotBc2, gA2_Boris,&
@@ -30,8 +30,7 @@ subroutine update_states_MHD(iStage,iBlock)
        Bx, By, Bz, BxOld, ByOld, BzOld, B0x, B0y, B0z, RhoUx, RhoUy, RhoUz,&
        mBorisMinusRhoUxOld, mBorisMinusRhoUyOld, mBorisMinusRhoUzOld,&
        Rho, RhoInv, eCorr
-  real:: DtFactor
-  real:: DtLocal
+  real:: DtLocal, DtFactor
   real:: B0_DC(3,nI,nJ,nK)
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
@@ -41,11 +40,6 @@ subroutine update_states_MHD(iStage,iBlock)
   else
      DoTest=.false.; DoTestMe=.false.
   endif
-
-  !\
-  ! Set variables depending on stage number
-  !/
-  DtFactor = iStage*(Cfl/nStage)
 
   !\
   ! Update the new solution state and calc residuals for the mth stage.
@@ -69,8 +63,13 @@ subroutine update_states_MHD(iStage,iBlock)
   end if                     !^CFG END DISSFLUX
 
   !Get Residual.
+  if(UseHalfStep)then
+     DtFactor = (Cfl*iStage)/nStage
+  else
+     DtFactor = Cfl
+  end if
   do k = 1,nK; do j = 1,nJ; do i = 1,nI
-     DtLocal=DtFactor*time_BLK(i,j,k,iBlock)
+     DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
      Source_VC(:,i,j,k) = &
           DtLocal* (Source_VC(:,i,j,k) + &
           ( Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k) &
@@ -133,16 +132,50 @@ contains
 
   subroutine update_explicit
 
+    real:: Coeff
+    !----------------------------------------------------------------------------
+
+    ! Update state variables
     do k=1,nK; do j=1,nJ; do i=1,nI
-       do iVar=1,nVar
-          State_VGB(iVar,i,j,k,iBlock) = &
-               StateOld_VCB(iVar,i,j,k,iBlock) + &
-               Source_VC(iVar,i,j,k)
-       end do
-       ! Compute energy. Choose which to keep below in the where statement
-       Energy_GBI(i,j,k,iBlock,:) = EnergyOld_CBI(i,j,k,iBlock,:) + &
-            Source_VC(Energy_:Energy_-1+nFluid,i,j,k)
+       State_VGB(:,i,j,k,iBlock) = StateOld_VCB(:,i,j,k,iBlock) + &
+            Source_VC(1:nVar,i,j,k)
     end do; end do; end do
+
+    ! Update energy variables
+    do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+       Energy_GBI(i,j,k,iBlock,iFluid) = EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
+            Source_VC(nVar+iFluid,i,j,k)
+    end do; end do; end do; end do
+
+    ! Continue with an interpolation step for Runge-Kutta schemes
+    if(.not.UseHalfStep .and. iStage > 1)then
+
+       ! Runge-Kutta scheme coefficients
+       if (nStage==2) then
+          Coeff = 0.5
+       elseif (nStage==3) then          
+          if (iStage==2) then
+             Coeff = 0.75
+          elseif (iStage==3) then
+             Coeff = 1./3.
+          end if
+       end if
+
+       ! Interpolate state variables
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          State_VGB(:,i,j,k,iBlock) = &
+               Coeff*StateOld_VCB(:,i,j,k,iBlock) + &
+               (1-Coeff)*State_VGB(:,i,j,k,iBlock)
+       end do; end do; end do
+
+       ! Interpolate energies
+       do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+          Energy_GBI(i,j,k,iBlock,iFluid) = &
+               Coeff*EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
+               (1-Coeff)*Energy_GBI(i,j,k,iBlock,iFluid)
+       end do; end do; end do; end do
+
+    endif
 
     if(DoTestMe)write(*,*) NameSub, ' after flux/source=', &
          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
