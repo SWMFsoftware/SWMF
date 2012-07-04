@@ -1,3 +1,6 @@
+#OPTIMIZEMPI
+T			UseOptimizeMpi
+
 #INCLUDE
 Param/CRASH/START.in
 
