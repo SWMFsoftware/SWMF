@@ -132,47 +132,62 @@ contains
 
   subroutine update_explicit
 
-    real:: Coeff
+    real:: Coeff1, Coeff2
     !----------------------------------------------------------------------------
 
-    ! Update state variables
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       State_VGB(:,i,j,k,iBlock) = StateOld_VCB(:,i,j,k,iBlock) + &
-            Source_VC(1:nVar,i,j,k)
-    end do; end do; end do
+    if(UseHalfStep .or. nStage == 1)then
+       ! Update state variables starting from level n (=old) state
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          State_VGB(:,i,j,k,iBlock) = StateOld_VCB(:,i,j,k,iBlock) + &
+               Source_VC(1:nVar,i,j,k)
+       end do; end do; end do
 
-    ! Update energy variables
-    do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
-       Energy_GBI(i,j,k,iBlock,iFluid) = EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
-            Source_VC(nVar+iFluid,i,j,k)
-    end do; end do; end do; end do
+       ! Update energy variables
+       do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+          Energy_GBI(i,j,k,iBlock,iFluid) = EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
+               Source_VC(nVar+iFluid,i,j,k)
+       end do; end do; end do; end do
+    else
+       ! Update state variables starting from previous stage
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) + &
+               Source_VC(1:nVar,i,j,k)
+       end do; end do; end do
+
+       ! Update energy variables
+       do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+          Energy_GBI(i,j,k,iBlock,iFluid) = Energy_GBI(i,j,k,iBlock,iFluid) + &
+               Source_VC(nVar+iFluid,i,j,k)
+       end do; end do; end do; end do
+    end if
 
     ! Continue with an interpolation step for Runge-Kutta schemes
     if(.not.UseHalfStep .and. iStage > 1)then
 
        ! Runge-Kutta scheme coefficients
        if (nStage==2) then
-          Coeff = 0.5
+          Coeff1 = 0.5
        elseif (nStage==3) then          
           if (iStage==2) then
-             Coeff = 0.75
+             Coeff1 = 0.75
           elseif (iStage==3) then
-             Coeff = 1./3.
+             Coeff1 = 1./3.
           end if
        end if
+       Coeff2 = 1 - Coeff1
 
        ! Interpolate state variables
        do k=1,nK; do j=1,nJ; do i=1,nI
           State_VGB(:,i,j,k,iBlock) = &
-               Coeff*StateOld_VCB(:,i,j,k,iBlock) + &
-               (1-Coeff)*State_VGB(:,i,j,k,iBlock)
+               Coeff1*StateOld_VCB(:,i,j,k,iBlock) + &
+               Coeff2*State_VGB(:,i,j,k,iBlock)
        end do; end do; end do
 
        ! Interpolate energies
        do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
           Energy_GBI(i,j,k,iBlock,iFluid) = &
-               Coeff*EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
-               (1-Coeff)*Energy_GBI(i,j,k,iBlock,iFluid)
+               Coeff1*EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
+               Coeff2*Energy_GBI(i,j,k,iBlock,iFluid)
        end do; end do; end do; end do
 
     endif
