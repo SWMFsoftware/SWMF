@@ -79,11 +79,14 @@ istep = -1
 iyear = -1
 itime = -1
 ihour = -1
+imsc  = -1
 for i = 0, nwlog-1 do begin
-    if wlognames(i) eq 'step' or wlognames(i) eq 'it' then istep=i
-    if wlognames(i) eq 'year' or wlognames(i) eq 'yr' then iyear=i
-    if wlognames(i) eq 'time' or wlognames(i) eq 't'  then itime=i
-    if wlognames(i) eq 'hour' or wlognames(i) eq 'hours'  then ihour=i
+   varname = strlowcase(wlognames(i))
+    if varname eq 'step' or varname eq 'it' then istep=i
+    if varname eq 'year' or varname eq 'yr' then iyear=i
+    if varname eq 'time' or varname eq 't'  then itime=i
+    if varname eq 'hour' or varname eq 'hours' then ihour=i
+    if varname eq 'ms' or varname eq 'msec' then imsc = i
 endfor
 
 if itime gt -1 then begin
@@ -101,10 +104,12 @@ endif else begin
         ihour = iday+1
         imin  = iday+2
         isec  = iday+3
-        imsc  = iday+4
         hours = (wlog(*,iday)-wlog(0,iday))*24.0 + $
-          wlog(*,ihour) + wlog(*,imin)/60.0 + wlog(*,isec)/3600.0 + $
-          wlog(*,imsc)/3.6e6
+          wlog(*,ihour) + wlog(*,imin)/60.0 + wlog(*,isec)/3600.0
+
+        if imsc eq iday + 4 then $
+           hours = hours + wlog(*,imsc)/3.6e6
+
     endelse
 endelse
 
@@ -139,7 +144,7 @@ end
 function log_func, wlog, varnames, varname, error
 
     error = 0
-    ivar  = where(varnames eq varname) & ivar = ivar(0)
+    ivar  = where(strlowcase(varnames) eq strlowcase(varname)) & ivar = ivar(0)
     ; Variable is found, return with array
     if ivar ge 0 then return, wlog(*,ivar)
 
@@ -3310,36 +3315,89 @@ if not keyword_set(verbose) then verbose = 0
 ; If verbose is a string set the index string to it
 if size(verbose,/type) eq 7 then index=verbose else index=''
 
-headline=''
-readf,unit,headline
-wlogname=''
-readf,unit,wlogname
-i = strpos(wlogname,'#START')
-if i ge 0 then strput,wlogname,'      ',i
-str2arr,wlogname,wlognames,nwlog
-
-if verbose then begin
-  if filesource then print,'logfile',index,'  =',file
-  print,'headline',index,' =',strtrim(headline,2)
-  for i=0,nwlog-1 do $
-    print,FORMAT='("  wlog",A,"(*,",I2,")= ",A)',index,i,wlognames(i)
-endif
-
 ; Use buffers for efficient reading
+line  = ''
+nheadline = 0
+isheader  = 1
+headlines = strarr(1)
 buf   = long(10000)
 dbuf  = long(10000)
-wlog  = dblarr(nwlog,buf)
-wlog_ = dblarr(nwlog)
 nt    = long(0)
 while not eof(unit) do begin
     on_ioerror,close_file
-    readf,unit,wlog_
-    wlog(*,nt)=wlog_
-    nt=nt+1
-    if nt ge buf then begin
-        buf=buf+dbuf
-        wlog=[[wlog],[dblarr(nwlog,buf)]]
-    endif
+
+    if isheader then begin
+       readf, unit, line
+       ; check if the line contains any character that is not a number
+       isheader = 0
+       for i = 0, strlen(line)-1 do begin
+          if strmatch(strmid(line,i,1), '[!0123456789dDeE \.+-]') then begin
+             isheader = 1
+             break
+          endif
+       endfor
+
+       if isheader then begin
+          if nheadline eq 0 then $
+             headlines(0) = line $
+          else $
+             headlines = [headlines, line]
+          nheadline = nheadline + 1
+       endif else begin
+          ; split line into numbers
+          str2arr,line, numbers, nwlog
+          ; create arrays to read data into
+          wlog_ = dblarr(nwlog)
+          wlog  = dblarr(nwlog,buf)
+
+          ; read first line
+          reads, line, wlog_
+          wlog(*,0) = wlog_
+          nt = 1
+
+          ; find variable names in the header lines
+          for i = nheadline - 1, 0, -1 do begin
+             line = headlines[i]
+             char = strlowcase(strmid(strtrim(line,1),0,1))
+             if char ge 'a' and char le 'z' then begin
+
+                ; Overwrite #START with spaces if present
+                j = strpos(line,'#START')
+                if j ge 0 then strput, line, '      ', j
+
+                ; split line into names
+                str2arr, line, wlognames, nname
+
+                ; if number of names agree we are done
+                if nname eq nwlog then BREAK
+             endif
+          endfor
+
+          if n_elements(wlognames) ne nwlog then begin
+             wlognames = strarr(nwlog)
+             for i = 0, nwlog - 1 do $
+                wlognames[i] = 'var'+string(i, format='(i2.2)')
+          endif
+
+          if verbose then begin
+             if filesource then print,'logfile',index,'  =',file
+             print,'headlines',index,':'
+             print, format='(a)', strtrim(headlines,2)
+             for i=0, nwlog-1 do $
+                print,FORMAT='("  wlog",A,"(*,",I2,")= ",A)',index,i,wlognames(i)
+          endif
+
+       endelse
+    endif else begin
+       readf, unit, wlog_
+       wlog(*,nt)=wlog_
+       nt=nt+1
+       if nt ge buf then begin
+          buf=buf+dbuf
+          wlog=[[wlog],[dblarr(nwlog,buf)]]
+       endif
+    endelse
+
 endwhile
 close_file: if filesource then close,unit
 
@@ -3447,6 +3505,8 @@ if n_elements(ytitles) eq nfunc and size(ytitles,/type) eq 7 then $
 
 if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
 if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
+
+;thick=3 ; !!! temp
 
 ; Set size of plot windows
 ppp   = nfunc
