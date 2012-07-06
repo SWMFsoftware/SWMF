@@ -104,12 +104,19 @@ endif else begin
         ihour = iday+1
         imin  = iday+2
         isec  = iday+3
-        hours = (wlog(*,iday)-wlog(0,iday))*24.0 + $
-          wlog(*,ihour) + wlog(*,imin)/60.0 + wlog(*,isec)/3600.0
 
-        if imsc eq iday + 4 then $
-           hours = hours + wlog(*,imsc)/3.6e6
+        nday = 0
+        daylast  = wlog(0,iday)
+        for i = 0, n_elements(hours) - 1 do begin
+           if daylast ne wlog(i,iday) then begin
+              daylast = wlog(i,iday)
+              nday = nday + 1
+           endif
+           hours[i] = nday*24.0 + $
+                      wlog(i,ihour) + wlog(i,imin)/60.0 + wlog(i,isec)/3600.0
 
+           if imsc eq iday + 4 then hours[i] = hours[i] + wlog(i,imsc)/3.6e6
+        endfor
     endelse
 endelse
 
@@ -3352,8 +3359,10 @@ while not eof(unit) do begin
 
           ; read first line
           reads, line, wlog_
-          wlog(*,0) = wlog_
-          nt = 1
+          if total(finite(wlog_)) eq nwlog then begin
+             wlog(*,0) = wlog_
+             nt = 1
+          endif
 
           ; find variable names in the header lines
           for i = nheadline - 1, 0, -1 do begin
@@ -3390,8 +3399,10 @@ while not eof(unit) do begin
        endelse
     endif else begin
        readf, unit, wlog_
-       wlog(*,nt)=wlog_
-       nt=nt+1
+       if total(finite(wlog_)) eq nwlog then begin
+          wlog(*,nt) = wlog_
+          nt=nt+1
+       endif
        if nt ge buf then begin
           buf=buf+dbuf
           wlog=[[wlog],[dblarr(nwlog,buf)]]
