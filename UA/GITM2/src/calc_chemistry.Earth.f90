@@ -21,6 +21,7 @@ subroutine calc_chemistry(iBlock)
   real :: te3, ti, tn, tn1, tn06, dtsubtmp, losstmp, dentmp, l, t,m1,m2,y1,y2,k1,k2
   real :: Ions(nIons), Neutrals(nSpeciesTotal)
   real :: tli(nIons), tsi(nIons), tln(nSpeciesTotal), tsn(nSpeciesTotal)
+  real :: szap
 
   integer :: iLon, iLat, iAlt, iIon, nIters, iNeutral
   
@@ -203,6 +204,10 @@ subroutine calc_chemistry(iBlock)
 
   do iLon = 1, nLons
      do iLat = 1, nLats
+
+        szap = cos(sza(iLon, iLat,iBlock))
+        if (szap < 0.0) szap = 0.0
+
         do iAlt = 1, nAlts
 
            y1 = max(1.0,k1*exp(m1*altitude_GB(iLon,iLat,iAlt,iBlock)/1000.0))
@@ -459,7 +464,7 @@ subroutine calc_chemistry(iBlock)
 
               ! N2+ + NO -> NO+ + N2 + 6.33 eV
 
-              rr = 3.3e-16
+              rr = 4.1e-16  ! schunk and nagy
 
               Reaction = &
                    rr * &
@@ -666,7 +671,7 @@ subroutine calc_chemistry(iBlock)
               ! O2+ + N(4S) -> NO+ + O + 4.25 eV
               ! -----------
 
-              rr = 1.8e-16
+              rr = 1.5e-16 ! schunk and nagy
 
               Reaction = &
                    rr * &
@@ -689,7 +694,7 @@ subroutine calc_chemistry(iBlock)
               ! O2+ + NO -> NO+ + O2 + 2.813 eV
               ! -----------
 
-              rr = 4.4e-16
+              rr = 4.6e-16 ! schunk and nagy
 
               Reaction = &
                    rr * &
@@ -1332,7 +1337,7 @@ subroutine calc_chemistry(iBlock)
               ! NO+ + e -> O + N(2D) + 0.38 eV  (0.78)
               ! -----------
 
-              rr = 4.2e-13 * te3m085
+              rr = 4.0e-13 * te3m05 ! schunk and nagy !4.2e-13 * te3m085
 
               Reaction = &
                    rr * &
@@ -1709,8 +1714,7 @@ subroutine calc_chemistry(iBlock)
 !              rr = 6.0e-7
 
               rr=5.88e-7*(1+0.2*(f107-65)/100)*exp(-2.115e-18* &
-                   (Neutrals(iO2_)*1.e-6)**0.8855)
-
+                   (Neutrals(iO2_)*1.e-6)**0.8855)*szap
               Reaction = &
                    rr * &
                    Neutrals(iNO_)
