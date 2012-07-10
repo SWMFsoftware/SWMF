@@ -4724,6 +4724,20 @@ of the momenta.
 Default values are shown.
 </command>
 
+<command name="UNIFORMIONVELOCITY">
+	<parameter name="UseUniformIonVelocity"  type="logical" default="F"/>
+#UNIFORMIONVELOCITY
+F			UseUniformIonVelocity
+
+This command allows to enforce uniform velocities in multifluid simulations.
+When true it turns a multifluid into a singlefluid simulation with multiple
+species. Each specie has a separate continuity and pressure equation but the
+velocity is derived from the momentum and mass density of the total fluid:
+sum(iRhoUxIon_I/sum(iRhoIon_I).
+
+Default value is false.
+</command>
+
 <command name="COLLISION">
 	<parameter name="CollisionCoefDim" type="real" min="-1" />
 	<parameter name="TauCutOffDim" type="real" min="-1" default="1000"/>

@@ -1540,6 +1540,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoReplaceDensity', DoReplaceDensity)
         call read_var('SpeciesPercentCheck',SpeciesPercentCheck)
 
+     case("#UNIFORMIONVELOCITY")
+        call read_var('UseUniformIonVelocity', UseUniformIonVelocity)
+
      case("#NEUTRALFLUID")
         call read_var('DoConserveNeutrals', DoConserveNeutrals)
         call read_var('TypeFluxNeutral',    TypeFluxNeutral)

@@ -41,6 +41,11 @@ module ModAdvance
   ! Replace density with sum of species densities (in multi-species plasma)
   logical :: DoReplaceDensity = .true.
 
+  ! Enforce all ion fluids to the same velocity in multi-fluid plasma, which  
+  ! makes a multifluid plasma behave like multi species. Densities and pressures
+  ! are unaffected.
+  logical :: UseUniformIonVelocity = .false.
+
   !\
   ! Conservative/Non-conservative parameters
   !/

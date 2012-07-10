@@ -110,7 +110,8 @@ contains
     use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, nStage, time_accurate, &
          iTest, jTest, kTest, ProcTest, BlkTest, Test_String
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk, &
-         DoReplaceDensity
+         DoReplaceDensity, UseUniformIonVelocity
+    use ModMultiFluid, ONLY: UseMultiIon
     use ModGeometry,ONLY: True_Blk, True_Cell
     use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_, &
          Rho_, DefaultState_V
@@ -370,6 +371,11 @@ contains
        end if
 
     end do; end do; end do
+
+    if(UseUniformIonVelocity.and.UseMultiIon) then
+       call multi_ion_uniform_velocity(iBlock)
+    end if
+
 
     ! Make sure that energy is consistent
     call calc_energy_cell(iBlock)

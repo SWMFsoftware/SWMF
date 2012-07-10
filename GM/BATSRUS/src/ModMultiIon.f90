@@ -563,6 +563,9 @@ contains
                 Force_D = Force_D + CollisionRate * (uIon2_D - uIon_D)
 
 !!! No heating for now
+! If heating is added as below, adjust update_states_MHD to make sure that 
+! the execution passes through here even if UseUniformIonVelocity is true 
+! (fluids can have different temperatures)
                 !Heating = Heating + CollisionRate* &
                 !     ( 2*(Temp_I(jIon) - Temp_I(iIon)) &
                 !     + gm1*sum((uIon2_D - uIon_D)**2) )
