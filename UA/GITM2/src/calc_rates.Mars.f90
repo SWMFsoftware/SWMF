@@ -30,7 +30,7 @@ subroutine calc_rates(iBlock)
        Tn, Ti, TWork1, TWork2, TWork3, NO2
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
-       Ne, mnd, Te, tmp
+       Ne, mnd, Te, tmp,invmnd,invNe
 
   real :: ScaleHeight(nLons, nLats)
 
@@ -61,72 +61,72 @@ trouble = .false.
 
 ! -------------------------------------------------------------------------------
 !     write(*,*) '1st, Some Preliminary Diagnostics for Calc_Rates ===----------------+'
-      do iLon = -1,nLons+2
-        do iLat = -1,nLats+2
-          do iAlt = -1,nAlts+2
+!       do iLon = -1,nLons+2
+!         do iLat = -1,nLats+2
+!           do iAlt = -1,nAlts+2
 
-            if( .not. (Temperature(iLon,iLat,iAlt,iBlock) < 0.0) .and. &
-                .not. (Temperature(iLon,iLat,iAlt,iBlock) > 0.0) ) then
-              write(*,*)'Temperature(',iLon,iLat,iAlt,iBlock,') = ',&
-                  Temperature(iLon,iLat,iAlt,iBlock)
-                  trouble = .true.
-            elseif( Temperature(iLon,iLat,iAlt,iBlock) <= -1.0e+300) then
-              write(*,*)'Temperature(',iLon,iLat,iAlt,iBlock,') = ',&
-                  Temperature(iLon,iLat,iAlt,iBlock)
-                  trouble = .true.
-            elseif(Temperature(iLon,iLat,iAlt,iBlock) >= 1.0e+300) then
-              write(*,*)'Temperature(',iLon,iLat,iAlt,iBlock,') = ',&
-                  Temperature(iLon,iLat,iAlt,iBlock)
-                  trouble = .true.
-            elseif(Temperature(iLon,iLat,iAlt,iBlock) <= 0.0) then
-              write(*,*)'Temperature(',iLon,iLat,iAlt,iBlock,') = ',&
-                  Temperature(iLon,iLat,iAlt,iBlock)
-                  trouble = .true.
-            endif
+!             if( .not. (Temperature(iLon,iLat,iAlt,iBlock) < 0.0) .and. &
+!                 .not. (Temperature(iLon,iLat,iAlt,iBlock) > 0.0) ) then
+!               write(*,*)'Temperature(',iLon,iLat,iAlt,iBlock,') = ',&
+!                   Temperature(iLon,iLat,iAlt,iBlock)
+!                   trouble = .true.
+!             elseif( Temperature(iLon,iLat,iAlt,iBlock) <= -1.0e+300) then
+!               write(*,*)'Temperature(',iLon,iLat,iAlt,iBlock,') = ',&
+!                   Temperature(iLon,iLat,iAlt,iBlock)
+!                   trouble = .true.
+!             elseif(Temperature(iLon,iLat,iAlt,iBlock) >= 1.0e+300) then
+!               write(*,*)'Temperature(',iLon,iLat,iAlt,iBlock,') = ',&
+!                   Temperature(iLon,iLat,iAlt,iBlock)
+!                   trouble = .true.
+!             elseif(Temperature(iLon,iLat,iAlt,iBlock) <= 0.0) then
+!               write(*,*)'Temperature(',iLon,iLat,iAlt,iBlock,') = ',&
+!                   Temperature(iLon,iLat,iAlt,iBlock)
+!                   trouble = .true.
+!             endif
 
-            do iSpecies = 1,nSpecies !Total
-                 if( .not. (NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) < 0.0) .and. &
-                     .not. (NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) > 0.0) ) then
-              	   write(*,*)'NDensityS(',iLon,iLat,iAlt,iSpecies,iBlock,') = ',&
-               	   NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
-                   trouble = .true.
-                 elseif(NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) <= -1.0e+300) then
-                   write(*,*)'NDensityS(',iLon,iLat,iAlt,iSpecies,iBlock,') = ',&
-                       NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
-                   trouble = .true.
-                 elseif(NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) >= 1.0e+300) then
-                   write(*,*)'NDensityS(',iLon,iLat,iAlt,iSpecies,iBlock,') = ',&
-                       NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
-                   trouble = .true.
-                 elseif(NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) <= 0.0) then
-                   write(*,*)'NDensityS(',iLon,iLat,iAlt,iSpecies,iBlock,') = ',&
-                       NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
-                   trouble = .true.
-                 endif
-            enddo !iSpecies = 1,nSpeciesTotal
+!             do iSpecies = 1,nSpecies !Total
+!                  if( .not. (NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) < 0.0) .and. &
+!                      .not. (NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) > 0.0) ) then
+!               	   write(*,*)'NDensityS(',iLon,iLat,iAlt,iSpecies,iBlock,') = ',&
+!                	   NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
+!                    trouble = .true.
+!                  elseif(NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) <= -1.0e+300) then
+!                    write(*,*)'NDensityS(',iLon,iLat,iAlt,iSpecies,iBlock,') = ',&
+!                        NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
+!                    trouble = .true.
+!                  elseif(NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) >= 1.0e+300) then
+!                    write(*,*)'NDensityS(',iLon,iLat,iAlt,iSpecies,iBlock,') = ',&
+!                        NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
+!                    trouble = .true.
+!                  elseif(NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) <= 0.0) then
+!                    write(*,*)'NDensityS(',iLon,iLat,iAlt,iSpecies,iBlock,') = ',&
+!                        NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
+!                    trouble = .true.
+!                  endif
+!             enddo !iSpecies = 1,nSpeciesTotal
 
-            if( .not. (NDensity(iLon,iLat,iAlt,iBlock) < 0.0) .and. &
-                .not. (NDensity(iLon,iLat,iAlt,iBlock) > 0.0) ) then
-              write(*,*)'NDensity(',iLon,iLat,iAlt,iBlock,') = ',&
-                  NDensity(iLon,iLat,iAlt,iBlock)
-                  trouble = .true.
-            elseif( NDensity(iLon,iLat,iAlt,iBlock) <= -1.0e+300) then
-              write(*,*)'NDensity(',iLon,iLat,iAlt,iBlock,') = ',&
-                  NDensity(iLon,iLat,iAlt,iBlock)
-                  trouble = .true.
-            elseif(NDensity(iLon,iLat,iAlt,iBlock) >= 1.0e+300) then
-              write(*,*)'NDensity(',iLon,iLat,iAlt,iBlock,') = ',&
-                  NDensity(iLon,iLat,iAlt,iBlock)
-                  trouble = .true.
-            elseif(NDensity(iLon,iLat,iAlt,iBlock) <= 0.0) then
-              write(*,*)'NDensity(',iLon,iLat,iAlt,iBlock,') = ',&
-                  NDensity(iLon,iLat,iAlt,iBlock)
-                  trouble = .true.
-            endif
+!             if( .not. (NDensity(iLon,iLat,iAlt,iBlock) < 0.0) .and. &
+!                 .not. (NDensity(iLon,iLat,iAlt,iBlock) > 0.0) ) then
+!               write(*,*)'NDensity(',iLon,iLat,iAlt,iBlock,') = ',&
+!                   NDensity(iLon,iLat,iAlt,iBlock)
+!                   trouble = .true.
+!             elseif( NDensity(iLon,iLat,iAlt,iBlock) <= -1.0e+300) then
+!               write(*,*)'NDensity(',iLon,iLat,iAlt,iBlock,') = ',&
+!                   NDensity(iLon,iLat,iAlt,iBlock)
+!                   trouble = .true.
+!             elseif(NDensity(iLon,iLat,iAlt,iBlock) >= 1.0e+300) then
+!               write(*,*)'NDensity(',iLon,iLat,iAlt,iBlock,') = ',&
+!                   NDensity(iLon,iLat,iAlt,iBlock)
+!                   trouble = .true.
+!             elseif(NDensity(iLon,iLat,iAlt,iBlock) <= 0.0) then
+!               write(*,*)'NDensity(',iLon,iLat,iAlt,iBlock,') = ',&
+!                   NDensity(iLon,iLat,iAlt,iBlock)
+!                   trouble = .true.
+!             endif
 
-          enddo
-        enddo
-      enddo
+!           enddo
+!         enddo
+!      enddo
 
 ! -------------------------------------------------------------------------------
    
@@ -161,8 +161,8 @@ trouble = .false.
   ! We add 1 because this is in the denominator a lot, and the corners 
   ! don't have anything. Total number density.
 
-  mnd = NDensity(:,:,:,iBlock)+1.0
-
+  mnd = (NDensity(:,:,:,iBlock)+1.0)
+  invmnd = 1/mnd
 !write(*,*) '==> calc_rates:  Before MeanMajorMass Calculation.'
 
   MeanIonMass = 0.0
@@ -170,9 +170,9 @@ trouble = .false.
   do iSpecies = 1, nSpecies
      MeanMajorMass = MeanMajorMass + &
           Mass(iSpecies) * &
-          NDensityS(:,:,:,iSpecies,iBlock)/mnd
+          NDensityS(:,:,:,iSpecies,iBlock)
   enddo
-
+  MeanMajorMass = MeanMajorMass*invmnd
 !  MMM_3D(1:nLons,1:nLats,1:nAlts,iBlock) = MeanMajorMass(1:nLons,1:nLats,1:nAlts)/AMU
 
 ! Once again, in the corners, the meanmajormass is 0.
@@ -181,15 +181,15 @@ trouble = .false.
 
 !write(*,*) '==> calc_rates:  Before MeanIonMass Calculation.'
 
+  invNe = 1/Ne
   do iIon = 1, nIons-1
      MeanIonMass = MeanIonMass + &
-          MassI(iIon) * IDensityS(:,:,:,iIon,iBlock) / Ne
+          MassI(iIon) * IDensityS(:,:,:,iIon,iBlock) 
   enddo
+  MeanIonMass = MeanIonMass * invNe
 
 ! -------------------------------------------------------------------------------
-
   TempUnit = MeanMajorMass / Boltzmanns_Constant       
-
 ! -------------------------------------------------------------------------------
 
 !write(*,*) '==> calc_rates:  Before Mixing Ratio Calculation.'
@@ -197,20 +197,30 @@ trouble = .false.
 !   Mixing Ratios needed for Kt and Km calculations below
 !   Temperature Arrays needed for Kt amd Km calculation below
 
-  do iAlt = 0, nAlts+1
+ ! do iAlt = 0, nAlts+1
 
 !   Mixing Ratios 
-   po(:,:,iAlt)   = NDensityS(:,:,iAlt,iO_,iBlock)/mnd(:,:,iAlt)
-   pco(:,:,iAlt)  = NDensityS(:,:,iAlt,iCO_,iBlock)/mnd(:,:,iAlt)
-   pn2(:,:,iAlt)  = NDensityS(:,:,iAlt,iN2_,iBlock)/mnd(:,:,iAlt)
-   pco2(:,:,iAlt) = NDensityS(:,:,iAlt,iCO2_,iBlock)/mnd(:,:,iAlt)
+!    po(:,:,0:nAlts+1)   = NDensityS(:,:,0:nAlts+1,iO_,iBlock)*invmnd(:,:,0:nAlts+1)
+!    pco(:,:,0:nAlts+1)  = NDensityS(:,:,0:nAlts+1,iCO_,iBlock)*invmnd(:,:,0:nAlts+1)
+!    pn2(:,:,0:nAlts+1)  = NDensityS(:,:,0:nAlts+1,iN2_,iBlock)*invmnd(:,:,0:nAlts+1)
+!    pco2(:,:,0:nAlts+1) = NDensityS(:,:,0:nAlts+1,iCO2_,iBlock)*invmnd(:,:,0:nAlts+1)
+ 
+! !   Temperature Based Arrays 
+!    ttot(:,:,0:nAlts+1) = Temperature(:,:,0:nAlts+1,iBlock) * &
+!                          TempUnit(:,:,0:nAlts+1)   
+!    tt(:,:,0:nAlts+1) = ttot(:,:,0:nAlts+1)**0.69
+
+   po   = NDensityS(:,:,:,iO_,iBlock)*invmnd
+   pco  = NDensityS(:,:,:,iCO_,iBlock)*invmnd
+   pn2  = NDensityS(:,:,:,iN2_,iBlock)*invmnd
+   pco2 = NDensityS(:,:,:,iCO2_,iBlock)*invmnd
  
 !   Temperature Based Arrays 
-   ttot(:,:,iAlt) = Temperature(:,:,iAlt,iBlock) * &
-                         TempUnit(:,:,iAlt)   
-   tt(:,:,iAlt) = ttot(:,:,iAlt)**0.69
+   ttot = Temperature(:,:,:,iBlock) * &
+                         TempUnit   
+   tt = ttot**0.69
 
-  enddo
+!  enddo
 
 ! -------------------------------------------------------------------------------
 
@@ -226,7 +236,6 @@ trouble = .false.
 !---- KM=((PO*3.9)+(PN2*3.42))*TT*1.E-06 +(PCO*COKM)+(PCO2*CO2KM)
 !---- KT=((PO*75.9)+(PN2*56.))*TT +(PCO*COKT)+(PCO2*CO2KT)
 ! -------------------------------------------------------------------------------
-
      do iLon = -1,nLons+2
         do iLat = -1,nLats+2
            do iAlt = 0, nAlts+1
