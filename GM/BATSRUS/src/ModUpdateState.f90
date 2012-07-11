@@ -409,9 +409,8 @@ contains
 
     end if                                   !^CFG END SIMPLEBORIS
 
-    if(UseUniformIonVelocity.and.UseMultiIon.and..not.UsePointImplicit) then
-       call multi_ion_uniform_velocity(iBlock)
-    end if
+    if(UseUniformIonVelocity.and.UseMultiIon.and..not.UsePointImplicit) &
+         call multi_ion_uniform_velocity(iBlock)
 
     ! Update energy or pressure based on UseConservative and IsConserv_CB
     call calc_energy_or_pressure(iBlock)
@@ -623,12 +622,14 @@ subroutine multi_ion_uniform_velocity(iBlock)
   use ModSize,       ONLY: nI, nJ, nK
   use ModAdvance,    ONLY: State_VGB
   use ModMain,       ONLY: iTest, jTest, kTest, BlkTest, ProcTest
-  use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, IonFirst_, IonLast_
+  use ModMultiFluid, ONLY: &
+       iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, IonFirst_, IonLast_
 
   integer, intent(in) :: iBlock
 
   integer :: i, j, k, iIonFluid
-  real :: RhoTot, RhoUxTot, RhoUyTot, RhoUzTot
+  real :: RhoTot, UxTot, UyTot, UzTot
+
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'multi_ion_uniform_velocity'
   !----------------------------------------------------------------------
@@ -639,33 +640,35 @@ subroutine multi_ion_uniform_velocity(iBlock)
      DoTest = .false. ; DoTestMe = .false.
   end if
 
-  do k=1,nK; do j=1,nJ; do i=1,nI
+  if(DoTestMe)then
+     write(*,*) NameSub,': ion fluid velocities before consolidation:'
+     do iIonFluid = IonFirst_, IonLast_
+        write(*,*)'ux_',iIonFluid,' = ', &
+             State_VGB(iRhoUx_I(iIonFluid),iTest,jTest,kTest,iBlock)/&
+             State_VGB(iRho_I(iIonFluid),iTest,jTest,kTest,iBlock), &
+             ' uy_',iIonFluid,' = ',&
+             State_VGB(iRhoUy_I(iIonFluid),iTest,jTest,kTest,iBlock)/&
+             State_VGB(iRho_I(iIonFluid),iTest,jTest,kTest,iBlock), &
+             ' uz_',iIonFluid,' = ',&
+             State_VGB(iRhoUz_I(iIonFluid),iTest,jTest,kTest,iBlock)/&
+             State_VGB(iRho_I(iIonFluid),iTest,jTest,kTest,iBlock)
+     end do
+  end if
 
-     if(DoTestMe .and. i == iTest .and. j == jTest .and. k == kTest) then
-        write(*,*) NameSub
-        write(*,*)' Ion fluid velocities before consolidation:'
-        do iIonFluid=IonFirst_,IonLast_
-           write(*,*)'ux_',iIonFluid,' = ',State_VGB(iRhoUx_I(iIonFluid),i,j,k,iBlock)/&
-                State_VGB(iRho_I(iIonFluid),i,j,k,iBlock),'uy_',iIonFluid,' = ',&
-                State_VGB(iRhoUy_I(iIonFluid),i,j,k,iBlock)/&
-                State_VGB(iRho_I(iIonFluid),i,j,k,iBlock),'uz_',iIonFluid,' = ',&
-                State_VGB(iRhoUz_I(iIonFluid),i,j,k,iBlock)/&
-                State_VGB(iRho_I(iIonFluid),i,j,k,iBlock)
-        end do
-     end if
+  do k=1, nK; do j=1, nJ; do i=1, nI
 
      ! Total plasma phase
-     RhoTot   = sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
-     RhoUxTot = sum(State_VGB(iRhoUx_I(IonFirst_:IonLast_),i,j,k,iBlock))
-     RhoUyTot = sum(State_VGB(iRhoUy_I(IonFirst_:IonLast_),i,j,k,iBlock))
-     RhoUzTot = sum(State_VGB(iRhoUz_I(IonFirst_:IonLast_),i,j,k,iBlock))
+     RhoTot= sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
+     UxTot = sum(State_VGB(iRhoUx_I(IonFirst_:IonLast_),i,j,k,iBlock))/RhoTot
+     UyTot = sum(State_VGB(iRhoUy_I(IonFirst_:IonLast_),i,j,k,iBlock))/RhoTot
+     UzTot = sum(State_VGB(iRhoUz_I(IonFirst_:IonLast_),i,j,k,iBlock))/RhoTot
 
      State_VGB(iRhoUx_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
-          RhoUxTot/RhoTot*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
+          UxTot*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
      State_VGB(iRhoUy_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
-          RhoUyTot/RhoTot*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
+          UyTot*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
      State_VGB(iRhoUz_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
-          RhoUzTot/RhoTot*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
+          UzTot*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
 
   end do; end do; end do
 
