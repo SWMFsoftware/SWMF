@@ -13,28 +13,22 @@ HGR                     TypeCoordSystem
 #BODY
 F
 
-T                       UseBody
-1.0                     rBody
-3.0E+8                  BodyNDim
-3.5E+6                  BodyTDim
-
-#GRAVITY
-F
-
 #TESTXYZ
-10.0			xTest
-0.0001			yTest
-0.0001			zTest
+8.5			xTest
+0.5			yTest
+0.5			zTest
 
 #TESTVAR
 2			RhoUx
 
+The initial condition has zero velocity in the inertial frame, 
+but not in the rotating frame. 
 #TEST
 ADDROTATIONALVELOCITY update_states calc_source
 
-! Should work with conservative energy and non-conservative pressure equation (trivial)
+Should work both with conservative energy and non-conservative pressure equations
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative
 
 #CONSERVATIVECRITERIA
 0			nConserativeCrit
@@ -42,17 +36,11 @@ T			UseNonConservative
 #SAVERESTART
 F			DoSaveRestart
 
-GRIDGEOMETRY
-spherical		TypeGeometry
-
-LIMITRADIUS
-1.0			RadiusMin
-16.0			RadiusMax
-
+Increase the resolution to 8,8,8 to demonstrate second order convergence
 #GRID
-2			nRootBlockX
-2			nRootBlockY
-2			nRootBlockZ
+4			nRootBlockX
+4			nRootBlockY
+4			nRootBlockZ
 -16.                    xMin
 +16.                    xMax
 -16.0                   yMin
@@ -61,35 +49,18 @@ LIMITRADIUS
 +16.0                   zMax
 
 #GRIDLEVEL
-2			nLevel
+1			nLevel
 initial			NameArea
 
 #GRIDLEVEL
 3			Resolution
-sphere0			NameArea
-5.0			Radius
+brick0			NameArea
+10.0			xSize
+10.0			ySize
+10.0			zSize
 
-SHOCKTUBE
-5.0153927e-16   rho
-0.              Ux (Un)
-0.              Uy (Ut1)
-0.              Uz (Ut2)
-0.              Bx (Bn)
-0.              By (Bt1)
-0.              Bz (Bt2)
-0.14485762      P
-5.0153927e-16   rho (right state)
-0.              Ux (Un)
-0.              Uy (Ut1)
-0.              Uz (Ut2)
-0.              Bx (Bn)
-0.              By (Bt1)
-0.              Bz (Bt2)
-0.14485762      P
-
-#INNERBOUNDARY
-float			TypeBcInner
-
+The ghost cells are initialized with the rotational velocity,
+we keep the ghost cells to make the solution exact at the boundaries
 #OUTERBOUNDARY
 none			TypeBcEast
 none			TypeBcWest
@@ -108,6 +79,7 @@ Rusanov			TypeFlux
 mc3			TypeLimiter
 1.5			BetaLimiter
 
+With the default TVD res. change the error is much larger
 #RESCHANGE
 T			UseAccuateResChange
 
@@ -120,18 +92,19 @@ RAW			StringLogfile
 #SAVEPLOT
 3                       nPlotFiles
 x=0 FUL idl             StringPlot
-1                       DnSavePlot
--1.			DtSavePlot
+-1                       DnSavePlot
+850.			DtSavePlot
 -1.0			Dx
 y=0 FUL idl             StringPlot
-1                       DnSavePlot
--1.			DtSavePlot
+-1                       DnSavePlot
+850.			DtSavePlot
 -1.0			Dx
 z=0 FUL idl             StringPlot
-1                       DnSavePlot
--1.			DtSavePlot
+-1                       DnSavePlot
+850.			DtSavePlot
 -1.0			Dx
 
+Use a fixed final time independent of grid resolution
 #STOP
-10			MaxIteration
--1.0			tSimulationMax
+-1			MaxIteration
+8500.0			tSimulationMax
