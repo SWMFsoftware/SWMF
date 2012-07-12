@@ -24,7 +24,7 @@ test_help:
 	@echo "    test_ccmc                  (run CCMC test)"
 	@echo "    test_ccmc_small            (run small version of CCMC test)"
 	@echo "    test1                      (run GM-IE-PW test)"
-	@echo "    test2                      (run SC-IH test )"
+	@echo "    test2                      (run SC-IH + IH-GM test )"
 	@echo "    test3                      (run GM-IE-IM test)"
 	@echo "    test4                      (run GM-IE-HEIDI test)"
 	@echo "    test5                      (run EE-SC test)"
@@ -286,9 +286,9 @@ test2:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test2_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=Sc,e=MhdCorona -o=IH:u=Ih,e=Mhd
-	./Config.pl -g=SC:4,4,4,3200,1,IH:8,8,8,400,1
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,GM/BATSRUS
+	./Config.pl -o=SC:u=Sc,e=MhdCorona,IH:u=Ih,e=Mhd,GM:u=Default,e=Mhd
+	./Config.pl -g=SC:4,4,4,3200,1,IH:8,8,8,400,1,GM:8,8,8,400,1
 	${MAKE} SWMF
 	make PIDL EARTH_TRAJ
 
@@ -302,21 +302,30 @@ test2_rundir:
 
 test2_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./Restart.pl
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS/start
+	cp Param/PARAM.in.test.IHGM ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.IHGM ${TESTDIR}/LAYOUT.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS/restart
 
 test2_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/SC/log_n000001.log \
+		${TESTDIR}/RESULTS/start/SC/log_n000001.log \
 		output/test2/SC_log_n000001.log \
 		> test2_sc.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IH/log_n000001.log \
+		${TESTDIR}/RESULTS/start/IH/log_n000001.log \
 		output/test2/IH_log_n000001.log \
 		> test2_ih.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IH/sat_earth_traj_n000000.sat \
+		${TESTDIR}/RESULTS/start/IH/sat_earth_traj_n000000.sat \
 		output/test2/IH_sat_earth_traj_n000000.sat \
 		>> test2_ih.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/restart/GM/log_n000001.log \
+		output/test2/GM_log_n000001.log \
+		> test2_gm.diff)
 	ls -l test2*.diff
 
 ### Test3: GM+IE+IM ###

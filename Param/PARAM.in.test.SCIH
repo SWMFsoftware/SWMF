@@ -17,7 +17,7 @@ F			DoTimeAccurate
 0.0 			FracSecond
 
 #SAVERESTART
-F			DoSaveRestart
+T			DoSaveRestart
 2000			DnSaveRestart
 -1.0			DtSaveRestart
 
@@ -77,15 +77,15 @@ RAW			StringLogfile
 #SAVEPLOT
 3			nPlotFiles
 x=0 MHD idl             StringPlot
-100                     DnSavePlot
+10                      DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 y=0 MHD idl             StringPlot
-100                     DnSavePlot
+10                      DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 z=0 MHD idl             StringPlot
-100                     DnSavePlot
+10                      DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 
@@ -109,6 +109,8 @@ MHD file
 36000.0
 IH/earth_traj.dat
 
+! The sample trajectory file contains data for -1 to +1 day only
+! so there will be only 48 hours in the satellite output file.
 #STEADYSTATESATELLITE
 -432000.0                -5 days
 432000.0                 +5 days
@@ -205,16 +207,16 @@ RAW			StringLogfile
 
 #SAVEPLOT
 3			nPlotFiles
-y=0 MHD idl		StringPlot
-1000                   	DnSavePlot
+x=0 MHD idl		StringPlot
+10                   	DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 y=0 MHD idl		StringPlot
-1000			DnSavePlot
+10			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 z=0 MHD idl		StringPlot
-1000			DnSavePlot
+10			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 
