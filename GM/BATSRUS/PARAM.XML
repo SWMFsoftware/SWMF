@@ -3368,9 +3368,9 @@ Only useful if the initial condition has a non-trivial analytic form.
 </command>
 
 <command name="AMRREGION" multiple="T">
-        <part name="NameRegion" type="string" required="T">
 	<set name="RotateArea" value="0"/>
 	<set name="StretchArea"  value="0"/>
+        <parameter name="NameRegion" type="string"/>
 	<parameter name="Resolution" type="real" min="0"
 		if="$_command =~ /RESOLUTION/" />
 	<parameter name="nLevel" type="integer" min="0" max="30"
@@ -3851,7 +3851,6 @@ for refinement.  Again, stretching, rotation and centering cannot be applied
 to the 'user' area.
 </command>
 
-
 <command name="AMRLEVELS">
 	<parameter name="MinBlockLevel" type="integer" min="-1" default="0" />
 	<parameter name="MaxBlockLevel" type="integer" min="-1" default="99" />
@@ -4121,7 +4120,7 @@ Example for InvD2Ray =
 \end{verbatim}
 </command>
 
-<command name="AMRCRITERIALEVEL" alias name="AMRCRITERIARESOLUTION">
+<command name="AMRCRITERIALEVEL" alias="AMRCRITERIARESOLUTION">
 	<parameter name="nRefineCrit" type="integer" min="0" default="0" />
 	<for from="1" to="$nRefineCrit">
 	     <parameter name="StringRefine" type="strings" min="1" max="2">
