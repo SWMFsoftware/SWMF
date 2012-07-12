@@ -154,7 +154,7 @@ module CON_axes
        HgiGse_DD, dLongitudeHgiDeg, dLongitudeHgi, &
        CON_recalc, CON_sun, SunEMBDistance, JulianDay
   use ModNumConst, ONLY: cHalfPi, cRadToDeg, cTwoPi, cTwoPi8, cUnit_DD, cTiny
-
+  use ModConst, ONLY: rSun
   use ModPlanetConst
 
   !REVISION HISTORY:
@@ -398,8 +398,8 @@ contains
             asin(XyzPlanetHgi_D(3)/sqrt(sum(XyzPlanetHgi_D**2)))*cRadToDeg, &
             atan2(XyzPlanetHgr_D(2),XyzPlanetHgr_D(1))*cRadToDeg,&
             atan2(XyzPlanetHgi_D(2),XyzPlanetHgi_D(1))*cRadToDeg
-!       write(*,*)'XyzPlanetHgi_D/rSun = ',XyzPlanetHgi_D/rSun
-!       write(*,*)'XyzPlanetHgr_D/rSun = ',XyzPlanetHgr_D/rSun
+       write(*,*)'XyzPlanetHgi_D/rSun = ',XyzPlanetHgi_D/rSun
+       write(*,*)'XyzPlanetHgr_D/rSun = ',XyzPlanetHgr_D/rSun
        write(*,*)'vPlanetHgi_D/(km/s) = ',vPlanetHgi_D/1000.0
     end if
 
