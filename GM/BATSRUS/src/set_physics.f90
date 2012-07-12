@@ -46,7 +46,7 @@ subroutine set_physics_constants
      if(UseStar) then
         rPlanetSi   = RadiusStar*rSun
         MassBodySi  = MassStar*mSun
-        RotPeriodSi = RotationPeriodStar
+        RotPeriodSi = RotationPeriodStar*cSecondPerDay 
      else
         rPlanetSi   = rSun
         MassBodySi  = mSun

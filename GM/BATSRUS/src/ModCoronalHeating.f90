@@ -133,6 +133,7 @@ module ModNonWKBHeating
   !
   use ModConst, ONLY: rSun,cPi
   use ModAlfvenWaveHeating
+  use ModPhysics,ONLY: UseStar,RadiusStar
   implicit none
   SAVE
   PRIVATE !Except
@@ -157,11 +158,6 @@ module ModNonWKBHeating
   !      WaveEnergyDensitySI,&   !Optional input, is used to calculate VPerp
   !      IsFullReflection,   &   !Optional input, sets the reflection coef to 1
   !      GammaSI)       !Optional output, nonlinear damping rate in s^{-1}
-
-
-
-  real,parameter:: rSunCGS = rSun * 1.0e2 !Solar radius in cm
-  real,parameter:: rSunCGS2= rSunCGS**2
 
   real,parameter:: cPi4 = 4.0 * cPi, cSqrt3Pi = 3.06998016655
 
@@ -281,7 +277,7 @@ contains
     real, intent(out), optional:: &            
          GammaSI            ! local damping rate of waves, in 1/s
     !-------------------------------
-    real:: RCGS, UMagCGS, RhoCGS, BMagCGS, QHeatCGS   !Converted variables
+    real:: RCGS, UMagCGS, RhoCGS, BMagCGS, QHeatCGS, rSunCGS, rSunCGS2   !Converted variables
 
     !Elzasser variables
     real:: ZPlus, ZMinus
@@ -318,6 +314,13 @@ contains
 
     character(LEN=*),parameter::NameSub = 'Cranmer_heating_function'
     !-------------------------------
+
+    if(UseStar)then
+       rSunCGS = rSun*RadiusStar * 1.0e2 !Stellar radius in cm
+    else
+       rSunCGS = rSun * 1.0e2 !Solar radius in cm
+    endif
+    rSunCGS2= rSunCGS**2
 
     !Inputs conversion:
     RCGS      = max(RSI    * 1.0e+2, 1.001 * rSunCGS) 

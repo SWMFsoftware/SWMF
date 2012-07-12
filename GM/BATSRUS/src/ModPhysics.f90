@@ -202,6 +202,6 @@ module ModPhysics
 
   ! Use Stellar parameters
   logical :: UseStar = .false.
-  real :: RadiusStar,MassStar,RotationPeriodStar
+  real :: RadiusStar=1.0,MassStar=1.0,RotationPeriodStar=25.38
 
 end module ModPhysics
