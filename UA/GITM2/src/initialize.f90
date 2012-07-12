@@ -403,19 +403,14 @@ subroutine initialize_gitm(TimeIn)
   endif
 
   if (UseIRI .and. IsEarth) then
-
      call init_iri
-
   else
-
-        if (IsEarth) then
-     do iBlock = 1, nBlocks
-
-        IDensityS(:,:,:,:,iBlock)    = 1.00e8
-        IDensityS(:,:,:,ie_,iBlock)  = 1.00e8*(nIons-1)
-
-     enddo
-    endif
+     if (IsEarth) then
+        do iBlock = 1, nBlocks
+           IDensityS(:,:,:,:,iBlock)    = 1.00e8
+           IDensityS(:,:,:,ie_,iBlock)  = 1.00e8*(nIons-1)
+        enddo
+     endif
   endif
 
   endif
@@ -452,10 +447,6 @@ subroutine initialize_gitm(TimeIn)
     call calc_rates(iBlock)
     call calc_viscosity(iBlock)
   enddo
-
-!  do iBlock = 1, nBlocks
-!    call calc_rates(iBlock)
-!  enddo
 
   call end_timing("initialize")
 
