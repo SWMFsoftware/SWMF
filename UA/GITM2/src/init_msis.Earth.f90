@@ -198,8 +198,8 @@ subroutine init_msis
                    max(msis_dens(3),100.0)
               NDensityS(iLon,iLat,iAlt,iO2_,iBlock)         = &
                    max(msis_dens(4),100.0)
-              NDensityS(iLon,iLat,iAlt,iAr_,iBlock)         = &
-                   max(msis_dens(5),100.0)
+!              NDensityS(iLon,iLat,iAlt,iAr_,iBlock)         = &
+!                   max(msis_dens(5),100.0)
               NDensityS(iLon,iLat,iAlt,iHe_,iBlock)         = &
                    max(msis_dens(7),100.0)
               NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)       = &
@@ -214,8 +214,8 @@ subroutine init_msis
               MeanMajorMass(iLon,iLat,iAlt)=0
 
               do iSpecies = 1, nSpecies
-                 MeanMajorMass(iLon,iLat,iAlt) = MeanMajorMass(iLon,iLat,iAlt) +   &
-                      Mass(iSpecies) * NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)/   &
+                 MeanMajorMass(iLon,iLat,iAlt) = MeanMajorMass(iLon,iLat,iAlt)+&
+                      Mass(iSpecies)*NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)/&
                       sum(NDensityS(iLon,iLat,iAlt,1:nSpecies,iBlock))
               enddo
   
@@ -224,6 +224,10 @@ subroutine init_msis
 
               Temperature(iLon,iLat,iAlt,iBlock) = &
                    msis_temp(2)/TempUnit(iLon,iLat,iAlt)
+
+              InvScaleHeight(iLon,iLat,iAlt,iBlock)  =  &
+                   -Gravity_GB(iLon,iLat,iAlt,iBlock) / &
+                   Temperature(iLon,iLat,iAlt,iBlock)
 
               Rho(iLon,iLat,iAlt,iBlock) = msis_dens(6)
 
@@ -281,6 +285,8 @@ subroutine init_msis
              Mass(iSpecies)*NDensityS(:,:,:,iSpecies,iBlock)
         
      enddo
+
+     call calc_co2(iBlock)
 
   enddo
  
@@ -355,3 +361,57 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
 
 end subroutine msis_bcs
 
+
+subroutine calc_co2(iBlock)
+
+  use ModPlanet
+  use ModGITM
+  use ModInputs, only: CO2ppm
+
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iAlt
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
+       Have, Hn2, Ho, r, Hco2, Hco2t
+
+  Have  = 1.0/InvScaleHeight(:,:,:,iBlock)
+  Hn2   = -Boltzmanns_Constant * &
+       Temperature(:,:,:,iBlock)*TempUnit / ( &
+       Mass(iN2_) * Gravity_GB(:,:,:,iBlock))
+  Ho    = -Boltzmanns_Constant * &
+       Temperature(:,:,:,iBlock)*TempUnit / ( &
+       Mass(iO_3P_) * Gravity_GB(:,:,:,iBlock))
+  Hco2t = -Boltzmanns_Constant * &
+       Temperature(:,:,:,iBlock)*TempUnit / ( &
+       Mass(iCO2_) * Gravity_GB(:,:,:,iBlock))
+
+  ! This calculates the ratio between the current average scale height
+  ! and the Oxygen scale height.  If the scale height is the oxygen 
+  ! scale height, then the atmosphere is in molecular diffusion.  If it
+  ! is far away from the oxygen scale height (closer to the N2 scale height)
+  ! the atmosphere is well mixed and we should use the Have.
+
+  r = (Ho - Have) / (Ho - Hn2)
+  where (r > 1.0) r = 1.0
+  where (r < 0.0) r = 0.0
+
+  Hco2 = (1.0-r) * Hco2t + r * Have
+
+  ! Start at the bottom of the model:
+
+  do iAlt = -1, 0
+     NDensityS(:, :, iAlt, iCO2_, iBlock) = &
+          CO2ppm*1e-6 / (1.0-CO2ppm*1e-6) * NDensity(:,:,iAlt,iBlock)
+  enddo
+
+  ! Then do hydrostatic to the top using the inferred scale height.
+
+  do iAlt = 1, nAlts+2
+     NDensityS(:, :, iAlt, iCO2_, iBlock) = &
+          NDensityS(:, :, iAlt-1, iCO2_, iBlock) * &
+          Temperature(:, :, iAlt-1, iBlock)/Temperature(:, :, iAlt, iBlock) * &
+          exp(-dAlt_GB(:, :, iAlt, iBlock)/Hco2(:,:,iAlt))
+  enddo
+
+end subroutine calc_co2

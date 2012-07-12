@@ -6,20 +6,21 @@ module ModPlanet
 
   implicit none
 
-  integer, parameter :: nSpecies = 5
   integer, parameter :: iO_3P_  = 1
   integer, parameter :: iO2_ = 2
   integer, parameter :: iN2_ = 3
   integer, parameter :: iN_4S_ =  4
   integer, parameter :: iNO_   =  5
+  integer, parameter :: nSpecies = 5
 
-  integer, parameter :: nSpeciesTotal = 11
   integer, parameter :: iN_2D_ =  6
   integer, parameter :: iN_2P_ =  7
   integer, parameter :: iH_    =  8
   integer, parameter :: iHe_   =  9
-  integer, parameter :: iAr_   = 10
+!  integer, parameter :: iAr_   = 10
+  integer, parameter :: iCO2_  = 10
   integer, parameter :: iO_1D_ = 11
+  integer, parameter :: nSpeciesTotal = 11
 
   integer, parameter  :: iO_4SP_ = 1
   integer, parameter  :: iO2P_   = 2
@@ -217,12 +218,13 @@ contains
     Mass(iH_)    = 1.0 * AMU
     Mass(iHe_)   = 4.0 * AMU
     Mass(iN_4S_) = 14.0 * AMU
-    Mass(iO_3P_)    = 16.0 * AMU
+    Mass(iO_3P_)  = 16.0 * AMU
     Mass(iN_2D_) = Mass(iN_4S_)
     Mass(iN_2P_) = Mass(iN_4S_)
     Mass(iN2_)   = 2*Mass(iN_4S_)
     Mass(iO2_)   = 2*Mass(iO_3P_)
     Mass(iNO_)   = Mass(iN_4S_)+Mass(iO_3P_)
+    Mass(iCO2_)  = 12.0*AMU + 2*Mass(iO_3P_)
 
     cSpecies(iH_)    = "H"
     cSpecies(iHe_)   = "He"
@@ -234,7 +236,8 @@ contains
     cSpecies(iN_2P_) = "N(!U2!NP)"
     cSpecies(iNO_)   = "NO"
     cSpecies(iO_1D_) = "O(!U1!ND)"
-    cSpecies(iAr_)   = "Ar"
+    cSpecies(iCO2_)   = "CO!D2!N"
+!    cSpecies(iAr_)   = "Ar"
 
     cIons(iO_4SP_) = "O_4SP_!U+!N"
     cIons(iO2P_)   = "O!D2!U+!N"
