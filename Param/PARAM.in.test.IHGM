@@ -118,11 +118,11 @@ z=0 MHD idl             StringPlot
 
 #END_COMP GM ------------------------------------------------------------------
 
-! Only need to couple at the beginning
+! Only need to couple at the beginning and after AMRs in GM (if any)
 #COUPLE1
 IH                      NameSource
 GM                      NameTarget
-100000                  DnCouple
+60                       DnCouple
 -1.0                    DtCouple
 
 ! Note: the GM->IH coupling does not work if IH is not active!
