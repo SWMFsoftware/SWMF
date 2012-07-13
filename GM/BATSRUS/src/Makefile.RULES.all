@@ -47,14 +47,5 @@ $MaxImplBlock == 1
 $Hdf5 eq "yes"
 	h5pfc ${Cflag2} ModHdf5.f90
 
-write_plot_common.o:\
-	ModHdf5.o
-
-write_plot_los.o:\
-	ModHdf5.o
-
-write_plot_sph.o:\
-	ModHdf5.o
-
 $Compiler eq "pgf90"
 	${COMPILE.f90}  ${Cflag0} impl_interface.f90
