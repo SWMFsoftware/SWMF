@@ -38,7 +38,7 @@ module ModPlotFile
 
   use ModIoUnit,    ONLY: UnitTmp_
   use ModKind,  ONLY: Real4_
-  use ModHdf5Utils, ONLY: losHdf5PlotWrite
+  use ModHdf5Utils, ONLY: save_hdf5_file
   implicit none
 
   private ! except
@@ -55,16 +55,18 @@ contains
 
   subroutine save_plot_file(NameFile, TypePositionIn, &
        TypeFileIn, StringHeaderIn, nStepIn, TimeIn, &
-       ParamIn_I, NameVarIn, PlotVarNameList, hdfUnits,&
+       ParamIn_I, NameVarIn, NameVarInList, NameUnitsIn,&
        IsCartesianIn, &
        nDimIn,&
        CoordMinIn_D, CoordMaxIn_D, &
        Coord1In_I, Coord2In_I, Coord3In_I, &
        CoordIn_I, CoordIn_DII, CoordIn_DIII,&
        VarIn_VI, VarIn_VII, VarIn_VIII, &
-       VarIn_IV, VarIn_IIV, VarIn_IIIV, mpiComm, codeVersionAtt,&
-       iProcL, numProcs)
+       VarIn_IV, VarIn_IIV, VarIn_IIIV, MpiComm,&
+       NorthernMap, SouthernMap, MappingNames)
 
+    use ModUtilities, only: split_string
+    
     character(len=*),           intent(in):: NameFile       ! Name of plot file
     character(len=*), optional, intent(in):: TypePositionIn ! asis/rewind/append
     character(len=*), optional, intent(in):: TypeFileIn     ! ascii/real8/real4
@@ -73,8 +75,8 @@ contains
     real,             optional, intent(in):: TimeIn         ! simulation time  
     real,             optional, intent(in):: ParamIn_I(:)   ! parameters
     character(len=*), optional, intent(in):: NameVarIn      ! list of names
-    character(len=*), optional, intent(in):: PlotVarNameList(:) !
-    character(len=*), optional, intent(in):: hdfUnits(:) !
+    character(len=*), optional, intent(in):: NameVarInList(:)! list of names 
+    character(len=*), optional, intent(in):: NameUnitsIn   ! list of units
     logical,          optional, intent(in):: IsCartesianIn  ! Cartesian grid?
     integer,          optional, intent(in):: nDimIn         ! grid dimensions
     real,             optional, intent(in):: CoordIn_I(:)   ! coords in 1D
@@ -87,31 +89,32 @@ contains
     real,             optional, intent(in):: CoordMaxIn_D(:)! max coordinates
     real,             optional, intent(in):: VarIn_VI(:,:)  ! variables in 1D
     real,             optional, intent(in):: VarIn_VII(:,:,:)            ! 2D
+    real,             optional, intent(in):: SouthernMap(:,:,:) ! holds mapping array for eqr plots
+    real,             optional, intent(in):: NorthernMap(:,:,:) ! holds mapping array for eqr plots
+    character(len=*), optional, intent(in):: MappingNames(:)   ! mapping names for eqr plots 
     real,             optional, intent(in):: VarIn_VIII(:,:,:,:)         ! 3D
     real,             optional, intent(in):: VarIn_IV(:,:)  ! variables in 1D
     real,             optional, intent(in):: VarIn_IIV(:,:,:)            ! 2D
     real,             optional, intent(in):: VarIn_IIIV(:,:,:,:)         ! 3D
-    real,             optional, intent(in):: codeVersionAtt ! Code version for .batl metadata
-    integer,          optional, intent(in):: mpiComm    !hdf5 needs to know iComm
-    integer,          optional, intent(in):: numProcs    !hdf5 spreads the write acrost all procs
-    integer,          optional, intent(in):: iProcL    !hdf5 spreads the write acrost all procs
+    integer,          optional, intent(in):: MpiComm    !hdf5 needs to know iComm
 
     character(len=10)  :: TypePosition
     character(len=10)  :: TypeStatus
+    character(len=11), allocatable  :: NameVarList(:)
     character(len=20)  :: TypeFile
     character(len=500) :: StringHeader
-    character(len=500) :: NameVar
-    integer :: nStep, nDim, nParam, nVar, n1, n2, n3, nCells, nBlkD(3), iBlk,nBlkUsedGlobal
-    integer :: pMin(3),pMax(3), nBlkXYZ(3), offset, iG,jG,kG
-    integer, allocatable:: nBlocksPerProc(:), procBlkOffset(:), iCoordMin(:,:)
-    real               :: Time, Coord, r1, cellDxDyDz(3), blockdXdYdZ(3)
-    logical            :: IsCartesian, allProcsWrite, doneSearching
-    real, allocatable  :: Param_I(:), Coord_ID(:,:), Var_IV(:,:),hdf5VarIn(:,:,:,:,:),coordinateH5Block(:,:,:)
+    character(len=500) :: NameVar,NameUnits
+    integer :: nStep, nDim, nParam, nVar, n1, n2, n3, nCells, nCellsPerBlock(3), iBlk, nBlocks
+    integer :: nBlocksXYZ(3), iG,jG,kG
+    integer, allocatable:: nBlocksPerProc(:), procBlkOffset(:), MinimumBlockIjk(:,:)
+    real               :: Time, Coord, ResultMod, iBlockDxDyDz(3)
+    logical            :: IsCartesian, IsDoneSearching
+    real, allocatable  :: Param_I(:), Coord_ID(:,:), Var_IV(:,:),VarHdf5Output(:,:,:,:,:),XYZMinMax(:,:,:)
     real(Real4_), allocatable:: Param4_I(:), Coord4_ID(:,:), Var4_I(:)
 
-    integer :: n_D(0:MaxDim), i1,i2,i3,ii,jj,kk, iBlkG, blockSize, procIdx
+    integer :: n_D(0:MaxDim), i1,i2,i3,ii,jj,kk,nBlocksUsed, iCommWrite
     integer :: i, j, k, i_D(3), iDim, iVar, n, nDimOut, iError
-    logical  :: procSplitSuccess(3)
+    logical  :: IsSplitSuccessfull
 
     character(len=*), parameter:: NameSub = 'save_plot_file'
     !---------------------------------------------------------------------
@@ -124,13 +127,10 @@ contains
 
     TypeFile = 'ascii'
     if(present(TypeFileIn)) TypeFile = TypeFileIn
-
     StringHeader = 'No header info'
     if(present(StringHeaderIn)) StringHeader = StringHeaderIn
-
     nStep = 0
     if(present(nStepIn)) nStep = nStepIn
-
     Time = 0.0
     if(present(TimeIn)) Time = TimeIn
 
@@ -143,7 +143,6 @@ contains
        allocate(Param_I(1))
        Param_I(1) = 0.0
     end if
-
     ! Figure out grid dimensions and number of variables       
     n_D = 1
     ! For VI, VII, VIII types
@@ -173,14 +172,11 @@ contains
        call CON_stop(NameSub // &
             'none of VarIn_VI/VarIn_IV,VarIn_VII/VarIn_IIV,VarIn_VIII/VarIn_IIIV are present')
     endif
-
     ! Extract information
     nVar = n_D(0)
     n1   = n_D(1)
     n2   = n_D(2)
     n3   = n_D(3)
-
-
 
     ! The plot dimension may be different from the dimensionality of VarIn
     if(present(nDimIn))then
@@ -193,7 +189,6 @@ contains
           n_D(1:3) = (/ n1, n3, 1/)
        end if
     end if
-
     IsCartesian = .true.
     if(present(IsCartesianIn)) IsCartesian = IsCartesianIn
 
@@ -215,142 +210,100 @@ contains
           write(NameVar, "(a, i2.2)") trim(NameVar) // ' p', i
        end do
     end if
-
     ! Allocate arrays with a shape that is convenient for saving data
     if(TypeFile == 'hdf5') then
        !   VisIt is much much faster if you give it blocks so it can parallelize and 
        !   on some machines hdf5 is faster in parallel.
        !   this routine can be called in serial or parallel for hdf5.  Just calling it
        !   with iproc = 0 seems to be the best thing for now.
-       do j=1,20
-          i = 21-j
-          procSplitSuccess(1) = .true.
-          if (n1 > 1) then
-             r1 = mod(real(n1), real(i))
-             if (r1 == 0) then 
-                procSplitSuccess(1) = .true.
-             else
-                procSplitSuccess(1) = .false.
-             end if
-          end if
-          procSplitSuccess(2) = .true.
-          if (n1 > 1) then
-             r1 = mod(real(n2), real(i))
-             if (r1 == 0) then 
-                procSplitSuccess(2) = .true.
-             else
-                procSplitSuccess(2) = .false.
-             end if
-          end if
-          procSplitSuccess(3) = .true.
-          if (n3 > 1) then
-             r1 = mod(real(n3), real(i))
-             if (r1 == 0) then 
-                procSplitSuccess(3) = .true.
-             else
-                procSplitSuccess(3) = .false.
-             end if
-          end if
-          if (procSplitSuccess(1) .and. procSplitSuccess(2) .and. procSplitSuccess(3)) then
-             doneSearching = .true.
-          else 
-             doneSearching = .false.
-          end if
-          if (doneSearching) then
-             blockSize = i
-             exit
-          end if
-       end do
-       do i = 1,nDimOut
-          if(n_D(i) .le. 1) then
-             nBlkD(i) = 1
-          else 
-             nBlkD(i) = blockSize
-          end if
-       end do
-       nBlkUsedGlobal = (n_D(1)/nBlkD(1))*(n_D(2)/nBlkD(2))!*(n_D(3)/nBlkD(3))
-       do i = 1,nDimOut
-          if (i>nDim) then
-             nBlkXYZ(i) = 1
-             n_D(i) = 1
-          else
-             nBlkXYZ(i) = n_D(i)/nBLKD(1)
-          end if
-       end do
-       nBlkD(3) = 1
-       n_D(3) = 1
-       nBlkXYZ(3) = 1
-       !         nBlkUsedGlobal = n1/nBlkD(1)*n2/nBlkD(2)*n3/nBlkD(3)
-       do i = 1,nDimOut
-          blockdXdYdZ(i) = (CoordMaxIn_D(i) - CoordMinIn_D(i))/nBlkXYZ(i)
-       end do
-       allocate(nBlocksPerProc(0:numProcs-1))
-       if (numProcs>1) then
-          if(nBlkUsedGlobal >  numProcs) then 
-             allProcsWrite=.true.
-             i=0
-             do procIdx = 0, numProcs-2 
-                nBlocksPerProc(procIdx) = floor(real(nBlkUsedGlobal/numProcs))
-                i=i+floor(real(nBlkUsedGlobal/numProcs))
-             end do
-             nBlocksPerProc(numProcs-1) = nBlkUsedGlobal - i
-          else if(nBlkUsedGlobal .le. numProcs) then
-             nBlocksPerProc = 0
-             allProcsWrite = .false.
-             do procIdx = 0, nBlkUsedGlobal-1
-                nBlocksPerProc(procIdx) = 1
-             end do
-             if (nBlkUsedGlobal == numProcs) allProcsWrite=.true.
-          end if
+       allocate(NameVarList(nVar+7))
+       if (present(NameVarInList)) then
+            NameVarList(1:nVar) = NameVarInList(1:nVar)
        else
-          allProcsWrite = .true.
-          nBlocksPerProc=nBlkUsedGlobal
+            call split_string(NameVarIn,nVar+7,NameVarList, i)
        end if
-       allocate(procBlkOffset(0:numProcs)) 
-       procBlkOffset(0) = 0
-       do procIdx = 1, numProcs-1
-          procBlkOffset(procIdx) = procBlkOffset(procIdx-1) + nBlocksPerProc(procIdx-1)
-       end do
-       allocate(hdf5VarIn(nBlkD(1),nBlkD(2),1,nBlocksPerProc(iProcL), nVar))
-       allocate(coordinateh5Block(2,nDim,nBlocksPerProc(iProcL)))
-       allocate(iCoordMin(nDim, nBlocksPerProc(iProcL)))
-       iBlk = 0
-       iBlkG = 0
-       do kk=1,1; do jj=1,nBlkXyz(2); do ii=1,nBlkXyz(1);
-          iBlkG = iBlkG +1
-          if (iBlkG > procBlkOffset(iProcL) .and. iBlkG .le. procBlkOffset(iProcL) + nBlocksPerProc(iProcL)) then
-             iBlk = iBlk + 1
-             do k = 1, 1; do j = 1, nBlkD(2); do i = 1,nBlkD(1)
-                iG = (ii - 1)*nBlkD(1)+i
-                jG = (jj - 1)*nBlkD(2)+j
-                kG = (kk - 1)*nBlkD(3)+k
-                if(present(VarIn_VI))   hdf5VarIn(i,1,1,iBlk, 1:nVar) = VarIn_VI(1:nVar,iG)
-                if(present(VarIn_VII))  hdf5VarIn(i,j,1,iBlk, 1:nVar) = VarIn_VII(1:nVar,iG,jG)
-                if(present(VarIn_VIII)) hdf5VarIn(i,j,k,iBlk, 1:nVar) = VarIn_VIII(1:nVar,iG,jG,kG)
-                if(present(VarIn_IV))   hdf5VarIn(i,1,1,iBlk, 1:nVar) = VarIn_IV(iG,1:nVar)
-                if(present(VarIn_IIV))  hdf5VarIn(i,j,1,iBlk, 1:nVar) = VarIn_IIV(iG,jG,1:nVar)
-                if(present(VarIn_IIIV)) hdf5VarIn(i,j,k,iBlk, 1:nVar) = VarIn_IIIV(iG,jG,kG,1:nVar)
-             end do; end do; end do;
-             do iDim = 1,nDim
-                if(iDim==1) then
-                   iCoordMin(iDim, iBlk) = (ii-1)*nBlkD(iDim)
-                   coordinateh5Block(1, iDim, iBlk) = blockdXDyDz(iDim)*(ii-1) + CoordMinIn_D(iDim)
-                   coordinateh5Block(2, iDim, iBlk) = blockdXDyDz(iDim)*ii+ CoordMinIn_D(iDim)
-                else if(iDim==2) then
-                   iCoordMin(2, iBlk) = (jj-1)*nBlkD(2)
-                   coordinateh5Block(1, iDim, iBlk) = blockdXDyDz(iDim)*(jj-1)+ CoordMinIn_D(iDim)
-                   coordinateh5Block(2, iDim, iBlk) = blockdXDyDz(iDim)*jj+ CoordMinIn_D(iDim)
-                else if(iDim==3) then 
-                   iCoordMin(iDim, iBlk) = (kk-1)*nBlkD(iDim)
-                   coordinateh5Block(1, iDim, iBlk) = blockdXDyDz(iDim)*(kk-1)+ CoordMinIn_D(iDim)
-                   coordinateh5Block(2, iDim, iBlk) = blockdXDyDz(iDim)*kk+ CoordMinIn_D(iDim)
+            write (*,*) "NameVarIn", nameVarIn, "NameVarList", NameVarList
+        nCellsPerBlock = 1
+        nBlocksXYZ = 1
+        do i=1,nDimOut
+            if (n_D(i) > 1) then
+                do j= 4, 25
+                    ResultMod = mod(real(n_D(i)), real(j))
+                    if (ResultMod == 0) then 
+                        IsSplitSuccessfull = .true.
+                    else
+                        IsSplitSuccessfull = .false.
+                    end if
+                    if(IsSplitSuccessfull) exit
+                end do
+                if(.not. IsSplitSuccessfull ) then
+                    do j=3,2,-1
+                        ResultMod = mod(real(n_D(i)), real(j))
+                        if (ResultMod == 0) then 
+                            IsSplitSuccessfull = .true.
+                        else
+                            IsSplitSuccessfull = .false.
+                        end if
+                        if(IsSplitSuccessfull) exit
+                    end do
                 end if
-             end do
-          end if
-       end do; end do; end do;
+ 
+                if(IsSplitSuccessfull ) then
+                    nCellsPerBlock(i) = j
+                else 
+                    nCellsPerBlock(i) = n_D(i)
+                end if
+            else
+                nCellsPerBlock(i) = 1
+            end if
+        end do
+        
+        do i = 1,nDimOut
+              nBlocksXYZ(i)=n_D(i)/nCellsPerBlock(i)
+              iBlockDxDyDz(i) = (CoordMaxIn_D(i) - CoordMinIn_D(i))/nBlocksXYZ(i)
+        end do
+        nBlocks = product(nBlocksXYZ(1:nDimOut))
+
+        allocate(VarHdf5Output(nCellsPerBlock(1),nCellsPerBlock(2),&
+            nCellsPerBlock(3),nBlocks, nVar))
+           allocate(XYZMinMax(2,nDimOut, nBlocks))
+           allocate(MinimumBlockIjk(nDim, nBlocks))
+           iBlk = 0
+!            do kk=1, nBlocksXYZ(3); do jj=1, nBlocksXYZ(2); do ii=1,nBlocksXYZ(1);
+           do kk=1,1; do jj=1, nBlocksXYZ(2); do ii=1,nBlocksXYZ(1);
+              iBlk = iBlk +1
+                 do k = 1, 1; do j = 1, nCellsPerBlock(2); do i = 1,nCellsPerBlock(1)
+!                  do k = 1, nCellsPerBlock(3); do j = 1, nCellsPerBlock(2); do i = 1,nCellsPerBlock(1)
+                    iG = (ii - 1)*nCellsPerBlock(1)+i
+                    jG = (jj - 1)*nCellsPerBlock(2)+j
+                    kG = (kk - 1)*nCellsPerBlock(3)+k
+                    if(present(VarIn_VI))   VarHdf5Output(i,1,1,iBlk, 1:nVar) = VarIn_VI(1:nVar,iG)
+                    if(present(VarIn_VII))  VarHdf5Output(i,j,1,iBlk, 1:nVar) = VarIn_VII(1:nVar,iG,jG)
+                    if(present(VarIn_VIII)) VarHdf5Output(i,j,k,iBlk, 1:nVar) = VarIn_VIII(1:nVar,iG,jG,kG)
+                    if(present(VarIn_IV))   VarHdf5Output(i,1,1,iBlk, 1:nVar) = VarIn_IV(iG,1:nVar)
+                    if(present(VarIn_IIV))  VarHdf5Output(i,j,1,iBlk, 1:nVar) = VarIn_IIV(iG,jG,1:nVar)
+                    if(present(VarIn_IIIV)) VarHdf5Output(i,j,k,iBlk, 1:nVar) = VarIn_IIIV(iG,jG,kG,1:nVar)
+                end do; end do; end do;
+                 do n = 1,nDimOut
+                    if(n==1) then
+                       MinimumBlockIjk(n, iBlk) = (ii-1)*nCellsPerBlock(n) + 1
+                       XYZMinMax(1, n, iBlk) = iBlockDxDyDz(n)*(ii-1) + CoordMinIn_D(n)
+                       XYZMinMax(2, n, iBlk) = iBlockDxDyDz(n)*ii+ CoordMinIn_D(n)
+                    else if(n==2) then
+                       MinimumBlockIjk(2, iBlk) = (jj-1)*nCellsPerBlock(n) + 1
+                       XYZMinMax(1, n, iBlk) = iBlockDxDyDz(n)*(jj-1)+ CoordMinIn_D(n)
+                       XYZMinMax(2, n, iBlk) = iBlockDxDyDz(n)*jj+ CoordMinIn_D(n)
+                    else if(n==3) then 
+                       MinimumBlockIjk(n, iBlk) = (kk-1)*nCellsPerBlock(n) + 1
+                       XYZMinMax(1, n, iBlk) = iBlockDxDyDz(n)*(kk-1)+ CoordMinIn_D(n)
+                       XYZMinMax(2, n, iBlk) = iBlockDxDyDz(n)*kk+ CoordMinIn_D(n)
+                    end if
+                 end do
+
+           end do; end do; end do;
     else
        allocate(Coord_ID(n1*n2*n3,nDim), Var_IV(n1*n2*n3,nVar))
-       ! Fill in the 2D coordinate array using the available information
+       ! Fill in the 2D coordinate 5array using the available information
        do iDim = 1, nDim
           n = 0
           do k = 1, n3; do j = 1, n2; do i = 1, n1
@@ -397,15 +350,24 @@ contains
 
     select case(TypeFile)
     case('hdf5')
-       call losHdf5PlotWrite(NameFile,TypePosition, TypeStatus, StringHeader,&
-            nStep,nBlocksPerProc(iProcL),nBlkUsedGlobal, procBlkOffset(iProcL), Time, nDimOut, nParam, nVar,&
-            nBlkD(1:nDim), NameVar, PlotVarNameList,hdfUnits, CoordMinIn_D, CoordMaxIn_D, &
-            iCoordMin, coordinateH5Block, hdf5VarIn, codeVersionAtt, mpiComm, iProcL, numProcs)
-       deallocate(procBlkOffset)
-       deallocate(iCoordMin)
-       deallocate(coordinateH5Block)
-       deallocate(hdf5VarIn)
-       deallocate(nBlocksPerProc)
+
+        if (present(NameUnitsIn)) then
+            NameUnits = NameUnitsIn
+        else
+            NameUnits = ''
+            do iVar=1, nVar
+                NameUnits = NameUnits//'normalized '
+            end do
+        end if
+       call save_hdf5_file(NameFile,TypePosition, TypeStatus, StringHeader,&
+            nStep, nBlocks, Time, nDimOut, nParam, nVar,&
+            nCellsPerBlock(1:nDimOut), NameVarList(1:nVar),NameUnits, &
+            MinimumBlockIjk, XYZMinMax, VarHdf5Output, MpiComm,&
+            CoordMin=CoordMinIn_D, CoordMax=CoordMaxIn_D)
+       deallocate(NameVarList) 
+       deallocate(MinimumBlockIjk)
+       deallocate(XYZMinMax)
+       deallocate(VarHdf5Output)
        deallocate(Param_I)
     case('formatted', 'ascii')
        open(UnitTmp_, file=NameFile, &

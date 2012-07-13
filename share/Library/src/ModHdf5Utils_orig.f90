@@ -7,208 +7,222 @@ module ModHdf5Utils
   private!except
   save
 
-  public:: losHdf5PlotWrite
-  public:: writeHdf5Rank2Real
-  public:: writeHdf5Rank4Real
-  public:: writeHdf5Rank1Integer
-  public:: writeHdf5Rank2Integer
-  public:: writeHdf5Rank3Real
-  public:: hdf5_init_file
-  public:: write_plot_string
+  public:: save_hdf5_file
+  public:: open_hdf5_file
+  public:: write_hdf5_data
   public:: write_hdf5_attribute
+  public:: pad_string_with_null
+  public:: close_hdf5_file
+
+  logical :: DoCollectiveWrite
+    
+  !plot geometry type handles 
+  integer, public, parameter :: CartesianPlot_=0
+  integer, public, parameter :: RzPlot_=1
+  integer, public, parameter :: RoundCubePlot_=2
+  integer, public, parameter :: CylindricalPlot_=3
+  integer, public, parameter :: CylindricalLnrPlot_=4
+  integer, public, parameter :: CylindricalGenrPlot_=5
+  integer, public, parameter :: SphericalPlot_=6
+  integer, public, parameter :: SphericalLnrPlot_=7
+  integer, public, parameter :: SphericalGenrPlot_=8
+  integer, public, parameter :: rLonLatPlot_=9
+  integer, public, parameter :: rLonLatLnrPlot_=10
+  integer, public, parameter :: rLonLatGenrPlot_=11
+  integer, public, parameter :: SphShellPlot_=12
+
+  integer, public, parameter:: lNameVar = 10
+  integer, public, parameter:: lNameH5 = lNameVar + 1
 contains 
-  subroutine losHdf5PlotWrite(fileName, TypePosition, TypeStatus, StringHeader,&
-       nStep, nBlocksUsed,nBlkUsedGlobal, offset,Time, nDimOut, nParam, nVar, n_D,  NameVar, PlotVarNameList,&
-       unitList,coordMin, coordMax,iCoordMin, bBox, plotVarBlk, codeVersion, mpiComm, iProc, nProc)
+  subroutine save_hdf5_file(FileName,TypePosition, TypeStatus, StringHeader,&
+            nStep, NumberOfBlocksUsed, Time, nDimOut, nParam, nVar,&
+            n_D, NameVar, NameUnits, MinimumBlockIjk, XYZMinMax, PlotVarBlk,&
+            iComm, CoordMin, CoordMax)
+    use ModUtilities, only: split_string
 
-
-    character (len=*), intent(in) :: fileName
-    character (len=*), intent(in) :: TypePosition
-    character (len=*), intent(in) :: PlotVarNameList(:)
-    character (len=*), intent(in) :: unitList(:)
+    integer, intent(in) :: nDimOut, nParam, nVar, n_D(3),iComm, nStep,NumberOfBlocksUsed
+    character (len=*), intent(in) :: FileName
+    character (len=*), intent(in) :: TypePosition, NameVar(nVar)
     character (len=10), intent(in) :: TypeStatus
     character (len=500), intent(in) :: StringHeader
-    character (len=500), intent(in) :: NameVar
+    integer, intent(in) :: MinimumBlockIjk(:,:)
+    real, intent(in) :: Time, PlotVarBlk(:,:,:,:,:), XYZMinMax(:,:,:)
+    real, optional, intent(in) :: CoordMin(:), CoordMax(:)
+    character (len=*), intent(in) ::  NameUnits
+
+
     character (len=501) :: HeaderString
-
-    integer, intent(in) :: nDimOut, nParam, nVar, n_D(3), mpiComm, nStep, nBlocksUsed,nBlkUsedGlobal, offset
-    integer, intent(in) :: iCoordMin(:,:), iProc, nProc
-    real, intent(in) :: Time, coordMin(:), coordMax(:), codeVersion
-    real, intent(in) ::plotVarBlk(:,:,:,:,:), bbox(:,:,:)
-
-    integer (HID_T) :: fileID
-    integer(HID_T) :: dataset, dataspace
-    integer(HSIZE_T) :: dimens1D(1)
-    integer :: error, rank, iData, IntegerMetaData(16), iLen, iVar
-    integer :: labelLeng, numCells,i,j,k,n, iBlk
+    integer (HID_T) :: FileID, iInteger4
+    integer(HSIZE_T) :: iDimension1D(1), iInteger8
+    integer :: IntegerMetaData(16), iLen, iVar,iProc,nProc
+    integer :: LengthOfString, numCells,i,j,k,n, iBlk
     integer, parameter :: FFV = 1
 
-    real :: RealMetaData(7),varMin, varMax
+    real :: RealMetaData(7),varMin, varMax,xMin,xMax,yMin,yMax,zMin,zMax
     real, allocatable :: coordinates(:,:)
     integer, allocatable :: procNumAndLevel(:)
-    integer, parameter :: lnameh5 = 11
-    character (len=lnameh5) :: UnknownNameArray(nVar)
-    logical, parameter :: collectiveWrite = .true.
-    ! 
-    !     write(*,*)  filename, TypePosition, TypeStatus
-    !     write(*,*)  StringHeader
-    !     write(*,*)  NameVar
-    !     write(*,*)  "nStep=",nStep, "Time=", Time, "nDimOut=", nDimOut, "nParam=",nParam, "nVar=",nVar, "n_D=", n_D,&
-    !                 "PlotVarNameList="
-    !     do iVar = 1, nVar
-    !         write(*,*) (PlotVarNameList(iVar))
-    !     end do
-    !   
-    !     
-    call h5open_f(error)
-    fileID = -1
-    call hdf5_init_file(fileID, fileName, mpiComm)
-    if(fileID == -1) then
+    integer(HSIZE_T), parameter :: lnameh5 = 11
+    integer(HSIZE_T) :: CellsPerBlock(3), nBlkUsed, nPlotDim, iData,AnotheriInteger8
+    character (len=lnameh5), allocatable  :: UnknownNameArray(:), UnknownNameArray2(:), UnknownNameArray3(:)
+    nBlkUsed = NumberOfBlocksUsed
+    CellsPerBlock(1:3) = n_D(1:3)
+    nPlotDim = nDimOut
+    
+    iProc = 0
+    nProc = 1
+
+    FileID = -1
+    call open_hdf5_file(FileID, fileName, iComm)
+    if(FileID == -1) then
        write (*,*)  "Error: unable to initialize file"
        call CON_stop("unable to initialize hdf5 file")
     end if
+
+    xMin = 0; yMin = 0; zMin = 0
+    if (present(CoordMin)) then
+        xMin = CoordMin(1)
+        if (nDimOut .ge. 2) then
+            yMin = CoordMin(2)
+            if (nDimOut == 3) &
+                zMin = CoordMin(3)
+        end if
+    end if  ! else make a grid?
+    
+    xMax = 0; yMax = 0; zMax = 0
+    if (present(CoordMax)) then
+        xMax = CoordMax(1)
+        if (nDimOut .ge. 2) then
+            yMax = CoordMax(2)
+            if (nDimOut == 3) &
+                zMax = CoordMax(3)
+        end if
+    end if  ! else make a grid
+
+ 
+    
+    allocate(UnknownNameArray(nVar))
+    call split_string(NameUnits,nVar,UnknownNameArray(1:nVar), i)
+    iInteger4 = lNameh5
+    call pad_string_with_null(nVar, iInteger4, UnknownNameArray, UnknownNameArray)
+    iInteger8=nVar
+    call write_hdf5_data(FileID, "plotVarUnits", 1,  (/iInteger8/),&
+    CharacterData=UnknownNameArray, nStringChars=lNameH5)
+
+    call pad_string_with_null(nVar, iInteger4, NameVar, UnknownNameArray)
+    iInteger8=nVar
+    call write_hdf5_data(FileID, "plotVarNames", 1,  (/iInteger8/),&
+    CharacterData=UnknownNameArray, nStringChars=lNameH5)
+
+
+   
+         
     do iVar = 1, nVar
-       UnknownNameArray(iVar) = trim(PlotVarNameList(iVar))
-       !The VisIt plugin needs null padded names.
-       labelLeng = len_trim(UnknownNameArray(iVar))
-       do iLen = labelLeng + 1,lNameH5 
-          UnknownNameArray(iVar)(iLen:iLen) = CHAR(0)
-       end do
+       varMin = minVal(PlotVarBlk(:,:,:,:,iVar))
+       varMax = maxVal(PlotVarBlk(:,:,:,:,iVar))
+
+        call write_hdf5_data(FileID, UnknownNameArray(iVar), 4, (/CellsPerBlock(1), CellsPerBlock(2),&
+            CellsPerBlock(3),nBlkUsed/), Rank4RealData=PlotVarBlk(:,:,:,:,iVar),&
+            RealAttribute1=VarMin, RealAttribute2=VarMax, &
+            NameRealAttribute1="minimum", NameRealAttribute2="maximum")
     end do
-    call write_plot_string(nVar,lNameH5, UnknownNameArray,"plotVarNames",&
-         fileID)
-    do iVar = 1, nVar
-       varMin = minVal(plotVarBlk(:,:,:,:,iVar))
-       varMax = maxVal(plotVarBlk(:,:,:,:,iVar))
-       call writeHdf5Rank4Real(fileID, plotVarBlk(:,:,:,:,iVar), nBlocksUsed,&
-            nBlkUsedGlobal, offset, UnknownNameArray(iVar), &
-            n_D(1), n_D(2), n_D(3), .true., varMin, varMax,&
-            collectiveWrite)
+  deallocate(UnknownNameArray)
+
+        iInteger8 = 2
+       call  write_hdf5_data(FileID, "bounding box", 3,&
+      (/iInteger8, nPlotDim,nBlkUsed/),Rank3RealData=XYZMinMax(:,1:nPlotDim,:))
+
+    allocate(coordinates(nPlotDim, nBlkUsed))
+    do iBlk=1,nBlkUsed
+       coordinates(1:nPlotDim, iBlk) = .5*(XYZMinMax(1,1:nPlotDim, iBlk) + XYZMinMax(2,1:nPlotDim, iBlk))
     end do
-    call writeHdf5Rank3Real(fileID, bBox, nBlocksUsed,nBlkUsedGlobal,&
-         offset, "bounding box", 2, nDimOut,collectiveWrite)
-    allocate(coordinates(nDimOut, nBlocksUsed))
-    do iBlk=1,nBlocksUsed
-       coordinates(1:nDimOut, iBlk) = .5*(bbox(1,1:nDimOut, iBlk) + bbox(2,1:nDimOut, iBlk))
-    end do
-    call writeHdf5Rank2Real(fileID, coordinates, nBlocksUsed,&
-         nBlkUsedGlobal, offset, "coordinates", nDimOut, collectiveWrite)   
+       call  write_hdf5_data(FileID, "coordinates", 2,&
+      (/nPlotDim,nBlkUsed/),Rank2RealData=coordinates)
 
     deallocate(coordinates)
+    
+    allocate(UnknownNameArray(nPlotDim)) 
+    UnknownNameArray(1) = "Y-Axis"
+    if (nPlotDim .GE. 2) then
+    UnknownNameArray(2) = "Z-Axis"   
+    if (nPlotDim == 3) &
+        UnknownNameArray(3) = "Z-Axis"
+    end if
+    iInteger4=lNameh5
+    call pad_string_with_null(nVar,iInteger4 , UnknownNameArray, UnknownNameArray)
+    iInteger8=nPlotDim
+    call write_hdf5_data(FileID, "Axis Labels", 1,  (/iInteger8/),&
+    CharacterData=UnknownNameArray, nStringChars=lNameH5)
+    deallocate(UnknownNameArray)
 
-    ! 
-    !     call writeHdf5Rank2Real(fileID, Coord_ID, nCells,&
-    !          nCells, 0, "cell coordinates", nDimOut, collectiveWrite)
-    !     
-    do iVar = 1, nVar
-       UnknownNameArray(iVar) = trim(unitList(iVar))
-       !The VisIt plugin needs null padded names.
-       labelLeng = len_trim(UnknownNameArray(iVar))
-       do iLen = labelLeng + 1,lNameH5 
-          UnknownNameArray(iVar)(iLen:iLen) = CHAR(0)
-       end do
-    end do
-    call write_plot_string(nVar,lNameH5, UnknownNameArray,"plotVarUnits",&
-         fileID)
-    UnknownNameArray(1) = "X-Axis"
-    UnknownNameArray(2) = "Y-Axis"
-    UnknownNameArray(3) = "Z-Axis"
-    do iVar = 1, nDimOut
-       labelLeng = len_trim(UnknownNameArray(iVar))
-       do iLen = labelLeng + 1,lNameH5 
-          UnknownNameArray(iVar)(iLen:iLen) = CHAR(0)
-       end do
-    end do
-    call write_plot_string(nDimOut, lNameH5, UnknownNameArray(1:nDimOut), "Axis Labels",&
-         fileID)
-    HeaderString = trim(StringHeader)
-    labelLeng = len_trim(StringHeader)
-    iLen = labelLeng + 1
-    HeaderString(iLen:iLen) = CHAR(0)
-    call write_plot_string(1, iLen, HeaderString, "Header",fileID)
+    iLen = len(trim(StringHeader)) + 1
+    call pad_string_with_null(1, iLen, StringHeader, HeaderString)
+    AnotheriInteger8 = 1
+    call write_hdf5_data(FileID, "Header", 1,  (/AnotheriInteger8/),&
+    CharacterData=(/HeaderString/), nStringChars=iInteger8)
 
-    call writeHdf5Rank2Integer(fileID, iCoordMin, nBlocksUsed,&
-         nBlkUsedGlobal, offset, "MinLogicalExtents", nDimOut, collectiveWrite)
+    call  write_hdf5_data(FileID, "MinLogicalExtents", 2,&
+      (/nPlotDim,nBlkUsed/),Rank2IntegerData=MinimumBlockIjk)
 
-
-    allocate(procnumAndLevel(nBlocksUsed))
-    procnumAndLevel = 1
-    call writeHdf5Rank1Integer(fileID, procnumAndLevel, &
-         nBlocksUsed, nBlkUsedGlobal, offset,"refine level", collectiveWrite)
+    !As of VisIt 2.5.2 Processor Number and refine level are not required
+    !by the plugin.  They are here so older versions of VisIt work
+    allocate(ProcnumAndLevel(nBlkUsed))
+    ProcnumAndLevel = 1
+     call  write_hdf5_data(FileID, "refine level", 1, (/nBlkUsed/),&
+        Rank1IntegerData=ProcNumAndLevel)
     procNumAndLevel = iProc
-    call writeHdf5Rank1Integer(fileID, procNumAndLevel,nBlocksUsed, &
-         nBlkUsedGlobal, offset,"Processor Number", collectiveWrite)
-    deallocate(procnumAndLevel)
-    !    allocate(attName(nAtts))
+     call  write_hdf5_data(FileID, "Processor Number", 1, (/nBlkUsed/),&
+        Rank1IntegerData=ProcNumAndLevel)
+    deallocate(ProcnumAndLevel)
     iData = 1
-    !    attName(1) = 'Simulation Time'
+    !    AttributeName(1) = 'Simulation Time'
     RealMetaData(iData) = Time
     iData = iData + 1
-    RealMetaData(iData) = coordMin(1)
+    RealMetaData(iData) = xMin
     iData = iData + 1
-    RealMetaData(iData) = coordMax(1)
+    RealMetaData(iData) = xMax
     iData = iData + 1
-    RealMetaData(iData) = coordMin(2)
+    RealMetaData(iData) = yMin
     iData = iData + 1
-    RealMetaData(iData) = coordMax(2)
+    RealMetaData(iData) = yMax
     iData = iData + 1
     if(nDimOut < 3) then
        RealMetaData(iData) = 0!coordMin(3)
        iData = iData + 1
        RealMetaData(iData) = 0!coordMax(3)   
     else
-       RealMetaData(iData) = coordMin(3)
+       RealMetaData(iData) = zMin
        iData = iData + 1
-       RealMetaData(iData) = coordMax(3)
+       RealMetaData(iData) = zMax
     end if
 
     !-------------------------------------------------------------------
     !write the real Metadata
-    rank = 1
-    dimens1D = iData
-
-    call h5screate_simple_f(rank, dimens1D, dataspace, error) 
-    call h5dcreate_f(fileID, "Real Plot Metadata",&
-         H5T_NATIVE_DOUBLE,dataspace, dataset, error)
-
-
-    call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, &
-         RealMetaData,dimens1D, error, H5S_ALL_F, H5S_ALL_F, H5P_DEFAULT_F)
-    if (error == -1)&
-         call CON_stop(&
-         "error in subroutine init_grid. Error marker 3")
-    call write_hdf5_attribute("Code Version", dataset, H5T_NATIVE_DOUBLE,&
-         realAtt=CodeVersion)
-
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
-
-
-
+    call  write_hdf5_data(FileID, "Real Plot Metadata", 1, (/iData/),&
+        Rank1RealData=RealMetaData)
 
     iData = 1
 
     IntegerMetaData(iData) = FFV
-    !    attName(1) = 'File Format Version'
+    !    AttributeName(1) = 'File Format Version'
     iData = iData + 1
     IntegerMetaData(iData) = nStep 
-    !    attName(2) = "Time Step"
+    !    AttributeName(2) = "Time Step"
     iData = iData + 1
     IntegerMetaData(iData) = nDimOut
-    !    attName(3) = 'nDim'
+    !    AttributeName(3) = 'nDim'
     iData = iData + 1
     IntegerMetaData(iData) = 0
-    !    attName(3) = 'nDimAMR'
+    !    AttributeName(3) = 'nDimAMR'
     iData = iData + 1
-    IntegerMetaData(iData) = nBlkUsedGlobal
-    !    attName(4) = 'globalNumBlocks'
+    IntegerMetaData(iData) = nBlkUsed
+    !    AttributeName(4) = 'globalNumBlocks'
     iData = iData + 1    
     IntegerMetaData(iData) = nProc
-    !    attName(5) = 'numProcessors'
+    !    AttributeName(5) = 'numProcessors'
     iData = iData + 1
 
     IntegerMetaData(iData) = 1 ! no AMR levels
-    !    attName(7) = 'nLevel'
+    !    AttributeName(7) = 'nLevel'
     iData = iData + 1
     IntegerMetaData(iData) = n_D(1)
     iData = iData + 1
@@ -217,9 +231,10 @@ contains
     IntegerMetaData(iData) = n_D(3)
     iData = iData + 1
 
-
-    IntegerMetaData(iData) = 0 !I think these are always Cartesian. Refer to geometry types in
-    !GM/BATSRUS/src/ModHdf5_orig for geometry types.
+    !This only does cartesian for now, all that is needid
+    !for non-cartesian plots is node locations and a change
+    !in this metadata item
+    IntegerMetaData(iData) = CartesianPlot_
     iData = iData + 1
     !as of 2/3/2012 this is not implimented in the plugin but it probably
     !should be in the future
@@ -235,735 +250,347 @@ contains
 
     !-------------------------------------------------------------------
     !write the integer Metadata
-    rank = 1
-    dimens1D = iData
-
-    call h5screate_simple_f(rank, dimens1D, dataspace, error) 
-    call h5dcreate_f(fileID, "Integer Plot Metadata",&
-         H5T_NATIVE_INTEGER,dataspace, dataset, error)
-
-    !    if (iProc == 0)&   
-    call h5dwrite_f(dataset,H5T_NATIVE_INTEGER,IntegerMetaData,dimens1D,&
-         error, H5S_ALL_F, H5S_ALL_F, H5P_DEFAULT_F)
-    if (error == -1)&
-         call CON_stop(&
-         "error in subroutine init_grid. Error marker 3")
-    write (*,*) "closing file"
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
-
-
-    call h5garbage_collect_f(error)
-    call h5fclose_f(fileID,error)
-    !closing the hdf5 interface
-    call h5close_f(error)
-    if (error == -1) write (*,*) 'h5fclose_f failed'
-
-
-
-  end subroutine losHdf5PlotWrite
-  !These are the same write routines that used to live in GM/BATSRUS/src/ModHdf5.  I put them here so write_plot_file
-  !could access them.
-  subroutine writeHdf5Rank3Real(fileID, dataBuff, localNumBlocks,&
-       globalNumBlocks, localOffset, description, nIplot, nJplot, collectiveWrite)
-
-    implicit none
-
-    integer :: rank
-    integer, intent(in) :: nIplot,nJplot
-    integer :: error
-    integer(HID_T) :: dataset, plist_id
-    integer(HSIZE_T) :: dimens3D(3)
-    integer(HID_T) :: dataspace
-    integer(HID_T) :: memspace
-    integer(HSIZE_T) :: start3D(3),stride3D(3),count3D(3)
-    integer(HID_T), intent(in) :: fileID
-    integer, intent(in) :: localNumBlocks, globalNumBlocks
-    real, intent(in) :: dataBuff(:,:,:)
-    integer, intent(in) :: localOffset
-    character (len=*), intent(in) :: description
-    logical, intent(in) :: collectiveWrite
-    integer(HSIZE_T) :: one
-
-    !Set the dimensions of the dataset
-
-    rank = 3
-    dimens3D(1) = nIplot
-    dimens3D(2) = nJplot
-    dimens3D(3) = globalNumBlocks
-    call h5open_f(error)
-    if (error == -1) &
-         call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 1")
-
-    !     if (localNumBlocks == 0 .and. (.not. collectiveWrite)) return
-    call h5screate_simple_f(rank, dimens3D, dataspace, error) 
-    !create the dataset
-    call h5dcreate_f(fileID, description, H5T_NATIVE_DOUBLE, dataspace, dataset, error)
-
-    call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-    if (collectiveWrite) then
-       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
-    else
-       !          call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-    end if
-
-    if (error == -1) &
-         call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 2")
-
-    if (localNumBlocks == 0) then
-       if (collectiveWrite) then
-          one = 0
-          call h5screate_simple_f(1, (/one/), memspace, error)
-          call h5sselect_none_f(memspace,error)
-          call h5sselect_none_f(dataspace,error)
-          call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens3D, error, &
-               mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-       else
-          one = 1
-          call h5screate_simple_f(1, (/one/), memspace, error)
-       end if
-    else
-
-       start3D(1:2) = 0
-       start3D(3) = localOffset 
-       stride3D = 1
-       count3D(1:2) = dimens3D(1:2)
-       count3D(3) = localNumBlocks
-
-
-       !create the hyperslab.  This will differ on the different processors
-       call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start3D, count3D, error, &
-            stride = stride3D)
-       !         !create the memory space
-       if (error == -1)& 
-            call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 3")
-
-       dimens3D(3) = localNumBlocks
-       call h5screate_simple_f(rank, dimens3D, memspace, error)
-       !Write the data
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 3")
-
-       call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens3D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 5")
-    end if
-    call h5sclose_f(memspace,error)
-    call h5pclose_f(plist_id, error)
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
-
-    if (error == -1)& 
-         call CON_stop("error in subroutine writeHdf5Rank3Real. Error marker 6")
-
-  end subroutine writeHdf5Rank3Real
-
-
-
+    call  write_hdf5_data(FileID, "Integer Plot Metadata", 1, (/iData/),&
+        Rank1IntegerData=IntegerMetaData)
+    call close_hdf5_file(FileID)
+  end subroutine save_hdf5_file
+  
   !======================================================================
   !=====================================================================
-  subroutine writeHdf5Rank1Integer(fileID, dataBuff, localNumBlocks,&
-       globalNumBlocks, localOffset, description, collectiveWrite)
-
-    implicit none
-
-    logical, intent(in) :: collectiveWrite
-    integer :: rank
-    integer :: error
-    integer(HID_T) :: dataset, plist_id
-    integer(HSIZE_T) :: dimens1D(2)
-    integer(HID_T) :: dataspace
-    integer(HID_T) :: memspace
-    integer(HSIZE_T) :: start1D(2)
-    integer(HSIZE_T) :: stride1D(2)
-    integer(HSIZE_T) :: count1D(2)
-    integer(HID_T), intent(in) :: fileID
-    integer, intent(in) :: localNumBlocks, globalNumBlocks
-    integer, intent(in) :: dataBuff(:)
-    integer, intent(in) :: localOffset
-    character (len=*), intent(in) :: description
-    integer(HSIZE_T) ::  one
-    !Set the dimensions of the dataset
-    rank = 1
-    dimens1D(1) = globalNumBlocks
-    call h5open_f(error)
-    if (error == -1) &
-         call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 1")
-
-    call h5screate_simple_f(rank, dimens1D, dataspace, error) 
-    !create the dataset
-    call h5dcreate_f(fileID, description, H5T_NATIVE_INTEGER, dataspace, dataset, error)
-
-    call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-    if (collectiveWrite) then
-       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
-    else
-       !nothing = INDEPENDENT  call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-    end if
-
-
-    if (localNumBlocks == 0) then
-       if (collectiveWrite) then
-          one = 0
-          call h5screate_simple_f(1, (/one/), memspace, error)
-          call h5sselect_none_f(memspace,error)
-          call h5sselect_none_f(dataspace,error)
-          call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, dataBuff, dimens1D, error, &
-               mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-       else
-          one = 1
-          call h5screate_simple_f(1, (/one/), memspace, error)
-       end if
-    else
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 2")
-
-       start1D(1) = localOffset 
-       stride1D(:) = 1
-       count1D(1) = localNumBlocks
-
-       !create the hyperslab.  This will differ on the different processors
-       call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start1D, count1D, error, &
-            stride = stride1D)
-       !         !create the memory space
-       if (error == -1)& 
-            call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 3")
-
-       dimens1D(1) = localNumBlocks
-       call h5screate_simple_f(rank, dimens1D, memspace, error)
-       !Write the data
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 4")
-
-       call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, dataBuff, dimens1D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-
-
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 5")
-    end if
-    call h5sclose_f(memspace,error)
-    call h5pclose_f(plist_id, error)
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
-
-    if (error == -1)& 
-         call CON_stop("error in subroutine writeHdf5Rank1Integer. Error marker 6")
-
-  end subroutine writeHdf5Rank1Integer
-
-  !======================================================================
-  !=====================================================================
-
-
-  subroutine writeHdf5Rank1Real(fileID, dataBuff, localNumBlocks,&
-       globalNumBlocks, localOffset, description, hasMinMax, varMin, varMax, collectiveWrite)
-
-    implicit none
-
-    logical, intent(in) :: collectiveWrite
-    integer :: rank
-    integer :: error
-    integer(HID_T) :: dataset, plist_id
-    integer(HSIZE_T) :: dimens1D(2)
-    integer(HID_T) :: dataspace
-    integer(HID_T) :: memspace
-    integer(HSIZE_T) :: start1D(2)
-    integer(HSIZE_T) :: stride1D(2)
-    integer(HSIZE_T) :: count1D(2)
-    integer(HID_T), intent(in) :: fileID
-    integer, intent(in) :: localNumBlocks, globalNumBlocks
-    real, intent(in) :: dataBuff(:), varMin, varMax
-    logical, intent(in) :: hasMinMax
-    integer, intent(in) :: localOffset
-    character (len=*), intent(in) :: description
-    integer(HSIZE_T) ::  one
-    !Set the dimensions of the dataset
-    rank = 1
-    dimens1D(1) = globalNumBlocks
-    call h5open_f(error)
-    if (error == -1) &
-         call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 1")
-
-    call h5screate_simple_f(rank, dimens1D, dataspace, error) 
-    !create the dataset
-    call h5dcreate_f(fileID, description, H5T_NATIVE_DOUBLE, dataspace, dataset, error)
-
-    call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-    if (collectiveWrite) then
-       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
-    else
-       !nothing = INDEPENDENT  call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-    end if
-
-    if (hasMinMax) then
-       !Minimum
-       call write_hdf5_attribute("minimum", dataset, H5T_NATIVE_DOUBLE, realAtt = varMin)
-       call write_hdf5_attribute("maximum", dataset, H5T_NATIVE_DOUBLE, realAtt = varMax)
-    end if
-
-
-
-    if (localNumBlocks == 0) then
-       if (collectiveWrite) then
-          one = 0
-          call h5screate_simple_f(1, (/one/), memspace, error)
-          call h5sselect_none_f(memspace,error)
-          call h5sselect_none_f(dataspace,error)
-          call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens1D, error, &
-               mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-       else
-          one = 1
-          call h5screate_simple_f(1, (/one/), memspace, error)
-       end if
-    else
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 2")
-
-       start1D(1) = localOffset 
-       stride1D(:) = 1
-       count1D(1) = localNumBlocks
-
-       !create the hyperslab.  This will differ on the different processors
-       call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start1D, count1D, error, &
-            stride = stride1D)
-       !         !create the memory space
-       if (error == -1)& 
-            call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 3")
-
-       dimens1D(1) = localNumBlocks
-       call h5screate_simple_f(rank, dimens1D, memspace, error)
-       !Write the data
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 4")
-
-       call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens1D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-
-
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 5")
-    end if
-    call h5sclose_f(memspace,error)
-    call h5pclose_f(plist_id, error)
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
-
-    if (error == -1)& 
-         call CON_stop("error in subroutine writeHdf5Rank1Real. Error marker 6")
-
-  end subroutine writeHdf5Rank1Real
-
-  !=====================================================================
-  !=====================================================================
-
-  subroutine writeHdf5Rank2Integer(fileID, dataBuff, localNumBlocks,&
-       globalNumBlocks, localOffset, description, dimens, collectiveWrite)
-
-    implicit none
-
-    logical, intent(in) :: collectiveWrite
-    integer :: rank, dimens
-    integer :: error
-    integer(HID_T) :: dataset, plist_id
-    integer(HSIZE_T) :: dimens2D(2)
-    integer(HID_T) :: dataspace
-    integer(HID_T) :: memspace
-    integer(HSIZE_T) :: start2D(2)
-    integer(HSIZE_T) :: stride2D(2)
-    integer(HSIZE_T) :: count2D(2)
-    integer(HID_T), intent(in) :: fileID
-    integer, intent(in) :: localNumBlocks, globalNumBlocks
-    integer, intent(in) :: dataBuff(:,:)
-    integer, intent(in) :: localOffset
-    character (len=*), intent(in) :: description
-    integer(HSIZE_T) :: one
-
-    !Set the dimensions of the dataset
-    rank = 2
-    dimens2D(1) = dimens
-    dimens2D(2) = globalNumBlocks
-    call h5open_f(error)
-    if (error == -1) &
-         
-         call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 1")
-
-    !     if (localNumBlocks == 0 .and. (.not. collectiveWrite)) return
-    call h5screate_simple_f(rank, dimens2D, dataspace, error) 
-    !create the dataset
-    call h5dcreate_f(fileID, description, H5T_NATIVE_INTEGER, dataspace, dataset, error)
-
-    call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-    if (collectiveWrite) then
-       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
-    else
-       !         call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-    end if
-
-
-    if (localNumBlocks == 0) then
-       if (collectiveWrite) then
-          one = 0
-          call h5screate_simple_f(1, (/one/), memspace, error)
-          call h5sselect_none_f(memspace,error)
-          call h5sselect_none_f(dataspace,error)
-          call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, dataBuff, dimens2D, error, &
-               mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-       else
-          one = 1
-          call h5screate_simple_f(1, (/one/), memspace, error)
-       end if
-    else
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 2")
-
-       start2d(1) = 0
-       start2D(2) = localOffset 
-       stride2D(:) = 1
-       count2D(1) = dimens2D(1)
-       count2D(2) = localNumBlocks
-
-       !create the hyperslab.  This will differ on the different processors
-       call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start2D, count2D, error, &
-            stride = stride2D)
-       !         !create the memory space
-       if (error == -1)& 
-            call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 3")
-
-       dimens2D(2) = localNumBlocks
-       call h5screate_simple_f(rank, dimens2D, memspace, error)
-       !Write the data
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 4")
-
-       call h5dwrite_f(dataset, H5T_NATIVE_INTEGER, dataBuff, dimens2D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 5")
-    end if
-
-    call h5sclose_f(memspace,error)
-    call h5pclose_f(plist_id, error)
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
-
-    if (error == -1)& 
-         call CON_stop("error in subroutine writeHdf5Rank2Integer. Error marker 6")
-
-  end subroutine writeHdf5Rank2Integer
-
-  !======================================================================
-  !=====================================================================
-
-  subroutine writeHdf5Rank2Real(fileID, dataBuff, localNumBlocks,&
-       globalNumBlocks, localOffset, description, dimens, collectiveWrite)
-
-    implicit none
-
-    logical, intent(in) :: collectiveWrite
-    integer :: rank, dimens
-    integer :: error
-    integer(HID_T) :: dataset, plist_id
-    integer(HSIZE_T) :: dimens2D(2)
-    integer(HID_T) :: dataspace
-    integer(HID_T) :: memspace
-    integer(HSIZE_T) :: start2D(2)
-    integer(HSIZE_T) :: stride2D(2)
-    integer(HSIZE_T) :: count2D(2)
-    integer(HID_T), intent(in) :: fileID
-    integer, intent(in) :: localNumBlocks, globalNumBlocks
-    real, intent(in) :: dataBuff(:,:)
-    integer, intent(in) :: localOffset
-    character (len=*), intent(in) :: description
-    integer(HSIZE_T) :: one, nullSize(1) = 1
-
-    !Set the dimensions of the dataset
-    rank = 2
-    dimens2D(1) = dimens
-    dimens2D(2) = globalNumBlocks
-    call h5open_f(error)
-    if (error == -1) &
-         
-         call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 1")
-    !     if (localNumBlocks == 0 .and. (.not. collectiveWrite)) return
-
-    call h5screate_simple_f(rank, dimens2D, dataspace, error) 
-    !create the dataset
-    call h5dcreate_f(fileID, description, H5T_NATIVE_DOUBLE, dataspace, dataset, error)
-
-    call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-    if (collectiveWrite) then
-       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
-    else
-       !         call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-    end if
-
-
-    if (localNumBlocks == 0) then
-       if (collectiveWrite) then
-          one = 0
-          call h5screate_simple_f(1, (/one/), memspace, error)
-          call h5sselect_none_f(memspace,error)
-          call h5sselect_none_f(dataspace,error)
-          call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens2D, error, &
-               mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-       else
-          one = 1
-          call h5screate_simple_f(1, (/one/), memspace, error)
-       end if
-    else
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 2")
-
-       start2d(1) = 0
-       start2D(2) = localOffset 
-       stride2D(:) = 1
-       count2D(1) = dimens2D(1)
-       count2D(2) = localNumBlocks
-
-       !create the hyperslab.  This will differ on the different processors
-       call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start2D, count2D, error, &
-            stride = stride2D)
-       !         !create the memory space
-       if (error == -1)& 
-            call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 3")
-
-       dimens2D(2) = localNumBlocks
-       call h5screate_simple_f(rank, dimens2D, memspace, error)
-       !Write the data
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 4")
-
-       call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens2D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 5")
-    end if
-
-    call h5sclose_f(memspace,error)
-    call h5pclose_f(plist_id, error)
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
-
-    if (error == -1)& 
-         call CON_stop("error in subroutine writeHdf5Rank2Real. Error marker 6")
-
-  end subroutine writeHdf5Rank2Real
-
-  !======================================================================
-  !=====================================================================
-  subroutine hdf5_init_file(fileID, filename, mpiComm)
-
-    character (len=80), intent(in) :: filename
-    integer :: error, accTemplate
-    integer, optional, intent(in) :: mpiComm
-    integer, intent(inout) :: fileID
-    INTEGER :: mpierror       ! MPI error flag
-    INTEGER :: dxpList
-!!!    INTEGER :: mpi_size, mpi_rank, comm
-
-    !Initalize currentBlock andplotArrayBegin for this file
-
-    !    call h5open_f(error)                    
+  subroutine open_hdf5_file(FileID, Filename, iComm)
+
+    character (len=80), intent(in) :: Filename
+    integer :: iErrorHdf, AccessTemplate
+    integer, optional, intent(in) :: iComm
+    integer, intent(inout) :: FileID
+    integer :: iHdfMajor, iHdfMinor, iHdfRelease
+
+    call h5open_f(iErrorHdf)                    
 
     !create MPI info Object
 
     !Create file access propertty list
-    call h5pcreate_f(H5P_FILE_ACCESS_F, accTemplate, error)
-    if(present(mpiComm))&
-         CALL h5pset_fapl_mpio_f(accTemplate, mpiComm, MPI_INFO_NULL, error)
-    ! Create the file collectively.
+    call h5pcreate_f(H5P_FILE_ACCESS_F, AccessTemplate, iErrorHdf)
+    if(present(iComm)) then
+         CALL h5pset_fapl_mpio_f(AccessTemplate, iComm, MPI_INFO_NULL, iErrorHdf)
 
-    CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, fileID, error,&
-         access_prp = accTemplate)
-    CALL h5pclose_f(accTemplate, error)
-    if (error == -1) &
+        !determine if we want to do collective writes. Collective write
+        !is faster but all processors must call h5dwrite, even in cuts where 
+        !some processors write no data.  In newer versions of hdf5 a null
+        !write can be called but attempting to do so on older versions will
+        !cause the code to crash. We should be able to do collective for any
+        !hdf5 1.8.x where all procs write data but that didn't work for me 
+        !for some reason so for now collective write mode is restricted to
+        !hdf5 version 1.8.8+
+        !     write (*,*) "write plot iErrorHdf 3"v
+        call h5get_libversion_f(iHdfMajor, iHdfMinor, iHdfRelease, iErrorHdf)   
+        if (iHdfMajor > 1) then
+           DoCollectiveWrite = .true.
+        else if (iHdfMajor == 1 .and. iHdfMinor > 8) then
+           DoCollectiveWrite = .true.
+        else if (iHdfMajor == 1 .and. iHdfMinor == 8) then
+           if (iHdfRelease .ge. 8 ) then!.or. allProcsWrite) then
+              DoCollectiveWrite = .true.
+           else
+              DoCollectiveWrite = .false.
+           end if
+        else 
+           DoCollectiveWrite = .false.
+        end if
+    end if
+
+    ! Create the file Collectively.
+
+    CALL h5fcreate_f(Filename, H5F_ACC_TRUNC_F, FileID, iErrorHdf,&
+         access_prp = AccessTemplate)
+    CALL h5pclose_f(AccessTemplate, iErrorHdf)
+    if (iErrorHdf == -1) &
          call CON_stop(&
-         "error in subroutine hdf5_init_file. Error marker 1")
+         "iErrorHdf in subroutine hdf5_init_file. Error marker 1")
 
-    if (error == -1) fileID = -1
-  end subroutine hdf5_init_file
+    if (iErrorHdf == -1) FileID = -1
 
-  !=====================================================================
-  !=====================================================================
-
-  subroutine write_plot_string(nPlotVar, stringLen, dataBuff, description, fileID)
-
-    integer, intent(in) :: nPlotVar, stringLen
-    character (len=*), intent(in) :: dataBuff(nPlotVar)
-    integer (HID_T), intent(in) :: fileID
-    character (len=*), intent(in) :: description
-    integer (HID_T) :: dataType, dataset, dataspace
-    integer (HSIZE_T) :: sizeString, dimens1D(1) 
-
-    integer :: error, rank
-
-    rank = 1  
-    dimens1d(1) = nPlotVar
-
-    sizeString = stringLen
-
-
-    call h5tcopy_f(H5T_NATIVE_CHARACTER, datatype, error)
-    call h5tset_size_f(datatype, sizeString, error)
-    if (error == -1) &
-         call CON_stop(&
-         "error in subroutine writeHdf5Header. Error marker 10")
-    call h5screate_simple_f(rank, dimens1D, dataspace, error)
-    call h5dcreate_f(&
-         fileID, description, datatype, dataspace, dataset, error)
-    if (error == -1) &
-         call CON_stop("error in subroutine writeHdf5Header. Error marker 11")
-
-    call h5dwrite_f(dataset, datatype, databuff, dimens1D, error, H5S_ALL_F,&
-         H5S_ALL_F, H5P_DEFAULT_F)
-    if (error == -1) &
-         call CON_stop("error in subroutine writeHdf5Header. Error marker 11")
-
-
-
-    call h5tclose_f(datatype, error)
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
-
-    if (error == -1)& 
-         call CON_stop(&
-         "error in subroutine writeHdf5Header. Error marker 13")
-  end subroutine write_plot_string
+  end subroutine open_hdf5_file
 
   !=====================================================================
   !=====================================================================
+  subroutine write_hdf5_data(FileID, DatasetName, DatasetRank,  nDatasetDimension,&
+    nOffsetLocal, nBlocksLocalIn, CoordArray, nCellsLocalIn, Rank4RealData, Rank3RealData, Rank2RealData,&
+    Rank1RealData, Rank4IntegerData, Rank3IntegerData, Rank2IntegerData, Rank1IntegerData,&
+    CharacterData, nStringChars, RealAttribute1,RealAttribute2,NameRealAttribute1,NameRealAttribute2,&
+    IntegerAttribute1,IntegerAttribute2,NameIntegerAttribute1,NameIntegerAttribute2)
 
-  subroutine writeHdf5Rank4Real(fileID, dataBuff, localNumBlocks,&
-       globalNumBlocks, localOffset, description, nIplot, nJplot, nKplot,&
-       minMax ,vMin, vMax, collectiveWrite)
+    character (len=*), intent(in) :: DatasetName
 
-    implicit none
+    integer(HID_T), intent(in) :: FileID
+    integer, intent(in) :: DatasetRank
 
-    logical, intent(in) :: collectiveWrite
-    integer :: rank
-    integer, intent(in) :: nIplot,nJplot,nKplot
-    integer :: error
-    integer(HID_T) :: dataset, plist_id
-    integer(HSIZE_T) :: dimens4D(4), dimens1D(1)
-    integer(HID_T) :: dataspace
-    integer(HID_T) :: memspace
-    integer(HSIZE_T) :: start4D(4)
-    integer(HSIZE_T) :: stride4D(4)
-    integer(HSIZE_T) :: count4D(4)
-    integer(HID_T), intent(in) :: fileID
-    integer, intent(in) :: localNumBlocks, globalNumBlocks
-    real, intent(in) :: dataBuff(:,:,:,:)
-    integer, intent(in) :: localOffset
-    character (len=*), intent(in) :: description
-    logical, intent(in) :: minMax
-    real, intent(in) :: vMin, vMax
-    integer(HSIZE_T) :: one
+    integer(HSIZE_T), intent(in)  :: nDatasetDimension(DatasetRank)
 
-    !Set the dimensions of the dataset
+    integer, optional, intent(in) :: nOffsetLocal
+    integer, optional, intent(in) :: nBlocksLocalIn
+    integer(HSIZE_T), optional, intent(in) :: CoordArray(:,:)
+    integer(HSIZE_T), optional, intent(in) :: nCellsLocalIn
+    integer(HSIZE_T), optional, intent(in) :: nStringChars
 
-    rank = 4
-    dimens4D(1) = nIplot
-    dimens4D(2) = nJplot
-    dimens4D(3) = nKplot
-    dimens4D(4) = globalNumBlocks
-    call h5open_f(error)
-    if (error == -1) &
-         call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 1")
+    ! output data
+    real, optional, intent(in) :: Rank4RealData(:,:,:,:)
+    real, optional, intent(in) :: Rank3RealData(:,:,:)
+    real, optional, intent(in) :: Rank2RealData(:,:)
+    real, optional, intent(in) :: Rank1RealData(:)
+    integer, optional, intent(in) :: Rank4IntegerData(:,:,:,:)
+    integer, optional, intent(in) :: Rank3IntegerData(:,:,:)
+    integer, optional, intent(in) :: Rank2IntegerData(:,:)
+    integer, optional, intent(in) :: Rank1IntegerData(:)
+    character (len=*), optional, intent(in) :: CharacterData(:)
+
+    real, optional, intent(in) :: RealAttribute1
+    real, optional, intent(in) :: RealAttribute2
+    character (len=*), optional, intent(in) :: NameRealAttribute1
+    character (len=*), optional, intent(in) :: NameRealAttribute2
+    
+    integer, optional, intent(in) :: IntegerAttribute1
+    integer, optional, intent(in) :: IntegerAttribute2
+    character (len=*), optional, intent(in) :: NameIntegerAttribute1
+    character (len=*), optional, intent(in) :: NameIntegerAttribute2
 
 
-    call h5screate_simple_f(rank, dimens4D, dataspace, error) 
-    !create the dataset
-    call h5dcreate_f(fileID, description, H5T_NATIVE_DOUBLE, dataspace, dataset, error)
+    integer :: iErrorHdf, nBlocksLocal
+    integer(HID_T) :: DatasetID, PropertyListID
+    integer(HID_T) :: DataSpaceId
+    integer(HID_T) :: MemorySpaceId
+    integer(HSIZE_T) :: nStart(DatasetRank)
+    integer(HSIZE_T), allocatable :: nCount(:)
+    integer(HID_T) :: DataType
+    integer(HSIZE_T) :: iOneOrZero, nCellsLocal
 
-    call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-    if (collectiveWrite) then
-       call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+    if(present(nBlocksLocalIn)) then
+        nBlocksLocal = nBlocksLocalIn
+        allocate(nCount(DatasetRank))
     else
-       !          call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+        nBlocksLocal = nDatasetDimension(DatasetRank)
+    end if
+    if (present(nCellsLocalIn)) then
+        nCellsLocal = nCellsLocalIn
+        allocate(nCount(1))
+    else
+        nCellsLocal = nBlocksLocal
     end if
 
-    if (error == -1) &
-         call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 2")
+    if((.not. present(nBlocksLocalIn)) .and. (.not. present(nCellsLocalIn)))&
+        allocate(nCount(DatasetRank))        
 
-    if (minMax) then
-       call write_hdf5_attribute("minimum", dataset, H5T_NATIVE_DOUBLE, realAtt = vMin)
-       call write_hdf5_attribute("maximum", dataset, H5T_NATIVE_DOUBLE, realAtt = vMax)
+    !Set the nDatasetDimensionions of the DatasetID
+    iOneOrZero = 0
+    call h5open_f(iErrorHdf)
+    if (iErrorHdf == -1) &
+         call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 1")
+    
+    !Determine the hdf5 datatype
+    if (present(Rank1RealData) .or. present(Rank2RealData) .or.&
+        present(Rank3RealData) .or. present(Rank4RealData)) then
+        DataType = H5T_NATIVE_DOUBLE
+    else if (present(Rank1IntegerData) .or. present(Rank2IntegerData) .or.&
+        present(Rank3IntegerData) .or. present(Rank4IntegerData)) then
+        DataType = H5T_NATIVE_INTEGER
+    else if (present(CharacterData)) then
+        call h5tcopy_f(H5T_NATIVE_CHARACTER, DataType, iErrorHdf)
+        call h5tset_size_f(DataType, nStringChars, iErrorHdf)
     end if
 
-    if (localNumBlocks == 0) then
-       if (collectiveWrite) then
-          one = 0
-          call h5screate_simple_f(1, (/one/), memspace, error)
-          call h5sselect_none_f(memspace,error)
-          call h5sselect_none_f(dataspace,error)
-          call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens4D, error, &
-               mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
+    call h5screate_simple_f(DatasetRank, nDatasetDimension, DataSpaceId, iErrorHdf) 
+    !create the DatasetID
+    call h5dcreate_f(FileID, DatasetName, DataType, DataSpaceId, DatasetID, iErrorHdf)
+
+    call h5pcreate_f(H5P_DATASET_XFER_F, PropertyListID, iErrorHdf)
+    if (DoCollectiveWrite) &
+       call h5pset_dxpl_mpio_f(PropertyListID, H5FD_MPIO_COLLECTIVE_F, iErrorHdf)
+    
+    if (Present(RealAttribute1))&
+        call write_hdf5_attribute(NameRealAttribute1, DatasetID, &
+            RealAtt = RealAttribute1)
+
+    if (Present(RealAttribute2))&
+        call write_hdf5_attribute(NameRealAttribute2, DatasetID, &
+            RealAtt = RealAttribute2)
+
+    if (Present(IntegerAttribute1)) &
+        call write_hdf5_attribute(NameIntegerAttribute1, DatasetID, &
+            IntAtt = IntegerAttribute1)
+
+    if (Present(IntegerAttribute2)) &
+        call write_hdf5_attribute(NameIntegerAttribute2, DatasetID, &
+            IntAtt = IntegerAttribute2)
+
+    if (nCellsLocal == 0) then
+       if (DoCollectiveWrite) then
+          call h5screate_simple_f(1, (/iOneOrZero/), MemorySpaceId, iErrorHdf)
+          call h5sselect_none_f(MemorySpaceId,iErrorHdf)
+          call h5sselect_none_f(DataSpaceId,iErrorHdf)
        else
-          one = 1
-          call h5screate_simple_f(1, (/one/), memspace, error)
+        iOneOrZero = 1
+        call h5screate_simple_f(1, (/iOneOrZero/), MemorySpaceId, iErrorHdf)
+        call h5sclose_f(MemorySpaceId,iErrorHdf)
+        call h5pclose_f(PropertyListID, iErrorHdf)
+        call h5sclose_f(DataSpaceId, iErrorHdf)
+        call h5dclose_f(DatasetID, iErrorHdf)
+        deallocate(nCount)
+        return
        end if
     else
-
-       start4D(1:3) = 0
-       start4D(4) = localOffset 
-       stride4D(:) = 1
-       count4D(1:3) = dimens4D(1:3)
-       count4D(4) = localNumBlocks
-
-
-       !create the hyperslab.  This will differ on the different processors
-       call h5sselect_hyperslab_f(dataspace, H5S_SELECT_SET_F, start4D, count4D, error, &
-            stride = stride4D)
-       !         !create the memory space
-       if (error == -1)& 
-            call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 3")
-
-       dimens4D(4) = localNumBlocks
-       call h5screate_simple_f(rank, dimens4D, memspace, error)
-       !Write the data
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 4")
-       call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, dataBuff, dimens4D, error, &
-            mem_space_id = memspace, file_space_id = dataspace, xfer_prp = plist_id)
-       if (error == -1) &
-            call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 5")
+       if(present(nOffsetLocal)) then 
+           if(DatasetRank == 1) then 
+                nStart(1) = nOffsetLocal
+                nCount(1) = nBlocksLocal
+            else
+               nStart(1:DatasetRank-1) = 0
+               nStart(DatasetRank) = nOffsetLocal 
+               nCount(1:DatasetRank-1) = nDatasetDimension(1:DatasetRank-1)
+               nCount(DatasetRank) = nBlocksLocal
+            end if
+           !create the hyperslab.  This will differ on the different processors
+           call h5sselect_hyperslab_f(DataSpaceId, H5S_SELECT_SET_F, nStart, nCount, iErrorHdf)
+           !create the memory space
+           call h5screate_simple_f(DatasetRank, nCount, MemorySpaceId, iErrorHdf)
+        else if(present(CoordArray)) then
+               nCount(1) = nCellsLocal
+               !select the cells in the coordinate list
+               call h5sselect_elements_f(DataspaceID,H5S_SELECT_SET_F, DatasetRank, nCellsLocal,&
+                    CoordArray, iErrorHdf)
+               !         !create the memory space
+               call h5screate_simple_f(1, (/nCellsLocal/), MemorySpaceID, iErrorHdf)
+        else
+           nCount(1:DatasetRank) = nDatasetDimension(1:DatasetRank)
+           call h5sselect_all_f(DataSpaceId,iErrorHdf)
+           !         !create the memory space
+           call h5screate_simple_f(DatasetRank, nDatasetDimension, MemorySpaceId, iErrorHdf)
+        end if
     end if
+   if(DataType == H5T_NATIVE_DOUBLE) then
+       if (present(Rank1RealData)) then
+           call h5dwrite_f(DatasetID, DataType, Rank1RealData, nCount, iErrorHdf, &
+                mem_space_id = MemorySpaceId, file_space_id = DataSpaceId,&
+                xfer_prp = PropertyListID)
+                if (iErrorHdf == -1) &
+                    call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 6")
+       else if (present(Rank2RealData)) then
+           call h5dwrite_f(DatasetID, DataType, Rank2RealData, nCount, iErrorHdf, &
+                mem_space_id = MemorySpaceId, file_space_id = DataSpaceId,&
+                xfer_prp = PropertyListID)
+                if (iErrorHdf == -1) &
+                    call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 7")
+       else if (present(Rank3RealData)) then
+           call h5dwrite_f(DatasetID, DataType, Rank3RealData, nCount, iErrorHdf, &
+                mem_space_id = MemorySpaceId, file_space_id = DataSpaceId,&
+                xfer_prp = PropertyListID)
+                if (iErrorHdf == -1) &
+                    call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 8")
+       else if (present(Rank4RealData)) then
+           call h5dwrite_f(DatasetID, DataType, Rank4RealData, nCount, iErrorHdf, &
+                mem_space_id = MemorySpaceId, file_space_id = DataSpaceId,&
+                xfer_prp = PropertyListID)
+                if (iErrorHdf == -1) &
+                    call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 9")
+        end if
+    else if(DataType == H5T_NATIVE_INTEGER) then
+       if (present(Rank1IntegerData)) then
+           call h5dwrite_f(DatasetID, DataType, Rank1IntegerData, nCount, iErrorHdf, &
+                mem_space_id = MemorySpaceId, file_space_id = DataSpaceId,&
+                xfer_prp = PropertyListID)
+                if (iErrorHdf == -1) &
+                    call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 10")
+       else if (present(Rank2IntegerData)) then
+           call h5dwrite_f(DatasetID, DataType, Rank2IntegerData, nCount, iErrorHdf, &
+                mem_space_id = MemorySpaceId, file_space_id = DataSpaceId,&
+                xfer_prp = PropertyListID)
+                if (iErrorHdf == -1) &
+                    call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 11")
+       else if (present(Rank3IntegerData)) then
+           call h5dwrite_f(DatasetID, DataType, Rank3IntegerData, nCount, iErrorHdf, &
+                mem_space_id = MemorySpaceId, file_space_id = DataSpaceId,&
+                xfer_prp = PropertyListID)
+                if (iErrorHdf == -1) &
+                    call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 12")
+       else if (present(Rank4IntegerData)) then
+           call h5dwrite_f(DatasetID, DataType, Rank4IntegerData, nCount, iErrorHdf, &
+                mem_space_id = MemorySpaceId, file_space_id = DataSpaceId,&
+                xfer_prp = PropertyListID)
+                if (iErrorHdf == -1) &
+                    call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 13")
+        end if
+    else 
+           call h5dwrite_f(DatasetID, DataType, CharacterData, nCount, iErrorHdf, &
+                mem_space_id = MemorySpaceId, file_space_id = DataSpaceId,&
+                xfer_prp = PropertyListID)
+                if (iErrorHdf == -1) &
+                    call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 14")
+            call h5tclose_f(DataType,iErrorHdf)
+    end if
+    call h5sclose_f(MemorySpaceId,iErrorHdf)
+    call h5pclose_f(PropertyListID, iErrorHdf)
+    call h5sclose_f(DataSpaceId, iErrorHdf)
+    call h5dclose_f(DatasetID, iErrorHdf)
+    deallocate(nCount)
+  end subroutine write_hdf5_data
 
-    call h5sclose_f(memspace,error)
-    call h5pclose_f(plist_id, error)
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
+  !=====================================================================
+  !=====================================================================
 
-    if (error == -1)& 
-         call CON_stop("error in subroutine writeHdf5Rank4Real. Error marker 6")
+  subroutine write_hdf5_attribute(AttributeName, iDatasetID, RealAtt,&
+       IntAtt)
+    integer(HID_T), intent(in) :: iDatasetID
+    character (len=*), intent(in) :: AttributeName
+    real, optional, intent(in) :: RealAtt
+    integer, optional, intent(in) :: IntAtt
+    integer(HID_T) :: iAttributeSpaceID, attribute, datatype
+    integer(HSIZE_T) :: iDimension1D(1)
+    integer :: iErrorHdf
+    
+    iDimension1D=(1)
+    call h5screate_simple_f(1, iDimension1D, iAttributeSpaceID, iErrorHdf)
 
-  end subroutine writeHdf5Rank4Real
-
-  subroutine write_hdf5_attribute(attName, dataset, datatype, realAtt,&
-       intAtt)
-    integer(HID_T), intent(in) :: dataset, datatype
-    character (len=*), intent(in) :: attName
-    real, optional, intent(in) :: realAtt
-    real, optional, intent(in) :: intAtt
-    integer(HID_T) :: attributeSpace, attribute
-    integer(HSIZE_T) :: dimens1D(1)
-    integer :: error
-
-    dimens1D=(1)
-    call h5screate_simple_f(1, dimens1D, attributeSpace, error)
-
-    call h5acreate_f(dataset, attname, datatype,&
-         attributeSpace, attribute,&
-         error, H5P_DEFAULT_F)
-    if (Present(realAtt)) then
-       call h5awrite_f(attribute, datatype, realAtt, dimens1D, error)
-    elseif (present(intAtt)) then
-       call h5awrite_f(attribute, datatype, realAtt, dimens1D, error)
+    if (Present(RealAtt)) then
+        call h5acreate_f(iDatasetID, AttributeName, H5T_NATIVE_DOUBLE,&
+             iAttributeSpaceID, attribute,&
+             iErrorHdf, H5P_DEFAULT_F)
+       call h5awrite_f(attribute, H5T_NATIVE_DOUBLE, RealAtt, iDimension1D, iErrorHdf)
+    elseif (present(IntAtt)) then
+        call h5acreate_f(iDatasetID, AttributeName, H5T_NATIVE_INTEGER,&
+             iAttributeSpaceID, attribute,&
+             iErrorHdf, H5P_DEFAULT_F)
+       call h5awrite_f(attribute, H5T_NATIVE_INTEGER, RealAtt, iDimension1D, iErrorHdf)
     endif
-    call h5sclose_f(attributeSpace, error)
-    call h5aclose_f(attribute, error)
+    call h5sclose_f(iAttributeSpaceID, iErrorHdf)
+    call h5aclose_f(attribute, iErrorHdf)
 
   end subroutine write_hdf5_attribute
+  !=====================================================================
+  !=====================================================================
+  subroutine close_hdf5_file(FileID) 
+    integer(HID_T), intent(in) :: FileID
+    integer :: error
+    call h5garbage_collect_f(error)
+    call h5fclose_f(FileID,error)
+    !closing the hdf5 interface
+    call h5close_f(error)
+    if (error == -1) &
+        write (*,*) "close_hdf5_file failed!"
+  end subroutine
+  !=====================================================================
+  !=====================================================================
+  
+  subroutine pad_string_with_null(nStrings, nCharNeeded, StringsIn, StringsOut)
+  integer,intent(in) :: nStrings
+  integer, intent(in) :: nCharNeeded
+  character (len=*), intent(in) :: StringsIn(nStrings)
+  character (len=nCharNeeded), intent(out) :: StringsOut(nStrings)
+  integer :: iStr, iLen, nCharsIn
+  do iStr = 1, nStrings
+       StringsOut(iStr) = StringsIn(iStr)
+       nCharsIn = len_trim(StringsOut(iStr))
+       do iLen = nCharsIn + 1,nCharNeeded
+          StringsOut(iStr)(iLen:iLen) = CHAR(0)
+       end do
+    end do
+  end subroutine pad_string_with_null
 end module ModHdf5Utils

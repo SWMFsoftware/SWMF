@@ -4,45 +4,48 @@ module ModHdf5
   use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use hdf5
   use ModHdf5Utils
-
+  use ModNumConst
   implicit none
   SAVE
 
-  ! These parameters are needed if there is no HDF5 module
-  !integer,parameter:: Hsize_t=4,hid_t=4,H5T_NATIVE_INTEGER=4,H5T_NATIVE_CHARACTER=1
-  !integer,parameter:: H5P_DEFAULT_F=8,H5S_ALL_F=8,H5FD_MPIO_COLLECTIVE_F=8,H5S_SELECT_SET_F=8
-  !integer,parameter:: H5P_DATASET_XFER_F=8,H5T_NATIVE_DOUBLE=8,H5F_ACC_TRUNC_F=8,H5P_FILE_ACCESS_F=1
-
   private ! except
-  public write_var_hdf5
-  public write_cut_var_hdf5
-  public write_plot_hdf5
-  public hdf5_sph_plot
 
+  public write_var_hdf5
+  public write_plot_hdf5
+  public write_sph_var_hdf5
+  public init_sph_hdf5_plot
+  public close_sph_hdf5_plot
+  
   real,    allocatable :: PlotVarIdx(:,:,:,:,:)
-  real,    allocatable :: plotXYZNodes(:,:,:,:,:)
+  real,    allocatable :: PlotXYZNodes(:,:,:,:,:)
+  real, allocatable :: CellData(:,:)
 
   integer, allocatable :: UsedBlocks(:)
   integer, allocatable :: usednodes(:)
-  integer, allocatable :: UsedBlocksTemp(:)
+  integer, allocatable :: BlockProcNum(:)
+  integer, allocatable :: BlocksPerProc(:)
+  integer, allocatable :: MinLogicalExtents(:,:)
+  integer, allocatable :: CellProc(:,:,:)
+  integer(HSIZE_T), allocatable :: CoordArray(:,:)
 
-  integer, parameter:: lNameVar = 10
-  integer, parameter:: lNameH5 = lNameVar + 1
+  integer(HID_T), allocatable  :: VarDataset(:), VarPlistId(:), VarDataspace(:)
 
+  integer(HID_T) :: fileID
   character (len=lNameH5), allocatable :: UnknownNameArray(:)
 
-  integer :: nBlocksUsed, nBlkUsedGlobal, iBlk ,arrSize(3), nodeArrSize(3)
-  integer :: iSizeGlobal, jSizeGlobal, kSizeGlobal, nPlotDim, plotDim(3) 
-  logical :: collectiveWrite
-contains
-  subroutine  hdf5_sph_plot(i,j,x,y,z,theta_out,phi_out,PointVar)
-    real, intent(in) :: x,y,z, theta_out, phi_out,PointVar(:)
-    integer, intent(in) :: i,j 
+  integer ::  iBlk  
+  integer :: iSizeGlobal, jSizeGlobal, kSizeGlobal, iPlotDim(3)
+  integer :: nMessagesNeeded, nMessagesTotal, nBlocksThetaPhi(2), iProcOffset,nBlocksUsed
+  integer(HSIZE_T) :: nCellsLocal,nCellsPerBlock(3), nBlkUsedGlobal, nPlotDim
+  integer(HSIZE_T) :: nNodeCellsPerBlock(3), nLogicalDim
+  integer(HSIZE_T) :: iInteger8, iInteger8a
+  integer(HID_T) :: iInteger4
 
-  end subroutine hdf5_sph_plot
-  subroutine write_cut_var_hdf5(iFile, plotType, iBlock, H5Index,nPlotVar,PlotVar, &
+
+contains
+  subroutine write_var_hdf5(iFile, plotType, iBlock, H5Index,nPlotVar,PlotVar, &
        xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
-       isNonCartesian,nCell,H5Advance)
+       isNonCartesian, NotACut, nCell,H5Advance)
 
     ! Save all cells within plotting range, for each processor
 
@@ -52,7 +55,6 @@ contains
     use ModGeometry, ONLY: CellSize_DB,&
          XyzStart_BLK
     use ModIO
-    use ModNumConst
     use ModMpi
     use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical
 
@@ -64,29 +66,28 @@ contains
     integer, intent(in)   :: nPlotVar
     real,    intent(in)   :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
     real,    intent(in)   :: xMin,xMax,yMin,yMax,zMin,zMax
-    logical, intent(in) :: isNonCartesian
+    logical, intent(in) :: isNonCartesian, NotACut
     character (len=*), intent(in) :: plotType
     real,    intent(inout):: DxBlock,DyBlock,DzBlock
     integer, intent(out)  :: nCell 
     logical, intent(out) :: H5advance
 
     ! Local variables
-    ! Indices and coordinates
+    ! Indices and Coordinates
     integer :: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     integer :: iMin1, iMax1, jMin1, jMax1, kMin1, kMax1
     integer ::  iMaxN,jMaxN, kMaxN,iMaxN1,jMaxN1, kMaxN1
     integer :: ii, jj, kk, iSize, jSize, kSize
-    integer :: error
+    integer :: Error
     real ::Dx
     real :: xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
-    real :: DxBlockOut
 
     real :: ySqueezed
 
     real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
 
-    character(len=*), parameter :: NameSub = 'write_plot_idl'
-
+    character(len=*), parameter :: NameSub = 'write_var_hdf5'
+    save
 
     if (.not. allocated(PlotVarIdx)) then
        iMin = huge(iMin)
@@ -98,6 +99,7 @@ contains
        iSize = 0
        jSize = 0
        kSize = 0
+       nBlocksUsed = 0
        do iBlk = 1, nBlockMax
           xMin1 = xMin - cHalfMinusTiny*CellSize_DB(x_,iBlk)
           xMax1 = xMax + cHalfMinusTiny*CellSize_DB(x_,iBlk)
@@ -122,11 +124,16 @@ contains
                ySqueezed > yMax1.or.&
                ySqueezed+(nJ-1)*CellSize_DB(y_,iBlk) < yMin1.or.&  
                xyzStart_BLK(z_,iBlk) > zMax1.or.&
-               xyzStart_BLK(z_,iBlk)+(nK-1)*CellSize_DB(z_,iBlk) < zMin1) then
-
-             CYCLE
-
-          else
+               xyzStart_BLK(z_,iBlk)+(nK-1)*CellSize_DB(z_,iBlk) < zMin1) CYCLE
+              nBlocksUsed = nBlocksUsed + 1
+           if (NotACut) CYCLE !then
+!             iMin = 1
+!             iMax = nI
+!             jMin = 1
+!             jMax = nJ
+!             kMin = 1
+!             kMax = nK
+!           else
 
              Dx = plot_Dx(1,iFile)
              DxBlock=CellSize_DB(x_,iBlk); DyBlock=CellSize_DB(y_,iBlk); DzBlock=CellSize_DB(z_,iBlk)
@@ -161,79 +168,128 @@ contains
                   kMax = kk
              if ((kk-k+1) > kSize)&
                   kSize = kk-k+1
-
-          end if
+!          end if
        end do
-       call MPI_AllReduce(iSize, iSizeGlobal, 1,&
-            MPI_INTEGER, MPI_MAX, iComm, error)
-       call MPI_AllReduce(jSize, jSizeGlobal, 1,&
-            MPI_INTEGER, MPI_MAX, iComm, error)
-       call MPI_AllReduce(kSize, kSizeGlobal, 1,&
-            MPI_INTEGER, MPI_MAX, iComm, error)
-       nBlocksUsed = 0
-       allocate(UsedBlocksTemp(nBlockMax))
+    allocate(blocksPerProc(0:nProc-1))
+    call MPI_Allgather(nBlocksUsed, 1, MPI_INTEGER, blocksPerProc, &
+         1, MPI_INTEGER, iComm, Error)
+    if (iProc == 0) then
+        iProcOffset = 0
+    else
+        iProcOffset = sum(blocksPerProc(0:iProc-1))
+    end if
+    nBlkUsedGlobal = sum(blocksPerProc(0:nProc-1))
+    deallocate(blocksPerProc)
+
+       allocate(UsedBlocks(nBlocksUsed))
+       if(NotACut) then
+            iSizeGlobal = nI
+            jSizeGlobal = nJ
+            kSizeGlobal = nK
+        else
+           call MPI_AllReduce(iSize, iSizeGlobal, 1,&
+                MPI_INTEGER, MPI_MAX, iComm, Error)
+           call MPI_AllReduce(jSize, jSizeGlobal, 1,&
+                MPI_INTEGER, MPI_MAX, iComm, Error)
+           call MPI_AllReduce(kSize, kSizeGlobal, 1,&
+                MPI_INTEGER, MPI_MAX, iComm, Error)
+        end if
+
        if (isNonCartesian) then
-          if (plotType=='x=0') then
+          if (NotACut) then
+             nPlotDim = nDim
+             iPlotDim = 0
+            nCellsPerBlock = 1
+            nNodeCellsPerBlock = 1
+             do i=1,nPlotDim
+                iPlotDim(i) = i
+                if (i == 1) then
+                    nCellsPerBlock(i) = iSizeGlobal
+                    nNodeCellsPerBlock(i) = iSizeGlobal+1
+                else if (i == 2) then
+                    nCellsPerBlock(i) = jSizeGlobal
+                    nNodeCellsPerBlock(i) = jSizeGlobal+1
+                else if (i == 3) then
+                    nCellsPerBlock(i) = kSizeGlobal
+                    nNodeCellsPerBlock(i) = kSizeGlobal+1
+                end if
+            end do
+          else if (plotType=='x=0') then
              !              write (*,*) "allocated x=0"
              nPlotDim = 2
-             plotDim = (/1,3,0/)
-             arrSize = (/iSizeGlobal, kSizeGlobal, 1/)
-             nodeArrSize = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
+             iPlotDim = (/1,3,0/)
+             nCellsPerBlock = (/iSizeGlobal, kSizeGlobal, 1/)
+             nNodeCellsPerBlock = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
           else if(plotType=="y=0)") then
              !              write (*,*) "allocated y=0"
              nPlotDim = 2
-             plotDim = (/1,3,0/)
-             arrSize = (/iSizeGlobal, kSizeGlobal, 1/)
-             nodeArrSize = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
+             iPlotDim = (/1,3,0/)
+             nCellsPerBlock = (/iSizeGlobal, kSizeGlobal, 1/)
+             nNodeCellsPerBlock = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
           else if (plotType=='z=0' )then
              !              write (*,*) "allocated z=0"
              nPlotDim = 2
-             plotDim = (/1,2,0/)
-             arrSize = (/iSizeGlobal, jSizeGlobal, 1/)
-             nodeArrSize = (/iSizeGlobal+1, jSizeGlobal+1, 1/)
-          end if
+             iPlotDim = (/1,2,0/)
+             nCellsPerBlock = (/iSizeGlobal, jSizeGlobal, 1/)
+             nNodeCellsPerBlock = (/iSizeGlobal+1, jSizeGlobal+1, 1/)
+        end if
        else
-          if (iSizeGlobal == 1 .and. jSizeGlobal == 1) then
+          if (NotACut) then
+             nPlotDim = nDim
+             iPlotDim = 0
+            nCellsPerBlock = 1
+            nNodeCellsPerBlock = 1
+             do i=1,nPlotDim
+                iPlotDim(i) = i
+                if (i == 1) then
+                    nCellsPerBlock(i) = iSizeGlobal
+                    nNodeCellsPerBlock(i) = iSizeGlobal+1
+                else if (i == 2) then
+                    nCellsPerBlock(i) = jSizeGlobal
+                    nNodeCellsPerBlock(i) = jSizeGlobal+1
+                else if (i == 3) then
+                    nCellsPerBlock(i) = kSizeGlobal
+                    nNodeCellsPerBlock(i) = kSizeGlobal+1
+                end if
+            end do
+ 
+          else if (iSizeGlobal == 1 .and. jSizeGlobal == 1) then
              nPlotDim = 1
-             plotDim = (/3,0,0/)
-             arrSize = (/kSizeGlobal,1,1/)
-             nodeArrSize = (/kSizeGlobal+1,1,1/)
+             iPlotDim = (/3,0,0/)
+             nCellsPerBlock = (/kSizeGlobal,1,1/)
+             nNodeCellsPerBlock = (/kSizeGlobal+1,1,1/)
           else if (iSizeGlobal == 1 .and. kSizeGlobal == 1) then
              nPlotDim = 1
-             plotDim = (/2,0,0/)
-             arrSize = (/jSizeGlobal,1,1/)
-             nodeArrSize = (/jSizeGlobal+1,1,1/)
+             iPlotDim = (/2,0,0/)
+             nCellsPerBlock = (/jSizeGlobal,1,1/)
+             nNodeCellsPerBlock = (/jSizeGlobal+1,1,1/)
           else if (jSizeGlobal == 1 .and. kSizeGlobal == 1) then
              nPlotDim = 1
-             plotDim = (/1,0,0/)
-             arrSize = (/iSizeGlobal,1,1/)
-             nodeArrSize = (/iSizeGlobal+1,1,1/)
+             iPlotDim = (/1,0,0/)
+             nCellsPerBlock = (/iSizeGlobal,1,1/)
+             nNodeCellsPerBlock = (/iSizeGlobal+1,1,1/)
           else if (iSizeGlobal == 1) then
              nPlotDim = 2
-             plotDim = (/2,3,0/)
-             arrSize = (/jSizeGlobal,kSizeGlobal,1/)
-             nodeArrSize = (/jSizeGlobal+1,kSizeGlobal+1,1/)
+             iPlotDim = (/2,3,0/)
+             nCellsPerBlock = (/jSizeGlobal,kSizeGlobal,1/)
+             nNodeCellsPerBlock = (/jSizeGlobal+1,kSizeGlobal+1,1/)
           else if (jSizeGlobal == 1) then
              nPlotDim = 2
-             plotDim = (/1,3,0/)
-             arrSize = (/iSizeGlobal,kSizeGlobal,1/)
-             nodeArrSize = (/iSizeGlobal+1,kSizeGlobal+1,1/)
+             iPlotDim = (/1,3,0/)
+             nCellsPerBlock = (/iSizeGlobal,kSizeGlobal,1/)
+             nNodeCellsPerBlock = (/iSizeGlobal+1,kSizeGlobal+1,1/)
           else if (kSizeGlobal == 1) then
              nPlotDim = 2
-             plotDim = (/1,2,0/)
-             arrSize = (/iSizeGlobal,jSizeGlobal,1/)
-             nodeArrSize = (/iSizeGlobal+1,jSizeGlobal+1,1/)
-          else
-             nPlotDim = 3
-             plotDim = (/1,2,3/)
-             arrSize = (/iSizeGlobal,jSizeGlobal,kSizeGlobal/)
-             nodeArrSize = (/iSizeGlobal+1,jSizeGlobal+1,kSizeGlobal+1/)
-          end if
+             iPlotDim = (/1,2,0/)
+             nCellsPerBlock = (/iSizeGlobal,jSizeGlobal,1/)
+             nNodeCellsPerBlock = (/iSizeGlobal+1,jSizeGlobal+1,1/)
+         end if
        end if
-       allocate(PlotVarIdx(arrSize(1),arrSize(2), arrSize(3), nBlockMax, nPlotVar))
+
+       allocate(PlotVarIdx(nCellsPerBlock(1),nCellsPerBlock(2), nCellsPerBlock(3), nBlocksUsed, nPlotVar))
        PlotVarIdx=-50
-       if (isNonCartesian) allocate(plotXYZNodes(nPlotDim, &
-            nodeArrSize(1),nodeArrSize(2),nodeArrSize(3),nBlockMax))
+       if (isNonCartesian) allocate(PlotXYZNodes(nPlotDim, &
+            nNodeCellsPerBlock(1),nNodeCellsPerBlock(2),nNodeCellsPerBlock(3),nBlocksUsed))
     end if
 
     xMin1 = xMin - cHalfMinusTiny*CellSize_DB(x_,iBlock)
@@ -280,57 +336,37 @@ contains
     DxBlock=CellSize_DB(x_,iBlock); DyBlock=CellSize_DB(y_,iBlock); DzBlock=CellSize_DB(z_,iBlock)
 
     ! Calculate index limits of cells inside cut
-    iMin = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
-    iMax = min(nI,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
+   if(NotACut) then
+        iMin = 1
+        jMin = 1
+        kMin = 1
 
-    jMin = max(1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
-    jMax = min(nJ,floor((yMax1-ySqueezed)/DyBlock)+1)
-
-    kMin = max(1,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
-    kMax = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
-
-    iMin1 = max(0 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
-    iMax1 = min(nI+1,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
-
-    kMin1 = max(0,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
-    kMax1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
-
-    jMin1 = max(0 ,floor((yMin1-ySqueezed)/DyBlock)+2)
-    jMax1 = min(nJ+1,floor((yMax1-ySqueezed)/DyBlock)+1)
-
-    iMaxN = iMax
-    jMaxN = jMax
-    kMaxN = kMax
-
-
-    if (isNonCartesian) then
-       if ( plotType(1:3)=='x=0' .or. plotType(1:3)=='y=0') then
-          iMaxN = iMax + 1
-          kMaxN = kMax + 1
-
-          iMaxN1 = iMax1 + 1
-          kMaxN1 = kMax1 + 1
-
-       else if ( plotType(1:3)=='z=0') then
-          iMaxN = iMax + 1
-          jMaxN = jmax + 1
-          iMaxN1 = iMax1 + 1
-          jMaxN1 = jmax1 + 1
-
-
-       end if
+        iMax = nI
+        jMax = nJ
+        kMax = nK
     else
-       do ii = 1, nPlotDim
-          if (plotDim(ii) == 1) then
-             iMaxN = iMax + 1
-          else if (plotDim(ii) == 2) then
-             jMaxN = jMax + 1
-          else if (plotDim(ii) == 3) then
-             kMaxN = kMax + 1
-          end if
-       end do
-    end if
+        iMin = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
+        iMax = min(nI,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
 
+        jMin = max(1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
+        jMax = min(nJ,floor((yMax1-ySqueezed)/DyBlock)+1)
+
+        kMin = max(1,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
+        kMax = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
+
+        iMin1 = max(0 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
+        iMax1 = min(nI+1,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
+
+        kMin1 = max(0,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
+        kMax1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
+
+        jMin1 = max(0 ,floor((yMin1-ySqueezed)/DyBlock)+2)
+        jMax1 = min(nJ+1,floor((yMax1-ySqueezed)/DyBlock)+1)
+
+        iMaxN = iMax
+        jMaxN = jMax
+        kMaxN = kMax
+    end if
 
     !   if(DoTestMe)then
     !      write(*,*) NameSub, 'iMin,iMax,jMin,jMax,kMin,kMax=',&
@@ -342,44 +378,75 @@ contains
     !      write(*,*) NameSub, 'zMin1,zMax1=',zMin1,zMax1
     !   end if
     ! 
-    DxBlockOut = DxBlock
-    ! if (plot_dimensional(iFile))DxBlockOut = DxBlockOut*No2Io_V(UnitX_)
-    !  if (nPlotDim == 2) then
-    !     if (plotDim(1) == 2) then
-    !         iMin = jMin
-    !         iMax = jMax
-    !     end if
-    !     if (plotDim(2) == 3) then
-    !         jMin = kMin
-    !         jMax = kMax
-    !     end if
-    !     kMin = 1
-    !     kMax = 1
-    !   end if
-    ! 
+ 
+    if (isNonCartesian) then
+       if ( plotType=='x=0' .or. plotType=='y=0') then
+          iMaxN = iMax + 1
+          kMaxN = kMax + 1
 
-    ! this seems to do y=0 and z=0 plots okay but x=0 plots appear to be broken
-    !I have only tried one test case so the problem be bigger than just x=0 cuts
+          iMaxN1 = iMax1 + 1
+          kMaxN1 = kMax1 + 1
+
+       else if ( plotType=='z=0') then
+          iMaxN = iMax + 1
+          jMaxN = jmax + 1
+          iMaxN1 = iMax1 + 1
+          jMaxN1 = jmax1 + 1
+      else if (NotACut) then
+           do ii = 1, nPlotDim
+              if (iPlotDim(ii) == 1) then
+                 iMaxN = iMax + 1
+              else if (iPlotDim(ii) == 2) then
+                 jMaxN = jMax + 1
+              else if (iPlotDim(ii) == 3) then
+                 kMaxN = kMax + 1
+              end if
+           end do
+        end if
+    else
+       do ii = 1, nPlotDim
+          if (iPlotDim(ii) == 1) then
+             iMaxN = iMax + 1
+          else if (iPlotDim(ii) == 2) then
+             jMaxN = jMax + 1
+          else if (iPlotDim(ii) == 3) then
+             kMaxN = kMax + 1
+          end if
+       end do
+    end if
+    
     if (isNonCartesian) then
        do kk=kMin,kMaxN; do jj=jMin,jMaxN; do ii=iMin,iMaxN
-          if (plotType=='x=0') then
+          if (nPlotDim == 3) then
+             i = ii - iMin + 1
+             j = jj - jMin + 1
+             k = kk - kMin + 1
+
+             PlotXYZNodes(1,i, j, k, H5Index) = &
+                  Xyz_DNB(1,ii, jj, kk, iBlock)
+             PlotXYZNodes(2,i, j, k, H5Index) = &
+                  Xyz_DNB(2,ii, jj, kk, iBlock)
+             PlotXYZNodes(3,i, j, k, H5Index) = &
+                  Xyz_DNB(3,ii, jj, kk, iBlock)
+
+          else if (plotType=='x=0') then
              i = ii - iMin + 1
              j = kk - kMin + 1
              k = jj - jMin + 1
 
-             plotXYZNodes(1,i, j, k, H5Index) = &
+             PlotXYZNodes(1,i, j, k, H5Index) = &
                   Xyz_DNB(2,ii, jj, kk, iBlock)
 
-             plotXYZNodes(2,i, j, k, H5Index) = &
+             PlotXYZNodes(2,i, j, k, H5Index) = &
                   Xyz_DNB(3,ii, jj, kk, iBlock)
           else if (plotType=='y=0') then
              i = ii - iMin + 1
              j = kk - kMin + 1
              k = jj - jMin + 1
 
-             plotXYZNodes(1,i, j, k, H5Index) = &
+             PlotXYZNodes(1,i, j, k, H5Index) = &
                   xyz_dnb(1,ii, jj, kk, iblock)
-             plotXYZNodes(2,i, j, k, H5Index) = &
+             PlotXYZNodes(2,i, j, k, H5Index) = &
                   Xyz_DNB(3,ii, jj, kk, iBlock)
              ! 
           else if (plotType=='z=0') then
@@ -387,19 +454,35 @@ contains
              j = jj - jMin + 1
              k = kk - kMin + 1
 
-             plotXYZNodes(1,i, j, k, H5Index) = &
+             PlotXYZNodes(1,i, j, k, H5Index) = &
                   Xyz_DNB(1,ii, jj, kk, iBlock)
-             plotXYZNodes(2,i, j, k, H5Index) = &
+             PlotXYZNodes(2,i, j, k, H5Index) = &
                   Xyz_DNB(2,ii, jj, kk, iBlock)
 
-          else if (nPlotDim == 3) then
-             write (*,*) "NPLOTDIM==3"
+          else
+             i = ii - iMin + 1
+             j = jj - jMin + 1
+             k = kk - kMin + 1
+
+             PlotXYZNodes(1,i, j, k, H5Index) = &
+                  Xyz_DNB(1,ii, jj, kk, iBlock)
+             PlotXYZNodes(2,i, j, k, H5Index) = &
+                  Xyz_DNB(2,ii, jj, kk, iBlock)
+             PlotXYZNodes(3,i, j, k, H5Index) = &
+                  Xyz_DNB(3,ii, jj, kk, iBlock)
+
           end if
           where(abs(PlotXYZNodes(:,:,:,:,H5Index))<1.e-10) &
                PlotXYZNodes(:,:,:,:,H5Index) = 0.
        end do; end do; end do
        do kk=kMin,kMax; do jj=jMin,jMax; do ii=iMin,iMax
-          if ( plotType=='x=0' .or. plotType=='y=0') then
+          if (nPlotDim == 3 .or. NotACut) then
+             i = ii - iMin + 1
+             j = jj - jMin + 1
+             k = kk - kMin + 1
+             PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
+                  PlotVar(ii, jj, kk, 1:nPlotVar)
+          else if ( plotType=='x=0' .or. plotType=='y=0') then
              !              write (*,*) "x=0 y=0"
              i = ii - iMin + 1
              j = kk - kMin + 1
@@ -413,9 +496,7 @@ contains
              k = kk - kMin + 1
              PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
                   .5*(PlotVar(ii, jj, kMin1, 1:nPlotVar)+PlotVar(ii, jj, kMax1, 1:nPlotVar))
-          else if (nPlotDim == 3) then
-             write (*,*) "NPLOTDIM==3"
-          end if
+         end if
           nCell = nCell+1
        end do; end do; end do
     else
@@ -442,19 +523,19 @@ contains
                      .5*(plotvar(iMin1, jj ,kk, 1:nplotvar)+plotvar(iMax1, jj, kk, 1:nplotvar))
              end if
           else if (nPlotDim == 1) then
-             if (plotDim(1) == 1) then
+             if (iPlotDim(1) == 1) then
                 i = ii - iMin + 1
                 j = jj - jMin + 1
                 k = kk - kMin + 1
                 PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
                      plotvar(ii, jj ,kk, 1:nplotvar) 
-             else if (plotDim(1) == 2) then
+             else if (iPlotDim(1) == 2) then
                 i = jj - jMin + 1
                 j = ii - iMin + 1
                 k = kk - kMin + 1
                 PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
                      plotvar(ii, jj ,kk, 1:nplotvar) 
-             else if (plotDim(1) == 3) then
+             else if (iPlotDim(1) == 3) then
                 i = kk - kMin + 1
                 j = ii - iMin + 1
                 k = kk - kMin + 1
@@ -467,101 +548,412 @@ contains
              j = jj - jMin + 1
              k = kk - kMin + 1
              PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
-                  plotvar(ii, jj ,kk, 1:nplotvar) 
+                  plotvar(ii, jj ,kk, 1:nplotvar)
           end if
 
           nCell = nCell+1
        end do; end do; end do
     end if
     H5Advance = .true.
-    UsedBlocksTemp(H5Index) = iBlock
-    nBlocksUsed = H5Index
-
-  end subroutine write_cut_var_hdf5
-
-
-  !=================================================================
-  !================================================================
-
-
-  subroutine write_var_hdf5(PlotVar, nPlotVar, H5Index, iBlock,&
-       isNonCartesian)
-    use ModMain, only : nBlockMax, nI,nJ,nK
-    use BATL_lib, ONLY : nDim, Xyz_DNB
-
-
-    !  Handles adding one block of variable data that for plotting
-    !  in the next plotfile.
-
-    integer, intent(in) :: nPlotVar, H5Index, iBlock
-    real, intent(in) :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
-    logical, intent(in) :: isNonCartesian
-    integer:: ii, jj, kk
-
-    !----------------------------------------------------------------------
-    ! Allocate the storage array if it has not been allocated for
-    ! this plotfile yet
-
-!!! Use nBlock if possible
-    !!NODE ORDER TEMPORARILY SWITCHED
-    if (.not. allocated(PlotVarIdx)) then
-       allocate(PlotVarIdx(nI, nJ, nK, nBlockMax, nPlotVar))
-       allocate(UsedBlocksTemp(nBlockMax))
-       iSizeGlobal = nI
-       jSizeGlobal = nJ
-       kSizeGlobal = nK
-       arrSize = (/nI,nJ,nK/)
-       nPlotDim = nDim
-       plotDim = (/1,2,3/)
-       nBlocksUsed = 0
-
-       nodeArrSize(1) = nI + 1
-       if (nDim .ge. 2) then
-          nodeArrSize(2) = nJ + 1
-       else
-          nodeArrSize(2) = nJ
-       end if
-       if (nDim == 3) then
-          nodeArrSize(3) = nK + 1
-       else
-          nodeArrSize(3) = nK
-       end if
-       if (isNonCartesian) &
-            allocate(plotXYZNodes(nPlotDim,1:1+nI,1:1+nJ,1:1+nK,nBlockMax))
-    end if
-    if (isNonCartesian) then  
-       do kk = 1, nodeArrSize(3); do jj = 1, nodeArrSize(2); do ii = 1, nodeArrSize(1)
-          plotXYZNodes(1:nPlotDim,ii, jj, kk, H5Index) = &
-               Xyz_DNB(1:nPlotDim,ii, jj, kk, iBlock)
-
-       end do; end do; end do
-
-    end if
-    !translates iBlk to index for plotfile where unused blocks are skipped  
-!!! Efficient loop ordering: do k = ...; do j = ...; do i = ...
-
-    do kk = 1, nK; do jj = 1, nJ; do ii = 1, nI
-       PlotVarIdx(ii, jj, kk, H5Index, 1:nPlotVar) = &
-            PlotVar(ii,jj, kk,1:nPlotVar)
-
-
-    end do; end do; end do
-    UsedBlocksTemp(H5Index) = iBlock
-    nBlocksUsed = H5Index
-
-
+    UsedBlocks(h5Index) = iBlock
   end subroutine write_var_hdf5
+
+ !==================================================================================
+ !==================================================================================
+  subroutine init_sph_hdf5_plot(nPlotVar, filename, plotVarNames, PlotVarUnits, nTheta,&
+  nPhi, rplot) 
+  
+  use BATL_lib, ONLY: iTree_IA, Xyz_DNB, Proc_,barrier_mpi
+  use ModMain, ONLY: nBlockMax, Unused_B,Time_Simulation, n_step
+  use BATL_tree, ONLY: find_tree_node
+  
+  use ModGeometry, ONLY: nI,nJ,nK, CellSize_DB,&
+    x1,x2,y1,y2,z1,z2, Xyz_DGB
+  use ModProcMH, ONLY: iProc, nProc
+  use ModMpi
+  use ModIO, only: x_,y_,z_
+
+    integer, intent(in) :: nPlotVar, nTheta, nPhi
+    character(len=80),       intent(in):: filename
+    character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
+    character(len=lNameVar),  intent(in):: plotVarUnits(nPlotVar)
+    real, intent(in) :: rplot
+    real :: dtheta_plot, dphi_plot
+    real :: ResultMod, x,y,z,xx,yy,zz, theta_plot, phi_plot, xx1,yy1,zz1
+    real :: Coord_D(3), xx2,yy2,zz2, minRblk, maxRBlk, RealMetadata(7)
+    integer :: nThetaOrPhi, i, j, ii,jj ,iG,jG,iBlkCell, jBlkCell, iBlk, Error, iVar
+    integer :: iNode, nBlkUsedMax, PhiBlk, ThetaBlk, ProcNum
+    integer :: IntegerMetadata(16)
+    integer :: iLen, labelLeng
+    logical :: SplitPlotSuccessfull
+    real, allocatable :: BoundingBox(:,:,:)
+    integer, allocatable :: CellsFromProc(:),BlocksPerProc(:)
+    integer(HSIZE_T) :: iData
+    integer, parameter :: FFV = 1
+
+     dtheta_plot = cPi/real(ntheta)
+     dphi_plot   = 2.0*cPi/real(nphi)
+    call barrier_mpi
+    do i=1,2 !i is the dimension
+        if (i == 1) then 
+            nThetaOrPhi = nTheta
+        else
+            nThetaOrPhi = nPhi
+        end if
+        if (nThetaOrPhi > 1) then
+            do j= 4, 27
+                ResultMod = mod(real(nThetaOrPhi), real(j))
+                if (ResultMod == 0) then 
+                    SplitPlotSuccessfull = .true.
+                else
+                    SplitPlotSuccessfull = .false.
+                end if
+                if(SplitPlotSuccessfull) exit
+            end do
+            if(.not. SplitPlotSuccessfull ) then
+                do j=4,2,-1
+                    ResultMod = mod(real(nThetaOrPhi), real(j))
+                    if (ResultMod == 0) then 
+                        SplitPlotSuccessfull = .true.
+                    else
+                        SplitPlotSuccessfull = .false.
+                    end if
+                    if(SplitPlotSuccessfull) exit
+                end do
+            end if
+
+            if(SplitPlotSuccessfull ) then
+                nCellsPerBlock(i) = j
+            else 
+                nCellsPerBlock(i) = nThetaOrPhi
+            end if
+        else
+            nCellsPerBlock(i) = 1
+        end if
+    end do
+
+    nCellsPerBlock(3) = 1
+    nNodeCellsPerBlock(1:2) = nCellsPerBlock(1:2)+1
+    nNodeCellsPerBlock(3) = 1
+    iSizeGLobal = nCellsPerBlock(1)
+    jSizeGlobal = nCellsPerBlock(2)
+    kSizeGlobal = nCellsPerBlock(3)
+    nPlotDim = 3
+    nLogicalDim = 2
+    iPlotDim = (/1,2,3/)
+        nBlocksThetaPhi(1)=(nTheta)/nCellsPerBlock(1)
+        nBlocksThetaPhi(2)=nPhi/nCellsPerBlock(2)
+    do i = 1,2 !i is the dimension
+
+        if(nBlocksThetaPhi(i) == 0) then
+            nBlocksThetaPhi(i) = 1
+            nCellsPerBlock(i) = 1
+         end if
+    end do
+
+    nBlkUsedGlobal = nBlocksThetaPhi(1)*nBlocksThetaPhi(2)
+    
+    !These aren't necessarily blocks located on this processor
+    !This is done so values calculated in this routine and
+    !their corresponding writes can be
+    !split evenly between the processors.
+    nBlocksUsed = nint((nBlkUsedGlobal)/real(nProc))
+    iProcOffset = iProc*nBlocksUsed
+    if (iProc == nProc-1) &
+        nBlocksUsed = nBlkUsedGlobal - iProcOffset
+
+    nCellsLocal = 0
+
+    do iBLK=1, nBlockMax
+        if(Unused_B(iBLK))CYCLE
+
+      ! get the max and min radial distance for this block so that we can check
+      ! whether or not this block contibutes to the plot.
+      xx1 = 0.50*(Xyz_DGB(x_, 0, 0, 0,iBLK)+Xyz_DGB(x_,   1,   1  , 1,iBLK))
+      xx2 = 0.50*(Xyz_DGB(x_,nI,nJ,nK,iBLK)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBLK))
+      yy1 = 0.50*(Xyz_DGB(y_, 0, 0, 0,iBLK)+Xyz_DGB(y_,   1,   1,   1,iBLK))
+      yy2 = 0.50*(Xyz_DGB(y_,nI,nJ,nK,iBLK)+Xyz_DGB(y_,nI+1,nJ+1,nK+1,iBLK))
+      zz1 = 0.50*(Xyz_DGB(z_, 0, 0, 0,iBLK)+Xyz_DGB(z_,   1,   1,   1,iBLK))
+      zz2 = 0.50*(Xyz_DGB(z_,nI,nJ,nK,iBLK)+Xyz_DGB(z_,nI+1,nJ+1,nK+1,iBLK))
+      minRblk = sqrt(&
+           minmod(xx1,xx2)**2 + minmod(yy1,yy2)**2 + minmod(zz1,zz2)**2)
+      maxRblk = sqrt((max(abs(xx1),abs(xx2)))**2 + &
+           (max(abs(yy1),abs(yy2)))**2 + &
+           (max(abs(zz1),abs(zz2)))**2)
+
+      do i=1,ntheta
+            theta_plot = (i-.5)*dtheta_plot 
+         do j=1,nphi
+            phi_plot = (j-.5)*dphi_plot
+
+            ! get the cartesian coordinate from the spherical Coordinates
+            x = rplot*sin(theta_plot)*cos(phi_plot)
+            y = rplot*sin(theta_plot)*sin(phi_plot)
+            z = rplot*cos(theta_plot)
+
+            ! check to see if this point is inside the block - if so print it out
+        if (x >= xx1 .and. x < xx2 .and. &
+                 y >= yy1 .and. y < yy2 .and. &
+                 z >= zz1 .and. z < zz2 ) then
+           nCellsLocal = nCellsLocal+1
+
+        end if
+      end do
+    end do
+   end do
+
+    call open_hdf5_file(fileid, filename, icomm)
+    if(fileid == -1) then
+       if (iProc == 0) write (*,*)  "Error: unable to initialize file"
+       call stop_mpi("unable to initialize hdf5 file")
+    end if
+  call barrier_mpi
+  allocate(PlotXYZNodes(nPlotDim,nNodeCellsPerBlock(1),nNodeCellsPerBlock(2),nNodeCellsPerBlock(3),nBlocksUsed))
+  !build the grid node array for this proc
+  iBlk = 0
+  iNode = 0
+ call barrier_mpi
+   do jj=1, nBlocksThetaPhi(2); do ii=1,nBlocksThetaPhi(1);
+      iNode = iNode + 1
+      if (iNode .le. iProcOffset .or. iNode > iProcOffset+nBlocksUsed) cycle  
+        iBlk = iBlk +1
+         do j = 1, nNodeCellsPerBlock(2); do i = 1,nNodeCellsPerBlock(1)
+            iG = (ii - 1)*nCellsPerBlock(1)+i 
+            jG = (jj - 1)*nCellsPerBlock(2)+j 
+            
+            theta_plot = (iG-1)*dtheta_plot           
+            phi_plot = (jG-1)*dphi_plot
+            
+            ! get the cartesian coordinate from the spherical Coordinates
+            x = rplot*sin(theta_plot)*cos(phi_plot)
+            y = rplot*sin(theta_plot)*sin(phi_plot)
+            z = rplot*cos(theta_plot)
+            
+            PlotXYZNodes(1,i,j,1,iBlk) = x
+            PlotXYZNodes(2,i,j,1,iBlk) = y
+            PlotXYZNodes(3,i,j,1,iBlk) = z
+        end do; end do
+    end do; end do
+    
+    call write_hdf5_data(FileID, "NodesX", 4, (/nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
+        nNodeCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank4RealData=PlotXYZNodes(1,:,:,:,:))
+    call write_hdf5_data(FileID, "NodesY", 4, (/nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
+        nNodeCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank4RealData=PlotXYZNodes(2,:,:,:,:))
+    call write_hdf5_data(FileID, "NodesZ", 4, (/nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
+        nNodeCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank4RealData=PlotXYZNodes(3,:,:,:,:))
+   
+   allocate(BoundingBox(2,nPlotDim,nBlocksUsed))
+   
+   do iBlk = 1, nBlocksUsed
+      BoundingBox(1,1,iBlk) = minval(PlotXYZNodes(1,:,:,:,iBlk))
+      BoundingBox(2,1,iBlk) = maxval(PlotXYZNodes(1,:,:,:,iBlk))
+     
+     BoundingBox(1,2,iBlk) = minval(PlotXYZNodes(2,:,:,:,iBlk))
+     BoundingBox(2,2,iBlk) = maxval(PlotXYZNodes(2,:,:,:,iBlk))
+     
+     BoundingBox(1,3,iBlk) = minval(PlotXYZNodes(3,:,:,:,iBlk))
+     BoundingBox(2,3,iBlk) = maxval(PlotXYZNodes(3,:,:,:,iBlk))
+   end do
+   
+   deallocate(PlotXYZNodes)
+    iInteger8=2
+    call write_hdf5_data(FileID,"bounding box", 3, (/iInteger8, nPlotDim,nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,Rank3RealData=BoundingBox)
+   deallocate(BoundingBox)
+  
+  iBlk = 0
+  iNode = 0
+  allocate(MinLogicalExtents(2, nBlocksUsed))
+   do jj=1, nBlocksThetaPhi(2); do ii=1,nBlocksThetaPhi(1);
+      iNode = iNode + 1
+      if (iNode < iProcOffset .or. iNode > iProcOffset+nBlocksUsed-1) cycle  
+      iBlk = iBlk +1
+
+      MinLogicalExtents(1,iBlk) = (ii - 1)*nCellsPerBlock(1)+1
+      MinLogicalExtents(2,iBlk) = (jj - 1)*nCellsPerBlock(2)+1 
+   end do; end do
+     
+     call  write_hdf5_data(FileID, "MinLogicalExtents", 2, (/nLogicalDim,nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank2IntegerData=MinLogicalExtents)
+   deallocate(MinLogicalExtents) 
+    call write_integer_sim_metadata(fileID, nPlotVar)
+    call write_real_sim_metadata(FileID, .false.)
+    
+    iData = 1
+    !    attName(1) = 'Simulation Time'
+    RealMetaData(iData) = Time_Simulation
+    iData = iData + 1
+      RealMetaData(iData) = -rPlot
+      iData = iData + 1
+      RealMetaData(iData) = rPlot
+      iData = iData + 1
+      RealMetaData(iData) = -rPlot
+      iData = iData + 1
+      RealMetaData(iData) = rPlot
+      iData = iData + 1
+      RealMetaData(iData) = -rPlot
+      iData = iData + 1
+      RealMetaData(iData) = rPlot
+    !-------------------------------------------------------------------
+    !write the real Metadata
+    call  write_hdf5_data(FileID, "Real Plot Metadata", 1, (/iData/),&
+        Rank1RealData=RealMetaData)
+    iData = 1
+
+    IntegerMetaData(iData) = FFV
+    !    attName(1) = 'File Format Version'
+    iData = iData + 1
+    IntegerMetaData(iData) = n_step 
+    !    attName(2) = "Time Step"
+    iData = iData + 1
+    IntegerMetaData(iData) = nPlotDim
+    !    attName(3) = 'nDim'
+    iData = iData + 1
+    IntegerMetaData(iData) = 2
+    !    attName(3) = 'nDim'
+    iData = iData + 1
+    IntegerMetaData(iData) = nBlkUsedGlobal
+    !    attName(4) = 'globalNumBlocks'
+    iData = iData + 1    
+    IntegerMetaData(iData) = nProc
+    !    attName(5) = 'numProcessors'
+    iData = iData + 1
+
+    IntegerMetaData(iData) = 1
+    !    attName(7) = 'nLevel'
+    iData = iData + 1
+      IntegerMetaData(iData) = nCellsPerBlock(1)
+      iData = iData + 1
+      IntegerMetaData(iData) = nCellsPerBlock(2)
+      iData = iData + 1
+      IntegerMetaData(iData) = 0
+      iData = iData + 1
+       IntegerMetaData(iData) = SphShellPlot_
+    iData = iData + 1
+    !as of 2/3/2012 this is not implimented in the plugin but it probably
+    !should be in the future
+    do i = 1, 3
+       IntegerMetaData(iData) = 0
+       iData = iData + 1
+    end do
+
+    integerMetaData(iData) = 1
+    iData = iData + 1
+    integerMetaData(iData) = nPlotVar
+    !write the integer Metadata
+    call  write_hdf5_data(FileID, "Integer Plot Metadata", 1, (/iData/),&
+        Rank1IntegerData=IntegerMetaData)   
+    
+     allocate(UnknownNameArray(nPlotDim))
+     UnknownNameArray(1) = "X-Axis"
+     UnknownNameArray(2) = "Y-Axis"
+     UnknownNameArray(3) = "Z-Axis"
+    
+     iInteger4=nPlotDim
+    call pad_string_with_null(iInteger4, lNameh5, UnknownNameArray, UnknownNameArray)
+    call write_hdf5_data(FileID, "Axis Labels", 1,  (/nPlotDim/),&
+    CharacterData=UnknownNameArray, nStringChars=iInteger8)
+    deallocate(UnknownNameArray)
+
+    allocate(UnknownNameArray(nPlotVar))
+    call pad_string_with_null(nPlotVar, lNameh5, PlotVarUnits, UnknownNameArray)
+    iInteger8=nPlotVar
+    iInteger8a=lNameH5
+    call write_hdf5_data(FileID, "plotVarUnits", 1,  (/iInteger8/),&
+    CharacterData=UnknownNameArray, nStringChars=iInteger8a)
+
+    call pad_string_with_null(nPlotVar, lNameh5, PlotVarNames, UnknownNameArray)
+    iInteger8=nPlotVar
+    call write_hdf5_data(FileID, "plotVarNames", 1,  (/iInteger8/),&
+    CharacterData=UnknownNameArray, nStringChars=iInteger8a)
+
+    allocate(CoordArray(4,nCellsLocal))
+    allocate(CellData(nCellsLocal, nPlotVar))
+  end subroutine init_sph_hdf5_plot
+
+ !==================================================================================
+ !==================================================================================
+ 
+  subroutine write_sph_var_hdf5(iCell, jCell, H5Index, rplot, theta_out,phi_out,&
+   dtheta_plot, dphi_plot, nTheta, nPhi, nPlotVar, PointVar, plotVarNames)
+
+    integer, intent(in) :: iCell, jCell, nPlotVar, nTheta, nPhi, H5Index
+    real, intent(in) :: theta_out, phi_out, PointVar(nPlotVar)
+    real, intent(in) :: rplot, dtheta_plot, dphi_plot
+    character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
+    real :: theta_plot, phi_plot
+    integer :: iBlkCell, jBlkCell, iBlk
+    integer :: iNode,  PhiBlk, ThetaBlk
+
+    ThetaBlk = floor(real(iCell - 1)/real(nCellsPerBlock(1))) + 1
+    PhiBlk = floor(real(jCell - 1)/real(nCellsPerBlock(2))) + 1
+    
+    iNode = (PhiBlk-1)*nBlocksThetaPhi(1) + ThetaBlk
+
+    iBlkCell = iCell - (ThetaBlk - 1)*nCellsPerBlock(1) 
+    jBlkCell = jCell - (PhiBlk - 1)*nCellsPerBlock(2) 
+ 
+   CoordArray(1,H5Index) = iBlkCell
+   CoordArray(2,H5Index) = jBlkCell
+   CoordArray(3,H5Index) = 1
+   CoordArray(4,H5Index) = iNode
+   CellData(H5Index, 1:nPlotVar) = PointVar(1:nPlotVar)
+  end subroutine write_sph_var_hdf5
+
+  !===============================================================           
+  !================================================================
+  subroutine close_sph_hdf5_plot(nPlotVar)
+
+  use ModMpi
+
+    integer, intent(in) :: nPlotVar
+    integer ::  iVar
+    integer :: Error
+    real :: VarMin, VarMax, GlobalVarMin(nPlotVar), GlobalVarMax(nPlotVar)
+
+    call barrier_mpi
+
+    do iVar = 1, nPlotVar
+       if (nCellsLocal > 0) then
+          VarMin = minval(CellData(:,iVar))
+          VarMax = maxval(CellData(:,iVar))
+       else
+          VarMin = huge(VarMin)
+          VarMax = -huge(VarMax)
+       end if
+       
+       call MPI_allreduce(VarMin, GlobalVarMin(iVar), 1, MPI_REAL,&
+            MPI_MIN, iComm, Error)
+       call MPI_allreduce(VarMax, GlobalVarMax(iVar), 1, MPI_REAL,&
+            MPI_MAX, iComm, Error)
+    end do
+
+    do iVar = 1, nPlotVar
+         call write_hdf5_data(FileID, UnknownNameArray(iVar), 4, (/nCellsPerBlock(1), nCellsPerBlock(2),&
+            nCellsPerBlock(3),nBlkUsedGlobal/), CoordArray=CoordArray, nCellsLocalIn=nCellsLocal,&
+            Rank1RealData=CellData(:,iVar),RealAttribute1=GlobalVarMin(iVar), &
+            RealAttribute2=GlobalVarMax(iVar),NameRealAttribute1="minimum", NameRealAttribute2="maximum")
+    end do
+    deallocate(UnknownNameArray)
+    deallocate(CellData)
+    deallocate(CoordArray)
+    call close_hdf5_file(FileID)
+  end subroutine
+
   !===============================================================           
   !================================================================
 
   subroutine write_plot_hdf5(filename, plotType, plotVarNames, plotVarUnits,&
-       nPlotVar,isCutFile, nonCartesian,plot_dimensional, xmin, xmax, &
-       ymin, ymax, zmin, zmax)!, nBLKcells)
+       nPlotVar, NotACut, nonCartesian, IsSphPlot, plot_dimensional, xmin, xmax, &
+       ymin, ymax, zmin, zmax)
 
     use BATL_tree, only: iNode_B, iTree_IA, Coord0_,&
          Level_,iMortonNode_A
     use BATL_lib, only : CoordMin_DB, CoordMax_DB
-    !  use ModIO
     use ModNumConst
     use ModMpi
     use BATL_lib, ONLY : CoordMin_DB, MaxDim
@@ -570,111 +962,30 @@ contains
 
     integer,                 intent(in):: nPlotVar
     character(len=80),       intent(in):: filename
-    character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
+    character(len=lnamevar), intent(in):: plotvarnames(nplotvar)
     character(len=lNameVar),  intent(in):: plotVarUnits(nPlotVar)
     character (len=*), intent(in) :: plotType
     real, intent(in)  ::  xMin, xMax, yMin, yMax, zMin, zMax
-    !    integer,                 intent(in):: nBLKcells
-    logical, intent(in) :: isCutFile, plot_dimensional, nonCartesian
-    integer :: offsetPerProc(0:nProc-1), blocksPerProc(0:nProc-1)
-    integer :: error, procIdx, iLen, iVar, nBlocksUsedMax 
-    integer(HID_T) :: fileID
+    logical, intent(in) :: NotACut, plot_dimensional, nonCartesian, IsSphPlot
+    integer :: offsetPerProc(0:nProc-1)
+    integer :: Error, procIdx, iLen, iVar, nBlocksUsedMax 
+
     integer :: labelLeng, i, nBlocksUsedMin
-    integer :: hdfMajor, hdfMinor, hdfRelease
-    real, allocatable :: coordinates(:,:), bbox(:,:,:),blockDataExtents(:,:)
+
+    real, allocatable :: Coordinates(:,:), BoundingBox(:,:,:),BlockDataExtents(:,:)
     integer, allocatable :: procNum(:)
-    real :: varMin, varMax
-    real :: globalVarMin(nPlotVar), globalVarMax(nPlotVar)
+    real :: VarMin, VarMax
+    real :: GlobalVarMin(nPlotVar), GlobalVarMax(nPlotVar)
     real :: minCoords(3), maxCoords(3)
-    character (len=lnamevar+4) :: dsname
+    character (len=lnamevar+4) :: DatasetNameTemp
     real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
-
-
-
-
-    !--------------------------------------------------------------------------
-    !     !If you make changes to the hdf part of this code, uncomment this and 
-    !     !the writes at the end and run the code before commiting it to
-    !     !make sure that it doesn't cause the writes to to be really slow.
-    !     if (iProc == 0) write (*,*) '===================================='
-    !     if (iProc == 0) write (*,*) 'Writing BATL hdf5 parallel plotfile'
-    !     if (iProc == 0) write (*,*) '------------------------------------'
-    !     if (iProc == 0) write (*,*) '  opening hdf5 file'
-
-    call barrier_mpi()
-    do iVar = 1, nPlotVar
-       if (nBlocksUsed > 0) then
-          varMin = minval(PlotVarIdx(:,:,:,1:nBlocksUsed,iVar))
-          varMax = maxval(PlotVarIdx(:,:,:,1:nBlocksUsed,iVar))
-       else
-          varMin = huge(varMin)
-          varMax = -huge(varMax)
-       end if
-       call MPI_allreduce(varMin, globalVarMin(iVar), 1, MPI_REAL,&
-            MPI_MIN, iComm, error)
-
-       call MPI_allreduce(varMax, globalVarMax(iVar), 1, MPI_REAL,&
-            MPI_MAX, iComm, error)
-
-    end do
-
-
-    !initialize the Fortran Hdf5 library
-    call h5open_f(error)
-
-    !determine if we want to do collective writes. Collective write
-    !is faster but all processors must call h5dwrite, even in cuts where 
-    !some processors write no data.  In newer versions of hdf5 a null
-    !write can be called but attempting to do so on older versions will
-    !cause the code to crash. We should be able to do collective for any
-    !hdf5 1.8.x where all procs write data but that didn't work for me 
-    !for some reason so for now collective write mode is restricted to
-    !hdf5 version 1.8.8+
-    !     write (*,*) "write plot error 3"v
-    call h5get_libversion_f(hdfMajor, hdfMinor, hdfRelease, error)   
-    if (hdfmajor > 1) then
-       collectiveWrite = .true.
-    else if (hdfmajor == 1 .and. hdfMinor > 8) then
-       collectiveWrite = .true.
-    else if (hdfmajor == 1 .and. hdfMinor == 8) then
-       if (hdfRelease .ge. 8 ) then!.or. allProcsWrite) then
-          collectiveWrite = .true.
-       else
-          collectiveWrite = .false.
-       end if
-    else 
-       collectiveWrite = .false.
+    logical :: isCutFile
+    
+    if (NotACut) then
+        isCutFile = .false.
+    else
+        isCutFile = .true.
     end if
-
-    ! Open the hdf5 file and write data to it
-    !---------------------------------------------------------------------    
-    fileID = -1
-    call hdf5_init_file(fileID, filename, iComm)
-    if(fileID == -1) then
-       if (iProc == 0) write (*,*)  "Error: unable to initialize file"
-       call stop_mpi("unable to initialize hdf5 file")
-    end if
-    !get processor block offsets for writes
-    call MPI_Allgather(nBlocksUsed, 1, MPI_INTEGER, blocksPerProc, &
-         1, MPI_INTEGER, iComm, error)
-    nBlocksUsedMax = maxval(blocksPerProc)
-    nBlocksUsedMin = minval(blocksPerProc)
-    offsetPerProc(0) = 0
-    nBlkUsedGlobal = blocksPerProc(0) 
-    if (nProc > 1) then
-       do procIdx = 1, nProc-1
-          offsetPerProc(procIdx) = offsetPerProc(procIdx-1) &
-               + blocksPerProc(procIdx-1)
-          nBlkUsedGlobal = nBlkUsedGlobal + blocksPerProc(procIdx)
-       end do
-    end if
-    !The UsedBlocksTemp array will not serve our purpose because it will
-    !have trailing negative numbers.  Move it to an array of the correct
-    !size and use it to create an array of used Nodes.
-    allocate(UsedBlocks(nBlocksUsed))
-    UsedBlocks(1:nBlocksUsed) = UsedBlocksTemp(1:nBlocksUsed)
-    deallocate(UsedBlocksTemp)
-
 
     if (nBlocksUsed > 0) then
        allocate(UsedNodes(nBlocksUsed))
@@ -683,191 +994,207 @@ contains
        allocate(UsedNodes(1))
        UsedNodes(1) = 0
     end if
+    do iVar = 1, nPlotVar
+       if (nBlocksUsed > 0) then
+          VarMin = minval(PlotVarIdx(:,:,:,:,iVar))
+          VarMax = maxval(PlotVarIdx(:,:,:,:,iVar))
+       else
+          VarMin = huge(VarMin)
+          VarMax = -huge(VarMax)
+       end if
+       call MPI_allreduce(VarMin, GlobalVarMin(iVar), 1, MPI_REAL,&
+            MPI_MIN, iComm, Error)
+
+       call MPI_allreduce(VarMax, GlobalVarMax(iVar), 1, MPI_REAL,&
+            MPI_MAX, iComm, Error)
+
+    end do
+
+    
+    ! Open the hdf5 file
+    call open_hdf5_file(fileid, filename, icomm)
+    if(fileid == -1) then
+       if (iProc == 0) write (*,*)  "Error: unable to initialize file"
+       call stop_mpi("unable to initialize hdf5 file")
+    end if
 
     allocate(unknownNameArray(nPlotVar))
-    do iVar = 1, nPlotVar
-       UnknownNameArray(iVar) = plotVarNames(iVar)
-       !The VisIt plugin needs null padded names.
-       labelLeng = len_trim(UnknownNameArray(iVar))
-       do iLen = labelLeng + 1,lNameH5 
-          UnknownNameArray(iVar)(iLen:iLen) = CHAR(0)
-       end do
-    end do
-    call write_plot_string(nPlotVar,lNameH5, UnknownNameArray,"plotVarNames",&
-         fileID)
 
-    ! The plugn doesn't need these. However if does use this info to speed some 
+    call pad_string_with_null(nPlotVar, lNameh5, PlotVarNames, UnknownNameArray)
+    iInteger8=nPlotVar
+    iInteger8a=lNameh5
+    call write_hdf5_data(FileID, "plotVarNames", 1,  (/iInteger8/),&
+    CharacterData=UnknownNameArray, nStringChars=iInteger8a)
+
+
+    ! The plugn doesn't need these. However it does use this info to speed some 
     ! things up if it is there.  Perhaps this could be an option in PARAM.in
-    allocate (blockDataExtents(2,nBlocksUsed))
+    allocate (BlockDataExtents(2,nBlocksUsed))
     do iVar = 1, nPlotVar
        do iBlk = 1, nBlocksUsed
-          blockDataExtents(1, iBlk) = minval(PlotVarIdx(:,:,:,iBlk,iVar))
-          blockDataExtents(2, iBlk) = maxval(PlotVarIdx(:,:,:,iBlk,iVar))
+          BlockDataExtents(1, iBlk) = minval(PlotVarIdx(:,:,:,iBlk,iVar))
+          BlockDataExtents(2, iBlk) = maxval(PlotVarIdx(:,:,:,iBlk,iVar))
        end do
-       dsname = trim(plotVarNames(iVar))//"_Ext"
+       DatasetNameTemp = trim(plotVarNames(iVar))//"_Ext"
        labelLeng = len_trim(UnknownNameArray(iVar)) + 4
        do iLen = labelLeng + 1,lNameH5+3
-          dsname(iLen:iLen) = CHAR(0)
+          DatasetNameTemp(iLen:iLen) = CHAR(0)
        end do
-       !        if (nBlocksUsed == 0 ) then
-       !           if (collectiveWrite)&
-       !                call writeHdf5Rank2Real(fileID, reshape((/0.0,0.0,0.0,0.0/),(/2,2/)), nBlocksUsed,&
-       !                nBlkUsedGlobal, offsetPerProc(iProc), dsname, 2, collectiveWrite)
-       !        else
-       call writeHdf5Rank2Real(fileID, blockDataExtents, nBlocksUsed,&
-            nBlkUsedGlobal, offsetPerProc(iProc), dsname, 2, collectiveWrite)   
-       !       end if
+       if (nBlocksUsed == 0 ) then
+            iInteger8 = 2
+            call write_hdf5_data(FileID, DatasetNameTemp, 2, (/iInteger8,nBlkUsedGlobal/),&
+            nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+            Rank2RealData=reshape((/0.0,0.0,0.0,0.0/),(/2,2/)))
+       else
+            iInteger8 = 2
+            call write_hdf5_data(FileID, DatasetNameTemp, 2, (/iInteger8,nBlkUsedGlobal/),&
+            nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+            Rank2RealData=BlockDataExtents)
+      end if
+
     end do
 
-    deallocate (blockDataExtents)
+    deallocate (BlockDataExtents)
 
     do iVar = 1, nPlotVar
-       call writeHdf5Rank4Real(fileID, PlotVarIdx(:,:,:,1:nBlocksUsed,iVar), nBlocksUsed,&
-            nBlkUsedGlobal, offsetPerProc(iProc), UnknownNameArray(iVar), &
-            arrSize(1), arrSize(2), arrSize(3), .true., globalVarMin(iVar), globalVarMax(iVar),&
-            collectiveWrite)
+        call write_hdf5_data(FileID, UnknownNameArray(iVar), 4, (/nCellsPerBlock(1), nCellsPerBlock(2),&
+            nCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+            Rank4RealData=PlotVarIdx(:,:,:,:,iVar),&
+            RealAttribute1=GlobalVarMin(iVar), RealAttribute2=GlobalVarMax(iVar), &
+            NameRealAttribute1="minimum", NameRealAttribute2="maximum")
     end do
-    allocate(bbox(2,nPlotDim,nBlocksUsed))    
+
+    allocate(BoundingBox(2,nPlotDim,nBlocksUsed))    
     if (nonCartesian) then
-
-       call writeHdf5Rank4Real(fileID, plotXYZNodes(1,:,:,:,1:nBlocksUsed), nBlocksUsed,&
-            nBlkUsedGlobal, offsetPerProc(iProc), 'NodesX', &
-            nodeArrSize(1), nodeArrSize(2), nodeArrSize(3), .false., 0.0, 0.0, collectiveWrite)
-       if (nPlotDim .ge. 2) &
-            call writeHdf5Rank4Real(fileID, plotXYZNodes(2,:,:,:,1:nBlocksUsed), nBlocksUsed,&
-            nBlkUsedGlobal, offsetPerProc(iProc), 'NodesY', &
-            nodeArrSize(1), nodeArrSize(2), nodeArrSize(3), .false., 0.0, 0.0,collectiveWrite)
-       if (nPlotDim == 3) &
-            call writeHdf5Rank4Real(fileID, plotXYZNodes(3,:,:,:,1:nBlocksUsed), nBlocksUsed,&
-            nBlkUsedGlobal, offsetPerProc(iProc), 'NodesZ', &
-            nodeArrSize(1), nodeArrSize(2), nodeArrSize(3), .false., 0.0, 0.0,collectiveWrite)
-
-
+            call write_hdf5_data(FileID, "NodesX", 4, (/nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
+                nNodeCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+                Rank4RealData=PlotXYZNodes(1,:,:,:,:))
+            if (nPlotDim .ge. 2) then
+                call write_hdf5_data(FileID, "NodesY", 4, (/nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
+                    nNodeCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+                    Rank4RealData=PlotXYZNodes(2,:,:,:,:))
+               if (nPlotDim == 3) &
+                    call write_hdf5_data(FileID, "NodesZ", 4, (/nNodeCellsPerBlock(1), nNodeCellsPerBlock(2),&
+                        nNodeCellsPerBlock(3),nBlkUsedGlobal/),nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+                        Rank4RealData=PlotXYZNodes(3,:,:,:,:))
+            end if
        do iBlk = 1, nBlocksUsed
-          bbox(1,1,iBlk) = minval(plotXYZNodes(1,:,:,:,iBlk))
-          bbox(2,1,iBlk) = maxval(plotXYZNodes(1,:,:,:,iBlk))
+          BoundingBox(1,1,iBlk) = minval(PlotXYZNodes(1,:,:,:,iBlk))
+          BoundingBox(2,1,iBlk) = maxval(PlotXYZNodes(1,:,:,:,iBlk))
           if (nPlotDim .ge. 2) then
-             bbox(1,2,iBlk) = minval(plotXYZNodes(2,:,:,:,iBlk))
-             bbox(2,2,iBlk) = maxval(plotXYZNodes(2,:,:,:,iBlk))
+             BoundingBox(1,2,iBlk) = minval(PlotXYZNodes(2,:,:,:,iBlk))
+             BoundingBox(2,2,iBlk) = maxval(PlotXYZNodes(2,:,:,:,iBlk))
           end if
           if (nPlotDim == 3) then
-             bbox(1,3,iBlk) = minval(plotXYZNodes(3,:,:,:,iBlk))
-             bbox(2,3,iBlk) = maxval(plotXYZNodes(3,:,:,:,iBlk))
+             BoundingBox(1,3,iBlk) = minval(PlotXYZNodes(3,:,:,:,iBlk))
+             BoundingBox(2,3,iBlk) = maxval(PlotXYZNodes(3,:,:,:,iBlk))
           end if
        end do
-       deallocate(plotXYZNodes)
+       deallocate(PlotXYZNodes)
 
 
     else
-       bbox(1,:,:) = CoordMin_DB(plotDim(1:nPlotDim), UsedBlocks)
-       bbox(2,:,:) = CoordMax_DB(plotDim(1:nPlotDim), UsedBlocks) 
+       BoundingBox(1,:,:) = CoordMin_DB(iPlotDim(1:nPlotDim), UsedBlocks)
+       BoundingBox(2,:,:) = CoordMax_DB(iPlotDim(1:nPlotDim), UsedBlocks) 
     end if
-    call writeHdf5Rank3Real(fileID, bbox, nBlocksUsed,&
-         nBlkUsedGlobal, offsetPerProc(iProc), "bounding box", 2, nPlotDim,collectiveWrite)
-    ! 
-    !     call MPI_allreduce(minval(bbox(1,1,:)), minCoords(1), 1, MPI_REAL,&
-    !          MPI_MIN, iComm, error)
-    !     call MPI_allreduce(maxval(bbox(2,1,:)), maxCoords(1), 1, MPI_REAL,&
-    !          MPI_MAX, iComm, error)
-    !     if (nPlotDim .ge. 2) then
-    !        call MPI_allreduce(minval(bbox(1,2,:)), minCoords(2), 1, MPI_REAL,&
-    !             MPI_MIN, iComm, error)
-    !        call MPI_allreduce(maxval(bbox(2,2,:)), maxCoords(2), 1, MPI_REAL,&
-    !             MPI_MAX, iComm, error)
-    !     end if
-    !     if (nPlotDim == 3) then
-    !        call MPI_allreduce(minval(bbox(1,3,:)), minCoords(3), 1, MPI_REAL,&
-    !             MPI_MIN, iComm, error)
-    !        call MPI_allreduce(maxval(bbox(2,3,:)), maxCoords(3), 1, MPI_REAL,&
-    !             MPI_MAX, iComm, error)
-    !     end if
-    allocate(coordinates(nPlotDim, nBlocksUsed))
+        iInteger8=2
+        call write_hdf5_data(FileID, "bounding box", 3, (/iInteger8,nPlotDim,nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank3RealData=BoundingBox)
+    allocate(Coordinates(nPlotDim, nBlocksUsed))
     do iBlk = 1, nBlocksUsed
        do i = 1, nPlotDim
-          coordinates(i, iBlk) = .5*(bbox(1,i,iBlk) + bbox(2,i,iBlk))
+          Coordinates(i, iBlk) = .5*(BoundingBox(1,i,iBlk) + BoundingBox(2,i,iBlk))
        end do
     end do
-    deallocate(bbox)
+    deallocate(BoundingBox)
+    call barrier_mpi
+        call write_hdf5_data(FileID, "coordinates", 2, (/nPlotDim,nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank2RealData=Coordinates)
+    deallocate(Coordinates)
 
-    call writeHdf5Rank2Real(fileID, coordinates, nBlocksUsed,&
-         nBlkUsedGlobal, offsetPerProc(iProc), "coordinates", nPlotDim, collectiveWrite)
-    deallocate(coordinates)
-
+    call barrier_mpi
     if (nBlocksUsed > 0) then
-       call writeHdf5Rank2Integer(fileID, iTree_IA(plotDim(1:nPlotDim)+Coord0_,UsedNodes), nBlocksUsed,&
-            nBlkUsedGlobal, offsetPerProc(iProc), "MinLogicalExtents", nPlotDim, collectiveWrite)
-    else if (collectiveWrite .and. nBlocksUsed == 0) then
-       call writeHdf5Rank2Integer(fileID, reshape((/0,0,0,0/),(/2,2/)), nBlocksUsed,&
-            nBlkUsedGlobal, offsetPerProc(iProc), "MinLogicalExtents", nPlotDim, collectiveWrite)
+         call  write_hdf5_data(FileID, "MinLogicalExtents", 2, (/nPlotDim,nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank2IntegerData=iTree_IA(iPlotDim(1:nPlotDim)+Coord0_,UsedNodes))
+    else if (nBlocksUsed == 0) then
+         call  write_hdf5_data(FileID, "MinLogicalExtents", 2, (/nPlotDim,nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank2IntegerData=reshape((/0,0,0,0/),(/2,2/)))
     end if
-    !
-    do iVar = 1, nPlotVar
-       UnknownNameArray(iVar) = plotVarUnits(iVar)
-       !The VisIt plugin needs null padded names.
-       labelLeng = len_trim(UnknownNameArray(iVar))
-       do iLen = labelLeng + 1,lNameH5 
-          UnknownNameArray(iVar)(iLen:iLen) = CHAR(0)
-       end do
-    end do
-    call write_plot_string(nPlotVar, lNameH5, UnknownNameArray, "plotVarUnits",&
-         fileID)
 
+    call barrier_mpi
+    call pad_string_with_null(nPlotVar, lNameh5, PlotVarUnits, UnknownNameArray)
+
+    iInteger8=nPlotVar
+    iInteger8a=lNameH5
+    call write_hdf5_data(FileID, "plotVarUnits", 1,  (/iInteger8/),&
+    CharacterData=UnknownNameArray, nStringChars=iInteger8a)
+
+
+    call barrier_mpi
     deallocate(PlotVarIdx)
     deallocate(unknownNameArray)
 
-    allocate(bbox(2,nPlotDim, nBlocksUsed))
-
-    if (.not. isCutFile .and. nBlocksUsed > 0) then
-       call writeHdf5Rank1Integer(fileID, iMortonNode_A(UsedNodes), &
-            nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"iMortonNode_A",collectiveWrite)
-    else if (.not. isCutFile .and. collectiveWrite) then
-       call writeHdf5Rank1Integer(fileID, (/0/), &
-            nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"iMortonNode_A", collectiveWrite)
+    call barrier_mpi
+    if (NotACut .and. nBlocksUsed > 0) then
+         call  write_hdf5_data(FileID, "iMortonNode_A", 1, (/nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank1IntegerData=iMortonNode_A(UsedNodes))
+    else if (NotACut) then
+         call  write_hdf5_data(FileID, "iMortonNode_A", 1, (/nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank1IntegerData=(/0/))
     end if
-
+! 
+    call barrier_mpi
     if (nBlocksUsed > 0 ) then
-       call writeHdf5Rank1Integer(fileID, iTree_IA(Level_,UsedNodes), &
-            nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"refine level", collectiveWrite)
-    else if (collectiveWrite) then
-       call writeHdf5Rank1Integer(fileID, (/0/), &
-            nBlocksUsed, nBlkUsedGlobal, offsetPerProc(iProc),"refine level", collectiveWrite)
+         call  write_hdf5_data(FileID, "refine level", 1, (/nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank1IntegerData=iTree_IA(Level_,UsedNodes))
+        deallocate(usedNodes)
+    else 
+         call  write_hdf5_data(FileID, "refine level", 1, (/nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank1IntegerData=(/0/))
+        deallocate(usedNodes)
     end if
-
-    deallocate(usedNodes)
+    
+    call barrier_mpi
     allocate(procNum(nBlocksUsed))
     procNum = iProc
-    call writeHdf5Rank1Integer(fileID, procNum,nBlocksUsed, &
-         nBlkUsedGlobal, offsetPerProc(iProc),"Processor Number", collectiveWrite)
+     call  write_hdf5_data(FileID, "Processor Number", 1, (/nBlkUsedGlobal/),&
+    nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+    Rank1IntegerData=procNum)
     deallocate(procNum)
-
     deallocate(usedBlocks)
     allocate(UnknownNameArray(nPlotDim))
-
+    
+    call barrier_mpi
     if (plotType=='x=0') then
        UnknownNameArray(1) = "Y-Axis"
        UnknownNameArray(2) = "Z-Axis"
     else
        do iVar = 1, nPlotDim
 
-          if (plotDim(iVar) == 1) then
+          if (iPlotDim(iVar) == 1) then
              UnknownNameArray(iVar) = "X-Axis"
-          else if (plotDim(iVar) == 2) then
+          else if (iPlotDim(iVar) == 2) then
              UnknownNameArray(iVar) = "Y-Axis"
-          else if (plotDim(iVar) == 3) then
+          else if (iPlotDim(iVar) == 3) then
              UnknownNameArray(iVar) = "Z-Axis"
           end if
-          !The VisIt plugin needs null padded names.
        end do
     end if
-    do iVar = 1, nPlotDim
-       labelLeng = len_trim(UnknownNameArray(iVar))
-       do iLen = labelLeng + 1,lNameH5 
-          UnknownNameArray(iVar)(iLen:iLen) = CHAR(0)
-       end do
-    end do
 
-    call write_plot_string(nPlotDim, lNameH5, UnknownNameArray, "Axis Labels",&
-         fileID)
+    iInteger4=nPlotDim
+    call pad_string_with_null(iInteger4, lNameh5, UnknownNameArray, UnknownNameArray)
+    iInteger8 = lNameH5 
+    call write_hdf5_data(FileID, "Axis Labels", 1,  (/nPlotDim/),&
+    CharacterData=UnknownNameArray, nStringChars=iInteger8)
+
     deallocate(UnknownNameArray)
     call write_integer_sim_metadata(fileID, nPlotVar)
     call write_real_sim_metadata(FileID,plot_dimensional)
@@ -877,24 +1204,9 @@ contains
     else
        call write_real_plot_metadata(FileID,plot_dimensional, .false.)
     end if
+    call barrier_mpi
+    call close_hdf5_file(FileID)
 
-    !     call write_real_plot_metadata(FileID,minCoords(1),maxCoords(1),minCoords(2),maxCoords(2),&
-    !          minCoords(3),maxCoords(3))
-    !     call write_real_plot_metadata(FileID,xMin,xMax,yMin,yMax,&
-    !          zMin,zMax)
-
-
-    !   !if one of the hdf routines leaves a dataspace, dataset, proterty list, etc... open
-    !   !the code will hang on h5garbage_collect_f
-    !    if (iProc == 0) write (*,*) '  closing file'
-    !Close the file
-    call h5garbage_collect_f(error)
-    call h5fclose_f(fileID,error)
-    !closing the hdf5 interface
-    call h5close_f(error)
-    if (error == -1) write (*,*) 'h5fclose_f failed'
-
-    !     if (iProc == 0) write (*,*) '===================================='
   end subroutine write_plot_hdf5
 
   !======================================================================
@@ -907,16 +1219,13 @@ contains
     use BATL_lib, only : nLevel, nDim
     use ModGeometry, only : x1,x2,y1,y2,z1,z2
     use ModPhysics, ONLY : No2Io_V, UnitX_
-
-
-    integer (HID_T), intent(in) :: fileID
-    integer(HID_T) :: dataset, dataspace
-    integer(HSIZE_T) :: dimens1D(1)
-    integer :: error, rank, iData,i
+    integer(HID_T), intent(in) :: FileID
+    integer(HSIZE_T) :: iData
+    integer :: i
     logical, intent (in) :: plot_dimensional, isXZero
 
     real :: RealMetaData(7)
-    !    allocate(attName(nAtts))
+
     iData = 1
     !    attName(1) = 'Simulation Time'
     RealMetaData(iData) = Time_Simulation
@@ -936,22 +1245,22 @@ contains
           iData = iData + 1
     else
       do i=1,3
-         if (plotDim(i) == 1) then
+         if (iPlotDim(i) == 1) then
             RealMetaData(iData) = x1
             iData = iData + 1
             RealMetaData(iData) = x2
             iData = iData + 1
-         else if(plotDim(i) == 2) then
+         else if(iPlotDim(i) == 2) then
             RealMetaData(iData) = y1
             iData = iData + 1
             RealMetaData(iData) = y2
             iData = iData + 1
-         else if(plotDim(i) == 3) then
+         else if(iPlotDim(i) == 3) then
             RealMetaData(iData) = z1
             iData = iData + 1
             RealMetaData(iData) = z2
             iData = iData + 1
-         else if (plotDim(i) == 0) then
+         else if (iPlotDim(i) == 0) then
             RealMetaData(iData) = 0.0
             iData = iData + 1
             RealMetaData(iData) = 0.0
@@ -963,25 +1272,9 @@ contains
 
     !-------------------------------------------------------------------
     !write the real Metadata
-    rank = 1
-    dimens1D = iData
+    call  write_hdf5_data(FileID, "Real Plot Metadata", 1, (/iData/),&
+        Rank1RealData=RealMetaData)
 
-    call h5screate_simple_f(rank, dimens1D, dataspace, error) 
-    call h5dcreate_f(fileID, "Real Plot Metadata",&
-         H5T_NATIVE_DOUBLE,dataspace, dataset, error)
-
-
-    if (iProc == 0)&
-         call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, &
-         RealMetaData,dimens1D, error, H5S_ALL_F, H5S_ALL_F, H5P_DEFAULT_F)
-    if (error == -1)&
-         call stop_mpi(&
-         "error in subroutine init_grid. Error marker 3")
-    call write_hdf5_attribute("Code Version", dataset, H5T_NATIVE_DOUBLE,&
-         realAtt=CodeVersion)
-
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
   end subroutine write_real_plot_metadata
   !===========================================================================
 
@@ -994,9 +1287,8 @@ contains
 
     integer (HID_T), intent(in) :: fileID
     logical, intent (in) :: plot_dimensional
-    integer(HID_T) :: dataset, dataspace
-    integer(HSIZE_T) :: dimens1D(1)
-    integer :: error, rank, iData
+    integer :: rank
+    integer(HSIZE_T) :: iData
 
 
     real :: RealMetaData(7)
@@ -1024,7 +1316,9 @@ contains
        iData = iData + 1
        !    attName(3) = 'zmax'
        RealMetaData(iData) = z2*No2Io_V(UnitX_)
+
     else
+!         write (*,*) "x1,x2,y1,y2,z1,z2",x1,x2,y1,y2,z1,z2
        RealMetaData(iData) = x1
        iData = iData + 1
        !    attName(3) = 'xmax'
@@ -1044,25 +1338,10 @@ contains
     end if
     !-------------------------------------------------------------------
     !write the real Metadata
-    rank = 1
-    dimens1D = iData
+    call  write_hdf5_data(FileID, "Real Simulation Metadata", 1, (/iData/),&
+        Rank1RealData=RealMetaData, RealAttribute1=CodeVersion,&
+        NameRealAttribute1="CodeVersion")
 
-    call h5screate_simple_f(rank, dimens1D, dataspace, error) 
-    call h5dcreate_f(fileID, "Real Simulation Metadata",&
-         H5T_NATIVE_DOUBLE,dataspace, dataset, error)
-
-
-    !   if (iProc == 0)&
-    call h5dwrite_f(dataset, H5T_NATIVE_DOUBLE, &
-         RealMetaData,dimens1D, error, H5S_ALL_F, H5S_ALL_F, H5P_DEFAULT_F)
-    if (error == -1)&
-         call stop_mpi(&
-         "error in subroutine init_grid. Error marker 3")
-    call write_hdf5_attribute("Code Version", dataset, H5T_NATIVE_DOUBLE,&
-         realAtt=CodeVersion)
-
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
   end subroutine write_real_sim_metadata
 
   !==========================================================================
@@ -1075,11 +1354,9 @@ contains
     use ModGeometry, ONLY : TypeGeometry
     integer (HID_T), intent(in) :: fileID, nPlotVar
     logical, intent(in) :: isCutFile
-    integer(HID_T) :: dataset, dataspace
-    integer(HSIZE_T) :: dimens1D(1)
 
-    integer :: error, rank, i, iData
-    integer :: IntegerMetaData(16)
+    integer(HSIZE_T) ::  iData
+    integer :: i,IntegerMetaData(16)
     integer, parameter  :: FFV = 1 ! file format version
     iData = 1
 
@@ -1106,57 +1383,46 @@ contains
     !    attName(7) = 'nLevel'
     iData = iData + 1
     do i = 1, 3
-       if (plotDim(i) == 1) then
+       if (iPlotDim(i) == 1) then
           IntegerMetaData(iData) = iSizeGlobal
           iData = iData + 1
-       else if (plotDim(i) == 2) then
+       else if (iPlotDim(i) == 2) then
           IntegerMetaData(iData) = jSizeGlobal
           iData = iData + 1
-       else if (plotDim(i) == 3) then
+       else if (iPlotDim(i) == 3) then
           IntegerMetaData(iData) = kSizeGlobal
           iData = iData + 1
-       else if (plotDim(i) == 0) then
+       else if (iPlotDim(i) == 0) then
           IntegerMetaData(iData) = 0
           iData = iData + 1
 
        end if
     end do
 
-    !     IntegerMetaData(iData) = iSizeGlobal
-    !     !    attName(8) = 'nxb' 
-    !     iData = iData + 1
-    !     IntegerMetaData(iData) = jSizeGlobal
-    !     !    attName(9) = 'nyb'
-    !     iData = iData + 1
-    !     IntegerMetaData(iData) = kSizeGlobal
-    !     !    attName(10) = 'nzb'
-    ! 
-    !HDF5 has no boolean datatype so any logical parameters should go here.
-
     if(TypeGeometry=='cartesian') then
-       IntegerMetaData(iData) = 0
+       IntegerMetaData(iData) = CartesianPlot_
     elseif(TypeGeometry=='rz') then
-       IntegerMetaData(iData) = 1
+       IntegerMetaData(iData) = RzPlot_
     elseif(TypeGeometry=='roundcube') then
-       IntegerMetaData(iData) = 2
+       IntegerMetaData(iData) = RoundCubePlot_
     elseif(TypeGeometry=='cylindrical') then
-       IntegerMetaData(iData) = 3
+       IntegerMetaData(iData) = CylindricalPlot_
     elseif(TypeGeometry=='cylindrical_lnr') then
-       IntegerMetaData(iData) = 4
+       IntegerMetaData(iData) = CylindricalLnrPlot_
     elseif(TypeGeometry=='cylindrical_genr') then
-       IntegerMetaData(iData) = 5
+       IntegerMetaData(iData) = CylindricalGenrPlot_
     elseif(TypeGeometry=='spherical') then
-       IntegerMetaData(iData) = 6
+       IntegerMetaData(iData) = SphericalPlot_
     elseif(TypeGeometry=='spherical_lnr') then
-       IntegerMetaData(iData) = 7
+       IntegerMetaData(iData) = SphericalLnrPlot_
     elseif(TypeGeometry=='spherical_genr') then
-       IntegerMetaData(iData) = 8
+       IntegerMetaData(iData) = SphericalGenrPlot_
     elseif(TypeGeometry=='rlonlat') then
-       IntegerMetaData(iData) = 9
+       IntegerMetaData(iData) = rLonLatPlot_
     elseif(TypeGeometry=='rlonlat_lnr') then
-       IntegerMetaData(iData) = 10
+       IntegerMetaData(iData) = rLonLatLnrPlot_
     elseif(TypeGeometry=='rlonlat_genr') then
-       IntegerMetaData(iData) = 11
+       IntegerMetaData(iData) = rLonLatGenrPlot_
     endif
     iData = iData + 1
     !as of 2/3/2012 this is not implimented in the plugin but it probably
@@ -1180,22 +1446,8 @@ contains
 
     !-------------------------------------------------------------------
     !write the integer Metadata
-    rank = 1
-    dimens1D = iData
-
-    call h5screate_simple_f(rank, dimens1D, dataspace, error) 
-    call h5dcreate_f(fileID, "Integer Plot Metadata",&
-         H5T_NATIVE_INTEGER,dataspace, dataset, error)
-
-    !    if (iProc == 0)&   
-    call h5dwrite_f(dataset,H5T_NATIVE_INTEGER,IntegerMetaData,dimens1D,&
-         error, H5S_ALL_F, H5S_ALL_F, H5P_DEFAULT_F)
-    if (error == -1)&
-         call stop_mpi(&
-         "error in subroutine init_grid. Error marker 3")
-
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
+    call  write_hdf5_data(FileID, "Integer Plot Metadata", 1, (/iData/),&
+        Rank1IntegerData=IntegerMetaData)
   end subroutine write_integer_plot_metadata
 
   !=========================================================================
@@ -1208,10 +1460,8 @@ contains
     use BATL_lib, only : nDim, nDimAmr, nLevel
     use ModMain, only : n_step, nI, nJ, nK
     integer (HID_T), intent(in) :: fileID, nPlotVar
-    integer(HID_T) :: dataset, dataspace
-    integer(HSIZE_T) :: dimens1D(1)
 
-    integer :: error, rank, iData
+    integer(HSIZE_T) :: iData
     integer :: IntegerMetaData(8)
     iData = 1
 
@@ -1242,67 +1492,15 @@ contains
     !    attName(2) = "Time Step"
     !    iData = iData + 1
 
-    !HDF5 has no boolean datatype so any logical parameters should go here.
-    !  write character attributes for key.
-    !     iData = iData + 1
-    !     if(TypeGeometry=='cartesian') then
-    !        IntegerMetaData(iData) = 0
-    !     elseif(TypeGeometry=='rz') then
-    !        IntegerMetaData(iData) = 1
-    !     elseif(TypeGeometry=='roundcube') then
-    !        IntegerMetaData(iData) = 2
-    !     elseif(TypeGeometry=='cylindrical') then
-    !        IntegerMetaData(iData) = 3
-    !     elseif(TypeGeometry=='cylindrical_lnr') then
-    !        IntegerMetaData(iData) = 4
-    !     elseif(TypeGeometry=='cylindrical_genr') then
-    !        IntegerMetaData(iData) = 5
-    !     elseif(TypeGeometry=='spherical') then
-    !        IntegerMetaData(iData) = 6
-    !     elseif(TypeGeometry=='spherical_lnr') then
-    !        IntegerMetaData(iData) = 7
-    !     elseif(TypeGeometry=='spherical_genr') then
-    !        IntegerMetaData(iData) = 8
-    !     elseif(TypeGeometry=='rlonlat') then
-    !        IntegerMetaData(iData) = 9
-    !     elseif(TypeGeometry=='rlonlat_lnr') then
-    !        IntegerMetaData(iData) = 10
-    !     elseif(TypeGeometry=='rlonlat_genr') then
-    !        IntegerMetaData(iData) = 11
-    !     endif
-    ! 
-    !     !as of 2/3/2012 this is not implimented in the plugin but it probably
-    !     !should be in the future
-    !     do i = 1, 3
-    !        if(IsPeriodic_D(i)) then
-    !           IntegerMetaData(iData+i) = 1
-    !        else
-    !           IntegerMetaData(iData+i) = 0
-    !        endif
-    !     end do
-    !     iData = iData + 3
-
-
-
     !-------------------------------------------------------------------
     !write the integer Metadata
-    rank = 1
-    dimens1D = iData
-
-    call h5screate_simple_f(rank, dimens1D, dataspace, error) 
-    call h5dcreate_f(fileID, "Integer Simulation Metadata",&
-         H5T_NATIVE_INTEGER,dataspace, dataset, error)
-
-    !    if (iProc == 0)&   
-    call h5dwrite_f(dataset,H5T_NATIVE_INTEGER,IntegerMetaData,dimens1D,&
-         error, H5S_ALL_F, H5S_ALL_F, H5P_DEFAULT_F)
-    if (error == -1)&
-         call stop_mpi(&
-         "error in subroutine init_grid. Error marker 3")
-
-    call h5sclose_f(dataspace, error)
-    call h5dclose_f(dataset, error)
+    call  write_hdf5_data(FileID, "Integer Sim Metadata", 1, (/iData/),&
+        Rank1IntegerData=IntegerMetaData)
   end subroutine write_integer_sim_metadata
 
+  real function minmod(x,y)
+    real, intent(in) :: x,y
+    minmod = max(cZero,min(abs(x),sign(cOne,x)*y))
+  end function minmod
   !=====================================================================
 end module ModHdf5

@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 !=============================================================================
 subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
-     nTheta,nPhi,rPlot,nBlkCellsN,nBlkCellsS)
+     nTheta,nPhi,rPlot,plotvarnames,H5Index,nBlkCellsN,nBlkCellsS)
 
   ! Save all cells within plotting range, for each processor
 
@@ -10,25 +10,30 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
   use ModMain,     ONLY: BlkTest
   use ModNumConst
   use ModIO
+  use ModHdf5, ONLY: write_sph_var_hdf5
   implicit none
 
+  integer, parameter:: lNameVar = 10
   ! Arguments
   integer, intent(in)  :: iFile, iBLK,nTheta,nPhi
   integer, intent(in)  :: nPlotvar
+  integer, intent(inout) :: H5Index
   integer, intent(out) :: nBlkCellsN,nBlkCellsS
   real, intent(in)     :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nplotvar)
   real, intent(in)     :: rPlot
-
+  character(len=lNameVar), intent(in):: plotVarNames(nPlotVar)
   ! Local variables
   ! Indices and coordinates
   integer :: i,j,iVar
   integer :: i1,j1,k1,i2,j2,k2
+
   real :: x,y,z,xx,yy,zz
   real :: dx1,dy1,dz1,dx2,dy2,dz2
   real :: xx1,xx2,yy1,yy2,zz1,zz2,minRblk, maxRblk
   real :: rplot_out,theta_plot, phi_plot, dphi_plot, dtheta_plot, dxblk
   real :: theta_out, phi_out
   real :: PointVar(nPlotvarMax)
+
 
 
   logical :: oktest,oktest_me
@@ -60,14 +65,25 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
   ! If the block does not intersect the sphere that we are plotting then
   ! cycle
   if(minRblk>rplot .or. maxRblk<rplot)  return
-
-  dtheta_plot = cPi/real(ntheta-1)
-  dphi_plot   = 2.0*cPi/real(nphi)
+  if (plot_form(ifile) == "hdf") then
+    dtheta_plot = cPi/real(ntheta)
+  else
+    dtheta_plot = cPi/real(ntheta-1)
+  end if
+     dphi_plot   = 2.0*cPi/real(nphi)
 
   do i=1,ntheta
-     theta_plot = (i-1)*dtheta_plot
+     if (plot_form(ifile) == "hdf") then !batl hdf plots use cell centered values
+         theta_plot = (i-.5)*dtheta_plot 
+     else
+         theta_plot = (i-1)*dtheta_plot
+     end if
      do j=1,nphi
-        phi_plot = (j-1)*dphi_plot
+        if (plot_form(ifile) == 'hdf') then
+            phi_plot = (j-.5)*dphi_plot
+        else
+            phi_plot = (j-1)*dphi_plot
+        end if
 
 
         !!SAVE  The following code was originally used to write out the spherical plot
@@ -149,7 +165,11 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
                          dxblk,rplot_out,theta_out,phi_out,PointVar(1:nplotvar)
                  endif
               case('hdf')
-!                  call hdf5_sph_plot(i,j,x,y,z,theta_out,phi_out,PointVar(1:nplotvar))
+                !DOUBLE CHECK IF NORTH AND SOUTH ARE CORRECT
+                call write_sph_var_hdf5(i, j, H5Index, rplot_out, theta_out,phi_out,&
+                dtheta_plot, dphi_plot, nTheta, nPhi, nPlotVar, PointVar, &
+                plotVarNames)
+
               end select
            end if
            if (theta_plot >= (cPi/2.0-.1*dtheta_plot)) then
@@ -170,10 +190,14 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
                          dxblk,rplot_out,theta_out,phi_out,PointVar(1:nplotvar)
                  endif
               case('hdf')
-!                  call hdf5_sph_plot(i,j,x,y,z,theta_out,phi_out,PointVar(1:nplotvar))
+                !DOUBLE CHECK IF NORTH AND SOUTH ARE CORRECT
+                call write_sph_var_hdf5(i, j, H5Index, rplot_out, theta_out,phi_out,&
+                dtheta_plot, dphi_plot, nTheta, nPhi, nPlotVar, PointVar, &
+                plotVarNames)
 
-              end select
+               end select
            end if
+           H5Index = H5Index + 1
 
         end if
 

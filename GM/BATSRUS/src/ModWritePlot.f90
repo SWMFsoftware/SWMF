@@ -10,7 +10,8 @@ subroutine write_plot_common(ifile)
   use ModGeometry, ONLY: XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I
   use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
-  use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, write_cut_var_hdf5
+  use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, close_sph_hdf5_plot, &
+    init_sph_hdf5_plot
   use ModIoUnit, ONLY: io_unit_new
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
@@ -82,7 +83,7 @@ subroutine write_plot_common(ifile)
   character (len=80) :: format
   character (len=19) :: eventDateTime
 
-  logical :: oktest,oktest_me, isCutFile(nFile), H5Advance
+  logical :: oktest,oktest_me, NotACut, H5Advance,IsNonCartesianPlot
 
   !---------------------------------------------------------------------------
 
@@ -176,13 +177,17 @@ subroutine write_plot_common(ifile)
   if(IsSphPlot)then
      ! Put hemisphere info into the filename: the 3rd character of type
      l = len_trim(NamePlotDir) + 3
-     ! two files for the northern and southern hemispheres
-     filename_n = trim(NameSnapshot)//trim(NameProc); filename_n(l:l) = "N"
-     filename_s = trim(NameSnapshot)//trim(NameProc); filename_s(l:l) = "S"
-     ! open the files
-     unit_tmp2 = io_unit_new()
-     open(unit_tmp , file=filename_n, status="replace", form=TypeForm, err=999)
-     open(unit_tmp2, file=filename_s, status="replace", form=TypeForm, err=999)
+     if(plot_form(ifile)=='hdf') then
+         filename = trim(NameSnapshot)//".batl"
+     else
+         ! two files for the northern and southern hemispheres
+         filename_n = trim(NameSnapshot)//trim(NameProc); filename_n(l:l) = "N"
+         filename_s = trim(NameSnapshot)//trim(NameProc); filename_s(l:l) = "S"
+         ! open the files
+         unit_tmp2 = io_unit_new()
+         open(unit_tmp , file=filename_n, status="replace", form=TypeForm, err=999)
+         open(unit_tmp2, file=filename_s, status="replace", form=TypeForm, err=999)
+    end if
   elseif(plot_form(ifile)=='tec')then
      ! Open two files for connectivity and data
      filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
@@ -201,11 +206,38 @@ subroutine write_plot_common(ifile)
   end if
 
   if (IsSphPlot) then
-     ntheta = 1 + 180.0/plot_dx(2,ifile)
-     nphi   = 360.0/plot_dx(3,ifile)
-     rplot  = plot_range(1,ifile)
+     if (plot_form(ifile) == 'hdf') then
+         nphi   = 360.0/plot_dx(3,ifile)
+         rplot  = plot_range(1,ifile)
+        ntheta = 2+180.0/plot_dx(2,ifile)
+        call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
+          unitstr_IDL)
+        call init_sph_hdf5_plot(nPlotVar, filename, plotVarNames, NamePlotUnit_V, nTheta,&
+          nPhi, rplot)
+          call barrier_mpi
+     else
+         nphi   = 360.0/plot_dx(3,ifile)
+         rplot  = plot_range(1,ifile)
+        ntheta = 1 + 180.0/plot_dx(2,ifile)
+     end if
+
      if(oktest_me) write(*,*) NameSub,': nTheta, nPhi=', ntheta, nphi
+     IsNonCartesianPlot = .true.
+  else
+    IsNonCartesianPlot = .not.IsCartesianGrid
   end if
+  
+  !Logical for hdf plots
+
+  if (plot_type1(1:3)=='3d_') then
+    NotACut=.true.
+  else if (plot_type1(1:3)=='z=0' .and. nK == 1) then
+    NotACut=.true.
+  else
+    NotACut   = .false.
+  end if
+    
+
 
   !! START IDL
   ! define from values used in the plotting, so that they don't
@@ -251,17 +283,21 @@ subroutine write_plot_common(ifile)
      if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
 
      call set_plotvar(iBLK, ifile-plot_, nPlotVar, plotvarnames, plotvar, &
-          plotvar_inBody, plotvar_useBody)
+          plotvar_inBody,plotvar_useBody)
 
      if (plot_dimensional(ifile)) call dimensionalize_plotvar(iBLK, &
           ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
      if (IsSphPlot) then
         call write_plot_sph(ifile,iBLK,nplotvar,plotvar, &
-             ntheta,nphi,rplot,nBLKcellsN,nBLKcellsS)
-   	dxblk=1.0
-   	dyblk=180.0/real(ntheta-1)
-   	dzblk=360.0/real(nphi)
+             ntheta,nphi,rplot,plotvarnames,H5Index, nBLKcellsN,nBLKcellsS)
+        dxblk=1.0
+        if(plot_form(iFile) == 'hdf') then
+            dyblk=180.0/real(ntheta)
+        else
+            dyblk=180.0/real(ntheta-1)
+        end if
+        dzblk=360.0/real(nphi)
      else
         select case(plot_form(ifile))
         case('tec')
@@ -274,33 +310,11 @@ subroutine write_plot_common(ifile)
                 xmin,xmax,ymin,ymax,zmin,zmax, &
                 dxblk,dyblk,dzblk,nBLKcells)
         case('hdf')
-           if(plot_type1(1:3)=='3d_' .or.  (&
-                (plot_type1(1:3)=='z=0' .and. nK == 1))) then
-              call write_var_hdf5(PlotVar, nPlotVar, H5Index, iBlk,&
-                   .not.IsCartesianGrid)
-
-              H5Index = H5Index+1
-              isCutFile(iFile) = .false.
-           elseif(plot_type1(1:3)=='blk')then
-              if(iProc == iProcFound .and. iBlk==iBlockFound)then
-                 call write_cut_var_hdf5(ifile,plot_type1,iBLK,H5Index, &
-                      nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
-                      dxblk, dyblk, dzblk, &
-                      .not.IsCartesianGrid, nBLKcells, H5Advance)
-
-                 H5Index = H5Index+1
-              end if
-              IsCutFile(iFile)=.true.
-           else
-              call write_cut_var_hdf5(ifile, plot_type1(1:3), iBLK,H5Index, &
-                   nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
-                   dxblk, dyblk, dzblk, .not.IsCartesianGrid, nBLKcells, &
-                   H5Advance)
-
-              if (H5Advance) H5Index = H5Index+1
-
-              IsCutFile(iFile)=.true.
-           end if
+          call write_var_hdf5(ifile, plot_type1(1:3), iBLK,H5Index, &
+               nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
+               dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut, nBLKcells, &
+               H5Advance)
+               if (H5Advance) H5Index = H5Index+1
         end select
      end if
 
@@ -326,16 +340,18 @@ subroutine write_plot_common(ifile)
   ! Write the HDF5 output file and return
   select case(plot_form(ifile))
   case('hdf')
-     call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
-          unitstr_IDL)
 
-     call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
-          NamePlotUnit_V, nPlotVar, IsCutFile(iFile), .not.IsCartesianGrid, &
-          plot_dimensional(ifile), xmin, xmax, ymin, ymax, zmin, zmax)
+    if (isSphPlot) then
+        call close_sph_hdf5_plot(nPlotVar)
+    else
+      call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
+      unitstr_IDL)       
+      call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
+              NamePlotUnit_V, nPlotVar, NotACut, IsNonCartesianPlot, &
+              IsSphPlot, plot_dimensional(ifile), xmin, xmax, ymin, ymax, zmin, zmax)
+     end if
 
      RETURN
-
-     ! Get the headers that contain variables names and units
   case('tec')
      call get_tec_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
