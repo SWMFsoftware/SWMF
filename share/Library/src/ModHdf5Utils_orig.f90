@@ -33,28 +33,32 @@ module ModHdf5Utils
 
   integer, public, parameter:: lNameVar = 10
   integer, public, parameter:: lNameH5 = lNameVar + 1
+
 contains 
+  !===========================================================================
   subroutine save_hdf5_file(FileName,TypePosition, TypeStatus, StringHeader,&
             nStep, NumberOfBlocksUsed, Time, nDimOut, nParam, nVar,&
             n_D, NameVar, NameUnits, MinimumBlockIjk, XYZMinMax, PlotVarBlk,&
             iComm, CoordMin, CoordMax)
     use ModUtilities, only: split_string
 
-    integer, intent(in) :: nDimOut, nParam, nVar, n_D(3),iComm, nStep,NumberOfBlocksUsed
+    integer, intent(in) :: nDimOut, nParam, nVar, n_D(3)
+    integer, intent(in) :: nStep, NumberOfBlocksUsed
     character (len=*), intent(in) :: FileName
     character (len=*), intent(in) :: TypePosition, NameVar(nVar)
+    character (len=*), intent(in) ::  NameUnits
     character (len=10), intent(in) :: TypeStatus
     character (len=500), intent(in) :: StringHeader
     integer, intent(in) :: MinimumBlockIjk(:,:)
     real, intent(in) :: Time, PlotVarBlk(:,:,:,:,:), XYZMinMax(:,:,:)
-    real, optional, intent(in) :: CoordMin(:), CoordMax(:)
-    character (len=*), intent(in) ::  NameUnits
 
+    integer, optional, intent(in):: iComm
+    real, optional, intent(in) :: CoordMin(:), CoordMax(:)
 
     character (len=501) :: HeaderString
     integer (HID_T) :: FileID, iInteger4
     integer(HSIZE_T) :: iDimension1D(1), iInteger8
-    integer :: IntegerMetaData(16), iLen, iVar,iProc,nProc
+    integer :: IntegerMetaData(16), iLen, iVar, iProc, nProc, iCommOpen, iError
     integer :: LengthOfString, numCells,i,j,k,n, iBlk
     integer, parameter :: FFV = 1
 
@@ -64,15 +68,26 @@ contains
     integer(HSIZE_T), parameter :: lnameh5 = 11
     integer(HSIZE_T) :: CellsPerBlock(3), nBlkUsed, nPlotDim, iData,AnotheriInteger8
     character (len=lnameh5), allocatable  :: UnknownNameArray(:), UnknownNameArray2(:), UnknownNameArray3(:)
+
+    !-------------------------------------------------------------------------
+    if(present(iComm))then
+       iCommOpen = iComm
+       call MPI_comm_size(iComm, nProc, iError)
+       call MPI_comm_rank(iComm, iProc, iError)
+    else
+       ! Serial write is the default
+       iCommOpen = MPI_COMM_SELF
+       iProc = 0
+       nProc = 1
+    end if
+
+
     nBlkUsed = NumberOfBlocksUsed
     CellsPerBlock(1:3) = n_D(1:3)
     nPlotDim = nDimOut
     
-    iProc = 0
-    nProc = 1
-
     FileID = -1
-    call open_hdf5_file(FileID, fileName, iComm)
+    call open_hdf5_file(FileID, fileName, iCommOpen)
     if(FileID == -1) then
        write (*,*)  "Error: unable to initialize file"
        call CON_stop("unable to initialize hdf5 file")
