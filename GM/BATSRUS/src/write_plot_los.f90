@@ -309,18 +309,15 @@ subroutine write_plot_los(iFile)
   end select
 
   if(UseTableGen) then
-     write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y'
+     unitstr_TEC = 'VARIABLES = "X", "Y"'
      do iVar=1, nPlotVar
-        write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "'
-        write(unitstr_TEC,'(a)') trim(unitstr_TEC)//trim(PlotVarNames(iVar))
+        unitstr_TEC = trim(unitstr_TEC)//', "'//trim(PlotVarNames(iVar))//'"'
      enddo
-     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"'
      if(oktest .and. iProc==0) write(*,*)'unitstr_TEC: ',unitstr_TEC
 
-     if(plot_form(ifile) .ne. 'hdf') then
-         write(unitstr_IDL,'(a)') 'x y'
+     if(plot_form(ifile) /= 'hdf') then
          call join_string(nPlotVar, PlotVarNames, plot_vars1)
-         write(unitstr_IDL,'(a)') trim(unitstr_IDL)//' '//trim(plot_vars1)
+         unitstr_IDL = 'x y '//plot_vars1
          if(oktest .and. iProc==0) write(*,*)'unitstr_IDL: ',unitstr_IDL
     end if
   endif
@@ -438,7 +435,7 @@ subroutine write_plot_los(iFile)
      !the plot time is stored in the hdf5 files and displayed in VisIt.
      !if you don not include it in the filename VisIt will automacially
      !group all the los files.
-     if(time_accurate .and. plot_form(ifile) .NE. 'hdf')then
+     if(time_accurate .and. plot_form(ifile) /= 'hdf')then
         call get_time_string
         write(filename,file_format) &
              trim(plot_type1)//"_",&
@@ -559,35 +556,31 @@ subroutine write_plot_los(iFile)
  
         endif
         select case(plot_form(ifile))
-         case('idl')
-            ! set the size of plot image
-           ! Write
-            call save_plot_file(filename, &
-                 TypeFileIn = TypeIdlFile_I(iFile), &
-                 StringHeaderIn = StringHeadLine, &
-                 nStepIn = n_step, &
-                 TimeIn = time_simulation, &
-                 ParamIn_I = eqpar(1:neqpar), &
-                 NameVarIn = allnames, &
-                 nDimIn = 2, & 
-                 CoordMinIn_D = (/-aPix, -aPix/), &
-                 CoordMaxIn_D = (/+aPix, +aPix/), &
-                 VarIn_VII = Image_VII)
-         case('hdf')
-            call save_plot_file(filename, &
-                 TypeFileIn = 'hdf5', &
-                 StringHeaderIn = StringHeadLine, &
-                 nStepIn = n_step, &
-                 TimeIn = time_simulation, &
-                 ParamIn_I = eqpar(1:neqpar), &
-                 NameVarInList = PlotVarNames, &
-                 NameUnitsIn = unitstr_IDL,&
-                 nDimIn = 2, & 
-                 CoordMinIn_D = (/-aPix, -aPix/), &
-                 CoordMaxIn_D = (/+aPix, +aPix/), &
-                 VarIn_VII = Image_VII,&
-                 MpiComm = MPI_COMM_SELF)
-
+        case('idl')
+           call save_plot_file(filename, &
+                TypeFileIn = TypeIdlFile_I(iFile), &
+                StringHeaderIn = StringHeadLine, &
+                nStepIn = n_step, &
+                TimeIn = time_simulation, &
+                ParamIn_I = eqpar(1:neqpar), &
+                NameVarIn = allnames, &
+                nDimIn = 2, & 
+                CoordMinIn_D = (/-aPix, -aPix/), &
+                CoordMaxIn_D = (/+aPix, +aPix/), &
+                VarIn_VII = Image_VII)
+        case('hdf')
+           call save_plot_file(filename, &
+                TypeFileIn = 'hdf5', &
+                StringHeaderIn = StringHeadLine, &
+                nStepIn = n_step, &
+                TimeIn = time_simulation, &
+                ParamIn_I = eqpar(1:neqpar), &
+                NameVarIn_I = PlotVarNames, &
+                NameUnitsIn = unitstr_IDL,&
+                nDimIn = 2, & 
+                CoordMinIn_D = (/-aPix, -aPix/), &
+                CoordMaxIn_D = (/+aPix, +aPix/), &
+                VarIn_VII = Image_VII)
         end select
      end if
   end if  ! iProc==0
