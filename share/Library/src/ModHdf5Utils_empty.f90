@@ -9,15 +9,18 @@ module ModHdf5Utils
             iComm, CoordMin, CoordMax)
     use ModUtilities, only: split_string
 
-    integer, intent(in) :: nDimOut, nParam, nVar, n_D(3),iComm, nStep,NumberOfBlocksUsed
+    integer, intent(in) :: nDimOut, nParam, nVar, n_D(3)
+    integer, intent(in) :: nStep,NumberOfBlocksUsed
     character (len=*), intent(in) :: FileName
     character (len=*), intent(in) :: TypePosition, NameVar(nVar)
     character (len=10), intent(in) :: TypeStatus
     character (len=500), intent(in) :: StringHeader
+    character (len=*), intent(in) ::  NameUnits
     integer, intent(in) :: MinimumBlockIjk(:,:)
     real, intent(in) :: Time, PlotVarBlk(:,:,:,:,:), XYZMinMax(:,:,:)
+    integer, optional, intent(in):: iComm
     real, optional, intent(in) :: CoordMin(:), CoordMax(:)
-    character (len=*), intent(in) ::  NameUnits
+
    end subroutine save_hdf5_file
 
   !=====================================================================
