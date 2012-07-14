@@ -820,7 +820,7 @@ end subroutine CON_stop
 
 !=============================================================================
 
-real*8 function MPI_WTIME()
+double precision function MPI_WTIME()
 
   ! This is needed for ModUtilities.F90
 
