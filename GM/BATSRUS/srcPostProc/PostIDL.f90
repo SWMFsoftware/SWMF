@@ -818,3 +818,16 @@ subroutine CON_stop(String)
 
 end subroutine CON_stop
 
+!=============================================================================
+
+real*8 function MPI_WTIME()
+
+  ! This is needed for ModUtilities.F90
+
+  integer:: clock,clockrate,count_max
+
+  call system_clock(clock,clockrate,count_max)
+  MPI_WTIME=dble(clock)/clockrate
+
+end function MPI_WTIME
+
