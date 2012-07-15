@@ -462,12 +462,12 @@ subroutine MH_set_parameters(TypeAction)
         if (TypeBc_I(body1_) == 'coronatoih') TypeBc_I(body1_)= 'buffergrid'
         if(UseBody2) call read_var('TypeBcBody2',TypeBc_I(body2_)) 
 
-     case("#TIMESTEPPING", "#RUNGEKUTTA")
-        call read_var('nStage',nSTAGE)
-        call read_var('CflExpl',Cfl)
+     case("#TIMESTEPPING", "#RUNGEKUTTA", "#RK")
+        call read_var('nStage',  nStage)
+        call read_var('CflExpl', Cfl)
         CflOrig = Cfl
         ExplCfl = Cfl                                   !^CFG IF IMPLICIT
-        UseHalfStep = NameCommand == "#TIMESTEPPING" .and. nStage == 2
+        UseHalfStep = NameCommand == "#TIMESTEPPING" .and. nStage <= 2
 
      case("#FIXEDTIMESTEP")
         call read_var('UseDtFixed',UseDtFixed)
