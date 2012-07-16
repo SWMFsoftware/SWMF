@@ -773,7 +773,7 @@ contains
       iBlk = iBlk +1
 
       MinLogicalExtents(1,iBlk) = (ii - 1)*nCellsPerBlock(1)+1
-      MinLogicalExtents(2,iBlk) = (jj - 1)*nCellsPerBlock(2)+1 
+      MinLogicalExtents(2,iBlk) = (jj - 1)*nCellsPerBlock(2)+1
    end do; end do
      
      call  write_hdf5_data(FileID, "MinLogicalExtents", 2, (/nLogicalDim,nBlkUsedGlobal/),&
@@ -970,7 +970,7 @@ contains
     integer :: offsetPerProc(0:nProc-1)
     integer :: Error, procIdx, iLen, iVar, nBlocksUsedMax 
 
-    integer :: labelLeng, i, nBlocksUsedMin
+    integer :: labelLeng, i, ii, nBlocksUsedMin
 
     real, allocatable :: Coordinates(:,:), BoundingBox(:,:,:),BlockDataExtents(:,:)
     integer, allocatable :: procNum(:)
@@ -1116,16 +1116,30 @@ contains
 
     call barrier_mpi
     if (nBlocksUsed > 0) then
-         call  write_hdf5_data(FileID, "MinLogicalExtents", 2, (/nPlotDim,nBlkUsedGlobal/),&
-        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
-        Rank2IntegerData=iTree_IA(iPlotDim(1:nPlotDim)+Coord0_,UsedNodes))
-    else if (nBlocksUsed == 0) then
-         call  write_hdf5_data(FileID, "MinLogicalExtents", 2, (/nPlotDim,nBlkUsedGlobal/),&
-        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
-        Rank2IntegerData=reshape((/0,0,0,0/),(/2,2/)))
+        allocate(MinLogicalExtents(nPlotDim, nBlocksUsed))
+        do iVar = 1,nPlotDim
+            MinLogicalExtents(:,:) = iTree_IA(iPlotDim(1:nPlotDim)+Coord0_,UsedNodes)*nCellsPerBlock(iVar)
+        end do
+    else
+        allocate(MinLogicalExtents(nPlotDim, 1))
+        MinLogicalExtents = huge(MinLogicalExtents(1,1))
     end if
 
-    call barrier_mpi
+    do iVar = 1,nPlotDim
+        i = minval(MinLogicalExtents(iVar,:))
+        call MPI_allreduce(i, ii, 1, MPI_INTEGER,&
+                MPI_MIN, iComm, Error)
+        ii = ii - 1
+        do iBlk = 1, nBlocksUsed
+            MinLogicalExtents(iVar,iBlk) = MinLogicalExtents(iVar,iBlk) - ii
+        end do
+    end do
+
+     call  write_hdf5_data(FileID, "MinLogicalExtents", 2, (/nPlotDim,nBlkUsedGlobal/),&
+        nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
+        Rank2IntegerData=MinLogicalExtents)
+    deallocate(MinLogicalExtents)
+
     call pad_string_with_null(nPlotVar, lNameh5, PlotVarUnits, UnknownNameArray)
 
     iInteger8=nPlotVar
