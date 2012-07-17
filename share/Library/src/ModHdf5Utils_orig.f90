@@ -7,6 +7,116 @@ module ModHdf5Utils
   private!except
   save
 
+! Explanation of BATL File Format:
+!     
+! Arrays:
+!     
+! Axis Labels
+!   Axis label names.  VisIt/HDF5 doesn’t like character strings that
+!   aren’t null terminated so make sure to fill any trailing spaces with
+!   null characters.  This can be done with the pad_string_with_null
+!   subroutine in ModHdf5Utils.
+! 
+! plotVarUnits
+!   The unit names for all the plot variables.  .  VisIt/HDF5 doesn’t like
+!   character strings that aren’t null terminated so make sure to fill any
+!   trailing spaces with null characters.  This can be done with the
+!   pad_string_with_null subroutine in ModHdf5Utils.
+! 
+! plotVarNames
+!   The names of all the plot variables.  .  VisIt/HDF5 doesn’t like
+!   character strings that aren’t null terminated so make sure to fill any
+!   trailing spaces with null characters.  This can be done with the
+!   pad_string_with_null subroutine in ModHdf5Utils
+! 
+! 
+! Integer Plot Metadata
+!   Passes necessary/potentially useful integer metadata to VisIt in the
+!   following order:
+!   1.      File Format Version – Currently 1
+!   2.      Time-step number
+!   3.      Number of plot dimensions
+!   4.      Number of AMR dimensions
+!   5.      Total number of blocks used
+!   6.      Number of processors
+!   7.      Number of refinement levels
+!   8.      Cells per block i
+!   9.      Cells per block j
+!   10.     Cells per block k
+!   11.     Geometry type: See plot geometry handles in ModHdf5Utils.
+!     Basically anything less than 2 is Cartesian, anything .ge. 2 is
+!     non-Cartesian.  12 is a topologically 2D surface in 3D space.
+!   12.     1 if periodic in i dimension else 0
+!   13.     1 if periodic in j dimension else 0
+!   14.     1 if periodic in k dimension else 0
+!   15.     0 if you have Morton tree data else 1
+!   16.     Number of plot variables
+! 
+! Integer Sim Metadata (Optional)
+!   You could put anything you want here.  It won’t affect VisIt at all.
+!   Currently, for plots containing this array the data is as follows:
+!   1.      Cells per block i
+!   2.      Cells per block j
+!   3.      Cells per block k
+!   4.      Number of dimensions
+!   5.      Number of AMR dimensions
+!   6.      Number of processors
+!   7.      Number of refinement levels
+!   8.      Time step number
+! 
+! Real Plot Metadata:
+!   1.      Simulation time
+!   2.      Xmin
+!   3.      Xmax
+!   4.      Ymin
+!   5.      Ymax
+!   6.      Zmin
+!   7.      Zmax
+! 
+! Real Simulation Metadata (optional)
+!   Currently the same as real plot metadata except that it shows the
+!   size of the computational domain rather than the plot boundaries.
+! 
+! MinLogicalExtents
+!   Minimum block index.  See p.210 of “GettingDataIntoVisit2.0.0” on
+!   VisIt’s website for an explanation of VisIt zone indexing.  This is
+!   used with the info given in the Integer Plot Metadata array to give
+!   visit the indices for each block.
+! 
+! bounding box
+!   Minimum and Maximum coordinates in Cartesian space
+! 
+! Nodes(X,Y,Z)
+!   (X,Y,Z) Cartesian grid node coordinates for non-Cartesian plot files.
+!   If the plot is 2d you only need to use NodesX and NodesY.
+! 
+! Processor Number
+!   Processor number for each block.  This is required for VisIt 2.5.1 but
+!   will be optional in VisIt 2.5.2.
+! 
+! refine level
+!   The refinement level for each block.  Required for all files in VisIt
+!   2.5.1.  In VisIt 2.5.2 it may be left out if all blocks are at the
+!   same refinement level.
+! 
+! iMortonNode_A
+!   Required if the presence of a Morton curve is indicated in the integer
+!   plot metadata, otherwise not necessary.  Gives the Morton index of the
+!   block.
+! 
+! coordinates
+!   Required in VisIt 2.5.1, only required when iMortonNode_A is present
+!   in VisIt 2.5.2.  Gives the block center location for drawing the
+!   Morton curve.
+! 
+! (Variable Name)
+!   Cell centered variable data.  Has minimum and maximum values for the
+!   dataset stored in attributes named minimum and maximum.
+! 
+! (Variable Name_Ext) (optional but sometimes useful for VisIt)
+!   Minimum and maximum values for each block of a plot variable.
+
+
   public:: save_hdf5_file
   public:: open_hdf5_file
   public:: write_hdf5_data
