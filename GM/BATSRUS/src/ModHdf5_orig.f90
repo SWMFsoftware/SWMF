@@ -772,8 +772,8 @@ contains
       if (iNode < iProcOffset .or. iNode > iProcOffset+nBlocksUsed-1) cycle  
       iBlk = iBlk +1
 
-      MinLogicalExtents(1,iBlk) = (ii - 1)*nCellsPerBlock(1)+1
-      MinLogicalExtents(2,iBlk) = (jj - 1)*nCellsPerBlock(2)+1
+      MinLogicalExtents(1,iBlk) = (ii - 1)*nCellsPerBlock(1)
+      MinLogicalExtents(2,iBlk) = (jj - 1)*nCellsPerBlock(2)
    end do; end do
      
      call  write_hdf5_data(FileID, "MinLogicalExtents", 2, (/nLogicalDim,nBlkUsedGlobal/),&
@@ -1129,7 +1129,6 @@ contains
         i = minval(MinLogicalExtents(iVar,:))
         call MPI_allreduce(i, ii, 1, MPI_INTEGER,&
                 MPI_MIN, iComm, Error)
-        ii = ii - 1
         do iBlk = 1, nBlocksUsed
             MinLogicalExtents(iVar,iBlk) = MinLogicalExtents(iVar,iBlk) - ii
         end do

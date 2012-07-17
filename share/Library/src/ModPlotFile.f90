@@ -283,15 +283,15 @@ contains
           end do; end do; end do;
           do n = 1,nDimOut
              if(n==1) then
-                MinimumBlockIjk(n, iBlk) = (ii-1)*nCellsPerBlock(n) + 1
+                MinimumBlockIjk(n, iBlk) = (ii-1)*nCellsPerBlock(n) 
                 XYZMinMax(1, n, iBlk) = iBlockDxDyDz(n)*(ii-1) + CoordMinIn_D(n)
                 XYZMinMax(2, n, iBlk) = iBlockDxDyDz(n)*ii+ CoordMinIn_D(n)
              else if(n==2) then
-                MinimumBlockIjk(2, iBlk) = (jj-1)*nCellsPerBlock(n) + 1
+                MinimumBlockIjk(2, iBlk) = (jj-1)*nCellsPerBlock(n) 
                 XYZMinMax(1, n, iBlk) = iBlockDxDyDz(n)*(jj-1)+ CoordMinIn_D(n)
                 XYZMinMax(2, n, iBlk) = iBlockDxDyDz(n)*jj+ CoordMinIn_D(n)
              else if(n==3) then 
-                MinimumBlockIjk(n, iBlk) = (kk-1)*nCellsPerBlock(n) + 1
+                MinimumBlockIjk(n, iBlk) = (kk-1)*nCellsPerBlock(n)
                 XYZMinMax(1, n, iBlk) = iBlockDxDyDz(n)*(kk-1)+ CoordMinIn_D(n)
                 XYZMinMax(2, n, iBlk) = iBlockDxDyDz(n)*kk+ CoordMinIn_D(n)
              end if
