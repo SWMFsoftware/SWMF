@@ -109,7 +109,7 @@ ascii                   TypeFile
 #LOOKUPTABLE
 prl(T,Const)            NameTable
 load                    NameCommand
-chianti.dat             NameFile
+RadCoolCorona.dat             NameFile
 ascii                   TypeFile
 
 PLASMA
