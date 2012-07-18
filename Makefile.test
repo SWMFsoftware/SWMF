@@ -736,6 +736,7 @@ test9_rundir:
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.ChromoIH ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
+	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog

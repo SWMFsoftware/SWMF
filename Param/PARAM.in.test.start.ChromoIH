@@ -159,7 +159,7 @@ T			UseRadCooling
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-SC/Param/RadCool.dat
+RadCoolCorona.dat
 ascii			TypeFile
 
 #TRANSITIONREGION
