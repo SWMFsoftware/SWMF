@@ -141,6 +141,7 @@ test_fluxemergence_rundir:
 	cd ${TESTDIR}; cp ../data/FLUXEMERGENCE/*.dat* .
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/Grid.* .
 	cd ${TESTDIR}; gunzip *.gz
+	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
 	cd ${TESTDIR}; cp Param/FLUXEMERGENCE/PARAM.in.FluxEmergence.1D PARAM.in
 
 test_fluxemergence_run:
@@ -789,6 +790,7 @@ test_chromo_rundir:
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.chromo PARAM.in
 	cd ${TESTDIR}; cp Param/CORONA/GridChromo GridChromo
+	cd ${TESTDIR}; cp Param/CORONA/RadCoolCorona.dat .
 
 test_chromo_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
