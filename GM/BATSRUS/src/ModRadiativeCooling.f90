@@ -75,7 +75,7 @@ module ModRadiativeCooling
   logical:: UseRadCoolingTable =.false.
   integer,private:: iTableRadCool      =-1
 
-  
+
   real :: AuxTeSi
   !\
   ! Recommended usage of get_radiative_cooling function
@@ -90,8 +90,8 @@ module ModRadiativeCooling
   real :: RadCooling_C(1:nI,1:nJ,1:nK)
 
   real, parameter :: Cgs2SiEnergyDens = &
-                               1.0e-7&   !erg = 1e-7 J
-                              /1.0e-6    !cm3 = 1e-6 m3 
+       1.0e-7&   !erg = 1e-7 J
+       /1.0e-6    !cm3 = 1e-6 m3 
 contains
   !==============================
   subroutine read_modified_cooling
@@ -116,7 +116,7 @@ contains
     UseRadCoolingTable = iTableRadCool>0
 
   end subroutine check_cooling_param
-  !==============================
+  !============================================================================
   subroutine get_radiative_cooling(i, j, k, iBlock, TeSiIn, RadiativeCooling)
 
     use ModPhysics,       ONLY: No2Si_V, UnitN_
@@ -125,16 +125,10 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(in) :: TeSiIn
-
     real,   intent(out) :: RadiativeCooling
 
-
     real :: NumberDensCgs
-
     !--------------------------------------------------------------------------
-
-
-
     ! currently proton plasma only
     NumberDensCgs = State_VGB(Rho_, i, j, k, iBlock) * No2Si_V(UnitN_) * 1.0e-6
 
@@ -148,57 +142,51 @@ contains
        if(TeSiIn >= TeChromosphereSi) then
           RadiativeCooling = RadiativeCooling / extension_factor(TeSiIn)
        else
-          RadiativeCooling = RadiativeCooling * (TeChromosphereSi / TeModSi)**2.5
+          RadiativeCooling = RadiativeCooling * (TeChromosphereSi/TeModSi)**2.5
        endif
     end if
   end subroutine get_radiative_cooling
-  !============================================================
+  !===========================================================================
   real function radiative_cooling(TeSiIn, NumberDensCgs)
-    use ModPhysics,       ONLY: Si2No_V, UnitT_, &
-         UnitEnergyDens_
+    use ModPhysics,       ONLY: Si2No_V, UnitT_, UnitEnergyDens_
     use ModLookupTable,   ONLY: interpolate_lookup_table
 
     !Imput - dimensional, output: dimensionless
     real, intent(in):: TeSiIn, NumberDensCgs
- 
-    real :: CoolingFunctionCgs
-    real :: Log10TeSi, Log10NeCgs, CoolingTableOut(2)
-    real, parameter :: RadNorm = 1.0E+22
-    !-----------------------------------
-    if(UseRadCoolingTable) then
-       Log10TeSi = log10(TeSiIn)
-       Log10NeCgs = log10(NumberDensCgs)
 
+    real :: CoolingFunctionCgs
+    real :: CoolingTableOut_I(1)
+    real, parameter :: RadNorm = 1.0E+22
+    !--------------------------------------------------------------------------
+    if(UseRadCoolingTable) then
        ! at the moment, radC not a function of Ne, but need a dummy 2nd
        ! index, and might want to include Ne dependence in table later.
-       ! Also lookuptables need 2 output values, but we need only 1 in this case
-       ! so use dummy variable in 2nd var column.
-       ! *** also table variable should be normalized to radloss_cgs * 10E+22
-       ! since don't want to deal with such tiny numbers 
-       call interpolate_lookup_table(iTableRadCool,Log10TeSi,Log10NeCgs, &
-            CoolingTableOut, DoExtrapolate = .true.)
-       CoolingFunctionCgs = CoolingTableOut(1) / RadNorm
+       ! Table variable should be normalized to radloss_cgs * 10E+22
+       ! since we don't want to deal with such tiny numbers 
+       call interpolate_lookup_table(iTableRadCool, TeSiIn, NumberDensCgs, &
+            CoolingTableOut_I, DoExtrapolate = .true.)
+       CoolingFunctionCgs = CoolingTableOut_I(1) / RadNorm
     else
        call get_cooling_function_fit(TeSiIn, CoolingFunctionCgs)
     end if
 
     ! Avoid extrapolation past zero
-    CoolingFunctionCgs = max(CoolingFunctionCgs,0.0)
+    CoolingFunctionCgs = max(CoolingFunctionCgs, 0.0)
 
     radiative_cooling = NumberDensCgs**2*CoolingFunctionCgs &
          * Cgs2SiEnergyDens * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
 
   end function radiative_cooling
-!===============================
+  !============================================================================
   subroutine get_cooling_function_fit(TeSi, CoolingFunctionCgs)
-    
+
     ! Based on Rosner et al. (1978) and Peres et al. (1982)
     ! Need to be replaced by Chianti tables
-    
+
     real, intent(in) :: TeSi
     real, intent(out):: CoolingFunctionCgs
     !-----------------------------------------------------------
-    
+
     if(TeSi <= 8e3)then
        CoolingFunctionCgs = (1.0606e-6*TeSi)**11.7
     elseif(TeSi <= 2e4)then
@@ -218,13 +206,13 @@ contains
     else
        CoolingFunctionCgs = 10**(-26.6)*sqrt(TeSi)
     end if
-    
+
   end subroutine get_cooling_function_fit
   !=============================================================
   real function cooling_function_integral_si(TeTransitionRegionSi)
-    
+
     real,intent(in):: TeTransitionRegionSi
-    
+
     integer,parameter:: nStep = 1000
     integer:: iStep
     real:: DeltaTeSi, IntegralCgs, IntegralSi
@@ -258,13 +246,13 @@ contains
     use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
     use ModPhysics,  ONLY: UnitX_, Si2No_V,UseStar,RadiusStar,MassStar
     use ModCoronalHeating, ONLY: CoronalHeating_C
-    
+
     real,    intent(in):: TeSi_C(1:nI,1:nJ,1:nK)
     integer, intent(in):: iBlock
 
     real, parameter:: cGravityAcceleration = cGravitation * mSun / rSun**2
     real, parameter:: cBarometricScalePerT = cBoltzmann/&
-                      (cProtonMass * cGravityAcceleration)
+         (cProtonMass * cGravityAcceleration)
 
     real:: HeightSi_C(1:nI,1:nJ,1:nK), BarometricScaleSi, Amplitude
     !------------------------------
@@ -280,7 +268,7 @@ contains
          .and.TeSi_C < 1.1 * TeChromosphereSi)&
          CoronalHeating_C = CoronalHeating_C + &
          Amplitude * exp(-HeightSi_C/BarometricScaleSi)
-         
+
   end subroutine add_chromosphere_heating
 
 end module ModRadiativeCooling
