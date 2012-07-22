@@ -24,6 +24,7 @@ List of MH (GM, IH, OH, SC and LC) commands used in the PARAM.in file
 <command name="COMPONENT">
 	<parameter name="NameComp" type="string" input="select">
 		<option name="GM" default="T" />
+		<option name="EE" />
 		<option name="SC" />
 		<option name="LC" />
 		<option name="IH" />
@@ -1521,18 +1522,37 @@ is saved into the restart files.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!  TIME INTEGRATION PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-<command name="TIMESTEPPING">
-	<parameter name="nStage" type="integer" min="1" max="2" default="2" />
+<command name="TIMESTEPPING" alias="RUNGEKUTTA,RK">
+	<parameter name="nStage" type="integer" min="1" max="3" default="2" />
 	<parameter name="CflExpl" type="real" min="0" max="1" default="0.8" />
 
 #TIMESTEPPING
-2                       nStage (1 or 2)
-0.80                    CflExpl
+1                       nStage
+0.4                     CflExpl
 
-Parameters for time integration. For explicit time integration nStage
-is the number of stages in the Runge-Kutta scheme. For implicit time
-stepping nStage=2 corresponds to the BDF2 scheme that
-uses the previous time step to make the scheme 2nd order accurate in time.
+#RUNGEKUTTA
+2			nStage
+0.8			CflExpl
+
+#RK
+3			nStage
+0.9			CflExpl
+
+These commands set the parameters for time integration.
+For explicit time integration nStage is the number of stages.
+Setting nStage=1 selects a temporally first order forward Euler scheme.
+The nStage=2 corresponds to a temporally second order scheme. 
+The #TIMESTEPPING command uses half time step for the first stage,
+and full time step for the second stage. The #RUNGEKUTTA or #RK commands
+select a TVD Runge-Kutta scheme that employs full time step in both stages 
+and then takes their average.
+The nStage=3 selects a 3rd order TVD Runge-Kutta scheme. This option will
+become useful when higher spatial order schemes are implemented into BATSRUS.
+
+For implicit time stepping nStage=2 corresponds to the BDF2 (Backward Differene
+Formula 2) scheme that uses the previous time step to make the scheme 
+2nd order accurate in time.
+
 For explicit time stepping the CPU time is proportional to the number of 
 stages. In time accurate runs the 1-stage explicit time stepping scheme 
 may work reasonably well with second order spatial discretization, 
@@ -1542,7 +1562,7 @@ little compromise in accuracy.
 
 For local time stepping (steady state mode) one should always use the 
 2-stage scheme with 2-nd order spatial accuracy to avoid oscillations
-(or make the CFL number small, about 0.4). 
+(or use the 1-stage scheme with CflExpl=0.4).
 
 For implicit scheme the second order BDF2 scheme is more accurate 
 but not more expensive than the first order backward Euler scheme, 
@@ -1550,9 +1570,10 @@ so it is a good idea to use nStage=nOrder.
 
 To achieve consistency between the spatial and temporal orders of accuracy,
 the #SCHEME command always sets nStage to be the same as nOrder. 
-The #TIMESTEPPING command can be used to reset nStage if required.
+The #TIMESTEPPING (or #RUNGEKUTTA or #RK) command can be used AFTER the
+#SCHEME command to overwrite nStage if required.
 
-Default is 2-stage scheme with CflExpl=0.8
+Defaults are nStage=2 and CflExpl=0.8
 </command>
 
 <command name="FIXEDTIMESTEP">
@@ -1576,6 +1597,9 @@ update checking decides to reduce the time step for the sake of robustness.
 
 <command name="PARTSTEADY">
 	<parameter name="UsePartSteady" type="logical" default="F" />
+
+#PARTSTEADY
+T			UsePartSteady
 
 If UsePartSteady is true, the partially steady state algorithm is used.
 Only blocks which are changing or next to changing blocks are evolved.
@@ -5775,8 +5799,8 @@ planetary or solar radii).
 		<option name="Y direction"  value="2"			/>
 		<option name="Z direction"  value="3"			/>
 	</parameter>
-	<parameter name="GravitySi" type="real" min="0" default="10.0"
-							if="$iDirGravity"/>
+	<parameter name="GravitySi" type="real" default="-10.0"
+							if="$iDirGravity&gt;0"/>
 
 #GRAVITY
 T			UseGravity (rest of parameters read if true)
