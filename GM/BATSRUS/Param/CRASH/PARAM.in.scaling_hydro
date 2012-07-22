@@ -16,9 +16,6 @@ Param/CRASH/AMR2.in
 #DESCRIPTION
 Modified from CRASHTEST/FullSystem/Version2/input/PARAM.in_tube_3d_gray
 
-MESSAGEPASS
-dir			TypeMessagePass
-
 #TIMING
 T                       UseTiming      (rest of parameters read if true)
 -2                      DnTiming       (-3 none, -2 final, -1 each session/AMR)

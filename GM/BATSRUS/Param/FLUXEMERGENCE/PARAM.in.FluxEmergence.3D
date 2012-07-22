@@ -118,9 +118,6 @@ unsignedflux            TypeCoronalHeating
 4640.			Decaylength
 1.			HeatNormalization
 
-#MESSAGEPASS
-dir			TypeMessagePass
-
 #AMR
 -1			DnRefine
 F			DoAutoRefine

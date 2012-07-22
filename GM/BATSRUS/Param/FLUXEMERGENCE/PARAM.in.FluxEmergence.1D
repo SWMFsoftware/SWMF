@@ -129,9 +129,6 @@ modified 		TypeHeatConduction
 2.5E05			TmodifySi
 2e04			DeltaTmodifySi
 
-#MESSAGEPASS
-dir			TypeMessagePass
-
 #AMR
 -1			DnRefine
 F			DoAutoRefine
