@@ -1,0 +1,124 @@
+#ECHO
+T
+
+#DESCRIPTION
+Verification test for Runge-Kutta time integration
+
+! Only the friction term is needed from this module.
+#USERMODULE
+EXAMPLE FOR POINT IMPLICIT SOURCE, Toth
+1.0
+
+#PLANET
+NONE
+
+#IOUNITS
+NONE
+
+#NORMALIZATION
+NONE
+
+#GRID
+1                               nRootBlockX
+1				nRootBlockY
+1				nRootBlockZ
+-10.				xMin	   
+ 10.				xMax	   
+-1.				yMin	   
+ 1.				yMax	   
+-1.				zMin	   
+ 1.				zMax
+
+! Switch on friction with tau=5.0 decay rate
+#USERFLAGS
+F			UseUserInnerBcs
+T			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN  ----------------------
+
+#FRICTION
+100.0		rFriction
+5.0		TauFriction
+
+#USERINPUTEND    ----------------------
+
+! Start with Ux = 1.0
+#SHOCKTUBE
+1.		rho (left state)
+1.		Ux
+0.		Uy
+0.		Uz
+1.		P
+1.		rho (right state)
+1.		Ux
+0.		Uy
+0.		Uz
+1.		P
+
+#OUTERBOUNDARY
+float		xMinBc
+float		xMaxBc
+float		yMinBc
+float		yMaxBc
+float		zMinBc
+float		zMaxBc
+
+! Works with conservative too, but pressure changes slightly
+#NONCONSERVATIVE
+T		UseNonConservative
+
+! Any numerical scheme works
+#SCHEME
+1		nOrder
+Rusanov		TypeFlux
+
+! Vary time step from 1.0 to 0.5
+#FIXEDTIMESTEP
+T		UseFixedTimeStep
+1.0		DtFixed
+
+! Vary nStage from 1 to 3
+#RK
+2		nStage
+0.8		CflExpl
+
+! The average X momentum (Mx) should decay as exp(-time/5.0)
+#SAVELOGFILE
+T		DoSaveLogfile
+raw		StringLogfile
+1		DnSaveLogfile
+-1.		DtSaveLogfile
+
+#SAVERESTART
+F		DoSaverestart
+
+#SAVEPLOT
+1		nPlotfile
+cut raw idl	PlotString
+-1              DnSavePlot
+1.0             DtSavePlot
+-10.0		xMinCut
++10.0		xMaxCut
+-0.01		yMinCut
+0.01		yMaxCut
+-0.01		zMinCut
+0.01		zMaxCut
+0.0             DxSavePlot
+
+! At the final time Ux should be exp(-10./5.)
+#STOP
+-1		MaxIteration
+10.0		tSimulationMax
+
+#END
