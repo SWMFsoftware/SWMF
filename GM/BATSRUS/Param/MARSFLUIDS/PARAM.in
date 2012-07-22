@@ -71,14 +71,14 @@ T			body1
 #TIMEACCURATE
 F			DoTimeAccurate
 
-#TIMESTEPPING
-1			nStage
-0.2			CflExpl
-
 #SCHEME
 2                       nOrder
 Linde                   TypeFlux
 minmod                  TypeLimiter
+
+#TIMESTEPPING
+2			nStage
+0.2			CflExpl
 
 #USERFLAGS
 T			UseUserInnerBcs
