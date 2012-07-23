@@ -92,6 +92,8 @@ subroutine MH_set_parameters(TypeAction)
        read_modified_cooling, check_cooling_param, read_chromosphere
   use ModWaves, ONLY: read_waves_param, check_waves
   use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
+  use ModViscosity, ONLY: Viscosity_set_parameters, UseViscosity,&
+                          Viscosity_init
 
   implicit none
 
@@ -267,6 +269,7 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_equation
 
      if(UseResistivity)call init_mod_resistivity !^CFG IF DISSFLUX
+     if(UseViscosity) call Viscosity_init
 
      if(UseMagnetogram)then
         if(i_line_command("#MAGNETOGRAM") > 0)then
@@ -506,6 +509,9 @@ subroutine MH_set_parameters(TypeAction)
           "#RESISTIVITYREGION", "#RESISTIVEREGION")
         call read_resistivity_param(NameCommand)
         !                                               ^CFG END DISSFLUX
+
+     case("#VISCOSITY", "#VISCOSITYREGION")
+        call Viscosity_set_parameters(NameCommand)
 
      case("#HALLRESISTIVITY")
         call read_var('UseHallResist',  UseHallResist)
@@ -2336,6 +2342,8 @@ contains
        if(iProc==0)write(*,*)NameSub//' setting DoAmr=F'
        DoAmr = .false.
     end if                                            !^CFG END CONSTRAINB
+
+    if(UseViscosity) optimize_message_pass = 'all'
 
     if ( UseHallResist &
          .or. UseResistivity &                       !^CFG IF DISSFLUX

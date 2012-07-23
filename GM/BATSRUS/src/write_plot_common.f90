@@ -11,7 +11,7 @@ subroutine write_plot_common(ifile)
   use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, close_sph_hdf5_plot, &
-    init_sph_hdf5_plot
+       init_sph_hdf5_plot
   use ModIoUnit, ONLY: io_unit_new
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
@@ -178,16 +178,16 @@ subroutine write_plot_common(ifile)
      ! Put hemisphere info into the filename: the 3rd character of type
      l = len_trim(NamePlotDir) + 3
      if(plot_form(ifile)=='hdf') then
-         filename = trim(NameSnapshot)//".batl"
+        filename = trim(NameSnapshot)//".batl"
      else
-         ! two files for the northern and southern hemispheres
-         filename_n = trim(NameSnapshot)//trim(NameProc); filename_n(l:l) = "N"
-         filename_s = trim(NameSnapshot)//trim(NameProc); filename_s(l:l) = "S"
-         ! open the files
-         unit_tmp2 = io_unit_new()
-         open(unit_tmp , file=filename_n, status="replace", form=TypeForm, err=999)
-         open(unit_tmp2, file=filename_s, status="replace", form=TypeForm, err=999)
-    end if
+        ! two files for the northern and southern hemispheres
+        filename_n = trim(NameSnapshot)//trim(NameProc); filename_n(l:l) = "N"
+        filename_s = trim(NameSnapshot)//trim(NameProc); filename_s(l:l) = "S"
+        ! open the files
+        unit_tmp2 = io_unit_new()
+        open(unit_tmp , file=filename_n, status="replace", form=TypeForm, err=999)
+        open(unit_tmp2, file=filename_s, status="replace", form=TypeForm, err=999)
+     end if
   elseif(plot_form(ifile)=='tec')then
      ! Open two files for connectivity and data
      filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
@@ -207,36 +207,36 @@ subroutine write_plot_common(ifile)
 
   if (IsSphPlot) then
      if (plot_form(ifile) == 'hdf') then
-         nphi   = 360.0/plot_dx(3,ifile)
-         rplot  = plot_range(1,ifile)
+        nphi   = 360.0/plot_dx(3,ifile)
+        rplot  = plot_range(1,ifile)
         ntheta = 2+180.0/plot_dx(2,ifile)
         call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
-          unitstr_IDL)
+             unitstr_IDL)
         call init_sph_hdf5_plot(nPlotVar, filename, plotVarNames, NamePlotUnit_V, nTheta,&
-          nPhi, rplot)
-          call barrier_mpi
+             nPhi, rplot)
+        call barrier_mpi
      else
-         nphi   = 360.0/plot_dx(3,ifile)
-         rplot  = plot_range(1,ifile)
+        nphi   = 360.0/plot_dx(3,ifile)
+        rplot  = plot_range(1,ifile)
         ntheta = 1 + 180.0/plot_dx(2,ifile)
      end if
 
      if(oktest_me) write(*,*) NameSub,': nTheta, nPhi=', ntheta, nphi
      IsNonCartesianPlot = .true.
   else
-    IsNonCartesianPlot = .not.IsCartesianGrid
+     IsNonCartesianPlot = .not.IsCartesianGrid
   end if
-  
+
   !Logical for hdf plots
 
   if (plot_type1(1:3)=='3d_') then
-    NotACut=.true.
+     NotACut=.true.
   else if (plot_type1(1:3)=='z=0' .and. nK == 1) then
-    NotACut=.true.
+     NotACut=.true.
   else
-    NotACut   = .false.
+     NotACut   = .false.
   end if
-    
+
 
 
   !! START IDL
@@ -293,9 +293,9 @@ subroutine write_plot_common(ifile)
              ntheta,nphi,rplot,plotvarnames,H5Index, nBLKcellsN,nBLKcellsS)
         dxblk=1.0
         if(plot_form(iFile) == 'hdf') then
-            dyblk=180.0/real(ntheta)
+           dyblk=180.0/real(ntheta)
         else
-            dyblk=180.0/real(ntheta-1)
+           dyblk=180.0/real(ntheta-1)
         end if
         dzblk=360.0/real(nphi)
      else
@@ -310,11 +310,11 @@ subroutine write_plot_common(ifile)
                 xmin,xmax,ymin,ymax,zmin,zmax, &
                 dxblk,dyblk,dzblk,nBLKcells)
         case('hdf')
-          call write_var_hdf5(ifile, plot_type1(1:3), iBLK,H5Index, &
-               nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
-               dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut, nBLKcells, &
-               H5Advance)
-               if (H5Advance) H5Index = H5Index+1
+           call write_var_hdf5(ifile, plot_type1(1:3), iBLK,H5Index, &
+                nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
+                dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut, nBLKcells, &
+                H5Advance)
+           if (H5Advance) H5Index = H5Index+1
         end select
      end if
 
@@ -341,14 +341,14 @@ subroutine write_plot_common(ifile)
   select case(plot_form(ifile))
   case('hdf')
 
-    if (isSphPlot) then
+     if (isSphPlot) then
         call close_sph_hdf5_plot(nPlotVar)
-    else
-      call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
-      unitstr_IDL)       
-      call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
-              NamePlotUnit_V, nPlotVar, NotACut, IsNonCartesianPlot, &
-              IsSphPlot, plot_dimensional(ifile), xmin, xmax, ymin, ymax, zmin, zmax)
+     else
+        call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
+             unitstr_IDL)       
+        call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
+             NamePlotUnit_V, nPlotVar, NotACut, IsNonCartesianPlot, &
+             IsSphPlot, plot_dimensional(ifile), xmin, xmax, ymin, ymax, zmin, zmax)
      end if
 
      RETURN
@@ -697,6 +697,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        Xyz_DGB, iNode_B, CellSize_DB
   use ModCurrent, ONLY: get_current
   use ModCoordTransform, ONLY: cross_product
+  use ModViscosity, ONLY: Viscosity_factor, UseViscosity
+
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
@@ -793,7 +795,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         if (UseRotatingFrame) then
            do k = 1, nK; do j = 1, nJ; do i = 1, nI
               PlotVar(i,j,k,iVar)=State_VGB(iRhoUy,i,j,k,iBLK) &
-                + State_VGB(iRho,i,j,k,iBLK)*OmegaBody*Xyz_DGB(x_,i,j,k,iBLK)
+                   + State_VGB(iRho,i,j,k,iBLK)*OmegaBody*Xyz_DGB(x_,i,j,k,iBLK)
            end do; end do; end do
         else
            PlotVar(:,:,:,iVar)=State_VGB(iRhoUy,:,:,:,iBLK)
@@ -1087,6 +1089,14 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                 *     Xyz_DGB(:,i,j,k,iBLK) &
                 ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
         end do; end do; end do
+     case('visco')
+        if (UseViscosity) then
+           do k = 1, nK; do j = 1, nJ; do i =1, nI
+              PlotVar(i,j,k,iVar) = Viscosity_factor(0,i,j,k,iBLK)
+           end do;end do;end do
+        else
+           PlotVar(:,:,:,iVar)=0.0
+        end if
      case('divb','divb_cd','divb_ct')
         if(.not.IsCartesian)call stop_mpi( &
              NameSub//': for non cartesian grids only absdivb works')
@@ -1491,7 +1501,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
              // '", "Z ' // trim(NameTecUnit_V(UnitX_)) &
              // '", "`q [degree]", "`f[degree]'
      else
-   	StringVarTec = 'VARIABLES = "X", "Y", "Z", "`q", "`f'
+        StringVarTec = 'VARIABLES = "X", "Y", "Z", "`q", "`f'
      end if
 
   else
@@ -1501,7 +1511,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
              // '", "Y ' // trim(NameTecUnit_V(UnitX_)) &
              // '", "Z ' // trim(NameTecUnit_V(UnitX_))
      else
-   	StringVarTec = 'VARIABLES = "X", "Y", "Z'
+        StringVarTec = 'VARIABLES = "X", "Y", "Z'
      end if
 
   end if

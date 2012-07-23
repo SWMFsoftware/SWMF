@@ -1,7 +1,7 @@
 module ModFaceFlux
 
   use ModProcMH,     ONLY: iProc
-  use ModSize,       ONLY: x_, y_, z_, nI, nJ, nK, &
+  use ModSize,       ONLY:x_, y_, z_, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain,       ONLY: UseB, UseB0, cLimit, &
        iTest, jTest, kTest, ProcTest, BlkTest, DimTest
@@ -47,6 +47,8 @@ module ModFaceFlux
   use ModVarIndexes
   use ModMultiFluid
   use ModNumConst
+
+  use ModViscosity, ONLY : IsNewBlockViscosity,UseViscosity, U_DGI, Visco_DDI
 
   implicit none
 
@@ -109,7 +111,7 @@ module ModFaceFlux
   real :: Pe      = 0.0                         !electron pressure -> grad Pe
 
   ! Variables for normal resistivity
-  real :: EtaJx, EtaJy, EtaJz, Eta = -1.0
+  real :: EtaJx, EtaJy, EtaJz, Eta = 0.0
 
   ! Variables needed for Hall resistivity
   real :: InvDxyz, HallCoeff, HallJx, HallJy, HallJz
@@ -119,8 +121,11 @@ module ModFaceFlux
   real :: BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe
   real, allocatable, save :: Pe_G(:,:,:)
 
+  ! Variables needed by viscosity
+  real :: ViscoCoeff = 0.0
+
   ! Variables for diffusion solvers (radiation diffusion, heat conduction)
-  real :: DiffCoef, EradFlux, RadDiffCoef, HeatFlux, IonHeatFlux, &
+  real :: DiffCoef = 0.0, EradFlux, RadDiffCoef, HeatFlux, IonHeatFlux, &
        HeatCondCoefNormal
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
@@ -388,6 +393,7 @@ contains
     IsNewBlockRadDiffusion = .true.      !^CFG IF IMPLICIT
     IsNewBlockHeatCond    = .true.       !^CFG IF IMPLICIT
     IsNewBlockIonHeatCond = .true.       !^CFG IF IMPLICIT
+    IsNewBlockViscosity = .true.
 
     if(UseResistivity) call set_resistivity(iBlock)      !^CFG IF DISSFLUX
 
@@ -830,7 +836,7 @@ contains
 
     use ModPhysics, ONLY: Io2No_V, UnitU_
     use ModGeometry, ONLY: r_BLK
-
+    use ModViscosity, ONLY: viscosity_factor
     real :: r
     !--------------------------------------------------------------------
 
@@ -858,12 +864,18 @@ contains
        end if
     end if
 
+
+    ViscoCoeff = 0.0
+    if(UseViscosity) then
+      ViscoCoeff = viscosity_factor(iDimFace, iFace, jFace, kFace, iBlockFace)   
+    end if
+    
     ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
     UseHallGradPe = BiermannCoeff > 0.0 .and. &
          (UseElectronPressure .or. ElectronPressureRatio > 0.0 .or. &
          .not.UseIdealEos)
 
-    Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
+    Eta       = 0.0                                !^CFG IF DISSFLUX BEGIN
     if(UseResistivity .and. UseResistiveFlux) Eta = 0.5* &
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
          + Eta_GB(iRight,jRight,kRight,iBlockFace))  !^CFG END DISSFLUX
@@ -902,10 +914,12 @@ contains
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
-    use ModFaceGradient, ONLY: get_face_gradient
+    use ModFaceGradient, ONLY: get_face_GradVec, get_face_gradient
     use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
     use ModUser,     ONLY: user_material_properties
+    use BATL_size, ONLY: nDim, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib,  ONLY: x_, y_, z_
 
     real,    intent(out):: Flux_V(nFlux)
 
@@ -919,8 +933,11 @@ contains
 
     real :: GradPe_D(3)
     real :: InvElectronDens
-    integer :: i, j, k
+    integer :: i, j, k, iDim
     real :: NatomicSi, TeSi
+
+    real :: diag, gradV_DDI(nDim,Maxdim,nFluid)
+    logical :: IsNewBlock = .true.
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -931,6 +948,60 @@ contains
     ! Calculate current for the face if needed for (Hall) resistivity
     if(HallCoeff > 0.0 .or. Eta > 0.0) &
          call get_face_current(iDimFace,iFace,jFace,kFace,iBlockFace,Jx,Jy,Jz)
+
+
+    ! Calculateing stress tensor for viscosity 
+    if(ViscoCoeff > 0.0 ) then
+         ! Get velocity vector for the block, only done ones per block
+         if(IsNewBlockViscosity) then
+           do iFluid=iFluidMin,iFluidMax
+             call select_fluid
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+               if(State_VGB(iRho,i,j,k,iBlockFace) .ne. 0.0) then 
+                 U_DGI(:,i,j,k,iFluid) = State_VGB(iRhoUx:iRhoUz,i,j,k,iBlockFace)/&
+                                       State_VGB(iRho,i,j,k,iBlockFace)
+               else
+                 U_DGI(:,i,j,k,iFluid) = 0.0
+               end if
+             end do; end do; end do
+           end do
+         end if
+
+         ! Get the velocity gradient on the faces, only fill inn ghost cell for the block
+         ! for each fluid ones
+         IsNewBlock = IsNewBlockViscosity
+         do iFluid=iFluidMin,iFluidMax
+             call get_face_GradVec(iDimFace,iFace,jFace,kFace,iBlockFace,nDim,IsNewBlock,&
+                     U_DGI(:,:,:,:,iFluid), GradV_DDI(:,:,iFluid))
+             ! so ghost cell for all fluids are updated
+             IsNewBlock = IsNewBlockViscosity 
+         end do
+         IsNewBlockViscosity = .false.        
+
+         ! Get the viscosity tensor
+         do iFluid=iFluidMin,iFluidMax
+           diag = GradV_DDI(x_,x_,ifluid)
+           if(nDim >1) diag = diag+GradV_DDI(y_,y_,ifluid)
+           if(nDim >2) diag = diag+GradV_DDI(z_,z_,ifluid)
+           diag = -0.66666666666666666666666666666666666667*diag
+
+           ! Diagonal
+           Visco_DDI(x_,x_,ifluid)= 2.0*GradV_DDI(x_,x_,ifluid) + diag
+           if(nDim >1) Visco_DDI(y_,y_,ifluid) = 2.0*GradV_DDI(y_,y_,ifluid) + diag  
+           if(nDim >2) Visco_DDI(z_,z_,ifluid) = 2.0*GradV_DDI(z_,z_,ifluid) + diag  
+
+           ! Symetric off diagonal
+           if(nDim >1) Visco_DDI(x_,y_,ifluid) = GradV_DDI(x_,y_,ifluid) + GradV_DDI(y_,x_,ifluid)
+           if(nDim >1) Visco_DDI(y_,x_,ifluid) = Visco_DDI(x_,y_,ifluid)
+           if(nDim >2) Visco_DDI(x_,z_,ifluid) = GradV_DDI(x_,z_,ifluid) + GradV_DDI(z_,x_,ifluid)
+           if(nDim >2) Visco_DDI(z_,x_,ifluid) = Visco_DDI(x_,z_,ifluid)
+           if(nDim >2) Visco_DDI(y_,z_,ifluid) = GradV_DDI(y_,z_,ifluid) + GradV_DDI(z_,y_,ifluid)
+           if(nDim >2) Visco_DDI(z_,y_,ifluid) = Visco_DDI(y_,z_,ifluid)
+           
+           Visco_DDI(:,:,ifluid) = &
+                ViscoCoeff*Visco_DDI(:,:,ifluid)          
+         end do
+    end if 
 
     if(Eta > 0.0)then                  !^CFG IF DISSFLUX BEGIN
        EtaJx = Eta*Jx
@@ -1155,16 +1226,9 @@ contains
     ! Multiply Flux by Area. This is needed in div Flux in update_states_MHD
     Flux_V = Flux_V*Area
 
-    ! Increase maximum speed with resistive diffusion speed if necessary
-    if(Eta > 0.0) CmaxDt = CmaxDt + 2*Eta*InvDxyz !^CFG IF DISSFLUX
-
-    ! Increase maximum speed with diffusion speed if necessary
-    !^CFG IF IMPLICIT BEGIN
-    if(.not. UseSemiImplicit)then
-       if(UseHeatConduction .or. UseIonHeatConduction .or. UseRadDiffusion) &
-            CmaxDt = CmaxDt + 2*DiffCoef*InvDxyz
-    end if
-    !^CFG END IMPLICIT
+    ! Increase maximum speed with sum of diffusion speed
+    ! Resistivety, viscosity and heat conduction
+    CmaxDt = CmaxDt + 2*(Eta+ViscoCoeff+DiffCoef)*InvDxyz
 
     ! Further limit timestep due to the hyperbolic cleaning equation
     if(UseHyperbolicDivb) CmaxDt = max(SpeedHyp, CmaxDt)
@@ -1856,6 +1920,7 @@ contains
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
     use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
     use ModPhysics,  ONLY: gm1
+    use BATL_size,   ONLY: nDim  
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -1867,6 +1932,7 @@ contains
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
     real:: FluxBx, FluxBy, FluxBz
+    real:: FluxViscoX, FluxViscoY, FluxViscoZ
     !--------------------------------------------------------------------------
 
   
@@ -1934,6 +2000,25 @@ contains
 
     ! The extra fluxes should be added at the same time as fluid 1 fluxes
     ! if(iFluidMin /= 1) RETURN
+
+    if(ViscoCoeff > 0.0 ) then
+      do iFluid = 1, nFluid
+         call select_fluid
+         FluxViscoX = sum(Normal_D(1:nDim)*Visco_DDI(1:nDim,x_,ifluid))
+         FluxViscoY = sum(Normal_D(1:nDim)*Visco_DDI(1:nDim,y_,ifluid))
+         FluxViscoZ = sum(Normal_D(1:nDim)*Visco_DDI(1:nDim,z_,ifluid))
+
+         Flux_V(iRhoUx) = Flux_V(iRhoUx) - State_V(iRho)*FluxViscoX
+         Flux_V(iRhoUy) = Flux_V(iRhoUy) - State_V(iRho)*FluxViscoY
+         Flux_V(iRhoUz) = Flux_V(iRhoUz) - State_V(iRho)*FluxViscoZ
+
+         Flux_V(Energy_) = Flux_V(Energy_) - &
+             (State_V(iRhoUx)*FluxViscoX + State_V(iRhoUy)*FluxViscoY + &
+              State_V(iRhoUz)*FluxViscoZ) 
+
+      end do
+    end if 
+
 
     if(UseB) then
        ! These terms are common for the induction equation
