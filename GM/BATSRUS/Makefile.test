@@ -28,6 +28,7 @@ test:
 	-@($(MAKE) test_hyades2d)
 	-@($(MAKE) test_laserpackage)
 	-@($(MAKE) test_graydiffusion)
+	-@($(MAKE) test_viscosity)
 	-@($(MAKE) test_corona)
 	-@($(MAKE) test_coronasph)
 	-@($(MAKE) test_corona_2t)
@@ -111,6 +112,7 @@ test_help:
 	@echo "    test_titan_start           (run first Titan test)"
 	@echo "    test_titan_restart         (run titan restart test)"
 	@echo "    test_twofluidmhd           (run two-fluid test)"
+	@echo "    test_viscosity             (run Venus test)"
 	@echo "    test_venus                 (run Venus test)"
 
 test_rundir:
