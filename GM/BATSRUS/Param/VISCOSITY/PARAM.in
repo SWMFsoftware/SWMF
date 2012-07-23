@@ -1,0 +1,99 @@
+#ECHO
+T
+
+#PLANET
+NONE
+
+#IOUNITS
+NONE
+
+#NORMALIZATION
+NONE
+
+#CHECKGRIDSIZE
+16                              nI
+4                               nJ
+1                               nK
+1                               MinBlockALL
+
+#GRID
+1
+4
+1
+-1.
+ 1.
+-1.
+ 1.
+-1.
+ 1.
+
+#NONCONSERVATIVE
+F
+
+#VISCOSITY
+T
+1.05
+
+#USERINPUTBEGIN -----------------
+
+#PIPEFLOW
+T
+
+#USERINPUTEND   -----------------
+
+Sheared boundary condition is used for non-zero shock slope
+#OUTERBOUNDARY
+user
+float
+user
+user
+float
+float
+
+#USERFLAGS
+F                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+
+#TIMESTEPPING
+2		nStage
+0.8		CflExpl
+
+#SCHEME
+2		nOrder
+Linde		TypeFlux
+mc3		TypeLimiter
+1.5		LimiterBeta
+
+#SAVELOGFILE
+T		DoSaveLogfile
+raw		StringLogfile
+1		DnSaveLogfile
+-1.		DtSaveLogfile
+
+#SAVERESTART
+F		DoSaverestart
+
+#SAVEPLOT
+1		nPlotfile
+z=0 raw idl_ascii	PlotString
+-2		DnSavePlot
+100		DtSavePlot
+0.0		DxSavePlot
+
+The grid size is 256, so the final time corresponds to the usual 0.1
+#STOP
+-1		MaxIteration
+1.0		tSimulationMax
+

@@ -82,7 +82,7 @@ module ModUser
   real              :: InputUnitXSi = 0.0
 
   ! aux. flags for problem types
-  logical :: DoAdvectSphere, DoWave
+  logical :: DoAdvectSphere, DoWave, DoPipeFlow =.false.
 contains
 
   subroutine user_read_inputs
@@ -173,6 +173,9 @@ contains
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
+       case('#PIPEFLOW')
+          call read_var('DoPipeFlow',DoPipeFlow)
+          if(DoPipeFlow) UserProblem = 'PipeFlow'
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
@@ -192,9 +195,10 @@ contains
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
          rPlanetSi, rBody, UnitT_
     use ModNumconst, ONLY: cHalfPi, cPi, cTwoPi, cDegToRad
-    use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nI,nJ,nK
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
-
+    use ModViscosity,ONLY: viscosity_factor
+    use BATL_lib,    ONLY: CoordMax_D,CoordMin_D
     integer, intent(in) :: iBlock
 
     real,dimension(nVar):: State_V,KxTemp_V,KyTemp_V
@@ -204,7 +208,7 @@ contains
     integer             :: i, j, k
 
     real :: RhoLeft, RhoRight, pLeft
-
+    real :: ViscoCoeff = 0.0
     ! GEM relatex variables
     real:: x, y, Lx, Ly
 
@@ -295,7 +299,7 @@ contains
             xSphereCenterInit**2 + &
             ySphereCenterInit**2 + &
             zSphereCenterInit**2)
-       
+
        ! Start filling in cells (including ghost cells)
 
        if (DoInitSphere) then
@@ -304,8 +308,8 @@ contains
              yCell = Xyz_DGB(y_,i,j,k,iBlock)
              zCell = Xyz_DGB(z_,i,j,k,iBlock)
              rFromSphereCenter = sqrt((xCell - xSphereCenterInit)**2 + &
-                                      (yCell - ySphereCenterInit)**2 + &
-                                      (zCell - zSphereCenterInit)**2)
+                  (yCell - ySphereCenterInit)**2 + &
+                  (zCell - zSphereCenterInit)**2)
              if (rFromSphereCenter <= rSphere)then
                 ! inside the sphere                                           
                 ! State_VGB(rho_,i,j,k,iBlock) = RhoMaxNo ! for tophat
@@ -422,8 +426,8 @@ contains
        if(UseAnisoPressure) &
             ! parallel pressure
             State_VGB(Ppar_,:,:,:,iBlock) = ShockLeftState_V(Ppar_)*(1.0 &
-               + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
-               /ShockLeftState_V(p_))
+            + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
+            /ShockLeftState_V(p_))
 
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
 
@@ -441,7 +445,19 @@ contains
           State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) &
                + Az* cTwoPi/Lx * sin(cTwoPi*x/Lx) * cos(cPi*y/Ly)
        end do; end do; end do
-
+    case('PipeFlow')
+       State_VGB(:,:,:,:,iBlock)      = 0.0
+       State_VGB(Rho_,:,:,:,iBlock)   = 1.0
+       State_VGB(p_,:,:,:,iBlock)     = 1.0 - 0.1*(Xyz_DGB(x_,:,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
+       do k = 1,nK; do j = 1,nJ; do i = MinI,MaxI
+          ViscoCoeff = 1.0!Viscosity_factor(0,i,j,k,iBlock)
+          if(ViscoCoeff > 0.0) then
+             State_VGB(RhoUx_,i,j,k,iBlock) = 0.5*(Xyz_DGB(y_,i,j,k,iBlock)**2 -CoordMax_D(y_)**2)*&
+                  (State_VGB(p_,i,j,k,iBlock) -1.0)/(ViscoCoeff*(Xyz_DGB(x_,i,j,k,iBlock)-CoordMin_D(x_)))
+          else
+             State_VGB(RhoUx_,i,j,k,iBlock) = 0.0025
+          end if
+       end do; end do; end do
     case default
        if(iProc==0) call stop_mpi( &
             'user_set_ics: undefined user problem='//UserProblem)
@@ -596,8 +612,8 @@ contains
          ! Chcek if this cell is inside the sphere
          rFromCenter = &
               sqrt((x-xSphereCenter)**2 + &
-                   (y-ySphereCenter)**2 + &
-                   (z-zSphereCenter)**2)
+              (y-ySphereCenter)**2 + &
+              (z-zSphereCenter)**2)
          if (rFromCenter .le. rSphere) then
             RhoExact_G(i,j,k) = RhoBackgrndNo + (RhoMaxNo - RhoBackgrndNo)* &
                  cos(0.5*cPi*rFromCenter/rSphere)**2
@@ -723,6 +739,10 @@ contains
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
     use ModSetOuterBc
     use ModVarIndexes
+    use ModProcMH,   ONLY: iProc
+    use ModEnergy,   ONLY: calc_energy_ghost
+    use ModViscosity,ONLY: viscosity_factor
+    use BATL_lib,    ONLY: CoordMax_D,CoordMin_D
 
     integer, intent(in) :: iBlock, iSide
     logical, intent(out) :: IsFound
@@ -731,7 +751,7 @@ contains
     integer :: i,j,k,iVar
     real    :: Dx, x, y, z,r, rMin, rMax
     real    :: OmegaSun, phi, UxAligned, UyAligned
-
+    real    :: ViscoCoeff = 0.0
     !    logical :: DoTest = .false.
     character (len=*), parameter :: Name='user_set_cell_boundary'
     !-------------------------------------------------------------------------
@@ -789,6 +809,52 @@ contains
           end do
        end do
     end if
+
+    if(DoPipeFlow) then
+
+       select case(iSide)
+       case(1)
+          State_VGB(:,MinK:0,:,:,iBlock)      = 0.0
+          State_VGB(Rho_,MinK:0,:,:,iBlock)   = 1.0
+          State_VGB(p_,MinI:0,:,:,iBlock)     = 1.0 - 0.1*(Xyz_DGB(x_,MinI:0,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
+          do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,0
+             ViscoCoeff = 1.0!Viscosity_factor(0,i,j,k,iBlock)
+             if( ViscoCoeff > 0.0 ) then
+                State_VGB(RhoUx_,i,j,k,iBlock) = 0.5*(Xyz_DGB(y_,i,j,k,iBlock)**2 -CoordMax_D(y_)**2)*&
+                     (State_VGB(p_,i,j,k,iBlock)-1.0)/(ViscoCoeff*(Xyz_DGB(x_,i,j,k,iBlock)-CoordMin_D(x_)))
+             else
+                State_VGB(RhoUx_,i,j,k,iBlock) = 0.0025
+             end if
+
+          end do; end do; end do
+          call calc_energy_ghost(iBLK)
+       case(2)
+          State_VGB(:,nI+1,:,:,iBLK) = State_VGB(:,nI,:,:,iBLK)
+          State_VGB(:,nI+2,:,:,iBLK) = State_VGB(:,nI,:,:,iBLK)
+          State_VGB(p_,nI+1:MaxI,:,:,iBlock)     = 1.0 - 0.1*(Xyz_DGB(x_,nI+1:MaxI,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
+          call calc_energy_ghost(iBLK)
+       case(3)
+          State_VGB(:,:,0,:,iBLK) = State_VGB(:,:,1,:,iBLK)
+          State_VGB(:,:,-1,:,iBLK) = State_VGB(:,:,1,:,iBLK)
+          State_VGB(RhoUx_:RhoUz_,:,-1:0,:,iBLK) = 0.0
+       case(4)
+          State_VGB(:,:,nJ+1,:,iBLK) = State_VGB(:,:,nJ,:,iBLK)
+          State_VGB(:,:,nJ+2,:,iBLK) = State_VGB(:,:,nJ,:,iBLK)
+          State_VGB(RhoUx_:RhoUz_,:,nJ+1:MaxJ,:,iBLK) = 0.0
+       case(5)
+          State_VGB(:,:,:,0,iBLK) = State_VGB(:,:,:,1,iBLK)
+          State_VGB(:,:,:,-1,iBLK) = State_VGB(:,:,:,1,iBLK)
+          State_VGB(RhoUx_:RhoUz_,:,:,-1:0,iBLK) = 0.0
+       case(6)
+          State_VGB(:,:,:,nK+1,iBLK) = State_VGB(:,:,:,nK,iBLK)
+          State_VGB(:,:,:,nK+2,iBLK) = State_VGB(:,:,:,nK,iBLK)
+          State_VGB(RhoUx_:RhoUz_,:,:,nK+1:MaxK,iBLK) = 0.0
+       case default
+          if(iProc==0) call stop_mpi( &
+               'read_inputs: unrecognized command: '//Name)
+       end select
+    end if
+
 
     if (DoAdvectSphere) then
 

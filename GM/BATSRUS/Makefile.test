@@ -483,6 +483,39 @@ test_eosgodunov_check:
 	  ${TESTDIR}/RESULT/GM/cut_*500.0*.out > test_eosgodunov.diff)
 	ls -l test_eosgodunov.diff
 
+### VISCOSITY TEST ###
+
+test_viscosity:
+	@echo "test_viscosity_compile..." > test_viscosity.diff
+	$(MAKE) test_viscosity_compile
+	@echo "test_viscosity_rundir..." >> test_viscosity.diff
+	$(MAKE) test_viscosity_rundir 
+	@echo "test_viscosity_run..." >> test_viscosity.diff
+	$(MAKE) test_viscosity_run
+	@echo "test_viscosity_check..." >> test_viscosity.diff
+	$(MAKE) test_viscosity_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_viscosity_compile:
+	./Config.pl -e=Hd -u=Waves -g=16,4,1,200,1 
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_viscosity_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/VISCOSITY/PARAM.in PARAM.in
+
+test_viscosity_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_viscosity_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+		${TESTDIR}/RESULTS/GM/z=0*.outs \
+		Param/VISCOSITY/TestOutput/z=0_ref.outs \
+		> test_viscosity.diff)
+	ls -l test_viscosity.diff
+
+
 ### LEVELSET TEST ###
 
 test_levelset:
