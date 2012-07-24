@@ -126,14 +126,14 @@ contains
                xyzStart_BLK(z_,iBlk) > zMax1.or.&
                xyzStart_BLK(z_,iBlk)+(nK-1)*CellSize_DB(z_,iBlk) < zMin1) CYCLE
               nBlocksUsed = nBlocksUsed + 1
-           if (NotACut) CYCLE !then
-!             iMin = 1
-!             iMax = nI
-!             jMin = 1
-!             jMax = nJ
-!             kMin = 1
-!             kMax = nK
-!           else
+           if (NotACut) then
+            iMin = 1
+            iMax = nI
+            jMin = 1
+            jMax = nJ
+            kMin = 1
+            kMax = nK
+          else
 
              Dx = plot_Dx(1,iFile)
              DxBlock=CellSize_DB(x_,iBlk); DyBlock=CellSize_DB(y_,iBlk); DzBlock=CellSize_DB(z_,iBlk)
@@ -168,7 +168,7 @@ contains
                   kMax = kk
              if ((kk-k+1) > kSize)&
                   kSize = kk-k+1
-!          end if
+         end if
        end do
     allocate(blocksPerProc(0:nProc-1))
     call MPI_Allgather(nBlocksUsed, 1, MPI_INTEGER, blocksPerProc, &
@@ -336,37 +336,28 @@ contains
     DxBlock=CellSize_DB(x_,iBlock); DyBlock=CellSize_DB(y_,iBlock); DzBlock=CellSize_DB(z_,iBlock)
 
     ! Calculate index limits of cells inside cut
-   if(NotACut) then
-        iMin = 1
-        jMin = 1
-        kMin = 1
 
-        iMax = nI
-        jMax = nJ
-        kMax = nK
-    else
-        iMin = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
-        iMax = min(nI,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
+    iMin = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
+    iMax = min(nI,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
 
-        jMin = max(1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
-        jMax = min(nJ,floor((yMax1-ySqueezed)/DyBlock)+1)
+    jMin = max(1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
+    jMax = min(nJ,floor((yMax1-ySqueezed)/DyBlock)+1)
 
-        kMin = max(1,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
-        kMax = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
+    kMin = max(1,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
+    kMax = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
 
-        iMin1 = max(0 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
-        iMax1 = min(nI+1,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
+    iMin1 = max(0 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
+    iMax1 = min(nI+1,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
 
-        kMin1 = max(0,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
-        kMax1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
+    kMin1 = max(0,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
+    kMax1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
 
-        jMin1 = max(0 ,floor((yMin1-ySqueezed)/DyBlock)+2)
-        jMax1 = min(nJ+1,floor((yMax1-ySqueezed)/DyBlock)+1)
+    jMin1 = max(0 ,floor((yMin1-ySqueezed)/DyBlock)+2)
+    jMax1 = min(nJ+1,floor((yMax1-ySqueezed)/DyBlock)+1)
 
-        iMaxN = iMax
-        jMaxN = jMax
-        kMaxN = kMax
-    end if
+    iMaxN = iMax
+    jMaxN = jMax
+    kMaxN = kMax
 
     !   if(DoTestMe)then
     !      write(*,*) NameSub, 'iMin,iMax,jMin,jMax,kMin,kMax=',&
