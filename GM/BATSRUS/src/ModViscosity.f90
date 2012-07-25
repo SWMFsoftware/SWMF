@@ -114,8 +114,6 @@ contains
 
     ViscoCoeff = ViscoCoeff*Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
-    print *," Noremized ViscoCoeff = ", ViscoCoeff    
-
     if(allocated(U_DGI)) deallocate (U_DGI)
     if(allocated(Visco_DDI)) deallocate (Visco_DDI)
 
