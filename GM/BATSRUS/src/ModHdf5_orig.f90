@@ -1179,7 +1179,8 @@ contains
     call barrier_mpi
     if (plotType=='x=0') then
        UnknownNameArray(1) = "Y-Axis"
-       UnknownNameArray(2) = "Z-Axis"
+       if (nPlotDim == 2) &
+           UnknownNameArray(2) = "Z-Axis"
     else
        do iVar = 1, nPlotDim
 
@@ -1239,9 +1240,15 @@ contains
           iData = iData + 1
           RealMetaData(iData) = y2
           iData = iData + 1
-          RealMetaData(iData) = z1
-          iData = iData + 1
-          RealMetaData(iData) = z2
+          if (nPlotDim == 1) then
+              RealMetaData(iData) = 0.0
+              iData = iData + 1
+              RealMetaData(iData) = 1.0
+          else  
+              RealMetaData(iData) = z1
+              iData = iData + 1
+              RealMetaData(iData) = z2
+          end if
           iData = iData + 1
           RealMetaData(iData) = 0.0
           iData = iData + 1
@@ -1253,23 +1260,24 @@ contains
             RealMetaData(iData) = x1
             iData = iData + 1
             RealMetaData(iData) = x2
-            iData = iData + 1
          else if(iPlotDim(i) == 2) then
             RealMetaData(iData) = y1
             iData = iData + 1
             RealMetaData(iData) = y2
-            iData = iData + 1
          else if(iPlotDim(i) == 3) then
             RealMetaData(iData) = z1
             iData = iData + 1
             RealMetaData(iData) = z2
+        else if (i == 2 .and. nPlotDim == 1) then
+            RealMetaData(iData) = 0.0
             iData = iData + 1
-         else if (iPlotDim(i) == 0) then
+            RealMetaData(iData) = 1.0
+        else if (iPlotDim(i) == 0) then
             RealMetaData(iData) = 0.0
             iData = iData + 1
             RealMetaData(iData) = 0.0
-            iData = iData + 1
          end if
+        iData = iData + 1
       end do
     end if
     iData = iData -1
@@ -1389,18 +1397,14 @@ contains
     do i = 1, 3
        if (iPlotDim(i) == 1) then
           IntegerMetaData(iData) = iSizeGlobal
-          iData = iData + 1
        else if (iPlotDim(i) == 2) then
           IntegerMetaData(iData) = jSizeGlobal
-          iData = iData + 1
        else if (iPlotDim(i) == 3) then
           IntegerMetaData(iData) = kSizeGlobal
-          iData = iData + 1
        else if (iPlotDim(i) == 0) then
           IntegerMetaData(iData) = 0
-          iData = iData + 1
-
        end if
+      iData = iData + 1
     end do
 
     if(TypeGeometry=='cartesian') then
