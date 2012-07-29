@@ -211,7 +211,7 @@ mc                      TypeLimiter
 #LOOKUPTABLE
 euv			NameTable
 load			NameCommand
-LC/Param/los_Eit.dat	NameFile
+LC/Param/los_Eit_cor.dat	NameFile
 ascii			TypeFile
 
 #LOOKUPTABLE
@@ -225,7 +225,7 @@ ascii			TypeFile
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-LC/Param/RadCool.dat	NameFile
+RadCoolCorona.dat	NameFile
 ascii			TypeFile
 
 #SAVELOGFILE
