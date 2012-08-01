@@ -720,7 +720,7 @@ contains
             GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
                  0.5*(LeftState_VZ(iVar,i,j,k+1) &
                  + RightState_VZ(iVar,i,j,k+1))* &
-                 FaceNormal_DDFB(:,3,i,j+1,k,iBlock) &
+                 FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
                  - 0.5*(LeftState_VZ(iVar,i,j,k) &
                  + RightState_VZ(iVar,i,j,k))* &
                  FaceNormal_DDFB(:,3,i,j,k,iBlock)
