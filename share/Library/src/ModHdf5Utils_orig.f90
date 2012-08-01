@@ -507,7 +507,7 @@ contains
 
     !Set the nDatasetDimensionions of the DatasetID
     iOneOrZero = 0
-    call h5open_f(iErrorHdf)
+    
     if (iErrorHdf == -1) &
          call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 1")
     
