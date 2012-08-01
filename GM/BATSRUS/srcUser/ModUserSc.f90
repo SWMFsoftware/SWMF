@@ -358,7 +358,7 @@ contains
     use ModPhysics, ONLY: inv_gm1
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
-    use ModExpansionFactors, ONLY: gammaSS
+    use ModExpansionFactors, ONLY: gammaSS,Rs_PFSSM
 
     integer,intent(in):: iStage,iBlock
     integer:: i,j,k
@@ -371,12 +371,12 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        call get_plasma_parameters_cell(i,j,k,iBlock,&
             DensCell,PresCell,GammaCell)
-       if(R_BLK(i,j,k,iBlock)>2.5)&
+       if(R_BLK(i,j,k,iBlock)>Rs_PFSSM)&
             GammaCell=GammaCell-(GammaCell-gammaSS)*max(0.0, &
             -1.0 + 2*State_VGB(P_,i,j,k,iBlock)/&
             (State_VGB(P_   ,i,j,k,iBlock)+sum(&
             (State_VGB(Bx_:Bz_ ,i,j,k,iBlock)+B0_DGB(:,i,j,k,iBlock))**2)&
-            *0.25*(R_BLK(i,j,k,iBlock)/2.5)**1.50))
+            *0.25*(R_BLK(i,j,k,iBlock)/Rs_PFSSM)**1.50))
        State_VGB(P_   ,i,j,k,iBlock)=(GammaCell-1.0)*      &
             (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
        State_VGB(Ew_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &

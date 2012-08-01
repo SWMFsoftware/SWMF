@@ -615,12 +615,13 @@ subroutine get_gamma_emp(xx,yy,zz,gammaOut)
 
   real, intent(in) :: xx,yy,zz
   real, intent(out)   :: gammaOut 
-  real :: RR,Uf,BernoulliFactor
+  real :: RR,Uf,BernoulliFactor,R1
   real, parameter :: gammaIH=1.5
-  real, parameter :: R1=2.50,R2=12.50
+  real, parameter :: R2=12.50
   integer,parameter::nPowerIndex=2
   !------------------------------------------------------------------
   !--
+  R1=Rs_PFSSM
   !\
   ! Calculate cell-centered spherical coordinates::
   RR   = sqrt(xx**2+yy**2+zz**2)
