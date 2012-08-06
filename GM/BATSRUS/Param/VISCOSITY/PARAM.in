@@ -87,13 +87,84 @@ F		DoSaverestart
 
 #SAVEPLOT
 1		nPlotfile
-z=0 raw idl_ascii	PlotString
--2		DnSavePlot
-100		DtSavePlot
-0.0		DxSavePlot
+z=0 var idl_ascii	PlotString
+-1		DnSavePlot
+1.0		DtSavePlot
+-1		DxSavePlot
+Rho Mx My Mz E p b1x b1y b1z absdivB visco dx
+g rbody
 
-The grid size is 256, so the final time corresponds to the usual 0.1
 #STOP
 -1		MaxIteration
 1.0		tSimulationMax
 
+#RUN #####################
+
+mask is hardcoded to be around origo
+#VISCOSITYREGION
+mask            NameViscosityRegion
+0.25            rZeroVisco
+0.5             rFullVisco
+
+#SAVEPLOT
+1		nPlotfile
+z=0 var idl_ascii	PlotString
+-1		DnSavePlot
+0.1		DtSavePlot
+-1		DxSavePlot
+Rho Mx My Mz E p b1x b1y b1z absdivB visco dx
+g rbody
+
+#STOP
+-1		MaxIteration
+1.1		tSimulationMax
+
+#RUN #####################
+
+#VISCOSITYREGION
+sphere          NameViscosityRegion
+0.0             x0Visco
+0.0             y0Visco
+0.0             z0Visco
+0.5             rSphereVisco
+0.25            DrSphereVisco
+
+SAVEPLOT
+1		nPlotfile
+z=0 var idl_ascii	PlotString
+-1		DnSavePlot
+1.2		DtSavePlot
+-1		DxSavePlot
+Rho Mx My Mz E p b1x b1y b1z absdivB visco dx
+g rbody
+
+#STOP
+-1		MaxIteration
+1.2		tSimulationMax
+
+#RUN #####################
+
+#VISCOSITYREGION
+box            NameViscosityRegion
+0.0             x0Visco
+0.0             y0Visco
+0.0             z0Visco
+0.25            xSizeBoxVisco
+0.5             DxSizeBoxVisco
+0.25            ySizeBoxVisco
+0.5             DySizeBoxVisco
+0.25            zSizeBoxVisco
+0.5             DzSizeBoxVisco
+
+SAVEPLOT
+1		nPlotfile
+z=0 var idl_ascii	PlotString
+-1		DnSavePlot
+1.3		DtSavePlot
+-1		DxSavePlot
+Rho Mx My Mz E p b1x b1y b1z absdivB visco dx
+g rbody
+
+#STOP
+-1		MaxIteration
+1.3		tSimulationMax
