@@ -322,7 +322,7 @@ contains
               Get,&
               Weight,&
               Buff_I,nVar)
-           use CON_router
+           use CON_router, ONLY: IndexPtrType, WeightPtrType
            implicit none
            integer,intent(in)::nPartial,iGetStart,nVar
            type(IndexPtrType),intent(in)::Get
