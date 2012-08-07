@@ -11,7 +11,7 @@ subroutine write_plot_common(ifile)
   use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, close_sph_hdf5_plot, &
-       init_sph_hdf5_plot
+       init_sph_hdf5_plot,init_hdf5_plot
   use ModIoUnit, ONLY: io_unit_new
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
@@ -276,6 +276,11 @@ subroutine write_plot_common(ifile)
   ! Find the processor and block indexes for the 'blk' plot
   if(plot_type1(1:3)=='blk') &
        call find_grid_block(plot_point(:,iFile), iProcFound, iBlockFound)
+ 
+  if (plot_form(iFile) == 'hdf' .and. .not. IsSphPlot)&
+    call init_hdf5_plot(ifile, plot_type1(1:3),  &
+                nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
+                dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
 
   do iBLK=1, nBlockMax
      if(Unused_B(iBLK))CYCLE

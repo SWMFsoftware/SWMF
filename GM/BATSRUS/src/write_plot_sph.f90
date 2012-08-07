@@ -165,7 +165,6 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
                          dxblk,rplot_out,theta_out,phi_out,PointVar(1:nplotvar)
                  endif
               case('hdf')
-                !DOUBLE CHECK IF NORTH AND SOUTH ARE CORRECT
                 call write_sph_var_hdf5(i, j, H5Index, rplot_out, theta_out,phi_out,&
                 dtheta_plot, dphi_plot, nTheta, nPhi, nPlotVar, PointVar, &
                 plotVarNames)
@@ -190,7 +189,6 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
                          dxblk,rplot_out,theta_out,phi_out,PointVar(1:nplotvar)
                  endif
               case('hdf')
-                !DOUBLE CHECK IF NORTH AND SOUTH ARE CORRECT
                 call write_sph_var_hdf5(i, j, H5Index, rplot_out, theta_out,phi_out,&
                 dtheta_plot, dphi_plot, nTheta, nPhi, nPlotVar, PointVar, &
                 plotVarNames)

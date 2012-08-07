@@ -5,6 +5,7 @@ module ModHdf5
   use hdf5
   use ModHdf5Utils
   use ModNumConst
+  use BATL_size, ONLY: nDim
   implicit none
   SAVE
 
@@ -13,6 +14,7 @@ module ModHdf5
   public write_var_hdf5
   public write_plot_hdf5
   public write_sph_var_hdf5
+  public init_hdf5_plot
   public init_sph_hdf5_plot
   public close_sph_hdf5_plot
   
@@ -43,6 +45,310 @@ module ModHdf5
 
 
 contains
+  subroutine init_hdf5_plot(iFile, plotType, nPlotVar, &
+       xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
+       isNonCartesian, NotACut)
+
+    ! Save all cells within plotting range, for each processor
+
+    use ModProcMH
+    use ModMain, ONLY: nI, nJ, nK, &
+         x_, y_, z_, Phi_, nBlockMax, Unused_B
+    use ModGeometry, ONLY: CellSize_DB,&
+         XyzStart_BLK
+    use ModIO
+    use ModMpi
+    use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
+        CoordMax_DB, CoordMin_D,CoordMax_D,DiLevelNei_IIIB
+
+    implicit none
+
+    ! Arguments
+
+    integer, intent(in)   :: iFile
+    integer, intent(in)   :: nPlotVar
+    real,    intent(in)   :: xMin,xMax,yMin,yMax,zMin,zMax
+    logical, intent(in) :: isNonCartesian, NotACut
+    character (len=*), intent(in) :: plotType
+    real,    intent(inout):: DxBlock,DyBlock,DzBlock
+
+    ! Local variables
+    ! Indices and Coordinates
+    integer :: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
+    integer :: iMin1, iMax1, jMin1, jMax1, kMin1, kMax1
+    integer ::  iMaxN,jMaxN, kMaxN,iMaxN1,jMaxN1, kMaxN1
+    integer :: ii, jj, kk, iSize, jSize, kSize
+    integer :: Error,i1, j1, k1,ii1, jj1, kk1
+    real ::Dx
+    real :: xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
+
+    real :: ySqueezed
+
+    real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
+
+    character(len=*), parameter :: NameSub = 'write_var_hdf5'
+    save
+
+   iMin = huge(iMin)
+   iMax = -huge(iMax)
+   jMin = huge(jMin)
+   jMax = -huge(jMax)
+   kMin = huge(kMin)
+   kMax = -huge(kMax)
+   iSize = 0
+   jSize = 0
+   kSize = 0
+   nBlocksUsed = 0
+   do iBlk = 1, nBlockMax
+      xMin1 = xMin - cHalfMinusTiny*CellSize_DB(x_,iBlk)
+      xMax1 = xMax + cHalfMinusTiny*CellSize_DB(x_,iBlk)
+      yMin1 = yMin - cHalfMinusTiny*CellSize_DB(y_,iBlk)
+      yMax1 = yMax + cHalfMinusTiny*CellSize_DB(y_,iBlk)
+      zMin1 = zMin - cHalfMinusTiny*CellSize_DB(z_,iBlk)
+      zMax1 = zMax + cHalfMinusTiny*CellSize_DB(z_,iBlk)
+
+      if(IsRLonLat .or. IsCylindrical)then                 
+         ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
+         ySqueezed = mod(xyzStart_BLK(Phi_,iBlk),cPi)
+         ! Make sure that small angles are moved to Pi degrees for y=0 cut
+         if(ySqueezed < 0.25*cPi .and. &
+              abs(yMin+yMax-cTwoPi) < cTiny .and. yMax-yMin < 0.01) &
+              ySqueezed = ySqueezed + cPi
+      else                                          
+         ySqueezed = xyzStart_BLK(y_,iBlk)
+      end if
+
+      if( Unused_B(iBLK) .or. xyzStart_BLK(x_,iBlk) > xMax1.or.&
+           xyzStart_BLK(x_,iBlk)+(nI-1)*CellSize_DB(x_,iBlk) < xMin1.or.&
+           ySqueezed > yMax1.or.&
+           ySqueezed+(nJ-1)*CellSize_DB(y_,iBlk) < yMin1.or.&  
+           xyzStart_BLK(z_,iBlk) > zMax1.or.&
+           xyzStart_BLK(z_,iBlk)+(nK-1)*CellSize_DB(z_,iBlk) < zMin1) CYCLE
+       if (NotACut) then
+        iMin = 1
+        iMax = nI
+        jMin = 1
+        jMax = nJ
+        kMin = 1
+        kMax = nK
+        nBlocksUsed = nBlocksUsed + 1
+      else
+
+         Dx = plot_Dx(1,iFile)
+         DxBlock=CellSize_DB(x_,iBlk); DyBlock=CellSize_DB(y_,iBlk); DzBlock=CellSize_DB(z_,iBlk)
+
+         ! Calculate index limits of cells inside cut
+         i = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlk))/DxBlock)+2)
+         ii = min(nI,floor((xMax1-xyzStart_BLK(x_,iBlk))/DxBlock)+1)
+
+         j = max(1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
+         jj = min(nJ,floor((yMax1-ySqueezed)/DyBlock)+1)
+
+         k = max(1 ,floor((zMin1-xyzStart_BLK(z_,iBlk))/DzBlock)+2)
+         kk = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlk))/DzBlock)+1)
+
+        i1 = max(0 ,floor((xMin1-xyzStart_BLK(x_,iBlk))/DxBlock)+2)
+        ii1 = min(nI+1,floor((xMax1-xyzStart_BLK(x_,iBlk))/DxBlock)+1)
+
+        j1 = max(0 ,floor((yMin1-ySqueezed)/DyBlock)+2)
+        jj1 = min(nJ+1,floor((yMax1-ySqueezed)/DyBlock)+1)
+        
+        k1 = max(0,floor((zMin1-xyzStart_BLK(z_,iBlk))/DzBlock)+2)
+        kk1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlk))/DzBlock)+1)
+        
+        if (i1==0 .and.  i==1 .and. ii==1) then !Cut falls between iMinCell and iMinCell - 1
+            if (DiLevelNei_IIIB(-1, 0, 0,iBlk) == -1) cycle 
+            !Neighbor is more refined so it writes
+        end if
+
+        if (j1==0 .and. j==1 .and. jj == 1) then 
+            !Neighbor is more refined so it writes
+            if (DiLevelNei_IIIB(0, -1, 0,iBlk) == -1) cycle 
+        end if
+
+        if (k1==0 .and. k==1 .and. kk == 1) then 
+            !Neighbor is more refined so it writes
+            if (DiLevelNei_IIIB(0, 0, -1,iBlk) == -1) cycle 
+        end if
+
+        if (ii1==nI+1 .and.  ii==nI .and. i == nI) then !Cut falls between iMaxCell and iMaxCell 1
+            if (DiLevelNei_IIIB(1, 0, 0,iBlk) == -1) then
+                cycle
+            else if (CoordMax_DB(1, iBlk) .ne. CoordMax_D(1)) then
+                cycle
+
+            end if
+        end if
+
+        if (jj1==nJ+1 .and. jj==nJ .and. j == nJ) then 
+            if (DiLevelNei_IIIB(0, 1, 0,iBlk) == -1) then
+                cycle
+            else if (CoordMax_DB(2, iBlk) .ne. CoordMax_D(2)) then
+                cycle
+
+            end if
+        end if
+
+        if (kk1==nK+1 .and. kk==nK .and. k==nK) then 
+            if (DiLevelNei_IIIB(0, 0, 1,iBlk) == -1) then
+                cycle
+            else if (CoordMax_DB(3, iBlk) .ne. CoordMax_D(3)) then
+                cycle
+
+            end if
+        end if
+
+            !Neighbor is more refined so it writes
+
+
+         if (i < iMin)&
+              iMin = i
+         if (ii > iMax)&
+              iMax = ii
+         if ((ii-i + 1) > iSize)&
+              iSize = ii-i+1
+
+         if (j < jMin)&
+              jMin = j
+         if (jj > jMax)&
+              jMax = jj
+         if ((jj-j+1) > jSize)&
+              jSize = jj-j+1
+
+         if (k < kMin)&
+              kMin = k
+         if (kk > kMax)&
+              kMax = kk
+         if ((kk-k+1) > kSize)&
+              kSize = kk-k+1
+
+        nBlocksUsed = nBlocksUsed + 1
+     end if
+   end do
+allocate(blocksPerProc(0:nProc-1))
+call MPI_Allgather(nBlocksUsed, 1, MPI_INTEGER, blocksPerProc, &
+     1, MPI_INTEGER, iComm, Error)
+if (iProc == 0) then
+    iProcOffset = 0
+else
+    iProcOffset = sum(blocksPerProc(0:iProc-1))
+end if
+nBlkUsedGlobal = sum(blocksPerProc(0:nProc-1))
+deallocate(blocksPerProc)
+
+   allocate(UsedBlocks(nBlocksUsed))
+   if(NotACut) then
+        iSizeGlobal = nI
+        jSizeGlobal = nJ
+        kSizeGlobal = nK
+    else
+       call MPI_AllReduce(iSize, iSizeGlobal, 1,&
+            MPI_INTEGER, MPI_MAX, iComm, Error)
+       call MPI_AllReduce(jSize, jSizeGlobal, 1,&
+            MPI_INTEGER, MPI_MAX, iComm, Error)
+       call MPI_AllReduce(kSize, kSizeGlobal, 1,&
+            MPI_INTEGER, MPI_MAX, iComm, Error)
+    end if
+
+   if (isNonCartesian) then
+      if (NotACut) then
+         nPlotDim = nDim
+         iPlotDim = 0
+        nCellsPerBlock = 1
+        nNodeCellsPerBlock = 1
+         do i=1,nPlotDim
+            iPlotDim(i) = i
+            if (i == 1) then
+                nCellsPerBlock(i) = iSizeGlobal
+                nNodeCellsPerBlock(i) = iSizeGlobal+1
+            else if (i == 2) then
+                nCellsPerBlock(i) = jSizeGlobal
+                nNodeCellsPerBlock(i) = jSizeGlobal+1
+            else if (i == 3) then
+                nCellsPerBlock(i) = kSizeGlobal
+                nNodeCellsPerBlock(i) = kSizeGlobal+1
+            end if
+        end do
+      else if (plotType=='x=0') then
+         !              write (*,*) "allocated x=0"
+         nPlotDim = 2
+         iPlotDim = (/1,3,0/)
+         nCellsPerBlock = (/iSizeGlobal, kSizeGlobal, 1/)
+         nNodeCellsPerBlock = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
+      else if(plotType=="y=0)") then
+         !              write (*,*) "allocated y=0"
+         nPlotDim = 2
+         iPlotDim = (/1,3,0/)
+         nCellsPerBlock = (/iSizeGlobal, kSizeGlobal, 1/)
+         nNodeCellsPerBlock = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
+      else if (plotType=='z=0' )then
+         !              write (*,*) "allocated z=0"
+         nPlotDim = 2
+         iPlotDim = (/1,2,0/)
+         nCellsPerBlock = (/iSizeGlobal, jSizeGlobal, 1/)
+         nNodeCellsPerBlock = (/iSizeGlobal+1, jSizeGlobal+1, 1/)
+    end if
+   else
+      if (NotACut) then
+         nPlotDim = nDim
+         iPlotDim = 0
+        nCellsPerBlock = 1
+        nNodeCellsPerBlock = 1
+         do i=1,nPlotDim
+            iPlotDim(i) = i
+            if (i == 1) then
+                nCellsPerBlock(i) = iSizeGlobal
+                nNodeCellsPerBlock(i) = iSizeGlobal+1
+            else if (i == 2) then
+                nCellsPerBlock(i) = jSizeGlobal
+                nNodeCellsPerBlock(i) = jSizeGlobal+1
+            else if (i == 3) then
+                nCellsPerBlock(i) = kSizeGlobal
+                nNodeCellsPerBlock(i) = kSizeGlobal+1
+            end if
+        end do
+
+      else if (iSizeGlobal == 1 .and. jSizeGlobal == 1) then
+         nPlotDim = 1
+         iPlotDim = (/3,0,0/)
+         nCellsPerBlock = (/kSizeGlobal,1,1/)
+         nNodeCellsPerBlock = (/kSizeGlobal+1,1,1/)
+      else if (iSizeGlobal == 1 .and. kSizeGlobal == 1) then
+         nPlotDim = 1
+         iPlotDim = (/2,0,0/)
+         nCellsPerBlock = (/jSizeGlobal,1,1/)
+         nNodeCellsPerBlock = (/jSizeGlobal+1,1,1/)
+      else if (jSizeGlobal == 1 .and. kSizeGlobal == 1) then
+         nPlotDim = 1
+         iPlotDim = (/1,0,0/)
+         nCellsPerBlock = (/iSizeGlobal,1,1/)
+         nNodeCellsPerBlock = (/iSizeGlobal+1,1,1/)
+      else if (iSizeGlobal == 1) then
+         nPlotDim = 2
+         iPlotDim = (/2,3,0/)
+         nCellsPerBlock = (/jSizeGlobal,kSizeGlobal,1/)
+         nNodeCellsPerBlock = (/jSizeGlobal+1,kSizeGlobal+1,1/)
+      else if (jSizeGlobal == 1) then
+         nPlotDim = 2
+         iPlotDim = (/1,3,0/)
+         nCellsPerBlock = (/iSizeGlobal,kSizeGlobal,1/)
+         nNodeCellsPerBlock = (/iSizeGlobal+1,kSizeGlobal+1,1/)
+      else if (kSizeGlobal == 1) then
+         nPlotDim = 2
+         iPlotDim = (/1,2,0/)
+         nCellsPerBlock = (/iSizeGlobal,jSizeGlobal,1/)
+         nNodeCellsPerBlock = (/iSizeGlobal+1,jSizeGlobal+1,1/)
+     end if
+   end if
+
+   allocate(PlotVarIdx(nCellsPerBlock(1),nCellsPerBlock(2), nCellsPerBlock(3), nBlocksUsed, nPlotVar))
+   PlotVarIdx=-50
+   if (isNonCartesian) allocate(PlotXYZNodes(nPlotDim, &
+        nNodeCellsPerBlock(1),nNodeCellsPerBlock(2),nNodeCellsPerBlock(3),nBlocksUsed))
+  end subroutine init_hdf5_plot
+ !==================================================================================
+ !==================================================================================
+ 
   subroutine write_var_hdf5(iFile, plotType, iBlock, H5Index,nPlotVar,PlotVar, &
        xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
        isNonCartesian, NotACut, nCell,H5Advance)
@@ -56,7 +362,8 @@ contains
          XyzStart_BLK
     use ModIO
     use ModMpi
-    use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical
+    use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
+        CoordMax_DB, CoordMin_D,CoordMax_D,DiLevelNei_IIIB
 
     implicit none
 
@@ -78,7 +385,7 @@ contains
     integer :: iMin1, iMax1, jMin1, jMax1, kMin1, kMax1
     integer ::  iMaxN,jMaxN, kMaxN,iMaxN1,jMaxN1, kMaxN1
     integer :: ii, jj, kk, iSize, jSize, kSize
-    integer :: Error
+    integer :: Error,i1, j1, k1,ii1, jj1, kk1
     real ::Dx
     real :: xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
 
@@ -89,208 +396,6 @@ contains
     character(len=*), parameter :: NameSub = 'write_var_hdf5'
     save
 
-    if (.not. allocated(PlotVarIdx)) then
-       iMin = huge(iMin)
-       iMax = -huge(iMax)
-       jMin = huge(jMin)
-       jMax = -huge(jMax)
-       kMin = huge(kMin)
-       kMax = -huge(kMax)
-       iSize = 0
-       jSize = 0
-       kSize = 0
-       nBlocksUsed = 0
-       do iBlk = 1, nBlockMax
-          xMin1 = xMin - cHalfMinusTiny*CellSize_DB(x_,iBlk)
-          xMax1 = xMax + cHalfMinusTiny*CellSize_DB(x_,iBlk)
-          yMin1 = yMin - cHalfMinusTiny*CellSize_DB(y_,iBlk)
-          yMax1 = yMax + cHalfMinusTiny*CellSize_DB(y_,iBlk)
-          zMin1 = zMin - cHalfMinusTiny*CellSize_DB(z_,iBlk)
-          zMax1 = zMax + cHalfMinusTiny*CellSize_DB(z_,iBlk)
-
-          if(IsRLonLat .or. IsCylindrical)then                 
-             ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
-             ySqueezed = mod(xyzStart_BLK(Phi_,iBlk),cPi)
-             ! Make sure that small angles are moved to Pi degrees for y=0 cut
-             if(ySqueezed < 0.25*cPi .and. &
-                  abs(yMin+yMax-cTwoPi) < cTiny .and. yMax-yMin < 0.01) &
-                  ySqueezed = ySqueezed + cPi
-          else                                          
-             ySqueezed = xyzStart_BLK(y_,iBlk)
-          end if
-
-          if( Unused_B(iBLK) .or. xyzStart_BLK(x_,iBlk) > xMax1.or.&
-               xyzStart_BLK(x_,iBlk)+(nI-1)*CellSize_DB(x_,iBlk) < xMin1.or.&
-               ySqueezed > yMax1.or.&
-               ySqueezed+(nJ-1)*CellSize_DB(y_,iBlk) < yMin1.or.&  
-               xyzStart_BLK(z_,iBlk) > zMax1.or.&
-               xyzStart_BLK(z_,iBlk)+(nK-1)*CellSize_DB(z_,iBlk) < zMin1) CYCLE
-              nBlocksUsed = nBlocksUsed + 1
-           if (NotACut) then
-            iMin = 1
-            iMax = nI
-            jMin = 1
-            jMax = nJ
-            kMin = 1
-            kMax = nK
-          else
-
-             Dx = plot_Dx(1,iFile)
-             DxBlock=CellSize_DB(x_,iBlk); DyBlock=CellSize_DB(y_,iBlk); DzBlock=CellSize_DB(z_,iBlk)
-
-             ! Calculate index limits of cells inside cut
-             i = max(1 ,floor((xMin1-xyzStart_BLK(x_,iBlk))/DxBlock)+2)
-             ii = min(nI,floor((xMax1-xyzStart_BLK(x_,iBlk))/DxBlock)+1)
-
-             j = max(1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
-             jj = min(nJ,floor((yMax1-ySqueezed)/DyBlock)+1)
-
-             k = max(1 ,floor((zMin1-xyzStart_BLK(z_,iBlk))/DzBlock)+2)
-             kk = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlk))/DzBlock)+1)
-
-             if (i < iMin)&
-                  iMin = i
-             if (ii > iMax)&
-                  iMax = ii
-             if ((ii-i + 1) > iSize)&
-                  iSize = ii-i+1
-
-             if (j < jMin)&
-                  jMin = j
-             if (jj > jMax)&
-                  jMax = jj
-             if ((jj-j+1) > jSize)&
-                  jSize = jj-j+1
-
-             if (k < kMin)&
-                  kMin = k
-             if (kk > kMax)&
-                  kMax = kk
-             if ((kk-k+1) > kSize)&
-                  kSize = kk-k+1
-         end if
-       end do
-    allocate(blocksPerProc(0:nProc-1))
-    call MPI_Allgather(nBlocksUsed, 1, MPI_INTEGER, blocksPerProc, &
-         1, MPI_INTEGER, iComm, Error)
-    if (iProc == 0) then
-        iProcOffset = 0
-    else
-        iProcOffset = sum(blocksPerProc(0:iProc-1))
-    end if
-    nBlkUsedGlobal = sum(blocksPerProc(0:nProc-1))
-    deallocate(blocksPerProc)
-
-       allocate(UsedBlocks(nBlocksUsed))
-       if(NotACut) then
-            iSizeGlobal = nI
-            jSizeGlobal = nJ
-            kSizeGlobal = nK
-        else
-           call MPI_AllReduce(iSize, iSizeGlobal, 1,&
-                MPI_INTEGER, MPI_MAX, iComm, Error)
-           call MPI_AllReduce(jSize, jSizeGlobal, 1,&
-                MPI_INTEGER, MPI_MAX, iComm, Error)
-           call MPI_AllReduce(kSize, kSizeGlobal, 1,&
-                MPI_INTEGER, MPI_MAX, iComm, Error)
-        end if
-
-       if (isNonCartesian) then
-          if (NotACut) then
-             nPlotDim = nDim
-             iPlotDim = 0
-            nCellsPerBlock = 1
-            nNodeCellsPerBlock = 1
-             do i=1,nPlotDim
-                iPlotDim(i) = i
-                if (i == 1) then
-                    nCellsPerBlock(i) = iSizeGlobal
-                    nNodeCellsPerBlock(i) = iSizeGlobal+1
-                else if (i == 2) then
-                    nCellsPerBlock(i) = jSizeGlobal
-                    nNodeCellsPerBlock(i) = jSizeGlobal+1
-                else if (i == 3) then
-                    nCellsPerBlock(i) = kSizeGlobal
-                    nNodeCellsPerBlock(i) = kSizeGlobal+1
-                end if
-            end do
-          else if (plotType=='x=0') then
-             !              write (*,*) "allocated x=0"
-             nPlotDim = 2
-             iPlotDim = (/1,3,0/)
-             nCellsPerBlock = (/iSizeGlobal, kSizeGlobal, 1/)
-             nNodeCellsPerBlock = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
-          else if(plotType=="y=0)") then
-             !              write (*,*) "allocated y=0"
-             nPlotDim = 2
-             iPlotDim = (/1,3,0/)
-             nCellsPerBlock = (/iSizeGlobal, kSizeGlobal, 1/)
-             nNodeCellsPerBlock = (/iSizeGlobal+1, kSizeGlobal+1, 1/)
-          else if (plotType=='z=0' )then
-             !              write (*,*) "allocated z=0"
-             nPlotDim = 2
-             iPlotDim = (/1,2,0/)
-             nCellsPerBlock = (/iSizeGlobal, jSizeGlobal, 1/)
-             nNodeCellsPerBlock = (/iSizeGlobal+1, jSizeGlobal+1, 1/)
-        end if
-       else
-          if (NotACut) then
-             nPlotDim = nDim
-             iPlotDim = 0
-            nCellsPerBlock = 1
-            nNodeCellsPerBlock = 1
-             do i=1,nPlotDim
-                iPlotDim(i) = i
-                if (i == 1) then
-                    nCellsPerBlock(i) = iSizeGlobal
-                    nNodeCellsPerBlock(i) = iSizeGlobal+1
-                else if (i == 2) then
-                    nCellsPerBlock(i) = jSizeGlobal
-                    nNodeCellsPerBlock(i) = jSizeGlobal+1
-                else if (i == 3) then
-                    nCellsPerBlock(i) = kSizeGlobal
-                    nNodeCellsPerBlock(i) = kSizeGlobal+1
-                end if
-            end do
- 
-          else if (iSizeGlobal == 1 .and. jSizeGlobal == 1) then
-             nPlotDim = 1
-             iPlotDim = (/3,0,0/)
-             nCellsPerBlock = (/kSizeGlobal,1,1/)
-             nNodeCellsPerBlock = (/kSizeGlobal+1,1,1/)
-          else if (iSizeGlobal == 1 .and. kSizeGlobal == 1) then
-             nPlotDim = 1
-             iPlotDim = (/2,0,0/)
-             nCellsPerBlock = (/jSizeGlobal,1,1/)
-             nNodeCellsPerBlock = (/jSizeGlobal+1,1,1/)
-          else if (jSizeGlobal == 1 .and. kSizeGlobal == 1) then
-             nPlotDim = 1
-             iPlotDim = (/1,0,0/)
-             nCellsPerBlock = (/iSizeGlobal,1,1/)
-             nNodeCellsPerBlock = (/iSizeGlobal+1,1,1/)
-          else if (iSizeGlobal == 1) then
-             nPlotDim = 2
-             iPlotDim = (/2,3,0/)
-             nCellsPerBlock = (/jSizeGlobal,kSizeGlobal,1/)
-             nNodeCellsPerBlock = (/jSizeGlobal+1,kSizeGlobal+1,1/)
-          else if (jSizeGlobal == 1) then
-             nPlotDim = 2
-             iPlotDim = (/1,3,0/)
-             nCellsPerBlock = (/iSizeGlobal,kSizeGlobal,1/)
-             nNodeCellsPerBlock = (/iSizeGlobal+1,kSizeGlobal+1,1/)
-          else if (kSizeGlobal == 1) then
-             nPlotDim = 2
-             iPlotDim = (/1,2,0/)
-             nCellsPerBlock = (/iSizeGlobal,jSizeGlobal,1/)
-             nNodeCellsPerBlock = (/iSizeGlobal+1,jSizeGlobal+1,1/)
-         end if
-       end if
-
-       allocate(PlotVarIdx(nCellsPerBlock(1),nCellsPerBlock(2), nCellsPerBlock(3), nBlocksUsed, nPlotVar))
-       PlotVarIdx=-50
-       if (isNonCartesian) allocate(PlotXYZNodes(nPlotDim, &
-            nNodeCellsPerBlock(1),nNodeCellsPerBlock(2),nNodeCellsPerBlock(3),nBlocksUsed))
-    end if
 
     xMin1 = xMin - cHalfMinusTiny*CellSize_DB(x_,iBlock)
     xMax1 = xMax + cHalfMinusTiny*CellSize_DB(x_,iBlock)
@@ -346,14 +451,68 @@ contains
     kMin = max(1,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
     kMax = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
 
-    iMin1 = max(0 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
+    iMin1 = max(-1 ,floor((xMin1-xyzStart_BLK(x_,iBlock))/DxBlock)+2)
     iMax1 = min(nI+1,floor((xMax1-xyzStart_BLK(x_,iBlock))/DxBlock)+1)
 
-    kMin1 = max(0,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
-    kMax1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
-
-    jMin1 = max(0 ,floor((yMin1-ySqueezed)/DyBlock)+2)
+    jMin1 = max(-1 ,floor((yMin1-ySqueezed)/DyBlock)+2)
     jMax1 = min(nJ+1,floor((yMax1-ySqueezed)/DyBlock)+1)
+    
+    kMin1 = max(-1,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
+    kMax1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
+   
+   if (iMin1==0 .and.  iMin==1 .and. iMax==1) then !Cut falls between iMinCell and iMinCell - 1
+        if (DiLevelNei_IIIB(-1, 0, 0,iBlock) == -1) then
+            h5Advance = .false.
+            return 
+        end if
+        !Neighbor is more refined so it writes
+    end if
+
+    if (jMin1==0 .and. jMin==1 .and. jMax == 1) then 
+        !Neighbor is more refined so it writes
+        if (DiLevelNei_IIIB(0, -1, 0,iBlock) == -1) then
+            h5Advance = .false.
+            return 
+        end if
+    end if
+    if (kMin1==0 .and. kMin==1 .and. kMax == 1) then 
+        !Neighbor is more refined so it writes
+        if (DiLevelNei_IIIB(0, 0, -1,iBlock) == -1) then
+            h5Advance = .false.
+            return 
+        end if
+    end if
+    if (iMax1==nI+1 .and.  iMax==nI .and. iMin == nI) then !Cut falls between iMaxCell and iMaxCell 1
+        if (DiLevelNei_IIIB(1, 0, 0,iBlock) == -1) then
+            h5Advance = .false.
+            return
+        else if (CoordMax_DB(1, iBlock) .ne. CoordMax_D(1)) then
+            h5Advance = .false.
+            return
+        end if
+    end if
+
+    if (jMax1==nJ+1 .and. jMax==nJ .and. jMin == nJ) then 
+        if (DiLevelNei_IIIB(0, 1, 0,iBlock) == -1) then
+            h5Advance = .false.
+            return
+        else if (CoordMax_DB(2, iBlock) .ne. CoordMax_D(2)) then
+            h5Advance = .false.
+            return
+        end if
+    end if
+
+    if (kMax1==nK+1 .and. kMax==nK .and. kMin==nK) then 
+        if (DiLevelNei_IIIB(0, 0, 1,iBlock) == -1) then
+            h5Advance = .false.
+            return
+        else if (CoordMax_DB(3, iBlock) .ne. CoordMax_D(3)) then
+            h5Advance = .false.
+            return
+        end if
+    end if
+
+
 
     iMaxN = iMax
     jMaxN = jMax
@@ -493,48 +652,27 @@ contains
     else
        do kk=kMin,kMax; do jj=jMin,jMax; do ii=iMin,iMax
 
-          if (nPlotDim == 2) then
-             if (kSizeGlobal == 1) then
+          if (nPlotDim < 3) then
+             if (PlotType == 'z=0') then
                 i = ii - iMin + 1
                 j = jj - jMin + 1
                 k = kk - kMin + 1
                 PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
                      .5*(plotvar(ii, jj, kmin1, 1:nplotvar)+plotvar(ii, jj, kmax1, 1:nplotvar))
-             else if (jSizeGlobal == 1) then
+             else if (PlotType == 'y=0') then
                 i = ii - iMin + 1
                 j = kk - kMin + 1
                 k = jj - jMin + 1
                 PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
                      .5*(plotvar(ii, jMin1 ,kk, 1:nplotvar)+plotvar(ii, jMax1, kk, 1:nplotvar))
-             else if (iSizeGlobal == 1) then
+             else if (PlotType == 'x=0') then
                 i = jj - jMin + 1
                 j = kk - kMin + 1
                 k = ii - iMin + 1
                 PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
                      .5*(plotvar(iMin1, jj ,kk, 1:nplotvar)+plotvar(iMax1, jj, kk, 1:nplotvar))
              end if
-          else if (nPlotDim == 1) then
-             if (iPlotDim(1) == 1) then
-                i = ii - iMin + 1
-                j = jj - jMin + 1
-                k = kk - kMin + 1
-                PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
-                     plotvar(ii, jj ,kk, 1:nplotvar) 
-             else if (iPlotDim(1) == 2) then
-                i = jj - jMin + 1
-                j = ii - iMin + 1
-                k = kk - kMin + 1
-                PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
-                     plotvar(ii, jj ,kk, 1:nplotvar) 
-             else if (iPlotDim(1) == 3) then
-                i = kk - kMin + 1
-                j = ii - iMin + 1
-                k = kk - kMin + 1
-                PlotVarIdx(i, j, k, H5Index, 1:nPlotVar) = &
-                     plotvar(ii, jj ,kk, 1:nplotvar) 
-
-             end if
-          else
+            else
              i = ii - iMin + 1
              j = jj - jMin + 1
              k = kk - kMin + 1
@@ -548,7 +686,6 @@ contains
     H5Advance = .true.
     UsedBlocks(h5Index) = iBlock
   end subroutine write_var_hdf5
-
  !==================================================================================
  !==================================================================================
   subroutine init_sph_hdf5_plot(nPlotVar, filename, plotVarNames, PlotVarUnits, nTheta,&
@@ -934,6 +1071,9 @@ contains
     deallocate(CoordArray)
     call close_hdf5_file(FileID)
   end subroutine
+
+  !===============================================================           
+  !================================================================
 
   !===============================================================           
   !================================================================
