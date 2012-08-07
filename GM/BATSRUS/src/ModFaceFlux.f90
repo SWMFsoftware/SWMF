@@ -939,7 +939,7 @@ contains
 
        real :: diag, gradV_DDI(nDim,Maxdim,nFluid)
        logical :: IsNewBlock = .true.
-       real,parameter :: TraceCoeff = 2.0/nDim
+       real,parameter :: TraceCoeff = 2.0/3.0
        !-----------------------------------------------------------------------
 
        if(UseMultiSpecies .and. DoReplaceDensity)then
