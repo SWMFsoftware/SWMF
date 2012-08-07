@@ -7,6 +7,34 @@ module ModHdf5
   integer, parameter:: lNameVar = 10
 
 contains
+  subroutine init_hdf5_plot(iFile, plotType, nPlotVar, &
+       xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
+       isNonCartesian, NotACut)
+
+    ! Save all cells within plotting range, for each processor
+
+    use ModProcMH
+    use ModMain, ONLY: nI, nJ, nK, &
+         x_, y_, z_, Phi_, nBlockMax, Unused_B
+    use ModGeometry, ONLY: CellSize_DB,&
+         XyzStart_BLK
+    use ModIO
+    use ModMpi
+    use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
+        CoordMax_DB, CoordMin_D,CoordMax_D,DiLevelNei_IIIB
+
+    implicit none
+
+    ! Arguments
+
+    integer, intent(in)   :: iFile
+    integer, intent(in)   :: nPlotVar
+    real,    intent(in)   :: xMin,xMax,yMin,yMax,zMin,zMax
+    logical, intent(in) :: isNonCartesian, NotACut
+    character (len=*), intent(in) :: plotType
+    real,    intent(inout):: DxBlock,DyBlock,DzBlock
+
+    end subroutine
   !=========================================================================
 
   subroutine write_plot_hdf5(filename, plotType, plotVarNames, plotVarUnits,&
