@@ -1,4 +1,4 @@
-#!/bin/ruby
+#!/usr/bin/ruby
 
 require 'date'
 require 'Open3'
@@ -19,17 +19,16 @@ stdin.close  # stdin, stdout and stderr should be closed explicitly in this form
 stdout.close
 stderr.close
 
-puts(" maketest = #{maketest}\n\n")
+#puts(" maketest = #{maketest}\n\n")
 
 dirs = `find ./ -iname srcUser`.split("\n")
-puts("Dirs :: #{dirs}\n")
+#puts("Dirs :: #{dirs}\n")
 dirs.each{ |dir|
    mask = `fgrep -a "#NOTPUBLIC" #{dir}/*.f90`.split("\n")
-   puts("Mask :: #{mask}\n")
+   #puts("Mask :: #{mask}\n")
    mask.each{|line| 
 
-	puts("#{line}, #{dir}\n")
-
+	#puts("#{line}, #{dir}\n")
 	ids = line.split()
 	filename = ids[0].split(":").first
 
@@ -42,7 +41,8 @@ dirs.each{ |dir|
 		if Date.new(enddate[2],enddate[0],enddate[1]) <= Date.today
 			filename=""
 			# TODO remove NOTPUBLIC line and comit the change
-		elsif Date.new(enddate[2],enddate[0],enddate[1])- Date.today < NdaysWarning
+	        end
+		if Date.new(enddate[2],enddate[0],enddate[1])- Date.today < NdaysWarning
 			daysleft = Date.new(enddate[2],enddate[0],enddate[1])- Date.today
 			puts(red("File : #{filename} from #{contactname} will be public in #{daysleft} days.\n"))
 		end
@@ -57,11 +57,12 @@ dirs.each{ |dir|
 	end
 
 	if filename.length >0
-		#File.delete(filename)
+		File.delete(filename)
 		puts(green("Removed file #{filename}.\n"))	
         end
 } 
 }
 
-puts("Revove this script :: ./share/Scripts/RemoveFromDistro.rb \n")
+File.delete("./share/Scripts/RemoveFromDistro.rb")
+puts(green("Removed this script :: ./share/Scripts/RemoveFromDistro.rb \n"))
 
