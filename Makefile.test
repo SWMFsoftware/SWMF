@@ -616,7 +616,7 @@ test7_check:
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test7/Sph_IH_log_n000000.log \
 		> test7_ih.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=3e-30\
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=4e-30\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test7/Xyz_OH_log_n000000.log \
 		> test7_oh.diff)
