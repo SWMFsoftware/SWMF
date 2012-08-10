@@ -156,48 +156,48 @@ contains
         k1 = max(0,floor((zMin1-xyzStart_BLK(z_,iBlk))/DzBlock)+2)
         kk1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlk))/DzBlock)+1)
         
-        if (i1==0 .and.  i==1 .and. ii==1) then !Cut falls between iMinCell and iMinCell - 1
-            if (DiLevelNei_IIIB(-1, 0, 0,iBlk) == -1) cycle 
-            !Neighbor is more refined so it writes
-        end if
-
-        if (j1==0 .and. j==1 .and. jj == 1) then 
-            !Neighbor is more refined so it writes
-            if (DiLevelNei_IIIB(0, -1, 0,iBlk) == -1) cycle 
-        end if
-
-        if (k1==0 .and. k==1 .and. kk == 1) then 
-            !Neighbor is more refined so it writes
-            if (DiLevelNei_IIIB(0, 0, -1,iBlk) == -1) cycle 
-        end if
-
-        if (ii1==nI+1 .and.  ii==nI .and. i == nI) then !Cut falls between iMaxCell and iMaxCell 1
-            if (DiLevelNei_IIIB(1, 0, 0,iBlk) == -1) then
-                cycle
-            else if (CoordMax_DB(1, iBlk) .ne. CoordMax_D(1)) then
-                cycle
-
-            end if
-        end if
-
-        if (jj1==nJ+1 .and. jj==nJ .and. j == nJ) then 
-            if (DiLevelNei_IIIB(0, 1, 0,iBlk) == -1) then
-                cycle
-            else if (CoordMax_DB(2, iBlk) .ne. CoordMax_D(2)) then
-                cycle
-
-            end if
-        end if
-
-        if (kk1==nK+1 .and. kk==nK .and. k==nK) then 
-            if (DiLevelNei_IIIB(0, 0, 1,iBlk) == -1) then
-                cycle
-            else if (CoordMax_DB(3, iBlk) .ne. CoordMax_D(3)) then
-                cycle
-
-            end if
-        end if
-
+!         if (i1==0 .and.  i==1 .and. ii==1) then !Cut falls between iMinCell and iMinCell - 1
+!             if (DiLevelNei_IIIB(-1, 0, 0,iBlk) == -1) cycle 
+!             !Neighbor is more refined so it writes
+!         end if
+! 
+!         if (j1==0 .and. j==1 .and. jj == 1) then 
+!             !Neighbor is more refined so it writes
+!             if (DiLevelNei_IIIB(0, -1, 0,iBlk) == -1) cycle 
+!         end if
+! 
+!         if (k1==0 .and. k==1 .and. kk == 1) then 
+!             !Neighbor is more refined so it writes
+!             if (DiLevelNei_IIIB(0, 0, -1,iBlk) == -1) cycle 
+!         end if
+! 
+!         if (ii1==nI+1 .and.  ii==nI .and. i == nI) then !Cut falls between iMaxCell and iMaxCell 1
+!             if (DiLevelNei_IIIB(1, 0, 0,iBlk) == -1) then
+!                 cycle
+!             else if (CoordMax_DB(1, iBlk) .ne. CoordMax_D(1)) then
+!                 cycle
+! 
+!             end if
+!         end if
+! 
+!         if (jj1==nJ+1 .and. jj==nJ .and. j == nJ) then 
+!             if (DiLevelNei_IIIB(0, 1, 0,iBlk) == -1) then
+!                 cycle
+!             else if (CoordMax_DB(2, iBlk) .ne. CoordMax_D(2)) then
+!                 cycle
+! 
+!             end if
+!         end if
+! 
+!         if (kk1==nK+1 .and. kk==nK .and. k==nK) then 
+!             if (DiLevelNei_IIIB(0, 0, 1,iBlk) == -1) then
+!                 cycle
+!             else if (CoordMax_DB(3, iBlk) .ne. CoordMax_D(3)) then
+!                 cycle
+! 
+!             end if
+!         end if
+! 
             !Neighbor is more refined so it writes
 
 
@@ -460,57 +460,57 @@ deallocate(blocksPerProc)
     kMin1 = max(-1,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
     kMax1 = min(nK+1,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
    
-   if (iMin1==0 .and.  iMin==1 .and. iMax==1) then !Cut falls between iMinCell and iMinCell - 1
-        if (DiLevelNei_IIIB(-1, 0, 0,iBlock) == -1) then
-            h5Advance = .false.
-            return 
-        end if
-        !Neighbor is more refined so it writes
-    end if
-
-    if (jMin1==0 .and. jMin==1 .and. jMax == 1) then 
-        !Neighbor is more refined so it writes
-        if (DiLevelNei_IIIB(0, -1, 0,iBlock) == -1) then
-            h5Advance = .false.
-            return 
-        end if
-    end if
-    if (kMin1==0 .and. kMin==1 .and. kMax == 1) then 
-        !Neighbor is more refined so it writes
-        if (DiLevelNei_IIIB(0, 0, -1,iBlock) == -1) then
-            h5Advance = .false.
-            return 
-        end if
-    end if
-    if (iMax1==nI+1 .and.  iMax==nI .and. iMin == nI) then !Cut falls between iMaxCell and iMaxCell 1
-        if (DiLevelNei_IIIB(1, 0, 0,iBlock) == -1) then
-            h5Advance = .false.
-            return
-        else if (CoordMax_DB(1, iBlock) .ne. CoordMax_D(1)) then
-            h5Advance = .false.
-            return
-        end if
-    end if
-
-    if (jMax1==nJ+1 .and. jMax==nJ .and. jMin == nJ) then 
-        if (DiLevelNei_IIIB(0, 1, 0,iBlock) == -1) then
-            h5Advance = .false.
-            return
-        else if (CoordMax_DB(2, iBlock) .ne. CoordMax_D(2)) then
-            h5Advance = .false.
-            return
-        end if
-    end if
-
-    if (kMax1==nK+1 .and. kMax==nK .and. kMin==nK) then 
-        if (DiLevelNei_IIIB(0, 0, 1,iBlock) == -1) then
-            h5Advance = .false.
-            return
-        else if (CoordMax_DB(3, iBlock) .ne. CoordMax_D(3)) then
-            h5Advance = .false.
-            return
-        end if
-    end if
+!    if (iMin1==0 .and.  iMin==1 .and. iMax==1) then !Cut falls between iMinCell and iMinCell - 1
+!         if (DiLevelNei_IIIB(-1, 0, 0,iBlock) == -1) then
+!             h5Advance = .false.
+!             return 
+!         end if
+!         !Neighbor is more refined so it writes
+!     end if
+! 
+!     if (jMin1==0 .and. jMin==1 .and. jMax == 1) then 
+!         !Neighbor is more refined so it writes
+!         if (DiLevelNei_IIIB(0, -1, 0,iBlock) == -1) then
+!             h5Advance = .false.
+!             return 
+!         end if
+!     end if
+!     if (kMin1==0 .and. kMin==1 .and. kMax == 1) then 
+!         !Neighbor is more refined so it writes
+!         if (DiLevelNei_IIIB(0, 0, -1,iBlock) == -1) then
+!             h5Advance = .false.
+!             return 
+!         end if
+!     end if
+!     if (iMax1==nI+1 .and.  iMax==nI .and. iMin == nI) then !Cut falls between iMaxCell and iMaxCell 1
+!         if (DiLevelNei_IIIB(1, 0, 0,iBlock) == -1) then
+!             h5Advance = .false.
+!             return
+!         else if (CoordMax_DB(1, iBlock) .ne. CoordMax_D(1)) then
+!             h5Advance = .false.
+!             return
+!         end if
+!     end if
+! 
+!     if (jMax1==nJ+1 .and. jMax==nJ .and. jMin == nJ) then 
+!         if (DiLevelNei_IIIB(0, 1, 0,iBlock) == -1) then
+!             h5Advance = .false.
+!             return
+!         else if (CoordMax_DB(2, iBlock) .ne. CoordMax_D(2)) then
+!             h5Advance = .false.
+!             return
+!         end if
+!     end if
+! 
+!     if (kMax1==nK+1 .and. kMax==nK .and. kMin==nK) then 
+!         if (DiLevelNei_IIIB(0, 0, 1,iBlock) == -1) then
+!             h5Advance = .false.
+!             return
+!         else if (CoordMax_DB(3, iBlock) .ne. CoordMax_D(3)) then
+!             h5Advance = .false.
+!             return
+!         end if
+!     end if
 
 
 
