@@ -434,7 +434,7 @@ contains
   subroutine get_impl_resistivity_state(StateImpl_VGB, DconsDsemi_VCB)
 
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, message_pass_cell, &
-         CellFace_DB, CellFace_DFB, FaceNormal_DDFB
+         CellFace_DB, FaceNormal_DDFB
     use ModAdvance,      ONLY: State_VGB
     use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk
     use ModMain,         ONLY: MaxImplBlk
@@ -477,14 +477,8 @@ contains
              FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
           end if
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-             if(.not.IsCartesian)then
-                if(IsRzGeometry)then
-                   FaceNormal_D = 0.0
-                   FaceNormal_D(iDim)=CellFace_DFB(iDim,i,j,k,iBlock)
-                else
-                   FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
-                end if
-             end if
+             if(.not.IsCartesian) &
+                  FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
 
              Eta = 0.5*(Eta_GB(i,j,k,iBlock) + Eta_GB(i-Di,j-Dj,k-Dk,iBlock))
 
