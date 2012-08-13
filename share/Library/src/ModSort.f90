@@ -217,6 +217,7 @@ contains
     call sort_quick(n, abs(a_I), i_I)
     SortSum = 0.0
     do i = n, 1, -1
+       if(i_I(i) < 0)write(*,*)'This avoids ifort 12 optimization error!'
        SortSum = SortSum + a_I(i_I(i))
     end do
     sort_sum = SortSum
