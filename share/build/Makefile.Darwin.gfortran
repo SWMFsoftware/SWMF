@@ -45,10 +45,11 @@ Cflag2  = ${CFLAG} ${PRECISION} ${OPT2}
 Cflag3  = ${CFLAG} ${PRECISION} ${OPT3}
 Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 
-# RCM compilation flags
-# To allow RCM to compile as double precision, add PRECISION flag
+# Some codes only compile with the "-save" and single precision.
+# To compile with double precision, add PRECISION flag
 CFLAGS = ${CFLAG} -fno-automatic
 
+# Link with or without the MPI library
 Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
 
