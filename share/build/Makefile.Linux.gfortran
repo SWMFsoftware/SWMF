@@ -25,7 +25,7 @@ MPILIB =
 
 SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
-DEBUGFLAG = -C -g
+DEBUGFLAG = -C -g -fbacktrace -ffpe-trap=invalid,zero,overflow
 DEBUG     = 
 
 OPT0 = -O0
@@ -42,13 +42,13 @@ Cflag2  = ${CFLAG} ${PRECISION} ${OPT2}
 Cflag3  = ${CFLAG} ${PRECISION} ${OPT3}
 Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 
-# RCM compilation flags
-# To allow RCM to compile as double precision, add PRECISION flag
-CFLAGS = ${CFLAG} -save
+# Some codes only compile with the "-save" and single precision.
+# To compile with double precision, add PRECISION flag
+CFLAGS = ${CFLAG} -fno-automatic
 
-# The '-Bstatic' flag avoids segmentation fault for large number of blocks
-Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG} -Bstatic
-Lflag2  = ${PRECISION} ${DEBUG} -Bstatic
+# Link with or without the MPI library
+Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
+Lflag2  = ${PRECISION} ${DEBUG}
 
 # BLAS and LAPACK libraries
 LBLAS =
