@@ -3,7 +3,7 @@
 #PBS -A crash_flux
 #PBS -q flux
 #PBS -N CRASH
-#PBS -l procs=256,qos=crash_flux
+#PBS -l procs=256,qos=flux
 #PBS -l walltime=8:00:00
 
 # cd to job submission directory
