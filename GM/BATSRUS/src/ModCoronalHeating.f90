@@ -877,12 +877,13 @@ module ModCoronalHeating
 
   ! Alfven wave dissipation
   logical :: UseAlfvenWaveDissipation = .false.
-  real :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
-  real :: LperpTimesSqrtB
-  real :: Crefl = 0.04
+  real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
+  real    :: LperpTimesSqrtB
+  real    :: Crefl = 0.04
+  logical :: UseScaledCrefl = .false. ! Reflection coefficient scaled as 1/r^2
   logical :: UseCPRegion = .true. ! Limit region of counter-propating waves
-  real :: rCP = 2.0
-  real :: rCPefolding = 2.5
+  real    :: rCP = 2.0
+  real    :: rCPefolding = 2.5
 
   ! long scale height heating (Ch = Coronal Hole)
   logical :: DoChHeat = .false.
@@ -932,6 +933,7 @@ contains
           UseAlfvenWaveDissipation = .true.
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('Crefl', Crefl)
+          call read_var('UseScaledCrefl',UseScaledCrefl)
           call read_var('UseCPRegion', UseCPRegion)
           if(UseCPRegion) then
              call read_var('rCP', rCP)
@@ -1266,6 +1268,7 @@ contains
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
     use ModGeometry,   ONLY: r_BLK
+    use ModConst,      ONLY: rSun
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), CoronalHeating
@@ -1274,7 +1277,7 @@ contains
     real :: EwavePlus, EwaveMinus, FullB_D(3), FullB
     real :: DissipationRate
     real :: FactorCP = 1.0
-    real :: r
+    real :: r, CreflLocal
     !--------------------------------------------------------------------------
 
     if(UseB0)then
@@ -1297,7 +1300,14 @@ contains
        endif
     endif
 
-    DissipationRate = (Crefl*sqrt(EwavePlus+EwaveMinus) &
+    
+    if (UseScaledCrefl) then
+       CreflLocal = Crefl*(rSun/r_BLK(i,j,k,iBlock))**2
+    else
+       CreflLocal = Crefl
+    end if
+   
+    DissipationRate = (CreflLocal*sqrt(EwavePlus+EwaveMinus) &
          + FactorCP*sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
          *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
