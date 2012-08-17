@@ -40,9 +40,9 @@
 # To run on the 12-core Westmere nodes use this (2 times faster than Hapertown)
 ### PBS -lselect=16:ncpus=12:model=wes
 
-# To run on the development queue uncomment the following line,
-# select the Westmere nodes above and set the maximum walltime 
-# to 2 hours below. Use qstat @pbspl3 to check status.
+# To run in the development queue uncomment the following line,
+# select the Westmere nodes above and
+# set the maximum walltime to 2 hours below. 
 ### PBS -q devel
 
 #PBS -l walltime=8:00:00
