@@ -43,7 +43,7 @@
 # To run on the development queue uncomment the following line,
 # select the Westmere nodes above and set the maximum walltime 
 # to 2 hours below. Use qstat @pbspl3 to check status.
-### PBS -q devel@pbspl3
+### PBS -q devel
 
 #PBS -l walltime=8:00:00
 #PBS -j oe
