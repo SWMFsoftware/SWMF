@@ -124,6 +124,7 @@ F			UseExtrapolatedEwave
 alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
 0.04			Crefl
+F			UseScaledCrefl
 F			UseCPRegion
 
 HYPERBOLICDIVB
