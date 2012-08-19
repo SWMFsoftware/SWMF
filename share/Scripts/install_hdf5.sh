@@ -567,6 +567,11 @@ function build_hdf5
     #
     echo "Configuring HDF5 . . ."
     cd $HDF5_BUILD_DIR || error "Can't cd to HDF5 build dir."
+
+    # Fix too many continuation lines in fortran/src/H5f90global.f90
+    perl -pi -e 's/,\s*\&/\n  INTEGER(HID_T)  \&/ if /H5T_STD_U32LE/ and $.==109' \
+	fortran/src/H5f90global.f90
+
     cf_darwin=""
     if [[ "$OPSYS" == "Darwin" ]]; then
         export DYLD_LIBRARY_PATH=${SZIPINSTALLDIR}/lib:$DYLD_LIBRARY_PATH
@@ -617,23 +622,11 @@ function build_hdf5
        return 1
     fi
 
-    if [[ "$DO_STATIC_BUILD" == "no" && "$OPSYS" == "Darwin" ]]; then
-        #
-        # Make dynamic executable, need to patch up the install path and
-        # version information.
-        #
-        echo "Creating dynamic libraries for HDF5 . . ."
-    fi
+    # comment out arbitrary Fortran compiler flags
+    perl -pi -e 's/^H5BLD_FFLAGS/#H5BLD_FFLAGS/' bin/h5pfc
 
     cd "$START_DIR"
 
-    mv ${UTILDIR}/${HDF5_FILE} ${HDF5INSTALLDIR}
-    sed '1,/SHELL/ {/SHELL/a\
-    CUSTOMPATH_MPI='${HDF5INSTALLDIR}'/bin/
-    }' Makefile.conf >> tempSedFile
-    mv tempSedFile Makefile.conf
-
-#     mv ${UTILDIR}/${HDF5_FILE} ${HDF5INSTALLDIR}
     echo "Done with HDF5"
     return 0
 }
@@ -662,13 +655,10 @@ usage="install_hdf5.sh [-h] -- Script to install hdf5 library in current directo
 no flags = install hdf5 (and szip) here
 
 1. The proper mpif90 command used for the SWMF should be in the path before running install_hdf5.sh.
-2. If you want to use HDF5 with the NAG Fortran compiler download the /csem1/VISIT/hdf5-1.8.8.tar.gz
-   file from herot and place it in the directory you are running install_hdf5.sh from before running the
-   script.
-3. The install_hdf5.sh script should be run from the directory where you want hdf5 to be installed.
-4. Add the hdf5-1.8.8/bin directory to the path (or make links to the executables that will be in the path).
-5. Enable HDF5 in the SWMF: Config.pl -hdf5
-6. Enjoy"
+2. The install_hdf5.sh script should be run from the directory where you want hdf5 to be installed.
+3. Add the hdf5-1.8.8/bin directory to the path (or make links to the executables that will be in the path).
+4. Enable HDF5 in the SWMF: Config.pl -hdf5
+5. Enjoy"
 while getopts ':hs:' option; do
 case "$option" in
 h) echo "$usage"
