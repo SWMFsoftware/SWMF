@@ -1,6 +1,9 @@
 #^CFG COPYRIGHT UM
 
 include ../../../Makefile.def
+
+SEARCH_EXTRA = ${HDF5SRC}
+
 include ../../../Makefile.conf
 include Makefile.DEPEND
 include Makefile.RULES

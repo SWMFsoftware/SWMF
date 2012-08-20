@@ -6,7 +6,7 @@ include ../Makefile.def
 
 SEARCH_EXTRA = \
 	-I../srcBATL -I${MAGNETOGRAMDIR} -I${DEMTDIR} -I${EMPIRICALEEDIR} \
-	-I${CRASHDIR}
+	-I${CRASHDIR} ${HDF5SRC}
 
 include ../Makefile.conf
 include Makefile.DEPEND
