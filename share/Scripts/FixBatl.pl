@@ -41,7 +41,8 @@ s/^(\s*use.*)\bgcn\b/$1MinI, MaxI, MinJ, MaxJ, MinK, MaxK/i;
 
 # -1:nI+2 --> MinI:MaxI
 # -1,nK+2 --> MinK,MaxK
-s/\-1\s([,:])\s*n([ijk])\s*\+2/Min$2$1Max$2/gi;
+s/\-\s*1\s*([,:])\s*n([ijk])\s*\+\s*2/Min$2$1Max$2/gi 
+    unless /n[IJK]\s*\-\s*1/;
 
 # x_BLK( --> Xyz_DGB(x_,
 # y_BLK( --> Xyz_DGB(y_,
