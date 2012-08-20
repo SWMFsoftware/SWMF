@@ -1302,7 +1302,7 @@ contains
 
     
     if (UseScaledCrefl) then
-       CreflLocal = Crefl*(rSun/r_BLK(i,j,k,iBlock))**2
+       CreflLocal = Crefl/r_BLK(i,j,k,iBlock)**2
     else
        CreflLocal = Crefl
     end if
