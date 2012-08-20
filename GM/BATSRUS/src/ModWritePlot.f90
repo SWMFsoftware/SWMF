@@ -16,7 +16,7 @@ subroutine write_plot_common(ifile)
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
   use ModUtilities, ONLY: lower_case, split_string
-  use BATL_lib, ONLY: calc_error_amr_criteria, &
+  use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
        message_pass_node, average_grid_node, find_grid_block, &
        IsCartesianGrid, Xyz_DNB
   use ModAdvance, ONLY : State_VGB
@@ -277,10 +277,11 @@ subroutine write_plot_common(ifile)
   if(plot_type1(1:3)=='blk') &
        call find_grid_block(plot_point(:,iFile), iProcFound, iBlockFound)
  
-  if (plot_form(iFile) == 'hdf' .and. .not. IsSphPlot)&
-    call init_hdf5_plot(ifile, plot_type1(1:3),  &
-                nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
-                dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
+  if (plot_form(iFile) == 'hdf' .and. .not. IsSphPlot) then
+     call init_hdf5_plot(ifile, plot_type1(1:3),  &
+          nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
+          dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
+  end if
 
   do iBLK=1, nBlockMax
      if(Unused_B(iBLK))CYCLE
@@ -520,8 +521,14 @@ subroutine write_plot_common(ifile)
         end select
         close(unit_tmp)
      end do
+
   end if
 
+  ! Save tree information for 3D IDL file
+  if(plot_form(ifile) == 'idl' .and. plot_type1(1:3) == '3d_')then
+     filename = trim(NameSnapshot)//'.tree'
+     call write_tree_file(filename)
+  end if
 
   if(oktest_me)write(*,*) NameSub,' finished'
 
