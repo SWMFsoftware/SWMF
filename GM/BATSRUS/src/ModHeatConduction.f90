@@ -256,7 +256,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(IsNewBlockHeatCond)then
-       if(UseIdealEos)then
+       if(UseIdealEos .and. .not.DoUserHeatConduction)then
           iP = p_
           if(UseElectronPressure) iP = Pe_
 
@@ -292,7 +292,7 @@ contains
 
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
-    if(UseIdealEos)then
+    if(UseIdealEos .and. .not.DoUserHeatConduction)then
        CvL = inv_gm1*StateLeft_V(Rho_)/TeFraction
        CvR = inv_gm1*StateRight_V(Rho_)/TeFraction
     else
@@ -346,29 +346,25 @@ contains
     Bnorm = sqrt(sum(B_D**2))
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
-    if(UseIdealEos)then
+    if(UseIdealEos .and. .not.DoUserHeatConduction)then
        if(UseElectronPressure)then
           Te = TeFraction*State_V(Pe_)/State_V(Rho_)
        else
           Te = TeFraction*State_V(p_)/State_V(Rho_)
        end if
        TeSi = Te*No2Si_V(UnitTemperature_)
+
+       ! Spitzer form for collisional regime
+       HeatCoef = HeatCondPar*Te**2.5
     else
        ! Note we assume that the heat conduction formula for the
        ! ideal state is still applicable for the non-ideal state
-       call user_material_properties(State_V, TeOut=TeSi)
-       Te = TeSi*Si2No_V(UnitTemperature_)
-    end if
-
-    if(DoUserHeatConduction)then
-       call user_material_properties(State_V, TeIn=TeSi, &
+       call user_material_properties(State_V, TeOut=TeSi, &
             HeatCondOut=HeatCoefSi)
+
        HeatCoef = HeatCoefSi &
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
-    else
-       ! Spitzer form for collisional regime
-       HeatCoef = HeatCondPar*Te**2.5
     end if
 
     ! Artificial modified heat conduction for a smoother transition
@@ -411,7 +407,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(IsNewBlockIonHeatCond)then
-       if(UseIdealEos)then
+       if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              Ti_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
@@ -441,7 +437,7 @@ contains
 
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
-    if(UseIdealEos)then
+    if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
        CvL = inv_gm1*StateLeft_V(Rho_)/TiFraction
        CvR = inv_gm1*StateRight_V(Rho_)/TiFraction
     else
@@ -495,20 +491,18 @@ contains
     Bnorm = sqrt(sum(B_D**2))
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
-    if(UseIdealEos)then
+    if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
        Ti = TiFraction*State_V(p_)/State_V(Rho_)
+
+       ! Spitzer form for collisional regime
+       IonHeatCoef = IonHeatCondPar*Ti**2.5
     else
        call stop_mpi(NameSub//': no ion heat conduction yet for non-ideal eos')
-    end if
 
-    if(DoUserIonHeatConduction)then
        call user_material_properties(State_V, IonHeatCondOut=IonHeatCoefSi)
        IonHeatCoef = IonHeatCoefSi &
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
-    else
-       ! Spitzer form for collisional regime
-       IonHeatCoef = IonHeatCondPar*Ti**2.5
     end if
 
     HeatCond_D = IonHeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
@@ -587,7 +581,7 @@ contains
        ! Store the electron temperature in StateImpl_VGB and the
        ! specific heat in DconsDsemi_VCB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(UseIdealEos)then
+          if(UseIdealEos .and. .not.DoUserHeatConduction)then
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = TeFraction &
                   *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
 
@@ -595,7 +589,7 @@ contains
                   inv_gm1*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
           else
 
-             if(UseElectronPressure)then
+             if(UseElectronPressure .and. .not.DoUserHeatConduction)then
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi, &
                      NatomicOut = NatomicSi, TeTiRelaxOut = TeTiRelaxSi)
@@ -689,23 +683,19 @@ contains
       integer :: iDim
       !------------------------------------------------------------------------
 
-      if(UseIdealEos)then
+      if(UseIdealEos .and. .not.DoUserHeatConduction)then
          Te = TeFraction*State_V(iP)/State_V(Rho_)
          TeSi = Te*No2Si_V(UnitTemperature_)
-      else
-         call user_material_properties(State_V, TeOut=TeSi)
-         Te = TeSi*Si2No_V(UnitTemperature_)
-      end if
 
-      if(DoUserHeatConduction)then
-         call user_material_properties(State_V, TeIn=TeSi, &
+         ! Spitzer form for collisional regime
+         HeatCoef = HeatCondPar*Te**2.5
+      else
+         call user_material_properties(State_V, TeOut=TeSi, &
               HeatCondOut=HeatCoefSi)
+
          HeatCoef = HeatCoefSi &
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
-      else
-         ! Spitzer form for collisional regime
-         HeatCoef = HeatCondPar*Te**2.5
       end if
 
       ! Artificial modified heat conduction for a smoother transition
