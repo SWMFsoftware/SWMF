@@ -28,11 +28,11 @@ contains
     !In: sol. to be advanced; Out: advanced sol.                               !
     real,dimension(1-nGCLeft : nX+nGCRight),intent(inout)::  FInOut_I          !
     real, optional::BetaIn
-    
+
     !If this parameter IS PRESENT, the flux via the boundaries is nullified
     logical, optional, intent(in):: UseConservativeBC
     logical, optional, intent(out):: IsNegativeEnergy
-                                                                
+
     !--------------------------------------------------------------------------!
     integer:: iX,iStep,nStep
     real,dimension(1-max(nGCLeft,2):nX+max(nGCRight,2))::F_I
@@ -81,13 +81,13 @@ contains
        end do
        ! f_(i-1/2): 
        FSemiintDown_I(1:nX) = FSemiintUp_I(0:nX-1)
-       
+
        !Ensure the conservation of sum(F_I(1:nX), if needed
        if(present(UseConservativeBC))then
           FSemiintDown_I(1) = 0.0
           FSemiintUp_I( nX) = 0.0
        end if
-       
+
        !\
        ! Update the solution from f^(n) to f^(n+1):
        !/
@@ -165,7 +165,7 @@ contains
     if(any(F_I(1:nX)<0.0))then
        write(*,*)'Before advection F_I <0 in '//NameSub
 
-        if(present(IsNegativeEnergy))then
+       if(present(IsNegativeEnergy))then
           IsNegativeEnergy = .true.
           return
        else
@@ -218,10 +218,9 @@ contains
   !============================================================================!
   subroutine test_linear_advection
     ! Added Nov. 2009 by R. Oran
-    
+
     use ModIoUnit, ONLY: UNITTMP_
-    implicit none
-    
+
     integer,parameter                          :: nGCLeft=1, nGCRight=1     
     integer,parameter                          :: nCell= 80,nStep=40
     integer                                    :: iCell, iStep
@@ -233,7 +232,7 @@ contains
     character(len=40)                          :: FileNameTec
     ! ------------------------------------------------------
     ! Initial condition - create a uniform spectrum
-  
+
     Fplus_I  = 1.0 ! moving right
     Fminus_I = 1.0 ! moving left
     ! Start looping over time steps
@@ -242,9 +241,9 @@ contains
             2.0,.true.,IsNegativeEnergy)
        call advance_lin_advection_minus(CFL,nCell,nGCLeft,nGCRight,Fminus_I,& 
             2.0,.true.,IsNegativeEnergy)
-    
+
     end do
-    
+
     ! write sln to file
     ! Deafault output file name
     FileNameTec = 'test_linear_advection.tmp'
@@ -252,7 +251,7 @@ contains
     ! use this filename when an output file for each iteration is desired
     ! write(NameStage,'(i4.4)') iStep
     ! FileNameTec = 'LinAdvOut/Linear_advection_n_'//trim(NameStage)//'.dat'
-      
+
     open(UNITTMP_,file=FileNameTec,form='formatted', access='sequential',&
          status='replace')
     write(UNITTMP_, '(a)') 'Title: Test Linear Advection'
@@ -262,8 +261,8 @@ contains
        write(UNITTMP_,'(i3.3,e14.6,e14.6)') iCell,Fplus_I(iCell), Fminus_I(iCell)
     end do
     close(UNITTMP_)
-    
-end subroutine test_linear_advection
+
+  end subroutine test_linear_advection
   !====================SUPERBEE LIMITER =======================================!
   real function df_lim(F_I)
     real,dimension(0:2),intent(in)::F_I
