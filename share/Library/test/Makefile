@@ -42,25 +42,26 @@ help:
 	@echo
 	@echo "The default value for MPIRUN is mpirun -np 2."
 
-test:   test_axes \
-	test_coord_transform \
-	test_freq \
-	test_geopack \
-	test_io_unit \
-	test_interpolate \
-	test_initial_state \
-	test_line_extract \
-	test_linear_advection \
-	test_linear_solver \
-	test_lookup_table \
-	test_planet_field \
-	test_plot_file \
-	test_ray_trace \
-	test_sort \
-	test_time_convert \
-	test_triangulate \
-	test_process_var_name \
-	test_utilities
+test:
+	-@make test_axes
+	-@make test_coord_transform
+	-@make test_freq
+	-@make test_geopack
+	-@make test_io_unit
+	-@make test_interpolate
+	-@make test_initial_state
+	-@make test_line_extract
+	-@make test_linear_advection
+	-@make test_linear_solver
+	-@make test_lookup_table
+	-@make test_planet_field
+	-@make test_plot_file
+	-@make test_ray_trace
+	-@make test_sort
+	-@make test_time_convert
+	-@make test_triangulate
+	-@make test_process_var_name
+	-@make test_utilities
 	@echo ---------------------------------------------------------
 	@ls -l *.diff
 
@@ -71,6 +72,8 @@ distclean: clean
 #######################################################################
 OBJ_TIME_CONVERT = \
 	test_time_convert.o \
+	../src/ModConst.o \
+	../src/ModNumConst.o \
 	../src/ModTimeConvert.o
 
 test_time_convert_exe:
@@ -155,6 +158,7 @@ test_linear_solver:
 #######################################################################
 OBJ_LINEAR_ADVECTION = \
 	test_linear_advection.o \
+	../src/ModIoUnit.o \
 	../src/ModLinearAdvection.o 
 
 test_linear_advection_exe:
@@ -284,7 +288,7 @@ OBJ_LINE_EXTRACT = \
 	../src/ModSort.o \
 	../src/CON_line_extract.o
 
-test_line_extract_exe: ${OBJ_LINE_EXTRACT}
+test_line_extract_exe: 
 	@(cd ../src; make CON_line_extract.o)
 	@make test_line_extract.o
 	${LINK.f90} -o test_line_extract.exe ${OBJ_LINE_EXTRACT} ${Lflag1}
@@ -363,6 +367,7 @@ OBJ_PLANET_FIELD = \
 	../src/ModPlanetConst.o \
 	../src/ModCoordTransform.o \
 	../src/ModNumConst.o \
+	../src/ModConst.o \
 	../src/ModIoUnit.o \
 	../src/ModReadParam.o \
 	../src/ModTimeConvert.o \
@@ -389,6 +394,7 @@ OBJ_PLOT_FILE = \
 	test_plot_file.o \
 	../src/ModIoUnit.o \
 	../src/ModMpi.o \
+	../src/ModMpiInterfaces.o \
 	../src/ModUtilities.o \
 	../src/ModHdf5Utils.o \
 	../src/ModPlotFile.o
@@ -439,7 +445,9 @@ test_lookup_table:
 
 OBJ_UTILITIES = \
 	test_utilities.o \
+	../src/ModIoUnit.o \
 	../src/ModMpi.o \
+	../src/ModMpiInterfaces.o \
 	../src/ModUtilities.o
 
 test_utilities_exe:
@@ -483,6 +491,9 @@ OBJ_PROCESS_VAR_NAME = \
 	ModSingleFluid.o\
 	ModExtraVariables.o\
 	ModEquation.o \
+	../src/ModIoUnit.o \
+	../src/ModMpi.o \
+	../src/ModMpiInterfaces.o \
 	../src/ModUtilities.o \
 	../src/ModProcessVarName.o
 
