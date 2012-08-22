@@ -1,0 +1,206 @@
+!- PARAM.in:  Example input file for BATSRUS --
+
+#ECHO
+T                       DoEcho
+
+#PLANET
+HALLEY
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#STARTTIME
+2000                    iYear
+1                       iMonth
+1                       iDay
+0                       iHour
+0                       iMinute
+0                       iSecond
+0.0			FracSecond
+
+#DEBUG
+T                       DoDebug         (use it as if(okdebug.and.oktest)...)
+T                       DoDebugGhost    (parameter for show_BLK in library.f90)
+
+TESTIJK
+1                       iTest           (cell index for testing)
+1                       jTest           (cell index for testing)
+1                       kTest           (cell index for testing)
+1                       iBlockTest      (block index for testing)
+0                       iProcTest       (processor index for testing)
+
+#TESTXYZ
+0.0005
+0.0005
+0.000
+
+#COORDSYSTEM
+GSM                     TypeCoordSystem (Beta version; GM/BATSRUS is in GSM!)
+
+#SOLARWIND
+8.0                     SW_rho_dim [n/cc]
+1.E5                    SW_T_dim [K]     
+-371.                   SW_Ux_dim [km/s] 
+0.0                     SW_Uy_dim [km/s] 
+0.0                     SW_Uz_dim [km/s] 
+-3.4                    SW_Bx_dim [nT]   
+3.4                     SW_By_dim [nT]
+0.0                     SW_Bz_dim [nT]
+
+#OUTERBOUNDARY
+outflow                  TypeBcEast
+user                     TypeBcWest
+float                    TypeBcSouth
+float                    TypeBcNorth
+float                    TypeBcBottom
+float                    TypeBcTop
+
+#EXTRABOUNDARY
+T                       UseExtraBoundary
+user                    TypeExtraBoundary
+F                       DoFixExtraboundary
+
+#FACEBOUNDARY
+-1                      MinFaceBoundary
+-1                      MaxFaceBoundary
+F                       DoFixOuterBoundary
+
+#GRID
+2                        proc_dims(1)
+2                        proc_dims(2)
+2                        proc_dims(3),
+-0.02                  x1
+ 0.02                  x2
+-0.02                  y1
+ 0.02                  y2
+-0.02                  z1
+ 0.02                  z2
+
+#BODY 
+F                         body1
+6e-6	                  rBody
+1.0                       rCurrents
+0.1                       BodyRhoDim (1/ccm)
+600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
+0.1                       BodyRhoDim (1/ccm)
+600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
+
+#USERINPUTBEGIN --------------------
+
+#COMET
+7.0E29                    Neutral gas production rate [1/s]
+0.9                       Heliocentric distance [AU]
+15.0			  Minimum ion temperature (enforced in user_update_states)
+
+#USERINPUTEND ----------------------
+
+#MHDIONS
+F		          DoAddRho
+T			  DoAddRhoU
+
+#MINIMUMPRESSURE
+3e-11
+1e-11
+1e-11
+1e-11
+
+
+#PLASMA
+1.0                       IonMass SWp [amu]
+1.0                       IonMass Hp [amu]
+18.0                      IonMass H2Op [amu]
+1.0                       IonCharge SWp [e]
+1.0                       IonCharge Hp [e]
+1.0                       IonCharge H2Op [e]
+1.0                       ElectronTemperatureRatio
+
+#MULTIION
+1e-4			  LowDensityRatio
+1e-11			  LowPressureRatio
+F			  DoRestrictMultiIon
+
+#UNIFORMIONVELOCITY
+T	 		  UseSameIonVelocity
+
+#SCHEME
+1                         nOrder
+Rusanov                   TypeFlux | only for nOrder=2
+minmod			  TypeLimiter
+
+#TIMESTEPPING
+1                         nSTAGE
+0.5                       cfl
+
+#POINTIMPLICIT
+T                         UsePointImplicit
+1.0                       BetaPointImpl
+F                         IsAsymetric
+T                         DoNormalizeCell 
+
+#SAVERESTART
+T		  	  DoSaveRestart Rest of parameters read if true
+30			  DnSaveRestart
+-1.			  DtSaveRestart [seconds]
+
+#NONCONSERVATIVE
+T                         UseNonConservative
+
+#CONSERVATIVECRITERIA
+0
+
+#USERFLAGS
+T                        UseUserInnerBcs
+T                        UseUserSource
+F                        UseUserPerturbation
+T                        UseUserOuterBcs
+T                        UseUserICs
+F                        UseUserSpecifyRefinement
+T                        UseUserLogFiles
+T                        UseUserWritePlot
+F                        UseUserAMR
+F                        UseUserEchoInput
+F                        UseUserB0
+T                        UseUserInitSession
+T                        UseUserUpdateStates
+
+#SAVEPLOTSAMR
+F                       save_plots_amr to save plots before each AMR
+
+#SAVELOGFILE
+T                       DoSaveLogfile, rest of parameters read if true
+VAR step date time      StringLog
+1                       DnSaveLogfile
+-1                      DtSaveLogfile [sec]
+Rho Pmin Pmax Pe Bx By Bz SWpRho SWpUx SWpUy SWpUz SWpP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#SAVEPLOT
+0                       nplotfiles
+z=0 VAR idl             plot_string
+10                      DnSavePlot
+-1.                     DtSavePlot
+-1.			DxSavePlot
+SWpRho SWpUx SWpUy SWpUz SWpP HpRho HpUx HpUy HpUz HpP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
+rBody
+z=0 VAR idl             plot_string
+10                      DnSavePlot
+-1.                     DtSavePlot
+-1.			DxSavePlot
+rho Ux Uy Uz P Pe Bx By Bz dt nn1 unx1 uny1 unz1 divb
+rBody
+
+
+#PROGRESS
+1                     dnProgress1 (frequency of short reports to STDOUT)
+10                    dnProgress2 (frequency of summaries to STDOUT)
+
+#CPUTIMEMAX
+28400.0
+
+#STOP
+30
+-1
+
+#END
