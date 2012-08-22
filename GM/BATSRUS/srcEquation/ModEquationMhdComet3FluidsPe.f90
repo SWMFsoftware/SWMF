@@ -12,16 +12,6 @@ module ModVarIndexes
   character (len=*), parameter :: NameEquation= &
        '3-fluid + Pe MHD for Comets'
 
-  ! The variables numbered from 1 to nVar are:
-  !
-  ! 1. defined in set_ICs.
-  ! 2. prolonged and restricted in AMR
-  ! 3. saved into the restart file
-  ! 4. sent and recieved in the exchange message
-  ! 5. filled in the outer ghostcells by the program set_outer_BCs
-  ! 5. integrated by subroutine integrate_all for saving to logfile
-  ! 6. should be updated by advance_*
-
   integer, parameter :: nVar = 24
 
   integer, parameter :: nFluid    = 4
@@ -30,9 +20,9 @@ module ModVarIndexes
   logical, parameter :: IsMhd     = .true.   ! First total ion fluid obeys MHD
   real               :: MassFluid_I(2:nFluid) = (/ 1.0, 1.0, 17.0 /)
 
-  character (len=6), parameter :: NameFluid_I(nFluid) = &
-       (/ 'All  ', 'SWp  ', 'Hp   ', 'H2Op ' /)
-
+  ! Fluids: total fluid, solar wind protons, cometary protons, water ions
+  character (len=4), parameter :: NameFluid_I(nFluid) = &
+       (/ 'All ', 'SWp ', 'Hp  ', 'H2Op' /)
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -112,37 +102,36 @@ module ModVarIndexes
        1.0, & ! HpEnergy_
        1.0 /) ! H2OpEnergy_
   
-
   ! The names of the variables used in i/o
   character(len=7) :: NameVar_V(nVar+nFluid) = (/ &
-       'Rho     ', & ! Rho_
-       'Mx      ', & ! RhoUx_
-       'My      ', & ! RhoUy_
-       'Mz      ', & ! RhoUz_
-       'Bx      ', & ! Bx_
-       'By      ', & ! By_
-       'Bz      ', & ! Bz_
-       'Pe      ', & ! Pe_
-       'p       ', & ! p_
-       'SWpRho  ', & ! SWpRho_
-       'SWpMx   ', & ! SWpRhoUx_
-       'SWpMy   ', & ! SWpRhoUy_
-       'SWpMz   ', & ! SWpRhoUz_
-       'SWpP    ', & ! SWpP_
-       'HpRho   ', & ! HpRho_
-       'HpMx    ', & ! HpRhoUx_
-       'HpMy    ', & ! HpRhoUy_
-       'HpMz    ', & ! HpRhoUz_
-       'HpP     ', & ! HpP_
-       'H2OpRho ', & ! H2OpRho_
-       'H2OpMx  ', & ! H2OpRhoUx_
-       'H2OpMy  ', & ! H2OpRhoUy_
-       'H2OpMz  ', & ! H2OpRhoUz_
-       'H2OpP   ', & ! H2OpP_
-       'E       ', & ! Energy_
-       'SWpE    ', & ! SWpEnergy_
-       'HpE     ', & ! HpEnergy_
-       'H2OpE   ' /) ! H2OpEnergy_
+       'Rho    ', & ! Rho_
+       'Mx     ', & ! RhoUx_
+       'My     ', & ! RhoUy_
+       'Mz     ', & ! RhoUz_
+       'Bx     ', & ! Bx_
+       'By     ', & ! By_
+       'Bz     ', & ! Bz_
+       'Pe     ', & ! Pe_
+       'p      ', & ! p_
+       'SWpRho ', & ! SWpRho_
+       'SWpMx  ', & ! SWpRhoUx_
+       'SWpMy  ', & ! SWpRhoUy_
+       'SWpMz  ', & ! SWpRhoUz_
+       'SWpP   ', & ! SWpP_
+       'HpRho  ', & ! HpRho_
+       'HpMx   ', & ! HpRhoUx_
+       'HpMy   ', & ! HpRhoUy_
+       'HpMz   ', & ! HpRhoUz_
+       'HpP    ', & ! HpP_
+       'H2OpRho', & ! H2OpRho_
+       'H2OpMx ', & ! H2OpRhoUx_
+       'H2OpMy ', & ! H2OpRhoUy_
+       'H2OpMz ', & ! H2OpRhoUz_
+       'H2OpP  ', & ! H2OpP_
+       'E      ', & ! Energy_
+       'SWpE   ', & ! SWpEnergy_
+       'HpE    ', & ! HpEnergy_
+       'H2OpE  ' /) ! H2OpEnergy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
