@@ -690,8 +690,8 @@ contains
          ! Spitzer form for collisional regime
          HeatCoef = HeatCondPar*Te**2.5
       else
-         call user_material_properties(State_V, TeOut=TeSi, &
-              HeatCondOut=HeatCoefSi)
+         call user_material_properties(State_V, i, j, k, iBlock, &
+              TeOut=TeSi, HeatCondOut=HeatCoefSi)
 
          HeatCoef = HeatCoefSi &
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
