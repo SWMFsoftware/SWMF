@@ -43,6 +43,7 @@ test:
 	-@($(MAKE) test_mercurysph)
 	-@($(MAKE) test_saturn)
 	-@($(MAKE) test_comet)
+	-@($(MAKE) test_cometfluids)
 	-@($(MAKE) test_magnetometer)
 	-@($(MAKE) test_anisotropic)
 	-@($(MAKE) test_func)
