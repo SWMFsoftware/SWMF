@@ -53,8 +53,6 @@ module ModUser
 contains
 
   !========================================================================
-  !  SUBROUTINE user_read_inputs
-  !========================================================================
   subroutine user_read_inputs
 
     use ModMain
@@ -99,10 +97,8 @@ contains
 
   end subroutine user_read_inputs
 
+  !========================================================================
 
-  !========================================================================
-  !  SUBROUTINE user_neutral_atmosphere(iBlock)
-  !========================================================================
   subroutine user_neutral_atmosphere(iBlock)
     use ModBlockData,  ONLY: get_block_data, set_block_data, put_block_data, &
          use_block_data
@@ -219,13 +215,12 @@ contains
     end if
 
   end subroutine user_neutral_atmosphere
-
-
   !========================================================================
-  !  SUBROUTINE user_calc_electron_collision_rates(Te,i,j,k,iBlock,fen_I,fei_I)
-  !========================================================================
-  ! calculate all collision rates involving electrons (used for sources & resistivity)
-  subroutine user_calc_electron_collision_rates(Te,i,j,k,iBlock,fen_I,fei_I)
+  subroutine calc_electron_collision_rates(Te,i,j,k,iBlock,fen_I,fei_I)
+
+    ! calculate all collision rates involving electrons 
+    ! (used for sources & resistivity)
+
     use ModAdvance,    ONLY: State_VGB, Rho_
     use ModPhysics,    ONLY: No2SI_V, UnitN_
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
@@ -263,14 +258,13 @@ contains
          No2SI_V(UnitN_)/1E6/(Te*sqrtTe)
     fei_I(SWp_) = fei_I(Hp_)
 
-  end subroutine user_calc_electron_collision_rates
-
+  end subroutine calc_electron_collision_rates
 
   !========================================================================
-  !  SUBROUTINE user_calc_rates(Ti_I,Te,i,j,k,iBlock,nElec,nIon_I,fin_II,fii_II,alpha_I,kin_IIII,v_II,uElec_D,uIon_DI,Qexc_II)
-  !========================================================================
-  ! calculate all rates not involving electron collisions
   subroutine user_calc_rates(Ti_I,Te,i,j,k,iBlock,nElec,nIon_I,fin_II,fii_II,alpha_I,kin_IIII,v_II,uElec_D,uIon_DI,Qexc_II)
+
+    ! calculate all rates not involving electron collisions
+
     use ModPhysics,  ONLY: SI2No_V, UnitN_, rPlanetSI, rBody
     use ModConst,    ONLY: cElectronCharge, cBoltzmann, cElectronMass, cProtonMass
     use ModMain,     ONLY: Body1, iTest, jTest, kTest, BlkTest
@@ -460,8 +454,7 @@ contains
   end subroutine user_calc_rates
 
   !========================================================================
-  !  SUBROUTINE user_calc_sources(iBlock)
-  !========================================================================
+
   subroutine user_calc_sources(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
@@ -637,7 +630,7 @@ contains
        uElec_DC(1:3,i,j,k) = uIonMean_DC(1:3,i,j,k)-Current_DC(1:3,i,j,k)/(nElec_C(i,j,k)*Si2No_V(UnitN_)*&
             ElectronCharge)*No2SI_V(UnitU_)
 
-       call user_calc_electron_collision_rates(Te_C(i,j,k),i,j,k,iBlock,fen_IC(1:nNeutral,i,j,k),fei_IC(1:nIonFluid,i,j,k))
+       call calc_electron_collision_rates(Te_C(i,j,k),i,j,k,iBlock,fen_IC(1:nNeutral,i,j,k),fei_IC(1:nIonFluid,i,j,k))
        call user_calc_rates(Ti_IC(1:nIonFluid,i,j,k),Te_C(i,j,k),i,j,k,iBlock,nElec_C(i,j,k),nIon_IC(1:nIonFluid,i,j,k),&
             fin_IIC(1:nIonFluid,1:nNeutral,i,j,k),fii_IIC(1:nIonFluid,1:nIonFluid,i,j,k),alpha_IC(1:nIonFluid,i,j,k),&
             kin_IIIIC(1:nIonFluid,1:nNeutral,1:nNeutral,1:nIonFluid,i,j,k),v_IIC(1:nNeutral,1:nIonFluid,i,j,k),uElec_DC(1:3,i,j,k),&
@@ -1405,9 +1398,6 @@ contains
 
   end subroutine user_calc_sources
 
-
-  !========================================================================
-  !  SUBROUTINE user_update_states(iStage,iBlock)
   !========================================================================
 
   subroutine user_update_states(iStage,iBlock)
@@ -1473,9 +1463,6 @@ contains
 
   end subroutine user_update_states
 
-
-  !========================================================================
-  !  SUBROUTINE user_set_resistivity(iBlock, Eta_G)
   !========================================================================
 
   subroutine user_set_resistivity(iBlock, Eta_G)
@@ -1529,7 +1516,7 @@ contains
     end if
 
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-       call user_calc_electron_collision_rates(Te_G(i,j,k),i,j,k,iBlock,fen_I(1:nNeutral),fei_I(1:nIonFluid))
+       call calc_electron_collision_rates(Te_G(i,j,k),i,j,k,iBlock,fen_I(1:nNeutral),fei_I(1:nIonFluid))
 
 
        ! classical conductivities due to ion-electron and electron-neutral collisions (1E-20 to avoid div by 0)
@@ -1564,14 +1551,6 @@ contains
 
   end subroutine user_set_resistivity
 
-
-  !========================================================================
-  !  SUBROUTINE user_material_properties(State_V, i,j,k,iBlock,iDir, 
-  !     EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
-  !     EinternalOut, TeOut, PressureOut,   &
-  !     CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-  !     OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W, &
-  !     EntropyOut)
   !========================================================================
 
   subroutine user_material_properties(State_V, i,j,k,iBlock,iDir, &
@@ -1642,7 +1621,7 @@ contains
           call user_neutral_atmosphere(iBlock)
        end if
 
-       call user_calc_electron_collision_rates(TeSI,i,j,k,iBlock,fen_I(1:nNeutral),fei_I(1:nIonFluid))
+       call calc_electron_collision_rates(TeSI,i,j,k,iBlock,fen_I(1:nNeutral),fei_I(1:nIonFluid))
        eiSigma_I(1:nIonFluid) = cElectronCharge**2*nElec/((fei_I(1:nIonFluid)+1E-20)*cElectronMass) 
        enSigma_I(1:nNeutral) = cElectronCharge**2*nElec/((fen_I(1:nNeutral)+1E-20)*cElectronMass)
     
@@ -1677,10 +1656,6 @@ contains
     end if
   end subroutine user_material_properties
 
-
-
-  !========================================================================
-  !  SUBROUTINE user_init_point_implicit
   !========================================================================
 
   subroutine user_init_point_implicit
@@ -1712,9 +1687,6 @@ contains
 
   end subroutine user_init_point_implicit
 
-
-  !========================================================================
-  !  SUBROUTINE user_init_session
   !========================================================================
 
   subroutine user_init_session
@@ -1725,11 +1697,6 @@ contains
 
   end subroutine user_init_session
 
-
-  !========================================================================
-  !  SUBROUTINE user_set_plot_var(iBlock, NameVar, IsDimensional, PlotVar_G,
-  !               PlotVarBody, UsePlotVarBody,  NameTecVar, NameTecUnit,
-  !               NameIdlUnit, IsFound)
   !========================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional,&
@@ -1926,10 +1893,8 @@ contains
 
   end subroutine user_set_plot_var
 
+  !========================================================================
 
-  !========================================================================
-  !  SUBROUTINE user_set_ICs(iBlock)
-  !========================================================================
   subroutine user_set_ICs(iBlock)
     use ModIO,       ONLY: restart
     use ModProcMH,   ONLY: iProc
@@ -2080,10 +2045,8 @@ contains
 
   end subroutine user_set_cell_boundary
 
-
-  !========================================================================
-  !  SUBROUTINE user_get_log_var(VarValue, TypeVar, Radius)
   !============================================================================
+
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     use ModMain,       ONLY: Dt_BLK, BLKtest
@@ -2104,9 +2067,8 @@ contains
 
   end subroutine user_get_log_var
 
-  !========================================================================
-  !  SUBROUTINE user_set_face_boundary(VarsGhostFace_V)
   !============================================================================
+
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModSize,         ONLY: x_
@@ -2263,9 +2225,8 @@ contains
 
   end subroutine user_set_face_boundary
 
-  !========================================================================
-  !  SUBROUTINE user_set_boundary_cells(iBlock)
   !============================================================================
+
   subroutine user_set_boundary_cells(iBlock)
 
      use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x1, x2
@@ -2283,7 +2244,5 @@ contains
      IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
 
    end subroutine user_set_boundary_cells
-
-
 
 end module ModUser
