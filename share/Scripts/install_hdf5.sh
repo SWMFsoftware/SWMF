@@ -658,8 +658,11 @@ no flags = install hdf5 (and szip) here
 2. The install_hdf5.sh script should be run from the directory where you want hdf5 to be installed.
 3. Add the hdf5-1.8.8/bin directory to the path (or make links to the executables that will be in the path).
 4. Enable HDF5 in the SWMF: Config.pl -hdf5
-5. For the NAG compiler add this line to Makefile.def in the main directory of the installed SWMF/BATSRUS:
-     HDF5SRC = -I/YOURHDF5PATH/fortran/src 
+5. For the NAG compiler only: edit Makefile.conf in the main directory 
+   of the installed SWMF/BATSRUS and change the definition of SEARCH to
+
+   SEARCH = -I\${SHAREDIR} \${SEARCH_EXTRA} -I/YOURHDF5PATH/fortran/src 
+
 6. Enjoy"
 while getopts ':hs:' option; do
 case "$option" in
