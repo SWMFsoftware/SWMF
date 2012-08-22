@@ -10,16 +10,7 @@ module ModVarIndexes
   ! This equation module contains the MHD equations with species for Comets
   character (len=*), parameter :: NameEquation='Cometary MHD'
 
-  ! The variables numbered from 1 to nVar are:
-  !
-  ! 1. defined in set_ICs.
-  ! 2. prolonged and restricted in AMR
-  ! 3. saved into the restart file
-  ! 4. sent and recieved in the exchange message
-  ! 5. filled in the outer ghostcells by the program set_outer_BCs
-  ! 5. integrated by subroutine integrate_all for saving to logfile
-  ! 6. should be updated by advance_*
-
+  ! Number of variables without energy:
   integer, parameter :: nVar = 14  !8 + 6 ion species
 
   ! Named indexes for State_VGB and other variables

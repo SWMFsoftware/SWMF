@@ -9,16 +9,7 @@ module ModVarIndexes
    ! This equation module contains the standard MHD equations + 4 neutrals
    character (len=*), parameter :: NameEquation='MHD and four neutrals'
 
-   ! The variables numbered from 1 to nVar are:
-   !
-   ! 1. defined in set_ICs.
-   ! 2. prolonged and restricted in AMR
-   ! 3. saved into the restart file
-   ! 4. sent and recieved in the exchange message
-   ! 5. filled in the outer ghostcells by set_outer_bcs
-   ! 5. integrated by subroutine integrate_all for saving to logfile
-   ! 6. should be updated by advance_*
-
+   ! Number of variables without energy:
    integer, parameter :: nVar = 28
 
    ! 1 ion fluid and 4 neutral fluids
