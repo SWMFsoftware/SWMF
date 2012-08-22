@@ -5,15 +5,13 @@ module ModUser
 
   ! This file contains a sample of a protected ModUser file.
   ! The top line above must follow the format shown.
-  ! If a user file is included in a test of the code, it will be included
-  !   regardless of the inclusion of the NONPUBLIC line.
 
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs
 
   include 'user_module.h' !list of public methods
 
-  real, parameter :: VersionUserModule = 1.0
+  real, parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: &
        NameUserModule = 'NOTPUBLIC Protected Sample'
 
@@ -22,8 +20,10 @@ contains
   !============================================================================
   subroutine user_read_inputs
 
-    use ModReadParam,   ONLY: read_line, read_command, read_var
-    character (len=100) :: NameCommand
+    use ModReadParam, ONLY: read_line, read_command, read_var
+    character(len=100):: NameCommand
+    real:: MyVariable
+
     character(len=*), parameter :: NameSub = "ModUser::user_read_inputs"
     !--------------------------------------------------------------------------
     do
@@ -31,6 +31,10 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
 
        select case(NameCommand)
+       case('#MYCOMMAND')
+          call read_var('MyVariable', MyVariable)
+       case('#USERINPUTEND')
+          EXIT
        case default
           call stop_mpi(NameSub//': unknown command name='//trim(NameCommand))
        end select
@@ -40,4 +44,3 @@ contains
   !============================================================================
 
 end module ModUser
-
