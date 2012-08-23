@@ -30,7 +30,7 @@ module BATL_lib
   public:: MaxDim, nDim, nDimAmr, iDimAmr_D
   public:: MaxBlock, nBlock
   public:: nI, nJ, nK, nIJK, nIJK_D
-  public:: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  public:: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
   public:: nINode, nJNode, nKNode
 
   ! Inherited from BATL_mpi
