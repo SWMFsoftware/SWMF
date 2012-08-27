@@ -43,6 +43,11 @@ module ModUser
 
   real, parameter :: GammaRel = 4.0/3.0
 
+  ! variables for changing initial condition for parcodsemi pronblem.
+  real    :: xCenterGuassian, yCenterGuassian
+  real    :: BxInput, ByInput
+  logical :: UseUserParcondSemiInit = .true.
+
 contains
 
   !============================================================================
@@ -192,9 +197,14 @@ contains
        HeatConductionCoef = 1.0
        AmplitudeTemperature = 100.0
        Tmin = 0.01
-       Bx = 1.7
-       By = 1.0
        Time0 = Time_Simulation
+       if(UseUserParcondSemiInit) then
+          Bx = BxInput
+          By = ByInput
+       else
+          Bx = 1.7
+          By = 1.0
+       end if
 
     case default
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
@@ -343,6 +353,13 @@ contains
        select case(NameCommand)
        case("#HEATCONDUCTIONTEST")
           call read_var('TypeProblem',TypeProblem)
+
+       case("#PARCONDSEMIINIT")
+          UseUserParcondSemiInit = .true.
+          call read_var('BxInput', BxInput)
+          call read_var('ByInput', ByInput)
+          call read_var('xCenterGuassian', xCenterGuassian)
+          call read_var('yCenterGuassian', yCenterGuassian)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -807,7 +824,7 @@ contains
     Spread = 4.0*Time_Simulation
 
     Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
-         *exp(-xx**2/Spread-yy**2/Spread0)
+         *exp(-(xx-xCenterGuassian)**2/Spread-(yy-yCenterGuassian)**2/Spread0)
 
     if(TypeProblem == 'parcondsemi') Temperature = Temperature**(1.0/3.5)
 
