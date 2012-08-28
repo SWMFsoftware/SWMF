@@ -353,7 +353,8 @@ F 			UseWaves
 #BFIELD
 numeric 		TypeBField
 mhd                     TypeBFieldGrid
-
+1.0			StretchingFactorA
+0.0			StretchingFactorB
 
 #SAVERESTART
 T			DoSaveRestart
