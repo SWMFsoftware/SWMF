@@ -144,6 +144,14 @@ contains
           Z_ = iVar
        case('z2')
           Z2_= iVar
+       case('dpdrho')
+          DPOverDRho_ = iVar
+       case('dpedrho')
+          DPEOverDRho_ = iVar
+      case('dpdt')
+          DPOverDT_ = iVar
+       case('dpedt')
+          DPEOverDT_ = iVar
        case default
           call CON_stop(NameVar_I(iVar)// &
                ' is not allowed in the eos lookup tables')
@@ -264,7 +272,12 @@ contains
        HeatCond      = ValueTmp_V(Cond_) ,&
        TeTiRelax    = ValueTmp_V(TeTi_)  ,&
        zAverageOut   = ValueTmp_V(Z_)    ,&
-       z2AverageOut  = ValueTmp_V(Z2_)   )
+       z2AverageOut  = ValueTmp_V(Z2_)   ,&
+       DPOverDRho    = ValueTmp_V(DPOverDRho_ ), &
+       DPOverDT      = ValueTmp_V(DPOverDT_   ), &
+       DPEOverDRho   = ValueTmp_V(DPEOverDRho_), &
+       DPEOverDT     = ValueTmp_V(DPEOverDT_  ))
+       
     else
        call nlte_eos(iMaterial,Rho,&
        TeIn = Te, &

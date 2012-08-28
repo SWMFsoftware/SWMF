@@ -170,10 +170,14 @@ module CRASH_ModEos
              TeTi_   =  9, &
              Cond_   = 10, &
              Z_      = 11, &
-             Z2_     = 12
+             Z2_     = 12, &
+             DPOverDRho_ = 13, &
+             DPOverDT_   = 14, &
+             DPEOverDRho_= 15, &
+             DPEOverDT_  = 16
 
   !The number of columns in the EOS table
-  integer,public :: nVarEos =12   
+  integer,public :: nVarEos =16   
   
   ! Arrays which relate the iTable for the EOS table with 
   ! the material number:
@@ -337,7 +341,8 @@ contains
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
        OpacityPlanckOut_I, OpacityRosselandOut_I,            &
-       HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut, iError)
+       HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut,   &
+       DPOverDRho, DPOverDT, DPEOverDRho, DPEOverDT, iError)
 
     use ModLookupTable, ONLY: interpolate_lookup_table
     ! Eos function for single material
@@ -379,6 +384,10 @@ contains
 
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
     real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
+    real,    optional, intent(out) :: DPOverDRho   ! (\rho/P)(\partial P/\partial \rho)_T 
+    real,    optional, intent(out) :: DPOverDT     ! (1/N_a k_B)(\partial P/\partial T)_\rho
+    real,    optional, intent(out) :: DPEOverDRho  ! (\rho/P_e)(\partial P_e/\partial \rho)_T 
+    real,    optional, intent(out) :: DPEOverDT    ! (1/N_a k_B)(\partial P_e/\partial T)_\rho
     integer, optional, intent(out) :: iError       ! error flag
 
     real   :: Natomic
@@ -454,6 +463,11 @@ contains
        if(present(Ne))         Ne = Value_V(Z_) * NAtomic
        if(present(zAverageOut))zAverageOut = Value_V(Z_)
        if(present(z2AverageOut))z2AverageOut = Value_V(Z2_)
+       if(present(DPOverDRho))DPOverDRho = Value_V(DPOverDRho_)
+       if(present(DPOverDT))DPOverDT = Value_V(DPOverDT_)
+       if(present(DPEOverDRho))DPEOverDRho = Value_V(DPEOverDRho_)
+       if(present(DPEOverDT))DPEOverDT = Value_V(DPEOverDT_)
+
        if(present(iError))then
           iError=0
           if(Z_>=1)then
@@ -498,7 +512,8 @@ contains
             TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
             eElectronOut, pElectronOut, GammaEOut, CvElectronOut, & 
             OpacityPlanckOut_I, OpacityRosselandOut_I,            &
-            HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut, iError)
+            HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut,   &
+            DPOverDRho, DPOverDT, DPEOverDRho, DPEOverDT, iError)
     end if
   end subroutine eos_material
 
@@ -509,7 +524,8 @@ contains
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
        OpacityPlanckOut_I, OpacityRosselandOut_I,            & 
-       HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut, iError)
+       HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut,   &
+       DPOverDRho, DPOverDT, DPEOverDRho, DPEOverDT, iError)
     !\
     !!   WARNING !!!
     !You cannot use total pressure and total energy density as input or output
@@ -542,6 +558,10 @@ contains
     real,    optional, intent(out) :: Ne           ! electron concentration, [m-3]
     real,    optional, intent(out) :: zAverageOut  ! <z>
     real,    optional, intent(out) :: z2AverageOut ! <z^2>
+    real,    optional, intent(out) :: DPOverDRho   ! (\rho/P)(\partial P/\partial \rho)_T 
+    real,    optional, intent(out) :: DPOverDT     ! (1/N_a k_B)(\partial P/\partial T)_\rho
+    real,    optional, intent(out) :: DPEOverDRho  ! (\rho/P_e)(\partial P_e/\partial \rho)_T 
+    real,    optional, intent(out) :: DPEOverDT    ! (1/N_a k_B)(\partial P_e/\partial T)_\rho
 
     real,    optional, intent(out), &              !Opacities m^-1
                    dimension(nGroup) :: OpacityPlanckOut_I, OpacityRosselandOut_I
@@ -582,7 +602,8 @@ contains
          TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
          eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
          OpacityPlanckOut_I, OpacityRosselandOut_I,            & 
-         HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut,  iError)
+         HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut,   &
+         DPOverDRho, DPOverDT, DPEOverDRho, DPEOverDT,  iError)
 
   end subroutine eos_mixture
 
@@ -593,7 +614,8 @@ contains
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, & 
        OpacityPlanckOut_I, OpacityRosselandOut_I,            &
-       HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut, iError)
+       HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut,   &
+       DPOverDRho, DPOverDT, DPEOverDRho, DPEOverDT, iError)
     use CRASH_ModTransport, ONLY: electron_heat_conductivity, te_ti_relaxation
     use CRASH_ModPartition, ONLY: zAv, Z2
     !\
@@ -632,6 +654,10 @@ contains
 
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
     real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
+    real,    optional, intent(out) :: DPOverDRho   ! (\rho/P)(\partial P/\partial \rho)_T 
+    real,    optional, intent(out) :: DPOverDT     ! (1/N_a k_B)(\partial P/\partial T)_\rho
+    real,    optional, intent(out) :: DPEOverDRho  ! (\rho/P_e)(\partial P_e/\partial \rho)_T 
+    real,    optional, intent(out) :: DPEOverDT    ! (1/N_a k_B)(\partial P_e/\partial T)_\rho
     integer, optional, intent(out) :: iError       ! error flag
 
     real :: ePerAtom, pPerAtom,TeInEV  !All in eV
@@ -702,6 +728,11 @@ contains
     if(present(Ne)) Ne = NAtomic * zAv
     if(present(zAverageOut)) zAverageOut = zAv
     if(present(z2AverageOut))z2AverageOut = Z2
+    if(present(DPOverDRho))DPOverDRho=compressibility_at_const_te()
+    if(present(DPEOverDRho))DPEOverDRho=compressibility_at_const_te_e()
+    if(present(DPOverDT))DPOverDT=d_pressure_over_d_te()
+    if(present(DPEOverDT))DPEOverDT=d_pressure_e_over_d_te()
+
     if(present(iError).and.zAv <= cZMin)iError=4
   end subroutine eos_generic
   !===========================================================================
