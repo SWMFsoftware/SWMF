@@ -384,9 +384,11 @@ F 			UseConstantStepPA
 F 			UseWaves
 
 #BFIELD
-numeric 		TypeBField
-mhd                     TypeBFieldGrid
-dynamic			TypeBFieldTemp
+numeric 		TypeBField	
+mhd                     TypeBFieldGrid	
+dynamic			TypeBFieldTemp	
+1.0 			StretchingFactor	A
+0.0 			StretchingFactorB	
 
 #SAVERESTART
 T			DoSaveRestart
