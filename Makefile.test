@@ -1,4 +1,3 @@
-
 #^CMP COPYRIGHT UM
 #^CMP FILE TESTING
 
@@ -55,8 +54,9 @@ test:
 	-@(${MAKE} test9)
 	-@(${MAKE} test_check)
 
+# Note: sync makes sure that all disk writes are complete
 test_check:
-	@cat share/Library/test/*.diff ??/*/*.diff *.diff > /dev/null
+	@sync
 	-@ls -ltr share/Library/test/*.diff ??/*/*.diff *.diff > test_swmf.res
 	@cat test_swmf.res
 	@echo '=============================================================='\
