@@ -42,7 +42,8 @@ module CRASH_ModEosTable
 
   !The variable names in the EOS table
   character(LEN=100):: NameVarEos = &
-       'P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2'
+       'P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2 '//&
+       'DPOverDRho DPOverDT DPEOverDRho DPEOverDT'
 
   !The following subroutine may be used to reset the
   !list of variables tabulated in the EOS tables.
