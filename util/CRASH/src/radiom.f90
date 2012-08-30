@@ -202,7 +202,7 @@ contains
     Naft=max(Naft,0)
     !
     Ubef=min(Umax,Ufirst)
-    Ubef=min(Ubef,Ulast)
+    Ubef=max(Ubef,Umin)
     Nbef=log(Ubef/Umin)/lgdu
     Nbef=max(Nbef,0)
     !
