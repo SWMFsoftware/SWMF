@@ -54,9 +54,9 @@ test:
 	-@(${MAKE} test9)
 	-@(${MAKE} test_check)
 
-# Note: sync makes sure that all disk writes are complete
+# Note: the "cat ... > /dev/null" makes sure that file size are correct on nyx
 test_check:
-	@sync
+	@cat share/Library/test/*.diff ??/*/*.diff *.diff > /dev/null
 	-@ls -ltr share/Library/test/*.diff ??/*/*.diff *.diff > test_swmf.res
 	@cat test_swmf.res
 	@echo '=============================================================='\
