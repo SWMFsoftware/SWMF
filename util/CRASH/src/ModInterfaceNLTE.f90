@@ -1,11 +1,13 @@
 !^CFG COPYRIGHT UM
 module CRASH_ModInterfaceNLTE
   use CRASH_ModMultiGroup, ONLY:nGroup, EnergyGroup_I
-  use CRASH_M_EOS,   ONLY: UseNLTE=>UseCrashEos
+  use CRASH_M_EOS,   ONLY: UseNLTE=>UseCrashEos !eos_material.f90
+  use CRASH_M_RADIOM,      ONLY: printversion
   implicit none
   PRIVATE !Except
   public:: UseNLTE  !Logical describing if the nonLTE is used 
   public:: read_nlte,check_nlte !reads UseNlte, makes a check if UseNlte==.true.
+  public:: printversion
   public:: NLTE_EOS !Full list of the eos function parameters (no pIn)
 contains
   subroutine read_nlte
@@ -23,28 +25,25 @@ contains
     use CRASH_M_expTab,ONLY: exp_tab8
     use ModConst,            ONLY: cHPlanckEV
     use CRASH_M_NLTE,only : ng_rad
-    use M_RADIOM, only : prep_projE, prepCorrUbar
+    use CRASH_M_RADIOM, only : prep_projE, prepCorrUbar
     logical,save:: DoInit = .true.
     !---------------------
     if(.not.DoInit)return
     DoInit = .false.
     !Initialize NLTE calculations
-    call exp_tab8()
-    call setoptions(.false., .false., .true.)
-    
-    !What else?
-   
-   
+    call exp_tab8()    !ModExpTable.f90
+    call setoptions(brent=.false., EELog=.false.) !eos_material.f90
+       
     !\
     ! Coefficients for transforming from the user defined grid to
     ! the refined logrithmic-uniform internal fixed grid
     !/ 
-    call prep_projE(EnergyGroup_I(0:nGroup),nGroup)
+    call prep_projE(EnergyGroup_I(0:nGroup),nGroup) !radiom.f90
 
     !\
     ! Initialize and calculate some internal arrays
     !/
-    call prepCorrUbar()
+    call prepCorrUbar()                             !
    
     ng_rad=nGroup
 
@@ -59,11 +58,11 @@ contains
        OpacityPlanckOut_I, OpacityRosselandOut_I,            &
        HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut)
 
-    use CRASH_M_EOS,   ONLY: iMaterial, set_kbr
-    use CRASH_M_NLTE,only : ng_rad,EoB, NLTE=>NLTE_EOS, setErad 
+    use CRASH_M_EOS,   ONLY: iMaterial, set_kbr !eos_material.f90
+    use CRASH_M_NLTE,only : ng_rad,EoBIn, NLTE=>NLTE_EOS, setErad 
     use CRASH_ModEos,ONLY: eos, cAtomicMassCRASH_I, &
                            nZMix_II, cMix_II
-    use CRASH_M_localProperties,only : atoNum,atoMass
+    use CRASH_M_localProperties,only : atoNum,atoMass !ModLocalProperties.f90
     use ModConst
     ! Eos function for single material
 
@@ -106,7 +105,9 @@ contains
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
     real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
     
-    real:: Tz, NAtomic, Te, EIn, TzSi    !in eV, cm-3, eV, erg/cm3 
+    real:: Tz, NAtomic, Te, EIn, TzSi, ZBar    !in eV, cm-3, eV, erg/cm3 
+    real:: pNlte, pENlte, pLte, pELte, CvTotal, CvElectron
+    real:: DPOverDRho, DPEOverDRho, DPOverDT, DPEOverDT, DTzOverDRho
     !---------------
     !Set iMaterial and dependent variables
 
@@ -122,13 +123,13 @@ contains
                       cMix_II(:,iMaterial))
     
     if(present(EoBIn_I))then
-       EoB(1:nGroup) = EoBIn_I
+       EoBIn(1:nGroup) = EoBIn_I
     else
-       EoB(1:nGroup)=0.0  !Zero radiation energy
+       EoBIn(1:nGroup)=0.0  !Zero radiation energy
     end if
 
     call set_kbr(NAtom=NAtomic)
-    call setErad(eg_o_bg= EoB(1:nGroup),&
+    call setErad(eg_o_bg= EoBIn(1:nGroup),&
                  hnug=EnergyGroup_I(0:nGroup),&          
                  ng=nGroup)
 
@@ -142,18 +143,20 @@ contains
                Zbar_out=zAverageOut, &
                Tz_out=Tz,            &
                Ee_out=EElectronOut,  &
-               Pe_out=PElectronOut)
+               Pe_out=pENlte)
+          if(present(pElectronOut))pElectronOut=pENlte
+          !erg/cm3=0.1 J/m3
+          pENlte = pENlte * 0.10
        else
           call NLTE(Natom=NAtomic,   &
                Te_in=Te,             &
                Zbar_out=zAverageOut, &
                Tz_out=Tz,            &
-               Et_out=Ein,           &
-               Pt_out=PTotalOut)
-          !We use a fake parameter for ETotalOut,
-          !which is needed in case no energetic output
-          !parameters are present
-          if(present(ETotalOut))ETotalOut=EIn
+               Et_out=ETotalOut,     &
+               Pt_out=pNlte)
+          if(present(pTotalOut))pTotalOut=pNlte
+          !erg/cm3=0.1 J/m3
+          pNlte = pNlte * 0.10
        end if
     elseif(present(EElectronIn))then
        !Convert J/m3 = 10^7erg/10^6cm3=10 erg/cm3
@@ -162,11 +165,13 @@ contains
        !Get Tz
        call NLTE(Natom=NAtomic,&
          Ee_in=EIn,           &
-         Zbar_out=zAverageOut,&
+         Zbar_out=zBar,&
          Tz_out=Tz,           &
          Te_out=Te,           &
-         Pe_out=PElectronOut)
-       
+         Pe_out=pENlte)
+       if(present(pElectronOut))pElectronOut=pENlte
+       !erg/cm3=0.1 J/m3
+       pENlte = pENlte * 0.10
     elseif(present(ETotalIn))then
        !Convert J/m3 = 10^7erg/10^6cm3=10 erg/cm3
         EIn = ETotalIn * 10.0
@@ -175,10 +180,13 @@ contains
 
        call NLTE(Natom=NAtomic,&
          Et_in=EIn,           &
-         Zbar_out=zAverageOut,&
+         Zbar_out=zBar,       &
          Tz_out=Tz,           &
          Te_out=Te,           &
-         Pt_out=PTotalOut)
+         Pt_out=pNlte)
+       if(present(pTotalOut))pTotalOut=pNlte
+       !erg/cm3=0.1 J/m3
+          pNlte = pNlte * 0.10
     else
        call CON_stop(&
             'Stop NLTE_eos: TeIn or EElectronIn or ETotalIn must be present')
@@ -206,7 +214,7 @@ contains
     if(present(PTotalOut   ))then
        PTotalOut    = PTotalOut   *0.10
     end if
-
+    if(present(zAverageOut))zAverageOut=zBar
     if(&
          present(GammaOut).or.      &
          present(GammaEOut).or.     &
@@ -217,23 +225,47 @@ contains
          present(HeatCond).or.      &
          present(TeTiRelax).or.     &
          present(Ne).or.            &
-         present(zAverageOut).or.   & 
          present(z2AverageOut) )    &
          call eos(&
          iMaterial=iMaterialIn,     &
          Rho=Rho,                   &
-         TeIn=TzSi,                   &
-         GammaOut=GammaOut,         &
-         CvTotalOut=CvTotalOut,     &
-         GammaEOut=GammaEOut,       &
-         CvElectronOut=CvElectronOut, &
+         TeIn=TzSi,                 &
+         pTotalOut=pLte,            &
+         pElectronOut=pELte,        &
+         CvTotalOut=CvTotal,        &
+         CvElectronOut=CvElectron,  &
          OpacityPlanckOut_I=OpacityPlanckOut_I,       &
          OpacityRosselandOut_I=OpacityRosselandOut_I, &
          HeatCond=HeatCond,           &
          TeTiRelax=TeTiRelax,         &
          Ne=Ne,                       &
-         zAverageOut=zAverageOut,   &
-         z2AverageOut=z2AverageOut)
+         z2AverageOut=z2AverageOut,   &
+         DPOverDRho=DPOverDRho,       &
+         DPOverDT=DPOverDT,           &
+         DPEOverDRho=DPEOverDRho,     &
+         DPEOverDT=DPEOverDT          )
+    !Correct thermodynamic derivatives
+    if(present(CvTotalOut))CvTotalOut = CvTotal * (Tz/Te) +1.50*&
+         (zBar+1)*(1-Tz/Te)*(NAtomic*1.0e6*cBoltzmann)
+    if(present(CvElectronOut))CvElectronOut = CvElectron * (Tz/Te) +&
+         1.50*zBar*(1-Tz/Te)*(NAtomic*1.0e6*cBoltzmann)
+    if(present(GammaOut))then
+       !Calculate DTzOverDRho
+       
+       GammaOut = (pLte/pNlte)*DPOverDRho +(NAtomic*1.0e6)*Te*cEV/pNlte*&
+            ((DPOverDT-(zBar+1))*DTzOverDRho/Te + (zBar+1)*(1-Tz/Te)+&
+            (DPOverDT*Tz/Te + (zBar+1)*(1-Tz/Te))**2/&
+            (CvTotal/(NAtomic*1.0e6*cBoltzmann)+1.50*(zBar+1)*(1-Tz/Te)))
+    end if
+    if(present(GammaEOut))then
+       !Calculate DTzOverDRho
+       DTzOverDRho = 0.0
+       
+       GammaOut = (pELte/pENlte)*DPEOverDRho +(NAtomic*1.0e6)*Te*cEV/pENlte*&
+            ((DPEOverDT-zBar)*DTzOverDRho/Te + zBar*(1-Tz/Te)+&
+            (DPEOverDT*Tz/Te + zBar*(1-Tz/Te) )**2/&
+            (CvElectron/(NAtomic*1.0e6*cBoltzmann)+1.50*zBar*(1-Tz/Te)))
+    end if
     !TBD  Correct heat conduction and TeTiRelax with (Te/Tz)factors
   end subroutine NLTE_EOS
 end module CRASH_ModInterfaceNLTE
