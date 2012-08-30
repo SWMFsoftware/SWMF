@@ -2105,7 +2105,7 @@ contains
     use CRASH_ModEosTable,   ONLY: check_eos_table, check_opac_table
     use ModSize,             ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModVarIndexes,       ONLY: nWave
-    use CRASH_ModInterfaceNLTE, ONLY: check_nlte
+    use CRASH_ModInterfaceNLTE, ONLY: check_nlte,radiom_version=>printversion
 
     integer:: iMaterial
     logical:: IsFirstTime = .true.
@@ -2174,6 +2174,7 @@ contains
 
     if(UseNLTE)then
        call check_nlte
+       if(iProc==0)call radiom_version
        if(Te0_==1)call CON_stop('Use state vector with Te0_ component with NLTE!')
        if(.not.allocated(EOverB_VGB))then
           allocate(EOverB_VGB(nWave,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
