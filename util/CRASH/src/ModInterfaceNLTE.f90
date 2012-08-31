@@ -110,7 +110,8 @@ contains
     real:: DPOverDRho, DPEOverDRho, DPOverDT, DPEOverDT, DTzOverDRho
     !---------------
     !Set iMaterial and dependent variables
-
+    !Initialize
+    pLte=0.0; pELte=0.0; peNlte = 0.0; pNlte=0.0
     iMaterial = iMaterialIn
 
     !Calculate atomic density
@@ -140,7 +141,7 @@ contains
           !get Tz
           call NLTE(Natom=NAtomic,&
                Te_in=Te,             &
-               Zbar_out=zAverageOut, &
+               Zbar_out=zBar, &
                Tz_out=Tz,            &
                Ee_out=EElectronOut,  &
                Pe_out=pENlte)
@@ -150,7 +151,7 @@ contains
        else
           call NLTE(Natom=NAtomic,   &
                Te_in=Te,             &
-               Zbar_out=zAverageOut, &
+               Zbar_out=zBar, &
                Tz_out=Tz,            &
                Et_out=ETotalOut,     &
                Pt_out=pNlte)
@@ -266,6 +267,53 @@ contains
             (DPEOverDT*Tz/Te + zBar*(1-Tz/Te) )**2/&
             (CvElectron/(NAtomic*1.0e6*cBoltzmann)+1.50*zBar*(1-Tz/Te)))
     end if
+    !Check positivity
+    if(present(pElectronOut))then
+       if(pElectronOut<0.0)then
+          write(*,*)'Negative electron pressure=',pElectronOut,' n/m2'
+          call print_input_and_stop
+       end if
+    end if
+    if(present(pTotalOut))then
+       if(pTotalOut<=0.0)then
+          write(*,*)'Non-positive total pressure=',pTotalOut,' n/m2'
+          call print_input_and_stop
+       end if
+    end if
+    contains
+      subroutine print_input_and_stop
+        if(present(TeIn))then
+           write(*,*)'TeIn=',TeIn,' K'
+        else
+           write(*,*)'TeIn is not present'
+        end if
+        if(present(eTotalIn))then
+           write(*,*)'eTotalIn=',eTotalIn,' J/m3'
+        else
+           write(*,*)'eTotalIn is not present'
+        end if
+        if(present(eElectronIn))then
+           write(*,*)'eElectronIn=',eElectronIn,' J/m3'
+        else
+           write(*,*)'eElectronIn is not present'
+        end if
+        if(present(EoBIn_I))then
+           write(*,*)'EoBIn_I=',EoBIn_I
+        else
+           write(*,*)'EoBIn_I is not present'
+        end if
+        write(*,*)'NAtomic=', nAtomic*1e6,' 1/m3'
+        write(*,*)'Te=',Te,' eV'
+        write(*,*)'Tz=',Tz,' eV'
+        write(*,*)'zBar=',zBar
+        write(*,*)'pNLte  pressure=',pNLte,' n/m2'
+        write(*,*)'peNLte pressure=',peNlte,' n/m2'
+        write(*,*)'pLte   pressure=',pLte,' n/m2'
+        write(*,*)'peLte  pressure=',peLte,' n/m2' 
+        
+        call CON_stop('Unphysical output parameter(s) from NLTE EOS')
+      end subroutine print_input_and_stop
     !TBD  Correct heat conduction and TeTiRelax with (Te/Tz)factors
-  end subroutine NLTE_EOS
+  
+    end subroutine NLTE_EOS
 end module CRASH_ModInterfaceNLTE
