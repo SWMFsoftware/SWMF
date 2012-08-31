@@ -20,7 +20,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        gamma_1d, &
        EddyCoef_1d, &
        ViscCoef_1d, &
-       Gravity_G, Altitude_G, dAlt_C, InvRadialDistance_C, dAlt_F, InvDAlt_F, Cv_1D
+       Gravity_G, Altitude_G, dAlt_C, InvRadialDistance_C, dAlt_F, InvDAlt_F, &
+        Cv_1D, dAltdLon_1D, dAltdLat_1D
   
 
   implicit none
@@ -35,7 +36,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   iBlock1D = iBlock
 
   KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
-
+  dAltdLon_1D = dAltdLon_CB(iLon,iLat,0,iBlock)
+  dAltdLat_1D = dAltdLat_CB(iLon,iLat,0,iBlock)
   EddyCoef_1d(1:nAlts) = KappaEddyDiffusion(iLon,iLat,1:nAlts,iBlock)
   ViscCoef_1d(1:nAlts) = ViscCoef(iLon,iLat,1:nAlts)
   Cv_1D(1:nAlts) = cp(iLon,iLat,1:nAlts,iBlock)

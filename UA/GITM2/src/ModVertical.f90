@@ -36,7 +36,7 @@ module ModVertical
 !  real :: Kappa0(nAlts), KappaNS(nSpecies,nSpecies)
 !  real :: KappaNS(nAlts,nSpecies,nSpecies)
 
-  real :: Centrifugal, Coriolis, Lat, Lon
+  real :: Centrifugal, Coriolis, Lat, Lon, dAltdlon_1D, dAltdLat_1D
 
 end module ModVertical
 
