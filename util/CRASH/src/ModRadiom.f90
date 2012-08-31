@@ -109,7 +109,6 @@ contains
     real :: u,ey		! for 'exp_tab'  u -> ey=exp(-u), ex_u=1-ey
 
     logical,save :: lastWasPrep=.false.
-
     ngr=nbIn
     nfgp=ngr+1
     ts=sqrt(Te_in)/Ne_in
@@ -118,6 +117,7 @@ contains
        ubar=log(at32s)	! thus Tz/Te will be  1
        return
     end if
+  
     QJ=log(at32s)
     betapm= (b_CovR/Gaunt)*ts*Te_in**3        
     !	     --------
@@ -130,9 +130,9 @@ contains
     ! perform the "non overflow" alogrithm, u=including  jhg correction
     ubar=0
     s=one
-    if(nbOut.lt.2) call CON_stop('-E- xubar0 : nbOut<2')
+    if(nOut.lt.2) call CON_stop('-E- xubar0 : nbOut<2')
     duu=Uout(2)-Uout(1)
-    do ig=2,nbOut+1
+    do ig=2,nOut+1
        u  = (Uout(ig)+Uout(ig-1))/two
        du = (Uout(ig)-Uout(ig-1))
        bu3=betapm*u**3
