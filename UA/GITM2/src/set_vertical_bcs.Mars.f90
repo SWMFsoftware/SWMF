@@ -14,7 +14,8 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   use ModInputs
   use ModConstants
   use ModTime, only: UTime, iJulianDay,currenttime
-  use ModVertical, only: Lat, Lon, Gravity_G, Altitude_G, dAlt_F
+  use ModVertical, only:  Lat, Lon, Gravity_G, Altitude_G, dAlt_F, InvRadialDistance_C, &
+                         MeanMajorMass_1d, Coriolis, Centrifugal,dAltdLon_1D,dAltDLat_1D
   use ModIndicesInterfaces, only: get_HPI
 
   use EUA_ModMsis90, ONLY: meter6
@@ -35,9 +36,13 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   logical :: IsFirstTime = .true., UseMsisBCs = .false.
   real    :: HP
   integer :: ierror
-
+  real :: EffectiveGravity(-1:nAlts+2)
+  real    :: InvAtmScaleHeight
+  real :: LowerBoundaryFlux, LowerBoundaryVelocity
+  real :: UpperBoundaryFlux, UpperBoundaryVelocity
   integer, dimension(25) :: sw
-
+  real :: MeanGravity, MeanMass, MeanTemp
+  real :: RadDist(-1:nAlts+2)
   !-----------------------------------------------------------
   ! Bottom
   !-----------------------------------------------------------
@@ -69,32 +74,91 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
   endif
 
-  ! Let the winds blow !!!!
-  Vel_GD(-1:0,iEast_)  = 0.0
-  Vel_GD(-1:0,iNorth_) = 0.0
+  do iAlt = -1, nAlts+2
 
-  Vel_GD(-1:0,iUp_)    = 0.0
-  VertVel(-1:0,:)      = 0.0
-  IVel(-1:0,iUp_)      = 0.0
+         EffectiveGravity(iAlt) = Gravity_G(iAlt) + &
+                  (Vel_GD(iAlt,iNorth_)**2.0 + Vel_GD(iAlt,iEast_)**2.0)&
+                  *InvRadialDistance_C(iAlt) + &
+                  Centrifugal/InvRadialDistance_C(iAlt) + Coriolis*Vel_GD(iAlt,iEast_)
 
-  do iSpecies=1,nIonsAdvect
+
+  enddo 
+
+
+   do iSpecies = 1, nSpecies
+
+                       MeanMass =  0.5*( MeanMajorMass_1d(-1) + MeanMajorMass_1d(0))
+                       MeanTemp =  0.5*( Temp(-1) + Temp(0) )
+                    MeanGravity = -0.5*( EffectiveGravity(-1) + EffectiveGravity(0)) 
+
+                    InvAtmScaleHeight =  MeanGravity * MeanMass / &
+                                      (MeanTemp*Boltzmanns_Constant)
+
+                    LogNS(-1,iSpecies) = &
+                         LogNS( 0,iSpecies) + &
+                       (InvAtmScaleHeight)*(dAlt_F(-1))
+
+
+   enddo 
+
+   Vel_GD(-1:0,iEast_)  = 0.0
+   Vel_GD(-1:0,iNorth_) = 0.0
+   Vel_GD(-1:0,iUp_)    = 0.0
+
+  if (UseTopography) then
+    Vel_GD(0,iEast_) = Vel_GD(1,iEast_)
+    Vel_GD(0,iNorth_) = Vel_GD(1,iNorth_)
+
+    Vel_GD(-1:0,iUp_) = Vel_GD(0,iNorth_)*dAltdLat_1d + &
+      Vel_GD(0,iEast_) * dAltdLon_1D
+  endif
+
+
+
+   VertVel(-1:0,:)      = 0.0
+   IVel(-1:0,iUp_)      = 0.0
+
+!    do iSpecies = 1, nSpecies
+!          LowerBoundaryVelocity = VertVel(1,iSpecies)
+!          LowerBoundaryFlux = LowerBoundaryVelocity*exp(LogNS(1,iSpecies))
+!          VertVel( 0 ,iSpecies) = LowerBoundaryFlux*( (RadDist(1)/RadDist( 0))**2.0)/(exp(LogNS(  0,iSpecies)))
+!          VertVel(-1 ,iSpecies) = LowerBoundaryFlux*( (RadDist(1)/RadDist(-1))**2.0)/(exp(LogNS( -1,iSpecies)))
+!    enddo 
+   
+
+  do iSpecies=1,nIonsAdvect - 1
      dn = (LogINS(2,iSpecies) - LogINS(1,iSpecies))
-     
      LogINS(0,iSpecies) = LogINS(1,iSpecies) - dn
      LogINS(-1,iSpecies) = LogINS(0,iSpecies) - dn
   enddo
-
-  ! Lower boundary for NO on Earth
-  if (nSpecies == iNO_) then
-     dn = (LogNS(2,nSpecies) - LogNS(1,nSpecies))
-     if (dn >= 0) then
-        LogNS(0,nSpecies) = LogNS(1,nSpecies) - dn
-        LogNS(-1,nSpecies) = LogNS(0,nSpecies) - dn
-     else
-        LogNS(0,nSpecies) = LogNS(1,nSpecies) + dn
-        LogNS(-1,nSpecies) = LogNS(0,nSpecies) + dn
-     endif
-  endif
+!
+!
+!  ! Let the winds blow !!!!
+!  Vel_GD(-1:0,iEast_)  = 0.0
+!  Vel_GD(-1:0,iNorth_) = 0.0
+!
+!  Vel_GD(-1:0,iUp_)    = 0.0
+!  VertVel(-1:0,:)      = 0.0
+!  IVel(-1:0,iUp_)      = 0.0
+!
+!  do iSpecies=1,nIonsAdvect
+!     dn = (LogINS(2,iSpecies) - LogINS(1,iSpecies))
+!     
+!     LogINS(0,iSpecies) = LogINS(1,iSpecies) - dn
+!     LogINS(-1,iSpecies) = LogINS(0,iSpecies) - dn
+!  enddo
+!
+!  ! Lower boundary for NO on Earth
+!  if (nSpecies == iNO_) then
+!     dn = (LogNS(2,nSpecies) - LogNS(1,nSpecies))
+!     if (dn >= 0) then
+!        LogNS(0,nSpecies) = LogNS(1,nSpecies) - dn
+!        LogNS(-1,nSpecies) = LogNS(0,nSpecies) - dn
+!     else
+!        LogNS(0,nSpecies) = LogNS(1,nSpecies) + dn
+!        LogNS(-1,nSpecies) = LogNS(0,nSpecies) + dn
+!     endif
+!  endif
 
 !  dn = (LogNS(2,iN_4S_) - LogNS(1,iN_4S_))
 !  LogNS(0,iN_4S_) = LogNS(1,iN_4S_) - dn
@@ -163,13 +227,13 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
              Mass(iSpecies) / (Temp(iAlt)*Boltzmanns_Constant)
         LogNS(iAlt,iSpecies) = &
              LogNS(iAlt-1,iSpecies) - dAlt_F(iAlt)*InvScaleHeightS
-        if (LogNS(nAlts+1,iSpecies) > 75.0 .or. &
-             LogNS(nAlts+2,iSpecies) > 75.0) then
-           write(*,*) "======> bcs : ", iSpecies, 1.0e-3/InvScaleHeightS, &
-                Gravity_G(nAlts), Mass(iSpecies), Temp(nAlts), &
-                LogNS(nAlts,iSpecies), LogNS(nAlts+1,iSpecies), &
-                dAlt_F(nAlts), LogNS(nAlts+2,iSpecies)
-        endif
+!        if (LogNS(nAlts+1,iSpecies) > 75.0 .or. &
+!             LogNS(nAlts+2,iSpecies) > 75.0) then
+!           write(*,*) "======> bcs : ", iSpecies, 1.0e-3/InvScaleHeightS, &
+!                Gravity_G(nAlts), Mass(iSpecies), Temp(nAlts), &
+!                LogNS(nAlts,iSpecies), LogNS(nAlts+1,iSpecies), &
+!                dAlt_F(nAlts), LogNS(nAlts+2,iSpecies)
+!        endif
      enddo
   enddo
 
