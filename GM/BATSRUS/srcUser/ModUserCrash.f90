@@ -419,18 +419,19 @@ contains
          UnitTemperature_, UnitN_, PeMin, ExtraEintMin
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes,  ONLY: Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
-         Pe_, Erad_, WaveFirst_, WaveLast_, Te0_
+         Pe_, Erad_, WaveFirst_, WaveLast_, Te0_, nWave
     use ModGeometry,    ONLY: Xyz_DGB
     use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
+    use CRASH_ModMultiGroup, ONLY:get_planck_g_from_temperature
     use ModInitialState,ONLY: get_initial_state
 
     integer, intent(in) :: iBlock
 
-    real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi, Te0SI
+    real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi, Te0SI, PlanckSI
     real    :: TeSi, PeSi, Natomic, NatomicSi, RhoSi, pSi, p, Te
 
-    integer :: i, j, k, iMaterial, iP
+    integer :: i, j, k, iMaterial, iP, iGroup
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
@@ -664,6 +665,38 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i,j,k,iBlock, TeOut=Te0SI)
           State_VGB(Te0_,i,j,k,iBlock) = Te0SI * Si2No_V(UnitTemperature_)
+       
+          !Calculate "E_rad"
+          EOverB_VGB(:,i,j,k,iBlock) = No2Si_V(UnitEnergyDens_)* &
+               State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+             
+          !Calculate "over B"
+          Te0Si = State_VGB(Te0_,i,j,k,iBlock) * No2Si_V(UnitTemperature_)
+          do iGroup = 1, nWave
+             call get_planck_g_from_temperature(iGroup, Te0Si, EgSI=PlanckSi)
+             if(EOverB_VGB(iGroup,i,j,k,iBlock)>0.0)then
+                EOverB_VGB(iGroup,i,j,k,iBlock) = EOverB_VGB(iGroup,i,j,k,iBlock)/&
+                     max(PlanckSi, 0.01*EOverB_VGB(iGroup,i,j,k,iBlock))
+             else
+                EOverB_VGB(iGroup,i,j,k,iBlock)=0.0
+             end if
+          end do
+          
+
+          EInternalSI = (State_VGB(iP,i,j,k,iBlock)*inv_gm1+&
+                 State_VGB(ExtraEInt_,i,j,k,iBlock))*No2Si_V(UnitEnergyDens_)
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, EInternalIn=EInternalSI, &
+               PressureOut=PeSi)
+
+          State_VGB(iP,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
+    
+
+       ! Calculate internal energy
+
+       State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+            EinternalSi*Si2No_V(UnitEnergyDens_) &
+            - inv_gm1*State_VGB(iP,i,j,k,iBlock))
        end if
 
     end do; end do; end do
