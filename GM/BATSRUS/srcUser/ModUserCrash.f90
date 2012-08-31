@@ -2433,6 +2433,8 @@ contains
     RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
 
     if(present(EinternalIn)) EinternalSi = max(1e-30, EinternalIn)
+    if(useNLTE.and..not.present(i))&
+            call CON_stop('i,j,k,iBlock should be passed to user_material...for NLTE=T')
 
     ! The electron temperature may be needed for the opacities
     ! Initialize to negative value to see if it gets set
