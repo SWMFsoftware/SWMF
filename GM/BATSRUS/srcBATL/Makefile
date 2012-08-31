@@ -35,7 +35,7 @@ DEPEND:
 BATL_size.f90: BATL_size_orig.f90
 	cp -f BATL_size_orig.f90 BATL_size.f90
 
-MY_LIB = ${LIBDIR}/libBATL.a
+MY_LIB = libBATL.a
 
 LIB: DEPEND
 	$(MAKE) ${MY_LIB}
