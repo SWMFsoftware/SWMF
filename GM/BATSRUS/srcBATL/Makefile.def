@@ -3,7 +3,7 @@
 localdefault: help # default target
 
 SCRIPTDIR = ${DIR}/share/Scripts
-LIBDIR    = ${DIR}/src
+LIBDIR    = ${DIR}/lib
 BINDIR    = ${DIR}/bin
 SHAREDIR  = ${DIR}/share/Library/src
 TIMINGDIR = ${DIR}/util/TIMING/src
