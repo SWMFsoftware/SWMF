@@ -419,7 +419,7 @@ contains
          UnitTemperature_, UnitN_, PeMin, ExtraEintMin
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes,  ONLY: Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
-         Pe_, Erad_, WaveFirst_, WaveLast_
+         Pe_, Erad_, WaveFirst_, WaveLast_, Te0_
     use ModGeometry,    ONLY: Xyz_DGB
     use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
@@ -427,7 +427,7 @@ contains
 
     integer, intent(in) :: iBlock
 
-    real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
+    real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi, Te0SI
     real    :: TeSi, PeSi, Natomic, NatomicSi, RhoSi, pSi, p, Te
 
     integer :: i, j, k, iMaterial, iP
@@ -660,6 +660,11 @@ contains
        if(UseRadDiffusion) &
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*RadiationScaleFactor
+       if(UseNlte)then
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i,j,k,iBlock, TeOut=Te0SI)
+          State_VGB(Te0_,i,j,k,iBlock) = Te0SI * Si2No_V(UnitTemperature_)
+       end if
 
     end do; end do; end do
 
