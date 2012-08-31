@@ -310,7 +310,7 @@ contains
         write(*,*)'peNLte pressure=',peNlte,' n/m2'
         write(*,*)'pLte   pressure=',pLte,' n/m2'
         write(*,*)'peLte  pressure=',peLte,' n/m2' 
-        
+        write(*,*)'iMaterial=',iMaterialIn
         call CON_stop('Unphysical output parameter(s) from NLTE EOS')
       end subroutine print_input_and_stop
     !TBD  Correct heat conduction and TeTiRelax with (Te/Tz)factors

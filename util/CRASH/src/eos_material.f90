@@ -71,9 +71,9 @@ end subroutine verify
 !==================================
 
 subroutine LTE_EOS_dir(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
-  use CRASH_M_ZTF,only : ZTF_EOS_dir,setCALEOS
-  use CRASH_M_localProperties,only : atoNum,ro,zion
-  use CRASH_ModEos, ONLY: eos
+  use CRASH_M_ZTF,only : ZTF_EOS_dir,setCALEOS  ! 
+  use CRASH_M_localProperties,only : atoNum,ro,zion !ModLocalProperties.f90
+  use CRASH_ModEos, ONLY: eos   
   use CRASH_M_EOS,ONLY:iMaterial,useCALEOS=>UseCrashEos
   use ModConst
   implicit none
@@ -109,7 +109,20 @@ subroutine LTE_EOS_dir(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
   else
      call ZTF_EOS_dir(te,Etot,Ptot,Zbar,Cv)
   end if
-
+  !Check positivity
+ 
+  if(pTot<0.0)then
+     write(*,*)'Negative pressure in direct LTE_EOS =',ptot,' dyne/cm2'
+     write(*,*)'TeIn=',Te,' eV'
+     
+     write(*,*)'eTot=',eTot,' erg/cm3'
+     
+  
+     write(*,*)'zBar=',zBar
+  
+     
+     call CON_stop('Unphysical output parameter(s) from dir LTE EOS')
+  end if
 end subroutine LTE_EOS_dir	! ro : in module M_localProperties
 
 !------
@@ -150,6 +163,20 @@ subroutine LTE_EOS_inv(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
      Cv   = Cv * cEvToK   !erg/cm3K = erg/cm^3eV *(eV/K)
   else
      call ZTF_EOS_inv(te,Etot,Ptot,Zbar,Cv)
+  end if
+  !Check positivity
+ 
+  if(pTot<0.0)then
+     write(*,*)'Negative pressure in inverse LTE_EOS =',ptot,' dyne/cm2'
+     write(*,*)'TeIn=',Te,' eV'
+     
+     write(*,*)'eTot=',eTot,' erg/cm3'
+     
+  
+     write(*,*)'zBar=',zBar
+  
+     
+     call CON_stop('Unphysical output parameter(s) from inv LTE EOS')
   end if
 
 end subroutine LTE_EOS_inv	! ro : in module M_localProperties
