@@ -66,6 +66,4 @@ ${MY_LIB}: ${MODULES}
 
 
 distclean: clean
-	rm -f Makefile.DEPEND
-
-
+	rm -f Makefile.DEPEND ModHdf5Utils.f90
