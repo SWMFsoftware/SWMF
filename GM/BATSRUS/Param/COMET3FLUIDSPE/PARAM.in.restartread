@@ -89,10 +89,10 @@ T			  DoAddRhoU
 
 
 #PLASMA
-1.0                       IonMass SWp [amu]
+1.0                       IonMass Sw [amu]
 1.0                       IonMass Hp [amu]
 18.0                      IonMass H2Op [amu]
-1.0                       IonCharge SWp [e]
+1.0                       IonCharge Sw [e]
 1.0                       IonCharge Hp [e]
 1.0                       IonCharge H2Op [e]
 1.0                       ElectronTemperatureRatio
@@ -180,7 +180,7 @@ T                       DoSaveLogfile, rest of parameters read if true
 VAR step date time      StringLog
 1                       DnSaveLogfile
 -1                      DtSaveLogfile [sec]
-Rho Pmin Pmax Pe Bx By Bz SWpRho SWpUx SWpUy SWpUz SWpP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
+Rho Pmin Pmax Pe Bx By Bz SwRho SwUx SwUy SwUz SwP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
 
 #SAVEINITIAL
 F			DoSaveInitial
@@ -191,7 +191,7 @@ z=0 VAR idl             plot_string
 10                      DnSavePlot
 -1.                     DtSavePlot
 -1.			DxSavePlot
-SWpRho SWpUx SWpUy SWpUz SWpP HpRho HpUx HpUy HpUz HpP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
+SwRho SwUx SwUy SwUz SwP HpRho HpUx HpUy HpUz HpP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
 rBody
 z=0 VAR idl             plot_string
 10                      DnSavePlot

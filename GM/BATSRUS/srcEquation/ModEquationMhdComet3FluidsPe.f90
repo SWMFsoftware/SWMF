@@ -22,7 +22,7 @@ module ModVarIndexes
 
   ! Fluids: total fluid, solar wind protons, cometary protons, water ions
   character (len=4), parameter :: NameFluid_I(nFluid) = &
-       (/ 'All ', 'SWp ', 'Hp  ', 'H2Op' /)
+       (/ 'All ', 'Sw  ', 'Hp  ', 'H2Op' /)
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -113,11 +113,11 @@ module ModVarIndexes
        'Bz     ', & ! Bz_
        'Pe     ', & ! Pe_
        'p      ', & ! p_
-       'SWpRho ', & ! SWpRho_
-       'SWpMx  ', & ! SWpRhoUx_
-       'SWpMy  ', & ! SWpRhoUy_
-       'SWpMz  ', & ! SWpRhoUz_
-       'SWpP   ', & ! SWpP_
+       'SwRho  ', & ! SwRho_
+       'SwMx   ', & ! SwRhoUx_
+       'SwMy   ', & ! SwRhoUy_
+       'SwMz   ', & ! SwRhoUz_
+       'SwP    ', & ! SwP_
        'HpRho  ', & ! HpRho_
        'HpMx   ', & ! HpRhoUx_
        'HpMy   ', & ! HpRhoUy_
@@ -129,21 +129,21 @@ module ModVarIndexes
        'H2OpMz ', & ! H2OpRhoUz_
        'H2OpP  ', & ! H2OpP_
        'E      ', & ! Energy_
-       'SWpE   ', & ! SWpEnergy_
+       'SwE    ', & ! SwEnergy_
        'HpE    ', & ! HpEnergy_
        'H2OpE  ' /) ! H2OpEnergy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
        'Rho Mx My Mz Bx By Bz E '// &
-       'SWpRho SWpMx SWpMy SWpMz SWpE '// &
+       'SwRho SwMx SwMy SwMz SwE '// &
        'HpRho HpMx HpMy HpMz HpE '// &
        'H2OpRho H2OpMx H2OpMy H2OpMz H2OpE '
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
        'Rho Ux Uy Uz Bx By Bz Pe P ' // &
-       'SWpRho SWpUx SWpUy SWpUz SWpP '// &
+       'SwRho SwUx SwUy SwUz SwP '// &
        'HpRho HpUx HpUy HpUz HpP '// &
        'H2OpRho H2OpUx H2OpUy H2OpUz H2OpP '
 
