@@ -79,6 +79,7 @@ test_help:
 	@echo "    test MPIRUN='mpirun -np 3' (run tests with mpirun -np 3)"
 	@echo "    test MPIRUN='mprun -np 2'  (run tests with mprun -np 2)"
 	@echo "    test_amr                   (run AMR test)"
+	@echo "    test_amrsph                (run spherical AMR test)"
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
 	@echo "    test_2bodyplot             (run 2 Body Plot test)"
 	@echo "    test_comet                 (run comet test)"
@@ -520,7 +521,6 @@ test_viscosity_check:
 		Param/VISCOSITY/TestOutput/z=0_ref.outs \
 		> test_viscosity.diff)
 	ls -l test_viscosity.diff
-
 
 ### LEVELSET TEST ###
 
@@ -1407,17 +1407,12 @@ test_amr:
 	$(MAKE) test_amr_run
 	@echo "test_amr_check..." >> test_amr.diff
 	$(MAKE) test_amr_check
-	@echo "test_amrsph_rundir..." > test_amrsph.diff
-	$(MAKE) test_amrsph_rundir
-	@echo "test_amrsph_run..." >> test_amrsph.diff
-	$(MAKE) test_amrsph_run
-	@echo "test_amrsph_check..." >> test_amrsph.diff
-	$(MAKE) test_amrsph_check
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_amr_compile:
 	./Config.pl -e=Mhd -u=Default -g=4,4,4,4000,1
-	$(MAKE) BATSRUS PIDL PSPH
+	$(MAKE) BATSRUS
+	make PIDL PSPH
 
 test_amr_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1426,6 +1421,31 @@ test_amr_rundir: test_rundir
 test_amr_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test_amr_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-8 -r=1e-12 \
+		Param/AMR/TestOutput/log.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log \
+		> test_amr.diff)
+	ls -l test_amr.diff
+
+### TESTS FOR SPHERICAL AMR GRID ###
+
+test_amrsph:
+	@echo "test_amrsph_compile..." > test_amrsph.diff
+	$(MAKE) test_amrsph_compile
+	@echo "test_amrsph_rundir..." >> test_amrsph.diff
+	$(MAKE) test_amrsph_rundir
+	@echo "test_amrsph_run..." >> test_amrsph.diff
+	$(MAKE) test_amrsph_run
+	@echo "test_amrsph_check..." >> test_amrsph.diff
+	$(MAKE) test_amrsph_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_amrsph_compile:
+	./Config.pl -e=Mhd -u=Default -g=4,4,4,4000,1
+	$(MAKE) BATSRUS
+	make PIDL PSPH
 
 test_amrsph_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1440,15 +1460,7 @@ test_amrsph_check:
 		Param/AMR/TestOutput/log_sph.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log \
 		> test_amrsph.diff)
-	ls -l  test_amrsph.diff
-
-test_amr_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-8 -r=1e-12 \
-		Param/AMR/TestOutput/log.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log \
-		> test_amr.diff)
-	ls -l  test_amr.diff
-
+	ls -l test_amrsph.diff
 
 ### TESTS FOR CORRECT 2 BODY PLOT FILES ###
 
