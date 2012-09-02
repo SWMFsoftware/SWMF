@@ -34,6 +34,7 @@ clean:
 	cd Prologs;     make clean
 
 distclean: clean
+	cd Library/src; make distclean
 	cd Library/test;make distclean
 	cd Prologs;     make distclean
 	rm -f Library/src/mpif*.h *~ */*~ ${INSTALL_FILES}
