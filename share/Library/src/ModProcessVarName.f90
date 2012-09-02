@@ -411,6 +411,12 @@ contains
     ! H2O+ ions
     Dictionary_III(H2Op_, Rho_,   2) = 'h2op'
     Dictionary_III(H2Op_, Rho_,   3) = 'rhoh2op'
+    Dictionary_III(H2Op_, Rho_,   4) = 'h2oprho'
+    Dictionary_III(H2Op_, RhoUx_, 2) = 'h2opmx'
+    Dictionary_III(H2Op_, RhoUy_, 2) = 'h2opmy'
+    Dictionary_III(H2Op_, RhoUz_, 2) = 'h2opmz'
+    Dictionary_III(H2Op_, p_,     2) = 'h2opp'
+    Dictionary_III(H2Op_, Energy_,2) = 'h2ope'
 
     ! H3O+ ions
     Dictionary_III(H3Op_, Rho_,   2) = 'h3op'
