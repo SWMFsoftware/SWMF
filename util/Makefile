@@ -1,14 +1,10 @@
-INSTALLFILE = \
-
 touch_install_files:
-	-@touch DATAREAD/srcIndices/Makefile.DEPEND
-	-@touch EMPIRICAL/srcEE/Makefile.DEPEND
-	-@touch EMPIRICAL/srcIE/Makefile.DEPEND
-	-@touch EMPIRICAL/srcUA/Makefile.RULES
-	-@touch NOMPI/src/Makefile.RULES
-	-@touch CRASH/src/Makefile.DEPEND
-	-@touch CRASH/src/Makefile.RULES
-
+	@(if [ -d NOMPI ];     then touch NOMPI/src/Makefile.RULES; fi)
+	@(if [ -d EMPIRICAL ]; then touch EMPIRICAL/srcEE/Makefile.DEPEND \
+					  EMPIRICAL/srcIE/Makefile.DEPEND \
+					  EMPIRICAL/srcUA/Makefile.RULES; fi)
+	@(if [ -d CRASH ];     then touch CRASH/src/Makefile.DEPEND \
+					  CRASH/src/Makefile.RULES; fi)
 install: touch_install_files
 	@(if [ -d HYPRE ]; then cd HYPRE;  make install; fi);
 
