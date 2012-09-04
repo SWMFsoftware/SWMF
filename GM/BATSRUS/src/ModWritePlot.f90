@@ -8,7 +8,7 @@ subroutine write_plot_common(ifile)
   use ModProcMH
   use ModMain
   use ModGeometry, ONLY: XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I
-  use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt
+  use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt, cLight, UnitU_
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, close_sph_hdf5_plot, &
        init_sph_hdf5_plot,init_hdf5_plot
@@ -18,7 +18,7 @@ subroutine write_plot_common(ifile)
   use ModUtilities, ONLY: lower_case, split_string
   use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
        message_pass_node, average_grid_node, find_grid_block, &
-       IsCartesianGrid, Xyz_DNB
+       IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
 
@@ -518,6 +518,14 @@ subroutine write_plot_common(ifile)
               write(Unit_tmp,'(es13.5," LogRgen")') LogRGen_I
            end if
            write(unit_tmp,'(a)')TypeIdlFile_I(ifile)
+
+           ! Extra information for READAMR
+           write(unit_tmp,'(3i8,a)') nRoot_D,' nRoot_D'
+           write(unit_tmp,'(3i8,a)') nIJK_D,' nIJK_D'
+           write(unit_tmp,'(3l8,a)') IsPeriodic_D,' IsPeriodic_D'
+           write(unit_tmp,'(3es13.5,a)') cLight*No2Io_V(UnitU_), &
+                ThetaTilt*cRadToDeg, rBody*No2Io_V(UnitX_), &
+                ' cLight, ThetaTilt, rBody'
         end select
         close(unit_tmp)
      end do
