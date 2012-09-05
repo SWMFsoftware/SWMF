@@ -1163,13 +1163,18 @@ contains
        kLo = iCell_D(3); kHi = kLo + 1
 
        ! Index range limited to physical and outer boundary ghost cells
-       if(            DiLevelNei_IIIB(-1,0,0,iBlock)/=Unset_) iLo = max(1,iLo)
-       if(nDim<2 .or. DiLevelNei_IIIB(0,-1,0,iBlock)/=Unset_) jLo = max(1,jLo)
-       if(nDim<3 .or. DiLevelNei_IIIB(0,0,-1,iBlock)/=Unset_) kLo = max(1,kLo)
-
-       if(            DiLevelNei_IIIB(+1,0,0,iBlock)/=Unset_) iHi = min(nI,iHi)
-       if(nDim<2 .or. DiLevelNei_IIIB(0,+1,0,iBlock)/=Unset_) jHi = min(nJ,jHi)
-       if(nDim<3 .or. DiLevelNei_IIIB(0,0,+1,iBlock)/=Unset_) kHi = min(nK,kHi)
+       if(            DiLevelNei_IIIB(-1,0,0,iBlock)/=Unset_ .or. nG==0) &
+            iLo = max(1,iLo)
+       if(nDim<2 .or. DiLevelNei_IIIB(0,-1,0,iBlock)/=Unset_ .or. nG==0) &
+            jLo = max(1,jLo)
+       if(nDim<3 .or. DiLevelNei_IIIB(0,0,-1,iBlock)/=Unset_ .or. nG==0) &
+            kLo = max(1,kLo)
+       if(            DiLevelNei_IIIB(+1,0,0,iBlock)/=Unset_ .or. nG==0) &
+            iHi = min(nI,iHi)
+       if(nDim<2 .or. DiLevelNei_IIIB(0,+1,0,iBlock)/=Unset_ .or. nG==0) &
+            jHi = min(nJ,jHi)
+       if(nDim<3 .or. DiLevelNei_IIIB(0,0,+1,iBlock)/=Unset_ .or. nG==0) &
+            kHi = min(nK,kHi)
 
        if(DoTest)then
           write(*,*)'!!! iProc, iBlock, iCell_D, Coord_D=', &
