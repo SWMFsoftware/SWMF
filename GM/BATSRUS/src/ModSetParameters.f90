@@ -784,6 +784,8 @@ subroutine MH_set_parameters(TypeAction)
               plot_area='ion'
            elseif(index(plot_string,'1d')>0)then
               plot_area='1d_'
+           elseif(index(plot_string,'2d')>0)then
+              plot_area='2d_'
            elseif(index(plot_string,'3d')>0)then
               plot_area='3d_'
            elseif(index(plot_string,'x=0') > 0)then
@@ -2822,7 +2824,7 @@ contains
              plot_range(4, iFile) = +SmallSize_D(y_)
           end if
 
-       case('z=0')
+       case('z=0', '2d_')
           ! Limit plot range along z direction to be very small
           plot_range(1:5:2, iFile) = XyzMin_D
           plot_range(2:6:2, iFile) = XyzMax_D

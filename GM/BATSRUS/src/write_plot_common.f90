@@ -18,7 +18,7 @@ subroutine write_plot_common(ifile)
   use ModUtilities, ONLY: lower_case, split_string
   use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
        message_pass_node, average_grid_node, find_grid_block, &
-       IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D
+       IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
 
@@ -229,15 +229,8 @@ subroutine write_plot_common(ifile)
 
   !Logical for hdf plots
 
-  if (plot_type1(1:3)=='3d_') then
-     NotACut=.true.
-  else if (plot_type1(1:3)=='z=0' .and. nK == 1) then
-     NotACut=.true.
-  else
-     NotACut   = .false.
-  end if
-
-
+  NotACut = plot_type1(1:3)=='3d_' .or. nDim == 1 .or. &
+       (nDim==2 .and. (plot_type1(1:3) == '2d_' .or. plot_type1(1:3) == 'z=0'))
 
   !! START IDL
   ! define from values used in the plotting, so that they don't
@@ -533,7 +526,7 @@ subroutine write_plot_common(ifile)
   end if
 
   ! Save tree information for 3D IDL file
-  if(plot_form(ifile) == 'idl' .and. plot_type1(1:3) == '3d_')then
+  if(plot_form(ifile) == 'idl' .and. plot_type1(2:3) == 'd_')then
      filename = trim(NameSnapshot)//'.tree'
      call write_tree_file(filename)
   end if
