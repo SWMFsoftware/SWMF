@@ -20,12 +20,12 @@ module ModProcessVarName
   integer,parameter :: nVarPerSubstance = 7
 
   ! Number of allowed alternative names for each variable
-  integer  :: nSynonym = 4
+  integer  :: nSynonym = 3
 
   ! State variables not associated with a specific fluid/ specie
   integer,parameter  :: nVarExtra = 9
 
-  ! Named indices for species/fluids
+  ! Named indices for all substances (species or fluids)
   integer, parameter :: &
        H_    = 1,  &
        Hp_   = 2,  &
@@ -55,6 +55,36 @@ module ModProcessVarName
        Neu4_ = 26, &
        Main_ = 27 ! main component, MHD/HD
 
+  ! String array storing the sandard names of all substances
+  character(len = 6) :: NameSubstance_I(nSubstance) = (/ &
+       'H   ',  &
+       'Hp  ',  &
+       'HpSw',  &
+       'H2p ',  &
+       'O   ',  &
+       'Op  ',  &
+       'O2p ',  & 
+       'He  ',  &
+       'OHp ',  &
+       'N   ',  &
+       'COp ',  &
+       'CO2p',  &
+       'H2O ',  &
+       'H2Op',  &
+       'H3Op',  &
+       'Mp  ',  &
+       'Lp  ',  &
+       'MHCp',  &
+       'HHCp',  &
+       'HNIp',  &
+       'Sw  ',  &
+       'Iono',  &
+       'Neu1',  &
+       'Neu2',  &
+       'Neu3',  &
+       'Neu4',  &
+       '    '  /) ! main component, MHD / HD 
+          
   ! named indices for basic state variables associated with a substance
   integer,parameter :: &
        Rho_   = 1, &
@@ -142,27 +172,29 @@ contains
     ! DESCRIPTION:
     ! ------------
     ! 1. Creates standard names and a dictionary for each standard name.
-    ! The dictionary only contains the basic hydro quantities for 
-    ! different substances. Other quantities, e.g. magnetic field, 
-    ! that are not associated with a specific substance are
-    ! stored separately. This allows us to avoid searching the complete 
-    ! dictionary when it is not needed.
+    !    The dictionary only contains the basic hydro quantities for 
+    !    different substances. Other quantities, e.g. magnetic field, 
+    !    that are not associated with a specific substance are
+    !    stored separately. This allows us to avoid searching the complete 
+    !    dictionary when it is not needed.
+
     ! The dictionary is a string array:
     !    Dictionary_III(nSubstance, nVarPerSubstance, nSynonym)
-    ! where nSubstance is the number of possible species/ fluids,
-    !    nVarPerSubstance 
-    !              enumarates the variables associated with each substance.
-    !    nSynonym  is the number of alternative names representing the same
+    !
+    !    where:
+    !    - nSubstance is the number of possible species/ fluids
+    !    - nVarPerSubstance enumarates the variables associated with each substance.
+    !    - nSynonym is the number of alternative names representing the same
     !              physical quantity, used by different ModEquation files.
     !
     ! 2. Look up the elements of NameVar_V and replace them with standard names
-    ! The look up procedure in the dictionary is done by 
+    !    The look up procedure in the dictionary is done by 
     !    call find_substance_replace_name
-    ! Once a specific NameVarIn is found to be identical to a dictionary item:
-    ! it is replaced with SubstanceStandardName_II(iSubstance,iVarPerSubstance)
+    !    Once a specific NameVarIn is found to be identical to a dictionary item:
+    !    it is replaced with SubstanceStandardName_II(iSubstance,iVarPerSubstance)
     !
     ! 3. The number of fluids and species found are returned by 
-    !      nDensity and nSpeed.
+    !    nDensity and nSpeed.
  
     integer                   :: nDistinctSubstanceVar_I(nVarPerSubstance)
     character(len=15)                 :: NameVarIn
@@ -247,15 +279,18 @@ contains
 
       ! lookup var name in dictionary, replace with standard name
 
+      use ModUtilities,  ONLY: lower_case
+
       implicit none
 
       integer             :: iSubstance, iSynonym
       character(len=15)   :: DictionaryItem
       !----------------------------------------------------------------
       do iSubstance = 1, nSubstance 
-         do iSynonym = 2, nSynonym
+         do iSynonym = 1, nSynonym
             DictionaryItem = Dictionary_III(iSubstance, iVar, iSynonym)
             if(len_trim(DictionaryItem) > 0) then
+               call lower_case(DictionaryItem)
                if(NameVarIn ==  DictionaryItem) then
                   iSubstanceFound = iSubstance
                   IsFoundVar = .true.
@@ -275,39 +310,7 @@ contains
     implicit none
 
     integer   :: iVar, iSubstance
-    
-    character(len = 6) :: NameSubstance_I(nSubstance)
     ! ---------------------------------------------------------------------
-
-    NameSubstance_I = (/ &
-          'H   ',  &
-          'Hp  ',  &
-          'HpSw',  &
-          'H2p ',  &
-          'O   ',  &
-          'Op  ',  &
-          'O2p ',  & 
-          'He  ',  &
-          'OHp ',  &
-          'N   ',  &
-          'COp ',  &
-          'CO2p',  &
-          'H2O ',  &
-          'H2Op',  &
-          'H3Op',  &
-          'Mp  ',  &
-          'Lp_ ',  &
-          'MHCp',  &
-          'HHCp',  &
-          'HNIp',  &
-          'Sw  ',  &
-          'Iono',  &
-          'Neu1',  &
-          'Neu2',  &
-          'Neu3',  &
-          'Neu4',  &
-          '    '  /) ! main component, MHD / HD 
-          
  
     ! loop over all possible species/fluids to fill in Name arrays
     do iSubstance = 1, nSubstance
@@ -322,6 +325,10 @@ contains
   ! =========================================================================
   subroutine create_dictionary
 
+    implicit none
+
+    integer  :: iSubstance
+    ! --------------------------------------------------------------------
     Dictionary_III(:,:,:) = ''
 
     ! first page in dictionary is a 2 by 2 array of standard names
@@ -331,40 +338,30 @@ contains
     !\
     ! fill in alternative names
     !/
-    Dictionary_III(Main_, Rho_,      2) = 'rho'
-    Dictionary_III(Main_, RhoUx_,    2) = 'mx'
-    Dictionary_III(Main_, RhoUx_,    3) = 'rhoux'
-    Dictionary_III(Main_, RhoUy_,    2) = 'my'
-    Dictionary_III(Main_, RhoUy_,    3) = 'rhouy'
-    Dictionary_III(Main_, RhoUz_,    2) = 'mz'
-    Dictionary_III(Main_, RhoUz_,    3) = 'rhouz'
-    Dictionary_III(Main_, Energy_,   2) = 'e'
-    Dictionary_III(Main_, p_,        2) = 'p'
-    Dictionary_III(Main_, Ppar_,     2) = 'ppar'
+    ! The names below are alternative names to the standard names, as
+    ! used by existing ModEquation files.
+    ! The use of standard names in equation files is encouraged.
 
+    ! Alternative names for energy for all substances
+    do iSubstance = 1, nSubstance
+       Dictionary_III(iSubstance, Energy_, 2) = &
+            ''//trim(NameSubstance_I(iSubstance))//'e'
+    end do
+
+    ! main plasma fluid
+    Dictionary_III(Main_, RhoUx_,    2) = 'rhoux'
+    Dictionary_III(Main_, RhoUy_,    2) = 'rhouy'
+    Dictionary_III(Main_, RhoUz_,    2) = 'rhouz'
+    
     ! H atoms
     Dictionary_III(H_, Rho_,   2) = 'rhoh'
 
     ! H+ ions
-    Dictionary_III(Hp_, Rho_,   2) = 'hprho'
-    Dictionary_III(Hp_, Rho_,   3) = 'h1p'
-    Dictionary_III(Hp_, Rho_,   4) = 'hp'
-    Dictionary_III(Hp_, RhoUx_, 2) = 'hpmx'
-    Dictionary_III(Hp_, RhoUx_, 3) = 'hpux'
-    Dictionary_III(Hp_, RhoUy_, 2) = 'hpmy'
-    Dictionary_III(Hp_, RhoUy_, 3) = 'hpuy'
-    Dictionary_III(Hp_, RhoUz_, 2) = 'hpmz'
-    Dictionary_III(Hp_, RhoUz_, 3) = 'hpuz'
-    Dictionary_III(Hp_, p_,     2) = 'hpp'
-    Dictionary_III(Hp_, Energy_,2) = 'hpe'
-
-    ! H+ ions in solar wind
-    Dictionary_III(HpSw_, Rho_,   2) = 'hpswrho'
-    Dictionary_III(HpSw_, RhoUx_, 2) = 'hpswmx'
-    Dictionary_III(HpSw_, RhoUy_, 2) = 'hpswmy'
-    Dictionary_III(HpSw_, RhoUz_, 2) = 'hpswmz'
-    Dictionary_III(HpSw_, p_,     2) = 'hpswp'
-    Dictionary_III(HpSw_, Energy_,2) = 'hpswe'
+    Dictionary_III(Hp_, Rho_,   2) = 'h1p'
+    Dictionary_III(Hp_, Rho_,   3) = 'hp'
+    Dictionary_III(Hp_, RhoUx_, 2) = 'hpux'
+    Dictionary_III(Hp_, RhoUy_, 2) = 'hpuy'
+    Dictionary_III(Hp_, RhoUz_, 2) = 'hpuz'
 
     ! H2+ ions
     Dictionary_III(H2p_, Rho_,    2) = 'h2p'
@@ -376,34 +373,16 @@ contains
     Dictionary_III(O_, Rho_,      2) = 'rhoo'
 
     ! O+ ions
-    Dictionary_III(Op_, Rho_,   2) = 'oprho'
-    Dictionary_III(Op_, Rho_,   3) = 'op'
-    Dictionary_III(Op_, RhoUx_, 2) = 'opmx'
-    Dictionary_III(Op_, RhoUy_, 2) = 'opmy'
-    Dictionary_III(Op_, RhoUz_, 2) = 'opmz'
-    Dictionary_III(Op_, p_,     2) = 'opp'
-    Dictionary_III(Op_, Energy_,2) = 'ope'
+    Dictionary_III(Op_, Rho_,   2) = 'op'
 
     ! O2+ ions
     Dictionary_III(O2p_, Rho_,   2) = 'o2p'
-    Dictionary_III(O2p_, Rho_,   3) = 'o2prho'   
-    Dictionary_III(O2p_, RhoUx_, 2) = 'o2pmx'
-    Dictionary_III(O2p_, RhoUy_, 2) = 'o2pmy'
-    Dictionary_III(O2p_, RhoUz_, 2) = 'o2pmz'
-    Dictionary_III(O2p_, p_,     2) = 'o2pp'
-    Dictionary_III(O2p_, Energy_,2) = 'o2pe'
    
     ! CO+ ions
     Dictionary_III(COp_, Rho_,   2) = 'cop'
    
     ! CO2+ ions
-    Dictionary_III(CO2p_, Rho_,   2) = 'co2prho'
-    Dictionary_III(CO2p_, Rho_,   3) = 'co2p'
-    Dictionary_III(CO2p_, RhoUx_, 2) = 'co2pmx'
-    Dictionary_III(CO2p_, RhoUy_, 2) = 'co2pmy'
-    Dictionary_III(CO2p_, RhoUz_, 2) = 'co2pmz'
-    Dictionary_III(CO2p_, p_,     2) = 'co2pp'
-    Dictionary_III(CO2p_, Energy_,2) = 'co2pe'
+    Dictionary_III(CO2p_, Rho_,   2) = 'co2p'
 
     ! H2O molecules
     Dictionary_III(H2O_, Rho_,    2) = 'rhoh2o'
@@ -411,12 +390,6 @@ contains
     ! H2O+ ions
     Dictionary_III(H2Op_, Rho_,   2) = 'h2op'
     Dictionary_III(H2Op_, Rho_,   3) = 'rhoh2op'
-    Dictionary_III(H2Op_, Rho_,   4) = 'h2oprho'
-    Dictionary_III(H2Op_, RhoUx_, 2) = 'h2opmx'
-    Dictionary_III(H2Op_, RhoUy_, 2) = 'h2opmy'
-    Dictionary_III(H2Op_, RhoUz_, 2) = 'h2opmz'
-    Dictionary_III(H2Op_, p_,     2) = 'h2opp'
-    Dictionary_III(H2Op_, Energy_,2) = 'h2ope'
 
     ! H3O+ ions
     Dictionary_III(H3Op_, Rho_,   2) = 'h3op'
@@ -424,8 +397,10 @@ contains
     ! OH+ ions
     Dictionary_III(OHp_, Rho_,   2) = 'ohp'
    
-    ! Titan ions
+    ! Saturn fluids
     Dictionary_III(N_,    Rho_,   2) = 'rhon'
+
+    ! Titan ions
     Dictionary_III(Mp_,   Rho_,   2) = 'mp'
     Dictionary_III(Lp_,   Rho_,   2) = 'lp'
     Dictionary_III(MHCp_, Rho_,   2) = 'mhcp'
@@ -433,22 +408,11 @@ contains
     Dictionary_III(HNIp_, Rho_,   2) = 'hnip'
 
     ! solar wind
-    Dictionary_III(Sw_, Rho_,   2) = 'swrho'
-    Dictionary_III(Sw_, Rho_,   3) = 'rhosw'
-    Dictionary_III(Sw_, RhoUx_, 2) = 'swmx'
-    Dictionary_III(Sw_, RhoUy_, 2) = 'swmy'
-    Dictionary_III(Sw_, RhoUz_, 2) = 'swmz'
-    Dictionary_III(Sw_, p_,     2) = 'swp'
+    Dictionary_III(Sw_, Rho_,   2) = 'rhosw'
     Dictionary_III(Sw_, Energy_,2) = 'swe'
 
     ! ionosphere
-    Dictionary_III(Iono_, Rho_,   2) = 'ionorho'
-    Dictionary_III(Iono_, Rho_,   3) = 'rhoion'
-    Dictionary_III(Iono_, RhoUx_, 2) = 'ionomx'
-    Dictionary_III(Iono_, RhoUy_, 2) = 'ionomy'
-    Dictionary_III(Iono_, RhoUz_, 2) = 'ionomz'
-    Dictionary_III(Iono_, p_,     2) = 'ionop'
-    Dictionary_IIi(Iono_, Energy_,2) = 'ionoe'
+    Dictionary_III(Iono_, Rho_,   2) = 'rhoion'
 
     ! Outer Heliosphere Pop1 / arbitrary neutral
     Dictionary_III(Neu1_, Rho_,   2) = 'neurho'
