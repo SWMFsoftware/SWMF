@@ -165,8 +165,9 @@ if($Uninstall){
 	&shell_command("cd util; make distclean")
 	    if -d "util" and not $IsComponent;
 	&shell_command("make allclean");
-	&shell_command("rm -f Makefile.def Makefile.conf data dataCRASH ".
+	&shell_command("rm -f Makefile.def Makefile.conf dataCRASH ".
 		       "src*/$MakefileDepend src*/$MakefileRules");
+	&shell_command("rm -f data") unless -d "data";
 	exit 0;
     }
 }
