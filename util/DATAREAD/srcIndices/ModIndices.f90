@@ -53,6 +53,11 @@ Module ModIndices
   character (len=100) :: NameOfSecondIndexFile
   integer             :: LunIndices_ = UnitTmp_
 
+  logical :: ReReadIMFFile = .false.
+  logical :: ReReadHPIFile = .false.
+  character (len=100) :: NameOfIMFFile = ""
+  character (len=100) :: NameOfHPIFile = ""
+
 contains
 
   subroutine init_mod_indices
