@@ -253,6 +253,8 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseElectronPressure)then
+             ! This condition should never be true, avoid compiler optimization error
+             if (i < -999) write(*,*) 'Keep NAG compiler happy'
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1*(1.0-QeByQtotal)
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
