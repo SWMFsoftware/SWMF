@@ -517,9 +517,9 @@ test_process_var_name1:
 		perl -i -pe 's/call init_mhd_variables/ /' ModEquation.f90;\
 		echo working on $${i} >> test_process_var_name.tmp;\
 		echo working on $${i} >> test_process_var_name.log;\
+		sleep 1;\
 		make test_process_var_name_exe;\
 		make test_process_var_name_run;\
-		sleep 0.2;\
 	done
 	@make test_process_var_name_check
 	@rm -f ModEquation* ModExtraVariables* ModSingleFluid* 
