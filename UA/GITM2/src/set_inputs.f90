@@ -450,8 +450,9 @@ subroutine set_inputs
 
               iError = 0
               call IO_set_inputs(cTempLines)
-              call read_MHDIMF_Indices(iError)
 
+!              write(*,*) "going in :",CurrentTime, EndTime
+              call read_MHDIMF_Indices_new(iError, CurrentTime, EndTime)
               if (iError /= 0) then 
                  write(*,*) "read indices was NOT successful (imf file)"
                  IsDone = .true.
@@ -1089,7 +1090,7 @@ subroutine set_inputs
            cTempLines(4) = "#END"
 
            call IO_set_inputs(cTempLines)
-           call read_NGDC_Indices(iError)
+           call read_NGDC_Indices_new(iError,CurrentTime,EndTime)
 
            if (iError /= 0) then 
               write(*,*) "read indices was NOT successful (NOAA file)"
@@ -1125,7 +1126,7 @@ subroutine set_inputs
            cTempLines(4) = "#END"
 
            call IO_set_inputs(cTempLines)
-           call read_NOAAHPI_Indices(iError)
+           call read_NOAAHPI_Indices_new(iError,StartTime,EndTime)
 
            if (iError /= 0) then 
               write(*,*) "read indices was NOT successful (NOAA HPI file)"

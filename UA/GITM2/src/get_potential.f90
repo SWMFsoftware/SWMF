@@ -32,6 +32,7 @@ subroutine init_get_potential
      Lines(2) = "EIE/"
 
      UseHPI = .true.
+
      call get_IMF_Bz(CurrentTime, bz, iError)
      call IO_SetIMFBz(bz)
      if (iError /= 0) then
@@ -118,6 +119,8 @@ subroutine set_indices
 
   if (UseIMF) then
 
+     call read_NOAAHPI_Indices_new(iError, CurrentTime, EndTime)
+     call read_MHDIMF_Indices_new(iError, CurrentTime, EndTime)
      call get_IMF_Bz(CurrentTime, bz, iError)
      call IO_SetIMFBz(bz)
 
