@@ -47,11 +47,6 @@ subroutine read_NOAAHPI_Indices_new(iOutputError,StartTime,EndTime)
 
   if (nIndices_V(hpi_) == 0) NameOfHPIFile = NameOfIndexFile
 
-  write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  write(*,*) "going to start reading the HPI file again!"
-  write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  write(*,*) NameOfHPIFile
-
   open(LunIndices_, file=NameOfHPIFile, status="old", iostat = ierror)
 
   if (ierror.ne.0) then
@@ -157,7 +152,6 @@ contains
              if ( time_now >= StartTime-BufferTime .and. &
                   time_now <= EndTime+BufferTime*2 .and. &
                   i < MaxIndicesEntries) then 
-                write(*,*) i, tmp(:,i)
                 i = i + 1
              endif
 

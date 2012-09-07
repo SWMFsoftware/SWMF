@@ -119,8 +119,6 @@ subroutine read_MHDIMF_Indices_new(iOutputError, StartTime, EndTime)
                    IndexTimes_TV(iIMF,imf_bx_) <= EndTime+BufferTime .and. &
                    iIMF < MaxIndicesEntries) then
 
-                 !write(*,*) iTime
-
                  iIMF = iIMF + 1
                  if (abs(Indices_TV(iSW,sw_n_)) < 900.0) iSW = iSW + 1
 

@@ -119,14 +119,12 @@ subroutine read_NGDC_Indices_new(iOutputError,StartTime,EndTime)
         BufferTime=81.0*24.0*3600.0
         call read_values
         call Insert_into_Indices_Array(tmp, f107_)
-        write(*,*) "Done"
      endif
 
      if(index(line,'#Element: flux')>0 .or. index(line,'#Table: Flux')>0) then
         BufferTime=81.0*24.0*3600.0
         call read_values
         call Insert_into_Indices_Array(tmp, f107_)
-        write(*,*) "Done"
      endif
 
      ! This has to be before the DMSP stuff because of the 
@@ -256,7 +254,6 @@ contains
                 if ( time_now >= StartTime-BufferTime .and. &
                      time_now <= EndTime+BufferTime .and. &
                      i < MaxIndicesEntries) then
-                   write(*,*) "f107 : ",i,tmp(:,i)
                    i = i + 1
                 else
                    tmp(1:6,i) = 0.0
@@ -269,7 +266,6 @@ contains
        enddo
 
        npts = i-1
-       write(*,*) "npts : ",npts
 
     end if
 
