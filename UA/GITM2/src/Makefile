@@ -89,6 +89,9 @@ OBJECTS = \
 	write_output.o\
 	gradient.o\
 	tides.o\
+	read_MHDIMF_Indices_new.o\
+	read_NGDC_Indices_new.o\
+	read_NOAAHPI_Indices_new.o\
 	user.o
 
 OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}
