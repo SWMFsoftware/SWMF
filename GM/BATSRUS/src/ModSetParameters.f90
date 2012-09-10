@@ -795,7 +795,7 @@ subroutine MH_set_parameters(TypeAction)
            elseif(index(plot_string,'z=0') > 0)then
               plot_area = 'z=0'
            else
-              call stop_mpi('Area (1d,x=0,y=0,z=0,3d,cut,sph,ion) missing'&
+              call stop_mpi('Area (1d,2d,3d,x=0,y=0,z=0,cut,sph...) missing'&
                    //' from plot_string='//plot_string)
            end if
 
@@ -2831,6 +2831,13 @@ contains
           plot_range(5, iFile) = -SmallSize_D(z_)
           plot_range(6, iFile) = +SmallSize_D(z_)
 
+       case('1d_')
+          ! Limit plot range along 2nd and 3rd directions to be very small
+          plot_range(1, iFile) = XyzMin_D(1)
+          plot_range(2, iFile) = XyzMax_D(1)
+          plot_range(3:5:2, iFile) = -SmallSize_D(y_:z_)
+          plot_range(4:6:2, iFile) = +SmallSize_D(y_:z_)
+          
        case('3d_')
           plot_range(1:5:2, iFile) = XyzMin_D
           plot_range(2:6:2, iFile) = XyzMax_D
