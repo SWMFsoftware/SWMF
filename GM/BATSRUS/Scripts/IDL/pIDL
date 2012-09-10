@@ -187,10 +187,11 @@ sub process_file{
     die "$ERROR: error found in the output of $PostIdl\n" if $Error; 
     die "$ERROR: no out file $OutFile was produced\n" unless -s $OutFile;
     unless($Keep){
-	if($BaseFile =~ /3d_/){
-	    unless($Ccmc){
-		rename $HeaderFile, $BaseFile.".info";
-	    }
+	if($BaseFile =~ /[123]d_/){
+	    # Keep header file if file name is 1d_, 2d_ or 3d_.
+	    # Rename header file to .info so it is not postprocessed again
+	    # CCMC insists on using .h extension... 
+	    rename $HeaderFile, $BaseFile.".info" unless $Ccmc;
 	}else{
 	    unlink $HeaderFile;
 	}
