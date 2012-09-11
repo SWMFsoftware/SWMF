@@ -22,6 +22,7 @@ our $Verbose;
 our $Show;
 our $ShowGridSize;
 our $NewGridSize;
+our $NewGhostCell;
 
 &print_help if $Help;
 
@@ -40,8 +41,8 @@ my $UserModule;
 my $NameSizeFile = "$Src/ModSize.f90";
 my $NameBatlFile = "srcBATL/BATL_size.f90";
 my $GridSize;
-my ($nI, $nJ, $nK, $MaxBlock);
-my $MaxImplBlock;
+my $GhostCell;
+my ($nI, $nJ, $nK, $MaxBlock, $MaxImplBlock, $nG);
 
 # additional variable information
 my $nWave;
@@ -71,15 +72,16 @@ foreach (@Arguments){
 	die "$ERROR nMaterial=$1 must be 1 or more\n" if $1 < 1;
 	$nMaterialNew=$1;
 	next};
-
+    if(/^-ng=(.*)$/)    {$NewGhostCell=$1; next};
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
 
-&set_grid_size if $NewGridSize and $NewGridSize ne $GridSize;
+&set_grid_size if ($NewGridSize  and $NewGridSize ne $GridSize)
+    or            ($NewGhostCell and $NewGhostCell ne $GhostCell);
+
 # Show grid size in a compact form if requested
-print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock",
-    ",$MaxImplBlock"                           #^CFG IF IMPLICIT
-    ,"\n" if $ShowGridSize and not $Show;
+print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock,$MaxImplBlock -ng=$GhostCell\n",
+    if $ShowGridSize and not $Show;
 
 # Set or list the equations
 &set_equation if $Equation;
@@ -123,10 +125,8 @@ sub get_settings{
     die "$ERROR could not read MaxBlock from $NameSizeFile\n" 
 	unless length($MaxBlock);
 
-    #^CFG IF IMPLICIT BEGIN
     die "$ERROR could not read MaxImplBlock from $NameSizeFile\n" 
 	unless length($MaxImplBlock);                         
-    #^CFG END IMPLICIT
 
     # Make sure that BATL_size.f90 is up-to-date
     `make $NameBatlFile`;
@@ -136,15 +136,17 @@ sub get_settings{
         $nI=$1           if /\bnI\s*=\s*(\d+)/i;
 	$nJ=$1           if /\bnJ\s*=\s*(\d+)/i;
 	$nK=$1           if /\bnK\s*=\s*(\d+)/i;
+	$GhostCell=$1    if /\bnG\s*=\s*(\d)/;
     }
     close FILE;
 
     die "$ERROR could not read nI from $NameBatlFile\n" unless length($nI);
     die "$ERROR could not read nJ from $NameBatlFile\n" unless length($nJ);
     die "$ERROR could not read nK from $NameBatlFile\n" unless length($nK);
+    die "$ERROR could not read nG from $NameBatlFile\n" 
+	unless length($GhostCell);
 
-    $GridSize = "$nI,$nJ,$nK,$MaxBlock";
-    $GridSize .= ",$MaxImplBlock";                            #^CFG IF IMPLICIT
+    $GridSize = "$nI,$nJ,$nK,$MaxBlock,$MaxImplBlock";
 
 }
 
@@ -152,16 +154,12 @@ sub get_settings{
 
 sub set_grid_size{
 
-    $GridSize = $NewGridSize;
+    $GridSize = $NewGridSize if $NewGridSize;
 
-    if($GridSize=~/^[1-9]\d*,[1-9]\d*,[1-9]\d*,[1-9]\d*
-       ,[1-9]\d*  #^CFG IF IMPLICIT
-       $/x){
-	($nI,$nJ,$nK,$MaxBlock,$MaxImplBlock)= split(',', $GridSize);
+    if($GridSize =~ /^[1-9]\d*,[1-9]\d*,[1-9]\d*,[1-9]\d*,[1-9]\d*$/){
+	($nI,$nJ,$nK,$MaxBlock,$MaxImplBlock) = split(',', $GridSize);
     }elsif($GridSize){
-	die "$ERROR -g=$GridSize should be ".
-	    "5".  #^CFG IF IMPLICIT
-	    #"4". #^CFG IF NOT IMPLICIT
+	die "$ERROR -g=$GridSize should be 5".
 	    " positive integers separated with commas\n";
     }
 
@@ -174,12 +172,13 @@ sub set_grid_size{
     warn "$WARNING nI=$nI nJ=$nJ nK=$nK does not allow AMR\n" 
 	if $nI == 2 or $nJ == 2 or $nK==2;
 
-    #^CFG IF IMPLICIT BEGIN
     die "$ERROR MaxImplBlock=$MaxImplBlock cannot exceed MaxBlock=$MaxBlock\n"
 	if $MaxImplBlock > $MaxBlock;
-    #^CFG END IMPLICIT
 
-    print "Writing new grid size $GridSize into ".
+    $GhostCell = $NewGhostCell if $NewGhostCell;
+    die "$ERROR -ng=$GhostCell must be 2,3,4 or 5\n" if $GhostCell!~/^[2345]/;
+
+    print "Writing new grid size $GridSize and $GhostCell ghost cells into ".
 	"$NameSizeFile and $NameBatlFile...\n";
 
     @ARGV = ($NameSizeFile);
@@ -196,6 +195,7 @@ sub set_grid_size{
 	s/\b(nI\s*=[^0-9]*)(\d+)/$1$nI/i;
 	s/\b(nJ\s*=[^0-9]*)(\d+)/$1$nJ/i;
 	s/\b(nK\s*=[^0-9]*)(\d+)/$1$nK/i;
+	s/\b(nG\s*=[^0-9]*)\d/$1$GhostCell/i;
 	print;
     }
 
@@ -310,16 +310,16 @@ sub current_settings{
 	"Number of cells in a block        : nI=$nI, nJ=$nJ, nK=$nK\n";
     $Settings .= 
 	"Max. number of blocks/PE          : MaxBlock=$MaxBlock\n";
-    #^CFG IF IMPLICIT BEGIN
     $Settings .= 
 	"Max. number of implicit blocks/PE : MaxImplBlock=$MaxImplBlock\n";
-    #^CFG END IMPLICIT
-
+    $Settings .=
+	"Number of ghost cell layers       : nG=$GhostCell\n";
     $Settings .=
 	"Number of wave bins               : nWave=$nWave\n" if $nWave;
 
     $Settings .=
-	"Number of materials               : nMaterial=$nMaterial\n" if $nMaterial;
+	"Number of materials               : nMaterial=$nMaterial\n" 
+	if $nMaterial;
 
     open(FILE, $UserMod) or die "$ERROR Could not open $UserMod\n";
     my $Module='???';
@@ -375,6 +375,11 @@ Additional options for BATSRUS/Config.pl:
                 MAXIMPLBLK is the maximum number of implicitly integrated 
                 blocks per processor. Cannot be larger than MAXBLK.
 
+-ng=GHOSTCELL   Set number of ghost cell layers around grid blocks. 
+                The value GHOSTCELL has to be an integer at least 2 
+                and not more than half of min(NI,NJ,NK) for AMR.
+                Default value is GHOSTCELL=2.
+
 -e              List all available equation modules.
 
 -e=EQUATION     Select equation EQUATION. 
@@ -406,13 +411,10 @@ set the number of materials to 5 and number of radiation groups to 30:
 
     Config.pl -e=Crash -u=Crash -nMaterial=5 -nWave=30
 
-Set block size to 8x8x8, number of blocks to 400",
-" and implicit blocks to 100", #^CFG IF IMPLICIT
-":
+Set block size to 8x8x8, number of blocks to 400 and implicit blocks to 100
+and number of ghost cells to 2:
 
-    Config.pl -g=8,8,8,400",
-",100", #^CFG IF IMPLICIT
-"
+    Config.pl -g=8,8,8,400,100 -ng=2
 
 Show settings for BATSRUS:
 
