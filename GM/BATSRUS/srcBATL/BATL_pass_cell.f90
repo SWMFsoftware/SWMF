@@ -1089,7 +1089,10 @@ contains
                   do kR = kRMin, kRMax, DkR
                      ! For kRatio = 1 simple shift: kS = kSMin + |kR - kRMin|
                      ! For kRatio = 2 coarsen both kR and kRMin before shift
-                     kS = kSMin + abs((kR+3)/kRatio - (kRMin+3)/kRatio)
+                     ! We add 9 both to kR and kRMin before dividing by kRatio
+                     ! so that all values remain positive and get rounded down.
+                     ! This works up to nG=10 ghost cells: likely to be enough.
+                     kS = kSMin + abs((kR+9)/kRatio - (kRMin+9)/kRatio)
 
                      ! DkR=+1: interpolate left for odd kR, right for even kR 
                      ! DkR=-1: interpolate left for even kR, right for odd kR 
@@ -1097,12 +1100,12 @@ contains
                      if(kRatio == 2) kS1 = kS + DkR*(1 - 2*modulo(kR,2))
 
                      do jR = jRMin, jRMax, DjR
-                        jS = jSMin + abs((jR+3)/jRatio - (jRMin+3)/jRatio)
+                        jS = jSMin + abs((jR+9)/jRatio - (jRMin+9)/jRatio)
                         if(jRatio == 1) jS1 = jS
                         if(jRatio == 2) jS1 = jS + DjR*(1 - 2*modulo(jR,2))
 
                         do iR = iRMin, iRMax, DiR
-                           iS = iSMin + abs((iR+3)/iRatio - (iRMin+3)/iRatio)
+                           iS = iSMin + abs((iR+9)/iRatio - (iRMin+9)/iRatio)
 
                            if(iRatio == 1) iS1 = iS
                            if(iRatio == 2) iS1 = iS + DiR*(1 - 2*modulo(iR,2))
@@ -1216,14 +1219,14 @@ contains
                      do kR = kRMin, kRMax, DkR
                         ! For kRatio = 1 simple shift: kS = kSMin + kR - kRMin 
                         ! For kRatio = 2 coarsen both kR and kRMin before shift
-                        kS = kSMin + abs((kR+3)/kRatioRestr &
-                             -           (kRMin+3)/kRatioRestr)
+                        kS = kSMin + abs((kR+9)/kRatioRestr &
+                             -           (kRMin+9)/kRatioRestr)
                         do jR = jRMin, jRMax, DjR
-                           jS = jSMin + abs((jR+3)/jRatioRestr &
-                                -           (jRMin+3)/jRatioRestr)
+                           jS = jSMin + abs((jR+9)/jRatioRestr &
+                                -           (jRMin+9)/jRatioRestr)
                            do iR = iRMin, iRMax, DiR
-                              iS = iSMin + abs((iR+3)/iRatioRestr &
-                                   -           (iRMin+3)/iRatioRestr)
+                              iS = iSMin + abs((iR+9)/iRatioRestr &
+                                   -           (iRMin+9)/iRatioRestr)
                               State_VGB(:,iR,jR,kR,iBlockRecv) = &
                                    WeightOld*State_VGB(:,iR,jR,kR,iBlockRecv)+&
                                    WeightNew*(State_VGB(:,iS,jS,kS,iBlockSend)&
@@ -1233,14 +1236,14 @@ contains
                      end do
                   else
                      do kR = kRMin, kRMax, DkR
-                        kS = kSMin + abs((kR+3)/kRatioRestr &
-                             -           (kRMin+3)/kRatioRestr)
+                        kS = kSMin + abs((kR+9)/kRatioRestr &
+                             -           (kRMin+9)/kRatioRestr)
                         do jR = jRMin, jRMax, DjR
-                           jS = jSMin + abs((jR+3)/jRatioRestr &
-                                -           (jRMin+3)/jRatioRestr)
+                           jS = jSMin + abs((jR+9)/jRatioRestr &
+                                -           (jRMin+9)/jRatioRestr)
                            do iR = iRMin, iRMax, DiR
-                              iS = iSMin + abs((iR+3)/iRatioRestr &
-                                   -           (iRMin+3)/iRatioRestr)
+                              iS = iSMin + abs((iR+9)/iRatioRestr &
+                                   -           (iRMin+9)/iRatioRestr)
 
                               State_VGB(:,iR,jR,kR,iBlockRecv) = &
                                    State_VGB(:,iS,jS,kS,iBlockSend) &
@@ -1268,14 +1271,14 @@ contains
                   end if
 
                   do kR = kRMin, kRMax, DkR
-                     kS = kSMin + abs((kR+3)/kRatioRestr &
-                          -           (kRMin+3)/kRatioRestr)
+                     kS = kSMin + abs((kR+9)/kRatioRestr &
+                          -           (kRMin+9)/kRatioRestr)
                      do jR=jRMin, jRMax, DjR
-                        jS = jSMin + abs((jR+3)/jRatioRestr &
-                             -           (jRMin+3)/jRatioRestr)
+                        jS = jSMin + abs((jR+9)/jRatioRestr &
+                             -           (jRMin+9)/jRatioRestr)
                         do iR = iRMin, iRMax, DiR
-                           iS = iSMin + abs((iR+3)/iRatioRestr &
-                                -           (iRMin+3)/iRatioRestr)
+                           iS = iSMin + abs((iR+9)/iRatioRestr &
+                                -           (iRMin+9)/iRatioRestr)
                            BufferS_I(iBufferS+1:iBufferS+nVar)= &
                                 State_VGB(:,iS,jS,kS,iBlockSend) &
                                 + Slope_VG(:,iR,jR,kR)
@@ -1748,7 +1751,7 @@ contains
           end do; end do; end do
        end do
 
-       call message_pass_cell_scalar(Scalar_GB, nWidthIn=2, &
+       call message_pass_cell_scalar(Scalar_GB, &
             nProlongOrderIn=1, nCoarseLayerIn=2, &
             DoSendCornerIn=.true., DoRestrictFaceIn=.false., &
             NameOperatorIn=NameOperator_I(iOp))
