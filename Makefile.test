@@ -289,7 +289,7 @@ test2:
 test2_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,GM/BATSRUS
 	./Config.pl -o=SC:u=Sc,e=MhdCorona,IH:u=Ih,e=Mhd,GM:u=Default,e=Mhd
-	./Config.pl -g=SC:4,4,4,3200,1,IH:8,8,8,400,1,GM:8,8,8,700,1
+	./Config.pl -g=SC:4,4,4,6200,1,IH:8,8,8,400,1,GM:8,8,8,700,1
 	${MAKE} SWMF
 	make PIDL EARTH_TRAJ
 
@@ -728,7 +728,7 @@ test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesHypPe
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
-	./Config.pl -g=SC:6,4,4,1200,1200,IH:4,4,4,4500,1
+	./Config.pl -g=SC:6,4,4,1200,1200,IH:4,4,4,6800,1
 	${MAKE} SWMF
 	make PIDL
 
