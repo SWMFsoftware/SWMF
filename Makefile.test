@@ -223,7 +223,7 @@ test1:
 
 test1_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
-	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,PW:Earth
+	./Config.pl -g=GM:8,8,8,700,100 -o=GM:u=Default,e=Mhd,PW:Earth
 	${MAKE} SWMF
 	make PIDL
 
@@ -243,7 +243,7 @@ test1_check:
 		${TESTDIR}/RESULTS/PW/north_plots_iline0001.out \
 		PW/PWOM/data/output/Earth/PW_north_plots_iline0001.out \
 		> test1_pw.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-20 -r=1e-7 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0002.out \
 		PW/PWOM/data/output/Earth/PW_north_plots_iline0002.out \
 		>> test1_pw.diff)
