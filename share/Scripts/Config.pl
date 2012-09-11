@@ -775,14 +775,14 @@ Information:
                 (re)creates Makefile.conf, Makefile.def, make install
 
 -compiler       show available compiler choices for this operating system (OS)
--compiler=FC    create Makefile.conf from a non-default F90 compiler FCOMP
-                and the default C compiler
-                only works together with -install flag
+-compiler=FC    create Makefile.conf from a non-default F90 compiler FC
+                and the default C compiler.
+                This setting only works together with the -install flag!
 -compiler=FC,CC create Makefile.conf with a non-default F90 compiler FC
                 and non-default C compiler CC.
-                only works together with -install flag
+                This setting only works together with the -install flag!
 -nompi          install the code on a machine with no MPI library
-                only works this way with -install flag
+                This setting only works this way with the -install flag!
 
 Compilation:
 
