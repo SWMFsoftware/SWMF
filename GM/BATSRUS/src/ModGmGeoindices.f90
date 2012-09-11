@@ -195,8 +195,12 @@ contains
     end do
 
     ! MPI Reduce to head node.
-    if(nProc>1) call MPI_reduce(Bmag_DI, Bsum_DI, 3*nKpMag, &
-         MPI_REAL, MPI_SUM, 0, iComm, iError)
+    if(nProc>1) then
+       call MPI_reduce(Bmag_DI, Bsum_DI, 3*nKpMag, &
+            MPI_REAL, MPI_SUM, 0, iComm, iError)
+    else
+       BSum_DI = BMag_DI
+    end if
 
     ! Head node calculates K-values and shares them with all other nodes.
     if(iProc==0)then
