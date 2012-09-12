@@ -63,7 +63,19 @@ subroutine update_states_MHD(iStage,iBlock)
   end if                     !^CFG END DISSFLUX
 
   !Get Residual.
-  if(UseHalfStep)then
+  if(nStage==4)then
+     ! Classical 4th order Runge-Kutta scheme
+     select case(iStage)
+     case(1)
+        DtFactor = Cfl/2
+     case(2)
+        DtFactor = Cfl/2
+     case(3)
+        DtFactor = Cfl
+     case(4)
+        DtFactor = Cfl/6
+     end select
+  elseif(UseHalfStep)then
      DtFactor = (Cfl*iStage)/nStage
   else
      DtFactor = Cfl
@@ -132,37 +144,95 @@ contains
 
   subroutine update_explicit
 
-    real:: Coeff1, Coeff2
-    !----------------------------------------------------------------------------
+    ! Allocatable storage for classical 4th order Runge-Kutta scheme
+    real, allocatable, save:: Rk4_VCB(:,:,:,:,:), Rk4_CBI(:,:,:,:,:)
 
-    if(UseHalfStep .or. nStage == 1)then
+    real, parameter:: cThird = 1./3.
+    real:: Coeff1, Coeff2
+    !--------------------------------------------------------------------------
+
+    if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
        ! Update state variables starting from level n (=old) state
        do k=1,nK; do j=1,nJ; do i=1,nI
-          State_VGB(:,i,j,k,iBlock) = StateOld_VCB(:,i,j,k,iBlock) + &
-               Source_VC(1:nVar,i,j,k)
+          State_VGB(:,i,j,k,iBlock) = &
+               StateOld_VCB(:,i,j,k,iBlock) + Source_VC(1:nVar,i,j,k)
        end do; end do; end do
 
        ! Update energy variables
        do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
-          Energy_GBI(i,j,k,iBlock,iFluid) = EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
-               Source_VC(nVar+iFluid,i,j,k)
+          Energy_GBI(i,j,k,iBlock,iFluid) = &
+               EnergyOld_CBI(i,j,k,iBlock,iFluid)+Source_VC(nVar+iFluid,i,j,k)
        end do; end do; end do; end do
     else
        ! Update state variables starting from previous stage
        do k=1,nK; do j=1,nJ; do i=1,nI
-          State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) + &
-               Source_VC(1:nVar,i,j,k)
+          State_VGB(:,i,j,k,iBlock) = &
+               State_VGB(:,i,j,k,iBlock) + Source_VC(1:nVar,i,j,k)
        end do; end do; end do
 
        ! Update energy variables
        do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
-          Energy_GBI(i,j,k,iBlock,iFluid) = Energy_GBI(i,j,k,iBlock,iFluid) + &
-               Source_VC(nVar+iFluid,i,j,k)
+          Energy_GBI(i,j,k,iBlock,iFluid) = &
+               Energy_GBI(i,j,k,iBlock,iFluid) + Source_VC(nVar+iFluid,i,j,k)
        end do; end do; end do; end do
     end if
 
-    ! Continue with an interpolation step for Runge-Kutta schemes
-    if(.not.UseHalfStep .and. iStage > 1)then
+    if(nStage == 4)then
+       ! Classical 4th order Runge-Kutta scheme. Requires extra storage.
+       if(.not.allocated(Rk4_VCB)) allocate( &
+            Rk4_VCB(nVar,nI,nJ,nK,MaxBlock), &
+            Rk4_CBI(nI,nJ,nK,MaxBlock,nFluid))
+
+       select case(iStage)
+       case(1)
+          ! Rk4 = U1 = Un + Dt/2*Rn
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             Rk4_VCB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock)
+          end do; end do; end do
+          do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+             Rk4_CBI(i,j,k,iBlock,iFluid) = Energy_GBI(i,j,k,iBlock,iFluid)
+          end do; end do; end do; end do
+       case(2)
+          ! U2 = Un + Dt/2*R1
+          ! Rk4 = Rk4 + 2*U2 = 3*Un + Dt/2*Rn + Dt*R1
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             Rk4_VCB(:,i,j,k,iBlock) = Rk4_VCB(:,i,j,k,iBlock) &
+                  + 2*State_VGB(:,i,j,k,iBlock)
+          end do; end do; end do
+          do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+             Rk4_CBI(i,j,k,iBlock,iFluid) = Rk4_CBI(i,j,k,iBlock,iFluid) &
+                  + 2*Energy_GBI(i,j,k,iBlock,iFluid)
+          end do; end do; end do; end do
+       case(3)
+          ! U3 = Un + Dt*R2
+          ! Rk4 = Rk4 + U3 - 4Un = Dt/2*Rn + Dt*R1 + Dt*R2
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             Rk4_VCB(:,i,j,k,iBlock) = Rk4_VCB(:,i,j,k,iBlock) &
+                  + State_VGB(:,i,j,k,iBlock) &
+                  - 4*StateOld_VCB(:,i,j,k,iBlock)
+          end do; end do; end do
+          do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+             Rk4_CBI(i,j,k,iBlock,iFluid) = Rk4_CBI(i,j,k,iBlock,iFluid) &
+                  + Energy_GBI(i,j,k,iBlock,iFluid) &
+                  - 4*EnergyOld_CBI(i,j,k,iBlock,iFluid)
+          end do; end do; end do; end do
+       case(4)
+          ! U4 = Un + Dt/6*R3
+          ! Un+1 = U4 + Rk4/3 = Un + Dt/6*(Rn + 2*R1 + 2*R2 + R3)
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             State_VGB(:,i,j,k,iBlock) = &
+                  + State_VGB(:,i,j,k,iBlock) &
+                  + cThird*Rk4_VCB(:,i,j,k,iBlock)
+          end do; end do; end do
+          do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
+             Energy_GBI(i,j,k,iBlock,iFluid) = &
+                  + Energy_GBI(i,j,k,iBlock,iFluid) &
+                  + cThird*Rk4_CBI(i,j,k,iBlock,iFluid)
+          end do; end do; end do; end do
+       end select
+
+    elseif(.not.UseHalfStep .and. iStage > 1)then
+       ! Interpolation step for 2nd and 3rd order Runge-Kutta schemes
 
        ! Runge-Kutta scheme coefficients
        if (nStage==2) then
