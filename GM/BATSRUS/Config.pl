@@ -80,7 +80,7 @@ foreach (@Arguments){
     or            ($NewGhostCell and $NewGhostCell ne $GhostCell);
 
 # Show grid size in a compact form if requested
-print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock,$MaxImplBlock -ng=$GhostCell\n",
+print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock,$MaxImplBlock\n",
     if $ShowGridSize and not $Show;
 
 # Set or list the equations
