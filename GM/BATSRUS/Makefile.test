@@ -1476,7 +1476,7 @@ test_2bodyplot:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_2bodyplot_compile:
-	./Config.pl -e=Mhd -u=Default -g=8,8,8,600,300
+	./Config.pl -e=Mhd -u=Default -g=8,8,8,700,300
 	$(MAKE) BATSRUS
 	make PIDL
 
