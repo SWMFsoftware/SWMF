@@ -70,7 +70,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   character (len=5) :: proc_str,cBlock, cType
   character (len=24) :: cTime='', cTimeSave=''
-  integer :: iiLat, iiLon, nGCs, cL
+  integer :: iiLat, iiLon, nGCs, cL=0
   integer :: iLon,iLat,iAlt, nVars_to_Write, nlines, iBLK,iSpecies
   logical :: done, IsFirstTime = .true., IsThere
 
@@ -183,7 +183,6 @@ subroutine output(dir, iBlock, iOutputType)
         cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//cSecond
         cL = 14
      endif
-        
      if (IsFirstTime) cTimeSave = cTime
   else
      cTime = cTimeSave
