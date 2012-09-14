@@ -60,6 +60,7 @@ contains
     use ModPhysics, ONLY: g
     use ModProcMH,  ONLY: iProc
     use ModGeometry,ONLY: TypeGeometry
+    use ModVarIndexes, ONLY: ExtraEint_
 
     integer :: iCell, iError
     integer :: nStepRef, nDimRef, nParamRef, nVarRef
@@ -82,6 +83,13 @@ contains
                ' : starting simulation time should be larger than 0'
           call stop_mpi('reset time with #TIMESIMULATION')
        end if
+    end if
+
+    if(TypeProblem=='parcondsemi' .or. TypeProblem=='rmtv' .or. &
+         TypeProblem=='lowrie') then
+       if (ExtraEInt_ < 1) &
+            call CON_stop('TypeProblem '//trim(TypeProblem)//' requires'//&
+            ' ExtraEInt variable. Check ModEquation.f90')
     end if
 
     select case(TypeProblem)
