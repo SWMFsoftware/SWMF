@@ -19,6 +19,7 @@ module ModUser
        NameUserModule = 'heat conduction'
 
   character(len=20) :: TypeProblem
+  logical :: IsSpherical
   real :: HeatConductionCoef, AmplitudeTemperature, Tmin
   real :: Bx, By, Time0
   real :: u0, x0
@@ -58,6 +59,7 @@ contains
     use ModMain,    ONLY: Time_Simulation
     use ModPhysics, ONLY: g
     use ModProcMH,  ONLY: iProc
+    use ModGeometry,ONLY: TypeGeometry
 
     integer :: iCell, iError
     integer :: nStepRef, nDimRef, nParamRef, nVarRef
@@ -71,6 +73,7 @@ contains
 
     character(len=*), parameter :: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
+    IsSpherical = TypeGeometry(1:3) == 'sph'
 
     if(TypeProblem=='gaussian' .or. TypeProblem=='rz' &
          .or. TypeProblem=='parcond' .or. TypeProblem=='parcondsemi')then
@@ -519,10 +522,16 @@ contains
        end do; end do
 
     case('parcond', 'parcondsemi')
-       do j=MinJ,MaxJ; do i=MinI,MaxI
-          call get_state_parcond(i, j, iBlock)
-       end do; end do
-
+       if (IsSpherical) then
+          do k=MinK,MaxK ; do j=MinJ,MaxJ; do i=MinI,MaxI
+             call get_state_parcond_sph(i, j, k, iBlock)
+          end do; end do; end do
+       else
+          do j=MinJ,MaxJ; do i=MinI,MaxI
+             call get_state_parcond(i, j, iBlock)
+          end do; end do
+       end if
+       
     case default
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
     end select
@@ -536,14 +545,14 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: Xyz_DGB
     use ModImplicit,   ONLY: StateSemi_VGB
-    use ModMain,       ONLY: nI, nJ
+    use ModMain,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Rho_, RhoUx_, p_
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    integer :: i, j
+    integer :: i, j, k
     real :: r, Temperature
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
@@ -640,47 +649,111 @@ contains
     case('parcond', 'parcondsemi')
        select case(TypeBc)
        case('user')
-          select case(iSide)
-          case(1)
-             do j = MinJ,MaxJ; do i = -1, 0
-                call get_state_parcond(i, j, iBlock)
-             end do; end do
-          case(2)
-             do j = MinJ,MaxJ; do i = nI+1, nI+2
-                call get_state_parcond(i, j, iBlock)
-             end do; end do
-          case(3)
-             do j = -1, 0; do i = MinI,MaxI
-                call get_state_parcond(i, j, iBlock)
-             end do; end do
-          case(4)
-             do j = nJ+1, nJ+2; do i = MinI,MaxI
-                call get_state_parcond(i, j, iBlock)
-             end do; end do
-          end select
+          if (IsSpherical) then
+             select case(iSide)
+             case(1) ! inner radius
+                do k = MinK,MaxK; do j = MinJ,MaxJ; do i = -1, 0
+                   call get_state_parcond_sph(i, j, k, iBlock)
+                end do; end do; end do
+             case(2) ! outer radius
+                do k = MinK,MaxK; do j = MinJ,MaxJ; do i = nI+1, nI+2
+                   call get_state_parcond_sph(i, j, k, iBlock)
+                end do; end do; end do
+             case(3) ! min theta
+                do k = MinK, MaxK; do j = -1, 0;  do i = MinI,MaxI
+                   call get_state_parcond_sph(i, j, k, iBlock)
+                end do; end do; end do
+             case(4) ! max theta
+                do k = MinK, MaxK; do j = nJ+1, nJ+2; do i = MinI,MaxI
+                   call get_state_parcond_sph(i, j, k, iBlock)
+                end do; end do; end do
+             case(5) ! min phi
+                do k = -1, 0; do j = MinJ,MaxJ;  do i = MinI,MaxI
+                   call get_state_parcond_sph(i, j, k, iBlock)
+                end do; end do; end do
+             case(6) ! max phi
+                do k = nK+1, nK+2; do j = MinJ,MaxJ; do i = MinI,MaxI
+                   call get_state_parcond_sph(i, j, k, iBlock)
+                end do; end do; end do
+             end select
+          else
+             select case(iSide)
+             case(1)
+                do j = MinJ,MaxJ; do i = -1, 0
+                   call get_state_parcond(i, j, iBlock)
+                end do; end do
+             case(2)
+                do j = MinJ,MaxJ; do i = nI+1, nI+2
+                   call get_state_parcond(i, j, iBlock)
+                end do; end do
+             case(3)
+                do j = -1, 0; do i = MinI,MaxI
+                   call get_state_parcond(i, j, iBlock)
+                end do; end do
+             case(4)
+                do j = nJ+1, nJ+2; do i = MinI,MaxI
+                   call get_state_parcond(i, j, iBlock)
+                end do; end do
+             end select
+          end if
        case('usersemi')
-          select case(iSide)
-          case(1)
-             do j = 0, nJ+1
-                call get_temperature_parcond(0, j, iBlock, Temperature)
-                StateSemi_VGB(1,0,j,:,iBlock) = Temperature
-             end do
-          case(2)
-             do j = 0, nJ+1
-                call get_temperature_parcond(nI+1, j, iBlock, Temperature)
-                StateSemi_VGB(1,nI+1,j,:,iBlock) = Temperature
-             end do
-          case(3)
-             do i = 0, nI+1
-                call get_temperature_parcond(i, 0, iBlock, Temperature)
-                StateSemi_VGB(1,i,0,:,iBlock) = Temperature
-             end do
-          case(4)
-             do i = 0, nI+1
-                call get_temperature_parcond(i, nJ+1, iBlock, Temperature)
-                StateSemi_VGB(1,i,nI+1,:,iBlock) = Temperature
-             end do
-          end select
+          if(IsSpherical) then
+             select case(iSide)
+             case(1) ! min r
+                do k = 0, nK+1; do j = 0, nJ+1
+                   call get_temperature_parcond(0, j, k, iBlock, Temperature)
+                   StateSemi_VGB(1,0,j,k,iBlock) = Temperature
+                end do; end do
+             case(2) ! max r
+                do k = 0, nK+1; do j = 0, nJ+1
+                   call get_temperature_parcond(nI+1, j, k, iBlock, Temperature)
+                   StateSemi_VGB(1,nI+1,j,k,iBlock) = Temperature
+                end do; end do
+             case(3) ! min theta
+                do k = 0, nK+1; do i = 0, nI+1
+                   call get_temperature_parcond(i, 0, k, iBlock, Temperature)
+                   StateSemi_VGB(1,i,0,:,iBlock) = Temperature
+                end do; end do
+             case(4) ! max theta
+                do k = 0, nK+1; do i = 0, nI+1
+                   call get_temperature_parcond(i, nJ+1, k, iBlock, Temperature)
+                   StateSemi_VGB(1,i,nI+1,:,iBlock) = Temperature
+                end do; end do
+             case(5) ! min phi
+                do j = 0, nJ+1; do i = 0, nI+1
+                   call get_temperature_parcond(i, j, 0, iBlock, Temperature)
+                   StateSemi_VGB(1,i,j,0,iBlock) = Temperature
+                end do; end do
+             case(6) ! max phi
+                do j = 0, nJ+1; do i = 0, nI+1
+                   call get_temperature_parcond(i, j, nK+1, iBlock, Temperature)
+                   StateSemi_VGB(1,i,j,nK+1,iBlock) = Temperature
+                end do; end do
+             end select
+          else
+             select case(iSide)
+             case(1)
+                do j = 0, nJ+1
+                   call get_temperature_parcond(0, j, 0, iBlock, Temperature)
+                   StateSemi_VGB(1,0,j,:,iBlock) = Temperature
+                end do
+             case(2)
+                do j = 0, nJ+1
+                   call get_temperature_parcond(nI+1, j, 0, iBlock, Temperature)
+                   StateSemi_VGB(1,nI+1,j,:,iBlock) = Temperature
+                end do
+             case(3)
+                do i = 0, nI+1
+                   call get_temperature_parcond(i, 0, 0, iBlock, Temperature)
+                   StateSemi_VGB(1,i,0,:,iBlock) = Temperature
+                end do
+             case(4)
+                do i = 0, nI+1
+                   call get_temperature_parcond(i, nJ+1, 0, iBlock, Temperature)
+                   StateSemi_VGB(1,i,nI+1,:,iBlock) = Temperature
+                end do
+             end select
+          end if
        end select
 
     case default
@@ -783,7 +856,7 @@ contains
 
     real :: Te
     !--------------------------------------------------------------------------
-    call get_temperature_parcond(i, j, iBlock, Te)
+    call get_temperature_parcond(i, j, 0, iBlock, Te)
     State_VGB(:,i,j,:,iBlock) = 0.0
     State_VGB(Rho_,i,j,:,iBlock) = 1.0
     State_VGB(Bx_,i,j,:,iBlock) = Bx
@@ -803,20 +876,49 @@ contains
 
   !============================================================================
 
-  subroutine get_temperature_parcond(i, j, iBlock, Temperature)
+  subroutine get_state_parcond_sph(i, j, k, iBlock)
+
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModPhysics,    ONLY: inv_gm1, ElectronTemperatureRatio
+    use ModVarIndexes, ONLY: Rho_, Bx_, By_, p_, Pe_, ExtraEint_
+
+    integer, intent(in) :: i, j, k, iBlock
+
+    real :: Te
+    !--------------------------------------------------------------------------
+    call get_temperature_parcond(i, j, k, iBlock, Te)
+    State_VGB(:,i,j,k,iBlock) = 0.0
+    State_VGB(Rho_,i,j,k,iBlock) = 1.0
+    State_VGB(Bx_,i,j,k,iBlock) = Bx
+    State_VGB(By_,i,j,k,iBlock) = By
+    if(TypeProblem == 'parcondsemi')then
+       State_VGB(p_,i,j,k,iBlock) = Te
+       State_VGB(ExtraEint_,i,j,k,iBlock) = (1.0/3.5)*Te**3.5 - inv_gm1*Te
+    else
+       if(UseElectronPressure)then
+          State_VGB(Pe_,i,j,k,iBlock) = Te
+       else
+          State_VGB(p_,i,j,k,iBlock) = Te*(1 + ElectronTemperatureRatio)
+       end if
+    end if
+
+  end subroutine get_state_parcond_sph
+
+  !============================================================================
+
+  subroutine get_temperature_parcond(i, j, k, iBlock, Temperature)
 
     use ModGeometry, ONLY: Xyz_DGB
     use ModMain,     ONLY: Time_Simulation
     use ModNumConst, ONLY: cPi
 
-    integer, intent(in) :: i, j, iBlock
+    integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Temperature
 
     real :: x, y, xx, yy, Spread, Spread0
     !--------------------------------------------------------------------------
-
-    x = Xyz_DGB(x_,i,j,0,iBlock)
-    y = Xyz_DGB(y_,i,j,0,iBlock)
+    x = Xyz_DGB(x_,i,j,k,iBlock)
+    y = Xyz_DGB(y_,i,j,k,iBlock)
     xx = (Bx*x+By*y)/sqrt(Bx**2+By**2)
     yy = (Bx*y-By*x)/sqrt(Bx**2+By**2)
 
@@ -1019,10 +1121,10 @@ contains
     case('parcond', 'parcondsemi')
        select case(NameVar)
        case('te0')
-          do j=MinJ,MaxJ; do i=MinI,MaxI
-             call get_temperature_parcond(i, j, iBlock, Te)
-             PlotVar_G(i,j,:) = Te
-          end do; end do
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+             call get_temperature_parcond(i, j, k, iBlock, Te)
+             PlotVar_G(i,j,k) = Te
+          end do; end do; end do
        case('te')
           if(UseIdealEos)then
              do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
