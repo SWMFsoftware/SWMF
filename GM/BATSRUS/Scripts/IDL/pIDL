@@ -8,6 +8,7 @@ my $KeepMovieOnly = ($M or $MOVIE);
 my $Verbose       = ($v or $V or $verbose or $VERBOSE);
 my $Quiet         = ($q or $quiet or $Q or $QUIET);
 my $Ccmc          = ($CCMC or $ccmc);
+my $Input         = ($i or $input);
 my $nThread       = ($n or 4);
 
 use strict;
@@ -187,13 +188,15 @@ sub process_file{
     die "$ERROR: error found in the output of $PostIdl\n" if $Error; 
     die "$ERROR: no out file $OutFile was produced\n" unless -s $OutFile;
     unless($Keep){
-	if($BaseFile =~ /[123]d_/){
-	    # Keep header file if file name is 1d_, 2d_ or 3d_.
-	    # Rename header file to .info so it is not postprocessed again
-	    # CCMC insists on using .h extension... 
+	if($BaseFile =~ /[23]d_/ or $BaseFile =~ /1d_/ and $Input){
+	    # Keep header file if file name is 2d_ or 3d_, or 1d_ and -i is set.
+	    # Rename header file to .info so it is not postprocessed again.
+	    # Unfortunately CCMC insists on using .h extension... 
 	    rename $HeaderFile, $BaseFile.".info" unless $Ccmc;
 	}else{
+	    my $TreeFile = $HeaderFile; $TreeFile =~ s/\.h$/.tree/;
 	    unlink $HeaderFile;
+	    unlink $TreeFile if -e $TreeFile;
 	}
 	unlink glob("$BaseFile*.idl");
 	print "unlink ",join(" ",glob("$BaseFile*.idl")),"\n" if $Verbose;
@@ -210,12 +213,15 @@ Purpose:
    Create .outs movies from the .out files if requested.
 
 Usage:
-   pIDL [-h] [-v] [-k] [-m|M] [-n=NUMBER] [BASENAME]
+   pIDL [-h] [-v] [-q] [-i] [-k] [-ccmc] [-m|M] [-n=NUMBER] [BASENAME]
 
    -h -help    - print this help message
    -v -verbose - print verbose information
    -q -quiet   - do not print any information
+   -i -input   - rename .h to .info and keep .tree file for 1d_ files,
+                 so that the IDL file can be used as input for READAMR.
    -k -keep    - keep the .h and .idl files. Default is to delete them.
+   -ccmc       - keep the .h file for 3d_ files. This is needed by CCMC.
    -m -movie   - create movie from the .out files and keep the .out files
    -M -MOVIE   - create movie from the .out files and delete the .out files
    -n=NUMBER   - execute PostIDL.exe in parallel on NUMBER cores. Default is 4.
@@ -234,8 +240,11 @@ pIDL -n=8
 pIDL -M
 
    Process all files in the Plots/ directory, create .outs movies
-   and keep the .idl and .out files as well:
+   but keep the .h, .idl and .out files as well:
 pIDL -k -m Plots/
+
+   Process all files in IO2, rename .h to .info and keep .tree files:
+pIDL -i
 
    Process files starting with Plots/y=0 and print verbose information:
 pIDL -v Plots/y=0
