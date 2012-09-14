@@ -666,6 +666,12 @@ contains
          uBC2Inv,Ga2Boris                           !^CFG IF BORISCORR
     real:: B0_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
+    ! Number of cells needed to get the face values
+    integer:: nStencil
+
+    ! Coefficients for the 4th order interpolation
+    real, parameter:: Coef1 = 7.0/12.0, Coef2 = -1.0/12.0
+
     logical::DoTest,DoTestMe
     character(len=*), parameter :: NameSub = 'calc_face_value'
     !-------------------------------------------------------------------------
@@ -701,7 +707,10 @@ contains
     ! first, calculate the CELL values for the variables to be limited
     ! for non-boris corrections they are: density, velocity, pressure
     ! for boris correction momentum is used instead of the velocity
-    !
+
+    ! Number of cells away from the cell center
+    nStencil = min(2,nOrder)
+
     if(DoLimitMomentum)then                     !^CFG IF BORISCORR BEGIN
        if(UseB0)then
           B0_DG=B0_DGB(:,:,:,:,iBlock)
@@ -710,27 +719,27 @@ contains
        end if
        do k = kMinFace, kMaxFace
           do j = jMinFace, jMaxFace
-             do i=1-nOrder,nI+nOrder
+             do i=1-nStencil,nI+nStencil
                 call calc_primitives_boris    !needed for x-faces
              end do
           end do
        end do
        if(nJ > 1)then
           do k = kMinFace, kMaxFace; do i = iMinFace, iMaxFace
-             do j=1-nOrder,jMinFace-1
+             do j=1-nStencil,jMinFace-1
                 call calc_primitives_boris    ! additional calculations for 
              end do                           ! y -faces
-             do j=jMaxFace+1,nJ+nOrder
+             do j=jMaxFace+1,nJ+nStencil
                 call calc_primitives_boris    ! additional calculations for 
              end do	                      ! y-faces
           end do; end do
        end if
        if(nK > 1)then
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
-             do k=1-nOrder,kMinFace-1
+             do k=1-nStencil,kMinFace-1
                 call calc_primitives_boris    ! additional calculations for 
              end do                           ! z-faces
-             do k=kMaxFace+1,nK+nOrder
+             do k=kMaxFace+1,nK+nStencil
                 call calc_primitives_boris    ! additional calculations for 
              end do	                      ! z-faces
           end do; end do
@@ -743,27 +752,27 @@ contains
        else
           do k=kMinFace,kMaxFace
              do j=jMinFace,jMaxFace
-                do i=1-nOrder,nI+nOrder
+                do i=1-nStencil,nI+nStencil
                    call calc_primitives_MHD   !needed for x-faces
                 end do
              end do
           end do
           if(nJ > 1)then
              do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
-                do j=1-nOrder,jMinFace-1
+                do j=1-nStencil,jMinFace-1
                    call calc_primitives_MHD   ! additional calculations for 
                 end do                        ! y -faces
-                do j=jMaxFace+1,nJ+nOrder
+                do j=jMaxFace+1,nJ+nStencil
                    call calc_primitives_MHD   ! additional calculations for 
                 end do	                      ! y-faces
              end do; end do
           end if
           if(nK > 1)then
              do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
-                do k=1-nOrder,kMinFace-1
+                do k=1-nStencil,kMinFace-1
                    call calc_primitives_MHD   ! additional calculations for 
                 end do                        ! z-faces
-                do k=kMaxFace+1,nK+nOrder
+                do k=kMaxFace+1,nK+nStencil
                    call calc_primitives_MHD   ! additional calculations for 
                 end do	                      ! z-faces
              end do; end do
@@ -775,10 +784,20 @@ contains
     ! Now the first or second order face values are calcuted
     !/
     select case(nOrder)
+    case(4)
+       ! Fourth order interpolation
+       if (.not.DoResChangeOnly) then
+          call get_facex_fourth(&
+               1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
+          if(nJ > 1) call get_facey_fourth(&
+               iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
+          if(nK > 1) call get_facez_fourth(&
+               iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
+       else
+          !call CON_stop(NameSub//': 4th order at res change to be implemented')
+       end if
     case(1)
-       !\
        ! First order reconstruction
-       !/
        if (.not.DoResChangeOnly) then
           call get_faceX_first(&
                1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
@@ -942,7 +961,7 @@ contains
           end if
        end if
 
-    end select  !end second order
+    end select  ! nOrder
 
   contains
 
@@ -1151,6 +1170,71 @@ contains
     end subroutine calc_primitives_boris
     !=========================================================================
     !^CFG END BORISCORR
+    !========================================================================
+    subroutine get_facex_fourth(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      !-----------------------------------------------------------------------
+      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+         LeftState_VX(:,i,j,k) = &
+              Coef1*(Primitive_VG(:,i-1,j,k) + Primitive_VG(:,i,j,k)) + &
+              Coef2*(Primitive_VG(:,i-2,j,k) + Primitive_VG(:,i+1,j,k))
+              
+         RightState_VX(:,i,j,k)=LeftState_VX(:,i,j,k)
+      end do; end do; end do
+
+      !^CFG IF BORISCORR BEGIN
+      if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      !^CFG END BORISCORR
+
+      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
+           iMin,iMax,jMin,jMax,kMin,kMax)
+
+    end subroutine get_facex_fourth
+    !========================================================================
+    subroutine get_facey_fourth(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      !-----------------------------------------------------------------------
+      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+         LeftState_VY(:,i,j,k) = &
+              Coef1*(Primitive_VG(:,i,j-1,k) + Primitive_VG(:,i,j,k)) + &
+              Coef2*(Primitive_VG(:,i,j-2,k) + Primitive_VG(:,i,j+1,k))
+              
+         RightState_VY(:,i,j,k)=LeftState_VY(:,i,j,k)
+      end do; end do; end do
+
+      !^CFG IF BORISCORR BEGIN
+      if(DoLimitMomentum)call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      !^CFG END BORISCORR
+
+      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
+           iMin,iMax,jMin,jMax,kMin,kMax)
+
+    end subroutine get_facey_fourth
+    !========================================================================
+    subroutine get_facez_fourth(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      !-----------------------------------------------------------------------
+      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+         LeftState_VZ(:,i,j,k) = &
+              Coef1*(Primitive_VG(:,i,j,k-1) + Primitive_VG(:,i,j,k)) + &
+              Coef2*(Primitive_VG(:,i,j,k-2) + Primitive_VG(:,i,j,k+1))
+              
+         RightState_VZ(:,i,j,k)=LeftState_VZ(:,i,j,k)
+      end do; end do; end do
+
+      !^CFG IF BORISCORR BEGIN
+      if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      !^CFG END BORISCORR
+
+      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
+           iMin,iMax,jMin,jMax,kMin,kMax)
+
+    end subroutine get_facez_fourth
+
+    !========================================================================
     subroutine get_faceX_first(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
