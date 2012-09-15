@@ -234,6 +234,8 @@ subroutine calc_scaled_euv
      call stop_gitm("Stopping in euv_ionization_heat")
   endif
 
+  if (UseEUVData) call Set_Euv(iError, CurrentTime, EndTime)
+
   call calc_euv
 
   hlybr = 0.
@@ -545,27 +547,47 @@ enddo
 
 end subroutine init_euv
 
-subroutine Set_Euv(iError)
+subroutine Set_Euv(iError, StartTime, EndTime)
+
+  use ModKind
   use ModEUV
   use ModInputs
 
   implicit none
 
-  integer, intent(out)  :: iError
+  integer, intent(out)     :: iError
+  real(Real8_), intent(in) :: EndTime, StartTime
 
-  character    (len=20)                           :: line, cline
-  character    (len=20)                           :: cEUVText(10000)
-
+  character(len=20)                       :: line, cline
   integer, dimension(7)                   :: TimeOfFlare,TimeArray
   real, dimension(6+Num_Wavelengths_High) :: temp
-  
-  logical :: NotDone = .true.
-  integer ::  i, iline, ioerror, nline, nILine = 1,iErrortemp = 0
+
+  real (Real8_) :: TimeDelay, BufferTime = 180.0
+
+  logical :: NotDone
+  integer :: i, iline, ioerror, nline, nILine = 1, iErrortemp = 0
+
+  iError = 0
+
+  ! If we have been here before and we read the entire file, leave
+  if (.not.ReReadEUVFile .and. nSeeTimes > 0) return
+
+  ! This if statement makes sure that we have been here before and 
+  ! want to be here again
+  if (ReReadEUVFile) then
+     ! If we still have a lot of data in memory, then don't bother
+     ! reading more.
+     if (StartTime + BufferTime < TimeSee(nSeeTimes)) return
+  endif
+
+  ! Assume that we can read the entire file
+  ReReadEUVFile = .false.
+
   cline = ' '
 
   open(unit = iInputUnit_, file=cEUVFile, IOSTAT = iError)
 
-   if (iError /= 0) then
+  if (iError /= 0) then
      write(*,*) "Error in opening EUV file  Is this set?"
      write(*,*) "Code : ",iError,cEUVFile
      call stop_gitm("Stopping in calc_euv")
@@ -573,12 +595,13 @@ subroutine Set_Euv(iError)
      
   iline = 1
 
+  NotDone = .true.
   do while (NotDone)
      read(iInputUnit_,'(a)',iostat=iError) cLine
-
      if (cline(1:1) .eq. '#') then 
 
-        ! Remove anything after a space or TAB                                            
+        ! Remove anything after a space or TAB
+
         i=index(cLine,' '); if(i>0)cLine(i:len(cLine))=' '
         i=index(cLine,char(9)); if(i>0)cLine(i:len(cLine))=' '
         
@@ -613,9 +636,18 @@ subroutine Set_Euv(iError)
      TimeArray(7) = 0
      call time_int_to_real(TimeArray,TimeSee(iLine))
      SeeFlux(:,iline) = temp(7:6+Num_WaveLengths_High)
-     iline = iline + 1
+
+     if ( TimeSee(iLine) > StartTime-BufferTime .and. &
+          TimeSee(iLine) < EndTime+BufferTime) &
+          iline = iline + 1
 
      read(iInputUnit_,*,iostat=iErrortemp) temp
+
+     if (iline > nSeeLinesMax-1) then
+        iErrortemp = 1
+        ReReadEUVFile = .true.
+     endif
+
   enddo
 
   close(iInputUnit_)

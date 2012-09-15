@@ -1069,7 +1069,7 @@ subroutine set_inputs
            call read_in_logical(UseEUVData, iError)
            call read_in_string(cEUVFile, iError)
 
-           if (UseEUVData) call Set_Euv(iError)
+           if (UseEUVData) call Set_Euv(iError, CurrentTime, EndTime)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #EUV_DATA'
               write(*,*) 'This is for a FISM or some other solar spectrum file.'
