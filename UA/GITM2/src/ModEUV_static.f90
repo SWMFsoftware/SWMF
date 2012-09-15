@@ -48,6 +48,7 @@ integer, parameter :: nFlaresMax = 20
   real, dimension(Num_WaveLengths_High,nSeeLinesMax) :: SeeFlux
   real, dimension(nSeeLinesMax) :: TimeSee
   real, dimension(nFlaresMax) :: FlareTimes
+  logical :: ReReadEUVFile = .false.
 
   real, dimension(nS2WaveLengths) :: &
        S2WaveLengths, S2PhotonEnergy, S2SolarFlux, &
