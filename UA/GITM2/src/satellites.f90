@@ -86,7 +86,7 @@ subroutine read_satellites(iError)
               endif
            else
               nSatPos(iSat,nSatLines(iSat)) = nSatPos(iSat,nSatLines(iSat)) + 1
-              if (nSatPos(iSat,nSatLines(iSat)) > nMaxSatPos) then
+              if (nSatPos(iSat,nSatLines(iSat)) > nMaxSatPos-2) then
                  write(*,*) "Too Many Positions in satfile : ", &
                       cSatFileName(iSat)
                  write(*,*) "Line : ",nSatLines(iSat)
