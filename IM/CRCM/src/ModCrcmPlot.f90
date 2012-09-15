@@ -90,7 +90,7 @@ contains
             PlotState_IIV(1:iba(iLon),iLon,iPplot_I(1))&
             +Pressure_IC(iSpecies,1:iba(iLon),iLon) 
        PlotState_IIV(1:iba(iLon),iLon,iPparplot_I(1))= &
-            PlotState_IIV(1:iba(iLon),iLon,iPplot_I(1))&
+            PlotState_IIV(1:iba(iLon),iLon,iPparplot_I(1))&
             +PressurePar_IC(iSpecies,1:iba(iLon),iLon) 
        PlotState_IIV(1:iba(iLon),iLon,iPhotplot_I(1))= &
             PlotState_IIV(1:iba(iLon),iLon,iPhotplot_I(1))&
