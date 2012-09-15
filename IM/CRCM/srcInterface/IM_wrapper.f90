@@ -431,7 +431,7 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   !use CON_time, ONLY : get_time
   use ModCrcmGrid,  ONLY: iSize=>np, jSize=>nt, iProc
-  use ModCrcm,      ONLY: Pressure_IC=>phot, Ppar_IC, Bmin_C, Time, Pmin
+  use ModCrcm,      ONLY: Pressure_IC, PressurePar_IC, Bmin_C, Time, Pmin
   use ModGmCrcm,    ONLY: Den_IC, iLatMin, DoMultiFluidGMCoupling, &
        DoAnisoPressureGMCoupling
   use ModFieldTrace,ONLY: iba
@@ -516,7 +516,7 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
         Buffer_IIV(i,j,dens_) = &
              sum(Den_IC (1:nspec-1,i,j)*cProtonMass*amu_I(1:nspec-1))
         if(DoAnisoPressureGMCoupling)then
-           Buffer_IIV(i,j,parpres_) = max(sum(Ppar_IC(:,i,j)), Pmin)*1e-9
+           Buffer_IIV(i,j,parpres_) = max(sum(PressurePar_IC(:,i,j)), Pmin)*1e-9
            ! fill minimum B  
            Buffer_IIV(i,j,bmin_) = Bmin_C(i,j)
         end if
