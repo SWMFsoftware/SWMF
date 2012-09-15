@@ -59,15 +59,20 @@ Determine whether or not to continue a previous run.
 </command>
 
 <command name="INITIALF2">
-	<parameter name="IsEmptyInitial" type="logical" />
+	<parameter name="IsEmptyF2" type="logical" />
+	<parameter name="IsGMInitial" type="logical" />
+	<parameter name="IsDataInitial" type="logical" />
 
 #INITIALF2
-T		IsEmptyInitial
+T			IsEmptyF2
+F			IsGmInitial
+F			IsDataInitial
 
 Determines whether to fill the fluxes in the simulation domain based on a 
-Maxwellian determined from MHD quantities (IsEmptyInitial=F) or to set the 
-initial fluxes in the simulation domain to zero (IsEmptyInitial=T). The 
-default is shown.
+Maxwellian determined from MHD quantities (IsGMInitial=T) or to set the 
+initial fluxes in the simulation domain to zero (IsEmptyF2=T) or to set 
+the initial fluxes in the simulation to values from AMPTE/CCE data 
+(IsDataInitial=T). The default is shown.
 </command>
 
 
