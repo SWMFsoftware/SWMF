@@ -2,7 +2,8 @@
 subroutine crcm_run(delta_t)
   use ModConst,       ONLY: cLightSpeed, cElectronCharge
   use ModCrcmInitialize
-  use ModCrcm,        ONLY: f2,dt, Time, phot, Ppar_IC, Pressure_IC,FAC_C, Bmin_C
+  use ModCrcm,        ONLY: f2,dt, Time, phot, Ppar_IC, Pressure_IC, &
+                            PressurePar_IC,FAC_C, Bmin_C
   use ModCrcmPlanet,  ONLY: re_m, dipmom, Hiono, nspec, amu_I, &
                             dFactor_I,tFactor_I
   use ModFieldTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
@@ -169,9 +170,22 @@ subroutine crcm_run(delta_t)
      IsFirstCall=.false.
   endif
 
-
   ! calculate boundary flux (fb) at the CRCM outer boundary at the equator
   call boundaryIM(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
+
+  if (Time == 0.0 .and. nProc == 1 .and. DoSavePlot) then
+     call timing_start('crcm_output')
+     call crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
+          sinA,energy,sinAo,delE,dmu,amu_I,xjac,pp,xmm,dmm,dk,xlat,dphi, &
+          re_m,Hiono,flux,FAC_C,phot,Ppar_IC,Pressure_IC,PressurePar_IC)
+     call timing_stop('crcm_output')
+     
+     call timing_start('crcm_plot')
+     call Crcm_plot(np,nt,xo,yo,Pressure_IC,PressurePar_IC,phot,Ppar_IC,Den_IC,&
+          bo,ftv,pot,FAC_C,Time,dt)
+     call timing_stop('crcm_plot')
+     if (DoSaveFlux) call Crcm_plot_fls(rc,flux,time)
+  endif
 
   ! calculate the drift velocity
   call timing_start('crcm_driftV')
@@ -188,7 +202,6 @@ subroutine crcm_run(delta_t)
   call timing_start('crcm_StDiTime')
   call StDiTime(dt,vel,ftv,rc,re_m,dipmom,iba)
   call timing_stop('crcm_StDiTime')
-
 
   ! time loop
   do n=1,nstep
@@ -217,11 +230,11 @@ subroutine crcm_run(delta_t)
 
   call timing_start('crcm_output')
   call crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
-       sinA,energy,sinAo,delE,dmu,amu_I,xjac,pp,xmm, &
-       dmm,dk,xlat,dphi,re_m,Hiono,flux,FAC_C,phot,Ppar_IC,Pressure_IC)
+       sinA,energy,sinAo,delE,dmu,amu_I,xjac,pp,xmm,dmm,dk,xlat,dphi, &
+       re_m,Hiono,flux,FAC_C,phot,Ppar_IC,Pressure_IC,PressurePar_IC)
   call timing_stop('crcm_output')
   
-  ! When nProc >1 consolodate: phot, Ppar_IC, Pressure_IC, fac and iba on iProc 0
+  ! When nProc >1 consolodate: phot, Ppar_IC, Pressure_IC, PressurePar_IC, fac and iba on iProc 0
   if (nProc>1) then    
      if (.not.allocated(iRecieveCount_P)) &
           allocate(iRecieveCount_P(nProc), iDisplacement_P(nProc))       
@@ -241,6 +254,12 @@ subroutine crcm_run(delta_t)
              MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
              0, iComm, iError)
         if (iProc==0) Pressure_IC(iSpecies,:,:)=BufferRecv_C(:,:)
+
+        BufferSend_C(:,:)=PressurePar_IC(iSpecies,:,:)
+        call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+             MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
+             0, iComm, iError)
+        if (iProc==0) PressurePar_IC(iSpecies,:,:)=BufferRecv_C(:,:)
 
         BufferSend_C(:,:)=phot(iSpecies,:,:)
         call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
@@ -356,8 +375,8 @@ subroutine crcm_run(delta_t)
           (floor((Time+1.0e-5)/DtOutput))/=&
           floor((Time+1.0e-5-delta_t)/DtOutput)) then
         call timing_start('crcm_plot')
-        call Crcm_plot(np,nt,xo,yo,Pressure_IC,phot,Ppar_IC,Den_IC,bo,ftv,pot,&
-             FAC_C,Time,dt)
+        call Crcm_plot(np,nt,xo,yo,Pressure_IC,PressurePar_IC,phot,Ppar_IC,Den_IC,&
+             bo,ftv,pot,FAC_C,Time,dt)
         call timing_stop('crcm_plot')
 
         if (DoSaveFlux) call Crcm_plot_fls(rc,flux,time)
@@ -658,7 +677,7 @@ subroutine boundaryIM(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
   ! Input: nspec,np,nt,nm,nk,iba,irm,amu,xjac,Den_IC,Temp_IC,vel
   ! Output: fb
   Use ModGmCrcm, ONLY: Den_IC, Temp_IC, Temppar_IC, DoAnisoPressureGMCoupling
-  use ModCrcm,       ONLY: MinLonPar,MaxLonPar
+  use ModCrcm,       ONLY: MinLonPar,MaxLonPar, f2
   use ModFieldTrace, ONLY: sinA
   implicit none
 
@@ -1187,7 +1206,7 @@ end subroutine lossconeIM
 !-------------------------------------------------------------------------------
 subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
      sinA,energy,sinAo,delE,dmu,amu_I,xjac,pp,xmm, &
-     dmm,dk,xlat,dphi,re_m,Hiono,flux,fac,phot,Ppar_IC,Pressure_IC)
+     dmm,dk,xlat,dphi,re_m,Hiono,flux,fac,phot,Ppar_IC,Pressure_IC,PressurePar_IC)
   !-----------------------------------------------------------------------------
   ! Routine calculates CRCM output, flux, fac and phot from f2
   !
@@ -1206,19 +1225,22 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   real f2(nspec,np,nt,nm,nk),ekev(np,nt,nm,nk),sinA(np,nt,nk),re_m,Hiono,rion
   real ftv(np,nt),ftv1,energy(neng),sinAo(npit),delE(neng),dmu(npit),aloge(neng)
   real flux2D(nm,nk),pp(nspec,np,nt,nm,nk),xjac(nspec,np,nm)
-  real sinA1D(nk),flx,ekev2D(nm,nk),flx_lo,pf(nspec),delEE(neng),pi,cosAo2(npit)
+  real sinA1D(nk),cosA2(nk),flx,ekev2D(nm,nk),flx_lo,pf(nspec),delEE(neng),pi,cosAo2(npit)
+  real sina1,sina0,dcosa
   real amu_I(nspec),amu1,psd1,psd(nspec,np,nt,nm,nk),fave(nspec,np,nt,neng)
   real xmm(nm),dmm(nm),dk(nk),xlat(np),xlatr(np),dphi,eta(nspec,np,nt,nm,nk)
   real flux(nspec,np,nt,neng,npit),detadi,detadj,dwkdi,dwkdj
-  real fac(np,nt),phot(nspec,np,nt),Ppar_IC(nspec,np,nt),Pressure_IC(nspec,np,nt)
-  real Pressure1
+  real fac(np,nt),phot(nspec,np,nt),Ppar_IC(nspec,np,nt)
+  real Pressure_IC(nspec,np,nt), PressurePar_IC(nspec,np,nt)
+  real Pressure0, Pressure1, PressurePar1, Coeff
   integer :: iStatus_I(MPI_STATUS_SIZE), iError
   logical, parameter :: DoCalcFac=.true.
   flux=0.
   fac=0.
-  phot=0.
-  Ppar_IC=0.
   eta=0.
+  phot=0.
+  Ppar_IC = 0.
+  PressurePar_IC = 0.
 
   ! Some constants for pressure, fac calculations
   rion=re_m+Hiono*1000.                      ! ionosphere distance in meter
@@ -1234,15 +1256,22 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   jloop1: do j=MinLonPar,MaxLonPar
      iloop1: do i=1,iba(j)
         ftv1=ftv(i,j)     ! ftv1: flux tube volume in m^3/Wb
-        Pressure1=0.0
         nloop: do n=1,nspec
+           Pressure0=0.0
            Pressure1=0.0
+           PressurePar1=0.0
            Den_IC(n,i,j)=0.0
            amu1=amu_I(n)**1.5
 !!!! Calculate Den_IC, and 2D flux, fl2D(log), ekev2D(log) and sinA1D
            do m=1,nk
-              sinA1D(m)=sinA(i,j,m)
+              sinA1D(m) = sinA(i,j,m)
+              cosA2(m) = 1 - sinA1D(m)**2
               do k=1,nm
+                 if (m.eq.1) sina0=1.
+                 if (m.gt.1) sina0=0.5*(sinA1D(m)+sinA1D(m-1))
+                 if (m.eq.nk) sina1=0.
+                 if (m.lt.nk) sina1=0.5*(sinA1D(m)+sinA1D(m+1))
+                 dcosa=sqrt(1.-sina1*sina1)-sqrt(1.-sina0*sina0)
                  !write(*,*) 'n,i,k,xjac(n,i,k)',n,i,k,xjac(n,i,k)
                  psd1=f2(n,i,j,k,m)/1.e20/1.e19/xjac(n,i,k)  ! mug^-3cm^-6s^3
                  flx=psd1*(1.6e19*pp(n,i,j,k,m))*pp(n,i,j,k,m)
@@ -1252,11 +1281,17 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
                  eta(n,i,j,k,m)=amu1*1.209*psd1*sqrt(xmm(k))*dmm(k)*dk(m)
                  psd(n,i,j,k,m)=psd1
                  Den_IC(n,i,j)=Den_IC(n,i,j)+eta(n,i,j,k,m)/ftv1
-                 Pressure1=Pressure1+eta(n,i,j,k,m)*ekev(i,j,k,m)/ftv1
+                 !Pressure0 = eta(n,i,j,k,m)*ekev(i,j,k,m)/ftv1
+                 Pressure0 = ekev(i,j,k,m)*flx*pp(n,i,j,k,m)/xmm(k)*dmm(k)*dcosa
+                 Pressure1 = Pressure1 + Pressure0
+                 PressurePar1 = PressurePar1 + 3.*Pressure0*cosA2(m)
               enddo
            enddo
-           Pressure1=Pressure1*1.6e-16*2./3.      ! pressure in Pa
-           Pressure_IC(n,i,j)=Pressure1*1.e9           ! pressure in nPa
+           !Coeff = 1.6e-16*2./3.*1.e9
+           Coeff = 4.*cPi/3.*1.e4*1.e9
+           Pressure_IC(n,i,j) = Pressure1*Coeff
+           PressurePar_IC(n,i,j) = PressurePar1*Coeff
+
 !!!! Map flux to fixed energy and pitch-angle grids (energy, sinAo)
            do k=1,neng
               do m=1,npit

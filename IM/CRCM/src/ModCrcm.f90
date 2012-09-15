@@ -11,7 +11,7 @@ Module ModCrcm
   real    :: BetaLimiter = 1.5
   real    :: Pmin = 1e-2
   real, allocatable:: SDtime(:,:,:,:), f2(:,:,:,:,:)
-  real, allocatable:: phot(:,:,:), Ppar_IC(:,:,:), Pressure_IC(:,:,:)
+  real, allocatable:: phot(:,:,:), Ppar_IC(:,:,:), Pressure_IC(:,:,:),PressurePar_IC(:,:,:)
   real, allocatable:: FAC_C(:,:)
   real, allocatable:: Bmin_C(:,:)
 
@@ -27,6 +27,7 @@ contains
          phot(nspec,np,nt),        &
          Ppar_IC(nspec,np,nt),        &
          Pressure_IC(nspec,np,nt), &
+         PressurePar_IC(nspec,np,nt), &
          FAC_C(np,nt),             &
          Bmin_C(np,nt)                & ! minimum B field along each field line, 
         )                            ! passed from GM to IM, now as an output of IM
