@@ -171,8 +171,8 @@ T			DoExtendTransitionRegion
 #FIXAXIS
 F			UsePoleDiffusion
 T			DoFixAxis
-8.0			rFixAxis
-1.5			r2FixAxis
+1.5			rFixAxis
+1.2			r2FixAxis
 
 turn these off when restarting
 ---------------------------------------------------
