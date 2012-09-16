@@ -1229,7 +1229,7 @@ contains
           select case(CritName)
           case('level')
              call read_var('RefineTo',RefineCritPhys_I(nCrit-nCritDxLevel))
-             call read_var('CoursenTo',CoarsenCritPhys_I(nCrit-nCritDxLevel))
+             call read_var('CoarsenTo',CoarsenCritPhys_I(nCrit-nCritDxLevel))
              RefineCritPhys_I(nCrit-nCritDxLevel) = -RefineCritPhys_I(nCrit-nCritDxLevel)
              CoarsenCritPhys_I(nCrit-nCritDxLevel) = -(CoarsenCritPhys_I(nCrit-nCritDxLevel)+1)
              MaxLevelCritPhys_I(nCrit-nCritDxLevel) = -MaxLevel 
