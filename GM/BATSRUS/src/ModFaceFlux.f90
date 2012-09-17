@@ -914,7 +914,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp,&
          ProcTest, BlkTest, iTest, jTest, kTest
-    use ModFaceGradient, ONLY: get_face_GradVec, get_face_gradient
+    use ModFaceGradient, ONLY: get_face_gradient, get_face_gradient_field
     use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
     use ModUser,     ONLY: user_material_properties
@@ -936,9 +936,9 @@ contains
     integer :: i, j, k, iDim
     real :: NatomicSi, TeSi
 
-    real :: diag, gradV_DDI(nDim,Maxdim,nFluid)
+    real :: Diag, GradV_DDI(nDim,MaxDim,nFluid)
     logical :: IsNewBlock = .true.
-    real,parameter :: TraceCoeff = 2.0/3.0
+    real, parameter :: TraceCoeff = 2.0/3.0
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -958,8 +958,9 @@ contains
           do iFluid=iFluidMin,iFluidMax
              call select_fluid
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                if(State_VGB(iRho,i,j,k,iBlockFace) .ne. 0.0) then 
-                   U_DGI(:,i,j,k,iFluid) = State_VGB(iRhoUx:iRhoUz,i,j,k,iBlockFace)/&
+                if(State_VGB(iRho,i,j,k,iBlockFace) > 0.0) then 
+                   U_DGI(:,i,j,k,iFluid) = &
+                        State_VGB(iRhoUx:iRhoUz,i,j,k,iBlockFace) / &
                         State_VGB(iRho,i,j,k,iBlockFace)
                 else
                    U_DGI(:,i,j,k,iFluid) = 0.0
@@ -968,40 +969,46 @@ contains
           end do
        end if
 
-       ! Get the velocity gradient on the faces, only fill inn ghost cell for the block
-       ! for each fluid ones
+       ! Get the velocity gradient on the faces. 
+       ! Fill in ghost cells for the block for each fluid once.
        IsNewBlock = IsNewBlockViscosity
-       !GradV_DDI = 0.0
-       do iFluid=iFluidMin,iFluidMax
-          call get_face_GradVec(iDimFace,iFace,jFace,kFace,iBlockFace,nDim,IsNewBlock,&
-               U_DGI(:,:,:,:,iFluid), GradV_DDI(:,:,iFluid))
+       do iFluid = iFluidMin, iFluidMax
+          call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
+               iBlockFace, MaxDim,  &
+               IsNewBlock, U_DGI(:,:,:,:,iFluid), GradV_DDI(:,:,iFluid))
           ! so ghost cell for all fluids are updated
           IsNewBlock = IsNewBlockViscosity 
        end do
        IsNewBlockViscosity = .false.        
 
        ! Get the viscosity tensor
-       do iFluid=iFluidMin,iFluidMax
-          diag = GradV_DDI(x_,x_,ifluid)
-          if(nDim >1) diag = diag+GradV_DDI(y_,y_,ifluid)
-          if(nDim >2) diag = diag+GradV_DDI(z_,z_,ifluid)
-          diag = -TraceCoeff*diag
+       do iFluid = iFluidMin, iFluidMax
+          Diag = GradV_DDI(x_,x_,iFluid)
+          if(nDim > 1) Diag = Diag + GradV_DDI(y_,y_,iFluid)
+          if(nDim > 2) Diag = Diag + GradV_DDI(z_,z_,iFluid)
+          Diag = -TraceCoeff*Diag
 
           ! Diagonal
-          Visco_DDI(x_,x_,ifluid)= 2.0*GradV_DDI(x_,x_,ifluid) + diag
-          if(nDim >1) Visco_DDI(y_,y_,ifluid) = 2.0*GradV_DDI(y_,y_,ifluid) + diag  
-          if(nDim >2) Visco_DDI(z_,z_,ifluid) = 2.0*GradV_DDI(z_,z_,ifluid) + diag  
+          Visco_DDI(x_,x_,iFluid)            = 2*GradV_DDI(x_,x_,iFluid) + Diag
+          if(nDim > 1)Visco_DDI(y_,y_,iFluid)= 2*GradV_DDI(y_,y_,iFluid) + Diag
+          if(nDim > 2)Visco_DDI(z_,z_,iFluid)= 2*GradV_DDI(z_,z_,iFluid) + Diag
 
-          ! Symetric off diagonal
-          if(nDim >1) Visco_DDI(x_,y_,ifluid) = GradV_DDI(x_,y_,ifluid) + GradV_DDI(y_,x_,ifluid)
-          if(nDim >1) Visco_DDI(y_,x_,ifluid) = Visco_DDI(x_,y_,ifluid)
-          if(nDim >2) Visco_DDI(x_,z_,ifluid) = GradV_DDI(x_,z_,ifluid) + GradV_DDI(z_,x_,ifluid)
-          if(nDim >2) Visco_DDI(z_,x_,ifluid) = Visco_DDI(x_,z_,ifluid)
-          if(nDim >2) Visco_DDI(y_,z_,ifluid) = GradV_DDI(y_,z_,ifluid) + GradV_DDI(z_,y_,ifluid)
-          if(nDim >2) Visco_DDI(z_,y_,ifluid) = Visco_DDI(y_,z_,ifluid)
+          ! Off-diagonal terms are symmetrized
+          if(nDim > 1)then
+             Visco_DDI(x_,y_,ifluid) = &
+                  GradV_DDI(x_,y_,iFluid) + GradV_DDI(y_,x_,iFluid)
+             Visco_DDI(y_,x_,ifluid) = Visco_DDI(x_,y_,iFluid)
+          end if
+          if(nDim > 2)then
+             Visco_DDI(x_,z_,ifluid) = &
+                  GradV_DDI(x_,z_,iFluid) + GradV_DDI(z_,x_,iFluid)
+             Visco_DDI(z_,x_,ifluid) = Visco_DDI(x_,z_,iFluid)
+             Visco_DDI(y_,z_,ifluid) = &
+                  GradV_DDI(y_,z_,iFluid) + GradV_DDI(z_,y_,iFluid)
+             Visco_DDI(z_,y_,ifluid) = Visco_DDI(y_,z_,iFluid)
+          end if
 
-          Visco_DDI(:,:,ifluid) = &
-               ViscoCoeff*Visco_DDI(:,:,ifluid)          
+          Visco_DDI(:,:,iFluid) = ViscoCoeff*Visco_DDI(:,:,iFluid)          
        end do
     end if
 
