@@ -14,9 +14,13 @@ module ModViscosity
   public Viscosity_factor
 
   ! Velosity vector for each block and fluid
-  real, public, allocatable, dimension(:,:,:,:,:) :: U_DGI
+  real, public, allocatable:: u_DGI(:,:,:,:,:)
+
+  ! Gradient of velocity centered for faces
+  real, public, allocatable:: GradU_DDI(:,:,:)
+
   ! Visosity tensor for each fluid
-  real, public, allocatable, dimension(:,:,:)     :: Visco_DDI
+  real, public, allocatable:: Visco_DDI(:,:,:)
 
   logical, public :: UseViscosity=.false.
   logical, public :: IsNewBlockViscosity = .true.
@@ -111,10 +115,9 @@ contains
 
   !=========================================================================
 
-  subroutine  Viscosity_init()
+  subroutine  viscosity_init
 
-    use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
-         nDim, maxDim
+    use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nDim
     use ModMultiFluid, ONLY: nFluid
     use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
     !------------------------------------------------------------------------
@@ -124,13 +127,17 @@ contains
 
     ViscoCoeff = ViscoCoeffSi*Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
-    if(allocated(U_DGI)) deallocate (U_DGI)
-    if(allocated(Visco_DDI)) deallocate (Visco_DDI)
+    if(allocated(u_DGI))     deallocate(u_DGI)
+    if(allocated(GradU_DDI)) deallocate(GradU_DDI)
+    if(allocated(Visco_DDI)) deallocate(Visco_DDI)
 
-    allocate(U_DGI(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nFluid))
-    U_DGI = 0.0
+    allocate(u_DGI(nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nFluid))
+    u_DGI = 0.0
 
-    allocate(Visco_DDI(MaxDim,MaxDim,nFluid))
+    allocate(GradU_DDI(nDim,nDim,nFluid))
+    GradU_DDI = 0.0
+
+    allocate(Visco_DDI(nDim,nDim,nFluid))
     Visco_DDI = 0.0
 
     rSqrInner1 = -1.0
@@ -166,15 +173,16 @@ contains
             //NameViscoRegion)
     end select
 
-  end subroutine  Viscosity_init
+  end subroutine viscosity_init
 
   !=========================================================================
-  subroutine  Viscosity_clean()
+  subroutine  viscosity_clean
 
     if(.not.UseViscosity) RETURN
 
-    if(allocated(U_DGI)) deallocate (U_DGI)
-    if(allocated(Visco_DDI)) deallocate (Visco_DDI)
+    if(allocated(u_DGI))     deallocate(u_DGI)
+    if(allocated(GradU_DDI)) deallocate(GradU_DDI)
+    if(allocated(Visco_DDI)) deallocate(Visco_DDI)
 
     rSqrInner1 = -1.0
     rSqrInner2 = -1.0
@@ -185,11 +193,11 @@ contains
 
     UseViscosity=.false.
 
-  end subroutine  Viscosity_clean
+  end subroutine viscosity_clean
 
   !=========================================================================
 
-  real function Viscosity_factor(iDir, iFace, jFace, kFace , iBlock)
+  real function viscosity_factor(iDir, iFace, jFace, kFace , iBlock)
 
     use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_
     use ModPhysics,   ONLY: Si2No_V,No2Si_V,UnitX_,UnitT_   
@@ -235,7 +243,8 @@ contains
        if(rSqr > rSqrSphere2)then
           ViscoFactor=0.0
        else if(rSqr > rSqrSphere1)then
-          ViscoFactor = ViscoFactor*(rSqrSphere2-rSqr)/(rSqrSphere2-rSqrSphere1)
+          ViscoFactor = ViscoFactor*(rSqrSphere2-rSqr) &
+               / (rSqrSphere2 - rSqrSphere1)
        end if
     case('box')
        Distance2 = max( &
@@ -268,8 +277,8 @@ contains
        call stop_mpi("Unknown value for NameViscoRegion="//NameViscoRegion)
     end select
 
-    Viscosity_factor = ViscoCoeff*ViscoFactor
+    viscosity_factor = ViscoCoeff*ViscoFactor
 
-  end function Viscosity_factor
+  end function viscosity_factor
 
 end module ModViscosity

@@ -693,13 +693,13 @@ contains
 
     integer, intent(in) :: iDir, i, j, k, iBlock, nField
     logical, intent(inout) :: IsNewBlock
-    real, intent(inout) :: Var_IG(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real, intent(inout) :: Var_IG(nField,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(out) :: FaceGrad_DI(nDim,nField)
 
     integer :: iL, iR, jL, jR, kL, kR, iField
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     Real :: InvDx, InvDy, InvDz
-    real :: Var1_IG(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real, allocatable :: Var1_IG(:,:,:,:)
 
     character(len=*), parameter:: NameSub='get_face_gradient_field'
     !--------------------------------------------------------------------------
@@ -708,9 +708,10 @@ contains
     InvDz = 1.0/CellSize_DB(z_,iBlock)
 
     if(IsNewBlock)then
-       call set_block_field3(iBlock,nDim, Var1_IG, Var_IG)
-       if(.not.IsCartesianGrid) &
-            call set_block_jacobian_face(iBlock)
+       allocate(Var1_IG(nField,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+       call set_block_field3(iBlock, nField, Var1_IG, Var_IG)
+       deallocate(Var1_IG)
+       if(.not.IsCartesianGrid) call set_block_jacobian_face(iBlock)
 
        IsNewBlock = .false.
     end if

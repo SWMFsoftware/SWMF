@@ -48,7 +48,8 @@ module ModFaceFlux
   use ModMultiFluid
   use ModNumConst
 
-  use ModViscosity, ONLY : IsNewBlockViscosity,UseViscosity, U_DGI, Visco_DDI
+  use ModViscosity, ONLY: UseViscosity, IsNewBlockViscosity, &
+       u_DGI, Visco_DDI, GradU_DDI
 
   implicit none
 
@@ -936,7 +937,7 @@ contains
     integer :: i, j, k, iDim
     real :: NatomicSi, TeSi
 
-    real :: Diag, GradV_DDI(nDim,MaxDim,nFluid)
+    real :: Diag
     logical :: IsNewBlock = .true.
     real, parameter :: TraceCoeff = 2.0/3.0
     !-----------------------------------------------------------------------
@@ -959,11 +960,11 @@ contains
              call select_fluid
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 if(State_VGB(iRho,i,j,k,iBlockFace) > 0.0) then 
-                   U_DGI(:,i,j,k,iFluid) = &
-                        State_VGB(iRhoUx:iRhoUz,i,j,k,iBlockFace) / &
+                   u_DGI(:,i,j,k,iFluid) = &
+                        State_VGB(iRhoUx:iRhoUx+nDim-1,i,j,k,iBlockFace) / &
                         State_VGB(iRho,i,j,k,iBlockFace)
                 else
-                   U_DGI(:,i,j,k,iFluid) = 0.0
+                   u_DGI(:,i,j,k,iFluid) = 0.0
                 end if
              end do; end do; end do
           end do
@@ -974,8 +975,8 @@ contains
        IsNewBlock = IsNewBlockViscosity
        do iFluid = iFluidMin, iFluidMax
           call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
-               iBlockFace, MaxDim,  &
-               IsNewBlock, U_DGI(:,:,:,:,iFluid), GradV_DDI(:,:,iFluid))
+               iBlockFace, nDim,  &
+               IsNewBlock, u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
           ! so ghost cell for all fluids are updated
           IsNewBlock = IsNewBlockViscosity 
        end do
@@ -983,28 +984,28 @@ contains
 
        ! Get the viscosity tensor
        do iFluid = iFluidMin, iFluidMax
-          Diag = GradV_DDI(x_,x_,iFluid)
-          if(nDim > 1) Diag = Diag + GradV_DDI(y_,y_,iFluid)
-          if(nDim > 2) Diag = Diag + GradV_DDI(z_,z_,iFluid)
+          Diag              =        GradU_DDI(x_,x_,iFluid)
+          if(nDim > 1) Diag = Diag + GradU_DDI(y_,y_,iFluid)
+          if(nDim > 2) Diag = Diag + GradU_DDI(z_,z_,iFluid)
           Diag = -TraceCoeff*Diag
 
           ! Diagonal
-          Visco_DDI(x_,x_,iFluid)            = 2*GradV_DDI(x_,x_,iFluid) + Diag
-          if(nDim > 1)Visco_DDI(y_,y_,iFluid)= 2*GradV_DDI(y_,y_,iFluid) + Diag
-          if(nDim > 2)Visco_DDI(z_,z_,iFluid)= 2*GradV_DDI(z_,z_,iFluid) + Diag
+          Visco_DDI(x_,x_,iFluid)            = 2*GradU_DDI(x_,x_,iFluid) + Diag
+          if(nDim > 1)Visco_DDI(y_,y_,iFluid)= 2*GradU_DDI(y_,y_,iFluid) + Diag
+          if(nDim > 2)Visco_DDI(z_,z_,iFluid)= 2*GradU_DDI(z_,z_,iFluid) + Diag
 
           ! Off-diagonal terms are symmetrized
           if(nDim > 1)then
              Visco_DDI(x_,y_,ifluid) = &
-                  GradV_DDI(x_,y_,iFluid) + GradV_DDI(y_,x_,iFluid)
+                  GradU_DDI(x_,y_,iFluid) + GradU_DDI(y_,x_,iFluid)
              Visco_DDI(y_,x_,ifluid) = Visco_DDI(x_,y_,iFluid)
           end if
           if(nDim > 2)then
              Visco_DDI(x_,z_,ifluid) = &
-                  GradV_DDI(x_,z_,iFluid) + GradV_DDI(z_,x_,iFluid)
+                  GradU_DDI(x_,z_,iFluid) + GradU_DDI(z_,x_,iFluid)
              Visco_DDI(z_,x_,ifluid) = Visco_DDI(x_,z_,iFluid)
              Visco_DDI(y_,z_,ifluid) = &
-                  GradV_DDI(y_,z_,iFluid) + GradV_DDI(z_,y_,iFluid)
+                  GradU_DDI(y_,z_,iFluid) + GradU_DDI(z_,y_,iFluid)
              Visco_DDI(z_,y_,ifluid) = Visco_DDI(y_,z_,iFluid)
           end if
 
@@ -2013,20 +2014,19 @@ contains
     if(ViscoCoeff > 0.0 ) then
        do iFluid = 1, nFluid
           call select_fluid
-          FluxViscoX = sum(Normal_D(1:nDim)*Visco_DDI(1:nDim,x_,ifluid))
-          FluxViscoY = sum(Normal_D(1:nDim)*Visco_DDI(1:nDim,y_,ifluid))
-          FluxViscoZ = sum(Normal_D(1:nDim)*Visco_DDI(1:nDim,z_,ifluid))
-
+          FluxViscoX     = sum(Normal_D(1:nDim)*Visco_DDI(:,x_,iFluid))
           Flux_V(iRhoUx) = Flux_V(iRhoUx) - State_V(iRho)*FluxViscoX
+          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRhoUx)*FluxViscoX
+          if(nDim == 1) CYCLE
+          FluxViscoY     = sum(Normal_D(1:nDim)*Visco_DDI(:,y_,iFluid))
           Flux_V(iRhoUy) = Flux_V(iRhoUy) - State_V(iRho)*FluxViscoY
+          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRhoUy)*FluxViscoY
+          if(nDim == 2) CYCLE
+          FluxViscoZ     = sum(Normal_D(1:nDim)*Visco_DDI(:,z_,iFluid))
           Flux_V(iRhoUz) = Flux_V(iRhoUz) - State_V(iRho)*FluxViscoZ
-
-          Flux_V(Energy_) = Flux_V(Energy_) - &
-               (State_V(iRhoUx)*FluxViscoX + State_V(iRhoUy)*FluxViscoY + &
-               State_V(iRhoUz)*FluxViscoZ) 
+          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRhoUz)*FluxViscoZ
        end do
     end if
-
 
     if(UseB) then
        ! These terms are common for the induction equation
