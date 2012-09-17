@@ -624,7 +624,7 @@ contains
 
        ! Calculate the cell centered heat conduction tensor
        do k = kMin1, kMax1; do j = jMin1, jMax1; do i = 0, nI+1
-          call get_heat_cond_tensor(State_VGB(:,i,j,k,iBlock), &
+          call get_heat_cond_tensor(State2_VG(:,i,j,k), &
                i, j, k, iBlock, HeatCond_DDG(:,:,i,j,k))
        end do; end do; end do
 
