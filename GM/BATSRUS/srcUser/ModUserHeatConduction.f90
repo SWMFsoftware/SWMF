@@ -45,9 +45,8 @@ module ModUser
   real, parameter :: GammaRel = 4.0/3.0
 
   ! variables for changing initial condition for parcodsemi pronblem.
-  real    :: xCenterGuassian, yCenterGuassian
-  real    :: BxInput, ByInput
-  logical :: UseUserParcondSemiInit = .true.
+  real    :: xCenterGaussian = 0.0, yCenterGaussian = 0.0
+  real    :: BxInput = 1.7, ByInput = 1.0
 
 contains
 
@@ -209,13 +208,8 @@ contains
        AmplitudeTemperature = 100.0
        Tmin = 0.01
        Time0 = Time_Simulation
-       if(UseUserParcondSemiInit) then
-          Bx = BxInput
-          By = ByInput
-       else
-          Bx = 1.7
-          By = 1.0
-       end if
+       Bx = BxInput
+       By = ByInput
 
     case default
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
@@ -366,11 +360,10 @@ contains
           call read_var('TypeProblem',TypeProblem)
 
        case("#PARCONDSEMIINIT")
-          UseUserParcondSemiInit = .true.
           call read_var('BxInput', BxInput)
           call read_var('ByInput', ByInput)
-          call read_var('xCenterGuassian', xCenterGuassian)
-          call read_var('yCenterGuassian', yCenterGuassian)
+          call read_var('xCenterGaussian', xCenterGaussian)
+          call read_var('yCenterGaussian', yCenterGaussian)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -742,22 +735,22 @@ contains
              select case(iSide)
              case(1)
                 do j = 0, nJ+1
-                   call get_temperature_parcond(0, j, 0, iBlock, Temperature)
+                   call get_temperature_parcond(0, j, 1, iBlock, Temperature)
                    StateSemi_VGB(1,0,j,:,iBlock) = Temperature
                 end do
              case(2)
                 do j = 0, nJ+1
-                   call get_temperature_parcond(nI+1, j, 0, iBlock, Temperature)
+                   call get_temperature_parcond(nI+1, j, 1, iBlock, Temperature)
                    StateSemi_VGB(1,nI+1,j,:,iBlock) = Temperature
                 end do
              case(3)
                 do i = 0, nI+1
-                   call get_temperature_parcond(i, 0, 0, iBlock, Temperature)
+                   call get_temperature_parcond(i, 0, 1, iBlock, Temperature)
                    StateSemi_VGB(1,i,0,:,iBlock) = Temperature
                 end do
              case(4)
                 do i = 0, nI+1
-                   call get_temperature_parcond(i, nJ+1, 0, iBlock, Temperature)
+                   call get_temperature_parcond(i, nJ+1, 1, iBlock, Temperature)
                    StateSemi_VGB(1,i,nI+1,:,iBlock) = Temperature
                 end do
              end select
@@ -864,7 +857,7 @@ contains
 
     real :: Te
     !--------------------------------------------------------------------------
-    call get_temperature_parcond(i, j, 0, iBlock, Te)
+    call get_temperature_parcond(i, j, 1, iBlock, Te)
     State_VGB(:,i,j,:,iBlock) = 0.0
     State_VGB(Rho_,i,j,:,iBlock) = 1.0
     State_VGB(Bx_,i,j,:,iBlock) = Bx
@@ -934,7 +927,7 @@ contains
     Spread = 4.0*Time_Simulation
 
     Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
-         *exp(-(xx-xCenterGuassian)**2/Spread-(yy-yCenterGuassian)**2/Spread0)
+         *exp(-(xx-xCenterGaussian)**2/Spread-(yy-yCenterGaussian)**2/Spread0)
 
     if(TypeProblem == 'parcondsemi') Temperature = Temperature**(1.0/3.5)
 
