@@ -145,6 +145,7 @@ end subroutine IM_init_session
 
 subroutine IM_run(TimeSimulation,TimeSimulationLimit)
 
+  use CON_time,   ONLY: DoTimeAccurate
   use ModCrcm,    ONLY: Time, dt, dtmax,iProc
 
   implicit none
@@ -161,13 +162,19 @@ subroutine IM_run(TimeSimulation,TimeSimulationLimit)
      call crcm_init
      IsInitiallized = .true.
   endif
-
-  dt = min(dtmax, 0.5*(TimeSimulationLimit - TimeSimulation))
-  call crcm_run(TimeSimulationLimit - TimeSimulation)
-
-  ! return time at the end of the time step to CON
-  TimeSimulation   = TimeSimulationLimit
   
+  if( .not. DoTimeAccurate)then
+     ! steady state mode
+     dt = dtmax
+     call crcm_run(2*dt)
+  else
+     ! time accurate mode
+     dt = min(dtmax, 0.5*(TimeSimulationLimit - TimeSimulation))
+     call crcm_run(TimeSimulationLimit - TimeSimulation)
+     ! return time at the end of the time step to CON
+     TimeSimulation   = TimeSimulationLimit
+  end if
+
 end subroutine IM_run
 !===========================================================================
 
