@@ -311,7 +311,7 @@ subroutine initialize_gitm(TimeIn)
      call init_aerosol
   endif
 
- if (   .not. (index(cPlanet,"Mars") == 0)  ) then 
+  if (   .not. (index(cPlanet,"Mars") == 0)  ) then 
      call init_isochem
   endif
 
@@ -326,92 +326,100 @@ subroutine initialize_gitm(TimeIn)
         call init_msis
      else
 
-     TempUnit_const = 1. * Mass(1) / Boltzmanns_Constant
-     TempAve  = (TempMax+TempMin)/2/TempUnit_const
-     TempDiff = (TempMax-TempMin)/2/TempUnit_const
+        TempUnit_const = 1. * Mass(1) / Boltzmanns_Constant
+        TempAve  = (TempMax+TempMin)/2/TempUnit_const
+        TempDiff = (TempMax-TempMin)/2/TempUnit_const
+
+        do iBlock = 1, nBlocks
+
+           do iAlt=-1,nAlts+2
+              call get_temperature(0.0, 0.0, Altitude_GB(:,:,iAlt,iBlock), t, h)
+              Temperature(:,:,iAlt,iBlock)  = t/TempUnit_const
+              eTemperature(:,:,iAlt,iBlock) = t
+              iTemperature(:,:,iAlt,iBlock) = t
+           enddo
+           
+           do iAlt=-1,nAlts+2
+
+              InvScaleHeight(:,:,iAlt,iBlock)  =  &
+                   -Gravity_GB(:,:,iAlt,iBlock) / &
+                   Temperature(:,:,iAlt,iBlock)
+
+              Rho(:,:,iAlt,iBlock) = 0.0
+
+              NewSumRho = 0.0
+
+              do iSpecies = 1, nSpecies
+
+                 InvScaleHeightS = -Gravity_GB(:,:,iAlt,iBlock) * &
+                      Mass(iSpecies) / &
+                      (Temperature(:,:,iAlt,iBlock)*TempUnit_const* &
+                      Boltzmanns_Constant)
+
+                 if(iAlt < 2)then
+                    LogNS(:,:,iAlt,iSpecies,iBlock) = &
+                         - (Altitude_GB(:,:,iAlt,iBlock)-AltMin) &
+                         * InvScaleHeightS + LogNS0(iSpecies)
+                 elseif(iAlt > 1 .and. iAlt < nAlts+2)then
+                    LogNS(:,:,iAlt,iSpecies,iBlock) = &
+                         LogNS(:,:,iAlt-1,iSpecies,iBlock) &
+                         -(Altitude_GB(:,:,iAlt  ,iBlock) &
+                         - Altitude_GB(:,:,iAlt-1,iBlock))*InvScaleHeightS &
+                         -(Temperature(:,:,iAlt+1,iBlock)   &
+                         - Temperature(:,:,iAlt-1,iBlock))  &
+                         /(2.0*Temperature(:,:,iAlt,iBlock))
+                 else
+                    LogNS(:,:,iAlt,iSpecies,iBlock) = &
+                         LogNS(:,:,iAlt-1,iSpecies,iBlock) &
+                         -(Altitude_GB(:,:,iAlt  ,iBlock) &
+                         - Altitude_GB(:,:,iAlt-1,iBlock))*InvScaleHeightS &
+                         -(Temperature(:,:,iAlt  ,iBlock)  &
+                         - Temperature(:,:,iAlt-1,iBlock)) &
+                         /(Temperature(:,:,iAlt,iBlock))
+                 endif
+              
+                 NewSumRho      = NewSumRho + &
+                      Mass(iSpecies)*exp(LogNS(:,:,iAlt,iSpecies,iBlock))
+              
+              enddo
+              
+              do iSpecies=1,nSpecies
+
+                 NDensityS(:,:,iAlt,iSpecies,iBlock) = &
+                      exp(LogNS(:,:,iAlt,iSpecies,iBlock))
+
+                 NDensity(:,:,iAlt,iBlock) = NDensity(:,:,iAlt,iBlock) + &
+                      NDensityS(:,:,iAlt,iSpecies,iBlock)
+
+                 Rho(:,:,iAlt,iBlock) = Rho(:,:,iAlt,iBlock) + &
+                      Mass(iSpecies) * NDensityS(:,:,iAlt,iSpecies,iBlock)
+
+              enddo
+
+           enddo
+           
+        enddo
+
+     endif
+
+     if (UseIRI .and. IsEarth) then
+        call init_iri
+     else
+        if (IsEarth) then
+           do iBlock = 1, nBlocks
+              IDensityS(:,:,:,:,iBlock)    = 1.00e8
+              IDensityS(:,:,:,ie_,iBlock)  = 1.00e8*(nIons-1)
+           enddo
+        endif
+     endif
+
+  else
 
      do iBlock = 1, nBlocks
-
-        do iAlt=-1,nAlts+2
-           call get_temperature(0.0, 0.0, Altitude_GB(:,:,iAlt,iBlock), t, h)
-           Temperature(:,:,iAlt,iBlock)  = t/TempUnit_const
-           eTemperature(:,:,iAlt,iBlock) = t
-           iTemperature(:,:,iAlt,iBlock) = t
-        enddo
-           
-        do iAlt=-1,nAlts+2
-
-           InvScaleHeight(:,:,iAlt,iBlock)  =  &
-                -Gravity_GB(:,:,iAlt,iBlock) / &
-                Temperature(:,:,iAlt,iBlock)
-
-           Rho(:,:,iAlt,iBlock) = 0.0
-
-           NewSumRho = 0.0
-
-           do iSpecies = 1, nSpecies
-
-              InvScaleHeightS = -Gravity_GB(:,:,iAlt,iBlock) * &
-                   Mass(iSpecies) / &
-                   (Temperature(:,:,iAlt,iBlock)*TempUnit_const* &
-                   Boltzmanns_Constant)
-
-              if(iAlt < 2)then
-                 LogNS(:,:,iAlt,iSpecies,iBlock) = &
-                      - (Altitude_GB(:,:,iAlt,iBlock)-AltMin) &
-                      * InvScaleHeightS + LogNS0(iSpecies)
-              elseif(iAlt > 1 .and. iAlt < nAlts+2)then
-                 LogNS(:,:,iAlt,iSpecies,iBlock) = &
-                      LogNS(:,:,iAlt-1,iSpecies,iBlock) &
-                      -(Altitude_GB(:,:,iAlt  ,iBlock) &
-                      - Altitude_GB(:,:,iAlt-1,iBlock))*InvScaleHeightS &
-                      -(Temperature(:,:,iAlt+1,iBlock)   &
-                      - Temperature(:,:,iAlt-1,iBlock))  &
-                      /(2.0*Temperature(:,:,iAlt,iBlock))
-              else
-                 LogNS(:,:,iAlt,iSpecies,iBlock) = &
-                      LogNS(:,:,iAlt-1,iSpecies,iBlock) &
-                      -(Altitude_GB(:,:,iAlt  ,iBlock) &
-                      - Altitude_GB(:,:,iAlt-1,iBlock))*InvScaleHeightS &
-                      -(Temperature(:,:,iAlt  ,iBlock)  &
-                      - Temperature(:,:,iAlt-1,iBlock)) &
-                      /(Temperature(:,:,iAlt,iBlock))
-              endif
-              
-              NewSumRho      = NewSumRho + &
-                   Mass(iSpecies)*exp(LogNS(:,:,iAlt,iSpecies,iBlock))
-              
-           enddo
-              
-           do iSpecies=1,nSpecies
-
-              NDensityS(:,:,iAlt,iSpecies,iBlock) = &
-                   exp(LogNS(:,:,iAlt,iSpecies,iBlock))
-
-              NDensity(:,:,iAlt,iBlock) = NDensity(:,:,iAlt,iBlock) + &
-                   NDensityS(:,:,iAlt,iSpecies,iBlock)
-
-              Rho(:,:,iAlt,iBlock) = Rho(:,:,iAlt,iBlock) + &
-                   Mass(iSpecies) * NDensityS(:,:,iAlt,iSpecies,iBlock)
-
-           enddo
-
-        enddo
-           
+        InvScaleHeight(:,:,:,iBlock)  =  &
+             -Gravity_GB(:,:,:,iBlock) / &
+             Temperature(:,:,:,iBlock)
      enddo
-
-  endif
-
-  if (UseIRI .and. IsEarth) then
-     call init_iri
-  else
-     if (IsEarth) then
-        do iBlock = 1, nBlocks
-           IDensityS(:,:,:,:,iBlock)    = 1.00e8
-           IDensityS(:,:,:,ie_,iBlock)  = 1.00e8*(nIons-1)
-        enddo
-     endif
-  endif
 
   endif
 
