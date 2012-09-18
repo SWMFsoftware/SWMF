@@ -6,6 +6,7 @@ module ModExtraVariables
   integer, parameter :: Pe_ = 1, Ppar_ = 1
   integer, parameter :: Hyp_ = 1, Erad_ = 1, ExtraEint_ = 1
   integer, parameter :: Ew_  = 1
+  integer, parameter :: Lperp_ = 1
   integer, parameter :: SignB_ = 1
   integer, parameter :: Te0_   = 1
 
