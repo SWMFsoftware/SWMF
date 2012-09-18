@@ -1840,7 +1840,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_modified_cooling
 
      case("#ADVECTWAVES", "#ALFVENWAVES", "#WAVEPRESSURE", &
-          "#FREQUENCY", "#SPECTRUM")
+          "#FREQUENCY", "#SPECTRUM", "#WAVEREFLECTION")
         call read_waves_param(NameCommand)
 
      case("#LASERPULSE", "#LASERBEAM", "#LASERBEAMS", "#LASERBEAMPROFILE", &
