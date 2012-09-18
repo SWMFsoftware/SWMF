@@ -2230,6 +2230,7 @@ contains
       real :: Rho, Ux, Uy, Uz, p, e, Ew
       real :: HallUx, HallUy, HallUz, InvRho
       real :: B2, B0B1, FullB2, pTotal, DpPerB
+      real :: PwExtra, DPwPerB
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
       integer :: iVar
 
@@ -2415,6 +2416,25 @@ contains
          end do
          Flux_V(Energy_) = Flux_V(Energy_) - AlfvenSpeed &
               *sum(State_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_))
+
+         if(UseAlfvenWaveReflection)then
+            if(UseTransverseTurbulence)then
+               PwExtra = 0.5*Ew*SigmaD
+               FullB2 = FullBx**2 + FullBy**2 + FullBz**2
+               DPwPerB = -Ew*SigmaD*FullBn/max(1e-30,FullB2)
+               Flux_V(RhoUx_) = Flux_V(RhoUx_) + PwExtra*NormalX+DPwPerB*FullBx
+               Flux_V(RhoUy_) = Flux_V(RhoUy_) + PwExtra*NormalY+DPwPerB*FullBy
+               Flux_V(RhoUz_) = Flux_V(RhoUz_) + PwExtra*NormalZ+DPwPerB*FullBz
+               Flux_V(Energy_) = Flux_V(Energy_) + Un*PwExtra &
+                    + DPwPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
+            else ! isotropic turbulence
+               PwExtra = Ew*SigmaD/6.0
+               Flux_V(RhoUx_) = Flux_V(RhoUx_) + PwExtra*NormalX
+               Flux_V(RhoUy_) = Flux_V(RhoUy_) + PwExtra*NormalY
+               Flux_V(RhoUz_) = Flux_V(RhoUz_) + PwExtra*NormalZ
+               Flux_V(Energy_) = Flux_V(Energy_) + Un*PwExtra
+            end if
+         end if
       end if
 
       !^CFG IF SIMPLEBORIS BEGIN
@@ -2722,10 +2742,12 @@ contains
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure
+      use ModWaves,    ONLY: UseAlfvenWaveReflection, &
+           UseTransverseTurbulence, SigmaD
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
-      real :: Ppar, Pperp, BnInvB2, GammaPe
+      real :: Ppar, Pperp, BnInvB2, GammaPe, Pw
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real :: dB1dB1                                     !^CFG IF AWFLUX
 
@@ -2767,8 +2789,15 @@ contains
                  max(StateLeft_V(Ew_)/StateLeft_V(Rho_),&
                  StateRight_V(Ew_)/StateRight_V(Rho_))
          else
-            Sound2 = Sound2 + GammaWave * (GammaWave - 1)*&
-                 sum(State_V(WaveFirst_:WaveLast_))*InvRho
+            Pw = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
+            if(UseAlfvenWaveReflection)then
+               if(UseTransverseTurbulence)then
+                  Pw = Pw*(1.0 + abs(SigmaD))
+               else ! isotropic turbulence
+                  Pw = Pw*(1.0 + SigmaD/3.0)
+               end if
+            end if
+            Sound2 = Sound2 + GammaWave*Pw*InvRho
          end if
       end if
 
