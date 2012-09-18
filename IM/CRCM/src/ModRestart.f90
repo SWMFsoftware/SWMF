@@ -10,7 +10,7 @@ contains
   subroutine crcm_read_restart
     use ModCrcmPlanet,ONLY: nspec
     use ModCrcmGrid,  ONLY: np,nt,nm,nk
-    use ModCrcm,      ONLY: f2, phot, Pressure_IC, FAC_C, Ppar_IC, Bmin_C
+    use ModCrcm,      ONLY: f2, phot, Pressure_IC, PressurePar_IC, FAC_C, Ppar_IC, Bmin_C
     use ModFieldTrace,ONLY: iba
     use ModGmCrcm,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
@@ -27,6 +27,7 @@ contains
        read(UnitTmp_) Den_IC
        read(UnitTmp_) phot
        read(UnitTmp_) Pressure_IC           
+       read(UnitTmp_) PressurePar_IC           
        read(UnitTmp_) FAC_C             
        read(UnitTmp_) iba
        read(UnitTmp_) Ppar_IC
@@ -40,6 +41,7 @@ contains
        call MPI_bcast(Den_IC, nspec*np*nt, MPI_REAL, 0, iComm, iError)
        call MPI_bcast(phot, nspec*np*nt, MPI_REAL, 0, iComm, iError)
        call MPI_bcast(Pressure_IC, nspec*np*nt, MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(PressurePar_IC, nspec*np*nt, MPI_REAL, 0, iComm, iError)
        call MPI_bcast(FAC_C, np*nt, MPI_REAL, 0, iComm, iError)
        call MPI_bcast(iba, nt, MPI_INTEGER, 0, iComm, iError)
        call MPI_bcast(Ppar_IC, nspec*np*nt, MPI_REAL, 0, iComm, iError)
@@ -53,7 +55,7 @@ contains
   subroutine crcm_write_restart
     use ModCrcmPlanet,ONLY: nspec
     use ModCrcmGrid,  ONLY: np,nt,nm,nk,MinLonPar,MaxLonPar
-    use ModCrcm,      ONLY: f2,time, phot, Pressure_IC, FAC_C, Ppar_IC, Bmin_C
+    use ModCrcm,      ONLY: f2,time, phot, Pressure_IC, PressurePar_IC, FAC_C, Ppar_IC, Bmin_C
     use ModFieldTrace,ONLY: iba    
     use ModGmCrcm,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
@@ -106,6 +108,12 @@ contains
                MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
                0, iComm, iError)
           if (iProc==0) Pressure_IC(iSpecies,:,:)=BufferRecv_C(:,:)
+
+          BufferSend_C(:,:)=PressurePar_IC(iSpecies,:,:)
+          call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+               MPI_REAL, BufferRecv_C,iRecieveCount_P, iDisplacement_P,MPI_REAL, &
+               0, iComm, iError)
+          if (iProc==0) PressurePar_IC(iSpecies,:,:)=BufferRecv_C(:,:)
           
           BufferSend_C(:,:)=phot(iSpecies,:,:)
           call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
@@ -140,6 +148,7 @@ contains
        write(UnitTmp_) Den_IC
        write(UnitTmp_) phot
        write(UnitTmp_) Pressure_IC
+       write(UnitTmp_) PressurePar_IC
        write(UnitTmp_) FAC_C
        write(UnitTmp_) iba                
        write(UnitTmp_) Ppar_IC
