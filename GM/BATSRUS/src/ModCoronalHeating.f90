@@ -885,6 +885,12 @@ module ModCoronalHeating
   real    :: rCP = 2.0
   real    :: rCPefolding = 2.5
 
+  ! Variables for incompressible turbulence
+  logical :: UseTurbulentCascade = .false.
+  logical :: UseScaledCorrelationLength = .true.
+  real :: KarmanTaylorAlpha = 1.0
+  real :: KarmanTaylorBeta = 1.0
+
   ! long scale height heating (Ch = Coronal Hole)
   logical :: DoChHeat = .false.
   real :: HeatChCgs = 5.0e-7
@@ -901,8 +907,10 @@ module ModCoronalHeating
 contains
   !==========================================================================
   subroutine read_corona_heating(NameCommand)
-    use ModReadParam,   ONLY: read_var
-    
+
+    use ModReadParam,  ONLY: read_var
+    use ModVarIndexes, ONLY: Lperp_
+
     character(len=*), intent(in):: NameCommand
     !----------------------------------------------------------------------
     select case(NameCommand)
@@ -915,6 +923,7 @@ contains
        UseCranmerHeating    = .false.
        UseExponentialHeating= .false.
        UseAlfvenWaveDissipation = .false.
+       UseTurbulentCascade = .false.
        select case(TypeCoronalHeating)
        case('F','none')
           UseCoronalHeating = .false.
@@ -938,6 +947,16 @@ contains
           if(UseCPRegion) then
              call read_var('rCP', rCP)
              call read_var('rCPefolding', rCPefolding) 
+          end if
+       case('turbulentcascade')
+          UseTurbulentCascade = .true.
+          call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
+          call read_var('KarmanTaylorAlpha', KarmanTaylorAlpha)
+          if(Lperp_ > 1)then
+             call read_var('UseScaledCorrelationLength', &
+                  UseScaledCorrelationLength)
+             if(.not. UseScaledCorrelationLength) &
+                  call read_var('KarmanTaylorBeta', KarmanTaylorBeta)
           end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
@@ -978,7 +997,9 @@ contains
              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     end if
 
-    if(UseAlfvenWaveDissipation) LperpTimesSqrtB = LperpTimesSqrtBSi &
+    if(UseAlfvenWaveDissipation .or. &
+         UseTurbulentCascade.and.UseScaledCorrelationLength) &
+         LperpTimesSqrtB = LperpTimesSqrtBSi &
          *Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
 
     call set_adiabatic_law_4_waves
@@ -1026,7 +1047,12 @@ contains
        B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
     end if
 
-    if(UseAlfvenWaveDissipation)then
+    if(UseTurbulentCascade)then
+
+       call turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
+            CoronalHeating)
+
+    elseif(UseAlfvenWaveDissipation)then
 
        call calc_alfven_wave_dissipation(i, j, k, iBlock, &
             WaveDissipation_V, CoronalHeating)
@@ -1145,7 +1171,14 @@ contains
     real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
     !--------------------------------------------------------------------------
 
-    if(UseAlfvenWaveDissipation)then
+    if(UseTurbulentCascade)then
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call turbulent_cascade(i, j, k, iBlock, &
+               WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k))
+       end do; end do; end do
+
+    elseif(UseAlfvenWaveDissipation)then
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call calc_alfven_wave_dissipation(i, j, k, iBlock, &
@@ -1321,5 +1354,50 @@ contains
     CoronalHeating = sum(WaveDissipation_V)
 
   end subroutine calc_alfven_wave_dissipation
-  
+
+  !============================================================================
+
+  subroutine turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
+       CoronalHeating)
+
+    use ModAdvance, ONLY: State_VGB
+    use ModB0, ONLY: B0_DGB
+    use ModMain, ONLY: UseB0
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, Lperp_
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), &
+         CoronalHeating
+
+    real :: FullB_D(3), FullB, Coef
+    !--------------------------------------------------------------------------
+
+    ! Low-frequency cascade due to small-scale nonlinearities
+
+    If(UseScaledCorrelationLength)then
+       if(UseB0)then
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       else
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+       FullB = sqrt(sum(FullB_D**2))
+
+       Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock)) &
+            *2.0*KarmanTaylorAlpha/LperpTimesSqrtB
+    else
+       ! Note that Lperp is multiplied with the density
+       Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
+            *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
+    end If
+
+    WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock) &
+         *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))
+
+    WaveDissipation_V(WaveLast_) = Coef*State_VGB(WaveLast_,i,j,k,iBlock) &
+         *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock))
+
+    CoronalHeating = sum(WaveDissipation_V)
+
+  end subroutine turbulent_cascade
+
 end module ModCoronalHeating
