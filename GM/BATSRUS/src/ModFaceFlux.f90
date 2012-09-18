@@ -48,8 +48,8 @@ module ModFaceFlux
   use ModMultiFluid
   use ModNumConst
 
-  use ModViscosity, ONLY: UseViscosity, IsNewBlockViscosity, &
-       u_DGI, Visco_DDI, GradU_DDI
+  use ModViscosity, ONLY: UseViscosity, IsNewBlockViscosity, Visco_DDI,&
+       get_viscosity_tensor 
 
   implicit none
 
@@ -915,11 +915,11 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp,&
          ProcTest, BlkTest, iTest, jTest, kTest
-    use ModFaceGradient, ONLY: get_face_gradient, get_face_gradient_field
+    use ModFaceGradient, ONLY: get_face_gradient
     use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
     use ModUser,     ONLY: user_material_properties
-    use BATL_size, ONLY: nDim, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use BATL_lib,  ONLY: x_, y_, z_
 
     real,    intent(out):: Flux_V(nFlux)
@@ -934,12 +934,8 @@ contains
 
     real :: GradPe_D(3)
     real :: InvElectronDens
-    integer :: i, j, k, iDim
+    integer :: i, j, k
     real :: NatomicSi, TeSi
-
-    real :: Diag
-    logical :: IsNewBlock = .true.
-    real, parameter :: TraceCoeff = 2.0/3.0
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -951,66 +947,10 @@ contains
     if(HallCoeff > 0.0 .or. Eta > 0.0) &
          call get_face_current(iDimFace,iFace,jFace,kFace,iBlockFace,Jx,Jy,Jz)
 
-
-    ! Calculateing stress tensor for viscosity 
+    ! Calculateing stress tensor for viscosity Visco_DDI
     if(ViscoCoeff > 0.0 ) then
-       ! Get velocity vector for the block, only done ones per block
-       if(IsNewBlockViscosity) then
-          do iFluid=iFluidMin,iFluidMax
-             call select_fluid
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                if(State_VGB(iRho,i,j,k,iBlockFace) > 0.0) then 
-                   u_DGI(:,i,j,k,iFluid) = &
-                        State_VGB(iRhoUx:iRhoUx+nDim-1,i,j,k,iBlockFace) / &
-                        State_VGB(iRho,i,j,k,iBlockFace)
-                else
-                   u_DGI(:,i,j,k,iFluid) = 0.0
-                end if
-             end do; end do; end do
-          end do
-       end if
-
-       ! Get the velocity gradient on the faces. 
-       ! Fill in ghost cells for the block for each fluid once.
-       IsNewBlock = IsNewBlockViscosity
-       do iFluid = iFluidMin, iFluidMax
-          call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
-               iBlockFace, nDim,  &
-               IsNewBlock, u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
-          ! so ghost cell for all fluids are updated
-          IsNewBlock = IsNewBlockViscosity 
-       end do
-       IsNewBlockViscosity = .false.        
-
-       ! Get the viscosity tensor
-       do iFluid = iFluidMin, iFluidMax
-          Diag              =        GradU_DDI(x_,x_,iFluid)
-          if(nDim > 1) Diag = Diag + GradU_DDI(y_,y_,iFluid)
-          if(nDim > 2) Diag = Diag + GradU_DDI(z_,z_,iFluid)
-          Diag = -TraceCoeff*Diag
-
-          ! Diagonal
-          Visco_DDI(x_,x_,iFluid)            = 2*GradU_DDI(x_,x_,iFluid) + Diag
-          if(nDim > 1)Visco_DDI(y_,y_,iFluid)= 2*GradU_DDI(y_,y_,iFluid) + Diag
-          if(nDim > 2)Visco_DDI(z_,z_,iFluid)= 2*GradU_DDI(z_,z_,iFluid) + Diag
-
-          ! Off-diagonal terms are symmetrized
-          if(nDim > 1)then
-             Visco_DDI(x_,y_,ifluid) = &
-                  GradU_DDI(x_,y_,iFluid) + GradU_DDI(y_,x_,iFluid)
-             Visco_DDI(y_,x_,ifluid) = Visco_DDI(x_,y_,iFluid)
-          end if
-          if(nDim > 2)then
-             Visco_DDI(x_,z_,ifluid) = &
-                  GradU_DDI(x_,z_,iFluid) + GradU_DDI(z_,x_,iFluid)
-             Visco_DDI(z_,x_,ifluid) = Visco_DDI(x_,z_,iFluid)
-             Visco_DDI(y_,z_,ifluid) = &
-                  GradU_DDI(y_,z_,iFluid) + GradU_DDI(z_,y_,iFluid)
-             Visco_DDI(z_,y_,ifluid) = Visco_DDI(y_,z_,iFluid)
-          end if
-
-          Visco_DDI(:,:,iFluid) = ViscoCoeff*Visco_DDI(:,:,iFluid)          
-       end do
+       call get_viscosity_tensor(iDimFace, iFace, jFace, kFace,&
+            iBlockFace,iFluidMin,iFluidMax,ViscoCoeff)
     end if
 
     if(Eta > 0.0)then                  !^CFG IF DISSFLUX BEGIN

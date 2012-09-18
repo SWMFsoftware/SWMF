@@ -12,6 +12,7 @@ module ModViscosity
   public Viscosity_init
   public Viscosity_clean
   public Viscosity_factor
+  public get_viscosity_tensor
 
   ! Velosity vector for each block and fluid
   real, public, allocatable:: u_DGI(:,:,:,:,:)
@@ -117,9 +118,9 @@ contains
 
   subroutine  viscosity_init
 
-    use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nDim
+    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nDim
     use ModMultiFluid, ONLY: nFluid
-    use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
+    use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitT_
     !------------------------------------------------------------------------
 
 
@@ -199,15 +200,13 @@ contains
 
   real function viscosity_factor(iDir, iFace, jFace, kFace , iBlock)
 
-    use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_
-    use ModPhysics,   ONLY: Si2No_V,No2Si_V,UnitX_,UnitT_   
-    use ModGeometry, ONLY: rMin_BLK, r_BLK
+    use BATL_lib,    ONLY: Xyz_DGB, x_, y_, z_
+    use ModGeometry, ONLY: r_BLK
 
     integer, intent(in)::iDir, iFace, jFace, kFace, iBlock 
 
-    real :: x,y,z,r,rSqr,TanSqr,Distance1,Distance2
+    real :: x,y,z,r,rSqr,Distance1,Distance2
     real :: ViscoFactor
-    logical,save :: doOnes=.true.
     !--------------------------------------------------------------
 
 
@@ -280,5 +279,86 @@ contains
     viscosity_factor = ViscoCoeff*ViscoFactor
 
   end function viscosity_factor
+
+  !=========================================================================
+
+  subroutine get_viscosity_tensor(iDimFace, iFace, jFace, &
+       kFace,iBlockFace,iFluidMin,iFluidMax,ViscoCoeff)   
+
+    use ModAdvance, ONLY: State_VGB
+    use BATL_size, ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib,  ONLY: x_, y_, z_
+    use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iRho, iRhoUx
+    use ModFaceGradient, ONLY: get_face_gradient_field
+
+    integer, intent(in) :: iDimFace, iFace, jFace,kFace,iBlockFace
+    integer, intent(in) :: iFluidMin,iFluidMax
+    real,    intent(in) :: ViscoCoeff
+
+    real    :: Diag
+    logical :: IsNewBlock = .true.
+    real, parameter :: TraceCoeff = 2.0/3.0
+    integer :: i,j,k
+    !------------------------------------------------------------------------    
+
+    ! Get velocity vector for the block, only done ones per block
+    if(IsNewBlockViscosity) then
+       do iFluid=iFluidMin,iFluidMax
+          call select_fluid
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             if(State_VGB(iRho,i,j,k,iBlockFace) > 0.0) then 
+                u_DGI(:,i,j,k,iFluid) = &
+                     State_VGB(iRhoUx:iRhoUx+nDim-1,i,j,k,iBlockFace) / &
+                     State_VGB(iRho,i,j,k,iBlockFace)
+             else
+                u_DGI(:,i,j,k,iFluid) = 0.0
+             end if
+          end do; end do; end do
+       end do
+    end if
+
+    ! Get the velocity gradient on the faces. 
+    ! Fill in ghost cells for the block for each fluid once.
+    IsNewBlock = IsNewBlockViscosity
+    do iFluid = iFluidMin,iFluidMax
+       call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
+            iBlockFace, nDim,  &
+            IsNewBlock, u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
+       ! so ghost cell for all fluids are updated
+       IsNewBlock = IsNewBlockViscosity 
+    end do
+    IsNewBlockViscosity = .false.        
+
+    ! Get the viscosity tensor
+    do iFluid = 1,nFluid
+       Diag              =        GradU_DDI(x_,x_,iFluid)
+       if(nDim > 1) Diag = Diag + GradU_DDI(y_,y_,iFluid)
+       if(nDim > 2) Diag = Diag + GradU_DDI(z_,z_,iFluid)
+       Diag = -TraceCoeff*Diag
+
+       ! Diagonal
+       Visco_DDI(x_,x_,iFluid)            = 2*GradU_DDI(x_,x_,iFluid) + Diag
+       if(nDim > 1)Visco_DDI(y_,y_,iFluid)= 2*GradU_DDI(y_,y_,iFluid) + Diag
+       if(nDim > 2)Visco_DDI(z_,z_,iFluid)= 2*GradU_DDI(z_,z_,iFluid) + Diag
+
+       ! Off-diagonal terms are symmetrized
+       if(nDim > 1)then
+          Visco_DDI(x_,y_,ifluid) = &
+               GradU_DDI(x_,y_,iFluid) + GradU_DDI(y_,x_,iFluid)
+          Visco_DDI(y_,x_,ifluid) = Visco_DDI(x_,y_,iFluid)
+       end if
+       if(nDim > 2)then
+          Visco_DDI(x_,z_,ifluid) = &
+               GradU_DDI(x_,z_,iFluid) + GradU_DDI(z_,x_,iFluid)
+          Visco_DDI(z_,x_,ifluid) = Visco_DDI(x_,z_,iFluid)
+          Visco_DDI(y_,z_,ifluid) = &
+               GradU_DDI(y_,z_,iFluid) + GradU_DDI(z_,y_,iFluid)
+          Visco_DDI(z_,y_,ifluid) = Visco_DDI(y_,z_,iFluid)
+       end if
+
+       Visco_DDI(:,:,iFluid) = ViscoCoeff*Visco_DDI(:,:,iFluid)          
+    end do
+
+  end subroutine get_viscosity_tensor
 
 end module ModViscosity
