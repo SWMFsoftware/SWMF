@@ -31,10 +31,11 @@ contains
     use ModMultiFluid
     use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
-    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
+    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C, &
+         UseAlfvenWaveReflection, UseTransverseTurbulence, SigmaD
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
-         QeByQtotal
+         QeByQtotal, UseTurbulentCascade
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -225,6 +226,46 @@ contains
                + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
                *(GammaWave - 1)/Xyz_DGB(y_,i,j,k,iBlock)
        end do; end do; end do
+
+       if(UseAlfvenWaveReflection)then
+          ! The contribution below is not the wave reflection associated
+          ! with turbulence mixing, but compressibility mixing terms that
+          ! appear in the (simplified) incompressible turbulence framework
+          if(UseTransverseTurbulence)then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+                call calc_grad_U(GradU_DD, i, j, k, iBlock)
+
+                ! Calculate unit vector parallel with full B field
+                b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+                b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
+
+                ! Calculate b.(grad u).b
+                if(nDim < MaxDim) b_D(nDim+1:MaxDim) = 0.0 ! just to be sure
+                bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim), GradU_DD))
+
+                Coef = 0.5*SigmaD &
+                     *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+
+                Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
+                     Source_VC(WaveFirst_:WaveLast_,i,j,k) &
+                     - Coef*(0.5*DivU_C(i,j,k) - bDotGradparU)
+             end do; end do; end do
+          else ! isotropic turbulence
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+                Coef = 0.5*SigmaD &
+                     *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+
+                Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
+                     Source_VC(WaveFirst_:WaveLast_,i,j,k) &
+                     - Coef*DivU_C(i,j,k)/6.0
+             end do; end do; end do
+          end if
+       end if
     end if
 
     if(UseCoronalHeating .and. DoExtendTransitionRegion .or. UseRadCooling) &
@@ -241,7 +282,7 @@ contains
           end do; end do; end do
        end if
 
-       if(UseAlfvenWaveDissipation)then
+       if(UseAlfvenWaveDissipation .or. UseTurbulentCascade)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                   Source_VC(WaveFirst_:WaveLast_,i,j,k) &
