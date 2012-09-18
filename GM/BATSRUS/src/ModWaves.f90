@@ -86,6 +86,13 @@ module ModWaves
   real :: DivU_C(nI,nJ,nK) = 0.0       !Auxiliary variable
 
 
+  ! Variables for incompressible turbulence.
+  ! For now the ratio of magnetic to kinetic turbulence energy is assumed
+  ! to be uniform (as provided by SigmaD, corresponding to Alfven ratio 1/2).
+  logical :: UseAlfvenWaveReflection = .false.
+  logical :: UseTransverseTurbulence = .true.
+  real :: SigmaD = -1.0/3.0 ! Normalized energy difference
+
 contains
   !============================================================================
   subroutine read_waves_param(NameCommand)
@@ -97,6 +104,9 @@ contains
     character(len=*), parameter:: NameSub = 'read_waves_param'
     !-------------------------------------------------------------------------
     select case(NameCommand)
+    case("#WAVEREFLECTION")
+       call read_var('UseAlfvenWaveReflection', UseAlfvenWaveReflection)
+       call read_var('UseTransverseTurbulence', UseTransverseTurbulence)
     case("#ADVECTWAVES")
        call read_var('DoAdvectWaves', DoAdvectWaves)
     case("#ALFVENWAVES")
