@@ -18,9 +18,9 @@ contains
   subroutine calc_source(iBlock)
 
     use ModMain,          ONLY: ProcTest,iTest,jTest,kTest,BlkTest,VarTest,&
-                                UseB0,UseDivBsource,GravityDir,UseBody2,&
-                                TypeCoordSystem,Useraddiffusion,&
-                                DoThinCurrentSheet,UseUSerSource,test_string
+         UseB0,UseDivBsource,GravityDir,UseBody2,&
+         TypeCoordSystem,Useraddiffusion,&
+         DoThinCurrentSheet,UseUSerSource,test_string
     use ModAdvance, xx_=> x_,yy_=>y_,zz_=>z_  ! conflicting def of x_,y_,z_
     use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
     use ModPhysics
@@ -46,7 +46,7 @@ contains
          rCurrentFreeB0, DivB0_C, CurlB0_DC
     use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_
-    use ModViscosity,     ONLY: UseViscosity,viscosity_factor
+    use ModViscosity,     ONLY: UseViscosity, viscosity_factor
     integer, intent(in):: iBlock
 
     integer :: i, j, k, iVar
@@ -75,8 +75,10 @@ contains
 
     ! Electron temperature in K:
     real :: TeSi_C(nI,nJ,nK)
-    
-    real :: Visco, tmp,ViscoCoeff
+
+    ! Viscosity
+    real, parameter:: cTwoThirds = 2.0/3.0
+    real :: Visco, Tmp, ViscoCoeff
 
     logical :: DoTest, DoTestMe
 
@@ -100,69 +102,70 @@ contains
              ! Source terms for anisotropic pressure equations
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
- 
-                
-               if(UseViscosity) then
-                 ViscoCoeff = viscosity_factor(0,i,j,k,iBlock) 
-                 if(.not. UseAnisoPressure .and. ViscoCoeff <= 0.0 ) CYCLE
-               end if 
-                
+
+                if(UseViscosity) then
+                   ViscoCoeff = viscosity_factor(0,i,j,k,iBlock) 
+                   if(.not. UseAnisoPressure .and. ViscoCoeff <= 0.0 ) CYCLE
+                end if
+
                 ! Calculate gradient tensor of velocity
                 call calc_grad_U(GradU_DD,i,j,k,iBlock)
 
-               if(UseAnisoPressure) then
-                ! Calculate bDotGradparU = b dot (b matmul GradU)
+                if(UseAnisoPressure) then
+                   ! Calculate bDotGradparU = b dot (b matmul GradU)
 
-                ! Calculate unit vector parallel with full B field
-                b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-                if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-                b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
+                   ! Calculate unit vector parallel with full B field
+                   b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+                   if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+                   b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
 
-                ! Calculate b.grad u.b
-                if(nDim <MaxDim) b_D(nDim+1:MaxDim) = 0.0 ! just to be sure
-                bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim), GradU_DD))
+                   ! Calculate b.grad u.b
+                   bDotGradparU= dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
-                ! p parallel: -2*ppar*b.(b.(Grad U))
-                Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
-                     - 2*State_VGB(Ppar_,i,j,k,iBlock)*bDotGradparU
-                ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
-                !     = (p - ppar)*b.(b.(GradU)) 
-                Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-                     + (State_VGB(p_,i,j,k,iBlock) -  &
-                     State_VGB(Ppar_,i,j,k,iBlock))*bDotGradparU
-               end if
+                   ! p parallel: -2*ppar*b.(b.(Grad U))
+                   Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
+                        - 2*State_VGB(Ppar_,i,j,k,iBlock)*bDotGradparU
 
-               if(UseViscosity) then
-                 
-                 if(ViscoCoeff <= 0.0 ) CYCLE
+                   ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
+                   !     = (p - ppar)*b.(b.(GradU)) 
+                   Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+                        + (State_VGB(p_,i,j,k,iBlock) -  &
+                        State_VGB(Ppar_,i,j,k,iBlock))*bDotGradparU
+                end if
 
-                 Visco = GradU_DD(x_,x_) 
-                 if(nDim > 1) Visco = Visco + GradU_DD(y_,y_) 
-                 if(nDim > 2) Visco = Visco + GradU_DD(z_,z_)
-                 Visco = -0.6666666666666666666667*Visco**2
+                if(UseViscosity) then
 
-                 Visco = Visco + 2.0*GradU_DD(x_,x_)**2 
-                 if(nDim > 1) Visco = Visco + 2.0*GradU_DD(y_,y_)**2
-                 if(nDim > 2) Visco = Visco + 2.0*GradU_DD(z_,z_)**2
+                   if(ViscoCoeff <= 0.0 ) CYCLE
 
-                 tmp = GradU_DD(x_,y_)
-                 if(nDim > 1) tmp = tmp + GradU_DD(y_,x_)
-                 Visco = tmp**2+Visco
- 
-                 tmp = GradU_DD(x_,z_)
-                 if(nDim > 2) tmp = tmp + GradU_DD(z_,x_)
-                 Visco = tmp**2+Visco
+                   Visco = GradU_DD(x_,x_) 
+                   if(nDim > 1) Visco = Visco + GradU_DD(y_,y_) 
+                   if(nDim > 2) Visco = Visco + GradU_DD(z_,z_)
+                   Visco = -cTwoThirds*Visco**2
 
-                 tmp = 0.0
-                 if(nDim > 1) tmp = tmp + GradU_DD(y_,z_)      
-                 if(nDim > 2) tmp = tmp + GradU_DD(z_,y_)
-                 if(nDim > 1) Visco = tmp**2+Visco
+                   Visco = Visco + 2.0*GradU_DD(x_,x_)**2 
+                   if(nDim > 1) Visco = Visco + 2.0*GradU_DD(y_,y_)**2
+                   if(nDim > 2) Visco = Visco + 2.0*GradU_DD(z_,z_)**2
 
-                 Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) - ViscoCoeff*Visco
-               end if 
+                   Tmp = GradU_DD(x_,y_)
+                   if(nDim > 1) Tmp = Tmp + GradU_DD(y_,x_)
+                   Visco = Visco + Tmp**2
+
+                   Tmp = GradU_DD(x_,z_)
+                   if(nDim > 2) Tmp = Tmp + GradU_DD(z_,x_)
+                   Visco = Visco + Tmp**2
+
+                   if(nDim > 1)then
+                      Tmp = Tmp + GradU_DD(y_,z_)      
+                      if(nDim > 2) Tmp = Tmp + GradU_DD(z_,y_)
+                      Visco = Visco + Tmp**2
+                   end if
+
+                   Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) - ViscoCoeff*Visco
+                end if
              end do; end do; end do
 
-             if(DoTestMe .and. UseAnisoPressure .and. (VarTest == Ppar_ .or. VarTest == p_)) &
+             if(DoTestMe .and. UseAnisoPressure .and. &
+                  (VarTest == Ppar_ .or. VarTest == p_)) &
                   call write_source('After bDotGradparU')
 
           end if
@@ -191,7 +194,6 @@ contains
 
        end do
     end if
-
 
     ! Joule heating: dP/dt += (gamma-1)*eta*j**2    !^CFG IF DISSFLUX BEGIN
     ! Heat exchange between electrons and ions (mult-ion is not coded).
@@ -243,7 +245,6 @@ contains
                 b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
 
                 ! Calculate b.(grad u).b
-                if(nDim < MaxDim) b_D(nDim+1:MaxDim) = 0.0 ! just to be sure
                 bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim), GradU_DD))
 
                 Coef = 0.5*SigmaD &
@@ -699,47 +700,43 @@ contains
       use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, x_, y_, z_
 
       integer, intent(in) :: i, j, k, iBlock
-      !real,intent(out) :: GradU_DD(maxDim,maxDim)
-      real,intent(out) :: GradU_DD(nDim,maxDim)
+      real,   intent(out) :: GradU_DD(nDim,MaxDim)
 
       integer :: iDir
+      character(len=*), parameter:: NameSub = 'ModCalcSource::calc_grad_u'
       !------------------------------------------------------------------------
- 
+
       GradU_DD = 0.0
-       
+
       ! Calculate gradient tensor of velocity
       if(IsCartesian) then
-         GradU_DD(x_,:) = (0.5*(LeftState_VX(iUx:iUz,i+1,j,k) &
-              + RightState_VX(iUx:iUz,i+1,j,k))               &
-              - 0.5*(LeftState_VX(iUx:iUz,i,j,k)              &
-              + RightState_VX(iUx:iUz,i,j,k))) &
-              /CellSize_DB(x_,iBlock)
-         if(nJ > 1) then
-            GradU_DD(y_,:) = &
-                 ( 0.5*(LeftState_VY(iUx:iUz,i,j+1,k)  &
-                 +     RightState_VY(iUx:iUz,i,j+1,k)) &
-                 - 0.5*(LeftState_VY(iUx:iUz,i,j,k)    &
-                 +     RightState_VY(iUx:iUz,i,j,k)))  &
-                 /CellSize_DB(y_,iBlock)
-         else
-            GradU_DD(y_,:) = 0.0
-         end if
-         if(nK > 1) then
-            GradU_DD(z_,:) = &
-                 ( 0.5*(LeftState_VZ(iUx:iUz,i,j,k+1) &
-                 +     RightState_VZ(iUx:iUz,i,j,k+1)) &
-                 - 0.5*(LeftState_VZ(iUx:iUz,i,j,k) &
-                 +     RightState_VZ(iUx:iUz,i,j,k))) &
-                 /CellSize_DB(z_,iBlock)
-         else
-            GradU_DD(z_,:) = 0.0
-         end if
+         GradU_DD(x_,:) = &
+              ( LeftState_VX(iUx:iUz,i+1,j,k)   &
+              + RightState_VX(iUx:iUz,i+1,j,k)  &
+              - LeftState_VX(iUx:iUz,i,j,k)     &
+              - RightState_VX(iUx:iUz,i,j,k) )  &
+              /(2*CellSize_DB(x_,iBlock))
+
+         if(nJ > 1) GradU_DD(y_,:) = &
+              ( LeftState_VY(iUx:iUz,i,j+1,k)   &
+              + RightState_VY(iUx:iUz,i,j+1,k)  &
+              - LeftState_VY(iUx:iUz,i,j,k)     &
+              - RightState_VY(iUx:iUz,i,j,k) )  &
+              /(2*CellSize_DB(y_,iBlock))
+
+         if(nK > 1) GradU_DD(z_,:) = &
+              ( LeftState_VZ(iUx:iUz,i,j,k+1)   &
+              + RightState_VZ(iUx:iUz,i,j,k+1)  &
+              - LeftState_VZ(iUx:iUz,i,j,k)     &
+              - RightState_VZ(iUx:iUz,i,j,k) )  &
+              /(2*CellSize_DB(z_,iBlock))
+
       else if(IsRzGeometry) then
-         ! stop?
+         call stop_mpi(NameSub//': RZ geometry to be implemented')
       else
          do iDir = 1, MaxDim
             iVar = iUx - 1 + iDir
-            
+
             GradU_DD(:,iDir) = &
                  0.5*(LeftState_VX(iVar,i+1,j,k) &
                  + RightState_VX(iVar,i+1,j,k))* &
@@ -747,7 +744,7 @@ contains
                  - 0.5*(LeftState_VX(iVar,i,j,k) &
                  + RightState_VX(iVar,i,j,k))* &
                  FaceNormal_DDFB(:,1,i,j,k,iBlock)
-            
+
             if(nJ == 1) CYCLE
 
             GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
@@ -757,7 +754,7 @@ contains
                  - 0.5*(LeftState_VY(iVar,i,j,k) &
                  + RightState_VY(iVar,i,j,k))* &
                  FaceNormal_DDFB(:,2,i,j,k,iBlock)
-            
+
             if(nK == 1) CYCLE
 
             GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
