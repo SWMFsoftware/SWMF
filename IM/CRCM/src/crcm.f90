@@ -1266,12 +1266,14 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
            do m=1,nk
               sinA1D(m) = sinA(i,j,m)
               cosA2(m) = 1 - sinA1D(m)**2
+           end do
+           do m=1,nk
+              if (m.eq.1) sina0=1.
+              if (m.gt.1) sina0=0.5*(sinA1D(m)+sinA1D(m-1))
+              if (m.eq.nk) sina1=0.
+              if (m.lt.nk) sina1=0.5*(sinA1D(m)+sinA1D(m+1))
+              dcosa=sqrt(1.-sina1*sina1)-sqrt(1.-sina0*sina0)
               do k=1,nm
-                 if (m.eq.1) sina0=1.
-                 if (m.gt.1) sina0=0.5*(sinA1D(m)+sinA1D(m-1))
-                 if (m.eq.nk) sina1=0.
-                 if (m.lt.nk) sina1=0.5*(sinA1D(m)+sinA1D(m+1))
-                 dcosa=sqrt(1.-sina1*sina1)-sqrt(1.-sina0*sina0)
                  !write(*,*) 'n,i,k,xjac(n,i,k)',n,i,k,xjac(n,i,k)
                  psd1=f2(n,i,j,k,m)/1.e20/1.e19/xjac(n,i,k)  ! mug^-3cm^-6s^3
                  flx=psd1*(1.6e19*pp(n,i,j,k,m))*pp(n,i,j,k,m)
