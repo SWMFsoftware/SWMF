@@ -23,7 +23,7 @@ module ModProcessVarName
   integer  :: nSynonym = 3
 
   ! State variables not associated with a specific fluid/ specie
-  integer,parameter  :: nVarExtra = 9
+  integer,parameter  :: nVarExtra = 10
 
   ! Named indices for all substances (species or fluids)
   integer, parameter :: &
@@ -106,27 +106,29 @@ module ModProcessVarName
        'Energy'  /)
 
   ! string arrays containing variables not associated with any substance
-  character(len=4) :: NameVarExtra_I(nVarExtra) = (/ &
-       'bx  ', &
-       'by  ', &
-       'bz  ', &
-       'pe  ', &
-       'te0 ', &
-       'ew  ', &
-       'eint', &
-       'hyp ', &
-       'sign' /)
+  character(len=5) :: NameVarExtra_I(nVarExtra) = (/ &
+       'bx   ', &
+       'by   ', &
+       'bz   ', &
+       'pe   ', &
+       'te0  ', &
+       'ew   ', &
+       'eint ', &
+       'hyp  ', &
+       'sign ', &
+       'lperp' /)
 
- character(len=4) :: NameVarExtraStandardized_I(nVarExtra) = (/ &
-       'Bx  ', &
-       'By  ', &
-       'Bz  ', &
-       'Pe  ', &
-       'Te0 ', &
-       'Ew  ', &
-       'Eint', &
-       'Hyp ', &
-       'Sign' /)
+ character(len=5) :: NameVarExtraStandardized_I(nVarExtra) = (/ &
+       'Bx   ', &
+       'By   ', &
+       'Bz   ', &
+       'Pe   ', &
+       'Te0  ', &
+       'Ew   ', &
+       'Eint ', &
+       'Hyp  ', &
+       'Sign ', &
+       'Lperp' /)
 
   ! Array storing standarized variable names for all species / fluids
   character(len = 20),allocatable :: SubstanceStandardName_II(:,:)
