@@ -50,9 +50,10 @@ module ModUser
 
   character (len=20)  :: UserProblem='wave'
 
-  real                :: Width, Amplitude, Phase, LambdaX, LambdaY, LambdaZ
+  real                :: Width, Amplitude, Phase, CenterX, CenterY, CenterZ, &
+       LambdaX, LambdaY, LambdaZ
   real,dimension(nVar):: Width_V=0.0, Ampl_V=0.0, Phase_V=0.0, &
-       KxWave_V=0.0, KyWave_V=0.0,KzWave_V=0.0
+       x_V=0.0, y_V=0.0, z_V=0.0, KxWave_V=0.0, KyWave_V=0.0, KzWave_V=0.0
   integer   :: iPower_V(nVar)=1
   integer   :: iVar             
   logical   :: DoInitialize=.true.
@@ -113,7 +114,31 @@ contains
           call read_var('X Perturbation Width', Width)
        case('#WAVESPEED')
           call read_var('Velocity',Velocity)
-       case('#WAVE','#WAVE2')
+       case('#GAUSSIAN')
+          ! Read parameters for a Gaussian profile multiplied by smoother: 
+          !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
+          call read_var('iVar',      iVar)
+          call read_var('Amplitude', Amplitude)
+          call read_var('LambdaX',   LambdaX)
+          call read_var('LambdaY',   LambdaY)
+          call read_var('LambdaZ',   LambdaZ)
+          call read_var('CenterX',   CenterX)
+          call read_var('CenterY',   CenterY)
+          call read_var('CenterZ',   CenterZ)
+
+          Ampl_V(iVar)  = Amplitude
+          x_V(iVar) = CenterX
+          y_V(iVar) = CenterY
+          z_V(iVar) = CenterZ
+          ! Negative Lambda sets 0 for coefficient (constant)
+          KxWave_V(iVar) = max(0.0, 1/LambdaX)
+          KyWave_V(iVar) = max(0.0, 1/LambdaY)
+          KzWave_V(iVar) = max(0.0, 1/LambdaZ)
+
+          ! Setting negative value signals that this is a Gaussian
+          iPower_V(iVar) = -2
+
+       case('#WAVE','#WAVE2','#WAVE4', '#WAVE6')
           call read_var('iVar',iVar)
           call read_var('Width',Width)
           call read_var('Amplitude',Amplitude)
@@ -125,7 +150,11 @@ contains
           Ampl_V(iVar)  = Amplitude
           Phase_V(iVar) = Phase*cDegToRad
 
-          if(NameCommand == '#WAVE2')then
+          if(NameCommand == '#WAVE6')then
+             iPower_V(iVar) = 6
+          elseif(NameCommand == '#WAVE4')then
+             iPower_V(iVar) = 4
+          elseif(NameCommand == '#WAVE2')then
              iPower_V(iVar) = 2
           else
              iPower_V(iVar) = 1
@@ -187,7 +216,7 @@ contains
 
     use ModMain,     ONLY: TypeCoordSystem, GravitySi
     use ModGeometry, ONLY: x1, x2, y1, y2, Xyz_DGB
-    use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, &
+    use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, &
          Bx_, By_, rho_, Ppar_, p_, Pe_, &
          UseElectronPressure, UseAnisoPressure
     use ModProcMH,   ONLY: iProc
@@ -201,10 +230,10 @@ contains
     use BATL_lib,    ONLY: CoordMax_D,CoordMin_D
     integer, intent(in) :: iBlock
 
-    real,dimension(nVar):: State_V,KxTemp_V,KyTemp_V
+    real,dimension(nVar):: State_V, KxTemp_V, KyTemp_V
     real                :: SinSlope, CosSlope, Input2SiUnitX, OmegaSun
     real                :: rFromSphereCenter, rSphereCenterInit
-    real                :: xCell, yCell, zCell
+    real                :: xCell, yCell, zCell, r, r2
     integer             :: i, j, k
 
     real :: RhoLeft, RhoRight, pLeft
@@ -393,16 +422,47 @@ contains
           end if
        end if
 
-       do iVar=1,nVar
-          where(abs( Xyz_DGB(x_,:,:,:,iBlock) + ShockSlope*Xyz_DGB(y_,:,:,:,iBlock) ) &
-               < Width_V(iVar) )   &
-               State_VGB(iVar,:,:,:,iBlock) =        &
-               State_VGB(iVar,:,:,:,iBlock)          &
-               + Ampl_V(iVar)*cos(Phase_V(iVar)      &
-               + KxWave_V(iVar)*Xyz_DGB(x_,:,:,:,iBlock)  &
-               + KyWave_V(iVar)*Xyz_DGB(y_,:,:,:,iBlock)  &
-               + KzWave_V(iVar)*Xyz_DGB(z_,:,:,:,iBlock))**iPower_V(iVar)
+       ! Convert momentum to velocity
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
+               / State_VGB(Rho_,i,j,k,iBlock)
+       end do; end do; end do
+
+       do iVar = 1, nVar
+          if(iPower_V(iVar) < 0.0)then
+             ! Gaussian profile multiplied by smoother: 
+             !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                r2 =  (KxWave_V(iVar)*(Xyz_DGB(x_,i,j,k,iBlock)-x_V(iVar)))**2&
+                     +(KyWave_V(iVar)*(Xyz_DGB(y_,i,j,k,iBlock)-y_V(iVar)))**2&
+                     +(KzWave_V(iVar)*(Xyz_DGB(z_,i,j,k,iBlock)-z_V(iVar)))**2
+                if(r2 > 4.0) CYCLE
+                r  = sqrt(r2)
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock) &
+                     + Ampl_V(iVar)*cos(cPi*0.25*r)**6*exp(-r2)
+             end do; end do; end do
+          else
+             ! cos^n profile
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                if(abs( Xyz_DGB(x_,i,j,k,iBlock) &
+                  + ShockSlope*Xyz_DGB(y_,i,j,k,iBlock) ) > Width_V(iVar) ) &
+                  CYCLE
+                State_VGB(iVar,i,j,k,iBlock) =        &
+                     State_VGB(iVar,i,j,k,iBlock)          &
+                     + Ampl_V(iVar)*cos(Phase_V(iVar)      &
+                     + KxWave_V(iVar)*Xyz_DGB(x_,i,j,k,iBlock)  &
+                     + KyWave_V(iVar)*Xyz_DGB(y_,i,j,k,iBlock)  &
+                     + KzWave_V(iVar)*Xyz_DGB(z_,i,j,k,iBlock))**iPower_V(iVar)
+             end do; end do; end do
+          end if
        end do
+
+       ! Convert velocity to momentum
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+               State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
+       end do; end do; end do
 
     case('GEM')
        !write(*,*)'GEM problem set up'
