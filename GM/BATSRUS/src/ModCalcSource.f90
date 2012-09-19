@@ -160,7 +160,7 @@ contains
                       Visco = Visco + Tmp**2
                    end if
 
-                   Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) - ViscoCoeff*Visco
+                   Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + ViscoCoeff*Visco
                 end if
              end do; end do; end do
 

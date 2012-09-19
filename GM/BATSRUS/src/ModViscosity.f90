@@ -15,10 +15,10 @@ module ModViscosity
   public get_viscosity_tensor
 
   ! Velosity vector for each block and fluid
-  real, public, allocatable:: u_DGI(:,:,:,:,:)
+  real, allocatable:: u_DGI(:,:,:,:,:)
 
   ! Gradient of velocity centered for faces
-  real, public, allocatable:: GradU_DDI(:,:,:)
+  real, allocatable:: GradU_DDI(:,:,:)
 
   ! Visosity tensor for each fluid
   real, public, allocatable:: Visco_DDI(:,:,:)
