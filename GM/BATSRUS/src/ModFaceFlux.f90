@@ -735,8 +735,16 @@ contains
           AreaZ = 0.0
        else
           AreaX = FaceNormal_DDFB(x_, 1, iFace, jFace, kFace, iBlockFace)
-          AreaY = FaceNormal_DDFB(y_, 1, iFace, jFace, kFace, iBlockFace)
-          AreaZ = FaceNormal_DDFB(z_, 1, iFace, jFace, kFace, iBlockFace)
+          if(nJ > 1)then
+             AreaY = FaceNormal_DDFB(y_, 1, iFace, jFace, kFace, iBlockFace)
+          else
+             AreaY = 0.0
+          end if
+          if(nK > 1)then
+             AreaZ = FaceNormal_DDFB(z_, 1, iFace, jFace, kFace, iBlockFace)
+          else
+             AreaZ = 0.0
+          end if
        end if
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < 1e-30)then
@@ -773,7 +781,11 @@ contains
        else
           AreaX = FaceNormal_DDFB(x_, 2, iFace, jFace, kFace, iBlockFace)
           AreaY = FaceNormal_DDFB(y_, 2, iFace, jFace, kFace, iBlockFace)
-          AreaZ = FaceNormal_DDFB(z_, 2, iFace, jFace, kFace, iBlockFace)
+          if(nK > 1)then
+             AreaZ = FaceNormal_DDFB(z_, 2, iFace, jFace, kFace, iBlockFace)
+          else
+             AreaZ = 0.0
+          end if
        end if
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < 1e-30)then
