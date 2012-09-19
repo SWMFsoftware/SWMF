@@ -526,7 +526,10 @@ subroutine write_plot_common(ifile)
   end if
 
   ! Save tree information for 3D IDL file
-  if(plot_form(ifile) == 'idl' .and. plot_type1(2:3) == 'd_')then
+  if(plot_form(ifile) == 'idl' .and.               &
+       (    plot_type1(1:3) == '3d_'               &
+       .or. plot_type1(1:3) == '2d_' .and. nDim<=2 &
+       .or. plot_type1(1:3) == '1d_' .and. nDim==1 ) )then
      filename = trim(NameSnapshot)//'.tree'
      call write_tree_file(filename)
   end if
