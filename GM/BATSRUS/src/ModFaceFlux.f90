@@ -63,6 +63,7 @@ module ModFaceFlux
   logical:: UseDifferentNeutralFlux = .false.
   character(len=10):: TypeFluxNeutral = 'default'
 
+  logical :: DoSimple
   logical :: DoLf,  DoLfNeutral  !^CFG IF RUSANOVFLUX
   logical :: DoHll, DoHllNeutral !^CFG IF LINDEFLUX
   logical :: DoHlld              !^CFG IF HLLDFLUX
@@ -368,6 +369,7 @@ contains
 
     if(DoTestMe)call print_values
 
+    DoSimple = TypeFlux == 'Simple'
     DoLf     = TypeFlux == 'Rusanov'     !^CFG IF RUSANOVFLUX
     DoHll    = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
     DoHlld   = TypeFlux == 'HLLD'        !^CFG IF HLLDFLUX
@@ -925,7 +927,7 @@ contains
     use ModAdvance, ONLY: DoReplaceDensity, State_VGB
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
-    use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp,&
+    use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed, &
          ProcTest, BlkTest, iTest, jTest, kTest
     use ModFaceGradient, ONLY: get_face_gradient
     use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
@@ -1109,12 +1111,17 @@ contains
     end if
 
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
-    State_V = 0.5*(StateLeft_V + StateRight_V)
+    if(DoSimple)then
+       State_V = StateLeft_V
+       call get_physical_flux(State_V, B0x, B0y, B0z,&
+            StateLeftCons_V, Flux_V, Unormal_I, Enormal, Pe)
+    else
+       State_V = 0.5*(StateLeft_V + StateRight_V)
+    end if
 
-    if(UseDifferentNeutralFlux .or. .not.DoGodunov &
-         .and. .not.DoHlld &                                !^CFG IF HLLDFLUX
-         )then
-       ! All solvers, except HLLD and Godunov, use left and right fluxes
+    if(DoLf .or. DoHll .or. DoAw .or. DoRoe .or. DoRoeOld &
+         .or. UseDifferentNeutralFlux)then
+       ! These solvers use left and right fluxes
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft)
 
@@ -1150,6 +1157,13 @@ contains
     ! Initialize CmaxDt so we can take maximum of ion and neutral cmaxdt
     CmaxDt = 0.0
 
+    if(DoSimple)then
+       if(UseDtFixed)then 
+          CmaxDt = 1.0
+       else
+          call simple_flux
+       end if
+    end if
     if(DoLf)     call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
     if(DoHll)    call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
     if(DoHlld)   call hlld_flux                 !^CFG IF HLLDFLUX
@@ -1212,9 +1226,19 @@ contains
     subroutine roe_solver_new
 
       Flux_V = 0.5*(FluxLeft_V + FluxRight_V) + DissipationFlux_V
-      cMaxDt = cMax
+      CmaxDt = Cmax
 
     end subroutine roe_solver_new
+    !==========================================================================
+    subroutine simple_flux
+
+      real    :: Cmax_I(nFluid)
+      !----------------------------------------------------------------------
+      ! This is needed for the time step constraint only (CmaxDt)
+      call get_speed_max(State_V, B0x, B0y, B0z, Cmax_I = Cmax_I)
+
+    end subroutine simple_flux
+
     !^CFG IF RUSANOVFLUX BEGIN
     !==========================================================================
     subroutine lax_friedrichs_flux
@@ -1896,9 +1920,6 @@ contains
     real:: FluxBx, FluxBy, FluxBz
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
     !--------------------------------------------------------------------------
-
-
-
     ! Calculate conservative state
     StateCons_V(1:nVar)  = State_V
 

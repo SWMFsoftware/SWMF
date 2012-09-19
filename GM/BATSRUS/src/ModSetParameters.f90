@@ -2221,6 +2221,8 @@ contains
 
     ! Check flux type selection
     select case(FluxType)
+    case('SIMPLE','Simple')
+       FluxType='Simple'
     case('ROE','Roe')                                !^CFG IF ROEFLUX BEGIN
        FluxType='Roe'
        if(UseAlfvenWaves .or. UseWavePressure)then
