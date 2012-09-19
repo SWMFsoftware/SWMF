@@ -66,7 +66,7 @@ module ModVarIndexes
        0.0, & ! By_
        0.0, & ! Bz_
        0.0, & ! Hyp_
-       (0.0, iWave=WaveFirst_,WaveLast_), &
+       (1.0, iWave=WaveFirst_,WaveLast_), &
        1.0, & ! Pe_
        1.0, & ! Ppar_
        1.0, & ! p_
