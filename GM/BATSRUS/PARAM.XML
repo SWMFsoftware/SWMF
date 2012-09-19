@@ -468,9 +468,9 @@ A space separated list of subroutine names. Default is empty string.
 
 Examples:\\
   read_inputs  - echo the input parameters following the #TEST line\\
-  project_B    - info on projection scheme\\   <!-- ^CFG IF PROJECTION -->
-  implicit     - info on implicit scheme\\     <!-- ^CFG IF IMPLICIT   -->
-  krylov       - info on the Krylov solver\\   <!-- ^CFG IF IMPLICIT   -->
+  project_B    - info on projection scheme\\
+  implicit     - info on implicit scheme\\
+  krylov       - info on the Krylov solver\\
   message_count- count messages\\
   initial_refinement\\
   ...
@@ -927,10 +927,10 @@ The default value is 'block' for sake of backwards compatibility.
 </command>
 
 <command name="NEWRESTART" if="$_IsFirstSession">
-	<parameter name="DoRestartBFace" type="logical" default="F" /> <!-- ^CFG IF CONSTRAINB -->
+	<parameter name="DoRestartBFace" type="logical" default="F" />
 
 #NEWRESTART
-T		DoRestartBFace <!-- ^CFG IF CONSTRAINB -->
+T		DoRestartBFace
 
 The RESTARTINDIR/restart.H file always contains the #NEWRESTART command.
 This command is really used only in the restart headerfile.  Generally
@@ -940,11 +940,10 @@ The #NEWRESTART command sets the following global variables:
 DoRestart=.true. (read restart files),
 DoRestartGhost=.false.  (no ghost cells are saved into restart file)
 DoRestartReals=.true.   (only real numbers are saved in blk*.rst files).
-<!-- ^CFG IF CONSTRAINB BEGIN -->
+
 The DoRestartBFace parameter tells if the face centered magnetic field
 is saved into the restart files. These values are used by the 
 Constrained Transport scheme.
-<!-- ^CFG END CONSTRAINB -->
 </command>
 
 <command name="OUTERBOUNDARY">
@@ -1037,7 +1036,6 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 		<option name="ionosphereoutflow"		/>
 		<option name="user"				/>
 	</parameter>
-<!-- ^CFG IF SECONDBODY BEGIN -->
 	<if expr="$UseBody2">
 		<parameter name="TypeBcBody2" type="string" case="lower"
 		input="select">
@@ -1053,18 +1051,15 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 	expr="not($TypeBcBody2 =~ /ionosphere/)"> 
 	For the second body COROTATION AND AN IONOSPHERIC BOUNDARY DO NOT WORK.
 	</rule>
-<!-- ^CFG END SECONDBODY -->
 #INNERBOUNDARY
 ionosphere              TypeBcInner
-ionosphere              TypeBcBody2  !read only if UseBody2=T <!-- ^CFG IF SECONDBODY -->
+ionosphere              TypeBcBody2  !read only if UseBody2=T
 
-<!-- ^CFG IF SECONDBODY BEGIN -->
 This command should appear after the #SECONDBODY command when using 
 two bodies. Note: for the second body COROTATION AND AN IONOSPHERIC 
 BOUNDARY DO NOT WORK.
 
 Default value for TypeBcBody2 is 'reflect'.
-<!-- ^CFG END SECONDBODY -->
 
 Possible values for TypeBcInner are:
 \begin{verbatim}
@@ -1590,11 +1585,10 @@ Default is UseDtFixed=.false. Effective only if DoTimeAccurate is true.
 If UseDtFixed is true, the time step is fixed to DtFixedDim.
 
 This is useful for debugging explicit schemes.
-<!-- ^CFG IF IMPLICIT BEGIN -->
+
 The real application is, however, for implicit and partially
 implicit/local schemes. The time step is set to DtFixedDim unless the
 update checking decides to reduce the time step for the sake of robustness.
-<!-- ^CFG END IMPLICIT -->
 </command>
 
 <command name="PARTSTEADY">
@@ -1694,7 +1688,6 @@ For multi-ion MHD the default values are
 UsePointImplicit=.true., BetaPointImplicit=1.0 and IsAsymmetric=.true.
 </command>
 
-<!-- ^CFG IF IMPLICIT BEGIN -->
 <command name="IMPLICIT">
 	<parameter name="UsePointImplicit" type="logical" default="F"/>
 	<parameter name="UsePartImplicit" type="logical" default="F"/>
@@ -1783,10 +1776,8 @@ The "cond" option solves for electron heat conduction only.
 
 The default is UseSemiImplicit false.
 </command>
-<!-- ^CFG END IMPLICIT -->
 </commandgroup>
 
-<!-- ^CFG IF IMPLICIT BEGIN -->
 <commandgroup name="IMPLICIT PARAMETERS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!! PARAMETERS FOR FULL AND PART IMPLICIT TIME INTEGRATION !!!!!!!!!!!!
@@ -1898,13 +1889,13 @@ the code switches back to the two-level scheme for one time step.
 	<parameter name="nOrderImpl" type="integer" min="1" max="2" 
 								default="1"/>
 	<parameter name="TypeFluxImpl" type="string" case="upper"
-	input="select">
-	    <option name="Roe"     value="ROE/1"/>       <!--^CFG IF ROEFLUX-->
-	    <option name="RoeOld"  value="ROEOLD/5"/>    <!--^CFG IF ROEFLUX-->
-	    <option name="Rusanov" value="RUSANOV/2" default="T"/>								    <!--^CFG IF RUSANOVFLUX-->
-	    <option name="Linde"   value="LINDE/3"/>   <!--^CFG IF LINDEFLUX-->
-	    <option name="Sokolov" value="SOKOLOV/4"/> <!--^CFG IF AWFLUX-->
-	    <option name="HLLD"                     /> <!--^CFG IF HLLDFLUX-->
+	input="select">	    
+	    <option name="Rusanov" value="RUSANOV/2" default="T"/>
+	    <option name="Linde"   value="LINDE"/>
+	    <option name="Sokolov" value="SOKOLOV"/> 
+	    <option name="HLLD"                   /> 
+	    <option name="Roe"     value="ROE"/>
+	    <option name="RoeOld"  value="ROEOLD"/>
 	    <option name="Godunov" value="GODUNOV"/>
 	</parameter>
 #IMPLSCHEME
@@ -2152,7 +2143,6 @@ to nKrylovVector. The default is nKrylovVector=MaxMatvecKrylov (in #KRYLOV)
 which can be overwritten by #KRYLOVSIZE after the #KRYLOV command (if any).
 </command>
 </commandgroup>
-<!-- ^CFG END IMPLICIT -->
 <commandgroup name="STOPPING CRITERIA">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!! STOPPING CRITERIA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -2415,7 +2405,7 @@ Value at the test point: rhopnt rhoUxpnt rhoUypnt rhoUxpnt Uxpnt Uypnt Uzpnt
                          Bxpnt Bypnt Bzpnt B1xpnt B1ypnt B1zpnt
                          Epnt Ppnt Jxpnt Jypnt Jzpnt
                          theta1pnt theta2pnt phi1pnt phi2pnt statuspnt
-Ionosphere values:       cpcpn cpcps                  <!-- ^CFG IF IONOSPHERE -->
+Ionosphere values:       cpcpn cpcps
 
 Max or Min on grid:  Pmin Pmax
 Flux values:         Aflx rhoflx Bflx B2flx pvecflx e2dflx
@@ -2714,6 +2704,8 @@ out. The unit of the pertrubation output is nT.
 			</part>
 			<part name="plotarea" type="string" input="select"
 								required="T">
+				<option name="1D" value="1d/1d_"/>
+				<option name="2D" value="2d/2d_"/>
 				<option name="3D" value="3d/3d_"/>
 				<option name="x=0" />
 				<option name="y=0" default="T" />
@@ -2852,7 +2844,7 @@ out. The unit of the pertrubation output is nT.
 3d  MHD tec		StringPlot ! 3d plot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
-3d  FUL hdf		StringPlot ! 3d HDF plot with a lot of data
+2d  FUL hdf		StringPlot ! 2d HDF plot with a lot of data
 100			DnSavePlot
 -1.			DtSavePlot
 y=0 VAR idl		StringPlot ! y=0 plane plot with listed variables
@@ -2975,7 +2967,7 @@ StringPlot must contain the following 3 parts in the following order
 plotform plotarea plotvar
 
 plotform = 'tec', 'hdf', 'idl', 'idl_real4', 'idl_real8', 'idl_ascii'
-plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr', 'eqr', 'ieb', 'lcb'
+plotarea = '1d', '2d', '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', 'rfr', 'eqr', 'ieb', 'lcb'
 plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'euv', 'sxr', 'pos', 'var', 'bbk' 'rwi' 'int' 'nul' - normalized
 plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'EUV', 'SXR', 'pos', 'VAR', 'BBK' 'RWI' 'INT' 'NUL' - dimensional
 \end{verbatim}
@@ -2999,11 +2991,12 @@ be written simply as 'idl'.
 
 The plotarea string defines the 1, 2, or 3D volume of the plotting area:
 \begin{verbatim}
-1d    - full 1D, one point per block for all blocks
+1d    - 1D cut along the X axis (saves tree file)
+2d    - 2D cut (like Z=0)       (saves tree file)
+3d    - full 3D volume          (saves tree file)
 x=0   - full x=0 plane: average for symmetry plane
 y=0   - full y=0 plane: average for symmetry plane
 z=0   - full z=0 plane: average for symmetry plane
-3d    - full 3D volume
 cut   - 3D, 2D or 1D rectangular cut (IDL)/ a 2D rectangular cut (Tecplot)
 dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
@@ -3016,6 +3009,10 @@ eqr   - field lines traced from the magnetic equatorial plane
 ieb   - field lines traced from a subset of the IE coupled grid
 lcb   - last closed field lines
 \end{verbatim}
+The 1d, 2d and 3d cuts save the AMR tree information into a .tree file.
+This can be used for reconstructing the full grid and use the data
+with the READAMR library, for example. 
+
 The plotvar string defines the plot variables and the equation parameters.
 It also controls whether or not the variables will be plotted in dimensional
 values or as non-dimensional values:
@@ -4321,15 +4318,16 @@ all the blocks limited by the minimum and maximum levels only
 !!!!!!!!!!!!!!!  SCHEME PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="SCHEME">
-	<parameter name="nOrder" type="integer" min="1" max="2" default="1"/>
+	<parameter name="nOrder" type="integer" min="1" max="4" default="1"/>
 	<parameter name="TypeFlux" type="string" input="select" case="upper">
-	    <option name="Roe"     value="ROE/1"/>       <!--^CFG IF ROEFLUX-->
-	    <option name="RoeOld"  value="ROEOLD/5"/>    <!--^CFG IF ROEFLUX-->
-	    <option name="Rusanov" value="RUSANOV/2" default="T"/>								    <!--^CFG IF RUSANOVFLUX-->
-	    <option name="Linde"   value="LINDE/3"/>   <!--^CFG IF LINDEFLUX-->
-	    <option name="Sokolov" value="SOKOLOV/4"/> <!--^CFG IF AWFLUX-->
-	    <option name="HLLD"/>                      <!--^CFG IF HLLDFLUX-->
+	    <option name="Rusanov" value="RUSANOV" default="T"/>
+	    <option name="Linde"   value="LINDE"/>
+	    <option name="Sokolov" value="SOKOLOV"/>
+	    <option name="HLLD"/>
+	    <option name="Roe"     value="ROE"/>
+	    <option name="RoeOld"  value="ROEOLD"/>
 	    <option name="Godunov" value="GODUNOV"/>
+	    <option name="Simple"  value="SIMPLE"/>
 	</parameter>
 	<if expr="$nOrder == 2">
 		<parameter name="TypeLimiter" type="string" input="select">
@@ -4342,7 +4340,7 @@ all the blocks limited by the minimum and maximum levels only
 			default="1.2" if="$TypeLimiter ne 'minmod'"/>
 	</if>
 #SCHEME
-2			nOrder (1 or 2)
+2			nOrder (1, 2 or 4)
 Rusanov			TypeFlux
 mc3			TypeLimiter ! Only for nOrder=2
 1.2			LimiterBeta ! Only if TypeLimiter is NOT 'minmod'
@@ -4355,19 +4353,22 @@ explicit or a BDF2 three-level implicit time discretization.
 \noindent
 Possible values for TypeFlux:
 \begin{verbatim}
- 'Rusanov'     - Rusanov or Lax-Friedrichs flux     <!--^CFG IF RUSANOVFLUX-->
- 'Linde'       - Linde's HLLEL flux                   <!--^CFG IF LINDEFLUX-->
- 'Sokolov'     - Sokolov's Local Artificial Wind flux <!--^CFG IF AWFLUX   -->
- 'Roe'         - Roe's approximate Riemann flux (new) <!--^CFG IF ROEFLUX  -->
- 'RoeOld'      - Roe's approximate Riemann flux (old) <!--^CFG IF ROEFLUX  -->
- 'HLLD'        - Miyoshi and Kusano's HLLD flux       <!--^CFG IF HLLDFLUX -->
+ 'Rusanov'     - Rusanov or Lax-Friedrichs flux
+ 'Linde'       - Linde's HLLEL flux
+ 'Sokolov'     - Sokolov's Local Artificial Wind flux
+ 'Roe'         - Roe's approximate Riemann flux (new)
+ 'RoeOld'      - Roe's approximate Riemann flux (old)
+ 'HLLD'        - Miyoshi and Kusano's HLLD flux
  'Godunov'     - Godunov flux with exact Riemann solver
+ 'Simple'      - Physical fluxes are applied without any Riemann solver.
 \end{verbatim}
 The Godunov flux is only implemented for (multi-material) hydrodynamics.
 The Roe and HLLD schemes are implemented for ideal MHD only 
 (single fluid, non-relativistic, no Hall term).
 The new and old Roe schemes differ in some details of the algorithm,
 the new Roe scheme is somewhat more robust in magnetospheric applications.
+The Simple solver is for testing purposes only at this point.
+
 Possible values for TypeLimiter for spatially second order schemes:
 \begin{verbatim}
  'minmod'      - minmod limiter is the most robust and diffusive limiter
@@ -4964,7 +4965,6 @@ where the wave speed may exceed it and the reduced diffusion is important.
 Default is UseClimit false.
 </command>
 
-<!-- ^CFG IF BORISCORR BEGIN -->
 <command name="BORIS">
 	<parameter name="UseBorisCorrection" type="logical" default="F"/>
 	<parameter name="BorisClightFactor" type="real" min="0" max="1"
@@ -4978,11 +4978,9 @@ Use semi-relativistic MHD equations with speed of light reduced by
 the BorisClightFactor. Set BorisClightFactor=1.0 for true semi-relativistic
 MHD. Gives the same steady state as normal MHD analytically, but there
 can be differences due to discretization errors. 
-You can use either Boris or BorisSimple but not both. <!-- ^CFG IF SIMPLEBORIS -->
+You can use either Boris or BorisSimple but not both.
 </command>
-<!-- ^CFG END BORISCORR -->
 
-<!-- ^CFG IF SIMPLEBORIS BEGIN -->
 <command name="BORISSIMPLE">
 	<parameter name="UseBorisSimple" type="logical" default="F"/>
 	<parameter name="BorisClightFactor" type="real" min="0" max="1"
@@ -4996,36 +4994,31 @@ Use simplified semi-relativistic MHD with speed of light reduced by the
 BorisClightFactor. This is only useful with BorisClightFactor less than 1.
 Should give the same steady state as normal MHD, but there can be a
 difference due to discretization errors.
-You can use either Boris or BorisSimple but not both. <!-- ^CFG IF BORISCORR -->
+You can use either Boris or BorisSimple but not both.
 </command>
-<!-- ^CFG END SIMPLEBORIS -->
 
 <command name="DIVB">
 	<parameter name="UseDivbSource"    type="logical" default="T"/>
-	<parameter name="UseDivbDiffusion" type="logical" default="F"/><!--^CFG IF DIVBDIFFUSE -->
-	<parameter name="UseProjection"    type="logical" default="F"/><!--^CFG IF PROJECTION -->
-	<parameter name="UseConstrainB"    type="logical" default="F"/><!--^CFG IF CONSTRAINB -->
-	<!-- ^CFG IF PROJECTION BEGIN -->
+	<parameter name="UseDivbDiffusion" type="logical" default="F"/>
+	<parameter name="UseProjection"    type="logical" default="F"/>
+	<parameter name="UseConstrainB"    type="logical" default="F"/>
 	<rule 
 	expr="not($UseProjection and ($UseDivbSource or $UseDivbDiffusion or $UseConstrainB))">
 		If UseProjection is true, all others should be false.
 	</rule>
-	<!-- ^CFG END PROJECTION -->
-	<!-- ^CFG IF CONSTRAINB BEGIN -->
 	<rule
 	expr="not($UseConstrainB and ($UseDivbSource or $UseDivbDiffusion or $UseProjection))">
 		If UseConstrainB is true, all others should be false.
 	</rule>
-	<!-- ^CFG END CONSTRAINB -->
 #DIVB
 T			UseDivbSource
-F			UseDivbDiffusion	<!-- ^CFG IF DIVBDIFFUSE-->
-F			UseProjection           <!-- ^CFG IF PROJECTION -->
-F			UseConstrainB           <!-- ^CFG IF CONSTRAINB -->
+F			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
 
 Default values are shown above.
-If UseProjection is true, all others should be false.<!--^CFG IF PROJECTION-->
-If UseConstrainB is true, all others should be false.<!--^CFG IF CONSTRAINB-->
+If UseProjection is true, all others should be false.
+If UseConstrainB is true, all others should be false.
 At least one of the options should be true unless the hyperbolic cleaning
 is used. The hyperbolic cleaning can be combined with UseDivbSource only.
 </command>
@@ -5065,7 +5058,6 @@ Default values are UseHyperbolicDivb true, the speed SpeedHyp is 1.0 in
 the normalized units, and HypDecay=0.1.
 </command>
 
-<!-- ^CFG IF PROJECTION BEGIN -->
 <command name="PROJECTION">
 	<parameter name="TypeProjectIter" type="string" input="select">
 		<option name="Conjugate Gradients" value="cg" default="T"/>
@@ -5118,8 +5110,6 @@ The iterative scheme stops when the stopping condition is fulfilled:
  In practice reducing the norm of the error by a factor of 10 to 100 in 
  every iteration works well.
 
-<!-- ^CFG IF CONSTRAINB BEGIN -->
-
  Projection is also used when the scheme switches to constrained transport.
  It is probably a good idea to allow many iterations and require an
  accurate projection, because it is only done once, and the constrained
@@ -5132,7 +5122,6 @@ rel			TypeProjStop
 0.0			AbsoluteLimit 
 500			MaxMatvec
 
-<!-- ^CFG END CONSTRAINB -->
 </command>
 
 <command name="CORRECTP">
@@ -5160,9 +5149,7 @@ If pratioHigh &lt; q               then P is recalculated from E
 \end{verbatim}
 The second case is a linear interpolation between the first and third cases.
 </command>
-<!-- ^CFG END PROJECTION -->
 
-<!-- ^CFG IF RAYTRACE BEGIN -->
 <command name="RAYTRACE">
 	<parameter name="UseRaytrace" type="logical" default="T"/>
 	<if expr="$UseRaytrace">
@@ -5224,7 +5211,6 @@ RayLengthMax provides the maximum length in planet radius for tracing a ray.
 This avoid tracing extremely long field lines that are not used later.
 The default is 100 planet radius.
 </command>
-<!-- ^CFG END RAYTRACE -->
 
 <command name="IE">
 	<parameter name="DoTraceIE" type="logical" default="F"/>
@@ -5280,7 +5266,6 @@ uOrth is set in a single step.
 By default the coupling is switched off.
 </command>
 
-<!-- ^CFG IF RCM BEGIN -->
 <command name="IM">
 	<parameter name="TauCoupleIm" type="real" min="1"/>
 	<parameter name="DoImSatTrace" type="logical" default="F" />
@@ -5392,7 +5377,6 @@ The default is to couple the IM pressure only and no fix is applied
 in the polar region.
 
 </command>
-<!-- ^CFG END RCM -->
 
 </commandgroup>
 <commandgroup name="PHYSICS PARAMETERS">
@@ -5796,11 +5780,10 @@ the gravitational force is parallel with the X, Y or Z axes, respectively,
 and the gravitational acceleration is given by the GravitySi parameter.
 
 Default values depend on problem_type.
-<!-- ^CFG IF SECONDBODY BEGIN -->
+
 When a second body is used the gravity direction for the second body
 is independent of the GravityDir value.  Gravity due to the second body
 is radially inward toward the second body.
-<!-- ^CFG IF SECONDBODY END -->
 </command>
 
 <command name="HALLRESISTIVITY">
@@ -6191,8 +6174,6 @@ F			UseMassLoading
 F			DoAccelerateMassLoading
 </command>
 
-<!-- ^CFG IF DISSFLUX BEGIN -->
-
 <command name="HEATCONDUCTION">
 	 <parameter name="UseHeatConduction"    type="logical" default="F"/>
 	 <if expr="$UseHeatConduction">
@@ -6386,9 +6367,6 @@ and ion pressures is neglected.
 The defaults are true for all three logicals.
 </command>
 
-<!-- ^CFG END DISSFLUX -->
-
-<!-- ^CFG IF SECONDBODY BEGIN -->
 <command name="SECONDBODY" if="$_IsFirstSession">
 	<parameter name="UseBody2" type="logical" default="F"/>
 	<if expr="$UseBody2">
@@ -6448,7 +6426,6 @@ in nano Tesla.
 
 Default is no dipole field for the second body.
 </command>
-<!-- ^CFG END SECONDBODY -->
 
 </commandgroup>
 
