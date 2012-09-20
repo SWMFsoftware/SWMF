@@ -33,7 +33,8 @@ module ModUser
        IMPLEMENTED5 => user_set_face_boundary,          &
        IMPLEMENTED6 => user_set_cell_boundary,          &
        IMPLEMENTED7 => user_amr_criteria,               &
-       IMPLEMENTED8 => user_set_plot_var
+       IMPLEMENTED8 => user_set_plot_var,               &
+       IMPLEMENTED9 => user_update_states
 
   use ModSize,       ONLY: x_, y_, z_
   use ModVarIndexes, ONLY: nVar
@@ -83,7 +84,9 @@ module ModUser
   real              :: InputUnitXSi = 0.0
 
   ! aux. flags for problem types
-  logical :: DoAdvectSphere, DoWave, DoPipeFlow =.false.
+  logical :: DoAdvectSphere, DoWave, DoPipeFlow =.false., &
+       DoResistivityGaussian = .false.
+
 contains
 
   subroutine user_read_inputs
@@ -217,7 +220,7 @@ contains
     use ModMain,     ONLY: TypeCoordSystem, GravitySi
     use ModGeometry, ONLY: x1, x2, y1, y2, Xyz_DGB
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, &
-         Bx_, By_, rho_, Ppar_, p_, Pe_, &
+         Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
          UseElectronPressure, UseAnisoPressure
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, &
@@ -518,6 +521,18 @@ contains
              State_VGB(RhoUx_,i,j,k,iBlock) = 0.0025
           end if
        end do; end do; end do
+
+    case('ResistivityGaussian')
+       DoResistivityGaussian = .true.
+
+       State_VGB(Rho_,:,:,:,iBlock) = 1.0
+       State_VGB(p_,:,:,:,iBlock)   = 1.0
+       State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock) = 0.0
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call get_gaussian_field(i, j, k, iBlock, &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock))
+       end do; end do; end do
+
     case default
        if(iProc==0) call stop_mpi( &
             'user_set_ics: undefined user problem='//UserProblem)
@@ -552,7 +567,7 @@ contains
 
     real,dimension(MinI:MaxI, MinJ:MaxJ, MinK:MaxK):: RhoExact_G, RhoError_G
     real    :: FlowSpeedCell, Pressure, Density, OmegaSun
-    real    :: RhoU_D(3)
+    real    :: RhoU_D(3), B_D(3)
     integer :: i, j, k
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !-------------------------------------------------------------------
@@ -610,6 +625,14 @@ contains
        NameTecVar = 'Mach'
        NameTecUnit = '--'
        NameIdlUnit = '--'
+
+    case('bxexact')
+       if(DoResistivityGaussian)then
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             call get_gaussian_field(i, j, k, iBlock, B_D)
+             PlotVar_G(i,j,k) = B_D(1)
+          end do; end do ; end do
+       end if
 
     case default
        IsFound = .false.
@@ -785,6 +808,7 @@ contains
 
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
+    use ModImplicit, ONLY: StateSemi_VGB
     use ModSize,     ONLY: nI, nJ, nK
     use ModPhysics,  ONLY: Si2No_V, Io2Si_V,&
          Io2No_V, UnitRho_, UnitU_, UnitP_, UnitN_,&
@@ -825,6 +849,21 @@ contains
     !       write(*,*)'XyzMax=',XyzMax_D
     !    end if
     IsFound = .true.
+
+    if(DoResistivityGaussian)then
+       select case(TypeBc)
+       case('usersemi')
+          select case(iSide)
+          case(2)
+             do j = MinJ, MaxJ
+                call get_gaussian_field(nI+1, j, 1, iBlock, &
+                     StateSemi_VGB(1:3,nI+1,j,1,iBlock))
+             end do
+          end select
+       end select
+
+       RETURN
+    end if
 
     Dx = Velocity*Time_Simulation 
 
@@ -997,5 +1036,39 @@ contains
     UserCriteria = 0.0
 
   end subroutine user_amr_criteria
+
+  !============================================================================
+
+  subroutine user_update_states(iStage, iBlock)
+
+    integer,intent(in)::iStage,iBlock
+
+    character(len=*), parameter :: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+
+  end subroutine user_update_states
+
+  !============================================================================
+
+  subroutine get_gaussian_field(i, j, k, iBlock, B_D)
+
+    use ModGeometry,    ONLY: Xyz_DGB
+    use ModMain,        ONLY: Time_Simulation
+    use ModNumConst,    ONLY: cPi
+    use ModResistivity, ONLY: Eta0
+
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(out):: B_D(3)
+
+    real:: Spread, Field, AmplitudeGaussian = 10.0
+    !--------------------------------------------------------------------------
+
+    Spread = 4.0*Eta0*Time_Simulation
+    Field = AmplitudeGaussian/(sqrt(cPi*Spread)) &
+         *exp(-Xyz_DGB(y_,1,j,1,iBlock)**2/Spread)
+
+    B_D = (/ Field, 0.0, 0.0 /)
+
+  end subroutine get_gaussian_field
 
 end module ModUser
