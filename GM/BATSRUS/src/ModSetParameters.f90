@@ -1046,13 +1046,21 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
+        ! Set default value for nStage. Can be overwritten if desired.
         nStage = nOrder
+
         call read_var('TypeFlux',FluxType, IsUpperCase=.true.)
         BetaLimiter = 1.0
-        if(nOrder>1)then
+        if(nOrder==2)then
            call read_var('TypeLimiter', TypeLimiter)
            if(TypeLimiter /= 'minmod') &
                 call read_var('LimiterBeta', BetaLimiter)
+        elseif(nOrder==4)then
+           if(FluxType == 'SIMPLE')then
+              TypeLimiter = 'no'
+           else
+              TypeLimiter = 'ppm4'
+           end if
         end if
 
      case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
