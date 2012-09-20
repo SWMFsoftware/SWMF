@@ -169,7 +169,7 @@ F                       save_plots_amr to save plots before each AMR
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
 VAR step date time      StringLog
-1                       DnSaveLogfile
+60                       DnSaveLogfile
 -1                      DtSaveLogfile [sec]
 Rho Pmin Pmax Pe Bx By Bz SwRho SwUx SwUy SwUz SwP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
 
@@ -177,7 +177,7 @@ Rho Pmin Pmax Pe Bx By Bz SwRho SwUx SwUy SwUz SwP H2OpRho H2OpUx H2OpUy H2OpUz 
 F			DoSaveInitial
 
 #SAVEPLOT
-0                       nplotfiles
+2                       nplotfiles
 z=0 VAR idl             plot_string
 10                      DnSavePlot
 -1.                     DtSavePlot

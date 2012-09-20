@@ -178,7 +178,7 @@ F                       save_plots_amr to save plots before each AMR
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
 VAR step date time      StringLog
-1                       DnSaveLogfile
+30                      DnSaveLogfile
 -1                      DtSaveLogfile [sec]
 Rho Pmin Pmax Pe Bx By Bz SwRho SwUx SwUy SwUz SwP H2OpRho H2OpUx H2OpUy H2OpUz H2OpP
 

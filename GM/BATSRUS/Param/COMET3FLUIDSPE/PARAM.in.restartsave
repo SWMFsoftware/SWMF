@@ -167,7 +167,7 @@ T                        UseUserUpdateStates
 F                       save_plots_amr to save plots before each AMR
 
 #SAVELOGFILE
-T                       DoSaveLogfile, rest of parameters read if true
+F                       DoSaveLogfile, rest of parameters read if true
 VAR step date time      StringLog
 1                       DnSaveLogfile
 -1                      DtSaveLogfile [sec]

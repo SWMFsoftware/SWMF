@@ -1318,10 +1318,25 @@ test_cometfluids_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf CometFluidsTest; ./PostProc.pl -M -o CometFluidsTest
 
+# test_cometfluids_check:
+# 	cd ${TESTDIR}/CometFluidsTest; \
+# 	        tail -n 10 GM/log_n000001.log > log_last10.log; \
+# 		tail -n 10 ../../Param/COMET3FLUIDSPE/TestOutput/log_n000001.log > log_test.log
+# 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=5e-5 \
+# 		${TESTDIR}/CometFluidsTest/log_last10.log \
+# 		${TESTDIR}/CometFluidsTest/log_test.log > test_cometfluids.diff)
+# 	ls -l test_cometfluids.diff
+
+# test_cometfluids_check:
+# 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+# 		Param/COMET3FLUIDSPE/TestOutput/log_n000001.log \
+# 		${TESTDIR}/CometFluidsTest/GM/log_n000001.log > test_cometfluids.diff)
+# 	ls -l test_cometfluids.diff
+
 test_cometfluids_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
-		Param/COMET3FLUIDSPE/TestOutput/log_n000001.log \
-		${TESTDIR}/CometFluidsTest/GM/log_n000001.log > test_cometfluids.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=5e-5 \
+		Param/COMET3FLUIDSPE/TestOutput/log_n000060.log \
+		${TESTDIR}/CometFluidsTest/GM/log_n000060.log > test_cometfluids.diff)
 	ls -l test_cometfluids.diff
 
 test_cometfluids_restart:
@@ -1348,13 +1363,32 @@ test_cometfluids_restart_read:
 	cd ${TESTDIR}; rm -rf CometFluidsTest/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o CometFluidsTest/RestartRead
 
+# test_cometfluids_restart_check:
+# 	cd ${TESTDIR}/CometFluidsTest; \
+# 		tail -n 10 RestartRead/GM/log_n000031.log > log_last10.log; \
+# 		tail -n 10 ../../Param/COMET3FLUIDSPE/TestOutput/log_n000001.log > log_test.log
+# 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=5e-5 \
+# 		${TESTDIR}/CometFluidsTest/log_test.log \
+# 		${TESTDIR}/CometFluidsTest/log_last10.log \
+# 		> test_cometfluids_restart.diff)
+# 	ls -l test_cometfluids*.diff
+
+# test_cometfluids_restart_check:
+# 	cd ${TESTDIR}/CometFluidsTest; \
+# 		cp RestartSave/GM/log_n000001.log log_all.log; \
+# 		tail -30 RestartRead/GM/log_n000031.log >> log_all.log
+# 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+# 		Param/COMET3FLUIDSPE/TestOutput/log_n000001.log \
+# 		${TESTDIR}/CometFluidsTest/log_all.log \
+# 		> test_cometfluids_restart.diff)
+# 	ls -l test_cometfluids*.diff
+
 test_cometfluids_restart_check:
 	cd ${TESTDIR}/CometFluidsTest; \
-		cp RestartSave/GM/log_n000001.log log_all.log; \
-		tail -30 RestartRead/GM/log_n000031.log >> log_all.log
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
-		Param/COMET3FLUIDSPE/TestOutput/log_n000001.log \
-		${TESTDIR}/CometFluidsTest/log_all.log \
+		cp RestartRead/GM/log_n000060.log log_test.log
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=5e-5 \
+		Param/COMET3FLUIDSPE/TestOutput/log_n000060.log \
+		${TESTDIR}/CometFluidsTest/log_test.log \
 		> test_cometfluids_restart.diff)
 	ls -l test_cometfluids*.diff
 
