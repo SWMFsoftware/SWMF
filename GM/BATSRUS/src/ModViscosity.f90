@@ -14,17 +14,22 @@ module ModViscosity
   public Viscosity_factor
   public get_viscosity_tensor
 
+  ! Use viscosity or not
+  logical, public :: UseViscosity=.false.
+
+  ! Visosity tensor for each fluid
+  real, public, allocatable:: Visco_DDI(:,:,:)
+
+  ! Logical needed to fil up ghost cells only once per  block
+  logical, public :: IsNewBlockViscosity = .true.
+
+  ! Local variables
+
   ! Velosity vector for each block and fluid
   real, allocatable:: u_DGI(:,:,:,:,:)
 
   ! Gradient of velocity centered for faces
   real, allocatable:: GradU_DDI(:,:,:)
-
-  ! Visosity tensor for each fluid
-  real, public, allocatable:: Visco_DDI(:,:,:)
-
-  logical, public :: UseViscosity=.false.
-  logical, public :: IsNewBlockViscosity = .true.
 
   real,save :: ViscoCoeff = 0.0, ViscoCoeffSi = 0.0
 
