@@ -69,6 +69,9 @@ module ModUser
   ! Velocity of wave (default is set for right going whistler wave test)
   real      :: Velocity = 169.344
 
+  ! Entropy constant for isentropic initial condition
+  real      :: EntropyConstant = -1.0
+
   ! Variables used by the user problem AdvectSphere                           
   real      :: pBackgrndIo, uBackgrndIo, FlowAngleTheta, FlowAnglePhi
   real      :: NumDensBackgrndIo, NumDensMaxIo
@@ -117,6 +120,8 @@ contains
           call read_var('X Perturbation Width', Width)
        case('#WAVESPEED')
           call read_var('Velocity',Velocity)
+       case('#ENTROPY')
+          call read_var('EntropyConstant', EntropyConstant)
        case('#GAUSSIAN')
           ! Read parameters for a Gaussian profile multiplied by smoother: 
           !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
@@ -225,7 +230,7 @@ contains
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, &
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
-         rPlanetSi, rBody, UnitT_
+         rPlanetSi, rBody, UnitT_, g
     use ModNumconst, ONLY: cHalfPi, cPi, cTwoPi, cDegToRad
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nI,nJ,nK
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
@@ -511,12 +516,15 @@ contains
     case('PipeFlow')
        State_VGB(:,:,:,:,iBlock)      = 0.0
        State_VGB(Rho_,:,:,:,iBlock)   = 1.0
-       State_VGB(p_,:,:,:,iBlock)     = 1.0 - 0.1*(Xyz_DGB(x_,:,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
+       State_VGB(p_,:,:,:,iBlock)     = 1.0 &
+            - 0.1*(Xyz_DGB(x_,:,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
        do k = 1,nK; do j = 1,nJ; do i = MinI,MaxI
           ViscoCoeff = 1.0!Viscosity_factor(0,i,j,k,iBlock)
           if(ViscoCoeff > 0.0) then
-             State_VGB(RhoUx_,i,j,k,iBlock) = 0.5*(Xyz_DGB(y_,i,j,k,iBlock)**2 -CoordMax_D(y_)**2)*&
-                  (State_VGB(p_,i,j,k,iBlock) -1.0)/(ViscoCoeff*(Xyz_DGB(x_,i,j,k,iBlock)-CoordMin_D(x_)))
+             State_VGB(RhoUx_,i,j,k,iBlock) = &
+                  0.5*(Xyz_DGB(y_,i,j,k,iBlock)**2 -CoordMax_D(y_)**2)*&
+                  (State_VGB(p_,i,j,k,iBlock) -1.0) &
+                  /(ViscoCoeff*(Xyz_DGB(x_,i,j,k,iBlock)-CoordMin_D(x_)))
           else
              State_VGB(RhoUx_,i,j,k,iBlock) = 0.0025
           end if
@@ -538,6 +546,14 @@ contains
             'user_set_ics: undefined user problem='//UserProblem)
 
     end select
+
+    if(EntropyConstant > 0.0)then
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
+          State_VGB(p_,i,j,k,iBlock) = &
+               EntropyConstant*State_VGB(Rho_,i,j,k,iBlock)**g
+       end do; end do; end do
+    end if
+
   end subroutine user_set_ics
 
   !=====================================================================
