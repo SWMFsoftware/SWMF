@@ -7,7 +7,9 @@ module ModCrcmPlot
   character(len=5),  public    :: TypePlot   = 'ascii'
   logical,           public    :: DoSavePlot = .false.
   logical,           public    :: DoSaveFlux = .false.
+  logical,           public    :: UseSeparatePlotFiles = .false.
   real,              public    :: DtOutput   = 10.0
+  
 
   character(len=*), parameter :: NameHeader = 'CRCM output'
 
@@ -166,24 +168,35 @@ contains
     use ModCrcmPlanet,ONLY:nSpecies=>nspec
     use ModFieldTrace,ONLY:ro,bo,xmlto,irm
     use ModCrcmRestart, ONLY: IsRestart
-    
+    use ModImTime,    ONLY:iCurrentTime_I
     real, intent(in) :: rc,flux(nSpecies,nLat,nLon,nEnergy,nPitchAng),time
     
     real          :: parmod(1:10)=0.0,lat,ro1,xmlt1,bo1
     integer       :: iLat,iLon,k,m,n,i,nprint
     logical, save :: IsFirstCall = .true.
+    character(len=13):: outnameSep
     !--------------------------------------------------------------------------
     nprint=ifix(time/DtOutput)
+    write(outnameSep,"(i4.4,i2.2,i2.2,a,i2.2,i2.2)") & 
+         iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),'_',&
+         iCurrentTime_I(4),iCurrentTime_I(5)
+    
+    
     do n=1,nSpecies
-       if (IsFirstCall .and. .not. IsRestart) then
+       If (UseSeparatePlotFiles) then
+          
           if (n==1) &
-               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_h.fls',status='unknown')
+               open(unit=UnitTmp_,file='IM/plots/'//outnameSep//'_h.fls',&
+               status='unknown')
           if (n==2 .and. n /= nSpecies) &
-               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_o.fls',status='unknown')
+               open(unit=UnitTmp_,file='IM/plots/'//outnameSep//'_o.fls',&
+               status='unknown')
           if (n==3 .and. n /= nSpecies) &
-               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_he.fls',status='unknown')
+               open(unit=UnitTmp_,file='IM/plots/'//outnameSep//'_he.fls',&
+               status='unknown')
           if (n==nSpecies) &
-               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_e.fls',status='unknown')
+               open(unit=UnitTmp_,file='IM/plots/'//outnameSep//'_e.fls',&
+               status='unknown')
           write(UnitTmp_,"(f10.6,5i6,6x,'! rc in Re,nr,ip,je,ig,ntime')") &
                rc,nLat-1,nLon,nEnergy,nPitchAng,nprint
           write(UnitTmp_,'(6f9.3)') (energy(k),k=1,nEnergy)
@@ -191,20 +204,40 @@ contains
           write(UnitTmp_,'(6f9.5)') (sinAo(m),m=1,nPitchAng)
           write(UnitTmp_,'(10f8.3)') (xlat(i),i=2,nLat)
        else
-          if (n==1) &
-               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_h.fls',status='old', &
-               position='append')
-          if (n==2 .and. n /= nSpecies)&
-               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_o.fls',status='old', &
-               position='append')
-          if (n==3 .and. n /= nSpecies)&
-               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_he.fls',status='old', &
-               position='append')
-          if (n==nSpecies)&
-               open(unit=UnitTmp_,file='IM/plots/CrcmFlux_e.fls',status='old', &
-               position='append')
+          if (IsFirstCall .and. .not. IsRestart) then
+             if (n==1) &
+                  open(unit=UnitTmp_,file='IM/plots/CrcmFlux_h.fls',&
+                  status='unknown')
+             if (n==2 .and. n /= nSpecies) &
+                  open(unit=UnitTmp_,file='IM/plots/CrcmFlux_o.fls',&
+                  status='unknown')
+             if (n==3 .and. n /= nSpecies) &
+                  open(unit=UnitTmp_,file='IM/plots/CrcmFlux_he.fls',&
+                  status='unknown')
+             if (n==nSpecies) &
+                  open(unit=UnitTmp_,file='IM/plots/CrcmFlux_e.fls',&
+                  status='unknown')
+             write(UnitTmp_,"(f10.6,5i6,6x,'! rc in Re,nr,ip,je,ig,ntime')") &
+                  rc,nLat-1,nLon,nEnergy,nPitchAng,nprint
+             write(UnitTmp_,'(6f9.3)') (energy(k),k=1,nEnergy)
+             !write(UnitTmp_,'(6f9.3)') (Ebound(k),k=1,nEnergy+1)
+             write(UnitTmp_,'(6f9.5)') (sinAo(m),m=1,nPitchAng)
+             write(UnitTmp_,'(10f8.3)') (xlat(i),i=2,nLat)
+          else
+             if (n==1) &
+                  open(unit=UnitTmp_,file='IM/plots/CrcmFlux_h.fls',&
+                  status='old', position='append')
+             if (n==2 .and. n /= nSpecies)&
+                  open(unit=UnitTmp_,file='IM/plots/CrcmFlux_o.fls',&
+                  status='old', position='append')
+             if (n==3 .and. n /= nSpecies)&
+                  open(unit=UnitTmp_,file='IM/plots/CrcmFlux_he.fls',&
+                  status='old', position='append')
+             if (n==nSpecies)&
+                  open(unit=UnitTmp_,file='IM/plots/CrcmFlux_e.fls', &
+                  status='old', position='append')
+          endif
        endif
-
        write(UnitTmp_,'(f8.3,10f9.2,"    ! hour,  parmod")') &
             time/3600.,parmod(1:10)
        do iLat=2,nLat             ! Write fluxes @ fixed E & y grids

@@ -3,7 +3,8 @@ subroutine CRCM_set_parameters(NameAction)
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModReadParam
   use ModCrcmInitialize, ONLY: IsEmptyInitial,IsDataInitial, IsGmInitial
-  use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot, DoSaveFlux
+  use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot, DoSaveFlux, &
+                               UseSeparatePlotFiles
   use ModFieldTrace,     ONLY: UseEllipse
   use ModCrcm,           ONLY: UseMcLimiter, BetaLimiter, time, Pmin
   use ModCrcmRestart,    ONLY: IsRestart
@@ -30,6 +31,11 @@ subroutine CRCM_set_parameters(NameAction)
      case('#SAVEPLOT')
         call read_var('DtSavePlot',DtOutput)
         call read_var('DoSaveFlux',DoSaveFlux)
+        ! If saving flux then decide if it should be just one file or many
+        if (DoSaveFlux) then
+           call read_var('UseSeparatePlotFiles',UseSeparatePlotFiles)
+        endif
+        
         DoSavePlot = .true.
 
      case('#INITIALF2')

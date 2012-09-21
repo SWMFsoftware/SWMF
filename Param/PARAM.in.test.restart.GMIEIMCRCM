@@ -124,6 +124,7 @@ T			DoRestart
 #SAVEPLOT
 1.0			DtOutput
 F			DoSaveFlux
+F			UseSeparatePlotFiles
 
 #TYPEBOUNDARY
 circle                  TypeBoundary
