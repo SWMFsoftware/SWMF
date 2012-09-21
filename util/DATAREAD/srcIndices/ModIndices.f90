@@ -6,7 +6,7 @@ Module ModIndices
 
   implicit none
 
-  integer, parameter :: MaxInputLines=1000
+  integer, parameter :: MaxInputLines=10000
 
   integer, parameter :: GSM_ = 1
   integer, parameter :: GSE_ = 2
@@ -55,8 +55,8 @@ Module ModIndices
 
   logical :: ReReadIMFFile = .false.
   logical :: ReReadHPIFile = .false.
-  character (len=100) :: NameOfIMFFile = ""
-  character (len=100) :: NameOfHPIFile = ""
+  character (len=100) :: NameOfIMFFile = "none"
+  character (len=100) :: NameOfHPIFile = "none"
 
 contains
 

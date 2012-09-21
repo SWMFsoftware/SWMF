@@ -29,6 +29,9 @@ subroutine read_NOAAHPI_Indices_new(iOutputError,StartTime,EndTime)
 
   iOutputError = 0
   !-------------------------------------------------------------------------
+
+  if (NameOfHPIFile == "none") return
+
   call init_mod_indices
 
   ! If we have been here before and we read the entire file, leave

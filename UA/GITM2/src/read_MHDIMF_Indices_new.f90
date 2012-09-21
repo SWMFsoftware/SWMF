@@ -27,6 +27,8 @@ subroutine read_MHDIMF_Indices_new(iOutputError, StartTime, EndTime)
   npts = 0
   TimeDelay = 0.0
 
+  if (NameOfIMFFile == "none") return
+
   call init_mod_indices
 
   ! If we have been here before and we read the entire file, leave
