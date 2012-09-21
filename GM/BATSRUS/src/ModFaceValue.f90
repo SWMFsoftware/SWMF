@@ -1,7 +1,8 @@
 !^CFG COPYRIGHT UM
 module ModFaceValue
 
-  use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
+  use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+       x_, y_, z_
   use ModVarIndexes
 
   implicit none
@@ -46,10 +47,20 @@ module ModFaceValue
   ! local constants
   real, parameter :: cThird = 1./3., cTwoThird = 2./3., cSixth=1./6.
 
+  real, parameter:: c7over12 = 7.0/12.0, c1over12 = 1.0/12.0
+
+
   ! variables used for TVD limiters
-  real   :: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
-  real   :: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
-  real   :: Primitive_VI(1:nVar,-1:MaxIJK+2)
+  real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
+  real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
+  real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
+
+  ! variables for the PPM4 limiter
+  real:: Cell_I(1-nG:MaxIJK+nG)
+  real:: Face_I(0:MaxIJK+2)
+  real:: FaceL_I(1:MaxIJK+2)
+  real:: FaceR_I(0:MaxIJK+1)
+
   logical:: IsTrueCell_I(-1:MaxIJK+2)
 
   !primitive variables
@@ -669,9 +680,6 @@ contains
     ! Number of cells needed to get the face values
     integer:: nStencil
 
-    ! Coefficients for the 4th order interpolation
-    real, parameter:: Coef1 = 7.0/12.0, Coef2 = -1.0/12.0
-
     logical::DoTest,DoTestMe
     character(len=*), parameter :: NameSub = 'calc_face_value'
     !-------------------------------------------------------------------------
@@ -1175,13 +1183,25 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-         LeftState_VX(:,i,j,k) = &
-              Coef1*(Primitive_VG(:,i-1,j,k) + Primitive_VG(:,i,j,k)) + &
-              Coef2*(Primitive_VG(:,i-2,j,k) + Primitive_VG(:,i+1,j,k))
-              
-         RightState_VX(:,i,j,k)=LeftState_VX(:,i,j,k)
-      end do; end do; end do
+
+      if(TypeLimiter == 'ppm4')then
+         do k = kMin, kMax; do j = jMin, jMax; do iVar = 1, nVar
+            ! Copy points along i direction into 1D arrays
+            Cell_I(iMin-nG:iMax-1+nG)=Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
+            call limiter_ppm4(iMin, iMax)
+            ! Copy back the results into the 3D arrays
+            LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
+            RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
+         end do; end do; end do
+      else
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            LeftState_VX(:,i,j,k) = &
+                 c7over12*(Primitive_VG(:,i-1,j,k) + Primitive_VG(:,i,j,k)) - &
+                 c1over12*(Primitive_VG(:,i-2,j,k) + Primitive_VG(:,i+1,j,k))
+
+            RightState_VX(:,i,j,k) = LeftState_VX(:,i,j,k)
+         end do; end do; end do
+      end if
 
       !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
@@ -1198,9 +1218,9 @@ contains
       !-----------------------------------------------------------------------
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VY(:,i,j,k) = &
-              Coef1*(Primitive_VG(:,i,j-1,k) + Primitive_VG(:,i,j,k)) + &
-              Coef2*(Primitive_VG(:,i,j-2,k) + Primitive_VG(:,i,j+1,k))
-              
+              c7over12*(Primitive_VG(:,i,j-1,k) + Primitive_VG(:,i,j,k)) - &
+              c1over12*(Primitive_VG(:,i,j-2,k) + Primitive_VG(:,i,j+1,k))
+
          RightState_VY(:,i,j,k)=LeftState_VY(:,i,j,k)
       end do; end do; end do
 
@@ -1219,9 +1239,9 @@ contains
       !-----------------------------------------------------------------------
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VZ(:,i,j,k) = &
-              Coef1*(Primitive_VG(:,i,j,k-1) + Primitive_VG(:,i,j,k)) + &
-              Coef2*(Primitive_VG(:,i,j,k-2) + Primitive_VG(:,i,j,k+1))
-              
+              c7over12*(Primitive_VG(:,i,j,k-1) + Primitive_VG(:,i,j,k)) - &
+              c1over12*(Primitive_VG(:,i,j,k-2) + Primitive_VG(:,i,j,k+1))
+
          RightState_VZ(:,i,j,k)=LeftState_VZ(:,i,j,k)
       end do; end do; end do
 
@@ -2044,17 +2064,142 @@ contains
     end subroutine get_faceZ_second
   end subroutine calc_face_value
 
+  !===========================================================================
+  subroutine limiter_ppm4(lMin,lMax)
+
+    integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
+
+    ! Apply 4th order PPM limiter as described by 
+    !
+    ! "A high-order finite volume method for hyperbolic conservation laws
+    ! on locally-refined grids", 
+    ! P. McCorquodale and P. Colella, 2010, LBNL document
+    !
+    ! The cell centered primitive variables are  Cell_I(lMin-nG:lMax-1+nG)
+    ! The unlimited face centered values are     Face_I(lMin-1:lMax+1)
+    ! The routine returns the modified left face StateL_I(lMin:lMax)
+    !                             and right face StateR_I(lMin:lMax)
+    !
+    ! but it may also set StateR_I(lMin-1) and StateL_I(lMax+1)
+    ! (this could be excluded).
+    !
+    ! For now the implementation is done per variable
+    ! Optimization can be done once it works
+
+    ! Various constants 
+    real, parameter:: c0 = 1e-12, c2 = 1.25, c3 = 0.1, c6=6.0
+
+    ! Second derivative based on cell center values
+    real:: D2c_I(2-nG:MaxIJK+nG-1)
+
+    ! Third derivative is needed between cells where D2c is known
+    real:: D3Face_I(3-nG:MaxIJK+nG-1), D3max, D3min
+
+    real:: Dfm, Dfp, D2f, D2lim, D2Ratio
+
+    integer:: l
+
+    !-------------------------------------------------------------------------
+    ! Fourth order interpolation scheme
+    ! Fill in lMin-1 and lMax+1, because the limiter needs these face values
+    do l = lMin - 1, lMax + 1
+       Face_I(l) = c7over12*(Cell_I(l-1) + Cell_I(l)) &
+            -      c1over12*(Cell_I(l-2) + Cell_I(l+1))
+    end do
+
+    ! Set unlimited values as default
+    FaceR_I(lMin:lMax) = Face_I(lMin:lMax)
+    FaceL_I(lMin:lMax) = Face_I(lMin:lMax)
+
+    ! Second derivative based on cell values
+    do l = lMin+1-nG, lMax-2+nG
+       D2c_I(l) = Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1) 
+    end do
+
+    if(nG > 3)then
+       ! Third derivative at face based on cell values
+       do l = lMin-2, lMax+2
+          D3Face_I(l) = D2c_I(l) - D2c_I(l-1)
+       end do
+    end if
+
+    ! Loop through cells and modify FaceL and FaceR values if needed
+    ! Start  at lMin-1 so that FaceL_I(lMin) gets set.
+    ! Finish at lMax   so that FaceR_I(lMax) gets set.
+    do l = lMin - 1, lMax
+       ! Definitions at bottom of page 6
+       Dfm = Cell_I(l) - Face_I(l)
+       Dfp = Face_I(l+1) - Cell_I(l)
+
+       ! Check for local extremum on two different stencils
+       ! Eqs. (24) and (25)
+       if(Dfm*Dfp <= 0 .or. &
+            (Cell_I(l+2) - Cell_I(l)  )* &
+            (Cell_I(l)   - Cell_I(l-2)) <= 0)then
+
+          ! Second derivative based on face value (22.3)
+          D2f = c6*(Face_I(l+1) + Face_I(l) - 2*Cell_I(l))
+
+          ! Check if second derivative is almost zero (26.1)
+          if(abs(D2f) <= c0*maxval(abs(Cell_I(l-2:l+2))))then
+             D2Ratio = 0.0
+          else
+             ! Get limited value for second derivative (26)
+             ! First assume that all second derivatives are positive
+             D2lim = min(c2*minval(D2c_I(l-1:l+1)), D2f)
+             ! If this is negative, try the all negative case, else set 0
+             if(D2lim < 0.0) &
+                  D2lim = min(0.0, max(c2*maxval(D2c_I(l-1:l+1)), D2f))
+
+             D2Ratio = D2lim / D2f
+
+             ! If D2Ratio is close to 1, no need to limit
+             if(D2Ratio >= 1 - c0) CYCLE
+
+             if(nG > 3)then
+                ! Check 3rd derivative condition (28) 
+                D3min = minval(D3Face_I(l-1:l+2))
+                D3max = maxval(D3Face_I(l-1:l+2))
+                if(c3*max(abs(D3max),abs(D3min)) > D3max - D3min) CYCLE
+             end if
+          end if
+          if(Dfm*Dfp <= 0)then
+             ! Eqs. (29) and (30)
+             FaceR_I(l)   = Cell_I(l) - D2Ratio*Dfm
+             FaceL_I(l+1) = Cell_I(l) + D2Ratio*Dfp
+          elseif(abs(Dfm) >= 2*abs(Dfp))then
+             ! Eq. (31)
+             FaceR_I(l)   = Cell_I(l) - 2*(1-D2Ratio)*Dfp - D2Ratio*Dfm
+          elseif(abs(Dfp) >= 2*abs(Dfm))then
+             ! Eq. (32)
+             FaceL_I(l+1) = Cell_I(l) + 2*(1-D2Ratio)*Dfm + D2Ratio*Dfp
+          end if
+       elseif(abs(Dfm) >= 2*abs(Dfp))then
+          ! Eq. (33)
+          FaceR_I(l)  = Cell_I(l) - 2*Dfp
+       elseif(abs(Dfp) >= 2*abs(Dfm))then
+          ! Eq. (34)
+          FaceL_I(l+1) = Cell_I(l) + 2*Dfm
+       end if
+
+    end do
+
+  end subroutine limiter_ppm4
   !============================================================================
-  ! Limiters:
+  ! TVD limiters:
   ! mimod limiter:
   !                slim = minmod(s1,s2)
   !
   ! generalized MC (monotonized central) limiter:
   !                slim = minmod(beta*s1, beta*s2, (s1+s2)/2)
   !
+  ! Koren limiter (mc3):
+  !                slimL = minmod(beta*s1, beta*s2, (s1+2*s2)/3)
+  !                slimR = minmod(beta*s1, beta*s2, (2*s1+s2)/3)
+  !
   ! beta-limiter   slim = maxmod(minmod(beta*s1,s2), minmod(beta*s2,s1))
   !
-  !                (see C.Hirsch, Numerical Computation of
+  !                (see C.Hirsch, Numerical computation of
   !                 internal and external flows, Volume 2, page 544-545.)
   !
   ! where s1 and s2 are the unlimited slopes, the minmod function
@@ -2068,12 +2213,12 @@ contains
   ! Note: the subroutines limiter() and limiter_body() calculate the
   !       HALF of the limited difference, so it can be applied simply as
   !
-  !       left_face  = central_value - limited_slope
-  !       right_face = central_value + limited_slope
+  !       left_face  = central_value - limited_slope_left
+  !       right_face = central_value + limited_slope_right
   !===========================================================================
-  subroutine limiter_body(lMin,lMax,Beta)
+  subroutine limiter_body(lMin, lMax, Beta)
 
-    integer, intent(in):: lMin,lMax
+    integer, intent(in):: lMin, lMax
     real,    intent(in):: Beta
 
     real,dimension(Hi3_):: dVar1_I, dVar2_I ! 
@@ -2208,7 +2353,7 @@ contains
           dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
        end do
     case('mc')
-       ! Calculate right most unlimited slope
+       ! Calculate rightmost unlimited slope
        dVar1_V = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
        do l=lMax,lMin-1,-1
           ! Propagate old left slope to become the right slope
@@ -2223,7 +2368,7 @@ contains
           dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
        end do
     case('mc3')
-       ! Calculate right most unlimited slope
+       ! Calculate rightmost unlimited slope
        dVar1_V = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
        do l=lMax,lMin-1,-1
           ! Propagate old left slope to become the right slope
