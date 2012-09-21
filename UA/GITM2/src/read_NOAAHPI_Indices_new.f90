@@ -30,7 +30,15 @@ subroutine read_NOAAHPI_Indices_new(iOutputError,StartTime,EndTime)
   iOutputError = 0
   !-------------------------------------------------------------------------
 
-  if (NameOfHPIFile == "none") return
+  ! Problem - we have to figure out whether we are being called with no IMF
+  ! file at all or whether we actually have an index file to read (or reread)
+  ! Can't change comparability, so we can only use certain information.
+
+  ! We know that nIndices_V(hpi_) = 1 if there is a single index.
+  ! We know that NameOfIMFFile=none if (a) we have never read the file or (b)
+  !    we have no index file.
+
+  if (NameOfHPIFile == "none" .and. nIndices_V(hpi_)==1) return
 
   call init_mod_indices
 

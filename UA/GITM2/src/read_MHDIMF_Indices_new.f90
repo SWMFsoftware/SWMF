@@ -27,12 +27,20 @@ subroutine read_MHDIMF_Indices_new(iOutputError, StartTime, EndTime)
   npts = 0
   TimeDelay = 0.0
 
-  if (NameOfIMFFile == "none") return
+  ! Problem - we have to figure out whether we are being called with no IMF
+  ! file at all or whether we actually have an index file to read (or reread)
+  ! Can't change comparability, so we can only use certain information.
+
+  ! We know that nIndices_V(imf_by_) = 1 if there is a single index.
+  ! We know that NameOfIMFFile=none if (a) we have never read the file or (b)
+  !    we have no index file.
+
+  if (NameOfIMFFile == "none" .and. nIndices_V(imf_by_) == 1) return
 
   call init_mod_indices
 
   ! If we have been here before and we read the entire file, leave
-  if (.not.ReReadIMFFile .and. nIndices_V(imf_bx_) > 0) return
+  if (.not.ReReadIMFFile .and. nIndices_V(imf_by_) > 0) return
 
   ! This if statement makes sure that we have been here before and 
   ! want to be here again
