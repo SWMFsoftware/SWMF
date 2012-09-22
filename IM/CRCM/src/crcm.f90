@@ -7,7 +7,7 @@ subroutine crcm_run(delta_t)
   use ModCrcmPlanet,  ONLY: re_m, dipmom, Hiono, nspec, amu_I, &
                             dFactor_I,tFactor_I
   use ModFieldTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
-                            ekev,iba,bo,pp,Have, sinA, vel, alscone, iw2
+                            ekev,iba,bo,pp,Have, sinA, vel, alscone, iw2,xmlto
   use ModGmCrcm,      ONLY: Den_IC,Temp_IC,Temppar_IC,StateBmin_IIV,&
                             AveP_,AvePpar_,AveDens_, AveDen_I,AveP_I,iLatMin,&
                             DoMultiFluidGMCoupling,DoAnisoPressureGMCoupling
@@ -325,6 +325,11 @@ subroutine crcm_run(delta_t)
           BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
           0, iComm, iError)
      if (iProc==0) bo(:,:)=BufferRecv_C(:,:)
+     BufferSend_C(:,:)=xmlto(:,:)
+     call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
+          BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+          0, iComm, iError)
+     if (iProc==0) xmlto(:,:)=BufferRecv_C(:,:)
      BufferSend_C(:,:)=brad(:,:)
      call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, MPI_REAL, &
           BufferRecv_C, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
