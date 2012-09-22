@@ -14,38 +14,37 @@ contains
     use ModProcMH
     use ModMain, ONLY : nBlock, Unused_B, &
          TypeBc_I, time_loop, &
-         UseConstrainB,&              !^CFG IF CONSTRAINB 
-         UseProjection,&              !^CFG IF PROJECTION
+         UseConstrainB, UseProjection, &
          time_simulation,nOrder,prolong_order,optimize_message_pass
     use ModVarIndexes
-    use ModAdvance, ONLY : State_VGB
-    use ModGeometry, ONLY : far_field_BCs_BLK        
-    use ModPhysics, ONLY : ShockSlope
+    use ModAdvance,  ONLY: State_VGB
+    use ModGeometry, ONLY: far_field_BCs_BLK        
+    use ModPhysics,  ONLY: ShockSlope
     use ModFaceValue,ONLY: UseAccurateResChange
     use ModEnergy,   ONLY: calc_energy_ghost, correctP
 
-    use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB
+    use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB, nG
     use ModMpi
 
-    logical, optional, intent(in) :: DoResChangeOnlyIn, UseOrder2In
+    ! Fill ghost cells at res. change only
+    logical, optional, intent(in) :: DoResChangeOnlyIn 
+
+    ! Use 2nd order prolongation to fill
+    logical, optional, intent(in) :: UseOrder2In       
+
+    logical :: UseOrder2
+    logical :: DoResChangeOnly
+
+    logical :: DoRestrictFace, DoTwoCoarseLayers, DoFaces
+    integer :: nWidth, nCoarseLayer
 
     integer :: iBlock
-    logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
-    logical :: DoFaces
-    logical :: UseOrder2=.false.
-    integer :: nWidth, nCoarseLayer
-    logical :: DoResChangeOnly
 
     logical:: DoTest, DoTestMe, DoTime, DoTimeMe
     character (len=*), parameter :: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
     call set_oktest('time_exchange', DoTime, DoTimeMe)
-
-    !!^CFG IF DEBUGGING BEGIN
-    ! call testmessage_pass_nodes
-    ! call time_message_passing
-    !!^CFG END DEBUGGING
 
     DoResChangeOnly = .false.
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
@@ -54,28 +53,26 @@ contains
     if(present(UseOrder2In)) UseOrder2 = UseOrder2In
 
     DoRestrictFace = prolong_order==1
-    if(UseConstrainB) DoRestrictFace = .false.   !^CFG IF CONSTRAINB
+    if(UseConstrainB) DoRestrictFace = .false.
 
     DoTwoCoarseLayers = &
          nOrder==2 .and. prolong_order==1 .and. .not. DoOneCoarserLayer
-
 
     if(DoTestMe)write(*,*) NameSub, &
          ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers=',&
          DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers
 
     call timing_start('exch_msgs')
+
     ! Ensure that energy and pressure are consistent and positive in real cells
-    !if(prolong_order==2)then     !^CFG IF NOT PROJECTION
     if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
           if (far_field_BCs_BLK(iBlock) .and. prolong_order==2)&
                call set_cell_boundary(iBlock,time_simulation,.false.)        
-          if(UseConstrainB)call correctP(iBlock)   !^CFG IF CONSTRAINB
-          if(UseProjection)call correctP(iBlock)   !^CFG IF PROJECTION
+          if(UseConstrainB)call correctP(iBlock)
+          if(UseProjection)call correctP(iBlock)
        end do
-       !end if                       !^CFG IF NOT PROJECTION
     end if
 
     if (UseOrder2) then
@@ -85,10 +82,8 @@ contains
             call fix_boundary_ghost_cells(DoRestrictFace)
     elseif (optimize_message_pass=='all') then
        ! If ShockSlope is not zero then even the first order scheme needs 
-       ! two ghost cell layers to fill in the corner cells at the sheared BCs.
-       DoOneLayer = nOrder == 1 .and. ShockSlope == 0.0
-
-       nWidth = 2;       if(DoOneLayer)        nWidth = 1
+       ! all ghost cell layers to fill in the corner cells at the sheared BCs.
+       nWidth = nG; if(nOrder == 1 .and. ShockSlope == 0.0)  nWidth = 1
        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
        call message_pass_cell(nVar, State_VGB, &
             nWidthIn=nWidth, nProlongOrderIn=1, &
@@ -100,8 +95,7 @@ contains
        ! Do not pass corners if not necessary
        DoFaces = .not.(nOrder == 2 .and. UseAccurateResChange)
        ! Pass one layer if possible
-       DoOneLayer = nOrder == 1
-       nWidth = 2;       if(DoOneLayer)        nWidth = 1
+       nWidth = nG;      if(nOrder == 1)       nWidth = 1
        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
        call message_pass_cell(nVar, State_VGB, &
             nWidthIn=nWidth, &
