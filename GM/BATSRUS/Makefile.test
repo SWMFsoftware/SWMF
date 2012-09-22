@@ -49,18 +49,6 @@ test:
 	-@($(MAKE) test_func)
 	@ls -l *.diff
 
-test_sph:
-	@rm -f *.diff
-	-@($(MAKE) test_coronasph)
-	-@($(MAKE) test_chromo)
-	-@($(MAKE) test_earthsph)
-	-@($(MAKE) test_titan)
-	-@($(MAKE) test_mars)
-	-@($(MAKE) test_marsfluids)
-	-@($(MAKE) test_venus)
-	-@($(MAKE) test_mercurysph)
-	@ls -l *.diff
-
 # !!! NOTE: In the above list "test_func" should be the last test
 
 # All tests are done in this directory:
@@ -632,39 +620,6 @@ test_laserpackage_check:
 	ls -l test_laserpackage.diff
 
 
-### MIXED CELL TEST ###
-
-test_mixedcell:
-	@echo "test_mixedcell_compile..." > test_mixedcell.diff
-	$(MAKE) test_mixedcell_compile
-	@echo "test_mixedcell_rundir..." >> test_mixedcell.diff
-	$(MAKE) test_mixedcell_rundir DEFAULT_EXE=CRASH.exe
-	@echo "test_mixedcell_run..." >> test_mixedcell.diff
-	$(MAKE) test_mixedcell_run
-	@echo "test_mixedcell_check..." >> test_mixedcell.diff
-	$(MAKE) test_mixedcell_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test_mixedcell_compile:
-	./Config.pl -e=HdCrash -u=Crash -g=4,4,2,2000,1 -nMaterial=3
-	$(MAKE) CRASH
-	make PIDL
-
-test_mixedcell_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.mixedcell PARAM.in
-
-test_mixedcell_run:
-	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
-	cat ${TESTDIR}/GM/IO2/cut_hd_1_*_n0000882_pe*.idl \
-		> ${TESTDIR}/IO2/cut_400_ns.idl
-	#cd ${TESTDIR}; ./PostProc.pl -M
-
-test_mixedcell_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
-		Param/CRASH/TestOutput/cut_mixedcell.idl \
-		${TESTDIR}/IO2/cut_400_ns.idl > test_mixedcell.diff)
-	ls -l test_mixedcell.diff
-
 ### GRAY-DIFFUSION TEST ###
 
 test_graydiffusion:
@@ -956,12 +911,12 @@ test_titan_rundir: test_rundir
 
 test_titan_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf TitanTest; ./PostProc.pl -M -o TitanTest
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_titan_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/TITAN/TestOutput/log_n000001.log \
-		${TESTDIR}/TitanTest/GM/log_n000001.log > test_titan.diff)
+		${TESTDIR}/RESULTS/GM/log_n000001.log > test_titan.diff)
 	ls -l test_titan.diff
 
 test_titan_restart:
@@ -976,24 +931,24 @@ test_titan_restart_save:
 	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf TitanTest/RestartSave RESTART_titan
-	cd ${TESTDIR}; ./PostProc.pl -M -o TitanTest/RestartSave
+	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_titan
+	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
 test_titan_restart_read:
 	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ./Restart.pl -i TitanTest/RestartSave/RESTART
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf TitanTest/RestartRead
-	cd ${TESTDIR}; ./PostProc.pl -M -o TitanTest/RestartRead
+	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
 
 test_titan_restart_check:
-	cd ${TESTDIR}/TitanTest; \
+	cd ${TESTDIR}/RESULTS; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/TITAN/TestOutput/log_n000001.log \
-		${TESTDIR}/TitanTest/log_all.log > test_titan_restart.diff)
+		${TESTDIR}/RESULTS/log_all.log > test_titan_restart.diff)
 	ls -l test_titan*.diff
 
 ### TESTS FOR MODELING MARS ###
@@ -1025,12 +980,12 @@ test_mars_rundir: test_rundir
 
 test_mars_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf MarsTest; ./PostProc.pl -M -o MarsTest
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_mars_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		Param/MARS/TestOutput/log_n000001.log \
-		${TESTDIR}/MarsTest/GM/log_n000001.log > test_mars.diff)
+		${TESTDIR}/RESULTS/GM/log_n000001.log > test_mars.diff)
 	ls -l test_mars.diff
 
 ### TESTS FOR MODELING MARSFLUIDS ###
@@ -1062,12 +1017,12 @@ test_marsfluids_rundir: test_rundir
 
 test_marsfluids_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf MarsFluidsTest; ./PostProc.pl -M -o MarsFluidsTest
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_marsfluids_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/MARSFLUIDS/TestOutput/log_n000001.log \
-		${TESTDIR}/MarsFluidsTest/GM/log_n000001.log > test_marsfluids.diff)
+		${TESTDIR}/RESULTS/GM/log_n000001.log > test_marsfluids.diff)
 	ls -l test_marsfluids.diff
 
 test_marsfluids_restart:
@@ -1083,24 +1038,24 @@ test_marsfluids_restart_save:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf MarsFluidsTest/RestartSave RESTART_marsfluids
-	cd ${TESTDIR}; ./PostProc.pl -M -o MarsFluidsTest/RestartSave
+	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_marsfluids
+	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
 test_marsfluids_restart_read:
 	cd ${TESTDIR}; cp Param/MARSFLUIDS/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ./Restart.pl -i MarsFluidsTest/RestartSave/RESTART
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf MarsFluidsTest/RestartRead
-	cd ${TESTDIR}; ./PostProc.pl -M -o MarsFluidsTest/RestartRead
+	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
 
 test_marsfluids_restart_check:
-	cd ${TESTDIR}/MarsFluidsTest; \
+	cd ${TESTDIR}/RESULTS; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -10 RestartRead/GM/log_n000011.log >> log_all.log
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/MARSFLUIDS/TestOutput/log_n000001.log \
-		${TESTDIR}/MarsFluidsTest/log_all.log \
+		${TESTDIR}/RESULTS/log_all.log \
 		> test_marsfluids_restart.diff)
 	ls -l test_marsfluids*.diff
 
@@ -1134,12 +1089,12 @@ test_venus_rundir: test_rundir
 
 test_venus_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf VenusTest; ./PostProc.pl -M -o VenusTest
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_venus_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-17 \
 		Param/VENUS/TestOutput/log_n000001.log \
-		${TESTDIR}/VenusTest/GM/log_n000001.log > test_venus.diff)
+		${TESTDIR}/RESULTS/GM/log_n000001.log > test_venus.diff)
 	ls -l test_venus.diff
 
 test_venus_restart:
@@ -1154,24 +1109,24 @@ test_venus_restart_save:
 	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf VenusTest/RestartSave RESTART_venus
-	cd ${TESTDIR}; ./PostProc.pl -M -o VenusTest/RestartSave
+	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_venus
+	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
 test_venus_restart_read:
 	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ./Restart.pl -i VenusTest/RestartSave/RESTART
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf VenusTest/RestartRead
-	cd ${TESTDIR}; ./PostProc.pl -M -o VenusTest/RestartRead
+	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
 
 test_venus_restart_check:
-	cd ${TESTDIR}/VenusTest; \
+	cd ${TESTDIR}/RESULTS; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/VENUS/TestOutput/log_n000001.log \
-		${TESTDIR}/VenusTest/log_all.log > test_venus_restart.diff)
+		${TESTDIR}/RESULTS/log_all.log > test_venus_restart.diff)
 	ls -l test_venus*.diff
 
 ### TESTS FOR MODELING SATURN ###
@@ -1279,12 +1234,12 @@ test_comet_rundir: test_rundir
 
 test_comet_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf CometTest; ./PostProc.pl -M -o CometTest
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_comet_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-10 \
 		Param/COMET/TestOutput/log_n000001.log \
-		${TESTDIR}/CometTest/GM/log_n000001.log > test_comet.diff)
+		${TESTDIR}/RESULTS/GM/log_n000001.log > test_comet.diff)
 	ls -l test_comet.diff
 
 ### TEST FOR COMET3FLUIDSPE ###
@@ -1316,27 +1271,12 @@ test_cometfluids_rundir: test_rundir
 
 test_cometfluids_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf CometFluidsTest; ./PostProc.pl -M -o CometFluidsTest
-
-# test_cometfluids_check:
-# 	cd ${TESTDIR}/CometFluidsTest; \
-# 	        tail -n 10 GM/log_n000001.log > log_last10.log; \
-# 		tail -n 10 ../../Param/COMET3FLUIDSPE/TestOutput/log_n000001.log > log_test.log
-# 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=5e-5 \
-# 		${TESTDIR}/CometFluidsTest/log_last10.log \
-# 		${TESTDIR}/CometFluidsTest/log_test.log > test_cometfluids.diff)
-# 	ls -l test_cometfluids.diff
-
-# test_cometfluids_check:
-# 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
-# 		Param/COMET3FLUIDSPE/TestOutput/log_n000001.log \
-# 		${TESTDIR}/CometFluidsTest/GM/log_n000001.log > test_cometfluids.diff)
-# 	ls -l test_cometfluids.diff
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometfluids_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=5e-5 \
 		Param/COMET3FLUIDSPE/TestOutput/log_n000060.log \
-		${TESTDIR}/CometFluidsTest/GM/log_n000060.log > test_cometfluids.diff)
+		${TESTDIR}/RESULTS/GM/log_n000060.log > test_cometfluids.diff)
 	ls -l test_cometfluids.diff
 
 test_cometfluids_restart:
@@ -1344,51 +1284,30 @@ test_cometfluids_restart:
 	$(MAKE) test_cometfluids_restart_save
 	@echo "test_cometfluids_restart_read..." >> test_cometfluids_restart.diff
 	$(MAKE) test_cometfluids_restart_read
-	@echo "test_cometfluids_restart_check..." >> test_cometfluids_restart.diff
+	@echo "test_cometfluids_restart_check..." >>test_cometfluids_restart.diff
 	$(MAKE) test_cometfluids_restart_check
-
 
 test_cometfluids_restart_save:
 	cd ${TESTDIR}; cp Param/COMET3FLUIDSPE/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf CometFluidsTest/RestartSave RESTART_cometfluids
-	cd ${TESTDIR}; ./PostProc.pl -M -o CometFluidsTest/RestartSave
+	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_cometfluids
+	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
 
 test_cometfluids_restart_read:
 	cd ${TESTDIR}; cp Param/COMET3FLUIDSPE/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ./Restart.pl -i CometFluidsTest/RestartSave/RESTART
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
 	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf CometFluidsTest/RestartRead
-	cd ${TESTDIR}; ./PostProc.pl -M -o CometFluidsTest/RestartRead
-
-# test_cometfluids_restart_check:
-# 	cd ${TESTDIR}/CometFluidsTest; \
-# 		tail -n 10 RestartRead/GM/log_n000031.log > log_last10.log; \
-# 		tail -n 10 ../../Param/COMET3FLUIDSPE/TestOutput/log_n000001.log > log_test.log
-# 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=5e-5 \
-# 		${TESTDIR}/CometFluidsTest/log_test.log \
-# 		${TESTDIR}/CometFluidsTest/log_last10.log \
-# 		> test_cometfluids_restart.diff)
-# 	ls -l test_cometfluids*.diff
-
-# test_cometfluids_restart_check:
-# 	cd ${TESTDIR}/CometFluidsTest; \
-# 		cp RestartSave/GM/log_n000001.log log_all.log; \
-# 		tail -30 RestartRead/GM/log_n000031.log >> log_all.log
-# 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
-# 		Param/COMET3FLUIDSPE/TestOutput/log_n000001.log \
-# 		${TESTDIR}/CometFluidsTest/log_all.log \
-# 		> test_cometfluids_restart.diff)
-# 	ls -l test_cometfluids*.diff
+	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
 
 test_cometfluids_restart_check:
-	cd ${TESTDIR}/CometFluidsTest; \
+	cd ${TESTDIR}/RESULTS; \
 		cp RestartRead/GM/log_n000060.log log_test.log
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=5e-5 \
 		Param/COMET3FLUIDSPE/TestOutput/log_n000060.log \
-		${TESTDIR}/CometFluidsTest/log_test.log \
+		${TESTDIR}/RESULTS/log_test.log \
 		> test_cometfluids_restart.diff)
 	ls -l test_cometfluids*.diff
 
