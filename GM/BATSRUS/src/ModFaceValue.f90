@@ -5,6 +5,8 @@ module ModFaceValue
        x_, y_, z_
   use ModVarIndexes
 
+  use ModMain, ONLY: iTest
+
   implicit none
 
   private ! except
@@ -45,10 +47,8 @@ module ModFaceValue
   integer, parameter:: Lo2_=nVar+1, Hi2_=nVar+nVar, Lo3_=Hi2_+1, Hi3_=nVar+Hi2_
 
   ! local constants
-  real, parameter :: cThird = 1./3., cTwoThird = 2./3., cSixth=1./6.
-
+  real, parameter:: cThird = 1./3., cTwoThird = 2./3., cSixth=1./6.
   real, parameter:: c7over12 = 7.0/12.0, c1over12 = 1.0/12.0
-
 
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
@@ -64,7 +64,7 @@ module ModFaceValue
   logical:: IsTrueCell_I(-1:MaxIJK+2)
 
   !primitive variables
-  real, dimension(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK):: Primitive_VG
+  real:: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
   integer :: iVar
 
@@ -654,8 +654,8 @@ contains
 
     use ModGeometry, ONLY : true_cell,body_BLK
     use ModPhysics, ONLY: GammaWave
-    use ModPhysics, ONLY: c2LIGHT,inv_c2LIGHT  !^CFG IF BORISCORR BEGIN
-    use ModB0                                  !^CFG END BORISCORR
+    use ModPhysics, ONLY: c2LIGHT,inv_c2LIGHT
+    use ModB0
     use ModAdvance, ONLY: State_VGB, UseElectronPressure, UseWavePressure, &
          LeftState_VX,      &  ! Face Left  X
          RightState_VX,     &  ! Face Right X
@@ -673,8 +673,7 @@ contains
     integer:: i,j,k,iSide,iFluid
     real:: RhoInv
 
-    real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full,& !^CFG IF BORISCORR
-         uBC2Inv,Ga2Boris                           !^CFG IF BORISCORR
+    real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
     real:: B0_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Number of cells needed to get the face values
@@ -719,7 +718,7 @@ contains
     ! Number of cells away from the cell center
     nStencil = min(2,nOrder)
 
-    if(DoLimitMomentum)then                     !^CFG IF BORISCORR BEGIN
+    if(DoLimitMomentum)then
        if(UseB0)then
           B0_DG=B0_DGB(:,:,:,:,iBlock)
        else
@@ -752,7 +751,7 @@ contains
              end do	                      ! z-faces
           end do; end do
        end if
-    else                                         !^CFG END BORISCORR
+    else
        if(UseAccurateResChange)then
           do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
              call calc_primitives_MHD         !needed for x-faces
@@ -786,7 +785,7 @@ contains
              end do; end do
           end if
        end if
-    end if                                       !^CFG IF BORISCORR
+    end if
 
     !\
     ! Now the first or second order face values are calcuted
@@ -832,8 +831,8 @@ contains
        ! use second order limited reconstruction.
        ! When prolong_order==1 we can use first order reconstruction 
        ! at resolution changes.
-       ! However, constrained transport requires facevalues !^CFG IF CONSTRAINB
-       ! to be independent of the resolution changes.       !^CFG IF CONSTRAINB
+       ! However, constrained transport requires facevalues
+       ! to be independent of the resolution changes.
 
        if (.not.DoResChangeOnly)then
           call get_faceX_second(&
@@ -844,9 +843,7 @@ contains
                iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
        end if
 
-       if(prolong_order==1 &
-            .and..not.UseConstrainB & !^CFG IF CONSTRAINB
-            )then
+       if(prolong_order==1 .and..not.UseConstrainB)then
 
           if(nJ == 1 .and. (UseAccurateResChange .or. UseTvdResChange))then
              do iSide = 1, 2
@@ -1134,7 +1131,6 @@ contains
     end subroutine ptotal_to_p_faceZ
 
     !==========================================================================
-    !^CFG IF BORISCORR BEGIN
     subroutine calc_primitives_boris                                       
       !momentum is limited
 
@@ -1177,13 +1173,10 @@ contains
 
     end subroutine calc_primitives_boris
     !=========================================================================
-    !^CFG END BORISCORR
-    !========================================================================
     subroutine get_facex_fourth(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-
       if(TypeLimiter == 'ppm4')then
          do k = kMin, kMax; do j = jMin, jMax; do iVar = 1, nVar
             ! Copy points along i direction into 1D arrays
@@ -1203,9 +1196,7 @@ contains
          end do; end do; end do
       end if
 
-      !^CFG IF BORISCORR BEGIN
-      if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
-      !^CFG END BORISCORR
+      if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1216,17 +1207,26 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-         LeftState_VY(:,i,j,k) = &
-              c7over12*(Primitive_VG(:,i,j-1,k) + Primitive_VG(:,i,j,k)) - &
-              c1over12*(Primitive_VG(:,i,j-2,k) + Primitive_VG(:,i,j+1,k))
+      if(TypeLimiter == 'ppm4')then
+         do k = kMin, kMax; do i = iMin, iMax; do iVar = 1, nVar
+            ! Copy points along j direction into 1D arrays
+            Cell_I(jMin-nG:jMax-1+nG)=Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
+            call limiter_ppm4(jMin, jMax)
+            ! Copy back the results into the 3D arrays
+            LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
+            RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
+         end do; end do; end do
+      else
+         do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+            LeftState_VY(:,i,j,k) = &
+                 c7over12*(Primitive_VG(:,i,j-1,k) + Primitive_VG(:,i,j,k)) - &
+                 c1over12*(Primitive_VG(:,i,j-2,k) + Primitive_VG(:,i,j+1,k))
 
-         RightState_VY(:,i,j,k)=LeftState_VY(:,i,j,k)
-      end do; end do; end do
+            RightState_VY(:,i,j,k)=LeftState_VY(:,i,j,k)
+         end do; end do; end do
+      end if
 
-      !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum)call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
-      !^CFG END BORISCORR
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1237,17 +1237,26 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-         LeftState_VZ(:,i,j,k) = &
-              c7over12*(Primitive_VG(:,i,j,k-1) + Primitive_VG(:,i,j,k)) - &
-              c1over12*(Primitive_VG(:,i,j,k-2) + Primitive_VG(:,i,j,k+1))
+      if(TypeLimiter == 'ppm4')then
+         do j = jMin, jMax; do i = iMin, iMax; do iVar = 1, nVar
+            ! Copy points along k direction into 1D arrays
+            Cell_I(kMin-nG:kMax-1+nG)=Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
+            call limiter_ppm4(kMin, kMax)
+            ! Copy back the results into the 3D arrays
+            LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
+            RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
+         end do; end do; end do
+      else
+         do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+            LeftState_VZ(:,i,j,k) = &
+                 c7over12*(Primitive_VG(:,i,j,k-1) + Primitive_VG(:,i,j,k)) - &
+                 c1over12*(Primitive_VG(:,i,j,k-2) + Primitive_VG(:,i,j,k+1))
 
-         RightState_VZ(:,i,j,k)=LeftState_VZ(:,i,j,k)
-      end do; end do; end do
+            RightState_VZ(:,i,j,k)=LeftState_VZ(:,i,j,k)
+         end do; end do; end do
+      end if
 
-      !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
-      !^CFG END BORISCORR
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1264,9 +1273,7 @@ contains
          RightState_VX(:,i,j,k)=Primitive_VG(:,i,j,k)              
       end do; end do; end do
 
-      !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
-      !^CFG END BORISCORR
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1282,9 +1289,7 @@ contains
          RightState_VY(:,i,j,k)=Primitive_VG(:,i,j,k)              
       end do; end do; end do
 
-      !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
-      !^CFG END BORISCORR
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1300,9 +1305,7 @@ contains
          RightState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k)
       end do; end do; end do
 
-      !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
-      !^CFG END BORISCORR
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1345,7 +1348,6 @@ contains
 
     end subroutine calc_primitives_MHD
     !==========================================================================
-    !^CFG IF BORISCORR BEGIN
     subroutine BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
       ! Convert face centered Boris momenta to MHD velocities
@@ -1527,7 +1529,6 @@ contains
       end do; end do; end do
 
     end subroutine BorisFaceZtoMHD
-    !^CFG END BORISCORR
     !==========================================================================
     subroutine get_face_accurate3d(iSideIn)
       integer, intent(in):: iSideIn
@@ -1975,9 +1976,9 @@ contains
             RightState_VX(:,i,j,k) = Primitive_VI(:,i ) - dVarLimR_VI(:,i )
          end do
       end do; end do
-      !^CFG IF BORISCORR BEGIN
+
       if(DoLimitMomentum) call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
-      !^CFG END BORISCORR
+
     end subroutine get_faceX_second
     !==========================================================================
     subroutine get_faceY_second(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -2017,9 +2018,9 @@ contains
             RightState_VY(:,i,j,k) = Primitive_VI(:,j ) - dVarLimR_VI(:,j )
          end do
       end do; end do
-      !^CFG IF BORISCORR BEGIN
+
       if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
-      !^CFG END BORISCORR
+
     end subroutine get_faceY_second
     !==========================================================================
     subroutine get_faceZ_second(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -2058,14 +2059,14 @@ contains
             RightState_VZ(:,i,j,k) = Primitive_VI(:,k ) - dVarLimR_VI(:,k )
          end do
       end do; end do
-      !^CFG IF BORISCORR BEGIN
+
       if(DoLimitMomentum) call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
-      !^CFG END BORISCORR
+
     end subroutine get_faceZ_second
   end subroutine calc_face_value
 
   !===========================================================================
-  subroutine limiter_ppm4(lMin,lMax)
+  subroutine limiter_ppm4(lMin, lMax)
 
     integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
 
@@ -2075,12 +2076,11 @@ contains
     ! on locally-refined grids", 
     ! P. McCorquodale and P. Colella, 2010, LBNL document
     !
-    ! The cell centered primitive variables are  Cell_I(lMin-nG:lMax-1+nG)
-    ! The unlimited face centered values are     Face_I(lMin-1:lMax+1)
-    ! The routine returns the modified left face StateL_I(lMin:lMax)
-    !                             and right face StateR_I(lMin:lMax)
+    ! Input: cell centered primitive variables Cell_I(lMin-nG:lMax-1+nG)
+    ! Output: limited 4th order accurate left  StateL_I(lMin:lMax)
+    !                          and right face  StateR_I(lMin:lMax)
     !
-    ! but it may also set StateR_I(lMin-1) and StateL_I(lMax+1)
+    ! The code may also set StateR_I(lMin-1) and StateL_I(lMax+1)
     ! (this could be excluded).
     !
     ! For now the implementation is done per variable
@@ -2099,13 +2099,20 @@ contains
 
     integer:: l
 
+    logical, parameter:: DoDebug = .false.
+    character(len=*), parameter:: NameSub = 'limiter_ppm4'
     !-------------------------------------------------------------------------
+    if(DoDebug)write(*,*)'!!! starting with lMin, lMax=', lMin, lMax
+    if(DoDebug)write(*,*)'!!! Cell_I(iTest-4:iTest+3)=', Cell_I(iTest-4:iTest+3)
+
     ! Fourth order interpolation scheme
     ! Fill in lMin-1 and lMax+1, because the limiter needs these face values
     do l = lMin - 1, lMax + 1
        Face_I(l) = c7over12*(Cell_I(l-1) + Cell_I(l)) &
             -      c1over12*(Cell_I(l-2) + Cell_I(l+1))
     end do
+
+    if(DoDebug)write(*,*)'!!! Face_I(iTest-1:iTest+1)=', Face_I(iTest-1:iTest+1)
 
     ! Set unlimited values as default
     FaceR_I(lMin:lMax) = Face_I(lMin:lMax)
@@ -2116,12 +2123,17 @@ contains
        D2c_I(l) = Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1) 
     end do
 
+    if(DoDebug)write(*,*)'!!! D2c_I(iTest-3:iTest+2)=', D2c_I(iTest-3:iTest+2)
+
     if(nG > 3)then
        ! Third derivative at face based on cell values
        do l = lMin-2, lMax+2
           D3Face_I(l) = D2c_I(l) - D2c_I(l-1)
        end do
     end if
+
+    if(DoDebug)write(*,*)'!!! D3Face_I(iTest-2:iTest+2)=', &
+         D3Face_I(iTest-2:iTest+2)
 
     ! Loop through cells and modify FaceL and FaceR values if needed
     ! Start  at lMin-1 so that FaceL_I(lMin) gets set.
@@ -2133,9 +2145,9 @@ contains
 
        ! Check for local extremum on two different stencils
        ! Eqs. (24) and (25)
-       if(Dfm*Dfp <= 0 .or. &
+       if(Dfm*Dfp < 0 .or. &
             (Cell_I(l+2) - Cell_I(l)  )* &
-            (Cell_I(l)   - Cell_I(l-2)) <= 0)then
+            (Cell_I(l)   - Cell_I(l-2)) < 0)then
 
           ! Second derivative based on face value (22.3)
           D2f = c6*(Face_I(l+1) + Face_I(l) - 2*Cell_I(l))
