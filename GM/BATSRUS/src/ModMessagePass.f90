@@ -15,7 +15,7 @@ contains
     use ModMain, ONLY : nBlock, Unused_B, &
          TypeBc_I, time_loop, &
          UseConstrainB, UseProjection, &
-         time_simulation,nOrder,prolong_order,optimize_message_pass
+         time_simulation, nOrder, prolong_order, optimize_message_pass
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: far_field_BCs_BLK        
@@ -35,7 +35,7 @@ contains
     logical :: UseOrder2
     logical :: DoResChangeOnly
 
-    logical :: DoRestrictFace, DoTwoCoarseLayers, DoFaces
+    logical :: DoRestrictFace, DoTwoCoarseLayers, DoSendCorner
     integer :: nWidth, nCoarseLayer
 
     integer :: iBlock
@@ -56,7 +56,7 @@ contains
     if(UseConstrainB) DoRestrictFace = .false.
 
     DoTwoCoarseLayers = &
-         nOrder==2 .and. prolong_order==1 .and. .not. DoOneCoarserLayer
+         nOrder>1 .and. prolong_order==1 .and. .not. DoOneCoarserLayer
 
     if(DoTestMe)write(*,*) NameSub, &
          ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers=',&
@@ -92,8 +92,8 @@ contains
        if(.not.DoResChangeOnly) &
             call fix_boundary_ghost_cells(DoRestrictFace)
     else
-       ! Do not pass corners if not necessary
-       DoFaces = .not.(nOrder == 2 .and. UseAccurateResChange)
+       ! Pass corners if necessary
+       DoSendCorner = nOrder > 1 .and. UseAccurateResChange
        ! Pass one layer if possible
        nWidth = nG;      if(nOrder == 1)       nWidth = 1
        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
@@ -101,7 +101,7 @@ contains
             nWidthIn=nWidth, &
             nProlongOrderIn=1, &
             nCoarseLayerIn=nCoarseLayer,&
-            DoSendCornerIn=.not.DoFaces, &
+            DoSendCornerIn=DoSendCorner, &
             DoRestrictFaceIn=DoRestrictFace,&
             DoResChangeOnlyIn=DoResChangeOnlyIn)
        if(.not.DoResChangeOnly) &

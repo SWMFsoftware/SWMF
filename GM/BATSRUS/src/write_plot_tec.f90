@@ -795,11 +795,11 @@ contains
     write(unit_tmp,'(a,a,a)') 'AUXDATA NPROC="',trim(adjustl(stmp)),'"'
 
     !ORDER
-    if(nORDER==2)then
+    if(nOrder > 1)then
        write(stmp,'(i12,a,f8.5)') &
             nOrder,' '//trim(TypeLimiter)//', beta=',BetaLimiter
     else
-       write(stmp,'(i12)')nORDER
+       write(stmp,'(i12)') nOrder
     end if
     write(unit_tmp,'(a,a,a)') 'AUXDATA ORDER="',trim(adjustl(stmp)),'"'
 

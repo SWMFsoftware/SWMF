@@ -2954,7 +2954,7 @@ contains
        end if
     end if
 
-    DoOneCoarserLayer = .not. (nOrder==2 .and. &
+    DoOneCoarserLayer = .not. (nOrder>1 .and. &
          (UseTvdResChange .or. UseAccurateResChange))
     DoLimitMomentum = boris_correction .and. DoOneCoarserLayer
 
