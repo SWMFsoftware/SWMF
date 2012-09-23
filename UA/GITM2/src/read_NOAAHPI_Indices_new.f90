@@ -116,7 +116,7 @@ contains
 
   subroutine read_values
 
-    logical :: done_inner
+    logical :: done_inner, IsFirstTime
     real :: missing
     integer :: iYear
 
@@ -133,12 +133,16 @@ contains
        done_inner = .false.
 
        i = 1 
+       IsFirstTime = .true.
       
        do while (.not.done_inner)
 
           if(datatype.eq.1) then
              ! OLD NOAA HPI FILES
-             if (i==1) read(LunIndices_,'(i4)', iostat = ierror ) iYear
+             if (IsFirstTime) then 
+                read(LunIndices_,'(i4)', iostat = ierror ) iYear
+                IsFirstTime = .false.
+             endif
              tmp(1,i) = iYear
              tmp(2,i) = 1
              read(LunIndices_,'(a10,f3.0,f2.0,f2.0,f8.1)', iostat = ierror ) &
