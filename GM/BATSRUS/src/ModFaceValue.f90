@@ -689,7 +689,7 @@ contains
        DoTest=.false.; DoTestMe=.false.
     end if
 
-    UseLogLimiter   = nOrder == 2 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
+    UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
     UseLogLimiter_V = .false.
     if(UseLogLimiter)then
        if(UseLogRhoLimiter)then
@@ -704,10 +704,10 @@ contains
        end if
     end if
 
-    UsePtotalLimiter = nOrder == 2 .and. nIonFluid == 1 .and. UsePtotalLtd
+    UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
 
     if(.not.DoResChangeOnly & !In order not to call it twice
-         .and.nOrder==2     & !Is not needed for nOrder=1
+         .and. nOrder > 1   & !Is not needed for nOrder=1
          .and. (UseAccurateResChange .or. UseTvdResChange)) &
          call correct_monotone_restrict(iBlock)
 
@@ -716,7 +716,7 @@ contains
     ! for boris correction momentum is used instead of the velocity
 
     ! Number of cells away from the cell center
-    nStencil = min(2,nOrder)
+    nStencil = min(nG, nOrder)
 
     if(DoLimitMomentum)then
        if(UseB0)then
@@ -791,18 +791,6 @@ contains
     ! Now the first or second order face values are calcuted
     !/
     select case(nOrder)
-    case(4)
-       ! Fourth order interpolation
-       if (.not.DoResChangeOnly) then
-          call get_facex_fourth(&
-               1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
-          if(nJ > 1) call get_facey_fourth(&
-               iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
-          if(nK > 1) call get_facez_fourth(&
-               iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
-       else
-          !call CON_stop(NameSub//': 4th order at res change to be implemented')
-       end if
     case(1)
        ! First order reconstruction
        if (.not.DoResChangeOnly) then
@@ -826,24 +814,34 @@ contains
           if(nK > 1 .and. neiLtop(iBlock)==+1) &
                call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace)
        end if
-    case(2)
-       ! For second order scheme (nOrder==2)   
-       ! use second order limited reconstruction.
-       ! When prolong_order==1 we can use first order reconstruction 
-       ! at resolution changes.
-       ! However, constrained transport requires facevalues
-       ! to be independent of the resolution changes.
+    case(2,4)
 
        if (.not.DoResChangeOnly)then
-          call get_faceX_second(&
-               1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
-          if(nJ > 1) call get_faceY_second(&
-               iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
-          if(nK > 1) call get_faceZ_second(&
-               iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
+          ! Calculate all face values with high order scheme
+          if(nOrder==2)then
+             ! Second order scheme
+             call get_faceX_second(&
+                  1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
+             if(nJ > 1) call get_faceY_second(&
+                  iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
+             if(nK > 1) call get_faceZ_second(&
+                  iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
+          else
+             ! Fourth order scheme
+             call get_facex_fourth(&
+                  1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
+             if(nJ > 1) call get_facey_fourth(&
+                  iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
+             if(nK > 1) call get_facez_fourth(&
+                  iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
+          end if
        end if
 
+       ! Now take care of faces at resolution changes
        if(prolong_order==1 .and..not.UseConstrainB)then
+
+          ! If prolong_order is 1 then use TVD reschange or accurate reschange 
+          ! scheme and overwrite face values at resolution changes
 
           if(nJ == 1 .and. (UseAccurateResChange .or. UseTvdResChange))then
              do iSide = 1, 2
@@ -878,20 +876,37 @@ contains
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace)
           end if
+
        else if(DoResChangeOnly) then
-          ! Second order face values at resolution changes
-          if(neiLeast(iBlock)==+1)&
-               call get_faceX_second(1,1,1,nJ,1,nK)
-          if(neiLwest(iBlock)==+1)&
-               call get_faceX_second(nIFace,nIFace,1,nJ,1,nK)
-          if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
-               call get_faceY_second(1,nI,1,1,1,nK)
-          if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
-               call get_faceY_second(1,nI,nJFace,nJFace,1,nK)
-          if(nK > 1 .and. neiLbot(iBlock)==+1) &
-               call get_faceZ_second(1,nI,1,nJ,1,1)
-          if(nK > 1 .and. neiLtop(iBlock)==+1) &
-               call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace)
+          ! Second order face values at resolution changes as well
+
+          if(nOrder==2)then
+             if(neiLeast(iBlock)==+1)&
+                  call get_faceX_second(1,1,1,nJ,1,nK)
+             if(neiLwest(iBlock)==+1)&
+                  call get_faceX_second(nIFace,nIFace,1,nJ,1,nK)
+             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+                  call get_faceY_second(1,nI,1,1,1,nK)
+             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+                  call get_faceY_second(1,nI,nJFace,nJFace,1,nK)
+             if(nK > 1 .and. neiLbot(iBlock)==+1) &
+                  call get_faceZ_second(1,nI,1,nJ,1,1)
+             if(nK > 1 .and. neiLtop(iBlock)==+1) &
+                  call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace)
+          else
+             if(neiLeast(iBlock)==+1)&
+                  call get_faceX_fourth(1,1,1,nJ,1,nK)
+             if(neiLwest(iBlock)==+1)&
+                  call get_faceX_fourth(nIFace,nIFace,1,nJ,1,nK)
+             if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
+                  call get_faceY_fourth(1,nI,1,1,1,nK)
+             if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
+                  call get_faceY_fourth(1,nI,nJFace,nJFace,1,nK)
+             if(nK > 1 .and. neiLbot(iBlock)==+1) &
+                  call get_faceZ_fourth(1,nI,1,nJ,1,1)
+             if(nK > 1 .and. neiLtop(iBlock)==+1) &
+                  call get_faceZ_fourth(1,nI,1,nJ,nKFace,nKFace)
+          end if
        endif
 
        if(UseLogLimiter .and. .not.DoLimitMomentum)then
