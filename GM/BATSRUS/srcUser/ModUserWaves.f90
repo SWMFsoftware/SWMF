@@ -122,30 +122,32 @@ contains
           call read_var('Velocity',Velocity)
        case('#ENTROPY')
           call read_var('EntropyConstant', EntropyConstant)
-       case('#GAUSSIAN')
-          ! Read parameters for a Gaussian profile multiplied by smoother: 
+       case('#GAUSSIAN', '#TOPHAT')
+          ! Read parameters for a tophat ampl for r/d < 1 or 
+          ! a Gaussian profile multiplied by smoother: 
           !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
+          ! where d = k.(x-xCenter) and k = 1/lambda
           call read_var('iVar',      iVar)
-          call read_var('Amplitude', Amplitude)
+          call read_var('Amplitude', Ampl_V(iVar))
           call read_var('LambdaX',   LambdaX)
           call read_var('LambdaY',   LambdaY)
           call read_var('LambdaZ',   LambdaZ)
-          call read_var('CenterX',   CenterX)
-          call read_var('CenterY',   CenterY)
-          call read_var('CenterZ',   CenterZ)
+          call read_var('CenterX',   x_V(iVar))
+          call read_var('CenterY',   y_V(iVar))
+          call read_var('CenterZ',   z_V(iVar))
 
-          Ampl_V(iVar)  = Amplitude
-          x_V(iVar) = CenterX
-          y_V(iVar) = CenterY
-          z_V(iVar) = CenterZ
-          ! Negative Lambda sets 0 for coefficient (constant)
+          ! Negative Lambda sets 0 for wavenumber (constant in that direction)
           KxWave_V(iVar) = max(0.0, 1/LambdaX)
           KyWave_V(iVar) = max(0.0, 1/LambdaY)
           KzWave_V(iVar) = max(0.0, 1/LambdaZ)
 
-          ! Setting negative value signals that this is a Gaussian
-          iPower_V(iVar) = -2
-
+          if(NameCommand == '#TOPHAT')then
+             ! Setting zero value signals that this is a tophat
+             iPower_V(iVar) = 0
+          else
+             ! Setting negative value signals that this is a Gaussian
+             iPower_V(iVar) = -2
+          end if
        case('#WAVE','#WAVE2','#WAVE4', '#WAVE6')
           call read_var('iVar',iVar)
           call read_var('Width',Width)
@@ -223,7 +225,7 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModMain,     ONLY: TypeCoordSystem, GravitySi
-    use ModGeometry, ONLY: x1, x2, y1, y2, Xyz_DGB
+    use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, Xyz_DGB
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, &
          Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
          UseElectronPressure, UseAnisoPressure
@@ -235,19 +237,18 @@ contains
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nI,nJ,nK
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
     use ModViscosity,ONLY: viscosity_factor
-    use BATL_lib,    ONLY: CoordMax_D,CoordMin_D
+    use BATL_lib,    ONLY: CoordMax_D, CoordMin_D, IsPeriodic_D
     integer, intent(in) :: iBlock
 
     real,dimension(nVar):: State_V, KxTemp_V, KyTemp_V
     real                :: SinSlope, CosSlope, Input2SiUnitX, OmegaSun
-    real                :: rFromSphereCenter, rSphereCenterInit
-    real                :: xCell, yCell, zCell, r, r2
+    real                :: rSphereCenterInit
+    real                :: x, y, z, r, r2, Lx, Ly
     integer             :: i, j, k
 
     real :: RhoLeft, RhoRight, pLeft
     real :: ViscoCoeff = 0.0
-    ! GEM relatex variables
-    real:: x, y, Lx, Ly
+
 
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
@@ -341,18 +342,18 @@ contains
 
        if (DoInitSphere) then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             xCell = Xyz_DGB(x_,i,j,k,iBlock)
-             yCell = Xyz_DGB(y_,i,j,k,iBlock)
-             zCell = Xyz_DGB(z_,i,j,k,iBlock)
-             rFromSphereCenter = sqrt((xCell - xSphereCenterInit)**2 + &
-                  (yCell - ySphereCenterInit)**2 + &
-                  (zCell - zSphereCenterInit)**2)
-             if (rFromSphereCenter <= rSphere)then
+             x = Xyz_DGB(x_,i,j,k,iBlock)
+             y = Xyz_DGB(y_,i,j,k,iBlock)
+             z = Xyz_DGB(z_,i,j,k,iBlock)
+             r = sqrt((x - xSphereCenterInit)**2 + &
+                  (y - ySphereCenterInit)**2 + &
+                  (z - zSphereCenterInit)**2)
+             if (r <= rSphere)then
                 ! inside the sphere                                           
                 ! State_VGB(rho_,i,j,k,iBlock) = RhoMaxNo ! for tophat
                 State_VGB(rho_,i,j,k,iBlock) = RhoBackgrndNo + &
                      (RhoMaxNo - RhoBackgrndNo)* &
-                     (cos(0.5*cPi*rFromSphereCenter/rSphere))**2
+                     (cos(cHalfPi*r/rSphere))**2
              else
                 ! in background flow                                         
                 State_VGB(rho_,i,j,k,iBlock) = RhoBackgrndNo
@@ -393,11 +394,10 @@ contains
 
           if (UseUserInputUnitX) then
              ! Convert to normalized units of length
-             Width_V(:) = Width_V(:)*rSun*Si2No_V(UnitX_)
-             KxWave_V(:) = KxWave_V(:)/(Input2SiUnitX*Si2No_V(UnitX_))        
-             KyWave_V(:) = KyWave_V(:)/(Input2SiUnitX*Si2No_V(UnitX_))    
-             KzWave_V(:) = KzWave_V(:)/(Input2SiUnitX*Si2No_V(UnitX_))    
-
+             Width_V  = Width_V*rSun*Si2No_V(UnitX_)
+             KxWave_V = KxWave_V/(Input2SiUnitX*Si2No_V(UnitX_))        
+             KyWave_V = KyWave_V/(Input2SiUnitX*Si2No_V(UnitX_))    
+             KzWave_V = KzWave_V/(Input2SiUnitX*Si2No_V(UnitX_))    
           end if
 
           if(ShockSlope /= 0.0)then
@@ -438,17 +438,41 @@ contains
        end do; end do; end do
 
        do iVar = 1, nVar
-          if(iPower_V(iVar) < 0.0)then
-             ! Gaussian profile multiplied by smoother: 
+          if(iPower_V(iVar) <= 0)then
+             ! iPower==0: Tophat
+             ! iPower< 0: Gaussian profile multiplied by smoother: 
              !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                r2 =  (KxWave_V(iVar)*(Xyz_DGB(x_,i,j,k,iBlock)-x_V(iVar)))**2&
-                     +(KyWave_V(iVar)*(Xyz_DGB(y_,i,j,k,iBlock)-y_V(iVar)))**2&
-                     +(KzWave_V(iVar)*(Xyz_DGB(z_,i,j,k,iBlock)-z_V(iVar)))**2
-                if(r2 > 4.0) CYCLE
-                r  = sqrt(r2)
-                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock) &
-                     + Ampl_V(iVar)*cos(cPi*0.25*r)**6*exp(-r2)
+                x = Xyz_DGB(x_,i,j,k,iBlock) - x_V(iVar)
+                y = Xyz_DGB(y_,i,j,k,iBlock) - y_V(iVar)
+                z = Xyz_DGB(z_,i,j,k,iBlock) - z_V(iVar)
+                if(IsPeriodic_D(1))then
+                   if(x > +(x2-x1)/2) x = x - (x2-x1)
+                   if(x < -(x2-x1)/2) x = x + (x2-x1)
+                end if
+                if(IsPeriodic_D(2))then
+                   if(y > +(y2-y1)/2) y = y - (y2-y1)
+                   if(y < -(y2-y1)/2) y = y + (y2-y1)
+                end if
+                if(IsPeriodic_D(3))then
+                   if(z > +(z2-z1)/2) z = z - (z2-z1)
+                   if(z < -(z2-z1)/2) z = z + (z2-z1)
+                end if
+                r2 =   (KxWave_V(iVar)*x)**2 + (KyWave_V(iVar)*y)**2 &
+                     + (KzWave_V(iVar)*z)**2
+
+                if(iPower_V(iVar) == 0)then
+                   ! Top hat
+                   if(r2 > 1.0) CYCLE
+                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock) &
+                        + Ampl_V(iVar)
+                else
+                   ! Gaussian smoothed with cos^6
+                   if(r2 > 4.0) CYCLE
+                   r  = sqrt(r2)
+                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock) &
+                        + Ampl_V(iVar)*cos(cPi*0.25*r)**6*exp(-r2)
+                end if
              end do; end do; end do
           else
              ! cos^n profile
