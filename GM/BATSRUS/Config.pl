@@ -72,7 +72,7 @@ foreach (@Arguments){
 	die "$ERROR nMaterial=$1 must be 1 or more\n" if $1 < 1;
 	$nMaterialNew=$1;
 	next};
-    if(/^-ng=(.*)$/)    {$NewGhostCell=$1; next};
+    if(/^-ng=(.*)$/i)         {$NewGhostCell=$1; next};
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
 
