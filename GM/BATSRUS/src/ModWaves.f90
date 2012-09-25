@@ -284,26 +284,18 @@ contains
     use ModLinearAdvection,   ONLY: advance_lin_advection_plus, &
          advance_lin_advection_minus
     use ModMain,              ONLY: CFL
-    Use ModFaceValue,         ONLY: BetaLimiter
     use BATL_lib,             ONLY: Xyz_DGB
 
     integer,intent(in)    ::iBlock
 
-    !\
-    !Soution vector, to account for zero boundary condition
-    !a single layer of the ghost cels is added
-    !/
+    ! Soution vector, to account for zero boundary condition
+    ! a single layer of the ghost cels is added
     real:: F_I(0:nWave+1), F2_I( 0: nWaveHalf+1)
 
-
-    !\
-    !Auxiiary vector of CFL numbers:
-    !/
+    ! Auxiiary vector of CFL numbers:
     real:: CFL_I(1:nWave), CFL2_I(1:nWaveHalf)
 
-    !\
-    !Loop variables:
-    !/
+    ! Loop variables:
     integer :: i,j,k
 
     logical :: IsNegativeEnergy
@@ -327,7 +319,7 @@ contains
                   State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_,i,j,k,iBlock)
              F2_I(nWaveHalf+1)=F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
-                  BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
+                  UseConservativeBC=.true., IsNegativeEnergy=IsNegativeEnergy)
              if(IsNegativeEnergy)call write_and_stop
 
              State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock) = &
@@ -338,7 +330,7 @@ contains
 
              F2_I(nWaveHalf+1) = F2_I(nWaveHalf)
              call advance_lin_advection_minus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
-                  BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
+                  UseConservativeBC=.true., IsNegativeEnergy=IsNegativeEnergy)
              if(IsNegativeEnergy)call write_and_stop
 
              State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
@@ -350,17 +342,17 @@ contains
              F2_I(0) = F2_I(1) 
 
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
-                  BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
+                  UseConservativeBC=.true., IsNegativeEnergy=IsNegativeEnergy)
              if(IsNegativeEnergy) call write_and_stop
 
              State_VGB(AlfvenWavePlusFirst_:AlfvenWavePlusLast_, i,j,k, iBlock) = &
                   F2_I( 1:nWaveHalf)
 
              F2_I( 1:nWaveHalf) = &
-                  State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock)
+                  State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_,i,j,k,iBlock)
              F2_I(0) = F2_I(1)
              call advance_lin_advection_plus( CFL2_I, nWaveHalf, 1, 1, F2_I, &
-                  BetaLimiter, UseConservativeBC= .true., IsNegativeEnergy= IsNegativeEnergy)
+                  UseConservativeBC=.true., IsNegativeEnergy=IsNegativeEnergy)
              if(IsNegativeEnergy) call write_and_stop
 
              State_VGB(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_, i,j,k, iBlock) = &
