@@ -278,8 +278,8 @@ contains
                      *(State_VGB(WaveLast_,i,j,k,iBlock) &
                      *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)) &
                      + State_VGB(WaveFirst_,i,j,k,iBlock) &
-                     *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))) &
-                     /sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+                     *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))) / max(1e-30, &
+                     sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))
              end do; end do; end do
           end if
        end if ! UseAlfvenWaveReflection
