@@ -589,56 +589,104 @@ contains
     integer, intent(in) :: iBlock
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
-    integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iB
-    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
+    integer :: iDim, iDir, jDir, i, j, k, Di, Dj, Dk
+    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
     !--------------------------------------------------------------------------
 
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
 
-    if(.not.IsCartesianGrid) call set_block_jacobian_face(iBlock)
-
     ! the transverse diffusion is ignored in the Jacobian
-    do iDim = 1, nDim
-       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iDir = 1, MaxDim
-             if(iDim == iDir) CYCLE
-
-             iB = iDir
-
+    if(IsCartesianGrid)then
+       do iDim = 1, nDim
+          Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
-             if(IsCartesianGrid)then
+
+             do iDir = 1, MaxDim
+                if(iDim == iDir) CYCLE
+
                 DiffLeft = Coeff*Eta_DFDB(iDim,i,j,k,iDim,iBlock)
                 DiffRight = Coeff*Eta_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
-             else
-                InvDxyzVol_D = DcoordDxyz_DDFD(iDim,:nDim,i,j,k,iDim)*Coeff
-                DiffLeft = sum(Eta_DFDB(:,i,j,k,iDim,iBlock)*InvDxyzVol_D)
 
-                InvDxyzVol_D = &
-                     DcoordDxyz_DDFD(iDim,:nDim,i+Di,j+Dj,k+Dk,iDim)*Coeff
-                DiffRight = &
-                     sum(Eta_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyzVol_D)
-             end if
+                Jacobian_VVCI(iDir,iDir,i,j,k,1) = &
+                     Jacobian_VVCI(iDir,iDir,i,j,k,1) - (DiffLeft + DiffRight)
 
-             Jacobian_VVCI(iB,iB,i,j,k,1) = &
-                  Jacobian_VVCI(iB,iB,i,j,k,1) - (DiffLeft + DiffRight)
-             
-             if(UseNoOverlap)then
-                if(  iDim==1.and.i==1  .or. &
-                     iDim==2.and.j==1  .or. &
-                     iDim==3.and.k==1)        DiffLeft = 0.0
-                if(  iDim==1.and.i==nI .or. &
-                     iDim==2.and.j==nJ .or. &
-                     iDim==3.and.k==nK)       DiffRight = 0.0
-             end if
+                if(UseNoOverlap)then
+                   if(  iDim==1.and.i==1  .or. &
+                        iDim==2.and.j==1  .or. &
+                        iDim==3.and.k==1)        DiffLeft = 0.0
+                   if(  iDim==1.and.i==nI .or. &
+                        iDim==2.and.j==nJ .or. &
+                        iDim==3.and.k==nK)       DiffRight = 0.0
+                end if
 
-             Jacobian_VVCI(iB,iB,i,j,k,2*iDim)   = &
-                  Jacobian_VVCI(iB,iB,i,j,k,2*iDim) + DiffLeft
-             Jacobian_VVCI(iB,iB,i,j,k,2*iDim+1) = &
-                  Jacobian_VVCI(iB,iB,i,j,k,2*iDim+1) + DiffRight
-          end do
-       end do; end do; end do
-    end do
+                Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim)   = &
+                     Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim) + DiffLeft
+                Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) = &
+                     Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) + DiffRight
+             end do
+          end do; end do; end do
+       end do
+    else
+       call set_block_jacobian_face(iBlock)
+
+       do iDim = 1, nDim
+          Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
+
+             do iDir = 1, MaxDim; do jDir = 1, nDim
+                if(iDir ==jDir) CYCLE
+
+                DiffLeft = Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
+                     *DcoordDxyz_DDFD(jDir,iDim,i,j,k,iDim)*Coeff
+                DiffRight = Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
+                     *DcoordDxyz_DDFD(jDir,iDim,i+Di,j+Dj,k+Dk,iDim)*Coeff
+
+                Jacobian_VVCI(iDir,iDir,i,j,k,1) = &
+                     Jacobian_VVCI(iDir,iDir,i,j,k,1) - (DiffLeft + DiffRight)
+
+                if(UseNoOverlap)then
+                   if(  iDim==1.and.i==1  .or. &
+                        iDim==2.and.j==1  .or. &
+                        iDim==3.and.k==1)        DiffLeft = 0.0
+                   if(  iDim==1.and.i==nI .or. &
+                        iDim==2.and.j==nJ .or. &
+                        iDim==3.and.k==nK)       DiffRight = 0.0
+                end if
+
+                Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim)   = &
+                     Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim) + DiffLeft
+                Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) = &
+                     Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) + DiffRight
+
+
+                DiffLeft = -Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
+                     *DcoordDxyz_DDFD(iDir,iDim,i,j,k,iDim)*Coeff
+                DiffRight = -Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
+                     *DcoordDxyz_DDFD(iDir,iDim,i+Di,j+Dj,k+Dk,iDim)*Coeff
+
+                Jacobian_VVCI(iDir,jDir,i,j,k,1) = &
+                     Jacobian_VVCI(iDir,jDir,i,j,k,1) - (DiffLeft + DiffRight)
+
+                if(UseNoOverlap)then
+                   if(  iDim==1.and.i==1  .or. &
+                        iDim==2.and.j==1  .or. &
+                        iDim==3.and.k==1)        DiffLeft = 0.0
+                   if(  iDim==1.and.i==nI .or. &
+                        iDim==2.and.j==nJ .or. &
+                        iDim==3.and.k==nK)       DiffRight = 0.0
+                end if
+
+                Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim)   = &
+                     Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim) + DiffLeft
+                Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim+1) = &
+                     Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim+1) + DiffRight
+
+             end do; end do
+          end do; end do; end do
+       end do
+    end if
 
   end subroutine add_jacobian_resistivity
 
