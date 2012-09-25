@@ -149,10 +149,6 @@ contains
           allocate( &
                FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
                Eta_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
-
-          if(.not.IsCartesianGrid) call stop_mpi(NameSub//&
-               ': semi-implicit resistivity not '// &
-               'yet implemented for non-cartesian grids')
        end if
 
        if(DoTestMe)then
@@ -585,7 +581,8 @@ contains
 
   subroutine add_jacobian_resistivity(iBlock, Jacobian_VVCI)
 
-    use BATL_lib,        ONLY: CellSize_DB, CellVolume_GB
+    use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
+    use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
     use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap
     use ModNumConst,     ONLY: i_DD
 
@@ -593,10 +590,12 @@ contains
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iB
-    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
+    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
     !--------------------------------------------------------------------------
 
     InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
+
+    if(.not.IsCartesianGrid) call set_block_jacobian_face(iBlock)
 
     ! the transverse diffusion is ignored in the Jacobian
     do iDim = 1, nDim
@@ -608,9 +607,18 @@ contains
              iB = iDir
 
              Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
+             if(IsCartesianGrid)then
+                DiffLeft = Coeff*Eta_DFDB(iDim,i,j,k,iDim,iBlock)
+                DiffRight = Coeff*Eta_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
+             else
+                InvDxyzVol_D = DcoordDxyz_DDFD(iDim,:nDim,i,j,k,iDim)*Coeff
+                DiffLeft = sum(Eta_DFDB(:,i,j,k,iDim,iBlock)*InvDxyzVol_D)
 
-             DiffLeft = Coeff*Eta_DFDB(iDim,i,j,k,iDim,iBlock)
-             DiffRight = Coeff*Eta_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
+                InvDxyzVol_D = &
+                     DcoordDxyz_DDFD(iDim,:nDim,i+Di,j+Dj,k+Dk,iDim)*Coeff
+                DiffRight = &
+                     sum(Eta_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyzVol_D)
+             end if
 
              Jacobian_VVCI(iB,iB,i,j,k,1) = &
                   Jacobian_VVCI(iB,iB,i,j,k,1) - (DiffLeft + DiffRight)
