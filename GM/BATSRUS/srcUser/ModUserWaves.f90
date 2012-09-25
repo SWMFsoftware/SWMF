@@ -69,8 +69,11 @@ module ModUser
   ! Velocity of wave (default is set for right going whistler wave test)
   real      :: Velocity = 169.344
 
-  ! Entropy constant for isentropic initial condition
+  ! Entropy constant for isentropic initial condition. Only used if positive.
   real      :: EntropyConstant = -1.0
+
+  ! Integrate sin / cos wave over cell if true
+  logical   :: DoIntegrateWave = .false.
 
   ! Variables used by the user problem AdvectSphere                           
   real      :: pBackgrndIo, uBackgrndIo, FlowAngleTheta, FlowAnglePhi
@@ -122,6 +125,8 @@ contains
           call read_var('Velocity',Velocity)
        case('#ENTROPY')
           call read_var('EntropyConstant', EntropyConstant)
+       case('#WAVEINTEGRAL')
+          call read_var('DoIntegrateWave', DoIntegrateWave)
        case('#GAUSSIAN', '#TOPHAT')
           ! Read parameters for a tophat ampl for r/d < 1 or 
           ! a Gaussian profile multiplied by smoother: 
@@ -237,18 +242,22 @@ contains
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nI,nJ,nK
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
     use ModViscosity,ONLY: viscosity_factor
-    use BATL_lib,    ONLY: CoordMax_D, CoordMin_D, IsPeriodic_D
+    use BATL_lib,    ONLY: nDim, CoordMax_D, CoordMin_D, IsPeriodic_D, &
+         CellSize_DB
+
     integer, intent(in) :: iBlock
 
     real,dimension(nVar):: State_V, KxTemp_V, KyTemp_V
     real                :: SinSlope, CosSlope, Input2SiUnitX, OmegaSun
-    real                :: rSphereCenterInit
-    real                :: x, y, z, r, r2, Lx, Ly
+    real                :: x, y, z, r, r2, Lx, Ly, HalfWidth
     integer             :: i, j, k
 
     real :: RhoLeft, RhoRight, pLeft
     real :: ViscoCoeff = 0.0
 
+    ! For 4th order scheme
+    real:: Laplace
+    real, allocatable:: State_G(:,:,:)
 
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
@@ -333,10 +342,6 @@ contains
           ySphereCenterInit = ySphereCenterInitIo
           zSphereCenterInit = zSphereCenterInitIo
        end if
-       rSphereCenterInit = sqrt( &
-            xSphereCenterInit**2 + &
-            ySphereCenterInit**2 + &
-            zSphereCenterInit**2)
 
        ! Start filling in cells (including ghost cells)
 
@@ -389,6 +394,25 @@ contains
        if(DoInitialize)then
           DoWave = .true.
           DoInitialize=.false.
+
+          if(DoIntegrateWave)then
+             do iVar = 1, nVar
+                if(iPower_V(iVar) == 1)then
+                   if(KxWave_V(iVar) > 0) then
+                      HalfWidth = 0.5*KxWave_V(iVar)*CellSize_DB(x_,iBlock)
+                      Ampl_V(iVar) = Ampl_V(iVar)*sin(HalfWidth) / HalfWidth
+                   end if
+                   if(KyWave_V(iVar) > 0) then
+                      HalfWidth = 0.5*KyWave_V(iVar)*CellSize_DB(y_,iBlock)
+                      Ampl_V(iVar) = Ampl_V(iVar)*sin(HalfWidth) / HalfWidth
+                   end if
+                   if(KzWave_V(iVar) > 0) then
+                      HalfWidth = 0.5*KzWave_V(iVar)*CellSize_DB(z_,iBlock)
+                      Ampl_V(iVar) = Ampl_V(iVar)*sin(HalfWidth) / HalfWidth
+                   end if
+                end if
+             end do
+          end if
 
           PrimInit_V = ShockLeftState_V
 
@@ -496,6 +520,36 @@ contains
                State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
        end do; end do; end do
 
+       if(EntropyConstant > 0.0)then
+          do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
+             State_VGB(p_,i,j,k,iBlock) = &
+                  EntropyConstant*State_VGB(Rho_,i,j,k,iBlock)**g
+          end do; end do; end do
+          ! Make sure the pressure gets integrated below
+          ! This only works if the velocity is zero, so e = p/(g-1)
+          iPower_V(p_) = 2*iPower_V(Rho_)
+       end if
+
+       if(DoIntegrateWave)then
+          ! Convert to cell averages
+          allocate(State_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+          do iVar = 1, nVar
+             ! Tophat should not be integrated. 
+             ! Pure cosine can be integrated analytically
+             if(abs(iPower_V(iVar)) <= 1) CYCLE
+
+             State_G = State_VGB(iVar,:,:,:,iBlock)
+             do k=1, nK; do j=1, nJ; do i = 1, nI
+                Laplace =                   State_G(i-1,j,k) + State_G(i+1,j,k)
+                if(nJ > 1)Laplace=Laplace + State_G(i,j-1,k) + State_G(i,j+1,k)
+                if(nK > 1)Laplace=Laplace + State_G(i,j,k-1) + State_G(i,j,k+1)
+                State_VGB(iVar,i,j,k,iBlock) = &
+                     (1 - nDim/12.0)*State_VGB(iVar,i,j,k,iBlock) + Laplace/24
+             end do; end do; end do
+          end do
+          deallocate(State_G)
+       end if
+
     case('GEM')
        !write(*,*)'GEM problem set up'
        State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(Xyz_DGB(y_,:,:,:,iBlock)/Lambda0)
@@ -570,13 +624,6 @@ contains
             'user_set_ics: undefined user problem='//UserProblem)
 
     end select
-
-    if(EntropyConstant > 0.0)then
-       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
-          State_VGB(p_,i,j,k,iBlock) = &
-               EntropyConstant*State_VGB(Rho_,i,j,k,iBlock)**g
-       end do; end do; end do
-    end if
 
   end subroutine user_set_ics
 
@@ -683,63 +730,52 @@ contains
 
       use ModMain,       ONLY: time_simulation, TypeCoordSystem
       use ModGeometry,   ONLY: Xyz_DGB
-      use ModNumConst,   ONLY: cPi, cTwoPi
+      use ModNumConst,   ONLY: cHalfPi, cTwoPi
       use ModConst,      ONLY: RotationPeriodSun
       use ModAdvance,    ONLY: State_VGB
       use ModVarIndexes, ONLY: Rho_
       use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitX_, UnitU_,UnitT_
 
       integer,intent(in)  :: iBlock
-      real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(out)::RhoExact_G,&
-           RhoError_G
+      real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(out):: &
+           RhoExact_G, RhoError_G
+
       real    :: x, y, z, t
       real    :: xSphereCenter, ySphereCenter, zSphereCenter
       real    :: rFromCenter, rSphereCenter
       real    :: PhiSphereCenterInertial, PhiSphereCenterRotating
-      real    :: OmegaSun, phi
       integer :: i, j, k
 
       character(len=*),parameter  :: NameSub = 'calc_analytic_sln_sphere'
       !-----------------------------------------------------------------
-      t = time_simulation
-      OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
-      phi = OmegaSun*t*Si2No_V(UnitT_)
+      ! Find current location of sphere center
+      t = time_simulation*Si2No_V(UnitT_)
+      xSphereCenter = xSphereCenterInit + UxNo*t
+      ySphereCenter = ySphereCenterInit + UyNo*t
+      zSphereCenter = zSphereCenterInit + UzNo*t
+
+      ! transform if rotating frame
+      if (TypeCoordSystem =='HGC') then       
+         rSphereCenter = sqrt(xSphereCenter**2 + ySphereCenter**2)
+         PhiSphereCenterInertial = atan2(ySphereCenter, xSphereCenter)
+         PhiSphereCenterRotating = PhiSphereCenterInertial - &
+              time_simulation*cTwoPi/RotationPeriodSun
+         xSphereCenter = rSphereCenter*cos(PhiSphereCenterRotating)
+         ySphereCenter = rSphereCenter*sin(PhiSphereCenterRotating)
+      end if
+
       do k=MinK,MaxK ; do j= MinJ,MaxJ ; do i= MinI,MaxI
 
          x = Xyz_DGB(x_,i,j,k,iBlock)
          y = Xyz_DGB(y_,i,j,k,iBlock)
          z = Xyz_DGB(z_,i,j,k,iBlock)
 
-         ! Find current location of sphere center
-         xSphereCenter = xSphereCenterInit + &
-              UxNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
-         ySphereCenter = ySphereCenterInit + &
-              UyNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
-         zSphereCenter = zSphereCenterInit + &
-              UzNo*No2Si_V(UnitU_)*t*Si2No_V(UnitX_)
-
-         ! transform if rotating frame
-         if (TypeCoordSystem =='HGC') then       
-            rSphereCenter = sqrt( &
-                 xSphereCenter**2 + &
-                 ySphereCenter**2 + &
-                 zSphereCenter**2)
-            PhiSphereCenterInertial = atan2(ySphereCenter, xSphereCenter)
-            PhiSphereCenterRotating = PhiSphereCenterInertial - phi
-
-            xSphereCenter = rSphereCenter*cos(PhiSphereCenterRotating)
-            ySphereCenter = rSphereCenter*sin(PhiSphereCenterRotating)
-
-         end if
-
          ! Chcek if this cell is inside the sphere
-         rFromCenter = &
-              sqrt((x-xSphereCenter)**2 + &
-              (y-ySphereCenter)**2 + &
+         rFromCenter = sqrt((x-xSphereCenter)**2 + (y-ySphereCenter)**2 + &
               (z-zSphereCenter)**2)
-         if (rFromCenter .le. rSphere) then
+         if (rFromCenter <= rSphere) then
             RhoExact_G(i,j,k) = RhoBackgrndNo + (RhoMaxNo - RhoBackgrndNo)* &
-                 cos(0.5*cPi*rFromCenter/rSphere)**2
+                 cos(cHalfPi*rFromCenter/rSphere)**2
          else
             RhoExact_G(i,j,k) = RhoBackgrndNo
          end if
