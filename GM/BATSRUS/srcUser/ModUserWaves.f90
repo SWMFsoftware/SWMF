@@ -1141,7 +1141,7 @@ contains
 
     Spread = 4.0*Eta0*Time_Simulation
     Field = AmplitudeGaussian/(sqrt(cPi*Spread)) &
-         *exp(-Xyz_DGB(y_,1,j,1,iBlock)**2/Spread)
+         *exp(-Xyz_DGB(y_,i,j,k,iBlock)**2/Spread)
 
     B_D = (/ Field, 0.0, 0.0 /)
 
