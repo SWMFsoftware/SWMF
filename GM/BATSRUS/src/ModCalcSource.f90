@@ -35,7 +35,8 @@ contains
          UseAlfvenWaveReflection, UseTransverseTurbulence, SigmaD
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
-         QeByQtotal, UseTurbulentCascade
+         QeByQtotal, UseTurbulentCascade, KarmanTaylorBeta, &
+         UseScaledCorrelationLength
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -231,7 +232,7 @@ contains
 
        if(UseAlfvenWaveReflection)then
           ! The contribution below is not the wave reflection associated
-          ! with turbulence mixing, but compressibility mixing terms that
+          ! with turbulence mixing, but shear flow mixing terms that
           ! appear in the (simplified) incompressible turbulence framework
           if(UseTransverseTurbulence)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -266,7 +267,22 @@ contains
                      - Coef*DivU_C(i,j,k)/6.0
              end do; end do; end do
           end if
-       end if
+
+          if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
+             ! Positive (definite) source term for the correlation length
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+                Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) + &
+                     2.0*KarmanTaylorBeta*sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
+                     *(State_VGB(WaveLast_,i,j,k,iBlock) &
+                     *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)) &
+                     + State_VGB(WaveFirst_,i,j,k,iBlock) &
+                     *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))) &
+                     /sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+             end do; end do; end do
+          end if
+       end if ! UseAlfvenWaveReflection
     end if
 
     if(UseCoronalHeating .and. DoExtendTransitionRegion .or. UseRadCooling) &
