@@ -498,11 +498,14 @@ end subroutine update_states_mhd
 subroutine fix_anisotropy
 
   !\
-  ! calc pressure relaxation term for anisotropic pressure in unstable regions 
-  ! if UseConstantTau = true, use TauInstability read from PARAM.in as the 
-  ! contant relaxation time, same for different instabilities.
-  ! if UseConstantTau = false, use growth-rate based relaxation time, varying
-  ! with location.
+  ! Calculate the pressure anisotropy relaxation term for anisotropic MHD.
+  ! Correct the parallel pressure based on the firehose, mirror and proton 
+  ! cyclotron instability criteria in unstable regions and the global relaxation, 
+  ! if present, in the whole domain. The one that changes Ppar most is applied.
+  !
+  ! If UseConstantTau = true, use TauInstability read from PARAM.in as the 
+  ! contant relaxation time, same for different instabilities. 
+  ! TauGlobal is a constant read from PARAM.in.
   !/
 
   use ModVarIndexes, ONLY: Bx_, Bz_, Ppar_, p_
