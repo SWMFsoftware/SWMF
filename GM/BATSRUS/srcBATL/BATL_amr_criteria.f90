@@ -149,7 +149,7 @@ contains
     end interface
     optional :: user_amr_geometry
 
-    integer :: iBlock,iCrit,nCrit,iGeo,iArea,AreaSign
+    integer :: iBlock,iCrit,nCrit,iGeo,iArea,AreaSign,iAera,idx
     logical :: DoTestMe = .false.
     character(len=lNameArea) :: regionname
 
@@ -266,7 +266,16 @@ contains
           write(*,"(A17,100(F10.3))") "ResolutionLimit_I : ", ResolutionLimit_I
           write(*,"(A17,100(I10))") "iResolutionLimit_I     : ",iResolutionLimit_I
           write(*,"(A17,100(I10))") "iVarCritAll_I       : ", iVarCritAll_I
-          write(*,"(A17,100(A10))") "AreaGeo_I%Name      : ", AreaGeo_I%Name
+          write(*,"(A17,100(A10))") "nAreaPerCritAll_I   : ",nAreaPerCritAll_I
+          do iCrit=1,nAmrCritUsed
+             write(*,"(A11,I3)") "Criteria : ",iCrit
+             do iArea =1,nAreaPerCritAll_I(iCrit)
+                idx = iAreaIdx_II(iArea,iCrit)
+                write(*,"(A14,A6,I4,A8,A10,A14,A10)") " ","Idx = ", idx," Name = ",&
+                    AreaGeo_I(abs(idx))%Name, " NameRegion = ",&
+                    AreaGeo_I(abs(idx))%NameRegion
+             end do
+          end do
           write(*,"(A17,100(I10))") "iVarCritAll_I       : ", iVarCritAll_I
           write(*,"(A17,100(I10))") "AmrCrit_IB          : ", shape(AmrCrit_IB) 
           write(*,*) ""
@@ -1371,7 +1380,7 @@ contains
 
     ! Find if Criteria should be used in block
     do iCrit=1,nAmrCritUsed
-       UseCrit_IB(iCrit,iBlock) = .true.
+       UseCrit_IB(iCrit,iBlock) = .false.
        do iArea =1,nAreaPerCritAll_I(iCrit)
           idx = iAreaIdx_II(iArea,iCrit)
 
@@ -1380,11 +1389,9 @@ contains
                user_amr_geometry=user_amr_geometry)
 
           if(idx < 0) UseBlock = .not. UseBlock
-          UseCrit_IB(iCrit,iBlock) = UseCrit_IB(iCrit,iBlock) .and. UseBlock
-
+          UseCrit_IB(iCrit,iBlock) = UseCrit_IB(iCrit,iBlock) .or. UseBlock
        end do
     end do
-
   end subroutine set_amr_geometry
   !============================================================================
   logical function masked_amr_criteria(iBlock,iCritExtIn)
