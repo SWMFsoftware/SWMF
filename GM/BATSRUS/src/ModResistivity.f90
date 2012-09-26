@@ -639,9 +639,9 @@ contains
                 if(iDir ==jDir) CYCLE
 
                 DiffLeft = Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
-                     *DcoordDxyz_DDFD(jDir,iDim,i,j,k,iDim)*Coeff
+                     *DcoordDxyz_DDFD(iDim,jDir,i,j,k,iDim)*Coeff
                 DiffRight = Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
-                     *DcoordDxyz_DDFD(jDir,iDim,i+Di,j+Dj,k+Dk,iDim)*Coeff
+                     *DcoordDxyz_DDFD(iDim,jDir,i+Di,j+Dj,k+Dk,iDim)*Coeff
 
                 Jacobian_VVCI(iDir,iDir,i,j,k,1) = &
                      Jacobian_VVCI(iDir,iDir,i,j,k,1) - (DiffLeft + DiffRight)
@@ -662,9 +662,9 @@ contains
 
 
                 DiffLeft = -Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
-                     *DcoordDxyz_DDFD(iDir,iDim,i,j,k,iDim)*Coeff
+                     *DcoordDxyz_DDFD(iDim,iDir,i,j,k,iDim)*Coeff
                 DiffRight = -Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
-                     *DcoordDxyz_DDFD(iDir,iDim,i+Di,j+Dj,k+Dk,iDim)*Coeff
+                     *DcoordDxyz_DDFD(iDim,iDir,i+Di,j+Dj,k+Dk,iDim)*Coeff
 
                 Jacobian_VVCI(iDir,jDir,i,j,k,1) = &
                      Jacobian_VVCI(iDir,jDir,i,j,k,1) - (DiffLeft + DiffRight)
