@@ -2,7 +2,7 @@
 module ModFaceValue
 
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       x_, y_, z_
+       x_, y_, z_, nDim
   use ModVarIndexes
 
   use ModMain, ONLY: iTest
@@ -14,6 +14,7 @@ module ModFaceValue
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.
+  logical, public :: UseFiniteVolume4     = .false.
 
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
@@ -50,21 +51,23 @@ module ModFaceValue
   real, parameter:: cThird = 1./3., cTwoThird = 2./3., cSixth=1./6.
   real, parameter:: c7over12 = 7.0/12.0, c1over12 = 1.0/12.0
 
+  !primitive variables
+  real:: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+  logical:: IsTrueCell_I(-1:MaxIJK+2)
+
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
   real:: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
   real:: Primitive_VI(1:nVar,1-nG:MaxIJK+nG)
 
   ! variables for the PPM4 limiter
+  integer:: iMin, iMax, jMin, jMax, kMin, kMax
   real:: Cell_I(1-nG:MaxIJK+nG)
   real:: Face_I(0:MaxIJK+2)
   real:: FaceL_I(1:MaxIJK+2)
   real:: FaceR_I(0:MaxIJK+1)
-
-  logical:: IsTrueCell_I(-1:MaxIJK+2)
-
-  !primitive variables
-  real:: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+  real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
   integer :: iVar
 
@@ -652,11 +655,11 @@ contains
          UseConstrainB, nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
 
-    use ModGeometry, ONLY : true_cell,body_BLK
-    use ModPhysics, ONLY: GammaWave
-    use ModPhysics, ONLY: c2LIGHT,inv_c2LIGHT
+    use ModGeometry, ONLY : true_cell, body_BLK
+    use ModPhysics, ONLY: GammaWave, c2LIGHT, inv_c2LIGHT
     use ModB0
-    use ModAdvance, ONLY: State_VGB, UseElectronPressure, UseWavePressure, &
+    use ModAdvance, ONLY: State_VGB, Energy_GBI, &
+         UseElectronPressure, UseWavePressure, &
          LeftState_VX,      &  ! Face Left  X
          RightState_VX,     &  ! Face Right X
          LeftState_VY,      &  ! Face Left  Y
@@ -666,6 +669,8 @@ contains
 
     use ModParallel, ONLY : &
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
+
+    use ModEnergy, ONLY: calc_pressure
 
     logical, intent(in):: DoResChangeOnly
     integer, intent(in):: iBlock
@@ -678,6 +683,15 @@ contains
 
     ! Number of cells needed to get the face values
     integer:: nStencil
+
+    ! Variables related to 4th order finite volume scheme
+    real, parameter:: &
+         cLaplace1 = 1.0 + 2.0*nDim/24.0, &
+         cLaplace2 = 1.0/24.0
+
+    real:: Laplace_V(nVar), Laplace
+
+    real:: State_V(nVar), Energy
 
     logical::DoTest,DoTestMe
     character(len=*), parameter :: NameSub = 'calc_face_value'
@@ -716,7 +730,11 @@ contains
     ! for boris correction momentum is used instead of the velocity
 
     ! Number of cells away from the cell center
-    nStencil = min(nG, nOrder)
+    if(nOrder == 4)then
+       nStencil = nG
+    else
+       nStencil = nOrder
+    end if
 
     if(DoLimitMomentum)then
        if(UseB0)then
@@ -752,10 +770,95 @@ contains
           end do; end do
        end if
     else
-       if(UseAccurateResChange)then
-          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-             call calc_primitives_MHD         !needed for x-faces
+       if(UseAccurateResChange .or. UseFiniteVolume4)then
+          if(nJ == 1)then
+             jMin = 1; jMax = 1
+          else
+             jMin = MinJ; jMax = MaxJ
+          end if
+          if(nK == 1)then
+             kMin = 1; kMax = 1
+          else
+             kMin = MinK; kMax = MaxK
+          end if
+          do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+             call calc_primitives_MHD         ! all cells
           end do; end do; end do
+          if(UseFiniteVolume4)then
+             ! Calculate 4th order accurate cell averaged primitive variables
+
+             ! First get 4th order accurate cell centered conservative vars
+             iMin = MinI + 1; iMax = MaxI - 1
+             if(nJ > 1)then
+                jMin = MinJ + 1; jMax = MaxJ - 1
+             end if
+             if(nK > 1)then
+                kMin = MinK + 1; kMax = MaxK - 1
+             end if
+
+             ! Store primitive and conservative values based on cell averages
+             ! These are used to do the Laplace operators for corrections
+             Prim_VG = Primitive_VG
+
+             ! Convert to pointwise conservative variable (eq. 12)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+
+                ! Store cell averaged value
+                State_V = State_VGB(:,i,j,k,iBlock)
+
+                ! Calculate 4th order accurate cell center value (eq 12)
+                Laplace_V = &
+                     State_VGB(:,i-1,j,k,iBlock) + State_VGB(:,i+1,j,k,iBlock)
+                if(nJ > 1) Laplace_V = Laplace_V + &
+                     State_VGB(:,i,j-1,k,iBlock) + State_VGB(:,i,j+1,k,iBlock)
+                if(nK > 1) Laplace_V = Laplace_V + &
+                     State_VGB(:,i,j,k-1,iBlock) + State_VGB(:,i,j,k+1,iBlock)
+                State_VGB(:,i,j,k,iBlock) = &
+                     cLaplace1*State_V - cLaplace2*Laplace_V
+
+                do iFluid = 1, nFluid
+                   ! Store cell averaged energy
+                   Energy = Energy_GBI(i,j,k,iBlock,iFluid)
+
+                   ! Calculate 4th order accurate cell center energy
+                   Laplace = Energy_GBI(i-1,j,k,iBlock,iFluid) &
+                        +    Energy_GBI(i+1,j,k,iBlock,iFluid)
+                   if(nJ > 1) Laplace = Laplace &
+                        + Energy_GBI(i,j-1,k,iBlock,iFluid) &
+                        + Energy_GBI(i,j+1,k,iBlock,iFluid)
+                   if(nK > 1) Laplace = Laplace &
+                        + Energy_GBI(i,j,k-1,iBlock,iFluid) &
+                        + Energy_GBI(i,j,k+1,iBlock,iFluid)
+                   Energy_GBI(i,j,k,iBlock,iFluid) = &
+                        cLaplace1*Energy - cLaplace2*Laplace
+                   ! check positivity !!!
+
+                   ! Get 4th order accurate cell center pressure
+                   call calc_pressure(i,i,j,j,k,k,iBlock,iFluid,iFluid)
+
+                   ! Restore cell averaged energy
+                   Energy_GBI(i,j,k,iBlock,iFluid) = Energy
+                end do
+
+                !!! check positivity ???
+                ! Convert to pointwise primitive variables
+                call calc_primitives_MHD
+
+                ! Convert to cell averaged primitive variables (eq. 16)
+                Laplace_V = Prim_VG(:,i-1,j,k) + Prim_VG(:,i+1,j,k) &
+		     - 2*Prim_VG(:,i,j,k)
+                if(nJ > 1) Laplace_V = Laplace_V &
+                     + Prim_VG(:,i,j-1,k) + Prim_VG(:,i,j+1,k)
+                if(nK > 1) Laplace_V = Laplace_V &
+                     + Prim_VG(:,i,j,k-1) + Prim_VG(:,i,j,k+1)
+
+                Primitive_VG(:,i,j,k) = &
+                     Primitive_VG(:,i,j,k) + cLaplace2*Laplace_V
+
+                ! Restore cell averaged state
+                State_VGB(:,i,j,k,iBlock) = State_V
+             end do; end do; end do
+          end if
        else
           do k=kMinFace,kMaxFace
              do j=jMinFace,jMaxFace
@@ -1192,7 +1295,15 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-      if(TypeLimiter == 'ppm4')then
+      if(TypeLimiter == 'no')then
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            LeftState_VX(:,i,j,k) = &
+                 c7over12*(Primitive_VG(:,i-1,j,k) + Primitive_VG(:,i,j,k)) - &
+                 c1over12*(Primitive_VG(:,i-2,j,k) + Primitive_VG(:,i+1,j,k))
+
+            RightState_VX(:,i,j,k) = LeftState_VX(:,i,j,k)
+         end do; end do; end do
+      else
          do k = kMin, kMax; do j = jMin, jMax; do iVar = 1, nVar
             ! Copy points along i direction into 1D arrays
             Cell_I(iMin-nG:iMax-1+nG)=Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
@@ -1200,14 +1311,6 @@ contains
             ! Copy back the results into the 3D arrays
             LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
             RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
-         end do; end do; end do
-      else
-         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-            LeftState_VX(:,i,j,k) = &
-                 c7over12*(Primitive_VG(:,i-1,j,k) + Primitive_VG(:,i,j,k)) - &
-                 c1over12*(Primitive_VG(:,i-2,j,k) + Primitive_VG(:,i+1,j,k))
-
-            RightState_VX(:,i,j,k) = LeftState_VX(:,i,j,k)
          end do; end do; end do
       end if
 
@@ -1222,7 +1325,15 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-      if(TypeLimiter == 'ppm4')then
+      if(TypeLimiter == 'no')then
+         do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+            LeftState_VY(:,i,j,k) = &
+                 c7over12*(Primitive_VG(:,i,j-1,k) + Primitive_VG(:,i,j,k)) - &
+                 c1over12*(Primitive_VG(:,i,j-2,k) + Primitive_VG(:,i,j+1,k))
+
+            RightState_VY(:,i,j,k)=LeftState_VY(:,i,j,k)
+         end do; end do; end do
+      else
          do k = kMin, kMax; do i = iMin, iMax; do iVar = 1, nVar
             ! Copy points along j direction into 1D arrays
             Cell_I(jMin-nG:jMax-1+nG)=Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
@@ -1230,14 +1341,6 @@ contains
             ! Copy back the results into the 3D arrays
             LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
             RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
-         end do; end do; end do
-      else
-         do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-            LeftState_VY(:,i,j,k) = &
-                 c7over12*(Primitive_VG(:,i,j-1,k) + Primitive_VG(:,i,j,k)) - &
-                 c1over12*(Primitive_VG(:,i,j-2,k) + Primitive_VG(:,i,j+1,k))
-
-            RightState_VY(:,i,j,k)=LeftState_VY(:,i,j,k)
          end do; end do; end do
       end if
 
@@ -1252,7 +1355,15 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-      if(TypeLimiter == 'ppm4')then
+      if(TypeLimiter == 'no')then
+         do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+            LeftState_VZ(:,i,j,k) = &
+                 c7over12*(Primitive_VG(:,i,j,k-1) + Primitive_VG(:,i,j,k)) - &
+                 c1over12*(Primitive_VG(:,i,j,k-2) + Primitive_VG(:,i,j,k+1))
+
+            RightState_VZ(:,i,j,k)=LeftState_VZ(:,i,j,k)
+         end do; end do; end do
+      else
          do j = jMin, jMax; do i = iMin, iMax; do iVar = 1, nVar
             ! Copy points along k direction into 1D arrays
             Cell_I(kMin-nG:kMax-1+nG)=Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
@@ -1260,14 +1371,6 @@ contains
             ! Copy back the results into the 3D arrays
             LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
             RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
-         end do; end do; end do
-      else
-         do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-            LeftState_VZ(:,i,j,k) = &
-                 c7over12*(Primitive_VG(:,i,j,k-1) + Primitive_VG(:,i,j,k)) - &
-                 c1over12*(Primitive_VG(:,i,j,k-2) + Primitive_VG(:,i,j,k+1))
-
-            RightState_VZ(:,i,j,k)=LeftState_VZ(:,i,j,k)
          end do; end do; end do
       end if
 
