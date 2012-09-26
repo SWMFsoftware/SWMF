@@ -37,8 +37,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModReadParam
   use ModMessagePass,   ONLY: DoOneCoarserLayer
   use ModFaceValue,     ONLY: &
-       UseTvdResChange, UseAccurateResChange, DoLimitMomentum, BetaLimiter, &
-       TypeLimiter, read_face_value_param
+       UseTvdResChange, UseAccurateResChange, UseFiniteVolume4, &
+       DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
@@ -1056,6 +1056,7 @@ subroutine MH_set_parameters(TypeAction)
            if(TypeLimiter /= 'minmod') &
                 call read_var('LimiterBeta', BetaLimiter)
         elseif(nOrder==4)then
+           call read_var('UseFiniteVolume4', UseFiniteVolume4)
            if(FluxType == 'SIMPLE')then
               TypeLimiter = 'no'
            else
