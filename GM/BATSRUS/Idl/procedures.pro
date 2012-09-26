@@ -2900,7 +2900,7 @@ case ndim of
       result=result/n(0)/n(1)
    end
    3: begin
-      result=dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n2)
+      result=dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n(2))
       for ix=0,(nx(0)-1)/n(0) do $
       for iy=0,(nx(1)-1)/n(1) do $
       for iz=0,(nx(2)-1)/n(2) do $
