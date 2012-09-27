@@ -42,6 +42,7 @@ subroutine euv_ionization_heat(iBlock)
 
   EuvIonRate = 0.0
   EuvHeating(:,:,:,iBlock)= 0.0
+  PhotoElectronHeating(:,:,:,iBlock)= 0.0
   eEuvHeating(:,:,:,iBlock) = 0.0
   EuvIonRateS(:,:,:,:,iBlock) = 0.0 
   EuvDissRateS(:,:,:,:,iBlock) = 0.0
