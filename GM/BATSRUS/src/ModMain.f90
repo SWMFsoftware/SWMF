@@ -137,11 +137,12 @@ Module ModMain
   integer, parameter :: nJFace=nJ+1
   integer, parameter :: nKFace=nK+1  
 
-  ! Limits in the orthogonal directions
+  ! Limits in the orthogonal directions. Default is no ghost cells,
+  ! but this can be changed to 1 or 2 ghost cells depending on scheme
   integer:: &
-       iMinFace = 1, iMaxFace = nI, &
-       jMinFace = 1, jMaxFace = nJ, &
-       kMinFace = 1, kMaxFace = nK
+       iMinFace = 1, iMaxFace = nI, iMinFace2 = 1, iMaxFace2 = nI, &
+       jMinFace = 1, jMaxFace = nJ, jMinFace2 = 1, jMaxFace2 = nJ, &
+       kMinFace = 1, kMaxFace = nK, kMinFace2 = 1, kMaxFace2 = nK
 
   !\
   ! How to deal with div B = 0

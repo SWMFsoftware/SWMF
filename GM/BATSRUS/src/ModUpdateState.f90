@@ -17,6 +17,7 @@ subroutine update_states_MHD(iStage,iBlock)
        update_wave_group_advection
   use ModResistivity,   ONLY: UseResistivity, &          !^CFG IF DISSFLUX
        calc_resistivity_source                           !^CFG IF DISSFLUX
+  use ModFaceValue, ONLY: UseFaceIntegral4
   use BATL_lib, ONLY: CellVolume_GB
   implicit none
 
@@ -30,7 +31,7 @@ subroutine update_states_MHD(iStage,iBlock)
        Bx, By, Bz, BxOld, ByOld, BzOld, B0x, B0y, B0z, RhoUx, RhoUy, RhoUz,&
        mBorisMinusRhoUxOld, mBorisMinusRhoUyOld, mBorisMinusRhoUzOld,&
        Rho, RhoInv, eCorr
-  real:: DtLocal, DtFactor
+  real:: DtLocal, DtFactor, Coeff
   real:: B0_DC(3,nI,nJ,nK)
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
@@ -89,6 +90,27 @@ subroutine update_states_MHD(iStage,iBlock)
           + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) ) &
           /CellVolume_GB(i,j,k,iBlock) ) 
   end do; end do; end do
+
+  if(UseFaceIntegral4 .and. nDim > 1)then
+     do k = 1,nK; do j = 1,nJ; do i = 1,nI
+        Coeff = DtFactor*time_BLK(i,j,k,iBlock) &
+             /  (24.0*CellVolume_GB(i,j,k,iBlock))
+        Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Coeff* &
+             ( Flux_VX(:,i,j+1,k) &
+             + Flux_VX(:,i,j-1,k) &
+             - 2*Flux_VX(:,i,j,k) &
+             - Flux_VX(:,i+1,j+1,k) &
+             - Flux_VX(:,i+1,j-1,k) &
+             + 2*Flux_VX(:,i+1,j,k) &
+             + Flux_VY(:,i+1,j,k) &
+             + Flux_VY(:,i-1,j,k) &
+             - 2*Flux_VY(:,i,j,k) &
+             - Flux_VY(:,i+1,j+1,k) &
+             - Flux_VY(:,i-1,j+1,k) &
+             + 2*Flux_VY(:,i,j+1,k) )
+     
+     end do; end do; end do
+  end if
 
   if(UseMultiIon .and. DoRestrictMultiIon)call multi_ion_set_restrict(iBlock)
 

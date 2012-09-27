@@ -37,7 +37,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModReadParam
   use ModMessagePass,   ONLY: DoOneCoarserLayer
   use ModFaceValue,     ONLY: &
-       UseTvdResChange, UseAccurateResChange, UseFiniteVolume4, &
+       UseTvdResChange, UseAccurateResChange, &
+       UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, &
        DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
@@ -120,7 +121,7 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Temporary variables
   logical :: DoEcho=.false.
-  integer :: nVarRead=0
+  integer :: nVarRead=0, nGMin
   character (len=lStringLine) :: NameEquationRead="?"
 
   character (len=50) :: plot_string,log_string
@@ -1051,17 +1052,30 @@ subroutine MH_set_parameters(TypeAction)
 
         call read_var('TypeFlux',FluxType, IsUpperCase=.true.)
         BetaLimiter = 1.0
+        nGMin = 2 ! Minimum number of ghost cell layers
         if(nOrder==2)then
            call read_var('TypeLimiter', TypeLimiter)
            if(TypeLimiter /= 'minmod') &
                 call read_var('LimiterBeta', BetaLimiter)
         elseif(nOrder==4)then
-           call read_var('UseFiniteVolume4', UseFiniteVolume4)
+           call read_var('UseVolumeIntegral4', UseVolumeIntegral4)
+           if(UseVolumeIntegral4) nGMin = nGMin + 1
+           call read_var('UseFaceIntegral4', UseFaceIntegral4)
+           if(nDim == 1) UseFaceIntegral4 = .false.
            if(FluxType == 'SIMPLE')then
               TypeLimiter = 'no'
            else
-              TypeLimiter = 'ppm4'
+              nGMin = nGMin + 1
+              call read_var('UseLimiter4', UseLimiter4)
+              if(UseLimiter4) nGMin = nGMin + 1
            end if
+        end if
+        if(nGMin > nG .and. iProc==0)then
+           write(*,*)'The code if configured with nG=',nG,' ghost cell layers.'
+           write(*,*)'The selected scheme requires at least nGMin=',nGMin,&
+                ' ghost cell layers!'
+           write(*,*)'Either change settings or reconfigure and recompile!'
+           call CON_stop(NameSub//': insufficient number of ghost cells')
         end if
 
      case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
@@ -2197,14 +2211,23 @@ contains
 
     if(IsFirstCheck)then
        call correct_grid_geometry
-
-       if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
+       if(UseConstrainB .or. UseFaceIntegral4) then
           ! Extend face index range in the orthogonal direction
-          ! This is needed for the current CT scheme implementation
+          ! The CT scheme needs 1 extra layers
+          ! the 4th order face integrals need 1 and 2 ghost layers
           iMinFace = 0; iMaxFace = nI+1
-          jMinFace = 0; jMaxFace = nJ+1
-          kMinFace = 0; kMaxFace = nK+1
-       end if                          !^CFG END CONSTRAINB
+          jMinFace = 1 - min(1,nJ-1); jMaxFace = nJ + min(1,nJ-1)
+          kMinFace = 1 - min(1,nK-1); kMaxFace = nK + min(1,nK-1)
+          if(UseFaceIntegral4)then
+             iMinFace2 = -1; iMaxFace2 = nI+2
+             jMinFace2 = 1 - 2*min(1,nJ-1); jMaxFace2 = nJ + 2*min(1,nJ-1)
+             kMinFace2 = 1 - 2*min(1,nK-1); kMaxFace2 = nK + 2*min(1,nK-1)
+          else
+             iMinFace2 = iMinFace; iMaxFace2 = iMaxFace
+             jMinFace2 = jMinFace; jMaxFace2 = jMaxFace
+             kMinFace2 = kMinFace; kMaxFace2 = kMaxFace
+          end if
+       end if
     end if
 
     ! This depends on the grid geometry set above

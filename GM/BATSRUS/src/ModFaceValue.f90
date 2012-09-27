@@ -14,7 +14,9 @@ module ModFaceValue
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.
-  logical, public :: UseFiniteVolume4     = .false.
+  logical, public :: UseVolumeIntegral4   = .false.
+  logical, public :: UseFaceIntegral4     = .false.
+  logical, public :: UseLimiter4          = .false.
 
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
@@ -653,7 +655,8 @@ contains
     use ModMultiFluid, ONLY: nIonFluid
     use ModMain,     ONLY: nOrder, prolong_order, BlkTest, UseB0, &
          UseConstrainB, nIFace, nJFace, nKFace, &
-         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
+         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
+         iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
 
     use ModGeometry, ONLY : true_cell, body_BLK
     use ModPhysics, ONLY: GammaWave, c2LIGHT, inv_c2LIGHT
@@ -685,10 +688,7 @@ contains
     integer:: nStencil
 
     ! Variables related to 4th order finite volume scheme
-    real, parameter:: &
-         cLaplace1 = 1.0 + 2.0*nDim/24.0, &
-         cLaplace2 = 1.0/24.0
-
+    real, parameter:: c24th = 1.0/24.0
     real:: Laplace_V(nVar), Laplace
 
     real:: State_V(nVar), Energy
@@ -770,7 +770,7 @@ contains
           end do; end do
        end if
     else
-       if(UseAccurateResChange .or. UseFiniteVolume4)then
+       if(UseAccurateResChange .or. UseVolumeIntegral4)then
           if(nJ == 1)then
              jMin = 1; jMax = 1
           else
@@ -784,7 +784,7 @@ contains
           do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
              call calc_primitives_MHD         ! all cells
           end do; end do; end do
-          if(UseFiniteVolume4)then
+          if(UseVolumeIntegral4)then
              ! Calculate 4th order accurate cell averaged primitive variables
 
              ! First get 4th order accurate cell centered conservative vars
@@ -807,30 +807,29 @@ contains
                 State_V = State_VGB(:,i,j,k,iBlock)
 
                 ! Calculate 4th order accurate cell center value (eq 12)
-                Laplace_V = &
+                Laplace_V = -2*nDim*State_V + &
                      State_VGB(:,i-1,j,k,iBlock) + State_VGB(:,i+1,j,k,iBlock)
                 if(nJ > 1) Laplace_V = Laplace_V + &
                      State_VGB(:,i,j-1,k,iBlock) + State_VGB(:,i,j+1,k,iBlock)
                 if(nK > 1) Laplace_V = Laplace_V + &
                      State_VGB(:,i,j,k-1,iBlock) + State_VGB(:,i,j,k+1,iBlock)
-                State_VGB(:,i,j,k,iBlock) = &
-                     cLaplace1*State_V - cLaplace2*Laplace_V
+                State_VGB(:,i,j,k,iBlock) = State_V - c24th*Laplace_V
 
                 do iFluid = 1, nFluid
                    ! Store cell averaged energy
                    Energy = Energy_GBI(i,j,k,iBlock,iFluid)
 
                    ! Calculate 4th order accurate cell center energy
-                   Laplace = Energy_GBI(i-1,j,k,iBlock,iFluid) &
-                        +    Energy_GBI(i+1,j,k,iBlock,iFluid)
+                   Laplace = -2*nDim*Energy &
+                        + Energy_GBI(i-1,j,k,iBlock,iFluid) &
+                        + Energy_GBI(i+1,j,k,iBlock,iFluid)
                    if(nJ > 1) Laplace = Laplace &
                         + Energy_GBI(i,j-1,k,iBlock,iFluid) &
                         + Energy_GBI(i,j+1,k,iBlock,iFluid)
                    if(nK > 1) Laplace = Laplace &
                         + Energy_GBI(i,j,k-1,iBlock,iFluid) &
                         + Energy_GBI(i,j,k+1,iBlock,iFluid)
-                   Energy_GBI(i,j,k,iBlock,iFluid) = &
-                        cLaplace1*Energy - cLaplace2*Laplace
+                   Energy_GBI(i,j,k,iBlock,iFluid) = Energy - c24th*Laplace
                    ! check positivity !!!
 
                    ! Get 4th order accurate cell center pressure
@@ -846,14 +845,13 @@ contains
 
                 ! Convert to cell averaged primitive variables (eq. 16)
                 Laplace_V = Prim_VG(:,i-1,j,k) + Prim_VG(:,i+1,j,k) &
-		     - 2*Prim_VG(:,i,j,k)
+		     - 2*nDim*Prim_VG(:,i,j,k)
                 if(nJ > 1) Laplace_V = Laplace_V &
                      + Prim_VG(:,i,j-1,k) + Prim_VG(:,i,j+1,k)
                 if(nK > 1) Laplace_V = Laplace_V &
                      + Prim_VG(:,i,j,k-1) + Prim_VG(:,i,j,k+1)
 
-                Primitive_VG(:,i,j,k) = &
-                     Primitive_VG(:,i,j,k) + cLaplace2*Laplace_V
+                Primitive_VG(:,i,j,k) = Primitive_VG(:,i,j,k) + c24th*Laplace_V
 
                 ! Restore cell averaged state
                 State_VGB(:,i,j,k,iBlock) = State_V
@@ -932,11 +930,11 @@ contains
           else
              ! Fourth order scheme
              call get_facex_fourth(&
-                  1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
+                  1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2)
              if(nJ > 1) call get_facey_fourth(&
-                  iMinFace,iMaxFace,1,nJFace,kMinFace,kMaxFace)
+                  iMinFace2,iMaxFace2,1,nJFace,kMinFace2,kMaxFace2)
              if(nK > 1) call get_facez_fourth(&
-                  iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
+                  iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,1,nKFace)
           end if
        end if
 
@@ -1294,14 +1292,14 @@ contains
     subroutine get_facex_fourth(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+
+      real, allocatable, save:: State_VX(:,:,:,:)
       !-----------------------------------------------------------------------
       if(TypeLimiter == 'no')then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VX(:,i,j,k) = &
                  c7over12*(Primitive_VG(:,i-1,j,k) + Primitive_VG(:,i,j,k)) - &
                  c1over12*(Primitive_VG(:,i-2,j,k) + Primitive_VG(:,i+1,j,k))
-
-            RightState_VX(:,i,j,k) = LeftState_VX(:,i,j,k)
          end do; end do; end do
       else
          do k = kMin, kMax; do j = jMin, jMax; do iVar = 1, nVar
@@ -1314,6 +1312,33 @@ contains
          end do; end do; end do
       end if
 
+      if(UseFaceIntegral4 .and. nDim>1)then
+         if(.not.allocated(State_VX)) allocate( &
+              State_VX(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
+
+         ! Convert from face averaged to face centered variables (eq 18)
+         State_VX = LeftState_VX
+         do k = kMinFace,kMaxFace; do j = jMinFace,jMaxFace; do i = iMin,iMax
+            Laplace_V = -2*(nDim-1)*State_VX(:,i,j,k) &
+                 + State_VX(:,i,j-1,k) + State_VX(:,i,j+1,k)
+            if(nK>1) Laplace_V = Laplace_V &
+                 + State_VX(:,i,j,k-1) + State_VX(:,i,j,k+1)
+            LeftState_VX(:,i,j,k) = State_VX(:,i,j,k) - c24th*Laplace_V
+         end do; end do; end do
+         if(TypeLimiter /= 'no')then
+            State_VX = RightState_VX
+            do k=kMinFace,kMaxFace; do j=jMinFace,jMaxFace; do i=iMin,iMax
+               Laplace_V = -2*(nDim-1)*State_VX(:,i,j,k) &
+                    + State_VX(:,i,j-1,k) + State_VX(:,i,j+1,k)
+               if(nK>1) Laplace_V = Laplace_V &
+                    + State_VX(:,i,j,k-1) + State_VX(:,i,j,k+1)
+               RightState_VX(:,i,j,k) = State_VX(:,i,j,k) - c24th*Laplace_V
+            end do; end do; end do
+         end if
+      end if
+
+      if(TypeLimiter == 'no') RightState_VX = LeftState_VX
+
       if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
@@ -1324,14 +1349,14 @@ contains
     subroutine get_facey_fourth(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+
+      real, allocatable, save:: State_VY(:,:,:,:)
       !-----------------------------------------------------------------------
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
             LeftState_VY(:,i,j,k) = &
                  c7over12*(Primitive_VG(:,i,j-1,k) + Primitive_VG(:,i,j,k)) - &
                  c1over12*(Primitive_VG(:,i,j-2,k) + Primitive_VG(:,i,j+1,k))
-
-            RightState_VY(:,i,j,k)=LeftState_VY(:,i,j,k)
          end do; end do; end do
       else
          do k = kMin, kMax; do i = iMin, iMax; do iVar = 1, nVar
@@ -1344,6 +1369,32 @@ contains
          end do; end do; end do
       end if
 
+      if(UseFaceIntegral4)then
+         if(.not.allocated(State_VY)) allocate( &
+              State_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
+
+         ! Convert from face averaged to face centered variables (eq 18)
+         State_VY = LeftState_VY
+         do k = kMinFace,kMaxFace; do j = jMin,jMax; do i = iMinFace,iMaxFace; 
+            Laplace_V = -2*(nDim-1)*State_VY(:,i,j,k) &
+                 + State_VY(:,i-1,j,k) + State_VY(:,i+1,j,k)
+            if(nK>1) Laplace_V = Laplace_V &
+                 + State_VY(:,i,j,k-1) + State_VY(:,i,j,k+1)
+            LeftState_VY(:,i,j,k) = State_VY(:,i,j,k) - c24th*Laplace_V
+         end do; end do; end do
+         if(TypeLimiter /= 'no')then
+            State_VY = RightState_VY
+            do k=kMinFace,kMaxFace; do j=jMin,jMax; do i=iMinFace,iMaxFace; 
+               Laplace_V = -2*(nDim-1)*State_VY(:,i,j,k) &
+                    + State_VY(:,i-1,j,k) + State_VY(:,i+1,j,k)
+               if(nK>1) Laplace_V = Laplace_V &
+                    + State_VY(:,i,j,k-1) + State_VY(:,i,j,k+1)
+               RightState_VY(:,i,j,k) = State_VY(:,i,j,k) - c24th*Laplace_V
+            end do; end do; end do
+         end if
+      end if
+
+      if(TypeLimiter == 'no') RightState_VY = LeftState_VY
       if(DoLimitMomentum)call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
@@ -2243,7 +2294,7 @@ contains
 
     if(DoDebug)write(*,*)'!!! D2c_I(iTest-3:iTest+2)=', D2c_I(iTest-3:iTest+2)
 
-    if(nG > 3)then
+    if(UseLimiter4)then
        ! Third derivative at face based on cell values
        do l = lMin-2, lMax+2
           D3Face_I(l) = D2c_I(l) - D2c_I(l-1)
@@ -2286,8 +2337,8 @@ contains
              ! If D2Ratio is close to 1, no need to limit
              if(D2Ratio >= 1 - c0) CYCLE
 
-             if(nG > 3)then
-                ! Check 3rd derivative condition (28) 
+             if(UseLimiter4)then
+                ! Check 3rd derivative condition (28)
                 D3min = minval(D3Face_I(l-1:l+2))
                 D3max = maxval(D3Face_I(l-1:l+2))
                 if(c3*max(abs(D3max),abs(D3min)) > D3max - D3min) CYCLE
