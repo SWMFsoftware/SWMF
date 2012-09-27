@@ -44,6 +44,7 @@ subroutine add_sources
           /TempUnit(1:nLons,1:nLats,1:nAlts)&
          - RadCooling(1:nLons, 1:nLats, 1:nAlts, iBlock) &
            + EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+           + PhotoElectronHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
            + AuroralHeating &
            + JouleHeating &
            ) &

@@ -65,70 +65,36 @@ subroutine calc_GITM_sources(iBlock)
 
 !     if (UseBoquehoAndBlelly) then
 !
-         do iLat = 1, nLats
-           do iLon = 1, nLons
-             do iAlt = 1, nAlts
-               do iSpecies = 1, nSpecies
+     do iLat = 1, nLats
+        do iLon = 1, nLons
+           do iAlt = 1, nAlts
+              do iSpecies = 1, nSpecies
 
-               GradLogConS(iLon,iLat,iAlt,iSpecies) = &
-                  -1.0*Gravity_GB(iLon,iLat,iAlt,iBlock)*&
-                   (1.0 -  (MeanMajorMass(iLon,iLat,iAlt)/Mass(iSpecies)) )
+                 GradLogConS(iLon,iLat,iAlt,iSpecies) = &
+                      -1.0*Gravity_GB(iLon,iLat,iAlt,iBlock)*&
+                      (1.0 -  (MeanMajorMass(iLon,iLat,iAlt)/Mass(iSpecies)) )
 
-               enddo 
-             enddo 
-           enddo 
-         enddo 
-
-!     else
-!
-!         do iLat = 1, nLats
-!           do iLon = 1, nLons
-!             do iAlt = -1, nAlts+2
-!               do iSpecies = 1, nSpecies
-!
-!               ConS(iLon,iLat,iAlt,iSpecies) = &
-!                  NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)/&
-!                   NDensity(iLon,iLat,iAlt,iBlock)
-!
-!               enddo 
-!             enddo 
-!           enddo 
-!         enddo 
-!
-!         LogConS(1:nLons,1:nLats,-1:nAlts+2,1:nSpecies) = &
-!             alog(ConS(1:nLons,1:nLats,-1:nAlts+2,1:nSpecies) )
-!
-!         do iSpecies = 1, nSpecies
-!           do iAlt = 1, nAlts
-!                 GradLogConS(1:nLons,1:nLats,iAlt,  iSpecies) = &
-!               (-1.0*LogConS(1:nLons,1:nLats,iAlt+2,iSpecies) + & 
-!                 8.0*LogConS(1:nLons,1:nLats,iAlt+1,iSpecies) - &
-!                 8.0*LogConS(1:nLons,1:nLats,iAlt-1,iSpecies) + &
-!                 1.0*LogConS(1:nLons,1:nLats,iAlt-2,iSpecies) )/&
-!                  (12.0*dAlt_GB(1:nLons,1:nLats,iAlt,iBlock))
-!           enddo 
-!         enddo 
-!
-!     endif
-
-
-!     write(*,*) '==========> Now Entering Neutral Friction Calculation!!'
+              enddo
+           enddo
+        enddo
+     enddo
+     
      do iLat = 1, nLats
         do iLon = 1, nLons
 
            do iAlt = 1, nAlts
-                  NF_NDen(iAlt) = NDensity(iLon,iLat,iAlt,iBlock)
-                  NF_Temp(iAlt) = Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt)
-                  NF_Eddy(iAlt) = KappaEddyDiffusion(iLon,iLat,iAlt,iBlock)
-                  NF_Gravity(iAlt) = Gravity_GB(iLon,iLat,iAlt,iBlock)
+              NF_NDen(iAlt) = NDensity(iLon,iLat,iAlt,iBlock)
+              NF_Temp(iAlt) = Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt)
+              NF_Eddy(iAlt) = KappaEddyDiffusion(iLon,iLat,iAlt,iBlock)
+              NF_Gravity(iAlt) = Gravity_GB(iLon,iLat,iAlt,iBlock)
 
-             do iSpecies = 1, nSpecies
-                  nVel(iAlt,iSpecies) = VerticalVelocity(iLon,iLat,iAlt,iSpecies,iBlock)
-                  NF_NDenS(iAlt,iSpecies) = NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
-                  NF_EddyRatio(iAlt,iSpecies) = 0.0
-                  NF_GradLogCon(iAlt,iSpecies) = GradLogConS(iLon,iLat,iAlt,iSpecies)
-             enddo !iSpecies = 1, nSpecies
-
+              do iSpecies = 1, nSpecies
+                 nVel(iAlt,iSpecies) = VerticalVelocity(iLon,iLat,iAlt,iSpecies,iBlock)
+                 NF_NDenS(iAlt,iSpecies) = NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
+                 NF_EddyRatio(iAlt,iSpecies) = 0.0
+                 NF_GradLogCon(iAlt,iSpecies) = GradLogConS(iLon,iLat,iAlt,iSpecies)
+              enddo !iSpecies = 1, nSpecies
+             
            enddo !iAlt = 1, nAlts
 
            call calc_neutral_friction(nVel(1:nAlts,1:nSpecies), &
@@ -143,15 +109,6 @@ subroutine calc_GITM_sources(iBlock)
               NeutralFriction(iLon, iLat, iAlt, 1:nSpecies) = 0.0
               VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock) = nVel(iAlt,1:nSpecies)
 
-!              NeutralFriction(iLon, iLat, iAlt, 1:nSpecies) = &
-!                   nVel(iAlt,1:nSpecies) - VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock)
-
-!              
-!              EddyCoefRatio(iLon, iLat, iAlt, 1:nSpecies,iBlock) = &
-!                    NF_EddyRatio(iAlt,1:nSpecies)
-!
-!              EddyCoefRatio(iLon, iLat, iAlt, 1:nSpecies) = &
-!                    NF_EddyRatio(iAlt,1:nSpecies)
            enddo
 
         enddo
@@ -192,6 +149,10 @@ subroutine calc_GITM_sources(iBlock)
   endif
 
   if (.not. UseSolarHeating) EuvHeating = 0.0
+
+  ! This includes Radiative Cooling....
+  RadCooling = 0.0
+  call calc_planet_sources(iBlock)
 
   ! The auroral heating is specified below, after the aurora is described
   ! in get_potential
@@ -452,10 +413,6 @@ subroutine calc_GITM_sources(iBlock)
   endif
 
   call calc_ion_v(iBlock)
-
-  ! This includes Radiative Cooling....
-  RadCooling = 0.0
-  call calc_planet_sources(iBlock)
 
   ! The Emissions array was never set. Should this be here or earlier ????
   Emissions(:,:,:,:,iBlock) = 0.0

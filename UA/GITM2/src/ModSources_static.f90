@@ -14,7 +14,7 @@ module ModSources
        EddyCond,EddyCondAdia,MoleConduction
 
   real, dimension(nLons, nLats, nAlts,nBlocksMax) :: &
-       EuvHeating,eEuvHeating, &
+       EuvHeating, eEuvHeating, PhotoElectronHeating, &
        RadCooling, RadCoolingRate, RadCoolingErgs, EuvHeatingErgs, &
        LowAtmosRadRate, UserHeatingRate
 

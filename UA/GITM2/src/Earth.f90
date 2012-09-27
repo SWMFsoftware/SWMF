@@ -59,6 +59,7 @@ subroutine calc_planet_sources(iBlock)
 
   use ModInputs
   use ModSources
+  use ModEUV
   use ModGITM
   use ModTime
   
@@ -170,6 +171,28 @@ subroutine calc_planet_sources(iBlock)
   RadCooling(1:nLons,1:nLats,1:nAlts,iBlock) = &
        OCooling + NOCooling + CO2Cooling
 
+
+  PhotoElectronHeating(:,:,:,iBlock) = 0.0
+  PhotoElectronHeating(:,:,:,iBlock) = &
+       PhotoElectonHeatingEfficiency * &
+       35.0*1.602e-19*&
+       ( &
+       EuvIonRateS(:,:,:,iO2P_,iBlock)* &
+       nDensitys(:,:,1:nAlts,iO2_,iBlock) + &
+       EuvIonRateS(:,:,:,iN2P_,iBlock)* &
+       nDensitys(:,:,1:nAlts,iN2_,iBlock) + &
+       EuvIonRateS(:,:,:,iO_4SP_,iBlock)* &
+       nDensitys(:,:,1:nAlts,iO_3P_,iBlock) + &
+       EuvIonRateS(:,:,:,iO_2DP_,iBlock)* &
+       nDensitys(:,:,1:nAlts,iO_3P_,iBlock) + &
+       EuvIonRateS(:,:,:,iO_2PP_,iBlock)* &
+       nDensitys(:,:,1:nAlts,iO_3P_,iBlock))
+  
+  PhotoElectronHeating(:,:,:,iBlock) = &
+       PhotoElectronHeating(:,:,:,iBlock) / &
+       Rho(1:nLons,1:nLats,1:nAlts,iBlock) / &
+       cp(1:nLons,1:nLats,1:nAlts,iBlock) / &
+       TempUnit(1:nLons,1:nLats,1:nAlts)
 
 !--------------------------------------------------------------------
 ! GLOW

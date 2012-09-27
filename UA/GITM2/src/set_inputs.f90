@@ -549,6 +549,16 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
+        case ("#PHOTOELECTRON")
+           call read_in_real(PhotoElectonHeatingEfficiency, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #PHOTOELECTRON:'
+              write(*,*) ''
+              write(*,*) '#PHOTOELECTRON'
+              write(*,*) "PhotoElectonHeatingEfficiency   (real)"
+              IsDone = .true.
+           endif
+
         case ("#THERMO")
            call read_in_logical(UseSolarHeating, iError)
            call read_in_logical(UseJouleHeating, iError)
