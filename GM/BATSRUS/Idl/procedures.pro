@@ -3198,6 +3198,51 @@ endfor
 end
 
 ;=============================================================================
+function rel_errors, w0, w1, w2, w3, w4, w5, ivar=ivar, ratio=ratio
+
+  n = intarr(6)
+  n(0) = n_elements(w0)
+  n(1) = n_elements(w1)
+  n(2) = n_elements(w2)
+  n(3) = n_elements(w3)
+  n(4) = n_elements(w4)
+  n(5) = n_elements(w5)
+
+  narray = fix(total(n gt 0))
+  if narray lt 2 then begin
+     print,'ERROR in rel_errors: number of elements of arrays=',n
+     print,'There should be at least 2 non-empty arrays!'
+     retall
+  endif
+
+  nmax = max(n)
+  if narray gt 2 and nmax ne n(narray-1) then begin
+     print,'ERROR in rel_errors: number of elements=',n
+     print,'The last array should have the most elements!'
+     retall
+  endif
+
+  if narray eq 2 then wref = w1
+  if narray eq 3 then wref = w2
+  if narray eq 4 then wref = w3
+  if narray eq 5 then wref = w4
+  if narray eq 6 then wref = w5
+
+  errors = dblarr(narray-1)
+
+  errors(0)                     = rel_error(w0,wref,ivar)
+  if narray gt 2 then errors(1) = rel_error(w1,wref,ivar)
+  if narray gt 3 then errors(2) = rel_error(w2,wref,ivar)
+  if narray gt 4 then errors(2) = rel_error(w3,wref,ivar)
+  if narray gt 5 then errors(2) = rel_error(w4,wref,ivar)
+
+  if keyword_set(ratio) and narray gt 2 then $
+     print,'ratio=',errors(0:narray-3)/(errors(1:narray-2) > 1d-25)
+
+  return,errors
+end
+
+;=============================================================================
 function rel_error, w1, w2, iws
 
 ; Calculate relative errors of w1 with respect to w2.
@@ -3230,7 +3275,7 @@ function rel_error, w1, w2, iws
   endif
 
   if n_elements(iws) gt 0 then begin
-                                ; keep variable indexes iws only in w, wref
+     ; keep variable indexes iws only in w, wref
      nw = n_elements(iws)
      case ndim of
         1: begin
