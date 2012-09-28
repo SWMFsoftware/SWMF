@@ -3272,7 +3272,7 @@ end
 ;=============================================================================
 function rel_errors, w0, w1, w2, w3, w4, w5, ivar=ivar, ratio=ratio
 
-  n = intarr(6)
+  n = lonarr(6)
   n(0) = n_elements(w0)
   n(1) = n_elements(w1)
   n(2) = n_elements(w2)
