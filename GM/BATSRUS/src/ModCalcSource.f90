@@ -300,6 +300,15 @@ contains
        end if
 
        if(UseAlfvenWaveDissipation .or. UseTurbulentCascade)then
+          if(DoExtendTransitionRegion)then
+             ! Does not work together with UseChromosphereHeating
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                Coef = extension_factor(TeSi_C(i,j,k))
+                WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k)/Coef
+                CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)/Coef
+             end do; end do; end do
+          end if
+
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                   Source_VC(WaveFirst_:WaveLast_,i,j,k) &
@@ -311,7 +320,8 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseElectronPressure)then
-             ! This condition should never be true, avoid compiler optimization error
+             ! This condition should never be true, avoid compiler
+             ! optimization error
              if (i < -999) write(*,*) 'Keep NAG compiler happy'
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1*(1.0-QeByQtotal)
