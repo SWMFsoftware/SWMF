@@ -92,23 +92,48 @@ subroutine update_states_MHD(iStage,iBlock)
   end do; end do; end do
 
   if(UseFaceIntegral4 .and. nDim > 1)then
+     ! Integrate fluxes in the transverse direction (eq. 20)
+     ! <F> = F + Laplace_transverse(F)/24
      do k = 1,nK; do j = 1,nJ; do i = 1,nI
         Coeff = DtFactor*time_BLK(i,j,k,iBlock) &
              /  (24.0*CellVolume_GB(i,j,k,iBlock))
+        ! Add f
         Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Coeff* &
              ( Flux_VX(:,i,j+1,k) &
              + Flux_VX(:,i,j-1,k) &
-             - 2*Flux_VX(:,i,j,k) &
+             - 2*(nDim-1)*Flux_VX(:,i,j,k) &
              - Flux_VX(:,i+1,j+1,k) &
              - Flux_VX(:,i+1,j-1,k) &
-             + 2*Flux_VX(:,i+1,j,k) &
+             + 2*(nDim-1)*Flux_VX(:,i+1,j,k) &
              + Flux_VY(:,i+1,j,k) &
              + Flux_VY(:,i-1,j,k) &
-             - 2*Flux_VY(:,i,j,k) &
+             - 2*(nDim-1)*Flux_VY(:,i,j,k) &
              - Flux_VY(:,i+1,j+1,k) &
              - Flux_VY(:,i-1,j+1,k) &
-             + 2*Flux_VY(:,i,j+1,k) )
-     
+             + 2*(nDim-1)*Flux_VY(:,i,j+1,k) )
+        if(nK == 1) CYCLE
+        ! Remaining terms for 3D
+        Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Coeff* &
+             ( Flux_VX(:,i,j,k+1) &
+             + Flux_VX(:,i,j,k-1) &
+             - Flux_VX(:,i+1,j,k+1) &
+             - Flux_VX(:,i+1,j,k-1) &
+             + Flux_VY(:,i,j,k+1) &
+             + Flux_VY(:,i,j,k-1) &
+             - Flux_VY(:,i,j+1,k+1) &
+             - Flux_VY(:,i,j+1,k-1) &
+             + Flux_VZ(:,i+1,j,k) &
+             + Flux_VZ(:,i-1,j,k) &
+             - 2*(nDim-1)*Flux_VZ(:,i,j,k) &
+             - Flux_VZ(:,i+1,j,k+1) &
+             - Flux_VZ(:,i-1,j,k+1) &
+             + 2*(nDim-1)*Flux_VZ(:,i,j,k+1) &
+             + Flux_VZ(:,i,j+1,k) &
+             + Flux_VZ(:,i,j-1,k) &
+             - 2*(nDim-1)*Flux_VZ(:,i,j,k) &
+             - Flux_VZ(:,i,j+1,k+1) &
+             - Flux_VZ(:,i,j-1,k+1) &
+             + 2*(nDim-1)*Flux_VZ(:,i,j,k+1) )
      end do; end do; end do
   end if
 
