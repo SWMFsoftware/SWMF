@@ -1052,30 +1052,33 @@ subroutine MH_set_parameters(TypeAction)
 
         call read_var('TypeFlux',FluxType, IsUpperCase=.true.)
         BetaLimiter = 1.0
-        nGMin = 2 ! Minimum number of ghost cell layers
-        if(nOrder==2)then
+        if(nOrder > 1 .and. FluxType /= "SIMPLE")then
            call read_var('TypeLimiter', TypeLimiter)
            if(TypeLimiter /= 'minmod') &
                 call read_var('LimiterBeta', BetaLimiter)
-        elseif(nOrder==4)then
+        else
+           TypeLimiter = "no"
+        end if
+
+        nGMin = 2 ! Minimum number of ghost cell layers
+        if(nOrder==4)then
            call read_var('UseVolumeIntegral4', UseVolumeIntegral4)
            if(UseVolumeIntegral4) nGMin = nGMin + 1
            call read_var('UseFaceIntegral4', UseFaceIntegral4)
            if(nDim == 1) UseFaceIntegral4 = .false.
-           if(FluxType == 'SIMPLE')then
-              TypeLimiter = 'no'
-           else
+           if(TypeLimiter /= 'no')then
               nGMin = nGMin + 1
               call read_var('UseLimiter4', UseLimiter4)
               if(UseLimiter4) nGMin = nGMin + 1
            end if
         end if
-        if(nGMin > nG .and. iProc==0)then
-           write(*,*)'The code if configured with nG=',nG,' ghost cell layers.'
-           write(*,*)'The selected scheme requires at least nGMin=',nGMin,&
-                ' ghost cell layers!'
-           write(*,*)'Either change settings or reconfigure and recompile!'
-           call CON_stop(NameSub//': insufficient number of ghost cells')
+        if(nGMin /= nG .and. iProc==0)then
+           write(*,*)'The code is configured with nG=',nG,' ghost cell layers.'
+           write(*,*)'The selected scheme requires nGMin=',nGMin,' layers!'
+           if(nGMin > nG)then
+              write(*,*)'Either change settings or reconfigure and recompile!'
+              call CON_stop(NameSub//': insufficient number of ghost cells')
+           end if
         end if
 
      case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
