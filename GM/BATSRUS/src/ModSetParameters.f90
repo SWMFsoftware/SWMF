@@ -13,11 +13,11 @@ subroutine MH_set_parameters(TypeAction)
        MinBoundary,MaxBoundary,&
        read_gen_radial_grid, set_gen_radial_grid, NameGridFile
   use ModNodes, ONLY : init_mod_nodes
-  use ModImplicit                                       !^CFG IF IMPLICIT
-  use ModImplHypre, ONLY: hypre_read_param              !^CFG IF IMPLICIT
+  use ModImplicit
+  use ModImplHypre, ONLY: hypre_read_param
   use ModPhysics
-  use ModProject                                        !^CFG IF PROJECTION
-  use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
+  use ModProject
+  use ModCT, ONLY : init_mod_ct, DoInitConstrainB
   use ModBlockData, ONLY: clean_block_data
   use BATL_lib, ONLY: read_amr_criteria, read_amr_geometry, &
        DoCritAmr, DoAutoAmr, DoStrictAmr, BetaProlong,&
@@ -25,7 +25,7 @@ subroutine MH_set_parameters(TypeAction)
        IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
   use ModAMR
   use ModParallel, ONLY : proc_dims
-  use ModRaytrace                                       !^CFG IF RAYTRACE
+  use ModRaytrace
   use ModIO
   use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
   use ModPlanetConst
@@ -55,10 +55,10 @@ subroutine MH_set_parameters(TypeAction)
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall, &
        UseBiermannBattery
-  use ModHeatConduction, ONLY: read_heatconduction_param !^CFG IF IMPLICIT
-  use ModRadDiffusion,   ONLY: read_rad_diffusion_param  !^CFG IF IMPLICIT
-  use ModResistivity, ONLY: UseResistivity, &            !^CFG IF DISSFLUX
-       read_resistivity_param, init_mod_resistivity      !^CFG IF DISSFLUX
+  use ModHeatConduction, ONLY: read_heatconduction_param
+  use ModRadDiffusion,   ONLY: read_rad_diffusion_param
+  use ModResistivity, ONLY: UseResistivity, &
+       read_resistivity_param, init_mod_resistivity
   use ModMultiFluid, ONLY: MassIon_I,ChargeIon_I,nIonFluid, iFluid, &
        DoConserveNeutrals, DoOhNeutralBc, &
        uBcFactor_I, RhoBcFactor_I, RhoNeutralsISW_dim, &
@@ -247,10 +247,10 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_boundary_cells
      call init_mod_nodes
      if(UseB0)         call init_mod_b0
-     if(UseRaytrace)   call init_mod_raytrace  !^CFG IF RAYTRACE
-     if(UseConstrainB) call init_mod_ct        !^CFG IF CONSTRAINB
-     if(UseImplicit.or.UseSemiImplicit) &      !^CFG IF IMPLICIT
-          call init_mod_implicit               !^CFG IF IMPLICIT
+     if(UseRaytrace)   call init_mod_raytrace
+     if(UseConstrainB) call init_mod_ct
+     if(UseImplicit.or.UseSemiImplicit) &
+          call init_mod_implicit
      if (DoWriteIndices) call init_mod_geoindices
 
      ! clean dynamic storage
@@ -269,7 +269,7 @@ subroutine MH_set_parameters(TypeAction)
      ! initialize ModEqution (e.g. variable units)
      call init_mod_equation
 
-     if(UseResistivity)call init_mod_resistivity !^CFG IF DISSFLUX
+     if(UseResistivity)call init_mod_resistivity
      if(UseViscosity) call Viscosity_init
 
      if(UseMagnetogram)then
@@ -470,7 +470,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nStage',  nStage)
         call read_var('CflExpl', Cfl)
         CflOrig = Cfl
-        ExplCfl = Cfl                                   !^CFG IF IMPLICIT
+        ExplCfl = Cfl
         UseHalfStep = NameCommand == "#TIMESTEPPING" .and. nStage <= 2
 
      case("#FIXEDTIMESTEP")
@@ -491,7 +491,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#POINTIMPLICIT")
         call read_point_implicit_param
 
-     case("#IMPLICIT", &                                !^CFG IF IMPLICIT BEGIN
+     case("#IMPLICIT", &
           "#IMPLCRITERIA", "#IMPLICITCRITERIA", "#STEPPINGCRITERIA", &
           "#PARTIMPL", "#PARTIMPLICIT",     &
           "#SEMIIMPL", "#SEMIIMPLICIT",     &
@@ -504,12 +504,11 @@ subroutine MH_set_parameters(TypeAction)
         call read_implicit_param(NameCommand)           
 
      case("#HYPRE")
-        call hypre_read_param                           !^CFG END IMPLICIT
+        call hypre_read_param
 
-     case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &      !^CFG IF DISSFLUX BEGIN
+     case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &
           "#RESISTIVITYREGION", "#RESISTIVEREGION")
         call read_resistivity_param(NameCommand)
-        !                                               ^CFG END DISSFLUX
 
      case("#VISCOSITY", "#VISCOSITYREGION")
         call Viscosity_set_parameters(NameCommand)
@@ -583,12 +582,11 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('ExtraEintMinSi', ExtraEintMinSi)
 
      case("#RADIATION", "#HEATFLUXLIMITER", "#ACCURATERADIATION")
-        !^CFG IF IMPLICIT BEGIN 
         call read_rad_diffusion_param(NameCommand)
 
      case("#HEATCONDUCTION", "#WEAKFIELDCONDUCTION", &
           "#IONHEATCONDUCTION", "#HEATFLUXREGION")
-        call read_heatconduction_param(NameCommand) !^CFG END IMPLICIT
+        call read_heatconduction_param(NameCommand)
 
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
@@ -701,7 +699,7 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('xPoint',plot_point(1,ifile))
               call read_var('yPoint',plot_point(2,ifile))
               call read_var('zPoint',plot_point(3,ifile))
-           elseif(index(plot_string,'lin')>0)then     !^CFG IF RAYTRACE BEGIN
+           elseif(index(plot_string,'lin')>0)then
               iPlotFile = iFile - Plot_
               plot_area='lin'
               call read_var('NameLine', NameLine_I(iPlotFile), &
@@ -722,7 +720,7 @@ subroutine MH_set_parameters(TypeAction)
                  call read_var('yStartLine',XyzStartLine_DII(2,i,iPlotFile))
                  call read_var('zStartLine',XyzStartLine_DII(3,i,iPlotFile))
                  call read_var('IsParallel',IsParallelLine_II(i,iPlotFile))
-              end do                                  !^CFG END RAYTRACE
+              end do
            elseif (index(plot_string,'eqr')>0)then
               plot_area='eqr'
               call read_var('nRadius',   plot_range(1,ifile))
@@ -807,8 +805,8 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'sph' &
                    .and. plot_area /= 'los' &
                    .and. plot_area /= 'rfr' &
-                   .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
-                   .and. plot_area /= 'eqr' &        !^CFG IF RAYTRACE
+                   .and. plot_area /= 'lin' &
+                   .and. plot_area /= 'eqr' &
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
               if(.not.IsCartesianGrid)plot_dx(1,ifile)=-1.0 
 
@@ -839,13 +837,11 @@ subroutine MH_set_parameters(TypeAction)
               plot_dimensional(ifile) = index(plot_string,'VAR')>0
               call read_var('NameVars',plot_vars(ifile))
               call read_var('NamePars',plot_pars(ifile))
-              !                                         ^CFG  IF RAYTRACE BEGIN
            elseif(index(plot_string,'RAY')>0.or.index(plot_string,'ray')>0)then
               plot_var='ray'
               plot_dimensional(ifile) = index(plot_string,'RAY')>0
               plot_vars(ifile)='bx by bz theta1 phi1 theta2 phi2 status blk'
               plot_pars(ifile)='rbody'
-              !                                         ^CFG END RAYTRACE
            elseif(index(plot_string,'RAW')>0.or.index(plot_string,'raw')>0)then
               plot_var='raw'
               plot_dimensional(ifile)=index(plot_string,'RAW')>0
@@ -1163,7 +1159,7 @@ subroutine MH_set_parameters(TypeAction)
      case('#CLIMIT')
         call face_flux_set_parameters(NameCommand)
 
-     case("#BORIS")                                  !^CFG IF BORISCORR BEGIN
+     case("#BORIS")
         if(.not.UseB)CYCLE READPARAM
         call read_var('UseBorisCorrection', boris_correction)   
         if(boris_correction) then
@@ -1177,60 +1173,51 @@ subroutine MH_set_parameters(TypeAction)
            end if
         else
            boris_cLIGHT_factor = 1.0
-        end if                                       !^CFG END BORISCORR
+        end if
 
-     case("#BORISSIMPLE")                            !^CFG IF SIMPLEBORIS BEGIN
+     case("#BORISSIMPLE")
         call read_var('UseBorisSimple',UseBorisSimple)
         if(UseBorisSimple) then
            call read_var('BorisClightFactor',boris_cLIGHT_factor)
-           boris_correction=.false.                     !^CFG IF BORISCORR
+           boris_correction=.false.
         else
            boris_cLIGHT_factor = 1.0
-        end if                                       !^CFG END SIMPLEBORIS
+        end if
 
      case("#DIVB")
         if(.not.UseB)CYCLE READPARAM
         call read_var('UseDivbSource'   ,UseDivbSource)   
-        call read_var('UseDivbDiffusion',UseDivbDiffusion)!^CFG IF DIVBDIFFUSE
-        call read_var('UseProjection'   ,UseProjection)  !^CFG IF PROJECTION
-        call read_var('UseConstrainB'   ,UseConstrainB)  !^CFG IF CONSTRAINB
+        call read_var('UseDivbDiffusion',UseDivbDiffusion)
+        call read_var('UseProjection'   ,UseProjection)
+        call read_var('UseConstrainB'   ,UseConstrainB)
 
-        !^CFG IF CONSTRAINB BEGIN
         if (UseProjection.and.UseConstrainB.and.iProc==0) &
              call stop_mpi('Do not use projection and constrain B together!')
-        !^CFG END CONSTRAINB
-        !^CFG IF DIVBDIFFUSE BEGIN
-        !^CFG IF PROJECTION BEGIN
         if (UseProjection.and.UseDivbSource.and.iProc==0) then
            write(*,'(a)')NameSub // &
                 ' WARNING: using divbsource and projection together !!!'
            if (UseStrict) call stop_mpi('Correct ')
         end if
-        !^CFG END PROJECTION
-        !^CFG END DIVBDIFFUSE
-        !^CFG IF CONSTRAINB BEGIN
         if (UseConstrainB.and.UseDivbSource.and.iProc==0) then
            write(*,'(a)')NameSub // &
                 ' WARNING: using divbsource and constrain B together !!!'
            if (UseStrict) call stop_mpi('Correct ')
         end if
-        !^CFG END CONSTRAINB
 
         if (iProc==0 &
              .and..not.UseHyperbolicDivb &
              .and..not.UseDivbSource &
-             .and..not.UseProjection &      !^CFG IF PROJECTION
-             .and..not.UseConstrainB &      !^CFG IF CONSTRAINB
-             .and..not.UseDivbDiffusion &   !^CFG IF DIVBDIFFUSE
-             ) then
+             .and..not.UseProjection &
+             .and..not.UseConstrainB &
+             .and..not.UseDivbDiffusion) then
            write(*,*) NameSub // &
                 'WARNING: you should use some div B control method !!!'
            if (UseStrict) call stop_mpi('Correct PARAM.in!')
         end if
-        ! Make sure that divbmax will be calculated      !^CFG IF PROJECTION
-        DivbMax = -1.0                                   !^CFG IF PROJECTION
-        ! reinitialize constrained transport if needed   !^CFG IF CONSTRAINB
-        DoInitConstrainB = .true.                        !^CFG IF CONSTRAINB
+        ! Make sure that divbmax will be calculated
+        DivbMax = -1.0
+        ! reinitialize constrained transport if needed
+        DoInitConstrainB = .true.
 
      case("#USEB0", "#DIVBSOURCE", "#USECURLB0")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1252,7 +1239,7 @@ subroutine MH_set_parameters(TypeAction)
            end if
         endif
 
-     case("#PROJECTION")                              !^CFG IF PROJECTION BEGIN
+     case("#PROJECTION")
         if(.not.UseB)CYCLE READPARAM
         call read_var('TypeProjectIter' ,proj_method)
         call read_var('TypeProjectStop' ,proj_typestop)
@@ -1260,14 +1247,13 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('AbsoluteLimit'   ,proj_divbconst)
         call read_var('MaxMatvec'       ,proj_matvecmax)
         ! Make sure that DivbMax is recalculated
-        DivbMax = -1.0                                !^CFG END PROJECTION
+        DivbMax = -1.0
 
-     case("#CORRECTP")                                !^CFG IF PROJECTION BEGIN
+     case("#CORRECTP")
         call read_var('pRatioLow',Pratio_lo)
         call read_var('pRatioHigh',Pratio_hi)
         if(Pratio_lo>=Pratio_hi)&
              call stop_mpi(NameSub//' ERROR: Pratio_lo>=Pratio_hi')
-        !                                              ^CFG END PROJECTION
 
      case("#IOUNITS")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1312,7 +1298,6 @@ subroutine MH_set_parameters(TypeAction)
         DoReadSolarwindFile = UseSolarwindFile
         if (UseSolarwindFile) &
              call read_var('NameSolarWindFile', NameSolarWindFile)
-        !                                               ^CFG IF RAYTRACE BEGIN
 
      case("#RAYTRACE")
         call read_var('UseRaytrace',UseRaytrace)
@@ -1325,12 +1310,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('RayLengthMax', RayLengthMax)
      case("#IE")
         call read_var('DoTraceIE', DoTraceIE)
-        !                                              ^CFG END RAYTRACE
-
      case("#IECOUPLING")
         call read_iono_velocity_param
-
-     case("#IMCOUPLING","#IM")                        !^CFG IF RCM BEGIN
+     case("#IMCOUPLING","#IM")
         call read_var('TauCoupleIm',TauCoupleIm)
         if(TauCoupleIm < 1.0)then
            TauCoupleIM = 1.0/TauCoupleIM
@@ -1360,7 +1342,6 @@ subroutine MH_set_parameters(TypeAction)
         if(.not.is_first_session())CYCLE READPARAM
         ! couple GM and IM in multi-fluid (all, Hp, Op) mode                
         call read_var('DoMultiFluidIMCoupling', DoMultiFluidIMCoupling)
-        !^CFG END RCM
 
      case('#ANISOPRESSUREIM')
         if(.not.is_first_session())CYCLE READPARAM
@@ -1651,7 +1632,7 @@ subroutine MH_set_parameters(TypeAction)
            if(GravityDir /= 0) call read_var('GravitySi', GravitySi)
         end if
 
-     case("#SECONDBODY")                        !^CFG IF SECONDBODY BEGIN
+     case("#SECONDBODY")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseBody2',UseBody2)
         if(UseBody2)then
@@ -1675,7 +1656,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('BdpDimBody2x',BdpDimBody2_D(1))
         call read_var('BdpDimBody2y',BdpDimBody2_D(2))
         call read_var('BdpDimBody2z',BdpDimBody2_D(3))
-        !                                           ^CFG END SECONDBODY
 
      case('#PLANET','#MOON','#COMET','#IDEALAXES','#ROTATIONAXIS',&
           '#MAGNETICAXIS','#MAGNETICCENTER','#ROTATION','#DIPOLE', &
@@ -1733,8 +1713,8 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#NPREVIOUS")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('nPrev',n_prev)             !^CFG IF IMPLICIT
-        call read_var('DtPrev',dt_prev)           !^CFG IF IMPLICIT
+        call read_var('nPrev',n_prev)
+        call read_var('DtPrev',dt_prev)
 
      case("#STARTTIME", "#SETREALTIME")
         if(.not.is_first_session())CYCLE READPARAM
@@ -2032,10 +2012,9 @@ contains
     automatic_refinement = .false.
 
     nOrder = 2
-    FluxType = 'RUSANOV'               !^CFG IF RUSANOVFLUX
-    !FluxType = 'SOKOLOV'              !^CFG UNCOMMENT IF NOT RUSANOVFLUX
+    FluxType = 'RUSANOV'
 
-    ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
+    ! Default implicit parameters
     UseImplicit      = .false.
     ImplCritType     = 'dt'
 
@@ -2043,12 +2022,12 @@ contains
        JacobianEps   = 1.E-12
     else
        JacobianEps   = 1.E-6
-    end if                            !^CFG END IMPLICIT
+    end if
 
     UseDivbSource   =  UseB .and. nDim > 1
-    UseDivbDiffusion= .false.         !^CFG IF DIVBDIFFUSE
-    UseProjection   = .false.         !^CFG IF PROJECTION
-    UseConstrainB   = .false.         !^CFG IF CONSTRAINB
+    UseDivbDiffusion= .false.
+    UseProjection   = .false.
+    UseConstrainB   = .false.
 
     UseB0Source     = UseB0
     UseHyperbolicDivB = Hyp_ > 1
@@ -2076,7 +2055,7 @@ contains
 
     DipoleStrengthSi = 0.0
 
-    UseBody2 = .false.                                !^CFG IF SECONDBODY BEGIN
+    UseBody2 = .false.
     RBody2 =-1.0
     xBody2 = 0.0
     yBody2 = 0.0			
@@ -2084,7 +2063,7 @@ contains
     BdpBody2_D  = 0.0
     rCurrentsBody2 = 0.0
     RhoDimBody2 = 1.0    ! n/cc
-    TDimBody2   = 10000.0! K                          !^CFG END SECONDBODY
+    TDimBody2   = 10000.0! K
 
     MassIon_I = MassFluid_I(IonFirst_:IonLast_) ! Ion masses
 
@@ -2258,36 +2237,36 @@ contains
     select case(FluxType)
     case('SIMPLE','Simple')
        FluxType='Simple'
-    case('ROE','Roe')                                !^CFG IF ROEFLUX BEGIN
+    case('ROE','Roe')
        FluxType='Roe'
        if(UseAlfvenWaves .or. UseWavePressure)then
           if(iProc==0) write(*,'(a)')NameSub // &
                'Wave transport and wave pressure do not work with ' // &
                trim(FluxType)
-          if(UseStrict)&                             !^CFG IF AWFLUX
-               call stop_mpi('Correct PARAM.in')    
-          FluxType='Sokolov'                         !^CFG IF AWFLUX
+          if(UseStrict)&
+               call stop_mpi('Correct PARAM.in')
+          FluxType='Sokolov'
        end if
     case('ROEOLD','RoeOld')             
-       FluxType='RoeOld'                             !^CFG END ROEFLUX
-    case('RUSANOV','TVDLF','Rusanov')                !^CFG IF RUSANOVFLUX
-       FluxType='Rusanov'                            !^CFG IF RUSANOVFLUX
-    case('LINDE','HLLEL','Linde')                    !^CFG IF LINDEFLUX
-       FluxType='Linde'                              !^CFG IF LINDEFLUX
-    case('SOKOLOV','AW','Sokolov')                   !^CFG IF AWFLUX
-       FluxType='Sokolov'                            !^CFG IF AWFLUX
-    case('HLLD')                                     !^CFG IF HLLDFLUX
+       FluxType='RoeOld'
+    case('RUSANOV','TVDLF','Rusanov')
+       FluxType='Rusanov'
+    case('LINDE','HLLEL','Linde')
+       FluxType='Linde'
+    case('SOKOLOV','AW','Sokolov')
+       FluxType='Sokolov'
+    case('HLLD')
     case('GODUNOV','Godunov')
        FluxType='Godunov'
     case default
        if(iProc==0)then
           write(*,'(a)')NameSub // &
                'WARNING: unknown value for FluxType=' // trim(FluxType)
-          if(UseStrict) &                            !^CFG IF RUSANOVFLUX
+          if(UseStrict) &
                call stop_mpi('Correct PARAM.in!')
-          write(*,*)'setting FluxType=Rusanov'       !^CFG IF RUSANOVFLUX
+          write(*,*)'setting FluxType=Rusanov'
        end if
-       FluxType='Rusanov'                            !^CFG IF RUSANOVFLUX
+       FluxType='Rusanov'
     end select
 
     ! Set flux type for neutral fluids
@@ -2314,21 +2293,21 @@ contains
        TypeFluxNeutral = 'Linde'
     end select
 
-    ! Check flux type selection for implicit   !^CFG IF IMPLICIT BEGIN
+    ! Check flux type selection for implicit
     select case(FluxTypeImpl)
     case('default')
        FluxTypeImpl = FluxType
-    case('ROE','Roe')                                !^CFG IF ROEFLUX BEGIN
+    case('ROE','Roe')
        FluxTypeImpl='Roe'
     case('ROEOLD','RoeOld')
-       FluxTypeImpl='RoeOld'                         !^CFG END ROEFLUX
-    case('RUSANOV','TVDLF','Rusanov')                !^CFG IF RUSANOVFLUX
-       FluxTypeImpl='Rusanov'                        !^CFG IF RUSANOVFLUX
-    case('LINDE','HLLEL','Linde')                    !^CFG IF LINDEFLUX
-       FluxTypeImpl='Linde'                          !^CFG IF LINDEFLUX
-    case('SOKOLOV','AW','Sokolov')                   !^CFG IF AWFLUX
-       FluxTypeImpl='Sokolov'                        !^CFG IF AWFLUX
-    case('HLLD')                                     !^CFG IF HLLDFLUX
+       FluxTypeImpl='RoeOld'
+    case('RUSANOV','TVDLF','Rusanov')
+       FluxTypeImpl='Rusanov'
+    case('LINDE','HLLEL','Linde')
+       FluxTypeImpl='Linde'
+    case('SOKOLOV','AW','Sokolov')
+       FluxTypeImpl='Sokolov'
+    case('HLLD')
     case('GODUNOV','Godunov')
        FluxTypeImpl='Godunov'
     case default
@@ -2340,20 +2319,48 @@ contains
           write(*,*)NameSub//' setting FluxTypeImpl=',trim(FluxType)
        end if
        FluxTypeImpl=FluxType
-    end select                               !^CFG END IMPLICIT
+    end select
 
-    if(UseSemiImplicit .or. nStage == 1)then !^CFG IF IMPLICIT BEGIN
+    ! Check flux types
+    if( (FluxType(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe' .or. &
+         FluxType=='HLLD' .or.  FluxTypeImpl=='HLLD') &
+         .and. .not.UseB)then
+       if (iProc == 0) then
+          write(*,'(a)')NameSub//&
+               ' WARNING: HLLD/Roe(Old) flux is only implemented for MHD !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' Setting TypeFlux(Impl) = Linde'
+       end if
+       if(FluxType(1:3)=='Roe' .or. FluxType=='HLLD') &
+            FluxType     = 'Linde'
+       if(FluxTypeImpl(1:3)=='Roe' .or. FluxTypeImpl=='HLLD') &
+            FluxTypeImpl = 'Linde'
+    end if
+
+    if((FluxType=='Godunov' .or. FluxTypeImpl=='Godunov') &
+         .and. UseB)then
+       if (iProc == 0) then
+          write(*,'(a)')NameSub//&
+               ' WARNING: Godunov flux is only implemented for HD !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' Setting TypeFlux(Impl) = Linde'
+       end if
+       if(FluxType=='Godunov')     FluxType     = 'Linde'
+       if(FluxTypeImpl=='Godunov') FluxTypeImpl = 'Linde'
+    end if
+
+    if(UseSemiImplicit .or. nStage == 1)then
        UseBDF2 = .false.
     elseif (time_accurate .and. nStage == 2)then
        UseBDF2 = .true.
-    end if                                   !^CFG END IMPLICIT
+    end if
 
     ! Make sure periodic boundary conditions are symmetric
     if(any(TypeBc_I(1:2)=='periodic')) TypeBc_I(1:2)='periodic'
     if(any(TypeBc_I(3:4)=='periodic')) TypeBc_I(3:4)='periodic'
     if(any(TypeBc_I(5:6)=='periodic')) TypeBc_I(5:6)='periodic'
 
-    if(UseConstrainB .and. .not.time_accurate)then  !^CFG IF CONSTRAINB BEGIN
+    if(UseConstrainB .and. .not.time_accurate)then
        if(iProc==0)then
           write(*,'(a)')NameSub//&
                ' WARNING: constrain_B works for time accurate run only !!!'
@@ -2380,18 +2387,13 @@ contains
        if(UseStrict)call stop_mpi('Correct PARAM.in!')
        if(iProc==0)write(*,*)NameSub//' setting DoAmr=F'
        DoAmr = .false.
-    end if                                            !^CFG END CONSTRAINB
+    end if
 
-    if(UseViscosity) optimize_message_pass = 'all'
-
-    if ( UseHallResist &
-         .or. UseResistivity &                       !^CFG IF DISSFLUX
-         ) optimize_message_pass = 'all'
-
-    !^CFG IF IMPLICIT BEGIN
-    if ( UseRadDiffusion .and. (UseFullImplicit .or. UseSemiImplicit)) &
+    if (UseHallResist .or. UseResistivity .or. UseViscosity) &
          optimize_message_pass = 'all'
-    !^CFG END IMPLICIT
+
+    if (UseRadDiffusion .and. (UseFullImplicit .or. UseSemiImplicit)) &
+         optimize_message_pass = 'all'
 
     !Check for magnetogram
 
@@ -2439,20 +2441,16 @@ contains
     end if
 
     if(.not.IsCartesian)then
-       if(UseProjection)call stop_mpi(&                   !^CFG IF PROJECTION
-            'Only Cartesian works with projection')       !^CFG IF PROJECTION
-       if(UseConstrainB)call stop_mpi(&                   !^CFG IF CONSTRAINB
-            'Only Cartesian works with constrain B')      !^CFG IF CONSTRAINB
-       if(UseDivBDiffusion)call stop_mpi(&                !^CFG IF DIVBDIFFUSE
-            'Only Cartesian works with divB diffusion')   !^CFG IF DIVBDIFFUSE
+       if(UseProjection)call stop_mpi(&
+            'Only Cartesian works with projection')
+       if(UseConstrainB)call stop_mpi(&
+            'Only Cartesian works with constrain B')
+       if(UseDivBDiffusion)call stop_mpi(&
+            'Only Cartesian works with divB diffusion')
     end if
 
     if(UseHyperbolicDivb)then
-       if(.false.&
-            .or.UseDivbDiffusion & !^CFG IF DIVBDIFFUSE
-            .or. UseConstrainB &   !^CFG IF CONSTRAINB
-            .or. UseProjection &   !^CFG IF PROJECTION
-            )then
+       if(UseDivbDiffusion .or. UseConstrainB .or. UseProjection )then
           if(iProc==0)then
              write(*,'(a)')NameSub// &
                   ' WARNING: Hyperbolic cleaning can only be combined', &
@@ -2466,27 +2464,26 @@ contains
 
     ! Check CFL number
     if(.not.time_accurate .and. iProc==0)then
-       if(boris_correction)then                     !^CFG IF BORISCORR BEGIN
-          if(cfl>0.65) then
+       if(boris_correction)then
+          if(Cfl > 0.65) then
              write(*,'(a)')NameSub// &
                   ' WARNING: CFL number above 0.65 may be unstable'// &
                   ' for local timestepping with Boris correction !!!'
              if (UseStrict) call stop_mpi('Correct PARAM.in!')
           end if
-       else                                         !^CFG END BORISCORR
-          if(cfl>0.85)then
+       else
+          if(cfl > 0.85)then
              write(*,'(a)')NameSub// &
                   ' WARNING: CFL number above 0.85 may be unstable'// &
                   ' for local timestepping !!!'
              if (UseStrict) call stop_mpi('Correct PARAM.in!')
           end if
-       end if                                       !^CFG IF BORISCORR
+       end if
     end if
 
-    !Boris correction checks                        !^CFG IF BORISCORR BEGIN
-    if((FluxType=='Roe' &                              !^CFG IF ROEFLUX BEGIN
-         .or. FluxTypeImpl=='Roe' &                       !^CFG IF IMPLICIT
-         ) .and. boris_correction)then
+    ! Boris correction checks
+    if((FluxType(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe') &
+         .and. boris_correction)then
        if (iProc == 0) then
           write(*,'(a)')NameSub//&
                ' WARNING: Boris correction not available for Roe flux !!!'
@@ -2495,11 +2492,9 @@ contains
        end if
        boris_correction = .false.
        boris_cLIGHT_factor = 1.00
-    end if                                             !^CFG END ROEFLUX
-    ! Finish checks for boris                       !^CFG END BORISCORR
+    end if
 
-    ! Check parameters for implicit                 !^CFG IF IMPLICIT BEGIN
-
+    ! Check parameters for implicit
     if(UseClimit .and. .not. UseImplicit)then
        if(iProc==0)then
           write(*,'(a)')'UseClimit=T requires (part) implicit scheme'
@@ -2603,7 +2598,7 @@ contains
        UsePointImplicit = .false.
     end if
 
-    !Finish checks for implicit                     !^CFG END IMPLICIT
+    !Finish checks for implicit
 
     !Set min_block_level and max_block_level for #AMRRESOLUTION in session 1
     if(i_line_command("#AMRRESOLUTION", iSessionIn = 1) > 0)then
@@ -2716,7 +2711,7 @@ contains
     end if
 
     ! Make sure MinBoundary and MaxBoundary cover face only boundaries
-    if(UseBody2) MinBoundary = min(Body2_, MinBoundary)   !^CFG IF SECONDBODY
+    if(UseBody2) MinBoundary = min(Body2_, MinBoundary)
     if(body1) then   
        MinBoundary = min(Body1_, MinBoundary)
        MaxBoundary = max(Body1_, MaxBoundary)
