@@ -980,7 +980,7 @@ contains
 
           case('disstot')
              PlotVar_G(i,j,k) = max(1e-30, sum(WaveDissipation_V)* &
-                  No2Si_V(UnitEwdnergyDens_))
+                  No2Si_V(UnitEnergyDens_))
              
           case('lperp')
              PlotVar_G(i,j,k) = max(1e-30, Lperp * No2Si_V(UnitX_)/rSun )
