@@ -117,7 +117,7 @@ contains
 
     ! Variables for time step control due to loss terms
     real :: TeSi_C(nI,nJ,nK)
-    real :: Einternal, Source, Dt_loss
+    real :: Einternal, Source, Dt_loss, Coef
     !--------------------------------------------------------------------------
 
     if(iBlock==BLKtest)then
@@ -156,6 +156,15 @@ contains
        end if
 
        if(UseAlfvenWaveDissipation)then
+          if(DoExtendTransitionRegion)then
+             ! Does not work together with UseChromosphereHeating
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                Coef = extension_factor(TeSi_C(i,j,k))
+                WaveDissipation_VC(:,i,j,k) = WaveDissipation_VC(:,i,j,k)/Coef
+                CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)/Coef
+             end do; end do; end do
+          end if
+
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not. true_cell(i,j,k,iBlock)) CYCLE
 
