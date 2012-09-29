@@ -100,7 +100,8 @@ contains
     use ModGeometry, ONLY: TypeGeometry
     use ModParallel, ONLY: NeiLEast, NeiLBot, NeiLTop, NOBLK
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
-         CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC
+         CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
+         UseTurbulentCascade
     use ModRadiativeCooling, ONLY: UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModCalcSource, ONLY: get_tesi_c
@@ -155,7 +156,7 @@ contains
           end if
        end if
 
-       if(UseAlfvenWaveDissipation)then
+       if(UseAlfvenWaveDissipation .or. UseTurbulentCascade)then
           if(DoExtendTransitionRegion)then
              ! Does not work together with UseChromosphereHeating
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
