@@ -140,9 +140,9 @@ contains
 
     ! Time step restriction due to point wise loss terms
     ! (only explicit source terms)
-    if(UseAlfvenWaveDissipation .or. UseRadCooling)then
-       if(UseRadCooling .or. (UseChromosphereHeating .and. &
-            DoExtendTransitionRegion)) call get_tesi_c(iBlock, TeSi_C)
+    if(UseAlfvenWaveDissipation .or. UseTurbulentCascade .or.UseRadCooling)then
+       if(UseRadCooling .or. DoExtendTransitionRegion) &
+            call get_tesi_c(iBlock, TeSi_C)
 
        if(UseCoronalHeating)then
           call get_block_heating(iBlock)
