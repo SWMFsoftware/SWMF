@@ -1239,6 +1239,7 @@ contains
              Pressure = State_V(Pe_)
           else
              Pressure = State_V(p_)
+             if(TypeProblem=='parcond') Pressure = 0.5*State_V(p_)
           end if
           pSi = Pressure*No2Si_V(UnitP_)
           Te = Pressure/Rho
