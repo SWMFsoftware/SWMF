@@ -28,7 +28,7 @@ module ModUser
   logical :: UseChromoBc = .true., UseUparBc = .false., &
              UseExtrapolatedEwave = .true.
   real    :: DeltaUSi = 1.5e4, DeltaU = 0.0
-  real    :: nChromoSi = 0.0, tChromoSi = 0.0
+  real    :: nChromoSi = 2e17, tChromoSi = 2e4
   real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
 
   ! Input parametes for coronal inner BC's
