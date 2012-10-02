@@ -27,7 +27,7 @@ module ModUser
   ! Input parameters for chromospheric inner BC's
   logical :: UseChromoBc = .true., UseUparBc = .false., &
              UseExtrapolatedEwave = .true.
-  real    :: WaveDeltaU = 0.0
+  real    :: DeltaUSi = 1.5e4, DeltaU = 0.0
   real    :: nChromoSi = 0.0, tChromoSi = 0.0
   real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
 
@@ -84,7 +84,7 @@ contains
        case("#CHROMOBC")
           call read_var('UseChromoBc',UseChromoBc)
           if(UseChromoBc) then
-             call read_var('WaveDeltaU', WaveDeltaU)
+             call read_var('DeltaUSi', DeltaUSi)
              call read_var('nChromoSi', nChromoSi)
              call read_var('tChromoSi', tChromoSi)
              call read_var('UseUparBc',UseUparBc)
@@ -150,18 +150,18 @@ contains
   !============================================================================
   subroutine user_init_session
 
-    use ModMain,           ONLY: UseMagnetogram, UseUserPerturbation
-    use ModProcMH,         ONLY: iProc
-    use ModIO,             ONLY: write_prefix, iUnitOut
-    use ModWaves,          ONLY: UseWavePressure, UseAlfvenWaves
-    use ModAdvance,        ONLY: UseElectronPressure
-    use ModMultiFluid,     ONLY: MassIon_I
-    use ModConst,          ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
-                                 cElectronMass
-    use ModNumConst,       ONLY: cTwoPi, cDegToRad
-    use ModPhysics,        ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-                                 Si2No_V, UnitTemperature_, UnitN_, UnitX_, UnitB_, &
-                                 SinThetaTilt, CosThetaTilt
+    use ModMain,       ONLY: UseMagnetogram, UseUserPerturbation
+    use ModProcMH,     ONLY: iProc
+    use ModIO,         ONLY: write_prefix, iUnitOut
+    use ModWaves,      ONLY: UseWavePressure, UseAlfvenWaves
+    use ModAdvance,    ONLY: UseElectronPressure
+    use ModMultiFluid, ONLY: MassIon_I
+    use ModConst,      ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
+         cElectronMass
+    use ModNumConst,   ONLY: cTwoPi, cDegToRad
+    use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
+         Si2No_V, UnitTemperature_, UnitN_, UnitX_, UnitB_, UnitU_, &
+         SinThetaTilt, CosThetaTilt
 
     real, parameter :: CoulombLog = 20.0
     character (len=*),parameter :: NameSub = 'uset_init_session'
@@ -180,6 +180,7 @@ contains
        nChromo = nChromoSi*Si2No_V(UnitN_)
        RhoChromo = nChromo*MassIon_I(1)
        tChromo = tChromoSi*Si2No_V(UnitTemperature_)
+       DeltaU = DeltaUSi*Si2No_V(UnitU_)*(nChromoSi/2e16)**0.25
     end if
 
     if(UseUserWaveDissipation)then
@@ -285,8 +286,6 @@ contains
     ! Provides the distribution of the total Alfven wave energy density
     ! at the lower boundary
 
-    use ModPhysics,    ONLY: Si2No_V, UnitU_
-
     real, intent(in) :: FullB
     real, intent(out):: Ewave
 
@@ -296,7 +295,7 @@ contains
 
     if (UseChromoBc) then
        
-       Ewave = RhoChromo*(WaveDeltaU*Si2No_V(UnitU_))**2
+       Ewave = RhoChromo*DeltaU**2
 
     else if(UseScaledWaveBcs)then
       
@@ -314,7 +313,7 @@ contains
     use ModGeometry,   ONLY: Xyz_DGB, r_Blk
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
-         UnitU_, UnitN_, AverageIonCharge
+         UnitN_, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
          WaveFirst_, WaveLast_, Hyp_
 
@@ -460,11 +459,11 @@ contains
        if (UseChromoBc) then
           if (Br >= 0.0) then
              State_VGB(WaveFirst_,i,j,k,iBlock) =  &
-                  State_VGB(rho_,i,j,k,iBlock)*(WaveDeltaU*Si2No_V(UnitU_))**2
+                  State_VGB(rho_,i,j,k,iBlock)*DeltaU**2
              State_VGB(WaveLast_,i,j,k,iBlock) = 1e-30
           else
              State_VGB(WaveLast_,i,j,k,iBlock) =  &
-                  State_VGB(rho_,i,j,k,iBlock)*(WaveDeltaU*Si2No_V(UnitU_))**2
+                  State_VGB(rho_,i,j,k,iBlock)*DeltaU**2
              State_VGB(WaveFirst_,i,j,k,iBlock) = 1e-30
           end if
        else
