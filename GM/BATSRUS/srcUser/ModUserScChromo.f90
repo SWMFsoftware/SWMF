@@ -180,7 +180,7 @@ contains
        nChromo = nChromoSi*Si2No_V(UnitN_)
        RhoChromo = nChromo*MassIon_I(1)
        tChromo = tChromoSi*Si2No_V(UnitTemperature_)
-       DeltaU = DeltaUSi*Si2No_V(UnitU_)*(nChromoSi/2e16)**0.25
+       DeltaU = DeltaUSi*Si2No_V(UnitU_)*(2e16/nChromoSi)**0.25
     end if
 
     if(UseUserWaveDissipation)then
