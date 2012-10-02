@@ -133,16 +133,22 @@ subroutine impl2expl(Var_VC, iBLK)
   use ModEnergy,   ONLY : calc_pressure_cell, calc_energy_cell
   use ModMultiFluid, ONLY: iFluid, nFluid, iP_I, iP
   use ModImplicit, ONLY: UseImplicitEnergy
-  
+  use ModGeometry, ONLY: true_cell
+
   implicit none
 
   real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
   integer, intent(in) :: iBLK
+  integer :: i,j,k
   !---------------------------------------------------------------------------
 
   call timing_start('impl2expl')
 
-  State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBLK) = Var_VC
+
+  do k = 1, nK; do j = 1, nJ; do i = 1, nI
+     if(.not.true_cell(i,j,k,iBLK)) CYCLE
+     State_VGB(1:nVar,i,j,k,iBLK) = Var_VC(1:nVar,i,j,k)
+  end do; end do; end do
 
   if(UseImplicitEnergy)then
      do iFluid = 1, nFluid
@@ -294,7 +300,7 @@ subroutine set_semi_impl_range
   use ModRadDiffusion, ONLY: set_rad_diff_range
 
   implicit none
-  
+
   !select case(TypeSemiImplicit)
   call set_rad_diff_range
 
@@ -302,16 +308,17 @@ end subroutine set_semi_impl_range
 !==============================================================================
 subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
-  use ModImplicit, ONLY: StateSemi_VGB, nw, nVarSemi, nImplBlk, impl2iblk, &
+  use ModImplicit,       ONLY: StateSemi_VGB, nw, nVarSemi, nImplBlk, impl2iblk, &
        TypeSemiImplicit, iVarSemiMin, iVarSemiMax, nVarSemi, &
        FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, UseAccurateRadiation
-  use ModLinearSolver, ONLY: UsePDotADotP
-  use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
+  use ModLinearSolver,   ONLY: UsePDotADotP
+  use ModSize,           ONLY: nI, nJ, nK, MaxImplBlk
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModResistivity,    ONLY: get_resistivity_rhs
-  use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
+  use BATL_lib,          ONLY: message_pass_cell, message_pass_face, &
        apply_flux_correction_block, CellVolume_GB
+  use ModGeometry,      ONLY : true_cell, true_BLK
 
   implicit none
 
@@ -546,7 +553,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
            n = n + 1
            y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock) &
                 /DtLocal - ImplCoeff * ResImpl_VCB(1,i,j,k,iImplBlock))
-         end do; enddo; enddo
+        end do; enddo; enddo
      else
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
            if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -556,7 +563,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
               n = n + 1
               y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
                    /DtLocal - ImplCoeff * ResImpl_VCB(iVar,i,j,k,iImplBlock))
-            enddo
+           enddo
         enddo; enddo; enddo
      end if
   end do
@@ -614,6 +621,7 @@ subroutine get_semi_impl_jacobian
 
      ! Form A = Volume*(1/dt - ImplCoeff*dR/dU) (symmetrized for sake of CG)
      do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
         Coeff = - ImplCoeff*CellVolume_GB(i,j,k,iBlock)
         MAT(:, :, i, j, k, iStencil, iImplBlock) = &
              Coeff * MAT(:, :, i, j, k, iStencil, iImplBlock)
@@ -657,216 +665,168 @@ subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
 
   use ModRadDiffusion, ONLY: set_rad_outflow_bc
   use ModImplicit, ONLY: UseSplitSemiImplicit, iVarSemiMin, iVarSemiMax, &
-       StateSemi_VGB, iTrImplFirst, iTrImplLast
-  use ModMain,     ONLY: TypeBc_I
+       StateSemi_VGB, iTrImplFirst, iTrImplLast, TypeSemiImplicit
+  use ModMain,     ONLY: TypeBc_I, time_accurate, time_loop, time_simulation
   use ModParallel, ONLY: NOBLK, NeiLev
   use ModUser,     ONLY: user_set_cell_boundary
   use BATL_size,   ONLY: nI, nJ, nK, nDim
-
+  use BATL_lib,    ONLY: IsCylindricalAxis, IsRlonLat
+  use ModPhysics,  ONLY: CellState_VI
+  use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary
+  use ModSetOuterBc ! contains iBLK
   implicit none
 
   integer, intent(in) :: iBlock, iImplBlock
   logical, intent(in) :: IsLinear
 
   logical :: IsFound
-  integer :: iVar
+  integer :: iVar, iStart, iLast, iSide
   character(len=20), parameter :: TypeUserBc = 'usersemi'
   character(len=20), parameter :: TypeUserBcLinear = 'usersemilinear'
   character(len=*),  parameter :: NameSub = 'get_semi_implicit_bc'
+
+  ! As we are changing the number of boundary cell larger then 2 we make it a 
+  ! varable. At this moment we do not know if it will need to be more then 2 for
+  ! semi implesit
+  integer, parameter :: ngSemi = 2
+
+  ! Store the iSide as character, debug info
+  character(len=1) :: cSide
+
   !----------------------------------------------------------------------------
 
-  if(NeiLev(1,iBlock) == NOBLK)then
-     if(TypeBc_I(1) == 'outflow' .or. TypeBc_I(1) == 'float')then
+  iStart=1
+  ! Do not apply cell boundary conditions at the pole 
+  ! This is either handled by message passing or supercell
+  if(IsRLonLat) then
+     iLast = 2
+  else
+     iLast = 6
+  end if
+
+  if(.not. any(neiLEV(iStart:iLast,iBlock)==NOBLK)) RETURN
+
+  iBLK = iBlock
+
+  if(.not.far_field_BCs_BLK(iBlock))then
+     write(*,*) NameSub,' warning: iBLK=',iBlock,' is not far_field block'
+     RETURN
+  end if
+
+  iStart=1
+  ! Do not apply cell boundary conditions at the pole 
+  ! This is either handled by message passing or supercell
+  if(IsRLonLat) then
+     iLast = 2
+  else
+     iLast = 6
+  end if
+
+  ! Do not work on ignored directions
+  if(nK == 1 .and. iLast > 4) iLast = 4
+  if(nJ == 1 .and. iLast > 2) iLast = 2
+
+  do iSide = iStart, iLast
+
+     ! Check if this side of the block is indeed an outer boundary
+     if(neiLEV(iSide,iBlock)/=NOBLK) CYCLE
+
+     ! Do not apply cell boundary conditions at the pole 
+     ! This is either handled by message passing or supercell
+     if(IsCylindricalAxis .and. iSide == 1) CYCLE
+
+     ! Set index limits
+     imin1g= 1-ngSemi; imax1g=nI+ngSemi; imin2g= 1-ngSemi; imax2g=nI+ngSemi
+     jmin1g= 1-ngSemi; jmax1g=nJ+ngSemi; jmin2g= 1-ngSemi; jmax2g=nJ+ngSemi
+     kmin1g= 1-ngSemi; kmax1g=nK+ngSemi; kmin2g= 1-ngSemi; kmax2g=nK+ngSemi
+
+     imin1p= 1-ngSemi; imax1p=nI+ngSemi; imin2p= 1-ngSemi; imax2p=nI+ngSemi
+     jmin1p= 1-ngSemi; jmax1p=nJ+ngSemi; jmin2p= 1-ngSemi; jmax2p=nJ+ngSemi
+     kmin1p= 1-ngSemi; kmax1p=nK+ngSemi; kmin2p= 1-ngSemi; kmax2p=nK+ngSemi
+
+     select case(iSide)
+     case(1)
+        imin1g=0; imax1g=0; imin2g= 1-ngSemi; imax2g= 1-ngSemi
+        imin1p=1; imax1p=1; imin2p= ngSemi; imax2p= ngSemi
+     case(2)
+        imin1g=nI+1; imax1g=nI+1; imin2g=nI+ngSemi; imax2g=nI+ngSemi
+        imin1p=nI  ; imax1p=nI  ; imin2p=nI+1-ngSemi; imax2p=nI+1-ngSemi
+     case(3)
+        jmin1g=0; jmax1g=0; jmin2g= 1-ngSemi; jmax2g= 1-ngSemi
+        jmin1p=1; jmax1p=1; jmin2p= ngSemi; jmax2p= ngSemi
+     case(4)
+        jmin1g=nJ+1; jmax1g=nJ+1; jmin2g=nJ+ngSemi; jmax2g=nJ+ngSemi
+        jmin1p=nJ  ; jmax1p=nJ  ; jmin2p=nJ+1-ngSemi; jmax2p=nJ+1-ngSemi
+     case(5)
+        kmin1g=0; kmax1g=0; kmin2g= 1-ngSemi; kmax2g= 1-ngSemi
+        kmin1p=1; kmax1p=1; kmin2p= ngSemi; kmax2p= ngSemi
+     case(6)
+        kmin1g=nK+1; kmax1g=nK+1; kmin2g=nK+ngSemi; kmax2g=nK+ngSemi
+        kmin1p=nK  ; kmax1p=nK  ; kmin2p=nK+1-ngSemi; kmax2p=nK+1-ngSemi
+     end select
+
+     select case(TypeBc_I(iSide))
+     case('outflow','float')
         do iVar = iVarSemiMin, iVarSemiMax
            if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
               ! For non-radiation variables
               if(IsLinear)then
-                 StateSemi_VGB(iVar,0,:,:,iBlock) = 0.0
+                 StateSemi_VGB(iVar,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBlock) = 0.0
               else
-                 StateSemi_VGB(iVar,0,:,:,iBlock) = &
-                      StateSemi_VGB(iVar,1,:,:,iBlock)
+                 StateSemi_VGB(iVar,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBlock) = &
+                      StateSemi_VGB(iVar,imin1p:imax1p,jmin1p:jmax1p,kmin1p:kmax1p,iBlock)
               end if
            elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
               ! For radiation variables (only call once when unsplit)
-              call set_rad_outflow_bc(1,iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
+              call set_rad_outflow_bc(iSide,iBlock, iImplBlock, &
+                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear) 
            end if
         end do
-     elseif(TypeBc_I(1) == 'user')then
+     case('inflow','vary')
+        if(UseSplitSemiImplicit) &
+             call stop_mpi(NameSub//': UseSplitSemiImplicit unsuported for '//TypeBc_I(iSide))
+        if(TypeSemiImplicit /= 'resistivity')&
+             call stop_mpi(NameSub//' : '//TypeBc_I(iSide)//' only tested for resistivity')
         if(IsLinear)then
-           StateSemi_VGB(:,0,:,:,iBlock) = 0.0
-           call user_set_cell_boundary(iBlock, 1, TypeUserBcLinear, IsFound)
+           do iVar = iVarSemiMin, iVarSemiMax
+              StateSemi_VGB(iVar,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBlock) = 0.0
+           end do
         else
-           IsFound = .false.
-           call user_set_cell_boundary(iBlock, 1, TypeUserBc, IsFound)
-           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=1 in user_set_cell_boundary')
-        end if
-     elseif(TypeBc_I(1) == 'reflect')then
-        StateSemi_VGB(:,0,:,:,iBlock) = StateSemi_VGB(:,1,:,:,iBlock)
-     else
-        call stop_mpi(NameSub//': unknown TypeBc_I(1)='//TypeBc_I(1))
-     end if
-  end if
-  if(NeiLev(2,iBlock) == NOBLK)then
-     if(TypeBc_I(2) == 'outflow' .or. TypeBc_I(2) == 'float')then
-        do iVar = iVarSemiMin, iVarSemiMax
-           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
-              if(IsLinear)then
-                 StateSemi_VGB(iVar,nI+1,:,:,iBlock) = 0.0
-              else
-                 StateSemi_VGB(iVar,nI+1,:,:,iBlock) = &
-                      StateSemi_VGB(iVar,nI,:,:,iBlock)
-              end if
-           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
-              call set_rad_outflow_bc(2, iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
+           if(time_accurate &
+                .and.(TypeBc_I(iSide)=='vary'.or.TypeBc_I(iSide)=='inflow'))then
+              call semi_BC_solar_wind(iBlock,time_simulation)
+           else 
+              call stop_mpi(NameSub//': No unsuported for '//TypeBc_I(iSide))
            end if
-        end do
-     elseif(TypeBc_I(2) == 'user')then
+        end if
+     case('user')
         if(IsLinear)then
-           StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
-           call user_set_cell_boundary(iBlock, 2, TypeUserBcLinear, IsFound)
+           StateSemi_VGB(:,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBlock) = 0.0
+           call user_set_cell_boundary(iBlock, iSide, TypeUserBcLinear, IsFound )
         else
            IsFound = .false.
-           call user_set_cell_boundary(iBlock, 2, TypeUserBc, IsFound)
-           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=2 in user_set_cell_boundary')
-        end if
-     elseif(TypeBc_I(2) == 'reflect')then
-        StateSemi_VGB(:,nI+1,:,:,iBlock) = StateSemi_VGB(:,nI,:,:,iBlock)
-     else
-        call stop_mpi(NameSub//': unknown TypeBc_I(2)='//TypeBc_I(2))
-     end if
-  end if
-  if(nDim > 1 .and. NeiLev(3,iBlock) == NOBLK)then
-     if(TypeBc_I(3) == 'outflow' .or. TypeBc_I(3) == 'float')then
-        do iVar = iVarSemiMin, iVarSemiMax
-           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
-              if(IsLinear)then
-                 StateSemi_VGB(iVar,:,0,:,iBlock) = 0.0
-              else
-                 StateSemi_VGB(iVar,:,0,:,iBlock) = &
-                      StateSemi_VGB(iVar,:,1,:,iBlock)
-              end if
-           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
-              call set_rad_outflow_bc(3, iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
+           call user_set_cell_boundary(iBlock, iSide, TypeUserBc, IsFound)
+           if(.not. IsFound) then
+              write(cSide,'(I1)') iSide    
+              call stop_mpi(NameSub//': unknown TypeUserBc='//TypeUserBc//'iSide='//cSide)
            end if
-        end do
-     elseif(TypeBc_I(3) == 'user')then
-        if(IsLinear)then
-           StateSemi_VGB(:,:,0,:,iBlock) =  0.0
-           call user_set_cell_boundary(iBlock, 3, TypeUserBcLinear, IsFound)
-        else
-           IsFound = .false.
-           call user_set_cell_boundary(iBlock, 3, TypeUserBc, IsFound)
-           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=3 in user_set_cell_boundary')
         end if
-     elseif(TypeBc_I(3) == 'reflect')then
-        StateSemi_VGB(:,:,0,:,iBlock) = StateSemi_VGB(:,:,1,:,iBlock)
-     elseif(TypeBc_I(3) == 'shear')then
-        call semi_bc_shear(3)
-     else
-        call stop_mpi(NameSub//': unknown TypeBc_I(3)='//TypeBc_I(3))
-     end if
-  end if
-  if(nDim > 1 .and. NeiLev(4,iBlock) == NOBLK) then
-     if(TypeBc_I(4) == 'outflow' .or. TypeBc_I(4) == 'float')then
-        do iVar = iVarSemiMin, iVarSemiMax
-           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
-              if(IsLinear)then
-                 StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = 0.0
-              else
-                 StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = &
-                      StateSemi_VGB(iVar,:,nJ,:,iBlock)
-              end if
-           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
-              call set_rad_outflow_bc(4, iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
-           end if
-        end do
-     elseif(TypeBc_I(4) == 'user')then
-        if(IsLinear)then
-           StateSemi_VGB(:,:,nJ+1,:,iBlock) = 0.0
-           call user_set_cell_boundary(iBlock, 4, TypeUserBcLinear, IsFound)
+     case('reflect')
+        StateSemi_VGB(:,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBlock) =&
+             StateSemi_VGB(:,imin1p:imax1p,jmin1p:jmax1p,kmin1p:kmax1p,iBlock)
+     case('shear')
+        if(iSide ==3 .or. iSide == 4) then
+           call semi_bc_shear(iSide)
         else
-           IsFound = .false.
-           call user_set_cell_boundary(iBlock, 4, TypeUserBc, IsFound)
-           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=4 in user_set_cell_boundary')
+           write(cSide,'(I1)') iSide    
+           call stop_mpi(NameSub//': Shear not suported for iSide ='// cSide)
         end if
-     elseif(TypeBc_I(4) == 'reflect')then
-        StateSemi_VGB(:,:,nJ+1,:,iBlock) = StateSemi_VGB(:,:,nJ,:,iBlock)
-     elseif(TypeBc_I(4) == 'shear')then
-        call semi_bc_shear(4)
-     else
-        call stop_mpi(NameSub//': unknown TypeBc_I(4)='//TypeBc_I(4))
-     end if
-  end if
-  if(nDim > 2 .and. NeiLev(5,iBlock) == NOBLK) then
-     if(TypeBc_I(5) == 'outflow' .or. TypeBc_I(5) == 'float')then
-        do iVar = iVarSemiMin, iVarSemiMax
-           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
-              if(IsLinear)then
-                 StateSemi_VGB(iVar,:,:,0,iBlock) = 0.0
-              else
-                 StateSemi_VGB(iVar,:,:,0,iBlock) = &
-                      StateSemi_VGB(iVar,:,:,1,iBlock)
-              end if
-           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
-              call set_rad_outflow_bc(5, iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
-           end if
-        end do
-     elseif(TypeBc_I(5) == 'user')then
-        if(IsLinear)then
-           StateSemi_VGB(:,:,:,0,iBlock) = 0.0
-           call user_set_cell_boundary(iBlock, 5, TypeUserBcLinear, IsFound)
-        else
-           IsFound = .false.
-           call user_set_cell_boundary(iBlock, 5, TypeUserBc, IsFound)
-           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=5 in user_set_cell_boundary')
-        end if
-     elseif(TypeBc_I(5) == 'reflect')then
-        StateSemi_VGB(:,:,:,0,iBlock) = StateSemi_VGB(:,:,:,1,iBlock)
-     else
-        call stop_mpi(NameSub//': unknown TypeBc_I(5)='//TypeBc_I(5))
-     end if
-  end if
-  if(nDim > 2 .and. NeiLev(6,iBlock) == NOBLK)then 
-     if(TypeBc_I(6) == 'outflow' .or. TypeBc_I(6) == 'float')then
-        do iVar = iVarSemiMin, iVarSemiMax
-           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
-              if(IsLinear)then
-                 StateSemi_VGB(iVar,:,:,nK+1,iBlock) = 0.0
-              else
-                 StateSemi_VGB(iVar,:,:,nK+1,iBlock) = &
-                      StateSemi_VGB(iVar,:,:,nK,iBlock)
-              end if
-           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
-              call set_rad_outflow_bc(6, iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear)
-           end if
-        end do
-     elseif(TypeBc_I(6) == 'user')then
-        if(IsLinear)then
-           StateSemi_VGB(:,:,:,nK+1,iBlock) = 0.0
-           call user_set_cell_boundary(iBlock, 6, TypeUserBcLinear, IsFound)
-        else
-           IsFound = .false.
-           call user_set_cell_boundary(iBlock, 6, TypeUserBc, IsFound)
-           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                //TypeUserBc//' on iSide=6 in user_set_cell_boundary')
-        end if
-     elseif(TypeBc_I(6) == 'reflect')then
-        StateSemi_VGB(:,:,:,nK+1,iBlock) = StateSemi_VGB(:,:,:,nK,iBlock)
-     else
-        call stop_mpi(NameSub//': unknown TypeBc_I(6)='//TypeBc_I(6))
-     end if
-  end if
+     case default 
+        write(cSide,'(I1)') iSide    
+        call stop_mpi(NameSub//': unknown TypeBc_I('//cSide//')='//TypeBc_I(iSide))
+     end select
+
+  end do
 
 contains
 
@@ -906,6 +866,53 @@ contains
 
   end subroutine semi_bc_shear
 
+  subroutine semi_BC_solar_wind(iBlock,time_now)
+
+    use ModVarIndexes
+    use ModGeometry,    ONLY: x2
+    use ModAdvance,     ONLY: B0_DGB, nVar
+    use ModMultiFluid,  ONLY: &
+         iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
+    use ModSolarwind,   ONLY: get_solar_wind_point
+    use ModMain,        ONLY: UseB0, y_, z_
+    use BATL_lib,       ONLY: Xyz_DGB
+    use ModImplicit,    ONLY: StateSemi_VGB
+    use ModResistivity, ONLY: BxImpl_,BzImpl_
+    !character(len=*), parameter:: NameSub = 'BC_solar_wind'
+    !logical :: DoTest, DoTestMe
+
+    ! Current simulation time in seconds
+    integer, intent(in) :: iBlock
+    real, intent(in)    :: time_now 
+
+    ! index and location of a single point
+    integer :: i, j, k
+    real :: x, y, z
+    ! Varying solar wind parameters
+    real :: SolarWind_V(nVar)
+
+    !--------------------------------------------------------------------------
+
+    do k = kmin1g, kmax1g 
+       z = Xyz_DGB(z_,1,1,k,iBlock)
+       do j = jmin1g, jmax2g
+          y = Xyz_DGB(y_,1,j,1,iBlock)
+          do i = imin1g, imax2g, sign(1,imax2g-imin1g)
+
+             ! x= Xyz_DGB(x_,i,j,k,iBlock) ! for cell based BC this would be best
+             x=x2 ! for face based and for west side as the inflow
+             call get_solar_wind_point(time_now, (/x, y, z/), SolarWind_V)
+
+             StateSemi_VGB(BxImpl_:BzImpl_,i,j,k,iBlock) = SolarWind_V(Bx_:Bz_)
+
+             ! Subtract B0:   B1 = B - B0
+             if(UseB0) StateSemi_VGB(BxImpl_:BzImpl_,i,j,k,iBlock)    = &
+                  StateSemi_VGB(BxImpl_:BzImpl_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+          end do
+       end do
+    end do
+
+  end subroutine semi_BC_solar_wind
 end subroutine get_semi_implicit_bc
 
 !==============================================================================
@@ -933,15 +940,15 @@ subroutine getsource(iBLK,Var_VCB,SourceImpl_VC)
 
   qUseDivbSource = UseDivbSource
   UseDivbSource  = .false.
-  
+
   call impl2expl(Var_VCB,iBLK)
 
-  !!! Explicit time dependence  t+ImplCoeff*dt !!!
+!!! Explicit time dependence  t+ImplCoeff*dt !!!
   !call calc_point_sources(t+ImplCoeff*dt)
   call calc_source(iBlk)
 
   SourceImpl_VC = Source_VC(1:nVar,:,:,:)
-  
+
   if(UseImplicitEnergy)then
      ! Overwrite pressure source terms with energy source term
      SourceImpl_VC(iP_I,:,:,:) = Source_VC(Energy_:Energy_+nFluid-1,:,:,:)
@@ -1003,12 +1010,12 @@ subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
      Primitive_V = StateCons_VC( :,i, j, k)
      call conservative_to_primitive(Primitive_V)
 
-     !!! Conservative_V(1:nVar) = StateCons_VC( :,i, j, k)
-     !!! do iFluid=1, nFluid
-     !!!    iP = iP_I(iFluid)
-     !!!    Conservative_V(iP) = Primitive_V(iP)
-     !!!    Conservative_V(nVar+iFluid) = StateCons_VC( iP,i, j, k)
-     !!! end do
+!!! Conservative_V(1:nVar) = StateCons_VC( :,i, j, k)
+!!! do iFluid=1, nFluid
+!!!    iP = iP_I(iFluid)
+!!!    Conservative_V(iP) = Primitive_V(iP)
+!!!    Conservative_V(nVar+iFluid) = StateCons_VC( iP,i, j, k)
+!!! end do
 
      if(UseHallResist)then
         HallJx = HallJ_CD(i, j, k, x_)

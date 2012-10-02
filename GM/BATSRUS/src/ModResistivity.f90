@@ -54,7 +54,7 @@ module ModResistivity
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
 
   ! Named indices for semi-implicit variables
-  integer, parameter :: BxImpl_ = 1, ByImpl_ = 2, BzImpl_ = 3
+  integer, public, parameter :: BxImpl_ = 1, ByImpl_ = 2, BzImpl_ = 3
 
 contains
   !===========================================================================
@@ -371,7 +371,7 @@ contains
        if(UseJouleHeating)then
           call get_current(i,j,k,iBlock,Current_D)
           JouleHeating = gm1 * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
-       end if          
+       end if
        if(UseElectronPressure) then
           ! For single ion fluid the ion-electron collision results in a 
           ! heat exchange term for the electron pressure 
@@ -496,6 +496,7 @@ contains
          FluxImpl_VZB
     use ModNumConst,     ONLY: i_DD
     use ModSize,         ONLY: x_, y_, z_
+    use ModGeometry,     ONLY : true_cell, true_BLK
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -509,10 +510,14 @@ contains
 
     IsNewBlock = .true.
 
+    Rhs_VC = 0.0
+
+    if(.not. true_BLK(iblock)) RETURN
+
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
        do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
           call get_face_curl(iDim, i, j, k, iBlock, IsNewBlock, StateImpl_VG, &
                Current_D)
 
@@ -537,7 +542,7 @@ contains
           FluxImpl_VFD(BzImpl_,i,j,k,iDim) = &
                + Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(y_) &
                - Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(x_)
-                  
+
        end do; end do; end do
     end do
 
@@ -545,11 +550,11 @@ contains
     call store_face_flux(iBlock, nVarSemi, FluxImpl_VFD, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
-    Rhs_VC = 0.0
 
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
           Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k) &
                -(FluxImpl_VFD(:,i+Di,j+Dj,k+Dk,iDim) &
                - FluxImpl_VFD(:,i,j,k,iDim))/CellVolume_GB(i,j,k,iBlock)
@@ -560,6 +565,7 @@ contains
        InvDy2 = 0.5/CellSize_DB(y_,iBlock)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
           ! Jx = Dbz/Dy - Dby/Dz (Jz = Dbphi/Dr in rz-geometry)
           ! Note that set_block_field3 has already been called so that we can
           ! use central difference.
@@ -585,6 +591,7 @@ contains
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
     use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap
     use ModNumConst,     ONLY: i_DD
+    use ModGeometry,     ONLY: true_cell
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
@@ -600,6 +607,7 @@ contains
        do iDim = 1, nDim
           Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not.true_cell(i,j,k,iBlock)) CYCLE
              Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
 
              do iDir = 1, MaxDim
@@ -633,57 +641,63 @@ contains
        do iDim = 1, nDim
           Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
+             if(.not.true_cell(i,j,k,iBlock)) then
+                do iDir = 1, MaxDim
+                   Jacobian_VVCI(iDir,iDir,i,j,k,1) = 1.0
+                end do
+             else
+                Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
 
-             do iDir = 1, MaxDim; do jDir = 1, nDim
-                if(iDir ==jDir) CYCLE
+                do iDir = 1, MaxDim; do jDir = 1, nDim
+                   if(iDir ==jDir) CYCLE
 
-                DiffLeft = Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
-                     *DcoordDxyz_DDFD(iDim,jDir,i,j,k,iDim)*Coeff
-                DiffRight = Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
-                     *DcoordDxyz_DDFD(iDim,jDir,i+Di,j+Dj,k+Dk,iDim)*Coeff
+                   DiffLeft = Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
+                        *DcoordDxyz_DDFD(iDim,jDir,i,j,k,iDim)*Coeff
+                   DiffRight = Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
+                        *DcoordDxyz_DDFD(iDim,jDir,i+Di,j+Dj,k+Dk,iDim)*Coeff
 
-                Jacobian_VVCI(iDir,iDir,i,j,k,1) = &
-                     Jacobian_VVCI(iDir,iDir,i,j,k,1) - (DiffLeft + DiffRight)
+                   Jacobian_VVCI(iDir,iDir,i,j,k,1) = &
+                        Jacobian_VVCI(iDir,iDir,i,j,k,1) - (DiffLeft + DiffRight)
 
-                if(UseNoOverlap)then
-                   if(  iDim==1.and.i==1  .or. &
-                        iDim==2.and.j==1  .or. &
-                        iDim==3.and.k==1)        DiffLeft = 0.0
-                   if(  iDim==1.and.i==nI .or. &
-                        iDim==2.and.j==nJ .or. &
-                        iDim==3.and.k==nK)       DiffRight = 0.0
-                end if
+                   if(UseNoOverlap)then
+                      if(  iDim==1.and.i==1  .or. &
+                           iDim==2.and.j==1  .or. &
+                           iDim==3.and.k==1)        DiffLeft = 0.0
+                      if(  iDim==1.and.i==nI .or. &
+                           iDim==2.and.j==nJ .or. &
+                           iDim==3.and.k==nK)       DiffRight = 0.0
+                   end if
 
-                Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim)   = &
-                     Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim) + DiffLeft
-                Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) = &
-                     Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) + DiffRight
+                   Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim)   = &
+                        Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim) + DiffLeft
+                   Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) = &
+                        Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) + DiffRight
 
 
-                DiffLeft = -Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
-                     *DcoordDxyz_DDFD(iDim,iDir,i,j,k,iDim)*Coeff
-                DiffRight = -Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
-                     *DcoordDxyz_DDFD(iDim,iDir,i+Di,j+Dj,k+Dk,iDim)*Coeff
+                   DiffLeft = -Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
+                        *DcoordDxyz_DDFD(iDim,iDir,i,j,k,iDim)*Coeff
+                   DiffRight = -Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
+                        *DcoordDxyz_DDFD(iDim,iDir,i+Di,j+Dj,k+Dk,iDim)*Coeff
 
-                Jacobian_VVCI(iDir,jDir,i,j,k,1) = &
-                     Jacobian_VVCI(iDir,jDir,i,j,k,1) - (DiffLeft + DiffRight)
+                   Jacobian_VVCI(iDir,jDir,i,j,k,1) = &
+                        Jacobian_VVCI(iDir,jDir,i,j,k,1) - (DiffLeft + DiffRight)
 
-                if(UseNoOverlap)then
-                   if(  iDim==1.and.i==1  .or. &
-                        iDim==2.and.j==1  .or. &
-                        iDim==3.and.k==1)        DiffLeft = 0.0
-                   if(  iDim==1.and.i==nI .or. &
-                        iDim==2.and.j==nJ .or. &
-                        iDim==3.and.k==nK)       DiffRight = 0.0
-                end if
+                   if(UseNoOverlap)then
+                      if(  iDim==1.and.i==1  .or. &
+                           iDim==2.and.j==1  .or. &
+                           iDim==3.and.k==1)        DiffLeft = 0.0
+                      if(  iDim==1.and.i==nI .or. &
+                           iDim==2.and.j==nJ .or. &
+                           iDim==3.and.k==nK)       DiffRight = 0.0
+                   end if
 
-                Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim)   = &
-                     Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim) + DiffLeft
-                Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim+1) = &
-                     Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim+1) + DiffRight
+                   Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim)   = &
+                        Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim) + DiffLeft
+                   Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim+1) = &
+                        Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim+1) + DiffRight
 
-             end do; end do
+                end do; end do
+             end if
           end do; end do; end do
        end do
     end if
@@ -698,6 +712,7 @@ contains
     use ModEnergy,     ONLY: calc_energy_cell
     use ModImplicit,   ONLY: nw
     use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModGeometry, ONLY: true_cell
 
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(in) :: StateImpl_VG(nw,nI,nJ,nK)
@@ -706,6 +721,7 @@ contains
     !--------------------------------------------------------------------------
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = StateImpl_VG(BxImpl_:BzImpl_,i,j,k)
     end do; end do; end do
 
