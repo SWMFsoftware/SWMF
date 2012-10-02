@@ -49,6 +49,12 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 ;
 ;===========================================================================
 
+if n_elements(xx) eq 0 or n_elements(w) eq 0 then begin
+   print,'ERROR in funcdef: xx or w are not defined'
+   help,xx,w
+   retall
+endif
+
 ; In 1D xx(n1), in 2D xx(n1,n2,2), in 3D xx(n1,n2,n3,3)
 siz=size(xx)
 ndim=siz(0)-1
@@ -76,6 +82,7 @@ nEqpar = n_elements(eqpar)
 gamma  =  5./3.
 clight =  1.0
 rbody  = -1.0
+
 if nEqpar gt 0 then begin
     for i=nDim+nW,n_elements(variables)-1 do begin
         iEqpar = i-nDim-nW
