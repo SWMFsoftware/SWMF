@@ -1340,7 +1340,7 @@ contains
        CreflLocal = Crefl
     end if
    
-    DissipationRate = (CreflLocal*sqrt(EwavePlus+EwaveMinus) &
+    DissipationRate = (CreflLocal*sqrt(max(EwavePlus,EwaveMinus)) &
          + FactorCP*sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
          *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
