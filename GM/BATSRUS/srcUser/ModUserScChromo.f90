@@ -22,8 +22,6 @@ module ModUser
        'Chromosphere to solar wind model with Alfven waves - Oran, van der Holst'
 
   ! Input parameters for chromospheric inner BC's
-  logical :: UseUparBc = .false., &
-       UseExtrapolatedEwave = .true.
   real    :: DeltaUSi = 1.5e4, DeltaU = 0.0
   real    :: nChromoSi = 2e17, tChromoSi = 2e4
   real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
@@ -68,8 +66,6 @@ contains
           call read_var('DeltaUSi', DeltaUSi)
           call read_var('nChromoSi', nChromoSi)
           call read_var('tChromoSi', tChromoSi)
-          call read_var('UseUparBc',UseUparBc)
-          call read_var('UseExtrapolatedEwave',UseExtrapolatedEwave)
 
        case('#SOLARDIPOLE')
           call read_var('DipoleStrengthSi',DipoleStrengthSi)
@@ -627,7 +623,6 @@ contains
     real    :: WaveDissipation_V(WaveFirst_:WaveLast_), CoronalHeating, Lperp
     real    :: U_D(3), B_D(3), r, phi, theta
     real    :: sintheta, sinphi, costheta, cosphi
-    integer,parameter :: x_ =1, y_ =2, z_ =3
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -833,10 +828,8 @@ contains
     ! modifies ghost cells in the r direction
 
     use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure
-    use ModMain,       ONLY: UseUserInnerBcs
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
-    use ModVarIndexes, ONLY: Rho_, p_, Pe_, WaveFirst_, WaveLast_, &
-         Bx_, Bz_, Ux_, Uz_
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_
     use ModMultiFluid, ONLY: MassIon_I
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
     use ModPhysics,    ONLY: AverageIonCharge
@@ -845,11 +838,10 @@ contains
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    integer :: i,j,k
-    real    :: x, y, z, r, r_D(3), rUnit_DG(3,3), bUnit_DG(3,3), U_DG(3,3)
-    real    :: FullBr, FullB, FullB_D(3), Br1_D(3), Bt1_D(3),Ewave
+    integer :: i, j, k
+    real    :: Br1_D(3), Bt1_D(3)
     real    :: NumDensIon, NumDensElectron
-    real :: Runit_D(3)
+    real    :: Runit_D(3)
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
@@ -896,106 +888,17 @@ contains
 
     end do; end do
 
-    ! Safety
-    if (UseUserInnerBcs) RETURN
-
-    do k = MinK,MaxK ; do j = MinJ,MaxJ
-
-       ! Update B1 in ghost cells (r direction only
-       ! Reflect normal component, float tangential component 
-       do i= 1,0,-1
-          x = Xyz_DGB(x_,i,j,k,iBlock)
-          y = Xyz_DGB(y_,i,j,k,iBlock)
-          z = Xyz_DGB(z_,i,j,k,iBlock)
-          r = r_BLK(i,j,k,iBlock)
-          r_D = (/x,y,z/)
-          rUnit_DG(:,i) = r_D/r             
-
-          Br1_D = rUnit_DG(:,i) * &
-               sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*rUnit_DG(:,i))
-          Bt1_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) - Br1_D
-          State_VGB(Bx_:Bz_, i-1,j,k,iBlock) = Bt1_D - Br1_D
-       end do
-
-       ! Full magnetic field
-       do i = -1,1
-          FullB_D = B0_DGB(:,i,j,k,iBlock) + &
-               State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          FullB = sqrt(sum(FullB_D**2))
-          FullBr = sum(rUnit_DG(:,i)*FullB_D)
-          bUnit_DG(:,i) = FullB_D / FullB
-       end do
-
-       !\
-       ! Velocity
-       !/
-       do i = 0,-1,-1
-          if (UseUparBc) then
-             ! Conserve momentum along field lines
-             U_DG(:,i+1) = State_VGB(Ux_:Uz_,i+1,j,k,iBlock)
-             U_DG(:,i) = &
-                  (State_VGB(Rho_,i+1,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))* &
-                  sum(U_DG(:,i+1)*bUnit_DG(:,i+1))*bUnit_DG(:,i)
-             State_VGB(Ux_:Uz_,i,j,k,iBlock) = U_DG(:,i)
-          else
-             ! Reflect U - same as van der Holst, 2010, Cohen 2007
-             State_VGB(Ux_:Uz_,i,j,k,iBlock) = -U_DG(:,i+1)
-          end if
-       end do
-
-       Ewave = RhoChromo*DeltaU**2
-
-       if (UseExtrapolatedEwave) then
-          if(FullBr > 0.0)then
-             State_VGB(WaveFirst_,0,j,k,iBlock) = &
-                  2.*Ewave - State_VGB(WaveFirst_,1,j,k,iBlock)
-             State_VGB(WaveFirst_,-1,j,k,iBlock) = &
-                  2.*State_VGB(WaveFirst_,0,j,k,iBlock) - &
-                  State_VGB(WaveFirst_,1,j,k,iBlock)
-
-             State_VGB(WaveLast_,0,j,k,iBlock) = &
-                  2.*State_VGB(WaveLast_,1,j,k,iBlock) - &
-                  State_VGB(WaveLast_,2,j,k,iBlock)
-             State_VGB(WaveLast_,-1,j,k,iBlock) = &
-                  2.*State_VGB(WaveLast_,0,j,k,iBlock) - & 
-                  State_VGB(WaveLast_,1,j,k,iBlock)
-          else
-             State_VGB(WaveLast_,0,j,k,iBlock) = &
-                  2.*Ewave - State_VGB(WaveLast_,1,j,k,iBlock)
-             State_VGB(WaveLast_,-1,j,k,iBlock) = &
-                  2.*State_VGB(WaveLast_,0,j,k,iBlock) - & 
-                  State_VGB(WaveLast_,1,j,k,iBlock)
-
-             State_VGB(WaveFirst_,0,j,k,iBlock) = &
-                  2.*State_VGB(WaveFirst_,1,j,k,iBlock) - &
-                  State_VGB(WaveFirst_,2,j,k,iBlock)
-             State_VGB(WaveFirst_,-1,j,k,iBlock) = &
-                  2.*State_VGB(WaveFirst_,0,j,k,iBlock) - & 
-                  State_VGB(WaveFirst_,1,j,k,iBlock)
-          end if
-       else
-          ! Use fixed wave energy
-          if(FullBr > 0.0)then
-             State_VGB(WaveFirst_,-1:0,j,k,iBlock) = Ewave          
-             State_VGB(WaveLast_,-1:0,j,k,iBlock) = 0.0 
-          else
-             State_VGB(WaveFirst_,-1:0,j,k,iBlock) = Ewave          
-             State_VGB(WaveLast_,-1:0,j,k,iBlock) = 0.0 
-          end if
-       end if
-    end do; end do
-
   end subroutine user_set_cell_boundary
   !============================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModAdvance,     ONLY: UseElectronPressure
+    use ModAdvance,      ONLY: UseElectronPressure
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
-    use ModMain,        ONLY: x_, y_, UseRotatingFrame
-    use ModMultiFluid,  ONLY: MassIon_I
-    use ModPhysics,     ONLY: OmegaBody, AverageIonCharge
-    use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, Bz_, p_, &
-         WaveFirst_, WaveLast_, Pe_,Hyp_
+    use ModMain,         ONLY: x_, y_, UseRotatingFrame
+    use ModMultiFluid,   ONLY: MassIon_I
+    use ModPhysics,      ONLY: OmegaBody, AverageIonCharge
+    use ModVarIndexes,   ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, Bz_, p_, &
+         WaveFirst_, WaveLast_, Pe_, Hyp_
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
@@ -1007,9 +910,6 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    ! Check that extrapolated wave inner BC's were not chosen - can only be performed
-    ! while using ghost-cells based BC's (see set_outerbc for a spherical grid)
-    if (UseExtrapolatedEwave) call CON_stop('UseExtrapolatedEwave=T but you are using face_bcs')
 
     rUnit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
 
@@ -1037,31 +937,17 @@ contains
     ! Velocity
     !/
     U_D   = VarsTrueFace_V(Ux_:Uz_)
-    if (UseUparBc) then
-       ! Conserve momentum along field lines
-       bUnitGhost_D = FullBGhost_D/sqrt(sum(FullBGhost_D**2))
-       bUnitTrue_D = FullBTrue_D/sqrt(sum(FullBTrue_D**2))
 
-       VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
-            sum(U_D*bUnitTrue_D)*bUnitGhost_D       
+    bUnitGhost_D = FullBGhost_D/sqrt(sum(FullBGhost_D**2))
+    bUnitTrue_D = FullBTrue_D/sqrt(sum(FullBTrue_D**2))
 
-       ! Apply corotation if needed
-       if(.not.UseRotatingFrame)then
-          VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) &
-               - OmegaBody*FaceCoords_D(y_)
-          VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
-               + OmegaBody*FaceCoords_D(x_)
-       end if
-    else
-       ! Reflect U - same as van der Holst, 2010, Cohen 2007
-       VarsGhostFace_V(Ux_:Uz_) = -U_D
-       ! Apply corotation if needed
-       if(.not.UseRotatingFrame)then
-          VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) &
-               - 2.0*OmegaBody*FaceCoords_D(y_)
-          VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
-               + 2.0*OmegaBody*FaceCoords_D(x_)
-       end if
+    VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
+         sum(U_D*bUnitTrue_D)*bUnitGhost_D       
+
+    ! Apply corotation if needed
+    if(.not.UseRotatingFrame)then
+       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) - OmegaBody*FaceCoords_D(y_)
+       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) + OmegaBody*FaceCoords_D(x_)
     end if
 
     !\

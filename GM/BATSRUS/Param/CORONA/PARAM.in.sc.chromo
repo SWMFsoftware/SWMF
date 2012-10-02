@@ -78,8 +78,6 @@ F			UseUserUpdateStates
 1.5e4			DeltaU [m/s]
 2e16			nChromoSi [1/m^3]
 2e4			tChromoSi [K]
-T			UseFloatUpar
-F			UseExtrapolatedEwave
 
 #PARKERIC
 1.5e14			NumDensitySi 1e14
