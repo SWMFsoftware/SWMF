@@ -75,7 +75,6 @@ F			UseUserUpdateStates
 #USERINPUTBEGIN ------------------------
 
 #CHROMOBC
-T			UseChromoBc
 1.5e4			DeltaU [m/s]
 2e16			nChromoSi [1/m^3]
 2e4			tChromoSi [K]
