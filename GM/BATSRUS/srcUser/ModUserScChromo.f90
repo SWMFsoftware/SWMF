@@ -27,7 +27,7 @@ module ModUser
   real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
 
   ! variables for Parker initial condition
-  real    :: nCoronaSi = 0.0, tCoronaSi = 0.0
+  real    :: nCoronaSi = 1.5e14, tCoronaSi = 1.5e6
   real    :: DipoleTiltDeg = 0.0
 
   ! Input parameters for two-temperature effects
