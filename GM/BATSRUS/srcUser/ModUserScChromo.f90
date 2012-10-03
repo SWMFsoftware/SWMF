@@ -25,6 +25,7 @@ module ModUser
   real    :: DeltaUSi = 1.5e4, DeltaU = 0.0
   real    :: nChromoSi = 2e17, tChromoSi = 2e4
   real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
+  real    :: PointingFluxPerB = 0.0
 
   ! variables for Parker initial condition
   real    :: nCoronaSi = 1.5e14, tCoronaSi = 1.5e6
@@ -128,6 +129,7 @@ contains
     RhoChromo = nChromo*MassIon_I(1)
     tChromo = tChromoSi*Si2No_V(UnitTemperature_)
     DeltaU = DeltaUSi*Si2No_V(UnitU_)*(2e16/nChromoSi)**0.25
+    PointingFluxPerB = sqrt(RhoChromo)*DeltaU**2
 
     if (.not. UseMagnetogram) then
        SinThetaTilt = sin(cDegToRad*DipoleTiltDeg)
@@ -289,17 +291,7 @@ contains
           State_VGB(p_,i,j,k,iBlock) = &
                (NumDensIon + NumDensElectron)*Temperature
        end if
-       if (r > 1.5) then
-          ! NOTE: If you wish to recover the Parker solution, remove this case.
-
-          ! "Vacuum cleaner" initial condition to speed up convergence.
-          ! Basically, it makes the initial solution lighter and easier to
-          ! push out of the domain. Note, this initial solution is not
-          ! self consistent, but this should not affect the final state.
-          State_VGB(Rho_,i,j,k,iBlock) = Rho/2
-       else
-          State_VGB(Rho_,i,j,k,iBlock) = Rho
-       end if
+       State_VGB(Rho_,i,j,k,iBlock) = Rho
 
        State_VGB(RhoUx_,i,j,k,iBlock) = Rho*Ur*x/r *Usound
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
@@ -311,11 +303,11 @@ contains
 
        if (Br >= 0.0) then
           State_VGB(WaveFirst_,i,j,k,iBlock) =  &
-               State_VGB(rho_,i,j,k,iBlock)*DeltaU**2
+               PointingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
           State_VGB(WaveLast_,i,j,k,iBlock) = 1e-30
        else
           State_VGB(WaveLast_,i,j,k,iBlock) =  &
-               State_VGB(rho_,i,j,k,iBlock)*DeltaU**2
+               PointingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
           State_VGB(WaveFirst_,i,j,k,iBlock) = 1e-30
        end if
 
@@ -950,16 +942,16 @@ contains
     !\
     ! Fixed wave BC's
     !/
-    Ewave = RhoChromo*DeltaU**2
+    Ewave = PointingFluxPerB*sqrt(RhoGhost)
 
     ! Ewave \propto sqrt(rho) for U << Ualfven
     ! probably, just setting to Ewave is good enough
     if (FullBr > 0. ) then
-       VarsGhostFace_V(WaveFirst_) = Ewave*sqrt(RhoGhost/RhoChromo)
+       VarsGhostFace_V(WaveFirst_) = Ewave
        VarsGhostFace_V(WaveLast_) = 0.0
     else
        VarsGhostFace_V(WaveFirst_) = 0.0
-       VarsGhostFace_V(WaveLast_) = Ewave*sqrt(RhoGhost/RhoChromo)
+       VarsGhostFace_V(WaveLast_) = Ewave
     end if
 
     !\
