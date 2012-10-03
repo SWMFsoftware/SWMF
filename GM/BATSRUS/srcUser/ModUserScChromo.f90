@@ -25,7 +25,7 @@ module ModUser
   real    :: DeltaUSi = 1.5e4, DeltaU = 0.0
   real    :: nChromoSi = 2e17, tChromoSi = 2e4
   real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
-  real    :: PointingFluxPerB = 0.0
+  real    :: PoyntingFluxPerB = 0.0
 
   ! variables for Parker initial condition
   real    :: nCoronaSi = 1.5e14, tCoronaSi = 1.5e6
@@ -99,7 +99,7 @@ contains
   !============================================================================
   subroutine user_init_session
 
-    use ModMain,       ONLY: UseMagnetogram, UseUserPerturbation
+    use ModMain,       ONLY: UseMagnetogram
     use ModProcMH,     ONLY: iProc
     use ModIO,         ONLY: write_prefix, iUnitOut
     use ModWaves,      ONLY: UseWavePressure, UseAlfvenWaves
@@ -129,7 +129,7 @@ contains
     RhoChromo = nChromo*MassIon_I(1)
     tChromo = tChromoSi*Si2No_V(UnitTemperature_)
     DeltaU = DeltaUSi*Si2No_V(UnitU_)*(2e16/nChromoSi)**0.25
-    PointingFluxPerB = sqrt(RhoChromo)*DeltaU**2
+    PoyntingFluxPerB = sqrt(RhoChromo)*DeltaU**2
 
     if (.not. UseMagnetogram) then
        SinThetaTilt = sin(cDegToRad*DipoleTiltDeg)
@@ -303,11 +303,11 @@ contains
 
        if (Br >= 0.0) then
           State_VGB(WaveFirst_,i,j,k,iBlock) =  &
-               PointingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
+               PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
           State_VGB(WaveLast_,i,j,k,iBlock) = 1e-30
        else
           State_VGB(WaveLast_,i,j,k,iBlock) =  &
-               PointingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
+               PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
           State_VGB(WaveFirst_,i,j,k,iBlock) = 1e-30
        end if
 
@@ -942,10 +942,9 @@ contains
     !\
     ! Fixed wave BC's
     !/
-    Ewave = PointingFluxPerB*sqrt(RhoGhost)
+    Ewave = PoyntingFluxPerB*sqrt(RhoGhost)
 
     ! Ewave \propto sqrt(rho) for U << Ualfven
-    ! probably, just setting to Ewave is good enough
     if (FullBr > 0. ) then
        VarsGhostFace_V(WaveFirst_) = Ewave
        VarsGhostFace_V(WaveLast_) = 0.0
