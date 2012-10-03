@@ -902,7 +902,7 @@ contains
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
-    real :: RhoBase, NumDensIon, NumDensElectron, Tbase, FullBr, EwaveBase
+    real :: NumDensIon, NumDensElectron, FullBr, Ewave
     real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D
     real,dimension(3) :: bUnitGhost_D, bUnitTrue_D, rUnit_D
     real,dimension(3) :: FullBGhost_D, FullBTrue_D
@@ -925,10 +925,7 @@ contains
     FullBTrue_D  = B0Face_D + VarsTrueFace_V(Bx_:Bz_)
     FullBr = sum(FullBGhost_D*rUnit_D)
 
-    RhoBase = RhoChromo
-    TBase   = tChromo
-
-    VarsGhostFace_V(Rho_) =  2.0*RhoBase - VarsTrueFace_V(Rho_)
+    VarsGhostFace_V(Rho_) =  2.0*RhoChromo - VarsTrueFace_V(Rho_)
 
     RhoTrue = VarsTrueFace_V(Rho_)
     RhoGhost = VarsGhostFace_V(Rho_)
@@ -953,14 +950,16 @@ contains
     !\
     ! Fixed wave BC's
     !/
-    EwaveBase = RhoChromo*DeltaU**2
+    Ewave = RhoChromo*DeltaU**2
 
+    ! Ewave \propto sqrt(rho) for U << Ualfven
+    ! probably, just setting to Ewave is good enough
     if (FullBr > 0. ) then
-       VarsGhostFace_V(WaveFirst_) = EwaveBase*RhoGhost/RhoBase
+       VarsGhostFace_V(WaveFirst_) = Ewave*sqrt(RhoGhost/RhoChromo)
        VarsGhostFace_V(WaveLast_) = 0.0
     else
        VarsGhostFace_V(WaveFirst_) = 0.0
-       VarsGhostFace_V(WaveLast_) = EwaveBase*RhoGhost/RhoBase
+       VarsGhostFace_V(WaveLast_) = Ewave*sqrt(RhoGhost/RhoChromo)
     end if
 
     !\
@@ -969,10 +968,10 @@ contains
     NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
     if(UseElectronPressure)then
-       VarsGhostFace_V(p_) = NumDensIon*Tbase
-       VarsGhostFace_V(Pe_) = NumDensElectron*Tbase
+       VarsGhostFace_V(p_) = NumDensIon*tChromo
+       VarsGhostFace_V(Pe_) = NumDensElectron*tChromo
     else
-       VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Tbase
+       VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*tChromo
     end if
 
     if(Hyp_>1) VarsGhostFace_V(Hyp_) = 0.0
