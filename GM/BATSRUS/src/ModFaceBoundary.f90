@@ -456,7 +456,7 @@ contains
          VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
       case('inflow','vary')
-         call get_solar_wind_point(TimeBc, FaceCoords_D(x_), VarsGhostFace_V)
+         call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
          VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
       case('reflect','reflectb')
