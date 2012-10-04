@@ -897,7 +897,6 @@ contains
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB
     use ModGeometry, ONLY: Xyz_DGB, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
-    use ModSetOuterBc
     use ModVarIndexes
     use ModProcMH,   ONLY: iProc
     use ModEnergy,   ONLY: calc_energy_ghost
@@ -958,10 +957,10 @@ contains
        do i=MinI,MaxI
           do j=MinJ,MaxJ
              do k=MinK,MaxK
-                x = Xyz_DGB(x_,i,j,k,iBlk)
-                y = Xyz_DGB(y_,i,j,k,iBlk)
-                z = Xyz_DGB(z_,i,j,k,iBlk)
-                r = r_BLK(i,j,k,iBLK)
+                x = Xyz_DGB(x_,i,j,k,iBlock)
+                y = Xyz_DGB(y_,i,j,k,iBlock)
+                z = Xyz_DGB(z_,i,j,k,iBlock)
+                r = r_BLK(i,j,k,iBlock)
                 r = alog(r)
 
                 if( x1<x .and. x<x2 .and. y1<y .and. y<y2 .and. z1<z .and. z<z2 &
@@ -972,14 +971,14 @@ contains
                 do iVar = 1, nVar
 
                    ! Both of these are primitive variables
-                   State_VGB(iVar,i,j,k,iBlk) = PrimInit_V(iVar) &
+                   State_VGB(iVar,i,j,k,iBlock) = PrimInit_V(iVar) &
                         + Ampl_V(iVar)*cos(Phase_V(iVar)               &
                         + KxWave_V(iVar)*(x - Dx)                      &
                         + KyWave_V(iVar)*y                             &
                         + KzWave_V(iVar)*z)
                 end do
-                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlk) = &
-                     State_VGB(Ux_:Uz_,i,j,k,iBlk)*State_VGB(Rho_,i,j,k,iBlk)
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                     State_VGB(Ux_:Uz_,i,j,k,iBlock)*State_VGB(Rho_,i,j,k,iBlock)
              end do
           end do
        end do
@@ -1002,28 +1001,28 @@ contains
              end if
 
           end do; end do; end do
-          call calc_energy_ghost(iBLK)
+          call calc_energy_ghost(iBlock)
        case(2)
-          State_VGB(:,nI+1,:,:,iBLK) = State_VGB(:,nI,:,:,iBLK)
-          State_VGB(:,nI+2,:,:,iBLK) = State_VGB(:,nI,:,:,iBLK)
+          State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+          State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
           State_VGB(p_,nI+1:MaxI,:,:,iBlock)     = 1.0 - 0.1*(Xyz_DGB(x_,nI+1:MaxI,:,:,iBlock)-CoordMin_D(x_))/CoordMax_D(x_)
-          call calc_energy_ghost(iBLK)
+          call calc_energy_ghost(iBlock)
        case(3)
-          State_VGB(:,:,0,:,iBLK) = State_VGB(:,:,1,:,iBLK)
-          State_VGB(:,:,-1,:,iBLK) = State_VGB(:,:,1,:,iBLK)
-          State_VGB(RhoUx_:RhoUz_,:,-1:0,:,iBLK) = 0.0
+          State_VGB(:,:,0,:,iBlock) = State_VGB(:,:,1,:,iBlock)
+          State_VGB(:,:,-1,:,iBlock) = State_VGB(:,:,1,:,iBlock)
+          State_VGB(RhoUx_:RhoUz_,:,-1:0,:,iBlock) = 0.0
        case(4)
-          State_VGB(:,:,nJ+1,:,iBLK) = State_VGB(:,:,nJ,:,iBLK)
-          State_VGB(:,:,nJ+2,:,iBLK) = State_VGB(:,:,nJ,:,iBLK)
-          State_VGB(RhoUx_:RhoUz_,:,nJ+1:MaxJ,:,iBLK) = 0.0
+          State_VGB(:,:,nJ+1,:,iBlock) = State_VGB(:,:,nJ,:,iBlock)
+          State_VGB(:,:,nJ+2,:,iBlock) = State_VGB(:,:,nJ,:,iBlock)
+          State_VGB(RhoUx_:RhoUz_,:,nJ+1:MaxJ,:,iBlock) = 0.0
        case(5)
-          State_VGB(:,:,:,0,iBLK) = State_VGB(:,:,:,1,iBLK)
-          State_VGB(:,:,:,-1,iBLK) = State_VGB(:,:,:,1,iBLK)
-          State_VGB(RhoUx_:RhoUz_,:,:,-1:0,iBLK) = 0.0
+          State_VGB(:,:,:,0,iBlock) = State_VGB(:,:,:,1,iBlock)
+          State_VGB(:,:,:,-1,iBlock) = State_VGB(:,:,:,1,iBlock)
+          State_VGB(RhoUx_:RhoUz_,:,:,-1:0,iBlock) = 0.0
        case(6)
-          State_VGB(:,:,:,nK+1,iBLK) = State_VGB(:,:,:,nK,iBLK)
-          State_VGB(:,:,:,nK+2,iBLK) = State_VGB(:,:,:,nK,iBLK)
-          State_VGB(RhoUx_:RhoUz_,:,:,nK+1:MaxK,iBLK) = 0.0
+          State_VGB(:,:,:,nK+1,iBlock) = State_VGB(:,:,:,nK,iBlock)
+          State_VGB(:,:,:,nK+2,iBlock) = State_VGB(:,:,:,nK,iBlock)
+          State_VGB(RhoUx_:RhoUz_,:,:,nK+1:MaxK,iBlock) = 0.0
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//Name)
@@ -1046,7 +1045,7 @@ contains
        !\                                                                      
        ! Start filling in cells (including ghost cells)                       
        !/                          
-       State_VGB(rho_,:,:,:,iBlk) = RhoBackgrndNo
+       State_VGB(rho_,:,:,:,iBlock) = RhoBackgrndNo
 
        ! Transform to HGC frame  
        ! only velocity and/ or momentum in X-Y plane should be transformed
@@ -1059,21 +1058,21 @@ contains
           UxAligned =  UxNo*cos(phi) + UyNo*sin(phi)
           UyAligned = -UxNo*sin(phi) + UyNo*cos(phi)
 
-          State_VGB(RhoUx_,:,:,:,iBlk) = UxAligned*State_VGB(rho_,:,:,:,iBlk)
-          State_VGB(RhoUy_,:,:,:,iBlk) = UyAligned*State_VGB(rho_,:,:,:,iBlk)
+          State_VGB(RhoUx_,:,:,:,iBlock) = UxAligned*State_VGB(rho_,:,:,:,iBlock)
+          State_VGB(RhoUy_,:,:,:,iBlock) = UyAligned*State_VGB(rho_,:,:,:,iBlock)
 
           ! Now transform velocity field to a rotating frame
-          State_VGB(RhoUx_,:,:,:,iBlk) = State_VGB(RhoUx_,:,:,:,iBlk) &
-               + State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*Xyz_DGB(y_,:,:,:,iBlk)
+          State_VGB(RhoUx_,:,:,:,iBlock) = State_VGB(RhoUx_,:,:,:,iBlock) &
+               + State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*Xyz_DGB(y_,:,:,:,iBlock)
 
-          State_VGB(RhoUy_,:,:,:,iBlk) = State_VGB(RhoUy_,:,:,:,iBlk) &
-               - State_VGB(Rho_,:,:,:,iBlk)*OmegaSun*Xyz_DGB(x_,:,:,:,iBlk)
+          State_VGB(RhoUy_,:,:,:,iBlock) = State_VGB(RhoUy_,:,:,:,iBlock) &
+               - State_VGB(Rho_,:,:,:,iBlock)*OmegaSun*Xyz_DGB(x_,:,:,:,iBlock)
 
 
           ! set the rest of state variables
-          State_VGB(RhoUz_, :,:,:,iBlk) = UzNo
-          State_VGB(Bx_:Bz_,:,:,:,iBlk) = 0.0
-          State_VGB(p_,     :,:,:,iBlk) = pBackgrndIo*Io2No_V(UnitP_)
+          State_VGB(RhoUz_, :,:,:,iBlock) = UzNo
+          State_VGB(Bx_:Bz_,:,:,:,iBlock) = 0.0
+          State_VGB(p_,     :,:,:,iBlock) = pBackgrndIo*Io2No_V(UnitP_)
 
        else
 
