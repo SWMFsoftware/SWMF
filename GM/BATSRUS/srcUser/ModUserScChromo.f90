@@ -181,7 +181,7 @@ contains
 
     integer :: i, j, k
     real :: x, y, z, r, Rho, NumDensIon, NumDensElectron, Temperature
-    real :: RhoCorona, tCorona, uCorona, rCorona, TemperatureGradient
+    real :: RhoCorona, tCorona, uCorona
     real :: r_D(3), Br
     ! variables for iterative Parker solution
     integer :: IterCount
@@ -260,26 +260,8 @@ contains
           end do
        end if
 
-       ! Set chromospheric initial condition inside the body, if needed
-       if ( r <= rBody)then
-          Rho = RhoChromo
-          Temperature = tChromo
-       else
-          ! Density jumps to coronal values right outside body,
-          ! then set according to constant mass flux
-          Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur)
-
-          ! Temperature increases linearily from chromospheric 
-          ! to coronal values at r=rCorona (for stability)
-          rCorona = 1.1
-          if (r < rCorona) then
-             TemperatureGradient = (tCorona - tChromo)/(rCorona - rBody)    
-             Temperature = &
-                  (tChromo + TemperatureGradient*(r - rBody))
-          else
-             Temperature = tCorona
-          end if
-       end if
+       Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur)
+       Temperature = tCorona
 
        NumDensIon = Rho/MassIon_I(1)
        NumDensElectron = NumDensIon*AverageIonCharge
