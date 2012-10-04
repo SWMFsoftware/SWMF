@@ -76,12 +76,8 @@ F			UseUserUpdateStates
 
 #CHROMOBC
 1.5e4			DeltaU [m/s]
-2e16			nChromoSi [1/m^3]
-2e4			tChromoSi [K]
-
-#PARKERIC
-1.5e14			NumDensitySi 1e14
-1.5e6			Temperature (K) 1.5e6
+2e17			nChromoSi [1/m^3]
+5e4			tChromoSi [K]
 
 #USERINPUTEND ----------------------------
 
@@ -134,7 +130,7 @@ ascii			TypeFile
 
 #TRANSITIONREGION
 T			DoExtendTransitionRegion
-3.0e5			TeModSi
+2.2e5			TeModSi
 1.0e1			DeltaTeModSi
 
 #INCLUDE
