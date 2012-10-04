@@ -108,6 +108,7 @@ subroutine read_NOAAHPI_Indices_new(iOutputError,StartTime,EndTime)
            Indices_TV(i,hpi_norm_) = &
                 2.09 * ALOG(Indices_TV(i,hpi_)) * 1.0475
         endif
+
      enddo
 
   endif
@@ -160,6 +161,9 @@ contains
 
           if (ierror /= 0) then
              done_inner = .true.
+             ! This means that the last line in the file is before the 
+             ! first time in GITM.
+             if (StartTime > time_now) i = i + 1
           else
              itime(1:5) = tmp(1:5,i)
              itime(6:7) = 0
@@ -168,6 +172,10 @@ contains
                   time_now <= EndTime+BufferTime*2 .and. &
                   i < MaxIndicesEntries) then 
                 i = i + 1
+             else
+                ! This means that the GITM time is all BEFORE the first 
+                ! line in the file! 
+                if (EndTime < time_now .and. i == 1) i = i + 1
              endif
 
           endif

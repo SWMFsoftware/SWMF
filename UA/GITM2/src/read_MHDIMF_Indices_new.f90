@@ -47,7 +47,7 @@ subroutine read_MHDIMF_Indices_new(iOutputError, StartTime, EndTime)
   if (ReReadIMFFile) then
      ! If we still have a lot of data in memory, then don't bother
      ! reading more.
-     if (StartTime + BufferTime < IndexTimes_TV(nIndices_V(imf_bx_),imf_bx_)) return
+     if (StartTime + BufferTime < IndexTimes_TV(nIndices_V(imf_bx_),imf_by_)) return
   endif
 
   ! Assume that we can read the entire file
@@ -62,11 +62,10 @@ subroutine read_MHDIMF_Indices_new(iOutputError, StartTime, EndTime)
      return
   endif
 
-
   do while (.not.done)
      
      read(LunIndices_,'(a)', iostat = ierror ) line
-     if (ierror.ne.0) done = .true.
+     if (ierror /= 0) done = .true.
 
      if(index(line,'#DELAY')>0)then
         read(LunIndices_,*,iostat=iError) TimeDelay
@@ -95,6 +94,14 @@ subroutine read_MHDIMF_Indices_new(iOutputError, StartTime, EndTime)
 
            if (ierror /= 0) then
               done_inner = .true.
+
+              ! This means that the GITM time is all AFTER the first 
+              ! line in the file! 
+              if (StartTime > IndexTimes_TV(iIMF,imf_bx_)) then
+                 iIMF = iIMF +1
+                 iSW = iSW + 1
+              endif
+
            else
 
               call time_int_to_real(iTime,IndexTimes_TV(iIMF,imf_bx_))
@@ -131,6 +138,15 @@ subroutine read_MHDIMF_Indices_new(iOutputError, StartTime, EndTime)
 
                  iIMF = iIMF + 1
                  if (abs(Indices_TV(iSW,sw_n_)) < 900.0) iSW = iSW + 1
+
+              else
+
+                 ! This means that the GITM time is all BEFORE the first 
+                 ! line in the file! 
+                 if (EndTime < IndexTimes_TV(iIMF,imf_bx_) .and. iIMF == 1) then
+                    iIMF = iIMF +1
+                    iSW = iSW + 1
+                 endif
 
               endif
 
