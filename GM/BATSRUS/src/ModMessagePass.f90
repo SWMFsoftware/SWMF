@@ -15,7 +15,7 @@ contains
     use ModMain, ONLY : nBlock, Unused_B, &
          TypeBc_I, time_loop, &
          UseConstrainB, UseProjection, &
-         time_simulation, nOrder, prolong_order, optimize_message_pass
+         nOrder, prolong_order, optimize_message_pass
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: far_field_BCs_BLK        
@@ -69,7 +69,7 @@ contains
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
           if (far_field_BCs_BLK(iBlock) .and. prolong_order==2)&
-               call set_cell_boundary(iBlock,time_simulation,.false.)        
+               call set_cell_boundary(iBlock, State_VGB(:,:,:,:,iBlock))
           if(UseConstrainB)call correctP(iBlock)
           if(UseProjection)call correctP(iBlock)
        end do
@@ -117,7 +117,7 @@ contains
        if(.not.DoResChangeOnly &
             .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
           if (far_field_BCs_BLK(iBlock)) &
-               call set_cell_boundary(iBlock, time_simulation, .false.) 
+               call set_cell_boundary(iBlock, State_VGB(:,:,:,:,iBlock))
           if(time_loop.and. any(TypeBc_I=='buffergrid'))&
                call fill_in_from_buffer(iBlock)
        end if
