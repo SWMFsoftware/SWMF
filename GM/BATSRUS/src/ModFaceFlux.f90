@@ -7,8 +7,7 @@ module ModFaceFlux
        iTest, jTest, kTest, ProcTest, BlkTest, DimTest
   use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction, &
        UseIonHeatConduction, DoThinCurrentSheet
-  use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
-  use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
+  use ModMain,       ONLY: UseBorisSimple, UseBoris => boris_correction
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, UseNeutralFluid
   use ModGeometry,   ONLY: true_cell
   use BATL_lib,      ONLY: IsCartesianGrid, IsCartesian, IsRzGeometry, &
@@ -21,7 +20,7 @@ module ModFaceFlux
        RightState_VX, RightState_VY, RightState_VZ, & ! input: right face state
        Flux_VX, Flux_VY, Flux_VZ,        & ! output: flux*Area
        VdtFace_x, VdtFace_y, VdtFace_z,  & ! output: cMax*Area for CFL
-       EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area !^CFG IF BORISCORR
+       EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
        UseIdealEos, UseElectronPressure, &
@@ -35,14 +34,13 @@ module ModFaceFlux
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockCurrent, hall_factor, get_face_current, &
        set_ion_mass_per_charge, UseBiermannBattery
-  !^CFG IF IMPLICIT BEGIN
+
   use ModRadDiffusion, ONLY: IsNewBlockRadDiffusion, get_radiation_energy_flux
   use ModHeatConduction, ONLY: IsNewBlockHeatCond, IsNewBlockIonHeatCond, &
        get_heat_flux, get_ion_heat_flux
-  !^CFG END IMPLICIT
 
-  use ModResistivity, ONLY: set_resistivity, &   !^CFG IF DISSFLUX
-       UseResistivity, UseResistiveFlux, Eta_GB  !^CFG IF DISSFLUX
+  use ModResistivity, ONLY: set_resistivity, &
+       UseResistivity, UseResistiveFlux, Eta_GB
 
   use ModVarIndexes
   use ModMultiFluid
@@ -63,14 +61,10 @@ module ModFaceFlux
   logical:: UseDifferentNeutralFlux = .false.
   character(len=10):: TypeFluxNeutral = 'default'
 
-  logical :: DoSimple
-  logical :: DoLf,  DoLfNeutral  !^CFG IF RUSANOVFLUX
-  logical :: DoHll, DoHllNeutral !^CFG IF LINDEFLUX
-  logical :: DoHlld              !^CFG IF HLLDFLUX
-  logical :: DoAw                !^CFG IF AWFLUX
-  logical :: DoRoeOld            !^CFG IF ROEFLUX
-  logical :: DoRoe               !^CFG IF ROEFLUX
-  logical :: DoGodunov           
+  ! Logicals so we don't need string comparisons
+  logical :: DoSimple, DoLf, DoHll, DoHlld, DoAw, DoRoeOld, DoRoe, DoGodunov
+  logical :: DoLfNeutral, DoHllNeutral
+
   logical :: UseLindeFix
   logical :: DoTestCell
   logical :: IsBoundary
@@ -370,12 +364,12 @@ contains
     if(DoTestMe)call print_values
 
     DoSimple = TypeFlux == 'Simple'
-    DoLf     = TypeFlux == 'Rusanov'     !^CFG IF RUSANOVFLUX
-    DoHll    = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
-    DoHlld   = TypeFlux == 'HLLD'        !^CFG IF HLLDFLUX
-    DoAw     = TypeFlux == 'Sokolov'     !^CFG IF AWFLUX
-    DoRoeOld = TypeFlux == 'RoeOld'      !^CFG IF ROEFLUX
-    DoRoe    = TypeFlux == 'Roe'         !^CFG IF ROEFLUX
+    DoLf     = TypeFlux == 'Rusanov'
+    DoHll    = TypeFlux == 'Linde'
+    DoHlld   = TypeFlux == 'HLLD'
+    DoAw     = TypeFlux == 'Sokolov'
+    DoRoeOld = TypeFlux == 'RoeOld'
+    DoRoe    = TypeFlux == 'Roe'
     DoGodunov= TypeFlux == 'Godunov'
 
     UseDifferentNeutralFlux = UseNeutralFluid .and. TypeFluxNeutral /= TypeFlux
@@ -384,21 +378,19 @@ contains
 
     UseRS7 = DoRoe  ! This is always true for the current implementation
 
-    UseLindeFix = (UseHyperbolicDivb &
-         .or. DoHll      &               !^CFG IF LINDEFLUX
-         .or. DoHllD     &               !^CFG IF HLLDFLUX
-         .or. DoAw       &               !^CFG IF AWFLUX
-         ).and.UseB
+    UseLindeFix = UseB .and. &
+         (UseHyperbolicDivb .or. DoHll .or. DoHllD .or. DoAw)
+
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
-    IsNewBlockCurrent   = .true.
-    IsNewBlockGradPe = .true.
-    IsNewBlockRadDiffusion = .true.      !^CFG IF IMPLICIT
-    IsNewBlockHeatCond    = .true.       !^CFG IF IMPLICIT
-    IsNewBlockIonHeatCond = .true.       !^CFG IF IMPLICIT
-    IsNewBlockViscosity = .true.
+    IsNewBlockCurrent      = .true.
+    IsNewBlockGradPe       = .true.
+    IsNewBlockRadDiffusion = .true.
+    IsNewBlockHeatCond     = .true.
+    IsNewBlockIonHeatCond  = .true.
+    IsNewBlockViscosity    = .true.
 
-    if(UseResistivity) call set_resistivity(iBlock)      !^CFG IF DISSFLUX
+    if(UseResistivity) call set_resistivity(iBlock)
 
     if((UseHallResist .or. UseBiermannBattery) .and. &
          (UseMultiIon .or. UseMultiSpecies .or. .not.UseIdealEos)) &
@@ -555,8 +547,8 @@ contains
          VdtFace_x(iFace, jFace, kFace)       = CmaxDt*Area
          uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
 
-         if(UseB .and. UseBoris) &                       !^CFG IF BORISCORR
-              EDotFA_X(iFace,jFace,kFace) = Enormal*Area !^CFG IF BORISCORR
+         if(UseB .and. UseBoris) &
+              EDotFA_X(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. UseMultiIon) Pe_X(iFace, jFace, kFace) = Pe
 
@@ -613,8 +605,8 @@ contains
          VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
          uDotArea_YI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
-         if(UseB .and. UseBoris) &                       !^CFG IF BORISCORR
-              EDotFA_Y(iFace,jFace,kFace) = Enormal*Area !^CFG IF BORISCORR
+         if(UseB .and. UseBoris) &
+              EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. UseMultiIon) Pe_Y(iFace,jFace,kFace) = Pe
 
@@ -671,8 +663,8 @@ contains
          VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
          uDotArea_ZI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
-         if(UseB .and. UseBoris) &                       !^CFG IF BORISCORR  
-              EDotFA_Z(iFace,jFace,kFace) = Enormal*Area !^CFG IF BORISCORR
+         if(UseB .and. UseBoris) &
+              EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. UseMultiIon) Pe_Z(iFace,jFace,kFace) = Pe
 
@@ -878,21 +870,19 @@ contains
        end if
     end if
 
-
     ViscoCoeff = 0.0
-    if(UseViscosity) then
-       ViscoCoeff = viscosity_factor(iDimFace, iFace, jFace, kFace, iBlockFace)   
-    end if
+    if(UseViscosity) ViscoCoeff = &
+         viscosity_factor(iDimFace, iFace, jFace, kFace, iBlockFace)   
 
     ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
     UseHallGradPe = BiermannCoeff > 0.0 .and. &
          (UseElectronPressure .or. ElectronPressureRatio > 0.0 .or. &
          .not.UseIdealEos)
 
-    Eta       = 0.0                                !^CFG IF DISSFLUX BEGIN
+    Eta       = 0.0
     if(UseResistivity .and. UseResistiveFlux) Eta = 0.5* &
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
-         + Eta_GB(iRight,jRight,kRight,iBlockFace))  !^CFG END DISSFLUX
+         + Eta_GB(iRight,jRight,kRight,iBlockFace))
 
     if(.not.IsCartesian)then
        NormalX = Normal_D(x_); NormalY = Normal_D(y_); NormalZ = Normal_D(z_)
@@ -927,10 +917,9 @@ contains
     use ModAdvance, ONLY: DoReplaceDensity, State_VGB
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
-    use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed, &
-         ProcTest, BlkTest, iTest, jTest, kTest
+    use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
+    use ModImplicit, ONLY: UseSemiImplicit
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
     use ModUser,     ONLY: user_material_properties
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -967,11 +956,11 @@ contains
             iBlockFace,iFluidMin,iFluidMax,ViscoCoeff)
     end if
 
-    if(Eta > 0.0)then                  !^CFG IF DISSFLUX BEGIN
+    if(Eta > 0.0)then
        EtaJx = Eta*Jx
        EtaJy = Eta*Jy
        EtaJz = Eta*Jz
-    end if                             !^CFG END DISSFLUX
+    end if
 
     if(HallCoeff > 0.0)then
        HallJx = HallCoeff*Jx
@@ -1028,7 +1017,6 @@ contains
 
     end if
 
-    !^CFG IF IMPLICIT BEGIN
     if(.not.UseSemiImplicit)then
        ! Initialize diffusion coefficient for time step restriction
        DiffCoef = 0.0
@@ -1053,8 +1041,10 @@ contains
                HeatCondCoefNormal, IonHeatFlux)
           DiffCoef = DiffCoef + HeatCondCoefNormal
        end if
+
+       DiffCoef = DiffCoef + ViscoCoeff + Eta
+
     end if
-    !^CFG END IMPLICIT
 
     if(UseB)then
        if(DoRoe)then
@@ -1164,19 +1154,19 @@ contains
           call simple_flux
        end if
     end if
-    if(DoLf)     call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
-    if(DoHll)    call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
-    if(DoHlld)   call hlld_flux                 !^CFG IF HLLDFLUX
-    if(DoAw)     call artificial_wind           !^CFG IF AWFLUX
-    if(DoRoeOld) call roe_solver(Flux_V)        !^CFG IF ROEFLUX
-    if(DoRoe)    call roe_solver_new            !^CFG IF ROEFLUX
+    if(DoLf)     call lax_friedrichs_flux
+    if(DoHll)    call harten_lax_vanleer_flux
+    if(DoHlld)   call hlld_flux
+    if(DoAw)     call artificial_wind
+    if(DoRoeOld) call roe_solver(Flux_V)
+    if(DoRoe)    call roe_solver_new
     if(DoGodunov)call godunov_flux
 
     if(UseDifferentNeutralFlux)then
        iFluidMin = IonLast_+1; iFluidMax = nFluid
 
-       if(DoLfNeutral)  call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
-       if(DoHllNeutral) call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
+       if(DoLfNeutral)  call lax_friedrichs_flux
+       if(DoHllNeutral) call harten_lax_vanleer_flux
 
        iFluidMin = 1
     end if
@@ -1202,9 +1192,9 @@ contains
     ! Multiply Flux by Area. This is needed in div Flux in update_states_MHD
     Flux_V = Flux_V*Area
 
-    ! Increase maximum speed with sum of diffusion speed
-    ! Resistivety, viscosity and heat conduction
-    CmaxDt = CmaxDt + 2*(Eta+ViscoCoeff+DiffCoef)*InvDxyz
+    ! Increase maximum speed with the sum of diffusion speeds
+    ! Resistivity, viscosity, heat conduction, radiation diffusion
+    CmaxDt = CmaxDt + 2*DiffCoef*InvDxyz
 
     ! Further limit timestep due to the hyperbolic cleaning equation
     if(UseHyperbolicDivb) CmaxDt = max(SpeedHyp, CmaxDt)
@@ -1239,7 +1229,6 @@ contains
 
     end subroutine simple_flux
 
-    !^CFG IF RUSANOVFLUX BEGIN
     !==========================================================================
     subroutine lax_friedrichs_flux
 
@@ -1268,13 +1257,11 @@ contains
       end if
 
       Unormal_I = 0.5*(UnLeft_I + UnRight_I)
-      Enormal   = 0.5*(EnLeft + EnRight)                !^CFG IF BORISCORR
+      Enormal   = 0.5*(EnLeft + EnRight)
       if(UseMultiIon) &
            Pe   = 0.5*(PeLeft + PeRight)
 
     end subroutine lax_friedrichs_flux
-    !^CFG END RUSANOVFLUX
-    !^CFG IF LINDEFLUX BEGIN
     !==========================================================================
     subroutine harten_lax_vanleer_flux
 
@@ -1343,13 +1330,11 @@ contains
          Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
       end if
 
-      Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
+      Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft
       if(UseMultiIon) &
            Pe   = WeightRight*PeRight   + WeightLeft*PeLeft
 
     end subroutine harten_lax_vanleer_flux
-    !^CFG END LINDEFLUX
-    !^CFG IF AWFLUX BEGIN
     !==========================================================================
     subroutine artificial_wind
 
@@ -1375,13 +1360,11 @@ contains
 
       ! Weighted average of the normal speed and electric field
       Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
-      Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
+      Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft
       if(UseMultiIon) &
            Pe   = WeightRight*PeRight   + WeightLeft*PeLeft
 
     end subroutine artificial_wind
-    !^CFG END AWFLUX
-    !^CFG IF HLLDFLUX BEGIN
     !==========================================================================
     subroutine hlld_flux
 
@@ -1412,8 +1395,8 @@ contains
       real :: Rho, Un, Ut1, Ut2, B1n, B1t1, B1t2, p, e
       real :: RhoUn, uDotB1, Bn, Bt1, Bt2
 
-      ! Resistivity                                  !^CFG IF DISSFLUX
-      real :: FluxBx, FluxBy, FluxBz, B1x, B1y, B1z  !^CFG IF DISSFLUX
+      ! Resistivity
+      real :: FluxBx, FluxBy, FluxBz, B1x, B1y, B1z
 
       real :: Tmp, B1n2, Bn2, SignBn
 
@@ -1681,7 +1664,7 @@ contains
 
       if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
 
-      if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
+      if(Eta > 0.0)then
          ! Add flux corresponding to curl Eta.J to induction equation
          FluxBx = NormalY*EtaJz - NormalZ*EtaJy
          FluxBy = NormalZ*EtaJx - NormalX*EtaJz
@@ -1699,19 +1682,17 @@ contains
          ! add B1.dB1/dt = div(B1 x EtaJ) term to the energy equation
          Flux_V(Energy_) = Flux_V(Energy_) &
               + B1x*FluxBx + B1y*FluxBy + B1z*FluxBz
-      end if                                     !^CFG END DISSFLUX
+      end if
 
     end subroutine hlld_flux
-    !^CFG END HLLDFLUX
 
     !==========================================================================
-
     subroutine godunov_flux
 
       use ModAdvance,  ONLY: UseElectronPressure
       use ModExactRS,  ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar, pStar
-      use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
+      use ModImplicit, ONLY: UseSemiImplicit
       use ModPhysics,  ONLY: inv_gm1, g
       use ModWaves,    ONLY: UseWavePressure, GammaWave
 
@@ -1852,14 +1833,12 @@ contains
               + inv_gm1*(Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
       end if
 
-      !^CFG IF IMPLICIT BEGIN
       if(.not.UseSemiImplicit)then
          if(UseRadDiffusion)then
-            Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
+            Flux_V(Erad_)   = Flux_V(Erad_) + EradFlux
             Flux_V(Energy_) = Flux_V(Energy_) + EradFlux
          end if
       end if
-      !^CFG END IMPLICIT
 
     end subroutine godunov_flux
 
@@ -1904,7 +1883,7 @@ contains
 
     use ModMultiFluid
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
+    use ModImplicit, ONLY: UseSemiImplicit
     use ModPhysics,  ONLY: gm1
     use BATL_size,   ONLY: nDim  
 
@@ -1960,11 +1939,11 @@ contains
        call select_fluid
        if(iFluid == 1 .and. IsMhd)then
           ! Calculate MHD flux for first fluid
-          if(UseBoris)then           !^CFG IF BORISCORR BEGIN
+          if(UseBoris)then
              call get_boris_flux
-          else                       !^CFG END BORISCORR
+          else
              call get_mhd_flux
-          end if                     !^CFG IF BORISCORR
+          end if
        else
           ! If there is no MHD fluid, calculate fluxes for magnetic field
           ! together with hydro fluxes for the first fluid
@@ -2005,7 +1984,7 @@ contains
        ! These terms are common for the induction equation
        ! If the first fluid is the total fluid, 
        ! the total energy density is also updated
-       if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
+       if(Eta > 0.0)then
           ! Add curl Eta.J to induction equation
           FluxBx = NormalY*EtaJz - NormalZ*EtaJy
           FluxBy = NormalZ*EtaJx - NormalX*EtaJz
@@ -2018,7 +1997,7 @@ contains
           ! add B.dB/dt term to energy equation
           if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
                + Bx*FluxBx + By*FluxBy + Bz*FluxBz
-       end if                                     !^CFG END DISSFLUX
+       end if
 
        if(UseHallGradPe)then
           ! Add curl (-grad Pe/n e) to induction equation
@@ -2047,7 +2026,6 @@ contains
        end if
     end if
 
-    !^CFG IF  IMPLICIT BEGIN
     if(.not.UseSemiImplicit)then
        if(UseRadDiffusion)then
           Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
@@ -2066,7 +2044,6 @@ contains
           Flux_V(Energy_) = Flux_V(Energy_) + IonHeatFlux
        end if
     end if
-    !^CFG END IMPLICIT
 
     ! Set the normal electron velocity used for Hall MHD and/or 
     ! the electron pressure source term
@@ -2074,7 +2051,6 @@ contains
 
   contains
 
-    !^CFG IF BORISCORR BEGIN
     subroutine get_boris_flux
 
       use ModPhysics, ONLY: inv_gm1, Inv_C2light, InvClight
@@ -2191,7 +2167,6 @@ contains
     end subroutine get_boris_flux
 
     !==========================================================================
-    !^CFG END BORISCORR
 
     subroutine get_mhd_flux
 
@@ -2204,7 +2179,7 @@ contains
       real :: HallUx, HallUy, HallUz, InvRho
       real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: PwExtra, DPwPerB
-      real :: Gamma2                           !^CFG IF SIMPLEBORIS
+      real :: Gamma2
       integer :: iVar
 
       real :: InvElectronDens, UxPlus, UyPlus, UzPlus, UnPlus
@@ -2410,13 +2385,11 @@ contains
          end if
       end if
 
-      !^CFG IF SIMPLEBORIS BEGIN
       if(UseBorisSimple)then
          ! Correct the momentum using the (1+VA2/c^2)
          Gamma2 = 1.0 + (FullBx**2 + FullBy**2 + FullBz**2)/Rho*inv_c2LIGHT
          StateCons_V(RhoUx_:RhoUz_) = StateCons_V(RhoUx_:RhoUz_)*Gamma2
       end if
-      !^CFG END SIMPLEBORIS
 
     end subroutine get_mhd_flux
 
@@ -2556,29 +2529,30 @@ contains
     real, optional, intent(out) :: Cright_I(nFluid) ! maximum right speed
 
     real :: CmaxDt_I(nFluid)
-    real :: UnLeft, UnRight                         !^CFG IF AWFLUX
+    real :: UnLeft, UnRight
     !--------------------------------------------------------------------------
 
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
 
        if(iFluid == 1 .and. UseB)then
-          if(DoAW)then                                 !^CFG IF AWFLUX BEGIN
-             ! For AW flux UnLeft_I,UnRight_I are already set by get_physical_flux
+          if(DoAW)then
+             ! For AW flux UnLeft_I,UnRight_I 
+             ! are already set by get_physical_flux
              UnLeft = minval(UnLeft_I(1:nIonFluid))
              UnRight= maxval(UnRight_I(1:nIonFluid))
-          end if                                       !^CFG END AWFLUX
+          end if
 
-          if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
+          if(UseBoris)then
              call get_boris_speed             
-          else                                         !^CFG END BORISCORR
+          else
              call get_mhd_speed
-          endif                                        !^CFG IF BORISCORR    
+          endif
        else
-          if(DoAw)then                           !^CFG IF AWFLUX BEGIN
+          if(DoAw)then
              UnLeft = UnLeft_I(iFluid)
              UnRight= UnRight_I(iFluid)
-          end if                                 !^CFG END AWFLUX
+          end if
           call get_hd_speed
        end if
 
@@ -2609,7 +2583,6 @@ contains
 
   contains
 
-    !^CFG IF BORISCORR BEGIN
     !========================================================================
     subroutine get_boris_speed
 
@@ -2687,14 +2660,14 @@ contains
       ! In extreme cases "slow" wave can be faster than "fast" wave
       ! so take the maximum of the two
 
-      if(DoAw)then                                       !^CFG IF AWFLUX BEGIN
+      if(DoAw)then
          Un           = min(UnRight, UnLeft)
          Cleft_I(1)   = min(Un*GammaA2 - Fast, Un - Slow)
          Un           = max(UnLeft, UnRight)
          Cright_I(1)  = max(Un*GammaA2 + Fast, Un + Slow)
          Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
          CmaxDt_I(1)  = Cmax_I(1)
-      else                                                !^CFG END AWFLUX
+      else
          UnBoris            = Un*GammaA2
          if(present(Cmax_I))then
             Cmax_I(1)   = max(abs(UnBoris) + Fast, abs(Un) + Slow)
@@ -2702,10 +2675,10 @@ contains
          end if
          if(present(Cleft_I))  Cleft_I(1)  = min(UnBoris - Fast, Un - Slow)
          if(present(Cright_I)) Cright_I(1) = max(UnBoris + Fast, Un + Slow)
-      end if                                              !^CFG IF AWFLUX
+      end if
 
     end subroutine get_boris_speed
-    !^CFG END BORISCORR
+
     !========================================================================
 
     subroutine get_mhd_speed
@@ -2722,7 +2695,7 @@ contains
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
       real :: Ppar, Pperp, BnInvB2, GammaPe, Pw
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
-      real :: dB1dB1                                     !^CFG IF AWFLUX
+      real :: dB1dB1
 
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
            B1B0L, B1B0R
@@ -2779,7 +2752,7 @@ contains
       FullBx = State_V(Bx_) + B0x
       FullBy = State_V(By_) + B0y
       FullBz = State_V(Bz_) + B0z
-      if(DoAw)then                                       !^CFG IF AWFLUX BEGIN
+      if(DoAw)then
          ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
          ! the average field squared (Bright+Bleft)^2/4 results in 
          ! an upper estimate of the left and right Alfven speeds 
@@ -2790,9 +2763,9 @@ contains
          !
          dB1dB1 = 0.25*sum((StateRight_V(Bx_:Bz_)-StateLeft_V(Bx_:Bz_))**2)
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2 + dB1dB1)*InvRho
-      else                                               !^CFG END AWFLUX
+      else
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
-      end if                                             !^CFG IF AWFLUX
+      end if
       if(UseCurlB0)then
          B1B0L = StateLeft_V(Bx_)*B0x &
               +  StateLeft_V(By_)*B0y &
@@ -2834,13 +2807,12 @@ contains
       endif
 
       ! Fast speed multipled by the face area
-      if(UseBorisSimple)then                         !^CFG IF SIMPLEBORIS BEGIN
+      if(UseBorisSimple)then
          Fast = sqrt( 0.5*(Fast2 + Discr) &
               /       (1.0 + Alfven2*Inv_C2light) )
-      else                                           !^CFG END SIMPLEBORIS
+      else
          Fast = sqrt( 0.5*(Fast2 + Discr) )
-      end if                                         !^CFG IF SIMPLEBORIS
-
+      end if
 
       ! Add whistler wave speed for the shortest wavelength 2 dx
       if(HallCoeff > 0.0) then
@@ -2876,7 +2848,7 @@ contains
          FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
          Fast = max(Fast, sqrt( FullBn*FullBn / StateRight_V(Rho_) ))
       end if
-      if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
+      if(DoAw)then
          if(HallCoeff > 0.0)then
             Cleft_I(1)   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
             Cright_I(1)  = max(UnLeft, UnRight, HallUnLeft, HallUnRight)
@@ -2890,7 +2862,7 @@ contains
             Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
             CmaxDt_I(1) = Cmax_I(1)
          end if
-      else                                           !^CFG END AWFLUX
+      else
          if(present(Cmax_I))then
             if(HallCoeff > 0.0)then
                Cmax_I(1)   = max(abs(Un), abs(HallUnLeft), abs(HallUnRight))
@@ -2903,7 +2875,7 @@ contains
          end if
          if(present(Cleft_I))  Cleft_I(1)  = Un - Fast
          if(present(Cright_I)) Cright_I(1) = Un + Fast
-      end if                                         !^CFG IF AWFLUX
+      end if
 
       if(DoTestCell)then
          if(.not.IsCartesian)then
@@ -2911,10 +2883,10 @@ contains
             write(*,*)NameSub,' Area,Area2=',Area, Area2
             write(*,*)NameSub,' InvRho, RhoU_D=',InvRho, RhoU_D
          end if
-         if(DoAw)then                               !^CFG IF AWFLUX BEGIN
+         if(DoAw)then
             write(*,*)NameSub,' UnLeft=',  UnLeft
             write(*,*)NameSub,' UnRight=', UnRight
-         end if                                     !^CFG END AWFLUX
+         end if
          if(HallCoeff > 0.0) then
             write(*,*)NameSub,' HallCoeff=',   HallCoeff
             write(*,*)NameSub,' HallUnLeft=',  HallUnLeft
@@ -2983,19 +2955,19 @@ contains
       Un    = sum(State_V(iUx:iUz)*Normal_D)
 
 
-      if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
+      if(DoAw)then
          Cleft_I(iFluid)  = min(UnLeft, UnRight) - Sound
          Cright_I(iFluid) = max(UnLeft, UnRight) + Sound
          Cmax_I(iFluid)   = max(Cright_I(iFluid), -Cleft_I(iFluid))
          CmaxDt_I(iFluid) = Cmax_I(iFluid)
-      else                                           !^CFG END AWFLUX
+      else
          if(present(Cmax_I))then
             Cmax_I(iFluid)   = abs(Un) + Sound
             CmaxDt_I(iFluid) = Cmax_I(iFluid)
          end if
          if(present(Cleft_I))  Cleft_I(iFluid)  = Un - Sound
          if(present(Cright_I)) Cright_I(iFluid) = Un + Sound
-      end if                                         !^CFG IF AWFLUX
+      end if
 
       if(DoTestCell)then
          write(*,*)NameSub,' Un     =',Un
@@ -3009,7 +2981,6 @@ contains
 
 end module ModFaceFlux
 
-!^CFG IF ROEFLUX BEGIN
 !==============================================================================
 subroutine roe_solver(Flux_V)
 
@@ -3568,7 +3539,6 @@ subroutine roe_solver(Flux_V)
   CmaxDt    = abs(UnH) + CfH
 
 end subroutine roe_solver
-!^CFG END ROEFLUX
 
 !===========================================================================
 
