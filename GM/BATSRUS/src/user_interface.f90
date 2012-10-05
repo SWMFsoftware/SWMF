@@ -34,7 +34,7 @@ subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
   implicit none
 
   integer,          intent(in)  :: iBlock, iSide
-  character(len=20),intent(in)  :: TypeBc
+  character(len=*), intent(in)  :: TypeBc
   logical,          intent(out) :: IsFound
   !-------------------------------------------------------------------
   call user_sub(iBlock,iSide, TypeBc, IsFound)

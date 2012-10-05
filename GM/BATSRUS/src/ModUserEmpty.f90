@@ -38,10 +38,10 @@ contains
   end subroutine user_set_face_boundary
 
   !=====================================================================
-  subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     integer,          intent(in)  :: iBlock, iSide
-    character(len=20),intent(in)  :: TypeBc
+    character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     character(len=*), parameter :: NameSub = 'user_set_cell_boundary'
@@ -119,7 +119,7 @@ contains
 
     integer, intent(in)          :: iBlock
     real, intent(out)            :: UserCriteria
-    character(len=*),intent(in) :: TypeCriteria
+    character(len=*), intent(in) :: TypeCriteria
     logical, intent(inout)       :: IsFound
 
     character(len=*), parameter :: NameSub = 'user_amr_criteria'
@@ -139,8 +139,8 @@ contains
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     real, intent(out)            :: VarValue
-    character(len=*), intent(in):: TypeVar
-    real, intent(in), optional :: Radius
+    character(len=*), intent(in) :: TypeVar
+    real, intent(in), optional   :: Radius
 
     character(len=*), parameter :: NameSub = 'user_get_log_var'
     !-------------------------------------------------------------------
