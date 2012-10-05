@@ -84,6 +84,20 @@ module ModUser
   real      :: zSphereCenterInitIo, zSphereCenterInit
   logical   :: DoCalcAnalytic = .false., DoInitSphere = .false.
 
+  ! Variables for the generalized power profile
+  integer                  :: iPowerProfile_V(nVar) = 0
+  integer                  :: PowerX = 0, PowerY = 0, PowerZ = 0
+  integer, dimension(nVar) :: PowerX_V = 0, PowerY_V = 0, PowerZ_V = 0
+  real                     :: CoeffX = 0.0, CoeffY = 0.0, CoeffZ = 0.0
+  real, dimension(nVar)    :: CoeffX_V = 0.0, CoeffY_V = 0.0, CoeffZ_V = 0.0
+
+  ! For updating selected variables 
+  character (len=30)    :: VarsUpdate
+  integer, parameter    :: nVarsUpdateMax = 20
+  integer               :: nVarsUpdate
+  character(len=2)      :: VarsUpdate_I(nVarsUpdateMax)
+  integer               :: iVarsUpdate_I(nVarsUpdateMax) = 0
+
   ! Enable user units of length in input file
   logical           :: UseUserInputUnitx = .false.
   character(len=20) :: TypeInputUnitX
@@ -102,6 +116,7 @@ contains
     ! use ModPhysics,  ONLY: Si2No_V, Io2Si_V,Io2No_V,&
     !      UnitRho_, UnitU_, UnitP_, UnitN_, UnitX_
     use ModNumConst,  ONLY: cTwoPi,cDegToRad
+    use ModUtilities, ONLY: split_string
 
     character (len=100) :: NameCommand
     !-------------------------------------------------------------------------
@@ -214,12 +229,43 @@ contains
        case('#ANALYTIC')
           call read_var('DoCalcAnalytic', DoCalcAnalytic)
 
-       case('#USERINPUTEND')
-          if(iProc==0) write(*,*)'USERINPUTEND'
-          EXIT
+       case('#POWERPROFILE')
+          ! Read parameters for a power profile. Power is a postive or
+          ! negative integer or zero (linear profile).
+          call read_var('iVar',      iVar)
+          call read_var('CoeffX',  CoeffX)
+          call read_var('PowerX',  PowerX)
+          call read_var('CoeffY',  CoeffY)
+          call read_var('PowerY',  PowerY)
+          call read_var('CoeffZ',  CoeffZ)
+          call read_var('PowerZ',  PowerZ)          
+
+          UserProblem = 'PowerProfile'
+          iPowerProfile_V(iVar) = 1
+          CoeffX_V(iVar) = CoeffX
+          CoeffY_V(iVar) = CoeffY
+          CoeffZ_V(iVar) = CoeffZ
+          PowerX_V(iVar) = PowerX
+          PowerY_V(iVar) = PowerY
+          PowerZ_V(iVar) = PowerZ
+          
        case('#PIPEFLOW')
           call read_var('DoPipeFlow',DoPipeFlow)
           if(DoPipeFlow) UserProblem = 'PipeFlow'
+
+       case('#UPDATEVAR')
+          ! Only the states of the specified variables are updated
+          call read_var('VarsUpdate', VarsUpdate)
+
+          call split_string(VarsUpdate, nVarsUpdateMax, VarsUpdate_I, nVarsUpdate)
+          do iVar = 1, nVarsUpdate
+             read(VarsUpdate_I(iVar),*) iVarsUpdate_I(iVar)
+          end do
+
+       case('#USERINPUTEND')
+          if(iProc==0) write(*,*)'USERINPUTEND'
+          EXIT
+
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
@@ -591,6 +637,22 @@ contains
           State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) &
                + Az* cTwoPi/Lx * sin(cTwoPi*x/Lx) * cos(cPi*y/Ly)
        end do; end do; end do
+
+    case('PowerProfile')
+       ! Generalized power profile: 
+       ! state = shockleftstate + c1*x^p1 + c2*y^p2 + c3*z^p3
+       do iVar = 1, nVar
+          if(iPowerProfile_V(iVar) == 1)then
+             ! set up the power profile for iVar
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                State_VGB(iVar,i,j,k,iBlock) = ShockLeftState_V(iVar) &
+                     + CoeffX_V(iVar)*Xyz_DGB(x_,i,j,k,iBlock)**PowerX_V(iVar) &
+                     + CoeffY_V(iVar)*Xyz_DGB(y_,i,j,k,iBlock)**PowerY_V(iVar) &
+                     + CoeffZ_V(iVar)*Xyz_DGB(z_,i,j,k,iBlock)**PowerZ_V(iVar)
+             end do; end do; end do
+          end if
+       end do
+
     case('PipeFlow')
        State_VGB(:,:,:,:,iBlock)      = 0.0
        State_VGB(Rho_,:,:,:,iBlock)   = 1.0
@@ -1115,11 +1177,28 @@ contains
   !============================================================================
 
   subroutine user_update_states(iStage, iBlock)
+    use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
+         State_VGB
+    use ModVarIndexes
 
     integer,intent(in)::iStage,iBlock
+    integer :: iVar
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
+    if(maxval(iVarsUpdate_I) == 0) &
+         call CON_stop('Correct PARAM.in: set update variables in #UPDATEVAR')
+
+    do iVar = 1, nVar
+       if(minval(abs(iVarsUpdate_I - iVar)) /= 0)then
+          Flux_VX(iVar,:,:,:) = 0.0
+          Flux_VY(iVar,:,:,:) = 0.0
+          Flux_VZ(iVar,:,:,:) = 0.0       
+          Source_VC(iVar,:,:,:) = 0.0
+       end if
+    end do
+
+    call update_states_MHD(iStage, iBlock)
 
   end subroutine user_update_states
 
