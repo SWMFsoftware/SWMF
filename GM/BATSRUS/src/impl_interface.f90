@@ -316,9 +316,9 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModResistivity,    ONLY: get_resistivity_rhs
+  use ModCellBoundary,   ONLY: set_cell_boundary
   use BATL_lib,          ONLY: message_pass_cell, message_pass_face, &
        apply_flux_correction_block, CellVolume_GB
-  use ModGeometry,      ONLY : true_cell, true_BLK
 
   implicit none
 
@@ -360,7 +360,8 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
-     call get_semi_implicit_bc(iBlock, iImplBlock, .false.)
+     call set_cell_boundary(1, iBlock, nVarSemi, &
+          StateSemi_VGB(:,:,:,:,iBlock), iImplBlock, IsLinear=.false.)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
@@ -420,8 +421,9 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
   use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModResistivity,    ONLY: get_resistivity_rhs
-  use ModGeometry, ONLY: true_cell
-  use ModLinearSolver, ONLY: UsePDotADotP, pDotADotPPe
+  use ModGeometry,       ONLY: true_cell
+  use ModLinearSolver,   ONLY: UsePDotADotP, pDotADotPPe
+  use ModCellBoundary,   ONLY: set_cell_boundary
   use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
        apply_flux_correction_block, CellVolume_GB
   implicit none
@@ -480,7 +482,8 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
-     call get_semi_implicit_bc(iBlock, iImplBlock, .true.)
+     call set_cell_boundary(1, iBlock, nVarSemi, &
+          StateSemi_VGB(:,:,:,:,iBlock), iImplBlock, IsLinear=.true.)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
@@ -658,262 +661,6 @@ subroutine get_semi_impl_jacobian
   end if
 
 end subroutine get_semi_impl_jacobian
-
-!==============================================================================
-
-subroutine get_semi_implicit_bc(iBlock, iImplBlock, IsLinear)
-
-  use ModRadDiffusion, ONLY: set_rad_outflow_bc
-  use ModImplicit, ONLY: UseSplitSemiImplicit, iVarSemiMin, iVarSemiMax, &
-       StateSemi_VGB, iTrImplFirst, iTrImplLast, TypeSemiImplicit
-  use ModMain,     ONLY: TypeBc_I, time_accurate, time_loop, time_simulation
-  use ModParallel, ONLY: NOBLK, NeiLev
-  use ModUser,     ONLY: user_set_cell_boundary
-  use BATL_size,   ONLY: nI, nJ, nK, nDim
-  use BATL_lib,    ONLY: IsCylindricalAxis, IsRlonLat
-  use ModPhysics,  ONLY: CellState_VI
-  use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary
-  use ModSetOuterBc ! contains iBLK
-  implicit none
-
-  integer, intent(in) :: iBlock, iImplBlock
-  logical, intent(in) :: IsLinear
-
-  logical :: IsFound
-  integer :: iVar, iStart, iLast, iSide
-  character(len=20), parameter :: TypeUserBc = 'usersemi'
-  character(len=20), parameter :: TypeUserBcLinear = 'usersemilinear'
-  character(len=*),  parameter :: NameSub = 'get_semi_implicit_bc'
-
-  ! As we are changing the number of boundary cell larger then 2 we make it a 
-  ! varable. At this moment we do not know if it will need to be more then 2 for
-  ! semi implesit
-  integer, parameter :: ngSemi = 2
-
-  ! Store the iSide as character, debug info
-  character(len=1) :: cSide
-
-  !----------------------------------------------------------------------------
-
-  iStart=1
-  ! Do not apply cell boundary conditions at the pole 
-  ! This is either handled by message passing or supercell
-  if(IsRLonLat) then
-     iLast = 2
-  else
-     iLast = 6
-  end if
-
-  if(.not. any(neiLEV(iStart:iLast,iBlock)==NOBLK)) RETURN
-
-  iBLK = iBlock
-
-  if(.not.far_field_BCs_BLK(iBlock))then
-     write(*,*) NameSub,' warning: iBLK=',iBlock,' is not far_field block'
-     RETURN
-  end if
-
-  iStart=1
-  ! Do not apply cell boundary conditions at the pole 
-  ! This is either handled by message passing or supercell
-  if(IsRLonLat) then
-     iLast = 2
-  else
-     iLast = 6
-  end if
-
-  ! Do not work on ignored directions
-  if(nK == 1 .and. iLast > 4) iLast = 4
-  if(nJ == 1 .and. iLast > 2) iLast = 2
-
-  do iSide = iStart, iLast
-
-     ! Check if this side of the block is indeed an outer boundary
-     if(neiLEV(iSide,iBlock)/=NOBLK) CYCLE
-
-     ! Do not apply cell boundary conditions at the pole 
-     ! This is either handled by message passing or supercell
-     if(IsCylindricalAxis .and. iSide == 1) CYCLE
-
-     ! Set index limits
-     imin1g= 1-ngSemi; imax1g=nI+ngSemi; imin2g= 1-ngSemi; imax2g=nI+ngSemi
-     jmin1g= 1-ngSemi; jmax1g=nJ+ngSemi; jmin2g= 1-ngSemi; jmax2g=nJ+ngSemi
-     kmin1g= 1-ngSemi; kmax1g=nK+ngSemi; kmin2g= 1-ngSemi; kmax2g=nK+ngSemi
-
-     imin1p= 1-ngSemi; imax1p=nI+ngSemi; imin2p= 1-ngSemi; imax2p=nI+ngSemi
-     jmin1p= 1-ngSemi; jmax1p=nJ+ngSemi; jmin2p= 1-ngSemi; jmax2p=nJ+ngSemi
-     kmin1p= 1-ngSemi; kmax1p=nK+ngSemi; kmin2p= 1-ngSemi; kmax2p=nK+ngSemi
-
-     select case(iSide)
-     case(1)
-        imin1g=0; imax1g=0; imin2g= 1-ngSemi; imax2g= 1-ngSemi
-        imin1p=1; imax1p=1; imin2p= ngSemi; imax2p= ngSemi
-     case(2)
-        imin1g=nI+1; imax1g=nI+1; imin2g=nI+ngSemi; imax2g=nI+ngSemi
-        imin1p=nI  ; imax1p=nI  ; imin2p=nI+1-ngSemi; imax2p=nI+1-ngSemi
-     case(3)
-        jmin1g=0; jmax1g=0; jmin2g= 1-ngSemi; jmax2g= 1-ngSemi
-        jmin1p=1; jmax1p=1; jmin2p= ngSemi; jmax2p= ngSemi
-     case(4)
-        jmin1g=nJ+1; jmax1g=nJ+1; jmin2g=nJ+ngSemi; jmax2g=nJ+ngSemi
-        jmin1p=nJ  ; jmax1p=nJ  ; jmin2p=nJ+1-ngSemi; jmax2p=nJ+1-ngSemi
-     case(5)
-        kmin1g=0; kmax1g=0; kmin2g= 1-ngSemi; kmax2g= 1-ngSemi
-        kmin1p=1; kmax1p=1; kmin2p= ngSemi; kmax2p= ngSemi
-     case(6)
-        kmin1g=nK+1; kmax1g=nK+1; kmin2g=nK+ngSemi; kmax2g=nK+ngSemi
-        kmin1p=nK  ; kmax1p=nK  ; kmin2p=nK+1-ngSemi; kmax2p=nK+1-ngSemi
-     end select
-
-     select case(TypeBc_I(iSide))
-     case('outflow','float')
-        do iVar = iVarSemiMin, iVarSemiMax
-           if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
-              ! For non-radiation variables
-              if(IsLinear)then
-                 StateSemi_VGB(iVar,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBlock) = 0.0
-              else
-                 StateSemi_VGB(iVar,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBlock) = &
-                      StateSemi_VGB(iVar,imin1p:imax1p,jmin1p:jmax1p,kmin1p:kmax1p,iBlock)
-              end if
-           elseif(iVar == iTrImplFirst .or. UseSplitSemiImplicit)then
-              ! For radiation variables (only call once when unsplit)
-              call set_rad_outflow_bc(iSide,iBlock, iImplBlock, &
-                   StateSemi_VGB(:,:,:,:,iBlock), IsLinear) 
-           end if
-        end do
-     case('inflow','vary')
-        if(UseSplitSemiImplicit) &
-             call stop_mpi(NameSub//': UseSplitSemiImplicit unsuported for '//TypeBc_I(iSide))
-        if(TypeSemiImplicit /= 'resistivity')&
-             call stop_mpi(NameSub//' : '//TypeBc_I(iSide)//' only tested for resistivity')
-        if(IsLinear)then
-           do iVar = iVarSemiMin, iVarSemiMax
-              StateSemi_VGB(iVar,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBlock) = 0.0
-           end do
-        else
-           if(time_accurate &
-                .and.(TypeBc_I(iSide)=='vary'.or.TypeBc_I(iSide)=='inflow'))then
-              call semi_BC_solar_wind(iBlock,time_simulation)
-           else 
-              call stop_mpi(NameSub//': No unsuported for '//TypeBc_I(iSide))
-           end if
-        end if
-     case('user')
-        if(IsLinear)then
-           StateSemi_VGB(:,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBlock) = 0.0
-           call user_set_cell_boundary(iBlock, iSide, TypeUserBcLinear, IsFound )
-        else
-           IsFound = .false.
-           call user_set_cell_boundary(iBlock, iSide, TypeUserBc, IsFound)
-           if(.not. IsFound) then
-              write(cSide,'(I1)') iSide    
-              call stop_mpi(NameSub//': unknown TypeUserBc='//TypeUserBc//'iSide='//cSide)
-           end if
-        end if
-     case('reflect')
-        StateSemi_VGB(:,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBlock) =&
-             StateSemi_VGB(:,imin1p:imax1p,jmin1p:jmax1p,kmin1p:kmax1p,iBlock)
-     case('shear')
-        if(iSide ==3 .or. iSide == 4) then
-           call semi_bc_shear(iSide)
-        else
-           write(cSide,'(I1)') iSide    
-           call stop_mpi(NameSub//': Shear not suported for iSide ='// cSide)
-        end if
-     case default 
-        write(cSide,'(I1)') iSide    
-        call stop_mpi(NameSub//': unknown TypeBc_I('//cSide//')='//TypeBc_I(iSide))
-     end select
-
-  end do
-
-contains
-
-  subroutine semi_bc_shear(iSide)
-
-    use ModNumConst, ONLY: cTiny
-    use ModPhysics, ONLY: ShockSlope
-
-    integer, intent(in) :: iSide
-
-    integer :: Dn
-    !--------------------------------------------------------------------------
-
-    ! If the shock is not tilted, there is nothing to do
-    if(abs(ShockSlope)<cTiny) RETURN
-
-    ! Shear according to ShockSlope
-    if(ShockSlope < -cTiny)then
-       call stop_mpi('ShockSlope must be positive!')
-    elseif(ShockSlope > 1.0)then
-       call stop_mpi('ShockSlope > 1 not allowed!')
-    else
-       ! ShockSlope <= 1
-       Dn = nint(1.0/ShockSlope)
-       if(abs(Dn-1.0/ShockSlope)>cTiny)call stop_mpi( &
-            'ShockSlope <= 1 should be the inverse of a round number!')
-       select case(iSide)
-          ! Shift parallel to X by 1, but copy from distance Dn in Y
-       case(3)
-          StateSemi_VGB(:,1:nI,0,:,iBlock) = &
-               StateSemi_VGB(:,0:nI-1,Dn,:,iBlock)
-       case(4)
-          StateSemi_VGB(:,1:nI,nJ+1,:,iBlock) = &
-               StateSemi_VGB(:,2:nI+1,nJ+1-Dn,:,iBlock)
-       end select
-    end if
-
-  end subroutine semi_bc_shear
-
-  subroutine semi_BC_solar_wind(iBlock,time_now)
-
-    use ModVarIndexes
-    use ModGeometry,    ONLY: x2
-    use ModAdvance,     ONLY: B0_DGB, nVar
-    use ModMultiFluid,  ONLY: &
-         iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModSolarwind,   ONLY: get_solar_wind_point
-    use ModMain,        ONLY: UseB0, y_, z_
-    use BATL_lib,       ONLY: Xyz_DGB
-    use ModImplicit,    ONLY: StateSemi_VGB
-    use ModResistivity, ONLY: BxImpl_,BzImpl_
-    !character(len=*), parameter:: NameSub = 'BC_solar_wind'
-    !logical :: DoTest, DoTestMe
-
-    ! Current simulation time in seconds
-    integer, intent(in) :: iBlock
-    real, intent(in)    :: time_now 
-
-    ! index and location of a single point
-    integer :: i, j, k
-    real :: x, y, z
-    ! Varying solar wind parameters
-    real :: SolarWind_V(nVar)
-
-    !--------------------------------------------------------------------------
-
-    do k = kmin1g, kmax1g 
-       z = Xyz_DGB(z_,1,1,k,iBlock)
-       do j = jmin1g, jmax2g
-          y = Xyz_DGB(y_,1,j,1,iBlock)
-          do i = imin1g, imax2g, sign(1,imax2g-imin1g)
-
-             ! x= Xyz_DGB(x_,i,j,k,iBlock) ! for cell based BC this would be best
-             x=x2 ! for face based and for west side as the inflow
-             call get_solar_wind_point(time_now, (/x, y, z/), SolarWind_V)
-
-             StateSemi_VGB(BxImpl_:BzImpl_,i,j,k,iBlock) = SolarWind_V(Bx_:Bz_)
-
-             ! Subtract B0:   B1 = B - B0
-             if(UseB0) StateSemi_VGB(BxImpl_:BzImpl_,i,j,k,iBlock)    = &
-                  StateSemi_VGB(BxImpl_:BzImpl_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
-          end do
-       end do
-    end do
-
-  end subroutine semi_BC_solar_wind
-end subroutine get_semi_implicit_bc
 
 !==============================================================================
 

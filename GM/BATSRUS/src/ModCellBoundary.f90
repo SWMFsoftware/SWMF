@@ -18,13 +18,14 @@ module ModCellBoundary
 contains
 
   !============================================================================
-  subroutine set_cell_boundary(iBlock, State_VG)
+  subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
+       iImplBlock, IsLinear)
 
     ! Set ghost cells values in State_VG
 
-    use ModVarIndexes, ONLY: nVar, Bx_, By_, Bz_, p_, iRho_I, DefaultState_V, &
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, iRho_I, DefaultState_V, &
          NameVar_V, ScalarFirst_, ScalarLast_, WaveFirst_, WaveLast_
-    use BATL_size, ONLY: nI, nJ, nK, nG
+    use BATL_size, ONLY: nI, nJ, nK, nG, MaxDim
 
     use ModProcMH, ONLY: iProc
     use ModSize, ONLY: x_, y_, z_
@@ -38,14 +39,30 @@ contains
          ShockSlope
     use ModUser, ONLY: user_set_cell_boundary
     use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
+    use ModImplicit, ONLY: TypeSemiImplicit, iVarSemiMin, iVarSemiMax, &
+         iTrImplFirst, iTrImplLast
+    use ModResistivity, ONLY: BxImpl_, ByImpl_, BzImpl_
+    use ModRadDiffusion, ONLY: set_rad_outflow_bc
 
+    integer, intent(in):: nGhost
     integer, intent(in):: iBlock
-    real, intent(inout):: State_VG(nVar,1-nG:nI+nG,1-nG:nJ+nG,1-nG:nK+nG)
+    integer, intent(in):: nVarState
+    real, intent(inout):: State_VG(nVarState,1-nG:nI+nG,1-nG:nJ+nG,1-nG:nK+nG)
 
-    integer :: iSideMin, iSideMax, iVar
+    ! Optional arguments when called by semi-implicit scheme
+    integer, optional, intent(in):: iImplBlock
+    logical, optional, intent(in):: IsLinear
+
+    ! Index range for sides
+    integer :: iSideMin, iSideMax
+
+    ! Type of boundary for one side
+    character(len=30):: TypeBc
+
+    integer:: iVar
 
     ! Coefficient +1 or -1 for symmetric vs. anti-symmetric BCs
-    real:: SymmCoeff_V(nVar)
+    real, allocatable:: SymmCoeff_V(:)
 
     integer :: iGhost, jGhost, kGhost, iGhost2, jGhost2, kGhost2
     logical :: DoTest, DoTestMe, IsFound
@@ -96,7 +113,7 @@ contains
        write(*,*)'iTest,  jTest,  kTest   =',iTest,  jTest,  kTest
        write(*,*)'iGhost, jGhost, kGhost  =',iGhost, jGhost, kGhost
        write(*,*)'iGhost2,jGhost2,kGhost2 =',iGhost2,jGhost2,kGhost2
-       do iVar = 1, nVar
+       do iVar = 1, nVarState
           write(*,*)'initial',NameVar_V(iVar),   'cell,ghost,ghost2=',&
                State_VG(iVar,Itest,Jtest,Ktest),&
                State_VG(iVar,Ighost,Jghost,Kghost), &
@@ -117,6 +134,8 @@ contains
     if(nK == 1 .and. iSideMax > 4) iSideMax = 4
     if(nJ == 1 .and. iSideMax > 2) iSideMax = 2
 
+    allocate(SymmCoeff_V(nVarState))
+
     do iSide = iSideMin, iSideMax
 
        ! Check if this side of the block is indeed an outer boundary
@@ -127,9 +146,9 @@ contains
        if(IsCylindricalAxis .and. iSide == 1) CYCLE
 
        ! Set index limits for the ghost cell range
-       iMin = 1-nG; iMax = nI + nG
-       jMin = 1-nG; jMax = nJ + nG
-       kMin = 1-nG; kMax = nK + nG
+       iMin = 1-nGhost; iMax = nI + nGhost
+       jMin = 1-nGhost; jMax = nJ + nGhost
+       kMin = 1-nGhost; kMax = nK + nGhost
        select case(iSide)
        case(1)
           iMax = 0
@@ -145,30 +164,57 @@ contains
           kMin = nK + 1
        end select
 
-       select case(TypeBc_I(iSide))
+       if(nJ==1) jMin = 1
+       if(nJ==1) jMax = 1
+       if(nK==1) kMin = 1
+       if(nK==1) kMax = 1
+
+       TypeBc = TypeBc_I(iSide)
+       if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
+
+       select case(TypeBc)
        case('coupled')
           ! For SC-IH coupling the extra wave energy variable needs a BC
           if(NameThisComp == 'SC') call set_float_bc(ScalarFirst_, ScalarLast_)
-       case('periodic')
+
+       case('periodic', 'periodic_semi')
           call stop_mpi('The neighbors are not defined at periodic boundaries')
-       case('float','outflow')
-          call set_float_bc(1, nVar)
-          if(UseOutflowPressure .and. TypeBc_I(iSide) == 'outflow') &
+
+       case('float', 'outflow')
+          call set_float_bc(1, nVarState)
+          if(UseOutflowPressure .and. TypeBc == 'outflow') &
                call  set_fixed_bc(p_,p_,(/ pOutflow /) )
-          !^CFG IF IMPLICIT BEGIN
           if(UseRadDiffusion) &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
-          !^CFG END IMPLICIT
+
+       case('float_semi', 'outflow_semi')
+          do iVar = iVarSemiMin, iVarSemiMax
+             if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
+                ! For non-radiation variables
+                if(IsLinear)then
+                   State_VG(iVar,imin:imax,jmin:jmax,kmin:kmax) = 0.0
+                else
+                   call set_float_bc(iVar, iVar)
+                end if
+             elseif(iVar == iTrImplFirst .or. nVarState == 1)then
+                ! For radiation variables (only call once when unsplit)
+                call set_rad_outflow_bc(iSide, iBlock, iImplBlock, &
+                     State_VG, IsLinear)
+             end if
+          end do
+
        case('raeder')
-          call set_float_bc(1, nVar)
+          call set_float_bc(1, nVarState)
           if(iSide==4.or.iSide==3)then
              call set_fixed_bc(By_,By_,DefaultState_V(By_))
           elseif(iSide==5.or.iSide==6)then
              call set_fixed_bc(Bz_,Bz_,DefaultState_V(Bz_))
           end if
+
        case('reflect')
           ! Scalars are symmetric
           SymmCoeff_V = 1.0
+
           ! Normal vector components are mirror symmetric
           select case(iSide)
           case(1,2)
@@ -186,52 +232,101 @@ contains
              SymmCoeff_V(iRhoUz_I(1:nFluid)) = -1.0
              if(UseB)SymmCoeff_V(Bz_) = -1.0
           end select
-          call set_symm_bc(1, nVar, SymmCoeff_V)
+          call set_symm_bc(1, nVarState, SymmCoeff_V)
+
+       case('reflect_semi')
+          ! Scalars are symmetric
+          SymmCoeff_V = 1.0
+
+          ! Semi-implicit scheme is mostly applied to scalars
+          ! The only exception right now is the magnetic field
+          if(TypeSemiImplicit == 'resistivity')then
+             select case(iSide)
+             case(1,2)
+                SymmCoeff_V(BxImpl_) = -1.0
+             case(3,4)
+                SymmCoeff_V(ByImpl_) = -1.0
+                ! For RZ geometry, mirror Z components too at the axis
+                if(IsRzGeometry .and. XyzMin_D(2)==0.0 .and. iSide==3)then
+                   SymmCoeff_V(BzImpl_) = -1.0
+                end if
+             case(5,6)
+                SymmCoeff_V(BzImpl_) = -1.0
+             end select
+          end if
+          call set_symm_bc(1, nVarState, SymmCoeff_V)
+
        case('linetied')
           ! Most variables float
-          call set_float_bc(1,nVar)
+          call set_float_bc(1, nVarState)
 
-          ! The density and momentum use symmetric/antisymmetric BCs
-          SymmCoeff_V = 1.0
-          do iFluid=1, nFluid
-             SymmCoeff_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid)) = -1.0
-             call set_symm_bc(iRho_I(iFluid), iRhoUz_I(iFluid), SymmCoeff_V)
-          end do
+          if(.not.present(iImplBlock))then
+             ! The density and momentum use symmetric/antisymmetric BCs
+             SymmCoeff_V = 1.0
+             do iFluid=1, nFluid
+                SymmCoeff_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid)) = -1.0
+                call set_symm_bc(iRho_I(iFluid), iRhoUz_I(iFluid), SymmCoeff_V)
+             end do
+          end if
+
+       case('linetied_semi')
+          ! For semi-implicit scheme all variables float
+          call set_float_bc(1, nVarState)
+
        case('fixed','inflow','vary','ihbuffer')
           if(time_accurate &
-               .and.(TypeBc_I(iSide)=='vary'.or.TypeBc_I(iSide)=='inflow'))then
+               .and.(TypeBc == 'vary'.or. TypeBc == 'inflow'))then
              call set_solar_wind_bc
-          else if(TypeBc_I(iSide)=='ihbuffer'.and.time_loop)then
+          else if(TypeBc == 'ihbuffer' .and. time_loop)then
              call set_solar_wind_bc_buffer
           else
-             call set_fixed_bc(1,nVar,CellState_VI(:,iSide))
+             call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
              if(UseB0)call fix_b0(Bx_,Bz_)
           end if
-       case('fixedB1','fixedb1')
-          call set_fixed_bc(1,nVar,CellState_VI(:,iSide))
-       case('shear')
+       case('inflow_semi','vary_semi')
+          if(IsLinear)then
+             State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
+          else
+             call set_solar_wind_bc
+          end if
+       case('fixedb1')
+          call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
+       case('shear', 'shear_semi')
           call set_shear_bc
        case('none')
+       case('none_semi')
+          if(IsLinear) State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
+       case('user_semi')
+          if(IsLinear)then
+             State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
+             call user_set_cell_boundary(iBlock, iSide, 'usersemilinear', &
+                  IsFound)
+          else
+             IsFound = .false.
+             call user_set_cell_boundary(iBlock, iSide, 'usersemi', IsFound)
+             if(.not.IsFound) call stop_mpi(NameSub// &
+                  ': usersemi boundary condition is not found in user module')
+          end if
        case default
           IsFound=.false.
-          if(UseUserOuterBcs .or. TypeBc_I(iSide) == 'user')&
-               call user_set_cell_boundary(iBlock, iSide, TypeBc_I(iSide), &
-               IsFound)
+          if(UseUserOuterBcs .or. TypeBc(1:4) == 'user')&
+               call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
-          if(.not. IsFound) call stop_mpi( &
-               NameSub // ': unknown TypeBc_I=' //TypeBc_I(iSide))
+          if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc='//TypeBc)
        end select
 
     end do
 
     if(DoTestMe)then
-       do iVar = 1, nVar
+       do iVar = 1, nVarState
           write(*,*)'final',NameVar_V(iVar),'   cell,ghost,ghost2=',&
                State_VG(iVar,Itest,Jtest,Ktest),&
                State_VG(iVar,Ighost,Jghost,Kghost),&
                State_VG(iVar,Ighost2,Jghost2,Kghost2)
        end do
     end if
+
+    deallocate(SymmCoeff_V)
 
   contains
 
@@ -287,10 +382,10 @@ contains
       integer :: i, j, k, Dn
       !------------------------------------------------------------------------
       ! For the corners and boundaries 5 and 6 fill with unsheared data first
-      call set_float_bc(1, nVar)
+      call set_float_bc(1, nVarState)
 
       ! If the shock is not tilted, there is nothing to do
-      if( ShockSlope == 0.0) RETURN
+      if(ShockSlope == 0.0) RETURN
 
       ! Shear according to ShockSlope
       if(ShockSlope < 0.0)then
@@ -432,9 +527,9 @@ contains
     end subroutine fix_b0
 
     !==========================================================================
-
     subroutine set_solar_wind_bc
 
+      use ModAdvance,    ONLY: nVar
       use ModGeometry,   ONLY: x2
       use ModB0,         ONLY: B0_DGB
       use ModMultiFluid, ONLY: iRho_I, iUx_I, iUy_I, iUz_I
@@ -444,7 +539,8 @@ contains
 
       ! index and location of a single point
       integer :: i, j, k
-      real :: x, y, z
+      real :: Xyz_D(MaxDim)
+
       ! Varying solar wind parameters
       real :: SolarWind_V(nVar)
 
@@ -453,32 +549,32 @@ contains
       !------------------------------------------------------------------------
       !call set_oktest(NameSub, DoTest, DoTestMe)
 
-      do k = kMin, kMax
-         z = Xyz_DGB(z_,1,1,k,iBlock)
-         do j = jMin, jMax
-            y = Xyz_DGB(y_,1,j,1,iBlock)
-            do i = iMin, iMax
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         Xyz_D =  Xyz_DGB(:,i,j,k,iBlock)
+         Xyz_D(1) = x2 !!! Why????
+         call get_solar_wind_point(time_simulation, Xyz_D, SolarWind_V)
 
-               ! x= Xyz_DGB(x_,i,j,k,iBlock) ! for cell based BC this would be best
-               x=x2 ! for face based and for west side as the inflow
-               call get_solar_wind_point(time_simulation, (/x, y, z/), SolarWind_V)
+         if(present(iImplBlock))then
+            State_VG(:,i,j,k) = SolarWind_V(Bx_:Bz_)
+            ! Subtract B0:   B1 = B - B0
+            if(UseB0) State_VG(BxImpl_:BzImpl_,i,j,k) = &
+                 State_VG(BxImpl_:BzImpl_,i,j,k) - B0_DGB(:,i,j,k,iBlock)
+         else
+            State_VG(:,i,j,k) = SolarWind_V
 
-               State_VG(:,i,j,k) = SolarWind_V
+            ! Convert velocities to momenta
+            State_VG(iRhoUx_I, i,j,k) = &
+                 State_VG(iUx_I, i,j,k)*State_VG(iRho_I,i,j,k)
+            State_VG(iRhoUy_I, i,j,k) = &
+                 State_VG(iUy_I, i,j,k)*State_VG(iRho_I,i,j,k)
+            State_VG(iRhoUz_I, i,j,k) = &
+                 State_VG(iUz_I, i,j,k)*State_VG(iRho_I,i,j,k)
 
-               ! Convert velocities to momenta
-               State_VG(iRhoUx_I, i,j,k) = &
-                    State_VG(iUx_I, i,j,k)*State_VG(iRho_I,i,j,k)
-               State_VG(iRhoUy_I, i,j,k) = &
-                    State_VG(iUy_I, i,j,k)*State_VG(iRho_I,i,j,k)
-               State_VG(iRhoUz_I, i,j,k) = &
-                    State_VG(iUz_I, i,j,k)*State_VG(iRho_I,i,j,k)
-
-               ! Subtract B0:   B1 = B - B0
-               if(UseB0) State_VG(Bx_:Bz_,i,j,k)    = &
-                    State_VG(Bx_:Bz_,i,j,k) - B0_DGB(:,i,j,k,iBlock)
-            end do
-         end do
-      end do
+            ! Subtract B0:   B1 = B - B0
+            if(UseB0) State_VG(Bx_:Bz_,i,j,k) = &
+                 State_VG(Bx_:Bz_,i,j,k) - B0_DGB(:,i,j,k,iBlock)
+         end if
+      end do; end do; end do
 
     end subroutine set_solar_wind_bc
 
