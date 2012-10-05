@@ -23,7 +23,7 @@ module ModUser
 
   ! Input parameters for chromospheric inner BC's
   real    :: DeltaUSi = 1.5e4, DeltaU = 0.0
-  real    :: nChromoSi = 2e17, tChromoSi = 2e4
+  real    :: nChromoSi = 2e17, tChromoSi = 5e4
   real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
   real    :: PoyntingFluxPerB = 0.0
 
@@ -113,7 +113,7 @@ contains
          SinThetaTilt, CosThetaTilt
 
     real, parameter :: CoulombLog = 20.0
-    character (len=*),parameter :: NameSub = 'uset_init_session'
+    character (len=*),parameter :: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -180,7 +180,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: x, y, z, r, Rho, NumDensIon, NumDensElectron, Temperature
+    real :: x, y, z, r, Rho, NumDensIon, NumDensElectron
     real :: RhoCorona, tCorona, uCorona
     real :: r_D(3), Br
     ! variables for iterative Parker solution
@@ -261,17 +261,16 @@ contains
        end if
 
        Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur)
-       Temperature = tCorona
 
        NumDensIon = Rho/MassIon_I(1)
        NumDensElectron = NumDensIon*AverageIonCharge
 
        if(UseElectronPressure)then
-          State_VGB(p_,i,j,k,iBlock) = NumDensIon*Temperature
-          State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*Temperature
+          State_VGB(p_,i,j,k,iBlock) = NumDensIon*tCorona
+          State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tCorona
        else
           State_VGB(p_,i,j,k,iBlock) = &
-               (NumDensIon + NumDensElectron)*Temperature
+               (NumDensIon + NumDensElectron)*tCorona
        end if
        State_VGB(Rho_,i,j,k,iBlock) = Rho
 
@@ -831,17 +830,14 @@ contains
        RETURN
     end if
 
-    ! Extrapolate density around fixed RhoChromo value
-    State_VGB(Rho_,0,:,:,iBlock) = &
-         2.*RhoChromo - State_VGB(rho_,1,:,:,iBlock)
-    State_VGB(Rho_,-1,:,:,iBlock) = &
-         2.*State_VGB(Rho_,0,:,:,iBlock)  - State_VGB(rho_,1,:,:,iBlock)
-
+    ! The electron heat conduction requires the electron temperature
+    ! in the ghost cells
     do k = MinK,MaxK; do j = MinJ,MaxJ; do i = -1, 0
-       NumDensIon = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
+       State_VGB(Rho_,i,j,k,iBlock) = RhoChromo
+
+       NumDensIon = RhoChromo/MassIon_I(1)
        NumDensElectron = NumDensIon*AverageIonCharge
        if(UseElectronPressure)then
-          State_VGB(p_,i,j,k,iBlock) = NumDensIon*tChromo
           State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tChromo
        else
           State_VGB(p_,i,j,k,iBlock) = &
@@ -849,6 +845,9 @@ contains
        end if
     end do; end do; end do
 
+    ! The following is only needed for the semi-implicit heat conduction,
+    ! which averages the cell centered heat conduction coefficient towards
+    ! the face
     do k = MinK,MaxK; do j = MinJ,MaxJ
        Runit_D = (/ Xyz_DGB(x_,1,j,k,iBlock), Xyz_DGB(y_,1,j,k,iBlock), &
             Xyz_DGB(z_,1,j,k,iBlock) /) / r_BLK(1,j,k,iBlock)
@@ -887,31 +886,27 @@ contains
 
     rUnit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
 
-    !\
-    ! Magnetic field
-    !/
-    ! Float tangential B, reflect radial B
     B1_D  = VarsTrueFace_V(Bx_:Bz_)
     B1r_D = sum(rUnit_D*B1_D)*rUnit_D
     B1t_D = B1_D - B1r_D
     VarsGhostFace_V(Bx_:Bz_) = B1t_D
+
     FullBGhost_D = B0Face_D + VarsGhostFace_V(Bx_:Bz_)
     FullBTrue_D  = B0Face_D + VarsTrueFace_V(Bx_:Bz_)
     FullBr = sum(FullBGhost_D*rUnit_D)
 
-    VarsGhostFace_V(Rho_) =  2.0*RhoChromo - VarsTrueFace_V(Rho_)
+    ! Fix density
+    VarsGhostFace_V(Rho_) = RhoChromo
 
     RhoTrue = VarsTrueFace_V(Rho_)
     RhoGhost = VarsGhostFace_V(Rho_)
 
-    !\
-    ! Velocity
-    !/
-    U_D   = VarsTrueFace_V(Ux_:Uz_)
+    U_D = VarsTrueFace_V(Ux_:Uz_)
 
-    bUnitGhost_D = FullBGhost_D/sqrt(sum(FullBGhost_D**2))
-    bUnitTrue_D = FullBTrue_D/sqrt(sum(FullBTrue_D**2))
+    bUnitGhost_D = FullBGhost_D/sqrt(max(1e-30,sum(FullBGhost_D**2)))
+    bUnitTrue_D = FullBTrue_D/sqrt(max(1e-30,sum(FullBTrue_D**2)))
 
+    ! extrapolate field-aligned velocity component
     VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
          sum(U_D*bUnitTrue_D)*bUnitGhost_D       
 
@@ -921,12 +916,8 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) + OmegaBody*FaceCoords_D(x_)
     end if
 
-    !\
-    ! Fixed wave BC's
-    !/
-    Ewave = PoyntingFluxPerB*sqrt(RhoGhost)
-
     ! Ewave \propto sqrt(rho) for U << Ualfven
+    Ewave = PoyntingFluxPerB*sqrt(RhoGhost)
     if (FullBr > 0. ) then
        VarsGhostFace_V(WaveFirst_) = Ewave
        VarsGhostFace_V(WaveLast_) = 0.0
@@ -935,9 +926,7 @@ contains
        VarsGhostFace_V(WaveLast_) = Ewave
     end if
 
-    !\
-    ! Pressure
-    !/
+    ! Fix temperature
     NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
     if(UseElectronPressure)then
