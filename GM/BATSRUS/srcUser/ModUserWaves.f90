@@ -905,7 +905,7 @@ contains
 
     integer, intent(in) :: iBlock, iSide
     logical, intent(out) :: IsFound
-    character (len=20),intent(in) :: TypeBc
+    character (len=*), intent(in) :: TypeBc
 
     integer :: i,j,k,iVar
     real    :: Dx, x, y, z,r, rMin, rMax

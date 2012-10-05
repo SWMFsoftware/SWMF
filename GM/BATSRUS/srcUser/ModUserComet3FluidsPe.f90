@@ -2018,7 +2018,7 @@ contains
     use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
 
     integer,          intent(in)  :: iBlock, iSide
-    character(len=20),intent(in)  :: TypeBc
+    character(len=*),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     integer:: i, j, k

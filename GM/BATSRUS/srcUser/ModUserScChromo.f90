@@ -809,7 +809,7 @@ contains
     use ModPhysics,    ONLY: AverageIonCharge
 
     integer,          intent(in)  :: iBlock, iSide
-    character(len=20),intent(in)  :: TypeBc
+    character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     integer :: i, j, k

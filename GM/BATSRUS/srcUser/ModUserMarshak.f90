@@ -145,7 +145,7 @@ contains
     use ModPhysics,  ONLY: cRadiationNo
 
     integer,          intent(in)  :: iBlock, iSide
-    character(len=20),intent(in)  :: TypeBc
+    character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     real :: Coef

@@ -397,7 +397,7 @@ contains
 ! esm ]
 
     integer,          intent(in)  :: iBlock, iSide
-    character(len=20),intent(in)  :: TypeBc
+    character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'

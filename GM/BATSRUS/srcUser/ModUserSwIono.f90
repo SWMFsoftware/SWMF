@@ -92,7 +92,7 @@ contains
 
     integer,intent(in)::iBlock, iSide
     logical,intent(out) :: found
-    character (len=20),intent(in) :: TypeBc
+    character (len=*), intent(in) :: TypeBc
     real :: time_now
 
     character (len=*), parameter :: Name='user_set_cell_boundary'
