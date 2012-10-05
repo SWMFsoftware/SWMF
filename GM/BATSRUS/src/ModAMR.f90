@@ -58,7 +58,7 @@ contains
 
     use ModProcMH
     use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
-         Unused_B, lVerbose, UseB, UseB0, Dt_BLK, nTrueCellsALL, &
+         lVerbose, UseB, Dt_BLK, nTrueCellsALL, &
          iNewGrid, iNewDecomposition
     use ModGeometry, ONLY : minDXvalue,maxDXvalue,true_cell
     use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
@@ -79,7 +79,6 @@ contains
     logical, intent(in) :: DoFullMessagePass
     character(3), intent(in) :: TypeAmr
 
-    integer :: iBlock
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'do_amr'
@@ -236,7 +235,6 @@ contains
     use BATL_lib,      ONLY: Xyz_DGB, CellSize_DB, masked_amr_criteria
     use ModNumConst,   ONLY: cSqrtTwo, cTiny
     use ModVarIndexes, ONLY: SignB_
-    use ModUser,       ONLY: user_specify_refinement
 
     real, intent(out) :: Crit_IB(nAmrCriteria,maxBlock)
     character(len=3), intent(in) :: TypeAmr
@@ -262,7 +260,6 @@ contains
     ! Needed for the 'currentsheet'
     real :: rDotB_G(nI,nJ,0:nK+1)
 
-    integer :: iCritStart,iCritEnd
     !--------------------------------------------------------------------------
 
     ! initialize all criteria to zero

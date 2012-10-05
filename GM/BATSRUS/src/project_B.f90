@@ -10,7 +10,7 @@ subroutine project_B
   ! See G. Toth, 2000, Journal of Computational Physics, 161, 605-652
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK,Itest,Jtest,Ktest,BLKtest
+  use ModMain, ONLY :nBLK,Itest,Jtest,Ktest,BLKtest
   use ModVarIndexes,ONLY: Bx_,Bz_,P_
   use ModAdvance, ONLY : State_VGB
   use ModGeometry, ONLY : true_cell
@@ -269,7 +269,7 @@ end subroutine proj_get_divB
 subroutine proj_poisson(rhs,tolerance,typestop,matvecmax,&
      info,nmatvec,resid,phi)
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK
+  use ModMain, ONLY :nBLK
   use ModProject
   implicit none
 
