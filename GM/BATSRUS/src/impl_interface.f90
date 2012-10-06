@@ -308,8 +308,9 @@ end subroutine set_semi_impl_range
 !==============================================================================
 subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
-  use ModImplicit,       ONLY: StateSemi_VGB, nw, nVarSemi, nImplBlk, impl2iblk, &
-       TypeSemiImplicit, iVarSemiMin, iVarSemiMax, nVarSemi, &
+  use ModGeometry,       ONLY: far_field_BCs_BLK
+  use ModImplicit,       ONLY: StateSemi_VGB, nw, nVarSemi, nImplBlk, &
+       impl2iblk, TypeSemiImplicit, iVarSemiMin, iVarSemiMax, nVarSemi, &
        FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, UseAccurateRadiation
   use ModLinearSolver,   ONLY: UsePDotADotP
   use ModSize,           ONLY: nI, nJ, nK, MaxImplBlk
@@ -360,7 +361,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
-     call set_cell_boundary(1, iBlock, nVarSemi, &
+     if(far_field_BCs_BLK(iBlock))call set_cell_boundary(1, iBlock, nVarSemi, &
           StateSemi_VGB(:,:,:,:,iBlock), iImplBlock, IsLinear=.false.)
 
      select case(TypeSemiImplicit)
@@ -409,7 +410,8 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
   ! Calculate y_I = A.x_I where A is the linearized sem-implicit operator
 
-  use ModAdvance, ONLY: time_BLK
+  use ModAdvance,  ONLY: time_BLK
+  use ModGeometry, ONLY: far_field_BCs_BLK
   use ModImplicit, ONLY: StateSemi_VGB, ResImpl_VCB, &
        FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB, &
        nImplBlk, impl2iblk, &
@@ -482,7 +484,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
-     call set_cell_boundary(1, iBlock, nVarSemi, &
+     if(far_field_BCs_BLK(iBlock))call set_cell_boundary(1, iBlock, nVarSemi, &
           StateSemi_VGB(:,:,:,:,iBlock), iImplBlock, IsLinear=.true.)
 
      select case(TypeSemiImplicit)
