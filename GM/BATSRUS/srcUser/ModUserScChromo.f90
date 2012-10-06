@@ -832,18 +832,14 @@ contains
 
     ! The electron heat conduction requires the electron temperature
     ! in the ghost cells
-    do k = MinK,MaxK; do j = MinJ,MaxJ; do i = -1, 0
-       State_VGB(Rho_,i,j,k,iBlock) = RhoChromo
-
-       NumDensIon = RhoChromo/MassIon_I(1)
-       NumDensElectron = NumDensIon*AverageIonCharge
-       if(UseElectronPressure)then
-          State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tChromo
-       else
-          State_VGB(p_,i,j,k,iBlock) = &
-               (NumDensIon + NumDensElectron)*tChromo
-       end if
-    end do; end do; end do
+    State_VGB(Rho_,-1:0,:,:,iBlock) = RhoChromo
+    NumDensIon = RhoChromo/MassIon_I(1)
+    NumDensElectron = NumDensIon*AverageIonCharge
+    if(UseElectronPressure)then
+       State_VGB(Pe_,-1:0,:,:,iBlock) = NumDensElectron*tChromo
+    else
+       State_VGB(p_,-1:0,:,:,iBlock) = (NumDensIon + NumDensElectron)*tChromo
+    end if
 
     ! The following is only needed for the semi-implicit heat conduction,
     ! which averages the cell centered heat conduction coefficient towards
@@ -901,20 +897,28 @@ contains
     RhoTrue = VarsTrueFace_V(Rho_)
     RhoGhost = VarsGhostFace_V(Rho_)
 
-    U_D = VarsTrueFace_V(Ux_:Uz_)
-
-    bUnitGhost_D = FullBGhost_D/sqrt(max(1e-30,sum(FullBGhost_D**2)))
-    bUnitTrue_D = FullBTrue_D/sqrt(max(1e-30,sum(FullBTrue_D**2)))
-
-    ! extrapolate field-aligned velocity component
-    VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
-         sum(U_D*bUnitTrue_D)*bUnitGhost_D       
-
+    ! zero velocity at inner boundary
+    VarsGhostFace_V(Ux_:Uz_) = -VarsTrueFace_V(Ux_:Uz_)
     ! Apply corotation if needed
-    if(.not.UseRotatingFrame)then
-       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) - OmegaBody*FaceCoords_D(y_)
-       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) + OmegaBody*FaceCoords_D(x_)
-    end if
+    if(.not.UseRotatingFrame)then                                            
+       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_)-2*OmegaBody*FaceCoords_D(y_)
+       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_)+2*OmegaBody*FaceCoords_D(x_)
+    end if   
+
+    ! The following commented lines will be explored in the future
+!!!    U_D = VarsTrueFace_V(Ux_:Uz_)
+!!!    bUnitGhost_D = FullBGhost_D/sqrt(max(1e-30,sum(FullBGhost_D**2)))
+!!!    bUnitTrue_D = FullBTrue_D/sqrt(max(1e-30,sum(FullBTrue_D**2)))
+!!!
+!!!    ! extrapolate field-aligned velocity component
+!!!    VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
+!!!         sum(U_D*bUnitTrue_D)*bUnitGhost_D       
+!!!
+!!!    ! Apply corotation if needed
+!!!    if(.not.UseRotatingFrame)then
+!!!       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) - OmegaBody*FaceCoords_D(y_)
+!!!       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) + OmegaBody*FaceCoords_D(x_)
+!!!    end if
 
     ! Ewave \propto sqrt(rho) for U << Ualfven
     Ewave = PoyntingFluxPerB*sqrt(RhoGhost)
