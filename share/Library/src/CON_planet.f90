@@ -408,8 +408,12 @@ contains
        IsPlanetModified = .true.
 
        call read_var('DipoleStrength',DipoleStrength)
-
-
+       if(DipoleStrength ==0.0)then
+          TypeBField="NONE"
+       else
+          TypeBField="DIPOLE"
+       end if
+       
     case('#UPDATEB0')
 
        call read_var('DtUpdateB0',DtUpdateB0)
