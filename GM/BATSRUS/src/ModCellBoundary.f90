@@ -402,7 +402,7 @@ contains
             end do; end do; end do
          case(2)
             ! Shift by (Dix,Diy) = (-Dn,+1)
-            do k = kMin, kMax; do j = jMin, jMax-1; do i = iMin, iMax
+            do k = kMin, kMax; do j = jMax-1, jMin, -1; do i = iMin, iMax
                State_VG(:,i,j,k) = State_VG(:,i-Dn,j+1,k)
             end do; end do; end do
          case(3)
@@ -412,7 +412,7 @@ contains
             end do; end do; end do
          case(4)
             ! Shift by (Dix,Diy) = (+Dn,-1)
-            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax-Dn
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMax-Dn, iMin, -1
                State_VG(:,i,j,k) = State_VG(:,i+Dn,j-1,k)
             end do; end do; end do
          end select
@@ -429,7 +429,7 @@ contains
             end do; end do; end do
          case(2)
             ! Shift by (Dix,Diy) = (-1,+Dn)
-            do k = kMin, kMax; do j = jMin, jMax-Dn; do i = iMin, iMax
+            do k = kMin, kMax; do j = jMax-Dn, jMin, -1; do i = iMin, iMax
                State_VG(:,i,j,k) = State_VG(:,i-1,j+Dn,k)
             end do; end do; end do
          case(3)
@@ -439,7 +439,7 @@ contains
             end do; end do; end do
          case(4)
             ! Shift by (Dix,Diy) = (+1,-Dn)
-            do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax-1
+            do k = kMin, kMax; do j = jMin, jMax; do i = iMax-1, iMin, -1
                State_VG(:,i,j,k) = State_VG(:,i+1,j-Dn,k)
             end do; end do; end do
          end select
