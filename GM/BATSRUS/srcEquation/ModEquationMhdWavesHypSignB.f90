@@ -12,11 +12,9 @@ module ModVarIndexes
 
   save
 
-  ! This equation module contains the standard MHD equations plus one
-  ! extra wave energy of a single frequency w, Iw that carries the extra energy.
+  ! This equation module contains the standard MHD equations plus
+  ! extra wave energies
   character (len=*), parameter :: NameEquation='MHD Waves with Hyperbolic cleaning and Level Set B'
-
-
 
   ! loop variable over spectrum
   integer, private :: iWave
@@ -25,15 +23,10 @@ module ModVarIndexes
   integer, parameter :: nWave = 2
   integer, parameter :: nVar = 10 + nWave
   
-  ! Array of strings for plotting
-  character(len=3)   :: NameWaveVar_I(nWave)
-
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
   ! The energy is handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
-
-  ! Number of variables without energy:
   integer, parameter :: &
        Rho_       = 1,  &
        RhoUx_     = 2,  &
@@ -92,36 +85,18 @@ module ModVarIndexes
        'e   '/)  ! Energy_        
   
   ! The space separated list of nVar conservative variables for plotting
-  character(len=*), parameter :: NameConservativeVarPref = &
-       'rho mx my mz bx by bz hyp sign' 
-     
-  character(len=*), parameter :: NameConservativeVarSuff = &
-       ' e'
+  character(len=*), parameter :: NameConservativeVar = &
+       'rho mx my mz bx by bz hyp sign ew e'
  
-  character(len=4*nWave+len(NameConservativeVarPref) + &
-       len(NameConservativeVarSuff))      :: NameConservativeVar = &
-       trim(NameConservativeVarPref)         ! modified by init_mod_equation
-
   ! The space separated list of nVar primitive variables for plotting
-  character(len=*), parameter :: NamePrimitiveVarPref = &
-       'rho ux uy uz bx by bz hyp sign' 
-  character(len=*), parameter :: NamePrimitiveVarSuff = &
-       ' p'
-  character(len=4*nWave+len(NamePrimitiveVarPref)+len(NamePrimitiveVarSuff)) :: &
-       NamePrimitiveVar = trim(NamePrimitiveVarPref)
+  character(len=*), parameter :: NamePrimitiveVar = &
+       'rho ux uy uz bx by bz hyp sign ew p'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTecPref = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "Hyp", "Sign",'
+       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "Hyp", "Sign",' // &
+       '"E_w", "p"'
 
-  character(len=*), parameter :: NamePrimitiveVarTecSuff = &
-       ' "p"'
-
-  character(len=7*nWave+len(NamePrimitiveVarTecPref) + &
-       len(NamePrimitiveVarTecSuff))     :: NamePrimitiveVarTec = &
-       trim(NamePrimitiveVarTecPref)
-
-       
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
        NameUnitUserIdl_V(nVar+1) = '', NameUnitUserTec_V(nVar+1) = ''
@@ -145,23 +120,8 @@ module ModVarIndexes
 contains
 
   subroutine init_mod_equation
-    ! Initialize user units and names for the MHD variables
 
     call init_mhd_variables
-
-    ! Create variable name strings for plotting
-    
-    do iWave = 1, nWave
-       write(NameWaveVar_I(iWave),'(a,i2.2)') 'I',iWave
-       NameConservativeVar=trim(NameConservativeVar)//&
-            ' '//trim(NameWaveVar_I(iWave))
-       NamePrimitiveVar=trim(NamePrimitiveVar)//&
-            ' '//trim(NameWaveVar_I(iWave))
-       NamePrimitiveVarTec=trim(NamePrimitiveVarTec)//' "'//trim(NameWaveVar_I(iWave))//'",'
-    end do
-    NameConservativeVar=trim(NameConservativeVar)//trim(NameConservativeVarSuff)
-    NamePrimitiveVar=trim(NamePrimitiveVar)//trim(NamePrimitiveVarSuff)
-    NamePrimitiveVarTec=trim(NamePrimitiveVarTec)//trim(NamePrimitiveVarSuff)
 
   end subroutine init_mod_equation
 
