@@ -34,15 +34,14 @@ contains
          BlkTest, ProcTest, iTest, jTest, kTest, DimTest
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary, XyzMin_D
-    use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsRlonLat
-    use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI, &
-         ShockSlope
+    use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI
     use ModUser, ONLY: user_set_cell_boundary
     use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModImplicit, ONLY: TypeSemiImplicit, iVarSemiMin, iVarSemiMax, &
          iTrImplFirst, iTrImplLast
     use ModResistivity, ONLY: BxImpl_, ByImpl_, BzImpl_
     use ModRadDiffusion, ONLY: set_rad_outflow_bc
+    use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsRlonLat, nRoot_D
 
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
@@ -334,7 +333,7 @@ contains
     subroutine set_float_bc(iVarMin, iVarMax)
 
       ! Continuous: ghost = phys1
-      integer, intent(in) :: iVarMin,iVarMax
+      integer, intent(in) :: iVarMin, iVarMax
 
       integer:: i, j, k
       !------------------------------------------------------------------------
@@ -377,9 +376,13 @@ contains
     !==========================================================================
     subroutine set_shear_bc
 
+      use ModPhysics, ONLY: ShockSlope
+
       ! Shear: ghost = phys(shifted)
 
-      integer :: i, j, k, Dn
+      integer:: i, j, k, Di, Dj
+
+      character(len=*), parameter:: NameSub = 'set_shear_bc'
       !------------------------------------------------------------------------
       ! For the corners and boundaries 5 and 6 fill with unsheared data first
       call set_float_bc(1, nVarState)
@@ -390,60 +393,45 @@ contains
       ! Shear according to ShockSlope
       if(ShockSlope < 0.0)then
          call stop_mpi('ShockSlope must be positive!')
-      elseif(ShockSlope >= 1.0)then
-         Dn = nint(ShockSlope)
-         if(abs(Dn-ShockSlope) > 1e-6)&
+      elseif(ShockSlope > 1.1)then
+
+         if(nRoot_D(x_) > 1)call stop_mpi(NameSub// &
+              ': shear boundary condition does not work with '// &
+              'shockSlope > 1 and multiple blocks along X')
+
+         Di = nint(ShockSlope)
+         Dj = 1
+         if(abs(Di - ShockSlope) > 1e-6)&
               call stop_mpi('ShockSlope > 1 should be a round number!')
-         select case(iSide)
-         case(1)
-            ! Shift by (Dix,Diy) = (Dn,-1)
-            do k = kMin, kMax; do j = jMin+1, jMax; do i = iMax, iMin, -1
-               State_VG(:,i,j,k) = State_VG(:,i+Dn,j-1,k)
-            end do; end do; end do
-         case(2)
-            ! Shift by (Dix,Diy) = (-Dn,+1)
-            do k = kMin, kMax; do j = jMax-1, jMin, -1; do i = iMin, iMax
-               State_VG(:,i,j,k) = State_VG(:,i-Dn,j+1,k)
-            end do; end do; end do
-         case(3)
-            ! Shift by (Dix,Diy) = (-Dn,+1)
-            do k = kMin, kMax; do j = jMax, jMin, -1; do i = iMin+Dn, iMax
-               State_VG(:,i,j,k) = State_VG(:,i-Dn,j+1,k)
-            end do; end do; end do
-         case(4)
-            ! Shift by (Dix,Diy) = (+Dn,-1)
-            do k = kMin, kMax; do j = jMin, jMax; do i = iMax-Dn, iMin, -1
-               State_VG(:,i,j,k) = State_VG(:,i+Dn,j-1,k)
-            end do; end do; end do
-         end select
       else
          ! ShockSlope < 1
-         Dn = nint(1/ShockSlope)
-         if(abs(Dn - 1/ShockSlope) > 1e-6)call stop_mpi( &
+         Di = 1
+         Dj = nint(1/ShockSlope)
+         if(abs(Dj - 1/ShockSlope) > 1e-6)call stop_mpi( &
               'ShockSlope < 1 should be the inverse of a round number!')
-         select case(iSide)
-         case(1)
-            ! Shift by (Dix,Diy) = (1,-Dn)
-            do k = kMin, kMax; do j = jMin+Dn, jMax; do i = iMax, iMin, -1
-               State_VG(:,i,j,k) = State_VG(:,i+1,j-Dn,k)
-            end do; end do; end do
-         case(2)
-            ! Shift by (Dix,Diy) = (-1,+Dn)
-            do k = kMin, kMax; do j = jMax-Dn, jMin, -1; do i = iMin, iMax
-               State_VG(:,i,j,k) = State_VG(:,i-1,j+Dn,k)
-            end do; end do; end do
-         case(3)
-            ! Shift by (Dix,Diy) = (-1,+Dn)
-            do k = kMin, kMax; do j = jMax, jMin, -1; do i = iMin+1, iMax
-               State_VG(:,i,j,k) = State_VG(:,i-1,j+Dn,k)
-            end do; end do; end do
-         case(4)
-            ! Shift by (Dix,Diy) = (+1,-Dn)
-            do k = kMin, kMax; do j = jMin, jMax; do i = iMax-1, iMin, -1
-               State_VG(:,i,j,k) = State_VG(:,i+1,j-Dn,k)
-            end do; end do; end do
-         end select
       end if
+      select case(iSide)
+      case(1)
+         ! Shift by +Di,-Dj
+         do k = kMin, kMax; do j = jMin + Dj, jMax; do i = iMax, iMin, -1
+            State_VG(:,i,j,k) = State_VG(:,i+Di,j-Dj,k)
+         end do; end do; end do
+      case(2)
+         ! Shift by -Di,+Dj
+         do k = kMin, kMax; do j = jMax - Dj, jMin, -1; do i = iMin, iMax
+            State_VG(:,i,j,k) = State_VG(:,i-Di,j+Dj,k)
+         end do; end do; end do
+      case(3)
+         ! Shift by -Di,+Dj
+         do k = kMin, kMax; do j = jMax, jMin, -1; do i = iMin + Di, iMax
+            State_VG(:,i,j,k) = State_VG(:,i-Di,j+Dj,k)
+         end do; end do; end do
+      case(4)
+         ! Shift by +Di,-Dj
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMax - Di, iMin, -1
+            State_VG(:,i,j,k) = State_VG(:,i+Di,j-Dj,k)
+         end do; end do; end do
+      end select
 
     end subroutine set_shear_bc
     !==========================================================================
@@ -451,8 +439,8 @@ contains
 
       ! Symmetry with optional sign change: ghost_i = Coeff*phys_i
 
-      integer, intent(in) :: iVarMin, iVarMax
-      real, intent(in):: Coeff_V(iVarMin:iVarMax)
+      integer, intent(in):: iVarMin, iVarMax
+      real,    intent(in):: Coeff_V(iVarMin:iVarMax)
 
       integer:: i, j, k
       !------------------------------------------------------------------------
@@ -496,8 +484,8 @@ contains
 
       ! ghost = State_V
 
-      integer, intent(in) :: iVarMin, iVarMax
-      real,    intent(in) :: State_V(iVarMin:iVarMax)
+      integer, intent(in):: iVarMin, iVarMax
+      real,    intent(in):: State_V(iVarMin:iVarMax)
 
       integer:: i, j, k
       !------------------------------------------------------------------------
@@ -513,7 +501,7 @@ contains
 
       use ModB0, ONLY: B0_DGB
 
-      integer, intent(in) :: iVarMin,iVarMax
+      integer, intent(in) :: iVarMin, iVarMax
 
       ! Set B = B - B0 in ghost cells
 
@@ -530,12 +518,12 @@ contains
     subroutine set_solar_wind_bc
 
       use ModAdvance,    ONLY: nVar
-      use ModGeometry,   ONLY: x2
+      use ModGeometry,   ONLY: x1, x2, y1, y2, z1, z2
       use ModB0,         ONLY: B0_DGB
       use ModMultiFluid, ONLY: iRho_I, iUx_I, iUy_I, iUz_I
       use ModSolarwind,  ONLY: get_solar_wind_point
       use ModMain,       ONLY: time_simulation
-      use BATL_lib,      ONLY: Xyz_DGB
+      use BATL_lib,      ONLY: Xyz_DGB, IsCartesianGrid
 
       ! index and location of a single point
       integer :: i, j, k
@@ -551,7 +539,23 @@ contains
 
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          Xyz_D =  Xyz_DGB(:,i,j,k,iBlock)
-         Xyz_D(1) = x2 !!! Why????
+         if(IsCartesianGrid)then
+            ! Put the solar wind to the edge of the computational domain
+            select case(iSide)
+            case(1)
+               Xyz_D(x_) = x1
+            case(2)
+               Xyz_D(x_) = x2
+            case(3)
+               Xyz_D(y_) = y1
+            case(4)
+               Xyz_D(y_) = y2
+            case(5)
+               Xyz_D(z_) = z1
+            case(6)
+               Xyz_D(z_) = z2
+            end select
+         end if
          call get_solar_wind_point(time_simulation, Xyz_D, SolarWind_V)
 
          if(present(iImplBlock))then
