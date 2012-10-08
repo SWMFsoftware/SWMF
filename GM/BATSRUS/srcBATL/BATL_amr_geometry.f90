@@ -202,7 +202,6 @@ contains
     use BATL_size,     ONLY: nINode,nJNode,nKNode,nDim
     use ModNumConst,   ONLY: cTiny, cRadToDeg
     use BATL_grid,     ONLY: CoordMin_DB, CoordMax_DB
-    use BATL_tree,     ONLY: iNode_B
     implicit none
 
     interface

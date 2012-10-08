@@ -30,13 +30,12 @@
 
 module BATL_amr_criteria
 
-  use BATL_mpi,  ONLY: iProc
 
   use BATL_tree, ONLY: nDesiredRefine,nNodeRefine,nDesiredCoarsen, &
        nNodeCoarsen, DoStrictAmr, iRank_A, Rank_A, nNodeSort
 
   use BATL_amr_geometry, ONLY: nGeoCrit,clean_amr_geometry,&
-       isNewGeoParam, UseCrit_IB, UseCrit_B,AreaType,&
+       isNewGeoParam, UseCrit_IB, UseCrit_B,&
        apply_amr_geometry,nAmrCrit,nAmrCritUsed,AmrCrit_IB,nGeoCrit,&
        nCritGeoUsed,IsBatsrusAmr,iResolutionLimit_I,&
        CoarsenCritAll_I,RefineCritAll_I,ResolutionLimit_I,iVarCritAll_I,&
@@ -134,9 +133,8 @@ contains
 
   subroutine init_amr_criteria(user_amr_geometry)
 
-    use BATL_size, ONLY: MaxBlock,nBlock,MinI, MaxI,MinJ, MaxJ, MinK, MaxK, nDim
+    use BATL_size, ONLY: MaxBlock,nBlock
     use BATL_tree, ONLY: Unused_B
-    use BATL_grid, ONLY: CoordMin_D, CoordMax_D
     use BATL_amr_geometry, ONLY: init_amr_geometry
     use BATL_mpi,  ONLY: iProc
     use ModNumConst,  ONLY: cUnit_DD
@@ -149,7 +147,7 @@ contains
     end interface
     optional :: user_amr_geometry
 
-    integer :: iBlock,iCrit,nCrit,iGeo,iArea,AreaSign,iAera,idx
+    integer :: iBlock,iCrit,nCrit,iGeo,iArea,AreaSign,idx
     logical :: DoTestMe = .false.
     character(len=lNameArea) :: regionname
 
@@ -874,7 +872,6 @@ contains
 
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
 	 nI, nJ, nK, MaxDim, nDim, MaxBlock, nBlock
-    use BATL_tree, ONLY: Unused_B
 
     integer,  intent(in)   :: nVar
     real,    intent(in) :: &                            ! state variables
@@ -1041,13 +1038,11 @@ contains
     use ModUtilities, ONLY: lower_case
     use BATL_tree,    ONLY: MaxTotalBlock, iTree_IA,MaxLevel_,&
          MaxLevel
-    use BATL_size,    ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
-         MaxBlock, MaxDim, nDim
     use BATL_mpi,     ONLY: iProc
     use ModUtilities, ONLY: split_string
 
     character(len=*), intent(in) :: NameCommand
-    integer :: iCrit,iAmrBox,iCritName,nCrit,iIntCrit,iStatVar
+    integer :: iCrit,iCritName,nCrit,iIntCrit,iStatVar
 
     ! Number and name of criteria to be used by BATSRUS 
     integer,           optional, intent(inout) :: nCritInOut
@@ -1358,8 +1353,7 @@ contains
   !============================================================================
   subroutine set_amr_geometry(iBlock, user_amr_geometry)
 
-    use BATL_grid, ONLY: Xyz_DGB
-    use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nDim
+    use BATL_size, ONLY:nDim
 
     interface
        subroutine user_amr_geometry(iBlock, iArea, DoRefine)
@@ -1371,8 +1365,7 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer :: i,j,k,iAmrBox,iCrit,iArea,idx
-    real    :: Xyz_D(nDim) 
+    integer ::iCrit,iArea,idx
     logical :: UseBlock
     !--------------------------------------------------------
 
