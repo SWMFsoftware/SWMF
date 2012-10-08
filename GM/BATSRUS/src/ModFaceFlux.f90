@@ -1041,9 +1041,6 @@ contains
                HeatCondCoefNormal, IonHeatFlux)
           DiffCoef = DiffCoef + HeatCondCoefNormal
        end if
-
-       DiffCoef = DiffCoef + ViscoCoeff + Eta
-
     end if
 
     if(UseB)then
@@ -1194,7 +1191,7 @@ contains
 
     ! Increase maximum speed with the sum of diffusion speeds
     ! Resistivity, viscosity, heat conduction, radiation diffusion
-    CmaxDt = CmaxDt + 2*DiffCoef*InvDxyz
+    CmaxDt = CmaxDt + 2*(DiffCoef+ ViscoCoeff + Eta)*InvDxyz
 
     ! Further limit timestep due to the hyperbolic cleaning equation
     if(UseHyperbolicDivb) CmaxDt = max(SpeedHyp, CmaxDt)
