@@ -27,10 +27,11 @@ module BATL_lib
   logical, public:: IsBatlInitialized = .false.
 
   ! Inherited from BATL_size
-  public:: MaxDim, nDim, nDimAmr, iDimAmr_D
+  public:: MaxDim, nDim, nDimAmr, iDimAmr_D, iDim_, jDim_, kDim_
   public:: MaxBlock, nBlock
   public:: nI, nJ, nK, nIJK, nIJK_D
   public:: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
+  public:: j0_, j2_, nJp1_, nJm1_, k0_, k2_, nKp1_, nKm1_
   public:: nINode, nJNode, nKNode
 
   ! Inherited from BATL_mpi
