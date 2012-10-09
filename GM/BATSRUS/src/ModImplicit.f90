@@ -41,7 +41,7 @@ module ModImplicit
 
   ! Use semi-implicit scheme
   logical :: UseSemiImplicit = .false.
-  character(len=40) :: TypeSemiImplicit = 'radiation'
+  character(len=40) :: TypeSemiImplicit = 'none'
 
   logical:: UseSplitSemiImplicit = .false.
   ! Index range for split semi implicit scheme
@@ -384,8 +384,8 @@ contains
     end if
 
     if(nVarSemi > 1 .and. PrecondType == 'HYPRE' .and. iProc==0) &
-       call stop_mpi( &
-       'HYPRE preconditioner requires split semi-implicit scheme!')
+         call stop_mpi( &
+         'HYPRE preconditioner requires split semi-implicit scheme!')
 
     ! Arrays for all implicit variables
     allocate(Impl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBLK))
