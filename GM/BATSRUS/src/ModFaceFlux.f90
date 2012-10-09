@@ -152,6 +152,11 @@ module ModFaceFlux
   !  the Riemann problem. This approach is an alternative to the 8-wave scheme
   logical:: UseRS7 = .false.
 
+
+  ! Local logical variables 
+  logical :: DoResistivity = .false., DoRadDiffusion = .false.,&
+       DoHeatConduction = .false., DoIonHeatConduction = .false.
+
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
 contains
@@ -349,6 +354,7 @@ contains
     use ModMain, ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
          UseHyperbolicDivb
+    use ModImplicit, ONLY: TypeSemiImplicit
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
@@ -390,7 +396,15 @@ contains
     IsNewBlockIonHeatCond  = .true.
     IsNewBlockViscosity    = .true.
 
-    if(UseResistivity) call set_resistivity(iBlock)
+    DoResistivity       = UseResistivity .and.&
+         .not.  index(TypeSemiImplicit,'resistivity')>0
+    DoRadDiffusion      = UseRadDiffusion .and.&
+         .not. (index(TypeSemiImplicit,'radiation')>0 .or.&
+         index(TypeSemiImplicit,'radcond')>0 .or.&
+         index(TypeSemiImplicit,'cond')>0)
+    DoHeatConduction    = UseHeatConduction .and.&
+         .not.  index(TypeSemiImplicit,'parcond')>0
+    DoIonHeatConduction = UseIonHeatConduction 
 
     if((UseHallResist .or. UseBiermannBattery) .and. &
          (UseMultiIon .or. UseMultiSpecies .or. .not.UseIdealEos)) &
@@ -880,7 +894,7 @@ contains
          .not.UseIdealEos)
 
     Eta       = 0.0
-    if(UseResistivity .and. UseResistiveFlux) Eta = 0.5* &
+    if(DoResistivity .and. UseResistiveFlux) Eta = 0.5* &
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
          + Eta_GB(iRight,jRight,kRight,iBlockFace))
 
@@ -919,7 +933,6 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModImplicit, ONLY: UseSemiImplicit
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
     use ModUser,     ONLY: user_material_properties
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -940,6 +953,9 @@ contains
     integer :: i, j, k
     real :: NatomicSi, TeSi
     !-----------------------------------------------------------------------
+
+    ! Initialize diffusion coefficient for time step restriction
+    DiffCoef = 0.0
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
        StateLeft_V (Rho_)=sum( StateLeft_V(SpeciesFirst_:SpeciesLast_) )
@@ -1017,30 +1033,26 @@ contains
 
     end if
 
-    if(.not.UseSemiImplicit)then
-       ! Initialize diffusion coefficient for time step restriction
-       DiffCoef = 0.0
 
-       if(UseRadDiffusion)then
-          call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
-               iBlockFace, StateLeft_V, StateRight_V, Normal_D, &
-               RadDiffCoef, EradFlux)
-          DiffCoef = DiffCoef + RadDiffCoef
-       end if
+    if(DoRadDiffusion)then
+       call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
+            iBlockFace, StateLeft_V, StateRight_V, Normal_D, &
+            RadDiffCoef, EradFlux)
+       DiffCoef = DiffCoef + RadDiffCoef
+    end if
 
-       if(UseHeatConduction)then
-          call get_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
-               StateLeft_V, StateRight_V, Normal_D, &
-               HeatCondCoefNormal, HeatFlux)
-          DiffCoef = DiffCoef + HeatCondCoefNormal
-       end if
+    if(DoHeatConduction)then
+       call get_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
+            StateLeft_V, StateRight_V, Normal_D, &
+            HeatCondCoefNormal, HeatFlux)
+       DiffCoef = DiffCoef + HeatCondCoefNormal
+    end if
 
-       if(UseIonHeatConduction)then
-          call get_ion_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
-               StateLeft_V, StateRight_V, Normal_D, &
-               HeatCondCoefNormal, IonHeatFlux)
-          DiffCoef = DiffCoef + HeatCondCoefNormal
-       end if
+    if(DoIonHeatConduction)then
+       call get_ion_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
+            StateLeft_V, StateRight_V, Normal_D, &
+            HeatCondCoefNormal, IonHeatFlux)
+       DiffCoef = DiffCoef + HeatCondCoefNormal
     end if
 
     if(UseB)then
@@ -1689,7 +1701,6 @@ contains
       use ModAdvance,  ONLY: UseElectronPressure
       use ModExactRS,  ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar, pStar
-      use ModImplicit, ONLY: UseSemiImplicit
       use ModPhysics,  ONLY: inv_gm1, g
       use ModWaves,    ONLY: UseWavePressure, GammaWave
 
@@ -1830,11 +1841,9 @@ contains
               + inv_gm1*(Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
       end if
 
-      if(.not.UseSemiImplicit)then
-         if(UseRadDiffusion)then
-            Flux_V(Erad_)   = Flux_V(Erad_) + EradFlux
-            Flux_V(Energy_) = Flux_V(Energy_) + EradFlux
-         end if
+      if(DoRadDiffusion)then
+         Flux_V(Erad_)   = Flux_V(Erad_) + EradFlux
+         Flux_V(Energy_) = Flux_V(Energy_) + EradFlux
       end if
 
     end subroutine godunov_flux
@@ -1880,7 +1889,6 @@ contains
 
     use ModMultiFluid
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModImplicit, ONLY: UseSemiImplicit
     use ModPhysics,  ONLY: gm1
     use BATL_size,   ONLY: nDim  
 
@@ -2023,23 +2031,21 @@ contains
        end if
     end if
 
-    if(.not.UseSemiImplicit)then
-       if(UseRadDiffusion)then
-          Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
-          Flux_V(Energy_) = Flux_V(Energy_) + EradFlux
+    if(DoRadDiffusion)then
+       Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
+       Flux_V(Energy_) = Flux_V(Energy_) + EradFlux
+    end if
+    if(DoHeatConduction)then
+       if(UseElectronPressure)then
+          Flux_V(Pe_) = Flux_V(Pe_) + gm1*HeatFlux
+       else
+          Flux_V(p_) = Flux_V(p_) + gm1*HeatFlux
        end if
-       if(UseHeatConduction)then
-          if(UseElectronPressure)then
-             Flux_V(Pe_) = Flux_V(Pe_) + gm1*HeatFlux
-          else
-             Flux_V(p_) = Flux_V(p_) + gm1*HeatFlux
-          end if
-          Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
-       end if
-       if(UseIonHeatConduction)then
-          Flux_V(p_) = Flux_V(p_) + gm1*IonHeatFlux
-          Flux_V(Energy_) = Flux_V(Energy_) + IonHeatFlux
-       end if
+       Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
+    end if
+    if(DoIonHeatConduction)then
+       Flux_V(p_) = Flux_V(p_) + gm1*IonHeatFlux
+       Flux_V(Energy_) = Flux_V(Energy_) + IonHeatFlux
     end if
 
     ! Set the normal electron velocity used for Hall MHD and/or 
