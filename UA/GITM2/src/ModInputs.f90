@@ -91,6 +91,8 @@ module ModInputs
   real :: ConcentrationLatitude = 45.0
   real :: StretchingPercentage = 0.0
   real :: StretchingFactor = 1.0
+  logical :: NewStretchedGrid = .false.
+  real :: StretchWidth = 10.0
 
   logical :: UseTopography = .false.
   real :: AltMinUniform = 0.0

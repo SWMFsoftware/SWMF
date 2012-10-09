@@ -504,6 +504,7 @@ subroutine set_inputs
               write(*,*) 'robust, and 2.0 being less diffuse, but less robust.'
               write(*,*) '#LIMITER'
               write(*,*) 'TypeLimiter  (string)'
+              write(*,*) 'BetaLimiter  (real between 1.0-minmod and 2.0-mc)'
               IsDone = .true.
            endif
 
@@ -870,6 +871,26 @@ subroutine set_inputs
               LonStart = LonStart * pi / 180.0
               LonEnd   = LonEnd * pi / 180.0
 
+           endif
+
+        case ("#NEWSTRETCH")
+           NewStretchedGrid = .true.
+           call read_in_real(ConcentrationLatitude, iError)
+           call read_in_real(StretchWidth, iError)
+           call read_in_real(StretchingPercentage, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #NEWSTRETCH:'
+              write(*,*) ''
+              write(*,*) '#NEWSTRETCH'
+              write(*,*) 'Poleward Edge of Stretch Region (real, degrees)'
+              write(*,*) 'StretchWidth  (real, 1.0-20.0, deg)'
+              write(*,*) 'StretchingPercentage  (real, 0-1)'
+              write(*,*) 'Example (auroral zone):'
+              write(*,*) '#NEWSTRETCH'
+              write(*,*) '65.0 ! location of minimum grid spacing'
+              write(*,*) '5.0	 ! Width of stretched region'
+              write(*,*) '0.6	 ! Amount of stretch 0 (none) to 1 (lots)'
+              IsDone = .true.
            endif
 
         case ("#STRETCH")
