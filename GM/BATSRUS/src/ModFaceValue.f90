@@ -53,8 +53,8 @@ module ModFaceValue
   real, parameter:: cThird = 1./3., cTwoThird = 2./3., cSixth=1./6.
   real, parameter:: c7over12 = 7.0/12.0, c1over12 = 1.0/12.0
 
-  !primitive variables
-  real:: Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+  ! primitive variables
+  real, allocatable, save:: Primitive_VG(:,:,:,:)
 
   logical:: IsTrueCell_I(-1:MaxIJK+2)
 
@@ -696,12 +696,14 @@ contains
     logical::DoTest,DoTestMe
     character(len=*), parameter :: NameSub = 'calc_face_value'
     !-------------------------------------------------------------------------
-
     if(iBlock==BLKtest .and. .not. DoResChangeOnly )then
        call set_oktest('calc_face_value', DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
     end if
+
+    if(.not.allocated(Primitive_VG))&
+         allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
     UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
     UseLogLimiter_V = .false.
@@ -2616,7 +2618,7 @@ contains
 
     if(.not.DoLimitMomentum)then
        ! Convert momenta to velocities (that will be limited)
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
           State_VGB(iRhoUx_I,i,j,k,iBLK)=State_VGB(iRhoUx_I,i,j,k,iBLK) &
                / State_VGB(iRho_I,i,j,k,iBLK)
           State_VGB(iRhoUy_I,i,j,k,iBLK)=State_VGB(iRhoUy_I,i,j,k,iBLK) &
@@ -2626,40 +2628,8 @@ contains
        end do; end do; end do
     end if
 
-    if(neiLnorth(iBLK) == -1)then
-       if(     .not.Unused_BP(neiBnorth(1,iBLK),neiPnorth(1,iBLK)) &
-            .and. .not.Unused_BP(neiBnorth(2,iBLK),neiPnorth(2,iBLK)) &
-            .and. .not.Unused_BP(neiBnorth(3,iBLK),neiPnorth(3,iBLK)) &
-            .and. .not.Unused_BP(neiBnorth(4,iBLK),neiPnorth(4,iBLK)))then
-          do k=1,nK;do i=1,nI
-             State_VGB(1:nVar,i,nJ+1,k,iBLK) =&
-                  State_VGB(1:nVar,i,nJ+1,k,iBLK) + cThird*( &
-                  State_VGB(1:nVar,i,nJ+1,k,iBLK) - &
-                  State_VGB(1:nVar,i,nJ,k,iBLK))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,nJ+1,k,iBLK) = &
-                  max(State_VGB(1:nVar,i,nJ+1,k,iBLK), 1e-30)
-          end do; end do
-       end if
-    end if
-    if(neiLsouth(iBLK) == -1)then
-       if(        .not.Unused_BP(neiBsouth(1,iBLK),neiPsouth(1,iBLK)) & 
-            .and. .not.Unused_BP(neiBsouth(2,iBLK),neiPsouth(2,iBLK)) & 
-            .and. .not.Unused_BP(neiBsouth(3,iBLK),neiPsouth(3,iBLK)) & 
-            .and. .not.Unused_BP(neiBsouth(4,iBLK),neiPsouth(4,iBLK)))then
-          do k=1,nK;do i=1,nI
-             State_VGB(1:nVar,i,0,k,iBLK) = &
-                  State_VGB(1:nVar,i,0,k,iBLK) + cThird*( &
-                  State_VGB(1:nVar,i,0,k,iBLK) - &
-                  State_VGB(1:nVar,i,1,k,iBLK))
-             where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,0,k,iBLK) = &
-                  max(State_VGB(1:nVar,i,0,k,iBLK), 1e-30)
-          end do; end do
-       end if
-    end if
     if(neiLeast(iBLK) == -1)then
-       if(     .not.Unused_BP(neiBeast(1,iBLK),neiPeast(1,iBLK)) &
+       if(        .not.Unused_BP(neiBeast(1,iBLK),neiPeast(1,iBLK)) &
             .and. .not.Unused_BP(neiBeast(2,iBLK),neiPeast(2,iBLK)) &
             .and. .not.Unused_BP(neiBeast(3,iBLK),neiPeast(3,iBLK)) &
             .and. .not.Unused_BP(neiBeast(4,iBLK),neiPeast(4,iBLK)))then
@@ -2690,23 +2660,39 @@ contains
           end do; end do
        end if
     end if
-    if(neiLtop(iBLK) == -1)then
-       if(        .not.Unused_BP(neiBtop(1,iBLK),neiPtop(1,iBLK)) &
-            .and. .not.Unused_BP(neiBtop(2,iBLK),neiPtop(2,iBLK)) &
-            .and. .not.Unused_BP(neiBtop(3,iBLK),neiPtop(3,iBLK)) &
-            .and. .not.Unused_BP(neiBtop(4,iBLK),neiPtop(4,iBLK)))then
-          do j=1,nJ;do i=1,nI
-             State_VGB(1:nVar,i,j,nK+1,iBLK) = &
-                  State_VGB(1:nVar,i,j,nK+1,iBLK) + cThird*(&
-                  State_VGB(1:nVar,i,j,nK+1,iBLK) - &
-                  State_VGB(1:nVar,i,j,nK,iBLK))
+    if(neiLsouth(iBLK) == -1 .and. nJ > 1)then
+       if(        .not.Unused_BP(neiBsouth(1,iBLK),neiPsouth(1,iBLK)) & 
+            .and. .not.Unused_BP(neiBsouth(2,iBLK),neiPsouth(2,iBLK)) & 
+            .and. .not.Unused_BP(neiBsouth(3,iBLK),neiPsouth(3,iBLK)) & 
+            .and. .not.Unused_BP(neiBsouth(4,iBLK),neiPsouth(4,iBLK)))then
+          do k=1,nK;do i=1,nI
+             State_VGB(1:nVar,i,0,k,iBLK) = &
+                  State_VGB(1:nVar,i,0,k,iBLK) + cThird*( &
+                  State_VGB(1:nVar,i,0,k,iBLK) - &
+                  State_VGB(1:nVar,i,1,k,iBLK))
              where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,j,nK+1,iBLK) = &
-                  max(State_VGB(1:nVar,i,j,nK+1,iBLK), 1e-30)
+                  State_VGB(1:nVar,i,0,k,iBLK) = &
+                  max(State_VGB(1:nVar,i,0,k,iBLK), 1e-30)
           end do; end do
        end if
     end if
-    if(neiLbot(iBLK) == -1)then
+    if(neiLnorth(iBLK) == -1 .and. nJ > 1)then
+       if(     .not.Unused_BP(neiBnorth(1,iBLK),neiPnorth(1,iBLK)) &
+            .and. .not.Unused_BP(neiBnorth(2,iBLK),neiPnorth(2,iBLK)) &
+            .and. .not.Unused_BP(neiBnorth(3,iBLK),neiPnorth(3,iBLK)) &
+            .and. .not.Unused_BP(neiBnorth(4,iBLK),neiPnorth(4,iBLK)))then
+          do k=1,nK;do i=1,nI
+             State_VGB(1:nVar,i,nJ+1,k,iBLK) =&
+                  State_VGB(1:nVar,i,nJ+1,k,iBLK) + cThird*( &
+                  State_VGB(1:nVar,i,nJ+1,k,iBLK) - &
+                  State_VGB(1:nVar,i,nJ,k,iBLK))
+             where(DefaultState_V(1:nVar) > 0.0) &
+                  State_VGB(1:nVar,i,nJ+1,k,iBLK) = &
+                  max(State_VGB(1:nVar,i,nJ+1,k,iBLK), 1e-30)
+          end do; end do
+       end if
+    end if
+    if(neiLbot(iBLK) == -1 .and. nK > 1)then
        if(        .not.Unused_BP(neiBbot(1,iBLK),neiPbot(1,iBLK)) &
             .and. .not.Unused_BP(neiBbot(2,iBLK),neiPbot(2,iBLK)) &
             .and. .not.Unused_BP(neiBbot(3,iBLK),neiPbot(3,iBLK)) &
@@ -2722,10 +2708,26 @@ contains
           end do; end do
        end if
     end if
+    if(neiLtop(iBLK) == -1 .and. nK > 1)then
+       if(        .not.Unused_BP(neiBtop(1,iBLK),neiPtop(1,iBLK)) &
+            .and. .not.Unused_BP(neiBtop(2,iBLK),neiPtop(2,iBLK)) &
+            .and. .not.Unused_BP(neiBtop(3,iBLK),neiPtop(3,iBLK)) &
+            .and. .not.Unused_BP(neiBtop(4,iBLK),neiPtop(4,iBLK)))then
+          do j=1,nJ;do i=1,nI
+             State_VGB(1:nVar,i,j,nK+1,iBLK) = &
+                  State_VGB(1:nVar,i,j,nK+1,iBLK) + cThird*(&
+                  State_VGB(1:nVar,i,j,nK+1,iBLK) - &
+                  State_VGB(1:nVar,i,j,nK,iBLK))
+             where(DefaultState_V(1:nVar) > 0.0) &
+                  State_VGB(1:nVar,i,j,nK+1,iBLK) = &
+                  max(State_VGB(1:nVar,i,j,nK+1,iBLK), 1e-30)
+          end do; end do
+       end if
+    end if
 
     if(.not.DoLimitMomentum)then
        ! Convert velocities back to momenta
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
           State_VGB(iRhoUx_I,i,j,k,iBLK)=State_VGB(iRhoUx_I,i,j,k,iBLK) &
                * State_VGB(iRho_I,i,j,k,iBLK)
           State_VGB(iRhoUy_I,i,j,k,iBLK)=State_VGB(iRhoUy_I,i,j,k,iBLK) &

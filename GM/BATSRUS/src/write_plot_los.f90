@@ -604,8 +604,10 @@ contains
 
        if(IsRzGeometry)then
           ! Exclude blocks that do not intersect the Z=0 plane 
-          if(nK > 1 .and. .not.(Xyz_DGB(z_,1,1,0,iBLK)<0 &
-               .and.            Xyz_DGB(z_,1,1,nK,iBLK)>0)) RETURN
+          if(nK > 1)then
+             if(.not.(Xyz_DGB(z_,1,1,0,iBLK)<0 &
+                  .and. Xyz_DGB(z_,1,1,nK,iBLK)>0)) RETURN
+          end if
           ! Exclude blocks below the Y=0 plane
           if(Xyz_DGB(y_,1,nJ,1,iBLK)<0) RETURN
        end if

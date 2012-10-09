@@ -244,7 +244,7 @@ contains
     integer :: iBlock, iCrit, i, j, k
     real :: Xyz_D(3), RR, RcritAMR,AMRsort_1,AMRsort_2
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: &
+    real, allocatable, save, dimension(:,:,:):: &
          Var_G, Rho_G, RhoUx_G, RhoUy_G, RhoUz_G, Bx_G, By_G, Bz_G, P_G
 
     ! X, Y and Z derivatives for vectors and scalars
@@ -261,6 +261,17 @@ contains
     real :: rDotB_G(nI,nJ,0:nK+1)
 
     !--------------------------------------------------------------------------
+
+    if(.not.allocated(Rho_G)) allocate( &
+         Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+         Rho_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+         RhoUx_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+         RhoUy_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+         RhoUz_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+         Bx_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),    &
+         By_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),    &
+         Bz_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),    &
+         p_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
     ! initialize all criteria to zero
     Crit_IB = 0.0
@@ -507,10 +518,18 @@ contains
 
             GradX_C(i,j,k) = CellFace_DB(x_,iBlock)*&
                  (Var_G(i+1,j,k) - Var_G(i-1,j,k))*VInvHalf
-            GradY_C(i,j,k) = CellFace_DB(y_,iBlock)*&
-                 (Var_G(i,j+1,k) - Var_G(i,j-1,k))*VInvHalf
-            GradZ_C(i,j,k) = CellFace_DB(z_,iBlock)*&
-                 (Var_G(i,j,k+1) - Var_G(i,j,k-1))*VInvHalf
+            if(nJ == 1)then
+               GradY_C(i,j,k) = 0.0
+            else
+               GradY_C(i,j,k) = CellFace_DB(y_,iBlock)*&
+                    (Var_G(i,j+1,k) - Var_G(i,j-1,k))*VInvHalf
+            end if
+            if(nK == 1)then
+               GradZ_C(i,j,k) = 0.0
+            else
+               GradZ_C(i,j,k) = CellFace_DB(z_,iBlock)*&
+                    (Var_G(i,j,k+1) - Var_G(i,j,k-1))*VInvHalf
+            end if
          end do; end do; end do
       else
          where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
@@ -538,23 +557,30 @@ contains
                  OneTrue_G(i-1,j,k)*&
                  (2.0 - OneTrue_G(i+1,j,k)) )*VInvHalf
 
-            GradY_C(i,j,k) = CellSize_DB(y_,iBlock)*&
-                 OneTrue_G(i,j,k)*(&
-                 (Var_G(i,j+1,k) - Var_G(i,j,k))*&
-                 OneTrue_G(i,j+1,k)*&
-                 (2.0 - OneTrue_G(i,j-1,k))+&
-                 (Var_G(i,j,k)-Var_G(i,j-1,k))*&
-                 OneTrue_G(i,j-1,k)*&
-                 (2.0 - OneTrue_G(i,j+1,k)) )*VInvHalf
-
-            GradZ_C(i,j,k) = CellSize_DB(z_,iBlock)*&
-                 OneTrue_G(i,j,k)*(&
-                 (Var_G(i,j,k+1)-Var_G(i,j,k))*&
-                 OneTrue_G(i,j,k+1)*&
-                 (2.0 - OneTrue_G(i,j,k-1))+&
-                 (Var_G(i,j,k)-Var_G(i,j,k-1))*&
-                 OneTrue_G(i,j,k-1)*&
-                 (2.0 - OneTrue_G(i,j,k+1)) )*VInvHalf
+            if(nJ==1)then
+               GradY_C(i,j,k) = 0.0
+            else
+               GradY_C(i,j,k) = CellSize_DB(y_,iBlock)*&
+                    OneTrue_G(i,j,k)*(&
+                    (Var_G(i,j+1,k) - Var_G(i,j,k))*&
+                    OneTrue_G(i,j+1,k)*&
+                    (2.0 - OneTrue_G(i,j-1,k))+&
+                    (Var_G(i,j,k)-Var_G(i,j-1,k))*&
+                    OneTrue_G(i,j-1,k)*&
+                    (2.0 - OneTrue_G(i,j+1,k)) )*VInvHalf
+            end if
+            if(nK == 1)then
+               GradZ_C(i,j,k) = 0.0
+            else
+               GradZ_C(i,j,k) = CellSize_DB(z_,iBlock)*&
+                    OneTrue_G(i,j,k)*(&
+                    (Var_G(i,j,k+1)-Var_G(i,j,k))*&
+                    OneTrue_G(i,j,k+1)*&
+                    (2.0 - OneTrue_G(i,j,k-1))+&
+                    (Var_G(i,j,k)-Var_G(i,j,k-1))*&
+                    OneTrue_G(i,j,k-1)*&
+                    (2.0 - OneTrue_G(i,j,k+1)) )*VInvHalf
+            end if
          end do; end do; end do
       end if
 
@@ -562,9 +588,8 @@ contains
     !==========================================================================
     subroutine gencoord_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
 
-      use ModSize, ONLY: nI, nJ, nK
-      use ModMain, ONLY: x_, y_, z_
-      use ModGeometry,ONLY: body_blk, true_cell
+      use ModSize, ONLY: nDim, nI, nJ, nK, x_, y_, z_
+      use ModGeometry, ONLY: body_blk, true_cell
       use BATL_lib, ONLY: CellVolume_GB, FaceNormal_DDFB
 
       implicit none
@@ -592,12 +617,12 @@ contains
             FaceArea_DS(:,3:4) = FaceNormal_DDFB(:,2,i,j:j+1,k,iBlock)
             FaceArea_DS(:,5:6) = FaceNormal_DDFB(:,3,i,j,k:k+1,iBlock)
 
-            Difference_S(1) = -(Var_G(i-1,j,k)+Var_G(i,j,k))
-            Difference_S(2) = +(Var_G(i+1,j,k)+Var_G(i,j,k))
-            Difference_S(3) = -(Var_G(i,j-1,k)+Var_G(i,j,k))
-            Difference_S(4) = +(Var_G(i,j+1,k)+Var_G(i,j,k))
-            Difference_S(5) = -(Var_G(i,j,k-1)+Var_G(i,j,k))
-            Difference_S(6) = +(Var_G(i,j,k+1)+Var_G(i,j,k))
+            Difference_S(1) = -(Var_G(i-1,j,k) + Var_G(i,j,k))
+            Difference_S(2) = +(Var_G(i+1,j,k) + Var_G(i,j,k))
+            Difference_S(3) = -(Var_G(i,j-1,k) + Var_G(i,j,k))
+            Difference_S(4) = +(Var_G(i,j+1,k) + Var_G(i,j,k))
+            Difference_S(5) = -(Var_G(i,j,k-1) + Var_G(i,j,k))
+            Difference_S(6) = +(Var_G(i,j,k+1) + Var_G(i,j,k))
 
             GradX_C(i,j,k) = sum(FaceArea_DS(x_,:)*Difference_S)*VInvHalf
             GradY_C(i,j,k) = sum(FaceArea_DS(y_,:)*Difference_S)*VInvHalf
@@ -676,10 +701,11 @@ contains
       integer, intent(in) :: iBlock,iCrit
       real, intent(out) :: refine_crit
       real :: AMRsort
-      real, dimension(1:nI,1:nJ,1:nK) :: scrARR
+      real, dimension(nI,nJ,nK) :: scrARR
 
-      real, dimension(1:nI, 1:nJ, 1:nK) :: RhoOld_C, RhoUxOld_C, &
+      real, dimension(nI,nJ,nK) :: RhoOld_C, RhoUxOld_C, &
            RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, POld_C    
+      !-----------------------------------------------------------------------
 
       ! if we do a amr pysics refinmnet at startup we do not have any
       ! old walue. Can be inporved in the future

@@ -41,12 +41,13 @@ contains
          iTrImplFirst, iTrImplLast
     use ModResistivity, ONLY: BxImpl_, ByImpl_, BzImpl_
     use ModRadDiffusion, ONLY: set_rad_outflow_bc
-    use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsRlonLat, nRoot_D
+    use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsRlonLat, nRoot_D,&
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
-    real, intent(inout):: State_VG(nVarState,1-nG:nI+nG,1-nG:nJ+nG,1-nG:nK+nG)
+    real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     ! Optional arguments when called by semi-implicit scheme
     integer, optional, intent(in):: iImplBlock

@@ -1125,7 +1125,7 @@ end subroutine normalize_logvar
 
 !==============================================================================
 
-real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
+real function calc_sphere(TypeAction, nTheta, Radius, Array_GB)
 
   ! This function calculates the integral of the incomming variable Array_GB
   ! over the surface of a sphere centered at the origin radius Radius.  
@@ -1136,7 +1136,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
   use BATL_lib,  ONLY: nI, nJ, nK, Unused_B, &
        MinI, MaxI, MinJ, MaxJ, Mink, MaxK, nBlock, MaxBlock, &
        IsCartesianGrid, IsRLonLat, Xyz_DGB, x_, y_, z_, &
-       CellSize_DB, Theta_, Phi_
+       CellSize_DB, Theta_, Phi_, j0_, k0_, nJp1_, nKp1_
   use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
   use ModInterpolate, ONLY: trilinear
   implicit none
@@ -1159,7 +1159,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
   real    :: xMin, xMax, yMin, yMax, zMin, zMax, rMin, rMax
   real    :: dTheta, dPhi, Phi, Theta, SinTheta
 
-  real :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
+  real :: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
 
   ! Store cartesian coordinates for sake of efficiency
   ! The x and y depend on iPhi,iTheta while z only depends on iTheta
@@ -1183,26 +1183,26 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
      call stop_mpi('ERROR in calc_sphere: Invalid action='//TypeAction)
   end select
 
-  if(IsRlonLat)then         
+  if(IsRLonLat)then         
      ! For spherical geometry it is sufficient to 
      ! interpolate in the radial direction
 
      do iBlock = 1, nBlock
         if (Unused_B(iBlock)) CYCLE
-        rMin = 0.5*(R_BLK( 0, 1, 1,iBlock) + R_BLK( 1, 1, 1,iBlock))
+        rMin = 0.5*(R_BLK( 0,1,1,iBlock) + R_BLK( 1, 1, 1,iBlock))
         if(rMin > Radius) CYCLE
-        rMax = 0.5*(R_BLK(NI, 1, 1,iBlock) + R_BLK(NI+1,1,1,iBlock))
+        rMax = 0.5*(R_BLK(nI,1,1,iBlock) + R_BLK(nI+1,1,1,iBlock))
         if(rMax <= Radius) CYCLE
 
         ! Set temporary array
-        Array_G = Array_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock)
+        Array_G = Array_GB(0:nI+1,j0_:nJp1_,k0_:nKp1_,iBlock)
 
         dTheta = CellSize_DB(Theta_,iBlock); dPhi=CellSize_DB(Phi_,iBlock)
         dArea0 = Radius**2 *dPhi *dTheta
 
         ! Find the radial index just after Radius
         i2=0
-        do while ( Radius > R_BLK( i2, 1, 1, iBlock))
+        do while ( Radius > R_BLK(i2,1,1,iBlock))
            i2 = i2+1
         end do
         i1=i2-1
@@ -1290,7 +1290,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
         InvDxyz_D = 1 / CellSize_DB(:,iBlock)
 
         ! Set temporary array
-        Array_G = Array_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock)
+        Array_G = Array_GB(0:nI+1,j0_:nJp1_,k0_:nKp1_,iBlock)
 
         ! Fill in edges and corners for the first layer so that bilinear 
         ! interpolation can be used without message passing these values
@@ -1388,7 +1388,8 @@ real function integrate_circle(Radius,z,Array_GB)
   use ModNumConst, ONLY: cTwoPi
   use ModInterpolate, ONLY: trilinear
   use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
-       nBlock, MaxBlock, Unused_B, Xyz_DGB, x_, y_, z_, CellSize_DB
+       nBlock, MaxBlock, Unused_B, Xyz_DGB, x_, y_, z_, CellSize_DB, &
+       j0_, nJp1_, k0_, nKp1_
   implicit none
 
   ! Arguments
@@ -1405,7 +1406,7 @@ real function integrate_circle(Radius,z,Array_GB)
   real :: xMin,xMax,yMin,yMax,zMin,zMax
   real :: x, y, InvDxyz_D(3)
   real :: dPhi,Phi
-  real :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
+  real :: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
 
   logical :: DoTest,DoTestMe
   !---------------------------------------------------------------------------
@@ -1441,7 +1442,7 @@ real function integrate_circle(Radius,z,Array_GB)
      if( minmod(xMin,xMax)**2 + minmod(yMin,yMax)**2 > Radius**2) CYCLE
      if( maxmod(xMin,xMax)**2 + maxmod(yMin,yMax)**2 < Radius**2) CYCLE
 
-     Array_G = Array_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock)
+     Array_G = Array_GB(0:nI+1,j0_:nJp1_,k0_:nKp1_,iBlock)
 
      if(index(optimize_message_pass,'opt')>0) call fill_edge_corner(Array_G)
 

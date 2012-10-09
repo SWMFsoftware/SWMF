@@ -1011,10 +1011,10 @@ contains
 
     use BATL_lib,    ONLY: CellSize_DB
     use ModImplicit, ONLY: nVarSemi
-    use ModMain,     ONLY: nI, nJ, nK
     use ModPhysics,  ONLY: Clight
-    use ModSize,     ONLY: x_, y_, z_, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-
+    use ModSize,     ONLY: x_, y_, z_, &
+         nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+         j0_, nJp1_, k0_, nKp1_
 
     integer, intent(in) :: iSide, iBlock, iImplBlock
     real, intent(inout) :: State_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -1052,7 +1052,7 @@ contains
              iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,i,1,k,iBlock)/CellSize_DB(y_,iBlock)
-             State_VG(iVar,i,0,k) = State_VG(iVar,i,1,k) &
+             State_VG(iVar,i,j0_,k) = State_VG(iVar,i,1,k) &
                   *(Coef - 0.5)/(Coef + 0.5)
           end do
        end do; end do
@@ -1062,7 +1062,7 @@ contains
              iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,i,nJ,k,iBlock)/CellSize_DB(y_,iBlock)
-             State_VG(iVar,i,nJ+1,k) = State_VG(iVar,i,nJ,k) &
+             State_VG(iVar,i,nJp1_,k) = State_VG(iVar,i,nJ,k) &
                   *(Coef - 0.5)/(Coef + 0.5)
           end do
        end do; end do
@@ -1072,7 +1072,7 @@ contains
              iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,i,j,1,iBlock)/CellSize_DB(z_,iBlock)
-             State_VG(iVar,i,j,0) = State_VG(iVar,i,j,1) &
+             State_VG(iVar,i,j,k0_) = State_VG(iVar,i,j,1) &
                   *(Coef - 0.5)/(Coef + 0.5)
           end do
        end do; end do
@@ -1082,7 +1082,7 @@ contains
              iVar = iDiff_I(iDiff)
              Coef = 2/Clight &
                   *DiffSemiCoef_VGB(iDiff,i,j,nK,iBlock)/CellSize_DB(z_,iBlock)
-             State_VG(iVar,i,j,nK+1) = State_VG(iVar,i,j,nK) &
+             State_VG(iVar,i,j,nKp1_) = State_VG(iVar,i,j,nK) &
                   *(Coef - 0.5)/(Coef + 0.5)
           end do
        end do; end do

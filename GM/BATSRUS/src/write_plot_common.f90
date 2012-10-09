@@ -692,9 +692,9 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModGeometry
   use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
        AverageIonCharge, ElectronTemperatureRatio, &
-       RhoBody2, pBody2, xBody2, yBody2, zBody2, rBody2
-  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK       !^CFG IF CONSTRAINB
-  use ModRayTrace, ONLY : ray,rayface                      !^CFG  IF RAYTRACE
+       RhoBody2, pBody2, rBody2
+  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
+  use ModRayTrace, ONLY : ray,rayface
   use ModUtilities, ONLY: lower_case
   use ModUser, ONLY: user_set_plot_var
   use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
@@ -702,7 +702,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModNumConst, ONLY: cTiny
   use ModHallResist, ONLY: UseHallResist, hall_factor, &
        IsNewBlockCurrent, get_face_current
-  use ModResistivity, ONLY: Eta_GB                         !^CFG IF DISSFLUX
+  use ModResistivity, ONLY: Eta_GB
   use ModPointImplicit, ONLY: UsePointImplicit_B
   use ModMultiFluid, ONLY: extract_fluid_name, &
        UseMultiIon, nIonFluid, MassIon_I, &
@@ -726,7 +726,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   character (len=10)  :: String, NamePlotVar, NameVar
 
   real:: tmp1Var, tmp2Var
-  real, allocatable :: J_DG(:,:,:,:)
+  real, allocatable :: J_DC(:,:,:,:)
 
   integer :: iVar, itmp, jtmp, jVar, iIon
   integer :: i,j,k
@@ -922,35 +922,29 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
              -State_VGB(Ppar_,:,:,:,iBLK))/2.0
      case('jx','jy', 'jz', 'jr')
 
-        if(.not. allocated(J_DG))then
-           allocate(J_DG(1:3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-           J_DG = 0.0
-        end if
+        if(.not. allocated(J_DC)) allocate(J_DC(3,nI,nJ,nK))
 
         ! Calculationg all the currents only once per block
         if(DoCurrent) then
            ! Note that the current in the ghost cells are not 
            ! needed for Tecplot output. Maybe needed for HDF (!).
            do k = 1, nK; do j = 1, nJ; do i = 1, nI
-              call  get_current(i, j, k, iBLK, J_DG(:,i,j,k))
-           end do;end do;end do
+              call  get_current(i, j, k, iBLK, J_DC(:,i,j,k))
+           end do; end do; end do
            DoCurrent = .false.
         end if
 
         select case(String)
         case('jx')
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
-                J_DG(1,0:nI+1,0:nJ+1,0:nK+1)
+           PlotVar(1:nI,1:nJ,1:nK,iVar) = J_DC(1,:,:,:)
         case('jy')
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
-                J_DG(2,0:nI+1,0:nJ+1,0:nK+1)
+           PlotVar(1:nI,1:nJ,1:nK,iVar) = J_DC(2,:,:,:)
         case('jz')
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
-                J_DG(3,0:nI+1,0:nJ+1,0:nK+1)
+           PlotVar(1:nI,1:nJ,1:nK,iVar) = J_DC(3,:,:,:)
         case('jr')
            do k = 1,nK; do j = 1, nJ; do i = 1, nI
               PlotVar(i,j,k,iVar) = &
-                   sum(J_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlk)) &
+                   sum(J_DC(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlk)) &
                    / max(1e-30, r_BLK(i,j,k,iBlk))
            end do; end do; end do
         end select
@@ -1113,76 +1107,48 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         else
            PlotVar(:,:,:,iVar)=0.0
         end if
-     case('divb','divb_cd','divb_ct')
+     case('divb')
         if(.not.IsCartesian)call stop_mpi( &
              NameSub//': for non cartesian grids only absdivb works')
 
-        if(String == 'divb_cd' .or. (String == 'divb' &
-             .and..not.UseConstrainB &               !^CFG IF CONSTRAINB
-             ))then
+        if(.not.UseConstrainB)then
            ! Div B from central differences
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(  &
-                ( State_VGB(Bx_,1:nI+2,0:nJ+1,0:nK+1,iBLK) &
-                - State_VGB(Bx_,-1:nI,0:nJ+1,0:nK+1,iBLK)) &
-                /CellSize_DB(x_,iBLK) + &
-                ( State_VGB(By_,0:nI+1,1:nJ+2,0:nK+1,iBLK) &
-                - State_VGB(By_,0:nI+1,-1:nJ,0:nK+1,iBLK)) &
-                /CellSize_DB(y_,iBLK) + &
-                ( State_VGB(Bz_,0:nI+1,0:nJ+1,1:nk+2,iBLK) &
-                - State_VGB(Bz_,0:nI+1,0:nJ+1,-1:nK,iBLK)) &
-                /CellSize_DB(z_,iBLK) )
-        else if(UseConstrainB)then                   !^CFG IF CONSTRAINB BEGIN
-           ! Div B from face fluxes
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)= &
-                (Bxface_BLK(1:nI+2  ,0:nJ+1  ,0:nK+1  ,iBLK)              &
-                -Bxface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/CellSize_DB(x_,iBLK)&
-                +(Byface_BLK(0:nI+1  ,1:nJ+2  ,0:nK+1  ,iBLK)              &
-                -Byface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/CellSize_DB(y_,iBLK)&
-                +(Bzface_BLK(0:nI+1  ,0:nJ+1  ,1:nk+2  ,iBLK)              &
-                -Bzface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/CellSize_DB(z_,iBLK)
-           !                                         !^CFG END CONSTRAINB
+           do k = 1, nK; do j = 1, nJ; do i =1, nI
+              if(.not. true_cell(i,j,k,iBlk)) CYCLE
+              PlotVar(i,j,k,iVar) = 0.5* &
+                   ( State_VGB(Bx_,i+1,j,k,iBLK) &
+                   - State_VGB(Bx_,i-1,j,k,iBLK))/CellSize_DB(x_,iBLK)
+              if(nJ > 1) PlotVar(i,j,k,iVar) = PlotVar(i,j,k,iVar) + 0.5* &
+                   ( State_VGB(By_,i,j+1,k,iBLK) &
+                   - State_VGB(By_,i,j-1,k,iBLK))/CellSize_DB(y_,iBLK)
+              if(nK > 1) PlotVar(i,j,k,iVar) = PlotVar(i,j,k,iVar) + 0.5* &
+                   ( State_VGB(Bz_,i,j,k+1,iBLK)  &
+                   - State_VGB(Bz_,i,j,k-1,iBLK))/CellSize_DB(z_,iBLK)
+           end do; end do; end do
         else
-           ! Cell corner centered div B from cell centers
-           PlotVar(0:nI+1  ,0:nJ+1  ,0:nK+1,iVar)= 0.25*(&
-                (State_VGB(Bx_,0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK)  &
-                +State_VGB(Bx_,0:nI+1  ,-1:nJ   ,0:nK+1  ,iBLK)  &
-                +State_VGB(Bx_,0:nI+1  ,0:nJ+1  ,-1:nK   ,iBLK)  &
-                +State_VGB(Bx_,0:nI+1  ,-1:nJ   ,-1:nK   ,iBLK)  &
-                -State_VGB(Bx_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
-                -State_VGB(Bx_,-1:nI   ,-1:nJ   ,0:nK+1  ,iBLK)  &
-                -State_VGB(Bx_,-1:nI   ,0:nJ+1  ,-1:nK   ,iBLK)  &
-                -State_VGB(Bx_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/CellSize_DB(x_,iBLK) &
-                +(State_VGB(By_,0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK)  &
-                +State_VGB(By_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
-                +State_VGB(By_,0:nI+1  ,0:nJ+1  ,-1:nK   ,iBLK)  &
-                +State_VGB(By_,-1:nI   ,0:nJ+1  ,-1:nK   ,iBLK)  &
-                -State_VGB(By_,0:nI+1  ,-1:nJ   ,0:nK+1  ,iBLK)  &
-                -State_VGB(By_,-1:nI   ,-1:nJ   ,0:nK+1  ,iBLK)  &
-                -State_VGB(By_,0:nI+1  ,-1:nJ   ,-1:nK   ,iBLK)  &
-                -State_VGB(By_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/CellSize_DB(y_,iBLK) &
-                +(State_VGB(Bz_,0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK)  &
-                +State_VGB(Bz_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
-                +State_VGB(Bz_,0:nI+1  ,-1:nJ   ,0:nK+1  ,iBLK)  &
-                +State_VGB(Bz_,-1:nI   ,-1:nJ   ,0:nK+1  ,iBLK)  &
-                -State_VGB(Bz_,0:nI+1  ,0:nJ+1  ,-1:nK   ,iBLK)  &
-                -State_VGB(Bz_,-1:nI   ,0:nJ+1  ,-1:nK   ,iBLK)  &
-                -State_VGB(Bz_,0:nI+1  ,-1:nJ   ,-1:nK   ,iBLK)  &
-                -State_VGB(Bz_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/CellSize_DB(z_,iBLK))
-        endif
-        if(.not.true_BLK(iBLK))then
-           where(.not.true_cell(:,:,:,iBLK))PlotVar(:,:,:,iVar)=0.0
-        endif
+           ! Div B from face fluxes
+           do k = 1, nK; do j = 1, nJ; do i =1, nI
+              if(.not. true_cell(i,j,k,iBlk)) CYCLE
+              PlotVar(i,j,k,iVar) = &
+                   (Bxface_BLK(i+1,j,k,iBLK)                         &
+                   -Bxface_BLK(i  ,j,k,iBLK))/CellSize_DB(x_,iBLK) + &
+                   (Byface_BLK(i,j+1,k,iBLK)                         &
+                   -Byface_BLK(i,j  ,k,iBLK))/CellSize_DB(y_,iBLK)
+              if(nK > 1) PlotVar(i,j,k,iVar) = PlotVar(i,j,k,iVar) + &
+                   (Bzface_BLK(i,j,k+1,iBLK)                         &
+                   -Bzface_BLK(i,j,k  ,iBLK))/CellSize_DB(z_,iBLK)
+           end do; end do; end do
+        end if
 
      case('absdivb')
-        if(UseB) PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
-             abs(DivB1_GB(0:nI+1,0:nJ+1,0:nK+1,iBLK))
+        if(UseB) PlotVar(1:nI,1:nJ,1:nK,iVar) = &
+             abs(DivB1_GB(1:nI,1:nJ,1:nK,iBLK))
         if(.not.true_BLK(iBLK))then
            where(.not.true_cell(:,:,:,iBLK)) PlotVar(:,:,:,iVar)=0.0
         endif
-!!$!^CFG  IF RAYTRACE BEGIN
-        ! BASIC RAYTRACE variables
 
      case('theta1','theta2','phi1','phi2','status')
+        ! BASIC RAYTRACE variables
         select case(String)
         case ('theta1')
            itmp = 1 ; jtmp = 1
@@ -1201,34 +1167,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         ! cell on each face.  This is a bad approximation but is 
         ! needed for Tecplot.  It will be fixed later using message 
         ! passing
-        PlotVar(1:nI,1:nJ,0   ,iVar)=ray(itmp,jtmp,1:nI,1:nJ,1   ,iBLK)
-        PlotVar(1:nI,1:nJ,nK+1,iVar)=ray(itmp,jtmp,1:nI,1:nJ,nK  ,iBLK)
-        PlotVar(1:nI,0   ,1:nK,iVar)=ray(itmp,jtmp,1:nI,1   ,1:nK,iBLK)
-        PlotVar(1:nI,nJ+1,1:nK,iVar)=ray(itmp,jtmp,1:nI,nJ  ,1:nK,iBLK)
-        PlotVar(0   ,1:nJ,1:nK,iVar)=ray(itmp,jtmp,1   ,1:nJ,1:nK,iBLK)
-        PlotVar(nI+1,1:nJ,1:nK,iVar)=ray(itmp,jtmp,nI  ,1:nJ,1:nK,iBLK)
-        ! Do edges
-        PlotVar(1:nI,0   ,0   ,iVar)=ray(itmp,jtmp,1:nI,1   ,1   ,iBLK)
-        PlotVar(1:nI,nJ+1,nK+1,iVar)=ray(itmp,jtmp,1:nI,nJ  ,nK  ,iBLK)
-        PlotVar(1:nI,nJ+1,0   ,iVar)=ray(itmp,jtmp,1:nI,nJ  ,1   ,iBLK)
-        PlotVar(1:nI,0   ,nK+1,iVar)=ray(itmp,jtmp,1:nI,1   ,nK  ,iBLK)
-        PlotVar(0   ,0   ,1:nK,iVar)=ray(itmp,jtmp,1   ,1   ,1:nK,iBLK)
-        PlotVar(nI+1,nJ+1,1:nK,iVar)=ray(itmp,jtmp,nI  ,nJ  ,1:nK,iBLK)
-        PlotVar(nI+1,0   ,1:nK,iVar)=ray(itmp,jtmp,nI  ,1   ,1:nK,iBLK)
-        PlotVar(0   ,nJ+1,1:nK,iVar)=ray(itmp,jtmp,1   ,nJ  ,1:nK,iBLK)
-        PlotVar(0   ,1:nJ,0   ,iVar)=ray(itmp,jtmp,1   ,1:nJ,1   ,iBLK)
-        PlotVar(nI+1,1:nJ,nK+1,iVar)=ray(itmp,jtmp,nI  ,1:nJ,nK  ,iBLK)
-        PlotVar(nI+1,1:nJ,0   ,iVar)=ray(itmp,jtmp,nI  ,1:nJ,1   ,iBLK)
-        PlotVar(0   ,1:nJ,nK+1,iVar)=ray(itmp,jtmp,1   ,1:nJ,nK  ,iBLK)
-        ! Do corners
-        PlotVar(0   ,0   ,0   ,iVar)=ray(itmp,jtmp,1   ,1   ,1   ,iBLK)
-        PlotVar(0   ,nJ+1,0   ,iVar)=ray(itmp,jtmp,1   ,nJ  ,1   ,iBLK)
-        PlotVar(0   ,0   ,nK+1,iVar)=ray(itmp,jtmp,1   ,1   ,nK  ,iBLK)
-        PlotVar(0   ,nJ+1,nK+1,iVar)=ray(itmp,jtmp,1   ,nJ  ,nK  ,iBLK)
-        PlotVar(nI+1,0   ,0   ,iVar)=ray(itmp,jtmp,nI  ,1   ,1   ,iBLK)
-        PlotVar(nI+1,nJ+1,0   ,iVar)=ray(itmp,jtmp,nI  ,nJ  ,1   ,iBLK)
-        PlotVar(nI+1,0   ,nK+1,iVar)=ray(itmp,jtmp,nI  ,1   ,nK  ,iBLK)
-        PlotVar(nI+1,nJ+1,nK+1,iVar)=ray(itmp,jtmp,nI  ,nJ  ,nK  ,iBLK)
+        PlotVar(1:nI,1:nJ,1:nK,iVar)=ray(itmp,jtmp,1:nI,1:nJ,1:nK,iBLK)
 
         ! EXTRA RAYTRACE variables
      case('f1x')
@@ -1243,7 +1182,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(1:nI,1:nJ,1:nK,iVar)=rayface(2,2,1:nI,1:nJ,1:nK,iBLK)
      case('f2z')      	          		                   	   
         PlotVar(1:nI,1:nJ,1:nK,iVar)=rayface(3,2,1:nI,1:nJ,1:nK,iBLK)
-!!$!^CFG END RAYTRACE
 
         ! GRID INFORMATION
      case('crit1')
@@ -1367,7 +1305,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      end select
   end do ! iVar
 
-  if(allocated(J_DG))deallocate(J_DG)
+  if(allocated(J_DC)) deallocate(J_DC)
+
 end subroutine set_plotvar
 
 !==============================================================================

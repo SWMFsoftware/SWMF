@@ -10,7 +10,7 @@ subroutine project_B
   ! See G. Toth, 2000, Journal of Computational Physics, 161, 605-652
 
   use ModProcMH
-  use ModMain, ONLY :nBLK,Itest,Jtest,Ktest,BLKtest
+  use ModMain, ONLY: Itest, Jtest, Ktest, BLKtest
   use ModVarIndexes,ONLY: Bx_,Bz_,P_
   use ModAdvance, ONLY : State_VGB
   use ModGeometry, ONLY : true_cell
@@ -22,10 +22,9 @@ subroutine project_B
   implicit none
 
   ! Local variables
-  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK) :: &
-       proj_divb, &                  ! original error to be projected out
-       phi                           ! Scalar field in the Poisson problem
-
+  ! proj_divb: original error to be projected out
+  ! phi:       Scalar field in the Poisson problem
+  real, allocatable, save:: proj_divb(:,:,:,:), phi(:,:,:,:)
 
   integer :: info      ! error status of the iterative scheme
   integer :: nmatvec   ! number of matvex operations performed
@@ -42,12 +41,14 @@ subroutine project_B
 
   real, external :: maxval_abs_BLK, minval_BLK, maxval_loc_abs_BLK, &
        minval_loc_BLK
-
   !---------------------------------------------------------------------------
-
   call set_oktest('project_B',oktest,oktest_me)
 
   call timing_start('project_B')
+
+  if(.not.allocated(proj_divb)) allocate( &
+       proj_divb(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
+       phi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
   if(oktest_me)then
      write(*,*)'Project_B, old B:', &
@@ -128,7 +129,7 @@ subroutine project_B
   if(info<0)goto 100
 
   ! Get the ghost cell values for the solution phi
-  call proj_boundphi(phi,1,3);
+  call proj_boundphi(phi);
 
   !if(oktest_me)write(*,*)'proj_divb,lapl(phi)=',&
   !     proj_divb(Itest,Jtest,Ktest,BLKtest),&
@@ -211,18 +212,20 @@ end subroutine project_B
 subroutine proj_get_divB(proj_divB)
   ! Calculate div B using simple finite differences
   ! Do corrections for mesh refinement
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B, x_, y_, z_
+  use ModMain, ONLY: nBlock, Unused_B
+  use ModSize, ONLY : nI,nJ,nK, MaxBlock, x_, y_, z_
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : State_VGB
   use ModProject
   use ModMain, ONLY : UseConstrainB                       !^CFG IF CONSTRAINB
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK      !^CFG IF CONSTRAINB
   use BATL_lib, ONLY: CellSize_DB
+
   implicit none
 
   ! Argument
 
-  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(out) :: proj_divb
+  real, intent(out) :: proj_divb(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables
   integer :: iBLK, i, j, k
@@ -377,12 +380,11 @@ subroutine proj_matvec(phi,laplace_phi)
   integer :: idim, iBLK
   real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK) :: dphi,ddphi
   integer :: i,j,k
-  real, dimension(-1:1,-1:1,-1:1) :: phiC
+  real :: phiC(-1:1,-1:1,-1:1), InvDx2, InvDy2, InvDz2
   !---------------------------------------------------------------------------
+  call proj_boundphi(phi)
 
-  call proj_boundphi(phi,1,3)
-
-  if(UseConstrainB)then                      !^CFG IF CONSTRAINB BEGIN
+  if(UseConstrainB)then
      do iBLK=1,nBlock
         if(Unused_B(iBLK))CYCLE
 
@@ -390,7 +392,7 @@ subroutine proj_matvec(phi,laplace_phi)
            ! If some cells are inside the body, phi should have zero gradient
            ! accross the face between the body and the physical cell so that
            ! there is correction done for Bface on that face
-           do k=1,nK; do j=1,nJ; do i=1,nI
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
               if(.not.true_cell(i,j,k,iBLK)) CYCLE
 
@@ -409,30 +411,35 @@ subroutine proj_matvec(phi,laplace_phi)
                    /CellSize_DB(z_,iBLK)**2
            end do; end do; end do
         else
-           laplace_phi(1:nI,1:nJ,1:nK,iBLK)= &
-                (phi(2:nI+1,1:nJ,1:nK,iBLK)+phi(0:nI-1,1:nJ,1:nK,iBLK) &
-                -2*phi(1:nI,1:nJ,1:nK,iBLK))/CellSize_DB(x_,iBLK)**2 + &
-                (phi(1:nI,2:nJ+1,1:nK,iBLK)+phi(1:nI,0:nJ-1,1:nK,iBLK) &
-                -2*phi(1:nI,1:nJ,1:nK,iBLK))/CellSize_DB(y_,iBLK)**2 + &
-                (phi(1:nI,1:nJ,2:nK+1,iBLK)+phi(1:nI,1:nJ,0:nK-1,iBLK) &
-                -2*phi(1:nI,1:nJ,1:nK,iBLK))/CellSize_DB(z_,iBLK)**2
+           InvDx2 = 1/CellSize_DB(x_,iBLK)**2
+           InvDy2 = 1/CellSize_DB(y_,iBLK)**2
+           InvDz2 = 1/CellSize_DB(z_,iBLK)**2
+           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+              laplace_phi(i,j,k,iBLK)= &
+                   (phi(i+1,j,k,iBLK) + phi(i-1,j,k,iBLK) &
+                   -2*phi(i,j,k,iBLK))*InvDx2 + &
+                   (phi(i,j+1,k,iBLK) + phi(i,j-1,k,iBLK) &
+                   -2*phi(i,j,k,iBLK))*InvDy2 + &
+                   (phi(i,j,k+1,iBLK) + phi(i,j,k-1,iBLK) &
+                   -2*phi(i,j,k,iBLK))*InvDz2
+           end do; end do; end do
         endif
 
      end do
 
      RETURN
-  end if                                     !^CFG END CONSTRAINB
+  end if
 
   call proj_gradient(1,phi,dphi)
 
-  call proj_boundphi(dphi,1,1)
+  call proj_boundphi(dphi)
 
   call proj_gradient(1,dphi,laplace_phi)
 
   do idim=2,3
      call proj_gradient(idim,phi,dphi)
 
-     call proj_boundphi(dphi,idim,idim)
+     call proj_boundphi(dphi)
 
      call proj_gradient(idim,dphi,ddphi)
 
@@ -443,12 +450,14 @@ subroutine proj_matvec(phi,laplace_phi)
 end subroutine proj_matvec
 
 !=============================================================================
-! Calculate gradient of phi in direction idim for real cells only
 subroutine proj_gradient(idim,phi,dphi)
+
+  ! Calculate gradient of phi in direction idim
+
   use ModSize, ONLY: x_, y_, z_, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nBlock, MaxBlock
   use ModMain, ONLY : Unused_B
-  use BATL_lib, ONLY: CellFace_DB, CellVolume_B
+  use BATL_lib, ONLY: CellSize_DB
   implicit none
 
   ! Arguments
@@ -458,10 +467,10 @@ subroutine proj_gradient(idim,phi,dphi)
   real, intent(out) :: dphi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables
-  integer :: iBLK
+  integer :: i, j, k, iBLK
+  real:: Coef
 
   logical :: oktest, oktest_me
-
   !---------------------------------------------------------------------------
 
   call set_oktest('proj_gradient',oktest,oktest_me)
@@ -471,22 +480,24 @@ subroutine proj_gradient(idim,phi,dphi)
 
   !dphi=0.0
 
-  do iBLK=1,nBlock
+  do iBLK = 1, nBlock
      if(Unused_B(iBLK))CYCLE
      select case(idim)
      case(1)
-        dphi(1:nI,1:nJ,1:nK,iBLK) = &
-             0.5/CellVolume_B(iBLK)*CellFace_DB(x_,iBLK)* &
-             (phi(2:nI+1,1:nJ,1:nK,iBLK)-phi(0:nI-1,1:nJ,1:nK,iBLK))
+        Coef = 0.5/CellSize_DB(x_,iBLK)
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           dphi(i,j,k,iBLK) = Coef*(phi(i+1,j,k,iBLK) - phi(i-1,j,k,iBLK))
+        end do; end do; end do
      case(2)
-        dphi(1:nI,1:nJ,1:nK,iBLK) = &
-             0.5/CellVolume_B(iBLK)*CellFace_DB(y_,iBLK)* &
-             (phi(1:nI,2:nJ+1,1:nK,iBLK)-phi(1:nI,0:nJ-1,1:nK,iBLK))
-
+        Coef = 0.5/CellSize_DB(y_,iBLK)
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           dphi(i,j,k,iBLK) = Coef*(phi(i,j+1,k,iBLK) - phi(i,j-1,k,iBLK))
+        end do; end do; end do
      case(3)
-        dphi(1:nI,1:nJ,1:nK,iBLK) = &
-             0.5/CellVolume_B(iBLK)*CellFace_DB(z_,iBLK)* &
-             (phi(1:nI,1:nJ,2:nK+1,iBLK)-phi(1:nI,1:nJ,0:nK-1,iBLK))
+        Coef = 0.5/CellSize_DB(z_,iBLK)
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           dphi(i,j,k,iBLK) = Coef*(phi(i,j,k+1,iBLK) - phi(i,j,k-1,iBLK))
+        end do; end do; end do
      end select
   end do ! All blocks are done
 
@@ -497,21 +508,22 @@ subroutine proj_gradient(idim,phi,dphi)
 end subroutine proj_gradient
 
 !=============================================================================
-! Calculate boundary values for phi for dimensions idimmin..idimmax
-subroutine proj_boundphi(phi,idimmin,idimmax)
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,Unused_B
-  use ModMain, ONLY : UseConstrainB                   !^CFG IF CONSTRAINB
+subroutine proj_boundphi(phi)
+
+  ! Calculate boundary values for phi for dimensions 
+
+  use ModMain, ONLY : MaxBlock, nBlock, Unused_B
   use ModGeometry, ONLY : body_BLK, true_cell
-  use ModParallel, ONLY : NOBLK,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
+  use ModParallel, ONLY : &
+       NOBLK,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModProject
-  use BATL_lib, ONLY: message_pass_cell
+  use BATL_lib, ONLY: message_pass_cell, &
+       MinI, MaxI, j0_, nJp1_, MinJ, MaxJ, k0_, nKp1_, MinK, MaxK
 
   implicit none
 
   ! Arguments
-  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
-       intent(inout) :: phi
-  integer, intent(in):: idimmin,idimmax
+  real,    intent(inout) :: phi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables
   integer :: iBLK
@@ -520,65 +532,75 @@ subroutine proj_boundphi(phi,idimmin,idimmax)
   call message_pass_cell(1,Phi,nWidthIn=1, nProlongOrderIn=1, &
        DoSendCornerIn=.false., DoRestrictFaceIn = .true.)
 
-  do iBLK=1,nBlock
+  do iBLK = 1, nBlock
      if(Unused_B(iBLK))CYCLE
 
-     if(neiLeast(iBLK) ==NOBLK)phi(-1:0     ,:,:,iBLK)=0.0
-     if(neiLwest(iBLK) ==NOBLK)phi(nI+1:nI+2,:,:,iBLK)=0.0
-     if(neiLsouth(iBLK)==NOBLK)phi(:,-1:0     ,:,iBLK)=0.0
-     if(neiLnorth(iBLK)==NOBLK)phi(:,nJ+1:nJ+2,:,iBLK)=0.0
-     if(neiLbot(iBLK)  ==NOBLK)phi(:,:,-1:0     ,iBLK)=0.0
-     if(neiLtop(iBLK)  ==NOBLK)phi(:,:,nK+1:nK+2,iBLK)=0.0
+     if(neiLeast(iBLK) ==NOBLK) phi(MinI:0   ,:,:,iBLK) = 0.0
+     if(neiLwest(iBLK) ==NOBLK) phi(nI+1:MaxI,:,:,iBLK) = 0.0
+     if(neiLsouth(iBLK)==NOBLK) phi(:,MinJ :j0_ ,:,iBLK) = 0.0
+     if(neiLnorth(iBLK)==NOBLK) phi(:,nJp1_:MaxJ,:,iBLK) = 0.0
 
-     if(body_BLK(iBLK))then
-        where(.not.true_cell(:,:,:,iBLK))phi(:,:,:,iBLK)=0.0
+     if(nK>1)then
+        if(neiLbot(iBLK)==NOBLK) phi(:,:,MinK :k0_ ,iBLK) = 0.0
+        if(neiLtop(iBLK)==NOBLK) phi(:,:,nKp1_:MaxK,iBLK) = 0.0
      end if
 
-     if(UseConstrainB)then                      !^CFG IF CONSTRAINB BEGIN
-        ! Correct ghost cells at resolution changes to get consistent gradphi
+     if(body_BLK(iBLK))then
+        where(.not.true_cell(:,:,:,iBLK)) phi(:,:,:,iBLK)=0.0
+     end if
 
-        if(neiLeast(iBLK) ==-1)phi(0   ,1:nJ,1:nK,iBLK)=2*phi(0   ,1:nJ,1:nK,iBLK) &
-                                                         -phi(1   ,1:nJ,1:nK,iBLK)
-        if(neiLwest(iBLK) ==-1)phi(nI+1,1:nJ,1:nK,iBLK)=2*phi(nI+1,1:nJ,1:nK,iBLK) &
-                                                         -phi(nI  ,1:nJ,1:nK,iBLK)
-        if(neiLsouth(iBLK)==-1)phi(1:nI,0   ,1:nK,iBLK)=2*phi(1:nI,0   ,1:nK,iBLK) &
-                                                         -phi(1:nI,1   ,1:nK,iBLK)
-        if(neiLnorth(iBLK)==-1)phi(1:nI,nJ+1,1:nK,iBLK)=2*phi(1:nI,nJ+1,1:nK,iBLK) &
-                                                         -phi(1:nI,nJ  ,1:nK,iBLK)
-        if(neiLbot(iBLK)  ==-1)phi(1:nI,1:nJ,0   ,iBLK)=2*phi(1:nI,1:nJ,0   ,iBLK) &
-                                                         -phi(1:nI,1:nJ,1   ,iBLK)
-        if(neiLtop(iBLK)  ==-1)phi(1:nI,1:nJ,nK+1,iBLK)=2*phi(1:nI,1:nJ,nK+1,iBLK) &
-                                                         -phi(1:nI,1:nJ,nK  ,iBLK)
-     end if                                     !^CFG END CONSTRAINB
+     !if(UseConstrainB)then
+     !   ! Correct ghost cells at resolution changes to get consistent gradphi
+     !
+     !   if(neiLeast(iBLK) ==-1) &
+     !        phi(0   ,1:nJ,1:nK,iBLK)=2*phi(0   ,1:nJ,1:nK,iBLK) &
+     !        -phi(1   ,1:nJ,1:nK,iBLK)
+     !   if(neiLwest(iBLK) ==-1) &
+     !        phi(nI+1,1:nJ,1:nK,iBLK)=2*phi(nI+1,1:nJ,1:nK,iBLK) &
+     !        -phi(nI  ,1:nJ,1:nK,iBLK)
+     !   if(neiLsouth(iBLK)==-1) &
+     !        phi(1:nI,0   ,1:nK,iBLK)=2*phi(1:nI,0   ,1:nK,iBLK) &
+     !        -phi(1:nI,1   ,1:nK,iBLK)
+     !   if(neiLnorth(iBLK)==-1) &
+     !        phi(1:nI,nJ+1,1:nK,iBLK)=2*phi(1:nI,nJ+1,1:nK,iBLK) &
+     !        -phi(1:nI,nJ  ,1:nK,iBLK)
+     !   if(neiLbot(iBLK)  ==-1) &
+     !        phi(1:nI,1:nJ,0   ,iBLK)=2*phi(1:nI,1:nJ,0   ,iBLK) &
+     !        -phi(1:nI,1:nJ,1   ,iBLK)
+     !   if(neiLtop(iBLK)  ==-1) &
+     !        phi(1:nI,1:nJ,nK+1,iBLK)=2*phi(1:nI,1:nJ,nK+1,iBLK) &
+     !        -phi(1:nI,1:nJ,nK  ,iBLK)
+     !end if
 
   end do
 
 end subroutine proj_boundphi
 
 !=============================================================================
-! Correct B field by gradient of phi
 subroutine proj_correction(phi)
+
+  ! Correct B field by gradient of phi
+
   use ModMain, ONLY : nI,nJ,nK,nBLK,Itest,Jtest,Ktest,BLKtest, &
        nBlock,Unused_B
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance,    ONLY : State_VGB
   use ModGeometry,   ONLY : true_cell
   use ModProject
-  use ModMain, ONLY : UseConstrainB             !^CFG IF CONSTRAINB
-  use ModCT                                     !^CFG IF CONSTRAINB
-  use ModEnergy, ONLY: calc_energy_cell         !^CFG IF CONSTRAINB
+  use ModMain, ONLY : UseConstrainB
+  use ModCT
+  use ModEnergy, ONLY: calc_energy_cell
   use BATL_lib, ONLY: CellSize_DB
   implicit none
 
   ! Arguments
-  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(inout) :: phi
+  real, intent(inout) :: phi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
   ! Local variables
   integer :: iBLK, i, j, k
-  real    :: DxInvHalf, DyInvHalf, DzInvHalf
+  real    :: DxInvHalf, DyInvHalf, DzInvHalf, DxInv, DyInv, DzInv
 
   logical :: oktest, oktest_me
-
   !---------------------------------------------------------------------------
 
   call set_oktest('proj_correction',oktest,oktest_me)
@@ -591,25 +613,34 @@ subroutine proj_correction(phi)
           true_cell(Itest,Jtest,Ktest-1,BLKtest), &
           true_cell(Itest,Jtest,Ktest+1,BLKtest)
 
-     do iBLK=1,nBlock
+     do iBLK = 1, nBlock
         if(Unused_B(iBLK)) CYCLE
 
-        BxFace_BLK(1:nI+1,1:nJ,1:nK,iBLK)=BxFace_BLK(1:nI+1,1:nJ,1:nK,iBLK) &
-             -(phi(1:nI+1,1:nJ,1:nK,iBLK)-phi(0:nI,1:nJ,1:nK,iBLK)) &
-             /CellSize_DB(x_,iBLK)
+        DxInv = 1/CellSize_DB(x_,iBLK)
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+           BxFace_BLK(i,j,k,iBLK) = BxFace_BLK(i,j,k,iBLK) &
+                - DxInv*(phi(i,j,k,iBLK) - phi(i-1,j,k,iBLK))
+        end do; end do; end do
 
-        ByFace_BLK(1:nI,1:nJ+1,1:nK,iBLK)=ByFace_BLK(1:nI,1:nJ+1,1:nK,iBLK) &
-             -(phi(1:nI,1:nJ+1,1:nK,iBLK)-phi(1:nI,0:nJ,1:nK,iBLK)) &
-             /CellSize_DB(y_,iBLK)
+        DyInv = 1/CellSize_DB(y_,iBLK)
+        do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+           ByFace_BLK(i,j,k,iBLK) = ByFace_BLK(i,j,k,iBLK) &
+                - DyInv*(phi(i,j+1,k,iBLK) - phi(i,j-1,k,iBLK))
+        end do; end do; end do
 
-        BzFace_BLK(1:nI,1:nJ,1:nK+1,iBLK)=BzFace_BLK(1:nI,1:nJ,1:nK+1,iBLK) &
-             -(phi(1:nI,1:nJ,1:nK+1,iBLK)-phi(1:nI,1:nJ,0:nK,iBLK)) &
-             /CellSize_DB(z_,iBLK)
+        if(nK > 1)then
+           DzInv = 1/CellSize_DB(z_,iBLK)
+           do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+              BzFace_BLK(i,j,k,iBLK) = BzFace_BLK(i,j,k,iBLK) &
+                   - DzInv*(phi(i,j,k+1,iBLK) - phi(i,j,k-1,iBLK))
+           end do; end do; end do
+        end if
 
-        if(oktest_me.and.BLKtest==iBLK)write(*,*)'before bound_Bface Bzface=',&
+        if(oktest_me.and.BLKtest==iBLK) &
+             write(*,*)'before bound_Bface Bzface=',&
              BzFace_BLK(Itest,Jtest,Ktest,BLKtest), &
              BzFace_BLK(Itest,Jtest,Ktest+1,BLKtest)
-
+        
         ! Make sure that the correction is NOT applied to the body boundaries
         call bound_Bface(iBLK)
         ! Recalculate the cell centered B

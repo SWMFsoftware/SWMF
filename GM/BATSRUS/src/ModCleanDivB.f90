@@ -22,6 +22,7 @@ subroutine clean_divb
   use ModPhysics,ONLY:gm1
   use ModMpi
   use BATL_lib, ONLY: message_pass_cell, CellFace_DB, CellVolume_GB
+
   implicit none
 
   integer::i,j,k,iBlock
@@ -426,10 +427,13 @@ contains
     !         maxval(Prec_CB(:,:,:,1:nBlock)), maxloc(Prec_CB(:,:,:,1:nBlock)), &
     !         minval(Prec_CB(:,:,:,1:nBlock)), minloc(Prec_CB(:,:,:,1:nBlock)) 
   end subroutine init_divb_cleanup
-  !============================================================================                         
+  !===========================================================================
   subroutine v_grad_phi(Phi_GB,iBlock)
+
     integer,intent(in)::iBlock
     real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK),intent(inout)::Phi_GB
+    !------------------------------------------------------------------------
+
     vDotGradX_C = 0.0;vDotGradY_C = 0.0;vDotGradZ_C = 0.0
 !!! Apply continuous solution at east and west
     !    if (NeiLev(1,iBlock)==NOBLK)&
@@ -446,20 +450,22 @@ contains
     !         Phi_GB(1:nI,1:nJ,0   ,iBlock) = Phi_GB(1:nI,1:nJ,1 ,iBlock)
     !    if (NeiLev(6,iBlock)==NOBLK)&
     !         Phi_GB(1:nI,1:nJ,nK+1,iBlock) = Phi_GB(1:nI,1:nJ,nK,iBlock)
-    if (NeiLev(1,iBlock)==NOBLK)&
-         Phi_GB(0   ,1:nJ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1 ,1:nJ,1:nK,iBlock)
-    if (NeiLev(2,iBlock)==NOBLK)&
-         Phi_GB(nI+1,1:nJ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(nI,1:nJ,1:nK,iBlock)
-    if (NeiLev(3,iBlock)==NOBLK)&
-         Phi_GB(1:nI,0   ,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1 ,1:nK,iBlock)
-    if (NeiLev(4,iBlock)==NOBLK)&
-         Phi_GB(1:nI,nJ+1,1:nK,iBlock)=-BoundaryCoef*Phi_GB(1:nI,nJ,1:nK,iBlock)
-    if (NeiLev(5,iBlock)==NOBLK)&
-         Phi_GB(1:nI,1:nJ,0   ,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1:nJ,1 ,iBlock)
-    if (NeiLev(6,iBlock)==NOBLK)&
-         Phi_GB(1:nI,1:nJ,nK+1,iBlock)=-BoundaryCoef*Phi_GB(1:nI,1:nJ,nK,iBlock)
+
+    if (NeiLev(1,iBlock) == NOBLK) Phi_GB(0,1:nJ,1:nK,iBlock) = &
+         -BoundaryCoef*Phi_GB(1 ,1:nJ,1:nK,iBlock)
+    if (NeiLev(2,iBlock) == NOBLK) Phi_GB(nI+1,1:nJ,1:nK,iBlock) = &
+         -BoundaryCoef*Phi_GB(nI,1:nJ,1:nK,iBlock)
+    if (NeiLev(3,iBlock) == NOBLK) Phi_GB(1:nI,j0_ ,1:nK,iBlock) = &
+         -BoundaryCoef*Phi_GB(1:nI,1 ,1:nK,iBlock)
+    if (NeiLev(4,iBlock) == NOBLK) Phi_GB(1:nI,nJp1_,1:nK,iBlock) = &
+         -BoundaryCoef*Phi_GB(1:nI,nJ,1:nK,iBlock)
+    if (NeiLev(5,iBlock) == NOBLK .and. nK>1)Phi_GB(1:nI,1:nJ,k0_,iBlock) = &
+         -BoundaryCoef*Phi_GB(1:nI,1:nJ,1 ,iBlock)
+    if (NeiLev(6,iBlock) == NOBLK .and. nK>1)Phi_GB(1:nI,1:nJ,nKp1_,iBlock) = &
+         -BoundaryCoef*Phi_GB(1:nI,1:nJ,nK,iBlock)
+
     if(body_blk(iBlock))then
-       do k=1,nK;do j=1,nJ;do i=1,nI
+       do k = 1, nK; do j = 1, nJ;do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock))CYCLE
           where(.not.true_cell(i-1:i+1:2,j,k,iBlock))&
                Phi_GB(i-1:i+1:2,j,k,iBlock)=-BoundaryCoef*Phi_GB(i,j,k,iBlock)
@@ -500,83 +506,83 @@ contains
 end subroutine clean_divb
 !===================================================================
 subroutine div_3d_b1(iBlock,VecX_G,VecY_G,VecZ_G,Out_G)     
-use ModSize
-use ModGeometry, ONLY: body_blk, true_cell
-use ModParallel, ONLY: neilev, NOBLK
-use ModDivbCleanup, ONLY: BoundaryCoef
-use BATL_lib, ONLY: CellFace_DB
-implicit none
+  use ModSize
+  use ModGeometry, ONLY: body_blk, true_cell
+  use ModParallel, ONLY: neilev, NOBLK
+  use ModDivbCleanup, ONLY: BoundaryCoef
+  use BATL_lib, ONLY: CellFace_DB
+  implicit none
 
-integer,intent(in) :: iBlock
-real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(in)::&
-    VecX_G,VecY_G,VecZ_G
-real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(out)::Out_G
+  integer,intent(in) :: iBlock
+  real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(in)::&
+       VecX_G,VecY_G,VecZ_G
+  real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(out)::Out_G
 
-real, dimension(0:nI+1, 0:nJ+1, 0:nK+1) :: OneTrue_G
+  real, dimension(0:nI+1, 0:nJ+1, 0:nK+1) :: OneTrue_G
 
-integer :: i, j, k
+  integer :: i, j, k
 
-!\
-! Can only be used for divB diffusion and projection scheme!!!!
-! DivB is multiplied by -V_Cell!!!!
-! With this modification DivB[grad Phi] is a symmetric positive definite 
-! operator!
-!/
-Out_G = 0.0
-if(.not.(body_blk(iBlock).or.any(neilev(:,iBlock)==NOBLK)))then 
-  do k=1,nK; do j=1,nJ; do i=1,nI
-     Out_G(i,j,k) = - 0.5*(&
-          CellFace_DB(x_,iBlock)*&
-          (VecX_G(i+1, j, k)-VecX_G(i-1,j,k))&
-          +CellFace_DB(y_,iBlock)*&
-          (VecY_G(i ,j+1, k)-VecY_G(i,j-1,k))&
-          +CellFace_DB(z_,iBlock)*&
-          (VecZ_G(i, j, k+1)-VecZ_G(i,j,k-1)) )
-  end do; end do; end do
-else
-  where(true_cell(0:nI+1, 0:nJ+1, 0:nK+1,iBlock)) 
-     OneTrue_G = 1.0
-  elsewhere
-     OneTrue_G = 0.0
-  end where
-  if(neilev(1 ,iBlock)==NOBLK) OneTrue_G(0   ,:,:) = 0.0
-  if(neilev(2 ,iBlock)==NOBLK) OneTrue_G(nI+1,:,:) = 0.0
-  if(neilev(3,iBlock)==NOBLK) OneTrue_G(:,0   ,:) = 0.0
-  if(neilev(4,iBlock)==NOBLK) OneTrue_G(:,nJ+1,:) = 0.0
-  if(neilev(5  ,iBlock)==NOBLK) OneTrue_G(:,:,0   ) = 0.0
-  if(neilev(6  ,iBlock)==NOBLK) OneTrue_G(:,:,nK+1) = 0.0
-  !
   !\
-  ! Where .not.true_cell, all the gradients are zero
-  ! In true_cell the input to gradient from the face neighbor
-  ! is ignored, if the face neighbor is .not.true_cell
+  ! Can only be used for divB diffusion and projection scheme!!!!
+  ! DivB is multiplied by -V_Cell!!!!
+  ! With this modification DivB[grad Phi] is a symmetric positive definite 
+  ! operator!
   !/
-  !
-  do k=1,nK; do j=1,nJ; do i=1,nI
-     Out_G(i,j,k) = - 0.5*OneTrue_G(i,j,k)*(+&
-          CellFace_DB(x_,iBlock)*&
-          (VecX_G(i+1,j,k)-&
-          BoundaryCoef*(VecX_G(i+1,j,k)-VecX_G(i,j,k))*&
-          (1.0-OneTrue_G(i+1,j,k))-&
-          VecX_G(i-1,j,k)-&
-          BoundaryCoef*(VecX_G(i,j,k)-VecX_G(i-1,j,k))*&
-          (1.0-OneTrue_G(i-1,j,k)))+&
-          CellFace_DB(y_,iBlock)*&
-          (VecY_G(i,j+1,k)-&
-          BoundaryCoef*(VecY_G(i,j+1,k)-VecY_G(i,j,k))*&
-          (1.0-OneTrue_G(i,j+1,k))-&
-          VecY_G(i,j-1,k)-&
-          BoundaryCoef*(VecY_G(i,j,k)-VecY_G(i,j-1,k))*&
-          (1.0-OneTrue_G(i,j-1,k)))+&
-          CellFace_DB(z_,iBlock)*&
-          (VecZ_G(i,j,k+1)-&
-          BoundaryCoef*(VecZ_G(i,j,k+1)-VecZ_G(i,j,k))*&
-          (1.0-OneTrue_G(i,j,k+1))-&
-          VecZ_G(i,j,k-1)-&
-          BoundaryCoef*(VecZ_G(i,j,k)-VecZ_G(i,j,k-1))*&
-          (1.0-OneTrue_G(i,j,k-1))) &
-          )
-  end do; end do; end do
-end if
+  Out_G = 0.0
+  if(.not.(body_blk(iBlock).or.any(neilev(:,iBlock)==NOBLK)))then 
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        Out_G(i,j,k) = - 0.5*(&
+             CellFace_DB(x_,iBlock)*&
+             (VecX_G(i+1, j, k)-VecX_G(i-1,j,k))&
+             +CellFace_DB(y_,iBlock)*&
+             (VecY_G(i ,j+1, k)-VecY_G(i,j-1,k))&
+             +CellFace_DB(z_,iBlock)*&
+             (VecZ_G(i, j, k+1)-VecZ_G(i,j,k-1)) )
+     end do; end do; end do
+  else
+     where(true_cell(0:nI+1, 0:nJ+1, 0:nK+1,iBlock)) 
+        OneTrue_G = 1.0
+     elsewhere
+        OneTrue_G = 0.0
+     end where
+     if(neilev(1 ,iBlock)==NOBLK) OneTrue_G(0   ,:,:) = 0.0
+     if(neilev(2 ,iBlock)==NOBLK) OneTrue_G(nI+1,:,:) = 0.0
+     if(neilev(3,iBlock)==NOBLK) OneTrue_G(:,0   ,:) = 0.0
+     if(neilev(4,iBlock)==NOBLK) OneTrue_G(:,nJ+1,:) = 0.0
+     if(neilev(5  ,iBlock)==NOBLK) OneTrue_G(:,:,0   ) = 0.0
+     if(neilev(6  ,iBlock)==NOBLK) OneTrue_G(:,:,nK+1) = 0.0
+     !
+     !\
+     ! Where .not.true_cell, all the gradients are zero
+     ! In true_cell the input to gradient from the face neighbor
+     ! is ignored, if the face neighbor is .not.true_cell
+     !/
+     !
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        Out_G(i,j,k) = - 0.5*OneTrue_G(i,j,k)*(+&
+             CellFace_DB(x_,iBlock)*&
+             (VecX_G(i+1,j,k)-&
+             BoundaryCoef*(VecX_G(i+1,j,k)-VecX_G(i,j,k))*&
+             (1.0-OneTrue_G(i+1,j,k))-&
+             VecX_G(i-1,j,k)-&
+             BoundaryCoef*(VecX_G(i,j,k)-VecX_G(i-1,j,k))*&
+             (1.0-OneTrue_G(i-1,j,k)))+&
+             CellFace_DB(y_,iBlock)*&
+             (VecY_G(i,j+1,k)-&
+             BoundaryCoef*(VecY_G(i,j+1,k)-VecY_G(i,j,k))*&
+             (1.0-OneTrue_G(i,j+1,k))-&
+             VecY_G(i,j-1,k)-&
+             BoundaryCoef*(VecY_G(i,j,k)-VecY_G(i,j-1,k))*&
+             (1.0-OneTrue_G(i,j-1,k)))+&
+             CellFace_DB(z_,iBlock)*&
+             (VecZ_G(i,j,k+1)-&
+             BoundaryCoef*(VecZ_G(i,j,k+1)-VecZ_G(i,j,k))*&
+             (1.0-OneTrue_G(i,j,k+1))-&
+             VecZ_G(i,j,k-1)-&
+             BoundaryCoef*(VecZ_G(i,j,k)-VecZ_G(i,j,k-1))*&
+             (1.0-OneTrue_G(i,j,k-1))) &
+             )
+     end do; end do; end do
+  end if
 
 end subroutine div_3d_b1
