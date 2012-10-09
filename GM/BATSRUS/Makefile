@@ -77,7 +77,6 @@ src/ModImplHypre.f90: src/ModImplHypre_empty.f90
 
 srcBATL/BATL_size.f90: srcBATL/BATL_size_orig.f90
 	cp -f srcBATL/BATL_size_orig.f90 srcBATL/BATL_size.f90
-	perl -pi -e 's/nG\*/nG \!\*/' srcBATL/BATL_size.f90
 
 LIB:
 	cd srcBATL; $(MAKE) LIB
