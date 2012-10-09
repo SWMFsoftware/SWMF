@@ -22,7 +22,9 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
   use ModMessagePass, ONLY: exchange_messages
   use ModTimeStepControl, ONLY: calc_timestep
-  use BATL_lib, ONLY: message_pass_face, IsAnyAxis
+  use BATL_lib, ONLY: message_pass_face,  message_pass_cell, IsAnyAxis
+  use ModResistivity, ONLY: set_resistivity, UseResistivity, Eta_GB,&
+       MessagePassResistivity
 
   implicit none
 
@@ -52,6 +54,16 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
      if(.not.UseOptimizeMpi) call barrier_mpi2('expl1')
 
+     if(UseResistivity) then
+        do iBlock = 1, nBlock
+           if (Unused_B(iBlock)) CYCLE
+           call set_resistivity(iBlock)
+        end do
+        if(MessagePassResistivity) &
+             call message_pass_cell(1, Eta_GB, nWidthIn=1, &
+             nProlongOrderIn=1, nCoarseLayerIn=1, DoRestrictFaceIn = .true.)
+     end if
+
      do iBlock = 1, nBlock
         if (Unused_B(iBlock)) CYCLE
         if(all(neiLev(:,iBlock)/=1)) CYCLE
@@ -74,7 +86,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
         ! Save conservative flux correction for this solution block
         call save_cons_flux(iBlock)
-        
+
      end do
 
      if(DoTestMe)write(*,*)NameSub,' done res change only'
@@ -221,9 +233,9 @@ subroutine update_secondbody
      call set_boundary_cells(iBlock)
      call fix_block_geometry(iBlock)
   end do
-  
+
   ! call set_body_flag ! OLDAMR
   call exchange_messages
-  
+
 end subroutine update_secondbody
 !^CFG END SECONDBODY
