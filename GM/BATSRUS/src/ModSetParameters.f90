@@ -94,7 +94,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModWaves, ONLY: read_waves_param, check_waves
   use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
   use ModViscosity, ONLY: Viscosity_set_parameters, UseViscosity,&
-                          Viscosity_init
+       Viscosity_init
 
   implicit none
 
@@ -155,7 +155,7 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Initialize BATL
   call init_mpi(iComm)
- 
+
   if(IsUninitialized)then
      call set_namevar
      call set_defaults
@@ -507,7 +507,8 @@ subroutine MH_set_parameters(TypeAction)
         call hypre_read_param
 
      case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &
-          "#RESISTIVITYREGION", "#RESISTIVEREGION")
+          "#RESISTIVITYREGION", "#RESISTIVEREGION",&
+          '#MESSAGEPASSRESISTIVITY')
         call read_resistivity_param(NameCommand)
 
      case("#VISCOSITY", "#VISCOSITYREGION")
@@ -1020,7 +1021,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('zEarth'  ,zEarth)
            call read_var('InvD2Ray',InvD2Ray)
         end if
-        
+
      case("#AMRCRITERIALEVEL","#AMRCRITERIARESOLUTION")
 
         DoCritAmr = .true.
@@ -2869,7 +2870,7 @@ contains
           plot_range(2, iFile) = XyzMax_D(1)
           plot_range(3:5:2, iFile) = -SmallSize_D(y_:z_)
           plot_range(4:6:2, iFile) = +SmallSize_D(y_:z_)
-          
+
        case('3d_')
           plot_range(1:5:2, iFile) = XyzMin_D
           plot_range(2:6:2, iFile) = XyzMax_D
