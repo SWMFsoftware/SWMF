@@ -25,6 +25,7 @@ module ModResistivity
 
   logical, public           :: UseResistivity   = .false.
   logical, public           :: UseResistiveFlux = .true.
+  logical, public           :: MessagePassResistivity = .false.
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
   real, public              :: Eta0, Eta0Si=0.0
@@ -67,6 +68,8 @@ contains
     character(len=*), parameter:: NameSub = 'read_resistivity_param'
     !------------------------------------------------------------------------
     select case(NameCommand)
+    case('#MESSAGEPASSRESISTIVITY')
+       call read_var("MessagePassResistivity", MessagePassResistivity)
     case("#RESISTIVITYOPTIONS")
        call read_var("UseResistiveFlux", UseResistiveFlux)
        call read_var("UseJouleHeating",  UseJouleHeating)
@@ -496,7 +499,7 @@ contains
          FluxImpl_VZB
     use ModNumConst,     ONLY: i_DD
     use ModSize,         ONLY: x_, y_, z_
-    use ModGeometry,     ONLY : true_cell, true_BLK
+    use ModGeometry,     ONLY: true_cell, true_BLK
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -641,63 +644,58 @@ contains
        do iDim = 1, nDim
           Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) then
-                do iDir = 1, MaxDim
-                   Jacobian_VVCI(iDir,iDir,i,j,k,1) = 1.0
-                end do
-             else
-                Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
+             if(.not.true_cell(i,j,k,iBlock)) CYCLE 
+             Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
 
-                do iDir = 1, MaxDim; do jDir = 1, nDim
-                   if(iDir ==jDir) CYCLE
+             do iDir = 1, MaxDim; do jDir = 1, nDim
+                if(iDir ==jDir) CYCLE
 
-                   DiffLeft = Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
-                        *DcoordDxyz_DDFD(iDim,jDir,i,j,k,iDim)*Coeff
-                   DiffRight = Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
-                        *DcoordDxyz_DDFD(iDim,jDir,i+Di,j+Dj,k+Dk,iDim)*Coeff
+                DiffLeft = Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
+                     *DcoordDxyz_DDFD(iDim,jDir,i,j,k,iDim)*Coeff
+                DiffRight = Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
+                     *DcoordDxyz_DDFD(iDim,jDir,i+Di,j+Dj,k+Dk,iDim)*Coeff
 
-                   Jacobian_VVCI(iDir,iDir,i,j,k,1) = &
-                        Jacobian_VVCI(iDir,iDir,i,j,k,1) - (DiffLeft + DiffRight)
+                Jacobian_VVCI(iDir,iDir,i,j,k,1) = &
+                     Jacobian_VVCI(iDir,iDir,i,j,k,1) - (DiffLeft + DiffRight)
 
-                   if(UseNoOverlap)then
-                      if(  iDim==1.and.i==1  .or. &
-                           iDim==2.and.j==1  .or. &
-                           iDim==3.and.k==1)        DiffLeft = 0.0
-                      if(  iDim==1.and.i==nI .or. &
-                           iDim==2.and.j==nJ .or. &
-                           iDim==3.and.k==nK)       DiffRight = 0.0
-                   end if
+                if(UseNoOverlap)then
+                   if(  iDim==1.and.i==1  .or. &
+                        iDim==2.and.j==1  .or. &
+                        iDim==3.and.k==1)        DiffLeft = 0.0
+                   if(  iDim==1.and.i==nI .or. &
+                        iDim==2.and.j==nJ .or. &
+                        iDim==3.and.k==nK)       DiffRight = 0.0
+                end if
 
-                   Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim)   = &
-                        Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim) + DiffLeft
-                   Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) = &
-                        Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) + DiffRight
+                Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim)   = &
+                     Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim) + DiffLeft
+                Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) = &
+                     Jacobian_VVCI(iDir,iDir,i,j,k,2*iDim+1) + DiffRight
 
 
-                   DiffLeft = -Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
-                        *DcoordDxyz_DDFD(iDim,iDir,i,j,k,iDim)*Coeff
-                   DiffRight = -Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
-                        *DcoordDxyz_DDFD(iDim,iDir,i+Di,j+Dj,k+Dk,iDim)*Coeff
+                DiffLeft = -Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
+                     *DcoordDxyz_DDFD(iDim,iDir,i,j,k,iDim)*Coeff
+                DiffRight = -Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
+                     *DcoordDxyz_DDFD(iDim,iDir,i+Di,j+Dj,k+Dk,iDim)*Coeff
 
-                   Jacobian_VVCI(iDir,jDir,i,j,k,1) = &
-                        Jacobian_VVCI(iDir,jDir,i,j,k,1) - (DiffLeft + DiffRight)
+                Jacobian_VVCI(iDir,jDir,i,j,k,1) = &
+                     Jacobian_VVCI(iDir,jDir,i,j,k,1) - (DiffLeft + DiffRight)
 
-                   if(UseNoOverlap)then
-                      if(  iDim==1.and.i==1  .or. &
-                           iDim==2.and.j==1  .or. &
-                           iDim==3.and.k==1)        DiffLeft = 0.0
-                      if(  iDim==1.and.i==nI .or. &
-                           iDim==2.and.j==nJ .or. &
-                           iDim==3.and.k==nK)       DiffRight = 0.0
-                   end if
+                if(UseNoOverlap)then
+                   if(  iDim==1.and.i==1  .or. &
+                        iDim==2.and.j==1  .or. &
+                        iDim==3.and.k==1)        DiffLeft = 0.0
+                   if(  iDim==1.and.i==nI .or. &
+                        iDim==2.and.j==nJ .or. &
+                        iDim==3.and.k==nK)       DiffRight = 0.0
+                end if
 
-                   Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim)   = &
-                        Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim) + DiffLeft
-                   Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim+1) = &
-                        Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim+1) + DiffRight
+                Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim)   = &
+                     Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim) + DiffLeft
+                Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim+1) = &
+                     Jacobian_VVCI(iDir,jDir,i,j,k,2*iDim+1) + DiffRight
 
-                end do; end do
-             end if
+             end do; end do
           end do; end do; end do
        end do
     end if
