@@ -17,7 +17,7 @@ module BATL_pass_cell
   ! (2) Instead of waiting for receiving buffers from ALL processors, we
   !     we can wait for ANY receiving and already start unpacking
   ! (3) Instead of determining the receive (and send) buffer size during
-  !     the message_pass_cell, we can determining the sizes a priori:
+  !     the message_pass_cell, we can determine the sizes a priori:
   !     (a) We can then allocate a small known buffer size
   !     (b) we do at least two times message_pass_cell per time iteration,
   !         each time determining the buffer size. This would be reduced to
@@ -31,26 +31,32 @@ module BATL_pass_cell
   private ! except
 
   public message_pass_cell
-  public message_pass_cell_scalar
   public test_pass_cell
 
-contains
+  interface message_pass_cell
+     module procedure            &
+          message_pass_ng_int1,  &  ! Integer scalar with nG ghost cells
+          message_pass_ng_real1, &  ! Real scalar with nG ghost cells
+          message_pass_real1,    &  ! Real scalar with arbitrary ghost cells
+          message_pass_ng_real,  &  ! Real array with nG ghost cells
+          message_pass_real         ! Real array with arbitrary ghost cells
+  end interface
 
-  subroutine message_pass_cell_scalar(Float_GB, Int_GB, &
+contains
+  !===========================================================================
+  subroutine message_pass_ng_real(nVar, State_VGB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
        DoResChangeOnlyIn)
-    ! Wrapper function for making it easy to pass scalar data to
-    ! message_pass_cell
 
-    use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
-         nBlock
+    ! Message pass real array with nVar variables and BATL_size::nG ghost cells
+
+    use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
 
     ! Arguments
-    real, optional, intent(inout) :: &
-         Float_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    integer, optional, intent(inout) :: &
-         Int_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    integer, intent(in)   :: nVar
+    real,    intent(inout):: &
+         State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
@@ -64,54 +70,153 @@ contains
     real,    optional, intent(in) :: Time_B(MaxBlock)
     character(len=*), optional,intent(in) :: NameOperatorIn 
 
-    character(len=*), parameter:: NameSub = &
-         'BATL_pass_cell::message_pass_cell_scalar'
-
-    ! help array for converting between Scalar_GB and State_VGB
-    ! used by message_pass_cell
-    real, allocatable, save:: Scalar_VGB(:,:,:,:,:)
-
+    character(len=*), parameter:: NameSub = 'message_pass_ng_real'
     !--------------------------------------------------------------------------
 
-    if(.not.allocated(Scalar_VGB)) &
-         allocate(Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-
-    if(present(Float_GB)) then
-       Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
-            Float_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock)
-    else if(present(Int_GB)) then
-       Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
-            Int_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock)
-    else
-       call CON_stop(NameSub//': no array argument was specified')
-    end if
-
-    call message_pass_cell(1,Scalar_VGB, nWidthIn=nWidthIn, &
+    call message_pass_real(nVar, nG, State_VGB, nWidthIn=nWidthIn, &
          nProlongOrderIn=nProlongOrderIn, nCoarseLayerIn=nCoarseLayerIn, &
          DoSendCornerIn=DoSendCornerIn, DoRestrictFaceIn=DoRestrictFaceIn, &
          TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
          NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn)
 
-    if(present(Float_GB)) then
-       Float_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
-            Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock)
-    else if(present(Int_GB)) then
-       Int_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
-            nint(Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock))
-    end if
+  end subroutine message_pass_ng_real
 
-  end subroutine message_pass_cell_scalar
-
-  !==========================================================================
-
-  subroutine message_pass_cell(nVar, State_VGB, &
+  !===========================================================================
+  subroutine message_pass_ng_real1(State_GB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
        DoResChangeOnlyIn)
 
-    use BATL_size, ONLY: MaxBlock, &
-         nBlock, nIjk_D, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         MaxDim, nDim, iRatio, jRatio, kRatio, iRatio_D, InvIjkRatio
+    ! Message pass real scalar with BATL_size::nG ghost cells
+
+    use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
+
+    ! Arguments
+    real, intent(inout):: &
+         State_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+
+    ! Optional arguments
+    integer, optional, intent(in) :: nWidthIn
+    integer, optional, intent(in) :: nProlongOrderIn
+    integer, optional, intent(in) :: nCoarseLayerIn
+    logical, optional, intent(in) :: DoSendCornerIn
+    logical, optional, intent(in) :: DoRestrictFaceIn
+    logical, optional, intent(in) :: DoTestIn
+    logical, optional, intent(in) :: DoResChangeOnlyIn
+    real,    optional, intent(in) :: TimeOld_B(MaxBlock)
+    real,    optional, intent(in) :: Time_B(MaxBlock)
+    character(len=*), optional,intent(in) :: NameOperatorIn 
+
+    character(len=*), parameter:: NameSub = 'message_pass_ng_real'
+    !--------------------------------------------------------------------------
+
+    call message_pass_real(1, nG, State_GB, nWidthIn=nWidthIn, &
+         nProlongOrderIn=nProlongOrderIn, nCoarseLayerIn=nCoarseLayerIn, &
+         DoSendCornerIn=DoSendCornerIn, DoRestrictFaceIn=DoRestrictFaceIn, &
+         TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
+         NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn)
+
+  end subroutine message_pass_ng_real1
+
+  !===========================================================================
+  subroutine message_pass_real1(nG, State_GB, &
+       nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
+       DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
+       DoResChangeOnlyIn)
+
+    ! Message pass real scalar with BATL_size::nG ghost cells
+
+    use BATL_size, ONLY: MaxBlock, nI, nJ, nK, jDim_, kDim_
+
+    ! Arguments
+    integer, intent(in):: nG
+    real, intent(inout):: State_GB(1-nG:nI+nG,&
+         1-nG*jDim_:nJ+nG*jDim_,1-nG*kDim_:nK+nG*kDim_,MaxBlock)
+
+    ! Optional arguments
+    integer, optional, intent(in) :: nWidthIn
+    integer, optional, intent(in) :: nProlongOrderIn
+    integer, optional, intent(in) :: nCoarseLayerIn
+    logical, optional, intent(in) :: DoSendCornerIn
+    logical, optional, intent(in) :: DoRestrictFaceIn
+    logical, optional, intent(in) :: DoTestIn
+    logical, optional, intent(in) :: DoResChangeOnlyIn
+    real,    optional, intent(in) :: TimeOld_B(MaxBlock)
+    real,    optional, intent(in) :: Time_B(MaxBlock)
+    character(len=*), optional,intent(in) :: NameOperatorIn 
+
+    character(len=*), parameter:: NameSub = 'message_pass_real1'
+    !--------------------------------------------------------------------------
+
+    call message_pass_real(1, nG, State_GB, nWidthIn=nWidthIn, &
+         nProlongOrderIn=nProlongOrderIn, nCoarseLayerIn=nCoarseLayerIn, &
+         DoSendCornerIn=DoSendCornerIn, DoRestrictFaceIn=DoRestrictFaceIn, &
+         TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
+         NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn)
+
+  end subroutine message_pass_real1
+
+  !===========================================================================
+  subroutine message_pass_ng_int1(Int_GB, &
+       nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
+       DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
+       DoResChangeOnlyIn)
+
+    ! Message pass scalar integer data with BATL_size::nG ghost cells
+
+    use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG, &
+         nBlock
+
+    ! Arguments
+    integer, intent(inout) :: Int_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+
+    ! Optional arguments
+    integer, optional, intent(in) :: nWidthIn
+    integer, optional, intent(in) :: nProlongOrderIn
+    integer, optional, intent(in) :: nCoarseLayerIn
+    logical, optional, intent(in) :: DoSendCornerIn
+    logical, optional, intent(in) :: DoRestrictFaceIn
+    logical, optional, intent(in) :: DoTestIn
+    logical, optional, intent(in) :: DoResChangeOnlyIn
+    real,    optional, intent(in) :: TimeOld_B(MaxBlock)
+    real,    optional, intent(in) :: Time_B(MaxBlock)
+    character(len=*), optional,intent(in) :: NameOperatorIn 
+
+
+    ! help array for converting between Scalar_GB and State_VGB
+    ! used by message_pass_cell
+    real, allocatable, save:: Scalar_VGB(:,:,:,:,:)
+
+    character(len=*), parameter:: NameSub = 'message_pass_ng_int1'
+    !--------------------------------------------------------------------------
+
+    if(.not.allocated(Scalar_VGB)) &
+         allocate(Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+
+    Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
+         Int_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock)
+
+    call message_pass_cell(1, nG, Scalar_VGB, nWidthIn=nWidthIn, &
+         nProlongOrderIn=nProlongOrderIn, nCoarseLayerIn=nCoarseLayerIn, &
+         DoSendCornerIn=DoSendCornerIn, DoRestrictFaceIn=DoRestrictFaceIn, &
+         TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
+         NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn)
+
+    Int_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock) = &
+         nint(Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock))
+
+  end subroutine message_pass_ng_int1
+
+  !============================================================================
+
+  subroutine message_pass_real(nVar, nG, State_VGB, &
+       nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
+       DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
+       DoResChangeOnlyIn)
+
+    use BATL_size, ONLY: MaxBlock, nBlock, nI, nJ, nK, nIjk_D, &
+         MaxDim, nDim, jDim_, kDim_, &
+         iRatio, jRatio, kRatio, iRatio_D, InvIjkRatio
 
     use BATL_mpi, ONLY: iComm, nProc, iProc, barrier_mpi
 
@@ -123,13 +228,13 @@ contains
 
     use ModMpi
 
-
     use ModUtilities, ONLY: lower_case
 
     ! Arguments
-    integer, intent(in) :: nVar
-    real, intent(inout) :: &
-         State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    integer, intent(in) :: nVar  ! number of variables
+    integer, intent(in) :: nG    ! number of ghost cells for 1..nDim
+    real, intent(inout) :: State_VGB(nVar,&
+         1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,1-nG*kDim_:nK+nG*kDim_,MaxBlock)
 
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
@@ -308,8 +413,9 @@ contains
        end if
     end if
 
-    ! Allocate slope for prolongation. Size depends on nVar.
-    allocate(Slope_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+    ! Allocate slope for prolongation. Size depends on nVar and nWidth
+    allocate(Slope_VG(nVar,1-nWidth:nI+nWidth,&
+         1-nWidth*jDim_:nJ+nWidth*jDim_,1-nWidth*kDim_:nK+nWidth*kDim_))
     ! Set to zero so we can add it for first order prolongation too
     Slope_VG = 0.0
 
@@ -1399,7 +1505,7 @@ contains
 
     end subroutine set_range
 
-  end subroutine message_pass_cell
+  end subroutine message_pass_real
 
   !============================================================================
 
@@ -1751,7 +1857,7 @@ contains
           end do; end do; end do
        end do
 
-       call message_pass_cell_scalar(Scalar_GB, &
+       call message_pass_cell(Scalar_GB, &
             nProlongOrderIn=1, nCoarseLayerIn=2, &
             DoSendCornerIn=.true., DoRestrictFaceIn=.false., &
             NameOperatorIn=NameOperator_I(iOp))
