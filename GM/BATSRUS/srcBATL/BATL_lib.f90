@@ -82,7 +82,6 @@ module BATL_lib
 
   ! Inherited from BATL_pass_cell
   public:: message_pass_cell
-  public:: message_pass_cell_scalar
 
   ! Inherited from BATL_pass_face
   public:: message_pass_face

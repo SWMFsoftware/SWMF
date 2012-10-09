@@ -462,7 +462,7 @@ contains
     end do
 
     ! Message pass to fill in ghost cells
-    call message_pass_cell(1, Eta_GB, DoSendCornerIn=.false.)
+    call message_pass_cell(Eta_GB, DoSendCornerIn=.false.)
 
     do iImplBlock = 1, nImplBLK
        iBlock = impl2iBLK(iImplBlock)

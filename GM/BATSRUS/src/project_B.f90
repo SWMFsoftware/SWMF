@@ -529,7 +529,7 @@ subroutine proj_boundphi(phi)
   integer :: iBLK
 
   !---------------------------------------------------------------------------
-  call message_pass_cell(1,Phi,nWidthIn=1, nProlongOrderIn=1, &
+  call message_pass_cell(Phi, nWidthIn=1, nProlongOrderIn=1, &
        DoSendCornerIn=.false., DoRestrictFaceIn = .true.)
 
   do iBLK = 1, nBlock
@@ -581,7 +581,7 @@ subroutine proj_correction(phi)
 
   ! Correct B field by gradient of phi
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,Itest,Jtest,Ktest,BLKtest, &
+  use ModMain, ONLY : nI,nJ,nK,Itest,Jtest,Ktest,BLKtest, &
        nBlock,Unused_B
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance,    ONLY : State_VGB

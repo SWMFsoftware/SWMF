@@ -492,7 +492,7 @@ contains
           end do; end do; end do
        end do
 
-       call message_pass_cell(1,tmp1_BLK, nWidthIn=1)
+       call message_pass_cell(tmp1_BLK, nWidthIn=1)
 
        do iBLK = 1, nBlock
           if(Unused_B(iBLK))cycle

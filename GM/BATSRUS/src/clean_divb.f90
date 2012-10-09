@@ -141,7 +141,7 @@ subroutine clean_divb
         end if
      end do
 
-     call message_pass_cell(1,tmp2_blk, nWidthIn=1, DoSendCornerIn=.false. ,&
+     call message_pass_cell(tmp2_blk, nWidthIn=1, DoSendCornerIn=.false. ,&
           nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
      !Calculate Dir.A.Dir
@@ -213,7 +213,7 @@ contains
     end do
 
     !tmp1 is equal to the inverse of the volume, including the ghostcells 
-    call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
+    call message_pass_cell(tmp1_blk,DoSendCornerIn=.false. ,&
          nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
     do iBlock=1,nBlock
@@ -296,7 +296,7 @@ contains
           tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=Prec_CB(:,:,:,iBlock)
        end do
 
-       call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
+       call message_pass_cell(tmp1_blk,DoSendCornerIn=.false. ,&
             nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
        do iBlock=1,nBlock
@@ -339,7 +339,7 @@ contains
     end do
     !    if(iProc==0)write(*,*)' Cleanup Initialization second message pass'
 
-    call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
+    call message_pass_cell(tmp1_blk,DoSendCornerIn=.false. ,&
          nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
     !Now the elements of diag(Prec_CB)^{1/2} are in tmp1_blk
@@ -370,11 +370,11 @@ contains
     end do
     !In tmp1,tmp2 and divB1 are the estimates of gradX, gradY,gradZ correspondenyly
 
-    call message_pass_cell(1,tmp1_blk,DoSendCornerIn=.false. ,&
+    call message_pass_cell(tmp1_blk,DoSendCornerIn=.false. ,&
          nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-    call message_pass_cell(1,tmp2_blk,DoSendCornerIn=.false. ,&
+    call message_pass_cell(tmp2_blk,DoSendCornerIn=.false. ,&
          nProlongOrderIn=1, DoRestrictFaceIn=.true.)
-    call message_pass_cell(1,tmp3_blk,DoSendCornerIn=.false. ,&
+    call message_pass_cell(tmp3_blk,DoSendCornerIn=.false. ,&
          nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
     EstimateForMAMNorm = 0.0

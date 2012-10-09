@@ -42,7 +42,7 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
        body2_, BlkTest, iTest, jTest, kTest
   use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB
   !use ModProcMH, ONLY: iProc
-  use BATL_lib, ONLY: message_pass_cell_scalar
+  use BATL_lib, ONLY: message_pass_cell
 
   implicit none
 
@@ -69,7 +69,7 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
   if(DoTestMe) write(*,*)NameSub,' starting with true_cell(i-2:i+2)=', &
        true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
 
-  call message_pass_cell_scalar(Int_GB=iBoundary_GB, &
+  call message_pass_cell(iBoundary_GB, &
        nProlongOrderIn=1, nCoarseLayerIn=2, &
        DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
        NameOperatorIn=DomainOp)
