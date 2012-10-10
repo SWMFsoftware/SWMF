@@ -39,8 +39,7 @@ module ModFaceFlux
   use ModHeatConduction, ONLY: IsNewBlockHeatCond, IsNewBlockIonHeatCond, &
        get_heat_flux, get_ion_heat_flux
 
-  use ModResistivity, ONLY: set_resistivity, &
-       UseResistivity, UseResistiveFlux, Eta_GB
+  use ModResistivity, ONLY: UseResistiveFlux, Eta_GB
 
   use ModVarIndexes
   use ModMultiFluid
@@ -154,8 +153,8 @@ module ModFaceFlux
 
 
   ! Local logical variables 
-  logical :: DoResistivity = .false., DoRadDiffusion = .false.,&
-       DoHeatConduction = .false., DoIonHeatConduction = .false.
+  logical :: DoRadDiffusion = .false., DoHeatConduction = .false., &
+             DoIonHeatConduction = .false.
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
@@ -396,8 +395,6 @@ contains
     IsNewBlockIonHeatCond  = .true.
     IsNewBlockViscosity    = .true.
 
-    DoResistivity       = UseResistivity .and.&
-         .not.  index(TypeSemiImplicit,'resistivity')>0
     DoRadDiffusion      = UseRadDiffusion .and.&
          .not. (index(TypeSemiImplicit,'radiation')>0 .or.&
          index(TypeSemiImplicit,'radcond')>0 .or.&
@@ -894,7 +891,7 @@ contains
          .not.UseIdealEos)
 
     Eta       = 0.0
-    if(DoResistivity .and. UseResistiveFlux) Eta = 0.5* &
+    if(UseResistiveFlux) Eta = 0.5* &
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
          + Eta_GB(iRight,jRight,kRight,iBlockFace))
 
