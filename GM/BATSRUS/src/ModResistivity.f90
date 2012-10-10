@@ -24,7 +24,7 @@ module ModResistivity
   public:: update_impl_resistivity
 
   logical, public           :: UseResistivity   = .false.
-  logical, public           :: UseResistiveFlux = .true.
+  logical, public           :: UseResistiveFlux = .false.
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
   real, public              :: Eta0, Eta0Si=0.0
@@ -57,6 +57,7 @@ module ModResistivity
   ! Named indices for semi-implicit variables
   integer, public, parameter :: BxImpl_ = 1, ByImpl_ = 2, BzImpl_ = 3
 
+  logical :: DoResistiveFlux =.true.
 contains
   !===========================================================================
   subroutine read_resistivity_param(NameCommand)
@@ -67,11 +68,12 @@ contains
 
     character(len=*), parameter:: NameSub = 'read_resistivity_param'
     !------------------------------------------------------------------------
+
     select case(NameCommand)
     case('#MESSAGEPASSRESISTIVITY')
        call read_var("DoMessagePassResistivity", DoMessagePassResistivity)
     case("#RESISTIVITYOPTIONS")
-       call read_var("UseResistiveFlux", UseResistiveFlux)
+       call read_var("UseResistiveFlux", DoResistiveFlux)
        call read_var("UseJouleHeating",  UseJouleHeating)
        call read_var("UseHeatExchange",  UseHeatExchange)
     case("#RESISTIVITY")
@@ -121,6 +123,8 @@ contains
     character(len=*), parameter :: NameSub = 'init_mod_resistivity'
     !------------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
+
+    UseResistiveFlux = DoResistiveFlux 
 
     Si2NoEta = Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
