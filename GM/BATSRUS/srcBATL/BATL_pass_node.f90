@@ -850,7 +850,6 @@ contains
     real, parameter:: Tolerance = 1e-6
     integer, parameter:: nVar = 3!nDim
     integer :: iVar
-    real, allocatable:: State_VGB(:,:,:,:,:)
 
     character(len=4) :: NameOperator = "Min"
 
@@ -892,7 +891,6 @@ contains
     call distribute_tree(.true.)
     call create_grid
 
-    allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest))
     allocate(Xyz_DNB(MaxDim,nINode,nJNode,nKNode,MaxBlockTest))
     allocate(State_VNB(nVar,nI+1,nJ+1,nK+1,MaxBlockTest))
     allocate(i_NB(nI+1,nJ+1,nK+1,MaxBlockTest))
@@ -1034,7 +1032,6 @@ contains
 
     end do
 
-    deallocate(State_VGB,State_VNB, i_NB)
     deallocate(FineGridLocal_IIIV)
     deallocate(FineGridGlobal_IIIV)
     deallocate(Xyz_DNB)
