@@ -241,6 +241,7 @@ contains
        end do !end j loop
     end do !end k loop
 
+    if(nDim == 1) RETURN
     do k = kMinFace, kMaxFace
        do j = 1 , nJFace
           do i = iMinFace, iMaxFace
@@ -290,6 +291,7 @@ contains
        end do !end i loop
     end do !end k loop
 
+    if(nDim == 2) RETURN
     do k = 1, nKFace
        do j = jMinFace, jMaxFace
           do i = iMinFace, iMaxFace
