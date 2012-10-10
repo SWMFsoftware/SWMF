@@ -479,16 +479,16 @@ contains
        do k=2,nKNode; do j=2,nJNode; do i=2,nINode
 
           MaxLength = max(MaxLength,&
-               Xyz_DNB(1,i,j,k,iBlock)- &
-               Xyz_DNB(1,i-1,j,k,iBlock))
+               abs(Xyz_DNB(1,i,j,k,iBlock)- &
+               Xyz_DNB(1,i-1,j,k,iBlock)))
 
           if(nDim > 1) MaxLength = max(MaxLength,&
-               Xyz_DNB(2,i,j,k,iBlock)- &
-               Xyz_DNB(2,i,j-1,k,iBlock))
+               abs(Xyz_DNB(2,i,j,k,iBlock)- &
+               Xyz_DNB(2,i,j-1,k,iBlock)))
 
           if(nDim > 2) MaxLength = max(MaxLength,&
-               Xyz_DNB(3,i,j,k,iBlock)- &
-               Xyz_DNB(3,i,j,k-1,iBlock))
+               abs(Xyz_DNB(3,i,j,k,iBlock)- &
+               Xyz_DNB(3,i,j,k-1,iBlock)))
 
        end do; end do ; end do;
 
