@@ -92,6 +92,7 @@ OBJECTS = \
 	read_MHDIMF_Indices_new.o\
 	read_NGDC_Indices_new.o\
 	read_NOAAHPI_Indices_new.o\
+	read_ACE_data.o\
 	user.o
 
 OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}

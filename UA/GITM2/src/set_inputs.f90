@@ -1130,6 +1130,24 @@ subroutine set_inputs
               UseVariableInputs = .true.
            endif
 
+        case ("#ACE_DATA")
+           cTempLines(1) = cLine
+           call read_in_string(cTempLine, iError)
+           cTempLines(2) = cTempLine
+           call read_in_string(cTempLine, iError)
+           cTempLines(3) = cTempLine
+           cTempLines(4) = " "
+           cTempLines(5) = "#END"
+           call IO_set_inputs(cTempLines)
+           call read_ACE_data(iError)
+
+           if (iError /= 0) then 
+              write(*,*) "read indices was NOT successful (ACE SC file)"
+              IsDone = .true.
+           else
+              UseVariableInputs = .true.
+           endif
+
         case ("#SWPC_INDICES")
            cTempLines(1) = cLine
            call read_in_string(cTempLine, iError)
