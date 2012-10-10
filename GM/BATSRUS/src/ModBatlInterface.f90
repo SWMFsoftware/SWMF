@@ -254,9 +254,9 @@ contains
        call calc_energy_ghost(iBlock)
        call set_amr_geometry(iBlock,&
             user_amr_geometry=user_specify_refinement)
-       if(UseResistivity) call set_resistivity(iBlock)
     end do
 
+    if(UseResistivity) call set_resistivity
     if(UseB0)call set_b0_reschange
 
   end subroutine set_batsrus_state

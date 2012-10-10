@@ -25,7 +25,6 @@ module ModResistivity
 
   logical, public           :: UseResistivity   = .false.
   logical, public           :: UseResistiveFlux = .true.
-  logical, public           :: DoMessagePassResistivity = .false.
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
   real, public              :: Eta0, Eta0Si=0.0
@@ -33,6 +32,7 @@ module ModResistivity
   ! Local variables
   logical            :: UseJouleHeating  = .true.
   logical            :: UseHeatExchange  = .true.
+  logical            :: DoMessagePassResistivity = .false.
 
   real               :: EtaPerpSpitzerSi = 0.0
   real               :: CoulombLogarithm = 20.0
@@ -168,27 +168,38 @@ contains
 
   !===========================================================================
 
-  subroutine set_resistivity(iBlock)
+  subroutine set_resistivity
 
-    integer, intent(in) :: iBlock
+    use ModMain,    ONLY: nBlock, Unused_B
+    use BATL_lib,   ONLY: message_pass_cell
+
     character (len=*), parameter :: NameSub = 'set_resistivity'
-    !--------------------------------------------------------------------------
-    select case(TypeResistivity)
-    case('constant')
-       Eta_GB(:,:,:,iBlock) = Eta0
-    case('spitzer')
-       call spitzer_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
-    case('anomalous')
-       call anomalous_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
-    case('raeder')
-       call raeder_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
-    case('user')
-       call user_set_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
-    case default
-       call stop_mpi(NameSub//' : invalid TypeResistivity='//TypeResistivity)
-    end select
 
-    call mask_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+    integer :: iBlock
+    !--------------------------------------------------------------------------
+
+    do iBlock = 1, nBlock
+       if (Unused_B(iBlock)) CYCLE
+       select case(TypeResistivity)
+       case('constant')
+          Eta_GB(:,:,:,iBlock) = Eta0
+       case('spitzer')
+          call spitzer_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+       case('anomalous')
+          call anomalous_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+       case('raeder')
+          call raeder_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+       case('user')
+          call user_set_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+       case default
+          call stop_mpi(NameSub//' : invalid TypeResistivity='//TypeResistivity)
+       end select
+
+       call mask_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+    end do
+
+    if(DoMessagePassResistivity) &
+         call message_pass_cell(Eta_GB, nWidthIn=1)
 
   end subroutine set_resistivity
 
@@ -461,7 +472,7 @@ contains
        end do; end do; end do
 
        ! Calculate the cell-centered resistivity
-       call set_resistivity(iBlock)
+       !call set_resistivity(iBlock)
     end do
 
     ! Message pass to fill in ghost cells

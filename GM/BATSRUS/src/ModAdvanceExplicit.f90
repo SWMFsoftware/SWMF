@@ -23,8 +23,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModMessagePass, ONLY: exchange_messages
   use ModTimeStepControl, ONLY: calc_timestep
   use BATL_lib, ONLY: message_pass_face,  message_pass_cell, IsAnyAxis
-  use ModResistivity, ONLY: set_resistivity, UseResistivity, Eta_GB,&
-       DoMessagePassResistivity
+  use ModResistivity, ONLY: set_resistivity, UseResistivity
 
   implicit none
 
@@ -54,14 +53,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
      if(.not.UseOptimizeMpi) call barrier_mpi2('expl1')
 
-     if(UseResistivity) then
-        do iBlock = 1, nBlock
-           if (Unused_B(iBlock)) CYCLE
-           call set_resistivity(iBlock)
-        end do
-        if(DoMessagePassResistivity) &
-           call message_pass_cell(Eta_GB, nWidthIn=1)
-     end if
+     if(UseResistivity)  call set_resistivity
 
      do iBlock = 1, nBlock
         if (Unused_B(iBlock)) CYCLE
