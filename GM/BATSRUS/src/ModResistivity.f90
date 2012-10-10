@@ -25,7 +25,7 @@ module ModResistivity
 
   logical, public           :: UseResistivity   = .false.
   logical, public           :: UseResistiveFlux = .true.
-  logical, public           :: MessagePassResistivity = .false.
+  logical, public           :: DoMessagePassResistivity = .false.
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
   real, public              :: Eta0, Eta0Si=0.0
@@ -69,7 +69,7 @@ contains
     !------------------------------------------------------------------------
     select case(NameCommand)
     case('#MESSAGEPASSRESISTIVITY')
-       call read_var("MessagePassResistivity", MessagePassResistivity)
+       call read_var("DoMessagePassResistivity", DoMessagePassResistivity)
     case("#RESISTIVITYOPTIONS")
        call read_var("UseResistiveFlux", UseResistiveFlux)
        call read_var("UseJouleHeating",  UseJouleHeating)

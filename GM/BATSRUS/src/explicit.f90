@@ -24,7 +24,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModTimeStepControl, ONLY: calc_timestep
   use BATL_lib, ONLY: message_pass_face,  message_pass_cell, IsAnyAxis
   use ModResistivity, ONLY: set_resistivity, UseResistivity, Eta_GB,&
-       MessagePassResistivity
+       DoMessagePassResistivity
 
   implicit none
 
@@ -59,9 +59,8 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
            if (Unused_B(iBlock)) CYCLE
            call set_resistivity(iBlock)
         end do
-        if(MessagePassResistivity) &
-             call message_pass_cell(1, Eta_GB, nWidthIn=1, &
-             nProlongOrderIn=1, nCoarseLayerIn=1, DoRestrictFaceIn = .true.)
+        if(DoMessagePassResistivity) &
+           call message_pass_cell(Eta_GB, nWidthIn=1)
      end if
 
      do iBlock = 1, nBlock
