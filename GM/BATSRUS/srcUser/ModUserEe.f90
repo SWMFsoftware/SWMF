@@ -440,32 +440,30 @@ contains
     case(5)
        select case(TypeBc)
        case('fixvalue')
-          State_VGB(rho_,:,:,-1:0,iBlock) = BotDensity
-          State_VGB(rhoUx_:rhoUy_,:,:,-1:0,iBlock) = 0.0
-          State_VGB(rhoUz_,:,:,0,iBlock) = -State_VGB(rhoUz_,:,:,1,iBlock)
-          State_VGB(rhoUz_,:,:,-1,iBlock) = -State_VGB(rhoUz_,:,:,2,iBlock)
-          State_VGB(Bx_:By_,:,:,-1:0,iBlock) = 0.0
-          State_VGB(Bz_,:,:,0,iBlock) = State_VGB(Bz_,:,:,1,iBlock)
-          State_VGB(Bz_,:,:,-1,iBlock) = State_VGB(Bz_,:,:,1,iBlock)
-          State_VGB(p_,:,:,-1:0,iBlock) = BotPressure
-          State_VGB(ExtraEint_,:,:,-1:0,iBlock) = BotExtraE
+          do k = MinK,0; do j = MinJ,MaxJ; do i = MinI, MaxI
+             State_VGB(rho_,i,j,k,iBlock) = BotDensity
+             State_VGB(rhoUx_:rhoUy_,i,j,k,iBlock) = 0.0
+             State_VGB(rhoUz_,i,j,k,iBlock) = -State_VGB(rhoUz_,i,j,1-k,iBlock)
+             State_VGB(Bx_:By_,i,j,k,iBlock)= 0.0
+             State_VGB(Bz_,i,j,k,iBlock) = State_VGB(Bz_,i,j,1,iBlock)
+             State_VGB(p_,i,j,k,iBlock) = BotPressure
+             State_VGB(ExtraEint_,i,j,k,iBlock) = BotExtraE
+          end do; end do; end do
           IsFound = .true.
        case('forcebalance')
           ! the density at the boundary is fixed.
           ! pressure gradient at the boundary is set to balance the 
           ! gravitational force.
-          State_VGB(rho_,:,:,-1:0,iBlock) = BotDensity
-          State_VGB(rhoUx_:rhoUy_,:,:,-1:0,iBlock) = 0.0
-          State_VGB(rhoUz_,:,:,0,iBlock) = -State_VGB(rhoUz_,:,:,1,iBlock)
-          State_VGB(rhoUz_,:,:,-1,iBlock) = -State_VGB(rhoUz_,:,:,1,iBlock)
-          State_VGB(Bx_:By_,:,:,-1:0,iBlock) = 0.0
-          State_VGB(Bz_,:,:,0,iBlock) = State_VGB(Bz_,:,:,1,iBlock)
-          State_VGB(Bz_,:,:,-1,iBlock) = State_VGB(Bz_,:,:,1,iBlock)
-          State_VGB(p_,:,:,0,iBlock) =  State_VGB(p_,:,:,2,iBlock) + &
-               State_VGB(rho_,:,:,1,iBlock)*2.0*CellSize_DB(Z_,iBlock)
-          State_VGB(p_,:,:,-1,iBlock) = State_VGB(p_,:,:,1,iBlock) + &
-               State_VGB(rho_,:,:,0,iBlock)*2.0*CellSize_DB(Z_,iBlock)
-          do k = -1, 0; do j = MinJ,MaxJ; do i = MinI,MaxI 
+          do k = MinK,0; do j = MinJ,MaxJ; do i = MinI, MaxI
+             State_VGB(rho_,i,j,k,iBlock) = BotDensity
+             State_VGB(rhoUx_:rhoUy_,i,j,k,iBlock) = 0.0
+!!! suspicious !!!
+             State_VGB(rhoUz_,i,j,k,iBlock) = -State_VGB(rhoUz_,i,j,1,iBlock)
+             State_VGB(Bx_:By_,i,j,k,iBlock) = 0.0
+             State_VGB(Bz_,i,j,k,iBlock) = State_VGB(Bz_,i,j,1,iBlock)
+!!! gravity = 1 ???
+             State_VGB(p_,i,j,k,iBlock) =  State_VGB(p_,i,j,k+2,iBlock) + &
+                  State_VGB(rho_,i,j,k+1,iBlock)*2.0*CellSize_DB(Z_,iBlock)
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   EinternalOut = EinternalSi)
              State_VGB(ExtraEint_,i,j,k,iBlock) = EinternalSi* &
@@ -475,19 +473,13 @@ contains
        end select
     case(6)
        select case(TypeBc)
-          ! open upper boundary condition                         
-       case('open')
-          State_VGB(:,:,:,nK+1,iBlock) = State_VGB(:,:,:,nK,iBlock)
-          State_VGB(:,:,:,nK+2,iBlock) = State_VGB(:,:,:,nK,iBlock)
-          IsFound = .true.
-          ! closed upper boundary condition, not allowing upward motions
        case('no_inflow')
-          State_VGB(:,:,:,nK+1,iBlock) = State_VGB(:,:,:,nK,iBlock)
-          State_VGB(:,:,:,nK+2,iBlock) = State_VGB(:,:,:,nK,iBlock)
-          State_VGB(rhoUz_,:,:,nK+1,iBlock) = &
-               abs(State_VGB(rhoUz_,:,:,nK,iBlock))
-          State_VGB(rhoUz_,:,:,nK+2,iBlock) = &
-               abs(State_VGB(rhoUz_,:,:,nK,iBlock))
+          ! closed upper boundary condition, not allowing upward motions
+          do k = nK+1, MaxK; do j = MinJ,MaxJ; do i = MinI, MaxI
+             State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,nK,iBlock)
+             State_VGB(rhoUz_,i,j,k,iBlock) = &
+                  abs(State_VGB(rhoUz_,i,j,nK,iBlock))
+          end do; end do; end do
           IsFound = .true.
        end select
     end select
