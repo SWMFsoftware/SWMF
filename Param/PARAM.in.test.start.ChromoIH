@@ -45,11 +45,6 @@ RESTART.in
 CPUTIMEMAX
 6600
 
-CHECKSTOP
-T
-2000
--1
-
 #BEGIN_COMP SC --------------------------------------------------------------
 
 INCLUDE
@@ -110,6 +105,12 @@ F			UseUserUpdateStates
 1.5e4			DeltaU [m/s]
 2e17			nChromoSi [1/m^3]
 5e4			tChromoSi [K]
+
+To run the dipole test, switch UseCurlB0 and UseMagnetogram to false
+and activate the SOLARDIPOLE command below
+SOLARDIPOLE
+1.5e-4			DipoleStrengthSi
+0.0			DipoleTiltDeg
 
 #USERINPUTEND ----------------------------
 
@@ -231,7 +232,7 @@ initial			NameArea
 
 #DOAMR
 T			DoAmr
-50001			DnAmr
+30001			DnAmr
 -1.0			DtAmr
 T			IsStrictAmr
 
@@ -296,7 +297,7 @@ z=0 VAR idl		StringPlot
 rho ux uy uz ti te bx by bz I01 I02 p
 g rbody
 3d VAR tec
-100000			DnSavePlot
+60000			DnSavePlot
 -1.			DtSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p
 g rbody
@@ -491,7 +492,7 @@ IH			NameComp
 F			UseComp
 
 #STOP
-100000			MaxIteration
+60000			MaxIteration
 -1.0			tSimulationMax
 
 End session: 1
@@ -521,7 +522,7 @@ IH
 MPI
 
 #STOP
-100001			MaxIter
+60001			MaxIter
 -1.0			TimeMax
 
 End session: 2
@@ -549,7 +550,7 @@ T			IsStrictAmr
 #END_COMP IH   ----------------------------------------------------------------
 
 #STOP
-103000			MaxIter
+63000			MaxIter
 -1.0			TimeMax
 
 End session: 3
@@ -564,7 +565,7 @@ Begin session: 4
 #END_COMP IH   ----------------------------------------------------------------
 
 #STOP
-104000			MaxIter
+64000			MaxIter
 -1.0			TimeMax
 
 End session: 4
