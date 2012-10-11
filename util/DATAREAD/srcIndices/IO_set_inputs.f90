@@ -29,6 +29,11 @@ subroutine IO_set_inputs(StringInputLines)
            call read_in_string(NameOfSecondIndexFile)
         endif
 
+        if (index(StringLine,"#ACE_DATA") > 0) then
+           call read_in_string(NameOfIndexFile)
+           call read_in_string(NameOfSecondIndexFile)
+        endif
+
         if (index(StringLine,"#NOAAHPI_INDICES") > 0) then
            call read_in_string(NameOfIndexFile)
         endif
