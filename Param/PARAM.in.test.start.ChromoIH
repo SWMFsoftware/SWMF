@@ -101,8 +101,10 @@ F			UseUserUpdateStates
 
 #USERINPUTBEGIN ------------------------
 
+The velocity perturbation (DeltaU) is typically chosen in the range of 10 to
+15km/s. For many cases 10km/s is optimal.
 #CHROMOBC
-1.5e4			DeltaU [m/s]
+1.0e4			DeltaU [m/s]
 2e17			nChromoSi [1/m^3]
 5e4			tChromoSi [K]
 
@@ -114,6 +116,8 @@ SOLARDIPOLE
 
 #USERINPUTEND ----------------------------
 
+The value of the reflection coefficient is rather uncertain: 0.01 to 0.1
+For many cases 0.04 is optimal.
 #CORONALHEATING
 alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
