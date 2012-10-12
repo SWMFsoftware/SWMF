@@ -1079,7 +1079,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
      case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
-          '#LIMITPTOTAL')
+          '#LIMITPTOTAL', '#FLATTENING')
         call read_face_value_param(NameCommand)
 
      case("#NONCONSERVATIVE")
