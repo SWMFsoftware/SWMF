@@ -1,32 +1,205 @@
+Now that you have managed to successfully complete a GITM run you've found yourself with a bunch of output files.  All of the GITM output is in mks units and this data is contained within several files located in the {\tt UA/data} directory, as was previously discussed in Chapter~\ref{quickstart.ch} Section~\ref{post_process.sec}.  You will have found yourself with several {\tt iriOut\_*.dat} files, a {\tt log*.dat} file, and many {\tt .bin} files in whichever formats you specified in SAVEPLOT (see Chapter~\ref{input.ch} Section~\ref{def_out.sec}).  The {\tt iriOut\_*.dat} files are required by the IRI model and not typically used when analyzing the outcome of the GITM run.
 
-Once you have the output from GITM in a bunch of output files, there
-are a few IDL programs that you can use to visualize them:
+The log file provides useful information about the run, such as whether a restart was performed, which physical processes were used, and a list of the universal time, time-step, neutral temperature ranges (T), solar and geomagnetic indices, and the neutral velocity (VV) ranges for each iteration.  This file can be very useful when sharing runs with other users, when revisiting an old run, or merely ensuring that GITM performed as expected.  An example log file is provided below:
+
+\begin{verbatim}
+## Inputs from UAM.in
+# Resart= F
+# Eddy coef:   100.000 Eddy P0:     0.020 Eddy P1:     0.003 Eddy Scaling:     1.000
+# Statistical Models Only:  F Apex:  T
+# EUV Data:  TFile: 
+fismflux.dat                                                                                        
+# AMIE: none           
+none                                                                                                
+# Solar Heating:  T Joule Heating:  T Auroral Heating:  T
+# NO Cooling:  T O Cooling:  T
+# Conduction:  T Turbulent Conduction:  T Updated Turbulent Conduction:  T
+# Pressure Grad:  T Ion Drag:  T Neutral Drag:  T
+# Viscosity:  T Coriolis:  T Gravity:  T
+# Ion Chemistry:  T Ion Advection:  T Neutral Chemistry:  T
+ 
+#START
+   iStep yyyy mm dd hh mm ss  ms      dt min(T) max(T)...
+   ...mean(T) min(VV) max(VV) mean(VV) F107 F107A By Bz Vx...
+   ...HP HPn HPs
+       2 2011  9 23  0  0  2 297  2.2979  168.75192  1062.87354...
+       ...933.09984 -48.19362    524.93645  1.01910 159.3 127.9 -4.6  0.5 406.9...
+       ...11.1 14.4  15.5
+       .
+       .
+       .
+\end{verbatim}
+
+The output bin files can contain the following atmospheric quantities:
+
+\begin{itemize}
+\item[]{\bf Altitude:} Altitude from the surface of the planet (m)
+\item[]{\bf Ar:} Argon density (m$^{-3}$)
+\item[]{\bf Ar Mixing Ratio:} Argon mixing ratio
+\item[]{\bf CH4 Mixing Ratio:} Methane mixing ratio
+\item[]{\bf Conduction:} Heat conduction
+\item[]{\bf EuvHeating:} EUV Heating rate
+\item[]{\bf H:} Hydrogen density (m$^{-3}$)
+\item[]{\bf H!U+!N:} 
+\item[]{\bf H2 Mixing Ratio:} Molecular Hydrogen mixing ratio
+\item[]{\bf HCN Mixing Ratio:} Hydrogen Cyanide mixing ratio
+\item[]{\bf He:} Helium density (m$^{-3}$)
+\item[]{\bf He!U+!N:} 
+\item[]{\bf Heaing Efficiency:} Heating efficiency
+\item[]{\bf Heat Balance Total:} Heat balance total
+\item[]{\bf Latitude:} Geographic latitude
+\item[]{\bf Longitude:} Geographic longitude
+\item[]{\bf N!D2!N:} 
+\item[]{\bf N!D2!U+!N:} 
+\item[]{\bf N!U+!N:} 
+\item[]{\bf N(!U2!ND):} 
+\item[]{\bf N(!U2!NP):} 
+\item[]{\bf N(!U4!NS):} 
+\item[]{\bf N2 Mixing Ratio:} Molecular nitrogen mixing ratio
+\item[]{\bf NO:} Nitrious Oxide density (m$^{-3}$)
+\item[]{\bf NO!U+!N:} 
+\item[]{\bf O!D2!N:} 
+\item[]{\bf O!D2!U+!N:}
+\item[]{\bf O(!U1!ND):} 
+\item[]{\bf O(!U2!ND)!U+!N:} 
+\item[]{\bf O(!U2!NP)!U+!N:} 
+\item[]{\bf O(!U3!NP):} 
+\item[]{\bf O\_4SP\_!U+!N:} 
+\item[]{\bf RadCooling:} Radiative Cooling rate
+\item[]{\bf Rho:} Neutral density (m$^{-3}$)
+\item[]{\bf Temperature:} Neutral temperature (K)
+\item[]{\bf V!Di!N (east):} Ion velocity towards geographic East (m s$^{-1}$)
+\item[]{\bf V!Di!N (north):} Ion velocity towards geographic North (m s$^{-1}$) 
+\item[]{\bf V!Di!N (up):} Vertical ion velocity (m s$^{-1}$)
+\item[]{\bf V!Dn!N (east):} Neutral velocity towards geographic East (m s$^{-1}$)
+\item[]{\bf V!Dn!N (north):} Neutral velocity towards geographic North (m s$^{-1}$)
+\item[]{\bf V!Dn!N (up):} Vertical neutral velocity (m s$^{-1}$)
+\item[]{\bf V!Dn!N (up,N!D2!N):}
+\item[]{\bf V!Dn!N (up,N(!U4!NS)):}
+\item[]{\bf V!Dn!N (up,NO):}
+\item[]{\bf V!Dn!N (up,O!D2!N):}
+\item[]{\bf V!Dn!N (up,O(!U3!NP)):}
+\item[]{\bf e-:} electron density (m$^{-3}$)
+\item[]{\bf eTemperature:} electron temperature (K)
+\item[]{\bf iTemperature:} ion temperature (K)
+\item[]{\bf time:} Universal Time
+\end{itemize}
+
+There are many routines available to process and analyze the GITM bin files.  The majority of these routines are written in IDL and are available in the {\tt srcIDL} directory within the GITM model directory.  Currently 50 routines have been saved in this directory and more are under development.  Alternatively, python routines are currently being developed and these are located in the {\tt srcPython} directory.
+
+\section{IDL}
+\label{idl.sec}
+
+Here is an complete list with some description of the IDL processing and visualization routines currently available.  Please feel free to update this section for other GITM users when you CVS your vetted GITM processing routines.
+ 
+\subsubsection{gitm\_read\_bin}
+
+This is a routine to read a GITM bin file into IDL.  This is great when you want to get a handle on the data and experiment with different visualization methods.
+
+\subsubsection{thermo\_plotsat}
+
+This is the most commonly used routine to plot the 1D GITM results.  It can also be used to plot satellite files and other 1D simulations.  It is relatively straight forward to use, but experimentation can be help.  This is an actual program, so you have to {\tt .run} it.
+
+\subsubsection{thermo\_gui}
+
+This is a someone simplistic graphical user interface code for plotting 3D results.  The filename has to be entered manually in the upper left.  You then have to press the button for loading the file.  Variables appear on the left side, and you can select which one you want to plot.  You then select which of the available planes you would like to look at (lat/lon, lat/alt, or lon/alt) or scroll through the options.  This interface allows you to add wind vectors, plot in polar coordinates, and plot the log of the variable.
+
+\subsubsection{thermo\_batch\_new}
+
+This code will let you look at at 3D files exactly the same way as thermo\_gui, but is all scripted.  There are a few features that this has that thermo\_batch doesn't have:
+
 \begin{enumerate}
-\item {\bf thermo\_plotsat:} This is plotting 1D results.  It is the
-  most commonly used program for plotting 1D.  It can be used for
-  plotting satelite files and for plotting 1D simulations.  It is
-  relatively straight forward to use, but experimentation can be help.
-  This is an actual program, so you have to {\tt .run} it.
-\item {\bf thermo\_gui:} This is a graphical user interface code for
-  plotting 3D results that is somewhat simplistic.  The filename has
-  to be entered manually in the upper left.  You then have to press
-  the button for loading the file.  Variables appear on the left side,
-  and you can select which one you want to plot.  You then select
-  which plane you would like to look at (lat/lon, lat/alt, lon/alt).
-  You can scroll through which altitude/latitude/longitude you want to
-  look at.  You can also add wind vectors on, plot in polar
-  coordinats, and plot the log of the variable.
-\item {\bf thermo\_batch\_new:} This code will let you look at at 3D
-  files exactly the same way as thermo\_gui, but is all scripted.
-  There are a few features that this has that thermo\_batch doesn't
-  have: (1) you can use wildcards for the file name, so it can read in
-  a list of files.  The postscript file name will be appended with
-  numbers. (2) When plotting a lat/alt plane, you can do a zonal
-  average. (3) You can do a global average.
-\item {\bf thermo\_plotter:} All of the above plotting codes will only
-  plot one plot per page.  This code will plot many more than one plot
-  per page.  You can plot multiple variables on the same page, or multiple
-  files with the same variable, or both.
+%\setlength{\itemsep}{-3in}
+	\item You can use wildcards for the file name, so that a list of files can be read.  The postscript file names created for each figure will be differentiated by appending numbers sequentially so that no figures are overwritten.
+	\item When plotting a lat/alt plane, you can do a zonal average. 
+	\item You can do a global average.
 \end{enumerate}
 
+\subsubsection{thermo\_plotter}
+
+All of the above plotting codes will only plot one plot per page.  This code will plot many more than one plot per page.  You can plot multiple variables on the same page, or multiple files with the same variable, or both.
+
+\subsubsection{Other IDL Routines}
+
+Please feel free to provide a description of these routines so that GITM users do not waste their time rewriting code that already exists.
+
+\begin{multicols}{3}
+\begin{itemize}
+\item{\bf ask}
+\item{\bf c\_a\_to\_r}
+\item{\bf c\_a\_to\_s}
+\item{\bf chopr}
+\item{\bf closedevice}
+\item{\bf c\_r\_to\_a}
+\item{\bf c\_s\_to\_a}
+\item{\bf get\_position}
+\item{\bf makect}
+\item{\bf mklower}
+\item{\bf mm}
+\item{\bf plotct}
+\item{\bf plotdumb}
+\item{\bf plotmlt}
+\item{\bf pos\_space}
+\item{\bf read\_thermosphere\_file}
+\item{\bf setdevice}
+\item{\bf thermo\_batch}
+\item{\bf thermo\_calcforce}
+\item{\bf thermo\_champ}
+\item{\bf thermo\_compare}
+\item{\bf thermo\_compare\_time}
+\item{\bf thermo\_convert\_champfiles}
+\item{\bf thermo\_guvi}
+\item{\bf thermo\_magequator}
+\item{\bf thermo\_make\_summary}
+\item{\bf thermo\_mkguvisat}
+\item{\bf thermo\_mksatsave}
+\item{\bf thermo\_mksave}
+\item{\bf thermo\_mktec}
+\item{\bf thermo\_on2}
+\item{\bf thermo\_plotdist}
+\item{\bf thermo\_plotlog}
+\item{\bf thermo\_plot\_new}
+\item{\bf thermo\_plot}
+\item{\bf thermo\_plotsat2}
+\item{\bf thermo\_plotsat\_constalt\_ON2}
+\item{\bf thermo\_plotsat\_constalt}
+\item{\bf thermo\_plotvectors}
+\item{\bf thermo\_readsat}
+\item{\bf thermo\_sigma}
+\item{\bf thermo\_superposed}
+\item{\bf thermo\_tec}
+\item{\bf thermo\_temp}
+\item{\bf tostr}
+\end{itemize}
+\end{multicols}
+
+\section{Python}
+\label{python.sec}
+
+This section provides a complete list of the vetted GITM python routines.  These routines require that you use PyBats, a module included in SpacePy.  This is a library developed for space physics applications by the scientists at Los Alamos and can be downloaded for free at: 
+{\tt http://spacepy.lanl.gov}
+
+If you have questions about these routines or are at the University of Michigan and want to start using Python, Dr. Welling is the man to see.
+
+\subsubsection{gitm}
+
+GITM is a PyBats submodule that handles input and output from GITM.  It can be helpful for those wishing to write their own GITM processing routines but doesn't contain any analysis or visualization routines. 
+
+Once you have downloaded and installed Spacepy, the gitm submodule can be accessed via {\tt import spacepy.pybats.gitm}.  This module contains the following routines:
+
+\begin{itemize}
+\item[]{\bf GitmBin: } A routine to load a GITM output bin file.
+\item[]{\bf PbData: } The base class for all PyBats data container classes.  Used to hold the GITM data read in using GitmBin
+\item[]{\bf dt: } A shortcut for datetime.
+\item[]{\bf np: } A shortcut for numpy.
+\item[]{\bf dmarray: } A shortcut for data arrays.  Used in many of the data container classes defined in PbData.
+\end{itemize}
+
+\subsubsection{gitm\_3d\_test}
+
+This is a basic visualization routine that creates a contour plot of a single output variable from a GITM 3D bin file.  As the name implies, this routine is still under development and user comments are welcome.
+
+\subsubsection{gitm\_diff\_images}
+
+This is a visualization routine that creates a contour plot of the differences between a single GITM 3D output variable at two different times.
 

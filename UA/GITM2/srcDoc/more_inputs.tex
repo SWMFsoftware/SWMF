@@ -1,34 +1,21 @@
 
 \section{Auxiliary Input Files}
+\label{aux.sec}
 
+If you have access to the University of Michigan Atmospheric, Oceanic, and Space Science resources, the data needed for these auxiliary input files are on {\tt herot.engin.umich.edu}.  The following descriptions will allow you download to create your own auxiliary input files yourself, but this process is much more simple if you have access to the resources on {\tt herot}.  Recall that {\tt makerun.pl}, previously mentioned at the beginning of section~\ref{uam.sec}, will create many of the following input files when it builds a {\tt UAM.in} file.  All of these auxiliary input files should be kept in the same directory as the GITM executable and the {\tt UAM.in} file.
 
 \subsection{IMF and Solar Wind}
+\label{imf.sec}
 
-This file controls the high-latitude electric field and aurora when
-using models that depend on the solar wind and interplanetary magnetic
-field (IMF).  It allows for dynamically controlling these quantities.
-You can create realistical IMF files or hypothetical ones.  For
-realistic IMF files, we typically use CDF files downloaded from the
-CDAWEB ftp site, and IDL code that merges the solar wind and IMF files
-to create one single file.  The IDL code also propagates the solar
-wind and IMF from L1 to 32 Re upstream of the Earth.  You can use the
-{\tt DELAY} statement to shift the time more (e.g.,in the example
-below, it shifts by an additional 15 minutes).  The IDL code to
-process the CDF files is called {\tt cdf\_to\_mhd.pro}.  It requires
-both a solar wind file and an IMF file. For example, the IMF file
-would be {\tt ac\_h0\_mfi\_20011231\_v04.cdf} and the solar wind file
-would be {\tt ac\_h0\_swe\_20011231\_v06.cdf}.  The code assumes that
-the data starts at {\tt \#START}, and ends when it encounters an
-error.  This can mean that if there is an error in the data somewhere,
-the code will only read up to that point.  To validate that the solar
-wind and IMF is what you think it is, it is recommended that you use
-the IDL code {\tt imf\_plot.pro}.
+This file controls the high-latitude electric field and aurora when using models that depend on the solar wind and interplanetary magnetic field (IMF).  It allows GITM to dynamically control these quantities.  You can create either realistic IMF files or hypothetical ones.
 
-Here is an example file:
+For realistic IMF files, we typically use CDF files downloaded from the CDAWEB ftp site, located at:\\{\tt http://cdaweb.gsfc.nasa.gov/cdaweb\_anonymousftp.htm}.
+
+On {\tt herot}, an IDL code (called {\tt cdf\_to\_mhd.pro}) merges the solar wind and IMF files to create one single file.  This IDL code also propagates the solar wind and IMF from L1 to 32 Re upstream of the Earth.  You can use the {\tt DELAY} statement to shift the time more (e.g. in the example below, it shifts by an additional 15 minutes).  {\tt cdf\_to\_mhd.pro} requires both a solar wind file and an IMF file. For example, the IMF file would be {\tt ac\_h0\_mfi\_20011231\_v04.cdf} and the solar wind file would be {\tt ac\_h0\_swe\_20011231\_v06.cdf}.  The code assumes that the data starts at {\tt \#START}, and ends when it encounters an error.  This can mean that if there is an error in the data somewhere, the code will only read up to that point.  To validate that the solar wind and IMF is what you think it is, it is recommended that you use the IDL code {\tt imf\_plot.pro} to check the output before using it to run GITM.  Here is an example file:
+
 \begin{verbatim}
 
-This file was created by Aaron Ridley to do some
-wicked cool science thing.
+This file was created by Aaron Ridley to do some wicked cool science thing.
 
 The format is:
  Year MM DD HH Mi SS mS   Bx  By   Bz     Vx   Vy   Vz    N        T
@@ -67,26 +54,22 @@ T  = Solar Wind Temperature (K)
  2000  3 20  3  4  0  0  0.0 0.0 -2.0 -400.0  0.0  0.0  5.0  50000.0
 \end{verbatim}
 
-
-To actually read in this file, in {\tt UAM.in}, use the command:
-
-\begin{verbatim}
-#MHD_INDICES
-filename
-\end{verbatim}
+To actually read in this file, in {\tt UAM.in}, use the input option MHD\_INDICES described in section~\ref{indices.sec}.
 
 \subsection{Hemispheric Power}
+\label{hp.sec}
 
-These files describe the dynamic variation of the auroral power going
-into each hemisphere.  Models such as \cite{fuller87} use the
-Hemispheric Power to determine which level of the model it should use.
-The Hemispheric Power is converted to a Hemispheric Power Index using the 
-formula (check):
+The hemispheric power files describe the dynamic variation of the auroral power going into each hemisphere.  Models such as \cite{fuller87} use the Hemispheric Power to determine which level of the model it should use.  The Hemispheric Power is converted to a Hemispheric Power Index using the 
+formula shown in equation~\ref{hp.eq}.
+
 \begin{equation}
-HPI = 2.09log(HP)^{1.0475}
+\label{hp.eq}
+HPI = 2.09 \log(HP)^{1.0475}
 \end{equation}
 
-Example File 1:
+The National Oceanic and Atmospheric Administration (NOAA) provides these hemispheric power files for public use online at {\tt http://www.swpc.noaa.gov/ftpmenu/lists/hpi.html}.  There are two types of formats used for hemispheric power files (due to a change in the NOAA output format in 2007).  Both file formats can be used by GITM, and are shown in the examples below.
+
+Example file 1 for data prior to 2007:
 
 \begin{verbatim}
 # Prepared by the U.S. Dept. of Commerce, NOAA, Space Environment Center.
@@ -126,9 +109,7 @@ NOAA-15(N)  10204    36.4  7    1.311
 .
 \end{verbatim}
 
-The second example shows a file format that is much better.  This
-format started in 2007, while all of the files before this time are of
-the first example type.
+Example file 2 for data in and after 2007:
 
 \begin{verbatim}
 :Data_list: power_2010.txt
@@ -163,26 +144,48 @@ the first example type.
 .
 \end{verbatim}
 
+This file is not specified in {\tt UAM.in}, instead different subroutines within GITM will use it as needed.
 
 \subsection{Solar Irradiance}
+\label{solar_irradiance.sec}
 
-
-More to come here.
-
-\subsection{Satellites}
-
+To provide GITM with realistic solar irradiance, the solar EUV must be specified.  This can be done through a file containing modeled or observed solar irradiance data.  An example from the FISM model is shown below.
 
 \begin{verbatim}
-#SATELLITES 
-2                    nSats 
-guvi.2002041623.in 
-15.0                 SatDtPlot 
-stfd.fpi.in 
-60.0                 SatDtPlot
-
+#START
+    2009       3      20       0       0       0   0.00389548   0.00235693
+   0.00127776  0.000907677  0.000652528  0.000372993  0.000250124  0.000194781
+  0.000389686  0.000118650   0.00642058   0.00618358  0.000133490  7.67560e-05
+  7.80045e-05  0.000145722  5.92577e-05  5.95070e-05  0.000102437  6.48526e-05
+  8.94509e-05  0.000101928  5.94333e-05  5.36012e-05  1.51744e-05  1.10265e-05
+  1.26937e-05  2.16591e-05  9.57055e-06  1.82608e-05  7.07992e-05  2.55451e-05
+  1.12451e-05  6.89255e-05  3.03882e-05  2.33862e-05  2.98026e-05  4.44682e-05
+  1.50847e-05  3.00909e-05  8.18379e-05  3.52176e-05  0.000416491  0.000269080
+  0.000269080  0.000275734  6.60872e-05  4.46671e-05  0.000220697  0.000512933
+  3.85239e-05  9.30928e-05  2.71239e-05  1.23011e-05  1.05722e-05  9.30876e-06
+  7.08442e-07  3.54221e-07  1.77110e-07
+    2009       3      20       0       1       0   0.00389548   0.00235693
+   0.00127776  0.000907677  0.000652528  0.000372993  0.000250124  0.000194781
+  0.000389686  0.000118650   0.00642058   0.00618358  0.000133490  7.67560e-05
+  7.80045e-05  0.000145722  5.92577e-05  5.95070e-05  0.000102437  6.48526e-05
+  8.94509e-05  0.000101928  5.94333e-05  5.36012e-05  1.51744e-05  1.10265e-05
+  1.26937e-05  2.16591e-05  9.57055e-06  1.82608e-05  7.07992e-05  2.55451e-05
+  1.12451e-05  6.89255e-05  3.03882e-05  2.33862e-05  2.98026e-05  4.44682e-05
+  1.50847e-05  3.00909e-05  8.18379e-05  3.52176e-05  0.000416491  0.000269080
+  0.000269080  0.000275734  6.60872e-05  4.46671e-05  0.000220697  0.000512933
+  3.85239e-05  9.30928e-05  2.71239e-05  1.23011e-05  1.05722e-05  9.30876e-06
+  7.08442e-07  3.54221e-07  1.77110e-07
+.
+.
+.
 \end{verbatim}
 
-Here is a sample satellite input file:
+GITM knows to use the provided solar irradiance file through the EUV\_DATA input option specified in the {\tt UAM.in} file.  More information about this input option can be found in section~\ref{indices.sec}.  For more information on specifying to solar irradiance, please contact Professors Ridley or Pawlowski.
+
+\subsection{Satellites}
+\label{sat_aux.sec}
+
+GITM can provide output data at a list of times and locations using the SATELLITE input option, described in more detain in section~\ref{def_out.sec}.  Although this is designed to output data along a satellite orbit, any list of locations may be used.  There is currently no routine to create a satellite input file, but the format is simple and may be easily constructed from a satellite ASCII data file using awk.  Here is a sample satellite input file:
 
 \begin{verbatim}
 year mm dd hh mm ss msec long lat alt
@@ -200,5 +203,5 @@ year mm dd hh mm ss msec long lat alt
 2002 4 16 23 34 25 0 285.39  0.74 0.00
 \end{verbatim}
 
-At this time, GITM ignores the altitude, and just outputs the entire column.
+Note that the satellite output is not specified in this sample file.  This is because altitude entry doesn't matter t this time, GITM ignores the altitude and outputs altitudinal profiles of the atmospheric characteristics at each geographic location and universal time.  Although millisecond accuracy is provided, GITM should not be output at a resolution smaller than 1 second.  The temporal resolution in the satellite file does not need to match the output resolution.
 

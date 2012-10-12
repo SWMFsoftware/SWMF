@@ -4,8 +4,9 @@
 \usepackage{alltt}
 \usepackage{amsmath}
 \usepackage{epsfig}
-\usepackage{fancyheadings}
+\usepackage{fancyhdr}
 \usepackage[square]{natbib}
+\usepackage{multicol}
 
 % use these lengths for a more uniform margin
 % this format is more pleasing for stapling
@@ -18,8 +19,8 @@
 \renewcommand{\deg}{^{\circ}}
 
 
-\title{GITM User Manual \\ \large Version 2.0}
-\author{A.J. Ridley}
+\title{GITM User Manual \\ \large Version 2.1}
+\author{A.J. Ridley, A.G. Burrell}
 
 \begin{document}
 
@@ -36,13 +37,16 @@
 
 \clearpage
 
+%Chapter 1
 \chapter{Introduction to GITM}
 \input{intro}
+\label{intro.ch}
 
 \section{Code Outline}
+\label{outline.sec}
 
-This is an outline of GITM.  To produce this file, go into the {\tt src} 
-directory, and type:
+This is an outline of GITM.  To produce this file, go into the {\tt src} directory, and type:
+
 \begin{verbatim}
 cd ../src
 ./calling_sequence.pl > outline.tex
@@ -52,22 +56,27 @@ cd ../srcDoc
 
 \input{outline.tex}
 
-\chapter{Running GITM}
+%Chapter 2
+\chapter{Getting Started}
+\label{quickstart.ch}
 \input{quickstart}
 
-\input{grid}
-
+%Chapter 3
 \chapter{Inputs}
-
+\label{input.ch}
 \input{set_inputs}
-
+\input{grid}
 \input{more_inputs}
 
+%Chapter 4
 \chapter{Outputs}
-
+\label{outputs.ch}
 \input{outputs}
 
-\bibliographystyle{authyear}
-\bibliography{wholebib}
+%Bibliography
+\clearpage
+\addcontentsline{toc}{chapter}{Bibliography}
+\bibliographystyle{chicagoa}
+\bibliography{gitm}
 
 \end{document}
