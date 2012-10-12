@@ -43,8 +43,15 @@ module ModFaceValue
   integer :: nVarLimitRatio
   integer, allocatable :: iVarLimitRatio_I(:)
 
+  ! Colella's flattening scheme
+  logical :: UseFlattening = .false.
+  logical :: UseDuFlat    = .false.
+  real    :: FlatDelta    = 0.33
+  real    :: FlatRatioMin = 0.45
+  real    :: FlatRatioMax = 0.85
+
   ! Maximum length of the stencil in 1D
-  integer,parameter:: MaxIJK = max(nI,nJ,nK)
+  integer, parameter:: MaxIJK = max(nI,nJ,nK)
 
   ! index ranges for optimized slope limiter calculations
   integer, parameter:: Lo2_=nVar+1, Hi2_=nVar+nVar, Lo3_=Hi2_+1, Hi3_=nVar+Hi2_
@@ -129,6 +136,13 @@ contains
 
     case("#LIMITPTOTAL")
        call read_var('UsePtotalLtd', UsePtotalLtd)
+
+    case("#FLATTENING")
+       call read_var('UseFlattening', UseFlattening)
+       call read_var('UseDuFlat',     UseDuFlat)
+       call read_var('FlatDelta',     FlatDelta)
+       call read_var('FlatRatioMin',  FlatRatioMin)
+       call read_var('FlatRatioMax',  FlatRatioMax)
 
     case default
        call CON_stop(NameSub//' invalid command='//trim(NameCommand))
@@ -841,7 +855,7 @@ contains
                    Energy_GBI(i,j,k,iBlock,iFluid) = Energy
                 end do
 
-                !!! check positivity ???
+!!! check positivity ???
                 ! Convert to pointwise primitive variables
                 call calc_primitives_MHD
 
@@ -981,9 +995,9 @@ contains
           end if
 
        else if(DoResChangeOnly) then
-          ! Second order face values at resolution changes as well
-
           if(nOrder==2)then
+             ! Second order face values at resolution changes
+
              if(neiLeast(iBlock)==+1)&
                   call get_faceX_second(1,1,1,nJ,1,nK)
              if(neiLwest(iBlock)==+1)&
@@ -997,6 +1011,8 @@ contains
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace)
           else
+             ! Fourth order face values at resolution changes
+
              if(neiLeast(iBlock)==+1)&
                   call get_faceX_fourth(1,1,1,nJ,1,nK)
              if(neiLwest(iBlock)==+1)&
@@ -1081,6 +1097,14 @@ contains
                   kMinFace,kMaxFace)
              if(nK > 1) call ptotal_to_p_faceZ(iMinFace,iMaxFace, &
                   jMinFace,jMaxFace,1,nKFace)
+          end if
+       end if
+
+       if(nOrder==4 .and. UseFlattening .and. .not.DoResChangeOnly)then
+          if(UseVolumeIntegral4)then
+             call flatten(Prim_VG)
+          else
+             call flatten(Primitive_VG)
           end if
        end if
 
@@ -2234,6 +2258,85 @@ contains
       if(DoLimitMomentum) call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_faceZ_second
+
+    !========================================================================
+    subroutine flatten(Prim_VG)
+
+      real, intent(in):: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+      real:: InvRatioRange
+
+      real:: pL, pR, Dp, Ratio, Coef1, Coef2, Coef_I(-1:nI+2)
+
+      integer:: i, j, k, iUx, iP
+
+      logical, parameter:: DoDebug = .false.
+      !-----------------------------------------------------------------------
+      iUx = Ux_
+      iP  = p_
+      InvRatioRange = 1.0/(FlatRatioMax - FlatRatioMin)
+
+      do k = kMinFace, kMaxFace; do j = jMinFace, jMaxFace
+         if(DoDebug.and.j==1 .and. k==1)then
+            write(*,*)'!!! ux=',Prim_VG(Ux_,1:10,1,1)
+            write(*,*)'!!! p =',Prim_VG(p_ ,1:10,1,1)
+         end if
+
+         do i = -1, nI+2
+
+            ! Coef = 1 preserves the high order face value
+            Coef_I(i) = 1.0
+
+            if(UseDuFlat)then
+               ! Check if there is compression 
+               ! Note: Balsara suggests to look at rarefactions too...)
+               if(Prim_VG(iUx,i-1,j,k) - Prim_VG(iUx,i+1,j,k) <= -1e-12)CYCLE
+            end if
+
+            pL = Prim_VG(iP,i-1,j,k)
+            pR = Prim_VG(iP,i+1,j,k)
+            Dp = abs(pR - pL)
+
+            if(DoDebug.and.j==1.and.k==1) write(*,*)'!!! i, Du, Dp=', &
+                 i, Prim_VG(iUx,i-1,j,k) - Prim_VG(iUx,i+1,j,k), Dp
+
+            ! Check the shock strength. Nothing to do for weak shock
+            if(Dp < FlatDelta*min(pL, pR)) CYCLE
+
+            ! Calculate the shock width parameter
+            pL = Prim_VG(iP,i-2,j,k)
+            pR = Prim_VG(iP,i+2,j,k)
+            Ratio = Dp / max(1e-30, abs(pR - pL))
+
+            if(Ratio > FlatRatioMax)then
+               Coef_I(i) = 0
+            elseif(Ratio > FlatRatioMin)then
+               Coef_I(i) = InvRatioRange*(FlatRatioMax - Ratio)
+            end if
+            if(DoDebug.and.j==1.and.k==1) &
+                 write(*,*)'!!! i, Dp2, Ratio, Coef=', &
+                 i, abs(pR-pL), Ratio, Coef_I(i)
+         end do
+
+         if(DoDebug .and. j==1 .and. k==1) write(*,*)'!!! fl=',Coef_I(1:10)
+
+         do i = 0, nI+1
+            Coef2 = minval(Coef_I(i-1:i+1))
+
+            ! Coef2 is the final flattening parameter in eq. 34a,b
+            if(Coef2 > 1 - 1e-12) CYCLE
+
+            Coef1 = 1.0 - Coef2
+            if(i<=nI) LeftState_VX(:,i+1,j,k) = Coef2*LeftState_VX(:,i+1,j,k) &
+                 + Coef1*Prim_VG(:,i,j,k)
+            if(i> 0 ) RightState_VX(:,i,j,k)  = Coef2*RightState_VX(:,i,j,k) &
+                 + Coef1*Prim_VG(:,i,j,k)
+         end do
+
+      end do; end do
+
+    end subroutine flatten
+
   end subroutine calc_face_value
 
   !===========================================================================
@@ -2741,6 +2844,7 @@ contains
          State_VGB(VarTest, nI:nI+1, jTest, kTest, iBlk)
 
   end subroutine correct_monotone_restrict
+
 
 end module ModFaceValue
 
