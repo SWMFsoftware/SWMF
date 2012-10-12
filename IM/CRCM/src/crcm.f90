@@ -1287,16 +1287,34 @@ subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
                  ekev2D(k,m)=log10(ekev(i,j,k,m))
                  eta(n,i,j,k,m)=amu1*1.209*psd1*sqrt(xmm(k))*dmm(k)*dk(m)
                  psd(n,i,j,k,m)=psd1
-                 Den_IC(n,i,j)=Den_IC(n,i,j)+eta(n,i,j,k,m)/ftv1
-                 !Pressure0 = eta(n,i,j,k,m)*ekev(i,j,k,m)/ftv1
+
+                 ! The old rho and p calculation based on RCM method:
+                 !   Den_IC(n,i,j) = Den_IC(n,i,j)+eta(n,i,j,k,m)/ftv1
+                 !   Pressure0     = eta(n,i,j,k,m)*ekev(i,j,k,m)/ftv1
+                 ! might be incorrect, giving different results from the 
+                 ! following calculation based on integration of flux.
+                 
+                 ! Number density comes from the integration of "psd":
+                 ! n = int(psd*dp^3) = int(flx/p^2*4*pi*p^2*sinA*dpdA)
+                 ! with M = p^2/(2*m0*Bm) --> dp = p/2M*dM
+                 ! so n = 2*pi*int(flx*p/M*dcosAdM)
+                 ! 
+                 ! Total pressure and parallel pressure are from
+                 !   P    = 4*pi/3*int(E*flx*p/M*dcosAdM)
+                 !   Ppar = 4*pi*int(E*flx*p/M*(cosA)^2*dcosAdM)
+                 
+                 Den_IC(n,i,j) = Den_IC(n,i,j) & 
+                      + flx*pp(n,i,j,k,m)/xmm(k)*dmm(k)*dcosa
                  Pressure0 = ekev(i,j,k,m)*flx*pp(n,i,j,k,m)/xmm(k)*dmm(k)*dcosa
                  Pressure1 = Pressure1 + Pressure0
                  PressurePar1 = PressurePar1 + 3.*Pressure0*cosA2(m)
               enddo
            enddo
-           !Coeff = 1.6e-16*2./3.*1.e9
+           
+           Den_IC(n,i,j) = Den_IC(n,i,j)*2*cPi/1.6e-20   ! density in m^-3
+           !Coeff = 1.6e-16*2./3.*1.e9                   ! for the old p
            Coeff = 4.*cPi/3.*1.e4*1.e9
-           Pressure_IC(n,i,j) = Pressure1*Coeff
+           Pressure_IC(n,i,j) = Pressure1*Coeff          ! pressure in nPa
            PressurePar_IC(n,i,j) = PressurePar1*Coeff
 
 !!!! Map flux to fixed energy and pitch-angle grids (energy, sinAo)
