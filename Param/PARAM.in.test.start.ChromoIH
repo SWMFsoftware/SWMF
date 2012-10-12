@@ -64,11 +64,18 @@ T			UseBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
+Below are two ways to provide a potential field source surface (PFSS) solution
+as initial and boundary conditon for the magnetic field. The READPOTENTIALFIELD
+command is for reading the PFSS solution of the finite difference code FDIPS,
+while the MAGNETOGRAM command is for reading the PFSS solution based on
+spherical harmonics. These two PFSS solver can be found in the
+util/DATAREAD/srcMagnetogram directory of SWMF.
+
 #READPOTENTIALFIELD
 T			UseMagnetogram
 potentialfield.out	NamePotentialFieldFile
 0.0			HeightInnerBc
-2.0			UnitB 1.0
+3.0			UnitB
 
 MAGNETOGRAM
 T			UseMagnetogram
@@ -78,7 +85,7 @@ T			UseMagnetogram
 harmonics.dat		NameMagnetogramFile
 12			nHeaderLine
 0.0			PhiShift
-2.0			UnitB
+3.0			UnitB
 
 #USECURLB0
 T			UseCurlB0
@@ -102,7 +109,7 @@ F			UseUserUpdateStates
 #USERINPUTBEGIN ------------------------
 
 The velocity perturbation (DeltaU) is typically chosen in the range of 10 to
-15km/s. For many cases 10km/s is optimal.
+15km/s.
 #CHROMOBC
 1.0e4			DeltaU [m/s]
 2e17			nChromoSi [1/m^3]
@@ -117,7 +124,6 @@ SOLARDIPOLE
 #USERINPUTEND ----------------------------
 
 The value of the reflection coefficient is rather uncertain: 0.01 to 0.1
-For many cases 0.04 is optimal.
 #CORONALHEATING
 alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
