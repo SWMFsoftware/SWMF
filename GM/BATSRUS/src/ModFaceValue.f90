@@ -2269,19 +2269,12 @@ contains
       real:: pL, pR, Dp, Ratio, Coef1, Coef2, Coef_I(-1:nI+2)
 
       integer:: i, j, k, iUx, iP
-
-      logical, parameter:: DoDebug = .false.
       !-----------------------------------------------------------------------
       iUx = Ux_
       iP  = p_
       InvRatioRange = 1.0/(FlatRatioMax - FlatRatioMin)
 
       do k = kMinFace, kMaxFace; do j = jMinFace, jMaxFace
-         if(DoDebug.and.j==1 .and. k==1)then
-            write(*,*)'!!! ux=',Prim_VG(Ux_,1:10,1,1)
-            write(*,*)'!!! p =',Prim_VG(p_ ,1:10,1,1)
-         end if
-
          do i = -1, nI+2
 
             ! Coef = 1 preserves the high order face value
@@ -2297,9 +2290,6 @@ contains
             pR = Prim_VG(iP,i+1,j,k)
             Dp = abs(pR - pL)
 
-            if(DoDebug.and.j==1.and.k==1) write(*,*)'!!! i, Du, Dp=', &
-                 i, Prim_VG(iUx,i-1,j,k) - Prim_VG(iUx,i+1,j,k), Dp
-
             ! Check the shock strength. Nothing to do for weak shock
             if(Dp < FlatDelta*min(pL, pR)) CYCLE
 
@@ -2313,12 +2303,7 @@ contains
             elseif(Ratio > FlatRatioMin)then
                Coef_I(i) = InvRatioRange*(FlatRatioMax - Ratio)
             end if
-            if(DoDebug.and.j==1.and.k==1) &
-                 write(*,*)'!!! i, Dp2, Ratio, Coef=', &
-                 i, abs(pR-pL), Ratio, Coef_I(i)
          end do
-
-         if(DoDebug .and. j==1 .and. k==1) write(*,*)'!!! fl=',Coef_I(1:10)
 
          do i = 0, nI+1
             Coef2 = minval(Coef_I(i-1:i+1))
