@@ -1280,14 +1280,22 @@ subroutine MH_set_parameters(TypeAction)
                 //TypeNormalization)
         end select
 
+     case("#UNIFORMSTATE")
+        UseShockTube = .true.
+        call split_string(NamePrimitiveVar, nVar, NamePrimitive_V, nVarRead)
+        do i=1,nVar
+           call read_var(NamePrimitive_V(i), ShockLeftState_V(i))
+        end do
+        ShockRightState_V = ShockLeftState_V
+
      case("#SHOCKTUBE")
         UseShockTube = .true.
-        call split_string(NamePrimitiveVar,nVar,NamePrimitive_V,nVarRead)
+        call split_string(NamePrimitiveVar, nVar, NamePrimitive_V, nVarRead)
         do i=1,nVar
-           call read_var(NamePrimitive_V(i)//' left',ShockLeftState_V(i))
+           call read_var(NamePrimitive_V(i)//' left', ShockLeftState_V(i))
         end do
         do i=1,nVar
-           call read_var(NamePrimitive_V(i)//' right',ShockRightState_V(i))
+           call read_var(NamePrimitive_V(i)//' right', ShockRightState_V(i))
         end do
 
      case("#SHOCKPOSITION")
