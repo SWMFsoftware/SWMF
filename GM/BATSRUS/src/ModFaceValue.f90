@@ -2,8 +2,9 @@
 module ModFaceValue
 
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-       x_, y_, z_, nDim
+       x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
+  use ModMultiFluid
 
   use ModMain, ONLY: iTest
 
@@ -666,7 +667,6 @@ contains
     ! To improve the code stability, ONLY those values are calculated, which
     ! are actually used by the calc_facefluxes.
 
-    use ModMultiFluid, ONLY: nIonFluid
     use ModMain,     ONLY: nOrder, prolong_order, BlkTest, UseB0, &
          UseConstrainB, nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
@@ -1508,7 +1508,6 @@ contains
     end subroutine get_faceZ_first
     !==========================================================================
     subroutine calc_primitives_MHD
-      use ModMultiFluid
 
       Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
       RhoInv = 1/Primitive_VG(Rho_,i,j,k)
@@ -2262,28 +2261,38 @@ contains
     !========================================================================
     subroutine flatten(Prim_VG)
 
+      use ModMain, ONLY: test_string
+
       real, intent(in):: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
       real:: InvRatioRange
 
-      real:: pL, pR, Dp, Ratio, Coef1, Coef2, Coef_I(-1:nI+2)
+      real:: pL, pR, Dp, Ratio, Coef1, Coef
 
-      integer:: i, j, k, iUx, iP
-      !-----------------------------------------------------------------------
-      iUx = Ux_
-      iP  = p_
+      real:: FlatCoef_I(-1:MaxIJK+2)
+      real, allocatable:: FlatCoef_G(:,:,:)
+
+      integer:: i, j, k, iUx, iUy, iUz, iP
+      !----------------------------------------------------------------------
+      if(.not.allocated(FlatCoef_G)) &
+           allocate(FlatCoef_G(0:nI+1,1-jDim_:nJ+jDim_,1-kDim_:nK+kDim_))
+
+      iUx = iUx_I(1)
+      iUy = iUy_I(1)
+      iUz = iUz_I(1)
+      iP  = iP_I(1)
       InvRatioRange = 1.0/(FlatRatioMax - FlatRatioMin)
 
-      do k = kMinFace, kMaxFace; do j = jMinFace, jMaxFace
+      do k = 1-kDim_,nK+kDim_; do j = 1-jDim_,nJ+jDim_
          do i = -1, nI+2
 
             ! Coef = 1 preserves the high order face value
-            Coef_I(i) = 1.0
+            FlatCoef_I(i) = 1.0
 
             if(UseDuFlat)then
                ! Check if there is compression 
                ! Note: Balsara suggests to look at rarefactions too...)
-               if(Prim_VG(iUx,i-1,j,k) - Prim_VG(iUx,i+1,j,k) <= -1e-12)CYCLE
+               if(Prim_VG(iUx,i-1,j,k) - Prim_VG(iUx,i+1,j,k) <= 0)CYCLE
             end if
 
             pL = Prim_VG(iP,i-1,j,k)
@@ -2299,26 +2308,118 @@ contains
             Ratio = Dp / max(1e-30, abs(pR - pL))
 
             if(Ratio > FlatRatioMax)then
-               Coef_I(i) = 0
+               FlatCoef_I(i) = 0
             elseif(Ratio > FlatRatioMin)then
-               Coef_I(i) = InvRatioRange*(FlatRatioMax - Ratio)
+               FlatCoef_I(i) = InvRatioRange*(FlatRatioMax - Ratio)
             end if
          end do
 
          do i = 0, nI+1
-            Coef2 = minval(Coef_I(i-1:i+1))
-
-            ! Coef2 is the final flattening parameter in eq. 34a,b
-            if(Coef2 > 1 - 1e-12) CYCLE
-
-            Coef1 = 1.0 - Coef2
-            if(i<=nI) LeftState_VX(:,i+1,j,k) = Coef2*LeftState_VX(:,i+1,j,k) &
-                 + Coef1*Prim_VG(:,i,j,k)
-            if(i> 0 ) RightState_VX(:,i,j,k)  = Coef2*RightState_VX(:,i,j,k) &
-                 + Coef1*Prim_VG(:,i,j,k)
+            FlatCoef_G(i,j,k) = minval(FlatCoef_I(i-1:i+1))
          end do
-
       end do; end do
+
+      if(nDim > 1)then
+         do k = 1-kDim_,nK+kDim_; do i = 0, nI+1
+            do j = -1, nJ+2
+               FlatCoef_I(j) = 1.0
+
+               if(UseDuFlat)then
+                  if(Prim_VG(iUy,i,j-1,k) - Prim_VG(iUy,i,j+1,k) <= 0)CYCLE
+               end if
+
+               pL = Prim_VG(iP,i,j-1,k)
+               pR = Prim_VG(iP,i,j+1,k)
+               Dp = abs(pR - pL)
+
+               if(Dp < FlatDelta*min(pL, pR)) CYCLE
+
+               pL = Prim_VG(iP,i,j-2,k)
+               pR = Prim_VG(iP,i,j+2,k)
+               Ratio = Dp / max(1e-30, abs(pR - pL))
+
+               if(Ratio > FlatRatioMax)then
+                  FlatCoef_I(j) = 0
+               elseif(Ratio > FlatRatioMin)then
+                  FlatCoef_I(j) = InvRatioRange*(FlatRatioMax - Ratio)
+               end if
+            end do
+
+            do j = 0, nJ+1
+               FlatCoef_G(i,j,k) = &
+                    min(FlatCoef_G(i,j,k), minval(FlatCoef_I(j-1:j+1)))
+            end do
+         end do; end do
+      end if
+
+      if(nDim > 2)then
+         do j = 0, nJ+1; do i = 0, nI+1
+            do k = -1, nK+2
+               FlatCoef_I(k) = 1.0
+               if(UseDuFlat)then
+                  if(Prim_VG(iUz,i,j,k-1) - Prim_VG(iUz,i,j,k+1) <= 0)CYCLE
+               end if
+
+               pL = Prim_VG(iP,i,j,k-1)
+               pR = Prim_VG(iP,i,j,k+1)
+               Dp = abs(pR - pL)
+
+               if(Dp < FlatDelta*min(pL, pR)) CYCLE
+
+               pL = Prim_VG(iP,i,j,k-2)
+               pR = Prim_VG(iP,i,j,k+2)
+               Ratio = Dp / max(1e-30, abs(pR - pL))
+
+               if(Ratio > FlatRatioMax)then
+                  FlatCoef_I(k) = 0
+               elseif(Ratio > FlatRatioMin)then
+                  FlatCoef_I(k) = InvRatioRange*(FlatRatioMax - Ratio)
+               end if
+            end do
+
+            do k = 0, nK+1
+               FlatCoef_G(i,j,k) = &
+                    min(FlatCoef_G(i,j,k), minval(FlatCoef_I(k-1:k+1)))
+            end do
+         end do; end do
+      end if
+
+      do k = kMinFace, kMaxFace; do j = jMinFace, jMaxFace; do i = 0, nI+1
+         Coef = FlatCoef_G(i,j,k)
+
+         ! Coef is the final flattening parameter in eq. 34a,b
+         if(Coef > 1 - 1e-12) CYCLE
+
+         Coef1 = 1.0 - Coef
+         if(i<=nI) LeftState_VX(:,i+1,j,k) = Coef*LeftState_VX(:,i+1,j,k) &
+              + Coef1*Prim_VG(:,i,j,k)
+         if(i> 0 ) RightState_VX(:,i,j,k)  = Coef*RightState_VX(:,i,j,k) &
+              + Coef1*Prim_VG(:,i,j,k)
+      end do; end do; end do
+
+      if(nDim == 1) RETURN
+
+      do k = kMinFace, kMaxFace; do j = 0, nJ+1; do i = iMinFace,iMaxFace
+         Coef = FlatCoef_G(i,j,k)
+         if(Coef > 1 - 1e-12) CYCLE
+         Coef1 = 1.0 - Coef
+         if(j<=nJ) LeftState_VY(:,i,j+1,k) = Coef*LeftState_VY(:,i,j+1,k) &
+              + Coef1*Prim_VG(:,i,j,k)
+         if(j> 0 ) RightState_VY(:,i,j,k)  = Coef*RightState_VY(:,i,j,k) &
+              + Coef1*Prim_VG(:,i,j,k)
+      end do; end do; end do
+
+      if(nDim == 2) RETURN
+
+      do k = 0, nK+1; do j = jMinFace, jMaxFace; do i = iMinFace,iMaxFace
+         Coef = FlatCoef_G(i,j,k)
+         if(Coef > 1 - 1e-12) CYCLE
+         Coef1 = 1.0 - Coef
+         if(k<=nK) LeftState_VZ(:,i,j,k+1) = Coef*LeftState_VZ(:,i,j,k+1) &
+              + Coef1*Prim_VG(:,i,j,k)
+         if(k> 0 ) RightState_VZ(:,i,j,k)  = Coef*RightState_VZ(:,i,j,k) &
+              + Coef1*Prim_VG(:,i,j,k)
+      end do; end do; end do
 
     end subroutine flatten
 
@@ -2829,7 +2930,6 @@ contains
          State_VGB(VarTest, nI:nI+1, jTest, kTest, iBlk)
 
   end subroutine correct_monotone_restrict
-
 
 end module ModFaceValue
 
