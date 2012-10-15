@@ -4,8 +4,6 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
-  use ModMultiFluid, ONLY: iFluid, nIonFluid, iRho, iRhoUx, iRhoUz, &
-       iUx, iUy, iUz, iP, iUx_I, iUz_I, select_fluid
 
   use ModMain, ONLY: iTest
 
@@ -663,6 +661,8 @@ contains
   !===========================================================================
   subroutine calc_face_value(DoResChangeOnly, iBlock)
 
+    use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
+
     ! The subroutine calculates right and left face values.
     ! If DoResChangeOnly is true, only facevalues next to a coarser 
     ! neighbor block are calculated.
@@ -694,7 +694,7 @@ contains
     logical, intent(in):: DoResChangeOnly
     integer, intent(in):: iBlock
 
-    integer:: i,j,k,iSide
+    integer:: i, j, k, iSide, iFluid
     real:: RhoInv
 
     real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
@@ -2263,7 +2263,7 @@ contains
     !========================================================================
     subroutine flatten(Prim_VG)
 
-      use ModMain, ONLY: test_string
+      use ModMultiFluid, ONLY: iFluid, iRho, iUx, iUy, iUz, iP, select_fluid
 
       real, intent(in):: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
@@ -2276,6 +2276,8 @@ contains
 
       integer:: i, j, k
       !----------------------------------------------------------------------
+      !call timing_start('flatten')
+
       if(.not.allocated(FlatCoef_G)) &
            allocate(FlatCoef_G(0:nI+1,1-jDim_:nJ+jDim_,1-kDim_:nK+kDim_))
 
@@ -2430,6 +2432,8 @@ contains
          end do; end do; end do
 
       end do FLUIDLOOP
+
+      !call timing_stop('flatten')
 
     end subroutine flatten
 
@@ -2785,7 +2789,8 @@ contains
     ! the correction is not done if any of the finer block neighbors are unused
 
     use ModSize
-    use ModVarIndexes, ONLY: DefaultState_V, nVar
+    use ModVarIndexes, ONLY: DefaultState_V, nVar, &
+         iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
     use ModParallel,   ONLY: neiLEV, &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
