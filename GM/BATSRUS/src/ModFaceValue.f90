@@ -46,11 +46,11 @@ module ModFaceValue
   integer, allocatable :: iVarLimitRatio_I(:)
 
   ! Colella's flattening scheme
-  logical :: UseFlattening = .false.
-  logical :: UseDuFlat    = .false.
-  real    :: FlatDelta    = 0.33
-  real    :: FlatRatioMin = 0.45
-  real    :: FlatRatioMax = 0.85
+  logical :: UseFlattening = .true.
+  logical :: UseDuFlat     = .false.
+  real    :: FlatDelta     = 0.33
+  real    :: FlatRatioMin  = 0.75
+  real    :: FlatRatioMax  = 0.85
 
   ! Maximum length of the stencil in 1D
   integer, parameter:: MaxIJK = max(nI,nJ,nK)
@@ -141,11 +141,12 @@ contains
 
     case("#FLATTENING")
        call read_var('UseFlattening', UseFlattening)
-       call read_var('UseDuFlat',     UseDuFlat)
-       call read_var('FlatDelta',     FlatDelta)
-       call read_var('FlatRatioMin',  FlatRatioMin)
-       call read_var('FlatRatioMax',  FlatRatioMax)
-
+       if(UseFlattening)then
+          call read_var('UseDuFlat',     UseDuFlat)
+          call read_var('FlatDelta',     FlatDelta)
+          call read_var('FlatRatioMin',  FlatRatioMin)
+          call read_var('FlatRatioMax',  FlatRatioMax)
+       end if
     case default
        call CON_stop(NameSub//' invalid command='//trim(NameCommand))
     end select
