@@ -421,7 +421,7 @@ sub read_line{
 	    # Return an empty line
 	    $_="\n";
 	}
-    }elsif(/^\#END_COMP/ and not $StandAlone){
+    }elsif(/^\#END_COMP\b/ and not $StandAlone){
 	# Extract name of the component from #END_COMP ID
 	my $Comp;
 	($Comp) = /END_COMP ([A-Z][A-Z])/ or
@@ -438,7 +438,7 @@ sub read_line{
 	    # Return an empty line
 	    $_="\n";
 	}
-    }elsif(/^\#RUN/){ # Check if a new session has started
+    }elsif(/^\#RUN\b/){ # Check if a new session has started
 	# Check if the required commands are defined and
 	# if the parameters are correct for the session
 
@@ -448,9 +448,9 @@ sub read_line{
 	undef %definedSessionLast;
 	$nSession++;
 	$COMP::_IsFirstSession=0;
-    }elsif(/^\#USERINPUTBEGIN/){
+    }elsif(/^\#USERINPUTBEGIN\b/){
 	$UserInput = $nLine+1;
-    }elsif(/^\#USERINPUTEND/){
+    }elsif(/^\#USERINPUTEND\b/){
 	if(not $UserInput){
 	    &print_error(" for command $_".
 			 "\tthere is no matching #USERINPUTBEGIN command");
