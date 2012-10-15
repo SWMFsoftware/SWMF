@@ -4388,6 +4388,61 @@ are between 1.0 and 2.0 :
 The default is the second order Rusanov scheme with the minmod limiter.
 </command>
 
+<command name="FLATTENING">
+	 <parameter name="UseFlattening" type="logical" default="T"/>
+	 <if expr="$UseFlattening">
+	 	<parameter name="UseDuFlat" type="logical" default="F"/>
+	 	<parameter name="FlatDelta" type="real"
+			   min="0" max="1" default="0.33"/>
+		<parameter name="FlatRatioMin" type="real"
+			   min="0" max="1" default="0.75"/>
+		<parameter name="FlatRatioMax" type="real" 
+			   min="$FlatRatioMin" max="1" default="0.85"/>
+	</if>
+
+#FLATTENING
+T		UseFlattening (rest of parameters are read if true)
+F		UseDuFlat
+0.33		FlatDelta
+0.75		FlatRatioMin
+0.85		FlatRatioMax
+
+This command controls the parameters of Phil Collela's flattening 
+algorithm used by the 4th order scheme (nOrder=4 in the #SCHEME command). 
+The flattening scheme uses a linear combination of the first order and the 4th
+order accurate face values. Near strong shocks it switches to the first
+order scheme, elsewhere it uses the 4th order accurate face value.
+
+If the UseFlattening parameter is true, the flattening scheme is switched on.
+
+The UseDuFlat parameter determines if the velocity gradient is used as
+a condition for flattening. The "official" algorithm uses this check,
+in some cases it seems to be better not to use it, and it is not clear
+if there is any advantage using it.
+
+The FlatDelta parameter determines the threshold for the relative 
+pressure jump. If pR and pL are the pressures in the i+1 and i-1 cells,
+then the flattening is applied only if abs(pR - pL) is greater than 
+FlatDelta*min(pR, pL).
+
+The FlatRatioMin parameter determines the lower threshold for the shock width
+ratio = abs(p(i+2) - p(i-2))/abs(pR - pL). If the ratio is less than 
+FlatRatioMin, no flattening is applied. 
+
+The FlatRatioMax parameter determines the upper threshold for the shock width
+ratio. If the ratio is above FlatRatioMax, the first order scheme is used.
+If the ratio is between the FlatRatioMin and FlatRatioMax values, the
+1st order and 4th order face values are linearly combined with a 
+weight (Ratio - FlatRatioMin)/(FlatRatioMax - FlatRatioMin).
+
+In the actual scheme, the flattening parameters are calculated for all 
+dimensions and all cells first, and then the minimum is taken over 
+a 3 point stencil in each dimension, and then a minimum is taken over 
+the dimensions. See Miller and Colella 2005, APJS, 160, 199.
+
+The default values are shown in the example.
+</command>
+
 <command name="NONCONSERVATIVE">
 	<parameter name="UseNonConservative" type="logical" default="T"/>
 #NONCONSERVATIVE
@@ -4824,12 +4879,15 @@ neither collision, nor friction are applied.
 #MESSAGEPASS
 opt			TypeMessagePass
 
-Default value is shown above.\\
-Possible values for optimize_message_pass:
+Possible values for TypeMessagePass:
 \begin{verbatim}
 'all'	   - message_pass_cell: corners, edges and faces
-'opt'      - message_pass_cell:  faces only 
+'opt'      - message_pass_cell: faces only 
 \end{verbatim}
+Although the default value is 'opt', there are many schemes that require
+the ghost cells at the edges and corners (viscosity, resistivity, Hall MHD, 
+radiative diffusion, accurate resolution change algorithm, etc.), 
+and these will automatically change to the 'all' option.
 </command>
 
 <command name="RESOLUTIONCHANGE">
@@ -5533,6 +5591,23 @@ for the first index, respectively. The nIndex2, Index2Min, Index2Max define
 the number and range of the second index.
 
 This command can occur multiple times. By default no lookup tables are used.
+</command>
+
+<command name="UNIFORMSTATE" if="$_IsFirstSession">
+	<parameter name="Var1"  type="real"	/>
+	<parameter name="Var2"  type="real" />
+
+#UNIFORMSTATE
+0.125		Var1
+1.0		Var2
+-0.5		...
+0.0		
+1.0		
+
+The #UNIFORMSTATE command sets up a uniform initial state. This uniform
+state can be perturbed or modified by the user module.
+The command sets the primitive variables in the order defined in 
+the equation module. 
 </command>
 
 <command name="SHOCKTUBE" if="$_IsFirstSession">
