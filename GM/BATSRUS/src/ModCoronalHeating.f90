@@ -1518,7 +1518,7 @@ contains
     subroutine calc_grad_alfven(i, j, k, iBlock, GradAlfven_DD)
 
       use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
-           FaceNormal_DDFB, CellVolume_GB
+           FaceNormal_DDFB, CellVolume_GB, x_, y_, z_
 
       integer, intent(in) :: i, j, k, iBlock
       real, intent(out) :: GradAlfven_DD(nDim,MaxDim)
