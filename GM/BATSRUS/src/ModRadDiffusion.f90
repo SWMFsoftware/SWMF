@@ -1819,7 +1819,10 @@ contains
 
   subroutine update_impl_rad_diff(iBlock, iImplBlock, StateImpl_VG)
 
+    ! The use ModVarIndexes has to be next to use ModAdvance for sake
+    ! of the extremely advanced PGF90 12.9 compiler
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
     use ModEnergy,     ONLY: calc_energy_cell
     use ModImplicit,   ONLY: nw, iTeImpl, iTrImplFirst, &
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
@@ -1827,7 +1830,6 @@ contains
     use ModPhysics,    ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, UnitRho_, UnitTemperature_, ExtraEintMin
     use ModUser,       ONLY: user_material_properties
-    use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
     use ModGeometry,   ONLY: true_cell
 
     integer, intent(in) :: iBlock, iImplBlock

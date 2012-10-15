@@ -888,8 +888,11 @@ contains
 
   subroutine update_impl_heat_cond(iBlock, iImplBlock, StateImpl_VG)
 
+    ! The use ModVarIndexes has to be next to use ModAdvance for sake
+    ! of the extremely advanced PGF90 12.9 compiler 
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          time_BLK
+    use ModVarIndexes, ONLY: p_, Pe_, ExtraEint_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: true_cell
     use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
@@ -897,7 +900,7 @@ contains
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, ExtraEintMin
     use ModUser,     ONLY: user_material_properties
-    use ModVarIndexes, ONLY: p_, Pe_, ExtraEint_
+
 
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(in) :: StateImpl_VG(nw,nI,nJ,nK)
