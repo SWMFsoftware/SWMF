@@ -128,6 +128,16 @@ contains
     nChromo = nChromoSi*Si2No_V(UnitN_)
     RhoChromo = nChromo*MassIon_I(1)
     tChromo = tChromoSi*Si2No_V(UnitTemperature_)
+    !\
+    !The boundary condition sets the Poynting flux to be propotional 
+    !to the magnetic field intensity. Hence, 
+    !(B/sqrt(\rho)) \rho(\delta U)^2=const B
+    !Hence (\delta U)\propto \rho^{-0.25}
+    !Historically, for a long time we assigned the values of 
+    !\rho=2e16 [m-3]. Now we still assign the value of \delta U
+    !as if \rho=1e16 and recalculate the value of \delta U 
+    !automatically, if the larger value of nChromo is chosen
+    !/  
     DeltaU = DeltaUSi*Si2No_V(UnitU_)*(2e16/nChromoSi)**0.25
     PoyntingFluxPerB = sqrt(RhoChromo)*DeltaU**2
 
