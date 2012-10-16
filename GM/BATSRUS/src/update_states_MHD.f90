@@ -124,16 +124,15 @@ subroutine update_states_MHD(iStage,iBlock)
              - Flux_VY(:,i,j+1,k-1) &
              + Flux_VZ(:,i+1,j,k) &
              + Flux_VZ(:,i-1,j,k) &
-             - 2*(nDim-1)*Flux_VZ(:,i,j,k) &
-             - Flux_VZ(:,i+1,j,k+1) &
-             - Flux_VZ(:,i-1,j,k+1) &
-             + 2*(nDim-1)*Flux_VZ(:,i,j,k+1) &
              + Flux_VZ(:,i,j+1,k) &
              + Flux_VZ(:,i,j-1,k) &
-             - 2*(nDim-1)*Flux_VZ(:,i,j,k) &
+             - 4*Flux_VZ(:,i,j,k) &
+             - Flux_VZ(:,i+1,j,k+1) &
+             - Flux_VZ(:,i-1,j,k+1) &
              - Flux_VZ(:,i,j+1,k+1) &
              - Flux_VZ(:,i,j-1,k+1) &
-             + 2*(nDim-1)*Flux_VZ(:,i,j,k+1) )
+             + 4*Flux_VZ(:,i,j,k+1) )
+
      end do; end do; end do
   end if
 

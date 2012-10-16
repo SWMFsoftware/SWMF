@@ -1433,6 +1433,8 @@ contains
     subroutine get_facez_fourth(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+
+      real, allocatable, save:: State_VZ(:,:,:,:)
       !-----------------------------------------------------------------------
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
@@ -1451,6 +1453,29 @@ contains
             LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
             RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
          end do; end do; end do
+      end if
+
+      if(UseFaceIntegral4)then
+         if(.not.allocated(State_VZ)) allocate( &
+              State_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
+
+         ! Convert from face averaged to face centered variables (eq 18)
+         State_VZ = LeftState_VZ
+         do k = kMin,kMax; do j = jMinFace,jMaxFace; do i = iMinFace,iMaxFace
+            Laplace_V = -4*State_VZ(:,i,j,k) &
+                 + State_VZ(:,i-1,j,k) + State_VZ(:,i+1,j,k) &
+                 + State_VZ(:,i,j-1,k) + State_VZ(:,i,j+1,k)
+            LeftState_VZ(:,i,j,k) = State_VZ(:,i,j,k) - c24th*Laplace_V
+         end do; end do; end do
+         if(TypeLimiter /= 'no')then
+            State_VZ = RightState_VZ
+            do k=kMin,kMax; do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
+               Laplace_V = -4*State_VZ(:,i,j,k) &
+                    + State_VZ(:,i-1,j,k) + State_VZ(:,i+1,j,k) &
+                    + State_VZ(:,i,j-1,k) + State_VZ(:,i,j+1,k)
+               RightState_VZ(:,i,j,k) = State_VZ(:,i,j,k) - c24th*Laplace_V
+            end do; end do; end do
+         end if
       end if
 
       if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
