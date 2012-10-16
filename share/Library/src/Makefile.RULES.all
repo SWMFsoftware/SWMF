@@ -17,10 +17,14 @@ $Compiler eq "lf95" or $Compiler eq "mpxlf90"
 $Compiler eq "f95"
 	${COMPILE.f90} ${Cflag0} -dusty ModMpiInterfaces.f90
 
+# The PGF90 compiler fails if ModPlotFile is compiled with -fast
+$Compiler eq "pgf90"
+	${COMPILE.f90} ${Cflag2} ModPlotFile.f90
+
 # Use LINK.f90 (usually mpif90) so the mpif.h header file can be included
 1
 	${LINK.f90} ${Cflag0} ModMpiOrig.f90
 
-#Special rule to compile HDF5 code
+# Special rule to compile HDF5 code
 $Hdf5 eq "yes"
 	h5pfc ${Cflag2} ModHdf5Utils.f90
