@@ -509,8 +509,8 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         DtLocal = dt
         if(UseSplitSemiImplicit)then
            do k = 1, nK; do j = 1, nJ; do i = 1, nI
-              if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
-              Volume = CellVolume_GB(i,j,k,iBlock)
+              if(.not.time_accurate) DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
+              Volume = CellVolume_GB(i,j,k,iBlock)/DtLocal
               n = n + 1
               pDotADotPPe = pDotADotPPe +  &
                    Volume*x_I(n)**2*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock)&
@@ -518,7 +518,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
            end do; enddo; enddo
         else
            do k = 1, nK; do j = 1, nJ; do i = 1, nI
-              if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+              if(.not.time_accurate) DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
               Volume = CellVolume_GB(i,j,k,iBlock)
               do iVar = 1, nVarSemi
                  n = n + 1
@@ -553,7 +553,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
      DtLocal = dt
      if(UseSplitSemiImplicit)then
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
-           if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+           if(.not.time_accurate) DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
            Volume = CellVolume_GB(i,j,k,iBlock)
            n = n + 1
            y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVarSemi,i,j,k,iImplBlock) &
@@ -561,7 +561,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         end do; enddo; enddo
      else
         do k = 1, nK; do j = 1, nJ; do i = 1, nI
-           if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+           if(.not.time_accurate) DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
            Volume = CellVolume_GB(i,j,k,iBlock)
            do iVar = 1, nVarSemi
               n = n + 1
@@ -632,7 +632,7 @@ subroutine get_semi_impl_jacobian
      end do; end do; end do; end do
      DtLocal = dt
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+        if(.not.time_accurate) DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
         Coeff = CellVolume_GB(i,j,k,iBlock)/DtLocal
         if(UseSplitSemiImplicit)then
            MAT(1,1,i,j,k,1,iImplBlock) = &
