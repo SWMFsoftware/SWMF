@@ -2415,11 +2415,6 @@ contains
          call stop_mpi(&
          'The heating in the closed field region requires magnetogram')
 
-    ! Check algorithm at resolution changes
-    if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
-         call stop_mpi(NameSub// &
-         'The prolongation order=2 requires message_pass_dir')
-
     if(nOrder == 1)then
        BetaProlongOrig = BetaProlong    
        BetaProlong = 0.0
@@ -2433,7 +2428,8 @@ contains
        UseAccurateResChange = .true.
     end if
 
-    if (UseAccurateResChange) optimize_message_pass = 'all'
+    if (UseAccurateResChange .or. nOrder == 4) &
+         optimize_message_pass = 'all'
 
     ! Check test processor
     if(ProcTest > nProc)then
