@@ -789,17 +789,7 @@ contains
        end if
     else
        if(UseAccurateResChange .or. nOrder==4)then
-          if(nJ == 1)then
-             jMin = 1; jMax = 1
-          else
-             jMin = MinJ; jMax = MaxJ
-          end if
-          if(nK == 1)then
-             kMin = 1; kMax = 1
-          else
-             kMin = MinK; kMax = MaxK
-          end if
-          do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              call calc_primitives_MHD         ! all cells
           end do; end do; end do
           if(UseVolumeIntegral4)then
@@ -807,12 +797,8 @@ contains
 
              ! First get 4th order accurate cell centered conservative vars
              iMin = MinI + 1; iMax = MaxI - 1
-             if(nJ > 1)then
-                jMin = MinJ + 1; jMax = MaxJ - 1
-             end if
-             if(nK > 1)then
-                kMin = MinK + 1; kMax = MaxK - 1
-             end if
+             jMin = MinJ + jDim_; kMax = MaxJ - jDim_
+             kMin = MinK + kDim_; kMax = MaxK - kDim_
 
              ! Store primitive and conservative values based on cell averages
              ! These are used to do the Laplace operators for corrections
