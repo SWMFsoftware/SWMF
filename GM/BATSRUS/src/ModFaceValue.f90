@@ -788,7 +788,7 @@ contains
           end do; end do
        end if
     else
-       if(UseAccurateResChange .or. UseVolumeIntegral4)then
+       if(UseAccurateResChange .or. nOrder==4)then
           if(nJ == 1)then
              jMin = 1; jMax = 1
           else
