@@ -1065,6 +1065,7 @@ contains
     integer :: DnAmr
     real    :: DtAmr
 
+    real :: tmp
     character(len=*), parameter:: NameSub='BATL_amr_criteria::read_amr_criteria'
     !-------------------------------------------------------------------------
     ReadExtra = .false.
@@ -1240,8 +1241,10 @@ contains
              if(IsRes) MaxLevelCritPhys_I(nCrit-nCritDxLevel) = 0.0 
              nCritDxLevel = nCritDxLevel+1
           case('dx')
-             call read_var('RefineTo',RefineCritPhys_I(nCrit-nCritDxLevel))
-             call read_var('CoarsenFrom',CoarsenCritPhys_I(nCrit-nCritDxLevel))
+             call read_var('RefineTo',tmp)
+             RefineCritPhys_I(nCrit-nCritDxLevel)  = tmp**2
+             call read_var('CoarsenFrom',tmp)
+             CoarsenCritPhys_I(nCrit-nCritDxLevel) = tmp**2
              MaxLevelCritPhys_I(nCrit-nCritDxLevel) = -MaxLevel
              if(IsRes)  MaxLevelCritPhys_I(nCrit-nCritDxLevel) = 0.0
              nCritDxLevel = nCritDxLevel+1

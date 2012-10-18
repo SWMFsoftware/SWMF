@@ -157,7 +157,7 @@ contains
     end do
 
 
-     if(DoTestMe .and. iProc == 0) then
+    if(DoTestMe .and. iProc == 0) then
        write(*,*) "START init_amr_geometry "
        write(*,*) "nCritGeoUsed     = ",nCritGeoUsed
        do iGeoAll = 0, nCritGeoUsed
@@ -231,7 +231,7 @@ contains
     real, dimension(nINode,nJNode,nKNode):: x_N, y_N, z_N, R2_N
 
     character(len=*), parameter:: NameSub = 'apply_amr_geometry'
-    logical, parameter:: DoTestBlock = .false.
+    logical :: DoTestBlock = .false.
 
     logical :: DoCalcCrit
     !--------------------------------------------------------------------------
@@ -474,23 +474,29 @@ contains
     MaxLength = 0.0
 
     if(IsCartesian) then
-       MaxLength = maxval(CellSize_DB(1:nDim,iBlock))
+       MaxLength = maxval(CellSize_DB(1:nDim,iBlock))**2
     else
-       do k=2,nKNode; do j=2,nJNode; do i=2,nINode
-
+       do k=1,nKNode; do j=1,nJNode; do i=2,nINode
           MaxLength = max(MaxLength,&
-               abs(Xyz_DNB(1,i,j,k,iBlock)- &
-               Xyz_DNB(1,i-1,j,k,iBlock)))
-
-          if(nDim > 1) MaxLength = max(MaxLength,&
-               abs(Xyz_DNB(2,i,j,k,iBlock)- &
-               Xyz_DNB(2,i,j-1,k,iBlock)))
-
-          if(nDim > 2) MaxLength = max(MaxLength,&
-               abs(Xyz_DNB(3,i,j,k,iBlock)- &
-               Xyz_DNB(3,i,j,k-1,iBlock)))
-
+               sum((Xyz_DNB(:,i,j,k,iBlock)- &
+               Xyz_DNB(:,i-1,j,k,iBlock))**2))
        end do; end do ; end do;
+
+       if(nDim >1) then
+          do k=1,nKNode; do j=2,nJNode; do i=1,nINode
+             MaxLength = max(MaxLength,&
+                  sum((Xyz_DNB(:,i,j,k,iBlock)- &
+                  Xyz_DNB(:,i,j-1,k,iBlock))**2))
+          end do; end do ; end do;
+       end if
+
+       if(nDim >2) then
+          do k=2,nKNode; do j=1,nJNode; do i=1,nINode
+             MaxLength = max(MaxLength,&
+                  sum((Xyz_DNB(:,i,j,k,iBlock)- &
+                  Xyz_DNB(:,i,j,k-1,iBlock))**2))
+          end do; end do ; end do;
+       end if
 
     end if
 
@@ -535,8 +541,10 @@ contains
        call read_var('NameRegion',NameRegion, IsLowerCase=.true.)
        AreaResolution = 0
     else
+       !! #GRIDLEVEL/RESOLUTION
        if(index(NameCommand,"RESOLUTION")>0)then
-          call read_var('AreaResolution', AreaResolution)
+          call read_var('AreaResolution',AreaResolution) 
+          AreaResolution = AreaResolution**2
        else
           call read_var('nLevelArea',nLevelArea)
           ! Store level as a negative integer resolution.
@@ -554,11 +562,12 @@ contains
        ! and no area is created. 
        if(AreaResolution > 0)then
           InitialResolution = AreaResolution
+          if(present(InitResInOut)) InitResInOut = sqrt(AreaResolution)
        else
           initial_refine_levels = nLevelArea
+          if(present(InitResInOut)) InitResInOut = AreaResolution
        end if
        if(present(InitLevelInOut)) InitLevelInOut = initial_refine_levels
-       if(present(InitResInOut)) InitResInOut = AreaResolution
        RETURN
     end if
 
