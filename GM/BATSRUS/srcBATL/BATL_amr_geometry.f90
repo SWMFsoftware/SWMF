@@ -231,7 +231,7 @@ contains
     real, dimension(nINode,nJNode,nKNode):: x_N, y_N, z_N, R2_N
 
     character(len=*), parameter:: NameSub = 'apply_amr_geometry'
-    logical :: DoTestBlock = .false.
+    logical, parameter:: DoTestBlock = .false.
 
     logical :: DoCalcCrit
     !--------------------------------------------------------------------------
@@ -471,37 +471,44 @@ contains
     integer :: i,j,k
     !-------------------------------------------------------------------------
 
-    MaxLength = 0.0
-
     if(IsCartesian) then
-       MaxLength = maxval(CellSize_DB(1:nDim,iBlock))**2
+       MaxLength = maxval(CellSize_DB(1:nDim,iBlock))
     else
-       do k=1,nKNode; do j=1,nJNode; do i=2,nINode
+       ! Find the longest cell edge in the block
+       MaxLength = 0.0
+
+       ! Get maximum length squared of i-edges
+       do k = 1, nKNode; do j = 1, nJNode; do i = 2, nINode
           MaxLength = max(MaxLength,&
-               sum((Xyz_DNB(:,i,j,k,iBlock)- &
-               Xyz_DNB(:,i-1,j,k,iBlock))**2))
-       end do; end do ; end do;
+               sum((Xyz_DNB(:,i  ,j,k,iBlock) &
+               -    Xyz_DNB(:,i-1,j,k,iBlock))**2))
+       end do; end do ; end do
 
        if(nDim >1) then
-          do k=1,nKNode; do j=2,nJNode; do i=1,nINode
-             MaxLength = max(MaxLength,&
-                  sum((Xyz_DNB(:,i,j,k,iBlock)- &
-                  Xyz_DNB(:,i,j-1,k,iBlock))**2))
-          end do; end do ; end do;
+          ! Get maximum length squared of j-edges
+          do k = 1, nKNode; do j = 2, nJNode; do i = 1, nINode
+             MaxLength = max(MaxLength, &
+                  sum((Xyz_DNB(:,i,j  ,k,iBlock) &
+                  -    Xyz_DNB(:,i,j-1,k,iBlock))**2))
+          end do; end do ; end do
        end if
 
        if(nDim >2) then
-          do k=2,nKNode; do j=1,nJNode; do i=1,nINode
-             MaxLength = max(MaxLength,&
-                  sum((Xyz_DNB(:,i,j,k,iBlock)- &
-                  Xyz_DNB(:,i,j,k-1,iBlock))**2))
-          end do; end do ; end do;
+          ! Get maximum length squared of k-edges
+          do k = 2, nKNode; do j = 1, nJNode; do i = 1, nINode
+             MaxLength = max(MaxLength,               &
+                  sum((Xyz_DNB(:,i,j,k  ,iBlock)      &
+                  -    Xyz_DNB(:,i,j,k-1,iBlock))**2))
+          end do; end do ; end do
        end if
+
+       ! Get maximum length
+       MaxLength = sqrt(MaxLength)
 
     end if
 
     AmrCrit_IB(nAmrCrit-nGeoCrit+1:nAmrCrit,iBlock) = &
-         (/ sqrt(MaxLength), -real(iTree_IA(Level_,iNode_B(iBlock))) /)
+         (/ MaxLength, -real(iTree_IA(Level_,iNode_B(iBlock))) /)
 
   end subroutine calc_crit
 
@@ -541,14 +548,12 @@ contains
        call read_var('NameRegion',NameRegion, IsLowerCase=.true.)
        AreaResolution = 0
     else
-       !! #GRIDLEVEL/RESOLUTION
-       if(index(NameCommand,"RESOLUTION")>0)then
-          call read_var('AreaResolution',AreaResolution) 
-          AreaResolution = AreaResolution
+       ! #GRIDLEVEL/RESOLUTION
+       if(index(NameCommand,"RESOLUTION") > 0)then
+          call read_var('AreaResolution', AreaResolution) 
        else
-          call read_var('nLevelArea',nLevelArea)
+          call read_var('nLevelArea', nLevelArea)
           ! Store level as a negative integer resolution.
-          ! This will be converted to resolution in correct_grid_geometry
           AreaResolution = -nLevelArea
        end if
     end if
