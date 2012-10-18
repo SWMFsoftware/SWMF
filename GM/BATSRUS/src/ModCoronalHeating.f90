@@ -1415,7 +1415,7 @@ contains
     use ModNumConst, ONLY: i_DD
     use ModPointImplicit, ONLY: DsDu_VVC
     use ModSize, ONLY: x_, y_, z_
-    use ModVarIndexes, ONLY: nVar, Rho_, Bx_, Bz_
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
     use ModWaves, ONLY: WaveFirst_, WaveLast_, UseTransverseTurbulence, &
          SigmaD
 
@@ -1431,11 +1431,12 @@ contains
 
     real :: GradAlfven_DD(nDim,MaxDim), bDotbDotGradAlfven
     real :: DivAlfven
-    real :: b_D(MaxDim), FullB_D(MaxDim), FullB
+    real :: b_D(MaxDim)
     real :: Reflection, WaveEnergy
     real :: InvDx2, InvDy2, InvDz2
 
-    character(len=*), parameter :: NameSub = 'user_impl_source'
+    character(len=*), parameter :: &
+         NameSub = 'ModCoronalHeating::alfven_wave_reflection'
     !------------------------------------------------------------------------
 
     if(.not.allocated(Alfven_VG)) allocate( &
@@ -1444,8 +1445,10 @@ contains
          State2_VG(4,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
 
     ! second order interpolation of density and magnetic field
-    State2_VG(1,:,:,:) = State_VGB(Rho_,:,:,:,iBlock)
-    State2_VG(2:4,:,:,:) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       State2_VG(1,i,j,k) = State_VGB(Rho_,i,j,k,iBlock)
+       State2_VG(2:4,i,j,k) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    end do; end do; end do
     call set_block_field2(iBlock, 4, State1_VG, State2_VG)
 
     if(UseB0)then
@@ -1522,6 +1525,9 @@ contains
 
       integer, intent(in) :: i, j, k, iBlock
       real, intent(out) :: GradAlfven_DD(nDim,MaxDim)
+
+      character(len=*), parameter :: NameSub = &
+           'ModCoronalHeating::alfven_wave_reflection::calc_grad_alfven'
       !----------------------------------------------------------------------
 
       GradAlfven_DD = 0.0
@@ -1566,6 +1572,9 @@ contains
 
       integer, intent(in) :: i, j, k, iBlock
       real, intent(out) :: DivAlfven
+
+      character(len=*), parameter :: NameSub = &
+           'ModCoronalHeating::alfven_wave_reflection::calc_div_alfven'
       !----------------------------------------------------------------------
 
       if(IsCartesian)then
