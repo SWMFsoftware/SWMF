@@ -501,7 +501,7 @@ contains
     end if
 
     AmrCrit_IB(nAmrCrit-nGeoCrit+1:nAmrCrit,iBlock) = &
-         (/ MaxLength, -real(iTree_IA(Level_,iNode_B(iBlock))) /)
+         (/ sqrt(MaxLength), -real(iTree_IA(Level_,iNode_B(iBlock))) /)
 
   end subroutine calc_crit
 
@@ -544,7 +544,7 @@ contains
        !! #GRIDLEVEL/RESOLUTION
        if(index(NameCommand,"RESOLUTION")>0)then
           call read_var('AreaResolution',AreaResolution) 
-          AreaResolution = AreaResolution**2
+          AreaResolution = AreaResolution
        else
           call read_var('nLevelArea',nLevelArea)
           ! Store level as a negative integer resolution.
@@ -562,12 +562,11 @@ contains
        ! and no area is created. 
        if(AreaResolution > 0)then
           InitialResolution = AreaResolution
-          if(present(InitResInOut)) InitResInOut = sqrt(AreaResolution)
        else
           initial_refine_levels = nLevelArea
-          if(present(InitResInOut)) InitResInOut = AreaResolution
        end if
        if(present(InitLevelInOut)) InitLevelInOut = initial_refine_levels
+       if(present(InitResInOut)) InitResInOut = AreaResolution
        RETURN
     end if
 
