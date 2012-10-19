@@ -1563,14 +1563,17 @@ For local time stepping (steady state mode) one should always use the
 
 For implicit scheme the second order BDF2 scheme is more accurate 
 but not more expensive than the first order backward Euler scheme, 
-so it is a good idea to use nStage=nOrder. 
+so it is a good idea to use nStage=nOrder (or at least nStage=3 for
+high order schemes). 
 
 To achieve consistency between the spatial and temporal orders of accuracy,
-the #SCHEME command always sets nStage to be the same as nOrder. 
+the #SCHEME command always sets nStage to be the same as nOrder
+except for 5th order scheme, which sets nStage=3.
 The #TIMESTEPPING (or #RUNGEKUTTA or #RK) command can be used AFTER the
 #SCHEME command to overwrite nStage if required.
 
-Defaults are nStage=2 with the half-step predictor and CflExpl=0.8.
+If the #SCHEME command is not used, then the defaults are 
+nStage=2 with the half-step predictor and CflExpl=0.8.
 </command>
 
 <command name="FIXEDTIMESTEP">
@@ -4318,38 +4321,57 @@ all the blocks limited by the minimum and maximum levels only
 !!!!!!!!!!!!!!!  SCHEME PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="SCHEME">
-	<parameter name="nOrder" type="integer" min="1" max="4" default="1"/>
+	<parameter name="nOrder" type="integer" input="select">
+	    <option name="1st order"  value="1"/>
+	    <option name="TVD2"       value="2" default="T"/>
+	    <option name="FIVOL4"     value="4"/>
+	    <option name="MP5"        value="5"/>
+	</parameter>
 	<parameter name="TypeFlux" type="string" input="select" case="upper">
 	    <option name="Rusanov" value="RUSANOV" default="T"/>
-	    <option name="Linde"   value="LINDE"/>
+	    <option name="Linde"   value="LINDE"  />
 	    <option name="Sokolov" value="SOKOLOV"/>
-	    <option name="HLLD"/>
-	    <option name="Roe"     value="ROE"/>
-	    <option name="RoeOld"  value="ROEOLD"/>
+	    <option name="HLLD"                   />
+	    <option name="Roe"     value="ROE"    />
+	    <option name="RoeOld"  value="ROEOLD" />
 	    <option name="Godunov" value="GODUNOV"/>
-	    <option name="Simple"  value="SIMPLE"/>
+	    <option name="Simple"  value="SIMPLE" />
 	</parameter>
-	<if expr="$nOrder == 2">
-		<parameter name="TypeLimiter" type="string" input="select">
-			<option name="minmod"  		 	/>
-			<option name="mc"	default="T"	/>
-			<option name="mc3"			/>
-			<option name="beta"			/>
-		</parameter>
-		<parameter name="LimiterBeta" type="real" min="1" max="2"
+	<if expr="$nOrder != 1 and $TypeFlux ne 'SIMPLE'">
+	    <parameter name="TypeLimiter" type="string" input="select">
+		<option name="minmod"  		 	/>
+		<option name="mc"	default="T"	/>
+		<option name="mc3"			/>
+		<option name="beta"			/>
+	    </parameter>
+	    <parameter name="LimiterBeta" type="real" min="1" max="2"
 			default="1.2" if="$TypeLimiter ne 'minmod'"/>
 	</if>
+	<if expr="$nOrder == 4">
+	    <parameter name="UseVolumeIntegral4" type="logical" default="F"/>
+	    <parameter name="UseFaceIntegral4"   type="logical" default="F"/>
+            <parameter name="UseLimiter4"        type="logical" default="F"/>
+	</if>
 #SCHEME
-2			nOrder (1, 2 or 4)
+4			nOrder (1, 2, 4 or 5)
 Rusanov			TypeFlux
-mc3			TypeLimiter ! Only for nOrder=2
-1.2			LimiterBeta ! Only if TypeLimiter is NOT 'minmod'
+mc3			TypeLimiter ! Only read for Order>1 and flux not Simple
+1.2			LimiterBeta ! Only read if TypeLimiter is NOT 'minmod'
+F			UseVolumeIntegral4 ! Only read for nOrder=4
+F			UseFaceIntegral4   ! Only read for nOrder=4
+F			UseLimiter4        ! Only read for nOrder=4
 
 The nOrder parameter determines the spatial and temporal accuracy of
-the scheme. The spatially first order scheme uses a one-stage time integration,
-while the spatially second order scheme either uses a two-stage Runge-Kutta 
-explicit or a BDF2 three-level implicit time discretization. 
-
+the scheme. 
+The spatially first order scheme uses a one-stage time integration,
+while the spatially second order MUSCL scheme either uses 
+an explicit two-stage Runge-Kutta or an implicit three-level BDF2
+time discretization. 
+The 4th order finite volume scheme (FIVOL4) 
+uses the classical 4th order Runge-Kutta scheme for time integration.
+The spatially 5th order MP5 scheme uses the 3rd order Runge-Kutta scheme.
+Note that the time discretization scheme can be modified 
+with the #TIMESTEPPING, #RUNGEKUTTA or #RK commands after the #SCHEME command.
 \noindent
 Possible values for TypeFlux:
 \begin{verbatim}
@@ -4369,22 +4391,45 @@ The new and old Roe schemes differ in some details of the algorithm,
 the new Roe scheme is somewhat more robust in magnetospheric applications.
 The Simple solver is for testing purposes only at this point.
 
-Possible values for TypeLimiter for spatially second order schemes:
+No limiter is used by the 1st order scheme. The second order TVD scheme
+uses a TVD limiter everywhere. The FIVOL4 and MP5 schemes use
+the second order TVD scheme at resolution changes, but in
+the uniform part of the grid they use their own limiter.
+Possible values for TypeLimiter:
 \begin{verbatim}
  'minmod'      - minmod limiter is the most robust and diffusive limiter
  'mc'          - monotonized central limiter with a beta parameter
- 'mc3'         - third order (in the linear sense) limiter with beta parameter
+ 'mc3'         - Koren's third order limiter with a beta parameter
  'beta'        - beta limiter is less robust than the mc limiter for 
                  the same beta value
 \end{verbatim}
 Possible values for LimiterBeta (for limiters othen than minmod)
-are between 1.0 and 2.0 : 
+are between 1.0 and 2.0: 
 \begin{verbatim}
   LimiterBeta = 1.0 is the same as the minmod limiter
-  LimiterBeta = 2.0 for the beta limiter is the same as the superbee limiter
   LimiterBeta = 1.5 is a typical value for the mc/mc3 limiters
   LimiterBeta = 1.2 is the recommended value for the beta limiter
+  LimiterBeta = 2.0 for the beta limiter is the same as the superbee limiter
 \end{verbatim}
+
+The FIVOL4 scheme reads 3 more logicals. If UseVolumeIntegral4 is true than
+the cell averaged variables are converted into cell centered variables
+and back as needed. If UseFaceIntegral4 is true, then the face averaged
+face values and face fluxes are converted to face centered variables
+and back as needed. The UseLimiter4 is true then the truely 4th order
+limiter is used. If all 3 logicals are true the full FIVOL4 scheme is used.
+This, however, requires extra ghost cell layers (1 for the volume integral
+and 1 for the 4th order limiter) and extra calculations. In practice
+the fully 4th order FIVOL4 scheme is much more expensive but not much more 
+accurate than the simplified shceme with all three logicals set to false.
+
+IMPORTANT: the number of ghost cell layers have to be sufficient for the
+selected scheme! The 1st and 2nd order schemes work with 2 layers.
+The MP5 scheme needs 3 layers. The FIVOL4 scheme needs 3 to 5 layers.
+The minimum 3 layers are needed if both UseVolumeIntegral4 and UseLimiter4
+are false. If one of these logicals is true, 4 layers are required.
+If both are true then the maximum 5 ghost cells layers are needed.
+
 The default is the second order Rusanov scheme with the minmod limiter.
 </command>
 
