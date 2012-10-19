@@ -1046,6 +1046,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nOrder'  ,nOrder)
         ! Set default value for nStage. Can be overwritten if desired.
         nStage = nOrder
+        ! Use RK3 for MP5 scheme
+        if(nOrder > 4) nStage = 3
+        UseHalfStep = nStage <= 2
 
         call read_var('TypeFlux',FluxType, IsUpperCase=.true.)
         BetaLimiter = 1.0
@@ -1058,7 +1061,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
         nGMin = 2 ! Minimum number of ghost cell layers
-        if(nOrder==4)then
+        if(nOrder == 4)then
            call read_var('UseVolumeIntegral4', UseVolumeIntegral4)
            if(UseVolumeIntegral4) nGMin = nGMin + 1
            call read_var('UseFaceIntegral4', UseFaceIntegral4)
@@ -1068,6 +1071,8 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('UseLimiter4', UseLimiter4)
               if(UseLimiter4) nGMin = nGMin + 1
            end if
+        elseif(nOrder == 5)then
+           nGMin = 3
         end if
         if(nGMin /= nG .and. iProc==0)then
            write(*,*)'The code is configured with nG=',nG,' ghost cell layers.'
@@ -2428,6 +2433,8 @@ contains
        UseAccurateResChange = .true.
     end if
 
+    ! Accurate res change algorithm and 4th order finite volume scheme
+    ! both need corners and edges
     if (UseAccurateResChange .or. nOrder == 4) &
          optimize_message_pass = 'all'
 
