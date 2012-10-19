@@ -10,10 +10,11 @@ Latest CCHMTEST</A>,
 <A HREF="http://herot.engin.umich.edu/~bartvand/CCHM_OLD/CCHMTEST">
 previous CCHMTEST</A>, and
 <A HREF="http://herot.engin.umich.edu/~bartvand/CCHM_RESULTS">
-CCHMTEST archive</A>
+CCHMTEST archive</A>.
 <p>
 See <A HREF="#EXPLANATIONS">explanations</A> for the tests, the tables 
-and the scores.
+and the scores. See the <A HREF="SWMF_TEST_RESULTS">SWMF test archive</A>
+for test results more than a week old.
 <p>
 <A HREF=manual.log>Logfile</A> of creating the
 <A HREF=SWMF/doc/index.html>SWMF manuals</A>,
@@ -74,24 +75,32 @@ the results per year, month and day.
       <td><b>nyx/nag</b></td>
       <td>Linux cluster with quad-core CPUs</td>
       <td>NAG F95 v5.1(282)</td>
-      <td>openmpi-1.3.2-nag</td>
+      <td>openmpi-1.6.0/nag/5.1</td>
       <td></td>
-      <td>mpirun -np 2</td>
+      <td>mpirun -np 1</td>
+  </tr>
+  <tr>
+      <td><b>nyx/gfortran</b></td>
+      <td>Linux cluster with quad-core CPUs</td>
+      <td>gfortran 7.0</td>
+      <td>openmpi-1.6.0/gcc/4.7.0</td>
+      <td>hdf5/1.8.9/gcc/4.7.0-par</td>
+      <td>mpirun -np 4</td>
   </tr>
   <tr>
       <td><b>nyx/ifort</b></td>
       <td>Linux cluster with quad-core CPUs</td>
-      <td>ifort 11.0.074</td>
-      <td>openmpi-1.4.3/intel/11.0</td>
-      <td>hdf5/1.8.8-intel-par</td>
-      <td>mpirun -np 2</td>
+      <td>ifort 12.1</td>
+      <td>openmpi-1.6.0/intel/12.1</td>
+      <td>hdf5/1.8.9/intel/12.1-par</td>
+      <td>mpirun -np 4</td>
   </tr>
   <tr>
       <td><b>nyx/pgf90</b></td>
       <td>Linux cluster with quad-core CPUs</td>
-      <td>pgf90 8.0-6</td>
-      <td>openmpi-1.3.2-pgi</td>
-      <td>hdf5/1.8.3-pgi-par</td>
+      <td>pgf90 12.9</td>
+      <td>openmpi-1.6.2/pgi/12.9</td>
+      <td></td>
       <td>mpirun -np 2</td>
   </tr>
   <tr>

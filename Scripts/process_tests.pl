@@ -7,8 +7,9 @@ my %WeightMachine = (
     "grid"         => "1.0",
     "mesh"         => "1.0",
     "nyx"          => "1.0",
+    "nyx_gfortran" => "1.0",
     "nyx_pgf90"    => "1.0",
-    "nyx_ifort"    => "0.5",
+    "nyx_ifort"    => "1.0",
     );
 
 my @ScoreTypes = ("ALL", "CCHM", "CWMM", "CRASH");
