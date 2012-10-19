@@ -748,7 +748,9 @@ contains
     ! for boris correction momentum is used instead of the velocity
 
     ! Number of cells away from the cell center
-    if(nOrder == 4)then
+    if(nOrder == 5)then
+       nStencil = 3
+    elseif(nOrder == 4)then
        nStencil = nG
     else
        nStencil = nOrder
@@ -919,7 +921,7 @@ contains
           if(nK > 1 .and. neiLtop(iBlock)==+1) &
                call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace)
        end if
-    case(2,4)
+    case default
 
        if (.not.DoResChangeOnly)then
           ! Calculate all face values with high order scheme
@@ -932,12 +934,12 @@ contains
              if(nK > 1) call get_faceZ_second(&
                   iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
           else
-             ! Fourth order scheme
-             call get_facex_fourth(&
+             ! High order scheme
+             call get_facex_high(&
                   1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2)
-             if(nJ > 1) call get_facey_fourth(&
+             if(nJ > 1) call get_facey_high(&
                   iMinFace2,iMaxFace2,1,nJFace,kMinFace2,kMaxFace2)
-             if(nK > 1) call get_facez_fourth(&
+             if(nK > 1) call get_facez_high(&
                   iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,1,nKFace)
           end if
        end if
@@ -985,7 +987,6 @@ contains
        else if(DoResChangeOnly) then
           if(nOrder==2)then
              ! Second order face values at resolution changes
-
              if(neiLeast(iBlock)==+1)&
                   call get_faceX_second(1,1,1,nJ,1,nK)
              if(neiLwest(iBlock)==+1)&
@@ -999,20 +1000,19 @@ contains
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
                   call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace)
           else
-             ! Fourth order face values at resolution changes
-
+             ! High order face values at resolution changes
              if(neiLeast(iBlock)==+1)&
-                  call get_faceX_fourth(1,1,1,nJ,1,nK)
+                  call get_faceX_high(1,1,1,nJ,1,nK)
              if(neiLwest(iBlock)==+1)&
-                  call get_faceX_fourth(nIFace,nIFace,1,nJ,1,nK)
+                  call get_faceX_high(nIFace,nIFace,1,nJ,1,nK)
              if(nJ > 1 .and. neiLsouth(iBlock)==+1) &
-                  call get_faceY_fourth(1,nI,1,1,1,nK)
+                  call get_faceY_high(1,nI,1,1,1,nK)
              if(nJ > 1 .and. neiLnorth(iBlock)==+1) &
-                  call get_faceY_fourth(1,nI,nJFace,nJFace,1,nK)
+                  call get_faceY_high(1,nI,nJFace,nJFace,1,nK)
              if(nK > 1 .and. neiLbot(iBlock)==+1) &
-                  call get_faceZ_fourth(1,nI,1,nJ,1,1)
+                  call get_faceZ_high(1,nI,1,nJ,1,1)
              if(nK > 1 .and. neiLtop(iBlock)==+1) &
-                  call get_faceZ_fourth(1,nI,1,nJ,nKFace,nKFace)
+                  call get_faceZ_high(1,nI,1,nJ,nKFace,nKFace)
           end if
        endif
 
@@ -1303,7 +1303,7 @@ contains
 
     end subroutine calc_primitives_boris
     !=========================================================================
-    subroutine get_facex_fourth(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facex_high(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
@@ -1319,7 +1319,11 @@ contains
          do k = kMin, kMax; do j = jMin, jMax; do iVar = 1, nVar
             ! Copy points along i direction into 1D arrays
             Cell_I(iMin-nG:iMax-1+nG)=Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
-            call limiter_ppm4(iMin, iMax)
+            if(nOrder == 4)then
+               call limiter_ppm4(iMin, iMax)
+            else
+               call limiter_mp(iMin, iMax)
+            end if
             ! Copy back the results into the 3D arrays
             LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
             RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
@@ -1358,9 +1362,9 @@ contains
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
 
-    end subroutine get_facex_fourth
+    end subroutine get_facex_high
     !========================================================================
-    subroutine get_facey_fourth(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facey_high(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
@@ -1376,7 +1380,11 @@ contains
          do k = kMin, kMax; do i = iMin, iMax; do iVar = 1, nVar
             ! Copy points along j direction into 1D arrays
             Cell_I(jMin-nG:jMax-1+nG)=Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
-            call limiter_ppm4(jMin, jMax)
+            if(nOrder == 4)then
+               call limiter_ppm4(jMin, jMax)
+            else
+               call limiter_mp(jMin, jMax)
+            end if
             ! Copy back the results into the 3D arrays
             LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
             RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
@@ -1414,9 +1422,9 @@ contains
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
            iMin,iMax,jMin,jMax,kMin,kMax)
 
-    end subroutine get_facey_fourth
+    end subroutine get_facey_high
     !========================================================================
-    subroutine get_facez_fourth(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facez_high(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
@@ -1434,7 +1442,11 @@ contains
          do j = jMin, jMax; do i = iMin, iMax; do iVar = 1, nVar
             ! Copy points along k direction into 1D arrays
             Cell_I(kMin-nG:kMax-1+nG)=Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
-            call limiter_ppm4(kMin, kMax)
+            if(nOrder == 4)then
+               call limiter_ppm4(kMin, kMax)
+            else
+               call limiter_mp(kMin, kMax)
+            end if
             ! Copy back the results into the 3D arrays
             LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
             RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
@@ -1469,7 +1481,7 @@ contains
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
 
-    end subroutine get_facez_fourth
+    end subroutine get_facez_high
 
     !========================================================================
     subroutine get_faceX_first(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -2457,6 +2469,10 @@ contains
 
     ! Apply 5th order MP limiter
 
+    ! Coefficient for 5th order accurate interpolation
+    real, parameter:: &
+         c1 = 2/60., c2 = -13/60., c3 = 47/60., c4 = 27/60., c5 = -3/60.
+
     real, parameter:: cFourThird = 4./3.
 
     ! Cell centered values at l, l+1, l+2, l-1, l-2
@@ -2465,13 +2481,12 @@ contains
     ! Second derivatives
     real:: D2_I(-1:MaxIJK+2)
 
-    ! Limited second derivatives at l+1/2 and l-12/
+    ! Limited second derivatives at l+1/2 and l-1/2
     real:: D2p, D2m
 
     ! Various face values
     real:: FaceOrig, FaceMp, UpperLimit, Average, Median, LargeCurve
     real:: FaceMin, FaceMax
-
 
     integer:: l
     !------------------------------------------------------------------------
@@ -2490,7 +2505,8 @@ contains
        Cellp  = Cell_I(l+1)
        Cellpp = Cell_I(l+2)
 
-       FaceOrig = (2*Cellmm - 13*Cellm + 47*Cell + 27*Cellp -3*Cellpp)/60.0
+       ! 5th order interpolation
+       FaceOrig = c1*Cellmm + c2*Cellm + c3*Cell + c4*Cellp + c5*Cellpp
 
        ! This is a quick check if there is a need to do any limiting
        FaceMp = Cell + minmod(Cellp - Cell, 4*(Cell - Cellm))
@@ -2533,7 +2549,8 @@ contains
        Cellp  = Cell_I(l+1)
        Cellpp = Cell_I(l+2)
 
-       FaceOrig = (2*Cellpp - 13*Cellp + 47*Cell + 27*Cellm -3*Cellmm)/60.0
+       ! 5th order interpolation
+       FaceOrig = c1*Cellpp + c2*Cellp + c3*Cell + c4*Cellm + c5*Cellmm
 
        ! This is a quick check if there is a need to do any limiting
        FaceMp = Cell + minmod(Cellm - Cell, 4*(Cell - Cellp))
@@ -2562,21 +2579,6 @@ contains
 
           ! FaceR = median(FaceOrig, FaceMin, FaceMax)
           FaceR_I(l) = min(FaceMax, max(FaceMin, FaceOrig))
-
-          if(.false.)then
-             write(*,*)'l, Cell(l-2:l+2)=',l ,Cell_I(l-2:l+2)
-             write(*,*)'D2(l-1:l+1)=', D2_I(l-1:l+1)
-             write(*,*)'D2p,D2m =', D2p, D2m
-             write(*,*)'FaceOrig=', FaceOrig
-             write(*,*)'FaceMP  =', FaceMp
-             write(*,*)'FaceAv  =', Average
-             write(*,*)'FaceMD  =', Median
-             write(*,*)'FaceLC  =', LargeCurve
-             write(*,*)'FaceMin =', FaceMin
-             write(*,*)'FaceMax =', FaceMax
-             write(*,*)'FaceR   =', FaceR_I(l)
-             call stop_mpi('FAILED WITH FaceR')
-          end if
 
        end if
 
