@@ -2451,6 +2451,162 @@ contains
   end subroutine calc_face_value
 
   !===========================================================================
+  subroutine limiter_mp(lMin, lMax)
+
+    integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
+
+    ! Apply 5th order MP limiter
+
+    real, parameter:: cFourThird = 4./3.
+
+    ! Cell centered values at l, l+1, l+2, l-1, l-2
+    real:: Cell, Cellp, Cellpp, Cellm, Cellmm
+
+    ! Second derivatives
+    real:: D2_I(-1:MaxIJK+2)
+
+    ! Limited second derivatives at l+1/2 and l-12/
+    real:: D2p, D2m
+
+    ! Various face values
+    real:: FaceOrig, FaceMp, UpperLimit, Average, Median, LargeCurve
+    real:: FaceMin, FaceMax
+
+
+    integer:: l
+    !------------------------------------------------------------------------
+
+    ! Second derivative based on cell values (3 ghost cells are needed)
+    do l = lMin-2, lMax+1
+       D2_I(l) = Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1) 
+    end do
+
+    ! Limit left face first. Loop index l is for cell center, and face l+1/2
+    do l = lMin-1, lMax-1
+
+       Cellmm = Cell_I(l-2)
+       Cellm  = Cell_I(l-1)
+       Cell   = Cell_I(l)
+       Cellp  = Cell_I(l+1)
+       Cellpp = Cell_I(l+2)
+
+       FaceOrig = (2*Cellmm - 13*Cellm + 47*Cell + 27*Cellp -3*Cellpp)/60.0
+
+       ! This is a quick check if there is a need to do any limiting
+       FaceMp = Cell + minmod(Cellp - Cell, 4*(Cell - Cellm))
+
+       if( (FaceOrig - Cell)*(FaceOrig - FaceMp) <= 1e-12)then
+          FaceL_I(l+1) = FaceOrig
+       else
+
+          D2p = minmod4(4*D2_I(l) - D2_I(l+1),4*D2_I(l+1) - D2_I(l), &
+               D2_I(l), D2_I(l+1))
+
+          D2m = minmod4(4*D2_I(l) - D2_I(l-1),4*D2_I(l-1) - D2_I(l), &
+               D2_I(l), D2_I(l-1))
+          
+          UpperLimit = Cell + 4*(Cell - Cellm)
+          Average    = 0.5*(Cell + Cellp)
+          Median     = Average - 0.5*D2p
+          LargeCurve = Cell + 0.5*(Cell - Cellm) + cFourThird*D2m
+
+          ! Note: FaceMin <= Cell, FaceMax >= Cell, so FaceMin <= FaceMax
+          FaceMin = max(min(Cell, Cellp, Median), &
+               min(Cell, UpperLimit, LargeCurve))
+
+          FaceMax = min(max(Cell, Cellp, Median), &
+               max(Cell, UpperLimit, LargeCurve))
+
+          ! FaceL = median(FaceOrig, FaceMin, FaceMax)
+          FaceL_I(l+1) = min(FaceMax, max(FaceMin, FaceOrig))
+
+       end if
+
+    end do
+
+    ! Limit right face. Loop index l is for cell center, and face l-1/2
+    do l = lMin, lMax
+
+       Cellmm = Cell_I(l-2)
+       Cellm  = Cell_I(l-1)
+       Cell   = Cell_I(l)
+       Cellp  = Cell_I(l+1)
+       Cellpp = Cell_I(l+2)
+
+       FaceOrig = (2*Cellpp - 13*Cellp + 47*Cell + 27*Cellm -3*Cellmm)/60.0
+
+       ! This is a quick check if there is a need to do any limiting
+       FaceMp = Cell + minmod(Cellm - Cell, 4*(Cell - Cellp))
+
+       if( (FaceOrig - Cell)*(FaceOrig - FaceMp) <= 1e-12)then
+          FaceR_I(l) = FaceOrig
+       else
+
+          D2p = minmod4(4*D2_I(l) - D2_I(l+1),4*D2_I(l+1) - D2_I(l), &
+               D2_I(l), D2_I(l+1))
+
+          D2m = minmod4(4*D2_I(l) - D2_I(l-1),4*D2_I(l-1) - D2_I(l), &
+               D2_I(l), D2_I(l-1))
+          
+          UpperLimit = Cell + 4*(Cell - Cellp)
+          Average    = 0.5*(Cell + Cellm)
+          Median     = Average - 0.5*D2m
+          LargeCurve = Cell + 0.5*(Cell - Cellp) + cFourThird*D2p
+
+          ! Note: FaceMin <= Cell, FaceMax >= Cell, so FaceMin <= FaceMax
+          FaceMin = max(min(Cell, Cellm, Median), &
+               min(Cell, UpperLimit, LargeCurve))
+
+          FaceMax = min(max(Cell, Cellm, Median), &
+               max(Cell, UpperLimit, LargeCurve))
+
+          ! FaceR = median(FaceOrig, FaceMin, FaceMax)
+          FaceR_I(l) = min(FaceMax, max(FaceMin, FaceOrig))
+
+          if(.false.)then
+             write(*,*)'l, Cell(l-2:l+2)=',l ,Cell_I(l-2:l+2)
+             write(*,*)'D2(l-1:l+1)=', D2_I(l-1:l+1)
+             write(*,*)'D2p,D2m =', D2p, D2m
+             write(*,*)'FaceOrig=', FaceOrig
+             write(*,*)'FaceMP  =', FaceMp
+             write(*,*)'FaceAv  =', Average
+             write(*,*)'FaceMD  =', Median
+             write(*,*)'FaceLC  =', LargeCurve
+             write(*,*)'FaceMin =', FaceMin
+             write(*,*)'FaceMax =', FaceMax
+             write(*,*)'FaceR   =', FaceR_I(l)
+             call stop_mpi('FAILED WITH FaceR')
+          end if
+
+       end if
+
+    end do
+
+  contains
+    !========================================================================
+    real function minmod(a, b)
+      real, intent(in):: a, b
+      !---------------------------------------------------------------------
+      minmod = (sign(0.5,a) + sign(0.5,b))*min(abs(a), abs(b))
+    end function minmod
+
+    !========================================================================
+    real function minmod4(a, b, c, d)
+      real, intent(in):: a, b, c, d
+      real:: SignSum
+      !---------------------------------------------------------------------
+      SignSum = sign(0.25,a) + sign(0.25,b) + sign(0.25,c) + sign(0.25,d)
+      if(abs(SignSum) < 0.9)then
+         minmod4 = 0.0
+      else
+         minmod4 = SignSum*min(abs(a), abs(b), abs(c), abs(d))
+      end if
+    end function minmod4
+    !========================================================================
+
+  end subroutine limiter_mp
+
+  !===========================================================================
   subroutine limiter_ppm4(lMin, lMax)
 
     integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
@@ -2484,20 +2640,14 @@ contains
 
     integer:: l
 
-    logical, parameter:: DoDebug = .false.
     character(len=*), parameter:: NameSub = 'limiter_ppm4'
     !-------------------------------------------------------------------------
-    if(DoDebug)write(*,*)'!!! starting with lMin, lMax=', lMin, lMax
-    if(DoDebug)write(*,*)'!!! Cell_I(iTest-4:iTest+3)=', Cell_I(iTest-4:iTest+3)
-
     ! Fourth order interpolation scheme
     ! Fill in lMin-1 and lMax+1, because the limiter needs these face values
     do l = lMin - 1, lMax + 1
        Face_I(l) = c7over12*(Cell_I(l-1) + Cell_I(l)) &
             -      c1over12*(Cell_I(l-2) + Cell_I(l+1))
     end do
-
-    if(DoDebug)write(*,*)'!!! Face_I(iTest-1:iTest+1)=', Face_I(iTest-1:iTest+1)
 
     ! Set unlimited values as default
     FaceR_I(lMin:lMax) = Face_I(lMin:lMax)
@@ -2508,17 +2658,12 @@ contains
        D2c_I(l) = Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1) 
     end do
 
-    if(DoDebug)write(*,*)'!!! D2c_I(iTest-3:iTest+2)=', D2c_I(iTest-3:iTest+2)
-
     if(UseLimiter4)then
        ! Third derivative at face based on cell values
        do l = lMin-2, lMax+2
           D3Face_I(l) = D2c_I(l) - D2c_I(l-1)
        end do
     end if
-
-    if(DoDebug)write(*,*)'!!! D3Face_I(iTest-2:iTest+2)=', &
-         D3Face_I(iTest-2:iTest+2)
 
     ! Loop through cells and modify FaceL and FaceR values if needed
     ! Start  at lMin-1 so that FaceL_I(lMin) gets set.
