@@ -208,23 +208,26 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)'   MHD Numerical Solution Parameters'
   call write_prefix; write(iUnitOut,*)'   ---------------------------------'
   call write_prefix; write(iUnitOut,*)
+
+  call write_prefix
   select case (nOrder)
   case (1)
-     call write_prefix
      write(iUnitOut,'(10X,a)') '1st-order scheme'
   case (2)
-     call write_prefix
      write(iUnitOut,'(10X,a)') '2nd-order scheme with '//trim(TypeLimiter)// &
           ' limiter'
-     if(TypeLimiter /= 'minmod') then
-        call write_prefix;
-        write(iUnitOut,'(10x,a,f5.2)') '    BetaLimiter =', BetaLimiter
-     end if
-  case(4)
-     call write_prefix
+  case (4)
      write(iUnitOut,'(10X,a)') '4th-order scheme with '//trim(TypeLimiter)// &
           ' limiter'
+  case (5)
+     write(iUnitOut,'(10X,a)') '5th-order scheme with '//trim(TypeLimiter)// &
+          ' limiter'
   end select
+  if(nOrder > 1 .and. TypeLimiter /= 'minmod') then
+     call write_prefix;
+     write(iUnitOut,'(10x,a,f5.2)') '    BetaLimiter =', BetaLimiter
+  end if
+
   call write_prefix
   write(iUnitOut,'(10X,a,a)') trim(FluxType),' flux function'
   if(UseNeutralFluid)then
