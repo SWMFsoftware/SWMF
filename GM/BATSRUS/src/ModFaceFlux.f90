@@ -2739,11 +2739,14 @@ contains
             if(UseAlfvenWaveReflection)then
                if(UseTransverseTurbulence)then
                   Pw = Pw*(1.0 + abs(SigmaD))
+                  Sound2 = Sound2 + GammaWave*Pw*InvRho
                else ! isotropic turbulence
-                  Pw = Pw*(1.0 + SigmaD/3.0)
+                  Pw = Pw*(1 + SigmaD/3)
+                  Sound2 = Sound2 + Pw*(GammaWave + SigmaD/6)*InvRho
                end if
+            else
+               Sound2 = Sound2 + GammaWave*Pw*InvRho
             end if
-            Sound2 = Sound2 + GammaWave*Pw*InvRho
          end if
       end if
 
