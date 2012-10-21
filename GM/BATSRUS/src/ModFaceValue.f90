@@ -799,7 +799,7 @@ contains
 
              ! First get 4th order accurate cell centered conservative vars
              iMin = MinI + 1; iMax = MaxI - 1
-             jMin = MinJ + jDim_; kMax = MaxJ - jDim_
+             jMin = MinJ + jDim_; jMax = MaxJ - jDim_
              kMin = MinK + kDim_; kMax = MaxK - kDim_
 
              ! Store primitive and conservative values based on cell averages
