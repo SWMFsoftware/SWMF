@@ -158,11 +158,10 @@ Module ModMain
   !\
   ! More numerical scheme parameters
   !/
-  ! Prolongation order (1 or 2) and type ('central','lr','minmod','central2'..)
-  integer           :: prolong_order = 1
-  character(len=10) :: prolong_type  = 'lr'
+  ! Prolongation order
+  integer           :: nOrderProlong = 1
 
-  ! Message passing mode ('dir', 'opt', 'all', 'allopt' ...)
+  ! Message passing mode ('all' or 'allopt' ...)
   character(len=10) :: optimize_message_pass = 'allopt'
 
   !\

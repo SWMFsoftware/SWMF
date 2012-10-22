@@ -1156,8 +1156,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
      case("#PROLONGATION")
-        call read_var('nOrderProlong',prolong_order)
-        call read_var('TypeProlong' ,prolong_type)
+        call read_var('nOrderProlong', nOrderProlong)
 
      case("#MESSAGEPASS","#OPTIMIZE")               
         call read_var('TypeMessagePass', optimize_message_pass)

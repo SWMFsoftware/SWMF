@@ -669,7 +669,7 @@ contains
     ! To improve the code stability, ONLY those values are calculated, which
     ! are actually used by the calc_facefluxes.
 
-    use ModMain,     ONLY: nOrder, prolong_order, BlkTest, UseB0, &
+    use ModMain,     ONLY: nOrder, nOrderProlong, BlkTest, UseB0, &
          UseConstrainB, nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
          iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
@@ -945,9 +945,9 @@ contains
        end if
 
        ! Now take care of faces at resolution changes
-       if(prolong_order==1 .and..not.UseConstrainB)then
+       if(nOrderProlong==1 .and..not.UseConstrainB)then
 
-          ! If prolong_order is 1 then use TVD reschange or accurate reschange 
+          ! If nOrderProlong is 1 then use TVD reschange or accurate reschange 
           ! scheme and overwrite face values at resolution changes
 
           if(nJ == 1 .and. (UseAccurateResChange .or. UseTvdResChange))then

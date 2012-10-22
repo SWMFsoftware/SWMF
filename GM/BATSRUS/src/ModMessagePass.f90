@@ -15,7 +15,7 @@ contains
     use ModMain, ONLY : nBlock, Unused_B, &
          TypeBc_I, time_loop, &
          UseConstrainB, UseProjection, &
-         nOrder, prolong_order, optimize_message_pass
+         nOrder, nOrderProlong, optimize_message_pass
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: far_field_BCs_BLK        
@@ -30,7 +30,7 @@ contains
     logical, optional, intent(in) :: DoResChangeOnlyIn 
 
     ! Use 2nd order prolongation to fill
-    logical, optional, intent(in) :: UseOrder2In       
+    logical, optional, intent(in) :: UseOrder2In
 
     logical :: UseOrder2
     logical :: DoResChangeOnly
@@ -52,11 +52,11 @@ contains
     UseOrder2=.false.
     if(present(UseOrder2In)) UseOrder2 = UseOrder2In
 
-    DoRestrictFace = prolong_order==1
+    DoRestrictFace = nOrderProlong==1
     if(UseConstrainB) DoRestrictFace = .false.
 
     DoTwoCoarseLayers = &
-         nOrder>1 .and. prolong_order==1 .and. .not. DoOneCoarserLayer
+         nOrder>1 .and. nOrderProlong==1 .and. .not. DoOneCoarserLayer
 
     if(DoTestMe)write(*,*) NameSub, &
          ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers=',&
@@ -68,14 +68,14 @@ contains
     if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
-          if (far_field_BCs_BLK(iBlock) .and. prolong_order==2) call &
+          if (far_field_BCs_BLK(iBlock) .and. nOrderProlong==2) call &
                set_cell_boundary(nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
           if(UseConstrainB)call correctP(iBlock)
           if(UseProjection)call correctP(iBlock)
        end do
     end if
 
-    if (UseOrder2) then
+    if (UseOrder2 .or. nOrderProlong > 1) then
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn)
        if(.not.DoResChangeOnly) &
