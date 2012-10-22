@@ -107,6 +107,8 @@ module ModUser
   logical :: DoAdvectSphere, DoWave, DoPipeFlow =.false., &
        DoResistivityGaussian = .false.
 
+  logical:: UseInitialStateDefinition = .false.
+
 contains
 
   subroutine user_read_inputs
@@ -116,15 +118,24 @@ contains
     ! use ModPhysics,  ONLY: Si2No_V, Io2Si_V,Io2No_V,&
     !      UnitRho_, UnitU_, UnitP_, UnitN_, UnitX_
     use ModNumConst,  ONLY: cTwoPi,cDegToRad
-    use ModUtilities, ONLY: split_string
+    use ModUtilities, ONLY: split_string, join_string
+    use ModInitialState, ONLY: init_initial_state, read_initial_state_param
 
-    character (len=100) :: NameCommand
+    character(len=100) :: NameCommand
+    character(len=500) :: StringVar
     !-------------------------------------------------------------------------
 
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
+       case("#STATEDEFINITION")
+          UseInitialStateDefinition = .true.
+          call join_string(nVar, NameVar_V(1:nVar), StringVar)
+          call init_initial_state(StringVar)
+          call read_initial_state_param(NameCommand)
+       case("#STATEINTERFACE")
+          call read_initial_state_param(NameCommand)
        case('#USERPROBLEM')
           call read_var('UserProblem',UserProblem)
        case('#GEM')
@@ -290,6 +301,7 @@ contains
     use ModViscosity,ONLY: viscosity_factor
     use BATL_lib,    ONLY: nDim, CoordMax_D, CoordMin_D, IsPeriodic_D, &
          CellSize_DB
+    use ModInitialState, ONLY: get_initial_state
 
     integer, intent(in) :: iBlock
 
@@ -307,6 +319,14 @@ contains
 
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
+
+    if(UseInitialStateDefinition)then
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          x = Xyz_DGB(x_,i,j,k,iBlock)
+          y = Xyz_DGB(y_,i,j,k,iBlock)
+          call get_initial_state( (/x, y/), State_VGB(:,i,j,k,iBlock) )
+       end do; end do; end do
+    end if
 
     if(UseUserInputUnitX) then
        select case(TypeInputUnitX)
