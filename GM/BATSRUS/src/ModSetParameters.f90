@@ -1157,6 +1157,8 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#PROLONGATION")
         call read_var('nOrderProlong', nOrderProlong)
+        UseTvdResChange = .false.
+        UseAccurateResChange = .false.
 
      case("#MESSAGEPASS","#OPTIMIZE")               
         call read_var('TypeMessagePass', optimize_message_pass)
