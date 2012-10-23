@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 
 ! All amr criteria has the following form:
 ! * Refinemnet criteia, RefineCrit..._I

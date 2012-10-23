@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !BOP -------------------------------------------------------------------
 !
 !MODULE: CON_geopack - geopack code + heliocentric systems
