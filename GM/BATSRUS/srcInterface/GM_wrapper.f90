@@ -143,7 +143,7 @@ subroutine GM_print_variables(NameSource)
 
   use ModMain, ONLY: NameThisComp
   use ModNumConst
-  use ModImPressure                                  !^CFG IF RCM
+  use ModImPressure
   use ModIonoPotential,ONLY:IonoPotential_II
   use ModIeGrid,       ONLY:nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I
   use ModIoUnit, ONLY: UNITTMP_
@@ -160,8 +160,8 @@ subroutine GM_print_variables(NameSource)
   if(NameThisComp/='GM') RETURN
 
   select case(NameSource)
-  case('IM')                        !^CFG IF RCM
-     NameVar='j i lon lat density pressure' !^CFG IF RCM
+  case('IM')
+     NameVar='j i lon lat density pressure'
   case('IE','IE_swmf')
      NameVar='i j theta phi pot'
   case default
@@ -175,13 +175,13 @@ subroutine GM_print_variables(NameSource)
   write(UNITTMP_,'(a)')trim(NameVar)
 
   select case(NameSource)
-  case('IM')                             !^CFG IF RCM BEGIN
+  case('IM')
      do i=1,iSize
         do j=1,jSize
            write(UNITTMP_,'(2i4,4G14.6)')j,i,IM_lon(j),IM_lat(i), &
                 IM_dens(i,j),IM_p(i,j)
         end do
-     end do                              !^CFG END RCM
+     end do
   case('IE')
      do j=1,nPhiIono
         do i=1,nThetaIono
@@ -200,7 +200,7 @@ subroutine GM_init_session(iSession, TimeSimulation)
 
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: Time_Simulation, UseIe, UsePw, TypeBC_I, body1_
-  use ModMain,     ONLY: UseIM                            !^CFG IF RCM
+  use ModMain,     ONLY: UseIM
   use CON_physics, ONLY: get_time
   use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_
   implicit none
@@ -216,7 +216,7 @@ subroutine GM_init_session(iSession, TimeSimulation)
   !----------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
-  UseIm = Couple_CC(IM_,GM_) % DoThis !^CFG IF RCM
+  UseIm = Couple_CC(IM_,GM_) % DoThis
   UsePw = Couple_CC(PW_,GM_) % DoThis
   UseIe = Couple_CC(IE_,GM_) % DoThis
 
@@ -250,8 +250,8 @@ end subroutine GM_init_session
 subroutine GM_finalize(TimeSimulation)
 
   use ModMain, ONLY: UseIe, time_loop
-  use ModFieldAlignedCurrent, ONLY: &     !^CFG IF IONOSPHERE
-       clean_mod_field_aligned_current    !^CFG IF IONOSPHERE
+  use ModFieldAlignedCurrent, ONLY: &
+       clean_mod_field_aligned_current
   implicit none
 
   !INPUT PARAMETERS:
@@ -265,7 +265,7 @@ subroutine GM_finalize(TimeSimulation)
 
   call BATS_save_files('FINAL')
 
-  if (UseIe) call clean_mod_field_aligned_current  !^CFG IF IONOSPHERE
+  if (UseIe) call clean_mod_field_aligned_current
 
   call BATSRUS_finalize
 

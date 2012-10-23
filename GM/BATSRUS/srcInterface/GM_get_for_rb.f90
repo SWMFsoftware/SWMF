@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !^CMP FILE RB
 
 !==========================================================================
@@ -43,8 +43,8 @@ end subroutine GM_get_for_rb_trace
 subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
      BufferLine_VI, nVarLine, nPointLine, NameVar)
 
-  !call stop_mpi('RAYTRACE is OFF') !^CFG UNCOMMENT IF NOT RAYTRACE
-  !^CFG IF RAYTRACE BEGIN
+  !call stop_mpi('RAYTRACE is OFF')
+
 
   use ModGeometry,ONLY: x2
   use ModProcMH,  ONLY: iProc
@@ -176,7 +176,7 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   Buffer_IIV(7,:,6) = SolarWind_V(Bz_) * No2Si_V(UnitB_)
   Buffer_IIV(8,:,6) = SolarWind_V(p_)  * No2Si_V(UnitP_)
 
-  !^CFG END RAYTRACE
+
 end subroutine GM_get_for_rb
 
 

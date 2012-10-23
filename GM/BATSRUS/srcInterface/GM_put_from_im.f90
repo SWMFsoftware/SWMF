@@ -1,10 +1,10 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !^CMP FILE IM
 !==========================================================================
 subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
-  !call stop_mpi('RCM is OFF') !^CFG UNCOMMENT IF NOT RCM
-  !^CFG IF RCM BEGIN
+  !call stop_mpi('RCM is OFF')
+
   use CON_coupler
   use CON_world,      ONLY: get_comp_info
   use CON_comp_param, ONLY: lNameVersion
@@ -182,6 +182,6 @@ contains
 
   end subroutine write_IMvars_idl
 
-  !^CFG END RCM
+
 
 end subroutine GM_put_from_im

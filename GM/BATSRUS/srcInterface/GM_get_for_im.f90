@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !^CMP FILE IM
 !==========================================================================
 ! FOR CRCM COUPLING
@@ -54,8 +54,8 @@ end subroutine GM_get_for_im_trace_crcm
 subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
      BufferLine_VI, nVarLine, nPointLine, NameVar)
 
-  !call stop_mpi('RAYTRACE is OFF') !^CFG UNCOMMENT IF NOT RAYTRACE
-  !^CFG IF RAYTRACE BEGIN
+  !call stop_mpi('RAYTRACE is OFF')
+
 
   use ModGeometry,ONLY: x2
   use ModProcMH,  ONLY: iProc
@@ -214,7 +214,7 @@ subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   Buffer_IIV(7,:,6) = SolarWind_V(Bz_) * No2Si_V(UnitB_)
   Buffer_IIV(8,:,6) = SolarWind_V(p_)  * No2Si_V(UnitP_)
 
-  !^CFG END RAYTRACE
+
 
   ! test only for anisop
   if(iProc == 0 .and. DoTest .and. DoAnisoPressureIMCoupling)then
@@ -396,8 +396,8 @@ end subroutine GM_get_for_im_trace
 subroutine GM_get_for_im_line(nRadius, nLon, MapOut_DSII, &
      nVarLine, nPointLine, BufferLine_VI)
 
-  !call stop_mpi('RAYTRACE is OFF') !^CFG UNCOMMENT IF NOT RAYTRACE
-  !^CFG IF RAYTRACE BEGIN
+  !call stop_mpi('RAYTRACE is OFF')
+
 
   use ModProcMH,  ONLY: iProc
   use ModGmImCoupling, ONLY: StateLine_VI
@@ -428,15 +428,15 @@ subroutine GM_get_for_im_line(nRadius, nLon, MapOut_DSII, &
 
   deallocate(RayMap_DSII, StateLine_VI)
 
-  !^CFG END RAYTRACE
+
 end subroutine GM_get_for_im_line
 
 !==========================================================================
 
 subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
-  !call stop_mpi('RCM is OFF') !^CFG UNCOMMENT IF NOT RCM
-  !^CFG IF RCM BEGIN
+  !call stop_mpi('RCM is OFF')
+
   use ModProcMH, ONLY: iProc
   use ModMain, ONLY: DoMultiFluidIMCoupling
   use ModGmImCoupling, ONLY: &
@@ -644,7 +644,7 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
      end if
   end do
 
-  !^CFG END RCM      
+
 end subroutine GM_get_sat_for_im
 
 !==========================================================================

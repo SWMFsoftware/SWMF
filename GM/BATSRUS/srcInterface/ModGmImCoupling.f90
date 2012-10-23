@@ -1,6 +1,6 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !^CMP FILE IM
-!^CFG FILE RAYTRACE
+
 module ModGmImCoupling
 
   use ModMpi

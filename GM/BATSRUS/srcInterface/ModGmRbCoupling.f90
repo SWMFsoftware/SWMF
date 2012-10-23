@@ -1,5 +1,5 @@
-!^CFG COPYRIGHT UM
-!^CFG FILE RAYTRACE
+!This code is a copyright protected software (c) 2002- University of Michigan
+
 module ModGmRbCoupling
 
   use ModMpi
