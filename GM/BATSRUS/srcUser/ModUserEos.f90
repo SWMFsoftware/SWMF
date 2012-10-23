@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !========================================================================
 module ModUser
   ! This is the default user module which contains empty methods defined

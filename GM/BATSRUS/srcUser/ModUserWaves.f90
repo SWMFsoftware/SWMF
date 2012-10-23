@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !========================================================================
 ! Revision history:
 ! Nov. 2010 Rona Oran - 1. Added user problem AdvectSphere and comparison

@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModUser
   use ModSize,      ONLY: x_, y_, z_
@@ -83,7 +83,7 @@ contains
     VarsGhostFace_V(Ux_:Uz_) = -U_D(x_:z_)
     VarsGhostFace_V(Bx_:Bz_) = B1t_D(x_:z_)!-B1n_D(x_:z_)
 
-    !^CFG IF SECONDBODY BEGIN
+
     ! BCs for second body in SC
     if (iBoundary==body2_) then
        VarsGhostFace_V(Rho_)=FaceState_VI(Rho_, body2_)
@@ -96,7 +96,7 @@ contains
        end if
        return
     end if
-    !^CFG END SECONDBODY
+
 
     !\
     ! Compute the perturbed state of the eruptive event at RFace_D::

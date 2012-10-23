@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 !Description (Sokolov, Feb.,04,2010)
 !Coded by: Cooper Downs /cdowns@ifa.hawaii.edu (version 0)

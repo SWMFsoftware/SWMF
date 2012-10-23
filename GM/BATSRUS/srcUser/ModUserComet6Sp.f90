@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !this file contains the ModUser for general Cometary MHD
 !MassSpecies is defined at [SpeciesFirst:SpeciesLast]
 ! Last 01.15 committed in

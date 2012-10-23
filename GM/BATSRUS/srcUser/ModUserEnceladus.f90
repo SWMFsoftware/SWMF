@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !this file contains the ModUser foe a 1 species model of inosphereic mgnetospheric interaction in Enceladus, it contains Hptoionization of H2O, recombination, charge exchange and electron impact. 
 !==============================================================================
 

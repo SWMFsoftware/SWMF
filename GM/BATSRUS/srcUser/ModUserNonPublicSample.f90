@@ -1,5 +1,5 @@
 !#NOTPUBLIC  email:darrens@umich.edu  expires:12/31/2099
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModUser
 

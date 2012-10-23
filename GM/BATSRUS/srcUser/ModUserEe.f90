@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 ! ModUser for flux emergence problems on Sun
 ! We calculate the thin radiative cooling, vertical damping, 
 ! and call coronal heating from PARAM.in to model the solar 
