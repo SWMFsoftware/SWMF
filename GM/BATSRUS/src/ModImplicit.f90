@@ -1,5 +1,5 @@
-!^CFG COPYRIGHT UM
-!^CFG FILE IMPLICIT
+!This code is a copyright protected software (c) 2002- University of Michigan
+
 module ModImplicit
 
   use ModSize
@@ -195,7 +195,7 @@ contains
     character(len=*), parameter:: NameSub = 'read_implicit_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
-    case('#IMPLICIT')                                 !^CFG IF IMPLICIT BEGIN
+    case('#IMPLICIT')
        call read_var('UsePointImplicit', UsePointImplicit)
        call read_var('UsePartImplicit',  UsePartImplicit)
        call read_var('UseFullImplicit',  UseFullImplicit)

@@ -509,7 +509,7 @@ contains
          TypeCoordSystem, IsStandAlone
     use ModPhysics,       ONLY: Si2No_V, UnitB_, DipoleStrengthSi
     use CON_planet_field, ONLY: get_planet_field
-    use ModMain,          ONLY: UseBody2             !^CFG IF SECONDBODY
+    use ModMain,          ONLY: UseBody2
     use ModMain,          ONLY: UseUserB0, UseMagnetogram
     use ModMagnetogram,   ONLY: get_magnetogram_field
 
@@ -532,7 +532,7 @@ contains
     else
        call get_b0_multipole(Xyz_D, B0_D) 
     end if
-    if(UseBody2)call add_b0_body2(Xyz_D, B0_D)        !^CFG IF SECONDBODY
+    if(UseBody2)call add_b0_body2(Xyz_D, B0_D)
 
   end subroutine get_b0
 
@@ -644,7 +644,7 @@ contains
 
   end subroutine get_b0_multipole
 
-  !^CFG IF SECONDBODY BEGIN
+
   !============================================================================
   subroutine add_b0_body2(XyzIn_D, B0_D)
 
@@ -681,6 +681,6 @@ contains
     B0_D = B0_D + (Dp*Xyz_D - BdpBody2_D)*rr3_inv
 
   end subroutine add_b0_body2
-  !^CFG END SECONDBODY
+
 
 end module ModB0

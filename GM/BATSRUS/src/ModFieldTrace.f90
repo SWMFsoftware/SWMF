@@ -1,5 +1,5 @@
-!^CFG COPYRIGHT UM
-!^CFG FILE RAYTRACE
+!This code is a copyright protected software (c) 2002- University of Michigan
+
 
 ! The main subroutines in this file are
 ! subroutine ray_trace_accurate        - trace all rays starting from 3D MHD grid

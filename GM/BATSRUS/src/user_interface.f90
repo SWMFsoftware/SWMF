@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 ! We provide external subroutine interfaces to ModUser routines 
 ! to avoid circular dependencies
 

@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 
 module ModRestartFile
 
@@ -13,11 +13,11 @@ module ModRestartFile
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_
   use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: CellSize_DB, xyzStart_BLK, NameGridFile
-  use ModIO,         ONLY: Restart_Bface                    !^CFG IF CONSTRAINB
-  use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK !^CFG IF CONSTRAINB
-  use ModMain,       ONLY: UseConstrainB                    !^CFG IF CONSTRAINB
-  use ModImplicit, ONLY: UseImplicit, &                     !^CFG IF IMPLICIT
-       n_prev, ImplOld_VCB, dt_prev                         !^CFG IF IMPLICIT
+  use ModIO,         ONLY: Restart_Bface
+  use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK
+  use ModMain,       ONLY: UseConstrainB
+  use ModImplicit, ONLY: UseImplicit, &
+       n_prev, ImplOld_VCB, dt_prev
   use ModKind,       ONLY: Real4_, Real8_
   use ModIoUnit,     ONLY: UnitTmp_
   use ModGmGeoindices, ONLY: DoWriteIndices
@@ -75,10 +75,10 @@ module ModRestartFile
   real (Real4_) :: Dt4, Time4, Dxyz4_D(3), Xyz4_D(3)
   real (Real8_) :: State8_CV(nI,nJ,nK,nVar), State8_VC(nVar,nI,nJ,nK)
   real (Real4_) :: State4_CV(nI,nJ,nK,nVar), State4_VC(nVar,nI,nJ,nK)
-  !^CFG IF CONSTRAINB BEGIN
+
   real (Real8_) :: B8_X(nI+1,nJ,nK), B8_Y(nI,nJ+1,nK), B8_Z(nI,nJ,nK+1)
   real (Real4_) :: B4_X(nI+1,nJ,nK), B4_Y(nI,nJ+1,nK), B4_Z(nI,nJ,nK+1)
-  !^CFG END CONSTRAINB
+
 
 contains
 
@@ -113,7 +113,7 @@ contains
        end if
     case("#NEWRESTART")
        restart=.true.
-       call read_var('DoRestartBFace',restart_Bface) !^CFG IF CONSTRAINB
+       call read_var('DoRestartBFace',restart_Bface)
     case("#BLOCKLEVELSRELOADED")
        ! Sets logical for upgrade of restart files 
        ! to include LEVmin and LEVmax
@@ -251,7 +251,7 @@ contains
 
     use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem,&
          nBlockAll, Body1, Time_Accurate, iStartTime_I, IsStandAlone
-    use ModMain,       ONLY: UseBody2,UseOrbit            !^CFG IF SECONDBODY
+    use ModMain,       ONLY: UseBody2,UseOrbit
     use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzMin_D, XyzMax_D, &
          RadiusMin, RadiusMax, TypeGeometry
@@ -305,7 +305,7 @@ contains
     end if
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#NEWRESTART'
-    write(unit_tmp,'(l1,a39)')UseConstrainB,'DoRestartBFace'!^CFG IF CONSTRAINB
+    write(unit_tmp,'(l1,a39)')UseConstrainB,'DoRestartBFace'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#RESTARTINFILE'
     ! Note that the output file format is saved as the input for next restart
@@ -316,12 +316,12 @@ contains
     write(unit_tmp,'(a)')'#NSTEP'
     write(unit_tmp,'(i8,a32)')n_step,'nStep'
     write(unit_tmp,*)
-    if(n_prev == n_step)then                            !^CFG IF IMPLICIT BEGIN
+    if(n_prev == n_step)then
        write(unit_tmp,'(a)')'#NPREVIOUS'
        write(unit_tmp,'(i8,a32)')n_prev,'nPrev'
        write(unit_tmp,'(es22.15,a18)')dt_prev,'DtPrev'
        write(unit_tmp,*)
-    end if                                              !^CFG END IMPLICIT
+    end if
     write(unit_tmp,'(a)')'#STARTTIME'
     write(unit_tmp,'(i8,a32)')iStartTime_I(1),'iYear'
     write(unit_tmp,'(i8,a32)')iStartTime_I(2),'iMonth'
@@ -394,7 +394,7 @@ contains
        end do
        write(unit_tmp,*)
     end if
-    !^CFG IF SECONDBODY BEGIN
+
     if(UseBody2)then
        write(unit_tmp,'(a)')'#SECONDBODY'
        write(unit_tmp,'(l1,a39)')     UseBody2,      'UseBody2'
@@ -409,7 +409,7 @@ contains
        write(unit_tmp,'(es22.15,a18)')OrbitPeriod,   'OrbitPeriod'
        write(unit_tmp,*)
     end if
-    !^CFG END SECONDBODY
+
     write(unit_tmp,'(a)')'#END'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'Additional info'
@@ -533,18 +533,18 @@ contains
           State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State8_CV(:,:,:,iVar)
        end do
 
-       if(Restart_Bface)then                          !^CFG IF CONSTRAINB BEGIN
+       if(Restart_Bface)then
           read(Unit_tmp, iostat = iError) b8_X, b8_Y, b8_Z               
           BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = b8_X
           ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = b8_Y
           BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = b8_Z
-       end if                                         !^CFG END CONSTRAINB
-       if(n_prev==n_step) then                        !^CFG IF IMPLICIT BEGIN
+       end if
+       if(n_prev==n_step) then
           read(Unit_tmp, iostat = iError) State8_CV
           do iVar = 1, nVar
              ImplOld_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
           end do
-       end if                                         !^CFG END IMPLICIT
+       end if
     else
        read(unit_tmp, iostat = iError) Dt4, Time4
        dt_BLK(iBlock) = Dt4
@@ -559,18 +559,18 @@ contains
           State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State4_CV(:,:,:,iVar)
        end do
 
-       if(Restart_Bface)then                          !^CFG IF CONSTRAINB BEGIN
+       if(Restart_Bface)then
           read(Unit_tmp, iostat = iError) b4_X, b4_Y, b4_Z               
           BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = b4_X
           ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = b4_Y
           BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = b4_Z
-       end if                                         !^CFG END CONSTRAINB
-       if(n_prev==n_step) then                        !^CFG IF IMPLICIT BEGIN
+       end if
+       if(n_prev==n_step) then
           read(Unit_tmp, iostat = iError) State4_CV
           do iVar = 1, nVar
              ImplOld_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
           end do
-       end if                                         !^CFG END IMPLICIT
+       end if
     endif
 
     if(iError /= 0) call stop_mpi(NameSub// &
@@ -632,14 +632,14 @@ contains
     write(Unit_tmp) CellSize_DB(:,iBlock), xyzStart_BLK(:,iBlock)
     write(Unit_tmp) &
          ( State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock), iVar=1,nVar)
-    if(UseConstrainB)then                            !^CFG iF CONSTRAINB BEGIN
+    if(UseConstrainB)then
        write(Unit_tmp) &
             BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock),&
             ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock),&
             BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock)
-    end if                                           !^CFG END CONSTRAINB
-    if(n_prev==n_step) write(Unit_tmp) &                !^CFG IF IMPLICIT
-         (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)  !^CFG IF IMPLICIT
+    end if
+    if(n_prev==n_step) write(Unit_tmp) &
+         (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)
     close(unit_tmp)
 
   end subroutine write_restart_file
@@ -667,15 +667,15 @@ contains
          Dt_BLK(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
          State_VGB(1:nVar,1:nI,1:nJ,1:nK,1)
 
-    if(DoRead .and. Restart_Bface .or. &         !^CFG iF CONSTRAINB BEGIN
+    if(DoRead .and. Restart_Bface .or. &
          .not.DoRead .and. UseConstrainB)then
        l = lReal*((nI+1)*nJ*nK + nI*(nJ+1)*nK + nI*nJ*(nK+1))
        lRecord = lRecord + l
-    end if                                       !^CFG END CONSTRAINB
-    if(n_prev==n_step)then                       !^CFG IF IMPLICIT BEGIN
+    end if
+    if(n_prev==n_step)then
        l = lReal*nVar*nI*nJ*nK
        lRecord = lRecord + l
-    end if                                       !^CFG END IMPLICIT
+    end if
 
     if(DoTestMe)write(*,*) NameSub,' nByteReal, nByteRealRead, lRecord=',&
           nByteReal, nByteRealRead, lRecord   
@@ -766,7 +766,7 @@ contains
 
        IsRead = .false.
        if(nByteRealRead == 4)then
-          if(Restart_Bface)then                       !^CFG IF CONSTRAINB BEGIN
+          if(Restart_Bface)then
              ! Read with face centered magnetic field for constrained transport
              read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   B4_X, B4_Y, B4_Z
@@ -776,8 +776,8 @@ contains
                 BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = B4_Z
              end if
              IsRead = .true.
-          endif                                       !^CFG END CONSTRAINB
-          if(n_prev==n_step)then                      !^CFG IF IMPLICIT BEGIN
+          endif
+          if(n_prev==n_step)then
              ! Read with previous state for sake of implicit BDF2 scheme
              read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   State4_CV
@@ -787,7 +787,7 @@ contains
                 end do
              end if
              IsRead = .true.
-          end if                                       !^CFG END IMPLICIT
+          end if
           if(.not.IsRead) &
                read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC
           
@@ -797,7 +797,7 @@ contains
           State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock) = State4_VC
 
        else
-          if(Restart_Bface)then                       !^CFG IF CONSTRAINB BEGIN
+          if(Restart_Bface)then
              ! Read with face centered magnetic field for constrained transport
              read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   B8_X, B8_Y, B8_Z
@@ -807,8 +807,8 @@ contains
                 BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = B8_Z
              end if
              IsRead = .true.
-          endif                                       !^CFG END CONSTRAINB
-          if(n_prev==n_step)then                      !^CFG IF IMPLICIT BEGIN
+          endif
+          if(n_prev==n_step)then
              ! Read with previous state for sake of implicit BDF2 scheme
              read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   State8_CV
@@ -818,7 +818,7 @@ contains
                 end do
              end if
              IsRead = .true.
-          end if                                       !^CFG END IMPLICIT
+          end if
           if(.not.IsRead) &
                read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC
 
@@ -876,7 +876,7 @@ contains
           iRec = iMorton
        end if
 
-       if(UseConstrainB)then                          !^CFG IF CONSTRAINB BEGIN
+       if(UseConstrainB)then
           ! Save face centered magnetic field 
           write(Unit_tmp, rec=iRec)  Dt_BLK(iBlock),&
                CellSize_DB(:,iBLock), &
@@ -886,8 +886,8 @@ contains
                ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock),&
                BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock)
           CYCLE
-       endif                                          !^CFG END CONSTRAINB
-       if(n_prev==n_step)then                         !^CFG IF IMPLICIT BEGIN
+       endif
+       if(n_prev==n_step)then
           ! Save previous time step for sake of BDF2 scheme
           write(Unit_tmp, rec=iRec) &
                Dt_BLK(iBlock), &
@@ -896,7 +896,7 @@ contains
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
                (ImplOld_VCB(iVar,:,:,:,iBlock), iVar = 1, nVar)
           CYCLE
-       endif                                          !^CFG END IMPLICIT
+       endif
 
        write(Unit_tmp, rec=iRec) &
             Dt_BLK(iBlock), &

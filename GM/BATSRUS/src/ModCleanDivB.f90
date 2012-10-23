@@ -1,5 +1,5 @@
-!^CFG COPYRIGHT UM
-!^CFG FILE DIVBDIFFUSE
+!This code is a copyright protected software (c) 2002- University of Michigan
+
 Module ModDivbCleanup
   use ModSize
   real::OneDotMDotOneInv

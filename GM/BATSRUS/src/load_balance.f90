@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 
 module ModLoadBalance
 
@@ -7,9 +7,9 @@ module ModLoadBalance
 
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
        n_block_data, use_block_data, set_block_data
-  use ModImplicit, ONLY: UseBDF2, n_prev, ImplOld_VCB, nW  !^CFG IF IMPLICIT
-  use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK        !^CFG IF CONSTRAINB
-  use ModRaytrace, ONLY: ray                               !^CFG IF RCM
+  use ModImplicit, ONLY: UseBDF2, n_prev, ImplOld_VCB, nW
+  use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK
+  use ModRaytrace, ONLY: ray
   use ModAdvance, ONLY: nVar
   use ModB0, ONLY: B0_DGB
   use ModIo, ONLY: log_vars
@@ -86,7 +86,7 @@ contains
 
     iData = nScalarData
 
-    if (UseConstrainB) then                      !^CFG IF CONSTRAINB BEGIN
+    if (UseConstrainB) then
 
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           iData = iData+1
@@ -97,7 +97,7 @@ contains
           Buffer_I(iData) = Bzface_BLK(i,j,k,iBlock)
        end do; end do; end do
 
-    endif                                         !^CFG END CONSTRAINB
+    endif
 
     if(DoMoveExtraData)then
        if(UseB0)then
@@ -110,18 +110,18 @@ contains
 
     end if ! DoMoveExtraData
 
-    if(UseBDF2 .and. n_prev > 0)then             !^CFG IF IMPLICIT BEGIN
+    if(UseBDF2 .and. n_prev > 0)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nw; iData = iData+1
           Buffer_I(iData) = ImplOld_VCB(iVar,i,j,k,iBlock)
        end do; end do; end do; end do
-    end if                                       !^CFG END IMPLICIT
+    end if
 
-    if(DoSendRay)then                            !^CFG IF RCM BEGIN
+    if(DoSendRay)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
           iData = iData+1
           Buffer_I(iData) = ray(i1,i2,i,j,k,iBlock)
        end do; end do; end do; end do; end do
-    end if                                       !^CFG END RCM
+    end if
 
     if(nDynamicData > 0)then
        call get_block_data(iBlock, nDynamicData, &
@@ -156,7 +156,7 @@ contains
     ! Read rest of the blockData buffer
     iData = nScalarData
 
-    if (UseConstrainB) then                      !^CFG IF CONSTRAINB BEGIN
+    if (UseConstrainB) then
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           iData = iData+1
           Bxface_BLK(i,j,k,iBlock) = Buffer_I(iData) 
@@ -165,7 +165,7 @@ contains
           iData = iData+1
           Bzface_BLK(i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do
-    end if                                      !^CFG END CONSTRAINB
+    end if
 
     if(DoMoveExtraData)then
        if(UseB0)then
@@ -177,19 +177,19 @@ contains
        end if
     end if ! DoMoveExtraData
 
-    if(UseBDF2 .and. n_prev > 0)then            !^CFG IF IMPLICIT BEGIN
+    if(UseBDF2 .and. n_prev > 0)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nw
           iData = iData+1
           ImplOld_VCB(iVar,i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do; end do
-    end if                                      !^CFG END IMPLICIT
+    end if
 
-    if(DoSendRay)then                           !^CFG IF RCM BEGIN
+    if(DoSendRay)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
           iData = iData+1
           ray(i1,i2,i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do; end do; end do
-    end if                                      !^CFG END RCM
+    end if
 
     if(nDynamicData > 0)then
        call put_block_data(iBlock, nDynamicData, &
@@ -210,7 +210,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
   use ModProcMH
   use ModMain
-  use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
+  use ModImplicit, ONLY : UsePartImplicit
   use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP,&
        SkippedBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_,&
        State_VGB
@@ -277,7 +277,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
        ' starting with DoMoveCoord,DoMoveData,IsNewBlock=', &
        DoMoveCoord, DoMoveData, IsNewBlock
 
-  call select_stepping(DoMoveCoord)       !^CFG IF IMPLICIT
+  call select_stepping(DoMoveCoord)
 
   if (nProc>1 .and. index(test_string,'NOLOADBALANCE') < 1) then
 
@@ -306,9 +306,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         iType_I(ExplBlock_)        = 2
         iType_I(-SteadyBoundBlock_) = 3
         iType_I(-ExplBlock_)        = 3
-     elseif(UsePartImplicit)then                !^CFG IF IMPLICIT
-        iType_I( ImplBlock_) = 2                !^CFG IF IMPLICIT
-        iType_I(-ImplBlock_) = 2                !^CFG IF IMPLICIT
+     elseif(UsePartImplicit)then
+        iType_I( ImplBlock_) = 2
+        iType_I(-ImplBlock_) = 2
      else
         iType_I(-ExplBlock_) = 2
      endif
@@ -369,7 +369,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
 end subroutine load_balance
 
-!^CFG IF IMPLICIT BEGIN
+
 !=============================================================================
 subroutine select_stepping(DoPartSelect)
 
@@ -525,4 +525,4 @@ subroutine select_stepping(DoPartSelect)
           minval(iTypeAdvance_BP),maxval(iTypeAdvance_BP)
   end if
 end subroutine select_stepping
-!^CFG END IMPLICIT
+

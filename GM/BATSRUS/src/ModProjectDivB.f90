@@ -1,5 +1,5 @@
-!^CFG COPYRIGHT UM
-!^CFG FILE PROJECTION
+!This code is a copyright protected software (c) 2002- University of Michigan
+
 
 !=============================================================================
 subroutine project_B
@@ -15,8 +15,8 @@ subroutine project_B
   use ModAdvance, ONLY : State_VGB
   use ModGeometry, ONLY : true_cell
   use ModProject
-  use ModMain, ONLY : UseConstrainB                   !^CFG IF CONSTRAINB
-  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK  !^CFG IF CONSTRAINB
+  use ModMain, ONLY : UseConstrainB
+  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   use ModMessagePass, ONLY: exchange_messages
   use BATL_lib, ONLY: Xyz_DGB
   implicit none
@@ -54,7 +54,7 @@ subroutine project_B
      write(*,*)'Project_B, old B:', &
           State_VGB(Bx_:Bz_,Itest,Jtest,Ktest,BLKtest),  &
           true_cell(Itest,Jtest,Ktest,BLKtest)
-     if(UseConstrainB)then                      !^CFG IF CONSTRAINB BEGIN
+     if(UseConstrainB)then
         write(*,*)'Project_B, Bxface,true_cell:',    &
              Bxface_BLK(Itest,Jtest,Ktest,BLKtest),  &
              Bxface_BLK(Itest+1,Jtest,Ktest,BLKtest),&
@@ -73,7 +73,7 @@ subroutine project_B
              true_cell(Itest,Jtest,Ktest-1,BLKtest), &
              true_cell(Itest,Jtest,Ktest+1,BLKtest)
 
-     end if                                     !^CFG END CONSTRAINB
+     end if
   end if
 
   ! Determine the div B error
@@ -178,7 +178,7 @@ subroutine project_B
         write(*,*)'Project_B, new B, true_cell:', &
              State_VGB(Bx_:Bz_,Itest,Jtest,Ktest,BLKtest),  &
              true_cell(Itest,Jtest,Ktest,BLKtest)
-        if(UseConstrainB)then                      !^CFG IF CONSTRAINB BEGIN
+        if(UseConstrainB)then
            write(*,*)'Project_B, Bxface,true_cell:',    &
                 Bxface_BLK(Itest,Jtest,Ktest,BLKtest),  &
                 Bxface_BLK(Itest+1,Jtest,Ktest,BLKtest),&
@@ -197,7 +197,7 @@ subroutine project_B
                 true_cell(Itest,Jtest,Ktest-1,BLKtest), &
                 true_cell(Itest,Jtest,Ktest+1,BLKtest)
 
-        end if                                     !^CFG END CONSTRAINB
+        end if
      end if
   endif
 
@@ -217,8 +217,8 @@ subroutine proj_get_divB(proj_divB)
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : State_VGB
   use ModProject
-  use ModMain, ONLY : UseConstrainB                       !^CFG IF CONSTRAINB
-  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK      !^CFG IF CONSTRAINB
+  use ModMain, ONLY : UseConstrainB
+  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   use BATL_lib, ONLY: CellSize_DB
 
   implicit none
@@ -234,7 +234,7 @@ subroutine proj_get_divB(proj_divB)
 
   proj_divB=0.0
 
-  if(UseConstrainB)then                      !^CFG IF CONSTRAINB BEGIN
+  if(UseConstrainB)then
      do iBLK=1,nBlock
         if(Unused_B(iBLK)) CYCLE
 
@@ -246,7 +246,7 @@ subroutine proj_get_divB(proj_divB)
           +(Bzface_BLK(1:nI  ,1:nJ  ,2:nK+1,iBLK)                      &
            -Bzface_BLK(1:nI  ,1:nJ  ,1:nK  ,iBLK))/CellSize_DB(z_,iBLK)
      end do
-  else                                       !^CFG END CONSTRAINB
+  else
      do iBLK=1,nBlock
         if(Unused_B(iBLK))CYCLE
         DxInvHalf = 0.5/CellSize_DB(x_,iBLK);
@@ -262,7 +262,7 @@ subroutine proj_get_divB(proj_divB)
                 (State_VGB(Bz_,i,j,k+1,iBLK)-State_VGB(Bz_,i,j,k-1,iBLK))
        end do; end do; end do
     end do
-  end if                                     !^CFG IF CONSTRAINB
+  end if
 
 end subroutine proj_get_divB
 
@@ -364,8 +364,8 @@ subroutine proj_matvec(phi,laplace_phi)
   use ModMain, ONLY : nBLK,nBlock,Unused_B,nI,nJ,nK, x_, y_, z_
   use ModGeometry, ONLY : true_cell,body_BLK
   use ModProject
-  use ModMain, ONLY : UseConstrainB          !^CFG IF CONSTRAINB
-  use ModCT                                  !^CFG IF CONSTRAINB
+  use ModMain, ONLY : UseConstrainB
+  use ModCT
   use BATL_lib, ONLY: CellSize_DB
   implicit none
 
@@ -605,7 +605,7 @@ subroutine proj_correction(phi)
 
   call set_oktest('proj_correction',oktest,oktest_me)
 
-  if(UseConstrainB)then                      !^CFG IF CONSTRAINB BEGIN
+  if(UseConstrainB)then
 
      if(oktest_me)write(*,*)'proj_correction old Bzface=',&
           BzFace_BLK(Itest,Jtest,Ktest,BLKtest), &
@@ -653,7 +653,7 @@ subroutine proj_correction(phi)
           BzFace_BLK(Itest,Jtest,Ktest,BLKtest), &
           BzFace_BLK(Itest,Jtest,Ktest+1,BLKtest)
 
-  else                                       !^CFG END CONSTRAINB
+  else
      do iBLK = 1, nBlock
         if(Unused_B(iBLK)) CYCLE
         DxInvHalf = 0.5/CellSize_DB(x_,iBLK);
@@ -671,6 +671,6 @@ subroutine proj_correction(phi)
                 DzInvHalf*(phi(i,j,k+1,iBLK)-phi(i,j,k-1,iBLK))
         end do; end do; end do
      end do
-  end if                                     !^CFG IF CONSTRAINB
+  end if
 
 end subroutine proj_correction

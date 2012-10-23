@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
 subroutine write_logfile(iSatIn,iFile)
   use ModProcMH
@@ -273,8 +273,8 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModB0, ONLY:  B0_DGB, get_b0
   use ModGeometry,   ONLY: R_BLK,x1,x2,y1,y2,z1,z2, &
        DomainVolume
-  use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
-  use ModSatelliteFile, ONLY: get_satellite_ray !^CFG  IF RAYTRACE
+  use ModRaytrace,   ONLY: ray
+  use ModSatelliteFile, ONLY: get_satellite_ray
   use ModSatelliteFile, ONLY: XyzSat_DI
   use ModIO, ONLY: write_myname
   use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid
@@ -338,7 +338,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
                 + StateSat_V(rho_)*OmegaBody*XyzSat_DI(x_,iSat)
      end if
 
-     !^CFG IF RAYTRACE BEGIN
+
      !If any ray tracing satellite variables are present, collect ray data
      do iVar=1, nLogVar
         select case(NameLogVar_I(iVar))
@@ -349,7 +349,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
            EXIT
         end select
      enddo
-     !^CFG END RAYTRACE
+
 
   else
      ! The logfile may need the integral of conservative variables
@@ -399,8 +399,8 @@ contains
     integer :: jVar
     character(len=10) :: NameVar, NameLogVarLower
 
-    ! External function for ionosphere    !^CFG IF IONOSPHERE
-    real, external :: logvar_ionosphere   !^CFG IF IONOSPHERE
+    ! External function for ionosphere
+    real, external :: logvar_ionosphere
     !------------------------------------------------------------------------
 
     select case(NameLogVar)
@@ -697,7 +697,7 @@ contains
     case('statuspnt')
        if(iProc == ProcTest) &
             LogVar_I(iVarTot) = ray(3,1,iTest,jTest,kTest,BlkTest)
-!!$!^CFG END RAYTRACE
+!!$
 
 !!$! Ionosphere values                                 ^CFG IF IONOSPHERE BEGIN
     case('cpcpn','cpcp_n','cpcp_north','cpcpnorth',&
@@ -980,7 +980,7 @@ contains
           LogVar_I(iVarTot) = 1
        end if
        
-       !Raytracing footpoint values               !^CFG IF RAYTRACE BEGIN
+       !Raytracing footpoint values
     case('theta1')
        LogVar_I(iVarTot) = SatRayVarSum_I(1)
     case('phi1')
@@ -990,7 +990,7 @@ contains
     case('theta2')
        LogVar_I(iVarTot) = SatRayVarSum_I(4)
     case('phi2')
-       LogVar_I(iVarTot) = SatRayVarSum_I(5)      !^CFG END RAYTRACE
+       LogVar_I(iVarTot) = SatRayVarSum_I(5)
 
     case default
        ! Check if the variable name is one of the state variables
@@ -1066,13 +1066,13 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
         LogVar_I(iVarTot)=LogVar_I(iVarTot)*No2Io_V(UnitTemperature_)
 
 !!$! Ionosphere values                                
-        !^CFG IF IONOSPHERE BEGIN
+
      case('cpcpn','cpcp_n','cpcp_north','cpcpnorth',&
           'cpcps','cpcp_s','cpcp_south','cpcpsouth')
         ! User unit is kV = 1000 V
         LogVar_I(iVarTot) = LogVar_I(iVarTot) &
              *(No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0       
-        !^CFG END IONOSPHERE
+
 
 !!$! Flux values
      case('aflx')

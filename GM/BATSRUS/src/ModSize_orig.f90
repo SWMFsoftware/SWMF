@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 module ModSize
   
   use BATL_size, MaxBlockBatl => MaxBlock
@@ -11,8 +11,8 @@ module ModSize
 
   integer, parameter :: nBLK = MaxBlock ! alias for convenience
 
-  ! Maximum number of implicit blocks (set by Config.pl) !^CFG IF IMPLICIT
-  integer, parameter :: MaxImplBLK = min(MaxBlock, 100)  !^CFG IF IMPLICIT
+  ! Maximum number of implicit blocks (set by Config.pl)
+  integer, parameter :: MaxImplBLK = min(MaxBlock, 100)
 
   ! Named indexes for Cartesian directions (these are limited by nDim in BATL)
   integer, parameter :: x_ = 1, y_ = 2, z_ = 3

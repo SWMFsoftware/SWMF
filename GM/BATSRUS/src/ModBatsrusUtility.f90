@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !==== Simple subroutines and functions that operate on all used blocks ========
 !=============================================================================
 real function integrate_BLK(qnum,qa)              

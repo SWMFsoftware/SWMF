@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM      
+!This code is a copyright protected software (c) 2002- University of Michigan      
 module ModCurrent
 
   use ModCoordTransform, ONLY: sph_to_xyz

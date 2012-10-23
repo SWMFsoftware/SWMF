@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
 subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
      nTheta,nPhi,rPlot,plotvarnames,H5Index,nBlkCellsN,nBlkCellsS)

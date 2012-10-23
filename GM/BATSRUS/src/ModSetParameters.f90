@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 subroutine MH_set_parameters(TypeAction)
 
   ! Set input parameters for the Global Magnetosphere (GM) module

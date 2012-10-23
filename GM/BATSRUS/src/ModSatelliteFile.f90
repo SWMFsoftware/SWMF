@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModSatelliteFile
   use ModSize,   ONLY: MaxBlock
@@ -535,7 +535,7 @@ contains
   end subroutine satellite_trajectory_formula
 
   !============================================================================
-  !^CFG IF RAYTRACE BEGIN
+
   subroutine get_satellite_ray(iSatIn, SatRayVar_I)
 
     use ModRaytrace
@@ -817,6 +817,6 @@ contains
     endif
   end subroutine GM_trace_sat
   !============================================================================
-  !^CFG END RAYTRACE
+
   
 end module ModSatelliteFile

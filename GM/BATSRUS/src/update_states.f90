@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 subroutine update_states(iStage,iBlock)
   use ModProcMH
   use ModMain
@@ -50,7 +50,7 @@ subroutine update_states(iStage,iBlock)
      call update_states_MHD(iStage,iBlock)
   end if
 
-  !^CFG IF DEBUGGING BEGIN
+
   if(index(test_string,'fixrho ')>0) &
        State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)=StateOld_VCB(Rho_,:,:,:,iBlock)
 
@@ -87,7 +87,7 @@ subroutine update_states(iStage,iBlock)
         Energy_GBI(i,j,k,iBlock,:) = EnergyOld_CBI(i,j,k,iBlock,:)
      end do; end do; end do
   end if
-  !^CFG END DEBUGGING
+
 
   if(oktest_me)then
      write(*,*)NameSub,' final:'
@@ -129,7 +129,7 @@ subroutine update_check(iStage)
 
   use ModProcMH
   use ModMain
-  use ModImplicit, ONLY: UsePartImplicit !^CFG IF IMPLICIT
+  use ModImplicit, ONLY: UsePartImplicit
   use ModAdvance
   use ModPhysics
   use ModGeometry, ONLY : true_cell
@@ -337,13 +337,13 @@ subroutine update_check(iStage)
      PercentChangePE(1:2) =  percent_chg_rho(1:2) - 0.1
      PercentChangePE(3:4) =  percent_chg_p(1:2) - 0.1
 
-     !^CFG IF IMPLICIT BEGIN
+
      ! The part implicit scheme can get here if all blocks become explicit
      ! due to time step reductions. To be able to recover the time step,
      ! increase fixed time step if there was no time step reduction above.
      if(UsePartImplicit .and. dt == DtFixed) &
           DtFixed = min(DtFixedOrig, DtFixed*1.05)
-     !^CFG END IMPLICIT
+
 
      if(oktest) then
         if (iProc == 0 .and. report_tf < 1.) &
@@ -596,7 +596,7 @@ contains
        write(*,*)NameSub,' old     state=',StateOld_VCB(:,i,j,k,iBlock)
     end if
 
-    if(boris_correction .and. nFluid==1) then                  !^CFG IF BORISCORR BEGIN
+    if(boris_correction .and. nFluid==1) then
 
        ! Convert old state
        fullBx = B0_DC(x_,i,j,k) + &
@@ -755,7 +755,7 @@ contains
           call calc_energy1_point(i,j,k,iBlock)
        end if
     else                      ! Non-Boris interpolation                
-       !^CFG END BORISCORR
+
        State_VGB(1:nVar,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(1:nVar,i,j,k,iBlock) + &
             (cOne-time_fraction) * StateOld_VCB(1:nVar,i,j,k,iBlock)
@@ -777,7 +777,7 @@ contains
        else
           call calc_energy_point(i,j,k,iBlock)
        end if
-    end if                       !^CFG IF BORISCORR
+    end if
     time_BLK(i,j,k,iBlock) = time_BLK(i,j,k,iBlock)*time_fraction
 
     if(DoTestCell)write(*,*)NameSub,' final state=',State_VGB(:,i,j,k,iBlock)

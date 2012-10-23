@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModFaceBoundary
 
@@ -149,8 +149,8 @@ contains
     ! Variables used for polar wind boundary condition
     real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta
 
-    ! External function for ionosphere    !^CFG IF IONOSPHERE
-    real, external :: logvar_ionosphere   !^CFG IF IONOSPHERE
+    ! External function for ionosphere
+    real, external :: logvar_ionosphere
     real:: RhoCpcp
 
     character (len=*), parameter :: NameSub = 'set_face_bc'
@@ -167,14 +167,14 @@ contains
        Cos2PolarTheta = cos(PolarTheta)**2
     end if
 
-    !^CFG IF IONOSPHERE BEGIN
+
     ! Calculate inner BC density from cross polar cap potential if required
     ! Use KeV units for Cpcp and amu/cc for density.
     if(UseCpcpBc .and. UseIe) &
          RhoCpcp = Io2No_V(UnitRho_)*(Rho0Cpcp + RhoPerCpcp &
          * 0.5*(logvar_ionosphere('cpcpn') + logvar_ionosphere('cpcps')) &
          * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
-    !^CFG END IONOSPHERE
+
 
     !\
     ! Apply body boundary conditions as required.
@@ -346,7 +346,7 @@ contains
 
     subroutine set_face(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
-      use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
+      use ModPhysics, ONLY : xBody2,yBody2,zBody2
       use ModPhysics, ONLY : FaceState_VI,Si2No_V,No2Si_V,UnitX_,UnitN_, &
            UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_,OrbitPeriod, &
            UseOutflowPressure, pOutflow
@@ -393,13 +393,13 @@ contains
          return
       end if
 
-      !^CFG IF SECONDBODY BEGIN
+
       if(iBoundary==body2_)then
          FaceCoords_D(x_)= FaceCoords_D(x_) - xBody2
          FaceCoords_D(y_)= FaceCoords_D(y_) - yBody2
          FaceCoords_D(z_)= FaceCoords_D(z_) - zBody2
       end if
-      !^CFG END SECONDBODY
+
 
       ! Default fixed/initial state for this boundary
       FaceState_V = FaceState_VI(:, iBoundary)  
@@ -536,9 +536,9 @@ contains
                VarsGhostFace_V = VarsTrueFace_V
             end where
 
-            ! Apply CPCP dependent density if required      !^CFG IF IONOSPHERE
-            if(UseCpcpBc .and. UseIe) &                     !^CFG IF IONOSPHERE
-                 VarsGhostFace_V(Rho_) = RhoCpcp            !^CFG IF IONOSPHERE
+            ! Apply CPCP dependent density if required
+            if(UseCpcpBc .and. UseIe) &
+                 VarsGhostFace_V(Rho_) = RhoCpcp
 
             if(PressureJumpLimit > 0.0) then
                ! Use body pressures but limit jump
@@ -826,7 +826,7 @@ contains
             end if
          end if
 
-         !^CFG IF SECONDBODY BEGIN
+
       case('Body2Orbit')
          VarsGhostFace_V = FaceState_V
          VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
@@ -837,13 +837,13 @@ contains
          VarsGhostFace_V(Uy_) = &
               (cTwoPi*xBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
          VarsGhostFace_V(Uz_) =  0.0
-         !^CFG END SECONDBODY
+
 
       case default
          call stop_mpi('Incorrect TypeBc_I='//TypeBc)
       end select
 
-      !^CFG IF IONOSPHERE BEGIN
+
       if (UseIe .and. iBoundary == Body1_) then
          ! Get the E x B / B^2 velocity
          call calc_inner_bc_velocity(TimeBc, FaceCoords_D, &
@@ -865,7 +865,7 @@ contains
                  //TypeBc)
          end select
       end if
-      !^CFG END IONOSPHERE
+
 
       if (UseRotatingBc .and. iBoundary==Body1_) then
 

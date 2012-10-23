@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
 subroutine write_plot_common(ifile)
 
@@ -611,7 +611,7 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
   use ModParallel, ONLY: proc_dims
   use ModPhysics, ONLY : g, cLight, rBody, ThetaTilt, &
        No2Io_V, UnitU_, UnitX_, UnitRho_
-  use ModRaytrace, ONLY : R_raytrace                !^CFG  IF RAYTRACE
+  use ModRaytrace, ONLY : R_raytrace
   use ModNumConst, ONLY : cRadToDeg
   use ModResistivity, ONLY: Eta0Si
   use ModIO
@@ -666,10 +666,10 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
         EqPar_I(iPar)=No2Io_V(UnitU_)
      case('mu')
         EqPar_I(iPar)=mu_los
-!!$!^CFG  IF RAYTRACE BEGIN
+!!$
      case('R_ray')
         EqPar_I(iPar)=R_raytrace
-!!$!^CFG END RAYTRACE
+!!$
      case default
         EqPar_I(iPar)=-7777.
         if(iProc==0)write(*,*)'Error in set_eqpar: unknown eqparname=',&
@@ -827,7 +827,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('bz')
         plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=FullB_DG(z_,:,:,:)
-     case('bxl')                                 !^CFG IF CONSTRAINB BEGIN
+     case('bxl')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=BxFace_BLK(1:nI,1:nJ,1:nK,iBLK)
      case('bxr')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=BxFace_BLK(2:nI+1,1:nJ,1:nK,iBLK)
@@ -839,7 +839,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(1:nI,1:nJ,1:nK,iVar)=BzFace_BLK(1:nI,1:nJ,1:nK,iBLK)
      case('bzr')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=BzFace_BLK(1:nI,1:nJ,2:nK+1,iBLK)
-        !                                        !^CFG END CONSTRAINB
+        !
      case('e')
         PlotVar(:,:,:,iVar) = Energy_GBI(:,:,:,iBLK,iFluid)
         ! Add (B0+B1)^2 - B1^2 so the energy contains B0
@@ -861,7 +861,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
         ! EXTRA MHD variables
      case('eta')
-        PlotVar(:,:,:,iVar) = Eta_GB(:,:,:,iBlk)   !^CFG IF DISSFLUX
+        PlotVar(:,:,:,iVar) = Eta_GB(:,:,:,iBlk)
 
      case('n','t','temp')
         ! Calculate the number density
@@ -1363,7 +1363,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
      case('rhoux','mx','rhouy','my','rhouz','mz','rhour','mr' )
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitRhoU_)
      case('bx','by','bz','br','b1x','b1y','b1z','b1r' &
-          ,'bxl','bxr','byl','byr','bzl','bzr' &         !^CFG IF CONSTRAINB
+          ,'bxl','bxr','byl','byr','bzl','bzr' &
           )
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitB_)
      case('elaser')
@@ -1380,9 +1380,9 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitN_)
      case('t','temp')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitTemperature_)
-     case('eta')                                          !^CFG IF DISSFLUX
-        PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*&       !^CFG IF DISSFLUX
-             (No2Si_V(UnitX_)**2/No2Si_V(UnitT_))         !^CFG IF DISSFLUX
+     case('eta')
+        PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*&
+             (No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
      case('ux','uy','uz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
      case('jx','jy','jz','jr',&
@@ -1510,7 +1510,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case('bz') 
         NameTecVar = 'B_z'
         NameUnit   = NameTecUnit_V(UnitB_)
-        ! face centered magnetic field       !^CFG IF CONSTRAINB BEGIN
+        ! face centered magnetic field
      case('bxl') ! east
         NameTecVar = 'B_e'
         NameUnit   = NameTecUnit_V(UnitB_)
@@ -1529,7 +1529,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case('bzr') ! top
         NameTecVar = 'B_t'
         NameUnit   = NameTecUnit_V(UnitB_)
-        !                                        !^CFG END CONSTRAINB
+        !
      case('e')
         NameTecVar = 'E'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitEnergydens_)
@@ -1614,7 +1614,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case('divb', 'divb_cd', 'divb_ct', 'absdivb')
         NameTecVar = '~Q~7B'
         NameUnit   = NameTecUnit_V(UnitDivB_)
-     case('theta1')                              !^CFG  IF RAYTRACE BEGIN
+     case('theta1')
         NameTecVar = '`q_1'
         NameUnit   = NameTecUnit_V(UnitAngle_)
      case('phi1')
@@ -1629,7 +1629,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case('status')
         NameTecVar = 'Status'
      case('f1x','f1y','f1z','f2x','f2y','f2z')
-        NameTecVar = NamePlotVar                 !^CFG END RAYTRACE
+        NameTecVar = NamePlotVar
      case('dx','dy','dz')
         NameTecVar = String
         NameUnit   = NameTecUnit_V(UnitX_)
@@ -1639,8 +1639,8 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case('dtblk')
         NameTecVar = 'dtblk'
         NameUnit   = NameTecUnit_V(UnitT_)
-     case('impl')                                !^CFG IF IMPLICIT
-        NameTecVar = 'impl'                      !^CFG IF IMPLICIT
+     case('impl')
+        NameTecVar = 'impl'
      case('proc')
         NameTecVar = 'PE #'
      case('blk')
@@ -1753,10 +1753,10 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
         NameUnit = NameIdlUnit_V(UnitPoynting_)
      case('divb','divb_cd','divb_ct','absdivb')
         NameUnit = NameIdlUnit_V(UnitDivB_)
-     case('theta1','phi1','theta2','phi2')       !^CFG  IF RAYTRACE BEGIN
+     case('theta1','phi1','theta2','phi2')
         NameUnit = NameIdlUnit_V(UnitAngle_)
      case('status','f1x','f1y','f1z','f2x','f2y','f2z')
-        NameUnit = '--'                          !^CFG END RAYTRACE
+        NameUnit = '--'
         ! GRID INFORMATION
      case('proc','blk','node','impl','evolve')
         NameUnit = '1'

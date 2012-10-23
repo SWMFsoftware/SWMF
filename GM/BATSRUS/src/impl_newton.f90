@@ -1,5 +1,5 @@
-!^CFG COPYRIGHT UM
-!^CFG FILE IMPLICIT
+!This code is a copyright protected software (c) 2002- University of Michigan
+
 subroutine impl_newton_init
 
   ! initialization for NR

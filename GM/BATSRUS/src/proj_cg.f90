@@ -1,5 +1,5 @@
-!^CFG COPYRIGHT UM
-!^CFG FILE PROJECTION
+!This code is a copyright protected software (c) 2002- University of Michigan
+
 
 ! The CG-algorithm is implemented as shown on page 12 of the thesis
 ! "Preconditioning for sparse matrices with applications."

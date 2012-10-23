@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModCalcSource
 
@@ -26,8 +26,8 @@ contains
     use ModPhysics
     use ModUser,          ONLY: user_calc_sources
     use ModCoordTransform
-    use ModImplicit,      ONLY: UseFullImplicit            !^CFG IF IMPLICIT
-    use ModRadDiffusion,  ONLY: calc_source_rad_diffusion  !^CFG IF IMPLICIT
+    use ModImplicit,      ONLY: UseFullImplicit
+    use ModRadDiffusion,  ONLY: calc_source_rad_diffusion
     use ModMultiFluid
     use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
@@ -196,13 +196,13 @@ contains
        end do
     end if
 
-    ! Joule heating: dP/dt += (gamma-1)*eta*j**2    !^CFG IF DISSFLUX BEGIN
+    ! Joule heating: dP/dt += (gamma-1)*eta*j**2
     ! Heat exchange between electrons and ions (mult-ion is not coded).
     !if(.not.UseMultiIon .and. UseResistivity .and. &
     !     (UseElectronPressure .or. UseNonConservative))then  
     !   call calc_resistivity_source(iBlock)
     !   if(DoTestMe.and.VarTest==P_)call write_source('After resistive src')
-    !end if                                       !^CFG END DISSFLUX
+    !end if
 
     if(UseWavePressure)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -568,7 +568,7 @@ contains
             call write_source('After curl B0')
     end if
 
-    if(UseB .and. boris_correction &                   !^CFG IF BORISCORR BEGIN
+    if(UseB .and. boris_correction &
          .and. boris_cLIGHT_factor < 0.9999 & 
          .and. index(test_string,'nodivE')<1) then
 
@@ -593,7 +593,7 @@ contains
                call write_source('After E div E')
 
        end do; end do; end do
-    end if                                               !^CFG END BORISCORR
+    end if
 
     ! These source terms apply to all the fluids
     do iFluid = 1, nFluid
@@ -696,10 +696,10 @@ contains
     end if
 
 
-    !^CFG IF  IMPLICIT BEGIN
+
     if(UseRadDiffusion .and. UseFullImplicit) &
          call calc_source_rad_diffusion(iBlock)
-    !^CFG END IMPLICIT
+
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI

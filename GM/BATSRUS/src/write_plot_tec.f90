@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNodes_DNB,&
      unitstr_TEC,xmin,xmax,ymin,ymax,zmin,zmax)
   !
@@ -12,7 +12,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNode
        nOrder, UseRotatingBc, &
        TypeCoordSystem, CodeVersion, nTrueCellsALL
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
-  use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
+  use ModMain, ONLY: boris_correction
   use ModPhysics, ONLY : No2Io_V, UnitX_, &
        ThetaTilt, Rbody, boris_cLIGHT_factor, BodyNDim_I, g
   use ModAdvance, ONLY : FluxType, iTypeAdvance_B, SkippedBlock_
@@ -740,7 +740,7 @@ contains
     write(unit_tmp,'(a,a,a)') &
          'AUXDATA BODYNUMDENSITY="',trim(adjustl(stmp)),'"'
 
-    !^CFG IF BORISCORR BEGIN
+
     !BORIS
     if(boris_correction)then
        write(stmp,'(a,f8.4)')'T ',boris_cLIGHT_factor
@@ -748,7 +748,7 @@ contains
        write(stmp,'(a)')'F'
     end if
     write(unit_tmp,'(a,a,a)') 'AUXDATA BORIS="',trim(adjustl(stmp)),'"'
-    !^CFG END BORISCORR
+
 
     !BTHETATILT
     write(stmp,'(f12.4)')ThetaTilt*cRadToDeg

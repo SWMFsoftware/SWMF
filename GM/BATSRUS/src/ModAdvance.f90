@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 module ModAdvance
 
   use ModSize
@@ -109,8 +109,8 @@ module ModAdvance
   real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
 
   ! Electric field . area vector for div(E) in Boris correction
-  real, allocatable:: &                                  !^CFG IF BORISCORR
-       EDotFA_X(:,:,:), EDotFA_Y(:,:,:), EDotFA_Z(:,:,:) !^CFG IF BORISCORR
+  real, allocatable:: &
+       EDotFA_X(:,:,:), EDotFA_Y(:,:,:), EDotFA_Z(:,:,:)
 
   ! Fluxes are for conservative variables (momentum)
   real, allocatable:: Flux_VX(:,:,:,:), Flux_VY(:,:,:,:), Flux_VZ(:,:,:,:)

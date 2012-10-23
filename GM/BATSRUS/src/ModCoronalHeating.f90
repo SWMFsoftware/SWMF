@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !
 !These parameters may be used to parameterize
 !the coronal heating in terms of waves

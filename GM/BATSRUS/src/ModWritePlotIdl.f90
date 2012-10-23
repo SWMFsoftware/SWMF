@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
 subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock, nCell)

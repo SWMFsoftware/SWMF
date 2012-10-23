@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 subroutine set_ics(iBlock)
 
   use ModMain
@@ -139,7 +139,7 @@ subroutine set_ics(iBlock)
            end do; end do; end do
         end if
 
-        if(UseConstrainB)call constrain_ics(iBlock) !^CFG IF CONSTRAINB
+        if(UseConstrainB)call constrain_ics(iBlock)
 
         if(UseUserICs) call user_set_ics(iBlock)
 

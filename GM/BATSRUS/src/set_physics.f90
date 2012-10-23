@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !\
 ! set_physics_constants set normalizations, physical constants, 
 ! module (GM/IH/OH/SC/LC) dependent physical parameters
@@ -17,7 +17,7 @@ subroutine set_physics_constants
   implicit none
 
   real :: MassBodySi
-  real :: MassBody2Si                 !^CFG IF SECONDBODY
+  real :: MassBody2Si
   real :: pCoef
 
   integer :: i, iBoundary
@@ -69,8 +69,8 @@ subroutine set_physics_constants
   else
      OmegaBody = cTwoPi/RotPeriodSi
   end if
-  ! Second body mass is set to zero by default     !^CFG IF SECONDBODY
-  MassBody2Si = 0.0                                !^CFG IF SECONDBODY
+  ! Second body mass is set to zero by default
+  MassBody2Si = 0.0
 
 
   ! Make sure that MassIon_I is consistent with MassFluid_I
@@ -150,9 +150,9 @@ subroutine set_physics_constants
      Gbody  = GravitySi*(Si2No_V(UnitU_)**2 / Si2No_V(UnitX_))
   end if
 
-  !^CFG IF SECONDBODY BEGIN
+
   GBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
-  !^CFG END SECONDBODY
+
 
   !\
   ! Normalize solar wind values. Note: the solarwind is in I/O units
@@ -200,10 +200,10 @@ subroutine set_physics_constants
      PolarP_I(1) = PolarP_I(1)*(1 + ElectronPressureRatio)
   end if
 
-  !^CFG IF SECONDBODY BEGIN
+
   RhoBody2= RhoDimBody2 *Io2No_V(UnitN_)*MassIon_I(1)
   pBody2  = RhoBody2 * TDimBody2*Io2No_V(UnitTemperature_)
-  !^CFG END SECONDBODY
+
 
 
   ! Here the arrays of the FACE VALUE are formed
@@ -225,20 +225,20 @@ subroutine set_physics_constants
 
   if(UseElectronPressure)then
      FaceState_VI(Pe_,Body1_) = sum(BodyP_I(IonFirst_:IonLast_))
-     FaceState_VI(Pe_,Body2_) = pBody2             !^CFG IF SECONDBODY
+     FaceState_VI(Pe_,Body2_) = pBody2
   end if
 
   if(UseAnisoPressure)then
      FaceState_VI(Ppar_,Body1_) = BodyP_I(1)
-     FaceState_VI(Ppar_,Body2_) = pBody2           !^CFG IF SECONDBODY
+     FaceState_VI(Ppar_,Body2_) = pBody2
   end if
 
   !The following part of the code is sensitive to a particular physical
   !model. It should be modified in adding/deleting the physical effects 
   !or features
 
-  FaceState_VI(rho_,body2_) = RhoBody2             !^CFG IF SECONDBODY
-  FaceState_VI(P_,body2_)   = pBody2               !^CFG IF SECONDBODY
+  FaceState_VI(rho_,body2_) = RhoBody2
+  FaceState_VI(P_,body2_)   = pBody2
 
   !For Outer Boundaries (if SW_* are set)
   if(SW_rho > 0.0)then
@@ -325,7 +325,7 @@ subroutine set_physics_constants
   ! Nondimensionalize dipole strength.
   Bdp  = DipoleStrengthSi*Si2No_V(UnitB_)
 
-  !^CFG IF SECONDBODY BEGIN
+
   BdpBody2_D = BdpDimBody2_D*Io2No_V(UnitB_)              
 
   ! Saving initial coordinates of second body:
@@ -333,7 +333,7 @@ subroutine set_physics_constants
      PhaseBody2    = atan2(ybody2, xbody2)
      DistanceBody2 = sqrt(xbody2**2+ybody2**2)
   end if
-  !^CFG END SECONDBODY 
+
 
   ! Compute dipole tilt variables
   if(NameThisComp=='IH')then

@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 subroutine update_states_MHD(iStage,iBlock)
   use ModProcMH
   use ModMain
@@ -17,8 +17,8 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModWaves, ONLY: nWave, WaveFirst_,WaveLast_, &
        UseWavePressure, UseWavePressureLtd, DoAdvectWaves, &
        update_wave_group_advection, UseAlfvenWaveReflection
-  use ModResistivity,   ONLY: UseResistivity, &          !^CFG IF DISSFLUX
-       calc_resistivity_source                           !^CFG IF DISSFLUX
+  use ModResistivity,   ONLY: UseResistivity, &
+       calc_resistivity_source
   use ModFaceValue, ONLY: UseFaceIntegral4
   use BATL_lib, ONLY: CellVolume_GB
   implicit none
@@ -55,7 +55,7 @@ subroutine update_states_MHD(iStage,iBlock)
      EnergyOld_CBI(:,:,:,iBlock,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)
   end if
 
-  ! Add Joule heating: dP/dt += (gamma-1)*eta*j**2    !^CFG IF DISSFLUX BEGIN
+  ! Add Joule heating: dP/dt += (gamma-1)*eta*j**2
   ! and heat exchange between electrons and ions (mult-ion is not coded).
   if(.not.UseMultiIon .and. UseResistivity .and. &
        (UseElectronPressure .or. UseNonConservative)) then
@@ -63,7 +63,7 @@ subroutine update_states_MHD(iStage,iBlock)
      if(DoTestMe)write(*,*) NameSub, ' after add_resistive_source=', &
           State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
           Energy_GBI(iTest,jTest,kTest,iBlock,:)
-  end if                     !^CFG END DISSFLUX
+  end if
 
   !Get Residual.
   if(nStage==4)then
@@ -373,7 +373,7 @@ contains
        end if
     end if
 
-    if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
+    if(boris_correction) then
        if(UseB0)then
           B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
        else
@@ -485,9 +485,9 @@ contains
             State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
-    endif                                    !^CFG END BORISCORR
+    endif
 
-    if(UseBorisSimple .and. IsMhd) then      !^CFG IF SIMPLEBORIS BEGIN
+    if(UseBorisSimple .and. IsMhd) then
        ! Update using simplified Boris correction, i.e. update
        !
        !    RhoUBorisSimple = (1+B^2/(rho*c^2)) * RhoU
@@ -540,7 +540,7 @@ contains
             State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
-    end if                                   !^CFG END SIMPLEBORIS
+    end if
 
     ! Update energy or pressure based on UseConservative and IsConserv_CB
     call calc_energy_or_pressure(iBlock)

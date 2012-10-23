@@ -1,5 +1,5 @@
-!^CFG COPYRIGHT UM
-!^CFG FILE PROJECTION
+!This code is a copyright protected software (c) 2002- University of Michigan
+
 
 ! Simple BiCGstab(\ell=1) iterative method
 ! Modified by G.Toth from the \ell<=2 version written

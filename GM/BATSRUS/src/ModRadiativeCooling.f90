@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !============================================================================
 module ModChromosphere
   !Here all parameters relating to chromosphere and tansition region are

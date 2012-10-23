@@ -1,5 +1,5 @@
-!^CFG COPYRIGHT UM
-!^CFG FILE CONSTRAINB
+!This code is a copyright protected software (c) 2002- University of Michigan
+
 
 ! A flux averaged constrained transport scheme for block AMR grid. See 
 !

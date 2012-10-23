@@ -262,7 +262,7 @@ contains
          iTypeAdvance_B, ExplBlock_
     use ModAdvance,  ONLY: B0_DGB
     use ModGeometry, ONLY: true_cell, true_BLK, XyzStart_BLK
-    use ModImplicit, ONLY: UsePartImplicit                 !^CFG IF IMPLICIT
+    use ModImplicit, ONLY: UsePartImplicit
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, UnitX_, UnitU_, UnitT_, UnitB_, &
          UnitRho_, g
     use ModNumConst
@@ -287,14 +287,14 @@ contains
        !\
        ! Impose global time step for time-accurate calculations as required
        !/
-       if(UsePartImplicit)then                          !^CFG IF IMPLICIT BEGIN
+       if(UsePartImplicit)then
           ! Implicit blocks are not taken into account for partially implicit
           ! run
           DtMinPE = minval(Dt_BLK(1:nBlock),&
                MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
-       else                                             !^CFG END IMPLICIT
+       else
           DtMinPE = minval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock))
-       end if                                           !^CFG IF IMPLICIT
+       end if
 
        ! Set Dt to minimum time step over all the PE-s
        call MPI_allreduce(DtMinPE, Dt, 1, MPI_REAL, MPI_MIN, iComm, iError)

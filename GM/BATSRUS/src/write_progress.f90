@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 
 subroutine write_progress(inopt)
@@ -61,8 +61,8 @@ subroutine write_runtime_values()
   use ModAdvance,   ONLY: FluxType
   use ModGeometry,  ONLY: x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue
   use ModParallel,  ONLY: proc_dims
-  use ModImplicit,  ONLY: UseSplitSemiImplicit, &     !^CFG IF IMPLICIT
-       UseImplicit, UseSemiImplicit, TypeSemiImplicit !^CFG IF IMPLICIT
+  use ModImplicit,  ONLY: UseSplitSemiImplicit, &
+       UseImplicit, UseSemiImplicit, TypeSemiImplicit
   use ModUser, ONLY: user_action
   use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid, iFluid
   use ModFaceFlux,   ONLY: TypeFluxNeutral
@@ -146,7 +146,7 @@ subroutine write_runtime_values()
           'Gravity is used, gBody=', gBody
   end if
   call write_prefix; write(iUnitOut,*)
-  !^CFG IF SECONDBODY BEGIN
+
   if (UseBody2) then
      call write_prefix
      write(iUnitOut,'(10X,''UseBody2: .true.'')')
@@ -171,7 +171,7 @@ subroutine write_runtime_values()
      call write_prefix
      write(iUnitOut,'(10X,''UseBody2: .false.'')')
   end if
-  !^CFG END SECONDBODY
+
 
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))')&
@@ -244,7 +244,7 @@ subroutine write_runtime_values()
   end if
 
   call write_prefix
-  if (UseImplicit) then                            !^CFG IF IMPLICIT BEGIN
+  if (UseImplicit) then
      write(iUnitOut,'(10X,a)') 'Implicit time stepping'
   elseif(UseSemiImplicit)then
      if(UseSplitSemiImplicit)then
@@ -254,9 +254,9 @@ subroutine write_runtime_values()
         write(iUnitOut,'(10X,a)') 'Semi-implicit time stepping for '// &
              trim(TypeSemiImplicit)
      end if
-  else                                             !^CFG END IMPLICIT
+  else
      write(iUnitOut,'(10X,a)') 'Explicit time stepping'
-  end if                                           !^CFG IF IMPLICIT
+  end if
 
   call write_prefix; write(iUnitOut,'(10x,a,i1)')   '    nStage: ', nStage
   call write_prefix
@@ -265,16 +265,16 @@ subroutine write_runtime_values()
   else
      write(iUnitOut,'(10x,a,f4.2)') '    Cfl:    ', Cfl
   end if
-  if(boris_correction)then                         !^CFG IF BORISCORR BEGIN 
+  if(boris_correction)then
      call write_prefix     
      write(iUnitOut,'(10X,a,f10.4)') &
           "    with Boris correction, factor =", boris_cLIGHT_factor
-  end if                                           !^CFG END BORISCORR
-  if(UseBorisSimple)then                           !^CFG IF SIMPLEBORIS BEGIN
+  end if
+  if(UseBorisSimple)then
      call write_prefix
      write(iUnitOut,'(10X,a,f10.4)') &
           "   with simple Boris correction, factor =", boris_cLIGHT_factor
-  end if                                           !^CFG END SIMPLEBORIS
+  end if
 
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)'   Other Runtime Parameters'

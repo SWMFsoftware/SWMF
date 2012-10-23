@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 subroutine calc_corotation_velocities(Xyz_D, uRot_D)
   !-------------------------------------------------------------------------
   !\

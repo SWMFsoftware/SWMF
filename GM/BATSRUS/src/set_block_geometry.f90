@@ -1,14 +1,14 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 subroutine fix_block_geometry(iBlock)
 
   use ModMain, ONLY: body1_, body2_, ExtraBc_,&
        UseExtraBoundary, ProcTest, BlkTest   
-  use ModMain, ONLY: UseBody2                    !^CFG IF SECONDBODY
+  use ModMain, ONLY: UseBody2
   use ModGeometry, ONLY: MinBoundary, MaxBoundary, IsBoundaryBlock_IB, &
        IsBoundaryCell_GI, R2_BLK, Rmin2_BLK, Body_BLK, &
        far_field_BCs_BLK, true_blk, true_cell
-  use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
+  use ModPhysics, ONLY : xBody2,yBody2,zBody2
   use ModBoundaryCells
   use BATL_lib, ONLY: iProc, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
        Xyz_DGB, CellSize_DB, &
@@ -30,7 +30,7 @@ subroutine fix_block_geometry(iBlock)
      DoTest = .false.; DoTestMe = .false.
   end if
 
-  if (UseBody2) then                        !^CFG IF SECONDBODY BEGIN
+  if (UseBody2) then
      ! calculate the radius as measured from the second body
      ! Note that the second body can move
      do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -40,7 +40,7 @@ subroutine fix_block_geometry(iBlock)
      Rmin2_BLK(iBlock) = minval(R2_BLK(:,:,:,iBlock))
   else
      Rmin2_BLK(iBlock) = 0.0
-  end if                                    !^CFG END SECONDBODY
+  end if
 
   far_field_BCs_BLK(iBlock) = any( .not. IsPeriodic_D .and.   &
        (    CoordMin_DB(:,iBlock) <= CoordMin_D + 1e-12       &
@@ -104,8 +104,8 @@ subroutine set_boundary_cells(iBlock)
   use ModMain
   use ModPhysics,  ONLY: Rbody
   use ModGeometry, ONLY: R_BLK, IsBoundaryBlock_IB, IsBoundaryCell_GI
-  use ModPhysics,  ONLY: Rbody2                            !^CFG IF SECONDBODY
-  use ModGeometry, ONLY: R2_BLK                            !^CFG IF SECONDBODY
+  use ModPhysics,  ONLY: Rbody2
+  use ModGeometry, ONLY: R2_BLK
   use ModGeometry,ONLY:x1,x2,y1,y2,z1,z2
   use BATL_lib, ONLY: Xyz_DGB
   use ModUser, ONLY: user_set_boundary_cells
@@ -115,10 +115,10 @@ subroutine set_boundary_cells(iBlock)
   !----------------------------------------------------------------------------
 
   IsBoundaryCell_GI=.false.  
-  !^CFG IF SECONDBODY BEGIN
+
   if(UseBody2 .and. IsBoundaryBlock_IB(Body2_,iBlock)) &
        IsBoundaryCell_GI(:,:,:,Body2_) = R2_BLK(:,:,:,iBlock) < rBody2  
-  !^CFG END SECONDBODY
+
 
   if(IsBoundaryBlock_IB(Body1_,iBlock)) &
        IsBoundaryCell_GI(:,:,:,Body1_) = &

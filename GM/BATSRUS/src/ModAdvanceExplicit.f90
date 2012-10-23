@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!This code is a copyright protected software (c) 2002- University of Michigan
 !===========================================================================
 
 subroutine advance_expl(DoCalcTimestep, iStageMax)
@@ -13,7 +13,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModParallel,   ONLY: neiLev
   use ModGeometry,   ONLY: Body_BLK
   use ModBlockData,  ONLY: set_block_data
-  use ModImplicit,   ONLY: UsePartImplicit           !^CFG IF IMPLICIT
+  use ModImplicit,   ONLY: UsePartImplicit
   use ModPhysics,    ONLY: No2Si_V, UnitT_
   use ModCalcSource, ONLY: calc_source
   use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
@@ -40,9 +40,9 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   !\
   ! Perform multi-stage update of solution for this time (iteration) step
   !/
-  if(UsePartImplicit)call timing_start('advance_expl') !^CFG IF IMPLICIT
+  if(UsePartImplicit)call timing_start('advance_expl')
 
-  if(UseBody2 .and. UseOrbit) call update_secondbody  !^CFG IF SECONDBODY
+  if(UseBody2 .and. UseOrbit) call update_secondbody
 
   STAGELOOP: do iStage = 1, nStage
 
@@ -135,12 +135,12 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         if(DoCalcElectricField .and. iStage == nStage) &
              call calc_electric_field(iBlock)
 
-        if(UseConstrainB .and. iStage==nStage)then    !^CFG IF CONSTRAINB BEGIN
+        if(UseConstrainB .and. iStage==nStage)then
            call timing_start('constrain_B')
            call get_VxB(iBlock)
            call bound_VxB(iBlock)
            call timing_stop('constrain_B')
-        end if                                        !^CFG END CONSTRAINB
+        end if
 
         ! Calculate time step (both local and global
         ! for the block) used in multi-stage update
@@ -165,7 +165,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         if(DoTestMe)write(*,*)NameSub,' done update check'
      end if
 
-     if(UseConstrainB .and. iStage==nStage)then    !^CFG IF CONSTRAINB BEGIN
+     if(UseConstrainB .and. iStage==nStage)then
         call timing_start('constrain_B')
         ! Correct for consistency at resolution changes
         !call correct_VxB
@@ -178,7 +178,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         end do
         call timing_stop('constrain_B')
         if(DoTestMe)write(*,*)NameSub,' done constrain B'
-     end if                                        !^CFG END CONSTRAINB
+     end if
 
      if(DoCalcTimeStep) &
           Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)/nStage
@@ -196,13 +196,13 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      if(.not.Unused_B(iBlock)) call set_block_data(iBlock)
   end do
 
-  if(UsePartImplicit)call timing_stop('advance_expl') !^CFG IF IMPLICIT
+  if(UsePartImplicit)call timing_stop('advance_expl')
 
   if(DoTestMe)write(*,*)NameSub,' finished'
 
 end subroutine advance_expl
 
-!^CFG IF SECONDBODY BEGIN
+
 !===========================================================================
 
 subroutine update_secondbody
@@ -229,4 +229,4 @@ subroutine update_secondbody
   call exchange_messages
 
 end subroutine update_secondbody
-!^CFG END SECONDBODY
+

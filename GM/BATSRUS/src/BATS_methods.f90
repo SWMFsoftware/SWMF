@@ -1,3 +1,5 @@
+! This code is a copyright protected software (c) 2002- University of Michigan
+
 ! This file contains the top level methods for BATSRUS
 
 subroutine BATS_setup
@@ -5,7 +7,7 @@ subroutine BATS_setup
   use ModMpi
   use ModProcMH
   use ModMain
-  use ModCT, ONLY : DoInitConstrainB               !^CFG IF CONSTRAINB
+  use ModCT, ONLY : DoInitConstrainB
   use ModIO
   use ModAMR,      ONLY: initial_refine_levels, nRefineLevelIC
   use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
@@ -137,7 +139,7 @@ contains
 
     use ModUser,        ONLY: user_initial_perturbation, user_action
     use ModIO,          ONLY: restart
-    use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
+    use ModIO,          ONLY: restart_Bface
     use ModRestartFile, ONLY: read_restart_files
     use ModMessagePass, ONLY: exchange_messages
     use ModMain,        ONLY: UseB0
@@ -219,7 +221,7 @@ contains
     ! Fix face centered B0 at resolution changes
     if(UseB0)call set_b0_reschange
 
-    !^CFG IF CONSTRAINB BEGIN
+
     ! Ensure zero divergence for the CT scheme
     if(UseConstrainB)then
        if(restart_Bface)then
@@ -228,7 +230,7 @@ contains
           call BATS_init_constrain_b
        end if
     end if
-    !^CFG END CONSTRAINB
+
 
     call exchange_messages(.false.)
 
@@ -268,15 +270,15 @@ subroutine BATS_init_session
 
   use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation, &
        UseRadDiffusion, UseHeatConduction, UseIonHeatConduction
-  use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
-  use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
-  use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
+  use ModMain, ONLY: UseProjection
+  use ModMain, ONLY: UseConstrainB
+  use ModCT,   ONLY: DoInitConstrainB
   use ModHallResist, ONLY: UseHallResist, init_hall_resist, &
        UseBiermannBattery
-  use ModImplicit, ONLY: UseSemiImplicit, &                !^CFG IF IMPLICIT
-       TypeSemiImplicit, UseFullImplicit                   !^CFG IF IMPLICIT
-  use ModRadDiffusion, ONLY: init_rad_diffusion            !^CFG IF IMPLICIT
-  use ModHeatConduction, ONLY: init_heat_conduction        !^CFG IF IMPLICIT
+  use ModImplicit, ONLY: UseSemiImplicit, &
+       TypeSemiImplicit, UseFullImplicit
+  use ModRadDiffusion, ONLY: init_rad_diffusion
+  use ModHeatConduction, ONLY: init_heat_conduction
   use ModUser, ONLY: user_initial_perturbation
   use ModRestartFile, ONLY: UseRestartOutSeries
   use ModMessagePass, ONLY: exchange_messages
@@ -299,9 +301,9 @@ subroutine BATS_init_session
      UseUserPerturbation=.false.
   end if
 
-  ! Set number of explicit and implicit blocks !^CFG IF  IMPLICIT BEGIN
+  ! Set number of explicit and implicit blocks
   ! Partially implicit/local selection will be done in each time step
-  call select_stepping(.false.)                !^CFG END IMPLICIT 
+  call select_stepping(.false.)
 
   ! Transform velocities from a rotating system to the HGI system if required
   if(DoTransformToHgi)then
@@ -309,13 +311,13 @@ subroutine BATS_init_session
      DoTransformToHgi = .false.
   end if
 
-  ! Ensure zero divergence for the CT scheme   !^CFG IF CONSTRAINB
-  if(UseConstrainB .and. DoInitConstrainB)&    !^CFG IF CONSTRAINB
-       call BATS_init_constrain_b              !^CFG IF CONSTRAINB
+  ! Ensure zero divergence for the CT scheme
+  if(UseConstrainB .and. DoInitConstrainB)&
+       call BATS_init_constrain_b
 
   if(UseHallResist .or. UseBiermannBattery)call init_hall_resist
 
-  if(UseHeatConduction .or. UseIonHeatConduction) & !^CFG IF  IMPLICIT BEGIN
+  if(UseHeatConduction .or. UseIonHeatConduction) &
        call init_heat_conduction
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
@@ -324,12 +326,12 @@ subroutine BATS_init_session
      end select
   elseif(UseFullImplicit.and.UseRadDiffusion)then
      call init_rad_diffusion
-  end if                                            !^CFG END IMPLICIT
+  end if
 
   ! Make sure that ghost cells are up to date
   call exchange_messages
 
-  if(UseProjection)call project_B              !^CFG IF PROJECTION
+  if(UseProjection)call project_B
 
   call BATS_save_files('INITIAL')
 
@@ -358,7 +360,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
-  use ModImplicit, ONLY: UseImplicit, UseSemiImplicit, n_prev !^CFG IF IMPLICIT
+  use ModImplicit, ONLY: UseImplicit, UseSemiImplicit, n_prev
   use ModIonoVelocity, ONLY: apply_iono_velocity
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
   use ModLaserHeating,    ONLY: add_laser_heating
@@ -410,19 +412,19 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseNonConservative .and. nConservCrit > 0)&
        call select_conservative
 
-  if(UseImplicit.and.nBlockImplALL>0)then !^CFG IF IMPLICIT BEGIN
+  if(UseImplicit.and.nBlockImplALL>0)then
      call advance_impl
-  else                                    !^CFG END IMPLICIT
+  else
      call advance_expl(.true., -1)
-  endif                                   !^CFG IF IMPLICIT  
+  endif
 
-  if(UseIM)call apply_im_pressure         !^CFG IF RCM
+  if(UseIM)call apply_im_pressure
 
   if(UseAnisoPressure)call fix_anisotropy
 
   if(UseIE)call apply_iono_velocity
 
-  if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
+  if(UseDivBDiffusion)call clean_divb
 
   if(UseLaserHeating) call add_laser_heating
 
@@ -431,8 +433,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   
   call exchange_messages
 
-  if(UseSemiImplicit .and. (Dt>0 .or. .not.time_accurate)) & !^CFG IF IMPLICIT
-       call advance_impl                                     !^CFG IF IMPLICIT
+  if(UseSemiImplicit .and. (Dt>0 .or. .not.time_accurate)) &
+       call advance_impl
 
   if(UseTimeStepControl .and. time_accurate .and. Dt>0) call control_time_step
 
@@ -481,8 +483,8 @@ subroutine BATS_advance(TimeSimulationLimit)
 
      if (.not. automatic_refinement) nRefineLevel = nRefineLevel + 1
 
-     ! BDF2 scheme should not use previous step after AMR  !^CFG IF IMPLICIT
-     n_prev = -100                                         !^CFG IF IMPLICIT
+     ! BDF2 scheme should not use previous step after AMR
+     n_prev = -100
 
      ! Do AMR without full initial message passing
      call do_amr(.false.,'all')
@@ -498,13 +500,13 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   end if
 
-  if (UseProjection) call project_B    !^CFG IF PROJECTION
+  if (UseProjection) call project_B
 
   call BATS_save_files('NORMAL')
 
 end subroutine BATS_advance
 
-!^CFG IF CONSTRAINB BEGIN
+
 !============================================================================
 
 subroutine BATS_init_constrain_b
@@ -579,13 +581,13 @@ subroutine BATS_init_constrain_b
 
 end subroutine BATS_init_constrain_b
 
-!^CFG END CONSTRAINB
+
 
 !============================================================================
 subroutine BATS_select_blocks
 
   use ModProcMH
-  use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
+  use ModImplicit, ONLY : UsePartImplicit
   use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
   implicit none
 
@@ -595,7 +597,7 @@ subroutine BATS_select_blocks
 
   ! Select and load balance blocks for partially implicit/steady scheme
   if( UsePartSteady .and. IsNewSteadySelect &
-       .or. UsePartImplicit &                !^CFG IF IMPLICIT
+       .or. UsePartImplicit &
        )then
 
      !Redo load balancing: move coordinates and data, there are no new blocks
@@ -760,10 +762,10 @@ contains
        IsFound=.false.
 
        if(.not.DoExchangeAgain .and. ( &
-            index(plot_type(iFile),'lin')==1 .or. &    !^CFG IF RAYTRACE
-            index(plot_type(iFile),'eqr')==1 .or. &    !^CFG IF RAYTRACE
-            index(plot_type(iFile),'ieb')==1 .or. &    !^CFG IF RAYTRACE
-            index(plot_type(iFile),'lcb')==1 .or. &    !^CFG IF RAYTRACE
+            index(plot_type(iFile),'lin')==1 .or. &
+            index(plot_type(iFile),'eqr')==1 .or. &
+            index(plot_type(iFile),'ieb')==1 .or. &
+            index(plot_type(iFile),'lcb')==1 .or. &
             index(plot_type(iFile),'los')==1 .or. &
             index(plot_type(iFile),'sph')==1 .or. &
             plot_form(iFile) == 'tec')) then
@@ -786,7 +788,7 @@ contains
           call write_plot_radiowave(iFile)
        end if
 
-       !^CFG IF RAYTRACE BEGIN
+
        if(index(plot_type(iFile),'lin')>0) then
           IsFound = .true.
           call write_plot_line(iFile)
@@ -807,7 +809,7 @@ contains
           call lcb_plot(iFile)
        end if
 
-       !^CFG END RAYTRACE
+
 
        if(plot_type(ifile)/='nul' .and. .not.IsFound ) then
           ! Assign node numbers for tec plots
@@ -816,10 +818,10 @@ contains
              DoAssignNodeNumbers = .false.
           end if
 
-          !^CFG IF RAYTRACE BEGIN
+
           if(  index(plot_type(ifile),'ray')>0 .or. &
                index(plot_vars(ifile),'status')>0) call ray_trace
-          !^CFG END RAYTRACE
+
           call timing_start('save_plot')
           call write_plot_common(ifile)
           call timing_stop('save_plot')
@@ -929,9 +931,9 @@ subroutine BATSRUS_finalize
   use ModAdvance,  ONLY: clean_mod_advance
   use ModGeometry, ONLY: clean_mod_geometry
   use ModNodes,    ONLY: clean_mod_nodes
-  use ModCT,       ONLY: clean_mod_ct                  !^CFG IF CONSTRAINB
-  use ModRaytrace, ONLY: clean_mod_raytrace            !^CFG IF RAYTRACE
-  use ModImplicit, ONLY: clean_mod_implicit            !^CFG IF IMPLICIT
+  use ModCT,       ONLY: clean_mod_ct
+  use ModRaytrace, ONLY: clean_mod_raytrace
+  use ModImplicit, ONLY: clean_mod_implicit
   use BATL_lib,    ONLY: clean_batl
 
   implicit none
@@ -940,11 +942,11 @@ subroutine BATSRUS_finalize
   !---------------------------------------------------------------------------
   call clean_batl
   call clean_mod_advance
-  call clean_mod_ct                          !^CFG IF CONSTRAINB
-  call clean_mod_implicit                    !^CFG IF IMPLICIT
+  call clean_mod_ct
+  call clean_mod_implicit
   call clean_mod_geometry
   call clean_mod_nodes
-  call clean_mod_raytrace                    !^CFG IF RAYTRACE
+  call clean_mod_raytrace
 
   ! call clean_mod_boundary_cells !!! to be implemented
   ! call clean_mod_resistivity !!! to be implemented

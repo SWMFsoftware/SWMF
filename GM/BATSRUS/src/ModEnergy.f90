@@ -588,7 +588,7 @@ contains
     end do
 
   end subroutine limit_old_pressure
-  !^CFG IF PROJECTION BEGIN
+
   !============================================================================
   ! moved form file exchange_messages.f90 
   subroutine correctP(iBlock)
@@ -708,7 +708,7 @@ contains
     if(oktest_me)write(*,*)'CorrectP qpmin=',qpmin
 
   end subroutine correctP
-  !^CFG END PROJECTION
+
 
 end module ModEnergy
 
