@@ -119,8 +119,9 @@ T			  DoAddRhoU
 1e-11			  LowPressureRatio
 F			  DoRestrictMultiIon
 
-#UNIFORMIONVELOCITY
-T	 		  UseSameIonVelocity
+#MULTIIONSTATE
+T	 		  UseSingleIonVelocity
+F	 		  UseSingleIonTemperature
 
 #SCHEME
 1                         nOrder

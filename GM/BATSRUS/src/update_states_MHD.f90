@@ -146,6 +146,18 @@ subroutine update_states_MHD(iStage,iBlock)
 
   call update_explicit
 
+  if(UseMultiIon .and. (UseSingleIonVelocity .or. UseSingleIonTemperature) &
+       .and. .not.UsePointImplicit) then
+
+     call fix_multi_ion_update(iBlock)
+     call calc_energy_cell(iBlock)
+
+     if(DoTestMe)write(*,*) NameSub, ' after fix multiion update=', &
+          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+          Energy_GBI(iTest,jTest,kTest,iBlock,:)
+
+  end if
+
   if(UseMultiIon .and. IsMhd)then
      call multi_ion_update(iBlock, IsFinal = .false.)
 
@@ -157,10 +169,10 @@ subroutine update_states_MHD(iStage,iBlock)
 
   ! The point implicit update and other stuff below are only done in last stage
   if(iStage < nStage) RETURN
-
+ 
   ! Add point implicit user or multi-ion source terms
   if (UsePointImplicit .and. UsePointImplicit_B(iBlock))then
-     if(UseMultiIon.and..not.UseUniformIonVelocity)then
+     if(UseMultiIon .and. .not.UseSingleIonVelocity)then
         call update_point_implicit(iBlock, multi_ion_source_impl, &
              multi_ion_init_point_impl)
      elseif(UseAlfvenWaveReflection)then
@@ -530,9 +542,6 @@ contains
 
     end if                                   !^CFG END SIMPLEBORIS
 
-    if(UseUniformIonVelocity.and.UseMultiIon.and..not.UsePointImplicit) &
-         call multi_ion_uniform_velocity(iBlock)
-
     ! Update energy or pressure based on UseConservative and IsConserv_CB
     call calc_energy_or_pressure(iBlock)
 
@@ -739,25 +748,27 @@ end subroutine update_b0
 
 !===========================================================================
 
-subroutine multi_ion_uniform_velocity(iBlock)
+subroutine fix_multi_ion_update(iBlock)
+
   ! This subroutine sets the ion velocities of the individual fluids equal to
-  ! their mass density weighted average.
+  ! their mass density weighted average, and/or the ion temperature of the 
+  ! individual fluids equal to their number density weighted average.
 
   use ModSize,       ONLY: nI, nJ, nK
-  use ModAdvance,    ONLY: State_VGB
+  use ModAdvance,    ONLY: State_VGB, &
+       UseSingleIonVelocity, UseSingleIonTemperature
   use ModMain,       ONLY: iTest, jTest, kTest, BlkTest, ProcTest
-  use ModMultiFluid, ONLY: &
-       iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, IonFirst_, IonLast_
+  use ModMultiFluid, ONLY: nIonFluid, IonFirst_, IonLast_, &
+       iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, MassIon_I, MassFluid_I
 
   integer, intent(in) :: iBlock
 
-  integer :: i, j, k, iIonFluid
-  real :: RhoTot, UxTot, UyTot, UzTot
+  integer :: i, j, k, iFluid
+  real :: RhoInv, Ux, Uy, Uz, Temp, NumDens_I(nIonFluid)
 
   logical :: DoTest, DoTestMe
-  character(len=*), parameter :: NameSub = 'multi_ion_uniform_velocity'
+  character(len=*), parameter :: NameSub = 'fix_multi_ion_update'
   !----------------------------------------------------------------------
-
   if (iBlock == BlkTest .and. iProc == ProcTest) then 
      call set_oktest(NameSub, DoTest, DoTestMe)
   else
@@ -765,37 +776,67 @@ subroutine multi_ion_uniform_velocity(iBlock)
   end if
 
   if(DoTestMe)then
-     write(*,*) NameSub,': ion fluid velocities before consolidation:'
-     do iIonFluid = IonFirst_, IonLast_
-        write(*,*)'ux_',iIonFluid,' = ', &
-             State_VGB(iRhoUx_I(iIonFluid),iTest,jTest,kTest,iBlock)/&
-             State_VGB(iRho_I(iIonFluid),iTest,jTest,kTest,iBlock), &
-             ' uy_',iIonFluid,' = ',&
-             State_VGB(iRhoUy_I(iIonFluid),iTest,jTest,kTest,iBlock)/&
-             State_VGB(iRho_I(iIonFluid),iTest,jTest,kTest,iBlock), &
-             ' uz_',iIonFluid,' = ',&
-             State_VGB(iRhoUz_I(iIonFluid),iTest,jTest,kTest,iBlock)/&
-             State_VGB(iRho_I(iIonFluid),iTest,jTest,kTest,iBlock)
+     write(*,*) NameSub,': ion fluid velocities and temperatures before fix:'
+     do iFluid = IonFirst_, IonLast_
+        write(*,*)'iIonFluid,ux,uy,uz,T=', &
+             State_VGB(iRhoUx_I(iFluid):iRhoUz_I(iFluid),&
+             iTest,jTest,kTest,iBlock) &
+             / State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock), &
+             State_VGB(iP_I(iFluid),iTest,jTest,kTest,iBlock)    & 
+             *MassFluid_I(iFluid) &
+             /State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock)
      end do
   end if
 
-  do k=1, nK; do j=1, nJ; do i=1, nI
+  if(UseSingleIonVelocity) then
+     do k=1, nK; do j=1, nJ; do i=1, nI
 
-     ! Total plasma phase
-     RhoTot= sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
-     UxTot = sum(State_VGB(iRhoUx_I(IonFirst_:IonLast_),i,j,k,iBlock))/RhoTot
-     UyTot = sum(State_VGB(iRhoUy_I(IonFirst_:IonLast_),i,j,k,iBlock))/RhoTot
-     UzTot = sum(State_VGB(iRhoUz_I(IonFirst_:IonLast_),i,j,k,iBlock))/RhoTot
+        ! Calcualate average velocity from total momentum and density
+        RhoInv= 1/sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
+        Ux = RhoInv*sum(State_VGB(iRhoUx_I(IonFirst_:IonLast_),i,j,k,iBlock))
+        Uy = RhoInv*sum(State_VGB(iRhoUy_I(IonFirst_:IonLast_),i,j,k,iBlock))
+        Uz = RhoInv*sum(State_VGB(iRhoUz_I(IonFirst_:IonLast_),i,j,k,iBlock))
 
-     State_VGB(iRhoUx_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
-          UxTot*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
-     State_VGB(iRhoUy_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
-          UyTot*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
-     State_VGB(iRhoUz_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
-          UzTot*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
+        ! Reset the momentum of all ion fluids
+        State_VGB(iRhoUx_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
+             Ux*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
+        State_VGB(iRhoUy_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
+             Uy*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
+        State_VGB(iRhoUz_I(IonFirst_:IonLast_),i,j,k,iBlock) = &
+             Uz*State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)
 
-  end do; end do; end do
+     end do; end do; end do
+  end if
 
-end subroutine multi_ion_uniform_velocity
+  if(UseSingleIonTemperature) then
+     do k=1, nK; do j=1, nJ; do i=1, nI
 
+        ! Number density
+        NumDens_I = &
+             State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock)/MassIon_I
+
+        ! Average temperature = sum(p)/sum(n) = sum(p)/sum(rho/M)
+        Temp = sum(State_VGB(iP_I(IonFirst_:IonLast_),i,j,k,iBlock)) &
+             / sum(NumDens_I)
+
+        ! Reset the pressure of all ion fluids
+        State_VGB(iP_I(IonFirst_:IonLast_),i,j,k,iBlock) = Temp*NumDens_I
+
+     end do; end do; end do
+  end if
+
+  if(DoTestMe)then
+     write(*,*) NameSub,': ion fluid velocities and temperatures after fix:'
+     do iFluid = IonFirst_, IonLast_
+        write(*,*)'iIonFluid,ux,uy,uz,T=', &
+             State_VGB(iRhoUx_I(iFluid):iRhoUz_I(iFluid),&
+             iTest,jTest,kTest,iBlock) &
+             / State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock), &
+             State_VGB(iP_I(iFluid),iTest,jTest,kTest,iBlock)    & 
+             *MassFluid_I(iFluid) &
+             /State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock)
+     end do
+  end if
+
+end subroutine fix_multi_ion_update
 

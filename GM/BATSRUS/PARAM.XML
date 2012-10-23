@@ -4861,18 +4861,27 @@ of the momenta.
 Default values are shown.
 </command>
 
-<command name="UNIFORMIONVELOCITY">
-	<parameter name="UseUniformIonVelocity"  type="logical" default="F"/>
-#UNIFORMIONVELOCITY
-F			UseUniformIonVelocity
+<command name="MULTIIONSTATE">
+	<parameter name="UseSingleIonVelocity"    type="logical" default="F"/>
+	<parameter name="UseSingleIonTemperature" type="logical" default="F"/>
+#MULTIIONSTATE
+T			UseSingleIonVelocity
+F			UseSingleIonTemperature
 
-This command allows to enforce uniform velocities in multifluid simulations.
-When true it turns a multifluid into a singlefluid simulation with multiple
-species. Each specie has a separate continuity and pressure equation but the
-velocity is derived from the momentum and mass density of the total fluid:
-sum(iRhoUxIon_I/sum(iRhoIon_I).
+This command allows to enforce uniform ion velocities and/or temperatures
+in multi-ion simulations. When both logicals are true, the multi-ion 
+simulation should become equivalient with a singlefluid multi-species 
+simulation. This is useful for testing.
 
-Default value is false.
+When UseSingleIonVelocity is true, the ion velocities are set to the
+velocity of the total fluid $u=\sum_s(\rho_s u_s)/\sum_s\rho_s$ 
+as if there was an infinitely strong friction force between the ion fluids.
+
+When UseSingleIonTemperature is true, the ion temperatures are set to the
+temperature of the total fluid $k_B T = \sum_s p_s/\sum_s(\rho_s/M_s)$ 
+as if there was an infinitely fast energy exchange between the ion fluids.
+
+Default values are false for both parameters.
 </command>
 
 <command name="COLLISION">

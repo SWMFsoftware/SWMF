@@ -29,7 +29,7 @@ module ModMultiIon
 
   logical, public              :: DoRestrictMultiIon = .false.
 
-  ! does the cell have significant amount of multiple ion fluids?
+  ! Does the cell have significant amount of multiple ion fluids?
   logical, public, allocatable :: IsMultiIon_CB(:,:,:,:)
 
   ! Local variables
@@ -72,6 +72,7 @@ contains
     use ModPhysics, ONLY: LowDensityRatio
     use ModReadParam, ONLY: read_var
     use ModPointImplicit, ONLY: IsPointImplMatrixSet
+    use ModAdvance, ONLY: UseSingleIonVelocity, UseSingleIonTemperature
 
     character(len=*), intent(in):: NameCommand
     !------------------------------------------------------------------------
@@ -89,6 +90,10 @@ contains
        end if
        IsPointImplMatrixSet = IsAnalyticJacobian
        
+    case("#MULTIIONSTATE")
+       call read_var('UseSingleIonVelocity',    UseSingleIonVelocity)
+       call read_var('UseSingleIonTemperature', UseSingleIonTemperature)
+
     case("#COLLISION")
        call read_var('CollisionCoefDim', CollisionCoefDim)
        call read_var('TauCutOff', TauCutOffDim)

@@ -119,8 +119,9 @@ T			  DoAddRhoU
 1e-11			  LowPressureRatio
 F			  DoRestrictMultiIon
 
-#UNIFORMIONVELOCITY
-T	 		  UseSameIonVelocity
+#MULTIIONSTATE
+T	 		  UseSingleIonVelocity
+F	 		  UseSingleIonTemperature
 
 #SCHEME
 1                         nOrder
@@ -203,10 +204,11 @@ rBody
 30
 -1
 
-#RUN
+#RUN ######################################################################
 
-#UNIFORMIONVELOCITY
-F			UseSameIonVelocity
+#MULTIIONSTATE
+F	 		UseSingleIonVelocity
+F	 		UseSingleIonTemperature
 
 HEATCONDUCTION
 T			UseHeatConduction

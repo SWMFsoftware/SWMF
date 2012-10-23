@@ -1274,7 +1274,7 @@ test_cometfluids_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometfluids_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=5e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
 		Param/COMET3FLUIDSPE/TestOutput/log_n000060.log \
 		${TESTDIR}/RESULTS/GM/log_n000060.log > test_cometfluids.diff)
 	ls -l test_cometfluids.diff
@@ -1305,7 +1305,7 @@ test_cometfluids_restart_read:
 test_cometfluids_restart_check:
 	cd ${TESTDIR}/RESULTS; \
 		cp RestartRead/GM/log_n000060.log log_test.log
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=5e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
 		Param/COMET3FLUIDSPE/TestOutput/log_n000060.log \
 		${TESTDIR}/RESULTS/log_test.log \
 		> test_cometfluids_restart.diff)

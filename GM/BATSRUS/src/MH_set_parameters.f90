@@ -1570,14 +1570,11 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoReplaceDensity', DoReplaceDensity)
         call read_var('SpeciesPercentCheck',SpeciesPercentCheck)
 
-     case("#UNIFORMIONVELOCITY")
-        call read_var('UseUniformIonVelocity', UseUniformIonVelocity)
-
      case("#NEUTRALFLUID")
         call read_var('DoConserveNeutrals', DoConserveNeutrals)
         call read_var('TypeFluxNeutral',    TypeFluxNeutral)
 
-     case("#MULTIION", "#MHDIONS", "#COLLISION")
+     case("#MULTIION", "#MHDIONS", "#COLLISION", "#MULTIIONSTATE")
         call multi_ion_set_parameters(NameCommand)
 
      case('#USERBOUNDARY', '#EXTRABOUNDARY')

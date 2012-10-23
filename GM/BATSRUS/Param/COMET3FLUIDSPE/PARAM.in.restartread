@@ -6,9 +6,6 @@ T                       DoEcho
 #INCLUDE
 GM/restartIN/restart.H
 
-#PLANET
-HALLEY
-
 #TIMEACCURATE
 F			DoTimeAccurate
 
@@ -28,19 +25,6 @@ TESTIJK
 0.0005
 0.000
 
-#COORDSYSTEM
-GSM                     TypeCoordSystem (Beta version; GM/BATSRUS is in GSM!)
-
-#SOLARWIND
-8.0                     SW_rho_dim [n/cc]
-1.E5                    SW_T_dim [K]     
--371.                   SW_Ux_dim [km/s] 
-0.0                     SW_Uy_dim [km/s] 
-0.0                     SW_Uz_dim [km/s] 
--3.4                    SW_Bx_dim [nT]   
-3.4                     SW_By_dim [nT]
-0.0                     SW_Bz_dim [nT]
-
 #OUTERBOUNDARY
 outflow                  TypeBcEast
 user                     TypeBcWest
@@ -58,15 +42,6 @@ F                       DoFixExtraboundary
 -1                      MinFaceBoundary
 -1                      MaxFaceBoundary
 F                       DoFixOuterBoundary
-
-#BODY 
-F                         body1
-6e-6	                  rBody
-1.0                       rCurrents
-0.1                       BodyRhoDim (1/ccm)
-600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
-0.1                       BodyRhoDim (1/ccm)
-600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
 
 #USERINPUTBEGIN --------------------
 
@@ -102,9 +77,6 @@ T			  DoAddRhoU
 1e-11			  LowPressureRatio
 F			  DoRestrictMultiIon
 
-#UNIFORMIONVELOCITY
-T	 		  UseSameIonVelocity
-
 #SCHEME
 1                         nOrder
 Rusanov                   TypeFlux | only for nOrder=2
@@ -119,9 +91,6 @@ T                         UsePointImplicit
 1.0                       BetaPointImpl
 F                         IsAsymetric
 T                         DoNormalizeCell 
-
-#UNIFORMIONVELOCITY
-F			UseSameIonVelocity
 
 HEATCONDUCTION
 T			UseHeatConduction
