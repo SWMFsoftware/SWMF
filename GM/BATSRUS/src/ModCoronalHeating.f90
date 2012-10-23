@@ -1413,7 +1413,7 @@ contains
     use ModGeometry, ONLY: true_cell
     use ModMain, ONLY: UseB0
     use ModNumConst, ONLY: i_DD
-    use ModPointImplicit, ONLY: DsDu_VVC
+    use ModPointImplicit, ONLY: IsPointImplSource, DsDu_VVC
     use ModSize, ONLY: x_, y_, z_
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
     use ModWaves, ONLY: WaveFirst_, WaveLast_, UseTransverseTurbulence, &
@@ -1509,10 +1509,12 @@ contains
        Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
             + Reflection*WaveEnergy
 
-       DsDu_VVC(WaveFirst_,WaveFirst_,i,j,k) = -Reflection
-       DsDu_VVC(WaveFirst_,WaveLast_,i,j,k) = -Reflection
-       DsDu_VVC(WaveLast_,WaveFirst_,i,j,k) = Reflection
-       DsDu_VVC(WaveLast_,WaveLast_,i,j,k) = Reflection
+       if(IsPointImplSource)then
+          DsDu_VVC(WaveFirst_,WaveFirst_,i,j,k) = -Reflection
+          DsDu_VVC(WaveFirst_,WaveLast_,i,j,k) = -Reflection
+          DsDu_VVC(WaveLast_,WaveFirst_,i,j,k) = Reflection
+          DsDu_VVC(WaveLast_,WaveLast_,i,j,k) = Reflection
+       end if
 
     end do; end do; end do
 
@@ -1608,5 +1610,20 @@ contains
     end subroutine calc_div_alfven
 
   end subroutine alfven_wave_reflection
+
+  !============================================================================
+
+  subroutine wave_reflection_init_point_impl
+
+    use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
+    !--------------------------------------------------------------------------
+    allocate(iVarPointImpl_I(2))
+
+    iVarPointImpl_I = (/WaveFirst_, WaveLast_/)
+
+    IsPointImplMatrixSet = .true.
+
+  end subroutine wave_reflection_init_point_impl
 
 end module ModCoronalHeating

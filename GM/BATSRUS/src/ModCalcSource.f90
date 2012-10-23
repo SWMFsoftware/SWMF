@@ -36,7 +36,7 @@ contains
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          QeByQtotal, UseTurbulentCascade, KarmanTaylorBeta, &
-         UseScaledCorrelationLength
+         UseScaledCorrelationLength, alfven_wave_reflection
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -267,6 +267,10 @@ contains
                      - Coef*DivU_C(i,j,k)/6.0
              end do; end do; end do
           end if
+
+          ! The following is for the explicit evaluation of the wave reflection
+          if(.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock))) &
+               call alfven_wave_reflection(iBlock)
 
           if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
              ! Positive (definite) source term for the correlation length
