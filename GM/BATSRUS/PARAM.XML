@@ -1224,6 +1224,17 @@ Default is -1.0, which means no smoothing.
 	<parameter name="yMax"   type="real" min="$yMin" default="  64.0" />
 	<parameter name="zMin"   type="real"             default=" -64.0" />
 	<parameter name="zMax"   type="real" min="$zMin" default="  64.0" />
+
+	<rule expr="$xMin != $xMax">
+	      xMin has to be smaller than xMax
+	</rule>
+	<rule expr="$yMin != $yMax">
+	      yMin has to be smaller than yMax
+	</rule>
+	<rule expr="$zMin != $zMax">
+	      zMin has to be smaller than zMax
+	</rule>
+
 #GRID
 2                       nRootBlock1
 1                       nRootBlock2
