@@ -556,11 +556,15 @@ sub set_hdf5_{
     if(not $DryRun){
 	@ARGV = ($MakefileConf);
 	while(<>){
-	    # Add/remove HDF5 related definitions
-	    s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_\w+\})(.*)/$1$H5pfc \#$2/ 
-		if $Hdf5 eq "yes";
-	    s/$H5pfc \#(.*)/$1/
-		if $Hdf5 eq "no";
+	    if($Hdf5 eq "yes"){
+		# Modify linker definition to use h5pfc
+		s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_\w+\})(.*)/$1$H5pfc \#$2/;
+		# For pgf90 the F90 compiler has to be changed too
+		s/^(COMPILE\.f90\s*=.*)(pgf90)/$1$H5pfc \#$2/;
+	    }else{
+		# Undo the modifications
+		s/$H5pfc \#(.*)/$1/;
+	    }
 	    print;
 	}
     }
