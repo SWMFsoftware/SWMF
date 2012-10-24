@@ -179,13 +179,14 @@ contains
 
     ! The isothermal parker wind solution is used as initial condition
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB
+    use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure, &
+         UseAnisoPressure
     use ModGeometry,   ONLY: Xyz_DGB, r_Blk
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          UnitN_, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
-         WaveFirst_, WaveLast_, Hyp_
+         Ppar_, WaveFirst_, WaveLast_, Hyp_
 
     integer, intent(in) :: iBlock
 
@@ -278,6 +279,8 @@ contains
        if(UseElectronPressure)then
           State_VGB(p_,i,j,k,iBlock) = NumDensIon*tCorona
           State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tCorona
+          if(UseAnisoPressure) &
+               State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)
        else
           State_VGB(p_,i,j,k,iBlock) = &
                (NumDensIon + NumDensElectron)*tCorona
@@ -871,13 +874,13 @@ contains
   !============================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModAdvance,      ONLY: UseElectronPressure
+    use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
     use ModMain,         ONLY: x_, y_, UseRotatingFrame
     use ModMultiFluid,   ONLY: MassIon_I
     use ModPhysics,      ONLY: OmegaBody, AverageIonCharge
     use ModVarIndexes,   ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, Bz_, p_, &
-         WaveFirst_, WaveLast_, Pe_, Hyp_
+         WaveFirst_, WaveLast_, Pe_, Ppar_, Hyp_
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
@@ -946,6 +949,8 @@ contains
     if(UseElectronPressure)then
        VarsGhostFace_V(p_) = NumDensIon*tChromo
        VarsGhostFace_V(Pe_) = NumDensElectron*tChromo
+       if(UseAnisoPressure) &
+            VarsGhostFace_V(Ppar_) = VarsGhostFace_V(p_)
     else
        VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*tChromo
     end if

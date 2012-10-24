@@ -35,7 +35,7 @@ contains
          UseAlfvenWaveReflection, UseTransverseTurbulence, SigmaD
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
-         QeByQtotal, UseTurbulentCascade, KarmanTaylorBeta, &
+         QeByQtotal, QparByQtotal, UseTurbulentCascade, KarmanTaylorBeta, &
          UseScaledCorrelationLength, alfven_wave_reflection
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
@@ -331,6 +331,9 @@ contains
                   + CoronalHeating_C(i,j,k)*gm1*(1.0-QeByQtotal)
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1*QeByQtotal
+             if(UseAnisoPressure) &
+                  Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) & 
+                  + CoronalHeating_C(i,j,k)*gm1*QparByQtotal
           else
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1

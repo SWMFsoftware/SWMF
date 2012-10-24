@@ -903,6 +903,8 @@ module ModCoronalHeating
 
   ! Electron heating is a fraction of the total coronal heating
   real :: QeByQtotal = 0.4
+  ! The fraction of heating for ion parallel pressure: 1/3 of Qp
+  real :: QparByQtotal = 0.2
 
   logical,private:: DoInit = .true. 
 contains
@@ -978,6 +980,10 @@ contains
        end if
     case("#ELECTRONHEATING")
        call read_var('QeByQtotal', QeByQtotal)
+
+    case("#ANISOIONHEATING")
+       call read_var('QparByQtotal', QparByQtotal)
+
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
             // NameCommand)
