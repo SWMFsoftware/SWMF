@@ -831,9 +831,8 @@ contains
 end module ModUnsignedFluxModel
 !=========================================!Master module!======================!
 module ModCoronalHeating
-
-  use ModUnsignedFluxModel, ONLY: UseUnsignedFluxModel, DecayLength
-  use ModNonWKBHeating, ONLY: cranmer_heating_function, UseCranmerHeating
+  use ModUnsignedFluxModel
+  use ModNonWKBHeating
   use ModMain,      ONLY: nBLK, nI, nJ, nK
   use ModReadParam, ONLY: lStringLine
   use ModVarIndexes,ONLY: WaveFirst_, WaveLast_
@@ -1622,7 +1621,6 @@ contains
 
   subroutine wave_reflection_init_point_impl
 
-    use ModVarIndexes,    ONLY: WaveFirst_, WaveLast_
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
     !--------------------------------------------------------------------------
     allocate(iVarPointImpl_I(2))
