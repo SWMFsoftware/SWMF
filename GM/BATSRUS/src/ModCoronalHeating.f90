@@ -140,7 +140,7 @@ module ModNonWKBHeating
 
   !PUBLIC MEMBER:
   logical,public::UseCranmerHeating = .false.
-  public:: Cranmer_heating_function
+  public:: cranmer_heating_function
 
   !The Cranmers heating function.
 
@@ -149,7 +149,7 @@ module ModNonWKBHeating
   !Use ModNonWKBHeating
 
   !....
-  !call Cranmer_heating_function(&
+  !call cranmer_heating_function(&
   !      RSI,   &       !Heliocentric distance [m]
   !      RhoSI, &       !Density, [kg/m^3]
   !      UMagSI,&       !The magnitude of the solar wind speed, [m/s]
@@ -256,7 +256,7 @@ contains
   !C
   !C---------------------------------------------------------------------------
 
-  subroutine Cranmer_heating_function(&
+  subroutine cranmer_heating_function(&
        RSI, RhoSI, UMagSI, BMagSI,&            !INPUT
        QHeatSI,                   &            !OUTPUT
        WaveEnergyDensitySI,IsFullReflection,&  !OPTIONAL INPUT
@@ -312,7 +312,7 @@ contains
     !Nu, as given in Eq.(17)
     real::vNu
 
-    character(LEN=*),parameter::NameSub = 'Cranmer_heating_function'
+    character(LEN=*),parameter::NameSub = 'cranmer_heating_function'
     !-------------------------------
 
     if(UseStar)then
@@ -590,7 +590,7 @@ contains
 
     QHeatSI = 0.10 * QHeatCGS  !0.1= 1e-7 J/(1e-2 m)**3
 
-  end subroutine Cranmer_heating_function
+  end subroutine cranmer_heating_function
 
 end module ModNonWKBHeating
 !==============================================================================
@@ -831,11 +831,12 @@ contains
 end module ModUnsignedFluxModel
 !=========================================!Master module!======================!
 module ModCoronalHeating
-  use ModUnsignedFluxModel
-  use ModNonWKBHeating
+
+  use ModUnsignedFluxModel, ONLY: UseUnsignedFluxModel, DecayLength
+  use ModNonWKBHeating, ONLY: cranmer_heating_function, UseCranmerHeating
   use ModMain,      ONLY: nBLK, nI, nJ, nK
   use ModReadParam, ONLY: lStringLine
-  use ModWaves,     ONLY: WaveFirst_,WaveLast_,UseWavePressure
+  use ModVarIndexes,ONLY: WaveFirst_, WaveLast_
   implicit none
   SAVE
 
@@ -1075,7 +1076,7 @@ contains
                           State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitU_)
        BmagSI= sqrt( sum( B_D**2 ) ) * No2Si_V(UnitB_)
        if(.not.DoOpenClosedHeat)then
-          call Cranmer_heating_function(&
+          call cranmer_heating_function(&
                RSI=RSI,      &
                RhoSI = RhoSI,&
                UMagSI=UMagSI,&
@@ -1085,7 +1086,7 @@ contains
           UminIfOpen = UMin*1.05
           call get_bernoulli_integral( &
                Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock), UFinal)
-          call Cranmer_heating_function(&
+          call cranmer_heating_function(&
                RSI=RSI,      &
                RhoSI  = RhoSI,&
                UMagSI =UMagSI,&
@@ -1219,7 +1220,7 @@ contains
                State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitU_)
           BmagSI= sqrt( sum( B_D**2 ) ) * No2Si_V(UnitB_)
           if(.not.DoOpenClosedHeat)then
-             call Cranmer_heating_function(&
+             call cranmer_heating_function(&
                   RSI=RSI,      &
                   RhoSI = RhoSI,&
                   UMagSI=UMagSI,&
@@ -1229,7 +1230,7 @@ contains
              
              call get_bernoulli_integral( &
                   Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock), UFinal)
-             call Cranmer_heating_function(&
+             call cranmer_heating_function(&
                   RSI=RSI,      &
                   RhoSI  = RhoSI,&
                   UMagSI =UMagSI,&
@@ -1615,7 +1616,7 @@ contains
 
   subroutine wave_reflection_init_point_impl
 
-    use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
+    use ModVarIndexes,    ONLY: WaveFirst_, WaveLast_
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
     !--------------------------------------------------------------------------
     allocate(iVarPointImpl_I(2))
