@@ -2757,7 +2757,7 @@ contains
       FullBz = State_V(Bz_) + B0z
       if(DoAw)then
          ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
-         ! the average field squared (Bright+Bleft)^2/4 results in 
+         ! the average field squared (Bright+Bleft)^2/4 results is
          ! an upper estimate of the left and right Alfven speeds 
          ! max(Bleft^2/RhoLeft, Bright^2/RhoRight)/
          !
@@ -2782,9 +2782,9 @@ contains
       FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
       Alfven2Normal = InvRho*FullBn**2
 
-      ! Calculate Fast speed for anisopressure.
-      ! Formulae refer to V. B. Baranov, 1970 and MAPLE calculation
-      if(UseAnisoPressure) FullB2 = FullBx**2+FullBy**2+FullBz**2
+      ! Calculate fast speed for anisotropic ion pressure.
+      ! Formulas refer to V. B. Baranov, 1970 and MAPLE calculation
+      if(UseAnisoPressure) FullB2 = FullBx**2 + FullBy**2 + FullBz**2
       if(UseAnisoPressure .and. FullB2 > 0)then
          Ppar  = State_V(Ppar_)
          Pperp = (3*p - Ppar)/2.
@@ -2808,6 +2808,42 @@ contains
          Fast2  = Sound2 + Alfven2
          Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
       endif
+
+      if(Fast2 + Discr < 0.0)then
+         write(*,*)NameSub, &
+              ' negative fast speed squared, Fast2, Discr=', Fast2, Discr
+         write(*,*) NameSub, &
+              ' iFluid, rho, p(face)   =', iFluid, Rho, p
+         if(UseAnisoPressure) write(*,*) NameSub, &
+              ' Ppar, Perp             =', Ppar, Pperp
+         if(UseElectronPressure) write(*,*) NameSub, &
+              ' State_V(Pe_)           =', State_V(Pe_)
+         if(UseWavePressure) write(*,*) NameSub, &
+              ' GammaWave, State(Waves)=', &
+              GammaWave, State_V(WaveFirst_:WaveLast_)
+
+         write(*,*) NameSub, &
+              ' Sound2, Alfven2       =', Sound2, Alfven2
+         write(*,*) NameSub, &
+              ' FullBn, Alfven2Normal =', FullBn, Alfven2Normal
+         write(*,*) NameSub, &
+              ' FullBx, FullBy, FullBz=', FullBx, FullBy, FullBz
+         write(*,*) NameSub, &
+              ' State_VGB(left)       =', &
+              State_VGB(:,iLeft,jLeft,kLeft,iBlockFace)
+         write(*,*) NameSub, &
+              ' State_VGB(right)      =', &
+              State_VGB(:,iRight,jRight,kRight,iBlockFace)
+         write(*,*)NameSub, &
+              ' Xyz_DGB(right)        =', &
+              Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
+
+         write(*,*) NameSub, &
+              ' iDim,i,j,k,BlockFace,iProc=', &
+              iDimFace, iFace, jFace, kFace, iBlockFace, iProc
+
+         call stop_mpi(NameSub//' negative fast speed squared')
+      end if
 
       ! Fast speed multipled by the face area
       if(UseBorisSimple)then
