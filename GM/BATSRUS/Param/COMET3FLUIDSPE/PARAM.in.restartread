@@ -6,6 +6,9 @@ T                       DoEcho
 #INCLUDE
 GM/restartIN/restart.H
 
+#BODY
+F			UseBody
+
 #TIMEACCURATE
 F			DoTimeAccurate
 
