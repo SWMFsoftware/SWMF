@@ -1408,7 +1408,12 @@ contains
 
   !============================================================================
 
-  subroutine alfven_wave_reflection(iBlock)
+  subroutine turbulence_mixing(iBlock)
+
+    ! This subroutine calculates the turbulence mixing due to
+    ! - large-scale shear flow and compression
+    ! - gradients in the large-scale Alfven speed, resulting in Alfven wave
+    !   reflection
 
     use BATL_lib, ONLY: IsCartesian, CellSize_DB
     use BATL_size, ONLY: MaxDim, nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -1421,53 +1426,63 @@ contains
     use ModNumConst, ONLY: i_DD
     use ModPointImplicit, ONLY: IsPointImplSource, DsDu_VVC
     use ModSize, ONLY: x_, y_, z_
-    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use ModWaves, ONLY: WaveFirst_, WaveLast_, UseTransverseTurbulence, &
          SigmaD
 
     integer, intent(in) :: iBlock
 
+    integer, parameter :: iRho = 1, iRhoUx = 2, iRhoUz = 4, iBx = 5, iBz = 7
+
     integer :: i, j, k, Di, Dj, Dk, iDim, iDir
 
-    ! Face centered Alfven speed for one block
+    ! Cell centered and face centered velocity and Alfven speed for one block
+    real, allocatable :: U_VG(:,:,:,:), U_VFD(:,:,:,:,:)
     real, allocatable :: Alfven_VG(:,:,:,:), Alfven_VFD(:,:,:,:,:)
 
     ! Array needed for second order interpolation of ghost cells
     real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
 
-    real :: GradAlfven_DD(nDim,MaxDim), bDotbDotGradAlfven
-    real :: DivAlfven
+    real :: GradAlfven_DD(nDim,MaxDim), bDotbDotGradAlfven, DivAlfven
+    real :: GradU_DD(nDim,MaxDim), bDotbDotGradU, DivU
     real :: b_D(MaxDim)
-    real :: Reflection, WaveEnergy
+    real :: Reflection, Mixing, WaveEnergy
     real :: InvDx2, InvDy2, InvDz2
 
     character(len=*), parameter :: &
-         NameSub = 'ModCoronalHeating::alfven_wave_reflection'
+         NameSub = 'ModCoronalHeating::turbulence_mixing'
     !------------------------------------------------------------------------
 
     if(.not.allocated(Alfven_VG)) allocate( &
          Alfven_VG(MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
-         State1_VG(4,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
-         State2_VG(4,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
+         U_VG(MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
+         State1_VG(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+         State2_VG(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
 
     ! second order interpolation of density and magnetic field
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       State2_VG(1,i,j,k) = State_VGB(Rho_,i,j,k,iBlock)
-       State2_VG(2:4,i,j,k) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       State2_VG(iRho,i,j,k) = State_VGB(Rho_,i,j,k,iBlock)
+       State2_VG(iRhoUx:iRhoUz,i,j,k) = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+       State2_VG(iBx:iBz,i,j,k) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
     end do; end do; end do
-    call set_block_field2(iBlock, 4, State1_VG, State2_VG)
+    call set_block_field2(iBlock, 7, State1_VG, State2_VG)
 
     if(UseB0)then
        do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
           Alfven_VG(:,i,j,k) = &
-               (State2_VG(2:4,i,j,k) + B0_DGB(:,i,j,k,iBlock)) &
-               /sqrt(State2_VG(1,i,j,k))
+               (State2_VG(iBx:iBz,i,j,k) + B0_DGB(:,i,j,k,iBlock)) &
+               /sqrt(State2_VG(iRho,i,j,k))
        end do; end do; end do
     else
        do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
-          Alfven_VG(:,i,j,k) = State2_VG(2:4,i,j,k)/sqrt(State2_VG(1,i,j,k))
+          Alfven_VG(:,i,j,k) = State2_VG(iBx:iBz,i,j,k) &
+               /sqrt(State2_VG(iRho,i,j,k))
        end do; end do; end do
     end if
+
+    do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+       U_VG(:,i,j,k) = State2_VG(iRhoUx:iRHoUz,i,j,k)/State2_VG(iRho,i,j,k)
+    end do; end do; end do
 
     if(IsCartesian)then
        InvDx2 = 0.5/CellSize_DB(x_,iBlock)
@@ -1475,13 +1490,15 @@ contains
        InvDz2 = 0.5/CellSize_DB(z_,iBlock)
     else
        if(.not.allocated(Alfven_VFD)) allocate( &
-            Alfven_VFD(MaxDim,1:nI+1,1:nJ+1,1:nK+1,nDim) )
+            Alfven_VFD(MaxDim,1:nI+1,1:nJ+1,1:nK+1,nDim), &
+            U_VFD(MaxDim,1:nI+1,1:nJ+1,1:nK+1,nDim) )
 
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
              Alfven_VFD(:,i,j,k,iDim) = &
                   0.5*(Alfven_VG(:,i,j,k) + Alfven_VG(:,i-Di,j-Dj,k-Dk))
+             U_VFD(:,i,j,k,iDim) = 0.5*(U_VG(:,i,j,k) + U_VG(:,i-Di,j-Dj,k-Dk))
           end do; end do; end do
        end do
     end if
@@ -1489,37 +1506,51 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       ! Wave reflection
        if(UseTransverseTurbulence)then
-          call calc_grad_alfven(i, j, k, iBlock, GradAlfven_DD)
-
           ! Calculate unit vector parallel with full B field
           b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
           if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
           b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
 
           ! Calculate b.(grad Ualfven).b
+          call calc_grad_alfven(i, j, k, iBlock, GradAlfven_DD)
           bDotbDotGradAlfven = sum(b_D*matmul(b_D(1:nDim), GradAlfven_DD))
 
           Reflection = 0.5*SigmaD*bDotbDotGradAlfven
+
+          ! Calculate b.(grad U).b
+          call calc_grad_u(i, j, k, iBlock, GradU_DD)
+          bDotbDotGradU = sum(b_D*matmul(b_D(1:nDim), GradU_DD))
+
+          call calc_div_u(i, j, k, iBlock, DivU)
+
+          Mixing = 0.5*SigmaD*(0.5*DivU - bDotbDotGradU)
        else ! isotropic turbulence
           call calc_div_alfven(i, j, k, iBlock, DivAlfven)
 
           Reflection = 0.5*SigmaD*DivAlfven
+
+          call calc_div_u(i, j, k, iBlock, DivU)
+
+          Mixing = SigmaD*DivU/12.0
        end if
 
        WaveEnergy = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
 
        Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
-            - Reflection*WaveEnergy
+            - Reflection*WaveEnergy &
+            + Mixing*State_VGB(WaveFirst_,i,j,k,iBlock) &
+            - Mixing*State_VGB(WaveLast_,i,j,k,iBlock)
        Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
-            + Reflection*WaveEnergy
+            + Reflection*WaveEnergy &
+            - Mixing*State_VGB(WaveFirst_,i,j,k,iBlock) &
+            + Mixing*State_VGB(WaveLast_,i,j,k,iBlock)
 
        if(IsPointImplSource)then
-          DsDu_VVC(WaveFirst_,WaveFirst_,i,j,k) = -Reflection
-          DsDu_VVC(WaveFirst_,WaveLast_,i,j,k) = -Reflection
-          DsDu_VVC(WaveLast_,WaveFirst_,i,j,k) = Reflection
-          DsDu_VVC(WaveLast_,WaveLast_,i,j,k) = Reflection
+          DsDu_VVC(WaveFirst_,WaveFirst_,i,j,k) = -Reflection + Mixing
+          DsDu_VVC(WaveFirst_,WaveLast_,i,j,k) = -Reflection - Mixing
+          DsDu_VVC(WaveLast_,WaveFirst_,i,j,k) = Reflection - Mixing
+          DsDu_VVC(WaveLast_,WaveLast_,i,j,k) = Reflection + Mixing
        end if
 
     end do; end do; end do
@@ -1535,7 +1566,7 @@ contains
       real, intent(out) :: GradAlfven_DD(nDim,MaxDim)
 
       character(len=*), parameter :: NameSub = &
-           'ModCoronalHeating::alfven_wave_reflection::calc_grad_alfven'
+           'ModCoronalHeating::turbulence_mixing::calc_grad_alfven'
       !----------------------------------------------------------------------
 
       GradAlfven_DD = 0.0
@@ -1582,7 +1613,7 @@ contains
       real, intent(out) :: DivAlfven
 
       character(len=*), parameter :: NameSub = &
-           'ModCoronalHeating::alfven_wave_reflection::calc_div_alfven'
+           'ModCoronalHeating::turbulence_mixing::calc_div_alfven'
       !----------------------------------------------------------------------
 
       if(IsCartesian)then
@@ -1614,12 +1645,101 @@ contains
       end if
 
     end subroutine calc_div_alfven
+    !========================================================================
+    subroutine calc_grad_u(i, j, k, iBlock, GradU_DD)
 
-  end subroutine alfven_wave_reflection
+      use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
+           FaceNormal_DDFB, CellVolume_GB, x_, y_, z_
+
+      integer, intent(in) :: i, j, k, iBlock
+      real, intent(out) :: GradU_DD(nDim,MaxDim)
+
+      character(len=*), parameter :: NameSub = &
+           'ModCoronalHeating::turbulence_mixing::calc_grad_u'
+      !----------------------------------------------------------------------
+
+      GradU_DD = 0.0
+      ! Calculate gradient tensor of the velocity
+      if(IsCartesian) then
+         GradU_DD(x_,:) = InvDx2 &
+              *(U_VG(:,i+1,j,k) - U_VG(:,i-1,j,k))
+         if(nJ > 1) GradU_DD(y_,:) = InvDy2 &
+              *(U_VG(:,i,j+1,k) - U_VG(:,i,j-1,k))
+         if(nK > 1) GradU_DD(z_,:) = InvDz2 &
+              *(U_VG(:,i,j,k+1) - U_VG(:,i,j,k-1))
+      else if(IsRzGeometry) then
+         call stop_mpi(NameSub//': RZ geometry to be implemented')
+      else
+         do iDir = 1, MaxDim
+            GradU_DD(:,iDir) = &
+                 U_VFD(iDir,i+1,j,k,x_) &
+                 *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
+                 - U_VFD(iDir,i,j,k,x_) &
+                 *FaceNormal_DDFB(:,x_,i,j,k,iBlock)
+            if(nJ > 1) GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
+                 U_VFD(iDir,i,j+1,k,y_) &
+                 *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
+                 - U_VFD(iDir,i,j,k,y_) &
+                 *FaceNormal_DDFB(:,y_,i,j,k,iBlock)
+            if(nK > 1) GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
+                 U_VFD(iDir,i,j,k+1,z_) &
+                 *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
+                 - U_VFD(iDir,i,j,k,z_) &
+                 *FaceNormal_DDFB(:,z_,i,j,k,iBlock)
+         end do
+
+         GradU_DD = GradU_DD/CellVolume_GB(i,j,k,iBlock)
+      end if
+
+    end subroutine calc_grad_u
+    !========================================================================
+    subroutine calc_div_u(i, j, k, iBlock, DivU)
+
+      use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
+           FaceNormal_DDFB, CellVolume_GB
+
+      integer, intent(in) :: i, j, k, iBlock
+      real, intent(out) :: DivU
+
+      character(len=*), parameter :: NameSub = &
+           'ModCoronalHeating::turbulence_mixing::calc_div_u'
+      !----------------------------------------------------------------------
+
+      if(IsCartesian)then
+         DivU = InvDx2*(U_VG(x_,i+1,j,k) - U_VG(x_,i-1,j,k))
+         if(nJ > 1) DivU = DivU &
+              + InvDy2*(U_VG(y_,i,j+1,k) - U_VG(y_,i,j-1,k))
+         if(nK > 1) DivU = DivU &
+              + InvDz2*(U_VG(z_,i,j,k+1) - U_VG(z_,i,j,k-1))
+      else if(IsRzGeometry)then
+         call stop_mpi(NameSub//': RZ geometry to be implemented')
+      else
+         DivU = &
+              sum(U_VFD(:nDim,i+1,j,k,x_) &
+              *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
+              -   U_VFD(:nDim,i,j,k,x_) &
+              *FaceNormal_DDFB(:,x_,i,j,k,iBlock))
+         if(nJ > 1) DivU = DivU + &
+              sum(U_VFD(:nDim,i,j+1,k,y_) &
+              *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
+              -   U_VFD(:nDim,i,j,k,y_) &
+              *FaceNormal_DDFB(:,y_,i,j,k,iBlock))
+         if(nK > 1) DivU = DivU + &
+              sum(U_VFD(:nDim,i,j,k+1,z_) &
+              *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
+              -   U_VFD(:nDim,i,j,k,z_) &
+              *FaceNormal_DDFB(:,z_,i,j,k,iBlock))
+
+         DivU = DivU/CellVolume_GB(i,j,k,iBlock)
+      end if
+
+    end subroutine calc_div_u
+
+  end subroutine turbulence_mixing
 
   !============================================================================
 
-  subroutine wave_reflection_init_point_impl
+  subroutine turbulence_mixing_init_point_impl
 
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
     !--------------------------------------------------------------------------
@@ -1629,6 +1749,6 @@ contains
 
     IsPointImplMatrixSet = .true.
 
-  end subroutine wave_reflection_init_point_impl
+  end subroutine turbulence_mixing_init_point_impl
 
 end module ModCoronalHeating

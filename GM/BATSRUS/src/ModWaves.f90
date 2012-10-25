@@ -87,8 +87,12 @@ module ModWaves
 
 
   ! Variables for incompressible turbulence.
-  ! For now the ratio of magnetic to kinetic turbulence energy is assumed
-  ! to be uniform (as provided by SigmaD, corresponding to Alfven ratio 1/2).
+  ! For now, we assume that the magnetic turbulence energy is twice the
+  ! kinetic turbulence energy (Alfven ratio = 1/2), which is a more or less
+  ! correct assumption for most of the corona and inner heliosphere (with the
+  ! exception of the transition region and CME shocks).
+  ! The parameter that defines this ratio is the normalized energy
+  ! difference: SigmaD = (kinetic - magnetic)/(kinetic + magnetic)
   logical :: UseAlfvenWaveReflection = .false.
   logical :: UseTransverseTurbulence = .true.
   real :: SigmaD = -1.0/3.0 ! Normalized energy difference

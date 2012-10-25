@@ -36,7 +36,7 @@ contains
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          QeByQtotal, QparByQtotal, UseTurbulentCascade, KarmanTaylorBeta, &
-         UseScaledCorrelationLength, alfven_wave_reflection
+         UseScaledCorrelationLength, turbulence_mixing
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -231,9 +231,6 @@ contains
        end do; end do; end do
 
        if(UseAlfvenWaveReflection)then
-          ! The contribution below is not the wave reflection associated
-          ! with turbulence mixing, but shear flow mixing terms that
-          ! appear in the (simplified) incompressible turbulence framework
           if(UseTransverseTurbulence)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -248,29 +245,26 @@ contains
                 ! Calculate b.(grad u).b
                 bDotGradparU = dot_product(b_D, matmul(b_D(1:nDim), GradU_DD))
 
-                Coef = 0.5*SigmaD &
-                     *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-
                 Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                      Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                     - Coef*(0.5*DivU_C(i,j,k) - bDotGradparU)
+                     - SigmaD*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
+                     *(0.5*DivU_C(i,j,k) - bDotGradparU)
              end do; end do; end do
           else ! isotropic turbulence
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-                Coef = 0.5*SigmaD &
-                     *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-
                 Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                      Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                     - Coef*DivU_C(i,j,k)/6.0
+                     - SigmaD*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
+                     *DivU_C(i,j,k)/6.0
              end do; end do; end do
           end if
 
-          ! The following is for the explicit evaluation of the wave reflection
+          ! The following is for the explicit evaluation of the
+          ! turbulence mixing
           if(.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock))) &
-               call alfven_wave_reflection(iBlock)
+               call turbulence_mixing(iBlock)
 
           if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
              ! Positive (definite) source term for the correlation length
