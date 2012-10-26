@@ -1,11 +1,11 @@
 module ModHdf5
 
-  use ModProcMH, ONLY: iProc, nProc, iComm 
   use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use hdf5
   use ModHdf5Utils
   use ModNumConst
   use BATL_size, ONLY: nDim
+  use ModMpi
   implicit none
   SAVE
 
@@ -43,6 +43,7 @@ module ModHdf5
   integer(HSIZE_T) :: iInteger8, iInteger8a
   integer(HID_T) :: iInteger4
 
+  integer :: iplotComm,nPlotProc,iPlotProc ! one comunicator for each plot
 
 contains
   subroutine init_hdf5_plot(iFile, plotType, nPlotVar, &
@@ -57,7 +58,6 @@ contains
     use ModGeometry, ONLY: CellSize_DB,&
          XyzStart_BLK
     use ModIO
-    use ModMpi
     use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
          CoordMax_DB, CoordMin_D,CoordMax_D,DiLevelNei_IIIB
 
@@ -99,7 +99,7 @@ contains
     jSize = 0
     kSize = 0
     nBlocksUsed = 0
-    do iBlk = 1, nBlockMax
+    do iBlk = 1, nBlock
        if(Unused_B(iBLK)) CYCLE
 
        xMin1 = xMin - cHalfMinusTiny*CellSize_DB(x_,iBlk)
@@ -227,15 +227,29 @@ contains
           nBlocksUsed = nBlocksUsed + 1
        end if
     end do
-    allocate(blocksPerProc(0:nProc-1))
+
+    ! Make a comincator for only procs which has data to save
+    call timing_start('hdf5::MPI_Comm_split')
+    if(nBlock == 0) then 
+       call MPI_Comm_split(iComm,MPI_UNDEFINED,iProc,iplotComm,Error) 
+    else
+       call MPI_Comm_split(iComm,1,iProc,iplotComm,Error) 
+    endif
+    call timing_stop('hdf5::MPI_Comm_split')
+
+    if(MPI_COMM_NULL == iplotComm ) RETURN
+    call MPI_COMM_RANK (iplotComm, iPlotProc, Error)
+    call MPI_COMM_SIZE (iplotComm, nPlotProc, Error)
+
+    allocate(blocksPerProc(0:nPlotProc-1))
     call MPI_Allgather(nBlocksUsed, 1, MPI_INTEGER, blocksPerProc, &
-         1, MPI_INTEGER, iComm, Error)
-    if (iProc == 0) then
+         1, MPI_INTEGER, iplotComm, Error)
+    if (iPlotProc == 0) then
        iProcOffset = 0
     else
-       iProcOffset = sum(blocksPerProc(0:iProc-1))
+       iProcOffset = sum(blocksPerProc(0:iPlotProc-1))
     end if
-    nBlkUsedGlobal = sum(blocksPerProc(0:nProc-1))
+    nBlkUsedGlobal = sum(blocksPerProc(0:nPlotProc-1))
     deallocate(blocksPerProc)
 
     allocate(UsedBlocks(nBlocksUsed))
@@ -245,11 +259,11 @@ contains
        kSizeGlobal = nK
     else
        call MPI_AllReduce(iSize, iSizeGlobal, 1,&
-            MPI_INTEGER, MPI_MAX, iComm, Error)
+            MPI_INTEGER, MPI_MAX, iplotComm, Error)
        call MPI_AllReduce(jSize, jSizeGlobal, 1,&
-            MPI_INTEGER, MPI_MAX, iComm, Error)
+            MPI_INTEGER, MPI_MAX, iplotComm, Error)
        call MPI_AllReduce(kSize, kSizeGlobal, 1,&
-            MPI_INTEGER, MPI_MAX, iComm, Error)
+            MPI_INTEGER, MPI_MAX, iplotComm, Error)
     end if
 
     if (isNonCartesian) then
@@ -357,7 +371,6 @@ contains
 
     ! Save all cells within plotting range, for each processor
 
-    use ModProcMH
     use ModMain, ONLY: nI, nJ, nK, &
          x_, y_, z_, Phi_, nBlockMax, Unused_B
     use ModGeometry, ONLY: CellSize_DB,&
@@ -398,6 +411,8 @@ contains
     character(len=*), parameter :: NameSub = 'write_var_hdf5'
     save
 
+
+    if(MPI_COMM_NULL == iplotComm ) RETURN
 
     xMin1 = xMin - cHalfMinusTiny*CellSize_DB(x_,iBlock)
     xMax1 = xMax + cHalfMinusTiny*CellSize_DB(x_,iBlock)
@@ -699,7 +714,6 @@ contains
 
     use ModGeometry, ONLY: nI,nJ,nK, CellSize_DB,&
          x1,x2,y1,y2,z1,z2, Xyz_DGB
-    use ModProcMH, ONLY: iProc, nProc
     use ModMpi
     use ModIO, only: x_,y_,z_
 
@@ -721,9 +735,12 @@ contains
     integer(HSIZE_T) :: iData
     integer, parameter :: FFV = 1
 
+    if(MPI_COMM_NULL == iplotComm ) RETURN
+
     dtheta_plot = cPi/real(ntheta)
     dphi_plot   = 2.0*cPi/real(nphi)
-    call barrier_mpi
+    !call barrier_mpi
+    call MPI_Barrier(iPlotComm,Error)
     do i=1,2 !i is the dimension
        if (i == 1) then 
           nThetaOrPhi = nTheta
@@ -787,9 +804,9 @@ contains
     !This is done so values calculated in this routine and
     !their corresponding writes can be
     !split evenly between the processors.
-    nBlocksUsed = nint((nBlkUsedGlobal)/real(nProc))
-    iProcOffset = iProc*nBlocksUsed
-    if (iProc == nProc-1) &
+    nBlocksUsed = nint((nBlkUsedGlobal)/real(nPlotProc))
+    iProcOffset = iPlotProc*nBlocksUsed
+    if (iPlotProc == nPlotProc-1) &
          nBlocksUsed = nBlkUsedGlobal - iProcOffset
 
     nCellsLocal = 0
@@ -832,17 +849,19 @@ contains
        end do
     end do
 
-    call open_hdf5_file(fileid, filename, icomm)
+    call open_hdf5_file(fileid, filename, iplotComm)
     if(fileid == -1) then
-       if (iProc == 0) write (*,*)  "Error: unable to initialize file"
+       if (iPlotProc == 0) write (*,*)  "Error: unable to initialize file"
        call stop_mpi("unable to initialize hdf5 file")
     end if
-    call barrier_mpi
+
+    call MPI_Barrier(iPlotComm,Error)
     allocate(PlotXYZNodes(nPlotDim,nNodeCellsPerBlock(1),nNodeCellsPerBlock(2),nNodeCellsPerBlock(3),nBlocksUsed))
     !build the grid node array for this proc
     iBlk = 0
     iNode = 0
-    call barrier_mpi
+
+    call MPI_Barrier(iPlotComm,Error)
     do jj=1, nBlocksThetaPhi(2); do ii=1,nBlocksThetaPhi(1);
        iNode = iNode + 1
        if (iNode .le. iProcOffset .or. iNode > iProcOffset+nBlocksUsed) cycle  
@@ -949,7 +968,7 @@ contains
     IntegerMetaData(iData) = nBlkUsedGlobal
     !    attName(4) = 'globalNumBlocks'
     iData = iData + 1    
-    IntegerMetaData(iData) = nProc
+    IntegerMetaData(iData) = nPlotProc
     !    attName(5) = 'numProcessors'
     iData = iData + 1
 
@@ -1019,6 +1038,8 @@ contains
     integer :: iBlkCell, jBlkCell, iBlk
     integer :: iNode,  PhiBlk, ThetaBlk
 
+    if(MPI_COMM_NULL == iplotComm ) RETURN
+
     ThetaBlk = floor(real(iCell - 1)/real(nCellsPerBlock(1))) + 1
     PhiBlk = floor(real(jCell - 1)/real(nCellsPerBlock(2))) + 1
 
@@ -1045,7 +1066,9 @@ contains
     integer :: Error
     real :: VarMin, VarMax, GlobalVarMin(nPlotVar), GlobalVarMax(nPlotVar)
 
-    call barrier_mpi
+    if(MPI_COMM_NULL == iplotComm ) RETURN
+
+    call MPI_Barrier(iPlotComm,Error)
 
     do iVar = 1, nPlotVar
        if (nCellsLocal > 0) then
@@ -1057,9 +1080,9 @@ contains
        end if
 
        call MPI_allreduce(VarMin, GlobalVarMin(iVar), 1, MPI_REAL,&
-            MPI_MIN, iComm, Error)
+            MPI_MIN, iplotComm, Error)
        call MPI_allreduce(VarMax, GlobalVarMax(iVar), 1, MPI_REAL,&
-            MPI_MAX, iComm, Error)
+            MPI_MAX, iplotComm, Error)
     end do
 
     do iVar = 1, nPlotVar
@@ -1071,6 +1094,7 @@ contains
     deallocate(UnknownNameArray)
     deallocate(CellData)
     deallocate(CoordArray)
+
     call close_hdf5_file(FileID)
   end subroutine close_sph_hdf5_plot
 
@@ -1100,7 +1124,7 @@ contains
     character (len=*), intent(in) :: plotType
     real, intent(in)  ::  xMin, xMax, yMin, yMax, zMin, zMax
     logical, intent(in) :: NotACut, plot_dimensional, nonCartesian, IsSphPlot
-    integer :: offsetPerProc(0:nProc-1)
+    integer :: offsetPerProc(0:nPlotProc-1)
     integer :: Error, procIdx, iLen, iVar, nBlocksUsedMax 
 
     integer :: labelLeng, i, ii, nBlocksUsedMin
@@ -1113,6 +1137,8 @@ contains
     character (len=lnamevar+4) :: DatasetNameTemp
     real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
     logical :: isCutFile
+
+    if(MPI_COMM_NULL == iplotComm ) RETURN
 
     if (NotACut) then
        isCutFile = .false.
@@ -1136,18 +1162,18 @@ contains
           VarMax = -huge(VarMax)
        end if
        call MPI_allreduce(VarMin, GlobalVarMin(iVar), 1, MPI_REAL,&
-            MPI_MIN, iComm, Error)
+            MPI_MIN, iplotComm, Error)
 
        call MPI_allreduce(VarMax, GlobalVarMax(iVar), 1, MPI_REAL,&
-            MPI_MAX, iComm, Error)
+            MPI_MAX, iplotComm, Error)
 
     end do
 
 
     ! Open the hdf5 file
-    call open_hdf5_file(fileid, filename, icomm)
+    call open_hdf5_file(fileid, filename, iplotComm)
     if(fileid == -1) then
-       if (iProc == 0) write (*,*)  "Error: unable to initialize file"
+       if (iPlotProc == 0) write (*,*)  "Error: unable to initialize file"
        call stop_mpi("unable to initialize hdf5 file")
     end if
 
@@ -1241,13 +1267,13 @@ contains
        end do
     end do
     deallocate(BoundingBox)
-    call barrier_mpi
+    call MPI_Barrier(iPlotComm,Error)
     call write_hdf5_data(FileID, "coordinates", 2, (/nPlotDim,nBlkUsedGlobal/),&
          nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
          Rank2RealData=Coordinates)
     deallocate(Coordinates)
 
-    call barrier_mpi
+    call MPI_Barrier(iPlotComm,Error)
     if (nBlocksUsed > 0) then
        allocate(MinLogicalExtents(nPlotDim, nBlocksUsed))
        do iVar = 1,nPlotDim
@@ -1261,7 +1287,7 @@ contains
     do iVar = 1,nPlotDim
        i = minval(MinLogicalExtents(iVar,:))
        call MPI_allreduce(i, ii, 1, MPI_INTEGER,&
-            MPI_MIN, iComm, Error)
+            MPI_MIN, iplotComm, Error)
        do iBlk = 1, nBlocksUsed
           MinLogicalExtents(iVar,iBlk) = MinLogicalExtents(iVar,iBlk) - ii
        end do
@@ -1280,11 +1306,11 @@ contains
          CharacterData=UnknownNameArray, nStringChars=iInteger8a)
 
 
-    call barrier_mpi
+    call MPI_Barrier(iPlotComm,Error)
     deallocate(PlotVarIdx)
     deallocate(unknownNameArray)
 
-    call barrier_mpi
+    call MPI_Barrier(iPlotComm,Error)
     if (NotACut .and. nBlocksUsed > 0) then
        call  write_hdf5_data(FileID, "iMortonNode_A", 1, (/nBlkUsedGlobal/),&
             nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
@@ -1295,7 +1321,7 @@ contains
             Rank1IntegerData=(/0/))
     end if
     ! 
-    call barrier_mpi
+    call MPI_Barrier(iPlotComm,Error)
     if (nBlocksUsed > 0 ) then
        call  write_hdf5_data(FileID, "refine level", 1, (/nBlkUsedGlobal/),&
             nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
@@ -1308,9 +1334,9 @@ contains
        deallocate(usedNodes)
     end if
 
-    call barrier_mpi
+    call MPI_Barrier(iPlotComm,Error)
     allocate(procNum(nBlocksUsed))
-    procNum = iProc
+    procNum = iPlotProc
     call  write_hdf5_data(FileID, "Processor Number", 1, (/nBlkUsedGlobal/),&
          nOffsetLocal=iProcOffset, nBlocksLocalIn=nBlocksUsed,&
          Rank1IntegerData=procNum)
@@ -1318,7 +1344,7 @@ contains
     deallocate(usedBlocks)
     allocate(UnknownNameArray(nPlotDim))
 
-    call barrier_mpi
+    call MPI_Barrier(iPlotComm,Error)
     if (plotType=='x=0') then
        UnknownNameArray(1) = "Y-Axis"
        if (nPlotDim == 2) &
@@ -1351,8 +1377,11 @@ contains
     else
        call write_real_plot_metadata(FileID,plot_dimensional, .false.)
     end if
-    call barrier_mpi
+
+    call MPI_Barrier(iPlotComm,Error)
     call close_hdf5_file(FileID)
+
+    call MPI_Comm_Free(iPlotComm,Error)
 
   end subroutine write_plot_hdf5
 
@@ -1362,7 +1391,7 @@ contains
   subroutine write_real_plot_metadata(FileID,plot_dimensional, isXZero)
 
     use ModMain, only : Time_Simulation, CodeVersion
-    use ModProcMH, only : iProc
+    !use ModProcMH, only : iProc
     use BATL_lib, only : nLevel, nDim
     use ModGeometry, only : x1,x2,y1,y2,z1,z2
     use ModPhysics, ONLY : No2Io_V, UnitX_
@@ -1372,6 +1401,8 @@ contains
     logical, intent (in) :: plot_dimensional, isXZero
 
     real :: RealMetaData(7)
+
+    if(MPI_COMM_NULL == iplotComm ) RETURN
 
     iData = 1
     !    attName(1) = 'Simulation Time'
@@ -1447,6 +1478,9 @@ contains
 
     real :: RealMetaData(7)
     !    allocate(attName(nAtts))
+
+    if(MPI_COMM_NULL == iplotComm ) RETURN
+
     iData = 1
     !    attName(1) = 'Simulation Time'
     RealMetaData(iData) = Time_Simulation
@@ -1502,7 +1536,6 @@ contains
 
   subroutine write_integer_plot_metadata(fileID,nPlotVar,isCutFile)
 
-    use ModProcMH, only : nProc
     use BATL_lib, only : nDimAmr, nLevel, IsPeriodic_D 
     use ModMain, only : n_step
     use ModGeometry, ONLY : TypeGeometry
@@ -1512,6 +1545,9 @@ contains
     integer(HSIZE_T) ::  iData
     integer :: i,IntegerMetaData(16)
     integer, parameter  :: FFV = 1 ! file format version
+
+    if(MPI_COMM_NULL == iplotComm ) RETURN
+
     iData = 1
 
     IntegerMetaData(iData) = FFV
@@ -1529,7 +1565,7 @@ contains
     IntegerMetaData(iData) = nBlkUsedGlobal
     !    attName(4) = 'globalNumBlocks'
     iData = iData + 1    
-    IntegerMetaData(iData) = nProc
+    IntegerMetaData(iData) = nPlotProc
     !    attName(5) = 'numProcessors'
     iData = iData + 1
 
@@ -1606,13 +1642,14 @@ contains
     !Not read by plugin at this time  Only exists so that one looking at
     !the file may know something about the simulation that created it
 
-    use ModProcMH, only : nProc
     use BATL_lib, only : nDim, nDimAmr, nLevel
     use ModMain, only : n_step, nI, nJ, nK
     integer (HID_T), intent(in) :: fileID, nPlotVar
 
     integer(HSIZE_T) :: iData
     integer :: IntegerMetaData(8)
+    if(MPI_COMM_NULL == iplotComm ) RETURN
+
     iData = 1
 
     IntegerMetaData(iData) = nI
@@ -1630,7 +1667,7 @@ contains
     IntegerMetaData(iData) = nDimAmr
     !    attName(3) = 'nDim'
     iData = iData + 1
-    IntegerMetaData(iData) = nProc
+    IntegerMetaData(iData) = nPlotProc
     !    attName(5) = 'numProcessors'
     iData = iData + 1
 
