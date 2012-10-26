@@ -6040,6 +6040,22 @@ In that case the BIERMANNBATTERY command is not needed.
 Default is UseBiermannBattery false.
 </command>
 
+<command name="MINIMUMDENSITY">
+	<parameter name="RhoMinDim" type="real" min="-1" default="-1"/>
+
+#MINIMUMDENSITY
+0.001		RhoMinDim [amu/cc] for fluid 1
+-1.0		RhoMinDim [amu/cc] for fluid 2
+
+Provide minimum density(s) for the ion/neutral fluid(s). If the minimum
+density is positive, the density is kept above this limit for that fluid.
+The minimum density is given in the input/output units for density,
+which varies from application to application.
+A negative value indicates that no minimum density is applied for that fluid.
+
+By default no minimum density limit is applied.
+</command>
+
 <command name="MINIMUMPRESSURE">
 	<parameter name="pMinDim" type="real" min="-1" default="-1"/>
 
