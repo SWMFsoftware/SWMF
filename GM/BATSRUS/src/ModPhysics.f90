@@ -122,8 +122,9 @@ module ModPhysics
   ! Minimum threshold for electron pressure and extra internal energy
   real :: PeMinSi = -1.1e5, PeMin, ExtraEintMinSi = 0.0, ExtraEintMin
 
-  ! Minimum threshold for MHD pressure
-  real :: pMinDim_I(nFluid) = -1.0, pMin_I(nFluid)
+  ! Minimum threshold for MHD density and pressure
+  real :: RhoMinDim_I(nFluid) = -1.0, RhoMin_I(nFluid)
+  real :: pMinDim_I(nFluid)   = -1.0, pMin_I(nFluid)
 
   ! Boundary pressure for subsonic outflow
   logical:: UseOutflowPressure = .false.

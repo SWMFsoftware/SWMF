@@ -565,6 +565,11 @@ subroutine MH_set_parameters(TypeAction)
      case("#BIERMANNBATTERY")
         call read_var("UseBiermannBattery", UseBiermannBattery)
 
+     case("#MINIMUMDENSITY")
+        do iFluid = 1, nFluid
+           call read_var('RhoMinDim', RhoMinDim_I(iFluid))
+        end do
+
      case("#MINIMUMPRESSURE")
         do iFluid = 1, nFluid
            call read_var('pMinDim', pMinDim_I(iFluid))

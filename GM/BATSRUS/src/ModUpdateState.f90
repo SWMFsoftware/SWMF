@@ -329,6 +329,7 @@ contains
          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
          Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
+
     if(UseMultiSpecies)then
        ! Fix negative species densities
        State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBlock) = max(0.0,&
@@ -345,6 +346,20 @@ contains
        if(DoTestMe)write(*,*) NameSub, ' after multispecies correct=', &
             State_VGB(VarTest,iTest,jTest,kTest,iBlock)
 
+    end if
+
+    if(any(RhoMin_I > 0.0))then
+       do iFluid = 1, nFluid
+          if(RhoMin_I(iFluid) < 0) CYCLE
+          iRho = iRho_I(iFluid)
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             State_VGB(iRho,i,j,k,iBlock) = max(RhoMin_I(iFluid), &
+                  State_VGB(iRho,i,j,k,iBlock))
+          end do; end do; end do
+       end do
+
+       if(DoTestMe)write(*,*) NameSub, ' after min density correct densities=', &
+            State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
     end if
 
     if( IsMhd .and. &
