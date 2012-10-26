@@ -3,8 +3,6 @@
 module ModUser
 
   use ModMain, ONLY: nI, nJ,nK
-  use ModSize, ONLY: x_, y_, z_
-
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -13,7 +11,8 @@ module ModUser
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_set_cell_boundary,          &
        IMPLEMENTED7 => user_set_face_boundary,          &
-       IMPLEMENTED8 => user_set_resistivity
+       IMPLEMENTED8 => user_set_resistivity,            &
+       IMPLEMENTED9 => user_initial_perturbation
 
   include 'user_module.h' !list of public methods
 
@@ -22,13 +21,13 @@ module ModUser
        'Chromosphere to solar wind model with Alfven waves - Oran, van der Holst'
 
   ! Input parameters for chromospheric inner BC's
-  real    :: DeltaUSi = 1.5e4, DeltaU = 0.0
-  real    :: nChromoSi = 2e17, tChromoSi = 5e4
-  real    :: nChromo = 0.0, RhoChromo = 0.0, tChromo = 0.0
-  real    :: PoyntingFluxPerB = 0.0
+  real    :: DeltaUSi = 1.5e4, nChromoSi = 2e17, tChromoSi = 5e4
+  real    :: DeltaU, nChromo, RhoChromo, tChromo, PoyntingFluxPerB
 
   ! variables for Parker initial condition
   real    :: nCoronaSi = 1.5e14, tCoronaSi = 1.5e6
+
+  ! Dipole test
   real    :: DipoleTiltDeg = 0.0
 
   ! Input parameters for two-temperature effects
@@ -99,6 +98,8 @@ contains
   !============================================================================
   subroutine user_init_session
 
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,   ONLY: EEE_initialize
     use ModMain,       ONLY: UseMagnetogram
     use ModProcMH,     ONLY: iProc
     use ModIO,         ONLY: write_prefix, iUnitOut
@@ -110,7 +111,7 @@ contains
     use ModNumConst,   ONLY: cTwoPi, cDegToRad
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitX_, UnitB_, UnitU_, &
-         SinThetaTilt, CosThetaTilt
+         SinThetaTilt, CosThetaTilt, BodyNDim_I, BodyTDim_I, g
 
     real, parameter :: CoulombLog = 20.0
     character (len=*),parameter :: NameSub = 'user_init_session'
@@ -129,15 +130,15 @@ contains
     RhoChromo = nChromo*MassIon_I(1)
     tChromo = tChromoSi*Si2No_V(UnitTemperature_)
     !\
-    !The boundary condition sets the Poynting flux to be propotional 
-    !to the magnetic field intensity. Hence, 
+    !The boundary condition sets the Poynting flux to be propotional
+    !to the magnetic field intensity. Hence,
     !(B/sqrt(\rho)) \rho(\delta U)^2=const B
     !Hence (\delta U)\propto \rho^{-0.25}
-    !Historically, for a long time we assigned the values of 
+    !Historically, for a long time we assigned the values of
     !\rho=2e16 [m-3]. Now we still assign the value of \delta U
-    !as if \rho=1e16 and recalculate the value of \delta U 
+    !as if \rho=2e16 and recalculate the value of \delta U
     !automatically, if the larger value of nChromo is chosen
-    !/  
+    !/
     DeltaU = DeltaUSi*Si2No_V(UnitU_)*(2e16/nChromoSi)**0.25
     PoyntingFluxPerB = sqrt(RhoChromo)*DeltaU**2
 
@@ -166,6 +167,8 @@ contains
     ! Note EtaPerpSi is divided by cMu.
     EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
+
+    if(UseCme) call EEE_initialize(BodyNDim_I(1), BodyTDim_I(1), g)
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -282,8 +285,7 @@ contains
           if(UseAnisoPressure) &
                State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)
        else
-          State_VGB(p_,i,j,k,iBlock) = &
-               (NumDensIon + NumDensElectron)*tCorona
+          State_VGB(p_,i,j,k,iBlock) = (NumDensIon + NumDensElectron)*tCorona
        end if
        State_VGB(Rho_,i,j,k,iBlock) = Rho
 
@@ -813,12 +815,16 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only 
     ! modifies ghost cells in the r direction
 
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_
     use ModMultiFluid, ONLY: MassIon_I
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
-    use ModPhysics,    ONLY: AverageIonCharge
+    use ModPhysics,    ONLY: AverageIonCharge, UnitRho_, UnitB_, UnitP_, &
+         UnitU_, Si2No_V
+    use ModMain,       ONLY: n_step, iteration_number, time_simulation
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -828,6 +834,7 @@ contains
     real    :: Br1_D(3), Bt1_D(3)
     real    :: NumDensIon, NumDensElectron
     real    :: Runit_D(3)
+    real    :: RhoCme, Ucme_D(3), Bcme_D(3), pCme, BrCme, BrCme_D(3)
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
@@ -845,21 +852,22 @@ contains
 
     ! The electron heat conduction requires the electron temperature
     ! in the ghost cells
-    State_VGB(Rho_,-1:0,:,:,iBlock) = RhoChromo
     NumDensIon = RhoChromo/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
-    if(UseElectronPressure)then
-       State_VGB(Pe_,-1:0,:,:,iBlock) = NumDensElectron*tChromo
-    else
-       State_VGB(p_,-1:0,:,:,iBlock) = (NumDensIon + NumDensElectron)*tChromo
-    end if
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = -1, 0
+       State_VGB(Rho_,i,j,k,iBlock) = RhoChromo
+       if(UseElectronPressure)then
+          State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tChromo
+       else
+          State_VGB(p_,i,j,k,iBlock) = (NumDensIon + NumDensElectron)*tChromo
+       end if
+    end do; end do; end do
 
     ! The following is only needed for the semi-implicit heat conduction,
     ! which averages the cell centered heat conduction coefficient towards
     ! the face
     do k = MinK,MaxK; do j = MinJ,MaxJ
-       Runit_D = (/ Xyz_DGB(x_,1,j,k,iBlock), Xyz_DGB(y_,1,j,k,iBlock), &
-            Xyz_DGB(z_,1,j,k,iBlock) /) / r_BLK(1,j,k,iBlock)
+       Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
 
        Br1_D = sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
        Bt1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) - Br1_D
@@ -870,26 +878,59 @@ contains
 
     end do; end do
 
+    if(UseCme)then
+       do k = MinK, MaxK; do j = MinJ, MaxJ
+          Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
+
+          call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+               time_simulation, n_step, iteration_number)
+
+          RhoCme = RhoCme*Si2No_V(UnitRho_)
+          Bcme_D = Bcme_D*Si2No_V(UnitB_)
+          pCme   = pCme*Si2No_V(UnitP_)
+
+          BrCme   = sum(Runit_D*Bcme_D)
+          BrCme_D = BrCme*Runit_D
+
+          do i = -1, 0
+             State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)+RhoCme
+             if(UseElectronPressure)then
+                State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+                     + 0.5*pCme
+             else
+                State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + pCme
+             end if
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock) + BrCme_D
+          end do
+       end do; end do
+    end if
+
   end subroutine user_set_cell_boundary
   !============================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModAdvance,      ONLY: UseElectronPressure, UseAnisoPressure
-    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
-    use ModMain,         ONLY: x_, y_, UseRotatingFrame
+    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, TimeBc
+    use ModMain,         ONLY: x_, y_, UseRotatingFrame, n_step, &
+         iteration_number
     use ModMultiFluid,   ONLY: MassIon_I
-    use ModPhysics,      ONLY: OmegaBody, AverageIonCharge
+    use ModPhysics,      ONLY: OmegaBody, AverageIonCharge, UnitRho_, &
+         UnitP_, UnitB_, UnitU_, Si2No_V
     use ModVarIndexes,   ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, Bz_, p_, &
          WaveFirst_, WaveLast_, Pe_, Ppar_, Hyp_
+    use ModConst,        ONLY: cProtonMass
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
-    real :: NumDensIon, NumDensElectron, FullBr, Ewave
-    real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D
-    real,dimension(3) :: bUnitGhost_D, bUnitTrue_D, rUnit_D
-    real,dimension(3) :: FullBGhost_D, FullBTrue_D
-    real              :: RhoTrue, RhoGhost
+    real :: NumDensIon, NumDensElectron, FullBr, Ewave, Pressure, Temperature
+    real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D, rUnit_D
 
+    real :: RhoCme, Ucme_D(3), Bcme_D(3), pCme
+    real :: BrCme, BrCme_D(3), UrCme, UrCme_D(3), UtCme_D(3)
+   
     character (len=*), parameter :: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
 
@@ -900,15 +941,8 @@ contains
     B1t_D = B1_D - B1r_D
     VarsGhostFace_V(Bx_:Bz_) = B1t_D
 
-    FullBGhost_D = B0Face_D + VarsGhostFace_V(Bx_:Bz_)
-    FullBTrue_D  = B0Face_D + VarsTrueFace_V(Bx_:Bz_)
-    FullBr = sum(FullBGhost_D*rUnit_D)
-
     ! Fix density
     VarsGhostFace_V(Rho_) = RhoChromo
-
-    RhoTrue = VarsTrueFace_V(Rho_)
-    RhoGhost = VarsGhostFace_V(Rho_)
 
     ! zero velocity at inner boundary
     VarsGhostFace_V(Ux_:Uz_) = -VarsTrueFace_V(Ux_:Uz_)
@@ -918,23 +952,40 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_)+2*OmegaBody*FaceCoords_D(x_)
     end if   
 
-    ! The following commented lines will be explored in the future
-!!!    U_D = VarsTrueFace_V(Ux_:Uz_)
-!!!    bUnitGhost_D = FullBGhost_D/sqrt(max(1e-30,sum(FullBGhost_D**2)))
-!!!    bUnitTrue_D = FullBTrue_D/sqrt(max(1e-30,sum(FullBTrue_D**2)))
-!!!
-!!!    ! extrapolate field-aligned velocity component
-!!!    VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
-!!!         sum(U_D*bUnitTrue_D)*bUnitGhost_D       
-!!!
-!!!    ! Apply corotation if needed
-!!!    if(.not.UseRotatingFrame)then
-!!!       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) - OmegaBody*FaceCoords_D(y_)
-!!!       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) + OmegaBody*FaceCoords_D(x_)
-!!!    end if
+    Temperature = tChromo
+
+    if(UseCme)then
+       call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, TimeBc, &
+            n_step, iteration_number)
+
+       RhoCme = RhoCme*Si2No_V(UnitRho_)
+       Ucme_D = Ucme_D*Si2No_V(UnitU_)
+       Bcme_D = Bcme_D*Si2No_V(UnitB_)
+       pCme   = pCme*Si2No_V(UnitP_)
+
+       ! Add CME density
+       VarsGhostFace_V(Rho_) = VarsGhostFace_V(Rho_) + RhoCme
+
+       ! Fix the normal component of the CME field to BrCme_D at the Sun
+       BrCme   = sum(Runit_D*Bcme_D)
+       BrCme_D = BrCme*Runit_D
+       VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) + BrCme_D
+
+       ! Fix the tangential components of the CME velocity at the Sun
+       UrCme   = sum(Runit_D*Ucme_D)
+       UrCme_D = UrCme*Runit_D
+       UtCme_D = UCme_D - UrCme_D
+       VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2*UtCme_D
+
+       Pressure = RhoChromo/MassIon_I(1)*(1 + AverageIonCharge)*tChromo
+       Temperature = (Pressure + pCme) &
+            / (VarsGhostFace_V(Rho_)/MassIon_I(1)*(1 + AverageIonCharge))
+    end if
+ 
+    FullBr = sum((B0Face_D + VarsGhostFace_V(Bx_:Bz_))*rUnit_D)
 
     ! Ewave \propto sqrt(rho) for U << Ualfven
-    Ewave = PoyntingFluxPerB*sqrt(RhoGhost)
+    Ewave = PoyntingFluxPerB*sqrt(VarsGhostFace_V(Rho_))
     if (FullBr > 0. ) then
        VarsGhostFace_V(WaveFirst_) = Ewave
        VarsGhostFace_V(WaveLast_) = 0.0
@@ -947,12 +998,11 @@ contains
     NumDensIon = VarsGhostFace_V(Rho_)/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
     if(UseElectronPressure)then
-       VarsGhostFace_V(p_) = NumDensIon*tChromo
-       VarsGhostFace_V(Pe_) = NumDensElectron*tChromo
-       if(UseAnisoPressure) &
-            VarsGhostFace_V(Ppar_) = VarsGhostFace_V(p_)
+       VarsGhostFace_V(p_) = NumDensIon*Temperature
+       VarsGhostFace_V(Pe_) = NumDensElectron*Temperature
+       if(UseAnisoPressure) VarsGhostFace_V(Ppar_) = VarsGhostFace_V(p_)
     else
-       VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*tChromo
+       VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Temperature
     end if
 
     if(Hyp_>1) VarsGhostFace_V(Hyp_) = 0.0
@@ -982,5 +1032,63 @@ contains
     end do; end do; end do
 
   end subroutine user_set_resistivity
+  !============================================================================
+  subroutine user_initial_perturbation
+
+    use ModProcMH,    ONLY: iProc
+    use EEE_ModMain,  ONLY: EEE_get_state_init
+    use ModMain, ONLY: nI, nJ, nK, nBLK, unused_B, n_step, iteration_number
+    use ModVarIndexes
+    use ModAdvance,   ONLY: State_VGB, UseElectronPressure
+    use ModPhysics,   ONLY: Si2No_V, UnitU_, UnitRho_, UnitP_, UnitB_
+    use ModGeometry,  ONLY: Xyz_DGB
+    use ModEnergy,    ONLY: calc_energy_cell
+    use BATL_lib,     ONLY: nDim, MaxDim
+
+    integer :: i, j, k, iBlock
+    logical :: oktest, oktest_me
+    real :: x_D(nDim), Rho, B_D(MaxDim), p
+
+    character (len=*), parameter :: NameSub = 'user_initial_perturbation'
+    ! -------------------------------------------------------------------------
+    call set_oktest('user_initial_perturbation',oktest,oktest_me)
+
+    do iBlock = 1, nBLK
+       if(unused_B(iBlock))CYCLE
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+          x_D = Xyz_DGB(:,i,j,k,iBlock)
+
+          call EEE_get_state_init(x_D, Rho, B_D, p, n_step, iteration_number)
+
+          Rho = Rho*Si2No_V(UnitRho_)
+          B_D = B_D*Si2No_V(UnitB_)
+          p = p*Si2No_V(UnitP_)
+
+          !\
+          ! Add the eruptive event state to the solar wind
+          !/
+          State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) + Rho
+
+          if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0) &
+               write(*,*)'Negative density in solution'
+
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+               State_VGB(Bx_:Bz_,i,j,k,iBlock) + B_D
+
+          if(UseElectronPressure)then
+             State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) + 0.5*p
+             State_VGB(p_,i,j,k,iBlock)  = State_VGB(p_,i,j,k,iBlock)  + 0.5*p
+          else
+             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + p
+          end if
+       end do; end do; end do
+
+       call calc_energy_cell(iBlock)
+
+    end do
+
+  end subroutine user_initial_perturbation
 
 end module ModUser
