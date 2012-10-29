@@ -176,10 +176,10 @@ contains
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
              DivU = uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid)
-             if(nJ > 1) DivU = DivU + &
-                  uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid)
-             if(nK > 1) DivU = DivU + &
-                  uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
+             if(nJ > 1) DivU = DivU &
+                  + uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid)
+             if(nK > 1) DivU = DivU &
+                  + uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
              DivU = DivU/CellVolume_GB(i,j,k,iBlock)
              if(UseAnisoPressure)then
                 Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
@@ -208,7 +208,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-          DivU            = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+          DivU            =        uDotArea_XI(i+1,j,k,1) -uDotArea_XI(i,j,k,1)
           if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) -uDotArea_YI(i,j,k,1)
           if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) -uDotArea_ZI(i,j,k,1)
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
@@ -575,15 +575,16 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           E_D = cross_product(FullB_DC(:,i,j,k),&
-               State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))/&
-               State_VGB(rho_,i,j,k,iBlock)
-          ! Calculate divergence of electric field 
-          DivE = (EDotFA_X(i+1,j,k) - EDotFA_X(i,j,k) &
-               +  EDotFA_Y(i,j+1,k) - EDotFA_Y(i,j,k) &
-               +  EDotFA_Z(i,j,k+1) - EDotFA_Z(i,j,k)) &
-               /CellVolume_GB(i,j,k,iBlock)
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/&
+               State_VGB(Rho_,i,j,k,iBlock)
 
-          Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
+          ! Calculate divergence of electric field 
+          DivE =                     EDotFA_X(i+1,j,k) - EDotFA_X(i,j,k) 
+          if(nDim > 1) DivE = DivE + EDotFA_Y(i,j+1,k) - EDotFA_Y(i,j,k)
+          if(nDim > 2) DivE = DivE + EDotFA_Z(i,j,k+1) - EDotFA_Z(i,j,k)
+          DivE = DivE/CellVolume_GB(i,j,k,iBlock)
+
+          Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
                + Coef*DivE*E_D 
 
           if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUz_) &
