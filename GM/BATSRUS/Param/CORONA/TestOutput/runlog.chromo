@@ -3,40 +3,28 @@
           for 3D Heliospheric Flows
  University of Michigan, 1995-2007
 
- BATSRUS version 9.10 is running as GM on      4 PE(s)
+ BATSRUS version 9.20 is running as GM on      2 PE(s)
 
  EQUATIONS:   MHD Waves
  USER MODULE: Chromosphere to solar wind model with Alfven waves - Oran, van der Holst 1.00
 
-ModReadParam::read_file: read and broadcast nLine= 221 lines of text
+ModReadParam::read_file: read and broadcast nLine= 350 lines of text
  ----- Starting Session  1  ------
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
 
-#BATLTEST
-T		UseBatlTest
-
-#COMPONENT
-SC			NameComponent
-
 #DESCRIPTION
 
-#TIMEACCURATE
-F			DoTimeAccurate
+#COMPONENT
+SC			NameComp
 
-#STARTTIME
-2008			iYear
-11			iMonth
-20			iDay
-7			iHour
-13			iMinute
-0			iSecond
+#SAVERESTART
+T			DoSaveRestart
+10000			DnSaveRestart
+-1.0			DtSaveRestart
 
 #COORDSYSTEM
 HGR			TypeCoordSystem
  GM_set_parameters setting .UseRotatingFrame = T
-
-#NONCONSERVATIVE
-F			UseNonConservative
 
 #PLASMA
 1.0			IonMass [amu]		MassFluid
@@ -49,76 +37,60 @@ T			UseBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
+#STARTTIME
+2011			iYear
+2			iMonth
+16			iDay
+17			iHour
+26			iMinute
+0			iSecond
+
+#MAGNETOGRAM
+T			UseMagnetogram
+1.0			rMagnetogram
+2.5			rSourceSurface
+0.0			HeightInnerBc
+Param/CORONA/CR2077_GNG.dat	NameMagnetogramFile
+12			nHeaderLine
+0.0			PhiShift
+2.0			UnitB
+
+#USECURLB0
+T			UseCurlB0
+2.5			rCurrentFreeB0
+
 #USER_FLAGS
 T			UseUserInnerBcs
-T			UseUserSource
+F			UseUserSource
 F			UseUserPerturbation
-F			UseUserOuterBcs
+T			UseUserOuterBcs
 T			UseUserICs
-T			UseUserSpecifyRefinement
+F			UseUserSpecifyRefinement
 T			UseUserLogFiles
-F			UseUserWritePlot
+T			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
 F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
 
-#USECURLB0
-T			UseCurlB0
-0.0			rCurrentFreeB0
-
-#HYPERBOLICDIVB
-T			UseHyperbolicDivB
-400.0			SpeedHypDim
-0.1			HypDecay
-
-#MAGNETOGRAM
-T                       UseMagnetogram
-1.0                     rMagnetogram
-2.5                     rSourceSurface
-0.0                     HeightInnerBc
-Param/CORONA/CR2077_GNG.dat     NameMagnetogramFile
-12                      nHeaderLine
-0.0                     PhiShift
-1.0                     UnitB
-
-#RADIATIVECOOLING
-T			UseRadCooling
-
-#LOOKUPTABLE
-radcool			NameTable
-load			NameCommand
-Param/CORONA/RadCool.dat		NameFile
-ascii			TypeFile
-
-#TRANSITIONREGION
-T			DoExpandTransitionRegion		DoExtendTransitionRegion
-3.0e5			TeTransitionRegionSi		TeModSi
-1.0e1			DeltaTeSi		DeltaTeModSi
-
 #USERINPUTBEGIN ------------------------
  User read_input CHROMOSPHERE-CORONA starts
 
 #CHROMOBC
-T			UseChromoBc
-2e4			DeltaUSi  [m/s]		WaveDeltaU
-2e16			nChromoSi [1/m^3]
-2e4			tChromoSi [K]
-T			UseConsRhoUpar		UseUparBc
-F			UseExtrapolatedEwave
-
-#PARKERIC
-1.5e14			NumDensitySi 1e14		nCoronaSi
-1.5e6			Temperature (K) 1.5e6		tCoronaSi
-
-#WAVEDISSIPATION
-T                       UseWaveDissipation
-3.4e6                   Lmax [m T-1/2]		LkolIo
-25.                     Lratio > 1
+1.5e4			DeltaU [m/s]		DeltaUSi
+2e17			nChromoSi [1/m^3]
+5e4			tChromoSi [K]
 
 #USERINPUTEND ----------------------------
  User read_input SOLAR CORONA ends
+
+#CORONALHEATING
+alfvenwavedissipation	TypeCoronalHeating
+7.5e4			LperpTimesSqrtBSi
+0.04			Crefl
+F			UseScaledCrefl
+F			UseCPRegion
 
 #HEATCONDUCTION
 T			UseHeatConduction
@@ -127,41 +99,44 @@ spitzer			TypeHeatConduction
 #HEATFLUXREGION
 T			UseHeatFluxRegion
 5.0			rCollisional
-10.0			rCollisionless
+8.0			rCollisionless
 
-#SCHEME
-2			nOrder (1 or 2)
-Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
-mc3			TypeLimiter
-1.2			LimiterBeta
+#TEST
+krylov		StringTest
 
-#MESSAGEPASS
-all			TypeMessagePass
+#SEMIIMPLICIT
+T			UseSemiImplicit
+parcond			TypeSemiImplicit
 
-#RESCHANGE
-T			UseAccurateResChange
+#KRYLOV
+gmres			TypeKrylov
+nul			TypeInitKrylov
+1.0e-5			ErrorMaxKrylov
+10			MaxMatvecKrylov
 
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
+#PRECONDITIONER
+left			TypePrecondSide (left, symmetric, right)
+bilu			TypePrecond (MBILU)
 
-#SAVELOGFILE
-T			DoSaveLogfile
-RAW			StringLogfile
-1			DnSaveLogfile
--1.			DtSaveLogfile
+#RADIATIVECOOLING
+T			UseRadCooling
 
-#FACEBOUNDARY
--1			MinBoundary
--1			MaxBoundary
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+RadCoolCorona.dat		NameFile
+ascii			TypeFile
 
-#OUTERBOUNDARY
-user			TypeBcEast
-float			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+#TRANSITIONREGION
+T			DoExtendTransitionRegion
+2.2e5			TeModSi
+1.0e1			DeltaTeModSi
+
+#FIXAXIS
+F			UsePoleDiffusion
+T			DoFixAxis
+8.0			rFixAxis
+0.0			r2FixAxis
 
 #GRIDGEOMETRY
 spherical_genr		TypeGeometry
@@ -179,61 +154,115 @@ Param/CORONA/grid_TR.dat		NameGridFile
  100.0			zMax
 
 #LIMITRADIUS
-1.0			rMin		Coord1Min
-24.0			rMax		Coord1Max
+1.0			rMin		RadiusMin
+24.0			rMax		RadiusMax
+
+#AMRREGION
+InnerShell              NameRegion
+shell0                  TypeRegion
+1.0                     Radius1
+1.7                     Radius2
+
+#AMRREGION
+LargeShell              NameRegion
+shell0                  TypeRegion
+1.0                     Radius1
+2.0                     Radius2
+
+#AMRCRITERIARESOLUTION
+4                                        nCriteria
+Level +InnerShell                        TypeCriteria
+4                                        RefineTo
+4                                        CoursenTo		CoarsenTo
+currentsheet +LargeShell -InnerShell     TypeCriteria
+0.5                                      CoarsenLimit
+0.5                                      RefineLimit
+0.1                                      MaxResolution
+Level                                    TypeCriteria
+2                                        RefineTo
+2                                        CoursenTo		CoarsenTo
+currentsheet -LargeShell                 TypeCriteria
+0.5                                      CoarsenLimit
+0.5                                      RefineLimit
+0.1                                      MaxResolution
 
 #GRIDLEVEL
-3			nLevelArea
-all			NameArea
+2                       nLevelArea 5
+initial                 NameArea		TypeRegion
 
-#GRIDLEVEL
-4		nLevelArea
-currentsheet		NameArea
+#DOAMR
+T		DoAmr
+40		DnAmr
+-1		DtAmr
+T		IsStrictAmr
 
-#GRIDLEVEL
-5			nLevelArea
-box_gen			NameArea
-1.0			rMin		xMinBox
-0.0			LonMin		yMinBox
--76.0			LatMin		zMinBox
-24.0			rMax		xMaxBox
-360.0			LonMax		yMaxBox
-76.0			LatMax		zMaxBox
+#TIMEACCURATE
+F			DoTimeAccurate
 
-#GRIDLEVEL
-3			nLevelArea
-initial 		NameArea
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
 
-#GRIDLEVEL
-3			nLevelArea
-initial			NameArea
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3			TypeLimiter
+1.2			LimiterBeta
 
-#AMR
-60			DnRefine
-F			DoAutomaticRefinement		DoAutoRefine
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#MESSAGEPASS
+all			TypeMessagePass
+
+#RESCHANGE
+T			UseAccurateResChange
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#INNERBOUNDARY
+user			TypeBcInner
+
+#FACEBOUNDARY
+-1			MinBoundary
+-1			MaxBoundary
+
+#OUTERBOUNDARY
+user			TypeBcEast   user for spherical and user_outerbcs
+float			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
 
 #SAVEPLOT
-1			nPlotFiles
-y=0 VAR tec		StringPlot
-20			DnSavePlot
+1			nPlotFiles 1
+x=0 VAR idl		StringPlot
+20			DnSavePlot 5000
 -1.			DtSavePlot
-rho ux uy uz bx by bz I01 I02 temp disstot lkol lcp		NameVars
+-1.0			DxSavePlot
+rho ux uy uz ti bx by bz I01 I02 p		NameVars
 g rbody		NamePars
 
 #SAVEINITIAL
-F			DoSaveInitial
+T			DoSaveInitial
 
 #STOP
-100	                MaxIteration
--1.0                    tSimulationMax
+50			MaxIteration 60000
+-1.0			tSimulationMax
+
+#RUN ########################################################################
  SC_set_parameters: CHECK iSession = 1
   
- SC_set_parameters WARNING: there must be at least two blocks along latitude after initial refinement!
 init_mod_advance allocated arrays
 init_mod_geometry allocated arrays
- Only Extra and Outer boundary cells can be saved
 init_mod_nodes allocated arrays
 init_mod_raytrace allocated arrays
+init_mod_implicit allocated arrays
  Norder =  180
  Entered coefficient file name :: Param/CORONA/CR2077_GNG.dat     
  Entered number of header lines::  12
@@ -249,8 +278,7 @@ init_mod_raytrace allocated arrays
  
  BATS_setup starting initial refinement level, nBlockAll = 1 2
  BATS_setup starting initial refinement level, nBlockAll = 2 16
- BATS_setup starting initial refinement level, nBlockAll = 3 128
-     total blocks =  1024
+     total blocks =  128
 
     Begin Numerical Simulation
     --------------------------
@@ -280,21 +308,21 @@ init_mod_raytrace allocated arrays
               BetaLimiter = 1.20
           Sokolov flux function
           Steady state calculation
-          Explicit time stepping
+          Semi-implicit time stepping for parcond
               nStage: 2
               Cfl:    0.80
 
     Other Runtime Parameters
     ------------------------
 
- Available processors: nProc =  4
+ Available processors: nProc =  2
 
  After initial grid setup:
-   nBlockMax =  256  nBLK =  5000
-   Total number of blocks used =  1024
-   Total number of cells =  98304
-   Total number of true cells =  98304
-   Smallest cell dx:    2.3118947368114966E-02   Largest cell dx:    2.3118947368114984E-02
+   nBlockMax =  64  nBLK =  4000
+   Total number of blocks used =  128
+   Total number of cells =  12288
+   Total number of true cells =  12288
+   Smallest cell dx:    4.6237894736229947E-02   Largest cell dx:    4.6237894736229947E-02
 
  root blocks:        1       2       1
  nIJK_D:             6       4       4
@@ -302,126 +330,1363 @@ init_mod_raytrace allocated arrays
  y:              -100.00000000    100.00000000
  z:              -100.00000000    100.00000000
 
+saved ifile= 1 type=restart    at n_step=      0
+saved ifile= 5 type=x=0_var    at n_step=      0
 -------------------------------------------------------------------------------
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   0.47    100.00         1         1
+BATSRUS                   3.23    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     0.47    100.00         1         1
-exch_msgs                 0.03      5.93         1         1
-batl_pass                 0.02      3.99         1         2
-local_pass                0.01      2.21         1         4
-wait_pass                 0.01      1.31         1         2
-buffer_to_state           0.00      0.43         1         2
+setup                     3.23    100.00         1         1
+exch_msgs                 0.35     10.91         1         2
+write_restart_files       0.03      0.81         1         1
+save_plot                 0.02      0.70         1         1
+save_logfile              0.02      0.65         1         1
+batl_pass                 0.02      0.57         1         3
+local_pass                0.01      0.45         1         6
+buffer_to_state           0.00      0.07         1         3
+wait_pass                 0.00      0.04         1         3
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
- First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   3.8793517178982080E-29
-Speed is  51454.4 c/s/p after      4.8 s at N =      10
-  Message passing for plot files ...
- Starting assign_node_numbers ...
-  nBlockALL= 1024  NodesPerBlock= 175  unreduced total= 179200  nNodeALL= 101920
-saved ifile= 5 type=y=0_var    at n_step=     20
- Calling exchange_messages to reset ghost cells ...
-Speed is  53711.8 c/s/p after     10.0 s at N =      20
-Speed is  53894.4 c/s/p after     14.8 s at N =      30
-  Message passing for plot files ...
- Starting assign_node_numbers ...
-  nBlockALL= 1024  NodesPerBlock= 175  unreduced total= 179200  nNodeALL= 101920
-saved ifile= 5 type=y=0_var    at n_step=     40
- Calling exchange_messages to reset ghost cells ...
-Speed is  54519.9 c/s/p after     19.9 s at N =      40
-Speed is  54259.6 c/s/p after     24.7 s at N =      50
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   4.9277362010094640E-29
+ krylov at iter= 1
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.9043207767036510
+ 1  matvecs,  ||rn||/||r0|| =   0.2279431122815047
+ 2  matvecs,  ||rn||/||r0|| =   0.1202495908751097
+ 3  matvecs,  ||rn||/||r0|| =   2.3521701482137371E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.0656669375552347E-02
+ 5  matvecs,  ||rn||/||r0|| =   2.5206615456343819E-03
+ 6  matvecs,  ||rn||/||r0|| =   1.0057741832250350E-03
+ 7  matvecs,  ||rn||/||r0|| =   3.8561477834970603E-04
+ 8  matvecs,  ||rn||/||r0|| =   1.0809999514963344E-04
+ 9  matvecs,  ||rn||/||r0|| =   5.1428650893454494E-05
+ 10  matvecs,  ||rn||/||r0|| =   1.2335281244968889E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   1.2335281244968893E-05
+ krylov at iter= 2
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   2.8081259629805202
+ 1  matvecs,  ||rn||/||r0|| =   0.2413763057241053
+ 2  matvecs,  ||rn||/||r0|| =   0.1232764969684285
+ 3  matvecs,  ||rn||/||r0|| =   3.7279067091764623E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.8343913919709111E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.6302410058632580E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.2385381161743045E-03
+ 7  matvecs,  ||rn||/||r0|| =   8.3086893944001299E-04
+ 8  matvecs,  ||rn||/||r0|| =   2.8142213671912423E-04
+ 9  matvecs,  ||rn||/||r0|| =   1.5103919735364596E-04
+ 10  matvecs,  ||rn||/||r0|| =   4.3616747917125778E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.3616747917125778E-05
+ krylov at iter= 3
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   3.0944599407682647
+ 1  matvecs,  ||rn||/||r0|| =   0.2397343271049391
+ 2  matvecs,  ||rn||/||r0|| =   0.1257197876124381
+ 3  matvecs,  ||rn||/||r0|| =   4.2429332055082272E-02
+ 4  matvecs,  ||rn||/||r0|| =   2.1003385245622255E-02
+ 5  matvecs,  ||rn||/||r0|| =   6.0398756627746408E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.0357260903519706E-03
+ 7  matvecs,  ||rn||/||r0|| =   1.1198075166823937E-03
+ 8  matvecs,  ||rn||/||r0|| =   4.1311500417094791E-04
+ 9  matvecs,  ||rn||/||r0|| =   2.1029726864804288E-04
+ 10  matvecs,  ||rn||/||r0|| =   7.5917997782243586E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   7.5917997782243586E-05
+ krylov at iter= 4
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   3.0034482565041594
+ 1  matvecs,  ||rn||/||r0|| =   0.2303100211360769
+ 2  matvecs,  ||rn||/||r0|| =   0.1276425241806603
+ 3  matvecs,  ||rn||/||r0|| =   4.3031150023352678E-02
+ 4  matvecs,  ||rn||/||r0|| =   2.0948876848772158E-02
+ 5  matvecs,  ||rn||/||r0|| =   6.7737600807162976E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.2698959270474753E-03
+ 7  matvecs,  ||rn||/||r0|| =   1.3248790985465190E-03
+ 8  matvecs,  ||rn||/||r0|| =   5.0192833544911272E-04
+ 9  matvecs,  ||rn||/||r0|| =   2.3774620900545750E-04
+ 10  matvecs,  ||rn||/||r0|| =   9.7349133975045406E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   9.7349133975045392E-05
+ krylov at iter= 5
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   2.7527127990229561
+ 1  matvecs,  ||rn||/||r0|| =   0.2204228039112654
+ 2  matvecs,  ||rn||/||r0|| =   0.1277239488378176
+ 3  matvecs,  ||rn||/||r0|| =   4.1946055366069122E-02
+ 4  matvecs,  ||rn||/||r0|| =   2.0259603288874297E-02
+ 5  matvecs,  ||rn||/||r0|| =   7.0711874129010298E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.1634070548636805E-03
+ 7  matvecs,  ||rn||/||r0|| =   1.4681411463803703E-03
+ 8  matvecs,  ||rn||/||r0|| =   5.5203001012302483E-04
+ 9  matvecs,  ||rn||/||r0|| =   2.5035351973035492E-04
+ 10  matvecs,  ||rn||/||r0|| =   1.0424963087822122E-04
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   1.0424963087822122E-04
+ krylov at iter= 6
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   2.4541874436686646
+ 1  matvecs,  ||rn||/||r0|| =   0.2142937443683142
+ 2  matvecs,  ||rn||/||r0|| =   0.1266994106299247
+ 3  matvecs,  ||rn||/||r0|| =   4.0186146557548437E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.8996748942759056E-02
+ 5  matvecs,  ||rn||/||r0|| =   7.1067184999450287E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.9258594035399591E-03
+ 7  matvecs,  ||rn||/||r0|| =   1.4618468476845085E-03
+ 8  matvecs,  ||rn||/||r0|| =   5.5013343804736234E-04
+ 9  matvecs,  ||rn||/||r0|| =   2.3372658280225108E-04
+ 10  matvecs,  ||rn||/||r0|| =   9.9892751032955063E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   9.9892751032955063E-05
+ krylov at iter= 7
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   2.1535937809751990
+ 1  matvecs,  ||rn||/||r0|| =   0.2120736291405562
+ 2  matvecs,  ||rn||/||r0|| =   0.1250489559571924
+ 3  matvecs,  ||rn||/||r0|| =   3.8221597695299182E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.7348899214560363E-02
+ 5  matvecs,  ||rn||/||r0|| =   6.9212437752244243E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.6242483526996317E-03
+ 7  matvecs,  ||rn||/||r0|| =   1.3240439726230693E-03
+ 8  matvecs,  ||rn||/||r0|| =   5.0791109329227256E-04
+ 9  matvecs,  ||rn||/||r0|| =   1.9394896615905277E-04
+ 10  matvecs,  ||rn||/||r0|| =   8.6753818697157418E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   8.6753818697157418E-05
+ krylov at iter= 8
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.8781621775422599
+ 1  matvecs,  ||rn||/||r0|| =   0.2116911165813759
+ 2  matvecs,  ||rn||/||r0|| =   0.1220747784214308
+ 3  matvecs,  ||rn||/||r0|| =   3.5873020718073849E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.5490777767899188E-02
+ 5  matvecs,  ||rn||/||r0|| =   6.5155462922315451E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.3212389601698024E-03
+ 7  matvecs,  ||rn||/||r0|| =   1.1140301050561329E-03
+ 8  matvecs,  ||rn||/||r0|| =   4.4953500888845913E-04
+ 9  matvecs,  ||rn||/||r0|| =   1.4223652794430973E-04
+ 10  matvecs,  ||rn||/||r0|| =   6.9171504274313556E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   6.9171504274313542E-05
+ krylov at iter= 9
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.6381425964130869
+ 1  matvecs,  ||rn||/||r0|| =   0.2116636098818768
+ 2  matvecs,  ||rn||/||r0|| =   0.1173974970824233
+ 3  matvecs,  ||rn||/||r0|| =   3.3162134640253464E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.3659473781221643E-02
+ 5  matvecs,  ||rn||/||r0|| =   5.9311671312811494E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.0780508226836700E-03
+ 7  matvecs,  ||rn||/||r0|| =   9.1037071652320402E-04
+ 8  matvecs,  ||rn||/||r0|| =   3.8460867896310963E-04
+ 9  matvecs,  ||rn||/||r0|| =   1.3794128722944369E-04
+ 10  matvecs,  ||rn||/||r0|| =   5.3474381162942839E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   5.3474381162942839E-05
+ krylov at iter= 10
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.4346787294735781
+ 1  matvecs,  ||rn||/||r0|| =   0.2116662742479080
+ 2  matvecs,  ||rn||/||r0|| =   0.1112795502519092
+ 3  matvecs,  ||rn||/||r0|| =   3.0177574919145803E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.2124977714615473E-02
+ 5  matvecs,  ||rn||/||r0|| =   5.2202660303876641E-03
+ 6  matvecs,  ||rn||/||r0|| =   1.8479574877832740E-03
+ 7  matvecs,  ||rn||/||r0|| =   7.6639298000184580E-04
+ 8  matvecs,  ||rn||/||r0|| =   3.1733624656378484E-04
+ 9  matvecs,  ||rn||/||r0|| =   1.3129921081298036E-04
+ 10  matvecs,  ||rn||/||r0|| =   4.1593574564158431E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.1593574564158437E-05
+Speed is   4076.3 c/s/p after     15.3 s at N =      10
+ krylov at iter= 11
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.2638296635149642
+ 1  matvecs,  ||rn||/||r0|| =   0.2115850940169148
+ 2  matvecs,  ||rn||/||r0|| =   0.1039338876023288
+ 3  matvecs,  ||rn||/||r0|| =   2.7089578082971012E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.1062037777184827E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.4554327633378301E-03
+ 6  matvecs,  ||rn||/||r0|| =   1.6147179810833965E-03
+ 7  matvecs,  ||rn||/||r0|| =   6.5907008897688260E-04
+ 8  matvecs,  ||rn||/||r0|| =   2.5689954028318467E-04
+ 9  matvecs,  ||rn||/||r0|| =   1.1005675561940413E-04
+ 10  matvecs,  ||rn||/||r0|| =   3.3081150710428977E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   3.3081150710428977E-05
+ krylov at iter= 12
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.1206384753337240
+ 1  matvecs,  ||rn||/||r0|| =   0.2113902601776266
+ 2  matvecs,  ||rn||/||r0|| =   9.6268957174553513E-02
+ 3  matvecs,  ||rn||/||r0|| =   2.4020568427971237E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.0331447631432320E-02
+ 5  matvecs,  ||rn||/||r0|| =   3.7384594014178837E-03
+ 6  matvecs,  ||rn||/||r0|| =   1.3707345081152885E-03
+ 7  matvecs,  ||rn||/||r0|| =   5.5765392339678988E-04
+ 8  matvecs,  ||rn||/||r0|| =   2.0417060296062527E-04
+ 9  matvecs,  ||rn||/||r0|| =   8.7243207212321538E-05
+ 10  matvecs,  ||rn||/||r0|| =   2.6836746957550034E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   2.6836746957550034E-05
+ krylov at iter= 13
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.0003319692562707
+ 1  matvecs,  ||rn||/||r0|| =   0.2110339583373795
+ 2  matvecs,  ||rn||/||r0|| =   8.9060076844927477E-02
+ 3  matvecs,  ||rn||/||r0|| =   2.1048113558237151E-02
+ 4  matvecs,  ||rn||/||r0|| =   9.6025702026834442E-03
+ 5  matvecs,  ||rn||/||r0|| =   3.1229815681419210E-03
+ 6  matvecs,  ||rn||/||r0|| =   1.1203940347079193E-03
+ 7  matvecs,  ||rn||/||r0|| =   4.5948615985421846E-04
+ 8  matvecs,  ||rn||/||r0|| =   1.6026610916674975E-04
+ 9  matvecs,  ||rn||/||r0|| =   6.7849902004243196E-05
+ 10  matvecs,  ||rn||/||r0|| =   2.1762239589369082E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   2.1762239589369082E-05
+ krylov at iter= 14
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.8986871412739760
+ 1  matvecs,  ||rn||/||r0|| =   0.2105547800661207
+ 2  matvecs,  ||rn||/||r0|| =   8.2809936235749157E-02
+ 3  matvecs,  ||rn||/||r0|| =   1.8276340736274634E-02
+ 4  matvecs,  ||rn||/||r0|| =   8.7823245608590512E-03
+ 5  matvecs,  ||rn||/||r0|| =   2.6232380850170181E-03
+ 6  matvecs,  ||rn||/||r0|| =   8.8725251228705842E-04
+ 7  matvecs,  ||rn||/||r0|| =   3.7412010360796420E-04
+ 8  matvecs,  ||rn||/||r0|| =   1.2609444803236917E-04
+ 9  matvecs,  ||rn||/||r0|| =   5.2877213254691604E-05
+ 10  matvecs,  ||rn||/||r0|| =   1.7403358099416686E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   1.7403358099416686E-05
+ krylov at iter= 15
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.8125212608129522
+ 1  matvecs,  ||rn||/||r0|| =   0.2100248853862418
+ 2  matvecs,  ||rn||/||r0|| =   7.8393848752304054E-02
+ 3  matvecs,  ||rn||/||r0|| =   1.5807799190786703E-02
+ 4  matvecs,  ||rn||/||r0|| =   7.9521025759983020E-03
+ 5  matvecs,  ||rn||/||r0|| =   2.2422379284249617E-03
+ 6  matvecs,  ||rn||/||r0|| =   6.9461098997173265E-04
+ 7  matvecs,  ||rn||/||r0|| =   3.0550841084037031E-04
+ 8  matvecs,  ||rn||/||r0|| =   1.0085286313944517E-04
+ 9  matvecs,  ||rn||/||r0|| =   4.0772870117367103E-05
+ 10  matvecs,  ||rn||/||r0|| =   1.4090168503501792E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   1.4090168503501792E-05
+ krylov at iter= 16
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.7390085793900475
+ 1  matvecs,  ||rn||/||r0|| =   0.2094972715121911
+ 2  matvecs,  ||rn||/||r0|| =   7.5646439354903519E-02
+ 3  matvecs,  ||rn||/||r0|| =   1.3710496176517871E-02
+ 4  matvecs,  ||rn||/||r0|| =   7.1290416950751155E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.9692531837722637E-03
+ 6  matvecs,  ||rn||/||r0|| =   5.4910839250467284E-04
+ 7  matvecs,  ||rn||/||r0|| =   2.4823285006846579E-04
+ 8  matvecs,  ||rn||/||r0|| =   8.2786508316937794E-05
+ 9  matvecs,  ||rn||/||r0|| =   3.0506181704514501E-05
+ 10  matvecs,  ||rn||/||r0|| =   1.1769015725423051E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   1.1769015725423051E-05
+ krylov at iter= 17
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.6757555039451871
+ 1  matvecs,  ||rn||/||r0|| =   0.2090403313047929
+ 2  matvecs,  ||rn||/||r0|| =   7.4039718064077567E-02
+ 3  matvecs,  ||rn||/||r0|| =   1.1997424960982541E-02
+ 4  matvecs,  ||rn||/||r0|| =   6.3227989627831060E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.7780028194948620E-03
+ 6  matvecs,  ||rn||/||r0|| =   4.4445751895944323E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.9614160742750930E-04
+ 8  matvecs,  ||rn||/||r0|| =   6.9318382649804139E-05
+ 9  matvecs,  ||rn||/||r0|| =   2.2390495526692657E-05
+ 10  matvecs,  ||rn||/||r0|| =   9.5673176578411951E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 0   9.5673176578411951E-06
+ krylov at iter= 18
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.6211286654322343
+ 1  matvecs,  ||rn||/||r0|| =   0.2086804945546800
+ 2  matvecs,  ||rn||/||r0|| =   7.3201090090149218E-02
+ 3  matvecs,  ||rn||/||r0|| =   1.0672055685681650E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.5853805864103630E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.6483798921763959E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.7644301436096458E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.5386786971248166E-04
+ 8  matvecs,  ||rn||/||r0|| =   5.8863808026406773E-05
+ 9  matvecs,  ||rn||/||r0|| =   1.6657267633523992E-05
+ 10  matvecs,  ||rn||/||r0|| =   7.2384823398434329E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 0   7.2384823398434329E-06
+ krylov at iter= 19
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.5739848079686933
+ 1  matvecs,  ||rn||/||r0|| =   0.2083323297874816
+ 2  matvecs,  ||rn||/||r0|| =   7.2844901909367987E-02
+ 3  matvecs,  ||rn||/||r0|| =   9.7338522637309237E-03
+ 4  matvecs,  ||rn||/||r0|| =   4.9631967518787437E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.5581212487396831E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.3926709226426494E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.2661161991429630E-04
+ 8  matvecs,  ||rn||/||r0|| =   5.0928325780130958E-05
+ 9  matvecs,  ||rn||/||r0|| =   1.3204750154734159E-05
+ 10  matvecs,  ||rn||/||r0|| =   5.3132592965911995E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 0   5.3132592965911995E-06
+ krylov at iter= 20
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.5333055444093506
+ 1  matvecs,  ||rn||/||r0|| =   0.2080130214363329
+ 2  matvecs,  ||rn||/||r0|| =   7.2706999156218394E-02
+ 3  matvecs,  ||rn||/||r0|| =   9.1453957551254107E-03
+ 4  matvecs,  ||rn||/||r0|| =   4.4853500525736849E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.4854765829247719E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.2240491424667401E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.1492171336199849E-04
+ 8  matvecs,  ||rn||/||r0|| =   4.5540050729187718E-05
+ 9  matvecs,  ||rn||/||r0|| =   1.1536617776226350E-05
+ 10  matvecs,  ||rn||/||r0|| =   4.4411060206786106E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 0   4.4411060206786097E-06
+saved ifile= 5 type=x=0_var    at n_step=     20
+Speed is   4104.4 c/s/p after     30.9 s at N =      20
+ krylov at iter= 21
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.4981553029211460
+ 1  matvecs,  ||rn||/||r0|| =   0.2077115372475191
+ 2  matvecs,  ||rn||/||r0|| =   7.2672241938068385E-02
+ 3  matvecs,  ||rn||/||r0|| =   8.8390383616817839E-03
+ 4  matvecs,  ||rn||/||r0|| =   4.1475514723258418E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.4194596723934993E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.1459059825485923E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.1259241370340639E-04
+ 8  matvecs,  ||rn||/||r0|| =   4.2266432411462497E-05
+ 9  matvecs,  ||rn||/||r0|| =   1.0637160704846401E-05
+ 10  matvecs,  ||rn||/||r0|| =   4.1931421416208455E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 0   4.1931421416208455E-06
+ krylov at iter= 22
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.4676709485775967
+ 1  matvecs,  ||rn||/||r0|| =   0.2072898049130742
+ 2  matvecs,  ||rn||/||r0|| =   7.2189000499924549E-02
+ 3  matvecs,  ||rn||/||r0|| =   8.7201059742671658E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.9188131652590861E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.3603989525632443E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.0825482948968218E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.1272441954588484E-04
+ 8  matvecs,  ||rn||/||r0|| =   4.0065564659904998E-05
+ 9  matvecs,  ||rn||/||r0|| =   9.8950759449089624E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   9.8950759449089624E-06
+ krylov at iter= 23
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.4412020260157238
+ 1  matvecs,  ||rn||/||r0|| =   0.2069626287427709
+ 2  matvecs,  ||rn||/||r0|| =   7.1892996269828147E-02
+ 3  matvecs,  ||rn||/||r0|| =   8.7254706019556493E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.7724571575733080E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.3107655826336141E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.0175025758493904E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.1234524251139257E-04
+ 8  matvecs,  ||rn||/||r0|| =   3.8248698773421291E-05
+ 9  matvecs,  ||rn||/||r0|| =   9.2496856996096457E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   9.2496856996096457E-06
+ krylov at iter= 24
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.4181696759024248
+ 1  matvecs,  ||rn||/||r0|| =   0.2065233834995532
+ 2  matvecs,  ||rn||/||r0|| =   7.1542990462037270E-02
+ 3  matvecs,  ||rn||/||r0|| =   8.7918578289135994E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.6685328873483805E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.2688688778329769E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.9355996272884926E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.1039853018729733E-04
+ 8  matvecs,  ||rn||/||r0|| =   3.6526553714915501E-05
+ 9  matvecs,  ||rn||/||r0|| =   8.6542132315045584E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   8.6542132315045584E-06
+ krylov at iter= 25
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.3981091166746982
+ 1  matvecs,  ||rn||/||r0|| =   0.2058032786962919
+ 2  matvecs,  ||rn||/||r0|| =   7.1046079995085290E-02
+ 3  matvecs,  ||rn||/||r0|| =   8.8868739765471921E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.5826978094983470E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.2324123760377415E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.8440005052955610E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.0727534047593457E-04
+ 8  matvecs,  ||rn||/||r0|| =   3.4846005243420340E-05
+ 9  matvecs,  ||rn||/||r0|| =   8.1006111880015733E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   8.1006111880015733E-06
+ krylov at iter= 26
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.3805727588762570
+ 1  matvecs,  ||rn||/||r0|| =   0.2047254158003222
+ 2  matvecs,  ||rn||/||r0|| =   7.0210531379525959E-02
+ 3  matvecs,  ||rn||/||r0|| =   8.9823353651559846E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.5075257467536798E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.1994741188670658E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.7540213096131531E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.0379392088242309E-04
+ 8  matvecs,  ||rn||/||r0|| =   3.3257418517688045E-05
+ 9  matvecs,  ||rn||/||r0|| =   7.6167352798728963E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   7.6167352798728963E-06
+ krylov at iter= 27
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.3652070073435722
+ 1  matvecs,  ||rn||/||r0|| =   0.2034042827915626
+ 2  matvecs,  ||rn||/||r0|| =   6.9191068125890223E-02
+ 3  matvecs,  ||rn||/||r0|| =   9.0686956236053096E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.4384712497688577E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.1683667995547274E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.6695244259286935E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.0036192314059779E-04
+ 8  matvecs,  ||rn||/||r0|| =   3.1666315807442878E-05
+ 9  matvecs,  ||rn||/||r0|| =   7.1745308046192345E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   7.1745308046192353E-06
+ krylov at iter= 28
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.3516327920511613
+ 1  matvecs,  ||rn||/||r0|| =   0.2019782310392381
+ 2  matvecs,  ||rn||/||r0|| =   6.8129598363831007E-02
+ 3  matvecs,  ||rn||/||r0|| =   9.1512164200867451E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.3781649079189496E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.1391380420526223E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.5969944973121381E-04
+ 7  matvecs,  ||rn||/||r0|| =   9.7453153152508759E-05
+ 8  matvecs,  ||rn||/||r0|| =   3.0130716941400579E-05
+ 9  matvecs,  ||rn||/||r0|| =   6.7908394921749012E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   6.7908394921749012E-06
+ krylov at iter= 29
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.3396279298763579
+ 1  matvecs,  ||rn||/||r0|| =   0.2005001785061575
+ 2  matvecs,  ||rn||/||r0|| =   6.7101679976118475E-02
+ 3  matvecs,  ||rn||/||r0|| =   9.2341717220924147E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.3265630536123349E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.1125052362877439E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.5391694331412438E-04
+ 7  matvecs,  ||rn||/||r0|| =   9.5206297515664106E-05
+ 8  matvecs,  ||rn||/||r0|| =   2.8662063272177172E-05
+ 9  matvecs,  ||rn||/||r0|| =   6.4692507715986010E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   6.4692507715986002E-06
+ krylov at iter= 30
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.3290704627941221
+ 1  matvecs,  ||rn||/||r0|| =   0.1991767657614026
+ 2  matvecs,  ||rn||/||r0|| =   6.6521826044729365E-02
+ 3  matvecs,  ||rn||/||r0|| =   9.3302637679198597E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.2903738626099866E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.0904220352251468E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.5019990362726676E-04
+ 7  matvecs,  ||rn||/||r0|| =   9.3897620539992139E-05
+ 8  matvecs,  ||rn||/||r0|| =   2.7362117564089157E-05
+ 9  matvecs,  ||rn||/||r0|| =   6.2293924458985974E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   6.2293924458985974E-06
+Speed is   4230.5 c/s/p after     45.5 s at N =      30
+ krylov at iter= 31
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.3198040519129472
+ 1  matvecs,  ||rn||/||r0|| =   0.1980305913916232
+ 2  matvecs,  ||rn||/||r0|| =   6.6295834993852734E-02
+ 3  matvecs,  ||rn||/||r0|| =   9.4454925175923646E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.2707566846234496E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.0734397597792187E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.4851066708174836E-04
+ 7  matvecs,  ||rn||/||r0|| =   9.3411191823913962E-05
+ 8  matvecs,  ||rn||/||r0|| =   2.6273121080790367E-05
+ 9  matvecs,  ||rn||/||r0|| =   6.0770386516193269E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   6.0770386516193269E-06
+ krylov at iter= 32
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.3116091010880265
+ 1  matvecs,  ||rn||/||r0|| =   0.1971740655693065
+ 2  matvecs,  ||rn||/||r0|| =   6.6221841941423665E-02
+ 3  matvecs,  ||rn||/||r0|| =   9.5831360859414613E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.2695354323709009E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.0603085583066217E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.4854354619837700E-04
+ 7  matvecs,  ||rn||/||r0|| =   9.3378788927545823E-05
+ 8  matvecs,  ||rn||/||r0|| =   2.5364907315124050E-05
+ 9  matvecs,  ||rn||/||r0|| =   5.9974354717663810E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   5.9974354717663801E-06
+ krylov at iter= 33
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.3040772969505299
+ 1  matvecs,  ||rn||/||r0|| =   0.1969286957606200
+ 2  matvecs,  ||rn||/||r0|| =   6.6284688220603627E-02
+ 3  matvecs,  ||rn||/||r0|| =   9.7653796810699776E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.2925454511605660E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.0544282340539321E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.5078086938242833E-04
+ 7  matvecs,  ||rn||/||r0|| =   9.3982398185256857E-05
+ 8  matvecs,  ||rn||/||r0|| =   2.4699664742065123E-05
+ 9  matvecs,  ||rn||/||r0|| =   5.9978985526323080E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   5.9978985526323080E-06
+ krylov at iter= 34
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.2956798807106703
+ 1  matvecs,  ||rn||/||r0|| =   0.1986815967612995
+ 2  matvecs,  ||rn||/||r0|| =   6.6873951661575115E-02
+ 3  matvecs,  ||rn||/||r0|| =   1.0071630744580206E-02
+ 4  matvecs,  ||rn||/||r0|| =   3.3675923452201775E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.0667502755847894E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.5763218813230459E-04
+ 7  matvecs,  ||rn||/||r0|| =   9.6136856205093779E-05
+ 8  matvecs,  ||rn||/||r0|| =   2.4472435133992828E-05
+ 9  matvecs,  ||rn||/||r0|| =   6.1281402043702859E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   6.1281402043702859E-06
+ krylov at iter= 35
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.2844494872412153
+ 1  matvecs,  ||rn||/||r0|| =   0.2050526118458173
+ 2  matvecs,  ||rn||/||r0|| =   6.8732033169517898E-02
+ 3  matvecs,  ||rn||/||r0|| =   1.0659707134545296E-02
+ 4  matvecs,  ||rn||/||r0|| =   3.5562927656428720E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.1182580977249213E-03
+ 6  matvecs,  ||rn||/||r0|| =   2.7443287763666583E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.0167364126871231E-04
+ 8  matvecs,  ||rn||/||r0|| =   2.5060808877376965E-05
+ 9  matvecs,  ||rn||/||r0|| =   6.5003484339857652E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   6.5003484339857643E-06
+ krylov at iter= 36
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.2800771372009547
+ 1  matvecs,  ||rn||/||r0|| =   0.2133856355206567
+ 2  matvecs,  ||rn||/||r0|| =   7.1340239592045759E-02
+ 3  matvecs,  ||rn||/||r0|| =   1.1387009116050914E-02
+ 4  matvecs,  ||rn||/||r0|| =   3.8325879705064575E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.2030172531983729E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.0066862211540127E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.0967138658194683E-04
+ 8  matvecs,  ||rn||/||r0|| =   2.6167004890755731E-05
+ 9  matvecs,  ||rn||/||r0|| =   7.0845416797059670E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   7.0845416797059670E-06
+ krylov at iter= 37
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.2926287231667996
+ 1  matvecs,  ||rn||/||r0|| =   0.2249262575636165
+ 2  matvecs,  ||rn||/||r0|| =   7.5851992874133981E-02
+ 3  matvecs,  ||rn||/||r0|| =   1.2349269951669760E-02
+ 4  matvecs,  ||rn||/||r0|| =   4.2985850063247981E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.3525385921572437E-03
+ 6  matvecs,  ||rn||/||r0|| =   3.4564432171252206E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.2218043064240626E-04
+ 8  matvecs,  ||rn||/||r0|| =   2.8274679200440608E-05
+ 9  matvecs,  ||rn||/||r0|| =   8.1612052157627132E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 9 0   8.1612052157627132E-06
+ krylov at iter= 38
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.3368003120414499
+ 1  matvecs,  ||rn||/||r0|| =   0.2429789400638954
+ 2  matvecs,  ||rn||/||r0|| =   8.4351402023383412E-02
+ 3  matvecs,  ||rn||/||r0|| =   1.4607892094000345E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.4662965143606928E-03
+ 5  matvecs,  ||rn||/||r0|| =   1.7328524966070502E-03
+ 6  matvecs,  ||rn||/||r0|| =   4.4131616428074323E-04
+ 7  matvecs,  ||rn||/||r0|| =   1.5008195634313962E-04
+ 8  matvecs,  ||rn||/||r0|| =   3.7135690170307484E-05
+ 9  matvecs,  ||rn||/||r0|| =   1.1703761769373802E-05
+ 10  matvecs,  ||rn||/||r0|| =   3.9085131698287876E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 0   3.9085131698287876E-06
+ krylov at iter= 39
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   3.2189289052942058
+ 1  matvecs,  ||rn||/||r0|| =   0.2082142011996164
+ 2  matvecs,  ||rn||/||r0|| =   9.6987489850265535E-02
+ 3  matvecs,  ||rn||/||r0|| =   3.0289411668997370E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.2769276668613041E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.5529024823174778E-03
+ 6  matvecs,  ||rn||/||r0|| =   1.5809195207671066E-03
+ 7  matvecs,  ||rn||/||r0|| =   6.4950455635752805E-04
+ 8  matvecs,  ||rn||/||r0|| =   2.7385228213583568E-04
+ 9  matvecs,  ||rn||/||r0|| =   1.1799967477658132E-04
+ 10  matvecs,  ||rn||/||r0|| =   4.3486889334663648E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.3486889334663648E-05
+ krylov at iter= 40
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   3.0886451689003476
+ 1  matvecs,  ||rn||/||r0|| =   0.2334092229082091
+ 2  matvecs,  ||rn||/||r0|| =   0.1292401275469844
+ 3  matvecs,  ||rn||/||r0|| =   7.8603440455874626E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.4352046974374651E-02
+ 5  matvecs,  ||rn||/||r0|| =   2.8765812608341979E-02
+ 6  matvecs,  ||rn||/||r0|| =   1.0839038454496979E-02
+ 7  matvecs,  ||rn||/||r0|| =   5.5448507599116870E-03
+ 8  matvecs,  ||rn||/||r0|| =   2.8406390913885320E-03
+ 9  matvecs,  ||rn||/||r0|| =   1.6037510287002248E-03
+ 10  matvecs,  ||rn||/||r0|| =   8.6105809683181106E-04
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   8.6105809683181106E-04
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
  |
- |  AMR:  nBlockMax =  796  nBLK =  5000
- |  AMR:  Total number of blocks used =  3145
- |  AMR:  Total number of cells =  301920
- |  AMR:  Total number of true cells =  301920
- |  Smallest cell dx:    1.1559473684057483E-02   Largest cell dx:    2.3118947368114984E-02
+ |  AMR:  nBlockMax =  374  nBLK =  4000
+ |  AMR:  Total number of blocks used =  744
+ |  AMR:  Total number of cells =  71424
+ |  AMR:  Total number of true cells =  71424
+ |  Smallest cell dx:    2.3118947368114966E-02   Largest cell dx:    4.6237894736229947E-02
  |
-Timing for last SC_amr (BATSRUS):    1.09 sec
+Timing for last SC_amr (BATSRUS):    1.49 sec
  >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
-  Message passing for plot files ...
- Starting assign_node_numbers ...
-  nBlockALL= 3145  NodesPerBlock= 175  unreduced total= 550375  nNodeALL= 321114
-saved ifile= 5 type=y=0_var    at n_step=     60
- Calling exchange_messages to reset ghost cells ...
-Speed is 164317.3 c/s/p after     31.5 s at N =      60
-Speed is  49702.3 c/s/p after     47.1 s at N =      70
-  Message passing for plot files ...
- Starting assign_node_numbers ...
-  nBlockALL= 3145  NodesPerBlock= 175  unreduced total= 550375  nNodeALL= 321114
-saved ifile= 5 type=y=0_var    at n_step=     80
- Calling exchange_messages to reset ghost cells ...
-Speed is  48704.7 c/s/p after     63.4 s at N =      80
-Speed is  48744.3 c/s/p after     79.0 s at N =      90
-  Message passing for plot files ...
- Starting assign_node_numbers ...
-  nBlockALL= 3145  NodesPerBlock= 175  unreduced total= 550375  nNodeALL= 321114
-saved ifile= 5 type=y=0_var    at n_step=    100
- Calling exchange_messages to reset ghost cells ...
-Speed is  49425.4 c/s/p after     96.2 s at N =     100
--------------------------------------------------------------------------------
-TIMING TREE of depth 2 from step       0 to     100    on PE    0
-name                  #iter  #calls      sec   s/iter   s/call  percent
--------------------------------------------------------------------------------
-BATSRUS                   1       1    96.22   96.222   96.222   100.00
--------------------------------------------------------------------------------
-advance                 100     100    89.83    0.898    0.898    93.36
-save_logfile            100     100     1.60    0.016    0.016     1.66
-exch_msgs                 5      10     0.25    0.051    0.025     0.26
-pass_node                 5       5     0.04    0.007    0.007     0.04
-save_plot                 5       5     3.28    0.655    0.655     3.41
-SC_amr                    1       1     1.09    1.088    1.088     1.13
--------------------------------------------------------------------------------
-   100 of    100 iterations completed.   Expected time to completion:      0.00
+saved ifile= 5 type=x=0_var    at n_step=     40
+Speed is  18435.3 c/s/p after     62.4 s at N =      40
+ krylov at iter= 41
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   5.2952433103122365
+ 1  matvecs,  ||rn||/||r0|| =   0.2592649044491183
+ 2  matvecs,  ||rn||/||r0|| =   0.1530889209832835
+ 3  matvecs,  ||rn||/||r0|| =   8.8244530744569727E-02
+ 4  matvecs,  ||rn||/||r0|| =   4.9742366380223654E-02
+ 5  matvecs,  ||rn||/||r0|| =   3.3061257170041061E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.3510941492922061E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.7383841595324162E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.2594187543434611E-02
+ 9  matvecs,  ||rn||/||r0|| =   8.5848537406094990E-03
+ 10  matvecs,  ||rn||/||r0|| =   5.7618384333925137E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   5.7618384333925137E-03
+ krylov at iter= 42
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   3.9365238381471519
+ 1  matvecs,  ||rn||/||r0|| =   0.2466659757175767
+ 2  matvecs,  ||rn||/||r0|| =   0.1407302432833254
+ 3  matvecs,  ||rn||/||r0|| =   8.5377922515643898E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.4423888934550795E-02
+ 5  matvecs,  ||rn||/||r0|| =   3.5147609639383369E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.5904935194625736E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.0196099923046888E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.4729256344139510E-02
+ 9  matvecs,  ||rn||/||r0|| =   9.8241810441511285E-03
+ 10  matvecs,  ||rn||/||r0|| =   6.7358797301242156E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   6.7358797301242156E-03
+ krylov at iter= 43
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   3.1035606612348143
+ 1  matvecs,  ||rn||/||r0|| =   0.2415239851282069
+ 2  matvecs,  ||rn||/||r0|| =   0.1331359880420841
+ 3  matvecs,  ||rn||/||r0|| =   8.1208934695090704E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.6114469560148594E-02
+ 5  matvecs,  ||rn||/||r0|| =   3.9086547854624003E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.9215739331922713E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.2447251223671343E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.6955523012389107E-02
+ 9  matvecs,  ||rn||/||r0|| =   1.1736849571699140E-02
+ 10  matvecs,  ||rn||/||r0|| =   7.6919085751114384E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   7.6919085751114393E-03
+ krylov at iter= 44
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   2.4913168414669138
+ 1  matvecs,  ||rn||/||r0|| =   0.2391266940709398
+ 2  matvecs,  ||rn||/||r0|| =   0.1297222278862146
+ 3  matvecs,  ||rn||/||r0|| =   7.8621856544582591E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.6681489322361028E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.2584711622893776E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.2763801559827610E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.3999689444650894E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.7951710464788724E-02
+ 9  matvecs,  ||rn||/||r0|| =   1.2675277984462534E-02
+ 10  matvecs,  ||rn||/||r0|| =   8.2135713130450320E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   8.2135713130450320E-03
+ krylov at iter= 45
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   2.0449712483224789
+ 1  matvecs,  ||rn||/||r0|| =   0.2345312134352153
+ 2  matvecs,  ||rn||/||r0|| =   0.1262225293521196
+ 3  matvecs,  ||rn||/||r0|| =   7.7814753226952568E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.7688577201216971E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.5279863737069929E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.5376933171254350E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.4348127425075541E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.7506693010273296E-02
+ 9  matvecs,  ||rn||/||r0|| =   1.2244759655409906E-02
+ 10  matvecs,  ||rn||/||r0|| =   8.0753393217176100E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   8.0753393217176100E-03
+ krylov at iter= 46
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.7187568820937427
+ 1  matvecs,  ||rn||/||r0|| =   0.2282890671983163
+ 2  matvecs,  ||rn||/||r0|| =   0.1218577939506581
+ 3  matvecs,  ||rn||/||r0|| =   7.7646828670442175E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.8912189516872500E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.6981416534531820E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.6460022760182287E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.3429237786039635E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.6166090798649755E-02
+ 9  matvecs,  ||rn||/||r0|| =   1.1024611077386186E-02
+ 10  matvecs,  ||rn||/||r0|| =   7.4445236500722996E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   7.4445236500722996E-03
+ krylov at iter= 47
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.4754238969179871
+ 1  matvecs,  ||rn||/||r0|| =   0.2236317435201206
+ 2  matvecs,  ||rn||/||r0|| =   0.1184405582424783
+ 3  matvecs,  ||rn||/||r0|| =   7.7974041816478754E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.9930924924149372E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.7596441400657358E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.6220331607781257E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.2073371133787378E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.4911977657209334E-02
+ 9  matvecs,  ||rn||/||r0|| =   9.9215468478017245E-03
+ 10  matvecs,  ||rn||/||r0|| =   6.7403757509929977E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   6.7403757509929977E-03
+ krylov at iter= 48
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.2847679527923950
+ 1  matvecs,  ||rn||/||r0|| =   0.2210542164829922
+ 2  matvecs,  ||rn||/||r0|| =   0.1171246638315369
+ 3  matvecs,  ||rn||/||r0|| =   7.8718785488710141E-02
+ 4  matvecs,  ||rn||/||r0|| =   6.0336717660371061E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.7249159947810884E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.5170292702244720E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.1212251399413157E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.4377494270866261E-02
+ 9  matvecs,  ||rn||/||r0|| =   9.3863201343886080E-03
+ 10  matvecs,  ||rn||/||r0|| =   6.2837865479407930E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   6.2837865479407930E-03
+ krylov at iter= 49
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.1276034846725373
+ 1  matvecs,  ||rn||/||r0|| =   0.2195990468883499
+ 2  matvecs,  ||rn||/||r0|| =   0.1180716269917597
+ 3  matvecs,  ||rn||/||r0|| =   7.9771127120756069E-02
+ 4  matvecs,  ||rn||/||r0|| =   6.0201883340450207E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.6361803695360707E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.4047674596211226E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.1009584473569261E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.4371267822275774E-02
+ 9  matvecs,  ||rn||/||r0|| =   9.2265414148449930E-03
+ 10  matvecs,  ||rn||/||r0|| =   6.0648403869748109E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   6.0648403869748109E-03
+ krylov at iter= 50
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.9975681736230874
+ 1  matvecs,  ||rn||/||r0|| =   0.2197430758874926
+ 2  matvecs,  ||rn||/||r0|| =   0.1207192465526602
+ 3  matvecs,  ||rn||/||r0|| =   8.0832879159027884E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.9518976106340445E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.5199337449117132E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.3124199607654822E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.1076147036270618E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.4315018339216549E-02
+ 9  matvecs,  ||rn||/||r0|| =   9.0778708783488642E-03
+ 10  matvecs,  ||rn||/||r0|| =   5.8926448304325108E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   5.8926448304325108E-03
+Speed is   4245.3 c/s/p after    149.6 s at N =      50
+ ----- End of Session    1  ------
+ ----- Starting Session  2  ------
+ SC_set_parameters: READ iSession = 2  iLine= 278  nLine = 1000
 
+#AMR
+-1			DnRefine
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#USER_FLAGS
+T			UseUserInnerBCs		UseUserInnerBcs
+F			UseUserSource
+T			UseUserPerturbation
+T			UseUserOuterBcs
+F			UseUserICs
+F			UseUserSpecifyRefinement
+F			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+F			UseUserUpdateStates
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+80.0			LongitudeCme
+-10.0			LatitudeCme
+0.0			OrientationCme
+GL			TypeCme
+0.7			Stretch
+1.8			Distance
+1.0			Radius
+0.93			Bstrength
+0.0			Density
+
+#STOP
+51			MaxIteration
+-1.0			tSimulationMax
+
+#RUN #############################################################
+ SC_set_parameters: CHECK iSession = 2
+  
+ 
+ user_init_session:
+ 
+ 
+ user_init_session finished
+ 
+ EEE: 
+ EEE: >>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<
+ EEE: 
+ EEE:             Gibson and Low CME is initiated!!!
+ EEE: 
+ EEE: >>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<
+ EEE: 
+ EEE: cme_a  =    0.7000000000000000 [rSun]
+ EEE: cme_r1 =    1.8000000000000000 [rSun]
+ EEE: cme_r0 =    1.0000000000000000 [rSun]
+ EEE: cme_a1 =    0.9300000000000000 [Gauss]
+ EEE: cme_rho1 =    0.0000000000000000 [kg/m^3]
+ EEE: cme_rho2 =    0.0000000000000000 [kg/m^3]
+ EEE: ModulationRho =    0.0000000000000000
+ EEE: ModulationP   =    0.0000000000000000
+ EEE: LongitudeCme =   80.0000000000000000 [degrees]
+ EEE: LatitudeCme =  -10.0000000000000000 [degrees]
+ EEE: OrientationCme =    0.0000000000000000 [degrees]
+ EEE: 
+ krylov at iter= 51
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.1767308051265745
+ 1  matvecs,  ||rn||/||r0|| =   1.8378213131774648E-02
+ 2  matvecs,  ||rn||/||r0|| =   4.4600599217937145E-04
+ 3  matvecs,  ||rn||/||r0|| =   1.3023234898012280E-05
+ 4  matvecs,  ||rn||/||r0|| =   7.1758575302309129E-07
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 4 0   7.1758575302309129E-07
+ ----- End of Session    2  ------
+ ----- Starting Session  3  ------
+ SC_set_parameters: READ iSession = 3  iLine= 318  nLine = 1000
+
+#USER_FLAGS
+T			UseUserInnerBCs		UseUserInnerBcs
+F			UseUserSource
+T			UseUserPerturbation
+T			UseUserOuterBcs
+F			UseUserICs
+F			UseUserSpecifyRefinement
+F			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+F			UseUserUpdateStates
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+180.0			LongitudeCme
+15.0			LatitudeCme
+30.0			OrientationCme
+TD			TypeCme
+2.000E+11		Current
+7.000E+08		RadiusMajor
+3.000E+08		RadiusMinor
+1.000E+08		Depth
+1.000E+13		Mass
+
+#STOP
+80			MaxIteration
+-1.0			tSimulationMax
+ SC_set_parameters: CHECK iSession = 3
+  
+ 
+ user_init_session:
+ 
+ 
+ user_init_session finished
+ 
+ EEE: 
+ EEE: >>>>>>>>>>>>>>>>>>>                   <<<<<<<<<<<<<<<<<<<<<
+ EEE: 
+ EEE:     Twisted Flux Rope Model by Titov & Demoulin, 1999.     
+ EEE: 
+ EEE: >>>>>>>>>>>>>>>>>>>                   <<<<<<<<<<<<<<<<<<<<<
+ EEE: 
+ EEE: d_TD99      =    1.0000000000000000E+02 [Mm]
+ EEE: Rtube_TD99  =    7.0000000000000000E+02 [Mm]
+ EEE: atube_TD99  =    3.0000000000000000E+02 [Mm]
+ EEE: atube/Rtube =    0.4285714285714285 [-]
+ EEE: Itube_TD99  =    2.0000000000000000E+11 [A]
+ EEE: aratio_TD99 =    0.0000000000000000 [-]
+ EEE: Mass_TD99   =    1.0000000000000000E+16 [g] 
+ EEE: Rho0_TD99   =    1.7697790719308596E-17 [g/cm^3]
+ EEE: 
+ EEE: q_TD99      =    0.0000000000000000 [T m^2]
+ EEE: L_TD99      =    0.0000000000000000 [Mm]
+ EEE: 
+ EEE: Free energy of flux rope is    2.1237352340423935E+32 Ergs.
+ EEE: Separation of flux rope ends is    6.9282032302755090E+02 Mm,
+ EEE:    or   89.5888348742522851 deg.
+ EEE: 
+ krylov at iter= 52
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   1.1758622839265808E-03
+ 1  matvecs,  ||rn||/||r0|| =   1.2849674496705487E-04
+ 2  matvecs,  ||rn||/||r0|| =   3.0766304691250145E-08
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 2 0   3.0766304691250145E-08
+ krylov at iter= 53
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   7.2089590883198593E-03
+ 1  matvecs,  ||rn||/||r0|| =   6.3187510798807904E-04
+ 2  matvecs,  ||rn||/||r0|| =   6.2673525056995453E-07
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 2 0   6.2673525056995453E-07
+ krylov at iter= 54
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   0.1291496315566945
+ 1  matvecs,  ||rn||/||r0|| =   6.8180258729067982E-03
+ 2  matvecs,  ||rn||/||r0|| =   4.9598946243587278E-05
+ 3  matvecs,  ||rn||/||r0|| =   2.8916237040136418E-07
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 3 0   2.8916237040136418E-07
+ krylov at iter= 55
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:   5.9395864936775418
+ 1  matvecs,  ||rn||/||r0|| =   0.1266058326336086
+ 2  matvecs,  ||rn||/||r0|| =   1.9800152577435032E-02
+ 3  matvecs,  ||rn||/||r0|| =   2.5245792796419492E-03
+ 4  matvecs,  ||rn||/||r0|| =   3.2727060309104195E-04
+ 5  matvecs,  ||rn||/||r0|| =   4.5560870739631017E-05
+ 6  matvecs,  ||rn||/||r0|| =   6.6585205091723810E-06
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 6 0   6.6585205091723810E-06
+ krylov at iter= 56
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  21.2384810336162673
+ 1  matvecs,  ||rn||/||r0|| =   0.2719011487445624
+ 2  matvecs,  ||rn||/||r0|| =   9.8403791810762239E-02
+ 3  matvecs,  ||rn||/||r0|| =   3.7736203242342288E-02
+ 4  matvecs,  ||rn||/||r0|| =   1.2544812990367745E-02
+ 5  matvecs,  ||rn||/||r0|| =   3.9678492673131775E-03
+ 6  matvecs,  ||rn||/||r0|| =   1.2230437199947932E-03
+ 7  matvecs,  ||rn||/||r0|| =   3.9205739511229305E-04
+ 8  matvecs,  ||rn||/||r0|| =   1.2168875823886676E-04
+ 9  matvecs,  ||rn||/||r0|| =   3.9874683921065666E-05
+ 10  matvecs,  ||rn||/||r0|| =   1.3011894524530440E-05
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   1.3011894524530440E-05
+ First error for Krylov solver failure, Krylov error (PE= 0 ) at iter= 56  with value=   1.3011894524530440E-05
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   1.3011894524530440E-05   1.0000000000000001E-05
+ krylov at iter= 57
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  29.3927317968414243
+ 1  matvecs,  ||rn||/||r0|| =   0.2862801066099546
+ 2  matvecs,  ||rn||/||r0|| =   0.1288279888868579
+ 3  matvecs,  ||rn||/||r0|| =   6.6725815940536004E-02
+ 4  matvecs,  ||rn||/||r0|| =   3.2738652385972983E-02
+ 5  matvecs,  ||rn||/||r0|| =   1.2995025135166819E-02
+ 6  matvecs,  ||rn||/||r0|| =   4.9955455647213865E-03
+ 7  matvecs,  ||rn||/||r0|| =   1.9904933239782976E-03
+ 8  matvecs,  ||rn||/||r0|| =   7.3685553339529280E-04
+ 9  matvecs,  ||rn||/||r0|| =   2.7972608104443716E-04
+ 10  matvecs,  ||rn||/||r0|| =   1.0677059571208214E-04
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   1.0677059571208213E-04
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   1.0677059571208213E-04   1.0000000000000001E-05
+ krylov at iter= 58
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  35.6204802665456413
+ 1  matvecs,  ||rn||/||r0|| =   0.2615775645331566
+ 2  matvecs,  ||rn||/||r0|| =   0.1388322443036692
+ 3  matvecs,  ||rn||/||r0|| =   7.6901510997708020E-02
+ 4  matvecs,  ||rn||/||r0|| =   4.4510526565294507E-02
+ 5  matvecs,  ||rn||/||r0|| =   2.1740450520495499E-02
+ 6  matvecs,  ||rn||/||r0|| =   9.1379679787403235E-03
+ 7  matvecs,  ||rn||/||r0|| =   4.1613108699781742E-03
+ 8  matvecs,  ||rn||/||r0|| =   1.7232508074720449E-03
+ 9  matvecs,  ||rn||/||r0|| =   7.6838383009051399E-04
+ 10  matvecs,  ||rn||/||r0|| =   3.0316539904592411E-04
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   3.0316539904592411E-04
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   3.0316539904592411E-04   1.0000000000000001E-05
+ krylov at iter= 59
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  40.7236554811387848
+ 1  matvecs,  ||rn||/||r0|| =   0.2612406094119104
+ 2  matvecs,  ||rn||/||r0|| =   0.1455998105271733
+ 3  matvecs,  ||rn||/||r0|| =   8.4074539941178625E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.2364886011855627E-02
+ 5  matvecs,  ||rn||/||r0|| =   3.1424175277192212E-02
+ 6  matvecs,  ||rn||/||r0|| =   1.5027107146653982E-02
+ 7  matvecs,  ||rn||/||r0|| =   6.7384470434805324E-03
+ 8  matvecs,  ||rn||/||r0|| =   3.0692723260661832E-03
+ 9  matvecs,  ||rn||/||r0|| =   1.4930274732467682E-03
+ 10  matvecs,  ||rn||/||r0|| =   6.7910470173351931E-04
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   6.7910470173351942E-04
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   6.7910470173351942E-04   1.0000000000000001E-05
+ krylov at iter= 60
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  41.9224894040485907
+ 1  matvecs,  ||rn||/||r0|| =   0.3109622262917121
+ 2  matvecs,  ||rn||/||r0|| =   0.1691916217589081
+ 3  matvecs,  ||rn||/||r0|| =   9.9873614594115048E-02
+ 4  matvecs,  ||rn||/||r0|| =   6.2229769379445389E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.0714361222339665E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.4093412530725233E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.2102393628970301E-02
+ 8  matvecs,  ||rn||/||r0|| =   5.8624503777879502E-03
+ 9  matvecs,  ||rn||/||r0|| =   3.2048149333420259E-03
+ 10  matvecs,  ||rn||/||r0|| =   1.6366828792465352E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   1.6366828792465352E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   1.6366828792465352E-03   1.0000000000000001E-05
+saved ifile= 5 type=x=0_var    at n_step=     60 time=   0:00:03 h:m:s
+Speed is   3592.4 c/s/p after    220.6 s at N =      60 (3.0637E+00 s)
+ krylov at iter= 61
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  45.0171311037850330
+ 1  matvecs,  ||rn||/||r0|| =   0.3352942080729119
+ 2  matvecs,  ||rn||/||r0|| =   0.1707517588847640
+ 3  matvecs,  ||rn||/||r0|| =   0.1054292136224742
+ 4  matvecs,  ||rn||/||r0|| =   7.1462292669573643E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.3651888575138083E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.6311081123345043E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.3876038244034571E-02
+ 8  matvecs,  ||rn||/||r0|| =   7.4745609614054855E-03
+ 9  matvecs,  ||rn||/||r0|| =   4.2219104772742433E-03
+ 10  matvecs,  ||rn||/||r0|| =   2.5716549196134150E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   2.5716549196134154E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   2.5716549196134154E-03   1.0000000000000001E-05
+ krylov at iter= 62
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  37.4047761540002384
+ 1  matvecs,  ||rn||/||r0|| =   0.2952340010679041
+ 2  matvecs,  ||rn||/||r0|| =   0.1646425135675918
+ 3  matvecs,  ||rn||/||r0|| =   9.7645285280065705E-02
+ 4  matvecs,  ||rn||/||r0|| =   5.9017601986086313E-02
+ 5  matvecs,  ||rn||/||r0|| =   3.2610478902874600E-02
+ 6  matvecs,  ||rn||/||r0|| =   1.9312637183412234E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.0842288969761684E-02
+ 8  matvecs,  ||rn||/||r0|| =   6.3710280018318549E-03
+ 9  matvecs,  ||rn||/||r0|| =   4.4121371978535634E-03
+ 10  matvecs,  ||rn||/||r0|| =   3.0728626446992857E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   3.0728626446992853E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   3.0728626446992853E-03   1.0000000000000001E-05
+ krylov at iter= 63
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  34.1351904780827198
+ 1  matvecs,  ||rn||/||r0|| =   0.3104577690117607
+ 2  matvecs,  ||rn||/||r0|| =   0.1807098991561797
+ 3  matvecs,  ||rn||/||r0|| =   0.1113503322726096
+ 4  matvecs,  ||rn||/||r0|| =   6.8712432315555405E-02
+ 5  matvecs,  ||rn||/||r0|| =   3.8598585818413786E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.2356381075067953E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.2070679495332401E-02
+ 8  matvecs,  ||rn||/||r0|| =   6.5229747638412602E-03
+ 9  matvecs,  ||rn||/||r0|| =   4.0154679242301906E-03
+ 10  matvecs,  ||rn||/||r0|| =   2.7416330944821008E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   2.7416330944821008E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   2.7416330944821008E-03   1.0000000000000001E-05
+ krylov at iter= 64
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  30.6592160321062650
+ 1  matvecs,  ||rn||/||r0|| =   0.3467221537723750
+ 2  matvecs,  ||rn||/||r0|| =   0.2008378856127374
+ 3  matvecs,  ||rn||/||r0|| =   0.1234605632972199
+ 4  matvecs,  ||rn||/||r0|| =   7.4207805258154111E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.1708533012752201E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.2871543618607677E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.1549202273523173E-02
+ 8  matvecs,  ||rn||/||r0|| =   6.1194458163944835E-03
+ 9  matvecs,  ||rn||/||r0|| =   3.4097686413919305E-03
+ 10  matvecs,  ||rn||/||r0|| =   1.8084907510432346E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   1.8084907510432344E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   1.8084907510432344E-03   1.0000000000000001E-05
+ krylov at iter= 65
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  38.8271718677511686
+ 1  matvecs,  ||rn||/||r0|| =   0.3619227109701911
+ 2  matvecs,  ||rn||/||r0|| =   0.2009794366757945
+ 3  matvecs,  ||rn||/||r0|| =   0.1347911739985765
+ 4  matvecs,  ||rn||/||r0|| =   9.2730957649131390E-02
+ 5  matvecs,  ||rn||/||r0|| =   5.9365654893346595E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.7070130118758642E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.1561367252002580E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.1652001513631867E-02
+ 9  matvecs,  ||rn||/||r0|| =   6.8868873171029086E-03
+ 10  matvecs,  ||rn||/||r0|| =   4.1046876119066357E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.1046876119066357E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   4.1046876119066357E-03   1.0000000000000001E-05
+ krylov at iter= 66
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  37.5136283472756276
+ 1  matvecs,  ||rn||/||r0|| =   0.3703846168928260
+ 2  matvecs,  ||rn||/||r0|| =   0.2095316184341690
+ 3  matvecs,  ||rn||/||r0|| =   0.1395139611884090
+ 4  matvecs,  ||rn||/||r0|| =   9.6474614759646318E-02
+ 5  matvecs,  ||rn||/||r0|| =   6.2244192661141333E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.8500276182313192E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.1941460940308195E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.1936384691196020E-02
+ 9  matvecs,  ||rn||/||r0|| =   6.9171756040637845E-03
+ 10  matvecs,  ||rn||/||r0|| =   4.0988188461431648E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.0988188461431639E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   4.0988188461431639E-03   1.0000000000000001E-05
+ krylov at iter= 67
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  36.9104461227124858
+ 1  matvecs,  ||rn||/||r0|| =   0.3824992168906435
+ 2  matvecs,  ||rn||/||r0|| =   0.2160894428553437
+ 3  matvecs,  ||rn||/||r0|| =   0.1453210108467312
+ 4  matvecs,  ||rn||/||r0|| =   9.9799320760193072E-02
+ 5  matvecs,  ||rn||/||r0|| =   6.3917288114900384E-02
+ 6  matvecs,  ||rn||/||r0|| =   4.0003585508507973E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.3254684089599333E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.2988969629446226E-02
+ 9  matvecs,  ||rn||/||r0|| =   7.1563610697885447E-03
+ 10  matvecs,  ||rn||/||r0|| =   3.9969757781917071E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   3.9969757781917071E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   3.9969757781917071E-03   1.0000000000000001E-05
+ krylov at iter= 68
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  36.6981913118353873
+ 1  matvecs,  ||rn||/||r0|| =   0.3846365940499950
+ 2  matvecs,  ||rn||/||r0|| =   0.2189196032498036
+ 3  matvecs,  ||rn||/||r0|| =   0.1472628804284716
+ 4  matvecs,  ||rn||/||r0|| =   0.1013802044007699
+ 5  matvecs,  ||rn||/||r0|| =   6.5305745031569287E-02
+ 6  matvecs,  ||rn||/||r0|| =   4.1581163614303446E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.3897261130829139E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.3069379798298504E-02
+ 9  matvecs,  ||rn||/||r0|| =   7.3694184673920634E-03
+ 10  matvecs,  ||rn||/||r0|| =   4.2501432630430731E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.2501432630430731E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   4.2501432630430731E-03   1.0000000000000001E-05
+ krylov at iter= 69
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  35.8030703076080812
+ 1  matvecs,  ||rn||/||r0|| =   0.3844985805138986
+ 2  matvecs,  ||rn||/||r0|| =   0.2196839866188732
+ 3  matvecs,  ||rn||/||r0|| =   0.1490170233670071
+ 4  matvecs,  ||rn||/||r0|| =   0.1024110044978639
+ 5  matvecs,  ||rn||/||r0|| =   6.4836986211530084E-02
+ 6  matvecs,  ||rn||/||r0|| =   4.0701632577732343E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.3302477819237246E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.2845494505516196E-02
+ 9  matvecs,  ||rn||/||r0|| =   7.2757749712504226E-03
+ 10  matvecs,  ||rn||/||r0|| =   4.1235917385267660E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.1235917385267660E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   4.1235917385267660E-03   1.0000000000000001E-05
+ krylov at iter= 70
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  36.4100002102305638
+ 1  matvecs,  ||rn||/||r0|| =   0.3951971414998352
+ 2  matvecs,  ||rn||/||r0|| =   0.2239228115427908
+ 3  matvecs,  ||rn||/||r0|| =   0.1522293030657912
+ 4  matvecs,  ||rn||/||r0|| =   0.1063964657515107
+ 5  matvecs,  ||rn||/||r0|| =   6.8909185235003570E-02
+ 6  matvecs,  ||rn||/||r0|| =   4.3421469229032561E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.5469822509147293E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.4356330659260973E-02
+ 9  matvecs,  ||rn||/||r0|| =   8.2231738015555150E-03
+ 10  matvecs,  ||rn||/||r0|| =   4.6364243622811592E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.6364243622811592E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   4.6364243622811592E-03   1.0000000000000001E-05
+Speed is   4184.2 c/s/p after    316.1 s at N =      70 (7.8170E+00 s)
+ krylov at iter= 71
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  36.2355350796789537
+ 1  matvecs,  ||rn||/||r0|| =   0.4006161008924004
+ 2  matvecs,  ||rn||/||r0|| =   0.2267751131779976
+ 3  matvecs,  ||rn||/||r0|| =   0.1543252388086991
+ 4  matvecs,  ||rn||/||r0|| =   0.1080012097670684
+ 5  matvecs,  ||rn||/||r0|| =   7.0739179335755603E-02
+ 6  matvecs,  ||rn||/||r0|| =   4.4686364593651176E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.6231158670653711E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.4879719299372308E-02
+ 9  matvecs,  ||rn||/||r0|| =   8.5176247664231867E-03
+ 10  matvecs,  ||rn||/||r0|| =   4.8615939190908720E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.8615939190908720E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   4.8615939190908720E-03   1.0000000000000001E-05
+ krylov at iter= 72
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  36.3884643742737879
+ 1  matvecs,  ||rn||/||r0|| =   0.4019081809852502
+ 2  matvecs,  ||rn||/||r0|| =   0.2278521248215136
+ 3  matvecs,  ||rn||/||r0|| =   0.1556439547674265
+ 4  matvecs,  ||rn||/||r0|| =   0.1088495454892037
+ 5  matvecs,  ||rn||/||r0|| =   7.1693891501718454E-02
+ 6  matvecs,  ||rn||/||r0|| =   4.5694015917211069E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.6816008777594581E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.5185059044926712E-02
+ 9  matvecs,  ||rn||/||r0|| =   8.7643653403272365E-03
+ 10  matvecs,  ||rn||/||r0|| =   5.0964966442830946E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   5.0964966442830946E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   5.0964966442830946E-03   1.0000000000000001E-05
+ krylov at iter= 73
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  34.3048945505042866
+ 1  matvecs,  ||rn||/||r0|| =   0.4026009979630143
+ 2  matvecs,  ||rn||/||r0|| =   0.2307961572229229
+ 3  matvecs,  ||rn||/||r0|| =   0.1572080046432510
+ 4  matvecs,  ||rn||/||r0|| =   0.1078069382739970
+ 5  matvecs,  ||rn||/||r0|| =   6.8991643393984406E-02
+ 6  matvecs,  ||rn||/||r0|| =   4.3064016540331984E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.4888232067982279E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.3938916237738791E-02
+ 9  matvecs,  ||rn||/||r0|| =   8.0220489450558690E-03
+ 10  matvecs,  ||rn||/||r0|| =   4.5802936812905232E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.5802936812905232E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   4.5802936812905232E-03   1.0000000000000001E-05
+ krylov at iter= 74
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  33.4282224936758823
+ 1  matvecs,  ||rn||/||r0|| =   0.4019676424162283
+ 2  matvecs,  ||rn||/||r0|| =   0.2314345244393033
+ 3  matvecs,  ||rn||/||r0|| =   0.1576683817071712
+ 4  matvecs,  ||rn||/||r0|| =   0.1068112281738656
+ 5  matvecs,  ||rn||/||r0|| =   6.7497683142603085E-02
+ 6  matvecs,  ||rn||/||r0|| =   4.1746394034883387E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.4052078723316547E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.3411503122509652E-02
+ 9  matvecs,  ||rn||/||r0|| =   7.6946001311065555E-03
+ 10  matvecs,  ||rn||/||r0|| =   4.3747654046198490E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   4.3747654046198490E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   4.3747654046198490E-03   1.0000000000000001E-05
+ krylov at iter= 75
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  28.1747823063934213
+ 1  matvecs,  ||rn||/||r0|| =   0.4012094995925973
+ 2  matvecs,  ||rn||/||r0|| =   0.2364767486567491
+ 3  matvecs,  ||rn||/||r0|| =   0.1561117727408645
+ 4  matvecs,  ||rn||/||r0|| =   9.7922451811930794E-02
+ 5  matvecs,  ||rn||/||r0|| =   5.7444436714728785E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.3776293797805522E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.8419749009657774E-02
+ 8  matvecs,  ||rn||/||r0|| =   9.9164683840825274E-03
+ 9  matvecs,  ||rn||/||r0|| =   5.4564990682816504E-03
+ 10  matvecs,  ||rn||/||r0|| =   2.9561379556846501E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   2.9561379556846496E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   2.9561379556846496E-03   1.0000000000000001E-05
+ krylov at iter= 76
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  29.5649114056926088
+ 1  matvecs,  ||rn||/||r0|| =   0.4042348470706629
+ 2  matvecs,  ||rn||/||r0|| =   0.2367241446856911
+ 3  matvecs,  ||rn||/||r0|| =   0.1582430772092825
+ 4  matvecs,  ||rn||/||r0|| =   0.1016224286785102
+ 5  matvecs,  ||rn||/||r0|| =   6.1276081061593865E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.6508639789570543E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.0325943663119187E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.1148400180971086E-02
+ 9  matvecs,  ||rn||/||r0|| =   6.2361891452927982E-03
+ 10  matvecs,  ||rn||/||r0|| =   3.4420482970212306E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   3.4420482970212306E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   3.4420482970212306E-03   1.0000000000000001E-05
+ krylov at iter= 77
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  29.5025177622156072
+ 1  matvecs,  ||rn||/||r0|| =   0.4059346406909318
+ 2  matvecs,  ||rn||/||r0|| =   0.2381464237720411
+ 3  matvecs,  ||rn||/||r0|| =   0.1598613199465254
+ 4  matvecs,  ||rn||/||r0|| =   0.1027237581928735
+ 5  matvecs,  ||rn||/||r0|| =   6.2404638919384366E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.7466302574625694E-02
+ 7  matvecs,  ||rn||/||r0|| =   2.0858036600006683E-02
+ 8  matvecs,  ||rn||/||r0|| =   1.1491977833431715E-02
+ 9  matvecs,  ||rn||/||r0|| =   6.4716816984426613E-03
+ 10  matvecs,  ||rn||/||r0|| =   3.6081154393452124E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   3.6081154393452124E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   3.6081154393452124E-03   1.0000000000000001E-05
+ krylov at iter= 78
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  26.2543672421577696
+ 1  matvecs,  ||rn||/||r0|| =   0.4077236566245931
+ 2  matvecs,  ||rn||/||r0|| =   0.2416822095400062
+ 3  matvecs,  ||rn||/||r0|| =   0.1579960785319356
+ 4  matvecs,  ||rn||/||r0|| =   9.6650400595795133E-02
+ 5  matvecs,  ||rn||/||r0|| =   5.6239144356372520E-02
+ 6  matvecs,  ||rn||/||r0|| =   3.2771437095634452E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.7607438049953520E-02
+ 8  matvecs,  ||rn||/||r0|| =   9.5338835963283998E-03
+ 9  matvecs,  ||rn||/||r0|| =   5.2150140890829012E-03
+ 10  matvecs,  ||rn||/||r0|| =   2.8092535787111895E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   2.8092535787111890E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   2.8092535787111890E-03   1.0000000000000001E-05
+ krylov at iter= 79
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  23.5589575312123145
+ 1  matvecs,  ||rn||/||r0|| =   0.4078686405553565
+ 2  matvecs,  ||rn||/||r0|| =   0.2422305660546466
+ 3  matvecs,  ||rn||/||r0|| =   0.1528344602836049
+ 4  matvecs,  ||rn||/||r0|| =   8.9133848927622217E-02
+ 5  matvecs,  ||rn||/||r0|| =   4.9915858531256317E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.8261851551765537E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.4634653974861300E-02
+ 8  matvecs,  ||rn||/||r0|| =   7.7830648790579481E-03
+ 9  matvecs,  ||rn||/||r0|| =   4.1080978286154070E-03
+ 10  matvecs,  ||rn||/||r0|| =   2.1345379752755779E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   2.1345379752755779E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   2.1345379752755779E-03   1.0000000000000001E-05
+ krylov at iter= 80
+ GMRES tol,iter:   1.0000000000000001E-05 10
+ initial rnrm:  24.1505973341567319
+ 1  matvecs,  ||rn||/||r0|| =   0.4088155378610852
+ 2  matvecs,  ||rn||/||r0|| =   0.2432137210706964
+ 3  matvecs,  ||rn||/||r0|| =   0.1549025632911060
+ 4  matvecs,  ||rn||/||r0|| =   9.1588901825757255E-02
+ 5  matvecs,  ||rn||/||r0|| =   5.2024659216869211E-02
+ 6  matvecs,  ||rn||/||r0|| =   2.9708569208990052E-02
+ 7  matvecs,  ||rn||/||r0|| =   1.5529884755895043E-02
+ 8  matvecs,  ||rn||/||r0|| =   8.3428500315467259E-03
+ 9  matvecs,  ||rn||/||r0|| =   4.4701031236398063E-03
+ 10  matvecs,  ||rn||/||r0|| =   2.3495384469374757E-03
+ SC_advance_impl: After KrylovMatVec,info,KrylovError= 10 2   2.3495384469374753E-03
+ ERROR in SC_advance_impl: Krylov solver failed!
+ info, KrylovEerror, KrylovErrorMax= 2   2.3495384469374753E-03   1.0000000000000001E-05
+saved ifile= 5 type=x=0_var    at n_step=     80 time=   0:00:12 h:m:s
+Speed is   4236.5 c/s/p after    401.4 s at N =      80 (1.2911E+01 s)
 
     Finished Numerical Simulation
     -----------------------------
-saved ifile= 1 type=restart    at n_step=    100
+   Simulated Time T =   0.12911E+02 (    0.215189 min,     0.003586 hrs)
+saved ifile= 1 type=restart    at n_step=     80 time=   0:00:12 h:m:s
 
     Finished Saving Output Files
     ----------------------------
 -------------------------------------------------------------------------------
-SORTED TIMING from step       0 to     100    on PE    0
+SORTED TIMING from step       0 to      80    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                  96.39    100.00         1         1
+BATSRUS                 401.46    100.00         1         1
 -------------------------------------------------------------------------------
-advance                  89.83     93.20       100       100
-calc_fluxes              51.59     53.52       100     93600
-calc_sources              9.23      9.58       100     93600
-calc_facevalues           9.19      9.54       100     93600
-exch_msgs                 6.41      6.64       106       212
-batl_pass                 4.22      4.38       106       213
-save_plot                 3.28      3.40         5         5
-calc_fluxes_bfo           3.17      3.29        40     30080
-barrier-expl2             3.11      3.23       100       200
-local_pass                2.81      2.91       106       426
-update_states             2.35      2.44       100     93600
-update_check              2.24      2.33       100       200
-calc_face_bfo             1.69      1.75        40     30080
-save_logfile              1.60      1.66       100       100
-SC_amr                    1.09      1.13         1         1
-wait_pass                 0.81      0.84       106       213
-buffer_to_state           0.59      0.61       106       213
-pass_node                 0.53      0.55        10        10
-write_restart_files       0.17      0.17         1         1
-set_bcs                   0.16      0.17       100     13360
-barrier-expl1             0.10      0.10       100       200
-send_cons_flux            0.08      0.08       100       200
-send_pass                 0.01      0.01       106       213
-send_recv                 0.00      0.00       100       200
-init_pass                 0.00      0.00       106       213
-recv_pass                 0.00      0.00       106       213
+advance                 397.11     98.92        80        80
+krylov solver           221.82     55.25        80        80
+impl_matvec             215.09     53.58        80       751
+matvec_free             213.46     53.17        80       751
+calc_fluxes              50.71     12.63        80     34880
+calc_sources             21.50      5.36        80     34880
+calc_facevalues          20.43      5.09        80     34880
+batl_pass                12.96      3.23       243      1076
+exch_msgs                12.32      3.07        83       244
+local_pass               10.61      2.64       243      2154
+impl_jacobian             8.67      2.16        80        80
+expl2impl                 7.81      1.95        80        80
+update_check              3.38      0.84        80       160
+update_states             2.92      0.73        80     34880
+calc_face_bfo             2.09      0.52        40      8160
+save_logfile              1.97      0.49        80        80
+SC_amr                    1.49      0.37         1         1
+buffer_to_state           1.45      0.36       243      1077
+barrier-expl2             1.38      0.34        80       160
+set_face_boundary         1.01      0.25        80      6400
+wait_pass                 0.86      0.21       243      1077
+calc_fluxes_bfo           0.84      0.21        40      8160
+save_plot                 0.26      0.06         4         4
+integrate_domain          0.22      0.05        80        80
+send_cons_flux            0.10      0.02        80       160
+init_pass                 0.02      0.01       243      1076
+barrier-expl1             0.02      0.00        80       160
+write_restart_files       0.01      0.00         1         1
+send_recv                 0.01      0.00       241       993
+send_pass                 0.01      0.00       243      1077
+recv_pass                 0.01      0.00       243      1077
+buffer_to_flux            0.00      0.00       241       993
 -------------------------------------------------------------------------------
 clean_mod_advance deallocated arrays
+clean_mod_implicit deallocated arrays
 clean_mod_geometry deallocated arrays
 clean_mod_nodes deallocated arrays
 clean_mod_raytrace deallocated arrays
 Error_report for Time step reduction, min(factor)
- OCCURED first= 1  last= 69  count_max= 112  count_sum= 112
- VALUES min=   3.8793517178982080E-29  max=   0.8199802393730227  mean=   0.2096023889337122  last=   0.6030251937342485  last_sum=   0.6030251937342485
+ OCCURED first= 1  last= 64  count_max= 108  count_sum= 108
+ VALUES min=   4.9277362010094640E-29  max=   0.7500000000000000  mean=   0.1965689114989325  last=   0.7500000000000000  last_sum=   0.7500000000000000
+
+Error_report for Krylov solver failure, Krylov error
+ OCCURED first= 56  last= 80  count_max= 25  count_sum= 25
+ VALUES min=   1.3011894524530440E-05  max=   5.0964966442830946E-03  mean=   2.9742719928981115E-03  last=   2.3495384469374753E-03  last_sum=   2.3495384469374753E-03
 

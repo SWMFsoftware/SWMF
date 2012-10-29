@@ -761,7 +761,7 @@ test_corona_2t_check:
 
 test_chromo:
 	-@($(MAKE) test_chromo_start)
-	-@($(MAKE) test_chromo_restart)
+###	-@($(MAKE) test_chromo_restart)
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_chromo_start:

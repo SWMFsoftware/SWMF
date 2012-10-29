@@ -215,3 +215,77 @@ T			DoSaveInitial
 #STOP
 50			MaxIteration 60000
 -1.0			tSimulationMax
+
+#RUN ########################################################################
+
+#AMR
+-1			DnRefine
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#USER_FLAGS
+T			UseUserInnerBCs
+F			UseUserSource
+T			UseUserPerturbation
+T			UseUserOuterBcs
+F			UseUserICs
+F			UseUserSpecifyRefinement
+F			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+F			UseUserUpdateStates
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+80.0			LongitudeCme
+-10.0			LatitudeCme
+0.0			OrientationCme
+GL			TypeCme
+0.7			Stretch
+1.8			Distance
+1.0			Radius
+0.93			Bstrength
+0.0			Density
+
+#STOP
+51			MaxIteration
+-1.0			tSimulationMax
+
+#RUN #############################################################
+
+#USER_FLAGS
+T			UseUserInnerBCs
+F			UseUserSource
+T			UseUserPerturbation
+T			UseUserOuterBcs
+F			UseUserICs
+F			UseUserSpecifyRefinement
+F			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+F			UseUserUpdateStates
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+180.0			LongitudeCme
+15.0			LatitudeCme
+30.0			OrientationCme
+TD			TypeCme
+2.000E+11		Current
+7.000E+08		RadiusMajor
+3.000E+08		RadiusMinor
+1.000E+08		Depth
+1.000E+13		Mass
+
+#STOP
+80			MaxIteration
+-1.0			tSimulationMax
