@@ -1322,7 +1322,7 @@ contains
             if(nOrder == 4)then
                call limiter_ppm4(iMin, iMax)
             else
-               call limiter_mp(iMin, iMax)
+               call limiter_mp(iMin, iMax, iVar, 1)
             end if
             ! Copy back the results into the 3D arrays
             LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
@@ -1383,7 +1383,7 @@ contains
             if(nOrder == 4)then
                call limiter_ppm4(jMin, jMax)
             else
-               call limiter_mp(jMin, jMax)
+               call limiter_mp(jMin, jMax, iVar, 2)
             end if
             ! Copy back the results into the 3D arrays
             LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
@@ -1445,7 +1445,7 @@ contains
             if(nOrder == 4)then
                call limiter_ppm4(kMin, kMax)
             else
-               call limiter_mp(kMin, kMax)
+               call limiter_mp(kMin, kMax, iVar, 3)
             end if
             ! Copy back the results into the 3D arrays
             LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
@@ -2463,9 +2463,11 @@ contains
   end subroutine calc_face_value
 
   !===========================================================================
-  subroutine limiter_mp(lMin, lMax)
+  subroutine limiter_mp(lMin, lMax, iVar, iDim)
 
     integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
+
+    integer, intent(in):: iVar, iDim  ! variable and dimension index
 
     ! Apply 5th order MP limiter
 
@@ -2473,7 +2475,7 @@ contains
     real, parameter:: &
          c1 = 2/60., c2 = -13/60., c3 = 47/60., c4 = 27/60., c5 = -3/60.
 
-    real, parameter:: cFourThird = 4./3.
+    real, parameter:: cFourThird = 4./3., c6 = 0.6
 
     ! Cell centered values at l, l+1, l+2, l-1, l-2
     real:: Cell, Cellp, Cellpp, Cellm, Cellmm
@@ -2513,6 +2515,7 @@ contains
 
        if( (FaceOrig - Cell)*(FaceOrig - FaceMp) <= 1e-12)then
           FaceL_I(l+1) = FaceOrig
+
        else
 
           D2p = minmod4(4*D2_I(l) - D2_I(l+1),4*D2_I(l+1) - D2_I(l), &
@@ -2537,6 +2540,28 @@ contains
           FaceL_I(l+1) = min(FaceMax, max(FaceMin, FaceOrig))
 
        end if
+
+       ! If the face value is a very small fraction of the cell
+       ! then switch to first order scheme. This can occur at
+       ! a shock or a smooth minimum very close to zero.
+       if(DefaultState_V(iVar) > 0.0 .and. &
+            FaceL_I(l+1) < c6*Cell) FaceL_I(l+1) = Cell
+
+       !if(iVar == 1 .and. FaceL_I(l+1) < 0.0)then
+       !   write(*,*)'!!! Negative FaceL for iDim,l=',iDim,l
+       !   write(*,*)'Cell_I(l-2:l+2)=', Cell_I(l-2:l+2)
+       !   write(*,*)'FaceL,FaceOrig,FaceMp=',FaceL_I(l+1), FaceOrig, FaceMp
+       !   if( (FaceOrig - Cell)*(FaceOrig - FaceMp) > 1e-12)then
+       !      write(*,*)'D2_I(l-1:l+1)=', D2_I(l-1:l+1)
+       !      write(*,*)'D2p, D2m     =',D2p, D2m
+       !      write(*,*)'UpperLimit   =', UpperLimit 
+       !      write(*,*)'Average      =', Average
+       !      write(*,*)'Median       =', Median
+       !      write(*,*)'LargeCurve   =', LargeCurve
+       !      write(*,*)'FaceMin      =', FaceMin
+       !      write(*,*)'FaceMax      =', FaceMax
+       !   end if
+       !end if
 
     end do
 
@@ -2581,6 +2606,16 @@ contains
           FaceR_I(l) = min(FaceMax, max(FaceMin, FaceOrig))
 
        end if
+
+       ! Check fraction limit
+       if(DefaultState_V(iVar) > 0.0 .and. &
+            FaceR_I(l) < c6*Cell) FaceR_I(l) = Cell
+
+       !if(iVar == 1 .and. FaceR_I(l) < 0.0)then
+       !   write(*,*)'!!! Negative FaceR for iDim,l=',iDim,l
+       !   write(*,*)'Cell_I(l-2:l+2)=', Cell_I(l-2:l+2)
+       !   write(*,*)'FaceR,FaceOrig,FaceMp=',FaceR_I(l), FaceOrig, FaceMp
+       !end if
 
     end do
 
