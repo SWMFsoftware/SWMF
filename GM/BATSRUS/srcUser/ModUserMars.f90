@@ -13,7 +13,8 @@ module ModUser
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED9 => user_get_b0,                     &
-       IMPLEMENTED10 => user_get_log_var
+       IMPLEMENTED10 => user_get_log_var,               &
+       IMPLEMENTED11 => user_set_boundary_cells
 
   include 'user_module.h' !list of public methods
 
@@ -1326,10 +1327,10 @@ contains
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModMain,       ONLY: UseRotatingBc
+    use ModMain,       ONLY: UseRotatingBc, ExtraBc_, Body1_
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
-    use ModPhysics,    ONLY: SW_rho
-    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V
+    use ModPhysics,    ONLY: SW_rho, FaceState_VI
+    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, iBoundary
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
@@ -1337,7 +1338,16 @@ contains
     real:: v_phi(3)
     real:: cosSZA 
     real:: uDotR
+    character (len=*), parameter :: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
+
+    if(iBoundary == ExtraBc_)then
+       VarsGhostFace_V = FaceState_VI(:,1)
+       RETURN
+    elseif(iBoundary /= Body1_)then
+       call stop_mpi(NameSub//' invalid iBoundary value')
+    end if
+
 
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
@@ -1377,6 +1387,22 @@ contains
     end if
 
   end subroutine user_set_face_boundary
+
+
+  !============================================================================
+
+  subroutine user_set_boundary_cells(iBlock)
+
+    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
+
+
+    integer, intent(in):: iBlock
+
+    character (len=*), parameter :: Name='user_set_boundary_cells'
+    !--------------------------------------------------------------------------
+    IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
+
+  end subroutine user_set_boundary_cells
 
   !============================================================================
   real function neutral_density(R0,iNu)
