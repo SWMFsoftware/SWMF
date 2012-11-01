@@ -85,7 +85,7 @@ T			UseMagnetogram
 harmonics.dat		NameMagnetogramFile
 12			nHeaderLine
 0.0			PhiShift
-3.0			UnitB
+2.0			UnitB
 
 #USECURLB0
 T			UseCurlB0
@@ -111,7 +111,7 @@ F			UseUserUpdateStates
 The velocity perturbation (DeltaU) is typically chosen in the range of 10 to
 15km/s.
 #CHROMOBC
-1.0e4			DeltaU [m/s]
+1.5e4			DeltaU [m/s]
 2e17			nChromoSi [1/m^3]
 5e4			tChromoSi [K]
 
@@ -128,10 +128,6 @@ The value of the reflection coefficient is rather uncertain: 0.01 to 0.1
 alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
 0.04			Crefl
-F			UseScaledCrefl	
-T			UseCPRegion
-2.0			rCP
-2.5			rCPefolding
 
 HYPERBOLICDIVB
 F			UseHyperbolicDivb
@@ -421,10 +417,6 @@ F			UseUserUpdateStates
 alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
 0.04			Crefl
-F			USeScaledCrefl
-T			UseCPRegion
-2.0			rCP
-2.5			rCPefolding
 
 #RESISTIVITY
 T                       UseResistivity

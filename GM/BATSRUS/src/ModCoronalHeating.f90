@@ -880,10 +880,6 @@ module ModCoronalHeating
   real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real    :: LperpTimesSqrtB
   real    :: Crefl = 0.04
-  logical :: UseScaledCrefl = .false. ! Reflection coefficient scaled as 1/r^2
-  logical :: UseCPRegion = .true. ! Limit region of counter-propating waves
-  real    :: rCP = 2.0
-  real    :: rCPefolding = 2.5
 
   ! Variables for incompressible turbulence
   logical :: UseTurbulentCascade = .false.
@@ -944,12 +940,6 @@ contains
           UseAlfvenWaveDissipation = .true.
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('Crefl', Crefl)
-          call read_var('UseScaledCrefl',UseScaledCrefl)
-          call read_var('UseCPRegion', UseCPRegion)
-          if(UseCPRegion) then
-             call read_var('rCP', rCP)
-             call read_var('rCPefolding', rCPefolding) 
-          end if
        case('turbulentcascade')
           UseTurbulentCascade = .true.
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
@@ -1301,22 +1291,17 @@ contains
   !============================================================================
 
   subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, WaveDissipation_V, &
-       CoronalHeating, LperpEffective)
+       CoronalHeating)
 
     use ModAdvance, ONLY: State_VGB, B0_DGB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
-    use ModGeometry,   ONLY: r_BLK
-    use ModConst,      ONLY: rSun
 
     integer, intent(in) :: i, j, k, iBlock
-    real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), CoronalHeating
-    real, intent(out), optional ::  LperpEffective
+    real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), &
+         CoronalHeating
 
-    real :: EwavePlus, EwaveMinus, FullB_D(3), FullB
-    real :: DissipationRate
-    real :: FactorCP = 1.0
-    real :: r, CreflLocal
+    real :: EwavePlus, EwaveMinus, FullB_D(3), FullB, Coef
     !--------------------------------------------------------------------------
 
     if(UseB0)then
@@ -1326,36 +1311,16 @@ contains
     end if
     FullB = sqrt(sum(FullB_D**2))
 
+    Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
+
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-    ! Limit counter-propagating Alfven wave region
-    if(UseCPRegion) then
-       r = r_BLK(i,j,k,iBlock)
-       if(r <= rCP) then
-          FactorCP = 1.0
-       else
-          FactorCP = exp(-((r-rCP)/(rCPefolding-rCP))**2)
-       endif
-    endif
+    WaveDissipation_V(WaveFirst_) = Coef*EwavePlus &
+         *sqrt(max(EwaveMinus,Crefl**2*EwavePlus))
 
-    
-    if (UseScaledCrefl) then
-       CreflLocal = Crefl/r_BLK(i,j,k,iBlock)**2
-    else
-       CreflLocal = Crefl
-    end if
-   
-    DissipationRate = (CreflLocal*sqrt(max(EwavePlus,EwaveMinus)) &
-         + FactorCP*sqrt(2.0*EwavePlus*EwaveMinus/(EwavePlus + EwaveMinus))) &
-         *sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
-
-    ! Ouput dissipation lengths in units of length for plotting
-    if(present(LperpEffective)) &
-         LperpEffective = LperpTimesSqrtB/(FactorCP*sqrt(FullB))
-
-    WaveDissipation_V = DissipationRate &
-         *State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
+    WaveDissipation_V(WaveLast_) = Coef*EwaveMinus &
+         *sqrt(max(EwavePlus,Crefl**2*EwaveMinus))
 
     CoronalHeating = sum(WaveDissipation_V)
 
@@ -1380,7 +1345,11 @@ contains
 
     ! Low-frequency cascade due to small-scale nonlinearities
 
-    If(UseScaledCorrelationLength)then
+    if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
+       ! Note that Lperp is multiplied with the density
+       Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
+            *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
+    else
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
        else
@@ -1390,11 +1359,7 @@ contains
 
        Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock)) &
             *2.0*KarmanTaylorAlpha/LperpTimesSqrtB
-    else
-       ! Note that Lperp is multiplied with the density
-       Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
-            *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
-    end If
+    end if
 
     WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock) &
          *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))

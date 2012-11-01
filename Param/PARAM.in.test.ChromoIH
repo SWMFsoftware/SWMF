@@ -101,10 +101,6 @@ F			UseUserUpdateStates
 alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
 0.04			Crefl
-F			UseScaledCrefl
-T			UseCPRegion
-2.0			rCP
-2.5			rCPefolding
 
 HYPERBOLICDIVB
 F			UseHyperbolicDivb
@@ -394,10 +390,6 @@ F			UseUserUpdateStates
 alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
 0.04			Crefl
-F			UseScaledCrefl
-T			UseCPRegion
-2.0			rCP
-2.5			rCPefolding
 
 #RESISTIVITY
 T                       UseResistivity

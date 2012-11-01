@@ -491,81 +491,6 @@ contains
        end do
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
 
-    case('b')
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          if(UseB0)then
-             tmp1_BLK(:,:,:,iBlock) = &
-                  sqrt(sum((B0_DGB(:,:,:,:,iBlock) + State_VGB(Bx_:Bz_,:,:,:,iBlock))**2))
-          else
-             tmp1_BLK(:,:,:,iBlock) = sqrt(sum(State_VGB(Bx_:Bz_,:,:,:,iBlock)**2))
-          end if
-       end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
-
-    case('b0')
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          if(UseB0)then
-             tmp1_BLK(:,:,:,iBlock) = & 
-                  sqrt(sum(B0_DGB(:,:,:,:,iBlock)**2)) 
-          else
-             tmp1_BLK(:,:,:,iBlock) = -7777.
-          end if
-       end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
-
-    case('b1')
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          tmp1_BLK(:,:,:,iBlock) = &
-               sqrt(sum(State_VGB(Bx_:Bz_,:,:,:,iBlock)**2))
-       end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
-
-    case('bx0')
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          tmp1_BLK(:,:,:,iBlock) = B0_DGB(1,:,:,:,iBlock)
-       end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
-
-    case('by0')
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          tmp1_BLK(:,:,:,iBlock) = B0_DGB(2,:,:,:,iBlock)
-       end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
-
-    case('bz0')
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          tmp1_BLK(:,:,:,iBlock) = B0_DGB(3,:,:,:,iBlock)
-       end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
-
-    case('bx1')
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          tmp1_BLK(:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)
-       end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
-
-    case('by1')
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          tmp1_BLK(:,:,:,iBlock) = State_VGB(By_,:,:,:,iBlock)
-       end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
-
-    case('bz1')
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          tmp1_BLK(:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock)
-       end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
-
-
     case('vol')
        tmp1_BLK(:,:,:,iBlock) = 1.0
        VarValue = integrate_BLK(1,tmp1_BLK)
@@ -592,8 +517,6 @@ contains
     use ModGeometry,   ONLY: Xyz_DGB
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, By_, Bz_, RhoUx_, RhoUy_, &
          RhoUz_, WaveFirst_, WaveLast_
-    use ModCoronalHeating,  ONLY: calc_alfven_wave_dissipation, &
-         UseAlfvenWaveDissipation
     use ModCoordTransform,  ONLY: xyz_to_sph
 
     integer,          intent(in)   :: iBlock
@@ -608,7 +531,6 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k
-    real    :: WaveDissipation_V(WaveFirst_:WaveLast_), CoronalHeating, Lperp
     real    :: U_D(3), B_D(3), r, phi, theta
     real    :: sintheta, sinphi, costheta, cosphi
 
@@ -617,34 +539,6 @@ contains
     IsFound = .true.
 
     select case(NameVar)
-
-    case('disstot','dissplus','dissminus','lperp')
-       NameIdlUnit = 'J/m3'
-       NameTecUnit = '[J/m3]'
-       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
-          if (UseAlfvenWaveDissipation) &
-               call calc_alfven_wave_dissipation(i,j,k,iBlock, &
-               WaveDissipation_V, CoronalHeating, Lperp)
-          select case(NameVar)
-          case('dissplus')
-             PlotVar_G(i,j,k) = max(1e-30,WaveDissipation_V(WaveFirst_)* &
-                  No2Si_V(UnitEnergyDens_))
-
-          case('dissminus')
-             PlotVar_G(i,j,k) = max(1e-30,WaveDissipation_V(WaveLast_)* &
-                  No2Si_V(UnitEnergyDens_))
-
-          case('disstot')
-             PlotVar_G(i,j,k) = max(1e-30, sum(WaveDissipation_V)* &
-                  No2Si_V(UnitEnergyDens_))
-
-          case('lperp')
-             PlotVar_G(i,j,k) = max(1e-30, Lperp * No2Si_V(UnitX_)/rSun )
-             NameIdlUnit = 'Rs'
-             NameTecUnit = '[Rs]'
-          end select
-       end do; end do ; end do
-
     case('te')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
