@@ -41,7 +41,7 @@ module ModFaceValue
   ! Parameters for limiting the variable divided by density 
   logical :: UseScalarToRhoRatioLtd = .false.
   integer :: nVarLimitRatio
-  integer, allocatable :: iVarLimitRatio_I(:)
+  integer, allocatable, save:: iVarLimitRatio_I(:)
 
   ! Colella's flattening scheme
   logical :: UseFlattening = .true.
@@ -63,7 +63,9 @@ module ModFaceValue
   ! primitive variables
   real, allocatable, save:: Primitive_VG(:,:,:,:)
 
-  logical:: IsTrueCell_I(-1:MaxIJK+2)
+  ! Variables for "body" blocks with masked cells
+  logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
+  logical:: UseTrueCell
 
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
@@ -721,6 +723,8 @@ contains
     if(.not.allocated(Primitive_VG))&
          allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
+    UseTrueCell = body_BLK(iBlock)
+
     UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
     UseLogLimiter_V = .false.
     if(UseLogLimiter)then
@@ -1316,18 +1320,39 @@ contains
                  c1over12*(Primitive_VG(:,i-2,j,k) + Primitive_VG(:,i+1,j,k))
          end do; end do; end do
       else
-         do k = kMin, kMax; do j = jMin, jMax; do iVar = 1, nVar
-            ! Copy points along i direction into 1D arrays
-            Cell_I(iMin-nG:iMax-1+nG)=Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
-            if(nOrder == 4)then
-               call limiter_ppm4(iMin, iMax)
-            else
-               call limiter_mp(iMin, iMax, iVar, 1)
+         do k = kMin, kMax; do j = jMin, jMax
+            if(UseTrueCell)then
+               IsTrueCell_I(iMin-nG:iMax-1+nG) = &
+                    true_cell(iMin-nG:iMax-1+nG,j,k,iBlock)
+               Primitive_VI(:,iMin-2:iMax+1)=Primitive_VG(:,iMin-2:iMax+1,j,k)
+               call limiter_body(iMin, iMax, BetaLimiter)
+               do i = iMin, iMax
+                  LeftState_VX(:,i,j,k) =Primitive_VI(:,i-1)+dVarLimL_VI(:,i-1)
+                  RightState_VX(:,i,j,k)=Primitive_VI(:,i)  -dVarLimR_VI(:,i)
+               end do
             end if
-            ! Copy back the results into the 3D arrays
-            LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
-            RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
-         end do; end do; end do
+
+            do iVar = 1, nVar
+               ! Copy points along i direction into 1D array
+               Cell_I(iMin-nG:iMax-1+nG) = &
+                    Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
+
+               if(UseTrueCell)then
+                  ! Use the second order face values where high order is skipped
+                  FaceL_I(iMin:iMax) = LeftState_VX(iVar,iMin:iMax,j,k)
+                  FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
+               end if
+               if(nOrder == 4)then
+                  call limiter_ppm4(iMin, iMax)
+               else
+                  call limiter_mp(iMin, iMax, iVar)
+               end if
+               ! Copy back the results into the 3D arrays
+               LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
+               RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
+            end do
+         end do; end do
+
       end if
 
       if(UseFaceIntegral4 .and. nDim>1)then
@@ -1377,18 +1402,39 @@ contains
                  c1over12*(Primitive_VG(:,i,j-2,k) + Primitive_VG(:,i,j+1,k))
          end do; end do; end do
       else
-         do k = kMin, kMax; do i = iMin, iMax; do iVar = 1, nVar
-            ! Copy points along j direction into 1D arrays
-            Cell_I(jMin-nG:jMax-1+nG)=Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
-            if(nOrder == 4)then
-               call limiter_ppm4(jMin, jMax)
-            else
-               call limiter_mp(jMin, jMax, iVar, 2)
+         do k = kMin, kMax; do i = iMin, iMax
+            if(UseTrueCell)then
+               IsTrueCell_I(jMin-nG:jMax-1+nG) = &
+                    true_cell(i,jMin-nG:jMax-1+nG,k,iBlock)
+               Primitive_VI(:,jMin-2:jMax+1)=Primitive_VG(:,i,jMin-2:jMax+1,k)
+               call limiter_body(jMin, jMax, BetaLimiter)
+               do j = jMin, jMax
+                  LeftState_VY(:,i,j,k) =Primitive_VI(:,j-1)+dVarLimL_VI(:,j-1)
+                  RightState_VY(:,i,j,k)=Primitive_VI(:,j)  -dVarLimR_VI(:,j)
+               end do
             end if
-            ! Copy back the results into the 3D arrays
-            LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
-            RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
-         end do; end do; end do
+
+            do iVar = 1, nVar
+               ! Copy points along j direction into 1D array
+               Cell_I(jMin-nG:jMax-1+nG) = &
+                    Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
+
+               if(UseTrueCell)then
+                  ! Use the second order face values where high order is skipped
+                  FaceL_I(jMin:jMax) = LeftState_VY(iVar,i,jMin:jMax,k)
+                  FaceR_I(jMin:jMax) = RightState_VY(iVar,i,jMin:jMax,k)
+               end if
+
+               if(nOrder == 4)then
+                  call limiter_ppm4(jMin, jMax)
+               else
+                  call limiter_mp(jMin, jMax, iVar)
+               end if
+               ! Copy back the results into the 3D arrays
+               LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
+               RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
+            end do
+         end do; end do
       end if
 
       if(UseFaceIntegral4)then
@@ -1439,18 +1485,40 @@ contains
             RightState_VZ(:,i,j,k)=LeftState_VZ(:,i,j,k)
          end do; end do; end do
       else
-         do j = jMin, jMax; do i = iMin, iMax; do iVar = 1, nVar
-            ! Copy points along k direction into 1D arrays
-            Cell_I(kMin-nG:kMax-1+nG)=Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
-            if(nOrder == 4)then
-               call limiter_ppm4(kMin, kMax)
-            else
-               call limiter_mp(kMin, kMax, iVar, 3)
+         do j = jMin, jMax; do i = iMin, iMax
+
+            if(UseTrueCell)then
+               IsTrueCell_I(kMin-nG:kMax-1+nG) = &
+                    true_cell(i,j,kMin-nG:kMax-1+nG,iBlock)
+               Primitive_VI(:,kMin-2:kMax+1)=Primitive_VG(:,i,j,kMin-2:kMax+1)
+               call limiter_body(kMin, kMax, BetaLimiter)
+               do k = kMin, kMax
+                  LeftState_VZ(:,i,j,k) =Primitive_VI(:,k-1)+dVarLimL_VI(:,k-1)
+                  RightState_VZ(:,i,j,k)=Primitive_VI(:,k)  -dVarLimR_VI(:,k)
+               end do
             end if
-            ! Copy back the results into the 3D arrays
-            LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
-            RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
-         end do; end do; end do
+
+            do iVar = 1, nVar
+               ! Copy points along k direction into 1D array
+               Cell_I(kMin-nG:kMax-1+nG) = &
+                    Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
+               
+               if(UseTrueCell)then
+                  ! Use the second order face values where high order is skipped
+                  FaceL_I(kMin:kMax) = LeftState_VZ(iVar,i,j,kMin:kMax)
+                  FaceR_I(kMin:kMax) = RightState_VZ(iVar,i,j,kMin:kMax)
+               end if
+
+               if(nOrder == 4)then
+                  call limiter_ppm4(kMin, kMax)
+               else
+                  call limiter_mp(kMin, kMax, iVar)
+               end if
+               ! Copy back the results into the 3D arrays
+               LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
+               RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
+            end do
+         end do; end do
       end if
 
       if(UseFaceIntegral4)then
@@ -2173,7 +2241,7 @@ contains
 
       do k=kMin, kMax; do j=jMin, jMax; 
          Primitive_VI(:,iMin-2:iMax+1)=Primitive_VG(:,iMin-2:iMax+1,j,k)
-         if(body_BLK(iBlock))then
+         if(UseTrueCell)then
             IsTrueCell_I(iMin-2:iMax+1) = true_cell(iMin-2:iMax+1,j,k,iBlock)
             if(iMinSharp <= iMaxSharp) &
                  call limiter_body(iMinSharp, iMaxSharp, BetaLimiter)
@@ -2215,7 +2283,7 @@ contains
 
       do k=kMin, kMax; do i=iMin,iMax
          Primitive_VI(:,jMin-2:jMax+1)=Primitive_VG(:,i,jMin-2:jMax+1,k)
-         if(body_BLK(iBlock))then
+         if(UseTrueCell)then
             IsTrueCell_I(jMin-2:jMax+1) = true_cell(i,jMin-2:jMax+1,k,iBlock)
             if(jMinSharp <= jMaxSharp) &
                  call limiter_body(jMinSharp, jMaxSharp, BetaLimiter)
@@ -2256,7 +2324,7 @@ contains
       endif
       do j=jMin,jMax; do i=iMin,iMax; 
          Primitive_VI(:,kMin-2:kMax+1)=Primitive_VG(:,i,j,kMin-2:kMax+1)
-         if(body_BLK(iBlock))then
+         if(UseTrueCell)then
             IsTrueCell_I(kMin-2:kMax+1) = true_cell(i,j,kMin-2:kMax+1,iBlock)
             if(kMinSharp <= kMaxSharp) &
                  call limiter_body(kMinSharp, kMaxSharp, BetaLimiter)
@@ -2463,11 +2531,11 @@ contains
   end subroutine calc_face_value
 
   !===========================================================================
-  subroutine limiter_mp(lMin, lMax, iVar, iDim)
+  subroutine limiter_mp(lMin, lMax, iVar)
 
     integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
 
-    integer, intent(in):: iVar, iDim  ! variable and dimension index
+    integer, intent(in):: iVar        ! variable index
 
     ! Apply 5th order MP limiter
 
@@ -2500,6 +2568,11 @@ contains
 
     ! Limit left face first. Loop index l is for cell center, and face l+1/2
     do l = lMin-1, lMax-1
+
+       if(UseTrueCell)then
+          ! The left face uses l-2:l+2, while the right face need l-1:l+3
+          if(.not.all(IsTrueCell_I(l-2:l+3))) CYCLE
+       end if
 
        Cellmm = Cell_I(l-2)
        Cellm  = Cell_I(l-1)
@@ -2548,7 +2621,7 @@ contains
             FaceL_I(l+1) < c6*Cell) FaceL_I(l+1) = Cell
 
        !if(iVar == 1 .and. FaceL_I(l+1) < 0.0)then
-       !   write(*,*)'!!! Negative FaceL for iDim,l=',iDim,l
+       !   write(*,*)'!!! Negative FaceL for l=', l
        !   write(*,*)'Cell_I(l-2:l+2)=', Cell_I(l-2:l+2)
        !   write(*,*)'FaceL,FaceOrig,FaceMp=',FaceL_I(l+1), FaceOrig, FaceMp
        !   if( (FaceOrig - Cell)*(FaceOrig - FaceMp) > 1e-12)then
@@ -2567,6 +2640,11 @@ contains
 
     ! Limit right face. Loop index l is for cell center, and face l-1/2
     do l = lMin, lMax
+
+       if(UseTrueCell)then
+          ! The right face uses l-2:l+2, while the left face needs l-3:l+1
+          if(.not.all(IsTrueCell_I(l-3:l+2))) CYCLE
+       end if
 
        Cellmm = Cell_I(l-2)
        Cellm  = Cell_I(l-1)
@@ -2612,7 +2690,7 @@ contains
             FaceR_I(l) < c6*Cell) FaceR_I(l) = Cell
 
        !if(iVar == 1 .and. FaceR_I(l) < 0.0)then
-       !   write(*,*)'!!! Negative FaceR for iDim,l=',iDim,l
+       !   write(*,*)'!!! Negative FaceR for l=', l
        !   write(*,*)'Cell_I(l-2:l+2)=', Cell_I(l-2:l+2)
        !   write(*,*)'FaceR,FaceOrig,FaceMp=',FaceR_I(l), FaceOrig, FaceMp
        !end if
@@ -2686,17 +2764,14 @@ contains
             -      c1over12*(Cell_I(l-2) + Cell_I(l+1))
     end do
 
-    ! Set unlimited values as default
-    FaceR_I(lMin:lMax) = Face_I(lMin:lMax)
-    FaceL_I(lMin:lMax) = Face_I(lMin:lMax)
-
     ! Second derivative based on cell values
     do l = lMin+1-nG, lMax-2+nG
        D2c_I(l) = Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1) 
     end do
 
-    if(UseLimiter4)then
+    if(UseLimiter4 .and. .not.UseTrueCell)then
        ! Third derivative at face based on cell values
+       ! Don't use this in "body" blocks, so the stencil is smaller
        do l = lMin-2, lMax+2
           D3Face_I(l) = D2c_I(l) - D2c_I(l-1)
        end do
@@ -2706,6 +2781,16 @@ contains
     ! Start  at lMin-1 so that FaceL_I(lMin) gets set.
     ! Finish at lMax   so that FaceR_I(lMax) gets set.
     do l = lMin - 1, lMax
+
+       if(UseTrueCell)then
+          ! The PPM limiter seems to use these cells only
+          if(.not.all(IsTrueCell_I(l-2:l+2))) CYCLE
+       end if
+
+       ! Set unlimited values as default
+       FaceR_I(l)   = Face_I(l)
+       FaceL_I(l+1) = Face_I(l+1)
+
        ! Definitions at bottom of page 6
        Dfm = Cell_I(l) - Face_I(l)
        Dfp = Face_I(l+1) - Cell_I(l)
@@ -2735,7 +2820,7 @@ contains
              ! If D2Ratio is close to 1, no need to limit
              if(D2Ratio >= 1 - c0) CYCLE
 
-             if(UseLimiter4)then
+             if(UseLimiter4 .and. .not.UseTrueCell)then
                 ! Check 3rd derivative condition (28)
                 D3min = minval(D3Face_I(l-1:l+2))
                 D3max = maxval(D3Face_I(l-1:l+2))
