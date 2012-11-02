@@ -17,6 +17,7 @@ module ModFaceValue
   logical, public :: UseVolumeIntegral4   = .false.
   logical, public :: UseFaceIntegral4     = .false.
   logical, public :: UseLimiter4          = .false.
+  integer, public :: nGUsed               = nG
 
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'

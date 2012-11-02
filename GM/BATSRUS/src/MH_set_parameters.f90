@@ -38,7 +38,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModMessagePass,   ONLY: DoOneCoarserLayer
   use ModFaceValue,     ONLY: &
        UseTvdResChange, UseAccurateResChange, &
-       UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, &
+       UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, nGUsed, &
        DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
@@ -121,7 +121,7 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Temporary variables
   logical :: DoEcho=.false.
-  integer :: nVarRead=0, nGMin
+  integer :: nVarRead=0
   character (len=lStringLine) :: NameEquationRead="?"
 
   character (len=50) :: plot_string,log_string
@@ -1065,28 +1065,13 @@ subroutine MH_set_parameters(TypeAction)
            TypeLimiter = "no"
         end if
 
-        nGMin = 2 ! Minimum number of ghost cell layers
-        if(nOrder == 4)then
-           call read_var('UseVolumeIntegral4', UseVolumeIntegral4)
-           if(UseVolumeIntegral4) nGMin = nGMin + 1
-           call read_var('UseFaceIntegral4', UseFaceIntegral4)
-           if(nDim == 1) UseFaceIntegral4 = .false.
-           if(TypeLimiter /= 'no')then
-              nGMin = nGMin + 1
-              call read_var('UseLimiter4', UseLimiter4)
-              if(UseLimiter4) nGMin = nGMin + 1
-           end if
-        elseif(nOrder == 5)then
-           nGMin = 3
-        end if
-        if(nGMin /= nG .and. iProc==0)then
-           write(*,*)'The code is configured with nG=',nG,' ghost cell layers.'
-           write(*,*)'The selected scheme requires nGMin=',nGMin,' layers!'
-           if(nGMin > nG)then
-              write(*,*)'Either change settings or reconfigure and recompile!'
-              call CON_stop(NameSub//': insufficient number of ghost cells')
-           end if
-        end if
+     case("#SCHEME4")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('UseVolumeIntegral4', UseVolumeIntegral4)
+        call read_var('UseFaceIntegral4',   UseFaceIntegral4)
+        call read_var('UseLimiter4',        UseLimiter4)
+        ! There is no face integral in 1D
+        if(nDim == 1) UseFaceIntegral4 = .false.
 
      case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
           '#LIMITPTOTAL', '#FLATTENING')
@@ -2210,6 +2195,25 @@ contains
 
     if(IsFirstCheck)then
        call correct_grid_geometry
+
+       if(.not.IsCartesian .or. MinBoundary <= MaxBoundary &
+            .and. (UseVolumeIntegral4 .or. UseFaceIntegral4))then
+          if(iProc==0)then
+             if(.not. IsCartesian) write(*,'(a)')NameSub//&
+                  ': UseVolumeIntegral4/UseFaceIntegral4 are implemented ', &
+                  'for Cartesian grid only!'
+
+             if(MinBoundary <= MaxBoundary) write(*,'(a)')NameSub//&
+                  ': UseVolumeIntegral4/UseFaceIntegral4 are implemented ', &
+                  'for cell based boundaries only!'
+
+             if (UseStrict) call stop_mpi('Correct PARAM.in!')
+             write(*,*)NameSub//' Setting Use*Integral4 = .false.'
+          end if
+          UseVolumeIntegral4 = .false.
+          UseFaceIntegral4   = .false.
+       end if
+
        if(UseConstrainB .or. UseFaceIntegral4) then
           ! Extend face index range in the orthogonal direction
           ! The CT scheme needs 1 extra layers
@@ -2226,6 +2230,41 @@ contains
              jMinFace2 = jMinFace; jMaxFace2 = jMaxFace
              kMinFace2 = kMinFace; kMaxFace2 = kMaxFace
           end if
+       end if
+    end if
+
+    ! Get the number of used ghost cell layers
+    select case(nOrder)
+    case(1, 2)
+       nGUsed = nOrder
+    case(4)
+       ! 4th order interpolation formula needs 2 ghost cells
+       nGUsed = 2 
+       ! Volume integral needs an extra ghost cell layer
+       if(UseVolumeIntegral4) nGUsed = nGUsed + 1
+       if(TypeLimiter /= 'no')then
+          ! PPM limiter needs another 1 or 2 ghost cell layers
+          nGUsed = nGUsed + 1
+          if(UseLimiter4) nGUsed = nGUsed + 1
+       end if
+    case(5)
+       ! MP5 scheme needs 3 ghost cell layers
+       nGUsed = 3
+    case default
+       if(iProc==0)then
+          write(*,*)'ERROR: nOrder=', nOrder
+          call stop_mpi(NameSub//': Invalid value for nOrder')
+       end if
+    end select
+
+    ! Check if there are enough ghost cells
+    ! We could dynamically (re)allocate State_VGB etc. with nGUsed ?!
+    if(nGUsed /= nG .and. iProc==0)then
+       write(*,*)'The code is configured with nG=',nG,' ghost cell layers.'
+       write(*,*)'The selected scheme requires nGUsed=',nGUsed,' layers!'
+       if(nGUsed > nG)then
+          write(*,*)'Either change settings or reconfigure and recompile!'
+          call stop_mpi(NameSub//': insufficient number of ghost cells')
        end if
     end if
 
