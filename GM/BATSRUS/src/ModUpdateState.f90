@@ -93,7 +93,7 @@ subroutine update_states_MHD(iStage,iBlock)
           /CellVolume_GB(i,j,k,iBlock) ) 
   end do; end do; end do
 
-  if(UseFaceIntegral4 .and. nDim > 1)then
+  if(nOrder == 4 .and. UseFaceIntegral4 .and. nDim > 1)then
      ! Integrate fluxes in the transverse direction (eq. 20)
      ! <F> = F + Laplace_transverse(F)/24
      do k = 1,nK; do j = 1,nJ; do i = 1,nI

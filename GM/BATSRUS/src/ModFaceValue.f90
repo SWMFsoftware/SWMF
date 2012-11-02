@@ -799,7 +799,7 @@ contains
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              call calc_primitives_MHD         ! all cells
           end do; end do; end do
-          if(UseVolumeIntegral4)then
+          if(nOrder == 4 .and. UseVolumeIntegral4)then
              ! Calculate 4th order accurate cell averaged primitive variables
 
              ! First get 4th order accurate cell centered conservative vars
@@ -1356,7 +1356,7 @@ contains
 
       end if
 
-      if(UseFaceIntegral4 .and. nDim>1)then
+      if(nOrder == 4 .and. UseFaceIntegral4)then
          if(.not.allocated(State_VX)) allocate( &
               State_VX(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
 
@@ -1438,7 +1438,7 @@ contains
          end do; end do
       end if
 
-      if(UseFaceIntegral4)then
+      if(nOrder == 4 .and. UseFaceIntegral4)then
          if(.not.allocated(State_VY)) allocate( &
               State_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
 
@@ -1522,7 +1522,7 @@ contains
          end do; end do
       end if
 
-      if(UseFaceIntegral4)then
+      if(nOrder == 4 .and. UseFaceIntegral4)then
          if(.not.allocated(State_VZ)) allocate( &
               State_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
 
