@@ -12,7 +12,7 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
        multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
   use ModCoronalHeating, ONLY: turbulence_mixing, &
-       turbulence_mixing_init_point_impl
+       turb_mixing_init_point_impl
   use ModEnergy
   use ModWaves, ONLY: nWave, WaveFirst_,WaveLast_, &
        UseWavePressure, UseWavePressureLtd, DoAdvectWaves, &
@@ -177,7 +177,7 @@ subroutine update_states_MHD(iStage,iBlock)
              multi_ion_init_point_impl)
      elseif(UseAlfvenWaveReflection)then
         call update_point_implicit(iBlock, turbulence_mixing, &
-             turbulence_mixing_init_point_impl)
+             turb_mixing_init_point_impl)
      elseif(UseUserSource) then
         call update_point_implicit(iBlock, user_calc_sources, &
              user_init_point_implicit)

@@ -1704,7 +1704,7 @@ contains
 
   !============================================================================
 
-  subroutine turbulence_mixing_init_point_impl
+  subroutine turb_mixing_init_point_impl
 
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
     !--------------------------------------------------------------------------
@@ -1714,6 +1714,6 @@ contains
 
     IsPointImplMatrixSet = .true.
 
-  end subroutine turbulence_mixing_init_point_impl
+  end subroutine turb_mixing_init_point_impl
 
 end module ModCoronalHeating
