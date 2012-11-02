@@ -595,9 +595,7 @@ Excessive debug output can be controlled by the global okdebug parameter
 7.50                    CodeVersion
 
 Checks CodeVersion. Prints a WARNING if it differs from the CodeVersion
-defined in ModMain.f90. Used in newer restart header files. 
-Should be given in PARAM.in when reading old restart files, 
-which do not have version info in the header file.
+defined in ModMain.f90. 
 </command>
 
 <command name="USERMODULE" if="$_IsFirstSession">
@@ -4358,19 +4356,11 @@ all the blocks limited by the minimum and maximum levels only
 	    <parameter name="LimiterBeta" type="real" min="1" max="2"
 			default="1.2" if="$TypeLimiter ne 'minmod'"/>
 	</if>
-	<if expr="$nOrder == 4">
-	    <parameter name="UseVolumeIntegral4" type="logical" default="F"/>
-	    <parameter name="UseFaceIntegral4"   type="logical" default="F"/>
-            <parameter name="UseLimiter4"        type="logical" default="F"/>
-	</if>
 #SCHEME
 4			nOrder (1, 2, 4 or 5)
 Rusanov			TypeFlux
 mc3			TypeLimiter ! Only read for Order>1 and flux not Simple
 1.2			LimiterBeta ! Only read if TypeLimiter is NOT 'minmod'
-F			UseVolumeIntegral4 ! Only read for nOrder=4
-F			UseFaceIntegral4   ! Only read for nOrder=4
-F			UseLimiter4        ! Only read for nOrder=4
 
 The nOrder parameter determines the spatial and temporal accuracy of
 the scheme. 
@@ -4423,26 +4413,61 @@ are between 1.0 and 2.0:
   LimiterBeta = 2.0 for the beta limiter is the same as the superbee limiter
 \end{verbatim}
 
-The FIVOL4 scheme reads 3 more logicals. If UseVolumeIntegral4 is true than
-the cell averaged variables are converted into cell centered variables
-and back as needed. If UseFaceIntegral4 is true, then the face averaged
-face values and face fluxes are converted to face centered variables
-and back as needed. The UseLimiter4 is true then the truely 4th order
-limiter is used. If all 3 logicals are true the full FIVOL4 scheme is used.
-This, however, requires extra ghost cell layers (1 for the volume integral
-and 1 for the 4th order limiter) and extra calculations. In practice
-the fully 4th order FIVOL4 scheme is much more expensive but not much more 
-accurate than the simplified shceme with all three logicals set to false.
-
 IMPORTANT: the number of ghost cell layers have to be sufficient for the
 selected scheme! The 1st and 2nd order schemes work with 2 layers.
-The MP5 scheme needs 3 layers. The FIVOL4 scheme needs 3 to 5 layers.
+The MP5 scheme needs 3 layers. The FIVOL4 scheme needs 3 to 5 layers
+(see the #SCHEME4 command).
+
+The default is the second order Rusanov scheme with the minmod limiter.
+</command>
+
+<command name="SCHEME4" if="$_IsFirstSession">
+	<parameter name="UseVolumeIntegral4" type="logical" default="F"/>
+	<parameter name="UseFaceIntegral4"   type="logical" default="F"/>
+        <parameter name="UseLimiter4"        type="logical" default="F"/>
+#SCHEME4
+F			UseVolumeIntegral4
+F			UseFaceIntegral4
+F			UseLimiter4
+
+This command has to be used in the first session, because it determines
+the size of various arrays that are allocated at the beginning of the run.
+The command reads three parameters used by the 4th order finite volume 
+scheme FIVOL4, which can be activated in any session by setting
+nOrder=4 in the #SCHEME command.
+
+If UseVolumeIntegral4 is true then the cell averaged variables 
+are converted into cell centered variables and back as needed. 
+This requires an extra ghost cell layer.
+Currently this option only works for Cartesian grids and
+with cell based boundary conditions (no inner body).
+
+If UseFaceIntegral4 is true, then the face averaged face values 
+and face fluxes are converted to face centered variables
+and back as needed. This option can only be used on 2D and 3D
+Cartesian grids and with cell based boundary conditions (no inner body).
+
+If UseLimiter4 is true then the truely 4th order limiter is used,
+however this requires an extra ghost cell layer, and the improvement
+is marginal at best.
+
+If all 3 logicals are true and nOrder is set to 4 in the #SCHEME
+command then the fully 4th order accurate FIVOL4 scheme is used.
+This, however, requires extra ghost cell layers and extra face flux
+calculations. In practice the fully 4th order FIVOL4 scheme is much 
+more expensive but not much more accurate than the simplified shceme 
+with all three logicals set to false.
+
+IMPORTANT: the number of ghost cell layers set with Config.pl -ng=..
+has to be sufficient for the selected scheme! 
+The FIVOL4 scheme needs 3 to 5 layers.
 The minimum 3 layers are needed if both UseVolumeIntegral4 and UseLimiter4
 are false. If one of these logicals is true, 4 layers are required.
 If both are true then the maximum 5 ghost cells layers are needed.
 
-The default is the second order Rusanov scheme with the minmod limiter.
+The default is false for all 3 logicals.
 </command>
+
 
 <command name="FLATTENING">
 	 <parameter name="UseFlattening" type="logical" default="T"/>
