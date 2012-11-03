@@ -3404,7 +3404,7 @@ while not eof(unit) do begin
           reads, line, wlog_
           if total(finite(wlog_)) eq nwlog then begin
              wlog(*,0) = wlog_
-             nt = 1
+             nt = 1L
           endif
 
           ; find variable names in the header lines
