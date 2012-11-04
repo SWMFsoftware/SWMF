@@ -2196,7 +2196,7 @@ contains
     if(IsFirstCheck)then
        call correct_grid_geometry
 
-       if(.not.IsCartesian .or. MinBoundary <= MaxBoundary &
+       if( (.not.IsCartesian .or. MinBoundary <= MaxBoundary) &
             .and. (UseVolumeIntegral4 .or. UseFaceIntegral4))then
           if(iProc==0)then
              if(.not. IsCartesian) write(*,'(a)')NameSub//&
