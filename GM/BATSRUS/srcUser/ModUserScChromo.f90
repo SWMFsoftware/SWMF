@@ -23,6 +23,7 @@ module ModUser
   ! Input parameters for chromospheric inner BC's
   real    :: DeltaUSi = 1.5e4, nChromoSi = 2e17, tChromoSi = 5e4
   real    :: DeltaU, nChromo, RhoChromo, tChromo, PoyntingFluxPerB
+  logical :: UseUparBc = .false.
 
   ! variables for Parker initial condition
   real    :: nCoronaSi = 1.5e14, tCoronaSi = 1.5e6
@@ -66,6 +67,9 @@ contains
           call read_var('DeltaUSi', DeltaUSi)
           call read_var('nChromoSi', nChromoSi)
           call read_var('tChromoSi', tChromoSi)
+          
+       case("#LINETIEDBC")
+          call read_var('UseUparBc', UseUparBc)
 
        case('#SOLARDIPOLE')
           call read_var('DipoleStrengthSi',DipoleStrengthSi)
@@ -822,6 +826,12 @@ contains
     real :: NumDensIon, NumDensElectron, FullBr, Ewave, Pressure, Temperature
     real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D, rUnit_D
 
+    ! Line-tied related variables
+    real              :: RhoTrue, RhoGhost
+    real,dimension(3) :: bUnitGhost_D, bUnitTrue_D
+    real,dimension(3) :: FullBGhost_D, FullBTrue_D
+
+    ! CME related variables
     real :: RhoCme, Ucme_D(3), Bcme_D(3), pCme
     real :: BrCme, BrCme_D(3), UrCme, UrCme_D(3), UtCme_D(3)
    
@@ -838,8 +848,26 @@ contains
     ! Fix density
     VarsGhostFace_V(Rho_) = RhoChromo
 
-    ! zero velocity at inner boundary
-    VarsGhostFace_V(Ux_:Uz_) = -VarsTrueFace_V(Ux_:Uz_)
+    if (UseUparBc) then
+       ! Use line-tied boundary conditions
+       U_D = VarsTrueFace_V(Ux_:Uz_)
+
+       RhoTrue = VarsTrueFace_V(Rho_)
+       RhoGhost = VarsGhostFace_V(Rho_)
+       FullBGhost_D = B0Face_D + VarsGhostFace_V(Bx_:Bz_)
+       FullBTrue_D  = B0Face_D + VarsTrueFace_V(Bx_:Bz_)
+ 
+       bUnitGhost_D = FullBGhost_D/sqrt(max(1e-30,sum(FullBGhost_D**2)))
+       bUnitTrue_D = FullBTrue_D/sqrt(max(1e-30,sum(FullBTrue_D**2)))
+
+       ! extrapolate field-aligned velocity component
+       VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
+            sum(U_D*bUnitTrue_D)*bUnitGhost_D
+    else
+       ! zero velocity at inner boundary
+       VarsGhostFace_V(Ux_:Uz_) = -VarsTrueFace_V(Ux_:Uz_)
+    end if
+
     ! Apply corotation if needed
     if(.not.UseRotatingFrame)then                                            
        VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_)-2*OmegaBody*FaceCoords_D(y_)
