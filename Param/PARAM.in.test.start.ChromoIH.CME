@@ -356,6 +356,8 @@ Begin session: 3
 
 Switch to conservative for shock-capturing
 
+#BEGIN_COMP SC --------------------------------------------------------------
+
 #NONCONSERVATIVE
 F			UseNonConservative
 
