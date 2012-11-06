@@ -280,6 +280,9 @@ The latter avoids that the current dissipation heats the protons.
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
+#DOAMR
+F			DoAmr
+
 #USER_FLAGS
 T			UseUserInnerBcs
 F			UseUserSource
