@@ -78,7 +78,8 @@ subroutine LTE_EOS_dir(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
   use ModConst
   implicit none
   real,intent(IN) :: te   !in eV
-  real,intent(OUT) :: Etot,Ptot,Zbar,Cv  !erg/cm3, dyne/cm2, 1, erg/(cm3*eV)
+  real,intent(OUT) :: Etot,Ptot,Zbar  !erg/cm3, dyne/cm2, 1
+  real, optional, intent(OUT) :: Cv ! erg/(cm3*eV)
   real,external :: zbrent_EE_inv
 
   if(useCALEOS) then
@@ -134,7 +135,8 @@ subroutine LTE_EOS_inv(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
   use ModConst, ONLY:cKToEv,cEVToK
   implicit none
   real,intent(IN) :: Etot
-  real,intent(OUT) :: te,Ptot,Zbar,Cv
+  real,intent(OUT) :: te,Ptot,Zbar
+  real,optional,intent(OUT) :: Cv
 
   if(useCALEOS) then
      if(zion==0) then !The electron contribution only
