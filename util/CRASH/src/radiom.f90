@@ -191,10 +191,10 @@ contains
        goto 110
     end if
     !
-    if(Ulast<10)then
-       write(*,*) '-W- revise group binning,Ulast(='&
-            ,Ulast,') found<10 for Te=',Te
-    end if
+    !if(Ulast<10)then
+    !   write(*,*) '-W- revise group binning,Ulast(='&
+    !        ,Ulast,') found<10 for Te=',Te
+    !end if
     !
     Uaft=max(Umin,Ulast)
     Uaft=min(Uaft,Umax)
