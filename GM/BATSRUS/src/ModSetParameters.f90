@@ -2735,7 +2735,7 @@ contains
     case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
        !            R,   Phi, Z
        XyzMin_D = (/0.0, 0.0, z1/) 
-       XyzMax_D = (/sqrt(max(x1**2,x2**2) + max(y1**2,y2**2)), cTwoPi, 0.0/)
+       XyzMax_D = (/sqrt(max(x1**2,x2**2) + max(y1**2,y2**2)), cTwoPi, z2/)
     end select
 
     !if(index(TypeGeometry,'_lnr')>0) XyzMax_D(R_)=log(XyzMax_D(R_))
