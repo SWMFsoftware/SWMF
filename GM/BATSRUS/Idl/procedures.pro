@@ -394,6 +394,173 @@ endelse
 end
 
 ;=============================================================================
+pro get_pict_hdf,filenames,nfile,npict,x,w,$
+    headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
+    rBody,error
+   
+    print,"BEGIN get_pict_hdf"
+
+    Param = H5_PARSE('settings.hdf')
+   nx = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
+         Param.COLLECTIVE.NZC._DATA(0)]    
+
+   ;No body
+   rBody = -1
+  
+   idim = where(nx GT 1, ndim)
+   nx = nx(idim)
+   ; BX0 BY0 BZ0 Bx By Bz Ex Ey Ez ........
+   nw =10 + Param.COLLECTIVE.NS._DATA(0)*10
+
+   print,"idim = ",idim
+   print,"ndim = ",ndim
+   print,"nx   = ",nx
+
+   case ndim of
+   1:begin
+    x=DBLARR(nx(0),ndim)
+    w=DBLARR(nx(0),nw)
+   end
+   2:begin
+    x=DBLARR(nx(0),nx(1),ndim)
+    w=DBLARR(nx(0),nx(1),nw)
+   end
+   3:begin
+    x=DBLARR(nx(0),nx(1),nx(2),ndim)
+    w=DBLARR(nx(0),nx(1),nx(2),nw)
+   end
+   endcase
+
+   w(*,*,0) =  w(*,*,0)*0 + Param.COLLECTIVE.BX0._DATA(0)
+   w(*,*,1) =  w(*,*,1)*0 + Param.COLLECTIVE.BY0._DATA(0)
+   w(*,*,2) =  w(*,*,2)*0 + Param.COLLECTIVE.BZ0._DATA(0)
+   
+   dxyz_D = [Param.COLLECTIVE.Dx._DATA(0),$
+             Param.COLLECTIVE.Dy._DATA(0),$
+             Param.COLLECTIVE.Dz._DATA(0)]   
+
+    for x1=0L,nx(1)-1 do begin
+      for x0=0L,nx(0)-1 do begin
+         x(x0,x1,0:ndim-1) = [x0,x1]*dxyz_D(0:nDim-1)
+      endfor
+    endfor
+
+   ; Field and particle data
+   Data = H5_PARSE('proc0.hdf')
+
+   file_id = H5F_OPEN('proc0.hdf')
+  
+   ; Find the cronological timeline index SortIdx_I
+   group_id = H5G_OPEN(file_id, '/fields/Bx')
+   nObj = H5G_GET_NUM_OBJS(group_id)
+   Step_I = LONARR(nObj) ; store time index of saved snapshots
+   for iObj=0,nObj-1 do begin
+      ObjName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iObj)
+      Step_I(iObj) = STRMID(ObjName,6)
+   endfor
+   h5G_CLOSE, group_id
+   SortIdx_I = SORT(Step_I)
+   print,"SORTED list : ", Step_I[SortIdx_I]
+
+   ;bounding npict
+   if npict lt 0 then npict=0
+   if npict gt nObj-1 then npict=nObj-1
+   print,"Number of time frames  = ",nObj
+   print,"npict = ", npict
+  
+   nVar = nw +ndim
+   variables = STRARR(nVAr)
+   DimName = ['x','y','z']
+   variables(0:ndim-1) = DimName(0:ndim-1)
+
+   ; As long as the [2,65,65] is not solved we take a slab!
+   Slab = H5S_CREATE_SIMPLE([1,65,65])
+
+   ; Go thoug all fields variables
+   group_id = H5G_OPEN(file_id, '/fields')
+   nFields = H5G_GET_NUM_OBJS(group_id)
+   for iFields=0,nFields-1 do begin
+     FieldName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iFields)
+     print,"Field name = ",FieldName
+     idx = ndim+iFields
+     variables(ndim+idx) = FieldName
+     field_id = H5G_OPEN(group_id, FieldName)
+     print,FieldName," Number objects : ", H5G_GET_NUM_OBJS(field_id)
+    ;get filed data form npict time frame
+     FrameName = H5G_GET_OBJ_NAME_BY_IDX(field_id,SortIdx_I(npict))
+     print,"FrameName = ",FrameName,iFields
+     frame_id = H5D_OPEN(field_id,FrameName)
+     frame = H5D_READ(frame_id)
+     frame = 0.5*(frame(0,*,*) + frame(1,*,*))
+     frame = 0.5*(frame(0,0:nx(0)-1,*) + frame(0,1:nx(0),*))
+     frame = 0.5*(frame(0,0:nx(0)-1,0:nx(1)-1) + frame(0,0:nx(0)-1,1:nx(1)))
+     w(*,*,idx) = reform(frame(0,0:nx(0)-1,0:nx(1)-1))
+     H5D_CLOSE, frame_id
+     h5G_CLOSE, field_id
+   endfor
+   h5G_CLOSE, group_id  
+
+
+   ; Go thoug all fields variables
+   group_id = H5G_OPEN(file_id, '/moments')
+   nMoments = H5G_GET_NUM_OBJS(group_id)
+   ; RHO
+     FieldName = H5G_GET_OBJ_NAME_BY_IDX(group_id,0)
+     print,"Moment name = ",FieldName
+     idx = ndim+nFields
+     variables(ndim+idx) = FieldName
+     field_id = H5G_OPEN(group_id, FieldName)
+     print,FieldName," Number objects : ", H5G_GET_NUM_OBJS(field_id)
+    ;get filed data form npict time frame
+     FrameName = H5G_GET_OBJ_NAME_BY_IDX(field_id,SortIdx_I(npict))
+     print,"FrameName = ",FrameName,idx
+     frame_id = H5D_OPEN(field_id,FrameName)
+     frame = H5D_READ(frame_id)
+     frame = 0.5*(frame(0,*,*) + frame(1,*,*))
+     frame = 0.5*(frame(0,0:nx(0)-1,*) + frame(0,1:nx(0),*))
+     frame = 0.5*(frame(0,0:nx(0)-1,0:nx(1)-1) + frame(0,0:nx(0)-1,1:nx(1)))
+     w(*,*,idx) = reform(frame(0,0:nx(0)-1,0:nx(1)-1))
+     H5D_CLOSE, frame_id
+     h5G_CLOSE, field_id
+   ; LOOP over species
+     for iSpecies=1,nMoments-1 do begin
+       SpeciesName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iSpecies)
+       species_id = H5G_OPEN(group_id, SpeciesName)
+       nSpecisMoments = H5G_GET_NUM_OBJS(species_id)
+         for iSpecisMoments=0,nSpecisMoments-1 do begin
+           MomentName = H5G_GET_OBJ_NAME_BY_IDX(species_id,iSpecisMoments)
+           print,"Moment name = ",MomentName
+           idx =ndim+nFields+2+(iSpecies-1)*nSpecisMoments+iSpecisMoments-1
+           variables(ndim+idx) = MomentName +"S"+STRING(iSpecies-1,FORMAT='(I02)')
+           moment_id = H5G_OPEN(species_id, MomentName)
+           print,MomentName," Number objects : ", H5G_GET_NUM_OBJS(moment_id)
+           ;get filed data form npict time frame
+           FrameName = H5G_GET_OBJ_NAME_BY_IDX(moment_id,SortIdx_I(npict))
+           print,"FrameName = ",FrameName,idx
+           frame_id = H5D_OPEN(moment_id,FrameName)
+           frame = H5D_READ(frame_id)
+           frame = 0.5*(frame(0,*,*) + frame(1,*,*))
+           frame = 0.5*(frame(0,0:nx(0)-1,*) + frame(0,1:nx(0),*))
+           frame = 0.5*(frame(0,0:nx(0)-1,0:nx(1)-1) + frame(0,0:nx(0)-1,1:nx(1)))
+           w(*,*,idx) = reform(frame(0,0:nx(0)-1,0:nx(1)-1))
+           H5D_CLOSE, frame_id
+           h5G_CLOSE, moment_id
+        endfor
+        h5G_CLOSE, species_id  
+     endfor
+   h5G_CLOSE, group_id  
+
+
+
+   H5F_CLOSE, file_id
+
+    print,"END get_pict_hdf"
+
+
+
+end
+
+;=============================================================================
 pro get_pict,unit,filetype,npict,x,w,$
     headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
     rBody,error
