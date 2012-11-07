@@ -120,7 +120,7 @@ contains
     real,optional,intent(OUT) :: Te_out,Ee_out,Et_out,Pe_out,Pt_out,Cv_out
     real,optional,intent(OUT) :: RhoDTzDRho
     real :: Ee,Pe,Ne,d ,ElteTz,PlteTz
-    real :: Te,Tz,zbar,Eeff ,Elow,Ehigh,difLo,difHi
+    real :: Te,Tz,Cv,zbar,Eeff ,Elow,Ehigh,difLo,difHi
     integer :: niter
     real,parameter :: x_0=0,x_3o2=1.5d0,x_1=1d0,x_1o2=0.5d0,two=2d0,three=3d0
 
@@ -177,7 +177,7 @@ contains
        te=Te_in
        if(useLTE) then
           !- waiting for using the real direct EOS
-          call LTE_EOS_dir(te,Ee,Pe,Zbar,Cv_out)	! ro : in module M_localProperties, can be put in arg.
+          call LTE_EOS_dir(te,Ee,Pe,Zbar,Cv)	! ro : in module M_localProperties, can be put in arg.
           tz=te
           if(present(RhoDTzDRho))RhoDTzDRho = 0.0
           go to 200
@@ -195,12 +195,12 @@ contains
              Ne=Zbar*Ni
              call calTz0(Te,Ne, Tz, EoBIn(1:ng_rad))
 
-             call LTE_EOS_dir(tz,Ee,Pe,Zbar,Cv_out)	! ro : in module M_localProperties
+             call LTE_EOS_dir(tz,Ee,Pe,Zbar,Cv)	! ro : in module M_localProperties
              if(zBar<=0.0)EXIT DIR	
              d=(Ne-Ni*zbar)/(Ne+Ni*zbar)
              niter=niter+1
 	  end do DIR
-          call correctEOS(zbar , Te, Tz ,EE=Ee, Pe=Pe, Cv=Cv_out)
+          call correctEOS(zbar , Te, Tz ,EE=Ee, Pe=Pe, Cv=Cv)
        end if   !if non-LTE
        !--
     else	! if(present(TE_in))
@@ -218,7 +218,7 @@ contains
 
        if(useLTE) then		! 110827
           !- 
-          call LTE_EOS_inv(te,ee,pe,Zbar,Cv_out)! ro, {Erad,Brad} : in module M_localProperties
+          call LTE_EOS_inv(te,ee,pe,Zbar,Cv)! ro, {Erad,Brad} : in module M_localProperties
           Ne=Zbar*Natom
           tz=te
           if(present(RhoDTzDRho))RhoDTzDRho = 0.0
@@ -230,7 +230,7 @@ contains
           !   T	e= ; Ne=  : update at each iteration ? use Cv_loc ?
 
           !- waiting for using the real inverse EOS
-          call LTE_EOS_inv(tz,ee,pe,Zbar,Cv_out)	! zion flag must be dealt with !!
+          call LTE_EOS_inv(tz,ee,pe,Zbar,Cv)	! zion flag must be dealt with !!
 
 !!!
 !!!		 TAKE CARE OF   Te / Te+Ti ... if not in "LTE_EOS_inv"
@@ -259,7 +259,7 @@ contains
 
           call bracket_EE(getEEdiff,ee,Elow,Ehigh,Efloor,difLo,difHi,Te,Tz,zBar)
           if(Elow.eq.Ehigh) then
-             call LTE_EOS_inv(tz,Elow,pe,Zbar,Cv_out)
+             call LTE_EOS_inv(tz,Elow,pe,Zbar,Cv)
           else
              if(useZbrent) then
                 if(useEElog) then
@@ -279,7 +279,7 @@ contains
                 end if
              end if
           end if
-          call correctEOS(zbar , Te, Tz , Pe=Pe, Cv=Cv_out)
+          call correctEOS(zbar , Te, Tz , Pe=Pe, Cv=Cv)
           !
        end if	! useLTE/useEEdiff
        !--
@@ -295,6 +295,7 @@ contains
     if(present(Et_out)) Et_out=ee
     if(present(Pe_out)) Pe_out=pe
     if(present(Pt_out)) Pt_out=pe
+    if(present(Cv_out)) Cv_out=Cv
 
     return
     !
