@@ -56,13 +56,14 @@ contains
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
        OpacityPlanckOut_I, OpacityRosselandOut_I,            &
-       HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut)
+       HeatCond, TeTiRelax, Ne, zAverageOut, z2AverageOut,UseERadInput)
 
     use CRASH_M_EOS,   ONLY: iMaterial, set_kbr !eos_material.f90
     use CRASH_M_NLTE,only : ng_rad,EoBIn, NLTE=>NLTE_EOS, setErad 
     use CRASH_ModEos,ONLY: eos, cAtomicMassCRASH_I, &
                            nZMix_II, cMix_II
     use CRASH_M_localProperties,only : atoNum,atoMass !ModLocalProperties.f90
+    use CRASH_M_Radiom,ONLY: UseERadInCalTz=>UseERadInput
     use ModConst
     ! Eos function for single material
 
@@ -104,6 +105,8 @@ contains
 
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
     real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
+    !For indirect EOS either ERad or ERad/B(Te) is used as inputs
+    logical, optional, intent(out) :: UseERadInput
     
     real:: Tz, NAtomic, Te, EIn, TzSi, ZBar    !in eV, cm-3, eV, erg/cm3 
     real:: pNlte, pENlte, pLte, pELte, CvTotal, CvElectron
@@ -113,6 +116,12 @@ contains
     !Initialize
     pLte=0.0; pELte=0.0; peNlte = 0.0; pNlte=0.0
     iMaterial = iMaterialIn
+
+    if(present(UseERadInput))then
+       UseERadInCalTz = UseERadInput
+    else
+       UseERadInCalTz = .false.
+    end if
 
     !Calculate atomic density
     NAtomic = Rho/( cAtomicMassCRASH_I(iMaterial)*cAtomicMass ) & !In 1/m3

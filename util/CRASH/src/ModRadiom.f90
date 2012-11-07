@@ -23,7 +23,13 @@ module CRASH_M_RADIOM
   real :: QJ_1,dQJ ,corrUs(mxN),QJs(mxN) 
 
   real,parameter :: aSaha=6.02e21, b_CovR=1.34e13*0.2 ,one=1.0
-  public:: caltz0,prep_projE,PrepCorrUBar,printversion
+  !\
+  ! For Indirect Equation of state either ERad or ERad/B(Te) may be
+  ! used as inputs.
+  !/
+  logical:: UseERadInput = .false.
+
+  public:: caltz0,prep_projE,PrepCorrUBar,printversion, UseERadInput
 
   !-------
 contains
@@ -52,23 +58,42 @@ contains
   end subroutine printVersion
   
  !-------
-  subroutine calTz0(Te,Ne, Tz, EoB, RhoDTzDRho)
+  subroutine calTz0(Te,Ne, Tz, ERad_I, RhoDTzDRho)
     !-
     !-     same as "calTZ" but w/o hnug(0:ng) & ubar1
     !
     !
     use CRASH_M_projE,only : nbIn
+    use ModCOnst, ONLY: cEvToK
+    use CRASH_ModMultiGroup,ONLY:get_planck_g_from_temperature
     real,intent(IN) :: Te,ne
-    real,dimension(:),intent(IN) :: EoB
+    real,dimension(:),intent(IN) :: ERad_I
     real,intent(OUT) :: Tz
     real,intent(out), optional::RhoDTzDRho
     real,parameter :: roVar=0.015d0,roVarP=1+roVar
     real:: lgVar=0.0, QJ1, Ne1, ubar1, Tz1
     real :: at32s,ubar,QJ
+    !Array of EOverB
+    real:: EoB(nbIn), TeK=0, PlanckSi=0
+    integer:: iBin
     if(nbIn.le.0) then
        write(*,*)'-P- prep_projE not done before "caltz0"'
        call CON_stop('-P- calTZ: prep_projE not done')
     end if
+   
+    EoB = ERad_I
+    if(UseERadInput)then
+       TeK = Te*cEvToK
+       do iBin=1,nBin
+          call get_planck_g_from_temperature(iBin, TeK, EgSI=PlanckSi)
+          if(0.01*EoB(iBin)>0)then
+             EoB(iBin)=EoB(iBin)/max(0.01*EoB(iBin),PlanckSi)
+          else
+             EoB(iBin)=0
+          end if
+       end do
+    end if
+    
     at32s=aSaha*te*sqrt(te)/Ne
     tz=te
     if(present(RhoDTzDRho))RhoDTzDRho = 0.0

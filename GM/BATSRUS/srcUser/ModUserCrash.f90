@@ -413,7 +413,7 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModMain,        ONLY: nI, nJ, nK, UseRadDiffusion
+    use ModMain,        ONLY: nI, nJ, nK, UseRadDiffusion, UseERadInput
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
          UnitTemperature_, UnitN_, PeMin, ExtraEintMin
@@ -662,8 +662,11 @@ contains
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*RadiationScaleFactor
        if(UseNlte)then
+          !Calculate actual Te without assuming EOverB=1:
+          UseERadInput=.true.
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i,j,k,iBlock, TeOut=Te0SI)
+          UseERadInput=.false.
           State_VGB(Te0_,i,j,k,iBlock) = Te0SI * Si2No_V(UnitTemperature_)
        
           !Calculate "E_rad"
@@ -2411,11 +2414,12 @@ contains
 
     use CRASH_ModEos,  ONLY: eos, Xe_, Be_, Plastic_
     use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature
-    use ModMain,       ONLY: nI
+    use ModMain,       ONLY: nI, UseERadInput
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, &
-         inv_gm1
+         inv_gm1, UnitEnergyDens_
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
+         WaveFirst_,WaveLast_, &
          Pe_, ExtraEint_
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cAtomicMass
@@ -2612,10 +2616,11 @@ contains
                   OpacityPlanckOut_I=OpacityPlanckOut_W, &
                   OpacityRosselandOut_I=OpacityRosselandOut_W)
              else
+                !Direct EOS, use EOverB input
                 call NLTE_EOS(iMaterial, RhoSi, TeIn=TeSi, &
-                   EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),   &
-                   OpacityPlanckOut_I=OpacityPlanckOut_W, & 
-                   OpacityRosselandOut_I=OpacityRosselandOut_W)
+                     EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),   &
+                     OpacityPlanckOut_I=OpacityPlanckOut_W, & 
+                     OpacityRosselandOut_I=OpacityRosselandOut_W)
              end if
 
              if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
@@ -2671,11 +2676,21 @@ contains
                     GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut)
                else
-                   call NLTE_EOS(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
-                    EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
-                    pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
-                    GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                    HeatCond=HeatCondOut)
+                  !Inverse NLTE EOS, may be used with ERad[SI] or ERad/B(Te) as inputs.
+                  if(UseERadInput) then
+                     call NLTE_EOS(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
+                          EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                                    *No2Si_V(UnitEnergyDens_),&
+                          pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
+                          GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                          HeatCond=HeatCondOut, UseERadInput=UseERadInput)
+                  else
+                     call NLTE_EOS(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
+                          EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
+                          pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
+                          GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                          HeatCond=HeatCondOut, UseERadInput=UseERadInput)
+                  end if
                 end if
             end if
          end if
@@ -2694,6 +2709,7 @@ contains
                  CvTotalOut=CvOut, GammaOut=GammaOut, &
                  zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
             else
+               !Direct EOS, use EOverB input 
                call NLTE_EOS(iMaterial, Rho=RhoSi, TeIn=TeIn, &
                  EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
                  eTotalOut=EinternalOut, pTotalOut=pSi, &
@@ -2736,11 +2752,23 @@ contains
                      EinternalOut = pSi*inv_gm1 + State_VGB(ExtraEint_,i,j,k,iBlock)*&
                           No2Si_V(UnitP_)
                      EInternalOut = max(EInternalOut,1e-30)
-                     call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
-                       EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
-                       TeOut=TeSi,        &
-                       CvTotalOut=CvOut, GammaOut=GammaOut, &
-                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+                     !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
+                     if(UseERadInput)then
+                        call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
+                             EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                                    *No2Si_V(UnitEnergyDens_),&
+                             TeOut=TeSi,        &
+                             CvTotalOut=CvOut, GammaOut=GammaOut, &
+                             zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                             UseERadInput=UseERadInput) 
+                     else
+                        call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
+                             EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
+                             TeOut=TeSi,        &
+                             CvTotalOut=CvOut, GammaOut=GammaOut, &
+                             zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                             UseERadInput=UseERadInput)
+                     end if
                   else
                      call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                        EtotalOut=EinternalOut, TeOut=TeSi, &
@@ -2807,11 +2835,24 @@ contains
                   EinternalSi = pSi*inv_gm1+&
                        State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
                   EInternalSi = max(EInternalSi,1e-30)
-                  call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalSi,&
-                       EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
-                       TeOut=TeSi, &
-                       CvTotalOut=CvOut, GammaOut=GammaOut, &
-                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)  
+                  !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
+                  if(UseERadInput)then
+                     call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalSi,&
+                          EoBIn_I =  State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                                    *No2Si_V(UnitEnergyDens_),&
+                          TeOut=TeSi, &
+                          CvTotalOut=CvOut, GammaOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                          UseERadInput=UseERadInput) 
+                     
+                  else
+                     call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalSi,&
+                          EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
+                          TeOut=TeSi, &
+                          CvTotalOut=CvOut, GammaOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                          UseERadInput=UseERadInput)  
+                  end if
                end if
             end if
          end if
@@ -2853,11 +2894,23 @@ contains
                     GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
                else
-                  call NLTE_EOS(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
-                    EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
-                    pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
-                    GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                    HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+                  !Indirect EOS, either EOverB, or ERad may be used as inputs
+                  if(UseERadInput)then
+                     call NLTE_EOS(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
+                          EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                          *No2Si_V(UnitEnergyDens_),&
+                          pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                          GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                          HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut,&
+                          UseERadInput=UseERadInput)
+                  else
+                     call NLTE_EOS(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
+                          EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                          pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                          GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                          HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut,&
+                          UseERadInput=UseERadInput)
+                  end if
                end if
             end if
          end if
@@ -2878,6 +2931,7 @@ contains
                  GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                  HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
+               !Direct EOS, use EOverB as inputs
               call NLTE_EOS(iMaterial, Rho=RhoSi, TeIn=TeIn, &
                  EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
                  eElectronOut=EinternalOut, &
@@ -2922,12 +2976,25 @@ contains
                      EInternalOut = pSi*inv_gm1+&
                           State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
                      EInternalOut = max(EInternalOut,1e-30)
-                     call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
-                          EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
-                          TeOut=TeSi, &
-                          CvElectronOut=CvOut, GammaEOut=GammaOut, &
-                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                          TeTiRelax=TeTiRelaxOut)
+                     !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
+                     if(UseERadInput)then
+                        call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
+                             EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                                    *No2Si_V(UnitEnergyDens_),&
+                             TeOut=TeSi, &
+                             CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                             zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                             TeTiRelax=TeTiRelaxOut,&
+                             UseERadInput=UseERadInput)
+                     else
+                        call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
+                             EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                             TeOut=TeSi, &
+                             CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                             zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                             TeTiRelax=TeTiRelaxOut,&
+                             UseERadInput=UseERadInput)
+                     end if
                   else
                      call eos(iMaterial, RhoSi, pElectronIn=pSi, &
                        eElectronOut=EinternalOut, TeOut=TeSi, &
@@ -3001,12 +3068,23 @@ contains
                   EinternalSi = pSi*inv_gm1+&
                        State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
                   EInternalSi = max(EInternalSi,1e-30)
-                  call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalSi,&
-                       EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
-                       TeOut=TeSi, &
-                       CvElectronOut=CvOut, GammaEOut=GammaOut, &
-                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                       TeTiRelax=TeTiRelaxOut)
+                  !Indirect EOS, either ERad, or ERad/B(Te) may be used as inputs
+                  if(UseERadInput)then
+                     call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalSi,&
+                          EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                                    *No2Si_V(UnitEnergyDens_),&
+                          TeOut=TeSi, &
+                          CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                          TeTiRelax=TeTiRelaxOut, UseERadInput=UseERadInput)
+                  else
+                     call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalSi,&
+                          EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                          TeOut=TeSi, &
+                          CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                          TeTiRelax=TeTiRelaxOut, UseERadInput=UseERadInput)
+                  end if
                end if
             end if
          end if

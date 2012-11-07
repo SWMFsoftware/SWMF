@@ -106,12 +106,19 @@ end subroutine update_states
 subroutine update_te0
   use ModPhysics, ONLY: UnitTemperature_,Si2No_V
   use ModAdvance, ONLY: State_VGB,  nI, nJ, nK
-  use ModMain,    ONLY: nBlock, Unused_B
+  use ModMain,    ONLY: nBlock, Unused_B, UseERadInput
   use ModUser,    ONLY: user_material_properties
   use ModVarIndexes, ONLY: Te0_
   real:: Te0Si
   integer:: i, j, k, iBlock
   !-------------------------------------------------------------------------
+  !\
+  ! At the end of time step just calculated values of ERad are used to 
+  ! calculate Te (and accordingly B(Te).
+  !/
+  UseERadInput = .true.
+
+ 
   do iBlock = 1, nBlock
      if(Unused_B(iBlock))CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
@@ -120,6 +127,10 @@ subroutine update_te0
         State_VGB(Te0_,i,j,k,iBlock) = Te0SI * Si2No_V(UnitTemperature_)
      end do; end do; end do
   end do
+  !\
+  ! Reset UseERadInput:
+  !/
+  UseERadInput = .false.
 end subroutine update_te0
 
 !============================================================================

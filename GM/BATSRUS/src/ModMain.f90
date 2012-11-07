@@ -272,6 +272,13 @@ Module ModMain
   !/
   logical :: UseLaserHeating = .false.
 
+  !\
+  ! Logical, controlling NLTE computations and determining if
+  ! these computations use ERad values OR their ratios to the the equalibrium
+  ! values (ERad over B) for all energy groups.
+  !/
+  logical:: UseERadInput=.false.
+
   ! Logical for a thin heliospheric current sheet method similar to that
   ! in the ENLIL code of D. Odstril
   logical :: DoThinCurrentSheet = .false.
