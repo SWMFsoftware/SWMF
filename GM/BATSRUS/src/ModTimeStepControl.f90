@@ -91,14 +91,15 @@ contains
 
   subroutine calc_timestep(iBlock)
 
-    use ModProcMH
-    use ModMain
+    use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
+    use ModSize, ONLY: nI, nJ, nK
+    use ModMain, ONLY: UseDtFixed, Dt, Dt_BLK, time_accurate, &
+         iTest, jTest, kTest, BlkTest
     use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
-    use ModGeometry, ONLY: true_cell, true_BLK, rMin_BLK, TypeGeometry
+    use ModGeometry, ONLY: true_cell, true_BLK, rMin_BLK
     use ModGeometry, ONLY: TypeGeometry
-    use ModParallel, ONLY: NeiLEast, NeiLBot, NeiLTop, NOBLK
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          UseTurbulentCascade
@@ -108,7 +109,9 @@ contains
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
          UseChromosphereHeating
     use ModPhysics, ONLY: inv_gm1
-    use BATL_lib, ONLY: CellVolume_GB
+    use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
+         IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
+    use ModNumConst, ONLY: cHalfPi
 
     integer, intent(in) :: iBlock
 
@@ -200,18 +203,22 @@ contains
 
     if(DoFixAxis .and. time_accurate)then
        ! Ignore time step constraints from supercell
-       if(TypeGeometry == 'cylindrical' .and. NeiLEast(iBlock) == NOBLK)then
-          Di = 1; if(r2FixAxis > 0.1) Di = 2
-          time_BLK(1:Di, 1:nJ, 1:nK, iBlock) = &
-               time_BLK(1:Di, 1:nJ, 1:nK, iBlock) * 10.0
-       elseif(rMin_Blk(iBlock) < rFixAxis)then
-          Dk = 1; if(rMin_Blk(iBlock) < r2FixAxis) Dk = 2
-          if(NeiLTop(iBlock) == NOBLK) &
-               time_BLK(1:nI, 1:nJ, nK+1-Dk:nK, iBlock) = &
-               time_BLK(1:nI, 1:nJ, nK+1-Dk:nK, iBlock) * 10.0
-          if(NeiLBot(iBlock) == NOBLK) &
-               time_BLK(1:nI, 1:nJ, 1:Dk, iBlock) = &
-               time_BLK(1:nI, 1:nJ, 1:Dk, iBlock) * 10.0
+       if(IsCylindricalAxis)then
+          if(CoordMin_DB(r_,iBlock) <= 0.0)then
+             Di = 1; if(r2FixAxis > 0.1) Di = 2
+             time_BLK(1:Di, 1:nJ, 1:nK, iBlock) = &
+                  time_BLK(1:Di, 1:nJ, 1:nK, iBlock) * 10.0
+          end if
+       elseif(IsLatitudeAxis)then
+          if(rMin_Blk(iBlock) < rFixAxis)then
+             Dk = 1; if(rMin_Blk(iBlock) < r2FixAxis) Dk = 2
+             if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8) &
+                  time_BLK(1:nI, 1:nJ, nK+1-Dk:nK, iBlock) = &
+                  time_BLK(1:nI, 1:nJ, nK+1-Dk:nK, iBlock) * 10.0
+             if(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8) &
+                  time_BLK(1:nI, 1:nJ, 1:Dk, iBlock) = &
+                  time_BLK(1:nI, 1:nJ, 1:Dk, iBlock) * 10.0
+          end if
        end if
     end if
 
@@ -268,7 +275,6 @@ contains
     use ModNumConst
     use ModMpi
     use BATL_lib,    ONLY: Xyz_DGB, CellSize_DB
-
     real, intent(in) :: TimeSimulationLimit !Simulation time not to be exceeded
 
     integer :: iBlock
