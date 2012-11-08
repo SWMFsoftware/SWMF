@@ -467,99 +467,87 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
    if npict gt nObj-1 then npict=nObj-1
    print,"Number of time frames  = ",nObj
    print,"npict = ", npict
-  
+   ;Find iteration and time 
+   it= Step_I[SortIdx_I(npict)]
+   time =  it*Param.COLLECTIVE.Dt._DATA(0)
+   print," Interation : ",it
+   print," Time       : ",time
+
+   ;Seting up "variables"
    nVar = nw +ndim
    variables = STRARR(nVAr)
    DimName = ['x','y','z']
    variables(0:ndim-1) = DimName(0:ndim-1)
 
-   ; As long as the [2,65,65] is not solved we take a slab!
-   Slab = H5S_CREATE_SIMPLE([1,65,65])
-
    ; Go thoug all fields variables
    group_id = H5G_OPEN(file_id, '/fields')
    nFields = H5G_GET_NUM_OBJS(group_id)
    for iFields=0,nFields-1 do begin
-     FieldName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iFields)
-     print,"Field name = ",FieldName
+     get_hdf_frame,group_id,iFields,SortIdx_I(npict),nx,$
+                   -1,frame,varname
      idx = ndim+iFields
-     variables(ndim+idx) = FieldName
-     field_id = H5G_OPEN(group_id, FieldName)
-     print,FieldName," Number objects : ", H5G_GET_NUM_OBJS(field_id)
-    ;get filed data form npict time frame
-     FrameName = H5G_GET_OBJ_NAME_BY_IDX(field_id,SortIdx_I(npict))
-     print,"FrameName = ",FrameName,iFields
-     frame_id = H5D_OPEN(field_id,FrameName)
-     frame = H5D_READ(frame_id)
-     frame = 0.5*(frame(0,*,*) + frame(1,*,*))
-     frame = 0.5*(frame(0,0:nx(0)-1,*) + frame(0,1:nx(0),*))
-     frame = 0.5*(frame(0,0:nx(0)-1,0:nx(1)-1) + frame(0,0:nx(0)-1,1:nx(1)))
-     w(*,*,idx) = reform(frame(0,0:nx(0)-1,0:nx(1)-1))
-     H5D_CLOSE, frame_id
-     h5G_CLOSE, field_id
+     w(*,*,idx) = frame
+     variables(ndim+idx) = varname
    endfor
    h5G_CLOSE, group_id  
 
-
-   ; Go thoug all fields variables
+   ;Get all moment of the distrebution function
    group_id = H5G_OPEN(file_id, '/moments')
    nMoments = H5G_GET_NUM_OBJS(group_id)
-   ; RHO
-     FieldName = H5G_GET_OBJ_NAME_BY_IDX(group_id,0)
-     print,"Moment name = ",FieldName
+   ; Total charge density RHO
      idx = ndim+nFields
-     variables(ndim+idx) = FieldName
-     field_id = H5G_OPEN(group_id, FieldName)
-     print,FieldName," Number objects : ", H5G_GET_NUM_OBJS(field_id)
-    ;get filed data form npict time frame
-     FrameName = H5G_GET_OBJ_NAME_BY_IDX(field_id,SortIdx_I(npict))
-     print,"FrameName = ",FrameName,idx
-     frame_id = H5D_OPEN(field_id,FrameName)
-     frame = H5D_READ(frame_id)
-     frame = 0.5*(frame(0,*,*) + frame(1,*,*))
-     frame = 0.5*(frame(0,0:nx(0)-1,*) + frame(0,1:nx(0),*))
-     frame = 0.5*(frame(0,0:nx(0)-1,0:nx(1)-1) + frame(0,0:nx(0)-1,1:nx(1)))
-     w(*,*,idx) = reform(frame(0,0:nx(0)-1,0:nx(1)-1))
-     H5D_CLOSE, frame_id
-     h5G_CLOSE, field_id
-   ; LOOP over species
+  
+     get_hdf_frame,group_id,0,SortIdx_I(npict),nx,$
+                   -1,frame,varname
+      w(*,*,idx) = frame
+      variables(ndim+idx) = varname
+
+   ; LOOP over species and return density, pressure and currents
+   ; for each
      for iSpecies=1,nMoments-1 do begin
        SpeciesName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iSpecies)
        species_id = H5G_OPEN(group_id, SpeciesName)
        nSpecisMoments = H5G_GET_NUM_OBJS(species_id)
          for iSpecisMoments=0,nSpecisMoments-1 do begin
-           MomentName = H5G_GET_OBJ_NAME_BY_IDX(species_id,iSpecisMoments)
-           print,"Moment name = ",MomentName
            idx =ndim+nFields+2+(iSpecies-1)*nSpecisMoments+iSpecisMoments-1
-           variables(ndim+idx) = MomentName +"S"+STRING(iSpecies-1,FORMAT='(I02)')
-           moment_id = H5G_OPEN(species_id, MomentName)
-           print,MomentName," Number objects : ", H5G_GET_NUM_OBJS(moment_id)
-           ;get filed data form npict time frame
-           FrameName = H5G_GET_OBJ_NAME_BY_IDX(moment_id,SortIdx_I(npict))
-           print,"FrameName = ",FrameName,idx
-           frame_id = H5D_OPEN(moment_id,FrameName)
-           frame = H5D_READ(frame_id)
-           frame = 0.5*(frame(0,*,*) + frame(1,*,*))
-           frame = 0.5*(frame(0,0:nx(0)-1,*) + frame(0,1:nx(0),*))
-           frame = 0.5*(frame(0,0:nx(0)-1,0:nx(1)-1) + frame(0,0:nx(0)-1,1:nx(1)))
-           w(*,*,idx) = reform(frame(0,0:nx(0)-1,0:nx(1)-1))
-           H5D_CLOSE, frame_id
-           h5G_CLOSE, moment_id
+           get_hdf_frame,species_id,iSpecisMoments,SortIdx_I(npict),nx,$
+                         iSpecies-1,frame,varname
+           w(*,*,idx) = frame
+           variables(ndim+idx) = varname
         endfor
         h5G_CLOSE, species_id  
      endfor
    h5G_CLOSE, group_id  
 
-
-
    H5F_CLOSE, file_id
-
     print,"END get_pict_hdf"
-
-
 
 end
 
+;=============================================================================
+pro get_hdf_frame,group_id,iGroup,ipict,nx,iSpecies,wout,wname
+
+
+     GroupName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iGroup)
+     print,"Moment name = ",GroupName 
+     wname= GroupName
+     if iSpecies ge 0 then $
+        wname= GroupName +"S"+STRING(iSpecies,FORMAT='(I02)')
+     moment_id = H5G_OPEN(group_id, GroupName)
+     print,GroupName," Number objects : ", H5G_GET_NUM_OBJS(moment_id)
+     ;get filed data form npict time frame
+     FrameName = H5G_GET_OBJ_NAME_BY_IDX(moment_id,ipict)
+     print,"FrameName = ",FrameName
+     frame_id = H5D_OPEN(moment_id,FrameName)
+     frame = H5D_READ(frame_id)
+     frame = 0.5*(frame(0,*,*) + frame(1,*,*))
+     frame = 0.5*(frame(0,0:nx(0)-1,*) + frame(0,1:nx(0),*))
+     frame = 0.5*(frame(0,0:nx(0)-1,0:nx(1)-1) + frame(0,0:nx(0)-1,1:nx(1)))
+     wout = reform(frame(0,0:nx(0)-1,0:nx(1)-1))
+     H5D_CLOSE, frame_id
+     h5G_CLOSE, moment_id
+
+end
 ;=============================================================================
 pro get_pict,unit,filetype,npict,x,w,$
     headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
