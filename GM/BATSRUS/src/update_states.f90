@@ -114,7 +114,7 @@ subroutine update_te0
   !-------------------------------------------------------------------------
   !\
   ! At the end of time step just calculated values of ERad are used to 
-  ! calculate Te (and accordingly B(Te).
+  ! calculate Te (and accordingly B(Te)).
   !/
   UseERadInput = .true.
 
