@@ -149,7 +149,7 @@ subroutine fix_axis_cells
 
         InvVolume= 1.0/SumBuffer_VIII(Volume_,iR,Geom_,iHemisphere)
         SumX     = 0.5*SumBuffer_VIII(SumX_  ,iR,Geom_,iHemisphere)
-        InvSumX2 = 0.5/SumBuffer_VIII(SumX2_ ,iR,Geom_,iHemisphere)
+        InvSumX2 = 2.0/SumBuffer_VIII(SumX2_ ,iR,Geom_,iHemisphere)
 
         State_V = InvVolume*SumBuffer_VIII(:,iR,Sum_,iHemisphere)
 
@@ -197,12 +197,10 @@ subroutine fix_axis_cells_cyl
   use ModProcMH, ONLY: iComm
   use ModMain, ONLY: nJ, nK, nBlock, Unused_B, x_, y_, z_
   use ModAdvance, ONLY: nVar, State_VGB, r2FixAxis
-  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MinDxValue, &
-       rMin_Blk
+  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MinDxValue
   use ModEnergy, ONLY: calc_energy_point
-  use ModParallel, ONLY: NeiLEast, NOBLK
   use ModMpi
-  use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, CellVolume_GB
+  use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, CellVolume_GB, CoordMin_DB, r_
   implicit none
 
   real, allocatable:: Buffer_VII(:,:,:), SumBuffer_VII(:,:,:)
@@ -216,12 +214,17 @@ subroutine fix_axis_cells_cyl
   real :: x, y, z, Volume, InvVolume, SumX, SumXAvg, InvSumX2, dLeft, dRight
   real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
+  character(len=*), parameter:: NameSub = 'fix_axis_cells_cyl'
   !--------------------------------------------------------------------------
 
   ! Maximum number of cells along the axis
-  MinDzValue = MinDxValue*CellSize_DB(z_,1)/CellSize_DB(x_,1)
-  nZ = nint((XyzMax_D(3)-XyzMin_D(3))/MinDzValue)
-  allocate(Buffer_VII(nVar, nZ, 1:Geom_), SumBuffer_VII(nVar, nZ, 1:Geom_))
+  if(nK == 1)then
+     nZ = 1
+  else
+     MinDzValue = MinDxValue*CellSize_DB(z_,1)/CellSize_DB(x_,1)
+     nZ = nint((XyzMax_D(3)-XyzMin_D(3))/MinDzValue)
+  end if
+  allocate(Buffer_VII(nVar,nZ,1:Geom_), SumBuffer_VII(nVar,nZ,1:Geom_))
 
   Buffer_VII    = 0.0
   SumBuffer_VII = 0.0
@@ -234,11 +237,15 @@ subroutine fix_axis_cells_cyl
 
   do iBlock = 1, nBlock
      if(Unused_B(iBlock)) CYCLE
-     if(rMin_BLK(iBlock) > CellSize_DB(x_,iBlock)) CYCLE
+     if(CoordMin_DB(r_,iBlock) > 0.0) CYCLE
 
-     do k=1,nK
-        z = Xyz_DGB(z_,1,1,k,iBlock)
-        iZ = ceiling( (z - XyzMin_D(3))/MinDzValue + 0.1)
+     do k = 1, nK
+        if(nK == 1)then
+           iZ = 1
+        else
+           z = Xyz_DGB(z_,1,1,k,iBlock)
+           iZ = ceiling( (z - XyzMin_D(3))/MinDzValue + 0.1)
+        end if
 
         do i=1, nAxisCell
            Volume = CellVolume_GB(i,1,k,iBlock)
@@ -275,15 +282,21 @@ subroutine fix_axis_cells_cyl
        MPI_SUM, iComm, iError)
 
   do iBlock = 1, nBlock
-     if(Unused_B(iBlock) .or. NeiLeast(iBlock) /= NOBLK) CYCLE
 
-     do k=1,nK
-        z = Xyz_DGB(z_,1,1,k,iBlock)
-        iZ = ceiling( (z - XyzMin_D(3))/MinDzValue + 0.1)
+     if(Unused_B(iBlock)) CYCLE
+     if(CoordMin_DB(r_,iBlock) > 0.0) CYCLE
+
+     do k = 1, nK
+        if(nK == 1)then
+           iZ = 1
+        else
+           z = Xyz_DGB(z_,1,1,k,iBlock)
+           iZ = ceiling( (z - XyzMin_D(3))/MinDzValue + 0.1)
+        end if
 
         InvVolume = 1.0/SumBuffer_VII(Volume_,iZ,Geom_)
         SumX      = 0.5*SumBuffer_VII(SumX_  ,iZ,Geom_)
-        InvSumX2  = 0.5/SumBuffer_VII(SumX2_ ,iZ,Geom_)
+        InvSumX2  = 2.0/SumBuffer_VII(SumX2_ ,iZ,Geom_)
 
         State_V = InvVolume*SumBuffer_VII(:,iZ,Sum_)
 
@@ -300,6 +313,7 @@ subroutine fix_axis_cells_cyl
            dRight = SumBuffer_VII(iVar,iZ,SumYRight_) - SumXAvg
            dStateDy_V(iVar) = InvSumX2 * (sign(0.5,dLeft)+sign(0.5,dRight)) &
                 *min(1.5*abs(dLeft),1.5*abs(dRight),0.5*abs(dLeft+dRight))
+
         end do
 
         ! Apply fit to each cell within the supercell
@@ -311,6 +325,7 @@ subroutine fix_axis_cells_cyl
 
            call calc_energy_point(i,j,k,iBlock)
         end do; end do
+
      end do
 
   end do
