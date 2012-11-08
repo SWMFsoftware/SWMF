@@ -663,6 +663,8 @@ contains
              PeSi=PeMin*No2Si_V(UnitP_)
              !Use equilibrium EOS !!! 
              !NLTE EOS cannot be used with the pressure input
+             iMaterial = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock),1)-1
+             RhoSi = State_VGB(rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
              call eos(iMaterial, RhoSi, PElectronIn=PeSi,&
                   EElectronOut=EinternalSi)
              State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
