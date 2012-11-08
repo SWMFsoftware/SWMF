@@ -617,13 +617,18 @@ contains
     ! user_material_properties
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(UseElectronPressure)then
-
+          !Find electron and ion pressure from temperature distributions
           TeSi = Te_G(i,j,k)*No2Si_V(UnitTemperature_)
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, TeIn=TeSi, &
-               PressureOut=PeSi, NatomicOut=NatomicSi)
-
+               PressureOut=PeSi, NatomicOut=NatomicSi, EinternalOut=EinternalSi)
+ 
           State_VGB(Pe_,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
+          ! Calculate internal energy
+  
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               EinternalSi*Si2No_V(UnitEnergyDens_) &
+               - inv_gm1*State_VGB(iP,i,j,k,iBlock))
 
           if(UsePl .and. UseEqualTemperatureHyades .and. .not.UseMixedCell &
                .and. any(State_VGB(LevelPl_:LevelMax,i,j,k,iBlock) > 0.0))then
@@ -631,7 +636,11 @@ contains
              iMaterial = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1)-1
              RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
              pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
-             call eos(iMaterial, RhoSi, PtotalIn=pSi, TeOut=TeSi)
+             call eos(iMaterial, RhoSi, PtotalIn=pSi, TeOut=TeSi,&
+                  ETotalOut=EinternalSi)
+             State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               EinternalSi*Si2No_V(UnitEnergyDens_) &
+               - inv_gm1*State_VGB(p_,i,j,k,iBlock))
              Te = TeSi*Si2No_V(UnitTemperature_)
              Natomic = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial)) &
                   *Si2No_V(UnitN_)
@@ -648,15 +657,18 @@ contains
              Natomic = NatomicSi*Si2No_V(UnitN_)
              State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti_G(i,j,k)
           end if
+       else
+          if(UseNLTE)call stop_mpi('No NLTE EOS with pressure input')
+          ! Calculate internal energy
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, EinternalOut=EinternalSi)
+          
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               EinternalSi*Si2No_V(UnitEnergyDens_) &
+               - inv_gm1*State_VGB(iP,i,j,k,iBlock))
        end if
 
-       ! Calculate internal energy
-       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            i, j, k, iBlock, EinternalOut=EinternalSi)
 
-       State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-            EinternalSi*Si2No_V(UnitEnergyDens_) &
-            - inv_gm1*State_VGB(iP,i,j,k,iBlock))
 
        if(UseRadDiffusion) &
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
@@ -695,11 +707,11 @@ contains
           State_VGB(iP,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
     
 
-       ! Calculate internal energy
-
-       State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-            EinternalSi*Si2No_V(UnitEnergyDens_) &
-            - inv_gm1*State_VGB(iP,i,j,k,iBlock))
+          ! Calculate internal energy
+          
+          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               EinternalSi*Si2No_V(UnitEnergyDens_) &
+               - inv_gm1*State_VGB(iP,i,j,k,iBlock))
        end if
 
     end do; end do; end do
