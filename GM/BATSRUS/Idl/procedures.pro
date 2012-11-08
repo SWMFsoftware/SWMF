@@ -395,157 +395,157 @@ end
 
 ;=============================================================================
 pro get_pict_hdf,filenames,nfile,npict,x,w,$
-    headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
-    rBody,error
-   
-    print,"BEGIN get_pict_hdf"
-
-    Param = H5_PARSE('settings.hdf')
-   nx = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
-         Param.COLLECTIVE.NZC._DATA(0)]    
-
-   ;No body
-   rBody = -1
+                 headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
+                 rBody,error
   
-   idim = where(nx GT 1, ndim)
-   nx = nx(idim)
-   ; BX0 BY0 BZ0 Bx By Bz Ex Ey Ez ........
-   nw =10 + Param.COLLECTIVE.NS._DATA(0)*10
+  print,"BEGIN get_pict_hdf"
 
-   print,"idim = ",idim
-   print,"ndim = ",ndim
-   print,"nx   = ",nx
+  Param = H5_PARSE('settings.hdf')
+  nxyz = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
+          Param.COLLECTIVE.NZC._DATA(0)]    
 
-   case ndim of
-   1:begin
-    x=DBLARR(nx(0),ndim)
-    w=DBLARR(nx(0),nw)
-   end
-   2:begin
-    x=DBLARR(nx(0),nx(1),ndim)
-    w=DBLARR(nx(0),nx(1),nw)
-   end
-   3:begin
-    x=DBLARR(nx(0),nx(1),nx(2),ndim)
-    w=DBLARR(nx(0),nx(1),nx(2),nw)
-   end
-   endcase
+  gencoord = 0
+  headline = 'No headline for iPIC3D'  
 
-   w(*,*,0) =  w(*,*,0)*0 + Param.COLLECTIVE.BX0._DATA(0)
-   w(*,*,1) =  w(*,*,1)*0 + Param.COLLECTIVE.BY0._DATA(0)
-   w(*,*,2) =  w(*,*,2)*0 + Param.COLLECTIVE.BZ0._DATA(0)
-   
-   dxyz_D = [Param.COLLECTIVE.Dx._DATA(0),$
-             Param.COLLECTIVE.Dy._DATA(0),$
-             Param.COLLECTIVE.Dz._DATA(0)]   
+  idims = where(nxyz GT 1, ndim)
+  nx = nxyz(idims)
+  ;; Bx By Bz Ex Ey Ez ........
+  nw =7 + Param.COLLECTIVE.NS._DATA(0)*10
 
-    for x1=0L,nx(1)-1 do begin
-      for x0=0L,nx(0)-1 do begin
-         x(x0,x1,0:ndim-1) = [x0,x1]*dxyz_D(0:nDim-1)
-      endfor
-    endfor
+  print,"idims = ",idims
+  print,"ndim  = ",ndim
+  print,"nx    = ",nx
 
-   ; Field and particle data
-   Data = H5_PARSE('proc0.hdf')
+  case ndim of
+     1:begin
+        x=DBLARR(nx(0),ndim)
+        w=DBLARR(nx(0),nw)
+     end
+     2:begin
+        x=DBLARR(nx(0),nx(1),ndim)
+        w=DBLARR(nx(0),nx(1),nw)
+     end
+     3:begin
+        x=DBLARR(nx(0),nx(1),nx(2),ndim)
+        w=DBLARR(nx(0),nx(1),nx(2),nw)
+     end
+  endcase
 
-   file_id = H5F_OPEN('proc0.hdf')
+  eqpar = [Param.COLLECTIVE.BX0._DATA(0),Param.COLLECTIVE.BY0._DATA(0),$
+           Param.COLLECTIVE.BZ0._DATA(0)]
+  neqpar= 3
   
-   ; Find the cronological timeline index SortIdx_I
-   group_id = H5G_OPEN(file_id, '/fields/Bx')
-   nObj = H5G_GET_NUM_OBJS(group_id)
-   Step_I = LONARR(nObj) ; store time index of saved snapshots
-   for iObj=0,nObj-1 do begin
-      ObjName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iObj)
-      Step_I(iObj) = STRMID(ObjName,6)
-   endfor
-   h5G_CLOSE, group_id
-   SortIdx_I = SORT(Step_I)
-   print,"SORTED list : ", Step_I[SortIdx_I]
+  dxyz_D = [Param.COLLECTIVE.Dx._DATA(0),$
+            Param.COLLECTIVE.Dy._DATA(0),$
+            Param.COLLECTIVE.Dz._DATA(0)]   
 
-   ;bounding npict
-   if npict lt 0 then npict=0
-   if npict gt nObj-1 then npict=nObj-1
-   print,"Number of time frames  = ",nObj
-   print,"npict = ", npict
-   ;Find iteration and time 
-   it= Step_I[SortIdx_I(npict)]
-   time =  it*Param.COLLECTIVE.Dt._DATA(0)
-   print," Interation : ",it
-   print," Time       : ",time
-
-   ;Seting up "variables"
-   nVar = nw +ndim
-   variables = STRARR(nVAr)
-   DimName = ['x','y','z']
-   variables(0:ndim-1) = DimName(0:ndim-1)
-
-   ; Go thoug all fields variables
-   group_id = H5G_OPEN(file_id, '/fields')
-   nFields = H5G_GET_NUM_OBJS(group_id)
-   for iFields=0,nFields-1 do begin
-     get_hdf_frame,group_id,iFields,SortIdx_I(npict),nx,$
-                   -1,frame,varname
-     idx = ndim+iFields
-     w(*,*,idx) = frame
-     variables(ndim+idx) = varname
-   endfor
-   h5G_CLOSE, group_id  
-
-   ;Get all moment of the distrebution function
-   group_id = H5G_OPEN(file_id, '/moments')
-   nMoments = H5G_GET_NUM_OBJS(group_id)
-   ; Total charge density RHO
-     idx = ndim+nFields
-  
-     get_hdf_frame,group_id,0,SortIdx_I(npict),nx,$
-                   -1,frame,varname
-      w(*,*,idx) = frame
-      variables(ndim+idx) = varname
-
-   ; LOOP over species and return density, pressure and currents
-   ; for each
-     for iSpecies=1,nMoments-1 do begin
-       SpeciesName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iSpecies)
-       species_id = H5G_OPEN(group_id, SpeciesName)
-       nSpecisMoments = H5G_GET_NUM_OBJS(species_id)
-         for iSpecisMoments=0,nSpecisMoments-1 do begin
-           idx =ndim+nFields+2+(iSpecies-1)*nSpecisMoments+iSpecisMoments-1
-           get_hdf_frame,species_id,iSpecisMoments,SortIdx_I(npict),nx,$
-                         iSpecies-1,frame,varname
-           w(*,*,idx) = frame
-           variables(ndim+idx) = varname
-        endfor
-        h5G_CLOSE, species_id  
+  for x1=0L,nx(1)-1 do begin
+     for x0=0L,nx(0)-1 do begin
+        x(x0,x1,0:ndim-1) = [x0,x1]*dxyz_D(0:nDim-1)
      endfor
-   h5G_CLOSE, group_id  
+  endfor
 
-   H5F_CLOSE, file_id
-    print,"END get_pict_hdf"
+  ;; Field and particle data
+  Data = H5_PARSE('proc0.hdf')
+
+  file_id = H5F_OPEN('proc0.hdf')
+  
+  ;; Find the cronological timeline index SortIdx_I
+  group_id = H5G_OPEN(file_id, '/fields/Bx')
+  nObj = H5G_GET_NUM_OBJS(group_id)
+  Step_I = LONARR(nObj)         ;; store time index of saved snapshots
+  for iObj=0,nObj-1 do begin
+     ObjName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iObj)
+     Step_I(iObj) = STRMID(ObjName,6)
+  endfor
+  h5G_CLOSE, group_id
+  SortIdx_I = SORT(Step_I)
+  print,"SORTED list : ", Step_I[SortIdx_I]
+
+  ;;bounding npict
+  if npict lt 0 then npict=0
+  if npict gt nObj-1 then npict=nObj-1
+  print,"Number of time picts  = ",nObj
+  print,"npict = ", npict
+  ;;Find iteration and time 
+  it= Step_I[SortIdx_I(npict)]
+  time =  it*Param.COLLECTIVE.Dt._DATA(0)
+  print," Interation : ",it
+  print," Time       : ",time
+
+  ;;Seting up "variables"
+  nVar = nw +ndim+neqpar
+  variables = STRARR(nVAr)
+  DimName = ['x','y','z']
+  variables(0:ndim-1) = DimName(0:ndim-1)
+  variables(nVar-neqpar:nVar-1) = ['B0x','B0y','B0z']
+  
+  iw = 0
+  ;; Go thoug all fields variables
+  group_id = H5G_OPEN(file_id, '/fields')
+  nFields = H5G_GET_NUM_OBJS(group_id)
+  for iFields=0,nFields-1 do begin
+     get_hdf_pict,group_id,iFields,SortIdx_I(npict),nxyz,$
+                  -1,pict,varname
+     w(*,*,iw) = pict
+     variables(ndim+iw) = varname
+     iw = iw +1
+  endfor
+  h5G_CLOSE, group_id  
+
+  ;;Get all moment of the distrebution function
+  group_id = H5G_OPEN(file_id, '/moments')
+  nSpecie = H5G_GET_NUM_OBJS(group_id)
+  ;; First species is sum of carge densities Rho
+  get_hdf_pict,group_id,0,SortIdx_I(npict),nxyz,$
+               -1,pict,varname
+  w(*,*,iw) = pict
+  variables(ndim+iw) = varname
+  iw = iw +1
+  ;; LOOP over species and return density, pressure and currents
+  ;; for each
+  for iSpecie=1,nSpecie-1 do begin
+     SpeciesName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iSpecie)
+     Moment_id = H5G_OPEN(group_id, SpeciesName)
+     nMoment = H5G_GET_NUM_OBJS(Moment_id)
+     for iMoment=0,nMoment-1 do begin
+        get_hdf_pict,Moment_id,iMoment,SortIdx_I(npict),nxyz,$
+                     iSpecie-1,pict,varname
+        w(*,*,iw) = pict
+        variables(ndim+iw) = varname
+        iw = iw +1
+     endfor
+     h5G_CLOSE, Moment_id  
+  endfor
+  h5G_CLOSE, group_id  
+
+  H5F_CLOSE, file_id
+  print,"END get_pict_hdf"
 
 end
 
 ;=============================================================================
-pro get_hdf_frame,group_id,iGroup,ipict,nx,iSpecies,wout,wname
+pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name
 
 
-     GroupName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iGroup)
-     print,"Moment name = ",GroupName 
-     wname= GroupName
-     if iSpecies ge 0 then $
-        wname= GroupName +"S"+STRING(iSpecies,FORMAT='(I02)')
-     moment_id = H5G_OPEN(group_id, GroupName)
-     print,GroupName," Number objects : ", H5G_GET_NUM_OBJS(moment_id)
-     ;get filed data form npict time frame
-     FrameName = H5G_GET_OBJ_NAME_BY_IDX(moment_id,ipict)
-     print,"FrameName = ",FrameName
-     frame_id = H5D_OPEN(moment_id,FrameName)
-     frame = H5D_READ(frame_id)
-     frame = 0.5*(frame(0,*,*) + frame(1,*,*))
-     frame = 0.5*(frame(0,0:nx(0)-1,*) + frame(0,1:nx(0),*))
-     frame = 0.5*(frame(0,0:nx(0)-1,0:nx(1)-1) + frame(0,0:nx(0)-1,1:nx(1)))
-     wout = reform(frame(0,0:nx(0)-1,0:nx(1)-1))
-     H5D_CLOSE, frame_id
-     h5G_CLOSE, moment_id
+  GroupName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iGroup)
+  print,"Moment name = ",GroupName 
+  name= GroupName
+  if iSpecies ge 0 then $
+     name= GroupName +"S"+STRING(iSpecies,FORMAT='(I02)')
+  moment_id = H5G_OPEN(group_id, GroupName)
+  print,GroupName," Number objects : ", H5G_GET_NUM_OBJS(moment_id)
+  ;;get filed data form npict time pict
+  pictname = H5G_GET_OBJ_NAME_BY_IDX(moment_id,ipict)
+  print,"pictName = ",pictname
+  pict_id = H5D_OPEN(moment_id,pictname)
+  pict = H5D_READ(pict_id)
+  pict = 0.5*(pict(0:nx(2)-1,*,*) + pict(1:nx(2),*,*))
+  pict = 0.5*(pict(0:nx(2)-1,0:nx(1)-1,*) + pict(0:nx(2)-1,1:nx(1),*))
+  pict = 0.5*(pict(0:nx(2)-1,0:nx(1)-1,0:nx(0)-1) + pict(0:nx(2)-1,0:nx(1)-1,1:nx(0)))
+  pictout = reform(TRANSPOSE(pict(0,0:nx(0)-1,0:nx(1)-1),[2,1,0]))
+  H5D_CLOSE, pict_id
+  h5G_CLOSE, moment_id
 
 end
 ;=============================================================================
