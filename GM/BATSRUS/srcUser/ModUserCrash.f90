@@ -628,7 +628,7 @@ contains
   
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(iP,i,j,k,iBlock))
+               - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
 
           if(UsePl .and. UseEqualTemperatureHyades .and. .not.UseMixedCell &
                .and. any(State_VGB(LevelPl_:LevelMax,i,j,k,iBlock) > 0.0))then
@@ -656,6 +656,18 @@ contains
           else
              Natomic = NatomicSi*Si2No_V(UnitN_)
              State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti_G(i,j,k)
+          end if
+          if(State_VGB(Pe_,i,j,k,iBlock).le.PeMin)then
+             !Correct ExtraEInt, otherwise it will be corrected at the next 
+             !timespep, breaking the time control
+             PeSi=PeMin*No2Si_V(UnitP_)
+             !Use equilibrium EOS !!! 
+             !NLTE EOS cannot be used with the pressure input
+             call eos(iMaterial, RhoSi, PElectronIn=PeSi,&
+                  EElectronOut=EinternalSi)
+             State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+               EinternalSi*Si2No_V(UnitEnergyDens_) &
+               - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
           end if
        else
           if(UseNLTE)call stop_mpi('No NLTE EOS with pressure input')
