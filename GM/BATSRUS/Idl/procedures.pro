@@ -400,15 +400,21 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
   
   print,"BEGIN get_pict_hdf"
 
-  Param = H5_PARSE('settings.hdf')
-  nxyz = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
-          Param.COLLECTIVE.NZC._DATA(0)]    
+  ;;;;;;;;;;;;;;;;; SIM PARAMETERS ;;;;;;;;;;;;;;;;;;;;;;;;;;
+ 
+  dirname = strmid(filenames,0,strpos(filenames,"settings.hdf"))
+  print,"Dirname = ", dirname
+
+
+  Param = H5_PARSE(filenames)
+  nxyz_D = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
+            Param.COLLECTIVE.NZC._DATA(0)]    
 
   gencoord = 0
   headline = 'No headline for iPIC3D'  
 
-  idims = where(nxyz GT 1, ndim)
-  nx = nxyz(idims)
+  idims = where(nxyz_D GT 1, ndim)
+  nx = nxyz_D(idims)
   ;; Bx By Bz Ex Ey Ez ........
   nw =7 + Param.COLLECTIVE.NS._DATA(0)*10
 
@@ -445,10 +451,42 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
      endfor
   endfor
 
-  ;; Field and particle data
-  Data = H5_PARSE('proc0.hdf')
+  ;; processor layout
+  
+  nproc = Param.TOPOLOGY.Nprocs._DATA(0)
 
-  file_id = H5F_OPEN('proc0.hdf')
+  Proc_D = [Param.TOPOLOGY.XLEN._DATA(0),$
+            Param.TOPOLOGY.YLEN._DATA(0),$
+            Param.TOPOLOGY.ZLEN._DATA(0)]
+
+  nxyz_D = nxyz_D/Proc_D
+  print,"nxyz_D = ", nxyz_D
+
+  ;; index range
+  MinIJK_ID = INTARR(nproc,3)
+  MaxIJK_ID = INTARR(nproc,3)
+  iproc=0
+  for ip=0,Proc_D(0)-1 do begin
+     for jp=0,Proc_D(1)-1 do begin
+        for kp=0,Proc_D(2)-1 do begin
+           MinIJK_ID(iproc,*) = [ip,jp,kp]*nxyz_D 
+           MaxIJK_ID(iproc,*) = MinIJK_ID(iproc,*) + nxyz_D -1
+           iproc=iproc+1
+        endfor
+     endfor
+  endfor
+
+  MinIJK_ID = MinIJK_ID(0:nproc-1,idims)
+  MaxIJK_ID = MaxIJK_ID(0:nproc-1,idims)
+
+                                ;for iproc=0,nproc-1 do begin
+                                ;  print,FORMAT='(I3," MinIJK_ID = ", 3I4)',iproc,MinIJK_ID(iproc,*)
+                                ;  print,FORMAT='(I3," MaxIJK_ID = ", 3I4)',iproc,MaxIJK_ID(iproc,*)
+                                ;endfor
+  ;;;;;;;;;;;;;;;;; GETING TIMELINE ++  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  filename= dirname+'proc0.hdf'
+  file_id = H5F_OPEN(filename)
   
   ;; Find the cronological timeline index SortIdx_I
   group_id = H5G_OPEN(file_id, '/fields/Bx')
@@ -479,47 +517,64 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
   DimName = ['x','y','z']
   variables(0:ndim-1) = DimName(0:ndim-1)
   variables(nVar-neqpar:nVar-1) = ['B0x','B0y','B0z']
-  
-  iw = 0
-  ;; Go thoug all fields variables
-  group_id = H5G_OPEN(file_id, '/fields')
-  nFields = H5G_GET_NUM_OBJS(group_id)
-  for iFields=0,nFields-1 do begin
-     get_hdf_pict,group_id,iFields,SortIdx_I(npict),nxyz,$
-                  -1,pict,varname
-     w(*,*,iw) = pict
-     variables(ndim+iw) = varname
-     iw = iw +1
-  endfor
-  h5G_CLOSE, group_id  
 
-  ;;Get all moment of the distrebution function
-  group_id = H5G_OPEN(file_id, '/moments')
-  nSpecie = H5G_GET_NUM_OBJS(group_id)
-  ;; First species is sum of carge densities Rho
-  get_hdf_pict,group_id,0,SortIdx_I(npict),nxyz,$
-               -1,pict,varname
-  w(*,*,iw) = pict
-  variables(ndim+iw) = varname
-  iw = iw +1
-  ;; LOOP over species and return density, pressure and currents
-  ;; for each
-  for iSpecie=1,nSpecie-1 do begin
-     SpeciesName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iSpecie)
-     Moment_id = H5G_OPEN(group_id, SpeciesName)
-     nMoment = H5G_GET_NUM_OBJS(Moment_id)
-     for iMoment=0,nMoment-1 do begin
-        get_hdf_pict,Moment_id,iMoment,SortIdx_I(npict),nxyz,$
-                     iSpecie-1,pict,varname
-        w(*,*,iw) = pict
+  H5F_CLOSE, file_id
+  ;;;;;;;;;;;;;;;;; DATA GATHERING ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  ;; loop over all files
+  for iproc=0,nproc-1 do begin
+     
+     filename = dirname+'proc' + string(iproc,FORMAT='(I0)')+ '.hdf'
+     
+     file_id = H5F_OPEN(filename)
+     iMin = MinIJK_ID(iproc,0)
+     iMax = MaxIJK_ID(iproc,0)
+     jMin = MinIJK_ID(iproc,1)
+     jMax = MaxIJK_ID(iproc,1)
+                                ;kMin = MinIJK_ID(iproc,2)
+                                ;kMax = MaxIJK_ID(iproc,2)
+
+     iw = 0
+     ;; Go thoug all fields variables
+     group_id = H5G_OPEN(file_id, '/fields')
+     nFields = H5G_GET_NUM_OBJS(group_id)
+     for iFields=0,nFields-1 do begin
+        get_hdf_pict,group_id,iFields,SortIdx_I(npict),nxyz_D,$
+                     -1,pict,varname
+        w(iMin:iMax,jMin:jMax,iw) = pict
         variables(ndim+iw) = varname
         iw = iw +1
      endfor
-     h5G_CLOSE, Moment_id  
-  endfor
-  h5G_CLOSE, group_id  
+     h5G_CLOSE, group_id  
 
-  H5F_CLOSE, file_id
+     ;;Get all moment of the distrebution function
+     group_id = H5G_OPEN(file_id, '/moments')
+     nSpecie = H5G_GET_NUM_OBJS(group_id)
+     ;; First species is sum of carge densities Rho
+     get_hdf_pict,group_id,0,SortIdx_I(npict),nxyz_D,$
+                  -1,pict,varname
+     w(iMin:iMax,jMin:jMax,iw) = pict
+     variables(ndim+iw) = varname
+     iw = iw +1
+     ;; LOOP over species and return density, pressure and currents
+     ;; for each
+     for iSpecie=1,nSpecie-1 do begin
+        SpeciesName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iSpecie)
+        Moment_id = H5G_OPEN(group_id, SpeciesName)
+        nMoment = H5G_GET_NUM_OBJS(Moment_id)
+        for iMoment=0,nMoment-1 do begin
+           get_hdf_pict,Moment_id,iMoment,SortIdx_I(npict),nxyz_D,$
+                        iSpecie-1,pict,varname
+           w(iMin:iMax,jMin:jMax,iw) = pict
+           variables(ndim+iw) = varname
+           iw = iw +1
+        endfor
+        h5G_CLOSE, Moment_id  
+     endfor
+     h5G_CLOSE, group_id  
+
+     H5F_CLOSE, file_id
+  endfor
   print,"END get_pict_hdf"
 
 end
@@ -528,22 +583,24 @@ end
 pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name
 
 
+                                ;print ,"get_hdf_pict :: nxyz_D =",nx
   GroupName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iGroup)
-  print,"Moment name = ",GroupName 
+                                ;print,"Moment name = ",GroupName 
   name= GroupName
   if iSpecies ge 0 then $
      name= GroupName +"S"+STRING(iSpecies,FORMAT='(I02)')
   moment_id = H5G_OPEN(group_id, GroupName)
-  print,GroupName," Number objects : ", H5G_GET_NUM_OBJS(moment_id)
+                                ;print,GroupName," Number objects : ", H5G_GET_NUM_OBJS(moment_id)
   ;;get filed data form npict time pict
   pictname = H5G_GET_OBJ_NAME_BY_IDX(moment_id,ipict)
-  print,"pictName = ",pictname
+                                ;print,"pictName = ",pictname
   pict_id = H5D_OPEN(moment_id,pictname)
   pict = H5D_READ(pict_id)
+                                ;print," size pict :: ",size(pict,/DIMENSIONS), " :: ", nx
   pict = 0.5*(pict(0:nx(2)-1,*,*) + pict(1:nx(2),*,*))
   pict = 0.5*(pict(0:nx(2)-1,0:nx(1)-1,*) + pict(0:nx(2)-1,1:nx(1),*))
   pict = 0.5*(pict(0:nx(2)-1,0:nx(1)-1,0:nx(0)-1) + pict(0:nx(2)-1,0:nx(1)-1,1:nx(0)))
-  pictout = reform(TRANSPOSE(pict(0,0:nx(0)-1,0:nx(1)-1),[2,1,0]))
+  pictout = reform(TRANSPOSE(pict(0:nx(2)-1,0:nx(1)-1,0:nx(0)-1),[2,1,0]))
   H5D_CLOSE, pict_id
   h5G_CLOSE, moment_id
 
