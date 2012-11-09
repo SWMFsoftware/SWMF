@@ -176,16 +176,13 @@ contains
 
     use ModAdvance,    ONLY: State_VGB
     use ModMain,       ONLY: Unused_B, nBlockMax
-    use ModGeometry,   ONLY: R_BLK, Rmin_BLK
-    use ModSize
+    use ModGeometry,   ONLY: R_BLK
+    use ModSize,       ONLY: nI, nJ, nK, nG
     use ModVarIndexes, ONLY: Rho_, rhoUx_, rhoU_, P_,Bx_,Bz_
     use ModNumConst,   ONLY:cPi
-
     use CON_planet,    ONLY: RadiusPlanet, MassPlanet
-    use ModNumConst,   ONLY:cPi
     use ModPhysics,    ONLY: Si2No_V,UnitRho_ 
-
-    use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP,iEnergy, &
+    use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP, iEnergy, &
          iRho, iRhoUx, iRhoUy, iRhoUz
 
     integer, intent(in) :: iBlock
@@ -194,19 +191,20 @@ contains
     character (len=*), parameter :: NameSub = 'user_set_ics'
     !-------------------------------------------------------------------
 
-    if(Rmin_BLK(iBlock) > PlanetRadius) return
+    if(R_BLK(1,1,1,iBlock) > PlanetRadius) RETURN
 
     do iFluid = 1, nFluid
        call select_fluid
        do k=1,nK; do j=1,nJ; do i=1,nI
-          if(R_BLK(i+2,j,k,iBlock) > PlanetRadius) CYCLE
+          if(R_BLK(i+nG,j,k,iBlock) > PlanetRadius) CYCLE
           State_VGB(iRho,i,j,k,iBlock) = PlanetDensity
-          State_VGB(iP,i,j,k,iBlock) = PlanetPressure
-          State_VGB(irhoUx:irhoUz,i,j,k,iBlock) = 0.0
+          State_VGB(iP,i,j,k,iBlock)   = PlanetPressure
+          State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
        end do; end do; end do
     end do
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+       if(R_BLK(i,j,k,iBlock) > PlanetRadius) CYCLE
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
     end do; end do; end do
 
@@ -220,7 +218,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModMain,       ONLY: Unused_B, nBlockMax
     use ModGeometry,   ONLY: Xyz_DGB, R_BLK, Rmin_BLK
-    use ModSize
+    use ModSize,       ONLY: nI, nJ, nK, nG
     use ModPhysics,    ONLY: Si2No_V,UnitRho_ 
     use ModVarIndexes, ONLY: nVar, Rho_, RhoU_, RhoUx_, RhoUz_, Bx_, Bz_, p_
     use ModEnergy,     ONLY: calc_energy_cell
@@ -228,54 +226,57 @@ contains
     integer,intent(in) :: iStage, iBlock
 
     real :: r_D(3), dRhoUr_D(3), RhoUr
-    integer :: i, j, k, iVar
+    integer :: i, iG, j, k, iVar
     character (len=*), parameter :: NameSub = 'user_set_ics'
     !----------------------------------------------------------------------
 
     call update_states_MHD(iStage,iBlock)
 
     if(Rmin_BLK(iBlock) <= PlanetRadius) then
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          if(R_BLK(i+2,j,k,iBlock) >= PlanetRadius ) CYCLE
-          State_VGB(Rho_,i,j,k,iBlock) = PlanetDensity
-          State_VGB(P_,i,j,k,iBlock) = PlanetPressure
-          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = 0.0
-       end do; end do; end do
+       do i = 1, nI
+          if(R_BLK(i+nG,1,1,iBlock) >= PlanetRadius) CYCLE
+          do k = 1, nK; do j = 1, nJ; 
+             ! Set density, pressure and momentum inside the planet
+             ! and the nG ghost cells to fixed values.
+             State_VGB(Rho_,i,j,k,iBlock) = PlanetDensity
+             State_VGB(P_,i,j,k,iBlock)   = PlanetPressure
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+          end do; end do
+       end do
 
+       do i = MaxI, 1, -1
+          ! Find the i index just outside the planet radius
+          if(R_BLK(i-1,1,1,iBlock) > PlanetRadius ) CYCLE
 
+          do k = MinK, MaxK; do j = MinJ, MaxJ
 
-       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=1,nI
-          if(R_BLK(i-1,j,k,iBlock) > PlanetRadius ) CYCLE
-          if(R_BLK(i,j,k,iBlock) <= PlanetRadius ) CYCLE
+             ! Get radial velocity
+             r_D = (/ Xyz_DGB(x_,i,j,k,iBlock), Xyz_DGB(y_,i,j,k,iBlock), &
+                  Xyz_DGB(z_,i,j,k,iBlock) /) / r_BLK(i,j,k,iBlock)
 
-          r_D  = (/ Xyz_DGB(x_,i,j,k,iBlock), Xyz_DGB(y_,i,j,k,iBlock), &
-               Xyz_DGB(z_,i,j,k,iBlock) /) / r_BLK(i,j,k,iBlock)
+             RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
+             if(RhoUr > 0.0) then
+                ! If flow is out of the planet, remove the radial component 
+                ! of the momentum so that the flow is tangential
+                dRhoUr_D = -r_D*RhoUr
+             else
+                ! If flow is into the planet do nothing so the flow is absorbed
+                dRhoUr_D = 0.0
+             end if
 
-          RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
-          if(RhoUr > 0.0) then
-             ! If flow is out of the planet, remove the radial componet 
-             ! of the momentum so that the flow is tangential
-             dRhoUr_D = -r_D*RhoUr
-          else
-             ! If flow is into the planet do nothing so the flow is absorbed
-             dRhoUr_D = (/0.0,0.0,0.0/)
-          end if
+             ! Set nG cells inside the planet as a boundary condition
+             do iG = i-nG, i-1
+                State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
+                State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
+                     State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) + dRhoUr_D
+                State_VGB(Bz_+1:nVar,iG,j,k,iBlock) = &
+                     State_VGB(Bz_+1:nVar,i,j,k,iBlock)
+             end do
+          end do; end do
 
-          ! Two cell boundary layer inside the planet
-          !! -1
-          State_VGB(Rho_,i-1,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
-          State_VGB(RhoUx_:RhoUz_,i-1,j,k,iBlock) = &
-               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) + dRhoUr_D
-          State_VGB(Bz_+1:nVar,i-1,j,k,iBlock) = &
-               State_VGB(Bz_+1:nVar,i,j,k,iBlock)
-          !! -2
-          State_VGB(Rho_,i-2,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
-          State_VGB(RhoUx_:RhoUz_,i-2,j,k,iBlock) = &
-               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) + dRhoUr_D
-          State_VGB(Bz_+1:nVar,i-2,j,k,iBlock) = &
-               State_VGB(Bz_+1:nVar,i,j,k,iBlock)
+          EXIT
 
-       end do; end do; end do
+       end do
 
     end if
 
