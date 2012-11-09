@@ -72,6 +72,7 @@ foreach (@Arguments){
 	die "$ERROR nMaterial=$1 must be 1 or more\n" if $1 < 1;
 	$nMaterialNew=$1;
 	next};
+    if(/^-ng$/i)              {print "ng=$GhostCell\n"; next};
     if(/^-ng=(.*)$/i)         {$NewGhostCell=$1; next};
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
@@ -374,6 +375,8 @@ Additional options for BATSRUS/Config.pl:
                 MAXBLK is the maximum number of blocks per processor.
                 MAXIMPLBLK is the maximum number of implicitly integrated 
                 blocks per processor. Cannot be larger than MAXBLK.
+
+-ng             Print current setting for number of ghost cell layers.
 
 -ng=GHOSTCELL   Set number of ghost cell layers around grid blocks. 
                 The value GHOSTCELL has to be an integer at least 2 
