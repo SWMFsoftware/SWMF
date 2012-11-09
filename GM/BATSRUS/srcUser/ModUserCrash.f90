@@ -705,27 +705,27 @@ contains
              call get_planck_g_from_temperature(iGroup, Te0Si, EgSI=PlanckSi)
              if(EOverB_VGB(iGroup,i,j,k,iBlock)>0.0)then
                 EOverB_VGB(iGroup,i,j,k,iBlock) = EOverB_VGB(iGroup,i,j,k,iBlock)/&
-                     max(PlanckSi, 0.01*EOverB_VGB(iGroup,i,j,k,iBlock))
+                     max(PlanckSi, 0.2*EOverB_VGB(iGroup,i,j,k,iBlock))
              else
                 EOverB_VGB(iGroup,i,j,k,iBlock)=0.0
              end if
           end do
           
 
-          EInternalSI = (State_VGB(iP,i,j,k,iBlock)*inv_gm1+&
-                 State_VGB(ExtraEInt_,i,j,k,iBlock))*No2Si_V(UnitEnergyDens_)
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, EInternalIn=EInternalSI, &
-               PressureOut=PeSi)
+          !EInternalSI = (State_VGB(iP,i,j,k,iBlock)*inv_gm1+&
+          !       State_VGB(ExtraEInt_,i,j,k,iBlock))*No2Si_V(UnitEnergyDens_)
+          !call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+          !     i, j, k, iBlock, EInternalIn=EInternalSI, &
+          !     PressureOut=PeSi)
 
-          State_VGB(iP,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
+          !State_VGB(iP,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
     
 
           ! Calculate internal energy
           
-          State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(iP,i,j,k,iBlock))
+          !State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+          !     EinternalSi*Si2No_V(UnitEnergyDens_) &
+          !     - inv_gm1*State_VGB(iP,i,j,k,iBlock))
        end if
 
     end do; end do; end do
@@ -1760,7 +1760,7 @@ contains
              call get_planck_g_from_temperature(iGroup, Te0Si, EgSI=PlanckSi)
              if(EOverB_VGB(iGroup,i,j,k,iBlock)>0.0)then
                 EOverB_VGB(iGroup,i,j,k,iBlock) = EOverB_VGB(iGroup,i,j,k,iBlock)/&
-                     max(PlanckSi, 0.01*EOverB_VGB(iGroup,i,j,k,iBlock))
+                     max(PlanckSi, 0.2*EOverB_VGB(iGroup,i,j,k,iBlock))
              else
                 EOverB_VGB(iGroup,i,j,k,iBlock)=0.0
              end if
