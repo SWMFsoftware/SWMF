@@ -386,6 +386,11 @@ contains
                   sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
           end do; end do; end do
        end if
+       ! Avoid negative wave pressure
+       do k=1,nK;do j=1,nJ; do i=1,nI
+          State_VGB(WaveFirst_:WaveLast_,i,j,k, iBlock) = &
+               max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 1e-30)
+       end do; end do; end do
     end if
 
     if(boris_correction) then
