@@ -186,7 +186,7 @@ T			DoExtendTransitionRegion
 
 #FIXAXIS
 F			UsePoleDiffusion
-T			DoFixAxis
+F			DoFixAxis
 1.3			rFixAxis
 1.1			r2FixAxis
 
