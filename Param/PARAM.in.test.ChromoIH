@@ -157,12 +157,6 @@ T			DoExtendTransitionRegion
 2.2e5			TeModSi
 1.0e1			DeltaTeModSi
 
-#FIXAXIS
-F			UsePoleDiffusion
-T			DoFixAxis
-1.3			rFixAxis
-1.1			r2FixAxis
-
 turn these off when restarting
 ---------------------------------------------------
 #GRIDGEOMETRY
