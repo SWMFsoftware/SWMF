@@ -125,7 +125,7 @@ contains
 
     !Calculate atomic density
     NAtomic = Rho/( cAtomicMassCRASH_I(iMaterial)*cAtomicMass ) & !In 1/m3
-         * 1.0e-6                                   ![cm-3] !Convert units
+         * 1.0e6                                   ![cm-3] !Convert units
 
     atomass = cAtomicMassCRASH_I(iMaterial)
    
@@ -153,7 +153,8 @@ contains
                Zbar_out=zBar, &
                Tz_out=Tz,            &
                Ee_out=EElectronOut,  &
-               Pe_out=pENlte)
+               Pe_out=pENlte,        &
+               Cv_out=CvElectronOut)
           if(present(pElectronOut))pElectronOut=pENlte
           !erg/cm3=0.1 J/m3
           pENlte = pENlte * 0.10
@@ -163,7 +164,8 @@ contains
                Zbar_out=zBar, &
                Tz_out=Tz,            &
                Et_out=ETotalOut,     &
-               Pt_out=pNlte)
+               Pt_out=pNlte,         &
+               Cv_out=CvTotalOut)
           if(present(pTotalOut))pTotalOut=pNlte
           !erg/cm3=0.1 J/m3
           pNlte = pNlte * 0.10
@@ -178,7 +180,8 @@ contains
          Zbar_out=zBar,&
          Tz_out=Tz,           &
          Te_out=Te,           &
-         Pe_out=pENlte)
+         Pe_out=pENlte,       &
+         Cv_out=CvElectronOut)
        if(present(pElectronOut))pElectronOut=pENlte
        !erg/cm3=0.1 J/m3
        pENlte = pENlte * 0.10
@@ -193,7 +196,8 @@ contains
          Zbar_out=zBar,       &
          Tz_out=Tz,           &
          Te_out=Te,           &
-         Pt_out=pNlte)
+         Pt_out=pNlte,        &
+         Cv_out=CvTotalOut)
        if(present(pTotalOut))pTotalOut=pNlte
        !erg/cm3=0.1 J/m3
           pNlte = pNlte * 0.10
@@ -212,24 +216,27 @@ contains
        TeOut = Te*ceVToK
     end if
     !erg/cm3=0.1 J/m3
-    if(present(EElectronOut))then
+    if(present(EElectronOut))&
        EElectronOut = EElectronOut*0.10
-    end if
-    if(present(ETotalOut   ))then
+    
+    if(present(ETotalOut   ))&
        ETotalOut    = ETotalOut   *0.10
-    end if
-    if(present(PElectronOut))then
+
+    if(present(PElectronOut))&
        PElectronOut = PElectronOut*0.10
-    end if
-    if(present(PTotalOut   ))then
+
+    if(present(PTotalOut   ))&
        PTotalOut    = PTotalOut   *0.10
-    end if
+    if(present(CvElectronOut))&
+       CvElectronOut = CvElectronOut*0.10& !erg/cm3=0.1 J/m3
+                       *cKToeV             !1/eV=1/K*(K/eV)
+    if(present(CvTotalOut))&
+       CvTotalOut = CvTotalOut*0.10& !erg/cm3=0.1 J/m3
+                       *cKToeV             !1/eV=1/K*(K/eV)
     if(present(zAverageOut))zAverageOut=zBar
     if(&
          present(GammaOut).or.      &
          present(GammaEOut).or.     &
-         present(CvTotalOut).or.    &
-         present(CvElectronOut).or. &
          present(OpacityPlanckOut_I).or. &
          present(OpacityRosselandOut_I).or. &
          present(HeatCond).or.      &
@@ -254,11 +261,7 @@ contains
          DPOverDT=DPOverDT,           &
          DPEOverDRho=DPEOverDRho,     &
          DPEOverDT=DPEOverDT          )
-    !Correct thermodynamic derivatives
-    if(present(CvTotalOut))CvTotalOut = CvTotal * (Tz/Te) +1.50*&
-         (zBar+1)*(1-Tz/Te)*(NAtomic*1.0e6*cBoltzmann)
-    if(present(CvElectronOut))CvElectronOut = CvElectron * (Tz/Te) +&
-         1.50*zBar*(1-Tz/Te)*(NAtomic*1.0e6*cBoltzmann)
+    
     if(present(GammaOut))then
        !Calculate DTzOverDRho
        

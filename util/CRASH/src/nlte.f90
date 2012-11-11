@@ -332,9 +332,9 @@ contains
     zdt=zp * ( Te-Tz)
     if(present(Ee)) Ee=Ee + x_3o2 * kBr_E * zdt
     if(present(Pe)) Pe=Pe +         kBr_P * zdt
-    if(present(Cv)) then
-       Cv=Cv+ x_3o2 * kBr_E * zp
-    end if
+    if(present(Cv)) &
+       Cv=Cv*(Tz/Te)+ x_3o2 * kBr_E * zp*(1-Tz/Te)
+    
     return
   end subroutine correctEOS
 
