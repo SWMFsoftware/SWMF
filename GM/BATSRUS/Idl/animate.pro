@@ -19,25 +19,25 @@
 ;
 ;===========================================================================
 
-   print,'======= CURRENT ANIMATION PARAMETERS ================'
-   print,'firstpict=',firstpict,', dpict=',dpict,', npictmax=',npictmax, $
-     FORMAT='(a,'+string(n_elements(firstpict))+'i4,a,' $
-     +string(n_elements(dpict))+'i4,a,i4)'
-   print,'savemovie (n/ps/png/tiff/bmp/jpeg)=',savemovie
-   print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
-     ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
-     FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
-   if keyword_set(multiplot) then begin
-        siz=size(multiplot)
-        ; scalar multiplot value is converted to a row (+) or a column (-)
-        if siz(0) eq 0 then begin
-            if multiplot gt 0 then multiplot=[multiplot,1,1] $
-            else                   multiplot=[1,-multiplot,1]
-        endif
-        print,'multiplot= ',multiplot,', axistype (coord/cells)=',axistype,$
-              ', fixaspect= ',fixaspect,$
-              FORMAT='(a,"[",i2,",",i2,",",i2,"]",a,a,a,i1)'
-   endif else $
+print,'======= CURRENT ANIMATION PARAMETERS ================'
+print,'firstpict=',firstpict,', dpict=',dpict,', npictmax=',npictmax, $
+      FORMAT='(a,'+string(n_elements(firstpict))+'i4,a,' $
+      +string(n_elements(dpict))+'i4,a,i4)'
+print,'savemovie (n/ps/png/tiff/bmp/jpeg)=',savemovie
+print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
+      ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
+      FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
+if keyword_set(multiplot) then begin
+   siz=size(multiplot)
+                                ; scalar multiplot value is converted to a row (+) or a column (-)
+   if siz(0) eq 0 then begin
+      if multiplot gt 0 then multiplot=[multiplot,1,1] $
+      else                   multiplot=[1,-multiplot,1]
+   endif
+   print,'multiplot= ',multiplot,', axistype (coord/cells)=',axistype,$
+         ', fixaspect= ',fixaspect,$
+         FORMAT='(a,"[",i2,",",i2,",",i2,"]",a,a,a,i1)'
+endif else $
         print,'multiplot= 0 (default), axistype (coord/cells)=',axistype,$
               ', fixaspect= ',fixaspect,$
               FORMAT='(a,a,a,i1)'
@@ -77,7 +77,7 @@
    anygencoord=0
    for ifile=0,nfile-1 do begin
       openfile,10,filenames(ifile),filetypes(ifile)
-      gethead,10,filetypes(ifile), $
+      gethead,10,filenames(ifile),filetypes(ifile), $
          headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
       anygencoord=anygencoord or gencoord
       print,         'headline                  =',strtrim(headline,2)
@@ -108,11 +108,12 @@
       while npict lt npictmax and not error do begin
 
          for ifile=0,nfile-1 do begin
-
+      
             if npict eq 0 then nextpict=firstpict(ifile) $
             else               nextpict=dpict(ifile)
 
-            get_pict,ifile+10,filetypes(ifile),nextpict,x,w,$
+            if filetypes(ifile) eq 'IPIC3D' then nextpict = npict
+            get_pict,ifile+10,filenames(ifile),filetypes(ifile),nextpict,x,w,$
                 headline, it, time, gencoord, ndim, neqpar, nw, nx,$
                 eqpar, variables, rBody, err
 
@@ -209,7 +210,8 @@
          else               nextpict=dpict(ifile)
 
          if npict gt 1 or nfile gt 1 or noautorange then begin
-            get_pict, ifile+10, filetypes(ifile), nextpict, x, w, $
+            if filetypes(ifile) eq 'IPIC3D' then nextpict = ipict
+            get_pict, ifile+10, filenames(ifile),filetypes(ifile), nextpict, x, w, $
                headline, it, time, gencoord, ndim, neqpar, nw, nx,$
                eqpar, variables, rBody, err
 

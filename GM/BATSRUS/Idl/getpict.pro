@@ -43,7 +43,7 @@ nfile=0
 if filename eq '' and logfilename ne '' then begin
    filename=logfilename
    while strpos(filename,'.log') ge 0 $
-      do strput,filename,'.out',strpos(filename,'.log')
+   do strput,filename,'.out',strpos(filename,'.log')
    askstr,'filename(s)   ',filename,1
 endif else $
    askstr,'filename(s)   ',filename,doask
@@ -53,33 +53,6 @@ if stregex(filename, '[?*[]', /boolean) then begin
     nfile = n_elements(filenames)
 endif else $
   str2arr,filename,filenames,nfile
-
-if strpos(filename,'settings.hdf') ge 0 then begin
-  ; We do all hdf file handling here!
-  print," filename  = ", filename
-  print," filenames = ", filenames
-  print," nfile     = ", nfile
-
-  
-
-   get_pict_hdf,filenames,nfile,npict,x,w,headline,it,time,$
-          gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
-
-
-   ; Produce a wnames from the last file
-   wnames=variables(ndim:ndim+nw-1)
-
-   print,         'headline  =',strtrim(headline,2)
-   print,FORMAT='("ndim      =",i2,", neqpar=",i2,", nw=",i2)',ndim,neqpar,nw
-   if gencoord eq 1 then print,'Generalized coordinates'
-   print,         'it        =',it,', time=',time
-   print,FORMAT='("nx        = ",3(i8))',nx
-   print,         'eqpar     =',eqpar
-   print,         'variables =',variables
-
-
-endif else begin
-
 
 if nfile gt 3 then begin
    print,'Error in getpict: cannot handle more than 3 files.'
@@ -102,7 +75,7 @@ for ifile=0,nfile-1 do begin
 
    openfile,10,filenames(ifile),filetypes(ifile)
 
-   get_pict,10,filetypes(ifile),npict,x,w,headline,it,time,$
+   get_pict,10,filenames(ifile),filetypes(ifile),npict,x,w,headline,it,time,$
           gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
 
    print,         'headline  =',strtrim(headline,2)
@@ -154,7 +127,5 @@ close,10
 
 ; Produce a wnames from the last file
 wnames=variables(ndim:ndim+nw-1)
-
-endelse
 
 end

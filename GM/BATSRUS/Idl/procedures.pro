@@ -53,11 +53,11 @@ function reform2,x
 
 ;Remove all degenerate dimensions from x
 
-if n_elements(x) lt 2 then return,x
+  if n_elements(x) lt 2 then return,x
 
-siz=size(x)
-siz=siz(1:siz(0))
-return,reform(x,siz(where(siz gt 1)))
+  siz=size(x)
+  siz=siz(1:siz(0))
+  return,reform(x,siz(where(siz gt 1)))
 
 end
 
@@ -70,36 +70,36 @@ function log_time,wlog,wlognames,timeunit
 ; the beginning of the first day. 
 ; This algorithm works only if the whole file is in the same month.
 
-nwlog = n_elements(wlognames)
-hours = 0.0*wlog(*,0)
+  nwlog = n_elements(wlognames)
+  hours = 0.0*wlog(*,0)
 
-if nwlog lt 0 then return, hours
+  if nwlog lt 0 then return, hours
 
-istep = -1
-iyear = -1
-itime = -1
-ihour = -1
-imsc  = -1
-for i = 0, nwlog-1 do begin
-   varname = strlowcase(wlognames(i))
-    if varname eq 'step' or varname eq 'it' then istep=i
-    if varname eq 'year' or varname eq 'yr' then iyear=i
-    if varname eq 'time' or varname eq 't'  then itime=i
-    if varname eq 'hour' or varname eq 'hours' then ihour=i
-    if varname eq 'ms' or varname eq 'msec' then imsc = i
-endfor
+  istep = -1
+  iyear = -1
+  itime = -1
+  ihour = -1
+  imsc  = -1
+  for i = 0, nwlog-1 do begin
+     varname = strlowcase(wlognames(i))
+     if varname eq 'step' or varname eq 'it' then istep=i
+     if varname eq 'year' or varname eq 'yr' then iyear=i
+     if varname eq 'time' or varname eq 't'  then itime=i
+     if varname eq 'hour' or varname eq 'hours' then ihour=i
+     if varname eq 'ms' or varname eq 'msec' then imsc = i
+  endfor
 
-if itime gt -1 then begin
-    hours = wlog(*,itime)/3600.0
-endif else begin
-    if iyear eq -1 then begin
+  if itime gt -1 then begin
+     hours = wlog(*,itime)/3600.0
+  endif else begin
+     if iyear eq -1 then begin
         if ihour gt -1 then begin
-            hours = wlog(*,ihour)
-            for i=1, n_elements(hours)-1 do $
+           hours = wlog(*,ihour)
+           for i=1, n_elements(hours)-1 do $
               while hours(i) lt hours(i-1) do $
-              hours(i) = hours(i) + 24.0
+                 hours(i) = hours(i) + 24.0
         endif
-    endif else begin
+     endif else begin
         iday  = iyear+2
         ihour = iday+1
         imin  = iday+2
@@ -117,23 +117,23 @@ endif else begin
 
            if imsc eq iday + 4 then hours[i] = hours[i] + wlog(i,imsc)/3.6e6
         endfor
-    endelse
-endelse
+     endelse
+  endelse
 
-if max(hours) eq min(hours) then begin
-    if istep gt -1 then begin
+  if max(hours) eq min(hours) then begin
+     if istep gt -1 then begin
         print, 'Could not find time information, using steps'
         hours = wlog(*,istep)
-    endif else begin
+     endif else begin
         print, 'Could not find time information, using line number'
         hours = findgen(n_elements(wlog(*,0)))
-    endelse
-endif
+     endelse
+  endif
 
-logtime = hours
+  logtime = hours
 
-if n_elements(timeunit) gt 0 then begin
-    case timeunit of
+  if n_elements(timeunit) gt 0 then begin
+     case timeunit of
         '1': logtime = hours*3600
         's': logtime = hours*3600
         'm': logtime = hours*60
@@ -141,10 +141,10 @@ if n_elements(timeunit) gt 0 then begin
         'microsec': logtime = hours*3600e6
         'ns'    : logtime = hours*3600e9
         else: 
-    endcase
-endif
+     endcase
+  endif
 
-return, logtime
+  return, logtime
 end
 
 ;=============================================================================
@@ -197,6 +197,7 @@ pro openfile,unit,filename,filetype
        'real4' :openr,unit,filename,/f77_unf
        'BINARY':openr,unit,filename,/f77_unf
        'REAL4' :openr,unit,filename,/f77_unf
+       'IPIC3D':
        else    :print,'Openfile: unknown filetype:',filetype
    endcase
 end
@@ -204,61 +205,71 @@ end
 ;=============================================================================
 pro gettype,filenames,filetypes,npictinfiles
 
-on_error,2
+  on_error,2
 
-filetypes=filenames
-npictinfiles=intarr(n_elements(filenames))
-for ifile=0,n_elements(filenames)-1 do begin
-    l = strlen(filenames(ifile)) - 4
-    if   strpos(filenames(ifile),'.log') eq l $
-      or strpos(filenames(ifile),'.sat') eq l then begin
+  filetypes=filenames
+  npictinfiles=intarr(n_elements(filenames))
+  for ifile=0,n_elements(filenames)-1 do begin
+     l = strlen(filenames(ifile)) - 4
+     if   strpos(filenames(ifile),'.log') eq l $
+        or strpos(filenames(ifile),'.sat') eq l then begin
         filetypes(ifile)    = 'log'
         npictinfiles(ifile) = 1
-    endif else begin
-        ; Obtain filetype based on the length info in the first 4 bytes
-        close,10
-        openr,10,filenames(ifile)
-        lenhead=long(1)
-        readu,10,lenhead
-        if lenhead ne 79 and lenhead ne 500 then ftype='ascii' else begin
-            ; The length of the 2nd line decides between real4 and binary
-            ; since it contains the time, which is real*8 or real*4
-            head=bytarr(lenhead+4)
-            len=long(1)
-            readu,10,head,len
-            case len of
-                20: ftype='real4'
-                24: ftype='binary'
-                else: begin
+     endif else begin
+        if strpos(filenames(ifile),'settings.hdf') ge 0 then begin
+           dirname = strmid(filenames(ifile),0,strpos(filenames(ifile),"settings.hdf"))
+           file_id = H5F_OPEN(dirname+'proc0.hdf')
+           group_id = H5G_OPEN(file_id, '/fields/Bx')
+           npictinfiles(ifile) = H5G_GET_NUM_OBJS(group_id)
+           h5G_CLOSE, group_id
+           H5F_CLOSE, file_id
+           filetypes(ifile)   ='IPIC3D'
+        endif else begin
+                                ; Obtain filetype based on the length info in the first 4 bytes
+           close,10
+           openr,10,filenames(ifile)
+           lenhead=long(1)
+           readu,10,lenhead
+           if lenhead ne 79 and lenhead ne 500 then ftype='ascii' else begin
+                                ; The length of the 2nd line decides between real4 and binary
+                                ; since it contains the time, which is real*8 or real*4
+              head=bytarr(lenhead+4)
+              len=long(1)
+              readu,10,head,len
+              case len of
+                 20: ftype='real4'
+                 24: ftype='binary'
+                 else: begin
                     print,'Error in GetType: strange unformatted file:',$
-                      filenames(ifile)
+                          filenames(ifile)
                     retall
-                end
-            endcase
-            if lenhead eq 500 then ftype = strupcase(ftype)
+                 end
+              endcase
+              if lenhead eq 500 then ftype = strupcase(ftype)
+           endelse
+           close,10
+           
+                                ; Obtain file size and number of snapshots
+           openfile,1,filenames(ifile),ftype
+           status=fstat(1)
+           fsize=status.size
+
+           pointer=0
+           pictsize=1
+           npict=0
+           while pointer lt fsize do begin
+                                ; Obtain size of a single snapshot
+              point_lun,1,pointer
+              gethead,1,filenames(ifile),ftype,pictsize=pictsize
+              npict=npict+1
+              pointer=long64(pointer) + pictsize
+           endwhile
+           close,1
+
+           npictinfiles(ifile)=npict
+           filetypes(ifile)   =ftype
         endelse
-        close,10
-        
-        ; Obtain file size and number of snapshots
-        openfile,1,filenames(ifile),ftype
-        status=fstat(1)
-        fsize=status.size
-
-        pointer=0
-        pictsize=1
-        npict=0
-        while pointer lt fsize do begin
-            ; Obtain size of a single snapshot
-            point_lun,1,pointer
-            gethead,1,ftype,pictsize=pictsize
-            npict=npict+1
-            pointer=long64(pointer) + pictsize
-        endwhile
-        close,1
-
-        npictinfiles(ifile)=npict
-        filetypes(ifile)   =ftype
-    endelse
+     endelse
   endfor
 end
 
@@ -269,7 +280,7 @@ on_error,2
 if n_elements(filename) eq 0 then filename='file.out'
 gettype,filename,filetype
 openfile,1,filename,filetype
-gethead,1,filetype,$
+gethead,1,filetype,filename,$
   headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
 close,1
 print,'filename  = ',filename, format="(a,a)"
@@ -289,7 +300,7 @@ print,'eqpars    =',variables(ndim+nw:*)
 
 end
 ;=============================================================================
-pro gethead,unit,filetype,headline,it,time,gencoord, $
+pro gethead,unit,filename,filetype,headline,it,time,gencoord, $
             ndim,neqpar,nw,nx,eqpar,variables,pictsize=pictsize
 
 ;; on_error,2
@@ -309,10 +320,17 @@ varname=''
 for i=1, lenstr do varname=varname+' '
 
 ;Remember pointer position at beginning of header
-point_lun,-unit,pointer0
+if ftype ne 'ipic3d' then point_lun,-unit,pointer0
 
 ;Read header
 case ftype of
+    'ipic3d':begin
+        tmppict = 0
+        tmperror = 0
+        get_pict_hdf,filename,tmppict,x,w,$
+                 headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
+                 rBody,tmperror,0
+    end
     'log': begin
         readf,unit,headline
         readf,unit,varname
@@ -394,18 +412,14 @@ endelse
 end
 
 ;=============================================================================
-pro get_pict_hdf,filenames,nfile,npict,x,w,$
+pro get_pict_hdf,filenames,npict,x,w,$
                  headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
-                 rBody,error
+                 rBody,error,getdata
   
-  print,"BEGIN get_pict_hdf"
-
-  ;;;;;;;;;;;;;;;;; SIM PARAMETERS ;;;;;;;;;;;;;;;;;;;;;;;;;;
- 
+    ;;;;;;;;;;;;;;;;; SIM PARAMETERS ;;;;;;;;;;;;;;;;;;;;;;;;;;
+  
   dirname = strmid(filenames,0,strpos(filenames,"settings.hdf"))
-  print,"Dirname = ", dirname
-
-
+  
   Param = H5_PARSE(filenames)
   nxyz_D = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
             Param.COLLECTIVE.NZC._DATA(0)]    
@@ -418,25 +432,6 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
   ;; Bx By Bz Ex Ey Ez ........
   nw =7 + Param.COLLECTIVE.NS._DATA(0)*10
 
-  print,"idims = ",idims
-  print,"ndim  = ",ndim
-  print,"nx    = ",nx
-
-  case ndim of
-     1:begin
-        x=DBLARR(nx(0),ndim)
-        w=DBLARR(nx(0),nw)
-     end
-     2:begin
-        x=DBLARR(nx(0),nx(1),ndim)
-        w=DBLARR(nx(0),nx(1),nw)
-     end
-     3:begin
-        x=DBLARR(nx(0),nx(1),nx(2),ndim)
-        w=DBLARR(nx(0),nx(1),nx(2),nw)
-     end
-  endcase
-
   eqpar = [Param.COLLECTIVE.BX0._DATA(0),Param.COLLECTIVE.BY0._DATA(0),$
            Param.COLLECTIVE.BZ0._DATA(0)]
   neqpar= 3
@@ -445,14 +440,31 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
             Param.COLLECTIVE.Dy._DATA(0),$
             Param.COLLECTIVE.Dz._DATA(0)]   
 
-  for x1=0L,nx(1)-1 do begin
-     for x0=0L,nx(0)-1 do begin
-        x(x0,x1,0:ndim-1) = [x0,x1]*dxyz_D(0:nDim-1)
+  if getdata then begin
+     case ndim of
+        1:begin
+           x=DBLARR(nx(0),ndim)
+           w=DBLARR(nx(0),nw)
+        end
+        2:begin
+           x=DBLARR(nx(0),nx(1),ndim)
+           w=DBLARR(nx(0),nx(1),nw)
+        end
+        3:begin
+           x=DBLARR(nx(0),nx(1),nx(2),ndim)
+           w=DBLARR(nx(0),nx(1),nx(2),nw)
+        end
+     endcase
+
+     for x1=0L,nx(1)-1 do begin
+        for x0=0L,nx(0)-1 do begin
+           x(x0,x1,0:ndim-1) = [x0,x1]*dxyz_D(0:nDim-1)
+        endfor
      endfor
-  endfor
+
+  endif
 
   ;; processor layout
-  
   nproc = Param.TOPOLOGY.Nprocs._DATA(0)
 
   Proc_D = [Param.TOPOLOGY.XLEN._DATA(0),$
@@ -460,29 +472,24 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
             Param.TOPOLOGY.ZLEN._DATA(0)]
 
   nxyz_D = nxyz_D/Proc_D
-  print,"nxyz_D = ", nxyz_D
 
   ;; index range
-  MinIJK_ID = INTARR(nproc,3)
-  MaxIJK_ID = INTARR(nproc,3)
+  MinIJK_PD = INTARR(nproc,3)
+  MaxIJK_PD = INTARR(nproc,3)
   iproc=0
   for ip=0,Proc_D(0)-1 do begin
      for jp=0,Proc_D(1)-1 do begin
         for kp=0,Proc_D(2)-1 do begin
-           MinIJK_ID(iproc,*) = [ip,jp,kp]*nxyz_D 
-           MaxIJK_ID(iproc,*) = MinIJK_ID(iproc,*) + nxyz_D -1
+           MinIJK_PD(iproc,*) = [ip,jp,kp]*nxyz_D 
+           MaxIJK_PD(iproc,*) = MinIJK_PD(iproc,*) + nxyz_D -1
            iproc=iproc+1
         endfor
      endfor
   endfor
 
-  MinIJK_ID = MinIJK_ID(0:nproc-1,idims)
-  MaxIJK_ID = MaxIJK_ID(0:nproc-1,idims)
+  MinIJK_PD = MinIJK_PD(0:nproc-1,idims)
+  MaxIJK_PD = MaxIJK_PD(0:nproc-1,idims)
 
-                                ;for iproc=0,nproc-1 do begin
-                                ;  print,FORMAT='(I3," MinIJK_ID = ", 3I4)',iproc,MinIJK_ID(iproc,*)
-                                ;  print,FORMAT='(I3," MaxIJK_ID = ", 3I4)',iproc,MaxIJK_ID(iproc,*)
-                                ;endfor
   ;;;;;;;;;;;;;;;;; GETING TIMELINE ++  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   filename= dirname+'proc0.hdf'
@@ -497,20 +504,20 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
      Step_I(iObj) = STRMID(ObjName,6)
   endfor
   h5G_CLOSE, group_id
+  H5F_CLOSE, file_id
   SortIdx_I = SORT(Step_I)
-  print,"SORTED list : ", Step_I[SortIdx_I]
-
+  
   ;;bounding npict
   if npict lt 0 then npict=0
-  if npict gt nObj-1 then npict=nObj-1
-  print,"Number of time picts  = ",nObj
-  print,"npict = ", npict
+  if npict gt nObj-1 then begin
+     error = 1
+     return
+  endif
+
   ;;Find iteration and time 
   it= Step_I[SortIdx_I(npict)]
   time =  it*Param.COLLECTIVE.Dt._DATA(0)
-  print," Interation : ",it
-  print," Time       : ",time
-
+  
   ;;Seting up "variables"
   nVar = nw +ndim+neqpar
   variables = STRARR(nVAr)
@@ -518,7 +525,6 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
   variables(0:ndim-1) = DimName(0:ndim-1)
   variables(nVar-neqpar:nVar-1) = ['B0x','B0y','B0z']
 
-  H5F_CLOSE, file_id
   ;;;;;;;;;;;;;;;;; DATA GATHERING ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   ;; loop over all files
@@ -527,12 +533,12 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
      filename = dirname+'proc' + string(iproc,FORMAT='(I0)')+ '.hdf'
      
      file_id = H5F_OPEN(filename)
-     iMin = MinIJK_ID(iproc,0)
-     iMax = MaxIJK_ID(iproc,0)
-     jMin = MinIJK_ID(iproc,1)
-     jMax = MaxIJK_ID(iproc,1)
-                                ;kMin = MinIJK_ID(iproc,2)
-                                ;kMax = MaxIJK_ID(iproc,2)
+     iMin = MinIJK_PD(iproc,0)
+     iMax = MaxIJK_PD(iproc,0)
+     jMin = MinIJK_PD(iproc,1)
+     jMax = MaxIJK_PD(iproc,1)
+                                ;kMin = MinIJK_PD(iproc,2)
+                                ;kMax = MaxIJK_PD(iproc,2)
 
      iw = 0
      ;; Go thoug all fields variables
@@ -540,8 +546,8 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
      nFields = H5G_GET_NUM_OBJS(group_id)
      for iFields=0,nFields-1 do begin
         get_hdf_pict,group_id,iFields,SortIdx_I(npict),nxyz_D,$
-                     -1,pict,varname
-        w(iMin:iMax,jMin:jMax,iw) = pict
+                     -1,pict,varname,getdata
+        if getdata then w(iMin:iMax,jMin:jMax,iw) = pict
         variables(ndim+iw) = varname
         iw = iw +1
      endfor
@@ -552,8 +558,8 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
      nSpecie = H5G_GET_NUM_OBJS(group_id)
      ;; First species is sum of carge densities Rho
      get_hdf_pict,group_id,0,SortIdx_I(npict),nxyz_D,$
-                  -1,pict,varname
-     w(iMin:iMax,jMin:jMax,iw) = pict
+                  -1,pict,varname,getdata
+     if getdata then w(iMin:iMax,jMin:jMax,iw) = pict
      variables(ndim+iw) = varname
      iw = iw +1
      ;; LOOP over species and return density, pressure and currents
@@ -564,8 +570,8 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
         nMoment = H5G_GET_NUM_OBJS(Moment_id)
         for iMoment=0,nMoment-1 do begin
            get_hdf_pict,Moment_id,iMoment,SortIdx_I(npict),nxyz_D,$
-                        iSpecie-1,pict,varname
-           w(iMin:iMax,jMin:jMax,iw) = pict
+                        iSpecie-1,pict,varname,getdata
+           if getdata then w(iMin:iMax,jMin:jMax,iw) = pict
            variables(ndim+iw) = varname
            iw = iw +1
         endfor
@@ -575,109 +581,114 @@ pro get_pict_hdf,filenames,nfile,npict,x,w,$
 
      H5F_CLOSE, file_id
   endfor
-  print,"END get_pict_hdf"
-
+  
 end
 
 ;=============================================================================
-pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name
+pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name,getdata
 
 
-                                ;print ,"get_hdf_pict :: nxyz_D =",nx
   GroupName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iGroup)
-                                ;print,"Moment name = ",GroupName 
   name= GroupName
   if iSpecies ge 0 then $
      name= GroupName +"S"+STRING(iSpecies,FORMAT='(I02)')
   moment_id = H5G_OPEN(group_id, GroupName)
-                                ;print,GroupName," Number objects : ", H5G_GET_NUM_OBJS(moment_id)
   ;;get filed data form npict time pict
   pictname = H5G_GET_OBJ_NAME_BY_IDX(moment_id,ipict)
-                                ;print,"pictName = ",pictname
-  pict_id = H5D_OPEN(moment_id,pictname)
-  pict = H5D_READ(pict_id)
-                                ;print," size pict :: ",size(pict,/DIMENSIONS), " :: ", nx
-  pict = 0.5*(pict(0:nx(2)-1,*,*) + pict(1:nx(2),*,*))
-  pict = 0.5*(pict(0:nx(2)-1,0:nx(1)-1,*) + pict(0:nx(2)-1,1:nx(1),*))
-  pict = 0.5*(pict(0:nx(2)-1,0:nx(1)-1,0:nx(0)-1) + pict(0:nx(2)-1,0:nx(1)-1,1:nx(0)))
-  pictout = reform(TRANSPOSE(pict(0:nx(2)-1,0:nx(1)-1,0:nx(0)-1),[2,1,0]))
-  H5D_CLOSE, pict_id
+  if getdata then begin
+     pict_id = H5D_OPEN(moment_id,pictname)
+     pict = H5D_READ(pict_id)
+     pict = 0.5*(pict(0:nx(2)-1,*,*) + pict(1:nx(2),*,*))
+     pict = 0.5*(pict(0:nx(2)-1,0:nx(1)-1,*) + pict(0:nx(2)-1,1:nx(1),*))
+     pict = 0.5*(pict(0:nx(2)-1,0:nx(1)-1,0:nx(0)-1) + pict(0:nx(2)-1,0:nx(1)-1,1:nx(0)))
+     pictout = reform(TRANSPOSE(pict(0:nx(2)-1,0:nx(1)-1,0:nx(0)-1),[2,1,0]))
+     H5D_CLOSE, pict_id
+  endif
   h5G_CLOSE, moment_id
 
 end
 ;=============================================================================
-pro get_pict,unit,filetype,npict,x,w,$
-    headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
-    rBody,error
+pro get_pict,unit,filename,filetype,npict,x,w,$
+             headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
+             rBody,error
 
-   on_error,2
+  if filetype eq 'IPIC3D' then begin 
+     on_error,2
+     error=0
+     get_pict_hdf,filename,npict,x,w,headline,it,time,$
+                  gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error,1
 
-   error=0
+  endif else begin
 
-   if(eof(unit))then begin
-      error=1
-      return
-   endif
+     on_error,2
 
-   ; Get current pointer position
-   point_lun,-unit,pointer
+     error=0
 
-   ; Skip npict-1 snapshots
-   ipict=0
-   pictsize=1
-   while ipict lt npict-1 and not eof(unit) do begin
-      ipict=ipict+1
-      gethead,unit,filetype,pictsize=pictsize
-      pointer=long64(pointer) + pictsize
-      point_lun,unit,pointer
-   endwhile
+     if(eof(unit))then begin
+        error=1
+        return
+     endif
 
-   ; Backup 1 snapshot if end of file
-   if eof(unit) then begin
-       error=1
-       point_lun,unit,pointer-pictsize
-   endif
+                                ; Get current pointer position
+     point_lun,-unit,pointer
 
-   ; Read header information
-   gethead,unit,filetype,headline,$
-       it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
+                                ; Skip npict-1 snapshots
+     ipict=0
+     pictsize=1
+     while ipict lt npict-1 and not eof(unit) do begin
+        ipict=ipict+1
+        gethead,unit,filename,filetype,pictsize=pictsize
+        pointer=long64(pointer) + pictsize
+        point_lun,unit,pointer
+     endwhile
 
-   ; set rBody if listed among the parameters
-   for i = nDim + nW, n_elements(variables)-1 do begin
-       iPar = i - nDim - nW
-       if variables(i) eq 'rbody' or variables(i) eq 'rBody' then $
+                                ; Backup 1 snapshot if end of file
+     if eof(unit) then begin
+        error=1
+        point_lun,unit,pointer-pictsize
+     endif
+
+                                ; Read header information
+     gethead,unit,filename,filetype,headline,$
+             it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
+
+                                ; set rBody if listed among the parameters
+     for i = nDim + nW, n_elements(variables)-1 do begin
+        iPar = i - nDim - nW
+        if variables(i) eq 'rbody' or variables(i) eq 'rBody' then $
            rBody = eqpar(iPar)
-   endfor
+     endfor
 
-   ; Read data
-   case strlowcase(filetype) of
-       'log':    get_pict_log ,unit, npict, ndim, nw, nx, x, w
-       'ascii':  get_pict_asc ,unit, npict, ndim, nw, nx, x, w
-       'binary': get_pict_bin ,unit, npict, ndim, nw, nx, x, w
-       'real4':  get_pict_real,unit, npict, ndim, nw, nx, x, w
-       else:    begin
+                                ; Read data
+     case strlowcase(filetype) of
+        'log':    get_pict_log ,unit, npict, ndim, nw, nx, x, w
+        'ascii':  get_pict_asc ,unit, npict, ndim, nw, nx, x, w
+        'binary': get_pict_bin ,unit, npict, ndim, nw, nx, x, w
+        'real4':  get_pict_real,unit, npict, ndim, nw, nx, x, w
+        else:    begin
            print,'get_pict: unknown filetype:',filetype
            error=1
            close,unit
-       end
-   endcase
+        end
+     endcase
 
-   if ndim eq 2 and nx(ndim-1) eq 1 then begin
-       ; sort x and w according to the x + factor * y function
-       ; where factor is a transcendent number to avoid coincidences
-       factor = exp(1.0d0)
-       isort = sort( x(*,*,0) + factor*x(*,*,1) )
-       x(*,0,*) = x(isort,0,*)
-       w(*,0,*) = w(isort,0,*)
-   endif
+     if ndim eq 2 and nx(ndim-1) eq 1 then begin
+                                ; sort x and w according to the x + factor * y function
+                                ; where factor is a transcendent number to avoid coincidences
+        factor = exp(1.0d0)
+        isort = sort( x(*,*,0) + factor*x(*,*,1) )
+        x(*,0,*) = x(isort,0,*)
+        w(*,0,*) = w(isort,0,*)
+     endif
 
-   if ndim eq 1 and gencoord then begin
-       ; sort points to have increasing coordinates
-       isort = sort(x)
-       x     = x(isort)
-       w     = w(isort,*)
-   endif
+     if ndim eq 1 and gencoord then begin
+                                ; sort points to have increasing coordinates
+        isort = sort(x)
+        x     = x(isort)
+        w     = w(isort,*)
+     endif
 
+  endelse
 end
 
 ;=============================================================================

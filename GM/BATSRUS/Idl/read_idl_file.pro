@@ -55,7 +55,7 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
 
      openfile,10,filenames(ifile),filetypes(ifile)
 
-     get_pict,10,filetypes(ifile),npict,x,w,headline,phys,it,time,$
+     get_pict,10,filenames(ifile),filetypes(ifile),npict,x,w,headline,phys,it,time,$
             gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
 
      if (nxreg(0) lt 0.0) then begin
