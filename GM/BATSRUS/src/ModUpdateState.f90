@@ -15,7 +15,7 @@ subroutine update_states_MHD(iStage,iBlock)
        turb_mixing_init_point_impl
   use ModEnergy
   use ModWaves, ONLY: nWave, WaveFirst_,WaveLast_, &
-       UseWavePressure, UseWavePressureLtd, DoAdvectWaves, &
+       UseWavePressure, UseWavePressureLtd, UseAlfvenWaves, DoAdvectWaves, &
        update_wave_group_advection, UseAlfvenWaveReflection
   use ModResistivity,   ONLY: UseResistivity, &
        calc_resistivity_source
@@ -381,16 +381,18 @@ contains
        if(DoAdvectWaves .and. iStage==nStage .and. nWave>2)&
             call update_wave_group_advection(iBlock)
        if(UseWavePressureLtd)then
-          do k=1,nK;do j=1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              State_VGB(Ew_,i,j,k,iBlock)= &
                   sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
           end do; end do; end do
        end if
        ! Avoid negative wave pressure
-       do k=1,nK;do j=1,nJ; do i=1,nI
-          State_VGB(WaveFirst_:WaveLast_,i,j,k, iBlock) = &
-               max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 1e-30)
-       end do; end do; end do
+       if(UseAlfvenWaves)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             State_VGB(WaveFirst_:WaveLast_,i,j,k, iBlock) = &
+                  max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 0.0)
+          end do; end do; end do
+       end if
     end if
 
     if(boris_correction) then
