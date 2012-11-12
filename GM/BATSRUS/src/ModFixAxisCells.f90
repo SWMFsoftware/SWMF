@@ -22,6 +22,7 @@ subroutine fix_axis_cells
   integer, parameter :: Volume_=1, SumX_=2, SumX2_=3
   integer :: i, j, k, kMin, kMax, kOut, iBlock, iHemisphere, iR, nR, iError
   integer :: iVar, nAxisCell
+  real :: Beta
   real :: r, x, y, Volume, InvVolume, SumX, SumXAvg, InvSumX2, dLeft, dRight
   real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
@@ -58,8 +59,10 @@ subroutine fix_axis_cells
 
      if(rMin_BLK(iBlock) < r2FixAxis) then 
         nAxisCell = 2
+        Beta = 1.16
      elseif(rMin_BLK(iBlock) < rFixAxis) then 
         nAxisCell = 1
+        Beta = 1.5
      else
         CYCLE
      end if
@@ -160,12 +163,12 @@ subroutine fix_axis_cells
            dLeft  = SumXAvg - SumBuffer_VIII(iVar,iR,SumXLeft_,iHemisphere)
            dRight = SumBuffer_VIII(iVar,iR,SumXRight_,iHemisphere) - SumXAvg
            dStateDx_V(iVar) = (sign(0.5,dLeft)+sign(0.5,dRight))*InvSumX2 &
-               *min(1.5*abs(dLeft),1.5*abs(dRight),0.5*abs(dLeft+dRight))
+               *min(Beta*abs(dLeft),Beta*abs(dRight),0.5*abs(dLeft+dRight))
 
            dLeft  = SumXAvg - SumBuffer_VIII(iVar,iR,SumYLeft_,iHemisphere)
            dRight = SumBuffer_VIII(iVar,iR,SumYRight_,iHemisphere) - SumXAvg
            dStateDy_V(iVar) = InvSumX2 * (sign(0.5,dLeft)+sign(0.5,dRight)) &
-                *min(1.5*abs(dLeft),1.5*abs(dRight),0.5*abs(dLeft+dRight))
+                *min(Beta*abs(dLeft),Beta*abs(dRight),0.5*abs(dLeft+dRight))
         end do
 
         ! Apply fit to each cell within the supercell
@@ -210,7 +213,7 @@ subroutine fix_axis_cells_cyl
   integer, parameter :: Volume_=1, SumX_=2, SumX2_=3
   integer :: i, j, k, iBlock, iZ, nZ, iError
   integer :: iVar, nAxisCell
-  real :: MinDzValue
+  real :: MinDzValue, Beta
   real :: x, y, z, Volume, InvVolume, SumX, SumXAvg, InvSumX2, dLeft, dRight
   real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
@@ -231,8 +234,10 @@ subroutine fix_axis_cells_cyl
 
   if (r2FixAxis > 0.1) then 
      nAxisCell = 2
+     Beta = 1.16
   else
      nAxisCell = 1
+     Beta = 1.5
   end if
 
   do iBlock = 1, nBlock
@@ -307,14 +312,28 @@ subroutine fix_axis_cells_cyl
            dLeft  = SumXAvg - SumBuffer_VII(iVar,iZ,SumXLeft_)
            dRight = SumBuffer_VII(iVar,iZ,SumXRight_) - SumXAvg
            dStateDx_V(iVar) = (sign(0.5,dLeft)+sign(0.5,dRight))*InvSumX2 &
-               *min(1.5*abs(dLeft),1.5*abs(dRight),0.5*abs(dLeft+dRight))
+               *min(Beta*abs(dLeft),Beta*abs(dRight),0.5*abs(dLeft+dRight))
+
+           !if(iVar==1)then
+           !   write(*,*)'!!! iBlock=',iBlock
+           !   write(*,*)'!!! SumX, InvSumX2 =', SumX, InvSumX2
+           !   write(*,*)'!!! Avg, SumXAvg   =', State_V(iVar), SumXAvg 
+           !   write(*,*)'!!! SumXLeft, Right=', &
+           !        SumBuffer_VII(iVar,iZ,SumXLeft_), SumBuffer_VII(iVar,iZ,SumXRight_)
+           !   write(*,*)'!!! dLeft, dRight  =',  dLeft, dRight
+           !   write(*,*)'!!! dStateDx_V     =', dStateDx_V(iVar)
+           !end if
 
            dLeft  = SumXAvg - SumBuffer_VII(iVar,iZ,SumYLeft_)
            dRight = SumBuffer_VII(iVar,iZ,SumYRight_) - SumXAvg
            dStateDy_V(iVar) = InvSumX2 * (sign(0.5,dLeft)+sign(0.5,dRight)) &
-                *min(1.5*abs(dLeft),1.5*abs(dRight),0.5*abs(dLeft+dRight))
+                *min(Beta*abs(dLeft),Beta*abs(dRight),0.5*abs(dLeft+dRight))
 
         end do
+
+        !write(*,*)'!!! x     =', Xyz_DGB(x_,nAxisCell,1:nJ,1,iBlock)
+        !write(*,*)'!!! Before=',State_VGB(1,nAxisCell,1:nJ,1,iBlock)
+
 
         ! Apply fit to each cell within the supercell
         do j=1, nJ; do i=1, nAxisCell
@@ -325,6 +344,8 @@ subroutine fix_axis_cells_cyl
 
            call calc_energy_point(i,j,k,iBlock)
         end do; end do
+
+        !write(*,*)'!!! After =',State_VGB(1,nAxisCell,1:nJ,1,iBlock)
 
      end do
 
