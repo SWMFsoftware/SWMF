@@ -93,13 +93,12 @@ contains
 
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
-    use ModMain, ONLY: UseDtFixed, Dt, Dt_BLK, time_accurate, &
+    use ModMain, ONLY: UseDtFixed, Dt, Dt_BLK, &
          iTest, jTest, kTest, BlkTest
     use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
     use ModGeometry, ONLY: true_cell, true_BLK, rMin_BLK
-    use ModGeometry, ONLY: TypeGeometry
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          UseTurbulentCascade
@@ -130,8 +129,26 @@ contains
        DoTest=.false.; DoTestMe=.false.
     endif
 
+    if(DoFixAxis)then
+       ! Ignore time step constraints in the Phi direction inside the supercell
+       if(IsCylindricalAxis)then
+          if(CoordMin_DB(r_,iBlock) <= 0.0)then
+             Di = 1; if(r2FixAxis > 0.0) Di = 2
+             VdtFace_y(1:Di,:,1:nK) = 0.0
+          end if
+       elseif(IsLatitudeAxis)then
+          if(rMin_Blk(iBlock) < rFixAxis)then
+             Dk = 1; if(rMin_Blk(iBlock) < r2FixAxis) Dk = 2
+             if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8) &
+                  VdtFace_y(1:nI,:,nK+1-Dk:nK) = 0.0
+             if(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8) &
+                  VdtFace_y(1:nI,:,1:Dk) = 0.0
+          end if
+       end if
+    end if
+
     ! Calculate time step limit based on maximum speeds across 6 faces
-    do k=1,nK; do j=1,nJ; do i=1,nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
        Vdt = max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))
        if(nJ > 1) Vdt = Vdt + max(VdtFace_y(i,j,k), VdtFace_y(i,j+1,k))
@@ -197,28 +214,6 @@ contains
              ! due to too large loss terms.
              time_BLK(i,j,k,iBlock) = min(time_BLK(i,j,k,iBlock), Dt_loss)
           end do; end do; end do
-       end if
-    end if
-
-
-    if(DoFixAxis .and. time_accurate)then
-       ! Ignore time step constraints from supercell
-       if(IsCylindricalAxis)then
-          if(CoordMin_DB(r_,iBlock) <= 0.0)then
-             Di = 1; if(r2FixAxis > 0.1) Di = 2
-             time_BLK(1:Di, 1:nJ, 1:nK, iBlock) = &
-                  time_BLK(1:Di, 1:nJ, 1:nK, iBlock) * 10.0
-          end if
-       elseif(IsLatitudeAxis)then
-          if(rMin_Blk(iBlock) < rFixAxis)then
-             Dk = 1; if(rMin_Blk(iBlock) < r2FixAxis) Dk = 2
-             if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8) &
-                  time_BLK(1:nI, 1:nJ, nK+1-Dk:nK, iBlock) = &
-                  time_BLK(1:nI, 1:nJ, nK+1-Dk:nK, iBlock) * 10.0
-             if(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8) &
-                  time_BLK(1:nI, 1:nJ, 1:Dk, iBlock) = &
-                  time_BLK(1:nI, 1:nJ, 1:Dk, iBlock) * 10.0
-          end if
        end if
     end if
 
