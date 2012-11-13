@@ -121,8 +121,10 @@ module ModUser
   !HNuSpecies_dim_I(O_)=18.4e3    !m
 
   real, dimension(MaxNuSpecies):: BodynDenNuSpecies_I,&
-       BodynDenNuSpDim_I=(/1.1593e12, 3.2278e9, 1.1307e7, 1.951e4, &
-       1.5248e3, 9.4936e5, 5.2695e8, 2.2258e11, 3.71e4/)
+       BodynDenNuSpDim_I=(/0.0, 0.0, 0.0, 0.0, &
+       0.0, 0.0, 0.0, 0.0, 0.0/)
+!       BodynDenNuSpDim_I=(/1.1593e12, 3.2278e9, 1.1307e7, 1.951e4, &
+!       1.5248e3, 9.4936e5, 5.2695e8, 2.2258e11, 3.71e4/)
 
   real, dimension(nIonFluid):: BodyRhoSpecies_I
   integer, parameter :: & ! other numbers
@@ -924,11 +926,11 @@ contains
                 end do
              end do
              close(15)
-             write(*,*)Long_I(Nlong),Lat_I(NLat),Alt_I(Nalt)
-             write(*,*)Long_I(1),Lat_I(1),Alt_I(1)
-             write(*,*)'Den_O(i,j,k),ICO2p(i,j,k),IOp(i,j,k)=',&
-                  Den_O(Nlong,Nlat,Nalt),ICO2p(Nlong,Nlat,Nalt),&
-                  IOp(Nlong,Nlat,Nalt)
+          !   write(*,*)Long_I(Nlong),Lat_I(NLat),Alt_I(Nalt)
+          !   write(*,*)Long_I(1),Lat_I(1),Alt_I(1)
+          !   write(*,*)'Den_O(i,j,k),ICO2p(i,j,k),IOp(i,j,k)=',&
+          !        Den_O(Nlong,Nlat,Nalt),ICO2p(Nlong,Nlat,Nalt),&
+          !        IOp(Nlong,Nlat,Nalt)
 
           end if
        case('#POINTIMPLICITREGION')
@@ -975,7 +977,7 @@ contains
        ! at least part of the block is outside the body 
        if (R_BLK(nI,1,1,iBlock) >= Rbody) then  
 
-          write(*,*)'we are in the spherical case of Mars input!'
+         ! write(*,*)'we are in the spherical case of Mars input!'
 
           do k=1,nK
              Theta = (k-1)*dTheta  + xyzStart_BLK(Theta_,iBlock)      
@@ -1230,8 +1232,8 @@ contains
 
        HNuSpeciesDim_I(CO2_)=7.00
        HNuSpeciesDim_I(CO2x_)=16.67
-       HNuSpeciesDim_I(O_)=10.56  !scale height in km
-       HNuSpeciesDim_I(Ox_)=33.97
+       HNuSpeciesDim_I(O_)=12.27  !scale height in km
+       HNuSpeciesDim_I(Ox_)=48.57
        HNuSpeciesDim_I(H_)=100.
        HNuSpeciesDim_I(Hx_)=100.0
        HNuSpeciesDim_I(Oh_)=696.9
@@ -2126,7 +2128,7 @@ contains
           nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
                BodynDenNuSpecies_I
 
-       else if(R_BLK(i,j,k,iBlock)< 5.0) then         
+       else if(R_BLK(i,j,k,iBlock)< 5.0*Rbody) then         
           nDenNuSpecies_CBI(i,j,k,iBlock,:)=&
                BodynDenNuSpecies_I*& 
                exp(-(R_BLK(i,j,k,iBlock)-Rbody)&
@@ -2248,11 +2250,14 @@ contains
                nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
                nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)
 
+          nDenNuSpecies_CBI(i,j,k,iBlock,H_)= &
+          nDenNuSpecies_CBI(i,j,k,iBlock,H_)
+
           nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
-               nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_) + &
+               nDenNuSpecies_CBI(i,j,k,iBlock,H_))*nu0
 
 
-          nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
 
        end if
 
@@ -2269,7 +2274,8 @@ contains
           if(UseHotO) then
              nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)= &
                   nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)+&
-                  nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)
+                  nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)+&
+                  nDenNuSpecies_CBI(i,j,k,iBlock,Oh2x_)
 
              nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
                   nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
@@ -2280,9 +2286,10 @@ contains
                   nDenNuSpecies_CBI(i,j,k,iBlock,H_) )*nu0
           else              
              nu_BLK(i,j,k,iBlock)=(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)+&
-                  nDenNuSpecies_CBI(i,j,k,iBlock,O_))*nu0
+                  nDenNuSpecies_CBI(i,j,k,iBlock,O_)+&
+                  nDenNuSpecies_CBI(i,j,k,iBlock,H_))*nu0
 
-             nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
+!             nDenNuSpecies_CBI(i,j,k,iBlock,H_)= 1.0e-5
              
           end if
 
