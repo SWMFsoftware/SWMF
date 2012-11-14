@@ -2,7 +2,8 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
   use CON_coupler, ONLY: PW_, Grid_C
   use ModMain, ONLY: x_, y_, TypeCoordSystem, Time_Simulation
-  use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_
+  use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, &
+       SpeciesLast_, NameVar_V
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
   use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, rCurrents
   use ModPwGrid
@@ -23,7 +24,7 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
   logical, save :: DoInitialize = .true.
 
-  integer :: i, iLine, iHemisphere
+  integer :: i, iLine, iHemisphere, j
   real    :: GmPw_DD(3,3), Theta, Phi, XyzPw_D(3), &
        SinThetaOuter1,SinThetaOuter2,tmp1_array(nFieldLine)
   integer :: Tmp_array(nFieldLine)
@@ -102,9 +103,29 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
         iRhoGmLast  = nIonFluid
         iUGmFirst   = nIonFluid + 1
         iUGmLast    = 2*nIonFluid
-        
-        iRhoPwLast = min(iRhoPwLast, iRhoPwFirst + nIonFluid - 1)
-        iUPwLast   = min(iUPwLast,   iUPwFirst   + nIonFluid - 1)
+
+        ! Build iCoupleFluid, which connects PW fluids with GM fluids.
+        ! Assumption: MHD is using STANDARD FLUID NAMES and PW only has
+        ! Op, Hep, and Hp to share.
+        j = 1
+        do i=1, size(NameVar_V)
+           if(DoTestMe)write(*,*) 'Checking var ', trim(NameVar_V(i)),'.'
+           select case( trim(NameVar_V(i)) )
+           case('HpRho')
+              iCoupleFluid(j) = iRhoPwFirst
+           case('OpRho')
+              iCoupleFluid(j) = iRhoPwFirst + 1
+           case('HepRho')
+              iCoupleFluid(j) = iRhoPwFirst + 2
+           end select
+           ! Keep track of which ion species we are on by counting the
+           ! number of variables that have the name <Species>Rho.
+           if (index(NameVar_V(i), 'Rho')>1) j = j + 1
+        end do
+
+        if(DoTestMe)write(*,*) 'nIonFluid = ', nIonFluid
+        if(DoTestMe)write(*,*) 'iCoupleFluid = (',iCoupleFluid,')'
+
      else
         ! Total density and velocity
         iRhoGmFirst = 1
@@ -143,24 +164,42 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
   if(UseMultiIon)then
      do i = iRhoGmFirst, iRhoGmLast
-        where(Buffer_VI(Theta_,:)< cHalfPi)
-           StateGm1_VI(i,1:nFieldline) &
-                = Buffer_VI(i+iRhoPwFirst-1,:)*Si2No_V(UnitRho_)
-        elsewhere
-           StateGm2_VI(i,1:nFieldline) &
-                = Buffer_VI(i+iRhoPwFirst-1,:)*Si2No_V(UnitRho_)
-        end where
+        ! Set values based on if fluid is shared by PW & GM.
+        if (iCoupleFluid(i)==-1) then ! Fluid NOT in PW.
+           where(Buffer_VI(Theta_,:)< cHalfPi) ! Northern Hemisphere.
+              StateGm1_VI(i,           1:nFieldline) = 1.67E-24 * Si2No_V(UnitRho_)
+              StateGm1_VI(i+nIonFluid, 1:nFieldLine) = 0.0
+           elsewhere                           ! Southern Hemisphere
+              StateGm2_VI(i,           1:nFieldline) = 1.67E-24 * Si2No_V(UnitRho_)
+              StateGm2_VI(i+nIonFluid, 1:nFieldLine) = 0.0
+           end where
+        else                          ! Fluid IS in PW.
+           where(Buffer_VI(Theta_,:)< cHalfPi) ! Northern Hemisphere.
+              StateGm1_VI(i,           1:nFieldLine) = &
+                   Buffer_VI(iCoupleFluid(i),            :) * Si2No_V(UnitRho_)
+              StateGm1_VI(i+nIonFluid, 1:nFieldLine) = &
+                   Buffer_VI(iCoupleFluid(i)+nSpeciesPw, :) * Si2No_V(UnitU_)
+           elsewhere                           ! Southern Hemisphere
+              StateGm2_VI(i,           1:nFieldLine) = &
+                   Buffer_VI(iCoupleFluid(i),            :) * Si2No_V(UnitRho_)
+              StateGm2_VI(i+nIonFluid, 1:nFieldLine) = &
+                   Buffer_VI(iCoupleFluid(i)+nSpeciesPw, :) * Si2No_V(UnitU_)
+           end where
+        end if
      end do
      
-     do i = iUGmFirst, iUGmLast
-        where(Buffer_VI(Theta_,:)< cHalfPi)
-           StateGm1_VI(i, 1:nFieldline) &
-                = Buffer_VI(i-iUGmFirst+iUPwFirst, :) * Si2No_V(UnitU_)
-        elsewhere
-           StateGm2_VI(i, 1:nFieldline) &
-                = Buffer_VI(i-iUGmFirst+iUPwFirst, :) * Si2No_V(UnitU_)
-        end where
-     end do
+     if(DoTestMe) then
+        write(*,*)'Max Hp Density:', maxval(Buffer_VI(3, :))
+        write(*,*)'Max Op Density:', maxval(Buffer_VI(4, :))
+        write(*,*)'Max He Density:', maxval(Buffer_VI(5, :))
+        write(*,*)'Max Sw Density:', maxval(StateGm1_VI(1, :))/Si2No_V(UnitRho_)
+        
+        write(*,*)'Max Hp Velocity:', maxval(Buffer_VI(6, :))
+        write(*,*)'Max Op Velocity:', maxval(Buffer_VI(7, :))
+        write(*,*)'Max He Velocity:', maxval(Buffer_VI(8, :))
+        write(*,*)'Max Sw Velocity:', maxval(StateGm1_VI(4, :))/Si2No_V(UnitU_)
+     end if
+
   else
      ! Set total 
      if(UseMultiSpecies)then

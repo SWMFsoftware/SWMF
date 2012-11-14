@@ -1,7 +1,8 @@
 module ModPwGrid
 
-  use ModNumConst, ONLY: cDegToRad
-
+  use ModNumConst,   ONLY: cDegToRad
+  use ModMultiFluid, ONLY: nIonFluid
+  
   implicit none
   save
 
@@ -20,6 +21,8 @@ module ModPwGrid
 
   integer, parameter :: nOuterPoint=12
   real,    parameter :: dThetaOuter=5.0*cDegToRad
+
+  integer :: iCoupleFluid(nIonFluid) = -1
 
   integer :: nVarPw=-1, nSpeciesPw=-1, nLinePw=-1, nPoint=-1, nTriangle=-1
   integer :: iRhoPwFirst=-1, iRhoPwLast=-1, iUPwFirst=-1, iUPwLast=-1
