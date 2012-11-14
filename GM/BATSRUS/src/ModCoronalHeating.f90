@@ -1389,7 +1389,7 @@ contains
     use ModGeometry, ONLY: true_cell
     use ModMain, ONLY: UseB0
     use ModNumConst, ONLY: i_DD
-    use ModPointImplicit, ONLY: IsPointImplSource, DsDu_VVC
+    use ModPointImplicit, ONLY: IsPointImplMatrixSet, DsDu_VVC
     use ModSize, ONLY: x_, y_, z_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use ModWaves, ONLY: WaveFirst_, WaveLast_, UseTransverseTurbulence, &
@@ -1511,7 +1511,7 @@ contains
             - Mixing*State_VGB(WaveFirst_,i,j,k,iBlock) &
             + Mixing*State_VGB(WaveLast_,i,j,k,iBlock)
 
-       if(IsPointImplSource)then
+       if(IsPointImplMatrixSet)then
           DsDu_VVC(WaveFirst_,WaveFirst_,i,j,k) = -Reflection + Mixing
           DsDu_VVC(WaveFirst_,WaveLast_,i,j,k) = -Reflection - Mixing
           DsDu_VVC(WaveLast_,WaveFirst_,i,j,k) = Reflection - Mixing
