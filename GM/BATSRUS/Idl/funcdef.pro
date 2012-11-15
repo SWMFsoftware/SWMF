@@ -339,7 +339,7 @@ case f of
             iStart = strpos(f,'{')
             iEnd   = strpos(f,'}')
             Name   = strmid(f,iStart+1,iEnd-iStart-1)
-            iVar   = where(variables eq Name)
+            iVar   = where(STRLOWCASE(variables) eq STRLOWCASE(Name))
             iVar   = iVar(0)
             if iVar lt 0 then begin
                 print,'Error in funcdef: cannot find variable "{',Name, $
