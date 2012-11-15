@@ -374,41 +374,11 @@ contains
       !    write(*,*)'MassIon_I=',MassIon_I
       ! end if
 
-       !calculate Ion neutral collision rate:
+       !calculate Ion neutral collision rate: nu_in=C_in*n_n, Unit[C_in]:cm^3*s^-1
 
-!  integer, parameter :: & ! order of Neutral species
-!       CO2_=1 ,&
-!       O_=2   ,&
-!       H_=3, &
-!       Oh_=4   ,&
-!       Ohx_=5 , &
-!       Hx_=6, &
-!       Ox_=7 ,&
-!       CO2x_=8,&
-!       Oh2x_ =9
-
-!  real, parameter:: IonNeuCoeffDim_II(1:nIonFluid,1:nNuSpecies)= reshape( (/ &
-!       41.4, 5.63, 8.95, 4., &
-!       30., 2.31, 4., 1.76, &
-!       4., 0.65, 1., 0.47 /), (/4, 3/) )
-
-! nu_in=C_in*n_n (see Schunk and Nagy)
-
-       IonNeuRate_II(:,CO2_) = IonNeuCoeff_II(:,CO2_)*(nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)&
-                 +nDenNuSpecies_CBI(i,j,k,iBlock,CO2x_))
-
-
-       IonNeuRate_II(:,O_) = IonNeuCoeff_II(:,O_)*(nDenNuSpecies_CBI(i,j,k,iBlock,O_)&
-                 +nDenNuSpecies_CBI(i,j,k,iBlock,Ox_)+nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)&
-                 +nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)+nDenNuSpecies_CBI(i,j,k,iBlock,Oh2x_))
-
-       IonNeuRate_II(:,H_) = IonNeuCoeff_II(:,H_)*(nDenNuSpecies_CBI(i,j,k,iBlock,H_)&
-                 +nDenNuSpecies_CBI(i,j,k,iBlock,Hx_))
-
-
-!       do n=1,nNuSpecies   
-!          IonNeuRate_II(:,n) = IonNeuCoeff_II(:,n)*nDenNuSpecies_CBI(i,j,k,iBlock,n)
-!       end do
+       do n=1,nNuSpecies   
+          IonNeuRate_II(:,n) = IonNeuCoeff_II(:,n)*nDenNuSpecies_CBI(i,j,k,iBlock,n)
+       end do
 
 
        ReactionRate_I(H_hv__Hp_em_)= &
