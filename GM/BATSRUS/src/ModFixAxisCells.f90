@@ -59,7 +59,7 @@ subroutine fix_axis_cells
 
      if(rMin_BLK(iBlock) < r2FixAxis) then 
         nAxisCell = 2
-        Beta = 1.16
+        Beta = 0.8
      elseif(rMin_BLK(iBlock) < rFixAxis) then 
         nAxisCell = 1
         Beta = 1.5
@@ -118,7 +118,7 @@ subroutine fix_axis_cells
         end do
      end do
   end do
-     
+
   ! Collect all contributions around the axis
   call MPI_allreduce(Buffer_VIII, SumBuffer_VIII, nVar*nR*Geom_*2, MPI_REAL, &
        MPI_SUM, iComm, iError)
@@ -234,7 +234,7 @@ subroutine fix_axis_cells_cyl
 
   if (r2FixAxis > 0.1) then 
      nAxisCell = 2
-     Beta = 1.16
+     Beta = 0.8
   else
      nAxisCell = 1
      Beta = 1.5
