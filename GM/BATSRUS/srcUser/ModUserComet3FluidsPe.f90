@@ -38,7 +38,7 @@ module ModUser
   integer, parameter, public :: H2O_  =  1
   integer, parameter, public :: H_    =  2
   !! Ion species names
-  integer, parameter, public :: SWp_  =  1
+  integer, parameter, public :: SW_   =  1
   integer, parameter, public :: Hp_   =  2
   integer, parameter, public :: H2Op_ =  3
 
@@ -256,7 +256,7 @@ contains
     !! e - Hp, Schunk and Nagy, Ionospheres, Cambridge University Press, 2000
     fei_I(Hp_) = 54.5*ChargeIon_I(Hp_)**2*State_VGB(HpRho_,i,j,k,iBlock)/MassIon_I(Hp_)* &
          No2SI_V(UnitN_)/1E6/(Te*sqrtTe)
-    fei_I(SWp_) = fei_I(Hp_)
+    fei_I(SW_) = fei_I(Hp_)
 
   end subroutine calc_electron_collision_rates
 
@@ -302,7 +302,7 @@ contains
     v_II(H2O_,Hp_)   = (1.30E-8+3.26E-8)/(rHelio**2) !! Ionization rate producing Hp from H2O & OH [1/s] (Huebner et al. 1992 & estimate)
     v_II(H_,Hp_)     = 7.30E-8/(rHelio**2) !! Ionization rate producing Hp from H [1/s] (Huebner et al. 1992)
     v_II(H2O_,H2Op_) = 1.00E-6 !! Gombosi et al., J. Geophys. Res., (1996) 
-    v_II(H_,SWp_)    = v_II(H_,Hp_)*1e-9 ! set production of solar wind protons to a small but non-zero value
+    v_II(H_,SW_)     = v_II(H_,Hp_)*1e-9 ! set production of solar wind protons to a small but non-zero value
 
     !! Electron excess energies from ionization (increases electron pressure)
     Qexc_II(H2O_,Hp_)   = 4.0054E-18 ! 25.0 eV, Huebner 1992
@@ -381,8 +381,8 @@ contains
     Tr=(Ti_I(Hp_)+TnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1))/2.
     kin_IIII(Hp_,H_,H_,Hp_)  = 2.65E-10/1E6*sqrt(Tr)*(1.0-0.083*log10(Tr))**2  !! rate in [m^3/s]
     !! SWp & H -> H & Hp  ! resonant, Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
-    Tr=(Ti_I(SWp_)+TnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1))/2.
-    kin_IIII(SWp_,H_,H_,Hp_) = 2.65E-10/1E6*sqrt(Tr)*(1.0-0.083*log10(Tr))**2  !! rate in [m^3/s]
+    Tr=(Ti_I(SW_)+TnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1))/2.
+    kin_IIII(SW_,H_,H_,Hp_) = 2.65E-10/1E6*sqrt(Tr)*(1.0-0.083*log10(Tr))**2  !! rate in [m^3/s]
     !! Hp & H -> H & Hp  ! non-resonant
     !fin_II(Hp_,H_) = 0.
 
@@ -395,8 +395,8 @@ contains
     !!???kin_IIII(Hp_,H2O_,H_,H2Op_) = 1E-4*2.1E-15*(uHpBulk + uHpTherm) < -calc??? Benna et al., Plan. Sp. Sci., (2007)
 
     !! Hp & H2O -> H & H2Op    ! resonant, estimate to get the same drag on SW-protons
-    kin_IIII(Hp_,H2O_,H_,H2Op_)  = 1E-6*1.7E-9 !! Gombosi et al., J. Geophys. Res., (1996), estimated
-    kin_IIII(SWp_,H2O_,H_,H2Op_) = 1E-6*1.7E-9 !! Gombosi et al., J. Geophys. Res., (1996), estimated
+    kin_IIII(Hp_,H2O_,H_,H2Op_) = 1E-6*1.7E-9 !! Gombosi et al., J. Geophys. Res., (1996), estimated
+    kin_IIII(SW_,H2O_,H_,H2Op_) = 1E-6*1.7E-9 !! Gombosi et al., J. Geophys. Res., (1996), estimated
 
     !! ********** Ion-ion collision rates ********** 
     ! SWp - SWp is left zero because the they do not result in a change in the source terms
@@ -413,22 +413,22 @@ contains
          sqrt(Mred)*1e-6*nIon_I(H2Op_)/(Tred*sqrt(Tred))
 
     ! H2Op - SWp, Coulomb collision, Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
-    Tred = (MassIon_I(H2Op_)*Ti_I(SWp_)+MassIon_I(SWp_)*Ti_I(H2Op_))/(MassIon_I(H2Op_)+MassIon_I(SWp_)) ! reduced temp
-    Mred = MassIon_I(H2Op_)*MassIon_I(SWp_)/(MassIon_I(H2Op_)+MassIon_I(SWp_)) ! reduced mass
-    fii_II(H2Op_,SWp_) = 1.27*ChargeIon_I(H2Op_)**2*ChargeIon_I(SWp_)**2/MassIon_I(H2Op_)*&
-         sqrt(Mred)*1e-6*nIon_I(SWp_)/(Tred*sqrt(Tred))
+    Tred = (MassIon_I(H2Op_)*Ti_I(SW_)+MassIon_I(SW_)*Ti_I(H2Op_))/(MassIon_I(H2Op_)+MassIon_I(SW_)) ! reduced temp
+    Mred = MassIon_I(H2Op_)*MassIon_I(SW_)/(MassIon_I(H2Op_)+MassIon_I(SW_)) ! reduced mass
+    fii_II(H2Op_,SW_) = 1.27*ChargeIon_I(H2Op_)**2*ChargeIon_I(SW_)**2/MassIon_I(H2Op_)*&
+         sqrt(Mred)*1e-6*nIon_I(SW_)/(Tred*sqrt(Tred))
     ! SWp - H2Op, Coulomb collision, Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
-    fii_II(SWp_,H2Op_) = 1.27*ChargeIon_I(H2Op_)**2*ChargeIon_I(SWp_)**2/MassIon_I(SWp_)*&
+    fii_II(SW_,H2Op_) = 1.27*ChargeIon_I(H2Op_)**2*ChargeIon_I(SW_)**2/MassIon_I(SW_)*&
          sqrt(Mred)*1e-6*nIon_I(H2Op_)/(Tred*sqrt(Tred))
 
     ! SWp - Hp, Coulomb collision, Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
-    Tred = (MassIon_I(SWp_)*Ti_I(Hp_)+MassIon_I(Hp_)*Ti_I(SWp_))/(MassIon_I(SWp_)+MassIon_I(Hp_)) ! reduced temp
-    Mred = MassIon_I(SWp_)*MassIon_I(Hp_)/(MassIon_I(SWp_)+MassIon_I(Hp_)) ! reduced mass
-    fii_II(SWp_,Hp_) = 1.27*ChargeIon_I(SWp_)**2*ChargeIon_I(Hp_)**2/MassIon_I(SWp_)*&
+    Tred = (MassIon_I(SW_)*Ti_I(Hp_)+MassIon_I(Hp_)*Ti_I(SW_))/(MassIon_I(SW_)+MassIon_I(Hp_)) ! reduced temp
+    Mred = MassIon_I(SW_)*MassIon_I(Hp_)/(MassIon_I(SW_)+MassIon_I(Hp_)) ! reduced mass
+    fii_II(SW_,Hp_) = 1.27*ChargeIon_I(SW_)**2*ChargeIon_I(Hp_)**2/MassIon_I(SW_)*&
          sqrt(Mred)*1e-6*nIon_I(Hp_)/(Tred*sqrt(Tred))
     ! Hp - SWp, Coulomb collision, Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
-    fii_II(Hp_,SWp_) = 1.27*ChargeIon_I(SWp_)**2*ChargeIon_I(Hp_)**2/MassIon_I(Hp_)*&
-         sqrt(Mred)*1e-6*nIon_I(SWp_)/(Tred*sqrt(Tred))
+    fii_II(Hp_,SW_) = 1.27*ChargeIon_I(SW_)**2*ChargeIon_I(Hp_)**2/MassIon_I(Hp_)*&
+         sqrt(Mred)*1e-6*nIon_I(SW_)/(Tred*sqrt(Tred))
 
     !! ********** Ion-electron recombination rates ********** 
 
@@ -448,7 +448,7 @@ contains
 !     end if
 
     alpha_I(Hp_)   = 1E-6*4.8E-12*(250/Te)**0.7  !! Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
-    alpha_I(SWp_)  = alpha_I(Hp_)
+    alpha_I(SW_)  = alpha_I(Hp_)
     !alpha_I(Hp_)   = 1E-6*3.5E-12*(Te/300)**(-0.7)  !! Schmidt et al., Comput. Phys. Commun. (1988)
 
   end subroutine user_calc_rates
@@ -1935,11 +1935,11 @@ contains
        else
           ! State_VGB(:,i,j,k,iBlock) = CellState_VI(:,1)
 
-          State_VGB(SWpRho_,i,j,k,iBlock)    = SW_n*MassIon_I(SWp_)
-          State_VGB(SWpRhoUx_,i,j,k,iBlock)  = SW_n*MassIon_I(SWp_)*SW_Ux
-          State_VGB(SWpRhoUy_,i,j,k,iBlock)  = SW_n*MassIon_I(SWp_)*SW_Uy
-          State_VGB(SWpRhoUz_,i,j,k,iBlock)  = SW_n*MassIon_I(SWp_)*SW_Uz
-          State_VGB(SWpP_,i,j,k,iBlock)      = SW_n*SW_T_dim*Io2No_V(UnitTemperature_)
+          State_VGB(SwRho_,i,j,k,iBlock)     = SW_n*MassIon_I(SW_)
+          State_VGB(SwRhoUx_,i,j,k,iBlock)   = SW_n*MassIon_I(SW_)*SW_Ux
+          State_VGB(SwRhoUy_,i,j,k,iBlock)   = SW_n*MassIon_I(SW_)*SW_Uy
+          State_VGB(SwRhoUz_,i,j,k,iBlock)   = SW_n*MassIon_I(SW_)*SW_Uz
+          State_VGB(SwP_,i,j,k,iBlock)       = SW_n*SW_T_dim*Io2No_V(UnitTemperature_)
 
           State_VGB(HpRho_,i,j,k,iBlock)     = SW_n*LowDensityRatio*MassIon_I(Hp_)
           State_VGB(HpRhoUx_,i,j,k,iBlock)   = SW_n*LowDensityRatio*MassIon_I(Hp_)*SW_Ux
@@ -2104,11 +2104,11 @@ contains
        call get_solar_wind_point(TimeBc, FaceCoords_D(x_),VarsGhostFace_V)
 
        ! Solar wind protons     
-       VarsGhostFace_V(SWpRho_)    = SW_n*MassIon_I(SWp_)*Io2No_V(UnitRho_)
-       VarsGhostFace_V(SWpRhoUx_)  = SW_Ux
-       VarsGhostFace_V(SWpRhoUy_)  = SW_Uy
-       VarsGhostFace_V(SWpRhoUz_)  = SW_Uz
-       VarsGhostFace_V(SWpP_)      = SW_n*Io2No_V(UnitN_)*SW_T_dim*Io2No_V(UnitTemperature_) ! cBoltzmann is in Io2No_V(UnitTemperature_)
+       VarsGhostFace_V(SwRho_)     = SW_n*MassIon_I(SW_)*Io2No_V(UnitRho_)
+       VarsGhostFace_V(SwRhoUx_)   = SW_Ux
+       VarsGhostFace_V(SwRhoUy_)   = SW_Uy
+       VarsGhostFace_V(SwRhoUz_)   = SW_Uz
+       VarsGhostFace_V(SwP_)       = SW_n*Io2No_V(UnitN_)*SW_T_dim*Io2No_V(UnitTemperature_) ! cBoltzmann is in Io2No_V(UnitTemperature_)
        ! Cometary protons
        VarsGhostFace_V(HpRho_)     = SW_n*MassIon_I(Hp_)*LowDensityRatio*Io2No_V(UnitRho_)
        VarsGhostFace_V(HpRhoUx_)   = SW_Ux

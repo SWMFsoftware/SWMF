@@ -38,11 +38,11 @@ module ModVarIndexes
        Bz_        =  7, &
        Pe_        =  8, &
        p_         =  9, &
-       SWpRho_    = 10, &
-       SWpRhoUx_  = 11, &
-       SWpRhoUy_  = 12, &
-       SWpRhoUz_  = 13, &
-       SWpP_      = 14, &
+       SwRho_     = 10, &
+       SwRhoUx_   = 11, &
+       SwRhoUy_   = 12, &
+       SwRhoUz_   = 13, &
+       SwP_       = 14, &
        HpRho_     = 15, &
        HpRhoUx_   = 16, &
        HpRhoUy_   = 17, &
@@ -54,7 +54,7 @@ module ModVarIndexes
        H2OpRhoUz_ = 23, &
        H2OpP_     = 24, &
        Energy_    = nVar+1, &
-       SWpEnergy_ = nVar+2, &
+       SwEnergy_ = nVar+2, &
        HpEnergy_  = nVar+3, &
        H2OpEnergy_= nVar+4
  
@@ -63,11 +63,11 @@ module ModVarIndexes
 
   ! These arrays are useful for multifluid
   integer, parameter :: &
-       iRho_I(nFluid)  =(/Rho_,   SWpRho_,   HpRho_,   H2OpRho_ /) ,&
-       iRhoUx_I(nFluid)=(/RhoUx_, SWpRhoUx_, HpRhoUx_, H2OpRhoUx_ /),&
-       iRhoUy_I(nFluid)=(/RhoUy_, SWpRhoUy_, HpRhoUy_, H2OpRhoUy_ /),&
-       iRhoUz_I(nFluid)=(/RhoUz_, SWpRhoUz_, HpRhoUz_, H2OpRhoUz_ /),&
-       iP_I(nFluid)    =(/p_,     SWpP_,     HpP_,     H2OpP_ /)
+       iRho_I(nFluid)  =(/Rho_,   SwRho_,   HpRho_,   H2OpRho_ /) ,&
+       iRhoUx_I(nFluid)=(/RhoUx_, SwRhoUx_, HpRhoUx_, H2OpRhoUx_ /),&
+       iRhoUy_I(nFluid)=(/RhoUy_, SwRhoUy_, HpRhoUy_, H2OpRhoUy_ /),&
+       iRhoUz_I(nFluid)=(/RhoUz_, SwRhoUz_, HpRhoUz_, H2OpRhoUz_ /),&
+       iP_I(nFluid)    =(/p_,     SwP_,     HpP_,     H2OpP_ /)
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
@@ -82,11 +82,11 @@ module ModVarIndexes
        0.0, & ! Bz_
        1.0, & ! Pe_
        1.0, & ! p_
-       1.0, & ! SWpRho_
-       0.0, & ! SWpRhoUx_
-       0.0, & ! SWpRhoUy_
-       0.0, & ! SWpRhoUz_
-       1.0, & ! SWpP_
+       1.0, & ! SwRho_
+       0.0, & ! SwRhoUx_
+       0.0, & ! SwRhoUy_
+       0.0, & ! SwRhoUz_
+       1.0, & ! SwP_
        1.0, & ! HpRho_
        0.0, & ! HpRhoUx_
        0.0, & ! HpRhoUy_
@@ -98,7 +98,7 @@ module ModVarIndexes
        0.0, & ! H2OpRhoUz_
        1.0, & ! H2OpP_
        1.0, & ! Energy_
-       1.0, & ! SWpEnergy_
+       1.0, & ! SwEnergy_
        1.0, & ! HpEnergy_
        1.0 /) ! H2OpEnergy_
   
