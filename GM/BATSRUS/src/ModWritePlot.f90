@@ -1380,7 +1380,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitN_)
      case('t','temp')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitTemperature_)
-     case('eta')
+     case('eta','visco')
         PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*&
              (No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
      case('ux','uy','uz')
