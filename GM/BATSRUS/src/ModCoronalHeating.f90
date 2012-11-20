@@ -1382,7 +1382,7 @@ contains
 
     use BATL_lib, ONLY: IsCartesian, CellSize_DB
     use BATL_size, ONLY: MaxDim, nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         nI, nJ, nK
+         nI, nJ, nK, j0_, nJp1_, k0_, nKp1_
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0, ONLY: B0_DGB
     use ModFaceGradient, ONLY: set_block_field2
@@ -1433,19 +1433,19 @@ contains
     call set_block_field2(iBlock, 7, State1_VG, State2_VG)
 
     if(UseB0)then
-       do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
           Alfven_VG(:,i,j,k) = &
                (State2_VG(iBx:iBz,i,j,k) + B0_DGB(:,i,j,k,iBlock)) &
                /sqrt(State2_VG(iRho,i,j,k))
        end do; end do; end do
     else
-       do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
           Alfven_VG(:,i,j,k) = State2_VG(iBx:iBz,i,j,k) &
                /sqrt(State2_VG(iRho,i,j,k))
        end do; end do; end do
     end if
 
-    do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+    do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
        U_VG(:,i,j,k) = State2_VG(iRhoUx:iRHoUz,i,j,k)/State2_VG(iRho,i,j,k)
     end do; end do; end do
 
@@ -1592,18 +1592,18 @@ contains
       else
          DivAlfven = &
               sum(Alfven_VFD(:nDim,i+1,j,k,x_) &
-              *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
-              -   Alfven_VFD(:nDim,i,j,k,x_) &
+              *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock)) &
+              -sum(Alfven_VFD(:nDim,i,j,k,x_) &
               *FaceNormal_DDFB(:,x_,i,j,k,iBlock))
          if(nJ > 1) DivAlfven = DivAlfven + &
               sum(Alfven_VFD(:nDim,i,j+1,k,y_) &
-              *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
-              -   Alfven_VFD(:nDim,i,j,k,y_) &
+              *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock)) &
+              -sum(Alfven_VFD(:nDim,i,j,k,y_) &
               *FaceNormal_DDFB(:,y_,i,j,k,iBlock))
          if(nK > 1) DivAlfven = DivAlfven + &
               sum(Alfven_VFD(:nDim,i,j,k+1,z_) &
-              *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
-              -   Alfven_VFD(:nDim,i,j,k,z_) &
+              *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock)) &
+              -sum(Alfven_VFD(:nDim,i,j,k,z_) &
               *FaceNormal_DDFB(:,z_,i,j,k,iBlock))
 
          DivAlfven = DivAlfven/CellVolume_GB(i,j,k,iBlock)
@@ -1681,18 +1681,18 @@ contains
       else
          DivU = &
               sum(U_VFD(:nDim,i+1,j,k,x_) &
-              *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
-              -   U_VFD(:nDim,i,j,k,x_) &
+              *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock)) &
+              -sum(U_VFD(:nDim,i,j,k,x_) &
               *FaceNormal_DDFB(:,x_,i,j,k,iBlock))
          if(nJ > 1) DivU = DivU + &
               sum(U_VFD(:nDim,i,j+1,k,y_) &
-              *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
-              -   U_VFD(:nDim,i,j,k,y_) &
+              *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock)) &
+              -sum(U_VFD(:nDim,i,j,k,y_) &
               *FaceNormal_DDFB(:,y_,i,j,k,iBlock))
          if(nK > 1) DivU = DivU + &
               sum(U_VFD(:nDim,i,j,k+1,z_) &
-              *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
-              -   U_VFD(:nDim,i,j,k,z_) &
+              *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock)) &
+              -sum(U_VFD(:nDim,i,j,k,z_) &
               *FaceNormal_DDFB(:,z_,i,j,k,iBlock))
 
          DivU = DivU/CellVolume_GB(i,j,k,iBlock)
