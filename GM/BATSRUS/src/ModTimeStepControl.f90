@@ -190,7 +190,7 @@ contains
              if(.not. true_cell(i,j,k,iBlock)) CYCLE
 
              Dt_loss = 0.5*minval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                  /WaveDissipation_VC(:,i,j,k))
+                  /max(WaveDissipation_VC(:,i,j,k),1e-30))
              ! The following prevents the wave energies from becoming negative
              ! due to too large loss terms.
              time_BLK(i,j,k,iBlock) = min(time_BLK(i,j,k,iBlock), Dt_loss)
