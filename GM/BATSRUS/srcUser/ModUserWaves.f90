@@ -1206,8 +1206,8 @@ contains
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
-    if(maxval(iVarsUpdate_I) == 0) &
-         call CON_stop('Correct PARAM.in: set update variables in #UPDATEVAR')
+!!!    if(maxval(iVarsUpdate_I) == 0) &
+!!!         call CON_stop('Correct PARAM.in: set update variables in #UPDATEVAR')
 
     do iVar = 1, nVar
        if(minval(abs(iVarsUpdate_I - iVar)) /= 0)then
