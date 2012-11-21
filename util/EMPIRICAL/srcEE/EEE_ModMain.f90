@@ -163,15 +163,16 @@ contains
 
   subroutine EEE_get_state_BC(x_D,Rho,U_D,B_D,p,Time,n_step,iteration_number)
 
-    use EEE_ModCommonVariables, ONLY: UseCme, UseTD, UseShearFlow
+    use EEE_ModCommonVariables, ONLY: UseCme, UseTD, UseShearFlow, UseGL
     use EEE_ModTD99, ONLY: get_transformed_TD99fluxrope, DoBqField
     use EEE_ModShearFlow, ONLY: get_shearflow
+    use EEE_ModGL98, ONLY: get_GL98_fluxrope, adjust_GL98_fluxrope
 
     real, intent(in) :: x_D(3), Time
     real, intent(out) :: Rho, U_D(3), B_D(3), p
     integer, intent(in) :: n_step,iteration_number
 
-    real :: Rho1, U1_D(3), B1_D(3)
+    real :: Rho1, U1_D(3), B1_D(3), p1
     !--------------------------------------------------------------------------
 
     ! initialize perturbed state variables
@@ -187,6 +188,12 @@ contains
 
        Rho = Rho + Rho1; U_D = U_D + U1_D; B_D = B_D + B1_D
     end if
+
+    if(UseGL)then
+       ! Add Gibson & Low (GL98) flux rope                                           
+       call get_GL98_fluxrope(x_D, Rho1, p1, B1_D)
+       B_D = B_D + B1_D
+    endif
 
     if(UseShearFlow)then
        call get_shearflow(x_D, Time, U1_D, iteration_number)
