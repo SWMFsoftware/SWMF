@@ -41,7 +41,7 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
   IsBinary = .true.
 
   read(UnitTmp_,iostat=iError) AMIE_nlats,AMIE_nmlts,AMIE_ntimes
-  if ((iError.ne.0).or.(AMIE_nlats.gt.100)) then
+  if ((iError.ne.0).or.(AMIE_nlats.gt.500)) then
      write(*,*) "Error reading variables AMIE_nlats, AMIE_nmlts, AMIE_ntimes"
      IsBinary = .false.
   endif
