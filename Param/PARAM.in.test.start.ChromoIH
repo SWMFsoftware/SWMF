@@ -66,9 +66,10 @@ T			UseBody
 
 Below are two ways to provide a potential field source surface (PFSS) solution
 as initial and boundary conditon for the magnetic field. The READPOTENTIALFIELD
-command is for reading the PFSS solution of the finite difference code FDIPS,
+command is for reading the PFSS solution of the finite difference code FDIPS
+(the output file in FIPDS for which TypeOutput is field, not potential),
 while the MAGNETOGRAM command is for reading the PFSS solution based on
-spherical harmonics. These two PFSS solver can be found in the
+spherical harmonics. These two PFSS solvers can be found in the
 util/DATAREAD/srcMagnetogram directory of SWMF.
 
 #READPOTENTIALFIELD
@@ -109,7 +110,9 @@ F			UseUserUpdateStates
 #USERINPUTBEGIN ------------------------
 
 The velocity perturbation (DeltaU) is typically chosen in the range of 10 to
-15km/s.
+15km/s. This value assumes rho=2e16 [m-3] and is in the user file recalculated
+for the nChromoSi provided below (see ModUserScChromo.f90 for more
+information.)
 #CHROMOBC
 1.2e4			DeltaU [m/s]
 2e17			nChromoSi [1/m^3]
@@ -186,9 +189,9 @@ T			DoExtendTransitionRegion
 
 #FIXAXIS
 F			UsePoleDiffusion
-F			DoFixAxis
-1.3			rFixAxis
-1.1			r2FixAxis
+T			DoFixAxis
+24.0			rFixAxis
+-1.1			r2FixAxis
 
 turn these off when restarting
 ---------------------------------------------------

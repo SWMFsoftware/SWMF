@@ -1419,8 +1419,8 @@ contains
     !------------------------------------------------------------------------
 
     if(.not.allocated(Alfven_VG)) allocate( &
-         Alfven_VG(MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
-         U_VG(MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
+         Alfven_VG(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
+         U_VG(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
          State1_VG(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
          State2_VG(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
 
@@ -1455,8 +1455,8 @@ contains
        InvDz2 = 0.5/CellSize_DB(z_,iBlock)
     else
        if(.not.allocated(Alfven_VFD)) allocate( &
-            Alfven_VFD(MaxDim,1:nI+1,1:nJ+1,1:nK+1,nDim), &
-            U_VFD(MaxDim,1:nI+1,1:nJ+1,1:nK+1,nDim) )
+            Alfven_VFD(MaxDim,1:nI+1,1:nJp1_,1:nKp1_,nDim), &
+            U_VFD(MaxDim,1:nI+1,1:nJp1_,1:nKp1_,nDim) )
 
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
