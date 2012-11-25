@@ -4599,11 +4599,11 @@ have no conservative criteria: nConservCrit = 0.
 	<if expr="$UseUpdateCheck">
 		<parameter name="RhoMinPercent" type="real" min="0" max="100"
 			default="40" />
-		<parameter name="RhoMaxPercent" type="real" min="100"
+		<parameter name="RhoMaxPercent" type="real" min="0"
 			default="400" />
 		<parameter name="pMinPercent" type="real" min="0" max="100"
 			default="40" />
-		<parameter name="pMaxPercent" type="real" min="100"
+		<parameter name="pMaxPercent" type="real" min="0"
 			default="400" />
 	</if>
 #UPDATECHECK
@@ -4613,9 +4613,14 @@ T			UseUpdateCheck
 40.			pMinPercent
 400.			pMaxPercent
 
-Default values are shown.  This will adjust the timestep so that
-density and pressure cannot change by more than the given percentages
-in a single timestep.
+If UseUpdateCheck is true, the local or global time step will be adjusted
+so that the density and pressure does not decrease or increase by more than 
+the given percentages in a single timestep. For example with the default settings, 
+if density is 1.0 initially and it would change below 0.4 or above 5.0, 
+the (local) time step will be reduced so that the final density remains
+inside the prescribed bounds.
+
+Default values are shown.  
 </command>
 
 <command name="CONTROLTIMESTEP" alias="TIMESTEPCONTROL">
@@ -4633,6 +4638,8 @@ The various thresholds in the relative increase and decrease of these
 variables can be set by the #CONTROLINCREASE and #CONTROLDECREASE commands.
 The #CONTROLFACTOR command determines how much the time step changes
 when the various thresholds are reached.
+
+Currently this scheme only works in time accurate mode.
 
 The default is UseTimeStepControl false.
 </command>
