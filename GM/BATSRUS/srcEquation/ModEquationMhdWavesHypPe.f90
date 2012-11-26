@@ -14,7 +14,7 @@ module ModVarIndexes
 
   ! This equation module contains the standard MHD equations plus
   ! extra wave energies
-  character (len=*), parameter :: NameEquation='MHD Waves'
+  character (len=*), parameter :: NameEquation='MHD Waves + electron pressure + hyperbolic divB'
 
   ! loop variable over spectrum
   integer, private :: iWave
