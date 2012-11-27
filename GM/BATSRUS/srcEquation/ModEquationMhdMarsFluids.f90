@@ -118,11 +118,11 @@ module ModVarIndexes
        'By     ', & ! By_
        'Bz     ', & ! Bz_
        'P      ', & ! p_
-       'HpRho  ', & ! O2pRho_
-       'HpMx   ', & ! O2pRhoUx_
-       'HpMy   ', & ! O2pRhoUy_
-       'HpMz   ', & ! O2pRhoUz_
-       'HpP    ', & ! O2pP_
+       'HpRho  ', & ! HpRho_
+       'HpMx   ', & ! HpRhoUx_
+       'HpMy   ', & ! HpRhoUy_
+       'HpMz   ', & ! HpRhoUz_
+       'HpP    ', & ! HpP_
        'O2pRho ', & ! O2pRho_
        'O2pMx  ', & ! O2pRhoUx_
        'O2pMy  ', & ! O2pRhoUy_
