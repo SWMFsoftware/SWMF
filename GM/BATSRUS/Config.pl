@@ -252,10 +252,18 @@ sub set_nwave{
 
     @ARGV = ($EquationMod);
 
+    my $prev;
     while(<>){
-	if(/^\s*!/){print; next} # Skip commented out lines
-	s/\b(nWave\s*=[^0-9]*)(\d+)/$1$nWaveNew/i;
-	print;
+        if(/^\s*!/){print; next} # Skip commented out lines
+        if(m/\&\s*\n/){         # Concatenate continuation lines
+            $prev .= $_;
+            next;
+        }
+        $_ = $prev . $_;
+	$prev = "";
+        s/\b(nWave\s*=[^0-9]*)(\d+)/$1$nWaveNew/i;
+        s/I\([^\)]+\)/I($nWaveNew)/m if /NamePrimitiveVar\s*\=/;
+        print;
     }
 }
 
@@ -269,10 +277,18 @@ sub set_nmaterial{
 
     @ARGV = ($EquationMod);
 
+    my $prev;
     while(<>){
-	if(/^\s*!/){print; next} # Skip commented out lines
-	s/\b(nMaterial\s*=[^0-9]*)(\d+)/$1$nMaterialNew/i;
-	print;
+        if(/^\s*!/){print; next} # Skip commented out lines
+        if(m/\&\s*\n/){         # Concatenate continuation lines
+            $prev .= $_;
+            next;
+        }
+        $_ = $prev . $_;
+	$prev = "";
+        s/\b(nMaterial\s*=[^0-9]*)(\d+)/$1$nMaterialNew/i;
+        s/M\([^\)]+\)/M($nMaterialNew)/m if /NamePrimitiveVar\s*\=/;
+        print;
     }
 }
 
