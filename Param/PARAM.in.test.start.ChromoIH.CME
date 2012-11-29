@@ -194,7 +194,7 @@ box_gen			TypeRegion
 0.0			zMinBox
 10.0			xMaxBox
 180.0			yMaxBox
-80.0			zMaxBox
+70.0			zMaxBox
 
 #AMRCRITERIALEVEL
 4			nCriteria
@@ -209,11 +209,11 @@ currentsheet		TypeCriteria
 0.5			RefineLimit
 5			MaxLevel
 Level CMEbox		TypeCriteria
-7			RefineTo
-7			CoarsenTo
+6			RefineTo
+6			CoarsenTo
 
 #GRIDLEVEL
-7			nLevelArea
+6			nLevelArea
 initial			NameArea
 
 #DOAMR
@@ -322,19 +322,19 @@ x=0 VAR idl		StringPlot
 -1  			DnSavePlot
 60.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
+rho ux uy uz ti te bx by bz I01 I02 p cons
 g rbody
 y=0 VAR idl		StringPlot
 -1  			DnSavePlot
 60.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
+rho ux uy uz ti te bx by bz I01 I02 p cons
 g rbody
 z=0 VAR idl		StringPlot
 -1  			DnSavePlot
 60.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
+rho ux uy uz ti te bx by bz I01 I02 p cons
 g rbody
 3d VAR tec		Stringplot
 -1			DnSavePlot
@@ -359,8 +359,13 @@ Switch to conservative for shock-capturing
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
-#NONCONSERVATIVE
+NONCONSERVATIVE
 F			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+gradp			TypeConservCrit
+0.5			GradPCoeffConserv
 
 #USER_FLAGS
 T			UseUserInnerBcs
