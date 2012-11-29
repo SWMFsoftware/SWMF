@@ -1278,7 +1278,8 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#UNIFORMSTATE")
         UseShockTube = .true.
-        call split_string(NamePrimitiveVar, nVar, NamePrimitive_V, nVarRead)
+        call split_string(NamePrimitiveVar, nVar, NamePrimitive_V, nVarRead, &
+             UseArraySyntaxIn=.true.)
         do i=1,nVar
            call read_var(NamePrimitive_V(i), ShockLeftState_V(i))
         end do
@@ -1286,7 +1287,8 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SHOCKTUBE")
         UseShockTube = .true.
-        call split_string(NamePrimitiveVar, nVar, NamePrimitive_V, nVarRead)
+        call split_string(NamePrimitiveVar, nVar, NamePrimitive_V, nVarRead, &
+             UseArraySyntaxIn=.true.)
         do i=1,nVar
            call read_var(NamePrimitive_V(i)//' left', ShockLeftState_V(i))
         end do
