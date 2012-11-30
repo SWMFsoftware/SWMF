@@ -1726,24 +1726,23 @@ contains
        ! at least part of the block is outside the body 
        if (R_BLK(nI,1,1,iBlock) >= Rbody) then  
           
-          do k=1,nK
-             Theta = (k-1)*dTheta  + xyzStart_BLK(Theta_,iBlock)      
-             !Theta =  180*(0.5-Theta/cPi) !don't need anymore, already co-latitude
+          do k = 1, nK
+             Theta = (k-1)*dTheta  + xyzStart_BLK(Theta_,iBlock)
+             Theta = Theta*cRadToDeg ! Convert to degrees
              kLat=int((theta+87.5)/5.0+1.0)
              kp1=min(kLat+1, NLat)
              kLat = max(kLat,1)
              
-             do j=1,nJ  
+             do j = 1, nJ  
                 Phi = (j-1)*dPhi  + xyzStart_BLK(Phi_,iBlock)
-                if(phi>cPi)then 
-                   phi=phi-2*cPi
-                end if
-                Phi = 180*(Phi/cPi) 
-                jLong=int((phi+180)/5.0+1.0)                 
-                jp1=min(jLong+1,NLong)
-                jLong=max(jLong,1)
+                ! Shift to -pi to +pi range
+                if(Phi > cPi) Phi = Phi - cTwoPi
+                Phi = Phi*cRadToDeg ! Convert to degrees
+                jLong = int((Phi+180)/5.0 + 1.0)                 
+                jp1   = min(jLong+1, nLong)
+                jLong = max(jLong, 1)
                 
-                do i=nI,1,-1                    
+                do i = nI, 1, -1                    
                    hh = (R_BLK(i,j,k,iBlock)-1.00)*3396.00
                    !                 write(*,*)'hh=', hh, i,j,k,iBlock
                    xLong=0.2*(Phi-Long_I(jLong))
@@ -1756,8 +1755,8 @@ contains
                       nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
                            nDenNuSpecies_CBI(i+1,j,k,iBlock,O_)
                       
-                      !                    tempICO2p=max(tempICO2p,TINY)
-                      !                    tempIOP=max(tempIOp,TINY)
+                      ! tempICO2p=max(tempICO2p,TINY)
+                      ! tempIOP=max(tempIOp,TINY)
                       Ionizationrate_CBI(i,j,k,iBlock,CO2_)=&
                            Ionizationrate_CBI(i+1,j,k,iBlock,CO2_)
                       Ionizationrate_CBI(i,j,k,iBlock,O_)=&
@@ -1806,8 +1805,8 @@ contains
                       
                       tempICO2p=max(tempICO2p,TINY)
                       tempIOP=max(tempIOp,TINY)
-                      !                   Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
-                      !                   Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+                      ! Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
+                      ! Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
                       Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p
                       Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP
                    else  !hh.gt.Alt_I(NAlt)
@@ -1845,8 +1844,8 @@ contains
                       
                       tempICO2p=max(tempICO2p,TINY)
                       tempIOP=max(tempIOp,TINY)
-                      !                    Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
-                      !                    Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
+                      ! Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
+                      ! Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
                       Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p
                       Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP
 
