@@ -129,24 +129,6 @@ contains
        DoTest=.false.; DoTestMe=.false.
     endif
 
-    if(DoFixAxis)then
-       ! Ignore time step constraints in the Phi direction inside the supercell
-       if(IsCylindricalAxis)then
-          if(CoordMin_DB(r_,iBlock) <= 0.0)then
-             Di = 1; if(r2FixAxis > 0.0) Di = 2
-             VdtFace_y(1:Di,:,1:nK) = 0.0
-          end if
-       elseif(IsLatitudeAxis)then
-          if(rMin_Blk(iBlock) < rFixAxis)then
-             Dk = 1; if(rMin_Blk(iBlock) < r2FixAxis) Dk = 2
-             if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8) &
-                  VdtFace_y(1:nI,:,nK+1-Dk:nK) = 0.0
-             if(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8) &
-                  VdtFace_y(1:nI,:,1:Dk) = 0.0
-          end if
-       end if
-    end if
-
     ! Calculate time step limit based on maximum speeds across 6 faces
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
@@ -157,8 +139,33 @@ contains
 
     end do; end do; end do
 
+    if(DoFixAxis)then
+       ! Use the time step in the super cell of the cell just outside.
+       ! In time accurate this removes the time step constraints from supercell
+       ! In local time stepping mode it increases the time step
+       if(IsCylindricalAxis)then
+          if(CoordMin_DB(r_,iBlock) <= 0.0)then
+             Di = 1; if(r2FixAxis > 0.0) Di = 2
+             do j = 1, nJ; do i = 1, nI
+                time_BLK(1:Di,j,k,iBlock) = time_BLK(Di+1,j,k,iBlock)
+             end do; end do
+          end if
+       elseif(IsLatitudeAxis .and. rMin_Blk(iBlock) < rFixAxis)then
+          Dk = 1; if(rMin_Blk(iBlock) < r2FixAxis) Dk = 2
+          if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
+             do k = nK+1-Dk, nK
+                time_BLK(1:nI,1:nJ,k,iBlock) = time_BLK(1:nI,1:nJ,nK-Dk,iBlock)
+             end do
+          end if
+          if(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
+             do k = 1, Dk
+                time_BLK(1:nI,1:nJ,k,iBlock) = time_BLK(1:nI,1:nJ,Dk+1,iBlock)
+             end do
+          end if
+       end if
+    end if
 
-    ! Time step restriction due to point wise loss terms
+    ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
     if(UseAlfvenWaveDissipation .or. UseTurbulentCascade .or.UseRadCooling)then
        if(UseRadCooling .or. DoExtendTransitionRegion) &
