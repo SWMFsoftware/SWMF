@@ -979,7 +979,7 @@ contains
 
           do k=1,nK
              Theta = (k-1)*dTheta  + xyzStart_BLK(Theta_,iBlock)      
-             !Theta =  180*(0.5-Theta/cPi) !don't need anymore, already co-latitude
+             Theta = Theta*cRadToDeg ! Convert to degrees
              kLat=int((theta+87.5)/5.0+1.0)
              kp1=min(kLat+1, NLat)
              kLat = max(kLat,1)
@@ -989,7 +989,7 @@ contains
                 if(phi>cPi)then 
                    phi=phi-2*cPi
                 end if
-                Phi = 180*(Phi/cPi) 
+                Phi = Phi*cRadToDeg ! Convert to degrees
                 jLong=int((phi+180)/5.0+1.0)                 
                 jp1=min(jLong+1,NLong)
                 jLong=max(jLong,1)
