@@ -760,11 +760,6 @@ test_corona_2t_check:
 ### STANDALONE CHROMOSPHERE SOLAR CORONA TESTS ###
 
 test_chromo:
-	-@($(MAKE) test_chromo_start)
-###	-@($(MAKE) test_chromo_restart)
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test_chromo_start:
 	@echo "test_chromo_compile..." > test_chromo.diff
 	$(MAKE) test_chromo_compile
 	@echo "test_chromo_rundir..." >> test_chromo.diff
@@ -773,6 +768,7 @@ test_chromo_start:
 	$(MAKE) test_chromo_run
 	@echo "test_chromo_check..." >> test_chromo.diff
 	$(MAKE) test_chromo_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_chromo_compile:
 	./Config.pl -u=ScChromo -e=MhdWavesHyp -g=6,4,4,4000,4000
@@ -795,31 +791,6 @@ test_chromo_check:
 		Param/CORONA/TestOutput/log_n000000.sc.chromo \
 		${TESTDIR}/RESULTS/SC/log_n000000.log > test_chromo.diff)
 	ls -l test_chromo.diff
-
-test_chromo_restart:
-	@echo "test_chromo_restart_run..." >> test_chromo_restart.diff
-	$(MAKE) test_chromo_restart_run
-	@echo "test_chromo_restart_check..." >> test_chromo_restart.diff
-	$(MAKE) test_chromo_restart_check
-
-test_chromo_restart_run:
-	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.chromo.restartsave PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.sc.chromo.restartread PARAM.in
-	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	rm -rf ${TESTDIR}/RESTART_n000025
-	cd ${TESTDIR}; ./Restart.pl
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS_RESTART
-	cd ${TESTDIR}; ./PostProc.pl -cat -M -o RESULTS_RESTART
-
-test_chromo_restart_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
-		${TESTDIR}/RESULTS_RESTART/SC/log_n000000.log \
-		Param/CORONA/TestOutput/log_n000000.sc.chromo \
-		 > test_chromo_restart.diff)
-	ls -l test_chromo*.diff
 
 
 ### STANDALONE OUTER HELIOSPHERE TESTS ###

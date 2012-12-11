@@ -75,16 +75,16 @@ F			UseUserUpdateStates
 #USERINPUTBEGIN ------------------------
 
 #CHROMOBC
-1.5e4			DeltaU [m/s]
 2e17			nChromoSi [1/m^3]
 5e4			tChromoSi [K]
+0.74e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #USERINPUTEND ----------------------------
 
 #CORONALHEATING
 alfvenwavedissipation	TypeCoronalHeating
 7.5e4			LperpTimesSqrtBSi
-0.04			Crefl
+0.08			Crefl
 
 HYPERBOLICDIVB
 F			UseHyperbolicDivb

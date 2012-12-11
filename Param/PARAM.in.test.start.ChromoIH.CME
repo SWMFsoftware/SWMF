@@ -108,12 +108,12 @@ F			UseUserUpdateStates
 
 #USERINPUTBEGIN ------------------------
 
-The velocity perturbation (DeltaU) is typically chosen in the range of 10 to
-15km/s.
+The Poynting flux at the inner boundary is proportional to the magnetic field,
+with proportionality constant [0.5,1.5]x1e6 [J/m^2/s/T]
 #CHROMOBC
-1.2e4			DeltaU [m/s]
 2e17			nChromoSi [1/m^3]
 5e4			tChromoSi [K]
+0.74e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #USERINPUTEND ----------------------------
 

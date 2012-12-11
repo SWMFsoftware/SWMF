@@ -109,14 +109,12 @@ F			UseUserUpdateStates
 
 #USERINPUTBEGIN ------------------------
 
-The velocity perturbation (DeltaU) is typically chosen in the range of 10 to
-15km/s. This value assumes rho=2e16 [m-3] and is in the user file recalculated
-for the nChromoSi provided below (see ModUserScChromo.f90 for more
-information.)
+The Poynting flux at the inner boundary is proportional to the magnetic field,
+with proportionality constant [0.5,1.5]x1e6 [J/m^2/s/T]
 #CHROMOBC
-1.2e4			DeltaU [m/s]
 2e17			nChromoSi [1/m^3]
 5e4			tChromoSi [K]
+0.74e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 To run the dipole test, switch UseCurlB0 and UseMagnetogram to false
 and activate the SOLARDIPOLE command below

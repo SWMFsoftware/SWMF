@@ -21,8 +21,9 @@ module ModUser
        'Chromosphere to solar wind model with Alfven waves - Oran, van der Holst'
 
   ! Input parameters for chromospheric inner BC's
-  real    :: DeltaUSi = 1.5e4, nChromoSi = 2e17, tChromoSi = 5e4
-  real    :: DeltaU, nChromo, RhoChromo, tChromo, PoyntingFluxPerB
+  real    :: nChromoSi = 2e17, tChromoSi = 5e4
+  real    :: nChromo, RhoChromo, tChromo
+  real    :: PoyntingFluxPerBSi = 1e6, PoyntingFluxPerB
   logical :: UseUparBc = .false.
 
   ! variables for Parker initial condition
@@ -64,10 +65,10 @@ contains
 
           ! This commans is used when the inner boundary is the chromosphere   
        case("#CHROMOBC")
-          call read_var('DeltaUSi', DeltaUSi)
           call read_var('nChromoSi', nChromoSi)
           call read_var('tChromoSi', tChromoSi)
-          
+          call read_var('PoyntingFluxPerBSi', PoyntingFluxPerBSi)
+
        case("#LINETIEDBC")
           call read_var('UseUparBc', UseUparBc)
 
@@ -115,7 +116,7 @@ contains
     use ModNumConst,   ONLY: cTwoPi, cDegToRad
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitX_, UnitB_, UnitU_, &
-         SinThetaTilt, CosThetaTilt, BodyNDim_I, BodyTDim_I, g
+         UnitEnergyDens_, SinThetaTilt, CosThetaTilt, BodyNDim_I, BodyTDim_I, g
 
     real, parameter :: CoulombLog = 20.0
     character (len=*),parameter :: NameSub = 'user_init_session'
@@ -133,18 +134,9 @@ contains
     nChromo = nChromoSi*Si2No_V(UnitN_)
     RhoChromo = nChromo*MassIon_I(1)
     tChromo = tChromoSi*Si2No_V(UnitTemperature_)
-    !\
-    !The boundary condition sets the Poynting flux to be propotional
-    !to the magnetic field intensity. Hence,
-    !(B/sqrt(\rho)) \rho(\delta U)^2=const B
-    !Hence (\delta U)\propto \rho^{-0.25}
-    !Historically, for a long time we assigned the values of
-    !\rho=2e16 [m-3]. Now we still assign the value of \delta U
-    !as if \rho=2e16 and recalculate the value of \delta U
-    !automatically, if the larger value of nChromo is chosen
-    !/
-    DeltaU = DeltaUSi*Si2No_V(UnitU_)*(2e16/nChromoSi)**0.25
-    PoyntingFluxPerB = sqrt(RhoChromo)*DeltaU**2
+
+    PoyntingFluxPerB = PoyntingFluxPerBSi &
+         *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitU_)/Si2No_V(UnitB_)
 
     if (.not. UseMagnetogram) then
        SinThetaTilt = sin(cDegToRad*DipoleTiltDeg)
