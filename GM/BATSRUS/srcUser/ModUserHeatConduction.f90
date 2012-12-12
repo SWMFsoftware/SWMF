@@ -473,7 +473,7 @@ contains
 
        do j = MinJ,MaxJ; do i = MinI,MaxI
 
-          x = Xyz_DGB(x_,i,j,0,iBlock)*CosSlope + Xyz_DGB(y_,i,j,0,iBlock)*SinSlope - x0
+          x = Xyz_DGB(x_,i,j,1,iBlock)*CosSlope + Xyz_DGB(y_,i,j,1,iBlock)*SinSlope - x0
 
           do iCell = 1, nCellRef
              if(rRef_C(iCell) >= x) EXIT
