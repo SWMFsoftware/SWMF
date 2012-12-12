@@ -189,7 +189,7 @@ contains
 
     do j = 1, nJ; do i = 1, nI
        
-       x = Xyz_DGB(x_,i,j,0,iBlock)*CosSlope + Xyz_DGB(y_,i,j,0,iBlock)*SinSlope - X0
+       x = Xyz_DGB(x_,i,j,1,iBlock)*CosSlope + Xyz_DGB(y_,i,j,1,iBlock)*SinSlope - X0
 
        do iCell = 1, nCellLowrie
           if(xLowrie_C(iCell) >= x) EXIT
