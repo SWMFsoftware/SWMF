@@ -158,7 +158,19 @@ Module ModConst
 
  
 contains
-  !Transforms the spectroscopy term symbols to the value of the orbital quantum number
+  !Calculates the coefficient for the electron heat conduction coefficient 
+  !in a hydrogen plasma: q=kappa_e_0T^{5/2}\nabla T, the heat flux,q, and
+  !and the electron temperature, T, are both in SI system of units as well as
+  !the scale of length.
+  !\
+  ! Attention!!! For all applications to solar corona and inner heliosphere
+  ! it is expected that Coulomb logarithm equals 20. Therefore, the
+  ! only legitimate formula for electron heat conduction coefficient is
+  !
+  ! q=kappa_0_e(20.0)*TeSi^2*sqrt(TeSi)
+  !
+  ! This is the only place in which the use of CoulombLog=20 is documented.
+  !/
   real function kappa_0_e(CoulombLog)
     real, intent(in):: CoulombLog
     !-------------------------
