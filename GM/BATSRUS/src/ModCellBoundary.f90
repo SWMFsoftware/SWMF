@@ -152,12 +152,25 @@ contains
        select case(iSide)
        case(1)
           iMax = 0
+          ! Avoid using cells that are potentially not yet set
+          if(neiLEV(3,iBlock) == NOBLK) jMin = 1
+          if(neiLEV(4,iBlock) == NOBLK) jMax = nJ
+          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
+          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
        case(2)
           iMin = nI + 1
+          if(neiLEV(3,iBlock) == NOBLK) jMin = 1
+          if(neiLEV(4,iBlock) == NOBLK) jMax = nJ
+          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
+          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
        case(3)
           jMax = 0
+          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
+          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
        case(4)
           jMin = nJ + 1
+          if(neiLEV(5,iBlock) == NOBLK) kMin = 1
+          if(neiLEV(6,iBlock) == NOBLK) kMax = nK
        case(5)
           kMax = 0
        case(6)
