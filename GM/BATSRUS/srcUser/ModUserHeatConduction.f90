@@ -419,8 +419,8 @@ contains
 
     case('rmtv')
        do j=MinJ,MaxJ; do i=MinI,MaxI
-          x = Xyz_DGB(x_,i,j,0,iBlock)
-          y = Xyz_DGB(y_,i,j,0,iBlock)
+          x = Xyz_DGB(x_,i,j,1,iBlock)
+          y = Xyz_DGB(y_,i,j,1,iBlock)
           r = sqrt(x**2+y**2)
 
           do iCell = 1, nCellRef
@@ -995,8 +995,8 @@ contains
 
     case('rmtv')
        do j=MinJ,MaxJ; do i=MinI,MaxI
-          x = Xyz_DGB(x_,i,j,0,iBlock)
-          y = Xyz_DGB(y_,i,j,0,iBlock)
+          x = Xyz_DGB(x_,i,j,1,iBlock)
+          y = Xyz_DGB(y_,i,j,1,iBlock)
           r = sqrt(x**2+y**2)
 
           do iCell = 1, nCellFin
