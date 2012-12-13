@@ -85,7 +85,7 @@ module ModUser
 
 
   ! Variables for the REB model
-  logical :: IsNewBlockTeCalc(nBLK) = .true.
+  logical :: IsNewBlockTeCalc_B(nBLK) = .true.
   ! cell centered electron temperature for entire block
   ! put here so not always re-computed during boundary calculation
   real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
@@ -290,7 +290,14 @@ contains
 
 
     Density = BoundaryRho
-    if(DoREBModel) Density = calc_reb_density()
+    if(DoREBModel) then
+       ! now calculate the contribution due to heat conduction into the boundary
+       if(IsNewBlockTeCalc_B(iBlockBC)) Te_G = State_VGB(P_,:,:,:,iBlockBc) / &
+            State_VGB(Rho_,:,:,:,iBlockBc) * TeFraction
+       call calc_reb_density(iSide, iFace, jFace, kFace, iBlockBc,&
+            IsNewBlock=IsNewBlockTeCalc_B(iBlockBC),&
+            TotalFaceB_D=B0Face_D + B1_D, Te_G=Te_G, DensityReb=BoundaryRho)
+    end if
 
     Temperature = BoundaryTe/TeFraction
 
@@ -298,7 +305,7 @@ contains
     VarsGhostFace_V(Rho_) =  Density
     VarsGhostFace_V(p_) = Density*Temperature
     if(UseAlfvenWaves)call adiabatic_law_4_wave_state(&
-        VarsGhostFace_V, FaceCoords_D, B0Face_D)
+         VarsGhostFace_V, FaceCoords_D, B0Face_D)
 
     !\
     ! Apply corotation if needed
@@ -309,84 +316,6 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
             + 2.0*OmegaBody*FaceCoords_D(x_)
     end if
-
-  contains
-    !==========================================================================
-    real function calc_reb_density()
-      use ModConst, ONLY: kappa_0_e
-
-      ! function to return the density given by the Radiative Energy Balance Model
-      ! (REB) for the Transition region. Originally given in Withbroe 1988, this
-      ! uses eq from Lionell 2001. NO enthalpy flux correction in this
-      ! implementation.
-
-      real :: FaceGrad_D(3),GradTeSi_D(3)
-      real :: TotalFaceB_D(3), TotalFaceBunit_D(3)
-
-      ! Here Rad integral is integral of lossfunction*T^(1/2) from T=10,000 to
-      ! 500,000. Use same approximate loss function used in BATS to calculate
-      ! This is in SI units [J m^3 K^(3/2)]
-      real :: RadIntegralSi = 1.009E-26
-
-      ! Left and right cell centered heating
-      real :: CoronalHeatingLeft, CoronalHeatingRight, CoronalHeating
-
-      ! Condensed terms in the REB equation
-      real :: qCondSi, qHeatSi
-
-      integer :: iBlock, iDir=0
-
-      !--------------------------------------------------------------------------
-
-      iBlock = iBlockBc
-
-      ! need to get direction for face gradient calc
-      ! also put left cell centered heating call here (since index depends on
-      ! the direction)
-      if(iSide==1 .or. iSide==2) then 
-         iDir = x_
-         call get_cell_heating(iFace-1, jFace, kFace, iBlock, CoronalHeatingLeft)
-      elseif(iSide==3 .or. iSide==4) then 
-         iDir = y_
-         call get_cell_heating(iFace, jFace-1, kFace, iBlock, CoronalHeatingLeft)
-      elseif(iSide==5 .or. iSide==6) then
-         iDir = z_
-         call get_cell_heating(iFace, jFace, kFace-1, iBlock, CoronalHeatingLeft)
-      else
-         call stop_mpi('REB model got bad face direction')
-      endif
-
-      call get_cell_heating(iFace, jFace, kFace, iBlock, CoronalHeatingRight)
-
-      CoronalHeating = 0.5 * (CoronalHeatingLeft + CoronalHeatingRight)
-
-      ! term based on coronal heating into trans region (calc face centered avg)
-      qHeatSi = (2.0/7.0) * CoronalHeating * BoundaryTeSi**1.5 &
-                 * No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_)
-
-      ! now calculate the contribution due to heat conduction into the boundary
-      if(IsNewBlockTeCalc(iBlock)) Te_G = State_VGB(P_,:,:,:,iBlock) / &
-           State_VGB(Rho_,:,:,:,iBlock) * TeFraction
-
-      call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
-           IsNewBlockTeCalc(iBlock), Te_G, FaceGrad_D)
-
-      ! calculate the unit vector of the total magnetic field
-      TotalFaceB_D = B0Face_D + B1_D
-      TotalFaceBunit_D = TotalFaceB_D / sqrt(sum(TotalFaceB_D**2))
-
-      ! calculate the heat conduction term in the REB numerator
-      qCondSi = 0.5 * kappa_0_e(20.) * BoundaryTeSi**3 &
-           * sum(FaceGrad_D*TotalFaceBunit_D)**2 &
-           * (No2Si_V(UnitTemperature_) / No2Si_V(UnitX_))**2
-
-      ! put the terms together and calculate the REB density
-      calc_reb_density = sqrt((qCondSi + qHeatSi) / RadIntegralSi) &
-           * Si2No_V(UnitN_)
-
-    end function calc_reb_density
-
-
   end subroutine user_set_face_boundary
 
   !============================================================================
@@ -516,9 +445,9 @@ contains
        if(UseAlfvenWaves)call adiabatic_law_4_wave_state(&
             State_VGB(:, i, j, k, iBlock),&
             (/Xyz_DGB(x_,i, j, k, iBlock), &
-              Xyz_DGB(y_,i, j, k, iBlock), &
-              Xyz_DGB(z_,i, j, k, iBlock)/), &
-              B0_DGB(:, i, j, k, iBlock))
+            Xyz_DGB(y_,i, j, k, iBlock), &
+            Xyz_DGB(z_,i, j, k, iBlock)/), &
+            B0_DGB(:, i, j, k, iBlock))
     end do; end do; end do
 
   end subroutine user_set_ics
@@ -664,19 +593,19 @@ contains
 
     integer, intent(in) :: iStage, iBlock
     !--------------------------------------------------------------------------
-    
+
     call update_states_MHD(iStage, iBlock)
-    
+
     ! REB model calls face gradient calculation, reset block logical
     ! so that the Te block will be re-calculated next pass
-    if(DoREBModel) IsNewBlockTeCalc(iBlock) = .true.
-    
+    if(DoREBModel) IsNewBlockTeCalc_B(iBlock) = .true.
+
   end subroutine user_update_states
-  
+
   !============================================================================
-  
+
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
-    
+
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_ 
@@ -685,11 +614,11 @@ contains
          UnitT_, No2Si_V
     use ModCoronalHeating, ONLY: HeatFactor,HeatNormalization
     use ModProcMH,     ONLY: nProc
-    
+
     real, intent(out) :: VarValue
     character (LEN=10), intent(in) :: TypeVar 
     real, optional, intent(in) :: Radius
-    
+
     integer :: iBlock
     real :: unit_energy
     real, external :: integrate_BLK
@@ -705,7 +634,7 @@ contains
           tmp1_BLK(:,:,:,iBlock) = State_VGB(P_,:,:,:,iBlock)
        end do
        VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
-       
+
     case('emag')
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
@@ -715,25 +644,25 @@ contains
                +(B0_DGB(z_,:,:,:,iBlock) + State_VGB(Bz_,:,:,:,iBlock))**2
        end do
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
-       
+
     case('vol')
        tmp1_BLK(:,:,:,iBlock) = 1.0
        VarValue = integrate_BLK(1,tmp1_BLK)
-       
+
     case('psi')
        VarValue = HeatFactor * No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_) &
             * 10.0 / nProc * HeatNormalization
-       
+
     case default
        VarValue = -7777.
        call write_myname;
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
-    
+
   end subroutine user_get_log_var
-  
+
   !============================================================================
-  
+
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
 
 
@@ -761,49 +690,49 @@ contains
     call stop_mpi('ERROR::  use aboue option in PARAM.in')
 
   end subroutine user_specify_refinement
-  
+
   !============================================================================
-  
+
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
-    
+
     use ModAdvance,  ONLY: Rho_, P_, State_VGB
     use ModGeometry, ONLY: TypeGeometry
-    
+
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
-    
+
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !-------------------------------------------------------------------
-    
+
     ! This routine used only for setting the inner r ghost cells for
     ! spherical geometry. Need to fix the temperature to the boundary
     ! temperature (which is NOT necessarily the BODY normalization values)
     ! for the heat conduction calculation. The face_gradient calculation
     ! uses ghost cells! If face gradient was checking values other than
     ! P/rho, would need to set those as well!
-    
+
     if(iSide==1) then
        State_VGB(Rho_,-1:0,:,:,iBlock) = BoundaryRho
        State_VGB(P_  ,-1:0,:,:,iBlock) = BoundaryRho * BoundaryTe/TeFraction
     else
        call stop_mpi('For TR Model ONLY 1 (low R) user boundary can be used')
     endif
-    
+
     IsFound = .true.
   end subroutine user_set_cell_boundary
-  
+
   !===========================================================================
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
-    
+
     use ModSize,    ONLY: nI, nJ, nK
     use ModPhysics, ONLY: No2Si_V, UnitT_, UnitEnergyDens_, &
          UnitTemperature_
     use ModAdvance,  ONLY: State_VGB, Rho_, p_
-    
-    
+
+
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
@@ -814,7 +743,7 @@ contains
     character(len=*), intent(inout):: NameTecUnit
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
-    
+
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     real                         :: UnitEnergyDensPerTime, CoronalHeating
     real                         :: RadiativeCooling
@@ -823,7 +752,7 @@ contains
     !UsePlotVarBody = .true. 
     !PlotVarBody = 0.0 
     IsFound=.true.
-    
+
     UnitEnergyDensPerTime = 10.0 * No2Si_V(UnitEnergydens_) / No2Si_V(UnitT_)
     !\                                                                              
     ! Define plot variable to be saved::
@@ -831,7 +760,7 @@ contains
     !
     select case(NameVar)
        !Allways use lower case !!
-       
+
     case('qheat')
        do k=MinK,MaxK ; do j=MinJ,MaxJ ; do i=MinI,MaxI
           call get_cell_heating(i, j, k, iBlock, CoronalHeating)
@@ -841,11 +770,11 @@ contains
        NameTecVar = 'qH'
        NameTecUnit = '[erg/cm^3/s]'
        NameIdlUnit = '[erg/cm^3/s]'
-       
+
     case('qrad')
        do k=MinK,MaxK ; do j=MinJ,MaxJ ; do i=MinI,MaxI
           AuxTeSi = TeFraction * State_VGB(P_,i,j,k,iBlock) &
-            / State_VGB(Rho_,i,j,k,iBlock) *No2Si_V(UnitTemperature_)
+               / State_VGB(Rho_,i,j,k,iBlock) *No2Si_V(UnitTemperature_)
 
           call get_radiative_cooling(i, j, k, iBlock, AuxTeSi, RadiativeCooling)
           PlotVar_G(i,j,k) = RadiativeCooling
@@ -854,12 +783,12 @@ contains
        NameTecVar = 'qR'
        NameTecUnit = '[erg/cm^3/s]'
        NameIdlUnit = '[erg/cm^3/s]'
-       
+
     case default
        IsFound= .false.
     end select
   end subroutine user_set_plot_var
-  
+
   !============================================================================ 
 end module ModUser
 

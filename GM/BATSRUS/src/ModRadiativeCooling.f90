@@ -270,5 +270,119 @@ contains
          Amplitude * exp(-HeightSi_C/BarometricScaleSi)
 
   end subroutine add_chromosphere_heating
+  !======================================
+  subroutine calc_reb_density(iSide, iFace, jFace, kFace, iBlock,&
+       IsNewBlock, TotalFaceB_D,                                 &
+       Te_G, TeTRTopSiIn, TeChromoSiIn, RadIntegralSiIn, DensityReb)
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModConst, ONLY: kappa_0_e
+    use ModCoronalHeating,ONLY: get_cell_heating
+    use ModPhysics, ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_,&
+                          UnitEnergyDens_, UnitN_, UnitTemperature_
+    use ModFaceGradient,ONLY: get_face_gradient
+    ! function to return the density given by the Radiative Energy Balance Model
+    ! (REB) for the Transition region. Originally given in Withbroe 1988, this
+    ! uses eq from Lionell 2001. NO enthalpy flux correction in this
+    ! implementation.
+    integer, intent(in):: iSide,iFace,jFace,kFace,iBlock
 
+    logical, intent(inout):: IsNewBlock
+
+    real, intent(in):: TotalFaceB_D(3)
+
+    real,intent(inout) :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    !Temperature value in K chosen as the temperature at the top of 
+    !the transition region 
+    real, intent(in),optional :: TeTRTopSiIn
+    ! The same for 
+    ! the bottom of the transition region=the top of the chromosphere
+    real, intent(in),optional :: TeChromoSiIn
+    ! The value of integlar of the radiation loss function time \sqrt{T}
+    ! from TeChromoSi till TeTRTopSi
+    real, intent(in),optional :: RadIntegralSiIn
+    real, intent(out) :: DensityReb
+    real :: TeTRTopSi     = 1.0e4 
+    real :: TeChromoSi    = 5.0e5
+    ! Here Rad integral is integral of lossfunction*T^(1/2) from T=10,000 to
+    ! 500,000. Use same approximate loss function used in BATS to calculate
+    ! This is in SI units [J m^3 K^(3/2)]
+    real :: RadIntegralSi = 1.009E-26
+
+    real :: FaceGrad_D(3),GradTeSi_D(3)
+    real :: TotalFaceBunit_D(3)
+
+
+    ! Left and right cell centered heating
+    real :: CoronalHeatingLeft, CoronalHeatingRight, CoronalHeating
+
+    ! Condensed terms in the REB equation
+    real :: qCondSi, qHeatSi
+
+    integer :: iDir=0
+
+    !--------------------------------------------------------------------------
+
+    if(present(TeChromoSiIn))then
+       TeChromoSi = TeChromoSiIn
+    else
+       TeChromoSi = 1.0e4
+    end if
+
+    if(present(TeTRTopSiIn))then
+       TeTRTopSi = TeTRTopSiIn
+    else
+       TeTRTopSi = 5.0e5
+    end if
+
+    if(present(RadIntegralSiIn))then
+       RadIntegralSi = RadIntegralSiIn
+    else
+       ! Here Rad integral is integral of lossfunction*T^(1/2) from T=10,000 to
+       ! 500,000. Use same approximate loss function used in BATS to calculate
+       ! This is in SI units [J m^3 K^(3/2)]
+       RadIntegralSi = 1.009E-26
+    end if
+
+    ! need to get direction for face gradient calc
+    ! also put left cell centered heating call here (since index depends on
+    ! the direction)
+    if(iSide==1 .or. iSide==2) then 
+       iDir = x_
+       call get_cell_heating(iFace-1, jFace, kFace, iBlock, CoronalHeatingLeft)
+    elseif(iSide==3 .or. iSide==4) then 
+       iDir = y_
+       call get_cell_heating(iFace, jFace-1, kFace, iBlock, CoronalHeatingLeft)
+    elseif(iSide==5 .or. iSide==6) then
+       iDir = z_
+       call get_cell_heating(iFace, jFace, kFace-1, iBlock, CoronalHeatingLeft)
+    else
+       call stop_mpi('REB model got bad face direction')
+    endif
+
+    call get_cell_heating(iFace, jFace, kFace, iBlock, CoronalHeatingRight)
+
+    CoronalHeating = 0.5 * (CoronalHeatingLeft + CoronalHeatingRight)
+
+    ! term based on coronal heating into trans region (calc face centered avg)
+    qHeatSi = (2.0/7.0) * CoronalHeating * TeTRTopSi**1.5 &
+         * No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_)
+
+
+    call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
+         IsNewBlock, Te_G, FaceGrad_D)
+
+    ! calculate the unit vector of the total magnetic field
+    TotalFaceBunit_D = TotalFaceB_D / sqrt(sum(TotalFaceB_D**2))
+
+    ! calculate the heat conduction term in the REB numerator
+    qCondSi = 0.5 * kappa_0_e(20.) * TeTRTopSi**3 &
+         * sum(FaceGrad_D*TotalFaceBunit_D)**2 &
+         * (No2Si_V(UnitTemperature_) / No2Si_V(UnitX_))**2
+
+    ! put the terms together and calculate the REB density
+    DensityReb = sqrt((qCondSi + qHeatSi) / RadIntegralSi) &
+         * Si2No_V(UnitN_)
+
+  end subroutine calc_reb_density
 end module ModRadiativeCooling
