@@ -170,7 +170,9 @@ module ModNonWKBHeating
   !C  and this paper uses an intermediate value:
   !      parameter (ellconst=6.000d+08)
   !
-  real,parameter:: cCorrelationLength = 6.0e+8   !cm/sqrt{Gs}
+  !Typo in comments is fixed (igorsok Dec.12,2012: dimensions of cCorreletionlength
+  !should be cm*sqrt{Gs}, not "divided by"
+  real,parameter:: cCorrelationLength = 6.0e+8   !cm*sqrt{Gs}
 
 
   !C  Do we use the dimensionless efficiency factor?  (1=yes, 0=no)
@@ -1715,5 +1717,5 @@ contains
     IsPointImplMatrixSet = .true.
 
   end subroutine turb_mixing_init_point_impl
-
+  
 end module ModCoronalHeating
