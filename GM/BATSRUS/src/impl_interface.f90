@@ -323,10 +323,11 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModCellBoundary,   ONLY: set_cell_boundary
   use BATL_lib,          ONLY: message_pass_cell, message_pass_face, &
        apply_flux_correction_block, CellVolume_GB
+  use BATL_size,         ONLY: j0_, nJp1_, k0_, nKp1_
 
   implicit none
 
-  real, intent(in)  :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
+  real, intent(in)  :: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
   real, intent(out) :: Rhs_VCB(nVarSemi,nI,nJ,nK,MaxImplBlk)
 
   integer :: iImplBlock, iBlock, i, j, k

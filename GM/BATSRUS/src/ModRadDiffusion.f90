@@ -455,7 +455,8 @@ contains
 
     use BATL_lib,    ONLY: message_pass_cell, IsCartesian, IsRzGeometry, &
          CellSize_DB, CellFace_DFB, CellVolume_B
-    use BATL_size,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_size,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+         j0_, nJp1_, k0_, nKp1_
     use ModAdvance,  ONLY: State_VGB, UseElectronPressure, nWave, WaveFirst_, &
          WaveLast_
     use ModConst,    ONLY: cBoltzmann
@@ -470,8 +471,8 @@ contains
     use ModGeometry, ONLY: TypeGeometry
     use ModParallel, ONLY: NOBLK, NeiLev
 
-    real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
-    real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
+    real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
+    real, intent(inout):: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: iImplBlock, iBlock, i, j, k
     real :: OpacityPlanckSi_W(nWave), OpacityRosselandSi_W(nWave)

@@ -388,7 +388,7 @@ contains
          'HYPRE preconditioner requires split semi-implicit scheme!')
 
     ! Arrays for all implicit variables
-    allocate(Impl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBLK))
+    allocate(Impl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBLK))
     allocate(ImplOld_VCB(nw,nI,nJ,nK,nBLK))
     allocate(wnrm(nw))
     if(UseSemiImplicit) allocate(DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBLK))

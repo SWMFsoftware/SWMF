@@ -91,7 +91,7 @@ subroutine advance_impl
   use ModImplHypre, ONLY: hypre_preconditioner, hypre_initialize
   use ModMessagePass, ONLY: exchange_messages
   use BATL_lib, ONLY : Unused_BP, Xyz_DGB
-
+  use BATL_size, ONLY: j0_, nJp1_, k0_, nKp1_
   implicit none
 
   real, external :: minval_BLK, minval_loc_BLK
@@ -127,7 +127,7 @@ subroutine advance_impl
   call implicit_init
 
   ! Get initial iterate from current state
-  call explicit2implicit(0,nI+1,0,nJ+1,0,nK+1,Impl_VGB)
+  call explicit2implicit(0,nI+1,j0_,nJp1_,k0_,nKp1_,Impl_VGB)
 
   if(DoTestMe)write(*,*)NameSub,': nImplBLK=',nImplBLK
   if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,': Impl_VGB=',&
@@ -319,7 +319,7 @@ subroutine advance_impl
               ! because it is needed by impl_jacobian
               call implicit2explicit(Impl_VGB(:,1:nI,1:nJ,1:nK,:))
               call exchange_messages
-              call explicit2implicit(0,nI+1,0,nJ+1,0,nK+1,Impl_VGB)
+              call explicit2implicit(0,nI+1,j0_,nJp1_,k0_,nKp1_,Impl_VGB)
            end if
 
            call timing_start('impl_jacobian')

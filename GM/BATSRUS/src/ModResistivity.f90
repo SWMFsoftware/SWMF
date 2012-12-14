@@ -449,14 +449,15 @@ contains
 
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, message_pass_cell, &
          CellFace_DB, FaceNormal_DDFB
+    use BATL_size,       ONLY: j0_, nJp1_, k0_, nKp1_
     use ModAdvance,      ONLY: State_VGB
     use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk
     use ModMain,         ONLY: MaxImplBlk
     use ModNumConst,     ONLY: i_DD
     use ModVarIndexes,   ONLY: Bx_, Bz_
 
-    real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
-    real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
+    real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
+    real, intent(inout):: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: iDim, i, j, k, Di, Dj, Dk, iBlock, iImplBlock
     real :: Eta

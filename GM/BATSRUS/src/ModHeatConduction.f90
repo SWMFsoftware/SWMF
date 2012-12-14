@@ -558,16 +558,14 @@ contains
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
          CellFace_DB, CellFace_DFB, FaceNormal_DDFB
+    use BATL_size,       ONLY: j0_, nJp1_, k0_, nKp1_
 
-    real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
-    real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
+    real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
+    real, intent(inout):: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iImplBlock, iP
     real :: DtLocal
     real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
-
-    integer, parameter :: jMin1 = 1 - min(1,nJ-1), jMax1 = nJ + min(1,nJ-1)
-    integer, parameter :: kMin1 = 1 - min(1,nK-1), kMax1 = nK + min(1,nK-1)
     !--------------------------------------------------------------------------
 
     iP = p_
@@ -623,7 +621,7 @@ contains
        call set_block_field2(iBlock, nVar, State1_VG, State2_VG)
 
        ! Calculate the cell centered heat conduction tensor
-       do k = kMin1, kMax1; do j = jMin1, jMax1; do i = 0, nI+1
+       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
           call get_heat_cond_tensor(State2_VG(:,i,j,k), &
                i, j, k, iBlock, HeatCond_DDG(:,:,i,j,k))
        end do; end do; end do
