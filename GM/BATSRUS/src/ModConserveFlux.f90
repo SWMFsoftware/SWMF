@@ -449,29 +449,30 @@ contains
     integer, intent(in):: iFaceIn, iFaceOut, iBlock
 
     integer:: j, k
-    real:: B_D(MaxDim), FaceArea_D(MaxDim)
+    real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
     !------------------------------------------------------------------------
     do k=1,nK; do j=1,nJ
        if(.not.all(true_cell(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
+
        FaceArea_D = FaceNormal_DDFB(:,1,iFaceOut,j,k,iBlock)
        FaceArea2  = sum(FaceArea_D**2)
 
        if(FaceArea2 == 0.0) CYCLE
 
-       B_D=LeftState_VX(Bx_:Bz_,iFaceOut,j,k)
+       B_D = LeftState_VX(Bx_:B_+nDim,iFaceOut,j,k)
 
        DeltaBDotFA = (CorrectedFlux_VXB(BnL_,j,k,iFaceIn,iBlock) - &
             sum(B_D*FaceArea_D))/FaceArea2
 
-       LeftState_VX(Bx_:Bz_,iFaceOut,j,k)=B_D+DeltaBDotFA*FaceArea_D
+       LeftState_VX(Bx_:B_+nDim,iFaceOut,j,k) = B_D + DeltaBDotFA*FaceArea_D
 
-       B_D=RightState_VX(Bx_:Bz_,iFaceOut,j,k)
+       B_D = RightState_VX(Bx_:B_+nDim,iFaceOut,j,k)
 
        DeltaBDotFA = (CorrectedFlux_VXB(BnR_,j,k,iFaceIn,iBlock) - &
             sum(B_D*FaceArea_D))/FaceArea2
 
-       RightState_VX(Bx_:Bz_,iFaceOut,j,k)=B_D+DeltaBDotFA*FaceArea_D
+       RightState_VX(Bx_:B_+nDim,iFaceOut,j,k) = B_D + DeltaBDotFA*FaceArea_D
     end do; end do
 
   end subroutine apply_bn_face_i
@@ -482,30 +483,31 @@ contains
     integer, intent(in):: jFaceIn, jFaceOut, iBlock
 
     integer:: i, k
-    real:: B_D(MaxDim), FaceArea_D(MaxDim)
+    real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
     !------------------------------------------------------------------------
 
     do k=1,nK; do i=1,nI
        if(.not.all(true_cell(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
+
        FaceArea_D = FaceNormal_DDFB(:,2,i,jFaceOut,k,iBlock)
        FaceArea2  = sum(FaceArea_D**2)
 
        if(FaceArea2 == 0.0) CYCLE
 
-       B_D=LeftState_VY(Bx_:Bz_,i,jFaceOut,k)
+       B_D = LeftState_VY(Bx_:B_+nDim,i,jFaceOut,k)
 
-       DeltaBDotFA = (CorrectedFlux_VYB(BnL_,i,k,jFaceIn,iBlock)-&
+       DeltaBDotFA = (CorrectedFlux_VYB(BnL_,i,k,jFaceIn,iBlock) - &
             sum(B_D*FaceArea_D))/FaceArea2
 
-       LeftState_VY(Bx_:Bz_,i,jFaceOut,k)=B_D+DeltaBDotFA*FaceArea_D
+       LeftState_VY(Bx_:B_+nDim,i,jFaceOut,k) = B_D + DeltaBDotFA*FaceArea_D
 
-       B_D=RightState_VY(Bx_:Bz_,i,jFaceOut,k)
+       B_D = RightState_VY(Bx_:B_+nDim,i,jFaceOut,k)
 
-       DeltaBDotFA = (CorrectedFlux_VYB(BnR_,i,k,jFaceIn,iBlock)-&
+       DeltaBDotFA = (CorrectedFlux_VYB(BnR_,i,k,jFaceIn,iBlock) - &
             sum(B_D*FaceArea_D))/FaceArea2
 
-       RightState_VY(Bx_:Bz_,i,jFaceOut,k)=B_D+DeltaBDotFA*FaceArea_D
+       RightState_VY(Bx_:B_+nDim,i,jFaceOut,k) = B_D + DeltaBDotFA*FaceArea_D
 
     end do; end do
 
@@ -518,29 +520,30 @@ contains
     integer, intent(in):: kFaceIn, kFaceOut, iBlock
 
     integer:: i,j
-    real:: B_D(MaxDim), FaceArea_D(MaxDim)
+    real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
     !------------------------------------------------------------------------
     do j=1,nJ; do i=1,nI
        if(.not.all(true_cell(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
+
        FaceArea_D = FaceNormal_DDFB(:,3,i,j,kFaceOut,iBlock)
        FaceArea2  = sum(FaceArea_D**2)
 
        if(FaceArea2 == 0.0) CYCLE
 
-       B_D=LeftState_VZ(Bx_:Bz_,i,j,kFaceOut)
+       B_D = LeftState_VZ(Bx_:B_+nDim,i,j,kFaceOut)
 
-       DeltaBDotFA = ( CorrectedFlux_VZB(BnL_,i,j,kFaceIn,iBlock) -&
+       DeltaBDotFA = ( CorrectedFlux_VZB(BnL_,i,j,kFaceIn,iBlock) - &
             sum(B_D*FaceArea_D))/FaceArea2
 
-       LeftState_VZ(Bx_:Bz_,i,j,kFaceOut) = B_D+DeltaBDotFA*FaceArea_D  
+       LeftState_VZ(Bx_:B_+nDim,i,j,kFaceOut) = B_D + DeltaBDotFA*FaceArea_D  
 
-       B_D=RightState_VZ(Bx_:Bz_,i,j,kFaceOut)
+       B_D = RightState_VZ(Bx_:B_+nDim,i,j,kFaceOut)
 
-       DeltaBDotFA = (CorrectedFlux_VZB(BnR_,i,j,kFaceIn,iBlock) -&
+       DeltaBDotFA = (CorrectedFlux_VZB(BnR_,i,j,kFaceIn,iBlock) - &
             sum(B_D*FaceArea_D))/FaceArea2
 
-       RightState_VZ(Bx_:Bz_,i,j,kFaceOut) = B_D+DeltaBDotFA*FaceArea_D  
+       RightState_VZ(Bx_:B_+nDim,i,j,kFaceOut) = B_D + DeltaBDotFA*FaceArea_D  
 
     end do; end do
 
