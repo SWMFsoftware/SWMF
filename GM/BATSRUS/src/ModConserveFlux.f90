@@ -130,8 +130,8 @@ contains
     !==========================================================================
 
     subroutine save_corrected_flux_x
-      do k=1,nK; do j=1,nJ
 
+      do k=1,nK; do j=1,nJ
          CorrectedFlux_VXB(1:FluxLast_, j, k, lFaceTo, iBlock)  &
               = Flux_VX(1:nVar+nFluid, lFaceFrom,j,k)
 
@@ -140,8 +140,7 @@ contains
 
          CorrectedFlux_VXB(Vdt_,   j,k,lFaceTo,iBlock)          &
               = VdtFace_x(lFaceFrom,j,k)
-
-      end do;end do
+      end do; end do
 
       if(.not.UseB)RETURN
 
@@ -166,10 +165,10 @@ contains
          ! Dot product with face normal
          do k=1,nK; do j=1,nJ
             CorrectedFlux_VXB(BnL_, j, k, lFaceTo, iBlock) = &
-                 dot_product(LeftState_VX(Bx_:Bz_, lFaceFrom, j, k), &
+                 dot_product(LeftState_VX(Bx_:B_+nDim, lFaceFrom, j, k), &
                  FaceNormal_DDFB(:,1,lFaceFrom, j, k, iBlock))
             CorrectedFlux_VXB(BnR_, j, k, lFaceTo, iBlock) = &
-                 dot_product(RightState_VX(Bx_:Bz_,lFaceFrom, j, k), &
+                 dot_product(RightState_VX(Bx_:B_+nDim,lFaceFrom, j, k), &
                  FaceNormal_DDFB(:,1,lFaceFrom,j,k,iBlock))
          end do; end do
       end if
@@ -216,10 +215,10 @@ contains
       else
          do k=1,nK; do i=1,nI
             CorrectedFlux_VYB(BnL_, i, k, lFaceTo, iBlock) = &
-                 dot_product(LeftState_VY(Bx_:Bz_, i, lFaceFrom, k),&
+                 dot_product(LeftState_VY(Bx_:B_+nDim, i, lFaceFrom, k),&
                  FaceNormal_DDFB(:,2,i,lFaceFrom,k,iBlock))
             CorrectedFlux_VYB(BnR_, i, k, lFaceTo, iBlock) = &
-                 dot_product(RightState_VY(Bx_:Bz_,i,lFaceFrom, k),&
+                 dot_product(RightState_VY(Bx_:B_+nDim,i,lFaceFrom, k),&
                  FaceNormal_DDFB(:,2,i,lFaceFrom,k,iBlock))
          end do; end do
       end if
@@ -253,10 +252,10 @@ contains
       else
          do j=1,nJ; do i=1,nI
             CorrectedFlux_VZB(BnL_,i,j,lFaceTo,iBlock) = &
-                 dot_product(LeftState_VZ(Bx_:Bz_,i,j,lFaceFrom),&
+                 dot_product(LeftState_VZ(Bx_:B_+nDim,i,j,lFaceFrom),&
                  FaceNormal_DDFB(:,3,i,j,lFaceFrom,iBlock))
             CorrectedFlux_VZB(BnR_,i,j,lFaceTo, iBlock) =&
-                 dot_product(RightState_VZ(Bx_:Bz_,i,j,lFaceFrom),&
+                 dot_product(RightState_VZ(Bx_:B_+nDim,i,j,lFaceFrom),&
                  FaceNormal_DDFB(:,3,i,j,lFaceFrom,iBlock))
          end do; end do
       end if
