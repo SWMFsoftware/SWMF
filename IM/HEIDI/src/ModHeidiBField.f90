@@ -7,15 +7,17 @@ contains
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
+    use ModHeidiSize,  ONLY: dt
     use ModHeidiInput, ONLY: TypeBField, StretchingFactorA, StretchingFactorB
     use ModNumConst,   ONLY: cTiny
     use ModHeidiMain,  ONLY: LZ,BHeidi_III, SHeidi_III, RHeidi_III,&
          bGradB1xHeidi_III, bGradB1yHeidi_III, bGradB1zHeidi_III,&
-         BxHeidi_III, ByHeidi_III, BzHeidi_III, t, dt, Xyz_VIII, &
+         BxHeidi_III, ByHeidi_III, BzHeidi_III, t, Xyz_VIII, &
          Re
     use ModCoordTransform, ONLY: cross_product, rot_xyz_sph
     use ModPlotFile,       ONLY: save_plot_file
     use ModInit, ONLY:i3
+    
 
     integer, intent(in)    :: nPoint , nR, nPhi
     real,    intent(in)    :: L_I(nR),Phi_I(nPhi)        
@@ -843,14 +845,11 @@ contains
 
              RadialDistance_III(iPoint,iR,iPhi) = L_I(iR)*(1. - x**2)*&
                   sqrt((1. - x**2) * (y**2 + beta**2 *(1-y**2)) + alpha**2 * x**2)
-
              r =  RadialDistance_III(iPoint,iR,iPhi)
-
-
+             
              xc = r * cos(Lat) * cos(Phi_I(iPhi))
              yc = r * cos(Lat) * sin(Phi_I(iPhi))
              zc = r * sin(Lat)
-
 
              ! \
              !  Magnetic field components for the uniformly stretched dipole in y and z.

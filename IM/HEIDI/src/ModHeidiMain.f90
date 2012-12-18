@@ -1,12 +1,12 @@
 Module ModHeidiMain
   !\
   ! The main variable definition module for the HEIDI program.
-  ! Mike Liemohn, March 2006
   !/
   ! Include the parameter settings for MPI parallel processing
+  
   use ModMpi
-  use ModHeidiSize
-  use ModNumConst
+  use ModHeidiSize, ONLY: nR, nT, nS, nE, nPA, sLen, nPoint, dt
+  use ModNumConst,  ONLY:cPi
 
   ! Basic physical constants: Earth radius and dipole coefficient
   real :: Re, DipoleFactor
@@ -19,17 +19,17 @@ Module ModHeidiMain
   integer :: upa(NR)
   real    :: DL1,DR,LZ(NR),Z(NR),BE(NR,Slen),PHI(NT),DPHI,MLT(NT)
   real    :: MAS(NS),M1(NS),WE(NE),DE(NE),EKEV(NE)
-  real    :: V(NE,NS) = 0.0
+  real    :: V(NE,NS)
   real    :: VBND(NE,NS),MU(NPA),DMU(NPA),WMU(NPA),EBND(NE)
   real    :: CONMU1,CONMU2,FFACTOR(NR,NT,NE,NPA),FACMU(NPA,NR,NT),CONF1,CONF2
   real    :: CEDR(NR,NT,NE,NPA,NS),CIDR(NR,NT,NE,NPA,NS)
   
   ! Define flux variable, and a few others
-  real ::F2(NR,NT,NE,NPA,NS)=0.0
+  real ::F2(NR,NT,NE,NPA,NS)
   real ::A,T,FGEOS(NT,NE,NPA,NS)
   
   ! Define parameters based on grid variables
-  real :: ENER(NR,NS),FACTOR(NS)=0.0
+  real :: ENER(NR,NS),FACTOR(NS)
   real :: LEC(NR,NS),ECOF(NR),WCD(NR,NT)
   
   ! Define thermal plasma variables
@@ -48,7 +48,7 @@ Module ModHeidiMain
   real, dimension(3,nPoint,nR,nT) :: Xyz_VIII
   real, dimension(nR,nT,nE,nPA)   :: dEdt_IIII,VPhi_IIII,VR_IIII
   real, dimension(nR,nT,nE,nPA)   :: dMudt_III 
-  real :: NeutralHydrogen(nR,nT,nPa) = 0.0
+  real :: NeutralHydrogen(nR,nT,nPa)
   real :: bFieldMagnitude_III(nPoint,nR,nT)
   
   logical :: IsBFieldNew

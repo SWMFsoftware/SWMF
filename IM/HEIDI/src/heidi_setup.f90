@@ -19,8 +19,8 @@
 !======================================================================
 subroutine heidi_read
 
-  use ModHeidiSize,  ONLY: scalc, dt, dtmax, nS
-  use ModHeidiIO,    ONLY: iUnitStdout, year, month, day, ut, tmax, tint, time, &
+  use ModHeidiSize,  ONLY: scalc, dt, dtmax, tmax, nS
+  use ModHeidiIO,    ONLY: iUnitStdout, year, month, day, ut, tint, time, &
        ini, ibc, NameRun, TimeArray, iswb, isw, nStep, iB, ikp, ia,             &
        NameInputDirectory, iLambe, lamgam, tlame, ippc, tppc, ppc, lambe,       &
        write_prefix
@@ -190,12 +190,12 @@ end subroutine CONSTANT
 !======================================================================
 subroutine BFIELD_SETUP(LossCone_I)
 
-  use ModHeidiSize
-  use ModHeidiMain, ONLY: Be, LZ, DipoleFactor, Z, Q, Re
-  use ModHeidiWaves
-  use ModHeidiIO
-  use ModProcIM,   ONLY: iProc
-  use ModNumConst, ONLY: cPi
+  use ModHeidiSize,  ONLY: nR, io, iso, tmax
+  use ModHeidiMain,  ONLY: Be, LZ, DipoleFactor, Z, Q, Re
+  use ModHeidiWaves, ONLY: amla, bfc
+  use ModHeidiIO,    ONLY: hmin
+  use ModProcIM,     ONLY: iProc
+  use ModNumConst,   ONLY: cPi
   implicit none
 
   real     :: LossCone_I(NR+4)
@@ -237,10 +237,13 @@ end subroutine BFIELD_SETUP
 !======================================================================
 subroutine ARRAYS
 
-  use ModHeidiSize, ONLY: dT
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiWaves
+  use ModHeidiSize,  ONLY: nR, nT, nE, nPA, nS, dT, io, jo, ko, lo, iso, s, lo, slen, nlt
+  use ModHeidiIO,    ONLY: consl, ifac, iUnitStdOut, ist, ipa, swe, rw, elb, write_prefix
+  use ModHeidiMain,  ONLY: conmu1, conmu2, facmu, conf1, conf2, FluxFact, mp,&
+       fFactor, funi, funt, IsBFieldNew, wmu, be, mu, upa, ekev, q, IsBFieldNew, &
+       dl1, m1, dphi, dR, Re, LZ, Z, phi, mlt, mas, we, ebnd, de, dmu, wmu, vbnd, V
+  use ModHeidiWaves, ONLY: gtaw, ataw, epp, ernh, epme, epma, ernm, zrpabn, PAbn, &
+       amla
   use ModProcIM,     ONLY: iProc
   use ModPlotFile,   ONLY: save_plot_file
   use ModHeidiInput, ONLY: TypeBCalc
@@ -509,16 +512,13 @@ subroutine ARRAYS
   write(*,*) 'heidi_setup---> IsBfieldNew = ', IsBfieldNew
   
   if (IsBfieldNew) then 
-   
-     
      write(*,*) 'heidi_setup: ARRAYS---> get_IntegralH'
      call get_IntegralH(funt)
      
      write(*,*) 'heidi_setup: ARRAYS---> get_IntegralI'
      call get_IntegralI(funi)
      
-     !write(*,*) 'funi   = ', funt(42,:, 7)
-
+    
   end if
   
   
@@ -722,10 +722,11 @@ end subroutine ARRAYS
 !======================================================================
 subroutine GETKPA(i3,nst,i2,nkp)
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModProcIM, ONLY:iProc
+  use ModHeidiSize, ONLY: dt
+  use ModHeidiIO,   ONLY: ilambe, lambe, tlame, ia, ap, f107, ikp, &
+       kp, nStep, day, lamgam
+  use ModHeidiMain, ONLY: apr, dkp, T, rkph, dayr, f107r, rsunr, A
+  use ModProcIM,    ONLY: iProc
 
   implicit none
 
@@ -821,11 +822,12 @@ end subroutine GETKPA
 !======================================================================
 subroutine GETSWIND
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModIoUnit, ONLY : io_unit_new 
-  use ModProcIM, ONLY: iProc
+  use ModHeidiSize, ONLY: io, jo, dt
+  use ModHeidiIO,   ONLY: iUnitSw1, time, NameRun, NameInputDirectory, ilmp, lmp, ilold, &
+       bysw, bzsw, mdsw, usw, dpsw, nStep
+  use ModHeidiMain, ONLY: LZ, phi, T, mp
+  use ModIoUnit,    ONLY: io_unit_new 
+  use ModProcIM,    ONLY: iProc
 
   implicit none
 
@@ -906,12 +908,14 @@ end subroutine GETSWIND
 !======================================================================
 subroutine THERMAL
 
-  use ModHeidiSize
-  use ModHeidiMain
-  use ModHeidiDGCPM
-  use ModHeidiIO
-  use ModProcIM
-  use ModNumConst, ONLY: cPi
+  use ModMpi,        ONLY: MPI_Real
+  use ModHeidiSize,  ONLY: nR, nT, io, jo, lo, scalc, nthetacells, nphicells, dt
+  use ModHeidiMain,  ONLY: mlt, ithermfirst, itherminit, LZ, xne, F2, ffactor, ekev, mas, q
+  use ModHeidiDGCPM, ONLY: dendgcpm,  vthetacells, vphicells, gridx, gridy, gridoc, &
+       vlzcells,vmltcells, potdgcpm
+  use ModHeidiIO,    ONLY: NameRun, ist, iUnitStdOut, write_prefix
+  use ModProcIM,     ONLY: iComm, iError, Iproc
+  use ModNumConst,   ONLY: cPi
 
   implicit none
 
@@ -1033,9 +1037,7 @@ end subroutine THERMAL
 !                        Function G(X) 
 !======================================================================
 real function G(X)
-
-  use ModHeidiSize
-  use ModHeidiMain
+  
   use ModConst, ONLY : cPi
 
   implicit none
@@ -1075,24 +1077,20 @@ end function APPX
 !============================================================================           
 real function ACOSD(X)
 
-  use ModHeidiSize
-  use ModHeidiMain
   use ModConst, only : cPi
-
+  
   implicit none
   real :: x
   !------------------------------------------------------------------------
-
+  
   acosd=180.0/cPi*acos(X)
-
+  
 end function ACOSD
 !============================================================================          
 real function ASIND(X)
 
-  use ModHeidiSize
-  use ModHeidiMain
   use ModConst, only : cPi
-
+  
   implicit none
   real :: x
   !------------------------------------------------------------------------
@@ -1104,8 +1102,6 @@ end function ASIND
 !============================================================================           
 real function COSD(X)
 
-  use ModHeidiSize
-  use ModHeidiMain
   use ModConst, only : cPi
 
   implicit none
@@ -1119,8 +1115,6 @@ end function COSD
 !============================================================================           
 real function SIND(X)
 
-  use ModHeidiSize
-  use ModHeidiMain
   use ModConst, only : cPi
 
   implicit none

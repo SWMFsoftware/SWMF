@@ -11,11 +11,14 @@
 !=======================================================================
 subroutine PRESSURES
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiWaves
-  use ModHeidiCurrents
+  use ModHeidiSize,     ONLY: nS, s, io, jo, lo, ko, scalc
+  use ModHeidiIO,       ONLY: consl, ilmp
+  use ModHeidiMain,     ONLY: lz, Be, F2, dR, dL1, dPhi, ekev, wmu, we, Re, &
+       mp, m1, q 
+  use ModHeidiWaves,    ONLY: ernh, epp, ernm, epma, epme
+  use ModHeidiCurrents, ONLY: pPer, pPar, rnht, eden, anis, nSpace, eSpace, &
+       nTot, jPer, eTot, ePar, Dst 
+  use ModNumConst,     ONLY: cPi
   implicit none
 
   integer :: I,J,K,L,I_1,I_2
@@ -25,11 +28,11 @@ subroutine PRESSURES
   ! Start the main species loop
   !/
 
-  do S = 1, NS
+  do S = 1, nS
      if (SCALC(S).eq.1) then
         !   RFAC is 4*PI*SQRT(2)*(kg->amu * keV->J)^1.5 *(m->km)^6 *(cm->m)^3
         !   and should be ~5.3E-7/M(amu)^1.5
-        RFAC=4.*PI*sqrt(2.)*1.E-24*(Q*1.E3/MP/M1(S))**1.5
+        RFAC=4.*cPi*sqrt(2.)*1.E-24*(Q*1.E3/MP/M1(S))**1.5
         !   J_FAC is (keV->J)*(T->G)*(m->cm)^3 /RE(in m)
         !   and should be ~2.5E-13
 	J_FAC=Q*1.E13/RE
@@ -114,12 +117,17 @@ end subroutine PRESSURES
 !=======================================================================
 !			 	CURRENTSETUP
 !     Routine sets up the arrays for the current calculation
-!=======================================================================
+!================================================================, rl=======
 subroutine CURRENTSETUP
 
-  use ModHeidiSize
-  use ModHeidiMain
-  use ModHeidiCurrents
+  use ModHeidiSize,     ONLY: nR, nS, slen, s, io, jo
+  use ModHeidiMain,     ONLY: dR, phi, dPhi, Re, me, lz, dl1
+  use ModHeidiCurrents, ONLY: iRad, iPhi, basepot, fpot, ikk1, ikk2, ik1, ik2, dr2, dr1,   &
+       fac2, delR, cb1, cb2, fac1, ca1, alpha1, beta1, beta2, k1, k2, ilfac, irfac, drm,   &
+       i1, i2, sa1, sb1, sb2, cg1, cg2, sg1, sg2, gam1, gam2, j1, j2, ds1, ds2, ds, dbdrb, &
+       rxy, r2, bbr, sr3, sr, cr, drl, sl, cl, bf2, bz, bxy, lsh, ir, kmax, cr, sr,   &
+       drl, rl, lats, cp, sp, ko2
+  use ModNumConst,  ONLY:cPi
 
   implicit none
 
@@ -150,15 +158,15 @@ subroutine CURRENTSETUP
   Lats(1:Ir)=acos(sqrt(Rionos/Lsh(1:Ir)))
   cl(1:Ir)=cos(Lats(1:Ir))
   sl(1:Ir)=sin(Lats(1:Ir))
-  Lats(1:Ir)=Lats(1:Ir)*180.0/pi
+  Lats(1:Ir)=Lats(1:Ir)*180.0/cPi
   do i=1,Ir
      do k=Ko2,1,-1
         if (Lambda(k).gt.Lats(i)) Kmax(i)=k-1
      end do
   end do
   do i=1,Ir
-     rl(i,1:Ko2)=Lambda(1:Ko2)*pi/180.
-     rl(i,Kmax(i))=Lats(i)*pi/180.
+     rl(i,1:Ko2)=Lambda(1:Ko2)*cPi/180.
+     rl(i,Kmax(i))=Lats(i)*cPi/180.
   end do
   do i=1,Ir
      drl(i,2:Ko2-1)=.5*(rl(i,3:Ko2)-rl(i,1:Ko2-2))
@@ -239,7 +247,7 @@ subroutine CURRENTSETUP
         dRm(i)=1.
      endif
   end do
-  j=1  ! Pick one, r2(3) is independent of j
+  j=1  ! CPick one, r2(3) is independent of j
   do i=1,Ir
      do k=1,Kmax(i)
         k1(i,k)=k-1
@@ -252,7 +260,7 @@ subroutine CURRENTSETUP
         sb2(i,k)=sin(beta2(i,k))
         cb1(i,k)=cos(beta1(i,k))
         cb2(i,k)=cos(beta2(i,k))
-        alpha1(i,k)=.5*pi - asin(Bz(i,k)/sqrt(Bf2(i,k)))
+        alpha1(i,k)=.5*cPi - asin(Bz(i,k)/sqrt(Bf2(i,k)))
         sa1(i,k)=sin(alpha1(i,k))
         ca1(i,k)=cos(alpha1(i,k))
         delR(i,k)=dR*BBr(i,k)/cr(i,k)**3
@@ -345,10 +353,13 @@ end subroutine CURRENTSETUP
 !=======================================================================
 subroutine CURRENTCALC
 
-  use ModHeidiSize
-  use ModHeidiCurrents
-  use ModHeidiMain
-  use ModHeidiIO
+  use ModHeidiSize,     ONLY: s, nS, scalc, slen, io, jo, nR, nT
+  use ModHeidiCurrents, ONLY: jIon1, cr, delR, ds, dbdrb, bz, bxy, bf2, sa1, &
+       cg1, cg2, sp, Rxy, sg1, sg2, dr1, dr2, ca1, cp, k1, k2, j1, j2, ik1, ikk1, &
+       ik2, ikk2, i1, i2, fac1, fac2, kmax, BBr, lsh, iphi, pper, ppar, dRm, iR, &
+       iRad, rnht
+  use ModHeidiMain,     ONLY: Re, dPhi
+  use ModHeidiIO,       ONLY: iLmp
 
   implicit none
 
