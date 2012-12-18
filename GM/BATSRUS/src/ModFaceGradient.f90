@@ -573,6 +573,7 @@ contains
   subroutine set_block_jacobian_face(iBlock)
 
     use ModMain, ONLY: x_, y_, z_
+    use ModNumConst, ONLY: i_DD
     use ModCoordTransform, ONLY: inverse_matrix
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
 
@@ -615,17 +616,21 @@ contains
             + dp2* (Xyz_DGB(:,i+2,j,k,iBlock) - Xyz_DGB(:,i-2,j,k,iBlock)))
     end do; end do; end do
 
-    do k=MinK,MaxK; do j=1,nJ; do i=MinI,MaxI
-       TransGrad_DDG(:,2,i,j,k)=  &
-            ( dp1* (Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
-            + dp2* (Xyz_DGB(:,i,j+2,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
-    end do; end do; end do
+    if(nJ > 1)then
+       do k=MinK,MaxK; do j=1,nJ; do i=MinI,MaxI
+          TransGrad_DDG(:,2,i,j,k)=  &
+               ( dp1* (Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
+               + dp2* (Xyz_DGB(:,i,j+2,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
+       end do; end do; end do
+    end if
 
-    do k=1,nK; do j=MinJ,MaxJ; do i=MinI,MaxI
-       TransGrad_DDG(:,3,i,j,k)=  &
-            ( dp1* (Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
-            + dp2* (Xyz_DGB(:,i,j,k+2,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
-    end do; end do; end do
+    if(nK > 1)then
+       do k=1,nK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          TransGrad_DDG(:,3,i,j,k)=  &
+               ( dp1* (Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
+               + dp2* (Xyz_DGB(:,i,j,k+2,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
+       end do; end do; end do
+    end if
 
     ! coord1 face
     do k=1,nK; do j=1,nJ; do i=1,nI+1
@@ -633,49 +638,65 @@ contains
        DxyzDcoord_DD(:,1) = InvDx* &
             (  fp1*(Xyz_DGB(:,i  ,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock)) &
             +  fp2*(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-2,j,k,iBlock)))
-       DxyzDcoord_DD(:,2) = InvDy* &
-            ( ap1*( TransGrad_DDG(:,2,i  ,j,k) + TransGrad_DDG(:,2,i-1,j,k)) &
-            + ap2*( TransGrad_DDG(:,2,i+1,j,k) + TransGrad_DDG(:,2,i-2,j,k)))
-       DxyzDcoord_DD(:,3) = InvDz* &
-            ( ap1*( TransGrad_DDG(:,3,i  ,j,k) + TransGrad_DDG(:,3,i-1,j,k)) &
-            + ap2*( TransGrad_DDG(:,3,i+1,j,k) + TransGrad_DDG(:,3,i-2,j,k)))
+       if(nJ > 1)then
+          DxyzDcoord_DD(:,2) = InvDy* &
+               ( ap1*( TransGrad_DDG(:,2,i  ,j,k)+TransGrad_DDG(:,2,i-1,j,k)) &
+               + ap2*( TransGrad_DDG(:,2,i+1,j,k)+TransGrad_DDG(:,2,i-2,j,k)))
+       else
+          DxyzDcoord_DD(:,2) = i_DD(:,2)
+       end if
+       if(nK > 1)then
+          DxyzDcoord_DD(:,3) = InvDz* &
+               ( ap1*( TransGrad_DDG(:,3,i  ,j,k)+TransGrad_DDG(:,3,i-1,j,k)) &
+               + ap2*( TransGrad_DDG(:,3,i+1,j,k)+TransGrad_DDG(:,3,i-2,j,k)))
+       else
+          DxyzDcoord_DD(:,3) = i_DD(:,3)
+       end if
        DcoordDxyz_DDFD(:,:,i,j,k,1) = &
             inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
     end do; end do; end do
 
     ! coord2 face
-    do k=1,nK; do j=1,nJ+1; do i=1,nI
-       ! DxyzDcoord along coord2 face
-       DxyzDcoord_DD(:,1) = InvDx* &
-            ( ap1*( TransGrad_DDG(:,1,i,j  ,k) + TransGrad_DDG(:,1,i,j-1,k)) &
-            + ap2*( TransGrad_DDG(:,1,i,j+1,k) + TransGrad_DDG(:,1,i,j-2,k)))
-       DxyzDcoord_DD(:,2) = InvDy* &
-            (  fp1*(Xyz_DGB(:,i,j  ,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
-            +  fp2*(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
-       DxyzDcoord_DD(:,3) = InvDz* &
-            ( ap1*( TransGrad_DDG(:,3,i,j  ,k) + TransGrad_DDG(:,3,i,j-1,k)) &
-            + ap2*( TransGrad_DDG(:,3,i,j+1,k) + TransGrad_DDG(:,3,i,j-2,k)))
-
-       DcoordDxyz_DDFD(:,:,i,j,k,2) = &
-            inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
-    end do; end do; end do
+    if(nJ > 1)then
+       do k=1,nK; do j=1,nJ+1; do i=1,nI
+          ! DxyzDcoord along coord2 face
+          DxyzDcoord_DD(:,1) = InvDx* &
+               ( ap1*( TransGrad_DDG(:,1,i,j  ,k)+TransGrad_DDG(:,1,i,j-1,k)) &
+               + ap2*( TransGrad_DDG(:,1,i,j+1,k)+TransGrad_DDG(:,1,i,j-2,k)))
+          DxyzDcoord_DD(:,2) = InvDy* &
+               (  fp1*(Xyz_DGB(:,i,j  ,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock)) &
+               +  fp2*(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-2,k,iBlock)))
+          if(nK > 1)then
+             DxyzDcoord_DD(:,3) = InvDz* &
+                  ( ap1*( TransGrad_DDG(:,3,i,j  ,k)  &
+                  +       TransGrad_DDG(:,3,i,j-1,k)) &
+                  + ap2*( TransGrad_DDG(:,3,i,j+1,k)  &
+                  +       TransGrad_DDG(:,3,i,j-2,k)))
+          else
+             DxyzDcoord_DD(:,3) = i_DD(:,3)
+          end if
+          DcoordDxyz_DDFD(:,:,i,j,k,2) = &
+               inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
+       end do; end do; end do
+    end if
 
     ! coord3 face
-    do k=1,nK+1; do j=1,nJ; do i=1,nI
-       ! DxyzDcoord along coord3 face
-       DxyzDcoord_DD(:,1) = InvDx* &
-            ( ap1*( TransGrad_DDG(:,1,i,j,k  ) + TransGrad_DDG(:,1,i,j,k-1)) &
-            + ap2*( TransGrad_DDG(:,1,i,j,k+1) + TransGrad_DDG(:,1,i,j,k-2)))
-       DxyzDcoord_DD(:,2) = InvDy* &
-            ( ap1*( TransGrad_DDG(:,2,i,j,k  ) + TransGrad_DDG(:,2,i,j,k-1)) &
-            + ap2*( TransGrad_DDG(:,2,i,j,k+1) + TransGrad_DDG(:,2,i,j,k-2)))
-       DxyzDcoord_DD(:,3) = InvDz* &
-            (  fp1*(Xyz_DGB(:,i,j,k  ,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
-            +  fp2*(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
-
-       DcoordDxyz_DDFD(:,:,i,j,k,3) = &
-            inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
-    end do; end do; end do
+    if(nK > 1)then
+       do k=1,nK+1; do j=1,nJ; do i=1,nI
+          ! DxyzDcoord along coord3 face
+          DxyzDcoord_DD(:,1) = InvDx* &
+               ( ap1*( TransGrad_DDG(:,1,i,j,k  )+TransGrad_DDG(:,1,i,j,k-1)) &
+               + ap2*( TransGrad_DDG(:,1,i,j,k+1)+TransGrad_DDG(:,1,i,j,k-2)))
+          DxyzDcoord_DD(:,2) = InvDy* &
+               ( ap1*( TransGrad_DDG(:,2,i,j,k  )+TransGrad_DDG(:,2,i,j,k-1)) &
+               + ap2*( TransGrad_DDG(:,2,i,j,k+1)+TransGrad_DDG(:,2,i,j,k-2)))
+          DxyzDcoord_DD(:,3) = InvDz* &
+               (  fp1*(Xyz_DGB(:,i,j,k  ,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock)) &
+               +  fp2*(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-2,iBlock)))
+          DcoordDxyz_DDFD(:,:,i,j,k,3) = &
+               inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
+       end do; end do; end do
+    end if
 
   end subroutine set_block_jacobian_face
 
