@@ -881,7 +881,7 @@ contains
 
       use BATL_lib, ONLY: FaceNormal_DDFB
 
-      real :: FaceArea_D(3), vInvHalf
+      real :: FaceArea_D(nDim), vInvHalf
       real :: B1nJumpL, B1nJumpR, DivBInternal_C(1:nI,1:nJ,1:nK)
       integer :: i, j, k
 
@@ -894,18 +894,18 @@ contains
          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
          FaceArea_D = FaceNormal_DDFB(:,1,i,j,k,iBlock)
          B1nJumpL =VInvHalf*&
-              sum(FaceArea_D*(RightState_VX(Bx_:Bz_,i,j,k) &
-              -               LeftState_VX(Bx_:Bz_,i,j,k)))
+              sum(FaceArea_D*(RightState_VX(Bx_:B_+nDim,i,j,k) &
+              -               LeftState_VX(Bx_:B_+nDim,i,j,k)))
          DivBInternal_C(i,j,k) = &
-              -sum(FaceArea_D*RightState_VX(Bx_:Bz_,i,j,k))
+              -sum(FaceArea_D*RightState_VX(Bx_:B_+nDim,i,j,k))
 
          FaceArea_D = FaceNormal_DDFB(:,1,i+1,j,k,iBlock)
          B1nJumpR =  VInvHalf*&
-              sum(FaceArea_D*(RightState_VX(Bx_:Bz_,i+1,j,k) &
-              -               LeftState_VX(Bx_:Bz_,i+1,j,k)))
+              sum(FaceArea_D*(RightState_VX(Bx_:B_+nDim,i+1,j,k) &
+              -               LeftState_VX(Bx_:B_+nDim,i+1,j,k)))
 
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-              + sum(FaceArea_D*LeftState_VX(Bx_:Bz_,i+1,j,k))
+              + sum(FaceArea_D*LeftState_VX(Bx_:B_+nDim,i+1,j,k))
 
          DivB1_GB(i,j,k,iBlock)  = B1nJumpL + B1nJumpR
 
@@ -923,21 +923,22 @@ contains
 
       do k = 1, nK; do j = 1, nJ; do i = 1, nI 
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
          FaceArea_D = FaceNormal_DDFB(:,2,i,j,k,iBlock)
          B1nJumpL = VInvHalf*&
-              sum(FaceArea_D*(RightState_VY(Bx_:Bz_,i,j,k) &
-              -               LeftState_VY(Bx_:Bz_,i,j,k)))
+              sum(FaceArea_D*(RightState_VY(Bx_:B_+nDim,i,j,k) &
+              -               LeftState_VY(Bx_:B_+nDim,i,j,k)))
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-              - sum(FaceArea_D*RightState_VY(Bx_:Bz_,i,j,k))
+              - sum(FaceArea_D*RightState_VY(Bx_:B_+nDim,i,j,k))
 
          FaceArea_D =  FaceNormal_DDFB(:,2,i,j+1,k,iBlock)
          B1nJumpR = VInvHalf*&
-              sum(FaceArea_D*(RightState_VY(Bx_:Bz_,i,j+1,k) &
-              -               LeftState_VY(Bx_:Bz_,i,j+1,k)))
+              sum(FaceArea_D*(RightState_VY(Bx_:B_+nDim,i,j+1,k) &
+              -               LeftState_VY(Bx_:B_+nDim,i,j+1,k)))
 
          DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-              + sum(FaceArea_D*LeftState_VY(Bx_:Bz_,i,j+1,k))
+              + sum(FaceArea_D*LeftState_VY(Bx_:B_+nDim,i,j+1,k))
 
          DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
               + B1nJumpL + B1nJumpR
@@ -961,19 +962,19 @@ contains
             VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
             FaceArea_D = FaceNormal_DDFB(:,3,i,j,k,iBlock)
             B1nJumpL = VInvHalf*&
-                 sum(FaceArea_D*(RightState_VZ(Bx_:Bz_,i,j,k) &
-                 -                LeftState_VZ(Bx_:Bz_,i,j,k)))
+                 sum(FaceArea_D*(RightState_VZ(Bx_:B_+nDim,i,j,k) &
+                 -                LeftState_VZ(Bx_:B_+nDim,i,j,k)))
 
             DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) &
-                 - sum(FaceArea_D*RightState_VZ(Bx_:Bz_,i,j,k))
+                 - sum(FaceArea_D*RightState_VZ(Bx_:B_+nDim,i,j,k))
 
             FaceArea_D = FaceNormal_DDFB(:,3,i,j,k+1,iBlock)
             B1nJumpR = VInvHalf*&
-                 sum(FaceArea_D*(RightState_VZ(Bx_:Bz_,i,j,k+1) &
-                 -               LeftState_VZ(Bx_:Bz_,i,j,k+1)))
+                 sum(FaceArea_D*(RightState_VZ(Bx_:B_+nDim,i,j,k+1) &
+                 -               LeftState_VZ(Bx_:B_+nDim,i,j,k+1)))
 
             DivBInternal_C(i,j,k) = (DivBInternal_C(i,j,k) + &
-                 sum(FaceArea_D*LeftState_VZ(Bx_:Bz_,i,j,k+1))) &
+                 sum(FaceArea_D*LeftState_VZ(Bx_:B_+nDim,i,j,k+1))) &
                  /CellVolume_GB(i,j,k,iBlock)
 
             DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
