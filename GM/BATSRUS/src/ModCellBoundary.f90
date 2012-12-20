@@ -121,7 +121,12 @@ contains
        end do
     end if
 
-    iSideMin = max(MaxBoundary+1, 1)
+    if(present(iImplBlock))then
+       ! The semi-implicit scheme does not use face boundaries
+       iSideMin = 1
+    else
+       iSideMin = max(MaxBoundary+1, 1)
+    end if
     ! Do not apply cell boundary conditions at the pole 
     ! This is either handled by message passing or supercell
     if(IsRLonLat) then
