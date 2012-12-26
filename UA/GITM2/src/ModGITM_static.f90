@@ -48,6 +48,8 @@ real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nSpeciesAll, nBlocksMax) :: 
        nIons, nBlocksMax) :: &
        IDensityS, IRIDensity
 
+  real :: VTEC(-1:nLons+2, -1:nLats+2, nBlocksMax)
+
   real :: Gamma(-1:nLons+2, -1:nLats+2, -1:nAlts+2,nBlocksMax)
 
   real, dimension(nLons, nLats, 0:nAlts+1, nBlocksMax) :: &
