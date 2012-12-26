@@ -25,6 +25,7 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '2DGEL')     IsFound = .true.
      if (OutputType(iOutputType) == '2DMEL')     IsFound = .true.
      if (OutputType(iOutputType) == '2DUSR')     IsFound = .true.
+     if (OutputType(iOutputType) == '2DTEC')     IsFound = .true.
 
      if (OutputType(iOutputType) == '1DALL')     IsFound = .true.
      if (OutputType(iOutputType) == '1DGLO')     IsFound = .true.
@@ -183,6 +184,7 @@ subroutine output(dir, iBlock, iOutputType)
         cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//cSecond
         cL = 14
      endif
+        
      if (IsFirstTime) cTimeSave = cTime
   else
      cTime = cTimeSave
@@ -281,6 +283,12 @@ subroutine output(dir, iBlock, iOutputType)
      if (iBlock == 1) call set_nVarsUser2d
      nvars_to_write = nVarsUser2d
      call output_2duser(iBlock, iOutputUnit_)
+
+  case ('2DTEC')
+
+     if (iBlock == 1) call set_nVarsUser2d
+     nvars_to_write = 5
+     call output_2dtec(iBlock)
 
   case ('1DALL')
 
@@ -390,7 +398,7 @@ contains
           write(iOutputUnit_,"(I7,A)") nMagLons+1, " nLongitudes"
           write(iOutputUnit_,*) " "
           write(iOutputUnit_,*) "NO GHOSTCELLS"
-       elseif (cType(3:5) =="GEL") then
+       elseif (cType(3:5) =="GEL".or.cType(3:5)=="TEC") then
           write(iOutputUnit_,"(I7,A)") nLats, " nLatitude"
           write(iOutputUnit_,"(I7,A)") nLons, " nLongitudes"
           write(iOutputUnit_,*) " "
@@ -419,6 +427,13 @@ contains
        write(iOutputUnit_,"(I7,A1,a)") 11, " ", "Hall FL Conductance"
        write(iOutputUnit_,"(I7,A1,a)") 12, " ", "DivJu FL"
        write(iOutputUnit_,"(I7,A1,a)") 13, " ", "FL Length"
+
+    endif
+
+    if(cType(3:5) == "TEC") then
+
+       write(iOutputUnit_,"(I7,A1,a)")  4, " ", "Solar Zenith Angle"
+       write(iOutputUnit_,"(I7,A1,a)")  5, " ", "Vertical TEC"
 
     endif
     
@@ -1217,6 +1232,37 @@ subroutine output_2dgel(iBlock)
   enddo
 
 end subroutine output_2dgel
+
+!-------------------------------------------------------------------------------
+! AGB: Routine to output a 2D TEC file that includes the lat, lon, SZA, and VTEC
+!-------------------------------------------------------------------------------
+
+subroutine output_2dtec(iBlock)
+
+  use ModGITM
+  use ModInputs
+  use ModEUV, only : Sza
+
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iLat, iLon, iAlt, iiLat, iiLon
+
+  call calc_vtec(iBlock)
+
+  iAlt = 1
+  do iLat=-1,nLats+2
+     do iLon=-1,nLons+2
+        write(iOutputUnit_)       &
+             Longitude(iLon,iBlock), &
+             Latitude(iLat,iBlock),&
+             Altitude_GB(iLon,iLat,iAlt,iBlock), &
+             Sza(iLon,iLat,iBlock), &
+             VTEC(iLon,iLat,iBlock)
+     enddo
+  enddo
+
+end subroutine output_2dtec
 
 !----------------------------------------------------------------
 
