@@ -178,4 +178,30 @@ subroutine calc_physics(iBlock)
 
 end subroutine calc_physics
 
+!-----------------------------------------------------------------------------
+! get_subsolar: A routine to get the latitude and longitude of the subsolar
+!               point for a specified time and Vernal Equinox.
+!
+! Author: Alexey Morozov, UMich, December 2012
+!
+! Comments: Tested by Angeline G Burrell on December 26, 2012
+!----------------------------------------------------------------------------
 
+subroutine get_subsolar(CurrentTime, VernalTime, lon_sp, lat_sp)
+
+  use ModConstants, only : pi
+  use ModPlanet, only : Tilt, SecondsPerYear, Rotation_Period
+
+  implicit none
+
+  real*8, intent(in) :: CurrentTime, VernalTime
+  real*8, intent(out) :: lon_sp, lat_sp 
+
+  lon_sp=(pi - ((CurrentTime - VernalTime)/Rotation_Period &
+       - floor((CurrentTime - VernalTime)/Rotation_Period))*2*pi)
+  if (lon_sp<0.) lon_sp=lon_sp+2*pi
+
+  lat_sp=atan(tan(Tilt*pi/180.)*sin(2.*pi*(CurrentTime - VernalTime) &
+       /SecondsPerYear))
+
+end subroutine get_subsolar
