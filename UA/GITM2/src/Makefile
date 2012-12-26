@@ -93,7 +93,8 @@ OBJECTS = \
 	read_NGDC_Indices_new.o\
 	read_NOAAHPI_Indices_new.o\
 	read_ACE_data.o\
-	user.o
+	user.o \
+	calc_tec.o
 
 OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}
 
@@ -138,11 +139,12 @@ STATIC:
 	cp -f ModSources_static.f90 ModSources.f90
 
 S2D = ${SCRIPTDIR}/StaticToDynamic.pl
+
 DYNAMIC:	
 	${S2D} -l=nBlocksMax -d=4 ModGITM_static.f90    > ModGITM.f90
 	${S2D} -l=nBlocksMax -d=4 ModEUV_static.f90     > ModEUV.f90
 	${S2D} -l=nBlocksMax -d=4 ModSources_static.f90 > ModSources.f90
-	# Replaces nBlocksMax with nBlocks to make allocation flexible
+# Replaces nBlocksMax with nBlocks to make allocation flexible
 	perl -pi -e 's/nBlocksMax/nBlocks/ if /allocate/' \
 		ModGITM.f90 ModEUV.f90 ModSources.f90
 
