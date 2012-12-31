@@ -24,6 +24,4 @@ T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
 300.0			TradMinSi
 
-#TEST
-krylov			StringTest
 

@@ -27,6 +27,4 @@ larsen                  TypeRadFluxLimiter
 #ELECTRONPRESSURE
 1.1e5			PeMinSi
 
-#TEST
-krylov			StringTest
 
