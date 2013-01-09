@@ -2693,6 +2693,18 @@ contains
     if(DoFixAxis .and. .not. UseUniformAxis) &
          call stop_mpi("DoFixAxis=T only works with UseUniformAxis=T!")
 
+    if(TypeCoordSystem == 'HGI' .and. .not.time_accurate)then
+       if(iProc == 0)then
+          write(*,'(a)') NameSub//&
+               ' WARNING: there is no steady state solution in HGI system!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*) NameSub//' setting TypeCoordSystem = HGC'
+       end if
+       TypeCoordSystem  = 'HGC'
+       DoTransformToHgi = .false.
+       UseRotatingFrame = .true.
+    end if
+
     IsFirstCheck = .false.
 
   end subroutine correct_parameters
