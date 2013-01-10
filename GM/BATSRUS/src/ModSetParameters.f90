@@ -1953,18 +1953,21 @@ contains
     ! Default coordinate systems
     select case(NameThisComp)
     case('IH','OH')
-       ! Do not start line with Type... to avoid an Emacs indentation bug
        UseRotatingFrame  = .false.
-       UseRotatingBc     = .false.; TypeCoordSystem   = 'HGI'
+       UseRotatingBc     = .false.
+       TypeCoordSystem   = 'HGI'
     case('SC','LC')
        UseRotatingFrame  = .true.
-       UseRotatingBc     = .false.; TypeCoordSystem   = 'HGR'
+       UseRotatingBc     = .false.
+       TypeCoordSystem   = 'HGR'
     case('GM')
        UseRotatingFrame  = .false.
-       UseRotatingBc     = .true.;  TypeCoordSystem   = 'GSM'
+       UseRotatingBc     = .true.
+       TypeCoordSystem   = 'GSM'
     case('EE')
        UseRotatingFrame  = .false.
-       UseRotatingBc     = .false.; TypeCoordSystem   = 'GSM'
+       UseRotatingBc     = .false.
+       TypeCoordSystem   = 'GSM'
     end select
 
     !Do not set B0 field in IH and OH
@@ -1974,7 +1977,7 @@ contains
        UseB0=.false.
     end if
 
-    ! Do not update B0 for LC, SC or IH by default
+    ! Do not update B0 except in GM
     if(NameThisComp /= 'GM')then
        DoUpdateB0 = .false.
        DtUpdateB0 = -1.0
@@ -2693,7 +2696,20 @@ contains
     if(DoFixAxis .and. .not. UseUniformAxis) &
          call stop_mpi("DoFixAxis=T only works with UseUniformAxis=T!")
 
-    if(TypeCoordSystem == 'HGI' .and. .not.time_accurate)then
+    if(NameThisComp == 'SC' .and. TypeCoordSystem == 'HGI')then
+       if(iProc == 0)then
+          write(*,'(a)') NameSub//&
+               ' WARNING: SC only works with rotating frame!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*) NameSub//' setting TypeCoordSystem = HGC'
+       end if
+       TypeCoordSystem  = 'HGC'
+       DoTransformToHgi = .false.
+       UseRotatingFrame = .true.
+    end if
+
+    if(TypeCoordSystem == 'HGI' .and. NameThisComp /= 'OH' &
+         .and. .not.time_accurate)then
        if(iProc == 0)then
           write(*,'(a)') NameSub//&
                ' WARNING: there is no steady state solution in HGI system!'
