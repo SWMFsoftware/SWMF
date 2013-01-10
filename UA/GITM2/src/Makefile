@@ -94,7 +94,8 @@ OBJECTS = \
 	read_NOAAHPI_Indices_new.o\
 	read_ACE_data.o\
 	user.o \
-	calc_tec.o
+	calc_tec.o \
+	get_location.o
 
 OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}
 
