@@ -1,16 +1,39 @@
+!----------------------------------------------------------------------------
+! $ Id: $
+!
+! Author: Aaron Ridley, UMichigan
+!
+! Comments: Routines to produce the log file output.  The log file contains
+!           useful physical outputs in ascii form, allowing the user to see
+!           how the model is running without reading the GITM binaries.  It is
+!           also used in the compilation tests to ensure that GITM is set
+!           up successfuly given the desired configuration options.
+!
+! AGB 1/9/13: Add subsolar point and VTEC to log
+!-----------------------------------------------------------------------------
 
-subroutine get_log_info(GlobalMinTemp, GlobalMaxTemp, &
+!----------------------------------------------------------------------------
+! get_log_info: computes the physical values that will be output in the log.
+!               This routine goes to each processor and performs computations
+!               as appropriate.
+!
+! AGB 1/9/13: Added computation of VTEC at the subsolar point
+!----------------------------------------------------------------------------
+
+subroutine get_log_info(SSLon, SSLat, GlobalMinTemp, GlobalMaxTemp, &
      GlobalMinVertVel, GlobalMaxVertVel, AverageTemp, AverageVertVel, &
-     TotalVolume)
+     TotalVolume, SSVTEC)
 
   use ModGITM
 
+  real, intent(in)  :: SSLon, SSLat 
   real, intent(out) :: GlobalMinTemp, GlobalMaxTemp
   real, intent(out) :: GlobalMinVertVel, GlobalMaxVertVel
   real, intent(out) :: AverageTemp, AverageVertVel
-  real, intent(out) :: TotalVolume
+  real, intent(out) :: TotalVolume, SSVTEC
 
-  integer :: iBlock, iSpecies
+  integer :: iBlock, iSpecies, iLon, iLat
+  real :: rLon, rLat
   !--------------------------------------------------------------------------
 
   GlobalMaxTemp    = 0.0
@@ -19,7 +42,8 @@ subroutine get_log_info(GlobalMinTemp, GlobalMaxTemp, &
   GlobalMinVertVel = 1.0e32
   AverageTemp      = 0.0
   AverageVertVel   = 0.0
-  TotalVolume    = 0.0
+  TotalVolume      = 0.0
+  SSVTEC           = -1.0e32
 
   do iBlock = 1, nBlocks
 
@@ -48,16 +72,26 @@ subroutine get_log_info(GlobalMinTemp, GlobalMaxTemp, &
 
      TotalVolume = TotalVolume + &
           sum(CellVolume(1:nLons,1:nLats,1:nAlts,iBlock))
-
   enddo
+
+  call LocationIndex(SSLon, SSLat, iBlock, iLon, iLat, rLon, rLat)
+
+  if(iLon > 0 .and. iLat > 0) then
+    call calc_single_vtec(iLon, iLat, iBlock, SSVTEC)
+  end if
 
   AverageTemp    = AverageTemp
   AverageVertVel = AverageVertVel / nSpecies
 
-  
-
 end subroutine get_log_info
 
+!==============================================================================
+! logfile: A routine to write a log file
+!
+! AGB 1/9/13: Added Subsolar location and VTEC at the subsolar point to the
+!             output.  The subsolar location is computed in this subroutine
+!             and the location passed into get_log_info to compute the VTEC.
+!             MPI_REDUCE is then used to retrieve the appropriate VTEC.
 !==============================================================================
 
 subroutine logfile(dir)
@@ -77,7 +111,7 @@ subroutine logfile(dir)
 
   real    :: minTemp, maxTemp, localVar, minVertVel, maxVertVel
   real    :: AverageTemp, AverageVertVel, TotalVolume, Bx, By, Bz, Vx, Hpi
-  real    :: HPn, HPs
+  real    :: HPn, HPs, SSLon, SSLat, SSVTEC
   integer :: iError
 
   if (.not. IsOpenLogFile .and. iProc == 0) then
@@ -128,13 +162,12 @@ subroutine logfile(dir)
        write(iLogFileUnit_,'(a)') &
             "   iStep yyyy mm dd hh mm ss  ms      dt "// &
             "min(T) max(T) mean(T) min(VV) max(VV) mean(VV) F107 F107A "// &
-            "By Bz Vx HP HPn HPs"
-          
-
+            "By Bz Vx HP HPn HPs SubsolarLon SubsolarLat SubsolarVTEC"
   endif
 
-  call get_log_info(MinTemp, MaxTemp, MinVertVel, MaxVertVel, &
-       AverageTemp, AverageVertVel, TotalVolume)
+  call get_subsolar(CurrentTime, VernalTime, SSLon, SSLat)
+  call get_log_info(SSLon, SSLat, MinTemp, MaxTemp, MinVertVel, MaxVertVel, &
+       AverageTemp, AverageVertVel, TotalVolume, SSVTEC)
 
   localVar = TotalVolume
   call MPI_REDUCE(localVar, TotalVolume, 1, MPI_REAL, MPI_SUM, &
@@ -172,6 +205,10 @@ subroutine logfile(dir)
   call MPI_REDUCE(LocalVar, HPs, 1, MPI_REAL, MPI_SUM, &
        0, iCommGITM, iError)
 
+  LocalVar = SSVTEC
+  call MPI_REDUCE(LocalVar, SSVTEC, 1, MPI_REAL, MPI_MAX, &
+       0, iCommGITM, iError) 
+
   if (iProc == 0) then
 
      AverageTemp = AverageTemp / TotalVolume
@@ -184,11 +221,11 @@ subroutine logfile(dir)
      call get_sw_v(CurrentTime, Vx, iError)
      call get_hpi(CurrentTime,Hpi,iError)
 
-     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5,8f9.1)") &
+     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5,8f9.1,10f10.5,10f10.5,10f8.3)") &
           iStep, iTimeArray, dt, minTemp, maxTemp, AverageTemp, &
           minVertVel, maxVertVel, AverageVertVel,&
           f107,f107A,By,Bz,Vx, Hpi, HPn/1.0e9, &
-          HPs/1.0e9
+          HPs/1.0e9, SSLon, SSLat, SSVTEC
 
      call flush_unit(iLogFileUnit_)
   endif
