@@ -551,10 +551,13 @@ subroutine write_plot_los(iFile)
            write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
            write(StringHeadLine,'(a)')trim(StringHeadLine)//'_HGIXYZ='//&
                 adjustl(StringTmp)
-            aPix = rSizeImage 
-            if (plot_dimensional(ifile)) aPix = aPix * No2Io_V(UnitX_)
  
         endif
+
+        ! Set image size and dimensionalize if necessary
+        aPix = rSizeImage 
+        if (plot_dimensional(ifile)) aPix = aPix * No2Io_V(UnitX_)
+
         select case(plot_form(ifile))
         case('idl')
            call save_plot_file(filename, &
