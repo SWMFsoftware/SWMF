@@ -59,10 +59,8 @@ subroutine fix_axis_cells
 
      if(rMin_BLK(iBlock) < r2FixAxis) then 
         nAxisCell = 2
-        Beta = 0.8
      elseif(rMin_BLK(iBlock) < rFixAxis) then 
         nAxisCell = 1
-        Beta = 1.5
      else
         CYCLE
      end if
@@ -129,12 +127,13 @@ subroutine fix_axis_cells
 
      if(rMin_BLK(iBlock) < r2FixAxis) then 
         nAxisCell = 2
+        Beta = 0.8
      elseif(rMin_BLK(iBlock) < rFixAxis) then 
         nAxisCell = 1
+        Beta = 1.5
      else
         CYCLE
      end if
-
 
      if(    CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
         iHemisphere = 1; kMax = nK + 1; kMin = nK + 1 - nAxisCell
