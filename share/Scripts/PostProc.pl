@@ -4,6 +4,7 @@ my $Help    = ($h or $H or $help);
 my $Verbose = ($v or $verbose);
 my $Gzip    = ($g or $gzip);
 my $Repeat  = ($r or $repeat);
+my $Stop    = ($s or $stop or 2);
 my $Concat  = ($c or $cat and not $Repeat);
 my $MakeMovie = ($m or $movie or $M or $MOVIE);
 my $KeepMovieOnly = ($M or $MOVIE);
@@ -70,6 +71,7 @@ my %PlotDir = (
     "STDOUT" => "STDOUT",
 	    );
 
+my $time_start = time();
 REPEAT:{
     foreach my $Dir (sort keys %PlotDir){
 	next unless -d $Dir;
@@ -153,7 +155,7 @@ REPEAT:{
     }
 
     if($Repeat){
-
+	exit 0 if (time - $time_start) > $Stop*3600*24;
 	sleep $Repeat;
 	redo REPEAT;
     }
@@ -336,7 +338,7 @@ sub print_help{
 
 Usage:
 
-   PostProc.pl [-h] [-v] [-c] [-g] [-m | -M] [-r=REPEAT | DIR] 
+   PostProc.pl [-h] [-v] [-c] [-g] [-m | -M] [-r=REPEAT [-s=STOP] | DIR] 
                [-n=NTHREAD] [-p=PATTERN]
 
    -h -help    Print help message and exit.
@@ -356,6 +358,9 @@ Usage:
 
    -r=REPEAT   Repeat post processing every REPEAT seconds.
                Cannot be used with the DIR argument.
+
+   -s=STOP     Exit from the script after STOP days. Useful when the script
+               is run in the background with repeat flag. Default is 2 days.
 
    -p=PATTERN  Pass pattern to pIDL so it only processes the files that match.
 
@@ -394,9 +399,9 @@ PostProc.pl -M -cat -n=8 RESULTS/run23
 PostProc.pl -g -rsync=ME@OTHERMACHINE:My/Results -v
 
    Repeat post-processing every 360 seconds for files matching "IO2/x=",
-   and pipe standard output and error into a log file:
+   pipe standard output and error into a log file and stop after 3 days:
 
-PostProc.pl -r=360 -p=IO2/x= >& PostProc.log &
+PostProc.pl -r=360 -s=3 -p=IO2/x= >& PostProc.log &
 
    Collect processed output into a directory tree named OUTPUT/New
    and rsync it into the run/OUTPUT/New directory on another machine:
