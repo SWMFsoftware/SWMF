@@ -1,3 +1,4 @@
+!#NOTPUBLIC  email:gtoth@umich.edu  expires:12/31/2099
 !This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
 module ModUser
