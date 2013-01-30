@@ -122,6 +122,8 @@ subroutine set_indices
      call read_NOAAHPI_Indices_new(iError, CurrentTime, EndTime)
      call read_MHDIMF_Indices_new(iError, CurrentTime, EndTime)
      call get_IMF_Bz(CurrentTime, bz, iError)
+     if (bz < -20.0) bz = -20.0
+     if (bz >  20.0) bz =  20.0
      call IO_SetIMFBz(bz)
 
      if (iError /= 0) then
@@ -134,6 +136,8 @@ subroutine set_indices
      if (iDebugLevel > 1) write(*,*) "==> IMF Bz : ",bz
 
      call get_IMF_By(CurrentTime, by, iError)
+     if (by < -20.0) by = -20.0
+     if (by >  20.0) by =  20.0
      call IO_SetIMFBy(by)
 
      if (iError /= 0) then
@@ -145,6 +149,8 @@ subroutine set_indices
      if (iDebugLevel > 1) write(*,*) "==> IMF By : ",by
 
      call get_SW_V(CurrentTime, vx, iError)
+     if (vx < -800.0) vx = -800.0
+     if (vx >  800.0) vx =  800.0
      call IO_SetSWV(vx)
 
      if (iError /= 0) then
