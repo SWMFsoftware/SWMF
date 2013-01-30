@@ -133,7 +133,8 @@ subroutine read_ACE_data(iOutputError)
            done = .true.
         else
 
-           if (Indices_TV(iSW,sw_n_) > 0.0) then 
+           if ((Indices_TV(iSW,sw_n_) > 0.0) .and. &
+               (Indices_TV(iSW,sw_vx_) > -9999.0)) then
 
               Indices_TV(iSW,sw_vy_) = 0.0
               Indices_TV(iSW,sw_vz_) = 0.0
