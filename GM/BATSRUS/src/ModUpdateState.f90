@@ -602,7 +602,7 @@ subroutine fix_anisotropy
 
   ! Variables for anisotropic pressure
   real:: B_D(3), B2, p, Ppar, Pperp, Dp, DtCell
-  real:: InvGyroFreq, PparOverLimit
+  real:: InvGyroFreq, PparOverLimit, Deltapf, Deltapm
 
   integer:: i, j, k, iBlock
   !---------------------------------------------------------------------------
@@ -642,24 +642,29 @@ subroutine fix_anisotropy
         ! Limit anisotropy to instability criteria in unstable regions
         if(Ppar - Pperp > B2)then
            ! firehose
-           ! by how much the instability limit is exceeded
-           PparOverLimit = Ppar - Pperp - B2              ! Delta pf
+           ! by how much the instability limit is exceeded: 
+           ! ppar - ppar_marginalstable
+           PparOverLimit = Ppar - p - 2/3.*B2             
 
            ! Calc firehose relaxation time based on the maximum 
            ! growth rate calculated from eqn (2) of Hall [1981]
            ! with theta = 0 and ppar < 4*pperp 
            ! MaxGrowthRate = 
            !    0.5*GyroFreq*Delta pf/sqrt(ppar*(pperp-ppar/4))
-           if(.not. UseConstantTau) &
-                TauInstability = 2.0*InvGyroFreq* &
-                sqrt(max(3.0*Ppar*(Pperp-0.25*Ppar),1e-8))/PparOverLimit
-
+           ! where Delta pf = ppar-pperp-B^2 = 3/2*PparOverLimit
+           if(.not. UseConstantTau)then
+              Deltapf = 3/2.*PparOverLimit
+              TauInstability = 2.0*InvGyroFreq* &
+                   sqrt(max(3.0*Ppar*(Pperp-0.25*Ppar),1e-8))/Deltapf
+           end if
            Dp = min(Dp, -DtCell*PparOverLimit/(DtCell + TauInstability))
 
         else 
            if(Pperp**2 > Ppar*Pperp + 0.5*B2*Ppar)then
               ! mirror 
-              PparOverLimit = 2*Pperp**2/(B2 + 2*Pperp) - Ppar  
+              ! ppar_marginalstable - ppar
+              PparOverLimit = (B2 + 6.0*p &
+                   - sqrt(B2**2 + 12.0*B2*p + 9.0*p**2))/3. - Ppar
 
               ! Calc mirror relaxation time based on the maximum 
               ! growth rate from eqn (7) of Southwood [1993], 
@@ -668,16 +673,17 @@ subroutine fix_anisotropy
               ! MaxGrowthRate = 
               !    4/3/sqrt(5)*GyroFreq*sqrt(2*Delta pm/ppar)
               ! where Delta pm = pperp-ppar-B^2*ppar/(2*pperp)
-              if(.not. UseConstantTau) &
-                   TauInstability = 0.75*InvGyroFreq*sqrt(2.5*Ppar &
-                   *(PparOverLimit+Ppar)/(Pperp*PparOverLimit))
-
+              if(.not. UseConstantTau)then
+                 Deltapm = Pperp - Ppar - 0.5*B2*Ppar/Pperp
+                 TauInstability = 0.75*InvGyroFreq*sqrt(2.5*Ppar/Deltapm)
+              end if
               Dp = max(Dp, DtCell*PparOverLimit/(DtCell + TauInstability))
            end if
            if(Pperp > Ppar + 0.3*sqrt(0.5*B2*Ppar))then
               ! ion cyclotron
-              PparOverLimit = (sqrt(0.09*B2 + 8*Pperp) &
-                   - 0.3*sqrt(B2))**2/8. - Ppar
+              ! ppar_marginalstable - ppar
+              PparOverLimit = (sqrt(0.01*B2 + 2.0*p) &
+                   - 0.1*sqrt(B2))**2/2. - Ppar
 
               ! Estimate ion cyclotron relaxation time from
               ! observations in the magnetosphere and theories 
