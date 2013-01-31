@@ -108,11 +108,14 @@ endif else $
       while npict lt npictmax and not error do begin
 
          for ifile=0,nfile-1 do begin
-      
+
             if npict eq 0 then nextpict=firstpict(ifile) $
             else               nextpict=dpict(ifile)
 
-            if filetypes(ifile) eq 'IPIC3D' then nextpict = npict
+            ; IPIC3D reader always counts from the beginning
+            if filetypes(ifile) eq 'IPIC3D' then $
+               nextpict = firstpict(ifile) + npict*dpict(ifile)
+
             get_pict,ifile+10,filenames(ifile),filetypes(ifile),nextpict,x,w,$
                 headline, it, time, gencoord, ndim, neqpar, nw, nx,$
                 eqpar, variables, rBody, err
@@ -206,11 +209,15 @@ endif else $
 
       for ifile=0,nfile-1 do begin
 
-         if ipict eq 0 then nextpict=firstpict(ifile) $
-         else               nextpict=dpict(ifile)
-
          if npict gt 1 or nfile gt 1 or noautorange then begin
-            if filetypes(ifile) eq 'IPIC3D' then nextpict = ipict
+
+            if ipict eq 0 then nextpict=firstpict(ifile) $
+            else               nextpict=dpict(ifile)
+
+            ; IPIC3D reader always counts from the beginning
+            if filetypes(ifile) eq 'IPIC3D' then $
+               nextpict = firstpict(ifile) + ipict*dpict(ifile)
+
             get_pict, ifile+10, filenames(ifile),filetypes(ifile), nextpict, x, w, $
                headline, it, time, gencoord, ndim, neqpar, nw, nx,$
                eqpar, variables, rBody, err
