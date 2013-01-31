@@ -508,14 +508,14 @@ pro get_pict_hdf,filenames,npict,x,w,$
   SortIdx_I = SORT(Step_I)
   
   ;;bounding npict
-  if npict lt 0 then npict=0
-  if npict gt nObj-1 then begin
+  if npict lt 1 then npict=1
+  if npict gt nObj then begin
      error = 1
      return
   endif
 
   ;;Find iteration and time 
-  it= Step_I[SortIdx_I(npict)]
+  it= Step_I[SortIdx_I(npict-1)]
   time =  it*Param.COLLECTIVE.Dt._DATA(0)
   
   ;;Seting up "variables"
@@ -545,7 +545,7 @@ pro get_pict_hdf,filenames,npict,x,w,$
      group_id = H5G_OPEN(file_id, '/fields')
      nFields = H5G_GET_NUM_OBJS(group_id)
      for iFields=0,nFields-1 do begin
-        get_hdf_pict,group_id,iFields,SortIdx_I(npict),nxyz_D,$
+        get_hdf_pict,group_id,iFields,SortIdx_I(npict-1),nxyz_D,$
                      -1,pict,varname,getdata
         if getdata then w(iMin:iMax,jMin:jMax,iw) = pict
         variables(ndim+iw) = varname
@@ -557,7 +557,7 @@ pro get_pict_hdf,filenames,npict,x,w,$
      group_id = H5G_OPEN(file_id, '/moments')
      nSpecie = H5G_GET_NUM_OBJS(group_id)
      ;; First species is sum of carge densities Rho
-     get_hdf_pict,group_id,0,SortIdx_I(npict),nxyz_D,$
+     get_hdf_pict,group_id,0,SortIdx_I(npict-1),nxyz_D,$
                   -1,pict,varname,getdata
      if getdata then w(iMin:iMax,jMin:jMax,iw) = pict
      variables(ndim+iw) = varname
@@ -569,7 +569,7 @@ pro get_pict_hdf,filenames,npict,x,w,$
         Moment_id = H5G_OPEN(group_id, SpeciesName)
         nMoment = H5G_GET_NUM_OBJS(Moment_id)
         for iMoment=0,nMoment-1 do begin
-           get_hdf_pict,Moment_id,iMoment,SortIdx_I(npict),nxyz_D,$
+           get_hdf_pict,Moment_id,iMoment,SortIdx_I(npict-1),nxyz_D,$
                         iSpecie-1,pict,varname,getdata
            if getdata then w(iMin:iMax,jMin:jMax,iw) = pict
            variables(ndim+iw) = varname
@@ -586,7 +586,6 @@ end
 
 ;=============================================================================
 pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name,getdata
-
 
   GroupName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iGroup)
   name= GroupName
