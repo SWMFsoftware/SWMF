@@ -22,7 +22,7 @@ module ModUser
        'GEM and PIC coupling, G. Toth and L. Daldorff'
 
   ! GEM challenge parameters
-  real:: Tp=0.1        ! plasma temperature
+  real:: Tp=0.01       ! plasma temperature
   real:: B0=0.0014     ! Background field
   real:: Lambda0=0.5   ! Width of current sheet
   real:: Delta = 0.5   ! radial size of exponential perturbation in Az
