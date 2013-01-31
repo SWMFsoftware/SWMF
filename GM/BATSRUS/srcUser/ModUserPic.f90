@@ -9,6 +9,8 @@ module ModUser
        IMPLEMENTED3 => user_get_log_var,                &
        IMPLEMENTED4 => user_update_states
 
+  use ModNumConst, ONLY: cPi
+
   include 'user_module.h' !list of public methods
 
   !\
@@ -20,7 +22,13 @@ module ModUser
        'GEM and PIC coupling, G. Toth and L. Daldorff'
 
   ! GEM challenge parameters
-  real      :: Lambda0=0.5, Az=0.1, Tp=0.5 , B0=1.0  
+  real:: Tp=0.1        ! plasma temperature
+  real:: B0=0.0014     ! Background field
+  real:: Lambda0=0.5   ! Width of current sheet
+  real:: Delta = 0.5   ! radial size of exponential perturbation in Az
+  real:: Apert = 0.2   ! amplitude of perturbation
+  real:: Kx = cPi/5.0  ! X wave number of perturbation
+  real:: Ky = cPi/5.0  ! Y wave number of perturbation
 
   ! PIC coupling related variables
   integer:: DnCouplePic = -1
@@ -43,7 +51,7 @@ contains
        select case(NameCommand)
        case('#GEM')
           UseUserIcs = .true.
-          call read_var('Amplitude',Az)
+          call read_var('Amplitude', Apert)
        case('#PIC')
           call read_var('DnCouplePic', DnCouplePic)
           UseUserUpdateStates = DnCouplePic > 0
@@ -61,18 +69,17 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModGeometry, ONLY: x1, x2, y1, y2, Xyz_DGB
+    use ModGeometry, ONLY: Xyz_DGB
 
     use ModPhysics,  ONLY: ShockLeftState_V
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, rho_, Ppar_, p_, Pe_, &
          UseElectronPressure, UseAnisoPressure
-    use ModNumconst, ONLY: cTwoPi, cPi
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     integer, intent(in) :: iBlock
 
-    real                :: x, y, Lx, Ly
+    real                :: x, y, Aexp
     integer             :: i, j, k
 
     character(len=*), parameter :: NameSub = 'user_set_ics'
@@ -102,19 +109,20 @@ contains
          + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
          /ShockLeftState_V(p_))
 
-    State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
+    State_VGB(rho_,:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)/Tp
 
-    ! Size of the box
-    Lx = x2 - x1
-    Ly = y2 - y1
-    !set intial perturbation
+    ! set intial perturbation Az = exp(-(x^2+y^2)/Delta^2)*cos(Kx*x)*cos(Ky*y)
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
-       State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) &
-            - Az* cPi/Ly *cos(cTwoPi*x/Lx) * sin(cPi*y/Ly)
-       State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) &
-            + Az* cTwoPi/Lx * sin(cTwoPi*x/Lx) * cos(cPi*y/Ly)
+       Aexp = Apert*B0*exp( -(x**2 + y**2)/Delta**2)
+       ! Bx = dAz/dy
+       State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) + &
+            Aexp*(-2*y/Delta**2*cos(Kx*x)*cos(Ky*y) - Ky*cos(Kx*x)*sin(Ky*y))
+
+       ! By = -dAz/dx
+       State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) + &
+            Aexp*(+2*x/Delta**2*cos(Kx*x)*cos(Ky*y) + Kx*sin(Kx*x)*cos(Ky*y))
     end do; end do; end do
 
   end subroutine user_set_ics
