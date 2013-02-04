@@ -268,7 +268,7 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              XyzNorm_D = 1 + (Xyz_DGB(1:nDim,i,j,k,iBlock) - CoordMinPic_D) &
                   /DxyzPic_D
-             if(any(XyzNorm_D < 1.0) .or. any(XyzNorm_D > nCellPic_D)) CYCLE
+             if(any(XyzNorm_D < 4) .or. any(XyzNorm_D > nCellPic_D - 3)) CYCLE
              StatePic_V = &
                   bilinear(StatePic_VC, nVarPic, 1, nXPic, 1, nYPic, XyzNorm_D)
 
