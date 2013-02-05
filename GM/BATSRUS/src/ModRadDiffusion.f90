@@ -100,10 +100,10 @@ module ModRadDiffusion
   ! Here, f is the electron flux limiter.
   !
   ! Variables associated with the threshold electron heat flux limiter.
-  logical :: UseHeatFluxLimiter = .false.
+  logical, public :: UseHeatFluxLimiter = .false.
   ! The heat flux limiter (fraction of free streaming flux that is used
   ! in the threshold model)
-  real :: HeatFluxLimiter = 0.06
+  real, public :: HeatFluxLimiter = 0.06
   ! electron temperature array needed for calculating the elctron temperature
   ! gradient in the heat flux limiter
   real, allocatable :: Te_G(:,:,:)

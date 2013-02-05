@@ -57,10 +57,12 @@ module ModHeatConduction
   ! Heat flux for operator split scheme
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
 
-  ! Heat conduction tensor
-  real, allocatable :: HeatCond_DDG(:,:,:,:,:)
   ! Heat conduction dyad pre-multiplied by the face area
   real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
+  ! Arrays to build the Heat conduction dyad
+  real, allocatable :: HeatCoef_G(:,:,:), bb_DDG(:,:,:,:,:)
+  ! Arrays needed for the heat flux limiter
+  real, allocatable :: FreeStreamFlux_G(:,:,:)
 
   ! electron-ion energy exchange
   real, allocatable :: PointCoef_CB(:,:,:,:)
@@ -132,7 +134,8 @@ contains
 
   subroutine init_heat_conduction
 
-    use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
+    use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
+         j0_, nJp1_, k0_, nKp1_
     use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge
@@ -140,6 +143,7 @@ contains
     use ModMain,       ONLY: MaxBlock, UseHeatConduction, UseIonHeatConduction
     use ModMultiFluid, ONLY: MassIon_I
     use ModNumConst,   ONLY: cTwoPi
+    use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_, UnitB_, ElectronTemperatureRatio, AverageIonCharge
     use ModVarIndexes, ONLY: nVar
@@ -217,8 +221,15 @@ contains
             State1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             State2_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
-            HeatCond_DDG(MaxDim,MaxDim,0:nI+1,0:nJ+1,0:nK+1), &
+            HeatCoef_G(0:nI+1,j0_:nJp1_,k0_:nKp1_), &
+            bb_DDG(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
             HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
+            
+       if(UseHeatFluxLimiter)then
+          allocate( &
+               FreeStreamFlux_G(0:nI+1,j0_:nJp1_,k0_:nKp1_), &
+               Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
+       end if
 
        if(UseElectronPressure .and. .not.UseIdealEos)then
           allocate( &
@@ -548,17 +559,19 @@ contains
 
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          time_BLK
-    use ModFaceGradient, ONLY: set_block_field2
+    use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
     use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk, iTeImpl, ImplCoeff
     use ModMain,         ONLY: nI, nJ, nK, MaxImplBlk, Dt, time_accurate, Cfl
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_,&
          UnitN_, UnitT_, inv_gm1
+    use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
          CellFace_DB, CellFace_DFB, FaceNormal_DDFB
-    use BATL_size,       ONLY: j0_, nJp1_, k0_, nKp1_
+    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+         j0_, nJp1_, k0_, nKp1_
 
     real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
     real, intent(inout):: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
@@ -566,6 +579,8 @@ contains
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iImplBlock, iP
     real :: DtLocal
     real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
+    real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
+    logical :: IsNewBlockTe
     !--------------------------------------------------------------------------
 
     iP = p_
@@ -575,6 +590,24 @@ contains
 
     do iImplBlock = 1, nImplBLK
        iBlock = impl2iBLK(iImplBlock)
+
+       IsNewBlockTe = .true.
+
+       ! For the electron flux limiter, we need Te in the ghostcells
+       if(UseHeatFluxLimiter)then
+          if(UseIdealEos .and. .not.DoUserHeatConduction)then
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                Te_G(i,j,k) = TeFraction &
+                     *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             end do; end do; end do
+          else
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                     i, j, k, iBlock, TeOut = TeSi)
+                Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+             end do; end do; end do
+          end if
+       end if
 
        ! Store the electron temperature in StateImpl_VGB and the
        ! specific heat in DconsDsemi_VCB
@@ -622,8 +655,7 @@ contains
 
        ! Calculate the cell centered heat conduction tensor
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-          call get_heat_cond_tensor(State2_VG(:,i,j,k), &
-               i, j, k, iBlock, HeatCond_DDG(:,:,i,j,k))
+          call get_heat_cond_tensor(State2_VG(:,i,j,k), i, j, k, iBlock)
        end do; end do; end do
 
        ! Average the cell centered heat conduction tensor to the faces
@@ -631,22 +663,37 @@ contains
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+             HeatCoef = 0.5*(HeatCoef_G(i,j,k) + HeatCoef_G(i-Di,j-Dj,k-Dk))
+
+             if(UseHeatFluxLimiter)then
+                call get_face_gradient(iDim, i, j, k, iBlock, &
+                     IsNewBlockTe, Te_G, GradTe_D)
+                GradTe = sqrt(sum(GradTe_D(:nDim)**2))
+
+                FreeStreamFlux = 0.5*(FreeStreamFlux_G(i,j,k) &
+                     + FreeStreamFlux_G(i-Di,j-Dj,k-Dk))
+
+                ! The threshold heat flux limiter model
+                if(HeatCoef*GradTe > FreeStreamFlux) &
+                     HeatCoef = FreeStreamFlux/GradTe
+             end if
+
              if(IsCartesian)then
                 HeatCond_DFDB(:nDim,i,j,k,iDim,iBlock) = &
-                     CellFace_DB(iDim,iBlock) &
-                     *0.5*(HeatCond_DDG(iDim,:nDim,i,j,k) &
-                     +     HeatCond_DDG(iDim,:nDim,i-Di,j-Dj,k-Dk))
+                     CellFace_DB(iDim,iBlock)*HeatCoef &
+                     *0.5*(bb_DDG(iDim,:nDim,i,j,k) &
+                     +     bb_DDG(iDim,:nDim,i-Di,j-Dj,k-Dk))
              elseif(IsRzGeometry)then
                 HeatCond_DFDB(:nDim,i,j,k,iDim,iBlock) = &
-                     CellFace_DFB(iDim,i,j,k,iBlock) &
-                     *0.5*(HeatCond_DDG(iDim,:nDim,i,j,k) &
-                     +     HeatCond_DDG(iDim,:nDim,i-Di,j-Dj,k-Dk))
+                     CellFace_DFB(iDim,i,j,k,iBlock)*HeatCoef &
+                     *0.5*(bb_DDG(iDim,:nDim,i,j,k) &
+                     +     bb_DDG(iDim,:nDim,i-Di,j-Dj,k-Dk))
              else
                 do iDir = 1, nDim
-                   HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = &
-                        0.5*sum( FaceNormal_DDFB(:,iDim,i,j,k,iBlock) &
-                        *(HeatCond_DDG(:nDim,iDir,i,j,k) &
-                        + HeatCond_DDG(:nDim,iDir,i-Di,j-Dj,k-Dk)) )
+                   HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = 0.5*HeatCoef &
+                        *sum( FaceNormal_DDFB(:,iDim,i,j,k,iBlock) &
+                        *(bb_DDG(:nDim,iDir,i,j,k) &
+                        + bb_DDG(:nDim,iDir,i-Di,j-Dj,k-Dk)) )
                 end do
              end if
           end do; end do; end do
@@ -656,28 +703,31 @@ contains
 
   contains
 
-    subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock, HeatCond_DD)
+    subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
 
       use ModAdvance,    ONLY: UseIdealEos
       use ModB0,         ONLY: B0_DGB
+      use ModConst,      ONLY: cBoltzmann, cElectronmass
       use ModGeometry,   ONLY: r_BLK
       use ModMain,       ONLY: UseB0
+      use ModMultiFluid, ONLY: MassIon_I
       use ModNumConst,   ONLY: cTolerance
       use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
-           UnitEnergyDens_, UnitU_, UnitX_
+           UnitEnergyDens_, UnitU_, UnitX_, AverageIonCharge, UnitPoynting_
+      use ModRadDiffusion, ONLY: HeatFluxLimiter
       use ModUser,       ONLY: user_material_properties
       use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_
       use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
 
       real, intent(in) :: State_V(nVar)
       integer, intent(in) :: i, j, k, iBlock
-      real, intent(out) :: HeatCond_DD(3,3)
 
-      real :: TeSi, Te
+      real :: TeSi, Te, NatomicSi, NeSi, Zav
       real :: HeatCoefSi, HeatCoef
       real :: Factor, r
       real :: Bnorm, B_D(3), Bunit_D(3)
       real :: FractionFieldAligned
+      real :: InvDx
       integer :: iDim
       !------------------------------------------------------------------------
 
@@ -687,9 +737,13 @@ contains
 
          ! Spitzer form for collisional regime
          HeatCoef = HeatCondPar*Te**2.5
+
+         NatomicSi = State_V(Rho_)/MassIon_I(1)*No2Si_V(UnitN_)
+         Zav = AverageIonCharge
       else
          call user_material_properties(State_V, i, j, k, iBlock, &
-              TeOut=TeSi, HeatCondOut=HeatCoefSi)
+              TeOut=TeSi, HeatCondOut=HeatCoefSi, NatomicOut = NatomicSi, &
+              AverageIonChargeOut = Zav)
 
          HeatCoef = HeatCoefSi &
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
@@ -710,6 +764,15 @@ contains
          HeatCoef = Factor*HeatCoef
       end if
 
+      HeatCoef_G(i,j,k) = HeatCoef
+
+      if(UseHeatFluxLimiter)then
+         NeSi = Zav*NatomicSi
+         FreeStreamFlux_G(i,j,k) = HeatFluxLimiter &
+              *NeSi*cBoltzmann*TeSi*sqrt(cBoltzmann*TeSi/cElectronMass) &
+              *Si2No_V(UnitPoynting_)
+      end if
+
       if(UseB0)then
          B_D = State_V(Bx_:Bz_) + B0_DGB(:,i,j,k,iBlock)
       else
@@ -725,13 +788,13 @@ contains
          FractionFieldAligned = 0.5*(1.0+tanh((Bnorm-Bmodify)/DeltaBmodify))
 
          do iDim = 1, 3
-            HeatCond_DD(:,iDim) = HeatCoef*( &
+            bb_DDG(:,iDim,i,j,k) = ( &
                  FractionFieldAligned*Bunit_D*Bunit_D(iDim) &
                  + (1.0 - FractionFieldAligned)*i_DD(:,iDim) )
          end do
       else
          do iDim = 1, 3
-            HeatCond_DD(:,iDim) = HeatCoef*Bunit_D*Bunit_D(iDim)
+            bb_DDG(:,iDim,i,j,k) = Bunit_D*Bunit_D(iDim)
          end do
       end if
 
