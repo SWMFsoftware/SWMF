@@ -9,7 +9,7 @@ module ModUser
        IMPLEMENTED3 => user_get_log_var,                &
        IMPLEMENTED4 => user_update_states
 
-  use ModNumConst, ONLY: cPi
+  use ModNumConst, ONLY: cTwoPi
 
   include 'user_module.h' !list of public methods
 
@@ -22,13 +22,13 @@ module ModUser
        'GEM and PIC coupling, G. Toth and L. Daldorff'
 
   ! GEM challenge parameters
-  real:: Tp=0.01       ! plasma temperature
-  real:: B0=0.0014     ! Background field
-  real:: Lambda0=0.5   ! Width of current sheet
-  real:: DeltaInv = 2.0! radial size of exponential perturbation in Az
-  real:: Apert = 0.2   ! amplitude of perturbation
-  real:: Kx = cPi/5.0  ! X wave number of perturbation
-  real:: Ky = cPi/5.0  ! Y wave number of perturbation
+  real:: Tp=0.01          ! plasma temperature
+  real:: B0=0.0014        ! Background field
+  real:: Lambda0=0.5      ! Width of current sheet
+  real:: DeltaInv = 2.0   ! radial size of exponential perturbation in Az
+  real:: Apert = 0.2      ! amplitude of perturbation
+  real:: Kx = cTwoPi/25.6  ! X wave number of perturbation
+  real:: Ky = cTwoPi/12.8  ! Y wave number of perturbation
 
   ! PIC coupling related variables
   integer:: DnCouplePic = -1
@@ -74,12 +74,12 @@ contains
           if(WaveLengthX <= 0.0)then
              Kx = 0.0
           else
-             Kx = cPi/WaveLengthX
+             Kx = cTwoPi/WaveLengthX
           end if
           if(WaveLengthY <= 0.0)then
              Ky = 0.0
           else
-             Ky = cPi/WaveLengthY
+             Ky = cTwoPi/WaveLengthY
           end if
        case('#PIC')
           call read_var('DnCouplePic', DnCouplePic)
