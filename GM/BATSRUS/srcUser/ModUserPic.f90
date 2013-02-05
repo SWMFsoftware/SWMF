@@ -25,7 +25,7 @@ module ModUser
   real:: Tp=0.01       ! plasma temperature
   real:: B0=0.0014     ! Background field
   real:: Lambda0=0.5   ! Width of current sheet
-  real:: Delta = 0.5   ! radial size of exponential perturbation in Az
+  real:: DeltaInv = 2.0! radial size of exponential perturbation in Az
   real:: Apert = 0.2   ! amplitude of perturbation
   real:: Kx = cPi/5.0  ! X wave number of perturbation
   real:: Ky = cPi/5.0  ! Y wave number of perturbation
@@ -42,6 +42,8 @@ contains
     use ModReadParam
     use ModMain,      ONLY: UseUserUpdateStates, UseUserIcs, UseUserLogFiles
 
+    real:: WaveLengthX, WaveLengthY, Delta
+
     character(len=100) :: NameCommand
     !-------------------------------------------------------------------------
     UseUserLogFiles = .true.
@@ -52,6 +54,33 @@ contains
        case('#GEM')
           UseUserIcs = .true.
           call read_var('Amplitude', Apert)
+
+       case('#GEMPARAM')
+          call read_var('B0', B0)
+          call read_var('Tp', Tp)
+          call read_var('CurrentSheetWidth', Lambda0)
+
+       case('#GEMPERTURB')
+          call read_var('ExponentialWidth', Delta)
+          call read_var('WaveLengthX', WaveLengthX)
+          call read_var('WaveLengthY', WaveLengthY)
+
+          if(Delta <= 0)then
+             DeltaInv = 0.0
+          else
+             DeltaInv = 1.0/Delta
+          end if
+
+          if(WaveLengthX <= 0.0)then
+             Kx = 0.0
+          else
+             Kx = cPi/WaveLengthX
+          end if
+          if(WaveLengthY <= 0.0)then
+             Ky = 0.0
+          else
+             Ky = cPi/WaveLengthY
+          end if
        case('#PIC')
           call read_var('DnCouplePic', DnCouplePic)
           UseUserUpdateStates = DnCouplePic > 0
@@ -115,14 +144,14 @@ contains
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
-       Aexp = Apert*B0*exp( -(x**2 + y**2)/Delta**2)
+       Aexp = Apert*B0*exp( -(x**2 + y**2)*DeltaInv**2)
        ! Bx = dAz/dy
        State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) + &
-            Aexp*(-2*y/Delta**2*cos(Kx*x)*cos(Ky*y) - Ky*cos(Kx*x)*sin(Ky*y))
+            Aexp*(-2*y*DeltaInv**2*cos(Kx*x)*cos(Ky*y) - Ky*cos(Kx*x)*sin(Ky*y))
 
        ! By = -dAz/dx
        State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) + &
-            Aexp*(+2*x/Delta**2*cos(Kx*x)*cos(Ky*y) + Kx*sin(Kx*x)*cos(Ky*y))
+            Aexp*(+2*x*DeltaInv**2*cos(Kx*x)*cos(Ky*y) + Kx*sin(Kx*x)*cos(Ky*y))
     end do; end do; end do
 
   end subroutine user_set_ics
@@ -229,7 +258,7 @@ contains
              open(UnitTmp_, FILE=NameFile, STATUS='OLD', IOSTAT=iError)
              ! If successful, wait a bit so that file is fully written
              ! If not successful, wait a bit and try open again
-             call sleep(0.01)
+             call sleep(0.1)
              if(iError /= 0) CYCLE
              close(UnitTmp_)
              EXIT
