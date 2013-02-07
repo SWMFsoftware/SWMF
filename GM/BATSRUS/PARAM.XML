@@ -3816,9 +3816,11 @@ refers to the size of the cell in the first direction (Dx or Dr).
 The nLevel parameter is an integer with level 0 meaning no refinement relative
 to the root block, while level N is a refinement by 2 to the power N.
 
-If NameArea is set to 'initial', the highest initial resolution
-or level is set by the command. This level can be increased during the
-run with the AMR-s (see #AMR command). The default is no refinement initially.
+If NameArea is set to 'initial', it determines the number of grid adaptations
+used to initialize the grid. The grid adaptations are done according to the
+other GRIDLEVEL and GRIDESOLUTION commands. The default is no refinement initially,
+which means that the grid is uniform at the beginning, and it is refined during
+the run according to the #AMR or #DOAMR commands.
 
 For other values of NameArea, the command specifies the shape of the area. 
 where the blocks are to be refined. If the desired grid resolution is finer
