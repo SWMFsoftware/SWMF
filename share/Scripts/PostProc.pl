@@ -184,6 +184,9 @@ foreach my $Dir (sort keys %PlotDir){
 	rename $PlotDir, "$NameOutput/$Dir" or 
 	    die "$ERROR: could not rename $PlotDir $NameOutput/$Dir\n";
 
+	# Make sure that the directory is moved before trying to recreate it
+	sleep 1;
+
 	# Recreate an empty directory tree in $PlotDir
 	# Store current directory so the recursive mkdir can work
 	my $Pwd = `pwd`; chop $Pwd;
