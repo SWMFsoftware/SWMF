@@ -48,6 +48,12 @@ module ModRadDiffusion
   logical, public :: IsNewBlockRadDiffusion = .true.
   logical, public :: IsNewTimestepRadDiffusion = .true.
 
+  ! Logical for using the electron heat flux limiter
+  logical, public :: UseHeatFluxLimiter = .false.
+
+  ! Fraction of free streaming flux that is used in the threshold model
+  real, public :: HeatFluxLimiter = 0.06
+
   ! Local variables --------------
 
   ! Parameters for radiation flux limiter
@@ -99,11 +105,6 @@ module ModRadDiffusion
   !   F = -min(\kappa, f*F_fs / |grad(Te)|) * grad(Te)
   ! Here, f is the electron flux limiter.
   !
-  ! Variables associated with the threshold electron heat flux limiter.
-  logical, public :: UseHeatFluxLimiter = .false.
-  ! The heat flux limiter (fraction of free streaming flux that is used
-  ! in the threshold model)
-  real, public :: HeatFluxLimiter = 0.06
   ! electron temperature array needed for calculating the elctron temperature
   ! gradient in the heat flux limiter
   real, allocatable :: Te_G(:,:,:)
@@ -1554,7 +1555,7 @@ contains
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax
     real :: DiffLeft, DiffRight, RelaxCoef, PlanckWeight
     real :: InvDcoord_D(MaxDim), CoeffLeft, CoeffRight
-    real :: Dxyz_D(MaxDim), Area_D(MaxDim), Coeff0, Coeff
+    real :: Coeff0, Coeff
     !--------------------------------------------------------------------------
 
     if(UseSemiImplicit)then
