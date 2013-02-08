@@ -22,16 +22,17 @@ module ModUser
        'GEM and PIC coupling, G. Toth and L. Daldorff'
 
   ! GEM challenge parameters
-  real:: Tp=0.01          ! plasma temperature
-  real:: B0=0.0014        ! Background field
-  real:: Lambda0=0.5      ! Width of current sheet
-  real:: DeltaInv = 2.0   ! radial size of exponential perturbation in Az
-  real:: Apert = 0.2      ! amplitude of perturbation
+  real:: Tp=0.01           ! plasma temperature
+  real:: B0=0.0014         ! Background field
+  real:: Lambda0=0.5       ! Width of current sheet
+  real:: Apert = 0.2       ! amplitude of perturbation
+  real:: GaussXInv = 2.0   ! X size of Gaussian perturbation in Az
+  real:: GaussYInv = 2.0   ! Y size of Gaussian perturbation in Az
   real:: Kx = cTwoPi/25.6  ! X wave number of perturbation
   real:: Ky = cTwoPi/12.8  ! Y wave number of perturbation
 
   ! PIC coupling related variables
-  integer:: DnCouplePic = -1
+  integer:: nSmoothPic = 0
   character(len=100):: NameFilePic
 
 contains
@@ -42,7 +43,7 @@ contains
     use ModReadParam
     use ModMain,      ONLY: UseUserUpdateStates, UseUserIcs, UseUserLogFiles
 
-    real:: WaveLengthX, WaveLengthY, Delta
+    real:: WaveLengthX, WaveLengthY, GaussX, GaussY
 
     character(len=100) :: NameCommand
     !-------------------------------------------------------------------------
@@ -61,14 +62,21 @@ contains
           call read_var('CurrentSheetWidth', Lambda0)
 
        case('#GEMPERTURB')
-          call read_var('ExponentialWidth', Delta)
+          call read_var('GaussWidthX', GaussX)
+          call read_var('GaussWidthY', GaussY)
           call read_var('WaveLengthX', WaveLengthX)
           call read_var('WaveLengthY', WaveLengthY)
 
-          if(Delta <= 0)then
-             DeltaInv = 0.0
+          if(GaussX <= 0)then
+             GaussXInv = 0.0
           else
-             DeltaInv = 1.0/Delta
+             GaussXInv = 1.0/GaussX
+          end if
+
+          if(GaussY <= 0)then
+             GaussYInv = 0.0
+          else
+             GaussYInv = 1.0/GaussY
           end if
 
           if(WaveLengthX <= 0.0)then
@@ -82,9 +90,9 @@ contains
              Ky = cTwoPi/WaveLengthY
           end if
        case('#PIC')
-          call read_var('DnCouplePic', DnCouplePic)
-          UseUserUpdateStates = DnCouplePic > 0
-          if(DnCouplePic > 0)call read_var('NameFilePic', NameFilePic)
+          UseUserUpdateStates = .true.
+          call read_var('nSmoothPic', nSmoothPic)
+          call read_var('NameFilePic', NameFilePic)
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
@@ -108,7 +116,7 @@ contains
 
     integer, intent(in) :: iBlock
 
-    real                :: x, y, Aexp
+    real                :: x, y, a
     integer             :: i, j, k
 
     character(len=*), parameter :: NameSub = 'user_set_ics'
@@ -121,11 +129,11 @@ contains
     if(UseElectronPressure) then
        ! Distribute the correction proportionally between electrons and ions
        State_VGB(Pe_,:,:,:,iBlock) = ShockLeftState_V(Pe_)*(1.0 &
-            + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
+            + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2)      &
             /(ShockLeftState_V(Pe_) + ShockLeftState_V(p_)))
 
-       State_VGB(p_,:,:,:,iBlock) = ShockLeftState_V(p_)*(1.0 &
-            + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
+       State_VGB(p_,:,:,:,iBlock) = ShockLeftState_V(p_)*(1.0   &
+            + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2)      &
             /(ShockLeftState_V(Pe_) + ShockLeftState_V(p_)))
     else
        State_VGB(p_,:,:,:,iBlock)  = ShockLeftState_V(p_) &
@@ -135,24 +143,26 @@ contains
     if(UseAnisoPressure) &
          ! parallel pressure
          State_VGB(Ppar_,:,:,:,iBlock) = ShockLeftState_V(Ppar_)*(1.0 &
-         + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
+         + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2)               &
          /ShockLeftState_V(p_))
 
+    ! Get density from the uniform temperature assumption
     State_VGB(rho_,:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)/Tp
 
-    ! set intial perturbation Az = exp(-(x^2+y^2)/Delta^2)*cos(Kx*x)*cos(Ky*y)
+    ! set intial perturbation Az = exp(-x^2/GaussX^2-y^2/Gauss^2)*cos(Kx*x)*cos(Ky*y)
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
-       Aexp = Apert*B0*exp( -(x**2 + y**2)*DeltaInv**2)
+       a = Apert*B0*exp(-x**2*GaussXInv**2 - y**2*GaussYInv**2)
        ! Bx = dAz/dy
        State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) + &
-            Aexp*(-2*y*DeltaInv**2*cos(Kx*x)*cos(Ky*y) - Ky*cos(Kx*x)*sin(Ky*y))
+            a*(-2*y*GaussYInv**2*cos(Kx*x)*cos(Ky*y) - Ky*cos(Kx*x)*sin(Ky*y))
 
        ! By = -dAz/dx
        State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) + &
-            Aexp*(+2*x*DeltaInv**2*cos(Kx*x)*cos(Ky*y) + Kx*sin(Kx*x)*cos(Ky*y))
+            a*(+2*x*GaussXInv**2*cos(Kx*x)*cos(Ky*y) + Kx*sin(Kx*x)*cos(Ky*y))
     end do; end do; end do
+
 
   end subroutine user_set_ics
 
@@ -235,16 +245,21 @@ contains
     integer, save:: nVarPic
     real,    save, allocatable:: StatePic_VC(:,:,:), StatePic_V(:)
 
+    integer, parameter:: nGPic = 3
+    
+    integer:: Dn
+    real:: WeightMhd, WeightPic
+
     character(len=*), parameter :: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
 
     call update_states_mhd(iStage, iBlock)
 
-    if(DnCouplePic > 0 .and. n_step >= DnCouplePic)then
+    if(n_step >= 1)then
        ! Overwrite the region with the PIC solution
 
        ! Check if we should read in a new PIC file
-       if(n_step >= nStepLast + DnCouplePic)then
+       if(n_step > nStepLast)then
           nStepLast  = n_step
           iCouplePic = iCouplePic + 1
 
@@ -295,18 +310,43 @@ contains
        if(  all(Xyz_DGB(1:nDim, 1, 1, 1,iBlock) <= CoordMaxPic_D) .and. &
             all(Xyz_DGB(1:nDim,nI,nJ,nK,iBlock) >= CoordMinPic_D)) then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+             ! Normalized PIC grid coordinates (1...nCellPic_D)
              XyzNorm_D = 1 + (Xyz_DGB(1:nDim,i,j,k,iBlock) - CoordMinPic_D) &
                   /DxyzPic_D
-             if(any(XyzNorm_D < 4) .or. any(XyzNorm_D > nCellPic_D - 3)) CYCLE
+
+             ! Distance from edge
+             Dn = minval( min(nint(XyzNorm_D - 1), nint(nCellPic_D - XyzNorm_D)) )
+
+             ! Nothing to do within PIC ghost region
+             if(Dn < nGPic) CYCLE
+
+             ! Distance from ghost layer
+             Dn = Dn - nGPic + 1
+
+             if(Dn < nSmoothPic)then
+                WeightPic = Dn/real(nSmoothPic)
+             else
+                WeightPic = 1.0
+             end if
+
+             WeightMhd = 1.0 - WeightPic
+
              StatePic_V = &
                   bilinear(StatePic_VC, nVarPic, 1, nXPic, 1, nYPic, XyzNorm_D)
 
-             State_VGB(Rho_,i,j,k,iBlock) = StatePic_V(Rho_)
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                  StatePic_V(Rho_)*StatePic_V(Ux_:Uz_)
-             State_VGB(Bx_:Bz_,i,j,k,iBlock) = StatePic_V(Bx_:Bz_)
+             ! Convert velocity to momentum
+             StatePic_V(RhoUx_:RhoUz_) = StatePic_V(Rho_)*StatePic_V(Ux_:Uz_)
+
+             ! Interpolate MHD and PIC states. Skip hyperbolic scalar if present (Hyp=Bz_+1)
+             State_VGB(Rho_:Bz_,i,j,k,iBlock) = WeightMhd*State_VGB(Rho_:Bz_,i,j,k,iBlock) &
+                  + WeightPic*StatePic_V(Rho_:Bz_)
+
+             State_VGB(p_,i,j,k,iBlock) = WeightMhd*State_VGB(p_,i,j,k,iBlock) &
+                  + WeightPic*StatePic_V(nVarPic)
+
+             ! Set hyperbolic scalar to zero if present
              if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
-             State_VGB(p_,i,j,k,iBlock) = StatePic_V(nVarPic)
 
           end do; end do; end do
 
