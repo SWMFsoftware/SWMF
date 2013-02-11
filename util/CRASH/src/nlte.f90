@@ -694,7 +694,7 @@ contains
     !	dHi=diff_func(eHi ,EE_in ,te,tz,zBar)	! done outside
     if(dhi.eq.0) stop '#741.  rootEE found dHi=0'
     rootEE=eHi
-    if(abs(dHi).le.eps) return
+    if(abs(dHi).le.eps) go to 500
 
     if((dlo*dHi).gt.0) goto 100
     if(eHi.le.Efloor .or. abs(dhi).gt.0.99) then
@@ -704,7 +704,7 @@ contains
           call getdiff_func(d,e ,EE_in ,te,tz,zBar)		! PUSHhi : 110827-22:31
           if(abs(d).le.smallF) then
              rootEE=e
-             return
+             go to 500
           end if
           if((d*dLo).le.0) then
              eHi=e
@@ -726,7 +726,7 @@ contains
        if(dbg) write(*,*)'iter#',iter,' eLo,eHi,e=',eLo,eHi,e,'  dLo,dHi,d=',dLo,dHi,d,'  smallF=',smallF
        if(abs(d).le.smallF) then
           rootEE=e
-          return
+          go to 500
        elseif((dLo*d).lt.0) then
           eHi=e
           dHi=d
@@ -746,6 +746,8 @@ contains
 101 format(/,'-P- rootEE not bracketed: Eeff_Lo,Eeff_eHi=',1p,2e13.4, &
          ' for ro,Etot=',2e13.4,' diff=',2e13.3,//)
     stop '-P- rootEE not bracketed:'
+! Now actualize Te, Tz
+500 call GetDiff_func(d,root,EE_in,zBar, Te, Tz)
   end subroutine getrootEE
 
   !====THE CHOICE OF TWO PROCEDURES TO FIND A ROOT FOR THE ENERGY OR ITS LOGARITHM 
