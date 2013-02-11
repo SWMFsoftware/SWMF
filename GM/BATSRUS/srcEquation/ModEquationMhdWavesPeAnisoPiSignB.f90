@@ -5,17 +5,17 @@ module ModVarIndexes
        Redefine1 => nWave, &
        Redefine2 => WaveFirst_, &
        Redefine3 => WaveLast_, &
-       Redefine4 => Hyp_, &
-       Redefine5 => Ppar_, &
-       Redefine6 => Pe_
+       Redefine4 => Ppar_, &
+       Redefine5 => Pe_, &
+       Redefine6 => SignB_
 
   implicit none
 
   save
 
   ! This equation module contains the standard MHD equations with wave energy
-  character (len=*), parameter :: &
-       NameEquation='MHD + waves + hyperbolic cleaning + anistropic Pi + isotropic Pe'
+  character (len=*), parameter :: NameEquation = &
+       'MHD + waves + isotropic Pe + anisotropic Pi + sign for field direction'
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
@@ -36,7 +36,7 @@ module ModVarIndexes
        Bx_        = 5,                  &
        By_        = 6,                  &
        Bz_        = 7,                  &
-       Hyp_       = 8,                  &
+       SignB_     = 8,                  &
        WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
        Pe_        = nVar-2,             &
@@ -65,7 +65,7 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       0.0, & ! Hyp_
+       0.0, & ! SignB_
        (1.0, iWave=WaveFirst_,WaveLast_), &
        1.0, & ! Pe_
        1.0, & ! Ppar_
@@ -81,7 +81,7 @@ module ModVarIndexes
        'Bx  ', & ! Bx_
        'By  ', & ! By_
        'Bz  ', & ! Bz_
-       'Hyp ', & ! Hyp_
+       'Sign', & ! SignB_
        ('I?? ', iWave=WaveFirst_,WaveLast_), &
        'Pe  ', & ! Pe_
        'Ppar', & ! Ppar_
@@ -90,16 +90,16 @@ module ModVarIndexes
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz hyp pe ppar p e'
+       'rho mx my mz bx by bz sign pe ppar p e'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'rho ux uy uz bx by bz hyp I(2) pe ppar p'
+       'rho ux uy uz bx by bz sign I(2) pe ppar p'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
        '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", ' // &
-       '"hyp", "p_e", "p_par", "p"'
+       '"Sign", "p_e", "p_par", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
@@ -112,7 +112,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = WaveFirst_, ScalarLast_ = WaveLast_
+  integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = WaveLast_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
