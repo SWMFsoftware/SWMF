@@ -1,0 +1,29 @@
+README for Madrigal Processing Tools
+A.G. Burrell Jan 2013
+
+**************************************************************************
+
+Summary: Routines to access data from Madrigal databases.
+
+
+**************************************************************************
+
+To utilize the python scripts, the Madrigal python library must be downloaded
+and installed.  This library requires access to the internet (to connect to the
+desired Madrigal database) and python 2.3.  This library and examples of how to
+use the different programs contain therein can be found at:
+
+http://madrigal.haystack.mit.edu/madrigal/rt_python.html
+
+Routines:
+___________________________________________________________________________
+
+MadrigalData_Rout.py: Contains routines to support file downloads from the 
+                      Madrigal database.
+
+DownloadMadrigalTEC.py: A script to download global GPS TEC from the Madrigal
+                        database at the MIT Haystack observatory.  Must be run
+                        from the same directory as MadrigalData_Rout.py
+
+Changes:
+_____________________________________________________________________________
