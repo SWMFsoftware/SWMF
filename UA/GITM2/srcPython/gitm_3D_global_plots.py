@@ -25,12 +25,6 @@
 #                                           contour with or without a map
 #           plot_polar_3D_global          - plot a polar geographic contour
 #                                           with or without a map
-#           -----------------------------------------------------------------
-#           add_colorbar                  - add a colorbar to a contour plot
-#           center_polar_cap              - center radial coordinates for a
-#                                           polar plot
-#           find_zlimits                  - find the upper and lower limits
-#                                           for a list of GITM data arrays
 #----------------------------------------------------------------------------
 
 '''
@@ -47,7 +41,8 @@ import numpy as np
 from spacepy.pybats import gitm
 import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
-from matplotlib.ticker import ScalarFormatter,FormatStrFormatter,MultipleLocator
+from matplotlib.ticker import MultipleLocator
+import gitm_plot_rout as gpr
 
 def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
                          aindex=-1, nlat=90, slat=-90, linc=6, earth=False,
@@ -68,7 +63,7 @@ def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = find_zlimits([gData], zkey, aindex, 6)
+    zmin, zmax = gpr.find_zlimits([gData], zkey, aindex, 6)
 
     # Initialize the new figure
 
@@ -125,7 +120,7 @@ def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = find_zlimits([gData], zkey, aindex, 6)
+    zmin, zmax = gpr.find_zlimits([gData], zkey, aindex, 6)
 
     # Initialize the new figure
 
@@ -199,7 +194,7 @@ def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = find_zlimits([gData], zkey, aindex, 6)
+    zmin, zmax = gpr.find_zlimits([gData], zkey, aindex, 6)
 
     # Initialize the new figure, starting with the mid- and low-latitudes
 
@@ -230,8 +225,9 @@ def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
     if(cloc == 'l' or cloc == 'r'):
         orient = 'horizontal'
 
-    cb = add_colorbar(con, zmin, zmax, 6, orient, gData[zkey].attrs['scale'],
-                      gData[zkey].attrs['name'], gData[zkey].attrs['units'])
+    cb = gpr.add_colorbar(con, zmin, zmax, 6, orient,
+                          gData[zkey].attrs['scale'], gData[zkey].attrs['name'],
+                          gData[zkey].attrs['units'])
     bp = list(cb.ax.get_position().bounds)
 
     bp[0] = .9
@@ -280,7 +276,7 @@ def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = find_zlimits([gData], zkey, -2, 6)
+    zmin, zmax = gpr.find_zlimits([gData], zkey, -2, 6)
 
     # Initialize the new figure
 
@@ -347,17 +343,17 @@ def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
         else:
             # Add and adjust colorbar
 
-            cbar = add_colorbar(con, zmin, zmax, 6, "horizontal",
-                                gData[zkey].attrs['scale'],
-                                gData[zkey].attrs['name'],
-                                gData[zkey].attrs['units'])
+            cbar = gpr.add_colorbar(con, zmin, zmax, 6, "horizontal",
+                                    gData[zkey].attrs['scale'],
+                                    gData[zkey].attrs['name'],
+                                    gData[zkey].attrs['units'])
 
             bp  = list(cbar.ax.get_position().bounds)
             cp  = list(con.ax.get_position().bounds)
 
             cp[1] = bp[1]
             cp[3] = cpr[3]
-            bp[1] = cp[1] + cp[3] + 0.025
+            bp[1] = cp[1] + cp[3] + 0.03
 
             cbar.ax.set_position(bp)
             con.ax.set_position(cp)
@@ -480,10 +476,10 @@ def plot_rectangular_3D_global(ax, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
         if(cloc == 't' or cloc == 'b'):
             orient = 'horizontal'
 
-        cbar = add_colorbar(con, zmin, zmax, zinc, orient,
-                            gData[zkey].attrs['scale'],
-                            gData[zkey].attrs['name'],
-                            gData[zkey].attrs['units'])
+        cbar = gpr.add_colorbar(con, zmin, zmax, zinc, orient,
+                                gData[zkey].attrs['scale'],
+                                gData[zkey].attrs['name'],
+                                gData[zkey].attrs['units'])
 
         if(cloc == 'l' or cloc == 't'):
             bp = list(cbar.ax.get_position().bounds)
@@ -581,7 +577,7 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
     else:
         # Set the contour
         theta = gData['Longitude'][:,:,aindex]
-        con   = ax.contourf(theta, center_polar_cap(center_lat, edge_lat, r),
+        con   = ax.contourf(theta, gpr.center_polar_cap(center_lat,edge_lat,r),
                             z, v, cmap=get_cmap('Spectral_r'), vmin=zmin,
                             vmax=zmax)
         lpad    = 0
@@ -621,7 +617,7 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
     # Set the title
     if title:
         rot  = 'horizontal'
-        yloc = 1.1
+        yloc = 1.07
         xloc = 0.5
 
         if tloc == "b":
@@ -658,10 +654,10 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
         if(cloc == 't' or cloc == 'b'):
             orient = 'horizontal'
 
-        cbar = add_colorbar(con, zmin, zmax, zinc, orient,
-                            gData[zkey].attrs['scale'],
-                            gData[zkey].attrs['name'],
-                            gData[zkey].attrs['units'])
+        cbar = gpr.add_colorbar(con, zmin, zmax, zinc, orient,
+                                gData[zkey].attrs['scale'],
+                                gData[zkey].attrs['name'],
+                                gData[zkey].attrs['units'])
 
         if(cloc == 'l' or cloc == 't'):
             bp = list(cbar.ax.get_position().bounds)
@@ -678,74 +674,6 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
             cbar.ax.set_position(bp)
 
     return con
-
-def add_colorbar(contour_handle, zmin, zmax, zinc, orient, scale, name, units):
-    '''
-    Add a colorbar
-
-    Input: contour_handle = handle to contour plot
-           zmin           = minimum z value
-           zmax           = maximum z value
-           zinc           = z tick incriment (recommend 6)
-           orient         = orientation of the colorbar (horizontal or vertical)
-           scale          = linear or exponential?
-           name           = z variable name
-           units          = z variable units
-    '''
-
-    w  = np.linspace(zmin, zmax, zinc, endpoint=True)
-    cb = plt.colorbar(contour_handle, ticks=w, pad=.15, orientation=orient,
-                      fraction=.06)
-    if(scale is "exponetial"):
-        cb.formatter=FormatStrFormatter('%7.2E')
-    cb.set_label(r'%s ($%s$)' % (name, units))
-    cb.update_ticks()
-    return cb
-
-def center_polar_cap(rcenter, redge, r):
-    '''
-    Adjust the radial axis in a polar plot so that it is centered about
-    the northern or southern pole
-    '''
-
-    if(rcenter > redge):
-        return rcenter - r
-    else:
-        return r
-
-def find_zlimits(gDataList, zkey, aindex=-1, zinc=6, *args, **kwargs):
-    '''
-    Establish the appropriate z-axis limits for a list of GitmBin files
-
-    Input: gDataList = A list of GitmBin data structures
-           zkey      = key for the desired z value
-           aindex    = altitude index (default -1 for 2D measurement,
-                       use -2 for no index)
-           zinc      = number of tick incriments (default is 6)
-    '''
-
-    hold_min = []
-    hold_max = []
-
-    for gData in gDataList:
-        if(aindex > -2):
-            flat = gData[zkey][:,:,aindex].reshape(-1)
-        else:
-            flat = gData[zkey][:,:,:].reshape(-1)
-
-        hold_min.append(min(flat))
-        hold_max.append(max(flat))
-
-    zmin = min(hold_min)
-    zmax = max(hold_max)
-    zran = round((zmax-zmin)/zinc)
-
-    if(zran != 0.0):
-        zmin = math.floor(zmin / zran) * zran
-        zmax = math.ceil(zmax / zran) * zran
-
-    return zmin, zmax
-
 
 #End
 
