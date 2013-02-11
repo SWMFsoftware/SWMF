@@ -157,7 +157,7 @@ GITM defaults to creating many output files for satellite runs, but this option 
 \subsubsection{SAVEPLOT}
 \label{saveplot.sec}
 
-This input option specifies the types of files GITM will output.  The most common type is 3DALL, which outputs all primary state variables. Types (specified in OutputType) include : 3DALL, 3DNEU, 3DION, 3DTHM, 3DCHM, 3DUSR, 3DGLO, 2DGEL, 2DMEL, 2DUSR, 1DALL, 1DGLO, 1DTHM, 1DNEW, 1DCHM, 1DCMS, and 1DUSR.  These file types specify the number of dimensions (3D, 2D, 1D) in which GITM may be run and the different primary state variables that are included in the output (NEU stands for neutrals, ION stands for ionosphere, THM stands for thermosphere, CHM stands for BLAH, USR stands for BLAH, GLO stands for day glow, GEL stands for global electric BLAH, and MEL stands for BLAH).  Any number of output files may be produced, but nOutputTypes must be used to specify the number of types to be created.  Meanwhile, DtRestart and DtPlot specify the time-step in seconds for producing output files and plots (CHECK).
+This input option specifies the types of files GITM will output.  The most common type is 3DALL, which outputs all primary state variables. Types (specified in OutputType) include : 3DALL, 3DNEU, 3DION, 3DTHM, 3DCHM, 3DUSR, 3DGLO, 2DGEL, 2DMEL, 2DUSR, 2DTEC, 1DALL, 1DGLO, 1DTHM, 1DNEW, 1DCHM, 1DCMS, and 1DUSR.  These file types specify the number of dimensions (3D, 2D, 1D) in which GITM may be run and the different primary state variables that are included in the output (NEU stands for neutrals, ION stands for ionosphere, THM stands for thermosphere, CHM stands for BLAH, USR stands for BLAH, GLO stands for day glow, TEC stands for total electron content, GEL stands for global electric BLAH, and MEL stands for BLAH).  Any number of output files may be produced, but nOutputTypes must be used to specify the number of types to be created and an OutputType and DtPlot must be provided for each output just as was done for multiple satellites.  DtRestart and DtPlot specify the time-step in seconds for producing restart and output files, respectively.  
 
 \begin{verbatim}
 #SAVEPLOT
@@ -166,6 +166,9 @@ This input option specifies the types of files GITM will output.  The most commo
 (string) OutputType
 (real) DtPlot   
 \end{verbatim}
+\vspace{-.1in}
+\hspace{.6in} $\vdots$
+\vspace{.1in}
 
 \subsubsection{PLOTTIMECHANGE}
 \label{plottimechange.sec}
@@ -363,8 +366,9 @@ There can be benefits to running a simpler ionosphere and thermosphere models.  
 \subsubsection{TIDES}
 \label{tides}
 
-This option uses a series of logical flags to tell GITM how to use tides.   The first flag (UseMSISFlat) tells GITM to use MSIS without tides.  The second flag (UseMSISTides) is using MSIS with full up tides. One of these two flags should be true.  The remaining flags should only be true if UseMSISTides is false, and then only one should be true.  The third flag (UseGSWMTides) uses GSWM tides, while
-the forth flag (UseWACCMTides) sets GITM to use the WACCM tides.  Essentially, only one tidal model should be used per GITM run. (CITE GSWM and WACCM)
+This option uses a series of logical flags to tell GITM how to use tides.   The first flag (UseMSISFlat) tells GITM to use MSIS without tides.  The second flag (UseMSISTides) is using MSIS with full up tides. One of these two flags should be true.  The remaining flags should only be true if UseMSISTides is false, and then only one should be true.  The third flag (UseGSWMTides) uses GSWM tides, while the forth flag (UseWACCMTides) sets GITM to use the WACCM tides.  Essentially, only one tidal model should be used per GITM run.  Information about GSWM can be found at: \\{\tt http://www.hao.ucar.edu/modeling/gswm/gswm.html} and information about WACCM can be found at: \\{\tt http://www.cesm.ucar.edu/working\_groups/WACCM/}.
+
+When running with the MSIS or WACCM tides, no additional input files are needed.  However, when using GSWM additional files must be made accessible to GITM in the {\tt run/UA/DataIn} directory.  These files are stored in the {\tt Tides} directory within GITM.  You can check these files out using CVS (as described in Chapter~\ref{cvs.sec}) and then create links or copy them into your run directory by using: {\tt ln -s ~/GITM/Tides/*bin ~/GITM/run/UA/DataIn/.}
 
 \begin{verbatim}
 #TIDES
