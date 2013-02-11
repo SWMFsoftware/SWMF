@@ -10,6 +10,7 @@ tar -xvzf gitm.tgz
 \end{verbatim}
 
 \section{Checking out the code with CVS}
+\label{cvs.sec}
 
 If CVS (Concurrent Versions System) is available on your computer and
 you have an account on the CVS server machine herot.engin.umich.edu,
@@ -65,14 +66,19 @@ configure: (1) put the right {\tt Makefile} in the right place,
 specifying the compiler and the version of MPI that you will use to
 link the code; (2) put the right MPI header in the right place.  It
 also does some things like hard-codes the path of the source code into
-the {\tt Makefile}. Currently the configure script is not capable of detecting the system and compilers available.  Some examples for commonly used set-ups are shown below.
+the {\tt Makefile}. Currently the configure script is not capable of detecting the system and compilers available.  Some examples for commonly used set-ups are shown below.  Make sure that your .cshrc or .bashrc file is set up to detect the appropriate compilers before attempting to install GITM.
 
 Installing on Nyx:
 \begin{verbatim}
 ./Config.pl -install -compiler=ifortmpif90 -earth
 \end{verbatim}
 
-Installing on a Mac with gfortran and openmpi:
+Installing with an Intel compiler and OpenMPI (such as Pleiades):
+\begin{verbatim}
+./Config.pl -install -compiler=ifort -earth
+\end{verbatim}
+
+Installing a computer with gfortran and OpenMPI:
 \begin{verbatim}
 ./Config.pl -install -compiler=gfortran -earth
 \end{verbatim}
@@ -124,6 +130,14 @@ Once you have created the run directory, you can run the default simulation, by:
 cd myrun
 mpirun -np 4 GITM.exe
 \end{verbatim}
+
+Or, if your system uses Mpiexec:
+
+\begin{verbatim}
+cd myrun
+mpiexec ./GITM.exe
+\end{verbatim}
+
 This, hopefully should run GITM for Earth for 5 minutes.  If it
 doesn't work, then you might have mpi set up incorrectly.  The default
 is to allow you to run 4 blocks per processor, and the default {\tt
