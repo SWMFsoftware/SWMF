@@ -106,7 +106,7 @@ contains
     real,    optional, intent(out) :: HeatCond     ! electron heat conductivity (SI)
     real,    optional, intent(out) :: TeTiRelax    ! electron-ion interaction rate (SI)
     !For indirect EOS either ERad or ERad/B(Te) is used as inputs
-    logical, optional, intent(out) :: UseERadInput
+    logical, optional, intent(in) :: UseERadInput
     
     real:: Tz, NAtomic, Te, EIn, TzSi, ZBar    !in eV, cm-3, eV, erg/cm3 
     real:: pNlte, pENlte, pLte, pELte, CvTotal, CvElectron
@@ -249,8 +249,6 @@ contains
          TeIn=TzSi,                 &
          pTotalOut=pLte,            &
          pElectronOut=pELte,        &
-         CvTotalOut=CvTotal,        &
-         CvElectronOut=CvElectron,  &
          OpacityPlanckOut_I=OpacityPlanckOut_I,       &
          OpacityRosselandOut_I=OpacityRosselandOut_I, &
          HeatCond=HeatCond,           &
