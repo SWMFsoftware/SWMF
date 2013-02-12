@@ -32,7 +32,8 @@ module ModUser
   real:: Ky = cTwoPi/12.8  ! Y wave number of perturbation
 
   ! PIC coupling related variables
-  integer:: nSmoothPic = 0
+  integer:: nGhostPic   = 3
+  integer:: nOverlapPic = 0
   character(len=100):: NameFilePic
 
 contains
@@ -91,7 +92,8 @@ contains
           end if
        case('#PIC')
           UseUserUpdateStates = .true.
-          call read_var('nSmoothPic', nSmoothPic)
+          call read_var('nGhostPic'  , nGhostPic)
+          call read_var('nOverlapPic', nOverlapPic)
           call read_var('NameFilePic', NameFilePic)
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
@@ -245,8 +247,6 @@ contains
     integer, save:: nVarPic
     real,    save, allocatable:: StatePic_VC(:,:,:), StatePic_V(:)
 
-    integer, parameter:: nGPic = 3
-    
     integer:: Dn
     real:: WeightMhd, WeightPic
 
@@ -273,7 +273,7 @@ contains
              open(UnitTmp_, FILE=NameFile, STATUS='OLD', IOSTAT=iError)
              ! If successful, wait a bit so that file is fully written
              ! If not successful, wait a bit and try open again
-             call sleep(0.1)
+             call sleep(0.5)
              if(iError /= 0) CYCLE
              close(UnitTmp_)
              EXIT
@@ -319,13 +319,16 @@ contains
              Dn = minval( min(nint(XyzNorm_D - 1), nint(nCellPic_D - XyzNorm_D)) )
 
              ! Nothing to do within PIC ghost region
-             if(Dn < nGPic) CYCLE
+             if(Dn < nGhostPic) CYCLE
 
-             ! Distance from ghost layer
-             Dn = Dn - nGPic + 1
+             ! Distance from ghost layers
+             Dn = Dn - nGhostPic + 1
 
-             if(Dn < nSmoothPic)then
-                WeightPic = Dn/real(nSmoothPic)
+             if(Dn <= nOverlapPic)then
+                ! For nOverlapPic=1, Dn = 1, so use 0.5 as weight
+                ! For nOverlapPic=2, Dn = 1, 2, so use 1/3 and 2/3 weights for PIC
+                ! ...
+                WeightPic = Dn/(nOverlapPic + 1.0)
              else
                 WeightPic = 1.0
              end if
