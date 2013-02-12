@@ -125,7 +125,7 @@ contains
 
     !Calculate atomic density
     NAtomic = Rho/( cAtomicMassCRASH_I(iMaterial)*cAtomicMass ) & !In 1/m3
-         * 1.0e6                                   ![cm-3] !Convert units
+         * 1.0e-6                                   ![cm-3] !Convert units
 
     atomass = cAtomicMassCRASH_I(iMaterial)
    
