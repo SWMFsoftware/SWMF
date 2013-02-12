@@ -747,7 +747,7 @@ contains
          ' for ro,Etot=',2e13.4,' diff=',2e13.3,//)
     stop '-P- rootEE not bracketed:'
 ! Now actualize Te, Tz
-500 call GetDiff_func(d,root,EE_in,zBar, Te, Tz)
+500 call GetDiff_func(d,rootEE,EE_in,zBar, Te, Tz)
   end subroutine getrootEE
 
   !====THE CHOICE OF TWO PROCEDURES TO FIND A ROOT FOR THE ENERGY OR ITS LOGARITHM 
