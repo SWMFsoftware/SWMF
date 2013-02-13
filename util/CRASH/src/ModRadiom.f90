@@ -86,14 +86,16 @@ contains
        TeK = Te*cEvToK
        do iBin=1,nBin
           call get_planck_g_from_temperature(iBin, TeK, EgSI=PlanckSi)
-          if(0.01*EoB(iBin)>0)then
-             EoB(iBin)=EoB(iBin)/max(0.01*EoB(iBin),PlanckSi)
+          if(0.2*EoB(iBin)>0)then
+             EoB(iBin)=EoB(iBin)/max(0.2*EoB(iBin),PlanckSi)
           else
              EoB(iBin)=0
           end if
        end do
     end if
-    
+    !!!$
+    EoB = 1.0
+    !!!$
     at32s=aSaha*te*sqrt(te)/Ne
     tz=te
     if(present(RhoDTzDRho))RhoDTzDRho = 0.0

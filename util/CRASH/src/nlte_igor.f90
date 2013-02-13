@@ -90,7 +90,7 @@ contains
     ! 
     !   CALL SETERAD(Erad,Brad,hnuG,nbG)  has been set before.
     !
-    use CRASH_M_localProperties,only : ro,Ni
+    use CRASH_M_localProperties,only : ro,Ni,zSmall
     implicit none
     real,optional,intent(IN) :: Natom,ro_in 	! atomic density in   atom/cm3 
     real,optional,intent(IN) :: Te_in,Ee_in,Et_in,Pe_in,Pt_in 	! one and only one
@@ -105,7 +105,7 @@ contains
 
     ! variables for NLTE EOS_inv
 
-    real,parameter :: tol_EE=1d-6	! convergence param. for zbrentEE (linear function)
+    real,parameter :: tol_EE=1d-5	! convergence param. for zbrentEE (linear function)
     logical :: inverse,direct,oneT,twoT
 
 
@@ -150,20 +150,14 @@ contains
     if(direct) then
        !-
        te=Te_in
-       if(useLTE) then
+       call LTE_EOS_dir(te,Ee,Pe,Zbar,Cv)
+       if(useLTE.or.zBar<2*zSmall) then
           !- waiting for using the real direct EOS
-          call LTE_EOS_dir(te,Ee,Pe,Zbar,Cv)	! ro : in module M_localProperties, can be put in arg.
           tz=te
           if(present(RhoDTzDRho))RhoDTzDRho = 0.0
           go to 200
        else
-          if(present(estim_Zbar)) then
-             zbar=estim_Zbar
-          else
-             zbar=atoNum*x_1o2
-             if(zbar.eq.x_0) zbar=x_1
-          end if
-
+          
           d=100.
 	  nIter=0
           DIR:	  do while ( abs(d).gt.epsD .and. niter.lt.niterMax)
@@ -175,6 +169,7 @@ contains
              d=(Ne-Ni*zbar)/(Ne+Ni*zbar)
              niter=niter+1
 	  end do DIR
+          if(nIter==nIterMax)call CON_stop('No convergence in NLTE_EOS_dir')
           call correctEOS(zbar , Te, Tz ,EE=Ee, Pe=Pe, Cv=Cv)
        end if   !if non-LTE
        !--
@@ -208,7 +203,7 @@ contains
           call LTE_EOS_inv(tz,ee,pe,Zbar,Cv)	! zion flag must be dealt with 
 
           Ne=Zbar*Ni
-          if(Zbar.lt.0.1) then
+          if(Zbar.lt.2*zSmall) then
              ! for low Z, LTE is a sensible approximation
              te=tz
              if(present(RhoDTzDRho))RhoDTzDRho = 0.0
@@ -227,13 +222,13 @@ contains
           d=100.
           eDiff=0.0
 	  nIter=0
-          INV:	  do while ( (abs(d).gt.epsD.or.abs(eDiff)>tol_EE)&
+          INV:	  do while ( (abs(d).gt.epsD.or.abs(eDiff)>tol_EE*eE)&
                .and. niter.lt.niterMax)
              Ne=Zbar*Ni
              call calTz0(Te,Ne, Tz, EoBIn(1:ng_rad))
 
              call LTE_EOS_dir(tz,eCheck,Pe,Zbar,Cv)! ro : in module M_localProperties
-             if(zBar<=0.0)EXIT INV
+             if(zBar<0)call CON_stop('Negative zBar')
              call correctEOS(zbar , Te, Tz ,EE=eCheck, Pe=Pe, Cv=Cv)	
              d=(Ne-Ni*zbar)/(Ne+Ni*zbar)
              eDiff=eE - eCheck
@@ -241,13 +236,18 @@ contains
              Te = Te + eDiff/Cv
              nIter=nIter+1
 	  end do INV
-          if(nIter==nIterMax)call CON_stop('No Convergence in EOS_NLTE_Inv') 
-          
-
-
-          call correctEOS(zbar , Te, Tz , Pe=Pe, Cv=Cv)
-          !
-       end if	! useLTE/useEEdiff
+          if(nIter==nIterMax)then
+             write(*,*)'Ne=',Ne
+             write(*,*)'Ni=',Ni
+             write(*,*)'zBar=',zBar
+             write(*,*)'Ee=',ee
+             write(*,*)'eCheck=',eCheck
+             write(*,*)'Cv=',Cv
+             write(*,*)'Tz=',Tz
+             write(*,*)'Te=',Te
+             call CON_stop('No Convergence in EOS_NLTE_Inv')
+          end if
+       end if	! useLTE
        !--
     end if 	! if(present(TE_in))
     if(present(RhoDTzDRho))then
@@ -290,18 +290,27 @@ contains
     real,parameter :: x_3o2=1.5d0
     ! kbRO is the proportionnality factor in the code units (generally = Boltzmann cst * density)
     !   so  3/2* kbRo *Te  is the kinetic (translational) energy at Te
-
-    if(Te.le.0) return
+    if(1.01*zBar<zSmall)write(*,*)'Te,Tz,zBar=',Te,Tz,zBar
+    if(Te<0.01.or.Te>5e3.or.Tz<0.01.or.Tz>5e3.or.Tz<0.01*Te.or. Te<0.01*Tz.or.zBar<0)then
+       write(*,*)'Correct EOS:Tz=',Tz,'  Te=',Te,'  zBar=',zBar
+       call CON_stop('Stop')
+    end if
     !  small Zbar would yield diverging the "EEeff equ." (see correctEOS + EEdiff)
     !no	zp=(zbar+zion)
     zp=(max(zbar,Zsmall) + zion)
     zdt=zp * ( Te-Tz)
-    if(present(Ee)) Ee=Ee + x_3o2 * kBr_E * zdt
-    if(present(Pe)) Pe=Pe +         kBr_P * zdt
-    if(present(Cv)) &
+    if(present(Ee))then
+       if(Ee*1.01<=0)call CON_stop('negative Ee in correct EOS')
+       Ee=Ee + x_3o2 * kBr_E * zdt
+    end if
+    if(present(Pe)) then
+       if(Pe*1.01<=0) call CON_stop('negative Pe in correct EOS')
+       Pe=Pe +         kBr_P * zdt
+    end if
+    if(present(Cv)) then
+       if(1.01*Cv<=0)call CON_stop('negative Cv in correct EOS')
        Cv=Cv*(Tz/Te)+ x_3o2 * kBr_E * zp*(1-Tz/Te)
-    
-    return
+    end if
   end subroutine correctEOS
   !==========================
 
