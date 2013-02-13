@@ -76,9 +76,11 @@ subroutine get_log_info(SSLon, SSLat, GlobalMinTemp, GlobalMaxTemp, &
 
   call LocationIndex(SSLon, SSLat, iBlock, iLon, iLat, rLon, rLat)
 
-  if(iLon > 0 .and. iLat > 0) then
+  if(iLon > 0 .and. iLon <= nLons .and. iLat > 0 .and. iLat <= nLats) then
     call calc_single_vtec(iLon, iLat, iBlock, SSVTEC)
-  end if
+  else
+     SSVTEC = -1.0
+  endif
 
   AverageTemp    = AverageTemp
   AverageVertVel = AverageVertVel / nSpecies
@@ -131,31 +133,31 @@ subroutine logfile(dir)
           " Eddy P0: ",EddyDiffusionPressure0,&
           " Eddy P1: ",EddyDiffusionPressure1,&
           " Eddy Scaling: ",EddyScaling
-     write(iLogFileUnit_,'(2(a,L2))') "# Statistical Models Only: ",usestatisticalmodelsonly,&
-          " Apex: ",useApex
+     write(iLogFileUnit_,'(2(a,L2))') "# Statistical Models Only: ", &
+          usestatisticalmodelsonly, " Apex: ",useApex
      if (useEUVdata) then
-        write(iLogFileUnit_,'(a,L2,a)') "# EUV Data: ",useEUVdata, "File: ", cEUVFile
+        write(iLogFileUnit_,'(a,L2,a)') "# EUV Data: ", useEUVdata, "File: ", &
+             cEUVFile
      else
-        write(iLogFileUnit_,'(a,L2)') "# EUV Data: ",useEUVdata
+        write(iLogFileUnit_,'(a,L2)') "# EUV Data: ", useEUVdata
      endif
-      write(iLogFileUnit_,'(a,a15)') "# AMIE: ", cAmieFileNorth,cAmieFileSouth
-      write(iLogFileUnit_,'(3(a,L2))') "# Solar Heating: ",useSolarHeating ,&
-          " Joule Heating: ",useJouleHeating ,&
+      write(iLogFileUnit_,'(a,a15)') "# AMIE: ", cAmieFileNorth, cAmieFileSouth
+      write(iLogFileUnit_,'(3(a,L2))') "# Solar Heating: ",useSolarHeating, &
+          " Joule Heating: ",useJouleHeating, &
           " Auroral Heating: ", useAuroralHeating
        write(iLogFileUnit_,'(2(a,L2))') "# NO Cooling: ", useNOCooling, &
           " O Cooling: ", useOCooling
-       write(iLogFileUnit_,'(3(a,L2))') "# Conduction: ",useConduction ,&
-          " Turbulent Conduction: ", useTurbulentCond,&
+       write(iLogFileUnit_,'(3(a,L2))') "# Conduction: ",useConduction, &
+          " Turbulent Conduction: ", useTurbulentCond, &
           " Updated Turbulent Conduction: ",useUpdatedTurbulentCond
-       write(iLogFileUnit_,'(3(a,L2))') "# Pressure Grad: ",usePressureGradient ,&
-          " Ion Drag: ", useIonDrag,&
+       write(iLogFileUnit_,'(3(a,L2))') "# Pressure Grad: ", &
+            usePressureGradient, " Ion Drag: ", useIonDrag, &
           " Neutral Drag: ", useNeutralDrag
        write(iLogFileUnit_,'(3(a,L2))') "# Viscosity: ", useViscosity,&
-          " Coriolis: ", useCoriolis,&
-          " Gravity: ",useGravity 
-       write(iLogFileUnit_,'(3(a,L2))') "# Ion Chemistry: ",useIonChemistry ,&
-          " Ion Advection: ",useIonAdvection ,&
-          " Neutral Chemistry: ", useNeutralChemistry
+          " Coriolis: ", useCoriolis, " Gravity: ",useGravity 
+       write(iLogFileUnit_,'(3(a,L2))') "# Ion Chemistry: ", useIonChemistry, &
+          " Ion Advection: ", useIonAdvection, " Neutral Chemistry: ", &
+          useNeutralChemistry
           
        write(iLogFileUnit_,'(a)') " "
        write(iLogFileUnit_,'(a)') "#START"
