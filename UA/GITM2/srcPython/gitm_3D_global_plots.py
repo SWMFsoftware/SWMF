@@ -45,8 +45,8 @@ from matplotlib.ticker import MultipleLocator
 import gitm_plot_rout as gpr
 
 def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
-                         aindex=-1, nlat=90, slat=-90, linc=6, earth=False,
-                         *args, **kwargs):
+                         aindex=-1, nlat=90, slat=-90, linc=6,
+                         earth=False, tlon=90, *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
@@ -60,6 +60,8 @@ def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
            slat      = southern latitude limit (degrees North, defalut -90)
            linc      = number of latitude tick incriments (default 6)
            earth     = include continent outlines for Earth (default False)
+           tlon      = longitude at the top of a polar dial (degrees east,
+                       default 90)
     '''
 
     # Initialize the z variable limits
@@ -82,8 +84,8 @@ def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
                                    True, earth)
     elif(string.lower(plot_type)=="polar"):
         plot_polar_3D_global(ax, 1, zkey, gData, zmin, zmax, 6, aindex, nlat,
-                             slat, linc, True, "r", title, "t", True, True,
-                             earth)
+                             slat, linc, tlon, True, "r", title, "t", True,
+                             True, earth)
     else:
         print "ERROR: unknown input type [", plot_type, "]\n"
         gf = False
@@ -103,7 +105,7 @@ def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
             plt.savefig(figname)
 
 def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
-                                  aindex=-1, plat=90, elat=0, linc=3,
+                                  aindex=-1, plat=90, elat=0, linc=3, tlon=90,
                                   earth=False, *args, **kwargs):
     '''
     Creates a figure with two polar map projections for the northern and 
@@ -116,6 +118,8 @@ def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
            plat      = polar latitude limit (degrees North, default +/-90)
            elat      = equatorial latitude limit (degrees North, defalut 0)
            linc      = number of latitude tick incriments (default 6)
+           tlon      = longitude to place on the polar dial top (degrees east,
+                       default 90)
            earth     = include Earth continent outlines (default False)
     '''
 
@@ -140,7 +144,8 @@ def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
     # Northern Plot
     axn = f.add_subplot(121, polar=pf)
     plot_polar_3D_global(axn, 2, zkey, gData, zmin, zmax, 6, aindex, plat,
-                         elat, linc, False, "r", "North", "t", True, nc, earth)
+                         elat, linc, tlon, False, "r", "North", "t", True, nc,
+                         earth)
     psn = list(axn.get_position().bounds)
 
     # Southern Plot
@@ -150,7 +155,7 @@ def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
 
     axs = f.add_subplot(122, polar=pf)
     con = plot_polar_3D_global(axs, 2, zkey, gData, zmin, zmax, 6, aindex,
-                               plat, elat, linc, True, "r", "South", "t",
+                               plat, elat, linc, tlon, True, "r", "South", "t",
                                True, sc, earth)
     pss = list(axs.get_position().bounds)
 
@@ -179,18 +184,20 @@ def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
 
 
 def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
-                            aindex=-1, earth=False, *args, **kwargs):
+                            aindex=-1, tlon=90, earth=False, *args, **kwargs):
     '''
     Creates a map projection plot for the entire globe, seperating the polar
     and central latitude regions.
-    Input: zkey      = key for z variable (ie 'Vertical TEC')
-           gData     = gitm bin structure
-           title     = plot title
-           figname   = file name to save figure as (default is none)
-           aindex    = altitude index (default -1 if it is a 2D parameter)
-           nlat      = northern latitude limit (degrees North, default 90)
-           slat      = southern latitude limit (degrees North, defalut 90)
-           earth     = include Earth continent outlines (default False)
+    Input: zkey    = key for z variable (ie 'Vertical TEC')
+           gData   = gitm bin structure
+           title   = plot title
+           figname = file name to save figure as (default is none)
+           aindex  = altitude index (default -1 if it is a 2D parameter)
+           nlat    = northern latitude limit (degrees North, default 90)
+           slat    = southern latitude limit (degrees North, defalut 90)
+           tlon    = longitude at the top of the polar dial (degrees East,
+                     default 90)
+           earth   = include Earth continent outlines (default False)
     '''
 
     # Initialize the z variable limits
@@ -207,25 +214,25 @@ def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
 
     # Add the North pole
 
-    axn = f.add_subplot(221, polar=True)
+    pf = True
+    if earth:
+        pf = False
+
+    axn = f.add_subplot(221, polar=pf)
     plot_polar_3D_global(axn, 1, zkey, gData, zmin, zmax, 6, aindex, 90, 45, 3,
-                         False, "r", None, "t", True, False, earth)
+                         tlon, False, "r", "North", "t", True, False, earth)
 
     # Add the South pole
 
-    axs     = f.add_subplot(222, polar=True)
-    con, cb = plot_polar_3D_global(axs, 2, zkey, gData, zmin, zmax, 6, aindex,
-                                   -90, -45, 3, False, "r", None, "t", True,
-                                   True, earth)
+    axs = f.add_subplot(222, polar=pf)
+    con = plot_polar_3D_global(axs, 2, zkey, gData, zmin, zmax, 6, aindex,
+                               -90, -45, 3, tlon, False, "r", "South", "t",
+                               True, True, earth)
     pss = list(axs.get_position().bounds)
 
     # Add a colorbar for the entire plot
 
-    orient = 'vertical'
-    if(cloc == 'l' or cloc == 'r'):
-        orient = 'horizontal'
-
-    cb = gpr.add_colorbar(con, zmin, zmax, 6, orient,
+    cb = gpr.add_colorbar(con, zmin, zmax, 6, 'vertical',
                           gData[zkey].attrs['scale'], gData[zkey].attrs['name'],
                           gData[zkey].attrs['units'])
     bp = list(cb.ax.get_position().bounds)
@@ -259,7 +266,7 @@ def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
 
 def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
                         figname=None, nlat=90, slat=-90, linc=6, earth=False,
-                        *args, **kwargs):
+                        tlon=90, *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
@@ -273,6 +280,8 @@ def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
            slat      = southern latitude limit (degrees North, defalut -90)
            linc      = number of latitude tick incriments (default 6)
            earth     = include Earth continent outlines (default False)
+           tlon      = longitude on the top, for polar plots (degrees East,
+                       default 90)
     '''
 
     # Initialize the z variable limits
@@ -331,8 +340,8 @@ def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
 
             
             con = plot_polar_3D_global(ax, 2, zkey, gData, zmin, zmax, 6,
-                                       aindex[snum], nlat, slat, linc/2, False,
-                                       "t", tl, "l", xl, yl, earth)
+                                       aindex[snum], nlat, slat, linc/2, tlon,
+                                       False, "t", tl, "l", xl, yl, earth)
         else:
             print "ERROR: unknown input type [", plot_type, "]\n"
             sys.exit(0)
@@ -501,8 +510,8 @@ def plot_rectangular_3D_global(ax, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
 
 
 def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
-                         center_lat=90, edge_lat=0, linc=6, cb=True, cloc="r",
-                         title = None, tloc="t", tl = True, rl = True,
+                         center_lat=90, edge_lat=0, linc=6, top_lon=90, cb=True,
+                         cloc="r", title = None, tloc="t", tl = True, rl = True,
                          earth = False, *args, **kwargs):
     '''
     Creates a single polar projection, with the latitude center and range
@@ -518,6 +527,7 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
            center_lat = upper (center) latitude limit (degrees N, default 90)
            edge_lat   = lower (edge) latitude limit (degrees N, default 0)
            linc       = number of tick incriments in latitude (default 6)
+           top_lon    = longitude to place on top (degrees E, default 90)
            cb         = Add a colorbar (default is True)
            cloc       = Colorbar location (t=top, r=right, l=left, b=bottom, 
                         default is right)
@@ -536,30 +546,32 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
         aindex = 0
 
     # Assign the Longitude, Latitude, and Z data structures
-    r     = gData['dLat'][:,:,aindex]
-    z     = gData[zkey][:,:,aindex]
+    r = gData['dLat'][:,:,aindex]
+    z = gData[zkey][:,:,aindex]
 
     # Set range values
+    lon     = top_lon - 67.5
     rrange  = center_lat - edge_lat
     rwidth  = rrange / linc
     v       = np.linspace(zmin, zmax, 70, endpoint=True)
 
+    # Plot the polar contours
     if earth:
+        blon  = top_lon - 180
         theta = gData['dLon'][:,:,aindex]
         # If desired, map the Earth using a Polar Azimuthal Equidistant
         # Projection
 
         if center_lat < 0.0:
-            m    = Basemap(projection='spaeqd', lon_0=270, lat_0=center_lat,
+            m    = Basemap(projection='spaeqd', lon_0=blon, lat_0=center_lat,
                            boundinglat=edge_lat, round=True, resolution='i')
             lats = list(np.arange(edge_lat, center_lat-1, rwidth))
-            lon  = 157.5
+            lon  = lon + 135
         else:
-            m    = Basemap(projection='npaeqd', lon_0=270, lat_0=center_lat,
+            m    = Basemap(projection='npaeqd', lon_0=blon, lat_0=center_lat,
                            boundinglat=edge_lat, round=True, resolution='i')
             lats = list(np.arange(edge_lat, center_lat+1, rwidth))
             lats.reverse()
-            lon  = 22.5
 
         m.drawcoastlines(linewidth=0.5)
         m.drawmapboundary(linewidth=0.5)
@@ -576,10 +588,13 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
 
     else:
         # Set the contour
+        toff  = (450.0 - top_lon) * np.pi / 180.0
         theta = gData['Longitude'][:,:,aindex]
         con   = ax.contourf(theta, gpr.center_polar_cap(center_lat,edge_lat,r),
                             z, v, cmap=get_cmap('Spectral_r'), vmin=zmin,
                             vmax=zmax)
+        ax.set_theta_offset(toff)
+
         lpad    = 0
         rtics   = [edge_lat + rwidth * (x) for x in range(linc+1)]
         rlabels = map(str, (map(int, rtics)))
@@ -587,14 +602,15 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
         if(center_lat > edge_lat):
             rlabels.reverse()
 
+        if(min(rtics) >= 0.0):
+            ax.set_rgrids(rtics, labels=rlabels, angle=lon)
+        else:
+            ax.set_rgrids(range(-edge_lat, -center_lat, -rwidth), angle=lon)
+             
         ax.set_rmax(edge_lat)
         ax.set_rmin(center_lat)
         ax.set_rticks(rtics)
     
-        if(min(rtics) >= 0.0):
-            ax.set_rgrids(rtics[1:], labels=rlabels[1:])
-
-             
     # Configure axis.
     if tl:
         ax.set_xlabel('Longitude', labelpad=lpad)
