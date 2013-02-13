@@ -18,12 +18,7 @@
 !           less than 5% to the VTEC.  TEC is given in TECU, where 
 !           1 TECU = 10^16 m^-2
 !
-!           Numerical integration is performed using Simpson's Rule:
-!           S = (h/3) * [ f(a) + f(b) + 2 Sum[i=1,n-1](f(x_2i))
-!                         + 4 Sum[i=1,n](f(x_{2i-1})) ]
-!
-! References: http://www.salihnet.freeservers.com/engineering/
-!                     fortran_codes/unequal_simps.html
+!           Numerical integration is performed using the Trapazoidal Rule
 !
 ! Contains: calc_single_vtec <- computes the VTEC at a specified latitude
 !                               and longitude, using the latitude, longitude
@@ -40,59 +35,28 @@ subroutine calc_single_vtec(iLon, iLat, iBlock, single_vtec)
   integer, intent(in) :: iLon, iLat, iBlock
   real, intent(out) :: single_vtec
 
-  integer :: m, n, i
-  real :: sum1, sum2, sum3
-  real, dimension(nAlts) :: height
+  integer :: m, i
+  real :: height, density
 
-  ! Perform a simple numerical integration, using Simpson's rule for unequally
-  ! spaced data.  VTEC is in TECU while electron density is in m^-3
+  ! Perform a simple numerical integration, using the trapazoidal rule.  VTEC
+  ! is in TECU while electron density is in m^-3
 
-  ! Evaluate the segment width
-
-  m = nAlts - 1
+  m           = nAlts - 1
+  single_vtec = 0.0
 
   do i = 1, m
-     height(i) = Altitude_GB(iLon,iLat,i+1,iBlock) &
-          - Altitude_GB(iLon,iLat,i,iBlock)
+     ! Calculate height incriment and average density
+     height  = Altitude_GB(iLon,iLat,i+1,iBlock)-Altitude_GB(iLon,iLat,i,iBlock)
+     density = 0.5 * (IDensityS(iLon,iLat,i,ie_,iBlock) &
+          + IDensityS(iLon,iLat,i+1,ie_,iBlock))
+
+     ! Sum successive incrimentations of height * density
+     single_vtec = single_vtec + height * density
   enddo
 
-  n = nAlts + 1
+  ! Convert from SI units to TEC units
 
-  do i = nAlts, n
-     height(i) = 0.0
-  enddo
-
-  sum1 = 0.0
-  sum2 = 0.0
-  sum3 = 0.0
-  i    = 1
-
-  ! Loop for integration
-
-  do while(i < nAlts)
-     if((height(i) == height(i+1)).and.(height(i)==height(i+2))) then
-        ! Simpson's 3/8 rule
-        sum1 = sum1 + (3.0 * height(i) * (IDensityS(iLon,iLat,i,ie_,iBlock) &
-             + 3.0 * (IDensityS(iLon,iLat,i+1,ie_,iBlock) &
-             + IDensityS(iLon,iLat,i+2,ie_,iBlock)) &
-             + IDensityS(iLon,iLat,i+3,ie_,iBlock))) / 8.0
-        i = i + 3
-     elseif(height(i) == height(i+1)) then
-        ! Simpson's 1/3 rule
-        sum2 = sum2 + (2.0 * height(i) * (IDensityS(iLon,iLat,i,ie_,iBlock) &
-             + 4.0 * IDensityS(iLon,iLat,i+1,ie_,iBlock) &
-             + IDensityS(iLon,iLat,i+2,ie_,iBlock))) / 6.0
-        i = i + 2
-     elseif(height(i).ne.height(i+1)) then
-        ! Trapezoidal rule
-        sum3 = sum3 + height(i) * (IDensityS(iLon,iLat,i,ie_,iBlock) &
-             + IDensityS(iLon,iLat,i+1,ie_,iBlock)) / 2.0
-        i = i + 1
-     endif
-  enddo
-
-  single_vtec = (sum1 + sum2 + sum3) * (10.0**(-16.0))
-
+  single_vtec = single_vtec * (10.0**(-16.0))
 end subroutine calc_single_vtec
 
 
