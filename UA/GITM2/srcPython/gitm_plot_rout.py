@@ -91,6 +91,18 @@ def find_zlimits(gDataList, zkey, aindex=-1, zinc=6, *args, **kwargs):
 
     return zmin, zmax
 
+def localtime_to_glon(ut_datetime, localtime):
+    '''
+    Routine to compute the longitude where the local time is at a specified
+    value for a specified universal time
 
+    ut_datetime = Universal time as a datetime object
+    localtime   = Local time in hours
+    '''
+
+    uth = ut_datetime.hour+(ut_datetime.minute/60.0)+(ut_datetime.second/3600.0)
+    lon = (localtime - uth) * 15.0 # 15 = 360 degrees / 24 hours
+
+    return lon
 #End
 
