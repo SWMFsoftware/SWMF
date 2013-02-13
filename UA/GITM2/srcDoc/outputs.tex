@@ -206,6 +206,7 @@ Common routines used to format and analyze GITM data.
 \item[]{{\bf add\_colorbar:}  Add a color bar to a contour plot.  This routine does not depend on SpacePy.}
 \item[]{{\bf center\_polar\_cap:}  Adjust radial coordinates to produce a centered polar plot.  Necessary for the northern hemisphere, where polar plots assume the radial (latitude) coordinates should be centered at zero instead of 90$^\circ$.  This routine does not depend on SpacePy.}
 \item[]{{\bf find\_zlimits:}  Find the upper and lower limits for a list of GITM data arrays.}
+\item[]{{\bf localtime\_to\_glon:}  Find the longitude at a specified universal time and local time.}
 \end{itemize}
 
 \subsubsection{gitm\_3D\_global\_plots.py}
@@ -218,7 +219,7 @@ Routines to build and output GITM output variable contour plots over a geographi
 \item[]{{\bf plot\_global\_3D\_snapshot:}  A snapshot of a single GITM output over the entire globe.  This routine creates two polar contour plots centered at the geographic northern and southern poles and extending to 45$^\circ$ and a single rectangular plot containing the mid- and low-latitudes for a single output variable from a GITM 3D at a specified altitude or 2D bin file.  The Earth's continental boundaries may also be included in the output figure.  Sample output of the electron temperature is shown in figure~\ref{gitm_3D_global_plots.fig}~(d)}
 \item[]{{\bf plot\_mult\_3D\_slices:}  This routine creates a single plot containing multiple global contours of a GITM output variable from a 3D or 2D bin file at a list of specified altitudes.  These plots may be either polar or rectangular, with or without continental outlines, and within a specified latitude range.  Sample output of the electron temperature is shown in figure~\ref{gitm_3D_mult_plots.fig}.}
 \item[]{{\bf plot\_rectangular\_3D\_global:} This routine plots a single rectangular filled contour for a GITM output variable at a specified altitude index as a function of latitude and longitude.  Title, colorbar, and continental outlines are optional.  A handle to the contour plot is returned to allow the output to be further manipulated depending on what other subplots are included in the output figure.} 
-\item[]{{\bf plot\_polar\_3D\_global:} This routine plots a single polar filled contour for a GITM output variable at a specified altitude index as a function of latitude and longitude.  Title, colorbar, and continental outlines are optional.  A handle to the contour plot is returned to allow the output to be further manipulated depending on what other subplots are included in the output figure.} 
+\item[]{{\bf plot\_polar\_3D\_global:} This routine plots a single polar filled contour for a GITM output variable at a specified altitude index as a function of latitude and longitude.  Title, colorbar, and continental outlines are optional.  A handle to the contour plot is returned to allow the output to be further manipulated depending on what other subplots are included in the output figure.  The longitude at the top of the plot may also be specified, this allows one to ensure a specific local time is always located at the top of the dial using a routine like {\bf localtime\_to\_glon}.} 
 \end{itemize}
 
 \begin{figure}
