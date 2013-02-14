@@ -443,18 +443,19 @@ contains
 
   !=========================================================================
 
-  subroutine read_plot_file(NameFile, iUnitIn, &
-       TypeFileIn, StringHeaderOut, &
+  subroutine read_plot_file(NameFile, iUnitIn,         &
+       TypeFileIn, StringHeaderOut,                    &
        nStepOut, TimeOut, nDimOut, nParamOut, nVarOut, &
-       IsCartesianOut, &
-       n1Out, n2Out, n3Out, nOut_D, &
-       ParamOut_I, NameVarOut, &
-       CoordMinOut_D, CoordMaxOut_D, &
-       CoordOut_DI, &
-       Coord1Out_I, Coord2Out_I, Coord3Out_I, &
-       CoordOut_I, CoordOut_DII, CoordOut_DIII, &
-       VarOut_VI, VarOut_VII, VarOut_VIII,&
-       VarOut_IV, VarOut_IIV, VarOut_IIIV)
+       IsCartesianOut,                                 &
+       n1Out, n2Out, n3Out, nOut_D,                    &
+       ParamOut_I, NameVarOut,                         &
+       CoordMinOut_D, CoordMaxOut_D,                   &
+       CoordOut_DI,                                    &
+       Coord1Out_I, Coord2Out_I, Coord3Out_I,          &
+       CoordOut_I, CoordOut_DII, CoordOut_DIII,        &
+       VarOut_VI, VarOut_VII, VarOut_VIII,             &
+       VarOut_IV, VarOut_IIV, VarOut_IIIV,             &
+       iErrorOut)
 
     ! Both VarOut_VI and CoordOut_DI can be used in 1D, 2D, and 3D
 
@@ -487,6 +488,7 @@ contains
     real,             optional, intent(out):: VarOut_IV(:,:)       !        1D
     real,             optional, intent(out):: VarOut_IIV(:,:,:)    !        2D
     real,             optional, intent(out):: VarOut_IIIV(:,:,:,:) !        3D
+    integer,          optional, intent(out):: iErrorOut            ! I/O error
 
     integer            :: iUnit
     character(len=20)  :: TypeFile
@@ -500,7 +502,7 @@ contains
     real(Real4_), allocatable:: Param4_I(:), Coord4_ID(:,:), Var4_IV(:,:)
     real,         allocatable:: Param_I(:),  Coord_ID(:,:),  Var_IV(:,:)
 
-    integer :: i, j, k, iDim, iVar, n, iError
+    integer :: i, j, k, iDim, iVar, n
 
     ! Remember these values after reading header
     save :: nDim, nVar, n1, n2, n3, TypeFile, iUnit
@@ -513,6 +515,8 @@ contains
     TypeFile = 'ascii'
     if(present(TypeFileIn)) TypeFile = TypeFileIn
 
+    if(present(iErrorOut)) iErrorOut = 0
+    
     if(DoReadHeader) call read_header
     DoReadHeader = .false.
 
@@ -531,21 +535,21 @@ contains
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
           n = n + 1
-          read(iUnit, *) Coord_ID(n, :), Var_IV(n, :)
+          read(iUnit, *, ERR=77, END=77) Coord_ID(n, :), Var_IV(n, :)
        end do; end do; end do
 
     case('real8')
-       read(iUnit) Coord_ID
+       read(iUnit, ERR=77, END=77) Coord_ID
        do iVar = 1, nVar
-          read(iUnit) Var_IV(:, iVar)
+          read(iUnit, ERR=77, END=77) Var_IV(:, iVar)
        end do
 
     case('real4')
        allocate(Coord4_ID(n1*n2*n3, nDim), Var4_IV(n1*n2*n3, nVar))
-       read(iUnit) Coord4_ID
+       read(iUnit, ERR=77, END=77) Coord4_ID
        Coord_ID = Coord4_ID
        do iVar = 1, nVar
-          read(iUnit) Var4_IV(:, iVar)
+          read(iUnit, ERR=77, END=77) Var4_IV(:, iVar)
        end do
        Var_IV = Var4_IV
        deallocate(Coord4_ID, Var4_IV)
@@ -593,6 +597,16 @@ contains
 
     deallocate(Coord_ID, Var_IV)
 
+    RETURN
+
+77  if(.not.present(iErrorOut)) call CON_stop(NameSub // &
+         ' could not read data from file=' // trim(NameFile))
+
+    iErrorOut = 3
+    close(iUnit)
+    if(allocated(Coord_ID))  deallocate(Coord_ID, Var_IV)
+    if(allocated(Coord4_ID)) deallocate(Coord4_ID, Var4_IV)
+
   contains
     !==========================================================================
     subroutine read_header
@@ -600,43 +614,35 @@ contains
       n_D = 1
       select case(TypeFile)
       case('ascii', 'formatted')
-         open(iUnit, file=NameFile, status='old', iostat=iError)
-         if(iError /= 0) call CON_stop(NameSub // &
-              ' could not open ascii file=' // trim(NameFile))
+         open(iUnit, file=NameFile, status='old', ERR=66)
 
-         read(iUnit, '(a)') StringHeader        
-         read(iUnit, *) nStep, Time, nDim, nParam, nVar
-         read(iUnit, *) n_D(1:abs(nDim))
+         read(iUnit, '(a)', ERR=77, END=77) StringHeader
+         read(iUnit, *    , ERR=77, END=77) nStep, Time, nDim, nParam, nVar
+         read(iUnit, *    , ERR=77, END=77) n_D(1:abs(nDim))
          allocate(Param_I(nParam))
-         read(iUnit, *) Param_I
-         read(iUnit, '(a)') NameVar
+         read(iUnit, *    , ERR=77, END=77) Param_I
+         read(iUnit, '(a)', ERR=77, END=77) NameVar
       case('real8')
-         open(iUnit, file=NameFile, status='old', form='unformatted', &
-              iostat=iError)
-         if(iError /= 0) call CON_stop(NameSub // &
-              ' could not open real8 file=' // trim(NameFile))
+         open(iUnit, file=NameFile, status='old', form='unformatted', ERR=66)
 
-         read(iUnit) StringHeader       
-         read(iUnit) nStep, Time, nDim, nParam, nVar
-         read(iUnit) n_D(1:abs(nDim))
+         read(iUnit, ERR=77, END=77) StringHeader       
+         read(iUnit, ERR=77, END=77) nStep, Time, nDim, nParam, nVar
+         read(iUnit, ERR=77, END=77) n_D(1:abs(nDim))
          allocate(Param_I(nParam))
-         read(iUnit) Param_I
-         read(iUnit) NameVar
+         read(iUnit, ERR=77, END=77) Param_I
+         read(iUnit, ERR=77, END=77) NameVar
       case('real4')
-         open(iUnit, file=NameFile, status='old', form='unformatted', &
-              iostat=iError)
-         if(iError /= 0) call CON_stop(NameSub // &
-              ' could not open real4 file=' // trim(NameFile))
+         open(iUnit, file=NameFile, status='old', form='unformatted', ERR=66)
 
-         read(iUnit) StringHeader
-         read(iUnit) nStep, Time4, nDim, nParam, nVar
+         read(iUnit, ERR=77, END=77) StringHeader
+         read(iUnit, ERR=77, END=77) nStep, Time4, nDim, nParam, nVar
          Time = Time4
-         read(iUnit) n_D(1:abs(nDim))
+         read(iUnit, ERR=77, END=77) n_D(1:abs(nDim))
          allocate(Param_I(nParam), Param4_I(nParam))
-         read(iUnit) Param4_I
+         read(iUnit, ERR=77, END=77) Param4_I
          Param_I = Param4_I
          deallocate(Param4_I)
-         read(iUnit) NameVar
+         read(iUnit, ERR=77, END=77) NameVar
       case default
          call CON_stop(NameSub // ' unknown TypeFile =' // trim(TypeFile))
       end select
@@ -660,6 +666,25 @@ contains
       if(present(ParamOut_I))      ParamOut_I(1:nParam) = Param_I
 
       deallocate(Param_I)
+
+      RETURN
+
+66    if(.not.present(iErrorOut)) call CON_stop(NameSub // &
+           ' could not open '//trim(TypeFile)//' file=' // trim(NameFile))
+      
+      iErrorOut = 1
+      RETURN
+
+77    if(.not.present(iErrorOut)) call CON_stop(NameSub // &
+           ' could not read header from file=' // trim(NameFile))
+
+      iErrorOut = 2
+      close(iUnit)
+      if(allocated(Param_I)) deallocate(Param_I)
+      if(allocated(Param4_I)) deallocate(Param4_I)
+      RETURN
+
+
 
     end subroutine read_header
 
