@@ -266,15 +266,17 @@ contains
           ! Construct file name
           !write(NameFile,'(a,i7.7,a)') trim(NameFilePic), iCouplePic, '.out'
           write(NameFile,'(a,i7.7,a)') trim(NameFilePic), n_step, '.out'
-          
+
           if(iProc == 0)write(*,*) NameSub,' trying to read ',NameFile
           ! Wait until file exists
           do
              open(UnitTmp_, FILE=NameFile, STATUS='OLD', IOSTAT=iError)
              ! If successful, wait a bit so that file is fully written
              ! If not successful, wait a bit and try open again
-             call sleep(0.5)
-             if(iError /= 0) CYCLE
+             if(iError /= 0)then
+                call sleep(0.1)
+                CYCLE
+             end if
              close(UnitTmp_)
              EXIT
           end do
@@ -282,8 +284,17 @@ contains
           ! Check if this is the first time 
           if(.not.allocated(StatePic_VC))then
              ! Get size of PIC grid and allocate array
-             call read_plot_file(NameFile, &
-                  nVarOut = nVarPic, nOut_D = nCellPic_D)
+             do
+                call read_plot_file(NameFile, &
+                     nVarOut = nVarPic, nOut_D = nCellPic_D, iErrorOut=iError)
+                if(iError /= 0)then
+                   write(*,*) NameSub,': could not read header from ', &
+                        trim(NameFile), ' on processor', iProc
+                   call sleep(0.5)
+                   CYCLE
+                end if
+                EXIT
+             end do
              nXPic = nCellPic_D(1)
              nYPic = nCellPic_D(2)
              allocate(StatePic_VC(nVarPic,nXPic,nYPic), StatePic_V(nVarPic))
@@ -291,8 +302,20 @@ contains
                   ' allocated StatePic_VC with nXPic, nYPic=', nXPic, nYPic
 
              ! Read first PIC data and coordinate limits
-             call read_plot_file(NameFile, VarOut_VII=StatePic_VC, &
-                  CoordMinOut_D = CoordMinPic_D, CoordMaxOut_D = CoordMaxPic_D)
+             do
+                call read_plot_file(NameFile, VarOut_VII=StatePic_VC, &
+                     CoordMinOut_D = CoordMinPic_D, &
+                     CoordMaxOut_D = CoordMaxPic_D, &
+                     iErrorOut=iError)
+                if(iError /= 0)then
+                   write(*,*) NameSub,': could not read first data from ', &
+                        trim(NameFile), ' on processor', iProc
+                   call sleep(0.5)
+                   CYCLE
+                end if
+                EXIT
+             end do
+
 
              DxyzPic_D = (CoordMaxPic_D - CoordMinPic_D)/(nCellPic_D - 1)
 
@@ -302,7 +325,18 @@ contains
                 write(*,*) NameSub, ' DxyzPic_D    =', DxyzPic_D
              end if
           else
-             call read_plot_file(NameFile, VarOut_VII=StatePic_VC)
+             do
+                call read_plot_file(NameFile, VarOut_VII=StatePic_VC, &
+                     iErrorOut=iError)
+                if(iError /= 0)then
+                   write(*,*) NameSub,': could not read data from ', &
+                        trim(NameFile), ' on processor', iProc
+                   call sleep(0.5)
+                   CYCLE
+                end if
+                EXIT
+             end do
+
           end if
        end if
 
