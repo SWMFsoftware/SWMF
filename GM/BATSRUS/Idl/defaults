@@ -1,7 +1,8 @@
-;^CFG COPYRIGHT VAC_UM
+; This code is a copyright protected software (c) 2002- University of Michigan 
+;
 ; Definitions and/or default values for global variables
 
-;A useful constant
+; A useful constant (same as !pi or !dpi)
 pi=acos(-1.)
 
 ; Confirmation for set parameters
@@ -34,7 +35,6 @@ timetitleunit=0  ; set to number of seconds in time unit
 timetitlestart=0 ; set to initial time to be subtracted (in above units)
 autorange='y'
 axistype='coord'
-
 
 ; multiplot=0 gives the default number of subplots depending on nfile,nfunc
 ; multiplot=[3,2,0] defines 3 by 2 subplots filled up in vertical order
@@ -108,5 +108,9 @@ symbols=0    ; set to an array with symbols for each function
 smooths=0    ; set to an array with smoothing width for each logfile
 legends=''   ; legends for the lines, defaults are logfilenames
 legendpos=0  ; position for the legends: [xmin, xmax, ymin, ymax]
+
+; System variables that can get corrupted if an animation is interrupted
+!x.tickname=strarr(60)
+!y.tickname=strarr(60)
 
 end
