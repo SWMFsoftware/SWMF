@@ -73,8 +73,8 @@ module ModPlanet
   integer, parameter :: iVernalYear   = 1998
   integer, parameter :: iVernalMonth  =    7
   integer, parameter :: iVernalDay    =   14
-  integer, parameter :: iVernalHour   =   16
-  integer, parameter :: iVernalMinute =    0
+  integer, parameter :: iVernalHour   =   13
+  integer, parameter :: iVernalMinute =    40
   integer, parameter :: iVernalSecond =    0
 
 ! real, parameter :: SunOrbit_A = 1.52
