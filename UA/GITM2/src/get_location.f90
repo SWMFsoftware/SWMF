@@ -1,7 +1,9 @@
 !------------------------------------------------------------------------------
 ! $Id$
 !
-! Author: Angeline G. Burrell, UMichigan, Jan 2013
+! Author: Angeline G. Burrell (AGB), UMichigan, Jan 2013
+!
+! Modified: AGB, UMichigan, Feb 2013 - added BlockLocationIndex
 !
 ! LocationIndex: A routine to retireve the longitude, latitude, and block
 !                indeces for a specified location.  Shamelessly stolen from
@@ -14,6 +16,18 @@
 !
 ! Outputs: iiBlock = Block index containing the desired location
 !          iiLon   = Longitude index for LonFind
+!          iiLat   = Latitude index for LatFind
+!          rLon    = Longitude interpolation scaling factor
+!          rLat    = Latitude interpolation scaling factor
+!
+! BlockLocationIndex: A routine just like LocationIndex, but for a specified
+!                     block
+!
+! Inputs: LonFind = Desired Longitude
+!         LatFind = Desired Latitude
+!         iBlock  = Block index containing the desired longitude and latitude
+!
+! Outputs: iiLon   = Longitude index for LonFind
 !          iiLat   = Latitude index for LatFind
 !          rLon    = Longitude interpolation scaling factor
 !          rLat    = Latitude interpolation scaling factor
@@ -71,3 +85,49 @@ subroutine LocationIndex(LonFind, LatFind, iiBlock, iiLon, iiLat, rLon, rLat)
   end do
 
 end subroutine LocationIndex
+
+subroutine BlockLocationIndex(LonFind,LatFind,iBlock,iiLon,iiLat,rLon,rLat)
+
+  use ModGITM
+
+  real, intent(in) :: LonFind, LatFind
+  integer, intent(in) :: iBlock
+  integer, intent(out) :: iiLon, iiLat
+  real, intent(out) :: rLon, rLat
+
+  integer iLon, iLat
+
+  iiLon = -1
+  iiLat = -1
+  rLon  = -1.0
+  rLat  = -1.0
+
+  if((Longitude(0,iBlock)+Longitude(1,iBlock))/2 <=LonFind .and. &
+       (Longitude(nLons,iBlock)+Longitude(nLons+1,iBlock))/2 >LonFind) then
+
+     if((Latitude(0,iBlock)+Latitude(1,iBlock))/2 <=LatFind .and. &
+          (Latitude(nLats,iBlock)+Latitude(nLats+1,iBlock))/2 >LatFind) then
+
+        do iLon = 0,nLons
+           if(Longitude(iLon,iBlock) <= LonFind .and. &
+                Longitude(iLon+1,iBlock) > LonFind) then
+              iiLon = iLon
+              rLon  = 1.0 - (LonFind - Longitude(iLon,iBlock)) / &
+                   (Longitude(iLon+1,iBlock) - Longitude(iLon,iBlock))
+              exit
+           endif
+        enddo
+
+        do iLat = 0,nLats
+           if(Latitude(iLat,iBlock) <= LatFind .and. &
+                Latitude(iLat+1,iBlock) > LatFind) then
+              iiLat = iLat
+              rLat = 1.0 - (LatFind - Latitude(iLat,iBlock)) / &
+                   (Latitude(iLat+1,iBlock) - Latitude(iLat,iBlock))
+              exit
+           endif
+        enddo
+     end if
+  end if
+
+end subroutine BlockLocationIndex
