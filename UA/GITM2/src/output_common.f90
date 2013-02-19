@@ -1251,8 +1251,8 @@ subroutine output_2dtec(iBlock)
   call calc_vtec(iBlock)
 
   iAlt = 1
-  do iLat=-1,nLats+2
-     do iLon=-1,nLons+2
+  do iLat=1,nLats
+     do iLon=1,nLons
         write(iOutputUnit_)       &
              Longitude(iLon,iBlock), &
              Latitude(iLat,iBlock),&
