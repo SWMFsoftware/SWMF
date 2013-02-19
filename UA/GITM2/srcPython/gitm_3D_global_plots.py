@@ -453,7 +453,7 @@ def plot_rectangular_3D_global(ax, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
     # Set the title
     if title:
         rot  = 'horizontal'
-        yloc = 1.1
+        yloc = 1.05
         xloc = .5
 
         if(tloc == "l" or tloc == "r"):
