@@ -32,8 +32,7 @@ subroutine get_log_info(SSLon, SSLat, GlobalMinTemp, GlobalMaxTemp, &
   real, intent(out) :: AverageTemp, AverageVertVel
   real, intent(out) :: TotalVolume, SSVTEC
 
-  integer :: iBlock, iSpecies, iLon, iLat
-  real :: rLon, rLat
+  integer :: iBlock, iSpecies
   !--------------------------------------------------------------------------
 
   GlobalMaxTemp    = 0.0
@@ -74,13 +73,7 @@ subroutine get_log_info(SSLon, SSLat, GlobalMinTemp, GlobalMaxTemp, &
           sum(CellVolume(1:nLons,1:nLats,1:nAlts,iBlock))
   enddo
 
-  call LocationIndex(SSLon, SSLat, iBlock, iLon, iLat, rLon, rLat)
-
-  if(iLon > 0 .and. iLon <= nLons .and. iLat > 0 .and. iLat <= nLats) then
-    call calc_single_vtec(iLon, iLat, iBlock, SSVTEC)
-  else
-     SSVTEC = -1.0
-  endif
+  call calc_single_vtec_interp(SSLon, SSLat, SSVTEC)
 
   AverageTemp    = AverageTemp
   AverageVertVel = AverageVertVel / nSpecies
