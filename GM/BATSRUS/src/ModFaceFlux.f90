@@ -1900,6 +1900,8 @@ contains
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
     real:: FluxBx, FluxBy, FluxBz
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
+
+    integer:: iVar
     !--------------------------------------------------------------------------
     ! Calculate conservative state
     StateCons_V(1:nVar)  = State_V
@@ -1957,6 +1959,11 @@ contains
        ! Store normal velocity (needed for source terms with div U)
        Un_I(iFluid) = Un
 
+    end do
+
+    ! Scalars advect with the first fluid's velocity
+    do iVar = ScalarFirst_, ScalarLast_
+       Flux_V(iVar) = Un_I(1)*State_V(iVar)
     end do
 
     ! Set flux for electron pressure
@@ -2061,7 +2068,6 @@ contains
       real :: Rho, Ux, Uy, Uz, p, e, Ew
       real :: B2, FullB2, pTotal, pTotal2, UDotB, DpPerB
       real :: Ex, Ey, Ez, E2Half
-      integer :: iVar
       !-----------------------------------------------------------------------
 
       ! Extract primitive variables
@@ -2156,11 +2162,6 @@ contains
          Flux_V(Energy_) = Flux_V(Energy_) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
       end if
-
-      ! f_i[scalar] = Un*scalar
-      do iVar = ScalarFirst_, ScalarLast_
-         Flux_V(iVar) = Un*State_V(iVar)
-      end do
 
       HallUn = Un
 
@@ -2257,11 +2258,6 @@ contains
 
       ! f_n[rho] = Rho*U_i
       Flux_V(Rho_) = Rho*Un
-
-      ! f_n[scalar] = Scalar*Un
-      do iVar = ScalarFirst_, ScalarLast_
-         Flux_V(iVar) = Un*State_V(iVar)
-      end do
 
       if(UseMultiIon)then
          ! Add up the (rho u u) diads of the ion fluids:
@@ -2451,7 +2447,6 @@ contains
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal, Ew
-      integer :: iVar
       !-----------------------------------------------------------------------
       ! Extract primitive variables
       Rho     = State_V(iRho)
@@ -2500,11 +2495,6 @@ contains
       Flux_V(iP)  = Un*p
 
       Flux_V(iEnergy) = Un*(pTotal + e)
-
-      ! f_i[scalar] = Un*scalar
-      do iVar = ScalarFirst_, ScalarLast_
-         Flux_V(iVar) = Un*State_V(iVar)
-      end do
 
       ! Needed for adiabatic source term for electron pressure
       HallUn = Un
