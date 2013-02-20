@@ -1,0 +1,139 @@
+#ECHO
+T			DoEcho
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			NameIoUnits
+
+#NORMALIZATION
+NONE			NameNormalization
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+DEBUG
+F                    DoDebug
+T                    DoDebugGhost
+
+#CHECKGRIDSIZE
+6			nI
+6			nJ
+1			nK
+10000			MinBlockALL
+
+#GRID
+32			nRootBlockX
+8			nRootBlockY
+1			nRootBlockZ
+0.0			xMin
+4.0			xMax
+0.0			yMin
+1.0			yMax
+0.0			zMin
+1.0			zMax
+
+#UPDATECHECK
+T                       UseUpdateCheck
+40.                     RhoMinPercent
+200.                    RhoMaxPercent
+40.                     pMinPercent
+200.                    pMaxPercent
+
+
+#GAMMA
+1.4			Gamma
+
+#SHOCKTUBE
+8.0			rho (left state)
+7.1447			Ux
+-4.125			Uy
+0.0			Uz
+116.5			P
+1.4			rho (right state)
+0.0			Ux
+0.0			Uy
+0.0			Uz
+1.0			P
+
+#SHOCKPOSITION
+1.0/6.0			ShockPosition
+-1.0/1.73		ShockSlope
+
+#USERINPUTBEGIN ----------------
+
+#SHOCKRAMP
+T			DoShockRamp
+
+#USERINPUTEND   ----------------
+
+#OUTERBOUNDARY
+user			xMinBc
+float   	        xMaxBc
+user     		yMinBc
+user			yMaxBc
+reflect			zMinBc
+reflect			zMaxBc
+
+SCHEME      2 ghost cells
+2                       nOrder
+Linde                 TypeFlux
+mc3                     TypeLimiter
+2.0                     LimiterBeta
+
+
+#SCHEME
+4		nOrder
+Godunov		TypeFlux
+minmod		TypeLimiter
+1.5		BetaLimiter
+T		UseVolumeIntegral4
+T		UseFaceIntegral4
+T		UseLimiter4
+
+#SCHEME4
+F		UseVolumeIntegral4
+F		UseFaceIntegral4
+T		UseLimiter
+
+
+#FLATTENING
+T		UseFlattening
+F		UseDuFlat
+0.33		FlatDelta
+0.75		FlatRatioMin
+0.85		FlatRatioMax
+
+#RUNGEKUTTA
+4		nStage
+0.4		CflExpl
+
+FIXEDTIMESTEP
+T		UseFixedTimestep
+0.04		DtFixed
+
+#SAVELOGFILE
+F		DoSaveLogfile
+
+#SAVERESTART
+F		DoSaverestart
+
+#PLOTFILENAME
+second		NameMaxTimeUnit
+
+#SAVEINITIAL
+T		DoSaveInitial
+
+#SAVEPLOT
+1			nPlotfile
+z=0 var idl_real8       PlotString
+-1                       DnSavePlot
+0.004                     DtSavePlot
+0.0                     DxSavePlot
+rho mx my mz p e        NameVar
+g                       NamePar
+
+#STOP
+-1		MaxIteration
+0.2		tSimulationMax
