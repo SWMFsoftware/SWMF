@@ -109,6 +109,9 @@ module ModUser
 
   logical:: UseInitialStateDefinition = .false.
 
+
+  !Variables for shockramp problem
+  logical :: DoShockramp = .false.
 contains
 
   subroutine user_read_inputs
@@ -179,6 +182,10 @@ contains
              ! Setting negative value signals that this is a Gaussian
              iPower_V(iVar) = -2
           end if
+
+       case('#SHOCKRAMP')
+          call read_var('DoShockramp',DoShockramp)
+
        case('#WAVE','#WAVE2','#WAVE4', '#WAVE6')
           call read_var('iVar',iVar)
           call read_var('Width',Width)
@@ -967,10 +974,11 @@ contains
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     use ModImplicit, ONLY: StateSemi_VGB
-    use ModSize,     ONLY: nI, nJ, nK
+    use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
     use ModPhysics,  ONLY: Si2No_V, Io2Si_V,&
          Io2No_V, UnitRho_, UnitU_, UnitP_, UnitN_,&
-         UnitT_
+         UnitT_, ShockLeftState_V, ShockRightState_V,&
+         ShockSlope, ShockPosition
     use ModNumconst, ONLY: cTwoPi, cDegToRad
     use ModConst,    ONLY: cProtonMass, RotationPeriodSun
 
@@ -983,7 +991,7 @@ contains
     use ModProcMH,   ONLY: iProc
     use ModEnergy,   ONLY: calc_energy_ghost
     use ModViscosity,ONLY: viscosity_factor
-    use BATL_lib,    ONLY: CoordMax_D,CoordMin_D
+    use BATL_lib,    ONLY: CoordMax_D, CoordMin_D
 
     integer, intent(in) :: iBlock, iSide
     logical, intent(out) :: IsFound
@@ -995,17 +1003,58 @@ contains
     real    :: ViscoCoeff = 0.0
     !    logical :: DoTest = .false.
     character (len=*), parameter :: Name='user_set_cell_boundary'
+
+    ! variables for shockramp
+    real   :: x0
     !-------------------------------------------------------------------------
-
     !    DoTest = iBlock == BlkTest
-
-    !    if(DoTest)then
-    !       write(*,*)'outer: iSide=',iSide
-    !       write(*,*)'x1,x2,y1,y2,z1,z2=',x1,x2,y1,y2,z1,z2
-    !       write(*,*)'XyzMin=',XyzMin_D
-    !       write(*,*)'XyzMax=',XyzMax_D
-    !    end if
     IsFound = .true.
+
+    if (DoShockramp) then
+       select case (iSide)
+       case(1)
+          ! inflow BC for x=0
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
+             State_VGB(:,i,j,k,iBlock) = ShockLeftState_V
+             ! convert velocity into momentum.
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                  State_VGB(Ux_:Uz_,i,j,k,iBlock)&
+                  *State_VGB(Rho_,i,j,k,iBlock)
+          end do; end do; end do
+       case(3)
+          do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI
+             if (Xyz_DGB(x_,i,j,k,iBlock) <=  ShockPosition) then
+                ! upstream (fixed) BC for the bottom ahead of "ShockPosition"
+                State_VGB(:,i,j,k,iBlock) = ShockLeftState_V
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                     State_VGB(Ux_:Uz_,i,j,k,iBlock) &
+                     *State_VGB(Rho_,i,j,k,iBlock)
+             else
+                ! reflective BC beyond ShockPosition for the bottom
+                State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,1-j,k,iBlock)
+                State_VGB(RhoUy_,i,j,k,iBlock) = &
+                     -State_VGB(RhoUy_,i,j,k,iBlock)
+             end if
+
+          end do; end do; end do
+       case(4)           
+          ! x0 is the shock position at y=1 at the current simulation time. 
+          ! The analytic shock speed is 20 along X.
+          x0 = ShockPosition - ShockSlope*(1 + 20*time_simulation)
+          do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI
+             if (Xyz_DGB(x_,i,j,k,iBlock) <= x0) then
+                ! Upstream condition
+                State_VGB(:,i,j,k,iBlock) = ShockLeftState_V
+             else
+                ! Downstream condition
+                State_VGB(:,i,j,k,iBlock) = ShockRightState_V
+             end if
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                  State_VGB(Ux_:Uz_,i,j,k,iBlock)&
+                  *State_VGB(Rho_,i,j,k,iBlock)
+          end do; end do; end do
+       end select
+    end if
 
     if(DoResistivityGaussian)then
        select case(TypeBc)
