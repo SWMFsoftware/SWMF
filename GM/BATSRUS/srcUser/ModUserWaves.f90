@@ -184,7 +184,8 @@ contains
           end if
 
        case('#SHOCKRAMP')
-          call read_var('DoShockramp',DoShockramp)
+          call read_var('DoShockramp', DoShockramp)
+          UseUserOuterBcs = DoShockramp
 
        case('#WAVE','#WAVE2','#WAVE4', '#WAVE6')
           call read_var('iVar',iVar)
