@@ -24,8 +24,8 @@ T                    DoDebugGhost
 10000			MinBlockALL
 
 #GRID
-32			nRootBlockX
-8			nRootBlockY
+16			nRootBlockX
+4			nRootBlockY
 1			nRootBlockZ
 0.0			xMin
 4.0			xMax
@@ -76,14 +76,14 @@ user			yMaxBc
 reflect			zMinBc
 reflect			zMaxBc
 
-SCHEME      2 ghost cells
+#SCHEME      2 ghost cells
 2                       nOrder
-Linde                 TypeFlux
+Linde                   TypeFlux
 mc3                     TypeLimiter
 2.0                     LimiterBeta
 
 
-#SCHEME
+SCHEME
 4		nOrder
 Godunov		TypeFlux
 minmod		TypeLimiter
@@ -92,7 +92,7 @@ T		UseVolumeIntegral4
 T		UseFaceIntegral4
 T		UseLimiter4
 
-#SCHEME4
+SCHEME4
 F		UseVolumeIntegral4
 F		UseFaceIntegral4
 T		UseLimiter
@@ -109,9 +109,6 @@ F		UseDuFlat
 4		nStage
 0.4		CflExpl
 
-FIXEDTIMESTEP
-T		UseFixedTimestep
-0.04		DtFixed
 
 #SAVELOGFILE
 F		DoSaveLogfile
