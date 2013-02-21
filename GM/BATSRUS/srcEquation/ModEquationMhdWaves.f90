@@ -98,8 +98,8 @@ module ModVarIndexes
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
-  ! Specify scalar to be advected
-  integer, parameter :: ScalarFirst_ = WaveFirst_, ScalarLast_ = WaveLast_
+  ! No scalars
+  integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.

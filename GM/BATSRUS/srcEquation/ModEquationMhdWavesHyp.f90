@@ -13,7 +13,8 @@ module ModVarIndexes
 
   ! This equation module contains the standard MHD equations plus
   ! extra wave energies
-  character (len=*), parameter :: NameEquation='MHD Waves'
+  character (len=*), parameter :: &
+       NameEquation = 'MHD + Alfven waves + Hyperbolic DivB'
 
   ! loop variable over spectrum
   integer, private :: iWave
@@ -103,7 +104,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! Specify scalar to be advected
-  integer, parameter :: ScalarFirst_ = WaveFirst_, ScalarLast_ = WaveLast_
+  integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.

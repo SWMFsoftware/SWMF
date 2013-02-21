@@ -14,7 +14,7 @@ module ModVarIndexes
 
   ! This equation module contains the standard MHD equations with wave energy
   character (len=*), parameter :: &
-       NameEquation='MHD + waves + electron pressure'
+       NameEquation='MHD + Alfven waves + electron pressure'
 
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
@@ -108,7 +108,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = WaveFirst_, ScalarLast_ = WaveLast_
+  integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.

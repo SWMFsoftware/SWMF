@@ -111,8 +111,8 @@ module ModVarIndexes
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
-  ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = WaveLast_
+  ! There is one scalar
+  integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = SignB_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
