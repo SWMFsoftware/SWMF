@@ -2350,13 +2350,13 @@ contains
          end if
 
          do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
-            Flux_V(iVar) = Flux_V(iVar) + AlfvenSpeed*State_V(iVar) !!PLUS
+            Flux_V(iVar) = (Un + AlfvenSpeed)*State_V(iVar) !!PLUS
          end do
          Flux_V(Energy_) = Flux_V(Energy_) + AlfvenSpeed &
               *sum(State_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_))
 
          do iVar = AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_
-            Flux_V(iVar) = Flux_V(iVar) - AlfvenSpeed*State_V(iVar) !!MINUS
+            Flux_V(iVar) = (Un - AlfvenSpeed)*State_V(iVar) !!MINUS
          end do
          Flux_V(Energy_) = Flux_V(Energy_) - AlfvenSpeed &
               *sum(State_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_))
