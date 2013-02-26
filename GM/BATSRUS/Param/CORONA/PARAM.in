@@ -212,6 +212,8 @@ GL			TypeCme
 1.0			Radius
 0.93			Bstrength
 0.0			Density
+0.0			ModulationRho
+0.0			ModulationP
 
 #STOP
 71			MaxIteration  
