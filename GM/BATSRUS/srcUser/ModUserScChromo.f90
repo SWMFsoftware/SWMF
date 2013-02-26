@@ -983,19 +983,34 @@ contains
           !\
           ! Add the eruptive event state to the solar wind
           !/
-          State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) + Rho
-
-          if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0) &
-               write(*,*)'Negative density in solution'
+          if(State_VGB(Rho_,i,j,k,iBlock) + Rho < 0.25*State_VGB(Rho_,i,j,k,iBlock))then
+             State_VGB(Rho_,i,j,k,iBlock) = 0.25*State_VGB(Rho_,i,j,k,iBlock)
+          else
+             State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) + Rho
+          endif
 
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B_D
 
           if(UseElectronPressure)then
-             State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) + 0.5*p
-             State_VGB(p_,i,j,k,iBlock)  = State_VGB(p_,i,j,k,iBlock)  + 0.5*p
+             if(State_VGB(Pe_,i,j,k,iBlock) + 0.5*p < 0.25*State_VGB(Pe_,i,j,k,iBlock))then
+                State_VGB(Pe_,i,j,k,iBlock) = 0.25*State_VGB(Pe_,i,j,k,iBlock)
+             else
+                State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) + 0.5*p
+             endif
+
+             if(State_VGB(p_,i,j,k,iBlock)  + 0.5*p < 0.25*State_VGB(p_,i,j,k,iBlock))then
+                State_VGB(p_,i,j,k,iBlock) = 0.25*State_VGB(p_,i,j,k,iBlock)
+             else
+                State_VGB(p_,i,j,k,iBlock)  = State_VGB(p_,i,j,k,iBlock)  + 0.5*p
+             endif
+
           else
-             State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + p
+             if(State_VGB(p_,i,j,k,iBlock) + p < 0.25*State_VGB(p_,i,j,k,iBlock))then
+                State_VGB(p_,i,j,k,iBlock) = 0.25*State_VGB(p_,i,j,k,iBlock)
+             else
+                State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + p
+             endif
           end if
        end do; end do; end do
 
