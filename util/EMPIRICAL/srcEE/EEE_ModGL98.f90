@@ -47,6 +47,8 @@ contains
        call read_var('Radius',      cme_r0)
        call read_var('Bstrength',   cme_a1)
        call read_var('Density',     cme_rho1)
+       call read_var('ModulationRho',   ModulationRho)
+       call read_var('ModulationP',     ModulationP)
     case default
        call CON_stop(NameSub//' unknown NameCommand='//NameCommand)
     end select
@@ -384,7 +386,7 @@ contains
     ! to the mass density::
     !/
     if(ModulationRho*Rho <= 0.0)then
-       Rho = 0.0
+       Rho = Rho
     else
        Rho = ModulationRho*Rho
     end if
@@ -394,7 +396,7 @@ contains
     ! to the kinetic pressure::
     !/
     if(ModulationP*p <= 0.0) then
-       p = 0.0
+       p = p
     else
        p = ModulationP*p
     end if
