@@ -338,16 +338,14 @@ subroutine set_physics_constants
 
 
   ! Compute dipole tilt variables
-  if(NameThisComp=='IH')then
-     ! For IH ThetaTilt should be set with the #HELIODIPOLETILT command
-     ! But how is it going to rotate ?
-     CosThetaTilt = cos(ThetaTilt)
-     SinThetaTilt = sin(ThetaTilt)
-  end if
+  ! For IH ThetaTilt should be set with the #HELIODIPOLETILT command
+  ! For static dipole only, e.g. in 2D
+  CosThetaTilt = cos(ThetaTilt)
+  SinThetaTilt = sin(ThetaTilt)
 
   ! by default quadrupole and octupole terms are zero
-  Qqp(1:3,1:3) = 0.00
-  Oop(1:3,1:3,1:3) = 0.00
+  Qqp(1:3,1:3) = 0.0
+  Oop(1:3,1:3,1:3) = 0.0
 
   ! Hyperbolic cleaning uses SpeedHyp velocity
   if(UseHyperbolicDivb .and. SpeedHypDim > 0)then

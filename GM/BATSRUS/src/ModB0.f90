@@ -525,11 +525,11 @@ contains
     elseif(IsStandAlone .and. DipoleStrengthSi==0.0)then
        B0_D = 0.0
        RETURN
-    elseif(NameThisComp=='GM')then
+    elseif(NameThisComp=='GM' .and. nDim == 3)then
        call get_planet_field(Time_Simulation, Xyz_D, TypeCoordSystem//' NORM',&
             B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
-    else
+    else 
        call get_b0_multipole(Xyz_D, B0_D) 
     end if
     if(UseBody2)call add_b0_body2(Xyz_D, B0_D)
@@ -542,23 +542,23 @@ contains
 
     ! Calculate the multipole based B0_D field at location Xyz_D.
 
-    use ModPhysics
-    use ModNumConst
-
+    use ModPhysics, ONLY:Bdp, chalf, costhetatilt, sinthetatilt, ctiny, &
+         rbody, qqp, oop 
+    
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
-
+    
     integer :: i, j, k, l
     real :: R0, rr, rr_inv, rr2_inv, rr3_inv, rr5_inv, rr7_inv
     real, dimension(3) :: xxt, bb
     real :: Dp, temp1, temp2, Dipole_D(3)
-
+    
     logical :: do_quadrupole, do_octupole
     !-------------------------------------------------------------------------
     ! Determine radial distance and powers of it
 
-    R0 = sqrt(sum(Xyz_D**2))
-
+    R0 = sqrt(sum(Xyz_D(1:nDim)**2))
+    
     ! Avoid calculating B0 inside a critical radius = 1.E-6*Rbody
     if(R0 <= cTiny*Rbody)then
        B0_D = 0.0
@@ -569,7 +569,18 @@ contains
     rr_inv = 1.0/rr
     rr2_inv=rr_inv*rr_inv
     rr3_inv=rr_inv*rr2_inv
-
+    
+    if(nDim == 2) then
+       !
+       ! 2D magnetic dipole is implemented form preprint to JASTP of F.R. Cardoso et.al.'s paper
+       ! "2D MHD simulation of the magnetic dipole tilt and IMF influence on the magnetosphere"
+       !
+       B0_D(1) = Bdp*rr_inv**4*(-2.0*Xyz_D(1)*Xyz_D(2)*CosThetaTilt + (Xyz_D(1)**2-Xyz_D(2)**2)*SinThetaTilt)
+       B0_D(2) = Bdp*rr_inv**4*(+2.0*Xyz_D(1)*Xyz_D(2)*SinThetaTilt + (Xyz_D(1)**2-Xyz_D(2)**2)*CosThetaTilt)
+       B0_D(3) = 0.0
+       RETURN
+    end if
+    
     !\
     ! Compute dipole moment of the intrinsic magnetic field B0.
     !/
