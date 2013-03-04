@@ -945,10 +945,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('IsPlotName_n',IsPlotName_n)
         call read_var('IsPlotName_t',IsPlotName_t)
         call read_var('IsPlotName_e',IsPlotName_e)
-        ! Will set only _n true when not time accurate automatically.
-        ! Set _n true if both _t and _e are false.
-        if(.not.IsPlotName_t .and. .not.IsPlotName_e)&
-             IsPlotName_n=.true.
 
      case("#PLOTFILENAME")
         call read_var('NameMaxTimeUnit', NameMaxTimeUnit)
