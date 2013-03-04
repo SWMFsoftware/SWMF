@@ -1938,8 +1938,7 @@ contains
     ! Make sure this is initialized
     HallUn = 0.0
 
-    ! do iFluid = iFluidMin, iFluidMax
-    do iFluid = 1, nFluid
+    do iFluid = iFluidMin, iFluidMax
        call select_fluid
        if(iFluid == 1 .and. IsMhd)then
           ! Calculate MHD flux for first fluid
@@ -1961,6 +1960,9 @@ contains
 
     end do
 
+    ! The extra fluxes should be added at the same time as fluid 1 fluxes
+    if(iFluidMin /= 1) RETURN
+
     ! Scalars advect with the first fluid's velocity
     do iVar = ScalarFirst_, ScalarLast_
        Flux_V(iVar) = Un_I(1)*State_V(iVar)
@@ -1968,9 +1970,6 @@ contains
 
     ! Set flux for electron pressure
     if(UseElectronPressure) Flux_V(Pe_) = HallUn*State_V(Pe_)
-
-    ! The extra fluxes should be added at the same time as fluid 1 fluxes
-    ! if(iFluidMin /= 1) RETURN
 
     if(ViscoCoeff > 0.0 ) then
        do iFluid = 1, nFluid
