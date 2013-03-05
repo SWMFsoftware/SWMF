@@ -559,6 +559,27 @@ contains
                    ! CollisionRate = 
                    !  1/tau * min(rho^iIon, rho^jIon) * (du2/u_0^2)^n
 
+                   if(uCutOffDim < 0.0)then
+                      ! Use properly "averaged" Alfven speed 
+                      ! for the cut-off velocity based on 
+                      ! "ON THE PHYSICAL REALIZATION OF TWO-DIMENSIONAL 
+                      ! TURBULENCE FIELDS IN MAGNETIZED INTERPLANETARY PLASMAS"
+                      ! A. Stockem et al., APJ 651, 584, (2006). Eq(29) has
+                      !
+                      ! Du_crit = V_A1*sqrt(1 + r_n) 
+                      !
+                      ! where V_A1 = B/sqrt(rho1) from just above eq.29
+                      ! and r_n = N1/N2 = rho1/rho2 defined after eq.14, so
+                      !
+                      ! Du_crit^2 = B^2/rho1 * (1 + rho1/rho2) = B^2 / rho12
+                      !
+                      ! with rho12 = rho1*rho2/(rho1 + rho2)
+
+                      InvUCutOff2 = 1.0 / (sum(FullB_D**2) &
+                           *(Rho_I(iIon) + Rho_I(jIon)) &
+                           *InvRho_I(iIon)*InvRho_I(jIon))
+                   end if
+
                    Du2 = sum( (uIon2_D - uIon_D)**2 )
                    CollisionRate = CollisionRate + &
                         InvTauCutOff * min(Rho_I(iIon), Rho_I(jIon)) &
