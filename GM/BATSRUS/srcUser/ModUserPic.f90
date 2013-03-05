@@ -265,7 +265,8 @@ contains
 
           ! Construct file name
           !write(NameFile,'(a,i7.7,a)') trim(NameFilePic), iCouplePic, '.out'
-          write(NameFile,'(a,i7.7,a)') trim(NameFilePic), n_step, '.out'
+          !write(NameFile,'(a,i7.7,a)') trim(NameFilePic), n_step, '.out'
+          write(NameFile,'(a,a)') trim(NameFilePic), '.out'
 
           if(iProc == 0)write(*,*) NameSub,' trying to read ',NameFile
           ! Wait until file exists
@@ -340,6 +341,14 @@ contains
           end if
        end if
 
+
+       ! As we resuse the same filename, we will need to delete data we have read  
+       call barrier_mpi
+       if(iProc ==0 ) then
+          open(UnitTmp_, FILE=NameFile, STATUS='OLD', IOSTAT=iError)
+          close(UnitTmp_,STATUS='DELETE')
+       end if
+       
        ! Overwrite cells inside the PIC domain
        if(  all(Xyz_DGB(1:nDim, 1, 1, 1,iBlock) <= CoordMaxPic_D) .and. &
             all(Xyz_DGB(1:nDim,nI,nJ,nK,iBlock) >= CoordMinPic_D)) then
