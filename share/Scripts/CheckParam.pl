@@ -238,7 +238,8 @@ sub parse_xml{
     # Parse the XML file and return a pointer to the parsed tree
     my $XmlFile=$_[0];
 
-    require 'share/Scripts/XmlRead.pl';
+    push @INC, 'share/Scripts/', '../../share/Scripts/';
+    require 'XmlRead.pl';
 
     open(XMLFILE, $XmlFile) or die "$ERROR could not open $XmlFile\n";
     my $tree = &XmlRead( join('',<XMLFILE>) );
