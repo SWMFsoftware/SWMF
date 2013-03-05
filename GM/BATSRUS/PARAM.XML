@@ -4922,7 +4922,7 @@ Default values are false for both parameters.
 	<parameter name="CollisionCoefDim" type="real" min="-1" />
 	<parameter name="TauCutOffDim" type="real" min="-1" default="1000"/>
 	<if expr="$TauCutOffDim&gt;0">
-		<parameter name="uCutOffDim" type="real" min="0" 
+		<parameter name="uCutOffDim" type="real" min="-1" 
 			default="100"/>
 		<parameter name="nPowerCutOff" type="integer" min="1" max="3"
 			default="2" />
@@ -4950,9 +4950,16 @@ ion fluids (especially parallel to the magnetic field) can become very
 large. In reality the streaming instability limits the relative speed. 
 Instead of trying to model the effect of the streaming instability,
 in the current implementation we apply a simple friction term.
-If TauCutOffDim is positive, it gives the time rate of the friction,
-the uCutOffDim determines the speed difference where the friction
-term becomes large, and the nPowerCutOff is the exponent applied
+If TauCutOffDim is positive, it gives the time rate of the friction.
+
+The uCutOffDim determines the speed difference (in input units, 
+typically km/s), at which the friction term becomes large. 
+Setting uCutoffDim = -1.0 switches to a physics based cut-off
+velocity which is defined as B/sqrt[rho1*rho2/(rho1+rho2)]
+where B is the magnetic field magnitude, and rho1 and rho2 are 
+the densities of the two ion fluids in normalized units.
+
+The nPowerCutOff is the exponent applied
 to the square of the velocity difference. The friction force is
 applied between all pairs of ion fluids, and it is
 
