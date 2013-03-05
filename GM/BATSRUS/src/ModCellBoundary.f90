@@ -23,13 +23,14 @@ contains
 
     ! Set ghost cells values in State_VG
 
-    use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, iRho_I, DefaultState_V, &
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_, Hyp_, p_, iRho_I, DefaultState_V, &
          NameVar_V, ScalarFirst_, ScalarLast_, WaveFirst_, WaveLast_
-    use BATL_size, ONLY: nI, nJ, nK, nG, MaxDim
+    use BATL_size, ONLY: nI, nJ, nK, MaxDim
 
     use ModProcMH, ONLY: iProc
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
+         UseHyperbolicDivb, &
          UseUserOuterBcs, TypeBc_I, time_accurate, time_loop, &
          BlkTest, ProcTest, iTest, jTest, kTest, DimTest
     use ModParallel, ONLY: NOBLK, NeiLev
@@ -201,7 +202,9 @@ contains
        case('float', 'outflow')
           call set_float_bc(1, nVarState)
           if(UseOutflowPressure .and. TypeBc == 'outflow') &
-               call  set_fixed_bc(p_,p_,(/ pOutflow /) )
+               call set_fixed_bc(p_, p_, (/pOutflow/) )
+          if(UseHyperbolicDivb) &
+               call set_fixed_bc(Hyp_, Hyp_, (/0.0/) )
           if(UseRadDiffusion) &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
 
