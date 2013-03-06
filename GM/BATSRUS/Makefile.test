@@ -173,7 +173,7 @@ test_shocktube:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_shocktube_compile:
-	./Config.pl -u=Default -e=MhdHyp -g=64,2,2,10,1
+	./Config.pl -u=Default -e=MhdHyp -g=64,4,1,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -186,7 +186,7 @@ test_shocktube_run:
 
 test_shocktube_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/cut_*t25.6*.out \
+		${TESTDIR}/RESULT/GM/1d_*t25.6*.out \
 		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out \
 		> test_shocktube.diff)
 	ls -l test_shocktube.diff

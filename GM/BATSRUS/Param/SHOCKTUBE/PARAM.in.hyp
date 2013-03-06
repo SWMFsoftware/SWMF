@@ -10,8 +10,22 @@ NONE
 #NORMALIZATION
 NONE
 
-#INCLUDE
-Param/SHOCKTUBE/grid64
+#CHECKGRIDSIZE
+64                              nI
+4                               nJ
+1                               nK
+4                               MinBlockALL
+
+#GRID
+4                               nRootBlockX
+1				nRootBlockY
+1				nRootBlockZ
+-128.				xMin	   
+ 128.				xMax	   
+-2.				yMin	   
+ 2.				yMax	   
+-0.5				zMin	   
+ 0.5				zMax
 
 Brio-Wu MHD shock tube problem rotated around Z axis
 #GAMMA
@@ -89,15 +103,9 @@ z=0 raw idl	PlotString
 -1		DnSavePlot
 10.0		DtSavePlot
 0.0		DxSavePlot
-cut raw idl_ascii	PlotString
+1d raw idl_ascii	PlotString
 -1              DnSavePlot
 10.0            DtSavePlot
--128.0		xMinCut
-+128.0		xMaxCut
--0.01		yMinCut
-0.01		yMaxCut
--0.01		zMinCut
-0.01		zMaxCut
 0.0             DxSavePlot
 
 The grid size is 256, so the final time corresponds to the usual 0.1
