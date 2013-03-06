@@ -919,7 +919,7 @@ contains
        VarsGhostFace_V(p_) = (NumDensIon + NumDensElectron)*Temperature
     end if
 
-    if(Hyp_>1) VarsGhostFace_V(Hyp_) = 0.0
+    if(Hyp_>1) VarsGhostFace_V(Hyp_) = VarsTrueFace_V(Hyp_)
 
   end subroutine user_set_face_boundary
   !============================================================================
