@@ -41,8 +41,8 @@
 ### PBS -lselect=16:ncpus=12:model=wes
 
 # To run in the development queue uncomment the following line,
-# select the Westmere nodes above and
-# set the maximum walltime to 2 hours below. 
+# and set the maximum walltime to 2 hours below. 
+# Note that self-submitting job scripts are not allowed anymore!
 ### PBS -q devel
 
 #PBS -l walltime=8:00:00
