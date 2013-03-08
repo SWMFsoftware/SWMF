@@ -542,115 +542,121 @@ contains
 
     ! Calculate the multipole based B0_D field at location Xyz_D.
 
-    use ModPhysics, ONLY:Bdp, chalf, costhetatilt, sinthetatilt, ctiny, &
-         rbody, qqp, oop 
+    ! Note that ThetaTilt is positive when the north magnetic pole
+    ! points AWAY from the sun.
+
+    use ModPhysics, ONLY: Bdp, CosThetaTilt, SinThetaTilt, cTiny, &
+         rBody, Qqp, Oop
     
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
     
     integer :: i, j, k, l
-    real :: R0, rr, rr_inv, rr2_inv, rr3_inv, rr5_inv, rr7_inv
-    real, dimension(3) :: xxt, bb
-    real :: Dp, temp1, temp2, Dipole_D(3)
-    
-    logical :: do_quadrupole, do_octupole
+    real :: x, y, r2, rInv, r2Inv, r3Inv, r5Inv, r7Inv
+    real :: XyzTilt_D(3), b_D(3), Bx, By
+    real :: Dp, Tmp1, Tmp2, Dipole_D(3)
+
+    logical :: DoQuadrupole, DoOctupole
     !-------------------------------------------------------------------------
     ! Determine radial distance and powers of it
+    r2 = sum(Xyz_D(1:nDim)**2)
 
-    R0 = sqrt(sum(Xyz_D(1:nDim)**2))
-    
     ! Avoid calculating B0 inside a critical radius = 1.E-6*Rbody
-    if(R0 <= cTiny*Rbody)then
+    if(r2 <= (cTiny*rBody)**2)then
        B0_D = 0.0
        RETURN
     end if
 
-    rr     = R0
-    rr_inv = 1.0/rr
-    rr2_inv=rr_inv*rr_inv
-    rr3_inv=rr_inv*rr2_inv
-    
     if(nDim == 2) then
        !
-       ! 2D magnetic dipole is implemented form preprint to JASTP of F.R. Cardoso et.al.'s paper
-       ! "2D MHD simulation of the magnetic dipole tilt and IMF influence on the magnetosphere"
-       !
-       B0_D(1) = Bdp*rr_inv**4*(-2.0*Xyz_D(1)*Xyz_D(2)*CosThetaTilt + (Xyz_D(1)**2-Xyz_D(2)**2)*SinThetaTilt)
-       B0_D(2) = Bdp*rr_inv**4*(+2.0*Xyz_D(1)*Xyz_D(2)*SinThetaTilt + (Xyz_D(1)**2-Xyz_D(2)**2)*CosThetaTilt)
+       ! 2D magnetic dipole is implemented from F.R. Cardoso et.al.'s paper
+       ! "2D MHD simulation of the magnetic dipole tilt and IMF influence 
+       ! on the magnetosphere"
+       ! except that they define the dipole pointing down, while this one 
+       ! points upward.
+
+       x = Xyz_D(1)
+       y = Xyz_D(2)
+       Dp = Bdp/r2**2
+
+       ! Dipole aligned with the +Y axis
+       Bx = Dp*2*x*y
+       By = Dp*(y**2 - x**2)
+
+       ! Rotate the field with -ThetaTilt around the Z axis
+       B0_D(1) =  CosThetaTilt*Bx + SinThetaTilt*By
+       B0_D(2) = -SinThetaTilt*Bx + CosThetaTilt*By
        B0_D(3) = 0.0
        RETURN
     end if
     
-    !\
+    rInv  = 1.0/sqrt(r2)
+    r2Inv = rInv**2
+    r3Inv = rInv*r2Inv
+    
     ! Compute dipole moment of the intrinsic magnetic field B0.
-    !/
 
-    Dipole_D = (/ -sinTHETAtilt*Bdp, 0.0, cosTHETAtilt*Bdp /) 
+    Dipole_D = (/ -SinThetaTilt*Bdp, 0.0, CosThetaTilt*Bdp /) 
 
-    Dp = 3*sum(Dipole_D*Xyz_D)*rr2_inv
+    Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
-    B0_D = (Dp*Xyz_D - Dipole_D)*rr3_inv
+    B0_D = (Dp*Xyz_D - Dipole_D)*r3Inv
 
-    do_quadrupole=any(abs(Qqp)>cTiny)
-    do_octupole  =any(abs(Oop)>cTiny)
+    DoQuadrupole=any(abs(Qqp)>cTiny)
+    DoOctupole  =any(abs(Oop)>cTiny)
 
-    if(do_quadrupole .or. do_octupole)then
-       !\
+    if(DoQuadrupole .or. DoOctupole)then
        ! Compute the xx's in the tilted reference frame aligned with
        ! the magnetic field.
-       !/
-       xxt(1) = cosTHETAtilt*Xyz_D(1) + sinTHETAtilt*Xyz_D(3)
-       xxt(2) = Xyz_D(2)
-       xxt(3)= -sinTHETAtilt*Xyz_D(1) + cosTHETAtilt*Xyz_D(3)
+       XyzTilt_D(1) = CosThetaTilt*Xyz_D(1) + SinThetaTilt*Xyz_D(3)
+       XyzTilt_D(2) = Xyz_D(2)
+       XyzTilt_D(3)= -SinThetaTilt*Xyz_D(1) + CosThetaTilt*Xyz_D(3)
 
-       rr5_inv = rr3_inv*rr2_inv
-       rr7_inv = rr5_inv*rr2_inv
+       r5Inv = r3Inv*r2Inv
+       r7Inv = r5Inv*r2Inv
     end if
 
-    if(do_quadrupole)then
-       !\
+    if(DoQuadrupole)then
        ! Compute quadrupole moment of the intrinsic 
        ! magnetic field B0.
-       !/
        do k=1,3
-          temp1 = 0.0
-          temp2 = 0.0
+          Tmp1 = 0.0
+          Tmp2 = 0.0
           do i=1,3
-             temp1 = temp1 + Qqp(k,i)*xxt(i)
+             Tmp1 = Tmp1 + Qqp(k,i)*XyzTilt_D(i)
              do j=1,3
-                temp2 = temp2 + Qqp(i,j)*xxt(i)*xxt(j)*xxt(k)
+                Tmp2 = Tmp2 + Qqp(i,j)*XyzTilt_D(i)*XyzTilt_D(j)*XyzTilt_D(k)
              end do
           end do
-          bb(k) = 5.0*cHalf*temp2*rr7_inv - temp1*rr5_inv
+          b_D(k) = 2.5*Tmp2*r7Inv - Tmp1*r5Inv
        end do
 
-       B0_D(1) = B0_D(1) + cosTHETAtilt*bb(1) - sinTHETAtilt*bb(3) 
-       B0_D(2) = B0_D(2) + bb(2)
-       B0_D(3) = B0_D(3) + sinTHETAtilt*bb(1) + cosTHETAtilt*bb(3)
+       B0_D(1) = B0_D(1) + CosThetaTilt*b_D(1) - SinThetaTilt*b_D(3) 
+       B0_D(2) = B0_D(2) + b_D(2)
+       B0_D(3) = B0_D(3) + SinThetaTilt*b_D(1) + CosThetaTilt*b_D(3)
     end if
 
-    if(do_octupole)then
-       !\
+    if(DoOctupole)then
        ! Compute octupole moment of the intrinsic 
        ! magnetic field B0.
-       !/
        do k = 1, 3
-          temp1 = 0.0
-          temp2 = 0.0
+          Tmp1 = 0.0
+          Tmp2 = 0.0
           do i = 1, 3
              do j = 1, 3
-                temp1 = temp1 + Oop(i,j,k)*xxt(i)*xxt(j)
+                Tmp1 = Tmp1 + Oop(i,j,k)*XyzTilt_D(i)*XyzTilt_D(j)
                 do l = 1, 3
-                   temp2 = temp2 + Oop(i,j,l)*xxt(i)*xxt(j)*xxt(l)*xxt(k)
+                   Tmp2 = Tmp2 + Oop(i,j,l) &
+                        *XyzTilt_D(i)*XyzTilt_D(j)*XyzTilt_D(l)*XyzTilt_D(k)
                 end do
              end do
           end do
-          bb(k) = 7.0*temp2*rr7_inv - 3.0*temp1*rr5_inv
+          b_D(k) = 7.0*Tmp2*r7Inv - 3.0*Tmp1*r5Inv
        end do
 
-       B0_D(1) = B0_D(1) + cosTHETAtilt*bb(1) - sinTHETAtilt*bb(3) 
-       B0_D(2) = B0_D(2) + bb(2)
-       B0_D(3) = B0_D(3) + sinTHETAtilt*bb(1) + cosTHETAtilt*bb(3)
+       B0_D(1) = B0_D(1) + CosThetaTilt*b_D(1) - SinThetaTilt*b_D(3) 
+       B0_D(2) = B0_D(2) + b_D(2)
+       B0_D(3) = B0_D(3) + SinThetaTilt*b_D(1) + CosThetaTilt*b_D(3)
     end if
 
   end subroutine get_b0_multipole
@@ -670,7 +676,7 @@ contains
     real, intent(in)   :: XyzIn_D(3)
     real, intent(inout):: B0_D(3)
 
-    real :: Xyz_D(3),R0,rr_inv,rr2_inv,rr3_inv,Dp
+    real :: Xyz_D(3),R0,rInv,r2Inv,r3Inv,Dp
     !--------------------------------------------------------------------------
     !\
     ! Determine normalized relative coordinates and radial distance from body 2
@@ -682,14 +688,14 @@ contains
     ! Avoid calculating B0 inside a critical normalized radius = cTiny
     if(R0 <= cTiny) RETURN
 
-    rr_inv = 1/R0
-    rr2_inv=rr_inv**2
-    rr3_inv=rr_inv*rr2_inv
+    rInv  = 1/R0
+    r2Inv = rInv**2
+    r3Inv = rInv*r2Inv
 
     ! Add dipole field of the second body
-    Dp = sum(BdpBody2_D*Xyz_D)*3*rr2_inv
+    Dp = sum(BdpBody2_D*Xyz_D)*3*r2Inv
 
-    B0_D = B0_D + (Dp*Xyz_D - BdpBody2_D)*rr3_inv
+    B0_D = B0_D + (Dp*Xyz_D - BdpBody2_D)*r3Inv
 
   end subroutine add_b0_body2
 
