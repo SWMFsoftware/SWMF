@@ -96,18 +96,18 @@ subroutine write_runtime_values()
      if (IsPlanetModified .and. (Planet_ /= NewPlanet_)) &
           String = '( default values were modified! )'
      call write_prefix; write(iUnitOUT,'(10X,A,A,2x,A)')  &
-          'Name:            ', trim(NamePlanet), trim(String)
+          'Name:           ', trim(NamePlanet), trim(String)
      StringFormat = '(10X,A16,ES13.5)'
      call write_prefix; write(iUnitOUT,StringFormat) &
           'Radius:         ', RadiusPlanet
      call write_prefix; write(iUnitOUT,StringFormat) &
           'Mass:           ', MassPlanet
-     call write_prefix; write(iUnitOUT,StringFormat) &
-          'Rotation Tilt:  ', TiltRotation
      String = ' Not Rotating'
      if (OmegaPlanet /= 0.0) write(String, '(ES13.5)') cTwoPi/OmegaPlanet
      call write_prefix; write(iUnitOUT,'(10X,A,A)')'Rotation Period:', &
           trim(String)
+     call write_prefix; write(iUnitOUT,StringFormat) &
+          'Rot. Tilt [deg]:', TiltRotation*cRadToDeg
      String = ' Not Orbiting'
      if (OmegaOrbit /= 0.0) write(String, '(ES13.5)') cTwoPi/OmegaOrbit
      call write_prefix; write(iUnitOUT,'(10X,A,A)')'Orbit Period:   ', &
@@ -134,7 +134,7 @@ subroutine write_runtime_values()
              ', BodyTDim:  ',BodyTDim_I(iFluid)
      end do
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
-          'Bdp:         ',Bdp      ,', Tilt:      ',ThetaTilt
+          'Bdp:         ',Bdp      ,', Tilt [deg]:',ThetaTilt*cRadToDeg
      if(UseRotatingBc)then
         call write_prefix; write(iUnitOut,'(10X,a)') 'Corotation is used'
      end if
