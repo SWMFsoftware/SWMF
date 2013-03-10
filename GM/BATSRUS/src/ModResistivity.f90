@@ -399,9 +399,9 @@ contains
              HeatExchange = gm1 * Eta_GB(i,j,k,iBlock) * &
                   3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
 
-             ! Point-implicit correction for stability: H' = H/(1+dt*H)
+             ! Point-implicit correction for stability: H' = H/(1+2*dt*H)
              HeatExchange = HeatExchange / &
-                  (1 + Cfl*HeatExchange*time_BLK(i,j,k,iBlock))
+                  (1 + 2.0*Cfl*HeatExchange*time_BLK(i,j,k,iBlock))
 
              HeatExchangePeP = HeatExchange &
                   *(State_VGB(P_,i,j,k,iBlock) &
