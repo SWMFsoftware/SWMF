@@ -76,6 +76,7 @@ OBJECTS = \
 	ModNodes.o\
 	ModParallel.o\
 	ModPartSteady.o\
+	ModPIC.o\
 	ModPhysics.o\
 	ModPointImplicit.o\
 	ModProcMH.o\
