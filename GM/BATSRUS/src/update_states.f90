@@ -6,6 +6,7 @@ subroutine update_states(iStage,iBlock)
   use ModUser, ONLY: user_update_states
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use BATL_lib, ONLY: Xyz_DGB
+  use ModPIC, ONLY: UsePic, pic_update_states
 
   implicit none
 
@@ -47,9 +48,10 @@ subroutine update_states(iStage,iBlock)
   if(UseUserUpdateStates)then
      call user_update_states(iStage,iBlock)
   else
-     call update_states_MHD(iStage,iBlock)
+     call update_states_mhd(iStage,iBlock)
   end if
 
+  if(UsePic) call pic_update_states(iBlock)
 
   if(index(test_string,'fixrho ')>0) &
        State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)=StateOld_VCB(Rho_,:,:,:,iBlock)
