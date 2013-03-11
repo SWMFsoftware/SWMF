@@ -221,7 +221,7 @@ contains
     use ModSize, ONLY: nDim, nI, nJ, nK
     use ModProcMH, ONLY: iProc
     use ModMain, ONLY: n_step
-    use BATL_lib, ONLY: Xyz_DGB
+    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
 
     use ModEnergy, ONLY: calc_energy_cell
     use ModPlotFile, ONLY: read_plot_file
@@ -264,9 +264,7 @@ contains
           iCouplePic = iCouplePic + 1
 
           ! Construct file name
-          !write(NameFile,'(a,i7.7,a)') trim(NameFilePic), iCouplePic, '.out'
-          !write(NameFile,'(a,i7.7,a)') trim(NameFilePic), n_step, '.out'
-          write(NameFile,'(a,a)') trim(NameFilePic), '.out'
+          write(NameFile,'(a,a)') trim(NameFilePic), '.dat'
 
           if(iProc == 0)write(*,*) NameSub,' trying to read ',NameFile
           ! Wait until file exists
@@ -339,19 +337,17 @@ contains
              end do
 
           end if
+          ! We reuse the same filename, so delete file after read  
+          call barrier_mpi
+          if(iProc ==0 ) then
+             open(UnitTmp_, FILE=NameFile, STATUS='OLD', IOSTAT=iError)
+             close(UnitTmp_,STATUS='DELETE')
+          end if
        end if
 
-
-       ! As we resuse the same filename, we will need to delete data we have read  
-       call barrier_mpi
-       if(iProc ==0 ) then
-          open(UnitTmp_, FILE=NameFile, STATUS='OLD', IOSTAT=iError)
-          close(UnitTmp_,STATUS='DELETE')
-       end if
-       
        ! Overwrite cells inside the PIC domain
-       if(  all(Xyz_DGB(1:nDim, 1, 1, 1,iBlock) <= CoordMaxPic_D) .and. &
-            all(Xyz_DGB(1:nDim,nI,nJ,nK,iBlock) >= CoordMinPic_D)) then
+       if(  all(Xyz_DGB(1:nDim, 1, 1, 1,iBlock) <= CoordMaxPic_D + 0.1*CellSize_DB(1:nDim,iBlock)) .and. &
+            all(Xyz_DGB(1:nDim,nI,nJ,nK,iBlock) >= CoordMinPic_D - 0.1*CellSize_DB(1:nDim,iBlock))) then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
              ! Normalized PIC grid coordinates (1...nCellPic_D)
