@@ -93,8 +93,9 @@ subroutine MH_set_parameters(TypeAction)
        read_modified_cooling, check_cooling_param, read_chromosphere
   use ModWaves, ONLY: read_waves_param, check_waves
   use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
-  use ModViscosity, ONLY: Viscosity_set_parameters, UseViscosity,&
-       Viscosity_init
+  use ModViscosity, ONLY: viscosity_set_parameters, UseViscosity, &
+       viscosity_init
+  use ModPIC, ONLY: pic_read_param
 
   implicit none
 
@@ -270,7 +271,7 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_equation
 
      if(UseResistivity)call init_mod_resistivity
-     if(UseViscosity) call Viscosity_init
+     if(UseViscosity) call viscosity_init
 
      if(UseMagnetogram)then
         if(i_line_command("#MAGNETOGRAM") > 0)then
@@ -506,13 +507,16 @@ subroutine MH_set_parameters(TypeAction)
      case("#HYPRE")
         call hypre_read_param
 
+     case("#PIC")
+        call pic_read_param(NameCommand)
+
+     case("#VISCOSITY", "#VISCOSITYREGION")
+        call viscosity_set_parameters(NameCommand)
+
      case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &
           "#RESISTIVITYREGION", "#RESISTIVEREGION",&
           '#MESSAGEPASSRESISTIVITY')
         call read_resistivity_param(NameCommand)
-
-     case("#VISCOSITY", "#VISCOSITYREGION")
-        call Viscosity_set_parameters(NameCommand)
 
      case("#HALLRESISTIVITY")
         call read_var('UseHallResist',  UseHallResist)
@@ -864,6 +868,11 @@ subroutine MH_set_parameters(TypeAction)
               plot_vars(ifile) = NamePrimitiveVar
               plot_pars(ifile)='g'
               if(rBody>0.0)plot_pars(ifile)='g rbody'
+           elseif(index(plot_string,'PIC')>0.or.index(plot_string,'pic')>0)then
+              plot_var='pic'
+              plot_dimensional(ifile) = .false.
+              plot_vars(ifile) = 'rho ux uy uz bx by bz p jx jy jz'
+              plot_pars(ifile)='dt tUnitPic'
            elseif(index(plot_string,'ALL')>0.or.index(plot_string,'all')>0)then
               ! This is intended for restart with a different dimensionality
               plot_var='all'
