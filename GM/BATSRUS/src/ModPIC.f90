@@ -65,6 +65,7 @@ contains
     end select
 
   end function pic_param
+
   !===========================================================================
 
   subroutine pic_update_states(iBlock)
@@ -74,7 +75,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModVarIndexes
 
-    use ModSize, ONLY: nDim, nI, nJ, nK
+    use ModSize, ONLY: nDim, MaxDim, nI, nJ, nK
     use ModProcMH, ONLY: iProc
     use ModMain, ONLY: n_step
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
@@ -88,7 +89,7 @@ contains
     integer, intent(in):: iBlock
 
     integer:: i, j, k, iError
-    real:: XyzNorm_D(nDim)
+    real:: XyzNorm_D(MaxDim)
 
     ! PIC coupling related local variables
     integer:: nStepLast = -1000
@@ -142,7 +143,7 @@ contains
              EXIT
           end do
           nXPic = nCellPic_D(1)
-          nYPic = nCellPic_D(2)
+          nYPic = nCellPic_D(min(nDim,2))
           allocate(StatePic_VC(nVarPic,nXPic,nYPic), StatePic_V(nVarPic))
           if(iProc == 0)write(*,*) NameSub, &
                ' allocated StatePic_VC with nXPic, nYPic=', nXPic, nYPic
@@ -208,11 +209,12 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
        ! Normalized PIC grid coordinates (1...nCellPic_D)
-       XyzNorm_D = 1 + (Xyz_DGB(1:nDim,i,j,k,iBlock) - CoordMinPic_D) &
+       XyzNorm_D(1:nDim) = 1 + (Xyz_DGB(1:nDim,i,j,k,iBlock) - CoordMinPic_D) &
             /DxyzPic_D
 
        ! Distance from edge
-       Dn = minval(min(nint(XyzNorm_D-1), nint(nCellPic_D-XyzNorm_D)))
+       Dn = minval( min(nint(XyzNorm_D(1:nDim) - 1),  &
+            nint(nCellPic_D - XyzNorm_D(1:nDim))) )
 
        ! Nothing to do within PIC ghost region
        if(Dn < nGhostPic) CYCLE
