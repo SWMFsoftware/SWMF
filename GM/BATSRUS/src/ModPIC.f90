@@ -11,13 +11,14 @@ module ModPIC
 
   public:: pic_read_param
   public:: pic_update_states
+  public:: pic_param
 
   logical, public:: UsePic = .false.
-  real, public:: TimeUnitPic = 1.0
 
   ! Local variables
   integer:: nGhostPic   = 3
   integer:: nOverlapPic = 0
+  real   :: TimeUnitPic = 1.0
   character(len=100):: NameFilePic = 'GM/IO2/ipic3d.dat'
 
 contains
@@ -43,6 +44,27 @@ contains
 
   end subroutine pic_read_param
 
+  !===========================================================================
+  real function pic_param(NameParam)
+
+    use ModProcMH, ONLY: iProc
+
+    character(len=*), intent(in):: NameParam
+
+    character(len=*), parameter:: NameSub = 'pic_param'
+    !------------------------------------------------------------------------
+    select case(NameParam)
+    case('tunitpic')
+       pic_param = TimeUnitPic
+    case('noverlap')
+       pic_param = nOverlapPic
+    case('nghostpic')
+       pic_param = nGhostPic
+    case default
+       if(iProc==0)call stop_mpi(NameSub//': unknown NameParam='//NameParam)
+    end select
+
+  end function pic_param
   !===========================================================================
 
   subroutine pic_update_states(iBlock)
