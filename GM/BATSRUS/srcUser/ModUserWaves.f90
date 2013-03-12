@@ -142,6 +142,7 @@ contains
        case('#USERPROBLEM')
           call read_var('UserProblem',UserProblem)
        case('#GEM')
+          UseUserICs  = .true.
           call read_var('Amplitude',Az)
        case('#GEMPERTURB')
           call read_var('GemEps',GemEps)
@@ -161,6 +162,7 @@ contains
           ! a Gaussian profile multiplied by smoother: 
           !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
           ! where d = k.(x-xCenter) and k = 1/lambda
+          UseUserICs  = .true.
           call read_var('iVar',      iVar)
           call read_var('Amplitude', Ampl_V(iVar))
           call read_var('LambdaX',   LambdaX)
@@ -188,6 +190,7 @@ contains
           UseUserOuterBcs = DoShockramp
 
        case('#WAVE','#WAVE2','#WAVE4', '#WAVE6')
+          UseUserICs  = .true.
           call read_var('iVar',iVar)
           call read_var('Width',Width)
           call read_var('Amplitude',Amplitude)
