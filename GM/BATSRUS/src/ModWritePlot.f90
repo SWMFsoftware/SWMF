@@ -61,6 +61,8 @@ subroutine write_plot_common(ifile)
   character (len=80) :: NameSnapshot, NameProc
   character (len=20) :: TypeForm
 
+  logical:: IsBinary
+
   ! Indices and coordinates
   integer :: iBLK,i,j,k,l,iVar, H5Index, iProcFound, iBlockFound
   integer :: ntheta, nphi
@@ -165,8 +167,11 @@ subroutine write_plot_common(ifile)
      write(NameProc, '(a,i6.6,a)') "_pe", iProc, "."//plot_form(ifile)
   end if
 
-  ! Determine if file is formatted or unformatted
-  if(save_binary .and. plot_form(ifile)=='idl')then
+  ! Determine if output file is formatted or unformatted
+  IsBinary = save_binary .and. plot_form(ifile)=='idl' &
+       .and. plot_type1 /= 'cut_pic'
+
+  if(IsBinary)then
      TypeForm = "unformatted"
   else
      TypeForm = "formatted"
@@ -503,8 +508,8 @@ subroutine write_plot_common(ifile)
            write(unit_tmp,'(10es13.5)')eqpar(1:neqpar)
            write(unit_tmp,'(a)')trim(allnames)
            write(unit_tmp,'(a)')trim(unitstr_IDL)
-           write(unit_tmp,'(l8,a)')save_binary,' save_binary'
-           if(save_binary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
+           write(unit_tmp,'(l8,a)') IsBinary,' save_binary'
+           if(IsBinary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
            write(unit_tmp,'(a)')TypeGeometry
            if(index(TypeGeometry,'genr') > 0)then
               write(Unit_tmp,'(i8,    " nRgen"  )') size(LogRGen_I)

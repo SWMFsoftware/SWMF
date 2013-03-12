@@ -34,7 +34,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   real :: xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
   real :: DxBlockOut
   real :: Plot_V(nPlotVarMax)
-
+  logical:: IsBinary
   real :: ySqueezed
 
   real, parameter:: cHalfMinusTiny = 0.5*(1.0 - cTiny)
@@ -49,6 +49,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      DoTest=.false.; DoTestMe=.false.
   end if
 
+  IsBinary = save_binary .and. plot_type1 /= 'cut_pic'
 
   if(index(test_string,'SAVEPLOTALL')>0)then
      ! Save all cells of block including ghost cells
@@ -79,7 +80,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
            y = Xyz_DGB(y_,i,j,k,iBlock)
            z = Xyz_DGB(z_,i,j,k,iBlock)
         end if
-        if(save_binary)then
+        if(IsBinary)then
            write(unit_tmp)DxBlockOut,x,y,z,PlotVar(i,j,k,1:nPlotVar)
         else
            do iVar=1,nPlotVar
@@ -173,7 +174,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
            y = y*No2Io_V(UnitX_)
            z = z*No2Io_V(UnitX_)
         end if
-        if(save_binary)then
+        if(IsBinary)then
            write(unit_tmp) DxBlockOut, x, y, z, PlotVar(i,j,k,1:nPlotVar)
         else
            do iVar=1,nPlotVar
@@ -230,7 +231,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
               do iVar=1,nPlotVar
                  Plot_V(iVar) = Restrict*sum(PlotVar(i:i2,j:j2,k:k2,iVar))
               end do
-              if(save_binary)then
+              if(IsBinary)then
                  write(unit_tmp)DxBlockOut,x,y,z,Plot_V(1:nPlotVar)
               else
                  do iVar=1,nPlotVar
