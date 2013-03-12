@@ -137,7 +137,7 @@ subroutine write_plot_common(ifile)
   if(.not.time_accurate)then
      ! Add time step information
      write(NameSnapshot,'(a,i7.7)') trim(NameSnapshot)//"_n", n_step
-  else
+  elseif(plot_type1 /= 'cut_pic')then
      if(IsPlotName_e)then
         ! Event date
         write(format,*)'(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)'
@@ -615,11 +615,13 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
   use ModNumConst, ONLY : cRadToDeg
   use ModResistivity, ONLY: Eta0Si
   use ModIO
+  use ModMain, ONLY: dt
+  use ModPIC, ONLY: pic_param
 
   implicit none
-  integer, intent(in)      :: iPlotFile,nEqPar
-  character*10, intent(in) :: NameEqPar_I(nEqPar)
-  real, intent(out)        :: EqPar_I(nEqPar)
+  integer,           intent(in) :: iPlotFile,nEqPar
+  character(len=10), intent(in) :: NameEqPar_I(nEqPar)
+  real,              intent(out):: EqPar_I(nEqPar)
 
   integer :: iPar
   !---------------------------------------------------------------------------
@@ -666,10 +668,12 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
         EqPar_I(iPar)=No2Io_V(UnitU_)
      case('mu')
         EqPar_I(iPar)=mu_los
-!!$
      case('R_ray')
         EqPar_I(iPar)=R_raytrace
-!!$
+     case('dt')
+        EqPar_I(iPar) = dt
+     case('tunitpic', 'noverlap', 'nghostpic')
+        EqPar_I(iPar) = pic_param(NameEqPar_I(iPar))
      case default
         EqPar_I(iPar)=-7777.
         if(iProc==0)write(*,*)'Error in set_eqpar: unknown eqparname=',&
