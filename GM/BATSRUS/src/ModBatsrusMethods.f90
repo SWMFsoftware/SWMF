@@ -369,7 +369,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModMessagePass, ONLY: exchange_messages
   use ModTimeStepControl, ONLY: set_global_timestep
   use ModB0, ONLY: DoUpdateB0, DtUpdateB0
-  use ModResistivity, ONLY: UseHeatExchange, calc_heat_exchange
+  use ModResistivity, ONLY: UseResistivity, UseHeatExchange, calc_heat_exchange
+  use ModMultiFluid, ONLY: UseMultiIon
 
   implicit none
 
@@ -423,7 +424,10 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseIM)call apply_im_pressure
 
   ! Point implicit heat exchange between electron and ions
-  if(UseElectronPressure .and. UseHeatExchange) call calc_heat_exchange
+  if(.not.UseMultiIon .and. UseResistivity .and. UseHeatExchange &
+       .and. UseElectronPressure)then
+     call calc_heat_exchange
+  end if
 
   if(UseAnisoPressure)call fix_anisotropy
 
