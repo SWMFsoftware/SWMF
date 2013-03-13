@@ -21,7 +21,7 @@ NLTE=\
 	ModLocalProperties.o \
 	ModRadiom.o \
 	ModZtf.o \
-	nlte.o \
+	nlte_igor.o \
 	radiom.o  
 
 OBJECTS=\

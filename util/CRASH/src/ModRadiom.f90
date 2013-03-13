@@ -94,7 +94,7 @@ contains
        end do
     end if
     !!!$
-    EoB = 1.0
+    EoB = 0.0
     !!!$
     at32s=aSaha*te*sqrt(te)/Ne
     tz=te

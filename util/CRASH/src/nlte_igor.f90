@@ -291,10 +291,10 @@ contains
     ! kbRO is the proportionnality factor in the code units (generally = Boltzmann cst * density)
     !   so  3/2* kbRo *Te  is the kinetic (translational) energy at Te
     if(1.01*zBar<zSmall)write(*,*)'Te,Tz,zBar=',Te,Tz,zBar
-    if(Te<0.01.or.Te>5e3.or.Tz<0.01.or.Tz>5e3.or.Tz<0.01*Te.or. Te<0.01*Tz.or.zBar<0)then
-       write(*,*)'Correct EOS:Tz=',Tz,'  Te=',Te,'  zBar=',zBar
-       call CON_stop('Stop')
-    end if
+    !if(Te<0.01.or.Te>5e3.or.Tz<0.01.or.Tz>5e3.or.Tz<0.01*Te.or. Te<0.01*Tz.or.zBar<0)then
+    !   write(*,*)'Correct EOS:Tz=',Tz,'  Te=',Te,'  zBar=',zBar
+    !   call CON_stop('Stop')
+    !end if
     !  small Zbar would yield diverging the "EEeff equ." (see correctEOS + EEdiff)
     !no	zp=(zbar+zion)
     zp=(max(zbar,Zsmall) + zion)
