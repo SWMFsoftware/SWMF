@@ -18,6 +18,7 @@ module ModResistivity
   public:: set_resistivity
   public:: mask_resistivity
   public:: calc_resistivity_source
+  public:: calc_heat_exchange
   public:: get_impl_resistivity_state
   public:: get_resistivity_rhs
   public:: add_jacobian_resistivity
@@ -25,13 +26,13 @@ module ModResistivity
 
   logical, public           :: UseResistivity   = .false.
   logical, public           :: UseResistiveFlux = .false.
+  logical, public           :: UseHeatExchange  = .true.
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
   real, public              :: Eta0, Eta0Si=0.0
 
   ! Local variables
   logical            :: UseJouleHeating  = .true.
-  logical            :: UseHeatExchange  = .true.
   logical            :: DoMessagePassResistivity = .false.
 
   real               :: EtaPerpSpitzerSi = 0.0
@@ -361,27 +362,23 @@ contains
   !===========================================================================
   subroutine calc_resistivity_source(iBlock)
 
-    use ModMain,       ONLY: Cfl, x_
+    use ModMain,       ONLY: x_
     use ModGeometry,   ONLY: true_cell
     use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB
     use ModCurrent,    ONLY: get_current
-    use ModPhysics,    ONLY: gm1, IonMassPerCharge
-    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_, Bz_
-    use ModAdvance,    ONLY: time_blk, State_VGB, Source_VC, &
+    use ModPhysics,    ONLY: gm1
+    use ModVarIndexes, ONLY: p_, Pe_, Ppar_, Bz_
+    use ModAdvance,    ONLY: State_VGB, Source_VC, &
          UseElectronPressure, UseAnisoPressure
 
     integer, intent(in):: iBlock
 
     ! Variables needed for Joule heating
-    real :: Current_D(3), JouleHeating, HeatExchange, &
-         HeatExchangePeP, HeatExchangePePpar
+    real :: Current_D(3), JouleHeating
 
     integer:: i, j, k
     !-----------------------------------------------------------------------
     JouleHeating = 0.0
-    HeatExchange = 0.0
-    HeatExchangePeP = 0.0
-    HeatExchangePePpar = 0.0
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -391,38 +388,10 @@ contains
           JouleHeating = gm1 * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
        end if
        if(UseElectronPressure) then
-          ! For single ion fluid the ion-electron collision results in a 
-          ! heat exchange term for the electron pressure 
-          ! See eq. 4.124c in Schunk and Nagy.
-          if(UseHeatExchange)then
-             ! Explicit heat exchange
-             HeatExchange = gm1 * Eta_GB(i,j,k,iBlock) * &
-                  3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
-
-             ! Point-implicit correction for stability: H' = H/(1+2*dt*H)
-             HeatExchange = HeatExchange / &
-                  (1 + 2.0*Cfl*HeatExchange*time_BLK(i,j,k,iBlock))
-
-             HeatExchangePeP = HeatExchange &
-                  *(State_VGB(P_,i,j,k,iBlock) &
-                  - State_VGB(Pe_,i,j,k,iBlock))
-          end if
-
-          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-               + JouleHeating + HeatExchangePeP
-
-          ! Heat exchange applies to ions too
-          Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) - HeatExchangePeP
-          if(UseAnisoPressure)then
-             ! Heat exchange for parallel ion pressure
-             HeatExchangePePpar = HeatExchange &
-                  *(State_VGB(Ppar_,i,j,k,iBlock) &
-                  - State_VGB(Pe_,i,j,k,iBlock))
-             Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
-                  - HeatExchangePePpar 
-          end if
+          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + JouleHeating
        else
           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
+
           ! the same amount of Joule heating applies on Ppar
           if(UseAnisoPressure) &
                Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k) + JouleHeating
@@ -440,6 +409,71 @@ contains
     end do; end do; end do
 
   end subroutine calc_resistivity_source
+
+  !============================================================================
+
+  subroutine calc_heat_exchange
+
+    use ModMain,       ONLY: Cfl, nBlock, Unused_B
+    use ModGeometry,   ONLY: true_cell
+    use ModPhysics,    ONLY: gm1, IonMassPerCharge
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
+    use ModAdvance,    ONLY: time_blk, State_VGB, &
+         UseElectronPressure, UseAnisoPressure
+
+    real :: DtLocal
+    real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
+    integer:: i, j, k, iBlock
+    !--------------------------------------------------------------------------
+    HeatExchange = 0.0
+    HeatExchangePeP = 0.0
+    HeatExchangePePpar = 0.0
+
+    call set_resistivity
+
+    do iBlock = 1, nBlock
+       if (Unused_B(iBlock)) CYCLE
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+          DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+
+          ! For single ion fluid the ion-electron collision results in a 
+          ! heat exchange term for the electron pressure 
+          ! See eq. 4.124c in Schunk and Nagy.
+
+          ! Explicit heat exchange
+          HeatExchange = gm1 * Eta_GB(i,j,k,iBlock) * &
+               3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
+
+          ! Point-implicit correction for stability: H' = H/(1+2*dt*H)
+          HeatExchange = HeatExchange / (1 + 2.0*DtLocal*HeatExchange)
+
+          HeatExchangePeP = HeatExchange &
+               *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
+
+          ! Heat exchange for parallel ion pressure
+          if(UseAnisoPressure)then
+             HeatExchangePePpar = HeatExchange &
+                  *(State_VGB(Ppar_,i,j,k,iBlock) &
+                  - State_VGB(Pe_,i,j,k,iBlock))
+
+             State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
+                  - DtLocal*HeatExchangePePpar
+          end if
+
+          ! Heat exchange for the ions
+          State_VGB(P_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock) &
+               - DtLocal*HeatExchangePeP
+
+          ! Heat exchange for the electrons
+          State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+               + DtLocal*HeatExchangePeP
+       end do; end do; end do
+    end do
+
+  end subroutine calc_heat_exchange
 
   !============================================================================
   ! Operator split, semi-implicit subroutines

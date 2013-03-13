@@ -357,7 +357,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
   use ModAmr, ONLY: DnAmr, DoAmr, automatic_refinement, do_amr
   use ModPhysics, ONLY : No2Si_V, UnitT_
-  use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure
+  use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, &
+       UseElectronPressure
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, UseSemiImplicit, n_prev
@@ -368,6 +369,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModMessagePass, ONLY: exchange_messages
   use ModTimeStepControl, ONLY: set_global_timestep
   use ModB0, ONLY: DoUpdateB0, DtUpdateB0
+  use ModResistivity, ONLY: UseHeatExchange, calc_heat_exchange
 
   implicit none
 
@@ -420,6 +422,9 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseIM)call apply_im_pressure
 
+  ! Point implicit heat exchange between electron and ions
+  if(UseElectronPressure .and. UseHeatExchange) call calc_heat_exchange
+
   if(UseAnisoPressure)call fix_anisotropy
 
   if(UseIE)call apply_iono_velocity
@@ -430,7 +435,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   !Calculate temperature at the end of time step
   if(Te0_>1)call update_te0
-  
+
   call exchange_messages
 
   if(UseSemiImplicit .and. (Dt>0 .or. .not.time_accurate)) &
