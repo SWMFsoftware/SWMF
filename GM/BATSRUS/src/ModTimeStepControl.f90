@@ -100,13 +100,11 @@ contains
          UseElectronPressure
     use ModGeometry, ONLY: true_cell, true_BLK, rMin_BLK
     use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
-         CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
-         UseTurbulentCascade
+         CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC
     use ModRadiativeCooling, ONLY: UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
-    use ModCalcSource, ONLY: get_tesi_c
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
-         UseChromosphereHeating
+         UseChromosphereHeating, get_tesi_c, TeSi_C
     use ModPhysics, ONLY: inv_gm1
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
@@ -119,7 +117,6 @@ contains
     real:: Vdt
 
     ! Variables for time step control due to loss terms
-    real :: TeSi_C(nI,nJ,nK)
     real :: Einternal, Source, Dt_loss, Coef
     !--------------------------------------------------------------------------
 
@@ -167,7 +164,7 @@ contains
 
     ! Time step restriction due to point-wise loss terms
     ! (only explicit source terms)
-    if(UseAlfvenWaveDissipation .or. UseTurbulentCascade .or.UseRadCooling)then
+    if(UseAlfvenWaveDissipation .or.UseRadCooling)then
        if(UseRadCooling .or. DoExtendTransitionRegion) &
             call get_tesi_c(iBlock, TeSi_C)
 
@@ -183,7 +180,7 @@ contains
           end if
        end if
 
-       if(UseAlfvenWaveDissipation .or. UseTurbulentCascade)then
+       if(UseAlfvenWaveDissipation)then
           if(DoExtendTransitionRegion)then
              ! Does not work together with UseChromosphereHeating
              do k = 1, nK; do j = 1, nJ; do i = 1, nI

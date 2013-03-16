@@ -16,7 +16,7 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModEnergy
   use ModWaves, ONLY: nWave, WaveFirst_,WaveLast_, &
        UseWavePressure, UseWavePressureLtd, UseAlfvenWaves, DoAdvectWaves, &
-       update_wave_group_advection, UseAlfvenWaveReflection
+       update_wave_group_advection, UseNonWkbAlfvenWaves
   use ModResistivity,   ONLY: UseResistivity, &
        calc_resistivity_source
   use ModFaceValue, ONLY: UseFaceIntegral4
@@ -175,7 +175,7 @@ subroutine update_states_MHD(iStage,iBlock)
      if(UseMultiIon .and. .not.UseSingleIonVelocity)then
         call update_point_implicit(iBlock, multi_ion_source_impl, &
              multi_ion_init_point_impl)
-     elseif(UseAlfvenWaveReflection)then
+     elseif(UseNonWkbAlfvenWaves)then
         call update_point_implicit(iBlock, turbulence_mixing, &
              turb_mixing_init_point_impl)
      elseif(UseUserSource) then

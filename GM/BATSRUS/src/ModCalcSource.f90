@@ -9,7 +9,6 @@ module ModCalcSource
 
   ! Public methods
   public :: calc_source
-  public :: get_tesi_c
 
 contains
 
@@ -32,15 +31,15 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C, &
-         UseAlfvenWaveReflection, UseTransverseTurbulence, SigmaD
+         UseNonWkbAlfvenWaves, UseTransverseTurbulence, SigmaD
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
-         QeByQtotal, QparByQtotal, UseTurbulentCascade, KarmanTaylorBeta, &
+         QeByQtotal, QparByQtotal, KarmanTaylorBeta, &
          UseScaledCorrelationLength, turbulence_mixing
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
-         UseChromosphereHeating
+         UseChromosphereHeating, get_tesi_c, TeSi_C
     use ModFaceFlux,      ONLY: Pe_G
     use ModHallResist,    ONLY: UseBiermannBattery, IonMassPerCharge_G
     use ModB0,            ONLY: set_b0_source, UseB0Source, UseCurlB0, &
@@ -73,9 +72,6 @@ contains
 
     ! For centrifugal force
     real :: Omega2
-
-    ! Electron temperature in K:
-    real :: TeSi_C(nI,nJ,nK)
 
     ! Viscosity
     real, parameter:: cTwoThirds = 2.0/3.0
@@ -230,7 +226,7 @@ contains
                *(GammaWave - 1)/Xyz_DGB(y_,i,j,k,iBlock)
        end do; end do; end do
 
-       if(UseAlfvenWaveReflection)then
+       if(UseNonWkbAlfvenWaves)then
           if(UseTransverseTurbulence)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -280,7 +276,7 @@ contains
                      sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))
              end do; end do; end do
           end if
-       end if ! UseAlfvenWaveReflection
+       end if ! UseNonWkbAlfvenWaves
     end if
 
     if(UseCoronalHeating .and. DoExtendTransitionRegion .or. UseRadCooling) &
@@ -297,7 +293,7 @@ contains
           end do; end do; end do
        end if
 
-       if(UseAlfvenWaveDissipation .or. UseTurbulentCascade)then
+       if(UseAlfvenWaveDissipation)then
           if(DoExtendTransitionRegion)then
              ! Does not work together with UseChromosphereHeating
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -326,7 +322,7 @@ contains
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1*QeByQtotal
              if(UseAnisoPressure) &
-                  Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) & 
+                  Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1*QparByQtotal
           else
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
@@ -1069,46 +1065,5 @@ contains
     end do; end do; end do
 
   end subroutine calc_divb
-
-  !============================================================================
-
-  subroutine get_tesi_c(iBlock, TeSi_C)
-
-    use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
-    use ModAdvance,    ONLY: State_VGB, p_, Pe_, Rho_
-    use ModSize,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, &
-         AverageIonCharge, PePerPtotal
-    use ModMultifluid, ONLY: MassIon_I
-    use ModUser,       ONLY: user_material_properties
-
-    integer, intent(in)  :: iBlock
-    real,    intent(out) :: TeSi_C(1:nI, 1:nJ, 1:nK)
-
-    integer:: i, j, k
-    !--------------------------------------------------------------------------
-    if(UseIdealEos)then
-       if(UseElectronPressure)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
-                  /State_VGB(Rho_,i,j,k,iBlock)
-          end do; end do; end do
-          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_ ) * &
-               MassIon_I(1)/AverageIonCharge
-       else
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             TeSi_C(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
-                  /State_VGB(Rho_,i,j,k,iBlock)
-          end do; end do; end do
-          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_ ) * &
-               MassIon_I(1)/AverageIonCharge * PePerPtotal
-       end if
-    else
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          call user_material_properties( &
-               State_VGB(:,i,j,k,iBlock), TeOut=TeSi_C(i,j,k))
-       end do; end do; end do
-    end if
-  end subroutine get_tesi_c
 
 end module ModCalcSource

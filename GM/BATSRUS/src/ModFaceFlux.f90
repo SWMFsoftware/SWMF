@@ -2360,7 +2360,7 @@ contains
          Flux_V(Energy_) = Flux_V(Energy_) - AlfvenSpeed &
               *sum(State_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_))
 
-         if(UseAlfvenWaveReflection)then
+         if(UseNonWkbAlfvenWaves)then
             if(UseTransverseTurbulence)then
                PwExtra = 0.5*Ew*SigmaD
                FullB2 = FullBx**2 + FullBy**2 + FullBz**2
@@ -2677,7 +2677,7 @@ contains
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure
-      use ModWaves,    ONLY: UseAlfvenWaveReflection, &
+      use ModWaves,    ONLY: UseNonWkbAlfvenWaves, &
            UseTransverseTurbulence, SigmaD
 
       real :: RhoU_D(3)
@@ -2725,7 +2725,7 @@ contains
                  StateRight_V(Ew_)/StateRight_V(Rho_))
          else
             Pw = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
-            if(UseAlfvenWaveReflection)then
+            if(UseNonWkbAlfvenWaves)then
                if(UseTransverseTurbulence)then
                   Pw = Pw*(1.0 + abs(SigmaD))
                   Sound2 = Sound2 + GammaWave*Pw*InvRho

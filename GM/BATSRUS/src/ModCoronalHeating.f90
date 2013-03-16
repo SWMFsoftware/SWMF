@@ -1,5 +1,116 @@
 !This code is a copyright protected software (c) 2002- University of Michigan
-!
+
+!==============================================================================
+module ModChromosphere
+  !Here all parameters relating to chromosphere and tansition region are
+  !collected
+
+  use ModSize, ONLY: nI, nJ, nK
+  implicit none
+  save
+  
+  !The use of short-scale exponential heat function with 
+  !the decay length = (30 m/K)*TeCromosphere SI
+  logical:: UseChromosphereHeating    = .false. 
+ 
+
+  real   :: NumberDensChromosphereCgs = 1.0e+12 ![cm^{-3}  
+  real   :: TeChromosphereSi = 1.0e4            ![K]
+
+  !\
+  ! TRANSITION REGION
+  !/
+  ! 
+  
+  logical :: DoExtendTransitionRegion = .false.
+
+  !The following variables are meaningful if
+  !DoExtendTransitionRegion=.true.
+
+  real :: TeModSi = 3.0E+5                !K
+  real :: DeltaTeModSi = 1E+4             !K
+
+  !The following variable is meaningful if 
+  !DoExtendTransitionRegion = .false. . Al long as
+  !the unextended transition region cannot be resolved
+  !we set the 'corona base temperature' equal to the
+  !temperature at the top of the transition region and 
+  !use the integral ralationship across the transition
+  !region to find the number density at the top of the
+  !transition region
+
+  real :: TeTransitionRegionTopSi = 4.0e+5 ![K]
+
+  ! Electron temperature in K:
+  real :: TeSi_C(nI,nJ,nK)
+
+contains
+  !================================
+
+  subroutine read_chromosphere
+    use ModReadParam, ONLY: read_var
+    !-------------------------------
+    call read_var('UseChromosphereHeating'   , UseChromosphereHeating)
+    call read_var('NumberDensChromosphereCgs', NumberDensChromosphereCgs)
+    call read_var('TeChromosphereSi',          TeChromosphereSi      )
+  end subroutine read_chromosphere
+
+  !============================================================================
+
+  real function extension_factor(TeSi)
+    real, intent(in) :: TeSi    !Dimensionless
+    
+    real :: FractionSpitzer
+    !--------------------------------
+    FractionSpitzer = 0.5*(1.0+tanh((TeSi-TeModSi)/DeltaTeModSi))
+    
+    extension_factor = FractionSpitzer + &
+         (1.0 - FractionSpitzer)*(TeModSi/TeSi)**2.5
+  end function extension_factor
+
+  !============================================================================
+
+  subroutine get_tesi_c(iBlock, TeSi_C)
+
+    use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
+    use ModAdvance,    ONLY: State_VGB, p_, Pe_, Rho_
+    use ModSize,       ONLY: nI, nJ, nK
+    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, &
+         AverageIonCharge, PePerPtotal
+    use ModMultifluid, ONLY: MassIon_I
+    use ModUser,       ONLY: user_material_properties
+
+    integer, intent(in)  :: iBlock
+    real,    intent(out) :: TeSi_C(1:nI, 1:nJ, 1:nK)
+
+    integer:: i, j, k
+    !--------------------------------------------------------------------------
+    if(UseIdealEos)then
+       if(UseElectronPressure)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)
+          end do; end do; end do
+          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_ ) * &
+               MassIon_I(1)/AverageIonCharge
+       else
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             TeSi_C(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
+                  /State_VGB(Rho_,i,j,k,iBlock)
+          end do; end do; end do
+          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_ ) * &
+               MassIon_I(1)/AverageIonCharge * PePerPtotal
+       end if
+    else
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call user_material_properties( &
+               State_VGB(:,i,j,k,iBlock), TeOut=TeSi_C(i,j,k))
+       end do; end do; end do
+    end if
+  end subroutine get_tesi_c
+
+end module ModChromosphere
+!==============================================================================
 !These parameters may be used to parameterize
 !the coronal heating in terms of waves
 module ModAlfvenWaveHeating
@@ -831,13 +942,16 @@ contains
     
   end subroutine get_photosphere_field
 end module ModUnsignedFluxModel
-!=========================================!Master module!======================!
+!=========================================!Master module!======================
 module ModCoronalHeating
+
   use ModUnsignedFluxModel
   use ModNonWKBHeating
   use ModMain,      ONLY: nBLK, nI, nJ, nK
   use ModReadParam, ONLY: lStringLine
   use ModVarIndexes,ONLY: WaveFirst_, WaveLast_
+  use ModWaves,     ONLY: UseNonWkbAlfvenWaves
+
   implicit none
   SAVE
 
@@ -861,19 +975,19 @@ module ModCoronalHeating
   real :: ArHeatB0 = 30.0
   real :: DeltaArHeatB0 = 5.0
   real :: ArHeatFactorCgs = 4.03E-05  ! cgs energy density = [ergs cm-3 s-1]
-  
+
   ! open closed heat is if you want to have different heating
   ! between open and closed field lines. The routines for the WSA
   ! model in the ExpansionFactors module essentially do this, so will
   ! need to call them
   logical :: DoOpenClosedHeat = .false.
   real :: WsaT0 = 3.50
-  
+
   !\
   ! Abbett's model
   !/
-  
-  
+
+
   ! Normalization constant for Abbett Model
   real :: HeatNormalization = 1.0
 
@@ -889,11 +1003,13 @@ module ModCoronalHeating
   real :: KarmanTaylorAlpha = 1.0
   real :: KarmanTaylorBeta = 1.0
 
+  logical :: IsNewBlockAlfven = .true.
+
   ! long scale height heating (Ch = Coronal Hole)
   logical :: DoChHeat = .false.
   real :: HeatChCgs = 5.0e-7
   real :: DecayLengthCh = 0.7
-  
+
   !Arrays for the calculated heat function and dissipated wave energy
   real :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
@@ -910,6 +1026,7 @@ contains
 
     use ModReadParam,  ONLY: read_var
     use ModVarIndexes, ONLY: Lperp_
+    use ModWaves,      ONLY: UseTransverseTurbulence
 
     character(len=*), intent(in):: NameCommand
     !----------------------------------------------------------------------
@@ -931,7 +1048,7 @@ contains
           UseExponentialHeating = .true.
           call read_var('DecayLengthExp', DecayLengthExp)
           call read_var('HeatingAmplitudeCgs', HeatingAmplitudeCgs)
-          
+
        case('unsignedflux','Abbett')
           UseUnsignedFluxModel = .true.
           call read_var('DecayLength', DecayLength)
@@ -943,14 +1060,23 @@ contains
           call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           call read_var('Crefl', Crefl)
        case('turbulentcascade')
+          UseAlfvenWaveDissipation = .true.
           UseTurbulentCascade = .true.
-          call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-          call read_var('KarmanTaylorAlpha', KarmanTaylorAlpha)
-          if(Lperp_ > 1)then
-             call read_var('UseScaledCorrelationLength', &
-                  UseScaledCorrelationLength)
-             if(.not. UseScaledCorrelationLength) &
-                  call read_var('KarmanTaylorBeta', KarmanTaylorBeta)
+          call read_var('UseNonWkbAlfvenWaves', UseNonWkbAlfvenWaves)
+          if(UseNonWkbAlfvenWaves)then
+             call stop_mpi('The non-WKB Alfven wave approximation is ' &
+                  // 'not yet fully implemented')
+             call read_var('UseTransverseTurbulence', UseTransverseTurbulence)
+             call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
+             call read_var('KarmanTaylorAlpha', KarmanTaylorAlpha)
+             if(Lperp_ > 1)then
+                call read_var('UseScaledCorrelationLength', &
+                     UseScaledCorrelationLength)
+                if(.not. UseScaledCorrelationLength) &
+                     call read_var('KarmanTaylorBeta', KarmanTaylorBeta)
+             end if
+          else
+             call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
@@ -991,12 +1117,11 @@ contains
     DoInit = .false.
 
     if(UseExponentialHeating)then
-        HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
-             *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+       HeatingAmplitude =  HeatingAmplitudeCgs*0.1 &
+            *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     end if
 
-    if(UseAlfvenWaveDissipation .or. &
-         UseTurbulentCascade.and.UseScaledCorrelationLength) &
+    if(UseAlfvenWaveDissipation .and. UseScaledCorrelationLength) &
          LperpTimesSqrtB = LperpTimesSqrtBSi &
          *Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
 
@@ -1017,7 +1142,7 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: CoronalHeating
-    
+
     real :: HeatCh
 
     ! parameters for open/closed. This uses WSA model to determine if 
@@ -1031,46 +1156,46 @@ contains
     real :: UmaxIfOpen = 300.0
     real :: Weight
     real :: B_D(3)
-    
+
     ! local variables for ArHeating (Active Region Heating)
     real :: FractionB, Bcell
 
     real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
     real :: WaveDissipation_V(WaveFirst_:WaveLast_)
     !--------------------------------------------------------------------------
-    
+
     if(UseB0)then
        B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(x_:z_,i,j,k,iBlock)
     else
        B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
     end if
 
-    if(UseTurbulentCascade)then
+    if(UseAlfvenWaveDissipation)then
 
-       call turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
-            CoronalHeating)
-
-    elseif(UseAlfvenWaveDissipation)then
-
-       call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-            WaveDissipation_V, CoronalHeating)
+       if(UseTurbulentCascade)then
+          call turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
+               CoronalHeating)
+       else
+          call calc_alfven_wave_dissipation(i, j, k, iBlock, &
+               WaveDissipation_V, CoronalHeating)
+       end if
 
     elseif(UseUnsignedFluxModel)then
-       
+
        call get_coronal_heating(i, j, k, iBlock, CoronalHeating)
        CoronalHeating = CoronalHeating * HeatNormalization
-       
+
     elseif(UseExponentialHeating)then
-    
+
        CoronalHeating = HeatingAmplitude &
             *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
-            
+
     elseif(UseCranmerHeating)then
 
        RSI   = r_BLK(i,j,k,iBlock) * No2Si_V(UnitX_)
        RhoSI = State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitRho_)
        UMagSI= sqrt( sum( State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2 ) )/&
-                          State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitU_)
+            State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitU_)
        BmagSI= sqrt( sum( B_D**2 ) ) * No2Si_V(UnitB_)
        if(.not.DoOpenClosedHeat)then
           call cranmer_heating_function(&
@@ -1091,12 +1216,12 @@ contains
                QHeatSI=QHeatSI,&
                IsFullReflection = UFinal< UMinIfOpen)
        end if
-          
+
        CoronalHeating = QHeatSI *  Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     else
        CoronalHeating = 0.0
     end if
-  
+
     if(DoOpenClosedHeat.and.(.not.UseCranmerHeating))then
        ! If field is less than 1.05 times the minimum speed, mark as closed
        ! Interpolate between 1.05 and 1.10 for smoothness
@@ -1111,7 +1236,7 @@ contains
        else 
           Weight = (UFinal - UminIfOpen)/(UmaxIfOpen - UminIfOpen)
        end if
-       
+
        CoronalHeating = (1.0 - Weight) * CoronalHeating
     end if
 
@@ -1124,17 +1249,17 @@ contains
     if(UseExponentialHeating.and.UseArComponent) then
 
        Bcell = No2Io_V(UnitB_) * sqrt( sum( B_D**2 ) )
-          
+
        FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
        CoronalHeating = max(CoronalHeating, & 
-                 FractionB * ArHeatFactorCgs * Bcell &
-                 * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
+            FractionB * ArHeatFactorCgs * Bcell &
+            * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
 
     endif
-                       
+
   end subroutine get_cell_heating
   !============================================================================
-  
+
   subroutine get_block_heating(iBlock)
 
     use ModGeometry,       ONLY: r_BLK
@@ -1162,55 +1287,56 @@ contains
     real :: UmaxIfOpen = 300.0
     real :: Weight
     real :: B_D(3)
-    
+
     ! local variables for ArHeating (Active Region Heating)
     real :: FractionB, Bcell
 
     real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
     !--------------------------------------------------------------------------
 
-    if(UseTurbulentCascade)then
+    if(UseAlfvenWaveDissipation)then
 
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          call turbulent_cascade(i, j, k, iBlock, &
-               WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k))
-       end do; end do; end do
-
-    elseif(UseAlfvenWaveDissipation)then
-
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          call calc_alfven_wave_dissipation(i, j, k, iBlock, &
-               WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k))
-       end do; end do; end do
+       if(UseTurbulentCascade)then
+          IsNewBlockAlfven = .true.
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             call turbulent_cascade(i, j, k, iBlock, &
+                  WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k))
+          end do; end do; end do
+       else
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             call calc_alfven_wave_dissipation(i, j, k, iBlock, &
+                  WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k))
+          end do; end do; end do
+       end if
 
     elseif(UseUnsignedFluxModel)then
 
        do k=1,nK;do j=1,nJ; do i=1,nI
-       
+
           call get_coronal_heating(i, j, k, iBlock, CoronalHeating_C(i,j,k))
           CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) * HeatNormalization
 
        end do; end do; end do
-       
+
     elseif(UseExponentialHeating)then
        do k=1,nK;do j=1,nJ; do i=1,nI
 
           CoronalHeating_C(i,j,k) = HeatingAmplitude &
-            *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
+               *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthExp)
 
        end do; end do; end do
-            
+
     elseif(UseCranmerHeating)then
        UminIfOpen = UMin*1.05
 
        do k=1,nK;do j=1,nJ; do i=1,nI
-          
+
           if(UseB0)then
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(x_:z_,i,j,k,iBlock)
           else
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
           end if
-          
+
           RSI   = r_BLK(i,j,k,iBlock) * No2Si_V(UnitX_)
           RhoSI = State_VGB(Rho_,i,j,k,iBlock) * No2Si_V(UnitRho_)
           UMagSI= sqrt( sum( State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2 ) )/&
@@ -1224,7 +1350,7 @@ contains
                   BMagSI=BMagSI,&
                   QHeatSI=QHeatSI)
           else
-             
+
              call get_bernoulli_integral( &
                   Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock), UFinal)
              call cranmer_heating_function(&
@@ -1235,14 +1361,14 @@ contains
                   QHeatSI=QHeatSI,&
                   IsFullReflection = UFinal< UMinIfOpen)
           end if
-          
+
           CoronalHeating_C(i,j,k) = QHeatSI *  Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
-          
+
        end do; end do; end do
     else
        CoronalHeating_C = 0.0
     end if
-  
+
     if(DoOpenClosedHeat.and.(.not.UseCranmerHeating))then
        ! If field is less than 1.05 times the minimum speed, mark as closed
        ! Interpolate between 1.05 and 1.10 for smoothness
@@ -1258,7 +1384,7 @@ contains
           else 
              Weight = (UFinal - UminIfOpen)/(UmaxIfOpen - UminIfOpen)
           end if
-       
+
           CoronalHeating_C(i,j,k) = (1.0 - Weight) * CoronalHeating_C(i,j,k)
        end do; end do; end do
     end if
@@ -1267,28 +1393,28 @@ contains
        HeatCh = HeatChCgs * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
        do k=1,nK; do j=1,nJ; do i=1,nI
           CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k) + HeatCh &
-            *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
+               *exp(- max(r_BLK(i,j,k,iBlock) - 1.0, 0.0) / DecayLengthCh)
        end do; end do; end do
     end if
-    
+
     if(UseExponentialHeating.and.UseArComponent) then
        do k=1,nK; do j=1,nJ; do i=1,nI
-          
+
           if(UseB0)then
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(x_:z_,i,j,k,iBlock)
           else
              B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
           end if
-          
+
           Bcell = No2Io_V(UnitB_) * sqrt( sum( B_D**2 ) )
-          
+
           FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
           CoronalHeating_C(i,j,k) = max(CoronalHeating_C(i,j,k), & 
-            FractionB * ArHeatFactorCgs * Bcell &
-            * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
+               FractionB * ArHeatFactorCgs * Bcell &
+               * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
        end do; end do; end do
     endif
-    
+
   end subroutine get_block_heating
   !============================================================================
 
@@ -1333,8 +1459,13 @@ contains
   subroutine turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
        CoronalHeating)
 
+    use BATL_lib, ONLY: IsCartesianGrid, x_, y_, z_, &
+         CellSize_DB, FaceNormal_DDFB, CellVolume_GB
+    use BATL_size, ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+         nI, j0_, nJp1_, k0_, nKp1_
     use ModAdvance, ONLY: State_VGB
     use ModB0, ONLY: B0_DGB
+    use ModFaceGradient, ONLY: set_block_field2
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, Lperp_
 
@@ -1342,32 +1473,52 @@ contains
     real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), &
          CoronalHeating
 
+    integer, parameter :: iRho = 1, iBx = 2, iBz = 4
+
     real :: FullB_D(3), FullB, Coef
+    real :: EwavePlus, EwaveMinus, ReflectionPerLperp
+
+    integer :: ii, jj, kk
+    real :: GradAlfven_D(nDim)
+    ! Array needed for second order interpolation of ghost cells
+    real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
+    real, save :: Alfven_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
+
+    character(len=*), parameter :: &
+         NameSub = 'ModCoronalHeating::turbulent_cascade'
     !--------------------------------------------------------------------------
 
     ! Low-frequency cascade due to small-scale nonlinearities
 
-    if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
-       ! Note that Lperp is multiplied with the density
-       Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
-            *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
-    else
-       if(UseB0)then
-          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    if(UseNonWkbAlfvenWaves)then
+
+       if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
+          ! Note that Lperp is multiplied with the density
+          Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
+               *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
        else
-          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          if(UseB0)then
+             FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          else
+             FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          end if
+          FullB = sqrt(sum(FullB_D**2))
+
+          Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock)) &
+               *2.0*KarmanTaylorAlpha/LperpTimesSqrtB
        end if
-       FullB = sqrt(sum(FullB_D**2))
 
-       Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock)) &
-            *2.0*KarmanTaylorAlpha/LperpTimesSqrtB
+       WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock)&
+            *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))
+
+       WaveDissipation_V(WaveLast_) = Coef*State_VGB(WaveLast_,i,j,k,iBlock) &
+            *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock))
+
+    else
+
+       call stop_mpi(NameSub//'Wave dissipation to be committed')
+
     end if
-
-    WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock) &
-         *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))
-
-    WaveDissipation_V(WaveLast_) = Coef*State_VGB(WaveLast_,i,j,k,iBlock) &
-         *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock))
 
     CoronalHeating = sum(WaveDissipation_V)
 
@@ -1717,5 +1868,5 @@ contains
     IsPointImplMatrixSet = .true.
 
   end subroutine turb_mixing_init_point_impl
-  
+
 end module ModCoronalHeating
