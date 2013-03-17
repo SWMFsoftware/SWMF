@@ -50,6 +50,7 @@ OBJECTS = \
 	ModCalcSource.o\
 	ModCellBoundary.o\
 	ModConserveFlux.o\
+	ModChromosphere.o \
 	ModCoronalHeating.o \
 	ModFaceBoundary.o \
 	ModIonoVelocity.o\
