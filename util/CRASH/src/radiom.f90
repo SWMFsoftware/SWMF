@@ -105,6 +105,11 @@ contains
     do n=2,nbOut+1
        Eout(n)=Eout(n-1)*rdu
     end do
+ 
+    first_ctrb(1:nbOut+1)=0		!! handling 		<<<<<<<
+    last_ctrb(0t:nbOu)=0		!! some exceptions 	<<<<<<<
+
+ 
     ! 
     nOut=0
     nbContrib=0
@@ -142,6 +147,7 @@ contains
        if(.not.b2)then	! input segment overlaps 
           if(nOut.ge.nbOut) exit LOOP10	! more than 1 output segment
           nOut=nOut+1
+	  first_ctrb(nOut)=nIn		!!		 <<<<<<<
           du=Eout(nOut+1)-Eout(nOut)
           goto 2
        end if
@@ -187,6 +193,8 @@ contains
        goto 110
     elseif(Ufirst.gt.Umax) then
        gotoLTE=.true.
+       n1=nbContrib			!! 	<<<<<<<
+       n2=nbContrib-1			!! 	<<<<<<<
        r=one
        goto 110
     end if
@@ -213,6 +221,8 @@ contains
     n1=max(n1,0)
     n2=max(n1,min(n2,nbOut))
     ! 
+    if(n1.gt.1) SPout(1:n1-1)=SPin(1)		!! 	<<<<<<<  
+    SPout(max(n1,1):n2)=0			!! 	<<<<<<< 
     if(nBef.eq.0 .and. nAft.eq.0) then
        n1=ctrb_to1(n1+1)
        n3=ctrb_to2(n2)				! 111004
@@ -229,6 +239,11 @@ contains
        n1=1
        n2=nbContrib
     end if
+
+    if(nBef.gt.1) then			!! 	<<<<<<
+       SPout(1:nBef)=1			!! 	<<<<<<
+       Uout(1:nBef)=Eout(1:nBef)/te 		!! 	<<<<<<
+    endif					!! 	<<<<<<
  
     ! 
     nOut=0
@@ -243,6 +258,11 @@ contains
        end do
        nOut=nOut+nBef
        if(nout.gt.mxout) goto 1100
+    else				!! <<<<<<
+       u=Umin				!! <<<<<<
+       Uout(1)=u			!! <<<<<<
+       r=SPin(1)			!! <<<<<<
+       SPout(1)=r			!! <<<<<<
     end if
     ! 
     do n=nOut+1,min(mxOut,nbOut)
@@ -293,11 +313,17 @@ contains
     !! ?? que doit-on faire quand  nOut=0 ???
 
     if(nAft.ne.0) then
+       r=zero							!!  <<<<<<
+       c=one							!!  <<<<<<
+       if(nOut.gt.0) r=Spout(nOut)				!!  <<<<<<
+       if(nOut.gt.1) c=min(one,Spout(nOut+1)/Spout(nOut))	!!  <<<<<<
        do n=1,nAft
           if(nOut.ge.nbOut) exit		! 110806
           u=u*rdu
           nOut=nOut+1
-          SPout(nOut)=zero
+!n          SPout(nOut)=zero
+	  SPout(nOut)=r						!!  <<<<<<
+	  r=r*c							!!  <<<<<<
           Uout(nOut+1)=u
        end do
     end if

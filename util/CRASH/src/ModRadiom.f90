@@ -94,7 +94,7 @@ contains
        end do
     end if
     !!!$
-    EoB = 0.0
+    EoB = 1.0
     !!!$
     at32s=aSaha*te*sqrt(te)/Ne
     tz=te
@@ -104,6 +104,10 @@ contains
     call xubar0(te,ne,EoB ,ubar)	! no more a function
     QJ=log(at32s)
     tz=te*ubar/QJ
+    if(tz<0.9*Te.or.tz>1.1*Te)then
+       write(*,*)'Te=',Te,'  Tz=',Tz, 'Ne=',Ne
+       call CON_stop('Te/=Tz')
+    end if
     if(present(RhoDTzDRho))then
        if(lgVar==0.0) lgVar=log(roVarP)			
        ne1=ne*roVarP				
