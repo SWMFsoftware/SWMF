@@ -105,7 +105,7 @@ contains
 
     ! variables for NLTE EOS_inv
 
-    real,parameter :: tol_EE=1d-5	! convergence param. for zbrentEE (linear function)
+    real,parameter :: tol_EE=1d-4	! convergence param. for zbrentEE (linear function)
     logical :: inverse,direct,oneT,twoT
 
 

@@ -1,4 +1,3 @@
-!
 !  code will use :
 !
 ! initialisation:
@@ -106,8 +105,8 @@ contains
        Eout(n)=Eout(n-1)*rdu
     end do
  
-    first_ctrb(1:nbOut+1)=0		!! handling 		<<<<<<<
-    last_ctrb(0t:nbOu)=0		!! some exceptions 	<<<<<<<
+!    first_ctrb(1:nbOut+1)=0		!! handling 		<<<<<<<
+!    last_ctrb(0t:nbOu)=0		!! some exceptions 	<<<<<<<
 
  
     ! 
@@ -147,7 +146,7 @@ contains
        if(.not.b2)then	! input segment overlaps 
           if(nOut.ge.nbOut) exit LOOP10	! more than 1 output segment
           nOut=nOut+1
-	  first_ctrb(nOut)=nIn		!!		 <<<<<<<
+	!  first_ctrb(nOut)=nIn		!!		 <<<<<<<
           du=Eout(nOut+1)-Eout(nOut)
           goto 2
        end if
