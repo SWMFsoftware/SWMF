@@ -249,3 +249,15 @@ subroutine user_set_resistivity(iBlock, Eta_G)
   call user_sub(iBlock, Eta_G)
 
 end subroutine user_set_resistivity
+!=====================================================================
+subroutine user_material_te(State_V, TeOut)
+
+  use ModVarIndexes, ONLY: nVar
+  use ModUser, ONLY: user_material_properties
+
+  real, intent(in) :: State_V(nVar)
+  real, intent(out) :: TeOut
+  !-------------------------------------------------------------------
+  call user_material_properties(State_V, TeOut=TeOut)
+
+end subroutine user_material_te

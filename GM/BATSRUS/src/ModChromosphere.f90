@@ -78,7 +78,6 @@ contains
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, &
          AverageIonCharge, PePerPtotal
     use ModMultifluid, ONLY: MassIon_I
-    use ModUser,       ONLY: user_material_properties
 
     integer, intent(in)  :: iBlock
     real,    intent(out) :: TeSi_C(1:nI, 1:nJ, 1:nK)
@@ -103,8 +102,7 @@ contains
        end if
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          call user_material_properties( &
-               State_VGB(:,i,j,k,iBlock), TeOut=TeSi_C(i,j,k))
+          call user_material_te(State_VGB(:,i,j,k,iBlock), TeSi_C(i,j,k))
        end do; end do; end do
     end if
   end subroutine get_tesi_c
