@@ -7,17 +7,16 @@ module ModPwGrid
   save
 
   character (len=3) :: NamePwCoord = '???'
-  integer, parameter :: nCoord=2
+  integer, parameter :: nCoord=3
 
   ! StateGm_VI stores the PW variables that occur in GM too
   ! These are interpolated then to the GM grid
   real, allocatable :: CoordXyzPw_DI(:,:), CoordXyPw_DI(:,:), StateGm_VI(:,:),&
-       CoordXyPw1_DI(:,:), CoordXyPw2_DI(:,:), &
+       CoordXyzPw1_DI(:,:), CoordXyzPw2_DI(:,:), &
        StateGm1_VI(:,:),StateGm2_VI(:,:)
   
-  integer, allocatable :: iNodeTriangle_II(:, :),iNodeTriangle1_II(:,:), &
-       iNodeTriangle2_II(:,:)
-  
+  integer, allocatable :: list1_I(:),lptr1_I(:), lend1_I(:),&
+       list2_I(:),lptr2_I(:), lend2_I(:)  
 
   integer, parameter :: nOuterPoint=12
   real,    parameter :: dThetaOuter=5.0*cDegToRad

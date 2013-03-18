@@ -1,17 +1,18 @@
 subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
   use CON_coupler, ONLY: PW_, Grid_C
-  use ModMain, ONLY: x_, y_, TypeCoordSystem, Time_Simulation
+  use ModMain, ONLY: x_, y_,z_, TypeCoordSystem, Time_Simulation
   use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, &
        SpeciesLast_, NameVar_V
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
   use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, rCurrents
   use ModPwGrid
   use ModNumConst, ONLY: cTwoPi,cHalfPi
-  use ModTriangulate,ONLY:calc_triangulation
+  use ModTriangulateSpherical,ONLY:trmesh, trplot
   use CON_axes, ONLY: transform_matrix
   use ModCoordTransform, ONLY: dir_to_xyz
   use CON_planet_field,  ONLY: map_planet_field
+  use ModIoUnit, ONLY: UnitTmp_
 
   implicit none
   character (len=*),parameter :: NameSub='GM_put_from_pw'
@@ -26,9 +27,11 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
   integer :: i, iLine, iHemisphere, j
   real    :: GmPw_DD(3,3), Theta, Phi, XyzPw_D(3), &
-       SinThetaOuter1,SinThetaOuter2,tmp1_array(nFieldLine)
+       SinThetaOuter1,SinThetaOuter2,CosThetaOuter1,CosThetaOuter2,&
+       tmp1_array(nFieldLine)
   integer :: Tmp_array(nFieldLine)
   logical :: DoTest, DoTestMe
+  integer :: iError=0 !error counter for triangulation subroutine
   !----------------------------------------------------------------------------
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -133,12 +136,24 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
         iUGmFirst   = 2
         iUGmLast    = 2
      end if
-
-     allocate(StateGm1_VI(1:iUGmLast, nPoint), CoordXyPw1_DI(nCoord, nPoint), &
-          iNodeTriangle1_II(3, 2*nPoint1))
-     allocate(StateGm2_VI(1:iUGmLast, nPoint), CoordXyPw2_DI(nCoord, nPoint))
+     
+     allocate(StateGm1_VI(1:iUGmLast, nPoint), CoordXyzPw1_DI(nCoord, nPoint), &
+          list1_I(6*(nPoint1-2)),lptr1_I(6*(nPoint1-2)), lend1_I(nPoint1))
+     allocate(StateGm2_VI(1:iUGmLast, nPoint), CoordXyzPw2_DI(nCoord, nPoint))
+     !Initialize Arrays to zero
+     StateGm1_VI(:,:) =0.0
+     StateGm2_VI(:,:) =0.0
+     CoordXyzPw1_DI(:,:)=0.0
+     CoordXyzPw2_DI(:,:)=0.0
+     list1_I(:)=0
+     !list2_I(:)=0
+     lend1_I(:)=0
+     !lend2_I(:)=0
+     lptr1_I(:)=0
+     !lptr2_I(:)=0
      if(nLinePw2 /=0)then
-        allocate(iNodeTriangle2_II(3, 2*nPoint2))
+        allocate(list2_I(6*(nPoint1-2)),lptr2_I(6*(nPoint1-2)), &
+             lend2_I(nPoint1))
      end if
   end if
 
@@ -151,15 +166,19 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   ! Convert to X, Y on a unit sphere (this will be used for triangulation)
 
   where(Buffer_VI(Theta_,:) > cHalfPi)
-     CoordXyPw2_DI(x_,1:nFieldline) =  &
+     CoordXyzPw2_DI(x_,1:nFieldline) =  &
           sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
-     CoordXyPw2_DI(y_,1:nFieldline) =  &
+     CoordXyzPw2_DI(y_,1:nFieldline) =  &
           sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
+     CoordXyzPw2_DI(z_,1:nFieldline) =  &
+          cos(Buffer_VI(Theta_,:)) 
   elsewhere
-     CoordXyPw1_DI(x_,1:nFieldline) =  &
+     CoordXyzPw1_DI(x_,1:nFieldline) =  &
           sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
-     CoordXyPw1_DI(y_,1:nFieldline) =  &
+     CoordXyzPw1_DI(y_,1:nFieldline) =  &
           sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
+     CoordXyzPw1_DI(z_,1:nFieldline) =  &
+          cos(Buffer_VI(Theta_,:)) 
   end where
 
   if(UseMultiIon)then
@@ -251,46 +270,82 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
      tmp1_array = Buffer_VI(Theta_,:)
   end where
   SinThetaOuter2 = sin(minval(tmp1_array)-dThetaOuter)
+  CosThetaOuter2 = cos(minval(tmp1_array)-dThetaOuter)
 
   tmp1_array = 0.0
   where(Buffer_VI(Theta_,:)<cHalfPi)
      tmp1_array = Buffer_VI(Theta_,:)
   end where  
   SinThetaOuter1 = sin(maxval(tmp1_array)+dThetaOuter)
+  CosThetaOuter1 = cos(maxval(tmp1_array)+dThetaOuter)
 
   do i = 1, nOuterPoint
-     CoordXyPw1_DI(x_,nLinePw1+i) = &
+     CoordXyzPw1_DI(x_,nLinePw1+i) = &
           SinThetaOuter1 * cos(i*cTwoPi/nOuterPoint)
-     CoordXyPw1_DI(y_,nLinePw1+i) = &
+     CoordXyzPw1_DI(y_,nLinePw1+i) = &
           SinThetaOuter1 * sin(i*cTwoPi/nOuterPoint)
-
+     CoordXyzPw1_DI(z_,nLinePw1+i) = CosThetaOuter1
      if(nLinePw2 /=0)then
-        CoordXyPw2_DI(x_,nLinePw1+nLinePw2+i) = &
+        CoordXyzPw2_DI(x_,nLinePw1+nLinePw2+i) = &
              SinThetaOuter2 * cos(i*cTwoPi/nOuterPoint)
-        CoordXyPw2_DI(y_,nLinePw1+nLinePw2+i) = &
+        CoordXyzPw2_DI(y_,nLinePw1+nLinePw2+i) = &
              SinThetaOuter2 * sin(i*cTwoPi/nOuterPoint)
+        CoordXyzPw2_DI(z_,nLinePw1+nLinePw2+i) = CosThetaOuter2
      end if
   end do
 
-  call calc_triangulation(nPoint1, CoordXyPw1_DI(:,1:nPoint1), &
-       iNodeTriangle1_II, nTriangle1)
-  
+
+  !
+!  Create the triangulation.
+!
+  call trmesh ( nPoint1, CoordXyzPw1_DI(x_,1:nPoint1), &
+       CoordXyzPW1_DI(y_,1:nPoint1), CoordXyzPW1_DI(z_,1:nPoint1), &
+       list1_I, lptr1_I, lend1_I, iError )
+  if ( iError == -2 ) then
+     write(*,*)NameSub, &
+          ' WARNING: Error in TRMESH, First three nodes are collinear'
+     call CON_stop(NameSub,' Problem With Triangulation')
+  else if ( iError > 0 ) then
+     write(*,*)NameSub, &
+          ' ERROR: Error in TRMESH, Duplicate nodes encountered'
+     call CON_stop(NameSub,' Problem With Triangulation')
+  end if
+!
+
+
   if(nLinePw2 /=0)then
-     call calc_triangulation(nPoint2, CoordXyPw2_DI(:,nLinePw1+1:nLinePw1+nPoint2),&
-          iNodeTriangle2_II, nTriangle2)
+     call trmesh ( nPoint2, CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2), &
+          CoordXyzPW2_DI(y_,nLinePw1+1:nLinePw1+nPoint2), &
+          CoordXyzPW2_DI(z_,nLinePw1+1:nLinePw1+nPoint2), &
+          list2_I, lptr2_I, lend2_I, iError )
+     if ( iError == -2 ) then
+        write(*,*)NameSub, &
+             ' WARNING: Error in TRMESH, First three nodes are collinear'
+        call CON_stop(NameSub,' Problem With Triangulation')
+     else if ( iError > 0 ) then
+        write(*,*)NameSub, &
+             ' ERROR: Error in TRMESH, Duplicate nodes encountered'
+        call CON_stop(NameSub,' Problem With Triangulation')
+     end if
   end if
 
   if(DoTestMe)then
      write(*,*)NameSub,': nVarPw, nLinePw, nSpeciesPw=',&
           nVarPw, nLinePw2, nSpeciesPw
      write(*,*)NameSub,': nPoint2, nTriangle2=',nPoint2, nTriangle2
-     write(*,*)NameSub,': CoordXyPw_DI'
+     write(*,*)NameSub,': CoordXyzPw_DI'
      do i=nLinePw1+1,nLinePw1+nPoint2
-        write(*,*) i, CoordXyPw2_DI(:,i)
+        write(*,*) i-nLinePw1, CoordXyzPw2_DI(:,i)
      end do
      do i=1,nPoint1
-        write(*,*) i, CoordXyPw1_DI(:,i)
+        write(*,*) i, CoordXyzPw1_DI(:,i)
      end do
+     write(*,*) NameSub,': Writing plot of triangulation'
+     open ( UnitTmp_, file = 'TestTriangulation.eps' )
+     call trplot ( UnitTmp_, 7.5, 90.0, 0.0, 90.0, nPoint1, CoordXyzPw1_DI(x_,1:nPoint1), &
+          CoordXyzPw1_DI(y_,1:nPoint1), CoordXyzPw1_DI(z_,1:nPoint1), list1_I, lptr1_I, &
+          lend1_I, 'test1 triangulation',.true., iError )
+     close(UnitTmp_)
   end if
 
 
@@ -309,7 +364,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   use ModMultiFluid,     ONLY: UseMultiIon, nIonFluid, &
        iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
   use ModPwGrid
-  use ModTriangulate,    ONLY: find_triangle
+  use ModTriangulateSpherical, ONLY: find_triangle_sph
   use ModPhysics,        ONLY: No2Io_V, UnitU_, UnitRho_
   use ModB0,             ONLY: get_b0
   use CON_planet_field,  ONLY: map_planet_field
@@ -326,7 +381,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   ! A short time relative to the rotation period of Earth
   real, parameter :: dTimeMax = 600.0 ! [s]
-  real    :: B0_D(3), XyzPw_D(3), Xyz_D(3), Xy_D(2)
+  real    :: B0_D(3), XyzPw_D(3), Xyz_D(3), XyzTmp_D(3)
   integer :: iPoint, iHemisphere
   logical :: DoInitialize = .true.
 
@@ -335,8 +390,10 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   character (len=*), parameter :: NameSub = 'read_pw_buffer'
   
-  logical, parameter :: DoTestMe = .false.
+  logical :: DoTest, DoTestMe
   !--------------------------------------------------------
+
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
   if(DoInitialize)then
      DoInitialize = .false.
@@ -387,23 +444,39 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   call map_planet_field(Time_Simulation, XyzPw_D, 'SMG NORM', &
        1.0, Xyz_D, iHemisphere)
 
-  ! Project to unit sphere and calculate X, Y coordinates
-  ! Disregard the 3rd coordinate (Z) that determines the hemisphere !!!
-  Xy_D(1:2) = Xyz_D(1:2)
 
-  !Find triangle containing point Xy_D
+  !Find triangle containing point Xyz_D
+  Area1=0
+  Area2=0
+  Area3=0
 
+!  write(*,*) 'Calling find_triangle_sph with Xyz_D =', Xyz_D
+!  write(*,*) 'nLinePw2', nLinePw2
   if(Xyz_D(3) < 0..and. nLinePw2 /=0)then
-     call find_triangle(&
-          nPoint2, nTriangle2, Xy_D, CoordXyPw2_DI(:,nLinePw1+1:nLinePw1+nPoint2), &
-          iNodeTriangle2_II(:,1:nTriangle2), &
-          iNode1, iNode2, iNode3, Area1, Area2, Area3, IsTriangleFound)
+     call find_triangle_sph(Xyz_D, nPoint2, &
+          CoordXyzPw2_DI(:,nLinePw1+1:nLinePw1+nPoint2), &
+          list2_I, lptr2_I, lend2_I, Area1, Area2, Area3, IsTriangleFound, &
+          iNode1,iNode2,iNode3)
   else
-     call find_triangle(&
-          nPoint1, nTriangle1, Xy_D, CoordXyPw1_DI(:,1:nPoint1), &
-          iNodeTriangle1_II(:,1:nTriangle1), &
-          iNode1, iNode2, iNode3, Area1, Area2, Area3, IsTriangleFound)
+     ! Get weights if in northern hemisphere. 
+     ! If point is in southern, but no PwLines in south, then flip sign of z
+     XyzTmp_D(1)=Xyz_D(1)
+     XyzTmp_D(2)=Xyz_D(2)
+     XyzTmp_D(3)=abs(Xyz_D(3))
+     call find_triangle_sph(XyzTmp_D, nPoint1, &
+          CoordXyzPw1_DI(:,1:nPoint1), &
+          list1_I, lptr1_I, lend1_I, Area1, Area2, Area3, IsTriangleFound,&
+          iNode1,iNode2,iNode3)
   end if
+
+!  write(*,*) '!!!!!!! Point X, Y, Z =', Xyz_D, 'IsTriangleFound=', IsTriangleFound
+!  write(*,*) '!!!! Areas:', Area1, Area2,Area3
+!  write(*,*) '!!!! sum area=', Area1+Area2+Area3
+!  write(*,*) '!!!! Test Position Vector Length', sqrt(sum(Xyz_D(:)**2))
+!  write(*,*) '  '
+  
+!  call con_stop('')
+
   ! Point is not covered: leave the input state variables alone
   if (.not.IsTriangleFound) RETURN
 
@@ -468,17 +541,25 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   end if
 
-  deallocate(StateGm_VI)
-
   if(DoTestMe)then
      write(*,*)NameSub,' finished with'
      write(*,*)'CoordIn_D     =', CoordIn_D
      write(*,*)'XyzPw_D       =', XyzPw_D
-     write(*,*)'Xy_D          =', Xy_D
+     write(*,*)'XyzPw_D       =', Xyz_D
      write(*,*)'Area1,2,3     =', Area1, Area2, Area3
+     write(*,*)'sum(Area1,2,3)     =', Area1 + Area2 + Area3
      write(*,*)'State_V(Rho_) =', State_V(Rho_)*No2Io_V(UnitRho_)
      write(*,*)'B0_D          =', B0_D
      write(*,*)'State_V(Ux:Uz)=', State_V(Ux_:Uz_)*No2Io_V(UnitU_)
+     write(*,*)'Density at iNode1, iNode2, and iNode3=', &
+          StateGm_VI(iRhoGmFirst, iNode1)*No2Io_V(UnitRho_), &
+          StateGm_VI(iRhoGmFirst, iNode2)*No2Io_V(UnitRho_),&
+          StateGm_VI(iRhoGmFirst, iNode3)*No2Io_V(UnitRho_)
+
+
+     write(*,*)'iNode1, iNode2, iNode3 = ', iNode1, iNode2, iNode3
   end if
+
+  deallocate(StateGm_VI)
 
 end subroutine read_pw_buffer

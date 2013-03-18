@@ -40,6 +40,7 @@ MODULES = \
 	ModSort.o\
 	ModTimeConvert.o\
 	ModTriangulate.o\
+	ModTriangulateSpherical.o\
 	ModUtilities.o\
 	CON_axes.o\
 	CON_geopack.o\
