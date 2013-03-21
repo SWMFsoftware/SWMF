@@ -51,7 +51,7 @@ module ModUser
 
   character (len=20)  :: UserProblem='wave'
 
-  real                :: Width, Amplitude, Phase, CenterX, CenterY, CenterZ, &
+  real                :: Width, Amplitude, Phase, &
        LambdaX, LambdaY, LambdaZ
   real,dimension(nVar):: Width_V=0.0, Ampl_V=0.0, Phase_V=0.0, &
        x_V=0.0, y_V=0.0, z_V=0.0, KxWave_V=0.0, KyWave_V=0.0, KzWave_V=0.0
@@ -85,10 +85,8 @@ module ModUser
   logical   :: DoCalcAnalytic = .false., DoInitSphere = .false.
 
   ! Variables for the generalized power profile
-  integer                  :: iPowerProfile_V(nVar) = 0
-  integer                  :: PowerX = 0, PowerY = 0, PowerZ = 0
-  integer, dimension(nVar) :: PowerX_V = 0, PowerY_V = 0, PowerZ_V = 0
-  real                     :: CoeffX = 0.0, CoeffY = 0.0, CoeffZ = 0.0
+  logical                  :: IsPowerProfile_V(nVar) = .false.
+  integer, dimension(nVar) :: nPowerX_V = 1, nPowerY_V = 1, nPowerZ_V = 1
   real, dimension(nVar)    :: CoeffX_V = 0.0, CoeffY_V = 0.0, CoeffZ_V = 0.0
 
   ! For updating selected variables 
@@ -254,22 +252,17 @@ contains
        case('#POWERPROFILE')
           ! Read parameters for a power profile. Power is a postive or
           ! negative integer or zero (linear profile).
-          call read_var('iVar',      iVar)
-          call read_var('CoeffX',  CoeffX)
-          call read_var('PowerX',  PowerX)
-          call read_var('CoeffY',  CoeffY)
-          call read_var('PowerY',  PowerY)
-          call read_var('CoeffZ',  CoeffZ)
-          call read_var('PowerZ',  PowerZ)          
+          UseUserICs  = .true.
+          call read_var('iVar',    iVar)
+          call read_var('CoeffX',  CoeffX_V(iVar))
+          call read_var('nPowerX', nPowerX_V(iVar))
+          if(nDim > 1) call read_var('CoeffY',  CoeffY_V(iVar))
+          if(nDim > 1) call read_var('nPowerY', nPowerY_V(iVar))
+          if(nDim > 2) call read_var('CoeffZ',  CoeffZ_V(iVar))
+          if(nDim > 2) call read_var('nPowerZ', nPowerZ_V(iVar))
 
           UserProblem = 'PowerProfile'
-          iPowerProfile_V(iVar) = 1
-          CoeffX_V(iVar) = CoeffX
-          CoeffY_V(iVar) = CoeffY
-          CoeffZ_V(iVar) = CoeffZ
-          PowerX_V(iVar) = PowerX
-          PowerY_V(iVar) = PowerY
-          PowerZ_V(iVar) = PowerZ
+          IsPowerProfile_V(iVar) = .true.
           
        case('#PIPEFLOW')
           call read_var('DoPipeFlow',DoPipeFlow)
@@ -309,7 +302,6 @@ contains
     use ModNumconst, ONLY: cHalfPi, cPi, cTwoPi, cDegToRad
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nI,nJ,nK
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
-    use ModViscosity,ONLY: viscosity_factor
     use BATL_lib,    ONLY: nDim, CoordMax_D, CoordMin_D, IsPeriodic_D, &
          CellSize_DB
     use ModInitialState, ONLY: get_initial_state
@@ -673,15 +665,14 @@ contains
        ! Generalized power profile: 
        ! state = shockleftstate + c1*x^p1 + c2*y^p2 + c3*z^p3
        do iVar = 1, nVar
-          if(iPowerProfile_V(iVar) == 1)then
-             ! set up the power profile for iVar
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                State_VGB(iVar,i,j,k,iBlock) = ShockLeftState_V(iVar) &
-                     + CoeffX_V(iVar)*Xyz_DGB(x_,i,j,k,iBlock)**PowerX_V(iVar) &
-                     + CoeffY_V(iVar)*Xyz_DGB(y_,i,j,k,iBlock)**PowerY_V(iVar) &
-                     + CoeffZ_V(iVar)*Xyz_DGB(z_,i,j,k,iBlock)**PowerZ_V(iVar)
-             end do; end do; end do
-          end if
+          if( .not.IsPowerProfile_V(iVar)) CYCLE
+          ! set up the power profile for iVar
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             State_VGB(iVar,i,j,k,iBlock) = ShockLeftState_V(iVar) &
+                  + CoeffX_V(iVar)*Xyz_DGB(x_,i,j,k,iBlock)**nPowerX_V(iVar) &
+                  + CoeffY_V(iVar)*Xyz_DGB(y_,i,j,k,iBlock)**nPowerY_V(iVar) &
+                  + CoeffZ_V(iVar)*Xyz_DGB(z_,i,j,k,iBlock)**nPowerZ_V(iVar)
+          end do; end do; end do
        end do
 
     case('PipeFlow')
@@ -725,7 +716,7 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModMain,       ONLY: nI, nJ, nK, TypeCoordSystem
+    use ModMain,       ONLY: TypeCoordSystem
     use ModPhysics,    ONLY: NameTecUnit_V, NameIdlUnit_V, No2Io_V, No2Si_V, &
          Si2No_V, UnitRho_, UnitP_, UnitU_,  UnitT_, Gamma0
     use ModAdvance,    ONLY: State_VGB
@@ -827,7 +818,7 @@ contains
       use ModConst,      ONLY: RotationPeriodSun
       use ModAdvance,    ONLY: State_VGB
       use ModVarIndexes, ONLY: Rho_
-      use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitX_, UnitU_,UnitT_
+      use ModPhysics,    ONLY: Si2No_V,UnitT_
 
       integer,intent(in)  :: iBlock
       real,dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK),intent(out):: &
@@ -994,7 +985,6 @@ contains
     use ModVarIndexes
     use ModProcMH,   ONLY: iProc
     use ModEnergy,   ONLY: calc_energy_ghost
-    use ModViscosity,ONLY: viscosity_factor
     use BATL_lib,    ONLY: CoordMax_D, CoordMin_D
 
     integer, intent(in) :: iBlock, iSide
@@ -1250,8 +1240,7 @@ contains
   !============================================================================
 
   subroutine user_update_states(iStage, iBlock)
-    use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
-         State_VGB
+    use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC
     use ModVarIndexes
 
     integer,intent(in)::iStage,iBlock
