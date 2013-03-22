@@ -189,12 +189,12 @@ contains
 
        case('#WAVE','#WAVE2','#WAVE4', '#WAVE6')
           UseUserICs  = .true.
-          call read_var('iVar',iVar)
-          call read_var('Width',Width)
-          call read_var('Amplitude',Amplitude)
-          call read_var('LambdaX',LambdaX)          
-          call read_var('LambdaY',LambdaY)
-          call read_var('LambdaZ',LambdaZ)
+          call read_var('iVar', iVar)
+          call read_var('Width', Width)
+          call read_var('Amplitude', Amplitude)
+          call read_var('LambdaX', LambdaX)
+          call read_var('LambdaY', LambdaY)
+          call read_var('LambdaZ', LambdaZ)
           call read_var('Phase',Phase)
           Width_V(iVar) = Width
           Ampl_V(iVar)  = Amplitude
@@ -210,8 +210,7 @@ contains
              iPower_V(iVar) = 1
           end if
 
-          !if the wavelength is smaller than 0.0, 
-          !then the wave number is set to0
+          ! if the wavelength is smaller than 0, then the wave number is set to 0
           KxWave_V(iVar) = max(0.0, cTwoPi/LambdaX)          
           KyWave_V(iVar) = max(0.0, cTwoPi/LambdaY)          
           KzWave_V(iVar) = max(0.0, cTwoPi/LambdaZ)
@@ -465,6 +464,7 @@ contains
           DoInitialize=.false.
 
           if(DoIntegrateWave)then
+             ! Calculate the finite volume integral of the wave over the cell
              do iVar = 1, nVar
                 if(iPower_V(iVar) == 1)then
                    if(KxWave_V(iVar) > 0) then
@@ -494,6 +494,18 @@ contains
           end if
 
           if(ShockSlope /= 0.0)then
+
+             ! Make sure that the X and Y components of the momentum and
+             ! magnetic field variables have consistent wave parameters
+             if(Width_V(RhoUx_) > 0.0 .and. Width_V(RhoUy_) == 0.0) &
+                  call copy_wave(RhoUx_, RhoUy_)
+             if(Width_V(RhoUy_) > 0.0 .and. Width_V(RhoUx_) == 0.0) &
+                  call copy_wave(RhoUy_, RhoUx_)
+             if(Width_V(Bx_)    > 0.0 .and. Width_V(By_)    == 0.0) &
+                  call copy_wave(Bx_,    By_)
+             if(Width_V(By_)    > 0.0 .and. Width_V(Bx_)    == 0.0) &
+                  call copy_wave(By_,    Bx_)
+
              CosSlope = 1.0/sqrt(1+ShockSlope**2)
              SinSlope = ShockSlope*CosSlope
 
@@ -710,7 +722,21 @@ contains
     end select
 
   end subroutine user_set_ics
+  !=====================================================================
+  subroutine copy_wave(iVar, jVar)
 
+    ! Copy wave parameters from iVar to jVar for rotated problems
+
+    integer, intent(in):: iVar, jVar
+    !------------------------------------------------------------------
+    Width_V(jVar)  = Width_V(iVar)
+    KxWave_V(jVar) = KxWave_V(iVar)
+    KyWave_V(jVar) = KyWave_V(iVar)
+    KzWave_V(jVar) = KzWave_V(iVar)
+    Phase_V(iVar)  = Phase_V(jVar) 
+    iPower_V(jVar) = iPower_V(iVar)
+
+  end subroutine copy_wave
   !=====================================================================
   subroutine user_set_plot_var(iBlock,NameVar,IsDimensional,&
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
