@@ -68,6 +68,11 @@ module ModHeatConduction
   real, allocatable :: PointCoef_CB(:,:,:,:)
   real, allocatable :: PointImpl_VCB(:,:,:,:,:)
 
+  ! radiative cooling
+  logical :: DoRadCooling = .false.
+  real, allocatable :: RadCool_CB(:,:,:,:)
+  real, allocatable :: RadCoolDeriv_CB(:,:,:,:)
+
 contains
 
   !============================================================================
@@ -144,6 +149,7 @@ contains
     use ModMultiFluid, ONLY: MassIon_I
     use ModNumConst,   ONLY: cTwoPi
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
+    use ModRadiativeCooling, ONLY: UseRadCooling
     use ModResistivity,  ONLY: UseResistivity, UseHeatExchange
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_, UnitB_, ElectronTemperatureRatio, AverageIonCharge
@@ -244,6 +250,14 @@ contains
           if(UseIdealEos .and. .not.DoUserHeatConduction &
                .and. .not.UseResistivity) &
                call stop_mpi(NameSub//': set #RESISTIVITY command')
+       end if
+
+       if(UseRadCooling)then
+          DoRadCooling = UseRadCooling
+          UseRadCooling = .false.
+          allocate( &
+               RadCool_CB(nI,nJ,nK,MaxBlock), &
+               RadCoolDeriv_CB(nI,nJ,nK,MaxBlock) )
        end if
 
        iTeImpl = 1
@@ -573,9 +587,10 @@ contains
     use ModMain,         ONLY: nI, nJ, nK, MaxImplBlk, Dt, time_accurate, Cfl
     use ModMultiFluid,   ONLY: MassIon_I
     use ModNumConst,     ONLY: i_DD
-    use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_,&
-         UnitN_, UnitT_, inv_gm1, IonMassPerCharge
+    use ModPhysics,      ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
+         UnitEnergyDens_, UnitN_, UnitT_, inv_gm1, IonMassPerCharge
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
+    use ModRadiativeCooling, ONLY: get_radiative_cooling
     use ModResistivity,  ONLY: Eta_GB, set_resistivity
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_
@@ -591,8 +606,11 @@ contains
     real :: DtLocal
     real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
     real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
+    real :: TeEpsilonSi = 1e-3, TeEpsilon, RadCoolEpsilon
     logical :: IsNewBlockTe
     !--------------------------------------------------------------------------
+
+    TeEpsilon = TeEpsilonSi*Si2No_V(UnitTemperature_)
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
@@ -638,6 +656,9 @@ contains
                 TeTiCoef = Eta_GB(i,j,k,iBlock)*Natomic &
                      *3*State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2
              end if
+
+             TeSi = StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) &
+                  *No2Si_V(UnitTemperature_)
           else
 
              if(UseElectronPressure .and. .not.DoUserHeatConduction)then
@@ -668,6 +689,15 @@ contains
                 PointImpl_VCB(2,i,j,k,iBlock) = &
                      State_VGB(Ppar_,i,j,k,iBlock)/Natomic
              end if
+          end if
+
+          if(DoRadCooling)then
+             call get_radiative_cooling(i, j, k, iBlock, TeSi, &
+                  RadCool_CB(i,j,k,iBlock))
+             call get_radiative_cooling(i, j, k, iBlock, TeSi+TeEpsilonSi, &
+                  RadCoolEpsilon)
+             RadCoolDeriv_CB(i,j,k,iBlock) = &
+                  (RadCoolEpsilon - RadCool_CB(i,j,k,iBlock))/TeEpsilon
           end if
        end do; end do; end do
 
@@ -880,6 +910,19 @@ contains
        end do; end do; end do
     end do
 
+    if(DoRadCooling)then
+       if(IsLinear)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
+                  + RadCoolDeriv_CB(i,j,k,iBlock)*StateImpl_VG(iTeImpl,i,j,k)
+          end do; end do; end do
+       else
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) + RadCool_CB(i,j,k,iBlock)
+          end do; end do; end do
+       end if
+    end if
+
     ! Point implicit source terms due to electron-ion energy exchange
     if(UseElectronPressure)then
        if(IsLinear)then
@@ -923,6 +966,13 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                - PointCoef_CB(i,j,k,iBlock)
+       end do; end do; end do
+    end if
+
+    if(DoRadCooling)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
+               + RadCoolDeriv_CB(i,j,k,iBlock)
        end do; end do; end do
     end if
 

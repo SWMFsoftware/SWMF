@@ -560,7 +560,7 @@ contains
   !===========================================================================
 
   subroutine interpolate_with_known_arg(iTable, Arg1In, Arg2In, Value_V, &
-       Derivative_V, DoExtrapolate)
+       DoExtrapolate)
 
     ! Return the array of values Value_V corresponding to arguments
     ! Arg1In and Arg2In in iTable. Use a bilinear interpolation.
@@ -573,17 +573,11 @@ contains
     real,    intent(in) :: Arg1In, Arg2In    ! input arguments
     real,    intent(out):: Value_V(:)        ! output values
 
-    ! optional derivative with respect to first argument
-    real, optional, intent(out):: Derivative_V(:)
-
     logical, optional, intent(in):: DoExtrapolate ! optional extrapolation
 
     real :: Arg_I(2)
     type(TableType), pointer:: Ptr
-
-    integer :: i0, i1, i2, i3
-    real :: Dx1
-
+    
     character(len=*), parameter:: NameSub='interpolate_lookup_table'
     !--------------------------------------------------------------------------
     Arg_I = (/Arg1In, Arg2In/)
@@ -598,35 +592,6 @@ contains
          1, Ptr%nIndex_I(1), 1, Ptr%nIndex_I(2), &
          (Arg_I - Ptr%IndexMin_I)/Ptr%dIndex_I  + 1, &
          DoExtrapolate = DoExtrapolate)
-
-
-    ! The following could in general be done in the bilinear interpolate
-    ! routines. However, for our present applications we only need to take a
-    ! derivative in a one-dimensional table.
-    if(present(Derivative_V))then
-       call find_cell(1, Ptr%nIndex_I(1), &
-            (Arg_I(1)- Ptr%IndexMin_I(1))/Ptr%dIndex_I(1)+ 1 , &
-            i1, Dx1, DoExtrapolate = DoExtrapolate, &
-            StringError = 'Called from '//NameSub)
-
-       i0 = max(i1 - 1, 1)
-       i2 = i1 + 1
-       i3 = min(i1 + 2, Ptr%nIndex_I(1))
-
-       if(Dx1 < 0.5)then
-          Derivative_V = &
-               ( (0.5+Dx1)*(Ptr%Value_VII(:,i2,1) - Ptr%Value_VII(:,i1,1)) &
-               + (0.5-Dx1)*(Ptr%Value_VII(:,i1,1) - Ptr%Value_VII(:,i0,1)) ) &
-               /Ptr%dIndex_I(1)
-       else
-          Derivative_V = &
-               ( (Dx1-0.5)*(Ptr%Value_VII(:,i3,1) - Ptr%Value_VII(:,i2,1)) &
-               + (1.5-Dx1)*(Ptr%Value_VII(:,i2,1) - Ptr%Value_VII(:,i1,1)) ) &
-               /Ptr%dIndex_I(1)
-       end if
-
-       if(Ptr%IsLogIndex_I(1)) Derivative_V = Derivative_V/(Arg1In*log(10.0))
-    end if
 
   end subroutine interpolate_with_known_arg
 
