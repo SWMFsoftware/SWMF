@@ -34,7 +34,7 @@ contains
          UseNonWkbAlfvenWaves, UseTransverseTurbulence, SigmaD
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
-         QeByQtotal, QparByQtotal, KarmanTaylorBeta, &
+         apportion_coronal_heating, KarmanTaylorBeta, &
          UseScaledCorrelationLength, turbulence_mixing
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
@@ -76,6 +76,9 @@ contains
     ! Viscosity
     real, parameter:: cTwoThirds = 2.0/3.0
     real :: Visco, Tmp, ViscoCoeff
+
+    !Coronal Heating
+    real :: QeFraction, QparFraction
 
     logical :: DoTest, DoTestMe
 
@@ -314,16 +317,16 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseElectronPressure)then
-             ! This condition should never be true, avoid compiler
-             ! optimization error
-             if (i < -999) write(*,*) 'Keep NAG compiler happy'
+             call apportion_coronal_heating(i, j, k,iBlock,&
+                  QeFraction, QparFraction)
+
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*gm1*(1.0-QeByQtotal)
+                  + CoronalHeating_C(i,j,k)*gm1*(1.0 - QeFraction)
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*gm1*QeByQtotal
+                  + CoronalHeating_C(i,j,k)*gm1*QeFraction
              if(UseAnisoPressure) &
                   Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*gm1*QparByQtotal
+                  + CoronalHeating_C(i,j,k)*gm1*QparFraction
           else
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1

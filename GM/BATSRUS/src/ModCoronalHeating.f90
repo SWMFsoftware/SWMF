@@ -1758,4 +1758,21 @@ contains
 
   end subroutine turb_mixing_init_point_impl
 
+  !============================================================================
+
+  subroutine apportion_coronal_heating(i, j, k, iBlock, &
+       QeFraction, QparFraction) 
+
+    ! Apportion the coronal heating to the electrons and protons based on
+    ! how the Alfven waves dissipate at length scales << Lperp
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(out) :: QeFraction, QparFraction
+    !--------------------------------------------------------------------------
+
+    QeFraction = QeByQtotal
+    QparFraction = QparByQtotal
+
+  end subroutine apportion_coronal_heating
+
 end module ModCoronalHeating
