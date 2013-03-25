@@ -606,7 +606,7 @@ contains
     real :: DtLocal
     real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
     real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
-    real :: TeEpsilonSi = 1e-3, TeEpsilon, RadCoolEpsilon
+    real :: TeEpsilonSi = 1e-3, TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
     logical :: IsNewBlockTe
     !--------------------------------------------------------------------------
 
@@ -695,9 +695,11 @@ contains
              call get_radiative_cooling(i, j, k, iBlock, TeSi, &
                   RadCool_CB(i,j,k,iBlock))
              call get_radiative_cooling(i, j, k, iBlock, TeSi+TeEpsilonSi, &
-                  RadCoolEpsilon)
+                  RadCoolEpsilonR)
+             call get_radiative_cooling(i, j, k, iBlock, TeSi-TeEpsilonSi, &
+                  RadCoolEpsilonL)
              RadCoolDeriv_CB(i,j,k,iBlock) = &
-                  (RadCoolEpsilon - RadCool_CB(i,j,k,iBlock))/TeEpsilon
+                  0.5*(RadCoolEpsilonR - RadCoolEpsilonL)/TeEpsilon
           end if
        end do; end do; end do
 
