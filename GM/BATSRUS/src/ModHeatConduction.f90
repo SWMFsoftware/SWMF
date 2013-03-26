@@ -279,6 +279,10 @@ contains
           end if
        end if
 
+       ! Not yet operational
+       UseCoronalHeating = DoCoronalHeating
+       DoCoronalHeating = .false.
+
        if(DoRadCooling .or. DoCoronalHeating) &
             allocate(CoolHeat_CB(nI,nJ,nK,MaxBlock))
 
@@ -606,7 +610,7 @@ contains
          UseAnisoPressure, time_BLK
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor
     use ModCoronalHeating, ONLY: get_block_heating, CoronalHeating_C, &
-         apportion_coronal_heating, UseCoronalHeating, CoronalHeating_C, &
+         apportion_coronal_heating, CoronalHeating_C, &
          UseAlfvenWaveDissipation, WaveDissipation_VC
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
     use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk, iTeImpl
@@ -634,7 +638,7 @@ contains
     real :: Coef, Qtotal, QeFraction, QparFraction
     real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
     real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
-    real :: TeEpsilonSi = 0.1, TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
+    real :: TeEpsilonSi = 1e-3, TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
     logical :: IsNewBlockTe
     !--------------------------------------------------------------------------
 
