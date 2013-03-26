@@ -638,7 +638,7 @@ contains
     real :: Coef, Qtotal, QeFraction, QparFraction
     real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
     real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
-    real :: TeEpsilonSi = 1e-3, TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
+    real :: TeEpsilonSi = 1.0, TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
     logical :: IsNewBlockTe
     !--------------------------------------------------------------------------
 
