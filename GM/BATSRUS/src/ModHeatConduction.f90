@@ -747,8 +747,8 @@ contains
                    CoronalHeating_C(i,j,k) = CoronalHeating_C(i,j,k)*Coef
                 end if
                 State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
-                     State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
-                     - DtLocal*WaveDissipation_VC(:,i,j,k)
+                     max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
+                     - DtLocal*WaveDissipation_VC(:,i,j,k), 0.0)
              end if
 
              Qtotal = CoronalHeating_C(i,j,k)
