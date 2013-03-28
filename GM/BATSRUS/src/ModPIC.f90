@@ -77,7 +77,7 @@ contains
 
     use ModSize, ONLY: nDim, MaxDim, nI, nJ, nK
     use ModProcMH, ONLY: iProc
-    use ModMain, ONLY: n_step
+    use ModMain, ONLY: n_step, time_simulation
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
 
     use ModEnergy,      ONLY: calc_energy_cell
@@ -109,7 +109,7 @@ contains
     !--------------------------------------------------------------------------
 
     ! There is no PIC solution at the very beginning
-    if(n_step < 1) RETURN
+    if(time_simulation == 0.0) RETURN
 
     ! Check if we should read in a new PIC file
     if(n_step > nStepLast)then
