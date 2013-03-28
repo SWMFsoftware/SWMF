@@ -243,6 +243,11 @@ if(-f "runlog"){
     warn "$WARNING: no $RunLog file was found\n";
 }
 
+# Files used for IPIC3D coupled runs
+`cp IPIC.in $NameOutput/`    if -f "IPIC.in";
+`mv runlog.bats $NameOutput` if -f "runlog.bats";
+`mv runlog.ipic $NameOutput` if -f "runlog.ipic";
+
 print "$INFO: Restart.pl -o $NameOutput/RESTART\n";
 &shell("./Restart.pl -o $NameOutput/RESTART");
 
