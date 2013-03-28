@@ -606,6 +606,8 @@ contains
 
   subroutine get_impl_heat_cond_state(StateImpl_VGB, DconsDsemi_VCB)
 
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, &
+         WaveFirst_, WaveLast_
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, time_BLK
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor
@@ -623,8 +625,6 @@ contains
     use ModRadiativeCooling, ONLY: get_radiative_cooling
     use ModResistivity,  ONLY: Eta_GB, set_resistivity
     use ModUser,         ONLY: user_material_properties
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, &
-         WaveFirst_, WaveLast_
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
          CellFace_DB, CellFace_DFB, FaceNormal_DDFB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
