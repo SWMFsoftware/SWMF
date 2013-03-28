@@ -101,13 +101,16 @@ subroutine set_physics_constants
 
   ! Average ion mass per charge used by Hall MHD and
   ! by ion-electron thermal exchange term
-  if(TypeNormalization /= 'NONE') &
-       IonMassPerCharge = 1.0/cMu &
-       * (cProtonMass/(AverageIonCharge*cElectronCharge)) &
-       * No2Si_V(UnitB_)*No2Si_V(UnitT_)/(No2Si_V(UnitX_)**2 &
-       * No2Si_V(UnitRho_))
+  if(TypeNormalization == 'NONE')then
+     IonMassPerCharge = 1.0
+  else
+     IonMassPerCharge = 1.0/cMu &
+          * (cProtonMass/(AverageIonCharge*cElectronCharge)) &
+          * No2Si_V(UnitB_)*No2Si_V(UnitT_)/(No2Si_V(UnitX_)**2 &
+          * No2Si_V(UnitRho_))
+  end if
 
-  ! If not multispecies, multiply with average ion mass
+  ! For single ion fluid the average ion mass per charge is constant
   if(.not. (UseMultiSpecies .or. UseMultiIon)) &
        IonMassPerCharge = IonMassPerCharge * MassIon_I(1) /ChargeIon_I(1)
 
