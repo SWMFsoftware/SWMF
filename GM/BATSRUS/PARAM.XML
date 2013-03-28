@@ -5970,20 +5970,24 @@ is radially inward toward the second body.
 <command name="HALLRESISTIVITY">
 	<parameter name="UseHallResist" type="logical" default="F"/>
 	<if expr="$UseHallResist">
-		<parameter name="HallFactor" type="real" min="0" default="1"/>
+		<parameter name="HallFactorMax" type="real" min="0" 
+			default="1"/>
 		<parameter name="HallCmaxFactor" type="real" min="0" max="1" 
 			default="1"/>
 	</if>
 
 #HALLRESISTIVITY
 T		UseHallResist (rest of parameters read only if true)
-1.0		HallFactor
+1.0		HallFactorMax
 0.5		HallCmaxFactor
 
 If UseHallResist is true the Hall resistivity is used.
+
 The off-diagonal Hall elements of the resistivity tensor
-are multiplied by HallFactor. If HallFactor is 1 then the 
-physical Hall resistivity is used.
+are multiplied by HallFactorMax. If HallFactorMax is 1 then the 
+physical Hall resistivity is used (but also see the #HALLREGION command).
+Note that a physically consistent way of changing the strength of the 
+Hall effect is changing the ion mass and/or charge with the #PLASMA command.
 
 If HallCmaxFactor is 1.0 the maximum propagation speed takes into
 account the full whistler wave speed. If it is 0, the wave speed
@@ -5991,8 +5995,8 @@ is not modified. For values betwen 1 and 0 a fraction of the whistler
 wave speed is added. The full speed is needed for the stability
 of the explicit scheme (unless the whistler speed is very small
 and/or the diagonal part of the resistivity tensor is dominant).
-For the implicit scheme it is better to have HallCmaxFactor=dtexpl/dt,
-otherwise there is a significant phase error.
+For the implicit scheme it is recommended to set HallCmaxFactor=0.0
+(or maybe dtexpl/dt) to minimize the discretization errors.
 
 Default is UseHallResist false.
 </command>
