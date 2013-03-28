@@ -48,7 +48,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
   use ModHallResist,    ONLY: &
-       UseHallResist, HallFactor, HallCmaxFactor, &
+       UseHallResist, HallFactorMax, HallCmaxFactor, &
        PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
        NameHallRegion, x0Hall, y0Hall, z0Hall, rSphereHall, DrSphereHall, &
        xSizeBoxHall, DxSizeBoxHall, &
@@ -521,7 +521,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#HALLRESISTIVITY")
         call read_var('UseHallResist',  UseHallResist)
         if(UseHallResist)then
-           call read_var('HallFactor',  HallFactor)
+           call read_var('HallFactorMax',  HallFactorMax)
            call read_var('HallCmaxFactor', HallCmaxFactor)
         end if
 

@@ -17,7 +17,7 @@ module ModHallResist
   real, public:: HallCmaxFactor = 1.0
 
   ! Non-diagonal part (Hall) resistivity with an arbitrary factor
-  real, public:: HallFactor = 1.0
+  real, public:: HallFactorMax = 1.0
 
   ! Ion mass per charge may depend on space and time for multispecies
   real, public, allocatable:: IonMassPerCharge_G(:,:,:)
@@ -85,13 +85,11 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    IonMassPerCharge = HallFactor*IonMassPerCharge
-
     if (DoTestMe) then
        write(*,*) ''
        write(*,*) '>>>>>>>>>>>>>>>>> HALL Resistivity Parameters <<<<<<<<<<'
        write(*,*)
-       write(*,*) 'HallFactor       = ', HallFactor
+       write(*,*) 'HallFactorMax    = ', HallFactorMax
        write(*,*) 'HallCmaxFactor   = ', HallCmaxFactor
        write(*,*) 'IonMassPerCharge = ', IonMassPerCharge
        ! Omega_Bi=B0/IonMassPerCharge'
@@ -888,7 +886,7 @@ contains
        z = 0.5*sum(Xyz_DGB(z_,iFace,jFace,kFace-1:KFace,iBlock))
     end select
 
-    HallFactor = 1.0
+    HallFactor = HallFactorMax
 
     rSqr = (x**2 + y**2 + z**2)
     if(rSqr < rSqrInner1)then
