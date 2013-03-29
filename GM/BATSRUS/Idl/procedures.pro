@@ -3600,10 +3600,11 @@ while not eof(unit) do begin
 
     if isheader then begin
        readf, unit, line
+
        ; check if the line contains any character that is not a number
        isheader = 0
        for i = 0, strlen(line)-1 do begin
-          if strmatch(strmid(line,i,1), '[!0123456789dDeE \.+-]') then begin
+          if strmatch(strmid(line,i,1), '[!	0123456789dDeE \.+-]') then begin
              isheader = 1
              break
           endif
