@@ -32,7 +32,8 @@ subroutine get_log_info(SSLon, SSLat, GlobalMinTemp, GlobalMaxTemp, &
   real, intent(out) :: AverageTemp, AverageVertVel
   real, intent(out) :: TotalVolume, SSVTEC
 
-  integer :: iBlock, iSpecies
+  integer :: iBlock, iSpecies, iLon, iLat
+  real :: rLon, rLat
   !--------------------------------------------------------------------------
 
   GlobalMaxTemp    = 0.0
