@@ -31,6 +31,17 @@
 !          iiLat   = Latitude index for LatFind
 !          rLon    = Longitude interpolation scaling factor
 !          rLat    = Latitude interpolation scaling factor
+!
+! BlockAltIndex: A routine similar to BlockLocationIndex, but for a specified
+!                altitude
+!
+! Inputs: AltFind = Desired Altitude
+!         iBlock  = Block index containing the desired longitude and latitude
+!         iLon    = Longitude index
+!         iLat    = Latitude index
+!
+! Outputs: iiAlt  = Altitude index for AltFind
+!          rAlt   = Altitude interpolation scaling factor
 !------------------------------------------------------------------------------
 
 subroutine LocationIndex(LonFind, LatFind, iiBlock, iiLon, iiLat, rLon, rLat)
@@ -120,7 +131,7 @@ subroutine BlockLocationIndex(LonFind,LatFind,iBlock,iiLon,iiLat,rLon,rLat)
 
         do iLat = 0,nLats
            if(Latitude(iLat,iBlock) <= LatFind .and. &
-                Latitude(iLat+1,iBlock) > LatFind) then
+               Latitude(iLat+1,iBlock) > LatFind) then
               iiLat = iLat
               rLat = 1.0 - (LatFind - Latitude(iLat,iBlock)) / &
                    (Latitude(iLat+1,iBlock) - Latitude(iLat,iBlock))
@@ -131,3 +142,30 @@ subroutine BlockLocationIndex(LonFind,LatFind,iBlock,iiLon,iiLat,rLon,rLat)
   end if
 
 end subroutine BlockLocationIndex
+
+subroutine BlockAltIndex(AltFind,iBlock,iLon,iLat,iAlt,rAlt)
+
+  use ModGITM
+
+  real, intent(in)     :: AltFind
+  integer, intent(in)  :: iBlock, iLon, iLat
+  integer, intent(out) :: iAlt
+  real, intent(out)    :: rAlt
+
+  integer jAlt
+
+  iAlt = -1
+  rAlt = -1.0
+
+  do jAlt = 0,nAlts
+     if (Altitude_GB(iLon, iLat, jAlt, iBlock) <= AltFind .and. &
+          Altitude_GB(iLon, iLat, jAlt+1,iBlock) > AltFind) then
+        iAlt = jAlt
+        rAlt  = 1.0 - (AltFind - Altitude_GB(iLon, iLat, iAlt, iBlock)) &
+             / (Altitude_GB(iLon, iLat, iAlt+1, iBlock) &
+             - Altitude_GB(iLon, iLat, iAlt, iBlock))
+        exit
+     endif
+  enddo
+
+end subroutine BlockAltIndex
