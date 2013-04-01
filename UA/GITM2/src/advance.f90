@@ -1,6 +1,7 @@
 
 subroutine advance
 
+  use ModRCMR, only: RCMRFlag
   use ModConstants
   use ModGITM
   use ModTime
@@ -14,6 +15,14 @@ subroutine advance
 
   integer :: iBlock, iAlt, iLat, iLon,ispecies, iError
   real*8 :: DTime
+
+  if(RCMRFlag .eqv. .true.) then
+     ! Asad: When running RCAC both the F10.7 and F10.7A should have the same
+     !       number at this point because they are being estimated together
+
+     call IO_set_f107_single(f107_est)
+     call IO_set_f107a_single(f107_est)
+  end if
 
   call report("advance",1)
   call start_timing("advance")

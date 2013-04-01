@@ -18,6 +18,10 @@ module ModGITM
        Altitude_GB, dAlt_GB, RadialDistance_GB, InvRadialDistance_GB, &
        Gravity_GB, CellVolume
 
+  ! RCMR
+  real :: f107_est, f107a_est
+  integer :: Sat_Loc
+
   ! Topography
   real, dimension(nLons,nLats,nAlts,nBlocksMax) :: dAltDLon_CB, dAltDLat_CB
 

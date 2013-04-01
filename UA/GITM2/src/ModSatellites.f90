@@ -7,8 +7,8 @@ module ModSatellites
   implicit none
 
   integer, parameter :: nMaxSats = 20
-  integer, parameter :: nMaxSatInputLines = 60000
-  integer, parameter :: nMaxSatPos = 10
+  integer, parameter :: nMaxSatInputLines = 100000 !Asad: increased for RCAC
+  integer, parameter :: nMaxSatPos = 50
 
   integer :: nSats = 0
 
@@ -29,15 +29,26 @@ module ModSatellites
   real                :: CurrentSatellitePosition(3)
   character (len=8)   :: CurrentSatelliteName
 
+  integer :: CurrSat, nRCMRSat
+  integer, dimension(nMaxSats) :: RCMRSat
+
+  real, allocatable :: SatDat(:,:)
+  real, allocatable :: SatCurrentDat(:)
+  real, allocatable :: SatAltDat(:)
+
 contains
 
   subroutine init_mod_satellites
+    ! Asad: Added allocation for new variables SatDat, SatCurrentDat,
+    !       and SatAltDat
 
     if(allocated(SatTime)) return
     allocate( &
          SatTime(nMaxSats, nMaxSatInputLines), &
          SatPos(nMaxSats, 3, nMaxSatPos, nMaxSatInputLines), &
-         nSatPos(nMaxSats, nMaxSatInputLines))
+         nSatPos(nMaxSats, nMaxSatInputLines), &
+         SatDat(nMaxSats, nMaxSatInputLines), &
+         SatCurrentDat(nMaxSats), SatAltDat(nMaxSats))
 
   end subroutine init_mod_satellites
 
