@@ -31,7 +31,8 @@ MODULES = \
 	ModChemistry.o\
 	ModGITMImplicit.o\
 	ModHwm.o\
-	ModUser.o
+	ModUser.o \
+	ModRCMR.o
 
 OBJECTS = \
 	planet.o\
@@ -95,7 +96,8 @@ OBJECTS = \
 	read_ACE_data.o\
 	user.o \
 	calc_tec.o \
-	get_location.o
+	get_location.o \
+	RCMR_routines.o
 
 OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}
 
