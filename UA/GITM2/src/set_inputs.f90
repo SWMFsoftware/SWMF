@@ -1,12 +1,22 @@
+!-----------------------------------------------------------------------------
+! $Id$
+!
+! Author: Aaron Ridley, UMichigan
+!
+! Comments: Routine to read  input options from the UAM.in file.
+!
+! AGB 3/31/13: Added flags for data assimilation to adjust F10.7
+!-----------------------------------------------------------------------------
 
 subroutine set_inputs
 
   use ModInputs
   use ModSizeGitm
-  use ModGITM, only: iProc
+  use ModGITM, only: iProc, f107_est, f107a_est
   use ModTime
   use ModPlanet
   use ModSatellites
+  use ModRCMR
 
   implicit none
 
@@ -16,7 +26,7 @@ subroutine set_inputs
   integer, dimension(7) :: iEndTime
 
   logical :: IsDone
-  integer :: iDebugProc=0, n
+  integer :: iDebugProc=0
   character (len=iCharLen_) :: cLine
   integer :: iLine, iSpecies, iSat
   integer :: i, iError, iOutputTypes
@@ -233,8 +243,16 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
-           call IO_set_f107_single(f107)
-           call IO_set_f107a_single(f107a)
+           ! AGB: Added switch for initializing the GITM f107 depending on
+           !      the data assimilation (RCMR) flags
+
+           if(RCMRFlag .eqv. .false.) then
+              call IO_set_f107_single(f107)
+              call IO_set_f107a_single(f107a)
+           else
+              call IO_set_f107_single(f107_est)
+              call IO_set_f107a_single(f107a_est)
+           end if
 
         case ("#INITIAL")
 
@@ -945,9 +963,9 @@ subroutine set_inputs
            enddo
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #PLOTTIMECHANGE:'
-              write(*,*) 'This will allow you to change the output cadence'
-              write(*,*) 'of the files for a limited time.  If you have an event'
-              write(*,*) 'then you can output much more often during that event.'
+              write(*,*) 'This allows you to change the output cadence of the '
+              write(*,*) 'files for a limited time.  If you have an event then '
+              write(*,*) 'you can output much more often during that event.'
               write(*,*) '#PLOTTIMECHANGE'
               write(*,*) 'yyyy mm dd hh mm ss ms (start)'
               write(*,*) 'yyyy mm dd hh mm ss ms (end)'
@@ -1042,6 +1060,61 @@ subroutine set_inputs
               call read_satellites(iError)
               if (iError /= 0) IsDone = .true.
            endif
+
+        case("#RCMR")
+           call read_in_logical(RCMRRhoFlag, iError)
+           call read_in_logical(RCMRVTECFlag, iError)
+
+           if(iError == 0) then
+              if(RCMRRhoFlag .eqv. .true. .or. RCMRVTECFlag .eqv. .true.) then
+                 RCMRFlag = .true.
+                 call read_in_real(f107_est, iError)
+
+                 if(RCMRRhoFlag.eqv..true. .and. RCMRVTECFlag.eqv..true.) then
+                    write (*,*) 'Can only use one assimilation method. '
+                    write (*,*) 'Defaulting to Neutral Mass Density. '
+                    RCMRVTECFlag = .false.
+                 end if
+
+                 if(iError /= 0) then
+                    write (*,*) 'Unrecognizable initial F10.7 estimate'
+                    write (*,*) 'running with 100.0, which is only appropriate '
+                    write (*,*) 'if the actual F10.7 is not close to 100'
+                    f107_est = 100
+                    iError   = 0
+                 end if
+
+                 f107a_est = f107_est
+
+                 call read_in_int(nRCMRSat, iError)
+                 if(nRCMRSat > nSats) then
+                    iError = 1
+                    write (*,*) "No assimilating more satellites than specified"
+                 else
+                    do iSat=1,nRCMRSat
+                       call read_in_int(RCMRSat(iSat), iError)
+                    end do
+                 end if
+              end if
+           end if
+
+           if(iError /= 0) then
+              write (*,*) 'Incorrect format for #RCMR'
+              write (*,*) ''
+              write (*,*) '#RCMR'
+              write (*,*) 'Assimilate Neutral mass density (T/F)'
+              write (*,*) 'Assimilate VTEC (T/F)'
+              write (*,*) 'Initial F10.7 estimate'
+              write (*,*) 'Number satellites to assimilate'
+              write (*,*) '1st satellite index to assimilate'
+              write (*,*) '2nd satellite index to assimilate'
+              write (*,*) 'etc...'
+              IsDone = .true.
+           else
+              call alloc_rcmr
+              call init_markov_matrix
+              call init_rcmr
+           end if
 
         case ("#ELECTRODYNAMICS")
            call read_in_real(dTPotential, iError)
