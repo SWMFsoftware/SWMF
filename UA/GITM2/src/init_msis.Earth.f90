@@ -5,6 +5,7 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   use ModInputs
   use ModPlanet
   use ModGITM
+  use ModRCMR, only: RCMRFlag
 
   use EUA_ModMsis90, only: meter6, gtd6
 
@@ -48,8 +49,13 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
      call stop_gitm("Stopping in euv_ionization_heat")
   endif
 
-  CALL GTD6(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST, &
-       F107A,F107,AP,48,msis_dens,msis_temp)
+  if(RCMRFlag .eqv. .true.) then
+     CALL GTD6(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST, &
+          150.0,150.0,AP,48,msis_dens,msis_temp)
+  else
+     call GTD6(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST,&
+          F107A,F107,AP,48,msis_dens,msis_temp)
+  end if
 
   t = msis_temp(2)
   nO  = msis_dens(2)
