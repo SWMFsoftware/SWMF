@@ -226,8 +226,6 @@ subroutine RCMR_Function(Nc, ustep, s_dhat, lz, lu, lu2, ly, l_dim, Pc, Pcc,  &
      To_Invert = matmul(matmul(transpose(T),R2),T) &
           + eta*matmul(matmul(transpose(zr),zr),Idty)
 
-     write (*,*) "AGB TEST: ", T, eta, To_Invert
-
      ! invert this
      call LAPACK_getrf(lu, lu, To_Invert, lu, PIVOTARRAY, errorHandler)
      CALL LAPACK_getrs('n', lu, lu, To_Invert, lu, PIVOTARRAY, Inverted, lu, &
