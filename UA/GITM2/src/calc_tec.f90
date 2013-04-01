@@ -145,8 +145,6 @@ subroutine calc_single_vtec_interp(LonFind, LatFind, single_vtec)
 
   single_vtec = single_vtec * (10.0**(-16.0))
 
- write(*,*) "AGB TEST: got VTEC of", single_vtec
-
 contains
 
   subroutine inter2(variable, iiLon, iiLat, rLon, rLat, out) 
