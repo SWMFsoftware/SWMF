@@ -253,3 +253,32 @@ Routines to build and output GITM output variable contour plots over a geographi
 \label{gitm_3D_mult_plots.fig}
 \end{center}
 \end{figure}
+
+\subsubsection{gitm\_alt\_plots.py}
+
+Routines to build and output GITM output variable linear and contour plots over an altitude range.  Several different standard plot formats are available, and routines useful for creating custom figures are also included.
+
+\begin{itemize}
+\item[]{{\bf plot\_single\_alt\_image:}  Creates a single linear or contour altitude plot.}
+\item[]{{\bf plot\_mult\_alt\_image:}  Creates a figure with multiple linear or contour altitude plots.}
+\item[]{{\bf plot\_alt\_slices:}  Creates a figure with a contour plot showing the altitude dependence of a quantity as a function of latitude or longitude with several linear altitude slices at specified locations.  An example is shown in figure~\ref{gitm_alt_slices.fig}}
+\item[]{{\bf plot\_linear\_alt:}  Plots the the linear altitude dependence of a quantity, with altitude on the y-axis.}
+\item[]{{\bf plot\_3D\_alt:}  Plots the altitude dependence of a quantity as the function of another spatiotemporal coordinate with the spatiotemporal coordinate on the x-axis, altitude on the y-axis, and the desired quantity as a color contour.}
+\end{itemize}
+
+\begin{figure}
+\begin{center}
+\noindent\includegraphics[width=\textwidth]{Figures/gitm_alt_slice_test_Te.png}
+\caption{GITM electron temperature at a constant longitude with six latitude slices.}
+\label{gitm_alt_slices.fig}
+\end{center}
+\end{figure}
+
+
+
+
+
+
+
+
+
