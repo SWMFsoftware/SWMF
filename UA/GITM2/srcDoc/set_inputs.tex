@@ -157,7 +157,7 @@ GITM defaults to creating many output files for satellite runs, but this option 
 \subsubsection{SAVEPLOT}
 \label{saveplot.sec}
 
-This input option specifies the types of files GITM will output.  The most common type is 3DALL, which outputs all primary state variables. Types (specified in OutputType) include : 3DALL, 3DNEU, 3DION, 3DTHM, 3DCHM, 3DUSR, 3DGLO, 2DGEL, 2DMEL, 2DUSR, 2DTEC, 1DALL, 1DGLO, 1DTHM, 1DNEW, 1DCHM, 1DCMS, and 1DUSR.  These file types specify the number of dimensions (3D, 2D, 1D) in which GITM may be run and the different primary state variables that are included in the output (NEU stands for neutrals, ION stands for ionosphere, THM stands for thermosphere, CHM stands for BLAH, USR stands for BLAH, GLO stands for day glow, TEC stands for total electron content, GEL stands for global electric BLAH, and MEL stands for BLAH).  Any number of output files may be produced, but nOutputTypes must be used to specify the number of types to be created and an OutputType and DtPlot must be provided for each output just as was done for multiple satellites.  DtRestart and DtPlot specify the time-step in seconds for producing restart and output files, respectively.  
+This input option specifies the types of files GITM will output.  The most common type is 3DALL, which outputs all primary state variables. Types (specified in OutputType) include : 3DALL, 3DNEU, 3DION, 3DTHM, 3DCHM, 3DUSR, 3DGLO, 2DGEL, 2DMEL, 2DUSR, 2DTEC, 1DALL, 1DGLO, 1DTHM, 1DNEW, 1DCHM, 1DCMS, and 1DUSR.  These file types specify the number of dimensions (3D, 2D, 1D) in which GITM may be run and the different primary state variables that are included in the output (NEU stands for neutrals, ION stands for ionosphere, THM stands for thermosphere, CHM stands for BLAH, USR stands for BLAH, GLO stands for day glow, TEC stands for total electron content, GEL stands for global electric BLAH, and MEL stands for BLAH).  Any number of output files greater than zero may be produced, but nOutputTypes must be used to specify the number of types to be created and an OutputType and DtPlot must be provided for each output just as was done for multiple satellites.  DtRestart and DtPlot specify the time-step in seconds for producing restart and output files, respectively.  If no output files are specified, GITM will crash when attempting to finalize all procedures.
 
 \begin{verbatim}
 #SAVEPLOT
@@ -241,6 +241,27 @@ In this function, $\beta$ is specified by BetaLimiter, and so defaults to the mi
 #LIMITER
 (string) TypeLimiter
 (real) BetaLimiter
+\end{verbatim}
+
+\subsection{Data Assimilation}
+\label{assim.sec}
+
+This section contains the input options that allow GITM to perform data assimilation.
+
+\subsubsection{RCMR}
+\label{rcmr.sec}
+
+RCMR stands for Retrospective Cost Model Reference, and is a retrospective cost adaptive control (RCAC) method of data assimilation.  MRAC is useful when dealing with nonlinear systems~\citep{Ali:2012aa}.  To use this system, Markov parameters need to be set.  These parameters will vary based on the type and number of data sources being assimilated and the driver being estimated.  Markov parameters for the assimilation of a single satellite providing neutral density to drive the F$_{10.7}$ are currently available.  Other parameters are currently being developed.
+
+Because RCMR is used to provide an initial F$_{10.7}$ value, this input block must be included before the F107 input block.  It should also be included after the SATELLITE block, so that the validity of the specified satellite index can be determined.  The initial F$_{10.7}$ should not be close to the desired final value, as a perturbed location allows the assimilation to better account for model error.
+
+\begin{verbatim}
+#RCMR
+(logical) Assimilate neutral density
+(logical) Assimilate vertical TEC
+(real) Initial F10.7
+(integer) Number of satellites to include in data assimilation
+(integer) Index number of satellite to assimilate
 \end{verbatim}
 
 \subsection{Solar and Geomagnetic Indices}
