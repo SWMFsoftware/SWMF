@@ -1,18 +1,32 @@
+!-----------------------------------------------------------------------------
+! $Id$
+!
+! Author: Aaron Ridley
+!
+! Comments: GITM main
+!
+! AGB 3/31/13: Added call for RCMR data assimilation
+!-----------------------------------------------------------------------------
 
 program GITM
 
   use ModInputs
   use ModTime
   use ModGITM
+  use ModMpi
+  use ModRCMR
+  use ModSatellites, only: SatCurrentDat, SatAltDat, nRCMRSat
+  use ModEUV, only: sza
 
   implicit none
 
   integer :: iBlock
+  
 
   ! ------------------------------------------------------------------------
   ! initialize stuff
   ! ------------------------------------------------------------------------
-
+  
   call init_mpi
   call start_timing("GITM")
   call delete_stop
@@ -38,20 +52,29 @@ program GITM
      call calc_pressure
 
      !!! We may have to split cMax and Dt calculation!!!
-     Dt = 1.e32
+     if(RCMRFlag .eqv. .true.) then
+        Dt = 2
+     else
+        Dt = 1.e32
+     end if
 
      call calc_timestep_vertical
      if (.not. Is1D) call calc_timestep_horizontal
 
+     if(RCMRRhoFlag .eqv. .true.) then
+        call run_RCMR
+     endif
+
      call advance
 
-     if (.not.IsFramework) call check_stop
-
+     if (.not.IsFramework) then
+        call check_stop
+     endif
+     
      iStep = iStep + 1
 
      call write_output
-
-  enddo
+  end do
 
   ! ------------------------------------------------------------------------
   ! Finish run
