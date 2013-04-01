@@ -1,6 +1,20 @@
-
 !----------------------------------------------------------------------
+! $Id$
 !
+! Author: Aaron Ridley, UMichigan
+!
+! Modified: Asad, UMichigan, Feb 2013 - Added data reading capability to allow
+!                                       data assimilation
+!           Angeline Burrell (AGB), UMichigan, Feb 2013 - Modified variable
+!                                                         names for consistency
+!                                                         and added comments
+!
+! Comments: Routines to handle satellite data in GITM.
+!
+! Includes: read_satellites: reads space/time (and now data) from the satellite
+!                            files specified in the UAM.in file.
+!           move_satellites: Finds the current position and data value for
+!                            each satellite at the current universal time
 !----------------------------------------------------------------------
 
 subroutine read_satellites(iError)
@@ -18,7 +32,7 @@ subroutine read_satellites(iError)
   character (len=iCharLen_) :: cLine
   real (kind = dblprec)     :: OldTime, NewTime
   integer                   :: itime(7)
-  real                      :: pos(3)
+  real                      :: pos(3), dat
   !---------------------------------------------------------------------
   call init_mod_satellites
 
@@ -58,12 +72,14 @@ subroutine read_satellites(iError)
 
      do while (iError == 0)
 
-        read(iSatUnit,*,iostat=iError) iTime, Pos
+        ! Asad Note: Read in the time, 3D position, and a single data column
+        read(iSatUnit,*,iostat=iError) iTime, Pos, dat
 
         if (iError == 0) then
 
            IsFine = .true.
 
+           ! Convert position data from degrees and km to radians and m
            if (Pos(iEast_) < 0.0) Pos(iEast_) = Pos(iEast_) + 360.0
            Pos(iEast_)  = Pos(iEast_)*pi/180.0
            Pos(iNorth_) = Pos(iNorth_)*pi/180.0
@@ -77,12 +93,16 @@ subroutine read_satellites(iError)
                  write(*,*) "Too Many Lines in satfile : ",cSatFileName(iSat)
                  iError = 1
               else
-                 nSatPos(iSat,nSatLines(iSat)) = &
-                      nSatPos(iSat,nSatLines(iSat)) + 1
-                 SatPos(iSat,1,nSatPos(iSat,nSatLines(iSat)),nSatLines(iSat))=Pos(1)
-                 SatPos(iSat,2,nSatPos(iSat,nSatLines(iSat)),nSatLines(iSat))=Pos(2)
-                 SatPos(iSat,3,nSatPos(iSat,nSatLines(iSat)),nSatLines(iSat))=Pos(3)
-                 SatTime(iSat,nSatLines(iSat)) = NewTime
+                 nSatPos(iSat, nSatLines(iSat)) = &
+                      nSatPos(iSat, nSatLines(iSat)) + 1
+                 SatPos(iSat, 1, nSatPos(iSat,nSatLines(iSat)), &
+                      nSatLines(iSat)) = Pos(1)
+                 SatPos(iSat, 2, nSatPos(iSat, nSatLines(iSat)), &
+                      nSatLines(iSat)) = Pos(2)
+                 SatPos(iSat, 3, nSatPos(iSat, nSatLines(iSat)), &
+                      nSatLines(iSat)) = Pos(3)
+                 SatTime(iSat, nSatLines(iSat)) = NewTime
+                 SatDat(iSat, nSatLines(iSat)) = dat
               endif
            else
               nSatPos(iSat,nSatLines(iSat)) = nSatPos(iSat,nSatLines(iSat)) + 1
@@ -94,6 +114,7 @@ subroutine read_satellites(iError)
               else
                  SatPos(iSat,:,nSatPos(iSat,nSatLines(iSat)),nSatLines(iSat))=&
                       Pos
+                 SatDat(iSat,nSatLines(iSat)) = dat
               endif
            endif
 
@@ -126,23 +147,34 @@ end subroutine read_satellites
 
 !----------------------------------------------------------------------
 ! Find locations for current time
+!
+! AGB/Asad 3/31/13: Adapted to use satellites in RCMR data assimilation
 !----------------------------------------------------------------------
 
 subroutine move_satellites
 
+  use ModRCMR, only: RCMRFlag
   use ModSatellites
   use ModGITM, only: nBlocks, dt
   use ModTime, only: CurrentTime, tSimulation
 
   implicit none
 
-  integer :: iSat, iPos, iLine = 1, i, iBlock
+  integer :: iSat, iPos, iLine = 1, i, iBlock, iOut
   real    :: r
   character (len=8)         :: cName
   character (len=3)         :: cPos
   character (len=iCharLen_) :: cTmp
 
+  iOut = -1
+
+  if(RCMRFlag .eqv. .true.) then
+     iOut = -2
+  end if
+
   do iSat = 1, nSats
+     !Asad added this so that each satellite would be updated in output()
+     CurrSat = iSat
 
      if (floor((tSimulation-dt)/SatDtPlot(iSat)) /= &
           floor((tsimulation)/SatDtPlot(iSat))) then
@@ -190,6 +222,10 @@ subroutine move_satellites
                    (SatTime(iSat,iLine+1) - SatTime(iSat,iLine))
            endif
 
+           ! Asad: Estimate the current time's data value for each satellite
+           SatCurrentDat(iSat) = r * SatDat(iSat, iLine) + &
+                (1 - r) * SatDat(iSat, iLine + 1)
+
            do iPos = 1, nSatPos(iSat,iLine)
               do i=1,3
                  if (i == 1 .and. &
@@ -216,7 +252,7 @@ subroutine move_satellites
               do iBlock = 1, nBlocks
 !                 call output_1d("UA/data/",cName,iBlock, &
 !                      SatCurrentPos(iSat,:,iPos))
-                 call output("UA/data/",iBlock, -1)
+                 call output("UA/data/",iBlock, iOut)
               enddo
            enddo
 
