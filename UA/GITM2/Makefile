@@ -139,6 +139,43 @@ test_earth_check:
 		srcData/log00000002.dat.noAPEX >& test_earth.diff)
 	ls -l test_earth.diff
 
+#-----------------------------------------------------------------------------
+# AGB: Two tests to verify GITM compilation with RCMR data assimilation.
+#      One tests whether compilation occured correctly by comparing the logfile
+#      after a low-resolution, 5 minute run.  The second runs a longer test
+#      case to ensure that the RCMR routine is behaving as expected.
+
+# Test proper RCMR compilation.  Test was run on Earth.
+test_rcmr_quick:
+	@echo "test_earth_compile..." > test_rcmr_quick.diff
+	make test_earth_compile
+	@echo "test_rcmr_quick_rundir..." >> test_rcmr_quick.diff
+	make test_rcmr_quick_rundir
+	@echo "test_rcmr_quick_run..." >> test_rcmr_quick.diff
+	make test_rcmr_quick_run
+	@echo "test_rcmr_quick_check..." >> test_rcmr_quick.diff
+	make test_rcmr_quick_check
+
+test_rcmr_quick_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} STANDALONE=YES UADIR=`pwd`
+	cp ${TESTDIR}/UA/DataIn/UAM.in.test.rcmr_quick ${TESTDIR}/UAM.in
+	cp ${TESTDIR}/UA/DataIn/grace.test.rcmr_quick ${TESTDIR}/grace.dat
+	cp ${TESTDIR}/UA/DataIn/champ.test.rcmr_quick ${TESTDIR}/champ.dat
+	cp ${TESTDIR}/UA/DataIn/power.test.rcmr_quick ${TESTDIR}/power.dat
+	cp ${TESTDIR}/UA/DataIn/imf.test.rcmr_quick ${TESTDIR}/imf.dat
+
+test_rcmr_quick_run:
+	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog
+
+test_rcmr_quick_check:
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/UA/data/log00000002.dat \
+		srcData/log00000002.dat.rcmr_quick >& test_rcmr_quick.diff)
+	ls -l test_rcmr_quick.diff
+
+# End RCMR tests
+
 test_mars:
 	@echo "test_mars_compile..." > test_mars.diff
 	make test_mars_compile
