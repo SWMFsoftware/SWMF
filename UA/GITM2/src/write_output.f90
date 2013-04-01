@@ -1,3 +1,11 @@
+!-----------------------------------------------------------------------------
+! $Id$
+!
+! Author: Aaron Ridley, UMichigan
+!
+! Comments: Routines to write data output (both the desired model output files
+!           and satellite output).  Also calls the logfile output routine.
+!-----------------------------------------------------------------------------
 
 subroutine write_output
 
