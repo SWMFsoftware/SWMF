@@ -98,7 +98,7 @@ def plot_single_alt_image(plot_type, zkey, gData, lat_index=-1, lon_index=-1,
         if figname is not None:
             plt.savefig(figname)
 
-        return con
+        return f    
 
 # End plot_single_alt_image
 
@@ -257,6 +257,7 @@ def plot_mult_alt_images(plot_type, zkey, gData, lat_index, lon_index,
     if figname is not None:
         plt.savefig(figname)
 
+    return f
 # End plot_mult_alt_images
 
 
@@ -427,7 +428,8 @@ def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
     if figname is not None:
         plt.savefig(figname)
 
-# plot_alt_slices
+    return f
+# End plot_alt_slices
 
 def plot_linear_alt(ax, zkey, gData, zmin, zmax, amin, amax, zinc=6, ainc=6,
                     lon_index=1, lat_index=1, title=None, tloc="t", xl=True,
