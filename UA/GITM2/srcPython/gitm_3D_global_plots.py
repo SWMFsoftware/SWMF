@@ -65,7 +65,7 @@ def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = gpr.find_zlimits([gData], zkey, aindex, 6)
+    zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, aindex, 6)
 
     # Initialize the new figure
 
@@ -79,30 +79,31 @@ def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
     ax = f.add_subplot(111, polar=pf)
 
     if(string.lower(plot_type)=="rectangular"):
-        plot_rectangular_3D_global(ax, zkey, gData, zmin, zmax, 6, aindex, nlat,
-                                   slat, linc, True, "r", title, "t", True,
-                                   True, earth)
+        con = plot_rectangular_3D_global(ax, zkey, gData, zmin, zmax, 6, aindex,
+                                         nlat, slat, linc, True, "r", title,
+                                         "t", True, True, earth)
     elif(string.lower(plot_type)=="polar"):
-        plot_polar_3D_global(ax, 1, zkey, gData, zmin, zmax, 6, aindex, nlat,
-                             slat, linc, tlon, True, "r", title, "t", True,
-                             True, earth)
+        con = plot_polar_3D_global(ax, 1, zkey, gData, zmin, zmax, 6, aindex,
+                                   nlat, slat, linc, tlon, True, "r", title,
+                                   "t", True, True, earth)
     else:
         print "ERROR: unknown input type [", plot_type, "]\n"
-        gf = False
+        return
 
-    if gf:
-        # Draw to screen.
-        if plt.isinteractive():
-            plt.draw() #In interactive mode, you just "draw".
-        else:
-            # W/o interactive mode, "show" stops the user from typing more 
-            # at the terminal until plots are drawn.
-            plt.show()
+    # Draw to screen.
+    if plt.isinteractive():
+        plt.draw() #In interactive mode, you just "draw".
+    else:
+        # W/o interactive mode, "show" stops the user from typing more 
+        # at the terminal until plots are drawn.
+        plt.show()
 
-        # Save output file
+    # Save output file
 
-        if figname is not None:
-            plt.savefig(figname)
+    if figname is not None:
+        plt.savefig(figname)
+
+    return f
 
 def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
                                   aindex=-1, plat=90, elat=0, linc=3, tlon=90,
@@ -124,7 +125,7 @@ def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = gpr.find_zlimits([gData], zkey, aindex, 6)
+    zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, aindex, 6)
 
     # Initialize the new figure
 
@@ -182,6 +183,8 @@ def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
     if figname is not None:
         plt.savefig(figname)
 
+    return f
+
 
 def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
                             aindex=-1, tlon=90, earth=False, *args, **kwargs):
@@ -201,7 +204,7 @@ def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = gpr.find_zlimits([gData], zkey, aindex, 6)
+    zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, aindex, 6)
 
     # Initialize the new figure, starting with the mid- and low-latitudes
 
@@ -264,6 +267,8 @@ def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
     if figname is not None:
         plt.savefig(figname)
 
+    return f
+
 def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
                         figname=None, nlat=90, slat=-90, linc=6, earth=False,
                         tlon=90, *args, **kwargs):
@@ -285,7 +290,7 @@ def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = gpr.find_zlimits([gData], zkey, -2, 6)
+    zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, -2, 6)
 
     # Initialize the new figure
 
@@ -301,6 +306,9 @@ def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
     f  = plt.figure()
     ax = list()
     tl = " "
+
+    if title:
+        f.suptitle(title, size="medium")
 
     # Adjust the figure height to accomadate the number of subplots
 
@@ -380,6 +388,7 @@ def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
     if figname is not None:
         plt.savefig(figname)
 
+    return f
 # End plot_mult_3D_slices
 
 def plot_rectangular_3D_global(ax, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
