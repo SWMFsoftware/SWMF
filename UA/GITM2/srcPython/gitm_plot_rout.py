@@ -9,7 +9,7 @@
 # Includes: add_colorbar                  - add a colorbar to a contour plot
 #           center_polar_cap              - center radial coordinates for a
 #                                           polar plot
-#           find_zlimits                  - find the upper and lower limits
+#           find_data_limits              - find the upper and lower limits
 #                                           for a list of GITM data arrays
 #----------------------------------------------------------------------------
 
@@ -57,15 +57,18 @@ def center_polar_cap(rcenter, redge, r):
     else:
         return r
 
-def find_zlimits(gDataList, zkey, aindex=-1, zinc=6, *args, **kwargs):
+def find_data_limits(gDataList, xkey, lat_index=-1, lon_index=-1, alt_index=-2,
+                     inc=6, *args, **kwargs):
     '''
-    Establish the appropriate z-axis limits for a list of GitmBin files
+    Establish the appropriate axis limits for a list of GitmBin files at
+    a particular latitude/longitude index
 
     Input: gDataList = A list of GitmBin data structures
-           zkey      = key for the desired z value
-           aindex    = altitude index (default -1 for 2D measurement,
-                       use -2 for no index)
-           zinc      = number of tick incriments (default is 6)
+           xkey      = key for the desired values
+           lat_index = latitude index (default -1 for no index)
+           lon_index = longitude index (default -1 for no index)
+           alt_index = altitude index (default -2 for no index, -1 for 2D)
+           inc       = number of tick incriments (default is 6)
     '''
     import math
 
@@ -73,23 +76,59 @@ def find_zlimits(gDataList, zkey, aindex=-1, zinc=6, *args, **kwargs):
     hold_max = []
 
     for gData in gDataList:
-        if(aindex > -2):
-            flat = gData[zkey][:,:,aindex].reshape(-1)
+        if(lat_index < 0 and lon_index < 0):
+            if(alt_index > -2):
+                flat = gData[xkey][:,:,alt_index].reshape(-1)
+            else:
+                flat = gData[xkey][:,:,:].reshape(-1)
+        elif(lat_index < 0):
+            if(alt_index > -2):
+                flat = gData[xkey][lon_index,:,alt_index].reshape(-1)
+            else:
+                flat = gData[xkey][lon_index,:,:].reshape(-1)
+        elif(lon_index < 0):
+            if(alt_index > -2):
+                flat = gData[xkey][:,lat_index,alt_index].reshape(-1)
+            else:
+                flat = gData[xkey][:,lat_index,:].reshape(-1)
         else:
-            flat = gData[zkey][:,:,:].reshape(-1)
+            if(alt_index > -1):
+                flat = gData[xkey][lon_index,lat_index,alt_index].reshape(-1)
+            else:
+                flat = gData[xkey][lon_index,lat_index,:].reshape(-1)
 
         hold_min.append(min(flat))
         hold_max.append(max(flat))
 
-    zmin = min(hold_min)
-    zmax = max(hold_max)
-    zran = round((zmax-zmin)/zinc)
+    xmin = min(hold_min)
+    xmax = max(hold_max)
+    xran = round((xmax-xmin)/inc)
 
-    if(zran != 0.0):
-        zmin = math.floor(zmin / zran) * zran
-        zmax = math.ceil(zmax / zran) * zran
+    if(xran != 0.0):
+        xmin = math.floor(float("%.14f" % (xmin / xran))) * xran
+        xmax = math.ceil(float("%.14f" % (xmax / xran))) * xran
 
-    return zmin, zmax
+    # Consider physical limits for Latitude and Longitude keys.
+
+    if(xkey == "dLat"):
+        if(xmin < -90.0):
+            xmin = -90.0
+        if(xmax > 90.0):
+            xmax = 90.0
+    elif(xkey == "Latitude"):
+        if(xmin < -np.pi / 2.0):
+            xmin = -np.pi / 2.0
+        if(xmax > np.pi / 2.0):
+            xmax = np.pi / 2.0
+    elif(xkey == "dLon" or xkey == "Longitude"):
+        if(xmin < 0.0):
+            xmin = 0.0
+        if(xkey == "dLon" and xmax > 360.0):
+            xmax = 360
+        elif(xkey == "Longitude" and xmax > np.pi):
+            xmax = np.pi
+
+    return xmin, xmax
 
 def localtime_to_glon(ut_datetime, localtime):
     '''
