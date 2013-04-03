@@ -20,28 +20,28 @@ module ModBuffer
   type(GridDescriptorType)::LocalBufferGD
 
   integer:: SourceID_ = SC_, TargetID_ = IH_
-  
+
   integer::nVarBuff=-1
   logical::DoInit =.true.
   real,dimension(:),allocatable::Buffer_V
 
 contains
-
+  !==========================================================================
   subroutine set_buffer_name(NameIn,IDIn)
     character(LEN=*),intent(in)::NameIn
     integer,optional,intent(in)::IDIn
-    !-------------
+    !------------------------------------------------------------------------
 
     NameBuffer=NameIn
     if(present(IDIn))SourceID_ = IDIn
   end subroutine set_buffer_name
-  !====================================================
+  !==========================================================================
   subroutine set_spher_buffer_grid(DD,CompID_,IsLocal)
     type(DomainDecompositionType),&
          intent(out)::DD
     integer,intent(in)::CompID_
     logical,intent(in)::IsLocal
-    !----------------
+    !-----------------------------------------------------------------------
     call init_decomposition(&
          DD,CompID_,nDim=3,IsLocal=IsLocal)
 
@@ -202,7 +202,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
 
 end subroutine get_from_spher_buffer_grid
 
-!===============================================================                       
+!============================================================================
 subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
 
   ! DESCRIPTION
