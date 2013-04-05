@@ -1976,15 +1976,15 @@ contains
           call select_fluid
           FluxViscoX     = sum(Normal_D(1:nDim)*Visco_DDI(:,x_,iFluid))
           Flux_V(iRhoUx) = Flux_V(iRhoUx) - State_V(iRho)*FluxViscoX
-          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRhoUx)*FluxViscoX
+          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRho)*State_V(iUx)*FluxViscoX
           if(nDim == 1) CYCLE
           FluxViscoY     = sum(Normal_D(1:nDim)*Visco_DDI(:,y_,iFluid))
           Flux_V(iRhoUy) = Flux_V(iRhoUy) - State_V(iRho)*FluxViscoY
-          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRhoUy)*FluxViscoY
+          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRho)*State_V(iUy)*FluxViscoY
           if(nDim == 2) CYCLE
           FluxViscoZ     = sum(Normal_D(1:nDim)*Visco_DDI(:,z_,iFluid))
           Flux_V(iRhoUz) = Flux_V(iRhoUz) - State_V(iRho)*FluxViscoZ
-          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRhoUz)*FluxViscoZ
+          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRho)*State_V(iUz)*FluxViscoZ
        end do
     end if
 

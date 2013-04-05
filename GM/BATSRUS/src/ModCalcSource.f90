@@ -137,30 +137,34 @@ contains
 
                    if(ViscoCoeff <= 0.0 ) CYCLE
 
-                   Visco = GradU_DD(x_,x_) 
-                   if(nDim > 1) Visco = Visco + GradU_DD(y_,y_) 
-                   if(nDim > 2) Visco = Visco + GradU_DD(z_,z_)
+                   ! Calculate first -2/3 (div u)^2
+                   Visco = GradU_DD(1,1) 
+                   if(nDim > 1) Visco = Visco + GradU_DD(2,2) 
+                   if(nDim > 2) Visco = Visco + GradU_DD(3,3)
                    Visco = -cTwoThirds*Visco**2
 
-                   Visco = Visco + 2.0*GradU_DD(x_,x_)**2 
-                   if(nDim > 1) Visco = Visco + 2.0*GradU_DD(y_,y_)**2
-                   if(nDim > 2) Visco = Visco + 2.0*GradU_DD(z_,z_)**2
+                   ! Add 2*Sum_i (d_i u_i)^2
+                   Visco = Visco + 2.0*GradU_DD(x_,1)**2 
+                   if(nDim > 1) Visco = Visco + 2.0*GradU_DD(y_,2)**2
+                   if(nDim > 2) Visco = Visco + 2.0*GradU_DD(z_,3)**2
 
-                   Tmp = GradU_DD(x_,y_)
-                   if(nDim > 1) Tmp = Tmp + GradU_DD(y_,x_)
+                   ! Add Sum_{i<j} (d_i u_j + d_j u_i)^2
+                   Tmp = GradU_DD(1,2)
+                   if(nDim > 1) Tmp = Tmp + GradU_DD(y_,1)
                    Visco = Visco + Tmp**2
 
-                   Tmp = GradU_DD(x_,z_)
-                   if(nDim > 2) Tmp = Tmp + GradU_DD(z_,x_)
+                   Tmp = GradU_DD(1,3)
+                   if(nDim > 2) Tmp = Tmp + GradU_DD(z_,1)
                    Visco = Visco + Tmp**2
 
                    if(nDim > 1)then
-                      Tmp = Tmp + GradU_DD(y_,z_)      
-                      if(nDim > 2) Tmp = Tmp + GradU_DD(z_,y_)
+                      Tmp = GradU_DD(2,3)
+                      if(nDim > 2) Tmp = Tmp + GradU_DD(z_,2)
                       Visco = Visco + Tmp**2
                    end if
 
-                   Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + ViscoCoeff*Visco
+                   Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + &
+                        gm1*ViscoCoeff*State_VGB(iRho,i,j,k,iBlock)*Visco
                 end if
              end do; end do; end do
 
