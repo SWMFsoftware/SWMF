@@ -109,7 +109,7 @@ contains
                 end if
 
                 ! Calculate gradient tensor of velocity
-                call calc_grad_U(GradU_DD,i,j,k,iBlock)
+                call calc_grad_U(GradU_DD, i, j, k, iBlock)
 
                 if(UseAnisoPressure) then
                    ! Calculate bDotGradparU = b dot (b matmul GradU)
@@ -137,32 +137,36 @@ contains
 
                    if(ViscoCoeff <= 0.0 ) CYCLE
 
+                   ! Source(p) = (gamma - 1)*d_i u_j tau_ij
+                   ! tau_ij = rho*nu*(d_i u_j + d_j u_i - 2/3 delta_ij div u)
+
                    ! Calculate first -2/3 (div u)^2
-                   Visco = GradU_DD(x_,1) 
+                   Visco              =         GradU_DD(x_,1) 
                    if(nDim > 1) Visco = Visco + GradU_DD(y_,2) 
                    if(nDim > 2) Visco = Visco + GradU_DD(z_,3)
                    Visco = -cTwoThirds*Visco**2
 
                    ! Add 2*Sum_i (d_i u_i)^2
-                   Visco = Visco + 2.0*GradU_DD(x_,1)**2 
+                   Visco              = Visco + 2.0*GradU_DD(x_,1)**2 
                    if(nDim > 1) Visco = Visco + 2.0*GradU_DD(y_,2)**2
                    if(nDim > 2) Visco = Visco + 2.0*GradU_DD(z_,3)**2
 
                    ! Add Sum_{i<j} (d_i u_j + d_j u_i)^2
-                   Tmp = GradU_DD(1,2)
+                   Tmp              =       GradU_DD(x_,2)
                    if(nDim > 1) Tmp = Tmp + GradU_DD(y_,1)
                    Visco = Visco + Tmp**2
 
-                   Tmp = GradU_DD(1,3)
+                   Tmp              =       GradU_DD(x_,3)
                    if(nDim > 2) Tmp = Tmp + GradU_DD(z_,1)
                    Visco = Visco + Tmp**2
 
                    if(nDim > 1)then
-                      Tmp = GradU_DD(2,3)
+                      Tmp              =       GradU_DD(y_,3)
                       if(nDim > 2) Tmp = Tmp + GradU_DD(z_,2)
                       Visco = Visco + Tmp**2
                    end if
 
+                   ! Source(p) = (gamma - 1)*tau:grad u
                    Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + &
                         gm1*ViscoCoeff*State_VGB(iRho,i,j,k,iBlock)*Visco
                 end if
@@ -726,7 +730,7 @@ contains
 
   contains
     !==========================================================================
-    subroutine calc_grad_u(GradU_DD,i,j,k,iBlock)
+    subroutine calc_grad_u(GradU_DD, i, j, k, iBlock)
 
       use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, x_, y_, z_
 
@@ -802,8 +806,6 @@ contains
       end if
 
     end subroutine calc_grad_u
-
-
     !==========================================================================
     subroutine calc_divb_source
 
