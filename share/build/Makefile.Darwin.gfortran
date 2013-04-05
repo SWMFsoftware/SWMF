@@ -8,9 +8,9 @@ SHELL=/bin/sh
 #       Mac OS (Darwin) specific part of Makefile
 #
 
-COMPILE.f77     = ${CUSTOMPATH_F}openmpif90
-COMPILE.f90     = ${CUSTOMPATH_F}openmpif90
-LINK.f90	= ${CUSTOMPATH_MPI}openmpif90
+COMPILE.f77     = ${CUSTOMPATH_F}gfortran
+COMPILE.f90     = ${CUSTOMPATH_F}gfortran
+LINK.f90	= ${CUSTOMPATH_MPI}mpif90
 AR = ar -rs
 
 SINGLEPREC = -frecord-marker=4
@@ -87,3 +87,5 @@ clean:
 
 
 # keep this line
+
+
