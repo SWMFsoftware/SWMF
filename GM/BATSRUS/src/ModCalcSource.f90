@@ -138,9 +138,9 @@ contains
                    if(ViscoCoeff <= 0.0 ) CYCLE
 
                    ! Calculate first -2/3 (div u)^2
-                   Visco = GradU_DD(1,1) 
-                   if(nDim > 1) Visco = Visco + GradU_DD(2,2) 
-                   if(nDim > 2) Visco = Visco + GradU_DD(3,3)
+                   Visco = GradU_DD(x_,1) 
+                   if(nDim > 1) Visco = Visco + GradU_DD(y_,2) 
+                   if(nDim > 2) Visco = Visco + GradU_DD(z_,3)
                    Visco = -cTwoThirds*Visco**2
 
                    ! Add 2*Sum_i (d_i u_i)^2
