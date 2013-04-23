@@ -201,27 +201,38 @@ foreach my $Dir (sort keys %PlotDir){
 }
 #############################################################
 sub readrunlog{
-    ## Read runlog and print out init time and runtime 
-    ## without init time
-    my (@timearray);
-    my ($runlogfile);
+    # Read runlog and print out init time and runtime without init time
+    my $timeinit;
+    my $timerun;
+    my $runlogfile;
     foreach $runlogfile (glob("runlog*")){
-      open(INPUT , "<", $runlogfile)
-      	or die "Could not open runfile: $!\n";
-      while(<INPUT>){
-	if(/.*(BATSRUS|SWMF)\s+(\d+\.\d+).*/){
-	   @timearray = (@timearray,$2);
-	}elsif(/.*(BATSRUS|SWMF)\s*1\s*1\s+(.*?)\s+/){
-	   @timearray = (@timearray,$2);
-	}   
-      }
-      close(INPUT);
-      if($#timearray > 0){
-    	print "RUNLOG TIMINGS (init, run ...) @timearray[0] @timearray[$#timearray] \n";
-      }
-   }
+
+	# Read first timing for initialization
+	open(INPUT, $runlogfile) or die "Could not open $runlogfile: $!\n";
+	while(<INPUT>){
+	    if(/.*(BATSRUS|SWMF)\s+(\d+\.\d+).*/ or 
+	       /.*(BATSRUS|SWMF)\s*1\s*1\s+(.*?)\s+/){
+	       $timeinit = $2;
+	       last;
+	    }   
+	}
+	close(INPUT);
+
+	# Read last timing for total runtime
+	open(INPUT, "tail -n 400 $runlogfile |");
+	while(<INPUT>){
+	    if(/.*(BATSRUS|SWMF)\s+(\d+\.\d+).*/ or 
+	       /.*(BATSRUS|SWMF)\s*1\s*1\s+(.*?)\s+/){
+		$timerun = $2;
+	    }
+	}
+	close(INPUT);
+
+	print "$INFO: TIMINGS from $runlogfile (init, run)".
+	    " $timeinit $timerun\n" if $timeinit or $timerun;
+    }
 }
-#############################################################
+##############################################################################
 
 # Copy and move some input and output files if present
 if(-f $ParamIn){
