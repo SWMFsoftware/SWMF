@@ -52,7 +52,7 @@ Module ModHeidiIO
 
   !Define new variables needed for the framework version  
   logical :: IsFramework
-  integer :: iUnitStdOut =  9
+  integer :: iUnitStdOut =  6 ! Change to 9 for ABSOFT compiler
   character (len=7) :: StringPrefix = ''
   integer :: iUnitSw1,iUnitSw2,iUnitSopa,iUnitMpa,iUnitPot
   integer ::iUnitSal
