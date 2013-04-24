@@ -1,10 +1,10 @@
 subroutine heidi_run
   
-  use ModHeidiSize, ONLY: nS
+  use ModHeidiSize, ONLY: nS, s, scalc
   use ModInit,      ONLY: i3, nSt, i2, nkp, lnc, xn, nPr, nibc
   use ModHeidiIO,   ONLY: isw, nStep,iwpi,ires,&
        write_prefix,iUnitStdOut, IsFramework
-  use ModHeidiMain, ONLY: s,t,dt,scalc,IsBFieldNew
+  use ModHeidiMain, ONLY: t,dt,IsBFieldNew
   use ModProcIM,    ONLY: iProc
   
   implicit none 
