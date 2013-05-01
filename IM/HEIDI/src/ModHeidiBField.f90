@@ -51,12 +51,16 @@ contains
        ! Magnetic field from BATS_R_US code; only in the coupled mode.
        !/
     case('mhd')
-       write(*,*) 'TimStepCounter', i3
+       write(*,*) 'TimStepCounter = ', i3
        if (i3==1) then
           write(*,*) 'CASE MHD--------->INITIALIZE B FIED'
-          write(*,*) 'Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt       
-          call  get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
+          write(*,*) 'Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt    
+        
+        ! call get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
+        !       RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
+          call  get_asym_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,&
                RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
+          
        else
 
           write(*,*) 'REAL MHD------>Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt
@@ -1164,7 +1168,6 @@ contains
     dd = 0.0
     do iPhi =1, nPhi
 
-
        sigma = cos(Phi_I(iPhi))
        !\
        ! Calculate the maximum latitude for this case (from the equation of the field line).
@@ -1173,6 +1176,7 @@ contains
        gamma = sigma**2 + beta**2 * (1-sigma**2)
        bb = alpha**2
        aa = gamma - bb
+
        do iR =1, nR 
           cc = -1./(LZ(iR)*LZ(iR))
           call get_cubic_root(aa,bb,dd,cc,root,nroot)
@@ -1187,6 +1191,7 @@ contains
           Lat = LatMin
 
           do iPoint = 1, nPoint
+            
 
              !\
              ! Radial distance for the stretched dipole is calclulated as a function of the 
