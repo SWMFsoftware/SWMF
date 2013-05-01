@@ -390,6 +390,14 @@ dynamic			TypeBFieldTemp
 1.0 			StretchingFactor	A
 0.0 			StretchingFactorB	
 
+
+#HGEOCORONALMODEL
+twins    	         TypeHModel
+Solstice        	 TypeSeason
+80 			 WhichF107
+1.0 			 Ct
+
+
 #SAVERESTART
 T			DoSaveRestart
 40.0			DtSaveRestart
