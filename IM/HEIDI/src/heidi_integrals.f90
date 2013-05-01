@@ -153,6 +153,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   use ModHeidiBField
   use ModHeidiHydrogenGeo
   use ModHeidiInput, ONLY: TypeHModel
+  use ModIoUnit,     ONLY :UnitTmp_
   use NeutralHydrogenModel
   use ModPlotFile,       ONLY: save_plot_file
 
@@ -344,7 +345,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
        VarIn_VII = Rho_III(51:51,:,:))
   TypePosition = 'rewind' 
 
-  open(unit=3, file=trim(TypeHModel)//'HydrogenDensity.dat', status='unknown')
+  open(unit=UnitTmp_, file=trim(TypeHModel)//'HydrogenDensity.dat', status='unknown')
 
   do iR = 1, nR
      write(3,*) LZ(iR), Rho_III(51,iR,1)/1.e6
