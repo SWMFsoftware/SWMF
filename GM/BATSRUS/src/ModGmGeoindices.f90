@@ -68,9 +68,9 @@ contains
     use ModMain,      ONLY: n_step
     use ModProcMH,    ONLY: iProc
     use ModIoUnit,    ONLY: io_unit_new
-    use ModIO,        ONLY: NamePlotDir
+    use ModIO,        ONLY: NamePlotDir, IsLogName_e
 
-    integer            :: i
+    integer            :: i, iTime_I(7)
     real               :: radXY, phi
     character(len=100) :: NameFile
 
@@ -102,8 +102,15 @@ contains
        allocate(MagPerturb_II(nKpMag, iSizeKpWindow))
        MagPerturb_II = 0.0
 
-       write(NameFile, '(a, a, i8.8, a)') trim(NamePlotDir), &
-            'geoindex_n', n_step, '.log'
+       if(IsLogName_e)then
+          ! Event date added to geoindex file name
+          call get_date_time(iTime_I)
+          write(NameFile, '(a, a, i4.4, 2i2.2, "-", 3i2.2, a)') &
+               trim(NamePlotDir), 'geoindex_e', iTime_I(1:6), '.log'
+       else
+          write(NameFile, '(a, a, i8.8, a)') &
+               trim(NamePlotDir), 'geoindex_n', n_step, '.log'
+       end if
        iUnitOut = io_unit_new()
        open(iUnitOut, file=NameFile, status='replace')
 
