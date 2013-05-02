@@ -473,7 +473,7 @@ subroutine write_plot_common(ifile)
         write(unit_tmp,'(a)')filename
         write(unit_tmp,'(i8,a)')nProc,' nProc'
         write(unit_tmp,'(i8,a)')n_step,' n_step'
-        write(unit_tmp,'(1pe13.5,a)')time_simulation,' t'
+        write(unit_tmp,'(1pe18.10,a)')time_simulation,' t'
         select case(plot_form(ifile))
         case('tec')
            write(unit_tmp,'(a)')trim(unitstr_TEC)
