@@ -27,10 +27,10 @@ module ModGroundMagPerturb
 
   !local variables
   integer            :: nMagnetometer = 1
-  integer, parameter :: Max_MagnetometerNumber = 100
+  integer, parameter :: MaxMagnetometer = 500
   integer            :: iUnitMag = -1
-  real               :: PosMagnetometer_II(2,Max_MagnetometerNumber)
-  character(len=3)   :: MagName_I(Max_MagnetometerNumber), MagInCoord='MAG'
+  real               :: PosMagnetometer_II(2,MaxMagnetometer)
+  character(len=3)   :: MagName_I(MaxMagnetometer), MagInCoord='MAG'
 
 contains
 
@@ -278,7 +278,7 @@ contains
     character (len=100) :: Line
     character(len=3) :: iMagName
     real             :: iMagmLat, iMagmLon
-    real, dimension(Max_MagnetometerNumber)      :: MagmLat_I, MagmLon_I
+    real, dimension(MaxMagnetometer)      :: MagmLat_I, MagmLon_I
 
     integer          :: iMag
     character(len=*), parameter :: NameSub = 'read_magnetometer_input_files'
@@ -326,12 +326,12 @@ contains
                 read(unit_tmp,*, iostat=iError) iMagName, iMagmLat, iMagmLon
                 if (iError /= 0) EXIT READFILE
 
-                if (nStat >= Max_MagnetometerNumber) then
+                if (nStat >= MaxMagnetometer) then
                    call write_prefix;
                    write(*,*) NameSub,' WARNING: magnetometers file: ',&
                         trim(filename),' contains too many stations! '
                    call write_prefix; write(*,*) NameSub, &
-                        ': max number of stations =',Max_MagnetometerNumber
+                        ': max number of stations =',MaxMagnetometer
                    EXIT READFILE
                 endif
 
@@ -378,28 +378,35 @@ contains
     !-----------------------------------------------------------------------
   end subroutine read_mag_input_file
 
-  !=====================================================================
+  !===========================================================================
   subroutine open_magnetometer_output_file
 
     use ModMain,   ONLY: n_step
     use ModIoUnit, ONLY: io_unit_new
-    use ModIO,     ONLY: filename, NamePlotDir
+    use ModIO,     ONLY: NamePlotDir, IsLogName_e
 
-    integer :: iMag
+    character(len=100):: NameFile
+    integer :: iMag, iTime_I(7)
     logical :: oktest, oktest_me
-
+    !------------------------------------------------------------------------
     ! Open the output file 
     call set_oktest('open_magnetometer_output_files', oktest, oktest_me)
 
-    write(filename,'(a,i8.8,a)')trim(NamePlotDir)//&
-         'GM_mag_n', n_step, '.mag'
-
+    if(IsLogName_e)then
+       ! Event date added to magnetic perturbation file name
+       call get_date_time(iTime_I)
+       write(NameFile, '(a, a, i4.4, 2i2.2, "-", 3i2.2, a)') &
+            trim(NamePlotDir), 'GM_mag_e', iTime_I(1:6), '.mag'
+    else
+       write(NameFile,'(a,a, i8.8, a)') &
+            trim(NamePlotDir), 'GM_mag_n', n_step, '.mag'
+    end if
     if(oktest) then
-       write(*,*) 'open_magnetometer_output_files: filename:', filename
+       write(*,*) 'open_magnetometer_output_files: NameFile:', NameFile
     end if
 
     iUnitMag= io_unit_new()
-    open(iUnitMag, file=filename, status="replace")
+    open(iUnitMag, file=NameFile, status="replace")
 
     ! Write the header
     write(iUnitMag, '(i5,a)',ADVANCE="NO") nMagnetometer, ' magnetometers:'
@@ -497,7 +504,7 @@ contains
 
           write(iUnitMag,'(i8)',ADVANCE='NO') n_step
           write(iUnitMag,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
-          write(iUnitMag,'(1X,i2)', ADVANCE='NO')  iMag
+          write(iUnitMag,'(1X,i4)', ADVANCE='NO')  iMag
 
           ! Write position of magnetometer in SGM Coords
           write(iUnitMag,'(3es13.5)',ADVANCE='NO') &
