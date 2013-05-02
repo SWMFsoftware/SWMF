@@ -35,7 +35,7 @@ subroutine write_logfile(iSatIn,iFile)
   integer :: nFluxVar       ! number of flux variables used
   integer :: iUnit          ! local unit number
   real :: Xyz_D(3)
-  character (LEN=255) :: NameAll
+  character (LEN=500) :: NameAll
   character (LEN=100) :: StringTime
 
   logical :: DoWritePosition
@@ -47,8 +47,7 @@ subroutine write_logfile(iSatIn,iFile)
   integer :: iError
 
   ! Event date for filename
-  character(len=80) :: format
-  character(len=19) :: eventDateTime
+  character(len=19) :: EventDateTime
 
   character(len=*), parameter :: NameSub = 'write_logfile'
   !---------------------------------------------------------------------------
@@ -157,23 +156,24 @@ subroutine write_logfile(iSatIn,iFile)
 
   if(iProc==0) then
      if (iSatIn==0) then
+
         if(unit_log<0)then
            unit_log = io_unit_new()
            filename = trim(NamePlotDir) // 'log'
+
            if(IsLogName_e)then
               ! Event date added to log file name
-              write(format,*)'(i4.4,2i2.2,"-",3i2.2)'
               call get_date_time(iTime_I)
-              write(eventDateTime ,format) iTime_I(1:6)
+              write(EventDateTime, '(i4.4,2i2.2,"-",3i2.2)') iTime_I(1:6)
               filename = trim(filename) // '_e' // trim(eventDateTime)
-           end if
-           if(IsLogName_n .or. .not.time_accurate)then
+           else
               if(n_step < 1000000)then
                  write(filename,'(a,i6.6)') trim(filename)//'_n',n_step
               else
                  write(filename,'(a,i8.8)') trim(filename)//'_n',n_step
               end if
            end if
+
            filename = trim(filename) // '.log'
 
            open(unit_log,file=filename,status="replace")
