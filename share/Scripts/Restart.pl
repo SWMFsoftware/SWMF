@@ -224,7 +224,7 @@ sub create_tree_check{
 		}
 	    }
 	    # Use the simulation time for time accurate runs
-	    $RestartTree = sprintf("RESTART_t%6.2f%s", 
+	    $RestartTree = sprintf("RESTART_t%9.4f%s", 
 				   $SimulationTime/$UnitSecond{$TimeUnit},
 				   $TimeUnit);
 	}else{
@@ -482,9 +482,10 @@ Usage:
 
     -t=UNIT     Time unit to form the name of the restart tree from the
     -time=...   simulation time (only matters for time accurate run).
-    -u=UNIT     The UNIT can be given as one of the following characters:
-    -unit=...   s, m, h, d, y corresponding to seconds, minute, hour, day and
-                year respectively. The -t option has no effect if the 
+    -u=UNIT     The UNIT can be given as one of the following strings:
+    -unit=...   ns, us, ms, s, m, h, d, y corresponding to 
+                nanosec, microsec, millisec, seconds, minute, hour, day, and year,
+                respectively. The -t option has no effect if the 
                 name of the restart tree is specified by the parameter DIR.
                 The default time unit is the largest unit which does not 
                 exceed the simulation time.
