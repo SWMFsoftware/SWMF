@@ -6,7 +6,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
   use ModProcIM
   use RCM_variables, ONLY: NameRcmDir, iUnitOut, StringPrefix, STDOUT_, &
        DoRestart, iDtRcm, iDtPlot, asci_flag, nFilesPlot, iDnPlot, &
-       plot_area, plot_var, plot_format, &
+       plot_area, plot_var, plot_format, UseEventPlotName, &
        x_h, x_o, L_dktime, sunspot_number, f107, doy, &
        ipot, ibnd_type, &
        precipitation_tau, &
@@ -67,6 +67,8 @@ subroutine IM_set_param(CompInfo, TypeAction)
            call read_var('DoRestart',DoRestart)
         case("#TIMESTEP")
            call read_var('iDtRcm',iDtRcm)
+        case("#SAVEPLOTNAME")
+           call read_var('UseEventPlotName', UseEventPlotName)
         case("#SAVEPLOT")
            call read_var('nPlotFile',nFilesPlot)
            do iFile=1,nFilesPlot

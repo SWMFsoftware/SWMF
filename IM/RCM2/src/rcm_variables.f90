@@ -25,6 +25,7 @@ MODULE Rcm_variables
     logical :: DoRestart=.false.
     integer :: iDtRcm=5, nFilesPlot=0, iDnPlot(9)=-1, iDtPlot(9)=-1
     character(len=3) :: plot_area(9), plot_var(9), plot_format(9)
+    logical :: UseEventPlotName = .false.
 !
     ! SWMF: added unit number and prefix for output
     integer          :: iUnitOut=STDOUT_

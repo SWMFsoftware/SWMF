@@ -695,10 +695,16 @@ CONTAINS
     case('idl')
        extension='.idl'
     end select
-    write(filename,'(a,i4.4,i2.2,i2.2,a)') &
-         plot_area(iFN)//"_"//plot_var(iFN)//"_t",&
-         label%intg(3),label%intg(4),label%intg(5),extension
 
+    if(UseEventPlotName)then
+       filename = plot_area(iFN)//"_"//plot_var(iFN)//"_e"// &
+            real_date//"_"//real_time(1:5)//extension
+    else
+       ! Use simulation time: hours,minutes,seconds
+       write(filename,'(a,i4.4,i2.2,i2.2,a)') &
+            plot_area(iFN)//"_"//plot_var(iFN)//"_t",&
+            label%intg(3),label%intg(4),label%intg(5),extension
+    end if
     !Create time string
     WRITE(time_string,'(I4.4,A1,I2.2,A1,I2.2)') &
          label%intg(3),":",label%intg(4),":",label%intg(5)

@@ -44,6 +44,19 @@ what you are doing.
 
 </command>
 
+
+<command name="SAVEPLOTNAME">
+	 <parameter name="UseEventPlotName" type="logical" default="F"/>
+#SAVEPLOTNAME
+T			UseEvenPlotName
+
+If UseEventPlotName is true, the names of the plot files will contain
+the event date and time in the YearMoDy_HrMnSc format. If it is false,
+the simulation time is used in the HourMnSc format.
+
+The default value is false.
+</command>
+
 <command name="SAVEPLOT">
 	<parameter name="nFilesPlot" type="integer" min="0" max="9"
 		default="0" />
