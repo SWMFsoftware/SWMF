@@ -652,6 +652,13 @@ CONTAINS
     !
     ! Pass in current time in seconds (iWT) and file number (iFN) to write
     !
+    use CON_physics, ONLY: get_time
+    use ModTimeConvert, ONLY: time_real_to_int
+    use ModKind, ONLY: Real8_
+
+    integer :: iTime_I(7)
+    real(Real8_) :: tCurrent
+
     integer, intent(in) :: iFN
     integer :: iIT
     integer, save :: iLastIT=-1
@@ -697,8 +704,11 @@ CONTAINS
     end select
 
     if(UseEventPlotName)then
-       filename = plot_area(iFN)//"_"//plot_var(iFN)//"_e"// &
-            real_date//"_"//real_time(1:5)//extension
+       call get_time(tCurrentOut = tCurrent)
+       call time_real_to_int(tCurrent, iTime_I)
+       write(filename,'(a,i4.4,2i2.2,"_",3i2.2,a)') &
+            plot_area(iFN)//"_"//plot_var(iFN)//"_e"// &
+            real_date//"_",iTime_I(1:6), extension
     else
        ! Use simulation time: hours,minutes,seconds
        write(filename,'(a,i4.4,i2.2,i2.2,a)') &
