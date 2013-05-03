@@ -707,8 +707,7 @@ CONTAINS
        call get_time(tCurrentOut = tCurrent)
        call time_real_to_int(tCurrent, iTime_I)
        write(filename,'(a,i4.4,2i2.2,"_",3i2.2,a)') &
-            plot_area(iFN)//"_"//plot_var(iFN)//"_e"// &
-            real_date//"_",iTime_I(1:6), extension
+            plot_area(iFN)//"_"//plot_var(iFN)//"_e", iTime_I(1:6), extension
     else
        ! Use simulation time: hours,minutes,seconds
        write(filename,'(a,i4.4,i2.2,i2.2,a)') &
