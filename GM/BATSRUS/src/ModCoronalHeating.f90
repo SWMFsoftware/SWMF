@@ -965,6 +965,8 @@ contains
                      call read_var('KarmanTaylorBeta', KarmanTaylorBeta)
              end if
           else
+             call stop_mpi('The WKB Alfven wave approximation is ' &
+                  // 'not yet fully implemented')
              call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
           end if
        case default
@@ -1405,7 +1407,95 @@ contains
 
     else
 
-       call stop_mpi(NameSub//'Wave dissipation to be committed')
+       if(UseB0)then
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       else
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+       FullB = sqrt(sum(FullB_D**2))
+
+       Coef = sqrt(FullB)/LperpTimesSqrtB
+
+       EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+       EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+
+       if(FullB<1e-15)then
+
+          WaveDissipation_V(WaveFirst_) = &
+               EwavePlus*Coef*sqrt(4.0*EwaveMinus/State_VGB(Rho_,i,j,k,iBlock))
+
+          WaveDissipation_V(WaveLast_) = &
+               EwaveMinus*Coef*sqrt(4.0*EwavePlus/State_VGB(Rho_,i,j,k,iBlock))
+
+       else
+
+          if(IsNewBlockAlfven)then
+             if(.not.allocated(State2_VG)) allocate( &
+                  State1_VG(4,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+                  State2_VG(4,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
+
+             ! second order interpolation of density and magnetic field
+             do kk = MinK, MaxK; do jj = MinJ, MaxJ; do ii = MinI, MaxI
+                State2_VG(iRho,ii,jj,kk) = State_VGB(Rho_,ii,jj,kk,iBlock)
+                State2_VG(iBx:iBz,ii,jj,kk) = &
+                     State_VGB(Bx_:Bz_,ii,jj,kk,iBlock)
+             end do; end do; end do
+             call set_block_field2(iBlock, 4, State1_VG, State2_VG)
+
+             if(UseB0)then
+                do kk = k0_, nKp1_; do jj = j0_, nJp1_; do ii = 0, nI+1
+                   Alfven_G(ii,jj,kk) = &
+                        sqrt( sum((State2_VG(iBx:iBz,ii,jj,kk) &
+                        + B0_DGB(:,ii,jj,kk,iBlock))**2) &
+                        /State2_VG(iRho,ii,jj,kk))
+                end do; end do; end do
+             else
+                do kk = k0_, nKp1_; do jj = j0_, nJp1_; do ii = 0, nI+1
+                   Alfven_G(ii,jj,kk) = &
+                        sqrt( sum(State2_VG(iBx:iBz,ii,jj,kk)**2) &
+                        /State2_VG(iRho,ii,jj,kk))
+                end do; end do; end do
+             end if
+
+             IsNewBlockAlfven = .false.
+          end if
+
+          if(IsCartesianGrid)then
+             GradAlfven_D(x_) = 0.5/CellSize_DB(x_,iBlock) &
+                  *(Alfven_G(i+1,j,k) - Alfven_G(i-1,j,k))
+             if(nJ > 1) GradAlfven_D(y_) = 0.5/CellSize_DB(y_,iBlock) &
+                  *(Alfven_G(i,j+1,k) - Alfven_G(i,j-1,k))
+             if(nK > 1) GradAlfven_D(z_) = 0.5/CellSize_DB(z_,iBlock) &
+                  *(Alfven_G(i,j,k+1) - Alfven_G(i,j,k-1))
+          else
+             GradAlfven_D = &
+                  0.5*(Alfven_G(i+1,j,k) + Alfven_G(i,j,k)) &
+                  *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
+                  - 0.5*(Alfven_G(i,j,k) + Alfven_G(i-1,j,k)) &
+                  *FaceNormal_DDFB(:,x_,i,j,k,iBlock)
+             if(nJ > 1) GradAlfven_D = GradAlfven_D + &
+                  0.5*(Alfven_G(i,j+1,k) + Alfven_G(i,j,k)) &
+                  *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
+                  - 0.5*(Alfven_G(i,j,k) + Alfven_G(i,j-1,k)) &
+                  *FaceNormal_DDFB(:,y_,i,j,k,iBlock)
+             if(nK > 1) GradAlfven_D = GradAlfven_D + &
+                  0.5*(Alfven_G(i,j,k+1) + Alfven_G(i,j,k)) &
+                  *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
+                  - 0.5*(Alfven_G(i,j,k) + Alfven_G(i,j,k-1)) &
+                  *FaceNormal_DDFB(:,z_,i,j,k,iBlock)
+
+             GradAlfven_D = GradAlfven_D/CellVolume_GB(i,j,k,iBlock)
+          end if
+
+          ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradAlfven_D))/FullB
+
+          WaveDissipation_V(WaveFirst_) = EwavePlus*max( ReflectionPerLperp, &
+               Coef*sqrt(4.0*EwaveMinus/State_VGB(Rho_,i,j,k,iBlock)) )
+
+          WaveDissipation_V(WaveLast_) = EwaveMinus*max( ReflectionPerLperp, &
+               Coef*sqrt(4.0*EwavePlus/State_VGB(Rho_,i,j,k,iBlock)) )
+
+       end if
 
     end if
 
