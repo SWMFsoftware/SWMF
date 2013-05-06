@@ -1146,10 +1146,19 @@ end
 ;===========================================================================
 pro do_my_transform,ifile,variables,x,w,xreg,wreg,usereg
 
-print,'transform="my" so "pro do_my_transform" has to be written and compiled!'
-retall
+; this transformation is useful for plotting RCM files in the
+; equatorial plane
 
-; example: convert 2nd and 3rd indexes from radian to degrees in 3D
+; copy x and y coordinates from w to x
+x = w(*,*,0:1)
+
+; change coordinate names
+variables(0:1) = ['x','y']
+
+; use x and w (not xreg and wreg)
+usereg = 0
+
+; Another example: convert 2nd and 3rd indexes from radian to degrees in 3D
 ; check first if the conversion has been done already
 ;if max(x(*,*,*,1:2)) lt 10.0 then $
 ;  x(*,*,*,1:2) = x(*,*,*,1:2)*180/!pi
