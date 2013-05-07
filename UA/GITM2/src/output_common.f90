@@ -110,8 +110,14 @@ subroutine output(dir, iBlock, iOutputType)
      rLat = 1.0
   endif
 
-  SatAltDat(CurrSat) = -1.0e32 !! Initialize satellites so that the maximum
-                               !! from all processors contains the real value
+  ! If there are satellites, initialize the current satellite so that
+  ! the maximum from all processors will contain the real value.  This is
+  ! done by setting the current value to something rediculously small for
+  ! all currently known satellite input data types.
+
+  if(CurrSat > 0) then
+     SatAltDat(CurrSat) = -1.0e32
+  end if
 
   if (iOutputType <= -1) then
      LatFind = CurrentSatellitePosition(iNorth_)
