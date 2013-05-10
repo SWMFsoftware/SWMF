@@ -371,6 +371,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModB0, ONLY: DoUpdateB0, DtUpdateB0
   use ModResistivity, ONLY: UseResistivity, UseHeatExchange, calc_heat_exchange
   use ModMultiFluid, ONLY: UseMultiIon
+  use ModPic, ONLY: UsePic, pic_save_region
 
   implicit none
 
@@ -478,10 +479,17 @@ subroutine BATS_advance(TimeSimulationLimit)
           call update_b0
   end if
 
-  if ( DoAmr .and. mod(n_step, DnAmr) == 0 )then
+  if (UseProjection) call project_B
 
-     ! Write plotfiles before AMR if required
-     if(save_plots_amr)call BATS_save_files('PLOTS')
+  if(UsePic)then
+     ! Make sure that the next time step is calculated
+     call set_global_timestep(TimeSimulationLimit)
+     call pic_save_region
+  end if
+
+  call BATS_save_files('NORMAL')
+
+  if ( DoAmr .and. mod(n_step, DnAmr) == 0 )then
 
      call timing_start(NameThisComp//'_amr')
      if(iProc==0 .and. lVerbose > 0 .and. DnAmr > 1)then
@@ -507,14 +515,14 @@ subroutine BATS_advance(TimeSimulationLimit)
              '>>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<'
      end if
 
+     if (UseProjection) call project_B
+
+     ! Write plotfiles after AMR if required
+     if(save_plots_amr)call BATS_save_files('PLOTS')
+
   end if
 
-  if (UseProjection) call project_B
-
-  call BATS_save_files('NORMAL')
-
 end subroutine BATS_advance
-
 
 !============================================================================
 
