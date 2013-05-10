@@ -10,6 +10,7 @@ module ModPIC
   private ! except
 
   public:: pic_read_param
+  public:: pic_save_region
   public:: pic_update_states
   public:: pic_param
 
@@ -21,14 +22,20 @@ module ModPIC
   real   :: TimeUnitPic = 1.0
   character(len=100):: NameFilePic = 'GM/IO2/ipic3d.dat'
 
+  integer:: nRegionPic = 0
+  real, allocatable:: XyzMinPic_DI(:,:), XyzMaxPic_DI(:,:), DxyzPic_DI(:,:)
+
 contains
   !===========================================================================
   subroutine pic_read_param(NameCommand)
 
     use ModProcMH,    ONLY: iProc
     use ModReadParam, ONLY: read_var
+    use BATL_lib,     ONLY: x_, y_, z_, nDim
 
     character(len=*), intent(in):: NameCommand
+
+    integer:: iRegion
 
     character(len=*), parameter:: NameSub = 'read_pic_param'
     !------------------------------------------------------------------------
@@ -38,12 +45,172 @@ contains
        call read_var('nGhostPic',   nGhostPic)
        call read_var('nOverlapPic', nOverlapPic)
        call read_var('TimeUnitPic', TimeUnitPic)
+    case("#PICREGION")
+       call read_var('nPicRegion', nRegionPic)
+       if(allocated(XyzMinPic_DI)) deallocate( &
+            XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI)
+       allocate( &
+            XyzMinPic_DI(nDim,nRegionPic), &
+            XyzMaxPic_DI(nDim,nRegionPic), &
+            DxyzPic_DI(nDim,nRegionPic))
+       do iRegion = 1, nRegionPic
+          call              read_var('xMinPic', XyzMinPic_DI(x_,iRegion))
+          call              read_var('xMaxPic', XyzMaxPic_DI(x_,iRegion))
+          if(nDim > 1) call read_var('yMinPic', XyzMinPic_DI(y_,iRegion))
+          if(nDim > 1) call read_var('yMaxPic', XyzMaxPic_DI(y_,iRegion))
+          if(nDim > 2) call read_var('zMinPic', XyzMinPic_DI(z_,iRegion))
+          if(nDim > 2) call read_var('zMaxPic', XyzMaxPic_DI(z_,iRegion))
+          call              read_var('DxPic',   DxyzPic_DI(x_,iRegion))
+          if(nDim > 1) call read_var('DyPic',   DxyzPic_DI(y_,iRegion))
+          if(nDim > 2) call read_var('DzPic',   DxyzPic_DI(z_,iRegion))
+       end do
     case default
        if(iProc==0) call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
 
   end subroutine pic_read_param
+  !===========================================================================
+  subroutine pic_save_region
 
+    use ModProcMH,  ONLY: iProc, nProc, iComm
+    use ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, State_VGB
+    use ModMain,    ONLY: UseB0, Dt, time_simulation, n_step
+    use ModB0,      ONLY: B0_DGB
+    use ModCurrent, ONLY: get_current
+    use ModMpi,     ONLY: MPI_reduce, MPI_SUM, MPI_REAL
+    use BATL_lib,   ONLY: nDim, MaxDim, Xyz_DGB, CellSize_DB, find_grid_block
+    use ModIO,      ONLY: NamePlotDir
+    use ModPlotFile,ONLY: save_plot_file
+
+    ! Assuming ideal MHD for now !!! Add Pe, Ppar, PePar multi-ion???
+    integer, parameter:: RhoPic_=1, UxPic_=2, UzPic_=4, BxPic_=5, BzPic_=7, &
+         pPic_=8, JxPic_=9, JzPic_=11, nVarPic = 11
+
+    ! Coordinate, variable and parameter names
+    character(len=*), parameter:: NameVarPic = &
+         'x y rho ux uy uz bx by bz p jx jy jz dt tUnitPic'
+
+    ! PIC grid indexes
+    integer:: iPic, jPic, kPic, nPic_D(MaxDim), iRegion
+
+    ! MHD grid indexes
+    integer:: i, j, k, iBlock, iProcFound
+
+    ! Cell indexes in an array
+    integer:: iCell_D(MaxDim)
+
+    ! Location of PIC node
+    real:: XyzPic_D(MaxDim)
+
+    ! The PIC variable array
+    real, allocatable:: StatePic_VC(:,:,:,:), StateAllPic_VC(:,:,:,:)
+
+    ! Time step in SI units
+    real:: DtSi
+
+    ! MPI error
+    integer:: iError
+
+    character(len=100):: NameFile
+
+    character(len=*), parameter:: NameSub = 'pic_save_region'
+    !-------------------------------------------------------------------------
+    DtSi = dt !!! to be converted
+    XyzPic_D = 0.0
+    nPic_D = 1
+    do iRegion = 1, nRegionPic
+
+       nPic_D(1:nDim) = nint( &
+            (XyzMaxPic_DI(:,iRegion) - XyzMinPic_DI(:,iRegion)) &
+            / DxyzPic_DI(:,iRegion) )
+
+       write(*,*)'!!! XyzMinPic=', XyzMinPic_DI(:,iRegion)
+       write(*,*)'!!! XyzMaxPic=', XyzMaxPic_DI(:,iRegion)
+       write(*,*)'!!! DxyzPic  =', DxyzPic_DI(:,iRegion)
+       write(*,*)'!!! nPic_D   =', nPic_D
+
+       allocate(StatePic_VC(nVarPic, nPic_D(1), nPic_D(2), nPic_D(3)))
+       StatePic_VC = 0.0
+
+       do kPic = 1, nPic_D(3); do jPic = 1, nPic_D(2); do iPic = 1, nPic_D(1)
+
+          ! Set location of PIC node
+          iCell_D = (/iPic, jPic, kPic/)
+          XyzPic_D(1:nDim) = XyzMinPic_DI(:,iRegion) &
+               + (iCell_D(1:nDim) - 0.5)*DxyzPic_DI(:,iRegion)
+
+          call find_grid_block(XyzPic_D, iProcFound, iBlock, iCell_D)
+          if(iProcFound /= iProc) CYCLE
+
+          ! Find corresponding MHD cell center
+          i = iCell_D(1); j = iCell_D(2); k = iCell_D(3)
+
+          ! For now we only support coinciding grids...
+          if(any(abs(Xyz_DGB(:,i,j,k,iBlock) - XyzPic_D) > &
+               1e-5*CellSize_DB(:,iBlock))) then
+             write(*,*)'ERROR in ',NameSub
+             write(*,*)'XyzPic_D = ', XyzPic_D
+             write(*,*)'XyzMhd_D = ', Xyz_DGB(:,i,j,k,iBlock)
+             write(*,*)'iProc, iBlock, i, j, k=', iProc, iBlock, i, j, k
+             call stop_mpi('PIC cell center does not match MHD grid!')
+          end if
+
+          StatePic_VC(RhoPic_,iPic,jPic,kPic) &
+               = State_VGB(Rho_,i,j,k,iBlock)
+          StatePic_VC(UxPic_:UzPic_,iPic,jPic,kPic) &
+               = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
+               / StatePic_VC(RhoPic_,iPic,jPic,kPic)
+          if(UseB0)then
+             StatePic_VC(BxPic_:BzPic_,iPic,jPic,kPic) &
+                  = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+          else
+             StatePic_VC(BxPic_:BzPic_,iPic,jPic,kPic) &
+                  = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          end if
+          StatePic_VC(pPic_,iPic,jPic,kPic) &
+               = State_VGB(p_,i,j,k,iBlock)
+
+          ! Put current into the last three elemets
+          call get_current(i, j, k, iBlock, &
+               StatePic_VC(JxPic_:JzPic_,iPic,jPic,kPic))
+
+          ! SI normalization should come here !!!
+
+       end do; end do; end do
+
+       if(nProc > 1)then
+          ! Collect information from all processors
+          allocate(StateAllPic_VC(nVarPic,nPic_D(1),nPic_D(2),nPic_D(3)))
+          call MPI_reduce(StatePic_VC, StateAllPic_VC, size(StatePic_VC), &
+               MPI_REAL, MPI_SUM, 0, iComm, iError)
+          if(iProc == 0) StatePic_VC = StateAllPic_VC
+          deallocate(StateAllPic_VC)
+       endif
+
+       if(iProc == 0)then
+
+          write(*,*)'!!! shape of VarIn_VIII=', shape(StatePic_VC)
+
+          write(NameFile,'(a,i2.2,a)') &
+               trim(NamePlotDir)//'mhd_region_',iRegion,'.out'
+          call save_plot_file(NameFile, &
+               StringHeaderIn='PIC region', &
+               nStepIn = n_step, TimeIn = time_simulation, &
+               ParamIn_I = (/ DtSi, TimeUnitPic /), &
+               NameVarIn = NameVarPic, &
+               nDimIn = nDim, &
+               CoordMinIn_D = &
+               XyzMinPic_DI(:,iRegion)+0.5*DxyzPic_DI(:,iRegion), &
+               CoordMaxIn_D = &
+               XyzMaxPic_DI(:,iRegion)-0.5*DxyzPic_DI(:,iRegion), &
+               VarIn_VIII = StatePic_VC)
+       end if
+
+       deallocate(StatePic_VC)
+
+    end do ! iRegion
+
+  end subroutine pic_save_region
   !===========================================================================
   real function pic_param(NameParam)
 
