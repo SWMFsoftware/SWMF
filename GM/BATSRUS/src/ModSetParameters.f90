@@ -507,7 +507,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#HYPRE")
         call hypre_read_param
 
-     case("#PIC", "#PICREGION")
+     case("#PIC", "#PICREGION", "#PICUNIT")
         call pic_read_param(NameCommand)
 
      case("#VISCOSITY", "#VISCOSITYREGION")

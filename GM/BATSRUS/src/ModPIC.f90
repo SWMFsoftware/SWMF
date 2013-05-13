@@ -20,6 +20,10 @@ module ModPIC
   integer:: nGhostPic   = 3
   integer:: nOverlapPic = 0
   real   :: TimeUnitPic = 1.0
+  real   :: xUnitPicSi  = 1.0
+  real   :: uUnitPicSi  = 1.0
+  real   :: mUnitPicSi  = 1.0
+
   character(len=100):: NameFilePic = 'GM/IO2/ipic3d.dat'
 
   integer:: nRegionPic = 0
@@ -45,6 +49,12 @@ contains
        call read_var('nGhostPic',   nGhostPic)
        call read_var('nOverlapPic', nOverlapPic)
        call read_var('TimeUnitPic', TimeUnitPic)
+
+    case("#PICUNIT")
+       call read_var('xUnitPicSi', xUnitPicSi)
+       call read_var('uUnitPicSi', uUnitPicSi)
+       call read_var('mUnitPicSi', mUnitPicSi)
+
     case("#PICREGION")
        call read_var('nPicRegion', nRegionPic)
        if(allocated(XyzMinPic_DI)) deallocate( &
@@ -80,6 +90,8 @@ contains
     use ModMpi,     ONLY: MPI_reduce, MPI_SUM, MPI_REAL
     use BATL_lib,   ONLY: nDim, MaxDim, Xyz_DGB, CellSize_DB, find_grid_block
     use ModIO,      ONLY: NamePlotDir
+    use ModPhysics, ONLY: No2Si_V, UnitT_, UnitX_, UnitRho_, UnitU_, UnitB_, &
+         UnitP_, UnitJ_
     use ModPlotFile,ONLY: save_plot_file
 
     ! Assuming ideal MHD for now !!! Add Pe, Ppar, PePar multi-ion???
@@ -88,7 +100,7 @@ contains
 
     ! Coordinate, variable and parameter names
     character(len=*), parameter:: NameVarPic = &
-         'x y rho ux uy uz bx by bz p jx jy jz dt tUnitPic'
+         'x y rho ux uy uz bx by bz p jx jy jz dt xUnitPic uUnitPic mUnitPic'
 
     ! PIC grid indexes
     integer:: iPic, jPic, kPic, nPic_D(MaxDim), iRegion
@@ -101,6 +113,9 @@ contains
 
     ! Location of PIC node
     real:: XyzPic_D(MaxDim)
+
+    ! Current in normalized units
+    real:: Current_D(MaxDim)
 
     ! The PIC variable array
     real, allocatable:: StatePic_VC(:,:,:,:), StateAllPic_VC(:,:,:,:)
@@ -115,7 +130,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'pic_save_region'
     !-------------------------------------------------------------------------
-    DtSi = dt !!! to be converted
+    DtSi = dt*No2Si_V(UnitT_)
     XyzPic_D = 0.0
     nPic_D = 1
     do iRegion = 1, nRegionPic
@@ -123,11 +138,6 @@ contains
        nPic_D(1:nDim) = nint( &
             (XyzMaxPic_DI(:,iRegion) - XyzMinPic_DI(:,iRegion)) &
             / DxyzPic_DI(:,iRegion) )
-
-       write(*,*)'!!! XyzMinPic=', XyzMinPic_DI(:,iRegion)
-       write(*,*)'!!! XyzMaxPic=', XyzMaxPic_DI(:,iRegion)
-       write(*,*)'!!! DxyzPic  =', DxyzPic_DI(:,iRegion)
-       write(*,*)'!!! nPic_D   =', nPic_D
 
        allocate(StatePic_VC(nVarPic, nPic_D(1), nPic_D(2), nPic_D(3)))
        StatePic_VC = 0.0
@@ -155,26 +165,24 @@ contains
              call stop_mpi('PIC cell center does not match MHD grid!')
           end if
 
-          StatePic_VC(RhoPic_,iPic,jPic,kPic) &
-               = State_VGB(Rho_,i,j,k,iBlock)
-          StatePic_VC(UxPic_:UzPic_,iPic,jPic,kPic) &
-               = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
+          StatePic_VC(RhoPic_,iPic,jPic,kPic) = No2Si_V(UnitRho_)* &
+               State_VGB(Rho_,i,j,k,iBlock)
+          StatePic_VC(UxPic_:UzPic_,iPic,jPic,kPic) = No2Si_V(UnitU_)* &
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
                / StatePic_VC(RhoPic_,iPic,jPic,kPic)
           if(UseB0)then
-             StatePic_VC(BxPic_:BzPic_,iPic,jPic,kPic) &
-                  = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+             StatePic_VC(BxPic_:BzPic_,iPic,jPic,kPic) = No2Si_V(UnitB_)* &
+                  (State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
           else
-             StatePic_VC(BxPic_:BzPic_,iPic,jPic,kPic) &
-                  = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             StatePic_VC(BxPic_:BzPic_,iPic,jPic,kPic) = No2Si_V(UnitB_)* &
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock)
           end if
-          StatePic_VC(pPic_,iPic,jPic,kPic) &
-               = State_VGB(p_,i,j,k,iBlock)
+          StatePic_VC(pPic_,iPic,jPic,kPic) = No2Si_V(UnitP_)* &
+               State_VGB(p_,i,j,k,iBlock)
 
           ! Put current into the last three elemets
-          call get_current(i, j, k, iBlock, &
-               StatePic_VC(JxPic_:JzPic_,iPic,jPic,kPic))
-
-          ! SI normalization should come here !!!
+          call get_current(i, j, k, iBlock, Current_D)
+          StatePic_VC(JxPic_:JzPic_,iPic,jPic,kPic) = No2Si_V(UnitJ_)*Current_D
 
        end do; end do; end do
 
@@ -188,21 +196,18 @@ contains
        endif
 
        if(iProc == 0)then
-
-          write(*,*)'!!! shape of VarIn_VIII=', shape(StatePic_VC)
-
           write(NameFile,'(a,i2.2,a)') &
-               trim(NamePlotDir)//'mhd_region_',iRegion,'.out'
+               trim(NamePlotDir)//'mhd_to_pic_',iRegion,'.dat'
           call save_plot_file(NameFile, &
-               StringHeaderIn='PIC region', &
+               StringHeaderIn='PIC region in SI units', &
                nStepIn = n_step, TimeIn = time_simulation, &
-               ParamIn_I = (/ DtSi, TimeUnitPic /), &
+               ParamIn_I = (/ DtSi, xUnitPicSi, uUnitPicSi, mUnitPicSi /), &
                NameVarIn = NameVarPic, &
                nDimIn = nDim, &
-               CoordMinIn_D = &
-               XyzMinPic_DI(:,iRegion)+0.5*DxyzPic_DI(:,iRegion), &
-               CoordMaxIn_D = &
-               XyzMaxPic_DI(:,iRegion)-0.5*DxyzPic_DI(:,iRegion), &
+               CoordMinIn_D = No2Si_V(UnitX_)* &
+               (XyzMinPic_DI(:,iRegion) + 0.5*DxyzPic_DI(:,iRegion)), &
+               CoordMaxIn_D = No2Si_V(UnitX_)* &
+               (XyzMaxPic_DI(:,iRegion) - 0.5*DxyzPic_DI(:,iRegion)), &
                VarIn_VIII = StatePic_VC)
        end if
 
