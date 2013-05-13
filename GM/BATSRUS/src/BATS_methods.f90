@@ -335,10 +335,8 @@ subroutine BATS_init_session
 
   call BATS_save_files('INITIAL')
 
-  ! save initial condition
-  if (UseRestartOutSeries)then
-     call BATS_save_files('NORMAL')
-  end if
+  ! save initial restart series
+  if (UseRestartOutSeries) call BATS_save_files('RESTART')
 
   ! Set all Arrays for AMR
   call init_amr_criteria(user_amr_geometry=user_specify_refinement)
@@ -518,7 +516,7 @@ subroutine BATS_advance(TimeSimulationLimit)
      if (UseProjection) call project_B
 
      ! Write plotfiles after AMR if required
-     if(save_plots_amr)call BATS_save_files('PLOTS')
+     if(save_plots_amr)call BATS_save_files('AMRPLOTS')
 
   end if
 
@@ -634,7 +632,9 @@ subroutine BATS_save_files(TypeSaveIn)
   use ModIO
   use ModUtilities, ONLY : upper_case
   use ModMessagePass, ONLY: exchange_messages
+
   implicit none
+
   character(len=*), intent(in) :: TypeSaveIn
 
   character(len=len(TypeSaveIn)) :: TypeSave
@@ -683,10 +683,12 @@ subroutine BATS_save_files(TypeSaveIn)
      call save_files_final
   case('NORMAL')
      call save_files
-  case('PLOT','PLOTS')
+  case('AMRPLOTS')
      do iFile=plot_+1, plot_+nPlotFile
         call save_file
      end do
+     if(DoExchangeAgain) &
+          call exchange_messages(DoResChangeOnlyIn=.true.)
   case('RESTART')
      DoSaveRestartTmp = save_restart_file
      save_restart_file = .true.
@@ -698,7 +700,7 @@ subroutine BATS_save_files(TypeSaveIn)
   end select
 
 contains
-
+  !==========================================================================
   subroutine save_files
 
     logical :: DoSave = .false.
@@ -738,6 +740,7 @@ contains
   !==========================================================================
 
   subroutine save_file
+
     use ModRestartFile, ONLY: write_restart_files
     use ModSatelliteFile, ONLY: &
          nSatellite, set_satellite_file_status, set_satellite_flags, &
@@ -804,7 +807,6 @@ contains
           IsFound = .true.
           call write_plot_radiowave(iFile)
        end if
-
 
        if(index(plot_type(iFile),'lin')>0) then
           IsFound = .true.
@@ -915,18 +917,16 @@ contains
   subroutine save_files_final
     use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
     use ModGmGeoindices,  ONLY: DoWriteIndices, finalize_geoindices
-    use ModGroundMagPerturb, ONLY:save_magnetometer_data, close_magnetometer_output_file
-    implicit none
+    use ModGroundMagPerturb, ONLY: &
+         save_magnetometer_data, close_magnetometer_output_file
 
     integer :: iSat
-
+    !-----------------------------------------------------------------------
     do iFile = 1, plot_ + nPlotFile
        call save_file
     end do
 
-    !\
     ! Close files
-    !/
     if (iProc==0) then
        do iSat = 1, nSatellite
           call set_satellite_file_status(iSat,'close')
@@ -934,7 +934,8 @@ contains
     end if
 
     if (DoWriteIndices) call finalize_geoindices()
-    if (save_magnetometer_data .and. iProc==0) call close_magnetometer_output_file   
+    if (save_magnetometer_data .and. iProc==0) &
+         call close_magnetometer_output_file   
 
     if (save_logfile.and.iProc==0.and.unit_log>0) close(unit_log)
 
