@@ -362,26 +362,18 @@ rundir: ENV_CHECK
 	touch ${RUNDIR}/core
 	chmod 444 ${RUNDIR}/core
 	cd ${RUNDIR}; ln -s  ${DIR}/bin/SWMF.exe . ; ln -s  ${DIR}/Param .
-	cd ${EEDIR}; make rundir                 #^CMP IF EE
-	cd ${GMDIR}; make rundir                 #^CMP IF GM
-	cd ${IEDIR}; make rundir                 #^CMP IF IE
-	cd ${IHDIR}; make rundir                 #^CMP IF IH
-	cd ${IMDIR}; make rundir                 #^CMP IF IM
-	cd ${LADIR}; make rundir                 #^CMP IF LA
-	cd ${LCDIR}; make rundir                 #^CMP IF LC
-	cd ${OHDIR}; make rundir                 #^CMP IF OH
-	cd ${PSDIR}; make rundir                 #^CMP IF PS
-	cd ${PWDIR}; make rundir                 #^CMP IF PW
-	cd ${RBDIR}; make rundir                 #^CMP IF RB
-	cd ${SCDIR}; make rundir                 #^CMP IF SC
-	cd ${SPDIR}; make rundir                 #^CMP IF SP
-	cd ${UADIR}; make rundir                 #^CMP IF UA
+	@for i in `ls -d [A-Z][A-Z]`; do \
+		make rundircomp COMPDIR=$${i}DIR; \
+	done
 	@touch share/JobScripts/TMP_${MACHINE}
 	cp share/JobScripts/*${MACHINE}* ${RUNDIR}/
 	@rm -rf ${RUNDIR}/TMP_${MACHINE} share/JobScripts/TMP_${MACHINE}
 	@echo
 	@echo Creation of ${RUNDIR} directory succeeded
 	@echo
+
+rundircomp:
+	cd ${${COMPDIR}}; make rundir
 
 CDATE = `date +%Y%b%d`
 
