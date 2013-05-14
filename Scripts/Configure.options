@@ -48,8 +48,10 @@ GM			ON			#^CMP IF GM
 IE			ON			#^CMP IF IE
 IH			ON NEEDS GM		#^CMP IF IH
 IM			ON			#^CMP IF IM
-LA			ON			#^CMP IF LA
+OH			ON			#^CMP IF OH
+PC			ON			#^CMP IF PC
 PS			ON			#^CMP IF PS
+PT			ON			#^CMP IF PT
 PW			ON			#^CMP IF PW
 RB                      ON                      #^CMP IF RB
 SC			ON NEEDS GM		#^CMP IF SC

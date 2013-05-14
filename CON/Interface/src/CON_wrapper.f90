@@ -120,7 +120,6 @@ contains
     ! 19Jul03 - G. Toth <gtoth@umich.edu> - simplified and generalized version
     ! 09Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
     ! 03Jun08 - R Oran  <oran@umich.edu>  - add component OH
-    ! 16Sep09 - R. ORan <oran@umich.edu> - add component LC
     !EOP ___________________________________________________________________
 
     character(len=*),parameter :: NameSub=NameMod//'.set_param_id'
@@ -156,22 +155,22 @@ contains
        call IE_set_param(CompInfo,TypeAction)     !^CMP IF IE
     case(IH_)                                     !^CMP IF IH
        call IH_set_param(CompInfo,TypeAction)     !^CMP IF IH
-    case(OH_)                                     !^CMP IF OH                  
-       call OH_set_param(CompInfo,TypeAction)     !^CMP IF OH  
     case(IM_)                                     !^CMP IF IM
        call IM_set_param(CompInfo,TypeAction)     !^CMP IF IM
-    case(LA_)                                     !^CMP IF LA
-       call LA_set_param(CompInfo,TypeAction)     !^CMP IF LA
+    case(OH_)                                     !^CMP IF OH                  
+       call OH_set_param(CompInfo,TypeAction)     !^CMP IF OH  
+    case(PC_)                                     !^CMP IF PC
+       call PC_set_param(CompInfo,TypeAction)     !^CMP IF PC
     case(PS_)                                     !^CMP IF PS
        call PS_set_param(CompInfo,TypeAction)     !^CMP IF PS
+    case(PT_)                                     !^CMP IF PT
+       call PT_set_param(CompInfo,TypeAction)     !^CMP IF PT
     case(PW_)                                     !^CMP IF PW
        call PW_set_param(CompInfo,TypeAction)     !^CMP IF PW
     case(RB_)                                     !^CMP IF RB
        call RB_set_param(CompInfo,TypeAction)     !^CMP IF RB
     case(SC_)                                     !^CMP IF SC
        call SC_set_param(CompInfo,TypeAction)     !^CMP IF SC
-    case(LC_)                                     !^CMP IF LC
-       call LC_set_param(CompInfo,TypeAction)     !^CMP IF LC
     case(SP_)                                     !^CMP IF SP
        call SP_set_param(CompInfo,TypeAction)     !^CMP IF SP
     case(UA_)                                     !^CMP IF UA
@@ -273,18 +272,18 @@ contains
        call OH_set_param(CompInfo,'VERSION')     !^CMP IF OH   
     case(IM_)                                    !^CMP IF IM
        call IM_set_param(CompInfo,'VERSION')     !^CMP IF IM
-    case(LA_)                                    !^CMP IF LA
-       call LA_set_param(CompInfo,'VERSION')     !^CMP IF LA
+    case(PC_)                                    !^CMP IF PC
+       call PC_set_param(CompInfo,'VERSION')     !^CMP IF PC
     case(PS_)                                    !^CMP IF PS
        call PS_set_param(CompInfo,'VERSION')     !^CMP IF PS
+    case(PT_)                                    !^CMP IF PT
+       call PT_set_param(CompInfo,'VERSION')     !^CMP IF PT
     case(PW_)                                    !^CMP IF PW
        call PW_set_param(CompInfo,'VERSION')     !^CMP IF PW
     case(RB_)                                    !^CMP IF RB
        call RB_set_param(CompInfo,'VERSION')     !^CMP IF RB
     case(SC_)                                    !^CMP IF SC
        call SC_set_param(CompInfo,'VERSION')     !^CMP IF SC
-    case(LC_)                                    !^CMP IF LC
-       call LC_set_param(CompInfo,'VERSION')     !^CMP IF LC
     case(SP_)                                    !^CMP IF SP
        call SP_set_param(CompInfo,'VERSION')     !^CMP IF SP
     case(UA_)                                    !^CMP IF UA
@@ -340,18 +339,18 @@ contains
        call OH_init_session(iSession,TimeSimulation)     !^CMP IF OH           
     case(IM_)                                            !^CMP IF IM
        call IM_init_session(iSession,TimeSimulation)     !^CMP IF IM
-    case(LA_)                                            !^CMP IF LA
-       call LA_init_session(iSession,TimeSimulation)     !^CMP IF LA
+    case(PC_)                                            !^CMP IF PC
+       call PC_init_session(iSession,TimeSimulation)     !^CMP IF PC
     case(PS_)                                            !^CMP IF PS
        call PS_init_session(iSession,TimeSimulation)     !^CMP IF PS
+    case(PT_)                                            !^CMP IF PT
+       call PT_init_session(iSession,TimeSimulation)     !^CMP IF PT
     case(PW_)                                            !^CMP IF PW
        call PW_init_session(iSession,TimeSimulation)     !^CMP IF PW
     case(RB_)                                            !^CMP IF RB
        call RB_init_session(iSession,TimeSimulation)     !^CMP IF RB
     case(SC_)                                            !^CMP IF SC
        call SC_init_session(iSession,TimeSimulation)     !^CMP IF SC
-    case(LC_)                                            !^CMP IF LC
-       call LC_init_session(iSession,TimeSimulation)     !^CMP IF LC
     case(SP_)                                            !^CMP IF SP
        call SP_init_session(iSession,TimeSimulation)     !^CMP IF SP
     case(UA_)                                            !^CMP IF UA
@@ -408,18 +407,18 @@ contains
        call OH_finalize(TimeSimulation)     !^CMP IF OH      
     case(IM_)                               !^CMP IF IM
        call IM_finalize(TimeSimulation)     !^CMP IF IM
-    case(LA_)                               !^CMP IF LA
-       call LA_finalize(TimeSimulation)     !^CMP IF LA
+    case(PC_)                               !^CMP IF PC
+       call PC_finalize(TimeSimulation)     !^CMP IF PC
     case(PS_)                               !^CMP IF PS
        call PS_finalize(TimeSimulation)     !^CMP IF PS
+    case(PT_)                               !^CMP IF PT
+       call PT_finalize(TimeSimulation)     !^CMP IF PT
     case(PW_)                               !^CMP IF PW
        call PW_finalize(TimeSimulation)     !^CMP IF PW
     case(RB_)                               !^CMP IF RB
        call RB_finalize(TimeSimulation)     !^CMP IF RB
     case(SC_)                               !^CMP IF SC
        call SC_finalize(TimeSimulation)     !^CMP IF SC
-    case(LC_)                               !^CMP IF LC
-       call LC_finalize(TimeSimulation)     !^CMP IF LC
     case(SP_)                               !^CMP IF SP
        call SP_finalize(TimeSimulation)     !^CMP IF SP
     case(UA_)                               !^CMP IF UA
@@ -475,18 +474,18 @@ contains
        call OH_save_restart(TimeSimulation)     !^CMP IF OH 
     case(IM_)                                   !^CMP IF IM
        call IM_save_restart(TimeSimulation)     !^CMP IF IM
-    case(LA_)                                   !^CMP IF LA
-       call LA_save_restart(TimeSimulation)     !^CMP IF LA
+    case(PC_)                                   !^CMP IF PC
+       call PC_save_restart(TImeSimulation)     !^CMP IF PC
     case(PS_)                                   !^CMP IF PS
        call PS_save_restart(TimeSimulation)     !^CMP IF PS
+    case(PT_)                                   !^CMP IF PT
+       call PT_save_restart(TimeSimulation)     !^CMP IF PT
     case(PW_)                                   !^CMP IF PW
        call PW_save_restart(TimeSimulation)     !^CMP IF PW
     case(RB_)                                   !^CMP IF RB
        call RB_save_restart(TimeSimulation)     !^CMP IF RB
     case(SC_)                                   !^CMP IF SC
        call SC_save_restart(TimeSimulation)     !^CMP IF SC
-    case(LC_)                                   !^CMP IF LC
-       call LC_save_restart(TImeSimulation)     !^CMP IF LC
     case(SP_)                                   !^CMP IF SP
        call SP_save_restart(TimeSimulation)     !^CMP IF SP
     case(UA_)                                   !^CMP IF UA
@@ -547,18 +546,18 @@ contains
        call OH_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF OH   
     case(IM_)                                               !^CMP IF IM
        call IM_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF IM
-    case(LA_)                                               !^CMP IF LA
-       call LA_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF LA
+    case(PC_)                                               !^CMP IF PC
+       call PC_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF PC
     case(PS_)                                               !^CMP IF PS
        call PS_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF PS
+    case(PT_)                                               !^CMP IF PT
+       call PT_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF PT
     case(PW_)                                               !^CMP IF PW
        call PW_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF PW
     case(RB_)                                               !^CMP IF RB
        call RB_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF RB
     case(SC_)                                               !^CMP IF SC
        call SC_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF SC
-    case(LC_)                                               !^CMP IF LC
-       call LC_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF LC
     case(SP_)                                               !^CMP IF SP
        call SP_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF SP
     case(UA_)                                               !^CMP IF UA

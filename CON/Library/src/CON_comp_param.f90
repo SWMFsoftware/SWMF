@@ -22,14 +22,13 @@
 !\item[IE] Ionospheric Electrodynamics
 !\item[IH] Inner Heliosphere
 !\item[IM] Inner Magnetosphere
-!\item[LA] Lower Atmosphere
 !\item[OH] Outer Heliosphere
+!\item[PC] Particle-in-Cell
 !\item[PS] Plasmasphere
+!\item[PT] Particle Tracker
 !\item[PW] Polar Wind
 !\item[RB] Radiation Belts
-!\item[RT] Radiative Transfer
 !\item[SC] Solar Corona
-!\item[LC] Lower Solar Corona
 !\item[SP] Solar Energetic Particles
 !\item[UA] Upper Atmosphere
 !\end{itemize}
@@ -42,18 +41,18 @@ module CON_comp_param
 
   !PUBLIC DATA MEMBERS:
 
-  integer, parameter :: MaxComp   = 15 ! maximum number of components
+  integer, parameter :: MaxComp   = 14 ! maximum number of components
   integer, parameter :: lNameComp =  2 ! length of component names
 
   ! Convert component index to component name
   character(len=lNameComp), parameter :: NameComp_I(MaxComp) = (/ & 
-       "EE", "GM", "IE", "IH", "IM", "LA", "OH", "PS", "PW", &
-       "RB", "RT", "SP", "SC", "LC", "UA"/)
+       "EE", "GM", "IE", "IH", "IM", "OH", "PC", "PS", "PW", "PT", &
+       "RB", "SC", "SP", "UA"/)
 
   ! Named indexes for the components
   integer, parameter :: &
-       EE_=1, GM_=2, IE_=3, IH_=4 , IM_=5 ,LA_=6, OH_=7, PS_=8, PW_=9, &
-       RB_=10 ,RT_=11, SP_=12 ,SC_=13 ,LC_=14, UA_=15
+       EE_=1, GM_=2, IE_=3, IH_=4 , IM_=5, OH_=6, PC_=7, PS_=8, PT_=9, PW_=10, &
+       RB_=11, SC_=12 ,SP_=13, UA_=14
 
   ! Length of the version name of the component
   integer, parameter :: lNameVersion=40 
@@ -82,7 +81,6 @@ module CON_comp_param
   !
   !  June    2003 - O. Volberg <volov@umich.edu> - initial version
   !  July 12 2003 - G. Toth    <gtoth@umich.edu> - rewrite
-  !  Sep  16 2009 - R. Oran    <oran@umich.edu>  - add LC component
   !
   !EOP ------------------------------------------------------------------------
 
@@ -94,12 +92,10 @@ contains
   logical function is_valid_comp_name(NameComp)
     character(len=*), parameter :: NameSub=NameMod//'::is_valid_comp_name'
     character(len=*), intent(in) :: NameComp
-!    integer, intent (out), optional :: iCompOut
     integer :: iComp
     !---------------------------------------------------------------
     iComp=i_comp_name(NameComp)
     is_valid_comp_name = iComp/=0
-!    if(present(iCompOut)) iCompOut=iComp
 
   end function is_valid_comp_name
   !==================================================================

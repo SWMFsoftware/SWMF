@@ -15,7 +15,6 @@ test_help:
 	@echo "    test MPIRUN='mpiexec'      (run tests with mpiexec)"
 	@echo "    test_share_library         (run share/Library tests)"
 	@echo "    test_comp                  (run component tests)"
-	@echo "    test_lc                    (run LC/BATSRUS test)"
 	@echo "    test_pw                    (run PW/PWOM test)"
 	@echo "    test_ps                    (run PW/DGCPM test)"
 	@echo "    test_rb                    (run RB/RBE test)"
@@ -37,7 +36,6 @@ test:
 	@rm -f *.diff
 	-@(${MAKE} test_share_library)
 	-@(${MAKE} test_comp)
-	-@(${MAKE} test_lc)
 	-@(${MAKE} test_pw)
 	-@(${MAKE} test_rb)
 	-@(${MAKE} test_ps)
@@ -753,45 +751,6 @@ test9_check:
 		output/test9/IH_log_n000000.log \
 		> test9_ih.diff)
 	ls -l test9*.diff
-
-
-### test_lc: Lower Corona test ###
-
-test_lc:
-	@echo "test_lc_compile..." > test_lc.diff
-	${MAKE} test_lc_compile
-	@echo "test_lc_rundir..." >> test_lc.diff
-	${MAKE} test_lc_rundir
-	@echo "test_lc_run..." >> test_lc.diff
-	${MAKE} test_lc_run
-	@echo "test_lc_check..." >> test_lc.diff
-	${MAKE} test_lc_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test_lc_compile:
-	./Config.pl -v=Empty,LC/BATSRUS
-	cd LC/BATSRUS; ./Config.pl -u=Lc -e=Mhd
-	./Config.pl -g=LC:6,4,4,3000,1
-	${MAKE} SWMF
-	make PIDL
-
-test_lc_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.LC ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.LC ${TESTDIR}/LAYOUT.in
-	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
-
-test_lc_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-test_lc_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/LC/log_n000001.log \
-		output/test_lc/LC_log_n000001.log \
-		> test_lc.diff)
-	ls -l test_lc.diff
 
 ### ESMF test ###
 #

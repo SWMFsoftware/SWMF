@@ -67,7 +67,6 @@ my %PlotDir = (
     "PS"     => "PS/Output",
     "RB"     => "RB/plots",
     "SC"     => "SC/IO2",
-    "LC"     => "LC/IO2",
     "UA"     => "UA/Output,UA/data",
     "STDOUT" => "STDOUT",
 	    );
@@ -108,7 +107,7 @@ REPEAT:{
 		&shell("./pION");
 	    }
             &concat_sat_log if $Concat;
-	}elsif( $Dir =~ /^SC|LC|IH|OH|GM|EE$/ ){
+	}elsif( $Dir =~ /^SC|IH|OH|GM|EE$/ ){
 	    &shell("./pIDL $MovieFlag -n=$nThread $Pattern");
 	    if($Gzip){
 		&shell("./pTEC A g");
@@ -145,7 +144,7 @@ REPEAT:{
 	    my $PlotDir = $PlotDir{$Dir};
 	    next unless -d $PlotDir;
 	    my $command = $rsync;
-	    $command .= $exclude if $Dir =~ /GM|SC|LC|IH|OH|EE/;
+	    $command .= $exclude if $Dir =~ /GM|SC|IH|OH|EE/;
 	    &shell("$command $PlotDir/ $Rsync/$Dir") if -d $PlotDir;
 	}
 	&shell("$rsync $ParamIn $Rsync/")          if -f $ParamIn;

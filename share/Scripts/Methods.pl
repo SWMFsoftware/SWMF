@@ -22,8 +22,8 @@ $Outfile = $o; $Outfile = "RenameList.pl" unless $Outfile;
 # for the IH component. This code only generates the renaming rules.
 # The rules can be used by Rename.pl to do the actual renaming.
 #
-# There are some special rules for EE, OH, IH, SC, LC and GM because the
-# BATSRUS code implements all three of these components.
+# There are some special rules for EE, SC, IH, OH, and GM because the
+# BATSRUS code implements all of these components.
 #
 #!REVISION HISTORY:
 # 08/03/2003 G.Toth gtoth@umich.edu - initial version
@@ -37,8 +37,8 @@ It collects the subroutine, entry, function and module names from Fortran
 files and creates a renaming list which has the correct component prefix.
 The output list can be used by Rename.pl to do the actual renaming.
 
-For components EE, OH, IH, SC, LC and GM method names starting with
-MH_ EE_ OH_ IH_ SC_ LC_ and GM_ are handled intelligently.
+For components EE, SC, IH, OH, IH, and GM method names starting with
+MH_ EE_ SC_ IH_ OH_ and GM_ are handled intelligently.
 
 ',
 #BOC
@@ -177,11 +177,7 @@ foreach $method (sort values %method){
 
     s/^(GM|MH)_// if $Comp eq "IH";  # GM_ and MH_ prefix removed for IH
 
-    s/^(GM|IH|MH)_// if $Comp eq "SC";#IH_ GM_ and MH_ prefix removed for SC
-
-    s/^(GM|IH|MH)_// if $Comp eq "LC";#IH_ GM_ and MH_ prefix removed for LC
-    s/^(GM|IH|MH)_// if $Comp eq "OH";#IH_ GM_ and MH_ prefix removed for OH
-    s/^(GM|IH|MH)_// if $Comp eq "EE";#IH_ GM_ and MH_ prefix removed for EE
+    s/^(GM|IH|MH)_// if $Comp =~ /EE|SC|OH/; #IH_ GM_ MH_ prefix removed for EE,SC,OH
 
     $replace = $Comp."_$_";          # Add component prefix
 

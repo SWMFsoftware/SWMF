@@ -10,8 +10,8 @@ module ModInitGridStorage
   !EOP
   integer,parameter:: MaxGrid = MaxComp+3
   type(DomainDecompositionType),private,save,target::&
-       EeGrid, GmGrid, IeGrid, IhGrid, ImGrid, LaGrid, OhGrid, PsGrid, &
-       PwGrid, RbGrid, ScGrid, LcGrid, SpGrid, UaGrid
+       EeGrid, GmGrid, IeGrid, IhGrid, ImGrid, OhGrid, PcGrid, PsGrid, &
+       PtGrid, PwGrid, RbGrid, ScGrid, SpGrid, UaGrid
 contains
   !BOP
   !REVISION HISTORY:
@@ -45,12 +45,14 @@ contains
        DD_I(GridID_)%Ptr=>ImGrid
     case(IH_)
        DD_I(GridID_)%Ptr=>IhGrid
-    case(LA_)
-       DD_I(GridID_)%Ptr=>LaGrid
     case(OH_)
        DD_I(GridID_)%Ptr=>OhGrid
+    case(PC_)
+       DD_I(GridID_)%Ptr=>PcGrid
     case(PS_)
        DD_I(GridID_)%Ptr=>PsGrid
+    case(PT_)
+       DD_I(GridID_)%Ptr=>PtGrid
     case(PW_)
        DD_I(GridID_)%Ptr=>PwGrid
     case(RB_)
@@ -59,8 +61,6 @@ contains
        DD_I(GridID_)%Ptr=>SpGrid
     case(SC_)
        DD_I(GridID_)%Ptr=>ScGrid
-    case(LC_)
-       DD_I(GridID_)%Ptr=>LcGrid
     case(UA_)
        DD_I(GridID_)%Ptr=>UaGrid
     case default

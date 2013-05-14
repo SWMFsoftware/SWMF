@@ -52,7 +52,7 @@ module CON_coupler
 
   public :: MaxCouple           ! Maximum number of couplings
 
-  integer, parameter :: MaxCouple = 27
+  integer, parameter :: MaxCouple = 23
 
   public :: nCouple             ! Actual number of couplings
 
@@ -65,8 +65,6 @@ module CON_coupler
   integer :: iCompCoupleOrder_II(2,MaxCouple) = reshape ( (/&
        EE_, SC_, &
        SC_, EE_, &
-       LC_, SC_, &
-       SC_, LC_, &
        SC_, IH_, & 
        IH_, SC_, & 
        SC_, SP_, & ! The order of these two couplings is mandatory
@@ -77,8 +75,6 @@ module CON_coupler
        GM_, PW_, &
        GM_, RB_, &
        UA_, IE_, &
-       UA_, LA_, &
-       LA_, UA_, &
        IM_, GM_, &
        IM_, IE_, &
        PW_, GM_, &

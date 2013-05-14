@@ -19,8 +19,7 @@ OBJECTS = \
 	update_lagrangian_grid.o\
 	ModDensityAndGradient.o\
 	ModRadioWaveImage.o\
-	ModRadioWaveRaytracing.o \
-	SC_set_buffer_grid.o
+	ModRadioWaveRaytracing.o
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
 	-I${DEMTDIR} -I${EMPIRICALEEDIR} -I../src -I../srcBATL

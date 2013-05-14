@@ -1,7 +1,7 @@
 !This code is a copyright protected software (c) 2002- University of Michigan
 !\
 ! set_physics_constants set normalizations, physical constants, 
-! module (GM/IH/OH/SC/LC) dependent physical parameters
+! module (EE/SC/IH/OH/GM) dependent physical parameters
 !/
 subroutine set_physics_constants 
 
@@ -29,7 +29,7 @@ subroutine set_physics_constants
   call set_oktest(NameSub, DoTest, DoTestMe)
 
   !\
-  ! Load body rotation rates, masses, and radii by module (GM/IH/OH/SC/LC)
+  ! Load body rotation rates, masses, and radii
   !/
   NamePlanetRadius = 'R'
   select case(NameThisComp)
@@ -42,7 +42,7 @@ subroutine set_physics_constants
         rPlanetSi = 1000.0  ! 1 km
         NamePlanetRadius = 'km'
      end if
-  case("LC","SC","IH","OH")
+  case('SC', 'IH', 'OH')
      if(UseStar) then
         rPlanetSi   = RadiusStar*rSun
         MassBodySi  = MassStar*mSun

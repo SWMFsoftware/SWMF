@@ -1698,7 +1698,7 @@ subroutine MH_set_parameters(TypeAction)
                    ' ERROR: cannot handle coordinate system '&
                    //TypeCoordSystem)
            end select
-        case('SC','LC')
+        case('SC')
            select case(TypeCoordSystem)
            case('HGR','HGC')
               UseRotatingFrame = .true.
@@ -1707,7 +1707,7 @@ subroutine MH_set_parameters(TypeAction)
               end if
            case('HGI')
               if(iProc==0) write(*,*) NameSub,&
-                   ' WARNING: inertial SC/LC is less accurate'
+                   ' WARNING: inertial SC is less accurate'
               UseRotatingFrame = .false.
            case default
               call stop_mpi(NameSub// &
@@ -1763,7 +1763,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#HELIOBUFFERGRID")
         if(.not.is_first_session())CYCLE READPARAM
-        if(NameThisComp == 'SC'.or. NameThisComp == 'LC') &
+        if(NameThisComp == 'SC') &
              call stop_mpi(NameSub//' ERROR:'// &
              ' #HELIOBUFFERGRID command can be used in IH,OH components only')
         call read_var('rBuffMin',  rBuffMin)
@@ -1961,7 +1961,7 @@ contains
        UseRotatingFrame  = .false.
        UseRotatingBc     = .false.
        TypeCoordSystem   = 'HGI'
-    case('SC','LC')
+    case('SC')
        UseRotatingFrame  = .true.
        UseRotatingBc     = .false.
        TypeCoordSystem   = 'HGR'
@@ -2100,7 +2100,7 @@ contains
     if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
 
     select case(NameThisComp)
-    case('LC','SC','IH','OH')
+    case('SC','IH','OH')
        ! Body parameters
        UseGravity=.true.
        body1      =.true.

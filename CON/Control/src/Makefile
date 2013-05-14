@@ -57,17 +57,17 @@ LIBIH = ${LIBDIR}/libIH.a	#^CMP IF IH
 
 LIBIM = ${LIBDIR}/libIM.a	#^CMP IF IM
 
-LIBLA = ${LIBDIR}/libLA.a	#^CMP IF LA
-
 LIBOH = ${LIBDIR}/libOH.a       #^CMP IF OH
 
+LIBPC = ${LIBDIR}/libPC.a       #^CMP IF PC
+
 LIBPS = ${LIBDIR}/libPS.a	#^CMP IF PS
+
+LIBPT = ${LIBDIR}/libPT.a	#^CMP IF PT
 
 LIBPW = ${LIBDIR}/libPW.a       #^CMP IF PW
 
 LIBRB = ${LIBDIR}/libRB.a	#^CMP IF RB
-
-LIBLC = ${LIBDIR}/libLC.a       #^CMP IF LC
 
 LIBSC = ${LIBDIR}/libSC.a       #^CMP IF SC
 
@@ -176,12 +176,12 @@ LIB:
 	@cd ${IEDIR};                $(MAKE) LIB	#^CMP IF IE
 	@cd ${IHDIR};                $(MAKE) LIB	#^CMP IF IH
 	@cd ${IMDIR};                $(MAKE) LIB	#^CMP IF IM
-	@cd ${LADIR};                $(MAKE) LIB	#^CMP IF LA
+	@cd ${PCDIR};                $(MAKE) LIB	#^CMP IF PC
 	@cd ${OHDIR};                $(MAKE) LIB	#^CMP IF OH
 	@cd ${PSDIR};                $(MAKE) LIB	#^CMP IF PS
+	@cd ${PTDIR};                $(MAKE) LIB	#^CMP IF PT
 	@cd ${PWDIR};                $(MAKE) LIB	#^CMP IF PW
 	@cd ${RBDIR};                $(MAKE) LIB	#^CMP IF RB
-	@cd ${LCDIR};                $(MAKE) LIB	#^CMP IF LC
 	@cd ${SCDIR};                $(MAKE) LIB	#^CMP IF SC
 	@cd ${SPDIR};                $(MAKE) LIB	#^CMP IF SP
 	@cd ${UADIR};                $(MAKE) LIB	#^CMP IF UA
@@ -224,12 +224,12 @@ TMP_DIRS: LIB
 	mkdir Tmp_LIBIE;       cd Tmp_LIBIE;     ${AR_X} ${LIBIE} #^CMP IF IE
 	mkdir Tmp_LIBIH;       cd Tmp_LIBIH;     ${AR_X} ${LIBIH} #^CMP IF IH
 	mkdir Tmp_LIBIM;       cd Tmp_LIBIM;     ${AR_X} ${LIBIM} #^CMP IF IM
-	mkdir Tmp_LIBLA;       cd Tmp_LIBLA;     ${AR_X} ${LIBLA} #^CMP IF LA
 	mkdir Tmp_LIBOH;       cd Tmp_LIBOH;     ${AR_X} ${LIBOH} #^CMP IF OH
+	mkdir Tmp_LIBPC;       cd Tmp_LIBPC;     ${AR_X} ${LIBPC} #^CMP IF PC
 	mkdir Tmp_LIBPS;       cd Tmp_LIBPS;     ${AR_X} ${LIBPS} #^CMP IF PS
+	mkdir Tmp_LIBPT;       cd Tmp_LIBPT;     ${AR_X} ${LIBPT} #^CMP IF PT
 	mkdir Tmp_LIBPW;       cd Tmp_LIBPW;     ${AR_X} ${LIBPW} #^CMP IF PW
 	mkdir Tmp_LIBRB;       cd Tmp_LIBRB;     ${AR_X} ${LIBRB} #^CMP IF RB
-	mkdir Tmp_LIBLC;       cd Tmp_LIBLC;     ${AR_X} ${LIBLC} #^CMP IF LC
 	mkdir Tmp_LIBSC;       cd Tmp_LIBSC;     ${AR_X} ${LIBSC} #^CMP IF SC
 	mkdir Tmp_LIBSP;       cd Tmp_LIBSP;     ${AR_X} ${LIBSP} #^CMP IF SP
 	mkdir Tmp_LIBUA;       cd Tmp_LIBUA;     ${AR_X} ${LIBUA} #^CMP IF UA

@@ -190,9 +190,6 @@ subroutine write_plot_los(iFile)
   case('GM')
      rInner = 0.0 ! needed for comet applications
      rOuter = 1e30
-  case('LC')
-     rInner = rBody
-     rOuter = rBuffMax
   end select
   rInner2 = rInner**2
   rOuter2 = rOuter**2

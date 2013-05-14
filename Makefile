@@ -137,10 +137,6 @@ install: ENV_CHECK mkdir
 			then cp GM/BATSRUS/Config.pl SC/BATSRUS; \
 			     perl -i -pe 's/GM/SC/' SC/BATSRUS/Config.pl; \
 		fi; \
-		if([ -d "LC/BATSRUS" ]); \
-			then cp GM/BATSRUS/Config.pl LC/BATSRUS; \
-			     perl -i -pe 's/GM/LC/' LC/BATSRUS/Config.pl; \
-		fi; \
 		if([ -d "OH/BATSRUS" ]); \
 			then cp GM/BATSRUS/Config.pl OH/BATSRUS; \
 			     perl -i -pe 's/GM/OH/' OH/BATSRUS/Config.pl; \
@@ -586,9 +582,9 @@ SC/BATSRUS/src/Makefile:
 		SC/BATSRUS/srcInterface/SC_get_for_global_buffer.f90
 	cp -f IH/BATSRUS_share/src/IH_put_from_mh.f90 \
 		SC/BATSRUS/srcInterface/SC_put_from_mh.f90
-	cd SC/BATSRUS/srcInterface/; perl -i -pe \
-	's/SC/LC/' SC_get_for_mh_with_xyz.f90; perl -i -pe \
-	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/' \
+	cd SC/BATSRUS/srcInterface/; \
+	perl -i -pe \
+	  's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/' \
 		SC_wrapper.f90 SC_get_for_sp.f90 \
 		SC_get_for_mh.f90 SC_get_for_mh_with_xyz.f90 SC_put_from_mh.f90 \
 		SC_get_for_global_buffer.f90 ;
@@ -611,61 +607,5 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 		./Config.pl -install=c -u=Sc -e=MhdCorona
 
 #^CMP END SC
-
-#^CMP IF LC BEGIN
-#
-# collect source files for LC/BATSRUS component
-#
-LC/BATSRUS/src/Makefile:
-	cd LC/BATSRUS; \
-		rm -rf src srcBATL srcUser srcEquation \
-		srcInterface/LC_get_for_mh.f90 \
-		srcInterface/LC_put_from_mh.f90 \
-		srcInterface/LC_wrapper.f90 srcInterface/LC_get_for_sp.f90; \
-		mkdir src srcBATL srcUser srcEquation
-	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../LC/BATSRUS/src
-	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
-						  ../../../LC/BATSRUS/srcBATL
-	cp GM/BATSRUS/srcUser/*.f90 LC/BATSRUS/srcUser/	  
-	cp GM/BATSRUS/srcEquation/*.f90 LC/BATSRUS/srcEquation/
-	cd GM/BATSRUS; \
-		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
-			../../LC/BATSRUS/
-	cd GM/BATSRUS/srcInterface/; \
-		cp ModGridDescriptor.f90 ModBuffer.f90 \
-		update_lagrangian_grid.f90 \
-		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
-		ModDensityAndGradient.f90 \
-		../../../LC/BATSRUS/srcInterface
-	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
-		LC/BATSRUS/srcInterface/LC_wrapper.f90
-	cp -f IH/BATSRUS_share/src/IH_get_for_sp.f90 \
-		LC/BATSRUS/srcInterface/LC_get_for_sp.f90
-	cp -f IH/BATSRUS_share/src/IH_get_for_mh.f90 \
-		LC/BATSRUS/srcInterface/LC_get_for_mh.f90
-	cp -f IH/BATSRUS_share/src/IH_put_from_mh.f90 \
-		LC/BATSRUS/srcInterface/LC_put_from_mh.f90
-	cd LC/BATSRUS/srcInterface/; perl -i -pe \
-	's/IH/LC/g;s/BATSRUS/LC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/' \
-	LC_wrapper.f90 LC_get_for_sp.f90 LC_get_for_mh.f90 LC_put_from_mh.f90;\
-		perl -i -pe 's/OH/SC/' LC_get_for_mh.f90 LC_put_from_mh.f90
-	cd LC/BATSRUS/src; rm -f main.f90
-
-# rename LC source files to avoid name conflicts
-LC_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
-	srcInterface/*.f90
-
-LCBATSRUS: LC/BATSRUS/src/Makefile \
-		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
-	cd LC/BATSRUS; \
-		${SCRIPTDIR}/Methods.pl LC ${LC_SRC}; \
-		${SCRIPTDIR}/Rename.pl -w -r -common=LC ${LC_SRC}
-	touch LC/BATSRUS/srcInterface/Makefile.DEPEND
-	cd LC/BATSRUS; \
-		perl -i -pe 's/GM/LC/' Config.pl; \
-		./Config.pl -install=c -u=Lc -e=Mhd
-
-#^CMP END LC
-
 
 include Makefile.test #^CMP IF TESTING
