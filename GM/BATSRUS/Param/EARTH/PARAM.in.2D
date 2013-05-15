@@ -1,47 +1,31 @@
 #ECHO
 T
 
-#SAVEPLOTSAMR
-F                       DoSavePlotsAmr
+#DIPOLE
+-3.11e-6                DipoleStrength [Tesla]
 
-#SAVEINITIAL
-T
+#IDEALAXES
+
+MAGNETICAXIS
+T                       IsMagAxisPrimary (rest of parameters read if true)
+15.0                    MagAxisTheta [degree]
+0.0                     MagAxisPhi   [degree]
 
 #PROGRESS
 10			DnShowProgressShort
 100			DnShowProgressLong
 
 #DESCRIPTION
-Run GM and test 2Body plots
-
-#PLANET
-EARTH
-
-#SAVERESTART
-T
-4000
--1
+Two dimensional Earth simulation
 
 #TIMEACCURATE
-F
-
-#STARTTIME
-2000			iYear
-3			iMonth
-21			iDay
-10			iHour
-45			iMinute
-0			iSecond
-0.0			FracSecond
-
-#IDEALAXES
-! align rotation and magnetic axes with z axis
+F			IsTimeAccurate
 
 #ROTATION
 F			UseRotation
 
 #COORDSYSTEM
-GSE
+GSE			TypeCoordSystem
 
 #SOLARWIND
 5.0                     SwNDim  [n/cc]
@@ -50,12 +34,8 @@ GSE
 0.0                     SwUyDim [km/s]
 0.0                     SwUzDim [km/s]
 0.0                     SwBxDim [nT]  
-5.0                    SwByDim [nT]  
+-5.0                    SwByDim [nT]  
 0.0                     SwBzDim [nT]  
-
-#DIPOLE
--3.11e-6                DipoleStrength [Tesla]
-
 
 #MINIMUMPRESSURE
 1.0e-15
@@ -64,8 +44,8 @@ GSE
 T                       UseBody
 2.5                     rBody
 3.5                     rCurrents
-5.0			BodyRhoDim
-100000.0			BodyTDim
+28.0			BodyRhoDim
+100000.0		BodyTDim
 
 #GRID
 2			nRootBlockX
@@ -79,7 +59,7 @@ T                       UseBody
  1.			zMax
 
 #GRIDRESOLUTION
-1.0                    Resolution
+1.0                     Resolution
 initial                 NameArea
 
 #AMRREGION
@@ -103,20 +83,19 @@ box                     NameArea
  50.0                   zMaxBox
 
 #AMRCRITERIARESOLUTION
-1
-dx
-1.0
-0.5
+1			nCriteria
+dx +bigearthbox		TypeCriteria
+0.25			RefineTo
+0.125			CoarsenFrom
+
+#DOAMR
+T                       DoAmr
+200                     DnAmr
+-1                      DtAmr
+T                       IsStrictAmr
 
 #INNERBOUNDARY
 ionosphere		TypeBcInner
-fixed			TypeBcBody2
-
-#SAVELOGFILE
-T
-RAW			StringLogfile
-100			DnSaveLogfile
--1.			DtSaveLogfile
 
 #TIMESTEPPING
 1			nStage
@@ -131,17 +110,25 @@ T                       UseHyperbolicDivb
 500.0                   SpeedHypDim
 0.1                     HypDecay
 
-#BORIS
+BORIS
 T                       UseBorisCorrection
 1.0                     BorisClightFactor !Only if UseBorisCorrection is true
 
+#SAVEINITIAL
+T
+
+#SAVELOGFILE
+T
+RAW			StringLogfile
+100			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #SAVEPLOT
 1                      nPlotFile
-z=0 VAR idl       StringPlot
-250                      DnSavePlot
--100.                     DtSavePlot
--1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+z=0 VAR idl            StringPlot
+100 		       DnSavePlot
+-1.		       DtSavePlot
+-1.		       DxSavePlot (resolution, 0. maximum, -1. unstructured)
 rho Ux Uy Uz E Bx By Bz B1x B1y B1z P Jx Jy Jz absdivb dx dt
 g rbody
 
@@ -151,36 +138,10 @@ g rbody
 
 #RUN ##########################################################################
 
-
 #DOAMR
-T                       DoAmr
-100                     dnAmr
--1                      dtAmr
-T                       IsStrictAmr
+F			DoAmr
 
-
-#AMRREGION
-earthbox
-box                     NameArea
--10.0                   xMinBox
--10.0                   yMinBox
--10.0                   zMinBox
- 10.0                   xMaxBox
- 10.0                   yMaxBox
- 10.0                   zMaxBox
-
-
-#AMRCRITERIARESOLUTION
-2
-dx
-2.0
-1.0
-dx +bigearthbox
-0.5
-0.25
-
-
-#MESSAGEPASS
+MESSAGEPASS
 all
 
 #SCHEME
@@ -189,15 +150,6 @@ Sokolov			TypeFlux
 mc3			TypeLimiter
 1.5
 
-#SAVEPLOT
-1                      nPlotFile
-z=0 VAR idl            StringPlot
-400                    DnSavePlot
--100.                  DtSavePlot
--1.                    DxSavePlot (resolution, 0. maximum, -1. unstructured)
-rho Ux Uy Uz E Bx By Bz B1x B1y B1z P Jx Jy Jz absdivb dx dt
-
 #STOP
-16000
--1
-
+2000			MaxIteration
+-1			tSimulationMax
