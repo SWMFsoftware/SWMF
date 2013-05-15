@@ -46,7 +46,7 @@ module CON_comp_param
 
   ! Convert component index to component name
   character(len=lNameComp), parameter :: NameComp_I(MaxComp) = (/ & 
-       "EE", "GM", "IE", "IH", "IM", "OH", "PC", "PS", "PW", "PT", &
+       "EE", "GM", "IE", "IH", "IM", "OH", "PC", "PS", "PT", "PW", &
        "RB", "SC", "SP", "UA"/)
 
   ! Named indexes for the components
