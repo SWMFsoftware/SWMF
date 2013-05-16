@@ -569,7 +569,9 @@ contains
             +     Xyz_DGB(:,iFace,jFace,kFace  ,iBlock))
     end select
     r = sqrt(sum(x_D**2))
-    if(r <= rCollisional)then
+    if(rCollisionless < 0.0)then
+       heat_cond_factor = 1.0/((r/rCollisional)**2 + 1)
+    elseif(r <= rCollisional)then
        heat_cond_factor = 1.0
     else
        heat_cond_factor = &
@@ -817,7 +819,9 @@ contains
 
       if(UseHeatFluxRegion)then
          r = r_BLK(i,j,k,iBlock)
-         if(r <= rCollisional)then
+         if(rCollisionless < 0.0)then
+            Factor = 1.0/((r/rCollisional)**2 + 1)
+         elseif(r <= rCollisional)then
             Factor = 1.0
          else
             Factor = exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
