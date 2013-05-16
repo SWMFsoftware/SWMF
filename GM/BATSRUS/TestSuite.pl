@@ -76,7 +76,7 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-Inner=reflect"); 
 
     &execute($testbatsrus,"-Limiter=mc -Resist=hall");
-    &execute($testbatsrus,"-Limiter=mc3 -hlld -Message=dir");
+    &execute($testbatsrus,"-Limiter=mc3 -hlld");
     &execute($testbatsrus,"-ta -Stage=2 -partimpl05 -Limiter=mc3",
 	     "-hall -logsatmove -Reschange=accurate -Length=tiny_ta");
 
