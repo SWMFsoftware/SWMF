@@ -10,18 +10,30 @@
 # Note that the run directory should be moved to the /nobackup filesystem,
 # otherwise the quota on the home directory will fill up before the run ends.
 # Even on the /nobackup system there is a limit on the number of files.
-# You can use
+# To see the disk quota limits and usage use
 #
-# quota -v
+# lfs quota -u USERNAME /nobackupp1
 #
-# to see the limits and usage.
 # To avoid having too many output files run
 #
-#    PostProc.pl -g -r=360 >& PostProc.log &
+#    PostProc.pl -g -r=60 >& PostProc.log &
 #
-# on the head node (post-processes every 6 minutes). To check CPU usage, type
+# on the head node (post-processes every minute). 
+#
+# Also use (in the BATSRUS section of the PARAM.in file) the command
+#
+# #RESTARTOUTFILE
+# one                             TypeRestartOutFile
+#
+# to reduce the number of files in the restart directory.
+#
+# To see the CPU allocation and usage on your accounts use
 #
 # acct_ytd
+#
+# To see the number of CPU-s being using per type use
+#
+# node_stats.sh
 
 #PBS -S /bin/csh
 #PBS -N SWMF
@@ -39,6 +51,9 @@
 
 # To run on the 12-core Westmere nodes use this (2 times faster than Hapertown)
 ### PBS -lselect=16:ncpus=12:model=wes
+
+# To run on the 16-core Sandy Bridge nodes use this
+### PBS -lselect=16:ncpus=16:model=san
 
 # To run in the development queue uncomment the following line,
 # and set the maximum walltime to 2 hours below. 
