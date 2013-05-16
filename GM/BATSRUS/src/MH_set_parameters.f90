@@ -2055,7 +2055,7 @@ contains
     percent_max_p(1)   = 40.
     percent_max_p(2)   = 400.
 
-    optimize_message_pass = 'opt'
+    optimize_message_pass = 'all'
 
     plot_dimensional      = .true.
 
