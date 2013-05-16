@@ -22,7 +22,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
   use ModMessagePass, ONLY: exchange_messages
   use ModTimeStepControl, ONLY: calc_timestep
-  use BATL_lib, ONLY: message_pass_face,  message_pass_cell, IsAnyAxis
+  use BATL_lib, ONLY: message_pass_face, IsAnyAxis
   use ModResistivity, ONLY: set_resistivity, UseResistivity
 
   implicit none
