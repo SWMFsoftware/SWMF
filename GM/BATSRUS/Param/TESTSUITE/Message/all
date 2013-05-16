@@ -1,5 +1,5 @@
 
-#OPTIMIZE
-all                     OptimizeMessagePass
+#MESSAGEPASS
+all                     TypeMessagePass
 
 #END
