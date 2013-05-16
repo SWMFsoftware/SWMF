@@ -5,6 +5,7 @@ subroutine IM_set_param(CompInfo,TypeAction)
 
   use CON_comp_info
   use ModProcIM
+  use ModHeidiSize, ONLY: tMax
   use ModHeidiMain
   use ModReadParam, ONLY: i_session_read
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
