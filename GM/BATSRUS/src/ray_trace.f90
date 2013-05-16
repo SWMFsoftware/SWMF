@@ -143,7 +143,7 @@ subroutine ray_trace_fast
 
   oktest_ray = .false.
 
-  Bxyz_DGB = State_VGB(Bx_:Bz_,:,:,:,:)
+  Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
   ! Fill in ghost cells
   call message_pass_cell(3, Bxyz_DGB)
 
@@ -152,7 +152,7 @@ subroutine ray_trace_fast
   rayface=NORAY
   ray=NORAY
 
-  do iBLK=1,nBlockMax
+  do iBLK = 1, nBlockMax
      if(Unused_B(iBLK))then
         ! rayface in unused blocks is assigned to NORAY-1.
         rayface(:,:,:,:,:,iBLK)=NORAY-1.
@@ -174,7 +174,7 @@ subroutine ray_trace_fast
   if(oktest_me)write(*,*)'ray_trace initialized ray and rayface arrays'
 
   ! Interpolate the B1 field to the nodes
-  do iBLK=1, nBlockMax
+  do iBLK=1, nBlock
      if(Unused_B(iBLK))CYCLE
 
      do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1;
@@ -213,9 +213,9 @@ subroutine ray_trace_fast
      if(ray_iter>=ray_iter_max)exit
 
      ! Store rayface into ray so we can see if there is any change
-     ray(:,:,:,:,:,1:nBlockMax)=rayface(:,:,:,:,:,1:nBlockMax)
+     ray(:,:,:,:,:,1:nBlockMax) = rayface(:,:,:,:,:,1:nBlockMax)
 
-     do iBLK=1,nBlockMax
+     do iBLK = 1, nBlock
         if(Unused_B(iBLK))CYCLE
 
         ! Flag cells inside the ionosphere if necessary
@@ -364,7 +364,7 @@ subroutine ray_trace_fast
 
 !!$\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 !!$!     if(ray_iter==0)then
-!!$        do iBLK=1,nBlockMax
+!!$        do iBLK=1,nBlock
 !!$           if(Unused_B(iBLK))CYCLE
 !!$           do iz=1,nK+1; do iy=1,nJ+1; do ix=1,nI+1
 !!$              call print_test(ray_iter)
@@ -381,14 +381,14 @@ subroutine ray_trace_fast
      end if
 
      ! Check if we are done by checking for significant changes in rayface
-     done_me=all(abs(ray(:,:,:,:,:,1:nBlockMax)-&
-          rayface(:,:,:,:,:,1:nBlockMax))<dray_min)
+     done_me=all(abs(ray(:,:,:,:,:,1:nBlock) - &
+          rayface(:,:,:,:,:,1:nBlock)) < dray_min)
 
      call MPI_allreduce(done_me,done,1,MPI_LOGICAL,MPI_LAND,iComm,iError)
 
      if(Done)then
         Done_me = .true.
-        do iBLK=1,nBlockMax
+        do iBLK=1,nBlock
            if(Unused_B(iBLK))CYCLE
            Done_me = all(rayface(1,:,:,:,:,iBLK) > LOOPRAY) !!! NORAY)
            if(.not.Done_me)EXIT
@@ -407,7 +407,7 @@ subroutine ray_trace_fast
   end do ! ray iteration
 
 !!$\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-!!$  do iBLK=1,nBlockMax
+!!$  do iBLK=1,nBlock
 !!$     if(Unused_B(iBLK))CYCLE
 !!$     do iz=1,nK+1; do iy=1,nJ+1; do ix=1,nI+1
 !!$        call print_test(999)
@@ -418,7 +418,7 @@ subroutine ray_trace_fast
   ! Check for unassigned rayface in every used block
   if(oktest_me)then
      write(*,*)'ray_trace finished after ',ray_iter,' iterations'
-     do iBLK=1,nBlockMax
+     do iBLK = 1, nBlock
         if(Unused_B(iBLK))CYCLE
         do iray=1,2
            if(any(rayface(1,iray,1:nI,1:nJ,1:nK,iBLK)<BODYRAY))then
@@ -442,7 +442,7 @@ subroutine ray_trace_fast
   if(oktest_me)write(*,*)'ray_trace starting cell center assignments'
 
   ! Assign face ray values to cell centers
-  do iBLK=1,nBlockMax
+  do iBLK = 1, nBlock
 
      if(Unused_B(iBLK))CYCLE
 
@@ -495,7 +495,7 @@ subroutine ray_trace_fast
 
   if(oktest)then
      ! Check for unassigned cell centers
-     do iBLK=1,nBlockMax
+     do iBLK = 1, nBlock
         if(Unused_B(iBLK))CYCLE
         do iray=1,2
            if(any(ray(1,iray,1:nI,1:nJ,1:nK,iBLK)<BODYRAY))then
@@ -512,7 +512,7 @@ subroutine ray_trace_fast
   if(oktest_me)write(*,*)'ray_trace starting conversion to lat/lon'
 
   ! Convert x, y, z to latitude and longitude, and status
-  do iBLK=1,nBlockMax
+  do iBLK = 1, nBlock
      if(Unused_B(iBLK)) CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
         call xyz_to_latlonstatus(ray(:,:,i,j,k,iBLK))
@@ -543,7 +543,7 @@ contains
        if(xTest==0.0.and.yTest==0.0.and.zTest==0.0) EXIT
 
        ! Find position
-       do iBLK=1,nBlockMax
+       do iBLK = 1, nBlock
           if(Unused_B(iBLK))CYCLE
           do ix=1,nI+1
              if(abs(Xyz_DGB(x_,ix,1,1,iBLK)-0.5*CellSize_DB(x_,iBLK)-xTest)>0.01)CYCLE
