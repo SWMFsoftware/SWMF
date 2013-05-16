@@ -64,6 +64,7 @@ contains
     use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, &
          SkippedBlock_ !!!
+    use ModRaytrace, ONLY: ray
     use ModBlockData, ONLY: clean_block_data
     use ModIO, ONLY : write_prefix, iUnitOut
     use ModMpi
@@ -214,6 +215,10 @@ contains
     if(UseB)then
        if(DoProfileAmr) call timing_start('amr::set_divb')
        DivB1_GB(:,:,:,1:nBlock) = -7.70
+
+       ! write_log_file may use ray array before another ray tracing
+       if(allocated(ray)) ray(:,:,:,:,:,1:nBlock) = 0.0
+
        if(DoProfileAmr) call timing_stop('amr::set_divb')
     end if
 
@@ -588,7 +593,7 @@ contains
     !==========================================================================
     subroutine gencoord_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
 
-      use ModSize, ONLY: nDim, nI, nJ, nK, x_, y_, z_
+      use ModSize, ONLY: nI, nJ, nK, x_, y_, z_
       use ModGeometry, ONLY: body_blk, true_cell
       use BATL_lib, ONLY: CellVolume_GB, FaceNormal_DDFB
 
