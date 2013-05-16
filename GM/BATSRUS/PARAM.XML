@@ -4978,22 +4978,23 @@ neither collision, nor friction are applied.
 
 <command name="MESSAGEPASS" alias="OPTIMIZE">
 	<parameter name="TypeMessagePass" type="string" input="select">
-		<option value="opt"  name="opt: FACES ONLY"
-								default="T"/>
-		<option value="all"  name="all: ALL GHOST CELLS"     />
+		<option value="opt"  name="opt: FACES ONLY"/>
+		<option value="all"  name="all: ALL GHOST CELLS"
+				     		    	  default="T"/>
 	</parameter>
 #MESSAGEPASS
-opt			TypeMessagePass
+all			TypeMessagePass
 
 Possible values for TypeMessagePass:
 \begin{verbatim}
-'all'	   - message_pass_cell: corners, edges and faces
-'opt'      - message_pass_cell: faces only 
+'all'	   - fill in all ghost cells (corners, edges and faces)
+'opt'      - fill in face ghost cells only 
 \end{verbatim}
-Although the default value is 'opt', there are many schemes that require
+The default value is 'all', because there are many schemes that require
 the ghost cells at the edges and corners (viscosity, resistivity, Hall MHD, 
-radiative diffusion, accurate resolution change algorithm, etc.), 
-and these will automatically change to the 'all' option.
+radiative diffusion, accurate resolution change algorithm, etc.). 
+These will automatically change to the 'all' option even if the user sets
+"opt", which is only recommended for advanced users.
 </command>
 
 <command name="RESOLUTIONCHANGE">
