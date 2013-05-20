@@ -8,6 +8,7 @@
 #if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
 
 int PIC::MolecularCollisions::BackgroundAtmosphere::LocalTotalCollisionFreqSamplingOffset=-1;
+double *PIC::MolecularCollisions::BackgroundAtmosphere::ThermalizationRate=NULL,*PIC::MolecularCollisions::BackgroundAtmosphere::CollisionSourceRate=NULL;
 
 //init the model
 void PIC::MolecularCollisions::BackgroundAtmosphere::Init_BeforeParser() {
@@ -17,6 +18,43 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::Init_BeforeParser() {
   PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
   PIC::IndividualModelSampling::RequestSamplingData.push_back(RequestSamplingData);
 }
+
+void PIC::MolecularCollisions::BackgroundAtmosphere::Init_AfterParser() {
+  int spec;
+
+  ThermalizationRate=new double[PIC::nTotalSpecies];
+  CollisionSourceRate=new double[PIC::nTotalSpecies];
+
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) ThermalizationRate[spec]=0.0,CollisionSourceRate[spec]=0.0;
+
+  //set up the model sampling procedure
+  PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(SampleModelData,OutputSampledModelData);
+}
+
+//output sampled model paramters
+void PIC::MolecularCollisions::BackgroundAtmosphere::SampleModelData() {
+  //place holder for sampling rocedure for the background atmosphere model
+}
+
+void PIC::MolecularCollisions::BackgroundAtmosphere::OutputSampledModelData(int DataOutputFileNumber) {
+  int spec;
+
+  //collect the thermalization and collision source rates
+  double TotalThermalizationRate[PIC::nTotalSpecies],TotalCollisonSourceRate[PIC::nTotalSpecies];
+
+  MPI_Allreduce(ThermalizationRate,TotalThermalizationRate,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(CollisionSourceRate,TotalCollisonSourceRate,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+
+  if (PIC::ThisThread==0) {
+    cout << "Background Atmosphere: \n spec \t Thermalization Rate \t Collision Source Rate \n";
+
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) cout << spec << "\t" << TotalThermalizationRate[spec]/PIC::LastSampleLength << "\t" << TotalCollisonSourceRate[spec]/PIC::LastSampleLength << endl;
+  }
+
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) ThermalizationRate[spec]=0.0,CollisionSourceRate[spec]=0.0;
+
+}
+
 
 //Request Sampling Buffers
 int PIC::MolecularCollisions::BackgroundAtmosphere::RequestSamplingData(int offset) {
@@ -227,7 +265,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
         localTimeStep=node->block->GetLocalTimeStep(s);
 
         massModelParticle=PIC::MolecularData::GetMass(s);
-        massBackgroundParticle=GetBackgroundMolecularMass(BackgroundSpecieNumber);
+        massBackgroundParticle=BackgroundSpeciesMassTable[BackgroundSpecieNumber];
 
         mr=massModelParticle*massBackgroundParticle/(massModelParticle+massBackgroundParticle);
         am=massModelParticle+massBackgroundParticle;
@@ -433,7 +471,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
   //sample collisino frequentcy
   double TotalProspectiveCollisionParticleWeight[PIC::nTotalSpecies],TotalOccurringCollisionParticleWeight[PIC::nTotalSpecies];
 
-  int centerNodeIndexCounter,LocalCellNumber;
+  int LocalCellNumber;
 
   const int ParticleBufferLength=50000;
 
@@ -515,16 +553,24 @@ if ((nCall==1452339-1)&&(PIC::ThisThread==1)) {
 
 //--------------------------   END DEBUg -----------------------
 
+    for (int kCell=0;kCell<_BLOCK_CELLS_Z_;kCell++)
+      for (int jCell=0;jCell<_BLOCK_CELLS_Y_;jCell++)
+        for (int iCell=0;iCell<_BLOCK_CELLS_X_;iCell++) {
 
+          LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+          cell=block->GetCenterNode(LocalCellNumber);
 
-    for (centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;centerNodeIndexCounter++) {
+          modelParticle=block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
+          nCollidingParticles=0;
+
+/*    for (centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;centerNodeIndexCounter++) {
       LocalCellNumber=centerNodeIndexTable[centerNodeIndexCounter];
       cell=block->GetCenterNode(LocalCellNumber);
       modelParticle=cell->FirstCellParticle;
 
       //init the list of colliding particles
       nCollidingParticles=0;
-      modelParticle=cell->FirstCellParticle;
+      modelParticle=cell->FirstCellParticle;*/
 
       for (spec=0;spec<PIC::nTotalSpecies;spec++) TotalProspectiveCollisionParticleWeight[spec]=0.0,TotalOccurringCollisionParticleWeight[spec]=0.0;
 
@@ -559,9 +605,9 @@ _StartParticleCollisionLoop_:
         --nCollidingParticles;
 
         //simulate collisions with the background atmosphere
-        for (BackgroundSpecieNumber=0;BackgroundSpecieNumber<GetTotalNumberBackgroundSpecies();BackgroundSpecieNumber++) {
+        for (BackgroundSpecieNumber=0;BackgroundSpecieNumber<nTotalBackgroundSpecies;BackgroundSpecieNumber++) {
           SigmaCrMax=GetSigmaCrMax(spec,BackgroundSpecieNumber,modelParticleData);
-          MajorantCollisionFreq=GetBackgroundNumberDensity(BackgroundSpecieNumber,xModelParticle)*SigmaCrMax;
+          MajorantCollisionFreq=GetBackgroundLocalNumberDensity(BackgroundSpecieNumber,xModelParticle)*SigmaCrMax;
 
 
 //TEST!!!!!!!!!!!!!!!
@@ -579,7 +625,7 @@ _StartParticleCollisionLoop_:
 
 
             for (idim=0;idim<DIM;idim++) xProbe[idim]=xModelParticle[idim]-vModelParticle[idim]*particleCollisionTime;
-            meanValueOld=0.5*(GetBackgroundNumberDensity(BackgroundSpecieNumber,xModelParticle)+GetBackgroundNumberDensity(BackgroundSpecieNumber,xProbe));
+            meanValueOld=0.5*(GetBackgroundLocalNumberDensity(BackgroundSpecieNumber,xModelParticle)+GetBackgroundLocalNumberDensity(BackgroundSpecieNumber,xProbe));
 
 
             for (iDensityAveragingLevel=1;iDensityAveragingLevel<=maxDensityAveragingLevels;iDensityAveragingLevel++) {
@@ -591,7 +637,7 @@ _StartParticleCollisionLoop_:
               for (i=1;i<=nTestPoints;i+=2) {
                 for (idim=0;idim<DIM;idim++) xProbe[idim]=xModelParticle[idim]-vModelParticle[idim]*double(i)*particleCollisionTime/nTestPoints;     //'-' because the avaraging clong the 'past' trajectory
 
-                meanValueNew+=GetBackgroundNumberDensity(BackgroundSpecieNumber,xProbe);
+                meanValueNew+=GetBackgroundLocalNumberDensity(BackgroundSpecieNumber,xProbe);
               }
 
               meanValueNew/=(1+nTestPoints);
@@ -605,7 +651,7 @@ _StartParticleCollisionLoop_:
 
           timeCounter=0.0;
 
-          massBackgroundParticle=GetBackgroundMolecularMass(BackgroundSpecieNumber);
+          massBackgroundParticle=BackgroundSpeciesMassTable[BackgroundSpecieNumber];
           am=massModelParticle+massBackgroundParticle;
 
           if (MajorantCollisionFreq>0.0) while ((timeCounter-=log(rnd())/MajorantCollisionFreq)<particleCollisionTime) {
@@ -614,7 +660,7 @@ _StartParticleCollisionLoop_:
             PIC::ParticleBuffer::GetV(vBackgroundParticle,BackgroundAtmosphereParticleData);
 
 //TEST!!!!!!!!!!!!!!!
-for (idim=0;idim<3;idim++) vBackgroundParticle[idim]=0.0;
+//for (idim=0;idim<3;idim++) vBackgroundParticle[idim]=0.0;
 
             for (idim=0,cr2=0.0;idim<3;idim++) {
               Vrel[idim]=vModelParticle[idim]-vBackgroundParticle[idim];
@@ -642,7 +688,7 @@ for (idim=0;idim<3;idim++) vBackgroundParticle[idim]=0.0;
 #elif _PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_ == _PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__USER_DEFINED_
             double VelocityScatteringAngle;
 
-            VelocityScatteringAngle=UserDefinedVelocityScatteringAngle(Vrel,TranslationalEnergy,spec,BackgroundSpecieNumber);
+            VelocityScatteringAngle=GetCollisionScatteringAngle(Vrel,TranslationalEnergy,spec,BackgroundSpecieNumber);
             CosKsi=cos(VelocityScatteringAngle);
             SinKsi=sin(VelocityScatteringAngle);
 #else
@@ -683,49 +729,67 @@ for (idim=0;idim<3;idim++) vBackgroundParticle[idim]=0.0;
             PIC::ParticleBuffer::SetV(vModelParticle,modelParticle);
 
             //check if the 'background' particle should be kept in the system
-            if (false) { ///(KeepBackgroundAtmosphereParticle(BackgroundAtmosphereParticleData)==true) {
-              long int newParticle;
-              PIC::ParticleBuffer::byte *newParticleData;
+#if _PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_ == _PIC_MODE_ON_
+            if (Background2ModelSpeciesConversionTable[BackgroundSpecieNumber]!=-1) {
+              PIC::ParticleBuffer::SetI(Background2ModelSpeciesConversionTable[BackgroundSpecieNumber],BackgroundAtmosphereParticleData);
 
-              newParticle=PIC::ParticleBuffer::GetNewParticle(cell->FirstCellParticle);
-              PIC::ParticleBuffer::CloneParticle(newParticle,tempBackgroundAtmosphereParticle);
-              newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+              if (KeepConditionModelParticle(BackgroundAtmosphereParticleData)==true) {
+                long int newParticle;
+                PIC::ParticleBuffer::byte *newParticleData;
 
-              //set hte position of the new particle to be the position of the original model particle
-              PIC::ParticleBuffer::SetX(xModelParticle,newParticleData);
+                newParticle=PIC::ParticleBuffer::GetNewParticle(block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]);
+                PIC::ParticleBuffer::CloneParticle(newParticle,tempBackgroundAtmosphereParticle);
+                newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
 
-              //add the new particle to teh list of the particles that needes to be collided
-              if (nCollidingParticles>ParticleBufferLength-1) exit(__LINE__,__FILE__,"Error: the particle buffer is overflown");
+                //set the position of the new particle to be the position of the original model particle
+                PIC::ParticleBuffer::SetX(xModelParticle,newParticleData);
 
-              CollidingParticleList[nCollidingParticles].Particle=newParticle;
-              CollidingParticleList[nCollidingParticles].CollisionTimeFraction=1.0-timeCounter/localTimeStep;
-              ++nCollidingParticles;
+                //add the new particle to teh list of the particles that needes to be collided
+                if (nCollidingParticles>ParticleBufferLength-1) exit(__LINE__,__FILE__,"Error: the particle buffer is overflown");
 
-              //set particle weight
+                CollidingParticleList[nCollidingParticles].Particle=newParticle;
+                CollidingParticleList[nCollidingParticles].CollisionTimeFraction=1.0-timeCounter/localTimeStep;
+                ++nCollidingParticles;
+
+                //accout for the source of new exospheric particles
+                CollisionSourceRate[spec]+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)*block->GetLocalParticleWeight(spec)/localTimeStep;
+
+                //set particle weight
 #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-              double wcorrection;
-              int bspec;
+                double wcorrection;
+                int bspec;
 
-              bspec=PIC::ParticleBuffer::GetI(newParticleData);
-              wcorrection=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)*block->GetLocalParticleWeight(spec)/block->GetLocalParticleWeight(bspec);
-              PIC::ParticleBuffer::SetIndividualStatWeightCorrection(wcorrection,newParticleData);
-#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
-      exit(__LINE__,__FILE__,"Error: not implementd");
-#else
-            exit(__LINE__,__FILE__,"Error: the option is unknown");
+                bspec=PIC::ParticleBuffer::GetI(newParticleData);
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+                if (bspec>=PIC::nTotalSpecies) exit(__LINE__,__FILE__,"Error: the species number exeeds the total number of species");
 #endif
-           }
+
+                wcorrection=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)*block->GetLocalParticleWeight(spec)/block->GetLocalParticleWeight(bspec);
+                PIC::ParticleBuffer::SetIndividualStatWeightCorrection(wcorrection,newParticleData);
+#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+        exit(__LINE__,__FILE__,"Error: not implementd");
+#else
+               exit(__LINE__,__FILE__,"Error: the option is unknown");
+#endif
+              }
+            }
+#endif
 
             //check if the model particle should be removed from the system
-            if (KeepBackgroundAtmosphereParticle(modelParticleData)==false) {
+#if _PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_ == _PIC_MODE_ON_
+            if (KeepConditionModelParticle(modelParticleData)==false) {
               //the particle should be removed
               long int next,prev;
+
+              //accout for the termalization of the exospheric particles
+              ThermalizationRate[spec]+=node->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)/localTimeStep;
 
               next=PIC::ParticleBuffer::GetNext(modelParticleData);
               prev=PIC::ParticleBuffer::GetPrev(modelParticleData);
 
               //reconnect particles from the list
-              if (prev==-1) cell->FirstCellParticle=next;
+              if (prev==-1) block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]=next;
               else PIC::ParticleBuffer::SetNext(next,prev);
 
               if (next!=-1) PIC::ParticleBuffer::SetPrev(prev,next);
@@ -733,6 +797,7 @@ for (idim=0;idim<3;idim++) vBackgroundParticle[idim]=0.0;
               PIC::ParticleBuffer::DeleteParticle(modelParticle);
               goto _StartParticleCollisionLoop_;
             }
+#endif
           }
         }
 
@@ -766,7 +831,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::RemoveThermalBackgroundPart
   static bool initTableFlag=false;
   static int centerNodeIndexTable_Glabal[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
   static int nTotalCenterNodes=-1;
-  long int next,prev,ptr,centerNodeIndexCounter,LocalCellNumber;
+  long int next,prev,ptr,LocalCellNumber;
   PIC::ParticleBuffer::byte *pdata;
 
   if (initTableFlag==false) {
@@ -797,10 +862,17 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::RemoveThermalBackgroundPart
 
   //filter particles
   while (node!=NULL) {
-    for (centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;centerNodeIndexCounter++) {
+/*    for (centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;centerNodeIndexCounter++) {
       //sort the particle from the cell
       LocalCellNumber=centerNodeIndexTable[centerNodeIndexCounter];
-      ptr=node->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;
+      ptr=node->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;*/
+
+    for (int kCell=0;kCell<_BLOCK_CELLS_Z_;kCell++)
+       for (int jCell=0;jCell<_BLOCK_CELLS_Y_;jCell++)
+         for (int iCell=0;iCell<_BLOCK_CELLS_X_;iCell++) {
+
+           LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+           ptr=node->block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
 
       while (ptr!=-1) {
         pdata=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
@@ -808,10 +880,10 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::RemoveThermalBackgroundPart
         next=PIC::ParticleBuffer::GetNext(pdata);
         prev=PIC::ParticleBuffer::GetPrev(pdata);
 
-        if (KeepBackgroundAtmosphereParticle(pdata)==false) {
+        if (KeepConditionModelParticle(pdata)==false) {
           //the particle should be removed
           //reconnect particles from the list
-          if (prev==-1) node->block->GetCenterNode(LocalCellNumber)->FirstCellParticle=next;
+          if (prev==-1) node->block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]=next;
           else PIC::ParticleBuffer::SetNext(next,prev);
 
           if (next!=-1) PIC::ParticleBuffer::SetPrev(prev,next);

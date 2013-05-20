@@ -39,6 +39,28 @@ double PIC::ParticleWeightTimeStep::GetMaximumBlockInjectionRate(int spec,cTreeN
 }
 
 
+
+//====================================================
+//get the total Block injection rate across the computational domain
+double PIC::ParticleWeightTimeStep::GetTotalBlockInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  double res=0.0;
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    res=LocalBlockInjectionRate(spec,startNode)*startNode->block->GetLocalTimeStep(spec);
+  }
+  else {
+    int i;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
+      res+=GetTotalBlockInjectionRate(spec,downNode);
+    }
+  }
+
+  return res;
+}
+
+
 //====================================================
 //set particle's local weight (the weight is constant  across the domain)
 void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -47,7 +69,7 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
 
   if (startNode==PIC::Mesh::mesh.rootTree) {
     //injection rate from the boundariees of the box
-//    ParticleInjection=GetMaximumBlockInjectionRate(spec);
+    if (LocalBlockInjectionRate!=NULL) ParticleInjection=GetTotalBlockInjectionRate(spec);
 
 
     //injection rate from the internal surfaces

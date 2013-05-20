@@ -1,8 +1,7 @@
 
-
 #include "pic.h"
 
-int PIC::nTotalSpecies=0;
+//int PIC::nTotalSpecies=0;
 int PIC::ThisThread=0,PIC::nTotalThreads=1;
 
 //the list containing the functions used to exchange the run time execution statistics
@@ -23,3 +22,4 @@ vector<PIC::IndividualModelSampling::fRequestStaticCellData> PIC::IndividualMode
 //execution alarm
 bool PIC::Alarm::AlarmInitialized=false,PIC::Alarm::WallTimeExeedsLimit=false;
 double PIC::Alarm::StartTime=0.0,PIC::Alarm::RequestedExecutionWallTime=0.0;
+

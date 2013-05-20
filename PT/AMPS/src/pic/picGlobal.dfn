@@ -11,11 +11,14 @@
 #define _SIMULATION_PARTICLE_WEIGHT_MODE_ _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
 
 
+//the maximum length of the strings
+#define _MAX_STRING_LENGTH_PIC_  500
 
 //debugger mode
 #define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
 #define _PIC_DEBUGGER_MODE__MOVER__CALCULATED_PARTICLE_COORDINATES_ _PIC_DEBUGGER_MODE_OFF_
 #define _PIC_DEBUGGER_MODE__SAMPLING__PARTICLE_COORDINATES_ _PIC_DEBUGGER_MODE_OFF_
+#define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ _PIC_DEBUGGER_MODE_ON_
 
 //individual particles' weight
 #define _INDIVIDUAL_PARTICLE_WEIGHT_MODE_  _INDIVIDUAL_PARTICLE_WEIGHT_ON_ 
@@ -35,6 +38,8 @@
 
 //the mode of the parallel load balancing 
 #define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+#define _PIC_DYNAMIC_LOAD_BALANCING__MIN_ITERATION_BETWEEN_LOAD_REBALANCING_   50
+
 #define _PIC_EMERGENCY_LOAD_REBALANCING_MODE_ _PIC_MODE_ON_
 #define _PIC_SAMPLING_BREAK_LOAD_REBALANCING_MODE_ _PIC_MODE_ON_
 
@@ -46,11 +51,24 @@
 #define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_OFF_
 #define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_OFF_
 
+//the default procedure for calcualtion of the lifitime for the photolytic processes
+#define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(x,spec,ptr,flag) TotalLifeTime_default(x,spec,ptr,flag);
+
+//the default procedure for processing the photolytic reactions
+#define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,ptr,spec,ParticleData) PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReactionProcessor_default(xInit,xFinal,ptr,spec,ParticleData);
+
 //sampling of the particle data
 #define _PIC_SAMPLE_PARTICLE_DATA_MODE_  _PIC_SAMPLE_PARTICLE_DATA_MODE__BETWEEN_ITERATIONS_
 
+//sample normal and tangential kinetic temperature 
+#define _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__CONSTANT_DIRECTION_ORIGIN_
+
 //the default mode for the backgound atmosphere models
 #define _PIC_BACKGROUND_ATMOSPHERE_MODE_ _PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_
+#define _PIC_BACKGROUND_ATMOSPHERE__LOAD_USER_DEFINITION__MODE_ _PIC_MODE_OFF_
+#define _PIC_BACKGROUND_ATMOSPHERE__UDER_DEFINITION_ "UserDefinition.PIC.BackgroundAtmosphere.h"
+#define _PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_ _PIC_MODE_ON_
+#define _PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_  _PIC_MODE_ON_
 
 //the cross section type in the background atmosphere model
 #define _PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_ _PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__ISOTROPIC_    
@@ -73,7 +91,7 @@
 #define _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE_ _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE__OFF_
 
 //allow prefetch of memory buffers
-#define _PIC_MEMORY_PREFETCH_MODE_ _PIC_MEMORY_PREFETCH_MODE__ON_
+#define _PIC_MEMORY_PREFETCH_MODE_ _PIC_MEMORY_PREFETCH_MODE__OFF_
 #define _PIC_MEMORY_PREFETCH__CHACHE_LINE_ 64
 
 //execute user defined MPI data exchange function after the syncronizatino point at the particle exchange routine
@@ -81,6 +99,18 @@
 
 //call a user defined function after outputing of the data file to clean all user's sampling buffers
 #define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__OFF_ 
+
+//allow the load the user-defined difinition of macro defining the symbolic description of the species used in the simulation 
+#define _PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE_ _PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE__OFF_ 
+
+//the mode of particle collision model
+#define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_OFF_
+#define _PIC__PARTICLE_COLLISION_MODEL_ _PIC__PARTICLE_COLLISION_MODEL__HS_
+
+//sample collision frequentcy by the particle collision model
+#define _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ _PIC_MODE_ON_
+
+
 
 
 

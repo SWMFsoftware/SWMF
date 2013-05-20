@@ -195,22 +195,32 @@ void PIC::ColumnIntegration::GetCoulumnIntegral(double *ResultVector,int ResultV
   //the ratio between the step of the integration procedure and the local cell size
   static const double IntegrationStep2CellSizeRatio=0.3;
 
-  for (i=0;i<ResultVectorLength;i++) ResultVector[i]=0.0;
+  for (i=0;i<ResultVectorLength;i++) ResultVector[i]=0.0,a0[i]=0.0,a1[i]=0.0;
 
   //normalize the pointing vector
   for (c=0.0,idim=0;idim<3;idim++) x[idim]=xStart[idim],c+=pow(l[idim],2);
   for (c=sqrt(c),idim=0;idim<3;idim++) lNormalized[idim]=l[idim]/c;
 
-  MPI_Bcast(&IntegrationPathLength,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-  MPI_Bcast(x,3,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  double ExchangeBuffer[4];
+  memcpy(ExchangeBuffer,x,3*sizeof(double));
+  memcpy(ExchangeBuffer+3,&IntegrationPathLength,sizeof(double));
+
+  MPI_Bcast(ExchangeBuffer,4,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+  memcpy(x,ExchangeBuffer,3*sizeof(double));
+  memcpy(&IntegrationPathLength,ExchangeBuffer+3,sizeof(double));
+
+
+//  MPI_Bcast(&IntegrationPathLength,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+//  MPI_Bcast(x,3,MPI_DOUBLE,0,MPI_COMM_WORLD);
   xStartNode=PIC::Mesh::mesh.findTreeNode(x,xStartNode);
 
   //get the first value of the integrand function
   if (xNode->Thread==PIC::ThisThread) {
     Integrand(a0,ResultVectorLength,x,xNode);
-    if (PIC::ThisThread!=0) MPI_Send(a0,ResultVectorLength,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+//    if (PIC::ThisThread!=0) MPI_Send(a0,ResultVectorLength,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
   }
-  else if (PIC::ThisThread==0) MPI_Recv(a0,ResultVectorLength,MPI_DOUBLE,xNode->Thread,0,MPI_COMM_WORLD,&status);
+//  else if (PIC::ThisThread==0) MPI_Recv(a0,ResultVectorLength,MPI_DOUBLE,xNode->Thread,0,MPI_COMM_WORLD,&status);
 
 
   while ((IntegratedPath<IntegrationPathLength)&&(IntegrationFinished==false)) {
@@ -221,31 +231,38 @@ void PIC::ColumnIntegration::GetCoulumnIntegral(double *ResultVector,int ResultV
       IntegrationFinished=true;
     }
 
-    if (PIC::ThisThread==0) for (idim=0;idim<3;idim++) x[idim]+=dl*lNormalized[idim];
-    MPI_Bcast(x,3,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(&IntegrationFinished,1,MPI_INT,0,MPI_COMM_WORLD);
+//    if (PIC::ThisThread==0) for (idim=0;idim<3;idim++) x[idim]+=dl*lNormalized[idim];
+//    MPI_Bcast(x,3,MPI_DOUBLE,0,MPI_COMM_WORLD);
+//    MPI_Bcast(&IntegrationFinished,1,MPI_INT,0,MPI_COMM_WORLD);
 
+    for (idim=0;idim<3;idim++) x[idim]+=dl*lNormalized[idim];
     xNode=PIC::Mesh::mesh.findTreeNode(x,xNode);
 
     if (xNode==NULL) break;
 
     if (xNode->Thread==PIC::ThisThread) {
       Integrand(a1,ResultVectorLength,x,xNode);
-      if (PIC::ThisThread!=0) MPI_Send(a1,ResultVectorLength,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+//      if (PIC::ThisThread!=0) MPI_Send(a1,ResultVectorLength,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
     }
-    else if (PIC::ThisThread==0) MPI_Recv(a1,ResultVectorLength,MPI_DOUBLE,xNode->Thread,0,MPI_COMM_WORLD,&status);
-
+//    else if (PIC::ThisThread==0) MPI_Recv(a1,ResultVectorLength,MPI_DOUBLE,xNode->Thread,0,MPI_COMM_WORLD,&status);
+    else for (i=0;i<ResultVectorLength;i++) a1[i]=0.0;
 
     for (i=0;i<ResultVectorLength;i++) {
       ResultVector[i]+=0.5*(a0[i]+a1[i])*dl;
       a0[i]=a1[i];
     }
 
+
     IntegratedPath+=dl;
-    MPI_Bcast(&IntegratedPath,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+//    MPI_Bcast(&IntegratedPath,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
   }
 
-  MPI_Bcast(ResultVector,ResultVectorLength,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+  //collect the data
+  MPI_Allreduce(ResultVector,a0,ResultVectorLength,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+  memcpy(ResultVector,a0,ResultVectorLength*sizeof(double));
+
+//  MPI_Bcast(ResultVector,ResultVectorLength,MPI_DOUBLE,0,MPI_COMM_WORLD);
 }
 
 

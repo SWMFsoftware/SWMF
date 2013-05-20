@@ -49,7 +49,7 @@ void PIC::Parser::Run(char* InputFile) {
 //read the main block of the input file
 void PIC::Parser::readMain(CiFileOperations& ifile) {
   char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
-  char *endptr;
+//  char *endptr;
 
   while (ifile.eof()==false) {
 	ifile.GetInputStr(str,sizeof(str));
@@ -76,11 +76,13 @@ void PIC::Parser::readMain(CiFileOperations& ifile) {
 	  if (strcmp("ON",str1)==0) PIC::MolecularData::InternalDegreesOfFreedomModelingFlag=_INTERNAL_DEGRESS_OF_FREEDOM_OFF_;
 	  else if (strcmp("OFF",str1)==0) PIC::MolecularData::InternalDegreesOfFreedomModelingFlag=_INTERNAL_DEGRESS_OF_FREEDOM_OFF_;
 	  else ifile.error();}
-    else if (strcmp("NS",str1)==0) {
+
+/*    else if (strcmp("NS",str1)==0) {
 	  ifile.CutInputStr(str1,str);
 	  PIC::nTotalSpecies=(unsigned char)strtol(str1,&endptr,10);
 	  if (PIC::nTotalSpecies<=0) exit(__LINE__,__FILE__,"NS is out of the range");
-	  if ((str1[0]=='\0')||(endptr[0]!='\0')) ifile.error();}
+	  if ((str1[0]=='\0')||(endptr[0]!='\0')) ifile.error();}*/
+
 	else if (strcmp("SPECIESLIST",str1)==0) {
 	  int i,spec;
 
@@ -88,12 +90,12 @@ void PIC::Parser::readMain(CiFileOperations& ifile) {
 	  if (PIC::MolecularData::ChemTable!=NULL) exit(__LINE__,__FILE__"The chemical table is already defined");
 	  if (PIC::nTotalSpecies==0) exit(__LINE__,__FILE__,"The value of NS is nor defined yet");
 
-	  PIC::MolecularData::ChemTable=new char* [PIC::nTotalSpecies];
+/*	  PIC::MolecularData::ChemTable=new char* [PIC::nTotalSpecies];
 	  PIC::MolecularData::ChemTable[0]=new char[PIC::nTotalSpecies*_MAX_STRING_LENGTH_PIC_];
 	  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
 	    PIC::MolecularData::ChemTable[spec]=PIC::MolecularData::ChemTable[0]+spec*_MAX_STRING_LENGTH_PIC_;
 	    PIC::MolecularData::ChemTable[spec][0]='\0';
-	  }
+	  }*/
 
     PIC::MolecularData::LoadingSpeciesList=new char* [PIC::nTotalSpecies];
     PIC::MolecularData::LoadingSpeciesList[0]=new char[PIC::nTotalSpecies*_MAX_STRING_LENGTH_PIC_];
@@ -102,8 +104,10 @@ void PIC::Parser::readMain(CiFileOperations& ifile) {
       PIC::MolecularData::LoadingSpeciesList[spec][0]='\0';
     }
 
+/*
     PIC::MolecularData::SpcecieTypeTable=new int [PIC::nTotalSpecies];
     for (spec=0;spec<PIC::nTotalSpecies;spec++) PIC::MolecularData::SpcecieTypeTable[spec]=-1;
+*/
 
 	  spec=0;
 

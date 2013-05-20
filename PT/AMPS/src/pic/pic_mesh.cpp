@@ -21,6 +21,7 @@ int PIC::Mesh::completedCellSampleDataPointerOffset=0,PIC::Mesh::collectingCellS
 
 int PIC::Mesh::sampledParticleWeghtRelativeOffset=0,PIC::Mesh::sampledParticleNumberRelativeOffset=0,PIC::Mesh::sampledParticleNumberDensityRelativeOffset=0;
 int PIC::Mesh::sampledParticleVelocityRelativeOffset=0,PIC::Mesh::sampledParticleVelocity2RelativeOffset=0,PIC::Mesh::sampledParticleSpeedRelativeOffset=0;
+int PIC::Mesh::sampledParticleNormalParallelVelocityRelativeOffset=0,PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset=0;
 int PIC::Mesh::sampledExternalDataRelativeOffset=0;
 int PIC::Mesh::sampleSetDataLength=0;
 
@@ -55,6 +56,12 @@ void PIC::Mesh::cDataCenterNode::PrintVariableList(FILE* fout,int DataSetNumber)
  //the following will be printed only for the gas species
  if (PIC::MolecularData::GetSpecieType(DataSetNumber)==_PIC_SPECIE_TYPE__GAS_) {
    fprintf(fout,", \"Translational Temperature\"");
+
+#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+   //do nothing
+#else
+   fprintf(fout,", \"Translational Parallel Temperature\", \"Translational Tangential Temperature\" ");
+#endif
  }
 
  //print the user defind 'center node' data
@@ -73,6 +80,7 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
 
   struct cOutputData {
     double NumberDesnity,ParticleNumber,v[3],MeanParticleSpeed,TranslationalTemeprature;
+    double TranslationalParallelTemperature,TranslationalTangentialTemperature;
   } OutputData;
 
   if (pipe->ThisThread==CenterNodeThread) {
@@ -83,6 +91,12 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
 
     if (PIC::MolecularData::GetSpecieType(DataSetNumber)==_PIC_SPECIE_TYPE__GAS_) {
       OutputData.TranslationalTemeprature=GetTranslationalTemperature(DataSetNumber);
+
+#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+#else
+      OutputData.TranslationalParallelTemperature=GetParallelTranslationalTemperature(DataSetNumber);
+      OutputData.TranslationalTangentialTemperature=GetTangentialTranslationalTemperature(DataSetNumber);
+#endif
     }
   }
 
@@ -96,6 +110,11 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
 
     if (PIC::MolecularData::GetSpecieType(DataSetNumber)==_PIC_SPECIE_TYPE__GAS_) {
       fprintf(fout,"%e ",OutputData.TranslationalTemeprature);
+
+#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+#else
+      fprintf(fout,"%e %e ",OutputData.TranslationalParallelTemperature,OutputData.TranslationalTangentialTemperature);
+#endif
     }
   }
   else pipe->send((char*)&OutputData,sizeof(OutputData));
@@ -140,18 +159,28 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
   double InterpolatedParticleSpeed=0.0;
   double pWeight;
 
+#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+#else
+  double InterpolatedBulkParallelVelocity,InterpolatedBulk2ParallelVelocity;
+#endif
+
   for (s=0;s<PIC::nTotalSpecies;s++) {
     InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0,InterpolatedParticleSpeed=0.0;
     for (idim=0;idim<3;idim++) InterpolatedBulkVelocity[idim]=0.0,InterpolatedBulk2Velocity[idim]=0.0;
 
+#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+#else
+    InterpolatedBulkParallelVelocity=0.0,InterpolatedBulk2ParallelVelocity=0.0;
+#endif
+
     //interpolate the sampled data
     for (i=0;i<nInterpolationCoeficients;i++) {
       pWeight=InterpolationList[i]->GetRealParticleNumber(s);
-      c=PIC::LastSampleLength*InterpolationCoeficients[i];
+      c=InterpolationCoeficients[i];
 
-      InterpolatedParticleWeight+=c*pWeight;
-      InterpolatedParticleNumber+=c*InterpolationList[i]->GetParticleNumber(s);
-      InterpolatedParticleNumberDeinsity+=c*InterpolationList[i]->GetNumberDensity(s);
+      InterpolatedParticleWeight+=PIC::LastSampleLength*c*pWeight;
+      InterpolatedParticleNumber+=PIC::LastSampleLength*c*InterpolationList[i]->GetParticleNumber(s);
+      InterpolatedParticleNumberDeinsity+=PIC::LastSampleLength*c*InterpolationList[i]->GetNumberDensity(s);
 
 
       for (idim=0;idim<3;idim++) {
@@ -160,6 +189,12 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
       }
 
       InterpolatedParticleSpeed+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset)));
+
+#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+#else
+      InterpolatedBulkParallelVelocity+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocityRelativeOffset)));
+      InterpolatedBulk2ParallelVelocity+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset)));
+#endif
     }
 
     //stored the interpolated data in the associated data buffer
@@ -174,6 +209,12 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
     }
 
     *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset))=InterpolatedParticleSpeed;
+
+#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+#else
+    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocityRelativeOffset))=InterpolatedBulkParallelVelocity;
+    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset))=InterpolatedBulk2ParallelVelocity;
+#endif
 
   }
 
@@ -237,6 +278,17 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
 
   sampledParticleSpeedRelativeOffset=offset;
   offset+=sizeof(double)*PIC::nTotalSpecies;
+
+  //sampling the 'parallel' and 'tangential' kinetic temperatures
+#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+  //do nothing
+#else
+  sampledParticleNormalParallelVelocityRelativeOffset=offset;
+  offset+=sizeof(double)*PIC::nTotalSpecies;
+
+  sampledParticleNormalParallelVelocity2RelativeOffset=offset;
+  offset+=sizeof(double)*PIC::nTotalSpecies;
+#endif
 
 
   //check if user defined sampling data is requested

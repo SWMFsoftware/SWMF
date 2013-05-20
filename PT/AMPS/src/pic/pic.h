@@ -3,6 +3,7 @@
 //===============================================
 //the header for the new particle model
 
+#include "mpi.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,9 +32,18 @@ using namespace std;
 //the global model settings
 #include "picGlobal.dfn"
 
+//load the macros that defined symbolic references to the species
+#include "picSpeciesMacro.dfn"
+
 //load the user defined settings
 #if _PIC_USER_DEFINITION_MODE_ == _PIC_USER_DEFINITION_MODE__ENABLED_
 #include "UserDefinition.PIC.h"
+#endif
+
+
+
+#if _PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE_ == _PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE__ON_
+$MARKER:SPECIES-MACRO-DEFINIETION-USED-IN-SIMULATION$
 #endif
 
 #include "ifileopr.h"
@@ -52,8 +62,7 @@ using namespace std;
 
 #include "meshAMRinternalSurface.h"
 
-//the maximum length of the strings
-#define _MAX_STRING_LENGTH_PIC_  500
+
 
 
 /*
@@ -69,7 +78,8 @@ using namespace std;
 namespace PIC {
 
   //Global constants of the PIC solver
-  extern int nTotalSpecies;
+  //extern int nTotalSpecies;
+  static const int nTotalSpecies=1;
 
   //The currect and total number of processors used in the simulation
   extern int ThisThread,nTotalThreads;
@@ -99,6 +109,7 @@ namespace PIC {
 //  void Sampling();
 
   //init the particle solver
+  void InitMPI();
   void Init_BeforeParser();
   void Init_AfterParser();
 
@@ -145,13 +156,20 @@ namespace PIC {
     #define _INTERNAL_DEGRESS_OF_FREEDOM_OFF_ false
     extern bool InternalDegreesOfFreedomModelingFlag;
 
+    //the set of models for collision cross section used in simulations
+    namespace CrossSection {
+      const double ConstantCollisionCrossSectionTable[1][1]={{0.0}};
+    }
+
     //init the molecular data buffers
     void Init();
 
     //mass of particles
-    extern double *MolMass;
-    void SetMass(double,int);
-    double GetMass(int);
+    static const double MolMass[nTotalSpecies]={0.0};
+
+//    extern double *MolMass;
+//    void SetMass(double,int);
+    inline double GetMass(int spec) {return MolMass[spec];}
 
 
     //get and set the value of the electric charge for a species
@@ -160,17 +178,22 @@ namespace PIC {
     void SetElectricCharge(double,int);
 
     //get and set the species numbers and chemical symbols
-    extern char **ChemTable; // <- The table of chemical symbols used in the simulation
+    static const char ChemTable[][_MAX_STRING_LENGTH_PIC_]={"nothin is defined"};
+
+
+//    extern char **ChemTable; // <- The table of chemical symbols used in the simulation
     extern char **LoadingSpeciesList; // <- the list of species that CAN BE locased in the simualtion
 
 
     int GetSpecieNumber(char*);
     void SetChemSymbol(char*,int);
     void GetChemSymbol(char*,int);
+    const char* GetChemSymbol(int);
 
     //set and get the specie type (gas, external, background)
-    extern int *SpcecieTypeTable;
-    void SetSpecieType(int SpcecieType,int spec);
+    static const int SpcecieTypeTable[]={-1};
+//    extern int *SpcecieTypeTable;
+//    void SetSpecieType(int SpcecieType,int spec);
     int GetSpecieType(int spec);
 
 
@@ -310,6 +333,12 @@ namespace PIC {
     }
 
     inline void SetIndividualStatWeightCorrection(double WeightCorrectionFactor,long int ptr) {
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+      if (!isfinite(WeightCorrectionFactor)) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+#endif
+#endif
+
     #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
       *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
     #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
@@ -320,6 +349,12 @@ namespace PIC {
     }
 
     inline void SetIndividualStatWeightCorrection(double WeightCorrectionFactor,byte *ParticleDataStart) {
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+      if (!isfinite(WeightCorrectionFactor)) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+#endif
+#endif
+
     #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
       *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
     #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
@@ -563,6 +598,7 @@ namespace PIC {
 	  //b. sampling data requested for involved physical models and external species
     extern int sampledParticleWeghtRelativeOffset,sampledParticleNumberRelativeOffset,sampledParticleNumberDensityRelativeOffset;
     extern int sampledParticleVelocityRelativeOffset,sampledParticleVelocity2RelativeOffset,sampledParticleSpeedRelativeOffset;
+    extern int sampledParticleNormalParallelVelocityRelativeOffset,sampledParticleNormalParallelVelocity2RelativeOffset;
     extern int sampledExternalDataRelativeOffset;
     extern int sampleSetDataLength;
 
@@ -665,14 +701,16 @@ namespace PIC {
         double TotalWeight,*SampledData;
 
         #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
-        if ((s<0)||(s>=PIC::nTotalSpecies)) exit(__LINE__,__FILE__,"Error: 's' is out of the range");
+        if ((s<0)||(s>=PIC::nTotalSpecies)) {
+          exit(__LINE__,__FILE__,"Error: 's' is out of the range");
+        }
         #endif
 
         if (PIC::LastSampleLength!=0) {
           TotalWeight=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
           SampledData=3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset);
 
-          if (TotalWeight>0.0) for (idim=0;idim<DIM;idim++) v[idim]=SampledData[idim]/TotalWeight/PIC::LastSampleLength;
+          if (TotalWeight>0.0) for (idim=0;idim<DIM;idim++) v[idim]=SampledData[idim]/TotalWeight; /// /PIC::LastSampleLength;
           else for (idim=0;idim<DIM;idim++) v[idim]=0.0;
         }
         else for (idim=0;idim<DIM;idim++) v[idim]=0.0;
@@ -690,7 +728,7 @@ namespace PIC {
           TotalWeight=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
           SampledData=3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset);
 
-          if (TotalWeight>0.0) for (idim=0;idim<DIM;idim++) v2[idim]=SampledData[idim]/TotalWeight/PIC::LastSampleLength;
+          if (TotalWeight>0.0) for (idim=0;idim<DIM;idim++) v2[idim]=SampledData[idim]/TotalWeight; // /PIC::LastSampleLength;
           else for (idim=0;idim<DIM;idim++) v2[idim]=0.0;
         }
         else for (idim=0;idim<DIM;idim++) v2[idim]=0.0;
@@ -715,7 +753,7 @@ namespace PIC {
           TotalWeight=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
           SampledData=s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset);
 
-          if (TotalWeight>0.0) res=(*SampledData)/TotalWeight/PIC::LastSampleLength;
+          if (TotalWeight>0.0) res=(*SampledData)/TotalWeight; // /PIC::LastSampleLength;
         }
 
         return res;
@@ -733,6 +771,33 @@ namespace PIC {
         return PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
       }
 
+      double GetParallelTranslationalTemperature(int s) {
+#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+        return GetTranslationalTemperature(s);
+#else
+        double v=0.0,v2=0.0,w=0.0,res=0.0;
+
+        w=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
+
+        v=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocityRelativeOffset)));
+        v2=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset)));
+
+        if (w>0.0) {
+          v/=w,v2/=w;
+          res=PIC::MolecularData::GetMass(s)*(v2-v*v)/Kbol;
+        }
+
+        return res;
+#endif
+      }
+
+      double GetTangentialTranslationalTemperature(int s) {
+#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+        return GetTranslationalTemperature(s);
+#else
+      return 0.5*(3.0*GetTranslationalTemperature(s)-GetParallelTranslationalTemperature(s));
+#endif
+      }
 
 	    //print the sampled data into a file
       void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread);
@@ -1097,6 +1162,9 @@ namespace PIC {
     //'SaveOutputDataFile' determines weather the data file will be created for a particular species (output of data files can be suppress for particular species, such as external, dust....)
     extern bool *SaveOutputDataFile;
 
+    //sample the normal and tangential kinetic temperatures: constant origin of the direction of the normal
+    static const double constNormalDirection__SampleParallelTangentialTemperature[3]={0.0,0.0,0.0};
+
     namespace ExternalSamplingLocalVariables {
 
       //the external procedures for sampling particle data
@@ -1174,12 +1242,117 @@ namespace PIC {
   //colecular collisions
   namespace MolecularCollisions {
 
+    //collisions between model particles
+    namespace ParticleCollisionModel {
+      //sample collision statistics
+      extern int CollsionFrequentcySamplingOffset;
+
+      int RequestSamplingData(int offset);
+      void PrintVariableList(FILE* fout,int DataSetNumber);
+      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+      void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+      void Init();
+
+      //model of the particle collisions
+      void ntc();
+    }
+
+    //models for calculation of the relative velocity after a collision
+    namespace VelocityScattering {
+      namespace HS {
+        inline void VelocityAfterCollision(double *vrel,int s0,int s1) {
+          double Vrc,V[3];
+          double CosKsi,SinKsi,CosEps,SinEps,D,c;
+
+          CosKsi=2.0*rnd()-1.0;
+          SinKsi=sqrt(1.0-CosKsi*CosKsi);
+
+          c=2*Pi*rnd();
+          SinEps=sin(c);
+          CosEps=cos(c);
+
+          D=sqrt(vrel[1]*vrel[1]+vrel[2]*vrel[2]);
+          if (D>1.0E-6) {
+            Vrc=sqrt(vrel[0]*vrel[0]+vrel[1]*vrel[1]+vrel[2]*vrel[2]);
+            V[0]=CosKsi*vrel[0]+SinKsi*SinEps*D;
+            V[1]=CosKsi*vrel[1]+SinKsi*(Vrc*vrel[2]*CosEps-vrel[0]*vrel[1]*SinEps)/D;
+            V[2]=CosKsi*vrel[2]-SinKsi*(Vrc*vrel[1]*CosEps+vrel[0]*vrel[2]*SinEps)/D;
+          }
+          else {
+            V[0]=CosKsi*vrel[0];
+            V[1]=SinKsi*CosEps*vrel[0];
+            V[2]=SinKsi*SinEps*vrel[0];
+          }
+
+          memcpy(vrel,V,3*sizeof(double));
+        }
+      }
+    }
+
     //collisions with the background atmosphere
 #if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
     namespace BackgroundAtmosphere {
 
+      //the total number of the background species, the mass table, the table of cosntant collision cross sections with the model species
+      static const int nTotalBackgroundSpecies=1;
+      static const double BackgroundSpeciesMassTable[]={0.0};
+      static const double BackgroundAtmosphereConstantCrossSectionTable[PIC::nTotalSpecies][nTotalBackgroundSpecies];
+      static const int Background2ModelSpeciesConversionTable[]={-1};
+
+      inline int GetTotalNumberBackgroundSpecies() {return nTotalBackgroundSpecies;}
+      inline double GetBackgroundMolecularMass(int spec) {return BackgroundSpeciesMassTable[spec];}
+
+
+/*
+      //the default value of the user-defined function that calculates the collision cross section
+      #define _PIC_BACKGROUND_ATMOSPHERE__COLLISION_CROSS_SECTION_FUNCTION_(spec,BackgroundSpecieNumber,modelParticleData,BackgroundAtmosphereParticleData,TranslationalEnergy,cr2) (0.0)
+
+      //get local, cell mean, and cell maximum density of the background species
+      #define _PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_SPECIES_LOCAL_DENSITY_(x,BackgroundSpecieNumber,cell,node) (0.0)
+      #define _PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_SPECIES_CELL_MEAN_DENSITY_(BackgroundSpecieNumber,cell,node) (0.0)
+      #define _PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_SPECIES_CELL_MAXIMUM_DENSITY_(BackgroundSpecieNumber,cell,node) (0.0)
+
+      //the user-defined function for calcualtion of the scattering angle
+      #define _PIC_BACKGROUND_ATMOSPHERE__COLLISION_SCATTERING_ANGLE_(Vrel,TranslationalEnergy,spec,BackgroundSpecieNumber) (0.0)
+
+      //the condition the remove the model particle from the simulation after the collision with the background particle
+      #define _PIC_BACKGROUND_ATMOSPHERE__REMOVE_CONDITION_MODEL_PARTICLE_(modelParticleData) (true)
+
+      //the conditions to inject the background atmosphere particle after a collision with the model particle
+      #define _PIC_BACKGROUND_ATMOSPHERE__INJECT_CONDITION_BACKGROUND_PARTICLE_(BackgroundAtmosphereParticleData) (false)
+
+      //Evaluate GetSigmaCrMax in a cell
+      #define _PIC_BACKGROUND_ATMOSPHERE__GET_SIGMA_CR_MAX(spec,BackgroundSpecieNumber,modelParticleData) (0.0)
+
+      //generate the background atmosphere particle
+      #define _PIC_BACKGROUND_ATMOSPHERE__GENERATE_BACKGROUND_PARTICLE_(BackgroundAtmosphereParticleData,BackgroundSpecieNumber,cell,node) (exit(__LINE__,__FILE__,"Error: _PIC_BACKGROUND_ATMOSPHERE__GENERATE_BACKGROUND_PARTICLE_ was not set"))
+
+      //define the mode for loading the definition file
+      #define _PIC_BACKGROUND_ATMOSPHERE__LOAD_USER_DEFINITION__MODE_ _PIC_MODE_OFF_
+      #define _PIC_BACKGROUND_ATMOSPHERE__UDER_DEFINITION_ "UserDefinition.PIC.BackgroundAtmosphere.h"
+*/
+
+      //define functions for calculation of the properties of the background atmosphere species
+      double GetCollisionCrossSectionBackgoundAtmosphereParticle(int spec,int BackgroundSpecieNumber,PIC::ParticleBuffer::byte *modelParticleData,PIC::ParticleBuffer::byte *BackgroundAtmosphereParticleData,double TranslationalEnergy,double cr2);
+      double GetSigmaCrMax(int spec,int BackgroundSpecieNumber,PIC::ParticleBuffer::byte *modelParticleData);
+      double GetCollisionScatteringAngle(double* Vrel,double TranslationalEnergy,int spec,int BackgroundSpecieNumber);
+
+      void GenerateBackgoundAtmosphereParticle(PIC::ParticleBuffer::byte *BackgroundAtmosphereParticleData,int BackgroundSpecieNumber,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+      double GetBackgroundLocalNumberDensity(int BackgroundSpecieNumber,double *x);
+      double GetCellMeanBackgroundNumberDensity(int BackgroundSpecieNumber,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+      double GetCellMaximumBackgroundNumberDensity(int BackgroundSpecieNumber,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+      double GetCellLocalBackgroundNumberDensity(double x[3],int BackgroundSpecieNumber,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+      //the conditions to keep the background particle or remove a model particle after a collision
+      bool KeepConditionModelParticle(PIC::ParticleBuffer::byte *ModelParticleData);
+
+
+
       //include the user defined properties of the background atmosphere
-      #include "UserDefinition.BackgroundAtmosphere.h"
+      #if _PIC_BACKGROUND_ATMOSPHERE__LOAD_USER_DEFINITION__MODE_ ==  _PIC_MODE_ON_
+      #include _PIC_BACKGROUND_ATMOSPHERE__UDER_DEFINITION_
+      #endif
 
 
       //Sampling of the model data
@@ -1189,11 +1362,16 @@ namespace PIC {
       void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
       void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
 
+      //sample the global rate of termalization of exospehric species and the rate of injection of new exospheric particles from the background atmosphere
+      extern double *ThermalizationRate,*CollisionSourceRate;
 
       //init the model
       void Init_BeforeParser();
+      void Init_AfterParser();
 
-
+      //output sampled model parameters
+      void OutputSampledModelData(int);
+      void SampleModelData();
 
       //processor of the collisions
       void CollisionProcessor();
@@ -1471,6 +1649,7 @@ namespace PIC {
     extern double *GlobalParticleWeight,*GlobalTimeStep;
 
     double GetMaximumBlockInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+    double GetTotalBlockInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
     void initParticleWeight(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
@@ -1677,15 +1856,17 @@ namespace PIC {
       //the total photolytic lifetime of the species;
       extern double *ConstantTotalLifeTime;
 
+/*
       typedef double (*fTotalLifeTime)(double *x,int spec,long int ptr,bool &ReactionAllowedFlag);
       extern fTotalLifeTime *TotalLifeTime;
 
       typedef int (*fReactionProcessor)(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData);
       extern fReactionProcessor *ReactionProcessorTable;
+*/
 
       void Init();
-      void SetReactionProcessor(fReactionProcessor f,int spec);
-      void SetSpeciesTotalPhotolyticLifeTime(fTotalLifeTime f,int spec);
+//      void SetReactionProcessor(fReactionProcessor f,int spec);
+//      void SetSpeciesTotalPhotolyticLifeTime(fTotalLifeTime f,int spec);
 
       //The return codes of the photolytic model
       #define _PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_      0
@@ -1697,15 +1878,21 @@ namespace PIC {
       //the default function that returns the constant life time value
       double TotalLifeTime_default(double *x,int spec,long int ptr,bool &ReactionAllowedFlag);
 
+      //the default function for processing the photolytic reactions -> the particle is removed if the reaction occured
+      inline int PhotolyticReactionProcessor_default(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
+        return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
+      }
+
       //the manager of the photolytic reaction module
       //if the reaction has occured-> spes returns the species number of the transformed particles, TimeInterval return the time when the reaction had occured
 
-      inline int PhotolyticReaction(double *x,long int ptr,int &spec,double &TimeInterval) {
+       int PhotolyticReaction(double *x,long int ptr,int &spec,double &TimeInterval);
+/*      inline int PhotolyticReaction(double *x,long int ptr,int &spec,double &TimeInterval) {
         int code=_PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
         register double p,lifetime,c;
         bool flag;
 
-        lifetime=TotalLifeTime[spec](x,spec,ptr,flag);
+        lifetime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(x,spec,ptr,flag);
         if (flag==false) return _PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
 
 
@@ -1720,7 +1907,7 @@ namespace PIC {
         }
 
         return code;
-      }
+      }*/
 
     }
 

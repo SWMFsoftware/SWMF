@@ -219,8 +219,8 @@ void PIC::ParticleFluxDistributionSample::printMacroscopicParameters(char *fname
   double vnorm[nSamleLocations],v2norm[nSamleLocations],fv,fv2;
   int voffset,v2offset,i;
 
-  voffset=GetSampleDataOffset(_NA_SPEC_,Sample_Speed_Offset);
-  v2offset=GetSampleDataOffset(_NA_SPEC_,Sample_V2_Offset);
+  voffset=GetSampleDataOffset(spec,Sample_Speed_Offset);
+  v2offset=GetSampleDataOffset(spec,Sample_V2_Offset);
 
   if (PIC::Mesh::mesh.ThisThread==0) {
     sprintf(str,"%s.f(v).dat",fname);

@@ -107,7 +107,18 @@
 #define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__ON_   0
 #define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__OFF_  1
 
+//allow the load the user-defined difinition of macro defining the symbolic description of the species used in the simulation 
+#define _PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE__ON_    0
+#define _PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE__OFF_   1
 
+
+//collision models
+#define _PIC__PARTICLE_COLLISION_MODEL__HS_     0
+
+//sampling of the parallel and normal kinetic temperature
+#define _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_                                   0
+#define _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__CONSTANT_DIRECTION_ORIGIN_             1
+#define _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__FUNSTION_CALCULATED_NORMAL_DIRECTION_  2
 
 
 

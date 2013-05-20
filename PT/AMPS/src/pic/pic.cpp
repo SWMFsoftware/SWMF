@@ -27,6 +27,7 @@ bool *PIC::Sampling::SaveOutputDataFile=NULL;
 //perform one time step
 void PIC::TimeStep() {
    double UserDefinedMPI_RoutineExecutionTime=0.0,ParticleMovingTime,InjectionBoundaryTime,ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
+   double ParticleCollisionTime=0.0;
 
    //Collect and exchange the run's statictic information
    static const int nRunStatisticExchangeIterationsMin=5,nRunStatisticExchangeIterationsMax=500,nRunStatisticExchangeTime=120;
@@ -53,6 +54,20 @@ void PIC::TimeStep() {
 #endif
 
   InjectionBoundaryTime=MPI_Wtime()-InjectionBoundaryTime;
+
+
+  //simulate particle collisions
+#if _PIC__PARTICLE_COLLISION_MODEL__MODE_ == _PIC_MODE_ON_
+  ParticleCollisionTime=MPI_Wtime();
+
+  #if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+  PIC::MolecularCollisions::ParticleCollisionModel::ntc();
+  #else
+  exit(__LINE__,__FILE__,"Error: the option is not implemented");
+  #endif
+
+  ParticleCollisionTime=MPI_Wtime()-ParticleCollisionTime;
+#endif
 
 
   //move existing particles
@@ -86,6 +101,7 @@ void PIC::TimeStep() {
     long int TotalParticlesNumber;
     double ParticleExchangeTime;
     double SamplingTime;
+    double ParticleCollisionTime;
     double InjectionBoundaryTime;
     double ParticleMovingTime;
     double Latency;
@@ -112,6 +128,7 @@ void PIC::TimeStep() {
     localRunStatisticData.TotalParticlesNumber=PIC::ParticleBuffer::NAllPart;
     localRunStatisticData.ParticleExchangeTime=ParticleExchangeTime;
     localRunStatisticData.SamplingTime=SamplingTime;
+    localRunStatisticData.ParticleCollisionTime=ParticleCollisionTime;
     localRunStatisticData.ParticleMovingTime=ParticleMovingTime;
     localRunStatisticData.InjectionBoundaryTime=InjectionBoundaryTime;
     localRunStatisticData.Latency=PIC::Parallel::Latency;
@@ -154,17 +171,19 @@ void PIC::TimeStep() {
       printf("11:\t Recv Particles\n");
       printf("12:\t nInjected Particls\n");
       printf("13:\t User Defined MPI Routine - Execution Time\n");
+      printf("14:\t Particle Collision Time\n");
 
-      printf("1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\n");
+
+      printf("1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\t\t 14\n");
 
 //      printf("Thread, Total Particle's number, Total Interation Time, Iteration Execution Time, Sampling Time, Injection Boundary Time, Particle Moving Time, Particle Exchange Time, Latency, Send Particles, Recv Particles, nInjected Particls\n");
 
       for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
-        printf("%i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\t %e\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
+        printf("%i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\t %e\t %e\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
             ExchangeBuffer[thread].IterationExecutionTime,ExchangeBuffer[thread].SamplingTime,ExchangeBuffer[thread].InjectionBoundaryTime,ExchangeBuffer[thread].ParticleMovingTime,
             ExchangeBuffer[thread].ParticleExchangeTime,ExchangeBuffer[thread].Latency,ExchangeBuffer[thread].sendParticleCounter,
             ExchangeBuffer[thread].recvParticleCounter,ExchangeBuffer[thread].nInjectedParticles/((nExchangeStatisticsIterationNumberSteps!=0) ? nExchangeStatisticsIterationNumberSteps : 1),
-            ExchangeBuffer[thread].UserDefinedMPI_RoutineExecutionTime);
+            ExchangeBuffer[thread].UserDefinedMPI_RoutineExecutionTime,ExchangeBuffer[thread].ParticleCollisionTime);
 
         nTotalModelParticles+=ExchangeBuffer[thread].TotalParticlesNumber;
         nTotalInjectedParticels+=ExchangeBuffer[thread].nInjectedParticles;
@@ -277,6 +296,11 @@ void PIC::TimeStep() {
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
     EmergencyLoadRebalancingFlag=true;
 #endif
+#endif
+
+    //check if the number of iterations between the load rebalancing exeeds the minimum number '_PIC_DYNAMIC_LOAD_BALANCING__MIN_ITERATION_BETWEEN_LOAD_REBALANCING_'
+#ifdef _PIC_DYNAMIC_LOAD_BALANCING__MIN_ITERATION_BETWEEN_LOAD_REBALANCING_
+    if (PIC::Parallel::IterationNumberAfterRebalancing<_PIC_DYNAMIC_LOAD_BALANCING__MIN_ITERATION_BETWEEN_LOAD_REBALANCING_) EmergencyLoadRebalancingFlag=false;
 #endif
 
     MPI_Bcast(&EmergencyLoadRebalancingFlag,1,MPI_INT,0,MPI_COMM_WORLD);
@@ -616,6 +640,37 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
               }
 
               *(s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleSpeedRelativeOffset))+=sqrt(Speed2)*LocalParticleWeight;
+
+              //sample the data for calculation the normal and tangential kinetic temepratures
+            #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+              //do nothing
+            #else
+              //calcualte the direction of the normal
+              double l[3];
+
+              #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__FUNSTION_CALCULATED_NORMAL_DIRECTION_
+              exit(__LINE__,__FILE__,"error: not developed: need a function for calculation of the local direction for the normal for calcualtion of the parallel and tengential temperatures");
+              #elif _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__CONSTANT_DIRECTION_ORIGIN_
+              double c,*x;
+
+              x=PIC::ParticleBuffer::GetX((PIC::ParticleBuffer::byte*)tempParticleData);
+
+              l[0]=x[0]-constNormalDirection__SampleParallelTangentialTemperature[0];
+              l[1]=x[1]-constNormalDirection__SampleParallelTangentialTemperature[1];
+              l[2]=x[2]-constNormalDirection__SampleParallelTangentialTemperature[2];
+
+              c=sqrt((l[0]*l[0])+(l[1]*l[1])+(l[2]*l[2]));
+
+              l[0]/=c,l[1]/=c,l[2]/=c;
+              #else
+              exit(__LINE__,__FILE__,"Error: the option is not defined");
+              #endif
+
+              double vParallel=(l[0]*v[0])+(l[1]*v[1])+(l[2]*v[2]);
+
+              *(s+(double*)(tempSamplingBuffer+PIC::Mesh::sampledParticleNormalParallelVelocityRelativeOffset))+=vParallel*LocalParticleWeight;
+              *(s+(double*)(tempSamplingBuffer+PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset))+=vParallel*vParallel*LocalParticleWeight;
+#endif
 
               //call sampling procedures of indivudual models
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
@@ -969,13 +1024,18 @@ void PIC::SignalHandler(int sig) {
 
   exit(__LINE__,__FILE__,"Error: exit in the signal handler");
 }
-//====================================================
-//init the particle solver
-void PIC::Init_BeforeParser() {
 
+//====================================================
+void PIC::InitMPI() {
   //init MPI variables
   MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
   MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
+}
+
+//init the particle solver
+void PIC::Init_BeforeParser() {
+
+  InitMPI();
 
   if (ThisThread==0) {
     time_t TimeValue=time(NULL);
@@ -1079,6 +1139,9 @@ void PIC::Init_BeforeParser() {
 #if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
   PIC::MolecularCollisions::BackgroundAtmosphere::Init_BeforeParser();
 #endif
+
+  //init the particle collision procedure
+  PIC::MolecularCollisions::ParticleCollisionModel::Init();
 }
 
 void PIC::Init_AfterParser() {
@@ -1119,6 +1182,11 @@ void PIC::Init_AfterParser() {
   //init the model of volume particle injections
 #if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
   PIC::VolumeParticleInjection::Init();
+#endif
+
+  //init the background atmosphere model
+#if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
+  PIC::MolecularCollisions::BackgroundAtmosphere::Init_AfterParser();
 #endif
 }
 

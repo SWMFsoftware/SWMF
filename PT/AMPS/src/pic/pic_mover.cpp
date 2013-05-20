@@ -589,7 +589,8 @@ int iTemp,jTemp,kTemp;
     if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
       int specInit=spec;
 
-      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,x,ptr,spec,ParticleData);
+      //PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,x,ptr,spec,ParticleData);
+      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,x,ptr,spec,ParticleData);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -894,7 +895,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory(long int p
 int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   PIC::ParticleBuffer::byte *ParticleData;
   double v[3],x[3]={0.0,0.0,0.0},vinit[3],xinit[3];
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* newNode;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* newNode=NULL;
   long int LocalCellNumber;
   int i,j,k;
   PIC::Mesh::cDataCenterNode *cell;
@@ -1047,7 +1048,8 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
     if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
       int specInit=spec;
 
-      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xinit,x,ptr,spec,ParticleData);
+//      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xinit,x,ptr,spec,ParticleData);
+      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xinit,x,ptr,spec,ParticleData);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -1212,7 +1214,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
 int PIC::Mover::UniformWeight_UniformTimeStep_SecondOrder(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   PIC::ParticleBuffer::byte *ParticleData;
   double vInit[3],xInit[3]={0.0,0.0,0.0},vMiddle[3],xMiddle[3],vFinal[3],xFinal[3],dt2;
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* newNode,*middleNode;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* newNode=NULL,*middleNode=NULL;
   long int LocalCellNumber;
   int i,j,k;
   PIC::Mesh::cDataCenterNode *cell;
@@ -1415,7 +1417,7 @@ exit(__LINE__,__FILE__,"not implemented");
 }
 
 int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,bool FirstBoundaryFlag) {
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode,*middleNode;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL,*middleNode=NULL;
   double dtMin=-1.0,dtTemp,dtMinInit2,dtMinInit;
   PIC::ParticleBuffer::byte *ParticleData;
   double vInit[3],xInit[3]={0.0,0.0,0.0},vMiddle[3],xMiddle[3],vFinal[3],xFinal[3],xminBlock[3],xmaxBlock[3];
@@ -1991,6 +1993,24 @@ exit(__LINE__,__FILE__,"not implemented");
 #else
       exit(__LINE__,__FILE__,"Error: the option is nor defined");
 #endif
+
+      if (newNode==NULL) {
+        //the particle left the computational domain
+        int code=_PARTICLE_DELETED_ON_THE_FACE_;
+
+        //call the function that process particles that leaved the coputational domain
+        if (ProcessOutsideDomainParticles!=NULL) code=ProcessOutsideDomainParticles(ptr,startNode);
+
+        if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+          PIC::ParticleBuffer::DeleteParticle(ptr);
+          return _PARTICLE_LEFT_THE_DOMAIN_;
+        }
+        else {
+          exit(__LINE__,__FILE__,"Error: not implemented");
+        }
+      }
+
+
     }
     else {
       exit(__LINE__,__FILE__,"Error: the option is nor defined");
@@ -2003,7 +2023,8 @@ exit(__LINE__,__FILE__,"not implemented");
     if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
       int specInit=spec;
 
-      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,xFinal,ptr,spec,ParticleData);
+      //PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,xFinal,ptr,spec,ParticleData);
+      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,ptr,spec,ParticleData);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
       dtTotal*=newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalTimeStep(specInit);
