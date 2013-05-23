@@ -5968,6 +5968,120 @@ is independent of the GravityDir value.  Gravity due to the second body
 is radially inward toward the second body.
 </command>
 
+<command name="RESISTIVITY">
+	<parameter name="UseResistivity" type="logical" default="F"	/>
+	<if expr="$UseResistivity">
+		<parameter name="TypeResistivity" type="string" case="lower"
+			input="select" >
+			<option name="constant" default="T"/>
+			<option name="spitzer"             />
+			<option name="anomalous"           />
+			<option name="user"                />
+		</parameter>
+		<if expr="$TypeResistivity =~ /spitzer/">
+			<parameter name="CoulombLogarithm" type="real" 
+							default="20" />
+		</if>
+		<if expr="$TypeResistivity =~ /constant/">
+			<parameter name="Eta0Si" type="real" min="0.0" 
+							default="1.0E+11"/>
+		</if>
+		<if expr="$TypeResistivity =~ /anomalous/">
+			<parameter name="Eta0Si" type="real" min="0.0" 
+							default="1.0E+9"/>
+			<parameter name="Eta0AnomSi" type="real"
+						default="2E+09"	/>
+			<parameter name="EtaMaxAnomSi" type="real"
+						default="2E+10"	/>
+			<parameter name="jCritAnomSi" type="real" min="0"
+						default="1.0E-9"/>
+		</if>
+		<if expr="$TypeResistivity =~ /user/">
+			<parameter name="Eta0Si" type="real" min="0.0" 
+							default="1.0"/>
+		</if>
+	</if>
+#RESISTIVITY
+T		UseResistivity (rest of parameters read only if set to true)
+anomalous	TypeResistivity
+1.0E+9		Eta0Si       [m2/s] (read except for Spitzer resistivity)
+2.0E+9		Eta0AnomSi   [m2/s] (read for anomalous resistivity only)
+2.0E+10		EtaMaxAnomSi [m2/s] (read for anomalous resistivity only)
+1.0E-9		jCritAnomSi  [A/m2] (read for anomalous resistivity only)
+
+The true SI units of resistivity are Ohm m = $N m^2 / (A^2 s)$. 
+In BATSRUS, however, we use "normalized" units, so that the magnetic
+permeability $[N/A^2]$ disappers from the equations. So what is 
+described here as "resistivity", is really eta/mu_0 which has units of $[m^2/s]$,
+same as (magnetic) diffusion. Since the normalized current is defined as curl B
+(instead of curl B/mu0), the electric field is E = -u x B + eta * J in the
+normalized units.
+
+If UseResistitivy is false, no resistivity is included.
+If UseResistivity is true, then one can select a constant resistivity,
+the classical Spitzer resistivity, 
+anomalous resistivity with a critical current, or a user defined resistivity.
+
+For TypeResistivity='Spitzer' the resistivity is very low in space plasma.
+The only parameter read is the CoulombLogarithm parameter with 
+typical values in the range of 10 to 30.
+
+For TypeResistivity='constant' the resistivity is uniformly set to 
+the parameter Eta0Si.
+
+For TypeResistivity='anomalous' the anomalous resistivity is 
+Eta0Si + Eta0AnomSi*(j/jCritAnomSi-1) limited by 0 and EtaMaxAnomSi.
+Here j is the absolute value of the current density in SI units.
+See the example for the order of the parameters.
+
+For TypeResistivity='user' only the Eta0Si parameter is read and it
+can be used to scale the resistivity set in subroutine user_set_resistivity
+in the ModUser module. Other parameters should be read with 
+subroutine user_read_inputs of the ModUser file.
+
+The default is UseResistivity=.false.
+</command>
+
+<command name="RESISTIVITYOPTIONS">
+	<parameter name="UseResistiveFlux" type="logical" default="T"/>
+	<parameter name="UseJouleHeating"  type="logical" default="T"/>
+	<parameter name="UseHeatExchange"  type="logical" default="T"/>
+#RESISTIVITYOPTIONS
+T			UseResistiveFlux
+T			UseJouleHeating
+F			UseHeatExchange
+
+Switch off negligible resistivity effects for sake of computational speed.
+If UseResistiveFlux is false, the resistive terms in the induction equation
+are neglected. If UseJouleHeating is false and non-conservative equations
+are used then the Joule heating is neglected in the electron/ion pressure
+equation. If UseHeatExchange is false, the heat exchange between electron
+and ion pressures is neglected. 
+
+The defaults are true for all three logicals.
+</command>
+
+<command name="RESISTIVEREGION" alias="RESISTIVITYREGION">
+	 <parameter name="rZeroResist" type="real" min="-1" default="-1"/>
+	 <parameter name="rFullResist" type="real" min="$rZeroResist" default="1e30"/>
+
+#RESISTIVEREGION
+4.0		rZeroResist
+5.0		rFullResist
+
+Mask the resistivity (set by the #RESISTIVITY command) depending on the
+radial coordinate r. For r less than rZeroResist the resistivity is zero.
+For r greater than rFullResist the full value of resistivity is used.
+Between these two value the resistivity is linearly ramped up from zero
+to the full value. This command can be used to reduce resistivity 
+where the field aligned currents are calculated 
+(set by the rCurrents parameter of the #BODY command), but still
+apply resistivity where reconnection happens.
+
+The default values are rZeroResist=-1 and rFullResist=1e30, 
+so there is no masking applied.
+</command>
+
 <command name="HALLRESISTIVITY">
 	<parameter name="UseHallResist" type="logical" default="F"/>
 	<if expr="$UseHallResist">
@@ -6474,99 +6588,6 @@ exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
 
 The default is UseHeatFluxRegion=.false.
 
-</command>
-
-<command name="RESISTIVITY">
-	<parameter name="UseResistivity" type="logical" default="F"	/>
-	<if expr="$UseResistivity">
-		<parameter name="TypeResistivity" type="string" case="lower"
-			input="select" >
-			<option name="constant" default="T"/>
-			<option name="spitzer"             />
-			<option name="anomalous"           />
-			<option name="user"                />
-		</parameter>
-		<if expr="$TypeResistivity =~ /spitzer/">
-			<parameter name="CoulombLogarithm" type="real" 
-							default="20" />
-		</if>
-		<if expr="$TypeResistivity =~ /constant/">
-			<parameter name="Eta0Si" type="real" min="0.0" 
-							default="1.0E+11"/>
-		</if>
-		<if expr="$TypeResistivity =~ /anomalous/">
-			<parameter name="Eta0Si" type="real" min="0.0" 
-							default="1.0E+9"/>
-			<parameter name="Eta0AnomSi" type="real"
-						default="2E+09"	/>
-			<parameter name="EtaMaxAnomSi" type="real"
-						default="2E+10"	/>
-			<parameter name="jCritAnomSi" type="real" min="0"
-						default="1.0E-9"/>
-		</if>
-		<if expr="$TypeResistivity =~ /user/">
-			<parameter name="Eta0Si" type="real" min="0.0" 
-							default="1.0"/>
-		</if>
-	</if>
-#RESISTIVITY
-T		UseResistivity (rest of parameters read only if set to true)
-anomalous	TypeResistivity
-1.0E+9		Eta0Si       [m2/s] (read except for Spitzer resistivity)
-2.0E+9		Eta0AnomSi   [m2/s] (read for anomalous resistivity only)
-2.0E+10		EtaMaxAnomSi [m2/s] (read for anomalous resistivity only)
-1.0E-9		jCritAnomSi  [A/m2] (read for anomalous resistivity only)
-
-The true SI units of resistivity are Ohm m = $N m^2 / (A^2 s)$. 
-In BATSRUS, however, we use "normalized" units, so that the magnetic
-permeability $[N/A^2]$ disappers from the equations. So what is 
-described here as "resistivity", is really eta/mu_0 which has units of $[m^2/s]$,
-same as (magnetic) diffusion. Since the normalized current is defined as curl B
-(instead of curl B/mu0), the electric field is E = -u x B + eta * J in the
-normalized units.
-
-If UseResistitivy is false, no resistivity is included.
-If UseResistivity is true, then one can select a constant resistivity,
-the classical Spitzer resistivity, 
-anomalous resistivity with a critical current, or a user defined resistivity.
-
-For TypeResistivity='Spitzer' the resistivity is very low in space plasma.
-The only parameter read is the CoulombLogarithm parameter with 
-typical values in the range of 10 to 30.
-
-For TypeResistivity='constant' the resistivity is uniformly set to 
-the parameter Eta0Si.
-
-For TypeResistivity='anomalous' the anomalous resistivity is 
-Eta0Si + Eta0AnomSi*(j/jCritAnomSi-1) limited by 0 and EtaMaxAnomSi.
-Here j is the absolute value of the current density in SI units.
-See the example for the order of the parameters.
-
-For TypeResistivity='user' only the Eta0Si parameter is read and it
-can be used to scale the resistivity set in subroutine user_set_resistivity
-in the ModUser module. Other parameters should be read with 
-subroutine user_read_inputs of the ModUser file.
-
-The default is UseResistivity=.false.
-</command>
-
-<command name="RESISTIVITYOPTIONS">
-	<parameter name="UseResistiveFlux" type="logical" default="T"/>
-	<parameter name="UseJouleHeating"  type="logical" default="T"/>
-	<parameter name="UseHeatExchange"  type="logical" default="T"/>
-#RESISTIVITYOPTIONS
-T			UseResistiveFlux
-T			UseJouleHeating
-F			UseHeatExchange
-
-Switch off negligible resistivity effects for sake of computational speed.
-If UseResistiveFlux is false, the resistive terms in the induction equation
-are neglected. If UseJouleHeating is false and non-conservative equations
-are used then the Joule heating is neglected in the electron/ion pressure
-equation. If UseHeatExchange is false, the heat exchange between electron
-and ion pressures is neglected. 
-
-The defaults are true for all three logicals.
 </command>
 
 <command name="SECONDBODY" if="$_IsFirstSession">
