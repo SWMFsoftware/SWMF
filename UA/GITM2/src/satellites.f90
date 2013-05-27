@@ -8,6 +8,8 @@
 !           Angeline Burrell (AGB), UMichigan, Feb 2013 - Modified variable
 !                                                         names for consistency
 !                                                         and added comments
+!           Alexey Morozov (alex), UM, May 2013 - fixed interpolation for the 
+!                    case when satellites cross the prime meridian (lon=0)
 !
 ! Comments: Routines to handle satellite data in GITM.
 !
@@ -149,6 +151,7 @@ end subroutine read_satellites
 ! Find locations for current time
 !
 ! AGB/Asad 3/31/13: Adapted to use satellites in RCMR data assimilation
+! Alexey 5/17/13: fixed the interpolation when satellite goes over 0lon
 !----------------------------------------------------------------------
 
 subroutine move_satellites
@@ -157,7 +160,7 @@ subroutine move_satellites
   use ModSatellites
   use ModGITM, only: nBlocks, dt
   use ModTime, only: CurrentTime, tSimulation
-
+  use ModConstants, only: pi !alex
   implicit none
 
   integer :: iSat, iPos, iLine = 1, i, iBlock, iOut
@@ -229,11 +232,11 @@ subroutine move_satellites
            do iPos = 1, nSatPos(iSat,iLine)
               do i=1,3
                  if (i == 1 .and. &
-                      SatPos(iSat, i, iPos, iLine) > 300 .and. &
-                      SatPos(iSat, i, iPos, iLine+1) < 60) then
+                      SatPos(iSat, i, iPos, iLine) > 260*pi/180 .and. & !alex
+                      SatPos(iSat, i, iPos, iLine+1) < 100*pi/180) then !alex
                     SatCurrentPos(iSat, i, iPos) = &
-                         (  r)*SatPos(iSat, i, iPos, iLine) + &
-                         (1-r)*(SatPos(iSat, i, iPos, iLine+1)+360.0)
+                        mod( (  r)*SatPos(iSat, i, iPos, iLine) + & !alex
+                         (1-r)*(SatPos(iSat, i, iPos, iLine+1)+2*pi) , 2*pi) !alex
                  else
                     SatCurrentPos(iSat, i, iPos) = &
                          (  r)*SatPos(iSat, i, iPos, iLine) + &
