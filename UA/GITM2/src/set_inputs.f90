@@ -1116,6 +1116,15 @@ subroutine set_inputs
               call init_rcmr
            end if
 
+        case ("#DART") !alexey
+           call read_in_int(useDART, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #DART:'
+              write(*,*) ''
+              write(*,*) '#DART'
+              write(*,*) "useDART (integer, {default 0=no}, 1=master ensemble member, 2=slave ens.)"
+           endif
+
         case ("#ELECTRODYNAMICS")
            call read_in_real(dTPotential, iError)
            call read_in_real(dTAurora, iError)
