@@ -8,6 +8,8 @@ module ModInputs
 
   implicit none
 
+  integer                   :: useDART = 0 !alexey, default is to not use DART
+
   integer, parameter        :: iCharLen_     = 100
 
   integer                   :: iOutputUnit_  = UnitTmp_
