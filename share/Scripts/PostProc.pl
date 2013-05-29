@@ -20,9 +20,9 @@ my $rsync = 'rsync -avz';
 my $exclude = " --exclude '*.idl' --exclude '*.tec' --exclude '*.dat'".
     " --exclude '*.[hHTS]'";
 
-my $INFO  = "PostProc.pl";
-my $ERROR = "ERROR in PostProc.pl";
-my $WARNING = "WARNING in PostProc.pl";
+my $INFO    = "PostProc.pl";                     # Info message string
+my $WARNING = "WARNING in PostProc.pl";          # Warning message string
+my $ERROR   = "ERROR in PostProc.pl";            # Error message string
 
 my $ParamIn = "PARAM.in";
 my $RunLog  = "runlog runlog_[0-9]*";
@@ -70,6 +70,11 @@ my %PlotDir = (
     "UA"     => "UA/Output,UA/data",
     "STDOUT" => "STDOUT",
 	    );
+
+if($Repeat){
+    print "$INFO running on ", `hostname`;
+    print "$INFO will stop in $Stop days after ", `date`;
+}
 
 my $time_start = time();
 REPEAT:{

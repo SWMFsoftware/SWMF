@@ -16,6 +16,7 @@ use strict;
 
 &print_help if $Help;
 
+my $INFO    ="Restart.pl";                       # Info message string
 my $WARNING ="WARNING in Restart.pl:";           # Warning message string
 my $ERROR   ="ERROR in Restart.pl:";             # Error message string
 my $HELP    ="\nType Restart.pl -h for help.\n"; # Help message string
@@ -117,6 +118,11 @@ if($Framework){
     $RestartInFile  = "$Comp/$HeaderFile{$Comp}";
     print "Restart.pl running in standalone mode for component $Comp\n" 
 	if $Verbose;
+}
+
+if($Repeat){
+    print "$INFO running on ", `hostname`;
+    print "$INFO started on ", `date`;
 }
 
 LOOP:{
