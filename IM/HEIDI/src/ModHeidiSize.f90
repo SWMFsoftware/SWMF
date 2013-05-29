@@ -31,6 +31,7 @@ Module ModHeidiSize
   ! Define the number of points along the field line
   integer, parameter :: nPoint = 101
   integer, parameter :: nPointEq = (nPoint-1)/2 +1
+  integer            :: EquatorialIndex_II(nR,nT)
 
   integer, parameter :: nRHodges = 40 ! Number of points in radial distance for Hodges model.
 end Module ModHeidiSize

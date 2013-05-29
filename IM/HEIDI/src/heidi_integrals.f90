@@ -380,7 +380,7 @@ end subroutine get_B_field
 !============================================================
 subroutine get_coef(dEdt_IIII,dMudt_III)
 
-  use ModHeidiSize,   ONLY: nPoint,nPointEq, nPa, nT, nR,nE
+  use ModHeidiSize,   ONLY: nPoint, EquatorialIndex_II , nPa, nT, nR,nE
   use ModConst,       ONLY: cTiny  
   use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,Z, funi, funt,dPhi, DipoleFactor
   use ModHeidiDrifts, ONLY: VR, P1,P2
@@ -419,6 +419,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
   real, dimension(nPoint)           :: TR1, TR2, TPhi
   real                              :: BouncedDriftR1,BouncedDriftR2
   integer                           :: iPoint, iRPlus, iRMinus, iPhiPlus, iPhiMinus
+  integer                           :: iPointEq
 
   character(LEN=500):: StringVarName, StringHeader, NameFile                              
   character(len=20) :: TypePosition                                                        
@@ -477,10 +478,14 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
                    dBdt_III(:,iR,iPhi),BouncedDBdt,RadialDistance_III(:,iR,iPhi)) 
 
               if (Sb==0.0) Sb = cTiny
-
-              GradEqBR      = GradB_VIII(1,nPointEq,iR,iPhi)
-              GradEqBPhi    = GradB_VIII(3,nPointEq,iR,iPhi)
-              InvB = 1./bFieldMagnitude_III(nPointEq,iR,iPhi)
+              
+              iPointEq = EquatorialIndex_II(iR,iPhi)
+              
+              !write(*,*) 'iPointEq = ', iPointEq
+              
+              GradEqBR      = GradB_VIII(1,iPointEq,iR,iPhi)
+              GradEqBPhi    = GradB_VIII(3,iPointEq,iR,iPhi)
+              InvB = 1./bFieldMagnitude_III(iPointEq,iR,iPhi)
               InvR =  1./LZ(iR)
 
               !\
@@ -489,7 +494,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
 
               CoeffE = EBND(iE)* InvB *(1. -  funi(iPitch,iR,iPhi)/(2.* funt(iPitch,iR,iPhi)))
 
-              TermEB  = CoeffE * dBdt_III(nPointEq,iR,iPhi)
+              TermEB  = CoeffE * dBdt_III(iPointEq,iR,iPhi)
               TermER1 = CoeffE * GradEqBR * VR(iR,iPhi,iE,iPitch)
               TermER2 = - (EBND(iE)/(funt(iPitch,iR,iPhi))) * VR(iR,iPhi,iE,iPitch) *&
                    (InvR * funi(iPitch,iR,iPhi) + dIdR_III(iPitch,iR,iPhi)) 
@@ -508,16 +513,17 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
               !/
 
               CoeffMu = -(funi(iPitch,iR,iPhi)/(2.* funt(iPitch,iR,iPhi)))
-
-              dBdt_III(nPointEq,iR,iPhi) = 0.0
+              dBdt_III(iPointEq,iR,iPhi) = 0.0
               dIdt_III(iPitch,iR,iPhi)   = 0.0
 
-              TermMut      = 0.5 * InvB * dBdt_III(nPointEq,iR,iPhi) + &
+              TermMut      = 0.5 * InvB * dBdt_III(iPointEq,iR,iPhi) + &
                    dIdt_III(iPitch,iR,iPhi)/funi(iPitch,iR,iPhi) 
               TermMuR1     = InvR 
               TermMuR2     = 0.5 * InvB * GradEqBR 
               TermMuR3     = dIdR_III(iPitch,iR,iPhi)/funi(iPitch,iR,iPhi) 
-              TermMuR      = 0.0!(TermMuR1 + TermMuR2 + TermMuR3) * VR(iR,iPhi,iE,iPitch)
+            
+              TermMuR      = (TermMuR1 + TermMuR2 + TermMuR3) * VR(iR,iPhi,iE,iPitch)
+              
               TermMuPhi1 = 0.5 * InvB * GradEqBPhi 
               TermMuPhi2 = dIdPhi_III(iPitch,iR,iPhi)/funi(iPitch,iR,iPhi) 
               TermMuPhi = (TermMuPhi1 + TermMuPhi2)*(P1(iR,iPhi) + P2(iR,iPhi,iE,iPitch))
@@ -676,7 +682,7 @@ end subroutine get_coef
 
 subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 
-  use ModHeidiSize,   ONLY: nPoint,nPointEq, nPa, nT, nR,nE
+  use ModHeidiSize,   ONLY: nPoint, nPa, nT, nR,nE
   use ModConst,       ONLY: cTiny  
   use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND, wmu, DPHI, Z, Re, DipoleFactor
   use ModHeidiDrifts, ONLY: VrConv, P1,P2

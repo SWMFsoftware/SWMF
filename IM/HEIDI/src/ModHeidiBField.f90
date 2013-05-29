@@ -60,7 +60,6 @@ contains
         !       RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
           call  get_asym_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,&
                RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
-          
        else
 
           write(*,*) 'REAL MHD------>Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt
