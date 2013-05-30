@@ -5,8 +5,8 @@ subroutine IM_set_param(CompInfo,TypeAction)
 
   use CON_comp_info
   use ModProcIM
-  use ModHeidiSize, ONLY: tMax
   use ModHeidiMain
+  use ModHeidiSize, ONLY: tMax
   use ModReadParam, ONLY: i_session_read
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
   use ModHeidiIO!,   ONLY: IsFramework, StringPrefix
@@ -58,8 +58,6 @@ subroutine IM_set_param(CompInfo,TypeAction)
      write(*,*) 'GRID'
 
      call IM_set_grid  
-
-     
 
   case('READ')
      write(*,*) 'READ'
@@ -331,7 +329,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
        BxHeidi_III, ByHeidi_III, BzHeidi_III,Xyz_VIII
   use ModHeidiMain,      ONLY: Phi, IsBFieldNew
   use ModHeidiIO,        ONLY: Time
-  use ModHeidiSize,      ONLY: RadiusMin, RadiusMax, nPointEq
+  use ModHeidiSize,      ONLY: RadiusMin, RadiusMax, iPointBMin_II, iPointEq, iPointEq
   use ModIoUnit,         ONLY: UnitTmp_
   use ModPlotFile,       ONLY: save_plot_file
   use ModHeidiBField,    ONLY: dipole_length
@@ -355,7 +353,8 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   ! there is no need for them, and BufferLine_VI should be put 
   ! into HEIDI variables right here. 
   ! Note that this routine is only called on the root processor !!!
-  !/
+  !/8
+
   integer                      :: nVarLine   = 0          ! number of vars per line point
   integer                      :: nPointLine = 0          ! number of points in all lines
   real, save, allocatable      :: StateLine_VI(:,:)       ! state along all lines
@@ -550,18 +549,18 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            do k = 1, nStepInterp
               LengthHeidi_I(k) = k * dLength
            end do
-           Xyz_VIII(1,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = XHeidi_I
-           Xyz_VIII(2,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = YHeidi_I
-           Xyz_VIII(3,(nPointEq+ 1):(nStep - nStepInside),iR,iT) = ZHeidi_I
-           BHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BHeidi_I
-           STemp((nPointEq+ 1):(nStep - nStepInside),iR,iT)      = LengthHeidi_I
-           RHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = RHeidi_I
-           bGradB1xHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1xHeidi_I
-           bGradB1yHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1yHeidi_I
-           bGradB1zHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1zHeidi_I
-           BxHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BxHeidi_I(:)
-           ByHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = ByHeidi_I(:)
-           BzHeidi_III((nPointEq+ 1):(nStep - nStepInside),iR,iT) = BzHeidi_I(:)
+           Xyz_VIII(1,(iPointEq+ 1):(nStep - nStepInside),iR,iT) = XHeidi_I
+           Xyz_VIII(2,(iPointEq+ 1):(nStep - nStepInside),iR,iT) = YHeidi_I
+           Xyz_VIII(3,(iPointEq+ 1):(nStep - nStepInside),iR,iT) = ZHeidi_I
+           BHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = BHeidi_I
+           STemp((iPointEq+ 1):(nStep - nStepInside),iR,iT)      = LengthHeidi_I
+           RHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = RHeidi_I
+           bGradB1xHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1xHeidi_I
+           bGradB1yHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1yHeidi_I
+           bGradB1zHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1zHeidi_I
+           BxHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = BxHeidi_I(:)
+           ByHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = ByHeidi_I(:)
+           BzHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = BzHeidi_I(:)
            LengthExN(iR,iT,iDir) = Length_I(2)
         end if
 
@@ -585,18 +584,18 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            BzHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BzHeidi_I(nStepInterp:1:-1) 
         end if
         
-        Xyz_VIII(1,nPointEq,iR,iT) = X_I(1)
-        Xyz_VIII(2,nPointEq,iR,iT) = Y_I(1)
-        Xyz_VIII(3,nPointEq,iR,iT) = Z_I(1)
-        BHeidi_III(nPointEq,iR,iT) = B_I(1)
-        STemp(nPointEq,iR,iT) = 0.5*(LengthExS(iR,iT,2) + LengthExN(iR,iT,1))
-        RHeidi_III(nPointEq,iR,iT) = RadialDist_I(1)
-        bGradB1xHeidi_III(nPointEq,iR,iT) = bGradB1x_I(1)
-        bGradB1yHeidi_III(nPointEq,iR,iT) = bGradB1y_I(1)
-        bGradB1zHeidi_III(nPointEq,iR,iT) = bGradB1z_I(1)
-        BxHeidi_III(nPointEq,iR,iT) = Bx_I(1)
-        ByHeidi_III(nPointEq,iR,iT) = By_I(1)
-        BzHeidi_III(nPointEq,iR,iT) = Bz_I(1)
+        Xyz_VIII(1,iPointEq,iR,iT) = X_I(1)
+        Xyz_VIII(2,iPointEq,iR,iT) = Y_I(1)
+        Xyz_VIII(3,iPointEq,iR,iT) = Z_I(1)
+        BHeidi_III(iPointEq,iR,iT) = B_I(1)
+        STemp(iPointEq,iR,iT) = 0.5*(LengthExS(iR,iT,2) + LengthExN(iR,iT,1))
+        RHeidi_III(iPointEq,iR,iT) = RadialDist_I(1)
+        bGradB1xHeidi_III(iPointEq,iR,iT) = bGradB1x_I(1)
+        bGradB1yHeidi_III(iPointEq,iR,iT) = bGradB1y_I(1)
+        bGradB1zHeidi_III(iPointEq,iR,iT) = bGradB1z_I(1)
+        BxHeidi_III(iPointEq,iR,iT) = Bx_I(1)
+        ByHeidi_III(iPointEq,iR,iT) = By_I(1)
+        BzHeidi_III(iPointEq,iR,iT) = Bz_I(1)
 
         i = 1
         iLineLast = StateLine_VI(1,iPoint)
@@ -675,8 +674,8 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
               SHeidi_III(i,iR,iT) = sDipoleS_I(nStepInside) + STemp(i,iR,iT)
            end do
 
-           do i = nPointEq, nPointEq
-              SHeidi_III(i,iR,iT) = sDipoleS_I(nStepInside) + STemp(nPointEq-1,iR,iT)+ STemp(nPointEq,iR,iT)
+           do i = iPointEq, iPointEq
+              SHeidi_III(i,iR,iT) = sDipoleS_I(nStepInside) + STemp(iPointEq-1,iR,iT)+ STemp(iPointEq,iR,iT)
            end do
            
            do i = nStepInside + nStepInterp + 2, nStep - nStepInside
@@ -742,7 +741,13 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   bGradB1zHeidi_III(:,nR,:) = bGradB1zHeidi_III(:,nR-1,:)
 
 
-
+  !Find the location of minimum B
+  do iR = 1, nR
+     do iT = 1, nT
+        iPointBmin_II(iR,iT) = minloc(BHeidi_III(:,iR,iT), 1) 
+     end do
+  end do
+  
 !~~~~~~~~~~~~~~~~~~~~~~~ Write out files for testing ~~~~~~~~~~~~~~~~~~~~~~
 
   NameFile      = 'BFieldMagn.out'
@@ -760,7 +765,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
        nDimIn = 2, & 
        CoordMinIn_D = (/1.75, 0.0/),&
        CoordMaxIn_D = (/6.5, 24.0/),&
-       VarIn_VII = BHeidi_III(nPointEq:nPointEq,:,:))
+       VarIn_VII = BHeidi_III(iPointEq:iPointEq,:,:))
   TypePosition = 'rewind' 
 
 
