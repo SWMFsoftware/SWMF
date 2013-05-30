@@ -92,7 +92,7 @@ module ModUser
   integer, parameter :: & ! order of Neutral species
        CO2_=1 ,&
        O_=2   ,&    
-       H_=3, &
+       H_=3, Op2_=3, &
        Oh_=4   ,&
        Ohx_=5 , &
        Hx_=6, &
@@ -171,16 +171,25 @@ module ModUser
   logical :: UseChargeEx=.true.
   !logical ::InitSession= .false.
 
-  integer,parameter::NLong=73, NLat=36, MaxAlt=21
-  real :: Long_I(NLong), Lat_I(NLat), Alt_I(MaxAlt), Alt0
-  real :: Temp(NLong, NLat, MaxAlt)
-  real :: Den_CO2(NLong, NLat, MaxAlt)!,Den_CO2_dim(NLong, NLat, NAlt)
-  real :: Den_O(NLong, NLat, MaxAlt)!,Den_O_dim(NLong, NLat, NAlt)
-  real :: ICO2p(NLong, NLat, MaxAlt)!,ICO2p_dim(NLong, NLat, NAlt)
-  real :: IOp(NLong, NLat, MaxAlt)!,IOp_dim(NLong, NLat, NAlt)
+  integer,parameter::MaxLong=73, MaxLat=36, MaxAlt=81, MaxAltD=269
+  real :: Long_I(MaxLong), Lat_I(MaxLat), Alt_I(MaxAlt), Alt0
+  real :: Temp(MaxLong, MaxLat, MaxAlt)
+  real :: Den_CO2(MaxLong, MaxLat, MaxAlt)!,Den_CO2_dim(NLong, NLat, NAlt)
+  real :: Den_O(MaxLong, MaxLat, MaxAlt)!,Den_O_dim(NLong, NLat, NAlt)
+  real :: ICO2p(MaxLong, MaxLat, MaxAlt)!,ICO2p_dim(NLong, NLat, NAlt)
+  real :: IOp(MaxLong, MaxLat, MaxAlt)!,IOp_dim(NLong, NLat, NAlt)
+  real :: IOp2(MaxLong, MaxLat, MaxAlt)
+  real :: SZA(MaxLong, MaxLat, MaxAlt)
+  real :: LongD_I(MaxLong), LatD_I(MaxLat), AltD_I(MaxAltD)
+  real :: Den_Oh(MaxLong, MaxLat, MaxAltD)
   logical ::UseMarsAtm=.false.
-  integer :: NAlt=21
-
+  logical ::UseDSMC=.false.
+  !integer :: NAlt=81
+  integer :: NAlt, NLong, NLat, NLine
+  integer :: NAltD, NLongD, NLatD, NLineD
+  real :: subsolarlong, subsolarlat
+  real :: longstart, latstart, altstart
+  real :: dlong, dlat, dalt
 
   !end mars stuff
 
@@ -831,7 +840,7 @@ contains
 
        allocate( TempNuSpecies_CBI(1:nI, 1:nJ, 1:nK, nBLK))
        allocate(Productrate_CB(1:nI, 1:nJ, 1:nK, nBLK))
-       allocate(Ionizationrate_CBI(1:nI, 1:nJ, 1:nK, nBLK,2))
+       allocate(Ionizationrate_CBI(1:nI, 1:nJ, 1:nK, nBLK,3))
        allocate(MaxSiSpecies_CB(1:nI, 1:nJ, 1:nK, nBLK))
        allocate(MaxLiSpecies_CB(1:nI, 1:nJ, 1:nK, nBLK))
        allocate(MaxSLSpecies_CB(1:nI, 1:nJ, 1:nK, nBLK))
@@ -847,7 +856,8 @@ contains
 
     character (len=100) :: NameCommand
     integer:: i, j, k, n, m
-    character (len=60):: TGCMFilename  
+    character (len=60):: TGCMFilename 
+    character (len=60):: DSMCFilename
     character (len=100) :: line
     !------------------------------------------------------------------------
 
@@ -911,15 +921,28 @@ contains
           call read_var('UseMarsAtm',UseMarsAtm)
           if(UseMarsAtm)then
              call read_var('TGCMFilename',TGCMFilename)
-             call read_var('NAlt', Nalt)
+             call read_var('NAlt', NAlt)
+             call read_var('NLat', NLat)
+             call read_var('NLong', NLong)
+             call read_var('subsolarlong', subsolarlong)
+             call read_var('subsolarlat', subsolarlat)
+             call read_var('longstart', longstart)
+             call read_var('latstart', latstart)
+             call read_var('altstart', altstart)
+             call read_var('dalt', dalt)
+             call read_var('dlat', dlat)
+             call read_var('dlong', dlong)
+             call read_var('NLine', NLine)
              open(15,file=TGCMFilename,status="old")
+             Do i=1,Nline
              read(15,*)line
-             write(*,*)line, Nalt
+             End Do
+             !write(*,*)line, NAlt
              do k = 1, NAlt
                 do j=1, NLat
                    do i=1, NLong
                       read(15,*)Long_I(i),Lat_I(j),Alt_I(k),Temp(i,j,k),Den_CO2(i,j,k),&
-                           Den_O(i,j,k),ICO2p(i,j,k),IOp(i,j,k)
+                           Den_O(i,j,k),ICO2p(i,j,k),IOp(i,j,k),IOP2(i,j,k),SZA(i,j,k)
                    end do
                 end do
              end do
@@ -929,8 +952,31 @@ contains
           !   write(*,*)'Den_O(i,j,k),ICO2p(i,j,k),IOp(i,j,k)=',&
           !        Den_O(Nlong,Nlat,Nalt),ICO2p(Nlong,Nlat,Nalt),&
           !        IOp(Nlong,Nlat,Nalt)
-
           end if
+
+       case("#UseDSMC")
+           call read_var('UseDSMC',UseDSMC)
+           if(UseDSMC)then
+               call read_var('DSMCFilename',DSMCFilename)
+               call read_var('NAltD', NaltD)
+               call read_var('NLatD', NLatD)
+               call read_var('NLongD', NLongD)
+               call read_var('NLineD', NLineD)
+               open(16,file=DSMCFilename,status="old")
+               Do i=1,NlineD
+                 read(16,*)line
+               End Do
+               do k = 1, NAltD
+                 do j=1, NLatD
+                   do i=1, NLongD
+                     read(16,*) LatD_I(j),AltD_I(k),LongD_I(i),Den_Oh(i,j,k)
+                   End Do
+                 End Do
+               End Do
+               Close(16)
+           End If
+
+
        case('#POINTIMPLICITREGION')
           call read_var('rPointImplicit',rPointImplicit)
 
@@ -940,6 +986,105 @@ contains
        end select
     end do
   end subroutine user_read_inputs
+
+
+  !============================================================================
+  subroutine DSMC_Input(iBlock)
+
+    use ModMain
+    use ModPhysics
+    use ModConst
+    use ModGeometry,ONLY:R_BLK,TypeGeometry
+    use BATL_lib, ONLY: CellSize_DB, CoordMin_DB
+
+    integer, intent(in) :: iBlock
+    real, parameter :: TINY=1.0E-12
+    real :: hh, theta, phi, dR, dtheta, dphi, dH, Hscale, HOh, grav
+    real:: xLat, xLong,xAlt
+    real:: subsolarlongD, subsolarlatD
+    real:: longstartD, latstartD, altstartD
+    real:: dlongD, dlatD, daltD
+    integer :: i,j,k
+    integer:: iAlt,jLong, kLat, ip1,jp1,kp1
+    logical:: oktestme=.false.
+    !-----------------------------------------------------------------------
+    !------ Interpolation/Expolation for hot Oxygen density from DSMC _-----
+    dR     = CellSize_DB(r_,iBlock)
+    dPhi   = CellSize_DB(Phi_,iBlock)
+    dTheta = CellSize_DB(Theta_,iBlock)
+    subsolarlongD=0
+    subsolarlatD=0
+    longstartD=0
+    latstartD=-87.5
+    altstartD=135.0
+    dlongD=5.0
+    dlatD=5.0
+    daltD=50.0
+
+    select case(TypeGeometry)
+    case('cartesian')
+        call stop_mpi('Unknown geometry type = '//TypeGeometry)
+
+    case('spherical','spherical_lnr')
+        if (R_BLK(nI,1,1,iBlock) >= Rbody) then
+            do k = 1, nK
+              ! Latitude coordinate in radians
+              Theta = (k - 0.5)*dTheta + CoordMin_DB(Theta_,iBlock)
+              ! Convert to degrees
+              Theta = cRadToDeg*Theta
+              Theta=Theta+subsolarlatD
+              kLat=int((Theta-latstartD)/dlatD + 1.0)
+              kp1=min(kLat+1, NLatD)
+              kLat = max(kLat,1)
+                
+                do j = 1, nJ
+                  ! Longitude coordinate in radians 
+                  Phi = (j-0.5)*dPhi  + CoordMin_DB(Phi_,iBlock)
+                  ! Convert to degree
+                  Phi = cRadToDeg*Phi
+                  jLong=int((phi-longstartD)/dlongD + 1.0)
+                  jp1=min(jLong+1,NLongD)
+                  jLong=max(jLong,1)
+
+                    do i=1,nI
+                      hh = (R_BLK(i,j,k,iBlock)-1.00)*3396.00
+                      xLong=(Phi-LongD_I(jLong))/dlongD
+                      xLat=(Theta-LatD_I(kLat))/dlatD
+                      if(hh.le. altstartD)then  !inside the body
+                          nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)= &
+                            nDenNuSpecies_CBI(i+1,j,k,iBlock,Oh_)
+                      elseif(hh.le.AltD_I(NAltD))then
+                          iAlt=int((hh-altstartD)/daltD+1.0)
+                          ip1=min(iAlt+1,NAltD)
+                          if(iAlt.lt.1)then
+                              write(*,*)'wrong ialt',iAlt
+                          end if
+                          xAlt=(hh-AltD_I(iAlt))/daltD
+                          nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)=&
+                              ((Den_Oh(jLong,kLat,iAlt)*(1-xLong)+xLong*Den_Oh(jp1,kLat,ialt))*(1-xLat)+&
+                              (Den_Oh(jLong,kp1,iAlt)*(1-xLong)+xLong*Den_Oh(jp1,kp1,ialt))*xLat)*(1-xAlt)+&
+                              ((Den_Oh(jLong,kLat,ip1)*(1-xLong)+xLong*Den_Oh(jp1,kLat,ip1))*(1-xLat)+&
+                              (Den_Oh(jLong,kp1,ip1)*(1-xLong)+xLong*Den_Oh(jp1,kp1,ip1))*xLat)*xAlt
+                      End If
+                    End Do
+                  End Do
+                End Do
+              End If
+
+          case default
+              call stop_mpi('Unknown geometry type = '//TypeGeometry)
+          end select
+
+          if(oktestme)then
+              write(*,*)'DSMC input end', &
+                  dR,dPhi,dTheta, iBlock, &
+                  maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,Oh_)),&
+                  minval(nDenNuSpecies_CBI(nI,:,:,iBlock,Oh_)),&
+                  maxval(R_BLK(nI,:,:,iBlock)),&
+                  minval(R_BLK(1,:,:,iBlock))
+          End If
+
+      End Subroutine DSMC_Input
 
 
   !============================================================================
@@ -955,13 +1100,13 @@ contains
 
     real, parameter :: TINY=1.0E-12 
     real :: hh, theta, phi, dR, dtheta, dphi, dH, Hscale, HCO2, HO, grav
-    real:: tempICO2p, tempIOp
+    real:: tempICO2p, tempIOp, tempIOp2
     real:: xLat, xLong,xAlt
     integer :: i,j,k
     integer:: iAlt, jLong, kLat, ip1,jp1,kp1
     logical:: oktestme=.false.
     !-----------------------------------------------------------------------
-    !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp ----- 
+    !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp,POp2,SZA ----- 
 
     dR=CellSize_DB(x_,iBlock)
     dPhi=CellSize_DB(y_,iBlock)
@@ -980,26 +1125,30 @@ contains
           do k=1,nK
              Theta = (k-1)*dTheta  + xyzStart_BLK(Theta_,iBlock)      
              Theta = Theta*cRadToDeg ! Convert to degrees
-             kLat=int((theta+87.5)/5.0+1.0)
+             !!Theta=Theta+subsolarlat
+             kLat=int((theta-latstart)/5.0+1.0)
              kp1=min(kLat+1, NLat)
              kLat = max(kLat,1)
 
              do j=1,nJ  
                 Phi = (j-1)*dPhi  + xyzStart_BLK(Phi_,iBlock)
-                if(phi>cPi)then 
-                   phi=phi-2*cPi
-                end if
+                !if(phi>cPi)then 
+                !   phi=phi-2*cPi
+                !end if
                 Phi = Phi*cRadToDeg ! Convert to degrees
-                jLong=int((phi+180)/5.0+1.0)                 
+                !!phi=Mod(phi+subsolarlong,360.0)
+                !phi=Mod(phi+32.5,360.)
+                !jLong=int((phi-2.5)/5.0+1.0)
+                jLong=int((phi-longstart)/5.0+1.0)
                 jp1=min(jLong+1,NLong)
                 jLong=max(jLong,1)
 
                 do i=nI,1,-1                    
                    hh = (R_BLK(i,j,k,iBlock)-1.00)*3396.00
                    !                 write(*,*)'hh=', hh, i,j,k,iBlock
-                   xLong=0.2*(Phi-Long_I(jLong))
-                   xLat=0.2*(Theta-Lat_I(kLat))
-                   if(hh.le.100.0)then  !inside the body
+                   xLong=(Phi-Long_I(jLong))/dlong
+                   xLat=(Theta-Lat_I(kLat))/dlat
+                   if(hh.le. 100.0)then  !inside the body
                       tempNuSpecies_CBI(i,j,k,iBlock)= &
                            tempNuSpecies_CBI(i+1,j,k,iBlock)
                       nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)=&
@@ -1013,13 +1162,15 @@ contains
                            Ionizationrate_CBI(i+1,j,k,iBlock,CO2_)
                       Ionizationrate_CBI(i,j,k,iBlock,O_)=&
                            Ionizationrate_CBI(i+1,j,k,iBlock,O_)
+                      Ionizationrate_CBI(i,j,k,iBlock,Op2_)=&
+                           Ionizationrate_CBI(i+1,j,k,iBlock,Op2_)
                    elseif(hh.le.Alt_I(NAlt))then
-                      iAlt=int((hh -100.0)/10.0+1.0)
+                      iAlt=int((hh -altstart)/dalt+1.0)
                       ip1=min(iAlt+1,NAlt)
                       if(iAlt.lt.1)then 
                          write(*,*)'wrong ialt',iAlt
                       end if
-                      xalt=0.1*(hh-Alt_I(iAlt))
+                      xalt=(hh-Alt_I(iAlt))/dalt
                       !interpolate
                       tempNuSpecies_CBI(i,j,k,iBlock)=          &
                            ((Temp(jLong,kLat,iAlt)*(1-xLong)       &
@@ -1055,10 +1206,18 @@ contains
                            ((IOp(jLong,kLat,ip1)*(1-xLong)+xLong*IOp(jp1, kLat, ip1))*(1-xLat)+&
                            (IOp(jLong,kp1,ip1)*(1-xLong)+xLong*IOp(jp1, kp1, ip1))*xLat)*xAlt
 
+                      tempIOP2=&
+                           ((IOp2(jLong,kLat,iAlt)*(1-xLong)+xLong*IOp2(jp1, kLat, ialt))*(1-xLat)+&
+                           (IOp2(jLong,kp1,iAlt)*(1-xLong)+xLong*IOp2(jp1, kp1, ialt))*xLat)*(1-xAlt)+&
+                           ((IOp2(jLong,kLat,ip1)*(1-xLong)+xLong*IOp2(jp1, kLat, ip1))*(1-xLat)+&
+                           (IOp2(jLong,kp1,ip1)*(1-xLong)+xLong*IOp2(jp1, kp1, ip1))*xLat)*xAlt
+
                       tempICO2p=max(tempICO2p,TINY)
                       tempIOP=max(tempIOp,TINY)
+                      tempIOP2=max(tempIOp2,TINY)
                       Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p
                       Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP
+                      Ionizationrate_CBI(i,j,k,iBlock,Op2_)=tempIOP2
                    else  !hh.gt.Alt_I(NAlt)
 
                       dH= hh - Alt_I(NAlt)
@@ -1073,6 +1232,10 @@ contains
                       tempIOP=&
                            (IOp(jLong,kLat,NAlt)*(1-xLong)+xLong*IOp(jp1, kLat, NAlt))*(1-xLat)+&
                            (IOp(jLong,kp1,NAlt)*(1-xLong)+xLong*IOp(jp1, kp1, NAlt))*xLat
+
+                      tempIOP2=&
+                           (IOp2(jLong,kLat,NAlt)*(1-xLong)+xLong*IOp2(jp1,kLat,NAlt))*(1-xLat)+&
+                           (IOp2(jLong,kp1,NAlt)*(1-xLong)+xLong*IOp2(jp1, kp1,NAlt))*xLat
 
                       ! grav=3.72/R_BLK(i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
                       grav=3.72/(1.0+300.0/3396.0)/(1.0+300.0/3396.0)
@@ -1094,10 +1257,12 @@ contains
 
                       tempICO2p=max(tempICO2p,TINY)
                       tempIOP=max(tempIOp,TINY)
+                      tempIOP2=max(tempIOp2,TINY)
                       !                    Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
                       !                    Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP*nDenNuSpecies_CBI(i,j,k,iBlock,O_)
                       Ionizationrate_CBI(i,j,k,iBlock,CO2_)=tempICO2p
                       Ionizationrate_CBI(i,j,k,iBlock,O_)=tempIOP
+                      Ionizationrate_CBI(i,j,k,iBlock,Op2_)=tempIOP2
 
                    end if !hh.lt.or.gt.300km
                 end do
@@ -1120,7 +1285,11 @@ contains
             iBlock, maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,O_)),&
             minval(nDenNuSpecies_CBI(nI,:,:,iBlock,O_)),&
             maxval(Ionizationrate_CBI(nI,:,:,iBlock,CO2_)),&
+            minval(Ionizationrate_CBI(nI,:,:,iBlock,CO2_)),&
+            maxval(Ionizationrate_CBI(nI,:,:,iBlock,O_)),&
             minval(Ionizationrate_CBI(nI,:,:,iBlock,O_)),&
+            maxval(Ionizationrate_CBI(nI,:,:,iBlock,Op2_)),&
+            minval(Ionizationrate_CBI(nI,:,:,iBlock,Op2_)),&
             maxval(R_BLK(nI,:,:,iBlock)),&
             minval(R_BLK(1,:,:,iBlock))
     end if
@@ -1298,6 +1467,8 @@ contains
     ! normlize the reaction rate
     Rate_I(CO2_hv__CO2p_em_)= &
          Ratedim_I(CO2_hv__CO2p_em_)*No2Io_V(UnitT_)
+    Rate_I(CO2_hv__Op_CO_em_)= &
+         Ratedim_I(CO2_hv__Op_CO_em_)*No2Io_V(UnitT_)
     Rate_I(O_hv__Op_em_)=  &
          Ratedim_I(O_hv__Op_em_)*No2Io_V(UnitT_)
     Rate_I(CO2p_O__O2p_CO_)=  &
@@ -1380,9 +1551,14 @@ contains
     BodyRhoSpecies_I(CO2p_)= Rate_I(CO2_hv__CO2p_em_)*Productrate0*&
          BodynDenNuSpecies_I(CO2_)/BodynDenNuSpecies_I(O_)/&
          (Rate_I(CO2p_O__O2p_CO_)+Rate_I(CO2p_O__Op_CO2_))
-    BodyRhoSpecies_I(Op_)= (Rate_I(O_hv__Op_em_)*Productrate0+&
+    !BodyRhoSpecies_I(Op_)= (Rate_I(O_hv__Op_em_)*Productrate0+&
+    !     Rate_I(CO2p_O__Op_CO2_)*BodyRhoSpecies_I(CO2p_))&
+    !     *BodynDenNuSpecies_I(O_)/(BodynDenNuSpecies_I(CO2_)+3.0e5)/&
+    !     Rate_I(Op_CO2__O2p_CO_)
+    BodyRhoSpecies_I(Op_)= ((Rate_I(O_hv__Op_em_)*Productrate0+&
          Rate_I(CO2p_O__Op_CO2_)*BodyRhoSpecies_I(CO2p_))&
-         *BodynDenNuSpecies_I(O_)/(BodynDenNuSpecies_I(CO2_)+3.0e5)/&
+         *BodynDenNuSpecies_I(O_)+Rate_I(CO2_hv__Op_CO_em_)*&
+         BodynDenNuSpecies_I(CO2_))/(BodynDenNuSpecies_I(CO2_)+3.0e5)/&
          Rate_I(Op_CO2__O2p_CO_)
     BodyRhoSpecies_I(O2p_)= SQRT((BodynDenNuSpecies_I(O_)*&
          BodyRhoSpecies_I(CO2p_)*Rate_I(CO2p_O__O2p_CO_)+ &
@@ -1759,7 +1935,7 @@ contains
     logical:: oktest=.false.,oktest_me
 
     !---------------------------------------------------------------------------
-    write(*,*)'user_get_log_var called'
+    !write(*,*)'user_get_log_var called'
     call set_oktest(NameSub,oktest,oktest_me)
     if(oktest_me)write(*,*)NameSub, ': TypeVar=',TypeVar
 
@@ -2269,10 +2445,15 @@ contains
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(UseHotO) then
+            if(UseDSMC .and. minval(R_BLK(:,:,:,iBlock))>1.+135/3396. &
+               .and. maxval(R_BLK(:,:,:,iBlock))<5.0) then
+                call DSMC_input(iBlock)
+            else
              nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)= &
                   nDenNuSpecies_CBI(i,j,k,iBlock,Oh_)+&
                   nDenNuSpecies_CBI(i,j,k,iBlock,Ohx_)+&
                   nDenNuSpecies_CBI(i,j,k,iBlock,Oh2x_)
+            End If
 
              nDenNuSpecies_CBI(i,j,k,iBlock,O_)= &
                   nDenNuSpecies_CBI(i,j,k,iBlock,O_)+ &
@@ -2295,14 +2476,34 @@ contains
                nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
           Ionizationrate_CBI(i,j,k,iBlock,O_)=&
                Ionizationrate_CBI(i,j,k,iBlock,O_)*&
-               nDenNuSpecies_CBI(i,j,k,iBlock,O_)
-
+               nDenNuSpecies_CBI(i,j,k,iBlock,O_)+&
+               Ionizationrate_CBI(i,j,k,iBlock,Op2_)*&
+               nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)
+          
+          If(Xyz_DGB(x_,i,j,k,iBlock) < -0.3 .and. &
+            sqrt(Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2) < 1.09 &
+            .and. R_BLK(i,j,k,iBlock)>3696.0/3396.0) then
+            Ionizationrate_CBI(i,j,k,iBlock,O_)=  &
+                Rate_I(O_hv__Op_em_)&
+                *nDenNuSpecies_CBI(i,j,k,iBlock,O_)&
+                *1.0e-6&
+                +Rate_I(CO2_hv__Op_CO_em_)&
+                *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)&
+                *1.0e-6
+            Ionizationrate_CBI(i,j,k,iBlock,CO2_)= &
+                Rate_I(CO2_hv__CO2p_em_)&
+               *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)&  
+               *1.0e-6
+          End If
        end do; end do; end do 
     else
        do k=1,nK; do j=1,nJ; do i=1,nI
           Ionizationrate_CBI(i,j,k,iBlock,O_)= &
                Rate_I(O_hv__Op_em_)&
                *nDenNuSpecies_CBI(i,j,k,iBlock,O_)&
+               *Productrate_CB(i,j,k,iBlock)&
+               +Rate_I(CO2_hv__Op_CO_em_)&
+               *nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)&
                *Productrate_CB(i,j,k,iBlock)
 
           Ionizationrate_CBI(i,j,k,iBlock,CO2_)= &
