@@ -1854,10 +1854,10 @@ contains
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
 
-    use ModAdvance, ONLY: State_VGB, B0_DGB
     use ModMain, ONLY: UseB0
-    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, Pe_, p_, Ppar_, WaveFirst_, WaveLast_
     use ModPhysics, ONLY: IonMassPerCharge
+    use ModAdvance, ONLY: State_VGB, B0_DGB, &
+         Rho_, Bx_, Bz_, Pe_, p_, Ppar_, WaveFirst_, WaveLast_
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: QeFraction, QparFraction
