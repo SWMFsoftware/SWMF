@@ -1856,7 +1856,7 @@ contains
 
     use ModMain, ONLY: UseB0
     use ModPhysics, ONLY: IonMassPerCharge
-    use ModAdvance, ONLY: State_VGB, B0_DGB, &
+    use ModAdvance, ONLY: State_VGB, B0_DGB, UseAnisoPressure, &
          Rho_, Bx_, Bz_, Pe_, p_, Ppar_, WaveFirst_, WaveLast_
 
     integer, intent(in) :: i, j, k, iBlock
@@ -1865,40 +1865,51 @@ contains
     real :: DampingElectron, DampingPar, DampingPerp, DampingTotal
     !--------------------------------------------------------------------------
 
-    if(.not. UseTurbulentCascade)then
-       QeFraction = QeByQtotal
-       QparFraction = QparByQtotal
-    else
-       ! Damping rates and wave energy partition based on Chandran et al. [2011]
+    if(UseTurbulentCascade)then
+       ! Damping rates and wave energy partition based on Chandran et al.[2011]
        ! C_d = 0.75, C_2 = 0.17
 
-       TeByTp = State_VGB(Pe_,i,j,k,iBlock)/max(State_VGB(p_,i,j,k,iBlock), 1.0e-8)
+       TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
+            /max(State_VGB(p_,i,j,k,iBlock), 1.0e-8)
+
        if(UseB0) then
-          B2 = sum((B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
+          B2 = sum((B0_DGB(:,i,j,k,iBlock)+State_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
        else
           B2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        end if
        BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/max(B2, 1.0e-8)
        BetaProton = 2.0*State_VGB(p_,i,j,k,iBlock)/max(B2, 1.0e-8)
 
-       ! Linear Landau damping contributes to electron and parallel proton heating
+       ! Linear Landau damping contributes to electron and parallel
+       ! proton heating
        DampingElectron = 0.01*sqrt(TeByTp/max(BetaProton, 1.0e-8)) &
-            *(1.0 + 0.17*BetaProton**1.3)/(1.0 + (2800.0*BetaElectron)**(-1.25))
+            *(1.0 + 0.17*BetaProton**1.3)/(1.0 +(2800.0*BetaElectron)**(-1.25))
        DampingPar = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
             *exp(-1.3/max(BetaProton, 1.0e-8))
 
        ! Nonlinear damping/stochastic heating to perpendicular proton heating
-       Pperp = (3*State_VGB(p_,i,j,k,iBlock) - State_VGB(Ppar_,i,j,k,iBlock))/2.0
+       if(UseAnisoPressure)then
+          Pperp = (3*State_VGB(p_,i,j,k,iBlock) &
+               - State_VGB(Ppar_,i,j,k,iBlock))/2.0
+       else
+          Pperp = State_VGB(p_,i,j,k,iBlock)
+       end if
        LperpInvGyroRad = sqrt(sqrt(LperpTimesSqrtB* &
-            sqrt(sqrt(B2)*State_VGB(Rho_,i,j,k,iBlock)/2.0*Pperp)/IonMassPerCharge))
+            sqrt(sqrt(B2)*State_VGB(Rho_,i,j,k,iBlock)/2.0*Pperp) &
+            /IonMassPerCharge))
+
        DampingPerp = 0.12*sqrt(State_VGB(WaveFirst_,i,j,k,iBlock) &
             /State_VGB(WaveLast_,i,j,k,iBlock))*LperpInvGyroRad &
             *exp(-0.17*sqrt(2.0*Pperp/max(State_VGB(WaveFirst_,i,j,k,iBlock), &
             1.0e-8))*LperpInvGyroRad)
             
        DampingTotal = DampingElectron + DampingPar + DampingPerp
+
        QeFraction = (1.0 + DampingElectron)/(1.0 + DampingTotal)
        QparFraction = DampingPar/(1.0 + Dampingtotal)
+    else
+       QeFraction = QeByQtotal
+       QparFraction = QparByQtotal
     end if
 
   end subroutine apportion_coronal_heating
