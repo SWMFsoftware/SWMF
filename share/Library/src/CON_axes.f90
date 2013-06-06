@@ -376,7 +376,7 @@ contains
 
     ! Calculate the planet position in HGI
     ! In GSE shifted to the center of the Sun the planet is at (-d,0,0)
-    XyzPlanetHgi_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
+    XyzPlanetHgi_D = matmul(HgiGse_DD, (/-real(cAU*SunEMBDistance), 0.0, 0.0/))
 
     ! Calculate the planet velocity in HGI
     call set_v_planet
@@ -514,10 +514,10 @@ contains
       !----------------------------------------------------------------------
       ! Calculate planet position for TimeSim-dt and TimeSim+dt
       call set_hgi_gse_d_planet(-Delta)
-      XyzMinus_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
+      XyzMinus_D = matmul(HgiGse_DD, (/-real(cAU*SunEMBDistance), 0.0, 0.0/))
 
       call set_hgi_gse_d_planet(Delta)
-      XyzPlus_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
+      XyzPlus_D = matmul(HgiGse_DD, (/-real(cAU*SunEMBDistance), 0.0, 0.0/))
 
       ! Finite difference velocity with the Delta second time perturbations
       vPlanetHgi_D = (XyzPlus_D - XyzMinus_D)/(2*Delta)
@@ -1208,7 +1208,7 @@ contains
     ! This will correspond to the point matmul((/cAU,0.,0./),HgrHgi_DD) in HGI
     ! and it should rotate with (/0.,0.,OmegaCarrington/) in HGI.
 
-    Position_D = (/cAU,0.,0./)
+    Position_D = (/real(cAU),real(0),real(0)/)
     v2_D = transform_velocity(0., (/0.,0.,0./), Position_D, 'HGR', 'HGI')
     Position_D = matmul(Position_D, HgrHgi_DD)
     Result_D = cross_product( (/0.,0.,real(OmegaCarrington)/), Position_D)
