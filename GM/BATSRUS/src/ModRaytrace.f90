@@ -18,6 +18,7 @@ module ModRaytrace
   logical :: DoMapRay       = .false. ! map rays down to the ionosphere
   logical :: DoExtractRay   = .false. ! extract info along the rays into arrays
   logical :: DoIntegrateRay = .false. ! integrate some functions along the rays
+  logical :: DoMapEquatorRay= .false.  ! map rays to the SM equatorial plane
 
   ! Use old IJK based logic for Cartesian tracing
   logical :: UseOldMethodOfRayTrace = .true.
@@ -35,14 +36,17 @@ module ModRaytrace
   ! The minimum number of time steps between two ray traces on the same grid
   integer      :: DnRaytrace = 1
 
-  ! Named parameters for ray status (must be less than 1=1)
-  integer, parameter :: &
-       ray_iono_ = 0, &
-       ray_block_=-1, &
-       ray_open_ =-2, &
-       ray_loop_ =-3, &
-       ray_body_ =-4, &
-       ray_out_  =-5
+  ! Named parameters for ray status 
+  ! These values all must be less than 1, because 1..6 correspond to the 
+  ! six faces of the block. The ordering of these values is arbitrary.
+  integer, parameter ::       &
+       ray_iono_    =  0,     &
+       ray_equator_ = -1,     &
+       ray_block_   = -2,     &
+       ray_open_    = -3,     &
+       ray_loop_    = -4,     &
+       ray_body_    = -5,     &
+       ray_out_     = -6
 
   ! Ray and rayface contain the x,y,z coordinates for the foot point of a given
   ! field line for both directions, eg. 
@@ -166,7 +170,7 @@ contains
 
     !-------------------------------------------------------------------------
 
-    ! Check if this direction is closed or not
+    ! Check if this direction is connected to the ionosphere or not
     if(Pos_D(1) > CLOSEDRAY)then
 
        ! Convert GM position into IM position
@@ -199,18 +203,68 @@ contains
 
   !============================================================================
 
+  subroutine xyz_to_rphi(Pos_DI)
+
+    use ModNumConst, ONLY: cRadToDeg
+
+    ! Convert X,Y coordinates into radial distance in the XY plane
+    ! and longitude (in degrees) for closed rays
+    real, intent(inout) :: Pos_DI(3,2)
+
+    real :: x, y, r, Phi
+
+    ! index for the direction connected to the equator
+    integer:: iDir 
+    !-------------------------------------------------------------------------
+
+    ! Check if both directions are connected to the ionosphere 
+    ! or the equatorial plane
+    if(all(Pos_DI(3,:) > CLOSEDRAY))then
+
+       ! Check if the first direction of the ray ends on the ionosphere
+       if(Pos_DI(1,1)**2 + Pos_DI(2,1)**2 <= rIonosphere2) then
+          iDir = 2
+       else
+          iDir = 1
+       end if
+
+       ! Convert to radius and longitude in degrees
+       x   = Pos_DI(1,iDir)
+       y   = Pos_DI(2,iDir)
+       r   = sqrt(x**2 + y**2)
+       Phi = cRadToDeg * atan2(y, x)
+       ! Get rid of negative longitude angles
+       if(Phi < 0.0) Phi = Phi + 360.0
+
+       ! Put r and Phi for BOTH directions
+       Pos_DI(1,:) = r
+       Pos_DI(2,:) = Phi
+
+    else
+       ! Impossible values
+       Pos_DI(1,:) = -1.0
+       Pos_DI(2,:) = -200.
+    endif
+
+  end subroutine xyz_to_rphi
+
+  !============================================================================
+
   subroutine xyz_to_latlonstatus(Ray_DI)
 
     real, intent(inout) :: Ray_DI(3,2)
 
     integer :: iRay
     !-------------------------------------------------------------------------
-
     ! Convert 1st and 2nd elements into latitude and longitude
-    do iRay=1,2
-       call xyz_to_latlon(Ray_DI(:,iRay))
-    end do
 
+    if(DoMapEquatorRay)then
+       call xyz_to_rphi(Ray_DI)
+    else
+       do iRay=1,2
+          call xyz_to_latlon(Ray_DI(:,iRay))
+       end do
+    end if
     ! Convert 3rd element into a status variable
 
     if(Ray_DI(3,1)>CLOSEDRAY .and. Ray_DI(3,2)>CLOSEDRAY)then
