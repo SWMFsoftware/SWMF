@@ -177,7 +177,7 @@ module CON_axes
   ! Difference between 01/01/1965 00:00:00 and 01/01/1854 12:00:00 in seconds
   real(Real8_), parameter :: tStartCarrington   = -3.5027856D+9
 
-  real(Real8_), parameter :: OmegaCarrington = cTwoPi/(25.38D0*24*3600)
+  real, parameter :: OmegaCarrington = cTwoPi/(25.38D0*24*3600)
 
   ! Position and Velocity of Planet in HGI
   real :: XyzPlanetHgi_D(3), vPlanetHgi_D(3)
@@ -256,8 +256,7 @@ contains
        if(UseRealRotAxis .or. UseRealMagAxis)then
           RotAxisTheta = TiltRotation
           RotAxisPhi   = mod( &
-               cHalfPi - OmegaOrbit*(tStart - TimeEquinox % Time), &
-               real(cTwoPi,kind=Real8_))
+               cHalfPi - OmegaOrbit*(tStart - TimeEquinox % Time), cTwoPi8)
        else
           ! Rotational axis must be aligned with magnetic axis
           if(UseSetMagAxis)then
@@ -376,7 +375,7 @@ contains
 
     ! Calculate the planet position in HGI
     ! In GSE shifted to the center of the Sun the planet is at (-d,0,0)
-    XyzPlanetHgi_D = matmul(HgiGse_DD, (/-real(cAU*SunEMBDistance), 0.0, 0.0/))
+    XyzPlanetHgi_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
 
     ! Calculate the planet velocity in HGI
     call set_v_planet
@@ -514,10 +513,10 @@ contains
       !----------------------------------------------------------------------
       ! Calculate planet position for TimeSim-dt and TimeSim+dt
       call set_hgi_gse_d_planet(-Delta)
-      XyzMinus_D = matmul(HgiGse_DD, (/-real(cAU*SunEMBDistance), 0.0, 0.0/))
+      XyzMinus_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
 
       call set_hgi_gse_d_planet(Delta)
-      XyzPlus_D = matmul(HgiGse_DD, (/-real(cAU*SunEMBDistance), 0.0, 0.0/))
+      XyzPlus_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
 
       ! Finite difference velocity with the Delta second time perturbations
       vPlanetHgi_D = (XyzPlus_D - XyzMinus_D)/(2*Delta)
@@ -1121,7 +1120,7 @@ contains
          ' within round off errors'
 
     Rot_DD = transform_matrix(10.0,'HGI','HGC')
-    Result_DD = rot_matrix_z(-10.0*real(OmegaCarrington))
+    Result_DD = rot_matrix_z(-10.0*OmegaCarrington)
     if(maxval(abs(Rot_DD - Result_DD)) > Epsilon1) then
        write(*,*)'test transform_matrix failed: HGI->HGC matrix is'
        call show_rot_matrix(Rot_DD)
@@ -1143,14 +1142,14 @@ contains
 
     ! HGR rotates around its Z axis with the OmegaCarrington
     Omega_D  = angular_velocity(0.0,'HGR')
-    Result_D = (/0., 0., real(OmegaCarrington)/)
+    Result_D = (/0., 0., OmegaCarrington/)
     if(maxval(abs(Omega_D - Result_D)) > Epsilon1) &
          write(*,*)'test angular_velocity failed: HGR Omega_D = ',Omega_D,&
          ' should be equal to ',Result_D,' within round off errors'   
 
     ! HGC rotates around its Z axis with the OmegaCarrington
     Omega_D  = angular_velocity(0.0,'HGC')
-    Result_D = (/0., 0., real(OmegaCarrington)/)
+    Result_D = (/0., 0., OmegaCarrington/)
     if(maxval(abs(Omega_D - Result_D)) > Epsilon1) &
          write(*,*)'test angular_velocity failed: HGC Omega_D = ',Omega_D,&
          ' should be equal to ',Result_D,' within round off errors'   
@@ -1208,10 +1207,10 @@ contains
     ! This will correspond to the point matmul((/cAU,0.,0./),HgrHgi_DD) in HGI
     ! and it should rotate with (/0.,0.,OmegaCarrington/) in HGI.
 
-    Position_D = (/real(cAU),real(0),real(0)/)
+    Position_D = (/cAU,0.,0./)
     v2_D = transform_velocity(0., (/0.,0.,0./), Position_D, 'HGR', 'HGI')
     Position_D = matmul(Position_D, HgrHgi_DD)
-    Result_D = cross_product( (/0.,0.,real(OmegaCarrington)/), Position_D)
+    Result_D = cross_product( (/0.,0.,OmegaCarrington/), Position_D)
 
     if(maxval(abs(v2_D - Result_D)) > Epsilon2) &
          write(*,*)'test angular_velocity failed: HGI-HGR v2_D = ',v2_D, &
@@ -1260,7 +1259,7 @@ contains
     ! HgrHgi_DD.(vPlanetHgi_D - OmegaCarrington x XyzPlanetHgi_D)
     v2_D = transform_velocity(0., (/0., 0., 0./), (/0., 0., 0./), 'GEO', 'HGR')
     Result_D = matmul(HgrHgi_DD, vPlanetHgi_D &
-         - cross_product((/0.,0.,real(OmegaCarrington)/), XyzPlanetHgi_D))
+         - cross_product((/0.,0.,OmegaCarrington/), XyzPlanetHgi_D))
     if(maxval(abs(v2_D - Result_D)) > Epsilon2) &
          write(*,*)'test angular_velocity failed: GEO-HGR v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
