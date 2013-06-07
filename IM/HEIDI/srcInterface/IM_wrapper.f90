@@ -326,7 +326,8 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
 
   use ModHeidiMain,      ONLY: nR, nT, LZ, BHeidi_III, SHeidi_III, RHeidi_III,&
        bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III,&
-       BxHeidi_III, ByHeidi_III, BzHeidi_III,Xyz_VIII
+       BxHeidi_III, ByHeidi_III, BzHeidi_III,Xyz_VIII, pHeidi_III, RhoHeidi_III, &
+       MhdEqPressure_I, MhdEqDensity_I
   use ModHeidiMain,      ONLY: Phi, IsBFieldNew
   use ModHeidiIO,        ONLY: Time
   use ModHeidiSize,      ONLY: RadiusMin, RadiusMax, iPointBMin_II, iPointEq, iPointEq
@@ -365,7 +366,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   !\
   ! Local Variables
   !/
-  integer, parameter           :: I_=1, S_=2, X_=3, Y_=4, Z_=5
+  integer, parameter           :: I_=1, S_=2, X_=3, Y_=4, Z_=5, rho_= 6, ux_=7, uy_=8, uz_=9, p_=13
   integer, parameter           :: Bx_=10, By_=11, Bz_=12, gx_=14, gy_=15, gz_=16 
   integer, parameter           :: nStepInside = 10, nStepInterp = 40
   integer, parameter           :: nStep = 2*(nStepInside + nStepInterp)+1
@@ -388,11 +389,13 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   real, dimension(nStepInterp)         :: XHeidi_I,YHeidi_I,ZHeidi_I,XHeidinew_I,XHeidi1new_I
   real, dimension(nStepInterp)         :: LengthHeidi1new_I
   real, dimension(nStepInterp)         :: BxHeidi_I,ByHeidi_I,BzHeidi_I
+  real, dimension(nStepInterp)         :: pHeidi_I, rhoHeidi_I
   real, dimension(nStepInterp)         :: bGradB1xHeidi_I, bGradB1yHeidi_I, bGradB1zHeidi_I
   real, allocatable                    :: B_I(:), Length_I(:),RadialDist_I(:)
   real, allocatable                    :: bGradB1x_I(:), bGradB1y_I(:), bGradB1z_I(:)
   real, allocatable                    :: Bx_I(:), By_I(:), Bz_I(:)
   real, allocatable                    :: X_I(:),Y_I(:),Z_I(:)
+  real, allocatable                    :: p_I(:), rho_I(:)
   real                                 :: LatBoundaryN, LatBoundaryS
   real                                 :: LatMax, LatMin, Lat, dLat,x,y,z,a,dLength
   real                                 :: Tr,Ttheta, r,gradB0R1,gradB0R2, gradB0Theta1,gradB0Theta2
@@ -416,6 +419,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   !/
   nPointLine = nPointLineIn
   nVarLine   = nVarLineIn
+ 
   !\
   ! Allocate buffer
   !/
@@ -504,7 +508,8 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   allocate(B_I(iMax), Length_I(iMax), RadialDist_I(iMax))
   allocate(bGradB1x_I(iMax), bGradB1y_I(iMax), bGradB1z_I(iMax));
   allocate(Bx_I(iMax), By_I(iMax), Bz_I(iMax));
-
+  allocate(p_I(iMax), rho_I(iMax));
+  
   iLineFirst = StateLine_VI(1,1)
   iLineLast = -1
   i = 1
@@ -533,9 +538,12 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   bGradB1x_I(2:np), bGradB1xHeidi_I, LengthHeidi_I) 
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   bGradB1y_I(2:np), bGradB1yHeidi_I, LengthHeidi_I) 
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   bGradB1z_I(2:np), bGradB1zHeidi_I, LengthHeidi_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Bx_I(2:np), BxHeidi_I, LengthHeidi_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   By_I(2:np), ByHeidi_I, LengthHeidi_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Bz_I(2:np), BzHeidi_I, LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Bx_I(2:np),  BxHeidi_I, LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   By_I(2:np),  ByHeidi_I, LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Bz_I(2:np),  BzHeidi_I, LengthHeidi_I) 
+       
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   p_I(2:np),   PHeidi_I, LengthHeidi_I) 
+        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Rho_I(2:np), RhoHeidi_I, LengthHeidi_I) 
 
         dLength =  Length_I(np-1)/nStepInterp
         
@@ -558,9 +566,12 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            bGradB1xHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1xHeidi_I
            bGradB1yHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1yHeidi_I
            bGradB1zHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = bGradB1zHeidi_I
-           BxHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = BxHeidi_I(:)
-           ByHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = ByHeidi_I(:)
-           BzHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT) = BzHeidi_I(:)
+           BxHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT)       = BxHeidi_I(:)
+           ByHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT)       = ByHeidi_I(:)
+           BzHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT)       = BzHeidi_I(:)
+          
+           pHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT)      = pHeidi_I(:)
+           rhoHeidi_III((iPointEq+ 1):(nStep - nStepInside),iR,iT)    = RhoHeidi_I(:)
            LengthExN(iR,iT,iDir) = Length_I(2)
         end if
 
@@ -582,6 +593,10 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            BxHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BxHeidi_I(nStepInterp:1:-1) 
            ByHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = ByHeidi_I(nStepInterp:1:-1) 
            BzHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = BzHeidi_I(nStepInterp:1:-1) 
+           
+           pHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT)   = pHeidi_I(nStepInterp:1:-1) 
+           rhoHeidi_III((nStepInside + 1):(nStepInside + nStepInterp),iR,iT) = rhoHeidi_I(nStepInterp:1:-1)
+           
         end if
         
         Xyz_VIII(1,iPointEq,iR,iT) = X_I(1)
@@ -596,7 +611,10 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         BxHeidi_III(iPointEq,iR,iT) = Bx_I(1)
         ByHeidi_III(iPointEq,iR,iT) = By_I(1)
         BzHeidi_III(iPointEq,iR,iT) = Bz_I(1)
-
+        
+        pHeidi_III(iPointEq,iR,iT)   = p_I(1)
+        rhoHeidi_III(iPointEq,iR,iT) = rho_I(1)
+        
         i = 1
         iLineLast = StateLine_VI(1,iPoint)
 
@@ -615,9 +633,11 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      bGradB1x_I(i) = StateLine_VI(gx_,iPoint)
      bGradB1y_I(i) = StateLine_VI(gy_,iPoint)
      bGradB1z_I(i) = StateLine_VI(gz_,iPoint)
-     Bx_I(i) = StateLine_VI(BX_,iPoint)
-     By_I(i) = StateLine_VI(BY_,iPoint)
-     Bz_I(i) = StateLine_VI(BZ_,iPoint)
+     Bx_I(i)       = StateLine_VI(BX_,iPoint)
+     By_I(i)       = StateLine_VI(BY_,iPoint)
+     Bz_I(i)       = StateLine_VI(BZ_,iPoint)
+     P_I(i)        = StateLine_VI(p_,iPoint)
+     Rho_I(i)      = StateLine_VI(rho_, iPoint)
 
      iLineLast = StateLine_VI(1,iPoint)
      i = i + 1
@@ -629,6 +649,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   deallocate(B_I);         deallocate(Length_I);    deallocate(RadialDist_I);
   deallocate(bGradB1x_I);  deallocate(bGradB1y_I);  deallocate(bGradB1z_I);
   deallocate(Bx_I);        deallocate(By_I);        deallocate(Bz_I);
+  deallocate(p_I) ;        deallocate(rho_I);
 
   !\
   ! Convert the MHD variables (B field) to Heidi grid
@@ -700,6 +721,13 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
            BzHeidi_III(1:nStepInside,iR,iT)                = bDipoleS_VI(3,1:nStepInside) 
            BzHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = bDipoleN_VI(3,2:nStepInside+1)
            
+           pHeidi_III(1:nStepInside,iR,iT)                = pHeidi_III(nStepInside+1,iR,iT)  
+           pHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = pHeidi_III(nStep-nStepInside,iR,iT)
+
+           RhoHeidi_III(1:nStepInside,iR,iT)                = RhoHeidi_III(nStepInside+1,iR,iT)  
+           RhoHeidi_III((nStep-nStepInside +1):nStep,iR,iT) = RhoHeidi_III(nStep-nStepInside,iR,iT)
+
+           
         end if
 
         if (LZ(iR) <= rBoundary) then
@@ -727,6 +755,8 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   bGradB1xHeidi_III(:,:,nT) = bGradB1xHeidi_III(:,:,1)
   bGradB1yHeidi_III(:,:,nT) = bGradB1yHeidi_III(:,:,1)  
   bGradB1zHeidi_III(:,:,nT) = bGradB1zHeidi_III(:,:,1)
+  pHeidi_III(:,:,nT)        = pHeidi_III(:,:,1)
+  rhoHeidi_III(:,:,nT)      = rhoHeidi_III(:,:,1)
 
   ! This should be gone !!!
   Xyz_VIII(:,:,nR,:)        = Xyz_VIII(:,:,nR-1,:)
@@ -739,6 +769,8 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
   bGradB1xHeidi_III(:,nR,:) = bGradB1xHeidi_III(:,nR-1,:)
   bGradB1yHeidi_III(:,nR,:) = bGradB1yHeidi_III(:,nR-1,:)  
   bGradB1zHeidi_III(:,nR,:) = bGradB1zHeidi_III(:,nR-1,:)
+  rhoHeidi_III(:,nR,:)      = rhoHeidi_III(:,nR-1,:)
+  pHeidi_III(:,nR,:)        = pHeidi_III(:,nR-1,:)
 
 
   !Find the location of minimum B
@@ -748,6 +780,17 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
      end do
   end do
   
+
+  !Get the pressure, density and velocity at the HEIDI boundary in the equatorial plane
+  
+  do iT = 1, nT
+     MhdEqPressure_I(iT) = pHeidi_III(iPointBmin_II(nR,iT),nR,iT)
+     MhdEqDensity_I(iT)    = rhoHeidi_III(iPointBmin_II(nR,iT),nR,iT)
+     ! MhdEqVelocity = sqrt(StateLine_VI(ux_,iPointBmin)**2 + &
+     !      StateLine_VI(uy_,iPointBmin)**2 + StateLine_VI(uz_,iPointBmin)**2)
+  end do
+  
+
 !~~~~~~~~~~~~~~~~~~~~~~~ Write out files for testing ~~~~~~~~~~~~~~~~~~~~~~
 
   NameFile      = 'BFieldMagn.out'
@@ -835,145 +878,194 @@ subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
 end subroutine IM_put_sat_from_gm
 
 !==============================================================================
-
 subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   use CON_time, ONLY : get_time
   use ModNumConst, ONLY: cPi, cDegToRad
   use ModConst, ONLY: cProtonMass
-  use ModIonoHeidi
-  use ModHeidiSize
-  use ModHeidiCurrents
+  use ModHeidiCurrents, ONLY:eden, rnht
+  use ModHeidiSize,  ONLY: iSize=>nR, jSize=>nT, nR, nT
   implicit none
   character (len=*),parameter :: NameSub='IM_get_for_gm'
 
   integer, intent(in)                                :: iSizeIn,jSizeIn,nVar
   real, dimension(iSizeIn,jSizeIn,nVar), intent(out) :: Buffer_IIV
   character (len=*),intent(in)                       :: NameVar
-
   integer, parameter :: pres_=1, dens_=2
-
   integer :: iLat, iLon, l, k
   real :: T, P, latsHeidi(NR), mltsHeidi(NT)
-
   logical :: DoTest, DoTestMe
+  real    :: Pmin
+  integer :: iLatMin=22 !Minimum latitude in MHD boundary 
+  integer :: i,j
   !--------------------------------------------------------------------------
-  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  
+  
+ call CON_set_do_test(NameSub, DoTest, DoTestMe)
   if (DoTestMe) &
-       write(*,*)NameSub,' starting with iSizeIn,jSizeIn,nVar,NameVar=',&
+       write(*,*)NameSub,' starting with iSizeIn, jSizeIn, nVar, NameVar=',&
        iSizeIn,jSizeIn,nVar,NameVar
-
+  
   if(NameVar /= 'p:rho') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
-
-  if(iSizeIn /= IONO_nTheta*2-1 .or. jSizeIn /= IONO_nPsi)then
+  
+  if(iSizeIn /= iSize .or. jSizeIn /= jSize)then
      write(*,*)NameSub//' incorrect buffer size=',iSizeIn,jSizeIn
      call CON_stop(NameSub//' SWMF_ERROR')
   end if
+  
+  Buffer_IIV = 0.0
 
-  Buffer_IIV = -1.0
-
-  ! eden and rnht are defined on a nr,nt grid
-  ! where do I get latitude and mlt on nr,nt grid?
-
-  ! the ionosphere and magnetosphere grid are shifted by 1, such that the
-  ! ionosphere grid has an extra point at the lower end (and 2 at the upper)
-
-  do iLon=1,jo
-     mltsHeidi(iLon) = LonFac(iLon) * cPi / 12.0 
-  enddo
-  mltsHeidi(jo+1) = mltsHeidi(1) + 2.0 * cPi
-
-  do iLat=1,io
-     latsHeidi(iLat) = Latfac(iLat+1) * cDegToRad
-  enddo
-
-  do iLat = 1, IONO_nTheta
-     do iLon = 1, IONO_nPsi
-
-        T = cPi/2.0 - IONO_NORTH_Theta(iLat,iLon)
-        P = mod(IONO_NORTH_Psi(iLat,iLon) + cPi, cPi*2)
-
-        if ((T < latsHeidi(1)).or.(T > latsHeidi(io))) then
-           Buffer_IIV(iLat,iLon,:) = -1.0
-        else 
-
-           k = 1
-           do while (T > latsHeidi(k))
-              k = k + 1
-           enddo
-
-           l = 1
-           do while (P > mltsHeidi(l))
-              l = l + 1
-           enddo
-
-           ! This takes the nearest cell, and does not do linear interpolation
-
-           ! Add together pressures from H+ (2) and O+ (4)
-           ! Convert from keV/cc to Pa
-           Buffer_IIV(iLat,iLon,pres_) = &
-                eden(k,l,2)*0.1602*1.0e-9 + &
-                eden(k,l,4)*0.1602*1.0e-9
-
+  !Fill pressure and density
+  do i=1,iSize
+     do j=1,jSize
+          ! if( i<iLatMin .or.  i > iba(j) ) then
+        if( i<iLatMin) then
+           Buffer_IIV(i,j,pres_) = -1.
+           Buffer_IIV(i,j,dens_) = -1.
+        else
+           ! make sure pressure passed to GM is not lower than Pmin [nPa]
+           ! to avoid too low GM pressure 
+           Pmin = minval(eden(i,j,:))
+           Buffer_IIV(i,j,pres_) = max(sum(eden(i,j,:)), Pmin)*1e-9
+           
            ! Add together density from H+ (2) and O+ (4)
            ! Convert from #/cc to kg/m3
-           Buffer_IIV(iLat,iLon,dens_) = &
-                rnht(k,l,2)*1.0e6*cProtonMass + &
-                rnht(k,l,4)*1.0e6*cProtonMass*16.0
+           Buffer_IIV(i,j,dens_) = &
+                rnht(i,j,1)*1.0e6*cProtonMass * 4 + & ! He+
+                rnht(i,j,2)*1.0e6*cProtonMass + &     ! H+
+                rnht(k,l,4)*1.0e6*cProtonMass*16.0    ! O+
+        end if
+     
+     ! Only a not-a-number can be less than zero and larger than one
+     if(  .not. Buffer_IIV(i,j,pres_) > 0 .and. &
+          .not. Buffer_IIV(i,j,pres_) < 1) then
+        write(*,*)NameSub,': ERROR IN PRESSURE'
+        write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,pres_)
+        call CON_stop(NameSub // ' ERROR: Not a number found in IM pressure !')
+     end if
+     if(  .not. Buffer_IIV(i,j,dens_) > 0 .and. &
+          .not. Buffer_IIV(i,j,dens_) < 1) then
+        write(*,*)NameSub,': ERROR IN DENSITY'
+        write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,dens_)
+        call CON_stop(NameSub // ' ERROR: Not a number found in IM density !')
+     end if
+     end do
+  end do
 
-        endif
+  if(DoTestMe)write(*,*) NameSub,' finished'
 
-     enddo
 
-  enddo
 
-  do iLat = 1, IONO_nTheta
-     do iLon = 1, IONO_nPsi
 
-        T = IONO_SOUTH_Theta(iLat,iLon) - cPi/2
-        P = mod(IONO_SOUTH_Psi(iLat,iLon) + cPi, cPi*2)
-
-        if ((T < latsHeidi(1)).or.(T > latsHeidi(io))) then
-           Buffer_IIV(iLat,iLon,:) = -1.0
-        else 
-
-           k = 1
-           do while (T > latsHeidi(k))
-              k = k + 1
-           enddo
-
-           l = 1
-           do while (P > mltsHeidi(l))
-              l = l + 1
-           enddo
-
-           if (l > 1) l = l - 1
-
-           ! This takes the nearest cell, and does not do linear interpolation
-
-           ! Add together pressures from H+ (2) and O+ (4)
-           ! Convert from keV/cc to Pa
-           Buffer_IIV(iLat,iLon,pres_) = &
-                eden(k,l,2)*0.1602*1.0e-9 + &
-                eden(k,l,4)*0.1602*1.0e-9
-
-           ! Add together density from H+ (2) and O+ (4)
-           ! Convert from #/cc to kg/m3
-           Buffer_IIV(iLat,iLon,dens_) = &
-                rnht(k,l,2)*1.0e6*cProtonMass + &
-                rnht(k,l,4)*1.0e6*cProtonMass*16.0
-
-        endif
-
-     enddo
-
-  enddo
-
-  ! species = e, H, he, o
-
-!!! RNHT(colat,mlt,species) = density in #/cc
-!!! EDEN("                ) = equatorial pressure (keV/cc) (*0.1602 = nPa)
+!!$  if(iSizeIn /= IONO_nTheta*2-1 .or. jSizeIn /= IONO_nPsi)then
+!!$     write(*,*)NameSub//' incorrect buffer size=',iSizeIn,jSizeIn
+!!$     call CON_stop(NameSub//' SWMF_ERROR')
+!!$  end if
+!!$
+!!$  Buffer_IIV = -1.0
+!!$
+!!$  ! eden and rnht are defined on a nr,nt grid
+!!$  ! where do I get latitude and mlt on nr,nt grid?
+!!$
+!!$  ! the ionosphere and magnetosphere grid are shifted by 1, such that the
+!!$  ! ionosphere grid has an extra point at the lower end (and 2 at the upper)
+!!$
+!!$  do iLon=1,jo
+!!$     mltsHeidi(iLon) = LonFac(iLon) * cPi / 12.0 
+!!$  enddo
+!!$  mltsHeidi(jo+1) = mltsHeidi(1) + 2.0 * cPi
+!!$
+!!$  do iLat=1,io
+!!$     latsHeidi(iLat) = Latfac(iLat+1) * cDegToRad
+!!$  enddo
+!!$
+!!$  do iLat = 1, IONO_nTheta
+!!$     do iLon = 1, IONO_nPsi
+!!$
+!!$        T = cPi/2.0 - IONO_NORTH_Theta(iLat,iLon)
+!!$        P = mod(IONO_NORTH_Psi(iLat,iLon) + cPi, cPi*2)
+!!$
+!!$        if ((T < latsHeidi(1)).or.(T > latsHeidi(io))) then
+!!$           Buffer_IIV(iLat,iLon,:) = -1.0
+!!$        else 
+!!$
+!!$           k = 1
+!!$           do while (T > latsHeidi(k))
+!!$              k = k + 1
+!!$           enddo
+!!$
+!!$           l = 1
+!!$           do while (P > mltsHeidi(l))
+!!$              l = l + 1
+!!$           enddo
+!!$
+!!$           ! This takes the nearest cell, and does not do linear interpolation
+!!$
+!!$           ! Add together pressures from H+ (2) and O+ (4)
+!!$           ! Convert from keV/cc to Pa
+!!$           Buffer_IIV(iLat,iLon,pres_) = &
+!!$                eden(k,l,2)*0.1602*1.0e-9 + &
+!!$                eden(k,l,4)*0.1602*1.0e-9
+!!$
+!!$           ! Add together density from H+ (2) and O+ (4)
+!!$           ! Convert from #/cc to kg/m3
+!!$           Buffer_IIV(iLat,iLon,dens_) = &
+!!$                rnht(k,l,2)*1.0e6*cProtonMass + &
+!!$                rnht(k,l,4)*1.0e6*cProtonMass*16.0
+!!$
+!!$        endif
+!!$
+!!$     enddo
+!!$
+!!$  enddo
+!!$
+!!$  do iLat = 1, IONO_nTheta
+!!$     do iLon = 1, IONO_nPsi
+!!$
+!!$        T = IONO_SOUTH_Theta(iLat,iLon) - cPi/2
+!!$        P = mod(IONO_SOUTH_Psi(iLat,iLon) + cPi, cPi*2)
+!!$
+!!$        if ((T < latsHeidi(1)).or.(T > latsHeidi(io))) then
+!!$           Buffer_IIV(iLat,iLon,:) = -1.0
+!!$        else 
+!!$
+!!$           k = 1
+!!$           do while (T > latsHeidi(k))
+!!$              k = k + 1
+!!$           enddo
+!!$
+!!$           l = 1
+!!$           do while (P > mltsHeidi(l))
+!!$              l = l + 1
+!!$           enddo
+!!$
+!!$           if (l > 1) l = l - 1
+!!$
+!!$           ! This takes the nearest cell, and does not do linear interpolation
+!!$
+!!$           ! Add together pressures from H+ (2) and O+ (4)
+!!$           ! Convert from keV/cc to Pa
+!!$           Buffer_IIV(iLat,iLon,pres_) = &
+!!$                eden(k,l,2)*0.1602*1.0e-9 + &
+!!$                eden(k,l,4)*0.1602*1.0e-9
+!!$
+!!$           ! Add together density from H+ (2) and O+ (4)
+!!$           ! Convert from #/cc to kg/m3
+!!$           Buffer_IIV(iLat,iLon,dens_) = &
+!!$                rnht(k,l,2)*1.0e6*cProtonMass + &
+!!$                rnht(k,l,4)*1.0e6*cProtonMass*16.0
+!!$
+!!$        endif
+!!$
+!!$     enddo
+!!$
+!!$  enddo
+!!$
+!!$  ! species = e, H, he, o
+!!$
+!!$!!! RNHT(colat,mlt,species) = density in #/cc
+!!$!!! EDEN("                ) = equatorial pressure (keV/cc) (*0.1602 = nPa)
 
 end subroutine IM_get_for_gm
 
