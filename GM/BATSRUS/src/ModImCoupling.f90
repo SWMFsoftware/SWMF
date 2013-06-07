@@ -71,15 +71,13 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
   implicit none
 
   integer, intent(in)  :: iBlock
-  
+
   real,    intent(out) :: pIm_IC(3,1:nI, 1:nJ, 1:nK)
   real,    intent(out) :: RhoIm_IC(3,1:nI, 1:nJ, 1:nK)
   real,    intent(out) :: TauCoeffIm_C(1:nI, 1:nJ, 1:nK)
   real,    intent(out) :: PparIm_C(1:nI, 1:nJ, 1:nK)
 
   real    :: BminIm_C(1:nI, 1:nJ, 1:nK), b_D(3)
- 
-  logical :: UseOldMethod = .false.
 
   integer :: i,j,k, n, iLat1,iLat2, iLon1,iLon2
 
@@ -123,127 +121,93 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
 
         Lon = ray(2,1,i,j,k,iBlock)
 
-        if(UseOldMethod)then
-           ! IM_lat: 1->iSize varies approximately from 89->10
-           iLat1=1
-           do n=2,iSize
-              if(Lat < 0.5*(IM_lat(n-1)+IM_lat(n))) iLat1 = n
+        if (IM_lat(1) > IM_lat(2)) then
+           ! IM_lat is in descending order
+           do iLat1 = 2, iSize
+              if(Lat > IM_lat(iLat1)) EXIT
            end do
-           iLat2=iLat1
-
-           ! IM_lon: 1->jSize varies approximately from 0->353
-           iLon1=1
-           do n=2,jSize
-              if(Lon > 0.5*(IM_lon(n-1)+IM_lon(n))) iLon1 = n
-           end do
-           if(Lon > 0.5*(IM_lon(jsize)+IM_lon(1)+360.)) iLon1=1
-           iLon2=iLon1
+           iLat2 = iLat1-1
+           LatWeight1 = (Lat - IM_lat(iLat2))/(IM_lat(iLat1) - IM_lat(iLat2))
+           LatWeight2 = 1 - LatWeight1
         else
-           if (IM_lat(1) > IM_lat(2)) then
-              ! IM_lat is in descending order
-              do iLat1 = 2, iSize
-                 if(Lat > IM_lat(iLat1)) EXIT
-              end do
-              iLat2 = iLat1-1
-              LatWeight1 = (Lat - IM_lat(iLat2))/(IM_lat(iLat1) - IM_lat(iLat2))
-              LatWeight2 = 1 - LatWeight1
-           else
-              ! IM lat is in ascending order
-              do iLat1 = 2, iSize
-                 if(Lat < IM_lat(iLat1)) EXIT
-              end do
-              iLat2 = iLat1-1
-              LatWeight1 = &
-                   (Lat - IM_lat(iLat2))/(IM_lat(iLat1) - IM_lat(iLat2))
-              LatWeight2 = 1 - LatWeight1              
-           endif
+           ! IM lat is in ascending order
+           do iLat1 = 2, iSize
+              if(Lat < IM_lat(iLat1)) EXIT
+           end do
+           iLat2 = iLat1-1
+           LatWeight1 = &
+                (Lat - IM_lat(iLat2))/(IM_lat(iLat1) - IM_lat(iLat2))
+           LatWeight2 = 1 - LatWeight1              
+        endif
 
-           ! Note: IM_lon is in ascending order
-           if(Lon < IM_lon(1)) then
-              ! periodic before 1
-              iLon1 = 1
-              iLon2 = jSize
-              LonWeight1 =     (Lon           + 360 - IM_lon(iLon2)) &
-                   /           (IM_lon(iLon1) + 360 - IM_lon(iLon2))
-           elseif(Lon > IM_lon(jSize)) then
-              ! periodic after jSize
-              iLon1 = 1
-              iLon2 = jSize
-              LonWeight1 = (Lon                 - IM_lon(iLon2)) &
-                   /       (IM_lon(iLon1) + 360 - IM_lon(iLon2))
-           else
-              do iLon1 = 2, jSize
-                 if(Lon < IM_lon(iLon1)) EXIT
-              end do
-              iLon2 = iLon1-1
-              LonWeight1 = (Lon           - IM_lon(iLon2)) &
-                   /       (IM_lon(iLon1) - IM_lon(iLon2))
-           end if
-           LonWeight2 = 1 - LonWeight1
+        ! Note: IM_lon is in ascending order
+        if(Lon < IM_lon(1)) then
+           ! periodic before 1
+           iLon1 = 1
+           iLon2 = jSize
+           LonWeight1 =     (Lon           + 360 - IM_lon(iLon2)) &
+                /           (IM_lon(iLon1) + 360 - IM_lon(iLon2))
+        elseif(Lon > IM_lon(jSize)) then
+           ! periodic after jSize
+           iLon1 = 1
+           iLon2 = jSize
+           LonWeight1 = (Lon                 - IM_lon(iLon2)) &
+                /       (IM_lon(iLon1) + 360 - IM_lon(iLon2))
+        else
+           do iLon1 = 2, jSize
+              if(Lon < IM_lon(iLon1)) EXIT
+           end do
+           iLon2 = iLon1-1
+           LonWeight1 = (Lon           - IM_lon(iLon2)) &
+                /       (IM_lon(iLon1) - IM_lon(iLon2))
         end if
+        LonWeight2 = 1 - LonWeight1
 
         if(all( IM_p( (/iLat1,iLat2/), (/iLon1, iLon2/) ) > 0.0 ))then
-           if(UseOldMethod)then
-              ! This is first order accurate only !!!
-              pIm_IC(1,i,j,k) = IM_p(iLat1,iLon1)*Si2No_V(UnitP_)
-              RhoIm_IC(1,i,j,k) = IM_dens(iLat1,iLon1)*Si2No_V(UnitRho_)
-              if(DoMultiFluidIMCoupling)then
-                 pIm_IC(2,i,j,k) = IM_Hpp(iLat1,iLon1)*Si2No_V(UnitP_)
-                 pIm_IC(3,i,j,k) = IM_Opp(iLat1,iLon1)*Si2No_V(UnitP_)
-                 RhoIm_IC(2,i,j,k) = IM_Hpdens(iLat1,iLon1)*Si2No_V(UnitRho_)
-                 RhoIm_IC(3,i,j,k) = IM_Opdens(iLat1,iLon1)*Si2No_V(UnitRho_)
-              end if
-              ! ppar at minimum B
-              if(DoAnisoPressureIMCoupling)then
-                 PparIm_C(i,j,k) = IM_ppar(iLat1,iLon1)*Si2No_V(UnitP_)
-                 BminIm_C(i,j,k) = IM_bmin(iLat1,iLon1)*Si2No_V(UnitB_)
-              end if
-           else
-              pIm_IC(1,i,j,k) = Si2No_V(UnitP_)*( &
-                   LonWeight1 * ( LatWeight1*IM_p(iLat1,iLon1) &
-                   +              LatWeight2*IM_p(iLat2,iLon1) ) + &
-                   LonWeight2 * ( LatWeight1*IM_p(iLat1,iLon2) &
-                   +              LatWeight2*IM_p(iLat2,iLon2) ) )
-              RhoIm_IC(1,i,j,k) = Si2No_V(UnitRho_)*( &
-                   LonWeight1 * ( LatWeight1*IM_dens(iLat1,iLon1) &
-                   +              LatWeight2*IM_dens(iLat2,iLon1) ) + &
-                   LonWeight2 * ( LatWeight1*IM_dens(iLat1,iLon2) &
-                   +              LatWeight2*IM_dens(iLat2,iLon2) ) )
-              if(DoMultiFluidIMCoupling)then
-                 pIm_IC(2,i,j,k) = Si2No_V(UnitP_)*( &
-                      LonWeight1 * ( LatWeight1*IM_Hpp(iLat1,iLon1) &
-                      +              LatWeight2*IM_Hpp(iLat2,iLon1) ) + &
-                      LonWeight2 * ( LatWeight1*IM_Hpp(iLat1,iLon2) &
-                      +              LatWeight2*IM_Hpp(iLat2,iLon2) ) )
-                 RhoIm_IC(2,i,j,k) = Si2No_V(UnitRho_)*( &
-                      LonWeight1 * ( LatWeight1*IM_Hpdens(iLat1,iLon1) &
-                      +              LatWeight2*IM_Hpdens(iLat2,iLon1) ) + &
-                      LonWeight2 * ( LatWeight1*IM_Hpdens(iLat1,iLon2) &
-                      +              LatWeight2*IM_Hpdens(iLat2,iLon2) ) )
-                 pIm_IC(3,i,j,k) = Si2No_V(UnitP_)*( &
-                      LonWeight1 * ( LatWeight1*IM_Opp(iLat1,iLon1) &
-                      +              LatWeight2*IM_Opp(iLat2,iLon1) ) + &
-                      LonWeight2 * ( LatWeight1*IM_Opp(iLat1,iLon2) &
-                      +              LatWeight2*IM_Opp(iLat2,iLon2) ) )
-                 RhoIm_IC(3,i,j,k) = Si2No_V(UnitRho_)*( &
-                      LonWeight1 * ( LatWeight1*IM_Opdens(iLat1,iLon1) &
-                      +              LatWeight2*IM_Opdens(iLat2,iLon1) ) + &
-                      LonWeight2 * ( LatWeight1*IM_Opdens(iLat1,iLon2) &
-                      +              LatWeight2*IM_Opdens(iLat2,iLon2) ) )
-              end if
-              ! ppar at minimum B
-              if(DoAnisoPressureIMCoupling)then
-                 PparIm_C(i,j,k) = Si2No_V(UnitP_)*( &
-                      LonWeight1 * ( LatWeight1*IM_ppar(iLat1,iLon1) &
-                      +              LatWeight2*IM_ppar(iLat2,iLon1) ) + &
-                      LonWeight2 * ( LatWeight1*IM_ppar(iLat1,iLon2) &
-                      +              LatWeight2*IM_ppar(iLat2,iLon2) ) ) 
-                 BminIm_C(i,j,k) = Si2No_V(UnitB_)*( &
-                      LonWeight1 * ( LatWeight1*IM_bmin(iLat1,iLon1) &
-                      +              LatWeight2*IM_bmin(iLat2,iLon1) ) + &
-                      LonWeight2 * ( LatWeight1*IM_bmin(iLat1,iLon2) &
-                      +              LatWeight2*IM_bmin(iLat2,iLon2) ) ) 
-              end if
+           pIm_IC(1,i,j,k) = Si2No_V(UnitP_)*( &
+                LonWeight1 * ( LatWeight1*IM_p(iLat1,iLon1) &
+                +              LatWeight2*IM_p(iLat2,iLon1) ) + &
+                LonWeight2 * ( LatWeight1*IM_p(iLat1,iLon2) &
+                +              LatWeight2*IM_p(iLat2,iLon2) ) )
+           RhoIm_IC(1,i,j,k) = Si2No_V(UnitRho_)*( &
+                LonWeight1 * ( LatWeight1*IM_dens(iLat1,iLon1) &
+                +              LatWeight2*IM_dens(iLat2,iLon1) ) + &
+                LonWeight2 * ( LatWeight1*IM_dens(iLat1,iLon2) &
+                +              LatWeight2*IM_dens(iLat2,iLon2) ) )
+           if(DoMultiFluidIMCoupling)then
+              pIm_IC(2,i,j,k) = Si2No_V(UnitP_)*( &
+                   LonWeight1 * ( LatWeight1*IM_Hpp(iLat1,iLon1) &
+                   +              LatWeight2*IM_Hpp(iLat2,iLon1) ) + &
+                   LonWeight2 * ( LatWeight1*IM_Hpp(iLat1,iLon2) &
+                   +              LatWeight2*IM_Hpp(iLat2,iLon2) ) )
+              RhoIm_IC(2,i,j,k) = Si2No_V(UnitRho_)*( &
+                   LonWeight1 * ( LatWeight1*IM_Hpdens(iLat1,iLon1) &
+                   +              LatWeight2*IM_Hpdens(iLat2,iLon1) ) + &
+                   LonWeight2 * ( LatWeight1*IM_Hpdens(iLat1,iLon2) &
+                   +              LatWeight2*IM_Hpdens(iLat2,iLon2) ) )
+              pIm_IC(3,i,j,k) = Si2No_V(UnitP_)*( &
+                   LonWeight1 * ( LatWeight1*IM_Opp(iLat1,iLon1) &
+                   +              LatWeight2*IM_Opp(iLat2,iLon1) ) + &
+                   LonWeight2 * ( LatWeight1*IM_Opp(iLat1,iLon2) &
+                   +              LatWeight2*IM_Opp(iLat2,iLon2) ) )
+              RhoIm_IC(3,i,j,k) = Si2No_V(UnitRho_)*( &
+                   LonWeight1 * ( LatWeight1*IM_Opdens(iLat1,iLon1) &
+                   +              LatWeight2*IM_Opdens(iLat2,iLon1) ) + &
+                   LonWeight2 * ( LatWeight1*IM_Opdens(iLat1,iLon2) &
+                   +              LatWeight2*IM_Opdens(iLat2,iLon2) ) )
+           end if
+           ! ppar at minimum B
+           if(DoAnisoPressureIMCoupling)then
+              PparIm_C(i,j,k) = Si2No_V(UnitP_)*( &
+                   LonWeight1 * ( LatWeight1*IM_ppar(iLat1,iLon1) &
+                   +              LatWeight2*IM_ppar(iLat2,iLon1) ) + &
+                   LonWeight2 * ( LatWeight1*IM_ppar(iLat1,iLon2) &
+                   +              LatWeight2*IM_ppar(iLat2,iLon2) ) ) 
+              BminIm_C(i,j,k) = Si2No_V(UnitB_)*( &
+                   LonWeight1 * ( LatWeight1*IM_bmin(iLat1,iLon1) &
+                   +              LatWeight2*IM_bmin(iLat2,iLon1) ) + &
+                   LonWeight2 * ( LatWeight1*IM_bmin(iLat1,iLon2) &
+                   +              LatWeight2*IM_bmin(iLat2,iLon2) ) ) 
            end if
 
            if(.not. DoAnisoPressureIMCoupling)then
@@ -251,15 +215,14 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
               PparIm_C(i,j,k) = pIm_IC(1,i,j,k)
            else
               ! Anisotropic pressure coupling, not dealing with multifluid for now 
-              ! pperp at minimum B                                                              
+              ! Pperp at minimum B
               Pperp = (3.0*pIm_IC(1,i,j,k) - PparIm_C(i,j,k))/2.0
               PperpInvPpar = Pperp/PparIm_C(i,j,k)
               b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
               if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
               Coeff = 1/(PperpInvPpar &
-!                   + BminIm_C(i,j,k)/sqrt(sum(b_D**2))*(1 - PperpInvPpar))
                    + min(1.0, BminIm_C(i,j,k)/sqrt(sum(b_D**2)))*(1 - PperpInvPpar))
-              ! pressures and density at an arbitrary location of a field line.                  
+              ! pressures and density at an arbitrary location of a field line.
               pIm_IC(1,i,j,k) = pIm_IC(1,i,j,k)*Coeff &
                    + 2.0*Pperp*(Coeff - 1)*Coeff/3.0
               PparIm_C(i,j,k) = PparIm_C(i,j,k)*Coeff
@@ -268,7 +231,8 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
 
            if(dLatSmoothIm > 0.0)then
               ! Go from low to high lat and look for first unset field line
-              do n=iSize,1,-1
+!!! WHAT ABOUT ASCENDING VS DESCENDING ORDER FOR LAT???
+              do n = iSize,1,-1
                  if(IM_p(n,iLon1) < 0.0) EXIT
               enddo
               ! Make sure n does not go below 1
