@@ -356,7 +356,7 @@ contains
     BLOCK: do iCount = 1, MaxCount
 
        if(iCount < MaxCount)then
-          call follow_ray_block(iStart_D,iRay,iBlockRay,XyzRay_D,&
+          call follow_ray_block(iStart_D, iRay, iBlockRay, XyzRay_D, &
                RayLength,iFace)
        else
           write(*,*)NameSub,' WARNING ray passed through more than MaxCount=',&
@@ -426,6 +426,12 @@ contains
           ! The ray hit the ionosphere 
           if(oktest_ray)write(*,'(a,2i4,3es12.4)')&
                'follow_this_ray finished on the ionosphere '// &
+               'at iProc,iRay,Xyz=',iProc,iRay,XyzRay_D
+
+       case(ray_equator_)
+          ! The ray hit the SM equatorial plane
+          if(oktest_ray)write(*,'(a,2i4,3es12.4)')&
+               'follow_this_ray finished on the SM equator '// &
                'at iProc,iRay,Xyz=',iProc,iRay,XyzRay_D
 
        case default
@@ -526,7 +532,8 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   !DESCRIPTION:
   ! Follow ray identified by index array iStart_D, 
   ! starting at initial position XyzInOut_D inside block iBlock,
-  ! in direction iRay until we hit the wall of the block or the ionosphere. 
+  ! in direction iRay until we hit the wall of the block or the ionosphere
+  ! or the SM equatorial plane (if required).
   ! Return XyzInOut_D with the final position. 
   ! Integrate and/or extract values if required.
   ! Also return Length increased by the length of the ray in this block.
@@ -572,9 +579,6 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
 
   ! Direction of B field, true interpolated field
   real, dimension(3) :: bNormIni_D, bNormMid_D, b_D
-
-  ! SM coordinates
-  real, dimension(3) :: XyzSMIni_D, XyzSMCur_D
 
   ! Radial distance from origin and square
   real :: rCur, r2Cur, rIni
@@ -870,6 +874,12 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
      ! Update ray length
      Length  = Length + dLength
 
+     if(DoIntegrateRay .or. DoMapEquatorRay)then
+        ! Check if we crossed the z=0 plane in the SM coordinates
+        ! Stop following ray if the function returns true
+        if(do_stop_at_sm_equator()) EXIT FOLLOW
+     end if
+
      if(DoIntegrateRay)then
 
         ! Interpolate density and pressure
@@ -894,59 +904,6 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
         RayIntegral_V(RhoInvB_:nLocalIntegral) = &
              RayIntegral_V(RhoInvB_:nLocalIntegral) + InvBDl * RhoP_V
 
-        ! Check if we crossed the Z=0 plane in the SM coord system
-        ! Convert GM position into SM frame using the transposed GmSm_DD
-        XyzSMIni_D = matmul(XyzIni_D, GmSm_DD)
-        XyzSMCur_D = matmul(XyzCur_D, GmSm_DD)
-
-        ! Check if we have crossed the magnetic equator in the SM frame
-        if(XyzSMCur_D(3)*XyzSMIni_D(3)<=0)then
-
-           ! Crossing the magnetic equator in opposite direction 
-           ! is not accepted !!!
-
-           if(DipoleStrength*(iRay-1.5)<0)then
-              if(XyzSMIni_D(3) <= 0 .and. XyzSMCur_D(3) >= 0)then
-
-                 ! This write is necessary to avoid incorrect 
-                 ! optimization by the ifort 8.070 compiler
-                 write(*,'(a)',ADVANCE='NO') ''
-
-                 iFace = ray_loop_
-                 EXIT FOLLOW
-              end if
-           else
-              if(XyzSMIni_D(3) >= 0 .and. XyzSMCur_D(3) <= 0)then
-
-                 ! This write is necessary to avoid incorrect
-                 ! optimization by the ifort 8.070 compiler
-                 write(*,'(a)',ADVANCE='NO') ''
-
-                 iFace = ray_loop_
-                 EXIT FOLLOW
-              end if
-           end if
-
-           ! Interpolate x and y
-           dz1 = abs(XyzSMIni_D(3))/(abs(XyzSMCur_D(3))+abs(XyzSMIni_D(3)))
-           dz2 = 1.0 - dz1
-
-           RayIntegral_V(Z0x_:Z0y_) = dz2*XyzSMIni_D(1:2) + dz1*XyzSMCur_D(1:2)
-
-           ! Assign Z0b_ as the middle point value of the magnetic field
-           RayIntegral_V(Z0b_) = sqrt(sum(b_D**2))
-           if(oktest_ray)then
-              write(*,'(a,3es12.4)') &
-                   'Found z=0 crossing at XyzSMIni_D=',XyzSMIni_D
-              write(*,'(a,3es12.4)') &
-                   'Found z=0 crossing at XyzSMCur_D=',XyzSMCur_D
-              write(*,'(a,3es12.4)')&
-                   'RayIntegral_V(Z0x_:Z0b_)=',RayIntegral_V(Z0x_:Z0b_)
-
-              !write(*,'(a,2es12.4)')'Weights =',dz1,dz2
-              !write(*,'(a,3es12.4)')'b_D = ',b_D
-           end if
-        end if
      end if
 
      if(oktest_ray.and.okdebug)&
@@ -1085,6 +1042,74 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   end if
 
 contains
+  !===========================================================================
+  logical function do_stop_at_sm_equator()
+
+    ! Check if we crossed the Z=0 plane in the SM coord system
+    ! Return true if there is no reason to follow the ray further
+
+    ! SM coordinates
+    real:: XyzSMIni_D(3), XyzSMCur_D(3), XySm_D(2)
+
+    real:: Dz1, Dz2
+    !-----------------------------------------------------------------------
+    do_stop_at_sm_equator = .false.
+
+    ! Convert GM position into SM frame using the transposed GmSm_DD
+    XyzSMIni_D = matmul(XyzIni_D, GmSm_DD)
+    XyzSMCur_D = matmul(XyzCur_D, GmSm_DD)
+
+    ! Check if we have crossed the magnetic equator in the SM frame
+    if(XyzSMCur_D(3)*XyzSMIni_D(3) > 0) RETURN
+
+    ! Crossing the magnetic equator in opposite direction is not accepted
+    if(DipoleStrength*(iRay-1.5)<0)then
+       if(XyzSMIni_D(3) <= 0 .and. XyzSMCur_D(3) >= 0)then
+          iFace = ray_loop_
+          do_stop_at_sm_equator = .true.
+          RETURN
+       end if
+    else
+       if(XyzSMIni_D(3) >= 0 .and. XyzSMCur_D(3) <= 0)then
+          iFace = ray_loop_
+          do_stop_at_sm_equator = .true.
+          RETURN
+       end if
+    end if
+
+    ! Interpolate x and y
+    Dz1 = abs(XyzSMIni_D(3))/(abs(XyzSMCur_D(3)) + abs(XyzSMIni_D(3)))
+    Dz2 = 1.0 - Dz1
+    XySM_D = Dz2*XyzSMIni_D(1:2) + Dz1*XyzSMCur_D(1:2)
+
+    if(DoMapEquatorRay)then
+       ! Store info
+       XyzInOut_D(1:2) = XySM_D
+       XyzInOut_D(3)   = 0.0
+       iFace = ray_equator_
+       do_stop_at_sm_equator = .true.
+       RETURN
+    end if
+
+    RayIntegral_V(Z0x_:Z0y_) = XySm_D
+
+    ! Assign Z0b_ as the middle point value of the magnetic field
+    RayIntegral_V(Z0b_) = sqrt(sum(b_D**2))
+    if(oktest_ray)then
+       write(*,'(a,3es12.4)') &
+            'Found z=0 crossing at XyzSMIni_D=',XyzSMIni_D
+       write(*,'(a,3es12.4)') &
+            'Found z=0 crossing at XyzSMCur_D=',XyzSMCur_D
+       write(*,'(a,3es12.4)')&
+            'RayIntegral_V(Z0x_:Z0b_)=',RayIntegral_V(Z0x_:Z0b_)
+       
+       !write(*,'(a,2es12.4)')'Weights =',dz1,dz2
+       !write(*,'(a,3es12.4)')'b_D = ',b_D
+    end if
+
+  end function do_stop_at_sm_equator
+
+
   !========================================================================
 
   subroutine interpolate_b(IjkIn_D,b_D,bNorm_D)
