@@ -41,18 +41,18 @@ Module ModHeidiMain
   integer :: nParallelSpecies(NS)
   integer :: nSpecies, iSpecies
 
-  real :: funt(nPa,nR,nT),funi(nPa,nR,nT)
+  real, dimension(nPa,nR,nT)      :: funt,funi
   real, dimension(nPoint,nR,nT)   :: BHeidi_III, SHeidi_III, RHeidi_III
   real, dimension(nPoint,nR,nT)   :: bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III 
-  real, dimension(nPoint,nR,nT)   :: BxHeidi_III, ByHeidi_III, BzHeidi_III
+  real, dimension(nPoint,nR,nT)   :: BxHeidi_III, ByHeidi_III, BzHeidi_III, pHeidi_III, rhoHeidi_III
   real, dimension(3,nPoint,nR,nT) :: Xyz_VIII
   real, dimension(nR,nT,nE,nPA)   :: dEdt_IIII,VPhi_IIII,VR_IIII
   real, dimension(nR,nT,nE,nPA)   :: dMudt_III 
-  real :: NeutralHydrogen(nR,nT,nPa)
-  real :: bFieldMagnitude_III(nPoint,nR,nT)
-  
-  logical :: IsBFieldNew
-  real, parameter::RadToDeg = 180.0/cPi
+  real, dimension(nR,nT,nPa)      :: NeutralHydrogen
+  real, dimension(nPoint,nR,nT)   :: bFieldMagnitude_III
+  real, dimension(nT)             :: MhdEqPressure_I, MhdEqDensity_I
+  logical                         :: IsBFieldNew
+  real, parameter                 :: RadToDeg = 180.0/cPi
 
 
 end Module ModHeidiMain
