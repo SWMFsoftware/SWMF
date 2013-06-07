@@ -850,7 +850,11 @@ subroutine MH_set_parameters(TypeAction)
            elseif(index(plot_string,'RAY')>0.or.index(plot_string,'ray')>0)then
               plot_var='ray'
               plot_dimensional(ifile) = index(plot_string,'RAY')>0
-              plot_vars(ifile)='bx by bz theta1 phi1 theta2 phi2 status blk'
+              if(DoMapEquatorRay)then
+                 plot_vars(ifile)='bx by bz req1 phi1 req2 phi2 status blk'
+              else
+                 plot_vars(ifile)='bx by bz theta1 phi1 theta2 phi2 status blk'
+              end if
               plot_pars(ifile)='rbody'
            elseif(index(plot_string,'RAW')>0.or.index(plot_string,'raw')>0)then
               plot_var='raw'
@@ -1320,6 +1324,8 @@ subroutine MH_set_parameters(TypeAction)
         end if
      case("#RAYTRACELIMIT")
         call read_var('RayLengthMax', RayLengthMax)
+     case("#RAYTRACEEQUATOR")
+        call read_var('DoMapEquatorRay', DoMapEquatorRay)
      case("#IE")
         call read_var('DoTraceIE', DoTraceIE)
      case("#IECOUPLING")
