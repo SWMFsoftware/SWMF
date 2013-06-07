@@ -1156,12 +1156,12 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            where(.not.true_cell(:,:,:,iBLK)) PlotVar(:,:,:,iVar)=0.0
         endif
 
-     case('theta1','theta2','phi1','phi2','status')
+     case('theta1','req1','theta2','req2','phi1','phi2','status')
         ! BASIC RAYTRACE variables
         select case(String)
-        case ('theta1')
+        case ('theta1', 'req1')
            itmp = 1 ; jtmp = 1
-        case ('theta2')
+        case ('theta2', 'req2')
            itmp = 1 ; jtmp = 2
         case ('phi1')
            itmp = 2 ; jtmp = 1
@@ -1409,7 +1409,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         ! GRID INFORMATION
      case('dt','dtblk')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitT_)
-     case('dx','dy','dz')
+     case('dx','dy','dz','req1','req2')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitX_)
 
         ! DEFAULT CASE
@@ -1639,7 +1639,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameTecVar = 'Status'
      case('f1x','f1y','f1z','f2x','f2y','f2z')
         NameTecVar = NamePlotVar
-     case('dx','dy','dz')
+     case('dx','dy','dz','req1','req2')
         NameTecVar = String
         NameUnit   = NameTecUnit_V(UnitX_)
      case('dt')
@@ -1771,7 +1771,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
         NameUnit = '1'
      case('dt', 'dtblk')
         NameUnit = NameIdlUnit_V(UnitT_)
-     case('dx','dy','dz')
+     case('dx','dy','dz','req1','req2')
         NameUnit = NameIdlUnit_V(UnitX_)
      case default
         ! Set default or user defined unit
