@@ -57,10 +57,12 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      ! according to the IM module we have selected.
      ! Determine version of IM:
      call get_comp_info(IM_, NameVersion=NameVersionIm)
-     if(NameVersionIm(1:3) .eq. 'RAM')then
+     if(NameVersionIm == 'RAM_HEIDI')then
+        IM_lat = Grid_C(IM_) % Coord1_I
+     elseif(NameVersionIm(1:3) == 'RAM')then
         ! RAM-SCB has an equatorial grid, pressure is mapped to 
         ! ionosphere by RAM using a constant, latitude based grid.
-        do i=1, iSizeIn
+        do i = 1, iSizeIn
            IM_lat(i) = (iSizeIn-i)*(35.0/iSizeIn)+45.0
         end do
      else
@@ -68,7 +70,7 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
         ! module grid information.
         IM_lat = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
      end if
-     IM_lon = Grid_C(IM_)% Coord2_I              * cRadToDeg
+     IM_lon = Grid_C(IM_)% Coord2_I * cRadToDeg
   end if
 
   ! Store IM variable for internal use
