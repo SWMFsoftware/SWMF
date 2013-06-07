@@ -13,6 +13,9 @@ For a two-temperature solar wind simulation, configure SWMF with
 ./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
 ./Config.pl -g=SC:6,4,4,400,400,IH:4,4,4,400,1
 
+Do not use the THINCURRENTSHEET if the intention is to run CMEs.
+Use the equation module without the SignB in the equation name and remove sign
+from the SAVEPLOT command.
 
 Begin session: 1
 
