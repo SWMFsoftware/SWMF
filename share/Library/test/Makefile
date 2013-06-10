@@ -231,7 +231,22 @@ test_interpolate:
 	-@(diff test_interpolate.tmp test_interpolate.log \
 						>  test_interpolate.diff)
 	@ls -l test_interpolate.diff
+#######################################################################
+OBJ_INTERPOLATE_AMR = \
+	test_interpolate_amr.o \
+	../src/ModInterpolateAMRGrid.o
 
+test_interpolate_amr_exe:
+	@(cd ../src; make ModInterpolateAMRGrid.o)
+	@make test_interpolate_amr.o
+	${LINK.f90} -o test_interpolate_amr.exe ${OBJ_INTERPOLATE_AMR} ${Lflag2}
+
+test_interpolate_amr:
+	@echo test_interpolate_amr starting     >  test_interpolate_amr.diff
+	@make test_interpolate_amr_exe		>> test_interpolate_amr.diff
+	@echo ./test_interpolate_amr.exe	>> test_interpolate_amr.diff
+	-@(./test_interpolate_amr.exe > test_interpolate_amr.diff)
+	@ls -l test_interpolate_amr.diff
 #######################################################################
 OBJ_INITIAL_STATE = \
 	test_initial_state.o \
