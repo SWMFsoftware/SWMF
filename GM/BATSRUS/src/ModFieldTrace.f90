@@ -1082,29 +1082,25 @@ contains
     Dz2 = 1.0 - Dz1
     XySM_D = Dz2*XyzSMIni_D(1:2) + Dz1*XyzSMCur_D(1:2)
 
-    if(DoMapEquatorRay)then
-       ! Store info
+    if(DoIntegrateRay)then
+       RayIntegral_V(Z0x_:Z0y_) = XySm_D
+
+       ! Assign Z0b_ as the middle point value of the magnetic field
+       RayIntegral_V(Z0b_) = sqrt(sum(b_D**2))
+       if(oktest_ray)then
+          write(*,'(a,3es12.4)') &
+               'Found z=0 crossing at XyzSMIni_D=',XyzSMIni_D
+          write(*,'(a,3es12.4)') &
+               'Found z=0 crossing at XyzSMCur_D=',XyzSMCur_D
+          write(*,'(a,3es12.4)')&
+               'RayIntegral_V(Z0x_:Z0b_)=',RayIntegral_V(Z0x_:Z0b_)
+       end if
+    elseif(DoMapEquatorRay)then
+       ! Stop at the equator and store final SM coordinates
        XyzInOut_D(1:2) = XySM_D
        XyzInOut_D(3)   = 0.0
        iFace = ray_equator_
        do_stop_at_sm_equator = .true.
-       RETURN
-    end if
-
-    RayIntegral_V(Z0x_:Z0y_) = XySm_D
-
-    ! Assign Z0b_ as the middle point value of the magnetic field
-    RayIntegral_V(Z0b_) = sqrt(sum(b_D**2))
-    if(oktest_ray)then
-       write(*,'(a,3es12.4)') &
-            'Found z=0 crossing at XyzSMIni_D=',XyzSMIni_D
-       write(*,'(a,3es12.4)') &
-            'Found z=0 crossing at XyzSMCur_D=',XyzSMCur_D
-       write(*,'(a,3es12.4)')&
-            'RayIntegral_V(Z0x_:Z0b_)=',RayIntegral_V(Z0x_:Z0b_)
-       
-       !write(*,'(a,2es12.4)')'Weights =',dz1,dz2
-       !write(*,'(a,3es12.4)')'b_D = ',b_D
     end if
 
   end function do_stop_at_sm_equator
