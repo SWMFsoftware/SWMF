@@ -92,27 +92,24 @@ subroutine set_physics_constants
      end do
   end if
 
-  !\
-  ! set the electric charge in normalized units for Hall and muli-ion MHD
-  ! use the fact that J/(n e) has the same units as velocity:
-  !/
-  ElectronCharge = cElectronCharge* &
-       Si2No_V(UnitJ_)/( Si2No_V(UnitU_)*Si2No_V(UnitN_) )
-
   ! Average ion mass per charge used by Hall MHD and
   ! by ion-electron thermal exchange term
   if(TypeNormalization == 'NONE')then
      IonMassPerCharge = 1.0
   else
-     IonMassPerCharge = 1.0/cMu &
-          * (cProtonMass/(AverageIonCharge*cElectronCharge)) &
-          * No2Si_V(UnitB_)*No2Si_V(UnitT_)/(No2Si_V(UnitX_)**2 &
-          * No2Si_V(UnitRho_))
+     IonMassPerCharge = cProtonMass/cElectronCharge &
+          *Si2No_V(UnitMass_)/Si2No_V(UnitCharge_)
   end if
+
+  ! Electron charge in normalized units (actually it is proton charge/mass)
+  ! This is useful in formulas like n_s q_s (u_s - u_+) x B 
+  ! in the multi-ion momentum equation. It is used in some user modules,
+  ! so we keep the name.
+  ElectronCharge = 1.0/IonMassPerCharge
 
   ! For single ion fluid the average ion mass per charge is constant
   if(.not. (UseMultiSpecies .or. UseMultiIon)) &
-       IonMassPerCharge = IonMassPerCharge * MassIon_I(1) /ChargeIon_I(1)
+       IonMassPerCharge = IonMassPerCharge * MassIon_I(1)/ChargeIon_I(1)
 
   !\
   ! set the (corrected) speed of light and get normalization
@@ -428,6 +425,9 @@ subroutine set_units
        /( No2Si_V(UnitN_)*cBoltzmann )                               ! K 
   No2Si_V(UnitDivB_)       = No2Si_V(UnitB_)/No2Si_V(UnitX_)         ! T/m
   No2Si_V(UnitAngle_)      = 1.0                                     ! radian
+  No2Si_V(UnitMass_)       = No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3    ! kg
+  No2Si_V(UnitCharge_)     = No2Si_V(UnitJ_)/No2Si_V(UnitU_) &       ! C
+       *No2Si_V(UnitX_)**3
 
   !\
   ! Set inverse conversion SI -> normalized
