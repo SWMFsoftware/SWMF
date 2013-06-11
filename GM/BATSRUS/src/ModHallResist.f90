@@ -21,7 +21,7 @@ module ModHallResist
 
   ! Ion mass per charge may depend on space and time for multispecies
   real, public, allocatable:: IonMassPerCharge_G(:,:,:)
-  real:: IonMassPerChargeUnit
+  real:: IonMassPerChargeCoef
 
   ! Arrays for the implicit preconditioning
   real, public, allocatable :: HallJ_CD(:,:,:,:), &
@@ -77,7 +77,7 @@ contains
     use ModConst,   ONLY: cMu, cElectronCharge
     use ModSize,    ONLY: nI, nJ, nK, MaxDim
     use ModPhysics, ONLY: IonMassPerCharge, Si2No_V, No2Si_V, UnitX_, &
-         UnitRho_, UnitT_, UnitB_
+         UnitRho_, UnitT_, UnitB_, UnitMass_, UnitCharge_, UnitU_, UnitJ_
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='init_hall_resist'
@@ -107,9 +107,10 @@ contains
 
     IonMassPerCharge_G = IonMassPerCharge
 
-    IonMassPerChargeUnit = No2Si_V(UnitRho_)/(cMu*cElectronCharge) &
-         *Si2No_V(UnitX_)**2*Si2No_V(UnitRho_) &
-         /(Si2No_V(UnitB_)*Si2No_V(UnitT_))
+    ! This is used in combination with normalized density
+    ! divided by SI charge density.
+    IonMassPerChargeCoef = &
+         Si2No_V(UnitX_)**3 / (cElectronCharge*Si2No_V(UnitCharge_))
 
     rSqrInner1 = -1.0
     rSqrInner2 = -1.0
@@ -191,7 +192,7 @@ contains
        ! field with the Biermann Battery term based numerical errors.
        zAverage = max(zAverage, 1.0)
 
-       IonMassPerChargeOut = IonMassPerChargeUnit*State_V(Rho_) &
+       IonMassPerChargeOut = IonMassPerChargeCoef*State_V(Rho_) &
             /(zAverage*NatomicSi)
 
     elseif(UseMultiSpecies)then
