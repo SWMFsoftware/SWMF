@@ -17,6 +17,7 @@ my %Compiler = (
 		"hera"                => "mpiifort",
 		"ubgl"                => "mpxlf90,mpxlc",
 		"jaguarpf-ext"        => "ftn",
+                "yslogin"             => "ifortmpif90",
 		);
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
