@@ -15,9 +15,9 @@ module ModPhysics
   real:: gm1 = Gamma0 - 1.0, gm2 = Gamma0 - 2.0, gp1 = Gamma0 + 1.0
 
   ! gamma of the waves
-  real :: GammaWave = 1.5
+  real:: GammaWave = 1.5
 
-  ! electron charge in normalized units
+  ! electron charge in normalized units (actually proton charge/mass)
   real:: ElectronCharge
 
   ! plasma parameters
@@ -172,7 +172,7 @@ module ModPhysics
   character (len=20) :: TypeIoUnit = "PLANETARY"
 
   ! Named indexes for I/O variable units
-  integer, parameter :: nIoUnit = 15
+  integer, parameter :: nIoUnit = 17
 
   integer, parameter :: UnitX_           = 1
   integer, parameter :: UnitU_           = 2
@@ -189,6 +189,8 @@ module ModPhysics
   integer, parameter :: UnitTemperature_ = 13
   integer, parameter :: UnitDivB_        = 14
   integer, parameter :: UnitAngle_       = 15
+  integer, parameter :: UnitMass_        = 16
+  integer, parameter :: UnitCharge_      = 17
 
   ! Conversion between units: e.g. VarSi = VarNo*No2Si_V(UnitVar_)
   ! The following should always be true: No2Si_V*Si2Io_V = No2Io_V
