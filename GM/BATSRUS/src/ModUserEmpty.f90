@@ -124,7 +124,8 @@ contains
 
     character(len=*), parameter :: NameSub = 'user_amr_criteria'
     !-------------------------------------------------------------------
-    call stop_user(NameSub)
+    call stop_user(NameSub//'(TypeCrit='//TypeCriteria//')')
+
   end subroutine user_amr_criteria
 
   !=====================================================================
@@ -136,15 +137,16 @@ contains
   end subroutine user_read_inputs
 
   !=====================================================================
-  subroutine user_get_log_var(VarValue, TypeVar, Radius)
+  subroutine user_get_log_var(VarValue, NameVar, Radius)
 
     real, intent(out)            :: VarValue
-    character(len=*), intent(in) :: TypeVar
+    character(len=*), intent(in) :: NameVar
     real, intent(in), optional   :: Radius
 
     character(len=*), parameter :: NameSub = 'user_get_log_var'
     !-------------------------------------------------------------------
-    call stop_user(NameSub)
+    call stop_user(NameSub//'(NameVar='//NameVar//')')
+
   end subroutine user_get_log_var
 
   !====================================================================
@@ -168,7 +170,7 @@ contains
 
     character(len=*), parameter :: NameSub = 'user_set_plot_var'
     !-------------------------------------------------------------------
-    call stop_user(NameSub)
+    call stop_user(NameSub//'(NameVar='//NameVar//')')
 
   end subroutine user_set_plot_var
 
