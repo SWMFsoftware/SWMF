@@ -186,110 +186,116 @@ class GitmBin(PbData):
         import sys
 
         if not self.attrs.has_key('ionfile'):
-            print "Can't calculate velocities in magnetic coordinates without specifying a 3D Ion file in the GitmBin attributed 'ionfile'"
-            sys.exit()
+            print "No 3D ION file associated with this GITM Binary"
+        elif self.attrs['ionfile'].find("ION") <= 0:
+            print "No 3D ION file associated with this GITM Binary"
+        else:
+            ion = GitmBin(self.attrs['ionfile'])
 
-        ion = GitmBin(self.attrs['ionfile'])
+            # Compute the field-aligned unit vector in East, North,
+            # and Vertical coordinates
 
-        # Compute the field-aligned unit vector in East, North, Vertical coord
+            bhat_e = ion['B.F. East'] / ion['B.F. Magnitude']
+            bhat_n = ion['B.F. North'] / ion['B.F. Magnitude']
+            bhat_v = ion['B.F. Vertical'] / ion['B.F. Magnitude']
 
-        bhat_e = ion['B.F. East'] / ion['B.F. Magnitude']
-        bhat_n = ion['B.F. North'] / ion['B.F. Magnitude']
-        bhat_v = ion['B.F. Vertical'] / ion['B.F. Magnitude']
+            # Compute the zonal unit vector in East, North, Vertical coord
 
-        # Compute the zonal unit vector in East, North, Vertical coord
+            mag = np.sqrt(np.square(ion['B.F. East'])
+                          + np.square(ion['B.F. North']))
 
-        mag = np.sqrt(np.square(ion['B.F. East'])+np.square(ion['B.F. North']))
+            zhat_e = -ion['B.F. North'] / mag
+            zhat_n = ion['B.F. East'] / mag
+            # zhat_v is identically zero
 
-        zhat_e = -ion['B.F. North'] / mag
-        zhat_n = ion['B.F. East'] / mag
-        # zhat_v is identically zero
+            # Compute the meridional unit vector in East, North, Vertical coord
 
-        # Compute the meridional unit vector in East, North, Vertical coord
+            mhat_e = (-ion['B.F. East']*ion['B.F. Vertical']
+                       / (mag * ion['B.F. Magnitude']))
+            mhat_n = (-ion['B.F. North']*ion['B.F. Vertical']
+                       / (mag * ion['B.F. Magnitude']))
+            mhat_v = mag / ion['B.F. Magnitude']
 
-        mhat_e = (-ion['B.F. East']*ion['B.F. Vertical']
-                   / (mag * ion['B.F. Magnitude']))
-        mhat_n = (-ion['B.F. North']*ion['B.F. Vertical']
-                   / (mag * ion['B.F. Magnitude']))
-        mhat_v = mag / ion['B.F. Magnitude']
+            # Compute the magnetic coordinate velocities for each overlapping
+            # latitude, longitude, and altitude.  Also include the mag coord.
 
-        # Compute the magnetic coordinate velocities for each overlapping
-        # latitude, longitude, and altitude.  Also include the magnetic coord.
+            eps  = 1.0e-3
+            skey = self.keys()
+            vkey = dict()
+            nkey = dict()
 
-        eps  = 1.0e-3
-        skey = self.keys()
-        vkey = dict()
-        nkey = dict()
+            for item in skey:
+                if string.find(item, "V!") >= 0:
+                    sp = string.split(item)
+                    if not sp[0] in vkey.keys():
+                        east  = string.join([sp[0], "(east)"], " ")
+                        north = string.join([sp[0], "(north)"], " ")
+                        up    = string.join([sp[0], "(up)"], " ")
+                        par   = string.join([sp[0], "(par)"], " ")
+                        zon   = string.join([sp[0], "(zon)"], " ")
+                        mer   = string.join([sp[0], "(mer)"], " ")
 
-        for item in skey:
-            if string.find(item, "V!") >= 0:
-                sp = string.split(item)
-                if not sp[0] in vkey.keys():
-                    east  = string.join([sp[0], "(east)"], " ")
-                    north = string.join([sp[0], "(north)"], " ")
-                    up    = string.join([sp[0], "(up)"], " ")
-                    par   = string.join([sp[0], "(par)"], " ")
-                    zon   = string.join([sp[0], "(zon)"], " ")
-                    mer   = string.join([sp[0], "(mer)"], " ")
-
-                    vp = bhat_e * self[east]+bhat_n*self[north]+bhat_v*self[up]
-                    vz = zhat_e * self[east]+zhat_n*self[north]
-                    vm = mhat_e * self[east]+mhat_n*self[north]+mhat_v*self[up]
-                    self[par] = dmarray.copy(vp)
-                    self[par].attrs = {'units':'m s$^{-1}$, positive mag north',
-                                       'scale':'linear',
-                                       'name':'v$_\parallel$'}
-                    self[zon] = dmarray.copy(vz)
-                    self[zon].attrs = {'units':'m s$^{-1}$, positive east',
-                                       'scale':'linear', 'name':'v$_{zon}$'}
-                    self[mer] = dmarray.copy(vm)
-                    self[mer].attrs = {'units':'m s$^{-1}$, positive up',
-                                       'scale':'linear', 'name':'v$_{mer}$'}
+                        vp=bhat_e*self[east]+bhat_n*self[north]+bhat_v*self[up]
+                        vz=zhat_e*self[east]+zhat_n*self[north]
+                        vm=mhat_e*self[east]+mhat_n*self[north]+mhat_v*self[up]
+                        self[par] = dmarray.copy(vp)
+                        self[par].attrs = {'units':'m s$^{-1}$, positive mag north',
+                                           'scale':'linear',
+                                           'name':'v$_\parallel$'}
+                        self[zon] = dmarray.copy(vz)
+                        self[zon].attrs = {'units':'m s$^{-1}$, positive east',
+                                           'scale':'linear', 'name':'v$_{zon}$'}
+                        self[mer] = dmarray.copy(vm)
+                        self[mer].attrs = {'units':'m s$^{-1}$, positive up',
+                                           'scale':'linear', 'name':'v$_{mer}$'}
         
-        self['B.F. East']          = dmarray.copy(ion['B.F. East'])
-        self['B.F. North']         = dmarray.copy(ion['B.F. North'])
-        self['B.F. Vertical']      = dmarray.copy(ion['B.F. Vertical'])
-        self['E.F. East']          = dmarray.copy(ion['E.F. East'])
-        self['E.F. North']         = dmarray.copy(ion['E.F. North'])
-        self['E.F. Vertical']      = dmarray.copy(ion['E.F. Vertical'])
-        self['Magnetic Latitude']  = dmarray.copy(ion['Magnetic Latitude'])
-        self['Magnetic Longitude'] = dmarray.copy(ion['Magnetic Longitude'])
+            self['B.F. East']          = dmarray.copy(ion['B.F. East'])
+            self['B.F. North']         = dmarray.copy(ion['B.F. North'])
+            self['B.F. Vertical']      = dmarray.copy(ion['B.F. Vertical'])
+            self['E.F. East']          = dmarray.copy(ion['E.F. East'])
+            self['E.F. North']         = dmarray.copy(ion['E.F. North'])
+            self['E.F. Vertical']      = dmarray.copy(ion['E.F. Vertical'])
+            self['Magnetic Latitude']  = dmarray.copy(ion['Magnetic Latitude'])
+            self['Magnetic Longitude'] = dmarray.copy(ion['Magnetic Longitude'])
 
-        self['B.F. East'].attrs          = {'units':'', 'scale':'linear', 
-                                            'name':'Magnetic Field East'}
-        self['B.F. North'].attrs         = {'units':'', 'scale':'linear',
-                                            'name':'Magnetic Field North'}
-        self['B.F. Vertical'].attrs      = {'units':'', 'scale':'linear',
-                                            'name':'Magnetic Field Vertical'}
-        self['E.F. East'].attrs          = {'units':'', 'scale':'linear',
-                                            'name':'Electric Field East'}
-        self['E.F. North'].attrs         = {'units':'', 'scale':'linear',
-                                            'name':'Electric Field North'}
-        self['E.F. Vertical'].attrs      = {'units':'', 'scale':'linear',
-                                            'name':'Electric Field Vertical'}
-        self['Magnetic Latitude'].attrs  = {'units':'radians', 'scale':'linear',
-                                            'name':'Magnetic Latitude'}
-        self['Magnetic Longitude'].attrs = {'units':'radians', 'scale':'linear',
-                                            'name':'Magnetic Longitude'}
+            self['B.F. East'].attrs          = {'units':'', 'scale':'linear', 
+                                                'name':'Magnetic Field East'}
+            self['B.F. North'].attrs         = {'units':'', 'scale':'linear',
+                                                'name':'Magnetic Field North'}
+            self['B.F. Vertical'].attrs      = {'units':'', 'scale':'linear',
+                                                'name':'Magnetic Field Vertical'}
+            self['E.F. East'].attrs          = {'units':'', 'scale':'linear',
+                                                'name':'Electric Field East'}
+            self['E.F. North'].attrs         = {'units':'', 'scale':'linear',
+                                                'name':'Electric Field North'}
+            self['E.F. Vertical'].attrs      = {'units':'', 'scale':'linear',
+                                                'name':'Electric Field Vertical'}
+            self['Magnetic Latitude'].attrs  = {'units':'radians',
+                                                'scale':'linear',
+                                                'name':'Magnetic Latitude'}
+            self['Magnetic Longitude'].attrs = {'units':'radians',
+                                                'scale':'linear',
+                                                'name':'Magnetic Longitude'}
 
-        self['Magnetic dLat'] = dmarray(self['Magnetic Latitude']*180.0/pi, 
-                                        attrs={'units':'degrees', 
-                                               'scale':'linear',
-                                               'name':'Magnetic Laitutde'})
-        self['Magnetic dLon'] = dmarray(self['Magnetic Longitude']*180.0/pi, 
-                                        attrs={'units':'degrees',
-                                               'scale':'linear',
-                                               'name':'Magnetic Longitude'})
+            self['Magnetic dLat'] = dmarray(self['Magnetic Latitude']*180.0/pi, 
+                                            attrs={'units':'degrees', 
+                                                   'scale':'linear',
+                                                   'name':'Magnetic Laitutde'})
+            self['Magnetic dLon'] = dmarray(self['Magnetic Longitude']
+                                            * 180.0 / pi, 
+                                            attrs={'units':'degrees',
+                                                   'scale':'linear',
+                                                   'name':'Magnetic Longitude'})
 
-        # Do not correct for Longitude beyond the 0-360 range, this is
-        # needed for plotting purposes
-        #
-        #for i in range(self.attrs['Magnetic nLon']):
-        #    for j in range(self.attrs['Magnetic nLat']):
-        #        if self['Magnetic dLon'][i][j][0] < 0.0:
-        #            self['Magnetic dLon'][i][j] += 360.0
-        #        elif self['Magnetic dLon'][i][j][0] >= 360.0:
-        #            self['Magnetic dLon'][i][j] -= 360.0
+            # Do not correct for Longitude beyond the 0-360 range, this is
+            # needed for plotting purposes
+            #
+            #for i in range(self.attrs['Magnetic nLon']):
+            #    for j in range(self.attrs['Magnetic nLat']):
+            #        if self['Magnetic dLon'][i][j][0] < 0.0:
+            #            self['Magnetic dLon'][i][j] += 360.0
+            #        elif self['Magnetic dLon'][i][j][0] >= 360.0:
+            #            self['Magnetic dLon'][i][j] -= 360.0
 
     def append_units(self):
         '''
@@ -321,14 +327,18 @@ class GitmBin(PbData):
                      "V!Dn!N (up,O!D2!N              )":"m s^{-1}",
                      "V!Dn!N (up,O(!U3!NP)           )":"m s^{-1}",
                      "e-":"m^{-3}", "Electron_Average_Energy":"J",
-                     "eTemperature":"K", "iTemperature":"K",
+                     "eTemperature":"K", "iTemperature":"K", "LT":"h",
                      "Solar Zenith Angle":"radians", "Vertical TEC":"TECU",
                      "CO!D2!N":"m^{-3}",  "DivJu FL":"", "DivJuAlt":"",
                      "Electron_Energy_Flux":"J m$^{-2}$", "FL Length":"m",
-                     "Pedersen FL Conductance":"S m^{-1}",
-                     "Pedersen Conductance":"S m^{-1}",
+                     "Pedersen FL Conductance":"S m^{-1}", "dLon":"degrees",
+                     "Pedersen Conductance":"S m^{-1}", "dLat":"degrees",
                      "Hall FL Conductance":"S m^{-1}", "Potential":"V",
-                     "Hall Conductance":"S m^{-1}"}
+                     "Hall Conductance":"S m^{-1}", "Je2":"A m^{-2}",
+                     "Je1":"A m^{-2}", "Magnetic Longitude":"degrees",
+                     "E.F. Vertical":"V m^{-1}", "E.F. East":"V m^{-1}",
+                     "E.F. North":"V m^{-1}", "E.F. Magnitude":"V m^{-1}",
+                     "Magnetic Latitude":"degrees", "Ed1":"", "Ed2":""}
 
         scale_dict = {"Altitude":"linear", "Ar Mixing Ratio":"linear",
                       "Ar":"exponential", "CH4 Mixing Ratio":"linear",
@@ -364,8 +374,13 @@ class GitmBin(PbData):
                       "Electron_Energy_Flux":"exponential",
                       "FL Length":"linear", "Pedersen FL Conductance":"linear",
                       "Hall Conductance":"linear", "Potential":"linear",
-                      "Hall FL Conductance":"linear",
-                      "Pedersen Conductance":"linear"}
+                      "Hall FL Conductance":"linear", "dLon":"linear",
+                      "Pedersen Conductance":"linear", "Je2":"linear",
+                      "Je1":"linear", "Ed1":"linear", "Ed2":"linear",
+                      "E.F. Vertical":"linear", "E.F. East":"linear",
+                      "E.F. North":"linear", "E.F. Magnitude":"linear",
+                      "Magnetic Latitude":"linear", "LT":"linear",
+                      "Magnetic Longitude":"linear", "dLat":"linear"}
 
         name_dict = {"Altitude":"Altitude",
                      "Ar Mixing Ratio":"Argon Mixing Ratio", "Ar":"[Ar]",
@@ -381,7 +396,7 @@ class GitmBin(PbData):
                      "N!D2!N":"[N$_2$]", "N!D2!U+!N":"[N$_2$$^+$]",
                      "N!U+!N":"[N$^+$]", "N(!U2!ND)":"[N($^2$D)]",
                      "N(!U2!NP)":"[N($^2$P)]", "N(!U4!NS)":"[N($^4$S)]",
-                     "N2 Mixing Ratio":"Molecular Nitrogen Mixing Ratio",
+                     "N2 Mixing Ratio":"N$_2$ Mixing Ratio",
                      "NO":"[NO]", "NO!U+!N":"[NO$^+$]", "O!D2!N":"[O$_2$]",
                      "O(!U1!ND)":"[O($^1$D)]", "O!D2!U+!N":"[O$_2$$^+$]",
                      "O(!U2!ND)!":"[O($^2$D)]", "O(!U2!ND)!U+!N":"[O($^2$D)]",
@@ -409,13 +424,31 @@ class GitmBin(PbData):
                      "Pedersen FL Conductance":"$\sigma_P$",
                      "Pedersen Conductance":"$\Sigma_P$",
                      "Hall FL Conductance":"$\sigma_H$",
-                     "Potential":"Potential", "Hall Conductance":"$\Sigma_H$"}
+                     "Potential":"Potential", "Hall Conductance":"$\Sigma_H$",
+                     "Je2":"Region 2 Current", "Je1":"Region 1 Current",
+                     "Ed1":"Ed1", "Ed2":"Ed2", "LT":"Solar Local Time",
+                     "E.F. Vertical":"Vertical Electric Field",
+                     "E.F. East":"Eastward Electric Field",
+                     "E.F. North":"Northward Electric Field",
+                     "E.F. Magnitude":"Electric Field Magnitude",
+                     "Magnetic Latitude":"Magnetic Latitude",
+                     "Magnetic Longitude":"Magnetic Longitude",
+                     "dLat":"Latitude", "dLon":"Longitude"}
 
         for k in self.keys():
             if type(self[k]) is dmarray:
+                nk = k
+                # Different versions of GITM differ in header capitalization
+                if not name_dict.has_key(k):
+                    # Try to capitalize or lowercase the key
+                    if k == k.capitalize():
+                        nk = k.lower()
+                    else:
+                        nk = k.capitalize()
+
                 if not self[k].attrs.has_key('units'):
-                    self[k].attrs['units'] = unit_dict[k]
+                    self[k].attrs['units'] = unit_dict[nk]
                 if not self[k].attrs.has_key('scale'):
-                    self[k].attrs['scale'] = scale_dict[k]
+                    self[k].attrs['scale'] = scale_dict[nk]
                 if not self[k].attrs.has_key('name'):
-                    self[k].attrs['name'] = name_dict[k]
+                    self[k].attrs['name'] = name_dict[nk]
