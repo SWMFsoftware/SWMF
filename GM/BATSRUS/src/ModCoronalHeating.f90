@@ -1861,6 +1861,7 @@ contains
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: QeFraction, QparFraction
+
     real :: TeByTp, B2, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
     real :: DampingElectron, DampingPar, DampingPerp, DampingTotal
     !--------------------------------------------------------------------------
@@ -1870,18 +1871,18 @@ contains
        ! C_d = 0.75, C_2 = 0.17
 
        TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
-            /max(State_VGB(p_,i,j,k,iBlock), 1.0e-8)
+            /max(State_VGB(p_,i,j,k,iBlock), 1e-15)
 
        if(UseB0) then
           B2 = sum((B0_DGB(:,i,j,k,iBlock)+State_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
        else
           B2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        end if
-       BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/max(B2, 1.0e-8)
-       BetaProton = 2.0*State_VGB(p_,i,j,k,iBlock)/max(B2, 1.0e-8)
+       BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/max(B2, 1e-30)
+       BetaProton = 2.0*State_VGB(p_,i,j,k,iBlock)/max(B2, 1e-30)
 
-       ! Linear Landau damping contributes to electron and parallel
-       ! proton heating
+       ! Linear Landau damping of kinetic Alfven waves contributes to
+       ! electron and parallel proton heating
        DampingElectron = 0.01*sqrt(TeByTp/max(BetaProton, 1.0e-8)) &
             *(1.0 + 0.17*BetaProton**1.3)/(1.0 +(2800.0*BetaElectron)**(-1.25))
        DampingPar = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
@@ -1889,24 +1890,29 @@ contains
 
        ! Nonlinear damping/stochastic heating to perpendicular proton heating
        if(UseAnisoPressure)then
-          Pperp = (3*State_VGB(p_,i,j,k,iBlock) &
-               - State_VGB(Ppar_,i,j,k,iBlock))/2.0
+          Pperp = 0.5*(3*State_VGB(p_,i,j,k,iBlock) &
+               - State_VGB(Ppar_,i,j,k,iBlock))
        else
           Pperp = State_VGB(p_,i,j,k,iBlock)
        end if
+
+       ! The following is the fourth sqrt of Lperp by proton gyroradius
        LperpInvGyroRad = sqrt(sqrt(LperpTimesSqrtB* &
-            sqrt(sqrt(B2)*State_VGB(Rho_,i,j,k,iBlock)/2.0*Pperp) &
+            sqrt(sqrt(B2)*State_VGB(Rho_,i,j,k,iBlock)/(2.0*Pperp)) &
             /IonMassPerCharge))
 
        DampingPerp = 0.12*sqrt(State_VGB(WaveFirst_,i,j,k,iBlock) &
             /State_VGB(WaveLast_,i,j,k,iBlock))*LperpInvGyroRad &
             *exp(-0.17*sqrt(2.0*Pperp/max(State_VGB(WaveFirst_,i,j,k,iBlock), &
             1.0e-8))*LperpInvGyroRad)
-            
-       DampingTotal = DampingElectron + DampingPar + DampingPerp
 
-       QeFraction = (1.0 + DampingElectron)/(1.0 + DampingTotal)
-       QparFraction = DampingPar/(1.0 + Dampingtotal)
+       ! The fraction 1.0 is due to the fraction of the cascade power
+       ! that succeed to cascade to the smallest scale (<< proton gyroradius)
+       ! where the dissipation is via interactions with the electrons
+       DampingTotal = 1.0 + DampingElectron + DampingPar + DampingPerp
+
+       QeFraction = (1.0 + DampingElectron)/DampingTotal
+       QparFraction = DampingPar/Dampingtotal
     else
        QeFraction = QeByQtotal
        QparFraction = QparByQtotal
