@@ -11,6 +11,9 @@
 #                                           polar plot
 #           find_data_limits              - find the upper and lower limits
 #                                           for a list of GITM data arrays
+#           localtime_to_glon             - convert local time to longitude
+#           find_lat_lon_index            - find the appropriate index for
+#                                           a specified location
 #----------------------------------------------------------------------------
 
 '''
@@ -143,5 +146,99 @@ def localtime_to_glon(ut_datetime, localtime):
     lon = (localtime - uth) * 15.0 # 15 = 360 degrees / 24 hours
 
     return lon
+
+def find_lon_lat_index(gData, glon, glat, units="degrees"):
+    '''
+    Routine to locate the appropriate longitude and latitude indexes for a
+    given location.  The location may be specified in degrees (default) or
+    radians.
+    '''
+
+    import string
+
+    # Set the keys to look for the location in the appropriate units
+    if string.lower(units) == "degrees":
+        latkey = "dLat"
+        lonkey = "dLon"
+    else:
+        latkey = "Latitude"
+        lonkey = "Longitude"
+
+    # First identify the appropriate Longitude.  All longitude values are
+    # the same for any latitude and altitude index.
+
+
+    for (lonindex,clon) in enumerate(gData[lonkey][:,0,0]):
+        if clon >= glon:
+            if (clon - glon) > (glon - gData[lonkey][lonindex-1,0,0]):
+                lonindex = lonindex - 1
+            break
+        
+    # Next identify the appropriate Latitude at the specified longitude
+
+    for (latindex,clat) in enumerate(gData[latkey][lonindex,:,0]):
+        if clat >= glat:
+            if (clat - glat) > (glat - gData[latkey][lonindex,latindex-1,0]):
+                latindex = latindex - 1
+            break
+
+    return(lonindex, latindex)
+
+def retrieve_key_from_web_name(name):
+    '''
+    A routine to retrieve a GITM key corresponding to a descriptive name.
+    '''
+    key_dict = {"Altitude":"Altitude", "Argon Mixing Ratio":"Ar Mixing Ratio",
+                "[Ar]":"Ar","Methane Mixing Ratio":"CH4 Mixing Ratio",
+                "Conduction":"Conduction", "EUV Heating":"EuvHeating",
+                "[H]":"H", "[H$^+$]":"H!U+!N", "[He]":"He",
+                "H$_2$ Mixing Ratio":"H2 Mixing Ratio", "[He$^+$]":"He!U+!N",
+                "Hydrogen Cyanide Mixing Ratio":"HCN Mixing Ratio",
+                "Heating Efficiency":"Heating Efficiency",
+                "Heat Balance Total":"Heat Balance Total",
+                "Latitude (rad)":"Latitude", "Longitude (rad)":"Longitude",
+                "[N$_2$]":"N!D2!N", "[N$_2$$^+$]":"N!D2!U+!N",
+                "[N$^+$]":"N!U+!N", "[N($^2$D)]":"N(!U2!ND)",
+                "[N($^2$P)]":"N(!U2!NP)", "[N($^4$S)]":"N(!U4!NS)",
+                "N$_2$ Mixing Ratio":"N2 Mixing Ratio", "[NO]":"NO",
+                "[NO$^+$]":"NO!U+!N", "[O($^4$SP)$^+$]":"O_4SP_!U+!N",
+                "[O($^1$D)]":"O(!U1!ND)", "[O$_2$$^+$]":"O!D2!U+!N",
+                "[O($^2$D)]":"O(!U2!ND)!", "[O($^2$D)]":"O(!U2!ND)!U+!N",
+                "[O($^2$P)$^+$]":"O(!U2!NP)!U+!N", "[O$_2$]":"O!D2!N",
+                "[O($^2$P)]":"O(!U2!NP)!U+!N", "[O($^3$P)]":"O(!U3!NP)",
+                "Radiative Cooling":"RadCooling", "Neutral Density":"Rho",
+                "T$_n$":"Temperature", "v$_{East}$":"V!Di!N (east)",
+                "v$_{North}$":"V!Di!N (north)", "v$_{Up}$":"V!Di!N (up)",
+                "u$_{East}$":"V!Dn!N (east)","u$_{North}$":"V!Dn!N (north)",
+                "u$_{Up}$":"V!Dn!N (up)", "[e-]":"e-",
+                "u$_{Up, N_2}$":"V!Dn!N (up,N!D2!N              )",
+                "u$_{Up, N(^4S)}$":"V!Dn!N (up,N(!U4!NS)           )",
+                "u$_{Up, NO}$":"V!Dn!N (up,NO                  )",
+                "u$_{Up, O_2}$":"V!Dn!N (up,O!D2!N              )",
+                "u$_{Up, O(^3P)}$":"V!Dn!N (up,O(!U3!NP)           )",
+                "Electron Average Energy":"Electron_Average_Energy",
+                "T$_e$":"eTemperature", "T$_i$":"iTemperature",
+                "Solar Zenith Angle":"Solar Zenith Angle", "[CO$_2$]":"CO!D2!N",
+                "Vertical TEC":"Vertical TEC", "DivJu FL":"DivJu FL",
+                "DivJuAlt":"DivJuAlt", "Field Line Length":"FL Length",
+                "Electron Energy Flux":"Electron_Energy_Flux",
+                "$\sigma_P$":"Pedersen FL Conductance", "Potential":"Potential",
+                "$\Sigma_P$":"Pedersen Conductance", "Region 2 Current":"Je2",
+                "$\sigma_H$":"Hall FL Conductance", "Region 1 Current":"Je1",
+                "Hall Conductance":"$\Sigma_H$", "Ed1":"Ed1", "Ed2":"Ed2",
+                "Vertical Electric Field":"E.F. Vertical",
+                "Eastward Electric Field":"E.F. East", "dLat":"Latitude (deg)",
+                "Northward Electric Field":"E.F. North",
+                "Electric Field Magnitude":"E.F. Magnitude",
+                "Magnetic Latitude":"Magnetic Latitude",
+                "Magnetic Longitude":"Magnetic Longitude",
+                "dLon":"Longitude (deg)", "LT":"Solar Local Time"}
+
+    if key_dict.has_key(name):
+        return key_dict[name]
+    else:
+        print "ERROR: unknown data type [", name, "], known names are: "
+        print key_dict.keys()
+
 #End
 
