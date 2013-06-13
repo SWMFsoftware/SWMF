@@ -50,6 +50,15 @@ IE			NameComp2
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+#RAYTRACEEQUATOR
+T
+
+#RAYTRACE
+T			UseRaytrace (rest is read if true)
+T			UseAccurateTrace
+0.1			DtExchangeRay [sec]
+1			DnRaytrace
+
 USERFLAGS
 F                       UseUserInnerBcs
 F                       UseUserSource
