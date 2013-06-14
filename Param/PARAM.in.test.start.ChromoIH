@@ -180,7 +180,7 @@ T			UseRadCooling
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-RadCoolCorona.dat
+SC/Param/RadCoolCorona.dat
 ascii			TypeFile
 
 #TRANSITIONREGION
@@ -261,9 +261,6 @@ mc3			TypeLimiter
 
 #NONCONSERVATIVE
 T			UseNonConservative
-
-#MESSAGEPASS
-all			TypeMessagePass
 
 #RESCHANGE
 T			UseAccurateResChange
