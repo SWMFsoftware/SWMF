@@ -5,6 +5,8 @@
 #ifndef _AMR_MESH_GENERIC_ 
 #define _AMR_MESH_GENERIC_ 
 
+#include "mpi.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -23,14 +25,16 @@
 #include <list>
 #include <vector>
 
-#include "mpi.h"
+
 
 
 #include "meshAMRdef.h"
 
 
 //include the user defined data for the internal boundaries
+#if _AMR__LOAD_USER_DEFINITION__MODE_  == _AMR__LOAD_USER_DEFINITION__MODE__ON_
 #include "UserDefinition.meshAMR.h"
+#endif
 
 
 
@@ -901,8 +905,7 @@ public:
   } 
 
   double CellCharacteristicSize() {
-    register double res;
-    register int idim;
+    double res;
 
     res=pow((_MESH_AMR_XMAX_[0]-_MESH_AMR_XMIN_[0])/_BLOCK_CELLS_X_,2);
     if (_MESH_DIMENSION_>1) res+=pow((_MESH_AMR_XMAX_[1]-_MESH_AMR_XMIN_[1])/_BLOCK_CELLS_Y_,2);
@@ -3646,14 +3649,14 @@ void DeallocateBlock(cTreeNodeAMR<cBlockAMR> *startNode) {
 
 //===================================================================
 bool deleteTreeNode(cTreeNodeAMR<cBlockAMR> *startNode) {
-  int nface,i,j,k,iMax,jMax,kMax,iMin,jMin,kMin,nDownNode;
+  int i,j,k,iMax,jMax,kMax,iMin,jMin,kMin,nDownNode;
   cTreeNodeAMR<cBlockAMR> *upNode,*downNode,*neibNode; 
 
 
 //######## DEBUG #############
 
 if (startNode->Temp_ID==1169) {
-cout << __LINE__ << endl;
+cout << __LINE__ << __FILE__ << endl;
 }
 
 //######## END DEBUG #########
@@ -3796,11 +3799,7 @@ cout << __LINE__ << endl;
 
   //###########  DEBUG  #######
   if (startNode->Temp_ID==729) {
-  	cout << __LINE__ << endl;
-  }
-
-  if (upNode->Temp_ID==261) {
-  	cout << __LINE__ << endl;
+  	cout << __LINE__ << __FILE__ << endl;
   }
 
   //########### END DEBUG ######
@@ -3827,7 +3826,7 @@ cout << __LINE__ << endl;
 
 //###########  DEBUG  #######
 if (newCenterNode->Temp_ID==88861) {
-	cout << __LINE__ << endl;
+	cout << __LINE__ << __FILE__ << endl;
 }
 
 //########### END DEBUG ######

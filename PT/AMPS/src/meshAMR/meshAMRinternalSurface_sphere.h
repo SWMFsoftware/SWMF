@@ -272,7 +272,7 @@ public:
     #endif
   }
 
-  void GetSurfaceCoordinate(double *x,long int iZenithPoint,long int iAzimutalPoint) {
+  inline void GetSurfaceNormal(double *x,double iZenithPoint,double  iAzimutalPoint) {
     double cosZenithAngle,sinZenithAngle,AzimuthalAngle;
 
     #if _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_COSINE_DISTRIBUTION_
@@ -288,9 +288,17 @@ public:
 
     AzimuthalAngle=dAzimuthalAngle*iAzimutalPoint;
 
-    x[0]=Radius*sinZenithAngle*cos(AzimuthalAngle)+OriginPosition[0];
-    x[1]=Radius*sinZenithAngle*sin(AzimuthalAngle)+OriginPosition[1];
-    x[2]=Radius*cosZenithAngle+OriginPosition[2];
+    x[0]=sinZenithAngle*cos(AzimuthalAngle);
+    x[1]=sinZenithAngle*sin(AzimuthalAngle);
+    x[2]=cosZenithAngle;
+  }
+
+  inline void GetSurfaceCoordinate(double *x,double iZenithPoint,double  iAzimutalPoint) {
+    GetSurfaceNormal(x,iZenithPoint,iAzimutalPoint);
+
+    x[0]=Radius*x[0]+OriginPosition[0];
+    x[1]=Radius*x[1]+OriginPosition[1];
+    x[2]=Radius*x[2]+OriginPosition[2];
   }
 
   void PrintSurfaceData(const char *fname,int nDataSet, bool PrintStateVectorFlag=true) {
@@ -321,7 +329,7 @@ public:
       }
 
       //print the number of variables and blocks
-      fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",2+(nZenithSurfaceElements-1)*nAzimuthalSurfaceElements,nZenithSurfaceElements*nAzimuthalSurfaceElements);
+      fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",(nZenithSurfaceElements+1)*nAzimuthalSurfaceElements,nZenithSurfaceElements*nAzimuthalSurfaceElements);
     }
     else pipe.openSend(0);
 
@@ -338,10 +346,13 @@ public:
         //prepare the interpolation stencil
         InterpolationListLength=0;
 
-        if ((iZenith==0)||(iZenith==nZenithSurfaceElements)) {
-           for (InterpolationListLength=0;InterpolationListLength<nAzimuthalSurfaceElements;InterpolationListLength++) {
-             InterpolationList[InterpolationListLength]=GetLocalSurfaceElementNumber((iZenith==0) ? 0 : nZenithSurfaceElements-1,InterpolationListLength);
-           }
+        if (iZenith==0) {
+          InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(0,iAzimuthal);
+          InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(0,((iAzimuthal>0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1));
+        }
+        else if (iZenith==nZenithSurfaceElements) {
+          InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(nZenithSurfaceElements-1,iAzimuthal);
+          InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(nZenithSurfaceElements-1,((iAzimuthal>0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1));
         }
         else {
           int iA,iZ,A[2],Z[2];
@@ -359,9 +370,6 @@ public:
       }
 
       if (ThisThread==0) fprintf(fout,"\n");
-
-      //only one point is printed for azimuthal angle of iAzimuthal==0, nAzimuthalSurfaceElements
-      if ((iZenith==0)||(iZenith==nZenithSurfaceElements)) break;
     }
 
     //close the pipe
@@ -377,10 +385,18 @@ public:
         iAzimuthalMax=(iAzimuthal+1!=nAzimuthalSurfaceElements) ? iAzimuthal+1 : 0;
         iAzimuthalMin=iAzimuthal;
 
+        nd0=1+iAzimuthalMin+iZenith*nAzimuthalSurfaceElements;
+        nd1=1+iAzimuthalMax+iZenith*nAzimuthalSurfaceElements;
+        nd2=1+iAzimuthalMax+(iZenith+1)*nAzimuthalSurfaceElements;
+        nd3=1+iAzimuthalMin+(iZenith+1)*nAzimuthalSurfaceElements;
+
+
+/*
         nd0=(iZenith!=0) ? 2+iAzimuthalMin+(iZenith-1)*nAzimuthalSurfaceElements : 1; //iZenithMin,iAzimuthalMin
         nd1=(iZenith!=nZenithSurfaceElements-1) ? 2+iAzimuthalMin+iZenith*nAzimuthalSurfaceElements : 2+(nZenithSurfaceElements-1)*nAzimuthalSurfaceElements; //iZenithMax,iAzimuthalMin
         nd2=(iZenith!=nZenithSurfaceElements-1) ? 2+iAzimuthalMax+iZenith*nAzimuthalSurfaceElements : 2+(nZenithSurfaceElements-1)*nAzimuthalSurfaceElements; //iZenithMax,iAzimuthalMax
         nd3=(iZenith!=0) ? 2+iAzimuthalMax+(iZenith-1)*nAzimuthalSurfaceElements : 1; //iZenithMin,iAzimuthalMax
+*/
 
         fprintf(fout,"%ld %ld %ld %ld\n",nd0,nd1,nd2,nd3);
       }

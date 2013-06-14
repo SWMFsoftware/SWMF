@@ -2,6 +2,9 @@
 //$Id$
 //global macroscopic variables for the AMR mesh (no cut cells) 
 
+
+#include "mpi.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -9,8 +12,6 @@
 #include <unistd.h>
 #include <time.h>
 #include <iostream>
-
-#include "mpi.h"
 
 #include "constants.h"
 
@@ -52,6 +53,12 @@
 #define _USED_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_OFF_    1
 
 #define _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ON_
+
+//load the user difinitions
+#define _AMR__LOAD_USER_DEFINITION__MODE__ON_      0
+#define _AMR__LOAD_USER_DEFINITION__MODE__OFF_     1
+
+#define _AMR__LOAD_USER_DEFINITION__MODE_  _AMR__LOAD_USER_DEFINITION__MODE__OFF_
 
 
 //the types of the internal boundaries
@@ -753,7 +760,7 @@ public:
     fread(&dataBufferListPointer,sizeof(long int),1,fout);
 
     //allocate the stack's buffers
-    long int i,j,elementCountingNumber;
+    long int i;
 
     dataBufferList=new T*[dataBufferListSize];
     MemoryAllocation+=sizeof(T*)*dataBufferListSize;
@@ -763,8 +770,6 @@ public:
       dataBufferList[i]=new T[_STACK_DEFAULT_BUFFER_BUNK_SIZE_];
       MemoryAllocation+=sizeof(T)*_STACK_DEFAULT_BUFFER_BUNK_SIZE_;
     }
-
-
 
     exit(__LINE__,__FILE__,"Check the implementation");
   }

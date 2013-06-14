@@ -10,6 +10,7 @@
 
 
 #include "pic.h"
+#include "Exosphere.h"
 
 double Exosphere::OrbitalMotion::AccumulatedPlanetRotation=0.0,Exosphere::OrbitalMotion::TotalSimulationTime=0.0,Exosphere::OrbitalMotion::TAA=0.0;
 double Exosphere::OrbitalMotion::CoordinateFrameRotationRate=0.0;
@@ -28,13 +29,22 @@ int Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier=1;
 
 
 double Exosphere::OrbitalMotion::GetTAA(const char* UTC) {
+  double res=0.0;
+
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   SpiceDouble EphemerisTime;
 
   utc2et_c(UTC,&EphemerisTime);
-  return GetTAA(EphemerisTime);
+  res=GetTAA(EphemerisTime);
+#endif
+
+  return res;
 }
 
 double Exosphere::OrbitalMotion::GetPhaseAngle(SpiceDouble EphemerisTime) {
+  double res=0.0;
+
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   SpiceDouble StateSun[6],StateEarth[6],ltlocal;
 
   spkezr_c("Sun",EphemerisTime,"MSGR_HCI","none",ObjectName,StateSun,&ltlocal);
@@ -49,19 +59,29 @@ double Exosphere::OrbitalMotion::GetPhaseAngle(SpiceDouble EphemerisTime) {
     c+=StateSun[idim]*StateEarth[idim];
   }
 
-  return acos(c/sqrt(l0*l1));
+  res=acos(c/sqrt(l0*l1));
+#endif
+
+  return res;
 }
 
 double Exosphere::OrbitalMotion::GetPhaseAngle(const char* UTC) {
+  double res=0.0;
+
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   SpiceDouble EphemerisTime;
 
   utc2et_c(UTC,&EphemerisTime);
-  return GetPhaseAngle(EphemerisTime);
+  res=GetPhaseAngle(EphemerisTime);
+#endif
+
+  return res;
 }
 
 //Get Rotations of the frame
 //the calcualtion is described in Zhuravlev-VF-Osnovy-teoreticheskoi-mehaniki-2-e-izdanie, chapter 2, page 30
 void Exosphere::OrbitalMotion::FrameRotation::GetRotationAxis(double *RotationAxis,double &RotationAngle,const char *FrameName,double etStartRotation,double etFinishRotation) {
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   SpiceDouble T1[6][6],T2[6][6];
   double t,T[3][3];
   int i,j,k;
@@ -82,6 +102,10 @@ void Exosphere::OrbitalMotion::FrameRotation::GetRotationAxis(double *RotationAx
   RotationAxis[0]=(T[2][1]-T[1][2])/t;
   RotationAxis[1]=(T[0][2]-T[2][0])/t;
   RotationAxis[2]=(T[1][0]-T[0][1])/t;
+#else
+  RotationAngle=0.0;
+  for (int idim=0;idim<3;idim++) RotationAxis[idim]=0.0;
+#endif
 }
 
 

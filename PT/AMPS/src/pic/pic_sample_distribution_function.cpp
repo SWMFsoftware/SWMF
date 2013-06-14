@@ -26,7 +26,7 @@ void PIC::DistributionFunctionSample::Init(double ProbeLocations[][DIM],int nPro
   int idim,nProbe,i,j,k;
 
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_OFF_
-  if (PIC::Mesh::mesh.ThisThread==0) printf("WARNING: Sampling of the distribution function is prohibited in the settings of the model");
+  if (PIC::Mesh::mesh.ThisThread==0) fprintf(PIC::DiagnospticMessageStream,"WARNING: Sampling of the distribution function is prohibited in the settings of the model");
   return;
 #endif
 
@@ -179,7 +179,7 @@ void PIC::DistributionFunctionSample::printDistributionFunction(char *fname,int 
       sprintf(str,"%s.nSamplePoint=%ld.dat",fname,nProbe);
       fout=fopen(str,"w");
 
-      printf("printing output file: %s.........         ",str);
+      fprintf(PIC::DiagnospticMessageStream,"printing output file: %s.........         ",str);
 
       fprintf(fout,"\"TITLE=Distribution function at x=%e",SamplingLocations[nProbe][0]);
       for (idim=1;idim<DIM;idim++) fprintf(fout,", %e",SamplingLocations[nProbe][idim]);
@@ -249,7 +249,7 @@ void PIC::DistributionFunctionSample::printDistributionFunction(char *fname,int 
 
       //close the output file
       fclose(fout);
-      printf("done.\n");
+      fprintf(PIC::DiagnospticMessageStream,"done.\n");
     }
     else {
       for (nVariable=0;nVariable<SampleDataLength;nVariable++) {

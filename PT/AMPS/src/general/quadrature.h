@@ -195,7 +195,7 @@ namespace Quadrature {
       inline void Generate_GaussLegendreTable(int n, double* x, double* w, double eps)
       {
         double x0,  x1,  dx;  /* Abscissas */
-        double w0,  w1,  dw;  /* Weights */
+        double w0=0.0,  w1=0.0,  dw=0.0;  /* Weights */
         double P0, P_1, P_2;  /* Legendre polynomial values */
         double dpdx;      /* Legendre polynomial derivative */
         int i, j, k, m;     /* Iterators */

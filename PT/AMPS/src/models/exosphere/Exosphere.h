@@ -11,34 +11,11 @@
 #ifndef _EXOSPHERE_
 #define _EXOSPHERE_
 
-#include "Na.h"
 
-#include "SpiceUsr.h"
+
 #include "SingleVariableDistribution.h"
 #include "SingleVariableDiscreteDistribution.h"
 #include "constants.h"
-
-/*//path to the SPICE Kernels directory
-const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Users/vtenishe/SPICE/Kernels/MESSENGER/kernels";
-
-//SPICE Kernels to be loaded
-const int nFurnishedSPICEkernels=5+12;
-const char SPICE_Kernels[nFurnishedSPICEkernels][_MAX_STRING_LENGTH_PIC_]={"spk/msgr_de405_de423s.bsp","fk/msgr_dyn_v600.tf","../../NAIF/naif0010.tls","pck/pck00009_MSGR_v10.tpc","fk/msgr_v210.tf",
-    "ik/msgr_epps_v100.ti","ck/msgr20110413.bc","ck/msgr20110414.bc","ck/msgr20110415.bc","ck/msgr20110416.bc","ck/msgr20110417.bc","ck/msgr20110418.bc","ck/msgr20110419.bc","ck/msgr20110420.bc","ck/msgr20110421.bc",
-    "sclk/messenger_1486.tsc","spk/msgr_20040803_20140823_od266sc_0.bsp"};
-
-
-
-//time stams for sampling remote column density observations
-const int nReferenceGroundBasedObservations=5; //25;
-const char ReferenceGroundBasedObservationTime[nReferenceGroundBasedObservations][_MAX_STRING_LENGTH_PIC_]={
-    "2008-05-18T00:00:00","2008-07-06T00:00:00","2008-11-07T00:00:00","2007-11-12T00:00:00","2007-06-03T00:00:00"};
-
-
-/ *    "2001-05-25T00:00:00","2006-01-12T00:00:00","2005-12-18T00:00:00","2006-06-17T00:00:00","2003-10-04T00:00:00",
-    "2006-10-21T00:00:00","2003-05-07T00:00:00","1999-04-27T00:00:00","1998-05-28T00:00:00","1990-12-10T00:00:00",
-    "1990-12-04T00:00:00","1988-01-11T00:00:00","2000-06-05T00:00:00","2003-02-06T00:00:00","2002-12-16T00:00:00",
-    "2002-08-21T00:00:00","2003-12-13T00:00:00","2006-06-12T00:00:00","2008-07-13T00:00:00","2006-11-09T00:00:00"};* /*/
 
 
 //default setting of the exospheric model
@@ -52,10 +29,10 @@ const char ReferenceGroundBasedObservationTime[nReferenceGroundBasedObservations
 #define _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_            3
 
 //define wich of the source processes are active
-#define _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_              _EXOSPHERE_SOURCE__ON_
-#define _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_     _EXOSPHERE_SOURCE__ON_
-#define _EXOSPHERE_SOURCE__THERMAL_DESORPTION_               _EXOSPHERE_SOURCE__ON_
-#define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_            _EXOSPHERE_SOURCE__ON_
+#define _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_              _EXOSPHERE_SOURCE__OFF_
+#define _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_     _EXOSPHERE_SOURCE__OFF_
+#define _EXOSPHERE_SOURCE__THERMAL_DESORPTION_               _EXOSPHERE_SOURCE__OFF_
+#define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_            _EXOSPHERE_SOURCE__OFF_
 
 
 //integration mode: steady state/time dependent
@@ -77,29 +54,36 @@ const char ReferenceGroundBasedObservationTime[nReferenceGroundBasedObservations
 //#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__UNIFORM_
 #define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__BALANCE_FLUXES_
 
+//the default maximum ID number for the source processes (need only estimation of the MAXIMUM VALUE for allocation of memory buffers -> don't need exact value)
+#define _EXOSPHERE__SOURCE_MAX_ID_VALUE_ 3
+#define _EXOSPHERE__SOURCE_TOTAL_NUMBER_ 4
+
+//use the user defined exospheric sources
+#define _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_ _EXOSPHERE_SOURCE__OFF_
+
+//user derined output in the data file of the exosphere model
+#define _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__MODE__ _EXOSPHERE_SOURCE__OFF_
+#define _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__PRINT_DATA__(fout,DataSetNumber,pipe,CenterNodeThread,CenterNode)
+#define _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__VARIABLE_LIST_(fout)
+
+//allow the orbit calculation with SPICE
+#define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
+
 //user defined settings of the exospheric model
 #include "UserDefinition.Exosphere.h"
+#include "Na.h"
 
+//define the symbolic id of source processes
+static const char _EXOSPHERE__SOURCE_SYMBOLIC_ID_[][100]={"ImpactVaposization","PhotonStimulatedDesorption","ThermalDesorption","SolarWindSputtering"};
 
-
-//set up "dependent" model parameters
-//maximum value of the source ID number
-#define _EXOSPHERE_SOURCE_MAX_ID_VALUE_ 0
-
-#if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
-#undef _EXOSPHERE_SOURCE_MAX_ID_VALUE_
-#define _EXOSPHERE_SOURCE_MAX_ID_VALUE_ _EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
+#include "SpiceUsr.h"
+#else
+typedef double SpiceDouble;
+typedef int SpiceInt;
+typedef char SpiceChar;
 #endif
 
-#if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
-#undef _EXOSPHERE_SOURCE_MAX_ID_VALUE_
-#define _EXOSPHERE_SOURCE_MAX_ID_VALUE_ _EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_
-#endif
-
-#if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_  == _EXOSPHERE_SOURCE__ON_
-#undef _EXOSPHERE_SOURCE_MAX_ID_VALUE_
-#define _EXOSPHERE_SOURCE_MAX_ID_VALUE_ _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_
-#endif
 
 namespace Exosphere {
 
@@ -109,7 +93,10 @@ namespace Exosphere {
 
   //simulation date and position of Object at the time of simulations
   //const char SimulationStartTimeString[_MAX_STRING_LENGTH_PIC_]="2011-04-13T00:00:00"; //"2001-03-01T00:00:00";  ////"2011-01-01T00:00:00";
-  extern char SimulationStartTimeString[_MAX_STRING_LENGTH_PIC_];
+  //extern char SimulationStartTimeString[_MAX_STRING_LENGTH_PIC_];
+
+  static const char SimulationStartTimeString[]="2000-01-01T00:00:00";
+
   extern double xObject_HCI[3],vObject_HCI[3],xEarth_HCI[3],vEarth_HCI[3],xEarth_SO[3],vEarth_SO[3],xSun_SO[3],vSun_SO[3];
   extern double vObjectRadial,xObjectRadial;
 
@@ -118,9 +105,10 @@ namespace Exosphere {
 
 
   //typical solar wind conditions far from the planet
-  extern const double swVelocity_Typical[3];
-  extern const double swB_Typical[3];
-  extern const double swTemperature_Typical,swNumberDensity_Typical;
+  static const double Exosphere_swVelocity_Typical[]={0.0,0.0,0.0};
+  static const double Exosphere_swB_Typical[]={0.0,0.0,0.0};
+  static const double Exosphere_swTemperature_Typical=0.0;
+  static const double Exosphere_swNumberDensity_Typical=0.0;
   extern double swE_Typical[3];
 
   //the total number of source processes
@@ -138,14 +126,19 @@ namespace Exosphere {
 
 
   //make coulumn integration
-  void SodiumCoulumnDensityIntegrant(double *res,int resLength,double* x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
-  void GetColumnIntegralLimbSubsolarPoint(double* ColumnIntegralVector,int ColumnIntegralVectorLength);
+  namespace ColumnIntegral {
+    void CoulumnDensityIntegrant(double *res,int resLength,double* x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
+    int GetVariableList(char *vlist=NULL);
+    void ProcessColumnIntegrationVector(double *res,int resLength);
 
-  void ColumnDensityIntegration_Tail(char *name);
-  void ColumnDensityIntegration_Limb(char *name);
-  void ColumnDensityIntegration_Map(char *fname,double dXmax,double dZmax,int nXpoints);
-  void ColumnDensityIntegration_CircularMap(char *fname,double rmax,double dRmin,double dRmax,int nAzimuthPoints,SpiceDouble EphemerisTime);
 
+
+    void GetSubsolarPointDirection(double *LimbDirection,double *EarthPosition);
+    void Tail(char *name);
+    void Limb(char *name);
+//    void Map(char *fname,double dXmax,double dZmax,int nXpoints);
+    void CircularMap(char *fname,double rmax,double dRmin,double dRmax,int nAzimuthPoints,SpiceDouble EphemerisTime);
+  }
 
   //Chamberlain Exosphere Model (Shen-1963-JAS,Valeille-2009)
   namespace ChamberlainExosphere {
@@ -178,11 +171,11 @@ namespace Exosphere {
        void OutputSampledData(SpiceDouble etStartInterval,SpiceDouble etFinishInterval,int nObjectOutputFile);
     }
 
+    //sample the source rates
+    extern double CalculatedSourceRate[PIC::nTotalSpecies][1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
+
     //offsets for sampling densities that are due to different sampling processes
-    extern int SamplingDensity__ImpactVaporization_Offset;
-    extern int SamplingDensity__PhotonStimulatedDesorption_Offset;
-    extern int SamplingDensity__ThermalDesorption_Offset;
-    extern int SamplingDensity__SolarWindSputtering_Offset;
+    extern int SamplingDensityOffset[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
     extern int CellSamplingDataOffset;
 
     //the field in the particle's data that keeps the id of the source process due to which the particle has beed produced
@@ -230,10 +223,11 @@ namespace Exosphere {
       int id;
 
       //determine if the particle is a sodium atom
-      if (spec!=_NA_SPEC_) return;
+//      if (spec!=_NA_SPEC_) return;
 
       id=GetParticleSourceID((PIC::ParticleBuffer::byte*)ParticleData);
-
+      *((double*)(SamplingBuffer+SamplingDensityOffset[id]))+=LocalParticleWeight;
+/*
       switch (id) {
       case _EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_:
         *((double*)(SamplingBuffer+SamplingDensity__ImpactVaporization_Offset))+=LocalParticleWeight;
@@ -250,11 +244,22 @@ namespace Exosphere {
       default:
         exit(__LINE__,__FILE__,"Error: the option is not found");
       }
+      */
     }
 
 
     void SampleModelData();
     void OutputSampledModelData(int DataOutputFileNumber);
+
+    typedef void (*fUserDefinedAdditionalData_VariableList_OutputSampledModelData)(FILE*);
+    typedef void (*fUserDefinedAdditionalData_OutputSampledModelData)(FILE*,int);
+    extern fUserDefinedAdditionalData_VariableList_OutputSampledModelData UserDefinedAdditionalData_VariableList_OutputSampledModelData;
+    extern fUserDefinedAdditionalData_OutputSampledModelData UserDefinedAdditionalData_OutputSampledModelData;
+
+    void inline SetUserDefinedAdditionalOutputSampledModelDataFunctions(fUserDefinedAdditionalData_VariableList_OutputSampledModelData t0,fUserDefinedAdditionalData_OutputSampledModelData t1) {
+      UserDefinedAdditionalData_VariableList_OutputSampledModelData=t0;
+      UserDefinedAdditionalData_OutputSampledModelData=t1;
+    }
   }
 
 
@@ -304,7 +309,7 @@ namespace Exosphere {
 
     //generate particle position and velocity
   //generate particle properties
-  inline bool GenerateParticleProperties(double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,cSingleVariableDiscreteDistribution *SurfaceInjectionDistribution,cSingleVariableDistribution *EnergyDistribution) {
+  inline bool GenerateParticleProperties(double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,cSingleVariableDiscreteDistribution<int> *SurfaceInjectionDistribution,cSingleVariableDistribution<int> *EnergyDistribution) {
     double ExternalNormal[3];
 
     //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
@@ -404,22 +409,22 @@ namespace Exosphere {
   }
 
     namespace ThermalDesorption {
-      extern double uThermal;
-      extern double VibrationalFrequency;
+      static const double ThermalDesorption_uThermal[]={0.0};
+      static const double ThermalDesorption_VibrationalFrequency[]={0.0};
 
-      extern double SourceRate,maxLocalSourceRate;
-      extern double CalculatedTotalSodiumSourceRate;
+      extern double SourceRate[PIC::nTotalSpecies],maxLocalSourceRate[PIC::nTotalSpecies];
+//      extern double CalculatedTotalSodiumSourceRate;
 
       //the object for distribution of injection positino on the planet's surface
-      extern cSingleVariableDiscreteDistribution SurfaceInjectionDistribution;
-      double GetSurfaceElementSodiumProductionRate(int nElement);
+      extern cSingleVariableDiscreteDistribution<int> SurfaceInjectionDistribution[PIC::nTotalSpecies];
+      double GetSurfaceElementProductionRate(int nElement,int *spec);
 
-      inline double GetTotalProductionRate(int spec,void *SphereDataPointer) {return SourceRate;}
+      inline double GetTotalProductionRate(int spec,void *SphereDataPointer) {return SourceRate[spec];}
 
       inline double GetSurfaceElementProductionRate(int spec,int SurfaceElement,void *SphereDataPointer) {
         double res=0.0,norm[3],sun[3],temp,SodiumSurfaceElementPopulation;
 
-        SodiumSurfaceElementPopulation=((cInternalSphericalData*)SphereDataPointer)->SodiumSurfaceElementPopulation[SurfaceElement];
+        SodiumSurfaceElementPopulation=((cInternalSphericalData*)SphereDataPointer)->SurfaceElementPopulation[spec][SurfaceElement];
         if (SodiumSurfaceElementPopulation<0.0) return 0.0;
 
         memcpy(sun,Exosphere::OrbitalMotion::SunDirection_IAU_OBJECT,3*sizeof(double));
@@ -452,13 +457,13 @@ namespace Exosphere {
 
 
         temp=GetSurfaceTemeprature(res,x_LOCAL_SO_OBJECT);
-        res=VibrationalFrequency*SodiumSurfaceElementPopulation*exp(-uThermal/(Kbol*temp));
+        res=ThermalDesorption_VibrationalFrequency[spec]*SodiumSurfaceElementPopulation*exp(-ThermalDesorption_uThermal[spec]/(Kbol*temp));
 
         return res;
       }
 
 
-      inline bool GenerateParticleProperties(double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double* v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+      inline bool GenerateParticleProperties(int spec,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double* v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
         double ExternalNormal[3],CosSubSolarAngle;
 
         //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
@@ -466,7 +471,7 @@ namespace Exosphere {
         int nZenithElement,nAzimuthalElement;
         unsigned int el;
 
-        el=SurfaceInjectionDistribution.DistributeVariable();
+        el=SurfaceInjectionDistribution[spec].DistributeVariable();
         Exosphere::Planet->GetSurfaceElementIndex(nZenithElement,nAzimuthalElement,el);
         Exosphere::Planet->GetSurfaceElementRandomDirection(ExternalNormal,nZenithElement,nAzimuthalElement);
 
@@ -507,7 +512,7 @@ namespace Exosphere {
         double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
 
         SurfaceTemperature=GetSurfaceTemeprature(CosSubSolarAngle,x_LOCAL_SO_OBJECT);
-        PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,_NA_SPEC_);
+        PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
 
 
         //transform the velocity vector to the coordinate frame 'MSGR_SO'
@@ -548,26 +553,26 @@ namespace Exosphere {
     }
 
     namespace PhotonStimulatedDesorption {
-      extern double PhotonFlux_1AU;
-      extern double CrossSection;
+      static const double PhotonStimulatedDesorption_PhotonFlux_1AU=0.0;
+      static const double PhotonStimulatedDesorption_CrossSection[]={0.0};
 
-      extern double minInjectionEnergy;
-      extern double maxInjectionEnergy;
+      static const double PhotonStimulatedDesorption_minInjectionEnergy[]={0.0};
+      static const double PhotonStimulatedDesorption_maxInjectionEnergy[]={0.0};
 
-      extern double SourceRate,maxLocalSourceRate;
+      extern double SourceRate[PIC::nTotalSpecies],maxLocalSourceRate[PIC::nTotalSpecies];
 
       //the object for distribution of injection positino on the planet's surface
-      extern cSingleVariableDiscreteDistribution SurfaceInjectionDistribution;
-      double GetSurfaceElementSodiumProductionRate(int nElement);
+      extern cSingleVariableDiscreteDistribution<int> SurfaceInjectionDistribution[PIC::nTotalSpecies];
+      double GetSurfaceElementProductionRate(int nElement,int *spec);
 
       //evaluate nemerically the source rate
-      extern double CalculatedTotalSodiumSourceRate;
+//      extern double CalculatedTotalSodiumSourceRate;
 
       inline double GetSurfaceElementProductionRate(int spec,int SurfaceElement,void *SphereDataPointer) {
-        double res=0.0,norm[3],sun[3],SodiumSurfaceElementPopulation;
+        double res=0.0,norm[3],sun[3],SurfaceElementPopulation;
 
-        SodiumSurfaceElementPopulation=((cInternalSphericalData*)SphereDataPointer)->SodiumSurfaceElementPopulation[SurfaceElement];
-        if (SodiumSurfaceElementPopulation<0.0) return 0.0;
+        SurfaceElementPopulation=((cInternalSphericalData*)SphereDataPointer)->SurfaceElementPopulation[spec][SurfaceElement];
+        if (SurfaceElementPopulation<0.0) return 0.0;
 
         memcpy(sun,Exosphere::OrbitalMotion::SunDirection_IAU_OBJECT,3*sizeof(double));
         memcpy(norm,(((cInternalSphericalData*)SphereDataPointer)->SurfaceElementExternalNormal+SurfaceElement)->norm,3*sizeof(double));
@@ -575,34 +580,34 @@ namespace Exosphere {
         for (int idim=0;idim<DIM;idim++) res+=sun[idim]*norm[idim];
 
 
-        res*=(res>0.0) ? SodiumSurfaceElementPopulation*CrossSection*PhotonFlux_1AU*pow(_AU_/Exosphere::xObjectRadial,2.0) : 0.0;
+        res*=(res>0.0) ? SurfaceElementPopulation*PhotonStimulatedDesorption_CrossSection[spec]*PhotonStimulatedDesorption_PhotonFlux_1AU*pow(_AU_/Exosphere::xObjectRadial,2.0) : 0.0;
         return res;
       }
 
-      inline double GetTotalProductionRate(int spec,void *SphereDataPointer) {return SourceRate;}
+      inline double GetTotalProductionRate(int spec,void *SphereDataPointer) {return SourceRate[spec];}
 
       //energy distribution function of injected particles
-      extern cSingleVariableDistribution EnergyDistribution;
-      double EnergyDistributionFunction(double e);
+      extern cSingleVariableDistribution<int> EnergyDistribution[PIC::nTotalSpecies];
+      double EnergyDistributionFunction(double e,int *spec);
 
       //generate particle properties
-      inline bool GenerateParticleProperties(double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
-        return Exosphere::SourceProcesses::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,&SurfaceInjectionDistribution,&EnergyDistribution);
+      inline bool GenerateParticleProperties(int spec,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+        return Exosphere::SourceProcesses::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec);
       }
     }
 
     namespace ImpactVaporization {
-      extern double SourceRate;
-      extern double HeliocentricDistance;
-      extern double SourceRatePowerIndex;
-      extern double SourceTemeprature;
+      static const double ImpactVaporization_SourceRate[]={0.0};
+      static const double ImpactVaporization_HeliocentricDistance=1.0*_AU_;
+      static const double ImpactVaporization_SourceRatePowerIndex=0.0;
+      static const double ImpactVaporization_SourceTemeprature[]={0.0};
 
       double GetTotalProductionRate(int spec,void *SphereDataPointer);
 
       //evaluate nemerically the source rate
-      extern double CalculatedTotalSodiumSourceRate;
+//      extern double CalculatedTotalSodiumSourceRate;
 
-      inline bool GenerateParticleProperties(double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode) {
+      inline bool GenerateParticleProperties(int spec,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode) {
         unsigned int idim;
         double r=0.0,vbulk[3]={0.0,0.0,0.0},ExternalNormal[3];
 
@@ -637,7 +642,7 @@ namespace Exosphere {
         if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
 
         //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
-        PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SourceTemeprature,ExternalNormal,_NA_SPEC_);
+        PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,ImpactVaporization_SourceTemeprature[spec],ExternalNormal,spec);
 
 
 /*
@@ -669,23 +674,23 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
     }
 
     namespace SolarWindSputtering {
-      extern double Yield;
-      extern double minInjectionEnergy;
-      extern double maxInjectionEnergy;
+      static const double SolarWindSputtering_Yield[]={0.0};
+      static const double SolarWindSputtering_minInjectionEnergy[]={0.0};
+      static const double SolarWindSputtering_maxInjectionEnergy[]={0.0};
 
-      extern double SourceRate,maxLocalSourceRate;
+      extern double SourceRate[PIC::nTotalSpecies],maxLocalSourceRate[PIC::nTotalSpecies];
 
       //the object for distribution of injection positino on the planet's surface
-      extern cSingleVariableDiscreteDistribution SurfaceInjectionDistribution;
-      double GetSurfaceElementSodiumProductionRate(int nElement);
+      extern cSingleVariableDiscreteDistribution<int> SurfaceInjectionDistribution[PIC::nTotalSpecies];
+      double GetSurfaceElementProductionRate(int nElement,int *spec);
 
       //evaluate nemerically the source rate
-      extern double CalculatedTotalSodiumSourceRate;
+//      extern double CalculatedTotalSodiumSourceRate;
 
       inline double GetSurfaceElementProductionRate(int spec,int SurfaceElement,void *SphereDataPointer) {
         double norm_IAU_OBJECT[3],norm_SO_OBJECT[3];
 
-        if (((cInternalSphericalData*)SphereDataPointer)->SodiumSurfaceElementPopulation[SurfaceElement]<=0.0) return 0.0;
+        if (((cInternalSphericalData*)SphereDataPointer)->SurfaceElementPopulation[spec][SurfaceElement]<=0.0) return 0.0;
 
         //get the normal to the surface element in 'IAU' frame
         memcpy(norm_IAU_OBJECT,(((cInternalSphericalData*)SphereDataPointer)->SurfaceElementExternalNormal+SurfaceElement)->norm,3*sizeof(double));
@@ -713,24 +718,25 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
         nd=((cInternalSphericalData*)SphereDataPointer)->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
         //return the local source rate
-        return ((cInternalSphericalData*)SphereDataPointer)->SolarWindSurfaceFlux[nd]*Yield*((cInternalSphericalData*)SphereDataPointer)->SurfaceElementArea[SurfaceElement];
+        return ((cInternalSphericalData*)SphereDataPointer)->SolarWindSurfaceFlux[nd]*SolarWindSputtering_Yield[spec]*((cInternalSphericalData*)SphereDataPointer)->SurfaceElementArea[SurfaceElement];
       }
 
-      inline double GetTotalProductionRate(int spec,void *SphereDataPointer) {return SourceRate;}
+      inline double GetTotalProductionRate(int spec,void *SphereDataPointer) {return SourceRate[spec];}
 
       //energy distribution function of injected particles
-      extern cSingleVariableDistribution EnergyDistribution;
-      double EnergyDistributionFunction(double e);
+      extern cSingleVariableDistribution<int> EnergyDistribution[PIC::nTotalSpecies];
+      double EnergyDistributionFunction(double e,int *spec);
 
       //generate particle properties
-      inline bool GenerateParticleProperties(double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
-        return Exosphere::SourceProcesses::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,&SurfaceInjectionDistribution,&EnergyDistribution);
+      inline bool GenerateParticleProperties(int spec,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+        return Exosphere::SourceProcesses::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec);
       }
     }
 
 
     double totalProductionRate(int spec,void *SphereDataPointer);
     long int InjectionBoundaryModel(void *SphereDataPointer);
+    long int InjectionBoundaryModel(int spec,void *SphereDataPointer);
   }
 
 
@@ -752,10 +758,10 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
 
 
     //sodium/surface interaction model
-    extern const double AccomodationCoefficient;
+    static const double AccomodationCoefficient[]={0.0};
 
     //sticking probability of sodium atoms
-    double SodiumStickingProbability(double& ReemissionParticleFraction,double Temp);
+    double StickingProbability(int spec,double& ReemissionParticleFraction,double Temp);
 
     //model of the interaction between particles and the planetary surface
     int ParticleSphereInteraction_SurfaceAccomodation(int spec,long int ptr,double *x,double *v,double &dtTotal,void *NodeDataPonter,void *SphereDataPointer);

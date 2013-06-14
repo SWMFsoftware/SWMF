@@ -84,6 +84,13 @@ namespace PIC {
   //The currect and total number of processors used in the simulation
   extern int ThisThread,nTotalThreads;
 
+  //the output and prefix for the diagnostic information
+  extern FILE* DiagnospticMessageStream;
+  extern char DiagnospricMessagePrefix[_MAX_STRING_LENGTH_PIC_];
+
+  //the directory for output files
+  extern char OutputDataFileDirectory[_MAX_STRING_LENGTH_PIC_];
+
 
   //the variables that controls the sampling procedure
   //LastSampleLength: the length of the last collected sample

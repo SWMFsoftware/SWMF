@@ -23,3 +23,9 @@ vector<PIC::IndividualModelSampling::fRequestStaticCellData> PIC::IndividualMode
 bool PIC::Alarm::AlarmInitialized=false,PIC::Alarm::WallTimeExeedsLimit=false;
 double PIC::Alarm::StartTime=0.0,PIC::Alarm::RequestedExecutionWallTime=0.0;
 
+//the file descriptor and the prefix for output of the diagnostic
+FILE* PIC::DiagnospticMessageStream=stdout;
+char PIC::DiagnospricMessagePrefix[_MAX_STRING_LENGTH_PIC_]="";
+
+//the directory for output files
+char PIC::OutputDataFileDirectory[_MAX_STRING_LENGTH_PIC_]=".";

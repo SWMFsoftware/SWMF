@@ -14,6 +14,7 @@
 
 #include "Exosphere.h"
 #include "constants.h"
+#include "SingleVariableDiscreteDistribution.h"
 
 
 double Exosphere::swE_Typical[3]={0.0,0.0,0.0};
@@ -29,11 +30,11 @@ double Exosphere::RotationVector_SO_FROZEN[3],Exosphere::RotationRate_SO_FROZEN;
 //matrix for transformation SO->HCI coordinate frame (used only when prepare data files)
 SpiceDouble Exosphere::Sampling::OutputDataFile::SO_to_HCI_TransformationMartix[6][6];
 
+//sample the source rate
+double Exosphere::Sampling::CalculatedSourceRate[PIC::nTotalSpecies][1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
+
 //sampling offsets
-int Exosphere::Sampling::SamplingDensity__ImpactVaporization_Offset=-1;
-int Exosphere::Sampling::SamplingDensity__PhotonStimulatedDesorption_Offset=-1;
-int Exosphere::Sampling::SamplingDensity__ThermalDesorption_Offset=-1;
-int Exosphere::Sampling::SamplingDensity__SolarWindSputtering_Offset=-1;
+int Exosphere::Sampling::SamplingDensityOffset[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
 int Exosphere::Sampling::CellSamplingDataOffset=-1;
 double **Exosphere::Sampling::PlanetNightSideReturnFlux=NULL;
 double *Exosphere::Sampling::TotalPlanetReturnFlux=NULL,*Exosphere::Sampling::PlanetSurfaceStickingRate=NULL;
@@ -49,15 +50,21 @@ int Exosphere::nTotalSourceProcesses=0;
 cInternalSphericalData *Exosphere::Planet=NULL;
 
 //the total source rate values for specific source processes
-double Exosphere::SourceProcesses::PhotonStimulatedDesorption::SourceRate=0.0,Exosphere::SourceProcesses::PhotonStimulatedDesorption::maxLocalSourceRate=0.0;
-double Exosphere::SourceProcesses::ThermalDesorption::SourceRate=0.0,Exosphere::SourceProcesses::ThermalDesorption::maxLocalSourceRate=0.0;
-double Exosphere::SourceProcesses::SolarWindSputtering::SourceRate=0.0,Exosphere::SourceProcesses::SolarWindSputtering::maxLocalSourceRate=0.0;
+double Exosphere::SourceProcesses::PhotonStimulatedDesorption::SourceRate[PIC::nTotalSpecies],Exosphere::SourceProcesses::PhotonStimulatedDesorption::maxLocalSourceRate[PIC::nTotalSpecies];
+double Exosphere::SourceProcesses::ThermalDesorption::SourceRate[PIC::nTotalSpecies],Exosphere::SourceProcesses::ThermalDesorption::maxLocalSourceRate[PIC::nTotalSpecies];
+double Exosphere::SourceProcesses::SolarWindSputtering::SourceRate[PIC::nTotalSpecies],Exosphere::SourceProcesses::SolarWindSputtering::maxLocalSourceRate[PIC::nTotalSpecies];
 
 //evaluate nemerically the source rate
+/*
 double Exosphere::SourceProcesses::PhotonStimulatedDesorption::CalculatedTotalSodiumSourceRate=0.0;
 double Exosphere::SourceProcesses::ImpactVaporization::CalculatedTotalSodiumSourceRate=0.0;
 double Exosphere::SourceProcesses::ThermalDesorption::CalculatedTotalSodiumSourceRate=0.0;
 double Exosphere::SourceProcesses::SolarWindSputtering::CalculatedTotalSodiumSourceRate=0.0;
+*/
+
+//user-defined additional output data
+Exosphere::Sampling::fUserDefinedAdditionalData_VariableList_OutputSampledModelData Exosphere::Sampling::UserDefinedAdditionalData_VariableList_OutputSampledModelData=NULL;
+Exosphere::Sampling::fUserDefinedAdditionalData_OutputSampledModelData Exosphere::Sampling::UserDefinedAdditionalData_OutputSampledModelData=NULL;
 
 //request the sampling and particle's field data
 int Exosphere::Sampling::RequestSamplingData(int offset) {
@@ -66,26 +73,32 @@ int Exosphere::Sampling::RequestSamplingData(int offset) {
   if (CellSamplingDataOffset!=-1) exit(__LINE__,__FILE__,"Error: second request for the sampling data");
 
   CellSamplingDataOffset=offset;
+  for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SamplingDensityOffset[iSource]=-1;
 
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
-  SamplingDensity__ImpactVaporization_Offset=CellSamplingDataOffset+SamplingLength;
+  SamplingDensityOffset[_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_]=CellSamplingDataOffset+SamplingLength;
   SamplingLength+=sizeof(double)*PIC::nTotalSpecies;
 #endif
 
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
-  Exosphere::Sampling::SamplingDensity__PhotonStimulatedDesorption_Offset=CellSamplingDataOffset+SamplingLength;
+  Exosphere::Sampling::SamplingDensityOffset[_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_]=CellSamplingDataOffset+SamplingLength;
   SamplingLength+=sizeof(double)*PIC::nTotalSpecies;
 #endif
 
 #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
-  SamplingDensity__ThermalDesorption_Offset=CellSamplingDataOffset+SamplingLength;
+  SamplingDensityOffset[_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_]=CellSamplingDataOffset+SamplingLength;
   SamplingLength+=sizeof(double)*PIC::nTotalSpecies;
 #endif
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
-  SamplingDensity__SolarWindSputtering_Offset=CellSamplingDataOffset+SamplingLength;
+  SamplingDensityOffset[_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_]=CellSamplingDataOffset+SamplingLength;
   SamplingLength+=sizeof(double)*PIC::nTotalSpecies;
+#endif
+
+  //reserve the space for sampling particles's density generated by user defined source functions
+#if _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_ == _EXOSPHERE_SOURCE__ON_
+$MARKER:RESERVE-CELL-SAMPLING-DATA-BUFFER$
 #endif
 
 
@@ -102,9 +115,9 @@ void Exosphere::Init_BeforeParser() {
   int idim;
 
   //calculate the typical value of the motional electrical field
-  swE_Typical[0]=-(swVelocity_Typical[1]*swB_Typical[2]-swVelocity_Typical[2]*swB_Typical[1]);
-  swE_Typical[1]=+(swVelocity_Typical[0]*swB_Typical[2]-swVelocity_Typical[2]*swB_Typical[0]);
-  swE_Typical[2]=-(swVelocity_Typical[0]*swB_Typical[1]-swVelocity_Typical[1]*swB_Typical[0]);
+  swE_Typical[0]=-(Exosphere_swVelocity_Typical[1]*Exosphere_swB_Typical[2]-Exosphere_swVelocity_Typical[2]*Exosphere_swB_Typical[1]);
+  swE_Typical[1]=+(Exosphere_swVelocity_Typical[0]*Exosphere_swB_Typical[2]-Exosphere_swVelocity_Typical[2]*Exosphere_swB_Typical[0]);
+  swE_Typical[2]=-(Exosphere_swVelocity_Typical[0]*Exosphere_swB_Typical[1]-Exosphere_swVelocity_Typical[1]*Exosphere_swB_Typical[0]);
 
 
   //set the pre-processor into the ICES model
@@ -112,6 +125,10 @@ void Exosphere::Init_BeforeParser() {
 
   //set up the model sampling procedure
   PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(Sampling::SampleModelData,Sampling::OutputSampledModelData);
+
+  //init the buffer for sampling of the source rate
+  for (int s=0;s<PIC::nTotalSpecies;s++) for (int i=0;i<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;i++)  Sampling::CalculatedSourceRate[s][i]=0.0;
+
 
   //furnish the SPICE kernels
   char str[_MAX_STRING_LENGTH_PIC_];
@@ -186,27 +203,48 @@ void Exosphere::Init_BeforeParser() {
 
   //init the energy distribution function for specific injection processes
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
-  SourceProcesses::PhotonStimulatedDesorption::EnergyDistribution.Init(SourceProcesses::PhotonStimulatedDesorption::minInjectionEnergy, \
-      SourceProcesses::PhotonStimulatedDesorption::maxInjectionEnergy,SourceProcesses::PhotonStimulatedDesorption::EnergyDistributionFunction, \
-      _SINGLE_VARIABLE_DISTRIBUTION__INTERPOLATION_MODE__LINEAR_);
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (SourceProcesses::PhotonStimulatedDesorption::PhotonStimulatedDesorption_CrossSection[spec]>0.0) {
+    SourceProcesses::PhotonStimulatedDesorption::EnergyDistribution[spec].Init(SourceProcesses::PhotonStimulatedDesorption::PhotonStimulatedDesorption_minInjectionEnergy[spec], \
+        SourceProcesses::PhotonStimulatedDesorption::PhotonStimulatedDesorption_maxInjectionEnergy[spec],SourceProcesses::PhotonStimulatedDesorption::EnergyDistributionFunction, \
+        _SINGLE_VARIABLE_DISTRIBUTION__INTERPOLATION_MODE__LINEAR_,&spec);
 
-  if (PIC::ThisThread==0) {
-    SourceProcesses::PhotonStimulatedDesorption::EnergyDistribution.fPrintCumulativeDistributionFunction("CumulativeEnergyDistribution-PSD.dat");
-    SourceProcesses::PhotonStimulatedDesorption::EnergyDistribution.fPrintDistributionFunction("EnergyDistribution-PSD.dat");
+    if (PIC::ThisThread==0) {
+      char fname[200];
+
+      sprintf(fname,"CumulativeEnergyDistribution-PSD.nspec=%i.%s.dat",spec,PIC::MolecularData::GetChemSymbol(spec));
+      SourceProcesses::PhotonStimulatedDesorption::EnergyDistribution[spec].fPrintCumulativeDistributionFunction(fname);
+
+      sprintf(fname,"EnergyDistribution-PSD.nspec=%i.%s.dat",spec,PIC::MolecularData::GetChemSymbol(spec));
+      SourceProcesses::PhotonStimulatedDesorption::EnergyDistribution[spec].fPrintDistributionFunction(fname,&spec);
+    }
   }
 #endif
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
-  SourceProcesses::SolarWindSputtering::EnergyDistribution.Init(SourceProcesses::SolarWindSputtering::minInjectionEnergy, \
-      SourceProcesses::SolarWindSputtering::maxInjectionEnergy,SourceProcesses::SolarWindSputtering::EnergyDistributionFunction, \
-      _SINGLE_VARIABLE_DISTRIBUTION__INTERPOLATION_MODE__LINEAR_);
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (SourceProcesses::SolarWindSputtering::SolarWindSputtering_Yield[spec]>0.0) {
+    SourceProcesses::SolarWindSputtering::EnergyDistribution[spec].Init(SourceProcesses::SolarWindSputtering::SolarWindSputtering_minInjectionEnergy[spec], \
+        SourceProcesses::SolarWindSputtering::SolarWindSputtering_maxInjectionEnergy[spec],SourceProcesses::SolarWindSputtering::EnergyDistributionFunction, \
+        _SINGLE_VARIABLE_DISTRIBUTION__INTERPOLATION_MODE__LINEAR_,&spec);
 
-  if (PIC::ThisThread==0) {
-    SourceProcesses::SolarWindSputtering::EnergyDistribution.fPrintCumulativeDistributionFunction("CumulativeEnergyDistribution-SWS.dat");
-    SourceProcesses::SolarWindSputtering::EnergyDistribution.fPrintDistributionFunction("EnergyDistribution-SWS.dat");
+    if (PIC::ThisThread==0) {
+      char fname[200];
+
+      sprintf(fname,"CumulativeEnergyDistribution-SWS.nspec=%i.%s.dat",spec,PIC::MolecularData::GetChemSymbol(spec));
+      SourceProcesses::SolarWindSputtering::EnergyDistribution[spec].fPrintCumulativeDistributionFunction(fname);
+
+      sprintf(fname,"EnergyDistribution-SWS.nspec=%i.%s.dat",spec,PIC::MolecularData::GetChemSymbol(spec));
+      SourceProcesses::SolarWindSputtering::EnergyDistribution[spec].fPrintDistributionFunction(fname,&spec);
+    }
   }
 #endif
 
+
+  //init the source rate buffers
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+    SourceProcesses::PhotonStimulatedDesorption::SourceRate[spec]=0.0,SourceProcesses::PhotonStimulatedDesorption::maxLocalSourceRate[spec]=0.0;
+    SourceProcesses::ThermalDesorption::SourceRate[spec]=0.0,SourceProcesses::ThermalDesorption::maxLocalSourceRate[spec]=0.0;
+    SourceProcesses::SolarWindSputtering::SourceRate[spec]=0.0,SourceProcesses::SolarWindSputtering::maxLocalSourceRate[spec]=0.0;
+  }
 }
 
 void Exosphere::Init_AfterParser() {
@@ -215,16 +253,16 @@ void Exosphere::Init_AfterParser() {
   int offset,s,i;
 
   Sampling::PlanetNightSideReturnFlux=new double *[PIC::nTotalSpecies];
-  Sampling::PlanetNightSideReturnFlux[0]=new double [PIC::nTotalSpecies*(_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1)];
+  Sampling::PlanetNightSideReturnFlux[0]=new double [PIC::nTotalSpecies*(_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1)];
 
   Sampling::TotalPlanetReturnFlux=new double[PIC::nTotalSpecies];
   Sampling::PlanetSurfaceStickingRate=new double[PIC::nTotalSpecies];
 
   for (s=0,offset=0;s<PIC::nTotalSpecies;s++) {
     Sampling::PlanetNightSideReturnFlux[s]=Sampling::PlanetNightSideReturnFlux[0]+offset;
-    offset+=_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1;
+    offset+=_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1;
 
-    for (i=0;i<_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1;i++) Sampling::PlanetNightSideReturnFlux[s][i]=0.0;
+    for (i=0;i<_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1;i++) Sampling::PlanetNightSideReturnFlux[s][i]=0.0;
 
     Sampling::TotalPlanetReturnFlux[s]=0.0,Sampling::PlanetSurfaceStickingRate[s]=0.0;
   }
@@ -261,13 +299,13 @@ void Exosphere::SWMFdataPreProcessor(double *x,PIC::ICES::cDataNodeSWMF& data) {
 
   if (data.status!=_PIC_ICES__STATUS_OK_) {
     for (i=0;i<3;i++) {
-      data.B[i]=swB_Typical[i];
+      data.B[i]=Exosphere_swB_Typical[i];
       data.E[i]=swE_Typical[i];
-      data.swVel[i]=swVelocity_Typical[i];
+      data.swVel[i]=Exosphere_swVelocity_Typical[i];
     }
 
-    data.swTemperature=swTemperature_Typical;
-    data.swNumberDensity=swNumberDensity_Typical;
+    data.swTemperature=Exosphere_swTemperature_Typical;
+    data.swNumberDensity=Exosphere_swNumberDensity_Typical;
 
     //p=2*n*k*T assuming quasi neutrality ni=ne=n and Ti=Te=T
     data.swPressure=2.0*data.swNumberDensity*Kbol*data.swTemperature;
@@ -275,7 +313,7 @@ void Exosphere::SWMFdataPreProcessor(double *x,PIC::ICES::cDataNodeSWMF& data) {
 }
 
 //calculate the sodium column density and plot
-void Exosphere::ColumnDensityIntegration_Tail(char *fname) {
+void Exosphere::ColumnIntegral::Tail(char *fname) {
   double xEarth_new[3]={0.0,0.0,0.0};
 
   const int nPoints=500;
@@ -299,27 +337,37 @@ void Exosphere::ColumnDensityIntegration_Tail(char *fname) {
 
   if (PIC::ThisThread==0) {
     fout=fopen(fname,"w");
-    fprintf(fout,"VARIABLES=\"Distance from the planet\", \"Total Column Density\"\n");
+    char vlist[_MAX_STRING_LENGTH_PIC_]="";
+
+    ColumnIntegral::GetVariableList(vlist);
+    fprintf(fout,"VARIABLES=\"Distance from the planet\" %s\n",vlist);
   }
 
   for (npoint=0;npoint<nPoints;npoint++) {
      double l[3];
-     double ColumnDensity;
+     int StateVectorLength=ColumnIntegral::GetVariableList(NULL);
+     double StateVector[StateVectorLength];
 
      l[0]=-(IntegrationRangeBegin+npoint*IntegrationStep)-xEarth_new[0];
      l[1]=-xEarth_new[1];
      l[2]=-xEarth_new[2];
 
-     PIC::ColumnIntegration::GetCoulumnIntegral(&ColumnDensity,1,xEarth_new,l,SodiumCoulumnDensityIntegrant);
+     PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,StateVectorLength,xEarth_new,l,ColumnIntegral::CoulumnDensityIntegrant);
+     ColumnIntegral::ProcessColumnIntegrationVector(StateVector,StateVectorLength);
 
-     if (PIC::ThisThread==0) fprintf(fout,"%e   %e\n",IntegrationRangeBegin+npoint*IntegrationStep,ColumnDensity);
+     if (PIC::ThisThread==0) {
+       fprintf(fout,"%e  ",IntegrationRangeBegin+npoint*IntegrationStep);
+
+       for (int i=0;i<StateVectorLength;i++) fprintf(fout,"   %e",StateVector[i]);
+       fprintf(fout,"\n");
+     }
   }
 
   if (PIC::ThisThread==0) fclose(fout);
 }
 
 
-void Exosphere::GetColumnIntegralLimbSubsolarPoint(double* ColumnIntegralVector,int ColumnIntegralVectorLength) {
+void Exosphere::ColumnIntegral::GetSubsolarPointDirection(double *LimbDirection,double *EarthPosition) {
   SpiceInt n,nxpts;
   SpiceDouble rad[3],xpt0[3],xpt1[3],xLimb_IAU[3],xLimb_SO[3];
   SpiceDouble EarthState_IAU[6],EarthState_SO[6],lt,SunState_IAU[6];
@@ -357,7 +405,7 @@ void Exosphere::GetColumnIntegralLimbSubsolarPoint(double* ColumnIntegralVector,
   spkezr_c("Earth",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,EarthState_SO,&lt);
 
   //get the column integral
-  double l[3],rEarth[3],c=0.0;
+  double l[3],c=0.0;
 
   for (idim=0;idim<3;idim++) {
     //recalculate position of the limb in the 'SO_FRAME'
@@ -371,16 +419,14 @@ void Exosphere::GetColumnIntegralLimbSubsolarPoint(double* ColumnIntegralVector,
     l[idim]=xLimb_SO[idim]-EarthState_SO[idim];
     c+=pow(l[idim],2);
 
-    rEarth[idim]=1.0E3*EarthState_SO[idim];
+    EarthPosition[idim]=1.0E3*EarthState_SO[idim];
   }
 
-  for (c=sqrt(c),idim=0;idim<3;idim++) l[idim]/=c;
-
-  PIC::ColumnIntegration::GetCoulumnIntegral(ColumnIntegralVector,ColumnIntegralVectorLength,rEarth,l,SodiumCoulumnDensityIntegrant);
+  for (c=sqrt(c),idim=0;idim<3;idim++) LimbDirection[idim]=l[idim]/c;
 }
 
 
-void Exosphere::ColumnDensityIntegration_Limb(char *fname) {
+void Exosphere::ColumnIntegral::Limb(char *fname) {
   FILE *fout=NULL,*fLimb=NULL;
 
   const double maxAltitude=50.0; //altititude in radii of the object
@@ -454,20 +500,23 @@ void Exosphere::ColumnDensityIntegration_Limb(char *fname) {
   if (PIC::ThisThread==0) {
     const SpiceInt lenout = 35;
     SpiceChar utcstr[lenout+2];
+    char vlist[_MAX_STRING_LENGTH_PIC_]="";
+
+    ColumnIntegral::GetVariableList(vlist);
 
     fout=fopen(fname,"w");
 
     et2utc_c(Exosphere::OrbitalMotion::et,"ISOC",0,lenout,utcstr);
     fprintf(fout,"TITLE=\"UTC=%s, Radial size of the planet=%e\"\n",utcstr,atan(_RADIUS_(_TARGET_)/sqrt(rEarth[0]*rEarth[0]+rEarth[1]*rEarth[1]+rEarth[2]*rEarth[2]))/Pi*180.0);
 
-    fprintf(fout,"VARIABLES=\"R [Object Radii]\", \"R [m]\", \"Angle from the center of the object [degree]\", \"Column Density [m^{-2}]\", \"Intensity (5891.58A) [R]\", \"Intensity (5897.56A) [R]\" \n");
+    fprintf(fout,"VARIABLES=\"R [Object Radii]\", \"R [m]\", \"Angle from the center of the object [degree]\" %s \n",vlist);
     fprintf(fout,"ZONE T=\"Column Density Along the Limb\"\n");
 
 
     //output emmision and column integrals at the limb at different phase angles
     if (PIC::DataOutputFileNumber==0) {
       fLimb=fopen("pic.LimbIntegrals.dat","w");
-      fprintf(fLimb,"VARIABLES=\"Phase Angle[degrees]\", \"Julian Date\", \"Object Radial Velocity\", \"Column Density [m^{-2}]\", \"g-factor (5891.58A)\", \"Intensity (5891.58A) [R]\", \"g-factor (5897.56A)\", \"Intensity (5897.56A) [R]\" \n");
+      fprintf(fLimb,"VARIABLES=\"Phase Angle[degrees]\", \"Julian Date\", \"Object Radial Velocity\"  %s \n",vlist);
     }
     else fLimb=fopen("pic.LimbIntegrals.dat","a");
   }
@@ -475,7 +524,7 @@ void Exosphere::ColumnDensityIntegration_Limb(char *fname) {
 
 
   //calculate the integrals
-  const int StateVectorLength=3;
+  int StateVectorLength=ColumnIntegral::GetVariableList(NULL);
   double StateVector[StateVectorLength];
   double StateVectorMax[StateVectorLength]; //maximum values of the state variables == the values of the state variables at the limb
 
@@ -491,11 +540,15 @@ void Exosphere::ColumnDensityIntegration_Limb(char *fname) {
 
     for (c=sqrt(c),idim=0;idim<3;idim++) l[idim]/=c;
 
-    PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,StateVectorLength,rEarth,l,SodiumCoulumnDensityIntegrant);
+    PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,StateVectorLength,rEarth,l,ColumnIntegral::CoulumnDensityIntegrant);
+    ColumnIntegral::ProcessColumnIntegrationVector(StateVector,StateVectorLength);
+
     for (int i=0;i<StateVectorLength;i++) if (StateVectorMax[i]<StateVector[i]) StateVectorMax[i]=StateVector[i];
 
     if (PIC::ThisThread==0) {
-      fprintf(fout,"%e   %e   %e   %e   %e   %e\n",R,R*_RADIUS_(_TARGET_),atan((1.0+R)*_RADIUS_(_TARGET_)/sqrt(rEarth[0]*rEarth[0]+rEarth[1]*rEarth[1]+rEarth[2]*rEarth[2]))/Pi*180.0,StateVector[0],StateVector[1],StateVector[2]);
+      fprintf(fout,"%e   %e   %e\n",R,R*_RADIUS_(_TARGET_),atan((1.0+R)*_RADIUS_(_TARGET_)/sqrt(rEarth[0]*rEarth[0]+rEarth[1]*rEarth[1]+rEarth[2]*rEarth[2]))/Pi*180.0);
+      for (int i=0;i<StateVectorLength;i++) fprintf(fout,"   %e",StateVector[i]);
+      fprintf(fout,"\n");
     }
 
     R+=dAlt;
@@ -522,11 +575,9 @@ void Exosphere::ColumnDensityIntegration_Limb(char *fname) {
 
     //VARIABLES=\"Phase Angle[degrees]\", \"Julian Date\", \"Object Radial Velocity\", \"Column Density [m^{-2}]\", \"g-factor (5891.58A)\", \"Intensity (5891.58A) [R]\", \"g-factor (5897.56A)\", \"Intensity (5897.56A) [R]\" \n");
 
-    fprintf(fLimb,"%e %e  %e  %e  %e  %e  %e  %e\n",Exosphere::OrbitalMotion::GetPhaseAngle(Exosphere::OrbitalMotion::et)/Pi*180.0,j2000_c()+Exosphere::OrbitalMotion::et/spd_c(),
-        1.0E3*StateSun_SO[3],StateVectorMax[0],
-        SodiumGfactor__5891_58A__Killen_2009_AJSS(1.0E3*StateSun_SO[3],1.0E3*StateSun_SO[0]),StateVectorMax[1] ,
-        SodiumGfactor__5897_56A__Killen_2009_AJSS(1.0E3*StateSun_SO[3],1.0E3*StateSun_SO[0]),StateVectorMax[2]);
-
+    fprintf(fLimb,"%e  %e  %e",Exosphere::OrbitalMotion::GetPhaseAngle(Exosphere::OrbitalMotion::et)/Pi*180.0,j2000_c()+Exosphere::OrbitalMotion::et/spd_c(),1.0E3*StateSun_SO[3]);
+    for (int i=0;i<StateVectorLength;i++) fprintf(fLimb,"   %e",StateVectorMax[i]);
+    fprintf(fLimb,"\n");
     fclose(fLimb);
   }
 }
@@ -686,7 +737,8 @@ void Exosphere::ColumnDensityIntegration_Limb(char *fname) {
 */
 
 
-void Exosphere::ColumnDensityIntegration_Map(char *fname,double dXmax,double dZmax,int nXpoints) {
+/*
+void Exosphere::ColumnIntegral::Map(char *fname,double dXmax,double dZmax,int nXpoints) {
   double l[3],xEarth_new[3]={0.0,0.0,0.0};
 
   //find position of Earth
@@ -736,7 +788,7 @@ void Exosphere::ColumnDensityIntegration_Map(char *fname,double dXmax,double dZm
       PhiZ=minPhiZ+dPhi*iZ;
       l[2]=r*tan(PhiZ)-xEarth_new[2];
 
-      PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,3,xEarth_new,l,SodiumCoulumnDensityIntegrant);
+      PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,3,xEarth_new,l,ColumnIntegral::CoulumnDensityIntegrant);
 
       if (PIC::ThisThread==0) fprintf(fout,"%e   %e   %e   %e  %e\n",-PhiX/Pi*180.0,PhiZ/Pi*180.0,StateVector[0],StateVector[1],StateVector[2]);
     }
@@ -745,6 +797,7 @@ void Exosphere::ColumnDensityIntegration_Map(char *fname,double dXmax,double dZm
 
   if (PIC::ThisThread==0) fclose(fout);
 }
+*/
 
 /*
 void Exosphere::ColumnDensityIntegration_CircularMap(char *fname,double rmax,double dRmin,double dRmax,int nAzimuthPoints,SpiceDouble EphemerisTime) {
@@ -877,7 +930,7 @@ void Exosphere::ColumnDensityIntegration_CircularMap(char *fname,double rmax,dou
   if (PIC::ThisThread==0) fclose(fout);
 }
 */
-void Exosphere::ColumnDensityIntegration_CircularMap(char *fname,double rmax,double dRmin,double dRmax,int nAzimuthPoints,SpiceDouble EphemerisTime) {
+void Exosphere::ColumnIntegral::CircularMap(char *fname,double rmax,double dRmin,double dRmax,int nAzimuthPoints,SpiceDouble EphemerisTime) {
   double l[3],xEarthSO[3]={0.0,0.0,0.0},lEarth;
   double rr,dR,R=0.0;
   FILE *fout=NULL;
@@ -906,12 +959,15 @@ void Exosphere::ColumnDensityIntegration_CircularMap(char *fname,double rmax,dou
   t=(long int)(log(dRmax/dRmin)/log(rr)-2.0);
   rr=pow(dRmax/dRmin,1.0/(t+2.0));
 
-  //determine the coordinate frame with z-axis align with the Eath-Mercury direction
-  //e2 -> direction from Mercury to the Earth, e0 -> projection of the z-axis ofthe SO frame, e1 -> cross product of e2 and e0
+
   double e0[3],e1[3],e2[3],c,c1;
   int idim;
 
-  for (idim=0,c=0.0;idim<3;idim++) {
+
+
+  //determine the coordinate frame with z-axis align with the Eath-Mercury direction
+  //e2 -> direction from Mercury to the Earth, e1 -> a part of GSE z-axis ortogonal to e2, and e0 -> to get the right handed frame
+/*  for (idim=0,c=0.0;idim<3;idim++) {
     e2[idim]=-EarthStateSO[idim];
     c+=pow(e2[idim],2);
   }
@@ -928,7 +984,46 @@ void Exosphere::ColumnDensityIntegration_CircularMap(char *fname,double rmax,dou
 
   e0[0]=e2[1]*e1[2]-e1[1]*e2[2];
   e0[1]=e1[0]*e2[2]-e2[0]*e1[2];
-  e0[2]=e2[0]*e1[1]-e1[0]*e2[1];
+  e0[2]=e2[0]*e1[1]-e1[0]*e2[1];*/
+
+
+  double e0GSE[3],e1GSE[3],e2GSE[3];
+
+  for (idim=0,c=0.0;idim<3;idim++) {
+    e2GSE[idim]=ObjectStateGSE[idim];
+    c+=pow(e2GSE[idim],2);
+  }
+
+  for (c=sqrt(c),idim=0;idim<3;idim++) e2GSE[idim]/=c;
+
+  //determine e1 (projection of z-axix)
+  e1GSE[0]=-e2GSE[2]*e2GSE[0];
+  e1GSE[1]=-e2GSE[2]*e2GSE[1];
+  e1GSE[2]=1.0-e2GSE[2]*e2GSE[2];
+
+  c=sqrt(e1GSE[0]*e1GSE[0]+e1GSE[1]*e1GSE[1]+e1GSE[2]*e1GSE[2]);
+  for (idim=0;idim<3;idim++) e1GSE[idim]/=c;
+
+  e0GSE[0]=-(e2GSE[1]*e1GSE[2]-e1GSE[1]*e2GSE[2]);
+  e0GSE[1]=-(e1GSE[0]*e2GSE[2]-e2GSE[0]*e1GSE[2]);
+  e0GSE[2]=-(e2GSE[0]*e1GSE[1]-e1GSE[0]*e2GSE[1]);
+
+  SpiceDouble xform[6][6],eGSE2SO[6]={0.0,0.0,0.0,0.0,0.0,0.0},eGSE2SOres[6]={0.0,0.0,0.0,0.0,0.0,0.0};
+
+  sxform_c("GSE",SO_FRAME,EphemerisTime,xform);
+
+  eGSE2SO[0]=e0GSE[0],eGSE2SO[1]=e0GSE[1],eGSE2SO[2]=e0GSE[2];
+  mxvg_c(xform,eGSE2SO,6,6,eGSE2SOres);
+  e0[0]=eGSE2SOres[0],e0[1]=eGSE2SOres[1],e0[2]=eGSE2SOres[2];
+
+  eGSE2SO[0]=e1GSE[0],eGSE2SO[1]=e1GSE[1],eGSE2SO[2]=e1GSE[2];
+  mxvg_c(xform,eGSE2SO,6,6,eGSE2SOres);
+  e1[0]=eGSE2SOres[0],e1[1]=eGSE2SOres[1],e1[2]=eGSE2SOres[2];
+
+  eGSE2SO[0]=e2GSE[0],eGSE2SO[1]=e2GSE[1],eGSE2SO[2]=e2GSE[2];
+  mxvg_c(xform,eGSE2SO,6,6,eGSE2SOres);
+  e2[0]=eGSE2SOres[0],e2[1]=eGSE2SOres[1],e2[2]=eGSE2SOres[2];
+
 
   //calculate the number of the radial points
   int nRadialPoints=0;
@@ -945,22 +1040,23 @@ void Exosphere::ColumnDensityIntegration_CircularMap(char *fname,double rmax,dou
   if (PIC::ThisThread==0) {
     const SpiceInt lenout = 35;
     SpiceChar utcstr[lenout+2];
+    char vlist[_MAX_STRING_LENGTH_PIC_]="";
 
+    ColumnIntegral::GetVariableList(vlist);
     fout=fopen(fname,"w");
 
     et2utc_c(Exosphere::OrbitalMotion::et,"ISOC",0,lenout,utcstr);
     fprintf(fout,"TITLE=\"UTC=%s, Radial size of the planet=%e\"\n",utcstr,atan(_RADIUS_(_TARGET_)/lEarth)/Pi*180.0);
 
-    fprintf(fout,"VARIABLES=\"l0 In Ecliptic Plane []\", \"l0 Out of Ecpliptic Plane []\", \"Column Density [m^{-2}]\", \"Intensity (5891.58A) [R]\", \"Intensity (5897.56A) [R]\" \n");
+    fprintf(fout,"VARIABLES=\"l0 In Ecliptic Plane []\", \"l1 Out of Ecpliptic Plane []\" %s\n",vlist);
     fprintf(fout,"ZONE T=\"Column Density Map\"\n");
     fprintf(fout,"I=%i, J=%i, K=1, ZONETYPE=Ordered\n",nAzimuthPoints+1,nRadialPoints);
     fprintf(fout,"DATAPACKING=POINT\n");
-    fprintf(fout,"DT=(SINGLE SINGLE SINGLE SINGLE SINGLE)\n");
   }
 
 
   //calcualte the column integrals
-  const int StateVectorLength=3;
+  int StateVectorLength=ColumnIntegral::GetVariableList(NULL);
   double StateVector[StateVectorLength];
   double AzimuthAngle,l0[3],ZenithAngle;
 
@@ -982,9 +1078,14 @@ void Exosphere::ColumnDensityIntegration_CircularMap(char *fname,double rmax,dou
       l[1]=l0[0]*e0[1]+l0[1]*e1[1]+l0[2]*e2[1];
       l[2]=l0[0]*e0[2]+l0[1]*e1[2]+l0[2]*e2[2];
 
-      PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,StateVectorLength,xEarthSO,l,SodiumCoulumnDensityIntegrant);
+      PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,StateVectorLength,xEarthSO,l,ColumnIntegral::CoulumnDensityIntegrant);
+      ColumnIntegral::ProcessColumnIntegrationVector(StateVector,StateVectorLength);
 
-      if (PIC::ThisThread==0) fprintf(fout,"%e   %e   %e   %e  %e\n",l0[0],l0[1],StateVector[0],StateVector[1],StateVector[2]);
+      if (PIC::ThisThread==0) {
+        fprintf(fout,"%e   %e",l0[0],l0[1]);
+        for (int i=0;i<StateVectorLength;i++) fprintf(fout,"   %e",StateVector[i]);
+        fprintf(fout,"\n");
+      }
 
     }
 
@@ -1031,7 +1132,7 @@ void Exosphere::Sampling::SampleModelData() {
     for (spec=0;spec<PIC::nTotalSpecies;spec++) {
       double SpecieSurfaceDensity;
 
-      SpecieSurfaceDensity=(spec==_NA_SPEC_) ? Planet->SodiumSurfaceElementPopulation[el_IAU]/SurfaceArea_IAU : 0.0;
+      SpecieSurfaceDensity=Planet->SurfaceElementPopulation[spec][el_IAU]/SurfaceArea_IAU;
       Planet->SampleSpeciesSurfaceAreaDensity[spec][el_SO]+=SpecieSurfaceDensity;
     }
 
@@ -1058,35 +1159,86 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
   et2utc_c(Exosphere::OrbitalMotion::et,"ISOC",0,lenout,utcstr);
 
-  if (PIC::ThisThread==0) {
-    printf("Output file number: %i\n",DataOutputFileNumber);
-    printf("Simulation Time: %s, et=%e,TAA=%e [deg]\n",utcstr,Exosphere::OrbitalMotion::et,Exosphere::OrbitalMotion::TAA/Pi*180.0);
-    printf("rHeliocenric=%e, vRadial=%e\n",Exosphere::xObjectRadial,Exosphere::vObjectRadial);
-    printf("Sodium RadiationPressure Acceleration=%e\n",SodiumRadiationPressureAcceleration__Combi_1997_icarus(Exosphere::vObjectRadial,Exosphere::xObjectRadial));
-
-    printf("\nSource rates:\n");
-
-    if (DataOutputFileNumber==0) {
-      fSource=fopen("pic.SourceRate.dat","w");
-      fprintf(fSource,"VARIABLES=\"Time [JD] \", \"TAA [degrees]\", \"Phase Angle [degrees]\", \"PSD [m^{-2} s^{-1}]\", \"IV [m^{-2} s^{-1}]\", \"TD [m^{-2} s^{-1}]\", \"SWS [m^{-2} s^{-1}]\",\"Total Source Rate [m^{-2} s^{-1}]\","
-          "\"Na Radiation Pressure Acceleration [m/s^2]\", \"vObject [m/s]\", \"rObject [AU]\", \"Output file number\" \n");
-
-    } else fSource=fopen("pic.SourceRate.dat","a");
-
-    et2utc_c(Exosphere::OrbitalMotion::et,"J",5,lenout,utcstr);
-    fprintf(fSource,"%s  %e  %e",utcstr+3,Exosphere::OrbitalMotion::TAA/Pi*180.0,Exosphere::OrbitalMotion::GetPhaseAngle(Exosphere::OrbitalMotion::et)/Pi*180.0);
-  }
-
-  et2utc_c(Exosphere::OrbitalMotion::et,"ISOC",0,lenout,utcstr);
-
   //save the surface properties
   if (PIC::ThisThread==0) {
     char fname[300];
 
     sprintf(fname,"pic.SurfaceProperties.%s.out=%i.dat",utcstr,DataOutputFileNumber);
-    Exosphere::Planet->SaveSurfaceDensity(fname,Planet->GetTotalSurfaceElementsNumber());
+    Exosphere::Planet->SaveSurfaceDensity(fname,Planet->GetTotalSurfaceElementsNumber(),PIC::nTotalSpecies);
   }
 
+  if (PIC::ThisThread==0) {
+    printf("Output file number: %i\n",DataOutputFileNumber);
+    printf("Simulation Time: %s, et=%e,TAA=%e [deg]\n",utcstr,Exosphere::OrbitalMotion::et,Exosphere::OrbitalMotion::TAA/Pi*180.0);
+    printf("rHeliocenric=%e (%e AU), vRadial=%e\n",Exosphere::xObjectRadial,Exosphere::xObjectRadial/_AU_,Exosphere::vObjectRadial);
+    printf("Phase angle=%e [degrees]\n",Exosphere::OrbitalMotion::GetPhaseAngle(Exosphere::OrbitalMotion::et)*180.0/Pi);
+    printf("Sodium RadiationPressure Acceleration=%e\n",SodiumRadiationPressureAcceleration__Combi_1997_icarus(Exosphere::vObjectRadial,Exosphere::xObjectRadial));
+
+    printf("\nSource rates:\n");
+  }
+
+
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+    SourceRate=0.0,TotalSourceRate=0.0;
+
+    if (PIC::ThisThread==0) {
+      char fname[_MAX_STRING_LENGTH_PIC_];
+
+      sprintf(fname,"pic.SourceRate.%s.spec=%i.dat",PIC::MolecularData::GetChemSymbol(spec),spec);
+
+      if (DataOutputFileNumber==0) {
+        fSource=fopen(fname,"w");
+        fprintf(fSource,"VARIABLES=\"Time [JD] \", \"TAA [degrees]\", \"Phase Angle [degrees]\", \"PSD [m^{-2} s^{-1}]\", \"IV [m^{-2} s^{-1}]\", \"TD [m^{-2} s^{-1}]\", \"SWS [m^{-2} s^{-1}]\",\"Total Source Rate [m^{-2} s^{-1}]\","
+          "\"Na Radiation Pressure Acceleration [m/s^2]\", \"vObject [m/s]\", \"rObject [AU]\", \"Output file number\" ");
+
+        if (UserDefinedAdditionalData_VariableList_OutputSampledModelData!=NULL) {
+          UserDefinedAdditionalData_VariableList_OutputSampledModelData(fSource);
+        }
+
+        fprintf(fSource,"\n");
+      } else {
+        fSource=fopen(fname,"a");
+      }
+
+      et2utc_c(Exosphere::OrbitalMotion::et,"J",5,lenout,utcstr);
+      fprintf(fSource,"%s  %e  %e",utcstr+3,Exosphere::OrbitalMotion::TAA/Pi*180.0,Exosphere::OrbitalMotion::GetPhaseAngle(Exosphere::OrbitalMotion::et)/Pi*180.0);
+    }
+
+
+    //calculate the source rate
+    for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
+      ierr=MPI_Gather(&CalculatedSourceRate[spec][iSource],1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+      if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
+
+      for (thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) SourceRate+=buffer[thread];
+      if (PIC::LastSampleLength!=0) SourceRate/=PIC::LastSampleLength;
+
+      if (PIC::ThisThread==0) {
+        printf("%s source: %s rate - %e s^{-1}\n",PIC::MolecularData::GetChemSymbol(spec),_EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource],SourceRate);
+        fprintf(fSource,"  %e",SourceRate);
+
+        TotalSourceRate+=SourceRate;
+      }
+
+      CalculatedSourceRate[spec][iSource]=0.0;
+    }
+
+    if (PIC::ThisThread==0) {
+      printf("Total %s production rate - %e s^{-1}\n\n",PIC::MolecularData::GetChemSymbol(spec),TotalSourceRate);
+
+      fprintf(fSource,"  %e  %e  %e  %i\n",TotalSourceRate,Exosphere::vObjectRadial,Exosphere::xObjectRadial/_AU_,DataOutputFileNumber);
+
+      if (UserDefinedAdditionalData_OutputSampledModelData!=NULL) {
+        UserDefinedAdditionalData_OutputSampledModelData(fSource,spec);
+      }
+
+      fclose(fSource);
+    }
+  }
+
+
+
+/*
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
   ierr=MPI_Gather(&Exosphere::SourceProcesses::PhotonStimulatedDesorption::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
   if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
@@ -1164,8 +1316,9 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 #else
   if (PIC::ThisThread==0) fprintf(fSource,"  0.0");
 #endif
+*/
 
-  if (PIC::ThisThread==0) {
+/*  if (PIC::ThisThread==0) {
     printf("Total sodium production rate - %e s^{-1}\n",TotalSourceRate);
 
     fprintf(fSource,"  %e  %e  %e  %e  %i\n",TotalSourceRate,
@@ -1173,11 +1326,12 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
     fclose(fSource);
     printf("\nNight side return fluxes");
-  }
+  }*/
 
   //print the total night side flux
+
   for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
-    double flux[_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1],FluxAll[PIC::nTotalThreads*(_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1)];
+    double flux[_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1],FluxAll[PIC::nTotalThreads*(_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1)];
     char ChemSymbol[_MAX_STRING_LENGTH_PIC_];
     double LocalTimeStep;
     int i;
@@ -1190,11 +1344,11 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
-    ierr=MPI_Gather(Sampling::PlanetNightSideReturnFlux[spec],_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1,MPI_DOUBLE,FluxAll,_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+    ierr=MPI_Gather(Sampling::PlanetNightSideReturnFlux[spec],_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1,MPI_DOUBLE,FluxAll,_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1, MPI_DOUBLE,0, MPI_COMM_WORLD);
     if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
-    for (i=0;i<_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1;i++) {
-      for (flux[i]=0.0,thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) flux[i]+=FluxAll[i+thread*(_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1)];
+    for (i=0;i<_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1;i++) {
+      for (flux[i]=0.0,thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) flux[i]+=FluxAll[i+thread*(_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1)];
 
       if (PIC::LastSampleLength!=0) flux[i]/=PIC::LastSampleLength*LocalTimeStep;
     }
@@ -1204,6 +1358,13 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
        if (spec==0) printf("Night side return flux [s^{-1}]:\n");
 
        printf("Spec=%i (%s):\n",spec,ChemSymbol);
+
+       for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
+         printf("Particles produced by %s: %e\n",_EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource],flux[iSource]);
+       }
+
+       printf("\n");
+/*
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
        printf("Particles produced by  Impact Vaporization: %e\n",flux[_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_]);
@@ -1220,10 +1381,11 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
        printf("Particles produced by Solar wind sputtering: %e\n",flux[_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_]);
 #endif
+*/
 
     }
 
-    for (i=0;i<_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1;i++) Sampling::PlanetNightSideReturnFlux[spec][i]=0.0;
+    for (i=0;i<_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1;i++) Sampling::PlanetNightSideReturnFlux[spec][i]=0.0;
   }
 
 
@@ -1266,7 +1428,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     FILE *fTrajectory=fopen("pic.OrbitalData.dat","a");
     SpiceDouble State[6],lt,IAU2SO[6][6];
 
-    dEt=PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_]*PIC::LastSampleLength/Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier;
+    dEt=PIC::ParticleWeightTimeStep::GlobalTimeStep[0]*PIC::LastSampleLength/Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier;
     etStart=Exosphere::OrbitalMotion::et-dEt*(Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier-1);
 
     for (nTrajectoryPoint=0;nTrajectoryPoint<Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier;nTrajectoryPoint++) {
@@ -1302,7 +1464,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
   //the sodium column density in the tail
   sprintf(fname,"pic.TailColumnDensity.%s.out=%i.dat",utcstr,DataOutputFileNumber);
-  ColumnDensityIntegration_Tail(fname);
+  ColumnIntegral::Tail(fname);
 
   //column density distribution map
 /*
@@ -1317,15 +1479,15 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
   double domainCharacteristicSize=0.0;
   for (int idim=0;idim<DIM;idim++) domainCharacteristicSize=max(max(fabs(PIC::Mesh::mesh.xGlobalMax[idim]),fabs(PIC::Mesh::mesh.xGlobalMin[idim])),domainCharacteristicSize);
 
-  Exosphere::ColumnDensityIntegration_CircularMap(fname,domainCharacteristicSize,0.05*_RADIUS_(_TARGET_),5*_RADIUS_(_TARGET_),80,Exosphere::OrbitalMotion::et);
+  Exosphere::ColumnIntegral::CircularMap(fname,domainCharacteristicSize,0.05*_RADIUS_(_TARGET_),5*_RADIUS_(_TARGET_),80,Exosphere::OrbitalMotion::et);
 
   //sodium column density along the limb direction
   sprintf(fname,"pic.LimbColumnDensity.%s.out=%i.dat",utcstr,DataOutputFileNumber);
-  ColumnDensityIntegration_Limb(fname);
+  ColumnIntegral::Limb(fname);
 
 
   //output data that correcponds for avalable ground based observatinos
-  Exosphere::Sampling::ReferenceGroundBasedObservations::OutputSampledData(Exosphere::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_]*PIC::LastSampleLength,Exosphere::OrbitalMotion::et,DataOutputFileNumber);
+  Exosphere::Sampling::ReferenceGroundBasedObservations::OutputSampledData(Exosphere::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[0]*PIC::LastSampleLength,Exosphere::OrbitalMotion::et,DataOutputFileNumber);
 }
 
 
@@ -1337,6 +1499,11 @@ void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataS
   sxform_c(SO_FRAME,"MSGR_HCI",Exosphere::OrbitalMotion::et,SO_to_HCI_TransformationMartix);
   fprintf(fout,", \"xMSGR_HCI\", \"yMSGR_HCI\", \"zMSGR_HCI\"");
 
+  for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
+    fprintf(fout,", \"Sodium number Density(%s)\"", _EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource]);
+  }
+
+/*
   //macroscopic properties
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
   fprintf(fout,", \"Sodium number Density(Impact Vaporization Source)\"");
@@ -1353,9 +1520,17 @@ void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataS
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
   fprintf(fout,", \"Sodium number Density(Solar Wind Sputtering Source)\"");
 #endif
+*/
 
+  //add variable list from a user-defined output
+#if _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__MODE__ == _EXOSPHERE_SOURCE__ON_
+  _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__VARIABLE_LIST_(fout);
+#endif
+
+/*
   //mean particle radiation pressure acceleartion and g-factor
   fprintf(fout,", \"Radiation Pressure Acceleration [m/s^2]\", \"g-factor\", \"Radial Speed [m/s]\"");
+*/
 
   //print variables of the Chamberlain exosphere model
   if (Exosphere::ChamberlainExosphere::ModelInitFlag==true) Exosphere::ChamberlainExosphere::PrintVariableList(fout);
@@ -1363,10 +1538,15 @@ void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataS
 
 
 void Exosphere::Sampling::OutputDataFile::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
-  double TotalMeasure=0.0,Measure=0.0,ImpactVaposizationSource=0.0;
-  int i;
+  double TotalMeasure=0.0,Measure=0.0;
+  ////,ImpactVaposizationSource=0.0;
+  int i,iSource;
   char *SamplingBuffer,*CellNodeSamplingBuffer;
+  double SourceRate[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
 
+  for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SourceRate[iSource]=0.0;
+
+/*
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
   double SourcePDS=0.0;
 #endif
@@ -1378,6 +1558,7 @@ void Exosphere::Sampling::OutputDataFile::Interpolate(PIC::Mesh::cDataCenterNode
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
   double SourceSW=0.0;
 #endif
+*/
 
   CellNodeSamplingBuffer=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
 
@@ -1388,6 +1569,9 @@ void Exosphere::Sampling::OutputDataFile::Interpolate(PIC::Mesh::cDataCenterNode
     if (Measure<=0.0) exit(__LINE__,__FILE__,"Error: non-positive cell volume is found");
     TotalMeasure+=Measure;
 
+    for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SourceRate[iSource]+=*((double*)(SamplingBuffer+SamplingDensityOffset[iSource]));
+
+    /*
     #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
     ImpactVaposizationSource+=*((double*)(SamplingBuffer+SamplingDensity__ImpactVaporization_Offset));
     #endif
@@ -1403,8 +1587,17 @@ void Exosphere::Sampling::OutputDataFile::Interpolate(PIC::Mesh::cDataCenterNode
     #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
     SourceSW+=*((double*)(SamplingBuffer+SamplingDensity__SolarWindSputtering_Offset));
     #endif
+    */
   }
 
+  for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++){
+    if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) SourceRate[iSource]/=PIC::LastSampleLength*TotalMeasure;
+    *((double*)(CellNodeSamplingBuffer+SamplingDensityOffset[iSource]))=SourceRate[iSource];
+  }
+
+
+
+/*
   if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) ImpactVaposizationSource/=PIC::LastSampleLength*TotalMeasure;
   *((double*)(CellNodeSamplingBuffer+SamplingDensity__ImpactVaporization_Offset))=ImpactVaposizationSource;
 
@@ -1423,6 +1616,7 @@ void Exosphere::Sampling::OutputDataFile::Interpolate(PIC::Mesh::cDataCenterNode
   if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) SourceSW/=PIC::LastSampleLength*TotalMeasure;
   *((double*)(CellNodeSamplingBuffer+SamplingDensity__SolarWindSputtering_Offset))=SourceSW;
   #endif
+*/
 
 
 }
@@ -1453,6 +1647,22 @@ void Exosphere::Sampling::OutputDataFile::PrintData(FILE* fout,int DataSetNumber
 
   if (PIC::ThisThread==0) fprintf(fout,"%e  %e  %e ",x_HCI[0],x_HCI[1],x_HCI[2]);
 
+  //output the sampled number densities
+  for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
+    if (pipe->ThisThread==CenterNodeThread) {
+      t= *((double*)(SamplingBuffer+SamplingDensityOffset[iSource]));
+    }
+
+    if (pipe->ThisThread==0) {
+      if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
+
+      fprintf(fout,"%e ",t);
+    }
+    else pipe->send(t);
+  }
+
+
+/*
   //get the number density due to the impact evaporation source
   if (pipe->ThisThread==CenterNodeThread) {
     t= *((double*)(SamplingBuffer+SamplingDensity__ImpactVaporization_Offset));
@@ -1504,8 +1714,14 @@ void Exosphere::Sampling::OutputDataFile::PrintData(FILE* fout,int DataSetNumber
   }
   else pipe->send(t);
 #endif
+*/
 
-  //mean particle radiation pressure acceleration and g-factor
+  //user defined output in the data file of the exospehre model
+#if _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__MODE__ == _EXOSPHERE_SOURCE__ON_
+  _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__PRINT_DATA__(fout,DataSetNumber,pipe,CenterNodeThread,CenterNode);
+#endif
+
+/*  //mean particle radiation pressure acceleration and g-factor
   double gfactor=0.0,RadiationPressureAcceleration=0.0,vHeliocentric=0.0;
 
   if (pipe->ThisThread==CenterNodeThread) {
@@ -1553,7 +1769,7 @@ void Exosphere::Sampling::OutputDataFile::PrintData(FILE* fout,int DataSetNumber
     pipe->send(RadiationPressureAcceleration);
     pipe->send(gfactor);
     pipe->send(vHeliocentric);
-  }
+  }*/
 
 
   //Output parameters of the Chamberlain model
@@ -1571,34 +1787,48 @@ double Exosphere::SourceProcesses::totalProductionRate(int spec,void *SphereData
   double res=0.0;
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
-  if (spec==_NA_SPEC_) {
-    res+=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(spec,SphereDataPointer);
-  }
+//  if (spec==_NA_SPEC_) {
+  res+=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(spec,SphereDataPointer);
+//  }
 #endif
 
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
-  if (spec==_NA_SPEC_) {
-    res+=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GetTotalProductionRate(spec,SphereDataPointer);
-  }
+//  if (spec==_NA_SPEC_) {
+  res+=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GetTotalProductionRate(spec,SphereDataPointer);
+//  }
 #endif
 
 #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
-  if (spec==_NA_SPEC_) {
-    res+=Exosphere::SourceProcesses::ThermalDesorption::GetTotalProductionRate(spec,SphereDataPointer);
-  }
+//  if (spec==_NA_SPEC_) {
+  res+=Exosphere::SourceProcesses::ThermalDesorption::GetTotalProductionRate(spec,SphereDataPointer);
+//  }
 #endif
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
-  if (spec==_NA_SPEC_) {
-    res+=Exosphere::SourceProcesses::SolarWindSputtering::GetTotalProductionRate(spec,SphereDataPointer);
-  }
+//  if (spec==_NA_SPEC_) {
+  res+=Exosphere::SourceProcesses::SolarWindSputtering::GetTotalProductionRate(spec,SphereDataPointer);
+//  }
+#endif
+
+  //add source rate due to the user defined source process
+#if _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_ == _EXOSPHERE_SOURCE__ON_
+  $MARKER:USER-DEFINED-TOTAL-SOURCE-RATE$
 #endif
 
   return res;
 }
 
 
-long int Exosphere::SourceProcesses::InjectionBoundaryModel(void *SphereDataPointer) {
+long int Exosphere::SourceProcesses::InjectionBoundaryModel(void *SphereDataPointer)  {
+  int spec;
+  long int res=0;
+
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) res+=InjectionBoundaryModel(spec,SphereDataPointer);
+
+  return res;
+}
+
+long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *SphereDataPointer) {
   cInternalSphericalData *Sphere;
   double ModelParticlesInjectionRate,ParticleWeight,LocalTimeStep,TimeCounter=0.0,x_SO_OBJECT[3],x_IAU_OBJECT[3],v_SO_OBJECT[3],v_IAU_OBJECT[3],*sphereX0,sphereRadius;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=NULL;
@@ -1614,20 +1844,22 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(void *SphereDataPoin
   Sphere->GetSphereGeometricalParameters(sphereX0,sphereRadius);
 
 #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
-  ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_NA_SPEC_];
+  ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
 #else
   exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
 #endif
 
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
-  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_];
+  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-  LocalTimeStep=Sphere->maxIntersectedNodeTimeStep[_NA_SPEC_];
+  LocalTimeStep=Sphere->maxIntersectedNodeTimeStep[spec];
 #else
   exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
-  ModelParticlesInjectionRate=totalProductionRate(_NA_SPEC_,SphereDataPointer)/ParticleWeight;
+  ModelParticlesInjectionRate=totalProductionRate(spec,SphereDataPointer)/ParticleWeight;
+
+  if (ModelParticlesInjectionRate*ParticleWeight*LocalTimeStep<1.0E-10) return 0;
 
   if (ModelParticlesInjectionRate*LocalTimeStep>nMaxInjectedParticles) {
     ParticleWeightCorrection=ModelParticlesInjectionRate*LocalTimeStep/nMaxInjectedParticles;
@@ -1638,26 +1870,52 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(void *SphereDataPoin
 
 
   //calcualte probabilities of each source processes
-  double TotalFlux,Flux_ImpactVaporization=0.0,Flux_PSD=0.0,Flux_TD=0.0,Flux_SW_Sputtering=0.0;
-  double p,Probability_ImpactVaporization=0.0,Probability_PSD=0.0,Probability_TD=0.0,Probability_SW_Sputtering=0.0;
+  double TotalFlux,FluxSourceProcess[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_]; //,ProbabilitySourceProcess[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
+  int iSource;
 
-  TotalFlux=totalProductionRate(_NA_SPEC_,SphereDataPointer);
-  Flux_ImpactVaporization=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
+  for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) FluxSourceProcess[iSource]=0.0; //,ProbabilitySourceProcess[iSource]=0.0;
+
+/*  double TotalFlux,Flux_ImpactVaporization=0.0,Flux_PSD=0.0,Flux_TD=0.0,Flux_SW_Sputtering=0.0;
+  double p,Probability_ImpactVaporization=0.0,Probability_PSD=0.0,Probability_TD=0.0,Probability_SW_Sputtering=0.0;*/
+
+  TotalFlux=totalProductionRate(spec,SphereDataPointer);
+
+#if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
+//  Flux_ImpactVaporization=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
+
+  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_]=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(spec,SphereDataPointer);
+  #endif
 
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
-  Flux_PSD=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
+//  Flux_PSD=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
+  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_]=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GetTotalProductionRate(spec,SphereDataPointer);
+  if (FluxSourceProcess[_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_]>0.0) PhotonStimulatedDesorption::SurfaceInjectionDistribution[spec].Init(&spec);
 #endif
 
 #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
-  Flux_TD=Exosphere::SourceProcesses::ThermalDesorption::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
+//  Flux_TD=Exosphere::SourceProcesses::ThermalDesorption::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
+  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_]=Exosphere::SourceProcesses::ThermalDesorption::GetTotalProductionRate(spec,SphereDataPointer);
+  if (FluxSourceProcess[_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_]>0.0) ThermalDesorption::SurfaceInjectionDistribution[spec].Init(&spec);
 #endif
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
-  Flux_SW_Sputtering=Exosphere::SourceProcesses::SolarWindSputtering::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
+//  Flux_SW_Sputtering=Exosphere::SourceProcesses::SolarWindSputtering::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
+  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_]=Exosphere::SourceProcesses::SolarWindSputtering::GetTotalProductionRate(spec,SphereDataPointer);
+  if (FluxSourceProcess[_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_]>0.0) SolarWindSputtering::SurfaceInjectionDistribution[spec].Init(&spec);
 #endif
 
 
-  Probability_ImpactVaporization=Flux_ImpactVaporization/TotalFlux;
+#if _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_ == _EXOSPHERE_SOURCE__ON_
+  //calculate the source rate due to user defined source functions
+  $MARKER:CALCULATE-SOURCE-FLUX-WITH-USER-DEFINED-FUNCTIONS$
+#endif
+
+/*  for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
+    ProbabilitySourceProcess[iSource]=FluxSourceProcess[iSource]/TotalFlux;
+    if (iSource!=0) ProbabilitySourceProcess[iSource]+=ProbabilitySourceProcess[iSource-1];
+  }*/
+
+/*  Probability_ImpactVaporization=Flux_ImpactVaporization/TotalFlux;
   Probability_PSD=(Flux_PSD+Flux_ImpactVaporization)/TotalFlux;
   Probability_TD=(Flux_PSD+Flux_ImpactVaporization+Flux_TD)/TotalFlux;
   Probability_SW_Sputtering=(Flux_PSD+Flux_ImpactVaporization+Flux_TD+Flux_SW_Sputtering)/TotalFlux;
@@ -1665,75 +1923,58 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(void *SphereDataPoin
   //recalcualte the surface injection distributions
   if (Flux_PSD>0.0) PhotonStimulatedDesorption::SurfaceInjectionDistribution.Init();
   if (Flux_TD>0.0) ThermalDesorption::SurfaceInjectionDistribution.Init();
-  if (Flux_SW_Sputtering>0.0) SolarWindSputtering::SurfaceInjectionDistribution.Init();
+  if (Flux_SW_Sputtering>0.0) SolarWindSputtering::SurfaceInjectionDistribution.Init();*/
 
 
   while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
+    //determine the source process to generate a particle's properties
+    do {
+      SourceProcessID=(int)(rnd()*(1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_));
+    }
+    while (FluxSourceProcess[SourceProcessID]/TotalFlux<rnd());
 
 
+   //to satisfy the compiler and fit the while structure
+   if (false) {}
+#if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
+   else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_) {
+     flag=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode);
 
-
-//cout << __FILE__ << "@" << __LINE__ << endl;
-
-
-
-   //Determine the source processes
-   p=rnd();
-
-
-
-//cout << __FILE__ << "@" << __LINE__ << endl;
-
-   if (p<Probability_ImpactVaporization) {
-     flag=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode);
-
-/*
-cout << __FILE__ << "@" << __LINE__ << endl;
-cout << __FILE__ << "@" << __LINE__ << "  " << x_SO_OBJECT[0] << "   " << x_SO_OBJECT[1] << "  " << x_SO_OBJECT[2] << endl;
-cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_OBJECT[1] << "  " << x_IAU_OBJECT[2] << endl;
-*/
-
-     SourceProcessID=_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_;
-     if (flag==true) ImpactVaporization::CalculatedTotalSodiumSourceRate+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+//     SourceProcessID=_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_;
+     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
    }
-   else if (p<Probability_PSD) {
-     flag=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+#endif
+#if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
+   else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_) {
+     flag=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
-/*
-cout << __FILE__ << "@" << __LINE__ << endl;
-cout << __FILE__ << "@" << __LINE__ << "  " << x_SO_OBJECT[0] << "   " << x_SO_OBJECT[1] << "  " << x_SO_OBJECT[2] << endl;
-cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_OBJECT[1] << "  " << x_IAU_OBJECT[2] << endl;
-*/
-
-     SourceProcessID=_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_;
-     if (flag==true) PhotonStimulatedDesorption::CalculatedTotalSodiumSourceRate+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+//     SourceProcessID=_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_;
+     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
    }
-   else if (p<Probability_TD) {
-     flag=Exosphere::SourceProcesses::ThermalDesorption::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
-/*
-cout << __FILE__ << "@" << __LINE__ << endl;
-cout << __FILE__ << "@" << __LINE__ << "  " << x_SO_OBJECT[0] << "   " << x_SO_OBJECT[1] << "  " << x_SO_OBJECT[2] << endl;
-cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_OBJECT[1] << "  " << x_IAU_OBJECT[2] << endl;
-*/
+#endif
+#if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
+   else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_) {
+     flag=Exosphere::SourceProcesses::ThermalDesorption::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
-
-     SourceProcessID=_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_;
-     if (flag==true) ThermalDesorption::CalculatedTotalSodiumSourceRate+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+//     SourceProcessID=_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_;
+     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
    }
+#endif
+#if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
+   else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_) {
+     flag=Exosphere::SourceProcesses::SolarWindSputtering::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+
+//     SourceProcessID=_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_;
+     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+   }
+#endif
+#if _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_ == _EXOSPHERE_SOURCE__ON_
+   //Add the user defined particle gineration
+   $MARKER:GENERATE-PARTICLE-PROPERTIES-WITH-USER-DEFINED-FUNCTIONS$
+#endif
    else {
-     flag=Exosphere::SourceProcesses::SolarWindSputtering::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
-
-/*
-cout << __FILE__ << "@" << __LINE__ << endl;
-cout << __FILE__ << "@" << __LINE__ << "  " << x_SO_OBJECT[0] << "   " << x_SO_OBJECT[1] << "  " << x_SO_OBJECT[2] << endl;
-cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_OBJECT[1] << "  " << x_IAU_OBJECT[2] << endl;
-*/
-
-
-     SourceProcessID=_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_;
-     if (flag==true) SolarWindSputtering::CalculatedTotalSodiumSourceRate+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+     continue;
    }
-
 
    if (flag==false) continue;
 
@@ -1757,7 +1998,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
 
    //check is the injection of the particle will not make the surface aboundance negative
    if (SourceProcessID!=_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_){
-     if (Exosphere::Planet->SodiumSurfaceElementPopulation[el]<Sphere->SodiumSurfaceElementDesorptionFluxUP[el]+ParticleWeight*ParticleWeightCorrection) continue;
+     if (Exosphere::Planet->SurfaceElementPopulation[spec][el]<Sphere->SurfaceElementDesorptionFluxUP[spec][el]+ParticleWeight*ParticleWeightCorrection) continue;
    }
 
    //generate a particle
@@ -1765,7 +2006,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
 
    PIC::ParticleBuffer::SetX(x_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
    PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
-   PIC::ParticleBuffer::SetI(_NA_SPEC_,(PIC::ParticleBuffer::byte*)tempParticleData);
+   PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
 
    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 
@@ -1773,11 +2014,11 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    Sphere->GetSurfaceElementProjectionIndex(x_SO_OBJECT,nZenithElement,nAzimuthalElement);
    el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
-   Exosphere::Planet->SampleSpeciesSurfaceSourceRate[_NA_SPEC_][el][SourceProcessID]+=ParticleWeight*ParticleWeightCorrection/LocalTimeStep;
+   Exosphere::Planet->SampleSpeciesSurfaceSourceRate[spec][el][SourceProcessID]+=ParticleWeight*ParticleWeightCorrection/LocalTimeStep;
 
    //sample particle injection velocity
-   Exosphere::Planet->SampleSpeciesSurfaceInjectionFlux[_NA_SPEC_][el]+=ParticleWeight*ParticleWeightCorrection;
-   Exosphere::Planet->SampleInjectedFluxBulkSpeed[_NA_SPEC_][el]+=ParticleWeight*ParticleWeightCorrection*sqrt(pow(v_IAU_OBJECT[0],2)+pow(v_IAU_OBJECT[1],2)+pow(v_IAU_OBJECT[2],2));
+   Exosphere::Planet->SampleSpeciesSurfaceInjectionFlux[spec][el]+=ParticleWeight*ParticleWeightCorrection;
+   Exosphere::Planet->SampleInjectedFluxBulkSpeed[spec][el]+=ParticleWeight*ParticleWeightCorrection*sqrt(pow(v_IAU_OBJECT[0],2)+pow(v_IAU_OBJECT[1],2)+pow(v_IAU_OBJECT[2],2));
 
    Sampling::SetParticleSourceID(SourceProcessID,(PIC::ParticleBuffer::byte*)tempParticleData);
    Sampling::SetParicleOriginSurfaceElementNumber(el,(PIC::ParticleBuffer::byte*)tempParticleData);
@@ -1793,7 +2034,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
      Sphere->GetSurfaceElementProjectionIndex(x_IAU_OBJECT,nZenithElement,nAzimuthalElement);
      el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
-     Sphere->SodiumSurfaceElementDesorptionFluxUP[el]+=ParticleWeight*ParticleWeightCorrection;
+     Sphere->SurfaceElementDesorptionFluxUP[spec][el]+=ParticleWeight*ParticleWeightCorrection;
    }
 
 
@@ -1805,7 +2046,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    if ((startNode->Thread!=PIC::ThisThread)||(startNode->block==NULL)) exit(__LINE__,__FILE__,"Error: the block is not defined");
 #endif
 
-   _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,startNode->block->GetLocalTimeStep(_NA_SPEC_)*rnd(),startNode,true);
+   _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode,true);
  }
 
  return nInjectedParticles;
@@ -1899,12 +2140,12 @@ int Exosphere::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation
   //check if the particle sticks to the surface of the planet
   double ReemissionParticleFraction=1.0;
 
-  if ((spec==_NA_SPEC_)||(spec==_NA_PLUS_SPEC_)) if (rnd()<SodiumStickingProbability(ReemissionParticleFraction,SurfaceTemp)) {
+  if (rnd()<StickingProbability(spec,ReemissionParticleFraction,SurfaceTemp)) {
     //the particle is abserbed by the surface
     Sphere->GetSurfaceElementProjectionIndex(x_LOCAL_IAU_OBJECT,nZenithElement,nAzimuthalElement);
     el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
-    Sphere->SodiumSurfaceElementAdsorptionFluxDOWN[el]+=ReemissionParticleFraction*ParticleWeight;
+    Sphere->SurfaceElementAdsorptionFluxDOWN[spec][el]+=ReemissionParticleFraction*ParticleWeight;
     Exosphere::Sampling::PlanetSurfaceStickingRate[spec]+=ParticleWeight;
 
     PIC::ParticleBuffer::DeleteParticle(ptr);
@@ -1924,7 +2165,7 @@ int Exosphere::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation
   for (vt=0.0,idim=0;idim<3;idim++) vt+=pow(sqrt(-log(rnd()))/beta*cos(PiTimes2*rnd()),2);
 
   vt=sqrt(vt);
-  vf=AccomodationCoefficient*vt+(1.0-AccomodationCoefficient)*vi;
+  vf=AccomodationCoefficient[spec]*vt+(1.0-AccomodationCoefficient[spec])*vi;
 
   //determine the normal vector at the intersection point
   Sphere->GetSphereGeometricalParameters(x0Sphere,radiusSphere);
@@ -2109,7 +2350,7 @@ void Exosphere::Sampling::OutputSurfaceDataFile::PrintDataStateVector(FILE* fout
       if (TotalFluxDown>0.0) BulkSpeedDown/=TotalFluxDown;
       if (SampleSpeciesSurfaceInjectionFlux>0.0) BulkSpeedUp/=SampleSpeciesSurfaceInjectionFlux;
 
-      TotalFluxDown/=PIC::LastSampleLength*PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_];
+      TotalFluxDown/=PIC::LastSampleLength*PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
       SurfaceContent/=PIC::LastSampleLength;
     }
 
@@ -2146,7 +2387,7 @@ void Exosphere::Sampling::OutputSurfaceDataFile::PrintDataStateVector(FILE* fout
     double ReemissionParticleFraction;
 
     fprintf(fout," %e %e %e %e %e %e ",TotalFluxDown/InterpolationNormalization,TotalFluxUp/InterpolationNormalization,SurfaceContent/InterpolationNormalization,BulkSpeedDown,BulkSpeedUp,  \
-        SurfaceInteraction::SodiumStickingProbability(ReemissionParticleFraction,SurfaceTemperature));
+        SurfaceInteraction::StickingProbability(spec,ReemissionParticleFraction,SurfaceTemperature));
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
     fprintf(fout," %e ",FluxIV/InterpolationNormalization);

@@ -181,7 +181,7 @@ void ElectricallyChargedDust::OutputSampledModelData(int DataOutputFileNumber) {
   if (PIC::ThisThread==0) {
     for (int thread=1;thread<PIC::nTotalThreads;thread++) buffer[0]+=buffer[thread];
 
-    printf("The total dust production rate: %e [kg/sec]\n",buffer[0]/PIC::LastSampleLength);
+    fprintf(PIC::DiagnospticMessageStream,"The total dust production rate: %e [kg/sec]\n",buffer[0]/PIC::LastSampleLength);
   }
 
   if (PIC::SamplingMode==_RESTART_SAMPLING_MODE_) SampledDustMassInjectionRate=0.0;
@@ -969,7 +969,7 @@ void ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::printDis
       sprintf(str,"pic.DUST.SizeDistribution.out=%i.nSamplePoint=%i.dat",DataOutputFileNumber,nProbe);
       fout=fopen(str,"w");
 
-      printf("printing output file: %s.........         ",str);
+      fprintf(PIC::DiagnospticMessageStream,"printing output file: %s.........         ",str);
 
       fprintf(fout,"\"TITLE=Dust size distribution function at x=%e",SamplingLocations[nProbe][0]);
       for (idim=1;idim<DIM;idim++) fprintf(fout,", %e",SamplingLocations[nProbe][idim]);
@@ -1037,7 +1037,7 @@ void ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::printDis
 
       //close the output file
       fclose(fout);
-      printf("done.\n");
+      fprintf(PIC::DiagnospticMessageStream,"done.\n");
     }
     else {
       for (iInterval=0;iInterval<nSamplingIntervals;iInterval++)  {

@@ -28,8 +28,11 @@
 #define ElectronMass         9.10938291E-31
 #define ProtonMass           1.67262158E-27
 #define eV2J                 ElectronCharge
+#define EV2J                 ElectronCharge
 #define GravityConstant      6.67300E-11
 #define VacuumPermittivity   8.854187817620E-12
+#define PlanckConstant       6.62606957E-34
+#define SpeedOfLight         299792458.0
 
 
 

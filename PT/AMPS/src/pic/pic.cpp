@@ -144,7 +144,7 @@ void PIC::TimeStep() {
       time_t TimeValue=time(NULL);
       tm *ct=localtime(&TimeValue);
 
-      printf("\nPIC: (%i/%i %i:%i:%i), Iteration: %ld  (currect sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,nTotalIterations,PIC::RequiredSampleLength,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
+      fprintf(PIC::DiagnospticMessageStream,"\nPIC: (%i/%i %i:%i:%i), Iteration: %ld  (currect sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,nTotalIterations,PIC::RequiredSampleLength,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
 
 
 
@@ -157,29 +157,29 @@ void PIC::TimeStep() {
       double nTotalInjectedParticels=0.0;
       double MinExecutionTime=localRunStatisticData.IterationExecutionTime,MaxExecutionTime=localRunStatisticData.IterationExecutionTime,MaxLatency=0.0,MeanLatency=0.0;
 
-      printf("Description:\n");
-      printf("1:\t Thread\n");
-      printf("2:\t Total Particle's number\n");
-      printf("3:\t Total Interation Time\n");
-      printf("4:\t Iteration Execution Time\n");
-      printf("5:\t Sampling Time\n");
-      printf("6:\t Injection Boundary Time\n");
-      printf("7:\t Particle Moving Time\n");
-      printf("8:\t Particle Exchange Time\n");
-      printf("9:\t Latency\n");
-      printf("10:\t Send Particles\n");
-      printf("11:\t Recv Particles\n");
-      printf("12:\t nInjected Particls\n");
-      printf("13:\t User Defined MPI Routine - Execution Time\n");
-      printf("14:\t Particle Collision Time\n");
+      fprintf(PIC::DiagnospticMessageStream,"Description:\n");
+      fprintf(PIC::DiagnospticMessageStream,"1:\t Thread\n");
+      fprintf(PIC::DiagnospticMessageStream,"2:\t Total Particle's number\n");
+      fprintf(PIC::DiagnospticMessageStream,"3:\t Total Interation Time\n");
+      fprintf(PIC::DiagnospticMessageStream,"4:\t Iteration Execution Time\n");
+      fprintf(PIC::DiagnospticMessageStream,"5:\t Sampling Time\n");
+      fprintf(PIC::DiagnospticMessageStream,"6:\t Injection Boundary Time\n");
+      fprintf(PIC::DiagnospticMessageStream,"7:\t Particle Moving Time\n");
+      fprintf(PIC::DiagnospticMessageStream,"8:\t Particle Exchange Time\n");
+      fprintf(PIC::DiagnospticMessageStream,"9:\t Latency\n");
+      fprintf(PIC::DiagnospticMessageStream,"10:\t Send Particles\n");
+      fprintf(PIC::DiagnospticMessageStream,"11:\t Recv Particles\n");
+      fprintf(PIC::DiagnospticMessageStream,"12:\t nInjected Particls\n");
+      fprintf(PIC::DiagnospticMessageStream,"13:\t User Defined MPI Routine - Execution Time\n");
+      fprintf(PIC::DiagnospticMessageStream,"14:\t Particle Collision Time\n");
 
 
-      printf("1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\t\t 14\n");
+      fprintf(PIC::DiagnospticMessageStream,"1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\t\t 14\n");
 
-//      printf("Thread, Total Particle's number, Total Interation Time, Iteration Execution Time, Sampling Time, Injection Boundary Time, Particle Moving Time, Particle Exchange Time, Latency, Send Particles, Recv Particles, nInjected Particls\n");
+//      fprintf(PIC::DiagnospticMessageStream,"Thread, Total Particle's number, Total Interation Time, Iteration Execution Time, Sampling Time, Injection Boundary Time, Particle Moving Time, Particle Exchange Time, Latency, Send Particles, Recv Particles, nInjected Particls\n");
 
       for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
-        printf("%i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\t %e\t %e\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
+        fprintf(PIC::DiagnospticMessageStream,"%i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\t %e\t %e\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
             ExchangeBuffer[thread].IterationExecutionTime,ExchangeBuffer[thread].SamplingTime,ExchangeBuffer[thread].InjectionBoundaryTime,ExchangeBuffer[thread].ParticleMovingTime,
             ExchangeBuffer[thread].ParticleExchangeTime,ExchangeBuffer[thread].Latency,ExchangeBuffer[thread].sendParticleCounter,
             ExchangeBuffer[thread].recvParticleCounter,ExchangeBuffer[thread].nInjectedParticles/((nExchangeStatisticsIterationNumberSteps!=0) ? nExchangeStatisticsIterationNumberSteps : 1),
@@ -198,10 +198,10 @@ void PIC::TimeStep() {
       PIC::Parallel::CumulativeLatency+=MeanLatency*nInteractionsAfterRunStatisticExchange;
       if (nExchangeStatisticsIterationNumberSteps!=0) nTotalInjectedParticels/=nExchangeStatisticsIterationNumberSteps;
 
-      printf("Total number of particles: %ld\n",nTotalModelParticles);
+      fprintf(PIC::DiagnospticMessageStream,"Total number of particles: %ld\n",nTotalModelParticles);
 
       //exchange statistics of the particle production
-      printf("Species dependent particle production:\nSpecie\tInjected Particles\tProductionRate\n");
+      fprintf(PIC::DiagnospticMessageStream,"Species dependent particle production:\nSpecie\tInjected Particles\tProductionRate\n");
 
       for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
         double c=0.0;
@@ -219,19 +219,19 @@ void PIC::TimeStep() {
           ParticleProductionRateExchangeBuffer[0]/=nExchangeStatisticsIterationNumberSteps;
         }
 
-        printf("%i\t%e\t%e\n",spec,c,ParticleProductionRateExchangeBuffer[0]);
+        fprintf(PIC::DiagnospticMessageStream,"%i\t%e\t%e\n",spec,c,ParticleProductionRateExchangeBuffer[0]);
 
         PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0;
       }
 
-      printf("Total number of injected particles: %e\n",nTotalInjectedParticels);
-      printf("Iteration Execution Time: min=%e, max=%e\n",MinExecutionTime,MaxExecutionTime);
-      printf("Latency: max=%e,mean=%e;CumulativeLatency=%e,Iterations after rebalabcing=%ld,Rebalancing Time=%e\n",MaxLatency,MeanLatency,PIC::Parallel::CumulativeLatency,PIC::Parallel::IterationNumberAfterRebalancing,PIC::Parallel::RebalancingTime);
+      fprintf(PIC::DiagnospticMessageStream,"Total number of injected particles: %e\n",nTotalInjectedParticels);
+      fprintf(PIC::DiagnospticMessageStream,"Iteration Execution Time: min=%e, max=%e\n",MinExecutionTime,MaxExecutionTime);
+      fprintf(PIC::DiagnospticMessageStream,"Latency: max=%e,mean=%e;CumulativeLatency=%e,Iterations after rebalabcing=%ld,Rebalancing Time=%e\n",MaxLatency,MeanLatency,PIC::Parallel::CumulativeLatency,PIC::Parallel::IterationNumberAfterRebalancing,PIC::Parallel::RebalancingTime);
 
       //check the elapsed walltime for the alarm
       if (PIC::Alarm::AlarmInitialized==true) {
         if (MPI_Wtime()-PIC::Alarm::StartTime>PIC::Alarm::RequestedExecutionWallTime) PIC::Alarm::WallTimeExeedsLimit=true;
-        printf("Execution walltime: %e sec\n",MPI_Wtime()-PIC::Alarm::StartTime);
+        fprintf(PIC::DiagnospticMessageStream,"Execution walltime: %e sec\n",MPI_Wtime()-PIC::Alarm::StartTime);
       }
 
 
@@ -306,7 +306,7 @@ void PIC::TimeStep() {
     MPI_Bcast(&EmergencyLoadRebalancingFlag,1,MPI_INT,0,MPI_COMM_WORLD);
 
     if (EmergencyLoadRebalancingFlag==true) {
-      if (PIC::Mesh::mesh.ThisThread==0) printf("Load Rebalancing.....  begins\n");
+      if (PIC::Mesh::mesh.ThisThread==0) fprintf(PIC::DiagnospticMessageStream,"Load Rebalancing.....  begins\n");
 
 
       MPI_Barrier(MPI_COMM_WORLD);
@@ -317,7 +317,7 @@ void PIC::TimeStep() {
 
       MPI_Barrier(MPI_COMM_WORLD);
       PIC::Parallel::RebalancingTime=MPI_Wtime()-PIC::Parallel::RebalancingTime;
-      if (PIC::Mesh::mesh.ThisThread==0) printf("Load Rebalancing.....  done\n");
+      if (PIC::Mesh::mesh.ThisThread==0) fprintf(PIC::DiagnospticMessageStream,"Load Rebalancing.....  done\n");
     }
 #elif _PIC_EMERGENCY_LOAD_REBALANCING_MODE_ == _PIC_MODE_OFF_
     //do nothing
@@ -801,14 +801,14 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
         sprintf(fname,"pic.%s.s=%i.out=%ld.dat",ChemSymbol,s,DataOutputFileNumber);
 
         if (PIC::Mesh::mesh.ThisThread==0) {
-          printf("printing output file: %s.........",fname);
+          fprintf(PIC::DiagnospticMessageStream,"printing output file: %s.........",fname);
           fflush(stdout);
         }
 
         PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
 
         if (PIC::Mesh::mesh.ThisThread==0) {
-          printf("done.\n");
+          fprintf(PIC::DiagnospticMessageStream,"done.\n");
           fflush(stdout);
         }
 
@@ -840,14 +840,14 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
          if (PIC::ThisThread==0) {
            for (int thread=1;thread<PIC::nTotalThreads;thread++) for (s=0;s<PIC::nTotalSpecies;s++) buffer[s]+=buffer[thread*PIC::nTotalSpecies+s];
-           printf("Total sources rate by volume production injection models: \n Specie \t Soruce rate [s^{-1}]\n");
+           fprintf(PIC::DiagnospticMessageStream,"Total sources rate by volume production injection models: \n Specie \t Soruce rate [s^{-1}]\n");
 
            for (s=0;s<PIC::nTotalSpecies;s++) {
              PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
-             printf("%s (s=%i):\t %e\n",ChemSymbol,s,buffer[s]/LastSampleLength);
+             fprintf(PIC::DiagnospticMessageStream,"%s (s=%i):\t %e\n",ChemSymbol,s,buffer[s]/LastSampleLength);
            }
 
-           printf("\n");
+           fprintf(PIC::DiagnospticMessageStream,"\n");
          }
 
          if (SamplingMode==_RESTART_SAMPLING_MODE_) for (s=0;s<PIC::nTotalSpecies;s++) PIC::VolumeParticleInjection::SourceRate[s]=0.0;
@@ -865,14 +865,14 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
         sprintf(fname,"pic.Sphere=%ld.%s.s=%i.out=%ld.dat",iSphericalSurface,ChemSymbol,s,DataOutputFileNumber);
 
         if (PIC::Mesh::mesh.ThisThread==0) {
-          printf("printing output file: %s.........",fname);
+          fprintf(PIC::DiagnospticMessageStream,"printing output file: %s.........",fname);
           fflush(stdout);
         }
 
         PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(iSphericalSurface)->PrintSurfaceData(fname,s);
 
         if (PIC::Mesh::mesh.ThisThread==0) {
-          printf("done.\n");
+          fprintf(PIC::DiagnospticMessageStream,"done.\n");
           fflush(stdout);
         }
       }
@@ -909,8 +909,8 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
         nTotalSimulatedParticles+=pipe.recv<long int>(thread);
       }
 
-      printf("Model run statistics:\n");
-      printf("The total number of model particles: %ld\n",nTotalSimulatedParticles);
+      fprintf(PIC::DiagnospticMessageStream,"Model run statistics:\n");
+      fprintf(PIC::DiagnospticMessageStream,"The total number of model particles: %ld\n",nTotalSimulatedParticles);
 
       pipe.closeRecvAll();
     }
@@ -963,14 +963,14 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
       sprintf(fname,"pic.%s.s=%i.out=%ld-redistributed-load-CompleteSample.dat",ChemSymbol,s,DataOutputFileNumber-1);
 
       if (PIC::Mesh::mesh.ThisThread==0) {
-        printf("printing output file: %s.........",fname);
+        fprintf(PIC::DiagnospticMessageStream,"printing output file: %s.........",fname);
         fflush(stdout);
       }
 
       PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
 
       if (PIC::Mesh::mesh.ThisThread==0) {
-        printf("done.\n");
+        fprintf(PIC::DiagnospticMessageStream,"done.\n");
         fflush(stdout);
       }
     }
@@ -982,14 +982,14 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
       sprintf(fname,"pic.%s.s=%i.out=%ld-redistributed-load-TempSample.dat",ChemSymbol,s,DataOutputFileNumber-1);
 
       if (PIC::Mesh::mesh.ThisThread==0) {
-        printf("printing output file: %s.........",fname);
+        fprintf(PIC::DiagnospticMessageStream,"printing output file: %s.........",fname);
         fflush(stdout);
       }
 
       PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
 
       if (PIC::Mesh::mesh.ThisThread==0) {
-        printf("done.\n");
+        fprintf(PIC::DiagnospticMessageStream,"done.\n");
         fflush(stdout);
       }
     }
@@ -1041,8 +1041,8 @@ void PIC::Init_BeforeParser() {
     time_t TimeValue=time(NULL);
     tm *ct=localtime(&TimeValue);
 
-    printf("\nPIC: (%i/%i %i:%i:%i), Initialization of the code\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
-    printf("PIC: Simulation Target - %s \n",_MACRO_STR_VALUE_(_TARGET_));
+    fprintf(PIC::DiagnospticMessageStream,"\nPIC: (%i/%i %i:%i:%i), Initialization of the code\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+    fprintf(PIC::DiagnospticMessageStream,"PIC: Simulation Target - %s \n",_MACRO_STR_VALUE_(_TARGET_));
   }
 
 
@@ -1059,7 +1059,7 @@ void PIC::Init_BeforeParser() {
         : "%eax"              // clobbered register
        );
 
-  if (ThisThread==0) printf("Cache line size if %i bytes\n",CacheLineSize);
+  if (ThisThread==0) fprintf(PIC::DiagnospticMessageStream,"Cache line size if %i bytes\n",CacheLineSize);
 
 
 
@@ -1101,7 +1101,7 @@ void PIC::Init_BeforeParser() {
     }
 
     if (ThisThread==0) {
-      printf("CPU Manifacturer: INTEL\nCache line size is %i bytes, L2 cache size is %i KB\n",(int)w0,(int)w1);
+      fprintf(PIC::DiagnospticMessageStream,"CPU Manifacturer: INTEL\nCache line size is %i bytes, L2 cache size is %i KB\n",(int)w0,(int)w1);
     }
 
   }

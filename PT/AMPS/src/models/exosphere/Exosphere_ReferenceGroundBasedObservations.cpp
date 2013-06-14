@@ -8,10 +8,12 @@
 //$Id$
 
 #include "pic.h"
+#include "Exosphere.h"
 
 Exosphere::Sampling::ReferenceGroundBasedObservations::cObservationTag Exosphere::Sampling::ReferenceGroundBasedObservations::RemoteObservationList[nReferenceGroundBasedObservations];
 
 void Exosphere::Sampling::ReferenceGroundBasedObservations::init() {
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   int n;
 
   if (PIC::ThisThread==0) cout << "Reference Ground Based Observations:" << endl << "n\tObservation Time[degrees]\tTAA\tPhase Angle[degrees]" << endl;
@@ -26,9 +28,11 @@ void Exosphere::Sampling::ReferenceGroundBasedObservations::init() {
 
     if (PIC::ThisThread==0) cout << n << "\t" << ReferenceGroundBasedObservationTime[n] << "\t" << RemoteObservationList[n].TAA/Pi*180.0 << "\t" << RemoteObservationList[n].PhaseAngle/Pi*180.0 << endl;
   }
+#endif
 }
 
 void Exosphere::Sampling::ReferenceGroundBasedObservations::OutputSampledData(SpiceDouble etStartInterval,SpiceDouble etFinishInterval,int nMercuryOutputFile) {
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   double dTAA,dTAAobservation,taaStartInterval,taaFinishInterval,taa;
   double paStartInterval,paFinishInterval;
   int n;
@@ -52,12 +56,13 @@ void Exosphere::Sampling::ReferenceGroundBasedObservations::OutputSampledData(Sp
       char fname[_MAX_STRING_LENGTH_PIC_];
 
       sprintf(fname,"pic.GroundBasedObservation.n=%i.ColumnDensityMap.%s.nMercuryOutputFile=%i.out=%i.dat",n,RemoteObservationList[n].TimeStamp,nMercuryOutputFile,RemoteObservationList[n].nOutputFile);
-      Exosphere::ColumnDensityIntegration_CircularMap(fname,domainCharacteristicSize,0.05*_RADIUS_(_TARGET_),5*_RADIUS_(_TARGET_),80,RemoteObservationList[n].et);
+      Exosphere::ColumnIntegral::CircularMap(fname,domainCharacteristicSize,0.05*_RADIUS_(_TARGET_),5*_RADIUS_(_TARGET_),80,RemoteObservationList[n].et);
 
       sprintf(fname,"pic.GroundBasedObservation.n=%i.LimbColumnDensity.%s.nMercuryOutputFile=%i.out=%i.dat",n,RemoteObservationList[n].TimeStamp,nMercuryOutputFile,RemoteObservationList[n].nOutputFile);
-      Exosphere::ColumnDensityIntegration_Limb(fname);
+      Exosphere::ColumnIntegral::Limb(fname);
 
       RemoteObservationList[n].nOutputFile++;
     }
   }
+#endif
 }

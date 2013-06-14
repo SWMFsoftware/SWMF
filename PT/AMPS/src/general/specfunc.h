@@ -1,11 +1,13 @@
 #ifndef SPECFUNC
 #define SPECFUNC
 
+#include "mpi.h"
 
 #include <math.h>
 #include <iostream>
+#include <stdlib.h>
+#include <string.h>
 
-#include "mpi.h"
 
 #include "rnd.h"
 
@@ -51,7 +53,7 @@ void PrintLineMark(long int nline ,char* fname ,T code) {
 #endif
 
   if (ThisThread==0) {
-    std::cout << "linemark: line=" << nline << ", file=" << fname, " << code="; 
+    std::cout << "linemark: line=" << nline << ", file=" << fname << ", code=";
     for (thread=0;thread<TotalThreadsNumber;thread++) std::cout << "  " << ((T*)buffer)[thread]; 
 
     std::cout << std::endl;
@@ -64,7 +66,7 @@ void PrintLineMark(long int nline ,char* fname ,T code) {
 #ifdef DIM
 template<class TMesh>
 bool GetGradient(double* gradQ,double cellQ,double* Q,long int ncell,TMesh &grid) {
-  int counter,idim,pface;
+  int counter,pface;
   long int neib;
   double dx2,x[4][3],x0[3],df[4];
   double A[3][3],aa[3][3],af[3],detaa;
