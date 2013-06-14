@@ -26,6 +26,9 @@ our $NewGhostCell;
 
 &print_help if $Help;
 
+# Force settings without checking
+my $Force;
+
 # Equation and user module variables
 my $Src         = 'src';
 my $SrcUser     = 'srcUser';
@@ -57,6 +60,7 @@ if(not -d $Src){exit 0};
 &get_settings;
 
 foreach (@Arguments){
+    if(/^-f$/)                {$Force=1;                       next};
     if(/^-e$/)                {$Equation=1;                    next};
     if(/^-u$/)                {$UserModule=1;                  next};
     if(/^-e=(.*)$/)           {$Equation=$1;                   next};
@@ -164,20 +168,29 @@ sub set_grid_size{
 	    " positive integers separated with commas\n";
     }
 
+    $GhostCell = $NewGhostCell if $NewGhostCell;
+    die "$ERROR -ng=$GhostCell must be 2,3,4 or 5\n" if $GhostCell!~/^[2345]/;
+
     # Check the grid size (to be set)
     die "$ERROR nK=$nK must be 1 if nJ is 1\n"         if $nJ==1 and $nK>1;
     die "$ERROR nI=$nI must be an even integer\n"      if           $nI%2!=0;
     die "$ERROR nJ=$nJ must be 1 or an even integer\n" if $nJ>1 and $nJ%2!=0;
     die "$ERROR nK=$nK must be 1 or an even integer\n" if $nK>1 and $nK%2!=0;
 
-    warn "$WARNING nI=$nI nJ=$nJ nK=$nK does not allow AMR\n" 
-	if $nI == 2 or $nJ == 2 or $nK==2;
-
     die "$ERROR MaxImplBlock=$MaxImplBlock cannot exceed MaxBlock=$MaxBlock\n"
 	if $MaxImplBlock > $MaxBlock;
 
-    $GhostCell = $NewGhostCell if $NewGhostCell;
-    die "$ERROR -ng=$GhostCell must be 2,3,4 or 5\n" if $GhostCell!~/^[2345]/;
+    if(not $Force){
+	die "$ERROR nI=$nI nJ=$nJ nK=$nK does not allow AMR\n" 
+	    if $nI == 2 or $nJ == 2 or $nK==2;
+	die "$ERROR -ng=$GhostCell should not exceed nI/2=$nI/2\n"
+	    if $GhostCell > $nI/2;
+	die "$ERROR -ng=$GhostCell should not exceed nJ/2=$nJ/2\n"
+	    if $GhostCell > $nJ/2 and $nJ>1;
+	die "$ERROR -ng=$GhostCell should not exceed nK/2=$nK/2\n"
+	    if $GhostCell > $nK/2 and $nK>1;
+    }
+
 
     print "Writing new grid size $GridSize and $GhostCell ghost cells into ".
 	"$NameSizeFile and $NameBatlFile...\n";
@@ -384,7 +397,6 @@ Additional options for BATSRUS/Config.pl:
                 in the I, J and K directions, respectively. 
                 If NK = 1, the 3rd dimension is ignored: 2D grid.
                 If NJ=NK=1, the 2nd and 3rd dimensions are ignored: 1D grid.
-                1D and 2D grids are still experimental and limited.
                 In non-ignored dimensions NI, NJ, NK have to be even integers.
                 To allow AMR, the number of cells has to be 4 or more in all 
                 non-ignored directions. 
@@ -395,9 +407,12 @@ Additional options for BATSRUS/Config.pl:
 -ng             Print current setting for number of ghost cell layers.
 
 -ng=GHOSTCELL   Set number of ghost cell layers around grid blocks. 
-                The value GHOSTCELL has to be an integer at least 2 
-                and not more than half of min(NI,NJ,NK) for AMR.
+                The value GHOSTCELL has to be 2, 3, 4 or 5, but  
+                not more than NI/2, NJ/2 (if NJ>1), and NK/2 (if NK>1).
                 Default value is GHOSTCELL=2.
+
+-f              Force the -g and -ng settings even if GHOSTCELL 
+                exceeds NI/2, NJ/2 (if NJ>1), NK/2 (if NK>1) limits.
 
 -e              List all available equation modules.
 
