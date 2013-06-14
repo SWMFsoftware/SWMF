@@ -238,7 +238,7 @@ test_hallmhd:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_hallmhd_compile:
-	./Config.pl -u=Waves -e=Mhd -g=64,2,2,10,10
+	./Config.pl -u=Waves -e=Mhd -f -g=64,2,2,10,10
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -269,7 +269,7 @@ test_twofluidmhd:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_twofluidmhd_compile:
-	./Config.pl -u=Waves -e=MhdHypPe -g=64,2,2,10,10
+	./Config.pl -u=Waves -e=MhdHypPe -f -g=64,2,2,10,10
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -300,7 +300,7 @@ test_multifluid:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_multifluid_compile:
-	./Config.pl -u=Default -e=MhdHd -g=64,2,2,10,1
+	./Config.pl -u=Default -e=MhdHd -f -g=64,2,2,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -363,7 +363,7 @@ test_multiion:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_multiion_compile:
-	./Config.pl -u=Default -e=MultiIon -g=64,2,2,10,1
+	./Config.pl -u=Default -e=MultiIon -f -g=64,2,2,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -394,7 +394,7 @@ test_mhdions:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_mhdions_compile:
-	./Config.pl -u=Default -e=MhdIons -g=64,2,2,40,1
+	./Config.pl -u=Default -e=MhdIons -f -g=64,2,2,40,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -426,7 +426,7 @@ test_mhdnoncons:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_mhdnoncons_compile:
-	./Config.pl -u=Default -e=MhdNonCons -g=64,2,2,40,1
+	./Config.pl -u=Default -e=MhdNonCons -f -g=64,2,2,40,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1454,7 +1454,7 @@ test_anisotropic:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_anisotropic_compile:
-	./Config.pl -u=Waves -e=MhdAnisoP -g=100,2,2,100,1
+	./Config.pl -u=Waves -e=MhdAnisoP -f -g=100,2,2,100,1
 	$(MAKE) BATSRUS
 	make PIDL
 
