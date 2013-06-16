@@ -20,10 +20,9 @@ module ModIonoMagPerturb
        Initialized_Mag_File=.false.
   integer            :: nMagnetometer = 1
   integer            :: iUnitMag = -1
-  integer, parameter :: Max_MagnetometerNumber = 100
-  real, dimension(2,Max_MagnetometerNumber) :: &
-       PosMagnetometer_II
-  character(len=3)   :: MagName_I(Max_MagnetometerNumber), MagInCoord
+  integer, parameter :: MaxMagnetometer = 500
+  real, dimension(2,MaxMagnetometer) :: PosMagnetometer_II
+  character(len=3)   :: MagName_I(MaxMagnetometer), MagInCoord
 
 
 contains
@@ -241,8 +240,7 @@ contains
     character (len=100) :: Line
     character(len=3) :: iMagName
     real             :: iMagmLat, iMagmLon, Xyz_D(3)
-    real, dimension(Max_MagnetometerNumber)      :: &
-         MagmLat_I, MagmLon_I
+    real, dimension(MaxMagnetometer):: MagmLat_I, MagmLon_I
     integer          :: iMag
     character(len=*), parameter :: NameSub = 'read_magnetometer_input_files'
     logical          :: DoTest, DoTestMe
@@ -375,7 +373,7 @@ contains
           write(iUnitMag,'(i8)',ADVANCE='NO') nSolve
           write(iUnitMag,'(i5,5(1x,i2.2),1x,i3.3)',ADVANCE='NO') &
                (Time_array(i),i=1,7)
-          write(iUnitMag,'(1X,i2)', ADVANCE='NO')  iMag
+          write(iUnitMag,'(1X,i4)', ADVANCE='NO')  iMag
 
           ! Write position of magnetometer in SGM Coords
           write(iUnitMag,'(3es13.5)',ADVANCE='NO') Xyz_DI(:,iMag)
