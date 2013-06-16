@@ -125,7 +125,8 @@ sub process_swmf_file{
 	    unless $#items == 17;
 
 	# Extract date and station number/name
-	my $date = join(' ',@items[1..5]);
+        $items[6] =~ s/\d$/0/;  # replace second digit of seconds with a 0
+	my $date = join(' ',@items[1..6]);
 	my $imag = $items[8]-1;
 	$station = $stations[$imag];
 
@@ -279,8 +280,8 @@ sub write_output{
 		$sumBd += $data[11] + $data[14];
 	    }
 
-	    # Print date with sec and msc columns, sums, and data
-	    $output .= "$date 0 0 @data[0..2] ".
+	    # Print date, add a "msc" column with 0s, sums, and data
+	    $output .= "$date 0 @data[0..2] ".
 		"$sumBn $sumBe $sumBd @data[3..($ndata-1)]\n";
 
 	    # no error calculation if there is no data
