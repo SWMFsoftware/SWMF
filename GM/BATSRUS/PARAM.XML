@@ -1756,6 +1756,7 @@ Default is false for all logicals.
 		<option name="radiation"/>
 		<option name="radcondsplit"/>
 		<option name="radcond"/>
+		<option name="parcond"/>
 		<option name="cond"/>
 	</parameter>
 #SEMIIMPLICIT
@@ -1783,6 +1784,8 @@ To use the multi-group radiation select nWave larger than one.
 
 The "radcondsplit" option will solve each radiation group and the 
 electrons separately...
+
+The "parcond" option solves for field aligned electron heat conduction only.
 
 The "cond" option solves for electron heat conduction only.
 
@@ -5162,6 +5165,37 @@ difference due to discretization errors.
 You can use either Boris or BorisSimple but not both.
 </command>
 
+<command name="USEB0">
+	<parameter name="UseB0" type="logical" default="F"/>
+#USEB0
+F		UseB0
+
+If UseB0 is true, the magnetic field is split into an analytic B0 and
+a numerical B1 field. The B0 field may be a (rotating) dipole of a planet, 
+or the potentialf field solution for the corona. B1 is not small relative
+to B0 in general. The default value depends on the application.
+</command>
+
+<command name="USECURLB0">
+	<parameter name="UseCurlB0" type="logical" default="F"/>
+	<parameter name="rCurrentFreeB0" type="real" min="0" default="2.5"
+	    if="$UseCurlB0" />
+
+#USECURLB0
+T		UseCurlB0
+2.5		rCurrentFreeB0 (read if UseCurlB0 is true)
+
+If UseCurlB0 is true then the B0 field has non-zero curl.
+The B0 field of planets has zero curl, but the potential field source surface
+model (PFSS) for the corona has a finite curl beyond the source surface, 
+where the field is forced to become radial. 
+
+The rCurrentFreeB0 parameter is set to the radius within which the B0 field
+has no curl (i.e. it is current free).
+
+The default is UseCurlB0 false.
+</command>
+
 <command name="DIVB">
 	<parameter name="UseDivbSource"    type="logical" default="T"/>
 	<parameter name="UseDivbDiffusion" type="logical" default="F"/>
@@ -6713,6 +6747,36 @@ Default is UseMagnetogram=F.
  
 </command>
 
+<command name="READPOTENTIALFIELD">
+	<parameter name="UseMagnetogram" type="logical" default="F"/>
+	<if expr="$UseMagnetogram">
+	     <parameter name="NamePotentialFieldFile" type="string" 
+	     		length="100" default="potentialfield.out"/>
+	     <parameter name="HeightInnerBc" type="real" min="0" default="0"/>
+	     <parameter name="UnitB" type="real" min="0" default="3"/>
+	</if>
+
+#READPOTENTIALFIELD
+T                       UseMagnetogram (rest of parameters are read if true)
+potentialfield.out      NamePotentialFieldFile
+0.0                     HeightInnerBc
+3.0                     UnitB
+
+If UseMagnetogram=T then read the potential field from a file.
+
+NamePotentialFieldFile provides the name of the file containing the 3D
+potential field solution, typically produced by the FDIPS code.
+
+HeightInnerBc is the height above the photosphere of the boundary surface,
+non-zero values for this parameter are not recommended to unexperienced users.
+
+UnitB may be used both as a fudge-factor to upscale the (usually reduced)
+observational data and to accomodate data measured in the units
+different from Gauss.
+Wilcox data (in micro-Tesla) may be only used with UnitB=0.01-0.03.
+
+</command>
+
 <command name="LDEM">
 	<parameter name="UseLdem" type="logical" default="F"	/>
 	<if expr="$UseLdem">
@@ -6795,7 +6859,8 @@ Default values are show.
 		<option name="exponential"          />
 		<option name="unsignedflux"         />
 		<option name="NonWKB"               />
-		<option name="Alfvenwavedissipation"/>
+		<option name="alfvenwavedissipation"/>
+		<option name="turbulentcassade"/>
 	</parameter>
 	<if expr="$TypeCoronalHeating =~ /exponential/">
 		<parameter name="DecayLengthExp" type="real" 
