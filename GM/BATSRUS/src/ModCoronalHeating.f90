@@ -1849,7 +1849,7 @@ contains
   !============================================================================
 
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
-       QeFraction, QparFraction) 
+       CoronalHeating, QeFraction, QparFraction) 
 
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
@@ -1860,9 +1860,11 @@ contains
          Rho_, Bx_, Bz_, Pe_, p_, Ppar_, WaveFirst_, WaveLast_
 
     integer, intent(in) :: i, j, k, iBlock
+    real, intent(in) :: CoronalHeating
     real, intent(out) :: QeFraction, QparFraction
 
     real :: TeByTp, B2, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
+    real :: WaveLarge
     real :: DampingElectron, DampingPar, DampingPerp, DampingTotal
     !--------------------------------------------------------------------------
 
@@ -1901,13 +1903,15 @@ contains
             sqrt(sqrt(B2)*State_VGB(Rho_,i,j,k,iBlock)/(2.0*Pperp)) &
             /IonMassPerCharge))
 
-       DampingPerp = 0.12*sqrt(State_VGB(WaveFirst_,i,j,k,iBlock) &
-            /State_VGB(WaveLast_,i,j,k,iBlock))*LperpInvGyroRad &
-            *exp(-0.17*sqrt(2.0*Pperp/max(State_VGB(WaveFirst_,i,j,k,iBlock), &
-            1.0e-8))*LperpInvGyroRad)
+       ! Extract the Alfven wave energy density of the dominant wave
+       WaveLarge = maxval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
 
-       ! The fraction 1.0 is due to the fraction of the cascade power
-       ! that succeed to cascade to the smallest scale (<< proton gyroradius)
+       DampingPerp = 0.18*WaveLarge*sqrt(WaveLarge)*sqrt(B2/(2.0*Pperp)) &
+            /IonMassPerCharge/max(CoronalHeating*LperpInvGyroRad**3,1e-30) &
+            *exp(-0.17*sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
+
+       ! The 1+ is due to the fraction of the cascade power that succeeds
+       ! to cascade to the smallest scale (<< proton gyroradius),
        ! where the dissipation is via interactions with the electrons
        DampingTotal = 1.0 + DampingElectron + DampingPar + DampingPerp
 
