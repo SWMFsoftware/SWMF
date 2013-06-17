@@ -34,7 +34,7 @@ subroutine IM_set_param(CompInfo,TypeAction)
 
      call put(CompInfo,                         &
           Use=.true.,                           &
-          NameVersion='RAM_HEIDI (Liemohn)',    &
+          NameVersion='RAM_HEIDI',              &
           Version=1.1)
 
   case('MPI')
@@ -542,8 +542,8 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   By_I(2:np),  ByHeidi_I, LengthHeidi_I) 
         call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Bz_I(2:np),  BzHeidi_I, LengthHeidi_I) 
        
-        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   p_I(2:np),   PHeidi_I, LengthHeidi_I) 
-        call interpolate_mhd(3,(np-1),nStepInterp,Length_I(2:np),   Rho_I(2:np), RhoHeidi_I, LengthHeidi_I) 
+        call interpolate_mhd(2,(np-1),nStepInterp,Length_I(2:np),   p_I(2:np),   PHeidi_I, LengthHeidi_I) 
+        call interpolate_mhd(2,(np-1),nStepInterp,Length_I(2:np),   Rho_I(2:np), RhoHeidi_I, LengthHeidi_I) 
 
         dLength =  Length_I(np-1)/nStepInterp
         
@@ -884,7 +884,7 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   use ModNumConst, ONLY: cPi, cDegToRad
   use ModConst, ONLY: cProtonMass
   use ModHeidiCurrents, ONLY:eden, rnht
-  use ModHeidiSize,  ONLY: iSize=>nR, jSize=>nT, nR, nT
+  use ModHeidiSize,  ONLY:  nR, nT
   implicit none
   character (len=*),parameter :: NameSub='IM_get_for_gm'
 
@@ -896,12 +896,13 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   real :: T, P, latsHeidi(NR), mltsHeidi(NT)
   logical :: DoTest, DoTestMe
   real    :: Pmin
-  integer :: iLatMin=22 !Minimum latitude in MHD boundary 
-  integer :: i,j
+  integer :: i,j, iSize, jSize
   !--------------------------------------------------------------------------
-  
-  
- call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  iSize = nR
+  jSize = nT-1
+
+
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
   if (DoTestMe) &
        write(*,*)NameSub,' starting with iSizeIn, jSizeIn, nVar, NameVar=',&
        iSizeIn,jSizeIn,nVar,NameVar
@@ -915,157 +916,48 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   end if
   
   Buffer_IIV = 0.0
-
+  
   !Fill pressure and density
   do i=1,iSize
      do j=1,jSize
-          ! if( i<iLatMin .or.  i > iba(j) ) then
-        if( i<iLatMin) then
-           Buffer_IIV(i,j,pres_) = -1.
-           Buffer_IIV(i,j,dens_) = -1.
-        else
-           ! make sure pressure passed to GM is not lower than Pmin [nPa]
-           ! to avoid too low GM pressure 
-           Pmin = minval(eden(i,j,:))
-           Buffer_IIV(i,j,pres_) = max(sum(eden(i,j,:)), Pmin)*1e-9
-           
-           ! Add together density from H+ (2) and O+ (4)
-           ! Convert from #/cc to kg/m3
-           Buffer_IIV(i,j,dens_) = &
-                rnht(i,j,1)*1.0e6*cProtonMass * 4 + & ! He+
-                rnht(i,j,2)*1.0e6*cProtonMass + &     ! H+
-                rnht(k,l,4)*1.0e6*cProtonMass*16.0    ! O+
+
+        write(*,*) 'i, j, eden(i,j,:)=', i, j, eden(i,j,:)
+
+        ! make sure pressure passed to GM is not lower than Pmin [nPa]
+        ! to avoid too low GM pressure 
+        Pmin = minval(eden(i,j,:))
+        Buffer_IIV(i,j,pres_) = max(sum(eden(i,j,:)), Pmin)*1e-9
+        
+        ! Add together density from H+, He+ and O+
+        ! Convert from #/cc to kg/m3
+        Buffer_IIV(i,j,dens_) = &
+             rnht(i,j,1)*1.0e6*cProtonMass * 4 + & ! He+
+             rnht(i,j,2)*1.0e6*cProtonMass + &     ! H+
+             rnht(k,l,4)*1.0e6*cProtonMass*16.0    ! O+
+        
+        ! Only a not-a-number can be less than zero and larger than one
+        if(  .not. Buffer_IIV(i,j,pres_) > 0 .and. &
+             .not. Buffer_IIV(i,j,pres_) < 1) then
+           write(*,*)NameSub,': ERROR IN PRESSURE'
+           write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,pres_)
+           call CON_stop(NameSub // ' ERROR: Not a number found in IM pressure !')
         end if
-     
-     ! Only a not-a-number can be less than zero and larger than one
-     if(  .not. Buffer_IIV(i,j,pres_) > 0 .and. &
-          .not. Buffer_IIV(i,j,pres_) < 1) then
-        write(*,*)NameSub,': ERROR IN PRESSURE'
-        write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,pres_)
-        call CON_stop(NameSub // ' ERROR: Not a number found in IM pressure !')
-     end if
-     if(  .not. Buffer_IIV(i,j,dens_) > 0 .and. &
-          .not. Buffer_IIV(i,j,dens_) < 1) then
-        write(*,*)NameSub,': ERROR IN DENSITY'
-        write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,dens_)
-        call CON_stop(NameSub // ' ERROR: Not a number found in IM density !')
-     end if
+        if(  .not. Buffer_IIV(i,j,dens_) > 0 .and. &
+             .not. Buffer_IIV(i,j,dens_) < 1) then
+           write(*,*)NameSub,': ERROR IN DENSITY'
+           write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,dens_)
+           call CON_stop(NameSub // ' ERROR: Not a number found in IM density !')
+        end if
      end do
   end do
-
+  
   if(DoTestMe)write(*,*) NameSub,' finished'
+  
 
-
-
-
-!!$  if(iSizeIn /= IONO_nTheta*2-1 .or. jSizeIn /= IONO_nPsi)then
-!!$     write(*,*)NameSub//' incorrect buffer size=',iSizeIn,jSizeIn
-!!$     call CON_stop(NameSub//' SWMF_ERROR')
-!!$  end if
-!!$
-!!$  Buffer_IIV = -1.0
-!!$
-!!$  ! eden and rnht are defined on a nr,nt grid
-!!$  ! where do I get latitude and mlt on nr,nt grid?
-!!$
-!!$  ! the ionosphere and magnetosphere grid are shifted by 1, such that the
-!!$  ! ionosphere grid has an extra point at the lower end (and 2 at the upper)
-!!$
-!!$  do iLon=1,jo
-!!$     mltsHeidi(iLon) = LonFac(iLon) * cPi / 12.0 
-!!$  enddo
-!!$  mltsHeidi(jo+1) = mltsHeidi(1) + 2.0 * cPi
-!!$
-!!$  do iLat=1,io
-!!$     latsHeidi(iLat) = Latfac(iLat+1) * cDegToRad
-!!$  enddo
-!!$
-!!$  do iLat = 1, IONO_nTheta
-!!$     do iLon = 1, IONO_nPsi
-!!$
-!!$        T = cPi/2.0 - IONO_NORTH_Theta(iLat,iLon)
-!!$        P = mod(IONO_NORTH_Psi(iLat,iLon) + cPi, cPi*2)
-!!$
-!!$        if ((T < latsHeidi(1)).or.(T > latsHeidi(io))) then
-!!$           Buffer_IIV(iLat,iLon,:) = -1.0
-!!$        else 
-!!$
-!!$           k = 1
-!!$           do while (T > latsHeidi(k))
-!!$              k = k + 1
-!!$           enddo
-!!$
-!!$           l = 1
-!!$           do while (P > mltsHeidi(l))
-!!$              l = l + 1
-!!$           enddo
-!!$
-!!$           ! This takes the nearest cell, and does not do linear interpolation
-!!$
-!!$           ! Add together pressures from H+ (2) and O+ (4)
-!!$           ! Convert from keV/cc to Pa
-!!$           Buffer_IIV(iLat,iLon,pres_) = &
-!!$                eden(k,l,2)*0.1602*1.0e-9 + &
-!!$                eden(k,l,4)*0.1602*1.0e-9
-!!$
-!!$           ! Add together density from H+ (2) and O+ (4)
-!!$           ! Convert from #/cc to kg/m3
-!!$           Buffer_IIV(iLat,iLon,dens_) = &
-!!$                rnht(k,l,2)*1.0e6*cProtonMass + &
-!!$                rnht(k,l,4)*1.0e6*cProtonMass*16.0
-!!$
-!!$        endif
-!!$
-!!$     enddo
-!!$
-!!$  enddo
-!!$
-!!$  do iLat = 1, IONO_nTheta
-!!$     do iLon = 1, IONO_nPsi
-!!$
-!!$        T = IONO_SOUTH_Theta(iLat,iLon) - cPi/2
-!!$        P = mod(IONO_SOUTH_Psi(iLat,iLon) + cPi, cPi*2)
-!!$
-!!$        if ((T < latsHeidi(1)).or.(T > latsHeidi(io))) then
-!!$           Buffer_IIV(iLat,iLon,:) = -1.0
-!!$        else 
-!!$
-!!$           k = 1
-!!$           do while (T > latsHeidi(k))
-!!$              k = k + 1
-!!$           enddo
-!!$
-!!$           l = 1
-!!$           do while (P > mltsHeidi(l))
-!!$              l = l + 1
-!!$           enddo
-!!$
-!!$           if (l > 1) l = l - 1
-!!$
-!!$           ! This takes the nearest cell, and does not do linear interpolation
-!!$
-!!$           ! Add together pressures from H+ (2) and O+ (4)
-!!$           ! Convert from keV/cc to Pa
-!!$           Buffer_IIV(iLat,iLon,pres_) = &
-!!$                eden(k,l,2)*0.1602*1.0e-9 + &
-!!$                eden(k,l,4)*0.1602*1.0e-9
-!!$
-!!$           ! Add together density from H+ (2) and O+ (4)
-!!$           ! Convert from #/cc to kg/m3
-!!$           Buffer_IIV(iLat,iLon,dens_) = &
-!!$                rnht(k,l,2)*1.0e6*cProtonMass + &
-!!$                rnht(k,l,4)*1.0e6*cProtonMass*16.0
-!!$
-!!$        endif
-!!$
-!!$     enddo
-!!$
-!!$  enddo
-!!$
-!!$  ! species = e, H, he, o
-!!$
-!!$!!! RNHT(colat,mlt,species) = density in #/cc
-!!$!!! EDEN("                ) = equatorial pressure (keV/cc) (*0.1602 = nPa)
+!STOP
+! species = e, H, he, o
+! RNHT(colat,mlt,species) = density in #/cc
+! EDEN("                ) = equatorial pressure (keV/cc) (*0.1602 = nPa)
 
 end subroutine IM_get_for_gm
 
