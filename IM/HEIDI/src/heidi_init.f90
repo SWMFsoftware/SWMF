@@ -40,13 +40,12 @@ subroutine heidi_init
  
   call THERMAL   ! Setup only
  
-  call GEOSB
+  call GEOSB ! sets up the BC conditions
   if (iwpi.gt.0) then
      call WAPARA
      call ANISCH
   end if
-
-  
+ 
   !Start the calculation
 
   NPR=nint(TINT/DT/2.)

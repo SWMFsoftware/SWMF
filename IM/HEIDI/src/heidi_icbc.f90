@@ -623,14 +623,19 @@ end subroutine LMPLOSS
 
 subroutine GEOSB
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiDrifts
-  use ModIonoHeidi
-  use ModNumConst, only: cDegToRad
-  use ModIoUnit, only : io_unit_new
-
+  use ModHeidiSize,  ONLY: nE, nPa, nS, s, io, ko, lo, jo, dT, scalc
+  use ModHeidiIO,    ONLY: Kp, tinj, F107,  &
+       NameInputDirectory, iUnitStdOut, iUnitMpa, iUnitSopa, NameRun, &
+       time, nStep, iBC,  write_prefix
+  use ModHeidiMain,  ONLY: Q, FluxFact, mas, mu, ekev, fFactor, m1, F2, &
+       t, fGeos, MhdEqPressure_I, MhdEqDensity_I
+  use ModIonoHeidi,  ONLY: IONO_nPsi, IONO_nTheta, IONO_NORTH_Theta, &
+       IonoGmDensity, IonoGmTemperature
+  use ModNumConst,   ONLY: cDegToRad
+  use ModIoUnit,     ONLY: io_unit_new
+  use ModNumConst,   ONLY: cPi
+  use ModHeidiInput, ONLY: TypeBField
+  use ModConst,      ONLY: cBoltzmann
   implicit none
 
   character(len=80) :: HEADER
@@ -649,7 +654,7 @@ subroutine GEOSB
 
   integer :: iLatBoundary=-1, iLonBoundary=-1
   !---------------------------------------------------------------------
-
+  
   call write_prefix; write(iUnitStdOut,*) 'Resetting the outer boundary condition'
   !\
   ! Create a few flags and open a few files
@@ -682,29 +687,34 @@ subroutine GEOSB
               end do
            end if
         end do
+       
         if (IG7.eq.1) then
            TS2=TIME-1.		! Prepare SOPA input file
            TS1=TS2
            FS2(1:7)=0.
            iUnitSopa = io_unit_new()
            open(UNIT=iUnitSopa,FILE=NameInputDirectory//trim(NameRun)//'_sopa.in',status='old')
-          write(*,*) 'SOPA',  iUnitSopa
+           write(*,*) 'SOPA',  iUnitSopa
            do I=1,3
               read(iUnitSopa,*) HEADER
            end do
         end if
-        TM2=TIME-1.		! Prepare MPA input file
-        TM1=TM2
-        NM2=0.
-        TFM2=0.
-        TCM2=0.
+        
+        ! Prepare MPA input file
+        
+        TM2=TIME-1.	! Universal Time
+        TM1=TM2         
+        NM2=0.          ! proton density (1/cc)
+        TFM2=0.         ! T parallel proton (eV)
+        TCM2=0.         
         NE2=0.
         TEC2=0.
         TEF2=0.
+        
+!!!!!!!!!!!!!!!!!!!!
         iUnitMpa = io_unit_new()
         open(UNIT=iUnitMpa,FILE=NameInputDirectory//trim(NameRun)//'_mpa.in',status='old')
         
-
         do I=1,3			! 3 lines of header material
            read(iUnitMpa,*) HEADER
         end do
@@ -712,9 +722,9 @@ subroutine GEOSB
         if (S.eq.1) I2=3
      end if
   end if
-
+  
   do S=1,NS
-
+     
      do L=1,LO
         do K=1,KO
            do J=1,JO
@@ -722,9 +732,9 @@ subroutine GEOSB
            enddo
         enddo
      enddo
-
+     
      if (SCALC(S).eq.1) then
-
+        
         if (TINJ.gt.TIME+2.*DT*NSTEP) then ! No injection, use IC for BC
            do L=1,LO
               do K=1,KO
@@ -734,7 +744,7 @@ subroutine GEOSB
               end do
            end do
         end if
-
+        
      end if   ! SCALC check
   end do	 ! S loop
 
@@ -753,6 +763,45 @@ subroutine GEOSB
            NE2=data(7)
            TEF2=data(9)
            TEC2=data(8)
+          
+           write(*,*) 'MPA values TEC2, TEF2, NE2 = ', TM1, TM2, NM1, TEC2, TEF2, NE2 
+           
+         if ((TypeBField .eq. 'mhd') .and. t>dT) then 
+           !   if (TypeBField .eq. 'mhd')  then 
+
+             ! TM2 = Universal time
+              TM2=data(2)
+              
+              write(*,*) 'MHD Type BField' 
+ 
+              ! Tpa_p,eV 
+              write(*,*) 'cBoltzmann =', cBoltzmann
+              write(*,*) 'MhdEqPressure_I(1)= ', MhdEqPressure_I(1)
+              write(*,*) 'MhdEqDensity_I(1) = ', MhdEqDensity_I(1)
+              
+              MhdEqDensity_I(1) =  MhdEqDensity_I(1)  + 1.e-20
+              MhdEqPressure_I(1) = MhdEqPressure_I(1) + 1.e-20
+
+              TFM2 = MhdEqPressure_I(1)/(MhdEqDensity_I(1)*1.0e6*cBoltzmann)/11604.0 ! k -> eV
+              ! Tpe_p,eV 
+              TCM2 = MhdEqPressure_I(1)/(MhdEqDensity_I(1)*1.0e6*cBoltzmann)/11604.0 ! Tpe_p,eV 
+              ! proton density
+              NM2  = MhdEqDensity_I(1)  
+              ! electron density
+              NE2 = MhdEqDensity_I(1) 
+
+              ! Tpa_e,eV @ midnight
+              TEF2 = TFM2/7.0
+              ! Tpe_e,eV  
+              TEC2 =  TEF2
+
+              write(*,*) 'MHD values TEC2, TEF2, NE2 = ', TM1, TM2, NM1, TEC2, TEF2, NE2 
+              
+             ! STOP
+           end if
+
+
+
            if (L.lt.0) TM2=TIME+2*DT*(NSTEP+1)
            if (T.eq.TIME) then		! In case T2>T already
               TM1=TIME
@@ -766,6 +815,8 @@ subroutine GEOSB
         end do
      end if
 
+!!!!!!!!!!!!!!!!!!!!
+
      ! inputs are in /cc and eV
 
      FAC=(T-TM1)/(TM2-TM1)		! Linearly interpolate
@@ -775,6 +826,7 @@ subroutine GEOSB
      NEL=FAC*NE2+(1.-FAC)*NE1		! in cm-3
      TEF=(FAC*TEF2+(1.-FAC)*TEF1)*1.E-3	! in keV
      TEC=(FAC*TEC2+(1.-FAC)*TEC1)*1.E-3	! in keV
+     
      !\
      ! DONE reading in data
      ! This is a total hack - we need to figure out how to NOT read in the
@@ -844,7 +896,7 @@ subroutine GEOSB
            ! _hsopa: H+ has a different function than all other species
            if (SKAPPA(S).eq.1) then  ! bi-kappa=5,  SOPA (if designated)
               Ekap=TFM*(Kappa-1.5)/Kappa
-              FAC=(TFM/TCM)*(MAS(S)*1.E13/(2.*PI*Kappa*Ekap*Q))**1.5
+              FAC=(TFM/TCM)*(MAS(S)*1.E13/(2.*cPi*Kappa*Ekap*Q))**1.5
               FAC=FAC*exp(heidi_gammln(Kappa+1.,IER)-heidi_gammln(Kappa-0.5,IER))
               do L=1,LO
                  do K=1,KES(S)          ! MPA moments
@@ -870,7 +922,7 @@ subroutine GEOSB
                     ! TFM = Temperature (perp or par) - can have same
                     ! NM  = density
                     !/
-                    Flanl(K,L,S)=NM*NMFAC(S)*(MAS(S)*1.E13/Q/2./PI)**1.5/  &
+                    Flanl(K,L,S)=NM*NMFAC(S)*(MAS(S)*1.E13/Q/2./cPi)**1.5/  &
                          sqrt(TFM)/TCM*exp(-EKEV(K)*((1.-MU(L)*MU(L))/TCM    &
                          +MU(L)*MU(L)/TFM))
                  end do  ! K loop for MPA
@@ -1022,7 +1074,7 @@ subroutine FINJ(F)
      end do
      Ninj=Ninj*NY(S)/NY(1)
   end if
-  Cst1=(MAS(S)*1.E13/(2.*PI*Kinj*Einj*Q))**1.5
+  Cst1=(MAS(S)*1.E13/(2.*cPi*Kinj*Einj*Q))**1.5
   Cst2=exp(heidi_gammln(Kinj+1.,IER)-heidi_gammln(Kinj-0.5,IER))
   CONV=1.
   do K=1,KO
