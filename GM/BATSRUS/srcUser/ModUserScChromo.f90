@@ -504,9 +504,13 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, B0_DGB,&
-         StateOld_VCB
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
+         UseAnisoPressure, B0_DGB, StateOld_VCB
+    use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
+         get_tesi_c, TeSi_C
     use ModConst,      ONLY: rSun
+    use ModCoronalHeating, ONLY: get_block_heating, CoronalHeating_C, &
+         apportion_coronal_heating
     use ModMain,       ONLY: UseB0, UseRotatingFrame
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
          UnitX_, UnitU_, UnitB_, OmegaBody
@@ -529,6 +533,7 @@ contains
     integer :: i, j, k
     real    :: U_D(3), B_D(3), r, phi, theta
     real    :: sintheta, sinphi, costheta, cosphi
+    real    :: QeFraction, QparFraction
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -555,6 +560,24 @@ contains
           PlotVar_G(i,j,k) = TiFraction*State_VGB(p_,i,j,k,iBlock) &
                /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
        end do; end do; end do
+
+    case('qebyq', 'qparbyq')
+       if(UseElectronPressure)then
+          call get_block_heating(iBlock)
+          if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(DoExtendTransitionRegion) CoronalHeating_C(i,j,k) = &
+                  CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
+             call apportion_coronal_heating(i, j, k, iBlock, &
+                  CoronalHeating_C(i,j,k), QeFraction, QparFraction)
+             select case(NameVar)
+             case('qebyq')
+                PlotVar_G(i,j,k) = QeFraction
+             case('qparbyq')
+                if(UseAnisoPressure) PlotVar_G(i,j,k) = QparFraction
+             end select
+          end do; end do; end do
+       end if
 
        ! Vector components in spherical coordinates
     case('u_r','uphi','utheta')
