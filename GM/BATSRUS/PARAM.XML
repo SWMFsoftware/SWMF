@@ -2758,6 +2758,8 @@ out. The unit of the pertrubation output is nT.
 				<option name="Flux vars. scaled" value="flx"/>
 				<option name="Solar variables"    value="SOL"/>
 				<option name="Solar vars. scaled" value="sol"/>
+				<option name="EUV image variables" value="euv"/>
+				<option name="Tabular image variable"      value="tbl"/>
 				<option name="Radio wave intensity" value="rwi"/>
 				<option name="Position variables"    value="POS"  if="$plotarea eq 'lin'" />
 				<option name="Position vars. scaled" value="pos"  if="$plotarea eq 'lin'"/>
@@ -2814,6 +2816,8 @@ out. The unit of the pertrubation output is nT.
 						min="0" max="1" default="0.5"/>
 			<parameter name="nPix" type="integer" min="2"
 								default="200"/>
+			<parameter name="NameLosTable" type="string" length="100"
+				   if="$plotvar =~ /tbl/i"/>
                 </if>
 		<if expr="$plotarea =~ /\blin\b/">
 			<parameter name="NameLine" type="string" 
@@ -2882,7 +2886,7 @@ sph flx idl_ascii	StringPlot ! spherical plot
 -1			DnSavePlot
 100.			DtSavePlot
 4.			Radius     ! of spherical surface
-los sol idl_real4       StringPlot ! line of sight plot
+los tbl idl_real4       StringPlot ! line of sight plot using table
 -1			DnSavePlot
 100.			DtSavePlot
 -215.			ObsPosX
@@ -2895,6 +2899,7 @@ los sol idl_real4       StringPlot ! line of sight plot
 3.			rOccult
 0.5			MuLimbDarkening
 300			nPix
+AiaXrt			NameLosTable
 lin mhd idl		StringPlot  ! field line plot
 -1			DnSavePlot
 10.			DtSavePlot
@@ -2983,12 +2988,13 @@ plotform plotarea plotvar
 
 plotform = 'tec', 'hdf', 'idl', 'idl_real4', 'idl_real8', 'idl_ascii'
 plotarea = '1d', '2d', '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', 'rfr', 'eqr', 'ieb', 'lcb'
-plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'euv', 'sxr', 'pos', 'var', 'bbk' 'rwi' 'int' 'nul' - normalized
-plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'EUV', 'SXR', 'pos', 'VAR', 'BBK' 'RWI' 'INT' 'NUL' - dimensional
+plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'euv', 'sxr', 'tbl', 'pos', 'var', 'bbk' 'rwi' 'int' 'nul' - normalized
+plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'EUV', 'SXR', 'TBL', 'pos', 'VAR', 'BBK' 'RWI' 'INT' 'NUL' - dimensional
 \end{verbatim}
 NOTES: The plotvar option 'sol' is only valid for plotarea 'los';
        The plotvar option 'euv' is only valid for plotarea 'los';
        The plotvar option 'sxr' is only valid for plotarea 'los';
+       The plotvar option 'tbl' is only valid for plotarea 'los';
        the plotvar option 'pos' is only valid for plotarea 'lin'.
        the plotvar option 'rwi' is only valid for plotarea 'rfr'.
 \\
@@ -3054,6 +3060,8 @@ values or as non-dimensional values:
  'euv' - vars: euv171 euv195 euv284
          pars:
  'sxr' - vars: sxr
+         pars:
+ 'tbl' - vars: listed in the LOS table file
          pars:
  'bbk' - vars: dx pe blk blkall
          pars: 
