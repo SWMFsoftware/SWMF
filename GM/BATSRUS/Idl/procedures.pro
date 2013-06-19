@@ -4384,3 +4384,68 @@ b_curr = b_orig
 tvlct,r,g,b
 
 end
+
+;=============================================================================
+pro save_pict, unit, headline, varname, w, x, $
+               it, time, eqpar, ndim=ndim, type=type
+
+  ;; on_error,2
+
+  if n_elements(unit) eq 0 or n_elements(headline) eq 0 or $
+     n_elements(varname) eq 0 or n_elements(w) eq 0 then begin
+     print,'ERROR in save_pict: ', $
+           'arguments unit headline, varname, w are required'
+     retall
+  endif
+
+  if n_elements(type) eq 0 then type = 'ascii'
+  if n_elements(it) eq 0 then it=0
+  if n_elements(time) eq 0 then time=0.0
+  if n_elements(eqpar) eq 0 then begin
+     eqpar = fltarr(1)
+     varname = varname + ' none'
+  endif
+  neqpar = n_elements(eqpar)
+
+  sw = size(w)
+
+  if n_elements(x) gt 0 then begin
+     sx = size(x)
+     if n_elements(ndim) eq 0 then ndim = s(0) - 1 > 1
+     nx = sx(1:ndim)
+  endif else begin
+     if n_elements(ndim) eq 0 then ndim = sw(0) - 1 > 1
+     nx = sw(1:ndim)
+     case ndim of
+        1: x = findgen(nx(0)) + 1
+        2: begin
+           x = fltarr(nx(0), nx(1), 2)
+           for j = 0L, nx(1)-1 do for i = 0L, nx(0)-1 do x(i,j,*) = [i+1, j+1]
+        end
+        3: begin
+           x = fltarr(nx(0), nx(1), nx(2)) + 1
+           for k = 0L, nx(2)-1 do for j = 0L, nx(1)-1 do $
+              for i = 0L, nx(0)-1 do x(i,j,*) = [i+1., j+1., k+1.]
+        end
+     endcase
+  endelse
+
+  ; number of variables
+  if sw[0] eq ndim + 1 then nw = sw(ndim+1) else nw = 1
+
+  printf, unit, headline
+  printf, unit, it, time, ndim, neqpar, nw, format='(i8, 1e13.5, 3i3)'
+  printf, unit, nx, format='(3i8)'
+  printf, unit, eqpar, format='(100(1e13.5))'
+  printf, unit, varname
+  case ndim of
+     1: for i = 0L, nx(0)-1 do $
+        printf, unit, x(i), w(i,*), format='(100(1e18.10))'
+     2: for j = 0L, nx(1)-1 do for i = 0L, nx(0)-1 do $
+        printf, unit, x(i,j,*), w(i,j,*), format='(100(1e18.10))'
+     3: for k = 0L, nx(2)-1 do for j = 0L, nx(1)-1 do for i = 0L, nx(0)-1 do $
+        printf, unit, x(i,j,k,*), w(i,j,k,*), format='(100(1e18.10))'
+  endcase
+
+end
+
