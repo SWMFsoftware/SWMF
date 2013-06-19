@@ -3,9 +3,11 @@ pro loadct_eit, color
 
   ; Find /Idl in the path
   ct_path = '.'
-  list = strsplit(!path,':',/extract)
-  for i = 0, n_elements(list)-1 do begin
-     dir=list(i)
+
+  dirs = strsplit(!path,':',/extract)
+
+  for i = 0, n_elements(dirs)-1 do begin
+     dir = dirs[i]
      if strpos(dir,'/Idl') gt strlen(dir)-6 then ct_path = dir+"/"
   endfor
 
