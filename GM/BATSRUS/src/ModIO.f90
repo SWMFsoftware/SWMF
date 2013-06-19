@@ -42,6 +42,7 @@ Module ModIO
 
   logical :: restart=.false.        ! read restart file
   logical :: restart_Bface =.false. ! Bface restarted ^CFG IF CONSTRAINB
+  logical :: IsRestartCoupler=.false. ! Informs coupler if restarted
 
   logical :: DoSaveInitial = .false.
 

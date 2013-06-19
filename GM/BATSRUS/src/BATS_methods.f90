@@ -39,6 +39,7 @@ subroutine BATS_setup
 
   call write_runtime_values
 
+  IsRestartCoupler = restart
   restart = .false.
 
 contains
