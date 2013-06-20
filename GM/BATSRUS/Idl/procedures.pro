@@ -4395,19 +4395,20 @@ tvlct,r,g,b
 end
 
 ;=============================================================================
-pro save_pict, unit, headline, varname, w, x, $
-               it, time, eqpar, ndim=ndim, type=type
+pro save_pict, filename, headline, varname, w, x, $
+               it, time, eqpar, ndim=ndim, gencoord=gencoord, $
+               filetype=filetype, append=append
 
   ;; on_error,2
 
-  if n_elements(unit) eq 0 or n_elements(headline) eq 0 or $
+  if n_elements(filename) eq 0 or n_elements(headline) eq 0 or $
      n_elements(varname) eq 0 or n_elements(w) eq 0 then begin
      print,'ERROR in save_pict: ', $
            'arguments unit headline, varname, w are required'
      retall
   endif
 
-  if n_elements(type) eq 0 then type = 'ascii'
+  if n_elements(filetype) eq 0 then filetype = 'ascii'
   if n_elements(it) eq 0 then it=0
   if n_elements(time) eq 0 then time=0.0
   if n_elements(eqpar) eq 0 then begin
@@ -4420,7 +4421,7 @@ pro save_pict, unit, headline, varname, w, x, $
 
   if n_elements(x) gt 0 then begin
      sx = size(x)
-     if n_elements(ndim) eq 0 then ndim = s(0) - 1 > 1
+     if n_elements(ndim) eq 0 then ndim = sx(0) - 1 > 1
      nx = sx(1:ndim)
   endif else begin
      if n_elements(ndim) eq 0 then ndim = sw(0) - 1 > 1
@@ -4442,19 +4443,59 @@ pro save_pict, unit, headline, varname, w, x, $
   ; number of variables
   if sw[0] eq ndim + 1 then nw = sw(ndim+1) else nw = 1
 
-  printf, unit, headline
-  printf, unit, it, time, ndim, neqpar, nw, format='(i8, 1e13.5, 3i3)'
-  printf, unit, nx, format='(3i8)'
-  printf, unit, eqpar, format='(100(1e13.5))'
-  printf, unit, varname
-  case ndim of
-     1: for i = 0L, nx(0)-1 do $
-        printf, unit, x(i), w(i,*), format='(100(1e18.10))'
-     2: for j = 0L, nx(1)-1 do for i = 0L, nx(0)-1 do $
-        printf, unit, x(i,j,*), w(i,j,*), format='(100(1e18.10))'
-     3: for k = 0L, nx(2)-1 do for j = 0L, nx(1)-1 do for i = 0L, nx(0)-1 do $
-        printf, unit, x(i,j,k,*), w(i,j,k,*), format='(100(1e18.10))'
-  endcase
+  if keyword_set(gencoord) then ndim = -ndim
+
+  unit=1
+
+  if filetype eq 'ascii' then begin
+     openw, unit, filename, append=append
+
+     printf, unit, headline
+     printf, unit, it, time, ndim, neqpar, nw, format='(i8, 1e13.5, 3i3)'
+     printf, unit, nx, format='(3i8)'
+     printf, unit, eqpar, format='(100(1e13.5))'
+     printf, unit, varname
+     case ndim of
+        1: for i=0L, nx(0)-1 do $
+           printf, unit, x(i), w(i,*), format='(100(1e18.10))'
+        2: for j =0L, nx(1)-1 do for i=0L, nx(0)-1 do $
+           printf, unit, x(i,j,*), w(i,j,*), format='(100(1e18.10))'
+        3: for k=0L, nx(2)-1 do for j=0L, nx(1)-1 do for i=0L, nx(0)-1 do $
+           printf, unit, x(i,j,k,*), w(i,j,k,*), format='(100(1e18.10))'
+     endcase
+  endif else begin
+     ; extend strings to 500 characters
+     for i = 1, 500-strlen(headline) do headline = headline + ' '
+     for i = 1, 500-strlen(varname)  do varname  = varname  + ' '
+
+     ; convert reals to 4 or 8 bytes
+     if filetype eq 'real4' then begin
+        time  = float(time)
+        eqpar = float(eqpar)
+        x     = float(x)
+        w     = float(w)
+     endif else begin
+        time  = double(time)
+        eqpar = double(eqpar)
+        x     = double(x)
+        w     = double(w)
+     endelse
+
+     ; write unformatted Fortran file
+     openw, unit, filename, /f77_unformatted, append=append
+     writeu, unit, headline
+     writeu, unit, long(it), time, long(ndim), long(neqpar), long(nw)
+     writeu, unit, long(nx)
+     writeu, unit, eqpar
+     writeu, unit, varname
+     writeu, unit, x
+     case ndim of
+        1: for iw=0, nw-1 do writeu, unit, w(*,iw)
+        2: for iw=0, nw-1 do writeu, unit, w(*,*,iw)
+        3: for iw=0, nw-1 do writeu, unit, w(*,*,*,iw)
+     endcase
+  endelse
+  close,unit
 
 end
 
