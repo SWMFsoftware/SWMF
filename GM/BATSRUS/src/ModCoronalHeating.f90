@@ -1352,9 +1352,10 @@ contains
          CellSize_DB, FaceNormal_DDFB, CellVolume_GB
     use BATL_size, ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nI, j0_, nJp1_, k0_, nKp1_
-    use ModAdvance, ONLY: State_VGB
-    use ModB0, ONLY: B0_DGB
-    use ModFaceGradient, ONLY: set_block_field2
+    use ModAdvance, ONLY: State_VGB, &
+         LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
+         RightState_VX, RightState_VY, RightState_VZ
+    use ModB0, ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, Lperp_
 
@@ -1367,11 +1368,8 @@ contains
     real :: FullB_D(3), FullB, Coef
     real :: EwavePlus, EwaveMinus, ReflectionPerLperp
 
-    integer :: ii, jj, kk
     real :: GradAlfven_D(nDim)
-    ! Array needed for second order interpolation of ghost cells
-    real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
-    real, save :: Alfven_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
+    real, save :: Alfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
 
     character(len=*), parameter :: &
          NameSub = 'ModCoronalHeating::turbulent_cascade'
@@ -1428,59 +1426,28 @@ contains
        else
 
           if(IsNewBlockAlfven)then
-             if(.not.allocated(State2_VG)) allocate( &
-                  State1_VG(4,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
-                  State2_VG(4,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
-
-             ! second order interpolation of density and magnetic field
-             do kk = MinK, MaxK; do jj = MinJ, MaxJ; do ii = MinI, MaxI
-                State2_VG(iRho,ii,jj,kk) = State_VGB(Rho_,ii,jj,kk,iBlock)
-                State2_VG(iBx:iBz,ii,jj,kk) = &
-                     State_VGB(Bx_:Bz_,ii,jj,kk,iBlock)
-             end do; end do; end do
-             call set_block_field2(iBlock, 4, State1_VG, State2_VG)
-
-             if(UseB0)then
-                do kk = k0_, nKp1_; do jj = j0_, nJp1_; do ii = 0, nI+1
-                   Alfven_G(ii,jj,kk) = &
-                        sqrt( sum((State2_VG(iBx:iBz,ii,jj,kk) &
-                        + B0_DGB(:,ii,jj,kk,iBlock))**2) &
-                        /State2_VG(iRho,ii,jj,kk))
-                end do; end do; end do
-             else
-                do kk = k0_, nKp1_; do jj = j0_, nJp1_; do ii = 0, nI+1
-                   Alfven_G(ii,jj,kk) = &
-                        sqrt( sum(State2_VG(iBx:iBz,ii,jj,kk)**2) &
-                        /State2_VG(iRho,ii,jj,kk))
-                end do; end do; end do
-             end if
+             call get_alfven_speed
 
              IsNewBlockAlfven = .false.
           end if
 
           if(IsCartesianGrid)then
-             GradAlfven_D(x_) = 0.5/CellSize_DB(x_,iBlock) &
-                  *(Alfven_G(i+1,j,k) - Alfven_G(i-1,j,k))
-             if(nJ > 1) GradAlfven_D(y_) = 0.5/CellSize_DB(y_,iBlock) &
-                  *(Alfven_G(i,j+1,k) - Alfven_G(i,j-1,k))
-             if(nK > 1) GradAlfven_D(z_) = 0.5/CellSize_DB(z_,iBlock) &
-                  *(Alfven_G(i,j,k+1) - Alfven_G(i,j,k-1))
+             GradAlfven_D(x_) = 1.0/CellSize_DB(x_,iBlock) &
+                  *(Alfven_FD(i+1,j,k,1) - Alfven_FD(i,j,k,1))
+             if(nJ > 1) GradAlfven_D(y_) = 1.0/CellSize_DB(y_,iBlock) &
+                  *(Alfven_FD(i,j+1,k,2) - Alfven_FD(i,j,k,2))
+             if(nK > 1) GradAlfven_D(z_) = 1.0/CellSize_DB(z_,iBlock) &
+                  *(Alfven_FD(i,j,k+1,3) - Alfven_FD(i,j,k,3))
           else
              GradAlfven_D = &
-                  0.5*(Alfven_G(i+1,j,k) + Alfven_G(i,j,k)) &
-                  *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
-                  - 0.5*(Alfven_G(i,j,k) + Alfven_G(i-1,j,k)) &
-                  *FaceNormal_DDFB(:,x_,i,j,k,iBlock)
+                  Alfven_FD(i+1,j,k,1)*FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
+                  - Alfven_FD(i,j,k,1)*FaceNormal_DDFB(:,x_,i,j,k,iBlock)
              if(nJ > 1) GradAlfven_D = GradAlfven_D + &
-                  0.5*(Alfven_G(i,j+1,k) + Alfven_G(i,j,k)) &
-                  *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
-                  - 0.5*(Alfven_G(i,j,k) + Alfven_G(i,j-1,k)) &
-                  *FaceNormal_DDFB(:,y_,i,j,k,iBlock)
+                  Alfven_FD(i,j+1,k,2)*FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
+                  - Alfven_FD(i,j,k,2)*FaceNormal_DDFB(:,y_,i,j,k,iBlock)
              if(nK > 1) GradAlfven_D = GradAlfven_D + &
-                  0.5*(Alfven_G(i,j,k+1) + Alfven_G(i,j,k)) &
-                  *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
-                  - 0.5*(Alfven_G(i,j,k) + Alfven_G(i,j,k-1)) &
-                  *FaceNormal_DDFB(:,z_,i,j,k,iBlock)
+                  Alfven_FD(i,j,k+1,3)*FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
+                  - Alfven_FD(i,j,k,3)*FaceNormal_DDFB(:,z_,i,j,k,iBlock)
 
              GradAlfven_D = GradAlfven_D/CellVolume_GB(i,j,k,iBlock)
           end if
@@ -1498,6 +1465,43 @@ contains
     end if
 
     CoronalHeating = sum(WaveDissipation_V)
+
+  contains
+
+    subroutine get_alfven_speed
+
+      integer :: i, j, k
+      real :: Rho, FullB_D(3)
+      !------------------------------------------------------------------------
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+         FullB_D = 0.5*(LeftState_VX(Bx_:Bz_,i,j,k) &
+              + RightState_VX(Bx_:Bz_,i,j,k))
+         if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
+         Rho = 0.5*(LeftState_VX(Rho_,i,j,k) + RightState_VX(Rho_,i,j,k))
+         Alfven_FD(i,j,k,1) = sqrt( sum(FullB_D**2)/Rho )
+      end do; end do; end do
+
+      if(nJ > 1)then
+         do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+            FullB_D = 0.5*(LeftState_VY(Bx_:Bz_,i,j,k) &
+                 + RightState_VY(Bx_:Bz_,i,j,k))
+            if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
+            Rho = 0.5*(LeftState_VY(Rho_,i,j,k) + RightState_VY(Rho_,i,j,k))
+            Alfven_FD(i,j,k,2) = sqrt( sum(FullB_D**2)/Rho )
+         end do; end do; end do
+      end if
+
+      if(nK > 1)then
+         do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+            FullB_D = 0.5*(LeftState_VZ(Bx_:Bz_,i,j,k) &
+                 + RightState_VZ(Bx_:Bz_,i,j,k))
+            if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
+            Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) + RightState_VZ(Rho_,i,j,k))
+            Alfven_FD(i,j,k,3) = sqrt( sum(FullB_D**2)/Rho )
+         end do; end do; end do
+      end if
+
+    end subroutine get_alfven_speed
 
   end subroutine turbulent_cascade
 

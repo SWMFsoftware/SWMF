@@ -518,6 +518,8 @@ contains
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, By_, Bz_, RhoUx_, RhoUy_, &
          RhoUz_, WaveFirst_, WaveLast_
     use ModCoordTransform,  ONLY: xyz_to_sph
+    use ModFaceValue, ONLY: calc_face_value
+    use ModB0, ONLY: set_b0_face
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -563,6 +565,8 @@ contains
 
     case('qebyq', 'qparbyq')
        if(UseElectronPressure)then
+          call set_b0_face(iBlock)
+          call calc_face_value(.false., iBlock)
           call get_block_heating(iBlock)
           if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
