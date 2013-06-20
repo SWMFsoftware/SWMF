@@ -13,19 +13,10 @@ pro loadct_extra, color
      return
   endif
 
-  if strlen(color) eq 1 and $
-     strlen(stregex(color,'[0-9]',/extract)) eq 1 then begin
+  if stregex(color,'^[0-9]$',/boolean) or $
+     stregex(color, '^[0-3][0-9]$', /boolean) or color eq '40' then begin
      loadct, fix(color)
      return
-  endif
-
-  if strlen(color) eq 2 and $
-     strlen(stregex(color, '[0-4][0-9]', /extract)) eq 2 then begin
-     number = fix(color)
-     if number le 40 then begin
-        loadct, number
-        return
-     endif
   endif
 
   table1 = 'color_table_extra.ct'
