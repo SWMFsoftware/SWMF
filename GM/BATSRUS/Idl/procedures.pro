@@ -1001,13 +1001,13 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    askstr,'func(s) (e.g. rho p ux;uz bx+by -T) ',func,doask
    if plotdim eq 1 then begin
       print,'1D plotmode: plot/plot_io/plot_oi/plot_oo'
-      print,'1D +options: log,noaxis,over'
+      print,'1D +options: log,noaxis,over,ct###'
       askstr,'plotmode(s)                ',plotmode,doask
       if strmid(plotmode,0,4) ne 'plot' then plotmode='plot'
    endif else begin
       if strmid(plotmode,0,4) eq 'plot' then plotmode=''
       print,'2D plotmode: shade/surface/cont/tv/polar/velovect/vector/stream'
-      print,'2D +options: bar,body,fill,grid,irr,label,log,mesh,noaxis,over,white'
+      print,'2D +options: bar,body,fill,grid,irr,label,log,mesh,noaxis,over,white,ct###'
       askstr,'plotmode(s)                ',plotmode,doask
    endelse
    askstr,'plottitle(s) (e.g. B [G];J)',plottitle,doask
@@ -1897,7 +1897,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         getaxes,ndim,x   ,xx,yy,zz,cut,cut0,rSlice,plotdim,variables
   endif
 
-                                ; Calculate plot spacing from number of plots per page (ppp) and charsize
+  ; Calculate plot spacing from number of plots per page (ppp) and charsize
   if !p.charsize eq 0.0 then !p.charsize=1.0
   ppp   = multix*multiy
   space = max([float(!d.y_ch_size)/float(!d.y_size),$
@@ -1995,8 +1995,17 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         logarithm=1
      endif else logarithm=0
 
+     ; check if this plot requires a special color table &ct=XXX&
+     i = strpos(plotmod, 'ct')
+     if i ge 0 then begin
+        color = strmid(plotmod,i+2)
+        plotmod = strmid(plotmod,0,i)
+        loadct_extra, color
+     endif
+
      !p.title=plottitles(ifunc)
      if !p.title eq 'default' then !p.title=funcs(ifunc)
+
 
                                 ; Calculate the next p.multi(0) explicitly
      if !p.multi(0) gt 0 then multi0=!p.multi(0)-1 $
