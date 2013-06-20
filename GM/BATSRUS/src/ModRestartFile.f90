@@ -350,7 +350,7 @@ contains
     write(unit_tmp,'(es22.15,a18)')z1,'zMin'
     write(unit_tmp,'(es22.15,a18)')z2,'zMax'
     write(unit_tmp,*)
-    if(.not.IsCartesianGrid .and. RadiusMin > 0.0 .and. RadiusMax > 0.0)then
+    if(.not.IsCartesianGrid .and. RadiusMin >= 0.0 .and. RadiusMax > 0.0)then
        write(unit_tmp,'(a)')'#LIMITRADIUS'
        write(unit_tmp,'(es22.15,a18)') RadiusMin, 'RadiusMin' 
        write(unit_tmp,'(es22.15,a18)') RadiusMax, 'RadiusMax' 
