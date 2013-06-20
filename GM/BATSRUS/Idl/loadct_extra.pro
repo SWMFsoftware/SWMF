@@ -8,17 +8,28 @@ pro loadct_extra, color
      return
   endif
 
+  s = size(color)
+  if s(0) ne 0 then begin
+     print, 'ERROR in loadct_extra: color argument must be a scalar'
+     return
+  endif
+
+  ; convert number value to a string if necessary
+  if s(1) ne 7 then color = strtrim(string(fix(color)),2)
+
   if strlen(color) eq 0 then begin
      print, 'ERROR in loadct_extra: color has zero length'
      return
   endif
 
+  ;  check if we match '0' ... '40'
   if stregex(color,'^[0-9]$',/boolean) or $
      stregex(color, '^[0-3][0-9]$', /boolean) or color eq '40' then begin
      loadct, fix(color)
      return
   endif
 
+  ; Use this file for the extra color tables
   table1 = 'color_table_extra.ct'
   ; Find the color table in the path
   colortable1 = file_which(table1)
@@ -29,7 +40,6 @@ pro loadct_extra, color
 
   if n_elements(color) eq 0 then color=' '
   case color of
-     '0':    loadct,0
      'eityellow': loadct, file=colortable1, 41
      '171':   loadct, file=colortable1, 42
      '195':   loadct, file=colortable1, 43
