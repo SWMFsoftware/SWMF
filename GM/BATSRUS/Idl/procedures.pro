@@ -3493,7 +3493,7 @@ function rel_error, w1, w2, iws
   nxref = sref(1:ndim)
   if max(nxref gt nx) then wref = coarsen(wref, [nxref/nx, 1])
 
-  error = 0.0
+  error = double(0.0)
   for iw = 0, nw-1 do begin
      case ndim of
         1: error = error + (total(abs(w(*,iw)     - wref(*,iw)))) $
@@ -3545,8 +3545,8 @@ function rel_errors, w0, w1, w2, w3, w4, w5, ivar=ivar, ratio=ratio
   errors(0)                     = rel_error(w0,wref,ivar)
   if narray gt 2 then errors(1) = rel_error(w1,wref,ivar)
   if narray gt 3 then errors(2) = rel_error(w2,wref,ivar)
-  if narray gt 4 then errors(2) = rel_error(w3,wref,ivar)
-  if narray gt 5 then errors(2) = rel_error(w4,wref,ivar)
+  if narray gt 4 then errors(3) = rel_error(w3,wref,ivar)
+  if narray gt 5 then errors(4) = rel_error(w4,wref,ivar)
 
   if keyword_set(ratio) and narray gt 2 then $
      print,'ratio=',errors(0:narray-3)/(errors(1:narray-2) > 1d-25)
