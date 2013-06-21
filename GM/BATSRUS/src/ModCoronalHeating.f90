@@ -1433,21 +1433,21 @@ contains
 
           if(IsCartesianGrid)then
              GradAlfven_D(x_) = 1.0/CellSize_DB(x_,iBlock) &
-                  *(Alfven_FD(i+1,j,k,1) - Alfven_FD(i,j,k,1))
+                  *(Alfven_FD(i+1,j,k,x_) - Alfven_FD(i,j,k,x_))
              if(nJ > 1) GradAlfven_D(y_) = 1.0/CellSize_DB(y_,iBlock) &
-                  *(Alfven_FD(i,j+1,k,2) - Alfven_FD(i,j,k,2))
+                  *(Alfven_FD(i,j+1,k,y_) - Alfven_FD(i,j,k,y_))
              if(nK > 1) GradAlfven_D(z_) = 1.0/CellSize_DB(z_,iBlock) &
-                  *(Alfven_FD(i,j,k+1,3) - Alfven_FD(i,j,k,3))
+                  *(Alfven_FD(i,j,k+1,z_) - Alfven_FD(i,j,k,z_))
           else
              GradAlfven_D = &
-                  Alfven_FD(i+1,j,k,1)*FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
-                  - Alfven_FD(i,j,k,1)*FaceNormal_DDFB(:,x_,i,j,k,iBlock)
+                  Alfven_FD(i+1,j,k,x_)*FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
+                  - Alfven_FD(i,j,k,x_)*FaceNormal_DDFB(:,x_,i,j,k,iBlock)
              if(nJ > 1) GradAlfven_D = GradAlfven_D + &
-                  Alfven_FD(i,j+1,k,2)*FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
-                  - Alfven_FD(i,j,k,2)*FaceNormal_DDFB(:,y_,i,j,k,iBlock)
+                  Alfven_FD(i,j+1,k,y_)*FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
+                  - Alfven_FD(i,j,k,y_)*FaceNormal_DDFB(:,y_,i,j,k,iBlock)
              if(nK > 1) GradAlfven_D = GradAlfven_D + &
-                  Alfven_FD(i,j,k+1,3)*FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
-                  - Alfven_FD(i,j,k,3)*FaceNormal_DDFB(:,z_,i,j,k,iBlock)
+                  Alfven_FD(i,j,k+1,z_)*FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
+                  - Alfven_FD(i,j,k,z_)*FaceNormal_DDFB(:,z_,i,j,k,iBlock)
 
              GradAlfven_D = GradAlfven_D/CellVolume_GB(i,j,k,iBlock)
           end if
@@ -1478,7 +1478,7 @@ contains
               + RightState_VX(Bx_:Bz_,i,j,k))
          if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
          Rho = 0.5*(LeftState_VX(Rho_,i,j,k) + RightState_VX(Rho_,i,j,k))
-         Alfven_FD(i,j,k,1) = sqrt( sum(FullB_D**2)/Rho )
+         Alfven_FD(i,j,k,x_) = sqrt( sum(FullB_D**2)/Rho )
       end do; end do; end do
 
       if(nJ > 1)then
@@ -1487,7 +1487,7 @@ contains
                  + RightState_VY(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
             Rho = 0.5*(LeftState_VY(Rho_,i,j,k) + RightState_VY(Rho_,i,j,k))
-            Alfven_FD(i,j,k,2) = sqrt( sum(FullB_D**2)/Rho )
+            Alfven_FD(i,j,k,y_) = sqrt( sum(FullB_D**2)/Rho )
          end do; end do; end do
       end if
 
@@ -1497,7 +1497,7 @@ contains
                  + RightState_VZ(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
             Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) + RightState_VZ(Rho_,i,j,k))
-            Alfven_FD(i,j,k,3) = sqrt( sum(FullB_D**2)/Rho )
+            Alfven_FD(i,j,k,z_) = sqrt( sum(FullB_D**2)/Rho )
          end do; end do; end do
       end if
 
@@ -1706,7 +1706,7 @@ contains
     subroutine calc_div_alfven(i, j, k, iBlock, DivAlfven)
 
       use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
-           FaceNormal_DDFB, CellVolume_GB
+           FaceNormal_DDFB, CellVolume_GB, x_, y_, z_
 
       integer, intent(in) :: i, j, k, iBlock
       real, intent(out) :: DivAlfven
