@@ -1870,11 +1870,16 @@ contains
     real :: TeByTp, B2, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
     real :: WaveLarge
     real :: DampingElectron, DampingPar, DampingPerp, DampingTotal
+
+    ! The smaller C2, the more effective the stochastic heating is
+    real, parameter :: C2 = 0.17
+
+    character(len=*), parameter :: &
+         NameSub = 'ModCoronalHeating::apportion_coronal_heating'
     !--------------------------------------------------------------------------
 
     if(UseTurbulentCascade)then
        ! Damping rates and wave energy partition based on Chandran et al.[2011]
-       ! C_d = 0.75, C_2 = 0.17
 
        TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
             /max(State_VGB(p_,i,j,k,iBlock), 1e-15)
@@ -1887,8 +1892,8 @@ contains
        BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/max(B2, 1e-30)
        BetaProton = 2.0*State_VGB(p_,i,j,k,iBlock)/max(B2, 1e-30)
 
-       ! Linear Landau damping of kinetic Alfven waves contributes to
-       ! electron and parallel proton heating
+       ! Linear Landau damping and transit-time damping of kinetic Alfven
+       ! waves contributes to electron and parallel proton heating
        DampingElectron = 0.01*sqrt(TeByTp/max(BetaProton, 1.0e-8)) &
             *(1.0 + 0.17*BetaProton**1.3)/(1.0 +(2800.0*BetaElectron)**(-1.25))
        DampingPar = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
@@ -1907,12 +1912,17 @@ contains
             sqrt(sqrt(B2)*State_VGB(Rho_,i,j,k,iBlock)/(2.0*Pperp)) &
             /IonMassPerCharge))
 
-       ! Extract the Alfven wave energy density of the dominant wave
-       WaveLarge = maxval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+       if(UseNonWkbAlfvenWaves)then
+          call stop_mpi(NameSub//' The non-WKB Alfven wave approximation ' &
+                  // 'requires both waves to determine the perturbed velocity')
+       else
+          ! Extract the Alfven wave energy density of the dominant wave
+          WaveLarge = maxval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
 
-       DampingPerp = 0.18*WaveLarge*sqrt(WaveLarge)*sqrt(B2/(2.0*Pperp)) &
-            /IonMassPerCharge/max(CoronalHeating*LperpInvGyroRad**3,1e-30) &
-            *exp(-0.17*sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
+          DampingPerp = 0.18*WaveLarge*sqrt(WaveLarge*B2/(2.0*Pperp)) &
+               /IonMassPerCharge/max(CoronalHeating*LperpInvGyroRad**3,1e-30) &
+               *exp(-C2*sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
+       end if
 
        ! The 1+ is due to the fraction of the cascade power that succeeds
        ! to cascade to the smallest scale (<< proton gyroradius),
