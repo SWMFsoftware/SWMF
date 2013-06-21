@@ -22,7 +22,7 @@
 ;    and the original data is transformed according to the "transform"
 ;    string variable into "xreg" and "wreg".
 ;
-;    The same npict-th snapshot can be read from 2 or 3 files by e.g. setting
+;    The same npict-th snapshot can be read from up to 10 files by e.g. setting
 ;
 ; filename='data/file1.ini data/file2.out'
 ;
@@ -54,8 +54,8 @@ if stregex(filename, '[?*[]', /boolean) then begin
 endif else $
   str2arr,filename,filenames,nfile
 
-if nfile gt 3 then begin
-   print,'Error in getpict: cannot handle more than 3 files.'
+if nfile gt 10 then begin
+   print,'Error in getpict: cannot handle more than 10 files.'
    retall
 endif
 gettype,filenames,filetypes,npictinfiles
@@ -100,6 +100,34 @@ for ifile=0,nfile-1 do begin
           w2=w
           x2=x
         end
+     3: begin
+          w3=w
+          x3=x
+        end
+     4: begin
+          w4=w
+          x4=x
+        end
+     5: begin
+          w5=w
+          x5=x
+        end
+     6: begin
+          w6=w
+          x6=x
+        end
+     7: begin
+          w7=w
+          x7=x
+        end
+     8: begin
+          w8=w
+          x8=x
+        end
+     9: begin
+          w9=w
+          x9=x
+        end
      endcase
      print,'Read x',ifile,' and w',ifile,FORMAT='(a,i1,a,i1)'
    endif else print,'Read x and w'
@@ -117,9 +145,16 @@ for ifile=0,nfile-1 do begin
       else print,'...transform to xreg and wreg',ifile,FORMAT='(a,i1)'
 
       if nfile gt 1 then case ifile of
-         0: wreg0=wreg
-         1: wreg1=wreg
-         2: wreg2=wreg
+         0: wreg0 = wreg
+         1: wreg1 = wreg
+         2: wreg2 = wreg
+         3: wreg3 = wreg
+         4: wreg4 = wreg
+         5: wreg5 = wreg
+         6: wreg6 = wreg
+         7: wreg7 = wreg
+         8: wreg8 = wreg
+         9: wreg9 = wreg
       endcase
    endif
 endfor
