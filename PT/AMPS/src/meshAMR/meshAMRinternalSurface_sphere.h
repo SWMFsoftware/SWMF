@@ -263,8 +263,8 @@ public:
     static unsigned long int FunctionCallCounter=0;
 
     if ((nZenithElement<0)||(nZenithElement>=nZenithSurfaceElements)||(nAzimuthalElement<0)||(nAzimuthalElement>=nAzimuthalSurfaceElements)) {
-      printf("Error: out of range\n nZenithElement=%ld, nAzimuthalElement=%ld (%s@%i)\n",nZenithElement,nAzimuthalElement,__FILE__,__LINE__);
-      printf("x=%e, %e, %e\nCallCounter=%ld\n",x[0],x[1],x[2],FunctionCallCounter);
+      printf("$PREFIX:Error: out of range\n nZenithElement=%ld, nAzimuthalElement=%ld (%s@%i)\n",nZenithElement,nAzimuthalElement,__FILE__,__LINE__);
+      printf("$PREFIX:x=%e, %e, %e\nCallCounter=%ld\n",x[0],x[1],x[2],FunctionCallCounter);
       exit(__LINE__,__FILE__,"Error: 'nZenithElement' or 'nAzimuthalElement' are outside of the range ");
     }
 
@@ -308,8 +308,8 @@ public:
 
     CMPI_channel pipe(1000000);
     int ThisThread=0,nTotalThreads=1;
-    MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
-    MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
+    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+    MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
 
     if (ThisThread==0) {
       fout=fopen(fname,"w");

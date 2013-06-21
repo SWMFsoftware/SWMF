@@ -80,8 +80,8 @@ public:
 
     CMPI_channel pipe(1000000);
     int ThisThread=0,nTotalThreads=1;
-    MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
-    MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
+    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+    MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
 
     if (ThisThread==0) {
       fout=fopen(fname,"w");

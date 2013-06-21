@@ -106,10 +106,10 @@ public:
 
 
 //########  DEBUG ##########
-	  if (Temp_ID==88861) {
+/*	  if (Temp_ID==88861) {
 		  cout << __LINE__ << endl;
 	  }
-
+*/
 //######## END DEBUG #######
 
 
@@ -481,11 +481,12 @@ public:
 
 
 //################## DEBUG #####################
-    if ((this->Temp_ID==222)||(this->Temp_ID==107)) {
+/*    if ((this->Temp_ID==222)||(this->Temp_ID==107)) {
       cout << __LINE__ << endl;
 
 
     }
+*/
 //################## END DEBUG #####################
 
 
@@ -760,7 +761,7 @@ public:
     #endif
 
     if ((nd<0)||(nd>=nMaxCenterNodes)) {
-      printf("nd=%ld\n",nd);
+      printf("$PREFIX:nd=%ld\n",nd);
       exit(__LINE__,__FILE__,"The value is outside of the limit");
     }
 
@@ -1087,8 +1088,8 @@ public:
     MPI_Initialized(&mpiInitFlag);
 
     if (mpiInitFlag==true) {
-      MPI_Bcast(&MeshSignature,1,MPI_UNSIGNED_LONG,0,MPI_COMM_WORLD);
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Bcast(&MeshSignature,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     }
     */
   }
@@ -1252,8 +1253,8 @@ public:
       int idim=0;
       dx=0.0; //add the place for break point for debbuger purposes
 
-      cout << "Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
-      for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+      cout << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
+      for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
 
 //      exit(__LINE__,__FILE__);
 
@@ -1268,8 +1269,8 @@ public:
 
     if (_MESH_DIMENSION_>=2) {
       if ((x[1]<startNode->xmin[1])||(startNode->xmax[1]<x[1])) {
-        cout << "Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
-        for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+        cout << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
+        for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
 
         if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
         else return -1;
@@ -1283,8 +1284,8 @@ public:
 
     if (_MESH_DIMENSION_==3) {
       if ((x[2]<startNode->xmin[2])||(startNode->xmax[2]<x[2])) {
-        cout << "Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
-        for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+        cout << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
+        for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
 
         if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
         else return -1;
@@ -1458,8 +1459,8 @@ public:
     MPI_Initialized(&MPIinitFlag);
 
     if (MPIinitFlag==true) {
-      MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
-      MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
+      MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+      MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
     }
     else exit(__LINE__,__FILE__,"Error: MPI is not initialized");
 
@@ -2075,34 +2076,34 @@ void GetMeshTreeStatistics(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
     //compare the blocks distribution over the processors
     if (ThisThread==0) {
       for (thread=1;thread<nTotalThreads;thread++) {
-        MPI_Recv(buffer,nTotalThreads,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
+        MPI_Recv(buffer,nTotalThreads,MPI_LONG,thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
 
         for (i=0;i<nTotalThreads;i++) if (buffer[i]!=nBlocksPerProcessor[i]) exit(__LINE__,__FILE__,"Error: The blocks distribution on different processors is not the same");
        }
     }
-    else MPI_Send(nBlocksPerProcessor,nTotalThreads,MPI_LONG,0,0,MPI_COMM_WORLD);
+    else MPI_Send(nBlocksPerProcessor,nTotalThreads,MPI_LONG,0,0,MPI_GLOBAL_COMMUNICATOR);
 
 
 
     //output the collected information
-    if (ThisThread==0) cout << "Tree distribution statistical data:\nThread\t|nTotal Allocated Blocks\t|nAllocated Blocks Upper Tree Branches\t|nAllocated Blocks Domain Boundary Layer\t|nTotal Nodes Per Thread\n";
+    if (ThisThread==0) cout << "$PREFIX:Tree distribution statistical data:\nThread\t|nTotal Allocated Blocks\t|nAllocated Blocks Upper Tree Branches\t|nAllocated Blocks Domain Boundary Layer\t|nTotal Nodes Per Thread\n";
 
     for (thread=0;thread<nTotalThreads;thread++) {
       if (ThisThread!=0) {
         if (ThisThread==thread) {
-          MPI_Send(&nAllocatedBlocks,1,MPI_LONG,0,0,MPI_COMM_WORLD);
-          MPI_Send(&nAllocatedBoundaryLayerBlocks,1,MPI_LONG,0,0,MPI_COMM_WORLD);
-          MPI_Send(&nAllocatedBlocksUpperTreeBranches,1,MPI_LONG,0,0,MPI_COMM_WORLD);
+          MPI_Send(&nAllocatedBlocks,1,MPI_LONG,0,0,MPI_GLOBAL_COMMUNICATOR);
+          MPI_Send(&nAllocatedBoundaryLayerBlocks,1,MPI_LONG,0,0,MPI_GLOBAL_COMMUNICATOR);
+          MPI_Send(&nAllocatedBlocksUpperTreeBranches,1,MPI_LONG,0,0,MPI_GLOBAL_COMMUNICATOR);
         }
       }
       else {
         if (thread!=0) {
-          MPI_Recv(&nAllocatedBlocks,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
-          MPI_Recv(&nAllocatedBoundaryLayerBlocks,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
-          MPI_Recv(&nAllocatedBlocksUpperTreeBranches,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
+          MPI_Recv(&nAllocatedBlocks,1,MPI_LONG,thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
+          MPI_Recv(&nAllocatedBoundaryLayerBlocks,1,MPI_LONG,thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
+          MPI_Recv(&nAllocatedBlocksUpperTreeBranches,1,MPI_LONG,thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
         }
 
-        cout << thread << "\t" << nAllocatedBlocks << "\t\t\t\t\t" << nAllocatedBlocksUpperTreeBranches << "\t\t\t\t\t" << nAllocatedBoundaryLayerBlocks << "\t\t\t\t\t" << nBlocksPerProcessor[thread] <<  endl;
+        cout << "$PREFIX:" << thread << "\t" << nAllocatedBlocks << "\t\t\t\t\t" << nAllocatedBlocksUpperTreeBranches << "\t\t\t\t\t" << nAllocatedBoundaryLayerBlocks << "\t\t\t\t\t" << nBlocksPerProcessor[thread] <<  endl;
       }
     }
 
@@ -2112,9 +2113,9 @@ void GetMeshTreeStatistics(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
 #else
     int NodesBoundaryLayer;
 
-    cout << "Tree distribution statistical data:\nThread\t\nTotal Allocated Blocks\tnAllocated Blocks Upper Tree Branches\tnTotal Nodes Per Thread\tnNodes in the Boundary Layer\n";
+    cout << "$PREFIX:Tree distribution statistical data:\n$PREFIX:Thread\t\n$PREFIX:Total Allocated Blocks\tnAllocated Blocks Upper Tree Branches\tnTotal Nodes Per Thread\tnNodes in the Boundary Layer\n";
     for (i=0;i<nTotalThreads;i++) if (i!=thread) NodesBoundaryLayer+=nBlocksPerProcessor[i];
-    cout << thread << "\t" << nAllocatedBlocks << "\t" << nAllocatedBlocksUpperTreeBranches << "\t" << nBlocksPerProcessor[thread] << "\t" << NodesBoundaryLayer << endl;
+    cout << "$PREFIX:" << thread << "\t" << nAllocatedBlocks << "\t" << nAllocatedBlocksUpperTreeBranches << "\t" << nBlocksPerProcessor[thread] << "\t" << NodesBoundaryLayer << endl;
 #endif
 
   }
@@ -2304,24 +2305,24 @@ if ((AllowBlockAllocation==true)&&(startNode->block!=NULL)) {
        if (flag==false) {
          long int nd,ii,jj,kk,idim;
 
-         cout << "ERROR: Two neiubouring blocks doesn't share nodes" << endl;  
-         cout << "Block 1: ID=" << startNode->Temp_ID << endl << "Corner Nodes:" << endl;
+         cout << "$PREFIX:ERROR: Two neiubouring blocks doesn't share nodes" << endl;
+         cout << "$PREFIX:Block 1: ID=" << startNode->Temp_ID << endl << "Corner Nodes:" << endl;
 
          for (ii=0;ii<iMax;ii++) for (jj=0;jj<jMax;jj++) for (kk=0;kk<kMax;kk++) {
            nd=getCornerNodeLocalNumber(ii*_BLOCK_CELLS_X_,jj*_BLOCK_CELLS_Y_,kk*_BLOCK_CELLS_Z_);
   
-           cout << "(i,j,k)=" << ii <<"," << jj << "," << kk << " (nd=" << nd << "), Temp_ID=" << startNode->block->GetCornerNode(nd)->Temp_ID << " x=";
+           cout << "$PREFIX:(i,j,k)=" << ii <<"," << jj << "," << kk << " (nd=" << nd << "), Temp_ID=" << startNode->block->GetCornerNode(nd)->Temp_ID << " x=";
            for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << startNode->block->GetCornerNode(nd)->GetX()[idim] << " ";
            cout << endl; 
          }
 
-         cout << "Block 2: ID=" << neibNode->Temp_ID << endl << "Corner Nodes:";
+         cout << "$PREFIX:Block 2: ID=" << neibNode->Temp_ID << endl << "Corner Nodes:";
          cout << "neib coordinates=" << i << ", " << j << ", " << k << endl; 
 
          for (ii=0;ii<iMax;ii++) for (jj=0;jj<jMax;jj++) for (kk=0;kk<kMax;kk++) {
            nd=getCornerNodeLocalNumber(ii*_BLOCK_CELLS_X_,jj*_BLOCK_CELLS_Y_,kk*_BLOCK_CELLS_Z_);
   
-           cout << "(i,j,k)=" << ii <<"," << jj << "," << kk << " (nd=" << nd << "), Temp_ID=" << neibNode->block->GetCornerNode(nd)->Temp_ID << " x=";
+           cout << "$PREFIX:(i,j,k)=" << ii <<"," << jj << "," << kk << " (nd=" << nd << "), Temp_ID=" << neibNode->block->GetCornerNode(nd)->Temp_ID << " x=";
            for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << neibNode->block->GetCornerNode(nd)->GetX()[idim] << " ";
            cout << endl;
          }
@@ -2553,7 +2554,7 @@ if ((AllowBlockAllocation==true)&&(startNode->block!=NULL)) {
 
                 	//recalculate the indexes of the 'center nodes'
                 	nd=findCenterNodeIndex(startCenterNode->GetX(),iii[0],iii[1],iii[2],startNode);
-                	cout << "The center node is not found:x=";
+                	cout << "$PREFIX:The center node is not found:x=";
                 	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << startCenterNode->GetX()[idim] << "  ";
                 	cout << "; (i,j,k,nd)=";
                 	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << iii[idim] << "  ";
@@ -2564,7 +2565,7 @@ if ((AllowBlockAllocation==true)&&(startNode->block!=NULL)) {
 
                 	//recalculate the indexes of the 'center nodes'
                 	nd=findCenterNodeIndex(neibCenterNode->GetX(),iii[0],iii[1],iii[2],neibNode);
-                	cout << "The center node is not found:x=";
+                	cout << "$PREFIX:The center node is not found:x=";
                 	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << neibCenterNode->GetX()[idim] << "  ";
                 	cout << "; (i,j,k,nd)=";
                 	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << iii[idim] << "  ";
@@ -3092,11 +3093,12 @@ static long int nCallCounter=0;
 
 ++nCallCounter;
 
+/*
 if (startNode->Temp_ID==77) {
 // if (nCallCounter==34) {
   cout << __LINE__ << endl;
 }
-
+*/
 
 //################### END DEBUG  #############3
 
@@ -3493,9 +3495,11 @@ if (startNode->Temp_ID==77) {
 
 
 //==========================    DEBUG ======================
-if ((fabs(x[0]+225)<EPS)&&(fabs(x[1]+225)<EPS)&&(fabs(x[2]+12.5)<EPS)) {
+/*
+      if ((fabs(x[0]+225)<EPS)&&(fabs(x[1]+225)<EPS)&&(fabs(x[2]+12.5)<EPS)) {
   cout << __LINE__ << endl;
 }
+*/
 //========================== END DEBUG ===========================
 
 
@@ -3655,9 +3659,11 @@ bool deleteTreeNode(cTreeNodeAMR<cBlockAMR> *startNode) {
 
 //######## DEBUG #############
 
+  /*
 if (startNode->Temp_ID==1169) {
 cout << __LINE__ << __FILE__ << endl;
 }
+*/
 
 //######## END DEBUG #########
 
@@ -3753,10 +3759,10 @@ cout << __LINE__ << __FILE__ << endl;
           double xMissing[3]={0.0,0.0,0.0};
           cTreeNodeAMR<cBlockAMR>* xMissingNode;
 
-          cout << "neibNode->Temp_ID=" << neibNode->Temp_ID << ", neibNode->RefinmentLevel=" << neibNode->RefinmentLevel << endl;
+          cout << "$PREFIX:neibNode->Temp_ID=" << neibNode->Temp_ID << ", neibNode->RefinmentLevel=" << neibNode->RefinmentLevel << endl;
 
           //coordinates of the missing node
-          cout << "Coordinates of the missing node: x=" << (xMissing[0]=upNode->xmin[0]+(upNode->xmax[0]-upNode->xmin[0])/double(_BLOCK_CELLS_X_)*ii); 
+          cout << "$PREFIX:Coordinates of the missing node: x=" << (xMissing[0]=upNode->xmin[0]+(upNode->xmax[0]-upNode->xmin[0])/double(_BLOCK_CELLS_X_)*ii);
           if (_MESH_DIMENSION_>=2) cout << ", " << (xMissing[1]=upNode->xmin[1]+(upNode->xmax[1]-upNode->xmin[1])/double(_BLOCK_CELLS_Y_)*jj);
           if (_MESH_DIMENSION_==3) cout << ", " << (xMissing[2]=upNode->xmin[2]+(upNode->xmax[2]-upNode->xmin[2])/double(_BLOCK_CELLS_Z_)*kk); 
           cout << endl;
@@ -3780,7 +3786,7 @@ cout << __LINE__ << __FILE__ << endl;
           int iMissingNode=0,jMissingNode=0,kMissingNode=0;
 
           ndMissingNode=findCornerNodeIndex(xMissing,iMissingNode,jMissingNode,kMissingNode,xMissingNode); 
-          cout << "The (i,j,k) index of the missing node in 'xMissingNode': (i,j,k)=" << iMissingNode << ", " << jMissingNode << ", " << kMissingNode << ", ndMissingNode=" << ndMissingNode << endl;
+          cout << "$PREFIX:The (i,j,k) index of the missing node in 'xMissingNode': (i,j,k)=" << iMissingNode << ", " << jMissingNode << ", " << kMissingNode << ", ndMissingNode=" << ndMissingNode << endl;
 
 
           exit(__LINE__,__FILE__,"Blocks's corner node is not defined");
@@ -3798,9 +3804,11 @@ cout << __LINE__ << __FILE__ << endl;
 
 
   //###########  DEBUG  #######
+  /*
   if (startNode->Temp_ID==729) {
   	cout << __LINE__ << __FILE__ << endl;
   }
+  */
 
   //########### END DEBUG ######
 
@@ -3825,9 +3833,11 @@ cout << __LINE__ << __FILE__ << endl;
       newCenterNodeMap[ii-iiMin][jj-jjMin][kk-kkMin]=newCenterNode;
 
 //###########  DEBUG  #######
+      /*
 if (newCenterNode->Temp_ID==88861) {
 	cout << __LINE__ << __FILE__ << endl;
 }
+*/
 
 //########### END DEBUG ######
 
@@ -3873,10 +3883,10 @@ if (newCenterNode->Temp_ID==88861) {
           double xMissing[3]={0.0,0.0,0.0};
           cTreeNodeAMR<cBlockAMR>* xMissingNode;
 
-          cout << "neibNode->Temp_ID=" << neibNode->Temp_ID << ", neibNode->RefinmentLevel=" << neibNode->RefinmentLevel << endl;
+          cout << "$PREFIX:neibNode->Temp_ID=" << neibNode->Temp_ID << ", neibNode->RefinmentLevel=" << neibNode->RefinmentLevel << endl;
 
           //coordinates of the missing node
-          cout << "Coordinates of the missing node: x=" << (xMissing[0]=upNode->xmin[0]+(upNode->xmax[0]-upNode->xmin[0])/double(_BLOCK_CELLS_X_)*(ii+0.5));
+          cout << "$PREFIX:Coordinates of the missing node: x=" << (xMissing[0]=upNode->xmin[0]+(upNode->xmax[0]-upNode->xmin[0])/double(_BLOCK_CELLS_X_)*(ii+0.5));
           if (_MESH_DIMENSION_>=2) cout << ", " << (xMissing[1]=upNode->xmin[1]+(upNode->xmax[1]-upNode->xmin[1])/double(_BLOCK_CELLS_Y_)*(jj+0.5));
           if (_MESH_DIMENSION_==3) cout << ", " << (xMissing[2]=upNode->xmin[2]+(upNode->xmax[2]-upNode->xmin[2])/double(_BLOCK_CELLS_Z_)*(kk+0.5));
           cout << endl;
@@ -3900,7 +3910,7 @@ if (newCenterNode->Temp_ID==88861) {
           int iMissingNode=0,jMissingNode=0,kMissingNode=0;
 
           ndMissingNode=findCenterNodeIndex(xMissing,iMissingNode,jMissingNode,kMissingNode,xMissingNode);
-          cout << "The (i,j,k) index of the missing node in 'xMissingNode': (i,j,k)=" << iMissingNode << ", " << jMissingNode << ", " << kMissingNode << ", ndMissingNode=" << ndMissingNode << endl;
+          cout << "$PREFIX:The (i,j,k) index of the missing node in 'xMissingNode': (i,j,k)=" << iMissingNode << ", " << jMissingNode << ", " << kMissingNode << ", ndMissingNode=" << ndMissingNode << endl;
 
 
           exit(__LINE__,__FILE__,"Blocks's corner node is not defined");
@@ -4268,10 +4278,11 @@ bool splitTreeNode(cTreeNodeAMR<cBlockAMR> *startNode) {
   int i,j,k;
 
 
-
+/*
 if (startNode->Temp_ID==15) {
 cout << __LINE__ << endl;
 }
+*/
 
 
 
@@ -4611,11 +4622,11 @@ cout << __LINE__ << endl;
 
 
 //===========================   DEBUG =========================
-
+/*
      if (startNode->Temp_ID==3) {
        cout << __LINE__ << endl;
      }
-
+*/
 //=========================== END DEBUG =======================
 
 
@@ -5153,7 +5164,7 @@ cout << __LINE__ << endl;
       if (ThisThread==0)  pipe.closeRecvAll();
       else pipe.closeSend();
 
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     }
   }
 
@@ -5227,7 +5238,7 @@ cout << __LINE__ << endl;
 
 //================  DEBUG ==========================
 //if (ThisThread!=0) pipe.flush();
-//MPI_Barrier(MPI_COMM_WORLD);
+//MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 
 //================= END DEBUG ========================
@@ -5242,7 +5253,7 @@ cout << __LINE__ << endl;
       if (ThisThread==0)  pipe.closeRecvAll();
       else pipe.closeSend();
 
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     }
   }
 
@@ -5262,10 +5273,11 @@ cout << __LINE__ << endl;
 static long int CallsCounter=0;
 
 CallsCounter++;
-
+/*
 if (CallsCounter==83) {
   cout << __LINE__ << endl;
 }
+*/
 //====================== END DEBUG ==============
 
 
@@ -5312,7 +5324,7 @@ if (CallsCounter==83) {
       SendRequest=false;
 
 #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
-      MPI_Bcast(&meshNodesNumber,1,MPI_LONG,0,MPI_COMM_WORLD);
+      MPI_Bcast(&meshNodesNumber,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 #endif
 
 
@@ -5345,11 +5357,11 @@ if (CallsCounter==83) {
           }
         }
 
-        MPI_Gather(&SendRequest,1,MPI_INT,SendRequestVector,1,MPI_INT,0,MPI_COMM_WORLD);
+        MPI_Gather(&SendRequest,1,MPI_INT,SendRequestVector,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
 
         if (ThisThread==0) for (thread=0;thread<nTotalThreads;thread++) if (SendRequestVector[thread]==true) SendRequest=true;
 
-        MPI_Bcast(&SendRequest,1,MPI_INT,0,MPI_COMM_WORLD);
+        MPI_Bcast(&SendRequest,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
 
         if (SendRequest==true) {
           if (ThisThread==0) cout << __LINE__ << endl;
@@ -5482,15 +5494,15 @@ if (CallsCounter==83) {
           MPI_Status status;
 
           //update the total node's number
-          MPI_Recv(&meshNodesNumber,1,MPI_LONG,startNode->Thread,0,MPI_COMM_WORLD,&status);
+          MPI_Recv(&meshNodesNumber,1,MPI_LONG,startNode->Thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
         }
         else if (ThisThread==startNode->Thread) {
-          MPI_Send(&meshNodesNumber,1,MPI_LONG,0,0,MPI_COMM_WORLD);
+          MPI_Send(&meshNodesNumber,1,MPI_LONG,0,0,MPI_GLOBAL_COMMUNICATOR);
         }
       }
 
       //collect the SendRequest vector and exchenge the data
-      MPI_Gather(&SendRequest,1,MPI_INT,SendRequestVector,1,MPI_INT,startNode->Thread,MPI_COMM_WORLD);
+      MPI_Gather(&SendRequest,1,MPI_INT,SendRequestVector,1,MPI_INT,startNode->Thread,MPI_GLOBAL_COMMUNICATOR);
 
       if (ThisThread==startNode->Thread) {
         //compose the vector of global node's number (v)
@@ -5511,7 +5523,7 @@ if (CallsCounter==83) {
 
           //send the node's global number's vector
           for (thread=0;thread<nTotalThreads;thread++) if (SendRequestVector[thread]==true) {
-            MPI_Send(BlockNodeGlabalNumber,nBlockCornerNodes,MPI_LONG,thread,0,MPI_COMM_WORLD);
+            MPI_Send(BlockNodeGlabalNumber,nBlockCornerNodes,MPI_LONG,thread,0,MPI_GLOBAL_COMMUNICATOR);
           }
         }
       }
@@ -5520,7 +5532,7 @@ if (CallsCounter==83) {
         bool TempBlockAllocationFlag;
 
         //recieve the vector of node's numbers
-        MPI_Recv(BlockNodeGlabalNumber,nBlockCornerNodes,MPI_LONG,startNode->Thread,0,MPI_COMM_WORLD,&status);
+        MPI_Recv(BlockNodeGlabalNumber,nBlockCornerNodes,MPI_LONG,startNode->Thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
 
         //allocate the block
         TempBlockAllocationFlag=(startNode->block==NULL) ? true : false;
@@ -5545,9 +5557,9 @@ if (CallsCounter==83) {
 
 
 //============================ DEBUG ======================
-//      MPI_Barrier(MPI_COMM_WORLD);
+//      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 //      CompareGlobalNodeNumbering(rootTree);
-//      MPI_Barrier(MPI_COMM_WORLD);
+//      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 //============================ END DEBUG ====================
 
 #endif
@@ -5568,7 +5580,7 @@ if (CallsCounter==83) {
       CompareGlobalNodeNumbering(rootTree);
 
       meshModifiedFlag_CountMeshElements=false;
-      MPI_Bcast(&meshNodesNumber,1,MPI_LONG,0,MPI_COMM_WORLD);
+      MPI_Bcast(&meshNodesNumber,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
     }
   } 
 
@@ -5669,10 +5681,11 @@ static long int ncheckMeshConsistencyCalls=0;
 
 ncheckMeshConsistencyCalls++;
 
-
+/*
 if (ncheckMeshConsistencyCalls==38) {
   cout << __LINE__ << endl;
 }
+*/
 
 //checkMeshConsistency(rootTree);
 //checkMeshConsistency(startNode);
@@ -6158,11 +6171,11 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
 
 
 //=========================   DEBUG ==============================
-
+/*
                 if (cornerNode!=NULL) if (cornerNode->Temp_ID==58786) {
                   cout << __FILE__ << __LINE__ << endl;
                 }
-
+*/
 //========================= END DEBUG =========================
 
 
@@ -6331,7 +6344,7 @@ cnttemp=0;
         pipe.closeSend();
       }
 
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     }
 
   } 
@@ -6367,11 +6380,11 @@ cnttemp=0;
         cCornerNode *cornerNode;
 
         if (startNode->Thread!=0) {
-          if (ThisThread==0) MPI_Send(&nGlobalNodeNumber,1,MPI_LONG,startNode->Thread,0,MPI_COMM_WORLD);
+          if (ThisThread==0) MPI_Send(&nGlobalNodeNumber,1,MPI_LONG,startNode->Thread,0,MPI_GLOBAL_COMMUNICATOR);
           else if (ThisThread==startNode->Thread) {
             MPI_Status status;
 
-            MPI_Recv(&nGlobalNodeNumber,1,MPI_LONG,0,0,MPI_COMM_WORLD,&status);
+            MPI_Recv(&nGlobalNodeNumber,1,MPI_LONG,0,0,MPI_GLOBAL_COMMUNICATOR,&status);
           }
         }
 
@@ -6617,7 +6630,7 @@ nMPIops++;
       if (ThisThread==0) pipe.closeRecvAll();
       else pipe.closeSend();
 
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     }
 
   }
@@ -7447,11 +7460,11 @@ nMPIops++;
     countTreeNodes(rootTree,Counter,0);
 
     if (ThisThread==0) {
-      cout << "Mesh blocks report:" << endl;
-      for (level=0;level<=_MAX_REFINMENT_LEVEL_;level++) cout << "refinment level=" << level << ", blocks=" << Counter[level] << endl;
+      cout << "$PREFIX:Mesh blocks report:" << endl;
+      for (level=0;level<=_MAX_REFINMENT_LEVEL_;level++) cout << "$PREFIX:refinment level=" << level << ", blocks=" << Counter[level] << endl;
 
-      cout << "Memory usage:" << endl;
-      cout << "Thread \t Tree \t Blocks \t Nodes" << endl;
+      cout << "$PREFIX:Memory usage:" << endl;
+      cout << "$PREFIX:Thread \t Tree \t Blocks \t Nodes" << endl;
 
       pipe.openRecvAll();
     }
@@ -7477,7 +7490,7 @@ nMPIops++;
         }
       }
 
-      if (ThisThread==0) cout << thread << "\t" << TreeNodesAllocation/1.0E6 << "MB\t" << BlocksAllocation/1.0E6 << "MB\t" << CornerNodesAllocation/1.0E6 << "MB" << endl;
+      if (ThisThread==0) cout << "$PREFIX:" << thread << "\t" << TreeNodesAllocation/1.0E6 << "MB\t" << BlocksAllocation/1.0E6 << "MB\t" << CornerNodesAllocation/1.0E6 << "MB" << endl;
     }
 
 
@@ -7490,7 +7503,7 @@ nMPIops++;
       ru_ixrss=ResourceUsage.ru_ixrss;
       ru_idrss=ResourceUsage.ru_idrss;
 
-      if (ThisThread==0) cout << "Thread \t \"maximum resident set size\"\t \"integral shared memory size\"\t  \"integral unshared data size\"" <<endl;
+      if (ThisThread==0) cout << "$PREFIX:Thread \t \"maximum resident set size\"\t \"integral shared memory size\"\t  \"integral unshared data size\"" <<endl;
 
       for (thread=0;thread<nTotalThreads;thread++) {
         if (thread!=0) {
@@ -7506,7 +7519,7 @@ nMPIops++;
           }
         }
 
-        if (ThisThread==0) cout << thread << "\t" << ru_maxrss/1.0E6 << "MB\t" << ru_ixrss/1.0E6 << "MB\t" << ru_idrss/1.0E6 << "MB" << endl;
+        if (ThisThread==0) cout << "$PREFIX:" << thread << "\t" << ru_maxrss/1.0E6 << "MB\t" << ru_ixrss/1.0E6 << "MB\t" << ru_idrss/1.0E6 << "MB" << endl;
       }
     } 
 
@@ -7741,12 +7754,12 @@ nMPIops++;
     int thread;
 
     buffer[0]=nCounter;
-    MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_COMM_WORLD);
+    MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
     if (ThisThread==0) {
-      cout << "The length of the domain's boundary nodes list:\nThread\tThe number of the domain's boundary nodes\n";
+      cout << "$PREFIX:The length of the domain's boundary nodes list:\nThread\tThe number of the domain's boundary nodes\n";
 
-      for (thread=0;thread<nTotalThreads;thread++) cout << thread << "\t" << buffer[thread] << endl;
+      for (thread=0;thread<nTotalThreads;thread++) cout << "$PREFIX:" << thread << "\t" << buffer[thread] << endl;
     }
 
     delete [] buffer;
@@ -7771,7 +7784,7 @@ nMPIops++;
 
             while (node!=NULL) {
               if (node==startSearch) {
-                cout << "Error: have found a repearting node in the list. nodeid=" << node->Temp_ID << endl;
+                cout << "$PREFIX:Error: have found a repearting node in the list. nodeid=" << node->Temp_ID << endl;
               }
 
               node=node->nextNodeThisThread;
@@ -7867,10 +7880,11 @@ nMPIops++;
 
 
 //=============   DEBUG ==================
-if (startNode!=NULL) if (startNode->Temp_ID==5096) {
+/*
+    if (startNode!=NULL) if (startNode->Temp_ID==5096) {
   cout << __FILE__ << "@" << __LINE__ << endl;
 }
-
+*/
 //=============  END DEBUG ===============
 
 
@@ -8325,10 +8339,11 @@ static long int TmpAllocationCounter=0;
 
 TmpAllocationCounter++;
 
-
+/*
 if (TmpAllocationCounter==2437) {
   cout << __LINE__ << endl;
 }
+*/
 
 //checkMeshConsistency(rootTree);
 //====================== END DEBUG =============
@@ -8363,16 +8378,16 @@ if (TmpAllocationCounter==2437) {
           buffer=new long int [nTotalThreads];
           buffer[0]=nAllocatedBlocks;
 
-          MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_COMM_WORLD);
+          MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
-          cout << "Blocks Allocation Report:\n Thread\tAllocatedBlocks\n";
-          for (thread=0;thread<nTotalThreads;thread++) cout << thread << "\t" << buffer[thread] << endl;
+          cout << "$PREFIX:Blocks Allocation Report:\n$PREFIX: Thread\tAllocatedBlocks\n";
+          for (thread=0;thread<nTotalThreads;thread++) cout << "$PREFIX:" << thread << "\t" << buffer[thread] << endl;
 
           delete [] buffer;
         }
-        else MPI_Gather(&nAllocatedBlocks,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_COMM_WORLD);
+        else MPI_Gather(&nAllocatedBlocks,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
         //allocate the domain's boundary blocks
 #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
@@ -8395,16 +8410,16 @@ if (TmpAllocationCounter==2437) {
           buffer=new long int [nTotalThreads];
           buffer[0]=nAllocatedBlocks;
 
-          MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_COMM_WORLD);
+          MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
-          cout << "Blocks Allocation Report:\n Thread\tAllocated Domain's Boundary Blocks\n";
-          for (thread=0;thread<nTotalThreads;thread++) cout << thread << "\t" << buffer[thread] << endl;
+          cout << "$PREFIX:Blocks Allocation Report:\n$PREFIX: Thread\tAllocated Domain's Boundary Blocks\n";
+          for (thread=0;thread<nTotalThreads;thread++) cout << "$PREFIX:" << thread << "\t" << buffer[thread] << endl;
 
           delete [] buffer;
         }
-        else MPI_Gather(&nAllocatedBlocks,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_COMM_WORLD);
+        else MPI_Gather(&nAllocatedBlocks,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 #endif
 
       }
@@ -8514,7 +8529,7 @@ if (TmpAllocationCounter==2437) {
     double InitialProcessorLoad[nTotalThreads];
     LoadMeasureNormal=CalculateTotalParallelLoadMeasure(rootTree,InitialProcessorLoad)/nTotalThreads;
 
-    MPI_Bcast(&LoadMeasureNormal,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&LoadMeasureNormal,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
     if (LoadMeasureNormal<=0.0) {
       SetConstantParallelLoadMeasure(1.0,rootTree);
@@ -8525,12 +8540,12 @@ if (TmpAllocationCounter==2437) {
       cTreeNodeAMR<cBlockAMR> *ptr;
       long int nblocks;
 
-      cout << "Initial Cumulative Parallel Load Distribution\nThread\tLoad\tNormalized Load\tBlock's Number\n";
+      cout << "$PREFIX:Initial Cumulative Parallel Load Distribution\n$PREFIX:Thread\tLoad\tNormalized Load\tBlock's Number\n";
 
       for (int t=0;t<nTotalThreads;t++) {
         for (nblocks=0,ptr=ParallelNodesDistributionList[t];ptr!=NULL;ptr=ptr->nextNodeThisThread) nblocks++;
 
-        printf("%i\t%8.2e\t%8.2e\t%ld\n",t,InitialProcessorLoad[t],InitialProcessorLoad[t]/LoadMeasureNormal,nblocks);
+        printf("$PREFIX:%i\t%8.2e\t%8.2e\t%ld\n",t,InitialProcessorLoad[t],InitialProcessorLoad[t]/LoadMeasureNormal,nblocks);
       }
     }
 
@@ -8740,7 +8755,7 @@ if (TmpAllocationCounter==2437) {
 
       pipe.closeRecvAll();
 
-      cout << "Cumulative Parallel Load Distribution\nThread\tLoad\tNormalized Load\tBlock's Number\n";
+      cout << "$PREFIX:Cumulative Parallel Load Distribution\n$PREFIX:Thread\tLoad\tNormalized Load\tBlock's Number\n";
 
       int minThreadBlockNumber=-1,maxThreadBlockNumber=-1;
       double minLoadMeasure=-1.0,maxLoadMeasure=-1.0;
@@ -8758,7 +8773,7 @@ if (TmpAllocationCounter==2437) {
           if ((maxBlockLoad<0.0)||(maxBlockLoad<ptr->ParallelLoadMeasure)) maxBlockLoad=ptr->ParallelLoadMeasure,maxLoadBlock=ptr;
         }
 
-        printf("%i\t%8.2e\t%8.2e\t%ld\n",t,newCumulativeParallelLoadMeasure[t],nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure,nblocks);
+        printf("$PREFIX:%i\t%8.2e\t%8.2e\t%ld\n",t,newCumulativeParallelLoadMeasure[t],nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure,nblocks);
 
         if ((minThreadBlockNumber==-1)||(minThreadBlockNumber>nblocks)) minThreadBlockNumber=nblocks;
         if ((maxThreadBlockNumber==-1)||(maxThreadBlockNumber<nblocks)) maxThreadBlockNumber=nblocks;
@@ -8774,13 +8789,13 @@ if (TmpAllocationCounter==2437) {
         }
       }
 
-      printf("Min number of blocks per processor: %i\nMax number of blocks per processor: %i\n",minThreadBlockNumber,maxThreadBlockNumber);
-      printf("Min processor load: %e, thread=%i\n",minLoadMeasure,minLoadThread);
-      printf("Max processor load: %e, thread=%i\n",maxLoadMeasure,maxLoadThread);
-      printf("Individual block load: min=%e, max=%e\n",minBlockLoad,maxBlockLoad);
+      printf("$PREFIX:Min number of blocks per processor: %i\nMax number of blocks per processor: %i\n",minThreadBlockNumber,maxThreadBlockNumber);
+      printf("$PREFIX:Min processor load: %e, thread=%i\n",minLoadMeasure,minLoadThread);
+      printf("$PREFIX:Max processor load: %e, thread=%i\n",maxLoadMeasure,maxLoadThread);
+      printf("$PREFIX:Individual block load: min=%e, max=%e\n",minBlockLoad,maxBlockLoad);
 
-      printf("Parameters of the block with the maximum load\n");
-      printf("Block->Temp_ID=%ld\n",maxLoadBlock->Temp_ID);
+      printf("$PREFIX:Parameters of the block with the maximum load\n");
+      printf("$PREFIX:Block->Temp_ID=%ld\n",maxLoadBlock->Temp_ID);
 
       //the position of the block's nodes
       double middleX[3]={0.0,0.0,0.0},xnode[3];
@@ -8789,7 +8804,7 @@ if (TmpAllocationCounter==2437) {
       for (i=0;i<2;i++) for (j=0;j<((_MESH_DIMENSION_>1) ? 2 : 1);j++) for (k=0;k<((_MESH_DIMENSION_>2) ? 2 : 1);k++) {
         maxLoadBlock->GetCornerNodePosition(xnode,i*_BLOCK_CELLS_X_,j*_BLOCK_CELLS_Y_,k*_BLOCK_CELLS_Z_);
 
-        printf("(i,j,k)=(%i,%i,%i): x=",i,j,k);
+        printf("$PREFIX:(i,j,k)=(%i,%i,%i): x=",i,j,k);
         for (idim=0;idim<_MESH_DIMENSION_;idim++) {
           printf("%e ",xnode[idim]);
           middleX[idim]+=xnode[idim];
@@ -8799,7 +8814,7 @@ if (TmpAllocationCounter==2437) {
       }
 
 
-      printf("Middle block's coordinates=");
+      printf("$PREFIX:Middle block's coordinates=");
       for (idim=0;idim<_MESH_DIMENSION_;idim++) printf("%e ",middleX[idim]/(1<<_MESH_DIMENSION_));
       printf("\n\n");
 
@@ -8820,7 +8835,7 @@ if (TmpAllocationCounter==2437) {
     }
 
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
     //check that all blocks are presented in the new blocks' distribution lists
     long int nDistributedNodes=0;
@@ -8899,7 +8914,7 @@ if (TmpAllocationCounter==2437) {
       pipe.flush();
 
 #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
-//      MPI_Barrier(MPI_COMM_WORLD);
+//      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 #endif
 
     }
@@ -8988,7 +9003,7 @@ if (TmpAllocationCounter==2437) {
 #endif
 
 #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 #endif
 
 
@@ -9256,30 +9271,30 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
             bool found=false;
             cTreeNodeAMR<cBlockAMR> *searchNode;
 
-            cout << "Error: the node is not allocated:" << endl;
+            cout << "$PREFIX:Error: the node is not allocated:" << endl;
 
 #ifdef _AMR_ParallelBlockDataExchange_SEND_CORNER_NODES_
             for (i=0;i<(1<<_MESH_DIMENSION_);i++) if (recvNode->neibNodeCorner[i]!=NULL) if (recvNode->neibNodeCorner[i]->Thread==ThisThread) {
               found=true;
-              cout << "'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+              cout << "$PREFIX:'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
             }
 #endif
 
 //#ifdef _AMR_ParallelBlockDataExchange_SEND_FACES_
            for (i=0;i<_MESH_DIMENSION_*(1<<_MESH_DIMENSION_);i++) if (recvNode->neibNodeFace[i]!=NULL) if (recvNode->neibNodeFace[i]->Thread==ThisThread) {
              found=true;
-             cout << "'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+             cout << "$PREFIX:'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
            }
 //#endif
 
 #if _MESH_DIMENSION_ == 3
            for (i=0;i<12*2;i++) if (recvNode->neibNodeEdge[i]!=NULL) if (recvNode->neibNodeEdge[i]->Thread==ThisThread) {
              found=true;
-             cout << "'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+             cout << "$PREFIX:'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
            }
 #endif
 
-           if (found==false) cout << "'recvNode' doesn't have neibours at ThisThread (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+           if (found==false) cout << "$PREFIX:'recvNode' doesn't have neibours at ThisThread (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
 
            //2. check if the 'recvNode' in the list 'DomainBoundaryLayerNodesList[From]'
            found=false;
@@ -9288,13 +9303,13 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
            while (searchNode!=NULL) {
              if (searchNode==recvNode) {
                found=true;
-               cout << "recvNode in the 'DomainBoundaryLayerNodesList[From]' (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+               cout << "$PREFIX:recvNode in the 'DomainBoundaryLayerNodesList[From]' (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
              }
 
              searchNode=searchNode->nextNodeThisThread;
            }
 
-           if (found==false) cout << "'recvNode' is not in 'DomainBoundaryLayerNodesList[From]' (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+           if (found==false) cout << "$PREFIX:'recvNode' is not in 'DomainBoundaryLayerNodesList[From]' (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
 
 
             exit(__LINE__,__FILE__,"Error: the node is not allocated");

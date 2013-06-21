@@ -13,6 +13,7 @@
 #include <time.h>
 #include <iostream>
 
+#include "global.h"
 #include "constants.h"
 
 #ifndef _AMR_MESH_DEFINITION_
@@ -173,23 +174,23 @@ void exit(const long int nline, const char* fname,const char* msg=NULL) {
   if (msg==NULL) sprintf(str," exit: line=%ld, file=%s\n",nline,fname);
   else sprintf(str," exit: line=%ld, file=%s, message=%s\n",nline,fname,msg);
 
-  FILE* errorlog=fopen("error.log","a+");
+  FILE* errorlog=fopen("$ERROR","a+");
 
   time_t TimeValue=time(0);
   tm *ct=localtime(&TimeValue);
 
   MPI_Initialized(&mpiInitFlag);
 
-  if (mpiInitFlag==true)  MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
+  if (mpiInitFlag==true)  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
   else ThisThread=0;
 
   fprintf(errorlog,"Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
   fprintf(errorlog,"file=%s, line=%ld\n",fname,nline);
   fprintf(errorlog,"%s\n\n",msg);
 
-  printf("Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
-  printf("file=%s, line=%ld\n",fname,nline);
-  printf("%s\n\n",msg);
+  printf("$PREFIX:Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+  printf("$PREFIX:file=%s, line=%ld\n",fname,nline);
+  printf("$PREFIX:%s\n\n",msg);
 
   fclose(errorlog);
   ::exit(1);
@@ -439,7 +440,7 @@ public:
     delElement->cleanDataBuffer();
 
     if (elementStackPointer==0) {
-      cout << "ERROR: stack pointer is 0 (line=" << __LINE__ << ", file=" << __FILE__ << ")" << endl;
+      cout << "$PREFIX:ERROR: stack pointer is 0 (line=" << __LINE__ << ", file=" << __FILE__ << ")" << endl;
     } 
 
     long int elementStackBank,offset;
@@ -543,7 +544,7 @@ public:
 /*
 
     int t;
-    MPI_Comm_rank(MPI_COMM_WORLD,&t);
+    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&t);
 
     if (t==3) if ((res->Temp_ID==2708279)||(res->Temp_ID==536172)) {
       cout << __FILE__ << __LINE__ << endl;
