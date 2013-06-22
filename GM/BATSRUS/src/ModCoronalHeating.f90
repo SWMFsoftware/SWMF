@@ -1878,7 +1878,8 @@ contains
          NameSub = 'ModCoronalHeating::apportion_coronal_heating'
     !--------------------------------------------------------------------------
 
-    if(UseTurbulentCascade)then
+!!!    if(UseTurbulentCascade)then
+    if(.false.)then
        ! Damping rates and wave energy partition based on Chandran et al.[2011]
 
        TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
@@ -1914,7 +1915,7 @@ contains
 
        if(UseNonWkbAlfvenWaves)then
           call stop_mpi(NameSub//' The non-WKB Alfven wave approximation ' &
-                  // 'requires both waves to determine the perturbed velocity')
+               // 'requires both waves to determine the perturbed velocity')
        else
           ! Extract the Alfven wave energy density of the dominant wave
           WaveLarge = maxval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
