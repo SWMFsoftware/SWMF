@@ -380,10 +380,11 @@ end subroutine get_B_field
 !============================================================
 subroutine get_coef(dEdt_IIII,dMudt_III)
 
-  use ModHeidiSize,   ONLY: nPoint, iPointBmin_II, nPa, nT, nR,nE
+  use ModHeidiSize,   ONLY: nPoint, iPointBmin_II,iPointEq, nPa, nT, nR,nE
   use ModConst,       ONLY: cTiny  
   use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,Z, funi, funt,dPhi, DipoleFactor
   use ModHeidiDrifts, ONLY: VR, P1,P2
+  use ModHeidiInput,  ONLY: TypeBField
   use ModHeidiBField
   use ModHeidiBACoefficients
 
@@ -479,7 +480,11 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
 
               if (Sb==0.0) Sb = cTiny
               
-              iPointBmin = iPointBmin_II(iR,iPhi)
+              if (TypeBField .eq. 'mhd') then
+                 iPointBmin = iPointBmin_II(iR,iPhi)
+              else
+                 iPointBmin = iPointEq
+              end if
               
               GradEqBR      = GradB_VIII(1,iPointBMin,iR,iPhi)
               GradEqBPhi    = GradB_VIII(3,iPointBMin,iR,iPhi)
