@@ -3087,73 +3087,6 @@ return,filledge(-((intedge_rz(v,rc,zc)+intedge(u,rc^2))/vol2 - v)/2/r)
 
 end
 
-;==========================================
-function coarsen,a,boxsize
-;
-; Produce a coarser array from "a" by averaging out cells in a box.
-; The box size can be defined by a scalar (n long interval, n*n square,
-; or ,n*n*n cube) or as an
-; array of the same dimension as "a" (n1*n2 rectangle or n1*n2*n3 brick)
-
-;on_error,2
-
-if(n_elements(a) eq 0 or n_elements(boxsize) eq 0)then begin
-   print,'Calling sequence is: array_co=coarse(array, boxsize)'
-   retall
-endif
-
-siz=size(a)
-ndim=siz(0)
-
-if(ndim eq 0 or ndim gt 3)then begin
-   print,'coarse requires a 1,2 or 3D array for the 1st argument'
-   retall
-endif
-nx=siz(1:ndim)
-
-siz=size(box)
-if(siz(0) eq 0)then begin
-   n=intarr(ndim)+boxsize
-endif else if siz(0) eq ndim then begin
-   n=boxsize
-endif else begin
-   print,'boxsize should either be a scalar, or an array '
-   print,'of the same dimension as the number of dimensions of the array'
-   retall
-endelse
-
-case ndim of
-   1: begin
-      result=dblarr(nx(0)/n(0))
-      for ix=0,(nx(0)-1)/n(0) do $
-        for i=0,n(0)-1 do $
-           result(ix)=result(ix)+a(ix*n(0)+i)
-      result=result/n(0)
-   end
-   2: begin
-      result=dblarr(nx(0)/n(0),nx(1)/n(1))
-      for ix=0,(nx(0)-1)/n(0) do $
-      for iy=0,(nx(1)-1)/n(1) do $
-        for i=0,n(0)-1 do $
-        for j=0,n(1)-1 do $
-           result(ix,iy)=result(ix,iy)+a(ix*n(0)+i,iy*n(1)+j)
-      result=result/n(0)/n(1)
-   end
-   3: begin
-      result=dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n(2))
-      for ix=0,(nx(0)-1)/n(0) do $
-      for iy=0,(nx(1)-1)/n(1) do $
-      for iz=0,(nx(2)-1)/n(2) do $
-        for i=0,n(0)-1 do $
-        for j=0,n(1)-1 do $
-        for k=0,n(2)-1 do $
-           result(ix,iy,iz)=result(ix,iy,iz)+a(ix*n(0)+i,iy*n(1)+j,iz*n(2)+k)
-      result=result/n(0)/n(1)/n(2)
-   end
-endcase
-return,result
-end
-
 ;===========================================================================
 function quadruplet,nx,x0,x1,dx,ny,y0,y1,dy,nz,z0,z1,dz,nw,w0,w1,dw
 ;
@@ -3234,6 +3167,100 @@ if keyword_set(dx) then $
 print,'Error in TRIPLET: All strides are 0!'
 retall
 
+end
+
+;==========================================
+function coarsen,a,boxsize,fd=fd
+;
+; Produce a coarser array from "a" by averaging out cells in a box.
+; The box size can be defined by a scalar (n long interval, n*n square,
+; or n*n*n cube or n*n*n*n hyper cube) or as an
+; array of the same dimension as "a" (n1*n2 rectangle or n1*n2*n3
+; brick or n1*n2*n3*n4 hyper brick)
+;
+; If /fd is set then use finite difference coarsening:
+; extract every n1-th element in dimension 1, every n2-th in dim 2 etc.
+
+
+;on_error,2
+
+if(n_elements(a) eq 0 or n_elements(boxsize) eq 0)then begin
+   print,'Calling sequence is: array_co=coarse(array, boxsize, /fd)'
+   retall
+endif
+
+siz=size(a)
+ndim=siz(0)
+
+if(ndim eq 0 or ndim gt 4)then begin
+   print,'coarse requires a 1, 2, 3 or 4D array for the 1st argument'
+   retall
+endif
+nx=siz(1:ndim)
+
+siz=size(box)
+if(siz(0) eq 0)then begin
+   n = intarr(ndim) + boxsize
+endif else if siz(0) eq ndim then begin
+   n = boxsize
+endif else begin
+   print,'boxsize should either be a scalar, or an array '
+   print,'of the same dimension as the number of dimensions of the array'
+   retall
+endelse
+
+if keyword_set(fd) then case ndim of
+   1: result = a(triplet(0,nx(0)-1,n(0)))
+   2: result = a(triplet(0,nx(0)-1,n(0), 0,nx(1)-1,n(1)))
+   3: result = a(triplet(0,nx(0)-1,n(0), 0,nx(1)-1,n(1), 0,nx(2)-1,n(2)))
+   4: result = a(triplet(0,nx(0)-1,n(0), 0,nx(1)-1,n(1), 0,nx(2)-1,n(2), $
+                         0,nx(3)-1,n(3)))
+endcase else case ndim of
+   1: begin
+      result = dblarr(nx(0)/n(0))
+      for ix=0,(nx(0)-1)/n(0) do $
+        for i=0,n(0)-1 do $
+           result(ix)=result(ix) + a(ix*n(0)+i)
+      result=result/n(0)
+   end
+   2: begin
+      result = dblarr(nx(0)/n(0),nx(1)/n(1))
+      for ix=0,(nx(0)-1)/n(0) do $
+      for iy=0,(nx(1)-1)/n(1) do $
+        for i=0,n(0)-1 do $
+        for j=0,n(1)-1 do $
+           result(ix,iy) = result(ix,iy) + a(ix*n(0)+i,iy*n(1)+j)
+      result=result/n(0)/n(1)
+   end
+   3: begin
+      result=dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n(2))
+      for ix=0,(nx(0)-1)/n(0) do $
+      for iy=0,(nx(1)-1)/n(1) do $
+      for iz=0,(nx(2)-1)/n(2) do $
+        for i=0,n(0)-1 do $
+        for j=0,n(1)-1 do $
+        for k=0,n(2)-1 do $
+           result(ix,iy,iz) = result(ix,iy,iz) $
+         + a(ix*n(0)+i,iy*n(1)+j,iz*n(2)+k)
+      result = result/n(0)/n(1)/n(2)
+   end
+   4: begin
+      result = dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n(2),nx(3)/n(3))
+      for ix=0,(nx(0)-1)/n(0) do $
+      for iy=0,(nx(1)-1)/n(1) do $
+      for iz=0,(nx(2)-1)/n(2) do $
+      for iw=0,(nx(3)-1)/n(3) do $
+        for i=0,n(0)-1 do $
+        for j=0,n(1)-1 do $
+        for k=0,n(2)-1 do $
+        for l=0,n(3)-1 do $
+           result(ix,iy,iz,iw) = result(ix,iy,iz,iw) $
+         + a(ix*n(0)+i,iy*n(1)+j,iz*n(2)+k,iw*n(3)+l)
+      result = result/n(0)/n(1)/n(2)/n(3)
+   end
+endcase
+
+return,result
 end
 
 ;===========================================================================
@@ -3438,7 +3465,7 @@ endfor
 end
 
 ;=============================================================================
-function rel_error, w1, w2, iws
+function rel_error, w1, w2, iws, fd=fd
 
 ; Calculate relative errors of w1 with respect to w2.
 ; The 1 to ndim (=1,2, or 3) indexes are the spatial indexes. 
@@ -3449,6 +3476,8 @@ function rel_error, w1, w2, iws
 ; The function returns the relative errors averaged over all variables.
 ; If iws is present then the error is calculated for the variable
 ; indexes listed in iws. 
+;
+; If the /fd keyword is set, use finite difference coarsening.
 
   if n_elements(w1) le n_elements(w2) then begin
      w     = w1
@@ -3491,7 +3520,7 @@ function rel_error, w1, w2, iws
   ; Coarsen wref if necessary (only in the spatial indexes)
   nx    = s(1:ndim)
   nxref = sref(1:ndim)
-  if max(nxref gt nx) then wref = coarsen(wref, [nxref/nx, 1])
+  if max(nxref gt nx) then wref = coarsen(wref, [nxref/nx, 1], fd=fd)
 
   error = double(0.0)
   for iw = 0, nw-1 do begin
@@ -3510,7 +3539,17 @@ function rel_error, w1, w2, iws
 end
 
 ;=============================================================================
-function rel_errors, w0, w1, w2, w3, w4, w5, ivar=ivar, ratio=ratio
+function rel_errors, w0, w1, w2, w3, w4, w5, ivar=ivar, ratio=ratio, fd=fd
+
+  ; Calculate relative errors for up to 6 arrays w0 ...
+  ; The arrays can have different sizes. The finer arrays are coarsened. 
+  ; The last array should be the reference solution.
+  ;
+  ; The ivar keyword lists the variables to be compared. Default is all.
+  ; If /ratio keyword is set and there are at least 3 arguments, 
+  ;    then print out the ratio of errors. Useful for convergence rate.
+  ; If /fd keyword is set, use finite difference style coarsening.
+  ;    The default is finite volume style coarsening.
 
   n = lonarr(6)
   n(0) = n_elements(w0)
@@ -3542,11 +3581,11 @@ function rel_errors, w0, w1, w2, w3, w4, w5, ivar=ivar, ratio=ratio
 
   errors = dblarr(narray-1)
 
-  errors(0)                     = rel_error(w0,wref,ivar)
-  if narray gt 2 then errors(1) = rel_error(w1,wref,ivar)
-  if narray gt 3 then errors(2) = rel_error(w2,wref,ivar)
-  if narray gt 4 then errors(3) = rel_error(w3,wref,ivar)
-  if narray gt 5 then errors(4) = rel_error(w4,wref,ivar)
+  errors(0)                     = rel_error(w0, wref, ivar, fd=fd)
+  if narray gt 2 then errors(1) = rel_error(w1, wref, ivar, fd=fd)
+  if narray gt 3 then errors(2) = rel_error(w2, wref, ivar, fd=fd)
+  if narray gt 4 then errors(3) = rel_error(w3, wref, ivar, fd=fd)
+  if narray gt 5 then errors(4) = rel_error(w4, wref, ivar, fd=fd)
 
   if keyword_set(ratio) and narray gt 2 then $
      print,'ratio=',errors(0:narray-3)/(errors(1:narray-2) > 1d-25)
