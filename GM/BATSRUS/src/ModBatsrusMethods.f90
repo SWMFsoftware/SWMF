@@ -409,6 +409,10 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   ! Calculate time step dt
   if (time_accurate) call set_global_timestep(TimeSimulationLimit)
+  if(UsePic)then
+     call pic_save_region
+  end if
+
 
   call timing_start('advance')
 
@@ -479,12 +483,6 @@ subroutine BATS_advance(TimeSimulationLimit)
   end if
 
   if (UseProjection) call project_B
-
-  if(UsePic)then
-     ! Make sure that the next time step is calculated
-     call set_global_timestep(TimeSimulationLimit)
-     call pic_save_region
-  end if
 
   call BATS_save_files('NORMAL')
 
