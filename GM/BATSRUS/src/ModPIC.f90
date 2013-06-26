@@ -82,17 +82,21 @@ contains
   !===========================================================================
   subroutine pic_save_region
 
-    use ModProcMH,  ONLY: iProc, nProc, iComm
-    use ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, State_VGB
-    use ModMain,    ONLY: UseB0, Dt, time_simulation, n_step
-    use ModB0,      ONLY: B0_DGB
-    use ModCurrent, ONLY: get_current
-    use ModMpi,     ONLY: MPI_reduce, MPI_SUM, MPI_REAL
-    use BATL_lib,   ONLY: nDim, MaxDim, Xyz_DGB, CellSize_DB, find_grid_block
-    use ModIO,      ONLY: NamePlotDir
-    use ModPhysics, ONLY: No2Si_V, UnitT_, UnitX_, UnitRho_, UnitU_, UnitB_, &
-         UnitP_, UnitJ_
-    use ModPlotFile,ONLY: save_plot_file
+    use ModProcMH,    ONLY: iProc, nProc, iComm
+    use ModAdvance,   ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, State_VGB
+    use ModMain,      ONLY: UseB0, Dt, time_simulation, n_step
+    use ModB0,        ONLY: B0_DGB
+    use ModCurrent,   ONLY: get_current
+    use ModMpi,       ONLY: MPI_reduce, MPI_SUM, MPI_REAL
+    use BATL_lib,     ONLY: nDim, MaxDim, Xyz_DGB, CellSize_DB, find_grid_block
+    use ModIO,        ONLY: NamePlotDir
+    use ModPhysics,   ONLY: No2Si_V, UnitT_, UnitX_, UnitRho_, UnitU_, UnitB_, &
+         UnitP_, UnitJ_, UnitMass_, UnitCharge_
+    use ModPlotFile,  ONLY: save_plot_file
+    use ModMain,      ONLY: iTest, jTest, kTest, BlkTest, ProcTest
+    use ModConst,     ONLY: cLightSpeed, cMu
+    use ModHallResist,ONLY: HallFactorMax, UseHallResist
+    use ModPhysics,   ONLY: IonMassPerCharge, TypeNormalization 
 
     ! Assuming ideal MHD for now !!! Add Pe, Ppar, PePar multi-ion???
     integer, parameter:: RhoPic_=1, UxPic_=2, UzPic_=4, BxPic_=5, BzPic_=7, &
@@ -123,13 +127,41 @@ contains
     ! Time step in SI units
     real:: DtSi
 
+    ! mass per charge SI
+    real:: IonMassPerChargeSi 
+
     ! MPI error
     integer:: iError
+
+    ! Fist time called
+    logical :: IsFirstCall = .true.
 
     character(len=100):: NameFile
 
     character(len=*), parameter:: NameSub = 'pic_save_region'
     !-------------------------------------------------------------------------
+
+    ! Normalizing the system so q/m == 1 in IPIC3D 
+    ! 
+    ! Q_pic            Q_si * 10*C               [M]_cgs
+    ! -----  =   1  = ------------ *  --------------------------------
+    ! M_pic            M_si *1000      sqrt([M]_cgs * [L]_cgs)*[U]_cgs
+    !
+    !  [L]_cgs  = {(Q_si *10C)/(M_si*1000)}^2 *[M]_cgs/([U]_cgs)^2
+
+    if(IsFirstCall .and. UseHallResist) then
+
+       IonMassPerChargeSi = IonMassPerCharge*No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
+
+       ! correcting charge when BATSRUS is using cgs system !!!
+       if(TypeNormalization == 'NONE') &
+            IonMassPerChargeSi = IonMassPerChargeSi*cLightSpeed
+
+       xUnitPicSi =1.0e-7*cLightSpeed**2*mUnitPicSi/((IonMassPerChargeSi*HallFactorMax*uUnitPicSi)**2)
+
+       IsFirstCall = .false.
+    end if
+
     DtSi = dt*No2Si_V(UnitT_)
     XyzPic_D = 0.0
     nPic_D = 1
@@ -169,7 +201,7 @@ contains
                State_VGB(Rho_,i,j,k,iBlock)
           StatePic_VC(UxPic_:UzPic_,iPic,jPic,kPic) = No2Si_V(UnitU_)* &
                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
-               / StatePic_VC(RhoPic_,iPic,jPic,kPic)
+               /  State_VGB(Rho_,i,j,k,iBlock)
           if(UseB0)then
              StatePic_VC(BxPic_:BzPic_,iPic,jPic,kPic) = No2Si_V(UnitB_)* &
                   (State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
@@ -210,6 +242,12 @@ contains
                (XyzMaxPic_DI(:,iRegion) - 0.5*DxyzPic_DI(:,iRegion)), &
                VarIn_VIII = StatePic_VC)
        end if
+
+       ! Tell IPIC3D that its finnished
+       open  (unit=1031,file="IO2/ipic_sucess.txt",action="write",status="replace")
+       write (1031,*) "Have writen file to IPIC3D"
+       close (1031)
+
 
        deallocate(StatePic_VC)
 
@@ -257,6 +295,8 @@ contains
     use ModInterpolate, ONLY: bilinear
     use ModUtilities,   ONLY: sleep
     use ModIoUnit,      ONLY: UnitTmp_
+    use ModPhysics, ONLY: Si2No_V, UnitT_, UnitX_, UnitRho_, UnitU_, UnitB_, &
+         UnitP_, UnitJ_
 
     integer, intent(in):: iBlock
 
@@ -335,6 +375,9 @@ contains
              EXIT
           end do
 
+          CoordMaxPic_D = Si2No_V(UnitX_)*CoordMaxPic_D
+          CoordMinPic_D = Si2No_V(UnitX_)*CoordMinPic_D
+
           DxyzPic_D = (CoordMaxPic_D - CoordMinPic_D)/(nCellPic_D - 1)
 
           if(iProc == 0)then
@@ -358,6 +401,11 @@ contains
 
        end if
 
+       StatePic_VC(Rho_,:,:)    = StatePic_VC(Rho_,:,:)    * Si2No_V(UnitRho_)
+       StatePic_VC(Ux_:Uz_,:,:) = StatePic_VC(Ux_:Uz_,:,:) * Si2No_V(UnitU_)
+       StatePic_VC(Bx_:Bz_,:,:) = StatePic_VC(Bx_:Bz_,:,:) * Si2No_V(UnitB_)
+       StatePic_VC(nVarPic,:,:) = StatePic_VC(nVarPic,:,:) * Si2No_V(UnitP_)
+
        ! We reuse the same filename, so delete file after it was read in
        call barrier_mpi
        if(iProc ==0 ) then
@@ -378,55 +426,55 @@ contains
          all(Xyz_DGB(1:nDim,nI,nJ,nK,iBlock) >= CoordMinPic_D - 0.1*CellSize_DB(1:nDim,iBlock))) then
 
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-       ! Normalized PIC grid coordinates (1...nCellPic_D)
-       XyzNorm_D(1:nDim) = 1 + (Xyz_DGB(1:nDim,i,j,k,iBlock) - CoordMinPic_D) &
-            /DxyzPic_D
+          ! Normalized PIC grid coordinates (1...nCellPic_D)
+          XyzNorm_D(1:nDim) = 1 + (Xyz_DGB(1:nDim,i,j,k,iBlock) - CoordMinPic_D) &
+               /DxyzPic_D
 
-       ! Distance from edge
-       Dn = minval( min(nint(XyzNorm_D(1:nDim) - 1),  &
-            nint(nCellPic_D - XyzNorm_D(1:nDim))) )
+          ! Distance from edge
+          Dn = minval( min(nint(XyzNorm_D(1:nDim) - 1),  &
+               nint(nCellPic_D - XyzNorm_D(1:nDim))) )
 
-       ! Nothing to do within PIC ghost region
-       if(Dn < nGhostPic) CYCLE
+          ! Nothing to do within PIC ghost region
+          if(Dn < nGhostPic) CYCLE
 
-       ! Distance from ghost layers
-       Dn = Dn - nGhostPic + 1
+          ! Distance from ghost layers
+          Dn = Dn - nGhostPic + 1
 
-       if(Dn <= nOverlapPic)then
-          ! For nOverlapPic=1, Dn = 1, so use 0.5 as weight
-          ! For nOverlapPic=2, Dn = 1, 2, so use 1/3 and 2/3 weights
-          ! ...
-          WeightPic = Dn/(nOverlapPic + 1.0)
-       else
-          WeightPic = 1.0
-       end if
+          if(Dn <= nOverlapPic)then
+             ! For nOverlapPic=1, Dn = 1, so use 0.5 as weight
+             ! For nOverlapPic=2, Dn = 1, 2, so use 1/3 and 2/3 weights
+             ! ...
+             WeightPic = Dn/(nOverlapPic + 1.0)
+          else
+             WeightPic = 1.0
+          end if
 
-       WeightMhd = 1.0 - WeightPic
+          WeightMhd = 1.0 - WeightPic
 
-       StatePic_V = &
-            bilinear(StatePic_VC, nVarPic, 1, nXPic, 1, nYPic, XyzNorm_D)
+          StatePic_V = &
+               bilinear(StatePic_VC, nVarPic, 1, nXPic, 1, nYPic, XyzNorm_D)
 
-       ! Convert velocity to momentum
-       StatePic_V(RhoUx_:RhoUz_) = StatePic_V(Rho_)*StatePic_V(Ux_:Uz_)
+          ! Convert velocity to momentum
+          StatePic_V(RhoUx_:RhoUz_) = StatePic_V(Rho_)*StatePic_V(Ux_:Uz_)
 
-       ! Interpolate MHD and PIC states. 
-       ! Skip hyperbolic scalar if present (Hyp=Bz_+1)
-       State_VGB(Rho_:Bz_,i,j,k,iBlock) = &
-            WeightMhd*State_VGB(Rho_:Bz_,i,j,k,iBlock) + &
-            WeightPic*StatePic_V(Rho_:Bz_)
+          ! Interpolate MHD and PIC states. 
+          ! Skip hyperbolic scalar if present (Hyp=Bz_+1)
+          State_VGB(Rho_:Bz_,i,j,k,iBlock) = &
+               WeightMhd*State_VGB(Rho_:Bz_,i,j,k,iBlock) + &
+               WeightPic*StatePic_V(Rho_:Bz_)
 
-       State_VGB(p_,i,j,k,iBlock) = &
-            WeightMhd*State_VGB(p_,i,j,k,iBlock) &
-            + WeightPic*StatePic_V(nVarPic)
+          State_VGB(p_,i,j,k,iBlock) = &
+               WeightMhd*State_VGB(p_,i,j,k,iBlock) &
+               + WeightPic*StatePic_V(nVarPic)
 
-       ! Set hyperbolic scalar to zero if present
-       if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
+          ! Set hyperbolic scalar to zero if present
+          if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
 
-    end do; end do; end do
+       end do; end do; end do
 
-    call calc_energy_cell(iBlock)
+       call calc_energy_cell(iBlock)
 
     end if !!!
 
