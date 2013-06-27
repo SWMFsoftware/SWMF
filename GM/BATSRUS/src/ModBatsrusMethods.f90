@@ -409,10 +409,9 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   ! Calculate time step dt
   if (time_accurate) call set_global_timestep(TimeSimulationLimit)
-  if(UsePic)then
-     call pic_save_region
-  end if
 
+  ! Pass the PIC region(s) and the next timestep to the PIC code
+  if(UsePic) call pic_save_region
 
   call timing_start('advance')
 
