@@ -513,7 +513,8 @@ contains
          apportion_coronal_heating
     use ModMain,       ONLY: UseB0, UseRotatingFrame
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
-         UnitX_, UnitU_, UnitB_, OmegaBody
+         UnitX_, UnitU_, UnitB_, UnitT_, OmegaBody
+    use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
     use ModGeometry,   ONLY: Xyz_DGB
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, By_, Bz_, RhoUx_, RhoUy_, &
          RhoUz_, WaveFirst_, WaveLast_
@@ -563,6 +564,31 @@ contains
                /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
        end do; end do; end do
 
+    case('qrad')
+       call get_tesi_c(iBlock, TeSi_C)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call get_radiative_cooling(i, j, k, iBlock, TeSi_C(i,j,k), &
+               RadCooling_C(i,j,k))
+          PlotVar_G(i,j,k) = RadCooling_C(i,j,k) &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+       end do; end do; end do
+       NameIdlUnit = 'J/m^3/s'
+       NameTecUnit = 'J/m^3/s'
+
+    case('qheat')
+       ! some of the heating terms need face values
+       call set_b0_face(iBlock)
+       call calc_face_value(.false., iBlock)
+       call get_block_heating(iBlock)
+       call get_tesi_c(iBlock, TeSi_C)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = CoronalHeating_C(i,j,k) &
+               /extension_factor(TeSi_C(i,j,k)) &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+          end do; end do; end do
+       NameIdlUnit = 'J/m^3/s'
+       NameTecUnit = 'J/m^3/s'
+
     case('qebyq', 'qparbyq')
        if(UseElectronPressure)then
           call set_b0_face(iBlock)
@@ -582,6 +608,8 @@ contains
              end select
           end do; end do; end do
        end if
+       NameIdlUnit = 'J/m^3/s'
+       NameTecUnit = 'J/m^3/s'
 
        ! Vector components in spherical coordinates
     case('u_r','uphi','utheta')
