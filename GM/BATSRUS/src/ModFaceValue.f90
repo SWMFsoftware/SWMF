@@ -681,6 +681,8 @@ contains
     use ModPhysics, ONLY: GammaWave, c2LIGHT, inv_c2LIGHT
     use ModB0
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
+         DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
+         Flux_VX, &
          UseElectronPressure, UseWavePressure, &
          LeftState_VX,      &  ! Face Left  X
          RightState_VX,     &  ! Face Right X
@@ -697,7 +699,7 @@ contains
     logical, intent(in):: DoResChangeOnly
     integer, intent(in):: iBlock
 
-    integer:: i, j, k, iSide, iFluid
+    integer:: i, j, k, iSide, iFluid, iFlux
     real:: RhoInv
 
     real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
@@ -1339,7 +1341,7 @@ contains
                     Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
 
                if(UseTrueCell)then
-                  ! Use the second order face values where high order is skipped
+                  ! Use the 2nd order face values where high order is skipped
                   FaceL_I(iMin:iMax) = LeftState_VX(iVar,iMin:iMax,j,k)
                   FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
                end if
@@ -1352,6 +1354,25 @@ contains
                LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
                RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
             end do
+
+            if(.not.DoInterpolateFlux) CYCLE
+
+            ! Interpolate cell centered flux to the face
+            do iFlux = 1, nVar + nFluid
+               ! Copy left fluxes along i direction into 1D array
+               Cell_I(iMin-nG:iMax-1+nG) = &
+                    FluxLeft_VGD(iFlux,iMin-nG:iMax-1+nG,j,k,x_)
+               call limiter_mp(iMin, iMax, Ux_)
+               Flux_VX(iFlux,iMin:iMax,j,k) = FaceL_I(iMin:iMax)
+
+               Cell_I(iMin-nG:iMax-1+nG) = &
+                    FluxRight_VGD(iFlux,iMin-nG:iMax-1+nG,j,k,x_)
+               call limiter_mp(iMin, iMax, Ux_)
+               Flux_VX(iFlux,iMin:iMax,j,k) = &
+                    Flux_VX(iFlux,iMin:iMax,j,k) + FaceR_I(iMin:iMax)
+
+            end do
+
          end do; end do
 
       end if
@@ -1421,7 +1442,7 @@ contains
                     Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
 
                if(UseTrueCell)then
-                  ! Use the second order face values where high order is skipped
+                  ! Use the 2nd order face values where high order is skipped
                   FaceL_I(jMin:jMax) = LeftState_VY(iVar,i,jMin:jMax,k)
                   FaceR_I(jMin:jMax) = RightState_VY(iVar,i,jMin:jMax,k)
                end if
@@ -1505,7 +1526,7 @@ contains
                     Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
                
                if(UseTrueCell)then
-                  ! Use the second order face values where high order is skipped
+                  ! Use the 2nd order face values where high order is skipped
                   FaceL_I(kMin:kMax) = LeftState_VZ(iVar,i,j,kMin:kMax)
                   FaceR_I(kMin:kMax) = RightState_VZ(iVar,i,j,kMin:kMax)
                end if
@@ -1612,8 +1633,8 @@ contains
          Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iUx:iUz,i,j,k)
       end do
 
-      ! Transform p to Ptotal
       if(UsePtotalLimiter)then
+         ! Transform p to Ptotal
          if(UseElectronPressure)then
             Primitive_VG(p_,i,j,k) = Primitive_VG(p_,i,j,k) &
                  + Primitive_VG(Pe_,i,j,k)

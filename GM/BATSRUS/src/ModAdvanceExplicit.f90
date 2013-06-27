@@ -5,10 +5,10 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
   use ModMain
   use ModFaceBoundary, ONLY: set_face_boundary
-  use ModFaceFlux,   ONLY: calc_face_flux
+  use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
   use ModFaceValue,  ONLY: calc_face_value
-  use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, &
-       DoCalcElectricField
+  use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
+       DoInterpolateFlux
   use ModB0,         ONLY: set_b0_face
   use ModParallel,   ONLY: neiLev
   use ModGeometry,   ONLY: Body_BLK
@@ -99,6 +99,13 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         ! Calculate interface values for L/R states of each face
         !   and apply BCs for interface states as needed.
         call set_b0_face(iBlock)
+
+        if(DoInterpolateFlux)then
+           call timing_start('calc_fluxes')
+           call calc_cell_flux(iBlock)
+           call timing_stop('calc_fluxes')
+        end if
+
         call timing_start('calc_facevalues')
         call calc_face_value(.false., iBlock)
         call timing_stop('calc_facevalues')
@@ -106,10 +113,12 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         if(body_BLK(iBlock)) &
              call set_face_boundary(iBlock, Time_Simulation,.false.)
 
-        ! Compute interface fluxes for each cell.
-        call timing_start('calc_fluxes')
-        call calc_face_flux(.false., iBlock)
-        call timing_stop('calc_fluxes')
+        if(.not.DoInterpolateFlux)then
+           ! Compute interface fluxes for each cell.
+           call timing_start('calc_fluxes')
+           call calc_face_flux(.false., iBlock)
+           call timing_stop('calc_fluxes')
+        end if
 
         ! Enforce flux conservation by applying corrected fluxes
         ! to each coarse grid cell face at block edges with 
@@ -183,7 +192,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      if(DoCalcTimeStep) &
           Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)/nStage
 
-     if(iStage<nStage)call exchange_messages
+     if(iStage < nStage)call exchange_messages
 
      if(DoTestMe)write(*,*)NameSub,' finished stage=',istage
 

@@ -115,6 +115,10 @@ module ModAdvance
   ! Fluxes are for conservative variables (momentum)
   real, allocatable:: Flux_VX(:,:,:,:), Flux_VY(:,:,:,:), Flux_VZ(:,:,:,:)
 
+  ! Cell centered fluxes
+  logical:: DoInterpolateFlux = .false.
+  real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
+
   ! Velocity . area vector for div(U) in various source terms. Per fluid.
   real, allocatable:: &
        uDotArea_XI(:,:,:,:), uDotArea_YI(:,:,:,:), uDotArea_ZI(:,:,:,:)

@@ -1082,6 +1082,9 @@ subroutine MH_set_parameters(TypeAction)
         ! There is no face integral in 1D
         if(nDim == 1) UseFaceIntegral4 = .false.
 
+     case("#SCHEME5")
+        call read_var('DoInterpolateFlux', DoInterpolateFlux)
+
      case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
           '#LIMITPTOTAL', '#FLATTENING')
         call read_face_value_param(NameCommand)

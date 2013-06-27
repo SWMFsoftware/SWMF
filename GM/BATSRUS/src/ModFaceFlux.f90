@@ -2503,6 +2503,90 @@ contains
   end subroutine get_physical_flux
 
   !===========================================================================
+  subroutine calc_cell_flux(iBlock)
+
+    ! Calculate cell centered fluxes including ghost cells
+
+    use ModAdvance, ONLY: nVar, State_VGB, FluxLeft_VGD, FluxRight_VGD
+    use ModMultiFluid, ONLY: nFluid, iRho, iUx, iUz, iUx_I, iUz_I
+    use ModMain, ONLY: UseDtFixed, Cfl, Dt
+    use BATL_lib, ONLY: nDim
+
+    integer, intent(in):: iBlock
+
+    integer:: i, j, k, iDim, iFluid
+
+    real:: Primitive_V(nVar), RhoInv, Flux_V(nFlux)
+    real:: CmaxArea, CmaxAll, Cmax_I(nFluid), Conservative_V(nFlux)
+
+!!! These are calculated but not used                                           
+    real:: Un_I(nFluid+1), En, Pe
+    !------------------------------------------------------------------------
+
+    if(.not.allocated(FluxLeft_VGD)) allocate( &
+         FluxLeft_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim), &
+         FluxRight_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
+
+    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0         
+    DoTestCell = .false.
+    do iDim = 1, nDim
+       call set_block_values(iBlock, iDim)
+
+       if(Dt > 0)then
+          CmaxAll = CellSize_DB(iDim,iBlock)/Dt
+          if(.not.UseDtFixed) CmaxAll = Cfl*CmaxAll
+       else
+          CmaxAll = 0.0
+       end if
+
+       do k = MinK, MaxK; kFace = k
+          do j = MinJ, MaxJ; jFace = j
+             do i = MinI, MaxI; iFace = i
+                !!! call set_cell_values
+
+                ! Get primitive variables used by get_physical_flux
+                Primitive_V = State_VGB(:,i,j,k,iBlock)
+                do iFluid = 1, nFluid
+                   iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
+                   RhoInv = 1/Primitive_V(iRho)
+                   Primitive_V(iUx:iUz) = RhoInv*Primitive_V(iUx:iUz)
+                end do
+
+                if(UseB0)then
+                   B0x = B0_DGB(x_,i,j,k,iBlock)
+                   B0y = B0_DGB(x_,i,j,k,iBlock)
+                   B0z = B0_DGB(x_,i,j,k,iBlock)
+                end if
+
+                ! Get the flux
+                call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
+                     Conservative_V, Flux_V, Un_I, En, Pe)
+
+                FluxLeft_VGD(:,i,j,k,iDim) = 0.5*Area*(Flux_V + CmaxAll*Conservative_V)
+                FluxRight_VGD(:,i,j,k,iDim)= 0.5*Area*(Flux_V - CmaxAll*Conservative_V)
+
+                ! Get the maximum speed
+                call get_speed_max(Primitive_V, B0x, B0y, B0z, Cmax_I)
+                CmaxArea = maxval(Cmax_I)*Area
+                select case(iDim)
+                case(1)
+                   if(i>0 .and. i<=nI+1 .and. j>0 .and. j<=nJ .and. k>0 .and. k<=nK) &
+                        VdtFace_X(i,j,k) = CmaxArea
+                case(2)
+                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ+1 .and. k>0 .and. k<=nK) &
+                        VdtFace_Y(i,j,k) = CmaxArea
+                case(3)
+                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ .and. k>0 .and. k<=nK+1) &
+                        VdtFace_Z(i,j,k) = CmaxArea
+                end select
+
+             end do
+          end do
+       end do
+    end do
+
+  end subroutine calc_cell_flux
+  !===========================================================================
 
   subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I)
 
