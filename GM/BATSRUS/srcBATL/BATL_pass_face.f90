@@ -12,6 +12,7 @@ module BATL_pass_face
 
   public message_pass_face
   public store_face_flux
+  public correct_face_flux
   public apply_flux_correction
   public apply_flux_correction_block
   public test_pass_face
@@ -641,6 +642,57 @@ contains
     end if
 
   end subroutine store_face_flux
+
+  !============================================================================
+
+  subroutine correct_face_flux(iBlock, nVar, &
+    Flux_VXB, Flux_VYB, Flux_VZB, Flux_VFD)
+
+    ! Put Flux_VXB, Flux_VYB, Flux_VZB after message_pass_face
+    ! back into Flux_VFDB into for the appropriate faces.
+
+    use BATL_size, ONLY: nDim, nI, nJ, nK, MaxBlock
+    use BATL_tree, ONLY: DiLevelNei_IIIB
+
+    integer, intent(in):: iBlock, nVar
+
+    real, intent(in), optional:: &
+         Flux_VXB(nVar,nJ,nK,2,MaxBlock), &
+         Flux_VYB(nVar,nI,nK,2,MaxBlock), &
+         Flux_VZB(nVar,nI,nJ,2,MaxBlock)
+
+    real, intent(inout):: Flux_VFD(nVar,nI+1,nJ+1,nK+1,nDim)
+    !--------------------------------------------------------------------------
+    ! Store flux at resolution change for conservation fix
+
+    if(present(Flux_VXB))then
+       if(DiLevelNei_IIIB(-1,0,0,iBlock) == -1) &
+            Flux_VFD(:,1,1:nJ,1:nK,1) = Flux_VXB(:,1:nJ,1:nK,1,iBlock)
+
+       if(DiLevelNei_IIIB(+1,0,0,iBlock) == -1) &
+            Flux_VFD(:,nI+1,1:nJ,1:nK,1) = Flux_VXB(:,1:nJ,1:nK,2,iBlock)
+    end if
+
+    ! min(2,nDim) avoids compiler complaints when nDim is 1
+    if(present(Flux_VYB) .and. nDim > 1)then
+       if(DiLevelNei_IIIB(0,-1,0,iBlock) == -1) &
+            Flux_VFD(:,1:nI,1,1:nK,min(2,nDim)) &
+            = Flux_VYB(:,1:nI,1:nK,1,iBlock)
+       
+       if(DiLevelNei_IIIB(0,+1,0,iBlock) == -1) &
+            Flux_VFD(:,1:nI,nJ+1,1:nK,min(2,nDim)) &
+            = Flux_VYB(:,1:nI,1:nK,2,iBlock)
+    end if
+
+    if(present(Flux_VZB) .and. nDim > 2)then
+       if(DiLevelNei_IIIB(0,0,-1,iBlock) == -1) &
+            Flux_VFD(:,1:nI,1:nJ,1,nDim) = Flux_VZB(:,1:nI,1:nJ,1,iBlock) 
+
+       if(DiLevelNei_IIIB(0,0,+1,iBlock) == -1) &
+            Flux_VFD(:,1:nI,1:nJ,nK+1,nDim) = Flux_VZB(:,1:nI,1:nJ,2,iBlock)
+    end if
+
+  end subroutine correct_face_flux
 
   !============================================================================
 
