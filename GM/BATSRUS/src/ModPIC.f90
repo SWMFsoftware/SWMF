@@ -19,7 +19,6 @@ module ModPIC
   ! Local variables
   integer:: nGhostPic   = 3
   integer:: nOverlapPic = 0
-  real   :: TimeUnitPic = 1.0
   real   :: xUnitPicSi  = 1.0
   real   :: uUnitPicSi  = 1.0
   real   :: mUnitPicSi  = 1.0
@@ -48,7 +47,6 @@ contains
        call read_var('UsePic',      UsePic)
        call read_var('nGhostPic',   nGhostPic)
        call read_var('nOverlapPic', nOverlapPic)
-       call read_var('TimeUnitPic', TimeUnitPic)
 
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
@@ -241,12 +239,12 @@ contains
                CoordMaxIn_D = No2Si_V(UnitX_)* &
                (XyzMaxPic_DI(:,iRegion) - 0.5*DxyzPic_DI(:,iRegion)), &
                VarIn_VIII = StatePic_VC)
-       end if
 
-       ! Let IPIC3D know that the output file is already written
-       open(UnitTmp_, FILE=trim(NamePlotDir)//'ipic_sucess.txt', STATUS='replace')
-       write(UnitTmp_,*) "Have written file to IPIC3D"
-       close(UnitTmp_)
+          ! Let IPIC3D know that the output file is already written
+          open(UnitTmp_, FILE=trim(NamePlotDir)//'ipic_sucess.txt', STATUS='replace')
+          write(UnitTmp_,*) "Have written file to IPIC3D"
+          close(UnitTmp_)
+       end if
 
        deallocate(StatePic_VC)
 
@@ -263,8 +261,6 @@ contains
     character(len=*), parameter:: NameSub = 'pic_param'
     !------------------------------------------------------------------------
     select case(NameParam)
-    case('tunitpic')
-       pic_param = TimeUnitPic
     case('noverlap')
        pic_param = nOverlapPic
     case('nghostpic')
