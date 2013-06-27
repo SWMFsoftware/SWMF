@@ -90,11 +90,11 @@ contains
     use ModMpi,       ONLY: MPI_reduce, MPI_SUM, MPI_REAL
     use BATL_lib,     ONLY: nDim, MaxDim, Xyz_DGB, CellSize_DB, find_grid_block
     use ModIO,        ONLY: NamePlotDir
+    use ModIoUnit,    ONLY: UnitTmp_
     use ModPhysics,   ONLY: No2Si_V, UnitT_, UnitX_, UnitRho_, UnitU_, UnitB_, &
          UnitP_, UnitJ_, UnitMass_, UnitCharge_
     use ModPlotFile,  ONLY: save_plot_file
-    use ModMain,      ONLY: iTest, jTest, kTest, BlkTest, ProcTest
-    use ModConst,     ONLY: cLightSpeed, cMu
+    use ModConst,     ONLY: cLightSpeed
     use ModHallResist,ONLY: HallFactorMax, UseHallResist
     use ModPhysics,   ONLY: IonMassPerCharge, TypeNormalization 
 
@@ -243,11 +243,10 @@ contains
                VarIn_VIII = StatePic_VC)
        end if
 
-       ! Tell IPIC3D that its finnished
-       open  (unit=1031,file="IO2/ipic_sucess.txt",action="write",status="replace")
-       write (1031,*) "Have writen file to IPIC3D"
-       close (1031)
-
+       ! Let IPIC3D know that the output file is already written
+       open(UnitTmp_, FILE=trim(NamePlotDir)//'ipic_sucess.txt', STATUS='replace')
+       write(UnitTmp_,*) "Have written file to IPIC3D"
+       close(UnitTmp_)
 
        deallocate(StatePic_VC)
 
@@ -295,8 +294,8 @@ contains
     use ModInterpolate, ONLY: bilinear
     use ModUtilities,   ONLY: sleep
     use ModIoUnit,      ONLY: UnitTmp_
-    use ModPhysics, ONLY: Si2No_V, UnitT_, UnitX_, UnitRho_, UnitU_, UnitB_, &
-         UnitP_, UnitJ_
+    use ModPhysics, ONLY: Si2No_V, UnitX_, UnitRho_, UnitU_, UnitB_, &
+         UnitP_
 
     integer, intent(in):: iBlock
 
