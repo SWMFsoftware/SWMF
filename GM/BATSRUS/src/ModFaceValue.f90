@@ -683,7 +683,7 @@ contains
     use ModB0
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
-         Flux_VX, Flux_VY, Flux_VZ, &
+         Flux_VX, Flux_VY, Flux_VZ, uDotArea_XI, &
          UseElectronPressure, UseWavePressure, &
          LeftState_VX,      &  ! Face Left  X
          RightState_VX,     &  ! Face Right X
@@ -696,6 +696,8 @@ contains
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
 
     use ModEnergy, ONLY: calc_pressure
+
+    use BATL_lib, ONLY: CellFace_DB
 
     logical, intent(in):: DoResChangeOnly
     integer, intent(in):: iBlock
@@ -1335,7 +1337,6 @@ contains
                   RightState_VX(:,i,j,k)=Primitive_VI(:,i)  -dVarLimR_VI(:,i)
                end do
             end if
-
             if(.not.DoInterpolateFlux)then
                do iVar = 1, nVar
                   ! Copy points along i direction into 1D array
@@ -1357,6 +1358,14 @@ contains
                   RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
                end do
             else
+               iVar = Ux_
+               ! Copy points along i direction into 1D array
+               Cell_I(iMin-nG:iMax-1+nG) = &
+                    Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
+               call limiter_mp(iMin, iMax, Cell_I, Cell_I, iVar)
+               uDotArea_XI(iMin:iMax,j,k,1) = CellFace_DB(1,iBlock) &
+                    *0.5*(FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax))
+
                ! Interpolate cell centered split fluxes to the face
                do iFlux = 1, nVar + nFluid
                   ! Copy left fluxes along i direction into 1D array
