@@ -76,6 +76,7 @@ module ModFaceValue
   ! variables for the PPM4 limiter
   integer:: iMin, iMax, jMin, jMax, kMin, kMax
   real:: Cell_I(1-nG:MaxIJK+nG)
+  real:: Cell2_I(1-nG:MaxIJK+nG)
   real:: Face_I(0:MaxIJK+2)
   real:: FaceL_I(1:MaxIJK+2)
   real:: FaceR_I(0:MaxIJK+1)
@@ -682,7 +683,7 @@ contains
     use ModB0
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
-         Flux_VX, &
+         Flux_VX, Flux_VY, Flux_VZ, &
          UseElectronPressure, UseWavePressure, &
          LeftState_VX,      &  ! Face Left  X
          RightState_VX,     &  ! Face Right X
@@ -1335,44 +1336,42 @@ contains
                end do
             end if
 
-            do iVar = 1, nVar
-               ! Copy points along i direction into 1D array
-               Cell_I(iMin-nG:iMax-1+nG) = &
-                    Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
+            if(.not.DoInterpolateFlux)then
+               do iVar = 1, nVar
+                  ! Copy points along i direction into 1D array
+                  Cell_I(iMin-nG:iMax-1+nG) = &
+                       Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
 
-               if(UseTrueCell)then
-                  ! Use the 2nd order face values where high order is skipped
-                  FaceL_I(iMin:iMax) = LeftState_VX(iVar,iMin:iMax,j,k)
-                  FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
-               end if
-               if(nOrder == 4)then
-                  call limiter_ppm4(iMin, iMax)
-               else
-                  call limiter_mp(iMin, iMax, iVar)
-               end if
-               ! Copy back the results into the 3D arrays
-               LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
-               RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
-            end do
+                  if(UseTrueCell)then
+                     ! Use the 2nd order face values where high order is skipped
+                     FaceL_I(iMin:iMax) = LeftState_VX(iVar,iMin:iMax,j,k)
+                     FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
+                  end if
+                  if(nOrder == 4)then
+                     call limiter_ppm4(iMin, iMax)
+                  else
+                     call limiter_mp(iMin, iMax, Cell_I, Cell_I, iVar)
+                  end if
+                  ! Copy back the results into the 3D arrays
+                  LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
+                  RightState_VX(iVar,iMin:iMax,j,k) = FaceR_I(iMin:iMax)
+               end do
+            else
+               ! Interpolate cell centered split fluxes to the face
+               do iFlux = 1, nVar + nFluid
+                  ! Copy left fluxes along i direction into 1D array
+                  Cell_I(iMin-nG:iMax-1+nG) = &
+                       FluxLeft_VGD(iFlux,iMin-nG:iMax-1+nG,j,k,x_)
 
-            if(.not.DoInterpolateFlux) CYCLE
+                  Cell2_I(iMin-nG:iMax-1+nG) = &
+                       FluxRight_VGD(iFlux,iMin-nG:iMax-1+nG,j,k,x_)
 
-            ! Interpolate cell centered flux to the face
-            do iFlux = 1, nVar + nFluid
-               ! Copy left fluxes along i direction into 1D array
-               Cell_I(iMin-nG:iMax-1+nG) = &
-                    FluxLeft_VGD(iFlux,iMin-nG:iMax-1+nG,j,k,x_)
-               call limiter_mp(iMin, iMax, Ux_)
-               Flux_VX(iFlux,iMin:iMax,j,k) = FaceL_I(iMin:iMax)
+                  call limiter_mp(iMin, iMax, Cell_I, Cell2_I)
+                  Flux_VX(iFlux,iMin:iMax,j,k) = &
+                       FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax)
 
-               Cell_I(iMin-nG:iMax-1+nG) = &
-                    FluxRight_VGD(iFlux,iMin-nG:iMax-1+nG,j,k,x_)
-               call limiter_mp(iMin, iMax, Ux_)
-               Flux_VX(iFlux,iMin:iMax,j,k) = &
-                    Flux_VX(iFlux,iMin:iMax,j,k) + FaceR_I(iMin:iMax)
-
-            end do
-
+               end do
+            endif
          end do; end do
 
       end if
@@ -1436,26 +1435,43 @@ contains
                end do
             end if
 
-            do iVar = 1, nVar
-               ! Copy points along j direction into 1D array
-               Cell_I(jMin-nG:jMax-1+nG) = &
-                    Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
+            if(.not.DoInterpolateFlux)then
+               do iVar = 1, nVar
+                  ! Copy points along j direction into 1D array
+                  Cell_I(jMin-nG:jMax-1+nG) = &
+                       Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
 
-               if(UseTrueCell)then
-                  ! Use the 2nd order face values where high order is skipped
-                  FaceL_I(jMin:jMax) = LeftState_VY(iVar,i,jMin:jMax,k)
-                  FaceR_I(jMin:jMax) = RightState_VY(iVar,i,jMin:jMax,k)
-               end if
+                  if(UseTrueCell)then
+                     ! Use the 2nd order face values where high order is skipped
+                     FaceL_I(jMin:jMax) = LeftState_VY(iVar,i,jMin:jMax,k)
+                     FaceR_I(jMin:jMax) = RightState_VY(iVar,i,jMin:jMax,k)
+                  end if
 
-               if(nOrder == 4)then
-                  call limiter_ppm4(jMin, jMax)
-               else
-                  call limiter_mp(jMin, jMax, iVar)
-               end if
-               ! Copy back the results into the 3D arrays
-               LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
-               RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
-            end do
+                  if(nOrder == 4)then
+                     call limiter_ppm4(jMin, jMax)
+                  else
+                     call limiter_mp(jMin, jMax, Cell_I, Cell_I, iVar)
+                  end if
+                  ! Copy back the results into the 3D arrays
+                  LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
+                  RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
+               end do
+            else
+               ! Interpolate cell centered split fluxes to the face
+               do iFlux = 1, nVar + nFluid
+                  ! Copy left fluxes along i direction into 1D array
+                  Cell_I(jMin-nG:jMax-1+nG) = &
+                       FluxLeft_VGD(iFlux,i,jMin-nG:jMax-1+nG,k,y_)
+
+                  Cell2_I(jMin-nG:jMax-1+nG) = &
+                       FluxRight_VGD(iFlux,i,jMin-nG:jMax-1+nG,k,y_)
+
+                  call limiter_mp(jMin, jMax, Cell_I, Cell2_I)
+                  Flux_VY(iFlux,i,jMin:jMax,k) = &
+                       FaceL_I(jMin:jMax) + FaceR_I(jMin:jMax)
+               end do
+            endif
+
          end do; end do
       end if
 
@@ -1520,26 +1536,42 @@ contains
                end do
             end if
 
-            do iVar = 1, nVar
-               ! Copy points along k direction into 1D array
-               Cell_I(kMin-nG:kMax-1+nG) = &
-                    Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
-               
-               if(UseTrueCell)then
-                  ! Use the 2nd order face values where high order is skipped
-                  FaceL_I(kMin:kMax) = LeftState_VZ(iVar,i,j,kMin:kMax)
-                  FaceR_I(kMin:kMax) = RightState_VZ(iVar,i,j,kMin:kMax)
-               end if
+            if(.not.DoInterpolateFlux)then
+               do iVar = 1, nVar
+                  ! Copy points along k direction into 1D array
+                  Cell_I(kMin-nG:kMax-1+nG) = &
+                       Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
 
-               if(nOrder == 4)then
-                  call limiter_ppm4(kMin, kMax)
-               else
-                  call limiter_mp(kMin, kMax, iVar)
-               end if
-               ! Copy back the results into the 3D arrays
-               LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
-               RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
-            end do
+                  if(UseTrueCell)then
+                     ! Use the 2nd order face values where high order is skipped
+                     FaceL_I(kMin:kMax) = LeftState_VZ(iVar,i,j,kMin:kMax)
+                     FaceR_I(kMin:kMax) = RightState_VZ(iVar,i,j,kMin:kMax)
+                  end if
+
+                  if(nOrder == 4)then
+                     call limiter_ppm4(kMin, kMax)
+                  else
+                     call limiter_mp(kMin, kMax, Cell_I, Cell_I, iVar)
+                  end if
+                  ! Copy back the results into the 3D arrays
+                  LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
+                  RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
+               end do
+            else
+               ! Interpolate cell centered split fluxes to the face
+               do iFlux = 1, nVar + nFluid
+                  ! Copy left fluxes along i direction into 1D array
+                  Cell_I(kMin-nG:kMax-1+nG) = &
+                       FluxLeft_VGD(iFlux,i,j,kMin-nG:kMax-1+nG,z_)
+
+                  Cell2_I(kMin-nG:kMax-1+nG) = &
+                       FluxRight_VGD(iFlux,i,j,kMin-nG:kMax-1+nG,z_)
+
+                  call limiter_mp(kMin, kMax, Cell_I, Cell2_I)
+                  Flux_VZ(iFlux,i,j,kMin:kMax) = &
+                       FaceL_I(kMin:kMax) + FaceR_I(kMin:kMax)
+               end do
+            endif
          end do; end do
       end if
 
@@ -2553,13 +2585,17 @@ contains
   end subroutine calc_face_value
 
   !===========================================================================
-  subroutine limiter_mp(lMin, lMax, iVar)
+  subroutine limiter_mp(lMin, lMax, Cell_I, Cell2_I, iVar)
 
     integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
+    real,    intent(in):: Cell_I(1-nG:MaxIJK+nG)
+    real,    intent(in):: Cell2_I(1-nG:MaxIJK+nG)
 
-    integer, intent(in):: iVar        ! variable index
+    integer, optional, intent(in):: iVar        ! variable index
 
-    ! Apply 5th order MP limiter
+    ! Apply 5th order MP limiter to calculate face values.
+    ! Use Cell_I to calculate FaceL_I and Cell2_I for FaceR_I.
+    ! If iVar is present, apply the positivity check
 
     ! Coefficient for 5th order accurate interpolation
     real, parameter:: &
@@ -2639,25 +2675,15 @@ contains
        ! If the face value is a very small fraction of the cell
        ! then switch to first order scheme. This can occur at
        ! a shock or a smooth minimum very close to zero.
-       if(DefaultState_V(iVar) > 0.0 .and. &
-            FaceL_I(l+1) < c6*Cell) FaceL_I(l+1) = Cell
+       if(present(iVar))then
+          if(DefaultState_V(iVar) > 0.0 .and. &
+               FaceL_I(l+1) < c6*Cell) FaceL_I(l+1) = Cell
+       end if
 
-       !if(iVar == 1 .and. FaceL_I(l+1) < 0.0)then
-       !   write(*,*)'!!! Negative FaceL for l=', l
-       !   write(*,*)'Cell_I(l-2:l+2)=', Cell_I(l-2:l+2)
-       !   write(*,*)'FaceL,FaceOrig,FaceMp=',FaceL_I(l+1), FaceOrig, FaceMp
-       !   if( (FaceOrig - Cell)*(FaceOrig - FaceMp) > 1e-12)then
-       !      write(*,*)'D2_I(l-1:l+1)=', D2_I(l-1:l+1)
-       !      write(*,*)'D2p, D2m     =',D2p, D2m
-       !      write(*,*)'UpperLimit   =', UpperLimit 
-       !      write(*,*)'Average      =', Average
-       !      write(*,*)'Median       =', Median
-       !      write(*,*)'LargeCurve   =', LargeCurve
-       !      write(*,*)'FaceMin      =', FaceMin
-       !      write(*,*)'FaceMax      =', FaceMax
-       !   end if
-       !end if
+    end do
 
+    do l = lMin-2, lMax+1
+       D2_I(l) = Cell2_I(l+1) - 2*Cell2_I(l) + Cell2_I(l-1) 
     end do
 
     ! Limit right face. Loop index l is for cell center, and face l-1/2
@@ -2668,11 +2694,11 @@ contains
           if(.not.all(IsTrueCell_I(l-3:l+2))) CYCLE
        end if
 
-       Cellmm = Cell_I(l-2)
-       Cellm  = Cell_I(l-1)
-       Cell   = Cell_I(l)
-       Cellp  = Cell_I(l+1)
-       Cellpp = Cell_I(l+2)
+       Cellmm = Cell2_I(l-2)
+       Cellm  = Cell2_I(l-1)
+       Cell   = Cell2_I(l)
+       Cellp  = Cell2_I(l+1)
+       Cellpp = Cell2_I(l+2)
 
        ! 5th order interpolation
        FaceOrig = c1*Cellpp + c2*Cellp + c3*Cell + c4*Cellm + c5*Cellmm
@@ -2708,14 +2734,10 @@ contains
        end if
 
        ! Check fraction limit
-       if(DefaultState_V(iVar) > 0.0 .and. &
-            FaceR_I(l) < c6*Cell) FaceR_I(l) = Cell
-
-       !if(iVar == 1 .and. FaceR_I(l) < 0.0)then
-       !   write(*,*)'!!! Negative FaceR for l=', l
-       !   write(*,*)'Cell_I(l-2:l+2)=', Cell_I(l-2:l+2)
-       !   write(*,*)'FaceR,FaceOrig,FaceMp=',FaceR_I(l), FaceOrig, FaceMp
-       !end if
+       if(present(iVar))then
+          if(DefaultState_V(iVar) > 0.0 .and. &
+               FaceR_I(l) < c6*Cell) FaceR_I(l) = Cell
+       end if
 
     end do
 
