@@ -2152,7 +2152,7 @@ contains
       if(UseAnisoPressure)then
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
          ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
-         DpPerB = 3/2.*(State_V(Ppar_) - p)*FullBn/max(1e-30,FullB2)
+         DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
          Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
@@ -2303,7 +2303,7 @@ contains
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
          ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-         DpPerB = 3/2.*(State_V(Ppar_) - p)*FullBn/max(1e-30,FullB2)
+         DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
          Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
@@ -2364,7 +2364,7 @@ contains
             if(UseTransverseTurbulence)then
                PwExtra = 0.5*Ew*SigmaD
                FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-               DPwPerB = -Ew*SigmaD*FullBn/max(1e-30,FullB2)
+               DPwPerB = -Ew*SigmaD*FullBn/max(1e-30, FullB2)
                Flux_V(RhoUx_) = Flux_V(RhoUx_) + PwExtra*NormalX+DPwPerB*FullBx
                Flux_V(RhoUy_) = Flux_V(RhoUy_) + PwExtra*NormalY+DPwPerB*FullBy
                Flux_V(RhoUz_) = Flux_V(RhoUz_) + PwExtra*NormalZ+DPwPerB*FullBz
