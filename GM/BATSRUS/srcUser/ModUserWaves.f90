@@ -210,7 +210,7 @@ contains
              iPower_V(iVar) = 1
           end if
 
-          ! if the wavelength is smaller than 0, then the wave number is set to 0
+          ! if wavelength is smaller than 0, then the wave number is set to 0
           KxWave_V(iVar) = max(0.0, cTwoPi/LambdaX)          
           KyWave_V(iVar) = max(0.0, cTwoPi/LambdaY)          
           KzWave_V(iVar) = max(0.0, cTwoPi/LambdaZ)
@@ -569,22 +569,29 @@ contains
                 if(iPower_V(iVar) == 0)then
                    ! Top hat
                    if(r2 > 1.0) CYCLE
-                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock) &
+                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)&
                         + Ampl_V(iVar)
                 else
                    ! Gaussian smoothed with cos^6
                    if(r2 > 4.0) CYCLE
                    r  = sqrt(r2)
-                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock) &
+                   State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)&
                         + Ampl_V(iVar)*cos(cPi*0.25*r)**6*exp(-r2)
                 end if
              end do; end do; end do
           else
              ! cos^n profile
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                if(abs( Xyz_DGB(x_,i,j,k,iBlock) &
-                  + ShockSlope*Xyz_DGB(y_,i,j,k,iBlock) ) > Width_V(iVar) ) &
-                  CYCLE
+                if(KxWave_V(iVar) > 0.0)then
+                   if(abs(Xyz_DGB(x_,i,j,k,iBlock) &
+                        + ShockSlope*Xyz_DGB(y_,i,j,k,iBlock)) &
+                        > Width_V(iVar) ) CYCLE
+                elseif(KyWave_V(iVar) > 0.0)then
+                   if(abs(Xyz_DGB(y_,i,j,k,iBlock)) > Width_V(iVar) ) CYCLE
+                elseif(KzWave_V(iVar) > 0.0)then
+                   if(abs(Xyz_DGB(z_,i,j,k,iBlock)) > Width_V(iVar) ) CYCLE
+                end if
+
                 State_VGB(iVar,i,j,k,iBlock) =        &
                      State_VGB(iVar,i,j,k,iBlock)          &
                      + Ampl_V(iVar)*cos(Phase_V(iVar)      &
