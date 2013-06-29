@@ -349,7 +349,7 @@ contains
        ! Make J/B dimensionless by multiplying length scale 1Re
        JInvB = min(AbsJ*1.0/(AbsB + 1e-8), 1.0) 
 
-       ! Compute reader resistivity
+       ! Compute Raeder resistivity
        if(JInvB >= jInvbCrit)then
           Eta_G(i,j,k) = EtaCoeff*(JInvB**2) 
        else
