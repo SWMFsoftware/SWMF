@@ -24,12 +24,8 @@ tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
 #USERINPUTBEGIN  ----------------------
 
-#USEEOSTABLE
-T			Use Eos Table for Xe
-T			Use Eos Table for Be
-T			Use Eos Table for Pl
-F			Use Eos Table for Au
-F			Use Eos Table for Ay
+#EOSTABLE
+T			UseEosTable
 
 #HYADES
 T			UseHyadesFile

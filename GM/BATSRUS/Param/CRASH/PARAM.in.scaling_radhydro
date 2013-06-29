@@ -91,12 +91,8 @@ logrho logT p(30) r(30)
 
 #USERINPUTBEGIN  ----------------------
 
-#USEEOSTABLE
-T			Use Eos Table for Xe
-T			Use Eos Table for Be
-T			Use Eos Table for Pl
-T			Use Eos Table for Au
-T			Use Eos Table for Ay
+#EOSTABLE
+T			UseEosTable
 
 #HYADES
 T			UseHyadesFile
