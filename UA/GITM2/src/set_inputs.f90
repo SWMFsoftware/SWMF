@@ -480,6 +480,26 @@ subroutine set_inputs
 
            endif
 
+        case ("#AURORAMODS")
+           call read_in_logical(NormalizeAuroraToHP, iError)
+           call read_in_real(AuroralHeightFactor, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #AURORAMODS'
+              write(*,*) 'This is for modifying the aurora a bit.  The'
+              write(*,*) 'NormalizeAuroraToHP variable calculates the '
+              write(*,*) 'modeled hemispheric power and then normalizes it'
+              write(*,*) 'the hemispheric power read in.  AuroralHeightFactor'
+              write(*,*) 'adjusts the pressure to that the ionization height'
+              write(*,*) 'can be at the right height.  A value of 1 is the'
+              write(*,*) 'default height.  Lowering it to 0.4 changes the'
+              write(*,*) 'height to be consistent with FLIP (but that was a'
+              write(*,*) 'while ago that I checked this.'
+              write(*,*) ''
+              write(*,*) '#AURORAMODS'
+              write(*,*) 'NormalizeAuroraToHP     (logical)'
+              write(*,*) 'AuroralHeightFactor     (real)'
+           endif
+
         case ("#NEWELLAURORA")
            call read_in_logical(UseNewellAurora, iError)
            call read_in_logical(UseNewellAveraged, iError)
@@ -498,6 +518,23 @@ subroutine set_inputs
               write(*,*) 'UseNewellWave (logical)'
               write(*,*) 'UseNewellRemoveSpikes (logical)'
               write(*,*) 'UseNewellAverage      (logical)'
+              IsDone = .true.
+           endif
+
+        case ("#OVATIONSME")
+           call read_in_logical(UseOvationSME, iError)
+           call read_in_logical(UseOvationSMEMono, iError)
+           call read_in_logical(UseOvationSMEWave, iError)
+           call read_in_logical(UseOvationSMEIon, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #OVATIONSME'
+              write(*,*) 'This is for using Betsy Michells aurora (OvationSME).'
+              write(*,*) ''
+              write(*,*) '#OVATIONSME'
+              write(*,*) 'UseOvationSME     (logical)'
+              write(*,*) 'UseOvationSMEMono (logical)'
+              write(*,*) 'UseOvationSMEWave (logical)'
+              write(*,*) 'UseOvationSMEIon  (logical)'
               IsDone = .true.
            endif
 
@@ -1207,6 +1244,26 @@ subroutine set_inputs
 
            if (iError /= 0) then 
               write(*,*) "read indices was NOT successful (NOAA file)"
+              IsDone = .true.
+           else
+              UseVariableInputs = .true.
+           endif
+
+        case ("#SME_INDICES")
+           cTempLines(1) = cLine
+           call read_in_string(cTempLine, iError)
+           cTempLines(2) = cTempLine
+           call read_in_string(cTempLine, iError)
+           cTempLines(3) = cTempLine
+           cTempLines(4) = " "
+           cTempLines(5) = "#END"
+
+           call IO_set_inputs(cTempLines)
+           call read_sme(iError,CurrentTime,EndTime)
+           call read_al_onset_list(iError,CurrentTime,EndTime)
+
+           if (iError /= 0) then 
+              write(*,*) "read indices was NOT successful (SME file)"
               IsDone = .true.
            else
               UseVariableInputs = .true.
