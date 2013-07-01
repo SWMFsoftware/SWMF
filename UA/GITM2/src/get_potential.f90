@@ -7,6 +7,7 @@ subroutine init_get_potential
   use ModInputs
   use ModUserGITM
   use ModNewell
+  use ModOvationSME
 
   implicit none
 
@@ -26,12 +27,17 @@ subroutine init_get_potential
      UseIMF = .true.
   endif
 
+  if (UseOvationSME) then
+     call read_ovationsm_files
+  endif
+
   if (index(cAMIEFileNorth,"none") > 0) then
 
      Lines(1) = "#BACKGROUND"
      Lines(2) = "EIE/"
 
      UseHPI = .true.
+     if (UseNewellAurora .or. UseOvationSME) UseHPI = .false.
 
      call get_IMF_Bz(CurrentTime, bz, iError)
      call IO_SetIMFBz(bz)
@@ -211,6 +217,7 @@ subroutine get_potential(iBlock)
   use ModInputs
   use ModUserGITM
   use ModNewell
+  use ModOvationSME, only: run_ovationsme
 
   implicit none
 
@@ -238,19 +245,19 @@ subroutine get_potential(iBlock)
 
   endif
 
-  call init_get_potential
-  call UA_SetnMLTs(nLons+4)
-  call UA_SetnLats(nLats+4)
-  if (.not. IsFramework) then 
-     call IO_SetTime(CurrentTime)
-     call set_indices
-  endif
-  call UA_SetNorth
-
-  if (iDebugLevel > 1) write(*,*) "==> Setting up IE Grid"
-
   if (floor((tSimulation-dt)/DtPotential) /= &
        floor((tsimulation)/DtPotential) .or. IsFirstPotential(iBlock)) then
+
+     if (iDebugLevel > 1) write(*,*) "==> Setting up IE Grid"
+
+     call init_get_potential
+     call UA_SetnMLTs(nLons+4)
+     call UA_SetnLats(nLats+4)
+     if (.not. IsFramework) then 
+        call IO_SetTime(CurrentTime)
+        call set_indices
+     endif
+     call UA_SetNorth
 
      if (iDebugLevel > 1) write(*,*) "==> Getting Potential"
 
@@ -258,11 +265,9 @@ subroutine get_potential(iBlock)
 
      do iAlt=-1,nAlts+2
 
-        call start_timing("setgrid")
         call UA_SetGrid(                    &
              MLT(-1:nLons+2,-1:nLats+2,iAlt), &
              MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), iError)
-        call end_timing("setgrid")
 
         if (iError /= 0) then
            write(*,*) "Error in routine get_potential (UA_SetGrid):"
@@ -275,9 +280,7 @@ subroutine get_potential(iBlock)
 
         TempPotential = 0.0
 
-        call start_timing("getpotential")
         call UA_GetPotential(TempPotential, iError)
-        call end_timing("getpotential")
 
         if (iError /= 0) then
            write(*,*) "Error in get_potential (UA_GetPotential):"
@@ -335,13 +338,13 @@ subroutine get_potential(iBlock)
 
      if (UseNewellAurora) then
         call run_newell(iBlock)
+     elseif (UseOvationSME) then 
+        call run_ovationsme(StartTime, CurrentTime, iBlock)
      else
 
-        call start_timing("setgrid")
         call UA_SetGrid(                    &
              MLT(-1:nLons+2,-1:nLats+2,iAlt), &
              MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), iError)
-        call end_timing("setgrid")
 
         if (iError /= 0) then
            write(*,*) "Error in routine get_potential (UA_SetGrid):"
