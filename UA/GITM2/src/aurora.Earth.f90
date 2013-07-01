@@ -2,10 +2,12 @@ subroutine aurora(iBlock)
 
   use ModGITM
   use ModSources
-  use ModTime, only : tSimulation
+  use ModTime, only : tSimulation, CurrentTime
   use ModInputs
   use ModConstants
   use ModUserGITM
+  use ModMpi
+  use ModIndicesInterfaces
 
   implicit none
 
@@ -23,6 +25,8 @@ subroutine aurora(iBlock)
 
   real :: f1, f2, f3, f4, f5, power
   real :: de1, de2, de3, de4, de5, detotal, h
+
+  real :: LocalVar, HPn, HPs, avepower, ratio
 
   if (IsFirstTime(iBlock)) then
      IsFirstTime(iBlock) = .false.
@@ -48,6 +52,75 @@ subroutine aurora(iBlock)
        Longitude(1:nLons,iBlock), Latitude(1:nLats,iBlock), &
        Altitude_GB(1:nLons, 1:nLats, 1:nAlts, iBlock),&
        IonPrecipitationBulkIonRate, IonPrecipitationHeatingRate)
+
+  if (iBlock == 1) then
+     HemisphericPowerNorth = 0.0
+     HemisphericPowerSouth = 0.0
+  endif
+
+  ! Let's scale our hemispheric power so it is roughly the same as what
+  ! is measured.
+
+  if (.not.UseNewellAurora .and. .not.UseOvationSME .and. iBlock==1) then
+
+     do i=1,nLats
+        do j=1,nLons
+
+           eflx_ergs = ElectronEnergyFlux(j,i) !/ (1.0e-7 * 100.0 * 100.0)
+
+           if (eflx_ergs > 0.1) then
+              eflux = eflx_ergs * 6.242e11  ! ergs/cm2/s -> eV/cm2/s
+
+              !(eV/cm2/s -> J/m2/s)
+              power = eflux * Element_Charge*100.0*100.0 * & 
+                   dLatDist_FB(j, i, nAlts, iBlock) * &
+                   dLonDist_FB(j, i, nAlts, iBlock)
+
+              if (latitude(i,iBlock) < 0.0) then
+                 HemisphericPowerSouth = HemisphericPowerSouth + power
+              else
+                 HemisphericPowerNorth = HemisphericPowerNorth + power
+              endif
+
+           endif
+
+        enddo
+     enddo
+
+     ! Collect all of the powers by summing them together
+
+     LocalVar = HemisphericPowerNorth/1.0e9
+     call MPI_REDUCE(LocalVar, HPn, 1, MPI_REAL, MPI_SUM, &
+          0, iCommGITM, iError)
+
+     LocalVar = HemisphericPowerSouth/1.0e9
+     call MPI_REDUCE(LocalVar, HPs, 1, MPI_REAL, MPI_SUM, &
+          0, iCommGITM, iError)
+
+     ! Average north and south together
+
+     avepower = (HPn+HPs)/2.0
+
+     ! If we are only have one hemisphere or the other, assign to avepower
+     if (HPs < 0.1*HPn) avepower = HPn
+     if (HPn < 0.1*HPs) avepower = HPs
+
+     call MPI_Bcast(avepower,1,MPI_Real,0,iCommGITM,ierror)
+
+     call get_hpi(CurrentTime,Hpi,iError)
+     ratio = Hpi/avepower
+
+     do i=1,nLats
+        do j=1,nLons
+           if (ElectronEnergyFlux(j,i)>0.1) then
+              ElectronEnergyFlux(j,i) = ElectronEnergyFlux(j,i)*ratio
+           endif
+        enddo
+     enddo
+
+  endif
+
+  ! Reset the hemispheric power
 
   if (iBlock == 1) then
      HemisphericPowerNorth = 0.0
@@ -211,9 +284,8 @@ subroutine aurora(iBlock)
 
            iED = 1
 
-!           factor = 1.0
-           factor = 0.4
-!           factor = 1.0
+!           factor = 0.4
+           factor = 1.0
 
            do k = 1, nAlts
 
