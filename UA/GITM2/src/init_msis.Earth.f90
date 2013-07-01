@@ -181,6 +181,8 @@ subroutine init_msis
            do iLat=-1,nLats+2
 
               geo_lat = Latitude(iLat,iBlock)*180.0/pi
+              if (geo_lat < -90.0) geo_lat = -180.0-geo_lat
+              if (geo_lat >  90.0) geo_lat =  180.0-geo_lat
               geo_lon = Longitude(iLon,iBlock)*180.0/pi
 
               geo_alt = Altitude_GB(iLon, iLat, iAlt, iBlock)/1000.0
