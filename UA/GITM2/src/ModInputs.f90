@@ -43,7 +43,15 @@ module ModInputs
   logical :: UseNewellWave     = .false.
   logical :: DoNewellRemoveSpikes = .true.
   logical :: DoNewellAverage      = .true.
+
+  logical :: UseOvationSME     = .false.
+  logical :: UseOvationSMEMono = .false.
+  logical :: UseOvationSMEWave = .false.
+  logical :: UseOvationSMEIon  = .false.
   
+  real :: AuroralHeightFactor = 1.0
+  logical :: NormalizeAuroraToHP = .true.
+
   character (len=iCharLen_) :: TypeLimiter = "minmod"
 
   integer, dimension(7) :: iStartTime
