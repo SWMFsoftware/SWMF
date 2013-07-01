@@ -26,10 +26,14 @@ subroutine check_stop
 
   EndTimeLocal = EndTime
 
-  inquire(file="GITM.STOP",EXIST=IsThere)
-  if (IsThere) then
-     if (iProc == 0) write(*,*) "GITM.STOP file found. Exiting."
-     EndTimeLocal = CurrentTime - 1.0
+  if (iProc == 0) then 
+
+     inquire(file="GITM.STOP",EXIST=IsThere)
+     if (IsThere) then
+        write(*,*) "GITM.STOP file found. Exiting."
+        EndTimeLocal = CurrentTime - 1.0
+     endif
+
   endif
 
   if (get_timing("GITM") > CPUTimeMax) then
