@@ -38,7 +38,8 @@ subroutine read_NOAAHPI_Indices_new(iOutputError,StartTime,EndTime)
   ! We know that NameOfIMFFile=none if (a) we have never read the file or (b)
   !    we have no index file.
 
-  if (NameOfHPIFile == "none" .and. nIndices_V(hpi_)==1) return
+  if (NameOfHPIFile == "none") return
+  if (nIndices_V(hpi_) == 1) return
 
   call init_mod_indices
 
