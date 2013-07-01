@@ -27,6 +27,7 @@ MODULES = \
 	ModLimiter.o\
 	ModTides.o\
 	ModNewell.o\
+	ModOvationSME.o\
 	ModMagTrace.o\
 	ModChemistry.o\
 	ModGITMImplicit.o\
@@ -94,6 +95,7 @@ OBJECTS = \
 	read_NGDC_Indices_new.o\
 	read_NOAAHPI_Indices_new.o\
 	read_ACE_data.o\
+	read_sme.o\
 	user.o \
 	calc_tec.o \
 	get_location.o \
