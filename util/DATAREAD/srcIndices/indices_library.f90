@@ -131,14 +131,18 @@ subroutine set_time(TimeIn, iOutputError)
   SavedErrors_V  = 0
 
   do iIndex=1,nIndices
-     call get_index(iIndex, SavedTime, IndexValue, iError)
+     call get_index(iIndex, SavedTime, 0, IndexValue, iError)
      SavedIndices_V(iIndex) = IndexValue
      SavedErrors_V(iIndex)  = iError
   enddo
 
 end subroutine set_time
 
-subroutine get_index(label_, TimeIn, value, iOutputError)
+! If Interpolate = 0, it will interpolate
+! If Interpolare = 1, it will take the past value
+! If Interpolate = 2, it will take the next value
+
+subroutine get_index(label_, TimeIn, Interpolate, value, iOutputError)
 
   use ModKind
   use ModIndices
@@ -147,6 +151,7 @@ subroutine get_index(label_, TimeIn, value, iOutputError)
 
   integer, intent(in)  :: label_
   real (Real8_)  :: TimeIn
+  integer, intent(in)  :: Interpolate
   real, intent(out)    :: value
   integer, intent(out) :: iOutputError
 
@@ -211,15 +216,23 @@ subroutine get_index(label_, TimeIn, value, iOutputError)
 
   enddo
 
-  if (iMin == iMax) then
-     value = Indices_TV(iCenter, label_)
+  if (Interpolate == 1) then 
+     value = Indices_TV(iMin, label_)
+  elseif (Interpolate == 2) then 
+     value = Indices_TV(iMin+1, label_)
   else
-     DtNorm = 1.0 - (IndexTimes_TV(iMax, label_) - TimeIn) / &
-          (IndexTimes_TV(iMax, label_) - IndexTimes_TV(iMin, label_) + 1.0e-6)
-     value  =  DtNorm * Indices_TV(iMax, label_) + &
-                (1.0 - DtNorm) * Indices_TV(iMin, label_)
+
+     if (iMin == iMax) then
+        value = Indices_TV(iCenter, label_)
+     else
+        DtNorm = 1.0 - (IndexTimes_TV(iMax, label_) - TimeIn) / &
+             (IndexTimes_TV(iMax, label_) - IndexTimes_TV(iMin, label_)+1.0e-6)
+        value  =  DtNorm * Indices_TV(iMax, label_) + &
+             (1.0 - DtNorm) * Indices_TV(iMin, label_)
+     endif
+
   endif
-     
+
 end subroutine get_index
 
 !------------------------------------------------------------------------------
@@ -239,7 +252,7 @@ subroutine get_IMF_Bx_wtime(TimeIn, value, iOutputError)
 
   iOutputError = 0
 
-  call get_index(imf_bx_, TimeIn, value, iOutputError)
+  call get_index(imf_bx_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_IMF_Bx_wtime
 
@@ -279,7 +292,7 @@ subroutine get_IMF_By_wtime(TimeIn, value, iOutputError)
 
   iOutputError = 0
 
-  call get_index(imf_by_, TimeIn, value, iOutputError)
+  call get_index(imf_by_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_IMF_By_wtime
 
@@ -319,7 +332,7 @@ subroutine get_IMF_Bz_wtime(TimeIn, value, iOutputError)
 
   iOutputError = 0
 
-  call get_index(imf_bz_, TimeIn, value, iOutputError)
+  call get_index(imf_bz_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_IMF_Bz_wtime
 
@@ -361,9 +374,9 @@ subroutine get_IMF_B_wtime(TimeIn, value, iOutputError)
 
   iOutputError = 0
 
-  call get_index(imf_bx_, TimeIn, value_x, iOutputError)
-  call get_index(imf_by_, TimeIn, value_y, iOutputError)
-  call get_index(imf_bz_, TimeIn, value_z, iOutputError)
+  call get_index(imf_bx_, TimeIn, 0, value_x, iOutputError)
+  call get_index(imf_by_, TimeIn, 0, value_y, iOutputError)
+  call get_index(imf_bz_, TimeIn, 0, value_z, iOutputError)
 
   if (iOutputError == 0) then
      value = sqrt(value_x**2 + value_y**2 + value_z**2)
@@ -427,7 +440,7 @@ subroutine get_SW_Vx_wtime(TimeIn, value, iOutputError)
 
   iOutputError = 0
 
-  call get_index(sw_vx_, TimeIn, value, iOutputError)
+  call get_index(sw_vx_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_SW_Vx_wtime
 
@@ -471,7 +484,7 @@ subroutine get_SW_Vy_wtime(TimeIn, value, iOutputError)
 
   iOutputError = 0
 
-  call get_index(sw_vy_, TimeIn, value, iOutputError)
+  call get_index(sw_vy_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_SW_Vy_wtime
 
@@ -515,7 +528,7 @@ subroutine get_SW_Vz_wtime(TimeIn, value, iOutputError)
 
   iOutputError = 0
 
-  call get_index(sw_vz_, TimeIn, value, iOutputError)
+  call get_index(sw_vz_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_SW_Vz_wtime
 
@@ -566,7 +579,7 @@ subroutine get_SW_V_wtime(TimeIn, value, iOutputError)
   ! is probably better to see if it is a combo of Vx, Vy, and Vz first
   !/
 
-  call get_index(sw_vx_, TimeIn, value_x, iOutputError)
+  call get_index(sw_vx_, TimeIn, 0, value_x, iOutputError)
 
   if (iOutputError > 0) then 
 
@@ -575,12 +588,12 @@ subroutine get_SW_V_wtime(TimeIn, value, iOutputError)
      ! have the full velocity anyways.
      !/
 
-     call get_index(sw_v_, TimeIn, value_x, iOutputError)
+     call get_index(sw_v_, TimeIn, 0, value_x, iOutputError)
      value = value_x
 
   else
-     call get_index(sw_vy_, TimeIn, value_y, iOutputError)
-     call get_index(sw_vz_, TimeIn, value_z, iOutputError)
+     call get_index(sw_vy_, TimeIn, 0, value_y, iOutputError)
+     call get_index(sw_vz_, TimeIn, 0, value_z, iOutputError)
      value = sqrt(value_x**2 + value_y**2 + value_z**2)
   endif
 
@@ -649,7 +662,7 @@ subroutine get_SW_N_wtime(TimeIn, value, iOutputError)
   real, intent(out)                :: value
   integer, intent(out)             :: iOutputError
 
-  call get_index(sw_n_, TimeIn, value, iOutputError)
+  call get_index(sw_n_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_SW_N_wtime
 
@@ -693,7 +706,7 @@ subroutine get_f107_wtime(TimeIn, value, iOutputError)
 
   iOutputError = 0
 
-  call get_index(f107_, TimeIn, value, iOutputError)
+  call get_index(f107_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_f107_wtime
 
@@ -735,7 +748,7 @@ subroutine get_f107a_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(f107a_, TimeIn, value, iOutputError)
+  call get_index(f107a_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_f107a_wtime
 
@@ -777,7 +790,7 @@ subroutine get_hpi_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(hpi_, TimeIn, value, iOutputError)
+  call get_index(hpi_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_hpi_wtime
 
@@ -815,7 +828,7 @@ subroutine get_hpi_calc_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(hpi_calc_, TimeIn, value, iOutputError)
+  call get_index(hpi_calc_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_hpi_calc_wtime
 
@@ -853,10 +866,10 @@ subroutine get_hpi_norm_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(hpi_norm_, TimeIn, value, iOutputError)
+  call get_index(hpi_norm_, TimeIn, 0, value, iOutputError)
 
   if (iOutputError > 0) then
-     call get_index(hpi_, TimeIn, value, iOutputError)
+     call get_index(hpi_, TimeIn, 0, value, iOutputError)
      if (iOutputError == 0) then
         value = 2.09 * ALOG(value) * 1.0475
      endif
@@ -902,7 +915,7 @@ subroutine get_kp_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(kp_, TimeIn, value, iOutputError)
+  call get_index(kp_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_kp_wtime
 
@@ -944,7 +957,7 @@ subroutine get_ap_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(ap_, TimeIn, value, iOutputError)
+  call get_index(ap_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_ap_wtime
 
@@ -986,7 +999,7 @@ subroutine get_au_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(au_, TimeIn, value, iOutputError)
+  call get_index(au_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_au_wtime
 
@@ -1024,7 +1037,7 @@ subroutine get_al_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(al_, TimeIn, value, iOutputError)
+  call get_index(al_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_al_wtime
 
@@ -1062,7 +1075,7 @@ subroutine get_ae_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(ae_, TimeIn, value, iOutputError)
+  call get_index(ae_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_ae_wtime
 
@@ -1088,6 +1101,47 @@ subroutine get_ae_wotime(value, iOutputError)
   endif
   
 end subroutine get_ae_wotime
+
+subroutine get_onsetut_wtime(TimeIn, iNext, value, iOutputError)
+
+  use ModKind
+  use ModIndices
+
+  implicit none
+
+  real (Real8_), intent(in)       :: TimeIn
+  integer, intent(in)             :: iNext
+  real, intent(out)               :: value
+  integer, intent(out)            :: iOutputError
+
+  iOutputError = 0
+
+  call get_index(onsetut_, TimeIn, iNext, value, iOutputError)
+
+end subroutine get_onsetut_wtime
+
+subroutine get_onsetut_wotime(value, iOutputError)
+
+  use ModKind
+  use ModIndices
+
+  implicit none
+
+  real, intent(out)    :: value
+  integer, intent(out) :: iOutputError
+
+  iOutputError = 0
+
+  if (SavedTime < 0.0) then
+     value = -1.0e32
+     iOutputError = 3
+     return
+  else
+     value = SavedIndices_V(onsetut_)
+     iOutputError = SavedErrors_V(onsetut_)
+  endif
+  
+end subroutine get_onsetut_wotime
 
 subroutine get_nAE_wtime(TimeIn, value, iOutputError)
 

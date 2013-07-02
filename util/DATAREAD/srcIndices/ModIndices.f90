@@ -34,10 +34,12 @@ Module ModIndices
   integer, parameter :: hpi_norm_ = 21
   integer, parameter :: f107a_    = 22
   integer, parameter :: ap_       = 23
-
+  integer, parameter :: onsetut_  = 24
+  integer, parameter :: onsetmlat_= 25
+  integer, parameter :: onsetmlt_ = 26
 
   integer, parameter :: MaxIndicesEntries = 60000
-  integer, parameter :: nIndices  = ap_
+  integer, parameter :: nIndices  = onsetmlt_
 
   real, allocatable           :: Indices_TV(:,:)
   integer, dimension(nIndices)                           :: nIndices_V=0
@@ -53,10 +55,14 @@ Module ModIndices
   character (len=100) :: NameOfSecondIndexFile
   integer             :: LunIndices_ = UnitTmp_
 
-  logical :: ReReadIMFFile = .false.
-  logical :: ReReadHPIFile = .false.
+  logical :: ReReadIMFFile  = .false.
+  logical :: ReReadHPIFile  = .false.
+  logical :: ReReadSMEFile  = .false.
+  logical :: ReReadOnsetFile = .false.
   character (len=100) :: NameOfIMFFile = "none"
   character (len=100) :: NameOfHPIFile = "none"
+  character (len=100) :: NameOfSMEFile = "none"
+  character (len=100) :: NameOfOnsetFile = "none"
 
 contains
 

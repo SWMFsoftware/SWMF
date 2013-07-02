@@ -297,6 +297,20 @@ Module ModIndicesInterfaces
      end subroutine get_nAE_wotime
   end interface
 
+  interface get_onsetut
+     subroutine get_onsetut_wtime(TimeIn, iNext, value, iOutputError)
+       use ModKind
+       real (Real8_)  :: TimeIn
+       integer, intent(in)  :: iNext
+       real, intent(out)    :: value
+       integer, intent(out) :: iOutputError
+     end subroutine get_onsetut_wtime
+     subroutine get_onsetut_wotime(value, iOutputError)
+       real, intent(out)    :: value
+       integer, intent(out) :: iOutputError
+     end subroutine get_onsetut_wotime
+  end interface
+
   !\
   ! Dst Interfaces
   !/
