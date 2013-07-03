@@ -45,8 +45,9 @@ from matplotlib.ticker import MultipleLocator
 import gitm_plot_rout as gpr
 
 def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
-                         aindex=-1, nlat=90, slat=-90, linc=6,
-                         earth=False, tlon=90, *args, **kwargs):
+                         draw=True, aindex=-1, nlat=90, slat=-90, linc=6,
+                         earth=False, tlon=90, zmax=None, zmin=None, *args,
+                         **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
@@ -55,6 +56,7 @@ def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
            gData     = gitm bin structure
            title     = plot title
            figname   = file name to save figure as (default is none)
+           draw      = draw to screen? (default is True)
            aindex    = altitude index (default -1 if it is a 2D parameter)
            nlat      = northern latitude limit (degrees North, default 90)
            slat      = southern latitude limit (degrees North, defalut -90)
@@ -62,10 +64,13 @@ def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
            earth     = include continent outlines for Earth (default False)
            tlon      = longitude at the top of a polar dial (degrees east,
                        default 90)
+           zmax      = Maximum z range (default None)
+           zmin      = Minimum z range (default None)
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, aindex, 6)
+    if(zmin is None or zmax is None):
+        zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, aindex, 6)
 
     # Initialize the new figure
 
@@ -90,24 +95,25 @@ def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
         print "ERROR: unknown input type [", plot_type, "]\n"
         return
 
-    # Draw to screen.
-    if plt.isinteractive():
-        plt.draw() #In interactive mode, you just "draw".
-    else:
-        # W/o interactive mode, "show" stops the user from typing more 
-        # at the terminal until plots are drawn.
-        plt.show()
+    if draw:
+        # Draw to screen.
+        if plt.isinteractive():
+            plt.draw() #In interactive mode, you just "draw".
+        else:
+            # W/o interactive mode, "show" stops the user from typing more 
+            # at the terminal until plots are drawn.
+            plt.show()
 
     # Save output file
-
     if figname is not None:
         plt.savefig(figname)
 
     return f
 
 def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
-                                  aindex=-1, plat=90, elat=0, linc=3, tlon=90,
-                                  earth=False, *args, **kwargs):
+                                  draw=True, aindex=-1, plat=90, elat=0, linc=3,
+                                  tlon=90, earth=False, zmax=None, zmin=None,
+                                  *args, **kwargs):
     '''
     Creates a figure with two polar map projections for the northern and 
     southern ends of a specified latitude range.
@@ -115,6 +121,7 @@ def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
            gData     = gitm bin structure
            title     = plot title
            figname   = file name to save figure as (default is none)
+           draw      = draw to screen? (default is True)
            aindex    = altitude index (default -1 if it is a 2D parameter)
            plat      = polar latitude limit (degrees North, default +/-90)
            elat      = equatorial latitude limit (degrees North, defalut 0)
@@ -122,10 +129,13 @@ def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
            tlon      = longitude to place on the polar dial top (degrees east,
                        default 90)
            earth     = include Earth continent outlines (default False)
+           zmax      = maximum z range (default None)
+           zmin      = mininimum z range (default None)
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, aindex, 6)
+    if(zmin is None or zmax is None):
+        zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, aindex, 6)
 
     # Initialize the new figure
 
@@ -170,24 +180,25 @@ def plot_single_nsglobal_3D_image(zkey, gData, title=None, figname=None,
     axs.set_position(pss)
     axn.set_position(psn)    
 
-    # Draw to screen.
-    if plt.isinteractive():
-        plt.draw() #In interactive mode, you just "draw".
-    else:
-        # W/o interactive mode, "show" stops the user from typing more 
-        # at the terminal until plots are drawn.
-        plt.show()
+    if draw:
+        # Draw to screen.
+        if plt.isinteractive():
+            plt.draw() #In interactive mode, you just "draw".
+        else:
+            # W/o interactive mode, "show" stops the user from typing more 
+            # at the terminal until plots are drawn.
+            plt.show()
 
     # Save output file
-
     if figname is not None:
         plt.savefig(figname)
 
     return f
 
 
-def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
-                            aindex=-1, tlon=90, earth=False, *args, **kwargs):
+def plot_global_3D_snapshot(zkey, gData, title=None, figname=None, draw=True,
+                            aindex=-1, tlon=90, earth=False, zmax=None,
+                            zmin=None, *args, **kwargs):
     '''
     Creates a map projection plot for the entire globe, seperating the polar
     and central latitude regions.
@@ -195,16 +206,20 @@ def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
            gData   = gitm bin structure
            title   = plot title
            figname = file name to save figure as (default is none)
+           draw    = output a screen image? (default is True)
            aindex  = altitude index (default -1 if it is a 2D parameter)
            nlat    = northern latitude limit (degrees North, default 90)
            slat    = southern latitude limit (degrees North, defalut 90)
            tlon    = longitude at the top of the polar dial (degrees East,
                      default 90)
            earth   = include Earth continent outlines (default False)
+           zmax    = maximum z limit (default None)
+           zmin    = minimum z limit (default None)
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, aindex, 6)
+    if(zmax is None or zmin is None):
+        zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, aindex, 6)
 
     # Initialize the new figure, starting with the mid- and low-latitudes
 
@@ -254,13 +269,14 @@ def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
     if title:
         f.suptitle(title, size="medium")
 
-    # Draw to screen.
-    if plt.isinteractive():
-        plt.draw() #In interactive mode, you just "draw".
-    else:
-        # W/o interactive mode, "show" stops the user from typing more 
-        # at the terminal until plots are drawn.
-        plt.show()
+    if draw:
+        # Draw to screen.
+        if plt.isinteractive():
+            plt.draw() #In interactive mode, you just "draw".
+        else:
+            # W/o interactive mode, "show" stops the user from typing more 
+            # at the terminal until plots are drawn.
+            plt.show()
 
     # Save output file
         
@@ -270,8 +286,9 @@ def plot_global_3D_snapshot(zkey, gData, title=None, figname=None,
     return f
 
 def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
-                        figname=None, nlat=90, slat=-90, linc=6, earth=False,
-                        tlon=90, *args, **kwargs):
+                        figname=None, draw=True, nlat=90, slat=-90, linc=6,
+                        earth=False, tlon=90, zmax=None, zmin=None, *args,
+                        **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
@@ -281,16 +298,20 @@ def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
            aindex    = list of altitude indices
            title     = plot title
            figname   = file name to save figure as (default is none)
+           draw      = draw to screen? (default is True)
            nlat      = northern latitude limit (degrees North, default 90)
            slat      = southern latitude limit (degrees North, defalut -90)
            linc      = number of latitude tick incriments (default 6)
            earth     = include Earth continent outlines (default False)
            tlon      = longitude on the top, for polar plots (degrees East,
                        default 90)
+           zmax      = maximum z range (default None)
+           zmin      = minimum z range (default None)
     '''
 
     # Initialize the z variable limits
-    zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, -2, 6)
+    if(zmax is None or zmin is None):
+        zmin, zmax = gpr.find_data_limits([gData], zkey, -1, -1, -2, 6)
 
     # Initialize the new figure
 
@@ -375,16 +396,16 @@ def plot_mult_3D_slices(plot_type, zkey, gData, aindex, title=None,
             cbar.ax.set_position(bp)
             con.ax.set_position(cp)
 
-    # Draw to screen.
-    if plt.isinteractive():
-        plt.draw() #In interactive mode, you just "draw".
-    else:
-        # W/o interactive mode, "show" stops the user from typing more 
-        # at the terminal until plots are drawn.
-        plt.show()
+    if draw:
+        # Draw to screen.
+        if plt.isinteractive():
+            plt.draw() #In interactive mode, you just "draw".
+        else:
+            # W/o interactive mode, "show" stops the user from typing more 
+            # at the terminal until plots are drawn.
+            plt.show()
 
     # Save output file
-
     if figname is not None:
         plt.savefig(figname)
 
@@ -631,6 +652,8 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
         if earth:
             if cb or nsub > 1:
                 lpad = 1.5 * lpad + 50 * (nsub - 1)
+                if nsub == 1:
+                    lpad *= 1.25
             else:
                 lpad *= 2
         else:
