@@ -182,7 +182,11 @@ This section provides a complete list of the vetted GITM python routines.  These
 Another library, Basemap, is required for certain plotting routines.  Basemap is a part of the Matplotlib Toolkit and can be installed using Fink, Macports, or downloaded at:
 {\tt http://matplotlib.org/basemap/}
 
-If you have questions about these routines or are at the University of Michigan and want to start using Python, Dr. Welling is the man to see.  The source code behind the PyBats GITM routines are located in
+Python scripts that create movies rely on external programs to do so.  The scripts included here use FFmpeg, which can be installed using Fink, Macports, or downloaded at: {\tt http://http://www.ffmpeg.org/}
+
+If you have questions about these routines or are at the University of Michigan and want to start using Python, Dr. Welling is the man to see.  The source code behind the PyBats GITM routines are also located in {\tt GITM2/srcPython}.
+
+The following programs include the vetted python routines.  The examples shown are meant to be run in ipython, an interactive command-line interface for python.  The terminal window that is running ipython should be located in the {\tt GITM2/srcPython} directory.  The test file for the example code is one of the files output after running the default {\tt UAM.in} file.
 
 \subsubsection{gitm.py}
 
@@ -191,12 +195,73 @@ GITM is a PyBats submodule that handles input and output from GITM.  It can be h
 Once you have downloaded and installed Spacepy, the gitm submodule can be accessed via {\tt import spacepy.pybats.gitm}.  This module contains the following routines:
 
 \begin{itemize}
-\item[]{\bf GitmBin: } A routine to load a GITM output bin file.
+\item[]{\bf GitmBin: } A data class and routine to load a GITM output bin file.  Geographic position in degrees and local time are also added to the output.  Once a 3DION file is associated with the output GITM structure (by assigning a filename to the attribute `ionfile'), the ion velocity can be computed in magnetic field coordinates.
 \item[]{\bf PbData: } The base class for all PyBats data container classes.  Used to hold the GITM data read in using GitmBin
 \item[]{\bf dt: } A shortcut for datetime.
 \item[]{\bf np: } A shortcut for numpy.
 \item[]{\bf dmarray: } A shortcut for data arrays.  Used in many of the data container classes defined in PbData.
 \end{itemize}
+
+You can load a GITM binary file by entering the following commands.  Comments are preceded by a `\#'.
+
+\begin{verbatim}
+In [1]: import spacepy
+In [2]: import gitm # Load the local version of gitm.py, which may be more up-to-date
+In [3]: gdata = gitm.GitmBin(`3DALL_t021124_000000.bin') # example binary file
+In [4]: gdata.attrs
+Out[4]:
+{`endian': `big',
+ `file': `3DALL_t021124_000000.bin',
+ `nAlt': 54,
+ `nLat': 22,
+ `nLon': 22,
+ `nVars': 39,
+ `version': 3.13}
+\end{verbatim}
+
+\subsubsection{gitm\_time.py}
+
+gitm\_time has not yet been incorporated into PyBats, as it is actively being developed.   This module contains the following routines:
+
+\begin{itemize}
+\item[]{\bf GitmTime: } A data class and routine to load multiple GITM output binaries into a structure that includes a universal time (UT) dimension.  All data types and attributes provided by GitmBin are provided in this data class.
+\item[]{\bf load\_multiple\_gitm\_bin: } A routine to load a list of GITM output binary files into GitmBin data structures.  The output is a list of the GitmBin structures, where each element in the list contains the data from a GITM output binary.
+\end{itemize}
+
+You can load multiple GITM binary files into a data structure with UT dependence by entering the following commands.  Commands outside of ipython are preceded by a `\$'.  Again, the output files used are produced by running the default {\tt UAM.in} file.
+
+\begin{verbatim}
+$ ls 3DALL_t021124_000* > test.list
+$ ipython
+In [1]: import spacepy
+In [2]: import gitm # Load the local version of gitm.py, which may be more up-to-date
+In [3]: import gitm_time as gt
+In [4]: gtdata = gt.GitmTime(`test.list')
+In [5]: print gtdata['time'][:]
+[datetime.datetime(2002, 11, 24, 0, 0)
+ datetime.datetime(2002, 11, 24, 0, 5)]
+In [6]: print gtdata['dLon'][0,:,10,27]
+[ -30.  -10.   10.   30.   50.   70.   90.  110.  130.  150.  170.  190.
+  210.  230.  250.  270.  290.  310.  330.  350.  370.  390.]
+In [7]: print gtdata['dLat'][0,10,:,27]
+[-105.  -95.  -85.  -75.  -65.  -55.  -45.  -35.  -25.  -15.   -5.    5.
+   15.   25.   35.   45.   55.   65.   75.   85.   95.  105.]
+In [8]: print gtdata['Altitude'][0,10,10,:]
+[  96660.90047544   98330.45023772  100000.          101669.54976228
+  103348.94180562  105050.15497984  106788.53042153  108584.61276626
+  110467.61429397  112482.48190265  114698.91401856  117219.51380361
+  120200.6752566   123855.40706002  128245.43857411  133349.83464183
+  139220.53740507  145894.02746965  153389.42319611  161708.33330952
+  170836.59866663  180746.14929878  191399.58798926  202753.75931196
+  214763.18484817  227382.89781152  240569.83529396  254283.5502381
+  268486.11667059  283141.61144778  298215.46358093  313673.89525175
+  329480.19139848  345605.83193525  362018.21624294  378685.73558327
+  395578.19775965  412667.22510966  429926.74623085  447332.78448625
+  464864.02590453  482501.63589793  500229.1662886   518032.39821451
+  535899.14534895  553819.03817939  571783.3052721   589784.56266012
+  607816.61836022  625874.29578468  643953.27746286  662049.96890339
+  680161.38144647  698272.79398955]
+\end{verbatim}
 
 \subsubsection{gitm\_plot\_rout.py}
 
@@ -205,9 +270,25 @@ Common routines used to format and analyze GITM data.
 \begin{itemize}
 \item[]{{\bf add\_colorbar:}  Add a color bar to a contour plot.  This routine does not depend on SpacePy.}
 \item[]{{\bf center\_polar\_cap:}  Adjust radial coordinates to produce a centered polar plot.  Necessary for the northern hemisphere, where polar plots assume the radial (latitude) coordinates should be centered at zero instead of 90$^\circ$.  This routine does not depend on SpacePy.}
-\item[]{{\bf find\_zlimits:}  Find the upper and lower limits for a list of GITM data arrays.}
+\item[]{{\bf find\_data\_limits:}  Find the upper and lower limits for a specified data key in a list of GITM data structures at a specified location (either single indices or the entire range are permitted for latitude, longitude, and altitude).}
+\item[]{{\bf find\_data\_limits\_irange:}  Find the upper and lower limits for a specified data key in a list of GITM data structures at a specified location range (upper and lower limits or the entire range are permitted for latitude, longitude, and altitude).}
 \item[]{{\bf localtime\_to\_glon:}  Find the longitude at a specified universal time and local time.}
+\item[]{{\bf find\_lon\_lat\_index:}  Find the indexes for the location closest to a specified latitude and longitude.}
+\item[]{{\bf retrieve\_key\_from\_web\_name:}  Find a data key given a website-friendly version of data key names.}
+\item[]{{\bf find\_alt\_index:} Find the index closest to the specified altitude.  Altitude may be specified in km or m.}
 \end{itemize}
+
+This example shows how the index for a specified altitude can be found.  Note that GITM saves altitude in meters.
+
+\begin{verbatim}
+In [1]: import spacepy
+In [2]: import gitm
+In [3]: import gitm_plot_rout as gpr
+In [4]: gdata = gitm.GitmBin(`3DALL_t021124_000000.bin')
+In [5]: ialt = gpr.find_alt_index(gdata, 10, 10, 250.0, "km")
+In [6]: print ialt, gdata['Altitude'][10,10,ialt]
+27 254283.550238
+\end{verbatim}
 
 \subsubsection{gitm\_3D\_global\_plots.py}
 
@@ -274,7 +355,33 @@ Routines to build and output GITM output variable linear and contour plots over 
 \end{center}
 \end{figure}
 
+\subsubsection{gitm\_movie\_script.py}
 
+This is a python script that can be run either from ipython using the command {\tt run gitm\_movie\_script.py} or the command line using the command {\tt python gitm\_movie\_script.py}.  Input to this program is prompted interactively, and includes:
+
+\begin{itemize}
+\item{{\tt Ordered list of GITM binary files:}  A list of GITM binary files in chronological order (or whatever other order the movie should be played in).}
+\item{{\tt GITM plot type (rectangular, polar, nspolar, snapshot):}  The keyword for the desired plot type.  These are the plot types shown in figure~\ref{gitm_3D_global_plots.fig}, where polar corresponds to panel (a), rectangular to panel (b), nspolar to panel (c), and snapshot to panel (d).}
+\item{At this point, the routine enters a while-loop to allow multiple movies to be made for the same list of GITM binary files}
+	\begin{itemize}
+	\item{{\tt GITM key to plot on z axis (eg Temperature):} The data key corresponding to the data type to plot on the z axis.  A list of data keys can be found by typing `{\tt gdata.keys()}' into ipython after loading one of the listed GITM binaries.}
+	\item{{\tt Altitude to plot z value at (eg 250):} Altitude to plot, may be specified in km or m.  For 2D parameters, a value must be entered, but doesn't matter.}
+	\item{{\tt Units of altitude (km or m):} Units of altitude entered above.}
+	\item{{\tt Use map of Earth? (empty for False):} Enter any value to include a Basemap plot of the earth, enter a carriage return to exclude the map.}
+	\item{The latitude limits needed depend on the plot type}
+		\begin{itemize}
+		\item{{\bf for nspolar}  {\tt Polar latitude limit (degrees):} Specify the polar latitude limit (positive, same for both hemispheres).}
+		\item{{\bf for nspolar} {\tt Equatorial latitude limit (degrees):} Specify the equatorial latitude limit (positive, same for both hemispheres).}
+		\item{{\bf snapshot} {\tt Polar latitude limit (degrees):} Specify the polar latitude limit (positive, same for both hemispheres).}
+		\item{{\bf polar/rectangular} {\tt Northern latitude limit (degrees):} Specify the northernmost latitude (may be negative).}
+     	   	\item{{\bf polar/rectangular} {\tt Southern latitude limit (degrees):} Specify the southernmost latitude (must be smaller/more negative than the northernmost limit)}
+		\end{itemize}
+		
+    \item{{\tt Load another z axis key? (empty for False):} Enter any value to include another movie or, enter a carriage return finish.}
+    \end{itemize}
+\end{itemize}
+
+With this information, movies with appropriate z-variable ranges will be plot as .png files and combined into a movie using FFmpeg.  The image and movie files will be named using the plot type, z parameter, and altitude to distinguish them.
 
 
 
