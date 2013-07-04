@@ -968,6 +968,7 @@ contains
              call stop_mpi('The WKB Alfven wave approximation is ' &
                   // 'not yet fully implemented')
              call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
+             call read_var('Crefl', Crefl)
           end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
@@ -1410,18 +1411,15 @@ contains
        end if
        FullB = sqrt(sum(FullB_D**2))
 
-       Coef = sqrt(FullB)/LperpTimesSqrtB
+       Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
        if(FullB<1e-15)then
 
-          WaveDissipation_V(WaveFirst_) = &
-               EwavePlus*Coef*sqrt(4.0*EwaveMinus/State_VGB(Rho_,i,j,k,iBlock))
-
-          WaveDissipation_V(WaveLast_) = &
-               EwaveMinus*Coef*sqrt(4.0*EwavePlus/State_VGB(Rho_,i,j,k,iBlock))
+          WaveDissipation_V(WaveFirst_) = 2.0*Coef*EwavePlus*sqrt(EwaveMinus)
+          WaveDissipation_V(WaveLast_) = 2.0*Coef*EwaveMinus*sqrt(EwavePlus)
 
        else
 
@@ -1454,14 +1452,19 @@ contains
 
           ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradAlfven_D))/FullB
 
-          WaveDissipation_V(WaveFirst_) = EwavePlus*max( ReflectionPerLperp, &
-               Coef*sqrt(4.0*EwaveMinus/State_VGB(Rho_,i,j,k,iBlock)) )
+          WaveDissipation_V(WaveFirst_) = &
+               EwavePlus*max( ReflectionPerLperp, 2.0*Coef*sqrt(EwaveMinus) )
 
-          WaveDissipation_V(WaveLast_) = EwaveMinus*max( ReflectionPerLperp, &
-               Coef*sqrt(4.0*EwavePlus/State_VGB(Rho_,i,j,k,iBlock)) )
+          WaveDissipation_V(WaveLast_) = &
+               EwaveMinus*max( ReflectionPerLperp, 2.0*Coef*sqrt(EwavePlus) )
 
        end if
 
+       WaveDissipation_V(WaveFirst_) = max(WaveDissipation_V(WaveFirst_), &
+            Crefl*Coef*EwavePlus*sqrt(EwavePlus) )
+
+       WaveDissipation_V(WaveLast_) = max(WaveDissipation_V(WaveLast_), &
+            Crefl*Coef*EwaveMinus*sqrt(EwaveMinus) )
     end if
 
     CoronalHeating = sum(WaveDissipation_V)
@@ -1878,8 +1881,7 @@ contains
          NameSub = 'ModCoronalHeating::apportion_coronal_heating'
     !--------------------------------------------------------------------------
 
-!!!    if(UseTurbulentCascade)then
-    if(.false.)then
+    if(UseTurbulentCascade)then
        ! Damping rates and wave energy partition based on Chandran et al.[2011]
 
        TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
