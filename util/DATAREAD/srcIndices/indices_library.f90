@@ -1154,7 +1154,7 @@ subroutine get_nAE_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(nAE_, TimeIn, value, iOutputError)
+  call get_index(nAE_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_nAE_wtime
 
@@ -1196,7 +1196,7 @@ subroutine get_dst_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(dst_, TimeIn, value, iOutputError)
+  call get_index(dst_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_dst_wtime
 
@@ -1234,7 +1234,7 @@ subroutine get_nDst_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(nDst_, TimeIn, value, iOutputError)
+  call get_index(nDst_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_nDst_wtime
 
@@ -1276,7 +1276,7 @@ subroutine get_jh_calc_wtime(TimeIn, value, iOutputError)
   real, intent(out)               :: value
   integer, intent(out)            :: iOutputError
 
-  call get_index(jh_calc_, TimeIn, value, iOutputError)
+  call get_index(jh_calc_, TimeIn, 0, value, iOutputError)
 
 end subroutine get_jh_calc_wtime
 
