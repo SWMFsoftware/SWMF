@@ -683,7 +683,8 @@ contains
     use ModB0
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
-         Flux_VX, Flux_VY, Flux_VZ, uDotArea_XI, &
+         Flux_VX, Flux_VY, Flux_VZ, &
+         uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
          UseElectronPressure, UseWavePressure, &
          LeftState_VX,      &  ! Face Left  X
          RightState_VX,     &  ! Face Right X
@@ -1466,6 +1467,14 @@ contains
                   RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
                end do
             else
+               iVar = Uy_
+               ! Copy points along i direction into 1D array
+               Cell_I(jMin-nG:jMax-1+nG) = &
+                    Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
+               call limiter_mp(jMin, jMax, Cell_I, Cell_I, iVar)
+               uDotArea_YI(i,jMin:jMax,k,1) = CellFace_DB(2,iBlock) &
+                    *0.5*(FaceL_I(jMin:jMax) + FaceR_I(jMin:jMax))
+
                ! Interpolate cell centered split fluxes to the face
                do iFlux = 1, nVar + nFluid
                   ! Copy left fluxes along i direction into 1D array
@@ -1567,6 +1576,14 @@ contains
                   RightState_VZ(iVar,i,j,kMin:kMax) = FaceR_I(kMin:kMax)
                end do
             else
+               iVar = Uz_
+               ! Copy points along i direction into 1D array
+               Cell_I(kMin-nG:kMax-1+nG) = &
+                    Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
+               call limiter_mp(kMin, kMax, Cell_I, Cell_I, iVar)
+               uDotArea_ZI(i,j,kMin:kMax,1) = CellFace_DB(3,iBlock) &
+                    *0.5*(FaceL_I(kMin:kMax) + FaceR_I(kMin:kMax))
+
                ! Interpolate cell centered split fluxes to the face
                do iFlux = 1, nVar + nFluid
                   ! Copy left fluxes along i direction into 1D array
