@@ -6146,14 +6146,16 @@ physical Hall resistivity is used (but also see the #HALLREGION command).
 Note that a physically consistent way of changing the strength of the 
 Hall effect is changing the ion mass and/or charge with the #PLASMA command.
 
-If HallCmaxFactor is 1.0 the maximum propagation speed takes into
+If HallCmaxFactor is 1.0, the maximum propagation speed takes into
 account the full whistler wave speed. If it is 0, the wave speed
 is not modified. For values betwen 1 and 0 a fraction of the whistler
 wave speed is added. The full speed is needed for the stability
-of the explicit scheme (unless the whistler speed is very small
-and/or the diagonal part of the resistivity tensor is dominant).
-For the implicit scheme it is recommended to set HallCmaxFactor=0.0
-(or maybe dtexpl/dt) to minimize the discretization errors.
+of the one or two-stage explicit scheme 
+(unless the whistler speed is very small and/or the diagonal part of 
+the resistivity tensor is dominant). 
+For 3 and 4-stage explicit schemes (see the #RK command) and also
+for the implicit time stepping the HallCmaxFactor can be reduced, 
+possibly all the way to zero to minimize the discretization errors.
 
 Default is UseHallResist false.
 </command>
