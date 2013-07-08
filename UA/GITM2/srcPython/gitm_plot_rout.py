@@ -15,7 +15,7 @@
 #                                           for a list of GITM data arrays and
 #                                           a range of lon/lat/alt indexes
 #           localtime_to_glon             - convert local time to longitude
-#           find_lat_lon_index            - find the appropriate index for
+#           find_lon_lat_index            - find the appropriate index for
 #                                           a specified location
 #           retrieve_key_from_web_name    - a routine to retrieve the data key
 #                                           from a website-friendly data name
