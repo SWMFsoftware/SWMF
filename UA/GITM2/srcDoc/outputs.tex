@@ -335,6 +335,20 @@ Routines to build and output GITM output variable contour plots over a geographi
 \end{center}
 \end{figure}
 
+This example shows how to reproduce Figure~\ref{gitm_3D_global_plots.fig}~(a).
+
+\begin{verbatim}
+In [1]: import spacepy
+In [2]: import gitm
+In [3]: import gitm_3D_global_plots as g3d
+In [4]: import matplotlib.pyplot as plt
+In [5]: plt.ion() # This makes the plotting happen interactively
+In [6]: gdata = gitm.GitmBin(`3DALL_t021124_000000.bin')
+In [7]: title = "\%s UT" \% (gdata[`time'])
+In [8]: f = g3d.plot_single_3D_image("polar", "eTemperature", gdata, title, 
+                                     "example_polar_plot.png", True, 27, 90, 0)
+\end{verbatim}
+
 \subsubsection{gitm\_alt\_plots.py}
 
 Routines to build and output GITM output variable linear and contour plots over an altitude range.  Several different standard plot formats are available, and routines useful for creating custom figures are also included.
@@ -355,6 +369,36 @@ Routines to build and output GITM output variable linear and contour plots over 
 \end{center}
 \end{figure}
 
+This example shows how to reproduce Figure~\ref{gitm_alt_slices.fig}.
+
+\begin{verbatim}
+In [1]: import spacepy
+In [2]: import gitm
+In [3]: import gitm_alt_plots as gap
+In [4]: import gitm_plot_rout as gpr
+In [5]: import matplotlib.pyplot as plt
+In [6]: plt.ion() # This makes the plotting happen interactively
+In [7]: gdata = gitm.GitmBin(`3DALL_t021124_000000.bin')
+In [8]: title = "\%s UT" \% (gdata[`time'])
+In [9]: lat_index = list()
+In [10]: lon_index = list()
+In [11]: (ilon, ilat) = gpr.find_lon_lat_index(gdata, 150.0, -65.0, "degrees")
+In [12]: lon_index.append(ilon)
+In [13]: lat_index.append(ilat)
+In [14]: (ilon, ilat) = gpr.find_lon_lat_index(gdata, 150.0, -45.0, "degrees")
+In [15]: lat_index.append(ilat)
+In [16]: (ilon, ilat) = gpr.find_lon_lat_index(gdata, 150.0, -5.0, "degrees")
+In [17]: lat_index.append(ilat)
+In [18]: (ilon, ilat) = gpr.find_lon_lat_index(gdata, 150.0, 5.0, "degrees")
+In [19]: lat_index.append(ilat)
+In [20]: (ilon, ilat) = gpr.find_lon_lat_index(gdata, 150.0, 45.0, "degrees")
+In [21]: lat_index.append(ilat)
+In [22]: (ilon, ilat) = gpr.find_lon_lat_index(gdata, 150.0, 65.0, "degrees")
+In [23]: lat_index.append(ilat)
+In [24]: f = gap.plot_alt_slices("eTemperature", gdata, lat_index, lon_index, 
+                                 title, "example_alt_plot.png")
+\end{verbatim}
+
 \subsubsection{gitm\_movie\_script.py}
 
 This is a python script that can be run either from ipython using the command {\tt run gitm\_movie\_script.py} or the command line using the command {\tt python gitm\_movie\_script.py}.  Input to this program is prompted interactively, and includes:
@@ -370,8 +414,8 @@ This is a python script that can be run either from ipython using the command {\
 	\item{{\tt Use map of Earth? (empty for False):} Enter any value to include a Basemap plot of the earth, enter a carriage return to exclude the map.}
 	\item{The latitude limits needed depend on the plot type}
 		\begin{itemize}
-		\item{{\bf for nspolar}  {\tt Polar latitude limit (degrees):} Specify the polar latitude limit (positive, same for both hemispheres).}
-		\item{{\bf for nspolar} {\tt Equatorial latitude limit (degrees):} Specify the equatorial latitude limit (positive, same for both hemispheres).}
+		\item{{\bf nspolar}  {\tt Polar latitude limit (degrees):} Specify the polar latitude limit (positive, same for both hemispheres).}
+		\item{{\bf nspolar} {\tt Equatorial latitude limit (degrees):} Specify the equatorial latitude limit (positive, same for both hemispheres).}
 		\item{{\bf snapshot} {\tt Polar latitude limit (degrees):} Specify the polar latitude limit (positive, same for both hemispheres).}
 		\item{{\bf polar/rectangular} {\tt Northern latitude limit (degrees):} Specify the northernmost latitude (may be negative).}
      	   	\item{{\bf polar/rectangular} {\tt Southern latitude limit (degrees):} Specify the southernmost latitude (must be smaller/more negative than the northernmost limit)}
