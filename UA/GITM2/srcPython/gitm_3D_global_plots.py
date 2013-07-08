@@ -80,7 +80,7 @@ def plot_single_3D_image(plot_type, zkey, gData, title=None, figname=None,
     if(string.lower(plot_type)=="polar" and not earth):
         pf = True
 
-    f  = plt.figure()
+    f = plt.figure()
     ax = f.add_subplot(111, polar=pf)
 
     if(string.lower(plot_type)=="rectangular"):
@@ -223,7 +223,7 @@ def plot_global_3D_snapshot(zkey, gData, title=None, figname=None, draw=True,
 
     # Initialize the new figure, starting with the mid- and low-latitudes
 
-    f   = plt.figure()
+    f = plt.figure()
     axl = f.add_subplot(212)
     plot_rectangular_3D_global(axl, zkey, gData, zmin, zmax, 6, aindex, 45.0,
                                -45.0, 6, False, "r", None, "t", True, True,
@@ -575,20 +575,42 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
         df     = True
         aindex = 0
 
-    # Assign the Longitude, Latitude, and Z data structures
-    r = gData['dLat'][:,:,aindex]
-    z = gData[zkey][:,:,aindex]
+    # Assign the Longitude, Latitude, and Z data structures.  For the polar
+    # plots we do not want to include co-latitudes above 90 degrees
+
+    csign = np.sign(center_lat)
+    if csign == 0:
+        csign = 1.0
+
+    if(center_lat > edge_lat):
+        milat = edge_lat - csign * 10.0
+        malat = center_lat + csign * 10.0
+    else:
+        milat = center_lat + csign * 10.0
+        malat = edge_lat - csign * 10.0
+
+    if milat < -90.0:
+        milat = -90.0
+
+    if malat > 90.0:
+        malat = 90.0
+
+    (i, imin) = gpr.find_lon_lat_index(gData, 0.0, milat, "degrees")
+    (i, imax) = gpr.find_lon_lat_index(gData, 0.0, malat, "degrees")
+    imax += 1 
+    z = gData[zkey][:,imin:imax,aindex]
 
     # Set range values
-    lon     = top_lon - 67.5
-    rrange  = center_lat - edge_lat
-    rwidth  = rrange / linc
-    v       = np.linspace(zmin, zmax, 70, endpoint=True)
+    lon = top_lon - 67.5
+    rrange = center_lat - edge_lat
+    rwidth = (rrange / linc)
+    v = np.linspace(zmin, zmax, 70, endpoint=True)
 
     # Plot the polar contours
     if earth:
         blon  = top_lon - 180
-        theta = gData['dLon'][:,:,aindex]
+        r = gData['dLat'][:,imin:imax,aindex]
+        theta = gData['dLon'][:,imin:imax,aindex]
         # If desired, map the Earth using a Polar Azimuthal Equidistant
         # Projection
 
@@ -618,29 +640,52 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
 
     else:
         # Set the contour
-        toff  = (450.0 - top_lon) * np.pi / 180.0
-        theta = gData['Longitude'][:,:,aindex]
-        con   = ax.contourf(theta, gpr.center_polar_cap(center_lat,edge_lat,r),
-                            z, v, cmap=get_cmap('Spectral_r'), vmin=zmin,
-                            vmax=zmax)
+        rwidth *= csign
+        toff = (450.0 - top_lon) * np.pi / 180.0
+        r = csign * gData['dLat'][:,imin:imax,aindex]
+        theta = gData['Longitude'][:,imin:imax,aindex]
+
+        con = ax.contourf(theta, gpr.center_polar_cap(abs(center_lat),
+                                                      abs(edge_lat),r),
+                          z, v, cmap=get_cmap('Spectral_r'), vmin=zmin,
+                          vmax=zmax)
         ax.set_theta_offset(toff)
 
-        lpad    = 0
-        rtics   = [edge_lat + rwidth * (x) for x in range(linc+1)]
-        rlabels = map(str, (map(int, rtics)))
+        lpad = 0
+
+        if(edge_lat < center_lat):
+            ledge = edge_lat
+        else:
+            ledge = center_lat
+
+        rtics = [ax.get_rmin() + rwidth * (x) for x in range(linc+1)]
+        rlabels = map(str, (map(int, [ledge + rwidth * (x)
+                                      for x in range(linc+1)])))
 
         if(center_lat > edge_lat):
             rlabels.reverse()
 
-        if(min(rtics) >= 0.0):
+        if(min(rtics) == 0.0 or max(rtics) == 0.0):
+            # set_rgrids cannot handle zero.  Set minimum value to a fraction
+            # with the same sign as the maximum value
+            i = rtics.index(0.0)
+            if(min(rtics) == 0.0):
+                j = rtics.index(max(rtics))
+            else:
+                j = rtics.index(min(rtics))
+            rtics[i] = .1 * (rtics[j] / abs(rtics[j]))
+
+        if(min(rtics) > 0.0):
             ax.set_rgrids(rtics, labels=rlabels, angle=lon)
         else:
-            ax.set_rgrids(range(-edge_lat, -center_lat, -rwidth), angle=lon)
+            rtics = range(-edge_lat, -center_lat, -rwidth)
+            ax.set_rgrids(rtics, labels=rlabels, angle=lon)
              
-        ax.set_rmax(edge_lat)
-        ax.set_rmin(center_lat)
+
+        ax.set_rmax(max(rtics))
+        ax.set_rmin(min(rtics))
         ax.set_rticks(rtics)
-    
+
     # Configure axis.
     if tl:
         ax.set_xlabel('Longitude', labelpad=lpad)
@@ -657,7 +702,7 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
             else:
                 lpad *= 2
         else:
-            lpad = lpad - 10 * (nsub - 1)
+            lpad = 1.05 * (lpad - 10 * (nsub - 1))
             label_string = " ($degrees$)"
 
         ax.set_ylabel('Latitude%s' % label_string, labelpad=-lpad/nsub)
