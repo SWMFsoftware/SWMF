@@ -262,7 +262,7 @@ def plot_mult_alt_images(plot_type, zkey, gData, lat_index, lon_index,
 
 
 def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
-                    degrees=True, color="b", marker="o", line=":", *args,
+                    degrees=True, color="k", marker="o", line=":", *args,
                     **kwargs):
     '''
     Creates a contour altitude map with several linear slices as a function of
@@ -278,7 +278,7 @@ def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
            title     = plot title
            figname   = file name to save figure as (default is none)
            degrees   = plot x label in radians (False) or degrees (default True)
-           color     = line color for linear plots (default blue)
+           color     = line color for linear plots (default black)
            marker    = marker type for linear plots (default circle)
            line      = line type for linear plots (default dotted line)
     '''
@@ -380,9 +380,10 @@ def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
     gs = gridspec.GridSpec(2,pnum)
     gs.update(hspace=.4)
 
-    ax  = plt.subplot(gs[0,:])
-    con = plot_3D_alt(ax, zkey, xkey, gData, zmin, zmax, amin, amax, xmin, xmax,
-                      ilon, ilat, 6, 5, 6, True, "t", None, "r", True, True)
+    axc = plt.subplot(gs[0,:])
+    con = plot_3D_alt(axc, zkey, xkey, gData, zmin, zmax, amin, amax, xmin,
+                      xmax, ilon, ilat, 6, 5, 6, True, "t", None, "r", True,
+                      True)
   
     # Determine how many x tics to include in each linear slice
     if(pnum < 4):
@@ -391,11 +392,12 @@ def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
         zinc = 3
 
     # Add the linear slices
+    y = [amin, amax]
 
     for snum in reversed(range(0, pnum)):
         xl   = False
         yl   = False
-        ax   = plt.subplot(gs[1,snum])
+        axl  = plt.subplot(gs[1,snum])
 
         if(snum == 0):
             yl = True
@@ -408,11 +410,17 @@ def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
 
         if(lon_len > 1):
             ilon = lon_index[snum]
+            x = [gData[xkey][ilon,0,0], gData[xkey][ilon,0,0]]
 
         if(lat_len > 1):
             ilat = lat_index[snum]
+            x = [gData[xkey][0,ilat,0], gData[xkey][0,ilat,0]]
 
-        con = plot_linear_alt(ax, zkey, gData, zmin, zmax, amin, amax, zinc, 5,
+        # Add a line to the contour plot
+        con = axc.plot(x, y, color=color, linestyle=line, linewidth=2)
+
+        # Add a linear slice below the contour plot
+        con = plot_linear_alt(axl, zkey, gData, zmin, zmax, amin, amax, zinc, 5,
                               ilon, ilat, tl, "t", xl, yl, color, marker, line)
 
     # Draw to screen.
