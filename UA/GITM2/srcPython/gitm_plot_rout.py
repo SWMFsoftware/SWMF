@@ -225,6 +225,166 @@ def find_data_limits_irange(gDataList, xkey, min_ilat=-1, max_ilat = -1,
 
     return xmin, xmax
 
+def find_data_limits_ivalues(gDataList, xkey, lat_indices, lon_indices,
+                             alt_indices, lat_range=False, lon_range=False, 
+                             alt_range=False, inc=6, rvals=True, *args,
+                             **kwargs):
+    '''
+    Establish the appropriate axis limits for a list of GitmBin files at
+    a specified list of indexes.  If you want to include the entire range of
+    latitudes, longitudes, or altitudes instead of a particular index, set
+    the range flag to True.  If this is set to True, the first value in the
+    xxx_indices list will be used as the lower index and the second value as
+    the upper index.  If you are using indexes for more than one coordinate,
+    keep in mind that the indices will be paired unless they do not have the
+    same length.
+
+    Example:
+
+    xkey = "e-"
+    lat_indices = [1, 3, 5] with lat_range = False
+    lon_indices = [0, 2] with lon_range = False
+    alt_indices = [0, gdata.attrs['nAlt']] with alt_range = True
+
+    Finds the maximum and minimum electron density over all altitudes at
+    (lon index, lat index) locations: (0,1), (2,3), and (2,5)
+
+    Input: gDataList   = A list of GitmBin data structures
+           xkey        = key for the desired values
+           lat_indices = list of latitude indices (or lower index, upper index)
+           lon_indices = list of longitude indices (or lower index, upper index)
+           alt_indices = list of altitude indices (or lower index, upper index)
+           lat_range   = use range for lat instead of indexes (default is False)
+           lat_range   = use range for lon instead of indexes (default is False)
+           lat_range   = use range for alt instead of indexes (default is False)
+           inc         = number of tick incriments (default is 6)
+           rvals       = Round the min and max to a sensible number based
+                         on the desired number of incriments?  Will never
+                         decrease the maximum or increase the minimum.  Will
+                         also assess the max/min for latitude and longitudes
+                         to ensure they fall within physically sensible limits.
+                         (default is True)
+
+    Output: xmin = miminum data value
+            xmax = maximum data value
+    '''
+    import math
+    import sys
+    import copy
+
+    # Initialize the variables
+
+    hold_min = []
+    hold_max = []
+    ilat = -1
+    ilon = -1
+    ialt = -1
+    latlist = copy.deepcopy(lat_indices)
+    lonlist = copy.deepcopy(lon_indices)
+    altlist = copy.deepcopy(alt_indices)
+
+    # Set the maximum and minimum values for the range coordinates
+
+    if lat_range:
+        ilatmax = latlist.pop()
+        ilatmin = latlist.pop()
+
+    if lon_range:
+        ilonmax = lonlist.pop()
+        ilonmin = lonlist.pop()
+
+    if alt_range:
+        ialtmax = altlist.pop()
+        ialtmin = altlist.pop()
+
+    # Cycle over the index coordinates
+    while len(altlist) > 0 or len(lonlist) > 0 or len(latlist) > 0:
+        # Initialize the index coordiates
+        if len(latlist) > 0:
+            ilat = latlist.pop()
+
+        if len(lonlist) > 0:
+            ilon = lonlist.pop()
+
+        if len(altlist) > 0:
+            ialt = altlist.pop()
+
+        if((not lat_range and ilat == -1) or (not lon_range and ilon == -1)
+           or (not alt_range and ialt == -1)):
+            print "INPUT ERROR in find_data_limit_ivalues"
+            sys.exit(1)
+
+        # Cycle over the GITM data structures
+        for gData in gDataList:
+            # Make the appropriate data selection
+            if lat_range:
+                if lon_range:
+                    if alt_range:
+                        # This is silly to do, but sometimes people are silly
+                        flat = gData[xkey][ilonmin:ilonmax,ilatmin:ilatmax,
+                                           ialtmin:ialtmax].reshape(-1)
+                    else:
+                        flat = gData[xkey][ilonmin:ilonmax,ilatmin:ilatmax,
+                                           ialt].reshape(-1)
+                else:
+                    if alt_range:
+                        flat = gData[xkey][ilon,ilatmin:ilatmax,
+                                           ialtmin:ialtmax].reshape(-1)
+                    else:
+                        flat = gData[xkey][ilon,ilatmin:ilatmax,
+                                           ialt].reshape(-1)
+            else:
+                if lon_range:
+                    if alt_range:
+                        flat = gData[xkey][ilonmin:ilonmax,ilat,
+                                           ialtmin:ialtmax].reshape(-1)
+                    else:
+                        flat = gData[xkey][ilonmin:ilonmax,ilat,
+                                           ialt].reshape(-1)
+                else:
+                    if alt_range:
+                        flat = gData[xkey][ilon,ilat,
+                                           ialtmin:ialtmax].reshape(-1)
+                    else:
+                        # This is silly to do, but sometimes people are silly
+                        flat = gData[xkey][ilon,ilat,ialt].reshape(-1)
+        
+            # Maintain the maximum and mimimum values for this data selection
+            hold_min.append(min(flat))
+            hold_max.append(max(flat))
+
+    # Find the data max and min from the individual selection max and mins
+    xmin = min(hold_min)
+    xmax = max(hold_max)
+    xran = round((xmax-xmin)/inc)
+
+    if rvals:
+        if(xran != 0.0):
+            xmin = math.floor(float("%.14f" % (xmin / xran))) * xran
+            xmax = math.ceil(float("%.14f" % (xmax / xran))) * xran
+
+        # Consider physical limits for Latitude and Longitude keys.
+
+        if(xkey == "dLat"):
+            if(xmin < -90.0):
+                xmin = -90.0
+            if(xmax > 90.0):
+                xmax = 90.0
+        elif(xkey == "Latitude"):
+            if(xmin < -np.pi / 2.0):
+                xmin = -np.pi / 2.0
+            if(xmax > np.pi / 2.0):
+                xmax = np.pi / 2.0
+        elif(xkey == "dLon" or xkey == "Longitude"):
+            if(xmin < 0.0):
+                xmin = 0.0
+            if(xkey == "dLon" and xmax > 360.0):
+                xmax = 360
+            elif(xkey == "Longitude" and xmax > np.pi):
+                xmax = np.pi
+
+    return xmin, xmax
+
 def localtime_to_glon(ut_datetime, localtime):
     '''
     Routine to compute the longitude where the local time is at a specified
