@@ -463,9 +463,11 @@ def plot_rectangular_3D_global(ax, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
 
     # Set the contour
     v    = np.linspace(zmin, zmax, 70, endpoint=True)
-    con  = ax.contourf(gData['dLon'][:,:,aindex], gData['dLat'][:,:,aindex],
-                       gData[zkey][:,:,aindex], v, cmap=get_cmap('Spectral_r'),
-                       vmin=zmin, vmax=zmax)
+    # Casting as np.array to fix bug in SpacePy 0.1.4
+    con  = ax.contourf(np.array(gData['dLon'][:,:,aindex]),
+                       np.array(gData['dLat'][:,:,aindex]),
+                       np.array(gData[zkey][:,:,aindex]), v,
+                       cmap=get_cmap('Spectral_r'), vmin=zmin, vmax=zmax)
 
     # Configure axis
     ytics  = MultipleLocator(ywidth)
@@ -630,8 +632,10 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
         llab = m.drawparallels(lats)
 
         m.drawmeridians(np.arange(0,360,45), labels=[1,1,0,0], labelstyle="+/-")
-        con  = m.contourf(theta, r, z, v, cmap=get_cmap('Spectral_r'),
-                          vmin=zmin, vmax=zmax, latlon=True) 
+        # Casting as np.array to fix bug in SpacePy 0.1.4
+        con  = m.contourf(np.array(theta), np.array(r), np.array(z), v,
+                          cmap=get_cmap('Spectral_r'), vmin=zmin, vmax=zmax,
+                          latlon=True) 
         lpad = 20
         x, y = m(list(lon for i in lats), lats)
 
@@ -645,10 +649,12 @@ def plot_polar_3D_global(ax, nsub, zkey, gData, zmin, zmax, zinc=6, aindex=-1,
         r = csign * gData['dLat'][:,imin:imax,aindex]
         theta = gData['Longitude'][:,imin:imax,aindex]
 
-        con = ax.contourf(theta, gpr.center_polar_cap(abs(center_lat),
-                                                      abs(edge_lat),r),
-                          z, v, cmap=get_cmap('Spectral_r'), vmin=zmin,
-                          vmax=zmax)
+        # Casting as np.array to fix bug in SpacePy 0.1.4
+        con = ax.contourf(np.array(theta),
+                          np.array(gpr.center_polar_cap(abs(center_lat),
+                                                        abs(edge_lat),r)),
+                          np.array(z), v,
+                          cmap=get_cmap('Spectral_r'), vmin=zmin, vmax=zmax)
         ax.set_theta_offset(toff)
 
         lpad = 0
