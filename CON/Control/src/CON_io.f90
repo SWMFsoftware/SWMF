@@ -523,6 +523,25 @@ contains
                   ' SWMF_WARNING: TimeStart = ',TimeStart % String
           end if
 
+       case("#TIMEEND", "#ENDTIME")
+          if(IsStandAlone)then
+             call read_var('iYear'  ,TimeEnd % iYear)
+             call read_var('iMonth' ,TimeEnd % iMonth)
+             call read_var('iDay'   ,TimeEnd % iDay)
+             call read_var('iHour'  ,TimeEnd % iHour)
+             call read_var('iMinute',TimeEnd % iMinute)
+             call read_var('iSecond',TimeEnd % iSecond)
+             FracSecond = TimeEnd % FracSecond ! set default value
+             call read_var('FracSecond',FracSecond)
+             TimeEnd % FracSecond = FracSecond
+             call time_int_to_real(TimeEnd)
+             
+             UseEndTime = .true.
+          else
+             write(*,*)NameSub// &
+                  ' SWMF_WARNING: end time cannot be set internally'
+          end if
+
        case('#PLANET','#MOON','#COMET', &
             '#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS','#MAGNETICCENTER',&
             '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0')
@@ -625,6 +644,18 @@ contains
     end do
     ! reset ModReadParam to read the CON parameters
     call read_init('  ',iSession,iLine)
+
+    ! Checks for UseEndTime=.true.
+    if(UseEndTime)then
+       if(.not.DoTimeAccurate)&
+            call CON_stop('#TIMEEND command cannot be used in steady-state')
+       if(.not.IsLastRead)&
+            call CON_stop('#TIMEEND command can be only used in the last session')
+
+       !Determine, when to stop the simulation
+       tSimulationMax = TimeEnd % Time - TimeStart % Time
+       MaxIteration = -1
+    end if
 
     if(UseTiming)then
        call timing_version(IsOn,NameVersion,VersionNumber)

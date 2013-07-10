@@ -215,7 +215,10 @@ contains
     end if
     if (DnTiming > -2) call timing_report
 
-    if(SaveRestart % DoThis) call save_restart
+    if(SaveRestart % DoThis)then
+       if(UseEndTime)call save_end_time
+       call save_restart
+    end if
     do lComp = 1,n_comp()
        iComp = i_comp(lComp)
        call finalize_comp(iComp,tSimulation)

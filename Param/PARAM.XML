@@ -180,6 +180,32 @@ This is a date and time when, for the Earth, both the rotational and the magneti
 have approximately zero tilt towards the Sun.
 </command>
 
+<command name="STARTTIME" if="$_IsFirstSession">
+	<parameter name="iYear"   type="integer" default="2000" />
+	<parameter name="iMonth"  type="integer" min="1" max="12" default="3"/>
+	<parameter name="iDay"   type="integer" min="1" max="31" default="21"/>
+	<parameter name="iHour"   type="integer" min="0" max="23" default="0"/>
+	<parameter name="iMinute" type="integer" min="0" max="59" default="0"/>
+	<parameter name="iSecond" type="integer" min="0" max="59" default="0"/>
+	<parameter name="FracSecond" type="real" min="0" max="1"  default="0"/>
+
+#ENDTIME
+2000			iYear
+   3			iMonth
+  21			iDay
+  10			iHour
+  45			iMinute
+   0			iSecond
+   0.0			FracSecond
+
+The #ENDTIME command sets the date and time in Greenwich Mean Time (GMT) or Universal Time (UT).
+in which the simultion should be ended. This time is stored in the restart files as the start time
+for the restarted run 
+
+The default values are shown above. This is a date and time when, for the Earth, both the rotational 
+and the magnetic axes have approximately zero tilt towards the Sun.
+</command>
+
 <command name="TIMESIMULATION" if="$_IsFirstSession">
 	<parameter name="tSimulation" type="real" min="0" default="0.0" />
 

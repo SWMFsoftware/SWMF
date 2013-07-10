@@ -53,6 +53,14 @@ module CON_time
   ! Initial and current date/time
   type(TimeType) :: TimeStart
 
+  ! Date/time to finish the simulation
+  type(TimeType) :: TimeEnd
+  
+  !\Logical which determines if the end time is set and 
+  !/should be saved in the restart file
+  logical :: UseEndTime = .false.
+
+
   ! Simulation time
   real :: tSimulation = 0.0
 
@@ -101,6 +109,16 @@ contains
     TimeStart % FracSecond = 0.0
 
     call time_int_to_real(TimeStart)
+
+    TimeEnd % iYear   = 2000
+    TimeEnd % iMonth  = 3
+    TimeEnd % iDay    = 21
+    TimeEnd % iHour   = 10
+    TimeEnd % iMinute = 45
+    TimeEnd % iSecond = 0
+    TimeEnd % FracSecond = 0.0
+
+    call time_int_to_real(TimeEnd)
     !EOC
 
   end subroutine init_time
@@ -130,5 +148,22 @@ contains
     if(present(tCurrentOut))       tCurrentOut = TimeStart % Time + tSimulation
 
   end subroutine get_time
+  !BOP ========================================================================
+  !IROUTINE: save_end_time - save TimeEnd (instead of TimeStart and tSimulation) 
+  !INTERFACE:
+  subroutine save_end_time
+    !Put TimeEnd to TimeStart, the latter will be saved in the RESTART.in file
+    TimeStart % iYear      = TimeEnd % iYear   
+    TimeStart % iMonth     = TimeEnd % iMonth 
+    TimeStart % iDay       = TimeEnd % iDay    
+    TimeStart % iHour      = TimeEnd % iHour   
+    TimeStart % iMinute    = TimeEnd % iMinute
+    TimeStart % iSecond    = TimeEnd % iSecond
+    TimeStart % FracSecond = TimeEnd % FracSecond 
+
+    !Nullify tSimulation and nStep, which will be also saved 
+    tSimulation = 0
+    nStep       = 0
+  end subroutine save_end_time
 
 end module CON_time
