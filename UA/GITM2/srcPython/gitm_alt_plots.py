@@ -39,7 +39,8 @@ import gitm_plot_rout as gpr
 
 def plot_single_alt_image(plot_type, zkey, gData, lat_index=-1, lon_index=-1,
                           title=None, figname=None, xkey="dLat", color="b",
-                          marker="o", line=":", *args, **kwargs):
+                          marker="o", line=":", zmax=None, zmin=None, amax=None,
+                          amin=None, xmax=None, xmin=None, *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
@@ -55,14 +56,33 @@ def plot_single_alt_image(plot_type, zkey, gData, lat_index=-1, lon_index=-1,
            color     = linear color (default blue)
            marker    = linear marker type (default circles)
            line      = linear line type (default dotted)
+           zmax      = z key maximum (or None to compute automatically, default)
+           zmin      = z key minimum (or None to compute automatically, default)
+           amax      = a key maximum (or None to compute automatically, default)
+           amin      = a key minimum (or None to compute automatically, default)
+           xmax      = x key maximum for countour plots (or None to compute
+                       automatically, default)
+           xmin      = x key minimum for contour plots (or None to compute
+                       automatically, default)
     '''
 
     # Initialize the variable limits
-    zmin, zmax = gpr.find_data_limits([gData], zkey, lat_index, lon_index, -2,6)
-    amin, amax = gpr.find_data_limits([gData], "Altitude", lat_index, lon_index,
-                                      -2, 30)
-    amin = math.ceil(amin / 10000.0) * 10.0
-    amax = math.floor(amax / 10000.0) * 10.0
+    if(zmin == None or zmax == None):
+        tmin, tmax = gpr.find_data_limits([gData],zkey,lat_index,lon_index,-2,6)
+        if zmin == None:
+            zmin = tmin
+        if zmax == None:
+            zmax = tmax
+
+    if(amin == None or amax == None):
+        tmin, tmax = gpr.find_data_limits([gData], "Altitude", lat_index,
+                                          lon_index, -2, 30)
+        if amin == None:
+            amin = tmin
+            amin = math.ceil(amin / 10000.0) * 10.0
+        if amax == None:
+            amax = tmax
+            amax = math.floor(amax / 10000.0) * 10.0
 
     # Initialize the new figure
 
@@ -75,7 +95,13 @@ def plot_single_alt_image(plot_type, zkey, gData, lat_index=-1, lon_index=-1,
                               lon_index, lat_index, title, "t", True, True,
                               color=color, marker=marker, line=line)
     elif(string.lower(plot_type)=="contour"):
-        xmin, xmax = gpr.find_data_limits([gData],xkey,lat_index,lon_index,-2,6)
+        if(xmin == None or xmax == None):
+            tmin, tmax = gpr.find_data_limits([gData], xkey, lat_index,
+                                              lon_index, -2, 6)
+            if xmin == None:
+                xmin = tmin
+            if xmax == None:
+                xmax = tmax
 
         con = plot_3D_alt(ax, zkey, xkey, gData, zmin, zmax, amin, amax, xmin,
                           xmax, lon_index, lat_index, 6, 10, 6, True, "r",
@@ -104,12 +130,14 @@ def plot_single_alt_image(plot_type, zkey, gData, lat_index=-1, lon_index=-1,
 
 def plot_mult_alt_images(plot_type, zkey, gData, lat_index, lon_index,
                          title=None, figname=None, xkey="dLat", color="b",
-                         marker="o", line=":", *args, **kwargs):
+                         marker="o", line=":", zmax=None, zmin=None, amax=None,
+                         amin=None, xmax=None, xmin=None, *args, **kwargs):
     '''
     Creates a linear or contour altitude map for a specified altitude range.
     A list of latitude and longitude indexes should be specified.  They may
-    be of equal length, or (for a constant value) a length of list one may be
-    used.
+    be of equal length (for paired values), or for a constant value in one
+    coordinate, a length of list one can be specified.
+    
     Input: plot_type = key to determine plot type (rectangular, polar)
            zkey      = key for z variable (ie 'Vertical TEC')
            gData     = gitm bin structure
@@ -121,56 +149,67 @@ def plot_mult_alt_images(plot_type, zkey, gData, lat_index, lon_index,
            color     = line color for linear plots (default blue)
            marker    = marker type for linear plots (default circle)
            line      = line type for linear plots (default dotted line)
+           zmax      = z key maximum (or None to compute automatically, default)
+           zmin      = z key minimum (or None to compute automatically, default)
+           amax      = a key maximum (or None to compute automatically, default)
+           amin      = a key minimum (or None to compute automatically, default)
+           xmax      = x key maximum for countour plots (or None to compute
+                       automatically, default)
+           xmin      = x key minimum for contour plots (or None to compute
+                       automatically, default)
     '''
+
+    module_name = "plot_mult_alt_images"
 
     # Process the index lists
     lat_len = len(lat_index)
     lon_len = len(lon_index)
 
-    # Initialize the x,y,z variable limits
-    hold_xmin = []
-    hold_xmax = []
-    hold_amin = []
-    hold_amax = []
-    hold_zmin = []
-    hold_zmax = []
+    if lat_len != lon_len and lat_len != 1 and lon_len != 1:
+        print module_name, "ERROR: improperly paired lat/lon indices"
+        sys.exit(1)
 
-    for ilat in lat_index:
-        for ilon in lon_index:
-            tmin, tmax = gpr.find_data_limits([gData], zkey, ilat, ilon, -2, 6)
-            hold_zmin.append(tmin)
-            hold_zmax.append(tmax)
+    # Initialize the x,y,z variable limits if desired
+    alt_index = [0, gData.attrs['nAlt']]
 
-            tmin, tmax = gpr.find_data_limits([gData], "Altitude", ilat, ilon,
-                                              -2, 30)
-            hold_amin.append(math.ceil(tmin / 10000.0) * 10.0)
-            hold_amax.append(math.floor(tmax / 10000.0) * 10.0)
+    if amin == None or amax == None:
+        tmin, tmax = gpr.find_data_limits_ivalues([gData], "Altitude",
+                                                  lat_index, lon_index,
+                                                  alt_index, False, False, True,
+                                                  6, False)
+        if amin == None:
+            amin = math.ceil(tmin / 10000.0) * 10.0
+        if amax == None:
+            amax = math.floor(tmax / 10000.0) * 10.0
 
-            if(string.lower(plot_type)=="contour"):
-                tmin, tmax = gpr.find_data_limits([gData], xkey, ilat, ilon,
-                                                  -2, 6)
-                hold_xmin.append(tmin)
-                hold_xmax.append(tmax)
+    if zmin == None or zmax == None:
+        tmin, tmax = gpr.find_data_limits_ivalues([gData], zkey, lat_index,
+                                                  lon_index, alt_index, False,
+                                                  False, True, 6, True)
+        if zmin == None:
+            zmin = tmin
+        if zmax == None:
+            zmax = tmax
 
-    amin = min(hold_amin)
-    amax = max(hold_amax)
-    zmin = min(hold_zmin)
-    zmax = max(hold_zmax)
-
-    if(string.lower(plot_type)=="contour"):
-        xmin = min(hold_xmin)
-        xmax = max(hold_xmax)
+    if (xmin == None or xmax == None) and string.lower(plot_type)=="contour":
+        tmin, tmax = gpr.find_data_limits_ivalues([gData], xkey, lat_index,
+                                                  lon_index, alt_index, False,
+                                                  False, True, 6, True)
+        if xmin == None:
+            xmin = tmin
+        if xmax == None:
+            xmax = tmax
 
     # Initialize the new figure
 
     pnum = max([lat_len, lon_len])
 
     if(pnum < 1):
-        print "plot_mult_alt_images ERROR: no altitude regions specified"
+        print module_name, "ERROR: no altitude regions specified"
         sys.exit(0)
 
     if(pnum == 1):
-        print "plot_mult_alt_images WARNING: only one region, better to use plot_single_alt_image"
+        print module_name, "WARNING: only one region, better to use plot_single_alt_image"
 
     f  = plt.figure()
     tl = " "
@@ -262,8 +301,9 @@ def plot_mult_alt_images(plot_type, zkey, gData, lat_index, lon_index,
 
 
 def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
-                    degrees=True, color="k", marker="o", line=":", *args,
-                    **kwargs):
+                    degrees=True, color="k", marker="o", line=":", zmax=None,
+                    zmin=None, amax=None, amin=None, xmax=None, xmin=None,
+                    *args, **kwargs):
     '''
     Creates a contour altitude map with several linear slices as a function of
     altitude for a specified GITM variable.  A list of latitude and longitude
@@ -281,7 +321,17 @@ def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
            color     = line color for linear plots (default black)
            marker    = marker type for linear plots (default circle)
            line      = line type for linear plots (default dotted line)
+           zmax      = z key maximum (or None to compute automatically, default)
+           zmin      = z key minimum (or None to compute automatically, default)
+           amax      = a key maximum (or None to compute automatically, default)
+           amin      = a key minimum (or None to compute automatically, default)
+           xmax      = x key maximum for countour plots (or None to compute
+                       automatically, default)
+           xmin      = x key minimum for contour plots (or None to compute
+                       automatically, default)
     '''
+
+    module_name = "plot_alt_slices"
 
     # Process the index lists
     lat_len = len(lat_index)
@@ -289,11 +339,11 @@ def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
     pnum    = max([lat_len, lon_len])
 
     if(pnum < 1):
-        print "plot_mult_alt_slices ERROR: no altitude slices specified"
+        print module_name, "ERROR: no altitude slices specified"
         sys.exit(0)
 
     elif(lat_len > 1 and lon_len > 1):
-        print "plot_alt_slices ERROR: one geographic variable must be constant"
+        print module_name, "ERROR: one geographic variable must be constant"
         sys.exit(0)
 
     else:
@@ -326,43 +376,37 @@ def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
                 xkey = "dLat"
 
     # Initialize the x,y,z variable limits
-    hold_xmin = []
-    hold_xmax = []
-    hold_amin = []
-    hold_amax = []
-    hold_zmin = []
-    hold_zmax = []
+    alt_index = [0, gData.attrs['nAlt']]
 
-    for jlat in lat_index:
-        if lat_len == 1:
-            jlon = -1
+    if amin == None or amax == None:
+        tmin, tmax = gpr.find_data_limits_ivalues([gData], "Altitude",
+                                                  lat_index, lon_index,
+                                                  alt_index, False, False,
+                                                  True, 6, False)
+        if amin == None:
+            amin = math.ceil(tmin / 10000.0) * 10.0
+        if amax == None:
+            amax = math.floor(tmax / 10000.0) * 10.0
 
-        for jlon in lon_index:
-            if lon_len == 1:
-                jlat = -1
+    if zmin == None or zmax == None:
+        tmin, tmax = gpr.find_data_limits_ivalues([gData], zkey, lat_index,
+                                                  lon_index, alt_index, False,
+                                                  False, True, 6, True)
+        if zmin == None:
+            zmin = tmin
+        if zmax == None:
+            zmax = tmax
 
-            tmin, tmax = gpr.find_data_limits([gData], zkey, jlat, jlon, -2, 6)
-            hold_zmin.append(tmin)
-            hold_zmax.append(tmax)
-
-            tmin, tmax = gpr.find_data_limits([gData], "Altitude", jlat, jlon,
-                                              -2, 30)
-            hold_amin.append(math.ceil(tmin / 10000.0) * 10.0)
-            hold_amax.append(math.floor(tmax / 10000.0) * 10.0)
-
-            tmin, tmax = gpr.find_data_limits([gData], xkey, jlat, jlon, -2, 6)
-            hold_xmin.append(tmin)
-            hold_xmax.append(tmax)
-
-    amin = min(hold_amin)
-    amax = max(hold_amax)
-    zmin = min(hold_zmin)
-    zmax = max(hold_zmax)
-    xmin = min(hold_xmin)
-    xmax = max(hold_xmax)
+    if xmin == None or xmax == None:
+        tmin, tmax = gpr.find_data_limits_ivalues([gData], xkey, lat_index,
+                                                  lon_index, alt_index, False,
+                                                  False, True, 6, True)
+        if xmin == None:
+            xmin = tmin
+        if xmax == None:
+            xmax = tmax
 
     # Initialize the new figure
-
     f  = plt.figure()
     tl = " "
 
@@ -370,7 +414,6 @@ def plot_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
         f.suptitle(title, size="medium")
 
     # Adjust the figure size to accomadate the number of subplots
-
     if(pnum > 2):
         fwidth = f.get_figwidth()
         f.set_figwidth(fwidth * 0.5 * pnum)
@@ -603,8 +646,9 @@ def plot_3D_alt(ax, zkey, xkey, gData, zmin, zmax, amin, amax, xmin, xmax,
 
     # Set the contour
     v   = np.linspace(zmin, zmax, zinc*10, endpoint=True)
-    con = ax.contourf(x, a, z, v, cmap=get_cmap('Spectral_r'), vmin=zmin,
-                      vmax=zmax)
+    # Casting as np.array to fix bug in SpacePy 0.1.4
+    con = ax.contourf(np.array(x), np.array(a), np.array(z), v,
+                      cmap=get_cmap('Spectral_r'), vmin=zmin, vmax=zmax)
 
     # Configure axis
     ytics  = MultipleLocator(awidth)
