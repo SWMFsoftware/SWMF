@@ -175,12 +175,12 @@ The #STARTTIME command sets the initial date and time for the
 simulation in Greenwich Mean Time (GMT) or Universal Time (UT).
 This time is stored in the restart files. 
 
-The default values are shown above.
-This is a date and time when, for the Earth, both the rotational and the magnetic axes
-have approximately zero tilt towards the Sun.
+The default values are shown above.  This is a date and time when, for
+the Earth, both the rotational and the magnetic axes have
+approximately zero tilt towards the Sun.
 </command>
 
-<command name="STARTTIME" if="$_IsFirstSession">
+<command name="ENDTIME">
 	<parameter name="iYear"   type="integer" default="2000" />
 	<parameter name="iMonth"  type="integer" min="1" max="12" default="3"/>
 	<parameter name="iDay"   type="integer" min="1" max="31" default="21"/>
@@ -192,18 +192,21 @@ have approximately zero tilt towards the Sun.
 #ENDTIME
 2000			iYear
    3			iMonth
-  21			iDay
+  22			iDay
   10			iHour
   45			iMinute
    0			iSecond
    0.0			FracSecond
 
-The #ENDTIME command sets the date and time in Greenwich Mean Time (GMT) or Universal Time (UT).
-in which the simultion should be ended. This time is stored in the restart files as the start time
-for the restarted run 
+This command can only be used in time accurate mode and in the final session.
 
-The default values are shown above. This is a date and time when, for the Earth, both the rotational 
-and the magnetic axes have approximately zero tilt towards the Sun.
+The #ENDTIME command sets the date and time in Greenwich Mean Time
+(GMT) or Universal Time (UT) when the simulation should be ended.
+This is an alternative to the #STOP command in the final session.
+This time is stored in the final restart file as the start time for
+the restarted run, and tSimulation is set to zero.
+
+There is no default value.
 </command>
 
 <command name="TIMESIMULATION" if="$_IsFirstSession">
