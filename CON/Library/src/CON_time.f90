@@ -56,10 +56,8 @@ module CON_time
   ! Date/time to finish the simulation
   type(TimeType) :: TimeEnd
   
-  !\Logical which determines if the end time is set and 
-  !/should be saved in the restart file
+  ! Is the end time set and to be saved into the final restart file
   logical :: UseEndTime = .false.
-
 
   ! Simulation time
   real :: tSimulation = 0.0
@@ -152,6 +150,8 @@ contains
   !IROUTINE: save_end_time - save TimeEnd (instead of TimeStart and tSimulation) 
   !INTERFACE:
   subroutine save_end_time
+    !EOP
+    !-------------------------------------------------------------------------
     !Put TimeEnd to TimeStart, the latter will be saved in the RESTART.in file
     TimeStart % iYear      = TimeEnd % iYear   
     TimeStart % iMonth     = TimeEnd % iMonth 
