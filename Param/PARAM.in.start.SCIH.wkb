@@ -260,9 +260,6 @@ mc3			TypeLimiter
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#MESSAGEPASS
-all			TypeMessagePass
-
 #RESCHANGE
 T			UseAccurateResChange
 
@@ -527,8 +524,6 @@ MPI
 #STOP
 60001			MaxIter
 -1.0			TimeMax
-
-#END
 
 End session: 2
 #RUN ##########################################################################
