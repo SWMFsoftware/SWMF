@@ -38,10 +38,14 @@ subroutine read_NOAAHPI_Indices_new(iOutputError,StartTime,EndTime)
   ! We know that NameOfIMFFile=none if (a) we have never read the file or (b)
   !    we have no index file.
 
+  if (nIndices_V(hpi_) == 0 .and. NameOfHPIFile == "none") &
+       NameOfHPIFile = NameOfIndexFile
+
   if (NameOfHPIFile == "none") return
   if (nIndices_V(hpi_) == 1) return
 
   call init_mod_indices
+
 
   ! If we have been here before and we read the entire file, leave
   if (.not.ReReadHPIFile .and. nIndices_V(hpi_) > 0) return
@@ -158,6 +162,7 @@ contains
                   iostat = ierror ) &
                   tmp(1,i),line,tmp(2,i),line,tmp(3,i),line,tmp(4,i),line,tmp(5,i),line,tmp(6,i), &
                   line,tmp(6,i)
+
           endif
 
           if (ierror /= 0) then
