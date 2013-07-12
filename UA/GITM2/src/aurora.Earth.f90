@@ -16,7 +16,7 @@ subroutine aurora(iBlock)
   real :: alat, hpi, ped, hal, av_kev, eflx_ergs, a,b, maxi
   real :: Factor,temp_ED, avee, eflux, p
   integer :: i, j, k, n, iError, iED
-  logical :: IsDone, IsTop, HasSomeAurora
+  logical :: IsDone, IsTop, HasSomeAurora, UseMono, UseWave
 
   real, dimension(nLons,nLats,nAlts) :: temp, AuroralBulkIonRate, &
        IonPrecipitationBulkIonRate, IonPrecipitationHeatingRate
@@ -61,7 +61,10 @@ subroutine aurora(iBlock)
   ! Let's scale our hemispheric power so it is roughly the same as what
   ! is measured.
 
-  if (.not.UseNewellAurora .and. .not.UseOvationSME .and. iBlock==1) then
+  if ( .not.UseNewellAurora .and. &
+       .not.UseOvationSME   .and. &
+       .not. Is1D           .and. &
+       iBlock==1) then
 
      do i=1,nLats
         do j=1,nLons
@@ -189,15 +192,19 @@ subroutine aurora(iBlock)
 
         endif
 
-        if (UseNewellAurora .and. UseNewellMono .and. &
-             ElectronNumberFluxMono(j,i) > 0.0) then
+        UseMono = .false.
+        if (UseNewellAurora .and. UseNewellMono    ) UseMono = .true.
+        if (UseOvationSME   .and. UseOvationSMEMono) UseMono = .true.
+
+        if (UseMono .and. ElectronNumberFluxMono(j,i) > 0.0) then
 
            av_kev = ElectronEnergyFluxMono(j, i) / &
                     ElectronNumberFluxMono(j, i) * 6.242e11 ! eV
 
            power = ElectronNumberFluxMono(j, i) * &
                 Element_Charge * 100.0 * 100.0 * &    ! (eV/cm2/s -> J/m2/s)
-                dLatDist_FB(j, i, nAlts, iBlock) * dLonDist_FB(j, i, nAlts, iBlock)
+                dLatDist_FB(j, i, nAlts, iBlock) * &
+                dLonDist_FB(j, i, nAlts, iBlock)
 
            if (latitude(i,iBlock) < 0.0) then
               HemisphericPowerSouth = HemisphericPowerSouth + power
@@ -220,8 +227,11 @@ subroutine aurora(iBlock)
 
         endif
 
-        if (UseNewellAurora .and. UseNewellWave .and. &
-             ElectronNumberFluxWave(j,i) > 0.0) then
+        UseWave = .false.
+        if (UseNewellAurora .and. UseNewellWave    ) UseMono = .true.
+        if (UseOvationSME   .and. UseOvationSMEWave) UseMono = .true.
+
+        if (UseWave .and. ElectronNumberFluxWave(j,i) > 0.0) then
 
            av_kev = ElectronEnergyFluxWave(j, i) / &
                     ElectronNumberFluxWave(j, i) * 6.242e11 ! eV
