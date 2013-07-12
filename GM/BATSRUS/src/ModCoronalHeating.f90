@@ -1416,50 +1416,45 @@ contains
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-       if(FullB<1e-15)then
+       if(IsNewBlockAlfven)then
+          call get_alfven_speed
 
-          WaveDissipation_V(WaveFirst_) = 2.0*Coef*EwavePlus*sqrt(EwaveMinus)
-          WaveDissipation_V(WaveLast_) = 2.0*Coef*EwaveMinus*sqrt(EwavePlus)
-
-       else
-
-          if(IsNewBlockAlfven)then
-             call get_alfven_speed
-
-             IsNewBlockAlfven = .false.
-          end if
-
-          if(IsCartesianGrid)then
-             GradAlfven_D(x_) = 1.0/CellSize_DB(x_,iBlock) &
-                  *(Alfven_FD(i+1,j,k,x_) - Alfven_FD(i,j,k,x_))
-             if(nJ > 1) GradAlfven_D(y_) = 1.0/CellSize_DB(y_,iBlock) &
-                  *(Alfven_FD(i,j+1,k,y_) - Alfven_FD(i,j,k,y_))
-             if(nK > 1) GradAlfven_D(z_) = 1.0/CellSize_DB(z_,iBlock) &
-                  *(Alfven_FD(i,j,k+1,z_) - Alfven_FD(i,j,k,z_))
-          else
-             GradAlfven_D = &
-                  Alfven_FD(i+1,j,k,x_)*FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
-                  - Alfven_FD(i,j,k,x_)*FaceNormal_DDFB(:,x_,i,j,k,iBlock)
-             if(nJ > 1) GradAlfven_D = GradAlfven_D + &
-                  Alfven_FD(i,j+1,k,y_)*FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
-                  - Alfven_FD(i,j,k,y_)*FaceNormal_DDFB(:,y_,i,j,k,iBlock)
-             if(nK > 1) GradAlfven_D = GradAlfven_D + &
-                  Alfven_FD(i,j,k+1,z_)*FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
-                  - Alfven_FD(i,j,k,z_)*FaceNormal_DDFB(:,z_,i,j,k,iBlock)
-
-             GradAlfven_D = GradAlfven_D/CellVolume_GB(i,j,k,iBlock)
-          end if
-
-          ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradAlfven_D))/FullB
-
-          WaveDissipation_V(WaveFirst_) = &
-               EwavePlus*max( ReflectionPerLperp, 2.0*Coef*sqrt(EwaveMinus) )
-
-          WaveDissipation_V(WaveLast_) = &
-               EwaveMinus*max( ReflectionPerLperp, 2.0*Coef*sqrt(EwavePlus) )
-
+          IsNewBlockAlfven = .false.
        end if
 
+       if(IsCartesianGrid)then
+          GradAlfven_D(x_) = 1.0/CellSize_DB(x_,iBlock) &
+               *(Alfven_FD(i+1,j,k,x_) - Alfven_FD(i,j,k,x_))
+          if(nJ > 1) GradAlfven_D(y_) = 1.0/CellSize_DB(y_,iBlock) &
+               *(Alfven_FD(i,j+1,k,y_) - Alfven_FD(i,j,k,y_))
+          if(nK > 1) GradAlfven_D(z_) = 1.0/CellSize_DB(z_,iBlock) &
+               *(Alfven_FD(i,j,k+1,z_) - Alfven_FD(i,j,k,z_))
+       else
+          GradAlfven_D = &
+               Alfven_FD(i+1,j,k,x_)*FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
+               - Alfven_FD(i,j,k,x_)*FaceNormal_DDFB(:,x_,i,j,k,iBlock)
+          if(nJ > 1) GradAlfven_D = GradAlfven_D + &
+               Alfven_FD(i,j+1,k,y_)*FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
+               - Alfven_FD(i,j,k,y_)*FaceNormal_DDFB(:,y_,i,j,k,iBlock)
+          if(nK > 1) GradAlfven_D = GradAlfven_D + &
+               Alfven_FD(i,j,k+1,z_)*FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
+               - Alfven_FD(i,j,k,z_)*FaceNormal_DDFB(:,z_,i,j,k,iBlock)
+
+          GradAlfven_D = GradAlfven_D/CellVolume_GB(i,j,k,iBlock)
+       end if
+
+       ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradAlfven_D)) &
+            /max(FullB, 1e-15)
+
+       ! Correct at top of closed field lines, where turbulence is balanced
+       WaveDissipation_V(WaveFirst_) = &
+            EwavePlus*max( ReflectionPerLperp, 2.0*Coef*sqrt(EwaveMinus) )
+
+       WaveDissipation_V(WaveLast_) = &
+            EwaveMinus*max( ReflectionPerLperp, 2.0*Coef*sqrt(EwavePlus) )
+
+       ! Correct in inner heliosphere, where reflection is caused by
+       ! the radially expanding flow
        WaveDissipation_V(WaveFirst_) = max(WaveDissipation_V(WaveFirst_), &
             Crefl*Coef*EwavePlus*sqrt(EwavePlus) )
 
