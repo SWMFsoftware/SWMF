@@ -96,72 +96,26 @@ contains
     do iLon = -1, nLons+2
        do iLat = -1, nLats+2
 
-!          write(*,*) iLon, iLat, MLatitude(iLon, iLat, nAlts+1, iBlock), &
-!               mod(MLT(iLon, iLat, nAlts+1)+24.0,24.0)
-
           if (abs(MLatitude(iLon, iLat, nAlts+1, iBlock)) > 50.0) then
 
              iMlat = floor(abs(MLatitude(iLon, iLat, nAlts+1, iBlock)) - 50.0)*2
-!             iMlat = min(max(iMlat,1),nMLats/2)
-!             if (MLatitude(iLon, iLat, nAlts+1, iBlock) > 0.0) &
-!                  iMlat = iMlat + nMlats/2
              iMlt = mod(floor(mod(MLT(iLon, iLat, nAlts+1)+24.0,24.0)*4),nMlts)
              if (iMlt == 0) iMlt = nMlts
 
-!             if (iMlat > nMlats/2) then
-!                iMlat2 = iMlat-nMlats/2
-!             else
-!                iMlat2 = iMlat+nMlats/2
-!             endif
-!
-!             iMlat2 = min(max(iMlat2,1),nMlats)
+             ElectronEnergyFlux(iLon, iLat) = EnergyFluxDiff(iMlt, iMlat)
+             numflux = NumberFluxDiff(iMlt, iMlat)
+             if (numflux /= 0) &
+                  ElectronAverageEnergy(iLon,iLat) = &
+                  ElectronEnergyFlux(iLon, iLat)/numflux * &
+                  6.242e11 / 1000.0 ! ergs -> keV
 
-             ! Diffuse Energy Flux
+             ElectronEnergyFluxMono(iLon, iLat) = EnergyFluxMono(iMlt, iMlat)
+             ElectronNumberFluxMono(iLon, iLat) = NumberFluxMono(iMlt, iMlat)
 
-!             if (EnergyFluxDiff(iMlt, iMlat)==0) then
-!
-!                ! Add North and South together
-!                ElectronEnergyFlux(iLon, iLat) = &
-!                     EnergyFluxDiff(iMlt, iMlat) + EnergyFluxDiff(iMlt, iMlat2)
-!
-!                ! If there are values in both hemisphere, then divide by 2
-!                if ( EnergyFluxDiff(iMlt, iMlat) * &
-!                     EnergyFluxDiff(iMlt, iMlat2) /= 0) &
-!                     ElectronEnergyFlux(iLon, iLat) = &
-!                     ElectronEnergyFlux(iLon, iLat)/2.0
-!             else
-                ElectronEnergyFlux(iLon, iLat) = &
-                     EnergyFluxDiff(iMlt, iMlat)
-!             endif
-
-
-             ! Diffuse Number Flux
-
-!             if (NumberFluxDiff(iMlt, iMlat)==0) then
-!
-!                ! Add North and South together
-!                numflux = &
-!                     NumberFluxDiff(iMlt, iMlat) + NumberFluxDiff(iMlt, iMlat2)
-!
-!                ! If there are values in both hemisphere, then divide by 2
-!                if ( NumberFluxDiff(iMlt, iMlat) * &
-!                     NumberFluxDiff(iMlt, iMlat2) /= 0) &
-!                     numflux = numflux/2
-!
-!             else
-                numflux = NumberFluxDiff(iMlt, iMlat)
-!             endif
-
-             if (numflux /= 0) then
-                ElectronAverageEnergy(iLon,iLat) = &
-                     ElectronEnergyFlux(iLon, iLat)/numflux * &
-                     6.242e11 / 1000.0 ! ergs -> keV
-             endif
+             ElectronEnergyFluxWave(iLon, iLat) = EnergyFluxWave(iMlt, iMlat)
+             ElectronNumberFluxWave(iLon, iLat) = NumberFluxWave(iMlt, iMlat)
 
           endif
-
-!          write(*,*) iLon, iLat, &
-!               ElectronEnergyFlux(iLon, iLat), ElectronAverageEnergy(iLon,iLat)
 
        enddo
 
