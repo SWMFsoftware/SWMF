@@ -14,7 +14,7 @@ module ModProcessVarName
   
 
   integer,parameter :: nVarMax = 100   ! maximum number of state variables
-  integer,parameter :: nSubstance = 27 ! number of distinct fluids/species
+  integer,parameter :: nSubstance = 31 ! number of distinct fluids/species
 
   ! Number of state variables associated with each substance to be standarized
   integer,parameter :: nVarPerSubstance = 7
@@ -53,9 +53,13 @@ module ModProcessVarName
        Neu2_ = 24, &
        Neu3_ = 25, &
        Neu4_ = 26, &
-       Main_ = 27 ! main component, MHD/HD
+       Pui1_ = 27, &
+       Pui2_ = 28, &
+       Pui3_ = 29, &
+       Pui4_ = 30, &
+       Main_ = 31 ! main component, MHD/HD
 
-  ! String array storing the sandard names of all substances
+  ! String array storing the standard names of all substances
   character(len = 6) :: NameSubstance_I(nSubstance) = (/ &
        'H   ',  &
        'Hp  ',  &
@@ -83,6 +87,10 @@ module ModProcessVarName
        'Neu2',  &
        'Neu3',  &
        'Neu4',  &
+       'Pui1',  &
+       'Pui2',  &
+       'Pui3',  &
+       'Pui4',  &
        '    '  /) ! main component, MHD / HD 
           
   ! named indices for basic state variables associated with a substance
@@ -410,8 +418,15 @@ contains
     Dictionary_III(HNIp_, Rho_,   2) = 'hnip'
 
     ! solar wind
-    Dictionary_III(Sw_, Rho_,   2) = 'rhosw'
-    Dictionary_III(Sw_, Energy_,2) = 'swe'
+    Dictionary_III(Sw_, Rho_,   2) = 'swhrho'
+    Dictionary_III(Sw_, RhoUx_, 2) = 'swhmx'
+    Dictionary_III(Sw_, RhoUy_, 2) = 'swhmy'
+    Dictionary_III(Sw_, RhoUz_, 2) = 'swhmz'
+    Dictionary_III(Sw_, p_,     2) = 'swhp'
+    Dictionary_III(Sw_, Energy_,2) = 'swhe'
+
+    Dictionary_III(Sw_, Rho_,   3) = 'rhosw'
+    Dictionary_III(Sw_, Energy_,3) = 'swe'
 
     ! ionosphere
     Dictionary_III(Iono_, Rho_,   2) = 'rhoion'
@@ -447,6 +462,38 @@ contains
     Dictionary_III(Neu4_, RhoUz_, 2) = 'ne4mz'
     Dictionary_III(Neu4_, p_,     2) = 'ne4p'
     Dictionary_III(Neu4_, Energy_,2) = 'ne4e'
+    
+    ! Outer Heliosphere Pop1 / arbitrary pick up ion
+    Dictionary_III(Pui1_, Rho_,   2) = 'pu1rho'
+    Dictionary_III(Pui1_, RhoUx_, 2) = 'pu1mx'
+    Dictionary_III(Pui1_, RhoUy_, 2) = 'pu1my'
+    Dictionary_III(Pui1_, RhoUz_, 2) = 'pu1mz'
+    Dictionary_III(Pui1_, p_,     2) = 'pu1p'
+    Dictionary_III(Pui1_, Energy_,2) = 'pu1e'
+   
+    ! Outer Heliosphere Pop2 / arbitrary pick up ion
+    Dictionary_III(Pui2_, Rho_,   2) = 'pu2rho'
+    Dictionary_III(Pui2_, RhoUx_, 2) = 'pu2mx'
+    Dictionary_III(Pui2_, RhoUy_, 2) = 'pu2my'
+    Dictionary_III(Pui2_, RhoUz_, 2) = 'pu2mz'
+    Dictionary_III(Pui2_, p_,     2) = 'pu2p'
+    Dictionary_III(Pui2_, Energy_,2) = 'pu2e'
+
+    ! Outer Heliosphere Pop3 / arbitrary pick up ion
+    Dictionary_III(Pui3_, Rho_,   2) = 'pu3rho'
+    Dictionary_III(Pui3_, RhoUx_, 2) = 'pu3mx'
+    Dictionary_III(Pui3_, RhoUy_, 2) = 'pu3my'
+    Dictionary_III(Pui3_, RhoUz_, 2) = 'pu3mz'
+    Dictionary_III(Pui3_, p_,     2) = 'pu3p'
+    Dictionary_III(Pui3_, Energy_,2) = 'pu3e'
+
+    ! Outer Heliosphere Pop4 / arbitrary pick up ion
+    Dictionary_III(Pui4_, Rho_,   2) = 'pu4rho'
+    Dictionary_III(Pui4_, RhoUx_, 2) = 'pu4mx'
+    Dictionary_III(Pui4_, RhoUy_, 2) = 'pu4my'
+    Dictionary_III(Pui4_, RhoUz_, 2) = 'pu4mz'
+    Dictionary_III(Pui4_, p_,     2) = 'pu4p'
+    Dictionary_III(Pui4_, Energy_,2) = 'pu4e'
     
   end subroutine create_dictionary
   
