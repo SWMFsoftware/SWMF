@@ -141,21 +141,25 @@ contains
 
     ! Normalizing the system so q/m == 1 in IPIC3D 
     ! 
-    ! Q_pic            Q_si * 10*C               [M]_cgs
-    ! -----  =   1  = ------------ *  --------------------------------
-    ! M_pic            M_si *1000      sqrt([M]_cgs * [L]_cgs)*[U]_cgs
+    ! Q_pic           Q_si * 10*C               [M]_cgs
+    ! -----  =  1  = ------------ *  --------------------------------
+    ! M_pic           M_si *1000      sqrt([M]_cgs * [L]_cgs)*[U]_cgs
     !
-    !  [L]_cgs  = {(Q_si *10C)/(M_si*1000)}^2 *[M]_cgs/([U]_cgs)^2
+    !  [L]_cgs  = {(Q_si *10C)/(M_si*1000)}^2 * [M]_cgs/([U]_cgs)^2
+    !  [L]_si = 0.01*[L]_cgs = 1e-6*C^2/(M_si/Q_si)^2 * 0.1*[M]_si/[U]_si^2
+    !                        = 1e-7*C^2*[M]_si/(M_si/Q_si * [U]_si)^2
 
     if(IsFirstCall .and. UseHallResist) then
 
-       IonMassPerChargeSi = IonMassPerCharge*No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
+       IonMassPerChargeSi = IonMassPerCharge* &
+            No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
 
        ! correcting charge when BATSRUS is using cgs system !!!
        if(TypeNormalization == 'NONE') &
             IonMassPerChargeSi = IonMassPerChargeSi*cLightSpeed
 
-       xUnitPicSi =1.0e-7*cLightSpeed**2*mUnitPicSi/((IonMassPerChargeSi*HallFactorMax*uUnitPicSi)**2)
+       xUnitPicSi = 1e-7*cLightSpeed**2*mUnitPicSi/ &
+            ((IonMassPerChargeSi*HallFactorMax*uUnitPicSi)**2)
 
        IsFirstCall = .false.
     end if
