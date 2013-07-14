@@ -1917,6 +1917,13 @@ contains
           ! Extract the Alfven wave energy density of the dominant wave
           WaveLarge = maxval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
 
+          ! We note that if anistropic pressure is correctly included in
+          ! the Alfven wave transport equation than the relationship between
+          ! the wave energy density and velocity perturbation squared changes
+          ! to: E_w = 0.5*rho*<\delta u^2> (1 + 1/A), where <.> is the
+          ! ensemble average and A = 1 - (Ppar - Pperp)/B^2 in normalized
+          ! units, resulting in a slightly different expression below.
+
           DampingPerp = 0.18*WaveLarge*sqrt(WaveLarge*B2/(2.0*Pperp)) &
                /IonMassPerCharge/max(CoronalHeating*LperpInvGyroRad**3,1e-30) &
                *exp(-C2*sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
