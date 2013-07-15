@@ -76,6 +76,16 @@ contains
     EnergyFluxIons = EnergyFluxIons * Q * &
          beta_je_iono(5,:,:) / (beta_je_iono(5,:,:)+0.01)
 
+    where (EnergyFluxDiff < 0.01) EnergyFluxDiff = 0.01
+    where (EnergyFluxMono < 0.01) EnergyFluxMono = 0.01
+    where (EnergyFluxWave < 0.01) EnergyFluxWave = 0.01
+    where (EnergyFluxIons < 0.01) EnergyFluxIons = 0.01
+
+    where (EnergyFluxDiff > 50.0) EnergyFluxDiff = 50.0
+    where (EnergyFluxMono > 50.0) EnergyFluxMono = 50.0
+    where (EnergyFluxWave > 50.0) EnergyFluxWave = 50.0
+    where (EnergyFluxIons > 50.0) EnergyFluxIons = 50.0
+
     call calc_flux(beta_jn_diff, sme, DeltaTone, DeltaTtwo, NumberFluxDiff)
     call calc_flux(beta_jn_mono, sme, DeltaTone, DeltaTtwo, NumberFluxMono)
     call calc_flux(beta_jn_wave, sme, DeltaTone, DeltaTtwo, NumberFluxWave)
@@ -89,6 +99,17 @@ contains
          beta_jn_wave(5,:,:) / (beta_jn_iono(5,:,:)+0.01)
     NumberFluxIons = NumberFluxIons * &
          beta_jn_iono(5,:,:) / (beta_jn_iono(5,:,:)+0.01)
+
+
+    where (NumberFluxDiff < 1.0) NumberFluxDiff = 1.0
+    where (NumberFluxMono < 1.0) NumberFluxMono = 1.0
+    where (NumberFluxWave < 1.0) NumberFluxWave = 1.0
+    where (NumberFluxIons < 1.0) NumberFluxIons = 1.0
+
+    where (NumberFluxDiff > 50e8) NumberFluxDiff = 50e8
+    where (NumberFluxMono > 50e8) NumberFluxMono = 50e8
+    where (NumberFluxWave > 50e8) NumberFluxWave = 50e8
+    where (NumberFluxIons > 50e8) NumberFluxIons = 50e8
 
     ElectronEnergyFlux = 0.01
     ElectronAverageEnergy = 0.1
