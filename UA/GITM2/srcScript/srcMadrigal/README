@@ -25,5 +25,9 @@ DownloadMadrigalTEC.py: A script to download global GPS TEC from the Madrigal
                         database at the MIT Haystack observatory.  Must be run
                         from the same directory as MadrigalData_Rout.py
 
-Changes:
+madrigal_info_rout.py: Contains routines to provide the user with information
+                       about available instruments, experiments, Madrigal
+                       sites, et cetera.
+
+Changes: AGB July 2013 - Added madrigal_info_rout.py
 _____________________________________________________________________________
