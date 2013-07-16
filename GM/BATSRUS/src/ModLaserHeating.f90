@@ -963,8 +963,8 @@ contains
     real:: yDistance, zDistance, rDistance, BeamAmplitude
     integer:: iRay, jRay, iBeam
     logical:: IsInside
-    integer:: iRayR, iRayPhi, iRayY, iRayZ
-    real:: PhiRay, Amplitude
+    integer:: iRayR, iRayPhi, iRayY, iRayZ, iRayRPrev
+    real:: PhiRay, Amplitude, RandomPhase
     !--------------------------------------------------------------------------
 
     do iBeam = 1, nBeam
@@ -987,6 +987,8 @@ contains
        zCrStart = SinPhi*(rCr + xStart*SinTheta/CosTheta)
 
        BeamAmplitude = BeamParam_II(AmplitudeRel_,iBeam)
+
+       iRayRPrev = 0
 
        do iRay = 1, nRayPerBeam
 
@@ -1019,7 +1021,16 @@ contains
                 iRayPhi = modulo(iRay - 1, nRayPhi + 1)
 
                 rDistance = rBeam*1.5*iRayR/nRayR
-                PhiRay = cPi*iRayPhi/nRayPhi
+                if(BeamParam_II(rCr_,iBeam) > 0.0)then
+                   if(iRayR /= iRayRPrev)then
+                      call random_number(RandomPhase)
+                      RandomPhase = RandomPhase*cPi
+                      iRayRPrev = iRayR
+                   end if
+                   PhiRay = cPi*iRayPhi/nRayPhi + RandomPhase
+                else
+                   PhiRay = cPi*iRayPhi/nRayPhi
+                end if
 
                 yDistance = rDistance*cos(PhiRay)
                 zDistance = rDistance*sin(PhiRay)
