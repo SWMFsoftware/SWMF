@@ -86,8 +86,6 @@ subroutine read_satellites(iError)
            read(iSatUnit,*,iostat=iError) iTime, Pos
         endif
 
-        if (iSat ==3) write(*,*) iTime, iError
-
         if (iError == 0) then
 
            IsFine = .true.
@@ -108,12 +106,6 @@ subroutine read_satellites(iError)
               else
                  nSatPos(iSat, nSatLines(iSat)) = &
                       nSatPos(iSat, nSatLines(iSat)) + 1
-
-                 if (iSat == 3) then 
-                    write(*,*) nSatLines(iSat), newtime
-                 endif
-
-
                  SatPos(iSat, 1, nSatPos(iSat,nSatLines(iSat)), &
                       nSatLines(iSat)) = Pos(1)
                  SatPos(iSat, 2, nSatPos(iSat, nSatLines(iSat)), &
