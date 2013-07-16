@@ -3,7 +3,11 @@
 !
 ! Author: Aaron Ridley, UMichigan
 !
-! Modified: Asad, UMichigan, Feb 2013 - Added data reading capability to allow
+! Modified: 
+!           Aaron, July 2013 - when you are not doing RCAC, then you shouldn't
+!                              try to read data.  This was causing only every 
+!                              other line to be read.
+!           Asad, UMichigan, Feb 2013 - Added data reading capability to allow
 !                                       data assimilation
 !           Angeline Burrell (AGB), UMichigan, Feb 2013 - Modified variable
 !                                                         names for consistency
@@ -21,6 +25,7 @@
 
 subroutine read_satellites(iError)
 
+  use ModRCMR, only: RCMRFlag
   use ModSatellites
   use ModGITM, only: iUp_, iEast_, iNorth_
   use ModInputs, only: iDebugLevel
@@ -75,7 +80,13 @@ subroutine read_satellites(iError)
      do while (iError == 0)
 
         ! Asad Note: Read in the time, 3D position, and a single data column
-        read(iSatUnit,*,iostat=iError) iTime, Pos, dat
+        if (RCMRFlag) then
+           read(iSatUnit,*,iostat=iError) iTime, Pos, dat
+        else
+           read(iSatUnit,*,iostat=iError) iTime, Pos
+        endif
+
+        if (iSat ==3) write(*,*) iTime, iError
 
         if (iError == 0) then
 
@@ -97,6 +108,12 @@ subroutine read_satellites(iError)
               else
                  nSatPos(iSat, nSatLines(iSat)) = &
                       nSatPos(iSat, nSatLines(iSat)) + 1
+
+                 if (iSat == 3) then 
+                    write(*,*) nSatLines(iSat), newtime
+                 endif
+
+
                  SatPos(iSat, 1, nSatPos(iSat,nSatLines(iSat)), &
                       nSatLines(iSat)) = Pos(1)
                  SatPos(iSat, 2, nSatPos(iSat, nSatLines(iSat)), &
@@ -170,12 +187,10 @@ subroutine move_satellites
   character (len=iCharLen_) :: cTmp
 
   iOut = -1
-
-  if (RCMRFlag) then
-     iOut = -2
-  end if
+  if (RCMRFlag) iOut = -2
 
   do iSat = 1, nSats
+
      !Asad added this so that each satellite would be updated in output()
      CurrSat = iSat
 

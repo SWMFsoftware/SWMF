@@ -124,6 +124,8 @@ subroutine output(dir, iBlock, iOutputType)
      LonFind = CurrentSatellitePosition(iEast_)
      call BlockLocationIndex(LonFind,LatFind,iBlock,iiLon,iiLat,rLon,rLat)
 
+     if (iiLon < 0 .or. iiLat < 0) return
+
      if(iOutputType == -2) then
         AltFind = CurrentSatellitePosition(iUp_)
         call BlockAltIndex(AltFind,iBlock,iiLon,iiLat,iiAlt,rAlt)
