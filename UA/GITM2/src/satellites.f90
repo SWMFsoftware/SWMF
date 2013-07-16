@@ -171,7 +171,7 @@ subroutine move_satellites
 
   iOut = -1
 
-  if(RCMRFlag .eqv. .true.) then
+  if (RCMRFlag) then
      iOut = -2
   end if
 
