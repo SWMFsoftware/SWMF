@@ -23,7 +23,7 @@ T			DoSaveRestart
 50000			DnSaveRestart
 -1			DtSaveRestart
 
-INCLUDE
+#INCLUDE
 RESTART.in
 
 CPUTIMEMAX
@@ -36,7 +36,7 @@ T
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
-INCLUDE
+#INCLUDE
 SC/restartIN/restart.H	
 
 #COORDSYSTEM
@@ -159,12 +159,12 @@ T			DoExtendTransitionRegion
 
 turn these off when restarting
 ---------------------------------------------------
-#GRIDGEOMETRY
+GRIDGEOMETRY
 spherical_genr
 SC/Param/grid_TR.dat
 
 ! Use a true sphere, so box is made much larger
-#GRID
+GRID
 1			nRootBlockX
 2			nRootBlockY
 1			nRootBlockZ
@@ -175,7 +175,7 @@ SC/Param/grid_TR.dat
 -100.0			zMin
  100.0			zMax
 
-#LIMITRADIUS
+LIMITRADIUS
 1.0			rMin
 24.0			rMax
 
@@ -282,7 +282,7 @@ T			DoSaveInitial
 
 #BEGIN_COMP IH -------------------------------------------------------------
 
-INCLUDE
+#INCLUDE
 IH/restartIN/restart.H
 
 #COORDSYSTEM
@@ -455,17 +455,6 @@ rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
 
 #END_COMP IH ---------------------------------------------------------------
-
-#COMPONENT
-IH			NameComp
-F			UseComp
-
-#STOP
-100			MaxIteration
--1.0			tSimulationMax
-
-End session: 1
-#RUN ##########################################################################
 Begin session: 2
 
 #BEGIN_COMP SC ----------------------------------------------------------------
@@ -500,7 +489,7 @@ MPI
 
 #STOP
 -1			MaxIter
-50			TimeMax
+100			TimeMax
 
 End session: 2
 #END ##########################################################################

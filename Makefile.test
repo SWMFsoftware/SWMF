@@ -717,6 +717,9 @@ test9:
 	@echo "test9_run..." >> test9_sc_chromo.diff
 	@echo "test9_run..." >> test9_ih.diff
 	${MAKE} test9_run
+	@echo "test9_restart..." >> test9_sc_chromo.diff
+	@echo "test9_restart..." >> test9_ih.diff
+	${MAKE} test9_restart
 	@echo "test9_check..." >> test9_sc_chromo.diff
 	@echo "test9_check..." >> test9_ih.diff
 	${MAKE} test9_check
@@ -724,8 +727,8 @@ test9:
 
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesHypPe
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe
 	./Config.pl -g=SC:6,4,4,1200,1200,IH:4,4,4,6800,1
 	${MAKE} SWMF
 	make PIDL
@@ -733,13 +736,18 @@ test9_compile:
 test9_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.ChromoIH ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.start.ChromoIH ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./Restart.pl
+
+test9_restart:
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.ChromoIH PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test9_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
