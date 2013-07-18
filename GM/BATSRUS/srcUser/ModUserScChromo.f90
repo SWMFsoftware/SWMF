@@ -185,7 +185,7 @@ contains
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          UnitN_, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
-         Ppar_, WaveFirst_, WaveLast_, Hyp_
+         Ppar_, WaveFirst_, WaveLast_, Hyp_, Ehot_
 
     integer, intent(in) :: iBlock
 
@@ -292,6 +292,7 @@ contains
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
        Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
        if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
+       if(Ehot_ > 1) State_VGB(Ehot_,i,j,k,iBlock) = 0.0
 
        if (Br >= 0.0) then
           State_VGB(WaveFirst_,i,j,k,iBlock) =  &
@@ -863,14 +864,17 @@ contains
          iteration_number
     use ModMultiFluid,   ONLY: MassIon_I
     use ModPhysics,      ONLY: OmegaBody, AverageIonCharge, UnitRho_, &
-         UnitP_, UnitB_, UnitU_, Si2No_V
+         UnitP_, UnitB_, UnitU_, Si2No_V, inv_gm1
     use ModVarIndexes,   ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, Bz_, p_, &
-         WaveFirst_, WaveLast_, Pe_, Ppar_, Hyp_
+         WaveFirst_, WaveLast_, Pe_, Ppar_, Hyp_, Ehot_
     use ModConst,        ONLY: cProtonMass
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         get_gamma_collisionless
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
     real :: NumDensIon, NumDensElectron, FullBr, Ewave, Pressure, Temperature
+    real :: Gamma
     real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D, rUnit_D
 
     ! Line-tied related variables
@@ -975,6 +979,17 @@ contains
     end if
 
     if(Hyp_>1) VarsGhostFace_V(Hyp_) = VarsTrueFace_V(Hyp_)
+
+    if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
+       call get_gamma_collisionless(FaceCoords_D, Gamma)
+       if(UseElectronPressure)then
+          VarsGhostFace_V(Ehot_) = &
+               VarsGhostFace_V(Pe_)*(1.0/(Gamma - 1) - inv_gm1)
+       else
+          VarsGhostFace_V(Ehot_) = &
+               VarsGhostFace_V(p_)*(1.0/(Gamma - 1) - inv_gm1)
+       end if
+    end if
 
   end subroutine user_set_face_boundary
   !============================================================================

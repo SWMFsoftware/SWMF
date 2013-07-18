@@ -3,6 +3,8 @@
 !==============================================================================
 module ModHeatConduction
 
+  use ModHeatFluxCollisionless, ONLY: UseHeatFluxRegion, &
+       rCollisional, rCollisionless
   use BATL_size, ONLY: nDim, MaxDim
 
   implicit none
@@ -37,10 +39,6 @@ module ModHeatConduction
   logical :: DoWeakFieldConduction = .false.
   real :: BmodifySi = 1.0e-7, DeltaBmodifySi = 1.0e-8 ! modify about 1 mG
   real :: Bmodify, DeltaBmodify
-
-  ! Parameters for heat flux region
-  logical :: UseHeatFluxRegion = .false.
-  real :: rCollisional, rCollisionless
 
   ! electron/ion temperature used for calculating heat flux
   real, allocatable :: Te_G(:,:,:), Ti_G(:,:,:)
@@ -122,13 +120,6 @@ contains
              call stop_mpi(NameSub//': unknown TypeIonHeatConduction = ' &
                   //TypeIonHeatConduction)
           end select
-       end if
-
-    case("#HEATFLUXREGION")
-       call read_var('UseHeatFluxRegion', UseHeatFluxRegion)
-       if(UseHeatFluxRegion)then
-          call read_var('rCollisional', rCollisional)
-          call read_var('rCollisionless', rCollisionless)
        end if
 
     case default

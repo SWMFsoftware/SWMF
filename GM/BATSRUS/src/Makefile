@@ -70,6 +70,7 @@ OBJECTS = \
 	ModGroundMagPerturb.o\
 	ModGmGeoindices.o \
 	ModHallResist.o\
+	ModHeatFluxCollisionless.o\
 	ModIO.o\
 	ModLaserHeating.o\
 	ModMain.o\

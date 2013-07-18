@@ -6,7 +6,8 @@ module ModVarIndexes
        Redefine2 => WaveFirst_, &
        Redefine3 => WaveLast_, &
        Redefine4 => Erad_, &
-       Redefine5 => Pe_
+       Redefine5 => Pe_, &
+       Redefine6 => Ehot_
 
   implicit none
 
@@ -21,7 +22,7 @@ module ModVarIndexes
 
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 2
-  integer, parameter :: nVar = 9 + nWave
+  integer, parameter :: nVar = 10 + nWave
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
@@ -35,7 +36,8 @@ module ModVarIndexes
        Bx_        = 5,                  &
        By_        = 6,                  &
        Bz_        = 7,                  &
-       WaveFirst_ = 8,                  &
+       Ehot_      = 8,                  &
+       WaveFirst_ = 9,                  &
        WaveLast_  = WaveFirst_+nWave-1, &
        Pe_        = nVar-1,             &
        p_         = nVar,               &
@@ -65,37 +67,39 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
+       0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
        1.0, & ! Pe_
        1.0, & ! p_
        1.0 /) ! Energy_
 
   ! The names of the variables used in i/o
-  character(len=3) :: NameVar_V(nVar+1) = (/ &
-       'Rho', & ! Rho_
-       'Mx ', & ! RhoUx_
-       'My ', & ! RhoUy_
-       'Mz ', & ! RhoUz_
-       'Bx ', & ! Bx_
-       'By ', & ! By_
-       'Bz ', & ! Bz_
-       ('I??', iWave=WaveFirst_,WaveLast_), &
-       'Pe ', & ! Pe_
-       'p  ', & ! p_
-       'e  ' /) ! Energy_
+  character(len=4) :: NameVar_V(nVar+1) = (/ &
+       'Rho ', & ! Rho_
+       'Mx  ', & ! RhoUx_
+       'My  ', & ! RhoUy_
+       'Mz  ', & ! RhoUz_
+       'Bx  ', & ! Bx_
+       'By  ', & ! By_
+       'Bz  ', & ! Bz_
+       'Ehot', & ! Ehot_
+       ('I?? ', iWave=WaveFirst_,WaveLast_), &
+       'Pe  ', & ! Pe_
+       'p   ', & ! p_
+       'e   ' /) ! Energy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz ew pe e'
+       'rho mx my mz bx by bz ehot ew pe e'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'rho ux uy uz bx by bz I(2) pe p'
+       'rho ux uy uz bx by bz ehot I(2) pe p'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
        '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", ' // &
-       '"Ew", "p_e", "p"'
+       '"Ehot", "Ew", "p_e", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
@@ -108,7 +112,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There are no extra scalars
-  integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
+  integer, parameter :: ScalarFirst_ = Ehot_, ScalarLast_ = Ehot_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.

@@ -771,7 +771,7 @@ test_chromo:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_chromo_compile:
-	./Config.pl -u=ScChromo -e=MhdWavesHyp -g=6,4,4,4000,4000
+	./Config.pl -u=ScChromo -e=MhdWaves -g=6,4,4,4000,4000
 	$(MAKE) BATSRUS
 	make PIDL
 

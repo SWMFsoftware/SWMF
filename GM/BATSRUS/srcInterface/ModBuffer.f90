@@ -75,14 +75,14 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModVarIndexes, ONLY: &
        Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
        WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
-       UseMultiSpecies, SignB_
+       UseMultiSpecies, SignB_, Ehot_
   use CON_coupler,   ONLY: &
        Grid_C, DoCoupleVar_V, iVar_V, nVarCouple,&
        Bfield_, ElectronPressure_, AnisoPressure_, Wave_,&
-       MultiFluid_, MultiSpecie_, &
+       MultiFluid_, MultiSpecie_, CollisionlessHeatFlux_, &
        RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
        BxCouple_, BzCouple_, PeCouple_, PparCouple_, &
-       WaveFirstCouple_, WaveLastCouple_, &
+       WaveFirstCouple_, WaveLastCouple_, EhotCouple_, &
        UseGlobalMpiCoupler
   use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
@@ -177,6 +177,10 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   else if(UseAnisoPressure)then
      State_V(Ppar_) = Buffer_V(iVar_V(PCouple_))*Si2No_V(UnitP_)
   end if
+
+  if(DoCoupleVar_V(CollisionlessHeatFlux_))then
+     State_V(Ehot_) = Buffer_V(iVar_V(EhotCouple_))*Si2No_V(UnitEnergyDens_)
+  endif
 
   if( .not. DoCoupleVar_V(MultiFluid_)  .and. nFluid > 1 .or. &
       .not. DoCoupleVar_V(MultiSpecie_) .and. UseMultiSpecies)then

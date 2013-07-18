@@ -98,24 +98,25 @@ module CON_coupler
   integer, public :: nVarCouple, nVarCouple_CC(MaxComp,MaxComp)
 
   ! no. of state variable groups for which coupling is implemented
-  integer,parameter,public     :: nCoupleVarGroup = 7
+  integer,parameter,public     :: nCoupleVarGroup = 8
 
   ! named indices for variable groups for coupling
   integer,parameter,public :: &
-       Bfield_               = 1, &
-       AnisoPressure_     = 2, &
-       ElectronPressure_  = 3, &
-       Wave_              = 4, &
-       MultiFluid_        = 5, &
-       MultiSpecie_       = 6, &
-       Material_          = 7
+       Bfield_                = 1, &
+       AnisoPressure_         = 2, &
+       ElectronPressure_      = 3, &
+       Wave_                  = 4, &
+       MultiFluid_            = 5, &
+       MultiSpecie_           = 6, &
+       Material_              = 7, &
+       CollisionlessHeatFlux_ = 8
 
   logical, public :: &
        DoCoupleVar_V(nCoupleVarGroup) = .false. , &
        DoCoupleVar_VCC(nCoupleVarGroup,MaxComp,MaxComp) = .false.
 
   ! no. of variable indices known to the coupler
-  integer,parameter, public  :: nVarIndexCouple = 12
+  integer,parameter, public  :: nVarIndexCouple = 13
 
   ! Fixed indices for mapping actual variable indices
   integer,parameter,public ::     &
@@ -130,7 +131,8 @@ module CON_coupler
        WaveFirstCouple_     = 9,  &
        WaveLastCouple_      = 10, &
        MaterialFirstCouple_ = 11, &
-       MaterialLastCouple_  = 12
+       MaterialLastCouple_  = 12, &
+       EhotCouple_          = 13
 
   ! vector storing the actual values of variable indices inside a
   ! coupled component 
@@ -554,7 +556,7 @@ contains
     integer      :: nPSource, nPTarget, nPCouple
     integer      :: nPparSource, nPparTarget, nPparCouple
     integer      :: nWaveSource, nWaveTarget, nWaveCouple 
-    integer      :: nMaterialSource, nMaterialTarget, nMaterialCouple      
+    integer      :: nMaterialSource, nMaterialTarget, nMaterialCouple
     logical      :: DoTest, DoTestMe
 
     character(len=*), parameter    :: NameSub =NameMod//'::set_couple_var_info'
@@ -691,6 +693,10 @@ contains
 
        case('Ppar')
           DoCoupleVar_V(AnisoPressure_) = index(NameVarTarget,' Ppar ') > 0
+
+       case('Ehot')
+          DoCoupleVar_V(CollisionlessHeatFlux_) = &
+               index(NameVarTarget,' Ehot ') > 0
 
        case('i01')
           ! Enumerated names for waves                                     
@@ -849,6 +855,12 @@ contains
        nVarCouple = iVar_V(MaterialLastCouple_)
     end if
 
+    if (DoCoupleVar_V(CollisionlessHeatFlux_)) then
+       nVarCouple = nVarCouple + 1
+       iVar_V(EhotCouple_) = nVarCouple
+    end if
+
+
     if (nVarCouple >  nVarSource) then
        write(*,*) 'SWMF Error: # of coupled variables exceeds nVarSource'
        call CON_stop(NameSub//' error in calculating nVarCouple')
@@ -882,6 +894,7 @@ contains
        write(*,*) 'Magnetic field: ', DoCoupleVar_V(Bfield_)
        write(*,*) 'Pe: ',             DoCoupleVar_V(ElectronPressure_)
        write(*,*) 'Ppar: ',           DoCoupleVar_V(AnisoPressure_)
+       write(*,*) 'Ehot: ',           DoCoupleVar_V(CollisionlessHeatFlux_)
        write(*,*) 'Waves: ',          DoCoupleVar_V(Wave_)
        write(*,*) 'Neutrals: ',       DoCoupleVar_V(MultiFluid_)
        write(*,*) 'Ions: ',           DoCoupleVar_V(MultiSpecie_)
@@ -897,6 +910,7 @@ contains
        write(*,*) 'P: ',        iVar_V(PCouple_)
        write(*,*) 'Pe: ',       iVar_V(PeCouple_)
        write(*,*) 'Ppar: ',     iVar_V(PparCouple_)
+       write(*,*) 'Ehot: ',     iVar_V(EhotCouple_)
        write(*,*) 'WaveFirst: ',iVar_V(WaveFirstCouple_)
        write(*,*) 'WaveLast: ', iVar_V(WaveLastCouple_)
        write(*,*) 'nVarCouple: ',nVarCouple

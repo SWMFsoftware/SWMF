@@ -9,6 +9,7 @@ module ModExtraVariables
   integer, parameter :: Lperp_ = 1
   integer, parameter :: SignB_ = 1
   integer, parameter :: Te0_   = 1
+  integer, parameter :: Ehot_ = 1
 
   ! The named index range for frequency bins in multi-group
   integer, parameter :: nWave = 1
