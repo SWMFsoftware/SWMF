@@ -1,0 +1,146 @@
+SHELL =/bin/sh
+
+DEFAULT_TARGET : LIB
+
+include Makefile.def
+include Makefile.conf
+
+install:
+	@echo "AMPS installed"
+
+distclean:
+	./Config.pl -uninstall
+
+allclean: cleansrc
+
+rundir:
+	mkdir -p ${RUNDIR}/PT
+	cd ${RUNDIR}/PT; mkdir restartIN restartOUT plots
+
+
+#CC=icpc    
+#CC=${COMPILE.c}
+
+#CC=/usr/local/mpi/bin/mpicxx
+
+#CC=mpicxx
+#CC=openmpicxx
+#CC=/opt/intel/bin/icpc 
+
+#CC=/opt/local/bin//openmpic++
+#CC=/left/Compiler/Intell/11.1/bin/mpicxx 
+
+#CC=/opt/local/bin/openmpicxx
+
+CC=/usr/local/openmpi-1.4.2--intel/bin/mpicxx 
+
+
+SOURCES=/Users/vtenishe/Debugger/eclipse-workspace/SOURCES
+CWD=/Users/vtenishe/SWMF/SWMF/PT/AMPS
+# /Users/vtenishe/Debugger/eclipse-workspace/pic-input-preprocess
+WSD=src
+
+SPICE=/Users/vtenishe/SPICE/Toolkit/cspice
+EXE=amps
+
+Lib=  -lm -lmpi 
+SHELL=/bin/bash
+
+MPIRUN=mpirun -np 4
+RUNDIR=run
+
+cleansrc:
+	cd ${WSD}/general; make clean
+	cd ${WSD}/meshAMR; make clean
+	cd ${WSD}/pic; make clean
+	cd ${WSD}/species; make clean
+	cd ${WSD}/models/exosphere; make clean
+	cd ${WSD}/main; make clean
+
+	cd srcInterface; rm -f *.o
+
+tar:
+	cd ../pic-tower/sources/general; rm -f *.o *.a
+	cd ../pic-tower/sources/dsmc; rm -f *.o *.a
+	tar -cvf sources.tar sources
+
+#Flags=-O3 -fno-inline -ffinite-math-only  -ftrapping-math -fsignaling-nans -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
+#Flags=-O3  -fasm-blocks -use-asm  -fprefetch-loop-arrays -funroll-loops -unroll=3  -mmmx  -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
+Flags=-g   -use-asm   -fprefetch-loop-arrays -funroll-loops -unroll=3    -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
+export Flags
+
+#Flags=-O3 -fasm-blocks  -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
+
+#IncludeList=-I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general  -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${CWD}
+IncludeList=-I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general  -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${CWD}
+
+.SUFFIXES: .cpp .o 
+.cpp.o: 
+	${CC} -c ${Flags} ${IncludeList} $< 
+ 
+LIB :
+	make cleansrc
+	cd ${WSD}/main; rm -f *.o *.a 
+
+	cd ${WSD}/general; make CC=${CC} Flags="${Flags}" 
+	cd ${WSD}/meshAMR; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
+	cd ${WSD}/pic; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
+	cd ${WSD}/species; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}"
+	cd ${WSD}/models/exosphere; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
+	cd ${WSD}/main; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}"
+
+	cd srcInterface; make LIB 
+	cd srcInterface; ${CC} -c ${Flags} ${IncludeList} amps2swmf.cpp 
+	cd srcInterface; ar -scr amps2swmf.a amps2swmf.o
+
+#	ar -src ../../lib/libPT.a ${WSD}/general/*.o ${WSD}/meshAMR/*.o ${WSD}/pic/*.o ${WSD}/species/*.o ${WSD}/models/exosphere/exosphere.a srcInterface/PT_wrapper.o srcInterface/amps2swmf.o 
+	ar -rc /Users/vtenishe/SWMF/SWMF/lib//libPT.a ${WSD}/general/general.a ${WSD}/meshAMR/mesh.a ${WSD}/main/mainlib.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a srcInterface/PT_wrapper.o srcInterface/amps2swmf.a 
+#srcInterface/amps2swmf.o 
+#srcInterface/amps2swmf.o
+
+amps:
+	@rm -f amps
+	make LIB
+	cd ${WSD}/main; make amps CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
+
+	${CC} -o ${EXE} src/general/general.a src/meshAMR/mesh.a src/main/main.a src/main/mainlib.a src/pic/amps.a src/species/species.a src/models/exosphere/exosphere.a  ${SPICE}/lib/cspice.a  ${Lib}
+	${CC} -o ${EXE} src/general/general.a src/meshAMR/mesh.a src/main/main.a src/main/mainlib.a src/pic/amps.a src/species/species.a src/models/exosphere/exosphere.a   ${Lib}
+
+TESTDIR = run_test
+
+test:
+	rm -f *.diff
+	-@($(MAKE) test_amps)
+	#@ls -l *.diff
+
+test_amps:
+	@echo "test_amps_compile..." > test_amps.diff
+	$(MAKE) test_amps_compile
+	@echo "test_amps_rundir..." >> test_amps.diff
+	$(MAKE) test_amps_rundir
+	@echo "test_amps_run..." >> test_amps.diff
+	$(MAKE) test_amps_run
+	@echo "test_amps_check..." >> test_amps.diff
+	$(MAKE) test_amps_check
+	#if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_amps_compile:
+	rm -rf ${TESTDIR}
+	$(MAKE) amps
+
+test_amps_rundir:
+	rm -rf ${TESTDIR}
+	mkdir -p ${TESTDIR}
+	mv amps ${TESTDIR}
+
+test_amps_run:
+	-@(cd ${TESTDIR}; ${MPIRUN} ./amps)
+
+test_amps_check:
+	-(./DiffNum.pl ${TESTDIR}/PT/plots/amps.dat output/test_amps.ref > test_amps.diff)
+	@ls -l test_amps.diff
+
+
+
+t:
+	@(cd ${RUNDIR}; perl ../DiffNum.pl amps.test.dat ../amps.test.reference.dat > amps.diff)
