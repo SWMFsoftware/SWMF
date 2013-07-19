@@ -51,6 +51,7 @@ test:
 	-@(${MAKE} test7)
 	-@(${MAKE} test8)
 	-@(${MAKE} test9)
+	-@(${MAKE} test10)
 	-@(${MAKE} test_check)
 
 # Note: the "cat ... > /dev/null" makes sure that file size are correct on nyx

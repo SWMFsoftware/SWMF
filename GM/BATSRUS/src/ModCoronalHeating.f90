@@ -965,8 +965,6 @@ contains
                      call read_var('KarmanTaylorBeta', KarmanTaylorBeta)
              end if
           else
-             call stop_mpi('The WKB Alfven wave approximation is ' &
-                  // 'not yet fully implemented')
              call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
              call read_var('Crefl', Crefl)
           end if
