@@ -185,7 +185,7 @@ contains
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
          UnitN_, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
-         Ppar_, WaveFirst_, WaveLast_, Hyp_, Ehot_
+         Ppar_, WaveFirst_, WaveLast_
 
     integer, intent(in) :: iBlock
 
@@ -291,8 +291,6 @@ contains
 
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
        Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
-       if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
-       if(Ehot_ > 1) State_VGB(Ehot_,i,j,k,iBlock) = 0.0
 
        if (Br >= 0.0) then
           State_VGB(WaveFirst_,i,j,k,iBlock) =  &
@@ -873,6 +871,7 @@ contains
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
+    integer :: iP
     real :: NumDensIon, NumDensElectron, FullBr, Ewave, Pressure, Temperature
     real :: Gamma
     real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D, rUnit_D
@@ -980,14 +979,14 @@ contains
 
     if(Hyp_>1) VarsGhostFace_V(Hyp_) = VarsTrueFace_V(Hyp_)
 
-    if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
-       call get_gamma_collisionless(FaceCoords_D, Gamma)
-       if(UseElectronPressure)then
+    if(Ehot_ > 1)then
+       if(UseHeatFluxCollisionless)then
+          call get_gamma_collisionless(FaceCoords_D, Gamma)
+          iP = p_; if(UseElectronPressure) iP = Pe_
           VarsGhostFace_V(Ehot_) = &
-               VarsGhostFace_V(Pe_)*(1.0/(Gamma - 1) - inv_gm1)
+               VarsGhostFace_V(iP)*(1.0/(Gamma - 1) - inv_gm1)
        else
-          VarsGhostFace_V(Ehot_) = &
-               VarsGhostFace_V(p_)*(1.0/(Gamma - 1) - inv_gm1)
+          VarsGhostFace_V(Ehot_) = 0.0
        end if
     end if
 

@@ -820,7 +820,7 @@ contains
     use ModMultiFluid,  ONLY: MassIon_I
     use ModPhysics,     ONLY: OmegaBody, AverageIonCharge
     use ModVarIndexes,  ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, &
-         WaveFirst_, WaveLast_, Pe_
+         WaveFirst_, WaveLast_, Pe_, Ehot_
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
@@ -885,6 +885,9 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
             + 2.0*OmegaBody*FaceCoords_D(x_)
     end if
+
+    ! No suprathermal electrons in this model
+    if(Ehot_ > 1) VarsGhostFace_V(Ehot_) = 0.0
 
   contains
 
