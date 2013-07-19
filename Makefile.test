@@ -30,6 +30,7 @@ test_help:
 	@echo "    test7                      (run IH-OH test)"
 	@echo "    test8		      (run multifluid GM-IM coupling test)"
 	@echo "    test9		      (run Chromo SC-IH coupling test)"
+	@echo "    test10		      (run 3T solar wind test)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 test:
@@ -759,6 +760,53 @@ test9_check:
 		output/test9/IH_log_n000000.log \
 		> test9_ih.diff)
 	ls -l test9*.diff
+
+### test10: Global Solar Wind Model with three temperatures and Alfven waves
+
+test10:
+	@echo "test10_compile..." > test10_sc.diff
+	@echo "test10_compile..." > test10_ih.diff
+	${MAKE} test10_compile
+	@echo "test10_rundir..." >> test10_sc.diff
+	@echo "test10_rundir..." >> test10_ih.diff
+	${MAKE} test10_rundir
+	@echo "test10_run..." >> test10_sc.diff
+	@echo "test10_run..." >> test10_ih.diff
+	${MAKE} test10_run
+	@echo "test10_check..." >> test10_sc.diff
+	@echo "test10_check..." >> test10_ih.diff
+	${MAKE} test10_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test10_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPeAnisoPi
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeAnisoPiSignB
+	./Config.pl -g=SC:6,4,4,1200,1200,IH:4,4,4,6800,1
+	${MAKE} SWMF
+	make PIDL
+
+test10_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.SCIH_3T ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
+
+test10_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+
+test10_check:
+	-(${SCRIPTDIR}/DiffNum.pl -b \
+	        ${TESTDIR}/RESULTS/SC/log_n000000.log \
+		output/test10/SC_log_n000000.log \
+		> test10_sc_3T.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b \
+	        ${TESTDIR}/RESULTS/IH/log_n000000.log \
+		output/test10/IH_log_n000000.log \
+                > test10_ih_3T.diff)
+		ls -l test10*.diff
 
 ### ESMF test ###
 #
