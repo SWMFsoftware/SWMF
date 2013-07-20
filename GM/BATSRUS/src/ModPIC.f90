@@ -139,27 +139,37 @@ contains
     character(len=*), parameter:: NameSub = 'pic_save_region'
     !-------------------------------------------------------------------------
 
-    ! Normalizing the system so q/m == 1 in IPIC3D 
+    ! Normalizing the system so q/(mc) == 1 in IPIC3D.
     ! 
-    ! Q_pic           Q_si * 10*C               [M]_cgs
-    ! -----  =  1  = ------------ *  --------------------------------
-    ! M_pic           M_si *1000      sqrt([M]_cgs * [L]_cgs)*[U]_cgs
+    ! In CGS units the Hall speed is uH_CGS = j/(nq) = c/4pi curlB m/(q rho)
     !
-    !  [L]_cgs  = {(Q_si *10C)/(M_si*1000)}^2 * [M]_cgs/([U]_cgs)^2
-    !  [L]_si = 0.01*[L]_cgs = 1e-6*C^2/(M_si/Q_si)^2 * 0.1*[M]_si/[U]_si^2
-    !                        = 1e-7*C^2*[M]_si/(M_si/Q_si * [U]_si)^2
+    ! In SI  units the Hall speed is uH_SI  = j/nq = curlB/mu0 m/(q rho)
+    !
+    ! The CGS dimension of curlB/(uH rho) is 
+    !   1/[L] * [U]sqrt[RHO]/([U][RHO]) = 1/([L] sqrt[RHO]) = sqrt[L]/sqrt[M]
+    ! which can be used to scale the PIC units to true CGS units.
+    !
+    ! CGS->SI: 1kg=1000g, 1m=100cm, 1T=10000G and mu0 = 4pi*1e-7
+    !
+    ! 1  = q_PIC/(m_PIC c_pic) 
+    !    = curlB_PIC /  (4pi uH_PIC rho_PIC)     
+    !    = curlB_CGS /  (4pi uH_CGS rho_CGS) * sqrt( [M]_CGS / [L]_CGS )
+    !    = curlB_SI*100/(4pi uH_SI*100 rho_SI*0.001) 
+    !                                        * sqrt{ [M]_SI*1000 / ([L]_SI*100)
+    !    = 10^3.5/4pi * curlB_SI/(uH_SI rho_SI) * sqrt( [M]_SI / [L]_SI )
+    !    = 10^3.5/4pi * mu0_SI*q_SI/m_SI        * sqrt( [M]_SI / [L]_SI )
+    !    = 10^(-3.5)  *        q_SI/m_SI        * sqrt( [M]_SI / [L]_SI )
+    ! 
+    ! Then we can solve for the distance unit
+    ! 
+    !   [L]_SI = 10^(-7) * [M]_SI * (q_SI/m_SI)^2 
 
     if(IsFirstCall .and. UseHallResist) then
 
        IonMassPerChargeSi = IonMassPerCharge* &
             No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
 
-       ! correcting charge when BATSRUS is using cgs system !!!
-       if(TypeNormalization == 'NONE') &
-            IonMassPerChargeSi = IonMassPerChargeSi*cLightSpeed
-
-       xUnitPicSi = 1e-7*cLightSpeed**2*mUnitPicSi/ &
-            ((IonMassPerChargeSi*HallFactorMax*uUnitPicSi)**2)
+       xUnitPicSi = 1e-7*mUnitPicSi / (IonMassPerChargeSi*HallFactorMax)**2
 
        IsFirstCall = .false.
     end if
