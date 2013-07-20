@@ -1407,7 +1407,9 @@ contains
        else
           FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end if
-       if(State_VGB(SignB_,i,j,k,iBlock) < 0.0) FullB_D = -FullB_D
+       if(SignB_>1 .and. DoThinCurrentSheet)then
+          if(State_VGB(SignB_,i,j,k,iBlock) < 0.0) FullB_D = -FullB_D
+       end if
        FullB = sqrt(sum(FullB_D**2))
 
        Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
