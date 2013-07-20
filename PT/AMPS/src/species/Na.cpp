@@ -27,6 +27,49 @@
 #include "constants.h"
 #include "Na.h"
 
+
+double SodiumGfactor__D1D2__Combi_1997_icarus(double HeliocentricVelocity,double HeliocentricDistance) {
+
+  static const int SodiumGfactor__D1D2_TableLength__Combi_1997_icarus=101;
+  static const double SodiumGfactor__D1D2_HeliocenticVelocity_Min__Combi_1997_icarus=-50.0E3;
+  static const double SodiumGfactor__D1D2_HeliocenticVelocity_Max__Combi_1997_icarus=50.0E3;
+  static const double SodiumGfactor__D1D2_dHeliocenticVelocity__Combi_1997_icarus=1.0E3;
+
+  static const double SodiumGfactor__D1D2_Table__Combi_1997_icarus[SodiumGfactor__D1D2_TableLength__Combi_1997_icarus]={
+      14.55069, 14.55069, 14.53236, 14.53236, 14.53236, 14.53236, 14.53236, 14.53236, 14.53236, 14.53236,
+      14.33072, 14.20241, 14.12909, 14.05576, 13.98244, 13.85413, 13.74414, 13.63416, 13.50584, 13.34087,
+      13.10257, 12.79095, 12.47933, 12.31435, 12.16770, 12.02106, 11.91108, 11.81942, 11.72777, 11.54446,
+      11.30616, 11.03120, 10.75624, 10.40796, 10.09634, 9.74806, 9.38144, 8.90485, 8.50157, 8.09830,
+      7.69502, 7.16343, 6.48520, 5.77030, 4.57881, 3.24067, 2.25081, 1.33428, 1.04099, 0.87601,
+      0.80269, 0.85768, 1.05932, 1.46259, 2.23248, 3.38731, 4.28552, 5.45868, 6.26523, 6.90680,
+      7.43839, 7.87833, 8.28160, 8.66655, 9.03316, 9.32645, 9.47310, 9.67473, 10.16966, 10.57294,
+      11.03120, 11.30616, 11.61779, 11.85608, 12.09438, 12.29602, 12.46099, 12.68096, 12.88260, 12.97426,
+      13.13923, 13.34087, 13.43252, 13.59750, 13.70748, 13.79914, 13.87245, 14.00077, 14.09243, 14.12909,
+      14.16575, 14.25740, 14.49570, 14.49570, 14.49570, 14.49570, 14.49570, 14.49570, 14.49570, 14.49570,
+      14.49570};
+
+  double res=0.0;
+
+  if (HeliocentricVelocity<=SodiumGfactor__D1D2_HeliocenticVelocity_Min__Combi_1997_icarus) res=SodiumGfactor__D1D2_Table__Combi_1997_icarus[0];
+  else if (HeliocentricVelocity>=SodiumGfactor__D1D2_HeliocenticVelocity_Max__Combi_1997_icarus) res=SodiumGfactor__D1D2_Table__Combi_1997_icarus[SodiumGfactor__D1D2_TableLength__Combi_1997_icarus-1];
+  else {
+    int level;
+    double x;
+
+    x=(HeliocentricVelocity-SodiumGfactor__D1D2_HeliocenticVelocity_Min__Combi_1997_icarus)/SodiumGfactor__D1D2_dHeliocenticVelocity__Combi_1997_icarus;
+    level=(int)x;
+    x-=level;
+
+    res=SodiumGfactor__D1D2_Table__Combi_1997_icarus[level]+x*(SodiumGfactor__D1D2_Table__Combi_1997_icarus[level+1]-SodiumGfactor__D1D2_Table__Combi_1997_icarus[level]);
+  }
+
+  //scale g-factor to the required heliocentric distance
+  res*=pow(149598000000.0/HeliocentricDistance,2);
+
+  return res;
+
+}
+
 //the solar dariation pressure as a function of heliocentric distrance and velocty
 //taken from Combi-1997-icarus.pdf
 

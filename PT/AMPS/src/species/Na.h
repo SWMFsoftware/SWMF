@@ -15,6 +15,7 @@
 //the acceleration is in teh direction out of the sun
 
 double SodiumRadiationPressureAcceleration__Combi_1997_icarus(double HeliocentricVelocity,double HeliocentricDistance);
+double SodiumGfactor__D1D2__Combi_1997_icarus(double HeliocentricVelocity,double HeliocentricDistance);
 
 double SodiumGfactor__5891_58A__Killen_2009_AJSS(double HeliocentricVelocity,double HeliocentricDistance);
 double SodiumGfactor__5897_56A__Killen_2009_AJSS(double HeliocentricVelocity,double HeliocentricDistance);
