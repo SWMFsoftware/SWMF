@@ -802,11 +802,11 @@ test10_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b \
 	        ${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test10/SC_log_n000000.log \
-		> test10_sc_3T.diff)
+		> test10_sc.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b \
 	        ${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test10/IH_log_n000000.log \
-                > test10_ih_3T.diff)
+                > test10_ih.diff)
 		ls -l test10*.diff
 
 ### ESMF test ###
