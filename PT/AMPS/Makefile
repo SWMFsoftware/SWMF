@@ -17,22 +17,17 @@ rundir:
 	mkdir -p ${RUNDIR}/PT
 	cd ${RUNDIR}/PT; mkdir restartIN restartOUT plots
 
-
-#CC=icpc    
+CC=mpicxx
 #CC=${COMPILE.c}
 
-#CC=/usr/local/mpi/bin/mpicxx
-
-#CC=mpicxx
+#CC=icpc    
 #CC=openmpicxx
+#CC=/usr/local/mpi/bin/mpicxx
 #CC=/opt/intel/bin/icpc 
-
 #CC=/opt/local/bin//openmpic++
 #CC=/left/Compiler/Intell/11.1/bin/mpicxx 
-
 #CC=/opt/local/bin/openmpicxx
-
-CC=/usr/local/openmpi-1.4.2--intel/bin/mpicxx 
+#CC=/usr/local/openmpi-1.4.2--intel/bin/mpicxx 
 
 
 SOURCES=/Users/vtenishe/Debugger/eclipse-workspace/SOURCES
