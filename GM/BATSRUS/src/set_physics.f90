@@ -688,4 +688,12 @@ subroutine init_mhd_variables
      NameUnitUserIdl_V(SignB_) = '1'
   end if
 
+  if(Ehot_ > 1)then
+     ! Set the unit and unit name for the extra internal energy due
+     ! to suprathermal electrons
+     UnitUser_V(Ehot_)        = No2Io_V(UnitEnergyDens_)
+     NameUnitUserTec_V(Ehot_) = NameTecUnit_V(UnitEnergyDens_)
+     NameUnitUserIdl_V(Ehot_) = NameIdlUnit_V(UnitEnergyDens_)
+  end if
+
 end subroutine init_mhd_variables

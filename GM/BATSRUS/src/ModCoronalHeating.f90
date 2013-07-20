@@ -1356,7 +1356,7 @@ contains
          RightState_VX, RightState_VY, RightState_VZ
     use ModB0, ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
     use ModMain, ONLY: UseB0
-    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, Lperp_, SignB_
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, Lperp_
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), &
@@ -1406,9 +1406,6 @@ contains
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
        else
           FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-       end if
-       if(SignB_>1 .and. DoThinCurrentSheet)then
-          if(State_VGB(SignB_,i,j,k,iBlock) < 0.0) FullB_D = -FullB_D
        end if
        FullB = sqrt(sum(FullB_D**2))
 
