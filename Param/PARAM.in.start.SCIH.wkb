@@ -136,6 +136,10 @@ F                       UseNonWkbAlfvenWaves
 7.5e4                   LperpTimesSqrtBSi
 0.01			Crefl
 
+#ANISOTROPICPRESSURE
+F			UseConstantTau
+1e5			TauGlobalSi
+
 #RESISTIVITY
 T			UseResistivity
 user			TypeResistivity
@@ -294,24 +298,24 @@ x=0 VAR idl		StringPlot
 5000			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq
 g rbody
 y=0 VAR idl		StringPlot
 5000			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq
 g rbody
 z=0 VAR idl		StringPlot
 5000			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq
 g rbody
 3d VAR tec
 60000			DnSavePlot
 -1.			DtSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq
 g rbody
 
 #SAVEINITIAL
@@ -425,6 +429,10 @@ F                       UseNonWkbAlfvenWaves
 7.5e4                   LperpTimesSqrtBSi
 0.01			Crefl
 
+#ANISOTROPICPRESSURE
+F			UseConstantTau
+1e5			TauGlobalSi
+
 #RESISTIVITY
 T                       UseResistivity
 user                    TypeResistivity
@@ -473,24 +481,24 @@ x=0 VAR idl		StringPlot
 500 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq sign
 g rbody
 y=0 VAR idl		StringPlot
 500			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq sign
 g rbody
 z=0 VAR idl		StringPlot
 500 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq sign
 g rbody
 3d VAR tec		StringPlot
 4000			DnSavePlot
 -1.			DtSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq sign
 g rbody
 
 #END_COMP IH ---------------------------------------------------------------
