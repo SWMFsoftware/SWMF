@@ -34,7 +34,7 @@ contains
          UseNonWkbAlfvenWaves, UseTransverseTurbulence, SigmaD
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
-         apportion_coronal_heating, KarmanTaylorBeta, &
+         apportion_coronal_heating, UseTurbulentCascade, KarmanTaylorBeta, &
          UseScaledCorrelationLength, turbulence_mixing
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
@@ -325,9 +325,14 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseElectronPressure)then
-             call apportion_coronal_heating(i, j, k, iBlock, &
-                  CoronalHeating_C(i,j,k), QeFraction, QparFraction)
-
+             if(UseTurbulentCascade .and. DoExtendTransitionRegion)then
+                call apportion_coronal_heating(i, j, k, iBlock, &
+                     CoronalHeating_C(i,j,k)*extension_factor(TeSi_C(i,j,k)), &
+                     QeFraction, QparFraction)
+             else
+                call apportion_coronal_heating(i, j, k, iBlock, &
+                     CoronalHeating_C(i,j,k), QeFraction, QparFraction)
+             end if
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1*(1.0 - QeFraction)
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
