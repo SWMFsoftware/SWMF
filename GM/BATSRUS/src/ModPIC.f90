@@ -51,7 +51,6 @@ contains
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
-       call read_var('mUnitPicSi', mUnitPicSi)
 
     case("#PICREGION")
        call read_var('nPicRegion', nRegionPic)
@@ -164,12 +163,19 @@ contains
     ! 
     !   [L]_SI = 10^(-7) * [M]_SI * (q_SI/m_SI)^2 
 
-    if(IsFirstCall .and. UseHallResist) then
+    if(IsFirstCall) then
 
        IonMassPerChargeSi = IonMassPerCharge* &
             No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
 
-       xUnitPicSi = 1e-7*mUnitPicSi / (IonMassPerChargeSi*HallFactorMax)**2
+       ! xUnitPicSi = 1e-7*mUnitPicSi / (IonMassPerChargeSi*HallFactorMax)**2
+
+       mUnitPicSi = 1e7*xUnitPicSi * (IonMassPerChargeSi*HallFactorMax)**2
+
+       if(iProc==0)then
+          write(*,*) NameSub,': IonMassPerChargeSi=', IonMassPerChargeSi
+          write(*,*) NameSub,': xUnitPicSi = ',xUnitPicSi
+       end if
 
        IsFirstCall = .false.
     end if
