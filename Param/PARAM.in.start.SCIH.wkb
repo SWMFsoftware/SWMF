@@ -133,8 +133,8 @@ SOLARDIPOLE
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
-7.5e4                   LperpTimesSqrtBSi
-0.01			Crefl
+5.0e4                   LperpTimesSqrtBSi
+0.04			Crefl
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
@@ -426,8 +426,8 @@ F			UseUserUpdateStates
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
-7.5e4                   LperpTimesSqrtBSi
-0.01			Crefl
+5.0e4                   LperpTimesSqrtBSi
+0.04			Crefl
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
