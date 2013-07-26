@@ -47,8 +47,8 @@ T                       UseUpdateCheck
 
 #SHOCKTUBE
 8.0			rho (left state)
-7.1447			Ux
--4.125			Uy
+8.24999			Ux
+0.0			Uy
 0.0			Uz
 116.5			P
 1.4			rho (right state)
