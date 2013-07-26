@@ -59,7 +59,7 @@ T                       UseUpdateCheck
 
 #SHOCKPOSITION
 1.0/6.0			ShockPosition
--1.0/1.73		ShockSlope
+-1.0/1.73205		ShockSlope
 
 #USERINPUTBEGIN ----------------
 
