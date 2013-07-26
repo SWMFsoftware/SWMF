@@ -1012,7 +1012,7 @@ contains
 
     use ModMain,     ONLY: Time_Simulation, &
          TypeCoordSystem
-    use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB
+    use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB,p_
     use ModGeometry, ONLY: Xyz_DGB, x1, x2, y1, y2, z1, z2, &
          r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
     use ModVarIndexes
@@ -1033,16 +1033,30 @@ contains
 
     ! variables for shockramp
     real   :: x0
+    real   :: SinSlope, CosSlope
+    real   :: ShockRampLeft_I(Rho_: p_), ShockRampRight_I(Rho_: p_)
+    real   :: cOne = 1.0
     !-------------------------------------------------------------------------
     !    DoTest = iBlock == BlkTest
     IsFound = .true.
 
     if (DoShockramp) then
+       SinSlope=ShockSlope/sqrt(cOne+ShockSlope**2)
+       CosSlope=      cOne/sqrt(cOne+ShockSlope**2)
+
+       ShockRampLeft_I = ShockLeftState_V(Rho_:p_)
+       !Project the velocity in the shock front reference frame into the frame 
+       !for computation. 
+       ShockRampLeft_I(Ux_) = ShockLeftState_V(Ux_)*CosSlope 
+       ShockRampLeft_I(Uy_) = ShockLeftState_V(Ux_)*SinSlope
+
+       !The velocity is zero in the right of shock. 
+       ShockRampRight_I = ShockRightState_V(Rho_:p_)
        select case (iSide)
        case(1)
           ! inflow BC for x=0
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
-             State_VGB(:,i,j,k,iBlock) = ShockLeftState_V
+             State_VGB(:,i,j,k,iBlock) = ShockRampLeft_I
              ! convert velocity into momentum.
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                   State_VGB(Ux_:Uz_,i,j,k,iBlock)&
@@ -1052,7 +1066,7 @@ contains
           do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI
              if (Xyz_DGB(x_,i,j,k,iBlock) <=  ShockPosition) then
                 ! upstream (fixed) BC for the bottom ahead of "ShockPosition"
-                State_VGB(:,i,j,k,iBlock) = ShockLeftState_V
+                State_VGB(:,i,j,k,iBlock) = ShockRampLeft_I
                 State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                      State_VGB(Ux_:Uz_,i,j,k,iBlock) &
                      *State_VGB(Rho_,i,j,k,iBlock)
@@ -1071,10 +1085,10 @@ contains
           do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI
              if (Xyz_DGB(x_,i,j,k,iBlock) <= x0) then
                 ! Upstream condition
-                State_VGB(:,i,j,k,iBlock) = ShockLeftState_V
+                State_VGB(:,i,j,k,iBlock) = ShockRampLeft_I
              else
                 ! Downstream condition
-                State_VGB(:,i,j,k,iBlock) = ShockRightState_V
+                State_VGB(:,i,j,k,iBlock) = ShockRampRight_I
              end if
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                   State_VGB(Ux_:Uz_,i,j,k,iBlock)&
