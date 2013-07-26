@@ -363,7 +363,13 @@ contains
     end if
 
     if( IsMhd .and. &
-         ((nStage==1.and..not.time_accurate).or.(nStage>1.and.iStage==1)))then
+         ((nStage==1.and..not.time_accurate) &
+         .or.(nStage==2.and.iStage==1.and.UseHalfStep)))then
+
+       ! A desparate attempt to maintain positivity by adding dB^2 to the energy
+       ! This is fine for steady state, and is 2nd order accurate 
+       ! for half+full step method. But it cannot be used for RK schemes!
+
        do k=1,nK; do j=1,nJ; do i=1,nI
           Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) + cHalf*( &
                Source_VC(Bx_,i,j,k)**2 + &
