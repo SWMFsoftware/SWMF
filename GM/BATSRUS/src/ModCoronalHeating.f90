@@ -1373,7 +1373,7 @@ contains
 
     ! Low-frequency cascade due to small-scale nonlinearities
 
-    if(UseNonWkbAlfvenWaves)then
+    if(UseNonWkbAlfvenWaves .or. UseCounterPropagatingWave)then
 
        if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
           ! Note that Lperp is multiplied with the density
@@ -1394,22 +1394,6 @@ contains
        WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock)&
             *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))
 
-       WaveDissipation_V(WaveLast_) = Coef*State_VGB(WaveLast_,i,j,k,iBlock) &
-            *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock))
-
-    elseif(UseCounterPropagatingWave)then
-
-       if(UseB0)then
-          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
-       else
-          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-       end if
-       FullB = sqrt(sum(FullB_D**2))
-
-       Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))*2.0/LperpTimesSqrtB
-
-       WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock)&
-            *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))
        WaveDissipation_V(WaveLast_) = Coef*State_VGB(WaveLast_,i,j,k,iBlock) &
             *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock))
 
