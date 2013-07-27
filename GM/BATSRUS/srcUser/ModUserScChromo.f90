@@ -509,7 +509,7 @@ contains
          get_tesi_c, TeSi_C
     use ModConst,      ONLY: rSun
     use ModCoronalHeating, ONLY: get_block_heating, CoronalHeating_C, &
-         apportion_coronal_heating
+         apportion_coronal_heating, IsNewBlockAlfven
     use ModMain,       ONLY: UseB0, UseRotatingFrame
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
          UnitX_, UnitU_, UnitB_, UnitT_, OmegaBody
@@ -578,6 +578,7 @@ contains
        ! some of the heating terms need face values
        call set_b0_face(iBlock)
        call calc_face_value(.false., iBlock)
+       IsNewBlockAlfven = .true.
        call get_block_heating(iBlock)
        call get_tesi_c(iBlock, TeSi_C)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI

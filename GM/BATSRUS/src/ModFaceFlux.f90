@@ -44,7 +44,7 @@ module ModFaceFlux
   use ModVarIndexes
   use ModMultiFluid
   use ModNumConst
-
+  use ModCoronalHeating, ONLY: IsNewBlockAlfven
   use ModViscosity, ONLY: UseViscosity, IsNewBlockViscosity, Visco_DDI,&
        get_viscosity_tensor 
 
@@ -394,6 +394,7 @@ contains
     IsNewBlockHeatCond     = .true.
     IsNewBlockIonHeatCond  = .true.
     IsNewBlockViscosity    = .true.
+    IsNewBlockAlfven       = .true.
 
     DoRadDiffusion      = UseRadDiffusion .and.&
          .not. (index(TypeSemiImplicit,'radiation')>0 .or.&

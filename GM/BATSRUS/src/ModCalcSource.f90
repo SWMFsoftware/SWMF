@@ -288,8 +288,8 @@ contains
                      sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))
              end do; end do; end do
           end if
-       else ! WKB approach
-          if(UseCounterPropagatingWave) call get_wave_reflection(iBlock)
+       elseif(UseCounterPropagatingWave)then
+          call get_wave_reflection(iBlock)
        end if ! UseNonWkbAlfvenWaves
     end if
 

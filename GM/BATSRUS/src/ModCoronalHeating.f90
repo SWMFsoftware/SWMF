@@ -882,7 +882,7 @@ module ModCoronalHeating
 
   ! Alfven wave dissipation
   logical :: UseAlfvenWaveDissipation = .false.
-  logical :: UseCounterPropagatingWave
+  logical :: UseCounterPropagatingWave = .false.
   real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real    :: LperpTimesSqrtB
   real    :: Crefl = 0.04
@@ -931,6 +931,7 @@ contains
        UseExponentialHeating= .false.
        UseAlfvenWaveDissipation = .false.
        UseTurbulentCascade = .false.
+       UseCounterPropagatingWave = .false.
        select case(TypeCoronalHeating)
        case('F','none')
           UseCoronalHeating = .false.
@@ -1188,7 +1189,6 @@ contains
     if(UseAlfvenWaveDissipation)then
 
        if(UseTurbulentCascade)then
-          IsNewBlockAlfven = .true.
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              call turbulent_cascade(i, j, k, iBlock, &
                   WaveDissipation_VC(:,i,j,k), CoronalHeating_C(i,j,k))
