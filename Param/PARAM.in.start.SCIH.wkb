@@ -133,6 +133,7 @@ SOLARDIPOLE
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
+F			UseCounterPropagatingWave
 5.0e4                   LperpTimesSqrtBSi
 0.04			Crefl
 
@@ -426,6 +427,7 @@ F			UseUserUpdateStates
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
+F			UseCounterPropagatingWave
 5.0e4                   LperpTimesSqrtBSi
 0.04			Crefl
 
@@ -454,7 +456,7 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative
 
 #TIMESTEPPING
 2			nStage
@@ -481,24 +483,24 @@ x=0 VAR idl		StringPlot
 500 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq sign
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qheat qebyq qparbyq sign
 g rbody
 y=0 VAR idl		StringPlot
 500			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq sign
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qheat qebyq qparbyq sign
 g rbody
 z=0 VAR idl		StringPlot
 500 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq sign
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qheat qebyq qparbyq sign
 g rbody
 3d VAR tec		StringPlot
 4000			DnSavePlot
 -1.			DtSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qrad qheat qebyq qparbyq sign
+rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qheat qebyq qparbyq sign
 g rbody
 
 #END_COMP IH ---------------------------------------------------------------

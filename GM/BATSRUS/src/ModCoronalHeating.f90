@@ -882,6 +882,7 @@ module ModCoronalHeating
 
   ! Alfven wave dissipation
   logical :: UseAlfvenWaveDissipation = .false.
+  logical :: UseCounterPropagatingWave
   real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real    :: LperpTimesSqrtB
   real    :: Crefl = 0.04
@@ -965,6 +966,8 @@ contains
                      call read_var('KarmanTaylorBeta', KarmanTaylorBeta)
              end if
           else
+             call read_var('UseCounterPropagatingWave', &
+                  UseCounterPropagatingWave)
              call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
              call read_var('Crefl', Crefl)
           end if
@@ -1347,14 +1350,9 @@ contains
   subroutine turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
        CoronalHeating)
 
-    use BATL_lib, ONLY: IsCartesianGrid, x_, y_, z_, &
-         CellSize_DB, FaceNormal_DDFB, CellVolume_GB
-    use BATL_size, ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         nI, j0_, nJp1_, k0_, nKp1_
-    use ModAdvance, ONLY: State_VGB, &
-         LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
-         RightState_VX, RightState_VY, RightState_VZ
-    use ModB0, ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
+    use BATL_size, ONLY: nDim
+    use ModAdvance, ONLY: State_VGB
+    use ModB0, ONLY: B0_DGB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, Lperp_
 
@@ -1368,7 +1366,6 @@ contains
     real :: EwavePlus, EwaveMinus, ReflectionPerLperp
 
     real :: GradAlfven_D(nDim)
-    real, save :: Alfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
 
     character(len=*), parameter :: &
          NameSub = 'ModCoronalHeating::turbulent_cascade'
@@ -1400,6 +1397,22 @@ contains
        WaveDissipation_V(WaveLast_) = Coef*State_VGB(WaveLast_,i,j,k,iBlock) &
             *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock))
 
+    elseif(UseCounterPropagatingWave)then
+
+       if(UseB0)then
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       else
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+       FullB = sqrt(sum(FullB_D**2))
+
+       Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))*2.0/LperpTimesSqrtB
+
+       WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock)&
+            *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))
+       WaveDissipation_V(WaveLast_) = Coef*State_VGB(WaveLast_,i,j,k,iBlock) &
+            *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock))
+
     else
 
        if(UseB0)then
@@ -1414,57 +1427,143 @@ contains
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-       if(IsNewBlockAlfven)then
-          call get_alfven_speed
-
-          IsNewBlockAlfven = .false.
-       end if
-
-       if(IsCartesianGrid)then
-          GradAlfven_D(x_) = 1.0/CellSize_DB(x_,iBlock) &
-               *(Alfven_FD(i+1,j,k,x_) - Alfven_FD(i,j,k,x_))
-          if(nJ > 1) GradAlfven_D(y_) = 1.0/CellSize_DB(y_,iBlock) &
-               *(Alfven_FD(i,j+1,k,y_) - Alfven_FD(i,j,k,y_))
-          if(nK > 1) GradAlfven_D(z_) = 1.0/CellSize_DB(z_,iBlock) &
-               *(Alfven_FD(i,j,k+1,z_) - Alfven_FD(i,j,k,z_))
-       else
-          GradAlfven_D = &
-               Alfven_FD(i+1,j,k,x_)*FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
-               - Alfven_FD(i,j,k,x_)*FaceNormal_DDFB(:,x_,i,j,k,iBlock)
-          if(nJ > 1) GradAlfven_D = GradAlfven_D + &
-               Alfven_FD(i,j+1,k,y_)*FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
-               - Alfven_FD(i,j,k,y_)*FaceNormal_DDFB(:,y_,i,j,k,iBlock)
-          if(nK > 1) GradAlfven_D = GradAlfven_D + &
-               Alfven_FD(i,j,k+1,z_)*FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
-               - Alfven_FD(i,j,k,z_)*FaceNormal_DDFB(:,z_,i,j,k,iBlock)
-
-          GradAlfven_D = GradAlfven_D/CellVolume_GB(i,j,k,iBlock)
-       end if
+       call get_grad_alfven_speed(i, j, k, iBlock, GradAlfven_D)
 
        ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradAlfven_D)) &
             /max(FullB, 1e-15)
 
-       ! Correct at top of closed field lines, where turbulence is balanced
-       WaveDissipation_V(WaveFirst_) = &
-            EwavePlus*max( ReflectionPerLperp, 2.0*Coef*sqrt(EwaveMinus) )
+       WaveDissipation_V(WaveFirst_) = EwavePlus*ReflectionPerLperp
+       WaveDissipation_V(WaveLast_) = EwaveMinus*ReflectionPerLperp
 
-       WaveDissipation_V(WaveLast_) = &
-            EwaveMinus*max( ReflectionPerLperp, 2.0*Coef*sqrt(EwavePlus) )
+!!!       ! Correct at top of closed field lines, where turbulence is balanced
+!!!       WaveDissipation_V(WaveFirst_) = max( WaveDissipation_V(WaveFirst_), &
+!!!            EwavePlus*2.0*Coef*sqrt(EwaveMinus) )
+!!!       WaveDissipation_V(WaveLast_) = max( WaveDissipation_V(WaveLast_), &
+!!!            EwaveMinus*2.0*Coef*sqrt(EwavePlus) )
 
        ! Correct in inner heliosphere, where reflection is caused by
        ! the radially expanding flow
        WaveDissipation_V(WaveFirst_) = max(WaveDissipation_V(WaveFirst_), &
             Crefl*Coef*EwavePlus*sqrt(EwavePlus) )
-
        WaveDissipation_V(WaveLast_) = max(WaveDissipation_V(WaveLast_), &
             Crefl*Coef*EwaveMinus*sqrt(EwaveMinus) )
     end if
 
     CoronalHeating = sum(WaveDissipation_V)
 
+  end subroutine turbulent_cascade
+
+  !============================================================================
+
+  subroutine get_wave_reflection(iBlock)
+
+    use BATL_size, ONLY: nDim, nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB, Source_VC
+    use ModB0, ONLY: B0_DGB
+    use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
+         get_tesi_c, TeSi_C
+    use ModGeometry, ONLY: true_cell
+    use ModMain, ONLY: UseB0
+    use ModVarIndexes, ONLY: Bx_, Bz_
+
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
+    real :: GradAlfven_D(nDim), FullB_D(3), FullB, ReflectionPerLperp
+    real :: EwavePlus, EwaveMinus
+    !--------------------------------------------------------------------------
+
+    if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+       call get_grad_alfven_speed(i, j, k, iBlock, GradAlfven_D)
+
+       if(UseB0)then
+          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       else
+          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       end if
+       FullB = sqrt(sum(FullB_D**2))
+
+       ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradAlfven_D)) &
+            /max(FullB, 1e-15)
+
+       if(DoExtendTransitionRegion) ReflectionPerLperp &
+            = ReflectionPerLperp/extension_factor(TeSi_C(i,j,k))
+
+       EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+       EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+
+       ! Below is the limiting case U << Valfven
+       ! The implementation for the limit U >> Valfven still needs to be added
+       if(EwavePlus > EwaveMinus)then
+          Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
+               - ReflectionPerLperp*sqrt(EwavePlus*EwaveMinus)
+          Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
+               + ReflectionPerLperp*sqrt(EwavePlus*EwaveMinus)
+       else
+          Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
+               + ReflectionPerLperp*sqrt(EwavePlus*EwaveMinus)
+          Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
+               - ReflectionPerLperp*sqrt(EwavePlus*EwaveMinus)
+       end if
+
+    end do; end do; end do
+
+  end subroutine get_wave_reflection
+
+  !============================================================================
+
+  subroutine get_grad_alfven_speed(i, j, k, iBlock, GradAlfven_D)
+
+    use BATL_lib, ONLY: IsCartesianGrid, x_, y_, z_, &
+         CellSize_DB, FaceNormal_DDFB, CellVolume_GB
+    use BATL_size, ONLY: nDim, nI, j0_, nJp1_, k0_, nKp1_
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(out) :: GradAlfven_D(nDim)
+
+    real, save :: Alfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
+    !--------------------------------------------------------------------------
+    if(IsNewBlockAlfven)then
+       call get_alfven_speed
+
+       IsNewBlockAlfven = .false.
+    end if
+
+    if(IsCartesianGrid)then
+       GradAlfven_D(x_) = 1.0/CellSize_DB(x_,iBlock) &
+            *(Alfven_FD(i+1,j,k,x_) - Alfven_FD(i,j,k,x_))
+       if(nJ > 1) GradAlfven_D(y_) = 1.0/CellSize_DB(y_,iBlock) &
+            *(Alfven_FD(i,j+1,k,y_) - Alfven_FD(i,j,k,y_))
+       if(nK > 1) GradAlfven_D(z_) = 1.0/CellSize_DB(z_,iBlock) &
+            *(Alfven_FD(i,j,k+1,z_) - Alfven_FD(i,j,k,z_))
+    else
+       GradAlfven_D = &
+            Alfven_FD(i+1,j,k,x_)*FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
+            - Alfven_FD(i,j,k,x_)*FaceNormal_DDFB(:,x_,i,j,k,iBlock)
+       if(nJ > 1) GradAlfven_D = GradAlfven_D + &
+            Alfven_FD(i,j+1,k,y_)*FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
+            - Alfven_FD(i,j,k,y_)*FaceNormal_DDFB(:,y_,i,j,k,iBlock)
+       if(nK > 1) GradAlfven_D = GradAlfven_D + &
+            Alfven_FD(i,j,k+1,z_)*FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
+            - Alfven_FD(i,j,k,z_)*FaceNormal_DDFB(:,z_,i,j,k,iBlock)
+
+       GradAlfven_D = GradAlfven_D/CellVolume_GB(i,j,k,iBlock)
+    end if
+
   contains
 
     subroutine get_alfven_speed
+
+      use ModAdvance, ONLY: &
+           LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
+           RightState_VX, RightState_VY, RightState_VZ
+      use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
+      use ModMain, ONLY: UseB0
+      use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
       integer :: i, j, k
       real :: Rho, FullB_D(3)
@@ -1499,7 +1598,7 @@ contains
 
     end subroutine get_alfven_speed
 
-  end subroutine turbulent_cascade
+  end subroutine get_grad_alfven_speed
 
   !============================================================================
 

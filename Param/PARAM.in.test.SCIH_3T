@@ -84,6 +84,7 @@ F			UseUserUpdateStates
 #CORONALHEATING
 turbulentcascade	TypeCoronalHeating
 F			UseNonWkbAlfvenWaves
+F			UseCounterPropagatingWave
 7.5e4			LperpTimesSqrtBSi
 0.01			Crefl
 
@@ -364,6 +365,7 @@ F			UseUserUpdateStates
 #CORONALHEATING
 turbulentcascade	TypeCoronalHeating
 F			UseNonWkbAlfvenWaves
+F			UseCounterPropagatingWave
 7.5e4			LperpTimesSqrtBSi
 0.01			Crefl
 

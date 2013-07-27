@@ -35,7 +35,8 @@ contains
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          apportion_coronal_heating, UseTurbulentCascade, KarmanTaylorBeta, &
-         UseScaledCorrelationLength, turbulence_mixing
+         UseScaledCorrelationLength, turbulence_mixing, &
+         UseCounterPropagatingWave, get_wave_reflection
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -287,6 +288,8 @@ contains
                      sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))
              end do; end do; end do
           end if
+       else ! WKB approach
+          if(UseCounterPropagatingWave) call get_wave_reflection(iBlock)
        end if ! UseNonWkbAlfvenWaves
     end if
 
