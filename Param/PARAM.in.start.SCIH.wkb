@@ -28,6 +28,9 @@ T			DoEcho
 #DESCRIPTION
 Input file for creating a steady state solar corona
 
+INCLUDE
+RESTART.in
+
 #TIMEACCURATE
 F                       DoTimeAccurate
 
@@ -44,9 +47,6 @@ F                       DoTimeAccurate
 T			DoSaveRestart
 10000			DnSaveRestart
 -1.0			DtSaveRestart
-
-INCLUDE
-RESTART.in
 
 CPUTIMEMAX
 6600
@@ -456,7 +456,7 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #NONCONSERVATIVE
-F			UseNonConservative
+T			UseNonConservative
 
 #TIMESTEPPING
 2			nStage

@@ -1419,11 +1419,11 @@ contains
        WaveDissipation_V(WaveFirst_) = EwavePlus*ReflectionPerLperp
        WaveDissipation_V(WaveLast_) = EwaveMinus*ReflectionPerLperp
 
-!!!       ! Correct at top of closed field lines, where turbulence is balanced
-!!!       WaveDissipation_V(WaveFirst_) = max( WaveDissipation_V(WaveFirst_), &
-!!!            EwavePlus*2.0*Coef*sqrt(EwaveMinus) )
-!!!       WaveDissipation_V(WaveLast_) = max( WaveDissipation_V(WaveLast_), &
-!!!            EwaveMinus*2.0*Coef*sqrt(EwavePlus) )
+       ! Correct at top of closed field lines, where turbulence is balanced
+       WaveDissipation_V(WaveFirst_) = max( WaveDissipation_V(WaveFirst_), &
+            EwavePlus*2.0*Coef*sqrt(EwaveMinus) )
+       WaveDissipation_V(WaveLast_) = max( WaveDissipation_V(WaveLast_), &
+            EwaveMinus*2.0*Coef*sqrt(EwavePlus) )
 
        ! Correct in inner heliosphere, where reflection is caused by
        ! the radially expanding flow
