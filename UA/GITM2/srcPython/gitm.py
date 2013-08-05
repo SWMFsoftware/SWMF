@@ -44,22 +44,36 @@ class GitmBin(PbData):
 
     GITM index ordering is [lon, lat, altitude]; data arrays read from file
     will always be of the same shape and size.
+
+    kwargs may be specified for:
+    ionfile = 3DION file, allows computation of velocities in magnetic
+              coordinates
+    varlist = list of variable keys.  Will limit the variables read in to those
+              listed.  Time and position will always be read in.  If the list
+              is empty, all variables will be read in.
     '''
 
     def __init__(self, filename, *args, **kwargs):
+        if not kwargs.has_key('varlist'):
+            kwargs['varlist'] = list()
+
         super(GitmBin, self).__init__(*args, **kwargs) # Init as PbData.
         self.attrs['file']=filename
-        self._read()
+        self._read(kwargs['varlist'])
         self.calc_deg()
         self.calc_lt()
         self.append_units()
 
+        if kwargs.has_key('ionfile'):
+            self.attrs['ionfile']=kwargs['ionfile']
+            self.calc_magvel()
+
     def __repr__(self):
         return 'GITM binary output file %s' % (self.attrs['file'])
 
-    def _read(self):
+    def _read(self, varlist, newfile=True):
         '''
-        Read binary file; should only be called upon instantiation.
+        Read binary file.
         '''
 
         from re import sub
@@ -111,12 +125,24 @@ class GitmBin(PbData):
             # Trim variable names.
             v=sub('\[|\]', '', val).strip()
             s=unpack(endChar+'l',f.read(4))[0]
-            self[v]=dmarray(np.array(unpack(
-                        endChar+'%id'%(nTotal),f.read(s))))
-            # Reshape arrays, note that ordering in file is Fortran-like.
-            self[v]=self[v].reshape( 
-                (self.attrs['nLon'],self.attrs['nLat'],self.attrs['nAlt']),
-                order='fortran')
+            # Test to see if this variable is desired
+            gvar=True
+            if len(varlist) > 0:
+                try:
+                    varlist.index(v)
+                except ValueError:
+                    if((v.find('Altitude') < 0 and v.find('Longitude') < 0
+                        and v.find('Latitude') < 0) or not newfile):
+                        gvar=False
+            # Unpack the data and save, if desired
+            temp=unpack(endChar+'%id'%(nTotal),f.read(s))
+            if gvar:
+                self[v]=dmarray(np.array(temp))
+                # Reshape arrays, note that ordering in file is Fortran-like.
+                self[v]=self[v].reshape( 
+                    (self.attrs['nLon'],self.attrs['nLat'],self.attrs['nAlt']),
+                    order='fortran')
+                
             f.read(4)
 
 
@@ -182,6 +208,7 @@ class GitmBin(PbData):
         can get away with producing just one 3DIon file.  It is better to have
         a matching 3D Ion file for every 3D All file, however.
         '''
+        import math
         import string
         import sys
 
@@ -252,50 +279,13 @@ class GitmBin(PbData):
             self['B.F. East']          = dmarray.copy(ion['B.F. East'])
             self['B.F. North']         = dmarray.copy(ion['B.F. North'])
             self['B.F. Vertical']      = dmarray.copy(ion['B.F. Vertical'])
+            self['B.F. Magnitude']     = dmarray.copy(ion['B.F. Magnitude'])
             self['E.F. East']          = dmarray.copy(ion['E.F. East'])
             self['E.F. North']         = dmarray.copy(ion['E.F. North'])
             self['E.F. Vertical']      = dmarray.copy(ion['E.F. Vertical'])
+            self['E.F. Magnitude']     = dmarray.copy(ion['E.F. Magnitude'])
             self['Magnetic Latitude']  = dmarray.copy(ion['Magnetic Latitude'])
             self['Magnetic Longitude'] = dmarray.copy(ion['Magnetic Longitude'])
-
-            self['B.F. East'].attrs          = {'units':'', 'scale':'linear', 
-                                                'name':'Magnetic Field East'}
-            self['B.F. North'].attrs         = {'units':'', 'scale':'linear',
-                                                'name':'Magnetic Field North'}
-            self['B.F. Vertical'].attrs      = {'units':'', 'scale':'linear',
-                                                'name':'Magnetic Field Vertical'}
-            self['E.F. East'].attrs          = {'units':'', 'scale':'linear',
-                                                'name':'Electric Field East'}
-            self['E.F. North'].attrs         = {'units':'', 'scale':'linear',
-                                                'name':'Electric Field North'}
-            self['E.F. Vertical'].attrs      = {'units':'', 'scale':'linear',
-                                                'name':'Electric Field Vertical'}
-            self['Magnetic Latitude'].attrs  = {'units':'radians',
-                                                'scale':'linear',
-                                                'name':'Magnetic Latitude'}
-            self['Magnetic Longitude'].attrs = {'units':'radians',
-                                                'scale':'linear',
-                                                'name':'Magnetic Longitude'}
-
-            self['Magnetic dLat'] = dmarray(self['Magnetic Latitude']*180.0/pi, 
-                                            attrs={'units':'degrees', 
-                                                   'scale':'linear',
-                                                   'name':'Magnetic Laitutde'})
-            self['Magnetic dLon'] = dmarray(self['Magnetic Longitude']
-                                            * 180.0 / pi, 
-                                            attrs={'units':'degrees',
-                                                   'scale':'linear',
-                                                   'name':'Magnetic Longitude'})
-
-            # Do not correct for Longitude beyond the 0-360 range, this is
-            # needed for plotting purposes
-            #
-            #for i in range(self.attrs['Magnetic nLon']):
-            #    for j in range(self.attrs['Magnetic nLat']):
-            #        if self['Magnetic dLon'][i][j][0] < 0.0:
-            #            self['Magnetic dLon'][i][j] += 360.0
-            #        elif self['Magnetic dLon'][i][j][0] >= 360.0:
-            #            self['Magnetic dLon'][i][j] -= 360.0
 
     def append_units(self):
         '''
@@ -338,7 +328,9 @@ class GitmBin(PbData):
                      "Je1":"A m^{-2}", "Magnetic Longitude":"degrees",
                      "E.F. Vertical":"V m^{-1}", "E.F. East":"V m^{-1}",
                      "E.F. North":"V m^{-1}", "E.F. Magnitude":"V m^{-1}",
-                     "Magnetic Latitude":"degrees", "Ed1":"", "Ed2":""}
+                     "B.F. Vertical":"nT", "B.F. East":"nT", "B.F. North":"nT",
+                     "B.F. Magnitude":"nT", "Magnetic Latitude":"degrees",
+                     "Ed1":"", "Ed2":""}
 
         scale_dict = {"Altitude":"linear", "Ar Mixing Ratio":"linear",
                       "Ar":"exponential", "CH4 Mixing Ratio":"linear",
@@ -379,6 +371,8 @@ class GitmBin(PbData):
                       "Je1":"linear", "Ed1":"linear", "Ed2":"linear",
                       "E.F. Vertical":"linear", "E.F. East":"linear",
                       "E.F. North":"linear", "E.F. Magnitude":"linear",
+                      "B.F. Vertical":"linear", "B.F. East":"linear",
+                      "B.F. North":"linear", "B.F. Magnitude":"linear",
                       "Magnetic Latitude":"linear", "LT":"linear",
                       "Magnetic Longitude":"linear", "dLat":"linear"}
 
@@ -431,6 +425,10 @@ class GitmBin(PbData):
                      "E.F. East":"Eastward Electric Field",
                      "E.F. North":"Northward Electric Field",
                      "E.F. Magnitude":"Electric Field Magnitude",
+                     "B.F. Vertical":"Vertical Magnetic Field",
+                     "B.F. East":"Eastward Magnetic Field",
+                     "B.F. North":"Northward Magnetic Field",
+                     "B.F. Magnitude":"Magnetic Field Magnitude",
                      "Magnetic Latitude":"Magnetic Latitude",
                      "Magnetic Longitude":"Magnetic Longitude",
                      "dLat":"Latitude", "dLon":"Longitude"}
@@ -452,3 +450,16 @@ class GitmBin(PbData):
                     self[k].attrs['scale'] = scale_dict[nk]
                 if not self[k].attrs.has_key('name'):
                     self[k].attrs['name'] = name_dict[nk]
+
+    def append_data(self, varlist):
+        '''
+        A routine to append more variables to an existing GITM data structure.
+        New variables can only be added from the same file (specified in
+        the 'file' attribute).
+        '''
+
+        temp = GitmBin(self.attrs['file'], varlist, False)
+
+        for nkey in temp.keys():
+            if not self.has_key(nkey):
+                self[nkey] = dmarray.copy(temp[nkey])
