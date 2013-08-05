@@ -192,14 +192,25 @@ The following programs include the vetted python routines.  The examples shown a
 
 GITM is a PyBats submodule that handles input and output from GITM.  It can be helpful for those wishing to write their own GITM processing routines but doesn't contain any analysis or visualization routines. 
 
-Once you have downloaded and installed Spacepy, the gitm submodule can be accessed via {\tt import spacepy.pybats.gitm}.  This module contains the following routines:
+Once you have downloaded and installed Spacepy, the gitm submodule can be accessed via:
+
+\noindent{\tt import spacepy.pybats.gitm}
+ 
+ \noindent Though to be sure that you have the latest version it is best to CVS the latest version of {\tt gitm.py} and load:
+ 
+\noindent {\tt import gitm}
+ 
+\noindent while running the {\tt GITM2/srcPhython} directory.  This module contains the following routines:
 
 \begin{itemize}
-\item[]{\bf GitmBin: } A data class and routine to load a GITM output bin file.  Geographic position in degrees and local time are also added to the output.  Once a 3DION file is associated with the output GITM structure (by assigning a filename to the attribute `ionfile'), the ion velocity can be computed in magnetic field coordinates.
-\item[]{\bf PbData: } The base class for all PyBats data container classes.  Used to hold the GITM data read in using GitmBin
-\item[]{\bf dt: } A shortcut for datetime.
-\item[]{\bf np: } A shortcut for numpy.
-\item[]{\bf dmarray: } A shortcut for data arrays.  Used in many of the data container classes defined in PbData.
+\item[]{\bf GitmBin: } A data class and routine to load a GITM output bin file, based on the PyBats data container class PbData.  There are two keywords arguements that may be associated with this input, \textit{ionfile}, and \textit{varlist}.  The first keyword, \textit{ionfile}, takes a 3DION file as input, assigns an attribute called `ionfile' to the data class, and runs one of the functions called {\bf calc\_magvel} to calculate the ion and neutral velocities in magnetic coordinates.  The second keyword, \textit{varlist}, takes a list of atmospheric quantities such as those listed at the beginning of this chapter.  More variables may always be added from the same file that created a data class by calling the function {\bf append\_data}.  Geographic position in degrees and local time are also added to the output, regardless of what variables are specified.  A 3DION file may also be associated with the output GITM class after the fact by assigning a filename to the attribute `ionfile' and the magnetic velocity quantities obtained by running {\bf calc\_magvel}.
+	\begin{itemize}
+	\item[]{\bf append\_data: } A routine to append variables specified in an input list.  These are obtained from the file specified in the `file' attribute.
+	\item[]{\bf append\_units: } A routine to append unit, scale, and name attributes to the variable keys in the data class.  Runs automatically with {\bf GitmBin}.
+	\item[]{\bf calc\_deg: } A routine to compute latitude and longitude in degrees instead of radians.  Runs automatically with {\bf GitmBin}.
+	\item[]{\bf calc\_lt: } A routine to compute local time from universal time and longitude.  Runs automatically with {\bf GitmBin}.
+	\item[]{\bf calc\_magvel: } A routine to compute ion and neutral velocities in magnetic coordinates.  Runs automatically with {\bf GitmBin} if the \textit{ionfile} keyword is specified.
+	\end{itemize}
 \end{itemize}
 
 You can load a GITM binary file by entering the following commands.  Comments are preceded by a `\#'.
@@ -344,7 +355,7 @@ In [3]: import gitm_3D_global_plots as g3d
 In [4]: import matplotlib.pyplot as plt
 In [5]: plt.ion() # This makes the plotting happen interactively
 In [6]: gdata = gitm.GitmBin(`3DALL_t021124_000000.bin')
-In [7]: title = "\%s UT" \% (gdata[`time'])
+In [7]: title = "%s UT" % (gdata[`time'])
 In [8]: f = g3d.plot_single_3D_image("polar", "eTemperature", gdata, title, 
                                      "example_polar_plot.png", True, 27, 90, 0)
 \end{verbatim}
@@ -379,7 +390,7 @@ In [4]: import gitm_plot_rout as gpr
 In [5]: import matplotlib.pyplot as plt
 In [6]: plt.ion() # This makes the plotting happen interactively
 In [7]: gdata = gitm.GitmBin(`3DALL_t021124_000000.bin')
-In [8]: title = "\%s UT" \% (gdata[`time'])
+In [8]: title = "%s UT" % (gdata[`time'])
 In [9]: lat_index = list()
 In [10]: lon_index = list()
 In [11]: (ilon, ilat) = gpr.find_lon_lat_index(gdata, 150.0, -65.0, "degrees")
