@@ -30,6 +30,26 @@ different geographic configurations
 
 # Import modules
 
+def choose_contour_map(color, center):
+    '''
+    Choose a standard contour color map based on whether the output image
+    will be black and white or color, centered around zero or not.
+
+    Input: color  = True for color, False for black and white
+           center = True for centered about zero, False if not
+    '''
+
+    if color:
+        if center:
+            return("seismic_r")
+        else:
+            return("Spectral_r")
+    else:
+        if center:
+            return("binary")
+        else:
+            return("Greys")
+
 def add_colorbar(contour_handle, zmin, zmax, zinc, orient, scale, name, units):
     '''
     Add a colorbar
@@ -45,13 +65,23 @@ def add_colorbar(contour_handle, zmin, zmax, zinc, orient, scale, name, units):
     '''
     import numpy as np
     import matplotlib.pyplot as plt
-    from matplotlib.ticker import FormatStrFormatter
+    from matplotlib.ticker import FormatStrFormatter, ScalarFormatter
 
     w  = np.linspace(zmin, zmax, zinc, endpoint=True)
     cb = plt.colorbar(contour_handle, ticks=w, pad=.15, orientation=orient,
-                      fraction=.06)
-    if(scale is "exponetial"):
-        cb.formatter=FormatStrFormatter('%7.2E')
+                      fraction=.07)
+
+    if scale.find("exponential") >= 0:
+        print "Need to fix the exponential scaling"
+        #cb.formatter=FormatStrFormatter('%.1e')
+    else:
+        zscale = max(abs(zmin), abs(zmax))
+        if zscale > 1.0e3 or zscale < 1.0e-3:
+            cb.formatter=FormatStrFormatter('%.2g')
+        elif zscale < 1.0e1:
+            cb.formatter=FormatStrFormatter('%.2f')
+        else:
+            cb.formatter=FormatStrFormatter('%.0f')
     cb.set_label(r'%s ($%s$)' % (name, units))
     cb.update_ticks()
     return cb
