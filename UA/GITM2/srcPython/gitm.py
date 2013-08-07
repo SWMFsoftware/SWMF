@@ -19,6 +19,12 @@
 #                              the universal time for the file and longitude
 #           def append_units - Appends unit, descriptive name, and scale
 #                              attributes to each known data type
+#           def append_data  - Appends a list of data variables to a GitmBin
+#                              data structure, where only a limited number of
+#                              data variables from that file have been read
+#                              in before
+#           def calc_2dion   - Calculate the 2D ionospheric parameters (VTEC,
+#                              hmF2, NmF2)
 #
 # Updates: Angeline Burrell (AGB) - 1/7/13: Added calc_lt, append_units, and
 #                                           calc_magvel
@@ -266,14 +272,14 @@ class GitmBin(PbData):
                         vz=zhat_e*self[east]+zhat_n*self[north]
                         vm=mhat_e*self[east]+mhat_n*self[north]+mhat_v*self[up]
                         self[par] = dmarray.copy(vp)
-                        self[par].attrs = {'units':'m s$^{-1}$, positive mag north',
+                        self[par].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,mag\,north}}',
                                            'scale':'linear',
                                            'name':'v$_\parallel$'}
                         self[zon] = dmarray.copy(vz)
-                        self[zon].attrs = {'units':'m s$^{-1}$, positive east',
+                        self[zon].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,east}}',
                                            'scale':'linear', 'name':'v$_{zon}$'}
                         self[mer] = dmarray.copy(vm)
-                        self[mer].attrs = {'units':'m s$^{-1}$, positive up',
+                        self[mer].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,up}}',
                                            'scale':'linear', 'name':'v$_{mer}$'}
         
             self['B.F. East']          = dmarray.copy(ion['B.F. East'])
@@ -463,3 +469,38 @@ class GitmBin(PbData):
         for nkey in temp.keys():
             if not self.has_key(nkey):
                 self[nkey] = dmarray.copy(temp[nkey])
+
+    def calc_2dion(self):
+        '''
+        A routine to calculate the 2D ionospheric parameters: VTEC, hmF2, NmF2.
+        To perform these calculations, electron density ("e-") must be one of
+        the available data types.
+        '''
+
+        import scipy.integrate as integ
+        from scipy.interpolate import interp1d
+
+        if self.has_key('e-'):
+            self['VTEC'] = dmarray(self['e-'] * 1.0e-16,
+                                   attrs={'units':'TECU', 'scale':'linear',
+                                          'name':'Vertical TEC'})
+            self['NmF2'] = dmarray.copy(self['e-'])
+            self['NmF2'].attrs['name'] = 'N$_m$F$_2$'
+            self['hmF2'] = dmarray(self['Altitude'] / 1000.0,
+                                   attrs={'units':'km', 'scale':'linear',
+                                          'name':'h$_m$F$_2$'})
+
+            for ilon in range(self.attrs['nLon']):
+                for ilat in range(self.attrs['nLat']):
+                    # Integrate electron density over altitude
+                    vtec = integ.simps(self['VTEC'][ilon,ilat,:],
+                                       self['Altitude'][ilon,ilat,:], "avg")
+                    self['VTEC'][ilon,ilat,:] = vtec
+
+                    # Interpolate over the electron density altitude profile
+                    eprof = interp1d(self['hmF2'][ilon,ilat,:],
+                                     self['NmF2'][ilon,ilat,:], kind="cubic")
+                    alt = np.linspace(200.0,max(self['hmF2'][ilon,ilat,:]),1000)
+                    edens = list(eprof(alt))
+                    self['NmF2'][ilon,ilat,:] = max(edens)
+                    self['hmF2'][ilon,ilat,:] = alt[edens.index(max(edens))]
