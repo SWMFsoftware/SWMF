@@ -315,7 +315,6 @@ subroutine IE_set_grid
   use IE_ModMain
   use CON_coupler
   use ModNumConst
-  use ModIeGeoindices, ONLY: DoCalcIndices, init_geoindices
 
   implicit none
   character (len=*), parameter :: NameSub='IE_set_grid'
@@ -361,9 +360,6 @@ subroutine IE_set_grid
        Coord2_I=IONO_NORTH_Psi(1,:),               &! longitudes
        Coord3_I=(/IONO_Radius + IONO_Height/),     &! radial size in meters
        iProc_A = iProc_A)                           ! processor assigment
-
-  ! Initialize geomagnetic indices.
-  if(DoCalcIndices) call init_geoindices
 
 end subroutine IE_set_grid
 
@@ -1365,12 +1361,13 @@ end subroutine IE_setgrid
 
 subroutine IE_groundmaginit_for_gm(nShareGroundMag)
   ! Get number of shared ground magnetometers.
-  use ModIeGeoindices, ONLY: nIndexMag
+  use ModIeGeoindices, ONLY: nIndexMag, init_geoindices
 
   implicit none
 
   integer, intent(out) :: nShareGroundMag
 
+  call init_geoindices
   nShareGroundMag=nIndexMag
 
 end subroutine IE_groundmaginit_for_gm

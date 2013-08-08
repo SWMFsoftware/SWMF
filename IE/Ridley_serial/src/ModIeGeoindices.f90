@@ -12,7 +12,7 @@ module ModIeGeoindices
   implicit none
   save
   
-  logical, private :: IsInitialized=.false.
+  logical :: IsInitialized=.false.
 
   ! Specify what indices should be calculated and handed to GM:
   logical :: DoCalcIndices=.false., DoCalcKp=.false., DoCalcDst=.false.
@@ -22,7 +22,7 @@ module ModIeGeoindices
   integer           :: nIndexMag=0
   integer, parameter:: nKpMag=24, nDstMag=4 ! Number of mags per index.
   real              :: XyzKp_DI(3, nKpMag)  ! Locations of kp mags, SMG.
-  real, parameter   :: fakeplat = 50.0      ! Latitude of Kp stations.
+  real, parameter   :: fakeplat = 60.0      ! Latitude of Kp stations.
 
 contains
 
@@ -38,9 +38,10 @@ contains
     character(len=*), parameter :: NameSub='init_geoindices'
     logical :: DoTest, DoTestMe   
     !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Tally up total number of index-related magnetometers.
+    nIndexMag=0
     if(DoCalcKp ) nIndexMag=nIndexMag+nKpMag
     if(DoCalcDst) nIndexMag=nIndexMag+nDstMag
 
@@ -77,7 +78,11 @@ contains
     character(len=*), parameter :: NameSub='get_index_mags'
     logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    if(DoTestMe) write(*,*)'IE: '//NameSub//' Collecting geomagnetic indices.'
+    if(.not. IsInitialized) call CON_stop(NameSub// &
+         ': Error: Geomagnetic indices not initialized!')
 
     ! Fill XyzSmg depending on what indices we are calculating.
     i = 1
@@ -95,7 +100,8 @@ contains
          NameSub//' Indexing error!  Not all magnetometers accounted for.')
 
     ! Collect Hall and Peterson B pertubations, sum them.
-    call iono_mag_perturb(nIndexMag, XyzSmg_DI, MagPerturb_Jh_DI, MagPerturb_Jp_DI)
+    call iono_mag_perturb(nIndexMag, XyzSmg_DI, MagPerturb_Jh_DI, &
+         MagPerturb_Jp_DI)
     MagPertTotal_DI = MagPerturb_Jh_DI + MagPerturb_Jp_DI
 
     ! Collect the variables from all the PEs
