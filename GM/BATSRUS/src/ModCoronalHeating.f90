@@ -1362,10 +1362,10 @@ contains
 
     integer, parameter :: iRho = 1, iBx = 2, iBz = 4
 
-    real :: FullB_D(3), FullB, Coef
+    real :: FullB_D(3), FullB, Rho, Coef
     real :: EwavePlus, EwaveMinus, ReflectionPerLperp
 
-    real :: GradAlfven_D(nDim)
+    real :: GradLogAlfven_D(nDim)
 
     character(len=*), parameter :: &
          NameSub = 'ModCoronalHeating::turbulent_cascade'
@@ -1405,16 +1405,17 @@ contains
           FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end if
        FullB = sqrt(sum(FullB_D**2))
+       Rho = State_VGB(Rho_,i,j,k,iBlock)
 
-       Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
+       Coef = sqrt(FullB/Rho)/LperpTimesSqrtB
 
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-       call get_grad_alfven_speed(i, j, k, iBlock, GradAlfven_D)
+       call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
-       ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradAlfven_D)) &
-            /max(FullB, 1e-15)
+       ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D)) &
+            /sqrt(Rho)
 
        WaveDissipation_V(WaveFirst_) = EwavePlus*ReflectionPerLperp
        WaveDissipation_V(WaveLast_) = EwaveMinus*ReflectionPerLperp
@@ -1448,12 +1449,12 @@ contains
          get_tesi_c, TeSi_C
     use ModGeometry, ONLY: true_cell
     use ModMain, ONLY: UseB0
-    use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: GradAlfven_D(nDim), FullB_D(3), FullB, ReflectionPerLperp
+    real :: GradLogAlfven_D(nDim), FullB_D(3), FullB, ReflectionPerLperp
     real :: EwavePlus, EwaveMinus
     !--------------------------------------------------------------------------
 
@@ -1462,7 +1463,7 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       call get_grad_alfven_speed(i, j, k, iBlock, GradAlfven_D)
+       call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -1471,8 +1472,8 @@ contains
        end if
        FullB = sqrt(sum(FullB_D**2))
 
-       ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradAlfven_D)) &
-            /max(FullB, 1e-15)
+       ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D)) &
+            /sqrt(State_VGB(Rho_,i,j,k,iBlock))
 
        if(DoExtendTransitionRegion) ReflectionPerLperp &
             = ReflectionPerLperp/extension_factor(TeSi_C(i,j,k))
@@ -1500,47 +1501,47 @@ contains
 
   !============================================================================
 
-  subroutine get_grad_alfven_speed(i, j, k, iBlock, GradAlfven_D)
+  subroutine get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
     use BATL_lib, ONLY: IsCartesianGrid, x_, y_, z_, &
          CellSize_DB, FaceNormal_DDFB, CellVolume_GB
     use BATL_size, ONLY: nDim, nI, j0_, nJp1_, k0_, nKp1_
 
     integer, intent(in) :: i, j, k, iBlock
-    real, intent(out) :: GradAlfven_D(nDim)
+    real, intent(out) :: GradLogAlfven_D(nDim)
 
-    real, save :: Alfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
+    real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
     !--------------------------------------------------------------------------
     if(IsNewBlockAlfven)then
-       call get_alfven_speed
+       call get_log_alfven_speed
 
        IsNewBlockAlfven = .false.
     end if
 
     if(IsCartesianGrid)then
-       GradAlfven_D(x_) = 1.0/CellSize_DB(x_,iBlock) &
-            *(Alfven_FD(i+1,j,k,x_) - Alfven_FD(i,j,k,x_))
-       if(nJ > 1) GradAlfven_D(y_) = 1.0/CellSize_DB(y_,iBlock) &
-            *(Alfven_FD(i,j+1,k,y_) - Alfven_FD(i,j,k,y_))
-       if(nK > 1) GradAlfven_D(z_) = 1.0/CellSize_DB(z_,iBlock) &
-            *(Alfven_FD(i,j,k+1,z_) - Alfven_FD(i,j,k,z_))
+       GradLogAlfven_D(x_) = 1.0/CellSize_DB(x_,iBlock) &
+            *(LogAlfven_FD(i+1,j,k,x_) - LogAlfven_FD(i,j,k,x_))
+       if(nJ > 1) GradLogAlfven_D(y_) = 1.0/CellSize_DB(y_,iBlock) &
+            *(LogAlfven_FD(i,j+1,k,y_) - LogAlfven_FD(i,j,k,y_))
+       if(nK > 1) GradLogAlfven_D(z_) = 1.0/CellSize_DB(z_,iBlock) &
+            *(LogAlfven_FD(i,j,k+1,z_) - LogAlfven_FD(i,j,k,z_))
     else
-       GradAlfven_D = &
-            Alfven_FD(i+1,j,k,x_)*FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
-            - Alfven_FD(i,j,k,x_)*FaceNormal_DDFB(:,x_,i,j,k,iBlock)
-       if(nJ > 1) GradAlfven_D = GradAlfven_D + &
-            Alfven_FD(i,j+1,k,y_)*FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
-            - Alfven_FD(i,j,k,y_)*FaceNormal_DDFB(:,y_,i,j,k,iBlock)
-       if(nK > 1) GradAlfven_D = GradAlfven_D + &
-            Alfven_FD(i,j,k+1,z_)*FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
-            - Alfven_FD(i,j,k,z_)*FaceNormal_DDFB(:,z_,i,j,k,iBlock)
+       GradLogAlfven_D = &
+            LogAlfven_FD(i+1,j,k,x_)*FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
+            - LogAlfven_FD(i,j,k,x_)*FaceNormal_DDFB(:,x_,i,j,k,iBlock)
+       if(nJ > 1) GradLogAlfven_D = GradLogAlfven_D + &
+            LogAlfven_FD(i,j+1,k,y_)*FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
+            - LogAlfven_FD(i,j,k,y_)*FaceNormal_DDFB(:,y_,i,j,k,iBlock)
+       if(nK > 1) GradLogAlfven_D = GradLogAlfven_D + &
+            LogAlfven_FD(i,j,k+1,z_)*FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
+            - LogAlfven_FD(i,j,k,z_)*FaceNormal_DDFB(:,z_,i,j,k,iBlock)
 
-       GradAlfven_D = GradAlfven_D/CellVolume_GB(i,j,k,iBlock)
+       GradLogAlfven_D = GradLogAlfven_D/CellVolume_GB(i,j,k,iBlock)
     end if
 
   contains
 
-    subroutine get_alfven_speed
+    subroutine get_log_alfven_speed
 
       use ModAdvance, ONLY: &
            LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
@@ -1557,7 +1558,7 @@ contains
               + RightState_VX(Bx_:Bz_,i,j,k))
          if(UseB0) FullB_D = FullB_D + B0_DX(:,i,j,k)
          Rho = 0.5*(LeftState_VX(Rho_,i,j,k) + RightState_VX(Rho_,i,j,k))
-         Alfven_FD(i,j,k,x_) = sqrt( sum(FullB_D**2)/Rho )
+         LogAlfven_FD(i,j,k,x_) = log(sqrt(max(sum(FullB_D**2), 1e-30)/Rho))
       end do; end do; end do
 
       if(nJ > 1)then
@@ -1566,7 +1567,7 @@ contains
                  + RightState_VY(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
             Rho = 0.5*(LeftState_VY(Rho_,i,j,k) + RightState_VY(Rho_,i,j,k))
-            Alfven_FD(i,j,k,y_) = sqrt( sum(FullB_D**2)/Rho )
+            LogAlfven_FD(i,j,k,y_) = log(sqrt(max(sum(FullB_D**2), 1e-30)/Rho))
          end do; end do; end do
       end if
 
@@ -1576,13 +1577,13 @@ contains
                  + RightState_VZ(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
             Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) + RightState_VZ(Rho_,i,j,k))
-            Alfven_FD(i,j,k,z_) = sqrt( sum(FullB_D**2)/Rho )
+            LogAlfven_FD(i,j,k,z_) = log(sqrt(max(sum(FullB_D**2), 1e-30)/Rho))
          end do; end do; end do
       end if
 
-    end subroutine get_alfven_speed
+    end subroutine get_log_alfven_speed
 
-  end subroutine get_grad_alfven_speed
+  end subroutine get_grad_log_alfven_speed
 
   !============================================================================
 
