@@ -392,7 +392,7 @@ test3_check:
 		output/test3/GM_geoindex.log \
 		>> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/RESTART/GM/geoindex.txt \
+		${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
 		output/test3/GM_restart_geoindex.txt \
 		>> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
