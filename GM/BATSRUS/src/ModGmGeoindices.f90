@@ -41,17 +41,19 @@ module ModGmGeoindices
   ! VARIABLES FOR KP CALCULATION
   integer, parameter :: nKpMag = 24 ! Currently, only the faKe_p stations.
   integer            :: iSizeKpWindow = 0      ! Size of MagPerturb_II
-  real, parameter    :: KpLat = 50.0           ! Synthetic Kp geomag. latitude.
-  real, allocatable  :: MagPerturb_II(:,:)     ! Magnetometer time history.
+  real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude.
+  real               :: k9 = 600.0             ! Scaling of standard K.
+  real, allocatable  :: MagPerturb_DII(:,:,:)  ! Magnetometer time history.
   real               :: MagPerbIE_DI(3,nKpMag)=0.0! IE contribution.
   real               :: XyzKp_DI(3, nKpMag)    ! Locations of kp mags, SMG.
   real               :: Kp=0.0
   integer            :: kIndex_I(nKpMag)
-  logical            :: IsFirstCalc=.true.
+  logical            :: IsFirstCalc=.true., Is2ndCalc=.true.
 
   ! K CONVERSION TABLES
+  ! Conversion table for the standard station, Niemegk.
   real, parameter :: &
-       Table50_I(9)=(/5.,10.,20.,40.,70.,120.,200.,330.,500./) ! faKe_p, lat=50 deg.
+       Table50_I(9)=(/5.,10.,20.,40.,70.,120.,200.,330.,500./) 
 
   character(len=*), parameter :: NameKpVars = &
        'Kp K_12 K_13 K_14 K_15 K_16 K_17 K_18 K_19 K_20 K_21 K_22 K_23 '//&
@@ -90,17 +92,17 @@ contains
        phi = cTwoPi * (i-1)/24.0
        XyzKp_DI(1,i) = radXY * cos(phi)
        XyzKp_DI(2,i) = radXY * sin(phi)
-       !if(iProc==0) &
-       !write(*,'(a, 3(1x, e13.3))') 'Coords = ', XyzKp_DI(:,i)
+       if(iProc==0 .and. DoTestMe) &
+            write(*,'(a, 3(1x, e13.3))') 'Coords = ', XyzKp_DI(:,i)
     end do
 
     ! Allocate array to follow time history of magnetometer readings.
     iSizeKpWindow = int(nKpMins / (dtWriteIndices / 60.0))
 
-    ! Allocate MagPerturb_II, open index file, write header.
+    ! Allocate MagPerturb_DII, open index file, write header.
     if (iProc==0) then
-       allocate(MagPerturb_II(nKpMag, iSizeKpWindow))
-       MagPerturb_II = 0.0
+       allocate(MagPerturb_DII(2, nKpMag, iSizeKpWindow))
+       MagPerturb_DII = 0.0
 
        if(IsLogName_e)then
           ! Event date added to geoindex file name
@@ -164,6 +166,10 @@ contains
  
     call flush_unit(iUnitOut)
 
+    ! Ensure two initialization steps are not repeated.
+    if(.not. IsFirstCalc) Is2ndCalc=.false.
+    IsFirstCalc=.false.
+
   end subroutine write_geoindices
 
   !===========================================================================
@@ -179,7 +185,7 @@ contains
     integer :: i, iError
     real, dimension(3,3)       :: SmgToGsm_DD, GsmToSmg_DD
     real, dimension(3, nKpMag) :: Bmag_DI, Bfac_DI, Bsum_DI=0.0, XyzGsm_DI
-    real :: deltaH
+    real :: deltaB(2)
     character(len=*), parameter :: NameSub='calc_kp'
     logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
@@ -212,20 +218,28 @@ contains
     ! Head node calculates K-values and shares them with all other nodes.
     if(iProc==0)then
        ! Shift MagPerturb to make room for new measurements.
-       MagPerturb_II(:,1:iSizeKpWindow-1) = MagPerturb_II(:,2:iSizeKpWindow)
+       MagPerturb_DII(:,:,1:iSizeKpWindow-1) = &
+            MagPerturb_DII(:,:,2:iSizeKpWindow)
 
        ! Add IE component of pertubation.
        do i=1, nKpMag
-          ! Store H-component; add IE component.
-          if (IsFirstCalc) then
-             MagPerturb_II(i,:) = Bsum_DI(1,i)  + MagPerbIE_DI(1,i)
+          ! Store X and Y-components; add IE component.
+          if (IsFirstCalc .or. Is2ndCalc) then
+             ! First or second calc, fill in whole array to initialize.
+             MagPerturb_DII(1,i,:) = Bsum_DI(1,i) + MagPerbIE_DI(1,i)
+             MagPerturb_DII(2,i,:) = Bsum_DI(2,i) + MagPerbIE_DI(2,i)
           else
-             MagPerturb_II(i,iSizeKpWindow) = Bsum_DI(1,i) + MagPerbIE_DI(1,i)
+             ! Later in simulation, merely fill in the most recent value.
+             MagPerturb_DII(1,i,iSizeKpWindow) = Bsum_DI(1,i)+MagPerbIE_DI(1,i)
+             MagPerturb_DII(2,i,iSizeKpWindow) = Bsum_DI(2,i)+MagPerbIE_DI(2,i)
           end if
 
-          ! Calculate deltaH, convert to K.
-          DeltaH = maxval(MagPerturb_II(i,:)) - minval(MagPerturb_II(i,:))
-          kIndex_I(i) = k_index(DeltaH, Table50_I)
+          ! Calculate deltaB(x,y), convert to K.
+          deltaB(1) = maxval(MagPerturb_DII(1,i,:)) - &
+               minval(MagPerturb_DII(1,i,:))
+          deltaB(2) = maxval(MagPerturb_DII(2,i,:)) - &
+               minval(MagPerturb_DII(2,i,:))
+          kIndex_I(i) = k_index(maxval(DeltaB))
        end do
 
        ! Kp is average of Ks.
@@ -235,8 +249,6 @@ contains
        Kp = nint(3*Kp)/3.0
 
     end if
-    
-    IsFirstCalc=.false.
 
   end subroutine calc_kp
 
@@ -253,25 +265,25 @@ contains
        close(iUnitOut)
 
        ! Clean up allocatables.
-       deallocate(MagPerturb_II)
+       deallocate(MagPerturb_DII)
     end if
 
   end subroutine finalize_geoindices
   !===========================================================================
-  integer function k_index(DeltaB, Table_I)
+  integer function k_index(DeltaB)
 
     ! Convert a deltaB value (max-min over window) to a K-value using given
-    ! conversion table 'table'.  Table should be a 9-element vector that
-    ! lists the upper limit for each K window.  For example, a K of 0 is
-    ! given for a deltaB .le. 5, table(1) = 5.
+    ! the standard conversion table that lists the upper limit for each K 
+    ! window.  For example, a K of 0 is given for a deltaB .le. 5, table(1) = 5.
+    ! This table is scaled by k9, or the k9 for the station where the
+    ! measurement is actually taken.
     
-    !real :: convert_to_k = 9
-    real, intent(in) :: DeltaB, Table_I(9)
+    real, intent(in) :: DeltaB
     
     integer :: i
     !------------------------------------------------------------------------
     do i = 1, 9
-       if( DeltaB - Table_I(i) < 0) then
+       if( DeltaB - Table50_I(i)*k9/Table50_I(9) < 0) then
           k_index = i - 1
           RETURN
        end if

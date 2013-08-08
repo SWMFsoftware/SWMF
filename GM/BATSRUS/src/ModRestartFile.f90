@@ -52,7 +52,7 @@ module ModRestartFile
   character(len=*), parameter :: NameHeaderFile   = "restart.H"
   character(len=*), parameter :: NameDataFile     = "data.rst"
   character(len=*), parameter :: NameIndexFile    = "index.rst"
-  character(len=*), parameter :: NameGeoindFile   = "geoindex.txt"
+  character(len=*), parameter :: NameGeoindFile   = "geoindex.rst"
 
   logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
   integer :: nByteRealRead = 8     ! Real precision in restart files
@@ -939,10 +939,11 @@ contains
 
     use ModIO,          ONLY: Unit_Tmp
     use ModProcMH,      ONLY: iProc
-    use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_II
+    use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_DII
 
-    integer            :: i, j
+    integer            :: i, j, iDim
     character(len=100) :: NameFile
+    character(len=1)   :: NameDim(2) = (/'x', 'y'/)
 
     character(len=*), parameter :: NameSub='write_geoind_restart'
     logical :: DoTest, DoTestMe
@@ -952,19 +953,21 @@ contains
     ! Ensure that restart files are only written from head node.
     if(iProc/=0) return
 
-    ! Open restart file.
-    NameFile = trim(NameRestartOutDir)//NameGeoIndFile
-    open(Unit_Tmp, file=NameFile, status='REPLACE')
+    do iDim=1, 2
+       ! Open restart file.
+       NameFile = trim(NameRestartOutDir)//NameDim(iDim)//'_'//NameGeoIndFile
+       open(Unit_Tmp, file=NameFile, status='REPLACE')
 
-    ! Size of array:
-    write(Unit_Tmp,*) nKpMag, iSizeKpWindow
-    ! Save MagPerturb_II
-    do j = 1, iSizeKpWindow
-       do i = 1, nKpMag
-          write(Unit_Tmp, '(es20.12)' ) MagPerturb_II(i,j)
+       ! Size of array:
+       write(Unit_Tmp,*) nKpMag, iSizeKpWindow
+       ! Save MagPerturb_II
+       do j = 1, iSizeKpWindow
+          do i = 1, nKpMag
+             write(Unit_Tmp, '(es20.12)' ) MagPerturb_DII(iDim, i,j)
+          end do
        end do
+       close(Unit_Tmp)
     end do
-    close(Unit_Tmp)
 
   end subroutine write_geoind_restart
 
@@ -974,52 +977,60 @@ contains
     ! Read MagPerturb_II from restart file on processor 0
 
     use ModIO,          ONLY: Unit_Tmp
-    use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_II, IsFirstCalc
+    use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_DII, &
+         IsFirstCalc, Is2ndCalc
 
-    integer            :: i, j, nMagTmp, iSizeTmp
+    integer            :: i, j, iDim, nMagTmp, iSizeTmp
     logical            :: DoRestart
     character(len=100) :: NameFile
+    character(len=1)   :: NameDim(2) = (/'x', 'y'/)
 
     character(len=*), parameter :: NameSub='read_geoind_restart'
     logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    NameFile = trim(NameRestartInDir)//NameGeoindFile
+    do iDim=1, 2
 
-    ! Check for restart file.  If one exists, use it.
-    inquire(file=NameFile, exist=DoRestart)
-    if(.not. DoRestart) then
-       write(*,*) NameSub,": WARNING did not find geoindices restart file ",&
-            trim(NameFile)
-       RETURN
-    end if
+       NameFile = trim(NameRestartInDir)//NameDim(iDim)//'_'//NameGeoindFile
 
-    write(*,*)'GM: ',NameSub, ' reading ',trim(NameFile)
+       ! Check for restart file.  If one exists, use it.
+       inquire(file=NameFile, exist=DoRestart)
+       if(.not. DoRestart) then
+          write(*,*) NameSub,": WARNING did not find geoindices restart file ",&
+               trim(NameFile)
+          MagPerturb_DII(iDim,:,:) = 0.0
+          CYCLE
+       end if
 
-    open(Unit_Tmp, file=NameFile, status='OLD', action='READ')
+       write(*,*)'GM: ',NameSub, ' reading ',trim(NameFile)
 
-    ! Read size of array, ensure that it matches expected.
-    ! If not, it means that the restart is incompatible and cannot be used.
-    read(Unit_Tmp, *) nMagTmp, iSizeTmp
+       open(Unit_Tmp, file=NameFile, status='OLD', action='READ')
 
-    if( nMagTmp /= nKpMag .or. iSizeTmp /= iSizeKpWindow ) then
-       write(*,*)'ERROR: in file ',trim(NameFile)
-       write(*,*)'Restart file contains  nMagTmp, iSizeTmp=', &
-            nMagTmp, iSizeTmp
-       write(*,*)'PARAM.in contains nKpMag, iSizeKpWindow =', &
-            nKpMag, iSizeKpWindow
-       call stop_mpi(NameSub//' restart does not match Kp settings!')
-    end if
+       ! Read size of array, ensure that it matches expected.
+       ! If not, it means that the restart is incompatible and cannot be used.
+       read(Unit_Tmp, *) nMagTmp, iSizeTmp
 
-    do j = 1, iSizeKpWindow
-       do i = 1, nKpMag
-          read(Unit_Tmp,*) MagPerturb_II(i,j)
+       if( nMagTmp /= nKpMag .or. iSizeTmp /= iSizeKpWindow ) then
+          write(*,*)'ERROR: in file ',trim(NameFile)
+          write(*,*)'Restart file contains  nMagTmp, iSizeTmp=', &
+               nMagTmp, iSizeTmp
+          write(*,*)'PARAM.in contains nKpMag, iSizeKpWindow =', &
+               nKpMag, iSizeKpWindow
+          call stop_mpi(NameSub//' restart does not match Kp settings!')
+       end if
+
+       do j = 1, iSizeKpWindow
+          do i = 1, nKpMag
+             read(Unit_Tmp,*) MagPerturb_DII(iDim,i,j)
+          end do
        end do
+       close(Unit_Tmp)
+
     end do
-    close(Unit_Tmp)
 
     IsFirstCalc=.false.
+    Is2ndCalc  =.false.
 
   end subroutine read_geoind_restart
 
