@@ -15,6 +15,9 @@ use the different programs contain therein can be found at:
 
 http://madrigal.haystack.mit.edu/madrigal/rt_python.html
 
+to install:
+$ sudo python setupMadrigalWeb.py install
+
 Routines:
 ___________________________________________________________________________
 
