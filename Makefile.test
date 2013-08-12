@@ -391,7 +391,7 @@ test3_check:
 		${TESTDIR}/RESULTS/GM/geoindex_n00000005.log \
 		output/test3/GM_geoindex.log \
 		>> test3_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
 		${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
 		output/test3/GM_restart_geoindex.txt \
 		>> test3_gm.diff)
@@ -685,8 +685,8 @@ test8_check:
 		${TESTDIR}/RESULTS/GM/geoindex_n00000005.log \
 		output/test8/GM_geoindex.log \
 		>> test8_gm_multi.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/RESTART/GM/geoindex.txt \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
+		${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
 		output/test8/GM_restart_geoindex.txt \
 		>> test8_gm_multi.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
