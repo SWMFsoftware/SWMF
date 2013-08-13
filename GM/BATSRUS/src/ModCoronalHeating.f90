@@ -1422,9 +1422,9 @@ contains
 
        ! Correct at top of closed field lines, where turbulence is balanced
        WaveDissipation_V(WaveFirst_) = max( WaveDissipation_V(WaveFirst_), &
-            EwavePlus*2.0*Coef*sqrt(EwaveMinus) )
+            EwavePlus*2.0*KarmanTaylorAlpha*Coef*sqrt(EwaveMinus) )
        WaveDissipation_V(WaveLast_) = max( WaveDissipation_V(WaveLast_), &
-            EwaveMinus*2.0*Coef*sqrt(EwavePlus) )
+            EwaveMinus*2.0*KarmanTaylorAlpha*Coef*sqrt(EwavePlus) )
 
        ! Correct in inner heliosphere, where reflection is caused by
        ! the radially expanding flow
@@ -1454,8 +1454,8 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: GradLogAlfven_D(nDim), FullB_D(3), FullB, ReflectionPerLperp
-    real :: EwavePlus, EwaveMinus
+    real :: GradLogAlfven_D(nDim), FullB_D(3), FullB, Rho, ReflectionPerLperp
+    real :: EwavePlus, EwaveMinus, Edominant, Eminor
     !--------------------------------------------------------------------------
 
     if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
@@ -1472,17 +1472,35 @@ contains
        end if
        FullB = sqrt(sum(FullB_D**2))
 
-       ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D)) &
-            /sqrt(State_VGB(Rho_,i,j,k,iBlock))
-
-       if(DoExtendTransitionRegion) ReflectionPerLperp &
-            = ReflectionPerLperp/extension_factor(TeSi_C(i,j,k))
+       Rho = State_VGB(Rho_,i,j,k,iBlock)
 
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-       ! Below is the limiting case U << Valfven
-       ! The implementation for the limit U >> Valfven still needs to be added
+       ! In the context of WKB analysis we need to figure out which wave
+       ! is dominant and which one is minor
+       Edominant = max(EwavePlus,EwaveMinus)
+       Eminor = min(EwavePlus,EwaveMinus)
+
+       ! Reflection driven by grad(log(Valfven)) along field lines
+       ReflectionPerLperp = &
+            0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D))/sqrt(Rho)
+
+       ! If the waves are within say a factor 4 of each other, we can not claim
+       ! to have a dominant wave --> the turbulence is near balanced
+       ReflectionPerLperp = ReflectionPerLperp &
+            *max(1.0 - 2.0*sqrt(Eminor/Edominant), 0.0)
+
+       ! This prevents a too small wave reflection far away from the Sun.
+       ReflectionPerLperp = max(ReflectionPerLperp, 2.0*KarmanTaylorAlpha &
+            *Crefl*sqrt(Edominant*FullB/Rho)/LperpTimesSqrtB)
+
+       ! For the minor wave equation, the reflection and cascade term
+       ! should be able to balance if needed. Hence reflection term also
+       ! requires transition region broadening
+       if(DoExtendTransitionRegion) ReflectionPerLperp &
+            = ReflectionPerLperp/extension_factor(TeSi_C(i,j,k))
+
        if(EwavePlus > EwaveMinus)then
           Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
                - ReflectionPerLperp*sqrt(EwavePlus*EwaveMinus)
