@@ -1486,14 +1486,14 @@ contains
        ReflectionPerLperp = &
             0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D))/sqrt(Rho)
 
+       ! This prevents a too small wave reflection far away from the Sun.
+       ReflectionPerLperp = max(ReflectionPerLperp, 2.0*KarmanTaylorAlpha &
+            *Crefl*sqrt(Edominant*FullB/Rho)/LperpTimesSqrtB)
+
        ! If the waves are within say a factor 4 of each other, we can not claim
        ! to have a dominant wave --> the turbulence is near balanced
        ReflectionPerLperp = ReflectionPerLperp &
             *max(1.0 - 2.0*sqrt(Eminor/Edominant), 0.0)
-
-       ! This prevents a too small wave reflection far away from the Sun.
-       ReflectionPerLperp = max(ReflectionPerLperp, 2.0*KarmanTaylorAlpha &
-            *Crefl*sqrt(Edominant*FullB/Rho)/LperpTimesSqrtB)
 
        ! For the minor wave equation, the reflection and cascade term
        ! should be able to balance if needed. Hence reflection term also
