@@ -1363,7 +1363,7 @@ contains
     integer, parameter :: iRho = 1, iBx = 2, iBz = 4
 
     real :: FullB_D(3), FullB, Rho, Coef
-    real :: EwavePlus, EwaveMinus, ReflectionPerLperp
+    real :: EwavePlus, EwaveMinus, ZminorPerLperp
 
     real :: GradLogAlfven_D(nDim)
 
@@ -1414,11 +1414,10 @@ contains
 
        call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
-       ReflectionPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D)) &
-            /sqrt(Rho)
+       ZminorPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D))/sqrt(Rho)
 
-       WaveDissipation_V(WaveFirst_) = EwavePlus*ReflectionPerLperp
-       WaveDissipation_V(WaveLast_) = EwaveMinus*ReflectionPerLperp
+       WaveDissipation_V(WaveFirst_) = EwavePlus*ZminorPerLperp
+       WaveDissipation_V(WaveLast_) = EwaveMinus*ZminorPerLperp
 
        ! Correct at top of closed field lines, where turbulence is balanced
        WaveDissipation_V(WaveFirst_) = max( WaveDissipation_V(WaveFirst_), &
@@ -1454,7 +1453,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: GradLogAlfven_D(nDim), FullB_D(3), FullB, Rho, ReflectionPerLperp
+    real :: GradLogAlfven_D(nDim), FullB_D(3), FullB, Rho, ZminorPerLperp
     real :: EwavePlus, EwaveMinus, Edominant, Eminor
     !--------------------------------------------------------------------------
 
@@ -1482,35 +1481,37 @@ contains
        Edominant = max(EwavePlus,EwaveMinus)
        Eminor = min(EwavePlus,EwaveMinus)
 
-       ! Reflection driven by grad(log(Valfven)) along field lines
-       ReflectionPerLperp = &
-            0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D))/sqrt(Rho)
+       ! Partial reflection of dominant wave into minor due to
+       ! grad(log(Valfven)) along field lines
+       ZminorPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D))/sqrt(Rho)
 
        ! This prevents a too small wave reflection far away from the Sun.
-       ReflectionPerLperp = max(ReflectionPerLperp, 2.0*KarmanTaylorAlpha &
+       ZminorPerLperp = max(ZminorPerLperp, 2.0*KarmanTaylorAlpha &
             *Crefl*sqrt(Edominant*FullB/Rho)/LperpTimesSqrtB)
 
        ! If the waves are within say a factor 4 of each other, we can not claim
        ! to have a dominant wave --> the turbulence is near balanced
-       ReflectionPerLperp = ReflectionPerLperp &
+       ZminorPerLperp = ZminorPerLperp &
             *max(1.0 - 2.0*sqrt(Eminor/Edominant), 0.0)
 
        ! For the minor wave equation, the reflection and cascade term
        ! should be able to balance if needed. Hence reflection term also
        ! requires transition region broadening
-       if(DoExtendTransitionRegion) ReflectionPerLperp &
-            = ReflectionPerLperp/extension_factor(TeSi_C(i,j,k))
+       if(DoExtendTransitionRegion) ZminorPerLperp &
+            = ZminorPerLperp/extension_factor(TeSi_C(i,j,k))
 
        if(EwavePlus > EwaveMinus)then
+          ! Partial reflection of dominant plus wave into minor minus wave
           Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
-               - ReflectionPerLperp*sqrt(EwavePlus*EwaveMinus)
+               - ZminorPerLperp*sqrt(EwavePlus*EwaveMinus)
           Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
-               + ReflectionPerLperp*sqrt(EwavePlus*EwaveMinus)
+               + ZminorPerLperp*sqrt(EwavePlus*EwaveMinus)
        else
+          ! Partial reflection of dominant minus wave into minor plus wave
           Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
-               + ReflectionPerLperp*sqrt(EwavePlus*EwaveMinus)
+               + ZminorPerLperp*sqrt(EwavePlus*EwaveMinus)
           Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
-               - ReflectionPerLperp*sqrt(EwavePlus*EwaveMinus)
+               - ZminorPerLperp*sqrt(EwavePlus*EwaveMinus)
        end if
 
     end do; end do; end do
