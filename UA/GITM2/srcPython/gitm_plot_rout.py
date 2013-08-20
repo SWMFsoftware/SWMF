@@ -434,6 +434,12 @@ def find_lon_lat_index(gData, glon, glat, units="degrees"):
     Routine to locate the appropriate longitude and latitude indexes for a
     given location.  The location may be specified in degrees (default) or
     radians.
+
+    INput:
+    gData
+    glon
+    glat
+    units = default is degrees
     '''
 
     import string
