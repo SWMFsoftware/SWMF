@@ -98,7 +98,7 @@ def get_possible_instruments(startyear, startmonth, startday, starthour,
     #-----------------------------------------------------------------------
     # Go through each site and determine which instruments have experiments
     # available in the desired time range
-
+    
     for m in msites:
         mdata = mWeb.MadrigalData(msites[m])
 
@@ -122,6 +122,8 @@ def get_possible_instruments(startyear, startmonth, startday, starthour,
                                     endmonth, endday, endhour, endmin, endsec)
         new_exp = dict()
 
+        
+
         #---------------------------------------------------------------
         # Save the code, name, and instrument category for each unique
         # experiment stored locally at this Madrigal database
@@ -136,7 +138,7 @@ def get_possible_instruments(startyear, startmonth, startday, starthour,
     #----------------------------------------------------------------------
     # Return the instrument code, instrument name, and instrument category
     # in dictionaries grouped by Madrigal site
-    return(mcode, mname, mcat)
+    return(mcode, mname, mcat,msites)
 
 # End get_instrument_codes
 
