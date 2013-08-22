@@ -28,6 +28,7 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '3DCHM')     IsFound = .true.
      if (OutputType(iOutputType) == '3DUSR')     IsFound = .true.
      if (OutputType(iOutputType) == '3DGLO')     IsFound = .true.
+     if (OutputType(iOutputType) == '3DMAG')     IsFound = .true.
 
      if (OutputType(iOutputType) == '2DGEL')     IsFound = .true.
      if (OutputType(iOutputType) == '2DMEL')     IsFound = .true.
@@ -114,7 +115,7 @@ subroutine output(dir, iBlock, iOutputType)
   ! the maximum from all processors will contain the real value.  This is
   ! done by setting the current value to something rediculously small for
   ! all currently known satellite input data types.
-
+  
   if(CurrSat > 0) then
      SatAltDat(CurrSat) = -1.0e32
   end if
@@ -123,8 +124,6 @@ subroutine output(dir, iBlock, iOutputType)
      LatFind = CurrentSatellitePosition(iNorth_)
      LonFind = CurrentSatellitePosition(iEast_)
      call BlockLocationIndex(LonFind,LatFind,iBlock,iiLon,iiLat,rLon,rLat)
-
-     if (iiLon < 0 .or. iiLat < 0) return
 
      if(iOutputType == -2) then
         AltFind = CurrentSatellitePosition(iUp_)
@@ -262,6 +261,11 @@ subroutine output(dir, iBlock, iOutputType)
      if (iBlock == 1) call set_nVarsUser3d
      nvars_to_write = nVarsUser3d
      call output_3duser(iBlock, iOutputUnit_)
+
+  case ('3DMAG')
+
+     nvars_to_write = 5+4
+     call output_3dmag(iBlock)
 
   case ('2DGEL')
 
@@ -417,6 +421,15 @@ contains
     write(iOutputUnit_,"(I7,A1,a)")  1, " ", "Longitude"
     write(iOutputUnit_,"(I7,A1,a)")  2, " ", "Latitude"
     write(iOutputUnit_,"(I7,A1,a)")  3, " ", "Altitude"
+
+    if (cType(3:5) == "MAG") then
+       write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Magnetic Latitude"
+       write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "Magnetic Longitude"
+       write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "B.F. East"
+       write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "B.F. North"
+       write(iOutputUnit_,"(I7,A1,a)") iOff+10, " ", "B.F. Vertical"
+       write(iOutputUnit_,"(I7,A1,a)") iOff+11, " ", "B.F. Magnitude"
+    end if
 
     if (cType(3:5) == "GEL") then
 
@@ -610,7 +623,7 @@ contains
           write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "B.F. East"
           write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "B.F. North"
           write(iOutputUnit_,"(I7,A1,a)") iOff+10, " ", "B.F. Vertical"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+11, " ", "B.F. Magnitude"          
+          write(iOutputUnit_,"(I7,A1,a)") iOff+11, " ", "B.F. Magnitude"
           write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "Potential"
           write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "E.F. East"
           write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "E.F. North"
@@ -1266,6 +1279,37 @@ subroutine output_2dtec(iBlock)
   enddo
 
 end subroutine output_2dtec
+
+!-------------------------------------------------------------------------------
+! AGB: Routine to output a 3D Mag file that includes the geomagnetic field info
+!-------------------------------------------------------------------------------
+
+subroutine output_3dmag(iBlock)
+
+  use ModGITM
+  use ModInputs
+
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iLat, iLon, iAlt
+
+  do iAlt=-1,nAlts+2
+     do iLat=-1,nLats+2
+        do iLon=-1,nLons+2
+           write(iOutputUnit_)                      &
+                Longitude(iLon,iBlock),             &
+                Latitude(iLat,iBlock),              &
+                Altitude_GB(iLon,iLat,iAlt,iBlock), &
+                mLatitude(iLon,iLat,iAlt,iBlock),   &
+                mLongitude(iLon,iLat,iAlt,iBlock),  &
+                B0(iLon,iLat,iAlt,:,iBlock)
+           ! B0 has 4 elements of the geomag field, the E, N, Up, and magnitude
+        enddo
+     enddo
+  end do
+
+end subroutine output_3dmag
 
 !----------------------------------------------------------------
 
