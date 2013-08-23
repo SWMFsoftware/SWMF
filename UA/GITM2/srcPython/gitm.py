@@ -52,7 +52,7 @@ class GitmBin(PbData):
     will always be of the same shape and size.
 
     kwargs may be specified for:
-    ionfile = 3DION file, allows computation of velocities in magnetic
+    magfile = 3DION or 3DMAG file, allows computation of velocities in magnetic
               coordinates
     varlist = list of variable keys.  Will limit the variables read in to those
               listed.  Time and position will always be read in.  If the list
@@ -70,8 +70,8 @@ class GitmBin(PbData):
         self.calc_lt()
         self.append_units()
 
-        if kwargs.has_key('ionfile'):
-            self.attrs['ionfile']=kwargs['ionfile']
+        if kwargs.has_key('magfile'):
+            self.attrs['magfile']=kwargs['magfile']
             self.calc_magvel()
 
     def __repr__(self):
@@ -218,12 +218,13 @@ class GitmBin(PbData):
         import string
         import sys
 
-        if not self.attrs.has_key('ionfile'):
-            print "No 3D ION file associated with this GITM Binary"
-        elif self.attrs['ionfile'].find("ION") <= 0:
-            print "No 3D ION file associated with this GITM Binary"
+        if not self.attrs.has_key('magfile'):
+            print "No 3D MAG/ION file associated with this GITM Binary"
+        elif(self.attrs['magfile'].find("ION") <= 0 and
+             self.attrs['magfile'].find("MAG") <= 0):
+            print "No 3D MAG/ION file associated with this GITM Binary"
         else:
-            ion = GitmBin(self.attrs['ionfile'])
+            ion = GitmBin(self.attrs['magfile'])
 
             # Compute the field-aligned unit vector in East, North,
             # and Vertical coordinates
@@ -286,10 +287,6 @@ class GitmBin(PbData):
             self['B.F. North']         = dmarray.copy(ion['B.F. North'])
             self['B.F. Vertical']      = dmarray.copy(ion['B.F. Vertical'])
             self['B.F. Magnitude']     = dmarray.copy(ion['B.F. Magnitude'])
-            self['E.F. East']          = dmarray.copy(ion['E.F. East'])
-            self['E.F. North']         = dmarray.copy(ion['E.F. North'])
-            self['E.F. Vertical']      = dmarray.copy(ion['E.F. Vertical'])
-            self['E.F. Magnitude']     = dmarray.copy(ion['E.F. Magnitude'])
             self['Magnetic Latitude']  = dmarray.copy(ion['Magnetic Latitude'])
             self['Magnetic Longitude'] = dmarray.copy(ion['Magnetic Longitude'])
 
