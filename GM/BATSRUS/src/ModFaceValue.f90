@@ -21,6 +21,7 @@ module ModFaceValue
 
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
+  character(len=6), public :: TypeLimiter5 = 'mp'
 
   public :: read_face_value_param, calc_face_value, correct_monotone_restrict
 
@@ -83,6 +84,20 @@ module ModFaceValue
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
   integer :: iVar
+
+  !Logical switch for 5th order scheme: use cweno5 or mp5 scheme. 
+  logical, public ::  DoCweno = .false. 
+
+  !The weight of the four low order polynomials of cweno5
+  real:: WeightL_I(0:MaxIJK+1, 4), WeightR_I(0:MaxIJK+1, 4)      
+
+  !Variables for cweno5
+  real:: ConsE 
+  integer:: iVarLimiter
+  logical, public:: UseiVarAsLimiter = .false. 
+
+  !Variable for mp5 scheme
+  logical :: UseiVar
 
 contains
   !============================================================================
@@ -254,7 +269,7 @@ contains
        Fine2_VII         ,& !States in 4 fine physical cells,2nd layer
        CoarseToFineF_VII ,& !Values at subfaces, in the coarse ghostcell
        FineToCoarseF_VII ,& !Facevalues in the physical cell,
-                                !                        looking at the coarser cell 
+                                !                  looking at the coarser cell 
        FineF_VII)           !Facevalues in the physical cell,
     !   looking at another physical cell
 
@@ -1068,7 +1083,7 @@ contains
           else
              call ratio_to_scalar_faceX(1,nIFace,jMinFace,jMaxFace, &
                   kMinFace,kMaxFace)
-             if(nJ > 1) call ratio_to_scalar_faceY(iMinFace,iMaxFace,1,nJFace, &
+             if(nJ > 1) call ratio_to_scalar_faceY(iMinFace,iMaxFace,1,nJFace,&
                   kMinFace,kMaxFace)
              if(nK > 1) call ratio_to_scalar_faceZ(iMinFace,iMaxFace, &
                   jMinFace,jMaxFace,1,nKFace)
@@ -1112,7 +1127,7 @@ contains
   contains
 
     !==========================================================================
-    subroutine logfaceX_to_faceX(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine logfacex_to_facex(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
@@ -1125,9 +1140,9 @@ contains
               exp(RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
       end do
 
-    end subroutine logfaceX_to_faceX
+    end subroutine logfacex_to_facex
     !==========================================================================
-    subroutine logfaceY_to_faceY(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine logfacey_to_facey(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
@@ -1140,9 +1155,9 @@ contains
               exp(RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
       end do
 
-    end subroutine logfaceY_to_faceY
+    end subroutine logfacey_to_facey
     !==========================================================================
-    subroutine logfaceZ_to_faceZ(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine logfacez_to_facez(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
@@ -1155,9 +1170,9 @@ contains
               exp(RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
       end do
 
-    end subroutine logfaceZ_to_faceZ
+    end subroutine logfacez_to_facez
     !==========================================================================
-    subroutine ratio_to_scalar_faceX(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine ratio_to_scalar_facex(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer :: i, j, k
@@ -1169,9 +1184,9 @@ contains
               RightState_VX(iVarLimitRatio_I,i,j,k)*RightState_VX(Rho_,i,j,k)
       end do; end do; end do
 
-    end subroutine ratio_to_scalar_faceX
+    end subroutine ratio_to_scalar_facex
     !==========================================================================
-    subroutine ratio_to_scalar_faceY(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine ratio_to_scalar_facey(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer :: i, j, k
@@ -1183,9 +1198,9 @@ contains
               RightState_VY(iVarLimitRatio_I,i,j,k)*RightState_VY(Rho_,i,j,k)
       end do; end do; end do
 
-    end subroutine ratio_to_scalar_faceY
+    end subroutine ratio_to_scalar_facey
     !==========================================================================
-    subroutine ratio_to_scalar_faceZ(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine ratio_to_scalar_facez(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer :: i, j, k
@@ -1197,9 +1212,9 @@ contains
               RightState_VZ(iVarLimitRatio_I,i,j,k)*RightState_VZ(Rho_,i,j,k)
       end do; end do; end do
 
-    end subroutine ratio_to_scalar_faceZ
+    end subroutine ratio_to_scalar_facez
     !==========================================================================
-    subroutine ptotal_to_p_faceX(iMin, iMax, jMin, jMax, kMin, kMax)
+    subroutine ptotal_to_p_facex(iMin, iMax, jMin, jMax, kMin, kMax)
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
@@ -1221,9 +1236,9 @@ contains
          end do; end do; end do
       end if
 
-    end subroutine ptotal_to_p_faceX
+    end subroutine ptotal_to_p_facex
     !==========================================================================
-    subroutine ptotal_to_p_faceY(iMin, iMax, jMin, jMax, kMin, kMax)
+    subroutine ptotal_to_p_facey(iMin, iMax, jMin, jMax, kMin, kMax)
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
@@ -1245,9 +1260,9 @@ contains
          end do; end do; end do
       end if
 
-    end subroutine ptotal_to_p_faceY
+    end subroutine ptotal_to_p_facey
     !==========================================================================
-    subroutine ptotal_to_p_faceZ(iMin, iMax, jMin, jMax, kMin, kMax)
+    subroutine ptotal_to_p_facez(iMin, iMax, jMin, jMax, kMin, kMax)
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
@@ -1269,7 +1284,7 @@ contains
          end do; end do; end do
       end if
 
-    end subroutine ptotal_to_p_faceZ
+    end subroutine ptotal_to_p_facez
 
     !==========================================================================
     subroutine calc_primitives_boris                                       
@@ -1352,7 +1367,18 @@ contains
                   if(nOrder == 4)then
                      call limiter_ppm4(iMin, iMax)
                   else
-                     call limiter_mp(iMin, iMax, Cell_I, Cell_I, iVar)
+                     
+                     if(UseiVarAsLimiter) then 
+                        !Use the variable itself as smooth indicator for every 
+                        !variable.
+                        iVarLimiter = iVar
+                     else
+                        !Use Rho as the smooth indicator for all variables. 
+                        iVarLimiter = Rho_
+                     end if
+                     UseiVar = .True.
+                     call limiter5(iMin, iMax, Cell_I, Cell_I, iVar, &
+                          UseiVar, DoCweno,iVarLimiter)
                   end if
                   ! Copy back the results into the 3D arrays
                   LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
@@ -1363,9 +1389,20 @@ contains
                ! Copy points along i direction into 1D array
                Cell_I(iMin-nG:iMax-1+nG) = &
                     Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
-               call limiter_mp(iMin, iMax, Cell_I, Cell_I, iVar)
+               UseiVar = .True.
+               call limiter5(iMin, iMax, Cell_I, Cell_I, iVar, &
+                    UseiVar, DoCweno,Ux_)
                uDotArea_XI(iMin:iMax,j,k,1) = CellFace_DB(1,iBlock) &
                     *0.5*(FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax))
+
+               if (DoCweno) then
+                  !Use Rho as the smooth indicator
+                  iVar = Rho_
+                  Cell_I(iMin-nG:iMax-1+nG) = &
+                       Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
+                  call limiter5(iMin, iMax, Cell_I, Cell_I, iVar, &
+                       UseiVar, DoCweno,Rho_)
+               end if
 
                ! Interpolate cell centered split fluxes to the face
                do iFlux = 1, nVar + nFluid
@@ -1376,10 +1413,13 @@ contains
                   Cell2_I(iMin-nG:iMax-1+nG) = &
                        FluxRight_VGD(iFlux,iMin-nG:iMax-1+nG,j,k,x_)
 
-                  call limiter_mp(iMin, iMax, Cell_I, Cell2_I)
+                  UseiVar = .False.
+                  !Rho is the smooth indicator for cweno5
+                  call limiter5(iMin, iMax, Cell_I, Cell2_I, iFlux, &
+                       UseiVar, DoCweno, -1)
+
                   Flux_VX(iFlux,iMin:iMax,j,k) = &
                        FaceL_I(iMin:iMax) + FaceR_I(iMin:iMax)
-
                end do
             endif
          end do; end do
@@ -1407,6 +1447,12 @@ contains
                if(nK>1) Laplace_V = Laplace_V &
                     + State_VX(:,i,j,k-1) + State_VX(:,i,j,k+1)
                RightState_VX(:,i,j,k) = State_VX(:,i,j,k) - c24th*Laplace_V
+
+               !Make sure Rho and P are positive.
+               if(RightState_VX(Rho_,i,j,k) < 0)  &
+                    RightState_VX(Rho_,i,j,k) = State_VX(Rho_,i,j,k)
+               if(RightState_VX(p_,i,j,k) < 0)  &
+                    RightState_VX(p_,i,j,k) = State_VX(p_,i,j,k)
             end do; end do; end do
          end if
       end if
@@ -1460,7 +1506,14 @@ contains
                   if(nOrder == 4)then
                      call limiter_ppm4(jMin, jMax)
                   else
-                     call limiter_mp(jMin, jMax, Cell_I, Cell_I, iVar)
+                     if(UseiVarAsLimiter) then 
+                        iVarLimiter = iVar
+                     else
+                        iVarLimiter = Rho_
+                     end if
+                     UseiVar = .True.
+                     call limiter5(jMin, jMax, Cell_I, Cell_I, iVar, &
+                          UseiVar, DoCweno, iVarLimiter)
                   end if
                   ! Copy back the results into the 3D arrays
                   LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
@@ -1468,12 +1521,21 @@ contains
                end do
             else
                iVar = Uy_
-               ! Copy points along i direction into 1D array
+               ! Copy points along i direction into 1D array                  
                Cell_I(jMin-nG:jMax-1+nG) = &
                     Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
-               call limiter_mp(jMin, jMax, Cell_I, Cell_I, iVar)
+               call limiter5(jMin, jMax, Cell_I, Cell_I, iVar, &
+                     UseiVar, DoCweno, Uy_)
                uDotArea_YI(i,jMin:jMax,k,1) = CellFace_DB(2,iBlock) &
                     *0.5*(FaceL_I(jMin:jMax) + FaceR_I(jMin:jMax))
+
+               if (DoCweno) then
+                  iVar = Rho_
+                  Cell_I(jMin-nG:jMax-1+nG) = &
+                       Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
+                  call limiter5(jMin, jMax, Cell_I, Cell_I, iVar, &
+                       UseiVar, DoCweno, Rho_)
+               end if
 
                ! Interpolate cell centered split fluxes to the face
                do iFlux = 1, nVar + nFluid
@@ -1484,7 +1546,10 @@ contains
                   Cell2_I(jMin-nG:jMax-1+nG) = &
                        FluxRight_VGD(iFlux,i,jMin-nG:jMax-1+nG,k,y_)
 
-                  call limiter_mp(jMin, jMax, Cell_I, Cell2_I)
+                  UseiVar = .False.
+                  call limiter5(jMin, jMax, Cell_I, Cell2_I, iFlux, &
+                       UseiVar, DoCweno,-1)
+
                   Flux_VY(iFlux,i,jMin:jMax,k) = &
                        FaceL_I(jMin:jMax) + FaceR_I(jMin:jMax)
                end do
@@ -1514,6 +1579,12 @@ contains
                if(nK>1) Laplace_V = Laplace_V &
                     + State_VY(:,i,j,k-1) + State_VY(:,i,j,k+1)
                RightState_VY(:,i,j,k) = State_VY(:,i,j,k) - c24th*Laplace_V
+
+               !Keep positivity.
+               if(RightState_VY(Rho_,i,j,k) < 0)  &
+                    RightState_VY(Rho_,i,j,k) = State_VY(Rho_,i,j,k)
+               if(RightState_VY(p_,i,j,k) < 0)  &
+                    RightState_VY(p_,i,j,k) = State_VY(p_,i,j,k)
             end do; end do; end do
          end if
       end if
@@ -1569,7 +1640,14 @@ contains
                   if(nOrder == 4)then
                      call limiter_ppm4(kMin, kMax)
                   else
-                     call limiter_mp(kMin, kMax, Cell_I, Cell_I, iVar)
+                     if(UseiVarAsLimiter) then 
+                        iVarLimiter = iVar
+                     else
+                        iVarLimiter = Rho_
+                     end if
+                     UseiVar = .True.
+                     call limiter5(kMin, kMax, Cell_I, Cell_I, iVar, &
+                           UseiVar, DoCweno, iVarLimiter)
                   end if
                   ! Copy back the results into the 3D arrays
                   LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
@@ -1577,12 +1655,21 @@ contains
                end do
             else
                iVar = Uz_
-               ! Copy points along i direction into 1D array
+               ! Copy points along i direction into 1D array                  
                Cell_I(kMin-nG:kMax-1+nG) = &
                     Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
-               call limiter_mp(kMin, kMax, Cell_I, Cell_I, iVar)
+               call limiter5(kMin, kMax, Cell_I, Cell_I, iVar, &
+                    UseiVar, DoCweno, Uz_)
                uDotArea_ZI(i,j,kMin:kMax,1) = CellFace_DB(3,iBlock) &
                     *0.5*(FaceL_I(kMin:kMax) + FaceR_I(kMin:kMax))
+
+               if (DoCweno) then
+                  iVar = Rho_
+                  Cell_I(kMin-nG:kMax-1+nG) = &
+                       Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
+                  call limiter5(kMin, kMax, Cell_I, Cell_I, iVar, &
+                        UseiVar, DoCweno, Rho_)
+               end if
 
                ! Interpolate cell centered split fluxes to the face
                do iFlux = 1, nVar + nFluid
@@ -1593,7 +1680,10 @@ contains
                   Cell2_I(kMin-nG:kMax-1+nG) = &
                        FluxRight_VGD(iFlux,i,j,kMin-nG:kMax-1+nG,z_)
 
-                  call limiter_mp(kMin, kMax, Cell_I, Cell2_I)
+                  UseiVar = .False.
+                  call limiter5(kMin, kMax, Cell_I, Cell2_I, iFlux, &
+                        UseiVar, DoCweno, -1)
+
                   Flux_VZ(iFlux,i,j,kMin:kMax) = &
                        FaceL_I(kMin:kMax) + FaceR_I(kMin:kMax)
                end do
@@ -1620,6 +1710,12 @@ contains
                     + State_VZ(:,i-1,j,k) + State_VZ(:,i+1,j,k) &
                     + State_VZ(:,i,j-1,k) + State_VZ(:,i,j+1,k)
                RightState_VZ(:,i,j,k) = State_VZ(:,i,j,k) - c24th*Laplace_V
+
+               !Keep Positivity
+               if(RightState_VZ(Rho_,i,j,k) < 0)  &
+                    RightState_VZ(Rho_,i,j,k) = State_VZ(Rho_,i,j,k)
+               if(RightState_VZ(p_,i,j,k) < 0)  &
+                    RightState_VZ(p_,i,j,k) = State_VZ(p_,i,j,k)
             end do; end do; end do
          end if
       end if
@@ -1632,7 +1728,7 @@ contains
     end subroutine get_facez_high
 
     !========================================================================
-    subroutine get_faceX_first(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facex_first(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
@@ -1646,9 +1742,9 @@ contains
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
 
-    end subroutine get_faceX_first
+    end subroutine get_facex_first
     !========================================================================
-    subroutine get_faceY_first(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facey_first(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !----------------------------------------------------------------------
@@ -1662,9 +1758,9 @@ contains
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
            iMin,iMax,jMin,jMax,kMin,kMax)
 
-    end subroutine get_faceY_first
+    end subroutine get_facey_first
     !========================================================================
-    subroutine get_faceZ_first(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facez_first(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !----------------------------------------------------------------------
@@ -1678,7 +1774,7 @@ contains
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
 
-    end subroutine get_faceZ_first
+    end subroutine get_facez_first
     !==========================================================================
     subroutine calc_primitives_MHD
 
@@ -2306,7 +2402,7 @@ contains
       end select
     end subroutine get_face_tvd
     !=========================================================================
-    subroutine get_faceX_second(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facex_second(iMin,iMax,jMin,jMax,kMin,kMax)
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer::i1, iMinSharp, iMaxSharp
       !----------------------------------------------------------------------
@@ -2346,9 +2442,9 @@ contains
 
       if(DoLimitMomentum) call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
 
-    end subroutine get_faceX_second
+    end subroutine get_facex_second
     !==========================================================================
-    subroutine get_faceY_second(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facey_second(iMin,iMax,jMin,jMax,kMin,kMax)
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer::j1, jMinSharp, jMaxSharp
       !----------------------------------------------------------------------
@@ -2388,9 +2484,9 @@ contains
 
       if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
 
-    end subroutine get_faceY_second
+    end subroutine get_facey_second
     !==========================================================================
-    subroutine get_faceZ_second(iMin,iMax,jMin,jMax,kMin,kMax)
+    subroutine get_facez_second(iMin,iMax,jMin,jMax,kMin,kMax)
       integer,intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer::k1, kMinSharp, kMaxSharp
       !----------------------------------------------------------------------
@@ -2429,7 +2525,7 @@ contains
 
       if(DoLimitMomentum) call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
-    end subroutine get_faceZ_second
+    end subroutine get_facez_second
 
     !========================================================================
     subroutine flatten(Prim_VG)
@@ -2680,7 +2776,7 @@ contains
 
           D2m = minmod4(4*D2_I(l) - D2_I(l-1),4*D2_I(l-1) - D2_I(l), &
                D2_I(l), D2_I(l-1))
-          
+
           UpperLimit = Cell + 4*(Cell - Cellm)
           Average    = 0.5*(Cell + Cellp)
           Median     = Average - 0.5*D2p
@@ -2741,7 +2837,7 @@ contains
 
           D2m = minmod4(4*D2_I(l) - D2_I(l-1),4*D2_I(l-1) - D2_I(l), &
                D2_I(l), D2_I(l-1))
-          
+
           UpperLimit = Cell + 4*(Cell - Cellp)
           Average    = 0.5*(Cell + Cellm)
           Median     = Average - 0.5*D2m
@@ -2790,6 +2886,220 @@ contains
     !========================================================================
 
   end subroutine limiter_mp
+
+  !=========================================================================
+  subroutine limiter5_cweno(lMin, lMax, Cell_I, Cell2_I, iVar, VarLimiter)
+    !G. Capdeville, A central WENO scheme for solving hyperbolic conservation
+    !laws on non-uniform meshes, J. Comput. Phys. 227 (2008) 2977–3014.
+    use ModMain, only: time_simulation
+    real,    intent(in):: Cell_I(1-nG: MaxIJK+nG)
+    real,    intent(in):: Cell2_I(1-nG: MaxIJK+nG)
+    integer, intent(in):: lMin, lMax
+    integer, intent(in):: iVar, VarLimiter
+
+    !linear coefficients of four low order polynamials. eq (13)
+    real:: LinearCoeff_I(4)
+
+    integer:: l
+
+    !The coefficients of these low order polynomials. eq (8), (9), (10), (15)
+    real:: a0_I(4), a1_I(4), a2_I(4), a3, a4
+
+    real:: Weight_I(4)
+    real, parameter:: x1 = -0.5, x2 = 0.5
+    !The constant in eq(24)
+
+    real, parameter:: c7over120 = 7./120, c1over6 = 1./6, c1over3 = 1./3
+    real, parameter:: c5over6 = 5./6, c21over40 = 21./40, c11over6 = 11./6
+    real, parameter:: c73over120 = 73./120, c7over6 = 7./6, c1over60 = 1./60
+    real, parameter:: c13over3 = 13./3
+    !----------------------------------------------------------------------
+    ConsE = 1e-6
+
+    LinearCoeff_I(1)= 1./8; LinearCoeff_I(2)=1./4
+    LinearCoeff_I(3)= 1./8; LinearCoeff_I(4)=1./2
+
+    if (iVar == VarLimiter) then
+       do l = lMin-1, lMax
+          !eq (6), (8), (9), (10)
+          call low_order_coeff(Cell2_I,l,LinearCoeff_I, a0_I, a1_I, a2_I,&
+               a3, a4)
+          !eq (23)
+          call cacl_weight(Cell2_I,Weight_I,LinearCoeff_I, ConsE, a1_I, &
+               a2_I, a3)
+          WeightR_I(l,:) = Weight_I(:)
+
+          call low_order_coeff(Cell_I,l,LinearCoeff_I, a0_I, a1_I, a2_I,&
+               a3, a4)
+          !eq (23)
+          call cacl_weight(Cell_I,Weight_I,LinearCoeff_I, ConsE, a1_I, &
+               a2_I, a3)
+          WeightL_I(l,:) = Weight_I(:)
+       end do
+    end if
+
+    do l = lMin-1, lMax
+
+       !eq (34)
+       FaceR_I(l) = (-c7over120*WeightR_I(l,4) - &
+            c1over6*WeightR_I(l,1))*Cell2_I(l-2) +&
+            (c1over3*WeightR_I(l,2) + c5over6*WeightR_I(l,1) + &
+            c21over40*WeightR_I(l,4))*Cell2_I(l-1) + &
+            (c5over6*WeightR_I(l,2) + c1over3*WeightR_I(l,1) + &
+            c11over6*WeightR_I(l,3) + c73over120*WeightR_I(l,4))*Cell2_I(l) + &
+            (-c1over6*WeightR_I(l,2) - c7over6*WeightR_I(l,3) - &
+            c7over120*WeightR_I(l,4))*Cell2_I(l+1) +&
+            (c1over3*WeightR_I(l,3) - c1over60*WeightR_I(l,4))*Cell2_I(l+2)
+
+       !eq (34)
+       FaceL_I(l+1) = (-c1over60*WeightL_I(l,4) + &
+            c1over3*WeightL_I(l,1))*Cell_I(l-2) + &
+            (-c1over6*WeightL_I(l,2) - c7over6*WeightL_I(l,1) - &
+            c7over120*WeightL_I(l,4))*Cell_I(l-1) +&
+            (c5over6*WeightL_I(l,2) + c1over3*WeightL_I(l,3) + &
+            c11over6*WeightL_I(l,1) + c73over120*WeightL_I(l,4))*Cell_I(l)+ &
+            (c1over3*WeightL_I(l,2) + c5over6*WeightL_I(l,3) + &
+            c21over40*WeightL_I(l,4))*Cell_I(l+1) + &
+            (-c1over6*WeightL_I(l,3) -c7over120*WeightL_I(l,4))*Cell_I(l+2)
+
+
+       !The comment below may be useful in the future.
+       !call low_order_coeff(Cell2_I,l,LinearCoeff_I, a0_I, a1_I, a2_I,&
+       !     a3, a4)
+       !FaceR_I(l) = cacl_cweno_face(WeightR_I(l,:), x1,a0_I, a1_I,&
+       !     a2_I, a3,a4)
+       !call low_order_coeff(Cell_I,l,LinearCoeff_I, a0_I, a1_I, a2_I,&
+       !     a3, a4)      
+       !FaceL_I(l+1) = cacl_cweno_face(WeightL_I(l,:), x2, a0_I, &
+       !     a1_I, a2_I, a3, a4)
+
+    end do
+
+  contains
+    !======================================================================
+    !real function  cacl_cweno_face(Weight_I, xface,a0_I, a1_I, a2_I, a3, a4)
+    !  real, intent(in):: a0_I(4), a1_I(4), a2_I(4), a3, a4
+    !  real, intent(in):: Weight_I(4)
+    !  real:: Facevalue, xface 
+    !  integer:: i
+      !----------------------------------------------------------------------
+    !  Facevalue = 0
+    !  do i = 1, 3
+    !     Facevalue = Facevalue + &
+    !          (a0_I(i) + a1_I(i)*xface + a2_I(i)*xface**2)*Weight_I(i)
+    !  end do
+    !  Facevalue = Facevalue +(a0_I(4)+a1_I(4)*xface + a2_I(4)*xface**2 + &
+    !       a3*xface**3 + a4*xface**4)*Weight_I(4)
+    !  cacl_cweno_face = Facevalue
+    !end function cacl_cweno_face
+
+    !----------------------------------------------------------------------
+    subroutine cacl_weight(Cell_I,Weight_I, LinearCoeff_I,ConsE,a1_I,a2_I,a3)
+      real, intent(in):: Cell_I(1-nG: MaxIJK+nG)      
+      real, intent(in):: a1_I(4), a2_I(4), a3, LinearCoeff_I(4), ConsE
+      real, intent(out):: Weight_I(4)
+
+      !Smoothness indicators. eq (19)
+      real:: ISLocal_I(4)
+
+      !eq (24)
+      real:: AlphaIS_I(4)
+
+      integer:: i
+      real, parameter::  c13over3 = 13./3
+
+      !----------------------------------------------------------------------
+      !eq(20)
+      do i = 1, 3
+         ISLocal_I(i) = a1_I(i)**2 + c13over3*a2_I(i)**2
+      end do
+      !eq(21)
+      ISLocal_I(4) = a1_I(4)**2 + c13over3*a2_I(4)**2 + 0.5*a1_I(4)*a3
+      !eq(24)
+      AlphaIS_I = LinearCoeff_I/((ConsE + ISLocal_I)**2)
+      !eq(23)
+      Weight_I = AlphaIS_I/sum(AlphaIS_I)
+
+    end subroutine cacl_weight
+
+    !==========================================================================
+    subroutine low_order_coeff(Cell_I,l,LinearCoeff_I, a0_I, a1_I, a2_I, a3,a4)
+      real,    intent(in):: Cell_I(1-nG: MaxIJK+nG)
+      real:: a0_I(4), a1_I(4), a2_I(4), a3, a4
+      real, intent(in):: LinearCoeff_I(4)
+      integer, intent(in):: l
+      real, parameter:: c23over24=23./24, c1over12=1./12, c13over12=13./12
+      real, parameter:: c1over24=1./24, c1over48=1./48, c1over16=1./16 
+      real, parameter:: c1067over960=1067./960, c29over480=29./480
+      real, parameter:: c3over640=3./640
+
+      real:: b0, b1, b2, b3, b4
+      real:: c1, c2, c3, cc 
+      !----------------------------------------------------------------------
+      c1=LinearCoeff_I(1); c2=LinearCoeff_I(2)
+      c3=LinearCoeff_I(3); cc=LinearCoeff_I(4)
+
+      !eq(8)
+      a0_I(1) = c23over24*Cell_I(l) + c1over12*(Cell_I(l-1)-0.5*Cell_I(l-2))
+      a1_I(1) = 0.5*(3*Cell_I(l) - 4*Cell_I(l-1) + Cell_I(l-2))
+      a2_I(1) = 0.5*(Cell_I(l) - 2*Cell_I(l-1) + Cell_I(l-2))
+
+      !eq(9)
+      a0_I(2) = c13over12*Cell_I(l) - c1over24*(Cell_I(l-1) + Cell_I(l+1))
+      a1_I(2) = 0.5*(Cell_I(l+1) - Cell_I(l-1))
+      a2_I(2) = 0.5*(Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1))
+
+      !eq(10)
+      a0_I(3) = c23over24*Cell_I(l) + c1over12*(Cell_I(l+1) - 0.5*Cell_I(l+2))
+      a1_I(3) = -0.5*(3*Cell_I(l) - 4*Cell_I(l+1) + Cell_I(l+2))
+      a2_I(3) = 0.5*(Cell_I(l) - 2*Cell_I(l+1) + Cell_I(l+2))
+
+      !eq(6)
+      b0 = c1067over960*Cell_I(l) - c29over480*(Cell_I(l+1) + Cell_I(l-1))&
+           + c3over640*(Cell_I(l+2) + Cell_I(l-2))
+      b1 = c1over48*(34.*(Cell_I(l+1) - Cell_I(l-1)) + &
+           5*(Cell_I(l-2) - Cell_I(l+2)))
+      b2 = 0 - c1over16*(Cell_I(l-2) + 22*Cell_I(l) + &
+           Cell_I(l+2) - 12*(Cell_I(l+1) + Cell_I(l-1)))
+      b3 = 0 - c1over12*(2*(Cell_I(l+1) - Cell_I(l-1)) + &
+           Cell_I(l-2) - Cell_I(l+2))
+      b4 = c1over24*(Cell_I(l-2) + 6*Cell_I(l) + Cell_I(l+2)- &
+           4*(Cell_I(l+1) + Cell_I(l-1)))
+
+      !eq(14)
+      a0_I(4) = (b0 - c1*a0_I(1) - c2*a0_I(2) - c3*a0_I(3))/cc
+      a1_I(4) = (b1 - c1*a1_I(1) - c2*a1_I(2) - c3*a1_I(3))/cc
+      a2_I(4) = (b2 - c1*a2_I(1) - c2*a2_I(2) - c3*a2_I(3))/cc
+      a3 = b3/cc
+      a4 = b4/cc
+
+    end subroutine low_order_coeff
+    !=======================================================================
+  end subroutine limiter5_cweno
+
+  !========================================================================
+
+  subroutine limiter5(lMin, lMax, Cell_I, Cell2_I, iVar, &
+       UseiVar, DoCweno, VarLimiter)
+    integer, intent(in):: lMin, lMax, iVar
+    real,    intent(in):: Cell_I(1-nG: MaxIJK+nG)
+    real,    intent(in):: Cell2_I(1-nG: MaxIJK+nG)
+    logical, intent(in):: UseiVar, DoCweno
+    real :: WeightL_I(lMin-1:lMax, 4), WeightR_I(lMin-1:lMax, 4)
+
+    integer, intent(in) :: VarLimiter
+    !------------------------------------------------------------------------
+
+    if(DoCweno) then
+       call limiter5_cweno(lMin, lMax, Cell_I, Cell2_I, iVar, VarLimiter)
+    else 
+       if (UseiVar) then
+          call limiter_mp(lMin, lMax, Cell_I, Cell2_I, iVar)
+       else
+          call limiter_mp(lMin, lMax, Cell_I, Cell2_I)
+       end if
+    end if
+  end subroutine limiter5
 
   !===========================================================================
   subroutine limiter_ppm4(lMin, lMax)
@@ -2915,6 +3225,12 @@ contains
           ! Eq. (34)
           FaceL_I(l+1) = Cell_I(l) + 2*Dfm
        end if
+
+       !Make sure Rho and P are positive
+       if((iVar == p_ .or. iVar == Rho_).and. FaceR_I(l) < 0) &
+            FaceR_I(l) = 0.5*(Cell_I(l-1) + Cell_I(l))
+       if((iVar == p_ .or. iVar == Rho_).and. FaceL_I(l+1) < 0)&
+            FaceL_I(l+1) = 0.5*(Cell_I(l+1) + Cell_I(l))
 
     end do
 
