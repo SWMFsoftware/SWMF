@@ -63,6 +63,9 @@ module ModFaceFlux
   ! Logicals so we don't need string comparisons
   logical :: DoSimple, DoLf, DoHll, DoHlld, DoAw, DoRoeOld, DoRoe, DoGodunov
   logical :: DoLfNeutral, DoHllNeutral
+  
+  !1D burgers equation, works for Hd  equations. 
+  logical:: DoBurgers = .False.
 
   logical :: UseLindeFix
   logical :: DoTestCell
@@ -2483,6 +2486,13 @@ contains
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
       RhoUn  = Rho*Un
 
+      
+      if (DoBurgers) then 
+         Flux_V = 0.0
+         Flux_V(iRho) = 0.5*Rho*Rho
+         RETURN
+      end if
+
       ! f_i[rho] = rho*u_i
       Flux_V(iRho)   = RhoUn
 
@@ -2622,6 +2632,8 @@ contains
           else
              call get_mhd_speed
           endif
+       elseif(DoBurgers)then
+          call get_burgers_speed
        else
           if(DoAw)then
              UnLeft = UnLeft_I(iFluid)
@@ -3089,6 +3101,20 @@ contains
       end if
 
     end subroutine get_hd_speed
+    !========================================================================
+    subroutine get_burgers_speed
+
+      real:: Rho
+      !---------------------------------------------------------------------
+      Rho = State_V(Rho_)
+      if(present(Cmax_I))then
+         Cmax_I(1)   = Rho
+         CmaxDt_I(1) = Rho
+      end if
+      if(present(Cleft_I))  Cleft_I(1)  = Rho
+      if(present(Cright_I)) Cright_I(1) = Rho
+
+    end subroutine get_burgers_speed
 
   end subroutine get_speed_max
 
