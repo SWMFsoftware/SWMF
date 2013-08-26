@@ -39,7 +39,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModFaceValue,     ONLY: &
        UseTvdResChange, UseAccurateResChange, &
        UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, nGUsed, &
-       DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param
+       DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
+       TypeLimiter5, DoCweno, UseiVarAsLimiter
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
@@ -75,7 +76,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModGmGeoindices, ONLY: &
        DoWriteIndices, DoCalcKp, nKpMins, dtWriteIndices, init_mod_geoindices
   use ModFaceFlux, ONLY: face_flux_set_parameters, TypeFluxNeutral, &
-       UseClimit, UsePoleDiffusion
+       UseClimit, UsePoleDiffusion, DoBurgers
   use ModLookupTable, ONLY: read_lookup_table_param
   use ModIonoVelocity,ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
@@ -1087,6 +1088,15 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SCHEME5")
         call read_var('DoInterpolateFlux', DoInterpolateFlux)
+        call read_Var('TypeLimiter5', TypeLimiter5)
+        if (TypeLimiter5 == 'cweno') then
+           DoCweno = .True. 
+           call read_var('UseiVarAsLimiter', UseiVarAsLimiter)
+        end if
+        !If it is not 'cweno', mp5 scheme will be used. 
+
+     case('#BURGERSEQUATION')
+        call read_var('DoBurgers', DoBurgers)
 
      case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
           '#LIMITPTOTAL', '#FLATTENING')
