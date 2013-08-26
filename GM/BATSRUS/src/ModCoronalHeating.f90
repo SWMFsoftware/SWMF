@@ -882,7 +882,6 @@ module ModCoronalHeating
 
   ! Alfven wave dissipation
   logical :: UseAlfvenWaveDissipation = .false.
-  logical :: UseCounterPropagatingWave = .false.
   real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real    :: LperpTimesSqrtB
   real    :: Crefl = 0.04
@@ -931,7 +930,6 @@ contains
        UseExponentialHeating= .false.
        UseAlfvenWaveDissipation = .false.
        UseTurbulentCascade = .false.
-       UseCounterPropagatingWave = .false.
        select case(TypeCoronalHeating)
        case('F','none')
           UseCoronalHeating = .false.
@@ -967,10 +965,7 @@ contains
                      call read_var('KarmanTaylorBeta', KarmanTaylorBeta)
              end if
           else
-             call read_var('UseCounterPropagatingWave', &
-                  UseCounterPropagatingWave)
              call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-             call read_var('Crefl', Crefl)
           end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
@@ -1360,12 +1355,7 @@ contains
     real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), &
          CoronalHeating
 
-    integer, parameter :: iRho = 1, iBx = 2, iBz = 4
-
     real :: FullB_D(3), FullB, Rho, Coef
-    real :: EwavePlus, EwaveMinus, ZminorPerLperp
-
-    real :: GradLogAlfven_D(nDim)
 
     character(len=*), parameter :: &
          NameSub = 'ModCoronalHeating::turbulent_cascade'
@@ -1373,65 +1363,27 @@ contains
 
     ! Low-frequency cascade due to small-scale nonlinearities
 
-    if(UseNonWkbAlfvenWaves .or. UseCounterPropagatingWave)then
-
-       if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
-          ! Note that Lperp is multiplied with the density
-          Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
-               *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
-       else
-          if(UseB0)then
-             FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          else
-             FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          end if
-          FullB = sqrt(sum(FullB_D**2))
-
-          Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock)) &
-               *2.0*KarmanTaylorAlpha/LperpTimesSqrtB
-       end if
-
-       WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock)&
-            *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))
-
-       WaveDissipation_V(WaveLast_) = Coef*State_VGB(WaveLast_,i,j,k,iBlock) &
-            *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock))
-
+    if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
+       ! Note that Lperp is multiplied with the density
+       Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
+            *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
     else
-
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
        else
           FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end if
        FullB = sqrt(sum(FullB_D**2))
-       Rho = State_VGB(Rho_,i,j,k,iBlock)
 
-       Coef = sqrt(FullB/Rho)/LperpTimesSqrtB
-
-       EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
-       EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
-
-       call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
-
-       ZminorPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D))/sqrt(Rho)
-
-       WaveDissipation_V(WaveFirst_) = EwavePlus*ZminorPerLperp
-       WaveDissipation_V(WaveLast_) = EwaveMinus*ZminorPerLperp
-
-       ! Correct at top of closed field lines, where turbulence is balanced
-       WaveDissipation_V(WaveFirst_) = max( WaveDissipation_V(WaveFirst_), &
-            EwavePlus*2.0*KarmanTaylorAlpha*Coef*sqrt(EwaveMinus) )
-       WaveDissipation_V(WaveLast_) = max( WaveDissipation_V(WaveLast_), &
-            EwaveMinus*2.0*KarmanTaylorAlpha*Coef*sqrt(EwavePlus) )
-
-       ! Correct in inner heliosphere, where reflection is caused by
-       ! the radially expanding flow
-       WaveDissipation_V(WaveFirst_) = max(WaveDissipation_V(WaveFirst_), &
-            Crefl*Coef*EwavePlus*sqrt(EwavePlus) )
-       WaveDissipation_V(WaveLast_) = max(WaveDissipation_V(WaveLast_), &
-            Crefl*Coef*EwaveMinus*sqrt(EwaveMinus) )
+       Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock)) &
+            *2.0*KarmanTaylorAlpha/LperpTimesSqrtB
     end if
+
+    WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock)&
+         *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))
+
+    WaveDissipation_V(WaveLast_) = Coef*State_VGB(WaveLast_,i,j,k,iBlock) &
+         *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock))
 
     CoronalHeating = sum(WaveDissipation_V)
 
@@ -1440,6 +1392,12 @@ contains
   !============================================================================
 
   subroutine get_wave_reflection(iBlock)
+
+    ! This is the wave reflection in the WKB approach.
+    ! The more generic wave reflection due to shear flows and Alfven speed
+    ! gradients in the non-WKB context is in the turbulence_mixing subroutine,
+    ! which is more suitable in the heliosphere but not applicable in the
+    ! lower corona
 
     use BATL_size, ONLY: nDim, nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC
@@ -1453,8 +1411,9 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: GradLogAlfven_D(nDim), FullB_D(3), FullB, Rho, ZminorPerLperp
-    real :: EwavePlus, EwaveMinus, Edominant, Eminor
+    real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
+    real :: FullB_D(3), FullB, Rho, Coef, ReflectionRate
+    real :: EwavePlus, EwaveMinus
     !--------------------------------------------------------------------------
 
     if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
@@ -1464,55 +1423,45 @@ contains
 
        call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
+       call get_curl_u(i, j, k, iBlock, CurlU_D)
+
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
        else
           FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end if
        FullB = sqrt(sum(FullB_D**2))
+       b_D = FullB_D/max(1e-15, FullB)
 
        Rho = State_VGB(Rho_,i,j,k,iBlock)
+
+       Coef = 2.0*sqrt(FullB/Rho)/LperpTimesSqrtB
 
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-       ! In the context of WKB analysis we need to figure out which wave
-       ! is dominant and which one is minor
-       Edominant = max(EwavePlus,EwaveMinus)
-       Eminor = min(EwavePlus,EwaveMinus)
+       ReflectionRate = min( sqrt( (sum(b_D*CurlU_D))**2 &
+            + (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho ), &
+            Coef*sqrt(max(EwavePlus,EwaveMinus)) )
 
-       ! Partial reflection of dominant wave into minor due to
-       ! grad(log(Valfven)) along field lines
-       ZminorPerLperp = 0.5*abs(sum(FullB_D(:nDim)*GradLogAlfven_D))/sqrt(Rho)
-
-       ! This prevents a too small wave reflection far away from the Sun.
-       ZminorPerLperp = max(ZminorPerLperp, 2.0*KarmanTaylorAlpha &
-            *Crefl*sqrt(Edominant*FullB/Rho)/LperpTimesSqrtB)
-
-       ! If the waves are within say a factor 4 of each other, we can not claim
-       ! to have a dominant wave --> the turbulence is near balanced
-       ZminorPerLperp = ZminorPerLperp &
-            *max(1.0 - 2.0*sqrt(Eminor/Edominant), 0.0)
+       if(4.0*EwaveMinus <= EwavePlus)then
+          ReflectionRate = ReflectionRate*(1.0-2.0*sqrt(EwaveMinus/EwavePlus))
+       elseif(4.0*EwavePlus <= EwaveMinus)then
+          ReflectionRate = ReflectionRate*(2.0*sqrt(EwavePlus/EwaveMinus)-1.0)
+       else
+          ReflectionRate = 0.0
+       end if
 
        ! For the minor wave equation, the reflection and cascade term
        ! should be able to balance if needed. Hence reflection term also
        ! requires transition region broadening
-       if(DoExtendTransitionRegion) ZminorPerLperp &
-            = ZminorPerLperp/extension_factor(TeSi_C(i,j,k))
+       if(DoExtendTransitionRegion) &
+            ReflectionRate = ReflectionRate/extension_factor(TeSi_C(i,j,k))
 
-       if(EwavePlus > EwaveMinus)then
-          ! Partial reflection of dominant plus wave into minor minus wave
-          Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
-               - ZminorPerLperp*sqrt(EwavePlus*EwaveMinus)
-          Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
-               + ZminorPerLperp*sqrt(EwavePlus*EwaveMinus)
-       else
-          ! Partial reflection of dominant minus wave into minor plus wave
-          Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
-               + ZminorPerLperp*sqrt(EwavePlus*EwaveMinus)
-          Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
-               - ZminorPerLperp*sqrt(EwavePlus*EwaveMinus)
-       end if
+       Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
+            - ReflectionRate*sqrt(EwavePlus*EwaveMinus)
+       Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
+            + ReflectionRate*sqrt(EwavePlus*EwaveMinus)
 
     end do; end do; end do
 
@@ -1603,6 +1552,67 @@ contains
     end subroutine get_log_alfven_speed
 
   end subroutine get_grad_log_alfven_speed
+
+  !============================================================================
+
+  subroutine get_curl_u(i, j, k, iBlock, CurlU_D)
+
+    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB, &
+         CellVolume_GB, x_, y_, z_
+    use ModAdvance, ONLY: &
+         LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
+         RightState_VX, RightState_VY, RightState_VZ
+    use ModCoordTransform, ONLY: cross_product
+    use ModSize, ONLY: MaxDim
+    use ModVarIndexes, ONLY: Ux_, Uy_, Uz_
+
+    integer, intent(in) :: i, j, k, iBlock
+    real, intent(out) :: CurlU_D(MaxDim)
+
+    real :: DxInvHalf, DyInvHalf, DzInvHalf
+    !--------------------------------------------------------------------------
+
+    if(IsCartesianGrid)then
+       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
+       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
+       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
+
+       CurlU_D(x_) = &
+            DyInvHalf*(LeftState_VY(Uz_,i,j+1,k) + RightState_VY(Uz_,i,j+1,k) &
+            - LeftState_VY(Uz_,i,j,k) - RightState_VY(Uz_,i,j,k)) - &
+            DzInvHalf*(LeftState_VZ(Uy_,i,j,k+1) + RightState_VZ(Uy_,i,j,k+1) &
+            - LeftState_VZ(Uy_,i,j,k) - RightState_VZ(Uy_,i,j,k))
+
+       CurlU_D(y_) = &
+            DzInvHalf*(LeftState_VZ(Ux_,i,j,k+1) + RightState_VZ(Ux_,i,j,k+1) &
+            - LeftState_VZ(Ux_,i,j,k) - RightState_VZ(Ux_,i,j,k)) - &
+            DxInvHalf*(LeftState_VX(Uz_,i+1,j,k) + RightState_VX(Uz_,i+1,j,k) &
+            - LeftState_VX(Uz_,i,j,k) - RightState_VX(Uz_,i,j,k))
+
+       CurlU_D(z_) = &
+            DxInvHalf*(LeftState_VX(Uy_,i+1,j,k) + RightState_VX(Uy_,i+1,j,k) &
+            - LeftState_VX(Uy_,i,j,k) - RightState_VX(Uy_,i,j,k)) - &
+            DyInvHalf*(LeftState_VY(Ux_,i,j+1,k) + RightState_VY(Ux_,i,j+1,k) &
+            - LeftState_VY(Ux_,i,j,k) - RightState_VY(Ux_,i,j,k))
+    else
+       CurlU_D(:) = &
+            + cross_product( FaceNormal_DDFB(:,1,i+1,j,k,iBlock), 0.5*(      &
+            LeftState_VX(Ux_:Uz_,i+1,j,k) + RightState_VX(Ux_:Uz_,i+1,j,k))) &
+            - cross_product( FaceNormal_DDFB(:,1,i  ,j,k,iBlock), 0.5*(      &
+            LeftState_VX(Ux_:Uz_,i  ,j,k) + RightState_VX(Ux_:Uz_,i  ,j,k))) &
+            + cross_product( FaceNormal_DDFB(:,2,i,j+1,k,iBlock), 0.5*(      &
+            LeftState_VY(Ux_:Uz_,i,j+1,k) + RightState_VY(Ux_:Uz_,i,j+1,k))) &
+            - cross_product( FaceNormal_DDFB(:,2,i,j  ,k,iBlock), 0.5*(      &
+            LeftState_VY(Ux_:Uz_,i,j  ,k) + RightState_VY(Ux_:Uz_,i,j  ,k))) &
+            + cross_product( FaceNormal_DDFB(:,3,i,j,k+1,iBlock), 0.5*(      &
+            LeftState_VZ(Ux_:Uz_,i,j,k+1) + RightState_VZ(Ux_:Uz_,i,j,k+1))) &
+            - cross_product( FaceNormal_DDFB(:,3,i,j,k  ,iBlock), 0.5*(      &
+            LeftState_VZ(Ux_:Uz_,i,j,k  ) + RightState_VZ(Ux_:Uz_,i,j,k  )))
+
+       CurlU_D(:) = CurlU_D(:)/CellVolume_GB(i,j,k,iBlock)
+    end if
+
+  end subroutine get_curl_u
 
   !============================================================================
 
