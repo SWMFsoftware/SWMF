@@ -323,7 +323,7 @@ contains
     use ModUtilities, ONLY: flush_unit
     implicit none
 
-    real, dimension(3,nMagnetometer):: Xyz_DI, MagPerturb_Jh_DI, MagPerturb_Jp_DI, &
+    real, dimension(3,nMagnetometer):: Xyz_DI, MagPerturbJh_DI, MagPerturbJp_DI, &
          MagVarSum_Jh_DI, MagVarSum_Jp_DI
     real, dimension(3):: Xyz_D
     real, dimension(3,3) :: MagtoGsm_DD, GsmtoSmg_DD
@@ -349,7 +349,7 @@ contains
 
     end do
     ! calculate the magnetic perturbation caused by Hall and Perdersen currents
-    call iono_mag_perturb(nMagnetometer, Xyz_DI, MagPerturb_Jh_DI, MagPerturb_Jp_DI)
+    call iono_mag_perturb(nMagnetometer, Xyz_DI, MagPerturbJh_DI, MagPerturbJp_DI)
 
      !\
      ! Collect the variables from all the PEs
@@ -357,13 +357,13 @@ contains
       MagVarSum_Jh_DI = 0.0
       MagVarSum_Jp_DI = 0.0
       if(nProc>1)then 
-         call MPI_reduce(MagPerturb_Jh_DI, MagVarSum_Jh_DI, 3*nMagnetometer, &
+         call MPI_reduce(MagPerturbJh_DI, MagVarSum_Jh_DI, 3*nMagnetometer, &
               MPI_REAL, MPI_SUM, 0, iComm, iError)
-         call MPI_reduce(MagPerturb_Jp_DI, MagVarSum_Jp_DI, 3*nMagnetometer, &
+         call MPI_reduce(MagPerturbJp_DI, MagVarSum_Jp_DI, 3*nMagnetometer, &
               MPI_REAL, MPI_SUM, 0, iComm, iError)
          if(iProc==0) then
-            MagPerturb_Jh_DI = MagVarSum_Jh_DI
-            MagPerturb_Jp_DI = MagVarSum_Jp_DI
+            MagPerturbJh_DI = MagVarSum_Jh_DI
+            MagPerturbJp_DI = MagVarSum_Jp_DI
          end if
       end if
     
@@ -378,9 +378,9 @@ contains
           ! Write position of magnetometer in SGM Coords
           write(iUnitMag,'(3es13.5)',ADVANCE='NO') Xyz_DI(:,iMag)
           ! Get the magnetic perturb data and Write out
-          write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagPerturb_Jh_DI(:,iMag)
+          write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagPerturbJh_DI(:,iMag)
           ! Write the Jp perturbations
-          write(iUnitMag, '(3es13.5)') MagPerturb_Jp_DI(:,iMag)
+          write(iUnitMag, '(3es13.5)') MagPerturbJp_DI(:,iMag)
 
        end do
        call flush_unit(iUnitMag)

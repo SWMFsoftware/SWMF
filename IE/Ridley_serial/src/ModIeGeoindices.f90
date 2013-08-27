@@ -22,7 +22,7 @@ module ModIeGeoindices
   integer           :: nIndexMag=0
   integer, parameter:: nKpMag=24, nDstMag=4 ! Number of mags per index.
   real              :: XyzKp_DI(3, nKpMag)  ! Locations of kp mags, SMG.
-  real, parameter   :: fakeplat = 60.0      ! Latitude of Kp stations.
+  real, parameter   :: FakePLat = 60.0      ! Latitude of Kp stations.
 
 contains
 
@@ -33,7 +33,7 @@ contains
     use ModPlanetConst, ONLY: rPlanet_I, Earth_
 
     integer :: i
-    real    :: radXY, phi
+    real    :: RadXY, Phi
 
     character(len=*), parameter :: NameSub='init_geoindices'
     logical :: DoTest, DoTestMe   
@@ -48,12 +48,12 @@ contains
     if(DoTest)write(*,*)'IE: '//NameSub//' Total number of mags = ', nIndexMag
 
     ! Initialize grid and arrays.  FaKe_p uses stations fixed in SMG coords.
-    XyzKp_DI(3,:) = rPlanet_I(Earth_)*sin(fakepLat * cDegToRad)
-    radXY         = rPlanet_I(Earth_)*cos(fakepLat * cDegToRad)
+    XyzKp_DI(3,:) = rPlanet_I(Earth_)*sin(FakePLat * cDegToRad)
+    RadXY         = rPlanet_I(Earth_)*cos(FakePLat * cDegToRad)
     do i=1, nKpMag
-       phi = cTwoPi * (i-1)/24.0
-       XyzKp_DI(1,i) = radXY * cos(phi)
-       XyzKp_DI(2,i) = radXY * sin(phi)
+       Phi = cTwoPi * (i-1)/24.0
+       XyzKp_DI(1,i) = RadXY * cos(Phi)
+       XyzKp_DI(2,i) = RadXY * sin(Phi)
        !write(*,'(a, 3(1x, e13.3))')'Coords = ', xyzkp_di(:,1)
     end do
 
@@ -72,8 +72,8 @@ contains
 
     integer:: i, nTmpMag, iError
     real, dimension(3,nIndexMag) :: &
-         XyzSmg_DI, MagPerturb_Jh_DI, MagPerturb_Jp_DI, &
-         MagPertTotal_DI, MagSum_dI
+         XyzSmg_DI, MagPerturbJh_DI, MagPerturbJp_DI, &
+         MagPertTotal_DI, MagSum_DI
 
     character(len=*), parameter :: NameSub='get_index_mags'
     logical :: DoTest, DoTestMe
@@ -99,10 +99,10 @@ contains
     if( nIndexMag .ne. (i-1) ) call CON_stop(&
          NameSub//' Indexing error!  Not all magnetometers accounted for.')
 
-    ! Collect Hall and Peterson B pertubations, sum them.
-    call iono_mag_perturb(nIndexMag, XyzSmg_DI, MagPerturb_Jh_DI, &
-         MagPerturb_Jp_DI)
-    MagPertTotal_DI = MagPerturb_Jh_DI + MagPerturb_Jp_DI
+    ! Collect Hall and Pedersen B pertubations, sum them.
+    call iono_mag_perturb(nIndexMag, XyzSmg_DI, MagPerturbJh_DI, &
+         MagPerturbJp_DI)
+    MagPertTotal_DI = MagPerturbJh_DI + MagPerturbJp_DI
 
     ! Collect the variables from all the PEs
     MagOut_DI=0.0
