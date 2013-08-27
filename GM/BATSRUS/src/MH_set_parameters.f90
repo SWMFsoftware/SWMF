@@ -1089,11 +1089,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#SCHEME5")
         call read_var('DoInterpolateFlux', DoInterpolateFlux)
         call read_Var('TypeLimiter5', TypeLimiter5)
-        if (TypeLimiter5 == 'cweno') then
-           DoCweno = .True. 
-           call read_var('UseiVarAsLimiter', UseiVarAsLimiter)
-        end if
-        !If it is not 'cweno', mp5 scheme will be used. 
+        ! If it is not 'cweno', mp5 scheme will be used. 
+        DoCweno = TypeLimiter5 == 'cweno'
+        if(DoCweno) call read_var('UseiVarAsLimiter', UseiVarAsLimiter)
 
      case('#BURGERSEQUATION')
         call read_var('DoBurgers', DoBurgers)
