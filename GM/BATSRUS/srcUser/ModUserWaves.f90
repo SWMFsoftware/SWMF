@@ -1035,14 +1035,13 @@ contains
     real   :: x0
     real   :: SinSlope, CosSlope
     real   :: ShockRampLeft_I(Rho_: p_), ShockRampRight_I(Rho_: p_)
-    real   :: cOne = 1.0
     !-------------------------------------------------------------------------
     !    DoTest = iBlock == BlkTest
     IsFound = .true.
 
     if (DoShockramp) then
-       SinSlope=ShockSlope/sqrt(cOne+ShockSlope**2)
-       CosSlope=      cOne/sqrt(cOne+ShockSlope**2)
+       SinSlope=ShockSlope/sqrt(1 + ShockSlope**2)
+       CosSlope=         1/sqrt(1 + ShockSlope**2)
 
        ShockRampLeft_I = ShockLeftState_V(Rho_:p_)
        !Project the velocity in the shock front reference frame into the frame 
