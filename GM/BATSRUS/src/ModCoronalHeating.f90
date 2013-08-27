@@ -966,6 +966,7 @@ contains
              end if
           else
              call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
+             call read_var('Crefl', Crefl)
           end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
@@ -1435,14 +1436,19 @@ contains
 
        Rho = State_VGB(Rho_,i,j,k,iBlock)
 
-       Coef = 2.0*sqrt(FullB/Rho)/LperpTimesSqrtB
+       Coef = 2.0*sqrt(max(EwavePlus,EwaveMinus)*FullB/Rho)/LperpTimesSqrtB
 
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-       ReflectionRate = min( sqrt( (sum(b_D*CurlU_D))**2 &
-            + (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho ), &
-            Coef*sqrt(max(EwavePlus,EwaveMinus)) )
+       ! Reflection rate driven by Alfven speed gradient and
+       ! vorticity along the field lines (the latter can be considered to be
+       ! zero for any practical applications)
+       ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
+            + (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho )
+
+       ! Clip the Zminor/Zdominant between Crefl and 1.0
+       ReflectionRate = max( min(ReflectionRate, Coef), Crefl*Coef)
 
        if(4.0*EwaveMinus <= EwavePlus)then
           ReflectionRate = ReflectionRate*(1.0-2.0*sqrt(EwaveMinus/EwavePlus))
