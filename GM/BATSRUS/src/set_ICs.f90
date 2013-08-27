@@ -53,8 +53,8 @@ subroutine set_ics(iBlock)
 
         if(UseShockTube)then
            ! Calculate sin and cos from the tangent = ShockSlope
-           SinSlope=ShockSlope/sqrt(cOne+ShockSlope**2)
-           CosSlope=      cOne/sqrt(cOne+ShockSlope**2)
+           SinSlope=ShockSlope/sqrt(1.0 + ShockSlope**2)
+           CosSlope=       1.0/sqrt(1.0 + ShockSlope**2)
            ! Set rotational matrix
            Rot_II = reshape( (/CosSlope, SinSlope, -SinSlope, CosSlope/), &
                 (/2,2/) )
