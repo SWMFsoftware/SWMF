@@ -6,6 +6,9 @@
 ! Comments: Routines to output binary files
 !
 ! AGB 3/31/13: Added 1D routine to output data at a specific altitude
+! AJR 8/28/13: The code was outputting data on all processors for satellite
+!              files.  I corrected this to make it so that if the linear
+!              interpolation routine returns -1, the processor returns. 
 !----------------------------------------------------------------------------
 
 integer function bad_outputtype()
@@ -129,6 +132,11 @@ subroutine output(dir, iBlock, iOutputType)
         AltFind = CurrentSatellitePosition(iUp_)
         call BlockAltIndex(AltFind,iBlock,iiLon,iiLat,iiAlt,rAlt)
      end if
+
+     ! write(*,*) LonFind,LatFind,iBlock,iiLon,iiLat,rLon,rLat
+
+     if (iiLon < 0 .or. iiLat < 0) return
+
   endif
 
   if((iProc == 0.and.iBlock == 1).and.(iOutputType /= -1)) &
