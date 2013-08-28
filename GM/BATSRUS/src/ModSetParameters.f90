@@ -40,7 +40,7 @@ subroutine MH_set_parameters(TypeAction)
        UseTvdResChange, UseAccurateResChange, &
        UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, nGUsed, &
        DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
-       TypeLimiter5, DoCweno, UseiVarAsLimiter
+       TypeLimiter5, UseCweno, UsePerVarLimiter
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
@@ -1090,8 +1090,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoInterpolateFlux', DoInterpolateFlux)
         call read_Var('TypeLimiter5', TypeLimiter5)
         ! If it is not 'cweno', mp5 scheme will be used. 
-        DoCweno = TypeLimiter5 == 'cweno'
-        if(DoCweno) call read_var('UseiVarAsLimiter', UseiVarAsLimiter)
+        UseCweno = TypeLimiter5 == 'cweno'
+        if(UseCweno) call read_var('UsePerVarLimiter', UsePerVarLimiter)
 
      case('#BURGERSEQUATION')
         call read_var('DoBurgers', DoBurgers)
