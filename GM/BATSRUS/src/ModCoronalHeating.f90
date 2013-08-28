@@ -1436,10 +1436,10 @@ contains
 
        Rho = State_VGB(Rho_,i,j,k,iBlock)
 
-       Coef = 2.0*sqrt(max(EwavePlus,EwaveMinus)*FullB/Rho)/LperpTimesSqrtB
-
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+
+       Coef = 2.0*sqrt(max(EwavePlus,EwaveMinus)*FullB/Rho)/LperpTimesSqrtB
 
        ! Reflection rate driven by Alfven speed gradient and
        ! vorticity along the field lines (the latter can be considered to be
