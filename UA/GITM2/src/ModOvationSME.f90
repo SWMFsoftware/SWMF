@@ -125,10 +125,13 @@ contains
 
              ElectronEnergyFlux(iLon, iLat) = EnergyFluxDiff(iMlt, iMlat)
              numflux = NumberFluxDiff(iMlt, iMlat)
-             if (numflux /= 0) &
-                  ElectronAverageEnergy(iLon,iLat) = &
-                  ElectronEnergyFlux(iLon, iLat)/numflux * &
-                  6.242e11 / 1000.0 ! ergs -> keV
+             if (numflux /= 0) then
+                ElectronAverageEnergy(iLon,iLat) = &
+                     ElectronEnergyFlux(iLon, iLat)/numflux * &
+                     6.242e11 / 1000.0 ! ergs -> keV
+                if (ElectronAverageEnergy(iLon,iLat) > 100.0) &
+                     ElectronAverageEnergy(iLon,iLat) = 100.0
+             endif
 
              ElectronEnergyFluxMono(iLon, iLat) = EnergyFluxMono(iMlt, iMlat)
              ElectronNumberFluxMono(iLon, iLat) = NumberFluxMono(iMlt, iMlat)
