@@ -2508,15 +2508,8 @@ contains
 
     !======================================================================
     subroutine get_burgers_flux
-      real :: Rho
-      !----------------------------------------------------------------------
-      
-      Rho = State_V(iRho)
-      if (DoBurgers) then 
-         Flux_V = 0.0
-         Flux_V(iRho) = 0.5*Rho*Rho
-         RETURN
-      end if
+      Flux_V = 0.0
+      Flux_V(iRho) = 0.5*State_V(iRho)**2
     end subroutine get_burgers_flux
     !=========================================================================
 
