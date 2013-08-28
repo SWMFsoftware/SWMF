@@ -1951,6 +1951,8 @@ contains
           else
              call get_mhd_flux
           end if
+       elseif(DoBurgers) then
+          call get_burgers_flux
        else
           ! If there is no MHD fluid, calculate fluxes for magnetic field
           ! together with hydro fluxes for the first fluid
@@ -2486,13 +2488,6 @@ contains
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
       RhoUn  = Rho*Un
 
-      
-      if (DoBurgers) then 
-         Flux_V = 0.0
-         Flux_V(iRho) = 0.5*Rho*Rho
-         RETURN
-      end if
-
       ! f_i[rho] = rho*u_i
       Flux_V(iRho)   = RhoUn
 
@@ -2510,6 +2505,20 @@ contains
       HallUn = Un
 
     end subroutine get_hd_flux
+
+    !======================================================================
+    subroutine get_burgers_flux
+      real :: Rho
+      !----------------------------------------------------------------------
+      
+      Rho = State_V(iRho)
+      if (DoBurgers) then 
+         Flux_V = 0.0
+         Flux_V(iRho) = 0.5*Rho*Rho
+         RETURN
+      end if
+    end subroutine get_burgers_flux
+    !=========================================================================
 
   end subroutine get_physical_flux
 
