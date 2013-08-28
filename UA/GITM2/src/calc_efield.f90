@@ -8,9 +8,9 @@ subroutine calc_efield(iBlock)
 
   integer, intent(in) :: iBlock
 
-  integer :: i, j, k, imax, jmax, kmax
+  integer :: i, j, k, imax, jmax, kmax, ku, kd
   real :: maxi
-  real :: p1, p2
+  real :: altu, alt, altd, du, dd, r, r2, pu, p, pd, dpda
 
   call report("Electric Field",2)
   call start_timing("calc_efield")
@@ -24,6 +24,7 @@ subroutine calc_efield(iBlock)
   do k=1,nAlts
      do i=1,nLats
         do j=1,nLons
+
            EField(j,i,k,iEast_) = &
                -(Potential(j+1,i,k,iBlock)-Potential(j-1,i,k,iBlock)) &
                 *0.5*InvdLonDist_GB(j,i,k,iBlock)
@@ -32,24 +33,35 @@ subroutine calc_efield(iBlock)
                 -(Potential(j,i+1,k,iBlock)-Potential(j,i-1,k,iBlock)) &
                 *0.5*InvdLatDist_GB(j,i,k,iBlock)
 
-           if (k < nAlts) then
-              p1 = (potential(j,i,k+2,iBlock) + potential(j,i,k+1,iBlock) + &
-                   potential(j,i,k,iBlock))/3.0
-           else
-              p1 = (potential(j,i,k+1,iBlock) + potential(j,i,k,iBlock))/2.0
-           endif
+           ! vertical direction, take a larger stencil:  
+           ku = k+7
+           kd = k-7
 
-           if (k > 1) then
-              p2 = (potential(j,i,k-2,iBlock) + potential(j,i,k-1,iBlock) + &
-                   potential(j,i,k,iBlock))/3.0
-           else
-              p2 = (potential(j,i,k-1,iBlock) + potential(j,i,k,iBlock))/2.0
-           endif
+           if (ku > nAlts+2) ku = nAlts+2
+           if (kd < -1) kd = -1
+              
+           altu = Altitude_GB(j,i,ku,iBlock)
+           alt  = Altitude_GB(j,i,k ,iBlock)
+           altd = Altitude_GB(j,i,kd,iBlock)
+           du   = altu - alt
+           dd   = alt - altd
 
-           p1 = potential(j,i,k+1,iBlock)
-           p2 = potential(j,i,k-1,iBlock)
+           r = du/dd
+           r2 = r**2
 
-           EField(j,i,k,iUp_) = -(P1-P2) / (2*dAlt_GB(j,i,k,iBlock))
+           pu = potential(j,i,ku,iBlock)
+           p  = potential(j,i,k ,iBlock)
+           pd = potential(j,i,kd,iBlock)
+
+           dpda = (pu - r2*pd - (1-r2)*p) / (du + r2*dd)
+
+           EField(j,i,k,iUp_) = -dpda
+
+           ! the electric field in the vertical direction should not be very
+           ! large.  Let's limit it, since it seems to blow up:
+
+           if (EField(j,i,k,iUp_) >  0.1) EField(j,i,k,iUp_) =  0.1
+           if (EField(j,i,k,iUp_) < -0.1) EField(j,i,k,iUp_) = -0.1
 
         enddo
      enddo
