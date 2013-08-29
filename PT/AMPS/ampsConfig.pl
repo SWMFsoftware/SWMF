@@ -9,7 +9,7 @@ my $loadedFlag_MainBlock=0;
 my $loadedFlag_SpeciesBlock=0;
 my $loadedFlag_BackgroundSpeciesBlock=0;
 
-my $InputFileName="mercury.input";
+my $InputFileName="mercury.input"; # Default
 my $line;
 my $InputFileLineNumber=0;
 my $InputLine;
@@ -21,7 +21,7 @@ my $TotalSpeciesNumber=0;
 my @SpeciesList;
 
 #Location of the local working vertion of the code that will be compiled 
-my $WorkingSourceDirectory="src";
+my $WorkingSourceDirectory="srcTmp";
 
 #location of the code distribution
 my $SourceDirectory=" ";
