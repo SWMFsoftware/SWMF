@@ -30,12 +30,12 @@ CC=mpicxx
 #CC=/usr/local/openmpi-1.4.2--intel/bin/mpicxx 
 
 
-SOURCES=/Users/vtenishe/Debugger/eclipse-workspace/SOURCES
-CWD=/Users/vtenishe/SWMF/SWMF/PT/AMPS
+SOURCES=src
+CWD=/Users/gtoth/swmf/AMPS
 # /Users/vtenishe/Debugger/eclipse-workspace/pic-input-preprocess
-WSD=src
+WSD=srcTmp
 
-SPICE=/Users/vtenishe/SPICE/Toolkit/cspice
+SPICE=MYLOCALSPICEDIR
 EXE=amps
 
 Lib=  -lm -lmpi 
