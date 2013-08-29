@@ -180,6 +180,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure, &
          UseAnisoPressure
+    use ModCoronalHeating, ONLY: UseTurbulentCascade
     use ModGeometry,   ONLY: Xyz_DGB, r_Blk
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
@@ -295,11 +296,21 @@ contains
        if (Br >= 0.0) then
           State_VGB(WaveFirst_,i,j,k,iBlock) =  &
                PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
-          State_VGB(WaveLast_,i,j,k,iBlock) = 1e-30
+          if(UseTurbulentCascade)then
+             State_VGB(WaveLast_,i,j,k,iBlock) = &
+                  1e-4*State_VGB(WaveFirst_,i,j,k,iBlock)
+          else
+             State_VGB(WaveLast_,i,j,k,iBlock) = 1e-30
+          end if
        else
           State_VGB(WaveLast_,i,j,k,iBlock) =  &
                PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
-          State_VGB(WaveFirst_,i,j,k,iBlock) = 1e-30
+          if(UseTurbulentCascade)then
+             State_VGB(WaveFirst_,i,j,k,iBlock) = &
+                  1e-4*State_VGB(WaveLast_,i,j,k,iBlock)
+          else
+             State_VGB(WaveFirst_,i,j,k,iBlock) = 1e-30
+          end if
        end if
 
     end do; end do; end do
