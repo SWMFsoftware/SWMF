@@ -1,0 +1,22 @@
+//$Id$
+//Definition of macro used to describe species in the model
+
+#ifndef _SPECIES_MACRO_DEFINITION_
+#define _SPECIES_MACRO_DEFINITION_
+
+#define _NA_SPEC_        -1
+#define _NA_PLUS_SPEC_   -2
+#define _HE_SPEC_        -3
+#define _O_SPEC_         -4
+#define _C_SPEC_         -5
+#define _H2O_SPEC_       -6
+
+
+//Species of the background atmosphere
+#define _CO_BACKGROUND_SPEC_        -1
+#define _CO2_BACKGROUND_SPEC_       -2
+#define _CO_PLUS_BACKGROUND_SPEC_   -3
+#define _O_PLUS_BACKGROUND_SPEC_    -4
+#define _N2_BACKGROUND_SPEC_        -5
+
+#endif
