@@ -415,12 +415,13 @@ end
 pro get_pict_hdf,filenames,npict,x,w,$
                  headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
                  rBody,error,getdata
-  
+
     ;;;;;;;;;;;;;;;;; SIM PARAMETERS ;;;;;;;;;;;;;;;;;;;;;;;;;;
   
   dirname = strmid(filenames,0,strpos(filenames,"settings.hdf"))
   
   Param = H5_PARSE(filenames)
+
   nxyz_D = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
             Param.COLLECTIVE.NZC._DATA(0)]    
 
@@ -445,23 +446,31 @@ pro get_pict_hdf,filenames,npict,x,w,$
         1:begin
            x=DBLARR(nx(0),ndim)
            w=DBLARR(nx(0),nw)
+           for x0=0L,nx(0)-1 do begin
+              x(x0,0:ndim-1) = x0*dxyz_D(0:nDim-1)
+           endfor
         end
         2:begin
            x=DBLARR(nx(0),nx(1),ndim)
            w=DBLARR(nx(0),nx(1),nw)
+           for x1=0L,nx(1)-1 do begin
+              for x0=0L,nx(0)-1 do begin
+                 x(x0,x1,0:ndim-1) = [x0,x1]*dxyz_D(0:nDim-1)
+              endfor
+           endfor
         end
         3:begin
            x=DBLARR(nx(0),nx(1),nx(2),ndim)
            w=DBLARR(nx(0),nx(1),nx(2),nw)
+           for x2=0L,nx(2)-1 do begin
+              for x1=0L,nx(1)-1 do begin
+                 for x0=0L,nx(0)-1 do begin
+                    x(x0,x1,x2,0:ndim-1) = [x0,x1,x2]*dxyz_D(0:nDim-1)
+                 endfor
+              endfor
+           endfor
         end
      endcase
-
-     for x1=0L,nx(1)-1 do begin
-        for x0=0L,nx(0)-1 do begin
-           x(x0,x1,0:ndim-1) = [x0,x1]*dxyz_D(0:nDim-1)
-        endfor
-     endfor
-
   endif
 
   ;; processor layout
@@ -524,7 +533,7 @@ pro get_pict_hdf,filenames,npict,x,w,$
   DimName = ['x','y','z']
   variables(0:ndim-1) = DimName(0:ndim-1)
   variables(nVar-neqpar:nVar-1) = ['B0x','B0y','B0z']
-
+  
   ;;;;;;;;;;;;;;;;; DATA GATHERING ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   ;; loop over all files
@@ -535,10 +544,16 @@ pro get_pict_hdf,filenames,npict,x,w,$
      file_id = H5F_OPEN(filename)
      iMin = MinIJK_PD(iproc,0)
      iMax = MaxIJK_PD(iproc,0)
-     jMin = MinIJK_PD(iproc,1)
-     jMax = MaxIJK_PD(iproc,1)
-                                ;kMin = MinIJK_PD(iproc,2)
-                                ;kMax = MaxIJK_PD(iproc,2)
+
+     if ndim gt 1 then begin 
+        jMin = MinIJK_PD(iproc,1)
+        jMax = MaxIJK_PD(iproc,1)
+     end
+
+     if ndim gt 2 then begin
+        kMin = MinIJK_PD(iproc,2)
+        kMax = MaxIJK_PD(iproc,2)
+     end
 
      iw = 0
      ;; Go thoug all fields variables
@@ -547,7 +562,14 @@ pro get_pict_hdf,filenames,npict,x,w,$
      for iFields=0,nFields-1 do begin
         get_hdf_pict,group_id,iFields,SortIdx_I(npict-1),nxyz_D,$
                      -1,pict,varname,getdata
-        if getdata then w(iMin:iMax,jMin:jMax,iw) = pict
+
+        if getdata then begin
+           case ndim of
+              1:w(iMin:iMax,iw) = pict
+              2:w(iMin:iMax,jMin:jMax,iw) = pict
+              3:w(iMin:iMax,jMin:jMax,kMin:kMax,iw) = pict
+           endcase
+        end
         variables(ndim+iw) = varname
         iw = iw +1
      endfor
@@ -559,7 +581,13 @@ pro get_pict_hdf,filenames,npict,x,w,$
      ;; First species is sum of carge densities Rho
      get_hdf_pict,group_id,0,SortIdx_I(npict-1),nxyz_D,$
                   -1,pict,varname,getdata
-     if getdata then w(iMin:iMax,jMin:jMax,iw) = pict
+     if getdata then begin
+        case ndim of
+           1:w(iMin:iMax,iw) = pict
+           2:w(iMin:iMax,jMin:jMax,iw) = pict
+           3:w(iMin:iMax,jMin:jMax,kMin:kMax,iw) = pict
+        endcase
+     end
      variables(ndim+iw) = varname
      iw = iw +1
      ;; LOOP over species and return density, pressure and currents
@@ -571,7 +599,13 @@ pro get_pict_hdf,filenames,npict,x,w,$
         for iMoment=0,nMoment-1 do begin
            get_hdf_pict,Moment_id,iMoment,SortIdx_I(npict-1),nxyz_D,$
                         iSpecie-1,pict,varname,getdata
-           if getdata then w(iMin:iMax,jMin:jMax,iw) = pict
+           if getdata then begin
+              case ndim of
+                 1:w(iMin:iMax,iw) = pict
+                 2:w(iMin:iMax,jMin:jMax,iw) = pict
+                 3:w(iMin:iMax,jMin:jMax,kMin:kMax,iw) = pict
+              endcase
+           end
            variables(ndim+iw) = varname
            iw = iw +1
         endfor
