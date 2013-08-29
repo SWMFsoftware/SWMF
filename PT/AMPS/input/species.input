@@ -1,0 +1,10 @@
+
+#species
+#component=Na
+  mass=3.82E-26
+
+
+#component=O
+  mass=3.82E-2
+
+#endspecies
