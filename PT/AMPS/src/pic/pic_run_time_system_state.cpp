@@ -60,7 +60,7 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum(char *msg) {
   MPI_Gather(&t,1,MPI_LONG,CheckSumBuffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::ThisThread==0) {
-     printf("AMPS: Particle Field Check Sum:");
+     printf("$PREFIX: Particle Field Check Sum:");
      if (msg!=NULL) printf("(message=\"%s\")",msg);
      for (int thread=0;thread<PIC::nTotalThreads;thread++) printf("  0x%lx",CheckSumBuffer[thread]);
      printf("\n");
@@ -90,7 +90,7 @@ void PIC::RunTimeSystemState::GetDomainDecompositionCheckSum(char *msg) {
   MPI_Gather(&t,1,MPI_LONG,CheckSumBuffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::ThisThread==0) {
-    printf("AMPS: Domain Decomposition Check Sum:");
+    printf("$PREFIX: Domain Decomposition Check Sum:");
     if (msg!=NULL) printf("(message=\"%s\") ",msg);
 
     for (int thread=0;thread<PIC::nTotalThreads;thread++) printf("  0x%lx",CheckSumBuffer[thread]);
@@ -162,9 +162,9 @@ void PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(FILE* fout,ch
   memcpy(MeanVelocity,TempBuffer,3*PIC::nTotalSpecies*sizeof(double));
 
   if (PIC::ThisThread==0) {
-    fprintf(fout,"AMPS: Averaged particles microscopic aprameters:");
+    fprintf(fout,"$PREFIX: Averaged particles microscopic aprameters:");
     if (msg!=NULL) fprintf(fout,"(message=\"%s\") ",msg);
-    fprintf(fout,"\nAMPS: spec\t<Speed>\t\t<v[0]>\t\t<v[1]>\t\t<v[2]>\n");
+    fprintf(fout,"\n$PREFIX: spec\t<Speed>\t\t<v[0]>\t\t<v[1]>\t\t<v[2]>\n");
 
     for (s=0;s<PIC::nTotalSpecies;s++) {
       if (TotalStatWeight[s]>0.0) {
@@ -173,7 +173,7 @@ void PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(FILE* fout,ch
         for (idim=0;idim<3;idim++) MeanVelocity[3*s+idim]/=TotalStatWeight[s];
       }
 
-      fprintf(fout,"AMPS: %i\t%e\t%e\t%e\t%e\t\n",s,MeanSpeed[s],MeanVelocity[0+3*s],MeanVelocity[1+3*s],MeanVelocity[2+3*s]);
+      fprintf(fout,"$PREFIX: %i\t%e\t%e\t%e\t%e\t\n",s,MeanSpeed[s],MeanVelocity[0+3*s],MeanVelocity[1+3*s],MeanVelocity[2+3*s]);
     }
 
     fprintf(fout,"\n");
