@@ -84,7 +84,7 @@ ForceRepeatableSimulationPath=on ! on,off
 #endBackgroundSpecies 
 
 
-#block ../moon.pl !process settings of the moon module
+#block ../moon.input.pl !process settings of the moon module
   SodiumStickingProbability= Yakshinskiy2005SS !const(1.0)  ! const(?), TemperatureLimit(??), Yakshinskiy2005SS  
   SodiumReemissionFraction=1.0
 
