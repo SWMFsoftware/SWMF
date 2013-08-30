@@ -254,9 +254,11 @@ static long int nCallCounter=0;
 
 nCallCounter++;
 
+/*
 if ((nCallCounter==1057317)&&(PIC::Mesh::mesh.ThisThread==5)) {
   cout << __FILE__ << "@" << __LINE__ << endl;
 }
+*/
 
 //########## END DEBUG ##########
 
@@ -318,7 +320,7 @@ if ((nCallCounter==1057317)&&(PIC::Mesh::mesh.ThisThread==5)) {
   cell=startNode->block->GetCenterNode(LocalCellNumber);
 
   if (cell->Measure<=0.0) {
-    cout << __FILE__<< __LINE__ << endl;
+    cout << "$PREFIX:" << __FILE__<< __LINE__ << endl;
     exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
   }
 #endif
@@ -331,9 +333,11 @@ if (sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])<1737.0E3) {
 
 */
 
+  /*
   if ((nCallCounter==1057317)&&(PIC::Mesh::mesh.ThisThread==5)) {
     cout << __FILE__ << "@" << __LINE__ << endl;
   }
+  */
 //===================== END DEBUG ==================
 
 
@@ -843,16 +847,16 @@ int iTemp,jTemp,kTemp;
   cell=startNode->block->GetCenterNode(LocalCellNumber);
 
   if ((cell->Measure<=0.0)&&(startNode->Thread==PIC::Mesh::mesh.ThisThread)) {
-    cout << __FILE__<< __LINE__ << endl;
+    cout << "$PREFIX:" << __FILE__<< __LINE__ << endl;
 
 
-    cout << "Error: cell has zero volume (" <<__FILE__<< "@" << __LINE__ << ")" << endl;
+    cout << "$PREFIX:Error: cell has zero volume (" <<__FILE__<< "@" << __LINE__ << ")" << endl;
 
      double r,rprobe[3]={0.0,0.0,0.0};
      int di,dj,dk;
 
 
-     cout << "x particle=";
+     cout << "$PREFIX:x particle=";
      for (r=0.0,idim=0;idim<DIM;idim++) {
        r+=pow(x[idim],2);
        cout << x[idim] << " ";
@@ -864,7 +868,7 @@ int iTemp,jTemp,kTemp;
        startNode->GetCornerNodePosition(rprobe,i+di,j+dj,k+dk);
 
        for (idim=0,r=0.0;idim<DIM;idim++) r+=pow(rprobe[idim],2);
-       cout << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << sqrt(r) << endl;
+       cout << "$PREFIX:Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << sqrt(r) << endl;
      }
 
 
@@ -908,9 +912,11 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
   nCallCounter++;
 
 
+  /*
   if (nCallCounter==5053963) {
     cout << __LINE__ << __FILE__<< endl;
   }
+  */
   //########## END DEBUG ##########
 
 
@@ -933,13 +939,13 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
   cell=startNode->block->GetCenterNode(LocalCellNumber);
 
   if ((cell->Measure<=0.0)&&(startNode->Thread==PIC::Mesh::mesh.ThisThread)) {
-    cout << "Error: cell has zero volume (" <<__FILE__<< "@" << __LINE__ << ")" << endl;
+    cout << "$PREFIX:Error: cell has zero volume (" <<__FILE__<< "@" << __LINE__ << ")" << endl;
 
     double r,rprobe[3]={0.0,0.0,0.0};
     int di,dj,dk,idim;
 
 
-    cout << "x particle=";
+    cout << "$PREFIX:x particle=";
     for (r=0.0,idim=0;idim<DIM;idim++) {
       r+=pow(x[idim],2);
       cout << x[idim] << " ";
@@ -951,7 +957,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
       startNode->GetCornerNodePosition(rprobe,i+di,j+dj,k+dk);
 
       for (idim=0,r=0.0;idim<DIM;idim++) r+=pow(rprobe[idim],2);
-      cout << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << sqrt(r) << endl;
+      cout << "$PREFIX:Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << sqrt(r) << endl;
     }
 
     PIC::Mesh::mesh.InitCellMeasure(startNode);
@@ -1189,7 +1195,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
   cell=newNode->block->GetCenterNode(LocalCellNumber);
 
   if ((cell->Measure<=0.0)&&(newNode->Thread==PIC::Mesh::mesh.ThisThread)) {
-    cout << __FILE__<< __LINE__ << endl;
+    cout << "$PREFIX:" << __FILE__<< __LINE__ << endl;
     exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
   }
 #endif
@@ -1236,13 +1242,13 @@ int PIC::Mover::UniformWeight_UniformTimeStep_SecondOrder(long int ptr,double dt
   cell=startNode->block->GetCenterNode(LocalCellNumber);
 
   if ((cell->Measure<=0.0)&&(startNode->Thread==PIC::Mesh::mesh.ThisThread)) {
-    cout << "Error: cell has zero volume (" <<__FILE__<< "@" << __LINE__ << ")" << endl;
+    cout << "$PREFIX:Error: cell has zero volume (" <<__FILE__<< "@" << __LINE__ << ")" << endl;
 
     double r,rprobe[3]={0.0,0.0,0.0};
     int di,dj,dk,idim;
 
 
-    cout << "x particle=";
+    cout << "$PREFIX:x particle=";
     for (r=0.0,idim=0;idim<DIM;idim++) {
       r+=pow(xInit[idim],2);
       cout << xInit[idim] << " ";
@@ -1254,7 +1260,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_SecondOrder(long int ptr,double dt
       startNode->GetCornerNodePosition(rprobe,i+di,j+dj,k+dk);
 
       for (idim=0,r=0.0;idim<DIM;idim++) r+=pow(rprobe[idim],2);
-      cout << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << sqrt(r) << endl;
+      cout << "$PREFIX:Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << sqrt(r) << endl;
     }
 
     PIC::Mesh::mesh.InitCellMeasure(startNode);
@@ -1407,7 +1413,7 @@ exit(__LINE__,__FILE__,"not implemented");
   cell=newNode->block->GetCenterNode(LocalCellNumber);
 
   if ((cell->Measure<=0.0)&&(newNode->Thread==PIC::Mesh::mesh.ThisThread)) {
-    cout << __FILE__<< __LINE__ << endl;
+    cout << "$PREFIX:" << __FILE__<< __LINE__ << endl;
     exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
   }
 #endif
@@ -1448,6 +1454,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 #define _UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_        0
 #define _BLOCK_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_       1
 #define _INTERNAL_SPHERE_MIN_DT_INTERSECTION_CODE_UTSNFTT_  2
+#define _BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_    3
 
   int ParticleIntersectionCode=_UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
 
@@ -1478,7 +1485,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
   cell=startNode->block->GetCenterNode(LocalCellNumber);
 
   if (cell->Measure<=0.0) {
-    cout << __FILE__<< __LINE__ << endl;
+    cout << "$PREFIX:" << __FILE__<< __LINE__ << endl;
     exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
   }
 #endif
@@ -1764,6 +1771,24 @@ MovingLoop:
       }
     }
 
+    //check intersection of the particle trajectory with the cut-faces
+    cTriangleFace *IntersectionFace=NULL;
+
+    if (middleNode->FirstTriangleCutFace!=NULL) {
+      cTriangleFaceDescriptor *t;
+      double TimeOfFlight;
+
+      for (t=middleNode->FirstTriangleCutFace;t!=NULL;t=t->next) {
+        if (t->TriangleFace->RayIntersection(xInit,vMiddle,TimeOfFlight,PIC::Mesh::mesh.EPS)==true) {
+          if (TimeOfFlight<dtMin) {
+            dtMin=TimeOfFlight;
+            IntersectionFace=t->TriangleFace;
+            ParticleIntersectionCode=_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
+          }
+        }
+      }
+    }
+
 
     //check the possible photolytic reactions
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
@@ -1798,7 +1823,25 @@ MovingLoop:
 
     //advance the particle's position and velocity
     //interaction with the faces of the block and internal surfaces
-    if (ParticleIntersectionCode==_INTERNAL_SPHERE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
+    if (ParticleIntersectionCode==_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
+      xFinal[0]=xInit[0]+dtMin*vInit[0];
+      xFinal[1]=xInit[1]+dtMin*vInit[1];
+      xFinal[2]=xInit[2]+dtMin*vInit[2];
+
+      vFinal[0]=vInit[0]+dtMin*acclInit[0];
+      vFinal[1]=vInit[1]+dtMin*acclInit[1];
+      vFinal[2]=vInit[2]+dtMin*acclInit[2];
+
+      FirstBoundaryFlag=true;
+      lastInternalBoundaryDescriptor=InternalBoundaryDescriptor_dtMin;
+
+      double c=vFinal[0]*IntersectionFace->ExternalNormal[0]+vFinal[1]*IntersectionFace->ExternalNormal[1]+vFinal[2]*IntersectionFace->ExternalNormal[2];
+      vFinal[0]-=2.0*c*IntersectionFace->ExternalNormal[0];
+      vFinal[1]-=2.0*c*IntersectionFace->ExternalNormal[1];
+      vFinal[2]-=2.0*c*IntersectionFace->ExternalNormal[2];
+
+    }
+    else if (ParticleIntersectionCode==_INTERNAL_SPHERE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
       int code;
 
       xFinal[0]=xInit[0]+dtMin*vInit[0];
@@ -2180,16 +2223,16 @@ exit(__LINE__,__FILE__,"not implemented");
   cell=startNode->block->GetCenterNode(LocalCellNumber);
 
   if ((cell->Measure<=0.0)&&(startNode->Thread==PIC::Mesh::mesh.ThisThread)) {
-    cout << __FILE__<< __LINE__ << endl;
+    cout << "$PREFIX:" << __FILE__<< __LINE__ << endl;
 
 
-    cout << "Error: cell has zero volume (" <<__FILE__<< "@" << __LINE__ << ")" << endl;
+    cout << "$PREFIX:Error: cell has zero volume (" <<__FILE__<< "@" << __LINE__ << ")" << endl;
 
      double r,rprobe[3]={0.0,0.0,0.0};
      int di,dj,dk;
 
 
-     cout << "x particle=";
+     cout << "$PREFIX:x particle=";
      for (r=0.0,idim=0;idim<DIM;idim++) {
        r+=pow(xFinal[idim],2);
        cout << xFinal[idim] << " ";
@@ -2201,7 +2244,7 @@ exit(__LINE__,__FILE__,"not implemented");
        startNode->GetCornerNodePosition(rprobe,i+di,j+dj,k+dk);
 
        for (idim=0,r=0.0;idim<DIM;idim++) r+=pow(rprobe[idim],2);
-       cout << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << sqrt(r) << endl;
+       cout << "$PREFIX:Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << sqrt(r) << endl;
      }
 
 

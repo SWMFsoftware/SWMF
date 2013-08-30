@@ -30,7 +30,7 @@ void rnd_seed(int seed=-1) {
 
 #ifdef MPI_ON
   int thread;
-  MPI_Comm_rank(MPI_COMM_WORLD,&thread);
+  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&thread);
 
   if (seed==-1) seed=thread; //+time(NULL)
 
@@ -55,7 +55,7 @@ int rndLastSeed=0;
 
 void rnd_seed(int seed=-1) {
   int thread;
-  MPI_Comm_rank(MPI_COMM_WORLD,&thread);
+  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&thread);
 
   if (seed==-1) seed=thread;
 
@@ -118,7 +118,7 @@ double gam(double x) {
 */
 //===================================================
 void PrintErrorLog(const char* message) {
-  FILE* errorlog=fopen("error.log","a+");
+  FILE* errorlog=fopen("$ERRORLOG","a+");
 
   time_t TimeValue=time(0);
   tm *ct=localtime(&TimeValue);
@@ -131,7 +131,7 @@ void PrintErrorLog(const char* message) {
 
 //use: PrintErrorLog(__LINE__,__FILE__, "mesage")
 void PrintErrorLog(long int nline, const char* fname, const char* message) {
-  FILE* errorlog=fopen("error.log","a+");
+  FILE* errorlog=fopen("$ERRORLOG","a+");
 
   time_t TimeValue=time(0);
   tm *ct=localtime(&TimeValue);
@@ -140,9 +140,9 @@ void PrintErrorLog(long int nline, const char* fname, const char* message) {
   fprintf(errorlog,"file=%s, line=%ld\n",fname,nline);
   fprintf(errorlog,"%s\n\n",message);
 
-  printf("Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
-  printf("file=%s, line=%ld\n",fname,nline);
-  printf("%s\n\n",message);
+  printf("$PREFIX:Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+  printf("$PREFIX:file=%s, line=%ld\n",fname,nline);
+  printf("$PREFIX:%s\n\n",message);
 
   fclose(errorlog);
 }
@@ -157,13 +157,13 @@ void StampSignature(char* message) {
   buffer[0]=rnd();
 
 #ifdef MPI_ON
-  MPI_Gather(buffer,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  MPI_Gather(buffer,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 #endif
 
   if (ThisThread==0) {
     for (thread=0;thread<TotalThreadsNumber;thread++) sign+=buffer[thread];
      
-    printf("Signature=%e (msg: %s)\n",sign,message); 
+    printf("$PREFIX:Signature=%e (msg: %s)\n",sign,message);
   }
 
   delete [] buffer;
@@ -177,7 +177,7 @@ void exit(long int nline, const char* fname, const char* msg=NULL) {
   if (msg==NULL) sprintf(str," exit: line=%ld, file=%s\n",nline,fname);
   else sprintf(str," exit: line=%ld, file=%s, message=%s\n",nline,fname,msg); 
 
-  printf("%s",str);
+  printf("$PREFIX:%s",str);
 
   PrintErrorLog(str);
   exit(0);
@@ -185,12 +185,12 @@ void exit(long int nline, const char* fname, const char* msg=NULL) {
 
 void PrintLineMark(long int nline ,char* fname ,char* msg) {
 #ifdef MPI_ON
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 #endif
 
   if (ThisThread==0) {
-    if (msg==NULL) printf("linemark: line=%ld, file=%s\n",nline,fname);
-    else printf("linemark: line=%ld, file=%s, message=%s\n",nline,fname,msg);
+    if (msg==NULL) printf("$PREFIX:linemark: line=%ld, file=%s\n",nline,fname);
+    else printf("$PREFIX:linemark: line=%ld, file=%s, message=%s\n",nline,fname,msg);
   }
 }
 

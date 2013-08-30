@@ -273,7 +273,7 @@ void PIC::Parallel::ExchangeParticleData() {
 
   //collect the data exchenge matrix
   Latency=MPI_Wtime();
-  MPI_Allgather(sendProcVector,PIC::Mesh::mesh.nTotalThreads,MPI_INT,exchangeProcMatrix,PIC::Mesh::mesh.nTotalThreads,MPI_INT,MPI_COMM_WORLD);
+  MPI_Allgather(sendProcVector,PIC::Mesh::mesh.nTotalThreads,MPI_INT,exchangeProcMatrix,PIC::Mesh::mesh.nTotalThreads,MPI_INT,MPI_GLOBAL_COMMUNICATOR);
   Latency=MPI_Wtime()-Latency;
 
   //extract the list of the processors that will send information to 'ThisThread'
@@ -402,14 +402,14 @@ void PIC::Parallel::ExchangeParticleData() {
       if ((offset!=sendProcVector[To])||(offset!=exchangeProcMatrix[PIC::Mesh::mesh.ThisThread*PIC::Mesh::mesh.nTotalThreads+To])) exit(__LINE__,__FILE__,"Error: the data anount to be send is not consistent");
 
       //end the part of the sender - initiate non-blocks send
-      MPI_Isend(buffer,offset,MPI_CHAR,To,0,MPI_COMM_WORLD,SendRequest+nproc);
+      MPI_Isend(buffer,offset,MPI_CHAR,To,0,MPI_GLOBAL_COMMUNICATOR,SendRequest+nproc);
    }
 
 
   //initiate reciving of the data
   for (nproc=0;nproc<nRecvProc;nproc++) {
     thread=recvProcList[nproc];
-    MPI_Irecv(recvDataBuffer[nproc],exchangeProcMatrix[thread*PIC::Mesh::mesh.nTotalThreads+PIC::Mesh::mesh.ThisThread],MPI_CHAR,thread,0,MPI_COMM_WORLD,RecvRequest+nproc);
+    MPI_Irecv(recvDataBuffer[nproc],exchangeProcMatrix[thread*PIC::Mesh::mesh.nTotalThreads+PIC::Mesh::mesh.ThisThread],MPI_CHAR,thread,0,MPI_GLOBAL_COMMUNICATOR,RecvRequest+nproc);
   }
 
 
@@ -426,6 +426,10 @@ void PIC::Parallel::ExchangeParticleData() {
       for (nproc=0;nproc<nRecvProc;nproc++) if (recvDataBuffer[nproc]!=NULL) {
         MPI_Test(RecvRequest+nproc,&flag,&status);
         if (flag==true) break;
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+        break;
+#endif
       }
     }
     while (flag==false);

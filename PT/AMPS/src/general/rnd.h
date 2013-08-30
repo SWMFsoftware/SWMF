@@ -11,7 +11,7 @@
 #ifndef _RND_
 #define _RND_
 
-
+#include "global.h"
 
 namespace RandomNumberGenerator {
   extern unsigned long int rndLastSeed;

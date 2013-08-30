@@ -22,7 +22,15 @@ SpiceDouble Exosphere::OrbitalMotion::et=0.0,Exosphere::OrbitalMotion::lt=0.0;
 double Exosphere::OrbitalMotion::SunDirection_IAU_OBJECT[3]={0.0,0.0,0.0};
 
 //matrixes for tranformation SO->IAU and IAU->SO coordinate frames
-SpiceDouble Exosphere::OrbitalMotion::SO_to_IAU_TransformationMartix[6][6],Exosphere::OrbitalMotion::IAU_to_SO_TransformationMartix[6][6];
+SpiceDouble Exosphere::OrbitalMotion::SO_to_IAU_TransformationMartix[6][6]={
+    {1.0,0.0,0.0, 0.0,0.0,0.0},{0.0,1.0,0.0, 0.0,0.0,0.0},{0.0,0.0,1.0, 0.0,0.0,0.0},
+    {0.0,0.0,0.0, 1.0,0.0,0.0},{0.0,0.0,0.0, 0.0,1.0,0.0},{0.0,0.0,0.0, 0.0,0.0,1.0},
+};
+
+SpiceDouble Exosphere::OrbitalMotion::IAU_to_SO_TransformationMartix[6][6]={
+    {1.0,0.0,0.0, 0.0,0.0,0.0},{0.0,1.0,0.0, 0.0,0.0,0.0},{0.0,0.0,1.0, 0.0,0.0,0.0},
+    {0.0,0.0,0.0, 1.0,0.0,0.0},{0.0,0.0,0.0, 0.0,1.0,0.0},{0.0,0.0,0.0, 0.0,0.0,1.0},
+};
 
 //the number intervals of orbit points printed for the time interval between two outputs of the data file
 int Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier=1;

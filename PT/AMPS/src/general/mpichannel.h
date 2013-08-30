@@ -5,6 +5,8 @@
 #ifndef MPI_CHANNEL
 #define MPI_CHANNEL
 
+#include "global.h"
+
 using namespace std;
 
 #define MPI_CHANNEL_DEFAULT_BUFFER_SIZE 100000
@@ -30,7 +32,7 @@ public:
 
   void exit(long int nline,const char* msg=NULL) {
     char str[2000];
-    FILE* errorlog=fopen("error.log","a+");
+    FILE* errorlog=fopen("$ERRORLOG","a+");
 
     time_t TimeValue=time(0);
     tm *ct=localtime(&TimeValue);
@@ -41,8 +43,8 @@ public:
     fprintf(errorlog,"Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
     fprintf(errorlog,"%s\n\n",msg);
 
-    printf("Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
-    printf("%s\n\n",msg); 
+    printf("$PREFIX:Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+    printf("$PREFIX:%s\n\n",msg);
 
     fclose(errorlog);
     ::exit(0);
@@ -85,8 +87,8 @@ public:
     sendThread=-1;
 
     #ifdef MPI_ON
-    MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
-    MPI_Comm_size(MPI_COMM_WORLD,&TotalThreadsNumber);
+    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+    MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&TotalThreadsNumber);
     #else
     ThisThread=0,TotalThreadsNumber=1;
     #endif
@@ -167,12 +169,12 @@ public:
 
 #ifdef MPI_ON
       if (ChannelMode==_MPI_CHANNEL_MODE_SENDRECV_) {
-        MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_COMM_WORLD);
-        MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD);
+        MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_GLOBAL_COMMUNICATOR);
+        MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_GLOBAL_COMMUNICATOR);
       }
       else {
-        MPI_Bcast(&sendptr,1,MPI_LONG,sendThread,MPI_COMM_WORLD);
-        MPI_Bcast(sendBuffer,sendptr,MPI_CHAR,sendThread,MPI_COMM_WORLD);
+        MPI_Bcast(&sendptr,1,MPI_LONG,sendThread,MPI_GLOBAL_COMMUNICATOR);
+        MPI_Bcast(sendBuffer,sendptr,MPI_CHAR,sendThread,MPI_GLOBAL_COMMUNICATOR);
       }
 #endif
 
@@ -200,12 +202,12 @@ public:
 
 #ifdef MPI_ON
       if (ChannelMode==_MPI_CHANNEL_MODE_SENDRECV_) {
-        MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_COMM_WORLD);
-        MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD);
+        MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_GLOBAL_COMMUNICATOR);
+        MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_GLOBAL_COMMUNICATOR);
       }
       else {
-        MPI_Bcast(&sendptr,1,MPI_LONG,sendThread,MPI_COMM_WORLD);
-        MPI_Bcast(sendBuffer,sendptr,MPI_CHAR,sendThread,MPI_COMM_WORLD);
+        MPI_Bcast(&sendptr,1,MPI_LONG,sendThread,MPI_GLOBAL_COMMUNICATOR);
+        MPI_Bcast(sendBuffer,sendptr,MPI_CHAR,sendThread,MPI_GLOBAL_COMMUNICATOR);
       }
 #endif
 
@@ -277,12 +279,12 @@ public:
       if (ChannelMode==_MPI_CHANNEL_MODE_SENDRECV_) {
         MPI_Status status;
 
-        MPI_Recv(RecvDataLength+thread,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
-        MPI_Recv(recvBuffer[thread],RecvDataLength[thread],MPI_CHAR,thread,0,MPI_COMM_WORLD,&status);
+        MPI_Recv(RecvDataLength+thread,1,MPI_LONG,thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
+        MPI_Recv(recvBuffer[thread],RecvDataLength[thread],MPI_CHAR,thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
       }
       else {
-        MPI_Bcast(RecvDataLength+thread,1,MPI_LONG,thread,MPI_COMM_WORLD);
-        MPI_Bcast(recvBuffer[thread],RecvDataLength[thread],MPI_CHAR,thread,MPI_COMM_WORLD);
+        MPI_Bcast(RecvDataLength+thread,1,MPI_LONG,thread,MPI_GLOBAL_COMMUNICATOR);
+        MPI_Bcast(recvBuffer[thread],RecvDataLength[thread],MPI_CHAR,thread,MPI_GLOBAL_COMMUNICATOR);
       }
 #endif
 

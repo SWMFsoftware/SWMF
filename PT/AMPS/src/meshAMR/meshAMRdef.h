@@ -41,6 +41,12 @@
 #define _TOTAL_BLOCK_CELLS_Y_ (_BLOCK_CELLS_Y_+2*_GHOST_CELLS_Y_)
 #define _TOTAL_BLOCK_CELLS_Z_ (_BLOCK_CELLS_Z_+2*_GHOST_CELLS_Z_)
 
+//use cut-cells in the mesh
+#define _AMR__CUT_CELL__MODE__ON_      0
+#define _AMR__CUT_CELL__MODE__OFF_     1
+
+#define _AMR__CUT_CELL__MODE_  _AMR__CUT_CELL__MODE__ON_
+
 
 //the existance of the internal boundaries (bodies inside the compurational domain)
 #define _INTERNAL_BOUNDARY_MODE_ON_  0

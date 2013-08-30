@@ -195,7 +195,7 @@ void PIC::ICES::retriveSWMFdata(const char *DataFile) {
   sprintf(command,"rm -f -r temp.ICES.thread=%i",PIC::Mesh::mesh.ThisThread);
   system(command);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::Mesh::mesh.ThisThread==0) {
     fprintf(PIC::DiagnospticMessageStream,"Combine individual trajectory files into a single file\n");
@@ -233,7 +233,7 @@ void PIC::ICES::retriveSWMFdata(const char *DataFile) {
   }
 
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::Mesh::mesh.ThisThread==0) fprintf(PIC::DiagnospticMessageStream,"ICES (SWMF) done\n");
 }
@@ -253,7 +253,7 @@ void PIC::ICES::retriveDSMCdata(const char *Case,const char *DataFile,const char
   if (PIC::Mesh::mesh.ThisThread==0) fprintf(PIC::DiagnospticMessageStream,"ICES: retrive DSMC data \n Execute command: %s\n",command);
   system(command);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::Mesh::mesh.ThisThread==0) {
     fprintf(PIC::DiagnospticMessageStream,"Combine individual trajectory files into a single file\n");
@@ -291,7 +291,7 @@ void PIC::ICES::retriveDSMCdata(const char *Case,const char *DataFile,const char
   }
 
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::Mesh::mesh.ThisThread==0) fprintf(PIC::DiagnospticMessageStream,"ICES (DSMC) done\n");
 

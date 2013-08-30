@@ -266,6 +266,6 @@ void PIC::DistributionFunctionSample::printDistributionFunction(char *fname,int 
   if (PIC::Mesh::mesh.ThisThread==0) pipe.closeRecvAll();
   else pipe.closeSend();
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 }
 

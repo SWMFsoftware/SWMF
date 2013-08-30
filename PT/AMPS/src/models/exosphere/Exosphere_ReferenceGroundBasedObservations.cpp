@@ -16,7 +16,7 @@ void Exosphere::Sampling::ReferenceGroundBasedObservations::init() {
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   int n;
 
-  if (PIC::ThisThread==0) cout << "Reference Ground Based Observations:" << endl << "n\tObservation Time[degrees]\tTAA\tPhase Angle[degrees]" << endl;
+  if (PIC::ThisThread==0) cout << "$PREFIX:Reference Ground Based Observations:" << endl << "$PREFIX:n\tObservation Time[degrees]\tTAA\tPhase Angle[degrees]" << endl;
 
   for (n=0;n<nReferenceGroundBasedObservations;n++) {
     RemoteObservationList[n].nOutputFile=0;
@@ -26,7 +26,7 @@ void Exosphere::Sampling::ReferenceGroundBasedObservations::init() {
     RemoteObservationList[n].TAA=Exosphere::OrbitalMotion::GetTAA(RemoteObservationList[n].et);
     RemoteObservationList[n].PhaseAngle=Exosphere::OrbitalMotion::GetPhaseAngle(RemoteObservationList[n].et);
 
-    if (PIC::ThisThread==0) cout << n << "\t" << ReferenceGroundBasedObservationTime[n] << "\t" << RemoteObservationList[n].TAA/Pi*180.0 << "\t" << RemoteObservationList[n].PhaseAngle/Pi*180.0 << endl;
+    if (PIC::ThisThread==0) cout << "$PREFIX:" << n << "\t" << ReferenceGroundBasedObservationTime[n] << "\t" << RemoteObservationList[n].TAA/Pi*180.0 << "\t" << RemoteObservationList[n].PhaseAngle/Pi*180.0 << endl;
   }
 #endif
 }

@@ -233,7 +233,10 @@ namespace ElectricallyChargedDust {
       const int nOutputPoints=400;
 
       if (PIC::ThisThread==0) {
-        fout=fopen("DustGrainSizeDistribution.dat","w");
+        char fname[_MAX_STRING_LENGTH_PIC_];
+
+        sprintf(fname,"%s/DustGrainSizeDistribution.dat",PIC::OutputDataFileDirectory);
+        fout=fopen(fname,"w");
         fprintf(fout,"VARIABLE=\"Grain Radius\", \"Normalized Distribution Function\" \n");
 
         double r,dLogR=(LogMaxDustGrainRadius-LogMinDustGrainRadius)/(nOutputPoints-1);
@@ -255,8 +258,8 @@ namespace ElectricallyChargedDust {
       maxValue__non_normalized=pow(minDustRadius,1.0-PowerIndex);
 
       if (PIC::ThisThread==0) {
-        cout << "Dust Grains Distribution:" << endl;
-        cout << "minDustRadius=" << minDustRadius << endl << "maxDustRadius=" << maxDustRadius << endl << "PowerIndex=" << PowerIndex << endl << "NormalizationFactor=" << NormalizationFactor << endl << endl;
+        cout << "$PREFIX:Dust Grains Distribution:" << endl;
+        cout << "$PREFIX:minDustRadius=" << minDustRadius << endl << "$PREFIX:maxDustRadius=" << maxDustRadius << endl << "$PREFIX:PowerIndex=" << PowerIndex << endl << "$PREFIX:NormalizationFactor=" << NormalizationFactor << endl << endl;
       }
 
       PrintDistributionFucntion();
@@ -655,10 +658,11 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
   static long int nFunctionCalls=0;
 
   nFunctionCalls++;
-
+/*
   if ((PIC::nTotalThreads==7)&&(nFunctionCalls==1709)) {
     cout << __FILE__ << "@" << __LINE__ << endl;
   }
+  */
 
 //==========   DEBUG END ===================
 
@@ -988,9 +992,11 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
 
     nFunctionCalls++;
 
+    /*
     if ((PIC::nTotalThreads==7)&&(nFunctionCalls==1709)) {
       cout << __FILE__ << "@" << __LINE__ << endl;
     }
+    */
 
   //==========   DEBUG END ===================
 

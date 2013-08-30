@@ -11,7 +11,7 @@ void PIC::Parser::Run(char* InputFile) {
 //  bool nonstandardBlock_flag=false;
   char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
 
-  if (PIC::ThisThread==0) printf("InputFile: %s\n",InputFile);
+  if (PIC::ThisThread==0) printf("$PREFIX:InputFile: %s\n",InputFile);
 
   if (access(InputFile,R_OK)!=0) {
 	printf("Cannot find the input file:%s\n",InputFile);
@@ -36,7 +36,7 @@ void PIC::Parser::Run(char* InputFile) {
 */
 
     if (usedDefinedBlock==true) {
-      if (ThisThread==0) printf("Read a user defined block \"%s\"\n",str1);
+      if (ThisThread==0) printf("$PREFIX:Read a user defined block \"%s\"\n",str1);
 	}
 	else if (strcmp("#MAIN",str1)==0) readMain(ifile);
 	else if (strcmp("#SPECIES",str1)==0) PIC::MolecularData::Parser::run(ifile);

@@ -207,14 +207,14 @@ unsigned long PIC::ParticleBuffer::GetChecksum() {
   char str[10*_MAX_STRING_LENGTH_PIC_];
 
   buffer[0]=sum.checksum();
-  MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,buffer,1,MPI_UNSIGNED_LONG,0,MPI_COMM_WORLD);
+  MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,buffer,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
   if (ThisThread==0) {
     sprintf(str,"Cdsmc::pbuffer CRC32 checksum: ");
 
     for (long int thread=0;thread<TotalThreadsNumber;thread++) sprintf(str,"%s 0x%lx ",str,buffer[thread]);
 
-    printf("%s\n",str);
+    printf("$PREFIX:%s\n",str);
     PrintErrorLog(str);
   }
 

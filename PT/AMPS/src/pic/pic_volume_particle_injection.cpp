@@ -69,7 +69,7 @@ void PIC::VolumeParticleInjection::InitTotalInjectionRate() {
 
 
   if (nRegistratedInjectionProcesses==0) {
-    printf("WARNING: No Volume Injection Rate function is registreted (FILE=%s,LINE=%i)\n",__FILE__,__LINE__);
+    printf("$PREFIX:WARNING: No Volume Injection Rate function is registreted (FILE=%s,LINE=%i)\n",__FILE__,__LINE__);
   }
 
 
@@ -146,11 +146,11 @@ double PIC::VolumeParticleInjection::GetTotalInjectionRate(int spec) {
   //collect the injection rate from all processors
   double buffer[PIC::nTotalThreads];
 
-  MPI_Gather(&res,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  MPI_Gather(&res,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::ThisThread==0) for (int thread=1;thread<PIC::nTotalThreads;thread++) res+=buffer[thread];
 
-  MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
   return res;
 }
@@ -173,14 +173,14 @@ double PIC::VolumeParticleInjection::GetTotalTimeStepInjection(int spec) {
   //collect the injection rate from all processors
   double buffer[PIC::nTotalThreads];
 
-  MPI_Gather(&res,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  MPI_Gather(&res,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
   if (PIC::ThisThread==0) for (int thread=1;thread<PIC::nTotalThreads;thread++) res+=buffer[thread];
-  MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
-  MPI_Gather(&totalInjectionPerSecond,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  MPI_Gather(&totalInjectionPerSecond,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
   if (PIC::ThisThread==0) {
     for (int thread=1;thread<PIC::nTotalThreads;thread++) totalInjectionPerSecond+=buffer[thread];
-    cout << "The total prodiction rate for specie s=" << spec << " is " << totalInjectionPerSecond << " particles per second (" << __FILE__ << "@" << __LINE__ << ")" << endl;
+    cout << "$PREFIX:The total prodiction rate for specie s=" << spec << " is " << totalInjectionPerSecond << " particles per second (" << __FILE__ << "@" << __LINE__ << ")" << endl;
   }
 
   return res;

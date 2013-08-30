@@ -318,7 +318,7 @@ namespace Quadrature {
         bool TableFound=false;
 
         if ((VectorDimention<=0)||(AccuracyOrder<0)) {
-          printf("Error: negative parameter! (file=%s,line=%i",__FILE__,__LINE__);
+          printf("$PREFIX:Error: negative parameter! (file=%s,line=%i",__FILE__,__LINE__);
           exit(0);
         }
 

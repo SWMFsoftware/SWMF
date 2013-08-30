@@ -148,9 +148,9 @@ public:
   }; 
 
   void error(const char *msg=NULL) {
-    printf("Error in file %s, line=%ld\n",fname,line);
-    printf("%s\n",init_str);
-    if (msg!=NULL) printf("Error message: %s\n",msg);
+    printf("$PREFIX:Error in file %s, line=%ld\n",fname,line);
+    printf("$PREFIX:%s\n",init_str);
+    if (msg!=NULL) printf("$PREFIX:Error message: %s\n",msg);
     exit(0);
   }; 
 };

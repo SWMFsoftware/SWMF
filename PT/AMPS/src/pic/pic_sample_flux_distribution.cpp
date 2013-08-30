@@ -318,7 +318,7 @@ void PIC::ParticleFluxDistributionSample::printMacroscopicParameters(char *fname
   }
   else pipe.closeSend();
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 }
 
 //====================================================
@@ -430,6 +430,6 @@ void PIC::ParticleFluxDistributionSample::printDistributionFunction(char *fname,
   else pipe.closeSend();
 */
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 }
 

@@ -256,7 +256,7 @@ public:
     double x,dx,norm=0.0,f1,f2;
 
     if (ProbabilityDistributionFunction==NULL) {
-      std::cout << "WARNING: ProbabilityDistributionFunction is NULL (file=" << __FILE__ << ", line=" << __LINE__ << ")" << std::endl;
+      std::cout << "$PREFIX:WARNING: ProbabilityDistributionFunction is NULL (file=" << __FILE__ << ", line=" << __LINE__ << ")" << std::endl;
 
       return;
     }
@@ -292,7 +292,7 @@ public:
     double norm=0.0,summ=0.0;
 
     if (ProbabilityDistributionFunction==NULL) {
-      std::cout << "WARNING: ProbabilityDistributionFunction is NULL (file=" << __FILE__ << ", line=" << __LINE__ << ")" << std::endl;
+      std::cout << "$PREFIX:WARNING: ProbabilityDistributionFunction is NULL (file=" << __FILE__ << ", line=" << __LINE__ << ")" << std::endl;
 
       return;
     }

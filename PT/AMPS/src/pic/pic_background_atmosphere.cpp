@@ -42,13 +42,13 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::OutputSampledModelData(int 
   //collect the thermalization and collision source rates
   double TotalThermalizationRate[PIC::nTotalSpecies],TotalCollisonSourceRate[PIC::nTotalSpecies];
 
-  MPI_Allreduce(ThermalizationRate,TotalThermalizationRate,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-  MPI_Allreduce(CollisionSourceRate,TotalCollisonSourceRate,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(ThermalizationRate,TotalThermalizationRate,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+  MPI_Allreduce(CollisionSourceRate,TotalCollisonSourceRate,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::ThisThread==0) {
-    cout << "Background Atmosphere: \n spec \t Thermalization Rate \t Collision Source Rate \n";
+    cout << "$PREFIX:Background Atmosphere: \n$PREFIX: spec \t Thermalization Rate \t Collision Source Rate \n";
 
-    for (spec=0;spec<PIC::nTotalSpecies;spec++) cout << spec << "\t" << TotalThermalizationRate[spec]/PIC::LastSampleLength << "\t" << TotalCollisonSourceRate[spec]/PIC::LastSampleLength << endl;
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) cout << "$PREFIX:" << spec << "\t" << TotalThermalizationRate[spec]/PIC::LastSampleLength << "\t" << TotalCollisonSourceRate[spec]/PIC::LastSampleLength << endl;
   }
 
   for (spec=0;spec<PIC::nTotalSpecies;spec++) ThermalizationRate[spec]=0.0,CollisionSourceRate[spec]=0.0;

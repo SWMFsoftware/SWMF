@@ -176,7 +176,7 @@ void ElectricallyChargedDust::Init_AfterParser() {
 void ElectricallyChargedDust::OutputSampledModelData(int DataOutputFileNumber) {
   double buffer[PIC::nTotalThreads];
 
-  MPI_Gather(&SampledDustMassInjectionRate,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  MPI_Gather(&SampledDustMassInjectionRate,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::ThisThread==0) {
     for (int thread=1;thread<PIC::nTotalThreads;thread++) buffer[0]+=buffer[thread];
@@ -647,9 +647,11 @@ static long int nCallCounter=0;
 
 nCallCounter++;
 
+/*
 if (nCallCounter==61723) {
   cout << __FILE__ << "%" << __LINE__ << endl;
 }
+*/
 //=======  DEBUG END  ==============
 
 
@@ -966,7 +968,7 @@ void ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::printDis
 
   for (nProbe=0;nProbe<nSamplingLocations;nProbe++) {
     if (PIC::Mesh::mesh.ThisThread==0) {
-      sprintf(str,"pic.DUST.SizeDistribution.out=%i.nSamplePoint=%i.dat",DataOutputFileNumber,nProbe);
+      sprintf(str,"%s/pic.DUST.SizeDistribution.out=%i.nSamplePoint=%i.dat",PIC::OutputDataFileDirectory,DataOutputFileNumber,nProbe);
       fout=fopen(str,"w");
 
       fprintf(PIC::DiagnospticMessageStream,"printing output file: %s.........         ",str);
@@ -1051,7 +1053,7 @@ void ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::printDis
   if (PIC::Mesh::mesh.ThisThread==0) pipe.closeRecvAll();
   else pipe.closeSend();
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 }
 
 

@@ -10,7 +10,7 @@
 
 
 #include "pic.h"
-#include "SpiceUsr.h"
+//#include "SpiceUsr.h"
 
 #include "Exosphere.h"
 #include "constants.h"
@@ -208,7 +208,8 @@ void Exosphere::Init_BeforeParser() {
         SourceProcesses::PhotonStimulatedDesorption::PhotonStimulatedDesorption_maxInjectionEnergy[spec],SourceProcesses::PhotonStimulatedDesorption::EnergyDistributionFunction, \
         _SINGLE_VARIABLE_DISTRIBUTION__INTERPOLATION_MODE__LINEAR_,&spec);
 
-    if (PIC::ThisThread==0) {
+
+/*    if (PIC::ThisThread==0) {
       char fname[200];
 
       sprintf(fname,"CumulativeEnergyDistribution-PSD.nspec=%i.%s.dat",spec,PIC::MolecularData::GetChemSymbol(spec));
@@ -216,7 +217,7 @@ void Exosphere::Init_BeforeParser() {
 
       sprintf(fname,"EnergyDistribution-PSD.nspec=%i.%s.dat",spec,PIC::MolecularData::GetChemSymbol(spec));
       SourceProcesses::PhotonStimulatedDesorption::EnergyDistribution[spec].fPrintDistributionFunction(fname,&spec);
-    }
+    }*/
   }
 #endif
 
@@ -226,6 +227,7 @@ void Exosphere::Init_BeforeParser() {
         SourceProcesses::SolarWindSputtering::SolarWindSputtering_maxInjectionEnergy[spec],SourceProcesses::SolarWindSputtering::EnergyDistributionFunction, \
         _SINGLE_VARIABLE_DISTRIBUTION__INTERPOLATION_MODE__LINEAR_,&spec);
 
+/*
     if (PIC::ThisThread==0) {
       char fname[200];
 
@@ -235,6 +237,7 @@ void Exosphere::Init_BeforeParser() {
       sprintf(fname,"EnergyDistribution-SWS.nspec=%i.%s.dat",spec,PIC::MolecularData::GetChemSymbol(spec));
       SourceProcesses::SolarWindSputtering::EnergyDistribution[spec].fPrintDistributionFunction(fname,&spec);
     }
+*/
   }
 #endif
 
@@ -270,9 +273,13 @@ void Exosphere::Init_AfterParser() {
   //remove old and create header for the new the file that contains the orbital information of the planet's motion
 
   if (PIC::ThisThread==0) {
-    system("rm -f pic.OrbitalData.dat");
+    char OrbitalDataFileName[_MAX_STRING_LENGTH_PIC_];
 
-    FILE *fout=fopen("pic.OrbitalData.dat","w");
+    sprintf(OrbitalDataFileName,"rm -f %s/pic.OrbitalData.dat",PIC::OutputDataFileDirectory);
+    system(OrbitalDataFileName);
+
+    sprintf(OrbitalDataFileName,"%s/pic.OrbitalData.dat",PIC::OutputDataFileDirectory);
+    FILE *fout=fopen(OrbitalDataFileName,"w");
     fprintf(fout,"Variables: \"UTC\", \
          \"xObject(MSGR_HCI)\", \"yObject(MSGR_HCI)\", \"zObject(MSGR_HCI)\", \
          \"xEarth(MSGR_HCI)\", \"yEarth(MSGR_HCI)\", \"zEarth(MSGR_HCI)\", \
@@ -368,6 +375,7 @@ void Exosphere::ColumnIntegral::Tail(char *fname) {
 
 
 void Exosphere::ColumnIntegral::GetSubsolarPointDirection(double *LimbDirection,double *EarthPosition) {
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   SpiceInt n,nxpts;
   SpiceDouble rad[3],xpt0[3],xpt1[3],xLimb_IAU[3],xLimb_SO[3];
   SpiceDouble EarthState_IAU[6],EarthState_SO[6],lt,SunState_IAU[6];
@@ -423,10 +431,14 @@ void Exosphere::ColumnIntegral::GetSubsolarPointDirection(double *LimbDirection,
   }
 
   for (c=sqrt(c),idim=0;idim<3;idim++) LimbDirection[idim]=l[idim]/c;
+#else
+  for (int idim=0;idim<3;idim++) LimbDirection[idim]=0.0;
+#endif
 }
 
 
 void Exosphere::ColumnIntegral::Limb(char *fname) {
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   FILE *fout=NULL,*fLimb=NULL;
 
   const double maxAltitude=50.0; //altititude in radii of the object
@@ -514,11 +526,15 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
 
 
     //output emmision and column integrals at the limb at different phase angles
+    char LimbIntegralsFileName[_MAX_STRING_LENGTH_PIC_];
+
+    sprintf(LimbIntegralsFileName,"%s/pic.LimbIntegrals.dat",PIC::OutputDataFileDirectory);
+
     if (PIC::DataOutputFileNumber==0) {
-      fLimb=fopen("pic.LimbIntegrals.dat","w");
+      fLimb=fopen(LimbIntegralsFileName,"w");
       fprintf(fLimb,"VARIABLES=\"Phase Angle[degrees]\", \"Julian Date\", \"Object Radial Velocity\"  %s \n",vlist);
     }
-    else fLimb=fopen("pic.LimbIntegrals.dat","a");
+    else fLimb=fopen(LimbIntegralsFileName,"a");
   }
 
 
@@ -580,6 +596,7 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
     fprintf(fLimb,"\n");
     fclose(fLimb);
   }
+#endif
 }
 
 
@@ -659,7 +676,7 @@ void Exosphere::ColumnDensityIntegration_Limb(char *fname) {
   c = 0.4e1 * t18 * t18 + 0.4e1 * t18 * t14;
 
   d=b*b-4.0*a*c;
-  MPI_Bcast(&d,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  MPI_Bcast(&d,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
   if (d<0.0) {
     if (PIC::ThisThread==0) cout << "WARNINIG: The limb can not being seen for the given orbital configuration\n";
@@ -931,6 +948,7 @@ void Exosphere::ColumnDensityIntegration_CircularMap(char *fname,double rmax,dou
 }
 */
 void Exosphere::ColumnIntegral::CircularMap(char *fname,double rmax,double dRmin,double dRmax,int nAzimuthPoints,SpiceDouble EphemerisTime) {
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   double l[3],xEarthSO[3]={0.0,0.0,0.0},lEarth;
   double rr,dR,R=0.0;
   FILE *fout=NULL;
@@ -1094,6 +1112,7 @@ void Exosphere::ColumnIntegral::CircularMap(char *fname,double rmax,double dRmin
   }
 
   if (PIC::ThisThread==0) fclose(fout);
+#endif
 }
 
 //=====================================================================================================
@@ -1142,6 +1161,7 @@ void Exosphere::Sampling::SampleModelData() {
 
 //output the column integrated density
 void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   char fname[_MAX_STRING_LENGTH_PIC_];
   int ierr;
 
@@ -1163,18 +1183,18 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
   if (PIC::ThisThread==0) {
     char fname[300];
 
-    sprintf(fname,"pic.SurfaceProperties.%s.out=%i.dat",utcstr,DataOutputFileNumber);
+    sprintf(fname,"%s/pic.SurfaceProperties.%s.out=%i.dat",PIC::OutputDataFileDirectory,utcstr,DataOutputFileNumber);
     Exosphere::Planet->SaveSurfaceDensity(fname,Planet->GetTotalSurfaceElementsNumber(),PIC::nTotalSpecies);
   }
 
   if (PIC::ThisThread==0) {
-    printf("Output file number: %i\n",DataOutputFileNumber);
-    printf("Simulation Time: %s, et=%e,TAA=%e [deg]\n",utcstr,Exosphere::OrbitalMotion::et,Exosphere::OrbitalMotion::TAA/Pi*180.0);
-    printf("rHeliocenric=%e (%e AU), vRadial=%e\n",Exosphere::xObjectRadial,Exosphere::xObjectRadial/_AU_,Exosphere::vObjectRadial);
-    printf("Phase angle=%e [degrees]\n",Exosphere::OrbitalMotion::GetPhaseAngle(Exosphere::OrbitalMotion::et)*180.0/Pi);
-    printf("Sodium RadiationPressure Acceleration=%e\n",SodiumRadiationPressureAcceleration__Combi_1997_icarus(Exosphere::vObjectRadial,Exosphere::xObjectRadial));
+    printf("$PREFIX:Output file number: %i\n",DataOutputFileNumber);
+    printf("$PREFIX:Simulation Time: %s, et=%e,TAA=%e [deg]\n",utcstr,Exosphere::OrbitalMotion::et,Exosphere::OrbitalMotion::TAA/Pi*180.0);
+    printf("$PREFIX:rHeliocenric=%e (%e AU), vRadial=%e\n",Exosphere::xObjectRadial,Exosphere::xObjectRadial/_AU_,Exosphere::vObjectRadial);
+    printf("$PREFIX:Phase angle=%e [degrees]\n",Exosphere::OrbitalMotion::GetPhaseAngle(Exosphere::OrbitalMotion::et)*180.0/Pi);
+    printf("$PREFIX:Sodium RadiationPressure Acceleration=%e\n",SodiumRadiationPressureAcceleration__Combi_1997_icarus(Exosphere::vObjectRadial,Exosphere::xObjectRadial));
 
-    printf("\nSource rates:\n");
+    printf("\n$PREFIX:Source rates:\n");
   }
 
 
@@ -1184,7 +1204,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     if (PIC::ThisThread==0) {
       char fname[_MAX_STRING_LENGTH_PIC_];
 
-      sprintf(fname,"pic.SourceRate.%s.spec=%i.dat",PIC::MolecularData::GetChemSymbol(spec),spec);
+      sprintf(fname,"%s/pic.SourceRate.%s.spec=%i.dat",PIC::OutputDataFileDirectory,PIC::MolecularData::GetChemSymbol(spec),spec);
 
       if (DataOutputFileNumber==0) {
         fSource=fopen(fname,"w");
@@ -1207,14 +1227,14 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
     //calculate the source rate
     for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
-      ierr=MPI_Gather(&CalculatedSourceRate[spec][iSource],1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+      ierr=MPI_Gather(&CalculatedSourceRate[spec][iSource],1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
       if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
       for (thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) SourceRate+=buffer[thread];
       if (PIC::LastSampleLength!=0) SourceRate/=PIC::LastSampleLength;
 
       if (PIC::ThisThread==0) {
-        printf("%s source: %s rate - %e s^{-1}\n",PIC::MolecularData::GetChemSymbol(spec),_EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource],SourceRate);
+        printf("$PREFIX:%s source: %s rate - %e s^{-1}\n",PIC::MolecularData::GetChemSymbol(spec),_EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource],SourceRate);
         fprintf(fSource,"  %e",SourceRate);
 
         TotalSourceRate+=SourceRate;
@@ -1224,7 +1244,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     }
 
     if (PIC::ThisThread==0) {
-      printf("Total %s production rate - %e s^{-1}\n\n",PIC::MolecularData::GetChemSymbol(spec),TotalSourceRate);
+      printf("$PREFIX:Total %s production rate - %e s^{-1}\n\n",PIC::MolecularData::GetChemSymbol(spec),TotalSourceRate);
 
       fprintf(fSource,"  %e  %e  %e  %i\n",TotalSourceRate,Exosphere::vObjectRadial,Exosphere::xObjectRadial/_AU_,DataOutputFileNumber);
 
@@ -1240,7 +1260,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
 /*
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
-  ierr=MPI_Gather(&Exosphere::SourceProcesses::PhotonStimulatedDesorption::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+  ierr=MPI_Gather(&Exosphere::SourceProcesses::PhotonStimulatedDesorption::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
   if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
   for (thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) SourceRate+=buffer[thread];
@@ -1260,7 +1280,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
-  ierr=MPI_Gather(&Exosphere::SourceProcesses::ImpactVaporization::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+  ierr=MPI_Gather(&Exosphere::SourceProcesses::ImpactVaporization::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
   if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
   for (thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) SourceRate+=buffer[thread];
@@ -1280,7 +1300,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
 
 #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
-  ierr=MPI_Gather(&Exosphere::SourceProcesses::ThermalDesorption::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+  ierr=MPI_Gather(&Exosphere::SourceProcesses::ThermalDesorption::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
   if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
   for (thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) SourceRate+=buffer[thread];
@@ -1299,7 +1319,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 #endif
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
-  ierr=MPI_Gather(&Exosphere::SourceProcesses::SolarWindSputtering::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+  ierr=MPI_Gather(&Exosphere::SourceProcesses::SolarWindSputtering::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
   if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
   for (thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) SourceRate+=buffer[thread];
@@ -1344,7 +1364,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
-    ierr=MPI_Gather(Sampling::PlanetNightSideReturnFlux[spec],_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1,MPI_DOUBLE,FluxAll,_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+    ierr=MPI_Gather(Sampling::PlanetNightSideReturnFlux[spec],_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1,MPI_DOUBLE,FluxAll,_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
     if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
     for (i=0;i<_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1;i++) {
@@ -1355,15 +1375,15 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
 
     if (PIC::ThisThread==0) {
-       if (spec==0) printf("Night side return flux [s^{-1}]:\n");
+       if (spec==0) printf("$PREFIX:Night side return flux [s^{-1}]:\n");
 
-       printf("Spec=%i (%s):\n",spec,ChemSymbol);
+       printf("$PREFIX:Spec=%i (%s):\n",spec,ChemSymbol);
 
        for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
-         printf("Particles produced by %s: %e\n",_EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource],flux[iSource]);
+         printf("$PREFIX:Particles produced by %s: %e\n",_EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource],flux[iSource]);
        }
 
-       printf("\n");
+       printf("$PREFIX:\n");
 /*
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
@@ -1396,11 +1416,11 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     double LocalTimeStep;
 
     if ((spec==0)&&(PIC::ThisThread==0)) {
-      printf("\nThe total return flux and sticking rate\nSpec\tTotal Return Flux [1/s]\tTotal Surface Sticking Rate [1/s]\n");
+      printf("\n$PREFIX:The total return flux and sticking rate\n$PREFIX:Spec\tTotal Return Flux [1/s]\tTotal Surface Sticking Rate [1/s]\n");
     }
 
     PIC::MolecularData::GetChemSymbol(ChemSymbol,spec);
-    if (PIC::ThisThread==0) printf("%i (%s)\t",spec,ChemSymbol);
+    if (PIC::ThisThread==0) printf("$PREFIX:%i (%s)\t",spec,ChemSymbol);
 
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
     LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
@@ -1408,12 +1428,12 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
-    ierr=MPI_Reduce(Sampling::TotalPlanetReturnFlux+spec,&TotalFlux,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+    ierr=MPI_Reduce(Sampling::TotalPlanetReturnFlux+spec,&TotalFlux,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
     if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
     if (PIC::LastSampleLength!=0) TotalFlux/=PIC::LastSampleLength*LocalTimeStep;
     if (PIC::ThisThread==0) printf("%e\t",TotalFlux);
 
-    ierr=MPI_Reduce(Sampling::PlanetSurfaceStickingRate+spec,&TotalFlux,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+    ierr=MPI_Reduce(Sampling::PlanetSurfaceStickingRate+spec,&TotalFlux,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
     if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
     if (PIC::LastSampleLength!=0) TotalFlux/=PIC::LastSampleLength*LocalTimeStep;
     if (PIC::ThisThread==0) printf("%e\n",TotalFlux);
@@ -1425,8 +1445,12 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
   if (PIC::ThisThread==0) {
     SpiceDouble etStart,dEt;
     int nTrajectoryPoint;
-    FILE *fTrajectory=fopen("pic.OrbitalData.dat","a");
+    FILE *fTrajectory;
     SpiceDouble State[6],lt,IAU2SO[6][6];
+    char OrbitalDataFileName[_MAX_STRING_LENGTH_PIC_];
+
+    sprintf(OrbitalDataFileName,"%s/pic.OrbitalData.dat",PIC::OutputDataFileDirectory);
+    fTrajectory=fopen(OrbitalDataFileName,"a");
 
     dEt=PIC::ParticleWeightTimeStep::GlobalTimeStep[0]*PIC::LastSampleLength/Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier;
     etStart=Exosphere::OrbitalMotion::et-dEt*(Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier-1);
@@ -1463,7 +1487,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
 
   //the sodium column density in the tail
-  sprintf(fname,"pic.TailColumnDensity.%s.out=%i.dat",utcstr,DataOutputFileNumber);
+  sprintf(fname,"%s/pic.TailColumnDensity.%s.out=%i.dat",PIC::OutputDataFileDirectory,utcstr,DataOutputFileNumber);
   ColumnIntegral::Tail(fname);
 
   //column density distribution map
@@ -1475,25 +1499,27 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
   ColumnDensityIntegration_Map(fname,40.0*_RADIUS_(_TARGET_),40.0*_RADIUS_(_TARGET_),100);
 */
 
-  sprintf(fname,"pic.ColumnDensityMap.spherical.%s.out=%i.dat",utcstr,DataOutputFileNumber);
+  sprintf(fname,"%s/pic.ColumnDensityMap.spherical.%s.out=%i.dat",PIC::OutputDataFileDirectory,utcstr,DataOutputFileNumber);
   double domainCharacteristicSize=0.0;
   for (int idim=0;idim<DIM;idim++) domainCharacteristicSize=max(max(fabs(PIC::Mesh::mesh.xGlobalMax[idim]),fabs(PIC::Mesh::mesh.xGlobalMin[idim])),domainCharacteristicSize);
 
   Exosphere::ColumnIntegral::CircularMap(fname,domainCharacteristicSize,0.05*_RADIUS_(_TARGET_),5*_RADIUS_(_TARGET_),80,Exosphere::OrbitalMotion::et);
 
   //sodium column density along the limb direction
-  sprintf(fname,"pic.LimbColumnDensity.%s.out=%i.dat",utcstr,DataOutputFileNumber);
+  sprintf(fname,"%s/pic.LimbColumnDensity.%s.out=%i.dat",PIC::OutputDataFileDirectory,utcstr,DataOutputFileNumber);
   ColumnIntegral::Limb(fname);
 
 
   //output data that correcponds for avalable ground based observatinos
   Exosphere::Sampling::ReferenceGroundBasedObservations::OutputSampledData(Exosphere::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[0]*PIC::LastSampleLength,Exosphere::OrbitalMotion::et,DataOutputFileNumber);
+#endif
 }
 
 
 
 /*--------------------------------- Print Output File: BEGIN  --------------------------------------*/
 void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataSetNumber) {
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
 
   //coordinate in the MSGR_HCI frame
   sxform_c(SO_FRAME,"MSGR_HCI",Exosphere::OrbitalMotion::et,SO_to_HCI_TransformationMartix);
@@ -1534,6 +1560,7 @@ void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataS
 
   //print variables of the Chamberlain exosphere model
   if (Exosphere::ChamberlainExosphere::ModelInitFlag==true) Exosphere::ChamberlainExosphere::PrintVariableList(fout);
+#endif
 }
 
 
@@ -1938,7 +1965,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
    if (false) {}
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
    else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_) {
-     flag=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode);
+     flag=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_;
      if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
@@ -1997,7 +2024,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
    //check is the injection of the particle will not make the surface aboundance negative
-   if (SourceProcessID!=_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_){
+   if (Source_DeplitSurfaceSpeciesAbundance_Flag[SourceProcessID]==true){
      if (Exosphere::Planet->SurfaceElementPopulation[spec][el]<Sphere->SurfaceElementDesorptionFluxUP[spec][el]+ParticleWeight*ParticleWeightCorrection) continue;
    }
 
@@ -2030,7 +2057,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    nInjectedParticles++;
 
    //for the secondary source processes accout for the decrease of the surface density
-   if (SourceProcessID!=_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_) {
+   if (Source_DeplitSurfaceSpeciesAbundance_Flag[SourceProcessID]==true) {
      Sphere->GetSurfaceElementProjectionIndex(x_IAU_OBJECT,nZenithElement,nAzimuthalElement);
      el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 

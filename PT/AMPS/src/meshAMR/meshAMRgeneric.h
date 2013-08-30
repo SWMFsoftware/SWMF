@@ -39,6 +39,7 @@
 
 
 #include "meshAMRinternalSurface.h"
+#include "meshAMRcutcell.h"
 
 
 #include "specfunc.h"
@@ -51,8 +52,10 @@
 
 
 
+
 //the limits of the comlutational domain
 extern double _MESH_AMR_XMAX_[3],_MESH_AMR_XMIN_[3];
+
 
 class cBasicNode : public cAMRexit {
 public:
@@ -107,7 +110,7 @@ public:
 
 //########  DEBUG ##########
 /*	  if (Temp_ID==88861) {
-		  cout << __LINE__ << endl;
+		  *DiagnospticMessageStream << __LINE__ << std::endl;
 	  }
 */
 //######## END DEBUG #######
@@ -269,6 +272,11 @@ public:
   #endif
 
 
+  //the list of the cut-face descriptors
+#if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
+  cTriangleFaceDescriptor *FirstTriangleCutFace;
+#endif
+
   double xmin[_MESH_DIMENSION_],xmax[_MESH_DIMENSION_];
   int RefinmentLevel;
 
@@ -409,6 +417,10 @@ public:
 
     nodeDescriptor.NodeProcessingFlag=_AMR_FALSE_;
 
+#if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
+    FirstTriangleCutFace=NULL;
+#endif
+
     //Neighbors of the nodes
     #if _MESH_DIMENSION_ == 1
     for (i=0;i<2;i++) neibNodeFace[i]=NULL;
@@ -482,7 +494,7 @@ public:
 
 //################## DEBUG #####################
 /*    if ((this->Temp_ID==222)||(this->Temp_ID==107)) {
-      cout << __LINE__ << endl;
+      *DiagnospticMessageStream << __LINE__ << std::endl;
 
 
     }
@@ -974,6 +986,9 @@ class cMeshAMRgeneric : public cAMRexit {
 public:
   cTreeNodeAMR<cBlockAMR>  *rootTree;
 
+  //the stream for output of the mesh diagnisotic information
+  FILE *DiagnospticMessageStream;
+
   //the function that calculates the interpolation coefficients to get an interpolated value for the block's nodes
   //return the number of the interpolation coefficients that was used in the stencil. if the return value <=0 -> the operation is not succesful
   typedef int (*cGetCornerNodesInterpolationCoefficients)(double *x,double *CoefficientsList,cCornerNode **InterpolationStencil,cTreeNodeAMR<cBlockAMR>* startNode,int nMaxCoefficients);
@@ -999,6 +1014,15 @@ public:
   int nTotalThreads,ThisThread;
   bool **ParallelSendRecvMap;
   #endif
+
+
+  //for testing the parallel mesh generation
+  int nMpiBarrierCalls;
+
+  void callMpiBarrier() {
+    nMpiBarrierCalls++;
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
 
 
   //mesh modyfied flag -> is set to true each time the mesh is modified, the flag is set to false when the number of elements and the connectivity list are prepared
@@ -1036,6 +1060,8 @@ public:
   #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
   cAMRstack<cInternalBoundaryConditionsDescriptor> InternalBoundaryDescriptors;
   #endif
+
+
 
   //the root block;
   cBlockAMR *rootBlock;
@@ -1253,8 +1279,14 @@ public:
       int idim=0;
       dx=0.0; //add the place for break point for debbuger purposes
 
-      cout << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
-      for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+/*
+      *DiagnospticMessageStream << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << std::endl;
+      for (idim=0;idim<_MESH_DIMENSION_;idim++) *DiagnospticMessageStream << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << std::endl;
+*/
+
+      fprintf(DiagnospticMessageStream,"$PREFIX:Error: a point is out pf the box (file=%s, line=%i)!!!!!!\n",__FILE__,__LINE__);
+      for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"$PREFIX:idim=%i, x[idim]=%e, xmin[idim]=%e, xmax[idim]=%e\n",idim,x[idim],startNode->xmin[idim],startNode->xmax[idim]);
+
 
 //      exit(__LINE__,__FILE__);
 
@@ -1269,8 +1301,14 @@ public:
 
     if (_MESH_DIMENSION_>=2) {
       if ((x[1]<startNode->xmin[1])||(startNode->xmax[1]<x[1])) {
-        cout << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
-        for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+/*
+        *DiagnospticMessageStream << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << std::endl;
+        for (int idim=0;idim<_MESH_DIMENSION_;idim++) *DiagnospticMessageStream << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << std::endl;
+*/
+
+        fprintf(DiagnospticMessageStream,"$PREFIX:Error: a point is out pf the box (file=%s, line=%i)!!!!!!\n",__FILE__,__LINE__);
+        for (int idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"$PREFIX:idim=%i, x[idim]=%e, xmin[idim]=%e, xmax[idim]=%e\n",idim,x[idim],startNode->xmin[idim],startNode->xmax[idim]);
+
 
         if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
         else return -1;
@@ -1284,8 +1322,15 @@ public:
 
     if (_MESH_DIMENSION_==3) {
       if ((x[2]<startNode->xmin[2])||(startNode->xmax[2]<x[2])) {
-        cout << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << endl;
-        for (int idim=0;idim<_MESH_DIMENSION_;idim++) cout << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << endl;
+/*
+        *DiagnospticMessageStream << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << std::endl;
+        for (int idim=0;idim<_MESH_DIMENSION_;idim++) *DiagnospticMessageStream << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << std::endl;
+*/
+
+        fprintf(DiagnospticMessageStream,"$PREFIX:Error: a point is out pf the box (file=%s, line=%i)!!!!!!\n",__FILE__,__LINE__);
+        for (int idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"$PREFIX:idim=%i, x[idim]=%e, xmin[idim]=%e, xmax[idim]=%e\n",idim,x[idim],startNode->xmin[idim],startNode->xmax[idim]);
+
+
 
         if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
         else return -1;
@@ -1360,6 +1405,10 @@ public:
 
     rootTree->RefinmentLevel=0;
     for (i=0;i<_MESH_DIMENSION_;i++) rootTree->xmin[i]=xMin[i],rootTree->xmax[i]=xMax[i];
+
+
+    //add the boundary faces to the root node
+    DistributeBoundaryCutBlocks(rootTree,BoundaryTriangleFaces,nBoundaryTriangleFaces);
 
     accepltTreeNodeFunction=NULL;
     MeshName[0]='\0',MeshSignature=0;
@@ -1507,12 +1556,17 @@ public:
      GetCornerNodesInterpolationCoefficients=NULL;
      localResolution=NULL;
 
+     //set the defaul value of the diagnostic stream
+     DiagnospticMessageStream=stdout;
+
      //set up the tree and the root block
      rootBlock=NULL;
      rootTree=NULL;
      meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true,meshMaximumRefinmentLevel=0;
      AllowBlockAllocation=true;
      DeallocateUnusedBlocks=true;
+
+     EPS=1.0E-20;
 
      ThisThread=0,nTotalThreads=1;
      ParallelSendRecvMap=NULL;
@@ -1529,6 +1583,8 @@ public:
      #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
      DomainSurfaceBoundaryList=NULL;
      #endif
+
+     nMpiBarrierCalls=0;
   }
 
   //register the 'internal boundary' (the surface determining cut cells)
@@ -2086,7 +2142,9 @@ void GetMeshTreeStatistics(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
 
 
     //output the collected information
-    if (ThisThread==0) cout << "$PREFIX:Tree distribution statistical data:\nThread\t|nTotal Allocated Blocks\t|nAllocated Blocks Upper Tree Branches\t|nAllocated Blocks Domain Boundary Layer\t|nTotal Nodes Per Thread\n";
+    //if (ThisThread==0) *DiagnospticMessageStream << "$PREFIX:Tree distribution statistical data:\nThread\t|nTotal Allocated Blocks\t|nAllocated Blocks Upper Tree Branches\t|nAllocated Blocks Domain Boundary Layer\t|nTotal Nodes Per Thread\n";
+    if (ThisThread==0) fprintf(DiagnospticMessageStream,"$PREFIX:Tree distribution statistical data:\n$PREFIX:Thread\t|nTotal Allocated Blocks\t|nAllocated Blocks Upper Tree Branches\t|nAllocated Blocks Domain Boundary Layer\t|nTotal Nodes Per Thread\n");
+
 
     for (thread=0;thread<nTotalThreads;thread++) {
       if (ThisThread!=0) {
@@ -2103,7 +2161,10 @@ void GetMeshTreeStatistics(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
           MPI_Recv(&nAllocatedBlocksUpperTreeBranches,1,MPI_LONG,thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
         }
 
-        cout << "$PREFIX:" << thread << "\t" << nAllocatedBlocks << "\t\t\t\t\t" << nAllocatedBlocksUpperTreeBranches << "\t\t\t\t\t" << nAllocatedBoundaryLayerBlocks << "\t\t\t\t\t" << nBlocksPerProcessor[thread] <<  endl;
+//        *DiagnospticMessageStream << "$PREFIX:" << thread << "\t" << nAllocatedBlocks << "\t\t\t\t\t" << nAllocatedBlocksUpperTreeBranches << "\t\t\t\t\t" << nAllocatedBoundaryLayerBlocks << "\t\t\t\t\t" << nBlocksPerProcessor[thread] <<  std::endl;
+        fprintf(DiagnospticMessageStream,"$PREFIX: %i\t%ld\t\t\t\t\t%ld\t\t\t\t\t%ld\t\t\t\t\t%ld\n",thread,nAllocatedBlocks,nAllocatedBlocksUpperTreeBranches,nAllocatedBoundaryLayerBlocks,nBlocksPerProcessor[thread]);
+
+
       }
     }
 
@@ -2113,9 +2174,9 @@ void GetMeshTreeStatistics(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
 #else
     int NodesBoundaryLayer;
 
-    cout << "$PREFIX:Tree distribution statistical data:\n$PREFIX:Thread\t\n$PREFIX:Total Allocated Blocks\tnAllocated Blocks Upper Tree Branches\tnTotal Nodes Per Thread\tnNodes in the Boundary Layer\n";
+    *DiagnospticMessageStream << "$PREFIX:Tree distribution statistical data:\n$PREFIX:Thread\t\n$PREFIX:Total Allocated Blocks\tnAllocated Blocks Upper Tree Branches\tnTotal Nodes Per Thread\tnNodes in the Boundary Layer\n";
     for (i=0;i<nTotalThreads;i++) if (i!=thread) NodesBoundaryLayer+=nBlocksPerProcessor[i];
-    cout << "$PREFIX:" << thread << "\t" << nAllocatedBlocks << "\t" << nAllocatedBlocksUpperTreeBranches << "\t" << nBlocksPerProcessor[thread] << "\t" << NodesBoundaryLayer << endl;
+    *DiagnospticMessageStream << "$PREFIX:" << thread << "\t" << nAllocatedBlocks << "\t" << nAllocatedBlocksUpperTreeBranches << "\t" << nBlocksPerProcessor[thread] << "\t" << NodesBoundaryLayer << std::endl;
 #endif
 
   }
@@ -2305,26 +2366,36 @@ if ((AllowBlockAllocation==true)&&(startNode->block!=NULL)) {
        if (flag==false) {
          long int nd,ii,jj,kk,idim;
 
-         cout << "$PREFIX:ERROR: Two neiubouring blocks doesn't share nodes" << endl;
-         cout << "$PREFIX:Block 1: ID=" << startNode->Temp_ID << endl << "Corner Nodes:" << endl;
+         fprintf(DiagnospticMessageStream,"$PREFIX:ERROR: Two neiubouring blocks doesn't share nodes\n");
+         fprintf(DiagnospticMessageStream,"$PREFIX:Block 1: ID=%ld\nCorner Nodes:\n",startNode->Temp_ID);
 
          for (ii=0;ii<iMax;ii++) for (jj=0;jj<jMax;jj++) for (kk=0;kk<kMax;kk++) {
            nd=getCornerNodeLocalNumber(ii*_BLOCK_CELLS_X_,jj*_BLOCK_CELLS_Y_,kk*_BLOCK_CELLS_Z_);
   
-           cout << "$PREFIX:(i,j,k)=" << ii <<"," << jj << "," << kk << " (nd=" << nd << "), Temp_ID=" << startNode->block->GetCornerNode(nd)->Temp_ID << " x=";
-           for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << startNode->block->GetCornerNode(nd)->GetX()[idim] << " ";
-           cout << endl; 
+/*           *DiagnospticMessageStream << "$PREFIX:(i,j,k)=" << ii <<"," << jj << "," << kk << " (nd=" << nd << "), Temp_ID=" << startNode->block->GetCornerNode(nd)->Temp_ID << " x=";
+           for (idim=0;idim<_MESH_DIMENSION_;idim++) *DiagnospticMessageStream << startNode->block->GetCornerNode(nd)->GetX()[idim] << " ";
+           *DiagnospticMessageStream << std::endl;*/
+
+           fprintf(DiagnospticMessageStream,"$PREFIX:(i,j,k)=%ld,%ld,%ld (nd=%ld), Temp_ID=%ld x=",ii,jj,kk,nd,startNode->block->GetCornerNode(nd)->Temp_ID);
+           for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"%e ",startNode->block->GetCornerNode(nd)->GetX()[idim]);
+           fprintf(DiagnospticMessageStream,"\n");
+
          }
 
-         cout << "$PREFIX:Block 2: ID=" << neibNode->Temp_ID << endl << "Corner Nodes:";
-         cout << "neib coordinates=" << i << ", " << j << ", " << k << endl; 
+         fprintf(DiagnospticMessageStream,"$PREFIX:Block 2: ID=%ld\nCorner Nodes:",neibNode->Temp_ID );
+         fprintf(DiagnospticMessageStream,"neib coordinates=%i, %i, %i\n",i,j,k);
 
          for (ii=0;ii<iMax;ii++) for (jj=0;jj<jMax;jj++) for (kk=0;kk<kMax;kk++) {
            nd=getCornerNodeLocalNumber(ii*_BLOCK_CELLS_X_,jj*_BLOCK_CELLS_Y_,kk*_BLOCK_CELLS_Z_);
   
-           cout << "$PREFIX:(i,j,k)=" << ii <<"," << jj << "," << kk << " (nd=" << nd << "), Temp_ID=" << neibNode->block->GetCornerNode(nd)->Temp_ID << " x=";
-           for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << neibNode->block->GetCornerNode(nd)->GetX()[idim] << " ";
-           cout << endl;
+/*           *DiagnospticMessageStream << "$PREFIX:(i,j,k)=" << ii <<"," << jj << "," << kk << " (nd=" << nd << "), Temp_ID=" << neibNode->block->GetCornerNode(nd)->Temp_ID << " x=";
+           for (idim=0;idim<_MESH_DIMENSION_;idim++) *DiagnospticMessageStream << neibNode->block->GetCornerNode(nd)->GetX()[idim] << " ";
+           *DiagnospticMessageStream << std::endl;*/
+
+
+           fprintf(DiagnospticMessageStream,"$PREFIX:(i,j,k)=%ld,%ld,%ld (nd=%ld), Temp_ID=%ld x=",ii,jj,kk,nd,neibNode->block->GetCornerNode(nd)->Temp_ID);
+           for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"%e ",neibNode->block->GetCornerNode(nd)->GetX()[idim]);
+           fprintf(DiagnospticMessageStream,"\n");
          }
 
          exit(__LINE__,__FILE__,"The blocks do not share a node"); 
@@ -2554,25 +2625,25 @@ if ((AllowBlockAllocation==true)&&(startNode->block!=NULL)) {
 
                 	//recalculate the indexes of the 'center nodes'
                 	nd=findCenterNodeIndex(startCenterNode->GetX(),iii[0],iii[1],iii[2],startNode);
-                	cout << "$PREFIX:The center node is not found:x=";
-                	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << startCenterNode->GetX()[idim] << "  ";
-                	cout << "; (i,j,k,nd)=";
-                	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << iii[idim] << "  ";
-                	cout << " Local node number=" <<  nd;
-                	cout << " Center node Temp_ID=" << startCenterNode->Temp_ID;
-                	cout << " Block Temp_ID=" << startNode->Temp_ID;
-                	cout << endl;
+                	fprintf(DiagnospticMessageStream,"$PREFIX:The center node is not found:x=");
+                	for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"%e  ",startCenterNode->GetX()[idim]);
+                	fprintf(DiagnospticMessageStream,"; (i,j,k,nd)=");
+                	for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"%i  ",iii[idim]);
+                	fprintf(DiagnospticMessageStream," Local node number=%ld",nd);
+                	fprintf(DiagnospticMessageStream," Center node Temp_ID=%ld",startCenterNode->Temp_ID);
+                	fprintf(DiagnospticMessageStream," Block Temp_ID=%ld",startNode->Temp_ID);
+                	fprintf(DiagnospticMessageStream,"\n");
 
                 	//recalculate the indexes of the 'center nodes'
                 	nd=findCenterNodeIndex(neibCenterNode->GetX(),iii[0],iii[1],iii[2],neibNode);
-                	cout << "$PREFIX:The center node is not found:x=";
-                	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << neibCenterNode->GetX()[idim] << "  ";
-                	cout << "; (i,j,k,nd)=";
-                	for (idim=0;idim<_MESH_DIMENSION_;idim++) cout << iii[idim] << "  ";
-                  cout << " Local node number=" <<  nd;
-                  cout << " Center node Temp_ID=" << neibCenterNode->Temp_ID;
-                  cout << " Block Temp_ID=" << neibNode->Temp_ID;
-                  cout << endl;
+                	fprintf(DiagnospticMessageStream,"$PREFIX:The center node is not found:x=");
+                	for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"%e  ",neibCenterNode->GetX()[idim]);
+                	fprintf(DiagnospticMessageStream,"; (i,j,k,nd)=");
+                	for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"%i  ",iii[idim]);
+                	fprintf(DiagnospticMessageStream," Local node number=%ld",nd);
+                	fprintf(DiagnospticMessageStream," Center node Temp_ID=%ld",neibCenterNode->Temp_ID);
+                	fprintf(DiagnospticMessageStream," Block Temp_ID=%ld",neibNode->Temp_ID);
+                	fprintf(DiagnospticMessageStream,"\n");
 
 
                 	exit(__LINE__,__FILE__,"Error: two different center nodes have found that has the same coordinate 'x'");
@@ -2991,7 +3062,7 @@ void AddNodeNeighborList(cTreeNodeAMR<cBlockAMR>* neibNode,cNeibDescriptor *Neib
 
 /*
   if (neibNode->Temp_ID==7021) {
-    cout << __LINE__ << endl;
+    *DiagnospticMessageStream << __LINE__ << std::endl;
   }
 */
 
@@ -3096,7 +3167,7 @@ static long int nCallCounter=0;
 /*
 if (startNode->Temp_ID==77) {
 // if (nCallCounter==34) {
-  cout << __LINE__ << endl;
+  *DiagnospticMessageStream << __LINE__ << std::endl;
 }
 */
 
@@ -3497,7 +3568,7 @@ if (startNode->Temp_ID==77) {
 //==========================    DEBUG ======================
 /*
       if ((fabs(x[0]+225)<EPS)&&(fabs(x[1]+225)<EPS)&&(fabs(x[2]+12.5)<EPS)) {
-  cout << __LINE__ << endl;
+  *DiagnospticMessageStream << __LINE__ << std::endl;
 }
 */
 //========================== END DEBUG ===========================
@@ -3661,7 +3732,7 @@ bool deleteTreeNode(cTreeNodeAMR<cBlockAMR> *startNode) {
 
   /*
 if (startNode->Temp_ID==1169) {
-cout << __LINE__ << __FILE__ << endl;
+*DiagnospticMessageStream << __LINE__ << __FILE__ << std::endl;
 }
 */
 
@@ -3759,13 +3830,21 @@ cout << __LINE__ << __FILE__ << endl;
           double xMissing[3]={0.0,0.0,0.0};
           cTreeNodeAMR<cBlockAMR>* xMissingNode;
 
-          cout << "$PREFIX:neibNode->Temp_ID=" << neibNode->Temp_ID << ", neibNode->RefinmentLevel=" << neibNode->RefinmentLevel << endl;
+/*          *DiagnospticMessageStream << "$PREFIX:neibNode->Temp_ID=" << neibNode->Temp_ID << ", neibNode->RefinmentLevel=" << neibNode->RefinmentLevel << std::endl;
 
           //coordinates of the missing node
-          cout << "$PREFIX:Coordinates of the missing node: x=" << (xMissing[0]=upNode->xmin[0]+(upNode->xmax[0]-upNode->xmin[0])/double(_BLOCK_CELLS_X_)*ii);
-          if (_MESH_DIMENSION_>=2) cout << ", " << (xMissing[1]=upNode->xmin[1]+(upNode->xmax[1]-upNode->xmin[1])/double(_BLOCK_CELLS_Y_)*jj);
-          if (_MESH_DIMENSION_==3) cout << ", " << (xMissing[2]=upNode->xmin[2]+(upNode->xmax[2]-upNode->xmin[2])/double(_BLOCK_CELLS_Z_)*kk); 
-          cout << endl;
+          *DiagnospticMessageStream << "$PREFIX:Coordinates of the missing node: x=" << (xMissing[0]=upNode->xmin[0]+(upNode->xmax[0]-upNode->xmin[0])/double(_BLOCK_CELLS_X_)*ii);
+          if (_MESH_DIMENSION_>=2) *DiagnospticMessageStream << ", " << (xMissing[1]=upNode->xmin[1]+(upNode->xmax[1]-upNode->xmin[1])/double(_BLOCK_CELLS_Y_)*jj);
+          if (_MESH_DIMENSION_==3) *DiagnospticMessageStream << ", " << (xMissing[2]=upNode->xmin[2]+(upNode->xmax[2]-upNode->xmin[2])/double(_BLOCK_CELLS_Z_)*kk);
+          *DiagnospticMessageStream << std::endl;*/
+
+          fprintf(DiagnospticMessageStream,"$PREFIX:neibNode->Temp_ID=%i, neibNode->RefinmentLevel=%i\n",neibNode->Temp_ID,neibNode->RefinmentLevel);
+
+          //coordinates of the missing node
+          fprintf(DiagnospticMessageStream,"$PREFIX:Coordinates of the missing node: x=%e",(xMissing[0]=upNode->xmin[0]+(upNode->xmax[0]-upNode->xmin[0])/double(_BLOCK_CELLS_X_)*ii));
+          if (_MESH_DIMENSION_>=2) fprintf(DiagnospticMessageStream,", %e",(xMissing[1]=upNode->xmin[1]+(upNode->xmax[1]-upNode->xmin[1])/double(_BLOCK_CELLS_Y_)*jj));
+          if (_MESH_DIMENSION_==3) fprintf(DiagnospticMessageStream,", %e",(xMissing[2]=upNode->xmin[2]+(upNode->xmax[2]-upNode->xmin[2])/double(_BLOCK_CELLS_Z_)*kk));
+          fprintf(DiagnospticMessageStream,"\n");
 
           //find the node that contains xMissing and compare it with neibNode
           xMissingNode=findTreeNode(xMissing);
@@ -3786,7 +3865,9 @@ cout << __LINE__ << __FILE__ << endl;
           int iMissingNode=0,jMissingNode=0,kMissingNode=0;
 
           ndMissingNode=findCornerNodeIndex(xMissing,iMissingNode,jMissingNode,kMissingNode,xMissingNode); 
-          cout << "$PREFIX:The (i,j,k) index of the missing node in 'xMissingNode': (i,j,k)=" << iMissingNode << ", " << jMissingNode << ", " << kMissingNode << ", ndMissingNode=" << ndMissingNode << endl;
+//          *DiagnospticMessageStream << "$PREFIX:The (i,j,k) index of the missing node in 'xMissingNode': (i,j,k)=" << iMissingNode << ", " << jMissingNode << ", " << kMissingNode << ", ndMissingNode=" << ndMissingNode << std::endl;
+          fprintf(DiagnospticMessageStream,"$PREFIX:The (i,j,k) index of the missing node in 'xMissingNode': (i,j,k)=%i, %i, %i, ndMissingNode=%i\n",iMissingNode,jMissingNode,kMissingNode,ndMissingNode);
+
 
 
           exit(__LINE__,__FILE__,"Blocks's corner node is not defined");
@@ -3806,7 +3887,7 @@ cout << __LINE__ << __FILE__ << endl;
   //###########  DEBUG  #######
   /*
   if (startNode->Temp_ID==729) {
-  	cout << __LINE__ << __FILE__ << endl;
+  	*DiagnospticMessageStream << __LINE__ << __FILE__ << std::endl;
   }
   */
 
@@ -3835,7 +3916,7 @@ cout << __LINE__ << __FILE__ << endl;
 //###########  DEBUG  #######
       /*
 if (newCenterNode->Temp_ID==88861) {
-	cout << __LINE__ << __FILE__ << endl;
+	*DiagnospticMessageStream << __LINE__ << __FILE__ << std::endl;
 }
 */
 
@@ -3883,13 +3964,21 @@ if (newCenterNode->Temp_ID==88861) {
           double xMissing[3]={0.0,0.0,0.0};
           cTreeNodeAMR<cBlockAMR>* xMissingNode;
 
-          cout << "$PREFIX:neibNode->Temp_ID=" << neibNode->Temp_ID << ", neibNode->RefinmentLevel=" << neibNode->RefinmentLevel << endl;
+/*          *DiagnospticMessageStream << "$PREFIX:neibNode->Temp_ID=" << neibNode->Temp_ID << ", neibNode->RefinmentLevel=" << neibNode->RefinmentLevel << std::endl;
 
           //coordinates of the missing node
-          cout << "$PREFIX:Coordinates of the missing node: x=" << (xMissing[0]=upNode->xmin[0]+(upNode->xmax[0]-upNode->xmin[0])/double(_BLOCK_CELLS_X_)*(ii+0.5));
-          if (_MESH_DIMENSION_>=2) cout << ", " << (xMissing[1]=upNode->xmin[1]+(upNode->xmax[1]-upNode->xmin[1])/double(_BLOCK_CELLS_Y_)*(jj+0.5));
-          if (_MESH_DIMENSION_==3) cout << ", " << (xMissing[2]=upNode->xmin[2]+(upNode->xmax[2]-upNode->xmin[2])/double(_BLOCK_CELLS_Z_)*(kk+0.5));
-          cout << endl;
+          *DiagnospticMessageStream << "$PREFIX:Coordinates of the missing node: x=" << (xMissing[0]=upNode->xmin[0]+(upNode->xmax[0]-upNode->xmin[0])/double(_BLOCK_CELLS_X_)*(ii+0.5));
+          if (_MESH_DIMENSION_>=2) *DiagnospticMessageStream << ", " << (xMissing[1]=upNode->xmin[1]+(upNode->xmax[1]-upNode->xmin[1])/double(_BLOCK_CELLS_Y_)*(jj+0.5));
+          if (_MESH_DIMENSION_==3) *DiagnospticMessageStream << ", " << (xMissing[2]=upNode->xmin[2]+(upNode->xmax[2]-upNode->xmin[2])/double(_BLOCK_CELLS_Z_)*(kk+0.5));
+          *DiagnospticMessageStream << std::endl;*/
+
+          fprintf(DiagnospticMessageStream,"$PREFIX:neibNode->Temp_ID=%i, neibNode->RefinmentLevel=%i\n",neibNode->Temp_ID,neibNode->RefinmentLevel);
+
+          //coordinates of the missing node
+          fprintf(DiagnospticMessageStream,"$PREFIX:Coordinates of the missing node: x=%e",(xMissing[0]=upNode->xmin[0]+(upNode->xmax[0]-upNode->xmin[0])/double(_BLOCK_CELLS_X_)*(ii+0.5)));
+          if (_MESH_DIMENSION_>=2) fprintf(DiagnospticMessageStream,", %e",(xMissing[1]=upNode->xmin[1]+(upNode->xmax[1]-upNode->xmin[1])/double(_BLOCK_CELLS_Y_)*(jj+0.5)));
+          if (_MESH_DIMENSION_==3) fprintf(DiagnospticMessageStream,", %e",(xMissing[2]=upNode->xmin[2]+(upNode->xmax[2]-upNode->xmin[2])/double(_BLOCK_CELLS_Z_)*(kk+0.5)));
+          fprintf(DiagnospticMessageStream,"\n");
 
           //find the node that contains xMissing and compare it with neibNode
           xMissingNode=findTreeNode(xMissing);
@@ -3910,7 +3999,8 @@ if (newCenterNode->Temp_ID==88861) {
           int iMissingNode=0,jMissingNode=0,kMissingNode=0;
 
           ndMissingNode=findCenterNodeIndex(xMissing,iMissingNode,jMissingNode,kMissingNode,xMissingNode);
-          cout << "$PREFIX:The (i,j,k) index of the missing node in 'xMissingNode': (i,j,k)=" << iMissingNode << ", " << jMissingNode << ", " << kMissingNode << ", ndMissingNode=" << ndMissingNode << endl;
+//          *DiagnospticMessageStream << "$PREFIX:The (i,j,k) index of the missing node in 'xMissingNode': (i,j,k)=" << iMissingNode << ", " << jMissingNode << ", " << kMissingNode << ", ndMissingNode=" << ndMissingNode << std::endl;
+          fprintf(DiagnospticMessageStream,"$PREFIX:The (i,j,k) index of the missing node in 'xMissingNode': (i,j,k)=%i, %i, %i, ndMissingNode=%i\n",iMissingNode,jMissingNode,kMissingNode,ndMissingNode);
 
 
           exit(__LINE__,__FILE__,"Blocks's corner node is not defined");
@@ -4008,7 +4098,7 @@ if (newCenterNode->Temp_ID==88861) {
 
 
 if (startNode->Temp_ID==44) {
-cout << __LINE__ << endl;
+*DiagnospticMessageStream << __LINE__ << std::endl;
 }
 
 
@@ -4104,7 +4194,7 @@ cout << __LINE__ << endl;
 //################  DEBUG ##############
 
 if (newCenterNode->Temp_ID==88861) {
-	cout << __LINE__ << endl;
+	*DiagnospticMessageStream << __LINE__ << std::endl;
 }
 
 //################ END DEBUG ###########
@@ -4280,7 +4370,7 @@ bool splitTreeNode(cTreeNodeAMR<cBlockAMR> *startNode) {
 
 /*
 if (startNode->Temp_ID==15) {
-cout << __LINE__ << endl;
+*DiagnospticMessageStream << __LINE__ << std::endl;
 }
 */
 
@@ -4360,6 +4450,9 @@ cout << __LINE__ << endl;
 
        //allocate the blocks:THE ORDER IS IMPORTANT
        AllocateBlock(newTreeNode);
+
+       //distribute the boundary faces
+       DistributeBoundaryCutBlocks(newTreeNode,startNode->FirstTriangleCutFace);
 
        //determine if the newTreeNode is intersected by any of the internal surface installed into the mesh
        #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
@@ -4624,7 +4717,7 @@ cout << __LINE__ << endl;
 //===========================   DEBUG =========================
 /*
      if (startNode->Temp_ID==3) {
-       cout << __LINE__ << endl;
+       *DiagnospticMessageStream << __LINE__ << std::endl;
      }
 */
 //=========================== END DEBUG =======================
@@ -5275,7 +5368,7 @@ static long int CallsCounter=0;
 CallsCounter++;
 /*
 if (CallsCounter==83) {
-  cout << __LINE__ << endl;
+  *DiagnospticMessageStream << __LINE__ << std::endl;
 }
 */
 //====================== END DEBUG ==============
@@ -5332,7 +5425,7 @@ if (CallsCounter==83) {
 //======================  DEBUG =======================
 /*
       if (startNode->Temp_ID==1684) {
-        cout << __LINE__ << endl;
+        *DiagnospticMessageStream << __LINE__ << std::endl;
       }
 
       {
@@ -5364,7 +5457,7 @@ if (CallsCounter==83) {
         MPI_Bcast(&SendRequest,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
 
         if (SendRequest==true) {
-          if (ThisThread==0) cout << __LINE__ << endl;
+          if (ThisThread==0) *DiagnospticMessageStream << __LINE__ << std::endl;
         }
 
       }
@@ -5566,7 +5659,7 @@ if (CallsCounter==83) {
 
     }
     else {
-      //cout the nodes in the downNodes
+      //*DiagnospticMessageStream the nodes in the downNodes
       for (i=0;i<nDownNodes;i++) if (startNode->downNode[i]!=NULL) countMeshElements(startNode->downNode[i],level+1);
     }
 
@@ -5616,6 +5709,8 @@ if (CallsCounter==83) {
     static const double characteristicBlockSize_min=characteristicBlockSize_max/(1<<_MAX_REFINMENT_LEVEL_);
     #endif 
 
+
+    callMpiBarrier();
 
     if (level==startLevel) { //refine the block if needed
       //get the characterist size of the block and the position of the block's middle point 
@@ -5683,7 +5778,7 @@ ncheckMeshConsistencyCalls++;
 
 /*
 if (ncheckMeshConsistencyCalls==38) {
-  cout << __LINE__ << endl;
+  *DiagnospticMessageStream << __LINE__ << std::endl;
 }
 */
 
@@ -6153,11 +6248,11 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
 
               /*
               if (_MESH_DIMENSION_==3) if ((fabs(xNode[0]+300.0)<EPS)&&(fabs(xNode[1]-1000.0)<EPS)&&(fabs(xNode[2]+00.0)<EPS)) {
-  cout << __FILE__ << __LINE__ << endl;
+  *DiagnospticMessageStream << __FILE__ << __LINE__ << std::endl;
 }
 
               if (startNode->Temp_ID==1116) {
-                cout << __FILE__ << __LINE__ << endl;
+                *DiagnospticMessageStream << __FILE__ << __LINE__ << std::endl;
               }
 
 */
@@ -6173,7 +6268,7 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
 //=========================   DEBUG ==============================
 /*
                 if (cornerNode!=NULL) if (cornerNode->Temp_ID==58786) {
-                  cout << __FILE__ << __LINE__ << endl;
+                  *DiagnospticMessageStream << __FILE__ << __LINE__ << std::endl;
                 }
 */
 //========================= END DEBUG =========================
@@ -6830,7 +6925,7 @@ nMPIops++;
   void outputMeshTECPLOTinternalNoBlocks(const char *fname) {
     FILE *fout;
 
-    //cout the number of the elements of the mesh
+    //  *DiagnospticMessageStream the number of the elements of the mesh
     if (meshModifiedFlag_CountMeshElements==true) countMeshElements(rootTree,0);
 
     fout=fopen(fname,"w");
@@ -7419,6 +7514,114 @@ nMPIops++;
   }
  
 
+  //distribute the cut-faces among the blocks
+  void DistributeBoundaryCutBlocks(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
+    int nDownNode;
+    static bool initflag=false;
+
+
+    if ((startNode==NULL)||(startNode==rootBlock)) {
+      if (initflag!=false) exit(__LINE__,__FILE__,"Error: repeated call of 'DistributeBoundaryCutBlocks'");
+      initflag=true;
+    }
+
+    if (startNode==NULL) {
+      startNode=rootTree;
+    }
+
+    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      //check intersection of the cut-faces with the block
+      //if the list is already allocated -> remove it
+
+      if (startNode->FirstTriangleCutFace!=NULL) {
+        cTriangleFaceDescriptor *tnext,*t=startNode->FirstTriangleCutFace;
+
+        while (t!=NULL) {
+          tnext=t->next;
+          BoundaryTriangleFaceDescriptor.deleteElement(t);
+          t=tnext;
+        }
+      }
+
+      //check all boundary faces for intersection with the block
+      int nface;
+
+      for (nface=0;nface<nBoundaryTriangleFaces;nface++) {
+        if (BoundaryTriangleFaces[nface].BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
+          //the block is intersected by the face
+          cTriangleFaceDescriptor *t=BoundaryTriangleFaceDescriptor.newElement();
+
+          t->TriangleFace=BoundaryTriangleFaces+nface;
+
+          t->prev=NULL,t->next=startNode->FirstTriangleCutFace;
+          if (startNode->FirstTriangleCutFace!=NULL) startNode->FirstTriangleCutFace->prev=t;
+          startNode->FirstTriangleCutFace=t;
+        }
+      }
+    }
+    else for (nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) DistributeBoundaryCutBlocks(startNode->downNode[nDownNode]);
+
+  }
+
+
+  void DistributeBoundaryCutBlocks(cTreeNodeAMR<cBlockAMR> *startNode,cTriangleFaceDescriptor *BoundaryFaces) {
+    //check intersection of the cut-faces with the block
+    //if the list is already allocated -> remove it
+    cTriangleFaceDescriptor *tnext,*t=startNode->FirstTriangleCutFace;
+
+    if (startNode->FirstTriangleCutFace!=NULL) {
+      while (t!=NULL) {
+        tnext=t->next;
+        BoundaryTriangleFaceDescriptor.deleteElement(t);
+        t=tnext;
+      }
+    }
+
+    //check all boundary faces for intersection with the block
+    for (t=BoundaryFaces;t!=NULL;t=t->next) {
+      if (t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
+        //the block is intersected by the face
+        cTriangleFaceDescriptor *startNodeBoundaryDescriptor=BoundaryTriangleFaceDescriptor.newElement();
+
+        startNodeBoundaryDescriptor->TriangleFace=t->TriangleFace;
+
+        startNodeBoundaryDescriptor->prev=NULL,startNodeBoundaryDescriptor->next=startNode->FirstTriangleCutFace;
+        if (startNode->FirstTriangleCutFace!=NULL) startNode->FirstTriangleCutFace->prev=startNodeBoundaryDescriptor;
+        startNode->FirstTriangleCutFace=startNodeBoundaryDescriptor;
+
+      }
+    }
+  }
+
+  void DistributeBoundaryCutBlocks(cTreeNodeAMR<cBlockAMR> *startNode,cTriangleFace *BoundaryFaces, int nBoundaryFaces) {
+    //check intersection of the cut-faces with the block
+    //if the list is already allocated -> remove it
+    cTriangleFaceDescriptor *tnext,*t=startNode->FirstTriangleCutFace;
+
+    if (startNode->FirstTriangleCutFace!=NULL) {
+      while (t!=NULL) {
+        tnext=t->next;
+        BoundaryTriangleFaceDescriptor.deleteElement(t);
+        t=tnext;
+      }
+    }
+
+    //check all boundary faces for intersection with the block
+    for (int nface=0;nface<nBoundaryFaces;nface++)  {
+      if (BoundaryFaces[nface].BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
+        //the block is intersected by the face
+        cTriangleFaceDescriptor *startNodeBoundaryDescriptor=BoundaryTriangleFaceDescriptor.newElement();
+
+        startNodeBoundaryDescriptor->TriangleFace=BoundaryFaces+nface;
+
+        startNodeBoundaryDescriptor->prev=NULL,startNodeBoundaryDescriptor->next=startNode->FirstTriangleCutFace;
+        if (startNode->FirstTriangleCutFace!=NULL) startNode->FirstTriangleCutFace->prev=startNodeBoundaryDescriptor;
+        startNode->FirstTriangleCutFace=startNodeBoundaryDescriptor;
+
+      }
+    }
+  }
+
   /*
   //generate the list of the blocks of the mesh
   void createMeshBlockList(cTreeNodeAMR<cBlockAMR>  *startNode=NULL) {
@@ -7460,11 +7663,18 @@ nMPIops++;
     countTreeNodes(rootTree,Counter,0);
 
     if (ThisThread==0) {
-      cout << "$PREFIX:Mesh blocks report:" << endl;
-      for (level=0;level<=_MAX_REFINMENT_LEVEL_;level++) cout << "$PREFIX:refinment level=" << level << ", blocks=" << Counter[level] << endl;
+/*      *DiagnospticMessageStream << "$PREFIX:Mesh blocks report:" << std::endl;
+      for (level=0;level<=_MAX_REFINMENT_LEVEL_;level++) *DiagnospticMessageStream << "$PREFIX:refinment level=" << level << ", blocks=" << Counter[level] << std::endl;
 
-      cout << "$PREFIX:Memory usage:" << endl;
-      cout << "$PREFIX:Thread \t Tree \t Blocks \t Nodes" << endl;
+      *DiagnospticMessageStream << "$PREFIX:Memory usage:" << std::endl;
+      *DiagnospticMessageStream << "$PREFIX:Thread \t Tree \t Blocks \t Nodes" << std::endl;*/
+
+
+      fprintf(DiagnospticMessageStream,"$PREFIX:Mesh blocks report:\n");
+      for (level=0;level<=_MAX_REFINMENT_LEVEL_;level++) fprintf(DiagnospticMessageStream,"$PREFIX:refinment level=%i, blocks=%ld\n",level,Counter[level]);
+
+      fprintf(DiagnospticMessageStream,"$PREFIX:Memory usage:\n");
+      fprintf(DiagnospticMessageStream,"$PREFIX:Thread \t Tree \t Blocks \t Nodes\n");
 
       pipe.openRecvAll();
     }
@@ -7490,7 +7700,8 @@ nMPIops++;
         }
       }
 
-      if (ThisThread==0) cout << "$PREFIX:" << thread << "\t" << TreeNodesAllocation/1.0E6 << "MB\t" << BlocksAllocation/1.0E6 << "MB\t" << CornerNodesAllocation/1.0E6 << "MB" << endl;
+//      if (ThisThread==0) *DiagnospticMessageStream << "$PREFIX:" << thread << "\t" << TreeNodesAllocation/1.0E6 << "MB\t" << BlocksAllocation/1.0E6 << "MB\t" << CornerNodesAllocation/1.0E6 << "MB" << std::endl;
+      if (ThisThread==0) fprintf(DiagnospticMessageStream,"$PREFIX:%i\t%eMB\t%eMB\t%eMB\n",thread,TreeNodesAllocation/1.0E6,BlocksAllocation/1.0E6,CornerNodesAllocation/1.0E6);
     }
 
 
@@ -7503,7 +7714,8 @@ nMPIops++;
       ru_ixrss=ResourceUsage.ru_ixrss;
       ru_idrss=ResourceUsage.ru_idrss;
 
-      if (ThisThread==0) cout << "$PREFIX:Thread \t \"maximum resident set size\"\t \"integral shared memory size\"\t  \"integral unshared data size\"" <<endl;
+//      if (ThisThread==0) *DiagnospticMessageStream << "$PREFIX:Thread \t \"maximum resident set size\"\t \"integral shared memory size\"\t  \"integral unshared data size\"" <<std::endl;
+      if (ThisThread==0) fprintf(DiagnospticMessageStream,"$PREFIX:Thread \t \"maximum resident set size\"\t \"integral shared memory size\"\t  \"integral unshared data size\"\n");
 
       for (thread=0;thread<nTotalThreads;thread++) {
         if (thread!=0) {
@@ -7519,7 +7731,8 @@ nMPIops++;
           }
         }
 
-        if (ThisThread==0) cout << "$PREFIX:" << thread << "\t" << ru_maxrss/1.0E6 << "MB\t" << ru_ixrss/1.0E6 << "MB\t" << ru_idrss/1.0E6 << "MB" << endl;
+//        if (ThisThread==0) *DiagnospticMessageStream << "$PREFIX:" << thread << "\t" << ru_maxrss/1.0E6 << "MB\t" << ru_ixrss/1.0E6 << "MB\t" << ru_idrss/1.0E6 << "MB" << std::endl;
+        if (ThisThread==0) fprintf(DiagnospticMessageStream,"$PREFIX:%i\t%eMB\t%eMB\t%eMB\n",thread,ru_maxrss/1.0E6,ru_ixrss/1.0E6,ru_idrss/1.0E6);
       }
     } 
 
@@ -7757,9 +7970,9 @@ nMPIops++;
     MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
     if (ThisThread==0) {
-      cout << "$PREFIX:The length of the domain's boundary nodes list:\nThread\tThe number of the domain's boundary nodes\n";
+      fprintf(DiagnospticMessageStream,"$PREFIX:The length of the domain's boundary nodes list:\n$PREFIX:Thread\tThe number of the domain's boundary nodes\n");
 
-      for (thread=0;thread<nTotalThreads;thread++) cout << "$PREFIX:" << thread << "\t" << buffer[thread] << endl;
+      for (thread=0;thread<nTotalThreads;thread++) fprintf(DiagnospticMessageStream,"$PREFIX:%i\t%ld\n",thread,buffer[thread]);
     }
 
     delete [] buffer;
@@ -7784,7 +7997,7 @@ nMPIops++;
 
             while (node!=NULL) {
               if (node==startSearch) {
-                cout << "$PREFIX:Error: have found a repearting node in the list. nodeid=" << node->Temp_ID << endl;
+                fprintf(DiagnospticMessageStream,"$PREFIX:Error: have found a repearting node in the list. nodeid=%ld\n",node->Temp_ID);
               }
 
               node=node->nextNodeThisThread;
@@ -7882,7 +8095,7 @@ nMPIops++;
 //=============   DEBUG ==================
 /*
     if (startNode!=NULL) if (startNode->Temp_ID==5096) {
-  cout << __FILE__ << "@" << __LINE__ << endl;
+  *DiagnospticMessageStream << __FILE__ << "@" << __LINE__ << std::endl;
 }
 */
 //=============  END DEBUG ===============
@@ -7980,6 +8193,14 @@ nMPIops++;
                  exit(__LINE__,__FILE__,"Error: the option is not recognized");
 #endif
                }
+
+               else if (startNode->FirstTriangleCutFace!=NULL) {
+                 //the block is cutted by a list of triangulat faces
+                 centerNode->Measure=GetRemainedBlockVolume(xCellMin,xCellMax,EPS,1.0E-6,BoundaryTriangleFaces,nBoundaryTriangleFaces,startNode->FirstTriangleCutFace);
+               }
+
+
+
                else {
 #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
                  int BoundarySurfaceCounter;
@@ -8341,7 +8562,7 @@ TmpAllocationCounter++;
 
 /*
 if (TmpAllocationCounter==2437) {
-  cout << __LINE__ << endl;
+  *DiagnospticMessageStream << __LINE__ << std::endl;
 }
 */
 
@@ -8380,8 +8601,8 @@ if (TmpAllocationCounter==2437) {
 
           MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
-          cout << "$PREFIX:Blocks Allocation Report:\n$PREFIX: Thread\tAllocatedBlocks\n";
-          for (thread=0;thread<nTotalThreads;thread++) cout << "$PREFIX:" << thread << "\t" << buffer[thread] << endl;
+          fprintf(DiagnospticMessageStream,"$PREFIX:Blocks Allocation Report:\n$PREFIX: Thread\tAllocatedBlocks\n");
+          for (thread=0;thread<nTotalThreads;thread++) fprintf(DiagnospticMessageStream,"$PREFIX:%ld\t%ld\n",thread,buffer[thread]);
 
           delete [] buffer;
         }
@@ -8412,8 +8633,8 @@ if (TmpAllocationCounter==2437) {
 
           MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
-          cout << "$PREFIX:Blocks Allocation Report:\n$PREFIX: Thread\tAllocated Domain's Boundary Blocks\n";
-          for (thread=0;thread<nTotalThreads;thread++) cout << "$PREFIX:" << thread << "\t" << buffer[thread] << endl;
+          fprintf(DiagnospticMessageStream,"$PREFIX:Blocks Allocation Report:\n$PREFIX: Thread\tAllocated Domain's Boundary Blocks\n");
+          for (thread=0;thread<nTotalThreads;thread++) fprintf(DiagnospticMessageStream,"$PREFIX:%ld\t%ld\n",thread,buffer[thread]);
 
           delete [] buffer;
         }
@@ -8540,12 +8761,12 @@ if (TmpAllocationCounter==2437) {
       cTreeNodeAMR<cBlockAMR> *ptr;
       long int nblocks;
 
-      cout << "$PREFIX:Initial Cumulative Parallel Load Distribution\n$PREFIX:Thread\tLoad\tNormalized Load\tBlock's Number\n";
+      fprintf(DiagnospticMessageStream,"$PREFIX:Initial Cumulative Parallel Load Distribution\n$PREFIX:Thread\tLoad\tNormalized Load\tBlock's Number\n");
 
       for (int t=0;t<nTotalThreads;t++) {
         for (nblocks=0,ptr=ParallelNodesDistributionList[t];ptr!=NULL;ptr=ptr->nextNodeThisThread) nblocks++;
 
-        printf("$PREFIX:%i\t%8.2e\t%8.2e\t%ld\n",t,InitialProcessorLoad[t],InitialProcessorLoad[t]/LoadMeasureNormal,nblocks);
+        fprintf(DiagnospticMessageStream,"$PREFIX:%i\t%8.2e\t%8.2e\t%ld\n",t,InitialProcessorLoad[t],InitialProcessorLoad[t]/LoadMeasureNormal,nblocks);
       }
     }
 
@@ -8755,7 +8976,7 @@ if (TmpAllocationCounter==2437) {
 
       pipe.closeRecvAll();
 
-      cout << "$PREFIX:Cumulative Parallel Load Distribution\n$PREFIX:Thread\tLoad\tNormalized Load\tBlock's Number\n";
+      fprintf(DiagnospticMessageStream,"$PREFIX:Cumulative Parallel Load Distribution\n$PREFIX:Thread\tLoad\tNormalized Load\tBlock's Number\n");
 
       int minThreadBlockNumber=-1,maxThreadBlockNumber=-1;
       double minLoadMeasure=-1.0,maxLoadMeasure=-1.0;
@@ -8773,7 +8994,7 @@ if (TmpAllocationCounter==2437) {
           if ((maxBlockLoad<0.0)||(maxBlockLoad<ptr->ParallelLoadMeasure)) maxBlockLoad=ptr->ParallelLoadMeasure,maxLoadBlock=ptr;
         }
 
-        printf("$PREFIX:%i\t%8.2e\t%8.2e\t%ld\n",t,newCumulativeParallelLoadMeasure[t],nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure,nblocks);
+        fprintf(DiagnospticMessageStream,"$PREFIX:%i\t%8.2e\t%8.2e\t%ld\n",t,newCumulativeParallelLoadMeasure[t],nTotalThreads*newCumulativeParallelLoadMeasure[t]/TotalParallelLoadMeasure,nblocks);
 
         if ((minThreadBlockNumber==-1)||(minThreadBlockNumber>nblocks)) minThreadBlockNumber=nblocks;
         if ((maxThreadBlockNumber==-1)||(maxThreadBlockNumber<nblocks)) maxThreadBlockNumber=nblocks;
@@ -8789,13 +9010,13 @@ if (TmpAllocationCounter==2437) {
         }
       }
 
-      printf("$PREFIX:Min number of blocks per processor: %i\nMax number of blocks per processor: %i\n",minThreadBlockNumber,maxThreadBlockNumber);
-      printf("$PREFIX:Min processor load: %e, thread=%i\n",minLoadMeasure,minLoadThread);
-      printf("$PREFIX:Max processor load: %e, thread=%i\n",maxLoadMeasure,maxLoadThread);
-      printf("$PREFIX:Individual block load: min=%e, max=%e\n",minBlockLoad,maxBlockLoad);
+      fprintf(DiagnospticMessageStream,"$PREFIX:Min number of blocks per processor: %i\n$PREFIX:Max number of blocks per processor: %i\n",minThreadBlockNumber,maxThreadBlockNumber);
+      fprintf(DiagnospticMessageStream,"$PREFIX:Min processor load: %e, thread=%i\n",minLoadMeasure,minLoadThread);
+      fprintf(DiagnospticMessageStream,"$PREFIX:Max processor load: %e, thread=%i\n",maxLoadMeasure,maxLoadThread);
+      fprintf(DiagnospticMessageStream,"$PREFIX:Individual block load: min=%e, max=%e\n",minBlockLoad,maxBlockLoad);
 
-      printf("$PREFIX:Parameters of the block with the maximum load\n");
-      printf("$PREFIX:Block->Temp_ID=%ld\n",maxLoadBlock->Temp_ID);
+      fprintf(DiagnospticMessageStream,"$PREFIX:Parameters of the block with the maximum load\n");
+      fprintf(DiagnospticMessageStream,"$PREFIX:Block->Temp_ID=%ld\n",maxLoadBlock->Temp_ID);
 
       //the position of the block's nodes
       double middleX[3]={0.0,0.0,0.0},xnode[3];
@@ -8804,19 +9025,19 @@ if (TmpAllocationCounter==2437) {
       for (i=0;i<2;i++) for (j=0;j<((_MESH_DIMENSION_>1) ? 2 : 1);j++) for (k=0;k<((_MESH_DIMENSION_>2) ? 2 : 1);k++) {
         maxLoadBlock->GetCornerNodePosition(xnode,i*_BLOCK_CELLS_X_,j*_BLOCK_CELLS_Y_,k*_BLOCK_CELLS_Z_);
 
-        printf("$PREFIX:(i,j,k)=(%i,%i,%i): x=",i,j,k);
+        fprintf(DiagnospticMessageStream,"$PREFIX:(i,j,k)=(%i,%i,%i): x=",i,j,k);
         for (idim=0;idim<_MESH_DIMENSION_;idim++) {
-          printf("%e ",xnode[idim]);
+          fprintf(DiagnospticMessageStream,"%e ",xnode[idim]);
           middleX[idim]+=xnode[idim];
         }
 
-        printf("\n");
+        fprintf(DiagnospticMessageStream,"\n");
       }
 
 
-      printf("$PREFIX:Middle block's coordinates=");
-      for (idim=0;idim<_MESH_DIMENSION_;idim++) printf("%e ",middleX[idim]/(1<<_MESH_DIMENSION_));
-      printf("\n\n");
+      fprintf(DiagnospticMessageStream,"$PREFIX:Middle block's coordinates=");
+      for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"%e ",middleX[idim]/(1<<_MESH_DIMENSION_));
+      fprintf(DiagnospticMessageStream,"\n\n");
 
     }
     else {
@@ -9020,7 +9241,7 @@ if (TmpAllocationCounter==2437) {
       cCenterNode *cell;
 
       if (node->Temp_ID==782) {
-        cout << __FILE__ << "@" << __LINE__ << endl;
+        *DiagnospticMessageStream << __FILE__ << "@" << __LINE__ << std::endl;
       }
 
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
@@ -9042,7 +9263,7 @@ if (TmpAllocationCounter==2437) {
                 }
 
                 if ((rmin<2439.0e3)&&(rmax>2439.0e3)) {
-                  cout << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << r << endl;
+                  *DiagnospticMessageStream << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << r << std::endl;
                 }
 
 
@@ -9105,7 +9326,7 @@ if (TmpAllocationCounter==2437) {
 
           /*
 if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+1000.0,2)+pow(recvNode->xmin[2]+500.0,2)<0.00001)||(recvNode->Temp_ID==14)) {
-   cout << __LINE__ << endl;
+   *DiagnospticMessageStream << __LINE__ << std::endl;
 }
 */
 //================ END DEBUG =====================
@@ -9271,30 +9492,30 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
             bool found=false;
             cTreeNodeAMR<cBlockAMR> *searchNode;
 
-            cout << "$PREFIX:Error: the node is not allocated:" << endl;
+            fprintf(DiagnospticMessageStream,"$PREFIX:Error: the node is not allocated:\n");
 
 #ifdef _AMR_ParallelBlockDataExchange_SEND_CORNER_NODES_
             for (i=0;i<(1<<_MESH_DIMENSION_);i++) if (recvNode->neibNodeCorner[i]!=NULL) if (recvNode->neibNodeCorner[i]->Thread==ThisThread) {
               found=true;
-              cout << "$PREFIX:'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+              fprintf(DiagnospticMessageStream,"$PREFIX:'recvNode' has neibours on 'ThisThread': (file=%s, line=%i)\n",__FILE__,__LINE__);
             }
 #endif
 
 //#ifdef _AMR_ParallelBlockDataExchange_SEND_FACES_
            for (i=0;i<_MESH_DIMENSION_*(1<<_MESH_DIMENSION_);i++) if (recvNode->neibNodeFace[i]!=NULL) if (recvNode->neibNodeFace[i]->Thread==ThisThread) {
              found=true;
-             cout << "$PREFIX:'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+             fprintf(DiagnospticMessageStream,"$PREFIX:'recvNode' has neibours on 'ThisThread': (file=%s, line=%i)\n",__FILE__,__LINE__);
            }
 //#endif
 
 #if _MESH_DIMENSION_ == 3
            for (i=0;i<12*2;i++) if (recvNode->neibNodeEdge[i]!=NULL) if (recvNode->neibNodeEdge[i]->Thread==ThisThread) {
              found=true;
-             cout << "$PREFIX:'recvNode' has neibours on 'ThisThread': (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+             fprintf(DiagnospticMessageStream,"$PREFIX:'recvNode' has neibours on 'ThisThread': (file=%s, line=%i)\n",__FILE__,__LINE__);
            }
 #endif
 
-           if (found==false) cout << "$PREFIX:'recvNode' doesn't have neibours at ThisThread (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+           if (found==false) fprintf(DiagnospticMessageStream,"$PREFIX:'recvNode' doesn't have neibours at ThisThread (file=%s, line=%i)\n",__FILE__,__LINE__);
 
            //2. check if the 'recvNode' in the list 'DomainBoundaryLayerNodesList[From]'
            found=false;
@@ -9303,13 +9524,13 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
            while (searchNode!=NULL) {
              if (searchNode==recvNode) {
                found=true;
-               cout << "$PREFIX:recvNode in the 'DomainBoundaryLayerNodesList[From]' (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+               fprintf(DiagnospticMessageStream,"$PREFIX:recvNode in the 'DomainBoundaryLayerNodesList[From]' (file=%s, line=%i)\n",__FILE__,__LINE__);
              }
 
              searchNode=searchNode->nextNodeThisThread;
            }
 
-           if (found==false) cout << "$PREFIX:'recvNode' is not in 'DomainBoundaryLayerNodesList[From]' (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+           if (found==false) fprintf(DiagnospticMessageStream,"$PREFIX:'recvNode' is not in 'DomainBoundaryLayerNodesList[From]' (file=%s, line=%i)\n",__FILE__,__LINE__);
 
 
             exit(__LINE__,__FILE__,"Error: the node is not allocated");
@@ -9320,7 +9541,7 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
 
           /*
 if (ThisThread==2) if (pow(recvNode->xmin[0]+250.0,2)+pow(recvNode->xmin[1]+500.0,2)+pow(recvNode->xmin[0]+0.0,2)<0.00001) {
-  cout << __LINE__ << endl;
+  *DiagnospticMessageStream << __LINE__ << std::endl;
 }
 */
 

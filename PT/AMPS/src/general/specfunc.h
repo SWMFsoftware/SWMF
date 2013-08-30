@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-
+#include "global.h"
 #include "rnd.h"
 
 //extern int DIM;
@@ -44,7 +44,7 @@ void PrintLineMark(long int nline ,char* fname ,T code) {
   char *buffer=new char[sizeof(T)*TotalThreadsNumber];
 
 #ifdef MPI_ON
-  MPI_Gather((char*)&code,sizeof(T),MPI_CHAR,buffer,sizeof(T),MPI_CHAR,0,MPI_COMM_WORLD);
+  MPI_Gather((char*)&code,sizeof(T),MPI_CHAR,buffer,sizeof(T),MPI_CHAR,0,MPI_GLOBAL_COMMUNICATOR);
 #else
   char *ptr;
   int i;  
@@ -117,7 +117,7 @@ bool GetGradient(double* gradQ,double cellQ,double* Q,long int ncell,TMesh &grid
 
     break;
   default:
-    printf("Error: GetGradient. DIM=%i is not implemented\n",DIM);
+    printf("$PREFIX:Error: GetGradient. DIM=%i is not implemented\n",DIM);
     exit(__LINE__,__FILE__);
   }
 
@@ -190,17 +190,17 @@ public:
     buffer[0]=checksum();
 
 #ifdef MPI_ON
-    MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,buffer,1,MPI_UNSIGNED_LONG,0,MPI_COMM_WORLD);
+    MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,buffer,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 #endif
 
     if (ThisThread==0) {
       CRC32 cumulativeSignature;
       cumulativeSignature.add(buffer,TotalThreadsNumber);
 
-      if (message!=NULL) printf("CRC32 checksum, cumulativeSignature=0x%lx, message=%s:\n",cumulativeSignature.checksum(),message);
-      else printf("CRC32 checksum, cumulativeSignature=0x%lx:\n",cumulativeSignature.checksum());
+      if (message!=NULL) printf("$PREFIX:CRC32 checksum, cumulativeSignature=0x%lx, message=%s:\n",cumulativeSignature.checksum(),message);
+      else printf("$PREFIX:CRC32 checksum, cumulativeSignature=0x%lx:\n",cumulativeSignature.checksum());
 
-      for (thread=0;thread<TotalThreadsNumber;thread++) printf("thread=%ld, sum=0x%lx\n",thread,buffer[thread]);
+      for (thread=0;thread<TotalThreadsNumber;thread++) printf("$PREFIX:thread=%ld, sum=0x%lx\n",thread,buffer[thread]);
     }
 
     delete [] buffer;

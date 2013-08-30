@@ -21,6 +21,7 @@
 #include <signal.h>
 
 
+
 #include <sys/time.h>
 #include <sys/resource.h>
 
@@ -86,7 +87,7 @@ namespace PIC {
 
   //the output and prefix for the diagnostic information
   extern FILE* DiagnospticMessageStream;
-  extern char DiagnospricMessagePrefix[_MAX_STRING_LENGTH_PIC_];
+  extern char DiagnospticMessageStreamName[_MAX_STRING_LENGTH_PIC_];
 
   //the directory for output files
   extern char OutputDataFileDirectory[_MAX_STRING_LENGTH_PIC_];
@@ -135,7 +136,18 @@ namespace PIC {
   }
 
 
+  //run tame calculation of the check sums
+  namespace RunTimeSystemState {
+    void GetParticleFieldCheckSum(char *msg=NULL);
+    void GetParticleFieldCheckSum(long int nline,char *fname);
 
+    void GetDomainDecompositionCheckSum(char *msg=NULL);
+    void GetDomainDecompositionCheckSum(long int nline,char *fname);
+
+    void GetMeanParticleMicroscopicParameters(FILE* fout,char *msg=NULL);
+    void GetMeanParticleMicroscopicParameters(FILE* fout,long int nline,char *fname);
+    void GetMeanParticleMicroscopicParameters(const char *fname);
+  }
 
 
   namespace MolecularData {
@@ -1703,7 +1715,7 @@ namespace PIC {
 
     inline void FinishExecution() {
       MPI_Finalize();
-      printf("!!!!! Execution is finished by the alarm (PIC::Alarm) !!!!!!\n");
+      printf("$PREFIX:!!!!! Execution is finished by the alarm (PIC::Alarm) !!!!!!\n");
       exit(__LINE__,__FILE__,"!!!!! Execution is finished by the alarm !!!!!!");
     }
   }

@@ -112,7 +112,7 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
     //calculate the particle weight
     GlobalParticleWeight=ParticleInjection/maxReferenceInjectedParticleNumber;
 
-    MPI_Bcast(&GlobalParticleWeight,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&GlobalParticleWeight,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
     if (GlobalParticleWeight<=0.0) exit(__LINE__,__FILE__,"Error: ParticleInjection has zero value");
   }
@@ -240,13 +240,13 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
             exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
           }
 
-          MPI_Gather(&blockTimeStep,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+          MPI_Gather(&blockTimeStep,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
           if (PIC::ThisThread==0) {
             for (thread=1;thread<PIC::nTotalThreads;thread++) if (buffer[thread]>blockTimeStep) blockTimeStep=buffer[thread];
           }
 
-          MPI_Bcast(&blockTimeStep,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+          MPI_Bcast(&blockTimeStep,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
           switch (ptr->BondaryType) {
           case _INTERNAL_BOUNDARY_TYPE_SPHERE_:
@@ -281,13 +281,13 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
 
         t=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread]->block->GetLocalTimeStep(s);
 
-        MPI_Gather(&t,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        MPI_Gather(&t,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
         if (PIC::ThisThread==0) {
           for (thread=1;thread<PIC::nTotalThreads;thread++) if (buffer[thread]<t) t=buffer[thread];
         }
 
-        MPI_Bcast(&t,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        MPI_Bcast(&t,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
         PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread]->block->SetLocalTimeStep(t,s);
       }
 #endif

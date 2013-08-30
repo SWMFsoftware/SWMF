@@ -79,9 +79,7 @@ static const char _EXOSPHERE__SOURCE_SYMBOLIC_ID_[][100]={"ImpactVaposization","
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
 #include "SpiceUsr.h"
 #else
-typedef double SpiceDouble;
-typedef int SpiceInt;
-typedef char SpiceChar;
+#include "SpiceEmptyDefinitions.h"
 #endif
 
 
@@ -113,6 +111,10 @@ namespace Exosphere {
 
   //the total number of source processes
   extern int nTotalSourceProcesses;
+
+  //the array of flags that defines wether the source process change the surface aboundance of the volatile
+  static const bool Source_DeplitSurfaceSpeciesAbundance_Flag[]={true};
+
 
   //the sphere that representd the planet
   extern cInternalSphericalData *Planet;
@@ -607,7 +609,7 @@ namespace Exosphere {
       //evaluate nemerically the source rate
 //      extern double CalculatedTotalSodiumSourceRate;
 
-      inline bool GenerateParticleProperties(int spec,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode) {
+      inline bool GenerateParticleProperties(int spec,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
         unsigned int idim;
         double r=0.0,vbulk[3]={0.0,0.0,0.0},ExternalNormal[3];
 
