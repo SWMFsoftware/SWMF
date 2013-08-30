@@ -23,9 +23,9 @@ use ampsConfigLib;
 #print "Process the exospehre model input:\n";
 
 
-my $InputFileName=$ARGV[0];  ##########"mercury.input.Assembled.Block";   #$ARGV[0];
-my $SpeciesFileName="mercury.input.Assembled.Species";
-my $WorkingSourceDirectory=$ARGV[1];   #####"src";  #$ARGV[1];
+my $InputFileName=$ARGV[0];  # moon.input.Assembled.Block";
+my $SpeciesFileName=$InputFileName; $SpeciesFileName =~ s/\.Block$/.Species/;
+my $WorkingSourceDirectory=$ARGV[1];   # srcTemp
 
 $ampsConfigLib::WorkingSourceDirectory=$WorkingSourceDirectory;
 
