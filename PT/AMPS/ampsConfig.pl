@@ -331,10 +331,10 @@ sub ReadMainBlock {
             ($l0,$l1)=split(' ',$line,2);
             $_=$l1;
           }
-          elsif ($l0 eq "CWD") {
-            $l1=`pwd`;
-            $_="CWD=$l1";
-          }
+          #elsif ($l0 eq "CWD") {
+          #  $l1=`pwd`;
+          #  $_="CWD=$l1";
+          #}
           
         }
       }

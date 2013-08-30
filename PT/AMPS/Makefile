@@ -33,7 +33,8 @@ CC=mpicxx
 
 
 SOURCES=src
-CWD=/k/vtenishe/Tmp/AMPS
+CWD=${PTDIR}
+
 # /Users/vtenishe/Debugger/eclipse-workspace/pic-input-preprocess
 WSD=srcTemp
 
@@ -100,7 +101,6 @@ amps:
 	make LIB
 	cd ${WSD}/main; make amps CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
 
-#	${CC} -o ${EXE} ${WSD}/general/general.a ${WSD}/meshAMR/mesh.a ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a  ${SPICE}/lib/cspice.a  ${Lib}
 	${CC} -o ${EXE} ${WSD}/general/general.a ${WSD}/meshAMR/mesh.a ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a   ${Lib}
 
 TESTDIR = run_test

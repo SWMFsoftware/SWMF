@@ -1,2 +1,2 @@
-PTDIR = .
-RUNDIR = run
+PTDIR = ${DIR}
+RUNDIR = ${DIR}/run
