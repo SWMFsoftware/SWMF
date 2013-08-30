@@ -25,7 +25,9 @@ if($Install){
 	`echo "include ../../Makefile.def" > Makefile.def`;
 	`echo "include ../../Makefile.conf" > Makefile.conf`;
     }else{
-	`cp -f Makefile.def.amps Makefile.def`;
+	my $pwd=`pwd`;
+	`echo "DIR=$pwd" > Makefile.def`;
+	`cat Makefile.def.amps >> Makefile.def`;
 	`echo "COMPILE.c = $Compiler" > Makefile.conf`;
 	`make install`;
     }
