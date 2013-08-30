@@ -6,12 +6,14 @@ include Makefile.def
 include Makefile.conf
 
 install:
+	Config.pl -application=Moon
 	@echo "AMPS installed"
 
 distclean:
 	./Config.pl -uninstall
 
 allclean: cleansrc
+	rm -rf main srcTemp *.input* amps
 
 rundir:
 	mkdir -p ${RUNDIR}/PT
@@ -31,11 +33,11 @@ CC=mpicxx
 
 
 SOURCES=src
-CWD=/Users/gtoth/swmf/AMPS
+CWD=/k/vtenishe/Tmp/AMPS
 # /Users/vtenishe/Debugger/eclipse-workspace/pic-input-preprocess
-WSD=srcTmp
+WSD=srcTemp
 
-SPICE=MYLOCALSPICEDIR
+SPICE=nospice
 EXE=amps
 
 Lib=  -lm -lmpi 
@@ -84,12 +86,12 @@ LIB :
 	cd ${WSD}/models/exosphere; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
 	cd ${WSD}/main; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}"
 
-	cd srcInterface; make LIB 
-	cd srcInterface; ${CC} -c ${Flags} ${IncludeList} amps2swmf.cpp 
-	cd srcInterface; ar -scr amps2swmf.a amps2swmf.o
+#	cd srcInterface; make LIB 
+#	cd srcInterface; ${CC} -c ${Flags} ${IncludeList} amps2swmf.cpp 
+#	cd srcInterface; ar -scr amps2swmf.a amps2swmf.o
 
 #	ar -src ../../lib/libPT.a ${WSD}/general/*.o ${WSD}/meshAMR/*.o ${WSD}/pic/*.o ${WSD}/species/*.o ${WSD}/models/exosphere/exosphere.a srcInterface/PT_wrapper.o srcInterface/amps2swmf.o 
-	ar -rc /Users/vtenishe/SWMF/SWMF/lib//libPT.a ${WSD}/general/general.a ${WSD}/meshAMR/mesh.a ${WSD}/main/mainlib.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a srcInterface/PT_wrapper.o srcInterface/amps2swmf.a 
+#	ar -rc /Users/vtenishe/SWMF/SWMF/lib//libPT.a ${WSD}/general/general.a ${WSD}/meshAMR/mesh.a ${WSD}/main/mainlib.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a srcInterface/amps2swmf.a 
 #srcInterface/amps2swmf.o 
 #srcInterface/amps2swmf.o
 
@@ -98,8 +100,8 @@ amps:
 	make LIB
 	cd ${WSD}/main; make amps CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
 
-	${CC} -o ${EXE} src/general/general.a src/meshAMR/mesh.a src/main/main.a src/main/mainlib.a src/pic/amps.a src/species/species.a src/models/exosphere/exosphere.a  ${SPICE}/lib/cspice.a  ${Lib}
-	${CC} -o ${EXE} src/general/general.a src/meshAMR/mesh.a src/main/main.a src/main/mainlib.a src/pic/amps.a src/species/species.a src/models/exosphere/exosphere.a   ${Lib}
+#	${CC} -o ${EXE} ${WSD}/general/general.a ${WSD}/meshAMR/mesh.a ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a  ${SPICE}/lib/cspice.a  ${Lib}
+	${CC} -o ${EXE} ${WSD}/general/general.a ${WSD}/meshAMR/mesh.a ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a   ${Lib}
 
 TESTDIR = run_test
 

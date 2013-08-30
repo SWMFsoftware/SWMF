@@ -4,24 +4,27 @@
 use strict;
 use warnings;
 
+use ampsConfigLib;
 
 my $loadedFlag_MainBlock=0;
 my $loadedFlag_SpeciesBlock=0;
 my $loadedFlag_BackgroundSpeciesBlock=0;
 
-my $InputFileName="mercury.input"; # Default
+my $InputFileName="moon.input";
 my $line;
 my $InputFileLineNumber=0;
 my $InputLine;
 my $InputComment;
 my $s0;
+my $FileName;
 
 #Main Block Global Variables
 my $TotalSpeciesNumber=0;
 my @SpeciesList;
 
 #Location of the local working vertion of the code that will be compiled 
-my $WorkingSourceDirectory="srcTmp";
+$ampsConfigLib::WorkingSourceDirectory="src";
+
 
 #location of the code distribution
 my $SourceDirectory=" ";
@@ -65,7 +68,8 @@ open (InputFile,"<","$InputFileName.Assembled") || die "Cannot find file \"$Inpu
 print "Preprocessing AMPS sources\n";
 
 while ($line=<InputFile>) {
-  $InputFileLineNumber++;
+  ($InputFileLineNumber,$FileName)=split(' ',$line);
+  $line=<InputFile>;
   
   ($InputLine,$InputComment)=split('!',$line,2);
   $InputLine=uc($InputLine);
@@ -108,7 +112,7 @@ while ($line=<InputFile>) {
     ($InputLine,$InputComment)=split('!',$line,2);     
     ($InputLine,$BlockProcessor)=split(' ',$InputLine,2);    
     $BlockProcessor=~s/ //g;
-    $BlockProcessor=$WorkingSourceDirectory."/".$BlockProcessor;
+    $BlockProcessor=$ampsConfigLib::WorkingSourceDirectory."/".$BlockProcessor;
       
     if (! -e $BlockProcessor) {
       die "Cannot find the input file block processor $BlockProcessor\n";
@@ -123,17 +127,22 @@ while ($line=<InputFile>) {
       ($InputLine,$InputComment)=split('!',$line,2);
       $InputLine=uc($InputLine);
       chomp($InputLine);    
+                 
+      print BLOCK "$line";  
+      
+#      print "$InputFileLineNumber: $InputLine\n";
+#      if ($InputFileLineNumber==104) {
+#        print "!!!\n";
+#      }
         
       if ($InputLine eq "#ENDBLOCK") {
         last;
       }  
-        
-      print BLOCK "$line";
     }
       
     close BLOCK;
     
-    my $cmd="perl $BlockProcessor $InputFileName.Assembled.Block $WorkingSourceDirectory";
+    my $cmd="perl $BlockProcessor $InputFileName.Assembled.Block $ampsConfigLib::WorkingSourceDirectory";
     print "Call: $cmd\n";
   
     system($cmd) and do {
@@ -180,6 +189,8 @@ sub AssambleInputFile {
   my $LineBreak=0,
   my $nline=0;
   
+  my $StatmentEnd=1;
+  
   open (my $Input,"<",$_[0]) || die "Cannot find file \"$_[0]\"\n";
   
   while ($line=<$Input>) {
@@ -218,17 +229,23 @@ sub AssambleInputFile {
      
      AssambleInputFile($s0);
    }
-   else {
+   else {   
      no warnings 'uninitialized';
-     
+       
      if (length $line) {
+       if ($StatmentEnd==1) {
+         print AssembledInputFile "$nline $_[0]\n";
+       }
+       
        if ($line=~m/\\\\$/) {
          $line=~s/\\\\$//;
          chomp($line);
          print AssembledInputFile "$line  ";
+         $StatmentEnd=0;
        }
        else {
          print AssembledInputFile "$line\n";
+         $StatmentEnd=1;
        }
      }
    }
@@ -255,7 +272,8 @@ sub ReadMainBlock {
   my $DebuggerMode=0;
     
   while ($line=<InputFile>) {
-    $InputFileLineNumber++;
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;
     
     ($InputLine,$InputComment)=split('!',$line,2);
     $InputLine=uc($InputLine);
@@ -364,7 +382,7 @@ sub ReadMainBlock {
       $InputLine=~s/ //g;
       $InputLine=~s/=/ /;
       
-      ($InputLine,$WorkingSourceDirectory)=split(' ',$InputLine,2);
+      ($InputLine,$ampsConfigLib::WorkingSourceDirectory)=split(' ',$InputLine,2);
     }
     elsif ($s0 eq "SOURCEDIRECTORY") {
       chomp($line);
@@ -440,7 +458,7 @@ sub ReadMainBlock {
 
     foreach (@MakeFileContent) {
       if ($_=~m/WSD=/) {
-        $_="WSD=".$WorkingSourceDirectory."\n";
+        $_="WSD=".$ampsConfigLib::WorkingSourceDirectory."\n";
         $FoundWSD=1;
       }
       
@@ -456,7 +474,7 @@ sub ReadMainBlock {
       close(MAKEFILE);
     
       open (MAKEFILE,">","makefile");   
-      print MAKEFILE "WSD=$WorkingSourceDirectory\n";  
+      print MAKEFILE "WSD=$ampsConfigLib::WorkingSourceDirectory\n";  
     
       foreach (@MakeFileContent) {
         print MAKEFILE "$_";      
@@ -469,37 +487,37 @@ sub ReadMainBlock {
   
   
   #remove the temporary source directory and copy there a fresh copy of the code distribution
-  if ( -d $WorkingSourceDirectory ) {
-    `rm -f -r $WorkingSourceDirectory`;
+  if ( -d $ampsConfigLib::WorkingSourceDirectory ) {
+    `rm -f -r $ampsConfigLib::WorkingSourceDirectory`;
   }
   
-  `cp -r $SourceDirectory $WorkingSourceDirectory`;
+  `cp -r $SourceDirectory $ampsConfigLib::WorkingSourceDirectory`;
  
   if ( -d "main" ) {
-    `cp -r main $WorkingSourceDirectory`;
+    `cp -r main $ampsConfigLib::WorkingSourceDirectory`;
   }
   
   #change prefix,error log file and diagnostic stream
-  RecursiveSubstitute('\$PREFIX:',$Prefix,$WorkingSourceDirectory);
-  RecursiveSubstitute('\$ERRORLOG',$ErrorLog,$WorkingSourceDirectory);
-  ChangeValueOfVariable("char PIC::DiagnospticMessageStreamName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$DiagnosticStream."\"","pic/pic_init_const.cpp");
-  ChangeValueOfVariable("char PIC::OutputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$OutputDirectory."\"","pic/pic_init_const.cpp");
+  ampsConfigLib::RecursiveSubstitute('\$PREFIX:',$Prefix,$ampsConfigLib::WorkingSourceDirectory);
+  ampsConfigLib::RecursiveSubstitute('\$ERRORLOG',$ErrorLog,$ampsConfigLib::WorkingSourceDirectory);
+  ampsConfigLib::ChangeValueOfVariable("char PIC::DiagnospticMessageStreamName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$DiagnosticStream."\"","pic/pic_init_const.cpp");
+  ampsConfigLib::ChangeValueOfVariable("char PIC::OutputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$OutputDirectory."\"","pic/pic_init_const.cpp");
   
   
   #update variables of the code distribution with the parameters of the "main block" of the input file 
-  ChangeValueOfVariable($InputFileVariable2CodeVariable{"TotalSpeciesNumber"},$TotalSpeciesNumber,$InputFileVariable2CodeSourceFile{"TotalSpeciesNumber"});
+  ampsConfigLib::ChangeValueOfVariable($InputFileVariable2CodeVariable{"TotalSpeciesNumber"},$TotalSpeciesNumber,$InputFileVariable2CodeSourceFile{"TotalSpeciesNumber"});
   
   #redefine the value of the macro that allows loading the user-defined table of the macros that describe the species used in the simulation 
-  RedefineMacro("_PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE_","_PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE__ON_","pic/picGlobal.dfn");
+  ampsConfigLib::RedefineMacro("_PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE_","_PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE__ON_","pic/picGlobal.dfn");
 
   #add markers to the code
   my @FileContent;
   
-  open (FILEIN,"<$WorkingSourceDirectory/pic/pic.h") || die "Cannot open file $WorkingSourceDirectory/pic/pic.h\n";  
+  open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/pic/pic.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/pic/pic.h\n";  
   @FileContent=<FILEIN>;
   close (FILEIN);
   
-  open (FILEOUT,">$WorkingSourceDirectory/pic/pic.h") || die "Cannot open file $WorkingSourceDirectory/pic/pic.h\n";
+  open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/pic/pic.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/pic/pic.h\n";
   
   foreach (@FileContent) {
     $_=~s/\$MARKER:SPECIES-MACRO-DEFINIETION-USED-IN-SIMULATION\$/$MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION/;
@@ -510,11 +528,11 @@ sub ReadMainBlock {
   close (FILEOUT);
   
   #add the definitions of the species macros to 'UserDefinition.PIC.h'
-  open (FILEIN,"<$WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $WorkingSourceDirectory/main/UserDefinition.PIC.h\n";  
+  open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h\n";  
   @FileContent=<FILEIN>;
   close (FILEIN); 
   
-  open (FILEOUT,">$WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $WorkingSourceDirectory/main/UserDefinition.PIC.h\n";
+  open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h\n";
   print FILEOUT "$MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION\n";
   
   foreach (@FileContent) {
@@ -525,16 +543,16 @@ sub ReadMainBlock {
   
   #set the debugger mode
   if ($DebuggerMode == 0) {
-    RedefineMacro("_PIC_DEBUGGER_MODE_","_PIC_DEBUGGER_MODE_OFF_","pic/picGlobal.dfn");
+    ampsConfigLib::RedefineMacro("_PIC_DEBUGGER_MODE_","_PIC_DEBUGGER_MODE_OFF_","pic/picGlobal.dfn");
   }
   else {
-    RedefineMacro("_PIC_DEBUGGER_MODE_","_PIC_DEBUGGER_MODE_ON_","pic/picGlobal.dfn");
+    ampsConfigLib::RedefineMacro("_PIC_DEBUGGER_MODE_","_PIC_DEBUGGER_MODE_ON_","pic/picGlobal.dfn");
   }
   
   #set the conditions for a repeables execution path of the code
   if ($ForceRepatableExecutionPath == 1) {
-    RedefineMacro("_PIC_DEBUGGER_MODE_","_PIC_DEBUGGER_MODE_ON_","pic/picGlobal.dfn");
-    RedefineMacro("_PIC_DYNAMIC_LOAD_BALANCING_MODE_","_PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_","pic/picGlobal.dfn");
+    ampsConfigLib::RedefineMacro("_PIC_DEBUGGER_MODE_","_PIC_DEBUGGER_MODE_ON_","pic/picGlobal.dfn");
+    ampsConfigLib::RedefineMacro("_PIC_DYNAMIC_LOAD_BALANCING_MODE_","_PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_","pic/picGlobal.dfn");
   }
 
 }
@@ -543,7 +561,8 @@ sub ReadMainBlock {
 sub UserDefinitions {
 
   while ($line=<InputFile>) {
-    $InputFileLineNumber++;
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;
     
     ($InputLine,$InputComment)=split('!',$line,2);
     $InputLine=uc($InputLine);
@@ -558,10 +577,10 @@ sub UserDefinitions {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
       if ($InputLine eq "ON") {
-        RedefineMacro("_PIC_USER_DEFINITION_MODE_","_PIC_USER_DEFINITION_MODE__ENABLED_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_USER_DEFINITION_MODE_","_PIC_USER_DEFINITION_MODE__ENABLED_","pic/picGlobal.dfn");
       }
       elsif ($InputLine eq "OFF") {
-        RedefineMacro("_PIC_USER_DEFINITION_MODE_","_PIC_USER_DEFINITION_MODE__DISABLED_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_USER_DEFINITION_MODE_","_PIC_USER_DEFINITION_MODE__DISABLED_","pic/picGlobal.dfn");
       }
       else {
         die "The option is unknown\n";
@@ -571,10 +590,10 @@ sub UserDefinitions {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
       if ($InputLine eq "ON") {
-        RedefineMacro("_AMR__LOAD_USER_DEFINITION__MODE_","_AMR__LOAD_USER_DEFINITION__MODE__ON_","meshAMR/meshAMRdef.h");
+        ampsConfigLib::RedefineMacro("_AMR__LOAD_USER_DEFINITION__MODE_","_AMR__LOAD_USER_DEFINITION__MODE__ON_","meshAMR/meshAMRdef.h");
       }
       elsif ($InputLine eq "OFF") {
-        RedefineMacro("_AMR__LOAD_USER_DEFINITION__MODE_","_AMR__LOAD_USER_DEFINITION__MODE__OFF_","meshAMR/meshAMRdef.h");
+        ampsConfigLib::RedefineMacro("_AMR__LOAD_USER_DEFINITION__MODE_","_AMR__LOAD_USER_DEFINITION__MODE__OFF_","meshAMR/meshAMRdef.h");
       }
       else {
         die "The option is unknown\n";
@@ -601,7 +620,8 @@ sub UserDefinitions {
 sub Sampling {
 
   while ($line=<InputFile>) {
-    $InputFileLineNumber++;
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;
     
     ($InputLine,$InputComment)=split('!',$line,2);
     $InputLine=uc($InputLine);
@@ -618,7 +638,7 @@ sub Sampling {
             
       
       if ($InputLine eq "OFF") {
-        RedefineMacro("_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_","_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_","_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_","pic/picGlobal.dfn");
       }
       elsif ($InputLine eq "ON") {
         my $t;
@@ -630,8 +650,8 @@ sub Sampling {
           my @x;
           
           @x=split(' ',$InputComment);
-          RedefineMacro("_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_","_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__CONSTANT_DIRECTION_ORIGIN_","pic/picGlobal.dfn");
-          ChangeValueOfArray("static const double constNormalDirection__SampleParallelTangentialTemperature\\[3\\]",\@x,"pic/pic.h");
+          ampsConfigLib::RedefineMacro("_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_","_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__CONSTANT_DIRECTION_ORIGIN_","pic/picGlobal.dfn");
+          ampsConfigLib::ChangeValueOfArray("static const double constNormalDirection__SampleParallelTangentialTemperature\\[3\\]",\@x,"pic/pic.h");
           
         }
         elsif ($InputLine eq "FUNCTION") {
@@ -642,7 +662,7 @@ sub Sampling {
         }
         
         
-        RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }  
       else {
         die "Unknown option\n";
@@ -668,7 +688,8 @@ sub Sampling {
 sub ParticleCollisionModel {
 
   while ($line=<InputFile>) {
-    $InputFileLineNumber++;
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;;
     
     ($InputLine,$InputComment)=split('!',$line,2);
     $InputLine=uc($InputLine);
@@ -684,11 +705,11 @@ sub ParticleCollisionModel {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
       if ($InputLine eq "HS") {
-        RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
-        RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL_","_PIC__PARTICLE_COLLISION_MODEL__HS_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL_","_PIC__PARTICLE_COLLISION_MODEL__HS_","pic/picGlobal.dfn");
       }
       elsif ($InputLine eq "OFF") {
-        RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }  
       else {
         die "Unknown option\n";
@@ -699,10 +720,10 @@ sub ParticleCollisionModel {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
       if ($InputLine eq "ON") {
-        RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__","_PIC_MODE_ON_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__","_PIC_MODE_ON_","pic/picGlobal.dfn");
       }
       elsif ($InputLine eq "OFF") {
-        RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
         die "Cannot recognize the option\n";
@@ -780,7 +801,7 @@ sub ParticleCollisionModel {
         }
           
           
-        SubstituteCodeLine("const double ConstantCollisionCrossSectionTable",$newCrossSectionTable,"pic/pic.h");  
+        ampsConfigLib::SubstituteCodeLine("const double ConstantCollisionCrossSectionTable",$newCrossSectionTable,"pic/pic.h");  
           
         
       }
@@ -813,7 +834,8 @@ sub ReadBackgroundAtmosphereBlock {
   my $s1;
     
   while ($line=<InputFile>) {
-    $InputFileLineNumber++;
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;
     
     ($InputLine,$InputComment)=split('!',$line,2);
     $InputLine=uc($InputLine);
@@ -831,17 +853,17 @@ sub ReadBackgroundAtmosphereBlock {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ON") {
-        RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__ON_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__ON_","pic/picGlobal.dfn");
         
         if (-e "main/UserDefinition.PIC.h") {
-          RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__ON_","main/UserDefinition.PIC.h");
+          ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__ON_","main/UserDefinition.PIC.h");
         }
       }
       elsif ($s0 eq "OFF") {
-        RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","pic/picGlobal.dfn");
         
         if (-e "main/UserDefinition.PIC.h") {
-          RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","main/UserDefinition.PIC.h");
+          ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","main/UserDefinition.PIC.h");
         }
       }
       else {
@@ -870,11 +892,11 @@ sub ReadBackgroundAtmosphereBlock {
       my @FileContent;
       my $cnt=0;
       
-      open (FILEIN,"<$WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $WorkingSourceDirectory/main/UserDefinition.PIC.h\n";  
+      open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h\n";  
       @FileContent=<FILEIN>;
       close (FILEIN); 
   
-      open (FILEOUT,">$WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $WorkingSourceDirectory/main/UserDefinition.PIC.h\n";
+      open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h\n";
       
       foreach (@BackgroundSpeciesList) {
         print FILEOUT "#undef _"."$_"."_BACKGROUND_SPEC_\n";
@@ -913,19 +935,19 @@ sub ReadBackgroundAtmosphereBlock {
       }
       
       #add new values of the variables into the code
-      ChangeValueOfArray("static const double BackgroundSpeciesMassTable\\[\\]",\@MassTable,"pic/pic.h");
-      ChangeValueOfVariable("static const int nTotalBackgroundSpecies",$nBackgroundSpecies,"pic/pic.h");
-      ChangeValueOfArray("static const int Background2ModelSpeciesConversionTable\\[\\]",\@Background2ModelSpeciesConversionTable,"pic/pic.h");
+      ampsConfigLib::ChangeValueOfArray("static const double BackgroundSpeciesMassTable\\[\\]",\@MassTable,"pic/pic.h");
+      ampsConfigLib::ChangeValueOfVariable("static const int nTotalBackgroundSpecies",$nBackgroundSpecies,"pic/pic.h");
+      ampsConfigLib::ChangeValueOfArray("static const int Background2ModelSpeciesConversionTable\\[\\]",\@Background2ModelSpeciesConversionTable,"pic/pic.h");
          
     }
     elsif ($s0 eq "COLLISIONMODE") {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ON") {
-        AddMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__ON_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__ON_","main/UserDefinition.PIC.h");
       }
       elsif ($s0 eq "OFF") {
-        AddMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","main/UserDefinition.PIC.h");
       }
       else {
         die "Cannot recognize the option\n";
@@ -1021,7 +1043,7 @@ sub ReadBackgroundAtmosphereBlock {
         }
         
         #add the difinition of the function into the code
-        RedefineMacroFunction("_PIC_BACKGROUND_ATMOSPHERE__COLLISION_CROSS_SECTION_FUNCTION_","(t1,t2,t3,t4,t5,t6) ($FunctionName(t1,t2,t3,t4,t5,t6))","pic/pic.h");  
+        ampsConfigLib::RedefineMacroFunction("_PIC_BACKGROUND_ATMOSPHERE__COLLISION_CROSS_SECTION_FUNCTION_","(t1,t2,t3,t4,t5,t6) ($FunctionName(t1,t2,t3,t4,t5,t6))","pic/pic.h");  
       }
       else {
         die "Cannot recognize the option\n";
@@ -1043,7 +1065,7 @@ sub ReadBackgroundAtmosphereBlock {
       }
         
       #insert the constant cross section table into the code
-      ChangeValueOfArray("static const double BackgroundAtmosphereConstantCrossSectionTable\\[PIC::nTotalSpecies\\]\\[nTotalBackgroundSpecies\\]",\@ConstantCrossSectionTable,"pic/pic.h");
+      ampsConfigLib::ChangeValueOfArray("static const double BackgroundAtmosphereConstantCrossSectionTable\\[PIC::nTotalSpecies\\]\\[nTotalBackgroundSpecies\\]",\@ConstantCrossSectionTable,"pic/pic.h");
       
     }
            
@@ -1051,10 +1073,10 @@ sub ReadBackgroundAtmosphereBlock {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ISOTROPIC") {
-        AddMacro("_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_","_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__ISOTROPIC_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_","_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__ISOTROPIC_","main/UserDefinition.PIC.h");
       }
       elsif ($s0 eq "FUNCTION") {
-        AddMacro("_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_","_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__USER_DEFINED_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_","_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__USER_DEFINED_","main/UserDefinition.PIC.h");
       }
     }
   
@@ -1062,10 +1084,10 @@ sub ReadBackgroundAtmosphereBlock {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ON") {
-        AddMacro("_PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_","_PIC_MODE_ON_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_","_PIC_MODE_ON_","main/UserDefinition.PIC.h");
       }
       elsif ($s0 eq "OFF") {
-        AddMacro("_PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_","_PIC_MODE_OFF_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_","_PIC_MODE_OFF_","main/UserDefinition.PIC.h");
       }
     }
 
@@ -1073,10 +1095,10 @@ sub ReadBackgroundAtmosphereBlock {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ON") {
-        AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_ON_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_ON_","main/UserDefinition.PIC.h");
       }
       elsif ($s0 eq "OFF") {
-        AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_OFF_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_OFF_","main/UserDefinition.PIC.h");
       }
     }
     
@@ -1087,7 +1109,7 @@ sub ReadBackgroundAtmosphereBlock {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ON") {
-        RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE__LOAD_USER_DEFINITION__MODE_","_PIC_MODE_ON_","pic/pic.h");
+        ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE__LOAD_USER_DEFINITION__MODE_","_PIC_MODE_ON_","pic/pic.h");
         
         my $FileName;
         $line=~s/=/ /g;
@@ -1096,7 +1118,7 @@ sub ReadBackgroundAtmosphereBlock {
         ($FileName,$line)=split(' ',$line,2);
         ($FileName,$line)=split(' ',$line,2);
         
-        RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE__UDER_DEFINITION_","\"$FileName\"","pic/pic.h");
+        ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE__UDER_DEFINITION_","\"$FileName\"","pic/pic.h");
       }
 
 
@@ -1129,7 +1151,8 @@ sub ReadSpeciesBlock {
   my $SkipSpecieFlag=0;
   
   while ($line=<InputFile>) {
-    $InputFileLineNumber++;
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;
     
     ($InputLine,$InputComment)=split('!',$line,2);
     $InputLine=uc($InputLine);
@@ -1185,12 +1208,12 @@ sub ReadSpeciesBlock {
     $_="\"".$_."\"";
   }
   
-  ChangeValueOfArray("static const char ChemTable\\[\\]\\[_MAX_STRING_LENGTH_PIC_\\]",\@t,"pic/pic.h");
-  ChangeValueOfArray("static const double MolMass\\[nTotalSpecies\\]",\@MassArray,"pic/pic.h");
+  ampsConfigLib::ChangeValueOfArray("static const char ChemTable\\[\\]\\[_MAX_STRING_LENGTH_PIC_\\]",\@t,"pic/pic.h");
+  ampsConfigLib::ChangeValueOfArray("static const double MolMass\\[nTotalSpecies\\]",\@MassArray,"pic/pic.h");
   
   #init the array of species type descriptors
   my @SpcecieTypeTable=("_PIC_SPECIE_TYPE__GAS_")x$TotalSpeciesNumber;
-  ChangeValueOfArray("static const int SpcecieTypeTable\\[\\]",\@SpcecieTypeTable,"pic/pic.h");
+  ampsConfigLib::ChangeValueOfArray("static const int SpcecieTypeTable\\[\\]",\@SpcecieTypeTable,"pic/pic.h");
 
 =comment
   #the chemical symbol table  
@@ -1229,6 +1252,7 @@ sub ReadSpeciesBlock {
 }
 
 
+=comment
 #=============================== Change a value of a variable in the code  =============================
 sub ChangeValueOfVariable {
   my $Variable=$_[0];
@@ -1237,11 +1261,11 @@ sub ChangeValueOfVariable {
   
   my @FileContent;
   
-  open (FILEIN,"<$WorkingSourceDirectory/$File") || die "Cannot open file $WorkingSourceDirectory/$File\n";  
+  open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";  
   @FileContent=<FILEIN>;
   close (FILEIN);
   
-  open (FILEOUT,">$WorkingSourceDirectory/$File");
+  open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/$File");
   
   foreach (@FileContent) {
     if ($_=~/$Variable/) {
@@ -1263,11 +1287,11 @@ sub RedefineMacro {
   
   my @FileContent;
   
-  open (FILEIN,"<$WorkingSourceDirectory/$File") || die "Cannot open file $WorkingSourceDirectory/$File\n";  
+  open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";  
   @FileContent=<FILEIN>;
   close (FILEIN);
   
-  open (FILEOUT,">$WorkingSourceDirectory/$File") || die "Cannot open file $WorkingSourceDirectory/$File\n";
+  open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";
   
   foreach (@FileContent) {
     if ($_=~/\#define $Macro /) {
@@ -1288,11 +1312,11 @@ sub RedefineMacroFunction {
   
   my @FileContent;
   
-  open (FILEIN,"<$WorkingSourceDirectory/$File") || die "Cannot open file $WorkingSourceDirectory/$File\n";  
+  open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";  
   @FileContent=<FILEIN>;
   close (FILEIN);
   
-  open (FILEOUT,">$WorkingSourceDirectory/$File") || die "Cannot open file $WorkingSourceDirectory/$File\n";
+  open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";
   
   foreach (@FileContent) {
     if ($_=~/\#define $Macro/) {
@@ -1311,7 +1335,7 @@ sub AddMacro {
   my $Value=$_[1];
   my $File=$_[2];
   
-  open (FILEIN,">>$WorkingSourceDirectory/$File") || die "Cannot open file $WorkingSourceDirectory/$File\n";   
+  open (FILEIN,">>$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";   
   print FILEIN "#undef $Macro\n#define $Macro $Value\n\n";
   close (FILEIN);
 }
@@ -1324,11 +1348,11 @@ sub ChangeValueOfArray {
   
   my @FileContent;
   
-  open (FILEIN,"<$WorkingSourceDirectory/$File") || die "Cannot open file $WorkingSourceDirectory/$File\n";  
+  open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";  
   @FileContent=<FILEIN>;
   close (FILEIN);
  
-  open (FILEOUT,">$WorkingSourceDirectory/$File");
+  open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/$File");
   
   foreach (@FileContent) {
     if ($_=~m/($Variable)/) {
@@ -1362,11 +1386,11 @@ sub SubstituteCodeLine {
   
   my @FileContent;
   
-  open (FILEIN,"<$WorkingSourceDirectory/$File") || die "Cannot open file $WorkingSourceDirectory/$File\n";  
+  open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";  
   @FileContent=<FILEIN>;
   close (FILEIN);
  
-  open (FILEOUT,">$WorkingSourceDirectory/$File");
+  open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/$File");
   
   foreach (@FileContent) {
     if ($_=~m/($oldLinstKey)/) {
@@ -1420,11 +1444,8 @@ sub RecursiveSubstitute {
       close (FILE);
     }
   }
-  
-   
-  
 }
 
-
+=cut
 
 
