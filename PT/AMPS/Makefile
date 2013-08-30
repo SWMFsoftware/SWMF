@@ -123,6 +123,7 @@ test_amps:
 
 test_amps_compile:
 	rm -rf ${TESTDIR}
+	./ampsConfig.pl
 	$(MAKE) amps
 
 test_amps_rundir:
