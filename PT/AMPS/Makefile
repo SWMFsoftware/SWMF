@@ -52,7 +52,7 @@ cleansrc:
 	cd ${WSD}/models/exosphere; make clean
 	cd ${WSD}/main; make clean
 
-	cd srcInterface; rm -f *.o
+#	cd srcInterface; rm -f *.o
 
 tar:
 	cd ../pic-tower/sources/general; rm -f *.o *.a
