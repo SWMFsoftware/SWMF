@@ -7,6 +7,8 @@ use warnings;
 use POSIX qw(strftime);
 use List::Util qw(first);
 
+use ampsConfigLib;
+
 
 #my $command= $];
 #print "Perl version : ".$command;
@@ -21,14 +23,17 @@ use List::Util qw(first);
 #print "Process the exospehre model input:\n";
 
 
-my $InputFileName="mercury.input.Assembled.Block";   #$ARGV[0];
+my $InputFileName=$ARGV[0];  ##########"mercury.input.Assembled.Block";   #$ARGV[0];
 my $SpeciesFileName="mercury.input.Assembled.Species";
-my $WorkingSourceDirectory="src";  #$ARGV[1];
+my $WorkingSourceDirectory=$ARGV[1];   #####"src";  #$ARGV[1];
+
+$ampsConfigLib::WorkingSourceDirectory=$WorkingSourceDirectory;
 
 my $line;
 my $LineOriginal;
 
 my $InputFileLineNumber=0;
+my $FileName;
 my $InputLine;
 my $InputComment;
 my $s0;
@@ -44,8 +49,10 @@ close (PIC_H);
 open (InputFile,"<","$InputFileName") || die "Cannot find file \"$InputFileName\"\n";
 
 while ($line=<InputFile>) {
+  ($InputFileLineNumber,$FileName)=split(' ',$line);
+  $line=<InputFile>;
+  
   $LineOriginal=$line;
-  $InputFileLineNumber++;
   chomp($line);
   
   
@@ -65,11 +72,11 @@ while ($line=<InputFile>) {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
       
-      RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY_MODE_","_EXOSPHERE_SODIUM_STICKING_PROBABILITY_MODE__CONSTANT_","main/Moon.cpp");
-      RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY__CONSTANT_VALUE_","$InputLine","main/Moon.cpp");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY_MODE_","_EXOSPHERE_SODIUM_STICKING_PROBABILITY_MODE__CONSTANT_","main/Moon.cpp");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY__CONSTANT_VALUE_","$InputLine","main/Moon.cpp");
     } 
     elsif ($InputLine eq "YAKSHINSKIY2005SS") {
-      RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY_MODE_","_EXOSPHERE_SODIUM_STICKING_PROBABILITY_MODE__YAKSHINSKY2005SS_","main/Moon.cpp");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY_MODE_","_EXOSPHERE_SODIUM_STICKING_PROBABILITY_MODE__YAKSHINSKY2005SS_","main/Moon.cpp");
     }
     else {
       die "The option is not recognized, line=$InputFileLineNumber ($InputFileName)\n";
@@ -79,7 +86,10 @@ while ($line=<InputFile>) {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
     $InputLine=~s/ //g;
     
-    RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY__REEMISSION_FRACTION_","$InputLine","main/Moon.cpp");
+    ampsConfigLib::RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY__REEMISSION_FRACTION_","$InputLine","main/Moon.cpp");
+  }
+  elsif ($InputLine eq "#ENDBLOCK") {
+    last;
   }
    
   else {
@@ -88,6 +98,7 @@ while ($line=<InputFile>) {
 }
 
 
+=comment
 #=============================== Change a definition of a macro in a source code  =============================
 sub RedefineMacro {
   my $Macro=$_[0];
@@ -113,3 +124,4 @@ sub RedefineMacro {
   
   close (FILEOUT);
 }
+=cut

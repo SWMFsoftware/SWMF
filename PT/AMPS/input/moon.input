@@ -6,19 +6,19 @@ SpeciesList=Na  !, NA_Plus !lkdsjflksdj
 
 !settings of the directories
 !update the following variables in the makefile 
-makefile  SOURCES=/Users/vtenishe/Debugger/eclipse-workspace/SOURCES
-makefile  SPICE=/Users/vtenishe/SPICE/Toolkit/cspice
-makefile  RUNDIR=run 
-makefile  MPIRUN=/usr/local/openmpi-1.4.2--intel/bin/mpirun -np 6   
+makefile  SOURCES=src
+makefile  SPICE=nospice 
+makefile  RUNDIR=run
+makefile  MPIRUN=mpirun -np 4
 
 
-WorkingSourceDirectory=src   !. !srcTemp !the location of the code that will be compiled  
-SourceDirectory=/Users/vtenishe/Debugger/eclipse-workspace/SOURCES 
+WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".") 
+SourceDirectory=src
 
 !ErrorLog=amps_error.log
 Prefix=AMPS
-!DiagnosticStream=output/PT/amps.log !!!screen !!screen, filename 'something like amps.log' 
-!OutputDirectory=output/PT 
+!DiagnosticStream=output/PT/amps.log !!!screen !!screen, filename 'something like amps.log'
+!OutputDirectory=output/PT
 
 !PT/plots
 ErrorLog=PT/amps_error.log
@@ -28,6 +28,11 @@ OutputDirectory=PT/plots
 
 DebuggerMode=off !on,off
 ForceRepeatableSimulationPath=on ! on,off
+
+
+
+
+
 
 #endmain
 
@@ -55,6 +60,8 @@ ForceRepeatableSimulationPath=on ! on,off
 
 
 #BackgroundSpecies
+  BackgroundSpecies=on !!on,off
+
   SpeciesList=CO2,O  
   CollisionMode=off !on !on,off
 
@@ -85,14 +92,13 @@ ForceRepeatableSimulationPath=on ! on,off
 
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
+  SPICE=off !off !on, off
+
 !  SimulationStartTime=2008-12-30T00:00:00 
   SimulationStartTime=2009-01-24T00:00:00
 
 !  addPhysicalModelHeader=Moon.h,Exosphere_Helium.h 
 !  addPhysicalModelHeader=Exosphere_Helium.h   
-
-
-SPICE=off  
 
 !---------------------------------   SOURCE RATE --------------------------------------------
   Source:Sputtering=off \\ !on,off
@@ -116,7 +122,8 @@ SPICE=off
   Source:UserDefined=on \\ !on,off
     SourceProcessCode=MySource \\
     SourceRate=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate \\ !!!!!Moon::GetTotalProductionRateBjorn !!!Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate \\
-    GenerateParticleProperties=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties !!Moon::GenerateParticlePropertiesBjorn !!Moon::GenerateParticlePropertiesBjorn  !!!Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties \\
+    GenerateParticleProperties=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties \\ !!Moon::GenerateParticlePropertiesBjorn !!Moon::GenerateParticlePropertiesBjorn  !!!Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties \\
+    ModifySurfaceSpeciesAbundance=false !!!true,false 
 !   InitSurfaceSourceDistribution=SolarWindSputtering::SurfaceInjectionDistribution.Init
 
 
@@ -166,13 +173,13 @@ SPICE=off
 
 
 
-_EXOSPHERE__USER_DEFINED_FILE_OUTPUT__PRINT_DATA__
+!_EXOSPHERE__USER_DEFINED_FILE_OUTPUT__PRINT_DATA__
 
 
-SPHERE__USER_DEFINED_FILE_OUTPUT__VARIABLE_LIST_
+!SPHERE__USER_DEFINED_FILE_OUTPUT__VARIABLE_LIST_
 
 
-#endblok
+#endblock
 
 
 #end
