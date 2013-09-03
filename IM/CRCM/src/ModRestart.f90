@@ -9,15 +9,18 @@ contains
 
   subroutine crcm_read_restart
     use ModCrcmPlanet,ONLY: nspec
-    use ModCrcmGrid,  ONLY: np,nt,nm,nk
-    use ModCrcm,      ONLY: f2, phot, Pressure_IC, PressurePar_IC, FAC_C, Ppar_IC, Bmin_C
-    use ModFieldTrace,ONLY: iba
+    use ModCrcmGrid,  ONLY: np,nt,nm,nk,d4Element_C
+    use ModCrcm,      ONLY: f2, phot, Pressure_IC, PressurePar_IC, FAC_C, &
+         Ppar_IC, Bmin_C,eChangeOperator_IV,driftin,driftout,rbsumlocal,  &
+         rbsumGlobal
+    use ModFieldTrace,ONLY: iba,ekev
     use ModGmCrcm,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCrcmGrid,  ONLY: iProc,nProc,iComm
     use ModMpi
 
-    integer :: iError,iSend
+    real :: weight
+    integer :: iError, n
     !--------------------------------------------------------------------------
     !When nProc>1, proc0 reads and then bcasts restart infor
     !when only 1 proc is used then just read restart info
@@ -32,9 +35,12 @@ contains
        read(UnitTmp_) iba
        read(UnitTmp_) Ppar_IC
        read(UnitTmp_) Bmin_C
+       read(UnitTmp_) eChangeOperator_IV
+       read(UnitTmp_) driftin
+       read(UnitTmp_) driftout
        close(UnitTmp_)
     end if
-
+    
     if(nProc>1)then
        !Bcast from proc 0 to all procs
        call MPI_bcast(f2,nspec*np*nt*nm*nk, MPI_REAL, 0, iComm, iError)
@@ -48,6 +54,20 @@ contains
        call MPI_bcast(Bmin_C, np*nt, MPI_REAL, 0, iComm, iError)
     endif
 
+    !Calculate rbsumLocal and Global
+    do n=1,nspec 
+       ! set rbsumlocal 
+       call calc_rbsumlocal(n)
+       
+       !reduce local sum to global
+       if (nProc >0) then
+          call MPI_REDUCE (rbsumLocal(n), rbsumGlobal(n), 1, MPI_REAL, &
+               MPI_SUM, 0, iComm, iError)
+       else
+          rbsumGlobal(n)=rbsumLocal(n)
+       endif
+    enddo
+    
   end subroutine crcm_read_restart
   
 
@@ -55,7 +75,8 @@ contains
   subroutine crcm_write_restart
     use ModCrcmPlanet,ONLY: nspec
     use ModCrcmGrid,  ONLY: np,nt,nm,nk,MinLonPar,MaxLonPar
-    use ModCrcm,      ONLY: f2,time, phot, Pressure_IC, PressurePar_IC, FAC_C, Ppar_IC, Bmin_C
+    use ModCrcm,      ONLY: f2,time, phot, Pressure_IC, PressurePar_IC, &
+         FAC_C, Ppar_IC, Bmin_C,eChangeOperator_IV,driftin,driftout
     use ModFieldTrace,ONLY: iba    
     use ModGmCrcm,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
@@ -153,6 +174,9 @@ contains
        write(UnitTmp_) iba                
        write(UnitTmp_) Ppar_IC
        write(UnitTmp_) Bmin_C
+       write(UnitTmp_) eChangeOperator_IV
+       write(UnitTmp_) driftin
+       write(UnitTmp_) driftout
        close(UnitTmp_)
 
        open(unit=UnitTmp_,file='IM/restartOUT/restart.H')

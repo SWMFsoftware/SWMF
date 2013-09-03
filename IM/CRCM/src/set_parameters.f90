@@ -3,8 +3,8 @@ subroutine CRCM_set_parameters(NameAction)
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModReadParam
   use ModCrcmInitialize, ONLY: IsEmptyInitial,IsDataInitial, IsGmInitial
-  use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot, DoSaveFlux, &
-                               UseSeparatePlotFiles
+  use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot, DoSaveFlux, DoSaveLog,&
+                               UseSeparatePlotFiles, DtLogOut
   use ModFieldTrace,     ONLY: UseEllipse
   use ModCrcm,           ONLY: UseMcLimiter, BetaLimiter, time, Pmin
   use ModCrcmRestart,    ONLY: IsRestart
@@ -37,6 +37,10 @@ subroutine CRCM_set_parameters(NameAction)
         endif
         
         DoSavePlot = .true.
+
+     case('#SAVELOG')
+        call read_var('DtLogOut',DtLogOut)
+        DoSaveLog = .true.
 
      case('#INITIALF2')
         call read_var('IsEmptyInitial',IsEmptyInitial)

@@ -39,6 +39,8 @@ Module ModCrcmGrid
 
   real :: xlatr(np), xmlt(nt), dlat(np1), energy(neng), sinAo(npit),&
           Ebound(neng+1)
+
+  real :: d4Element_C(np,nm,nk) !4D element (dlat*dphi*dmm*dk)
   
   logical, parameter :: UseExpandedGrid =.true.
 

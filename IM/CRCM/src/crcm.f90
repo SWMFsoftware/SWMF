@@ -3,7 +3,10 @@ subroutine crcm_run(delta_t)
   use ModConst,       ONLY: cLightSpeed, cElectronCharge
   use ModCrcmInitialize
   use ModCrcm,        ONLY: f2,dt, Time, phot, Ppar_IC, Pressure_IC, &
-                            PressurePar_IC,FAC_C, Bmin_C
+                            PressurePar_IC,FAC_C, Bmin_C, &
+                            eChangeOperator_IV,OpBfield_,OpDrift_,OpLossCone_, &
+                            OpChargeEx_, OpStrongDiff_,rbsumLocal,rbsumGlobal, &
+                            driftin, driftout
   use ModCrcmPlanet,  ONLY: re_m, dipmom, Hiono, nspec, amu_I, &
                             dFactor_I,tFactor_I
   use ModFieldTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
@@ -12,8 +15,8 @@ subroutine crcm_run(delta_t)
                             AveP_,AvePpar_,AveDens_, AveDen_I,AveP_I,iLatMin,&
                             DoMultiFluidGMCoupling,DoAnisoPressureGMCoupling
   use ModIeCrcm,      ONLY: pot
-  use ModCrcmPlot,    ONLY: Crcm_plot, Crcm_plot_fls, DtOutput, DoSavePlot,&
-                            DoSaveFlux
+  use ModCrcmPlot,    ONLY: Crcm_plot, Crcm_plot_fls, crcm_plot_log, &
+                            DtOutput, DtLogOut,DoSavePlot, DoSaveFlux, DoSaveLog
   use ModCrcmRestart, ONLY: IsRestart
   use ModImTime
   use ModTimeConvert, ONLY: time_real_to_int
@@ -203,23 +206,29 @@ subroutine crcm_run(delta_t)
   call StDiTime(dt,vel,ftv,rc,re_m,dipmom,iba)
   call timing_stop('crcm_StDiTime')
 
+  !get energy contribution from Bfield change before start of time loop
+  call sume(eChangeOperator_IV(:,OpBfield_))
   ! time loop
   do n=1,nstep
      call timing_start('crcm_driftIM')
-     call driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
-          fb,f2,ib0)
+     call driftIM(iw2,nspec,np,nt,nm,nk,dt,dlat,dphi,brad,rb,vl,vp, &
+          fb,f2,driftin,driftout,ib0)
+     call sume(eChangeOperator_IV(:,OpDrift_))
      call timing_stop('crcm_driftIM')
 
      call timing_start('crcm_charexchange')
      call charexchangeIM(np,nt,nm,nk,nspec,iba,achar,f2)
+     call sume(eChangeOperator_IV(:,OpChargeEx_))
      call timing_stop('crcm_charexchange')
 
      call timing_start('crcm_lossconeIM')
      call lossconeIM(np,nt,nm,nk,nspec,iba,alscone,f2)
+     call sume(eChangeOperator_IV(:,OpLossCone_))
      call timing_stop('crcm_lossconeIM')
 
      call timing_start('crcm_StrongDiff')
      call StrongDiff(iba)        
+     call sume(eChangeOperator_IV(:,OpStrongDiff_))
      call timing_stop('crcm_StrongDiff')                       
      
      Time = Time+dt
@@ -227,6 +236,17 @@ subroutine crcm_run(delta_t)
      CurrentTime = StartTime+Time
      call time_real_to_int(CurrentTime,iCurrentTime_I)
   enddo
+
+  ! After time loop sum rbsumLocal tp rbsumglobal
+  do n=1,nspec
+     if (nProc >0) then
+        call MPI_REDUCE (rbsumLocal(n), rbsumGlobal(n), 1, MPI_REAL, &
+               MPI_SUM, 0, iComm, iError)
+     else
+        rbsumGlobal(n)=rbsumLocal(n)
+     endif
+  enddo
+
 
   call timing_start('crcm_output')
   call crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
@@ -376,6 +396,7 @@ subroutine crcm_run(delta_t)
   !         ftv, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
   !            0, iComm, iError)
   if (iProc == 0) then
+     ! do main plotting
      if (DoSavePlot.and.&
           (floor((Time+1.0e-5)/DtOutput))/=&
           floor((Time+1.0e-5-delta_t)/DtOutput)) then
@@ -386,6 +407,7 @@ subroutine crcm_run(delta_t)
 
         if (DoSaveFlux) call Crcm_plot_fls(rc,flux,time)
      endif
+  
      ! Write Sat Output
      if(DoWriteSats .and. DoSavePlot .and. &
           (floor((Time+1.0e-5)/DtSatOut))/=&
@@ -396,8 +418,19 @@ subroutine crcm_run(delta_t)
            call timing_stop('crcm_write_im_sat')
         enddo
      endif
+
+     ! Write Logfile
+     if(DoSaveLog .and. &
+          (floor((Time+1.0e-5)/DtLogOut))/=&
+          floor((Time+1.0e-5-delta_t)/DtLogOut))then
+        call timing_start('crcm_plot_log')
+        call crcm_plot_log(Time)
+        call timing_stop('crcm_plot_log')
+     endif
   endif
   
+
+
 end subroutine Crcm_run
 
 !-----------------------------------------------------------------------------
@@ -407,7 +440,7 @@ subroutine crcm_init
   !
   ! Input: np,nt,neng,npit,nspec,re_m,dipmom,Hiono
   ! Output: xlat,xmlt,energy,sinAo (through augments)
-  !         xmm1,xk1,phi1,dlat1,dphi1,dmm1,dk1,delE1,dmu1,xjac,amu (through 
+  !         xmm1,xk1,phi1,dlat1,dphi1,dmm1,dk1,delE1,dmu1,xjac,d4,amu (through 
   !         common block cinitialization
 
   use ModPlanetConst, ONLY: Earth_,DipoleStrengthPlanet_I,rPlanet_I
@@ -417,16 +450,17 @@ subroutine crcm_init
   use ModCrcmInitialize
   use ModCrcmRestart, ONLY: IsRestart, crcm_read_restart
   use ModImTime
-  use ModCrcmGrid,    ONLY: iProcLeft, iProcRight, iLonLeft, iLonRight
+  use ModCrcmGrid,    ONLY: iProcLeft, iProcRight, iLonLeft, iLonRight,d4Element_C
   use ModTimeConvert, ONLY: time_int_to_real,time_real_to_int
   use ModMpi
 
   implicit none
 
-  integer i,n,k,iPe, iError
+  integer i,n,k,m,iPe, iError
   
   real rw,rsi,rs1
   real xjac1,sqrtm
+  real d2
 
   ! Set up proc distribution
   if (iProc < mod(nt,nProc))then
@@ -543,6 +577,16 @@ subroutine crcm_init
      enddo
   enddo
 
+  ! Calculate d4Element_C: dlat*dphi*dmm*dk
+      do i=1,np
+         d2=dlat(i)*dphi
+         do k=1,nm
+            do m=1,nk
+               d4Element_C(i,k,m)=d2*dmm(k)*dk(m)
+            enddo
+         enddo
+      enddo
+
   if(IsRestart) then
      !set initial state when restarting
      call crcm_read_restart
@@ -556,23 +600,26 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   ! Routine setup initial distribution.
   ! 
   ! Input: nspec,np,nt,iba,Den_IC,Temp_IC,amu,vel,xjac
-  ! Output: ib0,f2 (through common block cinitial_f2)
+  ! Output: ib0,f2,rbsum,xleb,xled,xlel,xlee,xles,driftin,driftout
+  !         (through common block cinitial_f2)
   use ModIoUnit, ONLY: UnitTmp_
   use ModGmCrcm, ONLY: Den_IC, Temp_IC, Temppar_IC, DoAnisoPressureGMCoupling
-  use ModCrcm,   ONLY: f2
+  use ModCrcm,   ONLY: f2,eChangeOperator_IV,nOperator,driftin,driftout,rbsumLocal,rbsumGlobal
   use ModCrcmInitialize,   ONLY: IsEmptyInitial, IsDataInitial, IsGmInitial
-  use ModCrcmGrid,ONLY: nm,nk,MinLonPar,MaxLonPar
+  use ModCrcmGrid,ONLY: nm,nk,MinLonPar,MaxLonPar,iProc,nProc,iComm,d4Element_C
   use ModFieldTrace, ONLY: sinA,ro, ekev,pp,iw2,irm
+  use ModMpi
   implicit none
 
   integer,parameter :: np1=51,nt1=48,nspec1=1  
   !integer,parameter :: nm=35,nk=28 ! dimension of CRCM magnetic moment and K
  
-  integer nspec,np,nt,iba(nt),ib0(nt),n,j,i,k,m
+  integer nspec,np,nt,iba(nt),ib0(nt),n,j,i,k,m, iError
   real amu_I(nspec),vel(nspec,np,nt,nm,nk)
   real velperp2, velpar2
   real xjac(nspec,np,nm),pi,xmass,chmass,f21,vtchm
   real Tempperp_IC(nspec,np,nt)
+  real xleb(nspec),xled(nspec),xlel(nspec),xlee(nspec),xles(nspec)
 
   ! Variables needed for data initialization 
   integer :: il, ie, iunit
@@ -669,6 +716,30 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
         !f2(:,1,:,:,:)=f2(:,2,:,:,:)
      enddo                                        ! end of n loop
   end if
+
+! Calculation of rbsum
+  do n=1,nspec
+     call calc_rbsumlocal(n)
+     !reduce local sum to global
+     if (nProc >0) then
+        call MPI_REDUCE (rbsumLocal(n), rbsumGlobal(n), 1, MPI_REAL, &
+               MPI_SUM, 0, iComm, iError)
+     else
+        rbsumGlobal(n)=rbsumLocal(n)
+     endif
+  enddo                 
+
+
+! Setup variables for energy gain/loss from each process
+  eChangeOperator_IV(1:nspec,1:nOperator)=0.0
+!  xleb(1:nspec)=0.          ! energy gain/loss due to changing B field        
+!  xled(1:nspec)=0.          ! energy gain/loss due to drift
+!  xlel(1:nspec)=0.          ! energy loss due to losscone 
+!  xlee(1:nspec)=0.          ! energy loss due to charge exchange         
+!  xles(1:nspec)=0.          ! energy loss due to strong diffusion 
+  driftin(1:nspec)=0.      ! energy gain due injection
+  driftout(1:nspec)=0.     ! energy loss due drift-out loss
+
 end subroutine initial_f2
 
 
@@ -877,24 +948,27 @@ end subroutine driftV
 
 
 !-------------------------------------------------------------------------------
-subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
-     fb,f2,ib0)
+subroutine driftIM(iw2,nspec,np,nt,nm,nk,dt,dlat,dphi,brad,rb,vl,vp, &
+     fb,f2,driftin,driftout,ib0)
   !-----------------------------------------------------------------------------
   ! Routine updates f2 due to drift
   !
-  ! Input: iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp,fb 
-  ! Input/Output: f2,ib0
+  ! Input: iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp,fbi
+  ! Input/Output: f2,ib0,driftin,driftout
   use ModCrcmGrid, ONLY: iProc,nProc,iComm,MinLonPar,MaxLonPar, &
-       iProcLeft, iLonLeft, iProcRight, iLonRight
+       iProcLeft, iLonLeft, iProcRight, iLonRight, d4Element_C
+  use ModFieldTrace, ONLY: iba, ekev
+    
   use ModMpi
   implicit none
 
-  integer nk,iw2(nk),nspec,np,nt,nm,iba(nt),ib0(nt)
+  integer nk,iw2(nk),nspec,np,nt,nm,ib0(nt)
   integer n,i,j,k,m,j1,j_1,ibaj,ib,ibo,nrun,nn
   real dt,dlat(np),dphi,brad(np,nt),vl(nspec,0:np,nt,nm,nk),vp(nspec,np,nt,nm,nk)
   real rb,fb(nspec,nt,nm,nk),f2(nspec,np,nt,nm,nk)
   real f2d(np,nt),cmax,cl1,cp1,cmx,dt1,fb0(nt),fb1(nt),fo_log,fb_log,f_log
   real slope,cl(np,nt),cp(np,nt),fal(0:np,nt),fap(np,nt),fupl(0:np,nt),fupp(np,nt)
+  real driftin(nspec),driftout(nspec),dEner,dPart,dEnerLocal,dPartLocal
   logical :: UseUpwind=.false.
 
   ! MPI status variable
@@ -1046,6 +1120,23 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
                        endif
                     endif
                  enddo iloop
+                 ! Calculate gain or loss at the outer boundary
+                 dPartLocal=-dt1/dlat(iba(j))*vl(n,iba(j),j,k,m)*fal(iba(j),j)*d4Element_C(iba(j),k,m)
+                 dEnerLocal=ekev(iba(j),j,k,m)*dPart
+                 !sum all dEner to root proc
+                 if(nProc>1) then
+                      call MPI_REDUCE (dPartLocal, dPart, 1, MPI_REAL, MPI_SUM, 0, &
+                      iComm, iError)
+                      call MPI_REDUCE (dEnerLocal, dEner, 1, MPI_REAL, MPI_SUM, 0, &
+                      iComm, iError)
+                   endif
+                 if(iProc==0) then
+                    if (dPart.gt.0.) driftin(n)=driftin(n)+dEner
+                    if (dPart.lt.0.) driftout(n)=driftout(n)+dEner
+                 else
+                    driftin(n)=0
+                    driftout(n)=0
+                 endif
               enddo jloop
 
               ! When regular scheme fails, try again with upwind scheme before 
@@ -1079,9 +1170,25 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp, &
                           endif
                        endif
                     enddo iLoopUpwind
+                    ! Calculate gain or loss at the outer boundary
+                    dPartLocal=-dt1/dlat(iba(j))*vl(n,iba(j),j,k,m)*fupl(iba(j),j)*d4Element_C(iba(j),k,m)
+                    dEnerLocal=ekev(iba(j),j,k,m)*dPart
+                    !sum all dEner to root proc
+                    if(nProc>1) &
+                      call MPI_REDUCE (dPartLocal, dPart, 1, MPI_REAL, MPI_SUM, 0, &
+                      iComm, iError)
+                      call MPI_REDUCE (dEnerLocal, dEner, 1, MPI_REAL, MPI_SUM, 0, &
+                      iComm, iError) 
+                    if(iProc==0) then
+                       if (dPart.gt.0.) driftin(n)=driftin(n)+dEner
+                       if (dPart.lt.0.) driftout(n)=driftout(n)+dEner
+                    else
+                       driftin(n)=0
+                       driftout(n)=0
+                    endif
                  enddo
               endif
-           enddo
+           enddo          ! end of do nn=1,nrun
            f2(n,1:np,1:nt,k,m)=f2d(1:np,1:nt)
         enddo kloop
      enddo mloop
@@ -1207,8 +1314,73 @@ subroutine lossconeIM(np,nt,nm,nk,nspec,iba,alscone,f2)
 
 end subroutine lossconeIM
 
+!==============================================================================
 
+subroutine sume(xle)
 !-------------------------------------------------------------------------------
+! Routine updates rbsum and xle
+! 
+! Input: f2,ekev,iba
+! Input/Output: rbsum,xle
+  use ModCrcm,       ONLY: rbsumLocal
+  use ModFieldTrace, ONLY: iba
+  use ModCrcmGrid,   ONLY: nProc,iProc,iComm
+  use ModCrcmPlanet, ONLY: nspec
+  use ModMPI
+  implicit none
+  
+  real, intent(inout):: xle(nspec)
+  
+  integer n,i,j,k,m,iError
+  real rbsumLocal0,xleChange,xleChangeLocal
+
+  do n=1,nspec
+     rbsumLocal0=rbsumLocal(n)
+     
+     call calc_rbsumlocal(n)
+
+     xleChangeLocal=rbsumLocal(n)-rbsumLocal0
+     
+     if (nProc >1) call MPI_REDUCE (xleChangeLocal, xleChange, 1, MPI_REAL, &
+           MPI_SUM, 0, iComm, iError)
+
+     if(iProc==0) then 
+        xle(n)=xle(n)+xleChange
+     else
+        xle(n)=0.0
+     endif
+ enddo
+
+end subroutine sume
+
+!==============================================================================
+
+subroutine calc_rbsumlocal(iSpecies)
+  use ModCrcm,       ONLY: f2,rbsumLocal
+  use ModCrcmGrid,   ONLY: np,nm,nk,MinLonPar,MaxLonPar,d4Element_C
+  use ModFieldTrace, ONLY: iba, ekev
+  implicit none
+
+  integer, intent(in) :: iSpecies
+  real    :: weight
+  integer :: i,j,k,m
+  !-----------------------------------------------------------------------------
+  rbsumLocal(iSpecies)=0.
+  do j=MinLonPar,MaxLonPar
+     do i=1,iba(j)
+        do k=1,nm
+           do m=1,nk
+              weight=f2(iSpecies,i,j,k,m)*d4Element_C(i,k,m)*ekev(i,j,k,m)
+              rbsumLocal(iSpecies)=rbsumLocal(iSpecies)+weight        ! rbsum in keV
+           enddo
+        enddo
+     enddo
+  enddo
+
+end subroutine calc_rbsumlocal
+
+!==============================================================================
+
 subroutine crcm_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
      sinA,energy,sinAo,delE,dmu,amu_I,xjac,pp,xmm, &
      dmm,dk,xlat,dphi,re_m,Hiono,flux,fac,phot,Ppar_IC,Pressure_IC,PressurePar_IC)

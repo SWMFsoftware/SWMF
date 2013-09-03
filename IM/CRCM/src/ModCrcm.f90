@@ -15,6 +15,10 @@ Module ModCrcm
   real, allocatable:: FAC_C(:,:)
   real, allocatable:: Bmin_C(:,:)
 
+  !Variable for E gain and loss
+  real, allocatable :: driftin(:),driftout(:),rbsumLocal(:),rbsumGlobal(:)
+  real, allocatable :: eChangeOperator_IV(:,:)
+  integer, parameter :: nOperator = 5, OpBfield_=1, OpDrift_=2, OpLossCone_=3, OpChargeEx_=4, OpStrongDiff_=5
 contains
 
   subroutine init_mod_crcm
@@ -35,6 +39,10 @@ contains
     ! Not clear why these need initialization !!!
     FAC_C = 0.0
     Pressure_IC = 0.0
+
+    ! now allocate arrays for energy tracking
+    allocate(eChangeOperator_IV(nspec,nOperator), driftin(nspec), &
+         driftout(nspec),rbsumLocal(nspec),rbsumGlobal(nspec))
 
   end subroutine init_mod_crcm
 

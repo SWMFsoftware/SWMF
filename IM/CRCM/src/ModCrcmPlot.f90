@@ -3,18 +3,19 @@ module ModCrcmPlot
   implicit none
 
   private ! except
-  public :: Crcm_plot, Crcm_plot_fls
+  public :: Crcm_plot, Crcm_plot_fls, crcm_plot_log
   character(len=5),  public    :: TypePlot   = 'ascii'
   logical,           public    :: DoSavePlot = .false.
   logical,           public    :: DoSaveFlux = .false.
+  logical,           public    :: DoSaveLog = .false.
   logical,           public    :: UseSeparatePlotFiles = .false.
   real,              public    :: DtOutput   = 10.0
+  real,              public    :: DtLogout   = 10.0
   
 
   character(len=*), parameter :: NameHeader = 'CRCM output'
 
 contains
-  !============================================================================
   subroutine Crcm_plot(nLat,nLon, X_C,Y_C,Pressure_IC,PressurePar_IC,&
        PressureHot_IC,PparHot_IC, Den_IC, Beq_C,Volume_C,Potential_C,FAC_C, &
        Time,Dt)
@@ -264,5 +265,56 @@ contains
     
 
   end subroutine Crcm_plot_fls
+
+  !============================================================================
+  subroutine crcm_plot_log(Time)
+    use ModCrcmPlanet,  ONLY:nSpecies=>nspec,NamePlotVarLog
+    use ModCrcmRestart, ONLY: IsRestart
+    use ModIoUnit,      ONLY: UnitTmp_
+    use ModCRCM,        ONLY: nOperator, eChangeOperator_IV,driftin,driftout,&
+                              rbsumglobal,dt
+    implicit none
+    
+    real, intent(in) :: Time
+    integer, parameter :: nLogVars = 8
+    logical, save :: IsFirstCall=.true.
+    integer       :: iSpecies,iOperator
+    !--------------------------------------------------------------------------
+
+    ! Open file and write header if no restart on first call
+    If (IsFirstCall .and. .not.IsRestart) then
+       open(unit=UnitTmp_,file='IM/plots/CRCM.log',&
+                  status='unknown')
+       write(UnitTmp_,*) 'CRCM Logfile'
+       write(UnitTmp_,*) NamePlotVarLog
+       IsFirstCall = .false.
+    else
+       open(unit=UnitTmp_,file='IM/plots/CRCM.log',&
+                  status='old', position='append')      
+       IsFirstCall = .false.
+    endif
+
+    ! Write out iteration number (just use time in seconds)
+    write(UnitTmp_,'(i7)',ADVANCE='NO') nint(Time/dt)
+
+    ! write time 
+    write(UnitTmp_,'(1es13.5)',ADVANCE='NO') time
+    
+  ! write out the operator changes
+    do iSpecies=1,nSpecies
+       if (iSpecies < nSpecies) then
+          write(UnitTmp_,'(8es13.5)',ADVANCE='NO') & 
+               rbsumglobal(iSpecies),eChangeOperator_IV(iSpecies,1:nOperator), &
+               driftin(iSpecies),driftout(iSpecies)
+       else
+          write(UnitTmp_,'(8es13.5)') & 
+               rbsumglobal(iSpecies),eChangeOperator_IV(iSpecies,1:nOperator),&
+               driftin(iSpecies),driftout(iSpecies)
+       endif
+    enddo
+
+    close(UnitTmp_)
+
+  end subroutine crcm_plot_log
 end module ModCrcmPlot
 

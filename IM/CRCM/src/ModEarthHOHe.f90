@@ -38,4 +38,14 @@ Module ModCrcmPlanet
   integer, dimension(nspec+1) :: iPparhotplot_I =(/16,17,18,19,20/)
   integer, dimension(nspec+1) :: iNplot_I    =(/21,22,23,24,25/)
   integer, parameter          :: Beq_=26,Vol_=27,Pot_=28, FAC_=29, nVar=29
+
+  !set Logplot parameters
+
+!  integer, parameter :: nLogVars = 8
+  character(len=300), parameter :: & 
+       NamePlotVarLog='it t RbSumH HpBfield HpDrift HpLossCone HpChargeEx HpStrongDiff HpDriftIn HpDriftOut '&
+       //'RbSumO OpBfield OpDrift OpLossCone OpChargeEx OpStrongDiff OpDriftIn OpDriftOut '&
+       //'RbSumHe HepBfield HepDrift HepLossCone HepChargeEx HepStrongDiff HepDriftIn HepDriftOut '&
+       //'RbSume HeBfield eDrift eLossCone eChargeEx eStrongDiff eDriftIn eDriftOut'
+
 end Module ModCrcmPlanet
