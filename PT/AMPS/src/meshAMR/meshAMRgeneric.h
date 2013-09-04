@@ -1021,7 +1021,7 @@ public:
 
   void callMpiBarrier() {
     nMpiBarrierCalls++;
-    MPI_Barrier(MPI_COMM_WORLD);
+ //   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   }
 
 
