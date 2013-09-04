@@ -2,8 +2,8 @@
 # C language related part of Makefile.conf
 
 COMPILE.c     = gcc
-COMPILE.mpicc = mpicc
-COMPILE.mpicxx= mpicxx
+COMPILE.mpicc = openmpicc
+COMPILE.mpicxx= openmpicxx
 
 DEBUGC = 
 #DEBUGC = -g
