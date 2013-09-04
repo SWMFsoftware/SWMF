@@ -130,10 +130,12 @@ SOLARDIPOLE
 
 #USERINPUTEND ----------------------------
 
+The reflection coefficient, Crefl, clips the reflection rate from below.
+Typical values are between 0.01 and 0.1.
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
-5.0e4                   LperpTimesSqrtBSi
+1.5e5                   LperpTimesSqrtBSi
 0.03			Crefl
 
 #ANISOTROPICPRESSURE
@@ -423,10 +425,12 @@ F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
 
+The reflection coefficient, Crefl, clips the reflection rate from below.
+Typical values are between 0.01 and 0.1.
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
-5.0e4                   LperpTimesSqrtBSi
+1.5e5                   LperpTimesSqrtBSi
 0.03			Crefl
 
 #ANISOTROPICPRESSURE
