@@ -885,11 +885,11 @@ module ModCoronalHeating
   real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real    :: LperpTimesSqrtB
   real    :: Crefl = 0.04
+  real    :: ReflectionRateCeiling = 1.0
 
   ! Variables for incompressible turbulence
   logical :: UseTurbulentCascade = .false.
   logical :: UseScaledCorrelationLength = .true.
-  real :: KarmanTaylorAlpha = 1.0
   real :: KarmanTaylorBeta = 1.0
 
   logical :: IsNewBlockAlfven = .true.
@@ -957,7 +957,6 @@ contains
                   // 'not yet fully implemented')
              call read_var('UseTransverseTurbulence', UseTransverseTurbulence)
              call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-             call read_var('KarmanTaylorAlpha', KarmanTaylorAlpha)
              if(Lperp_ > 1)then
                 call read_var('UseScaledCorrelationLength', &
                      UseScaledCorrelationLength)
@@ -989,6 +988,8 @@ contains
        call read_var('QeByQtotal', QeByQtotal)
     case("#ANISOIONHEATING")
        call read_var('QparByQtotal', QparByQtotal)
+    case("#REFLECTIONRATE")
+       call read_var('ReflectionRateCeiling', ReflectionRateCeiling)
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
             // NameCommand)
@@ -1366,8 +1367,8 @@ contains
 
     if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
        ! Note that Lperp is multiplied with the density
-       Coef = sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
-            *2.0*KarmanTaylorAlpha/State_VGB(Lperp_,i,j,k,iBlock)
+       Coef = 2.0*sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
+            /State_VGB(Lperp_,i,j,k,iBlock)
     else
        if(UseB0)then
           FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -1376,8 +1377,7 @@ contains
        end if
        FullB = sqrt(sum(FullB_D**2))
 
-       Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock)) &
-            *2.0*KarmanTaylorAlpha/LperpTimesSqrtB
+       Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))*2.0/LperpTimesSqrtB
     end if
 
     WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock)&
@@ -1413,7 +1413,7 @@ contains
 
     integer :: i, j, k
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
-    real :: FullB_D(3), FullB, Rho, Coef, ReflectionRate
+    real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate
     real :: EwavePlus, EwaveMinus
     !--------------------------------------------------------------------------
 
@@ -1439,17 +1439,20 @@ contains
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-       Coef = 2.0*sqrt(max(EwavePlus,EwaveMinus)*FullB/Rho)/LperpTimesSqrtB
+       DissipationRateMax = &
+            2.0*sqrt(max(EwavePlus,EwaveMinus)*FullB/Rho)/LperpTimesSqrtB
 
        ! Reflection rate driven by Alfven speed gradient and
-       ! vorticity along the field lines (the latter can be considered to be
-       ! zero for any practical applications)
+       ! vorticity along the field lines
        ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
             + (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho )
 
-       ! Clip the Zminor/Zdominant between Crefl and 1.0
-       ReflectionRate = max( min(ReflectionRate, Coef), Crefl*Coef)
+       ! Clip the reflection rate from above and below
+       ReflectionRate = max( min(ReflectionRate, &
+            ReflectionRateCeiling*DissipationRateMax),Crefl*DissipationRateMax)
 
+       ! No reflection when turbulence is balanced (waves are then
+       ! assumed to be uncorrelated)
        if(4.0*EwaveMinus <= EwavePlus)then
           ReflectionRate = ReflectionRate*(1.0-2.0*sqrt(EwaveMinus/EwavePlus))
        elseif(4.0*EwavePlus <= EwaveMinus)then
