@@ -515,12 +515,12 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
-         UseAnisoPressure, B0_DGB, StateOld_VCB
+         UseAnisoPressure, B0_DGB, StateOld_VCB, Source_VC
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
     use ModConst,      ONLY: rSun
     use ModCoronalHeating, ONLY: get_block_heating, CoronalHeating_C, &
-         apportion_coronal_heating, IsNewBlockAlfven
+         apportion_coronal_heating, IsNewBlockAlfven, get_wave_reflection
     use ModMain,       ONLY: UseB0, UseRotatingFrame
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
          UnitX_, UnitU_, UnitB_, UnitT_, OmegaBody
@@ -585,18 +585,32 @@ contains
        NameIdlUnit = 'J/m^3/s'
        NameTecUnit = 'J/m^3/s'
 
+    case('refl')
+       Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
+       call set_b0_face(iBlock)
+       call calc_face_value(.false., iBlock)
+       IsNewBlockAlfven = .true.
+       call get_wave_reflection(iBlock)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = Source_VC(WaveLast_,i,j,k) &
+               /sqrt(State_VGB(WaveFirst_,i,j,k,iBlock) &
+               *     State_VGB(WaveLast_,i,j,k,iBlock))/No2Si_V(UnitT_)
+          Source_VC(WaveFirst_:WaveLast_,i,j,k) = 0.0
+       end do; end do; end do
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+
     case('qheat')
        ! some of the heating terms need face values
        call set_b0_face(iBlock)
        call calc_face_value(.false., iBlock)
-       IsNewBlockAlfven = .true.
        call get_block_heating(iBlock)
        call get_tesi_c(iBlock, TeSi_C)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           PlotVar_G(i,j,k) = CoronalHeating_C(i,j,k) &
                /extension_factor(TeSi_C(i,j,k)) &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
-          end do; end do; end do
+       end do; end do; end do
        NameIdlUnit = 'J/m^3/s'
        NameTecUnit = 'J/m^3/s'
 
