@@ -576,6 +576,10 @@ test6_check:
 		${TESTDIR}/RESULTS/IM/CRCMeq.out \
 		${TESTDIR}/RESULTS/IM/CRCMeq_ref.out \
 		> test6_im_crcm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IM/CRCM.log \
+		output/test6/IM.log \
+		> test6_im_crcm_log.diff)
 	ls -l test6*.diff
 
 ### test7: IH+OH test ###

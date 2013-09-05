@@ -134,6 +134,9 @@ F			IsEmptyF2
 T			IsGmInitial
 F			IsDataInitial
 
+#SAVELOG
+5.0			DtLogOut
+
 
 #END_COMP IM   ----------------------------------------
 
