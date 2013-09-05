@@ -39,15 +39,49 @@ This command specifies the simulation time.
 <command name="SAVEPLOT">
 	<parameter name="DtSavePlot" type="real" />
 	<parameter name="DoSaveFlux" type="logical" default="F"/>
+	<parameter name="UseSeparatePlotFiles" type="logical" default="F"/>
 #SAVEPLOT
 2		DtSavePlot
 F		DoSaveFlux
+F		UseSeparatePlotFiles
 
 Define frequency of plots. When DoSaveFlux is false, only integrated 
 values such as species pressure density etc is saved. When DoSaveFlux is 
 true, then another file containing information needed to make plots of 
-species flux in each energy bin is saved.
+species flux in each energy bin is saved. Use SeparatePlotFiles defines if 
+each time is saved in the same file or if a separate file is used for each 
+time.
 </command>
+
+<command name="SAVELOG">
+	<parameter name="DtLogOut" type="real" />
+#SAVELOG
+10		DtSaveLog
+
+When this command is set, a log file for CRCM is written out. The log file 
+saves the change in ring current energy content for each species resulting 
+from each operator. A new entry in the log is written out every DtSaveLog 
+seconds of simulation time.
+</command>
+
+<command name="TYPEBOUNDARY">
+	<parameter name="TypeBoundary" type="string" />
+
+#TYPEBOUNDARY
+Ellipse		TypeBoundary
+
+Determines if the IM outer boundary is an ellipse of circle.
+</command>
+
+<command name="MINIMUMPRESSURETOGM">
+	<parameter name="MinimumPressureToGM" type="real" />
+
+#MINIMUMPRESSURETOGM
+1e-2		MinimumPressureToGM
+
+Sets minimum pressure passed to GM. 
+</command>
+
 
 <command name="RESTART">
 	<parameter name="IsRestart" type="logical" />
