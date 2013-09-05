@@ -91,7 +91,7 @@ module ModFaceValue
   integer :: iVar
 
   !Variables for cweno5
-  real:: ConsE 
+  real:: Epsilon
   integer:: iVarLimiter
   !The weight of the four low order polynomials of cweno5
   real:: WeightL_II(4,0:MaxIJK+1), WeightR_II(4,0:MaxIJK+1)      
@@ -2913,8 +2913,7 @@ contains
     real, parameter:: c73over120 = 73./120, c7over6 = 7./6, c1over60 = 1./60
     real, parameter:: c13over3 = 13./3
     !----------------------------------------------------------------------
-    ConsE = 1e-6
-
+    
     LinearCoeff_I(1)= 1./8; LinearCoeff_I(2)=1./4
     LinearCoeff_I(3)= 1./8; LinearCoeff_I(4)=1./2
 
@@ -3004,14 +3003,28 @@ contains
 
       integer:: i
       real, parameter::  c13over3 = 13./3
+      real:: ISmin,ISmax
       !----------------------------------------------------------------------
 
       !eq(20)
-         ISLocal_I(1:3) = a1_I(1:3)**2 + c13over3*a2_I(1:3)**2
+      ISLocal_I(1:3) = a1_I(1:3)**2 + c13over3*a2_I(1:3)**2
       !eq(21)
-      ISLocal_I(4) = a1_I(4)**2 + c13over3*a2_I(4)**2 + 0.5*a1_I(4)*a3
+      !ISLocal_I(4) = a1_I(4)**2 + c13over3*a2_I(4)**2 + 0.5*a1_I(4)*a3
+      !Epsilon=1.e-6
+
+      ISLocal_I(4) = maxval(ISLocal_I(1:3))
+      ISmax = ISLocal_I(4)
+      ISmin = minval(ISLocal_I(1:3))
+      
+      !The expression was suggested by G. Capdeville
+      Epsilon = sqrt(((ISmin + 1.e-12)/(ISmax + 1.e-12))**3)
+
+      !The expression comes from: A.A.I. pEER, et al., Appl. Math. Lett. 22 
+      !(2009) 1730-1733
+      !Epsilon = 1.e-6*min(1.0,((ISmin+1.e-28)/(ISmax-ISmin+1.e-30))) + 1.e-99
+
       !eq(24)
-      AlphaIS_I = LinearCoeff_I/((ConsE + ISLocal_I)**2)
+      AlphaIS_I = LinearCoeff_I/((Epsilon + ISLocal_I)**2)
       !eq(23)
       Weight_I = AlphaIS_I/sum(AlphaIS_I)
 
@@ -3128,7 +3141,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'limiter_ppm4'
     
-    real, parameter :: cRatio = 0.6
     !-------------------------------------------------------------------------
     ! Fourth order interpolation scheme
     ! Fill in lMin-1 and lMax+1, because the limiter needs these face values
