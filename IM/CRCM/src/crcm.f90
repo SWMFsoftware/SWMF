@@ -1125,11 +1125,15 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,dt,dlat,dphi,brad,rb,vl,vp, &
                  dEnerLocal=ekev(iba(j),j,k,m)*dPart
                  !sum all dEner to root proc
                  if(nProc>1) then
-                      call MPI_REDUCE (dPartLocal, dPart, 1, MPI_REAL, MPI_SUM, 0, &
-                      iComm, iError)
-                      call MPI_REDUCE (dEnerLocal, dEner, 1, MPI_REAL, MPI_SUM, 0, &
-                      iComm, iError)
-                   endif
+                    call MPI_REDUCE (dPartLocal, dPart, 1, MPI_REAL, &
+                         MPI_SUM, 0, iComm, iError)
+                    call MPI_REDUCE (dEnerLocal, dEner, 1, MPI_REAL, &
+                         MPI_SUM, 0, iComm, iError)
+                 else
+                    dPart=dPartLocal
+                    dEner=dEnerLocal
+                 endif
+                 
                  if(iProc==0) then
                     if (dPart.gt.0.) driftin(n)=driftin(n)+dEner
                     if (dPart.lt.0.) driftout(n)=driftout(n)+dEner
@@ -1174,11 +1178,15 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,dt,dlat,dphi,brad,rb,vl,vp, &
                     dPartLocal=-dt1/dlat(iba(j))*vl(n,iba(j),j,k,m)*fupl(iba(j),j)*d4Element_C(iba(j),k,m)
                     dEnerLocal=ekev(iba(j),j,k,m)*dPart
                     !sum all dEner to root proc
-                    if(nProc>1) &
-                      call MPI_REDUCE (dPartLocal, dPart, 1, MPI_REAL, MPI_SUM, 0, &
-                      iComm, iError)
-                      call MPI_REDUCE (dEnerLocal, dEner, 1, MPI_REAL, MPI_SUM, 0, &
-                      iComm, iError) 
+                    if(nProc>1) then
+                       call MPI_REDUCE (dPartLocal, dPart, 1, MPI_REAL, &
+                            MPI_SUM, 0, iComm, iError)
+                       call MPI_REDUCE (dEnerLocal, dEner, 1, MPI_REAL, &
+                            MPI_SUM, 0, iComm, iError)
+                    else
+                       dPart=dPartLocal
+                       dEner=dEnerLocal
+                    endif
                     if(iProc==0) then
                        if (dPart.gt.0.) driftin(n)=driftin(n)+dEner
                        if (dPart.lt.0.) driftout(n)=driftout(n)+dEner
