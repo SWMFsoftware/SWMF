@@ -130,13 +130,14 @@ SOLARDIPOLE
 
 #USERINPUTEND ----------------------------
 
-The reflection coefficient, Crefl, clips the reflection rate from below.
+The floor coefficient, Cfloor, clips the reflection rate from below
+with a fraction of the maximum dissipation rate.
 Typical values are between 0.01 and 0.1.
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
 1.5e5                   LperpTimesSqrtBSi
-0.03			Crefl
+0.03			Cfloor
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
@@ -425,13 +426,14 @@ F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
 
-The reflection coefficient, Crefl, clips the reflection rate from below.
+The floor coefficient, Cfloor, clips the reflection rate from below
+with a fraction of the maximum dissipation rate.
 Typical values are between 0.01 and 0.1.
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
 1.5e5                   LperpTimesSqrtBSi
-0.03			Crefl
+0.03			Cfloor
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau

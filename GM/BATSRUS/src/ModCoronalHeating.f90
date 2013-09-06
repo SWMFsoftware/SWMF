@@ -885,6 +885,7 @@ module ModCoronalHeating
   real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real    :: LperpTimesSqrtB
   real    :: Crefl = 0.04
+  real    :: Cfloor = 0.04
   real    :: ReflectionRateCeiling = 1.0
 
   ! Variables for incompressible turbulence
@@ -965,7 +966,7 @@ contains
              end if
           else
              call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-             call read_var('Crefl', Crefl)
+             call read_var('Cfloor', Cfloor)
           end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
@@ -1449,7 +1450,8 @@ contains
 
        ! Clip the reflection rate from above and below
        ReflectionRate = max( min(ReflectionRate, &
-            ReflectionRateCeiling*DissipationRateMax),Crefl*DissipationRateMax)
+            ReflectionRateCeiling*DissipationRateMax), &
+            Cfloor*DissipationRateMax)
 
        ! No reflection when turbulence is balanced (waves are then
        ! assumed to be uncorrelated)
