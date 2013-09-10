@@ -113,7 +113,7 @@ with proportionality constant [0.5,1.5]x1e6 [J/m^2/s/T]
 #CHROMOBC
 2e17			nChromoSi [1/m^3]
 5e4			tChromoSi [K]
-0.74e6			PoyntingFluxPerBSi [J/m^2/s/T]
+1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #USERINPUTEND ----------------------------
 

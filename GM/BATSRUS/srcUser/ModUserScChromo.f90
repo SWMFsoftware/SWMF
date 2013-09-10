@@ -117,6 +117,7 @@ contains
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitX_, UnitB_, UnitU_, &
          UnitEnergyDens_, SinThetaTilt, CosThetaTilt, BodyNDim_I, BodyTDim_I, g
+    use ModMagnetogram, ONLY: UnitB
 
     real, parameter :: CoulombLog = 20.0
     character (len=*),parameter :: NameSub = 'user_init_session'
@@ -135,7 +136,7 @@ contains
     RhoChromo = nChromo*MassIon_I(1)
     tChromo = tChromoSi*Si2No_V(UnitTemperature_)
 
-    PoyntingFluxPerB = PoyntingFluxPerBSi &
+    PoyntingFluxPerB = PoyntingFluxPerBSi/UnitB &
          *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitU_)/Si2No_V(UnitB_)
 
     if (.not. UseMagnetogram) then
