@@ -2981,7 +2981,7 @@ contains
 
     integer:: l
     !----------------------------------------------------------------------
-    do l = lMin-1, lMax
+    do l = lMin-1, lMax-1
        if(UseTrueCell)then
           ! The left face with index l+1 uses l-2:l+2
           ! while the right face with index l+1 needs l-1:l+3
@@ -2991,7 +2991,7 @@ contains
        ! eq (34)
        FaceL_I(l+1) = sum(WeightL_II(-2:2,l)*Cell_I(l-2:l+2))
     end do
-    do l = lMin-1, lMax
+    do l = lMin, lMax
        if(UseTrueCell)then
           ! The right face with index l uses l-2:l+2, 
           ! while the left face with index l needs l-3:l+1
