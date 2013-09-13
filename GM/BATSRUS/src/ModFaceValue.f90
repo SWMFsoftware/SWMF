@@ -1128,7 +1128,7 @@ contains
       elseif(UseCweno) then
          if (UsePerVarLimiter .or. iVar == Rho_) &
               call calc_cweno_weight(lMin, lMax)
-         call limiter_cweno5(lMin, lMax, Cell_I, Cell_I)
+         call limiter_cweno5(lMin, lMax, Cell_I, Cell_I, iVar)
       else
          call limiter_mp(lMin, lMax, Cell_I, Cell_I, iVar)
       end if
@@ -2970,7 +2970,7 @@ contains
 
   end subroutine calc_cweno_weight
   !=========================================================================
-  subroutine limiter_cweno5(lMin, lMax, Cell_I, Cell2_I)
+  subroutine limiter_cweno5(lMin, lMax, Cell_I, Cell2_I, iVar)
 
     ! G. Capdeville, A central WENO scheme for solving hyperbolic conservation
     ! laws on non-uniform meshes, J. Comput. Phys. 227 (2008) 2977-3014
@@ -2978,6 +2978,7 @@ contains
     integer, intent(in):: lMin, lMax
     real,    intent(in):: Cell_I(1-nG:MaxIJK+nG)
     real,    intent(in):: Cell2_I(1-nG:MaxIJK+nG)
+    integer, optional, intent(in):: iVar
 
     integer:: l
     !----------------------------------------------------------------------
@@ -2991,6 +2992,7 @@ contains
        ! eq (34)
        FaceL_I(l+1) = sum(WeightL_II(-2:2,l)*Cell_I(l-2:l+2))
     end do
+
     do l = lMin, lMax
        if(UseTrueCell)then
           ! The right face with index l uses l-2:l+2, 
@@ -3002,6 +3004,15 @@ contains
        FaceR_I(l)   = sum(WeightR_II(-2:2,l)*Cell2_I(l-2:l+2))
     end do
 
+    if(present(iVar) .and. DefaultState_V(iVar) > 0.0)then
+       do l = lMin-1, lMax-1
+          ! Make sure positive variables remain positive
+          if(FaceL_I(l+1) < 0)&
+               FaceL_I(l+1) = 0.5*(Cell_I(l+1) + Cell_I(l))
+          if(FaceR_I(l) < 0) &
+               FaceR_I(l) = 0.5*(Cell_I(l-1) + Cell_I(l))
+       end do
+    end if
   end subroutine limiter_cweno5
   !===========================================================================
   subroutine limiter_ppm4(lMin, lMax, iVar)
@@ -3039,7 +3050,7 @@ contains
     integer:: l
 
     character(len=*), parameter:: NameSub = 'limiter_ppm4'
-    
+
     !-------------------------------------------------------------------------
     ! Fourth order interpolation scheme
     ! Fill in lMin-1 and lMax+1, because the limiter needs these face values
