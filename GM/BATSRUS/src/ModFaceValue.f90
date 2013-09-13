@@ -3009,6 +3009,9 @@ contains
           ! Make sure positive variables remain positive
           if(FaceL_I(l+1) < 0)&
                FaceL_I(l+1) = 0.5*(Cell_I(l+1) + Cell_I(l))
+       end do
+
+       do l = lMin, lMax
           if(FaceR_I(l) < 0) &
                FaceR_I(l) = 0.5*(Cell_I(l-1) + Cell_I(l))
        end do
