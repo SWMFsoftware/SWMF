@@ -38,22 +38,20 @@
 #PBS -S /bin/csh
 #PBS -N SWMF
 
-# set the number of CPU-s by changing select: nProc = select*mpiprocs
-# ncpus should be fixed to 8 (or 12) because there are 8 (or 12) cores on 
-# each node. The faster nodes mean faster execution, but also more charged
-# to the account. 
+# set the number of MPI processes by changing select: nProc = select*ncpus
+# ncpus is the number of CPUs per node (8, 12, 16 or 20)
 
-# To run on the 8-core Harpertown nodes (default now)
-#PBS -l select=16:ncpus=8:model=har
+# To run on the 12-core Westmere nodes 
+#PBS -lselect=16:ncpus=12:model=wes
 
-# To run on the 8-core Nehalem nodes (2.4 times faster than Hapertown)
+# To run on the 8-core Nehalem nodes 
 ### PBS -l select=16:ncpus=8:model=neh
 
-# To run on the 12-core Westmere nodes use this (2 times faster than Hapertown)
-### PBS -lselect=16:ncpus=12:model=wes
-
-# To run on the 16-core Sandy Bridge nodes use this
+# To run on the 16-core Sandy Bridge nodes
 ### PBS -lselect=16:ncpus=16:model=san
+
+# To run on the 20-core Ivy Bridge nodes
+### PBS -l select=16:ncpus=20:model=ivy
 
 # To run in the development queue uncomment the following line,
 # and set the maximum walltime to 2 hours below. 
