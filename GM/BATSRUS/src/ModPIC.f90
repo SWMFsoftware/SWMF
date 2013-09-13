@@ -302,7 +302,7 @@ contains
 
     use ModSize, ONLY: nDim, MaxDim, nI, nJ, nK
     use ModProcMH, ONLY: iProc
-    use ModMain, ONLY: n_step, time_simulation
+    use ModMain, ONLY: n_step, time_simulation, nIter
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
 
     use ModEnergy,      ONLY: calc_energy_cell
@@ -339,7 +339,7 @@ contains
     if(time_simulation == 0.0) RETURN
 
     ! Check if we should read in a new PIC file
-    if(n_step > nStepLast)then
+    if(n_step > nStepLast .and. nIter /= 1)then
        nStepLast  = n_step
 
        if(iProc == 0)write(*,*) NameSub,' trying to read ', NameFilePic
