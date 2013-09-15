@@ -43,5 +43,3 @@ PC_wrapper.o: ${LIBRARYDIR}/CON_comp_info.o
 #
 
 distclean: clean
-	   rm -f PC_wrapper.f90
-
