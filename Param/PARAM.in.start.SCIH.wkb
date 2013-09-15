@@ -36,10 +36,10 @@ F                       DoTimeAccurate
 
 #STARTTIME
 2011			iYear
-2			iMonth
-16			iDay
-17			iHour
-26			iMinute
+4			iMonth
+12			iDay
+8			iHour
+30			iMinute
 0			iSecond
 0.0			FracSecond
 
@@ -78,11 +78,13 @@ while the MAGNETOGRAM command is for reading the PFSS solution based on
 spherical harmonics. These two PFSS solvers can be found in the
 util/DATAREAD/srcMagnetogram directory of SWMF.
 
+GONG magnetograms are obtained from http://gong.nso.edu/data/magmap/crmap.html
+
 #READPOTENTIALFIELD
 T			UseMagnetogram
-potentialfield.out	NamePotentialFieldFile
+CR2109_GONG.out		NamePotentialFieldFile
 0.0			HeightInnerBc
-3.0			UnitB
+2.6			UnitB
 
 MAGNETOGRAM
 T			UseMagnetogram
@@ -92,7 +94,7 @@ T			UseMagnetogram
 harmonics.dat		NameMagnetogramFile
 12			nHeaderLine
 0.0			PhiShift
-3.0			UnitB
+3.75			UnitB
 
 #USECURLB0
 T			UseCurlB0
@@ -137,7 +139,7 @@ Typical values are between 0.0 and 0.1.
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
 1.5e5                   LperpTimesSqrtBSi
-0.01			Cfloor
+0.0			Cfloor
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
@@ -166,7 +168,7 @@ T			UseHeatFluxRegion
 T			UseHeatFluxCollisionless
 1.05			CollisionlessAlpha
 
-#TEST
+TEST
 krylov
 
 #SEMIIMPLICIT
@@ -277,7 +279,7 @@ T			UseAccurateResChange
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-1			DnSaveLogfile
+10			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #INNERBOUNDARY
@@ -433,7 +435,7 @@ Typical values are between 0.0 and 0.1.
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
 1.5e5                   LperpTimesSqrtBSi
-0.01			Cfloor
+0.0			Cfloor
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
@@ -478,9 +480,6 @@ RAW			StringLogfile
 10			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#SAVEINITIAL
-T
-
 #SAVEPLOT
 4			nPlotFiles
 x=0 VAR idl		StringPlot
@@ -506,6 +505,18 @@ g rbody
 -1.			DtSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qheat qebyq qparbyq sign
 g rbody
+
+#SATELLITE
+1			nSatellite
+VAR file		StringSatellite
+4000			DnOutput
+3600.0			DtOutput [sec]
+earth_traj_2109.dat		NameTrajectoryFile
+rho ux uy uz bx by bz p pe	NameSatelliteVars
+
+#STEADYSTATESATELLITE
+0.0			0  days
+2419200.0		28 days
 
 #END_COMP IH ---------------------------------------------------------------
 
