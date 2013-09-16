@@ -207,7 +207,10 @@ unsigned long PIC::ParticleBuffer::GetChecksum() {
   char str[10*_MAX_STRING_LENGTH_PIC_];
 
   buffer[0]=sum.checksum();
-  MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,buffer,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+
+  unsigned long int bufferRecv[TotalThreadsNumber];
+  MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,bufferRecv,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+  memcpy(buffer,bufferRecv,TotalThreadsNumber*sizeof(unsigned long int));
 
   if (ThisThread==0) {
     sprintf(str,"Cdsmc::pbuffer CRC32 checksum: ");
