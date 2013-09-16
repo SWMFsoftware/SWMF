@@ -8,6 +8,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 
 #include "rnd.h"
@@ -157,7 +158,10 @@ void StampSignature(char* message) {
   buffer[0]=rnd();
 
 #ifdef MPI_ON
-  MPI_Gather(buffer,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+  double bufferRecv[TotalThreadsNumber];
+
+  MPI_Gather(buffer,1,MPI_DOUBLE,bufferRecv,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+  memcpy(buffer,bufferRecv,TotalThreadsNumber*sizeof(double));
 #endif
 
   if (ThisThread==0) {

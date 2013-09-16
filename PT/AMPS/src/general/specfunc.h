@@ -190,7 +190,10 @@ public:
     buffer[0]=checksum();
 
 #ifdef MPI_ON
-    MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,buffer,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+    unsigned long int bufferRecv[TotalThreadsNumber];
+
+    MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,bufferRecv,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+    memcpy(buffer,bufferRecv,TotalThreadsNumber*sizeof(unsigned long int));
 #endif
 
     if (ThisThread==0) {
