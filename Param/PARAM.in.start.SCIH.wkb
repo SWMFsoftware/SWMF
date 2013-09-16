@@ -86,7 +86,7 @@ GONG magnetograms are obtained from http://gong.nso.edu/data/magmap/crmap.html
 T			UseMagnetogram
 CR2109_GONG.out		NamePotentialFieldFile
 0.0			HeightInnerBc
-2.6			UnitB
+3.75			UnitB
 
 MAGNETOGRAM
 T			UseMagnetogram
@@ -226,7 +226,7 @@ SC/Param/grid_TR.dat
  100.0			zMax
 
 #LIMITRADIUS
-1.0			rMin
+1.001			rMin
 24.0			rMax
 
 ----------------------------------------------------
