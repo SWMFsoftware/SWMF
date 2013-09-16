@@ -1021,7 +1021,7 @@ public:
 
   void callMpiBarrier() {
     nMpiBarrierCalls++;
- //   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+//    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   }
 
 
@@ -1597,7 +1597,9 @@ public:
     #elif _MESH_DIMENSION_ == 2
     if (Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_CIRCLE_) exit(__LINE__,__FILE__,"Error: Attempted boundary type is not allowed for _MESH_DIMENSION_ == 2");
     #elif _MESH_DIMENSION_ == 3
-    if (Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_SPHERE_) exit(__LINE__,__FILE__,"Error: Attempted boundary type is not allowed for _MESH_DIMENSION_ == 3");
+    if ((Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_SPHERE_)&&(Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_)) {
+      exit(__LINE__,__FILE__,"Error: Attempted boundary type is not allowed for _MESH_DIMENSION_ == 3");
+    }
     #else
     exit(__LINE__,__FILE__,"Error: unknown value of _MESH_DIMENSION_");
     #endif
@@ -4471,6 +4473,9 @@ if (startNode->Temp_ID==15) {
          case _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_:
            IntersectionCode=((cInternalSphere1DData*)(InternalBoundaryDescriptor->BoundaryElement))->BlockIntersection(xmin,xmax,EPS);
            break;
+         case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+           IntersectionCode=((cInternalRotationBodyData*)(InternalBoundaryDescriptor->BoundaryElement))->BlockIntersection(xmin,xmax,EPS);
+           break;
          default:
            exit(__LINE__,__FILE__,"Error: The internal boundary type is not recognized");
          }
@@ -5753,6 +5758,9 @@ if (CallsCounter==83) {
             if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) SurfaceLocalResolution=((cInternalSphericalData*)SurfaceDescriptor->BoundaryElement)->localResolution;
             else if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_CIRCLE_) SurfaceLocalResolution=((cInternalCircleData*)SurfaceDescriptor->BoundaryElement)->localResolution;
             else if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_1D_SPHERE_) SurfaceLocalResolution=((cInternalSphere1DData*)SurfaceDescriptor->BoundaryElement)->localResolution;
+            else if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_) SurfaceLocalResolution=((cInternalRotationBodyData*)SurfaceDescriptor->BoundaryElement)->localResolution;
+
+
             else exit(__LINE__,__FILE__,"Error: unknown boundary type");
 
             if (SurfaceLocalResolution!=NULL) {
@@ -7967,7 +7975,10 @@ nMPIops++;
     int thread;
 
     buffer[0]=nCounter;
-    MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+
+    long int bufferRecv[nTotalThreads];
+    MPI_Gather(buffer,1,MPI_LONG,bufferRecv,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+    memcpy(buffer,bufferRecv,nTotalThreads*sizeof(long int));
 
     if (ThisThread==0) {
       fprintf(DiagnospticMessageStream,"$PREFIX:The length of the domain's boundary nodes list:\n$PREFIX:Thread\tThe number of the domain's boundary nodes\n");
@@ -8160,6 +8171,9 @@ nMPIops++;
             else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_1D_SPHERE_) {
               IntersectionCodeTemp=((cInternalSphere1DData*)(bc->BoundaryElement))->BlockIntersection(xTotalMin,xTotalMax,EPS);
             }
+            else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_) {
+              IntersectionCodeTemp=((cInternalRotationBodyData*)(bc->BoundaryElement))->BlockIntersection(xTotalMin,xTotalMax,EPS);
+            }
             else exit(__LINE__,__FILE__,"Error: unknown boundary type");
 
             if (IntersectionCodeTemp==_AMR_BLOCK_OUTSIDE_DOMAIN_) IntersectionCode=_AMR_BLOCK_OUTSIDE_DOMAIN_;
@@ -8218,6 +8232,9 @@ nMPIops++;
                      }
                      else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_1D_SPHERE_) {
                        centerNode->Measure=((cInternalSphere1DData*)(bc->BoundaryElement))->GetRemainedBlockVolume(xCellMin,xCellMax,EPS,&cellIntersectionStatus);
+                     }
+                     else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_) {
+                       centerNode->Measure=((cInternalRotationBodyData*)(bc->BoundaryElement))->GetRemainedBlockVolume(xCellMin,xCellMax,EPS,&cellIntersectionStatus);
                      }
                      else exit(__LINE__,__FILE__,"Error: unknown boundary type");
 
@@ -8599,7 +8616,9 @@ if (TmpAllocationCounter==2437) {
           buffer=new long int [nTotalThreads];
           buffer[0]=nAllocatedBlocks;
 
-          MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+          long int bufferRecv[nTotalThreads];
+          MPI_Gather(buffer,1,MPI_LONG,bufferRecv,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+          memcpy(buffer,bufferRecv,nTotalThreads*sizeof(long int));
 
           fprintf(DiagnospticMessageStream,"$PREFIX:Blocks Allocation Report:\n$PREFIX: Thread\tAllocatedBlocks\n");
           for (thread=0;thread<nTotalThreads;thread++) fprintf(DiagnospticMessageStream,"$PREFIX:%ld\t%ld\n",thread,buffer[thread]);
@@ -8631,7 +8650,9 @@ if (TmpAllocationCounter==2437) {
           buffer=new long int [nTotalThreads];
           buffer[0]=nAllocatedBlocks;
 
-          MPI_Gather(buffer,1,MPI_LONG,buffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+          long int bufferRecv[nTotalThreads];
+          MPI_Gather(buffer,1,MPI_LONG,bufferRecv,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+          memcpy(buffer,bufferRecv,nTotalThreads*sizeof(long int));
 
           fprintf(DiagnospticMessageStream,"$PREFIX:Blocks Allocation Report:\n$PREFIX: Thread\tAllocated Domain's Boundary Blocks\n");
           for (thread=0;thread<nTotalThreads;thread++) fprintf(DiagnospticMessageStream,"$PREFIX:%ld\t%ld\n",thread,buffer[thread]);
