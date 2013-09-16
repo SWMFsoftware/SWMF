@@ -69,10 +69,11 @@
 
 
 //the types of the internal boundaries
-#define _INTERNAL_BOUNDARY_TYPE_UNDEFINED_  0
-#define _INTERNAL_BOUNDARY_TYPE_SPHERE_     1
-#define _INTERNAL_BOUNDARY_TYPE_CIRCLE_     2
-#define _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_  3
+#define _INTERNAL_BOUNDARY_TYPE_UNDEFINED_         0
+#define _INTERNAL_BOUNDARY_TYPE_SPHERE_            1
+#define _INTERNAL_BOUNDARY_TYPE_CIRCLE_            2
+#define _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_         3
+#define _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_  4
 
 //the types of symmetries used with the mesh
 #define _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_    0
