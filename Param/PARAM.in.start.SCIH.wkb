@@ -64,9 +64,11 @@ HGR			TypeCoordSystem
 1.0			AverageIonCharge [e]
 1.0			ElectronTemperatureRatio
 
+When using FDIPS, rBody should be large enough so that a nonzero B0 can be
+assigned to the relevant ghostcells.
 #BODY
 T			UseBody
-1.0			rBody
+1.001			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
