@@ -128,4 +128,11 @@ public :
   }
 };
 
+
+class cInternalRotationBodyData_UserDefined : public cInternalSphericalData_UserDefined {
+public:
+  cInternalRotationBodyData_UserDefined() : cInternalSphericalData_UserDefined() {
+
+  }
+};
 #endif
