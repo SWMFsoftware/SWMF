@@ -20,7 +20,7 @@
 //the class describes the data that defines the spherical internal boundary; the class may contains the user defined data
 class cInternalRotationBodyData : public cAMRexit
 #if _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ == _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ON_
-//, public cInternalSphericalData_UserDefined
+, public cInternalRotationBodyData_UserDefined
 #endif
 {
 //protected:
@@ -30,10 +30,10 @@ public:
   double *SurfaceElementNormalVector;
 
 
-  int nAzimuthalSurfaceElements;
+  static int nAzimuthalSurfaceElements;
   double dAzimuthalAngle;
 
-  int nAxisSurfaceElements;
+  static int nAxisSurfaceElements;
   double *xAxisSurfaceElement;
 
   typedef bool (*fSurfaceCurve)(double&,double);
@@ -69,23 +69,27 @@ public:
 
   cInternalRotationBodyData ()
 #if _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ == _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ON_
- // : cInternalSphericalData_UserDefined()
+ : cInternalRotationBodyData_UserDefined()
 #endif
   {
 
     SurfaceElementNormalVector=NULL;
+//    nAxisSurfaceElements=0,nAzimuthalSurfaceElements=0;
 
     cleanDataBuffer();
 //    SetGeneralSurfaceMeshParameters(nZenithSurfaceElements,nAzimuthalSurfaceElements);
   }
 
+  static void SetGeneralSurfaceMeshParameters(long int nAxisElements,long int nAzimuthalElements) {
+    nAxisSurfaceElements=nAxisElements,nAzimuthalSurfaceElements=nAzimuthalElements;
+  }
 
 
-
-
-  void SetGeometricalParameters(double *x0,double *l,double xmin,double xmax,fSurfaceCurve f,long int nAxisElements,long int nAzimuthalElements) {
+  void SetGeometricalParameters(double *x0,double *l,double xmin,double xmax,fSurfaceCurve f) {
      int idim,iAxis;
      double c=0.0;
+
+     if ((nAxisSurfaceElements==0)||(nAzimuthalSurfaceElements==0)) exit(__LINE__,__FILE__,"Error: nAxisSurfaceElements and nAzimuthalSurfaceElements has to be set up first");
 
      for (idim=0;idim<3;idim++) {
        OriginPosition[idim]=x0[idim],AxisOfSymmetry[idim]=l[idim],e0[idim]=l[idim];
@@ -94,8 +98,6 @@ public:
 
      xAxisMin=xmin,xAxisMax=xmax;
      SurfaceCurve=f;
-
-     nAxisSurfaceElements=nAxisElements,nAzimuthalSurfaceElements=nAzimuthalElements;
 
      dAzimuthalAngle=2.0*Pi/nAzimuthalSurfaceElements;
      xAxisSurfaceElement=new double [nAxisSurfaceElements+1];
@@ -259,6 +261,8 @@ public:
 
 
     SurfaceCurve(r,locx[0]);
+
+    AzimuthAngle=2.0*Pi*rnd();
     locx[1]=r*cos(AzimuthAngle);
     locx[2]=r*sin(AzimuthAngle);
 
@@ -723,9 +727,9 @@ FunctionBegins:
 
 
 
-//     BlockIntersectionCode=BlockIntersection(levelDataPtr->xSubBlockMin,levelDataPtr->xSubBlockMax,EPS);
+     BlockIntersectionCode=BlockIntersection(levelDataPtr->xSubBlockMin,levelDataPtr->xSubBlockMax,EPS);
 
-     BlockIntersectionCode=-10;
+//     BlockIntersectionCode=-10;
 
 
 
