@@ -491,7 +491,11 @@ bool GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,double *xInte
 
   buffer[0].nFaceIntersection=nFaceIntersection;
   buffer[0].tIntersection=tIntersection;
-  MPI_Gather(buffer,sizeof(cBuffer),MPI_CHAR,buffer,sizeof(cBuffer),MPI_CHAR,0,MPI_COMM_WORLD);
+
+  cBuffer bufferRecv[nTotalThreads];
+
+  MPI_Gather(buffer,sizeof(cBuffer),MPI_CHAR,bufferRecv,sizeof(cBuffer),MPI_CHAR,0,MPI_COMM_WORLD);
+  memcpy(buffer,bufferRecv,nTotalThreads*sizeof(cBuffer));
 
   if (ThisThread==0) {
     for (int thread=1;thread<nTotalThreads;thread++) if (buffer[thread].nFaceIntersection!=-1) if ((tIntersection>buffer[thread].tIntersection)||(nFaceIntersection==-1)) {
