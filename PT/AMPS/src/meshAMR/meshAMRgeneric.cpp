@@ -11,6 +11,11 @@ double _MESH_AMR_XMAX_[3]={0.0,0.0,0.0},_MESH_AMR_XMIN_[3]={0.0,0.0,0.0};
 long int cInternalSphericalData::nAzimuthalSurfaceElements=30,cInternalSphericalData::nZenithSurfaceElements=20;
 double cInternalSphericalData::dAzimuthalAngle=-1.0,cInternalSphericalData::dCosZenithAngle=-1.0;
 
+int cInternalRotationBodyData::nAxisSurfaceElements=50,cInternalRotationBodyData::nAzimuthalSurfaceElements=50;
+
+
+
+
 /*
 double cInternalSphericalData::dAzimuthalAngle=2.0*Pi/cInternalSphericalData::nAzimuthalSurfaceElements;
 
