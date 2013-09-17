@@ -101,7 +101,7 @@ amps:
 	make LIB
 	cd ${WSD}/main; make amps CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
 
-	${CC} -o ${EXE} ${WSD}/general/general.a ${WSD}/meshAMR/mesh.a ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a   ${Lib}
+	${CC} -o ${EXE} ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/general/general.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a  ${WSD}/meshAMR/mesh.a ${WSD}/pic/amps.a ${Lib}
 
 TESTDIR = run_test
 
