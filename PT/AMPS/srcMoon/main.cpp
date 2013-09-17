@@ -34,7 +34,10 @@ int main(int argc,char **argv) {
   amps_init();
 
 
-  for (long int niter=0;niter<100 /*000001*/;niter++) {
+  int niter;
+  const int niterMax=100;
+
+  for (niter=0;niter<niterMax;niter++) {
 
     amps_time_step();
   }
