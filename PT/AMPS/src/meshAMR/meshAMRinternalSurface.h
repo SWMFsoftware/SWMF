@@ -24,6 +24,7 @@
 #include "meshAMRinternalSurface_sphere.h"
 #include "meshAMRinternalSurface_circle.h"
 #include "meshAMRinternalSurface_1D_sphere.h"
+#include "meshAMRinternalSurface_RotationBody.h"
 
 
 //=======================================================================
