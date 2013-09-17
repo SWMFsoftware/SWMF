@@ -29,6 +29,8 @@ $ampsConfigLib::WorkingSourceDirectory="src";
 #location of the code distribution
 my $SourceDirectory=" ";
 
+#the location of the project sprcific sources
+my $ProjectSpecificSourceDirectory="main";
 
 #compilation mode: stand along of a part of SWMF
 my $CompilationMode="AMPS";
@@ -156,7 +158,7 @@ while ($line=<InputFile>) {
 #modify the makefile for the compilation mode
 my @makefilelines;
       
-open (MAKEFILE,"<makefile") || die "Cannot open makefile\n";
+open (MAKEFILE,"<Makefile.def") || die "Cannot open Makefile.def\n";
 @makefilelines=<MAKEFILE>;
 close (MAKEFILEFILE);
       
@@ -170,7 +172,7 @@ foreach (@makefilelines) {
     }
 }
       
-open (MAKEFILEFILE,">makefile") || die "Cannot open makefile\n";
+open (MAKEFILEFILE,">Makefile.def") || die "Cannot open Makefile.def\n";
 print MAKEFILEFILE @makefilelines;
 close (MAKEFILEFILE);
 
@@ -265,6 +267,7 @@ sub ReadMainBlock {
   my $DiagnosticStream='stdout';
   my $OutputDirectory='.';
   
+  
   #force the repeatable execution path
   my $ForceRepatableExecutionPath=0;
   
@@ -297,10 +300,12 @@ sub ReadMainBlock {
       }        
     }
     elsif ($s0 eq "MAKEFILE") {
-      #substitute the following line in the makefile 
+      #substitute the following line in the Makefile.def 
       my $Variable;
       my $Argument;
       my @MakeFileContent;
+      
+      my $FoundVariable=0;
       
       ($line,$Argument)=split('!',$line,2);
       $Variable=$line;
@@ -308,8 +313,8 @@ sub ReadMainBlock {
       ($Variable,$Argument)=split(' ',$Variable,2);
       ($Variable,$Argument)=split(' ',$Argument,2);
       
-      if (-e "makefile") {     
-        open (MAKEFILE,"<","makefile") || die "Cannot open makefile\n";
+      if (-e "Makefile.def") {     
+        open (MAKEFILE,"<","Makefile.def") || die "Cannot open Makefile.def\n";
         @MakeFileContent=<MAKEFILE>;
         close(MAKEFILE);
         
@@ -330,6 +335,7 @@ sub ReadMainBlock {
           if ($l0 eq $Variable) {
             ($l0,$l1)=split(' ',$line,2);
             $_=$l1;
+            $FoundVariable=1;
           }
           #elsif ($l0 eq "CWD") {
           #  $l1=`pwd`;
@@ -337,10 +343,15 @@ sub ReadMainBlock {
           #}
           
         }
+        
+        if ($FoundVariable == 0) {
+          #the definition of the variable is not found -> add it to Makefile.def
+          push(@MakeFileContent,$Variable."=".$Argument);
+        }
       }
       
-      #write the updated copy of the makefile 
-      open (MAKEFILE,">","makefile");
+      #write the updated copy of the Makefile.def 
+      open (MAKEFILE,">","Makefile.def");
 
       foreach (@MakeFileContent) {
         print MAKEFILE "$_";
@@ -392,6 +403,17 @@ sub ReadMainBlock {
       
       ($InputLine,$SourceDirectory)=split(' ',$InputLine,2);
     } 
+    
+    
+    elsif ($s0 eq "PROJECTSOURCEDIRECTORY") {
+      chomp($line);
+      ($InputLine,$InputComment)=split('!',$line,2);
+      $InputLine=~s/ //g;
+      $InputLine=~s/=/ /;
+      
+      ($InputLine,$ProjectSpecificSourceDirectory)=split(' ',$InputLine,2);
+    }
+    
  
     elsif ($s0 eq "ERRORLOG") {
       chomp($line);
@@ -446,15 +468,15 @@ sub ReadMainBlock {
   
   
   #set working directory in the makefile 
-  if (-e "makefile") {
+  if (-e "Makefile.def") {
     my @MakeFileContent;
     my $FoundWSD=0;
     
-    open (MAKEFILE,"<","makefile") || die "Cannot open makefile\n";
+    open (MAKEFILE,"<","Makefile.def") || die "Cannot open Makefile.def\n";
     @MakeFileContent=<MAKEFILE>;
     close(MAKEFILE);
     
-    open (MAKEFILE,">","makefile");
+    open (MAKEFILE,">","Makefile.def");
 
     foreach (@MakeFileContent) {
       if ($_=~m/WSD=/) {
@@ -469,11 +491,11 @@ sub ReadMainBlock {
     
     #check if the WSD is found
     if ($FoundWSD eq 0 ) {
-      open (MAKEFILE,"<","makefile") || die "Cannot open makefile\n";
+      open (MAKEFILE,"<","Makefile.def") || die "Cannot open Makefile.def\n";
       @MakeFileContent=<MAKEFILE>;
       close(MAKEFILE);
     
-      open (MAKEFILE,">","makefile");   
+      open (MAKEFILE,">","Makefile.def");   
       print MAKEFILE "WSD=$ampsConfigLib::WorkingSourceDirectory\n";  
     
       foreach (@MakeFileContent) {
@@ -493,8 +515,8 @@ sub ReadMainBlock {
   
   `cp -r $SourceDirectory $ampsConfigLib::WorkingSourceDirectory`;
  
-  if ( -d "main" ) {
-    `cp -r main $ampsConfigLib::WorkingSourceDirectory`;
+  if ( -d $ProjectSpecificSourceDirectory ) {
+    `cp -r $ProjectSpecificSourceDirectory $ampsConfigLib::WorkingSourceDirectory/main`;
   }
   
   #change prefix,error log file and diagnostic stream
