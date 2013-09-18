@@ -138,7 +138,7 @@ subroutine write_plot_common(ifile)
 
   if(.not.time_accurate)then
      ! Add time step information
-     write(NameSnapshot,'(a,i7.7)') trim(NameSnapshot)//"_n", n_step
+     write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", n_step
   elseif(plot_type1 /= 'cut_pic')then
      if(IsPlotName_e)then
         ! Event date
@@ -154,7 +154,7 @@ subroutine write_plot_common(ifile)
      end if
      if(IsPlotName_n)then
         ! Add time step information
-        write(NameSnapshot,'(a,i7.7)') trim(NameSnapshot)//"_n", n_step
+        write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", n_step
      end if
   end if
 
