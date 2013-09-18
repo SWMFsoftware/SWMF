@@ -1,2 +1,2 @@
-PTDIR = ${DIR}
 RUNDIR = ${DIR}/run
+SCRIPTDIR = ${DIR}/share/Scripts
