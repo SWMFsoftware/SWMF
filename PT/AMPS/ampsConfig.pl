@@ -22,6 +22,9 @@ my $FileName;
 my $TotalSpeciesNumber=0;
 my @SpeciesList;
 
+#compile the code
+my $CompileProcessedCodeFlag=1;
+
 #Location of the local working vertion of the code that will be compiled 
 $ampsConfigLib::WorkingSourceDirectory="src";
 
@@ -52,6 +55,9 @@ for (my $i=0;$i<$#ARGV + 1;$i++) {
   elsif ($ARGV[$i] eq "-mode") {
     $i++;
     $CompilationMode=$ARGV[$i];
+  }
+  elsif ($ARGV[$i] eq "-no-compile") {
+    $CompileProcessedCodeFlag=0;
   }
   
 }
@@ -178,8 +184,10 @@ close (MAKEFILEFILE);
 
 
 #compile the code 
-print "Compile the code\n";
-system("make");
+if ($CompileProcessedCodeFlag==1) {
+  print "Compile the code\n";
+  system("make");
+}
 
 
 #=============================== INCLUDE an additional input file to the assemble =============================
