@@ -329,6 +329,7 @@ sub set_version_makefile_comp{
 	my $Version = $1;
 	# Put the proper include command into $MakefileDef and $MakefileConf
 	&shell_command("echo include $DIR/$MakefileDef > $File");
+	&shell_command("echo MYDIR=$DIR/$Version >> $File");
 	&shell_command("echo include $DIR/$MakefileConf > ".
 		       "$Version/$MakefileConf");
     }
