@@ -60,18 +60,31 @@ class GitmBin(PbData):
     '''
 
     def __init__(self, filename, *args, **kwargs):
-        if not kwargs.has_key('varlist'):
-            kwargs['varlist'] = list()
+        # Remove any known kwargs, as we don't want them to be included in
+        # the GITM data keys!
 
+        if not kwargs.has_key('varlist'):
+            varlist = list()
+        else:
+            varlist = kwargs.pop('varlist')
+
+        if not kwargs.has_key('magfile'):
+            magfile = None
+        else:
+            magfile = kwargs.pop('magfile')
+
+        # Initialize the GITM data structure
         super(GitmBin, self).__init__(*args, **kwargs) # Init as PbData.
         self.attrs['file']=filename
-        self._read(kwargs['varlist'])
+
+        # Load the GITM data
+        self._read(varlist)
         self.calc_deg()
         self.calc_lt()
         self.append_units()
 
-        if kwargs.has_key('magfile'):
-            self.attrs['magfile']=kwargs['magfile']
+        if magfile:
+            self.attrs['magfile']=magfile
             self.calc_magvel()
 
     def __repr__(self):
@@ -439,10 +452,14 @@ class GitmBin(PbData):
         for k in self.keys():
             if type(self[k]) is dmarray:
                 nk = k
+                # Temporary fix for misspelled key (9/30/13)
+                if nk.find("Heaing Efficiency") >= 0:
+                    nk = "Heating Efficiency"
+
                 # Different versions of GITM differ in header capitalization
-                if not name_dict.has_key(k):
+                if not name_dict.has_key(nk):
                     # Try to capitalize or lowercase the key
-                    if k == k.capitalize():
+                    if nk == nk.capitalize():
                         nk = k.lower()
                     else:
                         nk = k.capitalize()
