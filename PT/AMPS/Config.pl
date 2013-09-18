@@ -29,9 +29,8 @@ if($Install){
     }else{
 	`cat Makefile.def.amps >> Makefile.def`;
 	`echo "COMPILE.mpicxx = $Compiler" > Makefile.conf`;
-	`make install`;
     }
-
+    `make install`;
 }
 
 if($Uninstall){
