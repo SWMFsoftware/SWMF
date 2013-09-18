@@ -19,8 +19,8 @@ rundir:
 	mkdir -p ${RUNDIR}/PT
 	cd ${RUNDIR}/PT; mkdir restartIN restartOUT plots
 
-CC=mpicxx
-#CC=${COMPILE.c}
+#CC=mpicxx
+CC=${COMPILE.c}
 
 #CC=icpc    
 #CC=openmpicxx
@@ -123,7 +123,7 @@ test_amps:
 
 test_amps_compile:
 	rm -rf ${TESTDIR}
-	./ampsConfig.pl
+	./ampsConfig.pl -no-compile 
 	$(MAKE) amps
 
 test_amps_rundir:
