@@ -6,21 +6,26 @@
 #
 # Comments: Common routine used to make GITM plots.
 #
-# Includes: add_colorbar                  - add a colorbar to a contour plot
-#           center_polar_cap              - center radial coordinates for a
-#                                           polar plot
-#           find_data_limits              - find the upper and lower limits
-#                                           for a list of GITM data arrays
-#           find_data_limits_irange       - find the upper and lower limits
-#                                           for a list of GITM data arrays and
-#                                           a range of lon/lat/alt indexes
-#           localtime_to_glon             - convert local time to longitude
-#           find_lon_lat_index            - find the appropriate index for
-#                                           a specified location
-#           retrieve_key_from_web_name    - a routine to retrieve the data key
-#                                           from a website-friendly data name
-#           find_alt_index - A routine to find the appropriate index for
-#                            a specified altitude
+# Includes: choose_contour_map         - choose a color map depending on certain
+#                                        specified plot characteristics
+#           add_colorbar               - add a colorbar to a contour plot
+#           find_order_of_magnitude    - find the order of magnitude
+#           center_polar_cap           - center radial coordinates for a
+#                                        polar plot
+#           find_data_limits           - find the upper and lower limits
+#                                        for a list of GITM data arrays
+#           find_data_limits_irange    - find the upper and lower limits
+#                                        for a list of GITM data arrays and
+#                                        a range of lon/lat/alt indexes
+#           localtime_to_glon          - convert local time to longitude
+#           find_lon_lat_index         - find the appropriate index for
+#                                        a specified location
+#           retrieve_key_from_web_name - a routine to retrieve the data key
+#                                        from a website-friendly data name
+#           find_alt_index             - A routine to find the appropriate index
+#                                        for a specified altitude
+#           match_cindi_key            - a routine to retrieve the CINDI data
+#                                        key from a GITM key
 #----------------------------------------------------------------------------
 
 '''
@@ -65,26 +70,53 @@ def add_colorbar(contour_handle, zmin, zmax, zinc, orient, scale, name, units):
     '''
     import numpy as np
     import matplotlib.pyplot as plt
-    from matplotlib.ticker import FormatStrFormatter, ScalarFormatter
+    import math
+    from matplotlib.ticker import FormatStrFormatter, FuncFormatter
 
     w  = np.linspace(zmin, zmax, zinc, endpoint=True)
     cb = plt.colorbar(contour_handle, ticks=w, pad=.15, orientation=orient,
                       fraction=.07)
 
     if scale.find("exponential") >= 0:
-        print "Need to fix the exponential scaling"
-        #cb.formatter=FormatStrFormatter('%.1e')
+        omag = find_order_of_magnitude(zmax)
+
+        def scaled_ticks(x, pos):
+            '''
+            Define ticks so that they are scaled by the order of magnitude.
+            The two arguements are the value (x) and the tick position (pos)
+            and are required for this function to be used by FuncFormatter
+            '''
+            tckstr = "{:.1f}".format(x / math.pow(10.0, omag))
+            return tckstr
+
+        # Use the previously defined function to scale the ticks
+        cb.formatter = FuncFormatter(scaled_ticks)
+        # Set the label
+        cb.set_label(r'{:s} (${:s} \times 10^{{{:.0f}}}$)'.format(name, units,
+                                                                  omag))
     else:
         zscale = max(abs(zmin), abs(zmax))
         if zscale > 1.0e3 or zscale < 1.0e-3:
-            cb.formatter=FormatStrFormatter('%.2g')
+            cb.formatter=FormatStrFormatter('{:.2g}')
         elif zscale < 1.0e1:
-            cb.formatter=FormatStrFormatter('%.2f')
+            cb.formatter=FormatStrFormatter('{:.2f}')
         else:
-            cb.formatter=FormatStrFormatter('%.0f')
-    cb.set_label(r'%s ($%s$)' % (name, units))
+            cb.formatter=FormatStrFormatter('{:.0f}')
+        # Set the label
+        cb.set_label(r'{:s} (${:s}$)'.format(name, units))
+
+    # Update the ticks to reflect formatting
     cb.update_ticks()
     return cb
+
+def find_order_of_magnitude(value):
+    '''
+    Find the order of magnitude of a number.  Returns the exponent.
+    Ex: -4000.0 = -4 x 10^3 will return 3
+    '''
+    import math
+
+    return math.floor(math.log10(abs(value)))
 
 def center_polar_cap(rcenter, redge, r):
     '''
@@ -415,6 +447,31 @@ def find_data_limits_ivalues(gDataList, xkey, lat_indices, lon_indices,
 
     return xmin, xmax
 
+def glon_to_localtime(ut_datetime, glon, units="degrees"):
+    '''
+    Routine to compute the local time where the longitude is at a specified
+    value for a specified universal time
+
+    ut_datetime = Universal time as a datetime object
+    glon        = Longitude
+    units       = units of longitude (default degrees)
+    '''
+
+    scale = 1.0 / 15.0 # (hours / degree)
+    if units.find("rad") >= 0:
+        scale *= (180.0 / np.pi) # Convert to hours / radians
+    uth = ut_datetime.hour+(ut_datetime.minute/60.0)+(ut_datetime.second/3600.0)
+    lt = glon * scale + uth
+
+    # Ensure that the local time falls between 00:00 and 23:59
+    if lt < 0.0:
+        lt += 24.0
+
+    if lt >= 24.0:
+        lt -= 24.0
+
+    return lt
+
 def localtime_to_glon(ut_datetime, localtime):
     '''
     Routine to compute the longitude where the local time is at a specified
@@ -435,11 +492,11 @@ def find_lon_lat_index(gData, glon, glat, units="degrees"):
     given location.  The location may be specified in degrees (default) or
     radians.
 
-    INput:
-    gData
-    glon
-    glat
-    units = default is degrees
+    Input:
+    gData = GitmBin data structure
+    glon  = longitude
+    glat  = latitude
+    units = units of longitude and latitude (default = degrees)
     '''
 
     import string
@@ -561,3 +618,42 @@ def find_alt_index(gData, ilon, ilat, alt, units="km"):
     return(ialt)
 #End find_alt_index
 
+def match_cindi_key(in_key, out_type="CINDI"):
+    '''
+    A routine to retrieve a CINDI/GITM data structure key from a GITM/CINDI key.
+
+    in_key   = Input key (GITM or CINDI) that you want to pair.  May specify ALL
+               to retrieve a list of all possible keys.
+    out_type = Should the output key(s) be the CINDI (default) or GITM keys?
+    '''
+    key_dict = {"Altitude":"Alt.", "H!U+!N":"FrH", "He!U+!N":"FrHe",
+                "NO!U+!N":"FrNO", "O_4SP_!U+!N":"FracO",
+                "O(!U2!NP)!U+!N":"FracO", "e-":"Ni(cm^-3)", "iTemperature":"Ti",
+                "dLat":"GLAT", "Magnetic Latitude":"MLAT", "dLon":"GLONG",
+                "LT":"SLT", "V!Di!N (zon)":"Vzonal", "V!Di!N (par)":"Vpara",
+                "V!Di!N (mer)":"Vmerid"}
+
+    if in_key == "ALL":
+        # Return a list of all keys of the desired type
+        if out_type == "CINDI":
+            return(key_dict.values())
+        else:
+            return(key_dict.keys())
+    else:
+        if out_type == "CINDI" and key_dict.has_key(in_key):
+            return key_dict[in_key]
+        elif out_type == "GITM":
+            out_list = [k for k, v in key_dict.iteritems() if v == 'Alt.']
+            if len(out_list) == 1:
+                return(out_list[0])
+            else:
+                print "WARNING: unknown CINDI data type [",in_key,"]"
+                return None
+        elif out_type == "CINDI":
+            print "WARNING: unknown GITM data type [",in_key,"], known names are:"
+            print key_dict.keys()
+            return None
+        else:
+            print "WARNING: unknown data source [", out_type, "]"
+            return None
+# END match_cindi_key
