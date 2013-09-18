@@ -19,18 +19,19 @@ foreach (@ARGV){
 
 if($Install){
 
-    $Compiler = "openmpicxx" unless $Compiler;
+    $Compiler = "mpicxx" unless $Compiler;
 
+    my $pwd=`pwd`;
+    `echo "MYDIR=$pwd" > Makefile.def`;
     if($IsComponent){
-	`echo "include ../../Makefile.def" > Makefile.def`;
+	`echo "include ../../Makefile.def" >> Makefile.def`;
 	`echo "include ../../Makefile.conf" > Makefile.conf`;
     }else{
-	my $pwd=`pwd`;
-	`echo "DIR=$pwd" > Makefile.def`;
 	`cat Makefile.def.amps >> Makefile.def`;
-	`echo "COMPILE.c = $Compiler" > Makefile.conf`;
+	`echo "COMPILE.mpicxx = $Compiler" > Makefile.conf`;
 	`make install`;
     }
+
 }
 
 if($Uninstall){
