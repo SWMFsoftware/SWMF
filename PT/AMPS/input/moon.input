@@ -6,11 +6,14 @@ SpeciesList=Na  !, NA_Plus !lkdsjflksdj
 
 !settings of the directories
 !update the following variables in the makefile 
+
+
 makefile  SOURCES=src
 makefile  SPICE=nospice 
 makefile  RUNDIR=run
 makefile  MPIRUN=mpirun -np 4
 
+ProjectSourceDirectory=srcMoon
 
 WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".") 
 SourceDirectory=src
