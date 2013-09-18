@@ -20,7 +20,7 @@ rundir:
 	cd ${RUNDIR}/PT; mkdir restartIN restartOUT plots
 
 #CC=mpicxx
-CC=${COMPILE.c}
+CC=${COMPILE.mpicxx}
 
 #CC=icpc    
 #CC=openmpicxx
@@ -31,9 +31,8 @@ CC=${COMPILE.c}
 #CC=/opt/local/bin/openmpicxx
 #CC=/usr/local/openmpi-1.4.2--intel/bin/mpicxx 
 
-
+CWD=${MYDIR}
 SOURCES=src
-CWD=${PTDIR}
 
 # /Users/vtenishe/Debugger/eclipse-workspace/pic-input-preprocess
 WSD=srcTemp
@@ -135,10 +134,10 @@ test_amps_run:
 	-@(cd ${TESTDIR}; ${MPIRUN} ./amps)
 
 test_amps_check:
-	-(./DiffNum.pl ${TESTDIR}/PT/plots/amps.dat output/test_amps.ref > test_amps.diff)
+	-(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PT/plots/amps.dat output/test_amps.ref > test_amps.diff)
 	@ls -l test_amps.diff
 
 
 
 t:
-	@(cd ${RUNDIR}; perl ../DiffNum.pl amps.test.dat ../amps.test.reference.dat > amps.diff)
+	@(cd ${RUNDIR}; perl ${SCRIPTDIR}/DiffNum.pl amps.test.dat ../amps.test.reference.dat > amps.diff)
