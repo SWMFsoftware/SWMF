@@ -353,6 +353,7 @@ sub install_code_{
 	die "$ERROR_ $MakefileDefOrig is missing\n" unless
 	    -f $MakefileDefOrig;
 	&shell_command("echo OS=$OS > $MakefileDef");
+	&shell_command("echo MYDIR=$DIR >> $MakefileDef");
 	&shell_command("echo ${Component}DIR=$DIR >> $MakefileDef");
 	&shell_command("echo COMPILER=$Compiler >> $MakefileDef");
 	&shell_command("cat $MakefileDefOrig >> $MakefileDef");
