@@ -1,0 +1,19 @@
+# C language related part of Makefile.conf
+# This file is for the Pleiades system where there is no mpicc or mpicxx
+
+COMPILE.c     = icc
+COMPILE.mpicc = icc
+COMPILE.mpicxx= icpc
+
+DEBUGC = 
+#DEBUGC = -g
+
+.SUFFIXES: .c
+
+FLAGC = ${SEARCH} -c ${OPT3} ${DEBUGC}
+
+.c.o:
+	${COMPILE.c} ${FLAGC} ${SEARCH} $<
+
+.cpp.o:
+	${COMPILE.mpicxx} ${FLAGC} ${SEARCH} $<

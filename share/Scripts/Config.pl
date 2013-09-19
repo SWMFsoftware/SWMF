@@ -10,7 +10,7 @@ my %Compiler = (
 		"AIX"                 => "xlf90",
 		"palm"                => "ifort",
 		"cfe"                 => "ifort",
-		"pfe"                 => "ifort,gcc",
+		"pfe"                 => "ifort,icc",
 		"sysx"                => "xlf90",
 		"nyx-login-intel"     => "ifortmpif90",
 		"nyx-login-amd"       => "ifortmpif90",
@@ -47,7 +47,7 @@ our $Compiler;
 $Compiler = $Compiler{$Machine} or $Compiler = $Compiler{$OS} or
     die "$ERROR_ default compiler is not known for OS=$OS\n";
 
-# Default C++ compiler
+# Default Makefile for C compilers
 our $CompilerC = "gcc_mpicc";
 $CompilerC = $1 if $Compiler =~ s/,(.+)//;
 
