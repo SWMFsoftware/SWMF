@@ -6,6 +6,9 @@ my $Uninstall;
 my $Compiler;
 my $IsComponent;
 my $Application;
+my $MpiLocation;
+my $Mpirun="mpirun";
+my $TestRunProcessorNumber=4;
 
 foreach (@ARGV){
     if(/^-install(=.*)?$/)    {my $value=$1;
@@ -15,11 +18,18 @@ foreach (@ARGV){
     if(/^-uninstall$/i)       {$Uninstall=1;                   next};
     if(/^-compiler=(.*)$/i)   {$Compiler=$1;                   next};
     if(/^-application=(.*)/i) {$Application=$1;                next};
+    if(/^-mpi=(.*)$/i)        {$MpiLocation=$1;                next}; 
+    if(/^-np=(.*)$/i)         {$TestRunProcessorNumber=$1;     next}; 
 }
 
 if($Install){
 
     $Compiler = "mpicxx" unless $Compiler;
+
+    if ($MpiLocation) {
+      $Compiler=$MpiLocation."/".$Compiler;
+      $Mpirun=$MpiLocation."/".$Mpirun." -np ".$TestRunProcessorNumber;
+    }
 
     my $pwd=`pwd`;
     `echo "MYDIR=$pwd" > Makefile.def`;
@@ -28,7 +38,9 @@ if($Install){
 	`echo "include ../../Makefile.conf" > Makefile.conf`;
     }else{
 	`cat Makefile.def.amps >> Makefile.def`;
+
 	`echo "COMPILE.mpicxx = $Compiler" > Makefile.conf`;
+        `echo "MPIRUN = $Mpirun" >> Makefile.conf`;
     }
     `make install`;
 }
@@ -40,7 +52,7 @@ if($Uninstall){
 
 if($Application){
     my $application = lc($Application);
-    `rm -rf main; cp -r src$Application main; rm -rf main/CVS`;
+#   `rm -rf main; cp -r src$Application main; rm -rf main/CVS`;
     `cp -f input/$application.* input/species.input .`;
 }
 
