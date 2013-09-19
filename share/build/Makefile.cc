@@ -1,9 +1,8 @@
-
 # C language related part of Makefile.conf
-# This works on Pleiaded where there is no mpicc
 
 COMPILE.c     = cc
-COMPILE.mpicc = cc
+COMPILE.mpicc = mpicc
+COMPILE.mpicxx= mpicxx
 
 DEBUGC = 
 #DEBUGC = -g
@@ -14,3 +13,6 @@ FLAGC = ${SEARCH} -c ${OPT3} ${DEBUGC}
 
 .c.o:
 	${COMPILE.c} ${FLAGC} ${SEARCH} $<
+
+.cpp.o:
+	${COMPILE.mpicxx} ${FLAGC} ${SEARCH} $<
