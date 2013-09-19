@@ -28,7 +28,7 @@ if($Install){
 
     if ($MpiLocation) {
       $Compiler=$MpiLocation."/".$Compiler;
-      $Mpirun=$MpiLocation."/".$Mpirun." -np ".$TestRunProcessorNumber;
+      $Mpirun=$MpiLocation."/".$Mpirun;
     }
 
     my $pwd=`pwd`;
@@ -40,7 +40,7 @@ if($Install){
 	`cat Makefile.def.amps >> Makefile.def`;
 
 	`echo "COMPILE.mpicxx = $Compiler" > Makefile.conf`;
-        `echo "MPIRUN = $Mpirun" >> Makefile.conf`;
+        `echo "MPIRUN = $Mpirun -np $TestRunProcessorNumber" >> Makefile.conf`;
     }
     `make install`;
 }
