@@ -1,4 +1,0 @@
-!^CFG COPYRIGHT UM
-
-
-
