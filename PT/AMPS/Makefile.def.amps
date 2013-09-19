@@ -1,2 +1,9 @@
-RUNDIR = ${DIR}/run
-SCRIPTDIR = ${DIR}/share/Scripts
+RUNDIR = ${MYDIR}/run
+SCRIPTDIR = ${MYDIR}/share/Scripts
+
+SOURCES=src
+WSD=srcTemp
+
+Lib=  -lm -lmpi
+SPICE=nospice
+
