@@ -32,19 +32,19 @@ CC=${COMPILE.mpicxx}
 #CC=/usr/local/openmpi-1.4.2--intel/bin/mpicxx 
 
 CWD=${MYDIR}
-SOURCES=src
+#SOURCES=src
 
 # /Users/vtenishe/Debugger/eclipse-workspace/pic-input-preprocess
-WSD=srcTemp
+#WSD=srcTemp
 
-SPICE=nospice
+#SPICE=nospice
 EXE=amps
 
-Lib=  -lm -lmpi 
+#Lib=  -lm -lmpi 
 SHELL=/bin/bash
 
-MPIRUN=mpirun -np 4
-RUNDIR=run
+#MPIRUN=mpirun -np 4
+#RUNDIR=run
 
 cleansrc:
 	cd ${WSD}/general; make clean
@@ -131,7 +131,7 @@ test_amps_rundir:
 	mv amps ${TESTDIR}
 
 test_amps_run:
-	-@(cd ${TESTDIR}; ${MPIRUN} ./amps)
+	-(cd ${TESTDIR}; ${MPIRUN} ./amps)
 
 test_amps_check:
 	-(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PT/plots/amps.dat output/test_amps.ref > test_amps.diff)
