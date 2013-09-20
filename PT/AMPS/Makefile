@@ -1,9 +1,18 @@
-SHELL =/bin/sh
+SHELL=/bin/bash
 
 DEFAULT_TARGET : LIB
 
+# These definitions may be overwritten by Makefile.def
+SOURCES=src
+WSD=srcTemp
+#SPICE=nospice
+
 include Makefile.def
 include Makefile.conf
+
+# These definitions are inherited from Makefile.def and Makefile.conf
+CC=${COMPILE.mpicxx}
+CWD=${MYDIR}
 
 install:
 	Config.pl -application=Moon
@@ -19,29 +28,12 @@ rundir:
 	mkdir -p ${RUNDIR}/PT
 	cd ${RUNDIR}/PT; mkdir restartIN restartOUT plots
 
-#CC=mpicxx
-CC=${COMPILE.mpicxx}
-
-#CC=icpc    
-#CC=openmpicxx
-#CC=/usr/local/mpi/bin/mpicxx
-#CC=/opt/intel/bin/icpc 
-#CC=/opt/local/bin//openmpic++
-#CC=/left/Compiler/Intell/11.1/bin/mpicxx 
-#CC=/opt/local/bin/openmpicxx
-#CC=/usr/local/openmpi-1.4.2--intel/bin/mpicxx 
-
-CWD=${MYDIR}
-#SOURCES=src
 
 # /Users/vtenishe/Debugger/eclipse-workspace/pic-input-preprocess
-#WSD=srcTemp
 
-#SPICE=nospice
 EXE=amps
 
-#Lib=  -lm -lmpi 
-SHELL=/bin/bash
+#Lib=  -lm
 
 #MPIRUN=mpirun -np 4
 #RUNDIR=run
@@ -77,7 +69,7 @@ IncludeList=-I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I
  
 LIB :
 	make cleansrc
-	cd ${WSD}/main; rm -f *.o *.a 
+	cd ${WSD}/main; rm -f *.o *.a
 
 	cd ${WSD}/general; make CC=${CC} Flags="${Flags}" 
 	cd ${WSD}/meshAMR; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
@@ -100,7 +92,7 @@ amps:
 	make LIB
 	cd ${WSD}/main; make amps CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
 
-	${CC} -o ${EXE} ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/general/general.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a  ${WSD}/meshAMR/mesh.a ${WSD}/pic/amps.a ${Lib}
+	${CC} -o ${EXE} ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/general/general.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a  ${WSD}/meshAMR/mesh.a ${WSD}/pic/amps.a ${Lib} ${MPILIB}
 
 TESTDIR = run_test
 
