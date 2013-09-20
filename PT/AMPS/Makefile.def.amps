@@ -4,6 +4,6 @@ SCRIPTDIR = ${MYDIR}/share/Scripts
 SOURCES=src
 WSD=srcTemp
 
-Lib=  -lm -lmpi
+Lib=  -lm
 SPICE=nospice
 
