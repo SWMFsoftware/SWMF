@@ -2,17 +2,7 @@ SHELL =/bin/sh
 
 DEFAULT_TARGET : amps  
 
-clean:
-	rm -f *.o *.a
-
-CC=mpicxx 
-Flags=-g 
-IncludeList=-I../general -I../meshAMR 
-
-.SUFFIXES: .cpp .o 
-.cpp.o: 
-	${CC} -c ${Flags} ${IncludeList} $< 
-
+include ../../Makefile.conf
 
 PICOBJ = pic.o \
 	pic_parallel.o \
@@ -36,6 +26,7 @@ PICOBJ = pic.o \
 	pic_column_integration.o \
 	pic_particle_collision_models.o \
 	pic_run_time_system_state.o 
+
 amps : $(PICOBJ)
 	ar -src amps.a $(PICOBJ)
 	@echo "Target 'amps' is done." 

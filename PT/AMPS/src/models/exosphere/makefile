@@ -2,17 +2,7 @@ SHELL =/bin/sh
 
 DEFAULT_TARGET : exosphere
 
-clean:
-	rm -f *.o *.a
-
-CC=gcc
-Flags=-g   
-IncludeList=
-
-.SUFFIXES: .cpp .o 
-.cpp.o: 
-	${CC} -c ${Flags} ${IncludeList} $< 
-
+include ../../../Makefile.conf
 
 EXOSPHEREOBJ = Exosphere.o \
 	Exosphere_OrbitalMotion.o \

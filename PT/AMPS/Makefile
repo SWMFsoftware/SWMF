@@ -1,4 +1,4 @@
-SHELL=/bin/bash
+SHELL=/bin/sh
 
 DEFAULT_TARGET : LIB
 
@@ -55,31 +55,26 @@ tar:
 
 #Flags=-O3 -fno-inline -ffinite-math-only  -ftrapping-math -fsignaling-nans -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
 #Flags=-O3  -fasm-blocks -use-asm  -fprefetch-loop-arrays -funroll-loops -unroll=3  -mmmx  -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
-Flags=-g   -use-asm   -fprefetch-loop-arrays -funroll-loops -unroll=3    -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
+
+#Flags=-g   -use-asm   -fprefetch-loop-arrays -funroll-loops -unroll=3    -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
 export Flags
 
 #Flags=-O3 -fasm-blocks  -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
 
-#IncludeList=-I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general  -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${CWD}
-IncludeList=-I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general  -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${CWD}
+SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${CWD}
 
-.SUFFIXES: .cpp .o 
-.cpp.o: 
-	${CC} -c ${Flags} ${IncludeList} $< 
- 
-LIB :
+LIB:
 	make cleansrc
 	cd ${WSD}/main; rm -f *.o *.a
 
-	cd ${WSD}/general; make CC=${CC} Flags="${Flags}" 
-	cd ${WSD}/meshAMR; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
-	cd ${WSD}/pic; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
-	cd ${WSD}/species; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}"
-	cd ${WSD}/models/exosphere; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
-	cd ${WSD}/main; make CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}"
+	cd ${WSD}/general; make SEARCH=
+	cd ${WSD}/meshAMR; make SEARCH="${SEARCH}" 
+	cd ${WSD}/pic; make SEARCH="${SEARCH}"
+	cd ${WSD}/species; make SEARCH="${SEARCH}"
+	cd ${WSD}/models/exosphere; make SEARCH="${SEARCH}"
+	cd ${WSD}/main; make SEARCH="${SEARCH}"
 
 #	cd srcInterface; make LIB 
-#	cd srcInterface; ${CC} -c ${Flags} ${IncludeList} amps2swmf.cpp 
 #	cd srcInterface; ar -scr amps2swmf.a amps2swmf.o
 
 #	ar -src ../../lib/libPT.a ${WSD}/general/*.o ${WSD}/meshAMR/*.o ${WSD}/pic/*.o ${WSD}/species/*.o ${WSD}/models/exosphere/exosphere.a srcInterface/PT_wrapper.o srcInterface/amps2swmf.o 
@@ -90,9 +85,11 @@ LIB :
 amps:
 	@rm -f amps
 	make LIB
-	cd ${WSD}/main; make amps CC=${CC} Flags="${Flags}" IncludeList="${IncludeList}" 
+	cd ${WSD}/main; make amps SEARCH="${SEARCH}"
 
-	${CC} -o ${EXE} ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/general/general.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a  ${WSD}/meshAMR/mesh.a ${WSD}/pic/amps.a ${Lib} ${MPILIB}
+	${CC} -o ${EXE} ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/general/general.a \
+			${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a \
+		 	${WSD}/meshAMR/mesh.a ${WSD}/pic/amps.a ${Lib} ${MPILIB}
 
 TESTDIR = run_test
 

@@ -2,17 +2,11 @@ SHELL =/bin/sh
 
 DEFAULT_TARGET : general  
 
-clean:
-	rm -f *.o *.a
+include ../../Makefile.def
+include ../../Makefile.conf
 
-CC=gcc
-Flags=-g   
-IncludeList=
+SEARCH=
 
-.SUFFIXES: .cpp .o 
-.cpp.o: 
-	${CC} -c ${Flags} ${IncludeList} $< 
- 
 GENERALOBJ = specfunc.o rnd.o global.o 
 
 general : $(GENERALOBJ)
