@@ -7,7 +7,7 @@ COMPILE.mpicxx= mpicxx
 DEBUGC = 
 #DEBUGC = -g
 
-.SUFFIXES: .c
+.SUFFIXES: .c .cpp
 
 FLAGC = ${SEARCH} -c ${OPT3} ${DEBUGC}
 
