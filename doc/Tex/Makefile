@@ -87,7 +87,6 @@ SWMFREF = \
 	${SCRIPTDIR}/XmlToTex.protex \
 	${SCRIPTDIR}/protex.protex \
 	${DIR}/Makefile.protex \
-	${DIR}/share/Makefile.protex \
 	${DIR}/share/build/Makefile.protex \
 	${DIR}/share/build/Makefile.doc.protex \
 	${DIR}/doc/Tex/Makefile.protex \
@@ -160,10 +159,6 @@ SWMFREF = \
 ${DIR}/Makefile.protex: ${DIR}/Makefile
 	${SCRIPTDIR}/protex.pl -b -n -f -S \
 		${DIR}/Makefile > ${DIR}/Makefile.protex
-
-${DIR}/share/Makefile.protex: ${DIR}/share/Makefile
-	${SCRIPTDIR}/protex.pl -b -n -f -S \
-		${DIR}/share/Makefile > ${DIR}/share/Makefile.protex
 
 ${DIR}/CON/Makefile.protex: ${DIR}/CON/Makefile.def
 	${SCRIPTDIR}/protex.pl -b -n -f -S \
