@@ -123,7 +123,9 @@ test_amps_run:
 	-(cd ${TESTDIR}; ${MPIRUN} ./amps)
 
 test_amps_check:
-	-(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PT/plots/amps.dat output/test_amps.ref > test_amps.diff)
+	-(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PT/plots/amps.dat \
+	output/test_amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+	> test_amps.diff)
 	@ls -l test_amps.diff
 
 
