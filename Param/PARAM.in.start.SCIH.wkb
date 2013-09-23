@@ -134,14 +134,13 @@ SOLARDIPOLE
 
 #USERINPUTEND ----------------------------
 
-The floor coefficient, Cfloor, clips the reflection rate from below
-with a fraction of the maximum dissipation rate.
-Typical values are between 0.0 and 0.1.
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
 1.5e5                   LperpTimesSqrtBSi
-0.0			Cfloor
+
+#HEATPARTITIONING
+0.17			StochasticHeating
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
@@ -430,14 +429,13 @@ F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
 
-The floor coefficient, Cfloor, clips the reflection rate from below
-with a fraction of the maximum dissipation rate.
-Typical values are between 0.0 and 0.1.
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
 1.5e5                   LperpTimesSqrtBSi
-0.0			Cfloor
+
+#HEATPARTITIONING
+0.17			StochasticHeating
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau

@@ -885,8 +885,6 @@ module ModCoronalHeating
   real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
   real    :: LperpTimesSqrtB
   real    :: Crefl = 0.04
-  real    :: Cfloor = 0.04
-  real    :: ReflectionRateCeiling = 1.0
 
   ! Variables for incompressible turbulence
   logical :: UseTurbulentCascade = .false.
@@ -908,6 +906,9 @@ module ModCoronalHeating
   real :: QeByQtotal = 0.4
   ! The fraction of heating for ion parallel pressure: 1/3 of Qp
   real :: QparByQtotal = 0.2
+
+  ! Dimensionless parameter for stochastic heating
+  real :: StochasticHeating = 0.17
 
   logical,private:: DoInit = .true. 
 contains
@@ -966,7 +967,6 @@ contains
              end if
           else
              call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-             call read_var('Cfloor', Cfloor)
           end if
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
@@ -989,8 +989,8 @@ contains
        call read_var('QeByQtotal', QeByQtotal)
     case("#ANISOIONHEATING")
        call read_var('QparByQtotal', QparByQtotal)
-    case("#REFLECTIONRATE")
-       call read_var('ReflectionRateCeiling', ReflectionRateCeiling)
+    case("#HEATPARTITIONING")
+       call read_var('StochasticHeating', StochasticHeating)
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
             // NameCommand)
@@ -1448,10 +1448,8 @@ contains
        ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
             + (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho )
 
-       ! Clip the reflection rate from above and below
-       ReflectionRate = max( min(ReflectionRate, &
-            ReflectionRateCeiling*DissipationRateMax), &
-            Cfloor*DissipationRateMax)
+       ! Clip the reflection rate from above with maximum dissipation rate
+       ReflectionRate = min(ReflectionRate, DissipationRateMax)
 
        ! No reflection when turbulence is balanced (waves are then
        ! assumed to be uncorrelated)
@@ -2048,7 +2046,8 @@ contains
 
           DampingPerp = 0.18*WaveLarge*sqrt(WaveLarge*B2/(2.0*Pperp)) &
                /IonMassPerCharge/max(CoronalHeating*LperpInvGyroRad**3,1e-30) &
-               *exp(-C2*sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
+               *exp(-StochasticHeating &
+               *sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
        end if
 
        ! The 1+ is due to the fraction of the cascade power that succeeds

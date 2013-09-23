@@ -84,8 +84,10 @@ F			UseUserUpdateStates
 #CORONALHEATING
 turbulentcascade	TypeCoronalHeating
 F			UseNonWkbAlfvenWaves
-7.5e4			LperpTimesSqrtBSi
-0.01			Crefl
+1.5e5			LperpTimesSqrtBSi
+
+#HEATPARTITIONING
+0.17			StochasticHeating
 
 #RESISTIVITY
 T			UseResistivity
@@ -364,8 +366,10 @@ F			UseUserUpdateStates
 #CORONALHEATING
 turbulentcascade	TypeCoronalHeating
 F			UseNonWkbAlfvenWaves
-7.5e4			LperpTimesSqrtBSi
-0.01			Crefl
+1.5e5			LperpTimesSqrtBSi
+
+#HEATPARTITIONING
+0.17			StochasticHeating
 
 #RESISTIVITY
 T                       UseResistivity

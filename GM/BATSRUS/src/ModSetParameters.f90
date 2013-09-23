@@ -1859,7 +1859,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_wsa_coeff 
 
      case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
-          "#ELECTRONHEATING", "#ANISOIONHEATING", "#REFLECTIONRATE")
+          "#ELECTRONHEATING", "#ANISOIONHEATING", "#HEATPARTITIONING")
         call read_corona_heating(NameCommand)
 
      case("#OPENCLOSEDHEAT")
