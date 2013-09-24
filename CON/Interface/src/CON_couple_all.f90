@@ -23,6 +23,7 @@ module CON_couple_all
   use CON_couple_ih_gm        !^CMP IF IH
   use CON_couple_gm_ie        !^CMP IF IE
   use CON_couple_gm_im        !^CMP IF IM
+  use CON_couple_gm_pt        !^CMP IF PT
   use CON_couple_gm_pw        !^CMP IF PW
   use CON_couple_gm_rb        !^CMP IF RB
   !^CMP END GM
@@ -54,8 +55,9 @@ module CON_couple_all
   !REVISION HISTORY:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
   ! 14Jan05 - G. Toth commented out _swmf version of GM-IE couplers.
-  ! 03Jun08 - R. Oran <oran@umich.edu> added ih_oh coupling
-  ! 23Jul08 - A. Ridley added IM->IE coupling
+  ! 03Jun08 - R. Oran <oran@umich.edu> added IH-OH coupling
+  ! 23Jul08 - A. Ridley added IM-IE coupling
+  ! 24Sep13 - G. Toth added GM-PT coupling
   !EOP
   character(len=*), parameter :: NameMod='CON_couple_all'
 
@@ -73,6 +75,7 @@ contains
     if(use_comp(GM_).and.use_comp(PW_))call couple_gm_pw_init  !^CMP IF PW
     if(use_comp(GM_).and.use_comp(RB_))call couple_gm_rb_init  !^CMP IF RB
     if(use_comp(IH_).and.use_comp(GM_))call couple_ih_gm_init  !^CMP IF IH
+    if(use_comp(GM_).and.use_comp(PT_))call couple_gm_pt_init  !^CMP IF PT
     !                                                     ^CMP END GM
     !                                                     ^CMP IF IE BEGIN
     if(use_comp(IE_).and.use_comp(IM_))call couple_ie_im_init  !^CMP IF IM
@@ -189,6 +192,8 @@ contains
           call couple_gm_ie(TimeSimulation)        !^CMP IF IE
        case(IM_)                                   !^CMP IF IM
           call couple_gm_im(TimeSimulation)        !^CMP IF IM
+       case(PT_)                                   !^CMP IF PT
+          call couple_gm_pt(TimeSimulation)        !^CMP IF PT
        case(PW_)                                   !^CMP IF PW
           call couple_gm_pw(TimeSimulation)        !^CMP IF PW
        case(RB_)                                   !^CMP IF RB
