@@ -1,6 +1,6 @@
 program test_interpolate_amr
 
-  use ModInterpolateAMRGrid, test => test_interpolate_on_amr_grid_2
+  use ModInterpolateAMRGrid, test => test_interpolate_amr_grid_2
 
   implicit none
 
