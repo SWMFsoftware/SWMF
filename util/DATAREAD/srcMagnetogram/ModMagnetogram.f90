@@ -847,15 +847,19 @@ contains
     real:: BMap_D(nDim)
     real:: SinPhi,CosPhi,XY,R_PFSSM
     real:: CosTheta,SinTheta
+
+    ! Variables to obtain FDIPS field below Ro_PFSSM
+    real :: BMapo_D(nDim), BMapi_D(nDim), Ri_PFSSM
     !--------------------------------------------------------------------------
     !\
     ! Calculate cell-centered spherical coordinates::
     !/
     Rin_PFSSM   = sqrt(xInput**2+yInput**2+zInput**2)
     !\
-    ! Avoid calculating B0 inside a critical radius = 0.5*Rsun
+    ! Avoid calculating B0 inside a critical radius = 0.9*Rsun
     !/
-    if (Rin_PFSSM <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
+    if(nRExt/=0 .and. Rin_PFSSM < max(Ro_PFSSM-dR*nRExt,0.9*Ro_PFSSM) &
+         .or. nRExt==0 .and. Rin_PFSSM < 0.9*Ro_PFSSM)then
        B0_D= 0.0
        RETURN
     end if
@@ -871,16 +875,24 @@ contains
     ! The inner boundary in the simulations starts at a height
     ! H_PFSSM above that of the magnetic field measurements!
     !/
-
     R_PFSSM =min(Rin_PFSSM+H_PFSSM, Rs_PFSSM)
 
-
     !\
-    ! Transform Phi_PFSSM from the component's frame to the magnetogram's frame.
+    ! Transform Phi_PFSSM from the component's frame to the magnetogram's frame
     !/
     Phi_PFSSM = Phi_PFSSM - Phi_Shift*cDegToRad
 
-    call interpolate_field((/R_PFSSM,Phi_PFSSM,Theta_PFSSM/),BMap_D)
+    if(nRExt == 0 .and. R_PFSSM < Ro_PFSSM)then
+       ! linearly extrapolate FDIPS field for locations below Ro_PFSSM
+       Ri_PFSSM = 2.0*Ro_PFSSM - R_PFSSM
+
+       call interpolate_field((/Ri_PFSSM,Phi_PFSSM,Theta_PFSSM/),BMapi_D)
+       call interpolate_field((/Ro_PFSSM,Phi_PFSSM,Theta_PFSSM/),BMapo_D)
+
+       BMap_D = 2.0*BMapo_D - BMapi_D
+    else
+       call interpolate_field((/R_PFSSM,Phi_PFSSM,Theta_PFSSM/),BMap_D)
+    end if
     !\
     ! Magnetic field components in global Cartesian coordinates::
     ! Set B0x::

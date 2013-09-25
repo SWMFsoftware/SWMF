@@ -68,7 +68,7 @@ When using FDIPS, rBody should be large enough so that a nonzero B0 can be
 assigned to the relevant ghostcells.
 #BODY
 T			UseBody
-1.001			rBody
+1.0			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
@@ -139,6 +139,7 @@ turbulentcascade        TypeCoronalHeating
 F                       UseNonWkbAlfvenWaves
 1.5e5                   LperpTimesSqrtBSi
 
+The stochastic heating parameter is in the range [0,0.34]
 #HEATPARTITIONING
 0.17			StochasticHeating
 
@@ -225,7 +226,7 @@ SC/Param/grid_TR.dat
  100.0			zMax
 
 #LIMITRADIUS
-1.001			rMin
+1.0			rMin
 24.0			rMax
 
 ----------------------------------------------------
