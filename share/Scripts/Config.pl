@@ -17,7 +17,8 @@ my %Compiler = (
 		"flux-login"          => "ifortmpif90",
 		"hera"                => "mpiifort",
 		"ubgl"                => "mpxlf90,mpxlc",
-		"jaguarpf-ext"        => "ftn",
+		"jaguarpf-ext"        => "ifortftn",
+                "kraken-gsi"          => "ifortftn",
                 "yslogin"             => "ifortmpif90",
 		);
 
@@ -27,7 +28,7 @@ my $ERROR_  ='share/Scripts/Config.pl ERROR:';
 # Obtain $OS, $DIR, and the machine name and provide it to caller script
 our $OS  = `uname`    or die "$ERROR_ could not obtain OS\n"; chop $OS;
 our $DIR = `/bin/pwd` or die "$ERROR_ could not obtain DIR\n"; chop $DIR;
-our $Machine = `hostname -s`; chop $Machine; 
+our $Machine = `hostname`; chop($Machine); $Machine =~ s/\..*//;
 
 # remove numbers from the machine name
 $Machine =~ s/\d+$//; 
