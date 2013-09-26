@@ -120,7 +120,7 @@ test_amps_rundir:
 	mv amps ${TESTDIR}
 
 test_amps_run:
-	-(cd ${TESTDIR}; ${MPIRUN} ./amps)
+	cd ${TESTDIR}; ${MPIRUN} ./amps
 
 test_amps_check:
 	-(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PT/plots/amps.dat \
