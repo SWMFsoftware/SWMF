@@ -48,7 +48,8 @@ int main(int argc,char **argv) {
   sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
   PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
 
-  cout << "End of the run:" << PIC::nTotalSpecies << endl;
+//  cout << "End of the run:" << PIC::nTotalSpecies << endl;
+  MPI_Finalize();
 
   return 1;
 }
