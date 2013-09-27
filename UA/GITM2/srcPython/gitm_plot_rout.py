@@ -97,11 +97,11 @@ def add_colorbar(contour_handle, zmin, zmax, zinc, orient, scale, name, units):
     else:
         zscale = max(abs(zmin), abs(zmax))
         if zscale > 1.0e3 or zscale < 1.0e-3:
-            cb.formatter=FormatStrFormatter('{:.2g}')
+            cb.formatter=FormatStrFormatter('%.2g')
         elif zscale < 1.0e1:
-            cb.formatter=FormatStrFormatter('{:.2f}')
+            cb.formatter=FormatStrFormatter('%.2f')
         else:
-            cb.formatter=FormatStrFormatter('{:.0f}')
+            cb.formatter=FormatStrFormatter('%.0f')
         # Set the label
         cb.set_label(r'{:s} (${:s}$)'.format(name, units))
 
