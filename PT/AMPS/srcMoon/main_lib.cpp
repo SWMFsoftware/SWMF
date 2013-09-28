@@ -1230,7 +1230,7 @@ void amps_init() {
   //  }
   //  VT_USER_END("name");
   //  MPI_Finalize();
-  //  return 1;
+  //  return EXIT_SUCCESS;
 
   //  cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
 
