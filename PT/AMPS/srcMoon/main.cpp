@@ -51,5 +51,5 @@ int main(int argc,char **argv) {
 //  cout << "End of the run:" << PIC::nTotalSpecies << endl;
   MPI_Finalize();
 
-  return 1;
+  return EXIT_SUCCESS;
 }
