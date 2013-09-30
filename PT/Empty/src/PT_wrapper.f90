@@ -90,3 +90,40 @@ subroutine PT_run(TimeSimulation,TimeSimulationLimit)
 
 end subroutine PT_run
 
+!==============================================================================
+subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
+
+  implicit none
+
+  integer, intent(out):: nDimOut    ! grid dimensionality
+  integer, intent(out):: iGridOut   ! grid index (increases with AMR)
+  integer, intent(out):: iDecompOut ! decomposition index
+  
+  character(len=*), parameter :: NameSub = 'PT_get_grid_info'
+
+  call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+
+end subroutine PT_get_grid_info
+!==============================================================================
+subroutine PT_put_from_gm(UseData, &
+     NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+
+  implicit none
+
+  logical,          intent(in)   :: UseData ! true when data is transferred
+                                            ! false if positions are asked
+  character(len=*), intent(inout):: NameVar ! List of variables
+  integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+  integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+
+  real, pointer:: Pos_DI(:,:)               ! Position vectors
+
+  real,    intent(in):: Data_VI(nVar,nPoint)! Recv data array
+  integer, intent(in):: iPoint_I(nPoint)    ! Order of data
+
+  character(len=*), parameter :: NameSub='PT_put_from_gm'
+  
+  call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+
+end subroutine PT_put_from_gm
+
