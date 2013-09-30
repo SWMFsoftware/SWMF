@@ -91,6 +91,36 @@ subroutine GM_run(TimeSimulation,TimeSimulationLimit)
 end subroutine GM_run
 
 !==============================================================================
+subroutine GM_get_grid_info(nDimOut, iGridOut, iDecompOut)
+
+  implicit none
+
+  integer, intent(out):: nDimOut    ! grid dimensionality
+  integer, intent(out):: iGridOut   ! grid index (increases with AMR)
+  integer, intent(out):: iDecompOut ! decomposition index
+  
+  character(len=*), parameter :: NameSub = 'GM_get_grid_info'
+
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+end subroutine GM_get_grid_info
+
+!==============================================================================
+subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+
+  implicit none
+
+  integer, intent(in) :: nDimIn                ! dimension of position vectors
+  integer, intent(in) :: nPoint                ! number of positions
+  real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
+  integer, intent(out):: iProc_I(nPoint)       ! processor owning position
+
+  character(len=*), parameter:: NameSub = 'GM_find_points'
+
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+end subroutine GM_find_points
+!==============================================================================
 subroutine GM_get_for_im(Buffer_IIV,iSize,jSize,nVar,NameVar)
   implicit none
 
@@ -452,3 +482,22 @@ subroutine GM_put_mag_from_ie(Buffer_DI, iSize)
 end subroutine GM_put_mag_from_ie
 
 !==========================================================================
+subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Pos_DI, &
+     Data_VI)
+
+  implicit none
+
+  logical,          intent(in):: IsNew   ! true for new point array
+  character(len=*), intent(in):: NameVar ! List of variables
+  integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+  integer,          intent(in):: nDimIn  ! Dimensionality of positions
+  integer,          intent(in):: nPoint  ! Number of points in Pos_DI
+
+  real, intent(in) :: Pos_DI(nDimIn,nPoint)  ! Position vectors
+  real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+  character(len=*), parameter :: NameSub='GM_get_for_pt'
+
+  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
+end subroutine GM_get_for_pt
