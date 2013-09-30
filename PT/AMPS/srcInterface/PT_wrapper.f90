@@ -112,3 +112,69 @@ call AMPS_TimeStep(TimeSimulation, TimeSimulationLimit)
 
 end subroutine PT_run
 
+!==============================================================================
+subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
+
+  ! Provide information about AMPS grid
+
+  implicit none
+
+  integer, intent(out):: nDimOut    ! grid dimensionality
+  integer, intent(out):: iGridOut   ! grid index (increases with AMR)
+  integer, intent(out):: iDecompOut ! decomposition index
+  
+  character(len=*), parameter :: NameSub = 'PT_get_grid_info'
+  !---------------------------------------------------------------------------
+  nDimOut    = 3
+  iGridOut   = 1
+  iDecompOut = 1
+
+end subroutine PT_get_grid_info
+!==============================================================================
+subroutine PT_put_from_gm(UseData, &
+     NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+
+  implicit none
+
+  logical,          intent(in)   :: UseData ! true when data is transferred
+                                            ! false if positions are asked
+  character(len=*), intent(inout):: NameVar ! List of variables
+  integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+  integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+
+  real, pointer:: Pos_DI(:,:)               ! Position vectors
+
+  real,    intent(in):: Data_VI(nVar,nPoint)! Recv data array
+  integer, intent(in):: iPoint_I(nPoint)    ! Order of data
+
+  integer:: iPoint, iPointOrig, iProc=0
+
+  character(len=*), parameter :: NameSub='PT_put_from_gm'
+  !--------------------------------------------------------------------------
+  if(.not.UseData)then
+     ! Set variable names
+     NameVar = 'Bx By Bz'
+     ! Set number of variables needed
+     nVar = 3
+
+     ! set number of grid points on this processor
+     nPoint = 10
+     ! allocate array
+     allocate(Pos_DI(3,nPoint))
+
+     ! Fill in values
+     do iPoint = 1, nPoint
+        Pos_DI(:,iPoint) = (/ 10.0*iPoint, 20.0*iPoint, 30.0*iPoint/)
+     end do
+     RETURN
+  end if
+
+  write(*,*)NameSub,': iProc, iPoint, i, Pos, Data'
+  do iPoint = 1, nPoint
+     i = iPoint_I(iPoint)
+     write(*,*)NameSub, iProc, iPoint, i, Pos_DI(:,i), DataData_VI(:,i)
+     ! Here should convert from SI to AMPS units and store data
+  end do
+
+end subroutine PT_put_from_gm
+
