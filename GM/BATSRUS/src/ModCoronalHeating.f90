@@ -1605,20 +1605,20 @@ contains
             - LeftState_VY(Ux_,i,j,k) - RightState_VY(Ux_,i,j,k))
     else
        CurlU_D(:) = &
-            + cross_product( FaceNormal_DDFB(:,1,i+1,j,k,iBlock), 0.5*(      &
-            LeftState_VX(Ux_:Uz_,i+1,j,k) + RightState_VX(Ux_:Uz_,i+1,j,k))) &
-            - cross_product( FaceNormal_DDFB(:,1,i  ,j,k,iBlock), 0.5*(      &
-            LeftState_VX(Ux_:Uz_,i  ,j,k) + RightState_VX(Ux_:Uz_,i  ,j,k))) &
-            + cross_product( FaceNormal_DDFB(:,2,i,j+1,k,iBlock), 0.5*(      &
-            LeftState_VY(Ux_:Uz_,i,j+1,k) + RightState_VY(Ux_:Uz_,i,j+1,k))) &
-            - cross_product( FaceNormal_DDFB(:,2,i,j  ,k,iBlock), 0.5*(      &
-            LeftState_VY(Ux_:Uz_,i,j  ,k) + RightState_VY(Ux_:Uz_,i,j  ,k))) &
-            + cross_product( FaceNormal_DDFB(:,3,i,j,k+1,iBlock), 0.5*(      &
-            LeftState_VZ(Ux_:Uz_,i,j,k+1) + RightState_VZ(Ux_:Uz_,i,j,k+1))) &
-            - cross_product( FaceNormal_DDFB(:,3,i,j,k  ,iBlock), 0.5*(      &
-            LeftState_VZ(Ux_:Uz_,i,j,k  ) + RightState_VZ(Ux_:Uz_,i,j,k  )))
+            + cross_product( FaceNormal_DDFB(:,1,i+1,j,k,iBlock),           &
+            LeftState_VX(Ux_:Uz_,i+1,j,k) + RightState_VX(Ux_:Uz_,i+1,j,k)) &
+            - cross_product( FaceNormal_DDFB(:,1,i  ,j,k,iBlock),           &
+            LeftState_VX(Ux_:Uz_,i  ,j,k) + RightState_VX(Ux_:Uz_,i  ,j,k)) &
+            + cross_product( FaceNormal_DDFB(:,2,i,j+1,k,iBlock),           &
+            LeftState_VY(Ux_:Uz_,i,j+1,k) + RightState_VY(Ux_:Uz_,i,j+1,k)) &
+            - cross_product( FaceNormal_DDFB(:,2,i,j  ,k,iBlock),           &
+            LeftState_VY(Ux_:Uz_,i,j  ,k) + RightState_VY(Ux_:Uz_,i,j  ,k)) &
+            + cross_product( FaceNormal_DDFB(:,3,i,j,k+1,iBlock),           &
+            LeftState_VZ(Ux_:Uz_,i,j,k+1) + RightState_VZ(Ux_:Uz_,i,j,k+1)) &
+            - cross_product( FaceNormal_DDFB(:,3,i,j,k  ,iBlock),           &
+            LeftState_VZ(Ux_:Uz_,i,j,k  ) + RightState_VZ(Ux_:Uz_,i,j,k  ))
 
-       CurlU_D(:) = CurlU_D(:)/CellVolume_GB(i,j,k,iBlock)
+       CurlU_D(:) = 0.5*CurlU_D(:)/CellVolume_GB(i,j,k,iBlock)
     end if
 
   end subroutine get_curl_u
@@ -1988,9 +1988,6 @@ contains
     real :: TeByTp, B2, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
     real :: WaveLarge
     real :: DampingElectron, DampingPar, DampingPerp, DampingTotal
-
-    ! The smaller C2, the more effective the stochastic heating is
-    real, parameter :: C2 = 0.17
 
     character(len=*), parameter :: &
          NameSub = 'ModCoronalHeating::apportion_coronal_heating'
