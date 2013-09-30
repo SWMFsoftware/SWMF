@@ -17,6 +17,8 @@ module ModB0
 
   private ! except
 
+  public:: UseB0            ! so one can use it from ModB0 too
+
   public:: init_mod_b0      ! initialize B0 module
   public:: clean_mod_b0     ! clean B0 module
   public:: read_b0_param    ! read UseB0, UseB0Source, UseCurlB0
