@@ -139,6 +139,56 @@ subroutine GM_synchronize_refinement(iProc0,iCommUnion)
 
 end subroutine GM_synchronize_refinement
 !==============================================================================
+subroutine GM_get_grid_info(nDimOut, iGridOut, iDecompOut)
+
+  use BATL_lib, ONLY: nDim
+  use ModMain,  ONLY: iNewGrid, iNewDecomposition
+
+  implicit none
+
+  integer, intent(out):: nDimOut    ! grid dimensionality
+  integer, intent(out):: iGridOut   ! grid index (increases with AMR)
+  integer, intent(out):: iDecompOut ! decomposition index 
+
+  character(len=*), parameter :: NameSub='GM_get_grid_info'
+
+  ! Return basic grid information useful for model coupling.
+  ! The decomposition index increases with load balance and AMR.
+  !---------------------------------------------------------------------------
+  
+  nDimOut    = nDim
+  iGridOut   = iNewGrid
+  iDecompOut = iNewDecomposition
+
+end subroutine GM_get_grid_info
+!==============================================================================
+subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+
+  use BATL_lib,   ONLY: MaxDim, find_grid_block
+  use ModPhysics, ONLY: Si2No_V, UnitX_
+
+  implicit none
+
+  integer, intent(in) :: nDimIn                ! dimension of position vectors
+  integer, intent(in) :: nPoint                ! number of positions
+  real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
+  integer, intent(out):: iProc_I(nPoint)       ! processor owning position
+
+  ! Find array of points and return processor indexes owning them
+  ! Could be generalized to return multiple processors...
+
+  real:: Xyz_D(MaxDim) = 0.0
+  integer:: iPoint, iBlock
+
+  character(len=*), parameter:: NameSub = 'GM_find_points'
+  !--------------------------------------------------------------------------
+  do iPoint = 1, nPoint
+     Xyz_D(1:nDimIn) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
+     call find_grid_block(Xyz_D, iProc_I(iPoint), iBlock)
+  end do
+
+end subroutine GM_find_points
+!==============================================================================
 subroutine GM_print_variables(NameSource)
 
   use ModMain, ONLY: NameThisComp
