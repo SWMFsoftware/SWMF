@@ -1067,7 +1067,7 @@ contains
        call MPI_bcast(iProc, 1, MPI_INTEGER, iProcWorld, i_comm(), iError)
     end if
 
-    if(present(iProc))then
+    if(present(jProc))then
        ! Broadcast the iProcUnion index from the global jProc to everyone
        iProcWorld = jProc
        jProc      = iProcUnion
