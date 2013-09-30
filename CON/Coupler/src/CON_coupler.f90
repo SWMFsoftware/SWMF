@@ -1020,53 +1020,63 @@ contains
 
   !============================================================================
 
-  subroutine set_router_comm(iComp1,iComp2,iCommRouter,UseMe,iProc)
+  subroutine set_router_comm(iComp1, iComp2, iCommRouter, UseMe, iProc, jProc)
 
+    ! This routine has to be called from ALL processors in i_comm()
+    !
     ! Return the union communicator iCommRouter for two components indexed by
-    ! iComp1 and iComp2
-    ! Also return UseMe=.true. if the processor is part of the union
+    ! iComp1 and iComp2.
+    !
+    ! Return optional UseMe=.true. if the processor is part of the union
     ! and UseMe=.false. if the processor is not part of the union
-    ! If the optional iProc argument is present, it is transformed from
-    ! the value valid for iCommWorld to the value valid for iCommRouter.
+    !
+    ! If the optional iProc and jProc arguments are present, 
+    ! they are transformed from the value valid for iCommWorld
+    ! to the value valid for iCommRouter.
+
+    integer, intent(in)              :: iComp1,iComp2
+    integer, intent(out)             :: iCommRouter
+    logical, intent(out),   optional :: UseMe
+    integer, intent(inout), optional :: iProc, jProc
+
+    integer:: iGroup1, iGroup2, iGroupUnion, iProcUnion, iProcWorld, iError
 
     character(len=*), parameter :: NameSub=NameMod//'::set_router_comm'
-    integer, intent(in) :: iComp1,iComp2
-    integer, intent(out):: iCommRouter
-    logical, intent(out), optional   :: UseMe
-    integer, intent(inout), optional :: iProc
-    integer :: iGroup1, iGroup2, iGroupUnion, iProcUnion, iError
-
-    logical :: DoTest, DoTestMe
+    logical:: DoTest, DoTestMe
     !-------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    if(DoTest)write(*,*)NameSub,': starting for iComp1,iComp2,iProc=',&
-         iComp1,iComp2,i_proc()
+    if(DoTest)write(*,*)NameSub,': starting for iComp1,iComp2,iProc=', &
+         iComp1, iComp2, i_proc()
 
     iGroup1 = i_group(iComp1)
     iGroup2 = i_group(iComp2)
 
-    !write(*,*)NameSub,': call MPI_group_union for iGroup1,iGroup2 =',&
-    !     iGroup1,iGroup2
     call MPI_group_union(iGroup1,iGroup2, iGroupUnion, iError)
 
-    !write(*,*)NameSub,': call MPI_comm_create, iProc=',i_proc()
     call MPI_comm_create(i_comm(),iGroupUnion,iCommRouter,iError)
 
-    call MPI_group_rank(iGroupUnion,iProcUnion,iError)
-    !write(*,*)NameSub,': iGroupUnion,iProcUnion=',iGroupUnion,iProcUnion
+    call MPI_group_rank(iGroupUnion, iProcUnion, iError)
 
     if(present(UseMe)) UseMe = iProcUnion /= MPI_UNDEFINED
 
     if(present(iProc))then
-       if(DoTest)write(*,*)NameSub,': bcast iProcUnion from iProc=',iProc
-       call MPI_bcast(iProcUnion,1,MPI_INTEGER,iProc,i_comm(),iError)
-       iProc=iProcUnion
-       if(DoTest)write(*,*)NameSub,': iProc modified to ',iProc
+       ! Broadcast the iProcUnion index from the global iProc to everyone
+       iProcWorld = iProc
+       iProc      = iProcUnion
+       call MPI_bcast(iProc, 1, MPI_INTEGER, iProcWorld, i_comm(), iError)
+    end if
+
+    if(present(iProc))then
+       ! Broadcast the iProcUnion index from the global jProc to everyone
+       iProcWorld = jProc
+       jProc      = iProcUnion
+       call MPI_bcast(jProc, 1, MPI_INTEGER, iProcWorld, i_comm(), iError)
     end if
 
     call MPI_group_free(iGroupUnion,iError)
-    if(DoTest)write(*,*)NameSub,': finished, iProc=',i_proc()
+
+    if(DoTest)write(*,*)NameSub,': finished, iProc=', i_proc()
 
   end subroutine set_router_comm
 
