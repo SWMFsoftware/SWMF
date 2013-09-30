@@ -8,23 +8,12 @@ include Makefile.DEPEND
 
 # Configurable objects
 
-#^CMP IF IH BEGIN
-OBJ_IH = GM_put_from_ih.o
-#^CMP END IH
-#^CMP IF IM BEGIN
-OBJ1   = ModGmImCoupling.o  #^CFG IF RAYTRACE
-OBJ_IM = $(OBJ1) GM_get_for_im.o GM_put_from_im.o
-#^CMP END IM
-#^CMP IF RB BEGIN
-OBJ2   = ModGmRbCoupling.o  #^CFG IF RAYTRACE
-OBJ_RB = $(OBJ2) GM_get_for_rb.o
-#^CMP END RB
-#^CMP IF IE BEGIN
-OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o ModIeGrid.o
-#^CMP END IE
-#^CMP IF PW BEGIN
-OBJ_PW = GM_get_for_pw.o GM_put_from_pw.o ModPwGrid.o
-#^CMP END PW
+OBJ_IH = GM_put_from_ih.o                                   #^CMP IF IH
+OBJ_IM = ModGmImCoupling.o GM_get_for_im.o GM_put_from_im.o #^CMP IF IM
+OBJ_RB = ModGmRbCoupling.o GM_get_for_rb.o                  #^CMP IF RB
+OBJ_IE = GM_get_for_ie.o GM_put_from_ie.o ModIeGrid.o       #^CMP IF IE
+OBJ_PT = GM_get_for_pt.o                                    #^CMP IF PT
+OBJ_PW = GM_get_for_pw.o GM_put_from_pw.o ModPwGrid.o       #^CMP IF PW
 
 OBJECTS = \
 	ModGridDescriptor.o\
@@ -35,7 +24,7 @@ OBJECTS = \
 	ModDensityAndGradient.o\
 	ModRadioWaveImage.o\
 	ModRadioWaveRaytracing.o\
-	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PW)
+	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PT) $(OBJ_PW)
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
 	-I../src -I../srcBATL -I${CRASHDIR}
