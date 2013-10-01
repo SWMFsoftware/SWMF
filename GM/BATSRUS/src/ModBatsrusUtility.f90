@@ -117,11 +117,11 @@ real function minval_BLK(qnum,qa)
           iComm, iError)
      minval_BLK=qminval_all
      if(oktest)write(*,*)'me,minval,minval_all:',iProc,qminval,qminval_all
-!     if(qminval_all>=1.e+30)call stop_mpi('Error in minval_BLK: huge min!')
+!     if(qminval_all>=1.e+30)call stop_mpi('Error in minval_BLK: NaN-s?')
   else
      minval_BLK=qminval
      if(oktest)write(*,*)'me,qminval:',iProc,qminval
-!     if(qminval>=1.e+30)call stop_mpi('Error in minval_BLK: huge min!')
+!     if(qminval>=1.e+30)call stop_mpi('Error in minval_BLK: NaN-s?')
   endif
 
 end function minval_BLK
@@ -176,11 +176,11 @@ real function maxval_BLK(qnum,qa)
           iComm, iError)
      maxval_BLK=qmaxval_all
      if(oktest)write(*,*)'me,maxval,maxval_all:',iProc,qmaxval,qmaxval_all
-     if(qmaxval_all<=-1.e+30)call stop_mpi('Error in maxval_BLK: tiny max!')
+     if(qmaxval_all<=-1.e+30)call stop_mpi('Error in maxval_BLK: NaN-s?')
   else
      maxval_BLK=qmaxval
      if(oktest)write(*,*)'qmaxval:',qmaxval
-     if(qmaxval<=-1.e+30)call stop_mpi('Error in maxval_BLK: tiny max!')
+     if(qmaxval<=-1.e+30)call stop_mpi('Error in maxval_BLK: NaN-s?')
   endif
 
 end function maxval_BLK
