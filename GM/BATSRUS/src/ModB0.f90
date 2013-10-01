@@ -441,6 +441,8 @@ contains
           end do; end do; end do
        end if
     elseif(IsRzGeometry)then
+       DxInv = 1/CellSize_DB(x_,iBlock)
+
        k = 1
        do j = 1, nJ; do i = 1, nI
           DivB0_C(i,j,k)= ( &
