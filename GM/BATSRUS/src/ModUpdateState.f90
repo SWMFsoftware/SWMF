@@ -794,6 +794,7 @@ subroutine fix_multi_ion_update(iBlock)
   use ModMain,       ONLY: iTest, jTest, kTest, BlkTest, ProcTest
   use ModMultiFluid, ONLY: nIonFluid, IonFirst_, IonLast_, &
        iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, MassIon_I, MassFluid_I
+  use ModProcMH,     ONLY: iProc
 
   integer, intent(in) :: iBlock
 

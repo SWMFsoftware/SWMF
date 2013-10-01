@@ -946,7 +946,7 @@ subroutine select_conservative
      ! the assumption of conservative everywhere
      IsConserv_CB = .true.
 
-     if(DoTestMe.and.iBlock==BlkTest)&
+     if(DoTestMe .and. iProc==PROCtest)&
           write(*,*)'select_conservative: default IsConserv is true'
   endif
 
