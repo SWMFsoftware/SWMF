@@ -311,14 +311,14 @@ contains
        SC_Xyz_D = SC_XyzIn_D
     else
        !transform to dimensionless cartesian Xyz
-       R = SC_Xyz_D(R_)
+       R = SC_XyzIn_D(R_)
        if(UseLogRSc)then
           R = exp(R)
        elseif(UseGenRSc)then
        end if
       
-       Phi = SC_Xyz_D(Phi_) 
-       Theta = SC_Xyz_D(Theta_)
+       Phi = SC_XyzIn_D(Phi_) 
+       Theta = SC_XyzIn_D(Theta_)
        rSinTheta = R *sin(Theta)
        
        SC_Xyz_D(x_) = rSinTheta * cos(Phi) 

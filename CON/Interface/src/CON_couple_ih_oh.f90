@@ -309,14 +309,14 @@ contains
        IH_Xyz_D = IH_XyzIn_D
     else
        !transform to dimensionless cartesian Xyz
-       R = IH_Xyz_D(R_)
+       R = IH_XyzIn_D(R_)
        if(UseLogRIh)then
           R = exp(R)
        elseif(UseGenRIh)then
        end if
       
-       Phi = IH_Xyz_D(Phi_) 
-       Theta = IH_Xyz_D(Theta_)
+       Phi = IH_XyzIn_D(Phi_) 
+       Theta = IH_XyzIn_D(Theta_)
        rSinTheta = R *sin(Theta)
        
        IH_Xyz_D(x_) = rSinTheta * cos(Phi) 
