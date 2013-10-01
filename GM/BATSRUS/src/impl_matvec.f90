@@ -266,10 +266,10 @@ subroutine impl_matvec_prec(qx,qy,n)
 
   call set_oktest('impl_matvec_prec',oktest,oktest_me)
 
+  qy=qx
+
   if(oktest_me)write(*,*)'impl_matvec_prec initial n,sum(x**2),sum(y**2)=',&
        nimpl,sum(qx(1:nimpl)**2),sum(qy(1:nimpl)**2)
-
-  qy=qx
 
   ! qy = P_R.qx, where P_R = I, U^{-1}, or U^{-1}L^{-1}
   ! for left, symmetric and right preconditioning, respectively
@@ -355,10 +355,10 @@ subroutine impl_matvec_with(qx,qy,n)
 
   call set_oktest('impl_matvec_with',oktest,oktest_me)
 
+  qy = 0.
+
   if(oktest_me)write(*,*)'impl_matvec_with initial n,sum(x**2),sum(y**2)=',&
        n,sum(qx**2),sum(qy**2)
-
-  qy = 0.
 
   do implBLK=1,nImplBLK
      call impl_matvec_with_BLK(MAT(1,1,1,1,1,1,implBLK),&
