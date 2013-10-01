@@ -888,6 +888,7 @@ module ModCoronalHeating
 
   ! Variables for incompressible turbulence
   logical :: UseTurbulentCascade = .false.
+  logical :: UseCounterPropagatingWave = .true.
   logical :: UseScaledCorrelationLength = .true.
   real :: KarmanTaylorBeta = 1.0
 
@@ -989,6 +990,8 @@ contains
        call read_var('QeByQtotal', QeByQtotal)
     case("#ANISOIONHEATING")
        call read_var('QparByQtotal', QparByQtotal)
+    case("#COUNTERPROPAGATINGWAVE")
+       call read_var('UseCounterPropagatingWave', UseCounterPropagatingWave)
     case("#HEATPARTITIONING")
        call read_var('StochasticHeating', StochasticHeating)
     case default
@@ -1359,6 +1362,8 @@ contains
          CoronalHeating
 
     real :: FullB_D(3), FullB, Rho, Coef
+    real :: ReflectionRate, GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
+    real :: EwavePlus, EwaveMinus
 
     character(len=*), parameter :: &
          NameSub = 'ModCoronalHeating::turbulent_cascade'
@@ -1366,26 +1371,47 @@ contains
 
     ! Low-frequency cascade due to small-scale nonlinearities
 
+    if(UseB0)then
+       FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    else
+       FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    end if
+    FullB = sqrt(sum(FullB_D**2))
+
     if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
        ! Note that Lperp is multiplied with the density
        Coef = 2.0*sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
             /State_VGB(Lperp_,i,j,k,iBlock)
     else
-       if(UseB0)then
-          FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
-       else
-          FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-       end if
-       FullB = sqrt(sum(FullB_D**2))
-
-       Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))*2.0/LperpTimesSqrtB
+       Coef = 2.0*sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
     end if
 
-    WaveDissipation_V(WaveFirst_) = Coef*State_VGB(WaveFirst_,i,j,k,iBlock)&
-         *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))
+    EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+    EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-    WaveDissipation_V(WaveLast_) = Coef*State_VGB(WaveLast_,i,j,k,iBlock) &
-         *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock))
+    if(UseCounterPropagatingWave)then
+       WaveDissipation_V(WaveFirst_) = Coef*sqrt(EwaveMinus)*EwavePlus
+       WaveDissipation_V(WaveLast_) = Coef*sqrt(EwavePlus)*EwaveMinus
+    else
+       b_D = FullB_D/max(1e-15, FullB)
+       Rho = State_VGB(Rho_,i,j,k,iBlock)
+       
+       call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
+
+       call get_curl_u(i, j, k, iBlock, CurlU_D)
+
+       ! Reflection rate driven by Alfven speed gradient and
+       ! vorticity along the field lines
+       ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
+            + (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho )
+
+       ! Local dissipation of Alfven waves.
+       ! Correct at top of closed field lines, where turbulence is balanced
+       WaveDissipation_V(WaveFirst_) = &
+            max(ReflectionRate, Coef*sqrt(EwaveMinus))*EwavePlus
+       WaveDissipation_V(WaveLast_) = &
+            max(ReflectionRate, Coef*sqrt(EwavePlus))*EwaveMinus
+     end if
 
     CoronalHeating = sum(WaveDissipation_V)
 
@@ -1394,12 +1420,6 @@ contains
   !============================================================================
 
   subroutine get_wave_reflection(iBlock)
-
-    ! This is the wave reflection in the WKB approach.
-    ! The more generic wave reflection due to shear flows and Alfven speed
-    ! gradients in the non-WKB context is in the turbulence_mixing subroutine,
-    ! which is more suitable in the heliosphere but not applicable in the
-    ! lower corona
 
     use BATL_size, ONLY: nDim, nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC
@@ -1417,6 +1437,8 @@ contains
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate
     real :: EwavePlus, EwaveMinus
     !--------------------------------------------------------------------------
+
+    if(.not.UseCounterPropagatingWave) RETURN
 
     if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
 
