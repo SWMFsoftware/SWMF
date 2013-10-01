@@ -499,7 +499,11 @@ contains
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
 
     case('vol')
-       tmp1_BLK(:,:,:,iBlock) = 1.0
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+
+          tmp1_BLK(:,:,:,iBlock) = 1.0
+       end do
        VarValue = integrate_BLK(1,tmp1_BLK)
 
     case default
