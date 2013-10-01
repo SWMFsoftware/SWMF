@@ -164,7 +164,7 @@ if($Uninstall){
 	exit 1;
     }else{
 	&shell_command("cd share; make distclean")
-	    if -d "share" and not $IsComponent;
+	    if -f "share/Makefile" and not $IsComponent;
 	&shell_command("cd util; make distclean")
 	    if -d "util" and not $IsComponent;
 	&shell_command("make allclean");
@@ -402,7 +402,7 @@ sub install_code_{
 
     # Install the code
     &shell_command("cd share; make install") 
-	if -d "share" and not $IsComponent;
+	if -f "share/Makefile" and not $IsComponent;
     &shell_command("cd util; make install") 
 	if -d "util" and not $IsComponent;
     &shell_command("make install");
