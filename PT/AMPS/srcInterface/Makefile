@@ -10,8 +10,9 @@ include ../../../Makefile.conf
 
 # OBJECT FILE FOR THE WRAPPER
 
-OBJ_WRAPPER = \
-	PT_wrapper.o
+OBJECTS = \
+	PT_wrapper.o \
+	amps2swmf.o
 
 #
 #	Making library
@@ -24,9 +25,11 @@ LIB:
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${OBJ_WRAPPER} ${MAKEFILE_COMP_SELECT}
-	rm -f ${MY_LIB}
-	${AR} ${MY_LIB} ${OBJ_WRAPPER}
+AMPS_LIB = ../srcTemp/libAMPS.a
+
+${MY_LIB}: ${AMPS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+	cp -f ${AMPS_LIB} ${MY_LIB}
+	${AR} ${MY_LIB} ${OBJECTS}
 
 PT_wrapper.o: ${LIBRARYDIR}/CON_comp_info.o
 
