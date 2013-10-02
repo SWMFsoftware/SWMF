@@ -78,7 +78,7 @@ ${LIB_AMPS}:
 	cd ${WSD}/main; make SEARCH_C="${SEARCH}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
 	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o \
-		species/*.o models/exosphere/*.o main/main_lib.o
+		species/*.o models/exosphere/*.o
 
 LIB: ${LIB_AMPS}
 	cd srcInterface; make LIB SEARCH_C="${SEARCH}"
