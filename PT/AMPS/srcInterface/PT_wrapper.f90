@@ -147,7 +147,7 @@ subroutine PT_put_from_gm(UseData, &
   real,    intent(in):: Data_VI(nVar,nPoint)! Recv data array
   integer, intent(in):: iPoint_I(nPoint)    ! Order of data
 
-  integer:: iPoint, iPointOrig, iProc=0
+  integer:: iPoint, i, iProc=0
 
   character(len=*), parameter :: NameSub='PT_put_from_gm'
   !--------------------------------------------------------------------------
@@ -172,7 +172,7 @@ subroutine PT_put_from_gm(UseData, &
   write(*,*)NameSub,': iProc, iPoint, i, Pos, Data'
   do iPoint = 1, nPoint
      i = iPoint_I(iPoint)
-     write(*,*)NameSub, iProc, iPoint, i, Pos_DI(:,i), DataData_VI(:,i)
+     write(*,*)NameSub, iProc, iPoint, i, Pos_DI(:,i), Data_VI(:,i)
      ! Here should convert from SI to AMPS units and store data
   end do
 
