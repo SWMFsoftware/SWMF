@@ -63,9 +63,13 @@ export Flags
 
 SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${CWD}
 
+${WSD}:
+	./ampsConfig.pl -no-compile
+
 LIB_AMPS = srcTemp/libAMPS.a
 
-${LIB_AMPS}:
+${LIB_AMPS}: 
+	make ${WSD}
 	cd ${WSD}/general; make SEARCH_C=
 	cd ${WSD}/meshAMR; make SEARCH_C="${SEARCH}" 
 	cd ${WSD}/pic; make SEARCH_C="${SEARCH}"
@@ -74,19 +78,15 @@ ${LIB_AMPS}:
 	cd ${WSD}/main; make SEARCH_C="${SEARCH}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
 	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o \
-		species/*.o models/exosphere/*.o
+		species/*.o models/exosphere/*.o main/main_lib.o
 
 LIB: ${LIB_AMPS}
 	cd srcInterface; make LIB SEARCH_C="${SEARCH}"
 
-amps:
+amps: ${LIB_AMPS}
 	@rm -f amps
-	make LIB
 	cd ${WSD}/main; make amps SEARCH_C="${SEARCH}"
-
-	${CC} -o ${EXE} ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/general/general.a \
-			${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a \
-		 	${WSD}/meshAMR/mesh.a ${WSD}/pic/amps.a ${Lib} ${MPILIB}
+	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB}
 
 TESTDIR = run_test
 
