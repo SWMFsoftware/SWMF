@@ -9,10 +9,10 @@ DEBUGC =
 
 .SUFFIXES: .c .cpp
 
-FLAGC = ${SEARCH} -c ${OPT3} ${DEBUGC}
+FLAGC = ${SEARCH_C} -c ${OPT3} ${DEBUGC}
 
 .c.o:
-	${COMPILE.c} ${FLAGC} ${SEARCH} $<
+	${COMPILE.c} ${FLAGC} $<
 
 .cpp.o:
-	${COMPILE.mpicxx} ${FLAGC} ${SEARCH} $<
+	${COMPILE.mpicxx} ${FLAGC} $<
