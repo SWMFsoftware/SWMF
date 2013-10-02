@@ -63,29 +63,26 @@ export Flags
 
 SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${CWD}
 
-LIB:
-	make cleansrc
-	cd ${WSD}/main; rm -f *.o *.a
+LIB_AMPS = srcTemp/libAMPS.a
 
-	cd ${WSD}/general; make SEARCH=
-	cd ${WSD}/meshAMR; make SEARCH="${SEARCH}" 
-	cd ${WSD}/pic; make SEARCH="${SEARCH}"
-	cd ${WSD}/species; make SEARCH="${SEARCH}"
-	cd ${WSD}/models/exosphere; make SEARCH="${SEARCH}"
-	cd ${WSD}/main; make SEARCH="${SEARCH}"
+${LIB_AMPS}:
+	cd ${WSD}/general; make SEARCH_C=
+	cd ${WSD}/meshAMR; make SEARCH_C="${SEARCH}" 
+	cd ${WSD}/pic; make SEARCH_C="${SEARCH}"
+	cd ${WSD}/species; make SEARCH_C="${SEARCH}"
+	cd ${WSD}/models/exosphere; make SEARCH_C="${SEARCH}"
+	cd ${WSD}/main; make SEARCH_C="${SEARCH}"
+	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o \
+		species/*.o models/exosphere/*.o
 
-#	cd srcInterface; make LIB 
-#	cd srcInterface; ar -scr amps2swmf.a amps2swmf.o
-
-#	ar -src ../../lib/libPT.a ${WSD}/general/*.o ${WSD}/meshAMR/*.o ${WSD}/pic/*.o ${WSD}/species/*.o ${WSD}/models/exosphere/exosphere.a srcInterface/PT_wrapper.o srcInterface/amps2swmf.o 
-#	ar -rc /Users/vtenishe/SWMF/SWMF/lib//libPT.a ${WSD}/general/general.a ${WSD}/meshAMR/mesh.a ${WSD}/main/mainlib.a ${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a srcInterface/amps2swmf.a 
-#srcInterface/amps2swmf.o 
-#srcInterface/amps2swmf.o
+LIB: ${LIB_AMPS}
+	cd srcInterface; make LIB SEARCH_C="${SEARCH}"
 
 amps:
 	@rm -f amps
 	make LIB
-	cd ${WSD}/main; make amps SEARCH="${SEARCH}"
+	cd ${WSD}/main; make amps SEARCH_C="${SEARCH}"
 
 	${CC} -o ${EXE} ${WSD}/main/main.a ${WSD}/main/mainlib.a ${WSD}/general/general.a \
 			${WSD}/pic/amps.a ${WSD}/species/species.a ${WSD}/models/exosphere/exosphere.a \
