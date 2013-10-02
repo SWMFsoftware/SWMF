@@ -1,6 +1,6 @@
 SHELL=/bin/sh
 
-DEFAULT_TARGET : LIB
+DEFAULT_TARGET : amps
 
 # These definitions may be overwritten by Makefile.def
 SOURCES=src
@@ -21,7 +21,7 @@ install:
 distclean:
 	./Config.pl -uninstall
 
-allclean: cleansrc
+allclean: clean
 	rm -rf main srcTemp *.input* amps
 
 rundir:
@@ -38,15 +38,17 @@ EXE=amps
 #MPIRUN=mpirun -np 4
 #RUNDIR=run
 
-cleansrc:
+LIB_AMPS = ${WSD}/libAMPS.a
+
+clean:
+	rm -f ${LIB_AMPS}
 	cd ${WSD}/general; make clean
 	cd ${WSD}/meshAMR; make clean
 	cd ${WSD}/pic; make clean
 	cd ${WSD}/species; make clean
 	cd ${WSD}/models/exosphere; make clean
 	cd ${WSD}/main; make clean
-
-#	cd srcInterface; rm -f *.o
+	@(if [ -d srcInterface ]; then cd srcInterface; $(MAKE) clean; fi);
 
 tar:
 	cd ../pic-tower/sources/general; rm -f *.o *.a
@@ -65,8 +67,6 @@ SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${W
 
 ${WSD}:
 	./ampsConfig.pl -no-compile
-
-LIB_AMPS = srcTemp/libAMPS.a
 
 ${LIB_AMPS}: 
 	make ${WSD}
