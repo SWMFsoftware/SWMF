@@ -277,9 +277,9 @@ subroutine write_plot_radiowave(iFile)
 
         ! Data
         do iPixel = 1, nXPixel
-           YPixel = YLower + (real(jPixel) - cHalf)*YPixelSize
+           XPixel = XLower + (real(iPixel) - cHalf)*XPixelSize
            do jPixel = 1, nYPixel
-              XPixel = XLower + (real(iPixel) - cHalf)*XPixelSize
+              YPixel = YLower + (real(jPixel) - cHalf)*YPixelSize
               write(unit_tmp,fmt="(30(1pe13.5))") &
                    XPixel, YPixel, Intensity_III(jPixel,iPixel,1:nFreq)
            end do
