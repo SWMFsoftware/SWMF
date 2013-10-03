@@ -141,9 +141,11 @@ void PrintErrorLog(long int nline, const char* fname, const char* message) {
   fprintf(errorlog,"file=%s, line=%ld\n",fname,nline);
   fprintf(errorlog,"%s\n\n",message);
 
+#if _STDOUT_ERRORLOG_MODE_ == _STDOUT_ERRORLOG_MODE__ON_
   printf("$PREFIX:Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
   printf("$PREFIX:file=%s, line=%ld\n",fname,nline);
   printf("$PREFIX:%s\n\n",message);
+#endif
 
   fclose(errorlog);
 }

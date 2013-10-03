@@ -33,7 +33,7 @@ DebuggerMode=off !on,off
 ForceRepeatableSimulationPath=on ! on,off
 
 
-
+StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
 

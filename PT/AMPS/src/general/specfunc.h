@@ -11,6 +11,12 @@
 #include "global.h"
 #include "rnd.h"
 
+
+#define _STDOUT_ERRORLOG_MODE__ON_   0
+#define _STDOUT_ERRORLOG_MODE__OFF_  1
+#define _STDOUT_ERRORLOG_MODE_ _STDOUT_ERRORLOG_MODE__ON_
+
+
 //extern int DIM;
 extern int ThisThread;
 extern int TotalThreadsNumber;

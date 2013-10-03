@@ -274,6 +274,7 @@ sub ReadMainBlock {
   my $ErrorLog='error.log';
   my $DiagnosticStream='stdout';
   my $OutputDirectory='.';
+  my $StdoutErrorLog='_STDOUT_ERRORLOG_MODE__ON_';
   
   
   #force the repeatable execution path
@@ -422,6 +423,21 @@ sub ReadMainBlock {
       ($InputLine,$ProjectSpecificSourceDirectory)=split(' ',$InputLine,2);
     }
     
+    
+    elsif ($s0 eq "STDOUTERRORLOG") {
+      ($s0,$s1)=split(' ',$s1,2);
+      
+      if ($s0 eq "ON") {
+        $StdoutErrorLog='_STDOUT_ERRORLOG_MODE__ON_';
+      }
+      elsif ($s0 eq "OFF") {
+        $StdoutErrorLog='_STDOUT_ERRORLOG_MODE__OFF_';
+      }
+      else {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }    
+    
  
     elsif ($s0 eq "ERRORLOG") {
       chomp($line);
@@ -533,6 +549,8 @@ sub ReadMainBlock {
   ampsConfigLib::ChangeValueOfVariable("char PIC::DiagnospticMessageStreamName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$DiagnosticStream."\"","pic/pic_init_const.cpp");
   ampsConfigLib::ChangeValueOfVariable("char PIC::OutputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$OutputDirectory."\"","pic/pic_init_const.cpp");
   
+  #redefine the value for the macro controlling output error messages into stdout
+  ampsConfigLib::RedefineMacro("_STDOUT_ERRORLOG_MODE_",$StdoutErrorLog,"general/specfunc.h");
   
   #update variables of the code distribution with the parameters of the "main block" of the input file 
   ampsConfigLib::ChangeValueOfVariable($InputFileVariable2CodeVariable{"TotalSpeciesNumber"},$TotalSpeciesNumber,$InputFileVariable2CodeSourceFile{"TotalSpeciesNumber"});
