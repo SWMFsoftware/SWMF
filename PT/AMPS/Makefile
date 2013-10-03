@@ -15,7 +15,7 @@ CC=${COMPILE.mpicxx}
 CWD=${MYDIR}
 
 install:
-	Config.pl -application=Moon
+	./Config.pl -application=Moon
 	@echo "AMPS installed"
 
 distclean:
