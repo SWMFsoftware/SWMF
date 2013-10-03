@@ -43,12 +43,12 @@ our $Code;                  # The name of the code
 our $ERROR   = "$Code/Config.pl ERROR:";
 our $WARNING = "$Code/Config.pl WARNING:";
 
-# Obtain the default compiler for this machine / OS
+# Obtain the default Fortran compiler part of Makefile.conf
 our $Compiler;
 $Compiler = $Compiler{$Machine} or $Compiler = $Compiler{$OS} or
     die "$ERROR_ default compiler is not known for OS=$OS\n";
 
-# Default Makefile for C compilers
+# Default C compiler part of Makefile.conf
 our $CompilerC = "gcc_mpicc";
 $CompilerC = $1 if $Compiler =~ s/,(.+)//;
 
@@ -104,7 +104,9 @@ my $NewHypre;
 my $IsCompilerSet;
 my $Debug;
 my $Mpi;
-my $CompilerMpi;
+my $Fcompiler;
+my $Ccompiler;
+my $MpiCompiler;
 my $MpiHeaderFile = "share/Library/src/mpif.h";
 my $Optimize;
 my $ShowCompiler;
@@ -260,10 +262,10 @@ sub get_settings_{
       close(MAKEFILE);
   }
 
-    $Debug = "no";
-    $Mpi   = "yes";
-    $Hdf5  = "no";
-    $Hypre = "no";
+    $Debug     = "no";
+    $Mpi       = "yes";
+    $Hdf5      = "no";
+    $Hypre     = "no";
   TRY:{
       # Read information from $MakefileConf
       open(MAKEFILE, $MakefileConf)
@@ -275,9 +277,14 @@ sub get_settings_{
 	      close MAKEFILE;
 	      redo TRY;
 	  }
-	  $Compiler = $+ if /^\s*COMPILE\.f90\s*=\s*(\$\{CUSTOMPATH_F\})?(\S+)/;
-	  $CompilerC= $1 if /^\s*COMPILE\.c\s*=\s*(\S+)/;
-	  $CompilerMpi = $1 if /^\s*LINK\.f90\s*=\s*(.*)/;
+	  $Compiler = $1 if 
+	      /^\#\s*Fortran language.*Makefile\.$OS\.(\S+)/i;
+	  $CompilerC= $1 if /^\#\s*C language.*:\s*Makefile\.(\S+)/;
+
+	  $Fcompiler = $+ if 
+	      /^\s*COMPILE\.f90\s*=\s*(\$\{CUSTOMPATH_F\})?(\S+)/;
+	  $Ccompiler   = $1 if /^\s*COMPILE\.c\s*=\s*(\S+)/;
+	  $MpiCompiler = $1 if /^\s*LINK\.f90\s*=\s*(.*)/;
 
 	  $Precision = lc($1) if /^\s*PRECISION\s*=.*(SINGLE|DOUBLE)PREC/;
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
@@ -289,11 +296,15 @@ sub get_settings_{
   }
     close(MAKEFILE);
 
-    # Fix CompilerMpi definition if needed
-    $CompilerMpi =~ s/\{COMPILE.f90\}\#\s*/\{CUSTOMPATH_MPI\}/;
+    # Fix these if the Fortran language and C language lines were missing
+    $Compiler  = $Fcompiler if not $Compiler;
+    $CompilerC = $Ccompiler if not $CompilerC;
+
+    # Fix MpiCompiler definition if needed
+    $MpiCompiler =~ s/\{COMPILE.f90\}\#\s*/\{CUSTOMPATH_MPI\}/;
 
     # Remove the commented out name of the original linker when h5pfc is used
-    $CompilerMpi =~ s/$H5pfc \#.*$/$H5pfc/;
+    $MpiCompiler =~ s/$H5pfc \#.*$/$H5pfc/;
 
 }
 
@@ -319,8 +330,8 @@ sub show_settings_{
 	}
     }
     print "The installation is for the $OS operating system.\n";
-    print "The selected F90 compiler is $Compiler.\n";
-    print "The selected C++ compiler is $CompilerC.\n";
+    print "The selected F90 compiler is $Fcompiler.\n";
+    print "The selected C   compiler is $Ccompiler.\n";
     print "The default precision for reals is $Precision precision.\n";
     print "The maximum optimization level is $Optimize\n";
     print "Debugging flags:   $Debug\n";
@@ -465,7 +476,7 @@ sub set_mpi_{
 
     if($Mpi eq "no" and $Install){
 	&shell_command("cp share/include/mpif.h $MpiHeaderFile");
-	$CompilerMpi = '${COMPILE.f90}';
+	$MpiCompiler = '${COMPILE.f90}';
     }
 
     # Select the MPI or NOMPI library in $MakefileConf
@@ -674,8 +685,8 @@ sub create_makefile_rules{
 		my $SrcFile = $1;
 		my $ObjectFile = $SrcFile; $ObjectFile =~ s/\.\w+$/.o/;
 
-		# Replace ${LINK.f90} with the $CompilerMpi
-		$Rule =~ s/\$\{LINK.f90\}/$CompilerMpi/;
+		# Replace ${LINK.f90} with the $MpiCompiler
+		$Rule =~ s/\$\{LINK.f90\}/$MpiCompiler/;
 
 		print OUTFILE "$ObjectFile: $SrcFile\n\t$Rule\n";
 	    }
