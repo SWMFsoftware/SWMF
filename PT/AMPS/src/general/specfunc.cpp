@@ -12,6 +12,7 @@
 
 
 #include "rnd.h"
+#include "specfunc.h"
 
 
 int ThisThread;
@@ -177,7 +178,7 @@ void StampSignature(char* message) {
 
 //===================================================
 //use: exit(__LINE__,__FILE__, "mesage")
-void exit(long int nline, const char* fname, const char* msg=NULL) {
+void exit(long int nline, const char* fname, const char* msg) {
   char str[1000];
 
   if (msg==NULL) sprintf(str," exit: line=%ld, file=%s\n",nline,fname);
