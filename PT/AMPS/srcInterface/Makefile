@@ -2,11 +2,11 @@
 
 SHELL =/bin/sh
 
-include ../../../Makefile.def
+include ../Makefile.def
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
-include ../../../Makefile.conf
+include ../Makefile.conf
 
 # OBJECT FILE FOR THE WRAPPER
 
