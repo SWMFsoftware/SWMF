@@ -2,8 +2,10 @@
 
 SHELL=/bin/sh
 
+# Fortran language related part of Makefile.conf: Makefile.Linux.mpxlf90
 #
 #	Space Weather Modeling Framework (SWMF) 
+#
 #	Fortran 90/95 Compiler
 #       BG/L specific part of the Makefile for parallel execution
 #	Note that serial codes (e.g. PostIDL.exe) 

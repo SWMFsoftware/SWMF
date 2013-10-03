@@ -2,10 +2,10 @@
 
 SHELL=/bin/sh
 
+# Fortran language related part of Makefile.conf: Makefile.Darwin.ifort
 #
 #	Space Weather Modeling Framework (SWMF) 
-#	Intel ifort Fortran compiler for OSX
-#       Mac OS (Darwin) specific part of Makefile
+#	Intel ifort Fortran compiler for OSX with mpif90
 #
 
 COMPILE.f77     = ${CUSTOMPATH_F}ifort

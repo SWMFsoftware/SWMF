@@ -2,10 +2,10 @@
 
 SHELL = /bin/sh
 
+# Fortran language related part of Makefile.conf: Makefile.IRIX64.f90
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	IRIX64 Operating System, MIPSpro Fortran 90 compiler
-#           IRIX64 specific part of Makefile
 #
 
 #MF = Makefile.${OS}

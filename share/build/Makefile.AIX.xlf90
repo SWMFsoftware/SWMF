@@ -2,10 +2,10 @@
 
 SHELL=/bin/sh
 
+# Fortran language related part of Makefile.conf: Makefile.AIX.xlf90
 #
 #	Space Weather Modeling Framework (SWMF) 
-#	Fortran 90/95 Compiler
-#       Mac OS (Darwin) specific part of Makefile
+#	AIX Fortran 90/95 Compiler
 #
 
 # Set suffix remapping options

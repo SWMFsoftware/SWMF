@@ -2,6 +2,7 @@
 
 SHELL=/bin/sh
 
+# Fortran language related part of Makefile.conf: Makefile.OSF1.f90
 #
 #	Tru64 Unix Operating System, f90 - Compaq Fortran 90 Compiler
 #	Space Weather Modeling Framework (SWMF) main Makefile

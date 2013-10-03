@@ -1,4 +1,4 @@
-# C language related part of Makefile.conf
+# C language related part of Makefile.conf: Makefile.mpxlc
 
 COMPILE.c     = mpxlc
 COMPILE.mpicc = mpxlc

@@ -26,10 +26,10 @@
 #BOC
 SHELL=/bin/sh
 
+# Fortran language related part of Makefile.conf: Makefile.Linux.pgf90
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	Portland Group Fortran 90 (pgf90) compiler
-#       Linux and compiler  specific part of Makefile
 #
 
 #

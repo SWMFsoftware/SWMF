@@ -2,6 +2,7 @@
 
 SHELL=/bin/sh
 
+# Fortran language related part of Makefile.conf: Makefile.Darwin.absoft
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	Makefile configuration for MacOS and Absoft Fortran

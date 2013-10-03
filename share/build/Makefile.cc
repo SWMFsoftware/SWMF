@@ -1,4 +1,4 @@
-# C language related part of Makefile.conf
+# C language related part of Makefile.conf: Makefile.cc
 
 COMPILE.c     = cc
 COMPILE.mpicc = mpicc

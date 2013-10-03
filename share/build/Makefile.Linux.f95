@@ -2,10 +2,10 @@
 
 SHELL=/bin/sh
 
+# Fortran language related part of Makefile.conf: Makefile.Linux.f95
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	NAG f95 Fortran 90/95 Compiler
-#       Linux specific part of Makefile
 #
 
 COMPILE.f77     = ${CUSTOMPATH_F}f95

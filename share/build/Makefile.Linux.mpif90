@@ -2,10 +2,10 @@
 
 SHELL=/bin/sh
 
+# Fortran language related part of Makefile.conf: Makefile.Linux.mpif90
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	Assume the mpif90 compiler works fine
-#       Linux specific part of Makefile
 #
 
 COMPILE.f77     = ${CUSTOMPATH_F}mpif90
