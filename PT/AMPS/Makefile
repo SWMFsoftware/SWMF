@@ -21,8 +21,9 @@ install:
 distclean:
 	./Config.pl -uninstall
 
-allclean: clean
+allclean:
 	rm -rf main srcTemp *.input* amps
+	$(MAKE) clean
 
 rundir:
 	mkdir -p ${RUNDIR}/PT
@@ -42,13 +43,13 @@ LIB_AMPS = ${WSD}/libAMPS.a
 
 clean:
 	rm -f ${LIB_AMPS}
-	cd ${WSD}/general; make clean
-	cd ${WSD}/meshAMR; make clean
-	cd ${WSD}/pic; make clean
-	cd ${WSD}/species; make clean
-	cd ${WSD}/models/exosphere; make clean
-	cd ${WSD}/main; make clean
-	@(if [ -d srcInterface ]; then cd srcInterface; $(MAKE) clean; fi);
+	@(if [ -d ${WSD} ]; then cd ${WSD}/general;         $(MAKE) clean; fi);
+	@(if [ -d ${WSD} ]; then cd ${WSD}/meshAMR;         $(MAKE) clean; fi);
+	@(if [ -d ${WSD} ]; then cd ${WSD}/pic;             $(MAKE) clean; fi);
+	@(if [ -d ${WSD} ]; then cd ${WSD}/species;         $(MAKE) clean; fi);
+	@(if [ -d ${WSD} ]; then cd ${WSD}/models/exosphere;$(MAKE) clean; fi);
+	@(if [ -d ${WSD} ]; then cd ${WSD}/main;            $(MAKE) clean; fi);
+	@(if [ -d srcInterface ]; then cd srcInterface;     $(MAKE) clean; fi);
 
 tar:
 	cd ../pic-tower/sources/general; rm -f *.o *.a
