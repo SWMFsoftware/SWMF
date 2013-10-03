@@ -16,7 +16,7 @@
 
         double HeliumDesorption::SourceRate[PIC::nTotalSpecies],HeliumDesorption::maxLocalSourceRate[PIC::nTotalSpecies];
         cSingleVariableDiscreteDistribution<int> HeliumDesorption::SurfaceInjectionDistribution[PIC::nTotalSpecies];
-        double HeliumDesorption::GetSurfaceElementProductionRate(int nElement,int *spec);
+//        double HeliumDesorption::GetSurfaceElementProductionRate(int nElement,int *spec);
 
 
         double HeliumDesorption::GetSurfaceElementProductionRate(int spec,int SurfaceElement,void *SphereDataPointer) {
