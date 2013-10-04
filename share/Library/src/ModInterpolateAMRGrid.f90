@@ -1426,6 +1426,7 @@ elseif(    abs(XyzGrid_DI(x_,1) - XyzGrid_DI(x_,5)) < dXyzSmall_D(x_).and.&
         DoStencilFix2 = DoStencilFix
         XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(1:4))
         iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(1:4))
+        where(iLevel2_I==BehindTheBoundary_)iLevel2_I=Coarse_
         call interpolate_amr_grid_2(&
             Xyz2_D, XyzGrid2_DI, iLevel2_I, &
             nGridOut2, Weight_I(1:4), iOrder2_I, DoStencilFix2, XyzStencil2_D)
