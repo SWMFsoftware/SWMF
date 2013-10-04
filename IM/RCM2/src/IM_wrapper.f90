@@ -95,6 +95,10 @@ subroutine IM_set_param(CompInfo, TypeAction)
               elseif(   index(StringPlot,'max')>0 &
                    .or. index(StringPlot,'rcm')>0 )then
                  plot_var(ifile)='max'
+              elseif(   index(StringPlot,'mc1')>0 )then
+                 plot_var(ifile)='mc1'
+              elseif(   index(StringPlot,'mc2')>0 )then
+                 plot_var(ifile)='mc2'
               else
                  call CON_stop('ERROR in IM/RCM2/src/IM_wrapper.f90: '// &
                       '#SAVEPLOT variable string (min/max/rcm) is missing')

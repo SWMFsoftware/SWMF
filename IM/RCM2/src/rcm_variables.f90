@@ -148,6 +148,11 @@ MODULE Rcm_variables
     INTEGER (iprec), PARAMETER :: irdk=18, inrgdk=13, isodk=2, iondk=2
     REAL (rprec) :: dktime (irdk, inrgdk, isodk, iondk)
     REAL (rprec), DIMENSION (19,5) :: trf !plasmasphere refilling rates, cm-3/day
+
+    ! These arrays hold plasma moments for different species and are to be used
+    ! for output only at the moment:
+    REAL (rprec), DIMENSION (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,iesize) :: &
+                    RCM_dens_prg=-1.0, RCM_dens_cm3=-1.0, RCM_temp_eVs=-1.0, RCM_pres_nPa=-1.0, RCM_eta_sum=-1.0, RCM_pvg_spc=-1.0
 !
 !
 !   Magnetic field:
@@ -170,6 +175,7 @@ MODULE Rcm_variables
                     qtped, pedpsi, &
                     qtplam, pedlam, &
                     qthall, hall, &
+                    sigma_P, sigma_H,&
                     ss (1-n_gc:jsize+n_gc), &
                     pwe, pwn, &
                     hwe, hwn , &

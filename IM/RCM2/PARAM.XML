@@ -74,6 +74,10 @@ The default value is false.
 					value="min/MIN" default="T"/>
 				<option name="maximum set" 
 					value="max/MAX/rcm/RCM"/>
+				<option name="CCMC set 1" 
+					value="mc1/MC1/mc1/Mc1"/>
+				<option name="CCMC set 2" 
+					value="mc2/MC2/mc2/Mc2"/>
 			</part>
 			<part name="plotformat" type="string" input="select" 
 								required="T">
@@ -87,13 +91,19 @@ The default value is false.
 		<parameter name="iDtSavePlot" type="integer" min="-1" />
 	</for>
 #SAVEPLOT
-2			nFilesPlot
+4			nFilesPlot
 2d min idl		StringPlot
 100			DnSavePlot
 -1			iDtSavePlot [sec]
 3d max tec		StringPlot
 -1			DnSavePlot
 60			iDtSavePlot [sec]
+2d mc1 idl		StringPlot
+100			DnSavePlot
+-1			iDtSavePlot [sec]
+2d mc2 idl		StringPlot
+100			DnSavePlot
+-1			iDtSavePlot [sec]
 
 Default is nFilesPlot=0. \\
 
@@ -102,20 +112,26 @@ StringPlot must contain the following 3 parts (separated with space)
 in arbitrary order:
 \begin{verbatim}
 plotarea   = '2d', '3d'
-plotvar    = 'min', 'max'
+plotvar    = 'min', 'max', 'mc1', 'mc2'
 plotformat = 'tec', 'idl'
 \end{verbatim}
 
 \noindent
 The plotformat specifies whether to output files for processing in either
-Tecplot or Idl.
+Tecplot or Idl. Tecplot formatt is ascii, idl is binary (therefore, more
+compact).
 
 The plotarea string defines the region for the plots, 2d or 3d.
 Currently the 3D output is implemented for Tecplot format only.
+2d means writing variables on the two-dimensional ionospheric grid.
+3d refers not to the third spatial dimension but to the energy dependences
+(writing 3d is essentially writing the distribution function of ring
+current population).
 
 The plotvar string specifies which variables to write, either a minimum set,
 or a maximum set (the 'rcm' string is preserved for backwards
-compatibility only, and it is the same as the 'max' string).
+compatibility only, and it is the same as the 'max' string), or
+one of the custom sets 'mc1' or 'mc2'.
 The 'min' value corresponds to the variables 
 'rho T P rho(MHD) T(MHD) P(MHD' in 2D and to 'eeta veff' in 3D.
 
@@ -124,6 +140,16 @@ they include the 'min' variables, but for IDL format the 'max' and
 'min' variables are distinct, so you need to specify two IDL plot files
 to get all the variables. In 3D only the Tecplot format is available,
 and the 'max' variable set contains 'bndloc Vm |B| V birk alam eeta veff w'.
+
+The values 'mc1' and 'mc2' were originally designed to be used by CCMC.
+For 2d files, 'mc1' and 'mc2' mean the same thing and define a set of
+both ionospheric quantities (potential, field-aligned currents, conductances)
+as well as plasma moments of the ring current species. 
+For 3d, 'mc1' and 'mc2' will cause output of full particle energy spectra
+(together with some extra variables); for 'mc1', these spectra will be in
+the form of flux-tube content (proportional to the phase space density),
+while for 'mc2' it will be differential particle fluxes. 
+
 
 The DnSavePlot and DtSavePlot integers define the plotting frequency
 in number of time steps and number of seconds, respectively.

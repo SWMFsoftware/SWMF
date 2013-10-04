@@ -771,6 +771,24 @@ CONTAINS
                      &"N_O(MHD) [cm-3]","T_O(MHD) [eV]","P_O(MHD) [nPa]",&
                      &"sigmaH(MHD)","sigmaP(MHD)"'
              endif
+          case('mc1')
+                WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]","COLAT [deg]","ALOCT [rad]","MLT [hrs]",&
+                     &"BNDLOC","VM","|Bmin| [nT]","Pot [V]",&
+                     &"BIRK(NH) [microAmp/m2]","Sigma_P [S]","Sigma_H [S]","EFLUX_e [erg/cm2/s]",&
+                     &"EAVG_e [eV]",&
+                     &"N_e(RCM) [cm-3]","T_e(RCM) [eV]","P_e(RCM) [nPa]","PVg_e",&
+                     &"N_H(RCM) [cm-3]","T_H(RCM) [eV]","P_H(RCM) [nPa]","PVg_H",&
+                     &"N_O(RCM) [cm-3]","T_O(RCM) [eV]","P_O(RCM) [nPa]","PVg_O",&
+                     &"N_total(RCM) [cm-3]", "P_total(RCM) [nPa]", "PVg_total(RCM)", "N_plasmasphere(RCM), [cm-3]"'
+          case('mc2')
+                WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]","COLAT [deg]","ALOCT [rad]","MLT [hrs]",&
+                     &"BNDLOC","VM","|Bmin| [nT]","Pot [V]",&
+                     &"BIRK(NH) [microAmp/m2]","Sigma_P [S]","Sigma_H [S]","EFLUX_e [erg/cm2/s]",&
+                     &"EAVG_e [eV]",&
+                     &"N_e(RCM) [cm-3]","T_e(RCM) [eV]","P_e(RCM) [nPa]","PVg_e",&
+                     &"N_H(RCM) [cm-3]","T_H(RCM) [eV]","P_H(RCM) [nPa]","PVg_H",&
+                     &"N_O(RCM) [cm-3]","T_O(RCM) [eV]","P_O(RCM) [nPa]","PVg_O",&
+                     &"N_total(RCM) [cm-3]", "P_total(RCM) [nPa]", "PVg_total(RCM)","N_plasmasphere(RCM), [cm-3]"'
           end select
           WRITE (LUN,'(A,I4,A,I4,A)') &
                'ZONE T="RCM-2D-'//time_string//'" I=', isize, &
@@ -816,10 +834,52 @@ CONTAINS
              StringLine = 'lon lat x y mlt bnd vm b v '// &
                   'birk pedlam pedpsi hall eflux eavg pvg birkmhd sH sP'
              write(LUN) StringLine
+          case('mc1')
+             ! Header string containing units for coordinates and variables
+             StringLine='deg deg R R hr - - nT V microAmp/m2 S S erg/cm2/s eV '//&
+                        'cm-3 eV nPa - cm-3 eV nPa - cm-3 eV nPa - cm-3 nPa - cm-3_var22'
+             write(LUN) StringLine
+             ! Time step, time, no. dimensions, equation params, variables
+             write(LUN) iIT,real(iCurrentTime),2,1,17
+             ! Grid size
+             write(LUN) jSize+1, iSize
+             ! Equation parameter (unused now)
+             write(LUN) 0.0
+             ! Name of coordinates, variables and equation parameters
+             StringLine = 'lon lat x y mlt bnd vm b v '// &
+                  'birk sigmaP sigmaH eflux eavg n_e T_e P_e pvg_e n_h T_h P_h pvg_h n_o T_o P_o pvg_o '//&
+                  'n_total P_total pvg_total n_plasmasphere'
+             write(LUN) StringLine
+          case('mc2')
+             ! Header string containing units for coordinates and variables
+             StringLine='deg deg R R hr - - nT V microAmp/m2 S S erg/cm2/s eV '//&
+                        'cm-3 eV nPa - cm-3 eV nPa - cm-3 eV nPa - cm-3 nPa - cm-3_var22'
+             write(LUN) StringLine
+             ! Time step, time, no. dimensions, equation params, variables
+             write(LUN) iIT,real(iCurrentTime),2,1,17
+             ! Grid size
+             write(LUN) jSize+1, iSize
+             ! Equation parameter (unused now)
+             write(LUN) 0.0
+             ! Name of coordinates, variables and equation parameters
+             StringLine = 'lon lat x y mlt bnd vm b v '// &
+                  'birk sigmaP sigmaH eflux eavg n_e T_e P_e pvg_e n_h T_h P_h pvg_h n_o T_o P_o pvg_o '//&
+                  'n_total P_total pvg_total n_plasmasphere'
+             write(LUN) StringLine
           end select
        end select
 
        !Compute some variables
+
+       ! For CCMC output, we will compute moments in a different way (for now).
+       ! Later, will switch to this for all kinds of output:
+       if ( plot_var(iFN) == 'mc1' .OR. plot_var(iFN) == 'mc2') then
+          CALL Rcm_compute_plasma_moments
+          ! No need to wrap ghostcells, as this calculation runs over all cells
+          sigma_P = sqrt (pedpsi*pedlam)   ! field-line integrated Pedersen conductance
+          sigma_H = hall ! field-line integrated Hall conductance
+       end if
+
        if(.not.DoMultiFluidGMCoupling)then
           RCM_p = 0.
           do i=1,isize; do j=1,jsize
@@ -959,19 +1019,19 @@ CONTAINS
                 end do
                 RCM_HpT(i,j) = vm(i,j)*RCM_Hppvgamma(i,j)/SUM(eeta(i,j,:))
                 RCM_OpT(i,j) = vm(i,j)*RCM_Oppvgamma(i,j)/SUM(eeta(i,j,:))           
+                MHD_HpP(i,j) = densityHp(i,j)*1.0E+6*temperatureHp(i,j)*1.6E-19 &
+                     / 1.0E-9 ![nPa]
+                MHD_OpP(i,j) = densityOp(i,j)*1.0E+6*temperatureOp(i,j)*1.6E-19 &
+                     / 1.0E-9 ![nPa]            
                 do k=1,kcsize
                    if (alamc(k) <= 0) cycle
                    RCM_n(i,j) = RCM_n(i,j) + eeta(i,j,k)*vm(i,j)**1.5/6.37E+21
                    RCM_T(i,j) = RCM_T(i,j) + eeta(i,j,k)
                 end do
                 RCM_T(i,j) = vm(i,j)*RCM_pvgamma(i,j)/SUM(eeta(i,j,:))
+                MHD_P(i,j) = density(i,j)*1.0E+6*temperature(i,j)*1.6E-19 &
+                     / 1.0E-9 ![nPa]          
              end if
-             MHD_HpP(i,j) = densityHp(i,j)*1.0E+6*temperatureHp(i,j)*1.6E-19 &
-                  / 1.0E-9 ![nPa]
-             MHD_OpP(i,j) = densityOp(i,j)*1.0E+6*temperatureOp(i,j)*1.6E-19 &
-                  / 1.0E-9 ![nPa]            
-             MHD_P(i,j) = density(i,j)*1.0E+6*temperature(i,j)*1.6E-19 &
-                  / 1.0E-9 ![nPa]          
           end do; end do
        end if
 
@@ -1115,6 +1175,62 @@ CONTAINS
              !        RCM_pvgamma(i,j),&
              !        -birk_mhd(i,j)/1.0E-6, sigmaH_mhd(i,j), sigmaP_mhd(i,j)
              !end do; end do
+          case('mc1')
+             write(LUN) ((MODULO(aloct(i,j)*rth+12.0,24.01) &
+                  ,                         j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((bndloc(j),        j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((vm(i,j),          j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((bmin(i,j),        j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((v(i,j),           j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((0.5*birk(i,j),    j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((sigma_P(i,j),     j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((sigma_H(i,j),     j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((eflux(i,j,1),     j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((eavg(i,j,1),      j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_dens_cm3(i,j,1), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_temp_eVs(i,j,1), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pres_nPa(i,j,1), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pvg_spc (i,j,1), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_dens_cm3(i,j,2), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_temp_eVs(i,j,2), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pres_nPa(i,j,2), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pvg_spc (i,j,2), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_dens_cm3(i,j,3), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_temp_eVs(i,j,3), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pres_nPa(i,j,3), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pvg_spc (i,j,3), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((SUM(RCM_dens_cm3(i,j,:)), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((SUM(RCM_pres_nPa(i,j,:)), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((SUM(RCM_pvg_spc(i,j,:)), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((eeta(i,j,1)*vm(i,j)**(2./3.)/(Re*1.0E+18), j=1,jsize+1), i=isize,1,-1)
+          case('mc2')
+             write(LUN) ((MODULO(aloct(i,j)*rth+12.0,24.01) &
+                  ,                         j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((bndloc(j),        j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((vm(i,j),          j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((bmin(i,j),        j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((v(i,j),           j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((0.5*birk(i,j),    j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((sigma_P(i,j),     j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((sigma_H(i,j),     j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((eflux(i,j,1),     j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((eavg(i,j,1),      j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_dens_cm3(i,j,1), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_temp_eVs(i,j,1), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pres_nPa(i,j,1), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pvg_spc (i,j,1), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_dens_cm3(i,j,2), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_temp_eVs(i,j,2), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pres_nPa(i,j,2), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pvg_spc (i,j,2), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_dens_cm3(i,j,3), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_temp_eVs(i,j,3), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pres_nPa(i,j,3), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((RCM_pvg_spc (i,j,3), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((SUM(RCM_dens_cm3(i,j,:)), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((SUM(RCM_pres_nPa(i,j,:)), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((SUM(RCM_pvg_spc(i,j,:)), j=1,jsize+1), i=isize,1,-1)
+             write(LUN) ((eeta(i,j,1)*vm(i,j)**(2./3.)/(Re*1.0E+18), j=1,jsize+1), i=isize,1,-1)
           end select
        end select
     case('3d_')
@@ -1464,3 +1580,55 @@ real function IM_bilinear(A_II, iMin, iMax, jMin, jMax, Xy_D)
           +             Dx1*A_II(i2,j2))
   
 end function IM_bilinear
+
+
+SUBROUTINE RCM_compute_plasma_moments ()
+   USE RCM_variables, ONLY: iprec, rprec, isize, jsize, imin_j, kcsize, iesize,n_gc, &
+                               alamc, ikflavc, eeta, vm, charge_e, R_planet=>Re,&
+                               RCM_dens_prg, RCM_dens_cm3, RCM_temp_eVs, RCM_pres_nPa, RCM_eta_sum, RCM_pvg_spc
+
+   IMPLICIT NONE
+
+   INTEGER (iprec) :: i, j, k, ie, kk
+   REAL (rprec) :: co1, co2, co3, co4
+
+
+   RCM_dens_prg = 0.0
+   RCM_dens_cm3 = 0.0
+   RCM_temp_eVs = 0.0
+   RCM_pres_nPa = 0.0
+   RCM_eta_sum  = 0.0
+   RCM_pvg_spc  = 0.0
+
+
+   DO j=1-n_gc,jsize+n_gc; DO i=1-n_gc,isize+n_gc
+
+      IF ( i<imin_j(j) ) CYCLE
+
+      co1 = vm(i,j)**(3./2.)
+      co2 = co1/(R_planet*1.0E+18)
+      co3 = vm(i,j)*2./3.
+      co4 = co2*1.0E+6*co3*charge_e*1.0E+9
+      DO k = 2, kcsize
+         kk = ikflavc(k)
+         RCM_dens_prg (i,j,kk) = RCM_dens_prg (i,j,kk) + eeta(i,j,k)*co1
+         RCM_dens_cm3 (i,j,kk) = RCM_dens_cm3 (i,j,kk) + eeta(i,j,k)*co2
+         RCM_temp_eVs (i,j,kk) = RCM_temp_eVs (i,j,kk) + eeta(i,j,k)*ABS(alamc(k))*co3
+         RCM_pres_nPa (i,j,kk) = RCM_pres_nPa (i,j,kk) + eeta(i,j,k)*ABS(alamc(k))*co4
+         RCM_eta_sum  (i,j,kk) = RCM_eta_sum  (i,j,kk) + eeta(i,j,k)
+         RCM_pvg_spc  (i,j,kk) = RCM_pvg_spc  (i,j,kk) + eeta(i,j,k)*ABS(alamc(k))
+      END DO
+
+      DO ie = iesize, 1, -1
+         IF (RCM_dens_cm3 (i,j,ie)> 1.0E-8) THEN
+            RCM_temp_eVs (i,j,ie) = RCM_temp_eVs(i,j,ie) / RCM_eta_sum(i,j,ie)
+         ELSE
+            RCM_temp_eVs (i,j,ie) = -1.0
+         END IF
+         RCM_pvg_spc (i,j,ie) = RCM_pvg_spc (i,j,ie)*2./3.*charge_e/(R_planet*1.0E+12)/1.0E-9 ! convert to [nPa*(R_planet/nT)**(5/3)]
+      END DO
+
+   END DO; END DO
+
+   RETURN
+END SUBROUTINE RCM_compute_plasma_moments
