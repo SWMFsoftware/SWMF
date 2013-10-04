@@ -1096,8 +1096,1179 @@ contains
     end do
 
 
+!\
+! Interpolate on stencil close to the resolution interface
+!/
+if(     all(iLevel_I(  1:4        )==Coarse_).or.  &
+all(iLevel_I(  1:4        )==Fine_  ))then
+!\
+!
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call interpolate_resolution_interface_vicinity(iAxis=x_,jAxis=y_)
+return
+elseif( all(iLevel_I(  5:8        )==Coarse_).or.  &
+all(iLevel_I(  5:8        )==Fine_  ))then
+!\
+!
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call interpolate_resolution_interface_vicinity(iAxis=x_,jAxis=z_)
+return
+elseif( all(iLevel_I(  1:7:2      )==Coarse_).or.  &
+all(iLevel_I(  1:7:2      )==Fine_  ))then
+!\
+!
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call interpolate_resolution_interface_vicinity(iAxis=y_,jAxis=z_)
+return
+elseif( all(iLevel_I(  2:8:2      )==Coarse_).or.  &
+all(iLevel_I(  2:8:2      )==Fine_  ))then
+!\
+!
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call interpolate_resolution_interface_vicinity(iAxis=y_,jAxis=z_)
+return
+elseif( all(iLevel_I( (/1,2,5,6/) )==Coarse_).or.  &
+all(iLevel_I( (/1,2,5,6/) )==Fine_  ))then
+!\
+!
+!/
+iOrder_I = (/3,4,7,8,1,2,5,6/)
+call interpolate_resolution_interface_vicinity(iAxis=x_,jAxis=z_)
+return
+elseif( all(iLevel_I( (/3,4,7,8/) )==Coarse_).or.  &
+all(iLevel_I( (/3,4,7,8/) )==Fine_  ))then
+!\
+!
+!/
+iOrder_I = (/1,2,5,6,3,4,7,8/)
+call interpolate_resolution_interface_vicinity(iAxis=x_,jAxis=z_)
+return
+end if
+
+DoStencilFix = .false.
+
+if((count(iLevel_I==Fine_)==2).and.count(iLevel_I==Coarse_)==6)then
+if(iLevel_I(1)==Fine_)then
+!\
+!   | C F | | C C |
+!   | C C | | F C |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_six_tetrahedra
+elseif(iLevel_I(2)==Fine_)then
+!\
+!   | C C | | C F |
+!   | F C | | C C |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_six_tetrahedra
+elseif(iLevel_I(3)==Fine_)then
+!\
+!   | F C | | C C |
+!   | C C | | C F |
+!/
+iOrder_I = (/3,4,1,2,7,8,5,6/)
+call triangulate_six_tetrahedra
+elseif(iLevel_I(4)==Fine_)then
+!\
+!   | C C | | F C |
+!   | C F | | C C |
+!/
+iOrder_I = (/4,8,2,6,3,7,1,5/)
+call triangulate_six_tetrahedra
+end if
+return
+
+elseif((count(iLevel_I==Fine_)==3).and.count(iLevel_I==Coarse_)==5)then
+if(iLevel_I(1)==Fine_)then
+if(iLevel_I(2)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | C F |
+!   | F C | | F C |
+!/
+iOrder_I = (/7,5,3,1,8,6,4,2/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C C |
+!   | F C | | F C |
+!/
+iOrder_I = (/8,6,4,2,7,5,3,1/)
+call triangulate_eagle_stencil
+end if
+elseif(iLevel_I(3)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | C C |
+!   | C C | | F F |
+!/
+iOrder_I = (/6,5,2,1,8,7,4,3/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C C |
+!   | C C | | F F |
+!/
+iOrder_I = (/8,7,4,3,6,5,2,1/)
+call triangulate_eagle_stencil
+end if
+elseif(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+!\
+!   | C C | | F C |
+!   | C F | | F C |
+!/
+iOrder_I = (/4,3,2,1,8,7,6,5/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | C C |
+!   | C F | | F C |
+!/
+iOrder_I = (/3,1,4,2,7,5,8,6/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | C F |
+!   | C F | | F C |
+!/
+iOrder_I = (/2,1,4,3,6,5,8,7/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C C |
+!   | C F | | F C |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_eagle_stencil
+end if
+elseif(iLevel_I(5)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F C |
+!   | C C | | F C |
+!/
+iOrder_I = (/8,7,6,5,4,3,2,1/)
+call triangulate_eagle_stencil
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | C F |
+!   | C C | | F C |
+!/
+iOrder_I = (/8,7,6,5,4,3,2,1/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | C C |
+!   | C C | | F C |
+!/
+iOrder_I = (/1,2,5,6,3,4,7,8/)
+call triangulate_eagle_stencil
+end if
+elseif(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C F |
+!   | C C | | F C |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_eagle_stencil
+end if
+end if
+elseif(iLevel_I(2)==Fine_)then
+if(iLevel_I(3)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+!\
+!   | C C | | F C |
+!   | F C | | C F |
+!/
+iOrder_I = (/4,3,2,1,8,7,6,5/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | C C |
+!   | F C | | C F |
+!/
+iOrder_I = (/3,4,1,2,7,8,5,6/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | C F |
+!   | F C | | C F |
+!/
+iOrder_I = (/2,1,4,3,6,5,8,7/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C C |
+!   | F C | | C F |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_five_tetrahedra
+end if
+elseif(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+!\
+!   | C C | | F C |
+!   | F F | | C C |
+!/
+iOrder_I = (/5,7,1,3,6,8,2,4/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | C F |
+!   | F F | | C C |
+!/
+iOrder_I = (/7,8,3,4,5,6,1,2/)
+call triangulate_eagle_stencil
+end if
+elseif(iLevel_I(5)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | F F |
+!   | F C | | C C |
+!/
+iOrder_I = (/2,1,6,5,4,3,8,7/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F C |
+!   | F C | | C C |
+!/
+iOrder_I = (/1,2,5,6,3,4,7,8/)
+call triangulate_five_tetrahedra
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | C F |
+!   | F C | | C C |
+!/
+iOrder_I = (/7,8,5,6,3,4,1,2/)
+call triangulate_eagle_stencil
+end if
+elseif(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C F |
+!   | F C | | C C |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_eagle_stencil
+end if
+end if
+elseif(iLevel_I(3)==Fine_)then
+if(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+!\
+!   | C C | | F C |
+!   | C F | | C F |
+!/
+iOrder_I = (/5,6,1,3,6,8,2,4/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | C C |
+!   | C F | | C F |
+!/
+iOrder_I = (/6,8,2,4,5,7,1,3/)
+call triangulate_eagle_stencil
+end if
+elseif(iLevel_I(5)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | F C |
+!   | C C | | C F |
+!/
+iOrder_I = (/3,1,7,5,4,2,8,6/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F C |
+!   | C C | | C F |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_five_tetrahedra
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | C F |
+!   | C C | | C F |
+!/
+iOrder_I = (/6,5,8,7,2,1,4,3/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | C C |
+!   | C C | | C F |
+!/
+iOrder_I = (/3,4,7,8,1,2,5,6/)
+call triangulate_eagle_stencil
+end if
+end if
+elseif(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | F C |
+!   | C F | | C C |
+!/
+iOrder_I = (/4,2,8,6,3,1,7,5/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | F F |
+!   | F C | | C C |
+!/
+iOrder_I = (/2,1,6,5,4,3,8,7/)
+call triangulate_eagle_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F C |
+!   | C F | | C C |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_eagle_stencil
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | C F |
+!   | C F | | C C |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_five_tetrahedra
+end if
+end if
+end if
+return
+
+elseif((count(iLevel_I==Fine_)==4).and.count(iLevel_I==Coarse_)==4)then
+if(iLevel_I(1)==Fine_)then
+if(iLevel_I(2)==Fine_)then
+if(iLevel_I(3)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+!\
+!   | C C | | F C |
+!   | F C | | F F |
+!/
+iOrder_I=(/4,3,2,1,8,7,6,5/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | C C |
+!   | F C | | F F |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_twist_stencil
+elseif(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | C F |
+!   | F C | | F F |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_twist_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C C |
+!   | F C | | F F |
+!/
+iOrder_I = (/4,3,2,1,8,7,6,5/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+!\
+!   | C C | | F C |
+!   | F F | | F C |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_twist_stencil
+elseif(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | C C |
+!   | F F | | F C |
+!/
+iOrder_I = (/3,1,4,2,7,5,8,6/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | C F |
+!   | F F | | F C |
+!/
+iOrder_I = (/3,4,1,2,7,8,5,6/)
+call triangulate_snail_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C C |
+!   | F F | | F C |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_twist_stencil
+end if
+elseif(iLevel_I(5)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | F F |
+!   | F C | | F C |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_twist_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F C |
+!   | F C | | F C |
+!/
+iOrder_I = (/6,5,2,1,8,7,4,3/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | C F |
+!   | F C | | F C |
+!/
+iOrder_I = (/5,6,1,2,7,8,3,4/)
+call triangulate_snail_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | C C |
+!   | F C | | F C |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_twist_stencil
+end if
+end if
+elseif(iLevel_I(3)==Fine_)then
+if(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+!\
+!   | C C | | F C |
+!   | C F | | F F |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_twist_stencil
+elseif(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | C C |
+!   | C F | | F F |
+!/
+iOrder_I = (/2,1,4,3,6,5,8,7/)
+call triangulate_snail_stencil
+elseif(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | C F |
+!   | C F | | F F |
+!/
+iOrder_I = (/2,1,4,3,6,5,8,7/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C C |
+!   | C F | | F F |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_twist_stencil
+end if
+elseif(iLevel_I(5)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | F C |
+!   | C C | | F F |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_twist_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F C |
+!   | C C | | F F |
+!/
+iOrder_I = (/7,5,3,1,8,6,4,2/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | C F |
+!   | C C | | F F |
+!/
+iOrder_I = (/5,7,1,3,6,8,2,4/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C F |
+!   | C C | | F F |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_twist_stencil
+end if
+end if
+elseif(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | F C |
+!   | C F | | F C |
+!/
+iOrder_I = (/2,1,6,5,4,3,8,7/)
+call triangulate_snail_stencil
+elseif(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | F F |
+!   | C F | | F C |
+!/
+iOrder_I = (/3,1,7,5,4,2,8,6/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | C F |
+!   | C F | | F C |
+!/
+iOrder_I = (/2,4,1,3,6,8,5,7/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | C C |
+!   | C F | | F C |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C F |
+!   | C F | | F C |
+!/
+iOrder_I = (/3,4,7,8,1,2,5,6/)
+call triangulate_snail_stencil
+end if
+end if
+elseif(iLevel_I(5)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | C F | | F F |
+!   | C C | | F C |
+!/
+iOrder_I = (/8,7,6,5,4,3,2,1/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | F C |
+!   | C C | | F C |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_twist_stencil
+end if
+elseif(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F F |
+!   | C C | | F C |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_twist_stencil
+end if
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | C F |
+!   | C C | | F C |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_snail_stencil
+end if
+end if
+end if
+elseif(iLevel_I(2)==Fine_)then
+if(iLevel_I(3)==Fine_)then
+if(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+!\
+!   | C C | | F C |
+!   | F F | | C F |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_snail_stencil
+elseif(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | C C |
+!   | F F | | C F |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_twist_stencil
+elseif(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | C F |
+!   | F F | | C F |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_twist_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C C |
+!   | F F | | C F |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_five_tetrahedra
+end if
+elseif(iLevel_I(5)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | F C |
+!   | F C | | C F |
+!/
+iOrder_I = (/1,2,5,6,3,4,7,8/)
+call triangulate_snail_stencil
+elseif(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | F F |
+!   | F C | | C F |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_snail_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F C |
+!   | F C | | C F |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_five_tetrahedra
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | C C |
+!   | F C | | C F |
+!/
+iOrder_I = (/4,2,8,6,3,1,7,5/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C F |
+!   | F C | | C F |
+!/
+iOrder_I = (/4,3,8,7,2,1,6,5/)
+call triangulate_snail_stencil
+end if
+end if
+elseif(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+!\
+!   | F C | | F C |
+!   | F F | | C C |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_twist_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F C |
+!   | F F | | C C |
+!/
+iOrder_I = (/6,8,2,4,5,7,1,3/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | C F |
+!   | F F | | C C |
+!/
+iOrder_I = (/8,6,4,2,7,5,3,1/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | C F |
+!   | F F | | C C |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_twist_stencil
+end if
+end if
+elseif(iLevel_I(5)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | F F |
+!   | F C | | C C |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_twist_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | F C |
+!   | F C | | C C |
+!/
+iOrder_I = (/7,8,5,6,3,4,1,2/)
+call triangulate_five_tetrahedra
+end if
+elseif(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F F |
+!   | F C | | C C |
+!/
+iOrder_I = (/6,5,8,7,2,1,4,3/)
+call triangulate_snail_stencil
+end if
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | C F |
+!   | F C | | C C |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_twist_stencil
+end if
+end if
+end if
+elseif(iLevel_I(3)==Fine_)then
+if(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | C C | | F F |
+!   | C F | | C F |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_twist_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F C |
+!   | C F | | C F |
+!/
+iOrder_I = (/7,8,3,4,5,6,1,2/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | C F |
+!   | C F | | C F |
+!/
+iOrder_I = (/8,7,4,3,6,5,2,1/)
+call triangulate_snail_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | C C |
+!   | C F | | C F |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_twist_stencil
+end if
+end if
+elseif(iLevel_I(5)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | F F |
+!   | C C | | C F |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_twist_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | F C |
+!   | C C | | C F |
+!/
+iOrder_I = (/7,8,5,6,3,4,1,2/)
+call triangulate_snail_stencil
+end if
+elseif(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F F |
+!   | C C | | C F |
+!/
+iOrder_I = (/6,5,8,7,2,1,4,3/)
+call triangulate_five_tetrahedra
+end if
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | C F |
+!   | C C | | C F |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_twist_stencil
+end if
+end if
+end if
+elseif(iLevel_I(4)==Fine_)then
+if(iLevel_I(5)==Fine_)then
+if(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+!\
+!   | F C | | F F |
+!   | C F | | C C |
+!/
+iOrder_I = (/8,7,6,5,4,3,2,1/)
+call triangulate_snail_stencil
+elseif(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | F C |
+!   | C F | | C C |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_twist_stencil
+end if
+elseif(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | C F | | F F |
+!   | C F | | C C |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_twist_stencil
+end if
+end if
+elseif(iLevel_I(6)==Fine_)then
+if(iLevel_I(7)==Fine_)then
+if(iLevel_I(8)==Fine_)then
+!\
+!   | F F | | C F |
+!   | C F | | C C |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_five_tetrahedra
+end if
+end if
+end if
+end if
+return
 
 
+
+elseif((count(iLevel_I==Fine_)==5).and.count(iLevel_I==Coarse_)==3)then
+if(iLevel_I(1)==Coarse_)then
+if(iLevel_I(2)==Coarse_)then
+if(iLevel_I(7)==Coarse_)then
+!\
+!   | F F | | F C |
+!   | C F | | C F |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_ship_stencil(iAxis=y_,jAxis=z_)
+elseif(iLevel_I(8)==Coarse_)then
+!\
+!   | F C | | F F |
+!   | C F | | C F |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_ship_stencil(iAxis=y_,jAxis=z_)
+end if
+elseif(iLevel_I(3)==Coarse_)then
+if(iLevel_I(6)==Coarse_)then
+!\
+!   | C F | | F F |
+!   | F F | | C C |
+!/
+iOrder_I = (/1,2,5,6,3,4,7,8/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=z_)
+elseif(iLevel_I(8)==Coarse_)then
+!\
+!   | F C | | F F |
+!   | F F | | C C |
+!/
+iOrder_I = (/3,4,7,8,1,2,5,6/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=z_)
+end if
+elseif(iLevel_I(4)==Coarse_)then
+if(iLevel_I(5)==Coarse_)then
+!\
+!   | F F | | C F |
+!   | F C | | C F |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=y_)
+elseif(iLevel_I(6)==Coarse_)then
+!\
+!   | C F | | F F |
+!   | F C | | C F |
+!/
+iOrder_I = (/3,4,1,2,7,8,5,6/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(7)==Coarse_)then
+!\
+!   | F F | | F C |
+!   | F C | | C F |
+!/
+iOrder_I = (/2,4,1,3,6,8,5,7/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(8)==Coarse_)then
+!\
+!   | F C | | F F |
+!   | F C | | C F |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=y_)
+end if
+elseif(iLevel_I(5)==Coarse_)then
+if(iLevel_I(8)==Coarse_)then
+!\
+!   | F C | | C F |
+!   | F F | | C F |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=y_)
+end if
+elseif(iLevel_I(6)==Coarse_)then
+if(iLevel_I(7)==Coarse_)then
+!\
+!   | C F | | F C |
+!   | F F | | C F |
+!/
+iOrder_I = (/8,7,6,5,4,3,2,1/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(8)==Coarse_)then
+!\
+!   | C C | | F F |
+!   | F F | | C F |
+!/
+iOrder_I = (/1,2,5,6,3,4,7,8/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=z_)
+end if
+elseif(iLevel_I(7)==Coarse_)then
+if(iLevel_I(8)==Coarse_)then
+!\
+!   | F C | | F C |
+!   | F F | | C F |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_ship_stencil(iAxis=y_,jAxis=z_)
+end if
+end if
+elseif(iLevel_I(2)==Coarse_)then
+if(iLevel_I(3)==Coarse_)then
+if(iLevel_I(5)==Coarse_)then
+!\
+!   | F F | | C F |
+!   | C F | | F C |
+!/
+iOrder_I = (/4,3,2,1,8,7,6,5/)
+call triangulate_five_tetrahedra
+elseif(iLevel_I(6)==Coarse_)then
+!\
+!   | C F | | F F |
+!   | C F | | F C |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=y_)
+elseif(iLevel_I(7)==Coarse_)then
+!\
+!   | F F | | F C |
+!   | C F | | F C |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=y_)
+elseif(iLevel_I(8)==Coarse_)then
+!\
+!   | F C | | F F |
+!   | C F | | F C |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_five_tetrahedra
+end if
+elseif(iLevel_I(4)==Coarse_)then
+if(iLevel_I(5)==Coarse_)then
+!\
+!   | F F | | C F |
+!   | C C | | F F |
+!/
+iOrder_I = (/1,2,5,6,3,4,7,8/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=z_)
+elseif(iLevel_I(7)==Coarse_)then
+!\
+!   | F F | | F C |
+!   | C C | | F F |
+!/
+iOrder_I = (/3,4,7,8,1,2,5,6/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=z_)
+end if
+elseif(iLevel_I(5)==Coarse_)then
+if(iLevel_I(7)==Coarse_)then
+!\
+!   | F F | | C C |
+!   | C F | | F F |
+!/
+iOrder_I = (/1,2,5,6,3,4,7,8/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=z_)
+elseif(iLevel_I(8)==Coarse_)then
+!\
+!   | F C | | C F |
+!   | C F | | F F |
+!/
+iOrder_I = (/1,2,5,6,3,4,7,8/)
+call triangulate_five_tetrahedra
+end if
+elseif(iLevel_I(6)==Coarse_)then
+if(iLevel_I(7)==Coarse_)then
+!\
+!   | C F | | F C |
+!   | C F | | F F |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=y_)
+end if
+elseif(iLevel_I(7)==Coarse_)then
+if(iLevel_I(8)==Coarse_)then
+!\
+!   | F C | | F C |
+!   | C F | | F F |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_ship_stencil(iAxis=y_,jAxis=z_)
+end if
+end if
+elseif(iLevel_I(3)==Coarse_)then
+if(iLevel_I(4)==Coarse_)then
+if(iLevel_I(5)==Coarse_)then
+!\
+!   | F F | | C F |
+!   | F C | | F C |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_ship_stencil(iAxis=y_,jAxis=z_)
+elseif(iLevel_I(6)==Coarse_)then
+!\
+!   | C F | | F F |
+!   | F C | | F C |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_ship_stencil(iAxis=y_,jAxis=z_)
+end if
+elseif(iLevel_I(5)==Coarse_)then
+if(iLevel_I(6)==Coarse_)then
+!\
+!   | C F | | C F |
+!   | F F | | F C |
+!/
+iOrder_I = (/1,3,5,7,2,4,6,8/)
+call triangulate_ship_stencil(iAxis=y_,jAxis=z_)
+elseif(iLevel_I(8)==Coarse_)then
+!\
+!   | F C | | C F |
+!   | F F | | F C |
+!/
+iOrder_I = (/1,5,3,7,2,6,4,8/)
+call triangulate_five_tetrahedra
+end if
+elseif(iLevel_I(6)==Coarse_)then
+if(iLevel_I(7)==Coarse_)then
+!\
+!   | C F | | F C |
+!   | F F | | F C |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=y_)
+elseif(iLevel_I(8)==Coarse_)then
+!\
+!   | C C | | F F |
+!   | F F | | F C |
+!/
+iOrder_I = (/3,4,7,8,1,2,5,6/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=z_)
+end if
+end if
+elseif(iLevel_I(4)==Coarse_)then
+if(iLevel_I(5)==Coarse_)then
+if(iLevel_I(6)==Coarse_)then
+!\
+!   | C F | | C F |
+!   | F C | | F F |
+!/
+iOrder_I = (/2,4,6,8,1,3,5,7/)
+call triangulate_ship_stencil(iAxis=y_,jAxis=z_)
+elseif(iLevel_I(7)==Coarse_)then
+!\
+!   | F F | | C C |
+!   | F C | | F F |
+!/
+iOrder_I = (/3,4,7,8,1,2,5,6/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=z_)
+elseif(iLevel_I(8)==Coarse_)then
+!\
+!   | F C | | C F |
+!   | F C | | F F |
+!/
+iOrder_I = (/5,6,7,8,1,2,3,4/)
+call triangulate_ship_stencil(iAxis=x_,jAxis=y_)
+end if
+elseif(iLevel_I(6)==Coarse_)then
+if(iLevel_I(7)==Coarse_)then
+!\
+!   | C F | | F C |
+!   | F C | | F F |
+!/
+iOrder_I = (/3,4,7,8,1,2,5,6/)
+call triangulate_five_tetrahedra
+end if
+end if
+end if
+return
+
+elseif((count(iLevel_I==Fine_)==6).and.count(iLevel_I==Coarse_)==2)then
+if(iLevel_I(1)==Coarse_)then
+!\
+!   | F C | | F F |
+!   | F F | | C F |
+!/
+iOrder_I = (/1,2,3,4,5,6,7,8/)
+call triangulate_two_tetrahedra_two_pyramids
+elseif(iLevel_I(2)==Coarse_)then
+!\
+!   | F F | | F C |
+!   | C F | | F F |
+!/
+iOrder_I = (/2,4,1,3,6,8,5,7/)
+call triangulate_two_tetrahedra_two_pyramids
+elseif(iLevel_I(3)==Coarse_)then
+!\
+!   | C F | | F F |
+!   | F F | | F C |
+!/
+iOrder_I = (/3,4,1,2,7,8,5,6/)
+call triangulate_two_tetrahedra_two_pyramids
+elseif(iLevel_I(4)==Coarse_)then
+!\
+!   | F F | | C F |
+!   | F C | | F F |
+!/
+iOrder_I = (/4,3,2,1,8,7,6,5/)
+call triangulate_two_tetrahedra_two_pyramids
+end if
+return
+else
+write(*,*)'Algorithm failure in '//NameSub
+do iGrid = 1,nGrid
+write(*,*)'iGrid=',iGrid,'iLevel(iGrid)=',iLevel_I(iGrid),'XyzGrid_DI=', XyzGrid_DI(:, iGrid)
+end do
+call CON_stop('Stop in '//NameSub)
+end if
 
   contains
     subroutine pyramids(iTetrahedron1_I,iTetrahedron2_I,iTetrahedron3_I,iTetrahedron4_I,iTetrahedron5_I,iTetrahedron6_I,&
@@ -1219,7 +2390,7 @@ contains
             end if             ! 2
          end if                ! 1
       end if                   ! no rectangular
-           
+
 
     end subroutine pyramids
     !========================
@@ -1240,6 +2411,28 @@ contains
       cross_product(y_) = a_D(z_)*b_D(x_) - a_D(x_)*b_D(z_)
       cross_product(z_) = a_D(x_)*b_D(y_) - a_D(y_)*b_D(x_)
     end function cross_product
+!=======================================================================
+function vertical_distance_point_plane(XP_D, iOrderAux_I, iAxis)
+real, dimension(nDim), intent(in) :: XP_D
+integer, dimension(3), intent(in) :: iOrderAux_I   !Points defining the plane
+integer,                  intent(in) :: iAxis              !Vertical direction
+real, dimension(nDim) ::             XAuxV_D            !Vertical vector
+real ,dimension(nDim):: X1_D, X2_D, X3_D
+real ::vertical_distance_point_plane
+!\
+! if XP_D is above plane X1,X2,X3 then distance is positive
+!/
+!----------------------------------------------
+XAuxV_D        = (/0,0,0/)
+XAuxV_D(iAxis) = 1
+X1_D = XyzGrid_DI(:,iOrder_I(iOrderAux_I(1)))
+X2_D = XyzGrid_DI(:,iOrder_I(iOrderAux_I(2)))
+X3_D = XyzGrid_DI(:,iOrder_I(iOrderAux_I(3)))
+vertical_distance_point_plane = &
+triple_product(XP_D - X1_D, X2_D - X1_D, X3_D- X1_D)/&
+triple_product(XAuxV_D,     X2_D - X1_D, X3_D- X1_D)
+end function vertical_distance_point_plane
+
     !==============================================================================
     subroutine interpolate_resolution_edge(iEdgeDir)
       integer, intent(in) :: iEdgeDir
@@ -1327,7 +2520,7 @@ contains
       ! Interpolate in the tetrahedron
       !/
       real, dimension(nDim), intent(in) :: X1_D, X2_D, X3_D, X4_D
-      real:: Aux 
+      real:: Aux
       !-----------------------------------------------
       !\
       ! Need to solve an equation:
@@ -1402,8 +2595,785 @@ contains
            sum( (X2_D - X1_D)*(X2_D - X1_D) )
       Weight_I(1:3:2) = Weight_I(1:3:2) - Weight_I(2:4:2)
     end subroutine rectangle
+    !=====================================
+
+!=======================================================================
+subroutine interpolate_resolution_interface_vicinity(iAxis,jAxis)
+integer, intent(in) :: iAxis, jAxis
+integer :: kAxis
+integer :: nFine, nCoarse
+integer, dimension(4) :: iFine_I, iCoarse_I
+real :: AlphaKAxis  ! weight along iAxis
+real :: dXyzDown,dXyzUp
+!\
+! Plane face is numbered 5 to 8 with all points of the same type (Fine_ or Coarse_)
+! Types of points 1:4 doesn't matter
+!/
+!-----------------------------------------------
+kAxis = 6 - iAxis - jAxis
+Xyz2_D(x_:y_) = Xyz_D((/iAxis,jAxis/))
+DoStencilFix = .false.
+!\
+! Determine nFine, number of fine points among grid points 1:4
+! and write their numbers in iFine_I
+!/
+nFine   = 0
+nCoarse = 0
+do iGrid = 1, 4
+if(iLevel_I(iOrder_I(iGrid))==Fine_)then
+nFine   = nFine   + 1
+iFine_I(nFine) = iGrid
+else
+nCoarse = nCoarse + 1
+iCoarse_I(nCoarse) = iGrid
+end if
+end do
+
+select case(nFine)
+case(1)
+!\
+! lower part of the stencil:  C - C
+!                             |  /
+!                             C-F
+!/
+!\
+! Rearrange iCoarse
+! so that iCoarse(1) is on diagonal with iFine(1)
+! iCoarse(1),iCoarse(2) goes along iAxis
+! iCoarse(1),iCoarse(3) goes along jAxis
+!/
+do iGrid = 2,nCoarse
+if(iCoarse_I(iGrid)+iFine_I(1)==5)then
+iCoarse_I((/1,iGrid/)) = iCoarse_I((/iGrid,1/))
+end if
+end do
+if(abs( XyzGrid_DI(iAxis,iOrder_I(iCoarse_I(1))) - &
+XyzGrid_DI(iAxis,iOrder_I(iCoarse_I(2))))<dXyzSmall_D(iAxis))then
+iCoarse_I((/2,3/)) = iCoarse_I((/3,2/))
+end if
+!\
+! rearrange iOrder
+!/
+iOrder_I(1:4) = iOrder_I((/iFine_I(1)  ,iCoarse_I(2)  ,iCoarse_I(3)  ,iCoarse_I(1)  /))
+iOrder_I(5:8) = iOrder_I((/iFine_I(1)+4,iCoarse_I(2)+4,iCoarse_I(3)+4,iCoarse_I(1)+4/))
+!\
+! Xyz point may be inside the pyramid 5,6,7,8,1 with 1 as an apex
+!/
+call rectangular_pyramid(XyzGrid_DI(:,iOrder_I(5)),XyzGrid_DI(:,iOrder_I(6)),&
+XyzGrid_DI(:,iOrder_I(7)),XyzGrid_DI(:,iOrder_I(8)),&
+XyzGrid_DI(:,iOrder_I(1)))
+if(.not.(any(Weight_I(1:5) < 0)))then
+nGridOut = 5
+iOrder_I(1:5) = iOrder_I((/5,6,7,8,iFine_I(1)/))
+return
+end if
+
+if(Weight_I(6) < 0.0)then
+!\
+! Xyz point is inside pyramid 3,4,7,8,1
+!/
+call rectangular_pyramid(XyzGrid_DI(:,iOrder_I(3)),XyzGrid_DI(:,iOrder_I(4)),&
+XyzGrid_DI(:,iOrder_I(7)),XyzGrid_DI(:,iOrder_I(8)),&
+XyzGrid_DI(:,iOrder_I(1)))
+if (.not. any(Weight_I(1:5) < 0.0))then
+nGridOut = 5
+iOrder_I(1:5) = iOrder_I((/3,4,7,8,1/))
+else
+!\
+! interpolate on tetrahedron 3,4,8,1
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(3)),XyzGrid_DI(:,iOrder_I(4)),&
+XyzGrid_DI(:,iOrder_I(8)),XyzGrid_DI(:,iOrder_I(1)))
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/3,4,8,1/))
+end if
+else
+!\
+! Xyz point is inside pyramid 2,4,6,8,1
+!/
+call rectangular_pyramid(XyzGrid_DI(:,iOrder_I(2)),XyzGrid_DI(:,iOrder_I(4)),&
+XyzGrid_DI(:,iOrder_I(6)),XyzGrid_DI(:,iOrder_I(8)),&
+XyzGrid_DI(:,iOrder_I(1)))
+if (.not. any(Weight_I(1:5) < 0.0))then
+nGridOut = 5
+iOrder_I(1:5) = iOrder_I((/2,4,6,8,1/))
+else
+!\
+! interpolate on tetrahedron 2,4,8,1
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(2)),XyzGrid_DI(:,iOrder_I(4)),&
+XyzGrid_DI(:,iOrder_I(8)),XyzGrid_DI(:,iOrder_I(1)))
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/2,4,8,1/))
+end if
+end if
+return
+
+case(2)
+!\
+! lower part of the stencil:    F--C
+!                              /  /
+!                             C--F
+!/
+
+!\
+! Xyz point may be inside one of two tetrahedra
+!
+!   \-----C
+!   |F   /|
+!   | F-F |
+!   | F-F |
+!   |/    |
+!   C-----\
+!          F
+!/
+call tetrahedron(&
+XyzGrid_DI(:,iOrder_I(iFine_I(  1)  )),XyzGrid_DI(:,iOrder_I(iFine_I(  2))),&
+XyzGrid_DI(:,iOrder_I(iCoarse_I(1)+4)),XyzGrid_DI(:,iOrder_I(iCoarse_I(1)))  )
+if( .not.(any(Weight_I(1:4) < 0)) )then
+nGridOut = 4
+iOrder_I(1:nGridOut) = iOrder_I((/iFine_I(  1)  ,iFine_I(  2),&
+iCoarse_I(1)+4,iCoarse_I(1)/))
+return
+else
+call tetrahedron(&
+XyzGrid_DI(:,iOrder_I(iFine_I(  1)  )),XyzGrid_DI(:,iOrder_I(iFine_I(  2))),&
+XyzGrid_DI(:,iOrder_I(iCoarse_I(2)+4)),XyzGrid_DI(:,iOrder_I(iCoarse_I(2)))  )
+if( .not.(any(Weight_I(1:4) < 0)) )then
+nGridOut = 4
+iOrder_I(1:nGridOut) = iOrder_I((/iFine_I(  1)  ,iFine_I(  2),&
+iCoarse_I(2)+4,iCoarse_I(2)/))
+return
+end if
+end if
+!\
+! Triangulate points 1:4
+!/
+!\
+! F---F
+! |F  |
+! | `F|
+! F---F
+!/
+DoStencilFix2 = .false.
+XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(5:8))
+iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(5:8))
+call interpolate_amr_grid_2(&
+Xyz2_D, XyzGrid2_DI,iLevel2_I,&
+nGridOut2, Weight_I(5:8), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+nGridOut = nGridOut2
+
+DoStencilFix2 = .true.
+XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(1:4))
+iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(1:4))
+XyzGrid2_DI(:,iOrder_I(iCoarse_I(1))) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(iCoarse_I(1)+4))
+XyzGrid2_DI(:,iOrder_I(iCoarse_I(2))) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(iCoarse_I(2)+4))
+iOrder_I(iCoarse_I(1)) = iOrder_I(iCoarse_I(1)+4)
+iOrder_I(iCoarse_I(2)) = iOrder_I(iCoarse_I(2)+4)
+call interpolate_amr_grid_2(&
+Xyz2_D, XyzGrid2_DI,iLevel2_I,&
+nGridOut2, Weight_I(1:4), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+nGridOut = 2
+iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+Weight_I(5:8) = Weight_I(iOrder2_I+4)
+
+dXyzUp   = vertical_distance_point_plane(Xyz_D,(/5,6,3/),kAxis)
+dXyzDown = vertical_distance_point_plane(Xyz_D,(/1,2,3/),kAxis)
+
+
+AlphaKAxis = abs(dXyzUp)/(abs(dXyzDown)+abs(dXyzUp))
+
+
+
+Weight_I(1:2) = Weight_I(1:2) *      AlphaKAxis
+Weight_I(  3) = Weight_I(  3) *      AlphaKAxis + &
+Weight_I(  7) * (1 - AlphaKAxis)
+Weight_I(5:8) = Weight_I(5:8) * (1 - AlphaKAxis)
+Weight_I(4:6) = Weight_I((/5,6,8/))
+iOrder_I(4:6) = iOrder_I((/5,6,8/))
+nGridOut = 6
+return
+
+
+case(3)
+!\
+! lower part of the stencil:    C
+!                               | \
+!                               |  F
+!/                              F--F
+!\
+! Rearrange iFine
+! so that iCoarse(1) is on diagonal with iFine(1)
+!/
+do iGrid = 2,nFine
+if(iCoarse_I(1)+iFine_I(iGrid)==5)then
+iFine_I((/1,iGrid/)) = iFine_I((/iGrid,1/))
+end if
+end do
+!\
+! Xyz point may be inside the tetrahedron iFine(2),iFine(3),iCoarse(1)+4,iCoarse(1)
+!/
+call tetrahedron(&
+XyzGrid_DI(:,iOrder_I(iFine_I(  1)  )),XyzGrid_DI(:,iOrder_I(iFine_I(  2))),&
+XyzGrid_DI(:,iOrder_I(iCoarse_I(1)+4)),XyzGrid_DI(:,iOrder_I(iCoarse_I(1)))  )
+if( .not.(any(Weight_I(1:4) < 0)) )then
+nGridOut = 4
+iOrder_I(1:nGridOut) = iOrder_I((/iFine_I(  1)  ,iFine_I(  2),&
+iCoarse_I(1)+4,iCoarse_I(1)/))
+return
+end if
+
+!\
+! substitute iCoarse(1) by iCoarse(1)+4
+!/
+iOrder_I(iCoarse_I(1)) = iOrder_I(iCoarse_I(1)+4)
+
+DoStencilFix2 = .false.
+XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(5:8))
+iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(5:8))
+call interpolate_amr_grid_2(&
+Xyz2_D, XyzGrid2_DI,iLevel2_I,&
+nGridOut2, Weight_I(5:8), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+nGridOut = nGridOut2
+
+DoStencilFix2 = .true.
+XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(1:4))
+iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(1:4))
+call interpolate_amr_grid_2(&
+Xyz2_D, XyzGrid2_DI,iLevel2_I,&
+nGridOut2, Weight_I(1:4), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+Weight_I(5:8) = Weight_I(iOrder2_I+4)
+
+if(nGridOut2 == 2)then
+AlphaKAxis = (Xyz_D(kAxis) - XyzGrid_DI(kAxis,5))/&
+(XyzGrid_DI(kAxis,1) - XyzGrid_DI(kAxis,5))
+Weight_I(1:2) = Weight_I(1:2) * AlphaKAxis
+Weight_I(5:8) = Weight_I(5:8) * (1 - AlphaKAxis)
+Weight_I(3:6) = Weight_I(5:8)
+iOrder_I(3:6) = iOrder_I(5:8)
+nGridOut = 6
+return
+end if
+
+
+if(iLevel_I(iOrder_I(3))==Coarse_)then
+
+dXyzUp   = vertical_distance_point_plane(Xyz_D,(/5,6,3/),kAxis)
+dXyzDown = vertical_distance_point_plane(Xyz_D,(/1,2,3/),kAxis)
+
+
+AlphaKAxis = abs(dXyzUp)/(abs(dXyzDown)+abs(dXyzUp))
+
+
+Weight_I(1:2) = Weight_I(1:2) *      AlphaKAxis
+Weight_I(  3) = Weight_I(  3) *      AlphaKAxis + &
+Weight_I(  7) * (1 - AlphaKAxis)
+Weight_I(5:8) = Weight_I(5:8) * (1 - AlphaKAxis)
+Weight_I(4:6) = Weight_I((/5,6,8/))
+iOrder_I(4:6) = iOrder_I((/5,6,8/))
+nGridOut = 6
+return
+else
+AlphaKAxis = (Xyz_D(kAxis) - XyzGrid_DI(kAxis,5))/&
+(XyzGrid_DI(kAxis,1) - XyzGrid_DI(kAxis,5))
+Weight_I(1:3) = Weight_I(1:3) * AlphaKAxis
+Weight_I(5:8) = Weight_I(5:8) * (1 - AlphaKAxis)
+Weight_I(4:7) = Weight_I(5:8)
+iOrder_I(4:7) = iOrder_I(5:8)
+nGridOut = 7
+return
+end if
+
+
+
+end select
+
+
+
+end subroutine interpolate_resolution_interface_vicinity
+!=======================================================================
+subroutine triangulate_eagle_stencil
+real, dimension(nDim) :: X1_D,X2_D,X3_D,X4_D,X5_D,X6_D,X7_D,X8_D
+!\
+! Fine point without Fine neighbours is stored in iOrder(1),
+! two others are stored in iOrder(4) and iOrder(8)
+!
+!      C------C
+!      |     /
+!    F---F  /
+!     `C---F
+!     /     \
+!    C-------C
+!
+!/
+!-----------------------------------------------
+X1_D = XyzGrid_DI(:,iOrder_I(1));X2_D = XyzGrid_DI(:,iOrder_I(2))
+X3_D = XyzGrid_DI(:,iOrder_I(3));X4_D = XyzGrid_DI(:,iOrder_I(4))
+X5_D = XyzGrid_DI(:,iOrder_I(5));X6_D = XyzGrid_DI(:,iOrder_I(6))
+X7_D = XyzGrid_DI(:,iOrder_I(7));X8_D = XyzGrid_DI(:,iOrder_I(8))
+!\
+!
+!/
+if(triple_product(X1_D - Xyz_D,X4_D - Xyz_D,X8_D - Xyz_D) * &
+triple_product(X1_D  - X6_D,X4_D - X6_D, X8_D - X6_D) > 0)then
+!\
+! Xyz point may be inside tetrahedron 1,4,8,6
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(1)),XyzGrid_DI(:,iOrder_I(5)),&
+XyzGrid_DI(:,iOrder_I(6)),XyzGrid_DI(:,iOrder_I(8)))
+if (.not. any(Weight_I(1:4) < 0.0))then
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/1,5,6,8/))
+else
+!\
+! Xyz point is inside pyramid 2,4,6,8,1
+!/
+call rectangular_pyramid(XyzGrid_DI(:,iOrder_I(2)),XyzGrid_DI(:,iOrder_I(6)),&
+XyzGrid_DI(:,iOrder_I(4)),XyzGrid_DI(:,iOrder_I(8)),&
+XyzGrid_DI(:,iOrder_I(1)))
+if (.not. any(Weight_I(1:5) < 0.0))then
+nGridOut = 5
+iOrder_I(1:5) = iOrder_I((/2,6,4,8,1/))
+else
+!\
+! interpolate on tetrahedron 2,6,8,1
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(1)),XyzGrid_DI(:,iOrder_I(2)),&
+XyzGrid_DI(:,iOrder_I(6)),XyzGrid_DI(:,iOrder_I(8)))
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/1,2,6,8/))
+end if
+end if
+else
+!\
+! Xyz point may be inside tetrahedron 1,4,8,7
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(1)),XyzGrid_DI(:,iOrder_I(5)),&
+XyzGrid_DI(:,iOrder_I(7)),XyzGrid_DI(:,iOrder_I(8)))
+if (.not. any(Weight_I(1:4) < 0.0))then
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/1,5,7,8/))
+else
+!\
+! Xyz point is inside pyramid 3,4,7,8,1
+!/
+call rectangular_pyramid(XyzGrid_DI(:,iOrder_I(3)),XyzGrid_DI(:,iOrder_I(7)),&
+XyzGrid_DI(:,iOrder_I(4)),XyzGrid_DI(:,iOrder_I(8)),&
+XyzGrid_DI(:,iOrder_I(1)))
+if (.not. any(Weight_I(1:5) < 0.0))then
+nGridOut = 5
+iOrder_I(1:5) = iOrder_I((/3,7,4,8,1/))
+else
+!\
+! interpolate on tetrahedron 3,7,8,1
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(3)),XyzGrid_DI(:,iOrder_I(7)),&
+XyzGrid_DI(:,iOrder_I(8)),XyzGrid_DI(:,iOrder_I(1)))
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/3,7,8,1/))
+end if
+end if
+end if
+
+end subroutine triangulate_eagle_stencil
+!=======================================================================
+subroutine triangulate_ship_stencil(iAxis,jAxis)
+integer,intent(in):: iAxis,jAxis
+real :: AlphaKAxisFine, AlphaKAxisCoarse    ! weight along iAxis
+real :: dXyzUp, dXyzDown
+integer:: kAxis
+integer:: iCoarse, iFine_I(2)
+!\
+! face 1:4 has 2 Coarse points on diagonal
+! face 5:8 has 1 Coarse point
+
+!/
+!-----------------------------------------------
+kAxis = 6 -iAxis-jAxis
+!\
+! find Coarse point on face 1:4 with Fine point below
+! find fine points on face 1:4
+!/
+do iGrid = 1,4
+if(iLevel_I(iOrder_I(iGrid  ))==Coarse_ .and.&
+iLevel_I(iOrder_I(iGrid+4))==Fine_ )then
+iCoarse = iGrid
+iFine_I(1) = abs(5-2*iCoarse)
+iFine_I(2) = 5- iFine_I(1)
+end if
+end do
+!\
+! Xyz point may be inside terahedron iCoarse, iFine_I(1),iFine_I(2),iCoarse+4
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(iCoarse  )),XyzGrid_DI(:,iOrder_I(iFine_I(1))),&
+XyzGrid_DI(:,iOrder_I(iCoarse+4)),XyzGrid_DI(:,iOrder_I(iFine_I(2))))
+if (.not. any(Weight_I(1:4) < 0.0))then
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/iCoarse,iFine_I(1),iCoarse+4,iFine_I(2)/))
+return
+end if
+
+
+
+!\
+! substitute iCoarse with iCoarse+4
+!/
+iOrder_I(iCoarse) = iOrder_I(iCoarse+4)
+
+DoStencilFix2 = .true.
+Xyz2_d(x_:y_) = Xyz_D((/iAxis, jAxis/))
+XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(1:4))
+iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(1:4))
+call interpolate_amr_grid_2(&
+Xyz2_D, XyzGrid2_DI,iLevel2_I,&
+nGridOut2, Weight_I(1:4), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+
+if(nGridOut2 == 2)then
+AlphaKAxisFine = (Xyz_D(kAxis) - XyzGrid_DI(kAxis,5))/&
+(XyzGrid_DI(kAxis,1) - XyzGrid_DI(kAxis,5))
+Weight_I(3:4) = Weight_I(1:2) * (1 - AlphaKAxisFine)
+Weight_I(1:2) = Weight_I(1:2) * AlphaKAxisFine
+iOrder_I(3:4) = iOrder_I(5:6)
+nGridOut = 4
+return
+end if
+
+
+if(iLevel_I(iOrder_I(3))==Fine_)then
+
+dXyzUp   = vertical_distance_point_plane(Xyz_D,(/5,6,3/),kAxis)
+dXyzDown = vertical_distance_point_plane(Xyz_D,(/1,2,3/),kAxis)
+
+AlphaKAxisFine = abs(dXyzUp)/(abs(dXyzDown)+abs(dXyzUp))
+Weight_I(4:5) = Weight_I(1:2) * (1 - AlphaKAxisFine)
+Weight_I(1:2) = Weight_I(1:2) *      AlphaKAxisFine
+
+iOrder_I(4:5) = iOrder_I(5:6)
+nGridOut = 5
+else
+AlphaKAxisFine = (Xyz_D(kAxis) - XyzGrid_DI(kAxis,iOrder_I(5)))/&
+(XyzGrid_DI(kAxis,iOrder_I(1)) - XyzGrid_DI(kAxis,iOrder_I(5)))
+AlphaKAxisCoarse = (Xyz_D(kAxis) - XyzGrid_DI(kAxis,iOrder_I(7)))/&
+(XyzGrid_DI(kAxis,iOrder_I(3)) - XyzGrid_DI(kAxis,iOrder_I(7)))
+Weight_I(4:5) = Weight_I(1:2) * (1 - AlphaKAxisFine)
+Weight_I(1:2) = Weight_I(1:2) * AlphaKAxisFine
+Weight_I(6) = Weight_I(3) * (1 - AlphaKAxisCoarse)
+Weight_I(3) = Weight_I(3) * AlphaKAxisCoarse
+iOrder_I(4:6) = iOrder_I(5:7)
+nGridOut = 6
+end if
+end subroutine triangulate_ship_stencil
+!=======================================================================
+subroutine triangulate_snail_stencil
+!\
+! face 1:4 has only one Coarse point stored in iOrder_I(1)
+! face 5:8 has three Coarse points in iOrder((/6,7,8/))
+!/
+!-----------------------------------------------
+!\
+! Xyz point may be inside terahedron 2,1,3,5
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(1)),XyzGrid_DI(:,iOrder_I(2)),&
+XyzGrid_DI(:,iOrder_I(3)),XyzGrid_DI(:,iOrder_I(5)))
+
+if (.not. any(Weight_I(1:4) < 0.0))then
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/1,2,3,5/))
+return
+end if
+!\
+! Xyz point may be inside terahedron 2,3,4,5
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(2)),XyzGrid_DI(:,iOrder_I(3)),&
+XyzGrid_DI(:,iOrder_I(4)),XyzGrid_DI(:,iOrder_I(5)))
+
+if (.not. any(Weight_I(1:4) < 0.0))then
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I(2:5)
+return
+end if
+!\
+! Xyz point may be inside pyramid 3,4,7,8,5
+!/
+call rectangular_pyramid(XyzGrid_DI(:,iOrder_I(3)),XyzGrid_DI(:,iOrder_I(4)),&
+XyzGrid_DI(:,iOrder_I(7)),XyzGrid_DI(:,iOrder_I(8)),&
+XyzGrid_DI(:,iOrder_I(5)))
+
+if (.not. any(Weight_I(1:5) < 0.0))then
+nGridOut = 5
+iOrder_I(1:5) = iOrder_I((/3,4,7,8,5/))
+return
+end if
+!\
+! Xyz point may be inside tetrahedron 4,7,8,5
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(4)),XyzGrid_DI(:,iOrder_I(7)),&
+XyzGrid_DI(:,iOrder_I(8)),XyzGrid_DI(:,iOrder_I(5)))
+
+if (.not. any(Weight_I(1:4) < 0.0))then
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/4,7,8,5/))
+return
+end if
+!\
+! Xyz point may be inside pyramid 2,4,6,8,5
+!/
+call rectangular_pyramid(XyzGrid_DI(:,iOrder_I(2)),XyzGrid_DI(:,iOrder_I(4)),&
+XyzGrid_DI(:,iOrder_I(6)),XyzGrid_DI(:,iOrder_I(8)),&
+XyzGrid_DI(:,iOrder_I(5)))
+
+if (.not. any(Weight_I(1:5) < 0.0))then
+nGridOut = 5
+iOrder_I(1:5) = iOrder_I((/2,4,6,8,5/))
+return
+end if
+!\
+! Xyz point is inside tetrahedron 4,6,8,5
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(4)),XyzGrid_DI(:,iOrder_I(6)),&
+XyzGrid_DI(:,iOrder_I(8)),XyzGrid_DI(:,iOrder_I(5)))
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/4,6,8,5/))
+
+
+end subroutine triangulate_snail_stencil
+!=======================================================================
+subroutine triangulate_twist_stencil
+integer, dimension(4):: iFine_I, iCoarse_I
+!\
+! Face 1:4 has only one Fine   point
+! Face 5:8 has only one Coarse point
+!       C----F
+!      /|   /|
+!     / |  / |
+!     F---F__F
+!    | `C `  |
+!    | /   ` |
+!    |/     `|
+!    C-------C
+!/
+!-----------------------------------------------
+
+!\
+! Fill arrays iFine_I and iCoarse_I so that they
+! represent a chain of points
+!/
+do iGrid=1,4
+if(iLevel_I(iGrid  )==Fine_  )then
+iFine_I(  1) = iGrid
+end if
+if(iLevel_I(iGrid+4)==Coarse_)then
+iCoarse_I(1) = iGrid
+end if
+end do
+
+iFine_I(  2) = iFine_I(  1)+4
+iCoarse_I(2) = iCoarse_I(1)-4
+
+iFine_I(  4) = 13 - iFine_I(  2)
+iCoarse_I(4) =  5 - iCoarse_I(2)
+
+iFine_I(  3) = iCoarse_I(4)+4
+iCoarse_I(3) = iFine_I(  4)-4
+
+!\
+! Xyz point may be inside tetrahedron iFine(1:4)
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(iFine_I(1))),XyzGrid_DI(:,iOrder_I(iFine_I(2))),&
+XyzGrid_DI(:,iOrder_I(iFine_I(3))),XyzGrid_DI(:,iOrder_I(iFine_I(4))))
+if (.not. any(Weight_I(1:4) < 0.0))then
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I(iFine_I(1:4))
+return
+end if
+
+!\
+! Xyz point may be inside tetrahedron iFine(1),iCoarse(2),iCoarse(3),iFine(4)
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(iFine_I(1))),XyzGrid_DI(:,iOrder_I(iCoarse_I(2))),&
+XyzGrid_DI(:,iOrder_I(iFine_I(4))),XyzGrid_DI(:,iOrder_I(iCoarse_I(3))))
+if (.not. any(Weight_I(1:4) < 0.0))then
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/iFine_I(1),iCoarse_I(2),iFine_I(4),iCoarse_I(3)/))
+return
+end if
+
+if(Weight_I(2) < 0.0)then
+!\
+! Xyz point is inside pyramid iCoarse(4),iCoarse(3),iFine(3),iFine(4),iFine(1)
+!/
+call rectangular_pyramid(XyzGrid_DI(:,iOrder_I(iCoarse_I(4))),XyzGrid_DI(:,iOrder_I(iCoarse_I(3))),&
+XyzGrid_DI(:,iOrder_I(iFine_I(  3))),XyzGrid_DI(:,iOrder_I(iFine_I(  4))),&
+XyzGrid_DI(:,iOrder_I(iFine_I(  1))))
+if (.not. any(Weight_I(1:4) < 0.0))then
+nGridOut = 5
+iOrder_I(1:5) = iOrder_I((/iCoarse_I(4),iCoarse_I(3),iFine_I(3),iFine_I(4),iFine_I(1)/))
+else
+!\
+! interpolate on tetrahedron iCoarse(4),iCoarse(3),iFine(4),iFine(1)
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(iFine_I(1))),XyzGrid_DI(:,iOrder_I(iCoarse_I(3))),&
+XyzGrid_DI(:,iOrder_I(iFine_I(4))),XyzGrid_DI(:,iOrder_I(iCoarse_I(4))))
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/iFine_I(1),iCoarse_I(3),iFine_I(4),iCoarse_I(4)/))
+end if
+else
+!\
+! Xyz point is inside pyramid iCoarse(2),iCoarse(1),iFine(1),iFine(2),iFine(4)
+!/
+call rectangular_pyramid(XyzGrid_DI(:,iOrder_I(iCoarse_I(2))),XyzGrid_DI(:,iOrder_I(iCoarse_I(1))),&
+XyzGrid_DI(:,iOrder_I(iFine_I(  1))),XyzGrid_DI(:,iOrder_I(iFine_I(  2))),&
+XyzGrid_DI(:,iOrder_I(iFine_I(  4))))
+if (.not. any(Weight_I(1:5) < 0.0))then
+nGridOut = 5
+iOrder_I(1:5) = iOrder_I((/iCoarse_I(2),iCoarse_I(1),iFine_I(1),iFine_I(2),iFine_I(4)/))
+else
+!\
+! interpolate on tetrahedron iCoarse(2),iCoarse(1),iFine(4),iFine(1)
+!/
+call tetrahedron(XyzGrid_DI(:,iOrder_I(iFine_I(4))),XyzGrid_DI(:,iOrder_I(iCoarse_I(2))),&
+XyzGrid_DI(:,iOrder_I(iFine_I(1))),XyzGrid_DI(:,iOrder_I(iCoarse_I(1))))
+nGridOut = 4
+iOrder_I(1:4) = iOrder_I((/iFine_I(4),iCoarse_I(2),iFine_I(1),iCoarse_I(1)/))
+end if
+end if
+
+
+end subroutine triangulate_twist_stencil
+!=======================================================================
+!=======================================================================
+subroutine triangulate_six_tetrahedra
+real, dimension(nDim) :: X1_D, X2_D, X3_D, X4_D, X5_D, X6_D, X7_D, X8_D
+!\
+! Points X1 and X8 are Fine_, others are Coarse_
+! Edge X1X8 is common for all tetrahedra
+!/
+!-----------------------------------------------
+
+X1_D = XyzGrid_DI(:,iOrder_I(1));X2_D = XyzGrid_DI(:,iOrder_I(2))
+X3_D = XyzGrid_DI(:,iOrder_I(3));X2_D = XyzGrid_DI(:,iOrder_I(4))
+X5_D = XyzGrid_DI(:,iOrder_I(5));X2_D = XyzGrid_DI(:,iOrder_I(6))
+X7_D = XyzGrid_DI(:,iOrder_I(7));X2_D = XyzGrid_DI(:,iOrder_I(8))
+nGridOut = 4
+call tetrahedron(X1_D, X2_D, X4_D, X8_D)
+if(any(Weight_I(1:4) < 0.0))then
+call tetrahedron(X1_D, X2_D, X6_D, X8_D)
+if(any(Weight_I(1:4) < 0.0))then
+call tetrahedron(X1_D, X3_D, X4_D, X8_D)
+if(any(Weight_I(1:4) < 0.0))then
+call tetrahedron(X1_D, X3_D, X7_D, X8_D)
+if(any(Weight_I(1:4) < 0.0))then
+call tetrahedron(X1_D, X5_D, X6_D, X8_D)
+if(any(Weight_I(1:4) < 0.0))then
+call tetrahedron(X1_D, X5_D, X7_D, X8_D)
+iOrder_I(1:4) = (/1,5,7,8/)
+else
+iOrder_I(1:4) = (/1,5,6,8/)
+end if
+else
+iOrder_I(1:4) = (/1,3,7,8/)
+end if
+else
+iOrder_I(1:4) = (/1,3,4,8/)
+end if
+else
+iOrder_I(1:4) = (/1,2,6,8/)
+end if
+else
+iOrder_I(1:4) = (/1,2,4,8/)
+end if
+end subroutine triangulate_six_tetrahedra
+!=======================================================================
+!=======================================================================
+subroutine triangulate_five_tetrahedra
+real, dimension(nDim) :: X1_D, X2_D, X3_D, X4_D, X5_D, X6_D, X7_D, X8_D
+!\
+! Points X2, X3, X8 are Fine_, X4 and X5 may be of any kind
+! others are Coarse_
+! Each tetrahedron contains two or three of these points
+!/
+!-----------------------------------------------
+
+X1_D = XyzGrid_DI(:,iOrder_I(1));X2_D = XyzGrid_DI(:,iOrder_I(2))
+X3_D = XyzGrid_DI(:,iOrder_I(2));X4_D = XyzGrid_DI(:,iOrder_I(4))
+X5_D = XyzGrid_DI(:,iOrder_I(5));X6_D = XyzGrid_DI(:,iOrder_I(6))
+X7_D = XyzGrid_DI(:,iOrder_I(7));X8_D = XyzGrid_DI(:,iOrder_I(8))
+nGridOut = 4
+call tetrahedron(X2_D, X3_D, X8_D, X4_D)
+if(any(Weight_I(1:4) < 0.0))then
+call tetrahedron(X2_D, X3_D, X8_D, X5_D)
+if(any(Weight_I(1:4) < 0.0))then
+call tetrahedron(X2_D, X8_D, X5_D, X6_D)
+if(any(Weight_I(1:4) < 0.0))then
+call tetrahedron(X2_D, X3_D, X5_D, X1_D)
+if(any(Weight_I(1:4) < 0.0))then
+call tetrahedron(X3_D, X8_D, X5_D, X7_D)
+iOrder_I(1:4) = (/3,8,5,7/)
+else
+iOrder_I(1:4) = (/2,3,5,1/)
+end if
+else
+iOrder_I(1:4) = (/2,8,5,6/)
+end if
+else
+iOrder_I(1:4) = (/2,3,8,5/)
+end if
+else
+iOrder_I(1:4) = (/2,3,8,4/)
+end if
+end subroutine triangulate_five_tetrahedra
+!=======================================================================
+subroutine triangulate_two_tetrahedra_two_pyramids
+real, dimension(nDim) :: X1_D, X2_D, X3_D, X4_D, X5_D, X6_D, X7_D, X8_D
+!\
+! Points X1, X8 are Coarse_
+! others are Finee_
+! X1X2X3X5, X4X6X7X8 are tetrahedra
+! X2X3X6X7X4, X2X3X6X7X5 are pyramids
+!/
+!-----------------------------------------------
+
+X1_D = XyzGrid_DI(:,iOrder_I(1));X2_D = XyzGrid_DI(:,iOrder_I(2))
+X3_D = XyzGrid_DI(:,iOrder_I(2));X4_D = XyzGrid_DI(:,iOrder_I(4))
+X5_D = XyzGrid_DI(:,iOrder_I(5));X6_D = XyzGrid_DI(:,iOrder_I(6))
+X7_D = XyzGrid_DI(:,iOrder_I(7));X8_D = XyzGrid_DI(:,iOrder_I(8))
+call tetrahedron(X1_D, X2_D, X3_D, X5_D)
+if(any(Weight_I(1:4) < 0.0))then
+call tetrahedron(X4_D, X6_D, X7_D, X8_D)
+if(any(Weight_I(1:4) < 0.0))then
+call rectangular_pyramid(X2_D, X3_D, X6_D, X7_D, X4_D)
+if(any(Weight_I(1:5) < 0.0))then
+call rectangular_pyramid(X2_D, X3_D, X6_D, X7_D, X5_D)
+nGridOut = 5
+iOrder_I(1:5) = (/2,3,6,7,5/)
+else
+nGridOut = 5
+iOrder_I(1:5) = (/2,3,6,7,4/)
+end if
+else
+nGridOut = 4
+iOrder_I(1:4) = (/4,6,7,8/)
+end if
+else
+nGridOut = 4
+iOrder_I(1:4) = (/1,2,3,5/)
+end if
+end subroutine triangulate_two_tetrahedra_two_pyramids
+!=======================================================================
+
   end subroutine interpolate_amr_grid_3
   !=========
+
+
 
 
 
@@ -1435,9 +3405,9 @@ contains
     real, parameter :: Xyz_DB(nDim, nBlock) = reshape((/&
          0.0, 0.0, 2.0, 0.0,  3.0, 0.0, 2.0, 1.0, 3.0, 1.0, 4.0, 0.0, 6.0, 0.0, 7.0, 0.0,  6.0, 1.0, 7.0, 1.0, 8.0, 0.0, &
          0.0, 2.0, 2.0, 2.0,  4.0, 2.0, 5.0, 2.0, 4.0, 3.0, 5.0, 3.0, 6.0, 2.0, 8.0, 2.0,  &
-         0.0, 4.0, 2.0, 4.0,  3.0, 4.0, 2.0, 5.0, 3.0, 5.0, 4.0, 4.0, 5.0, 4.0, 4.0, 5.0,  5.0, 5.0, 6.0, 4.0, 7.0, 4.0, & 
-         6.0, 5.0, 7.0, 5.0,  8.0, 4.0,        &  
-         0.0, 6.0, 2.0, 6.0,  3.0, 6.0, 2.0, 7.0, 3.0, 7.0, 4.0, 6.0, 6.0, 6.0, 7.0, 6.0,  6.0, 7.0, 7.0, 7.0, 8.0, 6.0  & 
+         0.0, 4.0, 2.0, 4.0,  3.0, 4.0, 2.0, 5.0, 3.0, 5.0, 4.0, 4.0, 5.0, 4.0, 4.0, 5.0,  5.0, 5.0, 6.0, 4.0, 7.0, 4.0, &
+         6.0, 5.0, 7.0, 5.0,  8.0, 4.0,        &
+         0.0, 6.0, 2.0, 6.0,  3.0, 6.0, 2.0, 7.0, 3.0, 7.0, 4.0, 6.0, 6.0, 6.0, 7.0, 6.0,  6.0, 7.0, 7.0, 7.0, 8.0, 6.0  &
          /),(/nDim, nBlock/))
     real :: dXyz_DB(nDim, nBlock) = 0.0
     integer, parameter :: iLevel_B(nBlock) = (/&
