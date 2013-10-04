@@ -183,10 +183,12 @@ if($ShowCompiler){
     foreach (@File){
 	next unless s/$MakefileConfOrig\.$OS\.//;
 	print "  $_\n";
+	$_ = ""; # remove the compiler from the list
     }
     print "List of C compilers:\n";
     foreach (@File){
-        next unless s/$MakefileConfOrig\.(.*(cc|xlc))$/$1/;
+	next unless $_ and not /$MakefileConfOrig\.(\w+\.|conf|doc)/;
+	s/$MakefileConfOrig\.//;
         print "  $_\n";
     }
     exit 0;
@@ -195,14 +197,30 @@ if($ShowCompiler){
 # Execute the actions in the appropriate order
 &install_code_ if $Install;
 
+# Check if Makefile.def is up to date
 if(-f $MakefileDef and not $IsComponent){
     my @Stat = stat $MakefileDef;
     my $Time = $Stat[9];
-    my @Stat = stat $MakefileDefOrig;
+    @Stat = stat $MakefileDefOrig;
     my $TimeOrig = $Stat[9];
     die "$ERROR $MakefileDefOrig is newer than $MakefileDef !\n".
 	"   Reinstall or merge changes into $MakefileDef !\n"
 	if $Time < $TimeOrig;
+}
+
+# Check if Makefile.conf is up to date
+if(-f $MakefileConf and not $IsComponent){
+    my @Stat = stat $MakefileConf;
+    my $Time = $Stat[9];
+    foreach ("$OS.$Compiler", $CompilerC){
+	my $Makefile = $MakefileConfOrig.".".$_;
+	next unless -f $Makefile;
+	my @Stat = stat $Makefile;
+	my $TimeOrig = $Stat[9];
+	die "$ERROR $Makefile is newer than $MakefileConf !\n".
+	    "   Reinstall or merge changes into $MakefileConf !\n"
+	    if $Time < $TimeOrig;
+    }
 }
 
 # Change precision of reals if required
@@ -329,17 +347,18 @@ sub show_settings_{
 	    print "    as a stand-alone code.\n";
 	}
     }
-    print "The installation is for the $OS operating system.\n";
-    print "The selected F90 compiler is $Fcompiler.\n";
-    print "The selected C   compiler is $Ccompiler.\n";
-    print "The default precision for reals is $Precision precision.\n";
-    print "The maximum optimization level is $Optimize\n";
-    print "Debugging flags:   $Debug\n";
-    print "Linked with MPI:   $Mpi\n";
-    print "Linked with HDF5:  $Hdf5\n";
-    print "Linked with HYPRE: $Hypre\n";
-
-    print "\n";
+    print "The installation is for the $OS operating system.
+Makefile.conf was created from $MakefileConfOrig.$OS.$Compiler 
+                           and $MakefileConfOrig.$CompilerC
+The selected F90 compiler is $Fcompiler.
+The selected C   compiler is $Ccompiler.
+The default precision for reals is $Precision precision.
+The maximum optimization level is $Optimize
+Debugging flags:   $Debug
+Linked with MPI:   $Mpi
+Linked with HDF5:  $Hdf5
+Linked with HYPRE: $Hypre
+";
 
 }
 
