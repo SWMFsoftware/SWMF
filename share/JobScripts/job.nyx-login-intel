@@ -3,7 +3,7 @@
 #PBS -A csem
 #PBS -q route
 #PBS -N SWMF
-#PBS -l nodes=4:ppn=4,qos=csem
+#PBS -l nodes=1:ppn=12,qos=ridley
 #PBS -l pmem=500mb
 #PBS -l walltime=2:00:00
 
@@ -14,8 +14,7 @@ cd $PBS_O_WORKDIR
 qstat -u $USER -n
 
 # look at what else is running
-resinfo.pl -n csem
+resinfo.pl -n ridley
 
 # run job
 mpirun ./SWMF.exe > runlog_`date +%y%m%d%H%M`
-
