@@ -1,11 +1,30 @@
 #!/bin/sh
 #PBS -V
-#PBS -A csem
-#PBS -q route
 #PBS -N SWMF
-#PBS -l nodes=1:ppn=12,qos=ridley
 #PBS -l pmem=500mb
 #PBS -l walltime=2:00:00
+
+# Use showq or resinfo.pl to see the availability of resources
+# Note: resinfo.pl does not work for flux queues!
+#
+# showq -w acct=ridley             or      resinfo.pl -n ridley
+# showq -w acct=crash              or      resinfo.pl -n crash
+# showq -w acct=crash_flux
+# showq -w acct=liemohn_flux
+# showq -w acct=engin_flux
+
+# Put #PBS in front of one of the following queues that you have access to
+#PBS -A crash        -q cac   -l qos=crash   # 192 cores,  8 cores/node
+#    -A ridley       -q route -l qos=ridley  # 192 cores, 12 cores/node
+#    -A liemohn_flux -q flux  -l qos=flux    # ??? cores, 12 cores/node
+#    -A crash_flux   -q flux  -l qos=flux    # ??? cores, 12 cores/node
+#    -A engin_flux   -q flux  -l qos=flux    # 100 cores, 12 cores/node, free
+
+# Adjust number number of procs (multiples of 8 or 12 depending on queue)
+# or set number of nodes with correct value of process-per-node (ppn).
+#PBS -l procs=96
+#    -l nodes=8:ppn=12
+#    -l nodes=12:ppn=8
 
 # cd to job submission directory
 cd $PBS_O_WORKDIR
