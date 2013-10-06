@@ -139,7 +139,7 @@ subroutine write_plot_common(ifile)
   if(.not.time_accurate)then
      ! Add time step information
      write(NameSnapshot,'(a,i8.8)') trim(NameSnapshot)//"_n", n_step
-  elseif(plot_type1 /= 'cut_pic')then
+  else
      if(IsPlotName_e)then
         ! Event date
         write(format,*)'(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)'
@@ -168,8 +168,7 @@ subroutine write_plot_common(ifile)
   end if
 
   ! Determine if output file is formatted or unformatted
-  IsBinary = save_binary .and. plot_form(ifile)=='idl' &
-       .and. plot_type1 /= 'cut_pic'
+  IsBinary = save_binary .and. plot_form(ifile)=='idl' 
 
   if(IsBinary)then
      TypeForm = "unformatted"
@@ -621,7 +620,6 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
   use ModResistivity, ONLY: Eta0Si
   use ModIO
   use ModMain, ONLY: dt
-  use ModPIC, ONLY: pic_param
 
   implicit none
   integer,           intent(in) :: iPlotFile,nEqPar
@@ -677,8 +675,6 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
         EqPar_I(iPar)=R_raytrace
      case('dt')
         EqPar_I(iPar) = dt
-     case('tunitpic', 'noverlap', 'nghostpic')
-        EqPar_I(iPar) = pic_param(NameEqPar_I(iPar))
      case default
         EqPar_I(iPar)=-7777.
         if(iProc==0)write(*,*)'Error in set_eqpar: unknown eqparname=',&
