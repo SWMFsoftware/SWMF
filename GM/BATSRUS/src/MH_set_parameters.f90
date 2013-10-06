@@ -509,7 +509,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#HYPRE")
         call hypre_read_param
 
-     case("#PIC", "#PICREGION", "#PICUNIT")
+     case("#PIC", "#PICREGION", "#PICUNIT", "#PICCOUPLE")
         call pic_read_param(NameCommand)
 
      case("#VISCOSITY", "#VISCOSITYREGION")
@@ -876,11 +876,6 @@ subroutine MH_set_parameters(TypeAction)
               plot_vars(ifile) = NamePrimitiveVar
               plot_pars(ifile)='g'
               if(rBody>0.0)plot_pars(ifile)='g rbody'
-           elseif(index(plot_string,'PIC')>0.or.index(plot_string,'pic')>0)then
-              plot_var='pic'
-              plot_dimensional(ifile) = .false.
-              plot_vars(ifile) = 'rho ux uy uz bx by bz p jx jy jz'
-              plot_pars(ifile)='dt tUnitPic'
            elseif(index(plot_string,'ALL')>0.or.index(plot_string,'all')>0)then
               ! This is intended for restart with a different dimensionality
               plot_var='all'
