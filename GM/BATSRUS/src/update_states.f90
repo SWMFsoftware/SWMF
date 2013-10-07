@@ -6,7 +6,6 @@ subroutine update_states(iStage,iBlock)
   use ModUser, ONLY: user_update_states
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use BATL_lib, ONLY: Xyz_DGB
-  use ModPIC, ONLY: UsePic, pic_update_states
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
        update_heatflux_collisionless
 
@@ -55,8 +54,6 @@ subroutine update_states(iStage,iBlock)
 
   if(Ehot_ > 1 .and. UseHeatFluxCollisionless) &
        call update_heatflux_collisionless(iBlock)
-
-  if(UsePic) call pic_update_states(iBlock)
 
   if(index(test_string,'fixrho ')>0) &
        State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)=StateOld_VCB(Rho_,:,:,:,iBlock)

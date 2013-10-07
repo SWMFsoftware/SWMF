@@ -370,7 +370,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModB0, ONLY: DoUpdateB0, DtUpdateB0
   use ModResistivity, ONLY: UseResistivity, UseHeatExchange, calc_heat_exchange
   use ModMultiFluid, ONLY: UseMultiIon
-  use ModPic, ONLY: UsePic, pic_save_region
+  use ModPic, ONLY: UsePic, pic_save_region, pic_update_states
 
   implicit none
 
@@ -423,6 +423,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   else
      call advance_expl(.true., -1)
   endif
+
+  if(UsePic)call pic_update_states
 
   if(UseIM)call apply_im_pressure
 
