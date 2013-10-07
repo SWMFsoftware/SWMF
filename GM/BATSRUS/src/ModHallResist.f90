@@ -1,7 +1,8 @@
 !This code is a copyright protected software (c) 2002- University of Michigan
 module ModHallResist
 
-  use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxDim
+  use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxDim,&
+       j0_, nJp1_, k0_, nKp1_
 
   implicit none
 
@@ -98,12 +99,12 @@ contains
        write(*,*) ''
     end if
 
-    if(.not.allocated(HallJ_CD)) allocate(&
-         HallJ_CD(nI,nJ,nK,MaxDim), &
-         BxPerN_G(0:nI+1,0:nJ+1,0:nK+1),&
-         ByPerN_G(0:nI+1,0:nJ+1,0:nK+1),&
-         BzPerN_G(0:nI+1,0:nJ+1,0:nK+1),&
-         IonMassPerCharge_G(0:nI+1,0:nJ+1,0:nK+1) )
+    if(.not.allocated(HallJ_CD)) allocate(              &
+         HallJ_CD(nI,nJ,nK,MaxDim),                     &
+         BxPerN_G(0:nI+1,j0_:nJp1_,k0_:nKp1_),          &
+         ByPerN_G(0:nI+1,j0_:nJp1_,k0_:nKp1_),          &
+         BzPerN_G(0:nI+1,j0_:nJp1_,k0_:nKp1_),          &
+         IonMassPerCharge_G(0:nI+1,j0_:nJp1_,k0_:nKp1_) )
 
     IonMassPerCharge_G = IonMassPerCharge
 
@@ -160,7 +161,7 @@ contains
 
     ! Multiply IonMassPerCharge_G by average ion mass = rho_total / n_total
 
-    do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+    do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
        call set_ion_mass_per_charge_point(State_VGB(:,i,j,k,iBlock), &
             IonMassPerCharge_G(i,j,k))
     end do; end do; end do
