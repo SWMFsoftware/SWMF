@@ -271,7 +271,8 @@ contains
                VarIn_VIII = StatePic_VC)
 
           ! Let IPIC3D know that the output file is already written
-          open(UnitTmp_, FILE=trim(NamePlotDir)//'ipic_sucess.txt', STATUS='replace')
+          open(UnitTmp_, FILE=trim(NamePlotDir)//'ipic_sucess.txt', &
+               STATUS='replace')
           write(UnitTmp_,*) "Have written file to IPIC3D"
           close(UnitTmp_)
        end if
@@ -283,17 +284,18 @@ contains
   end subroutine pic_save_region
   !===========================================================================
 
-  subroutine pic_update_states(iBlock)
+  subroutine pic_update_states
 
     ! Overwrite the PIC region with the PIC solution
+    ! Multiple PIC regions to be implemented
 
     use ModAdvance,    ONLY: State_VGB
     use ModVarIndexes
 
-    use ModSize, ONLY: nDim, MaxDim, nI, nJ, nK
     use ModProcMH, ONLY: iProc
     use ModMain, ONLY: n_step, time_simulation, nIter
-    use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
+    use BATL_lib, ONLY: nBlock, Unused_B, nDim, MaxDim, nI, nJ, nK, &
+         Xyz_DGB, CellSize_DB
 
     use ModEnergy,      ONLY: calc_energy_cell
     use ModPlotFile,    ONLY: read_plot_file
@@ -303,9 +305,7 @@ contains
     use ModPhysics, ONLY: Si2No_V, UnitX_, UnitRho_, UnitU_, UnitB_, &
          UnitP_
 
-    integer, intent(in):: iBlock
-
-    integer:: i, j, k, iError
+    integer:: i, j, k, iBlock, iError
     real:: XyzNorm_D(MaxDim)
 
     ! PIC coupling related local variables
@@ -421,62 +421,67 @@ contains
     end if
 
     ! Overwrite cells inside the PIC domain
-    ! Check if block overlaps with PIC domain (Cartesian ONLY for now!)
-    if(  any(Xyz_DGB(1:nDim, 1, 1, 1,iBlock) &
-         >   CoordMaxPic_D + 0.1*CellSize_DB(1:nDim,iBlock)) .or. &
-         any(Xyz_DGB(1:nDim,nI,nJ,nK,iBlock) &
-         <   CoordMinPic_D - 0.1*CellSize_DB(1:nDim,iBlock)))&
-         RETURN
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       ! Check if block overlaps with PIC domain (Cartesian ONLY for now!)
+       if(  any(Xyz_DGB(1:nDim, 1, 1, 1,iBlock) &
+            >   CoordMaxPic_D + 0.1*CellSize_DB(1:nDim,iBlock)) .or. &
+            any(Xyz_DGB(1:nDim,nI,nJ,nK,iBlock) &
+            <   CoordMinPic_D - 0.1*CellSize_DB(1:nDim,iBlock)))&
+            CYCLE
 
-       ! Normalized PIC grid coordinates (1...nCellPic_D)
-       XyzNorm_D(1:nDim) = 1 + (Xyz_DGB(1:nDim,i,j,k,iBlock) - CoordMinPic_D) &
-            /DxyzPic_D
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-       ! Distance from edge
-       Dn = minval( min(nint(XyzNorm_D(1:nDim) - 1),  &
-            nint(nCellPic_D - XyzNorm_D(1:nDim))) )
+          ! Normalized PIC grid coordinates (1...nCellPic_D)
+          XyzNorm_D(1:nDim) = 1 + &
+               (Xyz_DGB(1:nDim,i,j,k,iBlock) - CoordMinPic_D)/DxyzPic_D
 
-       ! Nothing to do within PIC ghost region
-       if(Dn < nGhostPic) CYCLE
+          ! Distance from edge
+          Dn = minval( min(nint(XyzNorm_D(1:nDim) - 1),  &
+               nint(nCellPic_D - XyzNorm_D(1:nDim))) )
 
-       ! Distance from ghost layers
-       Dn = Dn - nGhostPic + 1
+          ! Nothing to do within PIC ghost region
+          if(Dn < nGhostPic) CYCLE
 
-       if(Dn <= nOverlapPic)then
-          ! For nOverlapPic=1, Dn = 1, so use 0.5 as weight
-          ! For nOverlapPic=2, Dn = 1, 2, so use 1/3 and 2/3 weights
-          ! ...
-          WeightPic = Dn/(nOverlapPic + 1.0)
-       else
-          WeightPic = 1.0
-       end if
+          ! Distance from ghost layers
+          Dn = Dn - nGhostPic + 1
 
-       WeightMhd = 1.0 - WeightPic
+          if(Dn <= nOverlapPic)then
+             ! For nOverlapPic=1, Dn = 1, so use 0.5 as weight
+             ! For nOverlapPic=2, Dn = 1, 2, so use 1/3 and 2/3 weights
+             ! ...
+             WeightPic = Dn/(nOverlapPic + 1.0)
+          else
+             WeightPic = 1.0
+          end if
 
-       StatePic_V = &
-            bilinear(StatePic_VC, nVarPic, 1, nXPic, 1, nYPic, XyzNorm_D)
+          WeightMhd = 1.0 - WeightPic
 
-       ! Convert velocity to momentum
-       StatePic_V(RhoUx_:RhoUz_) = StatePic_V(Rho_)*StatePic_V(Ux_:Uz_)
+          StatePic_V = &
+               bilinear(StatePic_VC, nVarPic, 1, nXPic, 1, nYPic, XyzNorm_D)
 
-       ! Interpolate MHD and PIC states. 
-       ! Skip hyperbolic scalar if present (Hyp=Bz_+1)
-       State_VGB(Rho_:Bz_,i,j,k,iBlock) = &
-            WeightMhd*State_VGB(Rho_:Bz_,i,j,k,iBlock) + &
-            WeightPic*StatePic_V(Rho_:Bz_)
+          ! Convert velocity to momentum
+          StatePic_V(RhoUx_:RhoUz_) = StatePic_V(Rho_)*StatePic_V(Ux_:Uz_)
 
-       State_VGB(p_,i,j,k,iBlock) = &
-            WeightMhd*State_VGB(p_,i,j,k,iBlock) &
-            + WeightPic*StatePic_V(nVarPic)
+          ! Interpolate MHD and PIC states. 
+          ! Skip hyperbolic scalar if present (Hyp=Bz_+1)
+          State_VGB(Rho_:Bz_,i,j,k,iBlock) = &
+               WeightMhd*State_VGB(Rho_:Bz_,i,j,k,iBlock) + &
+               WeightPic*StatePic_V(Rho_:Bz_)
 
-       ! Set hyperbolic scalar to zero if present
-       if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
+          State_VGB(p_,i,j,k,iBlock) = &
+               WeightMhd*State_VGB(p_,i,j,k,iBlock) &
+               + WeightPic*StatePic_V(nVarPic)
 
-    end do; end do; end do
+          ! Set hyperbolic scalar to zero if present
+          if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
 
-    call calc_energy_cell(iBlock)
+       end do; end do; end do ! i,j,k
+
+       call calc_energy_cell(iBlock)
+
+    end do ! iBlock
 
   end subroutine pic_update_states
 
