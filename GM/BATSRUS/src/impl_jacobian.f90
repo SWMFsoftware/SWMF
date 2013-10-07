@@ -90,7 +90,7 @@ subroutine impl_jacobian(implBLK,JAC)
   real :: FluxEpsRight_VF(nW,nI,nJ,nK)         ! Perturbed right flux
   real :: FaceArea_F(nI, nJ, nK)               ! Only the inner faces
 
-  real :: HallFactor_G(0:nI+1,0:nJ+1,0:nK+1)
+  real :: HallFactor_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
   !----------------------------------------------------------------------------
 
   if(iProc==PROCtest.and.implBLK==implBLKtest)then
@@ -399,13 +399,17 @@ contains
     if(IsCartesianGrid)then
        if(IsRzGeometry)call CON_stop('impl_divbsrc_init not working for RZ')
 
-       divb=0.5*&
-            ((Impl_VGB(Bx_,2:nI+1,1:nJ,1:nK,implBLK)           &
-            -Impl_VGB(Bx_,0:nI-1,1:nJ,1:nK,implBLK))/dxyz(x_) &
+       divb = &
+            ( Impl_VGB(Bx_,2:nI+1,1:nJ,1:nK,implBLK)           &
+            - Impl_VGB(Bx_,0:nI-1,1:nJ,1:nK,implBLK))/dxyz(x_)
+       if(nJ>1) divb = divb &
             +(Impl_VGB(By_,1:nI,2:nJ+1,1:nK,implBLK)           &
-            -Impl_VGB(By_,1:nI,0:nJ-1,1:nK,implBLK))/dxyz(y_) &
+            - Impl_VGB(By_,1:nI,0:nJ-1,1:nK,implBLK))/dxyz(y_)
+       if(nK>1) divb = divb &
             +(Impl_VGB(Bz_,1:nI,1:nJ,2:nK+1,implBLK)           &
-            -Impl_VGB(Bz_,1:nI,1:nJ,0:nK-1,implBLK))/dxyz(z_))
+            - Impl_VGB(Bz_,1:nI,1:nJ,0:nK-1,implBLK))/dxyz(z_)
+       divb=0.5*divb
+
     else
        do k=1,nK; do j=1,nJ; do i=1,nI
           divb(i,j,k) = 0.5/CellVolume_GB(i,j,k,iBlk)*( &
@@ -531,7 +535,8 @@ contains
          DgenDxyz_DDC, set_block_jacobian_cell 
     real :: DbDgen_DD(3,3)                     
 
-    real :: InvDx2, InvDy2, InvDz2, InvN_G(0:nI+1,0:nJ+1,0:nK+1)
+    real :: InvDx2, InvDy2, InvDz2
+    real :: InvN_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub='impl_init_hall'
@@ -541,7 +546,7 @@ contains
     else
        DoTest = .false.; DoTestMe = .false.
     end if
-    
+
     call set_ion_mass_per_charge(iBlk)
 
     InvDx2 = 0.5/Dxyz(x_); InvDy2 = 0.5/Dxyz(y_); InvDz2 = 0.5/Dxyz(z_)
@@ -549,21 +554,30 @@ contains
     if(IsCartesianGrid)then
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-          HallJ_CD(i,j,k,x_) = &
-               +InvDy2*(Impl_VGB(Bz_,i,j+1,k,implBLK)-Impl_VGB(Bz_,i,j-1,k,implBLK)) &
-               -InvDz2*(Impl_VGB(By_,i,j,k+1,implBLK)-Impl_VGB(By_,i,j,k-1,implBLK))
+          if(nJ>1) HallJ_CD(i,j,k,x_) =                    &
+               +InvDy2*(Impl_VGB(Bz_,i,j+1,k,implBLK)      &
+               -        Impl_VGB(Bz_,i,j-1,k,implBLK))
+          if(nK>1) HallJ_CD(i,j,k,x_) = HallJ_CD(i,j,k,x_) &
+               -InvDz2*(Impl_VGB(By_,i,j,k+1,implBLK)      &
+               -        Impl_VGB(By_,i,j,k-1,implBLK))
        end do; end do; end do
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           HallJ_CD(i,j,k,y_) = &
-               +InvDz2*(Impl_VGB(Bx_,i,j,k+1,implBLK)-Impl_VGB(Bx_,i,j,k-1,implBLK)) &
-               -InvDx2*(Impl_VGB(Bz_,i+1,j,k,implBLK)-Impl_VGB(Bz_,i-1,j,k,implBLK))
+               -InvDx2*(Impl_VGB(Bz_,i+1,j,k,implBLK)      &
+               -        Impl_VGB(Bz_,i-1,j,k,implBLK))
+          if(nK>1) HallJ_CD(i,j,k,y_) = HallJ_CD(i,j,k,y_) &
+               +InvDz2*(Impl_VGB(Bx_,i,j,k+1,implBLK)      &
+               -        Impl_VGB(Bx_,i,j,k-1,implBLK))
        end do; end do; end do
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           HallJ_CD(i,j,k,z_) = &
-               +InvDx2*(Impl_VGB(By_,i+1,j,k,implBLK)-Impl_VGB(By_,i-1,j,k,implBLK)) &
-               -InvDy2*(Impl_VGB(Bx_,i,j+1,k,implBLK)-Impl_VGB(Bx_,i,j-1,k,implBLK))
+               +InvDx2*(Impl_VGB(By_,i+1,j,k,implBLK)      &
+               -        Impl_VGB(By_,i-1,j,k,implBLK))
+          if(nJ>1) HallJ_CD(i,j,k,z_) = HallJ_CD(i,j,k,z_) &
+               -InvDy2*(Impl_VGB(Bx_,i,j+1,k,implBLK)      &
+               -        Impl_VGB(Bx_,i,j-1,k,implBLK))
        end do; end do; end do
 
     else                                        
@@ -571,34 +585,40 @@ contains
        call set_block_jacobian_cell(iBlk)
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-          DbDgen_DD(:,1) = InvDx2* &
-               (Impl_VGB(Bx_:Bz_,i+1,j,k,implBLK)-Impl_VGB(Bx_:Bz_,i-1,j,k,implBLK))
-          DbDgen_DD(:,2) = InvDy2* &
-               (Impl_VGB(Bx_:Bz_,i,j+1,k,implBLK)-Impl_VGB(Bx_:Bz_,i,j-1,k,implBLK))
-          DbDgen_DD(:,3) = InvDz2* &
-               (Impl_VGB(Bx_:Bz_,i,j,k+1,implBLK)-Impl_VGB(Bx_:Bz_,i,j,k-1,implBLK))
+          DbDgen_DD(:,1) = InvDx2*&
+               (Impl_VGB(Bx_:Bz_,i+1,j,k,implBLK) &
+               -Impl_VGB(Bx_:Bz_,i-1,j,k,implBLK))
+          if(nJ>1) DbDgen_DD(:,2) = InvDy2* &
+               (Impl_VGB(Bx_:Bz_,i,j+1,k,implBLK) &
+               -Impl_VGB(Bx_:Bz_,i,j-1,k,implBLK))
+          if(nK>1) DbDgen_DD(:,3) = InvDz2* &
+               (Impl_VGB(Bx_:Bz_,i,j,k+1,implBLK) &
+               -Impl_VGB(Bx_:Bz_,i,j,k-1,implBLK))
 
           ! Jx = Dbz/Dy - Dby/Dz
-          HallJ_CD(i,j,k,x_) = &
-               sum(DbDgen_DD(z_,:)*DgenDxyz_DDC(:,y_,i,j,k)) - &
-               sum(DbDgen_DD(y_,:)*DgenDxyz_DDC(:,z_,i,j,k))
+          if(nJ>1) HallJ_CD(i,j,k,x_) = &
+               + sum(DbDgen_DD(z_,:)*DgenDxyz_DDC(:,y_,i,j,k)) 
+          if(nK>1) HallJ_CD(i,j,k,x_) = HallJ_CD(i,j,k,x_) &
+               - sum(DbDgen_DD(y_,:)*DgenDxyz_DDC(:,z_,i,j,k))
 
           ! Jy = Dbx/Dz - Dbz/Dx
           HallJ_CD(i,j,k,y_) = &
-               sum(DbDgen_DD(x_,:)*DgenDxyz_DDC(:,z_,i,j,k)) - &
-               sum(DbDgen_DD(z_,:)*DgenDxyz_DDC(:,x_,i,j,k))
+               - sum(DbDgen_DD(z_,:)*DgenDxyz_DDC(:,x_,i,j,k))
+          if(nK>1)HallJ_CD(i,j,k,y_) = HallJ_CD(i,j,k,y_) &
+               + sum(DbDgen_DD(x_,:)*DgenDxyz_DDC(:,z_,i,j,k))
 
           ! Jz = Dby/Dx - Dbx/Dy
           HallJ_CD(i,j,k,z_) = &
-               sum(DbDgen_DD(y_,:)*DgenDxyz_DDC(:,x_,i,j,k)) - &
-               sum(DbDgen_DD(x_,:)*DgenDxyz_DDC(:,y_,i,j,k))
+               + sum(DbDgen_DD(y_,:)*DgenDxyz_DDC(:,x_,i,j,k)) 
+          if(nJ>1) HallJ_CD(i,j,k,z_) = HallJ_CD(i,j,k,z_) &
+               - sum(DbDgen_DD(x_,:)*DgenDxyz_DDC(:,y_,i,j,k))
 
        end do; end do; end do
 
     end if                                    
     if(DoTestMe) write(*,*) NameSub,' HallJ_CD=',HallJ_CD(iTest,jTest,kTest,:)
 
-    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+    do k = k0_,nKp1_; do j=j0_,nJp1_; do i=0,nI+1
        HallFactor_G(i,j,k) = hall_factor(0,i,j,k,iBlk)
     end do; end do; end do
 
@@ -615,19 +635,24 @@ contains
     !write(*,*)'iBlock, max(HallJ)=',implBlk,maxval(abs(HallJ_CD(:,:,:,:)))
 
     InvN_G = HallFactor_G * IonMassPerCharge_G / &
-         Impl_VGB(Rho_,0:nI+1,0:nJ+1,0:nK+1,implBLK)
+         Impl_VGB(Rho_,0:nI+1,j0_:nJp1_,k0_:nKp1_,implBLK)
     if(UseB0)then
-       BxPerN_G = (B0_DGB(x_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
-            Impl_VGB(Bx_,0:nI+1,0:nJ+1,0:nK+1,implBLK))*InvN_G
-       ByPerN_G = (B0_DGB(y_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
-            Impl_VGB(By_,0:nI+1,0:nJ+1,0:nK+1,implBLK))*InvN_G
-       BzPerN_G = (B0_DGB(z_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
-            Impl_VGB(Bz_,0:nI+1,0:nJ+1,0:nK+1,implBLK))*InvN_G
+       do k = k0_,nKp1_; do j=j0_,nJp1_; do i=0,nI+1
+          BxPerN_G(i,j,k) = (B0_DGB(x_,i,j,k,iBlk) + &
+               Impl_VGB(Bx_,i,j,k,implBLK))*InvN_G(i,j,k)
+          ByPerN_G(i,j,k) = (B0_DGB(y_,i,j,k,iBlk) + &
+               Impl_VGB(By_,i,j,k,implBLK))*InvN_G(i,j,k)
+          BzPerN_G(i,j,k) = (B0_DGB(z_,i,j,k,iBlk) + &
+               Impl_VGB(Bz_,i,j,k,implBLK))*InvN_G(i,j,k)
+       end do; end do; end do
     else
-       BxPerN_G = Impl_VGB(Bx_,0:nI+1,0:nJ+1,0:nK+1,implBLK)*InvN_G
-       ByPerN_G = Impl_VGB(By_,0:nI+1,0:nJ+1,0:nK+1,implBLK)*InvN_G
-       BzPerN_G = Impl_VGB(Bz_,0:nI+1,0:nJ+1,0:nK+1,implBLK)*InvN_G
+       do k = k0_,nKp1_; do j=j0_,nJp1_; do i=0,nI+1
+          BxPerN_G(i,j,k) = Impl_VGB(Bx_,i,j,k,implBLK)*InvN_G(i,j,k)
+          ByPerN_G(i,j,k) = Impl_VGB(By_,i,j,k,implBLK)*InvN_G(i,j,k)
+          BzPerN_G(i,j,k) = Impl_VGB(Bz_,i,j,k,implBLK)*InvN_G(i,j,k)
+       end do; end do; end do
     end if
+
   end subroutine impl_init_hall
   !===========================================================================
   subroutine impl_hall_resist
