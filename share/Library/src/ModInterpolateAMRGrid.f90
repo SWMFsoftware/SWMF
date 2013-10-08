@@ -17,7 +17,7 @@ module ModInterpolateAMRGrid
 
   ! Three-dimensional grid, 
 
-  public :: interpolate_amr_grid_3
+  public :: interpolate_amr_grid_3, test_interpolate_amr_grid_3
 
   integer,parameter:: BehindTheBoundary_ = -7777, &
        Coarse_  = 0,               &
@@ -842,7 +842,7 @@ contains
     !\
     !Loop variables
     !/
-    integer :: iGrid , iDir
+    integer :: iGrid , jGrid, iDir
     !\
     ! Minimum refinement level used to set iLevel_I=0 in coarse points
     !/
@@ -1194,19 +1194,61 @@ contains
        end if
     end do
 
+    !\
+    ! Corner transition junction
+    !/
+    do iGrid = 1,nGrid;do iDir = 1,nDim
+      if( abs(        XyzGrid_DI(1 + mod(iDir    ,3),iGrid) - &
+             0.25*sum(XyzGrid_DI(1 + mod(iDir    ,3),iOppositeFace_IDI(:,iDir,iGrid)))) < &
+          dXyzSmall_D(1 + mod(iDir    ,3)).and.&
+          abs(        XyzGrid_DI(1 + mod(iDir + 1,3),iGrid) - &
+             0.25*sum(XyzGrid_DI(1 + mod(iDir + 1,3),iOppositeFace_IDI(:,iDir,iGrid)))) < &
+          dXyzSmall_D(1 + mod(iDir + 1,3)).and.&
+          (count(iLevel_I==Coarse_)==3))then
+        !\
+        ! Junction around direction iDir
+        !/
+        iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
+        iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
+        call interpolate_corner_transition_junction(iDir)
+        return
+      end if
+    end do;end do
+
+    !\
+    ! Corner transition
+    !/
+    do iGrid = 1,nGrid;do iDir = 1,nDim
+      if( count(iLevel_I(iFace_IDI(:,iDir,iGrid))==Fine_)>0 .and. &
+      all(abs(XyzGrid_DI(iDir,iGrid)                            - &
+        0.50*(XyzGrid_DI(iDir,iFace_IDI(        :,iDir,iGrid))  + &
+              XyzGrid_DI(iDir,iOppositeFace_IDI(:,iDir,iGrid))) * &
+                      (iLevel_I(iFace_IDI(:,iDir,iGrid))-Coarse_)-&
+              XyzGrid_DI(iDir,iFace_IDI(         :,iDir,iGrid)) * &
+                     (Fine_-iLevel_I(iFace_IDI(:,iDir,iGrid)))) < &
+        dXyzSmall_D(iDir)))then
+        !\
+        ! Transition in direction iDir
+        !/
+        iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
+        iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
+        call interpolate_corner_transition(iDir)
+        return
+      end if
+    end do;end do
 
 
 
     DoStencilFix = .false.
     !---------------------Resolution corners----------------------
-    !Among 255 legal combinations 
-    !(=2**nGrid - illegal "all Fine configurtion") 
+    !Among 255 legal combinations
+    !(=2**nGrid - illegal "all Fine configurtion")
     !we considered above one all-coarse configuration, + 6 resolution faces
-    !+ 30 resolution edges, totally 37 left 218 
+    !+ 30 resolution edges, totally 37 left 218
     !
     !
     !\
-    ! One configuration resulting in 
+    ! One configuration resulting in
     ! the corner split for five tetrahedra
     ! is occured in many cases (26), however, it is treated in the same way in all these cases
     ! if the given grid point is connected by three edges with three coarse points, while the across
@@ -1325,8 +1367,8 @@ contains
             iDTriangle1_I=(/iEdge_ID(Loc(1),x_),iEdge_ID(Loc(1),y_),iEdge_ID(Loc(1),z_)/),&
             iDTriangle2_I=(/iEdge_ID(Loc(1),x_),iEdge_ID(Loc(1),y_),iFaceDiag_ID(Loc(1),xy_)/),&
             iDTriangle3_I=(/iEdge_ID(Loc(1),x_),iEdge_ID(Loc(1),z_),iFaceDiag_ID(Loc(1),xz_)/),&
-            iDTriangle4_I=(/iEdge_ID(Loc(1),y_),iEdge_ID(Loc(1),y_),iFaceDiag_ID(Loc(1),yz_)/))
-       
+            iDTriangle4_I=(/iEdge_ID(Loc(1),y_),iEdge_ID(Loc(1),z_),iFaceDiag_ID(Loc(1),yz_)/))
+        return
     case(2)
        !Find the fine grid
        Loc = maxloc(iLevel_I)
@@ -1352,7 +1394,6 @@ contains
           !               |
           !               V
           !               z-axis
-
           iGrid = iMainDiag_I(Loc(1)) !Fine point across the main diagonal
           call pyramids(&
                iTetrahedron1_I=(/Loc(1) ,  &
@@ -1379,6 +1420,7 @@ contains
                iEdge_ID(    Loc(1),z_ ) ,  &
                iFaceDiag_ID(Loc(1),yz_) ,  &
                iGrid/))
+            return
        else                                            ! 12 cases  totally 95  left 160
           do iDir = yz_,xy_
              if(iLevel_I(iFaceDiag_ID(Loc(1), iDir))==Fine_)then
@@ -1458,11 +1500,11 @@ contains
                iUTriangle1_I=(/iEdge_ID(iGrid ,x_),iEdge_ID(iGrid ,y_),iEdge_ID(iGrid ,z_)/),&
                iUTriangle2_I=(/iEdge_ID(iGrid ,x_),iEdge_ID(iGrid ,y_),iFaceDiag_ID(iGrid ,xy_)/),&
                iUTriangle3_I=(/iEdge_ID(iGrid ,x_),iEdge_ID(iGrid ,z_),iFaceDiag_ID(iGrid ,xz_)/),&
-               iUTriangle4_I=(/iEdge_ID(iGrid ,y_),iEdge_ID(iGrid ,y_),iFaceDiag_ID(iGrid ,yz_)/),&
+               iUTriangle4_I=(/iEdge_ID(iGrid ,y_),iEdge_ID(iGrid ,z_),iFaceDiag_ID(iGrid ,yz_)/),&
                iDTriangle1_I=(/iEdge_ID(Loc(1),x_),iEdge_ID(Loc(1),y_),iEdge_ID(Loc(1),z_)/),&
                iDTriangle2_I=(/iEdge_ID(Loc(1),x_),iEdge_ID(Loc(1),y_),iFaceDiag_ID(Loc(1),xy_)/),&
                iDTriangle3_I=(/iEdge_ID(Loc(1),x_),iEdge_ID(Loc(1),z_),iFaceDiag_ID(Loc(1),xz_)/),&
-               iDTriangle4_I=(/iEdge_ID(Loc(1),y_),iEdge_ID(Loc(1),y_),iFaceDiag_ID(Loc(1),yz_)/))
+               iDTriangle4_I=(/iEdge_ID(Loc(1),y_),iEdge_ID(Loc(1),z_),iFaceDiag_ID(Loc(1),yz_)/))
           return
        else                                            ! 12 cases  totally 111  left 144
           do iDir = yz_,xy_
@@ -1601,10 +1643,65 @@ contains
                            iTetrahedron1_I=(/iOrder_I(1),iOrder_I(2),iOrder_I(3),iOrder_I(5)/),&
                            iRectangular1_I=(/iOrder_I(2),iOrder_I(3),iOrder_I(6),iOrder_I(7),iOrder_I(5)/))
                       if(nGridOut> 1)return
-                      call parallel_rays(Dir_D=XyzGrid_DI(:,iOrder_I(8)) - XyzGrid_DI(:,iOrder_I(4)),&
-                           iDTriangle1_I=(/iOrder_I(2),iOrder_I(3),iOrder_I(4)/),&
-                           iUTriangle2_I=(/iOrder_I(6),iOrder_I(7),iOrder_I(8)/) )                      
 
+                      Xyz2_D(x_:y_) = Xyz_D((/1 + mod(iDir,3),1 + mod(1 + iDir,3)/))
+                      !\
+                      ! Interpolation weights along iDir axis are calculated separately for
+                      ! Coarse and fine points
+                      !/
+                      !\
+                      ! may need to rearrange iOrder
+                      !/
+                      if(XyzGrid_DI(iDir,iOrder_I(1))>XyzGrid_DI(iDIr,iOrder_I(5)))then
+                        iOrder_I(1:8) = iOrder_I((/5,6,7,8,1,2,3,4/))
+                      end if
+                      XyzMin_D(iDir)   = minval(XyzGrid_DI(iDir,:),iLevel_I/=Fine_)
+                      AuxCoarse  = (Xyz_D(iDir) - XyzMin_D(iDir))/(&
+                           maxval(XyzGrid_DI(iDir,:),iLevel_I/=Fine_) - XyzMin_D(iDir))
+
+                      XyzMin_D(iDir)   = minval(XyzGrid_DI(iDir,:),iLevel_I==Fine_)
+                      AuxFine  = (Xyz_D(iDir) - XyzMin_D(iDir))/(&
+                            maxval(XyzGrid_DI(iDir,:),iLevel_I==Fine_) - XyzMin_D(iDir))
+                      !\
+                      ! Interpolate along lower face
+                      !/
+                      DoStencilFix2 = .true.
+                      XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/1 + mod(iDir,3),1 + mod(iDir+1,3)/),iOrder_I(1:4))
+                      iLevel2_I(        1:4) = iLevel_I( iOrder_I(1:4))
+
+                      call interpolate_amr_grid_2(&
+                         Xyz2_D, XyzGrid2_DI, iLevel2_I, &
+                         nGridOut2, Weight_I(1:4), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+
+                      iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+                      iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+
+                      !\
+                      ! May need to remove a grid points from the stencil
+                      !/
+                      nGridOut = 2 * nGridOut2
+                      if(    nGridOut2==2)then
+                        iOrder_I(  3:4) = iOrder_I((/5,6/))
+                      elseif(nGridOut2==3)then
+                        iOrder_I(  4:6) = iOrder_I((/5,6,7/))
+                      end if
+
+                      !\
+                      ! Apply weight for interpolation along iDir
+                      !/
+                      do jGrid = 1,nGridOut2
+                        if(iLevel_I(iOrder_I(jGrid))==Fine_)then
+                          Weight_I(nGridOut2+jGrid) = Weight_I(jGrid)*     AuxFine
+                          Weight_I(          jGrid) = Weight_I(jGrid)*(1-  AuxFine)
+                        else
+                          Weight_I(nGridOut2+jGrid) = Weight_I(jGrid)*     AuxCoarse
+                          Weight_I(          jGrid) = Weight_I(jGrid)*(1 - AuxCoarse)
+                        end if
+                      end do
+
+!                      call parallel_rays(Dir_D=XyzGrid_DI(:,iOrder_I(8)) - XyzGrid_DI(:,iOrder_I(4)),&
+!                           iDTriangle1_I=(/iOrder_I(2),iOrder_I(3),iOrder_I(4)/),&
+!                           iUTriangle2_I=(/iOrder_I(6),iOrder_I(7),iOrder_I(8)/) )
                       return
                    end if
                 end do
@@ -1612,7 +1709,6 @@ contains
              !\
              ! Three coarse cells in one plane 24 cases, totally 207 left 48
              !/
-
              do iDir = 1,nDim
                 if(all(iLevel_I(iFace_IDI(1:3, iDir, iGrid))==Coarse_))then
                    iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
@@ -2413,9 +2509,14 @@ contains
            triple_product(X5_D - X1_D , X2_D - X1_D, X3_D - X1_D)
 
       if(Alpha5==0.0)then
+        if(all(Xyz_D(:)==X5_D(:)))then
          Weight_I(5) = 1
          Weight_I(1:4) = 0
          return
+        else
+         Weight_I(1:5) = -1
+         return
+        end if
       elseif(Alpha5 < 0.0 .or. Alpha5 > 1.0)then
          Weight_I(1:5) = -1
          return
@@ -2514,6 +2615,364 @@ contains
       Weight_I(1) = 1 - sum(Weight_I(2:3))
 
     end subroutine triangle
+
+    !=======================================================================
+    subroutine interpolate_corner_transition_junction(iEdgeDir)
+        integer, intent(in) :: iEdgeDir
+        integer             :: iAxis,jAxis,kAxis
+        real :: AlphaKAxis
+        real :: dXyzUp, dXyzDown ! Auxilary variables to determine vertical weight
+        !\
+        ! Subroutine intepolates in junction of transitional regions near a resolution corner\
+        ! Face with all Fine points is numbered 5:8
+        ! Face with three Coarse points is numbered 1:4
+        !
+        !  F---F
+        !  |\ /|
+        !  | C-|-----C
+        !  |/|\|
+        !  F---F
+        !    |     F
+        !    |
+        !    C
+        !
+        !------------------------------------------------------------------------
+        kAxis = iEdgeDir
+        iAxis = 1 + mod(iEdgeDir    ,3)
+        jAxis = 1 + mod(iEdgeDir + 1,3)
+        Xyz2_D(x_:y_) = Xyz_D((/iAxis,jAxis/))
+!write(*,*)'junction'
+        !\
+        ! may need to rearrange iOrder
+        !/
+        if(XyzGrid_DI(iAxis,iOrder_I(5))>XyzGrid_DI(iAxis,iOrder_I(6)))then
+            iOrder_I(1:8) = iOrder_I((/2,1,4,3,6,5,8,7/))
+        end if
+        if(XyzGrid_DI(jAxis,iOrder_I(5))>XyzGrid_DI(jAxis,iOrder_I(7)))then
+            iOrder_I(1:8) = iOrder_I((/3,4,1,2,7,8,5,6/))
+        end if
+
+        !\
+        ! Interpolate along face 5:8
+        !/
+        DoStencilFix2 = .false.
+        XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(5:8))
+        iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(5:8))
+        call interpolate_amr_grid_2(&
+            Xyz2_D, XyzGrid2_DI, iLevel2_I, &
+            nGridOut2, Weight_I(5:8), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+        !\
+        ! Rearrange points according to 2D interpolation output
+        !/
+        iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+        iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+        nGridOut = nGridOut2
+
+        !\
+        ! find Fine point on 1:4 and substitute it with corresponding point from face 5:8
+        !/
+        do iGrid = 1,4
+            if(iLevel_I(iOrder_I(iGrid))==Fine_)then
+                iOrder_I(iGrid) = iOrder_I(iGrid + 4)
+            end if
+        end do
+
+
+        !\
+        ! Interpolate along face 1:4
+        !/
+        DoStencilFix2 = .false.
+        XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(1:4))
+        iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(1:4))
+        call interpolate_amr_grid_2(&
+            Xyz2_D, XyzGrid2_DI, iLevel2_I, &
+            nGridOut2, Weight_I(1:4), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+        !\
+        ! Rearrange points according to 2D interpolation output
+        !/
+        iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+        iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+        Weight_I(5:8) = Weight_I(iOrder2_I+4)
+
+        !\
+        ! move Fine point on 1:4 to position 1 and corresponding point to position 5
+        !/
+        if(iLevel_I(iOrder_I(2))==Fine_)then
+            iOrder_I((/1,2,5,6/)) = iOrder_I((/2,1,6,5/))
+            Weight_I((/1,2,5,6/)) = Weight_I((/2,1,6,5/))
+        end if
+
+        !\
+        ! find vertical weight
+        !/
+        dXyzUp   = Xyz_D(kAxis) - XyzGrid_DI(kAxis,iOrder_I(5))
+        dXyzDown = Xyz_D(kAxis) - sum(XyzGrid_DI(kAxis,iOrder_I(1:nGridOut2))*Weight_I(1:nGridOut2))
+
+!vertical_distance_point_plane(Xyz_D,(/1,2,3/),kAxis)
+
+        DoStencilFix = dXyzUp * dXyzDown > 0.0
+        if(DoStencilFix)then
+            XyzStencil_D((/iAxis,jAxis/)) =               &
+                XyzGrid_DI((/iAxis,jAxis/),iOrder_I(2)) + &
+                2*(XyzGrid_DI((/iAxis,jAxis/),iOrder_I(1))-XyzGrid_DI((/iAxis,jAxis/),iOrder_I(2)))
+        !XyzStencil_D(kAxis) = 0.50*(XyzGrid_DI(kAxis,iOrder_I(2))+XyzGrid_DI(kAxis,iOrder_I(1)))
+            XyzStencil_D(kAxis) = Xyz_D(kAxis)
+            return
+        end if
+
+        if(dXyzUp == 0.0)then
+            AlphaKAxis = 0.0
+        else
+            AlphaKAxis = abs(dXyzUp) / (abs(dXyzUp) + abs(dXyzDown))
+        end if
+
+
+        !\
+        ! Apply vertical weight
+        !/
+        Weight_I(1           ) = Weight_I(5           ) * (1 - AlphaKAxis) + &
+        Weight_I(1           ) *      AlphaKAxis
+        Weight_I(2:nGridOut2 ) = Weight_I(2:nGridOut2 ) *      AlphaKAxis
+        Weight_I(6:4+nGridOut) = Weight_I(6:4+nGridOut) * (1 - AlphaKAxis)
+        !\
+        ! Remove points
+        !/
+        iOrder_I(nGridOut2+1:nGridOut2+nGridOut-1) = iOrder_I(6:4+nGridOut)
+        Weight_I(nGridOut2+1:nGridOut2+nGridOut-1) = Weight_I(6:4+nGridOut)
+        nGridOut = nGridOut + nGridOut2 - 1
+
+    end subroutine interpolate_corner_transition_junction
+    !=======================================================================
+    subroutine interpolate_corner_transition(iEdgeDir)
+        integer, intent(in) :: iEdgeDir
+        integer             :: iAxis,jAxis,kAxis
+        real :: AlphaKAxisCoarse, AlphaKAxisFine
+        real :: dXyzUp, dXyzDown ! Auxilary variables to determine vertical weight
+        integer :: nFine, iFine_I(3)
+        integer :: nCoarse, iCoarse_I(3)
+        logical :: IsAmbiguous
+        !\
+        ! Subroutine intepolates in transitional near a resolution corner
+        ! Points facing a corner a numbered 5:8
+        !
+        !------------------------------------------------------------------------
+        kAxis = iEdgeDir
+        iAxis = 1 + mod(iEdgeDir    ,3)
+        jAxis = 1 + mod(iEdgeDir + 1,3)
+        Xyz2_D(x_:y_) = Xyz_D((/iAxis,jAxis/))
+        !\
+        ! may need to rearrange iOrder
+        !/
+        if(XyzGrid_DI(iAxis,iOrder_I(5))>XyzGrid_DI(iAxis,iOrder_I(6)))then
+            iOrder_I(1:8) = iOrder_I((/2,1,4,3,6,5,8,7/))
+        end if
+        if(XyzGrid_DI(jAxis,iOrder_I(5))>XyzGrid_DI(jAxis,iOrder_I(7)))then
+            iOrder_I(1:8) = iOrder_I((/3,4,1,2,7,8,5,6/))
+        end if
+
+
+        !\
+        ! Interpolate along face 1:4
+        !/
+        DoStencilFix2 = DoStencilFix
+        XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(1:4))
+        iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(1:4))
+        call interpolate_amr_grid_2(&
+            Xyz2_D, XyzGrid2_DI, iLevel2_I, &
+            nGridOut2, Weight_I(1:4), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+
+        !\
+        ! Check if 2D interpolation requires a fix
+        !
+        !   F---F
+        !    \ / \
+        !     C---F
+        !/
+        if(DoStencilFix2)then
+!write(*,*)'bowfix'
+            DoStencilFix = DoStencilFix2
+            !\
+            ! Move to another transition region
+            !/
+            XyzStencil_D((/iAxis,jAxis/)) = XyzStencil2_D
+            XyzStencil_D(kAxis) = Xyz_D(kAxis)
+            return
+        end if
+
+        !\
+        ! Rearrange points according to 2D interpolation output
+        !/
+        iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+        iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+
+
+        !\
+        ! Find number of Fine points in the output
+        ! Move them to the begining of iOrder_I
+        !/
+        nFine   = 0
+        do iGrid = 1, nGridOut2
+            if(iLevel_I(iOrder_I(iGrid))==Fine_)then
+                nFine   = nFine   + 1
+                iOrder_I((/nFine,  iGrid  /)) = iOrder_I((/iGrid,  nFine  /))
+                Weight_I((/nFine,  iGrid  /)) = Weight_I((/iGrid,  nFine  /))
+                iOrder_I((/nFine+4,iGrid+4/)) = iOrder_I((/iGrid+4,nFine+4/))
+            end if
+        end do
+        nCoarse = nGridOut2 - nFine
+        if(count(iLevel_I(iOrder_I(5:8))==Coarse_)==1   .and.&
+           count(iLevel_I(iOrder_I(1:4))==Fine_  )==1   .and.&
+                 iLevel_I(iOrder_I(5))  ==Fine_         .and.&
+                 iLevel_I(iOrder_I(6))  ==Fine_)then
+            !\
+            ! may be the wrong face
+            !             C
+            !      F     /|\
+            !     /|\   / | \
+            !    / | \ /F---F
+            !   C-----C \ | /
+            !    \ | /   \|/
+            !     \|/     C
+            !      F
+            !/
+            IsAmbiguous = .not.(DoStencilFix)
+        else
+            IsAmbiguous = .false.
+        end if
+
+        !\
+        ! Find vertical weights for Coarse
+        ! if above each Coarse point in the output there is another Coarse point
+        ! then that another Coarse point also should be used in the interpolation
+        ! if not substitute corresponding point with Coarse point from range 1:4
+        !/
+        select case(nCoarse)
+        case(0)
+            !\
+            ! no Coarse points
+            ! give AlphaKAxisCoarse value 1 for calculating AlphaKAxisFine
+            !/
+            AlphaKAxisCoarse = 1
+        case(1)
+            if(iLevel_I(iOrder_I(nFine+5))==Coarse_)then
+                !\
+                !     F-----F
+                !    /|    /|
+                !   C-----C |   ---->kAxis
+                !    \|    \|
+                !     F-----F
+                !/
+                AlphaKAxisCoarse = (Xyz_D(     kAxis                  ) - XyzGrid_DI(kAxis,iOrder_I(nFine+5)))/&
+                                   (XyzGrid_DI(kAxis,iOrder_I(nFine+1)) - XyzGrid_DI(kAxis,iOrder_I(nFine+5)))
+            else
+                !\
+                !     F-----F
+                !     |\   /|
+                !     |  C  |   ---->kAxis
+                !     |/   \|
+                !     F-----F
+                !/
+                AlphaKAxisCoarse = 1
+                iOrder_I(nFine+5) = iOrder_I(nFine+1)
+            end if
+        case(2)
+            if(iLevel_I(iOrder_I(nFine+5))==Coarse_.and.&
+               iLevel_I(iOrder_I(nFine+6))==Coarse_)then
+                !\
+                !     C---C
+                !    /|\  |
+                !   F---F |      ---->kAxis
+                !    \|/  |
+                !     C---C
+                !/
+                AlphaKAxisCoarse = (Xyz_D(     kAxis                  ) - XyzGrid_DI(kAxis,iOrder_I(nFine+5)))/&
+                                   (XyzGrid_DI(kAxis,iOrder_I(nFine+1)) - XyzGrid_DI(kAxis,iOrder_I(nFine+5)))
+            else
+                !\
+                !     F-----F       kAxis
+                !    /|    /|       ^
+                !   C-----C |       |
+                !    \|    \|       |
+                !     F-----F
+                !
+                !           OR
+                !
+                !     C
+                !    /|\
+                !   F---F      ---->kAxis
+                !    \|/
+                !     C
+                !/
+                AlphaKAxisCoarse = 1
+                iOrder_I(nFine+5) = iOrder_I(nFine+1)
+                iOrder_I(nFine+6) = iOrder_I(nFine+2)
+            end if
+        end select
+
+        !\
+        ! Find vertical weights for Fine
+        !/
+        if(nGridOut2==2)Weight_I(3:4)=0
+        if(AlphaKAxisCoarse==1)then
+            dXyzDown = Xyz_D(kAxis) - sum(XyzGrid_DI(kAxis,iOrder_I(1:nGridOut2))*Weight_I(1:nGridOut2))
+            dXyzUp   = Xyz_D(kAxis) - sum(XyzGrid_DI(kAxis,iOrder_I(5:4+nGridOut2))*Weight_I(1:nGridOut2))
+        else
+            if(nFine==2)then
+                dXyzDown = Xyz_D(kAxis) - XyzGrid_DI(kAxis,iOrder_I(1))
+                dXyzUp   = Xyz_D(kAxis) - XyzGrid_DI(kAxis,iOrder_I(5))
+            else
+                dXyzDown = Xyz_D(kAxis) - sum(XyzGrid_DI(kAxis,iOrder_I(1:2))*Weight_I(1:2))-&
+                            Weight_I(3)*(4*XyzGrid_DI(kAxis,iOrder_I(3))-XyzGrid_DI(kAxis,iOrder_I(7)))/3
+                dXyzUp  = Xyz_D(kAxis) - sum(XyzGrid_DI(kAxis,iOrder_I((/5,2/)))*Weight_I(1:2))-&
+                            Weight_I(3)*(2*XyzGrid_DI(kAxis,iOrder_I(3))+XyzGrid_DI(kAxis,iOrder_I(7)))/3
+            end if
+        end if
+
+        DoStencilFix = dXyzUp * dXyzDown > 0.0
+        if(DoStencilFix)then
+            XyzStencil_D(iAxis) = 0.25*sum(XyzGrid_DI(iAxis,iOrder_I(1:4)))
+            XyzStencil_D(jAxis) = 0.25*sum(XyzGrid_DI(jAxis,iOrder_I(1:4)))
+            if(IsAmbiguous)then
+                XyzStencil_D((/iAxis,jAxis/)) = Xyz_D((/iAxis, jAxis/))
+            end if
+            XyzStencil_D(kAxis) = XyzGrid_DI(kAxis,iOrder_I(3)) + &
+            XyzGrid_DI(kAxis,iOrder_I(5))-XyzGrid_DI(kAxis,iOrder_I(1))
+            return
+        end if
+
+        if(dXyzUp==0)then
+            AlphaKAxisFine = 0.0
+        else
+            AlphaKAxisFine = abs(dXyzUp) / (abs(dXyzUp)+abs(dXyzDown))
+        end if
+
+        !\
+        ! Remove points
+        ! Apply vertical weight
+        !/
+        if(AlphaKAxisCoarse == 1)then
+            nGridOut = nGridOut2 + nFine
+            iOrder_I(nGridOut2+1:nGridOut) = iOrder_I(5:4+nFine)
+            Weight_I(nGridOut2+1:nGridOut) = Weight_I(1:  nFine) * (1 - AlphaKAxisFine)
+            Weight_I(          1:nFine   ) = Weight_I(1:  nFine) *      AlphaKAxisFine
+        else
+            nGridOut = 2*nGridOut2
+            iOrder_I(nGridOut2      +1:nGridOut       ) = iOrder_I(      5:4+nGridOut2)
+            Weight_I(nGridOut2      +1:nGridOut2+nFine) = Weight_I(      1:nFine      ) * (1 - AlphaKAxisFine)
+            Weight_I(nGridOut2+nFine+1:nGridOut       ) = Weight_I(nFine+1:nGridOut2  ) * (1 - AlphaKAxisCoarse)
+            Weight_I(                1:nFine          ) = Weight_I(      1:nFine      ) *      AlphaKAxisFine
+            Weight_I(          nFine+1:nGridOut2      ) = Weight_I(nFine+1:nGridOut2  ) *      AlphaKAxisCoarse
+        end if
+
+
+    end subroutine interpolate_corner_transition
+
+
+
+
+
+
+
   end subroutine interpolate_amr_grid_3
 
   !===========================TESTS======================================================
@@ -2814,6 +3273,7 @@ contains
 
 
   end subroutine test_interpolate_amr_grid_2
+!=========================================
 
 
 end module ModInterpolateAMRGrid
