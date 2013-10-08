@@ -24,7 +24,6 @@ MODULES = \
 	ModInterpolate.o\
         ModInterGen.o\
         ModInterWrapper.o\
-	ModInterpolateAMRGrid.o\
 	ModIoUnit.o\
 	ModKind.o\
 	ModLinearAdvection.o\
