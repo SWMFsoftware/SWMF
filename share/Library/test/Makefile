@@ -232,14 +232,13 @@ test_interpolate:
 						>  test_interpolate.diff)
 	@ls -l test_interpolate.diff
 #######################################################################
-ndim=
 OBJ_INTERPOLATE_AMR = \
-	test_interpolate_amr${ndim}.o \
+	test_interpolate_amr.o \
 	../src/ModInterpolateAMRGrid.o
 
 test_interpolate_amr_exe:
 	@(cd ../src; make ModInterpolateAMRGrid.o)
-	@make test_interpolate_amr${ndim}.o
+	@make test_interpolate_amr.o
 	${LINK.f90} -o test_interpolate_amr.exe ${OBJ_INTERPOLATE_AMR} ${Lflag2}
 
 test_interpolate_amr:

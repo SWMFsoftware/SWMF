@@ -1,10 +1,10 @@
 program test_interpolate_amr
 
-  use ModInterpolateAMRGrid, test => test_interpolate_amr_grid_2
+  use ModInterpolateAMRGrid, test => test_interpolate_amr_grid
 
   implicit none
 
-  call test(1000000)
+  call test
 
 end program test_interpolate_amr
 
