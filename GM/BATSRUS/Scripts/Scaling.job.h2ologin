@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# This job script should be copied and modified by Scaling.pl
+
+#PBS -N test
+
+#PBS -l nodes=1:ppn=32:xe
+#PBS -l walltime=0:30:00
+
+cd $PBS_O_WORKDIR
+
+aprun -n $PBS_NP ./CRASH.exe
+
+# load opacity tables in next run(s)
+perl -pi -e 's/^LOOKUPTABLE/\#LOOKUPTABLE/; s/save/load/' PARAM.in
