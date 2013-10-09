@@ -20,7 +20,7 @@ my %Compiler = (
 		"jaguarpf-ext"        => "ifortftn",
                 "kraken-gsi"          => "ifortftn",
                 "yslogin"             => "ifortmpif90",
-                "h2ologin"            => "crayftn",
+                "h2ologin"            => "crayftn,cc",
 		);
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
