@@ -11,7 +11,7 @@
 # Specify queue priority: normal, high, low, debug
 # Low priority job can potentially be killed after 30 minutes by higher
 # priority jobs and restarted.
-#PBS -q low
+#PBS -q normal
 
 #PBS -N SWMF
 
