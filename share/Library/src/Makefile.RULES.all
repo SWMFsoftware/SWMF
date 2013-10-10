@@ -14,7 +14,7 @@ $Compiler eq "lf95" or $Compiler eq "mpxlf90"
 
 # Avoids segmentation error with Cray ftn
 $Compiler eq "crayftn"
-	${COMPILE.f90} ${Cflag0} ModPlotFile.f90
+	${COMPILE.f90} ${Cflag1} ModPlotFile.f90
 
 # With NAG f95 ModMpiInterface compiles with -dusty only because
 # the same MPI routines are called with different argument types
