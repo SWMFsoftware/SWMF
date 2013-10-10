@@ -19,7 +19,7 @@ my %Compiler = (
 		"ubgl"                => "mpxlf90,mpxlc",
 		"jaguarpf-ext"        => "ifortftn",
                 "kraken-gsi"          => "ifortftn",
-                "yslogin"             => "ifortmpif90",
+                "yslogin"             => "ifortmpif90,icc",
                 "h2ologin"            => "crayftn,cc",
 		);
 
