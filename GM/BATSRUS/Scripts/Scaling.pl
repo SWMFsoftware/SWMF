@@ -22,13 +22,15 @@ my $IsHera;
 my $IsPfe;
 my $IsUbgl;
 my $IsJaguar;
+my $IsBlueWaters;
 
 $IsHera = 1  if $Machine eq "hera";
 $IsUbgl = 1  if $Machine eq "ubgl";
 $IsPfe  = 1  if $Machine eq "pfe";
 $IsJaguar = 1 if $Machine eq "jaguarpf-ext";
+$IsBlueWaters = 1 if $Machine eq "h2ologin";
 
-die "Unknown machine=$Machine\n" unless $IsHera or $IsPfe or $IsUbgl or $IsJaguar;
+die "Unknown machine=$Machine\n" unless $IsHera or $IsPfe or $IsUbgl or $IsJaguar or $IsBlueWaters;
 
 # Number of nodes and cores to run on
 my $nNode;
@@ -201,7 +203,7 @@ sub make_rundir{
 sub submit_run{
     my $rundir = shift;
     my $job    = shift;
-    &shell("cd $rundir; qsub $job") if $IsPfe or $IsJaguar;
+    &shell("cd $rundir; qsub $job") if $IsPfe or $IsJaguar or $IsBlueWaters;
     &shell("cd $rundir; msub $job | tail -1 > ${job}id") if $IsHera or $IsUbgl;
 }
 ###############################################################################
@@ -222,6 +224,9 @@ sub edit_jobscript{
 	    s/(^\#PBS -l select)=\d+/$1=$nNode/;
 	    s/(^\#PBS -q) normal/$1 wide/ if $nCore >= 1024;
 	    s/(^\#PBS -q) wide/$1 normal/ if $nCore <  1024;
+	}elsif($IsBlueWaters){
+	    $nNode = int($nCore/32+0.99);
+	    s/(^\#PBS -l nodes)=\d+/$1=$nNode/;
 	}elsif($IsJaguar){
 	    s/(^\#PBS -l size)=\d+/$1=$nCore/;
 	}elsif($IsHera){
