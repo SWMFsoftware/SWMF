@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !--------------------------------------------------------------
 !  Corrections by S. W. Bougher (9/28/07)
 !  -- atomic oxygen replaces O2 in mean mass and scale height

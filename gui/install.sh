@@ -1,4 +1,6 @@
 #!/bin/sh
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 if [ "$1" = "" ] ; then
   echo 'Usage: '$0' port#'
   echo '  The port number should be > 1500 and preferably in the 8000s'

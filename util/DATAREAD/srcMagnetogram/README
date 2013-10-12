@@ -1,3 +1,5 @@
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 ##########################################################################
 # How to create a harmonics input file for SWMF from a raw magnetogram #
 # fits file:                						 #

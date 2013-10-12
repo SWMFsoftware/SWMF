@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 ! Note that for some reason that I don't understand yet, this user file 
 ! will only work with the normalization type set to "solarwind".  You 
 ! should set this in the PARAM.in file.

@@ -1,3 +1,7 @@
+<?php 
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf 
+?>
 <?php    // If set, use passed value, otherwise use empty string
   $parameter = array('codename', 'install', 'options', 'GM', 'IE', 'IH', 'IM', 'PS', 'PW', 'RB', 'SC', 'SP', 'UA', 'compiler', 'mpiversion', 'grid', 'grid1', 'grid2', 'grid3', 'grid4', 'grid5', 'grid6', 'grid7', 'grid8', 'grid9');
   foreach($parameter as $name) { $$name = isset($_GET[$name]) ? $_GET[$name] : ''; } ?>

@@ -1,4 +1,5 @@
-!^CFG COPYRIGHT UM
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine OH_set_buffer_grid(DD)
   use OH_ModBuffer,ONLY:&
        set_spher_buffer_grid,set_buffer_name,&

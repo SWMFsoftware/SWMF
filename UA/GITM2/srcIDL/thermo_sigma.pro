@@ -1,3 +1,5 @@
+;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 filelist = "b0016_t980321_030001.3DALL"
 

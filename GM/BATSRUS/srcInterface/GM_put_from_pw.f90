@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
   use CON_coupler, ONLY: PW_, Grid_C

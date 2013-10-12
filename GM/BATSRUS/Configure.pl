@@ -1,4 +1,6 @@
 #!/usr/bin/perl
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 #^CFG FILE CONFIGURE
 # Find and run share/Scripts/Configure.pl -c=CFG
 use strict;

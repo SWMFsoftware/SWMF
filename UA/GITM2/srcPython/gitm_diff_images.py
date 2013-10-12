@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 '''
 Open a GITM 3D file adn create a plot similar to the example given by Aaron.

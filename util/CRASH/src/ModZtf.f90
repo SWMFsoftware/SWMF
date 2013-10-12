@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CRASH_M_ZTF
   !use CRASH_M_EOS, ONLY: useCALEOS =>useCrashEos
   !This module is used in this file only

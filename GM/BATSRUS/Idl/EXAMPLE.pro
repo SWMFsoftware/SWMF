@@ -1,3 +1,5 @@
+;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  For more information, see http://csem.engin.umich.edu/tools/swmf
 ;^CFG COPYRIGHT VAC_UM
 ; This file plots the 10-th picture from run/IO2/example.out into the
 ; PostScript file example.ps

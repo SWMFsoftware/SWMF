@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 # This file is based on the interfaces of the MPI_CHECK library, see
 #
 # http://andrew.ait.iastate.edu/HPC/MPI-CHECK.htm

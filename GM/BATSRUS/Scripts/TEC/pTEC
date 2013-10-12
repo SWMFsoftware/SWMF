@@ -1,5 +1,6 @@
 #!/bin/csh
-#^CFG COPYRIGHT UM
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 # pTEC: Post process output files for use in tecplot
 #    - combine all *.tec files into one file per iteration
 #    - combine all spherical (sp*.tec) into one file

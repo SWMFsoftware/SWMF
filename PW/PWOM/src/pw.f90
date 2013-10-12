@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !******************************************************************************
 !  Determine the interpolated velocity at point theta3, and phi3. 
 !  Uses Shepard Interpolation given on page 430 of 

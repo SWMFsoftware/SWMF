@@ -1,4 +1,6 @@
 #!/usr/bin/perl -s
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 # Read an XML enhanced parameter file and write out an HTML page for the editor
 # Type ParamXmlToHtml.pl -h for help.

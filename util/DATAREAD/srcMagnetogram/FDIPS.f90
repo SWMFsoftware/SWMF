@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModB0Matvec
 
   use ModPotentialField, ONLY:  iComm, iProc, nProc, iProcTheta, iProcPhi, &

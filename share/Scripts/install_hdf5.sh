@@ -1,4 +1,6 @@
 #!/bin/bash
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 #Most of this code is a modification of code from build_visit2_5_1
 function initialize_build_libs()
 {

@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !  The integer iRealPrec is set to unity while compiling, if the length
 !  of 1.0 is 8 bytes or longer (=2 or more words). 
 !  It is set to zero if the length of 1.0 is 4 bytes (=1 word)

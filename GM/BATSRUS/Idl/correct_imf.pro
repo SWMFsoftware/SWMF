@@ -1,3 +1,5 @@
+;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  For more information, see http://csem.engin.umich.edu/tools/swmf
 pro correct_imf,wIn,xIn,inputfile,outputfile
 
 ; wIn contains the upstream data with 15 columns:

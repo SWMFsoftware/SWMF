@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 ! File name: dgcpm_fields_011.f9
 !
 ! Contains: Volland-Stern KP Driven Fields, Simple Potential Model, 

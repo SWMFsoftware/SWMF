@@ -1,3 +1,5 @@
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 This document outlines how to install the stand-alone BATSRUS code
 on your system and how to create and access the documentation.  
 Note that BATSRUS is part of the SWMF. If you already have the SWMF,

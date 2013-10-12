@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 ! File name: heidi_setup.f90
 ! Contains: input and array setup routines for HEIDI
 !	HEIDI_READ

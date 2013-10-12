@@ -1,3 +1,5 @@
+;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  For more information, see http://csem.engin.umich.edu/tools/swmf
 pro plotmlt, maxran, white = white, black = black, 		$
       no00 = no00, no06 = no06, no12 = no12, no18 = no18,	$
       longs = longs, dash = dash

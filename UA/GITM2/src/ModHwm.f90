@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 !  Horizontal Wind Model 07 (HWM07)
 !  Version HWM071308E, 13 July 2008

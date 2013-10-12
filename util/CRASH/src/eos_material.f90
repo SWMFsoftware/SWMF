@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !=====================Above is for ZTF
 !HERE CAL means CACculated and tabulated EOS in contrast with
 !ZTF which is the analytical fit for the Thomas-Fermi model

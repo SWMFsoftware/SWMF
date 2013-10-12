@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CRASH_ModIonMix
   !This is an interface to some methods of the code iomix.f
   ! IONMIX, A CODE FOR COMPUTING THE EQUATION OF STATE AND   

@@ -1,4 +1,5 @@
-!^CFG COPYRIGHT UM
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !==========================================================================
 subroutine UA_put_from_ie(Buffer_II,iSize,jSize,NameVar)
 

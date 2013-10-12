@@ -1,3 +1,5 @@
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 Dear Igor,
 I have attached 2 fortran files, containing two different 1D compressible
 multifluid algorithms.

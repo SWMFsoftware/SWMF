@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModIonoMagPerturb
 
   use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph, cross_product, rot_xyz_sph

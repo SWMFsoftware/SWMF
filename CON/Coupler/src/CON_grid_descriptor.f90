@@ -3,7 +3,8 @@
 !\setlength{\oddsidemargin}{0.5 in}!^CFG UNCOMMENT IF PRINTPS   !
 !\begin{document}                  !^CFG UNCOMMENT IF PRINTPS   !
 !\begin{verbatim}                  !^CFG UNCOMMENT IF PRINTPS   !
-!^CFG COPYRIGHT UM                                              !
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !BOP
 !MODULE: CON_grid_descriptor - for uniform or octree grids
 !INTERFACE:

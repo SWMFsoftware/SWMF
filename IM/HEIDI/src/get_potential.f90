@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine get_potential_heidi(iModel, imf_by, imf_bz, sw_v, &
      Year, Day, Hour, Minute, Second, &
      Lats1, MLTs1, OutPotential1, &

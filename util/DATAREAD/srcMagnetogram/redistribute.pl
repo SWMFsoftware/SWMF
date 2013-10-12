@@ -1,4 +1,6 @@
 #!/usr/bin/perl -s
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 my $Help        = $h or $H or $help;
 my $Debug       = $D;

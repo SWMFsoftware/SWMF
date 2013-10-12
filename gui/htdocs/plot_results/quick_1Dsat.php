@@ -1,3 +1,7 @@
+<?php 
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf 
+?>
 <?php
   Exec("rsync -av $imagedir/style*.sty $imagedir/script.mcr $imagedir/tecplot.mcr $batchdir/$tmpdir/;
         rsync -av $imagedir/batch-${number}.mcr $batchdir/$tmpdir/batch.mcr");

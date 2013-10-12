@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 ! This is the function used to distribute the range of grid lines
 ! over the range of latitude values. The input value x will be

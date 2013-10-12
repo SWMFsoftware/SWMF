@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 SUBROUTINE PW_calc_efield(nCell,State_GV)
   use ModCommonVariables,only: nDim,nIon,iRho_I,iU_I,iP_I,MassElecIon_I,&

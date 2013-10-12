@@ -1,3 +1,7 @@
+<?php 
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf 
+?>
 <?php include("../site_header_empty.php"); ?>
 
 <?php    // If set, use passed value, otherwise use empty string

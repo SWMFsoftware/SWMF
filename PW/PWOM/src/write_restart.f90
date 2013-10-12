@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine PW_write_restart(&
      nAlt,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     &
      State_CV)

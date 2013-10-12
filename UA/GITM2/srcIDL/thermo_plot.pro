@@ -1,3 +1,5 @@
+;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  For more information, see http://csem.engin.umich.edu/tools/swmf
 pro thermo_plot,cursor_x,cursor_y,strx,stry,step,nvars,sel,nfiles, $
                 cnt1,cnt2,cnt3,ghostcells,no,yeslog,  	  $
                 nolog,nalts,nlats,nlons,yeswrite_cnt,$

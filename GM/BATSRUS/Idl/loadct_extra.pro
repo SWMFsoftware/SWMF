@@ -1,3 +1,5 @@
+;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  For more information, see http://csem.engin.umich.edu/tools/swmf
 pro loadct_extra, color
   ; load a color table specified by the 'color' argument string
   ; for '0' .. '40' use standard color table

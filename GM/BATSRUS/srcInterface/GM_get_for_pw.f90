@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine GM_get_for_pw(nTotalLine, Buffer_I)
   
   use ModVarIndexes, ONLY: p_

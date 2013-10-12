@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 ! File name: dgcpm_main_010.f90
 !
 ! Contains: the main driver program for DGCPM

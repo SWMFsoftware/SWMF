@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !BOP
 !MODULE: ModInitGridStorage - set the number of grids and optimize the memory to store them
 !INTERFACE:

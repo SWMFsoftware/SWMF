@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 ! Note this code is adapted from GITM's vertical solver.
 ! Some variables are different from the rest of the polar
 ! wind code. I will try to list how they line up.

@@ -1,4 +1,5 @@
-!^CFG COPYRIGHT UM
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 ! Module with the data for all plastics, used in the CRASH targets or used 
 ! to simulate them.

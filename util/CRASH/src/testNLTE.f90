@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !-  testNLTE.f90 -  in progress
 !	testing NLTE_EOS, using zBrent for  te,tz finding given ro,Etot & EOS=ZTF_Perrot
 !      compile with :  radiom.f90, eos_material.f90

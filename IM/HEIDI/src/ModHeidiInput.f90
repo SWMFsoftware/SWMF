@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModHeidiInput
 
   use ModReadParam, ONLY: read_file, read_init, i_session_read, &

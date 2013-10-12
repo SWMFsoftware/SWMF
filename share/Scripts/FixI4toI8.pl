@@ -1,5 +1,6 @@
 #!/usr/bin/perl
-#^CFG COPYRIGHT UM
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 #BOP
 #!ROUTINE: FixI4toI8.pl - replace 4 byte integers with 8 byte integers.
 #!DESCRIPTION:

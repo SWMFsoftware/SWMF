@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
  ! *** exp_tabm.h ***
  ! *
  ! * IN : y , OUT: ey=exp(-Y), ex_y=1-ey , |Y|=min(|y|,ex_max) 

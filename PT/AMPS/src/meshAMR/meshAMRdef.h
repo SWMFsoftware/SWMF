@@ -1,3 +1,5 @@
+//  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+//  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 //$Id$
 //global macroscopic variables for the AMR mesh (no cut cells) 

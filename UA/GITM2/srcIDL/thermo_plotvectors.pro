@@ -1,3 +1,5 @@
+;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 pro thermo_plotvectors,vars,k,data, lat,lon, utrot, alt, nlats,nlons, nalts, $
                        cf,vi_cnt,vn_cnt,step, polar, maxran, plane, npolar

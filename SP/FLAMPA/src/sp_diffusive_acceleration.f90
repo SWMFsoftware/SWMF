@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !============================================================================!
 ! This routine solves three-diagonal system of equations:                    !
 !  ||m_1 u_1  0....        || ||w_1|| ||r_1||                                !

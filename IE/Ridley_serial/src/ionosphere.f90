@@ -1,4 +1,5 @@
-!^CFG COPYRIGHT UM
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 ! This is the ionospheric solver for the BATS-R-US MHD code.
 ! Initially written by Clinton Groth as a multigrid solver.

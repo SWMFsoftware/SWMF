@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !April 30, 2007 implementing MultiFluid
 !June 01, 2007 correcting normalization
 !June 08, 2007 correcting source terms

@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine epencalc(SimulationTime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
 
   use ModIonoHeidi

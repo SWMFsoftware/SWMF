@@ -1,4 +1,5 @@
-!^CFG COPYRIGHT UM
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CRASH_ModTransport
   use CRASH_ModPartition,ONLY: &
        Z2PerA, Z2, ZAv, CoulombLog, Na, Te

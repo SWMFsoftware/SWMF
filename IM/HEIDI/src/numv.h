@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !**  These parameters specify array sizes in Vania's program:
 !**  NR		grid in the radial direction
 !**  NT		grid in local time

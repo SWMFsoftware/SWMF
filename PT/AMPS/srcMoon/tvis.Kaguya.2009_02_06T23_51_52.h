@@ -1,3 +1,5 @@
+//  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+//  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 const int nTotalTvisOrientationElements__2009_02_06T23_51_52=583;
 

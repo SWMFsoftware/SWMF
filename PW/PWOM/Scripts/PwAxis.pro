@@ -1,3 +1,5 @@
+;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  For more information, see http://csem.engin.umich.edu/tools/swmf
 r80=sin(10.*!pi/180)
 r70=sin(20.*!pi/180)
 r60=sin(30.*!pi/180)

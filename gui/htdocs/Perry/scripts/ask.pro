@@ -1,3 +1,5 @@
+;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  For more information, see http://csem.engin.umich.edu/tools/swmf
 function ask, what, orig_ans, set_orig = set_orig
 
   if n_elements(orig_ans) eq 0 then orig_ans = ''

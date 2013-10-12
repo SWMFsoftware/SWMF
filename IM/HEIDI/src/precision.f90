@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 MODULE Precision_Module
   !
   !  This module is part of SMLIB v. 1.1.  It defines the real precision used

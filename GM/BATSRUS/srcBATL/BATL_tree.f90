@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_tree
 
   use BATL_size, ONLY: MaxBlock, nBlock, MaxDim, nDim, iRatio_D, &

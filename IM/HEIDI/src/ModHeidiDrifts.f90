@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 Module ModHeidiDrifts
   !\
   ! Drift and diffusion variable definition module for the HEIDI program.

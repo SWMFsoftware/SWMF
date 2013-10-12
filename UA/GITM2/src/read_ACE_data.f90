@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !==============================================================================
 ! This routine reads two files from the ACE science center:
 ! 1. IMF Bx, By and Bz (date is in year DOY hour minute second)

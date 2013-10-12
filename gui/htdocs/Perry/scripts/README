@@ -1,3 +1,5 @@
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 The files for the slices are called SliceXnnnnVAR.jpg where X is either the X, Y, or Z slice, nnnn is the position of the slice and VAR is the variable plotted.
 

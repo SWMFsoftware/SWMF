@@ -1,3 +1,5 @@
+//  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+//  For more information, see http://csem.engin.umich.edu/tools/swmf
 const int nTotalTvisOrientationElements__2009_04_05T13_09_19=44;
 
 Moon::Sampling::Kaguya::TVIS::cTvisOrientation TvisOrientation__2009_04_05T13_09_19[nTotalTvisOrientationElements__2009_04_05T13_09_19]={

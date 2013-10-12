@@ -1,3 +1,5 @@
+;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  For more information, see http://csem.engin.umich.edu/tools/swmf
 ;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
 ;    Read the npict-th picture from an ascii or binary ini or out file 

@@ -1,3 +1,5 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine UA_fill_electrodynamics(UAr2_fac, UAr2_ped, UAr2_hal, &
             UAr2_lats, UAr2_mlts)
 

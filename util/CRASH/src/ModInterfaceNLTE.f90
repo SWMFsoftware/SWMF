@@ -1,4 +1,5 @@
-!^CFG COPYRIGHT UM
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CRASH_ModInterfaceNLTE
   use CRASH_ModMultiGroup, ONLY:nGroup, EnergyGroup_I
   use CRASH_M_EOS,   ONLY: UseNLTE=>UseCrashEos !eos_material.f90
