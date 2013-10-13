@@ -1,6 +1,8 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-#  For more information, see http://csem.engin.umich.edu/tools/swmf
 \begin{verbatim}
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 This document outlines how to install the SWMF on your system and how to
 create and access the documentation.  To learn more about the SWMF, including
 how to compile and run the code, please consult the user manual.  To install
