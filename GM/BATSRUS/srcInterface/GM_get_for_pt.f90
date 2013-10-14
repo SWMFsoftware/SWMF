@@ -56,7 +56,7 @@ subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
      i1 = iCell_D(1);  j1 = iCell_D(2);       k1 = iCell_D(3)
      i2 = i1+1;        j2 = min(j1+1, MaxJ);  k2 = min(k1+1, MaxK)
      Dx1= Dist_D(1);  Dy1 = Dist_D(2);  Dz1 = Dist_D(3)
-     Dx2= 1.0 - Dx1;  Dx2 = 1.0 - Dx2;  Dz2 = 1.0 - Dz1
+     Dx2= 1.0 - Dx1;  Dy2 = 1.0 - Dy1;  Dz2 = 1.0 - Dz1
 
      b_D = b_D + Dz2*(Dy2*(Dx2*State_VGB(Bx_:Bz_,i1,j1,k1,iBlock)   &
           +                Dx1*State_VGB(Bx_:Bz_,i2,j1,k1,iBlock))  &
