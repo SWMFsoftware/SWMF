@@ -145,8 +145,8 @@ subroutine PT_put_from_gm(UseData, &
 
   real, pointer:: Pos_DI(:,:)               ! Position vectors
 
-  real,    intent(in):: Data_VI(nVar,nPoint)! Recv data array
-  integer, intent(in):: iPoint_I(nPoint)    ! Order of data
+  real,    intent(in), optional:: Data_VI(nVar,nPoint)! Recv data array
+  integer, intent(in), optional:: iPoint_I(nPoint)    ! Order of data
 
   integer:: iPoint, i, iProc=0
 
@@ -173,7 +173,7 @@ subroutine PT_put_from_gm(UseData, &
   write(*,*)NameSub,': iProc, iPoint, i, Pos, Data'
   do iPoint = 1, nPoint
      i = iPoint_I(iPoint)
-     write(*,*)NameSub, iProc, iPoint, i, Pos_DI(:,i), Data_VI(:,i)
+     write(*,*)NameSub, iProc, iPoint, i, Data_VI(:,i)
      ! Here should convert from SI to AMPS units and store data
   end do
 
