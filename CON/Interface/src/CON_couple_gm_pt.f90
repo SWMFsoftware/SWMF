@@ -86,7 +86,36 @@ contains
   !IROUTINE: couple_gm_pt - couple GM to PT
   !INTERFACE:
   subroutine couple_gm_pt(tSimulation)
+  
+    
+    interface
+    	subroutine PT_put_from_gm(UseData, &
+		     NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
+		  implicit none
+
+		  logical,          intent(in)   :: UseData ! true when data is transferred
+													! false if positions are asked
+		  character(len=*), intent(inout):: NameVar ! List of variables
+		  integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+		  integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+
+		  real, pointer:: Pos_DI(:,:)               ! Position vectors
+
+		  real,    intent(in), optional:: Data_VI(nVar,nPoint)! Recv data array
+		  integer, intent(in), optional:: iPoint_I(nPoint)    ! Order of data
+		end subroutine PT_put_from_gm
+		subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+
+		  implicit none
+
+		  integer, intent(in) :: nDimIn                ! dimension of position vectors
+		  integer, intent(in) :: nPoint                ! number of positions
+		  real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
+		  integer, intent(out):: iProc_I(nPoint)       ! processor owning position
+
+		end subroutine GM_find_points
+    end interface
     !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
@@ -145,6 +174,7 @@ contains
 
     ! Name of this interface
     character (len=*), parameter :: NameSub='couple_gm_pt'
+	  integer i
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -179,12 +209,14 @@ contains
        nPointPt = 0
        ! Get positions where info is needed from PT. PT will allocate array.
        if(is_proc(PT_)) call PT_put_from_gm(.false., &
-            NameVar, nVar, nPointPt, PosPt_DI, DataPt_VI, iPointPt_I)
+            NameVar, nVar, nPointPt, PosPt_DI)
 
        if(IsSameLayout)then
           ! Find processors that own the PT positions in GM
           allocate(iProcPt_I(nPointPt))
+          
           call GM_find_points(nDim, nPointPt, PosPt_DI, iProcPt_I)
+          
        else
           ! Calculate total number of points
           !call MPI_allreduce(nPointPt, nPointAll, 1, MPI_INTEGER, MPI_SUM, &
@@ -214,6 +246,7 @@ contains
           !iProcPt_I = iProcGm_I + iProc0Gm
        end if
 
+	   allocate(iPointPt_I(nPointPt))
        call get_buffer_order(nProcGmPt, nPointPt, iProcPt_I, &
             nPointPt_P, iPointPt_I)
        
@@ -240,9 +273,11 @@ contains
     end if
 
     ! Get the data from GM
+    allocate(DataGm_VI(nVar,nPointGm))
     if(is_proc(GM_)) call GM_get_for_pt( IsNewRoute, &
          NameVar, nVar, nDim, nPointGm, PosGm_DI, DataGm_VI)
 
+	allocate(DataPt_VI(nVar,nPointGm))
     call transfer_buffer(iCommGmPt, nProcGmPt, iProcGmPt, nVar, &
          nPointGm, nPointGm_P, DataGm_VI, &
          nPointPt, nPointPt_P, DataPt_VI) 
@@ -252,6 +287,8 @@ contains
          NameVar, nVar, nPointPt, PosPt_DI, DataPt_VI, iPointPt_I)
 
     if(DoTest) write(*,*) NameSub,' finished, iProc=',iProcWorld
+    deallocate(DataPt_VI)
+    deallocate(DataGm_VI)
 
   end subroutine couple_gm_pt
 
@@ -266,7 +303,7 @@ contains
 
     integer, intent(in)::  nProc, nBuffer    ! number of procs and points
     integer, intent(in)::  iProc_I(nBuffer)  ! proc index for each point
-    integer, intent(out):: nBuffer_P(nProc)  ! number of points per procs
+    integer, intent(out):: nBuffer_P(0:nProc-1)  ! number of points per procs
     integer, intent(out):: iBuffer_I(nBuffer)! index for reordering
 
     integer:: iBuffer, iProc
@@ -327,7 +364,7 @@ contains
     ! The resulting nPointRS_PP table contains the
     ! the number of points owned by iProcR and iProcS.
     if(iProc == 0)then
-       allocate(nPointRS_PP(nProc,nProc), nPoint_P(nProc))
+       allocate(nPointRS_PP(0:nProc-1,0:nProc-1), nPoint_P(0:nProc-1))
     else
        allocate(nPointRS_PP(1,1))
     end if
@@ -372,8 +409,8 @@ contains
     integer, intent(in):: nData                    ! number of reals per point
     integer:: nBufferS, nBufferR                   ! total buffer sizes
 
-    integer, intent(in):: nBufferS_P(nProc)        ! send buffer chunks 
-    integer, intent(in):: nBufferR_P(nProc)        ! recv buffer chunks
+    integer, intent(in):: nBufferS_P(0:nProc-1)        ! send buffer chunks 
+    integer, intent(in):: nBufferR_P(0:nProc-1)        ! recv buffer chunks
 
     real, intent(in) :: BufferS_I(nData*nBufferS)  ! send buffer
     real, intent(out):: BufferR_I(nData*nBufferR)  ! recv buffer
@@ -395,7 +432,7 @@ contains
     if(DoTestMe)write(*,*)'NameSub called with nProc, iProc, nData=', &
          nProc, iProc, nData
 
-    allocate(iRequestS_I(nProc-1), iRequestR_I(nProc-1), &
+    allocate(iRequestS_I(0:nProc-1), iRequestR_I(0:nProc-1), &
          iStatus_II(MPI_STATUS_SIZE,nProc))
 
     ! Possibly optimize for local copies?
@@ -405,11 +442,11 @@ contains
     iBufferS  = 1
     do iProcR = 0, nProc - 1
        if(nBufferS_P(iProcR) == 0) CYCLE        ! Skip empty chunks
-       iRequestS = iRequestS + 1                ! Count send requests
 
        ! Post send
        call MPI_isend(BufferS_I(iBufferS), nData*nBufferS_P(iProcR), &
             MPI_REAL, iProcR, iTag, iComm, iRequestS_I(iRequestS), iError)
+       iRequestS = iRequestS + 1                ! Count send requests
 
        ! Jump to the starting point of the next chunk
        iBufferS  = iBufferS + nData*nBufferS_P(iProcR) 
@@ -418,13 +455,14 @@ contains
     ! Recv the appropriate parts from the send processors
     iRequestR = 0
     iBufferR  = 1
-    do iProcS = 1, nProc
+    do iProcS = 0, nProc-1
        if(nBufferR_P(iProcS) == 0) CYCLE            ! Skip empty chunks
-       iRequestR = iRequestR + 1                    ! Count recv requests
 
        ! Post recv
        call MPI_irecv(BufferR_I(iBufferR), nData*nBufferR_P(iProcS), &
             MPI_REAL, iProcS, iTag, iComm, iRequestR_I(iRequestR), iError)
+            
+       iRequestR = iRequestR + 1                    ! Count recv requests
 
        ! Jump to the starting point of the next chunk
        iBufferR  = iBufferR + nData*nBufferR_P(iProcS)  
