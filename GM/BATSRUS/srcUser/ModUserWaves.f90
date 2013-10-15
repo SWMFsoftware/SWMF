@@ -742,7 +742,7 @@ contains
     KxWave_V(jVar) = KxWave_V(iVar)
     KyWave_V(jVar) = KyWave_V(iVar)
     KzWave_V(jVar) = KzWave_V(iVar)
-    Phase_V(iVar)  = Phase_V(jVar) 
+    Phase_V(jVar)  = Phase_V(iVar)
     iPower_V(jVar) = iPower_V(iVar)
 
   end subroutine copy_wave
