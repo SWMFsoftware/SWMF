@@ -326,12 +326,12 @@ contains
 
     character(len=*), parameter :: NameSub = 'pic_update_states'
     !--------------------------------------------------------------------------
-
-    ! There is no PIC solution at the very beginning
-    if(time_simulation == 0.0) RETURN
+    ! Don't read PIC solution if BATSRUS only runs for a single iteration
+    ! or when the simulation time is zero.
+    if(time_simulation == 0.0 .or. nIter == 1) RETURN
 
     ! Check if we should read in a new PIC file
-    if(n_step > nStepLast .and. nIter /= 1)then
+    if(n_step > nStepLast)then
        nStepLast  = n_step + DnCouplePic - 1
 
        if(iProc == 0)write(*,*) NameSub,' trying to read ', NameFilePic
