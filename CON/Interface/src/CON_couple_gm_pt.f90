@@ -61,7 +61,7 @@ contains
 
     if(IsInitialized) RETURN
     IsInitialized = .true.
-    
+
     iProcWorld = i_proc()
 
     ! Get the union communicator, the UseMe logical, 
@@ -86,35 +86,35 @@ contains
   !IROUTINE: couple_gm_pt - couple GM to PT
   !INTERFACE:
   subroutine couple_gm_pt(tSimulation)
-  
-    
+
+
     interface
-    	subroutine PT_put_from_gm(UseData, &
-		     NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+       subroutine PT_put_from_gm(UseData, &
+            NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
-		  implicit none
+         implicit none
 
-		  logical,          intent(in)   :: UseData ! true when data is transferred
-													! false if positions are asked
-		  character(len=*), intent(inout):: NameVar ! List of variables
-		  integer,          intent(inout):: nVar    ! Number of variables in Data_VI
-		  integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+         logical,          intent(in)   :: UseData ! true when data is transferred
+         ! false if positions are asked
+         character(len=*), intent(inout):: NameVar ! List of variables
+         integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+         integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
 
-		  real, pointer:: Pos_DI(:,:)               ! Position vectors
+         real, pointer:: Pos_DI(:,:)               ! Position vectors
 
-		  real,    intent(in), optional:: Data_VI(nVar,nPoint)! Recv data array
-		  integer, intent(in), optional:: iPoint_I(nPoint)    ! Order of data
-		end subroutine PT_put_from_gm
-		subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+         real,    intent(in), optional:: Data_VI(nVar,nPoint)! Recv data array
+         integer, intent(in), optional:: iPoint_I(nPoint)    ! Order of data
+       end subroutine PT_put_from_gm
+       subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
-		  implicit none
+         implicit none
 
-		  integer, intent(in) :: nDimIn                ! dimension of position vectors
-		  integer, intent(in) :: nPoint                ! number of positions
-		  real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
-		  integer, intent(out):: iProc_I(nPoint)       ! processor owning position
+         integer, intent(in) :: nDimIn                ! dimension of position vectors
+         integer, intent(in) :: nPoint                ! number of positions
+         real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
+         integer, intent(out):: iProc_I(nPoint)       ! processor owning position
 
-		end subroutine GM_find_points
+       end subroutine GM_find_points
     end interface
     !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
@@ -147,7 +147,7 @@ contains
 
     ! Permutation of PT points after data is returned
     integer, allocatable, save:: iPointPt_I(:)
-    
+
     ! Point positions local on a GM processor
     real, allocatable, save:: PosGm_DI(:,:)
     !---------------------------------------------------------------
@@ -168,13 +168,12 @@ contains
     ! Buffers for data on GM and PT
     real, allocatable:: DataGm_VI(:,:), DataPt_VI(:,:)
 
-    integer:: iPoint
+    integer:: iPoint, i
 
     logical :: DoTest, DoTestMe
 
     ! Name of this interface
     character (len=*), parameter :: NameSub='couple_gm_pt'
-	  integer i
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -193,11 +192,11 @@ contains
     if(IsSameLayout)then
        call GM_get_grid_info(nDim, iGridGm, iDecompGm)
        call PT_get_grid_info(nDim, iGridPt, iDecompPt)
-    ! else
-    !    if(is_proc0(GM_)) call GM_get_grid_id(nDim, iGridGm, iDecompGm)
-    !    if(is_proc0(PT_)) call PT_get_grid_id(nDim, iGridGm, iDecompGm)
-    !    call MPI_bcast(iDecompGm from GM root to union group)
-    !    call MPI_bcast(iDecompPt from PT root to union group)
+       ! else
+       !    if(is_proc0(GM_)) call GM_get_grid_id(nDim, iGridGm, iDecompGm)
+       !    if(is_proc0(PT_)) call PT_get_grid_id(nDim, iGridGm, iDecompGm)
+       !    call MPI_bcast(iDecompGm from GM root to union group)
+       !    call MPI_bcast(iDecompPt from PT root to union group)
     endif
 
     IsNewRoute = iDecompGm /= iDecompLastGm .or. iDecompLastPt /= iDecompPt
@@ -214,9 +213,9 @@ contains
        if(IsSameLayout)then
           ! Find processors that own the PT positions in GM
           allocate(iProcPt_I(nPointPt))
-          
+
           call GM_find_points(nDim, nPointPt, PosPt_DI, iProcPt_I)
-          
+
        else
           ! Calculate total number of points
           !call MPI_allreduce(nPointPt, nPointAll, 1, MPI_INTEGER, MPI_SUM, &
@@ -246,10 +245,10 @@ contains
           !iProcPt_I = iProcGm_I + iProc0Gm
        end if
 
-	   allocate(iPointPt_I(nPointPt))
+       allocate(iPointPt_I(nPointPt))
        call get_buffer_order(nProcGmPt, nPointPt, iProcPt_I, &
             nPointPt_P, iPointPt_I)
-       
+
        deallocate(iProcPt_I)
 
        ! Could be done in place !!! Ask Valeriy
@@ -277,7 +276,7 @@ contains
     if(is_proc(GM_)) call GM_get_for_pt( IsNewRoute, &
          NameVar, nVar, nDim, nPointGm, PosGm_DI, DataGm_VI)
 
-	allocate(DataPt_VI(nVar,nPointGm))
+    allocate(DataPt_VI(nVar,nPointGm))
     call transfer_buffer(iCommGmPt, nProcGmPt, iProcGmPt, nVar, &
          nPointGm, nPointGm_P, DataGm_VI, &
          nPointPt, nPointPt_P, DataPt_VI) 
@@ -286,9 +285,10 @@ contains
     if(is_proc(PT_)) call PT_put_from_gm(.true., &
          NameVar, nVar, nPointPt, PosPt_DI, DataPt_VI, iPointPt_I)
 
-    if(DoTest) write(*,*) NameSub,' finished, iProc=',iProcWorld
     deallocate(DataPt_VI)
     deallocate(DataGm_VI)
+
+    if(DoTest) write(*,*) NameSub,' finished, iProc=',iProcWorld
 
   end subroutine couple_gm_pt
 
@@ -328,10 +328,10 @@ contains
     do iBuffer = 1, nBuffer
        ! This buffer belongs to iProc
        iProc = iProc_I(iBuffer)
-       
+
        ! It will occupy iBufferSort position
        iBuffer_I(iBuffer) = iBuffer_P(iProc)
-       
+
        ! Jump to next position
        iBuffer_P(iProc) = iBuffer_P(iProc) + 1
     end do
@@ -432,8 +432,7 @@ contains
     if(DoTestMe)write(*,*)'NameSub called with nProc, iProc, nData=', &
          nProc, iProc, nData
 
-    allocate(iRequestS_I(0:nProc-1), iRequestR_I(0:nProc-1), &
-         iStatus_II(MPI_STATUS_SIZE,nProc))
+    allocate(iRequestS_I(nProc), iRequestR_I(nProc), iStatus_II(MPI_STATUS_SIZE,nProc))
 
     ! Possibly optimize for local copies?
 
@@ -443,10 +442,11 @@ contains
     do iProcR = 0, nProc - 1
        if(nBufferS_P(iProcR) == 0) CYCLE        ! Skip empty chunks
 
+       iRequestS = iRequestS + 1                ! Count send requests
+
        ! Post send
        call MPI_isend(BufferS_I(iBufferS), nData*nBufferS_P(iProcR), &
             MPI_REAL, iProcR, iTag, iComm, iRequestS_I(iRequestS), iError)
-       iRequestS = iRequestS + 1                ! Count send requests
 
        ! Jump to the starting point of the next chunk
        iBufferS  = iBufferS + nData*nBufferS_P(iProcR) 
@@ -455,14 +455,14 @@ contains
     ! Recv the appropriate parts from the send processors
     iRequestR = 0
     iBufferR  = 1
-    do iProcS = 0, nProc-1
+    do iProcS = 0, nProc - 1
        if(nBufferR_P(iProcS) == 0) CYCLE            ! Skip empty chunks
+
+       iRequestR = iRequestR + 1                    ! Count recv requests
 
        ! Post recv
        call MPI_irecv(BufferR_I(iBufferR), nData*nBufferR_P(iProcS), &
             MPI_REAL, iProcS, iTag, iComm, iRequestR_I(iRequestR), iError)
-            
-       iRequestR = iRequestR + 1                    ! Count recv requests
 
        ! Jump to the starting point of the next chunk
        iBufferR  = iBufferR + nData*nBufferR_P(iProcS)  
