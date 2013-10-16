@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #$Id$
  
@@ -12,7 +12,10 @@ my $loadedFlag_MainBlock=0;
 my $loadedFlag_SpeciesBlock=0;
 my $loadedFlag_BackgroundSpeciesBlock=0;
 
-my $InputFileName="moon.input";
+my $InputFileNameDefault="moon.input";
+my $InputFileName;
+
+
 my $line;
 my $InputFileLineNumber=0;
 my $InputLine;
@@ -64,6 +67,26 @@ for (my $i=0;$i<$#ARGV + 1;$i++) {
   
 }
 
+
+#if the input file is not determine in the argument line: 1. search for file .amps.InputFileName.txt that containes the inputfile name or 2. use the default input file name
+if (!defined($InputFileName)) {
+  if (-f ".amps.InputFile.txt") {
+    open(FILE,"<.amps.InputFileName.txt") || die "Cannot open .amps.InputFileName.txt\n";
+    $InputFileName=<FILE>;
+    close(FILE);
+  }
+  else {
+    $InputFileName=$InputFileNameDefault;
+  }
+}
+
+open(FILE,">.amps.InputFileName.txt");
+print FILE "$InputFileName";
+close(FILE);
+ 
+
+#output basic parameters of the code configuration 
+print "InputFile: $InputFileName\n"; 
 
 #assemble the input file 
 open (AssembledInputFile,">","$InputFileName.Assembled");
