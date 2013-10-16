@@ -1,6 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModInterpolateAMRGrid
+  use ModNumConst, ONLY: cHalf
   implicit none
 
   !Generalize bilinear and trilinear interpolation for AMR grids
@@ -20,7 +21,6 @@ module ModInterpolateAMRGrid
   ! Three-dimensional grid
   public :: interpolate_amr_grid3
 
-  public :: interpolate_amr
 
   ! Unit test
   public:: test_interpolate_amr_grid
@@ -3096,126 +3096,299 @@ contains
     end subroutine interpolate_corner_transition
   end subroutine interpolate_amr_grid3
   !============================================================================
-  subroutine interpolate_amr(nDim, Xyz_D, nIndexes, &
-       iIndexes_II, generate_extended_stencil, Weight_I, nGridOut)
-    !integer, intent(in)::nDim, nIndexes
-    !real, intent(in):: Xyz_D(nDim)
-    !integer, intent(out):: iIndexes_II(0:nIndexes,2**nDim)
-    !real,    intent(out):: Weight_I(2**nDim)
-    !integer, intent(out):: nGridOut
-    !\
-    !Calculates interpolation weights
-    !/
-    !\
-    !Example of application for SERIAL calculation of the
-    !interpolated value of the state vector sampled in the grid points as
-    !State_VGB(nVar,nI,nJ,nK,nBlock) array:
-    !
-    !call interpolate_amr(3, 4, 64, Xyz_D, ...., nGridOut, iIndexes_II, Weight_I)
-    !if(nGridOut < 1) call CON_stop('Interpolation failed')
-    !Value_V(1:nVar) = 0
-    !do iGrid = 1, nGridOut
-    !  Value_V = Value_V + State_VGB(:,iIndexes_II(1,iGrid), iIndexes_II(2,iGrid), &
-    !                                  iIndexes_II(3,iGrid), iIndexes_II(4,iGrid))*&
-    !                                  Weight_I(iGrid)
-    !end do 
-    !/
-    integer, intent(in) :: nDim               !Only nDim=2,3 are meaningful
-    !\
-    ! Coordinates of point in which the value is interpolated
-    !/
+  !Interpolation on the block AMR grid
 
-    real, intent(in)    :: Xyz_D(nDim)        
+  !\
+  !Calculates interpolation weights
+  !/
+  !\
+  !Example of application for SERIAL calculation of the
+  !interpolated value of the state vector sampled in the 
+  !grid points as
+  !State_VGB(nVar,nI,nJ,nK,nBlock) array:
+  !
+  !call interpolate_block_amr(&
+  ! 3, Xyz_D, 4, (/4,4,4/) ...., nGridOut, Weight_I,iIndexes_II)
+  ! if(nGridOut < 1) call CON_stop('Interpolation failed')
+  ! Value_V(1:nVar) = 0
+  ! do iGrid = 1, nGridOut
+  !    Value_V = Value_V + &
+  !     State_VGB(:,iIndexes_II(1,iGrid), iIndexes_II(2,iGrid), &
+  !             iIndexes_II(3,iGrid), iIndexes_II(4,iGrid))*&
+  !                               Weight_I(iGrid)
+  !end do 
+  !/
+  subroutine interpolate_block_amr(nDim, XyzIn_D, nIndexes, nCell_D, find, &
+       nGridOut, Weight_I, iIndexes_II, iLevelOut_I)
     !\
-    ! Dimension of the cell index array (equals 5 for  (/i, j, k, iBlock, iProc/))
+    ! Number of dimensions
+    !/
+    integer, intent(in) :: nDim 
+    !\
+    ! Number of indexes. Usually, nIndexes = nDim + 1, for three cell indexes 
+    ! and a block number. If the latter information is not needed, 
+    ! nIndexes=nDim should be added
+    !/
+    integer, intent(in) :: nIndexes
+    !\
+    ! Point coordinates
+    !/
+    real,    intent(in) :: XyzIn_D(nDim)
+    !\
+    ! Block AMR Grid characteristic: number of cells
     !/ 
-    integer, intent(in) :: nIndexes           
-
-
-    interface
-       subroutine generate_extended_stencil(nDim, Xyz_D, nIndexes,&
-            nGridOut,XyzAll_DI, iIndexesAll_II, iLevelAll_I)
+    integer, intent(in) :: nCell_D(nDim)
+    !\
+    ! Yet another Block AMR Grid characteristic:
+    ! the search routine, which returns, for a given point,
+    ! the block to which this points belong and the processor, at which
+    ! this block is allocated, as well as the block parameters:
+    ! coordinates of the left corner (the point in the block with the 
+    ! minvalue of coordinates) and (/Dx, Dy, Dz/)
+    interface 
+       subroutine find(nDim, Xyz_D, &
+            iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
          implicit none
-         integer, intent(in):: nDim
-         real, intent(in)   :: Xyz_D(nDim)
-         integer, intent(in):: nIndexes
-         integer,intent(out):: nGridOut
-         real,   intent(out):: XyzAll_DI(nDim, 2**(2*nDim))
-         integer,intent(out):: iIndexesAll_II(nIndexes, 2**(2*nDim))
-         integer,intent(out):: iLevelAll_I(2**(2*nDim))
-       end subroutine generate_extended_stencil
+         integer, intent(in) :: nDim
+         !\
+         ! In the coordinates of the point, out the coordinates of the
+         ! block with respect to the block corner. In the most cases
+         ! XyzOut_D = XyzIn_D - XyzCorner_D, the important distinction,
+         ! however, is the periodic boundary, near which the jump in the
+         ! stencil coordinates might occur. To handle the latter problem,
+         ! we added the "out" intent. The coordinates for the stencil
+         ! and input point are calculated and recalculated below with
+         ! respect to the block corner. 
+         !/
+         real,  intent(inout):: Xyz_D(nDim)
+         integer, intent(out):: iProc, iBlock !processer and block number
+         !\
+         ! Block left corner coordinates and the grid size:
+         !/
+         real,    intent(out):: XyzCorner_D(nDim), Dxyz_D(nDim)
+         logical, intent(out):: IsOut !Point is out of the domain.
+       end subroutine find
     end interface
-    integer,  intent(out):: iIndexes_II(nIndexes,2**nDim)
-    real,     intent(out):: Weight_I(2**nDim)
-    integer,  intent(out):: nGridOut
+    !\
+    !Number of grid points involved into interpolation
+    !/
+    integer, intent(out):: nGridOut      
+    !\
+    ! Interpolation weights (only the first nGridOut values are meaningful
+    !/
+    real,    intent(out):: Weight_I(2**nDim) 
+    !\
+    ! Cell(+block) indexes and processor number for grid points to be
+    ! invilved into interpolation. iProc numbers are stored in 
+    ! iIndexes_II(0,:) 
+    !/
+    integer, intent(out):: iIndexes_II(0:nIndexes,2**nDim)
+    integer, intent(out), optional:: iLevelOut_I(2**nDim)  !For diagnostics
     
-    real     :: XyzExtended_DI(nDim, 2**(2*nDim))
-    integer  :: nExtendedStencil
-    integer  :: iIndexesExtended_II(nIndexes, 2**(2*nDim))
-    integer  :: iLevelExtended_I(2**(2*nDim))
-    real     :: XyzStencil_D(nDim)
-    logical  :: DoStencilFix = .false.
-    integer, dimension(2**nDim) :: iOrderExtended_I, iOrder_I, iLevel_I
-    real, dimension(nDim,2**nDim):: XyzGrid_DI
-    real, dimension(nDim) :: dXyzInv_D
-    !-----------------------
-    call generate_extended_stencil(nDim, Xyz_D, nIndexes,&
-         nGridOut, XyzExtended_DI, iIndexesExtended_II, iLevelExtended_I)
-    if(nGridOut < 1) RETURN
-    dXyzInv_D = 1
-    nExtendedStencil = nGridOut
-    call generate_basic_stencil(&
-         nDim, Xyz_D, nExtendedStencil, XyzExtended_DI, dXyzInv_D, &
-         iOrderExtended_I,nGridOut)
-    if(nGridOut < 2**nDim)then
+    !\
+    ! Local variables
+    !/
+    integer, dimension(2**nDim):: iOrderExtended_I, iOrder_I
+    logical                    :: DoStencilFix
+    real                       :: XyzGrid_DI(nDim,2**nDim)
+    real, dimension(nDim)      :: Xyz_D, DxyzInv_D, XyzStencil_D
+    
+    !\
+    ! Extended stencil, the generous estimate for its size is 2**(2*nDim) 
+    !/
+    integer :: nExtendedStencil
+    real, dimension(nDim,2**(2*nDim)) :: XyzExtended_DI 
+    integer :: iLevelExtended_I(2**(2*nDim)), iLevel_I(2**nDim)
+    integer :: iIndexesExtended_II(0:nIndexes,2**(2*nDim))
+    !--------------------
+    !\
+    ! Initialize arrays
+    !/
+    Xyz_D = XyzIn_D
+
+    XyzExtended_DI = 0
+    iLevelExtended_I = 0 
+    iIndexesExtended_II = 0
+    iOrder_I = 0
+    DxyzInv_D = 0
+    iIndexes_II = 0
+    Weight_I = 0 
+    if(present(iLevelOut_I))iLevelOut_I=0
+
+    call generate_extended_stencil
+    if(nExtendedStencil < 2**nDim)then
        nGridOut = -1
        RETURN
     end if
-    XyzGrid_DI = XyzExtended_DI(:, iOrderExtended_I)
-    iLevel_I   = iLevelExtended_I( iOrderExtended_I)
+
+    call generate_basic_stencil(&
+         nDim, Xyz_D, nExtendedStencil,        &
+         XyzExtended_DI(:,1:nExtendedStencil), &
+         DxyzInv_D, iOrderExtended_I)
+    if(any(iOrderExtended_I < 1))then
+       nGridOut = -1
+       RETURN
+    end if
+       
+    XyzGrid_DI = XyzExtended_DI(:,iOrderExtended_I)
+    iLevel_I = iLevelExtended_I(iOrderExtended_I)
+
     select case(nDim)
     case(2)
-       call interpolate_amr_grid2(Xyz_D, XyzGrid_DI, iLevel_I,&
-            nGridOut, Weight_I, iOrder_I, DoStencilFix, XyzStencil_D)
+       call interpolate_amr_grid2(&
+            Xyz_D , XyzGrid_DI, iLevel_I, &
+            nGridOut, Weight_I, iOrder_I,&
+            DoStencilFix, XyzStencil_D)
        do while(DoStencilFix)
           call generate_basic_stencil(&
-               nDim, Xyz_D, nExtendedStencil, XyzExtended_DI, dXyzInv_D, &
-               iOrderExtended_I, nGridOut)
-          if(nGridOut < 2**nDim)then
+               nDim, XyzStencil_D, nExtendedStencil, &
+               XyzExtended_DI(:,1:nExtendedStencil), &
+               DxyzInv_D, iOrderExtended_I)
+          if(any(iOrderExtended_I < 1))then
              nGridOut = -1
              RETURN
           end if
-          XyzGrid_DI = XyzExtended_DI(:, iOrderExtended_I)
-          iLevel_I   = iLevelExtended_I( iOrderExtended_I)
-          call interpolate_amr_grid2(Xyz_D, XyzGrid_DI, iLevel_I,&
-               nGridOut, Weight_I, iOrder_I, DoStencilFix, XyzStencil_D)
+          
+          XyzGrid_DI = XyzExtended_DI(&
+               :,iOrderExtended_I)
+          iLevel_I = iLevelExtended_I(iOrderExtended_I)
+          call interpolate_amr_grid2(&
+               Xyz_D , XyzGrid_DI, iLevel_I, &
+               nGridOut, Weight_I, iOrder_I,&
+               DoStencilFix, XyzStencil_D)
        end do
+       if(nGridOut < 1) call CON_stop(&
+            'Cannot interpolate AMR')
+       iIndexes_II(:, 1:nGridOut) = &
+            iIndexesExtended_II(:,iOrderExtended_I(&
+            iOrder_I(1:nGridOut) ) )
     case(3)
-       call interpolate_amr_grid3(Xyz_D, XyzGrid_DI, iLevel_I,&
-            nGridOut, Weight_I, iOrder_I, DoStencilFix, XyzStencil_D)
+       call interpolate_amr_grid3(&
+            Xyz_D , XyzGrid_DI, iLevel_I, &
+            nGridOut, Weight_I, iOrder_I,&
+            DoStencilFix, XyzStencil_D)
        do while(DoStencilFix)
           call generate_basic_stencil(&
-               nDim, Xyz_D, nExtendedStencil, XyzExtended_DI, dXyzInv_D, &
-               iOrderExtended_I, nGridOut)
-          if(nGridOut < 2**nDim)then
-             nGridOut = -1
-             RETURN
-          end if
-          XyzGrid_DI = XyzExtended_DI(:, iOrderExtended_I)
-          iLevel_I   = iLevelExtended_I( iOrderExtended_I)
-          call interpolate_amr_grid3(Xyz_D, XyzGrid_DI, iLevel_I,&
-               nGridOut, Weight_I, iOrder_I, DoStencilFix, XyzStencil_D)
+               nDim, Xyz_D, nExtendedStencil,        &
+               XyzExtended_DI(:,1:nExtendedStencil), &
+               DxyzInv_D, iOrderExtended_I)
+          if(any(iOrderExtended_I < 1))call CON_stop(&
+               'Cannot construct basic stencil')
+          
+          XyzGrid_DI = XyzExtended_DI(&
+               :,iOrderExtended_I)
+          iLevel_I = iLevelExtended_I(iOrderExtended_I)
+          call interpolate_amr_grid3(&
+               Xyz_D , XyzGrid_DI, iLevel_I, &
+               nGridOut, Weight_I, iOrder_I,&
+               DoStencilFix, XyzStencil_D)
        end do
+       if(nGridOut < 1) RETURN
+       iIndexes_II(:, 1:nGridOut) = &
+            iIndexesExtended_II(:,iOrderExtended_I(&
+            iOrder_I(1:nGridOut)))
     case default
-       call CON_stop('generic interpolate_amr is implemented only for nDim=2,3')
+       call CON_stop('Only 2D and 3D AMR grids are implemented')
     end select
-    iIndexes_II=-1
-    iIndexes_II(:,1:nGridOut) = iIndexesExtended_II(:,iOrderExtended_I(iOrder_I(1:nGridOut)))
-  end subroutine interpolate_amr
-  !============================================================================
+    if(present(iLevelOut_I))iLevelOut_I = iLevel_I
+  contains
+    subroutine generate_extended_stencil
+      !\
+      !This routine separates grid points which in principle 
+      !can be involved into interpolation
+      !/
+      !\
+      ! A cubic 2*2*2 grid with 2*2*2 subgrids covering each vertex
+      !/
+      real       :: XyzGrid_DII(nDim,0:2**nDim,2**nDim)
+      integer, dimension(2**nDim):: iBlock_I  , iProc_I 
+      integer, dimension(2**nDim):: nSubGrid_I, iLevelSubgrid_I
+      integer                   :: iCellIndexes_DII(nDim,2**nDim,2**nDim)
+      logical        :: IsOut_I(2**nDim)
+      
+      !\
+      ! Loop variables
+      !/
+      integer:: iGrid, iSubgrid, nGrid
+
+      !\
+      ! For using find routine with inout argument
+      !/
+      real  :: XyzMisc_D(nDim), XyzStored_D(nDim)
+      
+      !\
+      ! Output parameters of find routine
+      !/
+      real  :: XyzCorner_D(nDim), Dxyz_D(nDim)
+      logical :: IsOut
+      !\
+      ! Shift of the iGrid point in the stencil with respect to the
+      ! first one
+      !/
+      integer, dimension(3,8),parameter :: iShift_DI = reshape((/&
+           0, 0, 0, &
+           1, 0, 0, &
+           0, 1, 0, &
+           1, 1, 0, &
+           0, 0, 1, &
+           1, 0, 1, &
+           0, 1, 1, &
+           1, 1, 1/),(/3,8/))
+      
+      !------------------------
+      nGrid = 2**nDim
+      XyzGrid_DII = 0
+      iCellIndexes_DII = 0
+      XyzStored_D = Xyz_D
+      call find(nDim, Xyz_D, &
+            iProc_I(1), iBlock_I(1),XyzCorner_D, Dxyz_D, IsOut)
+      if(IsOut)then
+         nExtendedStencil = -1
+         RETURN
+      end if
+      DxyzInv_D = 1/Dxyz_D
+      iLevelSubgrid_I = -1
+      COARSEN:do while(any(iLevelSubgrid_I < 0) )
+         !This loop works more than once if the stencil includes
+         !blocks which are coarser than the first one found. In this case
+         !the coarser block is used as the base for a coraser stencil
+         
+         !Xyz_D=XyzStored_D-xyz_block_d(&
+         !     GridDescriptor%DD%Ptr,lGlobalTreeNode)
+         
+         XyzMisc_D = Xyz_D*DxyzInv_D + cHalf
+         iCellIndexes_DII(:,1,1) = floor(XyzMisc_D)
+         !\ 
+         !XyzMisc_D - iCell_DII(:,1,1) satisfies the inequalities as    
+         !follows:it is >= 0 and < 1. 
+         
+      end do COARSEN
+      
+      !\
+      ! Finalize: calculate all arrays for extended stencil
+      ! in the upper routine:
+      !/
+      nExtendedStencil = 0
+      do iGrid = 1, nDim
+         do iSubgrid = 1, nSubgrid_I(iGrid)
+            nExtendedStencil = nExtendedStencil + 1
+            XyzExtended_DI(:,nExtendedStencil) = &
+                 XyzGrid_DII(:,iSubGrid,iGrid) 
+            iIndexesExtended_II(0,nExtendedStencil) = &
+                 iProc_I(iGrid)
+            iIndexesExtended_II(nIndexes,nExtendedStencil) = &
+                 iBlock_I(iGrid)
+            iIndexesExtended_II(1:nDim,nExtendedStencil)   = &
+                 iCellIndexes_DII(:,iSubGrid,iGrid)
+            iLevelExtended_I(nExtendedStencil) = iLevelSubgrid_I(iGrid) 
+         end do
+      end do
+    end subroutine generate_extended_stencil
+  end subroutine interpolate_block_amr
+  !=======================================================================
   subroutine generate_basic_stencil(&
        nDim, Xyz_D, nExtendedStencil, XyzExtended_DI, dXyzInv_D, &
-       iOrderExtended_I, nGridOut)
+       iOrderExtended_I)
     !\
     ! Dimensionality; number of points in the extended stencil
     !/
@@ -3232,8 +3405,6 @@ contains
     ! Basic stencil - point numbers in XyzExtended array
     !/
     integer,    intent(out):: iOrderExtended_I(2**nDim)
-    
-    integer, intent(out) :: nGridOut
 
     !\
     ! Arrays of logical values Xyz_D < XyzGrid_DI(:,iGrid) for iGrid'th grid
@@ -3249,14 +3420,6 @@ contains
          .false., .true. , .true. , &
          .true. , .true. , .true. /)&
          , (/3,8/) )
-
-    !\
-    ! Inverse function: gives the point number from the displacement
-    ! normalized per (/Dx,Dy,Dz/) of the grid point with respect to
-    ! point "1"
-    !/
-    integer, parameter:: NumberFromShift_III(0:1,0:1,0:1)=reshape(&
-         (/1,2,3,4,5,6,7,8/), (/2,2,2/))
     integer:: iGrid, nGrid, iPoint !Loop variables
     logical:: IsMask_I(nExtendedStencil) 
     logical:: IsBelowExtended_DI(nDim,nExtendedStencil)
@@ -3297,341 +3460,11 @@ contains
           iOrderExtended_I(iGrid) = minloc(Distance_I, MASK = IsMask_I, DIM=1)
        end do
     end if
-    nGridOut = count(iOrderExtended_I>0)
   end subroutine generate_basic_stencil
   !===========================TESTS============================================
-  subroutine test_interpolate_amr_grid!(nSample, nDim, nIndexes)
-    !The test subtoutine nSample times generate random point in the AMR domain
-    !and compares the result of the coordinate interpolation to this point with the
-    !gampled coordinates
-    !
-    integer, parameter :: nSample = 1
-    integer, parameter :: nDim = 2
-    integer, parameter :: nIndexes = 3
-    
-    integer :: nGrid
-    integer :: nBlock
-    integer, parameter :: nX=2, nY=2, nZ=2 !number of cells in block in each dimension
-    integer :: nCase
-   
-    integer :: iSeed=0, i, j, k, iBlock, jBlock, loc(nIndexes), iSample, iCase, iGrid, iDim, iAux
-    real    :: Xyz_DCB(nDim, nX, nY, nZ, 2**nDim + 2**(2*nDim))  !grid coordinates
-   
-    ! Block corner coordinates:
-    real    ::  Xyz_DB(nDim, 2**nDim + 2**nDim * 2**nDim)
-    real    :: dXyz_DB(nDim, 2**nDim + 2**nDim * 2**nDim)
-    integer :: iLevel_B(2**nDim + 2**nDim * 2**nDim)
-
-    !\
-    ! Parameters to call interpolate_amr
-    !/
-    real :: Xyz_D(nDim), Xyz2_D(nDim), XyzStencil_D(nDim), XyzGrid_DI(nDim,2**nDim), XyzGrid2_DI(nDim,2**nDim)
-    real :: Weight_I(2**nDim), Weight2_I(2**nDim)
-    real :: XyzInterpolated_D(nDim)                             ! for test of order of approximation
-    real :: XyzSquaredInterpolated1_D(nDim),XyzSquaredInterpolated2_D(nDim) ! for test of continuity
-    integer :: iLevel_I(2**nDim), iIndexes_II(nIndexes,2**nDim), nGridOut, iIndexes2_II(nIndexes,2**nDim),nGridOut2
-    integer :: iOrder_I(2**nDim), iOrder2_I(2**nDim)
-    logical :: DoStencilFix
-    !---------------------
-    Xyz_D(:)=0.0 
-    Xyz2_D(:)=0.0
-    XyzStencil_D(:)=0.0
-    XyzGrid_DI(:,:)=0.0
-    XyzGrid2_DI(:,:)=0.0
-    !\
-    !initialize grid
-    !/
-    nGrid  = 2**nDim
-    nBlock = 2**nDim + 2**nDim * 2**nDim
-    nCase  = 2**nGrid - 1
-    !\
-    ! assign coordinates
-    !/
-    do iBlock = 1, 2**nDim
-       do iDim =1, nDim
-          iAux = mod(iBlock-1,2**iDim)/2**(iDim-1)
-          Xyz_DB(iDim, iBlock) = 2.0 * iAux
-          dXyz_DB(iDim, iBlock) = 1.0
-          do jBlock = 1, 2**nDim
-             iAux = mod(jBlock-1,2**iDim)/2**(iDim-1)
-             Xyz_DB(iDim, iBlock * 2**nDim + jBlock) = &
-                  Xyz_DB(iDim, iBlock) + 1.0 * iAux 
-             dXyz_DB(iDim,iBlock * 2**nDim + jBlock) = 0.5
-          end do
-       end do
-    end do
-    !\
-    ! assign coorindates to grid points
-    !/
-    do iBlock = 1, nBlock; do i = 1, nX; do j = 1, nY; do k = 1, nZ
-       Xyz_DCB(1,i,j,k,iBlock) = Xyz_DB(1,iBlock)+(i-0.50)*dXyz_DB(1,iBlock)
-       Xyz_DCB(2,i,j,k,iBlock) = Xyz_DB(2,iBlock)+(j-0.50)*dXyz_DB(2,iBlock)
-       if(nDim==3)then
-          Xyz_DCB(3,i,j,k,iBlock) = Xyz_DB(3,iBlock)+(k-0.50)*dXyz_DB(3,iBlock)
-       end if
-    end do; end do; end do; end do
-
-    !\
-    ! assign levels of refinement
-    !/
-    do iBlock = 2**nDim+1, nBlock
-       iLevel_B(iBlock) = Fine_
-    end do
-
-    call init_rand()
-    do iCase = 1, nCase
-       !\
-       ! perform test for configuration iCase
-       ! binary form of number iCase indicates levels of refinement of 4 initial blocks
-       !/
-       iAux = iCase
-       do iBlock = 1, 4
-          !\
-          ! assign level of refinement
-          !/
-          iLevel_B(iBlock) = mod(iAux,2)
-          iAux = (iAux-iLevel_B(iBlock))/2
-       end do
-       
-
-       
-
-       !\
-       ! Test order of approximation
-       !/
-       do iSample = 1, nSample
-
-          do iDim = 1, nDim
-             Xyz_D(iDim)  = 4.0 * RAND()
-             Xyz2_D(iDim) = Xyz_D(iDim) + 0.0001
-          end do
-
-          call interpolate_amr(nDim, Xyz_D, nIndexes, &
-               iIndexes_II, generate_extended_stencil, Weight_I, nGridOut)
-
-          if(nGridOut<0)CYCLE
-
-          XyzInterpolated_D=0.0
-          XyzSquaredInterpolated1_D=0.0
-          XyzSquaredInterpolated2_D=0.0
-
-          do iGrid = 1, nGridOut
-             i = iIndexes_II(     1, iGrid)
-             j = iIndexes_II(     2, iGrid)
-             if(nDim==2)then
-                k = 1
-             else
-                k = iIndexes_II(3,iGrid)
-             end if
-             iBlock = iIndexes_II(nIndexes, iGrid)
-             XyzInterpolated_D = XyzInterpolated_D + &
-                  Weight_I(iGrid) * Xyz_DCB(:, i, j, k, iBlock)
-             XyzSquaredInterpolated1_D = XyzSquaredInterpolated1_D + &
-                  Weight_I(iGrid) * Xyz_DCB(:, i, j, k, iBlock)* Xyz_DCB(:, i, j, k, iBlock)
-          end do
-
-          !\
-          ! Order of approximation test
-          ! Check interpolated value and compare with Xyz_D
-          !/
-          if(sum(abs(Xyz_D(:)-XyzInterpolated_D(:))) > 1.0e-5)then
-             write(*,*)'Test failed at iSample = ', iSample
-             write(*,*)'                iCase  = ', iCase
-             write(*,*)'Sampled Xyz_D=', Xyz_D
-             write(*,*)'Interpolated value=',XyzInterpolated_D
-             write(*,*)'Stencil: i j iBlock Weight'
-             do iGrid = 1, nGridOut
-                write(*,*)'Point #',iGrid, iIndexes_II(:,iGrid), Weight_I(iGrid)
-             end do
-             write(*,*)'Step by step generate stencil'
-             write(*,*)'Stencil: i j iBlock Level XyzGrid_D'
-             do iGrid = 1, 4
-                write(*,*)'Point #',iGrid, iIndexes_II(:,iGrid), iLevel_I(iGrid), XyzGrid_DI(:,iGrid)
-             end do
-             call interpolate_amr(nDim, Xyz_D, nIndexes, &
-                  iIndexes_II, generate_extended_stencil, Weight_I, nGridOut)
-             call CON_stop('Test failed')
-          end if
-          !------------------------------------------------------------------------------------------------
-          call interpolate_amr(nDim, Xyz2_D, nIndexes, &
-       iIndexes_II, generate_extended_stencil, Weight_I, nGridOut)
-          if(nGridOut<0)CYCLE
-
-          do iGrid = 1, nGridOut
-             i = iIndexes_II(     1, iGrid)
-             j = iIndexes_II(     2, iGrid)
-             if(nDim==2)then
-                k = 1
-             else
-                k = iIndexes_II(3,iGrid)
-             end if
-             iBlock = iIndexes_II(nIndexes,iGrid)
-             XyzSquaredInterpolated2_D = XyzSquaredInterpolated2_D + &
-                  Weight_I(iGrid) * Xyz_DCB(:, i, j, k, iBlock)* Xyz_DCB(:, i, j, k, iBlock)
-          end do
-          !\
-          ! Continuity test
-          ! Check interpolated values of function f(x,y)=x^2+y^2 in points Xyz_D and Xyz2_D
-          !/
-          if(sum(abs(XyzSquaredInterpolated1_D(:)-XyzSquaredInterpolated2_D(:)-Xyz_D(:)*Xyz_D(:)+Xyz2_D(:)*Xyz2_D(:)))&
-               > 2*(2**nDim) * 1.0e-4)then
-             write(*,*)'Continuity test failed at iSample = ', iSample
-             write(*,*)'                          iCase   = ', iCase
-             write(*,*)'Sampled Xyz1_D=', Xyz_D
-             write(*,*)'Sampled Xyz2_D=', Xyz2_D
-             write(*,*)'Interpolated value1=',XyzSquaredInterpolated1_D
-             write(*,*)'Interpolated value2=',XyzSquaredInterpolated2_D
-             write(*,*)'Stencil: i j iBlock Weight'
-             do iGrid = 1, nGridOut
-                write(*,*)'Point #',iGrid, iIndexes_II(:,iGrid), Weight_I(iGrid)
-             end do
-             write(*,*)'+++++++++'
-             call interpolate_amr(nDim, Xyz_D, nIndexes, &
-                  iIndexes_II, generate_extended_stencil, Weight_I, nGridOut)
-             do iGrid = 1, nGridOut
-                write(*,*)'Point #',iGrid, iIndexes_II(:,iGrid), Weight_I(iGrid)
-             end do
-             write(*,*)'Step by step generate stencil'
-             write(*,*)'Stencil: i j iBlock Level XyzGrid_D'
-             do iGrid = 1, 4
-                write(*,*)'Point #',iGrid, iIndexes_II(:,iGrid), iLevel_I(iGrid), XyzGrid_DI(:,iGrid)
-             end do
-             call interpolate_amr(nDim, Xyz_D, nIndexes, &
-                  iIndexes_II, generate_extended_stencil, Weight_I, nGridOut)
-          call CON_stop('Test failed')
-       end if
-
-    end do
- end do
+  subroutine test_interpolate_amr_grid
+    integer:: iSeed
   contains
-    subroutine generate_extended_stencil(nDim, XyzIn_D, nIndexes,&
-         nGridOut,XyzAll_DI, iIndexesAll_II, iLevelAll_I)
-      integer, intent(in):: nDim
-      real,    intent(in):: XyzIn_D(nDim)
-      integer, intent(in):: nIndexes
-      integer,intent(out):: nGridOut
-      real,   intent(out):: XyzAll_DI(nDim, 2**(2*nDim))
-      integer,intent(out):: iIndexesAll_II(nIndexes, 2**(2*nDim))
-      integer,intent(out):: iLevelAll_I(2**(2*nDim))
-
-      real:: dXyzIn_D(nDim)
-      real:: Aux_D(nDim)
-      integer:: nBlockNei, iLevel
-      integer, dimension(2**nDim):: iBlockNei_I
-      integer:: iDim, kCase, kAux, kIndexes
-      !------------------
-      !\
-      ! find Block, which XyzIn is in
-      !/
-      nBlockNei = 1
-      iBlock = 0
-      iLevel = -1
-      call find_block(nDim,XyzIn_D, iBlock, iLevel)
-      iBlockNei_I(nBlockNei) = iBlock
-      !\
-      ! compare XyzIn with gridpoints in the block
-      !/
-      Aux_D(:) = Xyz_DB(:,iBlock) + 0.5*dXyz_DB(:,iBlock)
-      
-      do iDim = 1, nDim
-         !\
-         ! compare with cells in the block
-         !/
-         if(XyzIn_D(iDim)<=Aux_D(iDim))then
-            dXyzIn_D(iDim) =  - 0.5*dXyz_DB(iDim,iBlock)
-         elseif(XyzIn_D(iDim)<Aux_D(iDim)+0.5*dXyz_DB(iDim,iBlock))then
-            dXyzIn_D(iDim) =  - dXyz_DB(iDim,iBlock)
-         elseif(XyzIn_D(iDim)>=Aux_D(iDim)+dXyz_DB(iDim,iBlock))then
-            dXyzIn_D(iDim) =    0.5*dXyz_DB(iDim,iBlock)
-         else
-            dXyzIn_D(iDim) =  dXyz_DB(iDim,iBlock)
-            !            dXyzIn_D(iDim) = 0
-         end if
-      end do
-
-
-      !\
-      ! find neighbors
-      !/
-      do kCase = 1, 2**nDim-1
-         kAux = kCase
-         !\
-         ! define coordinates of neighboring point 
-         !/
-         do iDim = 1, nDim
-            Aux_D(iDim) = XyzIn_D(iDim) + dXyzIn_D(iDim) * mod(kAux,2)
-            kAux = (kAux-mod(kAux,2))/2
-         end do
-         iLevel = -1; iBlock=0
-         call find_block(nDim, Aux_D, iBlock, iLevel)
-         if(.not. any(iBlockNei_I(1:nBlockNei)==iBlock))then
-            !\
-            ! add found block to list of neighbors
-            !/
-            nBlockNei = nBlockNei + 1
-            iBlockNei_I(nBlockNei) = iBlock
-         end if
-      end do
-
-      !\
-      ! write indexes into iIndexesAll_II
-      !/
-      do iBlock = 1, nBlockNei
-         do iGrid = 1, 2**nDim
-            iIndexesAll_II(nIndexes,(iBlock-1)*2**nDim+iGrid) = iBlockNei_I(iBlock)
-            do iDim = 1, nDim
-               iIndexesAll_II(iDim,(iBlock-1)*2**nDim+iGrid) = 1+mod(iGrid-1,2**iDim)/2**(iDim-1)
-            end do
-         end do
-      end do
-      !\
-      ! write into XyzAll_DI and iLevelAll_I
-      !/
-      nGridOut = 2**nDim * nBlockNei
-      do iGrid = 1, 2**nDim * nBlockNei
-         i = iIndexesAll_II(1,iGrid)
-         j = iIndexesAll_II(2,iGrid)
-         if(nDim==2)then
-            k = 1
-         else
-            k = iIndexesAll_II(3,iGrid)
-         end if
-         iBlock = iIndexesAll_II(nIndexes,iGrid)
-         XyzAll_DI(:,iGrid) = Xyz_DCB(:,i,j,k,iBlock)
-         iLevelAll_I(iGrid) = iLevel_B(iBlock)
-      end do
-
-
-    end subroutine generate_extended_stencil
-    !========================================
-    recursive subroutine find_block(nDim,XyzIn_D, iBlock, iLevel)
-      integer, intent(in) :: nDim
-      real, intent(in):: XyzIn_D(nDim)
-      integer,intent(inout)::iBlock
-      integer, intent(inout):: iLevel
-      real:: Aux_D(nDim)
-      integer:: iDim
-      !-------------------------------
-      !\
-      ! find difference between Xyz_D and center of iBlock
-      !/
-      iLevel = iLevel + 1
-      Aux_D(:) = XyzIn_D - (Xyz_DB(:,2**nDim * (iBlock+1)))
-      iBlock = 2**nDim * iBlock + 1
-      do iDim = 1, nDim
-         if(Aux_D(iDim)<0)then
-            iBlock = iBlock + 0
-         else
-            iBlock = iBlock + 2**(iDim-1)
-         end if
-      end do
-      if(iLevel == iLevel_B(iBlock))then
-         RETURN
-      else
-         call find_block(nDim,XyzIn_D, iBlock, iLevel)
-      end if
-    end subroutine find_block
-    !==================================
     !\
     !The random number generator.
     !From the Buneman's code TRISTAN
