@@ -87,7 +87,12 @@ LIB: ${LIB_AMPS}
 amps: ${LIB_AMPS}
 	@rm -f amps
 	cd ${WSD}/main; make amps SEARCH_C="${SEARCH}"
-	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB}
+
+ifeq ($(SPICE),nospice)
+	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB}  
+else 
+	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} ${SPICE}/lib/cspice.a
+endif
 
 TESTDIR = run_test
 
