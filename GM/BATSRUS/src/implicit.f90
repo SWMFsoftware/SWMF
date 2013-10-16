@@ -1,7 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-
 
 !=============================================================================
 subroutine advance_impl
@@ -350,7 +349,7 @@ subroutine advance_impl
 
         call solve_linear_system
 
-        if(info /= 0 .and. info /= 3 .and. iProc == 0 .and. time_accurate) then
+        if(info /= 0 .and. iProc == 0 .and. time_accurate) then
            write(*,*) 'ERROR in ',NameSub,': Krylov solver failed!'
            write(*,*) 'info, KrylovEerror, KrylovErrorMax=', &
                 info, KrylovError, KrylovErrorMax
@@ -462,13 +461,19 @@ subroutine advance_impl
         end do
         ! Reduce next time step
         DtFixed = RejectStepFactor*DtFixed
+        if(index(Test_String, 'updatecheck') > 0) write(*,*) NameSub, &
+             ': RejectStepLevel, info, DtFixed=', RejectStepLevel,info, DtFixed
      elseif(pRhoRelativeMin < ReduceStepLevel)then
         ! Reduce next time step if pressure is reduced below ReduceStepLevel
         DtFixed = ReduceStepFactor*DtFixed
+        if(index(Test_String, 'updatecheck') > 0) write(*,*) NameSub, &
+             ': ReduceStepLevel, DtFixed=', ReduceStepLevel, DtFixed
      elseif(pRhoRelativeMin > IncreaseStepLevel .and. Dt == DtFixed)then
         ! Increase next time step if pressure remained above IncreaseStepLevel
         ! and the last step was taken with DtFixed. Do not exceed DtFixedOrig
         DtFixed = min(DtFixedOrig, DtFixed*IncreaseStepFactor)
+        if(index(Test_String, 'updatecheck') > 0) write(*,*) NameSub, &
+             ': IncreaseStepLevel, DtFixed=', IncreaseStepLevel, DtFixed
      end if
 
      if(DoTestMe) write(*,*) NameSub,': pRelMin,Dt,DtFixed=',&
@@ -661,10 +666,13 @@ contains
          ': After KrylovMatVec,info,KrylovError=',&
          KrylovMatVec,info,KrylovError
 
-    if(DoTestMe.and.info/=0)write(*,*) NameSub, &
+    ! Converging without any iteration is not a real error, so set info=0
+    if(info==3) info=0
+
+    if(DoTestMe .and. info/=0)write(*,*) NameSub, &
          ' warning: no convergence, info:',info
 
-    if(info /= 0 .and. info /= 3 .and. iProc == 0 .and. time_accurate) &
+    if(info /= 0 .and. iProc == 0 .and. time_accurate) &
          call error_report('Krylov solver failure, Krylov error', &
          KrylovError, iError1, .true.)
 
