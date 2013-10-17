@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #---------------------------------------------------------------------------
 # $Id$
@@ -12,6 +12,7 @@
 #
 # Contains: loadCINDIorbit_ASCII
 #           loadMadrigalVTEC_ASCII
+#           loadGITMsat_ASCII
 #---------------------------------------------------------------------------
 
 import string
@@ -178,3 +179,79 @@ def loadMadrigalVTEC_ASCII(input_file, *args, **kwargs):
     return nfiles, out
 
 # END loadMadrigalVTEC_ASCII
+
+#---------------------------------------------------------------------------
+# loadGITMsat_ASCII: A routine to load one GITM satellite data input file
+#                    into a data dictionary.  If data is available, instead of
+#                    just position and time, it will also be included.
+
+def loadGITMsat_ASCII(input_file, *args, **kwargs):
+    '''
+    Open one GITM satellite data input file into a data dictionary.  If data is
+    available, instead of just position and time, it will also be included.
+
+    Input:
+    input_file = GITM satellite data file
+
+    Output:
+    out = a dict containing the data in np.arrays, the dict keys are specified
+          by the GITM standards
+    '''
+
+    #-----------------------------------------------
+    # Initialize the routine variables
+    func_name = string.join([module_name, "loadGITMsat_ASCII"], " ")
+
+    #-----------------------------------------------
+    # Initialize the output
+    out = dict()
+
+    #-----------------------------------------------
+    # Identify the number of header lines
+    f = open(input_file, "r")
+    line = f.readline()
+    nhead = 1
+
+    while line.find("#START") < 0:
+        nhead += 1
+        line = f.readline()
+
+    #------------------------------------------------
+    # Load text file
+    temp = np.genfromtxt(input_file, skip_header=nhead)
+
+    #------------------------------------------------
+    # Load the data into the output dictionary
+    if len(temp) > 0:
+        # Assign the date, time, and position information
+        out['year'] = temp[:,0]
+        out['month'] = temp[:,1]
+        out['day'] = temp[:,2]
+        out['hour'] = temp[:,3]
+        out['min'] = temp[:,4]
+        out['sec'] = temp[:,5]
+        out['ms'] = temp[:,6]
+        out['lat'] = temp[:,7]
+        out['lon'] = temp[:,8]
+        out['alt'] = temp[:,9]
+
+        # Assign any data
+        len_temp = len(temp[0])
+        lt = 0
+        while len_temp - lt > 10:
+            lt += 1
+            out_key = "dat{:d}".format(lt)
+            out[out_key] = temp[:,9+lt]
+        
+        # Construct a datetime array
+        out['datetime'] = list()
+
+        for t in temp[:]:
+            this_date = dt.datetime.strptime("{:d} {:d} {:d} {:d} {:d} {:d} {:d}".format(int(t[0]), int(t[1]), int(t[2]), int(t[3]), int(t[4]), int(t[5]), int(t[6] * 1.0e3)), "%Y %m %d %H %M %S %f")
+            out['datetime'].append(this_date)
+
+        out['datetime'] = np.array(out['datetime'])
+
+    return out
+
+# END loadGITMsat_ASCII
