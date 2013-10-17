@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-#  For more information, see http://csem.engin.umich.edu/tools/swmf
 #-----------------------------------------------------------------------------
 # $Id$
 #
@@ -9,11 +7,16 @@
 # Comments: Defines a class to hold data from multiple GITM binary output files,
 #           allowing UT dependence to be explored
 #
+# AGB 10/17/13: Added routines to assist in plotting satellite data and matching
+#               observational in GITM data
+#
 # Contains: class GitmTime - The class for the GITM binary, which will contain
 #                            data from multiple GITM output binaries
 #           def load_multiple_gitm_bin - A routine to load multiple GITM binary
 #                                        files, returning a list of the
 #                                        GitmBin data structures
+#           def set_sat_dateloc_label - A routine to add a label to a plot
+#                                       using GitmTime satellite ticks
 #------------------------------------------------------------------------------
 
 '''
@@ -79,6 +82,26 @@ class GitmTime(PbData):
                     except ValueError:
                         print "ADVISEMENT: file [",i+1,"] is missing [",old,"]"
                         
+            # Add the filename as a key
+            if self.has_key('file'):
+                self['file'] = gitm.dmarray(np.append(self['file'],
+                                                      [gData.attrs['file']], 0),
+                                            attrs=self['file'].attrs)
+            else:
+                self['file'] = gitm.dmarray(np.array([gData.attrs['file']]),
+                                            attrs={"name":"GITM Bin Filename"})
+
+            # Add the magnetic field filename as a key
+            magfile = None
+            if gData.attrs.has_key('magfile'):
+                magfile = gData.attrs['magfile']
+
+            if self.has_key('magfile'):
+                self['magfile'] = gitm.dmarray(np.append(self['magfile'],
+                                                         [magfile], 0),
+                                               attrs=self['magfile'].attrs)
+            else:
+                self['magfile'] = gitm.dmarray(np.array([magfile]), attrs={"name":"GITM 3DMAG Filename"})
 
             # Initialize the first instance of each key and append the new data
             # if it is not
@@ -97,14 +120,14 @@ class GitmTime(PbData):
                 else:
                     data = np.array([gData[k]])
 
-                if type(gData[k]) is gitm.dmarray:
+                try:
                     self[k] = gitm.dmarray(data, attrs=gData[k].attrs)
-                elif type(gData[k]) is datetime:
-                    self[k] = gitm.dmarray(data, attrs={"name":"Universal Time",
-                                                        "units":"date",
-                                                        "scale":"date"})
-                else:
-                    self[k] = gitm.dmarray(data, attrs=gData[k].attrs)
+                except AttributeError:
+                    if k.find('time') >= 0:
+                        self[k] = gitm.dmarray(data,
+                                               attrs={"name":"Universal Time",
+                                                      "units":"date",
+                                                      "scale":"date"})
 
             tempk = gData.keys()
             for k in oldkeys:
@@ -333,8 +356,8 @@ class GitmTime(PbData):
 
     def sat_dateloc_ticks(self, x, pos):
         '''
-        Define ticks to include all the information necessry to know where
-        measurements lie in spacetime.  This is most usefule for data output
+        Define ticks to include all the information necessary to know where
+        measurements lie in spacetime.  This is most useful for data output
         along a satellite track.
         '''
         from matplotlib.dates import num2date
