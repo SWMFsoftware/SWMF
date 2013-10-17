@@ -153,14 +153,13 @@ Module CON_grid_descriptor
      module procedure set_standard_grid_descriptor_dd
   end interface
 
-  !or for an arbitrary grid,                                       
-  interface set_grid_descriptor_unused
-     module procedure set_grid_descriptor_id
-     module procedure set_grid_descriptor_dd
-  end interface
+  !or for an arbitrary grid,                             
   !in such a manner that for a given block the actual geometric   
   !displacement of the grid block fragment is equal to the product
-  !the product of the Displacement_D by the grid size:
+  !of Displacement_D by the grid size
+  type(GridDescriptorType) :: CellCenteredAMR
+  integer, target :: iOne_D(3) = (/1, 1, 1/) 
+  real,    target :: Null_D(3) = (/0.0, 0.0, 0.0/)
   !\end{verbatim} 
   !EOP             
 contains
@@ -189,29 +188,29 @@ contains
   !IROUTINE: set_standard_grid_descriptor - cell centered or node grids.
   !DESCRIPTION:
   !Allow to set the standard grid descriptor: 
-  !Standard\_=CellCentered\_ or Standard\_=Nodes\_,
+  !iStandard\_=CellCentered\_ or iStandard\_=Nodes\_,
   !with or without halo points ("ghost points")
   !EOP                  
   !---------------------------------------------------------------!
   !BOP
   !INTERFACE:
   subroutine set_standard_grid_descriptor_id(&
-       GridID_,&
+       iGridID,&
        nGhostGridPoints,&
-       Standard_,&
+       iStandard,&
        GridDescriptor)
     !INPUT ARGUMENTS:
-    integer,intent(in)::GridID_
-    integer,intent(in),optional::Standard_
+    integer,intent(in)::iGridID
+    integer,intent(in),optional::iStandard
     integer,intent(in),optional::nGhostGridPoints
     !OUTPUT ARGUMENTS:
     type(GridDescriptorType),intent(out)::GridDescriptor
     !EOP
-    integer::iError,MyStandard_,nGhostGridPointsMy
+    integer::iError,iMyStandard,nGhostGridPointsMy
     call associate_dd_pointer(&
-         GridID_,&
+         iGridID,&
          GridDescriptor%DD)
-    GridDescriptor%nDim=ndim_grid(GridID_)
+    GridDescriptor%nDim=ndim_grid(iGridID)
     allocate(GridDescriptor%Displacement_D(&
          1:GridDescriptor%nDim),stat=iError)
     call check_allocate(iError,"Displacement_D")
@@ -226,26 +225,26 @@ contains
     else
        nGhostGridPointsMy=0
     end if
-    if(present(Standard_))then
-       MyStandard_=Standard_
+    if(present(iStandard))then
+       iMyStandard=iStandard
     else
-       MyStandard_=CellCentered_
+       iMyStandard=CellCentered_
     end if
-    select case(MyStandard_)
+    select case(iMyStandard)
     case(CellCentered_)
        GridDescriptor%Displacement_D=cZero
        GridDescriptor%iGridPointMin_D=&
             1-nGhostGridPointsMy
        GridDescriptor%iGridPointMax_D=&
             ncells_decomposition_D(&
-            GridID_)+nGhostGridPointsMy
+            iGridID)+nGhostGridPointsMy
     case(Nodes_)
        GridDescriptor%Displacement_D=-cHalf
        GridDescriptor%iGridPointMin_D=&
             min(1,2-nGhostGridPointsMy)
        GridDescriptor%iGridPointMax_D=&
             ncells_decomposition_D(&
-            GridID_)+nGhostGridPointsMy
+            iGridID)+nGhostGridPointsMy
     case default
        call CON_stop('Unknown standard for Grid Descriptor')
     end select
@@ -256,17 +255,17 @@ contains
   subroutine set_standard_grid_descriptor_dd(&
        DomainDecomposition,&
        nGhostGridPoints,&
-       Standard_,&
+       iStandard,&
        GridDescriptor)
     !INPUT ARGUMENTS:
     type(DomainDecompositionType),target,intent(in)::&
          DomainDecomposition
-    integer,intent(in),optional::Standard_
+    integer,intent(in),optional::iStandard
     integer,intent(in),optional::nGhostGridPoints
     !OUTPUT ARGUMENTS:
     type(GridDescriptorType),intent(out)::GridDescriptor
     !EOP
-    integer::iError,MyStandard_,nGhostGridPointsMy
+    integer::iError,iMyStandard,nGhostGridPointsMy
     nullify(GridDescriptor%DD%Ptr)
     call associate_dd_pointer(&
          DomainDecomposition,&
@@ -287,12 +286,12 @@ contains
     else
        nGhostGridPointsMy=0
     end if
-    if(present(Standard_))then
-       MyStandard_=Standard_
+    if(present(iStandard))then
+       iMyStandard=iStandard
     else
-       MyStandard_=CellCentered_
+       iMyStandard=CellCentered_
     end if
-    select case(MyStandard_)
+    select case(iMyStandard)
     case(CellCentered_)
        GridDescriptor%Displacement_D=cZero
        GridDescriptor%iGridPointMin_D=1-nGhostGridPointsMy
@@ -317,14 +316,14 @@ contains
   !IROUTINE: set_grid_descriptor - set more general grid
   !INTERFACE:
   subroutine set_grid_descriptor_id(&
-       GridID_,&
+       iGridID,&
        nDim,&
        iGridPointMin_D,&
        iGridPointMax_D,&
        Displacement_D,&
        GridDescriptor)
     !INPUT ARGUMENTS:
-    integer,intent(in)::GridID_
+    integer,intent(in)::iGridID
     integer,intent(in)::nDim
     integer,intent(in),dimension(nDim)::iGridPointMin_D
     integer,intent(in),dimension(nDim)::iGridPointMax_D
@@ -332,9 +331,9 @@ contains
     !OUTPUT ARGUMENTS:
     type(GridDescriptorType),intent(out)::GridDescriptor
     !EOP
-    integer::iError,MyStandard_,nGhostGridPointsMy
+    integer::iError,iMyStandard,nGhostGridPointsMy
     call associate_dd_pointer(&
-         GridID_,&
+         iGridID,&
          GridDescriptor%DD)
     GridDescriptor%nDim=nDim
     allocate(GridDescriptor%Displacement_D(&
@@ -370,7 +369,7 @@ contains
     !OUTPUT ARGUMENTS:
     type(GridDescriptorType),intent(out)::GridDescriptor
     !EOP
-    integer::iError,MyStandard_,nGhostGridPointsMy
+    integer::iError,iMyStandard,nGhostGridPointsMy
     call associate_dd_pointer(&
          DomainDecomposition,&
          GridDescriptor%DD)
@@ -472,66 +471,7 @@ contains
     end do
     i_grid_point_global=i_grid_point_global+1
   end function i_grid_point_global
-  !^CFG IF USEMCT BEGIN
-  !BOP
-  !IROUTINE: grid_descriptor_to_gsmap - transformation to MCT global SegMap
-  !DESCRIPTION:
-  !TRANSFORMATION OF A GRID DESCRIPTOR TO A GLOBAL
-  !                 SEGMENTATION MAP FOR MCT
-  !
-  !At the time the transformation to the MCT SegMap can only be   
-  !done for a grid with no ghost points.   
-  !EOP
-  !===============================================================!
-  !
-  !REVISION HISTORY:
-  !I.Sokolov<igorsok@umich.edu> & J.W. Larson <larson@mcs.anl.gov>
-  ! 7.18.2003                                                     
-
-  subroutine grid_descriptor_to_gsmap(GridDescriptor&
-       !^CFG END USEMCT 
-       !       ,GSMap&                 !^CFG UNCOMMENT IF USEMCT
-    )                        !^CFG IF USEMCT
-    !       use m_GlobalSegMap,&    !^CFG UNCOMMENT IF USEMCT
-    !           ONLY:GlobalSegMap   !^CFG UNCOMMENT IF USEMCT
-    !^CFG IF USEMCT BEGIN
-    !---------------------------------------------------------------!
-    type(GridDescriptorType),intent(in)::GridDescriptor
-    !^CFG END USEMCT 
-    !    type(GlobalSegMap),&               !^CFG UNCOMMENT IF USEMCT
-    !         intent(out)::GSMap            !^CFG UNCOMMENT IF USEMCT
-    integer::iError,iGlobalTreeNode,iBlockAll      !^CFG IF USEMCT
-    !---------------------------------------------------------------!
-    !    GSMap%comp_id=MCTCompID_           !^CFG UNCOMMENT IF USEMCT
-    !    GSMap%ngseg=n_block_total(&        !^CFG UNCOMMENT IF USEMCT
-    !         GridDescriptor%DD%Ptr)        !^CFG UNCOMMENT IF USEMCT
-    !    GSMap%gsize= GSMap%ngseg*&         !^CFG UNCOMMENT IF USEMCT
-    !         n_grid_points_per_block(&     !^CFG UNCOMMENT IF USEMCT
-    !         GridDescriptor)               !^CFG UNCOMMENT IF USEMCT
-    !    allocate(GSMap%start(GSMap%ngseg),&!^CFG UNCOMMENT IF USEMCT
-    !         GSMap%length(GSMap%ngseg), &  !^CFG UNCOMMENT IF USEMCT
-    !         GSMap%pe_loc(GSMap%ngseg), &  !^CFG UNCOMMENT IF USEMCT
-    !         stat = iError)                !^CFG UNCOMMENT IF USEMCT
-    !    GSMap%length=n_grid_points_per_block(&    !^CFG UNCOMMENT IF USEMCT
-    !    GridDescriptor)                    !^CFG UNCOMMENT IF USEMCT
-    !^CFG IF USEMCT BEGIN
-    call check_allocate(iError,'GSMap arrays')
-    do iBlockAll=1,n_block_total(GridDescriptor%DD%Ptr)
-       iGlobalTreeNode=i_global_node_a(GridDescriptor%DD%Ptr,iBlockAll)
-       !^CFG END USEMCT
-       !       GSMap%start(iBlockAll)=&        !^CFG UNCOMMENT IF USEMCT
-       !            (iGlobalTreeNode-1)*&      !^CFG UNCOMMENT IF USEMCT
-       !            n_grid_points_per_block(&  !^CFG UNCOMMENT IF USEMCT
-       !            GridDescriptor)+1          !^CFG UNCOMMENT IF USEMCT
-       !       GSMap%pe_loc(iBlockAll)=&       !^CFG UNCOMMENT IF USEMCT
-       !            pe_decomposition(&         !^CFG UNCOMMENT IF USEMCT
-       !            GridDescriptor%DD%Ptr,&    !^CFG UNCOMMENT IF USEMCT
-       !            iGlobalTreeNode)           !^CFG UNCOMMENT IF USEMCT
-       !^CFG IF USEMCT BEGIN
-    end do
-  end subroutine grid_descriptor_to_gsmap
-  !^CFG END USEMCT
-  
+ 
   !BOP
   !IROUTINE: nearest_grid_points - first order interpolation
   !EOP
@@ -556,43 +496,48 @@ contains
   subroutine nearest_grid_points(nDim,Xyz_D,&
        GridDescriptor,&
        nIndexes,&
-       Index_II,&
-       nImages,Weight_I)
+       iIndex_II,&
+       nImages, Weight_I)
     !INPUT ARGUMENTS:                       
-    type(GridDescriptorType)::GridDescriptor
-    integer,intent(in)::nDim
-    real,dimension(nDim),intent(inout)::Xyz_D 
-    integer,intent(in)::nIndexes
-    !OUTPUT ARGUMENTS:
-    integer,dimension(0:nIndexes,2**nDim),intent(out)::&
-         Index_II
-    integer,intent(out)::nImages
-    real,dimension(2**nDim),intent(out)::&
-         Weight_I
-    !EOP
-    real,dimension(nDim)::&
-         XyzStored_D, DXyzCells_D,DXyzTolerance_D
-    integer,dimension(nDim)::iGridPoints_D
-    logical,dimension(nDim)::IsAtFace_D
-    real,dimension(nDim,2**nDim)&
-         :: Xyz_DI
-    real,parameter::Tolerance = 0.001
-    integer::lGlobalTreeNode,iDim,iImages
-    logical,dimension(nDim,2**nDim)::&
-         Up_DI,Down_DI
-    logical,dimension(nDim)::&
-         IsDomainBoundaryUp_D,IsDomainBoundaryDown_D
+    type(GridDescriptorType):: GridDescriptor
+    integer,      intent(in):: nDim
+    real,      intent(inout):: Xyz_D(nDim) 
+    integer,      intent(in):: nIndexes
 
-    Index_II=0;Weight_I=cZero
+    !OUTPUT ARGUMENTS:
+    integer,     intent(out):: iIndex_II(0:nIndexes,2**nDim)
+    integer,     intent(out):: nImages
+    real,        intent(out):: Weight_I(2**nDim)
+    !EOP
+
+    real,    dimension(nDim)::&
+         XyzStored_D, DxyzCells_D,DxyzTolerance_D
+
+    integer, dimension(nDim):: iGridPoints_D
+    logical, dimension(nDim):: IsAtFace_D
+    real                    :: Xyz_DI(nDim,2**nDim)
+    real,          parameter:: Tolerance = 0.001
+    integer::lGlobalTreeNode,iDim,iImages
+    !------------------
+    !\
+    !Initialize arrays
+    !/
+    iIndex_II=0;Weight_I=cZero
     XyzStored_D=Xyz_D
-    Index_II(1:nDim,1)=&
+    iIndex_II(1:nDim,1)=&
          GridDescriptor%iGridPointMax_D+1
-    do while(any(Index_II(1:nDim,1)>&
+    do while(any(iIndex_II(1:nDim,1)>&
          GridDescriptor%iGridPointMax_D))
        Xyz_D=XyzStored_D
+       !\
+       ! Find a block to which the point belongs
+       !/
        call search_in(GridDescriptor%DD%Ptr,Xyz_D,lGlobalTreeNode)
-       DXyzCells_D=d_xyz_cell_d(&
+       DxyzCells_D=d_xyz_cell_d(&
             GridDescriptor%DD%Ptr,lGlobalTreeNode)
+       !\
+       ! Check if the point is out of the computational domain
+       !/
        where(is_right_boundary_d(GridDescriptor%DD%Ptr,lGlobalTreeNode))
           Xyz_D=min(Xyz_D,cAlmostOne*d_xyz_block_d(&         
                GridDescriptor%DD%Ptr,lGlobalTreeNode))
@@ -604,22 +549,41 @@ contains
           XyzStored_D=Xyz_D+xyz_block_d(&         
                GridDescriptor%DD%Ptr,lGlobalTreeNode)
        end where
+       !\
+       ! Store the processor number and block number. If the block
+       ! number is meaningless use nIndex=nDim and this meaningless
+       ! value will be overwritten later
+       !/
        call pe_and_blk(GridDescriptor%DD%Ptr,lGlobalTreeNode,&
-            Index_II(0,1),Index_II(nIndexes,1))
-       Xyz_D=Xyz_D-DXyzCells_D*GridDescriptor%Displacement_D
-       iGridPoints_D=floor(Xyz_D/DXyzCells_D)
-       Xyz_D=Xyz_D-DXyzCells_D*iGridPoints_D
-       Index_II(1:nDim,1)=iGridPoints_D+1
-       DXyzTolerance_D=Tolerance*DXyzCells_D
-       IsAtFace_D=abs(Xyz_D)<DXyzTolerance_D&
-            .or.abs(Xyz_D-DXyzCells_D )<DXyzTolerance_D
+            iIndex_II(0,1),iIndex_II(nIndexes,1))
+       !\
+       ! Find the nearest grid point in the block
+       !/
+       Xyz_D=Xyz_D-DxyzCells_D*GridDescriptor%Displacement_D
+       iGridPoints_D=floor(Xyz_D/DxyzCells_D)
+       iIndex_II(1:nDim,1)=iGridPoints_D+1
+       DxyzTolerance_D=Tolerance*DxyzCells_D
+       !\
+       ! The vector Xyz - XyzGrid + 0.5 Dxyz
+       !/
+       Xyz_D=Xyz_D-DxyzCells_D*iGridPoints_D
+       !\
+       ! If the point coordintates are such that Xyz-XyzGrid=+/-0.5*Dxyz
+       ! there are several equidistant grid points
+       !/
+
+       IsAtFace_D=abs(Xyz_D)<DxyzTolerance_D&
+            .or.abs(Xyz_D-DxyzCells_D )<DxyzTolerance_D
        where(is_right_boundary_d(GridDescriptor%DD%Ptr,lGlobalTreeNode))&
-            Index_II(1:nDim,1)=&
-            min(Index_II(1:nDim,1),&
+            iIndex_II(1:nDim,1)=&
+            min(iIndex_II(1:nDim,1),&
             GridDescriptor%iGridPointMax_D)
-       where(Index_II(1:nDim,1)>&
+       !\
+       !The nearest grid points may be are in the upper block
+       !/
+       where(iIndex_II(1:nDim,1)>&
             GridDescriptor%iGridPointMax_D)&
-            XyzStored_D=XyzStored_D+DXyzTolerance_D*0.25
+            XyzStored_D=XyzStored_D+DxyzTolerance_D*0.25
     end do
     nImages=1;Weight_I(1)=cOne
 
@@ -631,10 +595,10 @@ contains
        if(IsAtFace_D(iDim))then
           Xyz_DI(:,1+nImages:nImages+nImages)=Xyz_DI(:,1:nImages)
           Xyz_DI(iDim,1:nImages)=Xyz_DI(iDim,1:nImages)-&
-               DXyzTolerance_D(iDim)
+               DxyzTolerance_D(iDim)
           Xyz_DI(iDim,1+nImages:nImages+nImages)=Xyz_DI(&
                iDim,1+nImages:nImages+nImages)+&
-               DXyzTolerance_D(iDim)
+               DxyzTolerance_D(iDim)
           nImages=nImages+nImages
        end if
     end do
@@ -644,28 +608,28 @@ contains
             lGlobalTreeNode)
        call pe_and_blk(GridDescriptor%DD%Ptr,&
             lGlobalTreeNode,&
-            Index_II(0,iImages),&
-            Index_II(nIndexes,iImages))
+            iIndex_II(0,iImages),&
+            iIndex_II(nIndexes,iImages))
        Xyz_DI(:,iImages)=Xyz_DI(:,iImages)-&
             d_xyz_cell_d(GridDescriptor%DD%Ptr,&
             lGlobalTreeNode)*GridDescriptor%Displacement_D
        call search_cell(GridDescriptor%DD%Ptr,&
             lGlobalTreeNode,Xyz_DI(:,iImages),&
-            Index_II(1:nDim,iImages))
+            iIndex_II(1:nDim,iImages))
     end do
     iImages=1
     do while(iImages<=nImages)
        !Exclude the stencil nodes which are out of the 
        !computational domain
        do while(any(GridDescriptor%iGridPointMin_D>&
-            Index_II(1:nDim,iImages).or.&
+            iIndex_II(1:nDim,iImages).or.&
             GridDescriptor%iGridPointMax_D<&
-            Index_II(1:nDim,iImages)))
+            iIndex_II(1:nDim,iImages)))
           if(iImages==nImages)then
              nImages=nImages-1
              EXIT
           end if
-          Index_II(:,iImages)=Index_II(:,nImages)
+          iIndex_II(:,iImages)=iIndex_II(:,nImages)
           nImages=nImages-1
        end do
        iImages=iImages+1
@@ -688,7 +652,7 @@ contains
        Xyz_D,&
        GridDescriptor,&
        nIndexes,& 
-       Index_II,&
+       iIndex_II,&
        nImages,Weight_I)
     !INPUT ARGUMENTS:
     integer,intent(in)      ::nDim
@@ -696,7 +660,7 @@ contains
     real,intent(inout)::Xyz_D(nDim)
     integer,intent(in)::nIndexes
     !OUTPUT ARGUMENTS
-    integer           ::Index_II(0:nIndexes,2**nDim)
+    integer, intent(out) :: iIndex_II(0:nIndexes,2**nDim)
          
     integer,intent(out)::nImages
     real,dimension(2**nDim),intent(out)::Weight_I
@@ -709,24 +673,24 @@ contains
     integer::lGlobalTreeNode,iDim,iImages,iNewStart,nImagesNew
     real::WeightLeft
     logical,dimension(nDim,2**nDim)::&
-         Up_DI,Down_DI
+         IsUp_DI,IsDown_DI
     real,dimension(nDim,0:2**nDim)::&
-         DXyz_DI
+         Dxyz_DI
     logical,dimension(nDim)::&
          IsDomainBoundaryUp_D,IsDomainBoundaryDown_D
 
-    Index_II=0
+    iIndex_II=0
     Weight_I=cZero
     XyzStored_D=Xyz_D
-    Up_DI(:,1)=.true.
+    IsUp_DI(:,1)=.true.
     call search_in(GridDescriptor%DD%Ptr,Xyz_D,lGlobalTreeNode)
     !Find global node number, PE and number which involved the point
-    do while(any(Up_DI(:,1)))
+    do while(any(IsUp_DI(:,1)))
        !This do loop works more than once only in case of node
        !grid and only in case of Xyz_D point belonging to a block
        !boundary. At this case the routine needs help in deciding,
        !to which block this point should be assigned. Otherwise,
-       !automatically Up_D(:,1)=.false. after first loop pass.
+       !automatically IsUp_D(:,1)=.false. after first loop pass.
        Xyz_D=XyzStored_D-xyz_block_d(&
             GridDescriptor%DD%Ptr,lGlobalTreeNode)
        IsDomainBoundaryUp_D=&
@@ -746,16 +710,16 @@ contains
        end where
 
        call pe_and_blk(GridDescriptor%DD%Ptr,lGlobalTreeNode,&
-            Index_II(0,1),Index_II(nIndexes,1))
+            iIndex_II(0,1),iIndex_II(nIndexes,1))
        
-       !Find DXyz for this block
-       DXyz_DI(:,0)=d_xyz_cell_d(&         
+       !Find Dxyz for this block
+       Dxyz_DI(:,0)=d_xyz_cell_d(&         
             GridDescriptor%DD%Ptr,lGlobalTreeNode)
        
        !\
        !/
        
-       XyzResid_D=Xyz_D/DXyz_DI(:,0)-&
+       XyzResid_D=Xyz_D/Dxyz_DI(:,0)-&
             GridDescriptor%Displacement_D+cHalf
        iGridPoints_D=floor(XyzResid_D)
        XyzResid_D=XyzResid_D-real(iGridPoints_D)
@@ -763,15 +727,15 @@ contains
        !follow:XyzResid_D>=0 and XyzResid_D<1. It is used to calculte  !
        !weights for the eight grid points, among them the iGridPoints_D!
        !being the left one with respect to all the spatial directions  !
-       Index_II(1:nDim,1)=iGridPoints_D
-       Up_DI(:,1)=Index_II(1:nDim,1)>&
+       iIndex_II(1:nDim,1)=iGridPoints_D
+       IsUp_DI(:,1)=iIndex_II(1:nDim,1)>&
             GridDescriptor%iGridPointMax_D
-       Down_DI(:,1)=Index_II(1:nDim,1)<&
+       IsDown_DI(:,1)=iIndex_II(1:nDim,1)<&
             GridDescriptor%iGridPointMin_D
-       if(any(Up_DI(:,1)))&
+       if(any(IsUp_DI(:,1)))&
             lGlobalTreeNode=l_neighbor(&
             GridDescriptor%DD%Ptr,lGlobalTreeNode,&
-            Index_II(1:nDim,1))
+            iIndex_II(1:nDim,1))
     end do
 
     nImages=1;Weight_I(1)=cOne
@@ -779,26 +743,26 @@ contains
     do iDim=1,nDim
        !Exclude the stencil nodes which are out of the 
        !computational domain
-       if(Down_DI(iDim,1).and.IsDomainBoundaryDown_D(iDim))then
-          Down_DI(iDim,1:nImages)=.false.
-          Index_II(iDim,1:nImages)=Index_II(iDim,1:nImages)+1
+       if(IsDown_DI(iDim,1).and.IsDomainBoundaryDown_D(iDim))then
+          IsDown_DI(iDim,1:nImages)=.false.
+          iIndex_II(iDim,1:nImages)=iIndex_II(iDim,1:nImages)+1
           CYCLE
        end if
        
-       if(Index_II(iDim,1)==GridDescriptor%iGridPointMax_D(iDim)&
+       if(iIndex_II(iDim,1)==GridDescriptor%iGridPointMax_D(iDim)&
             .and.IsDomainBoundaryUp_D(iDim))CYCLE
        if(XyzResid_D(iDim)<cTiny)CYCLE
        iNewStart=nImages+1;nImagesNew=nImages+nImages
-       Index_II(:,iNewStart:nImagesNew)=&
-            Index_II(:,1:nImages)
-       Index_II(iDim,iNewStart:nImagesNew)=&
-            Index_II(iDim,iNewStart:nImagesNew)+1
-       Up_DI(:,iNewStart:nImagesNew)=Up_DI(:,1:nImages)
-       Up_DI(iDim,iNewStart:nImagesNew)=&
-            Index_II(iDim,iNewStart)>&
+       iIndex_II(:,iNewStart:nImagesNew)=&
+            iIndex_II(:,1:nImages)
+       iIndex_II(iDim,iNewStart:nImagesNew)=&
+            iIndex_II(iDim,iNewStart:nImagesNew)+1
+       IsUp_DI(:,iNewStart:nImagesNew)=IsUp_DI(:,1:nImages)
+       IsUp_DI(iDim,iNewStart:nImagesNew)=&
+            iIndex_II(iDim,iNewStart)>&
             GridDescriptor%iGridPointMax_D(iDim)
-       Down_DI(:,iNewStart:nImagesNew)=Down_DI(:,1:nImages)
-       Down_DI(iDim,iNewStart:nImagesNew)=.false.
+       IsDown_DI(:,iNewStart:nImagesNew)=IsDown_DI(:,1:nImages)
+       IsDown_DI(iDim,iNewStart:nImagesNew)=.false.
        Weight_I(iNewStart:nImagesNew)= &
             Weight_I(1:nImages)*XyzResid_D(iDim)
        WeightLeft=cOne-XyzResid_D(iDim)
@@ -808,27 +772,27 @@ contains
     !---------------------------------------------------------------!
     !Check if the grid point index is within the index limits       !
     do iImages=1,nImages
-       if(.not.(any(Up_DI(:,iImages)).or.&
-            any(Down_DI(:,iImages))))then
-          DXyz_DI(:,iImages)=DXyz_DI(:,0)
+       if(.not.(any(IsUp_DI(:,iImages)).or.&
+            any(IsDown_DI(:,iImages))))then
+          Dxyz_DI(:,iImages)=Dxyz_DI(:,0)
           lNode_I(iImages)=lGlobalTreeNode
        else
           lNode_I(iImages)=l_neighbor(GridDescriptor%DD%Ptr,&
-               lGlobalTreeNode,Index_II(&
+               lGlobalTreeNode,iIndex_II(&
                1:nDim,iImages))
           XyzMisc_D=xyz_grid_d(GridDescriptor,&
-               lGlobalTreeNode,Index_II(&
+               lGlobalTreeNode,iIndex_II(&
                1:nDim,iImages))-&
                xyz_block_d(GridDescriptor%DD%Ptr,lNode_I(iImages))
           call pe_and_blk(GridDescriptor%DD%Ptr,lNode_I(iImages),&
-               Index_II(0,iImages),Index_II(nIndexes,iImages))
-          DXyz_DI(:,iImages)=d_xyz_cell_d(GridDescriptor%DD%Ptr,&
+               iIndex_II(0,iImages),iIndex_II(nIndexes,iImages))
+          Dxyz_DI(:,iImages)=d_xyz_cell_d(GridDescriptor%DD%Ptr,&
                lNode_I(iImages))
-          XyzMisc_D=XyzMisc_D- DXyz_DI(:,iImages)&
+          XyzMisc_D=XyzMisc_D- Dxyz_DI(:,iImages)&
                *GridDescriptor%Displacement_D
           call search_cell(GridDescriptor%DD%Ptr,&
                lNode_I(iImages),XyzMisc_D,&
-               Index_II(1:nDim,iImages))
+               iIndex_II(1:nDim,iImages))
        end if
     end do
   end subroutine bilinear_interpolation
@@ -846,16 +810,15 @@ contains
        Xyz_D,&
        GridDescriptor,&
        nIndexes,& 
-       Index_II,&
-       nImages,Weight_I)
+       iIndex_II,&
+       nImages, Weight_I)
     !INPUT ARGUMENTS:
     integer,intent(in):: nDim
     real,intent(inout):: Xyz_D(nDim)
     type(GridDescriptorType)::GridDescriptor     
     integer,intent(in)::nIndexes
     !OUTPUT ARGUMENTS
-    integer,dimension(0:nIndexes,2**nDim)::&
-         Index_II
+    integer,     intent(out):: iIndex_II(0:nIndexes,2**nDim)
     integer,intent(out)::nImages
     real,dimension(2**nDim),intent(out)::Weight_I
     !EOP
@@ -869,13 +832,13 @@ contains
     integer::lGlobalTreeNode,iDim,iImages,iNewStart,nImagesNew
     real::WeightLeft
     logical,dimension(nDim,2**nDim)::&
-         Up_DI,Down_DI
+         IsUp_DI,IsDown_DI
     real,dimension(nDim,0:2**nDim)::&
-         DXyz_DI
+         Dxyz_DI
     logical,dimension(nDim)::&
          IsDomainBoundaryUp_D,IsDomainBoundaryDown_D
     integer,dimension(0:nIndexes,2**nDim)::&
-         IndexAux_II
+         iIndexAux_II
     integer::nImagesAux,nImagesTemp
     real,dimension(2**nDim)::WeightAux_I
     logical::IsResChangeUp,IsResChangeDown
@@ -892,7 +855,7 @@ contains
     real,dimension(nDim)::&
          UpperCoordMax_D,LowerCoordMin_D
 
-    Index_II=0
+    iIndex_II=0
     Weight_I=cZero
     XyzStored_D=Xyz_D
 
@@ -905,9 +868,9 @@ contains
        !This loop works more than once if the stencil includes
        !blocks which are coarser than lGlobalTreeNode. In this case
        !the coarser block is used as the base for a coraser stencil
-       Up_DI(:,1)=.true.
+       IsUp_DI(:,1)=.true.
 
-       do while(any(Up_DI(:,1)))
+       do while(any(IsUp_DI(:,1)))
           iIteration=iIteration+1
           if(iIteration==iIterationMax)&
                call CON_stop(&
@@ -916,7 +879,7 @@ contains
           !grid and only in case of Xyz_D point belonging to a block
           !boundary. At this case the routine needs help in deciding,
           !to which block this point should be assigned. Otherwise,
-          !automatically Up_D(:,1)=.false. after first loop pass.
+          !automatically IsUp_D(:,1)=.false. after first loop pass.
           Xyz_D=XyzStored_D-xyz_block_d(&
                GridDescriptor%DD%Ptr,lGlobalTreeNode)
           IsDomainBoundaryUp_D=&
@@ -935,16 +898,16 @@ contains
                   GridDescriptor%DD%Ptr,lGlobalTreeNode)
           end where
           call pe_and_blk(GridDescriptor%DD%Ptr,lGlobalTreeNode,&
-               Index_II(0,1),Index_II(nIndexes,1))
+               iIndex_II(0,1),iIndex_II(nIndexes,1))
 
-          !Find DXyz for this block
-          DXyz_DI(:,0)=d_xyz_cell_d(&         
+          !Find Dxyz for this block
+          Dxyz_DI(:,0)=d_xyz_cell_d(&         
                GridDescriptor%DD%Ptr,lGlobalTreeNode)
 
           !\
           !/
 
-          XyzResid_D=Xyz_D/DXyz_DI(:,0)-&
+          XyzResid_D=Xyz_D/Dxyz_DI(:,0)-&
                GridDescriptor%Displacement_D+cHalf
           iGridPoints_D=floor(XyzResid_D)
           XyzResid_D=XyzResid_D-real(iGridPoints_D)
@@ -952,42 +915,42 @@ contains
           !follow:XyzResid_D>=0 and XyzResid_D<1. It is used to calculte  !
           !weights for the eight grid points, among them the iGridPoints_D!
           !being the left one with respect to all the spatial directions  !
-          Index_II(1:nDim,1)=iGridPoints_D
-          Up_DI(:,1)=Index_II(1:nDim,1)>&
+          iIndex_II(1:nDim,1)=iGridPoints_D
+          IsUp_DI(:,1)=iIndex_II(1:nDim,1)>&
                GridDescriptor%iGridPointMax_D
-          Down_DI(:,1)=Index_II(1:nDim,1)<&
+          IsDown_DI(:,1)=iIndex_II(1:nDim,1)<&
                GridDescriptor%iGridPointMin_D
-          if(any(Up_DI(:,1)))&
+          if(any(IsUp_DI(:,1)))&
                lGlobalTreeNode=l_neighbor(&
                GridDescriptor%DD%Ptr,lGlobalTreeNode,&
-               Index_II(1:nDim,1))
+               iIndex_II(1:nDim,1))
        end do
        nImages=1;Weight_I(1)=cOne
        iShift_D=0
        do iDim=1,nDim
           !Exclude the stencil nodes which are out of the 
           !computational domain
-          if(Down_DI(iDim,1).and.IsDomainBoundaryDown_D(iDim))then
-             Down_DI(iDim,1:nImages)=.false.
-             Index_II(iDim,1:nImages)=Index_II(iDim,1:nImages)+1
+          if(IsDown_DI(iDim,1).and.IsDomainBoundaryDown_D(iDim))then
+             IsDown_DI(iDim,1:nImages)=.false.
+             iIndex_II(iDim,1:nImages)=iIndex_II(iDim,1:nImages)+1
              CYCLE
           end if
 
-          if(Index_II(iDim,1)==GridDescriptor%iGridPointMax_D(iDim)&
+          if(iIndex_II(iDim,1)==GridDescriptor%iGridPointMax_D(iDim)&
                .and.IsDomainBoundaryUp_D(iDim))CYCLE
           if(XyzResid_D(iDim)<cTiny)CYCLE
           iShift_D(iDim)=nImages
           iNewStart=nImages+1;nImagesNew=nImages+nImages
-          Index_II(:,iNewStart:nImagesNew)=&
-               Index_II(:,1:nImages)
-          Index_II(iDim,iNewStart:nImagesNew)=&
-               Index_II(iDim,iNewStart:nImagesNew)+1
-          Up_DI(:,iNewStart:nImagesNew)=Up_DI(:,1:nImages)
-          Up_DI(iDim,iNewStart:nImagesNew)=&
-               Index_II(iDim,iNewStart)>&
+          iIndex_II(:,iNewStart:nImagesNew)=&
+               iIndex_II(:,1:nImages)
+          iIndex_II(iDim,iNewStart:nImagesNew)=&
+               iIndex_II(iDim,iNewStart:nImagesNew)+1
+          IsUp_DI(:,iNewStart:nImagesNew)=IsUp_DI(:,1:nImages)
+          IsUp_DI(iDim,iNewStart:nImagesNew)=&
+               iIndex_II(iDim,iNewStart)>&
                GridDescriptor%iGridPointMax_D(iDim)
-          Down_DI(:,iNewStart:nImagesNew)=Down_DI(:,1:nImages)
-          Down_DI(iDim,iNewStart:nImagesNew)=.false.
+          IsDown_DI(:,iNewStart:nImagesNew)=IsDown_DI(:,1:nImages)
+          IsDown_DI(iDim,iNewStart:nImagesNew)=.false.
           Weight_I(iNewStart:nImagesNew)= &
                Weight_I(1:nImages)*XyzResid_D(iDim)
           WeightLeft=cOne-XyzResid_D(iDim)
@@ -997,23 +960,23 @@ contains
        !---------------------------------------------------------------!
        !Check if the grid point index is within the index limits       !
        do iImages=1,nImages
-          if(.not.(any(Up_DI(:,iImages)).or.&
-               any(Down_DI(:,iImages))))then
-             DXyz_DI(:,iImages)=DXyz_DI(:,0)
+          if(.not.(any(IsUp_DI(:,iImages)).or.&
+               any(IsDown_DI(:,iImages))))then
+             Dxyz_DI(:,iImages)=Dxyz_DI(:,0)
              lNeighbor_I(iImages)=lGlobalTreeNode
              lLevel_I(iImages)=0
           else
              XyzMisc_D=xyz_grid_d(GridDescriptor,&
-                  lGlobalTreeNode,Index_II(&
+                  lGlobalTreeNode,iIndex_II(&
                   1:nDim,iImages))
              call search_in(GridDescriptor%DD%Ptr,&
                   XyzMisc_D,lNeighbor_I(iImages))
-             DXyz_DI(:,iImages)=&
+             Dxyz_DI(:,iImages)=&
                   d_xyz_cell_d(GridDescriptor%DD%Ptr,&
                   lNeighbor_I(iImages))
              lLevel_I(iImages)=int(&
-                  2*DXyz_DI(1,iImages)&
-                  /DXyz_DI(1,0) -3+cTiny)
+                  2*Dxyz_DI(1,iImages)&
+                  /Dxyz_DI(1,0) -3+cTiny)
              if(lLevel_I(iImages)>0)then
                 nImages=iImages
                 lGlobalTreeNode=lNeighbor_I(iImages)
@@ -1021,14 +984,14 @@ contains
              elseif(lLevel_I(iImages)==0)then
                 call pe_and_blk(&
                      GridDescriptor%DD%Ptr,lNeighbor_I(iImages),&
-                     Index_II(0,iImages),Index_II(nIndexes,iImages))
-                Index_II(1:nDim,iImages)=&
+                     iIndex_II(0,iImages),iIndex_II(nIndexes,iImages))
+                iIndex_II(1:nDim,iImages)=&
                      nint((xyz_grid_d(GridDescriptor,&
-                     lGlobalTreeNode,Index_II(&
+                     lGlobalTreeNode,iIndex_II(&
                      1:nDim,iImages))-&
                      xyz_block_d(&
                      GridDescriptor%DD%Ptr,lNeighbor_I(iImages)))/ &
-                     DXyz_DI(:,iImages)+cHalf-&
+                     Dxyz_DI(:,iImages)+cHalf-&
                      GridDescriptor%Displacement_D)
              end if
           end if
@@ -1044,19 +1007,19 @@ contains
        iImages=1
        IMAGES:do while(iImages<=nImages)
           do while(lLevel_I(iImages)/=0)
-             IsResChangeUp=Up_DI(iDim,iImages)
-             IsResChangeDown=Down_DI(iDim,iImages)
+             IsResChangeUp=IsUp_DI(iDim,iImages)
+             IsResChangeDown=IsDown_DI(iDim,iImages)
              lNodeResChange=lNeighbor_I(iImages)
              if(iImages==nImages)then
                 nImages=nImages-1
                 EXIT IMAGES
              end if
-             Index_II(:,iImages)=Index_II(:,nImages)
+             iIndex_II(:,iImages)=iIndex_II(:,nImages)
              Weight_I(iImages)=Weight_I(nImages)
              lNeighbor_I(iImages)=lNeighbor_I(nImages)
              lLevel_I(iImages)=lLevel_I(nImages)
-             Up_DI(iDim,iImages)=Up_DI(iDim,nImages)
-             Down_DI(iDim,iImages)=Down_DI(iDim,nImages)
+             IsUp_DI(iDim,iImages)=IsUp_DI(iDim,nImages)
+             IsDown_DI(iDim,iImages)=IsDown_DI(iDim,nImages)
              nImages=nImages-1
           end do
           iImages=iImages+1
@@ -1099,13 +1062,13 @@ contains
             ResChangeCoord_D,&
             GridDescriptor,&
             nIndexes,& 
-            IndexAux_II,&
+            iIndexAux_II,&
             nImagesAux,WeightAux_I)
-       if(nImages+nImagesAux>ubound(Index_II,2))&
+       if(nImages+nImagesAux>ubound(iIndex_II,2))&
             call CON_stop(&
             'Algorithmic error in interpolation_fix_reschange')
-       Index_II(:,nImages+1:nImages+nImagesAux)=&
-            IndexAux_II(:,1:nImagesAux)
+       iIndex_II(:,nImages+1:nImages+nImagesAux)=&
+            iIndexAux_II(:,1:nImagesAux)
        Weight_I(nImages+1:nImages+nImagesAux)=&
             WeightAux_I(1:nImagesAux)*(cOne-WeightLeft)
        nImages=nImages+nImagesAux
@@ -1211,13 +1174,13 @@ contains
                XyzMisc_D,&
                GridDescriptor,&
                nIndexes,& 
-               IndexAux_II,&
+               iIndexAux_II,&
                nImagesAux,WeightAux_I)
-          if(nImages+nImagesAux>ubound(Index_II,2))&
+          if(nImages+nImagesAux>ubound(iIndex_II,2))&
                call CON_stop(&
                'Algorithmic error in interpolation_fix_reschange')
-          Index_II(:,nImages+1:nImages+nImagesAux)=&
-               IndexAux_II(:,1:nImagesAux)
+          iIndex_II(:,nImages+1:nImages+nImagesAux)=&
+               iIndexAux_II(:,1:nImagesAux)
           Weight_I(nImages+1:nImages+nImagesAux)=&
                WeightAux_I(1:nImagesAux)*WeightLeft
           nImages=nImages+nImagesAux

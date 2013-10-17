@@ -127,7 +127,7 @@ contains
     call OH_set_buffer_grid(BuffDD)
     call set_standard_grid_descriptor(&
          BuffDD,          &
-         Standard_=Nodes_,&
+         iStandard=Nodes_,&
          nGhostGridPoints=1,  &
          GridDescriptor=BuffGD)
     call set_standard_grid_descriptor(&
