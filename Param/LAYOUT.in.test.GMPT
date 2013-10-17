@@ -1,0 +1,6 @@
+GM and PT running on the same set of processors
+
+#COMPONENTMAP
+GM	0 9999    1
+PT      0 9999    1
+#END

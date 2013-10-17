@@ -1,0 +1,103 @@
+Begin session: 1
+
+#ECHO
+T
+
+#PROGRESS
+1			DnShowProgressShort
+100			DnShowProgressLong
+
+#DESCRIPTION
+Run GM and IE in time accurate mode
+
+#PLANET
+NONE
+
+#SAVERESTART
+F		DoSaveRestart
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#VERBOSE
+10			Verbosity
+
+#BEGIN_COMP GM ----------------------------------------
+
+#IOUNITS
+NONE
+
+#NORMALIZATION
+NONE
+
+#GRID
+4			nRootBlock1
+4			nRootBlock2
+4			nRootBlock3
+-100.0			xMin
+100.0			xMax
+-100.			yMin
+100.			yMax
+-100.			zMin
+100.			zMax
+
+#SAVEPLOT
+3                       nPlotFile
+x=0 FUL idl             StringPlot
+1                      DnSavePlot
+-1.			DtSavePlot
+0.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+y=0 FUL idl             StringPlot
+1                      DnSavePlot
+-1.			DtSavePlot
+0.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+z=0 FUL idl             StringPlot
+1                      DnSavePlot
+-1.			DtSavePlot
+0.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+
+#OUTERBOUNDARY
+float
+float
+float
+float
+float
+float
+
+#UNIFORMSTATE
+1.0               Rho		rho
+0.0               Ux		ux
+0.0                Uy		uy
+0.0                Uz		uz
+-1.0              Bx		bx
+3.0               By		by
+4.0               Bz		bz
+1.0               P		p
+
+#USERINPUTBEGIN ----------------
+
+#WAVE
+5                        Bx		iVar
+500.0                 Width
+0.5                     Amplitude
+200.0                 LambdaX
+-1.0                    LambdaY
+-1.0                    LambdaZ
+0.0                      Phase
+
+#USERINPUTEND   ----------------
+#END_COMP GM   ----------------------------------------
+
+#COUPLE1
+GM			NameComp1
+PT			NameComp2
+1                      DnCouple
+-1                     Dtcouple
+
+#STOP
+2			MaxIter
+-1.0			TimeMax
+
+End session: 1
+#RUN ############################################################
+
