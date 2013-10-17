@@ -1,12 +1,15 @@
 #!/usr/bin/env python
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #-----------------------------------------------------------------------------
+# $Id$
 # gitm_plot_rout
 #
 # Author: Angeline G. Burrell, UMichigan, Jan 2013
 #
 # Comments: Common routine used to make GITM plots.
+#
+# AGB: 10/17/13: Added several routines and improved colorbar formatting
 #
 # Includes: choose_contour_map         - choose a color map depending on certain
 #                                        specified plot characteristics
@@ -19,6 +22,10 @@
 #           find_data_limits_irange    - find the upper and lower limits
 #                                        for a list of GITM data arrays and
 #                                        a range of lon/lat/alt indexes
+#           find_data_limits_ivalues   - find the upper and lower limits
+#                                        for a list of GITM data arrays and
+#                                        a range or a specific lon/lat/alt index
+#           glon_to_localtime          - convert longitude to local time
 #           localtime_to_glon          - convert local time to longitude
 #           find_lon_lat_index         - find the appropriate index for
 #                                        a specified location
@@ -28,6 +35,8 @@
 #                                        for a specified altitude
 #           match_cindi_key            - a routine to retrieve the CINDI data
 #                                        key from a GITM key
+#           add_geomagnetic_equator    - a routine to add the geomagnetic
+#                                        equator to an existing plot
 #----------------------------------------------------------------------------
 
 '''
@@ -659,3 +668,42 @@ def match_cindi_key(in_key, out_type="CINDI"):
             print "WARNING: unknown data source [", out_type, "]"
             return None
 # END match_cindi_key
+
+def add_geomagnetic_equator(ax, color="k", linestyle="-", markerstyle=None):
+    '''
+    A routine to add a line along the geomagnetic equator to a plot.  Color,
+    linestyle, and markerstyle can be specified using matplotlib symbols.  The
+    location of the equator was determined using IGRF-10
+
+    Input: ax          = axis handle
+           color       = Output color for equator line (default is black)
+           linestyle   = Linestyle for equator line (default is solid)
+           markerstyle = Marker style (default is None)
+    '''
+
+    meq_lon = [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0,
+               55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 90.0, 95.0, 100.0,
+               105.0, 110.0, 115.0, 120.0, 125.0, 130.0, 135.0, 140.0, 145.0,
+               150.0, 155.0, 160.0, 165.0, 170.0, 175.0, 180.0, 185.0, 190.0,
+               195.0, 200.0, 205.0, 210.0, 215.0, 220.0, 225.0, 230.0, 235.0,
+               240.0, 245.0, 250.0, 255.0, 260.0, 265.0, 270.0, 275.0, 280.0,
+               285.0, 290.0, 295.0, 300.0, 305.0, 310.0, 315.0, 320.0, 325.0,
+               330.0, 335.0, 340.0, 345.0, 350.0, 355.0, 360.,]
+    meq_lat = [10.7, 10.6, 10.5, 10.3, 9.9, 9.5, 9.0, 8.4, 7.9, 7.5, 7.2, 7.0,
+               7.1, 7.2, 7.3, 7.5, 7.7, 7.9, 8.0, 8.1, 8.0, 8.0, 7.9, 7.8, 7.8,
+               7.8, 7.9, 8.0, 7.9, 7.8, 7.5, 7.1, 6.5, 5.7, 4.9, 4.0, 3.1, 2.3,
+               1.6, 0.9, 0.3, -0.4, -1.0, -1.6, -2.3, -3.0, -3.7, -4.4, -5.1,
+               -5.9, -6.7, -7.6, -8.6, -9.6, -10.6, -11.4, -11.9, -12.0, -11.6,
+               -10.5, -8.8, -6.5, -3.8, -1.0, 1.9, 4.4, 6.4, 8.0, 9.2, 9.9,
+               10.4, 10.7, 10.7,]
+
+    stylestring = "{:s}".format(color)
+    if markerstyle:
+        stylestring = "{:s}{:s}".format(stylestring, markerstyle)
+    if linestyle:
+        stylestring = "{:s}{:s}".format(stylestring, linestyle)
+
+    ax.plot(meq_lon, meq_lat, stylestring)
+
+    return
+# END add_geomagnetic_equator
