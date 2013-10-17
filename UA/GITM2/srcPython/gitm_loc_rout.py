@@ -1,12 +1,14 @@
 #!/usr/bin/env python
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #-----------------------------------------------------------------------------
-# gitm_plot_rout
+# $Id$
+# gitm_loc_rout
 #
 # Author: Angeline G. Burrell, UMichigan, Jan 2013
 #
-# Comments: Common routine used to make GITM plots.
+# Comments: Common routine used to find GITM data at a specific location(s)
+#           and match with observations.
 #
 # Includes: find_nearest_location - A routine to find the nearest neighbor in
 #                                   a 1, 2, or 3D coordinate system
@@ -19,6 +21,8 @@
 #           match_running_median - Provide running medians at specified times
 #                                  and locations
 #           gitm_inst_loc - A routine to align GITM and instrument data.
+#           gitm_net_loc - A routine to align GITM and data from a large network
+#                          of instruments
 #----------------------------------------------------------------------------
 
 '''
@@ -859,3 +863,386 @@ def gitm_inst_loc(obs_date, obs_lat, obs_lon, obs_alt, dat_keys, obs_type,
     print rout_name, "ERROR: no data to output"
     return
 #END gitm_inst_loc
+
+
+def gitm_net_loc(obs_date, obs_lat, obs_lon, obs_alt, obs_dat_list,
+                 obs_dat_keys, obs_dat_name, obs_dat_scale, obs_dat_units,
+                 dat_keys, gitmname_list, gitm_type="3D",
+                 mag_file=None, lat_unit="degrees", lon_unit="degrees",
+                 alt_unit="km", *args, **kwargs):
+    '''
+    Extract GITM data for a network of instruments at specified locations and
+    times. The desired locations must be specified in time, latitude, and
+    longitude (altitude is also acceptable).  A GitmTime data structure will be
+    returned.  Since this structure requires the same number of latitudes,
+    longitudes, and altitudes be available at each time, if the number of
+    locations vary, times at a location with no observations will be filled
+    with np.nan.
+
+    Input:
+    obs_date      = ordered numpy array of datetime objects
+    obs_lat       = corresponding numpy array of latitudes 
+    obs_lon       = corresponding numpy array of longitudes
+    obs_alt       = corresponding numpy array of altitudes (or an empty list)
+    obs_dat_list  = list of numpy arrays containing observational data to append
+                    to the output data structure
+    obs_dat_keys  = list of key roots corresponding to the observational data
+    obs_dat_name  = list of descriptive names corresponding to the
+                    observational data
+    obs_dat_scale = list of plotting scales corresponding to the observational
+                     data
+    obs_dat_units = list of units corresponding to the observational data
+    dat_keys      = list of keys to extract from GITM, empty list returns all
+    gitmbin_list  = list of Gitm binary files, ordered by time
+    gitm_type     = GITM binary type (2D or 3D)
+    mag_file      = 3DMAG or 3DION file (default is None)
+    lat_unit      = Units of latitudes in track_lat (default degrees)
+    lon_unit      = Units of longitude in track_lon (default degrees)
+    alt_unit      = Units of altitude in track_alt (default km)
+
+    Output:
+    A GitmTime object, uses the PbData class
+    '''
+    # Local Imports
+    from copy import deepcopy as dc
+    from scipy import interpolate
+    from spacepy.datamodel import dmarray
+    import gitm
+    import gitm_time
+    import gitm_plot_rout as gpr
+
+    rout_name = "gitm_net_loc"
+
+    # Initialize the list that will hold the desired data in GitmBin structures
+    gitmbin_list = list()
+
+    # Define the scale values for each observation location type
+    alt_scale = 1.0
+    if alt_unit.find("km") >= 0:
+        alt_scale = 1000.0
+
+    dlon_scale = 1.0
+    rlon_scale = 180.0 / np.pi
+    if lon_unit.find("rad") >= 0:
+        dlon_scale = np.pi / 180.0
+        rlon_scale = 1.0
+
+    dlat_scale = 1.0
+    rlat_scale = 180.0 / np.pi
+    if lat_unit.find("rad") >= 0:
+        dlat_scale = np.pi / 180.0
+        rlat_scale = 1.0       
+
+    # Group the observation locations by time.  Since we will seldom
+    # require a truely vertical altitude profile (radars typically scan
+    # at an angle), altitude profiles will repeat the lat/lon
+    itime = list()
+    nlocs = list()
+    ilocs = list()
+    idata = list()
+    last_time = None
+    j = -1
+    ndim = 2
+    ndat = len(obs_dat_list)
+
+    if type(obs_alt) is np.ndarray:
+        ndim += 1
+
+    # Test the validity of the data arrays that will be appended
+    if ndat > len(obs_dat_keys):
+        print rout_name, "WARNING: forgot to include keys for", ndat-len(obs_dat_keys), "observational data types"
+    elif ndat < len(obs_dat_keys):
+        print rout_name, "WARNING: forgot to include data for", len(obs_dat_keys)-ndat, "observational data keys"
+        ndat = len(obs_dat_keys)
+
+    # Sort the observational data by date
+    for i,ot in enumerate(obs_date):
+        if not last_time or last_time != ot:
+            # If this is not the first time, save the old data
+            if j >= 0:
+                if ndim == 2:
+                    xi = np.ndarray(shape=(nlocs[j], ndim), dtype=float, buffer=np.array([[l, ilat[k]] for k,l in enumerate(ilon)]))
+                else:
+                    xi = np.ndarray(shape=(nlocs[j], ndim), dtype=float, buffer=np.array([[l, ilat[k], ialt[k]] for k,l in enumerate(ilon)]))
+                ilocs.append(dc(xi))
+
+                if ndat > 0:
+                    idata.append(np.ndarray(shape=(nlocs[j], ndat), dtype=float,
+                                            buffer=np.array(idat)))
+
+            # This is a new time so initialize the lists
+            j += 1
+            itime.append(timedelta.total_seconds(ot - obs_date[0]))
+            nlocs.append(0)
+            ialt = list()
+            ilat = list()
+            ilon = list()
+            idat = list()
+
+        # For new times and old times, save the locations
+        nlocs[j] += 1
+        ilat.append(obs_lat[i] * dlat_scale)
+        ilon.append(obs_lon[i] * dlon_scale)
+
+        if ndim > 2:
+            ialt.append(obs_alt[i] * alt_scale)
+
+        if ndat > 0:
+            idat.append([d[i] for d in obs_dat_list])
+            
+        # Update the test condition
+        last_time = ot
+
+    # Save the last set of locations
+    if ndim == 2:
+        xi = np.ndarray(shape=(nlocs[j], ndim), dtype=float,
+                        buffer=np.array([[l, ilat[i]]
+                                         for i,l in enumerate(ilon)]))
+    else:
+        xi = np.ndarray(shape=(nlocs[j], ndim), dtype=float,
+                        buffer=np.array([[l, ilat[i], ialt[i]]
+                                         for i,l in enumerate(ilon)]))
+    ilocs.append(dc(xi))
+
+    if ndat > 0:
+        idata.append(np.ndarray(shape=(nlocs[j], ndat), dtype=float,
+                                buffer=np.array(idat)))
+
+    # Delete the temporary arrays
+    del ilat, ilon, ialt, idat, xi
+
+    # Test to ensure the input data was parsed correctly
+    max_locs = max(nlocs)
+    max_saved = 0
+    if max_locs < 1:
+        print rout_name, "ERROR: there are no observation locations"
+        return
+
+    # Read the list of Gitm Binary files (default 2D or 3D output types).
+    for i, gitm_file in enumerate(gitmname_list):
+        split_file = string.split(gitm_file)
+        vals = dict()
+
+        # Read in the data for this GITM binary file
+        if mag_file:
+            gdata = gitm.GitmBin(split_file[0], magfile=mag_file,
+                                 varlist=dat_keys)
+        else:
+            gdata = gitm.GitmBin(split_file[0], varlist=dat_keys)
+
+        if gdata.has_key("e-"):
+            gdata.calc_2dion()
+
+        # Find the desired location index for this time
+        gdelt = timedelta.total_seconds(gdata['time'] - obs_date[0])
+        tmax = timedelta.total_seconds(gdata['time'] - obs_date[-1])
+        malt = gdata.attrs['nAlt']-1
+
+        # If the GitmBin files extend beyond the observation time, stop
+        # cycling through them
+        if tmax > 0.0:
+            print rout_name, "ADVISEMENT: GitmBin files after", split_file[0], "extend beyond the observation timeframe [", obs_date[0], " to ", obs_date[-1], "]"
+            break
+
+        # Find the index of the nearest observation time and difference
+        # in time between them
+        obs_dist, iobs = find_nearest_value(itime, gdelt)
+
+        # Only use matches with less than 5 min seperation in time.  Cycle
+        # through the all the locations for this time to interpolate values
+        if(obs_dist < 300.0 and iobs >= 0 and iobs < len(itime)
+           and nlocs[iobs] > 0):
+            gkeys = gdata.keys()
+            vkeys = list()
+            lkeys = dict()
+
+            # Add the observational data to the value dictionary
+            if ndat > 0:
+                for j,k in enumerate(obs_dat_keys):
+                    ok = "obs_{:s}".format(k)
+                    vals[ok] = [d[j] for d in idata[iobs]]
+
+            # Extract and assign the values that don't require interpolation
+            lkeys[gkeys.pop(gkeys.index('Latitude'))] = 1.0 / rlat_scale
+            lkeys[gkeys.pop(gkeys.index('Longitude'))] = 1.0 / rlon_scale
+            lkeys[gkeys.pop(gkeys.index('dLat'))] = 1.0 / dlat_scale
+            lkeys[gkeys.pop(gkeys.index('dLon'))] = 1.0 / dlon_scale
+            lkeys[gkeys.pop(gkeys.index('Altitude'))] = 1.0
+            lkeys[gkeys.pop(gkeys.index('LT'))] = lon_unit
+            gkeys.pop(gkeys.index('time'))
+
+            # Assign the 2D variables in the file to a seperate processing list
+            if gitm_type.find("2") >= 0:
+                vkeys = list(gkeys)
+                gkeys = list()
+            else:
+                if gdata.has_key('VTEC'):
+                    vkeys.append(gkeys.pop(gkeys.index('VTEC')))
+                if gdata.has_key('NmF2'):
+                    vkeys.append(gkeys.pop(gkeys.index('NmF2')))
+                if gdata.has_key('hmF2'):
+                    vkeys.append(gkeys.pop(gkeys.index('hmF2')))
+
+            # Get the time information
+            this_date = obs_date[0] + timedelta(0, itime[iobs])
+            good_interp = False
+
+            # Set up the grid for 3D interpolation
+            if ndim == 3:
+                good_interp = True
+                alon = gdata["dLon"].flatten()
+                alat = gdata["dLat"].flatten()
+                aalt = gdata['Altitude'].flatten()
+                points = np.ndarray(shape=(len(alat), ndim), dtype=float, buffer=np.array([[l, alat[j], aalt[j]] for j,l in enumerate(alon)]))
+
+                # Cycle through the keys to perform the 3D interpolation
+                for g in gkeys:
+                    values = np.ndarray(shape=len(alat), dtype=float,
+                                        buffer=np.array(gdata[g].flatten()))
+                    v = interpolate.griddata(points, values, ilocs[iobs],
+                                             method="linear")
+                    vals[g] = v
+
+            # Cycle through the keys to perform 2D interpolation
+            if len(vkeys) > 0:
+                good_interp = True
+                alon = gdata["dLon"][:,:,0].flatten()
+                alat = gdata["dLat"][:,:,0].flatten()
+                points = np.ndarray(shape=(len(alat), ndim), dtype=float, buffer=np.array([[l, alat[j]] for j,l in enumerate(alon)]))
+
+                for g in vkeys:
+                    values = np.ndarray(shape=len(alat), dtype=float, buffer=np.array(gdata[g][:,:,0].flatten()))
+                    v = interpolate.griddata(points, values, ilocs[iobs],
+                                             method="linear")
+                        
+                    vals[g] = v
+
+        # Save the interpolated data to the list of GitmBin structures
+        if good_interp:
+            # Initialize the observational data to append
+            if ndat > 0:
+                for j,k in enumerate(obs_dat_keys):
+                    ok = "obs_{:s}".format(k)
+                    gdata[ok] = dmarray(np.empty(shape=gdata['dLon'].shape,
+                                                 dtype=float) * np.nan,
+                                        attrs={"name":obs_dat_name[j],
+                                               "scale":obs_dat_scale[j],
+                                               "units":obs_dat_units[j]})
+                    gdata.attrs['nVars'] += 1
+
+            if max_locs == 1:
+                # Save this as a 1D GITM file.  Start by deleting the
+                # unneeded dimensions from the current GitmBin object and
+                # assigning the desired values
+                for k in gdata.keys():
+                    if vals.has_key(k) or lkeys.has_key(k):
+                        if gdata.attrs['nAlt'] > 1:
+                            gdata[k] = np.delete(gdata[k], np.arange(gdata.attrs['nAlt']-1), 2)
+                        if gdata.attrs['nLat'] > 1:
+                            gdata[k] = np.delete(gdata[k], np.arange(gdata.attrs['nLat']-1), 1)
+                        if gdata.attrs['nLon'] > 1:
+                            gdata[k] = np.delete(gdata[k], np.arange(gdata.attrs['nLon']-1), 0)
+                        if vals.has_key(k):
+                            gdata[k][0,0,0] = vals[k][0]
+                            if len(vals(k)) > max_saved:
+                                max_saved = len(vals(k))
+                        else:
+                            if k.find("Lat") >= 0:
+                                gdata[k][0,0,0] = ilocs[iobs][0][1] * lkeys[k]
+                            elif k.find("Lon") >= 0:
+                                gdata[k][0,0,0] = ilocs[iobs][0][0] * lkeys[k]
+                            elif k.find("Altitude") >= 0:
+                                if ndim == 2:
+                                    gdata[k][0,0,0] = 0.0
+                                else:
+                                    gdata[k][0,0,0] = ilocs[iobs][0][2]
+                            else:
+                                gdata[k][0,0,0] = gpr.glon_to_localtime(this_date, ilocs[iobs][0][0], lon_unit)      
+                    elif k.find('time') < 0:
+                        # This is not an interpolated value, location, or time
+                        del gdata[k]
+                        gdata.attrs['nVars'] -= 1
+            else:
+                # Save this as a 2D or 3D GITM file.  Start by reshaping the
+                # dimensions from the current GitmBin object and 
+                # assigning the desired values
+
+                for k in gdata.keys():
+                    if vals.has_key(k) or lkeys.has_key(k):
+                        if ndim == 2:
+                            gdata[k] = dmarray(np.empty((max_locs,max_locs,1,)),
+                                               attrs=gdata[k].attrs)
+                        else:
+                            gdata[k] = dmarray(np.empty((max_locs, max_locs,
+                                                         max_locs,)),
+                                               attrs=gdata[k].attrs)
+                        gdata[k][:] = np.nan
+
+                        # Assign the appropriate location or data value
+                        for j,loc in enumerate(ilocs[iobs]):
+                            jalt = 0
+                            if ndim == 3:
+                                jalt = 0
+                                alt = loc[3]
+
+                            if vals.has_key(k):
+                                gdata[k][j,j,jalt] = vals[k][j]
+                                if len(vals[k]) > max_saved:
+                                    max_saved = len(vals[k])
+                            else:
+                                if k.find('Lat') >= 0:
+                                    gdata[k][j,:,jalt] = loc[1] * lkeys[k]
+                                elif k.find('Lon') >= 0:
+                                    gdata[k][:,j,jalt] = loc[0] * lkeys[k]
+                                elif k.find("Altitude") >= 0:
+                                    if ndim == 2:
+                                        gdata[k][:,:,:] = 0.0
+                                        continue
+                                    else:
+                                        gdata[k][:,:,jalt] = loc[2]
+                                else:
+                                    gdata[k][j,j,jalt] = gpr.glon_to_localtime(this_date, loc[0], lon_unit)      
+                    elif k.find('time') < 0:
+                        del gdata[k]
+                        gdata.attrs['nVars'] -= 1
+
+            # Finish assigning the metadata
+            gdata.attrs['nLat'] = max_locs
+            gdata.attrs['nLon'] = max_locs
+            gdata.attrs['nAlt'] = max_locs
+            if ndim == 2:
+                gdata.attrs['nAlt'] = 1
+
+            # Save the output
+            gitmbin_list.append(dc(gdata))
+        else:
+            print rout_name, "ADVISEMENT: file [%s] outside of observation time range" % split_file[0]
+
+        del gdata
+                
+    # Save the interpolated data in a GitmTime object
+    if len(gitmbin_list) > 0:
+        # Remove unnecessary elements if the maximum number of dimensions is
+        # larger than the saved number of dimensions
+        if max_saved < max_locs:
+            for gdata in gitmbin_list:
+                # Re-assign the metadata
+                gdata.attrs['nLat'] = max_saved
+                gdata.attrs['nLon'] = max_saved
+                if ndim == 3:
+                    gdata.attrs['nAlt'] = max_saved
+
+                for k in gdata.keys():
+                    gdata[k] = np.delete(gdata[k], max_locs - 1 -
+                                         np.arange(max_locs - max_saved), 0)
+                    gdata[k] = np.delete(gdata[k], max_locs - 1 -
+                                         np.arange(max_locs - max_saved), 1)
+                    if ndim == 3:
+                        gdata[k] = np.delete(gdata[k], max_locs - 1 -
+                                             np.arange(max_locs - max_saved), 0)
+
+        return(gitm_time.GitmTime(gitmbin_list))
+
+    print rout_name, "ERROR: no data to output"
+    return
+#END gitm_net_loc
