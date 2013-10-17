@@ -1,7 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModInterpolateAMRGrid
-  use ModNumConst, ONLY: cHalf
   implicit none
 
   !Generalize bilinear and trilinear interpolation for AMR grids
@@ -33,9 +32,155 @@ module ModInterpolateAMRGrid
        x_       = 1,               &
        y_       = 2,               &
        z_       = 3
+  !=================ARRAYS FOR A CUBE====================================!
+  !For a cubic stencil enumerated as follows:
+  !
+  !       ^
+  ! z-axis|
+  !       |  7----------8
+  !       | /|         /|
+  !       |/ |        / |
+  !       5----------6  |
+  !       |  |   _   |  |
+  !       |  |   /|y-axi$
+  !       |  |  /    |  |
+  !       |  | /     |  |
+  !       |  |/      |  |
+  !       |  3----------4
+  !       | /        | /
+  !       |/         |/
+  !       1----------2------> x-axis
+  !       
+  ! we provide several functions characterizing its geometry in terms of 
+  ! the grid point numbers. The functions used in more than one place,
+  ! therefore we delegate them here. 
+  !Parameters to enumerate faces or face diagonal
+  integer, parameter:: Xy_ = 3, Xz_ = 2, Yz_ = 1
 
+  !Number of the vertex connected by 
+  !the edge of direction iDir (second index) 
+  !with the given vertex (first index)
+  integer, dimension(8,3), parameter:: iEdge_ID = &
+       reshape((/&   !Number of the connected vertex
+       2 ,1, 4, 3, 6, 5, 8, 7,        & !Edge x
+       3, 4, 1, 2, 7, 8, 5, 6,        & !Edge y
+       5, 6, 7, 8, 1, 2, 3, 4         & !Edge z
+       /),(/8,3/))
 
+  !Number of the vertex connected by 
+  !the face diagonal across the face of direction iDir (second index) 
+  !with the given vertex (first index)
+  integer, dimension(8,3), parameter:: iFaceDiag_ID = &
+       reshape((/&   !Number of the connected vertex
+       7 ,8, 5, 6, 3, 4, 1, 2,        & !Face yz
+       6, 5, 8, 7, 2, 1, 4, 3,        & !Face xz
+       4, 3, 2, 1, 8, 7, 6, 5         & !Face xy
+       /),(/8,3/))
+
+  !Number of the vertex connected by 
+  !the main diagonal with the given vertex (index)
+  integer, dimension(8), parameter:: iMainDiag_I = &
+       (/ 8, 7, 6, 5, 4, 3, 2, 1 /)
+
+  !Vertexes (enumerated by the first undex), which form 
+  !the face of direction iDir (second index) including the 
+  !given vertex (the third index). 
+  !When the first index equals 1,2,3,4, the vertex, accordingly: 
+  !(1) coincides with the given one
+  !(2) is connected with the given one by the edge of direction iDir+1
+  !(3) is connected with the given one by the edge of direction iDir+2
+  !(4) is connected to the given one by the face diagonal of direction iDir
+  integer, dimension(4,3,8), parameter:: iFace_IDI = &
+       reshape((/&   ! yz face   ! xz face      ! xy face ! 
+       1, 3, 5, 7,   1, 5, 2, 6,   1, 2, 3, 4, & 
+       2, 4, 6, 8,   2, 6, 1, 5,   2, 1, 4, 3, &
+       3, 1, 7, 5,   3, 7, 4, 8,   3, 4, 1, 2, &
+       4, 2, 8, 6,   4, 8, 3, 7,   4, 3, 2, 1, &
+       5, 7, 1, 3,   5, 1, 6, 2,   5, 6, 7, 8, &
+       6, 8, 2, 4,   6, 2, 5, 1,   6, 5, 8, 7, &
+       7, 5, 3, 1,   7, 3, 8, 4,   7, 8, 5, 6, &
+       8, 6, 4, 2,   8, 4, 7, 3,   8, 7, 6, 5  &
+       /), (/4,3,8/))
+
+  !Vertexes (enumerated by the first undex), which form 
+  !the face of direction iDir (second index) and does not include the
+  !given vertex (the third index). 
+  !When the first index equals 1,2,3,4, the vertex, accordingly: 
+  !(1) is connected to the given one by the edge of direction iDir
+  !(2) is connected to (1) by the edge of direction iDir+1
+  !(3) is connected to (1) by the edge of direction iDir+2
+  !(4) is connected to  by the face diagonal of direction iDir
+  integer, dimension(4,3,8), parameter:: iOppositeFace_IDI = &
+       reshape((/&   ! yz face   ! xz face      ! xy face ! 
+       2, 4, 6, 8,   3, 7, 4, 8,   5, 6, 7, 8, & 
+       1, 3, 5, 7,   4, 8, 3, 7,   6, 5, 8, 7, &
+       4, 2, 8, 6,   1, 5, 2, 6,   7, 8, 5, 6, &
+       3, 1, 7, 5,   2, 6, 1, 5,   8, 7, 6, 5, &
+       6, 8, 2, 4,   7, 3, 8, 4,   1, 2, 3, 4, &
+       5, 7, 1, 3,   8, 4, 7, 3,   2, 1, 4, 3, &
+       8, 6, 4, 2,   5, 1, 6, 2,   3, 4, 1, 2, &
+       7, 5, 3, 1,   6, 2, 5, 1,   4, 3, 2, 1  &
+       /), (/4,3,8/))
+  !\
+  ! Arrays of logical values Xyz_D < XyzGrid_DI(:,iGrid) for iGrid'th grid
+  ! point of the basic stencil for point Xyz
+  !/
+  logical, parameter:: IsBelow_DI(3,8)=reshape((/&
+       .false., .false., .false., &
+       .true. , .false., .false., &
+       .false., .true. , .false., &
+       .true. , .true. , .false., &
+       .false., .false., .true. , &
+       .true. , .false., .true. , &
+       .false., .true. , .true. , &
+       .true. , .true. , .true. /)&
+       , (/3,8/) )
+  !\
+  ! Shift of the iGrid point in the stencil with respect to the
+  ! first one
+  !/
+  integer, dimension(3,8),parameter :: iShift_DI = reshape((/&
+       0, 0, 0, &
+       1, 0, 0, &
+       0, 1, 0, &
+       1, 1, 0, &
+       0, 0, 1, &
+       1, 0, 1, &
+       0, 1, 1, &
+       1, 1, 1/),(/3,8/))
+  !\
+  ! Inverse function
+  !/
+  integer, parameter :: iOrderFromShift_III(0:1,0:1, 0:1) = reshape((/&
+       1, 2, 3, 4, 5, 6, 7, 8/),(/2, 2, 2/))
+
+  !\
+  ! For test: arrays of the refinement levels to be passed to
+  ! find_test routine
+  !/
+  integer:: iLevelTest_I(8)
+
+  integer:: iSeed = 1
 contains
+  !\
+  !The random number generator.
+  !From the Buneman's code TRISTAN
+  !/
+  subroutine init_rand(iSeedIn)
+    integer,optional,intent(in)::iSeedIn
+    if(present(iSeedIn))then
+       iSeed=iSeedIn
+    else
+       iSeed=1
+    end if
+  end subroutine init_rand
+  !=====================
+  real function rand()
+    iSeed = iSeed*48828125
+    IF(iSeed < 0) iSeed=(iSeed+2147483647)+1
+    if(iSeed==0) iSeed=1
+    rand=FLOAT(iSeed)/2147483647
+  end function rand
   !========================================================================
   subroutine  interpolate_amr_grid1(&
        Xyz_D, XyzGrid_DI, iLevel_I,&
@@ -175,13 +320,13 @@ contains
     integer :: iOrder1_I(2)                  ! To call 1D interpolation
     integer :: iLevel1_I(2)
     !-------------
- 
+
     !\
     ! Make iLevel=0 for coarser grids and iLevel=1 for finer grids
     !/
     iLevelMin = minval(iLevel_I, MASK=iLevel_I/=BehindTheBoundary_)
     where(iLevel_I/=BehindTheBoundary_)iLevel_I = iLevel_I - iLevelMin
-    
+
     if(DoStencilFix) goto 100
     !\
     ! Check if the grid points are out of the grid boundary
@@ -644,7 +789,7 @@ contains
           !   F--F
           iOrder_I = (/2,3,1,4/)
 
-       end select   
+       end select
     end if
 
     !\
@@ -786,74 +931,6 @@ contains
     ! XyzStencil_D to be used to construct stencil, not to interpolate!
     !/
     real, intent(out) :: XyzStencil_D(nDim)
-
-    !Parameters to enumerate faces or face diagonal
-    integer, parameter:: Xy_ = 3, Xz_ = 2, Yz_ = 1
-
-    !Number of the vertex connected by 
-    !the edge of direction iDir (second index) 
-    !with the given vertex (first index)
-    integer, dimension(nGrid,nDim), parameter:: iEdge_ID = &
-         reshape((/&   !Number of the connected vertex
-         2 ,1, 4, 3, 6, 5, 8, 7,        & !Edge x
-         3, 4, 1, 2, 7, 8, 5, 6,        & !Edge y
-         5, 6, 7, 8, 1, 2, 3, 4         & !Edge z
-         /),(/nGrid,nDim/))
-
-    !Number of the vertex connected by 
-    !the face diagonal across the face of direction iDir (second index) 
-    !with the given vertex (first index)
-    integer, dimension(nGrid,nDim), parameter:: iFaceDiag_ID = &
-         reshape((/&   !Number of the connected vertex
-         7 ,8, 5, 6, 3, 4, 1, 2,        & !Face yz
-         6, 5, 8, 7, 2, 1, 4, 3,        & !Face xz
-         4, 3, 2, 1, 8, 7, 6, 5         & !Face xy
-         /),(/nGrid,nDim/))
-
-    !Number of the vertex connected by 
-    !the main diagonal with the given vertex (index)
-    integer, dimension(nGrid), parameter:: iMainDiag_I = &
-         (/ 8, 7, 6, 5, 4, 3, 2, 1 /)
-
-    !Vertexes (enumerated by the first undex), which form 
-    !the face of direction iDir (second index) including the 
-    !given vertex (the third index). 
-    !When the first index equals 1,2,3,4, the vertex, accordingly: 
-    !(1) coincides with the given one
-    !(2) is connected with the given one by the edge of direction iDir+1
-    !(3) is connected with the given one by the edge of direction iDir+2
-    !(4) is connected to the given one by the face diagonal of direction iDir
-    integer, dimension(nGrid/2,nDim,nGrid), parameter:: iFace_IDI = &
-         reshape((/&   ! yz face   ! xz face      ! xy face ! 
-         1, 3, 5, 7,   1, 5, 2, 6,   1, 2, 3, 4, & 
-         2, 4, 6, 8,   2, 6, 1, 5,   2, 1, 4, 3, &
-         3, 1, 7, 5,   3, 7, 4, 8,   3, 4, 1, 2, &
-         4, 2, 8, 6,   4, 8, 3, 7,   4, 3, 2, 1, &
-         5, 7, 1, 3,   5, 1, 6, 2,   5, 6, 7, 8, &
-         6, 8, 2, 4,   6, 2, 5, 1,   6, 5, 8, 7, &
-         7, 5, 3, 1,   7, 3, 8, 4,   7, 8, 5, 6, &
-         8, 6, 4, 2,   8, 4, 7, 3,   8, 7, 6, 5  &
-         /), (/nGrid/2,nDim,nGrid/))
-
-    !Vertexes (enumerated by the first undex), which form 
-    !the face of direction iDir (second index) and does not include the
-    !given vertex (the third index). 
-    !When the first index equals 1,2,3,4, the vertex, accordingly: 
-    !(1) is connected to the given one by the edge of direction iDir
-    !(2) is connected to (1) by the edge of direction iDir+1
-    !(3) is connected to (1) by the edge of direction iDir+2
-    !(4) is connected to  by the face diagonal of direction iDir
-    integer, dimension(nGrid/2,nDim,nGrid), parameter:: iOppositeFace_IDI = &
-         reshape((/&   ! yz face   ! xz face      ! xy face ! 
-         2, 4, 6, 8,   3, 7, 4, 8,   5, 6, 7, 8, & 
-         1, 3, 5, 7,   4, 8, 3, 7,   6, 5, 8, 7, &
-         4, 2, 8, 6,   1, 5, 2, 6,   7, 8, 5, 6, &
-         3, 1, 7, 5,   2, 6, 1, 5,   8, 7, 6, 5, &
-         6, 8, 2, 4,   7, 3, 8, 4,   1, 2, 3, 4, &
-         5, 7, 1, 3,   8, 4, 7, 3,   2, 1, 4, 3, &
-         8, 6, 4, 2,   5, 1, 6, 2,   3, 4, 1, 2, &
-         7, 5, 3, 1,   6, 2, 5, 1,   4, 3, 2, 1  &
-         /), (/nGrid/2,nDim,nGrid/))
 
     !\
     !Loop variables
@@ -1377,7 +1454,7 @@ contains
        !Find the fine grid
        iLoc = maxloc(iLevel_I,DIM=1)
        if(iLevel_I(iMainDiag_I(iLoc))==Fine_)then 
-          
+
           ! 4 cases   totally 83 left 172
 
           !Full traingulation of all faces, each coarse vertex is connected  
@@ -3107,7 +3184,7 @@ contains
   !grid points as
   !State_VGB(nVar,nI,nJ,nK,nBlock) array:
   !
-  !call interpolate_block_amr(&
+  !call interpolate_amr(&
   ! 3, Xyz_D, 4, (/4,4,4/) ...., nGridOut, Weight_I,iIndexes_II)
   ! if(nGridOut < 1) call CON_stop('Interpolation failed')
   ! Value_V(1:nVar) = 0
@@ -3184,39 +3261,69 @@ contains
     !/
     integer, intent(out):: iIndexes_II(0:nIndexes,2**nDim)
     integer, intent(out), optional:: iLevelOut_I(2**nDim)  !For diagnostics
-    
+
     !\
     ! Local variables
     !/
-    integer, dimension(2**nDim):: iOrderExtended_I, iOrder_I
+    !\
+    ! The output array in generate_basic_stencil routine
+    ! This is the set of numbers of the elements of the extended stencil
+    ! to be included into the basic stencil
+    !/
+    integer, dimension(2**nDim):: iOrderExtended_I
+    !\
+    ! The output array in interpolate_amr_grid2,3  routine
+    ! This is the set of numbers of the elements of the basic stencil
+    ! to be involved in interpolation
+    !/
+    integer, dimension(2**nDim):: iOrder_I
+    !\
+    ! Output parameter of interpolate_amr_grid2,3
+    ! If .true., the basic stencil should be re-evaluated
+    !/
     logical                    :: DoStencilFix
+    !\
+    ! Basic stencil; points:
+    !/
     real                       :: XyzGrid_DI(nDim,2**nDim)
+    !\
+    ! Basic stencil; refinement level in the grid points:
+    !/
+    integer                    :: iLevel_I(2**nDim)
+    !\
+    ! Coordinates of the input point may be recalculated within
+    ! routine; inverse of (/Dx, Dy, Dz/) is reused; if .true.
+    ! DoFixStencil the input coordinate to reevaluate the basic stencil
+    ! should be provided: 
+    !/
     real, dimension(nDim)      :: Xyz_D, DxyzInv_D, XyzStencil_D
-    
+
     !\
     ! Extended stencil, the generous estimate for its size is 2**(2*nDim) 
     !/
-    integer :: nExtendedStencil
     real, dimension(nDim,2**(2*nDim)) :: XyzExtended_DI 
-    integer :: iLevelExtended_I(2**(2*nDim)), iLevel_I(2**nDim)
+    integer :: iLevelExtended_I(2**(2*nDim))
     integer :: iIndexesExtended_II(0:nIndexes,2**(2*nDim))
+    integer :: nExtendedStencil
     !--------------------
     !\
-    ! Initialize arrays
+    ! Initialize output arrays
     !/
-    Xyz_D = XyzIn_D
 
-    XyzExtended_DI = 0
-    iLevelExtended_I = 0 
-    iIndexesExtended_II = 0
-    iOrder_I = 0
-    DxyzInv_D = 0
+    iOrder_I    = 0
     iIndexes_II = 0
-    Weight_I = 0 
+    Weight_I    = 0 
     if(present(iLevelOut_I))iLevelOut_I=0
 
+    Xyz_D = XyzIn_D
     call generate_extended_stencil
+
     if(nExtendedStencil < 2**nDim)then
+       !\
+       ! Failure in constructing the extended stencil
+       ! May occur if the input point is out of the
+       ! AMR grid.
+       !/
        nGridOut = -1
        RETURN
     end if
@@ -3225,11 +3332,10 @@ contains
          nDim, Xyz_D, nExtendedStencil,        &
          XyzExtended_DI(:,1:nExtendedStencil), &
          DxyzInv_D, iOrderExtended_I)
-    if(any(iOrderExtended_I < 1))then
-       nGridOut = -1
-       RETURN
-    end if
-       
+    if(any(iOrderExtended_I < 1))&
+         call CON_stop('Failure in constructing basic stencil') 
+
+
     XyzGrid_DI = XyzExtended_DI(:,iOrderExtended_I)
     iLevel_I = iLevelExtended_I(iOrderExtended_I)
 
@@ -3244,11 +3350,8 @@ contains
                nDim, XyzStencil_D, nExtendedStencil, &
                XyzExtended_DI(:,1:nExtendedStencil), &
                DxyzInv_D, iOrderExtended_I)
-          if(any(iOrderExtended_I < 1))then
-             nGridOut = -1
-             RETURN
-          end if
-          
+          if(any(iOrderExtended_I < 1))&
+               call CON_stop('Failure in constructing basic stencil') 
           XyzGrid_DI = XyzExtended_DI(&
                :,iOrderExtended_I)
           iLevel_I = iLevelExtended_I(iOrderExtended_I)
@@ -3257,8 +3360,8 @@ contains
                nGridOut, Weight_I, iOrder_I,&
                DoStencilFix, XyzStencil_D)
        end do
-       if(nGridOut < 1) call CON_stop(&
-            'Cannot interpolate AMR')
+       if(nGridOut < 1)&
+            call CON_stop('Failure in interpolate amr grid2') 
        iIndexes_II(:, 1:nGridOut) = &
             iIndexesExtended_II(:,iOrderExtended_I(&
             iOrder_I(1:nGridOut) ) )
@@ -3272,9 +3375,8 @@ contains
                nDim, Xyz_D, nExtendedStencil,        &
                XyzExtended_DI(:,1:nExtendedStencil), &
                DxyzInv_D, iOrderExtended_I)
-          if(any(iOrderExtended_I < 1))call CON_stop(&
-               'Cannot construct basic stencil')
-          
+          if(any(iOrderExtended_I < 1))&
+               call CON_stop('Failure in constructing basic stencil') 
           XyzGrid_DI = XyzExtended_DI(&
                :,iOrderExtended_I)
           iLevel_I = iLevelExtended_I(iOrderExtended_I)
@@ -3283,7 +3385,8 @@ contains
                nGridOut, Weight_I, iOrder_I,&
                DoStencilFix, XyzStencil_D)
        end do
-       if(nGridOut < 1) RETURN
+       if(nGridOut < 1)&
+            call CON_stop('Failure in interpolate amr grid2') 
        iIndexes_II(:, 1:nGridOut) = &
             iIndexesExtended_II(:,iOrderExtended_I(&
             iOrder_I(1:nGridOut)))
@@ -3293,8 +3396,9 @@ contains
     if(present(iLevelOut_I))iLevelOut_I = iLevel_I
   contains
     subroutine generate_extended_stencil
+      use ModKind, ONLY: nByteReal
       !\
-      !This routine separates grid points which in principle 
+      !This routine extracts the grid points which in principle 
       !can be involved into interpolation
       !/
       !\
@@ -3302,73 +3406,289 @@ contains
       !/
       real       :: XyzGrid_DII(nDim,0:2**nDim,2**nDim)
       integer, dimension(2**nDim):: iBlock_I  , iProc_I 
-      integer, dimension(2**nDim):: nSubGrid_I, iLevelSubgrid_I
       integer                   :: iCellIndexes_DII(nDim,2**nDim,2**nDim)
-      logical        :: IsOut_I(2**nDim)
-      
+      integer, dimension(2**nDim):: nSubGrid_I, iLevelSubgrid_I
+
+
+      integer:: nGrid !Just 2**nDim
+
       !\
       ! Loop variables
       !/
-      integer:: iGrid, iSubgrid, nGrid
+      integer:: iGrid, iSubgrid 
+
+      !\
+      ! To evaluate grid points not belonging to the basic block
+      !/
+      integer:: iGridStored, iGridCheck
 
       !\
       ! For using find routine with inout argument
       !/
       real  :: XyzMisc_D(nDim), XyzStored_D(nDim)
-      
+
       !\
       ! Output parameters of find routine
       !/
-      real  :: XyzCorner_D(nDim), Dxyz_D(nDim)
+      real    :: XyzCorner_D(nDim), Dxyz_D(nDim)
       logical :: IsOut
       !\
-      ! Shift of the iGrid point in the stencil with respect to the
-      ! first one
+      !Displacement measured in grid sizes or in their halfs
+      !/ 
+      integer, dimension(nDim) :: iShift_D
+
+
+      !\
+      ! To inprove the algorithm stability against roundoff errors
       !/
-      integer, dimension(3,8),parameter :: iShift_DI = reshape((/&
-           0, 0, 0, &
-           1, 0, 0, &
-           0, 1, 0, &
-           1, 1, 0, &
-           0, 0, 1, &
-           1, 0, 1, &
-           0, 1, 1, &
-           1, 1, 1/),(/3,8/))
-      
+      real, parameter:: cTol = 0.00000010
       !------------------------
-      nGrid = 2**nDim
-      XyzGrid_DII = 0
-      iCellIndexes_DII = 0
-      XyzStored_D = Xyz_D
+      nGrid = 2**nDim !Number of points in a basic stencil
+      !\
+      ! Initialize arrays
+      !/
+
       call find(nDim, Xyz_D, &
-            iProc_I(1), iBlock_I(1),XyzCorner_D, Dxyz_D, IsOut)
+           iProc_I(1), iBlock_I(1),XyzCorner_D, Dxyz_D, IsOut)
       if(IsOut)then
+         !\
+         ! The algorithm cannot hanldle point out of the computation
+         ! domain. It could, but in this case too much information
+         ! about grid should be brought to the table - the domain size,
+         ! periodicity etc
+         !/
          nExtendedStencil = -1
          RETURN
       end if
-      DxyzInv_D = 1/Dxyz_D
+      !\
+      ! Now Xyz_D is calculated with respect to the block corner
+      !/
+      !\
+      ! Initialize iLevelSubgrid_I as all coarser, to enter the loop
       iLevelSubgrid_I = -1
+
       COARSEN:do while(any(iLevelSubgrid_I < 0) )
          !This loop works more than once if the stencil includes
-         !blocks which are coarser than the first one found. In this case
-         !the coarser block is used as the base for a coraser stencil
-         
-         !Xyz_D=XyzStored_D-xyz_block_d(&
-         !     GridDescriptor%DD%Ptr,lGlobalTreeNode)
-         
-         XyzMisc_D = Xyz_D*DxyzInv_D + cHalf
+         !blocks which are coarser than the first one found. In this 
+         !case the coarser block is used as the base for a stencil
+
+         iLevelSubgrid_I = Coarse_
+         nSubGrid_I      = 1
+
+         iCellIndexes_DII = 0
+         XyzGrid_DII      = 0
+
+         DxyzInv_D = 1/Dxyz_D
+         XyzStored_D = XyzCorner_D
+
+         XyzMisc_D = Xyz_D*DxyzInv_D + 0.50
+
          iCellIndexes_DII(:,1,1) = floor(XyzMisc_D)
+
+         !\
+         !Calculate coordinates of the left corner of a stencil
+         !/
+         XyzGrid_DII(:,0,1) = Dxyz_D*(iCellIndexes_DII(:,1,1) - 0.50)
+
+         XyzMisc_D = XyzMisc_D - iCellIndexes_DII(:,1,1)
          !\ 
-         !XyzMisc_D - iCell_DII(:,1,1) satisfies the inequalities as    
-         !follows:it is >= 0 and < 1. 
-         
+         ! now XyzMisc_D = (Xyz_D-XyzGrid_DII(:,0,1))/Dxyz satisfies 
+         ! inequalities: XyzMisc_D >= 0 and XyzMisc_D < 1. Strengthen 
+         ! these inequalities making them to have a gap of cTol, if the
+         ! code is compiled with a single precision, the gap of 
+         ! cTol**2 otherwise:
+         !/
+         XyzMisc_D = min(1 - cTol**(nByteReal/4),&
+              max(XyzMisc_D, cTol**(nByteReal/4) ))
+         Xyz_D = XyzGrid_DII(:,0,1) + XyzMisc_D*Dxyz_D
+
+         !Calculate other grid points, check if all points belong to 
+         !the found block
+
+         iGridCheck = -1
+         do iGrid = nGrid,2,-1
+            iShift_D = iShift_DI(1:nDim,iGrid)
+            iBlock_I(iGrid) = iBlock_I(1)
+            iCellIndexes_DII(:,1,iGrid) = &
+                 iCellIndexes_DII(:,1,1) + iShift_D
+            XyzGrid_DII(:,0,iGrid) = &
+                 XyzGrid_DII(:,0,1) + iShift_D*Dxyz_D
+            if(any(iCellIndexes_DII(:,1,iGrid) < 1).or.&
+                 any(iCellIndexes_DII(:,1,iGrid) > nCell_D))then
+               !This grid point is out of block, mark it
+               iProc_I(iGrid) = -1 
+               if(iGridCheck==-1)iGridCheck = iGrid
+            else
+               iProc_I(iGrid) = iProc_I(1)
+            end if
+         end do
+         if(any(iCellIndexes_DII(:,1,1) < 1).or.&
+              any(iCellIndexes_DII(:,1,1) > nCell_D))then
+            !This grid point is out of block, mark it
+            iProc_I(iGrid) = -1 
+            if(iGridCheck==-1)iGridCheck = 1
+         end if
+         iGridStored = iGridCheck
+         NEIBLOCK:do while(iGridStored > -1)
+            !\
+            !Recalculate absolute coordinates for
+            !the grid point which is out of the block
+            !/
+            XyzMisc_D = XyzStored_D + XyzGrid_DII(:,0,iGridStored)
+            !\
+            ! Find neighboring block
+            !/
+            call find(nDim, XyzMisc_D, &
+                 iProc_I(iGridStored), iBlock_I(iGridStored), &
+                 XyzCorner_D, Dxyz_D, IsOut)
+            if(IsOut)then
+               iLevelSubGrid_I(iGridStored) = BehindTheBoundary_
+               XyzGrid_DII(:,1,iGridStored) = XyzGrid_DII(:,1,iGridStored)
+               !\
+               ! Find the next out-of-block point
+               !/
+               do iGrid = iGridStored - 1, 1, -1
+                  if(iProc_I(iGrid)==-1)then
+                     iGridStored = iGrid
+                     CYCLE NEIBLOCK
+                  end if
+               end do
+               EXIT NEIBLOCK
+            end if
+            iLevelSubgrid_I(iGridStored) = &
+                 -int(2*(Dxyz_D(1)*DXyzInv_D(1)) - 3 + cTol)
+            !\                    ^
+            !For expression above | equal to 2 , 1, 0.5 correspondingly
+            ! iLevel = -1, 0, Fine_, meaning that the neighboring block
+            ! is coarser, at the same resolution or finer than the basic 
+            ! one.
+            !/
+            select case(iLevelSubgrid_I(iGridStored))
+            case(-1)
+               !The neighboring block is coarser and should be used as the 
+               !stencil base. Now Xyz_D and XyzGrid_DII(:,0,iGridStored) are
+               !defined with respect to the original block, the last point
+               !in the coarser neighboring block has a coordinates XyzMisc_D
+               !So that
+               Xyz_D = Xyz_D - XyzGrid_DII(:,0,iGridStored) + XyzMisc_D
+               !\
+               ! Return to the beginning of algorithm
+               !/
+               CYCLE COARSEN
+            case(0)  ! (New Dxyz_D)*Stored DXyzInv =1
+               XyzGrid_DII(:,1,iGridStored) = XyzGrid_DII(:,0,iGridStored)
+               !\
+               ! Calculate cell indexes as we did before. Use nint
+               ! instead of int as long as XyzMisc_D is very close to 
+               ! the grid point 
+               !/
+               iCellIndexes_DII(:,1,iGridStored) = &
+                    nint(XyzMisc_D*DxyzInv_D + 0.50)
+               !\
+               ! A single point in the subgrid
+               !/
+               nSubGrid_I(iGridStored) = 1
+               iLevelSubGrid_I(iGridStored) = 0
+               !\
+               ! Check if there are more grid points belonging to the
+               ! newly found block
+               !/
+               iGridCheck = -1
+               do iGrid = iGridStored -1, 1, -1
+                  if(iProc_I(iGrid)/=-1)CYCLE !This point is done earlier
+                  iCellIndexes_DII(:,1,iGrid) = &
+                       iCellIndexes_DII(:,1,iGridStored) +&
+                       iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridStored)
+                  if(any(iCellIndexes_DII(:,1,iGrid) < 1).or.&
+                       any(iCellIndexes_DII(:,1,iGrid) > nCell_D))then
+                     !\
+                     !This grid point is out of block
+                     !/
+                     if(iGridCheck==-1)iGridCheck = iGrid
+                  else
+                     iProc_I(iGrid ) = iProc_I( iGridStored)
+                     iBlock_I(iGrid) = iBlock_I(iGridStored)
+                     XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid)
+                     nSubGrid_I(iGridStored) = 1
+                     iLevelSubGrid_I(iGridStored) = 0
+                  end if
+               end do
+            case(Fine_  )  !1, (New Dxyz_D)*Stored DXyzInv =0.5
+               !
+               ! Fine subgrid is displaced by half of finer subgrid size
+               !
+               XyzGrid_DII(:,1,iGridStored) = XyzGrid_DII(:,0,iGridStored) -&
+                    0.50*Dxyz_D
+
+               !\
+               ! Calculate cell indexes as we did above. Note that DxyzInv_D
+               ! is twice less than needed, because it is calculated for the
+               ! whole stencil, not for the finer subgrid
+               !/
+               iCellIndexes_DII(:,1,iGridStored) = &
+                    floor(2*XyzMisc_D*DxyzInv_D + 0.50)
+               !\
+               ! All points in the 2*2*2 finer subgrid are involved
+               !/
+               nSubGrid_I(iGridStored) = nGrid
+               iLevelSubGrid_I(iGridStored) = Fine_
+               do iSubGrid = 2, nGrid
+                  XyzGrid_DII(:,iSubGrid,iGridStored) = &
+                       XyzGrid_DII(:,1,iGridStored) + &
+                       Dxyz_D*iShift_DI(1:nDim,iSubGrid)
+                  iCellIndexes_DII(:,iSubGrid,iGridStored) = &
+                       iCellIndexes_DII(:,1,iGridStored) + &
+                       iShift_DI(1:nDim,iSubGrid)
+               end do
+               !\
+               ! Check if there are more grid points belonging to the
+               ! newly found block
+               !/
+               iGridCheck = -1
+               do iGrid = iGridStored -1, 1, -1
+                  if(iProc_I(iGrid)/=-1)CYCLE
+                  iCellIndexes_DII(:,1,iGrid) = &
+                       iCellIndexes_DII(:,1,iGridStored) + 2*(&
+                       iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridStored))
+                  if(any(iCellIndexes_DII(:,1,iGrid) < 1).or.&
+                       any(iCellIndexes_DII(:,1,iGrid) > nCell_D))then
+                     !\
+                     !This grid point is out of block
+                     !/
+                     if(iGridCheck==-1)iGridCheck = iGrid
+                  else
+                     iProc_I(iGrid ) = iProc_I( iGridStored)
+                     iBlock_I(iGrid) = iBlock_I(iGridStored)
+                     XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid) -&
+                          0.50*Dxyz_D
+                     nSubGrid_I(iGridStored) = nGrid
+                     iLevelSubGrid_I(iGridStored) = Fine_
+                     do iSubGrid = 2, nGrid
+                        XyzGrid_DII(:,iSubGrid,iGrid) = &
+                             XyzGrid_DII(:,1,iGrid) + &
+                             Dxyz_D*iShift_DI(1:nDim,iSubGrid)
+                        iCellIndexes_DII(:,iSubGrid,iGrid) = &
+                             iCellIndexes_DII(:,1,iGrid) + &
+                             iShift_DI(1:nDim,iSubGrid)
+                     end do
+                  end if
+               end do
+            end select
+            iGridStored = iGridCheck
+         end do NEIBLOCK
       end do COARSEN
-      
+      !\
+      ! Handle points behind the boundary
+      !/
+
       !\
       ! Finalize: calculate all arrays for extended stencil
       ! in the upper routine:
       !/
-      nExtendedStencil = 0
+      nExtendedStencil    = 0
+      XyzExtended_DI      = 0
+      iIndexesExtended_II = 0
+      iLevelExtended_I    = 0
       do iGrid = 1, nDim
          do iSubgrid = 1, nSubgrid_I(iGrid)
             nExtendedStencil = nExtendedStencil + 1
@@ -3406,20 +3726,6 @@ contains
     !/
     integer,    intent(out):: iOrderExtended_I(2**nDim)
 
-    !\
-    ! Arrays of logical values Xyz_D < XyzGrid_DI(:,iGrid) for iGrid'th grid
-    ! point of the basic stencil for point Xyz
-    !/
-    logical, parameter:: IsBelow_DI(3,8)=reshape((/&
-         .false., .false., .false., &
-         .true. , .false., .false., &
-         .false., .true. , .false., &
-         .true. , .true. , .false., &
-         .false., .false., .true. , &
-         .true. , .false., .true. , &
-         .false., .true. , .true. , &
-         .true. , .true. , .true. /)&
-         , (/3,8/) )
     integer:: iGrid, nGrid, iPoint !Loop variables
     logical:: IsMask_I(nExtendedStencil) 
     logical:: IsBelowExtended_DI(nDim,nExtendedStencil)
@@ -3452,7 +3758,7 @@ contains
              ! the basic stencil
              !/
              IsMask_I(iPoint) = all(&
-               IsBelowExtended_DI(:,iPoint).eqv.IsBelow_DI(1:nDim,iGrid))
+                  IsBelowExtended_DI(:,iPoint).eqv.IsBelow_DI(1:nDim,iGrid))
           end do
           !\
           !Among the candidates chose the closest one
@@ -3463,26 +3769,6 @@ contains
   end subroutine generate_basic_stencil
   !===========================TESTS============================================
   subroutine test_interpolate_amr_grid
-    integer:: iSeed
-  contains
-    !\
-    !The random number generator.
-    !From the Buneman's code TRISTAN
-    !/
-    subroutine init_rand(iSeedIn)
-      integer,optional,intent(in)::iSeedIn
-      if(present(iSeedIn))then
-         iSeed=iSeedIn
-      else
-         iSeed=1
-      end if
-    end subroutine init_rand
-    !=====================
-    real function rand()
-      iSeed = iSeed*48828125
-      IF(iSeed < 0) iSeed=(iSeed+2147483647)+1
-      if(iSeed==0) iSeed=1
-      RAND=FLOAT(iSeed)/2147483647
-    end function rand
+
   end subroutine test_interpolate_amr_grid
 end module ModInterpolateAMRGrid

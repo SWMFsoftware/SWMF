@@ -23,6 +23,7 @@ MODULES = \
 	ModFreq.o\
 	ModInitialState.o\
 	ModInterpolate.o\
+	ModInterpolateAMRGrid.o\
         ModInterGen.o\
         ModInterWrapper.o\
 	ModIoUnit.o\
