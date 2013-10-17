@@ -460,6 +460,12 @@ Sokolov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
+The following minimum pressure is sufficiently small even when the
+domain extends to 400 Rsun, i.e. including Mars orbit.
+It might be important to prevent code crashing due to CMEs with strong shocks.
+#MINIMUMPRESSURE
+1E-14			pMinDim
+
 #NONCONSERVATIVE
 T			UseNonConservative
 
