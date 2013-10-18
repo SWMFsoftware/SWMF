@@ -1505,11 +1505,22 @@ contains
                 iOrder_I(1:4) = iFace_IDI(:,iDir,iLoc)
                 iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iLoc)
                 !
-                !    7C     8C 
-                !  5C     6C     
+                !       ^
+                !iDir-axis
+                !       |  7C---------8C
+                !       | /|         /|
+                !       |/ |        / |
+                !       5C---------6C |
+                !       |  |   _   |  |
+                !       |  |   /|1+mod(iDir+1,3) axis
+                !       |  |  /    |  |
+                !       |  | /     |  |
+                !       |  |/      |  |
+                !       |  3C---------4F
+                !       | /        | /
+                !       |/         |/
+                !       1F---------2C-----> 1+mod(iDir,3)-axis
                 !
-                !    3C     4F
-                !  1F     2C
                 !
                 ! 1 Remove tetrahedra 1F 4F 2C 6C and 1F 4F 3C 7C
                 call pyramids(&
@@ -1603,12 +1614,22 @@ contains
              if(iLevel_I(iFaceDiag_ID(iLoc, iDir))==Coarse_)then
                 iOrder_I(1:4) = iFace_IDI(:,iDir,iLoc)
                 iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iLoc)
+                !       ^
+                !iDir-axis
+                !       |  7F---------8F
+                !       | /|         /|
+                !       |/ |        / |
+                !       5F---------6F |
+                !       |  |   _   |  |
+                !       |  |   /|1+mod(iDir+1,3) axis
+                !       |  |  /    |  |
+                !       |  | /     |  |
+                !       |  |/      |  |
+                !       |  3F---------4C
+                !       | /        | /
+                !       |/         |/
+                !       1C---------2F-----> 1+mod(iDir,3)-axis
                 !
-                !    7F     8F 
-                !  5F     6F     
-                !
-                !    3F     4C
-                !  1C     2F
                 !
                 ! 1 Remove tetrahedra 1C 2F 3F 5F and 4C 2F 3F 8F
                 call pyramids(&
@@ -1652,15 +1673,30 @@ contains
                    if(iLevel_I(iFaceDiag_ID(iGrid, iDir))==Fine_)then
                       iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
                       iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
+                      !       ^
+                      !iDir-axis
+                      !       |  7C---------8F
+                      !       | /|         /|
+                      !       |/ |        / |
+                      !       5C---------6C |
+                      !       |  |   _   |  |
+                      !       |  |   /|1+mod(iDir+1,3) axis
+                      !       |  |  /    |  |
+                      !       |  | /     |  |
+                      !       |  |/      |  |
+                      !       |  3C---------4F
+                      !       | /        | /
+                      !       |/         |/
+                      !       1F---------2C-----> 1+mod(iDir,3)-axis
                       !
-                      !                                  F4 F8
-                      !\       C7   F8        Trapezoid: C3 C7       
-                      !     C5   C6           
-                      !                       Trapezoid: F4 F8
-                      !        C3   F4                   C2 C6
-                      !     F1   C2        F1 is apex of trapezoidal pyramids 
-                      !                    Tetrahedra left F1C5F8C6 + F1C5F8C7
-                      !/
+                      !                    F4 F8
+                      !         Trapezoid: C3 C7
+                      !                
+                      !         Trapezoid: F4 F8
+                      !                    C2 C6
+                      !     F1 is apex of trapezoidal pyramids 
+                      !     Tetrahedra left F1C5F8C6 + F1C5F8C7
+
                       call pyramids(&
                            iTetrahedron1_I=(/&
                            iOrder_I(1),iOrder_I(5),iOrder_I(8),iOrder_I(6)/),&
@@ -1687,14 +1723,28 @@ contains
                       iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
                       iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
                       !
-                      !                                  F1 F3
-                      !\       C7   C8        Trapezoid: C5 C7       
-                      !     C5   C6           
-                      !                       Trapezoid: F1 F2
-                      !        F3   C4                   C5 C6
-                      !     F1   F2            
-                      !/
-                      !=============
+                      !       ^
+                      !iDir-axis
+                      !       |  7C---------8C
+                      !       | /|         /|
+                      !       |/ |        / |
+                      !       5C---------6C |
+                      !       |  |   _   |  |
+                      !       |  |   /|1+mod(iDir+1,3) axis
+                      !       |  |  /    |  |
+                      !       |  | /     |  |
+                      !       |  |/      |  |
+                      !       |  3F---------4C
+                      !       | /        | /
+                      !       |/         |/
+                      !       1F---------2F-----> 1+mod(iDir,3)-axis
+                      !
+                      !                  F1 F3
+                      !       Trapezoid: C5 C7       
+                      !               
+                      !       Trapezoid: F1 F2
+                      !                  C5 C6
+                                  
                       call pyramids(&
                            iTetrahedron1_I=&
                            (/iOrder_I(2),iOrder_I(3),iOrder_I(8),iOrder_I(4)/))
@@ -1741,14 +1791,30 @@ contains
                       iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
                       iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
                       !
-                      !                                  F3 F7
-                      !\       F7   C8        Trapezoid: C4 C8       
-                      !     F5   F6           
-                      !                       Trapezoid: F2 F6
-                      !        F3   C4                   C4 C8
-                      !     C1   F2            
-                      !/
-                      !=============
+                      !       ^
+                      !iDir-axis
+                      !       |  7F---------8C
+                      !       | /|         /|
+                      !       |/ |        / |
+                      !       5F---------6F |
+                      !       |  |   _   |  |
+                      !       |  |   /|1+mod(iDir+1,3) axis
+                      !       |  |  /    |  |
+                      !       |  | /     |  |
+                      !       |  |/      |  |
+                      !       |  3F---------4C
+                      !       | /        | /
+                      !       |/         |/
+                      !       1C---------2F-----> 1+mod(iDir,3)-axis
+                      !
+                      !
+                      !                  F3 F7
+                      !       Trapezoid: C4 C8       
+                      !         
+                      !       Trapezoid: F2 F6
+                      !                  C4 C8
+                      !                
+                      !
                       call pyramids(&
                            iTetrahedron1_I=(/&
                            iOrder_I(1),iOrder_I(2),iOrder_I(3),iOrder_I(5)/),&
@@ -1837,14 +1903,30 @@ contains
                 if(all(iLevel_I(iFace_IDI(1:3, iDir, iGrid))==Coarse_))then
                    iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
                    iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
-
                    !
-                   !                                  F5 F7
-                   !\       F7   F8        Trapezoid: C1 C3       
-                   !     F5   F6           
-                   !                       Trapezoid: F5 F6
-                   !        C3   F4                   C1 C2
-                   !     C1   C2           Rectangle: F5 F6 F7 F8
+                   !       ^
+                   !iDir-axis
+                   !       |  7F---------8F
+                   !       | /|         /|
+                   !       |/ |        / |
+                   !       5F---------6F |
+                   !       |  |   _   |  |
+                   !       |  |   /|1+mod(iDir+1,3) axis
+                   !       |  |  /    |  |
+                   !       |  | /     |  |
+                   !       |  |/      |  |
+                   !       |  3C---------4F
+                   !       | /        | /
+                   !       |/         |/
+                   !       1C---------2C-----> 1+mod(iDir,3)-axis
+                   !
+                   !
+                   !            F5 F7
+                   ! Trapezoid: C1 C3       
+                   !           
+                   ! Trapezoid: F5 F6
+                   !            C1 C2
+                   ! Rectangle: F5 F6 F7 F8
                    !/               
                    !    Common apex F4
                    call pyramids(&
@@ -1879,15 +1961,31 @@ contains
                    ! face 5:8 has three Coarse points iOrder((/6,7,8/))
                    !/
                    !-----------------------------------------------
-                   !                                            F2 F4
-                   !                  C7    C8        Trapezoid C6 C8
-                   !                                           
-                   !                F5    C6
-                   !                                            F3 F4
-                   !                                  Trapezoid C7 C8
-                   !                  F3    F4                 
                    !
-                   !                C1    F2
+                   !       ^
+                   !iDir-axis
+                   !       |  7C---------8C
+                   !       | /|         /|
+                   !       |/ |        / |
+                   !       5F---------6C |
+                   !       |  |   _   |  |
+                   !       |  |   /|1+mod(iDir+1,3) axis
+                   !       |  |  /    |  |
+                   !       |  | /     |  |
+                   !       |  |/      |  |
+                   !       |  3F---------4F
+                   !       | /        | /
+                   !       |/         |/
+                   !       1C---------2F-----> 1+mod(iDir,3)-axis
+                   !
+                   !                F2 F4
+                   !      Trapezoid C6 C8
+                   !                                           
+                   !         
+                   !                F3 F4
+                   !      Trapezoid C7 C8
+                   !                
+                   !
                    !Common apex F5
                    call pyramids(&
                         iTrapezoidal1_I=&
@@ -1917,15 +2015,30 @@ contains
                    !orthogonal edges
                    !/
                    !-----------------------------------------------
-                   !                                            F6 F8
-                   !                  C7    F8        Trapezoid C5 C7
-                   !                                           
-                   !                C5    F6
-                   !                                            F3 F4
-                   !                                  Trapezoid C1 C2
-                   !                  F3    F4                 
                    !
-                   !                C1    C2
+                   !       ^
+                   !iDir-axis
+                   !       |  C7---------8F
+                   !       | /|         /|
+                   !       |/ |        / |
+                   !       5C---------6F |
+                   !       |  |   _   |  |
+                   !       |  |   /|1+mod(iDir+1,3) axis
+                   !       |  |  /    |  |
+                   !       |  | /     |  |
+                   !       |  |/      |  |
+                   !       |  3F---------4F
+                   !       | /        | /
+                   !       |/         |/
+                   !       1C---------2C-----> 1+mod(iDir,3)-axis
+                   !
+                   !                  F6 F8
+                   !        Trapezoid C5 C7
+                   !                                           
+                   !      
+                   !                  F3 F4
+                   !        Trapezoid C1 C2                
+                   !
                    call pyramids(&
                         iTrapezoidal1_I=&
                         (/iOrder_I(1),iOrder_I(2),iOrder_I(3),iOrder_I(4),&
@@ -3169,7 +3282,6 @@ contains
   end subroutine interpolate_amr_grid3
   !============================================================================
   !Interpolation on the block AMR grid
-
   !\
   !Calculates interpolation weights
   !/
@@ -3223,8 +3335,8 @@ contains
          implicit none
          integer, intent(in) :: nDim
          !\
-         ! In the coordinates of the point, out the coordinates of the
-         ! block with respect to the block corner. In the most cases
+         ! "In"- the coordinates of the point, "out" the coordinates of the
+         ! point with respect to the block corner. In the most cases
          ! XyzOut_D = XyzIn_D - XyzCorner_D, the important distinction,
          ! however, is the periodic boundary, near which the jump in the
          ! stencil coordinates might occur. To handle the latter problem,
@@ -3366,9 +3478,6 @@ contains
        end do
        if(nGridOut < 1)&
             call CON_stop('Failure in interpolate amr grid2') 
-       iIndexes_II(:, 1:nGridOut) = &
-            iIndexesExtended_II(:,iOrderExtended_I(&
-            iOrder_I(1:nGridOut) ) )
     case(3)
        call interpolate_amr_grid3(&
             Xyz_D , XyzGrid_DI, iLevel_I, &
@@ -3390,13 +3499,13 @@ contains
                DoStencilFix, XyzStencil_D)
        end do
        if(nGridOut < 1)&
-            call CON_stop('Failure in interpolate amr grid2') 
-       iIndexes_II(:, 1:nGridOut) = &
-            iIndexesExtended_II(:,iOrderExtended_I(&
-            iOrder_I(1:nGridOut)))
+            call CON_stop('Failure in interpolate amr grid3') 
     case default
        call CON_stop('Only 2D and 3D AMR grids are implemented')
     end select
+    iIndexes_II(:, 1:nGridOut) = &
+         iIndexesExtended_II(:,iOrderExtended_I(&
+         iOrder_I(1:nGridOut)))
     if(present(iLevelOut_I))iLevelOut_I = iLevel_I
   contains
     subroutine generate_extended_stencil
@@ -3440,14 +3549,14 @@ contains
       !------------------------
 
       nGrid = 2**nDim !Number of points in a basic stencil
-      
+
       !\
       ! Find block to which the point belong
       !/
       call find(nDim, Xyz_D, &
            iProc_I(1), iBlock_I(1),XyzCorner_D, Dxyz_D, IsOut)
       !\
-      ! Now Xyz_D is calculated with respect to the block corner
+      ! Now Xyz_D is given  with respect to the block corner
       !/
       if(IsOut)then
          !\
@@ -3459,7 +3568,7 @@ contains
          nExtendedStencil = -1
          RETURN
       end if
- 
+
       !\
       ! Initialize iLevelSubgrid_I as all coarser, to enter the loop
       !/
@@ -3481,7 +3590,17 @@ contains
          XyzStored_D = XyzCorner_D
 
          XyzMisc_D = Xyz_D*DxyzInv_D + 0.50
-
+         !
+         !       y ^
+         !         |    i,j+1         i+1,j+1
+         !         |     +              +
+         !         |          o (x,y)           (x,y,z)= [(x,y,z)-
+         !         |     +<------dx---->+        -(x_ijk,y_ijk,z_ijk)]
+         !         |  x_ij=(i-0.5)dx   i+1,j    +(dx,dy,dz)(i,j,k)-0.5*
+         !         |  y_ij=(j-0.5)dy             (dx,dy,dz)
+         !         |----------------------------->
+         !       block           x
+         !       corner, xyz=0
          iCellIndexes_DII(:,1,1) = floor(XyzMisc_D)
 
          !\
@@ -3500,10 +3619,10 @@ contains
          XyzMisc_D = min(1 - cTol**(nByteReal/4),&
               max(XyzMisc_D, cTol**(nByteReal/4) ))
          Xyz_D = XyzGrid_DII(:,0,1) + XyzMisc_D*Dxyz_D
-
+         !\
          !Calculate other grid points, check if all points belong to 
          !the found block
-
+         !/
          iGridCheck = -1
          do iGrid = nGrid,1,-1
             iShift_D = iShift_DI(1:nDim,iGrid)
@@ -3526,13 +3645,12 @@ contains
                iProc_I(iGrid) = iProc_I(1)
             end if
          end do
-        
+
          iGridStored = iGridCheck
          !\
          ! For the grid points not belonging to the block
          ! find the block they belong to
          !/ 
-        
          NEIBLOCK:do while(iGridStored/= -1)
             !\
             !Recalculate absolute coordinates for
@@ -3549,6 +3667,7 @@ contains
                iProc_I(iGridStored) = 0 !For not processing this point again
                iLevelSubGrid_I(iGridStored) = BehindTheBoundary_
                XyzGrid_DII(:,1,iGridStored) = XyzGrid_DII(:,0,iGridStored)
+               nSubGrid_I(iGridStored)      =1
                !\
                ! Find the next out-of-block point
                !/
@@ -3562,7 +3681,7 @@ contains
             end if
             iLevelSubgrid_I(iGridStored) = &
                  -int(2*(Dxyz_D(1)*DXyzInv_D(1)) - 3 + cTol)
-            !\                    ^
+            !\                     ^
             ! For expression above | equal to 2 , 1, 0.5 correspondingly
             ! iLevel = -1, 0, Fine_, meaning that the neighboring block
             ! is coarser, at the same resolution or finer than the basic 
@@ -3678,12 +3797,13 @@ contains
                      nSubGrid_I(iGrid)      = nGrid
                      iLevelSubGrid_I(iGrid) = Fine_
                      do iSubGrid = 2, nGrid
+                        iShift_D = iShift_DI(1:nDim,iSubGrid)
                         XyzGrid_DII(:,iSubGrid,iGrid) = &
                              XyzGrid_DII(:,1,iGrid) + &
-                             Dxyz_D*iShift_DI(1:nDim,iSubGrid)
+                             Dxyz_D*iShift_D
                         iCellIndexes_DII(:,iSubGrid,iGrid) = &
                              iCellIndexes_DII(:,1,iGrid) + &
-                             iShift_DI(1:nDim,iSubGrid)
+                             iShift_D
                      end do
                   end if
                end do
@@ -3705,7 +3825,7 @@ contains
          !\
          ! One of the faces is fully out of the domain
          !/
-         
+
          !\
          !Find point in the domain
          !/
@@ -3726,7 +3846,7 @@ contains
          end do
       case(2)
          ! Analogous to the previos case, but nDim = 2 
-         
+
          !\
          !Check if the points behind the boundary are 1,2 or 1,3
          !/
@@ -3786,7 +3906,7 @@ contains
             end if
          end do
       end select
-      
+
       !\
       ! Finalize: calculate all arrays for extended stencil
       ! in the upper routine:
@@ -3810,22 +3930,22 @@ contains
          end do
       end do
     end subroutine generate_extended_stencil
-      !\
-      ! Used to prolong grid behind the boundary
-      !/
-      subroutine prolong(iGridPhys, iGridGhost)          
-        integer, intent(in) :: iGridPhys, iGridGhost
-        !Loop variable
-        integer :: iSubGrid
-        !--------------------
-        nSubGrid_I(iGridGhost) = nSubGrid_I(iGridPhys)
-        do iSubGrid = 1, nSubGrid_I(iGridGhost)
-           XyzGrid_DII(:,iSubGrid,iGridGhost) = &
-                XyzGrid_DII(:,iSubGrid,iGridPhys) +&
-                XyzGrid_DII(:,0,iGridGhost)       -&
-                XyzGrid_DII(:,0,iGridPhys )
-        end do
-      end subroutine prolong
+    !\
+    ! Used to prolong grid behind the boundary
+    !/
+    subroutine prolong(iGridPhys, iGridGhost)          
+      integer, intent(in) :: iGridPhys, iGridGhost
+      !Loop variable
+      integer :: iSubGrid
+      !--------------------
+      nSubGrid_I(iGridGhost) = nSubGrid_I(iGridPhys)
+      do iSubGrid = 1, nSubGrid_I(iGridGhost)
+         XyzGrid_DII(:,iSubGrid,iGridGhost) = &
+              XyzGrid_DII(:,iSubGrid,iGridPhys) +&
+              XyzGrid_DII(:,0,iGridGhost)       -&
+              XyzGrid_DII(:,0,iGridPhys )
+      end do
+    end subroutine prolong
   end subroutine interpolate_block_amr
   !=======================================================================
   subroutine generate_basic_stencil(&
