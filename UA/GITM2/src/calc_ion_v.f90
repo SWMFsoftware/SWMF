@@ -1,5 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 subroutine calc_ion_v(iBlock)
 
   use ModGITM
@@ -18,7 +19,7 @@ subroutine calc_ion_v(iBlock)
                   VIParallel, VNParallel, gDotB, gpDotB, UDotB
 
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) ::           &
-                  PressureGradient, Force, BLocal, &
+                  Force, BLocal, & ! AGB: moved PressureGradient to ModGitm
                   ForceCrossB, ForcePerp
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2):: Pressure_G
