@@ -2,11 +2,12 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program test_interpolate_amr
 
-  use ModInterpolateAMRGrid, test => test_interpolate_amr_grid
+  use ModInterpolateAMRGrid, test => test_interpolate_amr
 
   implicit none
 
-  call test
+  call test(2,10000)
+  call test(3,10000)
 
 end program test_interpolate_amr
 

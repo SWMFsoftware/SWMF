@@ -234,11 +234,12 @@ test_interpolate:
 	@ls -l test_interpolate.diff
 #######################################################################
 OBJ_INTERPOLATE_AMR = \
-	test_interpolate_amr.o \
-	../src/ModInterpolateAMRGrid.o
+	../src/ModKind.o \
+	../src/ModInterpolateAMRGrid.o \
+	test_interpolate_amr.o
 
 test_interpolate_amr_exe:
-	@(cd ../src; make ModInterpolateAMRGrid.o)
+	@(cd ../src; make ModKind.o; make ModInterpolateAMRGrid.o)
 	@make test_interpolate_amr.o
 	${LINK.f90} -o test_interpolate_amr.exe ${OBJ_INTERPOLATE_AMR} ${Lflag2}
 
