@@ -11,6 +11,8 @@
 ! AJR 8/28/13: The code was outputting data on all processors for satellite
 !              files.  I corrected this to make it so that if the linear
 !              interpolation routine returns -1, the processor returns. 
+! AGB 10/18/13: Added gravity, collision frequency, and pressure gradient
+!               to 3DION output
 !----------------------------------------------------------------------------
 
 integer function bad_outputtype()
@@ -630,16 +632,24 @@ contains
           write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "Je2"
           write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Magnetic Latitude"
           write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "Magnetic Longitude"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "B.F. East"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "B.F. North"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+10, " ", "B.F. Vertical"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+11, " ", "B.F. Magnitude"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "Potential"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "E.F. East"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "E.F. North"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+10, " ", "E.F. Vertical"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+11, " ", "E.F. Magnitude"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "B.F. East"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "B.F. North"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "B.F. Vertical"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+10, " ", "B.F. Magnitude"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+11, " ", "Potential"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+12, " ", "E.F. East"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+13, " ", "E.F. North"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+14, " ", "E.F. Vertical"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+15, " ", "E.F. Magnitude"
 
+          ! AGB: 10/18/17: Add Collision Frequency, Pressure Gradient,
+          ! and local gravity to output
+
+          write(iOutputUnit_,"(I7,A1,a)") iOff+16, " ", "IN Collision Freq"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+17, " ", "PressGrad (east)"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+18, " ", "PressGrad (north)"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+19, " ", "PressGrad (up)"
+          write(iOutputUnit_,"(I7,A1,a)") iOff+20, " ", "Gravity"
        endif
 
     endif
@@ -980,7 +990,10 @@ subroutine output_3dion(iBlock)
                 B0(iLon,iLat,iAlt,:,iBlock), &  !Geomagnetic B0(nLons,nLats,nAlts,4[iEast_,iNorth_,iUp_,iMag_],nBlocks)
                 potential(iLon,iLat,iAlt,iBlock), &
                 EField(iLon,iLat,iAlt,:), &  ! EField(Lon,lat,alt,3)
-                sqrt(sum(EField(iLon,iLat,iAlt,:)**2))   ! magnitude of E.F.
+                sqrt(sum(EField(iLon,iLat,iAlt,:)**2)), & ! magnitude of E.F.
+                Collisions(iLon,iLat,iAlt,iVIN_), & ! AGB: nu_in
+                PressureGradient(iLon,iLat,iAlt,:), & ! AGB: 3D Grad(Pi+Pe)
+                Gravity_GB(iLon,iLat,iAlt,iBlock) ! AGB: local gravity
         enddo
      enddo
   enddo
