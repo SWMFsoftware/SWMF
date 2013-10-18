@@ -977,8 +977,6 @@ contains
     iLevelMin = minval(iLevel_I, MASK=iLevel_I/=BehindTheBoundary_)
     where(iLevel_I/=BehindTheBoundary_)iLevel_I = iLevel_I - iLevelMin
 
-    if(DoStencilFix) goto 300
-300 continue
 
     !\
     ! Check if the grid points are out of the grid boundary
@@ -1016,10 +1014,9 @@ contains
        iLevel2_I(1:4) = iLevel_I(iOrder_I(1:4))
        call interpolate_amr_grid2(&
             Xyz2_D,  XyzGrid2_DI, iLevel2_I, &
-            nGridOut, Weight_I(1:4), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+            nGridOut, Weight_I(1:4), iOrder2_I, DoStencilFix, XyzStencil2_D)
 
-       if(DoStencilFix2)then
-          DoStencilFix = .true.
+       if(DoStencilFix)then
           XyzStencil_D(iDir)    = Xyz_D(iDir)
           XyzStencil_D(1 + mod(iDir  ,3)) = XyzStencil2_D(x_)
           XyzStencil_D(1 + mod(iDir+1,3)) = XyzStencil2_D(y_)
@@ -3464,7 +3461,7 @@ contains
        nIter=0
        do while(DoStencilFix)
           nIter=nIter+1
-          if(nIter==nDim)call CON_stop('Infinite loop in fixing stencil')
+          if(nIter==2)call CON_stop('Infinite loop in fixing stencil')
           call generate_basic_stencil(&
                nDim, XyzStencil_D, nExtendedStencil, &
                XyzExtended_DI(:,1:nExtendedStencil), &
@@ -3488,7 +3485,10 @@ contains
             Xyz_D , XyzGrid_DI, iLevel_I, &
             nGridOut, Weight_I, iOrder_I,&
             DoStencilFix, XyzStencil_D)
+       nIter = 0
        do while(DoStencilFix)
+          nIter=nIter+1
+          if(nIter==3)call CON_stop('Infinite loop in fixing stencil')
           call generate_basic_stencil(&
                nDim, Xyz_D, nExtendedStencil,        &
                XyzExtended_DI(:,1:nExtendedStencil), &
@@ -4084,6 +4084,7 @@ contains
           iLevelTest_I(iGrid) = mod(iMisc, 2)
           iMisc = (iMisc - iLevelTest_I(iGrid))/2
        end do
+       write(*,*)'Case=',iLevelTest_I(1:2**nDim)
        !\
        ! We generated refinement, now sample points
        !/
