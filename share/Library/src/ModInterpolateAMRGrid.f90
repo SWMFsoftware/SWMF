@@ -3188,7 +3188,9 @@ contains
                  (/iOrder_I(2),iOrder_I(3),iOrder_I(6),iOrder_I(7)/),&
                  iUTriangle1_I = &
                  (/iOrder_I(1),iOrder_I(2), iOrder_I(5)/))
+            DoStencilFix = .false.
             if(nGridOut>0)RETURN
+            AlphaKAxisCoarse = 0.5
          else
             !\
             !     F-----F       kAxis
@@ -3490,7 +3492,7 @@ contains
           nIter=nIter+1
           if(nIter==3)call CON_stop('Infinite loop in fixing stencil')
           call generate_basic_stencil(&
-               nDim, Xyz_D, nExtendedStencil,        &
+               nDim, XyzStencil_D, nExtendedStencil,        &
                XyzExtended_DI(:,1:nExtendedStencil), &
                DxyzInv_D, iOrderExtended_I)
           if(any(iOrderExtended_I < 1))&
