@@ -4028,16 +4028,20 @@ contains
     integer :: iIndexes_II(0:nDim+1,2**nDim), iLevelOut_I(2**nDim)
     real, dimension(nDim):: DxyzDomain_D, DxyzCoarseBlock_D, &
          DxyzFineBlock_D, DxyzCoarse_D, &
-         DxyzFine_D, Xyz_D,&
+         DxyzFine_D, Xyz_D,             &
+         XyzCont_D,                     &
          XyzInterpolated_D, XyzCorner_D
-    real:: Weight_I(2**nDim)
+    real    ::VarInterpolated, VarContInterpolated
+    
+    real, allocatable, dimension(:,:,:,:) :: Var_CB
+    real    :: Weight_I(2**nDim)
     !Loop variables
     integer :: iCase, iSample, iGrid, iSubGrid, i, j, k, iBlock, iDir
     
     integer :: nCell_D(3)  ! Cells per block
     integer :: iCellIndex_D(3)
     integer :: nIndexes
-    integer:: iMisc , nGridOut
+    integer :: iMisc , nGridOut
     !--------------------
     call init_rand()
     nCell_D = 1; nCell_D(1:nDim) = 2
@@ -4049,6 +4053,9 @@ contains
     allocate(Xyz_DCB(nDim,nCell_D(1), nCell_D(2), nCell_D(3),&
          (2**nDim)*(2**nDim+1)))
     Xyz_DCB = 0
+    allocate(Var_CB(nCell_D(1), nCell_D(2), nCell_D(3),&
+         (2**nDim)*(2**nDim+1)))
+    Var_CB = 0
     do iGrid = 1, 2**nDim
        iBlock = iGrid
        XyzCorner_D = DxyzCoarseBlock_D*iShift_DI(1:nDim,iGrid)
@@ -4071,6 +4078,11 @@ contains
                    iCellIndex_D = (/i,j,k/)
                    Xyz_DCB(:,i,j,k,iBlock) = XyzCorner_D +&
                         DxyzFine_D*(iCellIndex_D(1:nDim) - 0.50)
+                   if(iBlock <= 2**nDim)then
+                      Var_CB(i,j,k,iBlock) = rand()
+                   else
+                      Var_CB(i,j,k,iBlock) = 0.25 + 0.50 * rand()
+                   end if
                 end do
              end do
           end do
@@ -4086,7 +4098,7 @@ contains
           iLevelTest_I(iGrid) = mod(iMisc, 2)
           iMisc = (iMisc - iLevelTest_I(iGrid))/2
        end do
-       write(*,*)'Case=',iLevelTest_I(1:2**nDim)
+       !write(*,*)'Case=',iLevelTest_I(1:2**nDim)
        !\
        ! We generated refinement, now sample points
        !/
@@ -4112,6 +4124,7 @@ contains
           !Compare with interpolated:
           !/
           XyzInterpolated_D = 0
+          VarInterpolated   = 0
           do iGrid = 1, nGridOut
              iCellIndex_D = 1
              iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
@@ -4119,6 +4132,10 @@ contains
              XyzInterpolated_D = XyzInterpolated_D + Weight_I(iGrid)*&
                   Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
                   iCellIndex_D(3), iBlock)
+             VarInterpolated = VarInterpolated + &
+                  Weight_I(iGrid)*&
+                  Var_CB(iCellIndex_D(1), iCellIndex_D(2), &
+                         iCellIndex_D(3), iBlock)
           end do
           if(any(abs(Xyz_D - XyzInterpolated_D) > 1.0e-6).and.&
                all(iLevelOut_I/=BehindTheBoundary_))then
@@ -4139,6 +4156,58 @@ contains
              write(*,*)'XyzInterpolated_D=',XyzInterpolated_D
              call CON_stop('Correct code and redo test')
           end if
+          !\
+          ! Test continuity
+          !/
+          do iDir =1, nDim
+             XyzCont_D(iDir) = Xyz_D(iDir) + (0.02*rand() - 0.01)
+          end do
+          !\
+          ! call interpolate_amr
+          !/
+          call interpolate_block_amr(&
+               nDim=nDim, &
+               XyzIn_D=XyzCont_D, &
+               nIndexes=nDim+1,&
+               nCell_D=nCell_D(1:nDim),&
+               find=find_test, &
+               nGridOut=nGridOut,&
+               Weight_I=Weight_I,&
+               iIndexes_II=iIndexes_II,&
+               iLevelOut_I=iLevelOut_I)
+          !\          
+          !Compare interpolated values of Var:
+          !/
+          VarContInterpolated = 0
+          do iGrid = 1, nGridOut
+             iCellIndex_D = 1
+             iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
+             iBlock = iIndexes_II(nIndexes,iGrid)
+             VarContInterpolated = VarContInterpolated + &
+                  Weight_I(iGrid)*&
+                  Var_CB(iCellIndex_D(1), iCellIndex_D(2), &
+                         iCellIndex_D(3), iBlock)
+          end do
+          if(abs(VarContInterpolated - VarInterpolated) > nGridOut * 0.01.and.&
+               all(iLevelOut_I/=BehindTheBoundary_))then
+             write(*,*)'Approximation test failed'
+             write(*,*)'Grid:', iLevelTest_I
+             write(*,*)'nGridOut=',nGridOut
+             write(*,*)'Point=', XyzCont_D
+             write(*,*)'Cell_D  iBlock XyzGrid_D Weight_I(iGrid)'
+             do iGrid = 1, nGridOut
+                iCellIndex_D = 1
+                iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
+                iBlock = iIndexes_II(nIndexes,iGrid)
+                write(*,*)iIndexes_II(1:nDim,iGrid), iBlock ,&
+                     Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
+                     iCellIndex_D(3), iBlock), Weight_I(iGrid)
+             end do
+             write(*,*)'Xyz_D=',Xyz_D
+             call CON_stop('Correct code and redo test')
+          end if
+          
+
        end do SAMPLE
     end do CASE
     deallocate(Xyz_DCB)
