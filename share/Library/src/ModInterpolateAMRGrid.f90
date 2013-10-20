@@ -98,8 +98,8 @@ module ModInterpolateAMRGrid
        /), (/4,3,8/))
 
   !Vertexes (enumerated by the first undex), which form 
-  !the face of direction iDir (second index) and does not include the
-  !given vertex (the third index). 
+  !the face of direction iDir (second index) and does not 
+  !include the given vertex (the third index). 
   !When the first index equals 1,2,3,4, the vertex, accordingly: 
   !(1) is connected to the given one by the edge of direction iDir
   !(2) is connected to (1) by the edge of direction iDir+1
@@ -116,6 +116,69 @@ module ModInterpolateAMRGrid
        8, 6, 4, 2,   5, 1, 6, 2,   3, 4, 1, 2, &
        7, 5, 3, 1,   6, 2, 5, 1,   4, 3, 2, 1  &
        /), (/4,3,8/))
+  !=================ARRAYS FOR A RECTANGLE==============!
+  !For a cubic stencil enumerated as follows:
+  !
+  !       ^
+  ! y-axis|
+  !       |   
+  !       3----------4  
+  !       |          |  
+  !       |          !
+  !       |          |  
+  !       |          |  
+  !       |          |  
+  !       |          !
+  !       |          |
+  !       |          |
+  !       1----------2------> x-axis
+  !       
+  ! we provide several functions characterizing its geometry in terms of 
+  ! the grid point numbers. The functions used in more than one place,
+  ! therefore we delegate them here. 
+  
+
+  !Number of the vertex connected by 
+  !the side of direction iDir (second index) 
+  !with the given vertex (first index)
+  integer, dimension(4,2), parameter:: iSide_ID = &
+       reshape((/&   !Number of the connected vertex
+       2 ,1, 4, 3,        & !Edge x
+       3, 4, 1, 2         & !Edge y
+       /),(/4,2/))
+
+  !Number of the vertex connected by  
+  !a main diagonal with the given vertex (index)
+  integer, dimension(4), parameter:: iDiag_I = &
+       (/ 4, 3, 2, 1 /)
+
+  !Vertexes (enumerated by the first undex), which form 
+  !the side of direction iDir (second index) including the 
+  !given vertex (the third index). 
+  !When the first index equals 1,2,3,4, the vertex, accordingly: 
+  !(1) coincides with the given one
+  !(2) is connected with the given one by the edge of direction iDir
+  integer, dimension(2,2,4), parameter:: iSide_IDI = &
+       reshape((/&   ! x side   ! y side ! 
+       1, 2,    1, 3, & !Vertex 1
+       2, 1,    2, 4, & !Vertex 2
+       3, 4,    3, 1, & !Vertex 3
+       4, 3,    4, 2  & !Vertex 4
+       /), (/2,2,4/))
+
+  !Vertexes (enumerated by the first undex), which form 
+  !the side of direction iDir (second index) and does not include the
+  !given vertex (the third index). 
+  !When the first index equals 1,2 the vertex, accordingly: 
+  !(1) is connected to the given one by the side of direction 1+mod(iDir,2)
+  !(2) is connected to (1) by the edge of direction iDir
+  integer, dimension(2,2,4), parameter:: iOppositeSide_IDI = &
+       reshape((/&   ! x side   ! y side ! 
+       3, 4,    2, 4, & !Vertex 1
+       4, 3,    1, 3, & !Vertex 2
+       1, 2,    4, 2, & !Vertex 3
+       2, 1,    3, 1  & !Vertex 4
+       /), (/2,2,4/))
   !\
   ! Arrays of logical values Xyz_D < XyzGrid_DI(:,iGrid) for iGrid'th grid
   ! point of the basic stencil for point Xyz
@@ -149,33 +212,7 @@ module ModInterpolateAMRGrid
   ! find_test routine
   !/
   integer:: iLevelTest_I(8)
-  !\
-  !For one of the versions of the test: coordinate array
-  !/
-  real, allocatable::Xyz_DCB(:,:,:,:,:)
-
-  integer:: iSeed = 1
 contains
-  !\
-  !The random number generator.
-  !From the Buneman's code TRISTAN
-  !/
-  subroutine init_rand(iSeedIn)
-    integer,optional,intent(in)::iSeedIn
-    if(present(iSeedIn))then
-       iSeed=iSeedIn
-    else
-       iSeed=1
-    end if
-  end subroutine init_rand
-  !=====================
-  real function rand()
-    iSeed = iSeed*48828125
-    IF(iSeed < 0) iSeed=(iSeed+2147483647)+1
-    if(iSeed==0) iSeed=1
-    rand=FLOAT(iSeed)/2147483647
-  end function rand
-  !========================================================================
   subroutine  interpolate_amr_grid1(&
        Xyz_D, XyzGrid_DI, iLevel_I,&
        nGridOut, Weight_I, iOrder_I)
@@ -259,7 +296,7 @@ contains
 
     !The refinement level at each grid point. By one higher level of refinement
     !assumes the cell size reduced by a factor of 0.5
-    integer,  intent(inout) :: iLevel_I(nGrid)
+    integer,  intent(in) :: iLevel_I(nGrid)
 
     !\
     !Output parameters
@@ -288,14 +325,12 @@ contains
     real, intent(out) :: XyzStencil_D(nDim)
 
 
-    integer :: iGrid, iDir   !Loop variables
-    integer :: iLoc          !Find minloc and maxloc
+    integer :: iGrid, iDir, iDirPerp !Loop variables
+    integer :: iLoc                  !Find minloc and maxloc
     !\
     !Number of grid points returned from 1D routine
     !/
-    integer :: nGridOut1     
-    integer :: iLevelMin     !Minimumum refinement level
-
+    integer :: nGridOut1    
 
     !\
     ! Min and max values of coordinates
@@ -315,75 +350,52 @@ contains
     integer :: iLevel1_I(2)
     !-------------
 
-    !\
-    ! Make iLevel=0 for coarser grids and iLevel=1 for finer grids
-    !/
-    iLevelMin = minval(iLevel_I, MASK=iLevel_I/=BehindTheBoundary_)
-    where(iLevel_I/=BehindTheBoundary_)iLevel_I = iLevel_I - iLevelMin
-
     if(DoStencilFix) goto 100
     !\
     ! Check if the grid points are out of the grid boundary
     !/
-    if(all(iLevel_I(3:4)== BehindTheBoundary_).or.&
-         all(XyzGrid_DI(y_,1:2)==Xyz_D(y_)) )then
-       !\
-       ! Edge 3:4 should be removed
-       !/
-       iOrder_I = (/1,2,3,4/)
-       Xyz1_D(x_) = Xyz_D(x_) ; XyzGrid1_DI(x_,:) = XyzGrid_DI(x_,1:2)
-       iLevel1_I = iLevel_I(1:2)
-
-       call interpolate_amr_grid1(&
-            Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
-            nGridOut, Weight_I(1:2), iOrder1_I)
-       iOrder_I(1:2) = iOrder_I(iOrder1_I)
-       RETURN
-
-    elseif(all(iLevel_I(1:2)== BehindTheBoundary_))then
-       !\
-       ! Edge 1:2 should be removed
-       !/
-       iOrder_I = (/3,4,1,2/)
-       Xyz1_D(x_) = Xyz_D(x_) ; XyzGrid1_DI(x_,:) = XyzGrid_DI(x_,3:4)
-       iLevel1_I = iLevel_I(3:4)
-
-       call interpolate_amr_grid1(&
-            Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
-            nGridOut, Weight_I(1:2), iOrder1_I)
-       iOrder_I(1:2) = iOrder_I(iOrder1_I)
-       RETURN
-
-    elseif(all(iLevel_I(2:4:2)== BehindTheBoundary_).or. &
-         all(XyzGrid_DI(x_,1:3:2)==Xyz_D(x_)) )then
-       !\
-       ! Edge 2,4 should be removed
-       !/
-       iOrder_I = (/1,3,2,4/)
-       Xyz1_D(x_) = Xyz_D(y_) ; XyzGrid1_DI(x_,:) = XyzGrid_DI(y_,1:3:2)
-       iLevel1_I = iLevel_I(1:3:2)
-
-       call interpolate_amr_grid1(&
-            Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
-            nGridOut, Weight_I(1:2), iOrder1_I)
-       iOrder_I(1:2) = iOrder_I(iOrder1_I)
-       RETURN
-
-    elseif(all(iLevel_I(1:3:2)== BehindTheBoundary_) )then
-       !\
-       ! Edge 1,3 should be removed
-       !/
-       iOrder_I = (/2,4,1,3/)
-       Xyz1_D(x_) = Xyz_D(y_) ; XyzGrid1_DI(x_,:) = XyzGrid_DI(y_,2:4:2)
-       iLevel1_I = iLevel_I(2:4:2)
-
-       call interpolate_amr_grid1(&
-            Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
-            nGridOut, Weight_I(1:2), iOrder1_I)
-       iOrder_I(1:2) = iOrder_I(iOrder1_I)
-       RETURN
+    if(count(iLevel_I== BehindTheBoundary_)>=2)then
+       do iDir=1, nDim
+          iDirPerp = 3 - iDir
+          if(all(iLevel_I(iOppositeSide_IDI(:,iDir,1))== &
+               BehindTheBoundary_).or.&
+               all(XyzGrid_DI(iDirPerp,iSide_IDI(:,iDir,1))==&
+               Xyz_D(iDirPerp))  )then
+             !\
+             ! OppositeSide should be removed
+             !/
+             iOrder_I(1:2) = iSide_IDI(:,iDir,1)
+             iOrder_I(3:4) = iOppositeSide_IDI(:,iDir,1)
+             Xyz1_D(x_) = Xyz_D(iDir)  
+             XyzGrid1_DI(x_,:) = XyzGrid_DI(iDir,iSide_IDI(:,iDir,1))
+             iLevel1_I = iLevel_I(iSide_IDI(:,iDir,1))
+             
+             call interpolate_amr_grid1(&
+                  Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
+                  nGridOut, Weight_I(1:2), iOrder1_I)
+             iOrder_I(1:2) = iOrder_I(iOrder1_I)
+             RETURN
+             
+          elseif(all(iLevel_I(&
+               iSide_IDI(:,iDir,1))== BehindTheBoundary_))then
+             !\
+             ! Side should be removed
+             !/
+             iOrder_I(1:2) = iOppositeSide_IDI(:,iDir,1)
+             iOrder_I(3:4) = iSide_IDI(:,iDir,1)
+             Xyz1_D(x_) = Xyz_D(iDir) 
+             XyzGrid1_DI(x_,:) = &
+                  XyzGrid_DI(iDir,iOppositeSide_IDI(:,iDir,1))
+             iLevel1_I = iLevel_I(iOppositeSide_IDI(:,iDir,1))
+             
+             call interpolate_amr_grid1(&
+                  Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
+                  nGridOut, Weight_I(1:2), iOrder1_I)
+             iOrder_I(1:2) = iOrder_I(iOrder1_I)
+             RETURN
+          end if
+       end do
     end if
-
     !\
     ! Calculate the stencil size
     !/
@@ -398,7 +410,7 @@ contains
     ! no resolution interface
     !/
 
-    if(all(iLevel_I==0))then
+    if(all(iLevel_I==Coarse_).or.all(iLevel_I==Fine_))then
        !\                       C  C
        ! No refinement
        !/                       C  C
@@ -410,386 +422,163 @@ contains
        Weight_I(3) = (1 - Aux_D(1))*     Aux_D(2)
        Weight_I(4) =      Aux_D(1) *     Aux_D(2)
        RETURN
-
-    elseif(abs(XyzGrid_DI(y_,1) - XyzGrid_DI(y_,2)) &
-         < dXyzSmall_D(y_).and.&
-         abs(XyzGrid_DI(y_,3) - XyzGrid_DI(y_,4)) &
-         < dXyzSmall_D(y_))then
-       !\                             C  C
-       ! Edges going along x-axis    F F   or   F F
-       !/                                     C  C
-       iOrder_I = (/1,2,3,4/)
-       Aux_D(y_) = &
-            dXyzInv_D(y_)*(  Xyz_D(y_) - XyzGrid_DI( y_,iOrder_I(1) )  )
-       Xyz1_D(x_) = Xyz_D(x_)
-
-       !\
-       ! Interpolate along edge X1X2
-       !/
-       XyzGrid1_DI(x_,1) = XyzGrid_DI(x_,iOrder_I(1))
-       XyzGrid1_DI(x_,2) = XyzGrid_DI(x_,iOrder_I(2))
-       iLevel1_I(     1) = iLevel_I(     iOrder_I(1))
-       iLevel1_I(     2) = iLevel_I(     iOrder_I(2))
-       call interpolate_amr_grid1(&
-            Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
-            nGridOut1, Weight_I(1:2), iOrder1_I)
-       iOrder_I(1:2) = iOrder_I(iOrder1_I)
-
-       !\
-       ! Apply weight for interpolation along another axis
-       !/
-       Weight_I(1:nGridOut1) =  Weight_I(1:nGridOut1) * (1 - Aux_D(y_))
-       !\
-       ! May need to remove a grid point once behind the boundary
-       !/
-       if(nGridOut1==1)then
-          iOrder_I(2:4) = iOrder_I((/3,4,2/))
-       end if
-       nGridOut = nGridOut1
-
-       !\
-       ! Interpolate along edge X3X4
-       !/
-       XyzGrid1_DI(x_,1) = XyzGrid_DI(x_,iOrder_I(nGridOut+1))
-       XyzGrid1_DI(x_,2) = XyzGrid_DI(x_,iOrder_I(nGridOut+2))
-       iLevel1_I(     1) = iLevel_I(     iOrder_I(nGridOut+1))
-       iLevel1_I(     2) = iLevel_I(     iOrder_I(nGridOut+2))
-       call interpolate_amr_grid1(&
-            Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
-            nGridOut1, Weight_I(nGridOut+1:nGridOut+2), iOrder1_I)
-
-       iOrder_I(nGridOut+1:nGridOut+2) = iOrder_I(nGridOut+iOrder1_I)
-       !\
-       ! Apply weight for interpolation along another axis
-       !/
-       Weight_I(nGridOut + 1:nGridOut + nGridOut1) =  &
-            Weight_I(nGridOut + 1:nGridOut + nGridOut1)*Aux_D(y_)
-
-       !\
-       ! May need to remove a grid point once behind the boundary
-       !/
-       nGridOut = nGridOut + nGridOut1
-       DoStencilFix = .false.
-       RETURN
-
-    elseif(abs(XyzGrid_DI(x_,1) - XyzGrid_DI(x_,3)) < dXyzSmall_D(x_).and.&
-         abs(XyzGrid_DI(x_,2) - XyzGrid_DI(x_,4)) < dXyzSmall_D(x_))then
-       !\                             C  F         F C
-       ! Edges going along y-axis        F    or   F
-       !/                             C              C
-       iOrder_I = (/1,3,2,4/)
-       Aux_D(x_) = dXyzInv_D(x_)*(Xyz_D(x_)-XyzGrid_DI(x_,iOrder_I(1)))
-       Xyz1_D(x_) = Xyz_D(y_)
-
-       !\
-       ! Interpolate along edge X1X2
-       !/
-       XyzGrid1_DI(x_,1) = XyzGrid_DI(y_,iOrder_I(1))
-       XyzGrid1_DI(x_,2) = XyzGrid_DI(y_,iOrder_I(2))
-       iLevel1_I(     1) = iLevel_I(     iOrder_I(1))
-       iLevel1_I(     2) = iLevel_I(     iOrder_I(2))
-       call interpolate_amr_grid1(&
-            Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
-            nGridOut1, Weight_I(1:2), iOrder1_I)
-       iOrder_I(1:2) = iOrder_I(iOrder1_I)
-
-       !\
-       ! Apply weight for interpolation along another axis
-       !/
-       Weight_I(1:nGridOut1) =  Weight_I(1:nGridOut1) * (1 - Aux_D(x_))
-       !\
-       ! May need to remove a grid point once behind the boundary
-       !/
-       if(nGridOut1==1)then
-          iOrder_I(2:4) = iOrder_I((/3,4,2/))
-       end if
-       nGridOut = nGridOut1
-
-       !\
-       ! Interpolate along edge X3X4
-       !/
-       XyzGrid1_DI(x_,1) = XyzGrid_DI(y_,iOrder_I(nGridOut+1))
-       XyzGrid1_DI(x_,2) = XyzGrid_DI(y_,iOrder_I(nGridOut+2))
-       iLevel1_I(     1) = iLevel_I(     iOrder_I(nGridOut+1))
-       iLevel1_I(     2) = iLevel_I(     iOrder_I(nGridOut+2))
-       call interpolate_amr_grid1(&
-            Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
-            nGridOut1, Weight_I(nGridOut+1:nGridOut+2), iOrder1_I)
-
-       iOrder_I(nGridOut+1:nGridOut+2) = iOrder_I(nGridOut+iOrder1_I)
-       !\
-       ! Apply weight for interpolation along another axis
-       !/
-       Weight_I(nGridOut + 1:nGridOut + nGridOut1) =  &
-            Weight_I(nGridOut + 1:nGridOut + nGridOut1)*Aux_D(x_)
-
-       !\
-       ! May need to remove a grid point once behind the boundary
-       !/
-       nGridOut = nGridOut + nGridOut1
-       DoStencilFix = .false.
-       RETURN
     end if
+    !\
+    !Find resolution interfaces
+    !/
+    do iDir = 1, nDim
+       iDirPerp = 3 - iDir
+       if(abs(XyzGrid_DI(iDirPerp,1) - &
+            XyzGrid_DI(iDirPerp,iSide_ID(1,iDir)) ) &
+            < dXyzSmall_D(iDirPerp).and.&
+            abs(XyzGrid_DI(iDirPerp,iOppositeSide_IDI(1,iDir,1)) - &
+            XyzGrid_DI(iDirPerp,iOppositeSide_IDI(2,iDir,1))) &
+            < dXyzSmall_D(iDirPerp) )then
+          !\                             C  C
+          ! Edges going along iDir-axis    F F   or   F F   ---> iDir
+          !/                                           C  C
+          iOrder_I(1:2) = iSide_IDI(:,iDir,1)
+          iOrder_I(3:4) = iOppositeSide_IDI(:,iDir,1)
+          Aux_D(iDirPerp) = &
+               dXyzInv_D(iDirPerp)*(Xyz_D(iDirPerp) - &
+               XyzGrid_DI(iDirPerp,iOrder_I(1) )  )
+          Xyz1_D(x_) = Xyz_D(iDir)
+          
+          !\
+          ! Interpolate along edge X1X2
+          !/
+          XyzGrid1_DI(x_,1) = XyzGrid_DI(iDir,iOrder_I(1))
+          XyzGrid1_DI(x_,2) = XyzGrid_DI(iDir,iOrder_I(2))
+          iLevel1_I(     1) = iLevel_I(     iOrder_I(1))
+          iLevel1_I(     2) = iLevel_I(     iOrder_I(2))
+          call interpolate_amr_grid1(&
+               Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
+               nGridOut1, Weight_I(1:2), iOrder1_I)
+          iOrder_I(1:2) = iOrder_I(iOrder1_I)
+          
+          !\
+          ! Apply weight for interpolation along another axis
+          !/
+          Weight_I(1:nGridOut1) =  &
+               Weight_I(1:nGridOut1)*(1 - Aux_D(1 + mod(iDir,2)))
+          !\
+          ! May need to remove a grid point once behind the boundary
+          !/
+          if(nGridOut1==1)then
+             iOrder_I(2:4) = iOrder_I((/3,4,2/))
+          end if
+          nGridOut = nGridOut1
+          
+          !\
+          ! Interpolate along edge X3X4
+          !/
+          XyzGrid1_DI(x_,1) = XyzGrid_DI(iDir,iOrder_I(nGridOut+1))
+          XyzGrid1_DI(x_,2) = XyzGrid_DI(iDir,iOrder_I(nGridOut+2))
+          iLevel1_I(     1) = iLevel_I(     iOrder_I(nGridOut+1))
+          iLevel1_I(     2) = iLevel_I(     iOrder_I(nGridOut+2))
+          call interpolate_amr_grid1(&
+               Xyz1_D,  XyzGrid1_DI, iLevel1_I, &
+               nGridOut1, Weight_I(nGridOut+1:nGridOut+2), iOrder1_I)
+          
+          iOrder_I(nGridOut+1:nGridOut+2) = iOrder_I(nGridOut+iOrder1_I)
+          !\
+          ! Apply weight for interpolation along another axis
+          !/
+          Weight_I(nGridOut + 1:nGridOut + nGridOut1) =  &
+               Weight_I(nGridOut + 1:nGridOut + nGridOut1)*&
+               Aux_D(1 + mod(iDir,2))
+          
+          !\
+          ! May need to remove a grid point once behind the boundary
+          !/
+          nGridOut = nGridOut + nGridOut1
+          DoStencilFix = .false.
+          RETURN
+       end if
+    end do
 
+  
     !\
     ! Check the ends of the resolution interfaces. Near the resolution 
-    ! interface endpoint the stencil may need to be reevaluated. Check 
-    ! fine edges along x_ direction
+    ! interface endpoint the stencil may need to be reevaluated. 
     !/
-    if(abs(XyzGrid_DI(y_,2) - XyzGrid_DI(y_,1)) < &
-         dXyzSmall_D(y_).and.all(iLevel_I(1:2)==1))then
-
-       if(abs(XyzGrid_DI(x_,3) - 0.50*(XyzGrid_DI(x_,2) + XyzGrid_DI(x_,1)))&
-            < dXyzSmall_D(x_))then
-          !\                    C (?)                                  C
-          ! The configuration  F F   Check if Xyz belongs to triangle F F
+    if(count(iLevel_I==Coarse_)/=1)go to 100
+    iLoc = minloc(iLevel_I,DIM=1) !Coarse point
+    do iDir = 1, nDim
+       
+       if(abs(XyzGrid_DI(1 + mod(iDir,2),iOppositeSide_IDI(1,iDir,iLoc)) - &
+            XyzGrid_DI(1 + mod(iDir,2),iOppositeSide_IDI(2,iDir,iLoc)) ) < &
+            dXyzSmall_D(1 + mod(iDir,2)) .and.                             &
+            abs(XyzGrid_DI(iDir,iLoc) - 0.50*                              &
+            sum(XyzGrid_DI(iDir,iOppositeSide_IDI(:,iDir,iLoc)))) <        &
+            dXyzSmall_D(iDir)  )then
+          !\                   F F                                     F F
+          ! The configuration   C (?) Check if Xyz belongs to triangle  C
           !/
-          iOrder_I = (/2,3,1,4/)
+          iOrder_I(1:2) = iOppositeSide_IDI(:,iDir,iLoc) 
+          iOrder_I(3:4) = iSide_IDI(:,iDir,iLoc)
+          !              4F here
+          !       3C  |  
+          !      /  \ |  or here 
+          !------------
+          !     1F- 2F|
+          !       |   |
           !\
-          ! Interpolate on the triangle X1,X2,X3 (F-C-F)
-          ! vector X1-X3 is parallel to iAxis and directed toward
-          ! 4th point of the stencil
-          !   X3(F) - X1(F)
-          !      \   /
-          !      X2(C)  X4(?)
+          ! Interpolate on the triangle X1,X2,X3 (FFC)
           !/
-          call interpolate_triangle(iAxisFF=x_)
-          RETURN
-
-       elseif(&
-            abs(XyzGrid_DI(x_,4) - 0.50*(XyzGrid_DI(x_,2) + XyzGrid_DI(x_,1)))&
-            < dXyzSmall_D(x_))then
-          !\                (?) C                                          C
-          ! The configuration  F F   Check if Xyz belongs to the triangle F F
-          !/
-          iOrder_I = (/1,4,2,3/)
+          call triangles(nTriangles=1)
           !\
-          ! Interpolate on the triangle X1,X2,X3 (F-C-F)
-          ! vector X1-X3 is parallel to iAxis and directed 
-          ! toward 4th point of the stencil
-          !   X3(F) - X1(F)
-          !      \   /
-          !      X2(C)  X4(?)
-          !/
-          call interpolate_triangle(iAxisFF=x_)
-          RETURN
-       end if
-    end if
-
-    if(abs(XyzGrid_DI(y_,4) - XyzGrid_DI(y_,3)) < &
-         dXyzSmall_D(y_).and.all(iLevel_I(3:4)==1))then
-
-       if(abs(XyzGrid_DI(x_,1) - 0.50*(XyzGrid_DI(x_,3) + XyzGrid_DI(x_,4)))&
-            <dXyzSmall_D(x_))then
-          !\                   F F                                        F F
-          ! The configuration   C (?)    Check if Xyz belongs to triangle  C
-          !/
-          iOrder_I = (/4,1,3,2/)
-          !\
-          ! Interpolate on the triangle X1,X2,X3 (F-C-F)
-          ! vector X1-X3 is parallel to iAxis and directed 
-          ! toward 4th point of the stencil
-          !   X3(F) - X1(F)
-          !      \   /
-          !      X2(C)  X4(?)
-          !/
-          call interpolate_triangle(iAxisFF=x_)
-          RETURN
-
-       elseif(&
-            abs(XyzGrid_DI(x_,2) - 0.50*(XyzGrid_DI(x_,3) + XyzGrid_DI(x_,4)))&
-            < dXyzSmall_D(x_))then
-          !\                     F F                                     F F
-          ! The configuration (?) C    Check if Xyz belongs to triangle   C
-          !/
-          iOrder_I = (/3,2,4,1/)
-          !\
-          ! Interpolate on the triangle X1,X2,X3 (F-C-F)
-          ! vector X1-X3 is parallel to iAxis and directed 
-          ! toward 4th point of the stencil
-          !   X3(F) - X1(F)
-          !      \   /
-          !      X2(C)  X4(?)
-          !/
-          call interpolate_triangle(iAxisFF=x_)
+          !Need to fix stencil, if the interpolation fails
+          DoStencilFix = any(Weight_I(1:3) < 0)
+          if(DoStencilFix)then
+             !\
+             !The point 1/3(XyzGrid(1)+XyzGrid(2)+XyzGrid(3))
+             !lays on the resolution interface between 3C and 1F2F
+             !and it is a fine grid size to the left from the endpoint
+             !of the resolution interface, hence coordinates of the end
+             !point are 1/3(XyzGrid(1)+XyzGrid(2)+XyzGrid(3)) +
+             !              XyzGrid(2)-XyzGrid(1)
+             XyzStencil_D = (4*XyzGrid_DI(:,iOrder_I(2)) - &
+                  2*XyzGrid_DI(:,iOrder_I(1)) + XyzGrid_DI(:,iOrder_I(3)))/3
+          end if
           RETURN
        end if
-    end if
-
-    !\
-    ! Check the ends of the resolution interfaces. Near the resolution 
-    ! interface endpoint the stencil may need to be reevaluated. Check 
-    ! fine edges along y_ direction
-    !/
-    if(abs(XyzGrid_DI(x_,3) - XyzGrid_DI(x_,1)) < dXyzSmall_D(x_)&
-         .and.all(iLevel_I((/1,3/))==Fine_))then
-       if(abs(XyzGrid_DI(y_,2) - &
-            0.50*(XyzGrid_DI(y_,3) + XyzGrid_DI(y_,1)))&
-            <dXyzSmall_D(y_))then
-          !                     (?)
-          !\                   F                                       F
-          ! The configuration    C  Check if Xyz belongs to triangle C
-          !/                   F                                       F
-          iOrder_I = (/3,2,1,4/)
-          !\
-          ! Interpolate on the triangle X1,X2,X3 (F-C-F)
-          ! vector X1-X3 is parallel to iAxis and directed toward 
-          ! 4th point of the stencil
-          !   X3(F) - X1(F)
-          !      \   /
-          !      X2(C)  X4(?)
-          !/
-          call interpolate_triangle(iAxisFF=y_)
-          RETURN
-
-       elseif(&
-            abs(XyzGrid_DI(y_,4) - &
-            0.50*(XyzGrid_DI(y_,3) + XyzGrid_DI(y_,1)))&
-            < dXyzSmall_D(y_))then
-          !\                   F                                         F
-          ! The configuration    C  Check if Xyz belongs to triangle   C
-          !/                   F                                         F
-          !                     (?)
-          iOrder_I = (/1,4,3,2/)
-          !\
-          ! Interpolate on the triangle X1,X2,X3 (F-C-F)
-          ! vector X1-X3 is parallel to iAxis and directed 
-          ! toward 4th point of the stencil
-          !   X3(F) - X1(F)
-          !      \   /
-          !      X2(C)  X4(?)
-          !/
-          call interpolate_triangle(iAxisFF=y_)
-          RETURN
-       end if
-    end if
-
-    if(abs(XyzGrid_DI(x_,4) - XyzGrid_DI(x_,2)) < dXyzSmall_D(x_)&
-         .and.all(iLevel_I((/2,4/))==1))then
-
-       if(abs(XyzGrid_DI(y_,1) - 0.50*(XyzGrid_DI(y_,2) + XyzGrid_DI(y_,4)))&
-            <dXyzSmall_D(y_))then
-          !                    (?)
-          !\                       F                                        F
-          ! The configuration   C       Check if Xyz belongs to triangle  C
-          !/                       F                                        F
-          iOrder_I = (/4,1,2,3/)
-          !\
-          ! Interpolate on the triangle X1,X2,X3 (F-C-F)
-          ! vector X1-X3 is parallel to iAxis and directed 
-          ! toward 4th point of the stencil
-          !   X3(F) - X1(F)
-          !      \   /
-          !      X2(C)  X4(?)
-          !/
-          call interpolate_triangle(iAxisFF=y_)
-          RETURN
-
-       elseif(abs(XyzGrid_DI(y_,3) - &
-            0.50*(XyzGrid_DI(y_,2) + XyzGrid_DI(y_,4)))&
-            <dXyzSmall_D(y_))then
-          !\                       F                                        F
-          ! The configuration    C    Check if Xyz belongs to the triangle C
-          !/                       F                                        F
-          !                     (?)
-          iOrder_I = (/2,3,4,1/)
-          !\
-          ! Interpolate on the triangle X1,X2,X3 (F-C-F)
-          ! vector X1-X3 is parallel to iAxis and directed 
-          ! toward 4th point of the stencil
-          !   X3(F) - X1(F)
-          !      \   /
-          !      X2(C)  X4(?)
-          !/
-          call interpolate_triangle(iAxisFF=y_)
-          RETURN
-       end if
-    end if
-
+    end do
 100 continue
 
 
     DoStencilFix = .false.
 
-    if(count(iLevel_I==Fine_)==1.and.count(iLevel_I==Coarse_)==3)then
+    if(count(iLevel_I==Fine_) < 3)then
        iLoc = maxloc(iLevel_I,DIM=1)
-       select case(iLoc)
-       case(1)
-          !   C---C
-          !    \ /|
-          !     F-C
-          iOrder_I = (/1,4,2,3/)
-
-       case(2)
-          !   C---C
-          !   |\ /
-          !   C-F
-          iOrder_I = (/2,3,1,4/)
-
-       case(3)
-          !     F-C
-          !    / \|
-          !    C--C
-          iOrder_I = (/2,3,1,4/)
-
-       case(4)
-          !   C-F
-          !   |/\
-          !   C--C
-          iOrder_I = (/1,4,2,3/)
-
-       end select
-
-    elseif(count(iLevel_I==Fine_)==2.and.count(iLevel_I==Coarse_)==2)then
-       if(iLevel_I(1)==Fine_)then
-          !   C-F
-          !   |/\
-          !   F--C
-          iOrder_I = (/1,4,2,3/)
-
-       else
-          !   F---C
-          !   |\ /
-          !   C-F
-          iOrder_I = (/2,3,1,4/)
-
-       end if
-
-
-    elseif(count(iLevel_I==Fine_)==3.and.count(iLevel_I==Coarse_)==1)then
+       
+       !   C---C
+       !    \ /|
+       !     F-C
+            
+       !   C-F
+       !   |/\
+       !   F--C
+       iOrder_I = &
+            (/iLoc, iDiag_I(iLoc), iSide_ID(iLoc,x_), iSide_ID(iLoc,y_)/)
+       !This  / and this \ are the vertexes on
+       ! the common side of two triangles in triangulation
+    else
        iLoc = minloc(iLevel_I,DIM=1)
-       select case(iLoc)
-       case(1)
-          !   F---F
-          !    \ \|
-          !     C-F
-          iOrder_I = (/2,3,1,4/)
 
-       case(2)
-          !   F---F
-          !   | //
-          !   F-C
-          iOrder_I = (/1,4,2,3/)
-
-       case(3)
-          !     C-F
-          !    / /|
-          !    F--F
-          iOrder_I = (/1,4,2,3/)
-
-       case(4)
-          !   F-C
-          !   |\\
-          !   F--F
-          iOrder_I = (/2,3,1,4/)
-
-       end select
+       !   F---F
+       !    \ \|
+       !     C-F
+       iOrder_I = &
+            (/iSide_ID(iLoc,x_), iSide_ID(iLoc,y_), iLoc, iDiag_I(iLoc)/)
+       !This    / and this           \ are the vertexes on 
+       !the common side of two triangles in triangulation
     end if
 
     !\
     !Points 1 and 2 are on the shared side of the triangles, 3 and 4 are off
     !/
-    call triangulate
+    call triangles(nTriangles=2)
 
   contains
     real function cross_product(a_D, b_D)
@@ -798,82 +587,47 @@ contains
       cross_product = a_D(x_)* b_D(y_) - a_D(y_)*b_D(x_)
     end function cross_product
     !=======
-    subroutine triangulate
+    subroutine triangles(nTriangles)
       !\
-      !Points 1 and 2 are on the shared side of the triangles, 3 and 4 are off
+      !If nTriangles=1, interpolate triangle Order_I(1),Order_I(2),Order_I(3)
+      !If the point if out of this triangle, return with negative weghts.
+      !If nTriangle2=2, interpolate triangle Order_I(1),Order_I(2),Order_I(3)
+      !If is out of this triangle, use Order_I(1),Order_I(2),Order_I(4) 
+      !So, points 1 and 2 are on the shared side of the triangles, 
+      !           3 and 4 are off
       !/
+      integer, intent(in) :: nTriangles
       real, dimension(nDim) :: X1_D, X2_D, X3_D, X4_D
-      real :: Alpha2, Alpha3
       !-------
       X1_D=XyzGrid_DI(:,iOrder_I(1)); X2_D=XyzGrid_DI(:,iOrder_I(2))
       X3_D=XyzGrid_DI(:,iOrder_I(3)); X4_D=XyzGrid_DI(:,iOrder_I(4))
-      Alpha3 = cross_product(Xyz_D - X1_D,X2_D - X1_D)/&
+      Weight_I = 0
+
+      Weight_I(3) = cross_product(Xyz_D - X1_D,X2_D - X1_D)/&
            cross_product(X3_D - X1_D,X2_D - X1_D)
-      if(Alpha3==0.0)then
+      if(Weight_I(3)==0)then
          nGridOut = 2
-         Alpha2 = cross_product(X3_D-X1_D,Xyz_D - X1_D)/&
+         Weight_I(2) = cross_product(X3_D-X1_D,Xyz_D - X1_D)/&
               cross_product(X3_D - X1_D,X2_D - X1_D)
-         Weight_I(2) = Alpha2
-      elseif(Alpha3 > 0.0)then
+      elseif(Weight_I(3) > 0.0)then
          nGridOut = 3
-         Alpha2 = cross_product(X3_D-X1_D,Xyz_D - X1_D)/&
+         Weight_I(2) = cross_product(X3_D-X1_D,Xyz_D - X1_D)/&
               cross_product(X3_D - X1_D,X2_D - X1_D)
-         Weight_I(2) = Alpha2
-         Weight_I(3) = Alpha3
       else
+         if(nTriangles==1)RETURN !Interpolation on one triangle failed
          nGridOut = 3
-         Alpha2 = cross_product(X4_D - X1_D,Xyz_D - X1_D)/&
+         Weight_I(2) = cross_product(X4_D - X1_D,Xyz_D - X1_D)/&
               cross_product(X4_D - X1_D,X2_D - X1_D)
-         Alpha3 = cross_product(Xyz_D - X1_D,X2_D - X1_D)/&
+         Weight_I(3) = cross_product(Xyz_D - X1_D,X2_D - X1_D)/&
               cross_product(X4_D - X1_D, X2_D-X1_D)
          iOrder_I(3:4) = iOrder_I((/4,3/))
-         Weight_I(2) = Alpha2
-         Weight_I(3) = Alpha3
       end if
 
       Weight_I(1) = 1 - sum(Weight_I(2:nGridOut))
 
-    end subroutine triangulate
-    !===============================================================
-    subroutine interpolate_triangle(iAxisFF)
-      !\
-      ! Interpolate on the triangle X1,X2,X3 (F-C-F)
-      ! vector X1-X3 is parallel to iAxis and directed 
-      ! toward 4th point of the stencil
-      !   X3(F) - X1(F)
-      !      \   /
-      !      X2(C)  X4(?)
-      !/
-      integer, intent(in) :: iAxisFF
-      integer             :: iAxisPerp
-      real, dimension(nDim) :: X1_D, X2_D, X3_D
-      !-------
-      !Vertexes
-      X1_D=XyzGrid_DI(:,iOrder_I(1)); X2_D=XyzGrid_DI(:,iOrder_I(2))
-      X3_D=XyzGrid_DI(:,iOrder_I(3))
-
-      Weight_I(3) = cross_product(Xyz_D - X1_D, X2_D  - X1_D)/&
-           cross_product(X3_D - X1_D, X2_D-X1_D)
-      Weight_I(2) = cross_product(X3_D  - X1_D, Xyz_D - X1_D)/&
-           cross_product(X3_D - X1_D, X2_D-X1_D)
-      if(Weight_I(3)==0.0)then
-         nGridOut = 2
-      else
-         nGridOut = 3
-      end if
-      Weight_I(1) = 1 - sum(Weight_I(2:3))
-      DoStencilFix = any(Weight_I(1:3)<0)
-      if(DoStencilFix)then
-         iAxisPerp = 3 - iAxisFF
-         XyzStencil_D(iAxisFF)  =  &
-              X1_D(iAxisFF) + X2_D(iAxisFF) - X3_D(iAxisFF)
-         XyzStencil_D(iAxisPerp) = &
-              (X1_D(iAxisPerp) + X2_D(iAxisPerp) + X3_D(iAxisPerp))/3
-      end if
-    end subroutine interpolate_triangle
+    end subroutine triangles
   end subroutine interpolate_amr_grid2
-
-  !==================================================================
+  !===========================
   subroutine  interpolate_amr_grid3(&
        Xyz_D, XyzGrid_DI, iLevel_I, &
        nGridOut, Weight_I, iOrder_I,&
@@ -930,11 +684,7 @@ contains
     !Loop variables
     !/
     integer :: iGrid , jGrid, iDir
-    !\
-    ! Minimum refinement level used to set iLevel_I=0 in coarse points
-    !/
-    integer:: iLevelMin
-
+ 
     !\
     ! To find location of fine or coarse points
     !/ 
@@ -970,12 +720,6 @@ contains
     !/
     integer, parameter:: Rectangular_=1, Trapezoidal_=2
     !-------------
-
-    !\
-    ! Make iLevel=0 for coarser grids and iLevel=1 for finer grids
-    !/
-    iLevelMin = minval(iLevel_I, MASK=iLevel_I/=BehindTheBoundary_)
-    where(iLevel_I/=BehindTheBoundary_)iLevel_I = iLevel_I - iLevelMin
 
 
     !\
@@ -4024,7 +3768,7 @@ contains
   !===========================TESTS============================================
   subroutine test_interpolate_amr(nDim,nSample)
     integer, intent(in)::nDim, nSample
-  
+
     integer :: iIndexes_II(0:nDim+1,2**nDim), iLevelOut_I(2**nDim)
     real, dimension(nDim):: DxyzDomain_D, DxyzCoarseBlock_D, &
          DxyzFineBlock_D, DxyzCoarse_D, &
@@ -4032,16 +3776,18 @@ contains
          XyzCont_D,                     &
          XyzInterpolated_D, XyzCorner_D
     real    ::VarInterpolated, VarContInterpolated
-    
+    real, allocatable::Xyz_DCB(:,:,:,:,:)    
     real, allocatable, dimension(:,:,:,:) :: Var_CB
     real    :: Weight_I(2**nDim)
     !Loop variables
     integer :: iCase, iSample, iGrid, iSubGrid, i, j, k, iBlock, iDir
-    
+
     integer :: nCell_D(3)  ! Cells per block
     integer :: iCellIndex_D(3)
     integer :: nIndexes
-    integer :: iMisc , nGridOut
+    integer:: iMisc , nGridOut
+
+    integer:: iSeed = 1
     !--------------------
     call init_rand()
     nCell_D = 1; nCell_D(1:nDim) = 2
@@ -4064,7 +3810,8 @@ contains
              do i = 1, nCell_D(1)
                 iCellIndex_D = (/i,j,k/)
                 Xyz_DCB(:,i,j,k,iBlock) = XyzCorner_D +&
-                    DxyzCoarse_D*(iCellIndex_D(1:nDim) - 0.50)
+                     DxyzCoarse_D*(iCellIndex_D(1:nDim) - 0.50)
+                Var_CB(i,j,k,iBlock) = rand()
              end do
           end do
        end do
@@ -4078,11 +3825,7 @@ contains
                    iCellIndex_D = (/i,j,k/)
                    Xyz_DCB(:,i,j,k,iBlock) = XyzCorner_D +&
                         DxyzFine_D*(iCellIndex_D(1:nDim) - 0.50)
-                   if(iBlock <= 2**nDim)then
-                      Var_CB(i,j,k,iBlock) = rand()
-                   else
-                      Var_CB(i,j,k,iBlock) = 0.25 + 0.50 * rand()
-                   end if
+                   Var_CB(i,j,k,iBlock) = 0.25 + 0.50 * rand()
                 end do
              end do
           end do
@@ -4098,7 +3841,7 @@ contains
           iLevelTest_I(iGrid) = mod(iMisc, 2)
           iMisc = (iMisc - iLevelTest_I(iGrid))/2
        end do
-       !write(*,*)'Case=',iLevelTest_I(1:2**nDim)
+       write(*,*)'Case=',iLevelTest_I(1:2**nDim)
        !\
        ! We generated refinement, now sample points
        !/
@@ -4106,11 +3849,10 @@ contains
           do iDir = 1, nDim
              Xyz_D(iDir) = (0.01 +0.98*rand())*DxyzDomain_D(iDir)
           end do
-          ! write(*,*)'Xyz_D=',Xyz_D, ' case =', iLevelTest_I(1:2**nDim
           !\
           ! call interpolate_amr
           !/
-          call interpolate_block_amr(&
+          call interpolate_amr(&
                nDim=nDim, &
                XyzIn_D=Xyz_D, &
                nIndexes=nDim+1,&
@@ -4135,7 +3877,7 @@ contains
              VarInterpolated = VarInterpolated + &
                   Weight_I(iGrid)*&
                   Var_CB(iCellIndex_D(1), iCellIndex_D(2), &
-                         iCellIndex_D(3), iBlock)
+                  iCellIndex_D(3), iBlock)
           end do
           if(any(abs(Xyz_D - XyzInterpolated_D) > 1.0e-6).and.&
                all(iLevelOut_I/=BehindTheBoundary_))then
@@ -4165,7 +3907,7 @@ contains
           !\
           ! call interpolate_amr
           !/
-          call interpolate_block_amr(&
+          call interpolate_amr(&
                nDim=nDim, &
                XyzIn_D=XyzCont_D, &
                nIndexes=nDim+1,&
@@ -4186,14 +3928,14 @@ contains
              VarContInterpolated = VarContInterpolated + &
                   Weight_I(iGrid)*&
                   Var_CB(iCellIndex_D(1), iCellIndex_D(2), &
-                         iCellIndex_D(3), iBlock)
+                  iCellIndex_D(3), iBlock)
           end do
-          if(abs(VarContInterpolated - VarInterpolated) > nGridOut * 0.01.and.&
+          if(abs(VarContInterpolated - VarInterpolated) > nDim*0.01.and.&
                all(iLevelOut_I/=BehindTheBoundary_))then
-             write(*,*)'Approximation test failed'
+             write(*,*)'Continuity test failed'
              write(*,*)'Grid:', iLevelTest_I
              write(*,*)'nGridOut=',nGridOut
-             write(*,*)'Point=', XyzCont_D
+             write(*,*)'XyzCont=', XyzCont_D
              write(*,*)'Cell_D  iBlock XyzGrid_D Weight_I(iGrid)'
              do iGrid = 1, nGridOut
                 iCellIndex_D = 1
@@ -4204,13 +3946,50 @@ contains
                      iCellIndex_D(3), iBlock), Weight_I(iGrid)
              end do
              write(*,*)'Xyz_D=',Xyz_D
+             call interpolate_amr(&
+                  nDim=nDim, &
+                  XyzIn_D=Xyz_D, &
+                  nIndexes=nDim+1,&
+                  nCell_D=nCell_D(1:nDim),&
+                  find=find_test, &
+                  nGridOut=nGridOut,&
+                  Weight_I=Weight_I,&
+                  iIndexes_II=iIndexes_II,&
+                  iLevelOut_I=iLevelOut_I)
+             write(*,*)'Cell_D  iBlock XyzGrid_D Weight_I(iGrid)'
+             do iGrid = 1, nGridOut
+                iCellIndex_D = 1
+                iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
+                iBlock = iIndexes_II(nIndexes,iGrid)
+                write(*,*)iIndexes_II(1:nDim,iGrid), iBlock ,&
+                     Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
+                     iCellIndex_D(3), iBlock), Weight_I(iGrid)
+             end do
              call CON_stop('Correct code and redo test')
           end if
-          
-
        end do SAMPLE
     end do CASE
-    deallocate(Xyz_DCB)
+    deallocate(Xyz_DCB, Var_CB)
+  contains
+    !\
+    !The random number generator.
+    !From the Buneman's code TRISTAN
+    !/
+    subroutine init_rand(iSeedIn)
+      integer,optional,intent(in)::iSeedIn
+      if(present(iSeedIn))then
+         iSeed=iSeedIn
+      else
+         iSeed=1
+      end if
+    end subroutine init_rand
+    !=====================
+    real function rand()
+      iSeed = iSeed*48828125
+      IF(iSeed < 0) iSeed=(iSeed+2147483647)+1
+      if(iSeed==0) iSeed=1
+      rand=FLOAT(iSeed)/2147483647
+    end function rand
   end subroutine test_interpolate_amr
   !============================
   subroutine find_test(nDim, Xyz_D, &
@@ -4275,7 +4054,6 @@ contains
     XyzCorner_D = XyzCorner_D + DxyzFineBlock_D*iShift_D(1:nDim)
     Xyz_D       = Xyz_D       - DxyzFineBlock_D*iShift_D(1:nDim)
     iSubGrid = iGridFromShift_III(iShift_D(1),iShift_D(2),iShift_D(3))
-    !write(*,*)'Fine: Xyz_D, XyzCorner_D, iSubGrid=', Xyz_D, XyzCorner_D, iSubGrid
     iBlock = iGrid*(2**nDim)+iSubGrid
     Dxyz_D = DxyzFine_D
   end subroutine find_test
