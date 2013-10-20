@@ -58,8 +58,9 @@ contains
        call bcast_decomposition(DD)
     else
        call complete_grid(DD)
-       call set_standard_grid_descriptor(DD,Standard_=Nodes_,&
+       call set_standard_grid_descriptor(DD, &
             nGhostGridPoints=1,  &
+            iStandard=Nodes_,&
             GridDescriptor=LocalBufferGD)
     end if
   end subroutine set_spher_buffer_grid
