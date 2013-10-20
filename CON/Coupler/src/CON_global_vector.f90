@@ -506,7 +506,7 @@ contains
          real,intent(inout)::Xyz_D(nDim) 
          type(GridDescriptorType)::GridDescriptor     
          integer,intent(in)::nIndexes
-         integer           ::Index_II(0:nIndexes,2**nDim)
+         integer,intent(out)::Index_II(0:nIndexes,2**nDim)
          integer,intent(out)::nImages
          real,intent(out)::Weight_I(2**nDim)
        end subroutine interpolate
