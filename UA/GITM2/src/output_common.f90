@@ -244,7 +244,8 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('3DION')
 
-     nvars_to_write = 8+nIons+6+4+4+1
+     nvars_to_write = 8+nIons+6+4+4+1+5
+     ! AGB: added gravity (1) + nu_in (1) + pressure gradient (3)
      call output_3dion(iBlock)
 
   case ('3DTHM')
@@ -992,7 +993,7 @@ subroutine output_3dion(iBlock)
                 EField(iLon,iLat,iAlt,:), &  ! EField(Lon,lat,alt,3)
                 sqrt(sum(EField(iLon,iLat,iAlt,:)**2)), & ! magnitude of E.F.
                 Collisions(iLon,iLat,iAlt,iVIN_), & ! AGB: nu_in
-                PressureGradient(iLon,iLat,iAlt,:), & ! AGB: 3D Grad(Pi+Pe)
+                PressureGradient(iLon,iLat,iAlt,:,iBlock), & ! AGB: 3D Grad P
                 Gravity_GB(iLon,iLat,iAlt,iBlock) ! AGB: local gravity
         enddo
      enddo
