@@ -19,7 +19,7 @@ subroutine calc_ion_v(iBlock)
                   VIParallel, VNParallel, gDotB, gpDotB, UDotB
 
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) ::           &
-                  Force, BLocal, & ! AGB: moved PressureGradient to ModGitm
+                  LocPressGrad, Force, BLocal, & ! AGB: moved PressureGradient to ModGitm
                   ForceCrossB, ForcePerp
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2):: Pressure_G
@@ -33,13 +33,14 @@ subroutine calc_ion_v(iBlock)
   if (iDebugLevel > 4) write(*,*) "=====> pressure gradient", iproc
 
   Pressure_G = IPressure(:,:,:,iBlock)+ePressure(:,:,:,iBlock)
-  call UAM_Gradient(Pressure_G, PressureGradient, iBlock)
+  call UAM_Gradient(Pressure_G, LocPressGrad, iBlock)
 
-  PressureGradient(:,:,nAlts,iUp_) = PressureGradient(:,:,nAlts-1,iUp_)
+  PressureGradient(:,:,:,:,iBlock) = LocPressGrad
+  PressureGradient(:,:,nAlts,iUp_,iBlock) = PressureGradient(:,:,nAlts-1,iUp_,iBlock)
 
   if (Is1D) then
-     PressureGradient(:,:,:,iEast_) = 0.0
-     PressureGradient(:,:,:,iNorth_) = 0.0
+     PressureGradient(:,:,:,iEast_,iBlock) = 0.0
+     PressureGradient(:,:,:,iNorth_,iBlock) = 0.0
   endif
 
   Force = 0.0
@@ -47,7 +48,7 @@ subroutine calc_ion_v(iBlock)
   IRho = IDensityS(1:nLons,1:nLats,1:nAlts,ie_,iBlock) * &
        MeanIonMass(1:nLons,1:nLats,1:nAlts)
 
-  if (UseIonPressureGradient) Force = Force - PressureGradient
+  if (UseIonPressureGradient) Force = Force - PressureGradient(:,:,:,:,iBlock)
 
   if (UseIonGravity) then
      do iAlt = 1, nAlts
@@ -93,24 +94,24 @@ subroutine calc_ion_v(iBlock)
      IVelocity(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) = &
           Velocity(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) + &
           (Gravity_GB(1:nLons, 1:nLats, 1:nAlts, iBlock) - &
-          (PressureGradient(1:nLons,1:nLats,1:nAlts,iUp_) / IRho) / &
+          (PressureGradient(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) / IRho) / &
           Collisions(1:nLons,1:nLats,1:nAlts,iVIN_))
 
      IVelocity(1:nLons,1:nLats,1:nAlts,iEast_,iBlock) = &
           Velocity(1:nLons,1:nLats,1:nAlts,iEast_,iBlock) - &
-          (PressureGradient(1:nLons,1:nLats,1:nAlts,iEast_) / IRho) / &
+          (PressureGradient(1:nLons,1:nLats,1:nAlts,iEast_,iBlock) / IRho) / &
           Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)
 
      IVelocity(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock) = &
           Velocity(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock) - &
-          (PressureGradient(1:nLons,1:nLats,1:nAlts,iNorth_) / IRho) / &
+          (PressureGradient(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock) / IRho) / &
           Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)
          
   else
 
   UDotB = sum(Velocity(1:nLons,1:nLats,1:nAlts,:,iBlock) * BLocal, dim=4)/ &
        B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)
-  gpDotB = sum(PressureGradient(1:nLons,1:nLats,1:nAlts,:) * &
+  gpDotB = sum(PressureGradient(1:nLons,1:nLats,1:nAlts,:,iBlock) * &
        BLocal, dim=4) / B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)
 
   do iLon = 1,nLons
