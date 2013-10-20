@@ -97,7 +97,11 @@ real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nSpeciesAll, nBlocksMax) :: 
   real :: cMax_GDB(0:nLons+1, 0:nLats+1, 0:nAlts+1, 3, nBlocksMax)
 
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) :: &
-       IonDrag, Viscosity, PressureGradient ! AGB: Added pressure gradient
+       IonDrag, Viscosity
+
+ ! AGB: Added pressure gradient
+  real, dimension(1:nLons, 1:nLats, 1:nAlts, 3, nBlocksMax) :: &
+       PressureGradient
 
   real, dimension(1:nLons, 1:nLats, 1:nAlts, nSpecies) :: &
        VerticalIonDrag
