@@ -27,7 +27,8 @@ contains
   subroutine test_interpolate_amr(nDim,nSample)
     integer, intent(in)::nDim, nSample
 
-    integer :: iIndexes_II(0:nDim+1,2**nDim), iLevelOut_I(2**nDim)
+    integer :: iIndexes_II(0:nDim+1,2**nDim)
+    logical :: IsSecondOrder
     real, dimension(nDim):: DxyzDomain_D, DxyzCoarseBlock_D, &
          DxyzFineBlock_D, DxyzCoarse_D, &
          DxyzFine_D, Xyz_D,             &
@@ -119,7 +120,7 @@ contains
                nGridOut=nGridOut,&
                Weight_I=Weight_I,&
                iIndexes_II=iIndexes_II,&
-               iLevelOut_I=iLevelOut_I)
+               IsSecondOrder=IsSecondOrder)
           !\          
           !Compare with interpolated:
           !/
@@ -138,7 +139,7 @@ contains
                   iCellIndex_D(3), iBlock)
           end do
           if(any(abs(Xyz_D - XyzInterpolated_D) > 1.0e-6).and.&
-               all(iLevelOut_I/=OutOfGrid_))then
+               IsSecondOrder)then
              write(*,*)'Approximation test failed'
              write(*,*)'Grid:', iLevelTest_I
              write(*,*)'nGridOut=',nGridOut
@@ -174,7 +175,7 @@ contains
                nGridOut=nGridOut,&
                Weight_I=Weight_I,&
                iIndexes_II=iIndexes_II,&
-               iLevelOut_I=iLevelOut_I)
+               IsSecondOrder=IsSecondOrder)
           !\          
           !Compare interpolated values of Var:
           !/
@@ -212,7 +213,7 @@ contains
                   nGridOut=nGridOut,&
                   Weight_I=Weight_I,&
                   iIndexes_II=iIndexes_II,&
-                  iLevelOut_I=iLevelOut_I)
+                  IsSecondOrder=IsSecondOrder)
              write(*,*)'Cell_D  iBlock XyzGrid_D Weight_I(iGrid)'
              do iGrid = 1, nGridOut
                 iCellIndex_D = 1

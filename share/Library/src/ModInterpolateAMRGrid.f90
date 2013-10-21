@@ -649,10 +649,7 @@ contains
        DoStencilFix, XyzStencil_D)
 
     integer,parameter :: nGrid = 8, nDim = 3
-
-
     character(LEN=*),parameter:: NameSub='interpolate_amr3'
-
     !\
     !Input parameters
     !/
@@ -660,29 +657,28 @@ contains
     !The location at which to interpolate the data
     !/
     real   , intent(in) :: Xyz_D(nDim) 
-
+    !\
     !Grid point coordinates !3 coordinate, 8 points
+    !/
     real  ,   intent(in) :: XyzGrid_DI(nDim,nGrid) 
 
     !The refinement level at each grid point. By one higher level
     ! of refinement assumes the cell size reduced by a factor of 0.5
     integer,  intent(in) :: iLevel_I(nGrid)
-
     !\
     !Output parameters
     !/
-    !The number of grid points to be ultimately included 
-    !into the interpolation stencil
-    !If nGridOut < nGridIn, only the first nGridOut lines in the 
-    !output arrays are meaningful.
+    !The number of grid points to be ultimately included into 
+    !the interpolation stencil If nGridOut < nGrid only the
+    !first nGridOut lines in the output arrays are meaningful.
+    !/
     integer, intent(out) :: nGridOut
-
+    !\
     !The weight coefficients array.
     real   , intent(out) :: Weight_I(nGrid)
-
+    !\
     !Order(numbers) of grid points used for the interpolation
     integer, intent(out) :: iOrder_I(nGrid)
-
     !\
     ! The logical is true, if (for some resolution combinations) the 
     ! basic stencil for the point at which to inpertpolate is not 
@@ -707,8 +703,6 @@ contains
 
     !Number of grid points returned from 1D interpolation routine
     integer :: nGridOut1     
-
-
     !\
     ! Minimum and maximum values of coordinates
     !/
@@ -722,7 +716,6 @@ contains
     !/          
     real    :: dXyzInv_D(  nDim)                
     real    :: Aux_D(nDim), AuxCoarse, AuxFine   ! Misc
-
     !\
     ! To call two-dimensional interpolation
     !/
@@ -740,27 +733,21 @@ contains
     !/
     integer:: iCase
     !-------------
-
-
     !\
     ! Check if the grid points are out of the grid boundary
     !/
     do iDir = 1, nDim
        if(all(iLevel_I(iOppositeFace_IDI(:,iDir,1))== OutOfGrid_).or.&
             all(XyzGrid_DI(iDir,iFace_IDI(:,iDir,1)) == Xyz_D(iDir)) )then
-
           !\
           ! Upper face iDir should be removed
           !/
           iOrder_I(1:4) = iFace_IDI(        :,iDir,1)
           iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,1)
-
        elseif(all(iLevel_I(iFace_IDI(:,iDir,1))== OutOfGrid_))then
-
           !\
           ! Lower Face iDir should be removed
           !/
-
           iOrder_I(1:4) = iOppositeFace_IDI(        :,iDir,1)
           iOrder_I(5:8) = iFace_IDI(:,iDir,1)
        else
@@ -789,7 +776,6 @@ contains
        iOrder_I(1:4) = iOrder_I(iOrder2_I)
        RETURN
     end do
-
     !\
     ! Calculate the stencil size
     !/
@@ -798,32 +784,6 @@ contains
             maxval(XyzGrid_DI(iDir,:)) -  minval(XyzGrid_DI(iDir,:)))
        dXyzInv_D(iDir)   = 0.10/dXyzSmall_D(iDir)
     end do
-
-    !\
-    ! First conbinations of the resolution interfaces: no resolution 
-    ! interface.
-    !/
-
-    if(all(iLevel_I==0))then
-       !\
-       ! No refinement         
-       !                       
-       !/
-       iOrder_I = (/1,2,3,4,5,6,7,8/)
-       Aux_D = (Xyz_D - XyzGrid_DI(:,1))*dXyzInv_D
-       nGridOut = 8
-       Weight_I(1) = (1 - Aux_D(1))*(1 - Aux_D(2))*(1-Aux_D(3))
-       Weight_I(2) =      Aux_D(1) *(1 - Aux_D(2))*(1-Aux_D(3))
-       Weight_I(3) = (1 - Aux_D(1))*     Aux_D(2) *(1-Aux_D(3))
-       Weight_I(4) =      Aux_D(1) *     Aux_D(2) *(1-Aux_D(3))
-       Weight_I(5) = (1 - Aux_D(1))*(1 - Aux_D(2))*   Aux_D(3)
-       Weight_I(6) =      Aux_D(1) *(1 - Aux_D(2))*   Aux_D(3)
-       Weight_I(7) = (1 - Aux_D(1))*     Aux_D(2) *   Aux_D(3)
-       Weight_I(8) =      Aux_D(1) *     Aux_D(2) *   Aux_D(3)
-       DoStencilFix = .false.
-       RETURN
-    end if
-
     !\
     ! Opposite faces going along resolution interface
     !/
@@ -846,7 +806,6 @@ contains
 
           Xyz2_D(x_) = Xyz_D(1 + mod(iDir    ,3))
           Xyz2_D(y_) = Xyz_D(1 + mod(iDir + 1,3))
-
           !\
           ! Interpolate along lower face
           !/
@@ -865,7 +824,6 @@ contains
           Aux_D(iDir) = dXyzInv_D(iDir)*&
                (Xyz_D(iDir) - XyzGrid_DI(iDir,iOrder_I(1)))
           Weight_I(1:nGridOut2) = Weight_I(1:nGridOut2)*(1 - Aux_D(iDir))
-
           !\
           ! May need to remove a grid points once behind the boundary
           !/
@@ -877,12 +835,10 @@ contains
              iOrder_I(2:8) = iOrder_I((/5,6,7,8,2,3,4/))
           end if
           nGridOut = nGridOut2
-
           !\
           ! Interpolate along upper face
           !/
           DoStencilFix2 = .false.
-
           XyzGrid2_DI(x_,1:4) = XyzGrid_DI(1 + mod(iDir    ,3),&
                iOrder_I(nGridOut2 + 1:nGridOut2+4))
           XyzGrid2_DI(y_,1:4) = XyzGrid_DI(1 + mod(iDir + 1,3),&
@@ -895,13 +851,11 @@ contains
           do iGrid=1,nGridOut2
              iOrder_I(nGridOut+iGrid)=iOrder_I(nGridOut+iOrder2_I(iGrid))
           end do
-
           !\
           ! Apply weight for interolation along kAxis
           !/
           Weight_I(nGridOut + 1:nGridOut + nGridOut2) = &
                Weight_I(nGridOut + 1:nGridOut + nGridOut2)*Aux_D(iDir)
-
           !\
           ! May need to remove a grid points once behind the boundary
           !/
@@ -910,8 +864,6 @@ contains
           RETURN
        end if
     end do
-
-
     !\
     ! Edges going along resolution edge
     ! Opposite "faces" have the same geometry in projection
@@ -931,8 +883,6 @@ contains
           iOrder_I(1:4) = iFace_IDI(:,iDir,1)
           iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,1)
           Xyz2_D(x_:y_) = Xyz_D((/1 + mod(iDir,3),1 + mod(1 + iDir,3)/))
-
-
           !\
           ! Interpolation weight along iDir axis are calculated seperately 
           ! for coarse and fine points
@@ -1024,7 +974,6 @@ contains
     if(DoInit)call init_sort_stencil
     iCase = i_case(iLevel_I)
     if(iSortStencil_II(Case_,iCase)==ThreeCoarseOnFace_)then
-
        !\
        ! Check corner transition junction
        !/
@@ -1074,14 +1023,9 @@ contains
     !---------------------Resolution corners----------------------
     !\
     ! We store in advance the 'basic' grid point
-    ! and orientation of all possible stencil configuration
+    ! and orientation of all possible stencil configurations
     ! and now we extracted this information
     !/ 
-    !\
-    ! Not yet a time to start corners, but this makes sense
-    ! to find the sort of stencil now (though it may change
-    ! after fixing stencil)
-    !/
     iGrid = iSortStencil_II(Grid_,iCase)
     iDir  = iSortStencil_II(Dir_, iCase)
 
@@ -1355,13 +1299,11 @@ contains
        !                    C2 C6
        !     F1 is apex of trapezoidal pyramids 
        !     Tetrahedra left F1C5F8C6 + F1C5F8C7
-
        call pyramids(&
             iTetrahedron1_I=(/1, 5, 8, 6/),&
             iTetrahedron2_I=(/1, 5, 8, 7/),&
             iTrapezoidal1_I=(/2, 6, 4, 8, 1/),&
             iTrapezoidal2_I=(/3, 7, 4, 8, 1/))
-
     case(ThreeFineOnFace_)
        !
        !       ^
@@ -1434,81 +1376,15 @@ contains
        !       Trapezoid: F2 F6
        !                  C4 C8
        !                
-       !
        call pyramids(&
             iTetrahedron1_I=(/1, 2, 3, 5/),&
             iRectangular1_I=(/2, 3, 6, 7, 5/))
        if(nGridOut> 1)RETURN
-
-       Xyz2_D(x_:y_) = &
-            Xyz_D((/1 + mod(iDir,3),1 + mod(1 + iDir,3)/))
-       !\
-       ! Interpolation weights along iDir axis are calculated 
-       ! separately for coarse and fine points
-       !/
-       !\
-       ! may need to rearrange iOrder
-       !/
-       if(XyzGrid_DI(iDir,iOrder_I(1))&
-            > XyzGrid_DI(iDIr,iOrder_I(5)))then
-          iOrder_I(1:8) = iOrder_I((/5,6,7,8,1,2,3,4/))
-       end if
-       XyzMin_D(iDir) = minval(&
-            XyzGrid_DI(iDir,:),iLevel_I/=Fine_)
-       AuxCoarse  = (Xyz_D(iDir) - XyzMin_D(iDir))/&
-            (maxval(&
-            XyzGrid_DI(iDir,:),iLevel_I/=Fine_) - &
-            XyzMin_D(iDir))
-
-       XyzMin_D(iDir) = minval(&
-            XyzGrid_DI(iDir,:),iLevel_I==Fine_)
-       AuxFine  = (Xyz_D(iDir) - XyzMin_D(iDir))/&
-            (maxval(&
-            XyzGrid_DI(iDir,:),iLevel_I==Fine_) - &
-            XyzMin_D(iDir))
-       !\
-       ! Interpolate along lower face
-       !/
-       DoStencilFix2 = .true.
-       XyzGrid2_DI(x_:y_,1:4) = &
-            XyzGrid_DI((/1 + mod(iDir,3),1 + mod(iDir+1,3)/),&
-            iOrder_I(1:4))
-       iLevel2_I(        1:4) = iLevel_I( iOrder_I(1:4))
-
-       call interpolate_amr2(&
-            Xyz2_D, XyzGrid2_DI, iLevel2_I, &
-            nGridOut2, Weight_I(1:4), iOrder2_I, &
-            DoStencilFix2, XyzStencil2_D)
-
-       iOrder_I(1:4) = iOrder_I(iOrder2_I  )
-       iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
-
-       !\
-       ! May need to remove a grid points from the stencil
-       !/
-       nGridOut = 2 * nGridOut2
-       if(    nGridOut2==2)then
-          iOrder_I(  3:4) = iOrder_I((/5,6/))
-       elseif(nGridOut2==3)then
-          iOrder_I(  4:6) = iOrder_I((/5,6,7/))
-       end if
-
-       !\
-       ! Apply weight for interpolation along iDir
-       !/
-       do jGrid = 1,nGridOut2
-          if(iLevel_I(iOrder_I(jGrid))==Fine_)then
-             Weight_I(nGridOut2+jGrid) = &
-                  Weight_I(jGrid)*     AuxFine
-             Weight_I(          jGrid) = &
-                  Weight_I(jGrid)*(1-  AuxFine)
-          else
-             Weight_I(nGridOut2+jGrid) = &
-                  Weight_I(jGrid)*     AuxCoarse
-             Weight_I(          jGrid) = &
-                  Weight_I(jGrid)*(1 - AuxCoarse)
-          end if
-       end do
+       call parallel_rays(Dir_D=&
+            XyzGrid_DI(:,iOrder_I(3)) - &
+            XyzGrid_DI(:,iOrder_I(2)),&
+            iDTrapezoid1_I=(/4, 8, 2, 6/),&
+            iUTrapezoid1_I=(/4, 8, 3, 7/)) 
     case(ThreeCoarseOnFace_)
        !
        !       ^
@@ -1566,7 +1442,6 @@ contains
        !                F2 F4
        !      Trapezoid C6 C8
        !                                           
-       !         
        !                F3 F4
        !      Trapezoid C7 C8
        !                
@@ -1763,10 +1638,11 @@ contains
     end subroutine pyramids
     !======================
     subroutine parallel_rays(Dir_D, &
-         iDRectangle1_I,   &
+         iDRectangle1_I, iDTrapezoid1_I,   &
          iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
          iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
          iURectangle1_I, iURectangle2_I, iURectangle3_I,&
+         iUTrapezoid1_I,                             &
          iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
          iUTriangle4_I)
       !Direction of parallel rays
@@ -1781,8 +1657,8 @@ contains
            iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
            iUTriangle4_I
       integer, intent(in), optional, dimension(4)::&
-           iDRectangle1_I, &
-           iURectangle1_I,iURectangle2_I,iURectangle3_I
+           iDRectangle1_I, iDTrapezoid1_I, iUTrapezoid1_I,&
+           iURectangle1_I, iURectangle2_I, iURectangle3_I
       !\
       !The point belonging to one of the up and down subfaces
       !/ 
@@ -1984,6 +1860,30 @@ contains
             end if     !3
          end if        !2
       end if           !1
+      if(present(iUTrapezoid1_I))then
+         X1_D = XyzGrid_DI(:,iOrder_I(iUTrapezoid1_I(1)))
+         X2_D = XyzGrid_DI(:,iOrder_I(iUTrapezoid1_I(2)))
+         X3_D = XyzGrid_DI(:,iOrder_I(iUTrapezoid1_I(3)))
+         X4_D = XyzGrid_DI(:,iOrder_I(iUTrapezoid1_I(4)))
+         AlphaUp = triple_product(X1_D - Xyz_D, X2_D - X1_D, X3_D - X1_D)/&
+              triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+         if(AlphaUp==0.0)then
+            call trapezoid(X1_D, X2_D, X3_D, X4_D, Xyz_D)
+            if(all(Weight_I(1:4)>=0.0))then
+               iOrder_I(1:4) = iOrder_I(iUTrapezoid1_I)
+               nGridOut = 4
+               RETURN
+            end if
+         elseif(AlphaUp > 0.0)then
+            XyzUp_D = Xyz_D + AlphaUp * Dir_D
+            call Trapezoid(X1_D, X2_D, X3_D, X4_D, XyzUp_D)
+            if(all(Weight_I(1:4)>=0.0))then
+               iOrderHere_I(1:4) = iOrder_I(iUTrapezoid1_I)
+               nGridOutUp = 4
+               go to 700
+            end if
+         end if
+      end if
       !No intersection point with upper boundary is found
       Weight_I = -1; nGridOut = -1
       RETURN
@@ -2167,6 +2067,39 @@ contains
             call rectangle(X1_D, X2_D, X3_D, X4_D, XyzDown_D)
             if(all(Weight_I(1:4)>=0.0))then
                iOrderHere_I(1:4) = iOrder_I(iDRectangle1_I)
+               nGridOutDown = 4
+               go to 800
+            end if
+         end if
+      end if           !1
+      if(present(iDTrapezoid1_I))then
+         if(.not.present(iDRectangle1_I))then
+            if(present(iDTriangle1_I))then
+               Weight_I(5:4+nGridOutUp) = Weight_I(4:3+nGridOutUp)
+               iOrderHere_I(5:4+nGridOutUp) = iOrderHere_I(4:3+nGridOutUp)
+            else
+               Weight_I(5:4+nGridOutUp) = Weight_I(1:nGridOutUp)
+               iOrderHere_I(5:4+nGridOutUp) = iOrderHere_I(1:nGridOutUp)
+            end if
+         end if
+         X1_D = XyzGrid_DI(:,iOrder_I(iDTrapezoid1_I(1)))
+         X2_D = XyzGrid_DI(:,iOrder_I(iDTrapezoid1_I(2)))
+         X3_D = XyzGrid_DI(:,iOrder_I(iDTrapezoid1_I(3)))
+         X4_D = XyzGrid_DI(:,iOrder_I(iDTrapezoid1_I(4)))
+         AlphaDown = triple_product(Xyz_D - X1_D, X2_D - X1_D, X3_D - X1_D)/&
+              triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+         if(AlphaDown==0.0)then
+            call trapezoid(X1_D, X2_D, X3_D, X4_D, Xyz_D)
+            if(all(Weight_I(1:4)>=0.0))then
+               iOrder_I(1:4) = iOrder_I(iDTrapezoid1_I)
+               nGridOut = 4
+               RETURN
+            end if
+         elseif(AlphaDown > 0.0)then
+            XyzDown_D = Xyz_D - AlphaDown * Dir_D
+            call trapezoid(X1_D, X2_D, X3_D, X4_D, XyzDown_D)
+            if(all(Weight_I(1:4)>=0.0))then
+               iOrderHere_I(1:4) = iOrder_I(iDTrapezoid1_I)
                nGridOutDown = 4
                go to 800
             end if
@@ -2361,7 +2294,6 @@ contains
       Weight_I(1) = 1 - sum(Weight_I(2:3))
 
     end subroutine triangle
-
     !=======================================================================
     subroutine corner_transition_junction(iEdgeDir)
       integer, intent(in) :: iEdgeDir
@@ -2945,7 +2877,7 @@ contains
   end subroutine init_sort_stencil
   !============================================================================
   subroutine interpolate_amr(nDim, XyzIn_D, nIndexes, nCell_D, find, &
-       nGridOut, Weight_I, iIndexes_II, iLevelOut_I)
+       nGridOut, Weight_I, iIndexes_II, IsSecondOrder)
     !\
     ! Number of dimensions
     !/
@@ -3009,7 +2941,11 @@ contains
     ! iIndexes_II(0,:) 
     !/
     integer, intent(out):: iIndexes_II(0:nIndexes,2**nDim)
-    integer, intent(out), optional:: iLevelOut_I(2**nDim)  !For diagnostics
+    !\
+    !The following is true if stencil does not employ 
+    !the out-of-grid points
+    !/
+    logical, intent(out), optional:: IsSecondOrder  
 
     !\
     ! Local variables
@@ -3053,7 +2989,7 @@ contains
     real, dimension(nDim,2**(2*nDim)) :: XyzExtended_DI 
     integer :: iLevelExtended_I(2**(2*nDim))
     integer :: iIndexesExtended_II(0:nIndexes,2**(2*nDim))
-    integer :: nExtendedStencil, nIter
+    integer :: nExtendedStencil
 
     !\
     ! The same extended stencil in a structured form:
@@ -3063,26 +2999,35 @@ contains
     integer, dimension(2**nDim):: iBlock_I  , iProc_I 
     integer                    :: iCellIndexes_DII(nDim,2**nDim,2**nDim)
     integer, dimension(2**nDim):: nSubGrid_I, iLevelSubgrid_I
+
+    !\
+    ! UseGhostPoint = .true. if in the extended stencil there are
+    ! out-of-grid points 
+    logical:: UseGhostPoint, IsExtended
+    !/
+    
     !--------------------
     !\
-    ! Initialize output arrays
+    ! Initialize 
     !/
+    iOrder_I    = 0; iIndexes_II = 0; Weight_I    = 0
+    nGridOut = -1; Xyz_D = XyzIn_D 
 
-    iOrder_I    = 0
-    iIndexes_II = 0
-    Weight_I    = 0 
-    if(present(iLevelOut_I))iLevelOut_I=0
-
-    Xyz_D = XyzIn_D
     call generate_extended_stencil
-    if(nExtendedStencil<1)call CON_stop('No extended stencil!')
+    !\
+    !The interpolation may be done inside generate_extended_stencil 
+    !/
+    if(nGridOut > 0) then
+       if(present(IsSecondOrder))IsSecondOrder = .not. UseGhostPoint
+       RETURN
+    end if
 
+    !\
+    ! Failure in constructing the extended stencil may  occur if the 
+    ! input point is out of AMR grid.
+    !/
     if(nExtendedStencil < 2**nDim)then
-       !\
-       ! Failure in constructing the extended stencil
-       ! May occur if the input point is out of the
-       ! AMR grid.
-       !/
+
        nGridOut = -1
        RETURN
     end if
@@ -3105,21 +3050,16 @@ contains
             Xyz_D , XyzGrid_DI, iLevel_I, &
             nGridOut, Weight_I, iOrder_I,&
             DoStencilFix, XyzStencil_D)
-       nIter=0
        do while(DoStencilFix)
-          nIter=nIter+1
-          if(nIter==2)call CON_stop('Infinite loop in fixing stencil')
           call generate_basic_stencil(&
                nDim, XyzStencil_D, nExtendedStencil, &
                XyzExtended_DI(:,1:nExtendedStencil), &
                DxyzInv_D, iOrderExtended_I)
           if(any(iOrderExtended_I < 1))&
                call CON_stop('Failure in constructing basic stencil') 
-          XyzGrid_DI = XyzExtended_DI(&
-               :,iOrderExtended_I)
+          XyzGrid_DI = XyzExtended_DI(:,iOrderExtended_I)
           iLevel_I = iLevelExtended_I(iOrderExtended_I)
-          iIndexes_II = &
-               iIndexesExtended_II(:,iOrderExtended_I)
+          iIndexes_II = iIndexesExtended_II(:,iOrderExtended_I)
           call interpolate_amr2(&
                Xyz_D , XyzGrid_DI, iLevel_I, &
                nGridOut, Weight_I, iOrder_I,&
@@ -3132,10 +3072,7 @@ contains
             Xyz_D , XyzGrid_DI, iLevel_I, &
             nGridOut, Weight_I, iOrder_I,&
             DoStencilFix, XyzStencil_D)
-       nIter = 0
        do while(DoStencilFix)
-          nIter=nIter+1
-          if(nIter==3)call CON_stop('Infinite loop in fixing stencil')
           call generate_basic_stencil(&
                nDim, XyzStencil_D, nExtendedStencil,        &
                XyzExtended_DI(:,1:nExtendedStencil), &
@@ -3158,7 +3095,8 @@ contains
        call CON_stop('Only 2D and 3D AMR grids are implemented')
     end select
     iIndexes_II(:, 1:nGridOut) = iIndexes_II(:,iOrder_I(1:nGridOut))
-    if(present(iLevelOut_I))iLevelOut_I = iLevel_I
+    if(present(IsSecondOrder))&
+         IsSecondOrder = .not.any(iLevel_I==OutOfGrid_)
   contains
     subroutine generate_extended_stencil
       use ModKind, ONLY: nByteReal
@@ -3169,22 +3107,18 @@ contains
       !\
       !Just 2**nDim
       integer:: nGrid
-
       !\
       ! Loop variables
       !/
       integer:: iGrid, iSubgrid, iDir 
-
       !\
       ! To evaluate grid points not belonging to the basic block
       !/
       integer:: iGridStored, iGridCheck
-
       !\
       ! For using find routine with inout argument
       !/
       real  :: XyzMisc_D(nDim), XyzStored_D(nDim)
-
       !\
       ! Output parameters of find routine
       !/
@@ -3199,19 +3133,16 @@ contains
       ! first one
       !/
       integer, dimension(3,8),parameter :: iShift_DI = reshape((/&
-           0, 0, 0, &
-           1, 0, 0, &
-           0, 1, 0, &
-           1, 1, 0, &
-           0, 0, 1, &
-           1, 0, 1, &
-           0, 1, 1, &
-           1, 1, 1/),(/3,8/))
+           0, 0, 0,   1, 0, 0,   0, 1, 0,   1, 1, 0, &
+           0, 0, 1,   1, 0, 1,   0, 1, 1,   1, 1, 1/),(/3,8/))
       !\
-      ! To inprove the algorithm stability against roundoff errors
+      ! To improve the algorithm stability against roundoff errors
       !/
       real, parameter:: cTol = 0.00000010
+      real           :: cTol2
       !------------------------
+      cTol2 = cTol**(nByteReal/4)
+      IsExtended = .false.; UseGhostPoint = .false.
 
       nGrid = 2**nDim !Number of points in a basic stencil
 
@@ -3233,7 +3164,6 @@ contains
          nExtendedStencil = -1
          RETURN
       end if
-
       !\
       ! Initialize iLevelSubgrid_I as all coarser, to enter the loop
       !/
@@ -3252,7 +3182,6 @@ contains
          XyzGrid_DII      = 0
          DxyzInv_D = 1/Dxyz_D
          XyzStored_D = XyzCorner_D
-
          XyzMisc_D = Xyz_D*DxyzInv_D + 0.50
          !
          !       y ^
@@ -3266,12 +3195,10 @@ contains
          !       block           x
          !       corner, xyz=0
          iCellIndexes_DII(:,1,1) = floor(XyzMisc_D)
-
          !\
          !Calculate coordinates of the left corner of a stencil
          !/
          XyzGrid_DII(:,0,1) = Dxyz_D*(iCellIndexes_DII(:,1,1) - 0.50)
-
          XyzMisc_D = XyzMisc_D - iCellIndexes_DII(:,1,1)
          !\ 
          ! now XyzMisc_D = (Xyz_D-XyzGrid_DII(:,0,1))/Dxyz satisfies 
@@ -3280,24 +3207,21 @@ contains
          ! code is compiled with a single precision, the gap of 
          ! cTol**2 otherwise:
          !/
-         XyzMisc_D = min(1 - cTol**(nByteReal/4),&
-              max(XyzMisc_D, cTol**(nByteReal/4) ))
+         XyzMisc_D = min(1 - cTol2,&
+              max(XyzMisc_D, cTol2 ))
          Xyz_D = XyzGrid_DII(:,0,1) + XyzMisc_D*Dxyz_D
          !\
          !Calculate other grid points, check if all points belong to 
          !the found block
          !/
          iGridCheck = -1
-         do iGrid = nGrid,1,-1
+         do iGrid = nGrid, 1, -1
             iShift_D = iShift_DI(1:nDim,iGrid)
             iBlock_I(iGrid) = iBlock_I(1)
             iCellIndexes_DII(:,1,iGrid) = &
                  iCellIndexes_DII(:,1,1) + iShift_D
             XyzGrid_DII(:,0,iGrid) = &
                  XyzGrid_DII(:,0,1) + iShift_D*Dxyz_D
-            !\
-            ! Check if the grid point is out of the block
-            !/
             if(any(iCellIndexes_DII(:,1,iGrid) < 1).or.&
                  any(iCellIndexes_DII(:,1,iGrid) > nCell_D))then
                !\
@@ -3329,10 +3253,11 @@ contains
                  iProc_I(iGridStored), iBlock_I(iGridStored), &
                  XyzCorner_D, Dxyz_D, IsOut)
             if(IsOut)then
+               UseGhostPoint = .true.
                iProc_I(iGridStored) = 0 !For not processing this point again
                iLevelSubGrid_I(iGridStored) = OutOfGrid_
                XyzGrid_DII(:,1,iGridStored) = XyzGrid_DII(:,0,iGridStored)
-               nSubGrid_I(iGridStored)      =1
+               nSubGrid_I(iGridStored)      = 1
                !\
                ! Find the next out-of-block point
                !/
@@ -3360,7 +3285,6 @@ contains
                !in the coarser neighboring block has a coordinates XyzMisc_D
                !So that
                Xyz_D = Xyz_D - XyzGrid_DII(:,0,iGridStored) + XyzMisc_D
-              
                !\
                ! Return to the beginning of algorithm. Before the COARSEN
                ! loop the block and processor number for the basic block
@@ -3391,7 +3315,7 @@ contains
                !/
                iShift_D = iShift_DI(1:nDim,iGridStored)
                iGridCheck = -1
-               do iGrid = iGridStored -1, 1, -1
+               do iGrid = iGridStored - 1, 1, -1
                   if(iProc_I(iGrid)/=-1)CYCLE !This point is done earlier
                   iCellIndexes_DII(:,1,iGrid) = &
                        iCellIndexes_DII(:,1,iGridStored) +&
@@ -3414,12 +3338,15 @@ contains
                   end if
                end do
             case(Fine_  )  !1, (New Dxyz_D)*Stored DXyzInv =0.5
-               !
+               IsExtended = .true. 
+               !\
+               !The number of points which may potentially
+               !/
+               !\
                ! Fine subgrid is displaced by half of finer subgrid size
-               !
+               !/
                XyzGrid_DII(:,1,iGridStored) = XyzGrid_DII(:,0,iGridStored) -&
                     0.50*Dxyz_D
-
                !\
                ! Calculate cell indexes as we did above. Note that DxyzInv_D
                ! is twice less than needed, because it is calculated for the
@@ -3450,9 +3377,6 @@ contains
                   iCellIndexes_DII(:,1,iGrid) = &
                        iCellIndexes_DII(:,1,iGridStored) + 2*(&
                        iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridStored))
-                  !\
-                  ! Check if the point is in the newly found block
-                  !/ 
                   if(any(iCellIndexes_DII(:,1,iGrid) < 1).or.&
                        any(iCellIndexes_DII(:,1,iGrid) > nCell_D))then
                      !\
@@ -3484,122 +3408,163 @@ contains
       !\
       ! Handle points behind the boundary
       !/
-      select case(count(iLevelSubgrid_I==OutOfGrid_))
-      case(0, 3, 7) !3,7 are nGrid -1 for nDim=2,3 
-         !\
-         !Do nothing: if there is a single physical grid point 
-         !then all coordinates of the ghost points are set earlier
-         !/
-      case(4)
-         ! nDim = 3
-         !\
-         ! One of the faces is fully out of the domain
-         !/
-
-         !\
-         !Find point in the domain
-         !/
-         iGridCheck = maxloc(iLevelSubGrid_I,DIM=1)
-         do iDir = 1, nDim
-            if(all(&
-                 iLevelSubGrid_I(iOppositeFace_IDI(:,iDir,iGridCheck))&
-                 ==OutOfGrid_))then
-               !\
-               ! Prolong grid from the physical phace to the ghost face
-               !/
-               do iGrid = 1,4
-                  call prolong(iFace_IDI(iGrid,iDir,iGridCheck), &
-                       iOppositeFace_IDI(iGrid,iDir,iGridCheck))
-               end do
-               EXIT
-            end if
-         end do
-      case(2)
-         ! Analogous to the previous case, but nDim = 2 
-
-         !\
-         !Check if the points behind the boundary are 1,2 or 1,3
-         !/
-         if(iLevelSubGrid_I(1)==OutOfGrid_)then
-            if(iLevelSubGrid_I(2)==OutOfGrid_)then
-               !\
-               !Prolong grid from 3,4 to 1,2
-               !/
-               do iGrid = 1,2
-                  call prolong(iGrid + 2, iGrid)
-               end do
-            else
-               !\
-               !Prolong grid from 2,4 to 1,3
-               !/
-               do iGrid = 1, 3, 2
-                  call prolong(iGrid + 1, iGrid)
-               end do
-            end if
-         else
+      if(UseGhostPoint)then
+         select case(count(iLevelSubgrid_I==OutOfGrid_))
+         case(3, 7) !3,7 are nGrid -1 for nDim=2,3 
             !\
-            !Check if the points behind the boundary are 3,4 or 2,4
+            !Find the only physical point in the stencil 
             !/
-            if(iLevelSubGrid_I(3)==OutOfGrid_)then
-               !\
-               !Prolong grid from 1,2 to 3,4
-               !/
-               do iGrid = 1,2
-                  call prolong(iGrid, iGrid +2)
-               end do
-            else
-               !\
-               !Prolong grid from 1,3 to 2,4
-               !/
-               do iGrid = 1, 3, 2
-                  call prolong(iGrid, iGrid + 1)
-               end do
-            end if
-         end if
-      case(6)
-         !\
-         ! Three-dimensional case, only two grid vertexes are
-         ! inside the domain. From each of the two physical
-         ! points the grid should be prolonged to three
-         ! ghost points along the plane
-         !/
-         iGridCheck = maxloc(iLevelSubGrid_I,DIM=1)
-         do iDir  = 1, nDim
-            if(iLevelSubGrid_I(iEdge_ID(iGridCheck,iDir))>=0)then
-               do iGrid = 2,4
-                  call prolong(iGridCheck,&
-                       iFace_IDI(iGrid,iDir,iGridCheck))
-                  call prolong(iEdge_ID(iGridCheck,iDir),&
-                       iOppositeFace_IDI(iGrid,iDir,iGridCheck))
-               end do
-               EXIT
-            end if
-         end do
-      end select
-
+            iGridCheck = maxloc(iLevelSubGrid_I, DIM=1)
+            nGridOut = 1
+            Weight_I = 0; Weight_I(1) = 1
+            iIndexes_II(0,       1) = iProc_I( iGridCheck) 
+            iIndexes_II(nIndexes,1) = iBlock_I(iGridCheck)
+            iIndexes_II(1:nDim,1  ) = iCellIndexes_DII(:,1,iGridCheck)
+            RETURN
+         case(4)
+            ! nDim = 3
+            !\
+            ! One of the faces is fully out of the domain
+            !/
+            !\
+            !Find point in the domain
+            !/
+            iGridCheck = maxloc(iLevelSubGrid_I,DIM=1)
+            do iDir = 1, nDim
+               if(all(&
+                    iLevelSubGrid_I(iOppositeFace_IDI(:,iDir,iGridCheck))&
+                    ==OutOfGrid_))then
+                  if(IsExtended)then
+                     !\
+                     ! Prolong grid from the physical face to the ghost one
+                     ! accounting for the difference in resolution
+                     !/
+                     do iGrid = 1,4
+                        call prolong(iFace_IDI(iGrid,iDir,iGridCheck), &
+                             iOppositeFace_IDI(iGrid,iDir,iGridCheck))
+                     end do
+                  else
+                     !\
+                     !Grid near the boundary is uniform. Put the point to the
+                     !physical face to nullify the ghost cell contributions
+                     !/
+                     Xyz_D(iDir) = XyzGrid_DII(iDir,1,iGridCheck)
+                  end if
+                  EXIT
+               end if
+            end do
+         case(2)
+            ! Analogous to the previous case, but nDim = 2 
+            !\
+            !Find point in the domain
+            !/
+            iGridCheck = maxloc(iLevelSubGrid_I,DIM=1)
+            do iDir = 1, 2
+               if(all(&
+                    iLevelSubGrid_I(iOppositeSide_IDI(:,iDir,iGridCheck))&
+                    ==OutOfGrid_))then
+                  if(IsExtended)then
+                     !\
+                     ! Prolong grid from the physical face to the ghost 
+                     ! accounting for the difference in resolution
+                     !/
+                     do iGrid = 1,2
+                        call prolong(iSide_IDI(iGrid,iDir,iGridCheck), &
+                             iOppositeSide_IDI(iGrid,iDir,iGridCheck))
+                     end do
+                  else
+                     !\
+                     !Put the point to the physical phase, which assign them
+                     !zero weight
+                     !/
+                     Xyz_D(3 - iDir) = XyzGrid_DII(3 - iDir,1,iGridCheck)
+                  end if
+                  EXIT
+               end if
+            end do
+         case(6)
+            !\
+            ! Three-dimensional case, only two grid vertexes are
+            ! inside the domain. From each of the two physical
+            ! points the grid should be prolonged to three
+            ! ghost points along the plane
+            !/
+            iGridCheck = maxloc(iLevelSubGrid_I,DIM=1)
+            do iDir  = 1, nDim
+               if(iLevelSubGrid_I(iEdge_ID(iGridCheck,iDir))>=0)then
+                  if(IsExtended)then
+                     do iGrid = 2,4
+                        call prolong(iGridCheck,&
+                             iFace_IDI(iGrid,iDir,iGridCheck))
+                        call prolong(iEdge_ID(iGridCheck,iDir),&
+                             iOppositeFace_IDI(iGrid,iDir,iGridCheck))
+                     end do
+                     EXIT
+                  else
+                     !\
+                     ! Put the point to the physical edge
+                     !/
+                     Xyz_D(1 + mod(iDir,3)) = &
+                          XyzGrid_DII(1 + mod(iDir,3),1,iGridCheck)
+                     Xyz_D(1 + mod(iDir+1,3)) = &
+                          XyzGrid_DII(1 + mod(iDir+1,3),1,iGridCheck)
+                  end if
+               end if
+            end do
+         end select
+      end if
       !\
-      ! Finalize: calculate all arrays for extended stencil
-      ! in the upper routine:
+      ! Finalize:
       !/
-      nExtendedStencil    = 0
-      XyzExtended_DI      = 0
-      iIndexesExtended_II = 0
-      iLevelExtended_I    = 0
-      do iGrid = 1, nGrid
-         do iSubgrid = 1, nSubgrid_I(iGrid)
-            nExtendedStencil = nExtendedStencil + 1
-            XyzExtended_DI(:,nExtendedStencil) = &
-                 XyzGrid_DII(:,iSubGrid,iGrid) 
-            iIndexesExtended_II(0,nExtendedStencil) = &
-                 iProc_I(iGrid)
-            iIndexesExtended_II(nIndexes,nExtendedStencil) = &
-                 iBlock_I(iGrid)
-            iIndexesExtended_II(1:nDim,nExtendedStencil)   = &
-                 iCellIndexes_DII(:,iSubGrid,iGrid)
-            iLevelExtended_I(nExtendedStencil) = iLevelSubgrid_I(iGrid) 
+      if(IsExtended)then
+         !\ 
+         ! calculate all arrays for extended stencil
+         !/
+         nExtendedStencil    = 0
+         XyzExtended_DI      = 0
+         iIndexesExtended_II = 0
+         iLevelExtended_I    = 0
+         do iGrid = 1, nGrid
+            do iSubgrid = 1, nSubgrid_I(iGrid)
+               nExtendedStencil = nExtendedStencil + 1
+               XyzExtended_DI(:,nExtendedStencil) = &
+                    XyzGrid_DII(:,iSubGrid,iGrid) 
+               iIndexesExtended_II(0,nExtendedStencil) = &
+                    iProc_I(iGrid)
+               iIndexesExtended_II(nIndexes,nExtendedStencil) = &
+                    iBlock_I(iGrid)
+               iIndexesExtended_II(1:nDim,nExtendedStencil)   = &
+                    iCellIndexes_DII(:,iSubGrid,iGrid)
+               iLevelExtended_I(nExtendedStencil) = iLevelSubgrid_I(iGrid) 
+            end do
          end do
-      end do
+      else
+         !\
+         ! Calculate nDim-linear interpolation on uniform grid
+         !/
+         Xyz_D = (Xyz_D - XyzGrid_DII(:,1,1))*DxyzInv_D
+         Weight_I = 0;  Weight_I(1) = 1; nGridOut = 1
+         do iDir = 1, nDim
+            Weight_I(nGridOut + 1:nGridOut + nGridOut) =&
+                 Weight_I(1:nGridOut)*Xyz_D(iDir)
+            Weight_I(1:nGridOut) =  Weight_I(1:nGridOut)*(1 -Xyz_D(iDir))
+            nGridOut = nGridOut + nGridOut
+         end do
+         !\
+         ! Sort out zero weights
+         !/
+         nGridOut = 0 ; cTol2 = 2*cTol2
+         do iGrid = 1, nGrid
+            if(Weight_I(iGrid) < cTol2)CYCLE
+            nGridOut = nGridOut + 1
+            iIndexes_II(0,       nGridOut) = iProc_I( iGrid)
+            iIndexes_II(nIndexes,nGridOut) = iBlock_I(iGrid)
+            iIndexes_II(1:nDim,  nGridOut) = iCellIndexes_DII(:,1,iGrid)
+            Weight_I(nGridOut) = Weight_I(iGrid)
+         end do
+      end if
     end subroutine generate_extended_stencil
+    !======================
     !\
     ! Used to prolong grid behind the boundary
     !/
@@ -3646,7 +3611,7 @@ contains
     ! Arrays of logical values Xyz_D < XyzGrid_DI(:,iGrid) for iGrid'th grid
     ! point of the basic stencil for point Xyz
     !/
-    logical, parameter:: IsBelow_DI(3,8)=reshape((/&
+    logical, parameter, dimension(3,8):: IsBelow_DI=reshape((/&
          .false., .false., .false., &
          .true. , .false., .false., &
          .false., .true. , .false., &
@@ -3658,8 +3623,7 @@ contains
          , (/3,8/) )
     !-------------------------------------
     nGrid = 2**nDim
-    iOrderExtended_I = -1
-   
+    iOrderExtended_I = -1   
     do iPoint = 1,nExtendedStencil
        IsBelowExtended_DI(:,iPoint) = Xyz_D < XyzExtended_DI(:,iPoint)
        Distance_I(iPoint) = sum( &
