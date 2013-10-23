@@ -17,6 +17,7 @@ help:
 	@echo "   test_freq             - test ModFreq"
 	@echo "   test_geopack          - test CON_geopack"
 	@echo "   test_interpolate      - test ModInterpolate"
+	@echo "   test_interpolate_amr  - test ModInterpolateAMRGrid"
 	@echo "   test_io_unit          - test ModIoUnit"
 	@echo "   test_initial_state    - test ModInitialState"
 	@echo "   test_line_extract     - test CON_line_extract"
@@ -50,6 +51,7 @@ test:
 	-@make test_geopack
 	-@make test_io_unit
 	-@make test_interpolate
+	-@make test_interpolate_amr
 	-@make test_initial_state
 	-@make test_line_extract
 	-@make test_linear_advection
