@@ -1526,6 +1526,7 @@ void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataS
   //coordinate in the MSGR_HCI frame
   sxform_c(SO_FRAME,"MSGR_HCI",Exosphere::OrbitalMotion::et,SO_to_HCI_TransformationMartix);
   fprintf(fout,", \"xMSGR_HCI\", \"yMSGR_HCI\", \"zMSGR_HCI\"");
+#endif
 
   for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
     fprintf(fout,", \"Sodium number Density(%s)\"", _EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource]);
@@ -1562,7 +1563,7 @@ void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataS
 
   //print variables of the Chamberlain exosphere model
   if (Exosphere::ChamberlainExosphere::ModelInitFlag==true) Exosphere::ChamberlainExosphere::PrintVariableList(fout);
-#endif
+//#endif
 }
 
 
@@ -1655,6 +1656,7 @@ void Exosphere::Sampling::OutputDataFile::PrintData(FILE* fout,int DataSetNumber
   char *SamplingBuffer=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
 
 
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   //print position of the cell in the MSGR_HCI frame
   double x_HCI[3],*x_SO=CenterNode->GetX();
 
@@ -1675,6 +1677,7 @@ void Exosphere::Sampling::OutputDataFile::PrintData(FILE* fout,int DataSetNumber
 
 
   if (PIC::ThisThread==0) fprintf(fout,"%e  %e  %e ",x_HCI[0],x_HCI[1],x_HCI[2]);
+#endif
 
   //output the sampled number densities
   for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
@@ -1970,7 +1973,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
      flag=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_;
-     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+//     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
    }
 #endif
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
@@ -1978,7 +1981,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
      flag=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_;
-     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+//     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
    }
 #endif
 #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
@@ -1986,7 +1989,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
      flag=Exosphere::SourceProcesses::ThermalDesorption::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_;
-     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+//     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
    }
 #endif
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
@@ -1994,7 +1997,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
      flag=Exosphere::SourceProcesses::SolarWindSputtering::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_;
-     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+//     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
    }
 #endif
 #if _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_ == _EXOSPHERE_SOURCE__ON_
@@ -2006,6 +2009,11 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
    }
 
    if (flag==false) continue;
+
+   //sample the injection information
+   Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+   PIC::BC::nInjectedParticles[spec]+=1;
+   PIC::BC::ParticleProductionRate[spec]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
 
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
    if (startNode->block->GetLocalTimeStep(_NA_SPEC_)/LocalTimeStep<rnd()) continue;
