@@ -6,16 +6,19 @@
 ! Author: Aaron Ridley, UMichigan
 !
 ! Modified: 
+!           AGB, Oct 2013 - Fixed RCMR flag useage and treatment of sat data
+!           AGB, Sept 2013 - when you are not doing RCAC the data is not being
+!                            read in, so you should not try to save it
 !           Aaron, July 2013 - when you are not doing RCAC, then you shouldn't
 !                              try to read data.  This was causing only every 
 !                              other line to be read.
-!           Asad, UMichigan, Feb 2013 - Added data reading capability to allow
-!                                       data assimilation
+!           Alexey Morozov (alex), UM, May 2013 - fixed interpolation for the 
+!                    case when satellites cross the prime meridian (lon=0)
 !           Angeline Burrell (AGB), UMichigan, Feb 2013 - Modified variable
 !                                                         names for consistency
 !                                                         and added comments
-!           Alexey Morozov (alex), UM, May 2013 - fixed interpolation for the 
-!                    case when satellites cross the prime meridian (lon=0)
+!           Asad, UMichigan, Feb 2013 - Added data reading capability to allow
+!                                       data assimilation
 !
 ! Comments: Routines to handle satellite data in GITM.
 !
@@ -43,7 +46,11 @@ subroutine read_satellites(iError)
   integer                   :: itime(7)
   real                      :: pos(3), dat
   !---------------------------------------------------------------------
-  call init_mod_satellites
+  if (RCMRFlag) then
+     call init_mod_satellites_rcmr
+  else
+     call init_mod_satellites
+  end if
 
   iError = 0
   nSatLines = 0
@@ -115,7 +122,8 @@ subroutine read_satellites(iError)
                  SatPos(iSat, 3, nSatPos(iSat, nSatLines(iSat)), &
                       nSatLines(iSat)) = Pos(3)
                  SatTime(iSat, nSatLines(iSat)) = NewTime
-                 SatDat(iSat, nSatLines(iSat)) = dat
+
+                 if (RCMRFlag) SatDat(iSat, nSatLines(iSat)) = dat
               endif
            else
               nSatPos(iSat,nSatLines(iSat)) = nSatPos(iSat,nSatLines(iSat)) + 1
@@ -127,7 +135,7 @@ subroutine read_satellites(iError)
               else
                  SatPos(iSat,:,nSatPos(iSat,nSatLines(iSat)),nSatLines(iSat))=&
                       Pos
-                 SatDat(iSat,nSatLines(iSat)) = dat
+                 if (RCMRFlag) SatDat(iSat,nSatLines(iSat)) = dat
               endif
            endif
 
@@ -234,9 +242,11 @@ subroutine move_satellites
                    (SatTime(iSat,iLine+1) - SatTime(iSat,iLine))
            endif
 
-           ! Asad: Estimate the current time's data value for each satellite
-           SatCurrentDat(iSat) = r * SatDat(iSat, iLine) + &
-                (1 - r) * SatDat(iSat, iLine + 1)
+           if (RCMRFlag) then
+              ! Asad: Estimate the current time's data value for each satellite
+              SatCurrentDat(iSat) = r * SatDat(iSat, iLine) + &
+                   (1 - r) * SatDat(iSat, iLine + 1)
+           end if
 
            do iPos = 1, nSatPos(iSat,iLine)
               do i=1,3
