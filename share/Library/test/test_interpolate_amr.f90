@@ -100,7 +100,7 @@ contains
           iLevelTest_I(iGrid) = mod(iMisc, 2)
           iMisc = (iMisc - iLevelTest_I(iGrid))/2
        end do
-       write(*,*)'Case=',iLevelTest_I(1:2**nDim)
+       !write(*,*)'Case=',iLevelTest_I(1:2**nDim)
        !\
        ! We generated refinement, now sample points
        !/
