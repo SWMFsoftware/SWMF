@@ -159,23 +159,30 @@ subroutine PT_put_from_gm(UseData, &
      nVar = 3
 
      ! set number of grid points on this processor
-     nPoint = 10
+     call amps_get_center_point_number(nPoint)  !kkkkjjj10
      ! allocate array
      allocate(Pos_DI(3,nPoint))
 
      ! Fill in values
-     do iPoint = 1, nPoint
-        Pos_DI(:,iPoint) = (/ 10.0*iPoint, 20.0*iPoint, 30.0*iPoint/)
-     end do
+!    do iPoint = 1, nPoint
+!       Pos_DI(:,iPoint) = (/ 10.0*iPoint, 20.0*iPoint, 30.0*iPoint/)
+!    end do
+
+     call amps_get_center_point_coordinates(Pos_DI) 
+
      RETURN
   end if
 
   write(*,*)NameSub,': iProc, iPoint, i, Pos, Data'
-  do iPoint = 1, nPoint
-     i = iPoint_I(iPoint)
-     write(*,*)NameSub, iProc, iPoint, i, Data_VI(:,i)
-     ! Here should convert from SI to AMPS units and store data
-  end do
+
+
+! do iPoint = 1, nPoint
+!    i = iPoint_I(iPoint)
+!    write(*,*)NameSub, iProc, iPoint, i, Data_VI(:,i)
+!    ! Here should convert from SI to AMPS units and store data
+! end do
+
+  call amps_recieve_gm2amps_center_point_data(Data_VI,iPoint_I)
 
 end subroutine PT_put_from_gm
 
