@@ -2,7 +2,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
   !===========================TESTS============================================
 module ModTestInterpolateAMR
-  use ModInterpolateAMR, ONLY: interpolate_amr, OutOfGrid_
+  use ModInterpolateAMR, ONLY: interpolate_amr
   implicit none
   !\
   ! Shift of the iGrid point in the stencil with respect to the
