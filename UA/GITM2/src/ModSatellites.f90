@@ -1,5 +1,18 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!----------------------------------------------------------------------------
+! $Id$
+! Author: Aaron Ridley, UMichigan
+!
+! Modified:
+!           AGB, Oct 2013 - Added seperate routine to allocate satellite data
+!                           structures if data assimilation will be performed
+!           Asad, Feb 2013 - Modified to allow satellite data to be read in.
+!                            Increased maximum allowable size of input file.
+!
+! Comments: Variables used to track satellites through the GITM grid and
+!           routines used to initialize these variables
+!----------------------------------------------------------------------------
 
 module ModSatellites
 
@@ -41,17 +54,36 @@ module ModSatellites
 contains
 
   subroutine init_mod_satellites
-    ! Asad: Added allocation for new variables SatDat, SatCurrentDat,
-    !       and SatAltDat
 
     if(allocated(SatTime)) return
     allocate( &
          SatTime(nMaxSats, nMaxSatInputLines), &
          SatPos(nMaxSats, 3, nMaxSatPos, nMaxSatInputLines), &
-         nSatPos(nMaxSats, nMaxSatInputLines), &
-         SatDat(nMaxSats, nMaxSatInputLines), &
-         SatCurrentDat(nMaxSats), SatAltDat(nMaxSats))
+         nSatPos(nMaxSats, nMaxSatInputLines))
 
   end subroutine init_mod_satellites
+
+  subroutine init_mod_satellites_rcmr
+    ! Asad: Added allocation for new variables SatDat, SatCurrentDat,
+    !       and SatAltDat
+    ! AGB: Defined this change as a seperate routine to simplify runs
+    !      with and without RCMR
+
+    if(allocated(SatAltDat)) return
+    if(allocated(SatTime)) then
+       allocate( &
+            SatDat(nMaxSats, nMaxSatInputLines), &
+            SatCurrentDat(nMaxSats), SatAltDat(nMaxSats))
+    else
+       allocate( &
+            SatTime(nMaxSats, nMaxSatInputLines), &
+            SatPos(nMaxSats, 3, nMaxSatPos, nMaxSatInputLines), &
+            nSatPos(nMaxSats, nMaxSatInputLines), &
+            SatDat(nMaxSats, nMaxSatInputLines), &
+            SatCurrentDat(nMaxSats), SatAltDat(nMaxSats))
+    end if
+    write (*,*) "AGB ALLOCATED SatDat, SatCurrentDat, SatAltDat"
+
+  end subroutine init_mod_satellites_rcmr
 
 end module ModSatellites
