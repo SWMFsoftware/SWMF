@@ -196,8 +196,8 @@ module ModInterpolateAMR
   !\
   ! Analogous for 2D
   !/
-  integer, parameter:: Trapezoid_ = 1, OneFine3C_      = 2
-  integer, parameter:: Rhombus_ = 3, OneCoarse3F_      = 4
+  integer, parameter:: Trapezoid_ = 1
+  integer, parameter:: Rhombus_ = 3
 contains
   !=========================================================================
   subroutine  interpolate_amr2(&
@@ -381,7 +381,7 @@ contains
        nGridOut = nGridOut + nGridOut1
        DoStencilFix = .false.
        RETURN
-    case(OneCoarse3F_)
+    case(OneCoarse_)
        !\
        ! Check the ends of the resolution interfaces. Near the resolution 
        ! interface endpoint the stencil may need to be reevaluated. 
@@ -445,7 +445,7 @@ contains
     iOrder_I(1:2) = iSide_IDI(:,iDir,iGrid)
     iOrder_I(3:4) = iOppositeSide_IDI(:,iDir,iGrid) 
     select case(iCase)
-    case(OneFine3C_,Rhombus_)
+    case(OneFine_,Rhombus_)
        !   C---C
        !    \ /|
        !     F-C
@@ -456,7 +456,7 @@ contains
        iOrder_I = iOrder_I((/1,4,2,3/))
        !              These  \/ two vertexes form
        ! the common side of two triangles in triangulation
-    case(OneCoarse3F_)
+    case(OneCoarse_)
        !   F---F
        !    \ \|
        !     C-F
@@ -1572,7 +1572,7 @@ contains
       !/
 
       nGridOut = -1; nGridOutUp= -1; nGridOutDown = -1
-      Weight_I = -1
+      Weight_I = -1; iOrderHere_I = 0
       if(present(iUTriangle1_I))then
          X1_D = XyzGrid_DI(:,iOrder_I(iUTriangle1_I(1)))
          X2_D = XyzGrid_DI(:,iOrder_I(iUTriangle1_I(2)))
@@ -1773,7 +1773,9 @@ contains
       !Calculate low face
       if(present(iDTriangle1_I))then
          Weight_I(4:3+nGridOutUp) = Weight_I(1:nGridOutUp)
+         Weight_I(1:3) = 0
          iOrderHere_I(4:3+nGridOutUp) = iOrderHere_I(1:nGridOutUp)
+         iOrderHere_I(1:3) = 0
          X1_D = XyzGrid_DI(:,iOrder_I(iDTriangle1_I(1)))
          X2_D = XyzGrid_DI(:,iOrder_I(iDTriangle1_I(2)))
          X3_D = XyzGrid_DI(:,iOrder_I(iDTriangle1_I(3)))
@@ -1925,10 +1927,14 @@ contains
       if(present(iDRectangle1_I))then
          if(present(iDTriangle1_I))then
             Weight_I(5:4+nGridOutUp) = Weight_I(4:3+nGridOutUp)
+            Weight_I(1:4) = 0
             iOrderHere_I(5:4+nGridOutUp) = iOrderHere_I(4:3+nGridOutUp)
+            iOrderHere_I(1:4)=0
          else
             Weight_I(5:4+nGridOutUp) = Weight_I(1:nGridOutUp)
+            Weight_I(1:4) = 0
             iOrderHere_I(5:4+nGridOutUp) = iOrderHere_I(1:nGridOutUp)
+            iOrderHere_I(1:4)=0
          end if
          X1_D = XyzGrid_DI(:,iOrder_I(iDRectangle1_I(1)))
          X2_D = XyzGrid_DI(:,iOrder_I(iDRectangle1_I(2)))
@@ -1957,10 +1963,14 @@ contains
          if(.not.present(iDRectangle1_I))then
             if(present(iDTriangle1_I))then
                Weight_I(5:4+nGridOutUp) = Weight_I(4:3+nGridOutUp)
+               Weight_I(1:4)=0
                iOrderHere_I(5:4+nGridOutUp) = iOrderHere_I(4:3+nGridOutUp)
+               iOrderHere_I(1:4) = 0
             else
                Weight_I(5:4+nGridOutUp) = Weight_I(1:nGridOutUp)
+               Weight_I(1:4)=0
                iOrderHere_I(5:4+nGridOutUp) = iOrderHere_I(1:nGridOutUp)
+               iOrderHere_I(1:4) = 0
             end if
          end if
          X1_D = XyzGrid_DI(:,iOrder_I(iDTrapezoid1_I(1)))
@@ -2818,13 +2828,13 @@ contains
           iLoc = maxloc(iLevel_I,DIM=1)
           iSortStencil_II(Dir_,iCase,nDim) = 1
           iSortStencil_II(Grid_,iCase,nDim) = iLoc
-          iSortStencil_II(Case_,iCase,nDim) = OneFine3C_
+          iSortStencil_II(Case_,iCase,nDim) = OneFine_
           CYCLE CASE2
        case(3)                          ! 4 cases 14 totally 2 left
           iLoc = minloc(iLevel_I(1:4),DIM=1)
           iSortStencil_II(Dir_,iCase,nDim)  = 1
           iSortStencil_II(Grid_,iCase,nDim) = iLoc
-          iSortStencil_II(Case_,iCase,nDim) = OneCoarse3F_
+          iSortStencil_II(Case_,iCase,nDim) = OneCoarse_
           CYCLE CASE2
        case(2)                          !          
           iLoc = maxloc(iLevel_I,DIM=1)
