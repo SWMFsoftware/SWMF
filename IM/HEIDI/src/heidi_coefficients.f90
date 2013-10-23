@@ -8,12 +8,12 @@
 !======================================================================
 subroutine heidi_cepara
 
-  use ModHeidiSize
-  use ModHeidiMain
-  use ModHeidiDrifts
-  use ModIoUnit,     ONLY: UNITTMP_
-  use ModHeidiIO,    ONLY: NameInputDirectory
-  use ModHeidiInput, ONLY: TypeBCalc
+  use ModHeidiSize,   ONLY: nR, nT, nPa, nS, s, io, jo, lo, ko, scalc, dt
+  use ModHeidiMain,   ONLY: eKev, upa, mu, lz, funt, m1, NeutralHydrogen, v, IsBFieldNew
+  use ModHeidiDrifts, ONLY: acharge, atlos
+  use ModIoUnit,      ONLY: UNITTMP_
+  use ModHeidiIO,     ONLY: NameInputDirectory
+  use ModHeidiInput,  ONLY: TypeBCalc
 
   implicit none
 
@@ -359,12 +359,16 @@ end subroutine Heidi_cepara
 !======================================================================
 subroutine OTHERPARA
 
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
-  use ModHeidiDrifts
-  use ModHeidiInput, ONLY: TypeBCalc
-
+  use ModHeidiSize,   ONLY: nE, nPA, nS, nSth, s, io, jo, ko, lo, dT, scalc
+  use ModHeidiIO,     ONLY: rns, rnl, res, rel, esn, eln, ele, ecn, ece, aln, &
+       ale, cen, cee, ilmp, lmp, ese
+  use ModHeidiMain,   ONLY: IsBFieldNew, Re, dPhi, Me, dl1, mp, q, cedr, cidr, &
+       mas, dE, vbnd, ebnd, facmu, VPhi_IIII, VR_IIII, funt, funi, ekev, upa,  &
+       lz, z, mlt, mu, wmu, dmu, v
+  use ModHeidiDrifts, ONLY: VrConv, Vr, P2, j6, j18, coule, couli, &
+       gtae, gtai, atae, atai, btae, btai
+  use ModHeidiInput,  ONLY: TypeBCalc
+  use ModNumConst,    ONLY: cPi
   implicit none
 
   integer :: i,j,k,l,is,iss,ier
@@ -479,7 +483,7 @@ subroutine OTHERPARA
      if (SCALC(S).eq.1) then
         SQM=sqrt(MAS(S))
         ! GAMA and EDRCO divided by an extra 2 to match Khazanov defn of Q
-        GAMA=DLN/8./PI*QE*1E6/SQM*QE ! *1E6 to transform ne into m-3
+        GAMA=DLN/8./cPi*QE*1E6/SQM*QE ! *1E6 to transform ne into m-3
         CCO=GAMA/Q*sqrt(2.)*DT
         CCD=GAMA*2*DT/16./sqrt(2.)   ! 2*DT due to double the time step
         EDRCO=2.*DLN*QE*RE/MAS(S)*QE/MAS(S)*(1.E-10) ! to invert in eV/cm2/s
@@ -640,16 +644,21 @@ end subroutine OTHERPARA
 
 subroutine MAGCONV(I3,NST)
 
-  use ModHeidiSize
-  use ModHeidiMain
-  use ModHeidiIO
-  use ModHeidiDrifts
-  use ModHeidiCurrents
-  use ModHeidiDGCPM
-  use ModProcIM
-  use ModIoUnit,  only : io_unit_new
-  use ModHeidiInput, ONLY: TypeBCalc
-
+  use ModHeidiSize,     ONLY: nS, nR, nT, nPhiCells, nThetaCells, s, io, jo, ko, lo, &
+       scalc, dT
+  use ModHeidiMain,     ONLY: LZ, VPhi_IIII, VR_IIII, mlt, dPhi, Phi, IsBFieldNew, dl1, nParallelSpecies, &
+       t, Me, Re, A
+  use ModHeidiIO,       ONLY: NameInputDirectory, NameRun, iUnitPot, iUnitStdOut, f107, day, year, &
+       BySW, BzSW, uSW, Kp, IA, iPPC, lmp, tppc, lamgam, nStep, ppc, time, write_prefix
+  use ModHeidiDrifts,   ONLY: Vr, VrConv, P1
+  use ModHeidiCurrents, ONLY: Jfac, Jion1, Lats, Lsh, LatFac, fpot, basepot, fpot, ilfac, irfac, &
+       lonfac, iR
+  use ModHeidiDGCPM,    ONLY: potdgcpm, vthetacells, vmltcells, vphicells, vlzcells
+  use ModProcIM,        ONLY: iComm, iError, iProc, nProc
+  use ModIoUnit,        ONLY: io_unit_new
+  use ModHeidiInput,    ONLY: TypeBCalc
+  use ModNumConst,      ONLY: cPi
+  use ModMpi,           ONLY: MPI_Real
   implicit none
 
   integer :: ABASE(24),AEPEN(24),IER,j,i,ii,I4,I3,NST,jj,bc_choice
@@ -699,8 +708,8 @@ subroutine MAGCONV(I3,NST)
 
 
   PHIPOFF=0.
-  DP1=.4*PI
-  DP2=2.*PI/3.
+  DP1=.4*cPi
+  DP2=2.*cPi/3.
   FACP=AMIN1((.25*KP)**2,1.5)
   Kr=KP/(1.+.1*KP)
   ! The next line is to cut down the size of the field-aligned currents...
@@ -1142,8 +1151,8 @@ subroutine MAGCONV(I3,NST)
         PJ=PHI(J)-PHIPOFF
         CPJ=abs(PJ)
         SPJ=1.
-        if (exp(-(CPJ/DP1)**3) .lt. exp(-((2.*pi-CPJ)/DP2)**3)) then
-           CPJ=2.*PI-CPJ
+        if (exp(-(CPJ/DP1)**3) .lt. exp(-((2.*cPi-CPJ)/DP2)**3)) then
+           CPJ=2.* cPi-CPJ
            if (PJ.gt.0.) SPJ=-1.
            DPP=DP2
         else
@@ -1180,8 +1189,8 @@ subroutine MAGCONV(I3,NST)
         CJ=cos(PHI(J)+.5*DPHI)
         PJ=PHI(J)-PHIPOFF+.5*DPHI
         CPJ=abs(PJ)
-        if (exp(-(CPJ/DP1)**3) .lt. exp(-((2.*pi-CPJ)/DP2)**3)) then
-           CPJ=2.*PI-CPJ
+        if (exp(-(CPJ/DP1)**3) .lt. exp(-((2.* cPi-CPJ)/DP2)**3)) then
+           CPJ=2.* cPi-CPJ
            DPP=DP2
         else
            DPP=DP1
@@ -1203,10 +1212,10 @@ subroutine MAGCONV(I3,NST)
      end do
      do j=1,nphicells   ! Fill in DGCPM potentials
         CJ=cosd(vphicells(j))
-        PJ=vphicells(j)*pi/180.+phipoff
+        PJ=vphicells(j)*cPi/180.+phipoff
         CPJ=abs(PJ)
-        if (exp(-(CPJ/DP1)**3) .lt. exp(-((2.*pi-CPJ)/DP2)**3)) then
-           CPJ=2.*PI-CPJ
+        if (exp(-(CPJ/DP1)**3) .lt. exp(-((2.* cPi-CPJ)/DP2)**3)) then
+           CPJ=2.* cPi-CPJ
            DPP=DP2
         else
            DPP=DP1
