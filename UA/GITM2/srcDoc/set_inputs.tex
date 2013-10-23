@@ -1,5 +1,3 @@
-%  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-%  For more information, see http://csem.engin.umich.edu/tools/swmf
 \section{Principle Input}
 \label{uam.sec}
 
@@ -47,6 +45,14 @@ This input block sets the ending time of the simulation.  As mentioned above, GI
 (integer) minute  
 (integer) second  
 \end{verbatim}
+
+\subsubsection{END}
+\label{end.sec}
+ The inclusion of this keyword will cause GITM to stop reading the {\tt UAM.in} file.  This can allow one to save typical input options not used in one particular run for another run by moving them after this key.
+ 
+ \begin{verbatim}
+ #END
+ \end{verbatim}
 
 %%
 
@@ -123,7 +129,7 @@ If you set the iDebugLevel to 0 (the default), you can set the debug report time
 \subsubsection{SATELLITES}
 \label{satellites.sec}
 
-To improve model-data studies, GITM can output model results along the satellite paths.  Any number of satellites may be flown through a GITM simulation.  Output from the satellite paths is provided at the specified universal time, geographic latitude and longitude.  Instead of confining the model output to the satellite altitude, simulated output is provided over the entire GITM altitude range.
+To improve model-data studies, GITM can output model results along the satellite paths.  Any number of satellites may be flown through a GITM simulation.  Output from the satellite paths is provided at the specified universal time, geographic latitude and longitude.  Instead of confining the model output to the satellite altitude, simulated output is provided over the entire GITM altitude range.  If RCMR is being run, the validity of the satellite index specified in that input block will be tested here.
 
 \begin{verbatim}
 #SATELLITES
@@ -159,7 +165,7 @@ GITM defaults to creating many output files for satellite runs, but this option 
 \subsubsection{SAVEPLOT}
 \label{saveplot.sec}
 
-This input option specifies the types of files GITM will output.  The most common type is 3DALL, which outputs all primary state variables. Types (specified in OutputType) include : 3DALL, 3DNEU, 3DION, 3DTHM, 3DCHM, 3DUSR, 3DGLO, 2DGEL, 2DMEL, 2DUSR, 2DTEC, 1DALL, 1DGLO, 1DTHM, 1DNEW, 1DCHM, 1DCMS, and 1DUSR.  These file types specify the number of dimensions (3D, 2D, 1D) in which GITM may be run and the different primary state variables that are included in the output (NEU stands for neutrals, ION stands for ionosphere, THM stands for thermosphere, CHM stands for BLAH, USR stands for BLAH, GLO stands for day glow, TEC stands for total electron content, GEL stands for global electric BLAH, and MEL stands for BLAH).  Any number of output files greater than zero may be produced, but nOutputTypes must be used to specify the number of types to be created and an OutputType and DtPlot must be provided for each output just as was done for multiple satellites.  DtRestart and DtPlot specify the time-step in seconds for producing restart and output files, respectively.  If no output files are specified, GITM will crash when attempting to finalize all procedures.
+This input option specifies the types of files GITM will output.  The most common type is 3DALL, which outputs all primary state variables. Types (specified in OutputType) include : 3DALL, 3DMAG, 3DNEU, 3DION, 3DTHM, 3DCHM, 3DUSR, 3DGLO, 2DGEL, 2DMEL, 2DUSR, 2DTEC, 1DALL, 1DGLO, 1DTHM, 1DNEW, 1DCHM, 1DCMS, and 1DUSR.  These file types specify the number of dimensions (3D, 2D, 1D) in which GITM may be run and the different primary state variables that are included in the output (NEU stands for neutrals, ION stands for ionosphere, MAG stands for magnetic field, THM stands for thermosphere, CHM stands for chemistry, USR stands for BLAH, GLO stands for day glow, TEC stands for total electron content, GEL stands for global electric BLAH, and MEL stands for BLAH).  Any number of output files greater than zero may be produced, but nOutputTypes must be used to specify the number of types to be created and an OutputType and DtPlot must be provided for each output just as was done for multiple satellites.  DtRestart and DtPlot specify the time-step in seconds for producing restart and output files, respectively.  If no output files are specified, GITM will crash when attempting to finalize all procedures.
 
 \begin{verbatim}
 #SAVEPLOT
@@ -171,6 +177,16 @@ This input option specifies the types of files GITM will output.  The most commo
 \vspace{-.1in}
 \hspace{.6in} $\vdots$
 \vspace{.1in}
+
+\subsubsection{CCMCFILENAME}
+\label{ccmcfilename.sec}
+
+The Community Coordinated Modeling Center (CCMC), located at {\tt ccmc.gsfc.nasa.gov}, provides access to space research models to the scientific community.  GITM provides the option to have the GITM output files use the CCMC naming convention: TYPE\_GITM\_YYYY-MM-DDThh-mm-ss.bin, where TYPE is one of the GITM output types such as 3DALL described in the previous subsection.
+
+\begin{verbatim}
+#CCMCFILENAME
+(logical) Use CCMC naming convention
+\end{verbatim}
 
 \subsubsection{PLOTTIMECHANGE}
 \label{plottimechange.sec}
@@ -188,7 +204,16 @@ This option allows you to change the output cadence of the files for a limited t
 
 \subsection{Restart Input}
 
-This section deals with options typically only specified in a restart header.  These options can be used in the principle input file but have very little use if a run does not need to be restarted from a specified point in a previous run.
+This section deals with options typically only specified in a restart header.  These options can be used in the principle input file but have very little use if a run does not need to be restarted from a specified point in a previous run.  Apart from setting the flag in the {\tt UAM.in} file, several steps must be taken.  First, you need to put the restart files that GITM writes into the correct location.  These files are located in subdirectories (named {\tt restartIN} and {\tt restartOUT}) within the {\tt run/UA} directory.  To preserve the past GITM restart information and enable a new start from the end of the previous run, prepare these directories as directed below.  This code snippit can also be added to a PBS job file, but should only be performed after GITM has finished executing and if the {\tt GITM.DONE} file exists.
+
+\begin{verbatim}
+cd UA
+mv restartOUT restartOUT.runname.XX
+mkdir restartOUT
+./pGITM
+rm -f restartIN; ln -s restartOUT.runname.XX
+cd ..
+\end{verbatim}
 
 \subsubsection{RESTART}
 
@@ -253,17 +278,27 @@ This section contains the input options that allow GITM to perform data assimila
 \subsubsection{RCMR}
 \label{rcmr.sec}
 
-RCMR stands for Retrospective Cost Model Reference, and is a retrospective cost adaptive control (RCAC) method of data assimilation.  MRAC is useful when dealing with nonlinear systems~\citep{Ali:2012aa}.  To use this system, Markov parameters need to be set.  These parameters will vary based on the type and number of data sources being assimilated and the driver being estimated.  Markov parameters for the assimilation of a single satellite providing neutral density to drive the F$_{10.7}$ are currently available.  Other parameters are currently being developed.
+RCMR stands for Retrospective Cost Model Reference, and is a Retrospective Cost Adaptive Control (RCAC) method of data assimilation.  RCMR is useful when dealing with nonlinear systems~\citep{Ali:2012aa}.  To use this system, Markov parameters need to be set.  These parameters will vary based on the type and number of data sources being assimilated and the driver being estimated.  Markov parameters for the assimilation of a single satellite providing neutral density to drive the F$_{10.7}$ are currently available.  Other parameters are currently being developed.
 
-Because RCMR is used to provide an initial F$_{10.7}$ value, this input block must be included before the F107 input block.  It should also be included after the SATELLITE block, so that the validity of the specified satellite index can be determined.  The initial F$_{10.7}$ should not be close to the desired final value, as a perturbed location allows the assimilation to better account for model error.
+The use of RCMR changes how the possible driving parameters and satellite data are treated within GITM.  Because of this, the RCMR block should be included before the SATELLITE, F107, and PHOTOELECTRON block in the UAM.in file.  The initial guess of the parameter being driven should not be close to the final value, as a perturbed location allows the assimilation to better account for model error.  Choosing a value within realistic physical boundaries but away from an intuitive guess as to the actual value is the best way to chose the initial guess.
 
 \begin{verbatim}
 #RCMR
-(logical) Assimilate neutral density
-(logical) Assimilate vertical TEC
-(real) Initial F10.7
+(string) Input data type (RHO/VTEC)
+(string) Output variable to drive (F107/PHOTOELECTRON)
+(real) Initial output estimate
 (integer) Number of satellites to include in data assimilation
 (integer) Index number of satellite to assimilate
+\end{verbatim}
+
+\subsubsection{DART}
+\label{dart.sec}
+
+DART stands for Data Assimilation Research Testbed, and is a community facility that provides software tools for data assimilation~\citep{Anderson:2009fn}.  Within the space physics community, DART has been coupled with TIE-GCM and GITM.  More information about using DART with GITM is available in the DART manual in the {\tt GITM2/srcDoc} directory.
+
+\begin{verbatim}
+#DART
+(integer) Method to use DART
 \end{verbatim}
 
 \subsection{Solar and Geomagnetic Indices}
@@ -274,7 +309,9 @@ This section contains the input options that specifies the level of solar and ge
 \subsubsection{F107}
 \label{f107.sec}
 
-Sets the F$_{10.7}$ and 81 day average of F$_{10.7}$ (commonly denoted as F$_{10.7a}$ or $\overline{F_{10.7}}$).  This is used to set the range of the initial altitude grid and drive the lower boundary conditions.  It is also used as input into several of the models called by GITM.  The F$_{10.7}$ is a measure of the solar 10.7 cm flux~\citep{Covington:1948aa} and is measured in solar flux units (1 sfu = 10$^{-22}$ W m$^{-2}$ Hz$^{-1}$ = 10,000 jansky).  The F$_{10.7}$ is commonly used as a proxy for the solar EUV output.  
+Sets the F$_{10.7}$ and 81 day average of F$_{10.7}$ (commonly denoted as F$_{10.7a}$ or $\overline{F_{10.7}}$).  This is used to set the range of the initial altitude grid and drive the lower boundary conditions.  It is also used as input into several of the models called by GITM.  If RCMR is being used to drive the F$_{10.7}$, then the values provided here are used to initialize MSIS and should be as close to the real F$_{10.7}$ as possible.
+
+The F$_{10.7}$ is a measure of the solar 10.7 cm flux~\citep{Covington:1948aa} and is measured in solar flux units (1 sfu = 10$^{-22}$ W m$^{-2}$ Hz$^{-1}$ = 10,000 jansky).  The F$_{10.7}$ is commonly used as a proxy for the solar EUV output.  
 
 \begin{verbatim}
 #F107
@@ -290,6 +327,47 @@ This input option allows GITM to use an appropriate F$_{10.7}$ for each day that
 \begin{verbatim}
 #NGDC_INDICES
 (string) filename
+\end{verbatim}
+
+\subsubsection{SME\_INDICES}
+\label{sme_indices.sec}
+
+This option is not well described in set\_inputs.f90.
+
+\begin{verbatim}
+#SME_INDICES
+(string) Mystery input number one
+(string) Mystery input number two
+\end{verbatim}
+
+\subsubsection{ACE\_DATA}
+\label{ace_data.sec}
+
+This option is not well described in set\_inputs.f90.
+
+\begin{verbatim}
+#ACE_INDICES
+(string) Mystery input number one
+(string) Mystery input number two
+\end{verbatim}
+
+\subsubsection{SWPC\_DATA}
+\label{swpc_data.sec}
+
+This option is not well described in set\_inputs.f90.
+
+\begin{verbatim}
+#SWPC_INDICES
+(string) Mystery input number one
+(string) Mystery input number two
+\end{verbatim}
+
+\subsubsection{NOAAHPI\_INDICES}
+\label{noaahpi_indices.sec}
+
+\begin{verbatim}
+#NOAAHPI_INDICES
+(string) NOAA HPI filename
 \end{verbatim}
 
 \subsubsection{KP}
@@ -401,6 +479,25 @@ When running with the MSIS or WACCM tides, no additional input files are needed.
 (logical) UseWACCMTides    
 \end{verbatim}
 
+\subsubsection{DUSTDATA}
+\label{dustdata.sec}
+
+\begin{verbatim}
+#DUSTDATA
+(logical) UseDustDistribution      
+(string) cDustFile      
+(string) cConrathFile  
+\end{verbatim}
+
+\subsubsection{DUST}
+\label{dust.sec}
+
+\begin{verbatim}
+#DUST
+(real) Total $\tau$      
+(real) Conrnu
+\end{verbatim}
+
 \subsubsection{GSWMCOMP}
 \label{gswmcomp.sec}
 
@@ -412,6 +509,14 @@ If you decided to use GSWM tides by selecting UseGSWMTides in the TIDES option, 
 (logical) GSWMdiurnal(2)       
 (logical) GSWMsemidiurnal(1)    
 (logical) GSWMsemidiurnal(2)    
+\end{verbatim}
+
+\subsubsection{USEPERTURBATION}
+\label{useperturbation.sec}
+
+\begin{verbatim}
+#USEPERTURBATION
+(logical) UsePerturbation
 \end{verbatim}
 
 \subsubsection{DAMPING}
@@ -433,6 +538,15 @@ A switch to add heating to the atmosphere.  This was primarily used to explore g
 (logical) UseGravityWave
 \end{verbatim}
 
+\subsubsection{AURORAMODS}
+\label{auroramods.sec}
+
+\begin{verbatim}
+#AURORAMODS
+(logical) Normalize Aurora to Hemispheric Power
+(real) Auroral Height Factor
+\end{verbatim}
+
 \subsubsection{NEWELLAURORA}
 \label{newellaurora.sec}
 
@@ -446,6 +560,19 @@ This input option provides several logical flags that allow GITM to use Pat Newe
 (logical) UseNewellWave
 (logical) UseNewellRemoveSpikes 
 (logical) UseNewellAverage  
+\end{verbatim}
+
+\subsubsection{OVATION}
+\label{ovation.sec}
+
+This input option provides several logical flags that allow GITM to use the SME Ovation model.
+
+\begin{verbatim}
+#OVATION
+(logical) UseOvationSME   
+(logical) UseOvationSMEMono
+(logical) UseOvationSMEWave
+(logical) UseOvationSMEIon
 \end{verbatim}
 
 \subsubsection{AMIEFILES}
@@ -516,8 +643,7 @@ This input option further allows the user to specify how Eddy diffusion is treat
 \subsubsection{DIFFUSION}
 \label{diffusion.sec}
 
-If you use Eddy diffusion, as indicated by the UseDiffusion flag, you must specify two pressure
-levels in units of UNITS using EddyDiffusionPressure[0,1].  Below the first pressure level, the Eddy diffusion will be constant.  Between the first and the second pressure levels, the Eddy diffusion coefficient will drop-off linearly.  Thus, the first pressure must be larger than the second!  The Eddy diffusion coefficient may also be specified using EddyDiffusionCoef.
+If you use Eddy diffusion, as indicated by the UseDiffusion flag, you must specify two pressure levels in units of UNITS using EddyDiffusionPressure[0,1].  Below the first pressure level, the Eddy diffusion will be constant.  Between the first and the second pressure levels, the Eddy diffusion coefficient will drop-off linearly.  Thus, the first pressure must be larger than the second!  The Eddy diffusion coefficient may also be specified using EddyDiffusionCoef.
 
 \begin{verbatim}
 #DIFFUSION
@@ -563,6 +689,27 @@ This input option turns several ionospheric transport processes on and off.  Use
 (logical) UseIonPressureGradient
 (logical) UseIonGravity     
 (logical) UseNeutralDrag   
+\end{verbatim}
+
+\subsubsection{CHEMISTRY}
+
+Turn certain chemical processes on or off.  All processes are included by default.
+
+\begin{verbatim}
+#CHEMISTRY
+(logical) UseIonChemistry         
+(logical) UseIonAdvection
+(logical) UseNeutralChemistry
+\end{verbatim}
+
+\subsubsection{PHOTOELECTRON}
+\label{photoelectron.sec}
+
+The photoelectron heating efficiency describes the energy input to the electron gas per electron-ion pair formed by the photoionization of a neutral~\citep{Hanson:1968ue}.  GITM defines the photoelectron heating efficiency as a scalar that multiplies the sum of the photoionization rate and the neutral density for each neutral species.  The specified value should lie between 0.02 and 0.20, though the default value is zero.  If RCMR is being used to drive the photoelectron heating efficiency, this block is ignored.
+
+\begin{verbatim}
+#PHOTOELECTRON
+(real) Photoelectron heating efficiency
 \end{verbatim}
 
 \subsubsection{DYNAMO}
@@ -707,4 +854,25 @@ Here is another example for no stretching near the auroral oval:
 65.0 ! Location of minimum grid spacing
 0.0	  ! There is no streching here
 1.0   ! For control
+\end{verbatim}
+
+\subsubsection{NEWSTRETCH}
+\label{newstretch.sec}
+
+An alternative way to stretch the grid.
+
+\begin{verbatim}
+#NEWSTRETCH
+(real) Poleward edge of the stretch region (degrees) 
+(real) Stretching width (degrees)
+(real) Stretching percentage  (0.0-1.0)
+\end{verbatim}
+
+Here is an example for stretching near the auroral zone:
+
+\begin{verbatim}
+#NEWSTRETCH
+65.0          ! Auroral oval
+5.0            ! Width of the stretched region
+0.6            ! Amount of stretch (0 = none, 1 = lots)
 \end{verbatim}
