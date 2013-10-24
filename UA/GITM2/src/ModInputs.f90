@@ -214,7 +214,7 @@ module ModInputs
 !! WAVE DRAG FORCINGS
   logical :: UseStressHeating  = .false.
 
-  real :: PhotoElectonHeatingEfficiency = 0.0
+  real :: PhotoElectronHeatingEfficiency = 0.0
 
   real :: KappaTemp0 = 5.6e-4
   real :: EddyDiffusionCoef = 0.0
