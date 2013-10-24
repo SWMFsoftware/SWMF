@@ -2919,7 +2919,6 @@ contains
             Xyz_D , XyzGrid_DI, iLevel_I, IsOut_I,&
             nGridOut, Weight_I, iOrder_I,&
             DoStencilFix, XyzStencil_D)
-       nIter = 0
        do while(DoStencilFix)
           call generate_basic_stencil(&
                nDim, XyzStencil_D, nExtendedStencil,        &
