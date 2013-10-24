@@ -8,6 +8,7 @@
 ! Comments: GITM main
 !
 ! AGB 3/31/13: Added call for RCMR data assimilation
+! AGB 10/23/13: Adapted RCMR call to new format
 !-----------------------------------------------------------------------------
 
 program GITM
@@ -54,7 +55,7 @@ program GITM
      call calc_pressure
 
      !!! We may have to split cMax and Dt calculation!!!
-     if(RCMRFlag .eqv. .true.) then
+     if(RCMRFlag) then
         Dt = 2
      else
         Dt = 1.e32
@@ -63,7 +64,7 @@ program GITM
      call calc_timestep_vertical
      if (.not. Is1D) call calc_timestep_horizontal
 
-     if(RCMRRhoFlag .eqv. .true.) then
+     if(RCMRFlag) then
         call run_RCMR
      endif
 
