@@ -110,7 +110,7 @@ module ModInterpolateAMR
   !\
   ! Array to sort stencil
   !/
-  use ModCubeGeometry, ONLY: iSortStencil_II, Case_, Dir_, Grid_
+  use ModCubeGeometry, ONLY: iSortStencil_III, Case_, Dir_, Grid_
   !\
   !Array used to sort stencil: 
   !(1) assign a type to it (Case_) 
@@ -118,8 +118,8 @@ module ModInterpolateAMR
   !(Grid_) example, if a a single point in the stencil is coarse and all
   !other are fine, the 'basic point' is the coarse point.
   !(3) assign a direction, if the orientation if this sort of stencil
-  !has a characteristic direction (Dir_). For example, for the 'resolution edge'
-  !of y direction iDir equals 1.
+  !has a characteristic direction (Dir_). For example, for the 'resolution 
+  !edge' of y direction iDir equals 1.
   !/
   !\
   !The tools to fill in this array
@@ -252,9 +252,9 @@ contains
     !-------------
     if(DoInit)call init_sort_stencil
     iCase = i_case(iLevel_I)
-    iGrid = iSortStencil_II(Grid_,iCase,nDim)
-    iDir =  iSortStencil_II(Dir_, iCase,nDim)
-    iCase=  iSortStencil_II(Case_,iCase,nDim)
+    iGrid = iSortStencil_III(Grid_,iCase,nDim)
+    iDir =  iSortStencil_III(Dir_, iCase,nDim)
+    iCase=  iSortStencil_III(Case_,iCase,nDim)
     iOrder_I(1:2) = iSide_IDI(:,iDir,iGrid)
     iOrder_I(3:4) = iOppositeSide_IDI(:,iDir,iGrid) 
     if(DoStencilFix) goto 100
@@ -405,9 +405,9 @@ contains
     DoStencilFix = .false.
     if(DoInit)call init_sort_stencil
     iCase = i_case(iLevel_I)
-    iGrid = iSortStencil_II(Grid_,iCase,nDim)
-    iDir =  iSortStencil_II(Dir_, iCase,nDim)
-    iCase=  iSortStencil_II(Case_,iCase,nDim)
+    iGrid = iSortStencil_III(Grid_,iCase,nDim)
+    iDir =  iSortStencil_III(Dir_, iCase,nDim)
+    iCase=  iSortStencil_III(Case_,iCase,nDim)
     iOrder_I(1:2) = iSide_IDI(:,iDir,iGrid)
     iOrder_I(3:4) = iOppositeSide_IDI(:,iDir,iGrid) 
     select case(iCase)
@@ -654,13 +654,13 @@ contains
     ! and orientation of all possible stencil configurations
     ! and now we extracted this information
     !/ 
-    iGrid = iSortStencil_II(Grid_,iCase,nDim)
-    iDir  = iSortStencil_II(Dir_,iCase,nDim)
+    iGrid = iSortStencil_III(Grid_,iCase,nDim)
+    iDir  = iSortStencil_III(Dir_,iCase,nDim)
     
     iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
     iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
 
-    select case(iSortStencil_II(Case_,iCase,nDim))
+    select case(iSortStencil_III(Case_,iCase,nDim))
     case(Face_)
        !\
        ! Faces going along plane iDir (which is the direction of normal)    
@@ -842,7 +842,7 @@ contains
           !    |
           !    C2
           !
-          !---------------------------------------------------------------------
+          !----------------------------------------------------------------
           call parallel_rays(Dir_D=0.50*(&
                XyzGrid_DI(:,iOrder_I(8)) + XyzGrid_DI(:,iOrder_I(5))) - &
                XyzGrid_DI(:,iOrder_I(1)),&
@@ -888,13 +888,13 @@ contains
     ! and orientation of all possible stencil configurations
     ! and now we extracted this information
     !/ 
-    iGrid = iSortStencil_II(Grid_,iCase,nDim)
-    iDir  = iSortStencil_II(Dir_, iCase,nDim)
+    iGrid = iSortStencil_III(Grid_,iCase,nDim)
+    iDir  = iSortStencil_III(Dir_, iCase,nDim)
 
     iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
     iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
 
-    select case(iSortStencil_II(Case_,iCase,nDim))
+    select case(iSortStencil_III(Case_,iCase,nDim))
     case(FiveTetrahedra_)
        !\
        ! One configuration resulting in the corner split for five tetrahedra
@@ -1724,7 +1724,7 @@ contains
                X2_D = XyzGrid_DI(:,iOrder_I(iURectangle2_I(2)))
                X3_D = XyzGrid_DI(:,iOrder_I(iURectangle2_I(3)))
                X4_D = XyzGrid_DI(:,iOrder_I(iURectangle2_I(4)))
-               AlphaUp = triple_product(X1_D - Xyz_D, X2_D - X1_D, X3_D - X1_D)/&
+               AlphaUp = triple_product(X1_D - Xyz_D,X2_D - X1_D,X3_D - X1_D)/&
                     triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
                XyzUp_D = Xyz_D + AlphaUp * Dir_D
                call rectangle(X1_D, X2_D, X3_D, X4_D, XyzUp_D)
@@ -2612,11 +2612,11 @@ contains
     !\
     ! Extended stencil, the generous estimate for its size is 2**(2*nDim) 
     !/
-    real, dimension(nDim,2**(2*nDim)) :: XyzExtended_DI 
-    integer :: iLevelExtended_I(2**(2*nDim))
-    integer :: iIndexesExtended_II(0:nIndexes,2**(2*nDim))
+    real, dimension(nDim,64) :: XyzExtended_DI 
+    integer :: iLevelExtended_I(64)
+    integer :: iIndexesExtended_II(0:nIndexes,64)
     integer :: nExtendedStencil
-    logical :: IsOutExtended_I(2**(2*nDim))
+    logical :: IsOutExtended_I(64)
 
     !\
     ! The same extended stencil in a structured form:
