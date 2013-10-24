@@ -8,13 +8,16 @@
 ! Comments: Routine to read  input options from the UAM.in file.
 !
 ! AGB 3/31/13: Added flags for data assimilation to adjust F10.7
+! AGB 10/23/13: Changed RCMR input to allow driving of photoelectron heating
+!               efficiency
 !-----------------------------------------------------------------------------
 
 subroutine set_inputs
 
   use ModInputs
   use ModSizeGitm
-  use ModGITM, only: iProc, f107_est, f107a_est
+  use ModGITM, only: iProc, f107_est, f107a_est, f107_msis, f107a_msis, &
+       PhotoElectronHeatingEfficiency_est
   use ModTime
   use ModPlanet
   use ModSatellites
@@ -228,9 +231,13 @@ subroutine set_inputs
            endif
 
         case ("#F107")
-
-           call read_in_real(f107, iError)
-           call read_in_real(f107a, iError)
+           if(RCMROutType == "F107") then
+              call read_in_real(f107_msis, iError)
+              call read_in_real(f107a_msis, iError)
+           else
+              call read_in_real(f107, iError)
+              call read_in_real(f107a, iError)
+           end if
 
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #F107:'
@@ -240,20 +247,22 @@ subroutine set_inputs
               write(*,*) '#F107'
               write(*,*) 'f107  (real)'
               write(*,*) 'f107a (real - 81 day average of f107)'
-              f107  = 150.0
-              f107a = 150.0
+              if(RCMROutType == "F107") then
+                 f107_msis  = 150.0
+                 f107a_msis = 150.0
+              else
+                 f107  = 150.0
+                 f107a = 150.0
+              end if
               IsDone = .true.
            endif
 
            ! AGB: Added switch for initializing the GITM f107 depending on
            !      the data assimilation (RCMR) flags
 
-           if(RCMRFlag .eqv. .false.) then
+           if(RCMROutType /= "F107") then
               call IO_set_f107_single(f107)
               call IO_set_f107a_single(f107a)
-           else
-              call IO_set_f107_single(f107_est)
-              call IO_set_f107a_single(f107a_est)
            end if
 
         case ("#INITIAL")
@@ -608,14 +617,16 @@ subroutine set_inputs
            endif
 
         case ("#PHOTOELECTRON")
-           call read_in_real(PhotoElectonHeatingEfficiency, iError)
-           if (iError /= 0) then
-              write(*,*) 'Incorrect format for #PHOTOELECTRON:'
-              write(*,*) ''
-              write(*,*) '#PHOTOELECTRON'
-              write(*,*) "PhotoElectonHeatingEfficiency   (real)"
-              IsDone = .true.
-           endif
+           if(RCMROutType /= 'PHOTOELECTRON') then
+              call read_in_real(PhotoElectronHeatingEfficiency, iError)
+              if (iError /= 0) then
+                 write(*,*) 'Incorrect format for #PHOTOELECTRON:'
+                 write(*,*) ''
+                 write(*,*) '#PHOTOELECTRON'
+                 write(*,*) "PhotoElectronHeatingEfficiency   (real)"
+                 IsDone = .true.
+              end if
+           end if
 
         case ("#THERMO")
            call read_in_logical(UseSolarHeating, iError)
@@ -1079,6 +1090,9 @@ subroutine set_inputs
            if (nSats > nMaxSats) then
               iError = 1
               write(*,*) "Too many satellites requested!!"
+           else if(RCMRFlag .and. nRCMRSat > nSats) then
+              iError = 1
+              write (*,*) "Assimilation satellite index out of range"
            else
               do iSat=1,nSats
                  call read_in_string(cSatFileName(iSat), iError)
@@ -1101,19 +1115,15 @@ subroutine set_inputs
            endif
 
         case("#RCMR")
-           call read_in_logical(RCMRRhoFlag, iError)
-           call read_in_logical(RCMRVTECFlag, iError)
+           ! Read in the data assimilation type
+           call read_in_string(RCMRInType, iError)
+           ! Read in the output driver type
+           call read_in_string(RCMROutType, iError)
 
            if(iError == 0) then
-              if(RCMRRhoFlag .eqv. .true. .or. RCMRVTECFlag .eqv. .true.) then
+              if(RCMROutType == 'F107') then
                  RCMRFlag = .true.
                  call read_in_real(f107_est, iError)
-
-                 if(RCMRRhoFlag.eqv..true. .and. RCMRVTECFlag.eqv..true.) then
-                    write (*,*) 'Can only use one assimilation method. '
-                    write (*,*) 'Defaulting to Neutral Mass Density. '
-                    RCMRVTECFlag = .false.
-                 end if
 
                  if(iError /= 0) then
                     write (*,*) 'Unrecognizable initial F10.7 estimate'
@@ -1124,30 +1134,49 @@ subroutine set_inputs
                  end if
 
                  f107a_est = f107_est
+                 call IO_set_f107_single(f107_est)
+                 call IO_set_f107a_single(f107a_est)
 
-                 call read_in_int(nRCMRSat, iError)
-                 if(nRCMRSat > nSats) then
-                    iError = 1
-                    write (*,*) "No assimilating more satellites than specified"
-                 else
-                    do iSat=1,nRCMRSat
-                       call read_in_int(RCMRSat(iSat), iError)
-                    end do
+              else if(RCMROutType == 'PHOTOELECTRON') then
+                 RCMRFlag = .true.
+                 call read_in_real(PhotoElectronHeatingEfficiency_est, iError)
+
+                 if(iError /= 0) then
+                    write (*,*) 'Unrecognizable initial photoelectron heating '
+                    write (*,*) 'efficiency.  Running with 0.1, which is only '
+                    write (*,*) 'appropraite if the actual efficiency is not '
+                    write (*,*) 'close to 0.1'
+                    PhotoElectronHeatingEfficiency_est = 0.1
+                    iError = 0
+                 end if
+
+                 if(RCMROutType == 'PHOTOELECTRON') then
+                    PhotoElectronHeatingEfficiency = PhotoElectronHeatingEfficiency_est
                  end if
               end if
+
+              ! Quality check of the satellite indexes will occur when
+              ! reading the satellite block.
+              call read_in_int(nRCMRSat, iError)
+              do iSat=1,nRCMRSat
+                 call read_in_int(RCMRSat(iSat), iError)
+              end do
            end if
 
            if(iError /= 0) then
               write (*,*) 'Incorrect format for #RCMR'
               write (*,*) ''
               write (*,*) '#RCMR'
-              write (*,*) 'Assimilate Neutral mass density (T/F)'
-              write (*,*) 'Assimilate VTEC (T/F)'
-              write (*,*) 'Initial F10.7 estimate'
+              write (*,*) 'Input data type to assimilate (RHO/VTEC)'
+              write (*,*) 'Output variable to drive (F107/PHOTOELECTRON)'
+              write (*,*) 'Initial output estimate'
               write (*,*) 'Number satellites to assimilate'
               write (*,*) '1st satellite index to assimilate'
               write (*,*) '2nd satellite index to assimilate'
               write (*,*) 'etc...'
+              write (*,*) ''
+              write (*,*) 'If driving F10.7, use #F10.7 input block to set'
+              write (*,*) 'the MSIS F10.7 and F10.7a to realistic values'
               IsDone = .true.
            else
               call alloc_rcmr
