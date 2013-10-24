@@ -19,6 +19,7 @@ MODULES = \
 	ModBlasLapack.o\
 	ModConst.o\
 	ModCoordTransform.o\
+	ModCubeGeometry.o\
 	ModExactRS.o\
 	ModFreq.o\
 	ModInitialState.o\

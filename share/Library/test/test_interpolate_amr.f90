@@ -23,6 +23,7 @@ module ModTestInterpolateAMR
   ! find_test routine
   !/
   integer:: iLevelTest_I(8)
+  integer,parameter:: nCell = 4
 contains
   subroutine test_interpolate_amr(nDim,nSample)
     integer, intent(in)::nDim, nSample
@@ -49,10 +50,10 @@ contains
     integer:: iSeed = 1
     !--------------------
     call init_rand()
-    nCell_D = 1; nCell_D(1:nDim) = 2
-    DxyzDomain_D      = 4
-    DxyzCoarseBlock_D = 2
-    DxyzFineBlock_D   = 1
+    nCell_D = 1; nCell_D(1:nDim) = nCell
+    DxyzDomain_D      = 2*nCell
+    DxyzCoarseBlock_D = nCell
+    DxyzFineBlock_D   = 0.5*nCell
     DxyzCoarse_D      = 1
     DxyzFine_D        = 0.5
     allocate(Xyz_DCB(nDim,nCell_D(1), nCell_D(2), nCell_D(3),&
@@ -277,9 +278,9 @@ contains
          (/1, 2, 3, 4, 5, 6, 7, 8/),(/2, 2, 2/))
     logical, dimension(nDim) :: IsAboveCenter_D
     !------------------- 
-    DxyzDomain_D      = 4
-    DxyzCoarseBlock_D = 2 
-    DxyzFineBlock_D   = 1 
+    DxyzDomain_D      = 2*nCell
+    DxyzCoarseBlock_D = nCell
+    DxyzFineBlock_D   = 0.5*nCell 
     DxyzCoarse_D      = 1
     DxyzFine_D        = 0.5
     iProc = 0; iBlock=0; XyzCorner_D=0.0; Dxyz_D = 0.0
