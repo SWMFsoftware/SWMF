@@ -71,7 +71,7 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
 
   if (startNode==PIC::Mesh::mesh.rootTree) {
     //injection rate from the boundariees of the box
-    if (LocalBlockInjectionRate!=NULL) ParticleInjection=GetTotalBlockInjectionRate(spec);
+    if (LocalBlockInjectionRate!=NULL) ParticleInjection=GetTotalBlockInjectionRate(spec,PIC::Mesh::mesh.rootTree);
 
 
     //injection rate from the internal surfaces
