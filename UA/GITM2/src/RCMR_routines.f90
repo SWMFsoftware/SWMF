@@ -11,6 +11,7 @@
 !              changed subroutine format for consistency with GITM files,
 !              removed test output files, removed unused variables, streamlined
 !              MPI calls.
+! AGB 10/23/13: Adapted to allow driving of photoelectron heating efficiency
 !-----------------------------------------------------------------------------
 
 subroutine run_RCMR
@@ -25,6 +26,7 @@ subroutine run_RCMR
   implicit none
 
   integer :: status(MPI_STATUS_SIZE), iError
+  real :: output_est, ulimit, llimit
   double precision :: localVar
 
   call MPI_BARRIER(iCommGITM, iError)
@@ -40,8 +42,20 @@ subroutine run_RCMR
      end do
   end if
 
-  ! Begin the first RCMR loop
+  ! AGB: Initialize the output estimate
+  if(RCMROutType == "F107") then
+     output_est = f107_est
+     llimit     = 70.0
+     ulimit     = 400.0
+  else if(RCMROutType == "PHOTOELECTRON") then
+     output_est = PhotoElectronHeatingEfficiency_est
+     llimit     = 0.02
+     ulimit     = 0.2
+  else
+     write (*,*) "ERROR: unknown RCMR output type", RCMROutType
+  end if
 
+  ! Begin the first RCMR loop
   if (mod((istep-1)*Dts,Measure_Dts) == 0.0 .AND. TRUTH_or_ID==1 .AND. &
        iProc==0) then
         
@@ -83,15 +97,17 @@ subroutine run_RCMR
         control_on = 1
      end if
 
-     CALL RCMR_Function(Nc, ustep, s_dhat, lz, lu, lu2, ly, l_dim, Pc, Pcc,  &
-          control_on, dbuffer, C_on, dhat, eta, lambda, usum, T,  R2, y_mat, &
-          z_mat, u_mat, P1, u_out, theta1, UB)
+     write (*,*) "AGB RCMR FUNC TEST", iProc, ustep
+     CALL RCMR_Function(llimit, ulimit, Nc, ustep, s_dhat, lz, lu, lu2, ly, &
+          l_dim, Pc, Pcc, control_on, dbuffer, C_on, dhat, eta, lambda, usum, &
+          T,  R2, y_mat, z_mat, u_mat, P1, u_out, theta1, UB)
 
-     if (u_out(1,1)< 70.0) then
-        u_out(1,1)=70.0
+     ! Enforce the realistic physical limitations
+     if (u_out(1,1) < llimit) then
+        u_out(1,1) = llimit
      end if
-     if (u_out(1,1)>=400.0) then
-        u_out(1,1)=400.0 
+     if (u_out(1,1) >= ulimit) then
+        u_out(1,1) = ulimit 
      end if
 
      up(1,ustep) = u_out(1,1)
@@ -104,14 +120,24 @@ subroutine run_RCMR
         u(:,ustep) = sum(up(:,uStep-90+1:uStep))/90
      end if
 
+     ! Save the output if GITM is initialized
+     ! AGB Question: would it not be better to ask this before calculating
+     !               a new output estimate?
+
      if (ustep > C_on) then
-        f107_est = u(1, ustep)
+        output_est = u(1, ustep)
      else if (ustep <= C_on) then
-        u(:,ustep) = f107_est
+        u(:,ustep) = output_est
      end if
 
-     f107a_est = f107_est
-     ustep     = ustep + 1
+     if(RCMROutType == 'F107') then
+        f107_est  = output_est
+        f107a_est = f107_est
+     else if(RCMROutType == "PHOTOELECTRON") then
+        PhotoElectronHeatingEfficiency_est = output_est
+     end if
+
+     ustep = ustep + 1
   end if
 
   ! END of the first RCMR loop
@@ -119,19 +145,24 @@ subroutine run_RCMR
   ! Send the F10.7 Estimate to all the different processors
   ! AGB Question: why use MPI_SCATTER and not MPI_Bcast?
   if (iProc==0) then
-     scattered(:)= f107_est
+     scattered(:) = output_est
   end if
 
   call MPI_SCATTER(scattered, 1, mpi_double_precision, scatter, 1, &
        mpi_double_precision, 0, iCommGITM, iError)
-  f107_est  = scatter    
-  f107a_est = f107_est
+
+  if(RCMROutType == 'F107') then
+     f107_est  = scatter    
+     f107a_est = f107_est
+  else if(RCMROutType == "PHOTOELECTRON") then
+     PhotoElectronHeatingEfficiency_est = scatter
+  end if
 
 end subroutine run_RCMR
 
-subroutine RCMR_Function(Nc, ustep, s_dhat, lz, lu, lu2, ly, l_dim, Pc, Pcc,  &
-     control_on, dbuffer, C_on, dhat, eta, lambda, usum, T, R2, y_mat, z_mat, &
-     u_mat, P1, u_out, theta1, UB)
+subroutine RCMR_Function(llimit, ulimit, Nc, ustep, s_dhat, lz, lu, lu2, ly, &
+     l_dim, Pc, Pcc, control_on, dbuffer, C_on, dhat, eta, lambda, usum, T, &
+     R2, y_mat, z_mat, u_mat, P1, u_out, theta1, UB)
 
   use ModBlasLapack, only: LAPACK_getrf, LAPACK_getrs
   implicit none
@@ -140,6 +171,7 @@ subroutine RCMR_Function(Nc, ustep, s_dhat, lz, lu, lu2, ly, l_dim, Pc, Pcc,  &
   !  Input variables
   ! *
 
+  real, intent(in) :: llimit, ulimit
   integer, intent(in) :: Nc, ustep, s_dhat, lu, ly, lz, l_dim, Pc, Pcc
   integer, intent(in) :: control_on, dbuffer, C_on
   integer, dimension(1,s_dhat), intent(in) :: dhat
@@ -237,10 +269,10 @@ subroutine RCMR_Function(Nc, ustep, s_dhat, lz, lu, lu2, ly, l_dim, Pc, Pcc,  &
           (-zmod+matmul(T,umod)))
 
      UB(1,1) = Us(1,1)
-     if (Us(1,1)>=400.0) then
-        Us(1,1) = 400.0
-     else if(Us(1,1)<=70.0) then
-        Us(1,1) = 70.0
+     if (Us(1,1)>=ulimit) then
+        Us(1,1) = ulimit
+     else if(Us(1,1)<=llimit) then
+        Us(1,1) = llimit
      end if
 
      if (ustep > dbuffer) then
