@@ -21,7 +21,8 @@ module ModGITM
        Gravity_GB, CellVolume
 
   ! RCMR
-  real :: f107_est, f107a_est
+  real :: f107_est, f107a_est, f107_msis, f107a_msis
+  real :: PhotoElectronHeatingEfficiency_est
   integer :: Sat_Loc
 
   ! Topography
