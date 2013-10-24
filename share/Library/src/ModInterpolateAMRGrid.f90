@@ -10,7 +10,7 @@ module ModInterpolateAMR
   !\
   !USE
   !/
-!=================ARRAYS FOR A CUBE====================================!
+  !=================ARRAYS FOR A CUBE====================================!
   !For a cubic stencil enumerated as follows:
   !
   !       ^
@@ -125,6 +125,7 @@ module ModInterpolateAMR
   !The tools to fill in this array
   !/
   use ModCubeGeometry, ONLY: DoInit, init_sort_stencil
+  implicit none
   PRIVATE !Except
   SAVE
   !============================================================================
@@ -165,8 +166,6 @@ module ModInterpolateAMR
   public interpolate_amr
 
   integer, parameter:: &
-    !   Coarse_  = 0,               &
-    !   Fine_    = 1,               &
        x_       = 1,               &
        y_       = 2,               &
        z_       = 3
