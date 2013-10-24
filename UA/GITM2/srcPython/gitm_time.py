@@ -80,28 +80,31 @@ class GitmTime(PbData):
                         n = newkeys.index(old)
                         newkeys.pop(n)
                     except ValueError:
-                        print "ADVISEMENT: file [",i+1,"] is missing [",old,"]"
-                        
-            # Add the filename as a key
-            if self.has_key('file'):
-                self['file'] = gitm.dmarray(np.append(self['file'],
-                                                      [gData.attrs['file']], 0),
-                                            attrs=self['file'].attrs)
+                        if old != 'file' and old != 'magfile':
+                            print "ADVISEMENT: file [",i+1,"] is missing [",old,"]"
             else:
-                self['file'] = gitm.dmarray(np.array([gData.attrs['file']]),
-                                            attrs={"name":"GITM Bin Filename"})
+                # Add the filename as a key
+                if self.has_key('file'):
+                    self['file'] = gitm.dmarray(np.append(self['file'],
+                                                          [gData.attrs['file']],
+                                                          0),
+                                                attrs=self['file'].attrs)
+                else:
+                    self['file'] = gitm.dmarray(np.array([gData.attrs['file']]),
+                                                attrs={"name":
+                                                           "GITM Bin Filename"})
 
-            # Add the magnetic field filename as a key
-            magfile = None
-            if gData.attrs.has_key('magfile'):
-                magfile = gData.attrs['magfile']
+                # Add the magnetic field filename as a key
+                magfile = None
+                if gData.attrs.has_key('magfile'):
+                    magfile = gData.attrs['magfile']
 
-            if self.has_key('magfile'):
-                self['magfile'] = gitm.dmarray(np.append(self['magfile'],
-                                                         [magfile], 0),
-                                               attrs=self['magfile'].attrs)
-            else:
-                self['magfile'] = gitm.dmarray(np.array([magfile]), attrs={"name":"GITM 3DMAG Filename"})
+                if self.has_key('magfile'):
+                    self['magfile'] = gitm.dmarray(np.append(self['magfile'],
+                                                             [magfile], 0),
+                                                   attrs=self['magfile'].attrs)
+                else:
+                    self['magfile'] = gitm.dmarray(np.array([magfile]), attrs={"name":"GITM 3DMAG Filename"})
 
             # Initialize the first instance of each key and append the new data
             # if it is not
@@ -133,6 +136,12 @@ class GitmTime(PbData):
             for k in oldkeys:
                 if gData.has_key(k):
                     self[k] = gitm.dmarray(np.append(self[k], [gData[k]], 0),
+                                           attrs=self[k].attrs)
+                elif gData.attrs.has_key(k):
+                    self[k] = gitm.dmarray(np.append(self[k], [gData.attrs[k]],
+                                                     0), attrs=self[k].attrs)
+                elif k.find("magfile") >= 0:
+                    self[k] = gitm.dmarray(np.append(self[k], [None], 0),
                                            attrs=self[k].attrs)
                 else:
                     self[k] = gitm.dmarray(np.append(self[k],
@@ -403,6 +412,10 @@ def load_multiple_gitm_bin(filelist, *args, **kwargs):
     The list may be an ascii file containing a list of files or a list object.
     A list of the data structures is returned.  A 3DION or 3DMAG file may
     be specified for the entire list using the keyword arguement "magfile".
+
+    Input:
+    filelist = python list of file names or an ASCII file containing a list
+               of filenames
     '''
     # import local packages
     from os import path
@@ -432,7 +445,8 @@ def load_multiple_gitm_bin(filelist, *args, **kwargs):
         else:
             outlist.append(gitm.GitmBin(name, magfile=kwargs['magfile']))
 
-        outlist[-1].calc_2dion()
+        if outlist[-1].attrs['nAlt'] > 1:
+            outlist[-1].calc_2dion()
 
     return(outlist)
 # End load_multiple_gitm_bin
