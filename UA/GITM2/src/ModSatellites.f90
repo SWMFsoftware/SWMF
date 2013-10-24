@@ -44,7 +44,8 @@ module ModSatellites
   real                :: CurrentSatellitePosition(3)
   character (len=8)   :: CurrentSatelliteName
 
-  integer :: CurrSat, nRCMRSat
+  integer :: CurrSat = 0
+  integer :: nRCMRSat
   integer, dimension(nMaxSats) :: RCMRSat
 
   real, allocatable :: SatDat(:,:)
