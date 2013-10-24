@@ -97,7 +97,6 @@ subroutine run_RCMR
         control_on = 1
      end if
 
-     write (*,*) "AGB RCMR FUNC TEST", iProc, ustep
      CALL RCMR_Function(llimit, ulimit, Nc, ustep, s_dhat, lz, lu, lu2, ly, &
           l_dim, Pc, Pcc, control_on, dbuffer, C_on, dhat, eta, lambda, usum, &
           T,  R2, y_mat, z_mat, u_mat, P1, u_out, theta1, UB)

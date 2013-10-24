@@ -82,7 +82,6 @@ contains
             SatDat(nMaxSats, nMaxSatInputLines), &
             SatCurrentDat(nMaxSats), SatAltDat(nMaxSats))
     end if
-    write (*,*) "AGB ALLOCATED SatDat, SatCurrentDat, SatAltDat"
 
   end subroutine init_mod_satellites_rcmr
 
