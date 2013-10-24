@@ -1,5 +1,17 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!-----------------------------------------------------------------------------
+! $Id$
+! Author: Aaron Ridley, UMichigan
+!
+! Modified:
+!           AGB Oct 2013 - Adapted to use specified realistic F10.7 value when
+!                          driving F10.7 in RCMR
+!           Asad Feb 2013 - Adapted to use F10.7 = 150 sfu when using RCMR
+!
+! Comments: Routines to initialize the GITM thermosphere with MSIS
+!------------------------------------------------------------------------------
+
 subroutine get_msis_temperature(lon, lat, alt, t, h)
 
  use ModIndicesInterfaces
@@ -7,7 +19,7 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   use ModInputs
   use ModPlanet
   use ModGITM
-  use ModRCMR, only: RCMRFlag
+  use ModRCMR, only: RCMRFlag, RCMROutType
 
   use EUA_ModMsis90, only: meter6, gtd6
 
@@ -51,9 +63,9 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
      call stop_gitm("Stopping in euv_ionization_heat")
   endif
 
-  if(RCMRFlag .eqv. .true.) then
+  if(RCMRFlag .and. RCMROutType == "F107") then
      CALL GTD6(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST, &
-          150.0,150.0,AP,48,msis_dens,msis_temp)
+          f107a_msis,f107_msis,AP,48,msis_dens,msis_temp)
   else
      call GTD6(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST,&
           F107A,F107,AP,48,msis_dens,msis_temp)

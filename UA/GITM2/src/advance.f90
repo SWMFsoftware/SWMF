@@ -1,9 +1,20 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!------------------------------------------------------------------------------
+! $Id$
+! Author: Aaron Ridley, UMichigan
+!
+! Modified:
+!           AGB, Oct 2013 - Adapted to allow new RCMR format
+!           Asad, Feb 2013 - Adapted to update F10.7 using estimated value if
+!                            RCMR data assimilation is being used.
+!
+! Comments: A routine to initialize the model for the next timestep
+!------------------------------------------------------------------------------
 
 subroutine advance
 
-  use ModRCMR, only: RCMRFlag
+  use ModRCMR, only: RCMRFlag, RCMROutType
   use ModConstants
   use ModGITM
   use ModTime
@@ -18,12 +29,16 @@ subroutine advance
   integer :: iBlock, iAlt, iLat, iLon,ispecies, iError
   real*8 :: DTime
 
-  if(RCMRFlag .eqv. .true.) then
-     ! Asad: When running RCAC both the F10.7 and F10.7A should have the same
-     !       number at this point because they are being estimated together
+  if(RCMRFlag) then
+     if(RCMROutType == 'F107') then
+        ! Asad: When running RCAC both the F10.7 and F10.7A should have the same
+        !       number at this point because they are being estimated together
 
-     call IO_set_f107_single(f107_est)
-     call IO_set_f107a_single(f107_est)
+        call IO_set_f107_single(f107_est)
+        call IO_set_f107a_single(f107_est)
+     else if(RCMROutType == "PHOTOELECTRON") then
+        PhotoElectronHeatingEfficiency = PhotoElectronHeatingEfficiency_est
+     end if
   end if
 
   call report("advance",1)
