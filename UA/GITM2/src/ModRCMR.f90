@@ -11,17 +11,17 @@
 ! AGB 3/31/13: Removed unnecessary variables, changed names to be more
 !              descriptive, added variables to allow flagging from UAM.in,
 !              added initialization routines to allow flagging from UAM.in
+! AGB 10/23/13: Adapted to allow driving of photoelectron heating efficiency
 !------------------------------------------------------------------------------
 
 module ModRCMR
 
   use ModGITM, only:iProc, nProcs, Sat_Loc
   use ModSatellites, only: SatAltDat
+  use ModInputs, only: iCharLen_
 	
   implicit none
 
-  logical :: RCMRRhoFlag = .false.
-  logical :: RCMRVTECFlag = .false.
   logical :: RCMRFlag = .false.
 
   integer :: row, col, max_rows, max_cols, print_i, print_j, N, M, mm, dbuffer
@@ -31,7 +31,8 @@ module ModRCMR
 
   double precision :: eta, reg_val, Dts, Measure_Dts, scatter
 
-  character (len=50) :: filename 
+  character (len=50) :: filename
+  character (len=iCharLen_) :: RCMRInType, RCMROutType
 	
   integer, dimension(1,1) :: dhat
 
@@ -93,16 +94,24 @@ subroutine init_markov_matrix
   ! T is a Markov parameter matrix that must be tuned for each type of
   ! assimilation
 
-  if(RCMRRhoFlag .eqv. .true.) then
-     ! Markov matrix for terrestrial neutral mass density with one data input.
+  if(RCMRInType == "RHO") then
+     ! Markov matrix for terrestrial neutral mass density
+     ! Assumes only one data input source
 
-     T = reshape((/ 0.15 /), shape(T))
-  else if(RCMRVTECFlag .eqv. .true.) then
-     ! Markov matrix for terrestrial VTEC
-
-     write (*,*) "Cannot assimilate VTEC yet, no Markov matrix"
-     RCMRVTECFlag = .false.
-     RCMRFlag     = .false.
+     if(RCMROutType == "F107") then
+        T = reshape((/ 0.15 /), shape(T))
+     else if(RCMROutType == "PHOTOELECTRON") then
+        ! AGB 7/17/13: This is not settled yet
+        write (*,*) "AGB RCMR WARNING: this is a test matrix"
+        T = reshape((/ 0.15 /), shape(T))
+     else
+        write (*,*) "No Markov matrix for this output type: ", RCMROutType
+        RCMRFlag = .false.
+     end if
+  else
+     ! Markov matrix has not been established
+     write (*,*) "No Markov matrix for this output type: ", RCMROutType
+     RCMRFlag = .false.
   end if
 end subroutine init_markov_matrix
 
@@ -122,6 +131,7 @@ subroutine init_rcmr
   col         = 1
   eta         = 0.0
   reg_val     = 100.0
+  ! C_on Ensures that estimates are not made before the model has settled
   C_on        = 1460
   dbuffer     = 1440
   lambda(1,1) = 0.9999
