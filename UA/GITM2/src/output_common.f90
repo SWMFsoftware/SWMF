@@ -43,7 +43,7 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '2DTEC')     IsFound = .true.
 
      if (OutputType(iOutputType) == '1DALL')     IsFound = .true.
-     if (OutputType(iOutputType) == '1DALT')     IsFound = .true.
+     if (OutputType(iOutputType) == '0DALL')     IsFound = .true.
      if (OutputType(iOutputType) == '1DGLO')     IsFound = .true.
      if (OutputType(iOutputType) == '1DTHM')     IsFound = .true.
      if (OutputType(iOutputType) == '1DNEW')     IsFound = .true.
@@ -79,6 +79,7 @@ subroutine output(dir, iBlock, iOutputType)
   use ModInputs
   use ModSources
   use ModUserGITM, only: nVarsUser2d, nVarsUser3d, nVarsUser1d
+  use ModRCMR, only: RCMRFlag
 
   implicit none
 
@@ -103,7 +104,7 @@ subroutine output(dir, iBlock, iOutputType)
   if (iOutputType == -1) then
      cType = "1DALL"
   else if(iOutputType == -2) then
-     cType = "1DALT"
+     cType = "0DALL"
   else
      cType = OutputType(iOutputType)
      if (cType(1:2) == "3D" .and. Is1D) then 
@@ -123,7 +124,7 @@ subroutine output(dir, iBlock, iOutputType)
   ! done by setting the current value to something rediculously small for
   ! all currently known satellite input data types.
   
-  if(CurrSat > 0) then
+  if(CurrSat > 0 .and. RCMRFlag) then
      SatAltDat(CurrSat) = -1.0e32
   end if
 
@@ -135,12 +136,13 @@ subroutine output(dir, iBlock, iOutputType)
      if(iOutputType == -2) then
         AltFind = CurrentSatellitePosition(iUp_)
         call BlockAltIndex(AltFind,iBlock,iiLon,iiLat,iiAlt,rAlt)
+
+        if (iiAlt < 0) return
      end if
 
-     ! write(*,*) LonFind,LatFind,iBlock,iiLon,iiLat,rLon,rLat
+     write(*,*) LonFind,LatFind,iBlock,iiLon,iiLat,rLon,rLat
 
      if (iiLon < 0 .or. iiLat < 0) return
-
   endif
 
   if((iProc == 0.and.iBlock == 1).and.(iOutputType /= -1)) &
@@ -308,13 +310,13 @@ subroutine output(dir, iBlock, iOutputType)
      nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons+nSpecies+5
      call output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iOutputUnit_)
 
-  case ('1DALT')
+  case ('0DALL')
      ! AGB: added output type used by Asad to allow satellite output at the
      !      exact orbit location
 
      nGCs = 0
      nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons+nSpecies+5
-     call output_1dalt(iiLon, iiLat, iiAlt, iBlock, rLon, rLat, rAlt, &
+     call output_0dall(iiLon, iiLat, iiAlt, iBlock, rLon, rLat, rAlt, &
           iOutputUnit_)
 
   case ('1DGLO')
@@ -404,12 +406,12 @@ contains
     write(iOutputUnit_,*) "NUMERICAL VALUES"
 
     write(iOutputUnit_,"(I7,6A)") nvars_to_write, " nvars"
-    if (cType(1:2) /= "2D") then 
+    if (cType(1:2) /= "2D" .and. cType(1:2) /= '0D') then 
        write(iOutputUnit_,"(I7,7A)") nAlts+4, " nAltitudes"
     else
        write(iOutputUnit_,"(I7,7A)") 1, " nAltitudes"
     endif
-    if (cType(1:2) == "1D") then 
+    if (cType(1:2) == "1D" .or. cType(1:2) == '0D') then 
        write(iOutputUnit_,"(I7,7A)") 1, " nLatitudes"
        write(iOutputUnit_,"(I7,7A)") 1, " nLongitudes"
     else
@@ -1525,12 +1527,11 @@ contains
 end subroutine output_1dall
 
 !----------------------------------------------------------------
-! output_1dalt: outputs GITM data at a specified 3D satellite location
+! output_0dall: outputs GITM data at a specified 3D satellite location
 !----------------------------------------------------------------
 
-subroutine output_1dalt(iiLon, iiLat, iiAlt, iBlock, rLon, rLat, rAlt, iUnit)
+subroutine output_0dall(iiLon, iiLat, iiAlt, iBlock, rLon, rLat, rAlt, iUnit)
 
-  use ModSatellites, only: SatAltDat, CurrSat
   use ModGITM
   use ModEUV, only: HeatingEfficiency_CB
   use ModSources, only: JouleHeating, RadCooling, EuvHeating, Conduction
@@ -1542,122 +1543,116 @@ subroutine output_1dalt(iiLon, iiLat, iiAlt, iBlock, rLon, rLat, rAlt, iUnit)
   integer, intent(in) :: iiLat, iiLon, iiAlt, iBlock, iUnit
   real, intent(in)    :: rLon, rLat, rAlt
 
-  integer :: ierr, count
+  integer :: ierr
   integer, parameter :: nVars = 13+nSpeciesTotal+nSpecies+nIons+nSpecies+5
-  real, dimension(2) :: inter_store
   real :: Vars(nVars)
-  real :: Tmp(0:nLons+1,0:nLats+1)
-  integer :: iAlt, jAlt, iOff, iIon, iSpecies, iDir
+  real :: Tmp(0:nLons+1,0:nLats+1,0:nAlts+1)
+  integer :: jAlt, iOff, iIon, iSpecies, iDir
 
-  count = 0
-  do iAlt=-1,nAlts+2
+  jAlt = max(min(iiAlt,nAlts),1)
 
-     jAlt = max(min(iAlt,nAlts),1)
+  !Determine the satellite position using linear interpolation
+  Vars(1) = rLon*Longitude(iiLon,iBlock)+(1-rLon)*Longitude(iiLon+1,iBlock)
+  Vars(2) = rLat*Latitude(iiLat,iBlock)+(1-rLat)*Latitude(iiLat+1,iBlock)
+  Vars(3) = rAlt*Altitude_GB(iiLon, iiLat, iiAlt, iBlock) + &
+       (1-rAlt)*Altitude_GB(iiLon+1, iiLat+1, iiAlt+1, iBlock)
 
-     Vars(1) = &
-          rLon*Longitude(iiLon,iBlock)+(1-rLon)*Longitude(iiLon+1,iBlock)
-     Vars(2) = &
-          rLat*Latitude(iiLat,iBlock)+(1-rLat)*Latitude(iiLat+1,iBlock)
+  ! Get the species characteristics at this location
+  Tmp     = Rho(0:nLons+1,0:nLats+1,0:nAlts+1,iBlock)
+  Vars(4) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
 
-     Vars(3) = Altitude_GB(iiLon, iiLat, iAlt, iBlock)
-
-     Tmp     = Rho(0:nLons+1,0:nLats+1,iAlt,iBlock)
-     Vars(4) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
-     if(iAlt == (iiAlt + count)) then
-        inter_store(count+1) = Vars(4)
-        if (count == 0) then
-           count=count+1
-        end if
-     end if
-
-     iOff = 4
-     do iSpecies = 1, nSpeciesTotal
-        Tmp = NDensityS(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock)
-        Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-     enddo
-
-     Tmp = Temperature(0:nLons+1,0:nLats+1,iAlt,iBlock) * &
-          TempUnit(0:nLons+1,0:nLats+1,iAlt)
-     iOff = 5+nSpeciesTotal
-     Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
-     do iDir = 1, 3
-        Tmp = Velocity(0:nLons+1,0:nLats+1,iAlt,iDir,iBlock)
-        Vars(iOff+iDir) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-     enddo
-
-     iOff = 8+nSpeciesTotal
-     do iSpecies = 1, nSpecies
-        Tmp = VerticalVelocity(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock)
-        Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-     enddo
-
-     iOff = 8+nSpeciesTotal+nSpecies
-     do iIon = 1, nIons
-        Tmp = IDensityS(0:nLons+1,0:nLats+1,iAlt,iIon,iBlock)
-        Vars(iOff+iIon) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-     enddo
-
-     iOff = 8+nSpeciesTotal+nSpecies+nIons+1
-     Tmp = eTemperature(0:nLons+1,0:nLats+1,iAlt,iBlock)
-     Vars(iOff)   = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
-     iOff = iOff+1
-     Tmp = iTemperature(0:nLons+1,0:nLats+1,iAlt,iBlock)
-     Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
-        iOff = iOff + 1
-        Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iEast_,iBlock)
-        Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
-        iOff = iOff + 1
-        Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iNorth_,iBlock)
-        Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
-        iOff = iOff + 1
-        Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iUp_,iBlock)
-        Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
-        do iSpecies = 1, nSpecies
-           Tmp = NDensityS(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock) &
-                / NDensity(0:nLons+1,0:nLats+1,iAlt,iBlock)
-           Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-        enddo
-
-        iOff = iOff + nSpecies
-        Vars(iOff+1) = Dt*RadCooling(1,1,jAlt,iBlock)*TempUnit(1,1,jAlt)
-
-        Vars(iOff+2) = Dt*EuvHeating(1,1,jAlt,iBlock)*TempUnit(1,1,jAlt)
-
-        Vars(iOff+3) = Conduction(1,1,jAlt)*TempUnit(1,1,jAlt)
-
-        Vars(iOff+4) = Dt*EuvHeating(1,1,jAlt,iBlock)*TempUnit(1,1,jAlt) - &
-         Dt*RadCooling(1,1,jAlt,iBlock)*TempUnit(1,1,jAlt) + &
-         Conduction(1,1,jAlt)*TempUnit(1,1,jAlt)
-
-        Vars(iOff+5) = HeatingEfficiency_CB(1,1,jAlt,iBlock)
+  iOff = 4
+  do iSpecies = 1, nSpeciesTotal
+     Tmp = NDensityS(0:nLons+1,0:nLats+1,0:nAlts+1,iSpecies,iBlock)
+     Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
   enddo
 
-  SatAltDat(CurrSat) = rAlt * inter_store(1) + (1 - rAlt) * inter_store(2)
+  Tmp = Temperature(0:nLons+1,0:nLats+1,0:nAlts+1,iBlock) * &
+       TempUnit(0:nLons+1,0:nLats+1,0:nAlts+1)
+  iOff = 5+nSpeciesTotal
+  Vars(iOff) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+
+  do iDir = 1, 3
+     Tmp = Velocity(0:nLons+1,0:nLats+1,0:nAlts+1,iDir,iBlock)
+     Vars(iOff+iDir) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+  enddo
+
+  iOff = 8+nSpeciesTotal
+  do iSpecies = 1, nSpecies
+     Tmp = VerticalVelocity(0:nLons+1,0:nLats+1,0:nAlts+1,iSpecies,iBlock)
+     Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+  enddo
+
+  iOff = 8+nSpeciesTotal+nSpecies
+  do iIon = 1, nIons
+     Tmp = IDensityS(0:nLons+1,0:nLats+1,0:nAlts+1,iIon,iBlock)
+     Vars(iOff+iIon) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+  enddo
+
+  iOff = 8+nSpeciesTotal+nSpecies+nIons+1
+  Tmp = eTemperature(0:nLons+1,0:nLats+1,0:nAlts+1,iBlock)
+  Vars(iOff) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+
+  iOff = iOff+1
+  Tmp = iTemperature(0:nLons+1,0:nLats+1,0:nAlts+1,iBlock)
+  Vars(iOff) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+
+  iOff = iOff + 1
+  Tmp = IVelocity(0:nLons+1,0:nLats+1,0:nAlts+1,iEast_,iBlock)
+  Vars(iOff) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+
+  iOff = iOff + 1
+  Tmp = IVelocity(0:nLons+1,0:nLats+1,0:nAlts+1,iNorth_,iBlock)
+  Vars(iOff) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+
+  iOff = iOff + 1
+  Tmp = IVelocity(0:nLons+1,0:nLats+1,0:nAlts+1,iUp_,iBlock)
+  Vars(iOff) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+
+  do iSpecies = 1, nSpecies
+     Tmp = NDensityS(0:nLons+1,0:nLats+1,0:nAlts+1,iSpecies,iBlock) &
+          / NDensity(0:nLons+1,0:nLats+1,0:nAlts+1,iBlock)
+     Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+  enddo
+
+  iOff = iOff + nSpecies
+  Vars(iOff+1) = Dt*RadCooling(1,1,jAlt,iBlock)*TempUnit(1,1,jAlt)
+
+  Vars(iOff+2) = Dt*EuvHeating(1,1,jAlt,iBlock)*TempUnit(1,1,jAlt)
+
+  Vars(iOff+3) = Conduction(1,1,jAlt)*TempUnit(1,1,jAlt)
+
+  Vars(iOff+4) = Dt*EuvHeating(1,1,jAlt,iBlock)*TempUnit(1,1,jAlt) - &
+       Dt*RadCooling(1,1,jAlt,iBlock)*TempUnit(1,1,jAlt) + &
+       Conduction(1,1,jAlt)*TempUnit(1,1,jAlt)
+
+  Vars(iOff+5) = HeatingEfficiency_CB(1,1,jAlt,iBlock)
+
+  ! Write the output data
+  write(iOutputUnit_) Vars
+
 contains
 
-  real function inter(variable, iiLon, iiLat, rLon, rLat) result(PointValue)
+  real function inter(variable, iiLon, iiLat, iiAlt, rLon, rLat, rAlt) &
+       result(PointValue)
 
     implicit none
 
-    real :: variable(0:nLons+1, 0:nLats+1), rLon, rLat
-    integer :: iiLon, iiLat
+    real :: variable(0:nLons+1, 0:nLats+1, 0:nAlts+1), rLon, rLat, rAlt
+    integer :: iiLon, iiLat, iiAlt
 
     PointValue = &  
-          (  rLon)*(  rLat)*Variable(iiLon  ,iiLat  ) + &
-          (1-rLon)*(  rLat)*Variable(iiLon+1,iiLat  ) + &
-          (  rLon)*(1-rLat)*Variable(iiLon  ,iiLat+1) + &
-          (1-rLon)*(1-rLat)*Variable(iiLon+1,iiLat+1)
+          (  rLon)*(  rLat)*(  rAlt)*Variable(iiLon  ,iiLat  ,iiAlt  ) + &
+          (1-rLon)*(  rLat)*(  rAlt)*Variable(iiLon+1,iiLat  ,iiAlt  ) + &
+          (  rLon)*(1-rLat)*(  rAlt)*Variable(iiLon  ,iiLat+1,iiAlt  ) + &
+          (1-rLon)*(1-rLat)*(  rAlt)*Variable(iiLon+1,iiLat+1,iiAlt  ) + &
+          (  rLon)*(  rLat)*(1-rAlt)*Variable(iiLon  ,iiLat  ,iiAlt+1) + &
+          (1-rLon)*(  rLat)*(1-rAlt)*Variable(iiLon+1,iiLat  ,iiAlt+1) + &
+          (  rLon)*(1-rLat)*(1-rAlt)*Variable(iiLon  ,iiLat+1,iiAlt+1) + &
+          (1-rLon)*(1-rLat)*(1-rAlt)*Variable(iiLon+1,iiLat+1,iiAlt+1)
 
   end function inter
-
-end subroutine output_1dalt
+end subroutine output_0dall
 
 subroutine output_1dnew(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
 
