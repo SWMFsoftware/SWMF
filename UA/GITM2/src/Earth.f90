@@ -1,5 +1,13 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!-----------------------------------------------------------------------------
+! $Id$
+!
+! Author: Aaron Ridley, UMichigan
+!
+! Modified: AGB Oct 2013 - Corrected spelling of photoelectron heating
+!                          efficiency variable
+!-----------------------------------------------------------------------------
 
 subroutine fill_photo(photoion, photoabs, photodis)
 
@@ -176,7 +184,7 @@ subroutine calc_planet_sources(iBlock)
 
   PhotoElectronHeating(:,:,:,iBlock) = 0.0
   PhotoElectronHeating(:,:,:,iBlock) = &
-       PhotoElectonHeatingEfficiency * &
+       PhotoElectronHeatingEfficiency * &
        35.0*1.602e-19*&
        ( &
        EuvIonRateS(:,:,:,iO2P_,iBlock)* &
