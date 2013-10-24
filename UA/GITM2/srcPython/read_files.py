@@ -87,6 +87,10 @@ def loadASCII_data_header(filename, miss=None, fill=np.nan, *args, **kwargs):
         print func_name, "ERROR: no header in this file [", filename, "]"
         return(header, out)
 
+    if len(f.readlines()) == 0:
+        print fun_name, "ERROR: no data in this file [", filename, "]"
+        return(header, out)
+
     #-------------------------------------------
     # Open the datafile and read the data rows
 
@@ -153,10 +157,14 @@ def loadASCII_data_hline(filename, hlines, miss=None, fill=np.nan, *args,
 
     if not f:
         print func_name, "ERROR: unable to open input file [", filename, "]"
-        return out
+        return(header, out)
 
     for h in range(hlines):
         header.append(f.readline())
+
+    if len(f.readlines()) == 0:
+        print func_name, "ERROR: this file has no data [", filename, "]"
+        return(header, out)
 
     #-------------------------------------------
     # Open the datafile and read the data rows
