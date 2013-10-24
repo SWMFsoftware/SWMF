@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-#  For more information, see http://csem.engin.umich.edu/tools/swmf
 #-----------------------------------------------------------------------------
 # example_gitm_plot_script
 #
@@ -17,8 +15,8 @@ import gitm
 import gitm_time
 import gitm_plot_rout as gpr
 import gitm_loc_rout as glr
+import gitm_comparison_plots as gcp
 import load_files as lf
-import gitm_sat_plots as gsp
 
 #------------------------------------------------------------------------------
 # Set defaults for the input parameters
@@ -157,7 +155,7 @@ if not errkey:
     pmin = -100.0
     pmax = 100.0
 
-    gsp.plot_sat_gitm_comp(cdata['datetime'], cdata[cindi_ykey], ctrack, ykey,
+    gcp.plot_sat_gitm_comp(cdata['datetime'], cdata[cindi_ykey], ctrack, ykey,
                            obs_key[0], tkey, bkey, title, tmin=tmin, tmax=tmax,
                            pmin=pmin, pmax=pmax, figname=filename, draw=False)
                            
