@@ -276,7 +276,7 @@ contains
     if(is_proc(GM_)) call GM_get_for_pt( IsNewRoute, &
          NameVar, nVar, nDim, nPointGm, PosGm_DI, DataGm_VI)
 
-    allocate(DataPt_VI(nVar,nPointGm))
+    allocate(DataPt_VI(nVar,nPointPt))
     call transfer_buffer(iCommGmPt, nProcGmPt, iProcGmPt, nVar, &
          nPointGm, nPointGm_P, DataGm_VI, &
          nPointPt, nPointPt_P, DataPt_VI) 
@@ -308,6 +308,7 @@ contains
 
     integer:: iBuffer, iProc
     integer, allocatable:: iBuffer_P(:)
+    character(len=*), parameter:: NameSub = 'get_buffer_order'
     !----------------------------------------------------------------------
 
     ! Buffer chunk sizes for each processor
@@ -321,7 +322,7 @@ contains
     allocate(iBuffer_P(0:nProc-1))
     iBuffer_P(0) = 1
     do iProc = 1, nProc-1
-       iBuffer_P(iProc) = iBuffer_P(iProc-1) + nBuffer_P(iProc)
+       iBuffer_P(iProc) = iBuffer_P(iProc-1) + nBuffer_P(iProc-1)
     end do
 
     ! Get the order that is consecutive per processor index
