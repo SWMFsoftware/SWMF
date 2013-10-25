@@ -110,7 +110,7 @@ module ModInterpolateAMR
   !\
   ! Array to sort stencil
   !/
-  use ModCubeGeometry, ONLY: iSortStencil_III, Case_, Dir_, Grid_
+  use ModCubeGeometry, ONLY: iSortStencil3_II, Case_, Dir_, Grid_
   !\
   !Array used to sort stencil: 
   !(1) assign a type to it (Case_) 
@@ -121,10 +121,6 @@ module ModInterpolateAMR
   !has a characteristic direction (Dir_). For example, for the 'resolution 
   !edge' of y direction iDir equals 1.
   !/
-  !\
-  !The tools to fill in this array
-  !/
-  use ModCubeGeometry, ONLY: DoInit, init_sort_stencil
   implicit none
   PRIVATE !Except
   SAVE
@@ -176,7 +172,7 @@ contains
        Xyz_D, XyzGrid_DI, iLevel_I, IsOut_I, &
        nGridOut, Weight_I, iOrder_I,&
        DoStencilFix, XyzStencil_D)
-
+    use ModCubeGeometry, ONLY: iSortStencil2_II
     integer,parameter :: nGrid = 4, nDim = 2
 
     character(LEN=*),parameter:: NameSub='interpolate_amr2'
@@ -228,8 +224,19 @@ contains
     real, intent(out) :: XyzStencil_D(nDim)
 
 
-    integer :: iGrid, iDir, iDirPerp, iDim !Loop variables
-    integer :: iCase                 
+    integer ::  iDim !Loop variable
+    !\
+    !Parameters fully characterizing a pattern of refinement for a stencil
+    !Calculated using iSortStencil_III array
+    !/
+    integer :: iCase, iGrid, iDir  
+
+    !\
+    ! 3 - iDir: 
+    ! for coordinate x_ the perpendicular cordinate is y_ and vice versa 
+    !/
+    integer ::  iDirPerp              
+
     !\
     !Number of grid points returned from 1D routine
     !/
@@ -246,17 +253,15 @@ contains
     !\       
     ! for calculating on a uniform grid 
     !/
-    real    :: dXyzInv_D(  nDim)               
-    real    :: Aux_D(nDim)                   ! Misc
+    real    :: dXyzInv_D(  nDim)  
+    !\
+    ! Misc
+    !/             
+    real, dimension(nDim):: &
+         Aux_D, X1_D = 0, X2_D = 0, X3_D = 0, X4_D = 0               
+
     !-------------
-    if(DoInit)call init_sort_stencil
-    iCase = i_case(iLevel_I)
-    iGrid = iSortStencil_III(Grid_,iCase,nDim)
-    iDir =  iSortStencil_III(Dir_, iCase,nDim)
-    iCase=  iSortStencil_III(Case_,iCase,nDim)
-    iOrder_I(1:2) = iSide_IDI(:,iDir,iGrid)
-    iOrder_I(3:4) = iOppositeSide_IDI(:,iDir,iGrid) 
-    if(DoStencilFix) goto 100
+    DoStencilFix = .false.
     !\
     ! Check the "ghost" grid points 
     !/
@@ -277,8 +282,8 @@ contains
           else
              CYCLE
           end if
-          call one_d_interpolate(iPoint1=1, iPoint2=2, nGridOut1=nGridOut)
-          DoStencilFix = .false.
+          call one_d_interpolate(iPoint1=1, iPoint2=2)
+          nGridOut = nGridOut1
           RETURN
        end do
     end if
@@ -291,10 +296,17 @@ contains
        dXyzInv_D(iDim)   = 0.10/dXyzSmall_D(iDim)
     end do
     !\
+    !/
+    iCase = i_case(iLevel_I)
+    iGrid = iSortStencil2_II(Grid_,iCase)
+    iDir =  iSortStencil2_II(Dir_, iCase)
+    iOrder_I(1:2) = iSide_IDI(:,iDir,iGrid)
+    iOrder_I(3:4) = iOppositeSide_IDI(:,iDir,iGrid) 
+    !\
     ! Frist conbinations of the resolution interfaces: 
     ! no resolution interface
     !/
-    select case(iCase)
+    select case(iSortStencil2_II(Case_,iCase))
     case(Uniform_)
        !\                       C  C
        ! No refinement
@@ -306,25 +318,21 @@ contains
        Weight_I(3) = (1 - Aux_D(1))*     Aux_D(2)
        Weight_I(4) =      Aux_D(1) *     Aux_D(2)
        RETURN
-    
        !\
        !Find resolution interfaces
        !/
     case(Face_)
        iDirPerp = 3 - iDir
-       
        !\                             C  C
        ! Edges going along iDir-axis    F F   or   F F   ---> iDir
        !/                                           C  C
-       
        Aux_D(iDirPerp) = &
             dXyzInv_D(iDirPerp)*(Xyz_D(iDirPerp) - &
             XyzGrid_DI(iDirPerp,iOrder_I(1) )  )       
        !\
        ! Interpolate along edge X1X2
        !/
-       call one_d_interpolate(iPoint1=1,iPoint2=2,nGridOut1=nGridOut1)
-       
+       call one_d_interpolate(iPoint1=1,iPoint2=2)
        !\
        ! Apply weight for interpolation along another axis
        !/
@@ -337,13 +345,11 @@ contains
           iOrder_I(2:4) = iOrder_I((/3,4,2/))
        end if
        nGridOut = nGridOut1
-       
        !\
        ! Interpolate along edge X3X4
        !/
-       
        call one_d_interpolate(iPoint1=nGridOut +1, &
-            iPoint2=nGridOut + 2, nGridOut1=nGridOut1)
+            iPoint2=nGridOut + 2)
        !\
        ! Apply weight for interpolation along another axis
        !/
@@ -358,100 +364,83 @@ contains
        ! Check the ends of the resolution interfaces. Near the resolution 
        ! interface endpoint the stencil may need to be reevaluated. 
        !/
-       do iDir = 1, nDim
+       do iDim = 1, nDim
           !\
           !iGrid is the location of coarse point
           !/
-          iDirPerp = 3 - iDir
-          if(abs(XyzGrid_DI(iDirPerp,iOppositeSide_IDI(1,iDir,iGrid)) - &
-               XyzGrid_DI(iDirPerp,iOppositeSide_IDI(2,iDir,iGrid)) ) < &
-               dXyzSmall_D(iDirPerp) .and.                              &
-               abs(XyzGrid_DI(iDir,iOrder_I(1)) - 0.50*                 &
-               sum(XyzGrid_DI(iDir,iOppositeSide_IDI(:,iDir,iGrid)))) < &
-               dXyzSmall_D(iDir)  )then
+          iDirPerp = 3 - iDim
+          X1_D = XyzGrid_DI(:,iOrder_I(1))
+          X3_D = XyzGrid_DI(:,iOppositeSide_IDI(1,iDim,iGrid)) 
+          X4_D = XyzGrid_DI(:,iOppositeSide_IDI(2,iDim,iGrid))
+          if(abs(X3_D(iDirPerp) - X4_D(iDirPerp) ) < dXyzSmall_D(iDirPerp)& 
+               .and. abs(X1_D(iDim) - 0.50*(X3_D(iDim) + X4_D(iDim))) < &
+               dXyzSmall_D(iDim)  )then
              !              
              !       |   |  
              !     3F--4F|   
              !------------    2F here
              !      \ /  !
              !       1C  |    or here
-             iOrder_I(1:2) = iOppositeSide_IDI(:,iDir,iGrid)
-             iOrder_I(3:4) = iSide_IDI(        :,iDir,iGrid)
+             iOrder_I(1:2) = iSide_IDI(        :,iDim,iGrid)
+             iOrder_I(3:4) = iOppositeSide_IDI(:,iDim,iGrid)
              !\
              ! Interpolate on the triangle X1,X3,X4 (CFF)
              !/
-             call triangles(iTriangle1_I=(/1, 2, 3/))
+             call triangles(iTriangle1_I=(/1, 3, 4/))
              !\
              !Need to fix stencil, if the interpolation fails
              !/
              DoStencilFix = any(Weight_I(1:3) < 0)
              if(DoStencilFix)then
                 !\
-                !The point 1/3(XyzGrid(1)+XyzGrid(2)+XyzGrid(3))
-                !lays on the resolution interface between 3C and 1F2F
-                !and it is a fine grid size to the left from the endpoint
+                !The point 1/3(X1 + X3 + X4) lays on the resolution
+                !interface between 1C and 3F4F and it is
+                !a fine grid size to the left from the endpoint
                 !of the resolution interface, hence coordinates of the end
-                !point are 1/3(XyzGrid(1)+XyzGrid(2)+XyzGrid(3)) +
-                !              XyzGrid(2)-XyzGrid(1)
-                XyzStencil_D = (4*XyzGrid_DI(:,iOrder_I(2)) - &
-                     2*XyzGrid_DI(:,iOrder_I(1)) + XyzGrid_DI(:,iOrder_I(3)))/3
+                !point are 1/3(X1 + X3 + X4) +
+                !              (X4 - X3)
+                XyzStencil_D = (4*X4_D - 2*X3_D + X1_D)/3
              end if
              RETURN
           end if
        end do
-    end select
-100 continue
-    DoStencilFix = .false.
-    if(DoInit)call init_sort_stencil
-    iCase = i_case(iLevel_I)
-    iGrid = iSortStencil_III(Grid_,iCase,nDim)
-    iDir =  iSortStencil_III(Dir_, iCase,nDim)
-    iCase=  iSortStencil_III(Case_,iCase,nDim)
-    iOrder_I(1:2) = iSide_IDI(:,iDir,iGrid)
-    iOrder_I(3:4) = iOppositeSide_IDI(:,iDir,iGrid) 
-    select case(iCase)
+       !     F-F
+       !    / \|
+       !   C---F
+       call triangles(iTriangle1_I=(/2, 3, 1/), iTriangle2_I=(/2, 3, 4/))
     case(OneFine_,Rhombus_)
        !   C---C
        !    \ /|
        !     F-C
-            
        !   C-F
        !   |/\
        !   F--C
-       iOrder_I = iOrder_I((/1,4,2,3/))
-       call triangles(iTriangle1_I=(/1, 2, 3/), iTriangle2_I=(/1, 2, 4/))
-    case(OneCoarse_)
-       !     F-F
-       !    / \|
-       !   C---F
-       iOrder_I = iOrder_I((/2,3,1,4/))
-       call triangles(iTriangle1_I=(/1, 2, 3/), iTriangle2_I=(/1, 2, 4/))
+       call triangles(iTriangle1_I=(/1, 4, 2/), iTriangle2_I=(/1, 4, 3/))
     end select
   contains
     !========================
-    subroutine one_d_interpolate(iPoint1, iPoint2, nGridOut1)
+    subroutine one_d_interpolate(iPoint1, iPoint2)
       integer, intent(in):: iPoint1, iPoint2 !First and second point
-      integer,intent(out):: nGridOut1
       !\
       ! Check if the grid points are out of the grid boundary
       !/
+      X1_D(iDir) = XyzGrid_DI(iDir,iOrder_I(iPoint1))
+      X2_D(iDir) = XyzGrid_DI(iDir,iOrder_I(iPoint2))
       if(IsOut_I(iOrder_I(iPoint2)))then
          nGridOut1 = 1
          Weight_I(iPoint1) = 1
       elseif(IsOut_I(iOrder_I(iPoint1)))then
-         iOrder_I(iPoint1:iPoint2) = iOrder_I((/iPoint2,iPoint1/))
+         iOrder_I((/iPoint1,iPoint2/)) = iOrder_I((/iPoint2,iPoint1/))
          nGridOut1 = 1
          Weight_I(iPoint1) = 1
       else
          nGridOut1 = 2
          Weight_I(iPoint2) = &
-              (Xyz_D(iDir) - XyzGrid_DI(iDir,iOrder_I(iPoint1))) /&
-              (XyzGrid_DI(iDir,iOrder_I(iPoint2)) - &
-              XyzGrid_DI(iDir,iOrder_I(iPoint1)))
+              (Xyz_D(iDir) - X1_D(iDir)) / (X2_D(iDir) - X1_D(iDir))
          Weight_I(iPoint1) = 1 - Weight_I(iPoint2) 
       end if
     end subroutine one_d_interpolate
-    !=======================================
+    !=========================
     real function cross_product(a_D, b_D)
       real,dimension(nDim),intent(in) :: a_D, b_D
       !----------
@@ -466,19 +455,20 @@ contains
       X1_D=XyzGrid_DI(:,iOrder_I(iTriangle1_I(1)))
       X2_D=XyzGrid_DI(:,iOrder_I(iTriangle1_I(2)))
       X3_D=XyzGrid_DI(:,iOrder_I(iTriangle1_I(3)))
-  
+
       call triangle(X1_D, X2_D, X3_D)
       if(all(Weight_I(1:3)>=0.0))then
-         iOrder_I(1:3) = iOrder_I(iTriangle1_I)
+         iOrder_I = (/iOrder_I(iTriangle1_I(1)),iOrder_I(iTriangle1_I(2)),&
+              iOrder_I(iTriangle1_I(3)), iOrder_I(10 - sum(iTriangle1_I))/) 
       else
          if(.not.present(iTriangle2_I))RETURN
          X1_D=XyzGrid_DI(:,iOrder_I(iTriangle2_I(1)))
          X2_D=XyzGrid_DI(:,iOrder_I(iTriangle2_I(2)))
          X3_D=XyzGrid_DI(:,iOrder_I(iTriangle2_I(3)))
-         
+
          call triangle(X1_D, X2_D, X3_D)
-         iOrder_I(3:4) = iOrder_I((/4,3/))
-         !iOrder_I(1:3) = iOrder_I(iTriangle2_I); 
+         iOrder_I = (/iOrder_I(iTriangle2_I(1)),iOrder_I(iTriangle2_I(2)),&
+              iOrder_I(iTriangle2_I(3)), iOrder_I(10 - sum(iTriangle2_I))/) 
       end if
     end subroutine triangles
     !============
@@ -646,20 +636,19 @@ contains
             maxval(XyzGrid_DI(iDir,:)) -  minval(XyzGrid_DI(iDir,:)))
        dXyzInv_D(iDir)   = 0.10/dXyzSmall_D(iDir)
     end do
-    if(DoInit)call init_sort_stencil
     iCase = i_case(iLevel_I)
     !\
     ! We store in advance the 'basic' grid point
     ! and orientation of all possible stencil configurations
     ! and now we extracted this information
     !/ 
-    iGrid = iSortStencil_III(Grid_,iCase,nDim)
-    iDir  = iSortStencil_III(Dir_,iCase,nDim)
+    iGrid = iSortStencil3_II(Grid_,iCase)
+    iDir  = iSortStencil3_II(Dir_,iCase)
     
     iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
     iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
 
-    select case(iSortStencil_III(Case_,iCase,nDim))
+    select case(iSortStencil3_II(Case_,iCase))
     case(Face_)
        !\
        ! Faces going along plane iDir (which is the direction of normal)    
@@ -887,13 +876,13 @@ contains
     ! and orientation of all possible stencil configurations
     ! and now we extracted this information
     !/ 
-    iGrid = iSortStencil_III(Grid_,iCase,nDim)
-    iDir  = iSortStencil_III(Dir_, iCase,nDim)
+    iGrid = iSortStencil3_II(Grid_,iCase)
+    iDir  = iSortStencil3_II(Dir_, iCase)
 
     iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
     iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
 
-    select case(iSortStencil_III(Case_,iCase,nDim))
+    select case(iSortStencil3_II(Case_,iCase))
     case(FiveTetrahedra_)
        !\
        ! One configuration resulting in the corner split for five tetrahedra
@@ -2504,6 +2493,10 @@ contains
   subroutine interpolate_amr(nDim, XyzIn_D, nIndexes, nCell_D, find, &
        nGridOut, Weight_I, iIndexes_II, IsSecondOrder)
     !\
+    !USE: The tools to fill in sort stencil array
+    !/
+    use ModCubeGeometry, ONLY: DoInit, init_sort_stencil
+    !\
     ! Number of dimensions
     !/
     integer, intent(in) :: nDim 
@@ -2647,7 +2640,7 @@ contains
        if(present(IsSecondOrder))IsSecondOrder = .not. UseGhostPoint
        RETURN
     end if
-
+    if(DoInit)call init_sort_stencil
     !\
     ! Failure in constructing the extended stencil may  occur if the 
     ! input point is out of AMR grid.
@@ -2657,6 +2650,7 @@ contains
        nGridOut = -1
        RETURN
     end if
+
     call generate_basic_stencil(&
          nDim, Xyz_D, nExtendedStencil,        &
          XyzExtended_DI(:,1:nExtendedStencil), &

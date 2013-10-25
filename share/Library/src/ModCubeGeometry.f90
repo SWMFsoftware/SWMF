@@ -132,7 +132,9 @@ module ModCubeGeometry
 
   logical:: DoInit = .true.
   integer, parameter:: Grid_=1, Dir_=2, Case_=3
-  integer:: iSortStencil_III(Grid_:Case_,0:255,2:3) = 0
+  integer:: iSortStencil3_II(Grid_:Case_,0:257) = 0
+  integer:: iSortStencil2_II(Grid_:Case_, 0:16) = 0
+  
   !\
   ! Different cases of stencil (will be stored in Case_ column
   !/
@@ -144,6 +146,8 @@ module ModCubeGeometry
   integer, parameter:: FineEdgePlusOne_ = 10, ThreeFineOnFace_ =11
   integer, parameter:: CoarseEdgePlusOne_ = 12, ThreeCoarseOnFace_=13
   integer, parameter:: ThreeCoarseOnFacePlusOne_ = 14, CoarseChain_   = 15
+  integer, parameter:: Transition2Edge_ = 16, Transition2Corner_ = 256
+  integer, parameter:: TransitionJunction_ = 257
   !\
   ! Analogous for 2D
   !/
@@ -180,12 +184,12 @@ contains
 
     !------------------------
     nDim = 3; nGrid = 8
-    iSortStencil_III = 0
+    iSortStencil3_II = 0
 
     DoInit = .false. !Do this only once
     !Zero and 255 cases are both uniform. !2 cases, 2 totally, 254 left
-    iSortStencil_III(Grid_:Dir_,0:255:255,nDim) = 1
-    iSortStencil_III(Case_,0:255:255,nDim) = Uniform_
+    iSortStencil3_II(Grid_:Dir_,0:255:255) = 1
+    iSortStencil3_II(Case_,0:255:255) = Uniform_
     CASE:do iCase = 1, 254
        !\
        ! Generate 'binary' iLevel_I from iCase
@@ -204,15 +208,15 @@ contains
        do iDir = 1, 3
           if(all(iLevel_I(iFace_IDI(:,iDir,1))==Fine_).and.&
                all(iLevel_I(iOppositeFace_IDI(:,iDir,1))==Coarse_))then
-             iSortStencil_III(Grid_,iCase,nDim) = 1
-             iSortStencil_III(Dir_, iCase,nDim) = iDir !  2*iDir -1
-             iSortStencil_III(Case_,iCase,nDim) = Face_
+             iSortStencil3_II(Grid_,iCase) = 1
+             iSortStencil3_II(Dir_, iCase) = iDir !  2*iDir -1
+             iSortStencil3_II(Case_,iCase) = Face_
              CYCLE CASE
           elseif(all(iLevel_I(iFace_IDI(:,iDir,1))==Coarse_).and.&
                all(iLevel_I(iOppositeFace_IDI(:,iDir,1))==Fine_))then
-             iSortStencil_III(Grid_,iCase,nDim) = 1
-             iSortStencil_III(Dir_, iCase,nDim) = iDir !2*iDir 
-             iSortStencil_III(Case_,iCase,nDim) = Face_
+             iSortStencil3_II(Grid_,iCase) = 1
+             iSortStencil3_II(Dir_, iCase) = iDir !2*iDir 
+             iSortStencil3_II(Case_,iCase) = Face_
              CYCLE CASE
           end if
        end do
@@ -222,9 +226,9 @@ contains
        do iDir = 1, 3
           if(all(iLevel_I(iFace_IDI(:,iDir,1))==&
                iLevel_I(iOppositeFace_IDI(:,iDir,1)) ) )then
-             iSortStencil_III(Grid_,iCase,nDim) = 1
-             iSortStencil_III(Dir_, iCase,nDim) = iDir
-             iSortStencil_III(Case_,iCase,nDim) = Edge_
+             iSortStencil3_II(Grid_,iCase) = 1
+             iSortStencil3_II(Dir_, iCase) = iDir
+             iSortStencil3_II(Case_,iCase) = Edge_
              CYCLE CASE
           end if
        end do
@@ -235,9 +239,9 @@ contains
        do iGrid = 1,nGrid
           if(  all(iLevel_I(iEdge_ID(iGrid,:))==Coarse_).and.&
                all(iLevel_I(iFaceDiag_ID(iGrid,:))==Fine_))then
-             iSortStencil_III(Dir_,iCase,nDim)  = 1
-             iSortStencil_III(Grid_,iCase,nDim) = iGrid
-             iSortStencil_III(Case_,iCase,nDim) = FiveTetrahedra_
+             iSortStencil3_II(Dir_,iCase)  = 1
+             iSortStencil3_II(Grid_,iCase) = iGrid
+             iSortStencil3_II(Case_,iCase) = FiveTetrahedra_
              CYCLE CASE
           end if
        end do
@@ -245,31 +249,31 @@ contains
        select case( count(iLevel_I==Fine_))
        case(1)                          ! 8 cases 72 totally 184 left 
           iLoc = maxloc(iLevel_I,DIM=1)
-          iSortStencil_III(Dir_,iCase,nDim) = 1
-          iSortStencil_III(Grid_,iCase,nDim) = iLoc
-          iSortStencil_III(Case_,iCase,nDim) = OneFine_
+          iSortStencil3_II(Dir_,iCase) = 1
+          iSortStencil3_II(Grid_,iCase) = iLoc
+          iSortStencil3_II(Case_,iCase) = OneFine_
           CYCLE CASE 
        case(7)                          ! 8 cases 80 totally 176 left
           iLoc = minloc(iLevel_I,DIM=1)
-          iSortStencil_III(Dir_,iCase,nDim)  = 1
-          iSortStencil_III(Grid_,iCase,nDim) = iLoc
-          iSortStencil_III(Case_,iCase,nDim) = OneCoarse_
+          iSortStencil3_II(Dir_,iCase)  = 1
+          iSortStencil3_II(Grid_,iCase) = iLoc
+          iSortStencil3_II(Case_,iCase) = OneCoarse_
           CYCLE CASE
        case(2)
           iLoc = maxloc(iLevel_I,DIM=1)
           if(iLevel_I(iMainDiag_I(iLoc))==Fine_)then 
 
              ! 4 cases   84 totally 172 left
-             iSortStencil_III(Dir_,iCase,nDim)  = 1
-             iSortStencil_III(Grid_,iCase,nDim) = iLoc
-             iSortStencil_III(Case_,iCase,nDim) = FineMainDiag_
+             iSortStencil3_II(Dir_,iCase)  = 1
+             iSortStencil3_II(Grid_,iCase) = iLoc
+             iSortStencil3_II(Case_,iCase) = FineMainDiag_
              CYCLE CASE
           else                      ! 12 cases  96 totally 160 left 
              do iDir = Yz_,Xy_
                 if(iLevel_I(iFaceDiag_ID(iLoc, iDir))==Fine_)then
-                   iSortStencil_III(Dir_,iCase,nDim)  = iDir
-                   iSortStencil_III(Grid_,iCase,nDim) = iLoc
-                   iSortStencil_III(Case_,iCase,nDim) = FineFaceDiag_
+                   iSortStencil3_II(Dir_,iCase)  = iDir
+                   iSortStencil3_II(Grid_,iCase) = iLoc
+                   iSortStencil3_II(Case_,iCase) = FineFaceDiag_
                    CYCLE CASE
                 end if
              end do
@@ -277,16 +281,16 @@ contains
        case(6)                       ! 4 cases 100 totally 156 left
           iLoc = minloc(iLevel_I,DIM=1)
           if(iLevel_I(iMainDiag_I(iLoc))==Coarse_)then  
-             iSortStencil_III(Dir_,iCase,nDim)  = 1
-             iSortStencil_III(Grid_,iCase,nDim) = iLoc
-             iSortStencil_III(Case_,iCase,nDim) = CoarseMainDiag_
+             iSortStencil3_II(Dir_,iCase)  = 1
+             iSortStencil3_II(Grid_,iCase) = iLoc
+             iSortStencil3_II(Case_,iCase) = CoarseMainDiag_
              CYCLE CASE
           else                      ! 12 cases 112 totally 144 left
              do iDir = Yz_,Xy_
                 if(iLevel_I(iFaceDiag_ID(iLoc, iDir))==Coarse_)then
-                   iSortStencil_III(Dir_,iCase,nDim) = iDir
-                   iSortStencil_III(Grid_,iCase,nDim) = iLoc
-                   iSortStencil_III(Case_,iCase,nDim) = CoarseFaceDiag_
+                   iSortStencil3_II(Dir_,iCase) = iDir
+                   iSortStencil3_II(Grid_,iCase) = iLoc
+                   iSortStencil3_II(Case_,iCase) = CoarseFaceDiag_
                    CYCLE CASE
                 end if
              end do
@@ -297,18 +301,18 @@ contains
                 if(iLevel_I(iMainDiag_I(iGrid))==Fine_)then
                    do iDir = Yz_,Xy_
                       if(iLevel_I(iFaceDiag_ID(iGrid, iDir))==Fine_)then
-                         iSortStencil_III(Dir_,iCase,nDim)  = iDir
-                         iSortStencil_III(Grid_,iCase,nDim) = iGrid
-                         iSortStencil_III(Case_,iCase,nDim) = FineEdgePlusOne_
+                         iSortStencil3_II(Dir_,iCase)  = iDir
+                         iSortStencil3_II(Grid_,iCase) = iGrid
+                         iSortStencil3_II(Case_,iCase) = FineEdgePlusOne_
                          CYCLE CASE
                       end if
                    end do
                 else            ! 24 cases 160 totally 96 left
                    do iDir = 1,nDim
                       if(all(iLevel_I(iFace_IDI(1:3,iDir,iGrid))==Fine_))then 
-                         iSortStencil_III(Dir_,iCase,nDim)  = iDir
-                         iSortStencil_III(Grid_,iCase,nDim) = iGrid
-                         iSortStencil_III(Case_,iCase,nDim) = ThreeFineOnFace_
+                         iSortStencil3_II(Dir_,iCase)  = iDir
+                         iSortStencil3_II(Grid_,iCase) = iGrid
+                         iSortStencil3_II(Case_,iCase) = ThreeFineOnFace_
                          CYCLE CASE
                       end if
                    end do
@@ -321,9 +325,9 @@ contains
              if(iLevel_I(iMainDiag_I(iGrid))==Coarse_)then
                 do iDir = Yz_,Xy_
                    if(iLevel_I(iFaceDiag_ID(iGrid, iDir))==Coarse_)then 
-                      iSortStencil_III(Dir_,iCase,nDim)  = iDir
-                      iSortStencil_III(Grid_,iCase,nDim) = iGrid
-                      iSortStencil_III(Case_,iCase,nDim) = CoarseEdgePlusOne_
+                      iSortStencil3_II(Dir_,iCase)  = iDir
+                      iSortStencil3_II(Grid_,iCase) = iGrid
+                      iSortStencil3_II(Case_,iCase) = CoarseEdgePlusOne_
                       CYCLE CASE          
                    end if
                 end do
@@ -331,9 +335,9 @@ contains
              !                     24 cases 208 totally 48 left
              do iDir = 1,nDim
                 if(all(iLevel_I(iFace_IDI(1:3, iDir, iGrid))==Coarse_))then
-                   iSortStencil_III(Dir_,iCase,nDim)  = iDir
-                   iSortStencil_III(Grid_,iCase,nDim) = iGrid
-                   iSortStencil_III(Case_,iCase,nDim) = ThreeCoarseOnFace_
+                   iSortStencil3_II(Dir_,iCase)  = iDir
+                   iSortStencil3_II(Grid_,iCase) = iGrid
+                   iSortStencil3_II(Case_,iCase) = ThreeCoarseOnFace_
                    CYCLE CASE
                 end if
              end do
@@ -345,9 +349,9 @@ contains
                    if(all(&
                         iLevel_I(iOppositeFace_IDI(2:4,iDir,iGrid))==Coarse_&
                         ))then
-                      iSortStencil_III(Dir_,iCase,nDim)  = iDir
-                      iSortStencil_III(Grid_,iCase,nDim) = iGrid
-                      iSortStencil_III(Case_,iCase,nDim) = &
+                      iSortStencil3_II(Dir_,iCase)  = iDir
+                      iSortStencil3_II(Grid_,iCase) = iGrid
+                      iSortStencil3_II(Case_,iCase) = &
                            ThreeCoarseOnFacePlusOne_
                       CYCLE CASE
                    end if
@@ -359,9 +363,9 @@ contains
                         iLevel_I(iEdge_ID(iGrid,1 + mod(iDir,3)))==Coarse_&
                         .and.iLevel_I(iEdge_ID(iEdge_ID(iGrid,iDir),&
                         1 + mod(1 + iDir,3)))==Coarse_)then
-                      iSortStencil_III(Dir_,iCase,nDim)  = iDir
-                      iSortStencil_III(Grid_,iCase,nDim) = iGrid
-                      iSortStencil_III(Case_,iCase,nDim) = CoarseChain_
+                      iSortStencil3_II(Dir_,iCase)  = iDir
+                      iSortStencil3_II(Grid_,iCase) = iGrid
+                      iSortStencil3_II(Case_,iCase) = CoarseChain_
                       CYCLE CASE
                    end if
                 end do
@@ -373,8 +377,8 @@ contains
     nDim = 2; nGrid = 4
    
     !Zero and 15 cases are both uniform. !2 cases, 2 totally, 14 left
-    iSortStencil_III(Grid_:Dir_,0:15:15,nDim) = 1
-    iSortStencil_III(Case_,0:15:15,nDim) = Uniform_
+    iSortStencil2_II(Grid_:Dir_,0:15:15) = 1
+    iSortStencil2_II(Case_,0:15:15) = Uniform_
     CASE2:do iCase = 1, 14
        !\
        ! Generate 'binary' iLevel_I from iCase
@@ -393,36 +397,36 @@ contains
        do iDir = 1, nDim
           if(all(iLevel_I(iSide_IDI(:,iDir,1))==Fine_).and.&
                all(iLevel_I(iOppositeSide_IDI(:,iDir,1))==Coarse_))then
-             iSortStencil_III(Grid_,iCase,nDim) = 1
-             iSortStencil_III(Dir_, iCase,nDim) = iDir !  2*iDir -1
-             iSortStencil_III(Case_,iCase,nDim) = Trapezoid_
+             iSortStencil2_II(Grid_,iCase) = 1
+             iSortStencil2_II(Dir_, iCase) = iDir !  2*iDir -1
+             iSortStencil2_II(Case_,iCase) = Trapezoid_
              CYCLE CASE2
           elseif(all(iLevel_I(iSide_IDI(:,iDir,1))==Coarse_).and.&
                all(iLevel_I(iOppositeSide_IDI(:,iDir,1))==Fine_))then
-             iSortStencil_III(Grid_,iCase,nDim) = 1
-             iSortStencil_III(Dir_, iCase,nDim) = iDir !2*iDir 
-             iSortStencil_III(Case_,iCase,nDim) = Trapezoid_
+             iSortStencil2_II(Grid_,iCase) = 1
+             iSortStencil2_II(Dir_, iCase) = iDir !2*iDir 
+             iSortStencil2_II(Case_,iCase) = Trapezoid_
              CYCLE CASE2
           end if
        end do
        select case( count(iLevel_I(1:4)==Fine_))
        case(1)                          ! 4 cases 10 totally 6 left 
           iLoc = maxloc(iLevel_I,DIM=1)
-          iSortStencil_III(Dir_,iCase,nDim) = 1
-          iSortStencil_III(Grid_,iCase,nDim) = iLoc
-          iSortStencil_III(Case_,iCase,nDim) = OneFine_
+          iSortStencil2_II(Dir_,iCase) = 1
+          iSortStencil2_II(Grid_,iCase) = iLoc
+          iSortStencil2_II(Case_,iCase) = OneFine_
           CYCLE CASE2
        case(3)                          ! 4 cases 14 totally 2 left
           iLoc = minloc(iLevel_I(1:4),DIM=1)
-          iSortStencil_III(Dir_,iCase,nDim)  = 1
-          iSortStencil_III(Grid_,iCase,nDim) = iLoc
-          iSortStencil_III(Case_,iCase,nDim) = OneCoarse_
+          iSortStencil2_II(Dir_,iCase)  = 1
+          iSortStencil2_II(Grid_,iCase) = iLoc
+          iSortStencil2_II(Case_,iCase) = OneCoarse_
           CYCLE CASE2
        case(2)                          !          
           iLoc = maxloc(iLevel_I,DIM=1)
-          iSortStencil_III(Dir_,iCase,nDim) = 1
-          iSortStencil_III(Grid_,iCase,nDim) = iLoc
-          iSortStencil_III(Case_,iCase,nDim) = Rhombus_
+          iSortStencil2_II(Dir_,iCase) = 1
+          iSortStencil2_II(Grid_,iCase) = iLoc
+          iSortStencil2_II(Case_,iCase) = Rhombus_
        end select
     end do CASE2
   end subroutine init_sort_stencil
