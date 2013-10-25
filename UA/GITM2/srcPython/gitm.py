@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-#  For more information, see http://csem.engin.umich.edu/tools/swmf
 #-----------------------------------------------------------------------------
 # $Id$
 #
@@ -99,6 +97,7 @@ class GitmBin(PbData):
 
         from re import sub
         from struct import unpack
+        import sys
         
         # Read data and header info
         f=open(self.attrs['file'], 'rb')
@@ -108,6 +107,9 @@ class GitmBin(PbData):
         self.attrs['endian']='little'
         endChar='>'
         rawRecLen=f.read(4)
+        if len(rawRecLen) < 4:
+            print "GitmBin ERROR: empty file [", self.attrs['file'], "]"
+            sys.exit(1)
         recLen=(unpack(endChar+'l',rawRecLen))[0]
         if (recLen>10000)or(recLen<0):
             # Ridiculous record length implies wrong endian.
@@ -233,17 +235,22 @@ class GitmBin(PbData):
         import string
         import sys
 
-        if not self.attrs.has_key('magfile'):
-            print "No 3D MAG/ION file associated with this GITM Binary"
-        elif(self.attrs['magfile'].find("ION") <= 0 and
-             self.attrs['magfile'].find("MAG") <= 0):
-            print "No 3D MAG/ION file associated with this GITM Binary"
+        ion = None
+        # If this is a 3D ION file we don't need a mag file
+        if self.attrs['file'].find("ION") > 0:
+            ion = self
         else:
-            ion = GitmBin(self.attrs['magfile'])
+            if not self.attrs.has_key('magfile'):
+                print "No 3D MAG/ION file associated with this GITM Binary"
+            elif(self.attrs['magfile'].find("ION") <= 0 and
+                 self.attrs['magfile'].find("MAG") <= 0):
+                print "No 3D MAG/ION file associated with this GITM Binary"
+            else:
+                ion = GitmBin(self.attrs['magfile'])
 
-            # Compute the field-aligned unit vector in East, North,
-            # and Vertical coordinates
-
+        # Compute the field-aligned unit vector in East, North,
+        # and Vertical coordinates
+        if ion:
             bhat_e = ion['B.F. East'] / ion['B.F. Magnitude']
             bhat_n = ion['B.F. North'] / ion['B.F. Magnitude']
             bhat_v = ion['B.F. Vertical'] / ion['B.F. Magnitude']
@@ -268,15 +275,12 @@ class GitmBin(PbData):
             # Compute the magnetic coordinate velocities for each overlapping
             # latitude, longitude, and altitude.  Also include the mag coord.
 
-            eps  = 1.0e-3
-            skey = self.keys()
-            vkey = dict()
-            nkey = dict()
-
-            for item in skey:
-                if string.find(item, "V!") >= 0:
+            for item in self.keys():
+                if(string.find(item, "V!") >= 0 or
+                   string.find(item, "Gravity") >= 0 or
+                   string.find(item, "PressGrad") >= 0):
                     sp = string.split(item)
-                    if not sp[0] in vkey.keys():
+                    if not self.has_key(sp[0]):
                         east  = string.join([sp[0], "(east)"], " ")
                         north = string.join([sp[0], "(north)"], " ")
                         up    = string.join([sp[0], "(up)"], " ")
@@ -288,22 +292,34 @@ class GitmBin(PbData):
                         vz=zhat_e*self[east]+zhat_n*self[north]
                         vm=mhat_e*self[east]+mhat_n*self[north]+mhat_v*self[up]
                         self[par] = dmarray.copy(vp)
-                        self[par].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,mag\,north}}',
-                                           'scale':'linear',
-                                           'name':'v$_\parallel$'}
+                        self[par].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,mag\,north}}', 'scale':'linear', 'name':'v$_\parallel$'}
                         self[zon] = dmarray.copy(vz)
-                        self[zon].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,east}}',
-                                           'scale':'linear', 'name':'v$_{zon}$'}
+                        self[zon].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,east}}', 'scale':'linear', 'name':'v$_{zon}$'}
                         self[mer] = dmarray.copy(vm)
-                        self[mer].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,up}}',
-                                           'scale':'linear', 'name':'v$_{mer}$'}
+                        self[mer].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,up}}', 'scale':'linear', 'name':'v$_{mer}$'}
+                    elif sp[0].find("Gravity") >= 0:
+                        par = string.join([sp[0], "(par)"], " ")
+                        zon = string.join([sp[0], "(zon)"], " ")
+                        mer = string.join([sp[0], "(mer)"], " ")
+
+                        gp=bhat_v*self[item]
+                        gz=0.0*self[item]
+                        gm=mhat_v*self[item]
+                        self[par] = dmarray.copy(gp)
+                        self[par].attrs = {'units':'m s^{-2}{\mathdefault{,\,positive\,mag\,north}}', 'scale':'linear', 'name':'g$_\parallel$'}
+                        self[zon] = dmarray.copy(gz)
+                        self[zon].attrs = {'units':'m s^{-2}{\mathdefault{,\,positive\,east}}', 'scale':'linear', 'name':'g$_{zon}$'}
+                        self[mer] = dmarray.copy(gm)
+                        self[mer].attrs = {'units':'m s^{-2}{\mathdefault{,\,positive\,up}}', 'scale':'linear', 'name':'g$_{mer}$'}
         
-            self['B.F. East']          = dmarray.copy(ion['B.F. East'])
-            self['B.F. North']         = dmarray.copy(ion['B.F. North'])
-            self['B.F. Vertical']      = dmarray.copy(ion['B.F. Vertical'])
-            self['B.F. Magnitude']     = dmarray.copy(ion['B.F. Magnitude'])
-            self['Magnetic Latitude']  = dmarray.copy(ion['Magnetic Latitude'])
-            self['Magnetic Longitude'] = dmarray.copy(ion['Magnetic Longitude'])
+            if not self.has_key('B.F. East'):
+                self['B.F. East'] = dmarray.copy(ion['B.F. East'])
+                self['B.F. North'] = dmarray.copy(ion['B.F. North'])
+                self['B.F. Vertical'] = dmarray.copy(ion['B.F. Vertical'])
+                self['B.F. Magnitude'] = dmarray.copy(ion['B.F. Magnitude'])
+            if not self.has_key('Magnetic Latitude'):
+                self['Magnetic Latitude'] = dmarray.copy(ion['Magnetic Latitude'])
+                self['Magnetic Longitude'] = dmarray.copy(ion['Magnetic Longitude'])
 
     def append_units(self):
         '''
@@ -348,7 +364,11 @@ class GitmBin(PbData):
                      "E.F. North":"V m^{-1}", "E.F. Magnitude":"V m^{-1}",
                      "B.F. Vertical":"nT", "B.F. East":"nT", "B.F. North":"nT",
                      "B.F. Magnitude":"nT", "Magnetic Latitude":"degrees",
-                     "Ed1":"", "Ed2":""}
+                     "Ed1":"", "Ed2":"", "Gravity":"m s$^{-2}$",
+                     "PressGrad (east)":"Pa m$^{-1}$",
+                     "PressGrad (north)":"Pa m$^{-1}$",
+                     "PressGrad (up)":"Pa m$^{-1}$",
+                     "IN Collision Freq":"s$^{-1}$"}
 
         scale_dict = {"Altitude":"linear", "Ar Mixing Ratio":"linear",
                       "Ar":"exponential", "CH4 Mixing Ratio":"linear",
@@ -392,7 +412,10 @@ class GitmBin(PbData):
                       "B.F. Vertical":"linear", "B.F. East":"linear",
                       "B.F. North":"linear", "B.F. Magnitude":"linear",
                       "Magnetic Latitude":"linear", "LT":"linear",
-                      "Magnetic Longitude":"linear", "dLat":"linear"}
+                      "Magnetic Longitude":"linear", "dLat":"linear",
+                      "Gravity":"linear", "PressGrad (east)":"linear",
+                      "PressGrad (north)":"linear", "PressGrad (up)":"linear",
+                      "IN Collision Freq":"linear"}
 
         name_dict = {"Altitude":"Altitude",
                      "Ar Mixing Ratio":"Argon Mixing Ratio", "Ar":"[Ar]",
@@ -449,7 +472,11 @@ class GitmBin(PbData):
                      "B.F. Magnitude":"Magnetic Field Magnitude",
                      "Magnetic Latitude":"Magnetic Latitude",
                      "Magnetic Longitude":"Magnetic Longitude",
-                     "dLat":"Latitude", "dLon":"Longitude"}
+                     "dLat":"Latitude", "dLon":"Longitude", "Gravity":"g",
+                     "PressGrad (east)":r"$\nabla_{east}$ (P$_i$ + P$_e$)",
+                     "PressGrad (north)":r"$\nabla_{north}$ (P$_i$ + P$_e$)",
+                     "PressGrad (up)":r"$\nabla_{up}$ (P$_i$ + P$_e$)",
+                     "IN Collision Freq":"$\nu_{in}$"}
 
         for k in self.keys():
             if type(self[k]) is dmarray:
