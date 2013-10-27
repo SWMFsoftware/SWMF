@@ -242,11 +242,6 @@ contains
     !Number of grid points returned from 1D routine
     !/
     integer :: nGridOut1    
-
-    !\
-    ! Min and max values of coordinates
-    !/
-    real    :: XyzMin_D(nDim), XyzMax_D(nDim)  
     !\
     ! To find lines at "constant" cordinate
     !/
@@ -257,7 +252,8 @@ contains
     real    :: dXyzInv_D(  nDim)  
     !\
     ! Misc
-    !/             
+    !/
+    integer:: iAux             
     real, dimension(nDim):: &
          Aux_D, X1_D = 0, X2_D = 0, X3_D = 0, X4_D = 0               
 
@@ -291,10 +287,12 @@ contains
     !\
     ! Calculate the stencil size
     !/
+    iAux = 2
     do iDim = 1, nDim
-       dXyzSmall_D(iDim) = 0.10*(&
-            maxval(XyzGrid_DI(iDim,:)) - minval(XyzGrid_DI(iDim,:)))
-       dXyzInv_D(iDim)   = 0.10/dXyzSmall_D(iDim)
+       Aux_D(iDim) = XyzGrid_DI(iDim,iAux) - XyzGrid_DI(iDim,1)
+       dXyzSmall_D(iDim) = 0.10*abs(Aux_D(iDim))
+       dXyzInv_D(iDim)   = 1/Aux_D(iDim)
+       iAux = 2*iAux - 1
     end do
     !\
     !/
@@ -758,7 +756,7 @@ contains
        !/
        Xyz2_D(x_:y_) = Xyz_D((/1 + mod(iDir,3),1 + mod(1 + iDir,3)/))
        !\
-       ! Interpolation weight along iDir axis are calculated seperately 
+       ! Interpolation weight along iDir axis are calculated separately 
        ! for coarse and fine points
        !/
        XyzMin_D(iDir)   = minval(XyzGrid_DI(iDir,:),iLevel_I/=Fine_)
@@ -2238,7 +2236,7 @@ contains
     !==============================
     subroutine trapezoid(X1_D, X2_D, X3_D, X4_D, XyzP_D)
       real, dimension(nDim), intent(in):: X1_D, X2_D, X3_D, X4_D, XyzP_D
-      real:: x,y
+      real:: x,y, XyzMin_D(nDim), XyzMax_D(nDim)
       !We require that the lager base is X1X2
       !---------
       !Calculate dimensionless coordinates with respect to vertex 1
@@ -2312,16 +2310,6 @@ contains
       iAxis = 1 + mod(iEdgeDir    ,3)
       jAxis = 1 + mod(iEdgeDir + 1,3)
       Xyz2_D(x_:y_) = Xyz_D((/iAxis,jAxis/))
-      !\
-      ! may need to rearrange iOrder
-      !/
-      if(XyzGrid_DI(iAxis,iOrder_I(5))>XyzGrid_DI(iAxis,iOrder_I(6)))then
-         iOrder_I(1:8) = iOrder_I((/2,1,4,3,6,5,8,7/))
-      end if
-      if(XyzGrid_DI(jAxis,iOrder_I(5))>XyzGrid_DI(jAxis,iOrder_I(7)))then
-         iOrder_I(1:8) = iOrder_I((/3,4,1,2,7,8,5,6/))
-      end if
-
 
       !\
       ! Interpolate along face 1:4
@@ -2939,7 +2927,7 @@ contains
                iIndexes_II(0,       nGridOut) = iProc_I(1)
                iIndexes_II(nIndexes,nGridOut) = iBlock_I(1)
                iIndexes_II(1:nDim,  nGridOut) = iCellIndexes_DII(:,1,1) + &
-                    iShift_DI(:,iGrid)
+                    iShift_DI(1:nDim,iGrid)
                Weight_I(nGridOut) = Weight_I(iGrid)
             end do
             RETURN
