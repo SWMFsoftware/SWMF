@@ -217,7 +217,7 @@ contains
     ! basic stencil for the point at which to inpertpolate is not 
     ! applicable
     !/
-    logical, intent(inout):: DoStencilFix
+    logical, intent(out):: DoStencilFix
     !\
     ! If DoStencilFix==.true., the subroutine provides XyzStencil_D to be
     ! used to construct stencil, not to interpolate
@@ -318,7 +318,6 @@ contains
        Weight_I(2) =      Aux_D(1) *(1 - Aux_D(2))
        Weight_I(3) = (1 - Aux_D(1))*     Aux_D(2)
        Weight_I(4) =      Aux_D(1) *     Aux_D(2)
-       RETURN
        !\
        !Find resolution interfaces
        !/
@@ -358,8 +357,6 @@ contains
             Weight_I(nGridOut + 1:nGridOut + nGridOut1)*&
             Aux_D(iDirPerp)
        nGridOut = nGridOut + nGridOut1
-       DoStencilFix = .false.
-       RETURN
     case(OneCoarse_)
        !\
        ! Check the ends of the resolution interfaces. Near the resolution 
@@ -534,7 +531,7 @@ contains
     ! basic stencil for the point at which to inpertpolate is not 
     ! applicable
     !/
-    logical, intent(out):: DoStencilFix
+    logical, intent(inout):: DoStencilFix
     !\
     ! If DoStencilFix==.true., the subroutine provides the 
     ! XyzStencil_D to be used to construct stencil, not to interpolate!
@@ -567,8 +564,7 @@ contains
     !/
     real    :: Xyz2_D(x_:y_), XyzGrid2_DI(x_:y_,4), XyzStencil2_D(x_:y_)
     integer :: nGridOut2, iOrder2_I(4),iLevel2_I(4)
-    logical :: DoStencilFix2, IsOut2_I(4)
-
+    logical :: IsOut2_I(4)
     !\
     ! To call subroutine pyramid
     !/
@@ -678,7 +674,7 @@ contains
           end do
        end do
     end if
-    if(iCase < Transition2Corner_.and.iCase > Edge_)DoStencilFix = .false.
+    if(iCase /= Transition2Corner_)DoStencilFix = .false.
     !\
     ! We store in advance the 'basic' grid point
     ! and orientation of all possible stencil configurations
@@ -699,7 +695,6 @@ contains
        !\
        ! Interpolate along lower face
        !/
-       DoStencilFix2 = .false.
        XyzGrid2_DI(x_,1:4) = XyzGrid_DI(1 + mod(iDir    ,3),iOrder_I(1:4))
        XyzGrid2_DI(y_,1:4) = XyzGrid_DI(1 + mod(iDir + 1,3),iOrder_I(1:4))
        iLevel2_I(        1:4) = iLevel_I(        iOrder_I(1:4))
@@ -707,7 +702,7 @@ contains
        call interpolate_amr2(&
             Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, &
             nGridOut2, Weight_I(1:4), iOrder2_I, &
-            DoStencilFix2, XyzStencil2_D)
+            DoStencilFix, XyzStencil2_D)
        iOrder_I(1:4) = iOrder_I(iOrder2_I)
        !\
        ! Apply weight for interpolation along z-axis
@@ -729,7 +724,6 @@ contains
        !\
        ! Interpolate along upper face
        !/
-       DoStencilFix2 = .false.
        XyzGrid2_DI(x_,1:4) = XyzGrid_DI(1 + mod(iDir    ,3),&
             iOrder_I(nGridOut2 + 1:nGridOut2+4))
        XyzGrid2_DI(y_,1:4) = XyzGrid_DI(1 + mod(iDir + 1,3),&
@@ -739,7 +733,7 @@ contains
        call interpolate_amr2(&
             Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I,&
             nGridOut2, Weight_I(nGridOut+1:nGridOut+4), iOrder2_I, &
-            DoStencilFix2, XyzStencil2_D)
+            DoStencilFix, XyzStencil2_D)
        do iGrid=1,nGridOut2
           iOrder_I(nGridOut+iGrid)=iOrder_I(nGridOut+iOrder2_I(iGrid))
        end do
@@ -752,8 +746,6 @@ contains
        ! May need to remove a grid points once behind the boundary
        !/
        nGridOut = nGridOut + nGridOut2
-       DoStencilFix = .false.
-       RETURN
     case(Edge_)
        !\
        ! Edges going along resolution edge
@@ -828,7 +820,6 @@ contains
              end if
           end if
        end do
-       DoStencilFix = .false.
     case(TransitionJunction_)
        !\
        ! Check corner transition junction
@@ -2311,7 +2302,7 @@ contains
       real :: dXyzUp, dXyzDown 
       integer :: nFine, iFine_I(3)
       integer :: nCoarse, iCoarse_I(3)
-      logical :: IsAmbiguous
+      logical :: IsAmbiguous, DoStencilFix2
       !\
       ! Subroutine intepolates in transitional near a resolution corner
       ! Points facing a corner a numbered 5:8
@@ -2335,7 +2326,6 @@ contains
       !\
       ! Interpolate along face 1:4
       !/
-      DoStencilFix2 = DoStencilFix
       XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(1:4))
       iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(1:4))
       IsOut2_I = IsOut_I(iOrder_I(1:4))
@@ -2750,7 +2740,6 @@ contains
     IsOut_I = IsOutExtended_I(iOrderExtended_I)
     iIndexes_II = &
          iIndexesExtended_II(:,iOrderExtended_I)
-    DoStencilFix = .false. 
     select case(nDim)
     case(2)
        call interpolate_amr2(&
@@ -2777,6 +2766,7 @@ contains
             call CON_stop('Failure in interpolate amr grid2') 
 
     case(3)
+       DoStencilFix = .false. 
        call interpolate_amr3(&
             Xyz_D , XyzGrid_DI, iLevel_I, IsOut_I,&
             nGridOut, Weight_I, iOrder_I,&
