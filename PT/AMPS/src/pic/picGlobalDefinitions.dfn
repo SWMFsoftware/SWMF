@@ -7,14 +7,16 @@
 
 //the definition of the 'time step' mode
 #define _SINGLE_GLOBAL_TIME_STEP_              0
-#define _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_   1
-#define _SPECIES_DEPENDENT_LOCAL_TIME_STEP_    2
+#define _SINGLE_LOCAL_TIME_STEP_               1
+#define _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_   2
+#define _SPECIES_DEPENDENT_LOCAL_TIME_STEP_    3
 
 
 //the definition of the 'particle weight' mode
 #define _SINGLE_GLOBAL_PARTICLE_WEIGHT_              0
-#define _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_   1
-#define _SPECIES_DEPENDENT_LOCAL_PARTICLE_WEIGHT_    2
+#define _SINGLE_LOCAL_PARTICLE_WEIGHT_               1
+#define _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_   2
+#define _SPECIES_DEPENDENT_LOCAL_PARTICLE_WEIGHT_    3
 
 //the debugger mode of the solver 
 #define _PIC_DEBUGGER_MODE_ON_  1
