@@ -12,7 +12,7 @@ my $loadedFlag_MainBlock=0;
 my $loadedFlag_SpeciesBlock=0;
 my $loadedFlag_BackgroundSpeciesBlock=0;
 
-my $InputFileNameDefault="moon.input";
+my $InputFileNameDefault="mercury.input";
 my $InputFileName;
 
 
@@ -301,6 +301,9 @@ sub ReadMainBlock {
   my $OutputDirectory='.';
   my $StdoutErrorLog='_STDOUT_ERRORLOG_MODE__ON_';
   
+  my $SimulationTimeStepMode='_SINGLE_GLOBAL_TIME_STEP_';
+  my $SimulationParticleWeightMode='_SINGLE_GLOBAL_PARTICLE_WEIGHT_';
+  my $SimulationParticleWeightCorrectionMode='_INDIVIDUAL_PARTICLE_WEIGHT_OFF_';
   
   #force the repeatable execution path
   my $ForceRepatableExecutionPath=0;
@@ -463,7 +466,59 @@ sub ReadMainBlock {
       }
     }    
     
- 
+    
+    elsif ($s0 eq "TIMESTEPMODE") {
+      ($s0,$s1)=split(' ',$s1,2);
+      
+      if ($s0 eq "SINGLEGLOBALTIMESTEP") {         
+        $SimulationTimeStepMode='_SINGLE_GLOBAL_TIME_STEP_';
+      }
+      elsif ($s0 eq "SPECIESGLOBALTIMESTEP") {
+        $SimulationTimeStepMode='_SPECIES_DEPENDENT_GLOBAL_TIME_STEP_';
+      }
+      elsif ($s0 eq "SINGLELOCALTIMESTEP") {
+        $SimulationTimeStepMode='_SINGLE_LOCAL_TIME_STEP_';
+      }
+      elsif ($s0 eq "SPECIESLOCALTIMESTEP") {
+        $SimulationTimeStepMode='_SPECIES_DEPENDENT_LOCAL_TIME_STEP_';
+      }
+      else {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }    
+    elsif ($s0 eq "PARTICLEWEIGHTMODE") {
+      ($s0,$s1)=split(' ',$s1,2);
+      
+      if ($s0 eq "SINGLEGLOBALPARTICLEWEIGHT") {
+        $SimulationParticleWeightMode='_SINGLE_GLOBAL_PARTICLE_WEIGHT_';
+      }
+      elsif ($s0 eq "SPECIESGLOBALPARTICLEWEIGHT") {
+        $SimulationParticleWeightMode='_SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_';
+      }
+      elsif ($s0 eq "SINGLELOCALPARTICLEWEIGHT") {
+        $SimulationParticleWeightMode='_SINGLE_LOCAL_PARTICLE_WEIGHT_';
+      }
+      elsif ($s0 eq "SPECIESLOCALPARTICLEWEIGHT") {
+        $SimulationParticleWeightMode='_SPECIES_DEPENDENT_LOCAL_PARTICLE_WEIGHT_';
+      }
+      else {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }
+    elsif ($s0 eq "PARTICLEWEIGHTCORRECTIONMODE") {
+      ($s0,$s1)=split(' ',$s1,2);
+      
+      if ($s0 eq "ON") {
+        $SimulationParticleWeightCorrectionMode='_INDIVIDUAL_PARTICLE_WEIGHT_ON_'
+      }
+      elsif ($s0 eq "OFF") {
+        $SimulationParticleWeightCorrectionMode='_INDIVIDUAL_PARTICLE_WEIGHT_OFF_'
+      }
+      else {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }
+   
     elsif ($s0 eq "ERRORLOG") {
       chomp($line);
       ($InputLine,$InputComment)=split('!',$line,2);
@@ -567,6 +622,12 @@ sub ReadMainBlock {
   if ( -d $ProjectSpecificSourceDirectory ) {
     `cp -r $ProjectSpecificSourceDirectory $ampsConfigLib::WorkingSourceDirectory/main`;
   }
+  
+  #setup the time-step and particle-weight modes
+  ampsConfigLib::RedefineMacro("_SIMULATION_TIME_STEP_MODE_",$SimulationTimeStepMode,"pic/picGlobal.dfn");
+  ampsConfigLib::RedefineMacro("_SIMULATION_PARTICLE_WEIGHT_MODE_",$SimulationParticleWeightMode,"pic/picGlobal.dfn");
+  ampsConfigLib::RedefineMacro("_INDIVIDUAL_PARTICLE_WEIGHT_MODE_",$SimulationParticleWeightCorrectionMode,"pic/picGlobal.dfn");
+  
   
   #change prefix,error log file and diagnostic stream
   ampsConfigLib::RecursiveSubstitute('\$PREFIX:',$Prefix,$ampsConfigLib::WorkingSourceDirectory);
