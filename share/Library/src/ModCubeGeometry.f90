@@ -373,6 +373,12 @@ contains
           end do
        end select
     end do CASE
+    iSortStencil3_II(Dir_ ,Transition2Corner_)  = 1
+    iSortStencil3_II(Grid_,Transition2Corner_)  = 1
+    iSortStencil3_II(Case_,Transition2Corner_)  = Transition2Corner_
+    iSortStencil3_II(Dir_ ,TransitionJunction_) = 1
+    iSortStencil3_II(Grid_,TransitionJunction_) = 1
+    iSortStencil3_II(Case_,TransitionJunction_) = TransitionJunction_
     !=================2 dimensional case=======
     nDim = 2; nGrid = 4
    
@@ -429,5 +435,8 @@ contains
           iSortStencil2_II(Case_,iCase) = Rhombus_
        end select
     end do CASE2
+    iSortStencil2_II(Dir_ ,Transition2Edge_)  = 1
+    iSortStencil2_II(Grid_,Transition2Edge_)  = 1
+    iSortStencil2_II(Case_,Transition2Edge_)  = Transition2Edge_
   end subroutine init_sort_stencil
 end module ModCubeGeometry
