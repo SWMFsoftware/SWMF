@@ -1358,6 +1358,7 @@ double PIC::Mesh::cDataBlockAMR::GetLocalParticleWeight(int spec) {
   return PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
   #else
   exit(__LINE__,__FILE__,"not implemented");
+  return 0.0;
   #endif
 }
 
