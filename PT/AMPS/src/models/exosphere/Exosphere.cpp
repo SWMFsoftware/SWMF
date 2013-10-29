@@ -1878,6 +1878,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
   ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
 #else
+  ParticleWeight=0.0;
   exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
 #endif
 
@@ -1886,6 +1887,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
   LocalTimeStep=Sphere->maxIntersectedNodeTimeStep[spec];
 #else
+  LocalTimeStep=0.0;
   exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
@@ -2147,6 +2149,7 @@ int Exosphere::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation
 #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
   ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
 #else
+  ParticleWeight=0.0;
     exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
 #endif
 
