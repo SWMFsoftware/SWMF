@@ -175,7 +175,7 @@ contains
        DoStencilFix, XyzStencil_D,iCaseExtended)
     use ModCubeGeometry, ONLY: iSortStencil2_II
     integer,parameter :: nGrid = 4, nDim = 2
-    
+
     character(LEN=*),parameter:: NameSub='interpolate_amr2'
 
     !\
@@ -591,6 +591,25 @@ contains
     !-------------
     Weight_I = 0
     !\
+    ! We store in advance the 'basic' grid point
+    ! and orientation of all possible stencil configurations
+    ! and now we extracted this information
+    !/ 
+    iCase = i_case(iLevel_I)
+    !\
+    ! Check junction and transitions
+    !/
+    if(iSortStencil3_II(Case_,iCase) > Edge_&
+         .and.iCaseExtended >= Transition2Corner_)&
+         iCase = iCaseExtended
+    if(iSortStencil3_II(Case_,iCase) == Edge_&
+         .and.iCaseExtended == Transition2Edge_)&
+         iCase = iCaseExtended 
+    iGrid = iSortStencil3_II(Grid_,iCase)
+    iDir  = iSortStencil3_II(Dir_,iCase)
+    iCase = iSortStencil3_II(Case_,iCase)
+    DoStencilFix = .false. 
+    !\
     ! Check if the grid points are out of the grid boundary
     !/
     if(count(IsOut_I)>=4)then
@@ -623,13 +642,8 @@ contains
 
           call interpolate_amr2(&
                Xyz2_D,  XyzGrid2_DI, iLevel2_I, IsOut2_I, &
-               nGridOut, Weight_I(1:4), iOrder2_I, DoStencilFix, XyzStencil2_D)
-
-          if(DoStencilFix)then
-             XyzStencil_D(iDim)    = Xyz_D(iDim)
-             XyzStencil_D(1 + mod(iDim  ,3)) = XyzStencil2_D(x_)
-             XyzStencil_D(1 + mod(iDim+1,3)) = XyzStencil2_D(y_)
-          end if
+               nGridOut, Weight_I(1:4), iOrder2_I, DoStencilFix, XyzStencil2_D,&
+               iCase)
 
           iOrder_I(1:4) = iOrder_I(iOrder2_I)
           RETURN
@@ -643,21 +657,19 @@ contains
             maxval(XyzGrid_DI(iDim,:)) -  minval(XyzGrid_DI(iDim,:)))
        dXyzInv_D(iDim)   = 0.10/dXyzSmall_D(iDim)
     end do
-    iCase = i_case(iLevel_I)
-    if(iSortStencil3_II(Case_,iCase) > Edge_&
-         .and.iCaseExtended >= Transition2Corner_)&
-         iCase = iCaseExtended
-    !if(iSortStencil3_II(Case_,iCase) == Edge_&
-    !     .and.iCaseExtended == Transition2Edge_)&
-    !   iCase = iCaseExtended 
-    iGrid = iSortStencil3_II(Grid_,iCase)
-    iDir  = iSortStencil3_II(Dir_,iCase)
-    iCase = iSortStencil3_II(Case_,iCase)
-    DoStencilFix = .false.     
 
 
     iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
     iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
+    !\
+    ! Reassign iCase for edges appearing from transitions, which require 
+    ! stencil fix
+    !/
+    if(iCase==Edge_.and.&
+         (iCaseExtended == TransitionJunction_.or.&
+         (iCaseExtended == Transition2Corner_.and.&
+         iDir/=iSortStencil3_II(Dir_,Transition2Corner_))))&
+         iCase = Transition2Edge_
     select case(iCase)
     case(Face_)
        !\
@@ -676,7 +688,7 @@ contains
        call interpolate_amr2(&
             Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, &
             nGridOut2, Weight_I(1:4), iOrder2_I, &
-            DoStencilFix, XyzStencil2_D)
+            DoStencilFix, XyzStencil2_D, iCase)
        iOrder_I(1:4) = iOrder_I(iOrder2_I)
        !\
        ! Apply weight for interpolation along z-axis
@@ -707,7 +719,7 @@ contains
        call interpolate_amr2(&
             Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I,&
             nGridOut2, Weight_I(nGridOut+1:nGridOut+4), iOrder2_I, &
-            DoStencilFix, XyzStencil2_D)
+            DoStencilFix, XyzStencil2_D, iCase)
        do iGrid=1,nGridOut2
           iOrder_I(nGridOut+iGrid)=iOrder_I(nGridOut+iOrder2_I(iGrid))
        end do
@@ -720,7 +732,7 @@ contains
        ! May need to remove a grid points once behind the boundary
        !/
        nGridOut = nGridOut + nGridOut2
-    case(Edge_)
+    case(Edge_,Transition2Edge_)
        !\
        ! Edges going along resolution edge
        ! Opposite "faces" have the same geometry in projection
@@ -752,7 +764,7 @@ contains
        call interpolate_amr2(&
             Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, &
             nGridOut2, Weight_I(1:4), iOrder2_I, &
-            DoStencilFix, XyzStencil2_D)
+            DoStencilFix, XyzStencil2_D, iCase)
 
        if(DoStencilFix)then
           XyzStencil_D((/1 + mod(iDir,3),1 + mod(iDir+1,3)/)) = &
@@ -3357,14 +3369,25 @@ contains
     ! for centers of faces or edges and distance from them to Xyz
     !/
     real   :: XyzAvr_D(nDim), XyzAvr_DD(nDim, nDim), Distance_D(nDim) 
+    !\
+    ! To treat Edges
+    !/
+    logical:: IsEdge
+    integer:: iDirEdge
+    !\
+    !Temporary
+    !/
+    real:: XyzIn_D(nDim)
     !----------------------
-    XyzStencil_D = Xyz_D
+    XyzStencil_D = Xyz_D; XyzIn_D=Xyz_D
     !For 2 dimensions the search of a basic stencil based on the distance
     !from the point to the point coordinates works well.
     iCase = i_case(iLevel_I)
-    if(iSortStencil3_II(Case_,iCase) <= Edge_)RETURN
+    if(iSortStencil3_II(Case_,iCase) <= Face_)RETURN
+    IsEdge = iSortStencil3_II(Case_,iCase) == Edge_
+    if(IsEdge) iDirEdge = iSortStencil3_II(Dir_,iCase)
     !\
-    !There is also no need to look for transitions in eagdes and faces
+    !There is also no need to look for transitions in faces
     !/
     Dimless_D = (Xyz_D - XyzGrid_DI(:,1))*DxyzInv_D 
     iDiscr_D = 0
@@ -3374,6 +3397,7 @@ contains
        if(Dimless_D(iDim) >=  0.750.and.any(iLevel_I(&
             iOppositeFace_IDI(:,iDim,1))==Fine_))iDiscr_D(iDim) = 1
     end do
+    if(IsEdge) iDiscr_D(iDirEdge) = 0
     iGrid = iGridDir_IIII(1, iDiscr_D(1), iDiscr_D(2), iDiscr_D(nDim))
     if(iGrid==0)RETURN 
     !\
@@ -3558,7 +3582,11 @@ contains
           end if
        end select
     end if
-
+    if(IsEdge)then
+       iCase = Transition2Edge_
+       iSortStencil3_II(Dir_, iCase) = iDirEdge
+       XyzStencil_D(iDirEdge) = XyzIn_D(iDirEdge)
+    end if
   end subroutine fix_basic_stencil3
   !=======================================================================
   subroutine fix_basic_stencil2( Xyz_D, dXyzInv_D, XyzGrid_DI, iLevel_I,&
