@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission
-#  For more information, see http://csem.engin.umich.edu/tools/swmf
 #-----------------------------------------------------------------------------
 # $Id$
 # gitm_3D_global_plots
@@ -55,7 +53,7 @@ def gitm_single_3D_image(plot_type, zkey, gdata, title=None, figname=None,
                          draw=True, aindex=-1, nlat=90, slat=-90, linc=6,
                          earth=False, tlon=90, zmax=None, zmin=None,
                          zcolor='Spectral_r', data_type="contour", faspect=True,
-                         meq=False, terminator=False, *args, **kwargs):
+                         meq=False, terminator=False, m=None, *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
@@ -80,6 +78,10 @@ def gitm_single_3D_image(plot_type, zkey, gdata, title=None, figname=None,
            meq        = Include the geomagnetic equator?  (default=False)
            terminator = Include the solar terminator? Only possible when
                         including the terrestrial map (default=False)
+           m          = Handle for earth map (default=None)
+
+    Output: f = figure handle
+            m = map handle (or None)
     '''
     # Set the altitude and latitude limits.  For polar plots, latitudes
     # Above and below 90 degrees will cause the routine to fail
@@ -110,26 +112,27 @@ def gitm_single_3D_image(plot_type, zkey, gdata, title=None, figname=None,
         title = spec_title
 
     # Output the figure
-    f = p3g.plot_single_3D_image(plot_type,
-                                 np.array(gdata['dLat'][:,imin:imax,ialt]),
-                                 np.array(gdata['dLon'][:,imin:imax,ialt]),
-                                 np.array(gdata[zkey][:,imin:imax,ialt]),
-                                 gdata[zkey].attrs['name'],
-                                 gdata[zkey].attrs['scale'],
-                                 gdata[zkey].attrs['units'], zmax=zmax,
-                                 zmin=zmin, zcolor=zcolor, title=title,
-                                 figname=figname, draw=draw, nlat=nlat,
-                                 slat=slat, linc=linc, tlon=tlon,
-                                 data_type=data_type, meq=meq, earth=earth,
-                                 faspect=faspect, term_datetime=tdt)
-    return f
+    f, m = p3g.plot_single_3D_image(plot_type,
+                                    np.array(gdata['dLat'][:,imin:imax,ialt]),
+                                    np.array(gdata['dLon'][:,imin:imax,ialt]),
+                                    np.array(gdata[zkey][:,imin:imax,ialt]),
+                                    gdata[zkey].attrs['name'],
+                                    gdata[zkey].attrs['scale'],
+                                    gdata[zkey].attrs['units'], zmax=zmax,
+                                    zmin=zmin, zcolor=zcolor, title=title,
+                                    figname=figname, draw=draw, nlat=nlat,
+                                    slat=slat, linc=linc, tlon=tlon,
+                                    data_type=data_type, meq=meq, earth=earth,
+                                    m=m, faspect=faspect, term_datetime=tdt)
+    return(f, m)
 # End gitm_single_3D_image
 
 def gitm_single_nsglobal_3D_image(zkey, gdata, title=None, figname=None,
                                   draw=True, aindex=-1, plat=90, elat=0, linc=3,
                                   tlon=90, earth=False, zmax=None, zmin=None,
                                   zcolor="Spectral_r", data_type="contour",
-                                  terminator=False, *args, **kwargs):
+                                  terminator=False, mn=None, ms=None,
+                                  *args, **kwargs):
     '''
     Creates a figure with two polar map projections for the northern and 
     southern ends of a specified latitude range.
@@ -151,6 +154,12 @@ def gitm_single_nsglobal_3D_image(zkey, gdata, title=None, figname=None,
            data_type  = Type of plot to make scatter/contour (default=scatter)
            terminator = Include the solar terminator by shading the night
                         time regions? (default=False) Only used if earth=True.
+           mn         = Northern latitude map handle (default=None)
+           ms         = Southern latitude map handle (default=None)
+
+    Output: f  = figure handle
+            mn = Northern latitude map handle
+            ms = Southern latitude map handle
     '''
     # Set the altitude and latitude limits.  For polar plots, latitudes
     # Above and below 90 degrees will cause the routine to fail
@@ -177,24 +186,27 @@ def gitm_single_nsglobal_3D_image(zkey, gdata, title=None, figname=None,
         title = spec_title
 
     # Output figure
-    f = p3g.plot_single_nsglobal_3D_image(np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[zkey][:,imin:imax,ialt]),
-                                          gdata[zkey].attrs['name'],
-                                          gdata[zkey].attrs['scale'],
-                                          gdata[zkey].attrs['units'], zmax=zmax,
-                                          zmin=zmin, zcolor=zcolor, title=title,
-                                          figname=figname, draw=draw, plat=plat,
-                                          elat=elat, linc=linc, tlon=tlon,
-                                          earth=earth, data_type=data_type,
-                                          term_datetime=tdt)
+    (f, mn, ms) = p3g.plot_single_nsglobal_3D_image(np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[zkey][:,imin:imax,ialt]),
+                                                    gdata[zkey].attrs['name'],
+                                                    gdata[zkey].attrs['scale'],
+                                                    gdata[zkey].attrs['units'],
+                                                    zmax=zmax, zmin=zmin,
+                                                    zcolor=zcolor, title=title,
+                                                    figname=figname, draw=draw,
+                                                    plat=plat, elat=elat,
+                                                    linc=linc, tlon=tlon,
+                                                    earth=earth, mn=mn, ms=ms,
+                                                    data_type=data_type,
+                                                    term_datetime=tdt)
 
-    return f
+    return(f, mn, ms)
 # End gitm_single_nsglobal_3D_image
 
 def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
                             aindex=-1, tlon=90, blat=45, earth=False, zmax=None,
                             zmin=None, zcolor="Spectral_r", meq=False, 
-                            data_type="contour", terminator=False,
-                            *args, **kwargs):
+                            data_type="contour", terminator=False, ml=None,
+                            mn=None, ms=None, *args, **kwargs):
     '''
     Creates a map projection plot for the entire globe, seperating the polar
     and central latitude regions.
@@ -216,6 +228,14 @@ def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
            data_type  = Type of plot to make scatter/contour (default=contour)
            terminator = Include the solar terminator by shading the night
                         time regions? (default=False) Only used if earth=True.
+           ml         = Low latitude map handle (default=None)
+           mn         = Northern latitude map handle (default=None)
+           ms         = Southern latitude map handle (default=None)
+
+    Output: f  = Figure handle
+            ml = Low latitude map handle
+            mn = Northern latitude map handle
+            ms = Southern latitude map handle
     '''
     # Set the altitude and latitude limits.  For polar plots, latitudes
     # Above and below 90 degrees will cause the routine to fail
@@ -242,17 +262,18 @@ def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
         title = spec_title
 
     # Output figure
-    f = p3g.plot_global_3D_snapshot(np.array(gdata['dLat'][:,imin:imax,ialt]),
-                                    np.array(gdata['dLon'][:,imin:imax,ialt]),
-                                    np.array(gdata[zkey][:,imin:imax,ialt]),
-                                    gdata[zkey].attrs['name'],
-                                    gdata[zkey].attrs['scale'],
-                                    gdata[zkey].attrs['units'], zmax=zmax,
-                                    zmin=zmin, zcolor=zcolor, title=title,
-                                    figname=figname, draw=draw, tlon=tlon,
-                                    blat=blat, meq=meq, earth=earth,
-                                    data_type=data_type, term_datetime=tdt)
-    return f
+    f, ml, mn, ms = p3g.plot_global_3D_snapshot(np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[zkey][:,imin:imax,ialt]),
+                                                gdata[zkey].attrs['name'],
+                                                gdata[zkey].attrs['scale'],
+                                                gdata[zkey].attrs['units'],
+                                                zmax=zmax, zmin=zmin,
+                                                zcolor=zcolor, title=title,
+                                                figname=figname, draw=draw,
+                                                tlon=tlon, blat=blat, meq=meq,
+                                                earth=earth, ml=ml, mn=mn,
+                                                ms=ms, data_type=data_type,
+                                                term_datetime=tdt)
+    return(f, ml, mn, ms)
 # End gitm_global_3D_snapshot
 
 def gitm_mult_3D_slices(plot_type, zkey, gdata, aindex, title=None,
