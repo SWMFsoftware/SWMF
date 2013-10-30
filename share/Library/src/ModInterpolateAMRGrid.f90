@@ -172,10 +172,10 @@ contains
   subroutine  interpolate_amr2(&
        Xyz_D, XyzGrid_DI, iLevel_I, IsOut_I, &
        nGridOut, Weight_I, iOrder_I,&
-       DoStencilFix, XyzStencil_D)
+       DoStencilFix, XyzStencil_D,iCaseExtended)
     use ModCubeGeometry, ONLY: iSortStencil2_II
     integer,parameter :: nGrid = 4, nDim = 2
-
+    
     character(LEN=*),parameter:: NameSub='interpolate_amr2'
 
     !\
@@ -223,7 +223,10 @@ contains
     ! used to construct stencil, not to interpolate
     !/
     real, intent(out) :: XyzStencil_D(nDim)
-
+    !\
+    ! iCase found by fix_basic_stencil
+    !/
+    integer, optional, intent(in):: iCaseExtended
 
     integer ::  iDim !Loop variable
     !\
@@ -298,14 +301,19 @@ contains
     !/
     iCase = i_case(iLevel_I)
     iGrid = iSortStencil2_II(Grid_,iCase)
-    iDir =  iSortStencil2_II(Dir_, iCase)
+    iDir  = iSortStencil2_II(Dir_, iCase)
+    iCase = iSortStencil2_II(Case_,iCase)
+    if(present(iCaseExtended))then
+       if(iCaseExtended == Transition2Edge_.and.iCase==OneCoarse_)&
+          iCase = Transition2Edge_
+    end if
     iOrder_I(1:2) = iSide_IDI(:,iDir,iGrid)
     iOrder_I(3:4) = iOppositeSide_IDI(:,iDir,iGrid)
     !\
     ! Frist conbinations of the resolution interfaces: 
     ! no resolution interface
     !/
-    select case(iSortStencil2_II(Case_,iCase))
+    select case(iCase)
     case(Uniform_)
        !\                       C  C
        ! No refinement
@@ -356,61 +364,68 @@ contains
             Aux_D(iDirPerp)
        nGridOut = nGridOut + nGridOut1
     case(OneCoarse_)
-       !\
-       ! Check the ends of the resolution interfaces. Near the resolution 
-       ! interface endpoint the stencil may need to be reevaluated. 
-       !/
-       do iDim = 1, nDim
+       if(.not.present(iCaseExtended))then
           !\
-          !iGrid is the location of coarse point
+          ! Check the ends of the resolution interfaces. Near the resolution 
+          ! interface endpoint the stencil may need to be reevaluated. 
           !/
-          iDirPerp = 3 - iDim
-          X1_D = XyzGrid_DI(:,iOrder_I(1))
-          X3_D = XyzGrid_DI(:,iOppositeSide_IDI(1,iDim,iGrid)) 
-          X4_D = XyzGrid_DI(:,iOppositeSide_IDI(2,iDim,iGrid))
-          if(abs(X3_D(iDirPerp) - X4_D(iDirPerp) ) < dXyzSmall_D(iDirPerp)& 
-               .and. abs(X1_D(iDim) - 0.50*(X3_D(iDim) + X4_D(iDim))) < &
-               dXyzSmall_D(iDim)  )then
-             !              
-             !       |   |  
-             !     3F--4F|   
-             !------------    2F here
-             !      \ /  !
-             !       1C  |    or here
-             iOrder_I(1:2) = iSide_IDI(        :,iDim,iGrid)
-             iOrder_I(3:4) = iOppositeSide_IDI(:,iDim,iGrid)
+          do iDim = 1, nDim
              !\
-             ! Interpolate on the triangle X1,X3,X4 (CFF)
+             !iGrid is the location of coarse point
              !/
-             call triangles(iTriangle1_I=(/1, 3, 4/))
-             !\
-             !Need to fix stencil, if the interpolation fails
-             !/
-             DoStencilFix = any(Weight_I(1:3) < 0)
-             if(DoStencilFix)then
+             iDirPerp = 3 - iDim
+             X1_D = XyzGrid_DI(:,iOrder_I(1))
+             X3_D = XyzGrid_DI(:,iOppositeSide_IDI(1,iDim,iGrid)) 
+             X4_D = XyzGrid_DI(:,iOppositeSide_IDI(2,iDim,iGrid))
+             if(abs(X3_D(iDirPerp) - X4_D(iDirPerp) ) < dXyzSmall_D(iDirPerp)& 
+                  .and. abs(X1_D(iDim) - 0.50*(X3_D(iDim) + X4_D(iDim))) < &
+                  dXyzSmall_D(iDim)  )then
+                !              
+                !       |   |  
+                !     3F--4F|   
+                !------------    2F here
+                !      \ /  !
+                !       1C  |    or here
+                iOrder_I(1:2) = iSide_IDI(        :,iDim,iGrid)
+                iOrder_I(3:4) = iOppositeSide_IDI(:,iDim,iGrid)
                 !\
-                !The point 1/3(X1 + X3 + X4) lays on the resolution
-                !interface between 1C and 3F4F and it is
-                !a fine grid size to the left from the endpoint
-                !of the resolution interface, hence coordinates of the end
-                !point are 1/3(X1 + X3 + X4) +
-                !              (X4 - X3)
-                XyzStencil_D = (4*X4_D - 2*X3_D + X1_D)/3
+                ! Interpolate on the triangle X1,X3,X4 (CFF)
+                !/
+                call triangles(iTriangle1_I=(/1, 3, 4/))
+                !\
+                !Need to fix stencil, if the interpolation fails
+                !/
+                DoStencilFix = any(Weight_I(1:3) < 0)
+                if(DoStencilFix)then
+                   !\
+                   !The point 1/3(X1 + X3 + X4) lays on the resolution
+                   !interface between 1C and 3F4F and it is
+                   !a fine grid size to the left from the endpoint
+                   !of the resolution interface, hence coordinates of the end
+                   !point are 1/3(X1 + X3 + X4) +
+                   !              (X4 - X3)
+                   XyzStencil_D = (4*X4_D - 2*X3_D + X1_D)/3
+                end if
+                RETURN
              end if
-             RETURN
-          end if
-       end do
+          end do
+       end if
        !     F-F
        !    / \|
        !   C---F
        call triangles(iTriangle1_I=(/2, 3, 1/), iTriangle2_I=(/2, 3, 4/))
-    case(OneFine_,Rhombus_)
+    case(OneFine_,Rhombus_,Transition2Edge_)
        !   C---C
        !    \ /|
        !     F-C
        !   C-F
        !   |/\
        !   F--C
+       !       |   |  
+       !     3F--4F|   
+       !------------    2F here
+       !      \ /  !
+       !       1C  | 
        call triangles(iTriangle1_I=(/1, 4, 2/), iTriangle2_I=(/1, 4, 3/))
     end select
   contains
@@ -629,56 +644,16 @@ contains
        dXyzInv_D(iDim)   = 0.10/dXyzSmall_D(iDim)
     end do
     iCase = i_case(iLevel_I)
-    !\
-    ! We store in advance the 'basic' grid point
-    ! and orientation of all possible stencil configurations
-    ! and now we extracted this information
-    !/ 
+    if(iSortStencil3_II(Case_,iCase) > Edge_&
+         .and.iCaseExtended >= Transition2Corner_)&
+         iCase = iCaseExtended
+    !if(iSortStencil3_II(Case_,iCase) == Edge_&
+    !     .and.iCaseExtended == Transition2Edge_)&
+    !   iCase = iCaseExtended 
     iGrid = iSortStencil3_II(Grid_,iCase)
     iDir  = iSortStencil3_II(Dir_,iCase)
     iCase = iSortStencil3_II(Case_,iCase)
-    !\
-    ! Check junction and transitions
-    !/
-    if(iCase == ThreeCoarseOnFace_)then
-       if( abs(XyzGrid_DI(1 + mod(iDir    ,3),iGrid) - &
-            0.25*sum(XyzGrid_DI(1 + mod(iDir    ,3),&
-            iOppositeFace_IDI(:,iDir,iGrid)))) < &
-            dXyzSmall_D(1 + mod(iDir    ,3)).and.&
-            abs(        XyzGrid_DI(1 + mod(iDir + 1,3),iGrid) - &
-            0.25*sum(XyzGrid_DI(1 + mod(iDir + 1,3),&
-            iOppositeFace_IDI(:,iDir,iGrid)))) < &
-            dXyzSmall_D(1 + mod(iDir + 1,3)))&
-            iCase = TransitionJunction_
-    end if
-    if(iCase > Edge_.and.iCase/=TransitionJunction_)then
-       !\
-       ! Corner transition
-       !/
-       do iLoop = 1,nGrid
-          do iDim = 1,nDim
-             if( any(iLevel_I(iFace_IDI(:,iDim,iLoop))==Fine_).and.   &
-                  all(abs(XyzGrid_DI(iDim,iLoop)                     -&
-                  0.50*(XyzGrid_DI(iDim,iFace_IDI(    :,iDim,iLoop)) +&
-                  XyzGrid_DI(iDim,iOppositeFace_IDI(:,iDim,iLoop)))*  &
-                  (iLevel_I(iFace_IDI(:,iDim,iLoop))-Coarse_)        -&
-                  XyzGrid_DI(iDim,iFace_IDI(         :,iDim,iLoop))*  &
-                  (Fine_-iLevel_I(iFace_IDI(:,iDim,iLoop)))) < &
-                  dXyzSmall_D(iDim)))then
-                iCase = Transition2Corner_
-                iGrid = iLoop
-                iDir  = iDim
-                EXIT
-             end if
-          end do
-       end do
-    end if
-    DoStencilFix = .false.
-    !\
-    ! We store in advance the 'basic' grid point
-    ! and orientation of all possible stencil configurations
-    ! and now we extracted this information
-    !/ 
+    DoStencilFix = .false.     
 
 
     iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
@@ -828,23 +803,40 @@ contains
        ! Junction around direction iDir
        !/
        ! Face with all Fine points is numbered 5:8
-       ! Face with three Coarse points is numbered 1:4
+       ! Face with one to three Coarse points is numbered 1:4
+       !
        !
        !  F5--F7
        !  |\ /|
-       !  | C1|-----C3
+       !  | C1|-----3
        !  |/|\|
        !  F6--F8
-       !    |     F4
+       !    |      4
        !    |
-       !    C2
+       !    2
        !
        !----------------------------------------------------------------
-       call parallel_rays(Dir_D=0.50*(&
-            XyzGrid_DI(:,iOrder_I(8)) + XyzGrid_DI(:,iOrder_I(5))) - &
-            XyzGrid_DI(:,iOrder_I(1)),&
-            iURectangle1_I=(/5, 6, 7, 8/),&
-            iDTriangle1_I=(/1, 2, 8/), iDTriangle2_I=(/1, 3, 8/))
+       !\
+       ! Stencil part C1F5F6F7F8 is symmetric with respect to the plane 158
+       ! Find if point Xyz is from the same side of the plane as point 2 is
+       ! or as point 3 is
+       !/
+       if(sum((Xyz_D - XyzGrid_DI(:,iOrder_I(1)))*&
+            (XyzGrid_DI(:,iOrder_I(6)) - XyzGrid_DI(:,iOrder_I(7)))) > 0)then
+          iGrid = 2
+       else
+          iGrid = 3
+       end if
+       if(iLevel_I(iOrder_I(iGrid))==Coarse_)then
+          call parallel_rays(Dir_D=0.50*(&
+               XyzGrid_DI(:,iOrder_I(8)) + XyzGrid_DI(:,iOrder_I(5))) - &
+               XyzGrid_DI(:,iOrder_I(1)),&
+               iURectangle1_I=(/5, 6, 7, 8/),&
+               iDTriangle1_I=(/1, iGrid, 8/))
+       else
+          call pyramids(iRectangular1_I = (/5, 6, 7, 8, 1/),&
+               iRectangular2_I= (/iGrid, 4, iGrid +4, 8, 1/))
+       end if
        DoStencilFix = nGridOut <= 3
        if(DoStencilFix)then
           !\
@@ -852,7 +844,7 @@ contains
           ! center
           !/
           XyzStencil_D = (4* XyzGrid_DI(:,iOrder_I(8)) -&
-               2*XyzGrid_DI(:,iOrder_I(5)) + XyzGrid_DI(:,iOrder_I(1)) )/3 
+               2*XyzGrid_DI(:,iOrder_I(5)) + XyzGrid_DI(:,iOrder_I(1)) )/3
        end if
     case(Transition2Corner_)
        call interpolate_corner_transition(iDir)
@@ -2324,7 +2316,8 @@ contains
       IsOut2_I = IsOut_I(iOrder_I(1:4))
       call interpolate_amr2(&
            Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, &
-           nGridOut2, Weight_I(1:4), iOrder2_I, DoStencilFix2, XyzStencil2_D)
+           nGridOut2, Weight_I(1:4), iOrder2_I, DoStencilFix2, &
+           XyzStencil2_D, Edge_)
 
       !\
       ! Check if 2D interpolation requires a fix
@@ -2701,66 +2694,41 @@ contains
        nGridOut = -1
        RETURN
     end if
-    if(nDim==3)then
-       call fix_basic_stencil3(&
-         Xyz_D, DxyzInv_D, XyzGrid_DII(:,0,:), iLevelSubgrid_I, &
-         XyzStencil_D, iCaseExtended)
-    else
-       XyzStencil_D = Xyz_D
-    end if
-
-    call generate_basic_stencil(&
-         nDim, XyzStencil_D, nExtendedStencil,                      &
-         XyzExtended_DI(:,1:nExtendedStencil), DxyzInv_D, iOrderExtended_I)
-    if(any(iOrderExtended_I < 1))&
-         call CON_stop('Failure in constructing basic stencil') 
-
-
-    XyzGrid_DI = XyzExtended_DI(:,iOrderExtended_I)
-    iLevel_I = iLevelExtended_I(iOrderExtended_I)
-    IsOut_I = IsOutExtended_I(iOrderExtended_I)
-    iIndexes_II = &
-         iIndexesExtended_II(:,iOrderExtended_I)
     select case(nDim)
     case(2)
+       call fix_basic_stencil2(&
+            Xyz_D, DxyzInv_D, XyzGrid_DII(:,0,:), iLevelSubgrid_I, &
+            XyzStencil_D, iCaseExtended)
+       call generate_basic_stencil(&
+            nDim, XyzStencil_D, nExtendedStencil,                      &
+            XyzExtended_DI(:,1:nExtendedStencil), DxyzInv_D, iOrderExtended_I)
+       if(any(iOrderExtended_I < 1))&
+            call CON_stop('Failure in constructing basic stencil') 
+       XyzGrid_DI = XyzExtended_DI(:,iOrderExtended_I)
+       iLevel_I = iLevelExtended_I(iOrderExtended_I)
+       IsOut_I = IsOutExtended_I(iOrderExtended_I)
+       iIndexes_II = &
+            iIndexesExtended_II(:,iOrderExtended_I)
        call interpolate_amr2(&
             Xyz_D , XyzGrid_DI, iLevel_I, IsOut_I,&
             nGridOut, Weight_I, iOrder_I,&
-            DoStencilFix, XyzStencil_D)
-       do while(DoStencilFix)
-          call generate_basic_stencil(&
-               nDim, XyzStencil_D, nExtendedStencil,          &
-               XyzExtended_DI(:,1:nExtendedStencil),          &
-               DxyzInv_D, iOrderExtended_I)
-          if(any(iOrderExtended_I < 1))&
-               call CON_stop('Failure in constructing basic stencil') 
-          XyzGrid_DI = XyzExtended_DI(:,iOrderExtended_I)
-          iLevel_I = iLevelExtended_I(iOrderExtended_I)
-          iIndexes_II = iIndexesExtended_II(:,iOrderExtended_I)
-          IsOut_I = IsOutExtended_I(iOrderExtended_I)
-          call interpolate_amr2(&
-               Xyz_D , XyzGrid_DI, iLevel_I, IsOut_I,&
-               nGridOut, Weight_I, iOrder_I,&
-               DoStencilFix, XyzStencil_D)
-       end do
+            DoStencilFix, XyzStencil_D, iCaseExtended)
        if(nGridOut < 1)&
             call CON_stop('Failure in interpolate amr grid2') 
-
     case(3)
-       DoStencilFix = .false. 
-       call interpolate_amr3(&
-            Xyz_D , XyzGrid_DI, iLevel_I, IsOut_I, iCaseExtended, &
-            nGridOut, Weight_I, iOrder_I,&
-            DoStencilFix, XyzStencil_D)
+       DoStencilFix = .true.  
+       XyzStencil_D = Xyz_D
        do while(DoStencilFix)
+          call fix_basic_stencil3(&
+               XyzStencil_D, DxyzInv_D, XyzGrid_DII(:,0,:), iLevelSubgrid_I, &
+               XyzStencil_D, iCaseExtended)
           call generate_basic_stencil(&
                nDim, XyzStencil_D, nExtendedStencil,              &
                XyzExtended_DI(:,1:nExtendedStencil),              &
                DxyzInv_D, iOrderExtended_I)
           if(any(iOrderExtended_I < 1))&
                call CON_stop('Failure in constructing basic stencil') 
-          XyzGrid_DI = XyzExtended_DI(&
-               :,iOrderExtended_I)
+          XyzGrid_DI = XyzExtended_DI(:,iOrderExtended_I)
           iLevel_I = iLevelExtended_I(iOrderExtended_I)
           iIndexes_II = &
                iIndexesExtended_II(:,iOrderExtended_I)
@@ -3348,9 +3316,9 @@ contains
     !\
     ! Point about which to construct basic stencil.
     !/
-    
+
     real, intent(out) :: XyzStencil_D(nDim)
- 
+
     !\
     ! For three-dimensional corner within this routine
     ! it is more convenient to figure out if Xyz point is
@@ -3379,7 +3347,7 @@ contains
          1,-3,    1, 2,  2,-3, 1, 1,0,0,2, 1,  3,-3, 3, 2, 4,-3,   &!   !
          5, 0,    5,-1,  6, 0, 5,-2,5,3,6,-2,  7, 0, 7,-1, 8, 0 /),&!z=1!
          (/2,3,3,3/))
-         !x=0,y=0!y=0 !x=1,y=0!x=0 !    !x=1 !x=0,y=1!y=1 !x=1,y=1!
+    !x=0,y=0!y=0 !x=1,y=0!x=0 !    !x=1 !x=0,y=1!y=1 !x=1,y=1!
     !\
     !Transitions junction's signatures
     !/
@@ -3394,27 +3362,188 @@ contains
     !For 2 dimensions the search of a basic stencil based on the distance
     !from the point to the point coordinates works well.
     iCase = i_case(iLevel_I)
-    if(iSortStencil3_II(Case_,iCase) > Edge_)then
+    if(iSortStencil3_II(Case_,iCase) <= Edge_)RETURN
+    !\
+    !There is also no need to look for transitions in eagdes and faces
+    !/
+    Dimless_D = (Xyz_D - XyzGrid_DI(:,1))*DxyzInv_D 
+    iDiscr_D = 0
+    do iDim = 1, nDim
+       if(Dimless_D(iDim) <  0.250.and.any(iLevel_I(&
+            iFace_IDI(:,iDim,1))==Fine_))iDiscr_D(iDim) = -1
+       if(Dimless_D(iDim) >=  0.750.and.any(iLevel_I(&
+            iOppositeFace_IDI(:,iDim,1))==Fine_))iDiscr_D(iDim) = 1
+    end do
+    iGrid = iGridDir_IIII(1, iDiscr_D(1), iDiscr_D(2), iDiscr_D(nDim))
+    if(iGrid==0)RETURN 
+    !\
+    !Xyz point is in the transition or transition junction domain
+    !/
+    XyzAvr_D = 0.50*(XyzGrid_DI(:,1) + XyzGrid_DI(:,8))
+    iDir = iGridDir_IIII(2, iDiscr_D(1), iDiscr_D(2), iDiscr_D(nDim))
+    if(iDir > 0)then
+       !Xyz point os close to a single refined face - transition!
+       iCase = Transition2Corner_
+       iSortStencil3_II(Grid_,Transition2Corner_) = iGrid
+       iSortStencil3_II(Dir_ ,Transition2Corner_) = iDir
        !\
-       !There is also no need to look for transitions in eagdes and faces
+       ! Displace the stencil center toward the face center
        !/
-       Dimless_D = (Xyz_D - XyzGrid_DI(:,1))*DxyzInv_D 
-       iDiscr_D = 0
-       do iDim = 1, nDim
-          if(Dimless_D(iDim) <  0.250.and.any(iLevel_I(&
-               iFace_IDI(:,iDim,1))==Fine_))iDiscr_D(iDim) = -1
-          if(Dimless_D(iDim) >=  0.750.and.any(iLevel_I(&
-               iOppositeFace_IDI(:,iDim,1))==Fine_))iDiscr_D(iDim) = 1
-       end do
-       iGrid = iGridDir_IIII(1, iDiscr_D(1), iDiscr_D(2), iDiscr_D(nDim))
-       if(iGrid/=0)then 
+       XyzStencil_D(1 + mod(iDir,3)) = XyzAvr_D(1 + mod(iDir,3))
+       XyzStencil_D(1 + mod(iDir + 1,3)) = &
+            XyzAvr_D(1 + mod(iDir + 1,3))
+    elseif(iDir < 0)then
+       !\
+       !The point is close to two faces intersescting at the
+       !edge of direction -iDir
+       !/
+       iDir = -iDir
+       jGrid = iEdge_ID(iGrid,iDir)
+       !\
+       ! Edge consists of the coarse points or finer subgrid 
+       ! iGrid,jGrid
+       !/
+       if(iLevel_I(iGrid)==Coarse_.and.iLevel_I(jGrid)==Fine_)then
           !\
-          !Xyz point is in the transition or transition junction domain
+          !Jucntion of two transition regions which goes along
+          !the edge of direction iDir and closed with fine
+          !subgrid at jGrid end
+          iCase = TransitionJunction_
+          iSortStencil3_II(Grid_,TransitionJunction_) = iGrid
+          iSortStencil3_II(Dir_ ,TransitionJunction_) = iDir    
+          XyzStencil_D(iDir) = XyzAvr_D(iDir)
+       elseif(iLevel_I(jGrid)==Coarse_.and.iLevel_I(iGrid)==Fine_)then
+          !\
+          !Jucntion of two transition regions which goes along
+          !the edge of direction iDir and closed with fine
+          !subgrid at iGrid end
+          iCase = TransitionJunction_
+          iSortStencil3_II(Grid_,TransitionJunction_) = jGrid
+          iSortStencil3_II(Dir_ ,TransitionJunction_) = iDir   
+          XyzStencil_D(iDir) = XyzAvr_D(iDir)
+       else
+          !\
+          ! We need to judge to which of the two transition regions
+          ! intersecting along the coarse edge, that is without 
+          ! forming a specific junction region as closed with the  
+          ! fine subface, point Xyz belongs 
           !/
-          XyzAvr_D = 0.50*(XyzGrid_DI(:,1) + XyzGrid_DI(:,8))
-          iDir = iGridDir_IIII(2, iDiscr_D(1), iDiscr_D(2), iDiscr_D(nDim))
-          if(iDir > 0)then
-             !Xyz point os close to a single refined face - transition!
+          do iDim = 0,1
+             XyzAvr_DD(:,1+iDim) = 0.50*(&
+                  XyzGrid_DI(:,&
+                  iFace_IDI(1,1 + mod(iDir + iDim,3),iGrid)) +&
+                  XyzGrid_DI(:,&
+                  iFace_IDI(4,1 + mod(iDir + iDim,3),iGrid)) )
+             Distance_D(1 + iDim) = &
+                  sum(((Xyz_D - XyzAvr_DD(:,1+iDim))*DxyzInv_D)**2) 
+          end do
+          iDim = minloc(Distance_D(1:2),DIM=1)
+          iDir = 1 + mod(iDir + iDim - 1,3)
+          iCase = Transition2Corner_
+          iSortStencil3_II(Grid_,Transition2Corner_) = iGrid
+          iSortStencil3_II(Dir_ ,Transition2Corner_) = iDir
+          !\
+          ! Displace the stencil center toward the face center
+          !/
+          XyzStencil_D(1 + mod(iDir,3)) = XyzAvr_D(1 + mod(iDir,3))
+          XyzStencil_D(1 + mod(iDir + 1,3)) = &
+               XyzAvr_D(1 + mod(iDir + 1,3))
+       end if
+    else
+       !\
+       ! Xyz point is close to three refined planes
+       !/
+       select case(count(iLevel_I(iEdge_ID(iGrid,:))==Fine_))
+       case(0)
+          !\
+          ! We need to judge to which of the three transition regions
+          ! intersecting at the corner without forming a specific
+          ! junction region, point Xyz belongs 
+          !/
+          do iDim = 1,nDim
+             XyzAvr_DD(:,iDim) = 0.50*(&
+                  XyzGrid_DI(:,iFace_IDI(1,iDim,iGrid)) +&
+                  XyzGrid_DI(:,iFace_IDI(4,iDim,iGrid)) )
+             Distance_D(iDim) = &
+                  sum(((Xyz_D - XyzAvr_DD(:,iDim))*DxyzInv_D)**2) 
+          end do
+          iDir = minloc(Distance_D,DIM=1)
+          iCase = Transition2Corner_
+          iSortStencil3_II(Grid_,Transition2Corner_) = iGrid
+          iSortStencil3_II(Dir_ ,Transition2Corner_) = iDir
+          !\
+          ! Displace the stencil center toward the face center
+          !/
+          XyzStencil_D(1 + mod(iDir,3)) = XyzAvr_D(1 + mod(iDir,3))
+          XyzStencil_D(1 + mod(iDir + 1,3)) = &
+               XyzAvr_D(1 + mod(iDir + 1,3))
+       case(2,3)
+          !\
+          ! We need to judge to which of the two or three transition 
+          ! junctions point Xyz belongs 
+          !/
+          do iDim = 1,nDim
+             !\
+             !If there is no junction region along this direction,
+             !that is iLevel_I(iEdge_ID(iGrid,iDim))=0, move the
+             !center of this edge far apart, otherwise take the 
+             !center of the edge  
+             !/
+             XyzAvr_DD(:,iDim) = (&
+                  XyzGrid_DI(:,iGrid)*iLevel_I(iEdge_ID(iGrid,iDim))&
+                  + XyzGrid_DI(:,iEdge_ID(iGrid,iDim)) )/&
+                  (iLevel_I(iEdge_ID(iGrid,iDim)) + 1)
+             Distance_D(iDim) = &
+                  sum(((Xyz_D - XyzAvr_DD(:,iDim))*DxyzInv_D)**2) 
+          end do
+          iDir = minloc(Distance_D,DIM=1)
+          iCase = TransitionJunction_
+          iSortStencil3_II(Grid_,TransitionJunction_) = iGrid
+          iSortStencil3_II(Dir_ ,TransitionJunction_) = iDir
+          XyzStencil_D(iDir) = XyzAvr_D(iDir)
+       case(1)
+          !\
+          ! We need to find the only transition junction and then  
+          ! judge if point Xyz belongs to this transition junction  
+          ! or to the transition region near the lower face of the
+          ! same direction. 
+          !/
+          iDir = minloc(iLevel_I(iEdge_ID(iGrid,:)), MASK=&
+               iLevel_I(iEdge_ID(iGrid,:))==Fine_, DIM=1)
+          !
+          !        ^     7F----8F
+          !   iDir |     /    /
+          !            5F----6F
+          !                  /3C
+          !                 /     4F
+          !                /________
+          !               1C       2C
+          !\
+          ! As a separator between the transition junction 1C5F6F7F8F
+          ! and a transition region near face 1C2C3C4F we use a
+          !  surface, z = min(x,y)*Alpha, which passes through
+          !  point 4F at Alpha = 1/3 and through point 8F at Alpha=3. 
+          !/
+          z = (Xyz_D(iDir) - XyzGrid_DI(iDir,iGrid))/  &
+               (XyzGrid_DI(iDir,iEdge_ID(iGrid,iDir)) -&
+               XyzGrid_DI(iDir,iGrid))
+          XyMin = min( (Xyz_D(1 + mod(iDir,3))        -&
+               XyzGrid_DI(1 + mod(iDir,3),iGrid))/     &
+               (XyzGrid_DI(1 + mod(iDir,3),            &
+               iEdge_ID(iGrid,1 + mod(iDir,3)))       -&
+               XyzGrid_DI(1 + mod(iDir,3),iGrid)),     &
+               (Xyz_D(1 + mod(iDir + 1,3))            -&
+               XyzGrid_DI(1 + mod(iDir + 1,3),iGrid))/ &
+               (XyzGrid_DI(1 + mod(iDir + 1,3),        &
+               iEdge_ID(iGrid,1 + mod(iDir + 1,3)))   -&
+               XyzGrid_DI(1 + mod(iDir + 1,3),iGrid)) )
+
+          if(z  >= 3*XyMin)then
+             iCase = TransitionJunction_
+             iSortStencil3_II(Grid_,TransitionJunction_) = iGrid
+             iSortStencil3_II(Dir_ ,TransitionJunction_) = iDir
+             XyzStencil_D(iDir) = XyzAvr_D(iDir)
+          elseif(z <= XyMin/3)then
              iCase = Transition2Corner_
              iSortStencil3_II(Grid_,Transition2Corner_) = iGrid
              iSortStencil3_II(Dir_ ,Transition2Corner_) = iDir
@@ -3424,176 +3553,121 @@ contains
              XyzStencil_D(1 + mod(iDir,3)) = XyzAvr_D(1 + mod(iDir,3))
              XyzStencil_D(1 + mod(iDir + 1,3)) = &
                   XyzAvr_D(1 + mod(iDir + 1,3))
-          elseif(iDir < 0)then
-             !\
-             !The point is close to two faces intersescting at the
-             !edge of direction -iDir
-             !/
-             iDir = -iDir
-             jGrid = iEdge_ID(iGrid,iDir)
-             !\
-             ! Edge consists of the coarse points or finer subgrid 
-             ! iGrid,jGrid
-             !/
-             if(iLevel_I(iGrid)==Coarse_.and.iLevel_I(jGrid)==Fine_)then
-                !\
-                !Jucntion of two transition regions which goes along
-                !the edge of direction iDir and closed with fine
-                !subgrid at jGrid end
-                iCase = TransitionJunction_
-                iSortStencil3_II(Grid_,TransitionJunction_) = iGrid
-                iSortStencil3_II(Dir_ ,TransitionJunction_) = iDir    
-                XyzStencil_D(iDir) = XyzAvr_D(iDir)
-             elseif(iLevel_I(jGrid)==Coarse_.and.iLevel_I(iGrid)==Fine_)then
-                !\
-                !Jucntion of two transition regions which goes along
-                !the edge of direction iDir and closed with fine
-                !subgrid at iGrid end
-                iCase = TransitionJunction_
-                iSortStencil3_II(Grid_,TransitionJunction_) = jGrid
-                iSortStencil3_II(Dir_ ,TransitionJunction_) = iDir   
-                XyzStencil_D(iDir) = XyzAvr_D(iDir)
-             else
-                !\
-                ! We need to judge to which of the two transition regions
-                ! intersecting along the coarse edge, that is without 
-                ! forming a specific junction region as closed with the  
-                ! fine subface, point Xyz belongs 
-                !/
-                do iDim = 0,1
-                   XyzAvr_DD(:,1+iDim) = 0.50*(&
-                        XyzGrid_DI(:,&
-                        iFace_IDI(1,1 + mod(iDir + iDim,3),iGrid)) +&
-                        XyzGrid_DI(:,&
-                        iFace_IDI(4,1 + mod(iDir + iDim,3),iGrid)) )
-                   Distance_D(1 + iDim) = &
-                        sum(((Xyz_D - XyzAvr_DD(:,1+iDim))*DxyzInv_D)**2) 
-                end do
-                iDim = minloc(Distance_D(1:2),DIM=1)
-                iDir = 1 + mod(iDir + iDim - 1,3)
-                iCase = Transition2Corner_
-                iSortStencil3_II(Grid_,Transition2Corner_) = iGrid
-                iSortStencil3_II(Dir_ ,Transition2Corner_) = iDir
-                !\
-                ! Displace the stencil center toward the face center
-                !/
-                XyzStencil_D(1 + mod(iDir,3)) = XyzAvr_D(1 + mod(iDir,3))
-                XyzStencil_D(1 + mod(iDir + 1,3)) = &
-                     XyzAvr_D(1 + mod(iDir + 1,3))
-             end if
           else
-             !\
-             ! Xyz point is close to three refined planes
-             !/
-             select case(count(iLevel_I(iEdge_ID(iGrid,:))==Fine_))
-             case(0)
-                !\
-                ! We need to judge to which of the three transition regions
-                ! intersecting at the corner without forming a specific
-                ! junction region, point Xyz belongs 
-                !/
-                do iDim = 1,nDim
-                   XyzAvr_DD(:,iDim) = 0.50*(&
-                        XyzGrid_DI(:,iFace_IDI(1,iDim,iGrid)) +&
-                        XyzGrid_DI(:,iFace_IDI(4,iDim,iGrid)) )
-                   Distance_D(iDim) = &
-                        sum(((Xyz_D - XyzAvr_DD(:,iDim))*DxyzInv_D)**2) 
-                end do
-                iDir = minloc(Distance_D,DIM=1)
-                iCase = Transition2Corner_
-                iSortStencil3_II(Grid_,Transition2Corner_) = iGrid
-                iSortStencil3_II(Dir_ ,Transition2Corner_) = iDir
-                !\
-                ! Displace the stencil center toward the face center
-                !/
-                XyzStencil_D(1 + mod(iDir,3)) = XyzAvr_D(1 + mod(iDir,3))
-                XyzStencil_D(1 + mod(iDir + 1,3)) = &
-                     XyzAvr_D(1 + mod(iDir + 1,3))
-             case(2,3)
-                !\
-                ! We need to judge to which of the two or three transition 
-                ! junctions point Xyz belongs 
-                !/
-                do iDim = 1,nDim
-                   !\
-                   !If there is no junction region along this direction,
-                   !that is iLevel_I(iEdge_ID(iGrid,iDim))=0, move the
-                   !center of this edge far apart, otherwise take the 
-                   !center of the edge  
-                   !/
-                   XyzAvr_DD(:,iDim) = (&
-                        XyzGrid_DI(:,iGrid)*iLevel_I(iEdge_ID(iGrid,iDim))&
-                        + XyzGrid_DI(:,iEdge_ID(iGrid,iDim)) )/&
-                        (iLevel_I(iEdge_ID(iGrid,iDim)) + 1)
-                   Distance_D(iDim) = &
-                        sum(((Xyz_D - XyzAvr_DD(:,iDim))*DxyzInv_D)**2) 
-                end do
-                iDir = minloc(Distance_D,DIM=1)
-                iCase = TransitionJunction_
-                iSortStencil3_II(Grid_,TransitionJunction_) = iGrid
-                iSortStencil3_II(Dir_ ,TransitionJunction_) = iDir
-                XyzStencil_D(iDir) = XyzAvr_D(iDir)
-             case(1)
-                !\
-                ! We need to find the only transition junction and then  
-                ! judge if point Xyz belongs to this transition junction  
-                ! or to the transition region near the lower face of the
-                ! same direction. 
-                !/
-                iDir = minloc(iLevel_I(iEdge_ID(iGrid,:)), MASK=&
-                     iLevel_I(iEdge_ID(iGrid,:))==Fine_, DIM=1)
-                !
-                !        ^     7F----8F
-                !   iDir |     /    /
-                !            5F----6F
-                !                  /3C
-                !                 /     4F
-                !                /________
-                !               1C       2C
-                !\
-                ! As a separator between the transition junction 1C5F6F7F8F
-                ! and a transition region near face 1C2C3C4F we use a
-                !  surface, z = min(x,y)*Alpha, which passes through
-                !  point 4F at Alpha = 1/3 and through point 8F at Alpha=3. 
-                !/
-                z = (Xyz_D(iDir) - XyzGrid_DI(iDir,iGrid))/  &
-                     (XyzGrid_DI(iDir,iEdge_ID(iGrid,iDir)) -&
-                     XyzGrid_DI(iDir,iGrid))
-                XyMin = min( (Xyz_D(1 + mod(iDir,3))        -&
-                     XyzGrid_DI(1 + mod(iDir,3),iGrid))/     &
-                     (XyzGrid_DI(1 + mod(iDir,3),            &
-                     iEdge_ID(iGrid,1 + mod(iDir,3)))       -&
-                     XyzGrid_DI(1 + mod(iDir,3),iGrid)),     &
-                     (Xyz_D(1 + mod(iDir + 1,3))            -&
-                     XyzGrid_DI(1 + mod(iDir + 1,3),iGrid))/ &
-                     (XyzGrid_DI(1 + mod(iDir + 1,3),        &
-                     iEdge_ID(iGrid,1 + mod(iDir + 1,3)))   -&
-                     XyzGrid_DI(1 + mod(iDir + 1,3),iGrid)) )
-                
-                if(z  >= 3*XyMin)then
-                   iCase = TransitionJunction_
-                   iSortStencil3_II(Grid_,TransitionJunction_) = iGrid
-                   iSortStencil3_II(Dir_ ,TransitionJunction_) = iDir
-                   XyzStencil_D(iDir) = XyzAvr_D(iDir)
-                elseif(z <= XyMin/3)then
-                   iCase = Transition2Corner_
-                   iSortStencil3_II(Grid_,Transition2Corner_) = iGrid
-                   iSortStencil3_II(Dir_ ,Transition2Corner_) = iDir
-                   !\
-                   ! Displace the stencil center toward the face center
-                   !/
-                   XyzStencil_D(1 + mod(iDir,3)) = XyzAvr_D(1 + mod(iDir,3))
-                   XyzStencil_D(1 + mod(iDir + 1,3)) = &
-                        XyzAvr_D(1 + mod(iDir + 1,3))
-                else
-                   XyzStencil_D = XyzAvr_D 
-                end if
-             end select
+             XyzStencil_D = XyzAvr_D 
           end if
-       end if
+       end select
     end if
+
   end subroutine fix_basic_stencil3
-    !=====================
+  !=======================================================================
+  subroutine fix_basic_stencil2( Xyz_D, dXyzInv_D, XyzGrid_DI, iLevel_I,&
+       XyzStencil_D, iCase)
+    integer, parameter:: nDim = 2, nGrid = 4
+    !\
+    ! Point where to interpolate; inverse of (/Dx,Dy,Dz/)
+    !/
+    real,    intent(in) :: Xyz_D(nDim), dXyzInv_D(nDim)
+    !\
+    ! The rectangular grid combining centers of the refined subgrids and
+    ! coarse vertexes
+    !/
+    real, intent(in):: XyzGrid_DI(nDim,nGrid)
+    !\
+    ! The refinement level pattern of the extended stencil
+    !/
+    integer, intent(in)::iLevel_I(nGrid)
+    !\
+    ! Point about which to construct basic stencil.
+    !/
+    
+    real, intent(out) :: XyzStencil_D(nDim)
+ 
+    !\
+    ! For three-dimensional corner within this routine
+    ! it is more convenient to figure out if Xyz point is
+    ! inside the domain of transition from an edge to the central
+    ! corner part or it belongs to a junction of such two domains
+    !/
+    integer, intent(out):: iCase
+    !\
+    !Dimensionless displacement from the first grid point to Xyz_D
+    !/
+    real :: Dimless_D(nDim)
+    !\
+    !Three components of Discr_D equal to -1,0 or 1 each. The first component 
+    !equals -1, if Xyz point is close to refined face x=0, +1 if it is close
+    !to refined face x=1, 0 otherwise
+    !/
+    integer:: iDiscr_D(nDim), iDir, iDim, iGrid, jGrid
+    !\ 
+    !Dir = 0 - corner, positive iDirs - face, negative iDir - edges, which
+    !occur at the intersection of the refined faces, which are close to
+    !Xyz
+    !/
+    integer, parameter, dimension(2,-1:1,-1:1):: &
+         iGridDir_III = reshape((/&
+         1,0,     1,2,  2,0,  1,1,  0,0, 2,1,  3,0,   3,2, 4,0/),(/2,3,3/))
+         !x=0,y=0!y=0 !x=1,y=0!x=0 !    !x=1 !x=0,y=1!y=1 !x=1,y=1!
+    real:: XyMin, z
+    !\
+    ! Average coordinates for the center of the resolution corner,
+    ! for centers of faces or edges and distance from them to Xyz
+    !/
+    real   :: XyzAvr_D(nDim), XyzAvr_DD(nDim, nDim), Distance_D(nDim) 
+    !----------------------
+    XyzStencil_D = Xyz_D
+    iCase = i_case(iLevel_I)
+    !\                                    F F
+    !We do not care about trapezoids like  C   C
+    !/
+    if(iSortStencil3_II(Case_,iCase) <= Face_)RETURN
+    Dimless_D = (Xyz_D - XyzGrid_DI(:,1))*DxyzInv_D 
+    iDiscr_D = 0
+    do iDim = 1, nDim
+       if(Dimless_D(iDim) <  0.250.and.any(iLevel_I(&
+            iSide_IDI(:,3 - iDim,1))==Fine_))iDiscr_D(iDim) = -1
+       if(Dimless_D(iDim) >=  0.750.and.any(iLevel_I(&
+            iOppositeSide_IDI(:,3 - iDim,1))==Fine_))iDiscr_D(iDim) = 1
+    end do
+    iGrid = iGridDir_III(1, iDiscr_D(1), iDiscr_D(2))
+    XyzAvr_D = 0.50*(XyzGrid_DI(:,1) + XyzGrid_DI(:,4))
+    if(iGrid==0)then 
+       !\
+       ! The point is in the close proximity of the resolution edge
+       !/
+       XyzStencil_D = XyzAvr_D 
+       RETURN
+    end if
+    !\
+    !Xyz point is in the transition domain
+    !/   
+    iDir = iGridDir_III(2, iDiscr_D(1), iDiscr_D(2))
+    if(iDir== 0)then
+       !\
+       !The point is close to two faces
+       !/
+       do iDim = 1,nDim
+          XyzAvr_DD(:,iDim) = 0.50*(&
+               XyzGrid_DI(:,&
+               iSide_IDI(1,3 - iDim,iGrid)) +&
+               XyzGrid_DI(:,&
+               iSide_IDI(2,3 - iDim,iGrid)) )
+          Distance_D(iDim) = &
+               sum(((Xyz_D - XyzAvr_DD(:,iDim))*DxyzInv_D)**2) 
+       end do
+       iDir = minloc(Distance_D(1:2),DIM=1)
+       !\
+       !else Xyz point is close to a single refined face 
+       !/
+    end if
+    iCase = Transition2Edge_
+    !\
+    ! Displace the stencil center toward the face center
+    !/
+    XyzStencil_D(3 - iDir) = XyzAvr_D(3 - iDir)
+  end subroutine fix_basic_stencil2
+  !=====================
   subroutine generate_basic_stencil(&
        nDim, XyzStencil_D, nExtendedStencil, XyzExtended_DI, dXyzInv_D, &
        iOrderExtended_I)

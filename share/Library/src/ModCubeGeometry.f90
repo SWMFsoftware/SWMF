@@ -132,8 +132,8 @@ module ModCubeGeometry
 
   logical:: DoInit = .true.
   integer, parameter:: Grid_=1, Dir_=2, Case_=3
-  integer:: iSortStencil3_II(Grid_:Case_,0:257) = 0
-  integer:: iSortStencil2_II(Grid_:Case_, 0:16) = 0
+  integer:: iSortStencil3_II(Grid_:Case_,0:258) = 0
+  integer:: iSortStencil2_II(Grid_:Case_, 0:15) = 0
   
   !\
   ! Different cases of stencil (will be stored in Case_ column
@@ -146,8 +146,8 @@ module ModCubeGeometry
   integer, parameter:: FineEdgePlusOne_ = 10, ThreeFineOnFace_ =11
   integer, parameter:: CoarseEdgePlusOne_ = 12, ThreeCoarseOnFace_=13
   integer, parameter:: ThreeCoarseOnFacePlusOne_ = 14, CoarseChain_   = 15
-  integer, parameter:: Transition2Edge_ = 16, Transition2Corner_ = 256
-  integer, parameter:: TransitionJunction_ = 257
+  integer, parameter:: Transition2Edge_ = 256, Transition2Corner_ = 257
+  integer, parameter:: TransitionJunction_ = 258
   !\
   ! Analogous for 2D
   !/
@@ -373,12 +373,9 @@ contains
           end do
        end select
     end do CASE
-    iSortStencil3_II(Dir_ ,Transition2Corner_)  = 1
-    iSortStencil3_II(Grid_,Transition2Corner_)  = 1
-    iSortStencil3_II(Case_,Transition2Corner_)  = Transition2Corner_
-    iSortStencil3_II(Dir_ ,TransitionJunction_) = 1
-    iSortStencil3_II(Grid_,TransitionJunction_) = 1
-    iSortStencil3_II(Case_,TransitionJunction_) = TransitionJunction_
+    iSortStencil3_II(Grid_:Dir_,Transition2Edge_:TransitionJunction_)  = 1
+    iSortStencil3_II(Case_,Transition2Edge_:TransitionJunction_)  = &
+         (/Transition2Edge_, Transition2Corner_, TransitionJunction_/)
     !=================2 dimensional case=======
     nDim = 2; nGrid = 4
    
@@ -435,8 +432,5 @@ contains
           iSortStencil2_II(Case_,iCase) = Rhombus_
        end select
     end do CASE2
-    iSortStencil2_II(Dir_ ,Transition2Edge_)  = 1
-    iSortStencil2_II(Grid_,Transition2Edge_)  = 1
-    iSortStencil2_II(Case_,Transition2Edge_)  = Transition2Edge_
   end subroutine init_sort_stencil
 end module ModCubeGeometry
