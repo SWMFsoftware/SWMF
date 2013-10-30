@@ -6,11 +6,11 @@
 !the coronal heating in terms of waves
 module ModAlfvenWaveHeating
   implicit none
-  
+
   !If this locical is set to .true. the heating function is parameterized
   !in terms of the absorption of the Alfven Waves
   logical:: UseAlfvenWaveHeating = .false.
-  
+
   !-------------------Original Steve Cranmer's code-----------------------!
   !C  Wave action conservation constant.  Earlier models found values that!
   !C  ranged between:                                                     !
@@ -19,7 +19,7 @@ module ModAlfvenWaveHeating
   !C  but this paper uses an intermediate value:                          !
   !      parameter (FoBconst=5.0d+04)                                     !
   !-----------------------------------------------------------------------!
-  
+
   !------------------Comment from Igor------------------------------------!
   !The consideration of the wave action conservation (about the wave      !
   !action see for example, Sokolov et al 2009) explains only the          !
@@ -28,9 +28,9 @@ module ModAlfvenWaveHeating
   !to be also constant over the solar surface is formulated in Suzuki,2006!
   !(see also the papers cited there) as the contition for the average of  !
   ! < \delta B_\perp \delta u_\perp >. Another reincarnation of the same  !
-  
+
   real :: cEnergyFluxPerBCgs = 5.0e4 !erg/cm2/s/Gs
-  
+
   !If the wave energy flux, directed along the magnetic field and equal,  !
   !in neglecting the plasma speed, to VAlfven * (Wave Energy Density      !
   !is assumed to be proportional to the magnetic field intensity, then    !
@@ -43,16 +43,16 @@ contains
   subroutine set_adiabatic_law_4_waves
     use ModPhysics, ONLY: UnitRho_, UnitEnergyDens_, Si2No_V, No2Si_V
     use ModConst  , ONLY: cTwoPi
-    
+
     real, parameter:: Cgs2Si4EnergyDens = 1.0e-7 & !1 erg to J
-                                        / 1.0e-6   !1 cm3 to m3
+         / 1.0e-6   !1 cm3 to m3
     real, parameter:: Si2Cgs4Dens       = 1.0e+3 & !1 kg in g
-                                        / 1.0e+6   !1 m3 in cm3
+         / 1.0e+6   !1 m3 in cm3
     !---------------------------------------
 
     cAdiabaticLaw = & ! (Wave Energy Demsity [NoDim]/sqrt(Rho[NoDim)=    1
          ( sqrt(2.0 * cTwoPi * No2Si_V(UnitRho_) * & ! Rho[NoDim]        2
-                Si2Cgs4Dens)* &                      !                   3
+         Si2Cgs4Dens)* &                      !                   3
          cEnergyFluxPerBCgs ) &      !Wave Energy Density [CGS]          4
          *Cgs2Si4EnergyDens   &      !Wave Energy Density [SI]           5
          *Si2No_V(UnitEnergyDens_)   !Wave Energy Density [NoDim]        6
@@ -66,7 +66,7 @@ contains
     use ModWaves
 
     !Input and output parameters:   
-   
+
     !WaveFirst_:WaveLast_ components of this vector are to be filled in:
     real, intent(inout) :: State_V(nVar)  
 
@@ -80,25 +80,25 @@ contains
     !--------------------------------------------------------!
 
     EWaveTotal = cAdiabaticLaw * sqrt(State_V(Rho_))
-   
- 
+
+
     BTotal_D = State_V(Bx_:Bz_)
     if(UseB0) BTotal_D = BTotal_D + B0_D
-    
+
     !Figure out the sign of {\bf B}\cdot{\bf r}
     if( sum( BTotal_D*Xyz_D ) > 0) then
-       
+
        State_V(WaveFirst_:WaveLast_) = EWaveTotal * SpectrumPlus_W
-       
+
     else
-       
+
        State_V(WaveFirst_:WaveLast_) = EWaveTotal * SpectrumMinus_W
-       
+
     end if
     if( UseWavePressureLtd )&
          State_V(Ew_) = sum(State_V(WaveFirst_:WaveLast_))
   end subroutine adiabatic_law_4_wave_state
-  
+
 end module ModAlfvenWaveHeating
 
 
@@ -163,7 +163,7 @@ module ModNonWKBHeating
 
   real,parameter:: cPi4 = 4.0 * cPi, cSqrt3Pi = 3.06998016655
 
-  
+
   !C  Turbulent correlation length normalization.  Earlier models found
   !C  values that ranged from a minimum of (Cranmer et al. 2007):
   !C     parameter (ellconst=2.876d+08)
@@ -700,10 +700,10 @@ contains
           if(Unused_B(iBlock)) cycle
           if(true_BLK(iBlock)) then
              dAreaCgs = CellFace_DB(z_,iBlock)*No2Si_V(UnitX_)**2*1e4
-             
+
              call get_photosphere_field(iBlock, UnsignedFluxHeight, &
                   State_VGB(Bz_,1:nI,1:nJ,0:nK+1,iBlock), BzCgs)
-             
+
              SumUnsignedBzCgs = sum(abs(BzCgs))
              UnsignedFluxCgs = UnsignedFluxCgs +  SumUnsignedBzCgs*dAreaCgs
           end if
@@ -714,11 +714,11 @@ contains
                MPI_REAL, MPI_SUM, iComm, iError)
        end if
        TotalCoronalHeatingCgs = HeatCoef*UnsignedFluxCgs**HeatExponent
-       
+
        TotalCoronalHeating = TotalCoronalHeatingCgs*1e-7 &
             *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)
        TimeUpdateLast = Time_Simulation
-       
+
     end if
 
     HeatFunctionVolume = 0
@@ -827,10 +827,10 @@ contains
 
     iZ = (UnsignedFluxHeight - MinZ)/CellSize_DB(z_,iBlock) + 0.5
     call find_cell(0, nK+1, iZ, iLeft, DxLeft)
-    
+
     BzCgs = ((1.0 - DxLeft)*Bz_V(1:nI, 1:nJ, iLeft) + &
          DxLeft*Bz_V(1:nI, 1:nJ, iLeft+1))*No2Si_V(UnitB_)*1e4
-    
+
   end subroutine get_photosphere_field
 end module ModUnsignedFluxModel
 !=========================================!Master module!======================
@@ -841,7 +841,6 @@ module ModCoronalHeating
   use ModMain,      ONLY: nBLK, nI, nJ, nK
   use ModReadParam, ONLY: lStringLine
   use ModVarIndexes,ONLY: WaveFirst_, WaveLast_
-  use ModWaves,     ONLY: UseNonWkbAlfvenWaves
 
   implicit none
   SAVE
@@ -890,9 +889,8 @@ module ModCoronalHeating
 
   ! Variables for incompressible turbulence
   logical :: UseTurbulentCascade = .false.
-  logical :: UseCounterPropagatingWave = .true.
+  logical :: UseWaveReflection = .true.
   logical :: UseScaledCorrelationLength = .true.
-  real :: KarmanTaylorBeta = 1.0
 
   logical :: IsNewBlockAlfven = .true.
 
@@ -920,7 +918,6 @@ contains
 
     use ModReadParam,  ONLY: read_var
     use ModVarIndexes, ONLY: Lperp_
-    use ModWaves,      ONLY: UseTransverseTurbulence
 
     character(len=*), intent(in):: NameCommand
     !----------------------------------------------------------------------
@@ -956,21 +953,8 @@ contains
        case('turbulentcascade')
           UseAlfvenWaveDissipation = .true.
           UseTurbulentCascade = .true.
-          call read_var('UseNonWkbAlfvenWaves', UseNonWkbAlfvenWaves)
-          if(UseNonWkbAlfvenWaves)then
-             call stop_mpi('The non-WKB Alfven wave approximation is ' &
-                  // 'not yet fully implemented')
-             call read_var('UseTransverseTurbulence', UseTransverseTurbulence)
-             call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-             if(Lperp_ > 1)then
-                call read_var('UseScaledCorrelationLength', &
-                     UseScaledCorrelationLength)
-                if(.not. UseScaledCorrelationLength) &
-                     call read_var('KarmanTaylorBeta', KarmanTaylorBeta)
-             end if
-          else
-             call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
-          end if
+          call read_var('UseWaveReflection', UseWaveReflection)
+          call read_var('LperpTimesSqrtBSi', LperpTimesSqrtBSi)
        case default
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
@@ -992,8 +976,6 @@ contains
        call read_var('QeByQtotal', QeByQtotal)
     case("#ANISOIONHEATING")
        call read_var('QparByQtotal', QparByQtotal)
-    case("#COUNTERPROPAGATINGWAVE")
-       call read_var('UseCounterPropagatingWave', UseCounterPropagatingWave)
     case("#HEATPARTITIONING")
        call read_var('StochasticHeating', StochasticHeating)
     case default
@@ -1391,13 +1373,13 @@ contains
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-    if(UseCounterPropagatingWave)then
+    if(UseWaveReflection)then
        WaveDissipation_V(WaveFirst_) = Coef*sqrt(EwaveMinus)*EwavePlus
        WaveDissipation_V(WaveLast_) = Coef*sqrt(EwavePlus)*EwaveMinus
     else
        b_D = FullB_D/max(1e-15, FullB)
        Rho = State_VGB(Rho_,i,j,k,iBlock)
-       
+
        call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
        call get_curl_u(i, j, k, iBlock, CurlU_D)
@@ -1413,7 +1395,7 @@ contains
             max(ReflectionRate, Coef*sqrt(EwaveMinus))*EwavePlus
        WaveDissipation_V(WaveLast_) = &
             max(ReflectionRate, Coef*sqrt(EwavePlus))*EwaveMinus
-     end if
+    end if
 
     CoronalHeating = sum(WaveDissipation_V)
 
@@ -1439,8 +1421,6 @@ contains
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate
     real :: EwavePlus, EwaveMinus
     !--------------------------------------------------------------------------
-
-    if(.not.UseCounterPropagatingWave) RETURN
 
     if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
 
@@ -1649,351 +1629,6 @@ contains
 
   !============================================================================
 
-  subroutine turbulence_mixing(iBlock)
-
-    ! This subroutine calculates the turbulence mixing due to
-    ! - large-scale shear flow and compression
-    ! - gradients in the large-scale Alfven speed, resulting in Alfven wave
-    !   reflection
-
-    use BATL_lib, ONLY: IsCartesian, CellSize_DB
-    use BATL_size, ONLY: MaxDim, nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         nI, nJ, nK, j0_, nJp1_, k0_, nKp1_
-    use ModAdvance, ONLY: State_VGB, Source_VC
-    use ModB0, ONLY: B0_DGB
-    use ModFaceGradient, ONLY: set_block_field2
-    use ModGeometry, ONLY: true_cell
-    use ModMain, ONLY: UseB0
-    use ModNumConst, ONLY: i_DD
-    use ModPointImplicit, ONLY: IsPointImplMatrixSet, DsDu_VVC
-    use ModSize, ONLY: x_, y_, z_
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_
-    use ModWaves, ONLY: WaveFirst_, WaveLast_, UseTransverseTurbulence, &
-         SigmaD
-
-    integer, intent(in) :: iBlock
-
-    integer, parameter :: iRho = 1, iRhoUx = 2, iRhoUz = 4, iBx = 5, iBz = 7
-
-    integer :: i, j, k, Di, Dj, Dk, iDim, iDir
-
-    ! Cell centered and face centered velocity and Alfven speed for one block
-    real, allocatable :: U_VG(:,:,:,:), U_VFD(:,:,:,:,:)
-    real, allocatable :: Alfven_VG(:,:,:,:), Alfven_VFD(:,:,:,:,:)
-
-    ! Array needed for second order interpolation of ghost cells
-    real, allocatable :: State1_VG(:,:,:,:), State2_VG(:,:,:,:)
-
-    real :: GradAlfven_DD(nDim,MaxDim), bDotbDotGradAlfven, DivAlfven
-    real :: GradU_DD(nDim,MaxDim), bDotbDotGradU, DivU
-    real :: b_D(MaxDim)
-    real :: Reflection, Mixing, WaveEnergy
-    real :: InvDx2, InvDy2, InvDz2
-
-    character(len=*), parameter :: &
-         NameSub = 'ModCoronalHeating::turbulence_mixing'
-    !------------------------------------------------------------------------
-
-    if(.not.allocated(Alfven_VG)) allocate( &
-         Alfven_VG(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
-         U_VG(MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
-         State1_VG(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
-         State2_VG(7,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
-
-    ! second order interpolation of density and magnetic field
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       State2_VG(iRho,i,j,k) = State_VGB(Rho_,i,j,k,iBlock)
-       State2_VG(iRhoUx:iRhoUz,i,j,k) = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
-       State2_VG(iBx:iBz,i,j,k) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-    end do; end do; end do
-    call set_block_field2(iBlock, 7, State1_VG, State2_VG)
-
-    if(UseB0)then
-       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-          Alfven_VG(:,i,j,k) = &
-               (State2_VG(iBx:iBz,i,j,k) + B0_DGB(:,i,j,k,iBlock)) &
-               /sqrt(State2_VG(iRho,i,j,k))
-       end do; end do; end do
-    else
-       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-          Alfven_VG(:,i,j,k) = State2_VG(iBx:iBz,i,j,k) &
-               /sqrt(State2_VG(iRho,i,j,k))
-       end do; end do; end do
-    end if
-
-    do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-       U_VG(:,i,j,k) = State2_VG(iRhoUx:iRHoUz,i,j,k)/State2_VG(iRho,i,j,k)
-    end do; end do; end do
-
-    if(IsCartesian)then
-       InvDx2 = 0.5/CellSize_DB(x_,iBlock)
-       InvDy2 = 0.5/CellSize_DB(y_,iBlock)
-       InvDz2 = 0.5/CellSize_DB(z_,iBlock)
-    else
-       if(.not.allocated(Alfven_VFD)) allocate( &
-            Alfven_VFD(MaxDim,1:nI+1,1:nJp1_,1:nKp1_,nDim), &
-            U_VFD(MaxDim,1:nI+1,1:nJp1_,1:nKp1_,nDim) )
-
-       do iDim = 1, nDim
-          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-          do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-             Alfven_VFD(:,i,j,k,iDim) = &
-                  0.5*(Alfven_VG(:,i,j,k) + Alfven_VG(:,i-Di,j-Dj,k-Dk))
-             U_VFD(:,i,j,k,iDim) = 0.5*(U_VG(:,i,j,k) + U_VG(:,i-Di,j-Dj,k-Dk))
-          end do; end do; end do
-       end do
-    end if
-
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-       if(UseTransverseTurbulence)then
-          ! Calculate unit vector parallel with full B field
-          b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-          b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
-
-          ! Calculate b.(grad Ualfven).b
-          call calc_grad_alfven(i, j, k, iBlock, GradAlfven_DD)
-          bDotbDotGradAlfven = sum(b_D*matmul(b_D(1:nDim), GradAlfven_DD))
-
-          Reflection = 0.5*SigmaD*bDotbDotGradAlfven
-
-          ! Calculate b.(grad U).b
-          call calc_grad_u(i, j, k, iBlock, GradU_DD)
-          bDotbDotGradU = sum(b_D*matmul(b_D(1:nDim), GradU_DD))
-
-          call calc_div_u(i, j, k, iBlock, DivU)
-
-          Mixing = 0.5*SigmaD*(0.5*DivU - bDotbDotGradU)
-       else ! isotropic turbulence
-          call calc_div_alfven(i, j, k, iBlock, DivAlfven)
-
-          Reflection = 0.5*SigmaD*DivAlfven
-
-          call calc_div_u(i, j, k, iBlock, DivU)
-
-          Mixing = SigmaD*DivU/12.0
-       end if
-
-       WaveEnergy = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-
-       Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
-            - Reflection*WaveEnergy &
-            + Mixing*State_VGB(WaveFirst_,i,j,k,iBlock) &
-            - Mixing*State_VGB(WaveLast_,i,j,k,iBlock)
-       Source_VC(WaveLast_,i,j,k) = Source_VC(WaveLast_,i,j,k) &
-            + Reflection*WaveEnergy &
-            - Mixing*State_VGB(WaveFirst_,i,j,k,iBlock) &
-            + Mixing*State_VGB(WaveLast_,i,j,k,iBlock)
-
-       if(IsPointImplMatrixSet)then
-          DsDu_VVC(WaveFirst_,WaveFirst_,i,j,k) = -Reflection + Mixing
-          DsDu_VVC(WaveFirst_,WaveLast_,i,j,k) = -Reflection - Mixing
-          DsDu_VVC(WaveLast_,WaveFirst_,i,j,k) = Reflection - Mixing
-          DsDu_VVC(WaveLast_,WaveLast_,i,j,k) = Reflection + Mixing
-       end if
-
-    end do; end do; end do
-
-  contains
-    !========================================================================
-    subroutine calc_grad_alfven(i, j, k, iBlock, GradAlfven_DD)
-
-      use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
-           FaceNormal_DDFB, CellVolume_GB, x_, y_, z_
-
-      integer, intent(in) :: i, j, k, iBlock
-      real, intent(out) :: GradAlfven_DD(nDim,MaxDim)
-
-      character(len=*), parameter :: NameSub = &
-           'ModCoronalHeating::turbulence_mixing::calc_grad_alfven'
-      !----------------------------------------------------------------------
-
-      GradAlfven_DD = 0.0
-      ! Calculate gradient tensor of the Alfven speed
-      if(IsCartesian) then
-         GradAlfven_DD(x_,:) = InvDx2 &
-              *(Alfven_VG(:,i+1,j,k) - Alfven_VG(:,i-1,j,k))
-         if(nJ > 1) GradAlfven_DD(y_,:) = InvDy2 &
-              *(Alfven_VG(:,i,j+1,k) - Alfven_VG(:,i,j-1,k))
-         if(nK > 1) GradAlfven_DD(z_,:) = InvDz2 &
-              *(Alfven_VG(:,i,j,k+1) - Alfven_VG(:,i,j,k-1))
-      else if(IsRzGeometry) then
-         call stop_mpi(NameSub//': RZ geometry to be implemented')
-      else
-         do iDir = 1, MaxDim
-            GradAlfven_DD(:,iDir) = &
-                 Alfven_VFD(iDir,i+1,j,k,x_) &
-                 *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
-                 - Alfven_VFD(iDir,i,j,k,x_) &
-                 *FaceNormal_DDFB(:,x_,i,j,k,iBlock)
-            if(nJ > 1) GradAlfven_DD(:,iDir) = GradAlfven_DD(:,iDir) + &
-                 Alfven_VFD(iDir,i,j+1,k,y_) &
-                 *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
-                 - Alfven_VFD(iDir,i,j,k,y_) &
-                 *FaceNormal_DDFB(:,y_,i,j,k,iBlock)
-            if(nK > 1) GradAlfven_DD(:,iDir) = GradAlfven_DD(:,iDir) + &
-                 Alfven_VFD(iDir,i,j,k+1,z_) &
-                 *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
-                 - Alfven_VFD(iDir,i,j,k,z_) &
-                 *FaceNormal_DDFB(:,z_,i,j,k,iBlock)
-         end do
-
-         GradAlfven_DD = GradAlfven_DD/CellVolume_GB(i,j,k,iBlock)
-      end if
-
-    end subroutine calc_grad_alfven
-    !========================================================================
-    subroutine calc_div_alfven(i, j, k, iBlock, DivAlfven)
-
-      use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
-           FaceNormal_DDFB, CellVolume_GB, x_, y_, z_
-
-      integer, intent(in) :: i, j, k, iBlock
-      real, intent(out) :: DivAlfven
-
-      character(len=*), parameter :: NameSub = &
-           'ModCoronalHeating::turbulence_mixing::calc_div_alfven'
-      !----------------------------------------------------------------------
-
-      if(IsCartesian)then
-         DivAlfven = InvDx2*(Alfven_VG(x_,i+1,j,k) - Alfven_VG(x_,i-1,j,k))
-         if(nJ > 1) DivAlfven = DivAlfven &
-              + InvDy2*(Alfven_VG(y_,i,j+1,k) - Alfven_VG(y_,i,j-1,k))
-         if(nK > 1) DivAlfven = DivAlfven &
-              + InvDz2*(Alfven_VG(z_,i,j,k+1) - Alfven_VG(z_,i,j,k-1))
-      else if(IsRzGeometry)then
-         call stop_mpi(NameSub//': RZ geometry to be implemented')
-      else
-         DivAlfven = &
-              sum(Alfven_VFD(:nDim,i+1,j,k,x_) &
-              *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock)) &
-              -sum(Alfven_VFD(:nDim,i,j,k,x_) &
-              *FaceNormal_DDFB(:,x_,i,j,k,iBlock))
-         if(nJ > 1) DivAlfven = DivAlfven + &
-              sum(Alfven_VFD(:nDim,i,j+1,k,y_) &
-              *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock)) &
-              -sum(Alfven_VFD(:nDim,i,j,k,y_) &
-              *FaceNormal_DDFB(:,y_,i,j,k,iBlock))
-         if(nK > 1) DivAlfven = DivAlfven + &
-              sum(Alfven_VFD(:nDim,i,j,k+1,z_) &
-              *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock)) &
-              -sum(Alfven_VFD(:nDim,i,j,k,z_) &
-              *FaceNormal_DDFB(:,z_,i,j,k,iBlock))
-
-         DivAlfven = DivAlfven/CellVolume_GB(i,j,k,iBlock)
-      end if
-
-    end subroutine calc_div_alfven
-    !========================================================================
-    subroutine calc_grad_u(i, j, k, iBlock, GradU_DD)
-
-      use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
-           FaceNormal_DDFB, CellVolume_GB, x_, y_, z_
-
-      integer, intent(in) :: i, j, k, iBlock
-      real, intent(out) :: GradU_DD(nDim,MaxDim)
-
-      character(len=*), parameter :: NameSub = &
-           'ModCoronalHeating::turbulence_mixing::calc_grad_u'
-      !----------------------------------------------------------------------
-
-      GradU_DD = 0.0
-      ! Calculate gradient tensor of the velocity
-      if(IsCartesian) then
-         GradU_DD(x_,:) = InvDx2 &
-              *(U_VG(:,i+1,j,k) - U_VG(:,i-1,j,k))
-         if(nJ > 1) GradU_DD(y_,:) = InvDy2 &
-              *(U_VG(:,i,j+1,k) - U_VG(:,i,j-1,k))
-         if(nK > 1) GradU_DD(z_,:) = InvDz2 &
-              *(U_VG(:,i,j,k+1) - U_VG(:,i,j,k-1))
-      else if(IsRzGeometry) then
-         call stop_mpi(NameSub//': RZ geometry to be implemented')
-      else
-         do iDir = 1, MaxDim
-            GradU_DD(:,iDir) = &
-                 U_VFD(iDir,i+1,j,k,x_) &
-                 *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
-                 - U_VFD(iDir,i,j,k,x_) &
-                 *FaceNormal_DDFB(:,x_,i,j,k,iBlock)
-            if(nJ > 1) GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
-                 U_VFD(iDir,i,j+1,k,y_) &
-                 *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
-                 - U_VFD(iDir,i,j,k,y_) &
-                 *FaceNormal_DDFB(:,y_,i,j,k,iBlock)
-            if(nK > 1) GradU_DD(:,iDir) = GradU_DD(:,iDir) + &
-                 U_VFD(iDir,i,j,k+1,z_) &
-                 *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
-                 - U_VFD(iDir,i,j,k,z_) &
-                 *FaceNormal_DDFB(:,z_,i,j,k,iBlock)
-         end do
-
-         GradU_DD = GradU_DD/CellVolume_GB(i,j,k,iBlock)
-      end if
-
-    end subroutine calc_grad_u
-    !========================================================================
-    subroutine calc_div_u(i, j, k, iBlock, DivU)
-
-      use BATL_lib, ONLY: IsCartesian, IsRzGeometry, &
-           FaceNormal_DDFB, CellVolume_GB
-
-      integer, intent(in) :: i, j, k, iBlock
-      real, intent(out) :: DivU
-
-      character(len=*), parameter :: NameSub = &
-           'ModCoronalHeating::turbulence_mixing::calc_div_u'
-      !----------------------------------------------------------------------
-
-      if(IsCartesian)then
-         DivU = InvDx2*(U_VG(x_,i+1,j,k) - U_VG(x_,i-1,j,k))
-         if(nJ > 1) DivU = DivU &
-              + InvDy2*(U_VG(y_,i,j+1,k) - U_VG(y_,i,j-1,k))
-         if(nK > 1) DivU = DivU &
-              + InvDz2*(U_VG(z_,i,j,k+1) - U_VG(z_,i,j,k-1))
-      else if(IsRzGeometry)then
-         call stop_mpi(NameSub//': RZ geometry to be implemented')
-      else
-         DivU = &
-              sum(U_VFD(:nDim,i+1,j,k,x_) &
-              *FaceNormal_DDFB(:,x_,i+1,j,k,iBlock)) &
-              -sum(U_VFD(:nDim,i,j,k,x_) &
-              *FaceNormal_DDFB(:,x_,i,j,k,iBlock))
-         if(nJ > 1) DivU = DivU + &
-              sum(U_VFD(:nDim,i,j+1,k,y_) &
-              *FaceNormal_DDFB(:,y_,i,j+1,k,iBlock)) &
-              -sum(U_VFD(:nDim,i,j,k,y_) &
-              *FaceNormal_DDFB(:,y_,i,j,k,iBlock))
-         if(nK > 1) DivU = DivU + &
-              sum(U_VFD(:nDim,i,j,k+1,z_) &
-              *FaceNormal_DDFB(:,z_,i,j,k+1,iBlock)) &
-              -sum(U_VFD(:nDim,i,j,k,z_) &
-              *FaceNormal_DDFB(:,z_,i,j,k,iBlock))
-
-         DivU = DivU/CellVolume_GB(i,j,k,iBlock)
-      end if
-
-    end subroutine calc_div_u
-
-  end subroutine turbulence_mixing
-
-  !============================================================================
-
-  subroutine turb_mixing_init_point_impl
-
-    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
-    !--------------------------------------------------------------------------
-    allocate(iVarPointImpl_I(2))
-
-    iVarPointImpl_I = (/WaveFirst_, WaveLast_/)
-
-    IsPointImplMatrixSet = .true.
-
-  end subroutine turb_mixing_init_point_impl
-
-  !============================================================================
-
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
        CoronalHeating, QeFraction, QparFraction) 
 
@@ -2051,25 +1686,20 @@ contains
             sqrt(sqrt(B2)*State_VGB(Rho_,i,j,k,iBlock)/(2.0*Pperp)) &
             /IonMassPerCharge))
 
-       if(UseNonWkbAlfvenWaves)then
-          call stop_mpi(NameSub//' The non-WKB Alfven wave approximation ' &
-               // 'requires both waves to determine the perturbed velocity')
-       else
-          ! Extract the Alfven wave energy density of the dominant wave
-          WaveLarge = maxval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+       ! Extract the Alfven wave energy density of the dominant wave
+       WaveLarge = maxval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
 
-          ! We note that if anistropic pressure is correctly included in
-          ! the Alfven wave transport equation than the relationship between
-          ! the wave energy density and velocity perturbation squared changes
-          ! to: E_w = 0.5*rho*<\delta u^2> (1 + 1/A), where <.> is the
-          ! ensemble average and A = 1 - (Ppar - Pperp)/B^2 in normalized
-          ! units, resulting in a slightly different expression below.
+       ! We note that if anistropic pressure is correctly included in
+       ! the Alfven wave transport equation than the relationship between
+       ! the wave energy density and velocity perturbation squared changes
+       ! to: E_w = 0.5*rho*<\delta u^2> (1 + 1/A), where <.> is the
+       ! ensemble average and A = 1 - (Ppar - Pperp)/B^2 in normalized
+       ! units, resulting in a slightly different expression below.
 
-          DampingPerp = 0.18*WaveLarge*sqrt(WaveLarge*B2/(2.0*Pperp)) &
-               /IonMassPerCharge/max(CoronalHeating*LperpInvGyroRad**3,1e-30) &
-               *exp(-StochasticHeating &
-               *sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
-       end if
+       DampingPerp = 0.18*WaveLarge*sqrt(WaveLarge*B2/(2.0*Pperp)) &
+            /IonMassPerCharge/max(CoronalHeating*LperpInvGyroRad**3,1e-30) &
+            *exp(-StochasticHeating &
+            *sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
 
        ! The 1+ is due to the fraction of the cascade power that succeeds
        ! to cascade to the smallest scale (<< proton gyroradius),

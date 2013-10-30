@@ -2367,25 +2367,6 @@ contains
          end do
          Flux_V(Energy_) = Flux_V(Energy_) - AlfvenSpeed &
               *sum(State_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_))
-
-         if(UseNonWkbAlfvenWaves)then
-            if(UseTransverseTurbulence)then
-               PwExtra = 0.5*Ew*SigmaD
-               FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-               DPwPerB = -Ew*SigmaD*FullBn/max(1e-30, FullB2)
-               Flux_V(RhoUx_) = Flux_V(RhoUx_) + PwExtra*NormalX+DPwPerB*FullBx
-               Flux_V(RhoUy_) = Flux_V(RhoUy_) + PwExtra*NormalY+DPwPerB*FullBy
-               Flux_V(RhoUz_) = Flux_V(RhoUz_) + PwExtra*NormalZ+DPwPerB*FullBz
-               Flux_V(Energy_) = Flux_V(Energy_) + Un*PwExtra &
-                    + DPwPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
-            else ! isotropic turbulence
-               PwExtra = Ew*SigmaD/6.0
-               Flux_V(RhoUx_) = Flux_V(RhoUx_) + PwExtra*NormalX
-               Flux_V(RhoUy_) = Flux_V(RhoUy_) + PwExtra*NormalY
-               Flux_V(RhoUz_) = Flux_V(RhoUz_) + PwExtra*NormalZ
-               Flux_V(Energy_) = Flux_V(Energy_) + Un*PwExtra
-            end if
-         end if
       end if
 
       if(UseBorisSimple)then
@@ -2778,8 +2759,6 @@ contains
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure
-      use ModWaves,    ONLY: UseNonWkbAlfvenWaves, &
-           UseTransverseTurbulence, SigmaD
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
@@ -2826,17 +2805,7 @@ contains
                  StateRight_V(Ew_)/StateRight_V(Rho_))
          else
             Pw = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
-            if(UseNonWkbAlfvenWaves)then
-               if(UseTransverseTurbulence)then
-                  Pw = Pw*(1.0 + abs(SigmaD))
-                  Sound2 = Sound2 + GammaWave*Pw*InvRho
-               else ! isotropic turbulence
-                  Pw = Pw*(1 + SigmaD/3)
-                  Sound2 = Sound2 + Pw*(GammaWave + SigmaD/6)*InvRho
-               end if
-            else
-               Sound2 = Sound2 + GammaWave*Pw*InvRho
-            end if
+            Sound2 = Sound2 + GammaWave*Pw*InvRho
          end if
       end if
 

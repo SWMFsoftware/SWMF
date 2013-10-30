@@ -87,17 +87,6 @@ module ModWaves
   real :: WaveEnergy = 0.0 !Auxiliary variable
   real :: DivU_C(nI,nJ,nK) = 0.0       !Auxiliary variable
 
-  ! Variables for incompressible turbulence.
-  ! For now, we assume that the magnetic turbulence energy is twice the
-  ! kinetic turbulence energy (Alfven ratio = 1/2), which is a more or less
-  ! correct assumption for most of the corona and inner heliosphere (with the
-  ! exception of the transition region and CME shocks).
-  ! The parameter that defines this ratio is the normalized energy
-  ! difference: SigmaD = (kinetic - magnetic)/(kinetic + magnetic)
-  logical :: UseNonWkbAlfvenWaves = .false.
-  logical :: UseTransverseTurbulence = .true.
-  real :: SigmaD = -1.0/3.0 ! Normalized energy difference
-
 contains
   !============================================================================
   subroutine read_waves_param(NameCommand)

@@ -32,12 +32,11 @@ contains
     use ModMultiFluid
     use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
-    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C, &
-         UseNonWkbAlfvenWaves, UseTransverseTurbulence, SigmaD
+    use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
-         apportion_coronal_heating, UseTurbulentCascade, KarmanTaylorBeta, &
-         UseScaledCorrelationLength, turbulence_mixing, get_wave_reflection
+         apportion_coronal_heating, UseTurbulentCascade, &
+         UseScaledCorrelationLength, UseWaveReflection, get_wave_reflection
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -240,59 +239,22 @@ contains
        end do; end do; end do
 
        if(UseTurbulentCascade)then
-          if(UseNonWkbAlfvenWaves)then
-             if(UseTransverseTurbulence)then
-                do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                   if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
+             ! Positive (definite) source term for the correlation length
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-                   call calc_grad_U(GradU_DD, i, j, k, iBlock)
+                Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) + 2.0* &
+                     sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
+                     *(State_VGB(WaveLast_,i,j,k,iBlock) &
+                     *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)) &
+                     + State_VGB(WaveFirst_,i,j,k,iBlock) &
+                     *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))) /max(1e-30, &
+                     sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))
+             end do; end do; end do
+          end if
 
-                   ! Calculate unit vector parallel with full B field
-                   b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-                   if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-                   b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
-
-                   ! Calculate b.(grad u).b
-                   bDotGradparU = dot_product(b_D,matmul(b_D(1:nDim),GradU_DD))
-
-                   Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
-                        Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                        - SigmaD*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
-                        *(0.5*DivU_C(i,j,k) - bDotGradparU)
-                end do; end do; end do
-             else ! isotropic turbulence
-                do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                   if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-                   Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
-                        Source_VC(WaveFirst_:WaveLast_,i,j,k) &
-                        - SigmaD*State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) &
-                        *DivU_C(i,j,k)/6.0
-                end do; end do; end do
-             end if
-
-             ! The following is for the explicit evaluation of the
-             ! turbulence mixing
-             if(.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock))) &
-                  call turbulence_mixing(iBlock)
-
-             if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
-                ! Positive (definite) source term for the correlation length
-                do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                   if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-                   Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) + 2.0* &
-                        KarmanTaylorBeta*sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
-                        *(State_VGB(WaveLast_,i,j,k,iBlock) &
-                        *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)) &
-                        + State_VGB(WaveFirst_,i,j,k,iBlock) &
-                        *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))) /max(1e-30, &
-                        sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))
-                end do; end do; end do
-             end if
-          else
-             call get_wave_reflection(iBlock)
-          end if ! UseNonWkbAlfvenWaves
+          if(UseWaveReflection) call get_wave_reflection(iBlock)
        end if ! UseTurbulentCascade
     end if
 

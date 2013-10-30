@@ -134,7 +134,7 @@ SOLARDIPOLE
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
-F                       UseNonWkbAlfvenWaves
+T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
 
 The stochastic heating parameter is in the range [0,0.34]
@@ -430,7 +430,7 @@ F			UseUserUpdateStates
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
-F                       UseNonWkbAlfvenWaves
+T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
 
 #HEATPARTITIONING

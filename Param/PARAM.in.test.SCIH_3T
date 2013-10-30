@@ -83,7 +83,7 @@ F			UseUserUpdateStates
 
 #CORONALHEATING
 turbulentcascade	TypeCoronalHeating
-F			UseNonWkbAlfvenWaves
+T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 
 #HEATPARTITIONING
@@ -365,7 +365,7 @@ F			UseUserUpdateStates
 
 #CORONALHEATING
 turbulentcascade	TypeCoronalHeating
-F			UseNonWkbAlfvenWaves
+T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 
 #HEATPARTITIONING
