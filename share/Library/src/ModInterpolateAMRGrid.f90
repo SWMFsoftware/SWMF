@@ -267,7 +267,7 @@ contains
     !/
     integer, dimension(2**nDim):: iOrder_I
     !\
-    ! Output parameter of interpolate_amr2,3
+    ! Output parameter of interpolate_amr3
     ! If .true., the basic stencil should be re-evaluated
     !/
     logical                    :: DoStencilFix
@@ -337,6 +337,7 @@ contains
     nGridOut = -1; Xyz_D = XyzIn_D ; IsOut_I = .false.
 
     call generate_extended_stencil
+    call prolong_extended_stencil
     !\
     !The interpolation may be done inside generate_extended_stencil 
     !/
@@ -400,10 +401,6 @@ contains
           end if
        end do
        if(nGridOut < 1)then
-          write(*,*)'Xyz_D=',Xyz_D
-          write(*,*)'XyzGrid_DI=',XyzGrid_DI
-          write(*,*)'iCaseExtended=',iCaseExtended
-          write(*,*)'iSortStencil=',iSortStencil3_II(:,iCaseExtended)
           call CON_stop('Failure in interpolate amr grid3') 
        end if
     case default
@@ -414,33 +411,6 @@ contains
     if(present(IsSecondOrder))&
          IsSecondOrder = .not.any(IsOut_I)
   contains
-    subroutine sort_out
-      !\
-      ! Sorts out zero weights and repeating points
-      !/
-      integer:: nStored !To store starting nGridOut
-      integer:: iLoc    !To find location of repeating index
-      integer:: iGrid   !Loop variable
-      !\
-      ! Form index array and sort out zero weights
-      !/
-      nStored =  nGridOut 
-      nGridOut = 0 
-      cTol2 = 2*cTol2
-      iLoc = 0
-      ALL:do iGrid = 1, nStored
-         if(Weight_I(iGrid) < cTol2)CYCLE
-         do iLoc = 1, nGridOut
-            if(iOrder_I(iLoc)==iOrder_I(iGrid))then
-               Weight_I(iLoc) = Weight_I(iLoc) + Weight_I(iGrid)
-               CYCLE ALL
-            end if
-         end do
-         nGridOut = nGridOut + 1
-         iOrder_I(nGridOut) = iOrder_I(iGrid)
-         Weight_I(nGridOut) = Weight_I(iGrid)
-      end do ALL
-    end subroutine sort_out
     !=====================
     subroutine generate_extended_stencil
       !\
@@ -765,21 +735,30 @@ contains
             iGridStored = iGridCheck
          end do NEIBLOCK
       end do COARSEN
+    end subroutine generate_extended_stencil
+    !=================
+    subroutine prolong_extended_stencil
       !\
       ! Handle points behind the boundary
       !/
+      !\
+      ! Loop variables
+      !/
+      integer:: iGrid, iSubgrid, iDir
+      integer:: iLoc
+      !---------------- 
       if(UseGhostPoint)then
          select case(count(IsOut_I))
          case(3, 7) !3,7 are nGrid -1 for nDim=2,3 
             !\
             !Find the only physical point in the stencil 
             !/
-            iGridCheck = maxloc(iLevelSubGrid_I,MASK=.not.IsOut_I, DIM=1)
+            iLoc = maxloc(iLevelSubGrid_I,MASK=.not.IsOut_I, DIM=1)
             nGridOut = 1
             Weight_I = 0; Weight_I(1) = 1
-            iIndexes_II(0,       1) = iProc_I( iGridCheck) 
-            iIndexes_II(nIndexes,1) = iBlock_I(iGridCheck)
-            iIndexes_II(1:nDim,1  ) = iCellIndexes_DII(:,1,iGridCheck)
+            iIndexes_II(0,       1) = iProc_I( iLoc) 
+            iIndexes_II(nIndexes,1) = iBlock_I(iLoc)
+            iIndexes_II(1:nDim,1  ) = iCellIndexes_DII(:,1,iLoc)
             RETURN
          case(4)
             ! nDim = 3
@@ -789,25 +768,25 @@ contains
             !\
             !Find point in the domain
             !/
-            iGridCheck = maxloc(iLevelSubGrid_I,MASK=.not.IsOut_I,DIM=1)
+            iLoc = maxloc(iLevelSubGrid_I,MASK=.not.IsOut_I,DIM=1)
             do iDir = 1, nDim
                if(all(&
-                    IsOut_I(iOppositeFace_IDI(:,iDir,iGridCheck))))then
+                    IsOut_I(iOppositeFace_IDI(:,iDir,iLoc))))then
                   if(IsExtended)then
                      !\
                      ! Prolong grid from the physical face to the ghost one
                      ! accounting for the difference in resolution
                      !/
                      do iGrid = 1,4
-                        call prolong(iFace_IDI(iGrid,iDir,iGridCheck), &
-                             iOppositeFace_IDI(iGrid,iDir,iGridCheck))
+                        call prolong(iFace_IDI(iGrid,iDir,iLoc), &
+                             iOppositeFace_IDI(iGrid,iDir,iLoc))
                      end do
                   else
                      !\
                      !Grid near the boundary is uniform. Put the point to the
                      !physical face to nullify the ghost cell contributions
                      !/
-                     Xyz_D(iDir) = XyzGrid_DII(iDir,1,iGridCheck)
+                     Xyz_D(iDir) = XyzGrid_DII(iDir,1,iLoc)
                   end if
                   EXIT
                end if
@@ -817,25 +796,25 @@ contains
             !\
             !Find point in the domain
             !/
-            iGridCheck = maxloc(iLevelSubGrid_I,MASK=.not.IsOut_I, DIM=1)
+            iLoc = maxloc(iLevelSubGrid_I,MASK=.not.IsOut_I, DIM=1)
             do iDir = 1, 2
                if(all(&
-                    IsOut_I(iOppositeSide_IDI(:,iDir,iGridCheck))))then
+                    IsOut_I(iOppositeSide_IDI(:,iDir,iLoc))))then
                   if(IsExtended)then
                      !\
                      ! Prolong grid from the physical face to the ghost 
                      ! accounting for the difference in resolution
                      !/
                      do iGrid = 1,2
-                        call prolong(iSide_IDI(iGrid,iDir,iGridCheck), &
-                             iOppositeSide_IDI(iGrid,iDir,iGridCheck))
+                        call prolong(iSide_IDI(iGrid,iDir,iLoc), &
+                             iOppositeSide_IDI(iGrid,iDir,iLoc))
                      end do
                   else
                      !\
-                     !Put the point to the physical phase, which assign them
+                     !Put the point to the physical face, which assign them
                      !zero weight
                      !/
-                     Xyz_D(3 - iDir) = XyzGrid_DII(3 - iDir,1,iGridCheck)
+                     Xyz_D(3 - iDir) = XyzGrid_DII(3 - iDir,1,iLoc)
                   end if
                   EXIT
                end if
@@ -847,15 +826,15 @@ contains
             ! points the grid should be prolonged to three
             ! ghost points along the plane
             !/
-            iGridCheck = maxloc(iLevelSubGrid_I,MASK=.not.IsOut_I, DIM=1)
+            iLoc = maxloc(iLevelSubGrid_I,MASK=.not.IsOut_I, DIM=1)
             do iDir  = 1, nDim
-               if(.not.IsOut_I(iEdge_ID(iGridCheck,iDir)))then
+               if(.not.IsOut_I(iEdge_ID(iLoc,iDir)))then
                   if(IsExtended)then
                      do iGrid = 2,4
-                        call prolong(iGridCheck,&
-                             iFace_IDI(iGrid,iDir,iGridCheck))
-                        call prolong(iEdge_ID(iGridCheck,iDir),&
-                             iOppositeFace_IDI(iGrid,iDir,iGridCheck))
+                        call prolong(iLoc,&
+                             iFace_IDI(iGrid,iDir,iLoc))
+                        call prolong(iEdge_ID(iLoc,iDir),&
+                             iOppositeFace_IDI(iGrid,iDir,iLoc))
                      end do
                      EXIT
                   else
@@ -863,9 +842,9 @@ contains
                      ! Put the point to the physical edge
                      !/
                      Xyz_D(1 + mod(iDir,3)) = &
-                          XyzGrid_DII(1 + mod(iDir,3),1,iGridCheck)
+                          XyzGrid_DII(1 + mod(iDir,3),1,iLoc)
                      Xyz_D(1 + mod(iDir+1,3)) = &
-                          XyzGrid_DII(1 + mod(iDir+1,3),1,iGridCheck)
+                          XyzGrid_DII(1 + mod(iDir+1,3),1,iLoc)
                   end if
                end if
             end do
@@ -916,7 +895,7 @@ contains
             Weight_I(nGridOut) = Weight_I(iGrid)
          end do
       end if
-    end subroutine generate_extended_stencil
+    end subroutine prolong_extended_stencil
     !======================
     subroutine interpolate_uniform(Dimless_D)
       !\
@@ -955,6 +934,34 @@ contains
               XyzGrid_DII(:,0,iGridPhys )
       end do
     end subroutine prolong
+    !=================
+    subroutine sort_out
+      !\
+      ! Sorts out zero weights and repeating points
+      !/
+      integer:: nStored !To store starting nGridOut
+      integer:: iLoc    !To find location of repeating index
+      integer:: iGrid   !Loop variable
+      !\
+      ! Form index array and sort out zero weights
+      !/
+      nStored =  nGridOut 
+      nGridOut = 0 
+      cTol2 = 2*cTol2
+      iLoc = 0
+      ALL:do iGrid = 1, nStored
+         if(Weight_I(iGrid) < cTol2)CYCLE
+         do iLoc = 1, nGridOut
+            if(iOrder_I(iLoc)==iOrder_I(iGrid))then
+               Weight_I(iLoc) = Weight_I(iLoc) + Weight_I(iGrid)
+               CYCLE ALL
+            end if
+         end do
+         nGridOut = nGridOut + 1
+         iOrder_I(nGridOut) = iOrder_I(iGrid)
+         Weight_I(nGridOut) = Weight_I(iGrid)
+      end do ALL
+    end subroutine sort_out
   end subroutine interpolate_amr
   !=========================================================================
   subroutine  interpolate_amr2(&
@@ -962,9 +969,9 @@ contains
        nGridOut, Weight_I, iOrder_I)
     use ModCubeGeometry, ONLY: iSortStencil2_II
     integer,parameter :: nGrid = 4, nDim = 2
-
+    
     character(LEN=*),parameter:: NameSub='interpolate_amr2'
-
+    
     !\
     !Input parameters
     !/
@@ -972,14 +979,14 @@ contains
     !The location at which to interpolate the data
     !/
     real, intent(in):: Xyz_D(nDim) 
-
+    
     !Grid point coordinates !2 coordinate, 4 points
     real  ,   intent(in) :: XyzGrid_DI(nDim,nGrid) 
-
+    
     !The refinement level at each grid point. By one higher level of refinement
     !assumes the cell size reduced by a factor of 0.5
     integer,  intent(in) :: iLevel_I(nGrid)
-
+    
     !\
     ! Logical which marks "ghost" points, not belonging to the computational 
     ! domain
@@ -993,13 +1000,13 @@ contains
     !the interpolation stencil. If nGridOut < nGridIn, only the first 
     !nGridOut lines are meaningful in the output
     integer, intent(out) :: nGridOut
-
+    
     !The weight coefficients array.
     real   , intent(out) :: Weight_I(nGrid)
-
+    
     !Order(numbers) of grid points used for the interpolation
     integer, intent(out) :: iOrder_I(nGrid)
-
+    
     integer ::  iDim !Loop variable
     !\
     !Parameters fully characterizing a pattern of refinement for a stencil
