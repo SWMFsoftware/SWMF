@@ -12,7 +12,7 @@ my $loadedFlag_MainBlock=0;
 my $loadedFlag_SpeciesBlock=0;
 my $loadedFlag_BackgroundSpeciesBlock=0;
 
-my $InputFileNameDefault="mercury.input";
+my $InputFileNameDefault="moon.input";
 my $InputFileName;
 
 
@@ -301,9 +301,9 @@ sub ReadMainBlock {
   my $OutputDirectory='.';
   my $StdoutErrorLog='_STDOUT_ERRORLOG_MODE__ON_';
   
-  my $SimulationTimeStepMode='_SINGLE_GLOBAL_TIME_STEP_';
-  my $SimulationParticleWeightMode='_SINGLE_GLOBAL_PARTICLE_WEIGHT_';
-  my $SimulationParticleWeightCorrectionMode='_INDIVIDUAL_PARTICLE_WEIGHT_OFF_';
+  my $SimulationTimeStepMode; #='_SINGLE_GLOBAL_TIME_STEP_';
+  my $SimulationParticleWeightMode; #='_SINGLE_GLOBAL_PARTICLE_WEIGHT_';
+  my $SimulationParticleWeightCorrectionMode; #='_INDIVIDUAL_PARTICLE_WEIGHT_OFF_';
   
   #force the repeatable execution path
   my $ForceRepatableExecutionPath=0;
@@ -624,9 +624,9 @@ sub ReadMainBlock {
   }
   
   #setup the time-step and particle-weight modes
-  ampsConfigLib::RedefineMacro("_SIMULATION_TIME_STEP_MODE_",$SimulationTimeStepMode,"pic/picGlobal.dfn");
-  ampsConfigLib::RedefineMacro("_SIMULATION_PARTICLE_WEIGHT_MODE_",$SimulationParticleWeightMode,"pic/picGlobal.dfn");
-  ampsConfigLib::RedefineMacro("_INDIVIDUAL_PARTICLE_WEIGHT_MODE_",$SimulationParticleWeightCorrectionMode,"pic/picGlobal.dfn");
+  if (defined $SimulationTimeStepMode) {ampsConfigLib::RedefineMacro("_SIMULATION_TIME_STEP_MODE_",$SimulationTimeStepMode,"pic/picGlobal.dfn");}
+  if (defined $SimulationParticleWeightMode) {ampsConfigLib::RedefineMacro("_SIMULATION_PARTICLE_WEIGHT_MODE_",$SimulationParticleWeightMode,"pic/picGlobal.dfn");}
+  if (defined $SimulationParticleWeightCorrectionMode) {ampsConfigLib::RedefineMacro("_INDIVIDUAL_PARTICLE_WEIGHT_MODE_",$SimulationParticleWeightCorrectionMode,"pic/picGlobal.dfn");}
   
   
   #change prefix,error log file and diagnostic stream
