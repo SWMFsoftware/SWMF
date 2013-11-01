@@ -322,12 +322,20 @@ while ($line=<InputFile>) {
       $OutputLine=$OutputLine."#endif\n\n";
       
       ampsConfigLib::AddLine2File($OutputLine,"main/UserDefinition.Exosphere.h");
-    }
+    }    
+    elsif ($InputLine eq "FLUXBALANCE") {
+      ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__BALANCE_FLUXES_\n\n","main/UserDefinition.Exosphere.h");
+    }    
+    elsif ($InputLine eq "UNIFORM") {
+      ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__UNIFORM_\n\n","main/UserDefinition.Exosphere.h");
+    }    
+    elsif ($InputLine eq "RADIALDISTRIBUTION") {
+      ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__RADIAL_DISTRIBUTION_\n\n","main/UserDefinition.Exosphere.h");
+    }       
     else {
       die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
     }
-  }
-  
+  }  
   elsif ($InputLine eq "SOURCE") {
     $InputComment=~s/[=(),]/ /g;
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
@@ -609,7 +617,9 @@ while ($line=<InputFile>) {
           $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS=$MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS."if (FluxSourceProcess[$SourceCode]>0.0) $InitSurfaceSourceDistribution();\n";
         }
         
-        $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS=$MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS."\nelse if (SourceProcessID==$SourceCode) {\nflag=$GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);\nSourceProcessID=$SourceCode;\nif (flag==true) Sampling::CalculatedSourceRate[spec][$SourceCode]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;\n}\n";
+#       $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS=$MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS."\nelse if (SourceProcessID==$SourceCode) {\nflag=$GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);\nSourceProcessID=$SourceCode;\nif (flag==true) Sampling::CalculatedSourceRate[spec][$SourceCode]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;\n}\n";
+
+        $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS=$MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS."\nelse if (SourceProcessID==$SourceCode) {\nflag=$GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);\n}\n"; 
         $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER=$MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER."\nSamplingDensityOffset[$SourceCode]=CellSamplingDataOffset+SamplingLength;\nSamplingLength+=sizeof(double)*PIC::nTotalSpecies;\n";
         $MARKER__USER_DEFINED_TOTAL_SOURCE_RATE=$MARKER__USER_DEFINED_TOTAL_SOURCE_RATE."\nres+=$SourceRate(spec,SphereDataPointer);\n";
                
