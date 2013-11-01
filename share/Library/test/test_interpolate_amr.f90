@@ -142,7 +142,7 @@ contains
           if(any(abs(Xyz_D - XyzInterpolated_D) > 1.0e-6).and.&
                IsSecondOrder)then
              write(*,*)'Approximation test failed'
-             write(*,*)'Grid:', iLevelTest_I
+             write(*,*)'Grid:', iLevelTest_I(1:2**nDim)
              write(*,*)'nGridOut=',nGridOut
              write(*,*)'Point=', Xyz_D
              write(*,*)'Cell_D  iBlock XyzGrid_D Weight_I(iGrid)'

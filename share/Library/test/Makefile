@@ -17,7 +17,7 @@ help:
 	@echo "   test_freq             - test ModFreq"
 	@echo "   test_geopack          - test CON_geopack"
 	@echo "   test_interpolate      - test ModInterpolate"
-	@echo "   test_interpolate_amr  - test ModInterpolateAMRGrid"
+	@echo "   test_interpolate_amr  - test ModInterpolateAMR"
 	@echo "   test_io_unit          - test ModIoUnit"
 	@echo "   test_initial_state    - test ModInitialState"
 	@echo "   test_line_extract     - test CON_line_extract"
@@ -238,12 +238,12 @@ test_interpolate:
 OBJ_INTERPOLATE_AMR = \
 	../src/ModKind.o \
 	../src/ModCubeGeometry.o \
-	../src/ModInterpolateAMRGrid.o \
+	../src/ModInterpolateAMR.o \
 	test_interpolate_amr.o
 
 test_interpolate_amr_exe:
 	@(cd ../src; make ModKind.o; make ModCubeGeometry.o; \
-	make ModInterpolateAMRGrid.o)
+	make ModInterpolateAMR.o)
 	@make test_interpolate_amr.o
 	${LINK.f90} -o test_interpolate_amr.exe ${OBJ_INTERPOLATE_AMR} ${Lflag2}
 
