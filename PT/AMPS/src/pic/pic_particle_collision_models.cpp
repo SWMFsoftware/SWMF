@@ -214,8 +214,13 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                   SigmaCrMax*=SigmaCrMax_SafetyMargin;
 
                   //2.Evaluate the prospective number of collisions
-                  if (s0==s1) ancoll=nParticleNumber[s0]*(nParticleNumber[s0]-1.0)*LocalParticleWeight_s0*SigmaCrMax*LocalTimeStep_s0/cellMeasure;
-                  else exit(__LINE__,__FILE__,"not implemented");
+                  double maxLocalTimeStep,minLocalParticleWeight;
+
+                  maxLocalTimeStep=max(LocalTimeStep_s0,LocalTimeStep_s1);
+                  minLocalParticleWeight=min(LocalParticleWeight_s0,LocalParticleWeight_s1);
+
+                  if (s0==s1) ancoll=0.5*nParticleNumber[s0]*(nParticleNumber[s0]-1.0)*LocalParticleWeight_s0*SigmaCrMax*LocalTimeStep_s0/cellMeasure;
+                  else ancoll=(nParticleNumber[s0]*LocalParticleWeight_s0)*(nParticleNumber[s1]*LocalParticleWeight_s1)*SigmaCrMax*maxLocalTimeStep/minLocalParticleWeight/cellMeasure;
 
                   ncoll=(long int)ancoll;
                   ancoll-=ncoll;
@@ -265,22 +270,40 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
 
                     //update the velocities in the lists
-                    s0List[s0ptr].ValueChangedFlag=true;
-                    memcpy(s0List[s0ptr].vel,v0,3*sizeof(double));
+                    double pUpdate_s0,pUpdate_s1;
 
-#if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
-                    int CollFreqOffset=CollsionFrequentcySamplingOffset+sizeof(double)*((2*PIC::nTotalSpecies-(s0-1))*s0)/2+(s1-s0);
+                    pUpdate_s0=minLocalParticleWeight/LocalParticleWeight_s0 * LocalTimeStep_s0/maxLocalTimeStep;
+                    pUpdate_s1=minLocalParticleWeight/LocalParticleWeight_s1 * LocalTimeStep_s1/maxLocalTimeStep;
 
-                    *((double*)(SamplingData+CollFreqOffset))+=LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure;
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+                    pUpdate_s0*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0ParticleDataList[s0ptr].ParticleData);
+                    pUpdate_s1*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s1ParticleDataList[s1ptr].ParticleData);
 #endif
 
-                    s1List[s1ptr].ValueChangedFlag=true;
-                    memcpy(s1List[s1ptr].vel,v1,3*sizeof(double));
+                    if (rnd()<pUpdate_s0) {
+                      s0List[s0ptr].ValueChangedFlag=true;
+                      memcpy(s0List[s0ptr].vel,v0,3*sizeof(double));
+
+#if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
+                      int CollFreqOffset=CollsionFrequentcySamplingOffset+sizeof(double)*((2*PIC::nTotalSpecies-(s0-1))*s0)/2+(s1-s0);
+
+                      *((double*)(SamplingData+CollFreqOffset))+=LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure;
+
+                      if (s0==s1) *((double*)(SamplingData+CollFreqOffset))+=LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure; //there are two collisions per a pair
+#endif
+                    }
+
+                    if (rnd()<pUpdate_s1) {
+                      s1List[s1ptr].ValueChangedFlag=true;
+                      memcpy(s1List[s1ptr].vel,v1,3*sizeof(double));
+                    }
                   }
 
                   //update the velocities of the species 's1'
                   if (s0!=s1) {
-                    exit(__LINE__,__FILE__,"not implemented");
+                    for (cnt=0;cnt<nParticleNumber[s1];cnt++) if (s1List[cnt].ValueChangedFlag==true) {
+                      PIC::ParticleBuffer::SetV(s1List[cnt].vel,s1List[cnt].ParticleData);
+                    }
                   }
                 }
 
