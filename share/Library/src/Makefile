@@ -25,6 +25,7 @@ MODULES = \
 	ModInitialState.o\
 	ModInterpolate.o\
 	ModInterpolateAMR.o\
+	ModInterpolateBody.o\
         ModInterGen.o\
         ModInterWrapper.o\
 	ModIoUnit.o\

@@ -238,11 +238,13 @@ test_interpolate:
 OBJ_INTERPOLATE_AMR = \
 	../src/ModKind.o \
 	../src/ModCubeGeometry.o \
+	../src/ModInterpolateBody.o \
 	../src/ModInterpolateAMR.o \
 	test_interpolate_amr.o
 
 test_interpolate_amr_exe:
-	@(cd ../src; make ModInterpolateAMR.o)
+	@(cd ../src; make ModKind.o; make ModCubeGeometry.o; \
+	make ModInterpolateBody.o; make ModInterpolateAMR.o)
 	@make test_interpolate_amr.o
 	${LINK.f90} -o test_interpolate_amr.exe ${OBJ_INTERPOLATE_AMR} ${Lflag2}
 
