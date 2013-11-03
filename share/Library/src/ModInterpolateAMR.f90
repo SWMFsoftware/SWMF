@@ -1,6 +1,2134 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+module ModInterpolateSimpleShape
+  !\
+  ! Construct interpolation weights for a point inside
+  ! bodies, interolation being in terms of the values 
+  ! in the vertexes of the body. Examples of the implemented
+  ! bodies: tetrahedron, pyramids (rectangular and trapezoidal)
+  ! and their different compositions. Interpolation in parallel 
+  ! rays implements the following procedure; a ray of given 
+  ! direction is passed trough a given point inside the body, 
+  ! in the point of the ray intersects the body boundary, the value
+  ! is interpolated over planar subface (traingle, trapezoid, 
+  ! ractangle), then the point value is weighted in accordance with
+  ! the distances from the given point to its intersections with the 
+  ! body surface. Resolution_corner interpolates within the resolution 
+  ! corner, which has "fine vertexes"  - grid points of finer 
+  ! rectangular grid and "coarse vertexes" - grid points of coarser
+  ! rectangular grid with twice larger grid size. Finer grid cube and 
+  ! coarser grid cube have comon central point. Such grid coniguration
+  ! is typical for the resolution corner of a block adaptive grid, 
+  ! so that the provided routine may be used for interpolating values
+  ! in the proximity of such points.  
+  !/
+  implicit none
+  PRIVATE
+  SAVE
+  integer, parameter:: nDim = 3, nGrid = 8
+  integer, parameter:: &
+       x_       = 1,               &
+       y_       = 2,               &
+       z_       = 3
+  
+  integer, parameter:: Rectangular_=1, Trapezoidal_=2
+  public :: interpolate_tetrahedron
+  public :: interpolate_pyramid
+  public:: interpolate_pyramids, interpolate_on_parallel_rays
+contains
+  !========================
+  function cross_product(a_D, B_d)
+    real, dimension(nDim), intent(in) :: a_D, b_D
+    real, dimension(nDim) :: cross_product
+    !-----------------------------------------------
+    cross_product(x_) = a_D(y_)*b_D(z_) - a_D(z_)*b_D(y_)
+    cross_product(y_) = a_D(z_)*b_D(x_) - a_D(x_)*b_D(z_)
+    cross_product(z_) = a_D(x_)*b_D(y_) - a_D(y_)*b_D(x_)
+  end function cross_product
+  !=========================
+  real function triple_product(a_D, b_D, c_D)
+    real, dimension(nDim), intent(in) :: a_D, b_D, c_D
+    !-----------------------------------------------
+    triple_product = sum(a_D * cross_product(b_D, c_D))
+  end function triple_product
+  !===================================================
+  subroutine interpolate_tetrahedron(X1_D, X2_D, X3_D, X4_D, Xyz_D, Weight_I)
+    !\
+    ! Interpolate in the tetrahedron
+    !/
+    real, dimension(nDim), intent(in) :: X1_D, X2_D, X3_D, X4_D, Xyz_D
+    real, intent(out):: Weight_I(1:4)
+    real:: Aux
+    !-----------------------------------------------
+    !\
+    ! Need to solve an equation:
+    ! Xyz = Weight_I(1)*X1+Weight_I(2)*X2+Weight_I(3)*X3+Weight_I(4)*X4
+    ! Or, which is equivalent:
+    ! Xyz -X1 = Weight_I(2)*(X2-X1)+Weight_I(3)*(X3-X1)+Weight_I(4)*(X4-X1)
+    !/
+    Aux= 1/triple_product( X4_D - X1_D,  X3_D - X1_D,  X2_D - X1_D)
+    Weight_I(4) = &
+         triple_product(Xyz_D - X1_D,  X3_D - X1_D,  X2_D - X1_D)*Aux
+    Weight_I(3) = &
+         triple_product( X4_D - X1_D, Xyz_D - X1_D,  X2_D - X1_D)*Aux
+    Weight_I(2) = &
+         triple_product( X4_D - X1_D,  X3_D - X1_D, Xyz_D - X1_D)*Aux
+    Weight_I(1) = 1 - sum(Weight_I(2:4))
+  end subroutine interpolate_tetrahedron
+  !=======================================================================
+  subroutine interpolate_pyramid(&
+       iBase,X1_D, X2_D, X3_D, X4_D, X5_D, Xyz_D, Weight_I)
+    !\
+    ! Interpolate in the pyramid with base X1X2X3X4 and apex X5
+    ! valid for case of rectangular or trapezoid base
+    !/
+    integer, intent(in) :: iBase
+    real, dimension(nDim), intent(in) :: X1_D, X2_D, X3_D, X4_D, X5_D, Xyz_D
+    real, intent(out):: Weight_I(1:5)
+    !\
+    !Projection of Xyz point on the base of the pyramid X1X2X3X4 
+    !along the line X5Xyz
+    !/
+    real, dimension(nDim) :: XyzP_D 
+    real ::Alpha5
+    !-----------------------------------------------
+    !\
+    ! Solve equation: X5 + (Xyz - X5)/Alpha5 = XyzP
+    ! where XyzP belongs to the pydamid base.
+    ! As long as (XyzP-X1_D)\cdot[(X2-X1)\times(X3-X1)]=0,
+    ! we have Alpha5 =(&
+    ! X5 -Xyz)\cdot[(X2-X1)\times(X3-X1)]/(X5-X1)\cdot[(X2-X1)\times(X3-X1)]
+    !/
 
+    Alpha5 = triple_product(X5_D - Xyz_D, X2_D - X1_D, X3_D - X1_D)/&
+         triple_product(X5_D - X1_D , X2_D - X1_D, X3_D - X1_D)
+
+    if(Alpha5==0.0)then
+       if(all(Xyz_D(:)==X5_D(:)))then
+          Weight_I(5) = 1
+          Weight_I(1:4) = 0
+          RETURN
+       else
+          Weight_I(1:5) = -1
+          RETURN
+       end if
+    elseif(Alpha5 < 0.0 .or. Alpha5 > 1.0)then
+       Weight_I(1:5) = -1
+       RETURN
+    end if
+
+    XyzP_D = X5_D + (Xyz_D-X5_D)/Alpha5
+    !\
+    ! Now, Xyz = Alpha5*XyzP + (1-Alpha5)*X5
+    ! Find weight of the apex point X5_D
+    !/
+    Weight_I(5) = 1 - Alpha5
+
+    !\
+    ! Find weights of the base points X1, X2, X3, X4
+    !/
+    select case(iBase)
+    case(Rectangular_)
+       call rectangle(X1_D, X2_D, X3_D, X4_D, XyzP_D, Weight_I(1:4))
+    case(Trapezoidal_)
+       call trapezoid(X1_D, X2_D, X3_D, X4_D, XyzP_D, Weight_I(1:4))
+    end select
+
+    if(any(Weight_I(1:4) < 0.0))RETURN
+    !\
+    ! Correct weights due to pyramid geometry
+    !/
+    Weight_I(1) = Weight_I(1) * (1 - Weight_I(5))
+    Weight_I(2) = Weight_I(2) * (1 - Weight_I(5))
+    Weight_I(3) = Weight_I(3) * (1 - Weight_I(5))
+    Weight_I(4) = Weight_I(4) * (1 - Weight_I(5))
+
+  end subroutine interpolate_pyramid
+  !============
+  subroutine rectangle(X1_D, X2_D, X3_D, X4_D, XyzP_D, Weight_I)
+    real, dimension(nDim), intent(in):: X1_D, X2_D, X3_D, X4_D, XyzP_D
+    real, intent(out):: Weight_I(1:4)
+    real:: x,y
+    !---------
+    !Calculate dimensionless coordinates with respect to vertex 1 
+    y =  sum((X3_D - X1_D)*(XyzP_D - X1_D))/&
+         sum((X3_D - X1_D)*(X3_D - X1_D))
+    x =  sum((XyzP_D - X1_D)*(X2_D - X1_D))/&
+         sum((X2_D - X1_D)*(X2_D - X1_D) )
+
+    Weight_I(3)  =     y *(1 - x) ; Weight_I(4) =      y *x
+    Weight_I(1) = (1 - y)*(1 - x) ; Weight_I(2) = (1 - y)*x
+
+  end subroutine rectangle
+  !==============================
+  subroutine trapezoid(X1_D, X2_D, X3_D, X4_D, XyzP_D, Weight_I)
+    real, dimension(nDim), intent(in):: X1_D, X2_D, X3_D, X4_D, XyzP_D
+    real, intent(out)::Weight_I(1:4)
+    real:: x,y, XyzMin_D(nDim), XyzMax_D(nDim)
+    !We require that the lager base is X1X2
+    !---------
+    !Calculate dimensionless coordinates with respect to vertex 1
+    XyzMin_D = 0.50*(X1_D + X2_D);  XyzMax_D = 0.50*(X3_D + X4_D)
+
+    y =  sum((XyzMax_D - XyzMin_D)*(XyzP_D - XyzMin_D))/&
+         sum((XyzMax_D - XyzMin_D)*(XyzMax_D - XyzMin_D))
+    x =  sum((XyzP_D   - X1_D)*(X2_D - X1_D))/&
+         sum( (X2_D    - X1_D)*(X2_D - X1_D))
+    if( y < 0.0 .or. y > 1.0 .or. x < 0.0 .or. x > 1.0)then
+       Weight_I(1:4) = -1
+       RETURN
+    end if
+    if( x <= 0.250) then
+       !Interpolation in triangle 132, 4th weight is zero
+       Weight_I(3) = y                   ; Weight_I(4) = 0
+       Weight_I(1) = 1 - 0.750*y - x     ; Weight_I(2) = x - 0.250*y
+    elseif(x <= 0.750) then
+       !Bilinear interpolation
+       Weight_I(3) = y*(1 - 2*(x - 0.25)); Weight_I(4) = y*2*(x - 0.25)
+       Weight_I(1) = (1 - y)*(1 - x)     ; Weight_I(2) = (1 - y)*x
+    else
+       !Interpolation in triangle 142, 3rd weight is zero
+       Weight_I(3) = 0                   ; Weight_I(4) = y
+       Weight_I(1) = 1 - 0.250*y - x     ; Weight_I(2) = x - 0.750*y
+    end if
+
+  end subroutine trapezoid
+  !=====================================
+  subroutine triangle(X1_D, X2_D, X3_D,  XyzP_D, Weight_I)
+    real, dimension(nDim), intent(in):: X1_D, X2_D, X3_D, XyzP_D
+    real, intent(out):: Weight_I(1:3)
+    real:: CrossProductInv_D(nDim)
+    !\
+    ! In 2D case
+    ! Weight_I(3) = cross_product(XyzP_D-X1_D,X2_D-X1_D)/&
+    !               cross_product(X3_D-X1_D,X2_D-X1_D)
+    ! Weight_I(2) = cross_product(X3_D-X1_D,Xyz_D-X1_D)/&
+    !               cross_product(X3_D - X1_D, X2_D-X1_D)
+    ! iN 3d case instead of /cross_product(X3_D - X1_D, X2_D-X1_D) we use 
+    ! \cdot cross_product(X3_D - X1_D, X2_D-X1_D)/&
+    !       sum(cross_product(X3_D - X1_D, X2_D-X1_D)**2)
+    !/
+    CrossProductInv_D = cross_product(X3_D - X1_D, X2_D - X1_D)
+    CrossProductInv_D = CrossProductInv_D/sum(CrossProductInv_D**2)
+
+    Weight_I(3) = sum(cross_product(XyzP_D - X1_D, X2_D  - X1_D)*&
+         CrossProductInv_D)
+    Weight_I(2) = sum(cross_product(X3_D  - X1_D, XyzP_D - X1_D)*&
+         CrossProductInv_D)
+    Weight_I(1) = 1 - sum(Weight_I(2:3))
+
+  end subroutine triangle
+  !=====================================
+  subroutine interpolate_pyramids(&
+       XyzGrid_DI,Xyz_D,iOrder_I, Weight_I, nGridOut, &
+       iTetrahedron1_I,iTetrahedron2_I,iTetrahedron3_I,&
+       iTetrahedron4_I,iTetrahedron5_I,iTetrahedron6_I,&
+       iRectangular1_I,iRectangular2_I,iRectangular3_I,&
+       iTrapezoidal1_I,iTrapezoidal2_I)
+    integer,intent(in),optional,dimension(4)::&
+         iTetrahedron1_I, iTetrahedron2_I, iTetrahedron3_I,&
+         iTetrahedron4_I, iTetrahedron5_I, iTetrahedron6_I
+    integer,intent(in),optional,dimension(5)::&
+         iRectangular1_I, iRectangular2_I, iRectangular3_I,&
+         iTrapezoidal1_I, iTrapezoidal2_I
+    real, intent(in):: XyzGrid_DI(nDim,nGrid), Xyz_D(nDim)
+    real, intent(out):: Weight_I(nGrid)
+    integer, intent(out)::nGridOut, iOrder_I(1:5)
+    !---------------------------
+    nGridOut = -1; Weight_I = -1
+    if(present(iTetrahedron1_I))then
+       call interpolate_tetrahedron(&
+            XyzGrid_DI(:,iTetrahedron1_I(1)),&
+            XyzGrid_DI(:,iTetrahedron1_I(2)),&
+            XyzGrid_DI(:,iTetrahedron1_I(3)),&
+            XyzGrid_DI(:,iTetrahedron1_I(4)),Xyz_D, Weight_I(1:4))
+       if(all(Weight_I(1:4).ge.0.0))then
+          nGridOut = 4
+          iOrder_I(1:4) = iTetrahedron1_I
+          RETURN
+       elseif(present(iTetrahedron2_I))then
+          call interpolate_tetrahedron(&
+               XyzGrid_DI(:,iTetrahedron2_I(1)),&
+               XyzGrid_DI(:,iTetrahedron2_I(2)),&
+               XyzGrid_DI(:,iTetrahedron2_I(3)),&
+               XyzGrid_DI(:,iTetrahedron2_I(4)),Xyz_D, Weight_I(1:4))
+          if(all(Weight_I(1:4).ge.0.0))then
+             nGridOut = 4
+             iOrder_I(1:4) = iTetrahedron2_I
+             RETURN
+          elseif(present(iTetrahedron3_I))then
+             call interpolate_tetrahedron(&
+                  XyzGrid_DI(:,iTetrahedron3_I(1)),&
+                  XyzGrid_DI(:,iTetrahedron3_I(2)),&
+                  XyzGrid_DI(:,iTetrahedron3_I(3)),&
+                  XyzGrid_DI(:,iTetrahedron3_I(4)),&
+                  Xyz_D, Weight_I(1:4))
+             if(all(Weight_I(1:4).ge.0.0))then
+                nGridOut = 4
+                iOrder_I(1:4) = iTetrahedron3_I
+                RETURN
+             elseif(present(iTetrahedron4_I))then
+                call interpolate_tetrahedron(&
+                     XyzGrid_DI(:,iTetrahedron4_I(1)),&
+                     XyzGrid_DI(:,iTetrahedron4_I(2)),&
+                     XyzGrid_DI(:,iTetrahedron4_I(3)),&
+                     XyzGrid_DI(:,iTetrahedron4_I(4)),&
+                     Xyz_D, Weight_I(1:4))
+                if(all(Weight_I(1:4).ge.0.0))then
+                   nGridOut = 4
+                   iOrder_I(1:4) = iTetrahedron4_I
+                   RETURN
+                elseif(present(iTetrahedron5_I))then
+                   call interpolate_tetrahedron(&
+                        XyzGrid_DI(:,iTetrahedron5_I(1)),&
+                        XyzGrid_DI(:,iTetrahedron5_I(2)),&
+                        XyzGrid_DI(:,iTetrahedron5_I(3)),&
+                        XyzGrid_DI(:,iTetrahedron5_I(4)),&
+                        Xyz_D, Weight_I(1:4))
+                   if(all(Weight_I(1:4).ge.0.0))then
+                      nGridOut = 4
+                      iOrder_I(1:4) = iTetrahedron5_I
+                      RETURN
+                   elseif(present(iTetrahedron6_I))then
+                      call interpolate_tetrahedron(&
+                           XyzGrid_DI(:,iTetrahedron6_I(1)),&
+                           XyzGrid_DI(:,iTetrahedron6_I(2)),&
+                           XyzGrid_DI(:,iTetrahedron6_I(3)),&
+                           XyzGrid_DI(:,iTetrahedron6_I(4)),&
+                           Xyz_D, Weight_I(1:4))
+                      if(all(Weight_I(1:4).ge.0.0))then
+                         nGridOut = 4
+                         iOrder_I(1:4) = iTetrahedron6_I
+                         RETURN
+                      end if ! 6
+                   end if    ! 5
+                end if       ! 4
+             end if          ! 3
+          end if             ! 2
+       end if                ! 1
+    end if                   ! no tetrahedron
+    if(present(iRectangular1_I))then
+       call interpolate_pyramid(Rectangular_,&
+            XyzGrid_DI(:,iRectangular1_I(1)),&
+            XyzGrid_DI(:,iRectangular1_I(2)),&
+            XyzGrid_DI(:,iRectangular1_I(3)),&
+            XyzGrid_DI(:,iRectangular1_I(4)),&
+            XyzGrid_DI(:,iRectangular1_I(5)),Xyz_D, Weight_I(1:5) )
+       if(all(Weight_I(1:5).ge.0.0))then
+          nGridOut = 5
+          iOrder_I(1:5) = iRectangular1_I
+          RETURN
+       elseif(present(iRectangular2_I))then
+          call interpolate_pyramid(Rectangular_,&
+               XyzGrid_DI(:,iRectangular2_I(1)),&
+               XyzGrid_DI(:,iRectangular2_I(2)),&
+               XyzGrid_DI(:,iRectangular2_I(3)),&
+               XyzGrid_DI(:,iRectangular2_I(4)),&
+               XyzGrid_DI(:,iRectangular2_I(5)),Xyz_D, Weight_I(1:5) )
+          if(all(Weight_I(1:5).ge.0.0))then
+             nGridOut = 5
+             iOrder_I(1:5) = iRectangular2_I
+             RETURN
+          elseif(present(iRectangular3_I))then
+             call interpolate_pyramid(Rectangular_,&
+                  XyzGrid_DI(:,iRectangular3_I(1)),&
+                  XyzGrid_DI(:,iRectangular3_I(2)),&
+                  XyzGrid_DI(:,iRectangular3_I(3)),&
+                  XyzGrid_DI(:,iRectangular3_I(4)),&
+                  XyzGrid_DI(:,iRectangular3_I(5)),Xyz_D, Weight_I(1:5) )
+             if(all(Weight_I(1:5).ge.0.0))then
+                nGridOut = 5
+                iOrder_I(1:5) = iRectangular3_I
+                RETURN
+             end if          ! 3
+          end if             ! 2
+       end if                ! 1
+    end if                   ! no rectangular
+    if(present(iTrapezoidal1_I))then
+       call interpolate_pyramid(Trapezoidal_,&
+            XyzGrid_DI(:,iTrapezoidal1_I(1)),&
+            XyzGrid_DI(:,iTrapezoidal1_I(2)),&
+            XyzGrid_DI(:,iTrapezoidal1_I(3)),&
+            XyzGrid_DI(:,iTrapezoidal1_I(4)),&
+            XyzGrid_DI(:,iTrapezoidal1_I(5)),Xyz_D, Weight_I(1:5) )
+       if(all(Weight_I(1:5).ge.0.0))then
+          nGridOut = 5
+          iOrder_I(1:5) = iTrapezoidal1_I
+          RETURN
+       elseif(present(iTrapezoidal2_I))then
+          call interpolate_pyramid(Trapezoidal_,&
+               XyzGrid_DI(:,iTrapezoidal2_I(1)),&
+               XyzGrid_DI(:,iTrapezoidal2_I(2)),&
+               XyzGrid_DI(:,iTrapezoidal2_I(3)),&
+               XyzGrid_DI(:,iTrapezoidal2_I(4)),&
+               XyzGrid_DI(:,iTrapezoidal2_I(5)),Xyz_D, Weight_I(1:5) )
+          if(all(Weight_I(1:5).ge.0.0))then
+             nGridOut = 5
+             iOrder_I(1:5) = iTrapezoidal2_I
+             RETURN
+          end if             ! 2
+       end if                ! 1
+    end if                   ! no trapezoid
+  end subroutine interpolate_pyramids
+  !======================
+  subroutine interpolate_on_parallel_rays(&
+       XyzGrid_DI, Xyz_D, iOrder_I, Weight_I, nGridOut, Dir_D, &
+       iDRectangle1_I, iDTrapezoid1_I,   &
+       iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
+       iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
+       iURectangle1_I, iURectangle2_I, iURectangle3_I,&
+       iUTrapezoid1_I,                             &
+       iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
+       iUTriangle4_I)
+    real, intent(in):: XyzGrid_DI(nDim,nGrid), Xyz_D(nDim)
+    real, intent(out):: Weight_I(nGrid)
+    integer, intent(out)::nGridOut, iOrder_I(8)
+    !Direction of parallel rays
+    real, intent(in) :: Dir_D(nDim)
+    !\
+    !Up subfaces ure in the direction of  Dir_D from Xyz point
+    !Down faces are in the direction of -Dir_D
+    !/
+    integer, intent(in), optional, dimension(3)::&
+         iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
+         iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
+         iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
+         iUTriangle4_I
+    integer, intent(in), optional, dimension(4)::&
+         iDRectangle1_I, iDTrapezoid1_I, iUTrapezoid1_I,&
+         iURectangle1_I, iURectangle2_I, iURectangle3_I
+    !\
+    !The point belonging to one of the up and down subfaces
+    !/ 
+    real, dimension(nDim) :: XyzUp_D, XyzDown_D, X1_D, X2_D, X3_D, X4_D
+    !Misc
+    real:: AlphaUp, AlphaDown
+    integer:: nGridOutUp, nGridOutDown
+    !\
+    ! Consider a ray passing through Xyz
+    ! Solve equation:
+    ! Xyz + Dir*AlphaUp = XyzUp 
+    ! its solution is 
+    ! AlphaUp = (UX1-Xyz)\cdot[(UX2-UX1)\times(UX3-UX1)]/&
+    !          Dir\cdot[(UX2-UX1)\times(UX3-UX1)]
+    ! XyzUp belongs to the up subface
+    !/
+    !\
+    ! Solve equation:
+    ! Xyz - Dir*AlphaDown = XyzDown 
+    ! its solution is 
+    ! AlphaDown = (Xyz-DX1)\cdot[(DX2-DX1)\times(DX3-DX1)]/&
+    ! Dir\cdot[(DX2-DX1)\times(DX3-DX1)]
+    ! XyzUp belongs to the Down subface
+    !/
+    !\
+    ! As long as Xyz=(XyzDown*AlphaUp + XyzUp*AlphaDown)/(AlphaUp+AlphaDown)
+    ! the weights for the upper face should be multiplied by 
+    ! AlphaDown/(AlphaUp+AlphaDown)
+    ! for the down face - by AlphaUp/(AlphaUp+AlphaDown)
+    !/
+
+    nGridOut = -1; nGridOutUp= -1; nGridOutDown = -1
+    Weight_I = -1; iOrder_I = 0
+    if(present(iUTriangle1_I))then
+       X1_D = XyzGrid_DI(:,iUTriangle1_I(1))
+       X2_D = XyzGrid_DI(:,iUTriangle1_I(2))
+       X3_D = XyzGrid_DI(:,iUTriangle1_I(3))
+       AlphaUp = triple_product(X1_D - Xyz_D, X2_D - X1_D, X3_D - X1_D)/&
+            triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+       XyzUp_D = Xyz_D + AlphaUp * Dir_D
+       call triangle(X1_D, X2_D, X3_D, XyzUp_D, Weight_I(1:3))
+       if(all(Weight_I(1:3)>=0.0))then
+          !\
+          !The ray for point Xyz is projected into this triangle
+          !/
+          if(AlphaUp==0.0)then
+             !\
+             !Point Xyz belongs to this traingle
+             !/
+             iOrder_I(1:3) = iUTriangle1_I
+             nGridOut = 3
+             RETURN
+          elseif(AlphaUp < 0)then
+             !\
+             ! Point is above the upper triangle
+             ! return with negative weights and nGridOut = -1
+             RETURN 
+          else
+             iOrder_I(1:3) = iUTriangle1_I
+             nGridOutUp = 3
+             !\
+             ! Exit if for triangles with positive AlphaUp and nGridOut = 3
+             !/
+          end if
+       elseif(present(iUTriangle2_I))then
+          X1_D = XyzGrid_DI(:,iUTriangle2_I(1))
+          X2_D = XyzGrid_DI(:,iUTriangle2_I(2))
+          X3_D = XyzGrid_DI(:,iUTriangle2_I(3))
+          AlphaUp = triple_product(X1_D - Xyz_D, X2_D - X1_D, X3_D - X1_D)/&
+               triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+          XyzUp_D = Xyz_D + AlphaUp * Dir_D
+          call triangle(X1_D, X2_D, X3_D, XyzUp_D, Weight_I(1:3))
+          if(all(Weight_I(1:3)>=0.0))then
+             !\
+             !The ray for point Xyz is projected into this triangle
+             !/
+             if(AlphaUp==0.0)then
+                !\
+                !Point Xyz belongs to this traingle
+                !/
+                iOrder_I(1:3) = iUTriangle2_I
+                nGridOut = 3
+                RETURN
+             elseif(AlphaUp < 0)then
+                !\
+                ! Point is above the upper triangle
+                ! return with negative weights and nGridOut = -1
+                RETURN 
+             else             
+                iOrder_I(1:3) = iUTriangle2_I
+                nGridOutUp = 3
+                !\
+                ! Exit if for triangles with positive AlphaUp
+                !/
+             end if
+          elseif(present(iUTriangle3_I))then
+             X1_D = XyzGrid_DI(:,iUTriangle3_I(1))
+             X2_D = XyzGrid_DI(:,iUTriangle3_I(2))
+             X3_D = XyzGrid_DI(:,iUTriangle3_I(3))
+             AlphaUp = &
+                  triple_product(X1_D - Xyz_D, X2_D - X1_D, X3_D - X1_D)/&
+                  triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+             XyzUp_D = Xyz_D + AlphaUp * Dir_D
+             call triangle(X1_D, X2_D, X3_D, XyzUp_D, Weight_I(1:3))
+             if(all(Weight_I(1:3)>=0.0))then
+                !\
+                !The ray for point Xyz is projected into this triangle
+                !/
+                if(AlphaUp==0.0)then
+                   !\
+                   !Point Xyz belongs to this traingle
+                   !/
+                   iOrder_I(1:3) = iUTriangle3_I
+                   nGridOut = 3
+                   RETURN
+                elseif(AlphaUp < 0)then
+                   !\
+                   ! Point is above the upper triangle
+                   ! return with negative weights and nGridOut = -1
+                   RETURN 
+                else        
+                   iOrder_I(1:3) = iUTriangle3_I
+                   nGridOutUp = 3
+                   !\
+                   ! Exit if for triangles with positive AlphaUp 
+                   !/
+
+                end if
+             elseif(present(iUTriangle4_I))then
+                X1_D = XyzGrid_DI(:,iUTriangle4_I(1))
+                X2_D = XyzGrid_DI(:,iUTriangle4_I(2))
+                X3_D = XyzGrid_DI(:,iUTriangle4_I(3))
+                AlphaUp = &
+                     triple_product(X1_D - Xyz_D,X2_D - X1_D,X3_D - X1_D)/&
+                     triple_product(Dir_D       ,X2_D - X1_D,X3_D - X1_D)
+                XyzUp_D = Xyz_D + AlphaUp * Dir_D
+                call triangle(X1_D, X2_D, X3_D, Xyz_D, Weight_I(1:3))
+                if(all(Weight_I(1:3)>=0.0))then
+                   !\
+                   !The ray for point Xyz is projected into this triangle
+                   !/
+                   if(AlphaUp==0.0)then
+                      !\
+                      !Point Xyz belongs to this traingle
+                      !/
+                      iOrder_I(1:3) = iUTriangle4_I
+                      nGridOut = 3
+                      RETURN
+                   elseif(AlphaUp < 0.0)then
+                      !\
+                      ! Point is above the upper triangle
+                      ! return with negative weights and nGridOut = -1
+                      RETURN 
+                   else   
+                      iOrder_I(1:3) = iUTriangle4_I
+                      nGridOutUp = 3
+                      !\
+                      ! Exit if for triangles with positive AlphaUp 
+                      !/
+                   end if
+                end if
+             end if       !4
+          end if          !3
+       end if             !2
+    end if                !1
+    if(nGridOutUp < 1)then
+       if(present(iURectangle1_I))then
+          X1_D = XyzGrid_DI(:,iURectangle1_I(1))
+          X2_D = XyzGrid_DI(:,iURectangle1_I(2))
+          X3_D = XyzGrid_DI(:,iURectangle1_I(3))
+          X4_D = XyzGrid_DI(:,iURectangle1_I(4))
+          AlphaUp = triple_product(X1_D - Xyz_D, X2_D - X1_D, X3_D - X1_D)/&
+               triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+          XyzUp_D = Xyz_D + AlphaUp * Dir_D
+          call rectangle(X1_D, X2_D, X3_D, X4_D, XyzUp_D, Weight_I(1:4))
+          if(all(Weight_I(1:4)>=0.0))then
+             !\
+             !The ray for point Xyz is projected into this rectangle
+             !/
+             if(AlphaUp==0.0)then
+                !\
+                !Point Xyz belongs to this rectangle
+                !/
+                iOrder_I(1:4) = iURectangle1_I
+                nGridOut = 4
+                RETURN
+             elseif(AlphaUp < 0.0)then
+                !\
+                ! Point is above the upper rectangle
+                ! return with negative weights and nGridOut = -1
+                RETURN 
+             else 
+                iOrder_I(1:4) = iURectangle1_I
+                nGridOutUp = 4
+                !\
+                ! Exit if for rectangles with positive AlphaUp 
+                !/
+             end if
+          elseif(present(iURectangle2_I))then
+             X1_D = XyzGrid_DI(:,iURectangle2_I(1))
+             X2_D = XyzGrid_DI(:,iURectangle2_I(2))
+             X3_D = XyzGrid_DI(:,iURectangle2_I(3))
+             X4_D = XyzGrid_DI(:,iURectangle2_I(4))
+             AlphaUp = triple_product(X1_D - Xyz_D,X2_D - X1_D,X3_D - X1_D)/&
+                  triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+             XyzUp_D = Xyz_D + AlphaUp * Dir_D
+             call rectangle(X1_D, X2_D, X3_D, X4_D, XyzUp_D, Weight_I(1:4))
+             if(all(Weight_I(1:4)>=0.0))then
+                !\
+                !The ray for point Xyz is projected into this rectangle
+                !/
+                if(AlphaUp==0.0)then
+                   !\
+                   !Point Xyz belongs to this rectangle
+                   !/
+                   iOrder_I(1:4) = iURectangle2_I
+                   nGridOut = 4
+                   RETURN
+                elseif(AlphaUp < 0.0)then
+                   !\
+                   ! Point is above the upper rectangle
+                   ! return with negative weights and nGridOut = -1
+                   RETURN 
+                else 
+                   !\
+                   ! Exit if for rectangles with positive AlphaUp 
+                   !/
+                   iOrder_I(1:4) = iURectangle2_I
+                   nGridOutUp = 4
+                end if
+             elseif(present(iURectangle3_I))then
+                X1_D = XyzGrid_DI(:,iURectangle3_I(1))
+                X2_D = XyzGrid_DI(:,iURectangle3_I(2))
+                X3_D = XyzGrid_DI(:,iURectangle3_I(3))
+                X4_D = XyzGrid_DI(:,iURectangle3_I(4))
+                AlphaUp = &
+                     triple_product(X1_D - Xyz_D, X2_D - X1_D, X3_D - X1_D)/&
+                     triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+                XyzUp_D = Xyz_D + AlphaUp * Dir_D
+                call rectangle(X1_D, X2_D, X3_D, X4_D, XyzUp_D, Weight_I(1:4))
+                if(all(Weight_I(1:4)>=0.0))then
+                   !\
+                   !The ray for point Xyz is projected into this rectangle
+                   !/
+                   if(AlphaUp==0.0)then
+                      !\
+                      !Point Xyz belongs to this rectangle
+                      !/
+                      iOrder_I(1:4) = iURectangle3_I
+                      nGridOut = 4
+                      RETURN
+                   elseif(AlphaUp < 0.0)then
+                      !\
+                      ! Point is above the upper rectangle
+                      ! return with negative weights and nGridOut = -1
+                      RETURN 
+                   else 
+                      !\
+                      ! Exit if for rectangles with positive AlphaUp 
+                      !/
+                      iOrder_I(1:4) = iURectangle3_I
+                      nGridOutUp = 4
+                   end if
+                end if
+             end if     !3
+          end if        !2
+       end if           !1
+    end if
+    if(nGridOutUp < 1)then
+       if(present(iUTrapezoid1_I))then
+          X1_D = XyzGrid_DI(:,iUTrapezoid1_I(1))
+          X2_D = XyzGrid_DI(:,iUTrapezoid1_I(2))
+          X3_D = XyzGrid_DI(:,iUTrapezoid1_I(3))
+          X4_D = XyzGrid_DI(:,iUTrapezoid1_I(4))
+          AlphaUp = triple_product(X1_D - Xyz_D, X2_D - X1_D, X3_D - X1_D)/&
+               triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+          XyzUp_D = Xyz_D + AlphaUp * Dir_D
+          call Trapezoid(X1_D, X2_D, X3_D, X4_D, XyzUp_D, Weight_I(1:4))
+          if(all(Weight_I(1:4)>=0.0))then
+             !\
+             !The ray for point Xyz is projected into this trapezoid
+             !/
+             if(AlphaUp==0.0)then
+                !\
+                !Point Xyz belongs to this rectangle
+                !/
+                iOrder_I(1:4) = iUTrapezoid1_I
+                nGridOut = 4
+                RETURN
+             elseif(AlphaUp < 0.0)then
+                !\
+                ! Point is above the upper trapezoid
+                ! return with negative weights and nGridOut = -1
+                RETURN 
+             else 
+                !\
+                ! Exit if for rectangles with positive AlphaUp 
+                !/
+                iOrder_I(1:4) = iUTrapezoid1_I
+                nGridOutUp = 4
+             end if
+          end if
+       end if
+    end if
+    !\
+    !If no intersection point with upper boundary is found
+    !/
+    if(nGridOutUp == -1)RETURN
+    !\
+    !Calculate low face
+    if(present(iDTriangle1_I))then
+       Weight_I(4:3+nGridOutUp) = Weight_I(1:nGridOutUp)
+       Weight_I(1:3) = 0
+       iOrder_I(4:3+nGridOutUp) = iOrder_I(1:nGridOutUp)
+       iOrder_I(1:3) = 0
+       X1_D = XyzGrid_DI(:,iDTriangle1_I(1))
+       X2_D = XyzGrid_DI(:,iDTriangle1_I(2))
+       X3_D = XyzGrid_DI(:,iDTriangle1_I(3))
+       AlphaDown = &
+            triple_product(Xyz_D - X1_D, X2_D - X1_D, X3_D - X1_D)/&
+            triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+       XyzDown_D = Xyz_D - AlphaDown*Dir_D
+       call triangle(X1_D, X2_D, X3_D, XyzDown_D, Weight_I(1:3))
+       if(all(Weight_I(1:3)>=0.0))then
+          !\
+          !The ray for point Xyz is projected into this triangle
+          !/
+          if(AlphaDown==0.0)then
+             !\
+             !Point Xyz belongs to this triangle
+             !/
+             iOrder_I(1:3) = iDTriangle1_I
+             nGridOut = 3
+             RETURN
+          elseif(AlphaDown < 0.0)then
+             !\
+             ! Point is below the lower triangle
+             ! return with negative weights and nGridOut = -1
+             !/
+             RETURN 
+          else
+             !\
+             ! Exit if for triangles with positive AlphaDown 
+             !/
+             iOrder_I(1:3) = iDTriangle1_I
+             nGridOutDown = 3
+          end if
+       elseif(present(iDTriangle2_I))then
+          X1_D = XyzGrid_DI(:,iDTriangle2_I(1))
+          X2_D = XyzGrid_DI(:,iDTriangle2_I(2))
+          X3_D = XyzGrid_DI(:,iDTriangle2_I(3))
+          AlphaDown = &
+               triple_product(Xyz_D - X1_D, X2_D - X1_D, X3_D - X1_D)/&
+               triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+          XyzDown_D = Xyz_D - AlphaDown * Dir_D
+          call triangle(X1_D, X2_D, X3_D, XyzDown_D, Weight_I(1:3))
+          if(all(Weight_I(1:3)>=0.0))then
+             !\
+             !The ray for point Xyz is projected into this triangle
+             !/
+             if(AlphaDown==0.0)then
+                !\
+                !Point Xyz belongs to this triangle
+                !/
+                iOrder_I(1:3) = iDTriangle2_I
+                nGridOut = 3
+                RETURN
+             elseif(AlphaDown < 0.0)then
+                !\
+                ! Point is below the lower triangle
+                ! return with negative weights and nGridOut = -1
+                !/
+                RETURN
+             else
+                !\
+                ! Exit if for triangles with positive AlphaDown 
+                !/
+                iOrder_I(1:3) = iDTriangle2_I
+                nGridOutDown = 3
+             end if
+          elseif(present(iDTriangle3_I))then
+             X1_D = XyzGrid_DI(:,iDTriangle3_I(1))
+             X2_D = XyzGrid_DI(:,iDTriangle3_I(2))
+             X3_D = XyzGrid_DI(:,iDTriangle3_I(3))
+             AlphaDown = &
+                  triple_product(Xyz_D - X1_D,X2_D - X1_D,X3_D - X1_D)/&
+                  triple_product(Dir_D       ,X2_D - X1_D,X3_D - X1_D)
+             XyzDown_D = Xyz_D - AlphaDown * Dir_D
+             call triangle(X1_D, X2_D, X3_D, XyzDown_D, Weight_I(1:3))
+             if(all(Weight_I(1:3)>=0.0))then
+                !\
+                !The ray for point Xyz is projected into this triangle
+                !/
+                if(AlphaDown==0.0)then
+                   !\
+                   !Point Xyz belongs to this triangle
+                   !/
+                   iOrder_I(1:3) = iDTriangle3_I
+                   nGridOut = 3
+                   RETURN
+                elseif(AlphaDown < 0.0)then
+                   !\
+                   ! Point is below the lower triangle
+                   ! return with negative weights and nGridOut = -1
+                   !/
+                   RETURN
+                else
+                   !\
+                   ! Exit if for triangles with positive AlphaDown 
+                   !/
+                   iOrder_I(1:3) = iDTriangle3_I
+                   nGridOutDown = 3
+                end if
+             elseif(present(iDTriangle4_I))then
+                X1_D = XyzGrid_DI(:,iDTriangle4_I(1))
+                X2_D = XyzGrid_DI(:,iDTriangle4_I(2))
+                X3_D = XyzGrid_DI(:,iDTriangle4_I(3))
+                AlphaDown = &
+                     triple_product(Xyz_D - X1_D,X2_D - X1_D,X3_D - X1_D)/&
+                     triple_product(Dir_D       ,X2_D - X1_D,X3_D - X1_D)
+                XyzDown_D = Xyz_D - AlphaDown * Dir_D
+                call triangle(X1_D, X2_D, X3_D, XyzDown_D, Weight_I(1:3))
+                if(all(Weight_I(1:3)>=0.0))then
+                   !\
+                   !The ray for point Xyz is projected into this triangle
+                   !/
+                   if(AlphaDown==0.0)then
+                      !\
+                      !Point Xyz belongs to this triangle
+                      !/
+                      iOrder_I(1:3) = iDTriangle4_I
+                      nGridOut = 3
+                      RETURN
+                   elseif(AlphaDown < 0.0)then
+                      !\
+                      ! Point is below the lower triangle
+                      ! return with negative weights and nGridOut = -1
+                      !/
+                      RETURN
+                   else
+                      !\
+                      ! Exit if for triangles with positive AlphaDown 
+                      !/
+                      iOrder_I(1:3) = iDTriangle4_I
+                      nGridOutDown = 3
+                   end if
+                elseif(present(iDTriangle5_I))then
+                   X1_D = XyzGrid_DI(:,iDTriangle5_I(1))
+                   X2_D = XyzGrid_DI(:,iDTriangle5_I(2))
+                   X3_D = XyzGrid_DI(:,iDTriangle5_I(3))
+                   AlphaDown = &
+                        triple_product(&
+                        Xyz_D - X1_D,X2_D - X1_D,X3_D - X1_D)/&
+                        triple_product(&
+                        Dir_D       ,X2_D - X1_D,X3_D - X1_D)
+                   XyzDown_D = Xyz_D - AlphaDown * Dir_D
+                   call triangle(X1_D, X2_D, X3_D, XyzDown_D, Weight_I(1:3))
+                   if(all(Weight_I(1:3)>=0.0))then
+                      !\
+                      !The ray for point Xyz is projected into this triangle
+                      !/
+                      if(AlphaDown==0.0)then
+                         !\
+                         !Point Xyz belongs to this triangle
+                         !/
+                         iOrder_I(1:3) = iDTriangle5_I
+                         nGridOut = 3
+                         RETURN
+                      elseif(AlphaDown < 0.0)then
+                         !\
+                         ! Point is below the lower triangle
+                         ! return with negative weights and nGridOut = -1
+                         !/
+                         RETURN
+                      else
+                         !\
+                         ! Exit if for triangles with positive AlphaDown 
+                         !/
+                         iOrder_I(1:3) = iDTriangle5_I
+                         nGridOutDown = 3
+                      end if
+                   elseif(present(iDTriangle6_I))then
+                      X1_D = XyzGrid_DI(:,iDTriangle6_I(1))
+                      X2_D = XyzGrid_DI(:,iDTriangle6_I(2))
+                      X3_D = XyzGrid_DI(:,iDTriangle6_I(3))
+                      AlphaDown = &
+                           triple_product(&
+                           Xyz_D - X1_D,X2_D - X1_D,X3_D - X1_D)/&
+                           triple_product(&
+                           Dir_D       ,X2_D - X1_D,X3_D - X1_D)
+                      XyzDown_D = Xyz_D - AlphaDown * Dir_D
+                      call triangle(X1_D, X2_D, X3_D, XyzDown_D, Weight_I(1:3))
+                      if(all(Weight_I(1:3)>=0.0))then
+                         !\
+                         !The ray for point Xyz is projected into this 
+                         !triangle
+                         !/
+                         if(AlphaDown==0.0)then
+                            !\
+                            !Point Xyz belongs to this triangle
+                            !/
+                            iOrder_I(1:3) = iDTriangle6_I
+                            nGridOut = 3
+                            RETURN
+                         elseif(AlphaDown < 0.0)then
+                            !\
+                            ! Point is below the lower triangle
+                            ! return with negative weights and nGridOut = -1
+                            !/
+                            RETURN
+                         else
+                            !\
+                            ! Exit if for triangles with positive AlphaDown 
+                            !/
+                            iOrder_I(1:3) = iDTriangle6_I
+                            nGridOutDown = 3
+                         end if
+                      end if
+                   end if !6
+                end if    !5
+             end if       !4
+          end if          !3
+       end if             !2
+    end if                !1
+    if(nGridOutDown <1)then
+       if(present(iDRectangle1_I))then
+          if(present(iDTriangle1_I))then
+             Weight_I(5:4+nGridOutUp) = Weight_I(4:3+nGridOutUp)
+             Weight_I(1:4) = 0
+             iOrder_I(5:4+nGridOutUp) = iOrder_I(4:3+nGridOutUp)
+             iOrder_I(1:4)=0
+          else
+             Weight_I(5:4+nGridOutUp) = Weight_I(1:nGridOutUp)
+             Weight_I(1:4) = 0
+             iOrder_I(5:4+nGridOutUp) = iOrder_I(1:nGridOutUp)
+             iOrder_I(1:4)=0
+          end if
+          X1_D = XyzGrid_DI(:,iDRectangle1_I(1))
+          X2_D = XyzGrid_DI(:,iDRectangle1_I(2))
+          X3_D = XyzGrid_DI(:,iDRectangle1_I(3))
+          X4_D = XyzGrid_DI(:,iDRectangle1_I(4))
+          AlphaDown = triple_product(Xyz_D - X1_D,X2_D - X1_D,X3_D - X1_D)/&
+               triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+          XyzDown_D = Xyz_D - AlphaDown * Dir_D
+          call rectangle(X1_D, X2_D, X3_D, X4_D, XyzDown_D, Weight_I(1:4))
+          if(all(Weight_I(1:4)>=0.0))then
+             !\
+             !The ray for point Xyz is projected into this rectangle
+             !/
+             if(AlphaDown==0.0)then
+                !\
+                !Point Xyz belongs to this rectangle
+                !/
+                iOrder_I(1:4) = iDRectangle1_I
+                nGridOut = 4
+                RETURN
+             elseif(AlphaDown < 0.0)then
+                !\
+                ! Point is below the lower rectangle
+                ! return with negative weights and nGridOut = -1
+                !/
+                RETURN
+             else
+                !\
+                ! Exit if for rectangles with positive AlphaDown 
+                !/
+                iOrder_I(1:4) = iDRectangle1_I
+                nGridOutDown = 4
+             end if
+          end if
+       end if
+    end if           !1
+    if(nGridOutDown < 1)then
+       if(present(iDTrapezoid1_I))then
+          if(.not.present(iDRectangle1_I))then
+             if(present(iDTriangle1_I))then
+                Weight_I(5:4+nGridOutUp) = Weight_I(4:3+nGridOutUp)
+                Weight_I(1:4)=0
+                iOrder_I(5:4+nGridOutUp) = iOrder_I(4:3+nGridOutUp)
+                iOrder_I(1:4) = 0
+             else
+                Weight_I(5:4+nGridOutUp) = Weight_I(1:nGridOutUp)
+                Weight_I(1:4)=0
+                iOrder_I(5:4+nGridOutUp) = iOrder_I(1:nGridOutUp)
+                iOrder_I(1:4) = 0
+             end if
+          end if
+          X1_D = XyzGrid_DI(:,iDTrapezoid1_I(1))
+          X2_D = XyzGrid_DI(:,iDTrapezoid1_I(2))
+          X3_D = XyzGrid_DI(:,iDTrapezoid1_I(3))
+          X4_D = XyzGrid_DI(:,iDTrapezoid1_I(4))
+          AlphaDown = triple_product(Xyz_D - X1_D,X2_D - X1_D,X3_D - X1_D)/&
+               triple_product(Dir_D       , X2_D - X1_D, X3_D - X1_D)
+          XyzDown_D = Xyz_D - AlphaDown * Dir_D
+          call trapezoid(X1_D, X2_D, X3_D, X4_D, XyzDown_D, Weight_I(1:4))
+          if(all(Weight_I(1:4)>=0.0))then
+             !\
+             !The ray for point Xyz is projected into this trapezoid
+             !/
+             if(AlphaDown==0.0)then
+                !\
+                !Point Xyz belongs to this rectangle
+                !/
+                iOrder_I(1:4) = iDTrapezoid1_I
+                nGridOut = 4
+                RETURN
+             elseif(AlphaDown < 0.0)then
+                !\
+                ! Point is below the lower rectangle
+                ! return with negative weights and nGridOut = -1
+                !/
+                RETURN
+             else
+                !\
+                ! Exit if for rectangles with positive AlphaDown 
+                !/
+                iOrder_I(1:4) = iDTrapezoid1_I
+                nGridOutDown = 4
+             end if
+          end if
+       end if           !1
+    end if
+    !\
+    !If no intersection point with the down subface is found
+    !/
+    if(nGridOutDown == -1)RETURN 
+    !\
+    !Apply the weight for interpolation along the rate
+    !/
+    nGridOut = nGridOutUp + nGridOutDown
+    Weight_I(1:nGridOutDown) = &
+         Weight_I(1:nGridOutDown)*AlphaUp/(AlphaUp + AlphaDown)
+    Weight_I(nGridOutDown+1:nGridOut) = &
+         Weight_I(nGridOutDown+1:nGridOut)*AlphaDown/(AlphaUp + AlphaDown)
+  end subroutine interpolate_on_parallel_rays
+end module ModInterpolateSimpleShape
+!============================
+!============================
+module ModCubeGeometry
+  implicit none
+  SAVE
+  !=================ARRAYS FOR A CUBE====================================!
+  !For a cubic stencil enumerated as follows:
+  !
+  !       ^
+  ! z-axis|
+  !       |  7----------8
+  !       | /|         /|
+  !       |/ |        / |
+  !       5----------6  |
+  !       |  |   _   |  |
+  !       |  |   /|y-axi$
+  !       |  |  /    |  |
+  !       |  | /     |  |
+  !       |  |/      |  |
+  !       |  3----------4
+  !       | /        | /
+  !       |/         |/
+  !       1----------2------> x-axis
+  !       
+  ! we provide several functions characterizing its geometry in terms of 
+  ! the grid point numbers. The functions used in more than one place,
+  ! therefore we delegate them here.   
+
+  !Vertexes (enumerated by the first undex), which form 
+  !the face of direction iDir (second index) including the 
+  !given vertex (the third index). 
+  !When the first index equals 1,2,3,4, the vertex, accordingly: 
+  !(1) coincides with the given one
+  !(2) is connected with the given one by the edge of direction iDir+1
+  !(3) is connected with the given one by the edge of direction iDir+2
+  !(4) is connected to the given one by the face diagonal of direction iDir
+  integer, dimension(4,3,8), parameter:: iFace_IDI = &
+       reshape((/&   ! yz face   ! xz face      ! xy face ! 
+       1, 3, 5, 7,   1, 5, 2, 6,   1, 2, 3, 4, & 
+       2, 4, 6, 8,   2, 6, 1, 5,   2, 1, 4, 3, &
+       3, 1, 7, 5,   3, 7, 4, 8,   3, 4, 1, 2, &
+       4, 2, 8, 6,   4, 8, 3, 7,   4, 3, 2, 1, &
+       5, 7, 1, 3,   5, 1, 6, 2,   5, 6, 7, 8, &
+       6, 8, 2, 4,   6, 2, 5, 1,   6, 5, 8, 7, &
+       7, 5, 3, 1,   7, 3, 8, 4,   7, 8, 5, 6, &
+       8, 6, 4, 2,   8, 4, 7, 3,   8, 7, 6, 5  &
+       /), (/4,3,8/))
+
+  !Vertexes (enumerated by the first undex), which form 
+  !the face of direction iDir (second index) and does not 
+  !include the given vertex (the third index). 
+  !When the first index equals 1,2,3,4, the vertex, accordingly: 
+  !(1) is connected to the given one by the edge of direction iDir
+  !(2) is connected to (1) by the edge of direction iDir+1
+  !(3) is connected to (1) by the edge of direction iDir+2
+  !(4) is connected to  by the face diagonal of direction iDir
+  integer, dimension(4,3,8), parameter:: iOppositeFace_IDI = &
+       reshape((/&   ! yz face   ! xz face      ! xy face ! 
+       2, 4, 6, 8,   3, 7, 4, 8,   5, 6, 7, 8, & 
+       1, 3, 5, 7,   4, 8, 3, 7,   6, 5, 8, 7, &
+       4, 2, 8, 6,   1, 5, 2, 6,   7, 8, 5, 6, &
+       3, 1, 7, 5,   2, 6, 1, 5,   8, 7, 6, 5, &
+       6, 8, 2, 4,   7, 3, 8, 4,   1, 2, 3, 4, &
+       5, 7, 1, 3,   8, 4, 7, 3,   2, 1, 4, 3, &
+       8, 6, 4, 2,   5, 1, 6, 2,   3, 4, 1, 2, &
+       7, 5, 3, 1,   6, 2, 5, 1,   4, 3, 2, 1  &
+       /), (/4,3,8/))
+    !Number of the vertex connected by 
+    !the edge of direction iDir (second index) 
+    !with the given vertex (first index)
+    integer, dimension(8,3), parameter:: iEdge_ID = &
+         reshape((/&   !Number of the connected vertex
+         2 ,1, 4, 3, 6, 5, 8, 7,        & !Edge x
+         3, 4, 1, 2, 7, 8, 5, 6,        & !Edge y
+         5, 6, 7, 8, 1, 2, 3, 4         & !Edge z
+         /),(/8,3/))
+  !=================ARRAYS FOR A RECTANGLE==============!
+  !For a cubic stencil enumerated as follows:
+  !
+  !       ^
+  ! y-axis|
+  !       |   
+  !       3----------4  
+  !       |          |  
+  !       |          !
+  !       |          |  
+  !       |          |  
+  !       |          |  
+  !       |          !
+  !       |          |
+  !       |          |
+  !       1----------2------> x-axis
+  !       
+  ! we provide several functions characterizing its geometry in terms of 
+  ! the grid point numbers. The functions used in more than one place,
+  ! therefore we delegate them here. 
+  
+
+  !Vertexes (enumerated by the first undex), which form 
+  !the side of direction iDir (second index) including the 
+  !given vertex (the third index). 
+  !When the first index equals 1,2,3,4, the vertex, accordingly: 
+  !(1) coincides with the given one
+  !(2) is connected with the given one by the edge of direction iDir
+  integer, dimension(2,2,4), parameter:: iSide_IDI = &
+       reshape((/&   ! x side   ! y side ! 
+       1, 2,    1, 3, & !Vertex 1
+       2, 1,    2, 4, & !Vertex 2
+       3, 4,    3, 1, & !Vertex 3
+       4, 3,    4, 2  & !Vertex 4
+       /), (/2,2,4/))
+
+  !Vertexes (enumerated by the first undex), which form 
+  !the side of direction iDir (second index) and does not include the
+  !given vertex (the third index). 
+  !When the first index equals 1,2 the vertex, accordingly: 
+  !(1) is connected to the given one by the side of direction 1+mod(iDir,2)
+  !(2) is connected to (1) by the edge of direction iDir
+  integer, dimension(2,2,4), parameter:: iOppositeSide_IDI = &
+       reshape((/&   ! x side   ! y side ! 
+       3, 4,    2, 4, & !Vertex 1
+       4, 3,    1, 3, & !Vertex 2
+       1, 2,    4, 2, & !Vertex 3
+       2, 1,    3, 1  & !Vertex 4
+       /), (/2,2,4/))
+  !\
+  !Array used to sort corners: 
+  !(1) assign a type to it (Case_) 
+  !(2) assign a grid point of the stencil chosen as the first one (Grid_)
+  !(3) assign a direction, if the configuration can be characterized (Dir_)
+  !by direction
+
+  logical:: DoInit = .true.
+  integer, parameter:: Grid_=1, Dir_=2, Case_=3
+  integer:: iSortStencil3_II(Grid_:Case_,0:258) = 0
+  integer:: iSortStencil2_II(Grid_:Case_, 0:15) = 0
+  
+  !\
+  ! Different cases of stencil (will be stored in Case_ column
+  !/
+  integer, parameter:: Uniform_ = 0, Face_ = 1, Edge_ = 2
+  integer, parameter:: FiveTetrahedra_ = 3
+  integer, parameter:: OneFine_        = 4, OneCoarse_      = 5
+  integer, parameter:: FineMainDiag_   = 6, FineFaceDiag_   = 7
+  integer, parameter:: CoarseMainDiag_ = 8, CoarseFaceDiag_ = 9
+  integer, parameter:: FineEdgePlusOne_ = 10, ThreeFineOnFace_ =11
+  integer, parameter:: CoarseEdgePlusOne_ = 12, ThreeCoarseOnFace_=13
+  integer, parameter:: ThreeCoarseOnFacePlusOne_ = 14, CoarseChain_   = 15
+  integer, parameter:: Transition2Edge_ = 256, Transition2Corner_ = 257
+  integer, parameter:: TransitionJunction_ = 258
+  !\
+  ! Analogous for 2D
+  !/
+  integer, parameter:: Trapezoid_ = 1
+  integer, parameter:: Rhombus_ = 3
+  integer, parameter:: &
+        Coarse_  = 0,               &
+        Fine_    = 1
+
+  !Parameters to enumerate faces or face diagonal
+  integer, parameter:: Xy_ = 3, Xz_ = 2, Yz_ = 1
+  
+  !Number of the vertex connected by 
+  !the face diagonal across the face of direction iDir (second index) 
+  !with the given vertex (first index)
+  integer, dimension(8,3), parameter:: iFaceDiag_ID = &
+       reshape((/&   !Number of the connected vertex
+       7 ,8, 5, 6, 3, 4, 1, 2,        & !Face yz
+       6, 5, 8, 7, 2, 1, 4, 3,        & !Face xz
+       4, 3, 2, 1, 8, 7, 6, 5         & !Face xy
+       /),(/8,3/))
+  
+  !Number of the vertex connected by 
+  !the main diagonal with the given vertex (index)
+  integer, dimension(8), parameter:: iMainDiag_I = &
+       (/ 8, 7, 6, 5, 4, 3, 2, 1 /)
+contains
+  !==========================
+  subroutine init_sort_stencil
+    integer:: iCase, iGrid, iLoc, iDir, iMisc
+    integer:: iLevel_I(8)
+    integer :: nDim = 3, nGrid = 8
+    integer, parameter:: x_ = 1, y_ = 2, z_ = 3
+
+    !------------------------
+    nDim = 3; nGrid = 8
+    iSortStencil3_II = 0
+
+    DoInit = .false. !Do this only once
+    !Zero and 255 cases are both uniform. !2 cases, 2 totally, 254 left
+    iSortStencil3_II(Grid_:Dir_,0:255:255) = 1
+    iSortStencil3_II(Case_,0:255:255) = Uniform_
+    CASE:do iCase = 1, 254
+       !\
+       ! Generate 'binary' iLevel_I from iCase
+       !/
+       iLevel_I=0
+       iGrid = 1
+       iMisc = iCase
+       do while(iMisc > 0)
+          iLevel_I(iGrid) = mod(iMisc,2)
+          iMisc = (iMisc -  iLevel_I(iGrid))/2
+          iGrid = iGrid +1
+       end do
+       !\
+       ! Sort out faces 6 cases, 8 totally, 248 left
+       !/
+       do iDir = 1, 3
+          if(all(iLevel_I(iFace_IDI(:,iDir,1))==Fine_).and.&
+               all(iLevel_I(iOppositeFace_IDI(:,iDir,1))==Coarse_))then
+             iSortStencil3_II(Grid_,iCase) = 1
+             iSortStencil3_II(Dir_, iCase) = iDir !  2*iDir -1
+             iSortStencil3_II(Case_,iCase) = Face_
+             CYCLE CASE
+          elseif(all(iLevel_I(iFace_IDI(:,iDir,1))==Coarse_).and.&
+               all(iLevel_I(iOppositeFace_IDI(:,iDir,1))==Fine_))then
+             iSortStencil3_II(Grid_,iCase) = 1
+             iSortStencil3_II(Dir_, iCase) = iDir !2*iDir 
+             iSortStencil3_II(Case_,iCase) = Face_
+             CYCLE CASE
+          end if
+       end do
+       !\
+       ! Sort out edges 30 cases, 38 totally, 218 left
+       !/
+       do iDir = 1, 3
+          if(all(iLevel_I(iFace_IDI(:,iDir,1))==&
+               iLevel_I(iOppositeFace_IDI(:,iDir,1)) ) )then
+             iSortStencil3_II(Grid_,iCase) = 1
+             iSortStencil3_II(Dir_, iCase) = iDir
+             iSortStencil3_II(Case_,iCase) = Edge_
+             CYCLE CASE
+          end if
+       end do
+       !\
+       ! Find configurations which split into five tetrahedra
+       !   26 cases 64 totally 192 left
+       !/
+       do iGrid = 1,nGrid
+          if(  all(iLevel_I(iEdge_ID(iGrid,:))==Coarse_).and.&
+               all(iLevel_I(iFaceDiag_ID(iGrid,:))==Fine_))then
+             iSortStencil3_II(Dir_,iCase)  = 1
+             iSortStencil3_II(Grid_,iCase) = iGrid
+             iSortStencil3_II(Case_,iCase) = FiveTetrahedra_
+             CYCLE CASE
+          end if
+       end do
+
+       select case( count(iLevel_I==Fine_))
+       case(1)                          ! 8 cases 72 totally 184 left 
+          iLoc = maxloc(iLevel_I,DIM=1)
+          iSortStencil3_II(Dir_,iCase) = 1
+          iSortStencil3_II(Grid_,iCase) = iLoc
+          iSortStencil3_II(Case_,iCase) = OneFine_
+          CYCLE CASE 
+       case(7)                          ! 8 cases 80 totally 176 left
+          iLoc = minloc(iLevel_I,DIM=1)
+          iSortStencil3_II(Dir_,iCase)  = 1
+          iSortStencil3_II(Grid_,iCase) = iLoc
+          iSortStencil3_II(Case_,iCase) = OneCoarse_
+          CYCLE CASE
+       case(2)
+          iLoc = maxloc(iLevel_I,DIM=1)
+          if(iLevel_I(iMainDiag_I(iLoc))==Fine_)then 
+
+             ! 4 cases   84 totally 172 left
+             iSortStencil3_II(Dir_,iCase)  = 1
+             iSortStencil3_II(Grid_,iCase) = iLoc
+             iSortStencil3_II(Case_,iCase) = FineMainDiag_
+             CYCLE CASE
+          else                      ! 12 cases  96 totally 160 left 
+             do iDir = Yz_,Xy_
+                if(iLevel_I(iFaceDiag_ID(iLoc, iDir))==Fine_)then
+                   iSortStencil3_II(Dir_,iCase)  = iDir
+                   iSortStencil3_II(Grid_,iCase) = iLoc
+                   iSortStencil3_II(Case_,iCase) = FineFaceDiag_
+                   CYCLE CASE
+                end if
+             end do
+          end if
+       case(6)                       ! 4 cases 100 totally 156 left
+          iLoc = minloc(iLevel_I,DIM=1)
+          if(iLevel_I(iMainDiag_I(iLoc))==Coarse_)then  
+             iSortStencil3_II(Dir_,iCase)  = 1
+             iSortStencil3_II(Grid_,iCase) = iLoc
+             iSortStencil3_II(Case_,iCase) = CoarseMainDiag_
+             CYCLE CASE
+          else                      ! 12 cases 112 totally 144 left
+             do iDir = Yz_,Xy_
+                if(iLevel_I(iFaceDiag_ID(iLoc, iDir))==Coarse_)then
+                   iSortStencil3_II(Dir_,iCase) = iDir
+                   iSortStencil3_II(Grid_,iCase) = iLoc
+                   iSortStencil3_II(Case_,iCase) = CoarseFaceDiag_
+                   CYCLE CASE
+                end if
+             end do
+          end if
+       case(3)          !         24 cases  136 totally 120 left
+          do iGrid = 1, nGrid
+             if(iLevel_I(iGrid)==Fine_)then
+                if(iLevel_I(iMainDiag_I(iGrid))==Fine_)then
+                   do iDir = Yz_,Xy_
+                      if(iLevel_I(iFaceDiag_ID(iGrid, iDir))==Fine_)then
+                         iSortStencil3_II(Dir_,iCase)  = iDir
+                         iSortStencil3_II(Grid_,iCase) = iGrid
+                         iSortStencil3_II(Case_,iCase) = FineEdgePlusOne_
+                         CYCLE CASE
+                      end if
+                   end do
+                else            ! 24 cases 160 totally 96 left
+                   do iDir = 1,nDim
+                      if(all(iLevel_I(iFace_IDI(1:3,iDir,iGrid))==Fine_))then 
+                         iSortStencil3_II(Dir_,iCase)  = iDir
+                         iSortStencil3_II(Grid_,iCase) = iGrid
+                         iSortStencil3_II(Case_,iCase) = ThreeFineOnFace_
+                         CYCLE CASE
+                      end if
+                   end do
+                end if
+             end if
+          end do
+       case(5)          !         24 cases 184 totally 72 left 
+          do iGrid = 1, nGrid
+             if(iLevel_I(iGrid)/=Coarse_)CYCLE
+             if(iLevel_I(iMainDiag_I(iGrid))==Coarse_)then
+                do iDir = Yz_,Xy_
+                   if(iLevel_I(iFaceDiag_ID(iGrid, iDir))==Coarse_)then 
+                      iSortStencil3_II(Dir_,iCase)  = iDir
+                      iSortStencil3_II(Grid_,iCase) = iGrid
+                      iSortStencil3_II(Case_,iCase) = CoarseEdgePlusOne_
+                      CYCLE CASE          
+                   end if
+                end do
+             end if
+             !                     24 cases 208 totally 48 left
+             do iDir = 1,nDim
+                if(all(iLevel_I(iFace_IDI(1:3, iDir, iGrid))==Coarse_))then
+                   iSortStencil3_II(Dir_,iCase)  = iDir
+                   iSortStencil3_II(Grid_,iCase) = iGrid
+                   iSortStencil3_II(Case_,iCase) = ThreeCoarseOnFace_
+                   CYCLE CASE
+                end if
+             end do
+          end do
+       case(4)                 
+          do iGrid = 1,nGrid
+             if(iLevel_I(iGrid)==Coarse_)then
+                do iDir = 1,nDim    !   24 cases 232 totally 24 left 
+                   if(all(&
+                        iLevel_I(iOppositeFace_IDI(2:4,iDir,iGrid))==Coarse_&
+                        ))then
+                      iSortStencil3_II(Dir_,iCase)  = iDir
+                      iSortStencil3_II(Grid_,iCase) = iGrid
+                      iSortStencil3_II(Case_,iCase) = &
+                           ThreeCoarseOnFacePlusOne_
+                      CYCLE CASE
+                   end if
+                   !
+                   !\
+                   ! 24 cases 256 totally 0 left
+                   !/
+                   if(iLevel_I(iEdge_ID(iGrid,iDir))==Coarse_.and.&
+                        iLevel_I(iEdge_ID(iGrid,1 + mod(iDir,3)))==Coarse_&
+                        .and.iLevel_I(iEdge_ID(iEdge_ID(iGrid,iDir),&
+                        1 + mod(1 + iDir,3)))==Coarse_)then
+                      iSortStencil3_II(Dir_,iCase)  = iDir
+                      iSortStencil3_II(Grid_,iCase) = iGrid
+                      iSortStencil3_II(Case_,iCase) = CoarseChain_
+                      CYCLE CASE
+                   end if
+                end do
+             end if
+          end do
+       end select
+    end do CASE
+    iSortStencil3_II(Grid_:Dir_,Transition2Edge_:TransitionJunction_)  = 1
+    iSortStencil3_II(Case_,Transition2Edge_:TransitionJunction_)  = &
+         (/Transition2Edge_, Transition2Corner_, TransitionJunction_/)
+    !=================2 dimensional case=======
+    nDim = 2; nGrid = 4
+   
+    !Zero and 15 cases are both uniform. !2 cases, 2 totally, 14 left
+    iSortStencil2_II(Grid_:Dir_,0:15:15) = 1
+    iSortStencil2_II(Case_,0:15:15) = Uniform_
+    CASE2:do iCase = 1, 14
+       !\
+       ! Generate 'binary' iLevel_I from iCase
+       !/
+       iLevel_I=0
+       iGrid = 1
+       iMisc = iCase
+       do while(iMisc > 0)
+          iLevel_I(iGrid) = mod(iMisc,2)
+          iMisc = (iMisc -  iLevel_I(iGrid))/2
+          iGrid = iGrid +1
+       end do
+       !\
+       ! Sort out faces 4 cases, 6 totally, 10 left
+       !/
+       do iDir = 1, nDim
+          if(all(iLevel_I(iSide_IDI(:,iDir,1))==Fine_).and.&
+               all(iLevel_I(iOppositeSide_IDI(:,iDir,1))==Coarse_))then
+             iSortStencil2_II(Grid_,iCase) = 1
+             iSortStencil2_II(Dir_, iCase) = iDir !  2*iDir -1
+             iSortStencil2_II(Case_,iCase) = Trapezoid_
+             CYCLE CASE2
+          elseif(all(iLevel_I(iSide_IDI(:,iDir,1))==Coarse_).and.&
+               all(iLevel_I(iOppositeSide_IDI(:,iDir,1))==Fine_))then
+             iSortStencil2_II(Grid_,iCase) = 1
+             iSortStencil2_II(Dir_, iCase) = iDir !2*iDir 
+             iSortStencil2_II(Case_,iCase) = Trapezoid_
+             CYCLE CASE2
+          end if
+       end do
+       select case( count(iLevel_I(1:4)==Fine_))
+       case(1)                          ! 4 cases 10 totally 6 left 
+          iLoc = maxloc(iLevel_I,DIM=1)
+          iSortStencil2_II(Dir_,iCase) = 1
+          iSortStencil2_II(Grid_,iCase) = iLoc
+          iSortStencil2_II(Case_,iCase) = OneFine_
+          CYCLE CASE2
+       case(3)                          ! 4 cases 14 totally 2 left
+          iLoc = minloc(iLevel_I(1:4),DIM=1)
+          iSortStencil2_II(Dir_,iCase)  = 1
+          iSortStencil2_II(Grid_,iCase) = iLoc
+          iSortStencil2_II(Case_,iCase) = OneCoarse_
+          CYCLE CASE2
+       case(2)                          !          
+          iLoc = maxloc(iLevel_I,DIM=1)
+          iSortStencil2_II(Dir_,iCase) = 1
+          iSortStencil2_II(Grid_,iCase) = iLoc
+          iSortStencil2_II(Case_,iCase) = Rhombus_
+       end select
+    end do CASE2
+  end subroutine init_sort_stencil
+end module ModCubeGeometry
+!=========================
+module ModResolutionCorner
+  use ModCubeGeometry, ONLY: iSortStencil3_II, iFace_IDI, iOppositeFace_IDI,&
+       Case_, Grid_, Dir_, FiveTetrahedra_, & 
+       OneFine_, OneCoarse_, FineMainDiag_, FineFaceDiag_,            &
+       CoarseMainDiag_, CoarseFaceDiag_, FineEdgePlusOne_,            &
+       ThreeFineOnFace_, CoarseEdgePlusOne_, ThreeCoarseOnFace_,      &
+       ThreeCoarseOnFacePlusOne_, CoarseChain_
+  implicit none
+  PRIVATE
+  SAVE
+  integer, parameter:: nDim = 3, nGrid = 8
+  integer, parameter:: &
+       x_       = 1,               &
+       y_       = 2,               &
+       z_       = 3
+  public:: resolution_corner
+contains
+  !==================================
+  integer function i_case(iLevel_I)
+    integer, intent(in):: iLevel_I(:)
+    integer:: iGrid, nGrid
+    !--------------------
+    nGrid = size(iLevel_I,DIM=1)
+    !\
+    ! Generate iCase from 'binary' iLevel_I
+    !/
+    i_case = iLevel_I(nGrid)
+    do iGrid = nGrid - 1, 1, -1
+       i_case = i_case + i_case + iLevel_I(iGrid)
+    end do
+  end function i_case
+  !============================
+  subroutine  resolution_corner(&
+       Xyz_D, XyzGridIn_DI, iLevel_I, nGridOut, Weight_I, iOrder_I)
+    character(LEN=*),parameter:: NameSub='resolution_corner'
+    !\
+    !Input parameters
+    !/
+    !\
+    !The location at which to interpolate the data
+    !/
+    real   , intent(in) :: Xyz_D(nDim) 
+    !\
+    !Grid point coordinates !3 coordinate, 8 points
+    !/
+    real  ,   intent(in) :: XyzGridIn_DI(nDim,nGrid)
+    !\
+    ! The same, but may be reordered, if needed 
+    real:: XyzGrid_DI(nDim,nGrid)
+
+    !The refinement level at each grid point. By one higher level
+    ! of refinement assumes the cell size reduced by a factor of 0.5
+    integer,  intent(in) :: iLevel_I(nGrid)
+    !\
+    !Output parameters
+    !/
+    !The number of grid points to be ultimately included into 
+    !the interpolation stencil If nGridOut < nGrid only the
+    !first nGridOut lines in the output arrays are meaningful.
+    !/
+    integer, intent(out) :: nGridOut
+    !\
+    !The weight coefficients array.
+    real   , intent(out) :: Weight_I(nGrid)
+    !\
+    !Order(numbers) of grid points used for the interpolation
+    integer, intent(out) :: iOrder_I(nGrid)    
+    !\
+    ! Minimum and maximum values of coordinates
+    !/
+    real    :: XyzMin_D(nDim), XyzMax_D(nDim)   
+    !\
+    ! To find points with  "equal" cordinates
+    !/
+    real    :: dXyzSmall_D(nDim)      
+    !\
+    ! for calculating on a uniform grid 
+    !/          
+    real    :: dXyzInv_D(nDim)                
+    real    :: Aux_D(nDim), AuxCoarse, AuxFine   ! Misc
+    !\
+    ! To call two-dimensional interpolation
+    !/
+
+    !\
+    ! To find the sort of corner stencil
+    !/
+    integer:: iCase, iDir, iGrid
+    !-------------
+    Weight_I = 0
+    XyzGrid_DI = XyzGridIn_DI
+    !\
+    ! We store in advance the 'basic' grid point
+    ! and orientation of all possible stencil configurations
+    ! and now we extracted this information
+    !/ 
+    iCase = i_case(iLevel_I)
+    iGrid = iSortStencil3_II(Grid_,iCase)
+    iDir  = iSortStencil3_II(Dir_,iCase)
+    iCase = iSortStencil3_II(Case_,iCase)
+    iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
+    iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
+    XyzGrid_DI = XyzGrid_DI(:,iOrder_I)
+    select case(iCase)
+    case(FiveTetrahedra_)
+       !\
+       ! One configuration resulting in the corner split for five tetrahedra
+       ! is occured in many cases (26), however, it is treated in the same  
+       ! way in all these cases. If the given grid point is connected by 
+       ! three edges with three coarse points, while the across the main  
+       ! diagonal point is connected by three edges (or, equivalently, the  
+       ! given point is connected by three face diagonals) with three coarse  
+       ! points), then all faces are trangulated   
+       !/
+       !\
+       ! View from  point iOrder
+       !            xy face diag
+       !   x-axis      |      y-axis
+       !         \     V     /
+       !          \  / F    /           
+       !           C   | \C           
+       !           |\  | / |            
+       !           | \ |/  |            
+       !           |  \/   |
+       !           |   1   |
+       !  xz facediag/ | \yz face diag
+       !           /   |  \|
+       !           F   |   F
+       !             \ C /
+       !               |
+       !               V
+       !               z-axis
+
+       call interpolate_pyramids(&
+            iTetrahedron1_I=(/1, 2, 6, 4/),&
+            iTetrahedron2_I=(/1, 3, 7, 4/),&
+            iTetrahedron3_I=(/1, 5, 7, 6/),&
+            iTetrahedron4_I=(/1, 7, 6, 4/),&
+            iTetrahedron5_I=(/8, 7, 6, 4/))
+    case(OneFine_)    
+       !\
+       ! View from the fine point
+       !            xy face diag
+       !   x-axis      |      y-axis
+       !         \     V     /
+       !          \   C4    /      Connections to opposite faces: main diag+
+       !           C2/ | \C3       3478 - y edge, yz face diag, xy face daig
+       !           |\  | / |       2468 - x edge, xy face diag, xz face diag
+       !           | \ |/  |       5687 - z face. yz face diag, xy face diag
+       !           |  \/   |
+       !           |   F1  |
+       !  xz facediag/ | \yz face diag
+       !           /   |  \|
+       !          C6   |   C7
+       !             \ C5/
+       !               |
+       !               V
+       !               z-axis
+       call interpolate_pyramids(&
+            iRectangular1_I=(/2, 4, 6, 8, 1/) ,&
+            iRectangular2_I=(/3, 4, 7, 8, 1/)  ,&
+            iRectangular3_I=(/5, 6, 7, 8, 1/))
+    case(OneCoarse_)                  ! 8 cases , totally 79 left 176
+       !\
+       ! View from the coarse point
+       !            xy face diag
+       !   x-axis            y-axis
+       !         \          /
+       !          \    F4  /           
+       !           F2----- F3            
+       !           |\    / |            
+       !           | \  / /|            
+       !           |\ \/   |            
+       !           |   C1  |
+       !           | \ | / |
+       !           |   |   |
+       !          F6  \ / F7
+       !             \ F5/
+       !               |
+       !               V
+       !               z-axis
+       call interpolate_pyramids(iTetrahedron1_I=(/1,2,3,5/))
+       if(nGridOut>1)RETURN
+       call interpolate_on_parallel_rays(&
+            Dir_D=XyzGrid_DI(:,8) - XyzGrid_DI(:,1), &
+            iURectangle1_I=(/2, 4, 6, 8/),&
+            iURectangle2_I=(/3, 4, 7, 8/),&
+            iURectangle3_I=(/5, 6, 7, 8/),&
+            iDTriangle1_I=(/2, 3, 5/),    &
+            iDTriangle2_I=(/2, 3, 4/),    &
+            iDTriangle3_I=(/2, 6, 5/),    &
+            iDTriangle4_I=(/3, 5, 7/))
+    case(FineMainDiag_)
+       !Full traingulation of all faces, each coarse vertex is connected  
+       !by edge with one fine point and with face diagonal to the other. 
+       !\
+       ! View from the fine point
+       !            xy face diag
+       !   x-axis      |      y-axis
+       !         \     V     /
+       !          \   C4    /           
+       !           C2/ | \C3           The point F8 is also fine 
+       !           |\  | / |           The line of sight goes along the
+       !           | \ |/  |           main diagonal F1F8 which is the 
+       !           |  \/   |           common side  of 6 tetrahedron
+       !           |   F1  |
+       !  xz facediag/ | \yz face diag
+       !           /   |  \|
+       !          C6   |   C7
+       !             \ C5/
+       !               |
+       !               V
+       !               z-axis
+       call interpolate_pyramids(&
+            iTetrahedron1_I=(/1, 2, 4, 8/), &
+            iTetrahedron2_I=(/1, 2, 6, 8/), &
+            iTetrahedron3_I=(/1, 3, 4, 8/), &
+            iTetrahedron4_I=(/1, 3, 7, 8/), &
+            iTetrahedron5_I=(/1, 5, 6, 8/), &
+            iTetrahedron6_I=(/1, 5, 7, 8/))
+    case(FineFaceDiag_)
+       !
+       !       ^
+       !iDir-axis
+       !       |  7C---------8C
+       !       | /|         /|
+       !       |/ |        / |
+       !       5C---------6C |
+       !       |  |   _   |  |
+       !       |  |   /|1+mod(iDir+1,3) axis
+       !       |  |  /    |  |
+       !       |  | /     |  |
+       !       |  |/      |  |
+       !       |  3C---------4F
+       !       | /        | /
+       !       |/         |/
+       !       1F---------2C-----> 1+mod(iDir,3)-axis
+       !
+       !
+       ! 1 Remove tetrahedra 1F 4F 2C 6C and 1F 4F 3C 7C
+       call interpolate_pyramids(&
+            iTetrahedron1_I=(/1, 4, 2, 6/), &
+            iTetrahedron2_I=(/1, 4, 3, 7/))
+       if(nGridOut > 1)RETURN
+       !
+       !    7C------ 8C 
+       !  5C--\---6C/|     
+       !   |  _ \_  \|
+       !   | /    --4F
+       !  1F----/     
+       !\
+       ! Center of the lower face
+       !/
+       XyzMin_D = &
+            0.50*(XyzGrid_DI(:,1) + XyzGrid_DI(:,4))
+       !\
+       ! Center of the upper face
+       !/
+       XyzMax_D = 0.50*&
+            (XyzGrid_DI(:,5)+XyzGrid_DI(:,8))
+       call interpolate_on_parallel_rays(Dir_D=XyzMax_D - XyzMin_D,&
+            iURectangle1_I=(/5, 6, 7, 8/),&
+            iDTriangle1_I=(/1, 4, 6/),&
+            iDTriangle2_I=(/1, 4, 7/),&
+            iDTriangle3_I=(/4, 6, 8/),&
+            iDTriangle4_I=(/4, 7, 8/),&
+            iDTriangle5_I=(/1, 5, 7/),&
+            iDTriangle6_I=(/1, 5, 6/))
+    case(CoarseMainDiag_)  
+       !Two coarse pints across the main diagonal
+       !\
+       ! View from the coarse point
+       !            xy face diag
+       !   x-axis            y-axis
+       !         \          /
+       !          \    F4  /           
+       !           F2----- F3            
+       !           |\    / |            
+       !           | \  / /|            
+       !           |\ \/   |            
+       !           |   C1  |
+       !           | \ | / |
+       !           |   |   |
+       !          F6  \ / F7
+       !             \ F5/
+       !               |
+       !               V
+       !               z-axis
+       call interpolate_pyramids(&
+            iTetrahedron1_I=(/1, 2, 3, 5/),&
+            iTetrahedron2_I=(/8, 7, 6, 4/))
+       if(nGridOut>1)RETURN
+       call interpolate_on_parallel_rays(&
+            Dir_D=XyzGrid_DI(:,8) - XyzGrid_DI(:,1), &
+            iUTriangle1_I=(/7, 6, 4/),&
+            iUTriangle2_I=(/7, 6, 5/),&
+            iUTriangle3_I=(/7, 4, 3/),&
+            iUTriangle4_I=(/6, 4, 2/),&
+            iDTriangle1_I=(/2, 3, 5/),&
+            iDTriangle2_I=(/2, 3, 4/),&
+            iDTriangle3_I=(/2, 5, 6/),&
+            iDTriangle4_I=(/3, 5, 7/))
+    case(CoarseFaceDiag_)
+       !       ^
+       !iDir-axis
+       !       |  7F---------8F
+       !       | /|         /|
+       !       |/ |        / |
+       !       5F---------6F |
+       !       |  |   _   |  |
+       !       |  |   /|1+mod(iDir+1,3) axis
+       !       |  |  /    |  |
+       !       |  | /     |  |
+       !       |  |/      |  |
+       !       |  3F---------4C
+       !       | /        | /
+       !       |/         |/
+       !       1C---------2F-----> 1+mod(iDir,3)-axis
+       !
+       !
+       ! 1 Remove tetrahedra 1C 2F 3F 5F and 4C 2F 3F 8F
+       call interpolate_pyramids(&
+            iTetrahedron1_I=(/1, 2, 3, 5/),&
+            iTetrahedron2_I=(/4, 2, 3, 8/))
+       if(nGridOut < 1)then
+          !
+          !    7F------ 8F 
+          !  5F------6F//     
+          !   \|      | |
+          !    3F_    |/
+          !        \_ 2F
+          !\
+          ! Center of the lower face
+          !/
+          XyzMin_D = 0.50*&
+               (XyzGrid_DI(:,1)+XyzGrid_DI(:,4))
+          !\
+          ! Center of the upper face
+          !/
+          XyzMax_D = 0.50*&
+               (XyzGrid_DI(:,5) + XyzGrid_DI(:,8))
+          call interpolate_on_parallel_rays(Dir_D=XyzMax_D - XyzMin_D,&
+               iURectangle1_I=(/5, 6, 7, 8/),&
+               iDTriangle1_I=(/2, 3, 5/),&
+               iDTriangle2_I=(/2, 3, 8/))
+       end if
+    case(FineEdgePlusOne_)
+       !       ^
+       !iDir-axis
+       !       |  7C---------8F
+       !       | /|         /|
+       !       |/ |        / |
+       !       5C---------6C |
+       !       |  |   _   |  |
+       !       |  |   /|1+mod(iDir+1,3) axis
+       !       |  |  /    |  |
+       !       |  | /     |  |
+       !       |  |/      |  |
+       !       |  3C---------4F
+       !       | /        | /
+       !       |/         |/
+       !       1F---------2C-----> 1+mod(iDir,3)-axis
+       !
+       !                    F4 F8
+       !         Trapezoid: C3 C7
+       !                
+       !         Trapezoid: F4 F8
+       !                    C2 C6
+       !     F1 is apex of trapezoidal pyramids 
+       !     Tetrahedra left F1C5F8C6 + F1C5F8C7
+       call interpolate_pyramids(&
+            iTetrahedron1_I=(/1, 5, 8, 6/),&
+            iTetrahedron2_I=(/1, 5, 8, 7/),&
+            iTrapezoidal1_I=(/2, 6, 4, 8, 1/),&
+            iTrapezoidal2_I=(/3, 7, 4, 8, 1/))
+    case(ThreeFineOnFace_)
+       !
+       !       ^
+       !iDir-axis
+       !       |  7C---------8C
+       !       | /|         /|
+       !       |/ |        / |
+       !       5C---------6C |
+       !       |  |   _   |  |
+       !       |  |   /|1+mod(iDir+1,3) axis
+       !       |  |  /    |  |
+       !       |  | /     |  |
+       !       |  |/      |  |
+       !       |  3F---------4C
+       !       | /        | /
+       !       |/         |/
+       !       1F---------2F-----> 1+mod(iDir,3)-axis
+       !
+       !                  F1 F3
+       !       Trapezoid: C5 C7       
+       !               
+       !       Trapezoid: F1 F2
+       !                  C5 C6
+
+       call interpolate_pyramids(&
+            iTetrahedron1_I=(/2, 3, 8, 4/))
+       if(nGridOut> 1)RETURN
+       !\
+       !Interpolation in parralel rays
+       !/
+       !The view for the lower subfaces is as follows
+       !  C5----------C6
+       !  | \         |
+       !  |   F1---F2 |
+       !  |   |   /   |
+       !  !   |  /  \ | 
+       !  |   F3      |
+       !  | /     \   |
+       !  C7----------C8      
+       call interpolate_on_parallel_rays(Dir_D=&
+            XyzGrid_DI(:,8) - &
+            XyzGrid_DI(:,4),&
+            iDTriangle1_I=(/1, 2, 3/),&
+            iDTriangle2_I=(/8, 2, 3/),&
+            iDTriangle3_I=(/8, 7, 3/),&
+            iDTriangle4_I=(/8, 2, 6/),&
+            iURectangle1_I=(/5, 6, 7, 8/))    
+    case(CoarseEdgePlusOne_)
+       !
+       !       ^
+       !iDir-axis
+       !       |  7F---------8C
+       !       | /|         /|
+       !       |/ |        / |
+       !       5F---------6F |
+       !       |  |   _   |  |
+       !       |  |   /|1+mod(iDir+1,3) axis
+       !       |  |  /    |  |
+       !       |  | /     |  |
+       !       |  |/      |  |
+       !       |  3F---------4C
+       !       | /        | /
+       !       |/         |/
+       !       1C---------2F-----> 1+mod(iDir,3)-axis
+       !
+       !
+       !                  F3 F7
+       !       Trapezoid: C4 C8       
+       !         
+       !       Trapezoid: F2 F6
+       !                  C4 C8
+       !                
+       call interpolate_pyramids(&
+            iTetrahedron1_I=(/1, 2, 3, 5/),&
+            iRectangular1_I=(/2, 3, 6, 7, 5/))
+       if(nGridOut> 1)RETURN
+       call interpolate_on_parallel_rays(Dir_D=&
+            XyzGrid_DI(:,3) - &
+            XyzGrid_DI(:,2),&
+            iDTrapezoid1_I=(/4, 8, 2, 6/),&
+            iUTrapezoid1_I=(/4, 8, 3, 7/)) 
+    case(ThreeCoarseOnFace_)
+       !
+       !       ^
+       !iDir-axis
+       !       |  7F---------8F
+       !       | /|         /|
+       !       |/ |        / |
+       !       5F---------6F |
+       !       |  |   _   |  |
+       !       |  |   /|1+mod(iDir+1,3) axis
+       !       |  |  /    |  |
+       !       |  | /     |  |
+       !       |  |/      |  |
+       !       |  3C---------4F
+       !       | /        | /
+       !       |/         |/
+       !       1C---------2C-----> 1+mod(iDir,3)-axis
+       !
+       !
+       !            F5 F7
+       ! Trapezoid: C1 C3       
+       !           
+       ! Trapezoid: F5 F6
+       !            C1 C2
+       ! Rectangle: F5 F6 F7 F8
+       !/               
+       !    Common apex F4
+       call interpolate_pyramids(&
+            iRectangular1_I=(/7, 8, 5, 6, 4/),&
+            iTrapezoidal1_I=(/1, 2, 5, 6, 4/),&
+            iTrapezoidal2_I=(/1, 3, 5, 7, 4/))
+    case(ThreeCoarseOnFacePlusOne_)
+       !\
+       ! face 1:4 has only one Coarse point 1
+       ! face 5:8 has three Coarse points iOrder((/6,7,8/))
+       !/
+       !-----------------------------------------------
+       !
+       !       ^
+       !iDir-axis
+       !       |  7C---------8C
+       !       | /|         /|
+       !       |/ |        / |
+       !       5F---------6C |
+       !       |  |   _   |  |
+       !       |  |   /|1+mod(iDir+1,3) axis
+       !       |  |  /    |  |
+       !       |  | /     |  |
+       !       |  |/      |  |
+       !       |  3F---------4F
+       !       | /        | /
+       !       |/         |/
+       !       1C---------2F-----> 1+mod(iDir,3)-axis
+       !
+       !                F2 F4
+       !      Trapezoid C6 C8
+       !                                           
+       !                F3 F4
+       !      Trapezoid C7 C8
+       !                
+       !
+       !Common apex F5
+       call interpolate_pyramids(&
+            iTrapezoidal1_I=(/6, 8, 2, 4, 5/),&
+            iTrapezoidal2_I=(/7, 8, 3, 4, 5/),&
+            iTetrahedron1_I=(/2, 3, 4, 5/),   &
+            iTetrahedron2_I=(/1, 2, 3, 5/) )
+    case(CoarseChain_)
+       !\
+       !Chain of four coarse points connected with mutually 
+       !orthogonal edges
+       !/
+       !-----------------------------------------------
+       !
+       !       ^
+       !iDir-axis
+       !       |  C7---------8F
+       !       | /|         /|
+       !       |/ |        / |
+       !       5C---------6F |
+       !       |  |   _   |  |
+       !       |  |   /|1+mod(iDir+1,3) axis
+       !       |  |  /    |  |
+       !       |  | /     |  |
+       !       |  |/      |  |
+       !       |  3F---------4F
+       !       | /        | /
+       !       |/         |/
+       !       1C---------2C-----> 1+mod(iDir,3)-axis
+       !
+       !                  F6 F8
+       !        Trapezoid C5 C7
+       !                                           
+       !      
+       !                  F3 F4
+       !        Trapezoid C1 C2                
+       !
+       call interpolate_pyramids(&
+            iTrapezoidal1_I=(/1, 2, 3, 4, 6/),& 
+            iTetrahedron1_I=(/8, 3, 4, 6/),&  !see #1 below 
+            iTetrahedron2_I=(/1, 6, 3, 5/),&  !see #2 below
+            iTrapezoidal2_I=(/5, 7, 6, 8, 3/))!see #3 below
+       ! #1 The leftover is above subfaces 136 and 364
+       ! #2 The leftover is above subfaces 136 and 368
+       ! #3 The leftover is above subfaces 365 and 368
+       !==========================
+    end select
+  contains
+    subroutine interpolate_pyramids(&
+         iTetrahedron1_I,iTetrahedron2_I,iTetrahedron3_I,&
+         iTetrahedron4_I,iTetrahedron5_I,iTetrahedron6_I,&
+         iRectangular1_I,iRectangular2_I,iRectangular3_I,&
+         iTrapezoidal1_I,iTrapezoidal2_I)
+      use ModInterpolateSimpleShape, ONLY:&
+           gen_interpolate_pyramids=>interpolate_pyramids
+      integer,intent(in),optional,dimension(4)::&
+           iTetrahedron1_I, iTetrahedron2_I, iTetrahedron3_I,&
+           iTetrahedron4_I, iTetrahedron5_I, iTetrahedron6_I
+      integer,intent(in),optional,dimension(5)::&
+           iRectangular1_I, iRectangular2_I, iRectangular3_I,&
+           iTrapezoidal1_I, iTrapezoidal2_I
+      integer:: iOrderHere_I(1:5)
+      !---------------------------
+      call gen_interpolate_pyramids(&
+           XyzGrid_DI, Xyz_D,iOrderHere_I, Weight_I, nGridOut,&
+           iTetrahedron1_I,iTetrahedron2_I,iTetrahedron3_I,&
+           iTetrahedron4_I,iTetrahedron5_I,iTetrahedron6_I,&
+           iRectangular1_I,iRectangular2_I,iRectangular3_I,&
+           iTrapezoidal1_I,iTrapezoidal2_I)
+      if(nGridOut > -1)iOrder_I(1:nGridOut) = &
+           iOrder_I(iOrderHere_I(1:nGridOut))
+    end subroutine interpolate_pyramids
+    !======================
+    subroutine interpolate_on_parallel_rays(Dir_D, &
+         iDRectangle1_I, iDTrapezoid1_I,   &
+         iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
+         iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
+         iURectangle1_I, iURectangle2_I, iURectangle3_I,&
+         iUTrapezoid1_I,                             &
+         iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
+         iUTriangle4_I)
+      use ModInterpolateSimpleShape, ONLY:&
+           parallel_rays=>interpolate_on_parallel_rays
+      !Direction of parallel rays
+      real, intent(in) :: Dir_D(nDim)
+      !\
+      !Up subfaces ure in the direction of  Dir_D from Xyz point
+      !Down faces are in the direction of -Dir_D
+      !/
+      integer, intent(in), optional, dimension(3)::&
+           iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
+           iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
+           iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
+           iUTriangle4_I
+      integer, intent(in), optional, dimension(4)::&
+           iDRectangle1_I, iDTrapezoid1_I, iUTrapezoid1_I,&
+           iURectangle1_I, iURectangle2_I, iURectangle3_I
+      !\
+      !The point belonging to one of the up and down subfaces
+      !/ 
+      real, dimension(nDim) :: XyzUp_D, XyzDown_D, X1_D, X2_D, X3_D, X4_D
+      !Misc
+      real:: AlphaUp, AlphaDown
+      integer:: nGridOutUp, nGridOutDown, iOrderHere_I(nGrid)
+      !\
+      ! Consider a ray passing through Xyz
+      ! Solve equation:
+      ! Xyz + Dir*AlphaUp = XyzUp 
+      ! its solution is 
+      ! AlphaUp = (UX1-Xyz)\cdot[(UX2-UX1)\times(UX3-UX1)]/&
+      !          Dir\cdot[(UX2-UX1)\times(UX3-UX1)]
+      ! XyzUp belongs to the up subface
+      !/
+      !\
+      ! Solve equation:
+      ! Xyz - Dir*AlphaDown = XyzDown 
+      ! its solution is 
+      ! AlphaDown = (Xyz-DX1)\cdot[(DX2-DX1)\times(DX3-DX1)]/&
+      ! Dir\cdot[(DX2-DX1)\times(DX3-DX1)]
+      ! XyzUp belongs to the Down subface
+      !/
+      !\
+      ! As long as Xyz=(XyzDown*AlphaUp + XyzUp*AlphaDown)/(AlphaUp+AlphaDown)
+      ! the weights for the upper face should be multiplied by 
+      ! AlphaDown/(AlphaUp+AlphaDown)
+      ! for the down face - by AlphaUp/(AlphaUp+AlphaDown)
+      !/
+      call parallel_rays(&
+           XyzGrid_DI, Xyz_D, iOrderHere_I, Weight_I, nGridOut, Dir_D, &
+           iDRectangle1_I, iDTrapezoid1_I,   &
+           iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
+           iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
+           iURectangle1_I, iURectangle2_I, iURectangle3_I,&
+           iUTrapezoid1_I,                             &
+           iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
+           iUTriangle4_I)
+      if(nGridOut > 0)iOrder_I(1:nGridOut) =  &
+           iOrder_I(iOrderHere_I(1:nGridOut))
+    end subroutine interpolate_on_parallel_rays
+    !===========================
+  end subroutine resolution_corner
+end module ModResolutionCorner
+!=========================
 module ModInterpolateAMR
   !\
   !Generalize bilinear and trilinear interpolation for AMR grids
@@ -85,7 +2213,7 @@ module ModInterpolateAMR
   !When the first index equals 1,2,3,4, the vertex, accordingly: 
   !(1) coincides with the given one
   !(2) is connected with the given one by the edge of direction iDir
-
+  
   use ModCubeGeometry, ONLY: iOppositeSide_IDI
   !Vertexes (enumerated by the first undex), which form 
   !the side of direction iDir (second index) and does not include the
@@ -95,12 +2223,12 @@ module ModInterpolateAMR
   !(2) is connected to (1) by the edge of direction iDir
   !---------------------REFINEMENT CHARACTERSTICS------------
   use ModCubeGeometry, ONLY: Coarse_, Fine_
-
+  
   !\
   ! Different cases of 3D stencil 
   !/
   use ModCubeGeometry, ONLY: Uniform_, Face_, Edge_, OneFine_, OneCoarse_,& 
-        Transition2Edge_, Transition2Corner_, TransitionJunction_
+       Transition2Edge_, Transition2Corner_, TransitionJunction_
   !\
   ! Analogous for 2D
   !/
@@ -142,8 +2270,8 @@ module ModInterpolateAMR
   !  nDim=3,              &!number of dimensions
   !  XyzIn_D=,Xyz_D,      &!Point in which to interpolate
   !  nIndexes = 4,        &!Three cell indexes plus one block index
-  !  nCell_D  = (/4,4,4/) &!
   !  find = find_subroutine , &! Search in grid
+  !  nCell_D  = (/4,4,4/) &!
   !  nGridOut=nGridOut,   &! Number of points in the output stencil
   !  Weight_I=Weight_I,   &! Weight coefficients
   !  iIndexes_II=iIndexes_II) !Cell+block indexes to be used in interpolation
@@ -160,13 +2288,12 @@ module ModInterpolateAMR
   ! of  State_VGB is allocated is provided in iIndex_II(0,:) components
   ! of the index output array
   !/
-  public interpolate_amr 
+  public interpolate_amr
 contains
-  !====================================================================
-  subroutine interpolate_amr(nDim, XyzIn_D, nIndexes, nCell_D, find, &
+  subroutine interpolate_amr(nDim, XyzIn_D, nIndexes, find, nCell_D,  &
        nGridOut, Weight_I, iIndexes_II, IsSecondOrder)
-    use ModInterpolateBody, ONLY: resolution_corner
-    !\
+  use ModResolutionCorner, ONLY: resolution_corner
+  !\
     !USE: The tools to fill in sort stencil array
     !/
     use ModCubeGeometry, ONLY: DoInit, init_sort_stencil
@@ -191,7 +2318,8 @@ contains
     !\
     ! Block AMR Grid characteristic: number of cells
     !/ 
-    integer, intent(in) :: nCell_D(nDim)
+    integer, intent(in)&!, optional 
+         :: nCell_D(nDim)
     !\
     ! Yet another Block AMR Grid characteristic:
     ! the search routine, which returns, for a given point,
@@ -199,6 +2327,8 @@ contains
     ! this block is allocated, as well as the block parameters:
     ! coordinates of the left corner (the point in the block with the 
     ! minvalue of coordinates) and (/Dx, Dy, Dz/)
+    
+    !optional::find
     interface 
        subroutine find(nDim, Xyz_D, &
             iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
@@ -223,6 +2353,11 @@ contains
          logical, intent(out):: IsOut !Point is out of the domain.
        end subroutine find
     end interface
+    !real,    optional, intent(in):: XyzGridIn_DII(nDim,0:2**nDim,2**nDim) 
+    !integer, optional, intent(in):: iCellIndexesIn_DII(nDim,2**nDim,2**nDim)
+    !integer, optional, intent(in):: iLevelIn_I(2**nDim) 
+    !logical, optional, intent(in):: IsOutOfDomainIn_I(2**nDim)
+    !integer, optional, intent(in), dimension(2**nDim):: iBlockIn_I, iProcIn_I
     !\
     !OUTPUT PARAMETERS
     !/
@@ -240,6 +2375,7 @@ contains
     ! iIndexes_II(0,:) 
     !/
     integer, intent(out):: iIndexes_II(0:nIndexes,2**nDim)
+
     !\
     !The following is true if stencil does not employ 
     !the out-of-grid points
@@ -248,12 +2384,6 @@ contains
     !\
     ! Local variables
     !/
-    !\
-    ! The output array in generate_basic_stencil routine
-    ! This is the set of numbers of the elements of the extended stencil
-    ! to be included into the basic stencil
-    !/
-    integer, dimension(2**nDim):: iOrderExtended_I
     !\
     ! The output array in interpolate_amr2,3  routine
     ! This is the set of numbers of the elements of the basic stencil
@@ -278,18 +2408,8 @@ contains
     ! routine; inverse of (/Dx, Dy, Dz/) is reused
     !/
     real, dimension(nDim)      :: Xyz_D, DxyzInv_D, XyzStencil_D
-
     !\
-    ! Extended stencil, the generous estimate for its size is 2**(2*nDim) 
-    !/
-    real, dimension(nDim,64) :: XyzExtended_DI 
-    integer :: iLevelExtended_I(64)
-    integer :: iIndexesExtended_II(0:nIndexes,64)
-    integer :: nExtendedStencil
-    logical :: IsOutExtended_I(64)
-
-    !\
-    ! The same extended stencil in a structured form:
+    ! The extended stencil in a structured form:
     ! A cubic 2*2*2 grid with 2*2*2 subgrids covering each vertex
     !/
     real       :: XyzGrid_DII(nDim,0:2**nDim,2**nDim)
@@ -304,11 +2424,10 @@ contains
     ! The sort of stencil as derived from EXTENDED stencil
     !/
     integer:: iCaseExtended
-
     !\
-    ! UseGhostPoint = .true. if in the extended stencil there are
+    ! UsePointsOutOfDomain = .true. if in the extended stencil there are
     ! out-of-grid points 
-    logical:: UseGhostPoint, IsExtended
+    logical:: UsePointsOutOfDomain, IsExtended
     !/
     !\
     !Just 2**nDim
@@ -330,7 +2449,7 @@ contains
     integer:: iGridOutOfBlock
     !------------------------
     cTol2 = cTol**(nByteReal/4)
-    IsExtended = .false.; UseGhostPoint = .false.
+    IsExtended = .false.; UsePointsOutOfDomain = .false.
 
     nGrid = 2**nDim !Number of points in a basic stencil
 
@@ -340,6 +2459,15 @@ contains
     iOrder_I    = 0; iIndexes_II = 0; Weight_I    = 0
     nGridOut = -1; Xyz_D = XyzIn_D ; IsOut_I = .false.
     if(present(IsSecondOrder))IsSecondOrder = .false.
+    !if(present(find).and.present(nCell_D))then
+    !\
+    ! Implemented version:
+    ! only physical points are involved into interpolation,
+    ! but, in general case, from many blocks. An alternative 
+    ! version, when the ghost cells may be involved but the 
+    ! stencil points should be all from one block is under
+    ! development.
+    !/
     !\
     ! Find block to which the point belong
     !/ 
@@ -370,38 +2498,68 @@ contains
     !\
     ! Prolong behind the boundary, if needed
     !/
-    if(UseGhostPoint)then
+    !elseif(present(XyzGridIn_DII).and.present(iCellIndexesIn_DII))then
+    !   XyzGrid_DII = XyzGridIn_DII
+    !   iCellIndexes_DII = iCellIndexesIn_DII
+    !   if(present(iLevelIn_I))then
+    !      iLevelSubgrid_I = iLevelIn_I
+    !   else
+    !      iLevelSubgrid_I = 0
+    !   end if
+    !   nSubGrid_I = 8**iLevelSubGrid_I
+    !   if(present(IsOutOfDomainIn_I))then
+    !      IsOut_I = IsOutOfDomainIn_I
+    !   else
+    !      IsOut_I = .false.
+    !   end if
+    !   if(present(iBlockIn_I))then
+    !      iBlock_I = iBlockIn_I
+    !   else
+    !      iBlock_I = 0
+    !   end if
+    !   if(present(iProcIn_I))then
+    !      iProc_I = iProcIn_I
+    !   end if
+    !   IsExtended = maxval(iLevelSubgrid_I,MASK=.not.IsOut_I) > Coarse_
+    !   UsePointsOutOfDomain = any(IsOut_I)
+    !   IsOutOfDomain = all(IsOut_I)
+    !   if(IsOutOfDomain)then
+    !      !\
+    !      ! The algorithm does not work for a point out of the computation
+    !      ! domain. It could, but in this case too much information
+    !      ! about grid should be brought to the table - the domain size,
+    !      ! periodicity etc
+    !      !/
+    !      nGridOut = -1
+    !      RETURN
+    !   end if
+    !end if
+
+    if(UsePointsOutOfDomain)then
        call prolong_beyond_boundary
        !\
-       !The interpolation may be done inside generate_extended_stencil 
+       ! If there is the only physical grid point in the stencil 
        !/
        if(nGridOut > 0) then
           if(present(IsSecondOrder))IsSecondOrder = .false.
           RETURN
        end if
     end if
-    call generate_extended_stencil
-    !\
-    !The interpolation may be done inside generate_extended_stencil 
-    !/
-    if(nGridOut > 0) then
-       if(present(IsSecondOrder))IsSecondOrder = .not. UseGhostPoint
+    if(.not.IsExtended) then
+       call do_on_uniform_grid
+       if(present(IsSecondOrder))IsSecondOrder = .not. UsePointsOutOfDomain
        RETURN
     end if
+    !\
+    !Start non-umifirm grid
+    !/
     if(DoInit)call init_sort_stencil
     select case(nDim)
     case(2)
-       call fix_basic_stencil2(&
+       call check_transition2(&
             Xyz_D, DxyzInv_D, XyzGrid_DII(:,0,:), iLevelSubgrid_I, &
             XyzStencil_D, iCaseExtended)
-       call generate_basic_stencil(&
-            nDim, XyzStencil_D, nExtendedStencil,                      &
-            XyzExtended_DI(:,1:nExtendedStencil), DxyzInv_D, iOrderExtended_I)
-       XyzGrid_DI = XyzExtended_DI(:,iOrderExtended_I)
-       iLevel_I = iLevelExtended_I(iOrderExtended_I)
-       IsOut_I = IsOutExtended_I(iOrderExtended_I)
-       iIndexes_II = &
-            iIndexesExtended_II(:,iOrderExtended_I)
+       call generate_basic_stencil(XyzStencil_D) 
        call interpolate_amr2(&
             Xyz_D , XyzGrid_DI, iLevel_I, IsOut_I, iCaseExtended, &
             nGridOut, Weight_I, iOrder_I)
@@ -415,19 +2573,11 @@ contains
        ! edge. iCaseExtended for these cases takes the values 
        ! Transition2Edge_, Transition2Corner_, TransitionJunction_
        !/ 
-       call fix_basic_stencil3(&
+       call check_transition3(&
             Xyz_D, DxyzInv_D, XyzGrid_DII(:,0,:), iLevelSubgrid_I, &
             XyzStencil_D, iCaseExtended, IsCorner)
        if(.not.IsCorner)then
-          call generate_basic_stencil(&
-               nDim, XyzStencil_D, nExtendedStencil,              &
-               XyzExtended_DI(:,1:nExtendedStencil),              &
-               DxyzInv_D, iOrderExtended_I)
-          XyzGrid_DI = XyzExtended_DI(:,iOrderExtended_I)
-          iLevel_I = iLevelExtended_I(iOrderExtended_I)
-          iIndexes_II = &
-               iIndexesExtended_II(:,iOrderExtended_I)
-          IsOut_I = IsOutExtended_I(iOrderExtended_I)
+          call generate_basic_stencil(XyzStencil_D)
           call interpolate_amr3(&
                Xyz_D , XyzGrid_DI, iLevel_I, IsOut_I, iCaseExtended,&
                nGridOut, Weight_I, iOrder_I, IsCorner)
@@ -626,7 +2776,7 @@ contains
            iProc_I(iGridStored), iBlock_I(iGridStored), &
            XyzCorner_D, Dxyz_D, IsOut)
       if(IsOut)then
-         UseGhostPoint = .true.
+         UsePointsOutOfDomain = .true.
          iProc_I(iGridStored) = 0 !For not processing this point again
          IsOut_I(iGridStored) = .true.
          XyzGrid_DII(:,1,iGridStored) = XyzGrid_DII(:,0,iGridStored)
@@ -956,51 +3106,25 @@ contains
       end do
     end subroutine prolong
     !======================
-    subroutine generate_extended_stencil
-      integer:: iGrid, iSubGrid
-      if(IsExtended)then
-         !\ 
-         ! calculate all arrays for extended stencil
-         !/
-         nExtendedStencil    = 0
-         XyzExtended_DI      = 0
-         iIndexesExtended_II = 0
-         iLevelExtended_I    = 0
-         IsOutExtended_I = .false.
-         do iGrid = 1, nGrid
-            do iSubgrid = 1, nSubgrid_I(iGrid)
-               nExtendedStencil = nExtendedStencil + 1
-               XyzExtended_DI(:,nExtendedStencil) = &
-                    XyzGrid_DII(:,iSubGrid,iGrid) 
-               iIndexesExtended_II(0,nExtendedStencil) = &
-                    iProc_I(iGrid)
-               iIndexesExtended_II(nIndexes,nExtendedStencil) = &
-                    iBlock_I(iGrid)
-               iIndexesExtended_II(1:nDim,nExtendedStencil)   = &
-                    iCellIndexes_DII(:,iSubGrid,iGrid)
-               iLevelExtended_I(nExtendedStencil) = iLevelSubgrid_I(iGrid)
-               IsOutExtended_I(nExtendedStencil) = IsOut_I(iGrid)
-            end do
-         end do
-      else
-         !\
-         ! Calculate nDim-linear interpolation on uniform grid
-         !/
-         call interpolate_uniform((Xyz_D - XyzGrid_DII(:,1,1))*DxyzInv_D)
-         !\
-         ! Form index array and sort out zero weights
-         !/
-         nGridOut = 0 ; cTol2 = 2*cTol2
-         do iGrid = 1, nGrid
-            if(Weight_I(iGrid) < cTol2)CYCLE
-            nGridOut = nGridOut + 1
-            iIndexes_II(0,       nGridOut) = iProc_I( iGrid)
-            iIndexes_II(nIndexes,nGridOut) = iBlock_I(iGrid)
-            iIndexes_II(1:nDim,  nGridOut) = iCellIndexes_DII(:,1,iGrid)
-            Weight_I(nGridOut) = Weight_I(iGrid)
-         end do
-      end if
-    end subroutine generate_extended_stencil
+    subroutine do_on_uniform_grid
+      integer:: iGrid
+      !\
+      ! Calculate nDim-linear interpolation on uniform grid
+      !/
+      call interpolate_uniform((Xyz_D - XyzGrid_DII(:,1,1))*DxyzInv_D)
+      !\
+      ! Form index array and sort out zero weights
+      !/
+      nGridOut = 0 ; cTol2 = 2*cTol2
+      do iGrid = 1, nGrid
+         if(Weight_I(iGrid) < cTol2)CYCLE
+         nGridOut = nGridOut + 1
+         iIndexes_II(0,       nGridOut) = iProc_I( iGrid)
+         iIndexes_II(nIndexes,nGridOut) = iBlock_I(iGrid)
+         iIndexes_II(1:nDim,  nGridOut) = iCellIndexes_DII(:,1,iGrid)
+         Weight_I(nGridOut) = Weight_I(iGrid)
+      end do
+    end subroutine do_on_uniform_grid
     !==================
     subroutine generate_corner_stencil
       integer:: iGrid
@@ -1019,6 +3143,71 @@ contains
          end if
       end do
     end subroutine generate_corner_stencil
+    !==================
+    subroutine generate_basic_stencil(XyzStencil_D)  
+      real,    intent(in) :: XyzStencil_D(nDim)
+     
+      integer:: nExtendedStencil, iGrid_I(64), iSubgrid_I(64)
+      integer:: iGrid, iPoint, iSubgrid !Loop variables
+      logical:: IsMask_I(64), IsOutSaved_I(nGrid) 
+      logical:: IsBelowExtended_DI(nDim,64)
+      real   :: Distance_I(64)
+      !\
+      ! Arrays of logical values Xyz_D < XyzGrid_DI(:,iGrid) for iGrid'th grid
+      ! point of the basic stencil for point Xyz
+      !/
+      logical, parameter, dimension(3,8):: IsBelow_DI=reshape((/&
+           .false., .false., .false., &
+           .true. , .false., .false., &
+           .false., .true. , .false., &
+           .true. , .true. , .false., &
+           .false., .false., .true. , &
+           .true. , .false., .true. , &
+           .false., .true. , .true. , &
+           .true. , .true. , .true. /)&
+           , (/3,8/) )
+      !-------------------------------------
+
+      IsOutSaved_I = IsOut_I
+      iPoint = 0
+      do iGrid = 1, nGrid
+         do iSubgrid = 1, nSubgrid_I(iGrid)
+            iPoint = iPoint + 1
+            iGrid_I(iPoint) = iGrid
+            iSubGrid_I(iPoint) = iSubGrid
+            IsBelowExtended_DI(:,iPoint) = &
+                 XyzStencil_D < XyzGrid_DII(:,iSubGrid,iGrid) 
+            Distance_I(iPoint) = sum( &
+              ((XyzStencil_D - XyzGrid_DII(:,iSubGrid,iGrid))*dXyzInv_D)**2)
+         end do
+      end do
+      nExtendedStencil = iPoint
+      do iGrid = 1, nGrid
+         do iPoint = 1, nExtendedStencil
+            !\
+            ! Mark all the candidates for the role of iGrid point of  
+            ! the basic stencil
+            !/
+            IsMask_I(iPoint) = all(&
+                 IsBelowExtended_DI(:,iPoint).eqv.IsBelow_DI(1:nDim,iGrid))
+         end do
+         !\
+         !Among the candidates chose the closest one
+         !/
+         iPoint = minloc(Distance_I(1:nExtendedStencil),&
+              MASK = IsMask_I(1:nExtendedStencil), DIM=1)
+         XyzGrid_DI(:,iGrid) = &
+              XyzGrid_DII(:,iSubGrid_I(iPoint),iGrid_I(iPoint)) 
+         iIndexes_II(0,iGrid) = &
+              iProc_I(iGrid_I(iPoint))
+         iIndexes_II(nIndexes,iGrid) = &
+              iBlock_I(iGrid_I(iPoint))
+         iIndexes_II(1:nDim,iGrid)   = &
+              iCellIndexes_DII(:,iSubGrid_I(iPoint),iGrid_I(iPoint))
+         iLevel_I(iGrid) = iLevelSubgrid_I(iGrid_I(iPoint))
+         IsOut_I(iGrid) = IsOutSaved_I(iGrid_I(iPoint))
+      end do
+    end subroutine generate_basic_stencil
     !==================
     subroutine sort_out
       !\
@@ -1048,7 +3237,126 @@ contains
       end do ALL
     end subroutine sort_out
   end subroutine interpolate_amr
-  !=========================================================================
+  !==================================
+  integer function i_case(iLevel_I)
+    integer, intent(in):: iLevel_I(:)
+    integer:: iGrid, nGrid
+    !--------------------
+    nGrid = size(iLevel_I,DIM=1)
+    !\
+    ! Generate iCase from 'binary' iLevel_I
+    !/
+    i_case = iLevel_I(nGrid)
+    do iGrid = nGrid - 1, 1, -1
+       i_case = i_case + i_case + iLevel_I(iGrid)
+    end do
+  end function i_case
+  !=====================================================================
+  subroutine check_transition2( Xyz_D, dXyzInv_D, XyzGrid_DI, iLevel_I,&
+       XyzStencil_D, iCase)
+    integer, parameter:: nDim = 2, nGrid = 4
+    !\
+    ! Point where to interpolate; inverse of (/Dx,Dy,Dz/)
+    !/
+    real,    intent(in) :: Xyz_D(nDim), dXyzInv_D(nDim)
+    !\
+    ! The rectangular grid combining centers of the refined subgrids and
+    ! coarse vertexes
+    !/
+    real, intent(in):: XyzGrid_DI(nDim,nGrid)
+    !\
+    ! The refinement level pattern of the extended stencil
+    !/
+    integer, intent(in)::iLevel_I(nGrid)
+    !\
+    ! Point about which to construct basic stencil.
+    !/
+    real, intent(out) :: XyzStencil_D(nDim)
+    !\
+    ! For three-dimensional corner within this routine
+    ! it is more convenient to figure out if Xyz point is
+    ! inside the domain of transition from an edge to the central
+    ! corner part or it belongs to a junction of such two domains
+    !/
+    integer, intent(out):: iCase
+    !\
+    !Dimensionless displacement from the first grid point to Xyz_D
+    !/
+    real :: Dimless_D(nDim)
+    !\
+    !Three components of Discr_D equal to -1,0 or 1 each. The first component 
+    !equals -1, if Xyz point is close to refined face x=0, +1 if it is close
+    !to refined face x=1, 0 otherwise
+    !/
+    integer:: iDiscr_D(nDim), iDir, iDim, iGrid, jGrid
+    !\ 
+    !Dir = 0 - corner, positive iDirs - face, negative iDir - edges, which
+    !occur at the intersection of the refined faces, which are close to
+    !Xyz
+    !/
+    integer, parameter, dimension(2,-1:1,-1:1):: &
+         iGridDir_III = reshape((/&
+         1,0,     1,2,  2,0,  1,1,  0,0, 2,1,  3,0,   3,2, 4,0/),(/2,3,3/))
+    !x=0,y=0!y=0 !x=1,y=0!x=0 !    !x=1 !x=0,y=1!y=1 !x=1,y=1!
+    real:: XyMin, z
+    !\
+    ! Average coordinates for the center of the resolution corner,
+    ! for centers of faces or edges and distance from them to Xyz
+    !/
+    real   :: XyzAvr_D(nDim), XyzAvr_DD(nDim, nDim), Distance_D(nDim) 
+    !----------------------
+    XyzStencil_D = Xyz_D
+    iCase = i_case(iLevel_I)
+    !\                                    F F
+    !We do not care about trapezoids like  C   C
+    !/
+    if(iSortStencil3_II(Case_,iCase) <= Face_)RETURN
+    Dimless_D = (Xyz_D - XyzGrid_DI(:,1))*DxyzInv_D 
+    iDiscr_D = 0
+    do iDim = 1, nDim
+       if(Dimless_D(iDim) <  0.250.and.any(iLevel_I(&
+            iSide_IDI(:,3 - iDim,1))==Fine_))iDiscr_D(iDim) = -1
+       if(Dimless_D(iDim) >=  0.750.and.any(iLevel_I(&
+            iOppositeSide_IDI(:,3 - iDim,1))==Fine_))iDiscr_D(iDim) = 1
+    end do
+    iGrid = iGridDir_III(1, iDiscr_D(1), iDiscr_D(2))
+    XyzAvr_D = 0.50*(XyzGrid_DI(:,1) + XyzGrid_DI(:,4))
+    if(iGrid==0)then 
+       !\
+       ! The point is in the close proximity of the resolution edge
+       !/
+       XyzStencil_D = XyzAvr_D 
+       RETURN
+    end if
+    !\
+    !Xyz point is in the transition domain
+    !/   
+    iDir = iGridDir_III(2, iDiscr_D(1), iDiscr_D(2))
+    if(iDir== 0)then
+       !\
+       !The point is close to two faces
+       !/
+       do iDim = 1,nDim
+          XyzAvr_DD(:,iDim) = 0.50*(&
+               XyzGrid_DI(:,&
+               iSide_IDI(1,3 - iDim,iGrid)) +&
+               XyzGrid_DI(:,&
+               iSide_IDI(2,3 - iDim,iGrid)) )
+          Distance_D(iDim) = &
+               sum(((Xyz_D - XyzAvr_DD(:,iDim))*DxyzInv_D)**2) 
+       end do
+       iDir = minloc(Distance_D(1:2),DIM=1)
+       !\
+       !else Xyz point is close to a single refined face 
+       !/
+    end if
+    iCase = Transition2Edge_
+    !\
+    ! Displace the stencil center toward the face center
+    !/
+    XyzStencil_D(3 - iDir) = XyzAvr_D(3 - iDir)
+  end subroutine check_transition2
+  !=========================================================
   subroutine  interpolate_amr2(&
        Xyz_D, XyzGrid_DI, iLevel_I, IsOut_I, iCaseExtended,&
        nGridOut, Weight_I, iOrder_I)
@@ -1312,638 +3620,8 @@ contains
       end if
     end subroutine triangle
   end subroutine interpolate_amr2
-  !===========================
-  subroutine  interpolate_amr3(&
-       Xyz_D, XyzGrid_DI, iLevel_I, IsOut_I, iCaseExtended,&
-       nGridOut, Weight_I, iOrder_I, IsCorner)
-    use ModInterpolateBody, ONLY: resolution_corner
-    integer,parameter :: nGrid = 8, nDim = 3
-    character(LEN=*),parameter:: NameSub='interpolate_amr3'
-    !\
-    !Input parameters
-    !/
-    !\
-    !The location at which to interpolate the data
-    !/
-    real   , intent(in) :: Xyz_D(nDim) 
-    !\
-    !Grid point coordinates !3 coordinate, 8 points
-    !/
-    real  ,   intent(in) :: XyzGrid_DI(nDim,nGrid)
-
-    !The refinement level at each grid point. By one higher level
-    ! of refinement assumes the cell size reduced by a factor of 0.5
-    integer,  intent(in) :: iLevel_I(nGrid)
-    !\
-    ! Logical which marks "ghost" points, not belonging to the computational 
-    ! domain
-    !/
-    logical, intent(in) :: IsOut_I(nGrid)
-    integer, intent(in) :: iCaseExtended
-    !\
-    !Output parameters
-    !/
-    !The number of grid points to be ultimately included into 
-    !the interpolation stencil If nGridOut < nGrid only the
-    !first nGridOut lines in the output arrays are meaningful.
-    !/
-    integer, intent(out) :: nGridOut
-    !\
-    !The weight coefficients array.
-    real   , intent(out) :: Weight_I(nGrid)
-    !\
-    !Order(numbers) of grid points used for the interpolation
-    integer, intent(out) :: iOrder_I(nGrid)
-    !\
-    ! The logical is true, if (for some resolution combinations) the 
-    ! basic stencil for the point at which to inpertpolate is not 
-    ! applicable
-    !/
-    logical, intent(out):: IsCorner
-    !\
-    !Loop variables
-    !/
-    integer :: iDim, iLoop
-    !\
-    ! To find location of fine or coarse points
-    !/
-    !Number of grid points returned from 1D interpolation routine
-    integer :: nGridOut1     
-    !\
-    ! Minimum and maximum values of coordinates
-    !/
-    real    :: XyzMin_D(nDim), XyzMax_D(nDim)   
-    !\
-    ! To find points with  "equal" cordinates
-    !/
-    real    :: dXyzSmall_D(nDim)      
-    !\
-    ! for calculating on a uniform grid 
-    !/          
-    real    :: dXyzInv_D(nDim)                
-    real    :: Aux_D(nDim), AuxCoarse, AuxFine   ! Misc
-    !\
-    ! To call two-dimensional interpolation
-    !/
-    real    :: Xyz2_D(x_:y_), XyzGrid2_DI(x_:y_,4)
-    integer :: nGridOut2, iOrder2_I(4),iLevel2_I(4)
-    logical :: IsOut2_I(4)
-
-    !\
-    ! To find the sort of corner stencil
-    !/
-    integer:: iCase, iDir, iGrid
-    !-------------
-    Weight_I = 0
-    !\
-    ! We store in advance the 'basic' grid point
-    ! and orientation of all possible stencil configurations
-    ! and now we extracted this information
-    !/ 
-    iCase = i_case(iLevel_I)
-    !\
-    ! Check junction and transitions
-    !/
-    if(iSortStencil3_II(Case_,iCase) > Edge_&
-         .and.iCaseExtended >= Transition2Corner_)&
-         iCase = iCaseExtended
-    if(iSortStencil3_II(Case_,iCase) == Edge_&
-         .and.iCaseExtended == Transition2Edge_)&
-         iCase = iCaseExtended 
-    iGrid = iSortStencil3_II(Grid_,iCase)
-    iDir  = iSortStencil3_II(Dir_,iCase)
-    iCase = iSortStencil3_II(Case_,iCase)
-    IsCorner = .false. 
-    !\
-    ! Check if the grid points are out of the grid boundary
-    !/
-    if(count(IsOut_I)>=4)then
-       do iDim = 1, nDim
-          if(all(IsOut_I(iOppositeFace_IDI(:,iDim,1))))then
-             !\
-             ! Upper face iDir should be removed
-             !/
-             iOrder_I(1:4) = iFace_IDI(        :,iDim,1)
-             iOrder_I(5:8) = iOppositeFace_IDI(:,iDim,1)
-          elseif(all(IsOut_I(iFace_IDI(:,iDim,1))))then
-             !\
-             ! Lower Face iDir should be removed
-             !/
-             iOrder_I(1:4) = iOppositeFace_IDI(:,iDim,1)
-             iOrder_I(5:8) = iFace_IDI(:,iDim,1)
-          else
-             CYCLE
-          end if
-          !\
-          ! iDir,1 + mod(iDir,3),1+mod(iDir+1,3) is 1,2,3 or 2,3,1 or 3,1,2
-          !/
-          Xyz2_D(x_) = Xyz_D(1 + mod(iDim,3))
-          Xyz2_D(y_) = Xyz_D(1 + mod(iDim + 1, 3))
-          XyzGrid2_DI(x_,1:4) = XyzGrid_DI(1 + mod(iDim    ,3),iOrder_I(1:4))
-          XyzGrid2_DI(y_,1:4) = XyzGrid_DI(1 + mod(iDim + 1,3),iOrder_I(1:4))
-
-          iLevel2_I(1:4) = iLevel_I(iOrder_I(1:4))
-          IsOut2_I(1:4)     = IsOut_I(iOrder_I(1:4))
-
-          call interpolate_amr2(&
-               Xyz2_D,  XyzGrid2_DI, iLevel2_I, IsOut2_I,  iCase, &
-               nGridOut, Weight_I(1:4), iOrder2_I)
-
-          iOrder_I(1:4) = iOrder_I(iOrder2_I)
-          RETURN
-       end do
-    end if
-    !\ 
-    ! Calculate the stencil size
-    !/
-    do iDim = 1, nDim
-       dXyzSmall_D(iDim) = 0.10*(&
-            maxval(XyzGrid_DI(iDim,:)) -  minval(XyzGrid_DI(iDim,:)))
-       dXyzInv_D(iDim)   = 0.10/dXyzSmall_D(iDim)
-    end do
-
-
-    iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
-    iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
-    !\
-    ! Reassign iCase for edges appearing from transitions, which require 
-    ! stencil fix
-    !/
-    if(iCase==Edge_.and.&
-         (iCaseExtended == TransitionJunction_.or.&
-         (iCaseExtended == Transition2Corner_.and.&
-         iDir/=iSortStencil3_II(Dir_,Transition2Corner_))))&
-         iCase = Transition2Edge_
-    select case(iCase)
-    case(Face_)
-       !\
-       ! Faces going along plane iDir (which is the direction of normal)    
-       !                               
-       !/
-       Xyz2_D(x_) = Xyz_D(1 + mod(iDir    ,3))
-       Xyz2_D(y_) = Xyz_D(1 + mod(iDir + 1,3))
-       !\
-       ! Interpolate along lower face
-       !/
-       XyzGrid2_DI(x_,1:4) = XyzGrid_DI(1 + mod(iDir    ,3),iOrder_I(1:4))
-       XyzGrid2_DI(y_,1:4) = XyzGrid_DI(1 + mod(iDir + 1,3),iOrder_I(1:4))
-       iLevel2_I(        1:4) = iLevel_I(        iOrder_I(1:4))
-       IsOut2_I = IsOut_I(iOrder_I(1:4))
-       call interpolate_amr2(&
-            Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, iCase, &
-            nGridOut2, Weight_I(1:4), iOrder2_I)
-       iOrder_I(1:4) = iOrder_I(iOrder2_I)
-       !\
-       ! Apply weight for interpolation along z-axis
-       !/
-       Aux_D(iDir) = dXyzInv_D(iDir)*&
-            (Xyz_D(iDir) - XyzGrid_DI(iDir,iOrder_I(1)))
-       Weight_I(1:nGridOut2) = Weight_I(1:nGridOut2)*(1 - Aux_D(iDir))
-       !\
-       ! May need to remove a grid points once behind the boundary
-       !/
-       if(    nGridOut2==2)then
-          iOrder_I(3:8) = iOrder_I((/5,6,7,8,3,4/))
-       elseif(nGridOut2==3)then
-          iOrder_I(4:8) = iOrder_I((/5,6,7,8,4/))
-       elseif(nGridOut2==1)then
-          iOrder_I(2:8) = iOrder_I((/5,6,7,8,2,3,4/))
-       end if
-       nGridOut = nGridOut2
-       !\
-       ! Interpolate along upper face
-       !/
-       XyzGrid2_DI(x_,1:4) = XyzGrid_DI(1 + mod(iDir    ,3),&
-            iOrder_I(nGridOut2 + 1:nGridOut2+4))
-       XyzGrid2_DI(y_,1:4) = XyzGrid_DI(1 + mod(iDir + 1,3),&
-            iOrder_I(nGridOut2 + 1:nGridOut2 + 4))
-       iLevel2_I(1:4) = iLevel_I(iOrder_I(nGridOut2 + 1:nGridOut2 + 4))
-       IsOut2_I = IsOut_I(iOrder_I(nGridOut2 + 1:nGridOut2 + 4))
-       call interpolate_amr2(&
-            Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, iCase, &
-            nGridOut2, Weight_I(nGridOut+1:nGridOut+4), iOrder2_I)
-       do iGrid=1,nGridOut2
-          iOrder_I(nGridOut+iGrid)=iOrder_I(nGridOut+iOrder2_I(iGrid))
-       end do
-       !\
-       ! Apply weight for interolation along kAxis
-       !/
-       Weight_I(nGridOut + 1:nGridOut + nGridOut2) = &
-            Weight_I(nGridOut + 1:nGridOut + nGridOut2)*Aux_D(iDir)
-       !\
-       ! May need to remove a grid points once behind the boundary
-       !/
-       nGridOut = nGridOut + nGridOut2
-    case(Edge_,Transition2Edge_)
-       !\
-       ! Edges going along resolution edge
-       ! Opposite "faces" have the same geometry in projection
-       ! term "face" is used to refer to 4 upper-, left-, 
-       ! front-most etc. grid points they do not belong to plane
-       !/      
-       !\
-       ! "Faces" have the same geometry in projection on iDir-plane
-       !/
-       Xyz2_D(x_:y_) = Xyz_D((/1 + mod(iDir,3),1 + mod(1 + iDir,3)/))
-       !\
-       ! Interpolation weight along iDir axis are calculated separately 
-       ! for coarse and fine points
-       !/
-       XyzMin_D(iDir)   = minval(XyzGrid_DI(iDir,:),iLevel_I/=Fine_)
-       AuxCoarse  = (Xyz_D(iDir) - XyzMin_D(iDir))/(&
-            maxval(XyzGrid_DI(iDir,:),iLevel_I/=Fine_) - XyzMin_D(iDir))
-
-       XyzMin_D(iDir)   = minval(XyzGrid_DI(iDir,:),iLevel_I==Fine_)
-       AuxFine  = (Xyz_D(iDir) - XyzMin_D(iDir))/(&
-            maxval(XyzGrid_DI(iDir,:),iLevel_I==Fine_) - XyzMin_D(iDir)) 
-       !\
-       ! Interpolate along lower face
-       !/
-       XyzGrid2_DI(x_:y_,1:4) = &
-            XyzGrid_DI((/1 + mod(iDir,3),1 + mod(iDir+1,3)/),iOrder_I(1:4))
-       iLevel2_I(        1:4) = iLevel_I( iOrder_I(1:4))
-       IsOut2_I = .false.
-       call interpolate_amr2(&
-            Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, iCase, &
-            nGridOut2, Weight_I(1:4), iOrder2_I)
-
-       iOrder_I(1:4) = iOrder_I(iOrder2_I  )
-       iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
-
-       !\
-       ! May need to remove grid points from the stencil
-       !/
-       nGridOut = 2 * nGridOut2
-       if(    nGridOut2==2)then
-          iOrder_I(  3:4) = iOrder_I((/5,6/))
-       elseif(nGridOut2==3)then
-          iOrder_I(  4:6) = iOrder_I((/5,6,7/))
-       end if
-       !\
-       ! Apply weight for interpolation along iDir
-       !/
-       do iGrid = 1,nGridOut2
-          if(iLevel_I(iOrder_I(iGrid))==Fine_)then
-             Weight_I(nGridOut2+iGrid) = Weight_I(iGrid)*     AuxFine
-             Weight_I(          iGrid) = Weight_I(iGrid)*(1-  AuxFine)
-          else
-             if(IsOut_I(iOrder_I(iGrid)))then
-                Weight_I(nGridOut2+iGrid) = Weight_I(iGrid)
-                Weight_I(          iGrid) = 0
-             elseif(&
-                  IsOut_I(iOrder_I(nGridOut2 + iGrid)))then
-                Weight_I(nGridOut2+iGrid) = 0
-                Weight_I(          iGrid) = Weight_I(iGrid)
-             else
-                Weight_I(nGridOut2+iGrid) = Weight_I(iGrid)* AuxCoarse
-                Weight_I(          iGrid) = Weight_I(iGrid)*(1 - AuxCoarse)
-             end if
-          end if
-       end do
-    case(TransitionJunction_)
-       !\
-       ! Check corner transition junction
-       !/
-
-       !\
-       ! Junction around direction iDir
-       !/
-       ! Face with all Fine points is numbered 5:8
-       ! Face with one to three Coarse points is numbered 1:4
-       !
-       !
-       !  F5--F7
-       !  |\ /|
-       !  | C1|-----3
-       !  |/|\|
-       !  F6--F8
-       !    |      4
-       !    |
-       !    2
-       !
-       !----------------------------------------------------------------
-       !\
-       ! Stencil part C1F5F6F7F8 is symmetric with respect to the plane 158
-       ! Find if point Xyz is from the same side of the plane as point 2 is
-       ! or as point 3 is
-       !/
-       if(sum((Xyz_D - XyzGrid_DI(:,iOrder_I(1)))*&
-            (XyzGrid_DI(:,iOrder_I(6)) - XyzGrid_DI(:,iOrder_I(7)))) > 0)then
-          iGrid = 2
-       else
-          iGrid = 3
-       end if
-       if(iLevel_I(iOrder_I(iGrid))==Coarse_)then
-          call parallel_rays(Dir_D=0.50*(&
-               XyzGrid_DI(:,iOrder_I(8)) + XyzGrid_DI(:,iOrder_I(5))) - &
-               XyzGrid_DI(:,iOrder_I(1)),&
-               iURectangle1_I=(/5, 6, 7, 8/),&
-               iDTriangle1_I=(/1, iGrid, 8/))
-       else
-          call pyramids(iRectangular1_I = (/5, 6, 7, 8, 1/),&
-               iRectangular2_I= (/iGrid, 4, iGrid +4, 8, 1/))
-       end if
-       IsCorner = nGridOut <= 3
-    case(Transition2Corner_)
-       call interpolate_corner_transition(iDir)
-    case default
-       call resolution_corner(&
-            Xyz_D, XyzGrid_DI, iLevel_I, nGridOut, Weight_I, iOrder_I) 
-    end select
-  contains
-    !==========================
-    subroutine pyramids(&
-         iTetrahedron1_I,iTetrahedron2_I,iTetrahedron3_I,&
-         iTetrahedron4_I,iTetrahedron5_I,iTetrahedron6_I,&
-         iRectangular1_I,iRectangular2_I,iRectangular3_I,&
-         iTrapezoidal1_I,iTrapezoidal2_I)
-      use ModInterpolateBody, ONLY:gen_pyramids=>pyramids
-      integer,intent(in),optional,dimension(4)::&
-           iTetrahedron1_I, iTetrahedron2_I, iTetrahedron3_I,&
-           iTetrahedron4_I, iTetrahedron5_I, iTetrahedron6_I
-      integer,intent(in),optional,dimension(5)::&
-           iRectangular1_I, iRectangular2_I, iRectangular3_I,&
-           iTrapezoidal1_I, iTrapezoidal2_I
-      integer:: iOrderHere_I(1:5)
-      real:: XyzGridHere_DI(nDim,nGrid)
-      !---------------------------
-      XyzGridHere_DI = XyzGrid_DI(:,iOrder_I)
-      call gen_pyramids(&
-           XyzGridHere_DI, Xyz_D,iOrderHere_I, Weight_I, nGridOut,&
-           iTetrahedron1_I,iTetrahedron2_I,iTetrahedron3_I,&
-           iTetrahedron4_I,iTetrahedron5_I,iTetrahedron6_I,&
-           iRectangular1_I,iRectangular2_I,iRectangular3_I,&
-           iTrapezoidal1_I,iTrapezoidal2_I)
-      if(nGridOut > -1)iOrder_I(1:nGridOut) = &
-           iOrder_I(iOrderHere_I(1:nGridOut))
-    end subroutine pyramids
-    !======================
-    subroutine parallel_rays(Dir_D, &
-         iDRectangle1_I, iDTrapezoid1_I,   &
-         iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
-         iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
-         iURectangle1_I, iURectangle2_I, iURectangle3_I,&
-         iUTrapezoid1_I,                             &
-         iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
-         iUTriangle4_I)
-      use ModInterpolateBody,ONLY: gen_parallel_rays=>parallel_rays
-      !Direction of parallel rays
-      real, intent(in) :: Dir_D(nDim)
-      !\
-      !Up subfaces ure in the direction of  Dir_D from Xyz point
-      !Down faces are in the direction of -Dir_D
-      !/
-      integer, intent(in), optional, dimension(3)::&
-           iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
-           iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
-           iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
-           iUTriangle4_I
-      integer, intent(in), optional, dimension(4)::&
-           iDRectangle1_I, iDTrapezoid1_I, iUTrapezoid1_I,&
-           iURectangle1_I, iURectangle2_I, iURectangle3_I
-      !\
-      !The point belonging to one of the up and down subfaces
-      !/ 
-      real, dimension(nDim) :: XyzUp_D, XyzDown_D, X1_D, X2_D, X3_D, X4_D
-      !Misc
-      real:: AlphaUp, AlphaDown, XyzGridHere_DI(nDim,nGrid)
-      integer:: nGridOutUp, nGridOutDown, iOrderHere_I(nGrid)
-      !\
-      ! Consider a ray passing through Xyz
-      ! Solve equation:
-      ! Xyz + Dir*AlphaUp = XyzUp 
-      ! its solution is 
-      ! AlphaUp = (UX1-Xyz)\cdot[(UX2-UX1)\times(UX3-UX1)]/&
-      !          Dir\cdot[(UX2-UX1)\times(UX3-UX1)]
-      ! XyzUp belongs to the up subface
-      !/
-      !\
-      ! Solve equation:
-      ! Xyz - Dir*AlphaDown = XyzDown 
-      ! its solution is 
-      ! AlphaDown = (Xyz-DX1)\cdot[(DX2-DX1)\times(DX3-DX1)]/&
-      ! Dir\cdot[(DX2-DX1)\times(DX3-DX1)]
-      ! XyzUp belongs to the Down subface
-      !/
-      !\
-      ! As long as Xyz=(XyzDown*AlphaUp + XyzUp*AlphaDown)/(AlphaUp+AlphaDown)
-      ! the weights for the upper face should be multiplied by 
-      ! AlphaDown/(AlphaUp+AlphaDown)
-      ! for the down face - by AlphaUp/(AlphaUp+AlphaDown)
-      !/
-      XyzGridHere_DI = XyzGrid_DI(:,iOrder_I)
-      call gen_parallel_rays(&
-           XyzGridHere_DI, Xyz_D, iOrderHere_I, Weight_I, nGridOut, Dir_D, &
-           iDRectangle1_I, iDTrapezoid1_I,   &
-           iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
-           iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
-           iURectangle1_I, iURectangle2_I, iURectangle3_I,&
-           iUTrapezoid1_I,                             &
-           iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
-           iUTriangle4_I)
-      if(nGridOut > 0)iOrder_I(1:nGridOut) =  &
-           iOrder_I(iOrderHere_I(1:nGridOut))
-    end subroutine parallel_rays
-    !===========================
-    subroutine interpolate_corner_transition(iEdgeDir)
-      integer, intent(in) :: iEdgeDir
-      integer             :: iAxis,jAxis,kAxis
-      !\
-      ! Auxilary variables to determine vertical weight
-      !/
-      real :: AlphaKAxisCoarse, AlphaKAxisFine
-      real :: dXyzUp, dXyzDown 
-      integer :: nFine, iFine_I(3)
-      integer :: nCoarse, iCoarse_I(3)
-      !\
-      ! Subroutine intepolates in transitional near a resolution corner
-      ! Points facing a corner a numbered 5:8
-      !
-      !-------------------------------------------------------------------
-      kAxis = iEdgeDir
-      iAxis = 1 + mod(iEdgeDir    ,3)
-      jAxis = 1 + mod(iEdgeDir + 1,3)
-      Xyz2_D(x_:y_) = Xyz_D((/iAxis,jAxis/))
-
-      !\
-      ! Interpolate along face 1:4
-      !/
-      XyzGrid2_DI(x_:y_,1:4) = XyzGrid_DI((/iAxis,jAxis/),iOrder_I(1:4))
-      iLevel2_I(        1:4) = iLevel_I(                  iOrder_I(1:4))
-      IsOut2_I = IsOut_I(iOrder_I(1:4))
-      call interpolate_amr2(&
-           Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, Edge_,&
-           nGridOut2, Weight_I(1:4), iOrder2_I)
-
-      !\
-      ! Rearrange points according to 2D interpolation output
-      !/
-      iOrder_I(1:4) = iOrder_I(iOrder2_I  )
-      iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
-      !\
-      ! Find number of Fine points in the output
-      ! Move them to the begining of iOrder_I
-      !/
-      nFine   = 0
-      do iGrid = 1, nGridOut2
-         if(iLevel_I(iOrder_I(iGrid))==Fine_)then
-            nFine   = nFine   + 1
-            iOrder_I((/nFine,  iGrid  /)) = iOrder_I((/iGrid,  nFine  /))
-            Weight_I((/nFine,  iGrid  /)) = Weight_I((/iGrid,  nFine  /))
-            iOrder_I((/nFine+4,iGrid+4/)) = iOrder_I((/iGrid+4,nFine+4/))
-         end if
-      end do
-      nCoarse = nGridOut2 - nFine
-      !\
-      ! Find vertical weights for Coarse
-      ! if above each Coarse point in the output there is another Coarse point
-      ! then that another Coarse point also should be used in the interpolation
-      ! if not substitute corresponding point with Coarse point from range 1:4
-      !/
-      select case(nCoarse)
-      case(0)
-         !\
-         ! no Coarse points
-         ! give AlphaKAxisCoarse value 1 for calculating AlphaKAxisFine
-         !/
-         AlphaKAxisCoarse = 1
-      case(1)
-         if(iLevel_I(iOrder_I(nFine+5))==Coarse_)then
-            !\
-            !     F-----F
-            !    /|    /|
-            !   C-----C |   ---->kAxis
-            !    \|    \|
-            !     F-----F
-            !/
-            AlphaKAxisCoarse = &
-                 (Xyz_D(kAxis) - XyzGrid_DI(kAxis,iOrder_I(nFine + 5)))/&
-                 (XyzGrid_DI(kAxis,iOrder_I(nFine + 1)) - &
-                 XyzGrid_DI(kAxis,iOrder_I(nFine +5)))
-         else
-            !\
-            !     F-----F
-            !     |\   /|
-            !     |  C  |   ---->kAxis
-            !     |/   \|
-            !     F-----F
-            !/
-            AlphaKAxisCoarse = 1
-            iOrder_I(nFine+5) = iOrder_I(nFine+1)
-         end if
-      case(2)
-         if(iLevel_I(iOrder_I(nFine+5))==Coarse_.and.&
-              iLevel_I(iOrder_I(nFine+6))==Coarse_)then
-            !\
-            !     C---C
-            !    /|\  |
-            !   F---F |      ---->kAxis
-            !    \|/  |
-            !     C---C
-            !/
-            call parallel_rays(&
-                 Dir_D = &
-                 XyzGrid_DI(:,iOrder_I(4))-XyzGrid_DI(:,iOrder_I(2)),&
-                 iDRectangle1_I = &
-                 (/2,3,6,7/),&
-                 iUTriangle1_I = &
-                 (/1,2, 5/))
-            IsCorner = .false.
-            if(nGridOut>0)RETURN
-            AlphaKAxisCoarse = 0.5
-         else
-            !\
-            !     F-----F       kAxis
-            !    /|    /|       ^
-            !   C-----C |       |
-            !    \|    \|       |
-            !     F-----F
-            !
-            !           OR
-            !
-            !     C
-            !    /|\
-            !   F---F      ---->kAxis
-            !    \|/
-            !     C
-            !/
-            AlphaKAxisCoarse = 1
-            iOrder_I(nFine+5) = iOrder_I(nFine+1)
-            iOrder_I(nFine+6) = iOrder_I(nFine+2)
-
-         end if
-      end select
-
-      !\
-      ! Find vertical weights for Fine
-      !/
-      if(nGridOut2==2)Weight_I(3:4)=0
-      if(AlphaKAxisCoarse==1)then
-         dXyzDown = Xyz_D(kAxis) - &
-              sum( XyzGrid_DI(kAxis,iOrder_I(1:nGridOut2))*&
-              Weight_I(1:nGridOut2) )
-         dXyzUp   = Xyz_D(kAxis) - sum(&
-              XyzGrid_DI(kAxis,iOrder_I(5:4 + nGridOut2))*&
-              Weight_I(1:nGridOut2))
-      else
-         if(nFine==2)then
-            dXyzDown = Xyz_D(kAxis) - XyzGrid_DI(kAxis,iOrder_I(1))
-            dXyzUp   = Xyz_D(kAxis) - XyzGrid_DI(kAxis,iOrder_I(5))
-         else
-            dXyzDown = 1
-            dXyzUp   = 1
-         end if
-      end if
-
-      IsCorner = dXyzUp * dXyzDown > 0.0
-      if(IsCorner)RETURN
-
-      if(dXyzUp==0)then
-         AlphaKAxisFine = 0.0
-      else
-         AlphaKAxisFine = abs(dXyzUp)/(abs(dXyzUp) + abs(dXyzDown))
-      end if
-
-      !\
-      ! Remove points
-      ! Apply vertical weight
-      !/
-      if(AlphaKAxisCoarse == 1)then
-         nGridOut = nGridOut2 + nFine
-         iOrder_I(nGridOut2 + 1:nGridOut) = iOrder_I(5:4+nFine)
-         Weight_I(nGridOut2 + 1:nGridOut) = &
-              Weight_I(1:  nFine)*(1 - AlphaKAxisFine)
-         Weight_I(          1:nFine   ) = Weight_I(1:  nFine)*AlphaKAxisFine
-      else
-         nGridOut = 2*nGridOut2
-         iOrder_I(nGridOut2 + 1:nGridOut       ) = iOrder_I(5:4 + nGridOut2)
-         Weight_I(nGridOut2  +1:nGridOut2+nFine) = &
-              Weight_I(1:nFine)*(1 - AlphaKAxisFine)
-         Weight_I(nGridOut2 + nFine+1:nGridOut ) = &
-              Weight_I(nFine + 1:nGridOut2)*(1 - AlphaKAxisCoarse)
-         Weight_I(1:nFine) = Weight_I(1:nFine)*AlphaKAxisFine
-         Weight_I(nFine + 1:nGridOut2) = &
-              Weight_I(nFine + 1:nGridOut2)*AlphaKAxisCoarse
-      end if
-    end subroutine interpolate_corner_transition
-  end subroutine interpolate_amr3
-  !==================================
-  integer function i_case(iLevel_I)
-    integer, intent(in):: iLevel_I(:)
-    integer:: iGrid, nGrid
-    !--------------------
-    nGrid = size(iLevel_I,DIM=1)
-    !\
-    ! Generate iCase from 'binary' iLevel_I
-    !/
-    i_case = iLevel_I(nGrid)
-    do iGrid = nGrid - 1, 1, -1
-       i_case = i_case + i_case + iLevel_I(iGrid)
-    end do
-  end function i_case
-
-  !=======================================================================
-  subroutine fix_basic_stencil3( Xyz_D, dXyzInv_D, XyzGrid_DI, iLevel_I,&
+  !==============================
+  subroutine check_transition3( Xyz_D, dXyzInv_D, XyzGrid_DI, iLevel_I,&
        XyzStencil_D, iCase, IsCorner)
     integer, parameter:: nDim = 3, nGrid = 8
     !\
@@ -2226,174 +3904,575 @@ contains
        iSortStencil3_II(Dir_, iCase) = iDirEdge
        XyzStencil_D(iDirEdge) = Xyz_D(iDirEdge)
     end if
-  end subroutine fix_basic_stencil3
-  !=======================================================================
-  subroutine fix_basic_stencil2( Xyz_D, dXyzInv_D, XyzGrid_DI, iLevel_I,&
-       XyzStencil_D, iCase)
-    integer, parameter:: nDim = 2, nGrid = 4
+  end subroutine check_transition3
+  !============================
+  subroutine  interpolate_amr3(&
+       Xyz_D, XyzGrid_DI, iLevel_I, IsOut_I, iCaseExtended,&
+       nGridOut, Weight_I, iOrder_I, IsCorner)
+    use ModResolutionCorner, ONLY: resolution_corner
+    integer,parameter :: nGrid = 8, nDim = 3
+    character(LEN=*),parameter:: NameSub='interpolate_amr3'
     !\
-    ! Point where to interpolate; inverse of (/Dx,Dy,Dz/)
+    !Input parameters
     !/
-    real,    intent(in) :: Xyz_D(nDim), dXyzInv_D(nDim)
     !\
-    ! The rectangular grid combining centers of the refined subgrids and
-    ! coarse vertexes
+    !The location at which to interpolate the data
     !/
-    real, intent(in):: XyzGrid_DI(nDim,nGrid)
+    real   , intent(in) :: Xyz_D(nDim) 
     !\
-    ! The refinement level pattern of the extended stencil
+    !Grid point coordinates !3 coordinate, 8 points
     !/
-    integer, intent(in)::iLevel_I(nGrid)
-    !\
-    ! Point about which to construct basic stencil.
-    !/
+    real  ,   intent(in) :: XyzGrid_DI(nDim,nGrid)
 
-    real, intent(out) :: XyzStencil_D(nDim)
+    !The refinement level at each grid point. By one higher level
+    ! of refinement assumes the cell size reduced by a factor of 0.5
+    integer,  intent(in) :: iLevel_I(nGrid)
+    !\
+    ! Logical which marks "ghost" points, not belonging to the computational 
+    ! domain
+    !/
+    logical, intent(in) :: IsOut_I(nGrid)
+    integer, intent(in) :: iCaseExtended
+    !\
+    !Output parameters
+    !/
+    !The number of grid points to be ultimately included into 
+    !the interpolation stencil If nGridOut < nGrid only the
+    !first nGridOut lines in the output arrays are meaningful.
+    !/
+    integer, intent(out) :: nGridOut
+    !\
+    !The weight coefficients array.
+    real   , intent(out) :: Weight_I(nGrid)
+    !\
+    !Order(numbers) of grid points used for the interpolation
+    integer, intent(out) :: iOrder_I(nGrid)
+    !\
+    ! The logical is true, if (for some resolution combinations) the 
+    ! basic stencil for the point at which to inpertpolate is not 
+    ! applicable
+    !/
+    logical, intent(out):: IsCorner
+    !\
+    !Loop variables
+    !/
+    integer :: iDim, iLoop
+    !\
+    ! To find location of fine or coarse points
+    !/
+    !Number of grid points returned from 1D interpolation routine
+    integer :: nGridOut1     
+    !\
+    ! Minimum and maximum values of coordinates
+    !/
+    real    :: XyzMin_D(nDim), XyzMax_D(nDim)   
+    !\
+    ! To find points with  "equal" cordinates
+    !/
+    real    :: dXyzSmall_D(nDim)      
+    !\
+    ! for calculating on a uniform grid 
+    !/          
+    real    :: dXyzInv_D(nDim)                
+    real    :: Aux_D(nDim), AuxCoarse, AuxFine   ! Misc
+    !\
+    ! To call two-dimensional interpolation
+    !/
+    real    :: Xyz2_D(x_:y_), XyzGrid2_DI(x_:y_,4)
+    integer :: nGridOut2, iOrder2_I(4),iLevel2_I(4)
+    logical :: IsOut2_I(4)
 
     !\
-    ! For three-dimensional corner within this routine
-    ! it is more convenient to figure out if Xyz point is
-    ! inside the domain of transition from an edge to the central
-    ! corner part or it belongs to a junction of such two domains
+    ! To find the sort of corner stencil
     !/
-    integer, intent(out):: iCase
+    integer:: iCase, iDir, iGrid
+    !-------------
+    Weight_I = 0
     !\
-    !Dimensionless displacement from the first grid point to Xyz_D
-    !/
-    real :: Dimless_D(nDim)
-    !\
-    !Three components of Discr_D equal to -1,0 or 1 each. The first component 
-    !equals -1, if Xyz point is close to refined face x=0, +1 if it is close
-    !to refined face x=1, 0 otherwise
-    !/
-    integer:: iDiscr_D(nDim), iDir, iDim, iGrid, jGrid
-    !\ 
-    !Dir = 0 - corner, positive iDirs - face, negative iDir - edges, which
-    !occur at the intersection of the refined faces, which are close to
-    !Xyz
-    !/
-    integer, parameter, dimension(2,-1:1,-1:1):: &
-         iGridDir_III = reshape((/&
-         1,0,     1,2,  2,0,  1,1,  0,0, 2,1,  3,0,   3,2, 4,0/),(/2,3,3/))
-    !x=0,y=0!y=0 !x=1,y=0!x=0 !    !x=1 !x=0,y=1!y=1 !x=1,y=1!
-    real:: XyMin, z
-    !\
-    ! Average coordinates for the center of the resolution corner,
-    ! for centers of faces or edges and distance from them to Xyz
-    !/
-    real   :: XyzAvr_D(nDim), XyzAvr_DD(nDim, nDim), Distance_D(nDim) 
-    !----------------------
-    XyzStencil_D = Xyz_D
+    ! We store in advance the 'basic' grid point
+    ! and orientation of all possible stencil configurations
+    ! and now we extracted this information
+    !/ 
     iCase = i_case(iLevel_I)
-    !\                                    F F
-    !We do not care about trapezoids like  C   C
-    !/
-    if(iSortStencil3_II(Case_,iCase) <= Face_)RETURN
-    Dimless_D = (Xyz_D - XyzGrid_DI(:,1))*DxyzInv_D 
-    iDiscr_D = 0
-    do iDim = 1, nDim
-       if(Dimless_D(iDim) <  0.250.and.any(iLevel_I(&
-            iSide_IDI(:,3 - iDim,1))==Fine_))iDiscr_D(iDim) = -1
-       if(Dimless_D(iDim) >=  0.750.and.any(iLevel_I(&
-            iOppositeSide_IDI(:,3 - iDim,1))==Fine_))iDiscr_D(iDim) = 1
-    end do
-    iGrid = iGridDir_III(1, iDiscr_D(1), iDiscr_D(2))
-    XyzAvr_D = 0.50*(XyzGrid_DI(:,1) + XyzGrid_DI(:,4))
-    if(iGrid==0)then 
-       !\
-       ! The point is in the close proximity of the resolution edge
-       !/
-       XyzStencil_D = XyzAvr_D 
-       RETURN
-    end if
     !\
-    !Xyz point is in the transition domain
-    !/   
-    iDir = iGridDir_III(2, iDiscr_D(1), iDiscr_D(2))
-    if(iDir== 0)then
-       !\
-       !The point is close to two faces
-       !/
-       do iDim = 1,nDim
-          XyzAvr_DD(:,iDim) = 0.50*(&
-               XyzGrid_DI(:,&
-               iSide_IDI(1,3 - iDim,iGrid)) +&
-               XyzGrid_DI(:,&
-               iSide_IDI(2,3 - iDim,iGrid)) )
-          Distance_D(iDim) = &
-               sum(((Xyz_D - XyzAvr_DD(:,iDim))*DxyzInv_D)**2) 
-       end do
-       iDir = minloc(Distance_D(1:2),DIM=1)
-       !\
-       !else Xyz point is close to a single refined face 
-       !/
-    end if
-    iCase = Transition2Edge_
-    !\
-    ! Displace the stencil center toward the face center
+    ! Check junction and transitions
     !/
-    XyzStencil_D(3 - iDir) = XyzAvr_D(3 - iDir)
-  end subroutine fix_basic_stencil2
-  !=====================
-  subroutine generate_basic_stencil(&
-       nDim, XyzStencil_D, nExtendedStencil, XyzExtended_DI, dXyzInv_D, &
-       iOrderExtended_I)
+    if(iSortStencil3_II(Case_,iCase) > Edge_&
+         .and.iCaseExtended >= Transition2Corner_)&
+         iCase = iCaseExtended
+    if(iSortStencil3_II(Case_,iCase) == Edge_&
+         .and.iCaseExtended == Transition2Edge_)&
+         iCase = iCaseExtended 
+    iGrid = iSortStencil3_II(Grid_,iCase)
+    iDir  = iSortStencil3_II(Dir_,iCase)
+    iCase = iSortStencil3_II(Case_,iCase)
+    IsCorner = .false. 
     !\
-    ! Dimensionality; number of points in the extended stencil
+    ! Check if the grid points are out of the grid boundary
     !/
-    integer, intent(in) :: nDim, nExtendedStencil
-    !\
-    ! Point about which to construct basic stencil; inverse of (/Dx,Dy,Dz/)
-    !/
-    real,    intent(in) :: XyzStencil_D(nDim), dXyzInv_D(nDim)
-    !\
-    ! Points of the extended stencil
-    !/
-    real,    intent(in) :: XyzExtended_DI(nDim, nExtendedStencil)
-    !\
-    ! Basic stencil - point numbers in XyzExtended array
-    !/
-    integer,    intent(out):: iOrderExtended_I(2**nDim)
-    integer:: iGrid, nGrid, iPoint !Loop variables
-    logical:: IsMask_I(nExtendedStencil) 
-    logical:: IsBelowExtended_DI(nDim,nExtendedStencil)
-    real   :: Distance_I(nExtendedStencil)
-    !\
-    ! Arrays of logical values Xyz_D < XyzGrid_DI(:,iGrid) for iGrid'th grid
-    ! point of the basic stencil for point Xyz
-    !/
-    logical, parameter, dimension(3,8):: IsBelow_DI=reshape((/&
-         .false., .false., .false., &
-         .true. , .false., .false., &
-         .false., .true. , .false., &
-         .true. , .true. , .false., &
-         .false., .false., .true. , &
-         .true. , .false., .true. , &
-         .false., .true. , .true. , &
-         .true. , .true. , .true. /)&
-         , (/3,8/) )
-    !-------------------------------------
-    nGrid = 2**nDim
-    iOrderExtended_I = -1
-
-    do iPoint = 1,nExtendedStencil
-       IsBelowExtended_DI(:,iPoint) = XyzStencil_D < XyzExtended_DI(:,iPoint)
-       Distance_I(iPoint) = sum( &
-            ((XyzStencil_D - XyzExtended_DI(:,iPoint))*dXyzInv_D)**2)
-    end do
-    do iGrid = 1, nGrid
-       do iPoint = 1, nExtendedStencil
+    if(count(IsOut_I)>=4)then
+       do iDim = 1, nDim
+          if(all(IsOut_I(iOppositeFace_IDI(:,iDim,1))))then
+             !\
+             ! Upper face iDir should be removed
+             !/
+             iOrder_I(1:4) = iFace_IDI(        :,iDim,1)
+             iOrder_I(5:8) = iOppositeFace_IDI(:,iDim,1)
+          elseif(all(IsOut_I(iFace_IDI(:,iDim,1))))then
+             !\
+             ! Lower Face iDir should be removed
+             !/
+             iOrder_I(1:4) = iOppositeFace_IDI(:,iDim,1)
+             iOrder_I(5:8) = iFace_IDI(:,iDim,1)
+          else
+             CYCLE
+          end if
           !\
-          ! Mark all the candidates for the role of iGrid point of  
-          ! the basic stencil
+          ! iDir,1 + mod(iDir,3),1+mod(iDir+1,3) is 1,2,3 or 2,3,1 or 3,1,2
           !/
-          IsMask_I(iPoint) = all(&
-               IsBelowExtended_DI(:,iPoint).eqv.IsBelow_DI(1:nDim,iGrid))
+          Xyz2_D(x_) = Xyz_D(1 + mod(iDim,3))
+          Xyz2_D(y_) = Xyz_D(1 + mod(iDim + 1, 3))
+          XyzGrid2_DI(x_,1:4) = XyzGrid_DI(1 + mod(iDim    ,3),iOrder_I(1:4))
+          XyzGrid2_DI(y_,1:4) = XyzGrid_DI(1 + mod(iDim + 1,3),iOrder_I(1:4))
+
+          iLevel2_I(1:4) = iLevel_I(iOrder_I(1:4))
+          IsOut2_I(1:4)     = IsOut_I(iOrder_I(1:4))
+
+          call interpolate_amr2(&
+               Xyz2_D,  XyzGrid2_DI, iLevel2_I, IsOut2_I,  iCase, &
+               nGridOut, Weight_I(1:4), iOrder2_I)
+
+          iOrder_I(1:4) = iOrder_I(iOrder2_I)
+          RETURN
+       end do
+    end if
+    !\ 
+    ! Calculate the stencil size
+    !/
+    do iDim = 1, nDim
+       dXyzSmall_D(iDim) = 0.10*(&
+            maxval(XyzGrid_DI(iDim,:)) -  minval(XyzGrid_DI(iDim,:)))
+       dXyzInv_D(iDim)   = 0.10/dXyzSmall_D(iDim)
+    end do
+
+
+    iOrder_I(1:4) = iFace_IDI(:,iDir,iGrid)
+    iOrder_I(5:8) = iOppositeFace_IDI(:,iDir,iGrid)
+    !\
+    ! Reassign iCase for edges appearing from transitions, which require 
+    ! stencil fix
+    !/
+    if(iCase==Edge_.and.&
+         (iCaseExtended == TransitionJunction_.or.&
+         (iCaseExtended == Transition2Corner_.and.&
+         iDir/=iSortStencil3_II(Dir_,Transition2Corner_))))&
+         iCase = Transition2Edge_
+    select case(iCase)
+    case(Face_)
+       !\
+       ! Faces going along plane iDir (which is the direction of normal)    
+       !                               
+       !/
+       Xyz2_D(x_) = Xyz_D(1 + mod(iDir    ,3))
+       Xyz2_D(y_) = Xyz_D(1 + mod(iDir + 1,3))
+       !\
+       ! Interpolate along lower face
+       !/
+       XyzGrid2_DI(x_,1:4) = XyzGrid_DI(1 + mod(iDir    ,3),iOrder_I(1:4))
+       XyzGrid2_DI(y_,1:4) = XyzGrid_DI(1 + mod(iDir + 1,3),iOrder_I(1:4))
+       iLevel2_I(        1:4) = iLevel_I(        iOrder_I(1:4))
+       IsOut2_I = IsOut_I(iOrder_I(1:4))
+       call interpolate_amr2(&
+            Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, iCase, &
+            nGridOut2, Weight_I(1:4), iOrder2_I)
+       iOrder_I(1:4) = iOrder_I(iOrder2_I)
+       !\
+       ! Apply weight for interpolation along z-axis
+       !/
+       Aux_D(iDir) = dXyzInv_D(iDir)*&
+            (Xyz_D(iDir) - XyzGrid_DI(iDir,iOrder_I(1)))
+       Weight_I(1:nGridOut2) = Weight_I(1:nGridOut2)*(1 - Aux_D(iDir))
+       !\
+       ! May need to remove a grid points once behind the boundary
+       !/
+       if(    nGridOut2==2)then
+          iOrder_I(3:8) = iOrder_I((/5,6,7,8,3,4/))
+       elseif(nGridOut2==3)then
+          iOrder_I(4:8) = iOrder_I((/5,6,7,8,4/))
+       elseif(nGridOut2==1)then
+          iOrder_I(2:8) = iOrder_I((/5,6,7,8,2,3,4/))
+       end if
+       nGridOut = nGridOut2
+       !\
+       ! Interpolate along upper face
+       !/
+       XyzGrid2_DI(x_,1:4) = XyzGrid_DI(1 + mod(iDir    ,3),&
+            iOrder_I(nGridOut2 + 1:nGridOut2+4))
+       XyzGrid2_DI(y_,1:4) = XyzGrid_DI(1 + mod(iDir + 1,3),&
+            iOrder_I(nGridOut2 + 1:nGridOut2 + 4))
+       iLevel2_I(1:4) = iLevel_I(iOrder_I(nGridOut2 + 1:nGridOut2 + 4))
+       IsOut2_I = IsOut_I(iOrder_I(nGridOut2 + 1:nGridOut2 + 4))
+       call interpolate_amr2(&
+            Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, iCase, &
+            nGridOut2, Weight_I(nGridOut+1:nGridOut+4), iOrder2_I)
+       do iGrid=1,nGridOut2
+          iOrder_I(nGridOut+iGrid)=iOrder_I(nGridOut+iOrder2_I(iGrid))
        end do
        !\
-       !Among the candidates chose the closest one
+       ! Apply weight for interolation along iDir
        !/
-       iOrderExtended_I(iGrid) = minloc(Distance_I, MASK = IsMask_I, DIM=1)
-    end do
-  end subroutine generate_basic_stencil
+       Weight_I(nGridOut + 1:nGridOut + nGridOut2) = &
+            Weight_I(nGridOut + 1:nGridOut + nGridOut2)*Aux_D(iDir)
+       !\
+       ! May need to remove a grid points once behind the boundary
+       !/
+       nGridOut = nGridOut + nGridOut2
+    case(Edge_,Transition2Edge_)
+       !\
+       ! Edges going along resolution edge
+       ! Opposite "faces" have the same geometry in projection
+       ! term "face" is used to refer to 4 upper-, left-, 
+       ! front-most etc. grid points they do not belong to plane
+       !/      
+       !\
+       ! "Faces" have the same geometry in projection on iDir-plane
+       !/
+       Xyz2_D(x_:y_) = Xyz_D((/1 + mod(iDir,3),1 + mod(1 + iDir,3)/))
+       !\
+       ! Interpolation weight along iDir axis are calculated separately 
+       ! for coarse and fine points
+       !/
+       XyzMin_D(iDir)   = minval(XyzGrid_DI(iDir,:),iLevel_I/=Fine_)
+       AuxCoarse  = (Xyz_D(iDir) - XyzMin_D(iDir))/(&
+            maxval(XyzGrid_DI(iDir,:),iLevel_I/=Fine_) - XyzMin_D(iDir))
+
+       XyzMin_D(iDir)   = minval(XyzGrid_DI(iDir,:),iLevel_I==Fine_)
+       AuxFine  = (Xyz_D(iDir) - XyzMin_D(iDir))/(&
+            maxval(XyzGrid_DI(iDir,:),iLevel_I==Fine_) - XyzMin_D(iDir)) 
+       !\
+       ! Interpolate along lower face
+       !/
+       XyzGrid2_DI(x_:y_,1:4) = &
+            XyzGrid_DI((/1 + mod(iDir,3),1 + mod(iDir+1,3)/),iOrder_I(1:4))
+       iLevel2_I(        1:4) = iLevel_I( iOrder_I(1:4))
+       IsOut2_I = .false.
+       call interpolate_amr2(&
+            Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, iCase, &
+            nGridOut2, Weight_I(1:4), iOrder2_I)
+
+       iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+       iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+
+       !\
+       ! May need to remove grid points from the stencil
+       !/
+       nGridOut = 2 * nGridOut2
+       if(    nGridOut2==2)then
+          iOrder_I(  3:4) = iOrder_I((/5,6/))
+       elseif(nGridOut2==3)then
+          iOrder_I(  4:6) = iOrder_I((/5,6,7/))
+       end if
+       !\
+       ! Apply weight for interpolation along iDir
+       !/
+       do iGrid = 1,nGridOut2
+          if(iLevel_I(iOrder_I(iGrid))==Fine_)then
+             Weight_I(nGridOut2+iGrid) = Weight_I(iGrid)*     AuxFine
+             Weight_I(          iGrid) = Weight_I(iGrid)*(1-  AuxFine)
+          else
+             if(IsOut_I(iOrder_I(iGrid)))then
+                Weight_I(nGridOut2+iGrid) = Weight_I(iGrid)
+                Weight_I(          iGrid) = 0
+             elseif(&
+                  IsOut_I(iOrder_I(nGridOut2 + iGrid)))then
+                Weight_I(nGridOut2+iGrid) = 0
+                Weight_I(          iGrid) = Weight_I(iGrid)
+             else
+                Weight_I(nGridOut2+iGrid) = Weight_I(iGrid)* AuxCoarse
+                Weight_I(          iGrid) = Weight_I(iGrid)*(1 - AuxCoarse)
+             end if
+          end if
+       end do
+    case(TransitionJunction_)
+       !\
+       ! Check corner transition junction
+       !/
+
+       !\
+       ! Junction around direction iDir
+       !/
+       ! Face with all Fine points is numbered 5:8
+       ! Face with one to three Coarse points is numbered 1:4
+       !
+       !
+       !  F5--F7
+       !  |\ /|
+       !  | C1|-----3
+       !  |/|\|
+       !  F6--F8
+       !    |      4
+       !    |
+       !    2
+       !
+       !----------------------------------------------------------------
+       !\
+       ! Stencil part C1F5F6F7F8 is symmetric with respect to the plane 158
+       ! Find if point Xyz is from the same side of the plane as point 2 is
+       ! or as point 3 is
+       !/
+       if(sum((Xyz_D - XyzGrid_DI(:,iOrder_I(1)))*&
+            (XyzGrid_DI(:,iOrder_I(6)) - XyzGrid_DI(:,iOrder_I(7)))) > 0)then
+          iGrid = 2
+       else
+          iGrid = 3
+       end if
+       if(iLevel_I(iOrder_I(iGrid))==Coarse_)then
+          call interpolate_on_parallel_rays(Dir_D=0.50*(&
+               XyzGrid_DI(:,iOrder_I(8)) + XyzGrid_DI(:,iOrder_I(5))) - &
+               XyzGrid_DI(:,iOrder_I(1)),&
+               iURectangle1_I=(/5, 6, 7, 8/),&
+               iDTriangle1_I=(/1, iGrid, 8/))
+       else
+          call interpolate_pyramids(iRectangular1_I = (/5, 6, 7, 8, 1/),&
+               iRectangular2_I= (/iGrid, 4, iGrid +4, 8, 1/))
+       end if
+       IsCorner = nGridOut <= 3
+    case(Transition2Corner_)
+       call interpolate_corner_transition
+    case default
+       call resolution_corner(&
+            Xyz_D, XyzGrid_DI, iLevel_I, nGridOut, Weight_I, iOrder_I) 
+    end select
+  contains
+    !==========================
+    subroutine interpolate_pyramids(&
+         iTetrahedron1_I,iTetrahedron2_I,iTetrahedron3_I,&
+         iTetrahedron4_I,iTetrahedron5_I,iTetrahedron6_I,&
+         iRectangular1_I,iRectangular2_I,iRectangular3_I,&
+         iTrapezoidal1_I,iTrapezoidal2_I)
+      use ModInterpolateSimpleShape, ONLY:&
+           gen_interpolate_pyramids=>interpolate_pyramids
+      integer,intent(in),optional,dimension(4)::&
+           iTetrahedron1_I, iTetrahedron2_I, iTetrahedron3_I,&
+           iTetrahedron4_I, iTetrahedron5_I, iTetrahedron6_I
+      integer,intent(in),optional,dimension(5)::&
+           iRectangular1_I, iRectangular2_I, iRectangular3_I,&
+           iTrapezoidal1_I, iTrapezoidal2_I
+      integer:: iOrderHere_I(1:5)
+      real:: XyzGridHere_DI(nDim,nGrid)
+      !---------------------------
+      XyzGridHere_DI = XyzGrid_DI(:,iOrder_I)
+      call gen_interpolate_pyramids(&
+           XyzGridHere_DI, Xyz_D,iOrderHere_I, Weight_I, nGridOut,&
+           iTetrahedron1_I,iTetrahedron2_I,iTetrahedron3_I,&
+           iTetrahedron4_I,iTetrahedron5_I,iTetrahedron6_I,&
+           iRectangular1_I,iRectangular2_I,iRectangular3_I,&
+           iTrapezoidal1_I,iTrapezoidal2_I)
+      if(nGridOut > -1)iOrder_I(1:nGridOut) = &
+           iOrder_I(iOrderHere_I(1:nGridOut))
+    end subroutine interpolate_pyramids
+    !======================
+    subroutine interpolate_on_parallel_rays(Dir_D, &
+         iDRectangle1_I, iDTrapezoid1_I,   &
+         iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
+         iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
+         iURectangle1_I, iURectangle2_I, iURectangle3_I,&
+         iUTrapezoid1_I,                             &
+         iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
+         iUTriangle4_I)
+      use ModInterpolateSimpleShape,ONLY: &
+           parallel_rays=>interpolate_on_parallel_rays
+      !Direction of parallel rays
+      real, intent(in) :: Dir_D(nDim)
+      !\
+      !Up subfaces ure in the direction of  Dir_D from Xyz point
+      !Down faces are in the direction of -Dir_D
+      !/
+      integer, intent(in), optional, dimension(3)::&
+           iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
+           iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
+           iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
+           iUTriangle4_I
+      integer, intent(in), optional, dimension(4)::&
+           iDRectangle1_I, iDTrapezoid1_I, iUTrapezoid1_I,&
+           iURectangle1_I, iURectangle2_I, iURectangle3_I
+      !\
+      !The point belonging to one of the up and down subfaces
+      !/ 
+      real, dimension(nDim) :: XyzUp_D, XyzDown_D, X1_D, X2_D, X3_D, X4_D
+      !Misc
+      real:: AlphaUp, AlphaDown, XyzGridHere_DI(nDim,nGrid)
+      integer:: nGridOutUp, nGridOutDown, iOrderHere_I(nGrid)
+      !\
+      ! Consider a ray passing through Xyz
+      ! Solve equation:
+      ! Xyz + Dir*AlphaUp = XyzUp 
+      ! its solution is 
+      ! AlphaUp = (UX1-Xyz)\cdot[(UX2-UX1)\times(UX3-UX1)]/&
+      !          Dir\cdot[(UX2-UX1)\times(UX3-UX1)]
+      ! XyzUp belongs to the up subface
+      !/
+      !\
+      ! Solve equation:
+      ! Xyz - Dir*AlphaDown = XyzDown 
+      ! its solution is 
+      ! AlphaDown = (Xyz-DX1)\cdot[(DX2-DX1)\times(DX3-DX1)]/&
+      ! Dir\cdot[(DX2-DX1)\times(DX3-DX1)]
+      ! XyzUp belongs to the Down subface
+      !/
+      !\
+      ! As long as Xyz=(XyzDown*AlphaUp + XyzUp*AlphaDown)/(AlphaUp+AlphaDown)
+      ! the weights for the upper face should be multiplied by 
+      ! AlphaDown/(AlphaUp+AlphaDown)
+      ! for the down face - by AlphaUp/(AlphaUp+AlphaDown)
+      !/
+      XyzGridHere_DI = XyzGrid_DI(:,iOrder_I)
+      call parallel_rays(&
+           XyzGridHere_DI, Xyz_D, iOrderHere_I, Weight_I, nGridOut, Dir_D, &
+           iDRectangle1_I, iDTrapezoid1_I,   &
+           iDTriangle1_I, iDTriangle2_I, iDTriangle3_I,&
+           iDTriangle4_I, iDTriangle5_I, iDTriangle6_I,&
+           iURectangle1_I, iURectangle2_I, iURectangle3_I,&
+           iUTrapezoid1_I,                             &
+           iUTriangle1_I, iUTriangle2_I, iUTriangle3_I,&
+           iUTriangle4_I)
+      if(nGridOut > 0)iOrder_I(1:nGridOut) =  &
+           iOrder_I(iOrderHere_I(1:nGridOut))
+    end subroutine interpolate_on_parallel_rays
+    !===========================
+    subroutine interpolate_corner_transition
+      !\
+      ! Auxilary variables to determine vertical weight
+      !/
+      real :: dXyzUp, dXyzDown 
+      integer :: nFine, nCoarse
+      !\
+      ! Subroutine intepolates in transitional near a resolution corner
+      ! Points facing a corner a numbered 5:8
+      !/
+      !-------------------------------------------------------------------
+      Xyz2_D(x_:y_) = Xyz_D((/1 + mod(iDir,3),1 + mod(iDir + 1,3)/))
+      !\
+      ! Interpolate over face 1:4
+      !/
+      XyzGrid2_DI(x_:y_,1:4) = &
+           XyzGrid_DI((/1 + mod(iDir,3),1 + mod(iDir + 1,3)/),iOrder_I(1:4))
+      iLevel2_I = iLevel_I(iOrder_I(1:4)); IsOut2_I = IsOut_I(iOrder_I(1:4))
+      call interpolate_amr2(&
+           Xyz2_D, XyzGrid2_DI, iLevel2_I, IsOut2_I, Edge_,&
+           nGridOut2, Weight_I(1:4), iOrder2_I)
+      !\
+      ! Rearrange points according to 2D interpolation output
+      !/
+      iOrder_I(1:4) = iOrder_I(iOrder2_I  )
+      iOrder_I(5:8) = iOrder_I(iOrder2_I+4)
+      !\
+      ! Find number of Fine points in the output
+      ! Move them to the begining of iOrder_I
+      !/
+      nFine   = 0
+      do iGrid = 1, nGridOut2
+         if(iLevel_I(iOrder_I(iGrid))==Fine_)then
+            nFine   = nFine   + 1
+            iOrder_I((/nFine,  iGrid  /)) = iOrder_I((/iGrid,  nFine  /))
+            Weight_I((/nFine,  iGrid  /)) = Weight_I((/iGrid,  nFine  /))
+            iOrder_I((/nFine+4,iGrid+4/)) = iOrder_I((/iGrid+4,nFine+4/))
+         end if
+      end do
+      nCoarse = nGridOut2 - nFine
+      !\
+      ! Two exceptions result from our desire to use whenever possible
+      ! interolation for edges and faces, even if the point is in the 
+      ! transition region of the corner. To maintain continuity at the 
+      ! boundaries with the domains in which these fake faces and edges
+      ! are employed we need to go farther these way and may need either 
+      ! to prolong a triangulated piece with THREE (not 4 as usually 
+      ! takes place forresolution edges) parallel edges in the stencil..
+      !/
+      if(nCoarse==1.and.iLevel_I(iOrder_I(nFine+5))==Coarse_)then
+         !\                            View along iDir:
+         !     F-----F                    F        Both up from C point
+         !    /|    /|                   /  \      and to the right from
+         !   C-----C | ---->iDir         |    \    it there are junctions
+         !    \|    \|                  /  ---F    treated as 'edges':
+         !     F-----F                 C---    there is a ray from C point
+         !/                            and one more ray from fine neighbor
+         AuxCoarse = &
+              (XyzGrid_DI(iDir,iOrder_I(nFine + 5)) - Xyz_D(iDir))/&
+              (XyzGrid_DI(iDir,iOrder_I(nFine + 5)) - &
+              XyzGrid_DI(iDir,iOrder_I(nFine +1)))
+         AuxFine = (XyzGrid_DI(iDir,iOrder_I(5)) - Xyz_D(iDir))/&
+              (XyzGrid_DI(iDir,iOrder_I(5)) - XyzGrid_DI(iDir,iOrder_I(1)))
+         nGridOut = 2*nGridOut2
+         iOrder_I(nGridOut2 + 1:nGridOut       ) = iOrder_I(5:4 + nGridOut2)
+         Weight_I(nGridOut2  +1:nGridOut2+nFine) = &
+              Weight_I(1:nFine)*(1 - AuxFine)
+         Weight_I(nGridOut2 + nFine+1:nGridOut ) = &
+              Weight_I(nFine + 1:nGridOut2)*(1 - AuxCoarse)
+         Weight_I(1:nFine) = Weight_I(1:nFine)*AuxFine
+         Weight_I(nFine + 1:nGridOut2) = &
+              Weight_I(nFine + 1:nGridOut2)*AuxCoarse
+         IsCorner = .false.
+         RETURN
+      elseif(nCoarse==2.and.iLevel_I(iOrder_I(nFine+5))==Coarse_.and.&
+           iLevel_I(iOrder_I(nFine+6))==Coarse_)then
+         !\
+         !... or we need to choose some unnatural direction for parallel
+         !rays interpolation, because the adjacent 'transition junction' was
+         !treated as the resolution interface, so that with the 'natural' 
+         !choice the continuity would break.
+         !/                    View along iDir (point order is set in amr2):
+         !\                                   
+         !     C---C           C4         C2  Points more F, F1, C3, C2 and 
+         !    /|\  |                     /|   their 'out-of-plane' neighbors 
+         !   F---F |-->iDir            /  |   form a resolution interface.
+         !    \|/  |                 /    |   To keep continuity, interpolate
+         !     C---C               F1--\  |   on parallel rays, the direction
+         !                              --C3  of rays being perpendicular to 
+         !                    more F          that of fake resolution 
+         !/                                   interface nearby
+         call interpolate_on_parallel_rays(&
+              Dir_D = &
+              XyzGrid_DI(:,iOrder_I(4))-XyzGrid_DI(:,iOrder_I(2)),&
+              iDRectangle1_I = &
+              (/2,3,6,7/),&
+              iUTriangle1_I = &
+              (/1,2, 5/))
+         IsCorner = nGridOut < 1
+         RETURN
+      end if
+      !\
+      ! Otherwise use parallel-rays procedure with rays parallel to
+      ! iDir, that is in the direction toward the corner. We employ the 
+      ! property of interpolation to exactly reproduce linear functions 
+      ! of coordinates. This allows us to easily find the coordinate of 
+      ! the point in which the ray intersects the corner boundary. 
+      !/
+      dXyzDown = Xyz_D(iDir) - &
+           sum( XyzGrid_DI(iDir,iOrder_I(1:nGridOut2))*&
+           Weight_I(1:nGridOut2) )
+      dXyzUp   = Xyz_D(iDir) - (sum(&
+           XyzGrid_DI(iDir,iOrder_I(5:4 + nFine))*&
+           Weight_I(1:nFine)) + sum(&
+           XyzGrid_DI(iDir,iOrder_I(nFine+1:nGridOut2))*&
+           Weight_I(nFine+1:nGridOut2)))
+      
+      IsCorner = dXyzUp * dXyzDown > 0.0
+      if(IsCorner)RETURN
+
+      if(dXyzUp==0)then
+         AuxFine = 0.0
+      else
+         AuxFine = abs(dXyzUp)/(abs(dXyzUp) + abs(dXyzDown))
+      end if
+      !\
+      ! Remove points, apply weights for fine points. 
+      !/
+      nGridOut = nGridOut2 + nFine
+      iOrder_I(nGridOut2 + 1:nGridOut) = iOrder_I(5:4+nFine)
+      Weight_I(nGridOut2 + 1:nGridOut) = &
+           Weight_I(1:  nFine)*(1 - AuxFine)
+      Weight_I(          1:nFine   ) = Weight_I(1:  nFine)*AuxFine
+    end subroutine interpolate_corner_transition
+  end subroutine interpolate_amr3
 end module ModInterpolateAMR

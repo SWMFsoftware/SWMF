@@ -19,13 +19,11 @@ MODULES = \
 	ModBlasLapack.o\
 	ModConst.o\
 	ModCoordTransform.o\
-	ModCubeGeometry.o\
 	ModExactRS.o\
 	ModFreq.o\
 	ModInitialState.o\
 	ModInterpolate.o\
 	ModInterpolateAMR.o\
-	ModInterpolateBody.o\
         ModInterGen.o\
         ModInterWrapper.o\
 	ModIoUnit.o\

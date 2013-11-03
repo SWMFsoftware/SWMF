@@ -101,7 +101,7 @@ contains
           iLevelTest_I(iGrid) = mod(iMisc, 2)
           iMisc = (iMisc - iLevelTest_I(iGrid))/2
        end do
-       !write(*,*)'Case=',iLevelTest_I(1:2**nDim)
+       write(*,*)'Case=',iLevelTest_I(1:2**nDim)
        !\
        ! We generated refinement, now sample points
        !/
@@ -116,8 +116,8 @@ contains
                nDim=nDim, &
                XyzIn_D=Xyz_D, &
                nIndexes=nDim+1,&
-               nCell_D=nCell_D(1:nDim),&
                find=find_test, &
+               nCell_D=nCell_D(1:nDim),&
                nGridOut=nGridOut,&
                Weight_I=Weight_I,&
                iIndexes_II=iIndexes_II,&
@@ -171,8 +171,8 @@ contains
                nDim=nDim, &
                XyzIn_D=XyzCont_D, &
                nIndexes=nDim+1,&
-               nCell_D=nCell_D(1:nDim),&
                find=find_test, &
+               nCell_D=nCell_D(1:nDim),&
                nGridOut=nGridOut,&
                Weight_I=Weight_I,&
                iIndexes_II=iIndexes_II,&
@@ -209,8 +209,8 @@ contains
                   nDim=nDim, &
                   XyzIn_D=Xyz_D, &
                   nIndexes=nDim+1,&
-                  nCell_D=nCell_D(1:nDim),&
                   find=find_test, &
+                  nCell_D=nCell_D(1:nDim),&
                   nGridOut=nGridOut,&
                   Weight_I=Weight_I,&
                   iIndexes_II=iIndexes_II,&
