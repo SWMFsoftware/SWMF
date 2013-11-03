@@ -37,7 +37,7 @@ module CON_couple_ie_ps
   type(GridDescriptorType)::IE_Grid           ! Source
   type(GridDescriptorType)::PS_Grid           ! Target
   type(RouterType),save:: RouterIePs, RouterPsIe
- 
+
   logical :: DoTest, DoTestMe
 
   ! Variables for the simple coupler
@@ -71,16 +71,16 @@ contains
     ! ionosphere. 
     call get_comp_info(PS_,NameVersion=NameVersionPs)
 
-!    if(NameVersionPs(1:3) == 'DGC')then
-       ! IE-PS coupling uses MPI
-       UseMe = is_proc(IE_) .or. is_proc(PS_)
+    !    if(NameVersionPs(1:3) == 'DGC')then
+    ! IE-PS coupling uses MPI
+    UseMe = is_proc(IE_) .or. is_proc(PS_)
 
-       nTheta = size(Grid_C(IE_) % Coord1_I)
-       nPhi   = size(Grid_C(IE_) % Coord2_I)
+    nTheta = size(Grid_C(IE_) % Coord1_I)
+    nPhi   = size(Grid_C(IE_) % Coord2_I)
 
-       iProc0Ps   = i_proc0(PS_)
-       iProc0Ie   = i_proc0(IE_)
-       iCommWorld = i_comm()
+    iProc0Ps   = i_proc0(PS_)
+    iProc0Ie   = i_proc0(IE_)
+    iCommWorld = i_comm()
 
   end subroutine couple_ie_ps_init
   !BOP =======================================================================
@@ -107,7 +107,7 @@ contains
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     write(*,*) "There is no PS->IE coupling!"
-    
+
   end subroutine couple_ps_ie
 
   !BOP =======================================================================
@@ -143,9 +143,8 @@ contains
     !==========================================================================
     subroutine couple_mpi
 
-    use ModInterGen, ONLY: Bilinear_general
-    use CON_coupler
-    character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
+      use CON_coupler
+      character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
 
       ! Variable to pass is potential on the 2D IE grid
       real, dimension(:,:), allocatable ::Potential_Out
@@ -157,7 +156,6 @@ contains
       real :: jPS(Grid_C(PS_) % nCoord_D(2))
       real :: Buffer_IIV(Grid_C(IE_) % nCoord_D(1),Grid_C(IE_) % nCoord_D(2))
       character (len=100) :: FieldModel
-      real :: pi
 
       ! General error code
       integer :: iError
@@ -169,41 +167,28 @@ contains
       if(DoTest)write(*,*)NameSubSub,', iProc, iProc0Ie, iProc0Ps=', &
            iProcWorld, iProc0Ie, iProc0Ps
 
-        ! Get Plasmasphere grid size
-        iPs_Size = Grid_C(PS_) % nCoord_D(1)
-        jPs_Size = Grid_C(PS_) % nCoord_D(2)
+      ! Get Plasmasphere grid size
+      iPs_Size = Grid_C(PS_) % nCoord_D(1)
+      jPs_Size = Grid_C(PS_) % nCoord_D(2)
 
-        ! Get Plasmasphere Grid
-        iPS = 90.0 - (Grid_C(PS_) % Coord1_I)
-        jPS = (Grid_C(PS_) % Coord2_I)-180.    
+      ! Get Plasmasphere Grid
+      iPS = 90.0 - (Grid_C(PS_) % Coord1_I)
+      jPS = (Grid_C(PS_) % Coord2_I)-180.    
 
-        do j=1, jPS_Size
-            if (jPS(j) .lt. 0) then
-            jPS(j) = jPS(j) +360. 
-            else 
+      do j=1, jPS_Size
+         if (jPS(j) < 0) then
+            jPS(j) = jPS(j) + 360
+         else 
             jPS(j) = jPS(j)
-            endif
-        enddo
+         endif
+      enddo
 
       ! Allocate buffers both on PS and IE root processors
-      allocate(Potential_out(iPS_Size,jPS_Size), stat=iError)
-       
-      ! Get Potential from IE, then Bilinear Interpolate
-      if(is_proc0(IE_)) then
-        call IE_get_for_ps(Buffer_IIV, iSize, jSize, tSimulation, FieldModel)
-                
-        ! Assign Pi, needed since RIM uses Radians
-        pi = 3.14159265
+      allocate(Potential_out(iPS_Size,jPS_Size))
 
-        call bilinear_general(size(Grid_C(IE_) % Coord1_I),&
-                                size(Grid_C(IE_) % Coord2_I),&
-                                size(Grid_C(PS_) % Coord1_I),&
-                                size(Grid_C(PS_) % Coord2_I),&
-                                (Grid_C(IE_) % Coord1_I)*180./pi,&
-                                (Grid_C(IE_) % Coord2_I)*180./pi,&
-                                iPS, jPS,&
-                                Buffer_IIV,Potential_Out)
-      endif
+      ! Get Potential from IE, then Bilinear Interpolate
+      if(is_proc0(IE_)) &
+           call IE_get_for_ps(Buffer_IIV, iSize, jSize, tSimulation, FieldModel)
 
       ! Transfer variables from IE to PS
       if(iProc0Ie /= iProc0Ps)then
@@ -218,9 +203,8 @@ contains
       if(DoTest)write(*,*)NameSubSub,', variables transferred iProc:',iProcWorld
 
       ! Put variables into PS
-      if(is_proc0(PS_)) then
-        call PS_put_from_ie(iPs_Size, jPs_Size, Potential_out, FieldModel)
-      endif
+      if(is_proc0(PS_)) &
+           call PS_put_from_ie(iPs_Size, jPs_Size, Potential_out, FieldModel)
 
       !\
       ! Deallocate buffer to save memory
