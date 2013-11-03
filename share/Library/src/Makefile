@@ -24,8 +24,6 @@ MODULES = \
 	ModInitialState.o\
 	ModInterpolate.o\
 	ModInterpolateAMR.o\
-        ModInterGen.o\
-        ModInterWrapper.o\
 	ModIoUnit.o\
 	ModKind.o\
 	ModLinearAdvection.o\
