@@ -6,6 +6,8 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
+  use ModAdvance, ONLY: UseFDFaceFlux, IS_VX, IS_VY, IS_VZ, UseFluxLimiter,&
+       UseFaceFlux, UseCenterFlux
 
   implicit none
 
@@ -84,12 +86,12 @@ module ModFaceValue
   real:: Cell_I(1-nG:MaxIJK+nG)
   real:: Cell2_I(1-nG:MaxIJK+nG)
   real:: Face_I(0:MaxIJK+2)
-  real:: FaceL_I(1:MaxIJK+2)
-  real:: FaceR_I(0:MaxIJK+1)
+  real, allocatable:: FaceL_I(:), FaceR_I(:)
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
   ! The weight of the four low order polynomials of cweno5
-  real:: WeightL_II(-2:2,0:MaxIJK+1), WeightR_II(-2:2,0:MaxIJK+1)
+  real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
+  real:: IS_II(4, -2:MaxIJK+3)
 
 contains
   !============================================================================
@@ -700,6 +702,7 @@ contains
          LeftState_VZ,      &  ! Face Left  Z
          RightState_VZ         ! Face Right Z
 
+
     use ModParallel, ONLY : &
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
 
@@ -736,6 +739,21 @@ contains
 
     if(.not.allocated(Primitive_VG))&
          allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+
+    if(.not. allocated(FaceL_I)) then
+       if(UseFaceFlux) then
+          !Need information on the ghost cell faces.
+          allocate(FaceL_I(-1:MaxIJK+4))
+          allocate(FaceR_I(-2:MaxIJK+3))
+          allocate(WeightL_II(-2:2,-2:MaxIJK+3))
+          allocate(WeightR_II(-2:2,-2:MaxIJK+3)) 
+       else
+          allocate(FaceL_I(1:MaxIJK+2))
+          allocate(FaceR_I(0:MaxIJK+1))
+          allocate(WeightL_II(-2:2,0:MaxIJK+1))
+          allocate(WeightR_II(-2:2,0:MaxIJK+1)) 
+       endif
+    endif
 
     UseTrueCell = body_BLK(iBlock)
 
@@ -953,12 +971,25 @@ contains
                   iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
           else
              ! High order scheme
-             call get_facex_high(&
-                  1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2)
-             if(nJ > 1) call get_facey_high(&
-                  iMinFace2,iMaxFace2,1,nJFace,kMinFace2,kMaxFace2)
-             if(nK > 1) call get_facez_high(&
-                  iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,1,nKFace)
+             if(UseFaceFlux) then
+                !Need to know the face value on two ghost cell faces
+                call get_facex_high(&
+                     iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,&
+                     kMinFace2,kMaxFace2)
+                if(nJ > 1) call get_facey_high(&
+                     iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,&
+                     kMinFace2,kMaxFace2)
+                if(nK > 1) call get_facez_high(&
+                     iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,&
+                     kMinFace2,kMaxFace2)
+             else
+                call get_facex_high(&
+                     1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2)
+                if(nJ > 1) call get_facey_high(&
+                     iMinFace2,iMaxFace2,1,nJFace,kMinFace2,kMaxFace2)
+                if(nK > 1) call get_facez_high(&
+                     iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,1,nKFace)
+             end if
           end if
        end if
 
@@ -1362,7 +1393,13 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
       integer:: iVar
+      integer:: iMin2, iMax2
       !-----------------------------------------------------------------------
+      !iMin is smaller than 1 when UseFaceFlux is true, then 
+      !Cell_I(iMin-nG: iMax-1+nG) will be wrong. 
+      !So, use iMin2 instead of iMin.
+      iMin2 = max(1,iMin); iMax2 = min(iMax, nI+1)
+
       if(TypeLimiter == 'no')then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
             LeftState_VX(:,i,j,k) = &
@@ -1381,11 +1418,12 @@ contains
                   RightState_VX(:,i,j,k)=Primitive_VI(:,i)  -dVarLimR_VI(:,i)
                end do
             end if
+
             if(.not.DoInterpolateFlux)then
                do iVar = 1, nVar
                   ! Copy points along i direction into 1D array
-                  Cell_I(iMin-nG:iMax-1+nG) = &
-                       Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
+                  Cell_I(iMin2-nG:iMax2-1+nG) = &
+                       Primitive_VG(iVar,iMin2-nG:iMax2-1+nG,j,k)
 
                   if(UseTrueCell)then
                      ! Use 2nd order face values where high order is skipped
@@ -1393,6 +1431,12 @@ contains
                      FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
                   end if
                   call limit_var(iMin, iMax, iVar)
+                  !Store the smooth indicator for face flux interpolation.
+                  if(UseFluxLimiter .and. UseCenterFlux) then
+                     IS_VX(1:3,iVar,iMin-1:iMax,j,k) = IS_II(1:3,iMin-1:iMax)
+                  elseif(UseFluxLimiter .and. UseFaceFlux) then
+                     IS_VX(1:3,iVar,iMin:iMax,j,k) = IS_II(1:3,iMin:iMax)   
+                  end if
 
                   ! Copy back the results into the 3D arrays
                   LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
@@ -1484,7 +1528,10 @@ contains
 
       real, allocatable, save:: State_VY(:,:,:,:)
       integer:: iVar
+      integer:: jMin2, jMax2
       !-----------------------------------------------------------------------
+      jMin2 = max(1,jMin); jMax2 = min(jMax, nJ+1)
+
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
             LeftState_VY(:,i,j,k) = &
@@ -1507,8 +1554,8 @@ contains
             if(.not.DoInterpolateFlux)then
                do iVar = 1, nVar
                   ! Copy points along j direction into 1D array
-                  Cell_I(jMin-nG:jMax-1+nG) = &
-                       Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
+                  Cell_I(jMin2-nG:jMax2-1+nG) = &
+                       Primitive_VG(iVar,i,jMin2-nG:jMax2-1+nG,k)
 
                   if(UseTrueCell)then
                      ! Use 2nd order face values where high order is skipped
@@ -1517,6 +1564,12 @@ contains
                   end if
 
                   call limit_var(jMin, jMax, iVar)
+
+                  if(UseFluxLimiter .and. UseCenterFlux) then
+                     IS_VY(1:3,iVar,i,jMin-1:jMax,k) = IS_II(1:3,jMin-1:jMax)
+                  elseif(UseFluxLimiter .and. UseFaceFlux) then
+                     IS_VY(1:3,iVar,i,jMin:jMax,k) = IS_II(1:3,jMin:jMax)
+                  end if
 
                   ! Copy back the results into the 3D arrays
                   LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
@@ -1606,7 +1659,9 @@ contains
 
       real, allocatable, save:: State_VZ(:,:,:,:)
       integer:: iVar
+      integer:: kMin2, kMax2
       !-----------------------------------------------------------------------
+      kMin2 = max(kMin, 1); kMax2 = min(kMax,nK+1)
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
             LeftState_VZ(:,i,j,k) = &
@@ -1632,8 +1687,8 @@ contains
             if(.not.DoInterpolateFlux)then
                do iVar = 1, nVar
                   ! Copy points along k direction into 1D array
-                  Cell_I(kMin-nG:kMax-1+nG) = &
-                       Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
+                  Cell_I(kMin2-nG:kMax2-1+nG) = &
+                       Primitive_VG(iVar,i,j,kMin2-nG:kMax2-1+nG)
 
                   if(UseTrueCell)then
                      ! Use 2nd order face values where high order is skipped
@@ -1642,6 +1697,12 @@ contains
                   end if
 
                   call limit_var(kMin, kMax, iVar)
+
+                  if(UseFluxLimiter .and. UseCenterFlux) then
+                     IS_VZ(1:3,iVar,i,j,kMin-1:kMax) = IS_II(1:3,kMin-1:kMax)
+                  elseif(UseFluxLimiter .and. UseFaceFlux) then
+                     IS_VZ(1:3,iVar,i,j,kMin:kMax) = IS_II(1:3,kMin:kMax) 
+                  end if
 
                   ! Copy back the results into the 3D arrays
                   LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
@@ -2715,6 +2776,11 @@ contains
     real, parameter:: &
          c1 = 2/60., c2 = -13/60., c3 = 47/60., c4 = 27/60., c5 = -3/60.
 
+    !If the cell center value is used, the interpolatio for the face value 
+    !is implitented with the coefficients below
+    real, parameter:: &
+         d1 = 3./128, d2 = -20./128, d3 = 90./128, d4=60./128, d5=-5./128
+
     real, parameter:: cFourThird = 4./3., c6 = 0.6
 
     ! Cell centered values at l, l+1, l+2, l-1, l-2
@@ -2752,8 +2818,13 @@ contains
        Cellp  = Cell_I(l+1)
        Cellpp = Cell_I(l+2)
 
-       ! 5th order interpolation
-       FaceOrig = c1*Cellmm + c2*Cellm + c3*Cell + c4*Cellp + c5*Cellpp
+       if(UseFDFaceFlux) then 
+          !Get the 5th order face value.
+          FaceOrig = d1*Cellmm + d2*Cellm + d3*Cell + d4*Cellp + d5*Cellpp
+       else
+          ! 5th order interpolation
+          FaceOrig = c1*Cellmm + c2*Cellm + c3*Cell + c4*Cellp + c5*Cellpp
+       end if
 
        ! This is a quick check if there is a need to do any limiting
        FaceMp = Cell + minmod(Cellp - Cell, 4*(Cell - Cellm))
@@ -2812,8 +2883,13 @@ contains
        Cellp  = Cell2_I(l+1)
        Cellpp = Cell2_I(l+2)
 
-       ! 5th order interpolation
-       FaceOrig = c1*Cellpp + c2*Cellp + c3*Cell + c4*Cellm + c5*Cellmm
+       if(UseFDFaceFlux) then 
+          !FaceOrig 
+          FaceOrig = d1*Cellpp + d2*Cellp + d3*Cell + d4* Cellm + d5*Cellmm
+       else
+          ! 5th order interpolation
+          FaceOrig = c1*Cellpp + c2*Cellp + c3*Cell + c4*Cellm + c5*Cellmm
+       end if
 
        ! This is a quick check if there is a need to do any limiting
        FaceMp = Cell + minmod(Cellm - Cell, 4*(Cell - Cellp))
@@ -2887,6 +2963,14 @@ contains
     real, parameter:: c73over120 = 73./120, c7over6 = 7./6, c1over60 = 1./60
     real, parameter:: c13over3 = 13./3
 
+    !Constants for ECHO scheme(UseFDFaceFlux)
+    real, parameter:: c3over8 = 3./8, c1over8 = 1./8, c6over8 = 3./4
+    real, parameter:: c10over8 = 10./8, c15over8 = 15./8
+    real, parameter:: c3over64 = 3./64, c1over16 = 1./16
+    real, parameter:: c15over32 = 15./32, c9over16 = 9./16
+
+    real:: c1
+ 
     ! Generic cell index
     integer:: l
 
@@ -2935,6 +3019,11 @@ contains
        ISmax = maxval(ISLocal_I(1:3))
        ISLocal_I(4) = IsMax
 
+       c1 = 1./(max(Cell,1.e-3)**2)
+       IS_II(1,l) = ISmin*c1
+       IS_II(2,l) = ISmax*c1
+       IS_II(3,l) = ISLocal_I(2)*c1
+
        ! This expression is from G. Capdeville's code
        Epsilon = sqrt(((ISmin + 1e-12)/(ISmax + 1e-12))**3)
 
@@ -2954,20 +3043,38 @@ contains
        w3 = Weight_I(3)
        w4 = Weight_I(4)
 
-       ! Calculate interpolation weights used in eq (34) to obtain 
-       ! left and right face values
-       WeightL_II(-2,l) = c1over3*w1 - c1over60*w4
-       WeightL_II(-1,l) = -(c1over6*w2 + c7over6*w1 + c7over120*w4)
-       WeightL_II( 0,l) = c5over6*w2 + c1over3*w3 + c11over6*w1 + c73over120*w4
-       WeightL_II(+1,l) = c1over3*w2 + c5over6*w3 + c21over40*w4
-       WeightL_II(+2,l) = -(c1over6*w3 + c7over120*w4)
+       if(UseFDFaceFlux) then
+          WeightL_II(-2,l) = c3over8*w1 - c3over64*w4
+          WeightL_II(-1,l) = -(c10over8*w1 + c1over8*w2 - c1over16*w4)
+          WeightL_II( 0,l) = c15over8*w1 + c6over8*w2 + c3over8*w3 + &
+               c15over32*w4
+          WeightL_II(+1,l) = c3over8*w2 + c6over8*w3 + c9over16*w4
+          WeightL_II(+2,l) = -(c1over8*w3 + c3over64*w4)
 
-       WeightR_II(+2,l) = c1over3*w3 -c1over60*w4
-       WeightR_II(+1,l) = -(c1over6*w2 + c7over6*w3 + c7over120*w4)
-       WeightR_II( 0,l) = c5over6*w2 + c1over3*w1 + c11over6*w3 + c73over120*w4
-       WeightR_II(-1,l) = c1over3*w2 + c5over6*w1 + c21over40*w4
-       WeightR_II(-2,l) = -(c1over6*w1 + c7over120*w4)
+          WeightR_II(-2,l) = -(c1over8*w1 + c3over64*w4)
+          WeightR_II(-1,l) = c6over8*w1 + c3over8*w2 + c9over16*w4
+          WeightR_II( 0,l) = c3over8*w1 + c6over8*w2 + c15over8*w3 + &
+               c15over32*w4
+          WeightR_II(+1,l) = -(c1over8*w2 + c10over8*w3 - c1over16*w4)
+          WeightR_II(+2,l) = c3over8*w3 - c3over64*w4
 
+       else
+          ! Calculate interpolation weights used in eq (34) to obtain 
+          ! left and right face values
+          WeightL_II(-2,l) = c1over3*w1 - c1over60*w4
+          WeightL_II(-1,l) = -(c1over6*w2 + c7over6*w1 + c7over120*w4)
+          WeightL_II( 0,l) = c5over6*w2 + c1over3*w3 + c11over6*w1 + &
+               c73over120*w4
+          WeightL_II(+1,l) = c1over3*w2 + c5over6*w3 + c21over40*w4
+          WeightL_II(+2,l) = -(c1over6*w3 + c7over120*w4)
+
+          WeightR_II(+2,l) = c1over3*w3 -c1over60*w4
+          WeightR_II(+1,l) = -(c1over6*w2 + c7over6*w3 + c7over120*w4)
+          WeightR_II( 0,l) = c5over6*w2 + c1over3*w1 + c11over6*w3 + &
+               c73over120*w4
+          WeightR_II(-1,l) = c1over3*w2 + c5over6*w1 + c21over40*w4
+          WeightR_II(-2,l) = -(c1over6*w1 + c7over120*w4)
+       endif
     end do
 
   end subroutine calc_cweno_weight
@@ -3006,18 +3113,20 @@ contains
        FaceR_I(l)   = sum(WeightR_II(-2:2,l)*Cell2_I(l-2:l+2))
     end do
 
-    if(present(iVar) .and. DefaultState_V(iVar) > 0.0)then
-       do l = lMin-1, lMax-1
-          ! Make sure positive variables remain positive
-          if(FaceL_I(l+1) < 0)&
-               FaceL_I(l+1) = 0.5*(Cell_I(l+1) + Cell_I(l))
-       end do
+    if(present(iVar))then
+       if (DefaultState_V(iVar) > 0.0) then
+          do l = lMin-1, lMax-1
+             ! Make sure positive variables remain positive
+             if(FaceL_I(l+1) < 0)&
+                  FaceL_I(l+1) = 0.5*(Cell_I(l+1) + Cell_I(l))
+          end do
 
-       do l = lMin, lMax
-          if(FaceR_I(l) < 0) &
-               FaceR_I(l) = 0.5*(Cell_I(l-1) + Cell_I(l))
-       end do
-    end if
+          do l = lMin, lMax
+             if(FaceR_I(l) < 0) &
+                  FaceR_I(l) = 0.5*(Cell_I(l-1) + Cell_I(l))
+          end do
+       end if
+    endif
   end subroutine limiter_cweno5
   !===========================================================================
   subroutine limiter_ppm4(lMin, lMax, iVar)
