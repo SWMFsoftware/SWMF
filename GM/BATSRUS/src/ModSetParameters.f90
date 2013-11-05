@@ -78,7 +78,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModGmGeoindices, ONLY: &
        DoWriteIndices, DoCalcKp, nKpMins, dtWriteIndices, init_mod_geoindices
   use ModFaceFlux, ONLY: face_flux_set_parameters, TypeFluxNeutral, &
-       UseClimit, UsePoleDiffusion, DoBurgers
+       UseClimit, UsePoleDiffusion, DoBurgers, criteria1, criteria2, &
+       TypeFluxLimiter, UseENOFluxLimiter, UseCWENOFluxLimiter
   use ModLookupTable, ONLY: read_lookup_table_param
   use ModIonoVelocity,ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
@@ -1085,10 +1086,40 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SCHEME5")
         call read_var('DoInterpolateFlux', DoInterpolateFlux)
+        !If UseFDFaceFlux is true. ECHO scheme, which based on:
+        !L. Del Zanna, O. Zanotti, N. Bucciantini, P. Londrillo,&
+        !Astronomy and Astrophysics, 473 (2007), pp.11-30.
+        call read_var('UseFDFaceFlux', UseFDFaceFlux)
+        call read_var('DoInterFDFaceFlux', DoInterFDFaceFlux)
         call read_Var('TypeLimiter5', TypeLimiter5)
         ! If it is not 'cweno', mp5 scheme will be used. 
         UseCweno = TypeLimiter5 == 'cweno'
         if(UseCweno) call read_var('UsePerVarLimiter', UsePerVarLimiter)
+
+        if(DoInterpolateFlux .and. UseFDFaceFlux) &
+             call stop_mpi('Do not use DoInterpolateFlux and UseFDFaceFlux at the same time!')
+
+     case('#LIMITFLUX')
+        !Limiter for ECHO
+        call read_var('UseFluxLimiter', UseFluxLimiter)
+        if(UseFluxLimiter) then
+           call read_var('UseCenterFlux', UseCenterFlux)
+           if(.not. UseCenterFlux) UseFaceFlux = .true. 
+           call read_var('TyperFluxLimiter', TypeFluxLimiter)
+           if(TypeFluxLimiter == 'CWENO') then
+              !Use 6th order, 4th order or 2nd order flux interpolation.
+              UseCWENOFluxLimiter = .true. 
+              call read_var('IS_Value_Criteria', criteria1)
+           elseif(TypeFluxLimiter == 'ENO') then
+              !Combine 6th, 4th and 2nd order interpolation according to 
+              !smooth indicator.
+              UseENOFluxLimiter = .true. 
+              call read_var('ISValueCriteria', criteria1)
+              call read_var('ISRatioCriteria', criteria2)
+           else
+              call stop_mpi('unknown flux limiter')
+           endif
+        endif
 
      case('#BURGERSEQUATION')
         call read_var('DoBurgers', DoBurgers)
@@ -2261,6 +2292,14 @@ contains
        end if
     end if
 
+    if(UseFaceFlux) then
+       !For ECHO scheme with face flux interpolation, face flux on two more
+       !ghost cells are needed. 
+       iMinFace2 = -1; iMaxFace2 = nI+3
+       jMinFace2 = 1 - 2*min(1,nJ-1); jMaxFace2 = nJ + 3*min(1,nJ-1)
+       kMinFace2 = 1 - 2*min(1,nK-1); kMaxFace2 = nK + 3*min(1,nK-1)
+    end if
+
     ! Get the number of used ghost cell layers
     select case(nOrder)
     case(1, 2)
@@ -2746,6 +2785,22 @@ contains
 
     IsFirstCheck = .false.
 
+    if(UseFluxLimiter .and. .not. UseCweno) &
+         call stop_mpi('UseFluxLimiter only works for CWENO5!')
+    if(.not. DoInterFDFaceFlux .and. UseFluxLimiter) &
+         call stop_mpi('FluxLimiter only works when DoInterFDFaceFlux is true!!')    
+    if(UseCweno .and. nOrder /= 5) &
+         call stop_mpi('CWENO5 is a 5th order scheme!! ')
+    if(UseFaceFlux .and. nG /= 5) &
+         call stop_mpi('If UseFaceFlux is true, need 5 ghost cells!')
+    !Now, directly interpolate face flux without limiter is implemented 
+    !with face flux (not cell center flux). 
+    if(DoInterFDFaceFlux .and. .not.UseFluxLimiter) then
+       UseFaceFlux = .true.
+       iMinFace2 = -1; iMaxFace2 = nI+3
+       jMinFace2 = 1 - 2*min(1,nJ-1); jMaxFace2 = nJ + 3*min(1,nJ-1)
+       kMinFace2 = 1 - 2*min(1,nK-1); kMaxFace2 = nK + 3*min(1,nK-1)
+    endif
   end subroutine correct_parameters
 
   !===========================================================================
