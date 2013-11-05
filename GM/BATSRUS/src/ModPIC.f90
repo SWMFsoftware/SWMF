@@ -3,6 +3,8 @@
 !This code is a copyright protected software (c) 2002- University of Michigan
 module ModPIC
 
+  use ModMain,      ONLY: UseB0
+  use ModB0,        ONLY: B0_DGB
   ! Variables and methods for coupling BATSRUS with a PIC code
 
   implicit none
@@ -92,8 +94,7 @@ contains
 
     use ModProcMH,    ONLY: iProc, nProc, iComm
     use ModAdvance,   ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, State_VGB
-    use ModMain,      ONLY: UseB0, Dt, time_simulation, n_step
-    use ModB0,        ONLY: B0_DGB
+    use ModMain,      ONLY: Dt, time_simulation, n_step
     use ModCurrent,   ONLY: get_current
     use ModMpi,       ONLY: MPI_reduce, MPI_SUM, MPI_REAL
     use BATL_lib,     ONLY: nDim, MaxDim, Xyz_DGB, CellSize_DB, find_grid_block
@@ -306,6 +307,8 @@ contains
     use ModIoUnit,      ONLY: UnitTmp_
     use ModPhysics, ONLY: Si2No_V, UnitX_, UnitRho_, UnitU_, UnitB_, &
          UnitP_
+    use ModProcMH, ONLY: iProc, iComm
+    use modmpi
 
     integer:: i, j, k, iBlock, iError
     real:: XyzNorm_D(MaxDim)
@@ -320,6 +323,7 @@ contains
     ! PIC variables
     integer, save:: nVarPic
     real,    save, allocatable:: StatePic_VC(:,:,:), StatePic_V(:)
+    integer, save:: nElmtStatePic
 
     integer:: Dn
     real:: WeightMhd, WeightPic
@@ -392,19 +396,24 @@ contains
              write(*,*) NameSub, ' CoordMaxPic_D=', CoordMaxPic_D
              write(*,*) NameSub, ' DxyzPic_D    =', DxyzPic_D
           end if
+          nElmtStatePic = nVarPic*product(nCellPic_D)
        else
           ! Read in PIC data
-          do
-             call read_plot_file(NameFilePic, VarOut_VII=StatePic_VC, &
-                  iErrorOut=iError)
-             if(iError /= 0)then
-                write(*,*) NameSub,': could not read data from ', &
-                     trim(NameFilePic), ' on processor', iProc
-                call sleep(0.5)
-                CYCLE
-             end if
-             EXIT
-          end do
+
+          if(iProc == 0) then
+             do
+                call read_plot_file(NameFilePic, VarOut_VII=StatePic_VC, &
+                     iErrorOut=iError)
+                if(iError /= 0)then
+                   write(*,*) NameSub,': could not read data from ', &
+                        trim(NameFilePic), ' on processor', iProc
+                   call sleep(0.5)
+                   CYCLE
+                end if
+                EXIT
+             end do
+          end if
+          call MPI_BCAST(StatePic_VC,nElmtStatePic,MPI_REAL,0,iComm,iError)
 
        end if
 
@@ -462,6 +471,10 @@ contains
 
           StatePic_V = &
                bilinear(StatePic_VC, nVarPic, 1, nXPic, 1, nYPic, XyzNorm_D)
+
+          ! Remover B0 from total B
+          if(UseB0) StatePic_V(Bx_:Bz_) = &
+               StatePic_V(Bx_:Bz_) - B0_DGB(:,i,j,k,iBlock)
 
           ! Convert velocity to momentum
           StatePic_V(RhoUx_:RhoUz_) = StatePic_V(Rho_)*StatePic_V(Ux_:Uz_)
