@@ -10,7 +10,8 @@ module ModAdvance
   use ModMain,       ONLY: UseB, UseRotatingFrame, UseGravity, &
        boris_correction, &
        iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
-       iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
+       iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2, &
+       nIFace, nJFace, nKFace
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc, nProc
 
@@ -121,6 +122,16 @@ module ModAdvance
   logical:: DoInterpolateFlux = .false.
   real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
 
+  !Variables for ECHO scheme
+  logical:: UseFDFaceFlux = .false., UseFluxLimiter = .false., &
+       DoInterFDFaceFlux = .false., UseCenterFlux = .false. , &
+       UseFaceFlux = .false.
+  real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
+
+  !CWENO weights
+  real, allocatable:: IS_VX(:,:,:,:,:), IS_VY(:,:,:,:,:), &
+       IS_VZ(:,:,:,:,:)
+
   ! Velocity . area vector for div(U) in various source terms. Per fluid.
   real, allocatable:: &
        uDotArea_XI(:,:,:,:), uDotArea_YI(:,:,:,:), uDotArea_ZI(:,:,:,:)
@@ -211,6 +222,70 @@ contains
     allocate(VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
+
+    if(UseFluxLimiter) then
+       allocate(IS_VX(3,nVar,min(0,iMinFace2):max(nIFace, iMaxFace2),&
+            jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
+       allocate(IS_VY(3,nVar,iMinFace2:iMaxFace2,&
+            min(0,jMinFace2):max(nJFace, jMaxFace2),kMinFace2:kMaxFace2))
+       allocate(IS_VZ(3,nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,&
+            min(0,kMinFace2):max(nKFace, kMaxFace2)))
+    endif
+
+    if (UseFaceFlux) then
+       !Flux through two ghost cell faces are needed for face flux interpolation.
+       deallocate(LeftState_VX)
+       deallocate(RightState_VX)
+       deallocate(Flux_VX)
+       deallocate(VdtFace_X)
+       deallocate(uDotArea_XI)
+
+       deallocate(LeftState_VY)
+       deallocate(RightState_VY)
+       deallocate(Flux_VY)
+       deallocate(VdtFace_Y)
+       deallocate(uDotArea_YI)
+
+       deallocate(LeftState_VZ)
+       deallocate(RightState_VZ)
+       deallocate(Flux_VZ)
+       deallocate(VdtFace_Z)
+       deallocate(uDotArea_ZI)
+
+       allocate(LeftState_VX(nVar,iMinFace2:max(iMaxFace2,2),&
+            jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
+       allocate(RightState_VX(nVar,iMinFace2:max(iMaxFace2,2),&
+            jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
+       allocate(Flux_VX(nVar+nFluid,iMinFace2:max(iMaxFace2,2),&
+            jMinFace:jMaxFace,kMinFace:kMaxFace))
+       allocate(VdtFace_X(iMinFace2:max(iMaxFace2,2),&
+            jMinFace:jMaxFace,kMinFace:kMaxFace))
+       allocate(uDotArea_XI(iMinFace2:max(iMaxFace2,2),jMinFace:jMaxFace,&
+            kMinFace:kMaxFace,nFluid+1))
+
+       allocate(LeftState_VY(nVar,iMinFace2:iMaxFace2,&
+            jMinFace2:max(jMaxFace2,2),kMinFace2:kMaxFace2))
+       allocate(RightState_VY(nVar,iMinFace2:iMaxFace2,&
+            jMinFace2:max(jMaxFace2,2),kMinFace2:kMaxFace2))
+       allocate(Flux_VY(nVar+nFluid,iMinFace:iMaxFace,&
+            jMinFace2:max(jMaxFace2,2),kMinFace:kMaxFace))
+       allocate(VdtFace_Y(iMinFace:iMaxFace,jMinFace2:max(jMaxFace2,2),&
+            kMinFace:kMaxFace))
+       allocate(uDotArea_YI(iMinFace:iMaxFace,jMinFace2:max(jMaxFace2,2),&
+            kMinFace:kMaxFace,nFluid+1))
+
+       allocate(LeftState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,&
+            kMinFace2:max(kMaxFace2,2)))
+       allocate(RightState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,&
+            kMinFace2:max(kMaxFace2,2)))
+       allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,&
+            kMinFace2:max(kMaxFace2,2)))
+       allocate(VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,&
+            kMinFace2:max(kMaxFace2,2)))
+       allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,&
+            kMinFace2:max(kMaxFace2,2),nFluid+1))
+
+    end if
 
     iTypeAdvance_B  = SkippedBlock_
     iTypeAdvance_BP = SkippedBlock_
