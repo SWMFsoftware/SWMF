@@ -23,7 +23,7 @@ module ModTestInterpolateAMR
   ! find_test routine
   !/
   integer:: iLevelTest_I(8)
-  integer,parameter:: nCell = 4
+  integer,parameter:: nCell = 2
 contains
   subroutine test_interpolate_amr(nDim,nSample)
     integer, intent(in)::nDim, nSample
@@ -181,6 +181,7 @@ contains
           !Compare interpolated values of Var:
           !/
           VarContInterpolated = 0
+          XyzInterpolated_D = 0
           do iGrid = 1, nGridOut
              iCellIndex_D = 1
              iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
@@ -189,7 +190,29 @@ contains
                   Weight_I(iGrid)*&
                   Var_CB(iCellIndex_D(1), iCellIndex_D(2), &
                   iCellIndex_D(3), iBlock)
+             XyzInterpolated_D = XyzInterpolated_D + Weight_I(iGrid)*&
+                  Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
+                  iCellIndex_D(3), iBlock)
           end do
+          if(any(abs(XyzCont_D - XyzInterpolated_D) > 1.0e-6).and.&
+               IsSecondOrder)then
+             write(*,*)'Approximation test failed'
+             write(*,*)'Grid:', iLevelTest_I(1:2**nDim)
+             write(*,*)'nGridOut=',nGridOut
+             write(*,*)'PointCont=', XyzCont_D
+             write(*,*)'Cell_D  iBlock XyzGrid_D Weight_I(iGrid)'
+             do iGrid = 1, nGridOut
+                iCellIndex_D = 1
+                iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
+                iBlock = iIndexes_II(nIndexes,iGrid)
+                write(*,*)iIndexes_II(1:nDim,iGrid), iBlock ,&
+                     Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
+                     iCellIndex_D(3), iBlock), Weight_I(iGrid)
+             end do
+             write(*,*)'XyzCont_D=',XyzCont_D
+             write(*,*)'XyzInterpolated_D=',XyzInterpolated_D
+             call CON_stop('Correct code and redo test')
+          end if
           if(abs(VarContInterpolated - VarInterpolated) > nDim*0.01)then
              write(*,*)'Continuity test failed'
              write(*,*)'Grid:', iLevelTest_I
@@ -324,8 +347,8 @@ program test_interpolate_amr
 
   implicit none
 
-  call test(2,10000)
-  call test(3,10000)
+  call test(2,20000)
+  call test(3,20000)
 
 end program test_interpolate_amr
 
