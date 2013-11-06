@@ -1121,8 +1121,9 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,dt,dlat,dphi,brad,rb,vl,vp, &
                     endif
                  enddo iloop
                  ! Calculate gain or loss at the outer boundary
-                 dPartLocal=-dt1/dlat(iba(j))*vl(n,iba(j),j,k,m)*fal(iba(j),j)*d4Element_C(iba(j),k,m)
-                 dEnerLocal=ekev(iba(j),j,k,m)*dPart
+                 dPartLocal = -dt1/dlat(iba(j)) &
+                      *vl(n,iba(j),j,k,m)*fal(iba(j),j)*d4Element_C(iba(j),k,m)
+                 dEnerLocal=ekev(iba(j),j,k,m)*dPartLocal
                  !sum all dEner to root proc
                  if(nProc>1) then
                     call MPI_REDUCE (dPartLocal, dPart, 1, MPI_REAL, &
