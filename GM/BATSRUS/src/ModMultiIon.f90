@@ -564,8 +564,8 @@ contains
                    if(uCutOffDim < 0.0)then
                       ! Use properly "averaged" Alfven speed 
                       ! for the cut-off velocity based on 
-                      ! "ON THE PHYSICAL REALIZATION OF TWO-DIMENSIONAL 
-                      ! TURBULENCE FIELDS IN MAGNETIZED INTERPLANETARY PLASMAS"
+                      ! "On the physical realization of two-dimensional 
+                      ! turbulence fields in magnetized interplanetary plasmas"
                       ! A. Stockem et al., APJ 651, 584, (2006). Eq(29) has
                       !
                       ! Du_crit = V_A1*sqrt(1 + r_n) 
