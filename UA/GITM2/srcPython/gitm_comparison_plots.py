@@ -240,6 +240,12 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
 
+    # Set the difference max/min limits, if desired
+    if diff_max is None:
+        diff_max = max(np.nanmax(diff_data), abs(np.nanmin(diff_data)))
+
+    diff_min = -1.0 * diff_max
+
     # Initialize the figure, setting the height for a 3 subfigure stack
     fwidth = 6
     fheight = 18
@@ -253,11 +259,16 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
     # Plot the three datasets using the desired format
     if plot_type.find("shot") > 0:
         # Output the observations as a scatter plot
-        p3g.plot_snapshot_subfigure(f, 3, 0, lat_data, lon_data, obs_data,
-                                    obs_name, obs_scale, obs_units, zmax, zmin,
-                                    data_color, tlon=tlon, blat=latlim1,
-                                    xl=False, yl=False, xt=False, meq=meq,
-                                    earth=earth, term_datetime=term_datetime)
+        axl,ml,axn,mn,axs,ms = p3g.plot_snapshot_subfigure(f, 3, 0, lat_data,
+                                                           lon_data, obs_data,
+                                                           obs_name, obs_scale,
+                                                           obs_units, zmax,
+                                                           zmin, data_color,
+                                                           tlon=tlon,
+                                                           blat=latlim1,
+                                                           xl=False, yl=False,
+                                                           xt=False, meq=meq,
+                                                           earth=earth, term_datetime=term_datetime)
         # Output the gitm data as a contour after ensuring that the GITM array
         # isn't padded to include unrealistic latitudes
         (i, imin) = gpr.find_lon_lat_index(gdata, 0.0, -90.0, "degrees")
@@ -272,31 +283,33 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                     gdata[gitm_key].attrs["units"], zmax, zmin,
                                     data_color, False, tlon, latlim1,
                                     title=False, xl=False, xt=False, meq=meq,
-                                    earth=earth, data_type="contour",
+                                    earth=earth, ml=ml, mn=mn, ms=ms,
+                                    data_type="contour",
                                     term_datetime=term_datetime)
         # Output the differences as a scatter plot
         p3g.plot_snapshot_subfigure(f, 3, 2, lat_data, lon_data, diff_data,
                                     diff_name, diff_scale, diff_units, diff_max,
-                                    -1.0*diff_max, diff_color, tlon=tlon,
+                                    diff_min, diff_color, tlon=tlon,
                                     blat=latlim1, title=False, yl=False,
-                                    meq=meq, earth=earth,
+                                    meq=meq, earth=earth, ml=ml, mn=mn, ms=ms,
                                     term_datetime=term_datetime)
     elif plot_type.find("nsglobal") >= 0:
         # Output the observations as a scatter plot
-        axn1, axs1 = p3g.plot_nsglobal_subfigure(f, 3, 0, lat_data, lon_data,
-                                                 obs_data, obs_name, obs_scale,
-                                                 obs_units, zmax, zmin,
-                                                 data_color, True, True,
-                                                 tlon=tlon, rl=False, tl=False,
-                                                 earth=earth,
-                                                 term_datetime=term_datetime)
+        axn1,mn,axs1,ms = p3g.plot_nsglobal_subfigure(f, 3, 0, lat_data,
+                                                      lon_data, obs_data,
+                                                      obs_name, obs_scale,
+                                                      obs_units, zmax, zmin,
+                                                      data_color, True, True,
+                                                      tlon=tlon, rl=False,
+                                                      tl=False, earth=earth,
+                                                      term_datetime=term_datetime)
         # Output the gitm data as a contour after ensuring that the GITM array
         # isn't padded to include unrealistic latitudes 
         (i, imin) = gpr.find_lon_lat_index(gdata, 0.0, -90.0, "degrees")
         (i, imax) = gpr.find_lon_lat_index(gdata, 0.0, 90.0, "degrees")
         imax += 1 
 
-        axn2, axs2 = p3g.plot_nsglobal_subfigure(f, 3, 1, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]), gdata[gitm_key].attrs["name"], gdata[gitm_key].attrs["scale"], gdata[gitm_key].attrs["units"], zmax, zmin, data_color, False, False, tlon=tlon, tl=False, earth=earth, data_type="contour", term_datetime=term_datetime)
+        axn2,mn,axs2,ms = p3g.plot_nsglobal_subfigure(f, 3, 1, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]), gdata[gitm_key].attrs["name"], gdata[gitm_key].attrs["scale"], gdata[gitm_key].attrs["units"], zmax, zmin, data_color, False, False, tlon=tlon, tl=False, earth=earth, mn=mn, ms=ms, data_type="contour", term_datetime=term_datetime)
 
         axn1_dim = list(axn1.axes.get_position().bounds)
         axs1_dim = list(axs1.axes.get_position().bounds)
@@ -311,35 +324,32 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         # Output the differences as a scatter plot
         p3g.plot_nsglobal_subfigure(f, 3, 2, lat_data, lon_data, diff_data,
                                     diff_name, diff_scale, diff_units, diff_max,
-                                    -1.0*diff_max, diff_color, False, True,
-                                    tlon=tlon, rl=False, earth=earth,
-                                    term_datetime=term_datetime)
+                                    diff_min, diff_color, False, True,
+                                    tlon=tlon, rl=False, earth=earth, mn=mn,
+                                    ms=ms, term_datetime=term_datetime)
     elif plot_type.find("rect") >= 0:
         # Output the observations as a scatter plot
         ax = f.add_subplot(3,1,1)
-        con1 = p3g.plot_rectangular_3D_global(ax, lat_data, lon_data, obs_data,
-                                              obs_name, obs_scale, obs_units,
-                                              zmin, zmax, data_color,
-                                              nlat=latlim1, slat=latlim2,
-                                              linc=linc, cloc="r", xl=False,
-                                              xt=False, yl=False, meq=meq,
-                                              earth=earth,
-                                              term_datetime=term_datetime)
+        con1, m = p3g.plot_rectangular_3D_global(ax, lat_data, lon_data,
+                                                 obs_data, obs_name, obs_scale,
+                                                 obs_units, zmin, zmax,
+                                                 data_color, nlat=latlim1,
+                                                 slat=latlim2, linc=linc,
+                                                 cloc="r", xl=False, xt=False,
+                                                 yl=False, meq=meq, earth=earth,
+                                                 term_datetime=term_datetime)
         # Output the gitm data as a contour
         ax = f.add_subplot(3,1,2)
-        con2 = p3g.plot_rectangular_3D_global(ax,
-                                              np.array(gdata['dLat'][:,:,ialt]),
-                                              np.array(gdata['dLon'][:,:,ialt]),
-                                              np.array(gdata[gitm_key][:,:,ialt]),
-                                              gdata[gitm_key].attrs["name"],
-                                              gdata[gitm_key].attrs["scale"],
-                                              gdata[gitm_key].attrs["units"],
-                                              zmin, zmax, data_color,
-                                              nlat=latlim1, slat=latlim2,
-                                              linc=linc, cb=False, xl=False,
-                                              xt=False, meq=meq, earth=earth,
-                                              data_type="contour",
-                                              term_datetime=term_datetime)
+        con2, m = p3g.plot_rectangular_3D_global(ax, np.array(gdata['dLat'][:,:,ialt]), np.array(gdata['dLon'][:,:,ialt]), np.array(gdata[gitm_key][:,:,ialt]),
+                                                 gdata[gitm_key].attrs["name"],
+                                                 gdata[gitm_key].attrs["scale"],
+                                                 gdata[gitm_key].attrs["units"],
+                                                 zmin, zmax, data_color,
+                                                 nlat=latlim1, slat=latlim2,
+                                                 linc=linc, cb=False, xl=False,
+                                                 xt=False, meq=meq, earth=earth,
+                                                 m=m, data_type="contour",
+                                                 term_datetime=term_datetime)
         # Adjust plot dimensions if necessary
         if not earth:
             con1_dim = list(con1.axes.get_position().bounds)
@@ -351,10 +361,10 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         ax = f.add_subplot(3,1,3)
         p3g.plot_rectangular_3D_global(ax, lat_data, lon_data, diff_data,
                                        diff_name, diff_scale, diff_units,
-                                       -1.0*diff_max, diff_max, diff_color,
+                                       diff_min, diff_max, diff_color,
                                        nlat=latlim1, slat=latlim2, linc=linc,
                                        cloc="r", yl=False, meq=meq, earth=earth,
-                                       term_datetime=term_datetime)
+                                       m=m, term_datetime=term_datetime)
     elif plot_type.find("polar") >= 0:
         pf = True
         if earth:
@@ -362,28 +372,28 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
 
         # Output the observations as a scatter plot
         ax = f.add_subplot(3,1,1, polar=pf)
-        con1 = p3g.plot_polar_3D_global(ax, 3, lat_data, lon_data, obs_data,
-                                        obs_name, obs_scale, obs_units, zmin,
-                                        zmax, data_color, center_lat=latlim1,
-                                        edge_lat=latlim2, linc=linc,
-                                        top_lon=tlon, cloc="r", tl=False,
-                                        rl=False, earth=earth,
-                                        term_datetime=term_datetime)
+        con1,m = p3g.plot_polar_3D_global(ax, 3, lat_data, lon_data, obs_data,
+                                          obs_name, obs_scale, obs_units, zmin,
+                                          zmax, data_color, center_lat=latlim1,
+                                          edge_lat=latlim2, linc=linc,
+                                          top_lon=tlon, cloc="r", tl=False,
+                                          rl=False, earth=earth,
+                                          term_datetime=term_datetime)
         # Output the gitm data as a contour after ensuring that the GITM
         # array isn't padded to include unrealistic latitudes
         ax = f.add_subplot(3,1,2, polar=pf)
         (i, imin) = gpr.find_lon_lat_index(gdata, 0.0, -90.0, "degrees")
         (i, imax) = gpr.find_lon_lat_index(gdata, 0.0, 90.0, "degrees")
         imax += 1 
-        con2 = p3g.plot_polar_3D_global(ax, 3, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]),
-                                        gdata[gitm_key].attrs["name"],
-                                        gdata[gitm_key].attrs["scale"],
-                                        gdata[gitm_key].attrs["units"], zmin,
-                                        zmax, data_color, center_lat=latlim1,
-                                        edge_lat=latlim2, linc=linc,
-                                        top_lon=tlon, cb=False, tl=False,
-                                        earth=earth, data_type="contour",
-                                        term_datetime=term_datetime)
+        con2,m = p3g.plot_polar_3D_global(ax, 3, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]),
+                                          gdata[gitm_key].attrs["name"],
+                                          gdata[gitm_key].attrs["scale"],
+                                          gdata[gitm_key].attrs["units"], zmin,
+                                          zmax, data_color, center_lat=latlim1,
+                                          edge_lat=latlim2, linc=linc,
+                                          top_lon=tlon, cb=False, tl=False,
+                                          earth=earth, m=m, data_type="contour",
+                                          term_datetime=term_datetime)
 
         con1_dim = list(con1.axes.get_position().bounds)
         con2_dim = list(con2.ax.get_position().bounds)
@@ -394,11 +404,11 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         # Output the differences as a scatter plot
         ax = f.add_subplot(3,1,3, polar=pf)
         p3g.plot_polar_3D_global(ax, 3, lat_data, lon_data, diff_data,
-                                 diff_name, diff_scale, diff_units,
-                                 -1.0*diff_max, diff_max, data_color,
-                                 center_lat=latlim1, edge_lat=latlim2,
-                                 linc=linc, top_lon=tlon, cloc="r", rl=False,
-                                 earth=earth, term_datetime=term_datetime)
+                                 diff_name, diff_scale, diff_units, diff_min,
+                                 diff_max, data_color, center_lat=latlim1,
+                                 edge_lat=latlim2, linc=linc, top_lon=tlon,
+                                 cloc="r", rl=False, earth=earth, m=m,
+                                 term_datetime=term_datetime)
     else:
         print rout_name, "ERROR: uknown plot type [", plot_type, "]"
         return
