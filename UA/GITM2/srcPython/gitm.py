@@ -23,11 +23,14 @@
 #                              data structure, where only a limited number of
 #                              data variables from that file have been read
 #                              in before
+#           def calc_tec     - Calculate the VTEC
 #           def calc_2dion   - Calculate the 2D ionospheric parameters (VTEC,
-#                              hmF2, NmF2)
+#                              hmF2, NmF2).  Checks to see if VTEC already
+#                              exists
 #
 # Updates: Angeline Burrell (AGB) - 1/7/13: Added calc_lt, append_units, and
 #                                           calc_magvel
+#          AGB - 11/7/13: Improved calc_2dion, added Aaron Ridley's calc_tec
 #------------------------------------------------------------------------------
 
 '''
@@ -280,37 +283,37 @@ class GitmBin(PbData):
                    string.find(item, "Gravity") >= 0 or
                    string.find(item, "PressGrad") >= 0):
                     sp = string.split(item)
+                    units = self[item].attrs['units']
+                    scale = self[item].attrs['scale']
+                    # extract the non-directional part of the name
                     if not self.has_key(sp[0]):
-                        east  = string.join([sp[0], "(east)"], " ")
+                        east = string.join([sp[0], "(east)"], " ")
                         north = string.join([sp[0], "(north)"], " ")
-                        up    = string.join([sp[0], "(up)"], " ")
-                        par   = string.join([sp[0], "(par)"], " ")
-                        zon   = string.join([sp[0], "(zon)"], " ")
-                        mer   = string.join([sp[0], "(mer)"], " ")
+                        up = string.join([sp[0], "(up)"], " ")
+                        par = string.join([sp[0], "(par)"], " ")
+                        zon = string.join([sp[0], "(zon)"], " ")
+                        mer = string.join([sp[0], "(mer)"], " ")
+                        name = self[east].attrs['name']
 
                         vp=bhat_e*self[east]+bhat_n*self[north]+bhat_v*self[up]
                         vz=zhat_e*self[east]+zhat_n*self[north]
                         vm=mhat_e*self[east]+mhat_n*self[north]+mhat_v*self[up]
-                        self[par] = dmarray.copy(vp)
-                        self[par].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,mag\,north}}', 'scale':'linear', 'name':'v$_\parallel$'}
-                        self[zon] = dmarray.copy(vz)
-                        self[zon].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,east}}', 'scale':'linear', 'name':'v$_{zon}$'}
-                        self[mer] = dmarray.copy(vm)
-                        self[mer].attrs = {'units':'m s^{-1}{\mathdefault{,\,positive\,up}}', 'scale':'linear', 'name':'v$_{mer}$'}
                     elif sp[0].find("Gravity") >= 0:
                         par = string.join([sp[0], "(par)"], " ")
                         zon = string.join([sp[0], "(zon)"], " ")
                         mer = string.join([sp[0], "(mer)"], " ")
+                        name = "%s$_{east}$" % (self[item].attrs['name'])
 
-                        gp=bhat_v*self[item]
-                        gz=0.0*self[item]
-                        gm=mhat_v*self[item]
-                        self[par] = dmarray.copy(gp)
-                        self[par].attrs = {'units':'m s^{-2}{\mathdefault{,\,positive\,mag\,north}}', 'scale':'linear', 'name':'g$_\parallel$'}
-                        self[zon] = dmarray.copy(gz)
-                        self[zon].attrs = {'units':'m s^{-2}{\mathdefault{,\,positive\,east}}', 'scale':'linear', 'name':'g$_{zon}$'}
-                        self[mer] = dmarray.copy(gm)
-                        self[mer].attrs = {'units':'m s^{-2}{\mathdefault{,\,positive\,up}}', 'scale':'linear', 'name':'g$_{mer}$'}
+                        vp=bhat_v*self[item]
+                        vz=0.0*self[item]
+                        vm=mhat_v*self[item]
+
+                    self[par] = dmarray.copy(vp)
+                    self[par].attrs = {'units':'%s{\mathdefault{,\,positive\,mag\,north}}'%(units), 'scale':scale, 'name':name.replace("east", "\parallel")}
+                    self[zon] = dmarray.copy(vz)
+                    self[zon].attrs = {'units':'%s{\mathdefault{,\,positive\,east}}'%(units), 'scale':scale, 'name':name.replace("east", "zon")}
+                    self[mer] = dmarray.copy(vm)
+                    self[mer].attrs = {'units':'%s{\mathdefault{,\,positive\,up}}'%(units), 'scale':scale, 'name':name.replace("east", "mer")}
         
             if not self.has_key('B.F. East'):
                 self['B.F. East'] = dmarray.copy(ion['B.F. East'])
@@ -364,11 +367,11 @@ class GitmBin(PbData):
                      "E.F. North":"V m^{-1}", "E.F. Magnitude":"V m^{-1}",
                      "B.F. Vertical":"nT", "B.F. East":"nT", "B.F. North":"nT",
                      "B.F. Magnitude":"nT", "Magnetic Latitude":"degrees",
-                     "Ed1":"", "Ed2":"", "Gravity":"m s$^{-2}$",
-                     "PressGrad (east)":"Pa m$^{-1}$",
-                     "PressGrad (north)":"Pa m$^{-1}$",
-                     "PressGrad (up)":"Pa m$^{-1}$",
-                     "IN Collision Freq":"s$^{-1}$"}
+                     "Ed1":"", "Ed2":"", "Gravity":"m s^{-2}",
+                     "PressGrad (east)":"Pa m^{-1}",
+                     "PressGrad (north)":"Pa m^{-1}",
+                     "PressGrad (up)":"Pa m^{-1}",
+                     "IN Collision Freq":"s^{-1}"}
 
         scale_dict = {"Altitude":"linear", "Ar Mixing Ratio":"linear",
                       "Ar":"exponential", "CH4 Mixing Ratio":"linear",
@@ -476,7 +479,7 @@ class GitmBin(PbData):
                      "PressGrad (east)":r"$\nabla_{east}$ (P$_i$ + P$_e$)",
                      "PressGrad (north)":r"$\nabla_{north}$ (P$_i$ + P$_e$)",
                      "PressGrad (up)":r"$\nabla_{up}$ (P$_i$ + P$_e$)",
-                     "IN Collision Freq":"$\nu_{in}$"}
+                     "IN Collision Freq":r"$\nu_{in}$"}
 
         for k in self.keys():
             if type(self[k]) is dmarray:
@@ -513,9 +516,9 @@ class GitmBin(PbData):
             if not self.has_key(nkey):
                 self[nkey] = dmarray.copy(temp[nkey])
 
-    def calc_2dion(self):
+    def calc_tec(self):
         '''
-        A routine to calculate the 2D ionospheric parameters: VTEC, hmF2, NmF2.
+        A routine to calculate the 2D VTEC.
         To perform these calculations, electron density ("e-") must be one of
         the available data types.
         '''
@@ -527,11 +530,6 @@ class GitmBin(PbData):
             self['VTEC'] = dmarray(self['e-'] * 1.0e-16,
                                    attrs={'units':'TECU', 'scale':'linear',
                                           'name':'Vertical TEC'})
-            self['NmF2'] = dmarray.copy(self['e-'])
-            self['NmF2'].attrs['name'] = 'N$_m$F$_2$'
-            self['hmF2'] = dmarray(self['Altitude'] / 1000.0,
-                                   attrs={'units':'km', 'scale':'linear',
-                                          'name':'h$_m$F$_2$'})
 
             for ilon in range(self.attrs['nLon']):
                 for ilat in range(self.attrs['nLat']):
@@ -540,10 +538,120 @@ class GitmBin(PbData):
                                        self['Altitude'][ilon,ilat,:], "avg")
                     self['VTEC'][ilon,ilat,:] = vtec
 
+    def calc_2dion(self):
+        '''
+        A routine to calculate the 2D ionospheric parameters: VTEC, hmF2, NmF2.
+        To perform these calculations, electron density ("e-") must be one of
+        the available data types.
+        '''
+
+        import scipy.integrate as integ
+        from scipy.interpolate import interp1d
+        from scipy.signal import argrelextrema
+
+        calc_vtec = False
+
+        if self.has_key('e-'):
+            if not self.has_key('VTEC'):
+                calc_vtec = True
+                self['VTEC'] = dmarray(self['e-'] * 1.0e-16,
+                                       attrs={'units':'TECU', 'scale':'linear',
+                                              'name':'Vertical TEC'})
+            self['NmF2'] = dmarray.copy(self['e-'])
+            self['NmF2'].attrs['name'] = 'N$_m$F$_2$'
+            self['hmF2'] = dmarray(self['Altitude'] / 1000.0,
+                                   attrs={'units':'km', 'scale':'linear',
+                                          'name':'h$_m$F$_2$'})
+            alt = np.linspace(min(self['hmF2'][0,0,:]),
+                              max(self['hmF2'][0,0,:]),1000)
+
+            for ilon in range(self.attrs['nLon']):
+                for ilat in range(self.attrs['nLat']):
+                    if calc_vtec is True:
+                        # Integrate electron density over altitude
+                        vtec = integ.simps(self['VTEC'][ilon,ilat,:],
+                                           self['Altitude'][ilon,ilat,:], "avg")
+                        self['VTEC'][ilon,ilat,:] = vtec
+
                     # Interpolate over the electron density altitude profile
                     eprof = interp1d(self['hmF2'][ilon,ilat,:],
                                      self['NmF2'][ilon,ilat,:], kind="cubic")
-                    alt = np.linspace(200.0,max(self['hmF2'][ilon,ilat,:]),1000)
-                    edens = list(eprof(alt))
-                    self['NmF2'][ilon,ilat,:] = max(edens)
-                    self['hmF2'][ilon,ilat,:] = alt[edens.index(max(edens))]
+                    try:
+                        edens = eprof(alt)
+                    except:
+                        alt = np.linspace(min(self['hmF2'][ilon,ilat,:]),
+                                          max(self['hmF2'][ilon,ilat,:]),1000)
+                        edens = eprof(alt)
+
+                    # Find the local maxima of the electron density profile
+                    emax = argrelextrema(edens, np.greater)
+                    emax_list = list(emax[0])
+                    saddle = False
+                    if len(emax_list) == 0:
+                        # No local maxima were found, try identifying
+                        # saddle points
+                        saddle = True
+                    elif len(emax_list) == 1:
+                        if max(edens) == edens[emax_list[0]]:
+                            # Only one maxima exists and is realistic. Sometimes
+                            # a profile will have inflection points instead of
+                            # local maxima and this can confuse the routine
+                            self['NmF2'][ilon,ilat,:] = edens[emax_list[0]]
+                            self['hmF2'][ilon,ilat,:] = alt[emax_list[0]]
+                        else:
+                            saddle = True
+                    elif alt[emax_list[-1]] < 120.0:
+                        saddle = True
+                    else:
+                        # More than one maxima exists.  Seperate hmF2 from hmF1
+                        # and spurious local maxima
+                        NmF2 = list(edens[emax_list])
+                        HmF2 = list(alt[emax_list])
+
+                        # If the global maximum is over 200 km,
+                        # this is the F2 peak
+                        eindex = NmF2.index(max(NmF2))
+                        if HmF2[eindex] <= 200.0 and HmF2[eindex] == min(HmF2):
+                            # The global max may be the F1 peak, see if the
+                            # secondary (or lessor) maxima is at the upper
+                            # limit of the model.  If so, remove this point
+                            # from consideration
+                            if max(HmF2) > self['hmF2'][ilon,ilat,-5]:
+                                eindex = HmF2.index(max(HmF2))
+                                emax_list.pop(eindex)
+                                NmF2.pop(eindex)
+                                HmF2.pop(eindex)
+                                eindex = NmF2.index(max(NmF2))
+
+                            if len(emax_list) > 1:
+                                # If there are multiple maxima after the upper
+                                # boundary has been removed, choose the largest
+                                # maxima above 200 km since the hmF1 is often
+                                # larger than the hmF2
+                                emax_list.pop(eindex)
+                                NmF2.pop(eindex)
+                                eindex = NmF2.index(max(NmF2))
+
+                        # Set the hmF2 and NmF2
+                        self['NmF2'][ilon,ilat,:] = edens[emax_list[eindex]]
+                        self['hmF2'][ilon,ilat,:] = alt[emax_list[eindex]]
+
+                    if saddle:
+                        # It is difficult to find saddle points.  Examine
+                        # the rate of change of density
+                        delta_alt = alt[1] - alt[0] # Equally spaced
+                        edens_dot = np.diff(edens) / delta_alt
+
+                        # Identify inflection points by looking for
+                        # minima in the derivative of electron density.
+                        edot_min = argrelextrema(edens_dot, np.less)
+                        emin_list = list(edot_min[0])
+                        edens_min = list(edens[emin_list])
+                        emax = np.max(edens_min)
+                        eindex = emin_list[edens_min.index(emax)]
+
+                        # Assign the inflection with the largest
+                        # electron density to the ion peak
+                        self['NmF2'][ilon,ilat,:] = edens[eindex]
+                        self['hmF2'][ilon,ilat,:] = alt[eindex]
+# END
