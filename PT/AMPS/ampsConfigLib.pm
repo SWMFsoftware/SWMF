@@ -144,6 +144,31 @@ sub ChangeValueOfArray {
   close (FILEOUT); 
 }
 
+#===============================  Get the first appearence of a string $_[0] in the array $_[1] ==
+sub GetElementNumber {
+  my $str=$_[0];
+  my @List=@{$_[1]};
+  
+  my $nspec=0;
+  my $found=0;
+  
+  foreach (@List) {
+    if ($List[$nspec] eq $str) {
+      $found=1; #the species has been found in the list of those used in the simulation
+      last;
+    }
+    else {
+      $nspec++;
+    }
+  }
+  
+  if ($found == 0) {
+    $nspec=-1;
+  }
+
+  return $nspec;
+}
+
 #===============================  Substitute a line in a source file =============================
 sub SubstituteCodeLine {
   my $oldLinstKey=$_[0];
@@ -160,7 +185,7 @@ sub SubstituteCodeLine {
   
   foreach (@FileContent) {
     if ($_=~m/($oldLinstKey)/) {
-      $_=$newLine;
+      $_=$newLine."\n";
     }
     
     print FILEOUT "$_";
