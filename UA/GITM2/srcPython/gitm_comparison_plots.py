@@ -161,8 +161,8 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                        zmax=None, zmin=None, title=None, color=True,
                        data_coff=False, diff_coff=True, figname=None, draw=True,
                        latlim1=90, latlim2=-90, linc=6, tlon=90, meq=False,
-                       earth=False, faspect=True, term_datetime=None,
-                       *args, **kwargs):
+                       earth=False, map_list=[], faspect=True,
+                       term_datetime=None, *args, **kwargs):
     '''
     Creates three plots of a specified type, one showing the observations, one
     showing the GITM data, and one showing the difference between the two.
@@ -208,6 +208,9 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
            meq            = Add a line for the geomagnetic equator?
                             (default=False)
            earth         = Include continent outlines for Earth (default=False)
+           map_list      = List of map handles for the specified plot_type
+                           (default=empty list)
+           faspect       = Keep a true aspect ratio for maps? (default=True)
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
                            with the UT for this map.  Only used if earth=True.
@@ -249,16 +252,25 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
 
     # Initialize the figure, setting the height for a 3 subfigure stack
     fwidth = 6
-    fheight = 18
-    if(plot_type.find("polar") >= 0):
-        fwidth /= 1.5
-    elif(plot_type.find("shot") > 0):
-        fheight *= 2.0
+    fheight = 12
+    if(plot_type.find("global") > 0):
+        fwidth *= 1.5
+    if(plot_type.find("shot") > 0):
+        fwidth *= 1.5
+        fheight *= 1.5
 
     f = plt.figure(figsize=(fwidth,fheight))
 
     # Plot the three datasets using the desired format
     if plot_type.find("shot") > 0:
+        if len(map_list) == 3:
+            ml = map_list[0]
+            mn = map_list[1]
+            ms = map_list[2]
+        else:
+            ml = None
+            mn = None
+            ms = None
         # Output the observations as a scatter plot
         axl,ml,axn,mn,axs,ms = p3g.plot_snapshot_subfigure(f, 3, 0, lat_data,
                                                            lon_data, obs_data,
@@ -269,7 +281,9 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                                            blat=latlim1,
                                                            xl=False, yl=False,
                                                            xt=False, meq=meq,
-                                                           earth=earth, term_datetime=term_datetime)
+                                                           earth=earth, ml=ml,
+                                                           mn=mn, ms=ms,
+                                                           term_datetime=term_datetime)
         # Output the gitm data as a contour after ensuring that the GITM array
         # isn't padded to include unrealistic latitudes
         (i, imin) = gpr.find_lon_lat_index(gdata, 0.0, -90.0, "degrees")
@@ -294,7 +308,14 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                     blat=latlim1, title=False, yl=False,
                                     meq=meq, earth=earth, ml=ml, mn=mn, ms=ms,
                                     term_datetime=term_datetime)
+        map_list = list([ml, mn, ms])
     elif plot_type.find("nsglobal") >= 0:
+        if len(map_list) == 2:
+            mn = map_list[0]
+            ms = map_list[1]
+        else:
+            mn = None
+            ms = None
         # Output the observations as a scatter plot
         axn1,mn,axs1,ms = p3g.plot_nsglobal_subfigure(f, 3, 0, lat_data,
                                                       lon_data, obs_data,
@@ -303,6 +324,7 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                                       data_color, True, True,
                                                       tlon=tlon, rl=False,
                                                       tl=False, earth=earth,
+                                                      mn=mn, ms=ms,
                                                       term_datetime=term_datetime)
         # Output the gitm data as a contour after ensuring that the GITM array
         # isn't padded to include unrealistic latitudes 
@@ -328,7 +350,12 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                     diff_min, diff_color, False, True,
                                     tlon=tlon, rl=False, earth=earth, mn=mn,
                                     ms=ms, term_datetime=term_datetime)
+        map_list = list([mn, ms])
     elif plot_type.find("rect") >= 0:
+        if len(map_list) == 1:
+            m = map_list[0]
+        else:
+            m = None
         # Output the observations as a scatter plot
         ax = f.add_subplot(3,1,1)
         con1, m = p3g.plot_rectangular_3D_global(ax, lat_data, lon_data,
@@ -338,6 +365,7 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                                  slat=latlim2, linc=linc,
                                                  cloc="r", xl=False, xt=False,
                                                  yl=False, meq=meq, earth=earth,
+                                                 m=m,
                                                  term_datetime=term_datetime)
         # Output the gitm data as a contour
         ax = f.add_subplot(3,1,2)
@@ -366,11 +394,16 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                        nlat=latlim1, slat=latlim2, linc=linc,
                                        cloc="r", yl=False, meq=meq, earth=earth,
                                        m=m, term_datetime=term_datetime)
+        map_list = list([m])
     elif plot_type.find("polar") >= 0:
+        if len(map_list) == 1:
+            m = map_list[0]
+        else:
+            m = None
+
         pf = True
         if earth:
             pf = False
-
         # Output the observations as a scatter plot
         ax = f.add_subplot(3,1,1, polar=pf)
         con1,m = p3g.plot_polar_3D_global(ax, 3, lat_data, lon_data, obs_data,
@@ -378,7 +411,7 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                           zmax, data_color, center_lat=latlim1,
                                           edge_lat=latlim2, linc=linc,
                                           top_lon=tlon, cloc="r", tl=False,
-                                          rl=False, earth=earth,
+                                          rl=False, earth=earth, m=m,
                                           term_datetime=term_datetime)
         # Output the gitm data as a contour after ensuring that the GITM
         # array isn't padded to include unrealistic latitudes
@@ -406,10 +439,11 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         ax = f.add_subplot(3,1,3, polar=pf)
         p3g.plot_polar_3D_global(ax, 3, lat_data, lon_data, diff_data,
                                  diff_name, diff_scale, diff_units, diff_min,
-                                 diff_max, data_color, center_lat=latlim1,
+                                 diff_max, diff_color, center_lat=latlim1,
                                  edge_lat=latlim2, linc=linc, top_lon=tlon,
                                  cloc="r", rl=False, earth=earth, m=m,
                                  term_datetime=term_datetime)
+        map_list = list([m])
     else:
         print rout_name, "ERROR: uknown plot type [", plot_type, "]"
         return
@@ -430,7 +464,7 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
     if figname is not None:
         plt.savefig(figname)
 
-    return f
+    return(f, map_list)
 
 # END plot_net_gitm_comp
 
