@@ -30,6 +30,7 @@ Process and plot data to facilitate GITM/data comparisons
 # Import modules
 import math
 import numpy as np
+from spacepy import pybats
 from spacepy.pybats import gitm
 import gitm # Temporary until the new GITM is incorporated into spacepy
 import gitm_time
