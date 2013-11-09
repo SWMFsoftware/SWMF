@@ -1514,8 +1514,8 @@ contains
   !==========================================================================
 
   subroutine dimensionalize_plotvar_los
-
-    use ModPhysics, ONLY : No2Si_V, UnitX_, UnitRho_
+    use ModConst,   ONLY : cSigmaThomson
+    use ModPhysics, ONLY : No2Si_V, UnitX_, UnitRho_, UnitN_
     !--------------------------------------------------------------------------
 
     do iVar = 1, nPlotVar
@@ -1528,7 +1528,8 @@ contains
           Image_VII(iVar,:,:) = Image_VII(iVar,:,:) &
                *No2Si_V(UnitRho_)*No2Si_V(UnitX_)
        case('wl','pb')
-          ! do nothing for backwards compatibility
+          Image_VII(iVar,:,:) = Image_VII(iVar,:,:) &
+               *No2Si_V(UnitN_)*No2Si_V(UnitX_)*cSigmaThomson*3.0/16.0
        case('euv171','euv195','euv284','sxr')
           ! do nothing since already taken care of
        case default
