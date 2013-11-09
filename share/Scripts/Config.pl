@@ -80,8 +80,12 @@ our $Install;               # True if code is (re)installed
 our $Uninstall;             # True if code is uninstalled
 our $ShowGridSize;          # Show grid size for caller code
 our $NewGridSize;           # New grid size to be set in caller code
-our $Hdf5;                  # True if HDF5 is enabled
+our $Hdf5;                  # True if HDF5  lib is enabled
 our $Hypre;                 # True if HYPRE lib is enabled
+our $Spice;                 # True if SPICE lib is enabled
+
+# The name of the parallel HDF5 Fortran compiler
+my $H5pfc = "h5pfc";
 
 # This string should be added into Makefile.conf when HYPRE is enabled
 my $HypreDefinition = "
@@ -90,8 +94,11 @@ HYPRELIB     = -L\${UTILDIR}/HYPRE/lib -lHYPRE
 HYPRESEARCH  = -I\${UTILDIR}/HYPRE/include
 ";             	    
 
-# The name of the parallel HDF5 Fortran compiler
-my $H5pfc = "h5pfc";
+# This string should be added into Makefile.conf when SPICE is enabled
+my $SpiceDefinition = "
+# SPICE library definitions
+SPICELIB     = -L\${SPICEDIR} -lSpice
+";
 
 # Default precision for installation
 my $DefaultPrecision = 'double';
@@ -104,6 +111,7 @@ my $NewDebug;
 my $NewMpi;
 my $NewHdf5;
 my $NewHypre;
+my $NewSpice;
 my $IsCompilerSet;
 my $Debug;
 my $Mpi;
@@ -145,6 +153,8 @@ foreach (@Arguments){
     if(/^-nohdf5$/i)          {$NewHdf5="no";                   next};
     if(/^-hypre$/i)           {$NewHypre="yes";                 next};
     if(/^-nohypre$/i)         {$NewHypre="no";                  next};
+    if(/^-spice$/i)           {$NewSpice="yes";                 next};
+    if(/^-nospice$/i)         {$NewSpice="no";                  next};
     if(/^-O[0-5]$/i)          {$NewOptimize=$_;                 next};  
     if(/^-g(rid)?$/)          {$ShowGridSize=1;                 next};
     if(/^-g(rid)?=([\d,]+)$/) {$NewGridSize=$+;                 next};
@@ -247,6 +257,9 @@ if($NewPrecision and $NewPrecision ne $Precision){
 # Link with HYPRE library is required
 &set_hypre_ if $NewHypre and $NewHypre ne $Hypre;
 
+# Link with SPICE library is required
+&set_spice_ if $NewSpice and $NewSpice ne $Spice;
+
 # Get new settings
 &get_settings_;
 
@@ -287,6 +300,7 @@ sub get_settings_{
     $Mpi       = "yes";
     $Hdf5      = "no";
     $Hypre     = "no";
+    $Spice     = "no";
   TRY:{
       # Read information from $MakefileConf
       open(MAKEFILE, $MakefileConf)
@@ -312,6 +326,7 @@ sub get_settings_{
 	  $Mpi   = "no"  if /^\s*MPILIB\s*=.*\-lNOMPI/;
 	  $Hdf5  = "yes" if /^\s*LINK\.f90\s*=.*$H5pfc/;
 	  $Hypre = "yes" if /^\s*HYPRELIB/;
+	  $Spice = "yes" if /^\s*SPICELIB/;
           $Optimize = $1 if /^\s*OPT[0-5]\s*=\s*(-O[0-5])/;
       }
   }
@@ -361,6 +376,7 @@ Debugging flags:   $Debug
 Linked with MPI:   $Mpi
 Linked with HDF5:  $Hdf5
 Linked with HYPRE: $Hypre
+Linked with SPICE: $Spice
 ";
 
 }
@@ -535,46 +551,6 @@ sub set_mpi_{
 
 ##############################################################################
 
-sub set_hypre_{
-
-    # Check if library is present
-    if($NewHypre eq "yes" and not -d "util/HYPRE"){
-	print "Warning: util/HYPRE is missing. Use cd util; cvs co HYPRE/\n";
-	return;
-    }
-
-    # $Hypre will be $NewHypre after changes
-    $Hypre = $NewHypre;
-
-    print "Enabling HYPRE library in $MakefileConf\n" if $Hypre eq "yes";
-    print "Disabling HYPRE library in $MakefileConf\n" if $Hypre eq "no";
-    if(not $DryRun){
-	@ARGV = ($MakefileConf);
-	while(<>){
-	    # Add/remove HYPRE related definitions after MPILIB
-	    $_ .= $HypreDefinition if $Hypre eq "yes" and /-lNOMPI/;
-	    chop    if $Hypre eq "no" and /-lNOMPI/;
-	    $_ = "" if $Hypre eq "no" and /HYPRE/i;
-	    print;
-	}
-    }
-    &shell_command("cd util/HYPRE; make install") if $Hypre eq "yes"
-	and not -e "util/HYPRE/lib/libHYPRE.a";
-
-    my @files = glob("src/*Hypre_orig.f90 ??/*/src/*Hypre_orig.f90");
-    foreach my $file (@files){
-	my $outfile = $file;
-	$outfile =~ s/_orig//;
-	my $infile  = $file;
-	$infile =~ s/_orig/_empty/ if $Hypre eq "no";
-	print "set_hypre_: cp $infile $outfile\n";
-	&shell_command("cp $infile $outfile");
-    }
-
-}
-
-##############################################################################
-
 sub set_hdf5_{
 
     $NewHdf5="no" if $Install and not $NewHdf5;
@@ -620,6 +596,82 @@ sub set_hdf5_{
     }
 }
 
+##############################################################################
+
+sub set_hypre_{
+
+    # Check if library is present
+    if($NewHypre eq "yes" and not -d "util/HYPRE"){
+	print "Warning: util/HYPRE is missing. Use cd util; cvs co HYPRE/\n";
+	return;
+    }
+
+    # $Hypre will be $NewHypre after changes
+    $Hypre = $NewHypre;
+
+    print "Enabling HYPRE library in $MakefileConf\n" if $Hypre eq "yes";
+    print "Disabling HYPRE library in $MakefileConf\n" if $Hypre eq "no";
+    if(not $DryRun){
+	@ARGV = ($MakefileConf);
+	while(<>){
+	    # Add/remove HYPRE related definitions after MPILIB
+	    $_ .= $HypreDefinition if $Hypre eq "yes" and /-lNOMPI/;
+	    chop    if $Hypre eq "no" and /-lNOMPI/;
+	    $_ = "" if $Hypre eq "no" and /HYPRE/i;
+	    print;
+	}
+    }
+    &shell_command("cd util/HYPRE; make install") if $Hypre eq "yes"
+	and not -e "util/HYPRE/lib/libHYPRE.a";
+
+    my @files = glob("src/*Hypre_orig.f90 ??/*/src/*Hypre_orig.f90");
+    foreach my $file (@files){
+	my $outfile = $file;
+	$outfile =~ s/_orig//;
+	my $infile  = $file;
+	$infile =~ s/_orig/_empty/ if $Hypre eq "no";
+	print "set_hypre_: cp $infile $outfile\n";
+	&shell_command("cp $infile $outfile");
+    }
+
+}
+
+##############################################################################
+
+sub set_spice_{
+
+    # Check if library is present, but how?
+
+    # $Spice will be $NewSpice after changes
+    $Spice = $NewSpice;
+
+    print "Enabling SPICE library in $MakefileConf\n"  if $Spice eq "yes";
+    print "Disabling SPICE library in $MakefileConf\n" if $Spice eq "no";
+    if(not $DryRun){
+	@ARGV = ($MakefileConf);
+	while(<>){
+	    # Add/remove SPICE related definitions after MPILIB
+	    $_ .= $SpiceDefinition if $Spice eq "yes" and /-lNOMPI/;
+	    chop    if $Spice eq "no" and /-lNOMPI/;
+	    $_ = "" if $Spice eq "no" and /SPICE/i;
+	    print;
+	}
+    }
+
+    my @files = glob("src/*Spice_orig.f90 */*/src/*Spice_orig.f90");
+
+    print "SPICE files=@files\n";
+
+    foreach my $file (@files){
+	my $outfile = $file;
+	$outfile =~ s/_orig//;
+	my $infile  = $file;
+	$infile =~ s/_orig/_empty/ if $Spice eq "no";
+	print "set_spice_: cp $infile $outfile\n";
+	&shell_command("cp $infile $outfile");
+    }
+
+}
 
 ##############################################################################
 
@@ -793,7 +845,7 @@ Usage: Config.pl [-help] [-verbose] [-dryrun] [-show] [-compiler]
                  [-install[=s|=c] [-compiler=FC[,CC] [-nompi]]
                  [-uninstall]
                  [-single|-double] [-debug|-nodebug] [-mpi|-nompi]
-                 [-hdf5|-nohdf5] [-hypre|-nohypre]
+                 [-hdf5|-nohdf5] [-hypre|-nohypre] [-spice|-nospice]
                  [-O0|-O1|-O2|-O3|-O4|-O5]
 
 If called without arguments, the current settings are shown.
@@ -837,6 +889,8 @@ Compilation:
 -nohdf5         do not compile with HDF5 library
 -hypre          compile and link with HYPRE library for linear solver
 -nohypre        do not compile with HYPRE library
+-spice          compile and link with SPICE library for coordinate transforms
+-nospice        do not compile with SPICE library
 -O0             set all optimization levels to -O0
 -O1             set optimization levels to at most -O1
 -O2             set optimization levels to at most -O2
@@ -866,9 +920,9 @@ Install code with the gfortran compiler and no MPI library on the machine
 
     Config.pl -install -compiler=gfortran -nompi
 
-Use the HDF5 plotting library and the HYPRE linear solver library
+Use the HDF5 plotting library, the HYPRE linear solver library, and SPICE:
 
-    Config.pl -hdf5 -hypre
+    Config.pl -hdf5 -hypre -spice
 
 Set optimization level to -O0, switch on debugging flags and link with NOMPI:
 
