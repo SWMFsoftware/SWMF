@@ -660,12 +660,17 @@ contains
                   *No2Si_V(UnitTemperature_)
           else
 
-             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi, &
-                  NatomicOut = NatomicSi, TeTiRelaxOut = TeTiRelaxSi)
+             if(UseElectronPressure)then
+                call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                     i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi, &
+                     NatomicOut = NatomicSi, TeTiRelaxOut = TeTiRelaxSi)
 
-             Natomic = NatomicSi*Si2No_V(UnitN_)
-             TeTiCoef = Natomic*TeTiRelaxSi/Si2No_V(UnitT_)
+                Natomic = NatomicSi*Si2No_V(UnitN_)
+                TeTiCoef = Natomic*TeTiRelaxSi/Si2No_V(UnitT_)
+             else
+                call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                     i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi)
+             end if
 
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
                   TeSi*Si2No_V(UnitTemperature_)
