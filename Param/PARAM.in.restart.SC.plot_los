@@ -135,7 +135,7 @@ los euv tec			StringPlot
 0.				rOccult
 0.				MuLimbDarkening
 512				nPix
-los sol tec            		StringPlot LASCO C2
+los SOL tec            		StringPlot LASCO C2
 1                     	 	DnSavePlot
 -1.0                    	DtSavePlot
 -3.62                 		xPos(Earth)
@@ -148,7 +148,7 @@ los sol tec            		StringPlot LASCO C2
 2.                     		rOccult
 0.5                    		MuLimbDarkening
 300                    		nPix
-los sol tec            		StringPlot LASCO C3
+los SOL tec            		StringPlot LASCO C3
 1                      		DnSavePlot
 -1.0                    	DtSavePlot
 -3.62                   	xPos(Earth)
@@ -216,7 +216,7 @@ los euv idl_ascii			StringPlot
 0.				rOccult
 0.				MuLimbDarkening
 512				nPix
-los sol idl_ascii            	StringPlot LASCO C2
+los SOL idl_ascii            	StringPlot LASCO C2
 1                      	     	DnSavePlot
 -1.0                    	DtSavePlot
 -3.62                 		xPos(Earth)
@@ -229,7 +229,7 @@ los sol idl_ascii            	StringPlot LASCO C2
 2.                     		rOccult
 0.5                    		MuLimbDarkening
 300                    		nPix
-los sol idl_ascii            	StringPlot LASCO C3
+los SOL idl_ascii            	StringPlot LASCO C3
 1                      		DnSavePlot
 -1.0                    	DtSavePlot
 -3.62                   	xPos(Earth)
