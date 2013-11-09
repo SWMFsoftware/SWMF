@@ -25,6 +25,7 @@ MODULES = \
 	ModInterpolate.o\
 	ModInterpolateAMR.o\
 	ModIoUnit.o\
+	ModHdf5Utils.o\
 	ModKind.o\
 	ModLinearAdvection.o\
 	ModLinearSolver.o\
@@ -38,6 +39,7 @@ MODULES = \
 	ModProcessVarName.o\
 	ModReadParam.o\
 	ModSort.o\
+	ModSpice.o\
 	ModTimeConvert.o\
 	ModTriangulate.o\
 	ModTriangulateSpherical.o\
@@ -47,7 +49,6 @@ MODULES = \
 	CON_line_extract.o\
 	CON_planet.o\
 	CON_planet_field.o\
-	ModHdf5Utils.o\
 	CON_ray_trace.o
 
 DEPEND:
@@ -67,4 +68,4 @@ ${MY_LIB}: ${MODULES}
 
 
 distclean: clean
-	rm -f Makefile.DEPEND ModHdf5Utils.f90
+	rm -f Makefile.DEPEND ModHdf5Utils.f90 ModSpice.f90
