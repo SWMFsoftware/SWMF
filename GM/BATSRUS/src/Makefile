@@ -176,7 +176,7 @@ ${EXE}: ${OBJECTS_EXE}
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBSHARE}
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
-		${LBLAS} ${HDFLIB} ${Lflag1} ${HYPRELIB}
+		${LBLAS} ${HDFLIB} ${Lflag1} ${HYPRELIB} ${SPICELIB}
 	rm -rf Tmp_
 
 # Compilation of CRASH ############
