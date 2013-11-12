@@ -9,7 +9,7 @@ module ModUser
        IMPLEMENTED2 => user_set_ics,                    &
        IMPLEMENTED3 => user_get_log_var
 
-  use ModNumConst, ONLY: cTwoPi, cPi
+  use ModNumConst, ONLY: cTwoPi
 
   include 'user_module.h' !list of public methods
 
@@ -31,7 +31,6 @@ module ModUser
   real:: Ky = cTwoPi/12.8  ! Y wave number of perturbation
 
   logical:: UseDoubleCurrentSheet = .false.
-  logical:: UseSymmetric          = .false.
   logical:: UseUniformPressure    = .false.
 
 contains
@@ -62,7 +61,6 @@ contains
 
        case('#GEMDOUBLE')
           call read_var('UseDoubleCurrentSheet', UseDoubleCurrentSheet)
-          call read_var('UseSymmetric', UseSymmetric)
 
        case('#GEMPRESSURE')
           call read_var('UseUniformPressure', UseUniformPressure)
@@ -108,7 +106,7 @@ contains
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModGeometry, ONLY: Xyz_DGB
+    use ModGeometry, ONLY: Xyz_DGB, y1, y2
 
     use ModPhysics,  ONLY: ShockLeftState_V
 
@@ -118,19 +116,16 @@ contains
 
     integer, intent(in) :: iBlock
 
-    real                :: x, y, a, Ly,Lx
+    real                :: x, y, a
     integer             :: i, j, k
 
     character(len=*), parameter :: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-    Ly = 12
-    Lx = 24
-
     if (UseDoubleCurrentSheet) then
        ! Use double current sheets in a Harris equilibrium
        State_VGB(Bx_,:,:,:,iBlock) = &
-            +B0*tanh((Xyz_DGB(y_,:,:,:,iBlock) + 0.25*Ly)/Lambda0) &
-            -B0*tanh((Xyz_DGB(y_,:,:,:,iBlock) - 0.25*Ly)/Lambda0) &
+            +B0*tanh((Xyz_DGB(y_,:,:,:,iBlock) + 0.25*(y2-y1))/Lambda0) &
+            -B0*tanh((Xyz_DGB(y_,:,:,:,iBlock) - 0.25*(y2-y1))/Lambda0) &
             -B0
     else
        ! Single Harris current sheet
@@ -172,30 +167,10 @@ contains
        y = Xyz_DGB(y_,i,j,k,iBlock)
        
        if (UseDoubleCurrentSheet) then
-          ! Double current sheets admit two modes; one with aligned X lines
-          ! and the other with X lines separated by 180 degrees.
-          if (UseSymmetric) then
-             ! set intial perturbation Az = exp(-x^2/GaussX^2-y^2/Gauss^2)*cos(Kx*x)*sin(Ky*y)
-             ! apply perturbation to reconnection sites only
-             a = Apert*B0*exp(-x**2*GaussXInv**2 - (Ly/4 - abs(y))**2*GaussYInv**2)
-             ! Bx = dAz/dy with x-component of perturbation shifted to center of grid
-             State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) + &
-                  a*(-2*(Ly/4 - abs(y))*GaussYInv**2*cos(Kx*x)*sin(Ky*y) + Ky*cos(Kx*x + cPi)*cos(Ky*y))
-             ! By = -dAz/dx with x-component of perturbation shifted to center of grid
-             State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) + &
-                  a*( 2*(Lx - abs(x))*GaussYInv**2*cos(Kx*x)*sin(Ky*y) + Kx*sin(Kx*x + cPi)*sin(Ky*y))  
-          else
-             ! set initial perturbation Az = exp(-x^2/GaussX^2-y^2/Gauss^2)*cos(Kx*x)
-             ! apply perturbation to reconnection sites only by varying By
-             if (y > 0)  then             
-                a = Apert*B0*exp(-(x-Lx)**2*GaussXInv**2 - (y-Ly/4)**2*GaussYInv**2)
-             else 
-                a = Apert*B0*exp(-x**2*GaussXInv**2 - (y+Ly/4)**2*GaussYInv**2)
-             end if
-             ! By = -dAz/dx
-             State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) + &
-                  a*(2*x*GaussXInv**2*cos(Kx*x)*cos(Ky*y) + Kx*sin(Kx*x))
-          end if
+          ! apply perturbation to reconnection sites only by varying By
+          ! set initial perturbation Az = Apert*B0*cos(Kx*x)
+          ! By = -dAz/dx
+          State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) + Apert*B0*Kx*sin(Kx*x)
           
        else
           ! set intial perturbation Az = exp(-x^2/GaussX^2-y^2/Gauss^2)*cos(Kx*x)*cos(Ky*y) 
