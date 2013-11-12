@@ -683,6 +683,27 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
               *(s+(double*)(tempSamplingBuffer+PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset))+=vParallel*vParallel*LocalParticleWeight;
 #endif
 
+              //sample data for the internal degrees of freedom model
+
+#if _INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_OFF_
+              //do mothing
+#elif _INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+              //save the total particle weight used for further interpolation
+              *(s+(double*)(tempSamplingBuffer+IDF::_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_))+=LocalParticleWeight;
+
+              //save rotational energy
+              *(s+(double*)(tempSamplingBuffer+IDF::_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_))+=IDF::GetRotE((PIC::ParticleBuffer::byte*)tempParticleData)*LocalParticleWeight;
+
+              //save vibrational evergy
+              for (int nmode=0;nmode<IDF::nTotalVibtationalModes[s];nmode++) {
+                *(s+(double*)(tempSamplingBuffer+IDF::_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_[s]))+=IDF::GetVibE(nmode,(PIC::ParticleBuffer::byte*)tempParticleData)*LocalParticleWeight;
+              }
+
+
+#else
+              exit(__LINE__,__FILE__,"the option is not defined");
+#endif
+
               //call sampling procedures of indivudual models
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
               ElectricallyChargedDust::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s);
@@ -1279,6 +1300,11 @@ void PIC::Init_BeforeParser() {
 
   //init the particle collision procedure
   PIC::MolecularCollisions::ParticleCollisionModel::Init();
+
+  //init the model of internal degrees of freedom
+#if _INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+  PIC::IDF::LB::Init_BeforeParser();
+#endif
 }
 
 void PIC::Init_AfterParser() {
