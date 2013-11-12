@@ -207,11 +207,20 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                     memcpy(v1,s1List[(int)(rnd()*nParticleNumber[s1])].vel,3*sizeof(double));
                     cr=sqrt(pow(v1[0]-v0[0],2)+pow(v1[1]-v0[1],2)+pow(v1[2]-v0[2],2));
 
-                    SigmaCr=cr*PIC::MolecularData::CrossSection::ConstantCollisionCrossSectionTable[s0][s1];
+#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+                    SigmaCr=cr*PIC::MolecularData::MolecularModels::HS::GetTotalCrossSection(s0,s1);
+#else
+                    exit(__LINE__,__FILE__,"Error: not implemented");
+#endif
+
                     if (SigmaCr>SigmaCrMax) SigmaCrMax=SigmaCr;
                   }
 
+#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+                  //do nothing
+#else
                   SigmaCrMax*=SigmaCrMax_SafetyMargin;
+#endif
 
                   //2.Evaluate the prospective number of collisions
                   double maxLocalTimeStep,minLocalParticleWeight;
@@ -255,32 +264,53 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                     }
 
                     cr=sqrt(cr);
-                    SigmaCr=cr*PIC::MolecularData::CrossSection::ConstantCollisionCrossSectionTable[s0][s1];
+
+#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+                    SigmaCr=cr*PIC::MolecularData::MolecularModels::HS::GetTotalCrossSection(s0,s1);
+#else
+                    exit(__LINE__,__FILE__,"Error: not implemented");
+#endif
+
                     if (rnd()*SigmaCrMax>=SigmaCr) continue;
+
+                    //determine weather the properties of particles were updated
+                    double pUpdate_s0,pUpdate_s1;
+                    bool UpdateFlag[2];
+
+                    pUpdate_s0=minLocalParticleWeight/LocalParticleWeight_s0 * LocalTimeStep_s0/maxLocalTimeStep;
+                    pUpdate_s1=minLocalParticleWeight/LocalParticleWeight_s1 * LocalTimeStep_s1/maxLocalTimeStep;
+
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+                    pUpdate_s0*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0List[s0ptr].ParticleData);
+                    pUpdate_s1*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s1List[s1ptr].ParticleData);
+#endif
+
+                    UpdateFlag[0]=(rnd()<pUpdate_s0) ? true :false;
+                    UpdateFlag[1]=(rnd()<pUpdate_s1) ? true :false;
+
+                    //model the internal energy exchange
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+                    double crInit=cr;
+
+                    PIC::IDF::RedistributeEnergy(s0List[s0ptr].ParticleData,s1List[s1ptr].ParticleData,cr,UpdateFlag,cell);
+                    for (int idim=0;idim<3;idim++) vrel[idim]=(cr>1.0E-10) ? vrel[idim]*cr/crInit : 0.0;
+#endif
+
+
 
                     //the collision is considered to be true
                     PIC::MolecularCollisions::VelocityScattering::HS::VelocityAfterCollision(vrel,s0,s1);
 
 
                     //calcualte the new value of the particle's velocities
-                    for (idim=0;idim<3;idim++) {
+                    for (int idim=0;idim<3;idim++) {
                       v1[idim]=vcm[idim]+m0/am*vrel[idim];
                       v0[idim]=vcm[idim]-m1/am*vrel[idim];
                     }
 
 
                     //update the velocities in the lists
-                    double pUpdate_s0,pUpdate_s1;
-
-                    pUpdate_s0=minLocalParticleWeight/LocalParticleWeight_s0 * LocalTimeStep_s0/maxLocalTimeStep;
-                    pUpdate_s1=minLocalParticleWeight/LocalParticleWeight_s1 * LocalTimeStep_s1/maxLocalTimeStep;
-
-#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-                    pUpdate_s0*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0ParticleDataList[s0ptr].ParticleData);
-                    pUpdate_s1*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s1ParticleDataList[s1ptr].ParticleData);
-#endif
-
-                    if (rnd()<pUpdate_s0) {
+                    if (UpdateFlag[0]==true) {
                       s0List[s0ptr].ValueChangedFlag=true;
                       memcpy(s0List[s0ptr].vel,v0,3*sizeof(double));
 
@@ -293,7 +323,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 #endif
                     }
 
-                    if (rnd()<pUpdate_s1) {
+                    if (UpdateFlag[1]==true) {
                       s1List[s1ptr].ValueChangedFlag=true;
                       memcpy(s1List[s1ptr].vel,v1,3*sizeof(double));
                     }
