@@ -35,6 +35,9 @@ ForceRepeatableSimulationPath=on ! on,off
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
+TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep  
+ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight 
+ParticleWeightCorrectionMode=on !on,off
 
 
 #endmain
@@ -47,7 +50,7 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 #endUserDefinitions
 
 #ParticleCollisions 
-  model = HS !!off !HS ! HS, off
+  model = off ! HS !!off !HS ! HS, off
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function 
@@ -60,6 +63,20 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
     direction=const(1.0,2.0,3.0)
 
 #endSampling
+
+#InternalDegreesOfFReedom
+  model=off! LB !off, qLB,LB
+  vv=off
+  vt=off
+  rt=on 
+
+  TotalVibModes(Na)=1
+  TotalRotModes(Na)=1
+  CharacteristicVibTemp(Na)=2000
+  RotationalZnumber(Na)=0.25
+
+  TemperatureIndex(Na,Na)=1.0
+#endInternalDegreesOfFReedom
 
 
 #BackgroundSpecies
