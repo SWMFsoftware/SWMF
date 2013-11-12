@@ -879,7 +879,7 @@ InjectionTangentionalSpeed+=sqrt(v1);
 }
 
 int main(int argc,char **argv) {
-  MPI_Init(&argc,&argv);
+//  MPI_Init(&argc,&argv);
   PIC::InitMPI();
 
 
@@ -913,11 +913,11 @@ int main(int argc,char **argv) {
 
   //init the particle solver
   PIC::Init_BeforeParser();
-  PIC::Parser::Run(inputFile);
+//  PIC::Parser::Run(inputFile);
 
 
   PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=400; //*10;
-  PIC::RequiredSampleLength=20000; //0; //0;
+  PIC::RequiredSampleLength=200; //0; //0;
 
   Mercury::OrbitalMotion::nOrbitalPositionOutputMultiplier=10;
 
