@@ -54,19 +54,6 @@ contains
        call MPI_bcast(Bmin_C, np*nt, MPI_REAL, 0, iComm, iError)
     endif
 
-    !Calculate rbsumLocal and Global
-    do n=1,nspec 
-       ! set rbsumlocal 
-       call calc_rbsumlocal(n)
-       
-       !reduce local sum to global
-       if (nProc >0) then
-          call MPI_REDUCE (rbsumLocal(n), rbsumGlobal(n), 1, MPI_REAL, &
-               MPI_SUM, 0, iComm, iError)
-       else
-          rbsumGlobal(n)=rbsumLocal(n)
-       endif
-    enddo
     
   end subroutine crcm_read_restart
   

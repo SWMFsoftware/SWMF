@@ -170,6 +170,19 @@ subroutine crcm_run(delta_t)
      IsFirstCall=.false.
   elseif(IsFirstCall .and. IsRestart) then
      ib0=iba
+     !Calculate rbsumLocal and Global on first call of a restart 
+     do n=1,nspec 
+        ! set rbsumlocal 
+        call calc_rbsumlocal(n)
+        
+       !reduce local sum to global
+        if (nProc >0) then
+           call MPI_REDUCE (rbsumLocal(n), rbsumGlobal(n), 1, MPI_REAL, &
+                MPI_SUM, 0, iComm, iError)
+        else
+           rbsumGlobal(n)=rbsumLocal(n)
+        endif
+     enddo
      IsFirstCall=.false.
   endif
 
