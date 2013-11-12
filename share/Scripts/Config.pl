@@ -251,7 +251,8 @@ if($NewPrecision and $NewPrecision ne $Precision){
 &set_hypre_ if $NewHypre and $NewHypre ne $Hypre;
 
 # Link with SPICE library is required
-&set_spice_ if $Install or $NewSpice and $NewSpice ne $Spice;
+&set_spice_ if ($Install or $NewSpice and $NewSpice ne $Spice) 
+    and not $IsComponent;
 
 # Get new settings
 &get_settings_;
