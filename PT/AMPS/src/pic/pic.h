@@ -177,16 +177,64 @@ namespace PIC {
     #define _INTERNAL_DEGRESS_OF_FREEDOM_OFF_ false
     extern bool InternalDegreesOfFreedomModelingFlag;
 
-    //the set of models for collision cross section used in simulations
-    namespace CrossSection {
-      const double ConstantCollisionCrossSectionTable[1][1]={{0.0}};
+    //molecular models
+    namespace MolecularModels {
+      namespace HS {
+        //the table of the constant collsion cross sections and reference diameter
+        static const double ConstantCollisionCrossSectionTable[1][1]={{0.0}};
+        static const double ConstantReferenceDiameter[1][1]={{0.0}};
+
+
+        inline double GetTotalCrossSection(int s0,int s1) {return ConstantCollisionCrossSectionTable[s0][s1];}
+        inline double GetDiam(int s0,int s1) {return ConstantReferenceDiameter[s0][s1];}
+        inline double GetRefDiam(int s0,int s1) {return ConstantReferenceDiameter[s0][s1];}
+
+      }
+
+      namespace VHS {
+      using namespace HS;
+
+      }
+
+      namespace VSS {
+      using namespace VHS;
+
+      }
     }
+
+    inline double GetRefDiam(int s0,int s1) {
+#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+      return MolecularModels::HS::GetRefDiam(s0,s1);
+#else
+      exit(__LINE__,__FILE__,"not implemented");
+      return 1.0;
+#endif
+    }
+
+    inline double GetDiam(int s0,int s1) {
+#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+      return MolecularModels::HS::GetRefDiam(s0,s1);
+#else
+      exit(__LINE__,__FILE__,"not implemented");
+      return 1.0;
+#endif
+    }
+
+    inline double GetTotalCrossSect(double Vrel,int ptr0,int s0,int ptr1,int s1,long int ncell) {
+#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+      return MolecularModels::HS::GetTotalCrossSection(s0,s1);
+#else
+      exit(__LINE__,__FILE__,"not implemented");
+      return 1.0;
+#endif
+    }
+
 
     //init the molecular data buffers
     void Init();
 
     //mass of particles
-    static const double MolMass[nTotalSpecies]={0.0};
+    static const double MolMass[]={0.0};
 
 //    extern double *MolMass;
 //    void SetMass(double,int);
@@ -594,6 +642,7 @@ namespace PIC {
   }
 
 
+
   namespace Mesh {
     class cDataCenterNode;
 
@@ -715,6 +764,10 @@ namespace PIC {
         }
 
         return res;
+      }
+
+      double GetCompleteSampleCellParticleWeight(int s) {
+        return *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset));
       }
 
       void GetBulkVelocity(double *v,int s) {
@@ -1616,6 +1669,103 @@ namespace PIC {
   }
 
 */
+
+
+  //the mode of the internal degrees of freedom
+  namespace IDF {
+
+    static const int nTotalVibtationalModes[]={-1};
+    static const int nTotalRotationalModes[]={-1};
+    static const int nSpeciesMaxVibrationalModes=0;
+    static const double CharacteristicVibrationalTemperature[]={0.0};    //the rule of access CharacteristicVibrationalTemperature[nmode+s*nSpeciesMaxVibrationalModes]
+    static const double RotationZnumber[]={0.0};
+
+    extern int _ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_;
+    extern int _VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_[PIC::nTotalSpecies];
+    extern int _TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_;
+
+    namespace LB {
+      extern int _ROTATIONAL_ENERGY_OFFSET_,_VIBRATIONAL_ENERGY_OFFSET_;
+
+
+      inline double GetRotE(PIC::ParticleBuffer::byte *ParticleDataStart) {
+        return *((double*)(ParticleDataStart+_ROTATIONAL_ENERGY_OFFSET_));
+      }
+
+      inline void SetRotE(double e,PIC::ParticleBuffer::byte *ParticleDataStart) {
+         *((double*)(ParticleDataStart+_ROTATIONAL_ENERGY_OFFSET_))=e;
+      }
+
+      inline double GetVibE(int nmode,PIC::ParticleBuffer::byte *ParticleDataStart) {
+        if (nmode>=0) return *(nmode+(double*)(ParticleDataStart+_VIBRATIONAL_ENERGY_OFFSET_));
+
+        double res=0.0;
+        int n,nVibModes,s;
+
+        s=PIC::ParticleBuffer::GetI(ParticleDataStart);
+        nVibModes=nTotalVibtationalModes[s];
+
+        for (n=0;n<nVibModes;n++) res+=*(nmode+(double*)(ParticleDataStart+_VIBRATIONAL_ENERGY_OFFSET_));
+        return res;
+      }
+
+      inline void SetVibE(double e,int nmode,PIC::ParticleBuffer::byte *ParticleDataStart) {
+        *(nmode+(double*)(ParticleDataStart+_VIBRATIONAL_ENERGY_OFFSET_))=e;
+      }
+
+      void InitVibTemp(double VibTemp,PIC::ParticleBuffer::byte *ParticleDataStart);
+      void InitRotTemp(double RotTemp,PIC::ParticleBuffer::byte *ParticleDataStart);
+
+      double GetCellRotTemp(int s,PIC::Mesh::cDataCenterNode* cell);
+      double GetCellVibTemp(int s,PIC::Mesh::cDataCenterNode* cell);
+      double GetCellVibTemp(int nmode,int s,PIC::Mesh::cDataCenterNode* cell);
+
+      double GetCellMeanRotE(int s,PIC::Mesh::cDataCenterNode* cell);
+      double GetCellMeanVibE(int nmode,int s,PIC::Mesh::cDataCenterNode* cell);
+
+      void RedistributeEnergy(PIC::ParticleBuffer::byte *ptr0,PIC::ParticleBuffer::byte *ptr1,double& vrel,bool* ChangeParticlePropertiesFlag,PIC::Mesh::cDataCenterNode* cell);
+
+      //request data for the model
+      int RequestSamplingData(int offset);
+
+      //init
+      void Init_BeforeParser();
+
+      //output the model data
+      void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+      void PrintVariableList(FILE* fout,int DataSetNumber);
+
+      //calcualte the temperature index
+      //get the temperature index
+      inline double GetTempIndex(int s0,int s1) {
+        static const double TemepratureIndex[1][1]={0.0};
+
+        return TemepratureIndex[s0][s1];
+      }
+    }
+
+    namespace qLB {
+    using namespace LB;
+    }
+
+    inline double GetRotE(PIC::ParticleBuffer::byte *ParticleDataStart) {
+      return LB::GetRotE(ParticleDataStart);
+    }
+
+    inline double GetVibE(int nmode,PIC::ParticleBuffer::byte *ParticleDataStart) {
+      return LB::GetVibE(nmode,ParticleDataStart);
+    }
+
+    inline void RedistributeEnergy(PIC::ParticleBuffer::byte *ptr0,PIC::ParticleBuffer::byte *ptr1,double& vrel,bool* ChangeParticlePropertiesFlag,PIC::Mesh::cDataCenterNode* cell) {
+      LB::RedistributeEnergy(ptr0,ptr1,vrel,ChangeParticlePropertiesFlag,cell);
+    }
+
+    inline void InitRotTemp(double RotTemp,PIC::ParticleBuffer::byte *ParticleDataStart) {
+      LB::InitRotTemp(RotTemp,ParticleDataStart);
+    }
+  }
+
 
   namespace Mover {
 
