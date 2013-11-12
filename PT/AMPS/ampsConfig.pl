@@ -12,7 +12,7 @@ my $loadedFlag_MainBlock=0;
 my $loadedFlag_SpeciesBlock=0;
 my $loadedFlag_BackgroundSpeciesBlock=0;
 
-my $InputFileNameDefault="moon.input";
+my $InputFileNameDefault="moon.input"; #"mercury.input-test"; #"moon.input"; #"mercury.input"; #"moon.input";
 my $InputFileName;
 
 
@@ -134,6 +134,9 @@ while ($line=<InputFile>) {
   elsif ($InputLine eq "#SAMPLING") {
     Sampling();
   } 
+  elsif ($InputLine eq "#INTERNALDEGREESOFFREEDOM") {
+    readInternalDegreesOfFreedom();
+  } 
   elsif ($InputLine eq "#USERDEFINITIONS") {
     UserDefinitions();
   } 
@@ -181,7 +184,13 @@ while ($line=<InputFile>) {
     system($cmd) and do {
       die "Execution of $BlockProcessor was not succesful\n";
     };
-
+  }
+  
+  elsif ($InputLine eq "#END") {
+    last;
+  }
+  else {
+    die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
   }
   
 }
@@ -796,7 +805,7 @@ sub Sampling {
         }
         
         
-        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+#       ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }  
       else {
         die "Unknown option\n";
@@ -957,6 +966,216 @@ sub ParticleCollisionModel {
     }
     
   }
+}
+
+#=============================== Read Internal Degrees of Freedom ==================
+sub readInternalDegreesOfFreedom {
+  
+  my @nTotalVibModes=(0)x$TotalSpeciesNumber;
+  my @nTotalRotModes=(0)x$TotalSpeciesNumber;
+  my @CharacteristicVibTemp=(0)x$TotalSpeciesNumber;
+  my @RotationalZnumber=(0)x$TotalSpeciesNumber;
+  
+  #temeprature index
+  my @TemperatureIndexTable;
+  my ($s0,$s1);
+  
+  for (my $i=0;$i<$TotalSpeciesNumber;$i++) {
+    my @tmp=((0)x$TotalSpeciesNumber);
+    push(@TemperatureIndexTable, [@tmp]);
+  }
+
+  while ($line=<InputFile>) {
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;
+    
+    ($InputLine,$InputComment)=split('!',$line,2);
+    $InputLine=uc($InputLine);
+    chomp($InputLine);
+    $InputLine=~s/\s+$//; #remove spaces from the end of the line
+ 
+    #substitute separators by 'spaces'
+    $InputLine=~s/[()=,]/ /g;
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+  
+  
+    if ($InputLine eq "MODEL") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "LB") {
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL_","_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL__LB_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+      }  
+      else {
+        die "Unknown option\n";
+      }
+    }
+    
+    elsif ($InputLine eq "VV") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM__VV_RELAXATION_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM__VV_RELAXATION_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+      }
+      else {
+        die "Cannot recognize the option\n";
+      }
+    }
+    elsif ($InputLine eq "VT") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM__VT_RELAXATION_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM__VT_RELAXATION_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+      }
+      else {
+        die "Cannot recognize the option\n";
+      }
+    }
+    elsif ($InputLine eq "RT") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM__RT_RELAXATION_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM__RT_RELAXATION_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+      }
+      else {
+        die "Cannot recognize the option\n";
+      }
+    }
+    
+    elsif ($InputLine eq "TOTALVIBMODES") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      my $nspec=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
+      if ($nspec==-1) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+      
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $nTotalVibModes[$nspec]=$InputLine;      
+    }
+    elsif ($InputLine eq "TOTALROTMODES") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      my $nspec=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
+      if ($nspec==-1) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+      
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $nTotalRotModes[$nspec]=$InputLine;      
+    }
+    elsif ($InputLine eq "CHARACTERISTICVIBTEMP") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      my $nspec=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
+      if ($nspec==-1) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+      
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $CharacteristicVibTemp[$nspec]=$InputLine;      
+    }
+    elsif ($InputLine eq "ROTATIONALZNUMBER") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      my $nspec=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
+      if ($nspec==-1) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+      
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $RotationalZnumber[$nspec]=$InputLine;      
+    }    
+  
+    elsif ($InputLine eq "TEMPERATUREINDEX") {     
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);     
+      $s0=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
+      if ($s0==-1) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+      
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);     
+      $s1=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
+      if ($s1==-1) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }      
+      
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $TemperatureIndexTable[$s0][$s1]=$InputLine;
+      $TemperatureIndexTable[$s1][$s0]=$InputLine;  
+    }
+  
+
+    elsif ($InputLine eq "#ENDINTERNALDEGREESOFFREEDOM") {
+      last;
+    }
+    else {      
+      $line=~s/ //g;
+      chomp($line);
+   
+      if (($line ne "") && (substr($line,0,1) ne '!')) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }
+    
+  }
+  
+  #update the model parameters in the code
+  my $nSpeciesMaxVibrationalModes=0;
+  
+  foreach (@nTotalVibModes) {
+    if ($_ > $nSpeciesMaxVibrationalModes) {
+      $nSpeciesMaxVibrationalModes=$_;
+    }
+  }
+  
+  #create the new TemperatureIndex Table
+  my $newTemperatureIndexTable="static const double TemepratureIndex[PIC::nTotalSpecies][PIC::nTotalSpecies]={";
+         
+  for ($s0=0;$s0<$TotalSpeciesNumber;$s0++) {
+    $newTemperatureIndexTable=$newTemperatureIndexTable."{";
+
+    for ($s1=0;$s1<$TotalSpeciesNumber;$s1++) {
+      $newTemperatureIndexTable=$newTemperatureIndexTable.$TemperatureIndexTable[$s0][$s1];
+
+      if ($s1 != $TotalSpeciesNumber-1) {
+        $newTemperatureIndexTable=$newTemperatureIndexTable.",";
+      }
+      else {
+        $newTemperatureIndexTable=$newTemperatureIndexTable."}"
+      }
+    }
+
+    if ($s0 != $TotalSpeciesNumber-1) {
+      $newTemperatureIndexTable=$newTemperatureIndexTable.",";
+    }
+    else {
+      $newTemperatureIndexTable=$newTemperatureIndexTable."};"
+    }     
+  }
+  
+  ampsConfigLib::SubstituteCodeLine("static const double TemepratureIndex",$newTemperatureIndexTable,"pic/pic.h");
+  
+  
+  ampsConfigLib::ChangeValueOfArray("static const int nTotalVibtationalModes\\[\\]",\@nTotalVibModes,"pic/pic.h");
+  ampsConfigLib::ChangeValueOfArray("static const int nTotalRotationalModes\\[\\]",\@nTotalRotModes,"pic/pic.h");
+  ampsConfigLib::ChangeValueOfArray("static const double CharacteristicVibrationalTemperature\\[\\]",\@CharacteristicVibTemp,"pic/pic.h");
+  ampsConfigLib::ChangeValueOfArray("static const double RotationZnumber\\[\\]",\@RotationalZnumber,"pic/pic.h");
+  
+  ampsConfigLib::ChangeValueOfVariable("static const int nSpeciesMaxVibrationalModes",$nSpeciesMaxVibrationalModes,"pic/pic.h");
+  
 }
 
 #=============================== Read Background Atmosphere Block ===============
@@ -1343,7 +1562,7 @@ sub ReadSpeciesBlock {
   }
   
   ampsConfigLib::ChangeValueOfArray("static const char ChemTable\\[\\]\\[_MAX_STRING_LENGTH_PIC_\\]",\@t,"pic/pic.h");
-  ampsConfigLib::ChangeValueOfArray("static const double MolMass\\[nTotalSpecies\\]",\@MassArray,"pic/pic.h");
+  ampsConfigLib::ChangeValueOfArray("static const double MolMass\\[\\]",\@MassArray,"pic/pic.h");
   
   #init the array of species type descriptors
   my @SpcecieTypeTable=("_PIC_SPECIE_TYPE__GAS_")x$TotalSpeciesNumber;
