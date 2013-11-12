@@ -244,6 +244,8 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
   cDataBlockAMR::totalAssociatedDataLength+=sizeof(double)*PIC::nTotalSpecies;
   #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   //do nothing for _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+  #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
+  //do nothing for _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
   #else
   exit(__LINE__,__FILE__,"not implemented");
   #endif
@@ -254,7 +256,9 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
   cDataBlockAMR::LocalParticleWeightOffset=cDataBlockAMR::totalAssociatedDataLength;
   cDataBlockAMR::totalAssociatedDataLength+=sizeof(double)*PIC::nTotalSpecies;
   #elif _SIMULATION_PARTICLE_WEIGHT_MODE_ ==_SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
-  //do nothing for _SIMULATION_PARTICLE_WEIGHT_MODE_ ==_SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+  //do nothing for _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+  #elif _SIMULATION_PARTICLE_WEIGHT_MODE_ ==_SINGLE_GLOBAL_PARTICLE_WEIGHT_
+  //do nothing for _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SINGLE_GLOBAL_PARTICLE_WEIGHT_
   #else
   exit(__LINE__,__FILE__,"not implemented");
   #endif
