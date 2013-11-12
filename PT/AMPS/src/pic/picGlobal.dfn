@@ -114,6 +114,16 @@
 //sample collision frequentcy by the particle collision model
 #define _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ _PIC_MODE_ON_
 
+//default setting for modeling of the relaxation of the internal degrees of freedom
+#define _PIC_INTERNAL_DEGREES_OF_FREEDOM__VT_RELAXATION_MODE_  _PIC_MODE_OFF_
+#define _PIC_INTERNAL_DEGREES_OF_FREEDOM__VV_RELAXATION_MODE_  _PIC_MODE_OFF_
+#define _PIC_INTERNAL_DEGREES_OF_FREEDOM__TR_RELAXATION_MODE_  _PIC_MODE_ON_
+
+//default setting of the internal degrees of freedom model
+#define _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ _PIC_MODE_ON_
+#define _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL_ _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL__LB_
+
+
 
 
 
