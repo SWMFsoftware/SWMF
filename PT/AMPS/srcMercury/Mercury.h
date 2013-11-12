@@ -174,10 +174,11 @@ namespace Mercury {
       res=-1.0,PhotolyticReactionAllowedFlag=false;
     }
 
-    //check if the particle intersect the surface of the Earth
+/*    //check if the particle intersect the surface of the Earth
     if (pow(x[0]-Mercury::xEarth_SO[0],2)+pow(x[1]-Mercury::xEarth_SO[1],2)+pow(x[2]-Mercury::xEarth_SO[2],2)<_RADIUS_(_EARTH_)*_RADIUS_(_EARTH_)) {
       res=1.0E-10*LifeTime,PhotolyticReactionAllowedFlag=true;
-    }
+    }*/
+
 #else
     double res=LifeTime;
     PhotolyticReactionAllowedFlag=true;
