@@ -1967,12 +1967,14 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
     }
     while (FluxSourceProcess[SourceProcessID]/TotalFlux<rnd());
 
+    //the particle buffer used to set-up the new particle data
+    char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
 
    //to satisfy the compiler and fit the while structure
    if (false) {}
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
    else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_) {
-     flag=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+     flag=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_;
 //     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
@@ -1980,7 +1982,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 #endif
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
    else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_) {
-     flag=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+     flag=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_;
 //     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
@@ -1988,7 +1990,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 #endif
 #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
    else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_) {
-     flag=Exosphere::SourceProcesses::ThermalDesorption::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+     flag=Exosphere::SourceProcesses::ThermalDesorption::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_;
 //     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
@@ -1996,7 +1998,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 #endif
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
    else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_) {
-     flag=Exosphere::SourceProcesses::SolarWindSputtering::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+     flag=Exosphere::SourceProcesses::SolarWindSputtering::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_;
 //     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
@@ -2041,8 +2043,6 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    }
 
    //generate a particle
-   char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
-
    PIC::ParticleBuffer::SetX(x_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
    PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
    PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
