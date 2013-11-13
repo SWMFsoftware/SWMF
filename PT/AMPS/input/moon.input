@@ -47,7 +47,7 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 #endUserDefinitions
 
 #ParticleCollisions 
-  model = HS !!off !HS ! HS, off
+  model = off !!off !HS ! HS, off
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function 
