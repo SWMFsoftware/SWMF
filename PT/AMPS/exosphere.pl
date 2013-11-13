@@ -667,7 +667,7 @@ close(EXOSPHERE_USER_DEFINITIONS);
 #substitue markers in 'Exosphere.cpp'
 my @FileContent;
 
-if (length $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS) {
+if (defined $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS) {
   my $line;
   
   open (FILEIN,"<$WorkingSourceDirectory/models/exosphere/Exosphere.cpp") || die "Cannot open file $WorkingSourceDirectory/models/exosphere/Exosphere.cpp\n";  
