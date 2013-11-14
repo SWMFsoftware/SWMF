@@ -160,7 +160,8 @@ subroutine logfile(dir)
        write(iLogFileUnit_,'(a)') &
             "   iStep yyyy mm dd hh mm ss  ms      dt "// &
             "min(T) max(T) mean(T) min(VV) max(VV) mean(VV) F107 F107A "// &
-            "By Bz Vx HP HPn HPs SubsolarLon SubsolarLat SubsolarVTEC"
+            "By Bz Vx HP HPn HPs SubsolarLon SubsolarLat SubsolarVTEC "// &
+            "PhotoElectronHeatingEfficiency"
   endif
 
   call get_subsolar(CurrentTime, VernalTime, SSLon, SSLat)
@@ -219,11 +220,11 @@ subroutine logfile(dir)
      call get_sw_v(CurrentTime, Vx, iError)
      call get_hpi(CurrentTime,Hpi,iError)
 
-     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5,8f9.1,10f10.5,10f10.5,10f8.3)") &
+     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5,8f9.1,10f10.5,10f10.5,10f8.3,5f1.4)") &
           iStep, iTimeArray, dt, minTemp, maxTemp, AverageTemp, &
           minVertVel, maxVertVel, AverageVertVel,&
           f107,f107A,By,Bz,Vx, Hpi, HPn/1.0e9, &
-          HPs/1.0e9, SSLon, SSLat, SSVTEC
+          HPs/1.0e9, SSLon, SSLat, SSVTEC, PhotoElectronHeatingEfficiency
 
      call flush_unit(iLogFileUnit_)
   endif
