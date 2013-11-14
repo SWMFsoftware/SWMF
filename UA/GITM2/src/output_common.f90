@@ -313,11 +313,10 @@ subroutine output(dir, iBlock, iOutputType)
   case ('0DALL')
      ! AGB: added output type used by Asad to allow satellite output at the
      !      exact orbit location
-
      nGCs = 0
      nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons+nSpecies+5
      call output_0dall(iiLon, iiLat, iiAlt, iBlock, rLon, rLat, rAlt, &
-          iOutputUnit_)
+          iOutputUnit_, SatAltDat(CurrSat))
 
   case ('1DGLO')
 
@@ -1530,18 +1529,21 @@ end subroutine output_1dall
 ! output_0dall: outputs GITM data at a specified 3D satellite location
 !----------------------------------------------------------------
 
-subroutine output_0dall(iiLon, iiLat, iiAlt, iBlock, rLon, rLat, rAlt, iUnit)
+subroutine output_0dall(iiLon, iiLat, iiAlt, iBlock, rLon, rLat, rAlt, iUnit, &
+     RCMR_data)
 
   use ModGITM
   use ModEUV, only: HeatingEfficiency_CB
   use ModSources, only: JouleHeating, RadCooling, EuvHeating, Conduction
   use ModMpi
+  use ModRCMR, only: RCMRInType
                         
   use ModInputs, only: iOutputUnit_
   implicit none
 
   integer, intent(in) :: iiLat, iiLon, iiAlt, iBlock, iUnit
   real, intent(in)    :: rLon, rLat, rAlt
+  real, intent(out)   :: RCMR_data
 
   integer :: ierr
   integer, parameter :: nVars = 13+nSpeciesTotal+nSpecies+nIons+nSpecies+5
@@ -1560,6 +1562,12 @@ subroutine output_0dall(iiLon, iiLat, iiAlt, iBlock, rLon, rLat, rAlt, iUnit)
   ! Get the species characteristics at this location
   Tmp     = Rho(0:nLons+1,0:nLats+1,0:nAlts+1,iBlock)
   Vars(4) = inter(Tmp,iiLon,iiLat,iiAlt,rLon,rLat,rAlt)
+
+  !AGB Note: When more RCMR Input types are allowed, this routine will need
+  !          to be updated.
+  if(RCMRInType == "RHO") then
+     RCMR_data = Vars(4)
+  endif
 
   iOff = 4
   do iSpecies = 1, nSpeciesTotal
