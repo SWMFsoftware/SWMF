@@ -685,9 +685,9 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
               //sample data for the internal degrees of freedom model
 
-#if _INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_OFF_
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_OFF_
               //do mothing
-#elif _INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+#elif _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
               //save the total particle weight used for further interpolation
               *(s+(double*)(tempSamplingBuffer+IDF::_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_))+=LocalParticleWeight;
 
@@ -1302,7 +1302,7 @@ void PIC::Init_BeforeParser() {
   PIC::MolecularCollisions::ParticleCollisionModel::Init();
 
   //init the model of internal degrees of freedom
-#if _INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
   PIC::IDF::LB::Init_BeforeParser();
 #endif
 }
