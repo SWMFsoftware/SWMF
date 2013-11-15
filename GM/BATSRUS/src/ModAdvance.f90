@@ -124,13 +124,12 @@ module ModAdvance
 
   !Variables for ECHO scheme
   logical:: UseFDFaceFlux = .false., UseFluxLimiter = .false., &
-       DoInterFDFaceFlux = .false., UseCenterFlux = .false. , &
-       UseFaceFlux = .false.
+       UseCenterFlux = .false. ,UseFaceFlux = .false.
   real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
 
-  !CWENO weights
-  real, allocatable:: IS_VX(:,:,:,:,:), IS_VY(:,:,:,:,:), &
-       IS_VZ(:,:,:,:,:)
+  !CWENO weight used to limit flux.
+  real, allocatable:: Weight_VX(:,:,:,:,:), Weight_VY(:,:,:,:,:), &
+       Weight_VZ(:,:,:,:,:)
 
   ! Velocity . area vector for div(U) in various source terms. Per fluid.
   real, allocatable:: &
@@ -224,16 +223,13 @@ contains
     allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
 
     if(UseFluxLimiter) then
-       allocate(IS_VX(3,nVar,min(0,iMinFace2):max(nIFace, iMaxFace2),&
-            jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
-       allocate(IS_VY(3,nVar,iMinFace2:iMaxFace2,&
-            min(0,jMinFace2):max(nJFace, jMaxFace2),kMinFace2:kMaxFace2))
-       allocate(IS_VZ(3,nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,&
-            min(0,kMinFace2):max(nKFace, kMaxFace2)))
+       allocate(Weight_VX(2,nVar,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace))
+       allocate(Weight_VY(2,nVar,iMinFace:iMaxFace,1:nJFace,kMinFace:kMaxFace))
+       allocate(Weight_VZ(2,nVar,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nKFace))
     endif
 
     if (UseFaceFlux) then
-       !Flux through two ghost cell faces are needed for face flux interpolation.
+       ! Flux through two ghost cell faces are needed for face flux interpolation.
        deallocate(LeftState_VX)
        deallocate(RightState_VX)
        deallocate(Flux_VX)
@@ -253,9 +249,9 @@ contains
        deallocate(uDotArea_ZI)
 
        allocate(LeftState_VX(nVar,iMinFace2:max(iMaxFace2,2),&
-            jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
+            jMinFace:jMaxFace,kMinFace:kMaxFace))
        allocate(RightState_VX(nVar,iMinFace2:max(iMaxFace2,2),&
-            jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
+            jMinFace:jMaxFace,kMinFace:kMaxFace))
        allocate(Flux_VX(nVar+nFluid,iMinFace2:max(iMaxFace2,2),&
             jMinFace:jMaxFace,kMinFace:kMaxFace))
        allocate(VdtFace_X(iMinFace2:max(iMaxFace2,2),&
@@ -263,10 +259,10 @@ contains
        allocate(uDotArea_XI(iMinFace2:max(iMaxFace2,2),jMinFace:jMaxFace,&
             kMinFace:kMaxFace,nFluid+1))
 
-       allocate(LeftState_VY(nVar,iMinFace2:iMaxFace2,&
-            jMinFace2:max(jMaxFace2,2),kMinFace2:kMaxFace2))
-       allocate(RightState_VY(nVar,iMinFace2:iMaxFace2,&
-            jMinFace2:max(jMaxFace2,2),kMinFace2:kMaxFace2))
+       allocate(LeftState_VY(nVar,iMinFace:iMaxFace,&
+            jMinFace2:max(jMaxFace2,2),kMinFace:kMaxFace))
+       allocate(RightState_VY(nVar,iMinFace:iMaxFace,&
+            jMinFace2:max(jMaxFace2,2),kMinFace:kMaxFace))
        allocate(Flux_VY(nVar+nFluid,iMinFace:iMaxFace,&
             jMinFace2:max(jMaxFace2,2),kMinFace:kMaxFace))
        allocate(VdtFace_Y(iMinFace:iMaxFace,jMinFace2:max(jMaxFace2,2),&
@@ -274,9 +270,9 @@ contains
        allocate(uDotArea_YI(iMinFace:iMaxFace,jMinFace2:max(jMaxFace2,2),&
             kMinFace:kMaxFace,nFluid+1))
 
-       allocate(LeftState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,&
+       allocate(LeftState_VZ(nVar,iMinFace:iMaxFace,jMinFace:jMaxFace,&
             kMinFace2:max(kMaxFace2,2)))
-       allocate(RightState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,&
+       allocate(RightState_VZ(nVar,iMinFace:iMaxFace,jMinFace:jMaxFace,&
             kMinFace2:max(kMaxFace2,2)))
        allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,&
             kMinFace2:max(kMaxFace2,2)))
