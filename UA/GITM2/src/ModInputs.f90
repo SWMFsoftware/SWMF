@@ -90,6 +90,8 @@ module ModInputs
   real :: DtAurora    = 60.0*1.0
   real :: DtPotential = 60.0*1.0
   real :: DtGlow      = 60.0
+  real :: TimeDelayHighLat = 0.0
+  real :: TimeDelayEUV     = 0.0
 
   real :: f107  = 150.0
   real :: f107a = 150.0
