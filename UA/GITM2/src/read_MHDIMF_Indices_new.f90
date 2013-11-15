@@ -166,15 +166,15 @@ subroutine read_MHDIMF_Indices_new(iOutputError, StartTime, EndTime)
 
   if (iIMF >= MaxIndicesEntries) ReReadIMFFile = .true.
 
-  nIndices_V(imf_bx_) = iIMF - 1
-  nIndices_V(imf_by_) = iIMF - 1
-  nIndices_V(imf_bz_) = iIMF - 1
-  nIndices_V(sw_vx_) = iSW - 1
-  nIndices_V(sw_vy_) = iSW - 1
-  nIndices_V(sw_vz_) = iSW - 1
-  nIndices_V(sw_v_) = iSW - 1
-  nIndices_V(sw_n_) = iSW - 1
-  nIndices_V(sw_t_) = iSW - 1
+  nIndices_V(imf_bx_) = iIMF - 2
+  nIndices_V(imf_by_) = iIMF - 2
+  nIndices_V(imf_bz_) = iIMF - 2
+  nIndices_V(sw_vx_) = iSW - 2
+  nIndices_V(sw_vy_) = iSW - 2
+  nIndices_V(sw_vz_) = iSW - 2
+  nIndices_V(sw_v_) = iSW - 2
+  nIndices_V(sw_n_) = iSW - 2
+  nIndices_V(sw_t_) = iSW - 2
 
 end subroutine read_MHDIMF_Indices_new
 
