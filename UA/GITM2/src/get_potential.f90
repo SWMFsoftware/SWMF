@@ -41,7 +41,7 @@ subroutine init_get_potential
      UseHPI = .true.
      if (UseNewellAurora .or. UseOvationSME) UseHPI = .false.
 
-     call get_IMF_Bz(CurrentTime, bz, iError)
+     call get_IMF_Bz(CurrentTime+TimeDelayHighLat, bz, iError)
      call IO_SetIMFBz(bz)
      if (iError /= 0) then
 !        write(*,*) "Can not find IMF Bz."
@@ -127,9 +127,9 @@ subroutine set_indices
 
   if (UseIMF) then
 
-     call read_NOAAHPI_Indices_new(iError, CurrentTime, EndTime)
-     call read_MHDIMF_Indices_new(iError, CurrentTime, EndTime)
-     call get_IMF_Bz(CurrentTime, bz, iError)
+     call read_NOAAHPI_Indices_new(iError, CurrentTime+TimeDelayHighLat, EndTime+TimeDelayHighLat)
+     call read_MHDIMF_Indices_new(iError, CurrentTime+TimeDelayHighLat, EndTime+TimeDelayHighLat)
+     call get_IMF_Bz(CurrentTime+TimeDelayHighLat, bz, iError)
      if (bz < -20.0) bz = -20.0
      if (bz >  20.0) bz =  20.0
      call IO_SetIMFBz(bz)
@@ -143,7 +143,7 @@ subroutine set_indices
 
      if (iDebugLevel > 1) write(*,*) "==> IMF Bz : ",bz
 
-     call get_IMF_By(CurrentTime, by, iError)
+     call get_IMF_By(CurrentTime+TimeDelayHighLat, by, iError)
      if (by < -20.0) by = -20.0
      if (by >  20.0) by =  20.0
      call IO_SetIMFBy(by)
@@ -156,7 +156,7 @@ subroutine set_indices
 
      if (iDebugLevel > 1) write(*,*) "==> IMF By : ",by
 
-     call get_SW_V(CurrentTime, vx, iError)
+     call get_SW_V(CurrentTime+TimeDelayHighLat, vx, iError)
      if (vx < -800.0) vx = -800.0
      if (vx >  800.0) vx =  800.0
      call IO_SetSWV(vx)
@@ -168,11 +168,11 @@ subroutine set_indices
 
      if (iDebugLevel > 1) write(*,*) "==> Solar Wind Velocity : ",vx
 
-     call get_SW_N(CurrentTime, den, iError)
+     call get_SW_N(CurrentTime+TimeDelayHighLat, den, iError)
      if (iError /= 0) den = 5.0
      call IO_SetSWN(den)
 
-!!!     call get_kp(CurrentTime, temp, iError)
+!!!     call get_kp(CurrentTime+TimeDelayHighLat, temp, iError)
 !!!     call IO_Setkp(temp)
 !!!
 !!!     if (iError /= 0) then
@@ -186,7 +186,7 @@ subroutine set_indices
 
   if (UseHPI) then
 
-     call get_HPI(CurrentTime, temp, iError)
+     call get_HPI(CurrentTime+TimeDelayHighLat, temp, iError)
      call IO_SetHPI(temp)
 
      if (iError /= 0) then
@@ -202,7 +202,7 @@ subroutine set_indices
      index(cAMIEFileNorth,"SPS") <= 0) then 
      if (iDebugLevel > 1) &
           write(*,*) "==> Reading AMIE values for time :",CurrentTime
-     call get_AMIE_values(CurrentTime)
+     call get_AMIE_values(CurrentTime+TimeDelayHighLat)
   endif
 
 end subroutine set_indices
