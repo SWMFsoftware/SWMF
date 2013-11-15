@@ -57,9 +57,9 @@ contains
 
     t = GitmCurrentTime - GitmStartTime
 
-    call get_onsetut(GitmCurrentTime, 1, onsettimePast, iError)
-    call get_onsetut(GitmCurrentTime, 2, onsettimeFuture, iError)
-    call get_ae(GitmCurrentTime, sme, iError)
+    call get_onsetut(GitmCurrentTime+TimeDelayHighLat, 1, onsettimePast, iError)
+    call get_onsetut(GitmCurrentTime+TimeDelayHighLat, 2, onsettimeFuture, iError)
+    call get_ae(GitmCurrentTime+TimeDelayHighLat, sme, iError)
 
     DeltaTone = t - onsettimePast
     DeltaTtwo = onsettimeFuture - t
