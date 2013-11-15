@@ -1207,6 +1207,19 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
+        case ("#INPUTTIMEDELAY")
+           call read_in_real(TimeDelayHighLat, iError)
+           call read_in_real(TimeDelayEUV, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #INPUTTIMEDELAY'
+              write(*,*) 'Sets the time delay for the high latitude drivers'
+              write(*,*) 'and solar EUV inputs.'
+              write(*,*) '#INPUTTIMEDELAY'
+              write(*,*) 'TimeDelayHighLat (real, seconds)'
+              write(*,*) 'TimeDelayEUV     (real, seconds)'
+              IsDone = .true.
+           endif
+
         case ("#LTERadiation")
            call read_in_real(DtLTERadiation, iError)
            if (iError /= 0) then
@@ -1290,11 +1303,17 @@ subroutine set_inputs
            cTempLines(5) = "#END"
 
            call IO_set_inputs(cTempLines)
-           call read_sme(iError,CurrentTime,EndTime)
-           call read_al_onset_list(iError,CurrentTime,EndTime)
+           call read_sme(iError,CurrentTime+TimeDelayHighLat,EndTime+TimeDelayHighLat)
 
-           if (iError /= 0) then 
+           if (iError /= 0) then
               write(*,*) "read indices was NOT successful (SME file)"
+              IsDone = .true.
+           endif
+
+           call read_al_onset_list(iError,CurrentTime+TimeDelayHighLat,EndTime+TimeDelayHighLat)
+
+           if (iError /= 0) then
+              write(*,*) "read indices was NOT successful (onset file)"
               IsDone = .true.
            else
               UseVariableInputs = .true.
