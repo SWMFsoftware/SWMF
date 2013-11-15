@@ -6,7 +6,7 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
-  use ModAdvance, ONLY: UseFDFaceFlux, IS_VX, IS_VY, IS_VZ, UseFluxLimiter,&
+  use ModAdvance, ONLY: UseFDFaceFlux, Weight_VX, Weight_VY, Weight_VZ, UseFluxLimiter,&
        UseFaceFlux, UseCenterFlux
 
   implicit none
@@ -29,6 +29,8 @@ module ModFaceValue
   logical, public ::  UseCweno = .false. 
 
   logical, public:: UsePerVarLimiter = .false. ! Variable for CWENO5
+
+  real,public:: FluxLimiterCriter  ! Varivable for ECHO
 
   public :: read_face_value_param, calc_face_value, correct_monotone_restrict
 
@@ -91,7 +93,7 @@ module ModFaceValue
 
   ! The weight of the four low order polynomials of cweno5
   real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
-  real:: IS_II(4, -2:MaxIJK+3)
+  real:: Smooth_II(2, -2:MaxIJK+3)
 
 contains
   !============================================================================
@@ -958,7 +960,7 @@ contains
                call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace)
        end if
     case default
-
+       
        if (.not.DoResChangeOnly)then
           ! Calculate all face values with high order scheme
           if(nOrder==2)then
@@ -972,16 +974,13 @@ contains
           else
              ! High order scheme
              if(UseFaceFlux) then
-                !Need to know the face value on two ghost cell faces
+                ! Need to know the face value on two ghost cell faces
                 call get_facex_high(&
-                     iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,&
-                     kMinFace2,kMaxFace2)
+                     -1,nIFace+2,jMinFace,jMaxFace,kMinFace,kMaxFace)
                 if(nJ > 1) call get_facey_high(&
-                     iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,&
-                     kMinFace2,kMaxFace2)
+                     iMinFace,iMaxFace,-1,nJFace+2,kMinFace,kMaxFace)
                 if(nK > 1) call get_facez_high(&
-                     iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,&
-                     kMinFace2,kMaxFace2)
+                     iMinFace,iMaxFace,jMinFace,jMaxFace,-1,nKFace+2)
              else
                 call get_facex_high(&
                      1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2)
@@ -1393,7 +1392,7 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
       integer:: iVar
-      integer:: iMin2, iMax2
+      integer:: iMin2, iMax2, iFace
       !-----------------------------------------------------------------------
       !iMin is smaller than 1 when UseFaceFlux is true, then 
       !Cell_I(iMin-nG: iMax-1+nG) will be wrong. 
@@ -1431,11 +1430,15 @@ contains
                      FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
                   end if
                   call limit_var(iMin, iMax, iVar)
-                  !Store the smooth indicator for face flux interpolation.
-                  if(UseFluxLimiter .and. UseCenterFlux) then
-                     IS_VX(1:3,iVar,iMin-1:iMax,j,k) = IS_II(1:3,iMin-1:iMax)
-                  elseif(UseFluxLimiter .and. UseFaceFlux) then
-                     IS_VX(1:3,iVar,iMin:iMax,j,k) = IS_II(1:3,iMin:iMax)   
+
+                  ! Calculate the non-linear weight for face flux interpolation.
+                  if(UseFluxLimiter) then
+                     do iFace = 1, nIFace
+                        Weight_VX(1,iVar,iFace,j,k) = FluxLimiterCriter/ &
+                             max(FluxLimiterCriter,Smooth_II(1,iFace-1),Smooth_II(1, iFace))
+                        Weight_VX(2,iVar,iFace,j,k) = FluxLimiterCriter/ &
+                             max(FluxLimiterCriter,Smooth_II(2,iFace-1),Smooth_II(2, iFace))            
+                     enddo
                   end if
 
                   ! Copy back the results into the 3D arrays
@@ -1528,7 +1531,7 @@ contains
 
       real, allocatable, save:: State_VY(:,:,:,:)
       integer:: iVar
-      integer:: jMin2, jMax2
+      integer:: jMin2, jMax2, jFace
       !-----------------------------------------------------------------------
       jMin2 = max(1,jMin); jMax2 = min(jMax, nJ+1)
 
@@ -1565,10 +1568,13 @@ contains
 
                   call limit_var(jMin, jMax, iVar)
 
-                  if(UseFluxLimiter .and. UseCenterFlux) then
-                     IS_VY(1:3,iVar,i,jMin-1:jMax,k) = IS_II(1:3,jMin-1:jMax)
-                  elseif(UseFluxLimiter .and. UseFaceFlux) then
-                     IS_VY(1:3,iVar,i,jMin:jMax,k) = IS_II(1:3,jMin:jMax)
+                  if(UseFluxLimiter) then
+                     do jFace = 1, nJFace
+                        Weight_VY(1,iVar,i,jFace,k) = FluxLimiterCriter/ &
+                             max(FluxLimiterCriter,Smooth_II(1,jFace-1),Smooth_II(1, jFace))
+                        Weight_VY(2,iVar,i,jFace,k) = FluxLimiterCriter/ &
+                             max(FluxLimiterCriter,Smooth_II(2,jFace-1),Smooth_II(2, jFace))
+                     enddo
                   end if
 
                   ! Copy back the results into the 3D arrays
@@ -1659,7 +1665,7 @@ contains
 
       real, allocatable, save:: State_VZ(:,:,:,:)
       integer:: iVar
-      integer:: kMin2, kMax2
+      integer:: kMin2, kMax2, kFace
       !-----------------------------------------------------------------------
       kMin2 = max(kMin, 1); kMax2 = min(kMax,nK+1)
       if(TypeLimiter == 'no')then
@@ -1698,10 +1704,13 @@ contains
 
                   call limit_var(kMin, kMax, iVar)
 
-                  if(UseFluxLimiter .and. UseCenterFlux) then
-                     IS_VZ(1:3,iVar,i,j,kMin-1:kMax) = IS_II(1:3,kMin-1:kMax)
-                  elseif(UseFluxLimiter .and. UseFaceFlux) then
-                     IS_VZ(1:3,iVar,i,j,kMin:kMax) = IS_II(1:3,kMin:kMax) 
+                  if(UseFluxLimiter) then
+                     do kFace = 1, nKFace
+                        Weight_VZ(1,iVar,i,j,kFace) = FluxLimiterCriter/ &
+                             max(FluxLimiterCriter,Smooth_II(1,kFace-1),Smooth_II(1, kFace))
+                        Weight_VZ(2,iVar,i,j,kFace) = FluxLimiterCriter/ &
+                             max(FluxLimiterCriter,Smooth_II(2,kFace-1),Smooth_II(2, kFace))
+                     enddo
                   end if
 
                   ! Copy back the results into the 3D arrays
@@ -2777,7 +2786,7 @@ contains
          c1 = 2/60., c2 = -13/60., c3 = 47/60., c4 = 27/60., c5 = -3/60.
 
     !If the cell center value is used, the interpolatio for the face value 
-    !is implitented with the coefficients below
+    !is implemented with the coefficients below
     real, parameter:: &
          d1 = 3./128, d2 = -20./128, d3 = 90./128, d4=60./128, d5=-5./128
 
@@ -2787,7 +2796,7 @@ contains
     real:: Cell, Cellp, Cellpp, Cellm, Cellmm
 
     ! Second derivatives
-    real:: D2_I(-1:MaxIJK+2)
+    real:: D2_I(-3:MaxIJK+4)
 
     ! Limited second derivatives at l+1/2 and l-1/2
     real:: D2p, D2m
@@ -2970,7 +2979,7 @@ contains
     real, parameter:: c15over32 = 15./32, c9over16 = 9./16
 
     real:: c1
- 
+
     ! Generic cell index
     integer:: l
 
@@ -3019,10 +3028,13 @@ contains
        ISmax = maxval(ISLocal_I(1:3))
        ISLocal_I(4) = IsMax
 
-       c1 = 1./(max(Cell,1.e-3)**2)
-       IS_II(1,l) = ISmin*c1
-       IS_II(2,l) = ISmax*c1
-       IS_II(3,l) = ISLocal_I(2)*c1
+       if(UseFluxLimiter) then
+          c1 = 1./(max(Cell,1.e-3)**2)
+          ! Smooth indicator for [x(l-1), x(l+1)].
+          Smooth_II(1,l) = ISLocal_I(2)*c1
+          ! Smooth indicator for [x(l-2),x(l+2)].
+          Smooth_II(2,l)  = ISmax*c1
+       endif
 
        ! This expression is from G. Capdeville's code
        Epsilon = sqrt(((ISmin + 1e-12)/(ISmax + 1e-12))**3)

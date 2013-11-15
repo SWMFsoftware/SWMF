@@ -28,7 +28,7 @@ module ModFaceFlux
        UseIdealEos, UseElectronPressure, &
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseFDFaceFlux, UseFluxLimiter, &
-       IS_VX, IS_VY, IS_VZ, DoInterFDFaceFlux, &
+       Weight_VX, Weight_VY, Weight_VZ, &
        UseCenterFlux, FluxCenter_VGD, UseFaceFlux
 
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
@@ -165,11 +165,6 @@ module ModFaceFlux
              DoIonHeatConduction = .false.
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
-
-  !Parameters used to limit flux
-  real:: criteria1, criteria2
-  character(len = 10):: TypeFluxLimiter
-  logical:: UseENOFluxLimiter, UseCWENOFluxLimiter
 
 contains
 
@@ -365,19 +360,19 @@ contains
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModMain, ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
-         UseHyperbolicDivb, iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, &
-         kMinFace2, kMaxFace2
+         iMinFace2, iMaxFace2, jMinFace2, jMaxFace2,kMinFace2, kMaxFace2,&
+         UseHyperbolicDivb
     use ModImplicit, ONLY: TypeSemiImplicit
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
     logical :: DoTest, DoTestMe
 
-    !Variables for 6th order flux interpolation
+    ! Variables for 6th order flux interpolation
     real, parameter:: d0=1067./960, d2=-29./480, d4=3./640
-    real, allocatable :: Flux1_V(:,:,:,:), IS_V(:,:,:),&
+    real, allocatable :: Flux1_V(:,:,:,:), Weight_V(:,:,:),&
          Flux2_V(:,:), FluxNew_V(:,:), Cell_I(:), FluxCenter_VG(:,:)
-    real:: Der, Der1, Der2
+    integer:: Minl, Maxl, MaxIJK
     !--------------------------------------------------------------------------
 
     if(iProc==PROCtest .and. iBlock==BLKtest)then
@@ -385,6 +380,22 @@ contains
     else
        DoTest=.false.; DoTestMe=.false.
     end if
+
+    if(UseFluxLimiter) then
+       if(.not. allocated(Weight_V)) then
+          MaxIJK = max(nI,nJ,nK)
+          if(UseFaceFlux) then
+             Minl = -1; Maxl = MaxIJK+3
+          else
+             Minl = 1; Maxl = MaxIJK+1
+          endif
+
+          allocate(Flux2_V(nFlux, Minl:Maxl))          
+          allocate(Weight_V(2,nVar,1:MaxIJK+1))
+          allocate(FluxNew_V(nFlux, 1:MaxIJK+1))
+          if(UseCenterFlux) allocate(FluxCenter_VG(nFlux,-1:MaxIJK+3))
+       endif
+    endif
 
     if(DoTestMe)call print_values
 
@@ -441,18 +452,8 @@ contains
             call get_flux_z(1,nI,1,nJ,1,1)
        if(nK > 1 .and. neiLtop(iBlock)   == 1) &
             call get_flux_z(1,nI,1,nJ,nKFace,nKFace)
-    elseif(UseFaceFlux) then
-       !Need to know the flux through the ghost cell face.
-       call get_flux_x(iMinFace2, iMaxFace2, jMinFace, jMaxFace,&
-            kMinFace, kMaxFace)
-       if(nJ > 1) &
-            call get_flux_y(iMinFace, iMaxFace, jMinFace2, jMaxFace2,&
-            kMinFace ,kMaxFace)
-       if(nK > 1) &
-            call get_flux_z(iMinFace, iMaxFace, jMinFace, jMaxFace, &
-            kMinFace2, kMaxFace2)
     else
-       if(UseFluxLimiter .and. UseCenterFlux) call calc_simple_cell_flux(iBlock)
+       if(UseCenterFlux) call calc_simple_cell_flux(iBlock)
        call get_flux_x(1, nIFace, jMinFace, jMaxFace, kMinFace, kMaxFace)
        if(nJ > 1) &
             call get_flux_y(iMinFace, iMaxFace, 1, nJFace, kMinFace ,kMaxFace)
@@ -549,10 +550,17 @@ contains
 
       use ModAdvance, ONLY: State_VGB
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer:: iMin2, iMax2 
       !-----------------------------------------------------------------------
+      if(UseFaceFlux) then
+         iMin2 = iMin-2; iMax2 = iMax+2
+      else
+         iMin2 = iMin; iMax2 = iMax
+      endif
+
       call set_block_values(iBlock, x_)
 
-      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin2, iMax2
 
          DoTestCell = DoTestMe &
               .and. (iFace == iTest .or. iFace == iTest+1) &
@@ -599,33 +607,28 @@ contains
               bCrossArea_DX(:,iFace,jFace,kFace) = bCrossArea_D
       end do; end do; end do
 
-      if(DoInterFDFaceFlux) then
+      if(UseFDFaceFlux) then
          if(UseFluxLimiter) then
-            !For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
-            !is 6th order at smooth region. 
-            allocate(IS_V(3,nVar,min(0,iMinFace2):max(nIFace,iMaxFace2)))
-            allocate(Flux2_V(nFlux, iMin:iMax))
-            allocate(FluxNew_V(nFlux, iMin:iMax))
-            if(UseCenterFlux) allocate(FluxCenter_VG(nFlux, MinI:MaxI))
+            ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
+            ! is 6th order at smooth region. 
             do kFace = kMin, kMax; do jFace = jMin, jMax
-               Flux2_V = Flux_VX(1:nFlux,iMin:iMax, jFace, kFace)
-               IS_V = IS_VX(:,:,:, jFace, kFace)
+               Flux2_V(:,iMin2:iMax2) = Flux_VX(:,iMin2:iMax2, jFace, kFace)
+               Weight_V(:,:,iMin:iMax) = Weight_VX(:,:,iMin:iMax, jFace, kFace)
                if(UseCenterFlux) &
-                    FluxCenter_VG = FluxCenter_VGD(:,MinI:MaxI, jFace, kFace, 1)
-               call limit_face_flux(iMin, iMax)
-               Flux_VX(1:nFlux,iMin:iMax, jFace, kFace) = FluxNew_V
+                    FluxCenter_VG(:,iMin-2:iMax+2) = &
+                    FluxCenter_VGD(:,iMin-2:iMax+2, jFace, kFace, 1)
+               call limit_face_flux(iMin,iMax)
+               Flux_VX(:,iMin:iMax, jFace, kFace) = FluxNew_V(:,iMin:iMax)
             end do; end do
-            deallocate(IS_V)
-            deallocate(Flux2_V)
-            deallocate(FluxNew_V)
-            if(UseCenterFlux) deallocate(FluxCenter_VG)
          else
-            !For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx 
-            !is 6th order. May cause unphysical oscillation.
-            allocate(Flux1_V(nVar+nFluid,iMin:iMax,jMin:jMax,kMin:kMax))
-            Flux1_V(:,iMin:iMax,jMin:jMax,kMin:kMax) = &
-                 Flux_VX(:,iMin:iMax,jMin:jMax,kMin:kMax)
-            do kFace = kMin,kMax; do jFace = jMin,jMax; do iFace = iMin+2,iMax-2
+            ! Interpolation without limiter may be not useful in practic. The 
+            ! code below left here for test, so it is not optimized. 
+            ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx 
+            ! is 6th order. May cause unphysical oscillation.
+            allocate(Flux1_V(nVar+nFluid,iMin2:iMax2,jMin:jMax,kMin:kMax))
+            Flux1_V(:,iMin2:iMax2,jMin:jMax,kMin:kMax) = &
+                 Flux_VX(:,iMin2:iMax2,jMin:jMax,kMin:kMax)
+            do kFace = kMin,kMax; do jFace = jMin,jMax; do iFace = iMin,iMax
                Flux_VX(:,iFace,jFace,kFace) = &
                     d0*Flux1_V(:,iFace,jFace,kFace) + &
                     d2*(Flux1_V(:,iFace-1,jFace,kFace) + &
@@ -644,10 +647,17 @@ contains
 
       use ModAdvance, ONLY: State_VGB
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
+      integer:: jMin2, jMax2
       !------------------------------------------------------------------------
+      if(UseFaceFlux) then
+         jMin2 = jMin-2; jMax2 = jMax +2
+      else
+         jMin2 = jMin; jMax2 = jMax
+      endif
+
       call set_block_values(iBlock, y_)
 
-      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+      do kFace = kMin, kMax; do jFace = jMin2, jMax2; do iFace = iMin, iMax
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
@@ -698,29 +708,22 @@ contains
 
       !For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
       !is 6th order. 
-      if(DoInterFDFaceFlux) then
+      if(UseFDFaceFlux) then
          if(UseFluxLimiter) then
-            allocate(IS_V(3,nVar,min(0,jMinFace2):max(nJFace,jMaxFace2)))
-            allocate(Flux2_V(nVar+nFluid, jMin:jMax))
-            allocate(FluxNew_V(nVar+nFluid, jMin:jMax))
-            if(UseCenterFlux) allocate(FluxCenter_VG(nFlux, MinJ:MaxJ))
             do kFace = kMin, kMax; do iFace = iMin, iMax
-               Flux2_V = Flux_VY(1:nVar+nFluid,iFace,jMin:jMax, kFace)
-               IS_V = IS_VY(:,:,iFace,:, kFace)
+               Flux2_V(:,jMin2:jMax2) = Flux_VY(:,iFace,jMin2:jMax2, kFace)
+               Weight_V(:,:,jMin:jMax) = Weight_VY(:,:,iFace,jMin:jMax, kFace)
                if(UseCenterFlux) &
-                    FluxCenter_VG = FluxCenter_VGD(:,iFace,MinJ:MaxJ, kFace, 2)
-               call limit_face_flux(jMin, jMax)
-               Flux_VY(1:nVar+nFluid,iFace,jMin:jMax, kFace) = FluxNew_V
+                    FluxCenter_VG(:,jMin-2:jMax+2) = &
+                    FluxCenter_VGD(:,iFace,jMin-2:jMax+2, kFace, 2)
+               call limit_face_flux(jMin,jMax)
+               Flux_VY(:,iFace,jMin:jMax, kFace) = FluxNew_V(:,jMin:jMax)
             end do; end do
-            deallocate(IS_V)
-            deallocate(Flux2_V)
-            deallocate(FluxNew_V)
-            if(UseCenterFlux) deallocate(FluxCenter_VG)
          else
-            allocate(Flux1_V(nVar+nFluid,iMin:iMax,jMin:jMax,kMin:kMax))
-            Flux1_V(:,iMin:iMax,jMin:jMax,kMin:kMax) = &
-                 Flux_VY(:,iMin:iMax,jMin:jMax,kMin:kMax)
-            do kFace = kMin,kMax; do jFace = jMin+2,jMax-2; do iFace =iMin,iMax
+            allocate(Flux1_V(nVar+nFluid,iMin:iMax,jMin2:jMax2,kMin:kMax))
+            Flux1_V(:,iMin:iMax,jMin2:jMax2,kMin:kMax) = &
+                 Flux_VY(:,iMin:iMax,jMin2:jMax2,kMin:kMax)
+            do kFace = kMin,kMax; do jFace = jMin,jMax; do iFace =iMin,iMax
                Flux_VY(:,iFace,jFace,kFace) = &
                     d0*Flux1_V(:,iFace,jFace,kFace) + &
                     d2*(Flux1_V(:,iFace,jFace-1,kFace) + &
@@ -739,10 +742,17 @@ contains
 
       use ModAdvance, ONLY: State_VGB
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
+      integer:: kMin2,kMax2
       !------------------------------------------------------------------------
+      if(UseFaceFlux) then
+         kMin2 = kMin-2; kMax2 = kMax+2
+      else
+         kMin2 = kMin; kMax2 = kMax
+      endif
+
       call set_block_values(iBlock, z_)
 
-      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+      do kFace = kMin2, kMax2; do jFace = jMin, jMax; do iFace = iMin, iMax
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
@@ -789,29 +799,22 @@ contains
 
       end do; end do; end do
 
-      if(DoInterFDFaceFlux) then
+      if(UseFDFaceFlux) then
          if(UseFluxLimiter) then
-            allocate(IS_V(3,nVar,min(0,kMinFace2):max(nKFace,kMaxFace2)))
-            allocate(Flux2_V(nFlux, kMin:kMax))
-            allocate(FluxNew_V(nFlux, kMin:kMax))
-            if(UseCenterFlux) allocate(FluxCenter_VG(nFlux, MinK:MaxK))
             do jFace = jMin, jMax; do iFace = iMin, iMax
-               Flux2_V = Flux_VZ(1:nFlux,iFace, jFace, kMin:kMax)
-               IS_V = IS_VZ(:,:, iFace, jFace, :)
+               Flux2_V(:,kMin2:kMax2) = Flux_VZ(:,iFace, jFace, kMin2:kMax2)
+               Weight_V(:,:,kMin:kMax) = Weight_VZ(:,:, iFace, jFace, kMin:kMax)
                if(UseCenterFlux) &
-                    FluxCenter_VG = FluxCenter_VGD(:,iFace, jFace, MinK:MaxK, 3)
-               call limit_face_flux(kMin, kMax)
-               Flux_VZ(1:nFlux,iFace, jFace, kMin:kMax) = FluxNew_V
+                    FluxCenter_VG(:,kMin-2:kMax+2) = &
+                    FluxCenter_VGD(:,iFace, jFace, kMin-2:kMax+2, 3)
+               call limit_face_flux(kMin,kMax)
+               Flux_VZ(:,iFace, jFace, kMin:kMax) = FluxNew_V(:,kMin:kMax)
             end do; end do
-            deallocate(IS_V)
-            deallocate(Flux2_V)
-            deallocate(FluxNew_V)
-            if(UseCenterFlux) deallocate(FluxCenter_VG)
          else
-            allocate(Flux1_V(nVar+nFluid,iMin:iMax,jMin:jMax,kMin:kMax))
-            Flux1_V(:,iMin:iMax,jMin:jMax,kMin:kMax) = &
-                 Flux_VZ(:,iMin:iMax,jMin:jMax,kMin:kMax)
-            do kFace = kMin+2,kMax-2; do jFace = jMin,jMax; do iFace = iMin,iMax
+            allocate(Flux1_V(nVar+nFluid,iMin:iMax,jMin:jMax,kMin2:kMax2))
+            Flux1_V(:,iMin:iMax,jMin:jMax,kMin2:kMax2) = &
+                 Flux_VZ(:,iMin:iMax,jMin:jMax,kMin2:kMax2)
+            do kFace = kMin,kMax; do jFace = jMin,jMax; do iFace = iMin,iMax
                Flux_VZ(:,iFace,jFace,kFace) = &
                     d0*Flux1_V(:,iFace,jFace,kFace) + &
                     d2*(Flux1_V(:,iFace,jFace,kFace-1) + &
@@ -830,225 +833,82 @@ contains
       if(UseCenterFlux) then
          call limit_flux_use_center_flux(lMin, lMax)
       else
-         call limit_flux_use_face_flux(lMin+2, lMax-2)
+         call limit_flux_use_face_flux(lMin, lMax)
       endif
     end subroutine limit_face_flux
     !===========================================================================
     subroutine limit_flux_use_center_flux(lMin, lMax)
       integer, intent(in)::lMin,lMax
-      real:: ISL_I(3), ISR_I(3)
-      integer:: l, ISmin_ = 1, ISmax_ = 2, ISC_ = 3, iVar
       real, parameter:: c1over6 = 1./6, c1over180 = 1./180
-      logical:: Use6th, Use4th, Use2nd
-      real:: der2, der4
-      real:: IS2, IS4, IS6
+      integer:: l, iVar
+      real:: Der2, Der4
+      real:: Weight4, Weight6
       real:: FluxValuemm, FluxValuem, FluxValuep, FluxValuepp, FluxValue
       !----------------------------------------------------------------------
-      if(UseENOFluxLimiter) then
-         !Flux_VX(YZ) stored the face flux value. If directly use these values 
-         !to calculate the df/dx at the cell center, it is at most second order.
-         !So, the interpolation with limiter is needed. 
-         !For the interpolation at xj, UseENOFluxLimiter is like a switch:
-         !----------------------
-         ! if (from x(j-2) to x(j+2) is smooth), use 6th order interpolation.
-         ! elseif (from x(j-1) to x(j+1) is smooth), then: use 4th order.
-         ! else, do not interpolate.          
-         !----------------------
-         !Use the smooth indicator got from CWENO5 method in ModFaceValue to
-         !decide whether the interpolation domain is smooth. 
-         do iVar = 1, nVar+nFluid
-            do l = lMin, lMax
-               Use6th = .false.; Use4th = .false.; use2nd = .false. 
-               !The face flux comes from the left face flux and right face flux.
-               !So, ISL_I/IS_R used to show whether the domain for left/right 
-               !face flux is smooth.
-               if(iVar > nVar) then
-                  ISL_I = IS_V(1:3,Rho_,l-1)
-                  ISR_I = IS_V(1:3,Rho_,l)
-               else
-                  ISL_I = IS_V(1:3,iVar,l-1)
-                  ISR_I = IS_V(1:3,iVar,l)
-               endif
-               
-               !If the max IS is small or the ratio between the max IS and the
-               !min IS is small, then use 6th order. 
-               Use6th = &
-                    ISL_I(ISmax_) < criteria1 .and. ISR_I(ISmax_) < criteria1
-               if(.not. Use6th) then
-                  Use6th = ISL_I(ISmax_)/max(ISL_I(ISmin_), criteria1/2) &
-                       < criteria2  .and. &
-                       ISR_I(ISmax_)/max(ISR_I(ISmin_), criteria1/2) < criteria2
-                  if(.not. Use6th) then
-                     !If it is smooth from x(j-1) to x(j+1), use 4th order. 
-                     if(ISL_I(ISC_) < criteria1 .and. ISR_I(ISC_) < criteria1) &
-                          then
-                        Use4th = .true.
-                     else
-                        Use2nd = .true.
-                     end if
-                  end if
-               end if
 
-               if(Use6th) then
-                  !FluxCenter_VG is at cell center
-                  !Flux2_V is the face value. 
-                  FluxValuemm = FluxCenter_VG(iVar, l-2)
-                  FluxValuem  = FluxCenter_VG(iVar,l-1)
-                  FluxValue   = Flux2_V(iVar,l)
-                  FluxValuep  = FluxCenter_VG(iVar,l)
-                  FluxValuepp = FluxCenter_VG(iVar,l+1)
+      ! Flux_VX(YZ) stored the face flux value. If directly use these values 
+      ! to calculate the df/dx at the cell center, it is at most second order.
+      ! So, the interpolation with limiter is needed. 
 
-                  der2 = c1over6*&
-                       (FluxValuem - 2*FluxValue + FluxValuep)
-                  der4 = c1over180*&
-                       (16*FluxValue - &
-                       9*(FluxValuem + FluxValuep) + &
-                       FluxValuemm + FluxValuepp)
-                  FluxNew_V(iVar,l) = Flux2_V(iVar,l) - der2 + der4
-               elseif(Use4th) then
-                  FluxValuem  = FluxCenter_VG(iVar,l-1)
-                  FluxValue   = Flux2_V(iVar,l)
-                  FluxValuep  = FluxCenter_VG(iVar,l)
-                  der2 = c1over6*&
-                       (FluxValuem - 2*FluxValue + FluxValuep)
-                  FluxNew_V(iVar,l) = Flux2_V(iVar,l) - der2 
-               else
-                  FluxNew_V(iVar,l) = Flux2_V(iVar,l) 
-               endif
-            end do
+      do iVar = 1, nVar+nFluid
+         do l = lMin, lMax
+            if(iVar > nVar) then
+               Weight4 = Weight_V(1,Rho_,l)
+               Weight6 = Weight_V(2,Rho_,l)
+            else
+               Weight4 = Weight_V(1,iVar,l)
+               Weight6 = Weight_V(2,iVar,l)
+            endif
+            ! FluxCenter_VG is at cell center
+            ! Flux2_V is the face value. 
+            FluxValuemm = FluxCenter_VG(iVar, l-2)
+            FluxValuem  = FluxCenter_VG(iVar,l-1)
+            FluxValue   = Flux2_V(iVar,l)
+            FluxValuep  = FluxCenter_VG(iVar,l)
+            FluxValuepp = FluxCenter_VG(iVar,l+1)
+
+            Der2 = c1over6*&
+                 (FluxValuem - 2*FluxValue + FluxValuep)
+            Der4 = c1over180*&
+                 (16*FluxValue - &
+                 9*(FluxValuem + FluxValuep) + &
+                 FluxValuemm + FluxValuepp)
+            ! Weitht4(6) got based on the smoothness at this point. 
+            FluxNew_V(iVar,l) = Flux2_V(iVar,l) - Weight4*Der2 + Weight6*Der4
          end do
+      end do
 
-      elseif(UseCWENOFluxLimiter) then
-         !Use the combination of 6th order and 4th order interpolation. 
-         !The weight is decided by smooth indicator(IS). 
-         do iVar = 1, nVar+nFluid
-            do l = lMin, lMax
-               if(iVar > nVar) then
-                  ISL_I = IS_V(1:3,Rho_,l-1)
-                  ISR_I = IS_V(1:3,Rho_,l)
-               else
-                  ISL_I = IS_V(1:3,iVar,l-1)
-                  ISR_I = IS_V(1:3,iVar,l)
-               endif
-
-               IS2 = 1
-               !Weight for 4th order interpolation
-               IS4 = max(criteria1, ISL_I(ISC_), ISR_I(ISC_))
-               !Weight for 6th order. 
-               IS6 = max(criteria1, ISL_I(ISmax_), ISR_I(ISmax_))
-               
-               !FluxCenter_VG is at cell center
-               !Flux2_V is the face value. 
-               FluxValuemm = FluxCenter_VG(iVar, l-2)
-               FluxValuem  = FluxCenter_VG(iVar,l-1)
-               FluxValue   = Flux2_V(iVar,l)
-               FluxValuep  = FluxCenter_VG(iVar,l)
-               FluxValuepp = FluxCenter_VG(iVar,l+1)
-               
-               der2 = c1over6*&
-                    (FluxValuem - 2*FluxValue + FluxValuep)
-               der4 = c1over180*&
-                    (16*FluxValue - &
-                    9*(FluxValuem + FluxValuep) + &
-                    FluxValuemm + FluxValuepp)
-
-               FluxNew_V(iVar,l) = Flux2_V(iVar,l) - &
-                    criteria1/IS4*der2 &
-                    + criteria1/IS6*der4
-            end do
-         end do
-      endif
     end subroutine limit_flux_use_center_flux
     !==========================================================================
     subroutine limit_flux_use_face_flux(lMin, lMax)
       integer, intent(in)::lMin,lMax
-      real:: ISL_I(3), ISR_I(3)
-      integer:: l, ISmin_ = 1, ISmax_ = 2, ISC_ = 3, iVar
       real, parameter:: c1over24 = 1./24, c3over640 = 3./640
-      logical:: Use6th, Use4th, Use2nd
-      real:: der2, der4
-      real:: IS2, IS4, IS6
+      integer:: l, iVar
+      real:: Der2, Der4
+      real:: Weight4, Weight6
       !----------------------------------------------------------------------
-      !This subroutine is very similar to another 
-      !subroutine:limit_flux_use_center_flux
-      if(UseENOFluxLimiter) then
-         do iVar = 1, nVar+nFluid
-            do l = lMin, lMax
-               Use6th = .false.; Use4th = .false.; use2nd = .false. 
-               if(iVar > nVar) then
-                  ISL_I = IS_V(1:3,Rho_,l-1)
-                  ISR_I = IS_V(1:3,Rho_,l)
-               else
-                  ISL_I = IS_V(1:3,iVar,l-1)
-                  ISR_I = IS_V(1:3,iVar,l)
-               endif
-               Use6th = &
-                    ISL_I(ISmax_) < criteria1 .and. ISR_I(ISmax_) < criteria1
-               if(.not. Use6th) then
-                  Use6th = ISL_I(ISmax_)/max(ISL_I(ISmin_), criteria1/2) &
-                       < criteria2  .and. &
-                       ISR_I(ISmax_)/max(ISR_I(ISmin_), criteria1/2) < criteria2
-                  if(.not. Use6th) then
-                     if(ISL_I(ISC_) < criteria1 .and. ISR_I(ISC_) < criteria1) &
-                          then
-                        Use4th = .true.
-                     else
-                        Use2nd = .true.
-                     end if
-                  end if
-               end if
+      ! Similar to subroutine limit_flux_use_center_flux. But this subroutine
+      ! will just use face flux for interpolation. 
 
-               if(Use6th) then
-                  !Flux2_V(ivar, l-2:l+1) are face flux.
-                  der2 = c1over24*&
-                       (Flux2_V(iVar,l-1) - &
-                       2*Flux2_V(iVar, l) + &
-                       Flux2_V(iVar,l+1)) 
-                  der4 = c3over640*&
-                       (Flux2_V(iVar,l-2) &
-                       - 4*Flux2_V(iVar,l-1) &
-                       + 6*Flux2_V(iVar,l)&
-                       - 4*Flux2_V(iVar,l+1) &
-                       + Flux2_V(iVar, l+2))
-                  FluxNew_V(iVar,l) = Flux2_V(iVar,l) - der2 + der4
-               elseif(Use4th) then
-                  der2 = c1over24*&
-                       (Flux2_V(iVar,l-1) - &
-                       2*Flux2_V(iVar, l) + &
-                       Flux2_V(iVar,l+1)) 
-                  FluxNew_V(iVar,l) = Flux2_V(iVar,l) - der2 
-               else
-                  FluxNew_V(iVar,l) = Flux2_V(iVar,l) 
-               endif
-            end do
+      do iVar = 1, nVar+nFluid
+         do l = lMin, lMax
+            if(iVar > nVar) then
+               Weight4 = Weight_V(1,Rho_,l)
+               Weight6 = Weight_V(2,Rho_,l)
+            else
+               Weight4 = Weight_V(1,iVar,l)
+               Weight6 = Weight_V(2,iVar,l)
+            endif
+
+            Der2 = c1over24*&
+                 (Flux2_V(iVar,l-1) - 2*Flux2_V(iVar, l) + Flux2_V(iVar,l+1))
+            Der4 = c3over640*&
+                 (Flux2_V(iVar,l-2) - 4*Flux2_V(iVar,l-1) + 6*Flux2_V(iVar,l)&
+                 - 4*Flux2_V(iVar,l+1) + Flux2_V(iVar, l+2))
+            FluxNew_V(iVar,l) = Flux2_V(iVar,l) - Weight4*Der2 + Weight6*Der4
          end do
+      end do
 
-      elseif(UseCWENOFluxLimiter) then
-         do iVar = 1, nVar+nFluid
-            do l = lMin, lMax
-               if(iVar > nVar) then
-                  ISL_I = IS_V(1:3,Rho_,l-1)
-                  ISR_I = IS_V(1:3,Rho_,l)
-               else
-                  ISL_I = IS_V(1:3,iVar,l-1)
-                  ISR_I = IS_V(1:3,iVar,l)
-               endif
-
-               IS2 = 1
-               IS4 = max(criteria1, ISL_I(ISC_), ISR_I(ISC_))
-               IS6 = max(criteria1, ISL_I(ISmax_), ISR_I(ISmax_))
-
-               der2 = c1over24*&
-                    (Flux2_V(iVar,l-1) - 2*Flux2_V(iVar, l) + Flux2_V(iVar,l+1))
-               der4 = c3over640*&
-                    (Flux2_V(iVar,l-2) - 4*Flux2_V(iVar,l-1) + 6*Flux2_V(iVar,l)&
-                    - 4*Flux2_V(iVar,l+1) + Flux2_V(iVar, l+2))
-               FluxNew_V(iVar,l) = Flux2_V(iVar,l) - &
-                    criteria1/IS4*der2 + &
-                    criteria1/IS6*der4
-            end do
-         end do
-      endif
     end subroutine limit_flux_use_face_flux
 
     !==========================================================================
