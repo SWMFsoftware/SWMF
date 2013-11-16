@@ -14,6 +14,8 @@ module ModSpice
   public:: spice_rot_matrix      ! return 3x3 rotation matrix
   public:: spice_rot_vel_matrix  ! return 6x6 matrix for position and 
   !                              ! velocity transform
+  public:: spice_get_two_body_distance ! return the distance between two bodies
+  !                                    ! in the solar system
 
   ! Number of seconds between SWMF and SPICE base times:
   ! SWMF: 1965-01-01T00:00:00
@@ -94,5 +96,26 @@ contains
     call SXFORM(NameCoord1, NameCoord2, tSpice, Rot_II)
 
   end subroutine spice_rot_vel_matrix
-  
+  !=============================================================================
+  subroutine spice_get_two_body_distance(tSimulation, NameBodyTarget, NameBodyObserver, Dist_I)
+    ! Return the distance, Dist_I, between two solar system bodies based on 
+    ! (NameBodyTarget and NameBodyObserver) at simulation time tSimulation
+
+    real,             intent(in) :: tSimulation
+    character(len=*), intent(in) :: NameBodyTarget
+    character(len=*), intent(in) :: NameBodyObserver
+    real,             intent(out):: Dist_I !Unit in km
+
+    real(Real8_):: tSpice
+    real(Real8_):: posTarget(3)   ! Position of target.
+    real(Real8_):: lightTime      ! One way light time between observer and target.
+
+    character(len=*), parameter:: NameSub = 'spice_get_two_body_distance'
+    !--------------------------------------------------------------------------
+    if(DoInitialize)call CON_stop(NameSub//': ModSpice was not initialized')
+    tSpice = tStartSpice + tSimulation
+    Call SPKPOS(NameBodyTarget,tSpice,'J2000','NONE',NameBodyObserver,posTarget,lightTime)
+    Dist_I=Sqrt(Sum(posTarget(:)**2))
+
+  end subroutine spice_get_two_body_distance
 end module ModSpice
