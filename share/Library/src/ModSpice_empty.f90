@@ -11,6 +11,9 @@ module ModSpice
   public:: spice_rot_vel_matrix  ! return 6x6 matrix for position and 
   !                              ! velocity transform
 
+  public:: spice_get_two_body_distance ! return the distance between two bodies
+  !                                    ! in the solar system
+
   ! Number of seconds between SWMF and SPICE base times:
   real, parameter,  public::   DtSpiceSwmf = -1104494359.0 
 
@@ -54,5 +57,17 @@ contains
     call CON_stop(NameSub//': SPICE is not swithed on!')
 
   end subroutine spice_rot_vel_matrix
-  
+  !============================================================================
+  subroutine spice_get_two_body_distance(tSimulation, NameBodyTarget, NameBodyObserver, Dist_I)
+
+    real,             intent(in) :: tSimulation
+    character(len=*), intent(in) :: NameBodyTarget
+    character(len=*), intent(in) :: NameBodyObserver
+    real,             intent(out):: Dist_I !Unit in km
+
+    character(len=*), parameter:: NameSub = 'spice_get_two_body_distance'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': SPICE is not swithed on!')
+
+  end subroutine spice_get_two_body_distance  
 end module ModSpice
