@@ -123,7 +123,7 @@ void Exosphere::Init_BeforeParser() {
 
 
   //set the pre-processor into the ICES model
-  PIC::ICES::SWMFdataPreProcessor=SWMFdataPreProcessor;
+  PIC::CPLR::ICES::SWMFdataPreProcessor=SWMFdataPreProcessor;
 
   //set up the model sampling procedure
   PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(Sampling::SampleModelData,Sampling::OutputSampledModelData);
@@ -303,7 +303,7 @@ void Exosphere::Init_AfterParser() {
 
 
 //ICES data preprocessor -> set up typical values of the solar wind in the regions where the SWMF values have not been found
-void Exosphere::SWMFdataPreProcessor(double *x,PIC::ICES::cDataNodeSWMF& data) {
+void Exosphere::SWMFdataPreProcessor(double *x,PIC::CPLR::ICES::cDataNodeSWMF& data) {
   int i;
 
   if (data.status!=_PIC_ICES__STATUS_OK_) {
