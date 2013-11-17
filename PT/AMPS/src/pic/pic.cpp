@@ -1290,7 +1290,7 @@ void PIC::Init_BeforeParser() {
 #endif
 
 #ifdef _PIC_INIT_ICES_
-  PIC::ICES::Init();
+  PIC::CPLR::ICES::Init();
 #endif
 
   //init the background atmosphere model
