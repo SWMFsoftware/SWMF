@@ -9,33 +9,33 @@
 #include "pic.h"
 
 
-char PIC::ICES::locationICES[_MAX_STRING_LENGTH_PIC_]; //location of the data and the dace cases
+char PIC::CPLR::ICES::locationICES[_MAX_STRING_LENGTH_PIC_]; //location of the data and the dace cases
 
 //background plasma parameter's offsets
-int PIC::ICES::ElectricFieldOffset=-1;
-int PIC::ICES::MagneticFieldOffset=-1;
-int PIC::ICES::PlasmaPressureOffset=-1;
-int PIC::ICES::PlasmaNumberDensityOffset=-1;
-int PIC::ICES::PlasmaTemperatureOffset=-1;
-int PIC::ICES::PlasmaBulkVelocityOffset=-1;
-int PIC::ICES::DataStatusOffsetSWMF=-1;
+int PIC::CPLR::ICES::ElectricFieldOffset=-1;
+int PIC::CPLR::ICES::MagneticFieldOffset=-1;
+int PIC::CPLR::ICES::PlasmaPressureOffset=-1;
+int PIC::CPLR::ICES::PlasmaNumberDensityOffset=-1;
+int PIC::CPLR::ICES::PlasmaTemperatureOffset=-1;
+int PIC::CPLR::ICES::PlasmaBulkVelocityOffset=-1;
+int PIC::CPLR::ICES::DataStatusOffsetSWMF=-1;
 
-int PIC::ICES::TotalAssociatedDataLength=0,PIC::ICES::AssociatedDataOffset=-1;
+int PIC::CPLR::ICES::TotalAssociatedDataLength=0,PIC::CPLR::ICES::AssociatedDataOffset=-1;
 
 //offsets of the data loaded from the DSMC results
-int PIC::ICES::NeutralBullVelocityOffset=-1,PIC::ICES::NeutralNumberDensityOffset=-1,PIC::ICES::NeutralTemperatureOffset=-1,PIC::ICES::DataStatusOffsetDSMC=-1;
+int PIC::CPLR::ICES::NeutralBullVelocityOffset=-1,PIC::CPLR::ICES::NeutralNumberDensityOffset=-1,PIC::CPLR::ICES::NeutralTemperatureOffset=-1,PIC::CPLR::ICES::DataStatusOffsetDSMC=-1;
 
 //pre-processor of the data
-PIC::ICES::fDSMCdataPreProcessor PIC::ICES::DSMCdataPreProcessor=NULL;
-PIC::ICES::fSWMFdataPreProcessor PIC::ICES::SWMFdataPreProcessor=NULL;
+PIC::CPLR::ICES::fDSMCdataPreProcessor PIC::CPLR::ICES::DSMCdataPreProcessor=NULL;
+PIC::CPLR::ICES::fSWMFdataPreProcessor PIC::CPLR::ICES::SWMFdataPreProcessor=NULL;
 
 //====================================================
-void PIC::ICES::SetLocationICES(const char* loc) {
+void PIC::CPLR::ICES::SetLocationICES(const char* loc) {
   sprintf(locationICES,"%s",loc);
 }
 
 //====================================================
-void PIC::ICES::Init() {
+void PIC::CPLR::ICES::Init() {
 
 #if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
   if (ElectricFieldOffset!=-1) exit(__LINE__,__FILE__,"Error: the model is already initialied");
@@ -144,7 +144,7 @@ void PIC::ICES::Init() {
 
 //====================================================
 //retrive the data file from SWMF
-void PIC::ICES::retriveSWMFdata(const char *DataFile) {
+void PIC::CPLR::ICES::retriveSWMFdata(const char *DataFile) {
   char cCurrentPath[_MAX_STRING_LENGTH_PIC_],command[_MAX_STRING_LENGTH_PIC_],initDirectory[_MAX_STRING_LENGTH_PIC_];
 
   //check if the model is initialied
@@ -243,7 +243,7 @@ void PIC::ICES::retriveSWMFdata(const char *DataFile) {
 
 //====================================================
 //retrive the data file from DSMC solver
-void PIC::ICES::retriveDSMCdata(const char *Case,const char *DataFile,const char *MeshFile) {
+void PIC::CPLR::ICES::retriveDSMCdata(const char *Case,const char *DataFile,const char *MeshFile) {
   char command[_MAX_STRING_LENGTH_PIC_];
 
   //check if the model if initialied
@@ -303,7 +303,7 @@ void PIC::ICES::retriveDSMCdata(const char *Case,const char *DataFile,const char
 
 //====================================================
 //read and parse the data file from SWMF
-void PIC::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+void PIC::CPLR::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   cDataNodeSWMF dataSWMF;
   static CiFileOperations ices;
   long int nd;
@@ -434,7 +434,7 @@ void PIC::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cD
 
 //====================================================
 //read and parse the data file from SWMF
-void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+void PIC::CPLR::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   cDataNodeDSMC dataDSMC;
   static CiFileOperations ices;
   long int nd;
@@ -540,7 +540,7 @@ void PIC::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) 
 
 //====================================================
 //output background parameters loaded with ICES from SWMF output
-void PIC::ICES::PrintVariableList(FILE* fout,int DataSetNumber) {
+void PIC::CPLR::ICES::PrintVariableList(FILE* fout,int DataSetNumber) {
 
 #if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
   for (int idim=0;idim<3;idim++) fprintf(fout,", \"E%i\"",idim);
@@ -557,7 +557,7 @@ void PIC::ICES::PrintVariableList(FILE* fout,int DataSetNumber) {
 
 }
 
-void PIC::ICES::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
+void PIC::CPLR::ICES::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
 
 #if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
   cDataNodeSWMF dataSWMF;
@@ -630,7 +630,7 @@ void PIC::ICES::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int Ce
   }
 }
 
-void PIC::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
+void PIC::CPLR::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
   int i;
   double c;
   char *offset,*offsetCenterNode;
@@ -695,7 +695,7 @@ void PIC::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,doubl
 
 //====================================================
 //the total number of cells on the mesh
-long int PIC::ICES::getTotalCellNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+long int PIC::CPLR::ICES::getTotalCellNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   long int res=0;
   int nDownNode;
   bool flag=false;
@@ -711,7 +711,7 @@ long int PIC::ICES::getTotalCellNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
 }
 
 //====================================================
-void PIC::ICES::createCellCenterCoordinateList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+void PIC::CPLR::ICES::createCellCenterCoordinateList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   static FILE *fout;
   char fname[_MAX_STRING_LENGTH_PIC_];
   double x[3]={0.0,0.0,0.0},*xNodeMin,*xNodeMax;
@@ -786,3 +786,71 @@ void PIC::ICES::createCellCenterCoordinateList(cTreeNodeAMR<PIC::Mesh::cDataBloc
 
   if (startNode==PIC::Mesh::mesh.rootTree) fclose(fout);
 }
+
+
+//====================================================
+//print the ion flux at a sphere
+void PIC::CPLR::ICES::PrintSphereSurfaceIonFlux(char const* fname,double SphereRadius) {
+  FILE *fout;
+  int nZenithAngle,nPolarAngle,LocalCellNumber,i,j,k;
+  double ZenithAngle,PolarAngle,x[3],n,v[3],flux;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.rootTree;
+
+  const int nTotalZenithPoints=100;
+  const double dZenithAngle=Pi/(nTotalZenithPoints-1);
+  const int nTotalPolarPoints=2*nTotalZenithPoints;
+  const double dPolarAngle=2.0*Pi/(nTotalPolarPoints-1);
+
+  fout=fopen(fname,"w");
+  fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Ion Flux\"\n");
+  fprintf(fout,"ZONE I=%i, J=%i, DATAPACKING=POINT\n",nTotalPolarPoints,nTotalZenithPoints);
+
+  for (nZenithAngle=0,ZenithAngle=-Pi/2.0;nZenithAngle<nTotalZenithPoints;nZenithAngle++,ZenithAngle+=dZenithAngle) {
+    for (nPolarAngle=0,PolarAngle=-Pi;nPolarAngle<nTotalPolarPoints;nPolarAngle++,PolarAngle+=dPolarAngle) {
+      x[0]=SphereRadius*cos(PolarAngle)*cos(ZenithAngle);
+      x[1]=SphereRadius*sin(PolarAngle)*cos(ZenithAngle);
+      x[1]=SphereRadius*sin(ZenithAngle);
+
+      node=PIC::Mesh::mesh.findTreeNode(x,node);
+      if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find cell");
+
+      n=GetBackgroundPlasmaNumberDensity(x,LocalCellNumber,node);
+      GetBackgroundPlasmaVelocity(v,x,LocalCellNumber,node);
+
+      flux=-n*(v[0]*x[0]+v[1]*x[1]+v[2]*x[2]);
+      fprintf(fout,"%e  %e  %e\n",PolarAngle/Pi*180.0,ZenithAngle/Pi*180.0,flux);
+    }
+  }
+
+  fclose(fout);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
