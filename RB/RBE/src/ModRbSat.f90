@@ -22,7 +22,7 @@ contains
                               AngleGrid_I=>gridy
     use rbe_cfield,     ONLY: BfieldEq_C => bo
     use ModRbTime,      ONLY: iCurrentTime_I
-    use ModGmRb,        ONLY: StateIntegral_IIV
+    use ModGmRb,        ONLY: StateBmin_IIV
     implicit none
     
     ! Arguments

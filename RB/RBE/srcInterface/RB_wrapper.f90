@@ -198,7 +198,7 @@ subroutine RB_save_restart(TimeSimulation)
 end subroutine RB_save_restart
 !===========================================================================
 
-subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
+subroutine RB_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
   use ModGmRb
   use rbe_grid,    ONLY: nLat => ir, nLon => ip
@@ -207,8 +207,8 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   use ModPrerunField,ONLY: DoWritePrerun, save_prerun
   implicit none
 
-  integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
-  real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn)
+  integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
+  real,    intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
   integer, intent(in) :: nVarLine, nPointLine
   real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
 
@@ -224,7 +224,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   !-------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-  if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
+  if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
   if(nVarLine /= nVar) then
@@ -233,40 +233,40 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   end if
 
   if(DoTestMe)then
-     write(*,*)NameSub,' iSizeIn,jSizeIn,nIntegralIn=',&
-          iSizeIn,jSizeIn,nIntegralIn
+     write(*,*)NameSub,' iSizeIn,jSizeIn,nVarIn=',&
+          iSizeIn,jSizeIn,nVarIn
      write(*,*)NameSub,' nVarLine,nPointLine=',nVarLine,nPointLine
-     !write(*,*)NameSub,' Integral_IIV(21,1,:)=',Integral_IIV(21,1,:)
+     !write(*,*)NameSub,' Buffer_IIV(21,1,:)=',Buffer_IIV(21,1,:)
      write(*,*)NameSub,' BufferLine_VI(:,1) =',BufferLine_VI(:,1)
      write(*,*)NameSub,' BufferLine_VI(:,2) =',BufferLine_VI(:,2)
-     write(*,*)NameSub,' IMF: Density  = ',Integral_IIV(1,1,6)
-     write(*,*)NameSub,' IMF: Velocity = ',Integral_IIV(2,1,6)
-     write(*,*)NameSub,' IMF: Bx       = ',Integral_IIV(5,1,6)
-     write(*,*)NameSub,' IMF: By       = ',Integral_IIV(6,1,6)
-     write(*,*)NameSub,' IMF: Bz       = ',Integral_IIV(7,1,6)
+     write(*,*)NameSub,' IMF: Density  = ',Buffer_IIV(1,1,6)
+     write(*,*)NameSub,' IMF: Velocity = ',Buffer_IIV(2,1,6)
+     write(*,*)NameSub,' IMF: Bx       = ',Buffer_IIV(5,1,6)
+     write(*,*)NameSub,' IMF: By       = ',Buffer_IIV(6,1,6)
+     write(*,*)NameSub,' IMF: Bz       = ',Buffer_IIV(7,1,6)
   end if
   
   if (allocated(StateLine_VI)) then
-     deallocate(StateLine_VI,StateIntegral_IIV)
+     deallocate(StateLine_VI,StateBmin_IIV)
   endif
   
   if (.not.allocated(StateLine_VI)) then
      allocate(StateLine_VI(nVarLine,nPointLine),&
-          StateIntegral_IIV(iSizeIn,jSizeIn,nIntegralIn))
+          StateBmin_IIV(iSizeIn,jSizeIn,nVarIn))
   endif
   
   StateLine_VI      = BufferLine_VI
-  StateIntegral_IIV = Integral_IIV
+  StateBmin_IIV = Buffer_IIV
   nPoint    = nPointLine
-  nIntegral = nIntegralIn
+  nVarBmin = nVarIn
   !Convert Units
   StateLine_VI(2,:) = StateLine_VI(2,:) / rEarth ! m --> Earth Radii
   StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
 
   !Solar wind values
   if(IsFirstCall .or. (.not. UseSmooth)) then
-     xnswa(1) = Integral_IIV(1,1,6)*1.0e-6                   !m^-3 -->/cc
-     vswa (1) = sqrt(sum(Integral_IIV(2:4,1,6)**2.0))*1.0e-3 !m/s-->km/s
+     xnswa(1) = Buffer_IIV(1,1,6)*1.0e-6                   !m^-3 -->/cc
+     vswa (1) = sqrt(sum(Buffer_IIV(2:4,1,6)**2.0))*1.0e-3 !m/s-->km/s
   else
      ! Update Solar wind value, but do not let them change more than 5 percent 
      ! per update
@@ -274,14 +274,14 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
      SwDensMin = 0.95*xnswa(1)
      SwVelMax  = 1.05*vswa(1)
      SwVelMin  = 0.95*vswa(1)
-     xnswa(1) = min(SwDensMax,Integral_IIV(1,1,6)*1.0e-6)
+     xnswa(1) = min(SwDensMax,Buffer_IIV(1,1,6)*1.0e-6)
      xnswa(1) = max(SwDensMin,xnswa(1))
-     vswa(1)  = min(SwVelMax,sqrt(sum(Integral_IIV(2:4,1,6)**2.0))*1.0e-3)
+     vswa(1)  = min(SwVelMax,sqrt(sum(Buffer_IIV(2:4,1,6)**2.0))*1.0e-3)
      vswa(1)  = max(SwVelMin,vswa(1))
   endif
-  bxw(1) = Integral_IIV(5,1,6)*1.0e9      !T --> nT
-  byw(1) = Integral_IIV(6,1,6)*1.0e9      !T --> nT
-  bzw(1) = Integral_IIV(7,1,6)*1.0e9      !T --> nT
+  bxw(1) = Buffer_IIV(5,1,6)*1.0e9      !T --> nT
+  byw(1) = Buffer_IIV(6,1,6)*1.0e9      !T --> nT
+  bzw(1) = Buffer_IIV(7,1,6)*1.0e9      !T --> nT
 
   nsw = 1
   

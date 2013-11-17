@@ -200,19 +200,19 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
   endif
 
   if (.not. UseDipole) then
-     ro1=sqrt(sum(StateIntegral_IIV(iLat,iLon,1:2)**2.0))
+     ro1=sqrt(sum(StateBmin_IIV(iLat,iLon,1:2)**2.0))
      !if (iLat==23 .and. iLon==3 )
      !write(*,*) 'Lat,Lon,iLat,iLon,iLineIndex_II(iLon,iLat)',Lat*180.0/cPi,Lon*180.0/cPi,&
      !     iLat,iLon,iLineIndex_II(iLon,iLat)
-     !write(*,*) 'ro1,StateIntegral_IIV(iLat,iLon,1:2),maxval(RadialDist_I(1:nAlt))',&
-     !     ro1,StateIntegral_IIV(iLat,iLon,1:2),maxval(RadialDist_I(1:nAlt))
+     !write(*,*) 'ro1,StateBmin_IIV(iLat,iLon,1:2),maxval(RadialDist_I(1:nAlt))',&
+     !     ro1,StateBmin_IIV(iLat,iLon,1:2),maxval(RadialDist_I(1:nAlt))
      
      xmlt1=&
-          (atan2(-StateIntegral_IIV(iLat,iLon,2),-StateIntegral_IIV(iLat,iLon,1))&
+          (atan2(-StateBmin_IIV(iLat,iLon,2),-StateBmin_IIV(iLat,iLon,1))&
           )&
           *12./cPi   ! mlt in hr
      if (xmlt1 < 0.) xmlt1=xmlt1+24.
-     bo1=StateIntegral_IIV(iLat,iLon,3)
+     bo1=StateBmin_IIV(iLat,iLon,3)
   endif
   
   !Check that nAlt < np

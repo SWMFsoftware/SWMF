@@ -1949,7 +1949,7 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
   use ModIoUnit,   ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
   use rbe_cread1
-  use ModGmRb,     ONLY: StateIntegral_IIV,AveDens_,AveP_
+  use ModGmRb,     ONLY: StateBmin_IIV,AveDens_,AveP_
   real v(ir,ip,iw,ik),xjac(ir,iw),p(ir,ip,iw,ik),&
        xmass(ns),f2(ir,ip,iw,ik)
   integer iba(ip),irm(ip),irm0(ip)
@@ -2007,9 +2007,9 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
      ! If using MHD values for boundary, set factors
      if (UseMhdBoundary) then
          xktn = &
-             StateIntegral_IIV(irm(j),j,AveP_)&
-             / StateIntegral_IIV(irm(j),j,AveDens_) *6.2415e15 !J-->KeV 
-        xnn  = StateIntegral_IIV(irm(j),j,AveDens_)
+             StateBmin_IIV(irm(j),j,AveP_)&
+             / StateBmin_IIV(irm(j),j,AveDens_) *6.2415e15 !J-->KeV 
+        xnn  = StateBmin_IIV(irm(j),j,AveDens_)
         !  Assume a Maxwellian at nightside when ibset=3 and Kappa when ibset=4
         if (ibset.eq.3) factorn=xnn/(2.*pi*xmass(js)*xktn*1.6e-16)**1.5  
         if (ibset.eq.4) factorn=xnn*exp(gammln(xk1))/exp(gammln(xk2))/&
@@ -2260,7 +2260,6 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
      write(UnitTmp_) eclc
      write(UnitTmp_) ecce
      close(UnitTmp_)
-     if (iplsp.eq.1) call RB_saveplasmasphere(t,tstart,itype)
      
      ! Write the restart.H file to be included at restart
      open(unit=UnitTmp_,file='RB/restartOUT/restart.H')
@@ -2277,6 +2276,8 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
      
      close(UnitTmp_)
   endif
+  if (iplsp.eq.1) call RB_saveplasmasphere(t,tstart,itype)
+
   ! Write to log file
   if (t.eq.tstart .and. DoSavePlot) write(*,'(a8)') outname
   if (DoSavePlot) write(*,*) 't(hour)   ',t/3600. 

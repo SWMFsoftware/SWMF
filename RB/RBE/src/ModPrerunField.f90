@@ -22,13 +22,13 @@ contains
     ! Write out SW values
     write(UnitTmp_) xnswa(1), vswa(1), bxw(1), byw(1), bzw(1)
     
-    ! Write out nPoint and nIntegral
-    write(UnitTmp_) nPoint, nIntegral
+    ! Write out nPoint and nVarBmin
+    write(UnitTmp_) nPoint, nVarBmin
 
-    ! Write out StateIntegral_IIV
+    ! Write out StateBmin_IIV
     do iLon = 1,nLon
        do iLat = 1,nLat
-          write(UnitTmp_) StateIntegral_IIV(iLat,iLon,1:nIntegral)
+          write(UnitTmp_) StateBmin_IIV(iLat,iLon,1:nVarBmin)
        end do
     end do
     
@@ -70,22 +70,22 @@ contains
     ! read SW values
     read(UnitTmp_) xnswa(1), vswa(1), bxw(1), byw(1), bzw(1)
     
-    !  read nPoint and nIntegral
-    read(UnitTmp_) nPoint, nIntegral
+    !  read nPoint and nVarBmin
+    read(UnitTmp_) nPoint, nVarBmin
 
-    ! Allocate StateLine and StateIntegral
+    ! Allocate StateLine and StateBmin
     if (allocated(StateLine_VI)) then
-       deallocate(StateLine_VI,StateIntegral_IIV)
+       deallocate(StateLine_VI,StateBmin_IIV)
     endif
     if (.not.allocated(StateLine_VI)) then
        allocate(StateLine_VI(nVar,nPoint),&
-            StateIntegral_IIV(nLat,nLon,nIntegral))
+            StateBmin_IIV(nLat,nLon,nVarBmin))
     endif
 
-    ! read StateIntegral_IIV
+    ! read StateBmin_IIV
     do iLon = 1,nLon
        do iLat = 1,nLat
-          read(UnitTmp_) StateIntegral_IIV(iLat,iLon,1:nIntegral)
+          read(UnitTmp_) StateBmin_IIV(iLat,iLon,1:nVarBmin)
        end do
     end do
     

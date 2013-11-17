@@ -99,7 +99,7 @@ contains
     integer, parameter :: nIntegral=6
 
     ! Names of variables to pass
-    character (len=*), parameter :: NameVar='Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF'
+    character (len=*), parameter :: NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p'
 
     ! Number of variables and points saved into the line data
     integer :: nVarLine, nPointLine

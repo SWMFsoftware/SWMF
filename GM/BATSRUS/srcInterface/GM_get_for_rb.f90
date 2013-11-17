@@ -22,7 +22,7 @@ subroutine GM_get_for_rb_trace(iSizeIn, jSizeIn, NameVar, nVarLine, nPointLine)
   character (len=*), parameter :: NameSub='GM_get_for_rb_trace'
   !---------------------------------------------------------------------
 
-  if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
+  if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
   ! Allocate arrays
@@ -51,7 +51,7 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   use ModGeometry,ONLY: x2
   use ModProcMH,  ONLY: iProc
 
-  use ModMain, ONLY: Time_Simulation
+  use ModMain, ONLY: Time_Simulation,TypeCoordSystem
 
   use ModGmRbCoupling, ONLY: &
        write_integrated_data_tec, write_integrated_data_idl, &
@@ -63,10 +63,13 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
                            MassFluid_I, IonFirst_, nVar
 
-  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_
+  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_, rBody
   use ModSolarwind, ONLY: get_solar_wind_point
+  use ModConst, ONLY: cProtonMass
 
   use CON_line_extract, ONLY: line_get, line_clean
+  use CON_axes,         ONLY: transform_matrix
+  use CON_planet,       ONLY: RadiusPlanet
 
   implicit none
 
@@ -79,22 +82,21 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
   character (len=*), intent(in):: NameVar
 
-  integer :: nVarExtract, nPoint, iPoint
+  integer :: nVarExtract, nPoint, iPoint, iStartPoint
   real, allocatable :: Buffer_VI(:,:)
 
   logical :: DoTestTec, DoTestIdl
   logical :: DoTest, DoTestMe
 
-  integer :: iLat,iLon,iLine
-  real    :: SolarWind_V(nVar)
+  integer :: iLat,iLon,iLine, iLocBmin
+  real    :: SolarWind_V(nVar), SmGm_DD(3,3), XyzBminSm_D(3)
   !--------------------------------------------------------------------------
 
-  if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
+  if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
   if(iProc /= 0)then
      ! Clean and return
-     deallocate(RayIntegral_VII, RayResult_VII)
      call line_clean
      RETURN
   end if
@@ -103,66 +105,75 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   call CON_set_do_test(NameSub//'_idl', DoTestIdl, DoTestMe)
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-  ! Copy RayResult into small arrays used in old algorithm
-  MHD_SUM_vol = RayResult_VII(InvB_   ,:,:)
-  MHD_Xeq     = RayResult_VII(Z0x_    ,:,:)
-  MHD_Yeq     = RayResult_VII(Z0y_    ,:,:)
-  MHD_Beq     = RayResult_VII(Z0b_    ,:,:)
-  MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
-  MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
-
-  ! Put impossible values if ray was not found for a lat-lon grid cell
-  where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-     MHD_Xeq     = NoValue
-     MHD_Yeq     = NoValue
-     MHD_SUM_vol = -1.0
-     MHD_SUM_rho = 0.0
-     MHD_SUM_p   = 0.0
-     MHD_Beq     = NoValue
-  end where
-  
-  ! Put impossible value for volume when inside inner boundary
-  where(MHD_SUM_vol == 0.0) MHD_SUM_vol = -1.0
+  ! Initialize buffer_iiv
+  Buffer_IIV = 0.0
 
   ! Put the extracted data into BufferLine_VI
-
   call line_get(nVarExtract, nPoint)
   if(nPoint /= nPointLine)call stop_mpi(NameSub//': nPointLine error')
   if(nVarExtract < nVarLine)call stop_mpi(NameSub//': nVarLine error')
   allocate(Buffer_VI(0:nVarExtract, nPoint))
   call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
   
+  ! Transformation matrix between CRCM(SM) and GM coordinates
+  SmGm_DD = transform_matrix(Time_Simulation,TypeCoordSystem,'SMG')
+
+ ! The first field line starts from iPoint = 1
+  iStartPoint = 1
   do iPoint = 1, nPoint
 
      iLine =  Buffer_VI(0,iPoint)     ! line index
      iLat = mod(iLine-1, iSizeIn) + 1
      iLon = (iLine-1)/iSizeIn + 1
 
-     ! exclude open field lines by setting impossible line index
-     if(MHD_Xeq(iLat, iLon) == NoValue)then
-        iLine = -1
-     endif
-
      BufferLine_VI(1,iPoint) = iLine
      BufferLine_VI(2,iPoint) = Buffer_VI(1,iPoint)                 ! Length
      BufferLine_VI(3,iPoint) = sqrt(sum(Buffer_VI(2:4,iPoint)**2)) ! |r|
      BufferLine_VI(4,iPoint) = &
           sqrt(sum(Buffer_VI(4+Bx_:4+Bz_,iPoint)**2))       ! |B|
+
+     ! Find the location of minimum B, Bmin, and other variables at Bmin 
+     ! for each field line
+     if(Buffer_VI(0,min(nPoint,iPoint+1)) /= Buffer_VI(0,iPoint) &
+          .or. iPoint == nPoint)then
+        ! Exclude open field lines by checking the radial 
+        ! distance of the last point on a field line
+        if(BufferLine_VI(3,iPoint) > 1.0001*rBody*RadiusPlanet)then
+           ! set line index to -1. for non-closed field line
+           ! It would be much better not to send the line at all !!!
+           BufferLine_VI(1,iStartPoint:iPoint) = -1
+           Buffer_IIV(iLat, iLon, 1:2) = NoValue*1e6    ! x, y
+           Buffer_IIV(iLat, iLon, 3) = NoValue       ! Bmin
+           Buffer_IIV(iLat, iLon, 4:5) = 0.0         ! rho, p
+
+        else
+           ! For closed field lines 
+           ! Location of Bmin for this field line
+           iLocBmin = minloc(BufferLine_VI(4,iStartPoint:iPoint), dim=1) &
+                + iStartPoint - 1
+           Buffer_IIV(iLat, iLon, 3) = BufferLine_VI(4, iLocBmin)    ! Bmin
+
+           ! Convert location from GM to SMG coordinates
+           XyzBminSm_D = matmul(SmGm_DD, Buffer_VI(2:4,iLocBmin))
+           Buffer_IIV(iLat, iLon, 1) = XyzBminSm_D(1) ! x
+           Buffer_IIV(iLat, iLon, 2) = XyzBminSm_D(2) ! y
+           Buffer_IIV(iLat, iLon, 4) = Buffer_VI(4+Rho_,iLocBmin) &
+                /cProtonMass                          ! rho in [#/m^3]
+           Buffer_IIV(iLat, iLon, 5) = Buffer_VI(4+p_,  iLocBmin)    ! p
+        end if
+        
+        ! Set the start point for the next field line
+        iStartPoint = iPoint +1
+     end if
   end do
   
-  deallocate(RayIntegral_VII, RayResult_VII, Buffer_VI)
+  deallocate(Buffer_VI)
   call line_clean
 
   ! Output before processing
   if(DoTest .or. DoTestTec)call write_integrated_data_tec
   if(DoTest .or. DoTestIdl)call write_integrated_data_idl
 
-  ! Put results into output buffer
-  Buffer_IIV(:,:,1)  = MHD_Xeq
-  Buffer_IIV(:,:,2)  = MHD_Yeq
-  Buffer_IIV(:,:,3)  = MHD_Beq * No2Si_V(UnitB_)
-  Buffer_IIV(:,:,4)  = MHD_SUM_rho / MHD_SUM_vol * No2Si_V(UnitN_) 
-  Buffer_IIV(:,:,5)  = MHD_SUM_p   / MHD_SUM_vol * No2Si_V(UnitP_)
  
   ! Send solar wind values in the array of the extra integral
   ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p

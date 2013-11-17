@@ -22,6 +22,7 @@ c MCF
 c     subroutine RB_initmain()
       subroutine RB_initmain(thetamin,thetamax)
       use rbe_cread1
+      use ModIoUnit, ONLY: UnitTmp_
 c MCF end
 
 c Set nthetacells, nphicells array index
@@ -122,6 +123,8 @@ c mgridoc, open(0) or closed(1) table
 
 c variables for RB_getgrid
       real gdelr, gvrcell
+c Variables for output
+      character(len=100) :: NamePlas
 
       save nrcells,rmin,rmax,vrcells,vthetacells,
      *   vphicells,delr,delphi,mgridb,mgridbi,
@@ -457,26 +460,63 @@ c     entry RB_saveplasmasphere(filename)
 c     call RB_saveit(vthetacells,nthetacells,vphicells,nphicells,
 c    *   mgridden,mgridx,mgridy,mgridoc,filename)
 
-      if (t.eq.tstart.and.itype.eq.1) then
-         open(unit=22,file=outname//'.nps',status='unknown')
+      if (t.eq.tstart .and.itype.eq.1) then
+         open(unit=UnitTmp_,file='RB/plots/'//outname//'.nps',
+     &        status='unknown')
       else
-         open(unit=22,file=outname//'.nps',status='old',
-     *        position='append')
+         open(unit=UnitTmp_,file='RB/plots/'//outname//'.nps',
+     &        status='old',position='append')
       endif
-      write(22,*) t,'      ! time in second '
-      write(22,*) nthetacells,nphicells,'       ! ir, ip '
-      write(22,'(8f10.3)') mgridx
-      write(22,'(8f10.3)') mgridy
-      write(22,'(1p,7e11.3)') mgridden
-      close(22)
+      write(UnitTmp_,*) t,'      ! time in second '
+      write(UnitTmp_,*) nthetacells,nphicells,'       ! ir, ip '
+      !write(UnitTmp_,'(8f10.3)') mgridx
+      write(UnitTmp_,"(100es18.10)") mgridx
+      !write(UnitTmp_,'(8f10.3)') mgridy
+      write(UnitTmp_,"(100es18.10)") mgridy
+      !write(UnitTmp_,'(1p,7e11.3)') mgridden
+      write(UnitTmp_,"(100es18.10)") mgridden
+      close(UnitTmp_)
 
       if (t.gt.tstart) then
-         open(unit=32,file=outname//'_c.den',form='unformatted')
-         write(32) mgridn
-         write(32) mgridden
-         close(32)
+         open(unit=UnitTmp_,file='RB/plots/'//outname//'_c.den',
+     &        form='unformatted')
+         write(UnitTmp_) mgridn
+         write(UnitTmp_) mgridden
+         close(UnitTmp_)
       endif
 c MCF end
+
+      ! Make tecplot output
+      
+      write(NamePlas,"(a,i8.8,a)") 
+     &     'RB/plots/Plasmasphere',int(t),'.dat'
+      open(UnitTmp_,FILE=NamePlas)
+      write(UnitTmp_,'(a)')      'VARIABLES = "X", "Y", "n"'
+      write(UnitTmp_,'(a,i3,a,i3,a)') 'Zone I=', nthetacells, 
+     &     ', J=', nphicells+2,', DATAPACKING=POINT'
+  
+      do iPhi=0,nphicells+1
+         do iTheta=1,nthetacells
+            if (iPhi == 0) then
+               write(UnitTmp_,"(100es18.10)") 
+     &              mgridx(iTheta,nphicells)/6375000.0,
+     &              mgridy(iTheta,nphicells)/6375000.0,
+     &              mgridden(iTheta,nphicells)
+            elseif(iPhi==nphicells+1) then
+               write(UnitTmp_,"(100es18.10)") 
+     &           mgridx(iTheta,1)/6375000.0,mgridy(iTheta,1)/6375000.0,
+     &           mgridden(iTheta,1)
+            else
+               write(UnitTmp_,"(100es18.10)") 
+     &              mgridx(iTheta,iPhi)/6375000.0,
+     &              mgridy(iTheta,iPhi)/6375000.0,
+     &              mgridden(iTheta,iPhi)
+            endif            
+         enddo
+      enddo
+  
+      close(UnitTmp_)
+      
 
       return
 
