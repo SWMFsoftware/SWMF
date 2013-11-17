@@ -200,7 +200,7 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
   endif
 
   if (.not. UseDipole) then
-     ro1=sqrt(sum(StateBmin_IIV(iLat,iLon,1:2)**2.0))
+     ro1=sqrt(sum(StateBmin_IIV(iLat,iLon,1:2)**2.0))/re ! radial dist at minB in re
      !if (iLat==23 .and. iLon==3 )
      !write(*,*) 'Lat,Lon,iLat,iLon,iLineIndex_II(iLon,iLat)',Lat*180.0/cPi,Lon*180.0/cPi,&
      !     iLat,iLon,iLineIndex_II(iLon,iLat)
