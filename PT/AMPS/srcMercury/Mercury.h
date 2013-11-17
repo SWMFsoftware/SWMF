@@ -73,9 +73,9 @@ namespace Mercury {
       CenterNode=startNode->block->GetCenterNode(nd);
       offset=CenterNode->GetAssociatedDataBufferPointer();
 
-      if (*((int*)(offset+PIC::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
-        memcpy(E,offset+PIC::ICES::ElectricFieldOffset,3*sizeof(double));
-        memcpy(B,offset+PIC::ICES::MagneticFieldOffset,3*sizeof(double));
+      if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
+        memcpy(E,offset+PIC::CPLR::ICES::ElectricFieldOffset,3*sizeof(double));
+        memcpy(B,offset+PIC::CPLR::ICES::MagneticFieldOffset,3*sizeof(double));
       }
       else {
         memcpy(E,Exosphere::swE_Typical,3*sizeof(double));

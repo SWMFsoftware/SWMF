@@ -1515,16 +1515,18 @@ int main(int argc,char **argv) {
   //init ICES
 
 #ifdef _ICES_CREATE_COORDINATE_LIST_
-  PIC::ICES::createCellCenterCoordinateList();
-  PIC::ICES::SetLocationICES("/left/ices/ICES");
-  PIC::ICES::retriveSWMFdata("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
+  PIC::CPLR::ICES::createCellCenterCoordinateList();
+  PIC::CPLR::ICES::SetLocationICES("/left/ices/ICES");
+  PIC::CPLR::ICES::retriveSWMFdata("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
 #endif
 
 
 #ifdef _ICES_LOAD_DATA_
-  PIC::ICES::readSWMFdata(1.0);
+  PIC::CPLR::ICES::readSWMFdata(1.0);
   PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
 
+  //output the solar winf ion flux at the palnet's surface
+  if (PIC::ThisThread==0) PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",_RADIUS_(_TARGET_));
 
   //create the map of the solar wind flux
   int el;
@@ -1556,9 +1558,9 @@ int main(int argc,char **argv) {
       CenterNode=node->block->GetCenterNode(nd);
       offset=CenterNode->GetAssociatedDataBufferPointer();
 
-      if (*((int*)(offset+PIC::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
-        memcpy(PlasmaVelocity,offset+PIC::ICES::PlasmaBulkVelocityOffset,3*sizeof(double));
-        memcpy(&PlasmaNumberDensity,offset+PIC::ICES::PlasmaNumberDensityOffset,sizeof(double));
+      if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
+        memcpy(PlasmaVelocity,offset+PIC::CPLR::ICES::PlasmaBulkVelocityOffset,3*sizeof(double));
+        memcpy(&PlasmaNumberDensity,offset+PIC::CPLR::ICES::PlasmaNumberDensityOffset,sizeof(double));
       }
       else {
         double EmptyArray[3]={0.0,0.0,0.0};
