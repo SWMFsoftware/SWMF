@@ -499,17 +499,17 @@ c MCF end
          do iTheta=1,nthetacells
             if (iPhi == 0) then
                write(UnitTmp_,"(100es18.10)") 
-     &              mgridx(iTheta,nphicells)/6375000.0,
-     &              mgridy(iTheta,nphicells)/6375000.0,
+     &              mgridx(iTheta,nphicells),!/6375000.0,
+     &              mgridy(iTheta,nphicells),!/6375000.0,
      &              mgridden(iTheta,nphicells)
             elseif(iPhi==nphicells+1) then
                write(UnitTmp_,"(100es18.10)") 
-     &           mgridx(iTheta,1)/6375000.0,mgridy(iTheta,1)/6375000.0,
+     &           mgridx(iTheta,1),mgridy(iTheta,1),
      &           mgridden(iTheta,1)
             else
                write(UnitTmp_,"(100es18.10)") 
-     &              mgridx(iTheta,iPhi)/6375000.0,
-     &              mgridy(iTheta,iPhi)/6375000.0,
+     &              mgridx(iTheta,iPhi),
+     &              mgridy(iTheta,iPhi),
      &              mgridden(iTheta,iPhi)
             endif            
          enddo
