@@ -937,30 +937,25 @@ contains
        iProcOut, iBlockOut, iCellOut_D, DistOut_D, UseGhostCell)
 
     ! Find the processor and block containing location XyzIn_D. 
-    ! If present, iCellOut_D returns the indexes of the closest cell center:
-    ! 1 <= iCellOut_D <= nIjk_D
-    ! If present, DistOut_D returns the signed distance to the closest 
-    ! cell center divided by the cell size.
+    ! If iCellOut_D is present and UseGhostCell is not present or false,
+    !   then iCell_D returns the indexes of the closest cell center:
+    !   1 <= iCellOut_D <= nIjk_D
+    ! If iCellOut_D is present and UseGhostCell is present and true, 
+    !   then iCell_D returns the indexes of the cell to the left from XyzIn_D
+    ! If present, DistOut_D returns the signed distance to the cell center
+    !    given by iCell_D divided by the cell size.
     ! DistOut_D can only be present if iCellOut_D is also present.
 
     real,    intent(in) :: XyzIn_D(MaxDim)        ! Cartesian coords of point
     integer, intent(out):: iBlockOut, iProcOut    ! Block and proc indexes
-
     integer, intent(out), optional:: iCellOut_D(MaxDim) ! Closest cell indexes
     real,    intent(out), optional:: DistOut_D(MaxDim)  ! Normalized distance
-    logical, intent(in), optional:: UseGhostCell ! Whether to use ghost cells
-
-
+    logical, intent(in),  optional:: UseGhostCell ! Use ghost cells or not
 
     real:: CoordTree_D(MaxDim), Coord_D(MaxDim)
     integer:: iNode
 
     character(len=*), parameter:: NameSub = 'find_grid_block'
-    logical UseGhostCellV ! Actual value of UseGhostCell to be used (stores either the passed value or the default if no value is passed)
-
-    UseGhostCellV = .false.
-    if(present(UseGhostCell)) UseGhostCellV=UseGhostCell
-
     !------------------------------------------------------------------------
     ! Convert to generalized coordinates if necessary
     if(IsCartesianGrid)then
@@ -973,7 +968,8 @@ contains
 
     ! Find node containing the point
     if(present(iCellOut_D))then
-       call find_tree_cell(CoordTree_D, iNode, iCellOut_D, DistOut_D, UseGhostCell = UseGhostCellV)
+       call find_tree_cell(CoordTree_D, iNode, iCellOut_D, DistOut_D, &
+            UseGhostCell)
     else
        call find_tree_node(CoordTree_D, iNode)
     end if
