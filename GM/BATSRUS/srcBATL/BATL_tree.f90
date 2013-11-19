@@ -978,7 +978,7 @@ contains
   end subroutine find_tree_node
 
   !==========================================================================
-  subroutine find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D)
+  subroutine find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D, UseGhostCell)
 
     ! Find the node that contains a point. The point coordinates should
     ! be given in generalized coordinates normalized to the domain size:
@@ -991,9 +991,15 @@ contains
     integer,        intent(out):: iNode
     integer,        intent(out):: iCell_D(MaxDim)
     real, optional, intent(out):: CellDistance_D(MaxDim)
+    logical, intent(in), optional:: UseGhostCell ! Whether to use ghost cells
 
     real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
     real:: CellCoord_D(MaxDim)
+
+    logical UseGhostCellV ! Actual value of UseGhostCell to be used (stores either the passed value or the default if no value is passed)
+
+    UseGhostCellV = .false.
+    if(present(UseGhostCell)) UseGhostCellV=UseGhostCell
 
     !----------------------------------------------------------------------
     call find_tree_node(Coord_D, iNode)
@@ -1007,7 +1013,13 @@ contains
     call get_tree_position(iNode, PositionMin_D, PositionMax_D)
     CellCoord_D = 0.5 + &
          nIJK_D*(Coord_D - PositionMin_D)/(PositionMax_D - PositionMin_D)
-    iCell_D = max(1, min(nIJK_D, nint(CellCoord_D)))
+
+    if(UseGhostCellV) then
+       iCell_D = floor(CellCoord_D)
+    else
+       iCell_D = max(1, min(nIJK_D, nint(CellCoord_D)))
+    end if
+
     if(present(CellDistance_D)) CellDistance_D = CellCoord_D - iCell_D
 
   end subroutine find_tree_cell
