@@ -9,10 +9,8 @@ module ModSpice
   public:: spice_init            ! read in SPICE "kernels", define start time
   public:: spice_rot_matrix      ! return 3x3 rotation matrix
   public:: spice_rot_vel_matrix  ! return 6x6 matrix for position and 
-  !                              ! velocity transform
-
-  public:: spice_get_two_body_distance ! return the distance between two bodies
-  !                                    ! in the solar system
+  !                              !      velocity transform
+  public:: spice_get_distance    ! return the distance between two bodies
 
   ! Number of seconds between SWMF and SPICE base times:
   real, parameter,  public::   DtSpiceSwmf = -1104494359.0 
@@ -58,16 +56,16 @@ contains
 
   end subroutine spice_rot_vel_matrix
   !============================================================================
-  subroutine spice_get_two_body_distance(tSimulation, NameBodyTarget, NameBodyObserver, Dist_I)
+  subroutine spice_get_distance(tSimulation, NameBody1, NameBody2, Distance)
 
     real,             intent(in) :: tSimulation
-    character(len=*), intent(in) :: NameBodyTarget
-    character(len=*), intent(in) :: NameBodyObserver
-    real,             intent(out):: Dist_I !Unit in km
+    character(len=*), intent(in) :: NameBody1
+    character(len=*), intent(in) :: NameBody2
+    real,             intent(out):: Distance
 
-    character(len=*), parameter:: NameSub = 'spice_get_two_body_distance'
+    character(len=*), parameter:: NameSub = 'spice_get_distance'
     !--------------------------------------------------------------------------
     call CON_stop(NameSub//': SPICE is not swithed on!')
 
-  end subroutine spice_get_two_body_distance  
+  end subroutine spice_get_distance
 end module ModSpice
