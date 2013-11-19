@@ -40,6 +40,8 @@ ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, Spec
 ParticleWeightCorrectionMode=on !on,off
 
 
+CouplerMode=ices !!off, ices, swmf 
+
 #endmain
 
 #include species.input
@@ -59,7 +61,7 @@ ParticleWeightCorrectionMode=on !on,off
 
 
 #Sampling 
-  SampleParallelTangentialKineticTemperature=on \\ !on,off direction=const(0.0,0.0,0.0); direction=function(??????)
+  SampleParallelTangentialKineticTemperature=off \\ !on,off direction=const(0.0,0.0,0.0); direction=function(??????)
     direction=const(1.0,2.0,3.0)
 
 #endSampling
@@ -80,9 +82,9 @@ ParticleWeightCorrectionMode=on !on,off
 
 
 #BackgroundSpecies
-  BackgroundSpecies=on !!on,off
+  BackgroundSpecies=off !!on,off
 
-  SpeciesList=CO2,O  
+  SpeciesList=CO2,O,Na  
   CollisionMode=off !on !on,off
 
   CollisionCrossSection= function \\ !!!const \\ !const -> hard sphere, function -> the name of the user-defined function that calculates cross section with the background species
@@ -120,7 +122,7 @@ ParticleWeightCorrectionMode=on !on,off
 !  addPhysicalModelHeader=Exosphere_Helium.h   
 
 !---------------------------------   SOURCE RATE --------------------------------------------
-  Source:Sputtering=off \\ !on,off
+  Source:Sputtering=on \\ !on,off
     Yield(NA)=0.1, InjectionVelocityRange(NA)=10,10.0E3
 
 
@@ -138,7 +140,7 @@ ParticleWeightCorrectionMode=on !on,off
 !  GenerateParticleProperties=HeliumDesorption::GenerateParticleProperties !\\
 !!   InitSurfaceSourceDistribution=HeliumDesorption::SurfaceInjectionDistribution.Init
 
-  Source:UserDefined=on \\ !on,off
+  Source:UserDefined=off \\ !on,off
     SourceProcessCode=MySource \\
     SourceRate=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate \\ !!!!!Moon::GetTotalProductionRateBjorn !!!Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate \\
     GenerateParticleProperties=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties \\ !!Moon::GenerateParticlePropertiesBjorn !!Moon::GenerateParticlePropertiesBjorn  !!!Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties \\
