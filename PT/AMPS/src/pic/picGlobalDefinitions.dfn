@@ -126,6 +126,12 @@
 #define _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL__LB_   0
 #define _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL__QLB_  1
 
+//definitions of the coupler mode
+#define _PIC_COUPLER_MODE__OFF_       0
+#define _PIC_COUPLER_MODE__ICES_      1
+#define _PIC_COUPLER_MODE__SWMF_      2
+
+
 
 
 

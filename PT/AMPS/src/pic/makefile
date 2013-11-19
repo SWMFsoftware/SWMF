@@ -26,7 +26,8 @@ PICOBJ = pic.o \
 	pic_column_integration.o \
 	pic_particle_collision_models.o \
 	pic_run_time_system_state.o \
-	pic_lb.o
+	pic_lb.o \
+	pic_swmf.o
 
 amps : $(PICOBJ)
 	ar -src amps.a $(PICOBJ)

@@ -1911,6 +1911,38 @@ namespace PIC {
   //namespace CPLR contains definitions of all couplers used in AMPS
   namespace CPLR {
 
+    //coupling with SWMF
+    namespace SWMF {
+      extern int MagneticFieldOffset,TotalDataLength;
+
+      //init the coupler
+      void init();
+      void ConvertMpiCommunicatorFortran2C(signed int* iComm,signed int* iProc,signed int* nProc);
+
+      //output the interpolated data into a file
+      int RequestDataBuffer(int offset);
+      void PrintVariableList(FILE* fout,int DataSetNumber);
+      void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+
+      //prepare the list of the coordinates for the interpolation
+      void ResetCenterPointProcessingFlag();
+      void GetCenterPointNumber(int *nCenterPoints);
+      void GetCenterPointCoordinates(double *x);
+      void RecieveCenterPointData(double *data,int *index);
+
+      //calcualte physical parameters
+      inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        register int idim;
+        register double *offset=(double*)(MagneticFieldOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+        for (idim=0;idim<3;idim++) B[idim]=offset[idim];
+      }
+
+
+    }
+
+
     //coupling of AMPS through the ICES tool
     namespace ICES {
        extern char locationICES[_MAX_STRING_LENGTH_PIC_]; //location of the data and the dace cases
@@ -2025,6 +2057,80 @@ namespace PIC {
          for (idim=0;idim<3;idim++) B[idim]=b[idim],E[idim]=e[idim];
        }
     }
+
+
+    inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+      #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
+      ICES::GetBackgroundElectricField(E,x,nd,node);
+      #else
+      exit(__LINE__,__FILE__,"not implemented");
+      #endif
+     }
+
+     inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
+       ICES::GetBackgroundMagneticField(B,x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       SWMF::GetBackgroundMagneticField(B,x,nd,node);
+       #else
+       exit(__LINE__,__FILE__,"not implemented");
+       #endif
+     }
+
+
+     inline void GetBackgroundPlasmaVelocity(double *vel,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
+       ICES::GetBackgroundPlasmaVelocity(vel,x,nd,node);
+       #else
+       exit(__LINE__,__FILE__,"not implemented");
+       #endif
+     }
+
+     inline double GetBackgroundPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       double res=0.0;
+
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
+       res=ICES::GetBackgroundPlasmaPressure(x,nd,node);
+       #else
+       exit(__LINE__,__FILE__,"not implemented");
+       #endif
+
+       return res;
+     }
+
+     inline double GetBackgroundPlasmaNumberDensity(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       double res=0.0;
+
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
+       res=ICES::GetBackgroundPlasmaNumberDensity(x,nd,node);
+       #else
+       exit(__LINE__,__FILE__,"not implemented");
+       #endif
+
+       return res;
+     }
+
+     inline double GetBackgroundPlasmaTemperature(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       double res=0.0;
+
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
+       res=ICES::GetBackgroundPlasmaTemperature(x,nd,node);
+       #else
+       exit(__LINE__,__FILE__,"not implemented");
+       #endif
+
+       return res;
+     }
+
+     inline void GetBackgroundFieldsVector(double *E,double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
+       GetBackgroundFieldsVector(E,B,x,nd,node);
+       #else
+       exit(__LINE__,__FILE__,"not implemented");
+       #endif
+     }
+
+
   }
 
   namespace ChemicalReactions {
