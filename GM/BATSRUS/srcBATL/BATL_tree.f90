@@ -978,29 +978,28 @@ contains
   end subroutine find_tree_node
 
   !==========================================================================
-  subroutine find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D, UseGhostCell)
+  subroutine find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D, &
+       UseGhostCell)
 
     ! Find the node that contains a point. The point coordinates should
     ! be given in generalized coordinates normalized to the domain size:
     ! CoordIn_D = (CoordOrig_D - CoordMin_D)/(CoordMax_D-CoordMin_D)
-    ! If iCell_D is present, return the cell that contains the point.
+    ! If UseGhostCell is not present or false
+    !    then iCell_D returns the cell that contains the point.
+    ! If UseGhostCell is present and true 
+    !    then iCell_D will contain the cell indexes to the left of the point.
     ! If CellDistance_D is present, return the signed distances per dimension
     ! normalized to the cell size. This can be used as interpolation weight.
+    ! 
 
     real,           intent(in) :: Coord_D(MaxDim)
     integer,        intent(out):: iNode
     integer,        intent(out):: iCell_D(MaxDim)
-    real, optional, intent(out):: CellDistance_D(MaxDim)
-    logical, intent(in), optional:: UseGhostCell ! Whether to use ghost cells
+    real,    optional, intent(out):: CellDistance_D(MaxDim)
+    logical, optional, intent(in) :: UseGhostCell
 
     real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
     real:: CellCoord_D(MaxDim)
-
-    logical UseGhostCellV ! Actual value of UseGhostCell to be used (stores either the passed value or the default if no value is passed)
-
-    UseGhostCellV = .false.
-    if(present(UseGhostCell)) UseGhostCellV=UseGhostCell
-
     !----------------------------------------------------------------------
     call find_tree_node(Coord_D, iNode)
 
@@ -1014,12 +1013,15 @@ contains
     CellCoord_D = 0.5 + &
          nIJK_D*(Coord_D - PositionMin_D)/(PositionMax_D - PositionMin_D)
 
-    if(UseGhostCellV) then
-       iCell_D = floor(CellCoord_D)
+    if(present(UseGhostCell))then
+       if(UseGhostCell) then
+          iCell_D = floor(CellCoord_D)
+       else
+          iCell_D = max(1, min(nIJK_D, nint(CellCoord_D)))
+       end if
     else
        iCell_D = max(1, min(nIJK_D, nint(CellCoord_D)))
     end if
-
     if(present(CellDistance_D)) CellDistance_D = CellCoord_D - iCell_D
 
   end subroutine find_tree_cell
