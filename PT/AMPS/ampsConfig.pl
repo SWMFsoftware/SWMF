@@ -314,6 +314,8 @@ sub ReadMainBlock {
   my $SimulationParticleWeightMode; #='_SINGLE_GLOBAL_PARTICLE_WEIGHT_';
   my $SimulationParticleWeightCorrectionMode; #='_INDIVIDUAL_PARTICLE_WEIGHT_OFF_';
   
+  my $CouplingMode;
+  
   #force the repeatable execution path
   my $ForceRepatableExecutionPath=0;
   
@@ -428,6 +430,18 @@ sub ReadMainBlock {
       elsif ($s0 eq "OFF") {
         $DebuggerMode=0;
       }
+      else {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }
+    
+    
+    elsif ($s0 eq "COUPLERMODE") {
+      ($s0,$s1)=split(' ',$s1,2);
+      
+      if ($s0 eq "OFF") {$CouplingMode="_PIC_COUPLER_MODE__OFF_";}
+      elsif ($s0 eq "ICES") {$CouplingMode="_PIC_COUPLER_MODE__ICES_";}
+      elsif ($s0 eq "SWMF") {$CouplingMode="_PIC_COUPLER_MODE__SWMF_";}
       else {
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
@@ -652,6 +666,10 @@ sub ReadMainBlock {
   
   #redefine the value of the macro that allows loading the user-defined table of the macros that describe the species used in the simulation 
   ampsConfigLib::RedefineMacro("_PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE_","_PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE__ON_","pic/picGlobal.dfn");
+  
+  #redefine the value of the macro that determined the coupling of AMPS
+  if (defined $CouplingMode) {ampsConfigLib::RedefineMacro("_PIC_COUPLER_MODE_",$CouplingMode,"pic/picGlobal.dfn");}
+
 
   #add markers to the code
   my @FileContent;
