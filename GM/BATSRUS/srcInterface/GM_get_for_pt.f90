@@ -40,7 +40,8 @@ subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
   do iPoint = 1, nPoint
 
      Xyz_D = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
-     call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D, UseGhostCell = .true.)
+     call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D, &
+          UseGhostCell = .true.)
 
      if(iProcFound /= iProc)then
         write(*,*)NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
