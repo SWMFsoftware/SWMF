@@ -40,7 +40,7 @@ subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
   do iPoint = 1, nPoint
 
      Xyz_D = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
-     call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D)
+     call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D, UseGhostCell = .true.)
 
      if(iProcFound /= iProc)then
         write(*,*)NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
@@ -53,41 +53,21 @@ subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
         b_D = 0.0
      end if
 
-     if(Dist_D(1)>0) then
         i1=iCell_D(1)
         i2=i1+1
         Dx1=Dist_D(1)
         Dx2=1.0-Dx1
-     else
-        i1=iCell_D(1)-1
-        i2=i1+1
-        Dx1=1.0+Dist_D(1)
-        Dx2=1.0-Dx1
-     end if
 
-     if(Dist_D(2)>0) then
         j1=iCell_D(2)
         j2=min(j1+1, MaxJ)
         Dy1=Dist_D(2)
         Dy2=1.0-Dy1
-     else
-        j1=iCell_D(2)-1
-        j2=min(j1+1, MaxJ)
-        Dy1=1.0+Dist_D(2)
-        Dy2=1.0-Dy1
-     end if
 
-     if(Dist_D(3)>0) then
         k1=iCell_D(3)
         k2=min(k1+1, MaxK)
         Dz1=Dist_D(3)
         Dz2=1.0-Dz1
-     else
-        k1=iCell_D(3)-1
-        k2=min(k1+1, MaxK)
-        Dz1=1.0+Dist_D(3)
-        Dz2=1.0-Dz1
-     end if
+
 
      b_D = b_D + Dz2*(Dy2*(Dx2*State_VGB(Bx_:Bz_,i1,j1,k1,iBlock)   &
           +                Dx1*State_VGB(Bx_:Bz_,i2,j1,k1,iBlock))  &
