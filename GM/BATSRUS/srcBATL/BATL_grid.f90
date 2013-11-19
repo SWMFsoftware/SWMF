@@ -934,7 +934,7 @@ contains
   !===========================================================================
 
   subroutine find_grid_block(XyzIn_D, &
-       iProcOut, iBlockOut, iCellOut_D, DistOut_D)
+       iProcOut, iBlockOut, iCellOut_D, DistOut_D, UseGhostCell)
 
     ! Find the processor and block containing location XyzIn_D. 
     ! If present, iCellOut_D returns the indexes of the closest cell center:
@@ -948,11 +948,19 @@ contains
 
     integer, intent(out), optional:: iCellOut_D(MaxDim) ! Closest cell indexes
     real,    intent(out), optional:: DistOut_D(MaxDim)  ! Normalized distance
+    logical, intent(in), optional:: UseGhostCell ! Whether to use ghost cells
+
+
 
     real:: CoordTree_D(MaxDim), Coord_D(MaxDim)
     integer:: iNode
 
     character(len=*), parameter:: NameSub = 'find_grid_block'
+    logical UseGhostCellV ! Actual value of UseGhostCell to be used (stores either the passed value or the default if no value is passed)
+
+    UseGhostCellV = .false.
+    if(present(UseGhostCell)) UseGhostCellV=UseGhostCell
+
     !------------------------------------------------------------------------
     ! Convert to generalized coordinates if necessary
     if(IsCartesianGrid)then
@@ -965,7 +973,7 @@ contains
 
     ! Find node containing the point
     if(present(iCellOut_D))then
-       call find_tree_cell(CoordTree_D, iNode, iCellOut_D, DistOut_D)
+       call find_tree_cell(CoordTree_D, iNode, iCellOut_D, DistOut_D, UseGhostCell = UseGhostCellV)
     else
        call find_tree_node(CoordTree_D, iNode)
     end if
