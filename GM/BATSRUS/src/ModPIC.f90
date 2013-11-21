@@ -1,6 +1,7 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan
+!  Portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
+
 module ModPIC
 
   use ModMain,      ONLY: UseB0
@@ -93,8 +94,10 @@ contains
   subroutine pic_save_region
 
     use ModProcMH,    ONLY: iProc, nProc, iComm
-    use ModAdvance,   ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, State_VGB
-    use ModMain,      ONLY: Dt, time_simulation, n_step
+    use ModAdvance,   ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Ppar_, p_, &
+         State_VGB, UseAnisoPressure
+    use ModMain,      ONLY: UseB0, Dt, time_simulation, n_step
+    use ModB0,        ONLY: B0_DGB
     use ModCurrent,   ONLY: get_current
     use ModMpi,       ONLY: MPI_reduce, MPI_SUM, MPI_REAL
     use BATL_lib,     ONLY: nDim, MaxDim, Xyz_DGB, CellSize_DB, find_grid_block
@@ -107,13 +110,13 @@ contains
     use ModHallResist,ONLY: HallFactorMax, UseHallResist
     use ModPhysics,   ONLY: IonMassPerCharge, TypeNormalization 
 
-    ! Assuming ideal MHD for now !!! Add Pe, Ppar, PePar multi-ion???
+    ! Assuming ideal/aniso MHD for now !!! Add Pe, PePar multi-ion???
     integer, parameter:: RhoPic_=1, UxPic_=2, UzPic_=4, BxPic_=5, BzPic_=7, &
-         pPic_=8, JxPic_=9, JzPic_=11, nVarPic = 11
+         PparPic_=8, pPic_=9, JxPic_=10, JzPic_=12, nVarPic = 12
 
     ! Coordinate, variable and parameter names
     character(len=*), parameter:: NameVarPic = &
-         'x y rho ux uy uz bx by bz p jx jy jz dt xUnitPic uUnitPic mUnitPic'
+         'x y rho ux uy uz bx by bz ppar p jx jy jz dt xUnitPic uUnitPic mUnitPic'
 
     ! PIC grid indexes
     integer:: iPic, jPic, kPic, nPic_D(MaxDim), iRegion
@@ -240,10 +243,17 @@ contains
              StatePic_VC(BxPic_:BzPic_,iPic,jPic,kPic) = No2Si_V(UnitB_)* &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock)
           end if
+          if(UseAnisoPressure)then
+             StatePic_VC(PparPic_,iPic,jPic,kPic) = No2Si_V(UnitP_)* &
+                  State_VGB(Ppar_,i,j,k,iBlock)
+          else
+             StatePic_VC(PparPic_,iPic,jPic,kPic) = No2Si_V(UnitP_)* &
+                  State_VGB(P_,i,j,k,iBlock)
+          end if
           StatePic_VC(pPic_,iPic,jPic,kPic) = No2Si_V(UnitP_)* &
                State_VGB(p_,i,j,k,iBlock)
 
-          ! Put current into the last three elemets
+          ! Put current into the last three elements
           call get_current(i, j, k, iBlock, Current_D)
           StatePic_VC(JxPic_:JzPic_,iPic,jPic,kPic) = No2Si_V(UnitJ_)*Current_D
 
@@ -292,7 +302,7 @@ contains
     ! Overwrite the PIC region with the PIC solution
     ! Multiple PIC regions to be implemented
 
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, UseAnisoPressure
     use ModVarIndexes
 
     use ModProcMH, ONLY: iProc
@@ -308,7 +318,7 @@ contains
     use ModPhysics, ONLY: Si2No_V, UnitX_, UnitRho_, UnitU_, UnitB_, &
          UnitP_
     use ModProcMH, ONLY: iProc, iComm
-    use modmpi
+    use ModMpi
 
     integer:: i, j, k, iBlock, iError
     real:: XyzNorm_D(MaxDim)
@@ -323,7 +333,7 @@ contains
     ! PIC variables
     integer, save:: nVarPic
     real,    save, allocatable:: StatePic_VC(:,:,:), StatePic_V(:)
-    integer, save:: nElmtStatePic
+    integer, save:: nSizePic
 
     integer:: Dn
     real:: WeightMhd, WeightPic
@@ -396,7 +406,7 @@ contains
              write(*,*) NameSub, ' CoordMaxPic_D=', CoordMaxPic_D
              write(*,*) NameSub, ' DxyzPic_D    =', DxyzPic_D
           end if
-          nElmtStatePic = nVarPic*product(nCellPic_D)
+          nSizePic = nVarPic*product(nCellPic_D)
        else
           ! Read in PIC data
 
@@ -413,14 +423,17 @@ contains
                 EXIT
              end do
           end if
-          call MPI_BCAST(StatePic_VC,nElmtStatePic,MPI_REAL,0,iComm,iError)
+          call MPI_bcast(StatePic_VC, nSizePic, MPI_REAL, 0, iComm, iError)
 
        end if
 
-       StatePic_VC(Rho_,:,:)    = StatePic_VC(Rho_,:,:)    * Si2No_V(UnitRho_)
-       StatePic_VC(Ux_:Uz_,:,:) = StatePic_VC(Ux_:Uz_,:,:) * Si2No_V(UnitU_)
-       StatePic_VC(Bx_:Bz_,:,:) = StatePic_VC(Bx_:Bz_,:,:) * Si2No_V(UnitB_)
-       StatePic_VC(nVarPic,:,:) = StatePic_VC(nVarPic,:,:) * Si2No_V(UnitP_)
+       do j = 1, nYPic; do i = 1, nXPic
+          StatePic_VC(Rho_,i,j)    = StatePic_VC(Rho_,i,j)   *Si2No_V(UnitRho_)
+          StatePic_VC(Ux_:Uz_,i,j) = StatePic_VC(Ux_:Uz_,i,j)*Si2No_V(UnitU_)
+          StatePic_VC(Bx_:Bz_,i,j) = StatePic_VC(Bx_:Bz_,i,j)*Si2No_V(UnitB_)
+          StatePic_VC(nVarPic-1:nVarPic,i,j) = &
+               StatePic_VC(nVarPic-1:nVarPic,i,j) * Si2No_V(UnitP_)
+       end do; end do
 
        ! We reuse the same filename, so delete file after it was read in
        call barrier_mpi
@@ -485,12 +498,16 @@ contains
                WeightMhd*State_VGB(Rho_:Bz_,i,j,k,iBlock) + &
                WeightPic*StatePic_V(Rho_:Bz_)
 
+          ! Set hyperbolic scalar to zero if present
+          if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
+
+          if(UseAnisoPressure) State_VGB(Ppar_,i,j,k,iBlock) = &
+               WeightMhd*State_VGB(Ppar_,i,j,k,iBlock) &
+               + WeightPic*StatePic_V(nVarPic-1)
+
           State_VGB(p_,i,j,k,iBlock) = &
                WeightMhd*State_VGB(p_,i,j,k,iBlock) &
                + WeightPic*StatePic_V(nVarPic)
-
-          ! Set hyperbolic scalar to zero if present
-          if(Hyp_>1) State_VGB(Hyp_,i,j,k,iBlock) = 0.0
 
        end do; end do; end do ! i,j,k
 
