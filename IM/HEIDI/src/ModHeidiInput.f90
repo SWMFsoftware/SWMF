@@ -381,31 +381,31 @@ contains
          end do
       case('1',  'maxwellian')
          do iSpecies = 1, 4
-            ini(iSpecies) = 1
+            ini(iSpecies) = 1 * scalc(iSpecies)
          end do
       case('2',  'gaussian')
          do iSpecies = 1, 4
-            ini(iSpecies) = 2
+            ini(iSpecies) = 2 * scalc(iSpecies)
          end do
       case('3',  'frominputfile')
          do iSpecies = 1, 4
-            ini(iSpecies) = 3
+            ini(iSpecies) = 3 * scalc(iSpecies)
          end do
       case('4',  'quietrc')
          do iSpecies = 1, 4
-            ini(iSpecies) = 4
+            ini(iSpecies) = 4 * scalc(iSpecies)
          end do
       case('5',  'fromfile')
          do iSpecies = 1, 4
-            ini(iSpecies) = 5
+            ini(iSpecies) = 5 * scalc(iSpecies)
          end do
       case('6',  'psinject')
          do iSpecies = 1, 4
-            ini(iSpecies) = 6
+            ini(iSpecies) = 6 * scalc(iSpecies)
          end do
       case('7',  'fromrestart')
          do iSpecies = 1, 4
-            ini(iSpecies) = 7
+            ini(iSpecies) = 7 * scalc(iSpecies)
          end do
       end select
   
@@ -413,35 +413,35 @@ contains
       select case(TypeBoundary)
       case('0',  'none')
          do iSpecies = 1, 4
-            ibc(iSpecies) = 0
+            ibc(iSpecies) = 0 * scalc(iSpecies)
          end do
       case('1',  'maxwellian')
          do iSpecies = 1, 4
-            ibc(iSpecies) = 1
+            ibc(iSpecies) = 1 * scalc(iSpecies)
          end do
       case('2',  'gaussian')
          do iSpecies = 1, 4
-            ibc(iSpecies) = 2
+            ibc(iSpecies) = 2 * scalc(iSpecies)
          end do
       case('3',  'frominputfile')
          do iSpecies = 1, 4
-            ibc(iSpecies) = 3
+            ibc(iSpecies) = 3 * scalc(iSpecies)
          end do
       case('4',  'quietrc')
          do iSpecies = 1, 4
-            ibc(iSpecies) = 4
+            ibc(iSpecies) = 4 * scalc(iSpecies)
          end do
       case('5',  'fromfile')
          do iSpecies = 1, 4
-            ibc(iSpecies) = 5
+            ibc(iSpecies) = 5 * scalc(iSpecies)
          end do
       case('6',  'psinject')
          do iSpecies = 1, 4
-            ibc(iSpecies) = 6
+            ibc(iSpecies) = 6 * scalc(iSpecies)
          end do
       case('7',  'fromrestart')
          do iSpecies = 1, 4
-            ibc(iSpecies) = 7
+            ibc(iSpecies) = 7 * scalc(iSpecies)
          end do
       end select
       

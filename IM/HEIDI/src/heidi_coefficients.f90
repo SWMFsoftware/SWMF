@@ -1246,6 +1246,9 @@ subroutine MAGCONV(I3,NST)
      call CURRENTCALC  ! Finds the perpendicular "ring current"
      ! and the field-aligned closure currents
 
+    write(*,*) 'IA ===========', IA
+
+!!$STOP
 
      Irfac=Ir
      Latfac(1:Ir)=Lats(1:Ir)

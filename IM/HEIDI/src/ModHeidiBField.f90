@@ -160,6 +160,8 @@ contains
        ! More refined at the equator, coarser towards the poles
        !/
     case('uniform_dipole')
+
+      
        do iPhi =1, nPhi
           do iR =1, nR 
              LatMax =  acos(sqrt(1./L_I(iR)))
@@ -178,6 +180,7 @@ contains
           end do
        end do
 
+           
        !\
        ! Dipole magnetic field with non-uniform number of points along the field line. 
        ! More refined at the equator, coarser towards the poles

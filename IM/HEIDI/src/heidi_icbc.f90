@@ -450,8 +450,9 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
            ! Read in from a restart file (INI=7) 
            !/
       
+!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!
 
- 
         else if (INI(S).eq.7) then
            NameFile       = trim(NameRestartInDir)//'restart'//trim(NameSpecies)//'.out'
            StringHeader   = &
@@ -494,6 +495,34 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
               end do
            end do
         end if
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!
+ !  Read in from a unformatted file (INI=7)
+           
+!!$	else if (INI(S).EQ.7) then
+!!$    iUnit = io_unit_new()
+!!$    NameFile = trim(NameRestartInDir)//'05022'//trim(NameSpecies)//'.unff'
+!!$    
+!!$    write(*,*) 'Filename=', NameFile
+!!$    open(UNIT=iUnit,FILE=NameFile, status='old', form="unformatted" ,&
+!!$         access="sequential")
+!!$    do L=1,NPA
+!!$       do K=1,NE  ! Change back to this for restarts
+!!$          do J=1,NT 
+!!$             write(*,*) 'l, k, j = ', l, k, j
+!!$             read(iUnit) (f2(I,J,K,L,S),I=1,NR)
+!!$            ! write(*,*) 'l, k, j, F2 = ', l, k, j, f2(I,J,K,L,S)
+!!$          end do
+!!$       end do
+!!$    end do
+!!$    close(iUnit)
+!!$ end if
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!
 
         !\
         ! Done with initial particle distribution set up
@@ -799,7 +828,7 @@ subroutine GEOSB
 
               write(*,*) 'MHD values TEC2, TEF2, NE2 = ', TM1, TM2, NM1, TEC2, TEF2, NE2 
               
-             ! STOP
+              STOP
            end if
 
 
