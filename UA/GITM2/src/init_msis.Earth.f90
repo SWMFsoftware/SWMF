@@ -111,6 +111,7 @@ subroutine init_msis
 
   integer :: iBlock, iAlt, iLat, iLon, iSpecies, iyd
   real :: geo_lat, geo_lon, geo_alt, geo_lst,m,k, ut
+  real :: ffactor, h, no  
   real, dimension(7)  :: ap = 10.0
 
   real*4 :: hwm_utime, hwm_alt, hwm_lat, hwm_lon, hwm_lst
@@ -253,26 +254,39 @@ subroutine init_msis
 
               Rho(iLon,iLat,iAlt,iBlock) = msis_dens(6)
 
-              ! The initial profile of [NO] is refered to:
-              !  [Charles A. Barth, AGU, 1995]
+!              ! The initial profile of [NO] is refered to:
+!              !  [Charles A. Barth, AGU, 1995]
+!
+!              if (geo_alt < 120.) then
+!                 NDensityS(iLon,iLat,iAlt,iNO_,iBlock)=  &
+!                      max(1e14-1e10*abs((geo_alt-110.0))**3.5, 100.0)
+!                      !10**(-0.003*(geo_alt-105.)**2 +14+LOG10(3.))
+!              else 
+!                 m = (1e10-3.9e13)/(200)
+!                 k = 1e10+(-m*300.) 
+!                 NDensityS(iLon,iLat,iAlt,iNO_,iBlock)=  &
+!                      MAX(k+(m*geo_alt)-(geo_alt - 120.0)**2,100.0)
+!                   !   MAX(10**(13.-LOG10(3.)*(geo_alt-165.)/35.),1.0)
+!              endif
+!
+!              LogNS(iLon,iLat,iAlt,:,iBlock) = &
+!                   log(NDensityS(iLon,iLat,iAlt,iNO_,iBlock))
 
-              if (geo_alt < 120.) then
-                 NDensityS(iLon,iLat,iAlt,iNO_,iBlock)=  &
-                      max(1e14-1e10*abs((geo_alt-110.0))**3.5, 100.0)
-                      !10**(-0.003*(geo_alt-105.)**2 +14+LOG10(3.))
-              else 
-                 m = (1e10-3.9e13)/(200)
-                 k = 1e10+(-m*300.) 
-                 NDensityS(iLon,iLat,iAlt,iNO_,iBlock)=  &
-                      MAX(k+(m*geo_alt)-(geo_alt - 120.0)**2,100.0)
-                   !   MAX(10**(13.-LOG10(3.)*(geo_alt-165.)/35.),1.0)
-              endif
+              ffactor = 6.36*log(f107)-13.8
+              no = (ffactor * 1.0e13 + 8.0e13)*12.4 ! 12.4 is roughly exp
 
-              LogNS(iLon,iLat,iAlt,:,iBlock) = &
-                   log(NDensityS(iLon,iLat,iAlt,iNO_,iBlock))
+              h = -Boltzmanns_Constant * msis_temp(2) / &
+                   (Gravity_GB(iLon,iLat,iAlt,iBlock) * Mass(iNO_)) /1000.0
+
+              NDensityS(iLon,iLat,iAlt,iNO_,iBlock) = &
+                   no * exp(-(geo_alt-100.0)/h)
 
               NDensity(iLon,iLat,iAlt,iBlock) = &
                    sum(NDensityS(iLon,iLat,iAlt,1:nSpecies,iBlock))
+
+              LogNS(iLon,iLat,iAlt,1:nSpecies,iBlock) = &
+                   log(NDensityS(iLon,iLat,iAlt,1:nSpecies,iBlock))
+
 
               hwm_utime = utime
               hwm_alt = geo_alt
