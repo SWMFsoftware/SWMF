@@ -264,8 +264,8 @@ c MCF
          call RB_initmgridn(nrcells,nphicells,vrcells,mgridn,
      *                      mgridden,mgridvol,mgridoc)
       else
-         open(unit=32,file=outname//'_c.den',status='old',
-     *        form='unformatted')
+         open(unit=32,file='RB/restartIN/'//outname//'_c.den',
+     *        status='old',form='unformatted')
          read(32) mgridn
          read(32) mgridden
          close(32)
@@ -478,7 +478,7 @@ c    *   mgridden,mgridx,mgridy,mgridoc,filename)
       close(UnitTmp_)
 
       if (t.gt.tstart) then
-         open(unit=UnitTmp_,file='RB/plots/'//outname//'_c.den',
+         open(unit=UnitTmp_,file='RB/restartOUT/'//outname//'_c.den',
      &        form='unformatted')
          write(UnitTmp_) mgridn
          write(UnitTmp_) mgridden
