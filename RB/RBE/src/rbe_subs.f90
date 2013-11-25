@@ -201,8 +201,8 @@ subroutine rbe_run
      vswb0,xnswb0,itype,ibset,irm,irm0,iba)
      call E_change(f2,d4,ekev,elb,eub,e_l,ecbf,iba,iw1,iw2)
      if (iplsp.eq.1) then
-        call RB_setfluxtubevol(colat,ir,xmltd,ip+1,volume)
-        call RB_setxygrid(colat,ir,xmltd,ip+1,xo,yo,gridoc)
+        call RB_setfluxtubevol(colat,ir,xmltd,ip,volume)
+        call RB_setxygrid(colat,ir,xmltd,ip,xo,yo,gridoc)
      endif
      if (js.eq.2) call cepara(dt,ekev,Hdens,v,irm,iw1,iw2)
   endif
@@ -256,8 +256,8 @@ subroutine rbe_run
      vswb0,xnswb0,itype,ibset,irm,irm0,iba)
      call E_change(f2,d4,ekev,elb,eub,e_l,ecbf,iba,iw1,iw2)
      if (iplsp.eq.1) then
-        call RB_setfluxtubevol(colat,ir,xmltd,ip+1,volume)
-        call RB_setxygrid(colat,ir,xmltd,ip+1,xo,yo,gridoc)
+        call RB_setfluxtubevol(colat,ir,xmltd,ip,volume)
+        call RB_setxygrid(colat,ir,xmltd,ip,xo,yo,gridoc)
      endif
      if (js.eq.2) call cepara(dt,ekev,Hdens,v,irm,iw1,iw2)
   endif
@@ -301,10 +301,10 @@ subroutine rbe_run
   endif
   ! update the plasmasphere density
   if (iplsp.eq.1) then
-     call RB_setpot(colat,ir,xmltd,ip+1,potent)
+     call RB_setpot(colat,ir,xmltd,ip,potent)
      delt=2.*dt
      call RB_plasmasphere(delt,par)
-     call RB_getdensity(colat,ir,xmltd,ip+1,density)
+     call RB_getdensity(colat,ir,xmltd,ip,density)
   endif
 
   !  Print results
