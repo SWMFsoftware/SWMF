@@ -1447,6 +1447,9 @@ contains
        DissipationRateMax = &
             2.0*sqrt(max(EwavePlus,EwaveMinus)*FullB/Rho)/LperpTimesSqrtB
 
+       if(DoExtendTransitionRegion) DissipationRateMax = &
+            DissipationRateMax/extension_factor(TeSi_C(i,j,k))
+
        ! Reflection rate driven by Alfven speed gradient and
        ! vorticity along the field lines
        ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
@@ -1464,12 +1467,6 @@ contains
        else
           ReflectionRate = 0.0
        end if
-
-       ! For the minor wave equation, the reflection and cascade term
-       ! should be able to balance if needed. Hence reflection term also
-       ! requires transition region broadening
-       if(DoExtendTransitionRegion) &
-            ReflectionRate = ReflectionRate/extension_factor(TeSi_C(i,j,k))
 
        Source_VC(WaveFirst_,i,j,k) = Source_VC(WaveFirst_,i,j,k) &
             - ReflectionRate*sqrt(EwavePlus*EwaveMinus)
