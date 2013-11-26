@@ -191,10 +191,14 @@ contains
   !=====================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
+    ! For TypeVar = byflux: 
+    ! Integrate abs(By) along the current sheet at a fixed Y value
+    ! Divide result by two to be compatible with GEM papers.
+
     use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B
     use ModAdvance,  ONLY: By_, State_VGB
-    use ModGeometry, ONLY: z2, z1
-    use BATL_lib,    ONLY: CellFace_DB, CellSize_DB, Xyz_DGB
+    use BATL_lib,    ONLY: CellFace_DB, CellSize_DB, Xyz_DGB, &
+         CoordMin_D, CoordMax_D
 
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: TypeVar
@@ -202,27 +206,51 @@ contains
 
     character (len=*), parameter :: Name='user_get_log_var'
 
-    integer :: k1, k2, iBlock
-    real:: y1, y2, dy1, dy2, HalfInvWidth, Flux
+    integer :: j1, j2, iBlock
+    real:: ySheet, y1, y2, Dy, dy1, dy2, HalfInvWidth, Flux
     !-------------------------------------------------------------------
-    HalfInvWidth = 0.5/(z2-z1)
+    
+    if(UseDoubleCurrentSheet)then
+       ! Current sheet is at y=yMax/2
+       ySheet = 0.5*CoordMax_D(y_)
+    else
+       ! Current sheet is at y=0
+       ySheet = 0.0
+    end if
+    
+    ! Width in Z direction should be ignored (it is one for 2D)
+    ! The 0.5 is there to be compatible with GEM papers
+    ! that did the integral for half of the domain x > 0.
+    HalfInvWidth = 0.5/(CoordMax_D(z_) - CoordMin_D(z_))
+
+    ! initialize log variable
     VarValue=0.0
     select case(TypeVar)
     case('byflux')
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
+
+          ! Check if the current sheet is in this block
           y1 = Xyz_DGB(y_,1,0,1,iBlock)
           y2 = Xyz_DGB(y_,1,nJ+1,1,iBlock)
+          if( (y1 - ySheet)*(y2 - ySheet) > 0 ) CYCLE
 
-          if(y1*y2 > 0) CYCLE
-          k1 = -y1/CellSize_DB(y_,iBlock)
-          k2 = k1 + 1
-          dy1 = abs(Xyz_DGB(y_,1,k1,1,iBlock))/CellSize_DB(y_,iBlock)
-          dy2 = 1.0 - dy1
+          ! Get interpolation cells and distances
+          Dy = CellSize_DB(y_,iBlock)
+          j1 = (ySheet - y1)/Dy
+          j2 = j1 + 1
+          Dy1 = (ySheet - Xyz_DGB(y_,1,j1,1,iBlock))/Dy
+          Dy2 = 1.0 - dy1
+
+          ! Interpolate in Y, integrate in X and Z
           Flux = CellFace_DB(2,iBlock)*HalfInvWidth* &
-               ( dy2*sum(abs(State_VGB(By_,1:nI,k1,1:nK,iBlock))) &
-               + dy1*sum(abs(State_VGB(By_,1:nI,k2,1:nK,iBlock))))
-          if(k1==0 .or. k2==nJ+1) Flux = 0.5*Flux
+               ( Dy2*sum(abs(State_VGB(By_,1:nI,j1,1:nK,iBlock))) &
+               + Dy1*sum(abs(State_VGB(By_,1:nI,j2,1:nK,iBlock))))
+
+          ! The flux is added up twice if ySheet is between two blocks
+          if(j1==0 .or. j2==nJ+1) Flux = 0.5*Flux
+
+          ! Add up total By flux
           VarValue = VarValue + Flux
        end do
     case default
