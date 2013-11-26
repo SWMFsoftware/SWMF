@@ -524,10 +524,8 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#HALLRESISTIVITY")
         call read_var('UseHallResist',  UseHallResist)
-        if(UseHallResist)then
-           call read_var('HallFactorMax',  HallFactorMax)
-           call read_var('HallCmaxFactor', HallCmaxFactor)
-        end if
+        call read_var('HallFactorMax',  HallFactorMax)
+        call read_var('HallCmaxFactor', HallCmaxFactor)
 
      case("#HALLREGION")
         call read_var('NameHallRegion', NameHallRegion)
