@@ -13,12 +13,12 @@ subroutine read_MHDIMF_Indices_new(iOutputError, StartTime, EndTime)
   real(Real8_), intent(in) :: EndTime, StartTime
 
   integer :: ierror, iIMF, iSW, j, npts
-  logical :: done, done_inner
+  logical :: done, done_inner, IsFirstLine = .true.
 
   ! One line of input
   character (len=100) :: line
 
-  real (Real8_) :: TimeDelay, BufferTime = 180.0
+  real (Real8_) :: TimeDelay, BufferTime = 1800.0, FirstTime, DeltaT = -1.0e32
 
   integer, dimension(7) :: itime
   !------------------------------------------------------------------------
@@ -107,6 +107,16 @@ subroutine read_MHDIMF_Indices_new(iOutputError, StartTime, EndTime)
            else
 
               call time_int_to_real(iTime,IndexTimes_TV(iIMF,imf_bx_))
+
+              if (IsFirstLine) then
+                 FirstTime = IndexTimes_TV(iIMF,imf_bx_)
+                 IsFirstLine = .false.
+              else
+                 if (DeltaT == -1.0e32) then
+                    DeltaT = IndexTimes_TV(iIMF,imf_bx_) - FirstTime
+                    if (DeltaT > BufferTime) BufferTime = 10.0*DeltaT
+                 endif
+              endif
 
               IndexTimes_TV(iIMF,imf_bx_) = IndexTimes_TV(iIMF,imf_bx_) &
                    + TimeDelay
