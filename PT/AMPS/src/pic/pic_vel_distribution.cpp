@@ -8,7 +8,7 @@
 #include "pic.h"
 
 //get particle velocity distribution with Maxwellian
-void PIC::Distribution::MaxwellianVelocityDistribution(double *v,double *BulkFlowVelocity,double Temp,int spec) {
+void PIC::Distribution::MaxwellianVelocityDistribution(double *v,const double *BulkFlowVelocity,double Temp,int spec) {
   double beta;
   int idim;
 
@@ -20,7 +20,7 @@ void PIC::Distribution::MaxwellianVelocityDistribution(double *v,double *BulkFlo
 
 //====================================================
 //Get the particle velocity that is injected with Maxwellian distribution
-double PIC::Distribution::InjectMaxwellianDistribution(double *v,double *BulkFlowVelocity,double Temp,double *ExternalNormal,int spec,int WeightCorrectionMode) {
+double PIC::Distribution::InjectMaxwellianDistribution(double *v,const double *BulkFlowVelocity,double Temp,double *ExternalNormal,int spec,int WeightCorrectionMode) {
   int idim;
   double sc,beta,u,c,a,c1;
   register double dotProduct=0.0;
