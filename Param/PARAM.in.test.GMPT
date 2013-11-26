@@ -43,18 +43,24 @@ NONE
 
 #SAVEPLOT
 3                       nPlotFile
-x=0 FUL idl             StringPlot
+x=0 VAR idl             StringPlot
 1                      DnSavePlot
 -1.			DtSavePlot
 0.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
-y=0 FUL idl             StringPlot
+bx by bz proc
+g
+y=0 VAR idl             StringPlot
 1                      DnSavePlot
 -1.			DtSavePlot
 0.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
-z=0 FUL idl             StringPlot
+bx by bz proc
+g
+z=0 VAR idl             StringPlot
 1                      DnSavePlot
 -1.			DtSavePlot
 0.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+bx by bz proc
+g
 
 #OUTERBOUNDARY
 float
@@ -70,8 +76,8 @@ float
 0.0                Uy		uy
 0.0                Uz		uz
 -1.0              Bx		bx
-3.0               By		by
-4.0               Bz		bz
+-1.0               By		by
+-1.0               Bz		bz
 1.0               P		p
 
 #USERINPUTBEGIN ----------------
@@ -83,6 +89,24 @@ float
 200.0                 LambdaX
 -1.0                    LambdaY
 -1.0                    LambdaZ
+0.0                      Phase
+
+#WAVE
+6                        By		iVar
+500.0                 Width
+0.5                     Amplitude
+-1.0                 LambdaX
+200.0                    LambdaY
+-1.0                    LambdaZ
+0.0                      Phase
+
+#WAVE
+7                        Bz		iVar
+500.0                 Width
+0.5                     Amplitude
+-1.0                 LambdaX
+-1.0                    LambdaY
+200.0                    LambdaZ
 0.0                      Phase
 
 #USERINPUTEND   ----------------
