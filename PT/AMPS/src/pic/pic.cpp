@@ -1299,7 +1299,9 @@ void PIC::Init_BeforeParser() {
 #endif
 
   //init the particle collision procedure
+#if _PIC__PARTICLE_COLLISION_MODEL__MODE_ == _PIC_MODE_ON_
   PIC::MolecularCollisions::ParticleCollisionModel::Init();
+#endif
 
   //init the model of internal degrees of freedom
 #if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
