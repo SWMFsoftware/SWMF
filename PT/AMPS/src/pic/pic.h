@@ -1574,8 +1574,8 @@ namespace PIC {
     #define _PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__INDIVIDUAL_PARTICLE_WEIGHT_   1
 
 
-    void MaxwellianVelocityDistribution(double *v,double *BulkFlowVelocity,double Temp,int spec);
-    double InjectMaxwellianDistribution(double *v,double *BulkFlowVelocity,double Temp,double *ExternalNormal,int spec,int WeightCorrectionMode=_PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__NO_WEIGHT_CORRECTION_);
+    void MaxwellianVelocityDistribution(double *v,const double *BulkFlowVelocity,const double Temp,const int spec);
+    double InjectMaxwellianDistribution(double *v,const double *BulkFlowVelocity,const double Temp,double *ExternalNormal,int spec,int WeightCorrectionMode=_PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__NO_WEIGHT_CORRECTION_);
   }
 
 
@@ -2253,7 +2253,7 @@ namespace PIC {
     void InjectionBoundaryConditions();
 
     //calculate of the injection rate of particles distributed with Maxwellian distribution
-    double CalculateInjectionRate_MaxwellianDistribution(double NumberDesnity,double Temp,double *BulkVelocity,double *ExternalNormal,int spec);
+    double CalculateInjectionRate_MaxwellianDistribution(const double NumberDesnity,const double Temp,const double *BulkVelocity,double *ExternalNormal,const int spec);
 
 
     namespace InternalBoundary {
