@@ -84,6 +84,13 @@ contains
           call              read_var('DxPic',   DxyzPic_DI(x_,iRegion))
           if(nDim > 1) call read_var('DyPic',   DxyzPic_DI(y_,iRegion))
           if(nDim > 2) call read_var('DzPic',   DxyzPic_DI(z_,iRegion))
+
+          ! Add 1 ghost cell in the minimum and 2 in the maximum direction
+          ! so that the node based PIC code has an even number of cells
+          XyzMinPic_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion) &
+               - DxyzPic_DI(1:nDim,iRegion)
+          XyzMaxPic_DI(1:nDim,iRegion) = XyzMaxPic_DI(1:nDim,iRegion) &
+               + 2*DxyzPic_DI(1:nDim,iRegion)
        end do
     case default
        if(iProc==0) call stop_mpi(NameSub//': unknown command='//NameCommand)
