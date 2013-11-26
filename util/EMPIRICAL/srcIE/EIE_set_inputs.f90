@@ -94,6 +94,10 @@ subroutine EIE_set_inputs(StringInputLines)
            endif
         endif
 
+        if (index(StringLine,"#FIXTILT") > 0) then
+           call read_in_logical(IsFixedTilt)
+        endif
+
         if (index(StringLine,"#END") > 0) then
            IsDone = .true.
         endif

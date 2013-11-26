@@ -151,6 +151,8 @@ module ModInputs
   real :: yDipoleCenter = 0.0
   real :: zDipoleCenter = 0.0
 
+  logical :: IsFixedTilt = .false.
+
   !\
   ! These are things for the ion precipitation for the April 2002 storm:
   !/

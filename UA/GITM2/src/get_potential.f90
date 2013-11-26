@@ -42,6 +42,7 @@ subroutine init_get_potential
      if (UseNewellAurora .or. UseOvationSME) UseHPI = .false.
 
      call get_IMF_Bz(CurrentTime+TimeDelayHighLat, bz, iError)
+
      call IO_SetIMFBz(bz)
      if (iError /= 0) then
 !        write(*,*) "Can not find IMF Bz."
@@ -91,7 +92,15 @@ subroutine init_get_potential
   Lines(8) = "0"
   Lines(9) = "0"
   Lines(10) = ""
-  Lines(11) = "#END"
+
+  if (IsFixedTilt) then
+     Lines(11) = "#FIXTILT"
+     Lines(12) = "T"
+     Lines(13) = ""
+     Lines(14) = "#END"
+  else
+     Lines(11) = "#END"
+  endif
 
   call EIE_set_inputs(Lines)
 

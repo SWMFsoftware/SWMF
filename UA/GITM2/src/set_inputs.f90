@@ -480,7 +480,6 @@ subroutine set_inputs
               iError = 0
               call IO_set_inputs(cTempLines)
 
-!              write(*,*) "going in :",CurrentTime, EndTime
               call read_MHDIMF_Indices_new(iError, CurrentTime, EndTime)
               if (iError /= 0) then 
                  write(*,*) "read indices was NOT successful (imf file)"
@@ -811,6 +810,18 @@ subroutine set_inputs
 !              enddo
 !              IsDone = .true.
 !           endif
+
+        case ("#FIXTILT")
+
+           call read_in_logical(IsFixedTilt, iError)
+
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #FIXTILT:'
+              write(*,*) ''
+              write(*,*) '#FIXTILT'
+              write(*,*) 'IsFixedTilt   (logical)'
+              IsDone = .true.
+           endif
 
         case ("#DIPOLE")
 

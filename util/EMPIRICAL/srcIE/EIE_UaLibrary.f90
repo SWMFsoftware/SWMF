@@ -207,6 +207,8 @@ subroutine UA_GetPotential(PotentialOut, iError)
      if (iError == 0) then
         PotentialOut = ValueOut
      else
+        write(*,*) 'error in UA_GetPotential (nongrid): ',cErrorCodes(iError)
+        stop
         PotentialOut = -1.0e32
      endif
 
@@ -343,7 +345,11 @@ subroutine UA_GetNonGridBasedPotential(PotentialOut, iError)
         if (index(EIE_NameOfEFieldModel,'weimer05') > 0) then
            if (abs(lat) >= 45.0) then 
               hr = float(iHour) + float(iMinute)/60.0
-              tilt = get_tilt (iYear,iMonth,iDay,hr)
+              if (IsFixedTilt) then
+                 tilt = 0.0
+              else
+                 tilt = iHemisphere * get_tilt (iYear,iMonth,iDay,hr)
+              endif
               call setmodel(IOr_NeedIMFBy,IOr_NeedIMFBz,tilt, &
                    IOr_NeedSWV,IOr_NeedSWN,'epot')
               call epotval(lat,mlt,0.0,Potential)

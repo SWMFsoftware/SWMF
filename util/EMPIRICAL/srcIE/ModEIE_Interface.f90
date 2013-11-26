@@ -61,4 +61,6 @@ module ModEIE_Interface
   logical :: UAl_UseGridBasedEIE
   logical :: UseGridBasedEIE
 
+  logical :: IsFixedTilt = .false.
+
 end module ModEIE_Interface

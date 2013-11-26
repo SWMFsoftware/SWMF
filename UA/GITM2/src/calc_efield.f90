@@ -28,8 +28,11 @@ subroutine calc_efield(iBlock)
         do j=1,nLons
 
            EField(j,i,k,iEast_) = &
-               -(Potential(j+1,i,k,iBlock)-Potential(j-1,i,k,iBlock)) &
-                *0.5*InvdLonDist_GB(j,i,k,iBlock)
+               -(Potential(j+1,i,k,iBlock)-Potential(j-1,i,k,iBlock))/ &
+               ((Longitude(j+1,iBlock) - Longitude(j-1,iBlock)) * &
+               0.5*(RadialDistance_GB(j+1, i, k, iBlock) &
+               +    RadialDistance_GB(j-1, i, k, iBlock)) &
+               *max(abs(CosLatitude(j,iBlock)),0.17)) ! 0.17 is 80 degrees.
 
            EField(j,i,k,iNorth_)= &
                 -(Potential(j,i+1,k,iBlock)-Potential(j,i-1,k,iBlock)) &
