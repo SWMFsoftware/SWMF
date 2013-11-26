@@ -80,8 +80,7 @@ contains
     if (UseOrder2 .or. nOrderProlong > 1) then
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn)
-       if(.not.DoResChangeOnly) &
-            call fix_boundary_ghost_cells(DoRestrictFace)
+       if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     elseif (optimize_message_pass=='all') then
        ! If ShockSlope is not zero then even the first order scheme needs 
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
@@ -91,8 +90,7 @@ contains
             nWidthIn=nWidth, nProlongOrderIn=1, &
             nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
             DoResChangeOnlyIn=DoResChangeOnlyIn)
-       if(.not.DoResChangeOnly) &
-            call fix_boundary_ghost_cells(DoRestrictFace)
+       if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     else
        ! Pass corners if necessary
        DoSendCorner = nOrder > 1 .and. UseAccurateResChange
@@ -106,8 +104,7 @@ contains
             DoSendCornerIn=DoSendCorner, &
             DoRestrictFaceIn=DoRestrictFace,&
             DoResChangeOnlyIn=DoResChangeOnlyIn)
-       if(.not.DoResChangeOnly) &
-            call fix_boundary_ghost_cells(DoRestrictFace)
+       if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     end if
 
     do iBlock = 1, nBlock

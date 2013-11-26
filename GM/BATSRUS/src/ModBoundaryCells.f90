@@ -37,10 +37,12 @@ end module ModBoundaryCells
 
 !=============================================================================
 
-subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
+subroutine fix_boundary_ghost_cells
+
+  ! Recalculate true_cell information in ghost cells if grid changed. 
 
   use ModBoundaryCells, ONLY: iBoundary_GB, DomainOp, domain_
-  use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, nOrder,&
+  use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
        body2_, BlkTest, iTest, jTest, kTest
   use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB
   !use ModProcMH, ONLY: iProc
@@ -48,25 +50,17 @@ subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
 
   implicit none
 
-  logical, intent(in):: UseMonotoneRestrict
-
   integer:: iBlock, iBoundary
-  integer:: iGridHere=-1, iDecompositionHere=-1, nOrderHere=-1
+  integer:: iGridHere = -1, iDecompositionHere = -1
 
   logical:: DoTest, DoTestMe
   character(len=*), parameter:: NameSub = 'fix_boundary_ghost_cells'
   !----------------------------------------------------------------------------
-  call set_oktest(NameSub, DoTest, DoTestMe)
-
-  if(DoTestMe) write(*,*) NameSub,' UseMonotone=',UseMonotoneRestrict
-
-  ! Recalculate ghost cell info if grid changed. If BATL is not used,
-  ! also has to redo it if the order of the scheme changed.
-  ! Depending on what the boundary cell info in the ghost cells is used for,
-  ! this condition may have to be revised !!!
   if(iGridHere==iNewGrid .and. iDecompositionHere==iNewDecomposition) RETURN
 
-  iGridHere=iNewGrid; iDecompositionHere=iNewDecomposition; nOrderHere=nOrder
+  iGridHere = iNewGrid; iDecompositionHere = iNewDecomposition
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   if(DoTestMe) write(*,*)NameSub,' starting with true_cell(i-2:i+2)=', &
        true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
