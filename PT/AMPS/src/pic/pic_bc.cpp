@@ -161,7 +161,7 @@ void PIC::BC::InjectionBoundaryConditions() {
 
 //====================================================
 //calculate the rate of injection of particles with the Maxwellian distribution
-double PIC::BC::CalculateInjectionRate_MaxwellianDistribution(double NumberDesnity,double Temp,double *BulkVelocity,double *ExternalNormal,int spec) {
+double PIC::BC::CalculateInjectionRate_MaxwellianDistribution(double NumberDesnity,double Temp,const double *BulkVelocity,double *ExternalNormal,int spec) {
   double res=0.0,vNorm,beta,vv,sc,cc,aa;
   int idim;
 
