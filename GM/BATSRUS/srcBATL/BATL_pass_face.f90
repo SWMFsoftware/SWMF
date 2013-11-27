@@ -721,11 +721,14 @@ contains
     integer:: iBlock, iNode, iLevel, iStage, MinLevelSend
     !-------------------------------------------------------------------------
     ! Set the levels MinLevelSend .. nLevel which need to send fluxes
+    ! If iStageIn is a multiple of 2^p then the finest p levels should send fluxes. 
     if(present(iStageIn))then
        MinLevelSend = nLevel + 1
        iStage = iStageIn
        do
+          ! Check if iStage is still an even number
           if(modulo(iStage,2) == 1)EXIT
+          ! Remove 2 factor from iStage and add another level for sending flux
           iStage = iStage/2
           MinLevelSend = MinLevelSend - 1
        end do
