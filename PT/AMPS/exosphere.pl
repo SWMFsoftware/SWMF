@@ -127,7 +127,7 @@ while ($line=<InputFile>) {
       }
       elsif ($InputLine eq "OFF") {
         $ReactionFlag=0;
-        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS_MODE_\n#define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_\n\n","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS_MODE_\n#define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_OFF_\n\n","main/UserDefinition.PIC.h");
       }
       elsif ($InputLine eq "REACTIONPROCESSOR") {
         ($InputLine,$InputComment)=split(' ',$InputComment,2);
