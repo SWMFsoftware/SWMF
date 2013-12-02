@@ -5,6 +5,20 @@
 
 
 #component=O
-  mass=3.82E-2
+  mass=16*_AMU_
+  
+#component=O2
+  mass=32*_AMU_
+  
+#component=O2PLUS
+  mass=32*_AMU_     
+  
+#component=OPLUS_HIGH
+  mass=16*_AMU_   
+  
+#component=OPLUS_THERMAL
+  mass=16*_AMU_  
+  
+
 
 #endspecies
