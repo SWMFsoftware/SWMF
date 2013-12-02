@@ -29,6 +29,7 @@ module ModUser
   real:: GaussYInv = 2.0   ! Y size of Gaussian perturbation in Az
   real:: Kx = cTwoPi/25.6  ! X wave number of perturbation
   real:: Ky = cTwoPi/12.8  ! Y wave number of perturbation
+  real:: ySheet = 0.0      ! Position of the current sheet
 
   logical:: UseDoubleCurrentSheet = .false.
   logical:: UseUniformPressure    = .false.
@@ -41,7 +42,9 @@ contains
     use ModReadParam
     use ModMain,      ONLY: UseUserUpdateStates, UseUserIcs, UseUserLogFiles
 
-    real:: WaveLengthX, WaveLengthY, GaussX, GaussY
+    real:: WaveLengthX       ! X wavelength of perturbation
+    real:: WaveLengthY       ! Y wavelength of perturbation
+    real:: GaussX, GaussY    ! Width of Gaussian perturbation
 
     character(len=100) :: NameCommand
     !-------------------------------------------------------------------------
@@ -102,11 +105,16 @@ contains
                'read_inputs: unrecognized command: '//NameCommand)
        end select
     end do
+
+    ! The two current sheets are at +ySheet and -ySheet
+    ySheet = 0.0
+    if(UseDoubleCurrentSheet) ySheet = 0.25*WaveLengthY
+
   end subroutine user_read_inputs
   !============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModGeometry, ONLY: Xyz_DGB, y1, y2
+    use ModGeometry, ONLY: Xyz_DGB
 
     use ModPhysics,  ONLY: ShockLeftState_V
 
@@ -123,13 +131,13 @@ contains
     !--------------------------------------------------------------------------
     if (UseDoubleCurrentSheet) then
        ! Use double current sheets in a Harris equilibrium
-       State_VGB(Bx_,:,:,:,iBlock) = &
-            +B0*tanh((Xyz_DGB(y_,:,:,:,iBlock) + 0.25*(y2-y1))/Lambda0) &
-            -B0*tanh((Xyz_DGB(y_,:,:,:,iBlock) - 0.25*(y2-y1))/Lambda0) &
-            -B0
+       State_VGB(Bx_,:,:,:,iBlock) = B0* &
+            ( tanh((Xyz_DGB(y_,:,:,:,iBlock) + ySheet)/Lambda0)    &
+            - tanh((Xyz_DGB(y_,:,:,:,iBlock) - ySheet)/Lambda0) - 1)
     else
        ! Single Harris current sheet
-       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh((Xyz_DGB(y_,:,:,:,iBlock))/Lambda0)
+       State_VGB(Bx_,:,:,:,iBlock) = B0* &
+            tanh((Xyz_DGB(y_,:,:,:,iBlock))/Lambda0)
     end if
 
     if(UseUniformPressure)then
@@ -157,9 +165,8 @@ contains
             /ShockLeftState_V(p_))
     end if
 
-    
     ! Get density from the uniform temperature assumption
-    State_VGB(rho_,:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)/Tp
+    State_VGB(Rho_,:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)/Tp
     
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        
@@ -168,24 +175,25 @@ contains
        
        if (UseDoubleCurrentSheet) then
           ! apply perturbation to reconnection sites only by varying By
-          ! set initial perturbation Az = Apert*B0*cos(Kx*x)
+          ! Az = Apert*B0*cos(Kx*x)
           ! By = -dAz/dx
-          State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) + Apert*B0*Kx*sin(Kx*x)
-          
+          State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) &
+               + Apert*B0*Kx*sin(Kx*x)          
        else
-          ! set intial perturbation Az = exp(-x^2/GaussX^2-y^2/Gauss^2)*cos(Kx*x)*cos(Ky*y) 
+          ! Az = exp(-x^2/GaussX^2-y^2/Gauss^2)*cos(Kx*x)*cos(Ky*y) 
           a = Apert*B0*exp(-x**2*GaussXInv**2 - y**2*GaussYInv**2)
           !  Bx = dAz/dy
           State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) + &
-               a*(-2*y*GaussYInv**2*cos(Kx*x)*cos(Ky*y) - Ky*cos(Kx*x)*sin(Ky*y))
+               a*(-2*y*GaussYInv**2*cos(Kx*x)*cos(Ky*y) &
+               - Ky*cos(Kx*x)*sin(Ky*y))
           ! By = -dAz/dx
           State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) + &
-               a*(2*x*GaussXInv**2*cos(Kx*x)*cos(Ky*y) + Kx*sin(Kx*x)*cos(Ky*y))
+               a*(2*x*GaussXInv**2*cos(Kx*x)*cos(Ky*y) &
+               + Kx*sin(Kx*x)*cos(Ky*y))
        end if
        
     end do; end do; end do
-    
-    
+
   end subroutine user_set_ics
 
   !=====================================================================
@@ -207,18 +215,9 @@ contains
     character (len=*), parameter :: Name='user_get_log_var'
 
     integer :: j1, j2, iBlock
-    real:: ySheet, y1, y2, Dy, dy1, dy2, HalfInvWidth, Flux
+    real:: y1, y2, Dy, dy1, dy2, HalfInvWidth, Flux
     !-------------------------------------------------------------------
-    
-    if(UseDoubleCurrentSheet)then
-       ! Current sheet is at y=yMax/2
-       ySheet = 0.5*CoordMax_D(y_)
-    else
-       ! Current sheet is at y=0
-       ySheet = 0.0
-    end if
-    
-    ! Width in Z direction should be ignored (it is one for 2D)
+        ! Width in Z direction should be ignored (it is one for 2D)
     ! The 0.5 is there to be compatible with GEM papers
     ! that did the integral for half of the domain x > 0.
     HalfInvWidth = 0.5/(CoordMax_D(z_) - CoordMin_D(z_))
