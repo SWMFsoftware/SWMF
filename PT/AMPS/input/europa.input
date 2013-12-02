@@ -62,6 +62,9 @@ CouplerMode=ices !!off, ices, swmf
 #block ../europa.input.pl !process the settings of the Europa's model
   SphereInsideDomain=on !on, off -> place Europa inside the computational domain
   
+  !the location of the SPICE kernels 
+  SpiceKernelPath=/Users/vtenishe/SPICE/Kernels
+  
   !injection of the high energy O+ ions
   EPD_Flux = 1.243919681E6*2*Pi*1e4 !Total Flux [(m^2*s)^-1] 
   
@@ -72,6 +75,8 @@ CouplerMode=ices !!off, ices, swmf
   
   !Interpolation of the BATSRUS output with ICES
   CreateNewCoordinateListForICES=off !on,off
+  IcesLocationPath=/left/ices/ICES
+  IcesModelCase=Europa09
   
   
   !produce oxigen by magnetospheric ion sputtering

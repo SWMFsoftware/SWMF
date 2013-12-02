@@ -23,9 +23,9 @@ use ampsConfigLib;
 #print "Process the exospehre model input:\n";
 
 
-my $InputFileName=$ARGV[0];  # moon.input.Assembled.Block";
+my $InputFileName=$ARGV[0];  #"europa.input.Assembled.Block"; #$ARGV[0];  # moon.input.Assembled.Block";
 my $SpeciesFileName=$InputFileName; $SpeciesFileName =~ s/\.Block$/.Species/;
-my $WorkingSourceDirectory=$ARGV[1];   # srcTemp
+my $WorkingSourceDirectory=$ARGV[1];   #"srcTemp"; #$ARGV[1];   # srcTemp
 
 $ampsConfigLib::WorkingSourceDirectory=$WorkingSourceDirectory;
 
@@ -189,10 +189,42 @@ while ($line=<InputFile>) {
         die "The option '$InputLine' is not recognized";
       }
     }
-    
-    
-     
   } 
+  
+  elsif ($InputLine eq "SPICEKERNELPATH") {
+    ($InputLine,$InputComment)=split('!',$line,2);
+    chomp($InputLine);
+    $InputLine=~s/=/ /g;
+    
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+    chomp($InputComment);
+    
+    $InputComment="\"".$InputComment."\"";
+    ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]",$InputComment,"main/Europa.h");  
+  }
+ 
+  elsif ($InputLine eq "ICESLOCATIONPATH") {
+    ($InputLine,$InputComment)=split('!',$line,2);
+    chomp($InputLine);
+    $InputLine=~s/=/ /g;
+    
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+    chomp($InputComment);
+    
+    $InputComment="\"".$InputComment."\"";
+    ampsConfigLib::ChangeValueOfVariable("const char IcesLocationPath\\[\\]",$InputComment,"main/main_lib.cpp");  
+  }
+  elsif ($InputLine eq "ICESMODELCASE") {
+    ($InputLine,$InputComment)=split('!',$line,2);
+    chomp($InputLine);
+    $InputLine=~s/=/ /g;
+    
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+    chomp($InputComment);
+    
+    $InputComment="\"".$InputComment."\"";
+    ampsConfigLib::ChangeValueOfVariable("const char IcesModelCase\\[\\]",$InputComment,"main/main_lib.cpp");  
+  }
   
   
   elsif ($InputLine eq "#ENDBLOCK") {
