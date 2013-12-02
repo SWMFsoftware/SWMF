@@ -1113,9 +1113,13 @@ PIC::InitMPI();
 	//init ICES
 
 #if _ICES_CREATE_COORDINATE_LIST_ == _PIC_MODE_ON_
+  const char IcesLocationPath[]="";  //"/left/ices/ICES"
+  const char IcesModelCase[]=""; //"Europa09"
+
+
 	PIC::CPLR::ICES::createCellCenterCoordinateList();
-	PIC::CPLR::ICES::SetLocationICES("/left/ices/ICES");
-	PIC::CPLR::ICES::retriveSWMFdata("Europa09");  ////("EUROPA_RESTART_n070001");
+	PIC::CPLR::ICES::SetLocationICES(IcesLocationPath);
+	PIC::CPLR::ICES::retriveSWMFdata(IcesModelCase);  ////("EUROPA_RESTART_n070001");
 #endif
 
 
