@@ -225,7 +225,15 @@ while ($line=<InputFile>) {
     $InputComment="\"".$InputComment."\"";
     ampsConfigLib::ChangeValueOfVariable("const char IcesModelCase\\[\\]",$InputComment,"main/main_lib.cpp");  
   }
-  
+
+  elsif ($InputLine eq "INITIALSAMPLELENGTH") { 
+    ($InputLine,$InputComment)=split('!',$line,2);
+    chomp($InputLine);
+    $InputLine=~s/[=();]/ /g;
+    
+    ($s0,$s1,$s2)=split(' ',$InputLine,3);
+    ampsConfigLib::ChangeValueOfVariable("const int InitialSampleLength",$s1,"main/main_lib.cpp");   
+  }  
   
   elsif ($InputLine eq "#ENDBLOCK") {
     last;

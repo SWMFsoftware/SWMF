@@ -78,6 +78,8 @@ CouplerMode=ices !!off, ices, swmf
   IcesLocationPath=/left/ices/ICES
   IcesModelCase=Europa09
   
+  !Initial Sample Length
+  InitialSampleLength=10
   
   !produce oxigen by magnetospheric ion sputtering
   IonSputteringMode=on !on, off 
