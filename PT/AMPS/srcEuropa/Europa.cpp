@@ -1130,6 +1130,8 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
       v_LOCAL_GALL_EPHIOD_EUROPA[2]=xform[5][0]*x_LOCAL_IAU_EUROPA[0]+xform[5][1]*x_LOCAL_IAU_EUROPA[1]+xform[5][2]*x_LOCAL_IAU_EUROPA[2]+
           xform[5][3]*vSputtered_IAU[0]+xform[5][4]*vSputtered_IAU[1]+xform[5][5]*vSputtered_IAU[2];
 
+      vi=sqrt(vSputtered_IAU[0]*vSputtered_IAU[0]+vSputtered_IAU[1]*vSputtered_IAU[1]+vSputtered_IAU[2]*vSputtered_IAU[2]);
+
 
       //generate new particle and inject it into the system
       newParticle=PIC::ParticleBuffer::GetNewParticle();
@@ -1139,6 +1141,17 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
       PIC::ParticleBuffer::SetI(_O2_SPEC_,newParticle);
       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(WeightCorrectionFactor,newParticle);
 
+      //sample the particle injection rate
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+      ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_O2_SPEC_]*WeightCorrectionFactor;
+#else
+      exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+
+      Sphere->SampleSpeciesSurfaceInjectionFlux[_O2_SPEC_][el]+=ParticleWeight;
+      Sphere->SampleInjectedFluxBulkSpeed[_O2_SPEC_][el]+=vi*ParticleWeight;
+
+      //inject the particle into the system
      _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_]*rnd(),(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)NodeDataPonter);
 
     }
