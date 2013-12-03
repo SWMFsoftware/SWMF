@@ -43,6 +43,9 @@ my $ProjectSpecificSourceDirectory="main";
 #compilation mode: stand along of a part of SWMF
 my $CompilationMode="AMPS";
 
+#the number of the compiling threads. The variable is UNDEFINED by default
+my $nCompilingThreads;
+
 #markers
 my $MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION;#the list of macro used to denote the species used in the simulation (pic.h)
 
@@ -63,6 +66,12 @@ for (my $i=0;$i<$#ARGV + 1;$i++) {
   }
   elsif ($ARGV[$i] eq "-no-compile") {
     $CompileProcessedCodeFlag=0;
+  }
+  elsif ($ARGV[$i] eq "-j") {
+    $nCompilingThreads=$ARGV[++$i];
+  }
+  else {
+    die "Unknown argument \"$ARGV[$i]\"\n";
   }
   
 }
@@ -220,7 +229,13 @@ close (MAKEFILEFILE);
 #compile the code 
 if ($CompileProcessedCodeFlag==1) {
   print "Compile the code\n";
-  system("make");
+  
+  if (defined $nCompilingThreads) {
+    system("make -j $nCompilingThreads"); 
+  }
+  else {
+    system("make");
+  }
 }
 
 
