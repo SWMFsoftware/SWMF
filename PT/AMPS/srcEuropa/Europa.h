@@ -162,6 +162,17 @@ namespace Europa {
       void flushCollectingSamplingBuffer(cInternalSphericalData* Sphere);
     }
 
+    namespace O2InjectionSpeed {
+      const int nSampleIntervals=1000;
+      const double vMax=10.0E3;
+      const double dv=vMax/nSampleIntervals;
+
+      extern double SamplingBuffer[nSampleIntervals];
+
+      void flush();
+      void OutputSampledModelData(int DataOutputFileNumber);
+    }
+
     //clean the model sampling buffers after output of the data file
     inline void FlushSamplingDataBuffers() {
       if (Planet!=NULL) {
@@ -258,7 +269,7 @@ namespace Europa {
 
   //Surface temeprature
   inline double GetSurfaceTemeprature(double *x_IAU) {
-    double x_GALL_ESOM[3];
+/*    double x_GALL_ESOM[3];
     int i,j;
 
     //transform coordinates into x_GALL_ESOM
@@ -268,19 +279,22 @@ namespace Europa {
       for (j=0;j<3;j++) {
         x_GALL_ESOM[i]+=Europa::OrbitalMotion::IAU_to_GALL_ESOM_TransformationMatrix[i][j]*x_IAU[j];
       }
-    }
+    }*/
 
 
 
     //calculate the surface itself
-    double subSolarAngle,r,cosLat,Temp;
+    double cosSubSolarAngle,r,cosLat,Temp;
 
     r=sqrt(x_IAU[0]*x_IAU[0]+x_IAU[1]*x_IAU[1]+x_IAU[2]*x_IAU[2]);
-    subSolarAngle=acos(x_IAU[0]/r);
+
+    cosSubSolarAngle=(Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0]*x_IAU[0]+
+        Europa::OrbitalMotion::SunDirection_IAU_EUROPA[1]*x_IAU[1]+
+        Europa::OrbitalMotion::SunDirection_IAU_EUROPA[2]*x_IAU[2])/r;
+
     cosLat=sqrt(x_IAU[0]*x_IAU[0]+x_IAU[1]*x_IAU[1])/r;
 
-    Temp=40.0+50.0*pow(cosLat,0.25);
-    if (subSolarAngle<Pi/2.0) Temp+=40.0*cos(subSolarAngle);
+    Temp=40.0+50.0*pow(cosLat,0.25)+40.0*cosSubSolarAngle;
 
     return Temp;
   }

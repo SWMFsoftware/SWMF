@@ -41,6 +41,9 @@ double **Europa::Sampling::PlanetNightSideReturnFlux=NULL;
 long int Europa::Sampling::ParticleData_SourceProcessID_Offset=-1;
 long int Europa::Sampling::ParticleData_OriginSurfaceElementNumber_Offset=-1;
 
+//sample velocity of the sputtered O2;
+double Europa::Sampling::O2InjectionSpeed::SamplingBuffer[Europa::Sampling::O2InjectionSpeed::nSampleIntervals];
+
 //the total number of source processes
 int Europa::nTotalSourceProcesses=0;
 
@@ -444,6 +447,9 @@ void Europa::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
   double SourceRate=0.0,TotalSourceRate=0.0;
   int thread;
   double buffer[PIC::nTotalThreads];
+
+  //output the speed distribution of the sputtered O2
+  O2InjectionSpeed::OutputSampledModelData(DataOutputFileNumber);
 
   //print the simulation time
   const SpiceInt lenout = 35;
@@ -973,17 +979,9 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   cInternalSphericalData *Sphere;
 //  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode;
   int idim;
-  double vi,vt,vf,v_LOCAL_GALL_EPHIOD_EUROPA[3],x_LOCAL_GALL_EPHIOD_EUROPA[3],v_LOCAL_IAU_EUROPA[3],x_LOCAL_IAU_EUROPA[3],cosSubsolarAngle,SurfaceTemp,beta;
+  double vi,vt,vf,v_LOCAL_GALL_EPHIOD_EUROPA[3],x_LOCAL_GALL_EPHIOD_EUROPA[3],v_LOCAL_IAU_EUROPA[3],x_LOCAL_IAU_EUROPA[3],SurfaceTemp,beta;
   SpiceDouble xform[6][6];
 
-#if  _ION_SPUTTERING_MODE_  == _PIC_MODE_ON_
-  //do nothing
-#elif _ION_SPUTTERING_MODE_  == _PIC_MODE_OFF_
-  PIC::ParticleBuffer::DeleteParticle(ptr);
-  return _PARTICLE_DELETED_ON_THE_FACE_;
-#else
-  exit(__LINE__,__FILE__,"the option is not defined");
-#endif
 
   Sphere=(cInternalSphericalData*)SphereDataPointer;
 //  startNode=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)NodeDataPonter;
@@ -999,7 +997,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   x_LOCAL_IAU_EUROPA[2]=xform[2][0]*x_LOCAL_GALL_EPHIOD_EUROPA[0]+xform[2][1]*x_LOCAL_GALL_EPHIOD_EUROPA[1]+xform[2][2]*x_LOCAL_GALL_EPHIOD_EUROPA[2];
 
   //get local surface temperature
-  cosSubsolarAngle=Europa::OrbitalMotion::GetCosineSubsolarAngle(x_LOCAL_GALL_EPHIOD_EUROPA);
+//  cosSubsolarAngle=Europa::OrbitalMotion::GetCosineSubsolarAngle(x_LOCAL_GALL_EPHIOD_EUROPA);
   SurfaceTemp=Europa::GetSurfaceTemeprature(x_LOCAL_IAU_EUROPA);
 
 
@@ -1069,7 +1067,15 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
       exit(__LINE__,__FILE__,"Error: the specie is not recognized");
     }
 
-    Yield*=ParticleWeight/PIC::ParticleWeightTimeStep::GlobalParticleWeight[_O2_SPEC_];
+
+#if  _ION_SPUTTERING_MODE_  == _PIC_MODE_ON_
+    Yield*=ParticleWeight/PIC::ParticleWeightTimeStep::GlobalParticleWeight[_O2_SPEC_]*
+        PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_]/PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#elif _ION_SPUTTERING_MODE_  == _PIC_MODE_OFF_
+    Yield=-1.0;
+#else
+    exit(__LINE__,__FILE__,"the option is not defined");
+#endif
 
     //reconstruct the local coordinate system at the point where the ion intersects the surface of Europa
     e0[0]=x_LOCAL_IAU_EUROPA[0],e0[1]=x_LOCAL_IAU_EUROPA[1],e0[2]=x_LOCAL_IAU_EUROPA[2];
@@ -1095,7 +1101,9 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
       if (WeightCorrectionFactor>Yield) WeightCorrectionFactor=Yield;
       Yield-=WeightCorrectionFactor;
 
-      WeightCorrectionFactor*=PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_]/PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+      //sample the injection speed of O2
+      int vInterval=(int)(SputteringSpeed/Europa::Sampling::O2InjectionSpeed::dv);
+      if (vInterval<Europa::Sampling::O2InjectionSpeed::nSampleIntervals) Europa::Sampling::O2InjectionSpeed::SamplingBuffer[vInterval]+=WeightCorrectionFactor;
 
       //distrubute the speed
       //p=cos^2(theta)
@@ -1585,4 +1593,65 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 
   if (cnt!=resLength) exit(__LINE__,__FILE__,"Error: the length of the vector is not coinsistent with the number of integrated variables");
 }
+
+void Europa::Sampling::O2InjectionSpeed::flush() {
+  for (int i=0;i<nSampleIntervals;i++) SamplingBuffer[i]=0.0;
+}
+
+void Europa::Sampling::O2InjectionSpeed::OutputSampledModelData(int DataOutputFileNumber) {
+  double norm;
+  int i;
+
+  //collect the distribution function from all processors
+  double recvBuffer[nSampleIntervals];
+
+  MPI_Reduce(SamplingBuffer,recvBuffer,nSampleIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+  flush();
+
+  if (PIC::ThisThread==0) {
+    //normalize the dsitribution function
+    for (norm=0.0,i=0;i<nSampleIntervals;i++) norm+=recvBuffer[i];
+
+    if (norm>0.0) {
+      for (i=0;i<nSampleIntervals;i++) recvBuffer[i]/=norm;
+    }
+
+    //output the distribution funcion input a file
+    char fname[_MAX_STRING_LENGTH_PIC_];
+    FILE *fout;
+
+    sprintf(fname,"%s/pic.O2.InjectedSpeedDistribution.out=%i.dat",PIC::OutputDataFileDirectory,DataOutputFileNumber);
+    fout=fopen(fname,"w");
+
+    fprintf(fout,"VARIABLES=\"v\", \"f(v)\"\n");
+    for (i=0;i<nSampleIntervals;i++) fprintf(fout,"%e %e\n",(0.5+i)*dv,recvBuffer[i]);
+
+    fclose(fout);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
