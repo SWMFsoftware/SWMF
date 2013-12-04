@@ -235,16 +235,18 @@ namespace PIC {
 
     //mass of particles
     static const double MolMass[]={0.0};
+    static const double ElectricChargeTable[]={0.0};
 
 //    extern double *MolMass;
 //    void SetMass(double,int);
     inline double GetMass(int spec) {return MolMass[spec];}
+    inline double GetElectricCharge(int spec) {return ElectricChargeTable[spec];}
 
 
     //get and set the value of the electric charge for a species
-    extern double *ElectricCharge;
+/*    extern double *ElectricCharge;
     int GetElectricCharge(int);
-    void SetElectricCharge(double,int);
+    void SetElectricCharge(double,int);*/
 
     //get and set the species numbers and chemical symbols
     static const char ChemTable[][_MAX_STRING_LENGTH_PIC_]={"nothin is defined"};
