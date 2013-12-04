@@ -32,7 +32,7 @@ void PIC::TimeStep() {
    double ParticleCollisionTime=0.0;
 
    //Collect and exchange the run's statictic information
-   static const int nRunStatisticExchangeIterationsMin=5,nRunStatisticExchangeIterationsMax=500,nRunStatisticExchangeTime=120;
+   static const int nRunStatisticExchangeIterationsMin=50,nRunStatisticExchangeIterationsMax=500,nRunStatisticExchangeTime=120;
    static long int nTotalIterations=0,nInteractionsAfterRunStatisticExchange=0;
    static int nExchangeStatisticsIterationNumberSteps=10;
 
@@ -246,7 +246,7 @@ void PIC::TimeStep() {
       else nExchangeStatisticsIterationNumberSteps=nRunStatisticExchangeIterationsMin;
 
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-      nExchangeStatisticsIterationNumberSteps=nRunStatisticExchangeIterationsMax;
+      nExchangeStatisticsIterationNumberSteps=nRunStatisticExchangeIterationsMin;
 #endif
 
       cStatExchangeControlParameters StatExchangeControlParameters;
@@ -255,6 +255,8 @@ void PIC::TimeStep() {
 
       MPI_Bcast(&StatExchangeControlParameters,sizeof(cStatExchangeControlParameters),MPI_CHAR,0,MPI_GLOBAL_COMMUNICATOR);
 
+      //flush the diagnostric stream
+      fflush(PIC::DiagnospticMessageStream);
 
       delete [] ExchangeBuffer;
     }
