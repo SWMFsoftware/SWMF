@@ -2,22 +2,28 @@
 #species
 #component=Na
   mass=3.82E-26
+  charge=0
 
 
 #component=O
   mass=16*_AMU_
+  charge=0
   
 #component=O2
   mass=32*_AMU_
+  charge=0
   
 #component=O2PLUS
-  mass=32*_AMU_     
+  mass=32*_AMU_
+  charge=1.0     
   
 #component=OPLUS_HIGH
-  mass=16*_AMU_   
+  mass=16*_AMU_
+  charge=1.0   
   
 #component=OPLUS_THERMAL
-  mass=16*_AMU_  
+  mass=16*_AMU_ 
+  charge=1.0 
   
 
 
