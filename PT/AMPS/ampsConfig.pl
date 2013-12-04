@@ -1533,6 +1533,7 @@ sub ReadSpeciesBlock {
   my $s1;
   
   my @MassArray=(0)x$TotalSpeciesNumber;
+  my @ElectricChargeArray=(0)x$TotalSpeciesNumber;
   
   my $SkipSpecieFlag=0;
   
@@ -1575,6 +1576,10 @@ sub ReadSpeciesBlock {
         ($s0,$s1)=split(' ',$s1,2);
         $MassArray[$nspec]=$s0;
       }
+      elsif ($s0 eq "CHARGE") {
+        ($s0,$s1)=split(' ',$s1,2);
+        $ElectricChargeArray[$nspec]=$s0."*ElectronCharge";
+      }      
     }
 
  
@@ -1596,6 +1601,7 @@ sub ReadSpeciesBlock {
   
   ampsConfigLib::ChangeValueOfArray("static const char ChemTable\\[\\]\\[_MAX_STRING_LENGTH_PIC_\\]",\@t,"pic/pic.h");
   ampsConfigLib::ChangeValueOfArray("static const double MolMass\\[\\]",\@MassArray,"pic/pic.h");
+  ampsConfigLib::ChangeValueOfArray("static const double ElectricChargeTable\\[\\]",\@ElectricChargeArray,"pic/pic.h");
   
   #init the array of species type descriptors
   my @SpcecieTypeTable=("_PIC_SPECIE_TYPE__GAS_")x$TotalSpeciesNumber;
