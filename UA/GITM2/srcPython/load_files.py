@@ -12,7 +12,8 @@
 #
 # Contains: loadCINDIorbit_ASCII
 #           loadMadrigalVTEC_ASCII
-#           loadGITMsat_ASCII
+#           loadGITMsat_ASCII: AGB added 2013
+#           loadMadrigalVTEC_HDF5: AGB added 11/20/13
 #---------------------------------------------------------------------------
 
 import string
@@ -231,8 +232,8 @@ def loadGITMsat_ASCII(input_file, *args, **kwargs):
         out['min'] = temp[:,4]
         out['sec'] = temp[:,5]
         out['ms'] = temp[:,6]
-        out['lat'] = temp[:,7]
-        out['lon'] = temp[:,8]
+        out['lon'] = temp[:,7]
+        out['lat'] = temp[:,8]
         out['alt'] = temp[:,9]
 
         # Assign any data
@@ -255,3 +256,74 @@ def loadGITMsat_ASCII(input_file, *args, **kwargs):
     return out
 
 # END loadGITMsat_ASCII
+
+#---------------------------------------------------------------------------
+# loadMadrigalVTEC_HDF5: A routine to open a HDF5 file and load the data into a
+#                        dictonary.
+
+def loadMadrigalVTEC_HDF5(filename, *args, **kwargs):
+    '''
+    Open an Madrigal TEC HDF5 data files and loads the data into a dictionary
+    of python numpy arrays.
+
+    NOTE that HDF files can have datasets hidden under an arbitrary number
+    of layers, so it's best to write a reader for each data format.
+
+    Input:
+    filename = Madrigal TEC HDF5 filename
+
+    Output:
+    out = a dict containing the data in np.arrays, the dict keys are
+          specified by the header data line.  A datetime array is also added.
+    '''
+    import h5py
+    func_name = string.join([module_name, "loadMadrigalVTEC_HDF5"], " ")
+
+    # Open the file in read-only mode
+    try:
+        f = h5py.File(filename, 'r')
+    except:
+        print func_name, "ERROR: unable to open file [", filename, "]"
+        return
+
+    # Load the variables into a standard numpy array and save the description
+    # as attributes
+    out = dict()
+
+    # Cycle through the file groups and locate the datasets
+    try:
+        dhandle = f['Data']
+    except:
+        print func_name, "ERROR: unable to locate Dataset key"
+        f.close()
+        return
+
+    try:
+        dhandle = dhandle['Table Layout']
+    except:
+        print func_name, "ERROR: unable to locate [Table Layout] key"
+        f.close()
+        return
+
+    if isinstance(dhandle, h5py.Dataset):
+        okeys = dhandle.dtype.fields
+
+        # Load the data
+        for ok in okeys.keys():
+            out[ok.upper()] = dhandle[ok]
+
+        # Construct the datetime array
+        out['datetime'] = np.array([dt.datetime.strptime("{:d} {:d} {:d} {:d} {:d} {:d}".format(out['YEAR'][i], out['MONTH'][i], out['DAY'][i], h, out['MIN'][i], out['SEC'][i]), "%Y %m %d %H %M %S") for i,h in enumerate(out['HOUR'])])
+
+        # Change the longitude range to go from 0-360 deg instead of +/- 180 deg
+        out['GLON'] = np.array([l if l >= 0. else l+360. for l in out['GLON']])
+
+
+    else:
+        print func_name, "ERROR: dataset not where expected"
+
+    # Close HDF5 file handle and return data
+    f.close()
+    return(out)
+
+# END loadMadrigalVTEC_HDF5
