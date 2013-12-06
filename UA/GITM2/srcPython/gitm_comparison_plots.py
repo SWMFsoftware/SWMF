@@ -157,12 +157,13 @@ def extract_gitm_time_arrays(gtime, data_key, ut_index=-1,
 
 def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                        obs_scale, obs_units, diff_data, diff_name, diff_scale,
-                       diff_units, gitm_key, gitm_alt, gdata, diff_max=None,
-                       zmax=None, zmin=None, title=None, color=True,
-                       data_coff=False, diff_coff=True, figname=None, draw=True,
-                       latlim1=90, latlim2=-90, linc=6, tlon=90, meq=False,
-                       earth=False, map_list=[], faspect=True,
-                       term_datetime=None, *args, **kwargs):
+                       diff_units, gitm_key, gitm_alt, gdata, gitm_name,
+                       diff_max=None, zmax=None, zmin=None, title=None,
+                       color=True, bcolor='#747679', data_coff=False,
+                       diff_coff=True, figname=None, draw=True, latlim1=90,
+                       latlim2=-90, linc=6, tlon=90, meq=False, earth=False,
+                       map_list=[], faspect=True, term_datetime=None,
+                       *args, **kwargs):
     '''
     Creates three plots of a specified type, one showing the observations, one
     showing the GITM data, and one showing the difference between the two.
@@ -175,18 +176,23 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                         points
            obs_data   = Numpy array with observational data for matching
                         model-obs points
+           obs_name   = Name portion of the observational data label
+           obs_scale  = Scale (linear/exponential) for plotting obs. data
+           obs_units  = Unit portion of the observational data label
            diff_data  = Numpy array with differences for matching model-obs
                         points
            gitm_key   = Key for the GITM data
            gitm_alt   = Altitude in km to plot the GITM data at.  For a 2D
                         variable like hmF2 or TEC, use 0.0 km.
            gdata      = GitmBin structure with model observations.
+           gitm_name  = Name portion of the GITM data label
            diff_max   = Maximum value for the difference (absolute value),
                         if None, will be determined in script (default=None)
            zmin       = minimum value for z variable (default=None)
            zmax       = maximum value for z variable (default=None)
            title      = Plot title (default=None)
            color      = Color (True, default) or black and white (False)?
+           bcolor     = Background color (default=)
            data_coff  = Center the data color scale about zero (False, default)?
            diff_coff  = Center the diff color scale about zero (True, default)?
            figname    = Output figure name with a .png suffix (default=None)
@@ -280,9 +286,11 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                                            tlon=tlon,
                                                            blat=latlim1,
                                                            xl=False, yl=False,
-                                                           xt=False, meq=meq,
-                                                           earth=earth, ml=ml,
-                                                           mn=mn, ms=ms,
+                                                           xt=False,
+                                                           bcolor=bcolor,
+                                                           meq=meq, earth=earth,
+                                                           ml=ml, mn=mn, ms=ms,
+                                                           faspect=faspect,
                                                            term_datetime=term_datetime)
         # Output the gitm data as a contour after ensuring that the GITM array
         # isn't padded to include unrealistic latitudes
@@ -293,20 +301,21 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                     np.array(gdata['dLat'][:,imin:imax,ialt]),
                                     np.array(gdata['dLon'][:,imin:imax,ialt]),
                                     np.array(gdata[gitm_key][:,imin:imax,ialt]),
-                                    gdata[gitm_key].attrs["name"],
-                                    gdata[gitm_key].attrs["scale"],
+                                    gitm_name, gdata[gitm_key].attrs["scale"],
                                     gdata[gitm_key].attrs["units"], zmax, zmin,
-                                    data_color, False, tlon, latlim1,
-                                    title=False, xl=False, xt=False, meq=meq,
+                                    data_color, cb=True, cloc="r", tlon=tlon,
+                                    blat=latlim1, title=False, xl=False,
+                                    xt=False, bcolor=bcolor, meq=meq,
                                     earth=earth, ml=ml, mn=mn, ms=ms,
-                                    data_type="contour",
+                                    faspect=faspect, data_type="contour",
                                     term_datetime=term_datetime)
         # Output the differences as a scatter plot
         p3g.plot_snapshot_subfigure(f, 3, 2, lat_data, lon_data, diff_data,
                                     diff_name, diff_scale, diff_units, diff_max,
                                     diff_min, diff_color, tlon=tlon,
                                     blat=latlim1, title=False, yl=False,
-                                    meq=meq, earth=earth, ml=ml, mn=mn, ms=ms,
+                                    bcolor=bcolor, meq=meq, earth=earth, ml=ml,
+                                    mn=mn, ms=ms, faspect=faspect,
                                     term_datetime=term_datetime)
         map_list = list([ml, mn, ms])
     elif plot_type.find("nsglobal") >= 0:
@@ -323,8 +332,9 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                                       obs_units, zmax, zmin,
                                                       data_color, True, True,
                                                       tlon=tlon, rl=False,
-                                                      tl=False, earth=earth,
-                                                      mn=mn, ms=ms,
+                                                      tl=False, bcolor=bcolor,
+                                                      earth=earth, mn=mn, ms=ms,
+                                                      faspect=faspect,
                                                       term_datetime=term_datetime)
         # Output the gitm data as a contour after ensuring that the GITM array
         # isn't padded to include unrealistic latitudes 
@@ -332,7 +342,7 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         (i, imax) = gpr.find_lon_lat_index(gdata, 0.0, 90.0, "degrees")
         imax += 1 
 
-        axn2,mn,axs2,ms = p3g.plot_nsglobal_subfigure(f, 3, 1, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]), gdata[gitm_key].attrs["name"], gdata[gitm_key].attrs["scale"], gdata[gitm_key].attrs["units"], zmax, zmin, data_color, False, False, tlon=tlon, tl=False, earth=earth, mn=mn, ms=ms, data_type="contour", term_datetime=term_datetime)
+        axn2,mn,axs2,ms = p3g.plot_nsglobal_subfigure(f, 3, 1, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]), gitm_name, gdata[gitm_key].attrs["scale"], gdata[gitm_key].attrs["units"], zmax, zmin, data_color, title=False, cb=True, tlon=tlon, tl=False, bcolor=bcolor, earth=earth, mn=mn, ms=ms, data_type="contour", term_datetime=term_datetime)
 
         axn1_dim = list(axn1.axes.get_position().bounds)
         axs1_dim = list(axs1.axes.get_position().bounds)
@@ -348,8 +358,9 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         p3g.plot_nsglobal_subfigure(f, 3, 2, lat_data, lon_data, diff_data,
                                     diff_name, diff_scale, diff_units, diff_max,
                                     diff_min, diff_color, False, True,
-                                    tlon=tlon, rl=False, earth=earth, mn=mn,
-                                    ms=ms, term_datetime=term_datetime)
+                                    tlon=tlon, rl=False, bcolor=bcolor,
+                                    earth=earth, mn=mn, ms=ms, faspect=faspect,
+                                    term_datetime=term_datetime)
         map_list = list([mn, ms])
     elif plot_type.find("rect") >= 0:
         if len(map_list) == 1:
@@ -364,20 +375,24 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                                  data_color, nlat=latlim1,
                                                  slat=latlim2, linc=linc,
                                                  cloc="r", xl=False, xt=False,
-                                                 yl=False, meq=meq, earth=earth,
-                                                 m=m,
+                                                 yl=False, meq=meq,
+                                                 bcolor=bcolor, earth=earth,
+                                                 m=m, faspect=faspect,
                                                  term_datetime=term_datetime)
         # Output the gitm data as a contour
         ax = f.add_subplot(3,1,2)
         con2, m = p3g.plot_rectangular_3D_global(ax, np.array(gdata['dLat'][:,:,ialt]), np.array(gdata['dLon'][:,:,ialt]), np.array(gdata[gitm_key][:,:,ialt]),
-                                                 gdata[gitm_key].attrs["name"],
+                                                 gitm_name,
                                                  gdata[gitm_key].attrs["scale"],
                                                  gdata[gitm_key].attrs["units"],
                                                  zmin, zmax, data_color,
                                                  nlat=latlim1, slat=latlim2,
-                                                 linc=linc, cb=False, xl=False,
-                                                 xt=False, meq=meq, earth=earth,
-                                                 m=m, data_type="contour",
+                                                 linc=linc, cb=True, cloc="r",
+                                                 xl=False, xt=False,
+                                                 bcolor=bcolor, meq=meq,
+                                                 earth=earth, m=m,
+                                                 faspect=faspect,
+                                                 data_type="contour",
                                                  term_datetime=term_datetime)
         # Adjust plot dimensions if necessary
         if not earth:
@@ -392,8 +407,10 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                        diff_name, diff_scale, diff_units,
                                        diff_min, diff_max, diff_color,
                                        nlat=latlim1, slat=latlim2, linc=linc,
-                                       cloc="r", yl=False, meq=meq, earth=earth,
-                                       m=m, term_datetime=term_datetime)
+                                       cloc="r", yl=False, bcolor=bcolor,
+                                       meq=meq, earth=earth, m=m,
+                                       faspect=faspect,
+                                       term_datetime=term_datetime)
         map_list = list([m])
     elif plot_type.find("polar") >= 0:
         if len(map_list) == 1:
@@ -411,7 +428,8 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                           zmax, data_color, center_lat=latlim1,
                                           edge_lat=latlim2, linc=linc,
                                           top_lon=tlon, cloc="r", tl=False,
-                                          rl=False, earth=earth, m=m,
+                                          rl=False, bcolor=bcolor, earth=earth,
+                                          m=m, faspect=faspect,
                                           term_datetime=term_datetime)
         # Output the gitm data as a contour after ensuring that the GITM
         # array isn't padded to include unrealistic latitudes
@@ -420,13 +438,15 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         (i, imax) = gpr.find_lon_lat_index(gdata, 0.0, 90.0, "degrees")
         imax += 1 
         con2,m = p3g.plot_polar_3D_global(ax, 3, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]),
-                                          gdata[gitm_key].attrs["name"],
+                                          gitm_name,
                                           gdata[gitm_key].attrs["scale"],
                                           gdata[gitm_key].attrs["units"], zmin,
                                           zmax, data_color, center_lat=latlim1,
                                           edge_lat=latlim2, linc=linc,
-                                          top_lon=tlon, cb=False, tl=False,
-                                          earth=earth, m=m, data_type="contour",
+                                          top_lon=tlon, cb=True, cloc="r",
+                                          tl=False, bcolor=bcolor, earth=earth,
+                                          m=m, faspect=faspect,
+                                          data_type="contour",
                                           term_datetime=term_datetime)
 
         con1_dim = list(con1.axes.get_position().bounds)
@@ -441,7 +461,8 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                  diff_name, diff_scale, diff_units, diff_min,
                                  diff_max, diff_color, center_lat=latlim1,
                                  edge_lat=latlim2, linc=linc, top_lon=tlon,
-                                 cloc="r", rl=False, earth=earth, m=m,
+                                 cloc="r", rl=False, bcolor=bcolor, earth=earth,
+                                 m=m, faspect=faspect,
                                  term_datetime=term_datetime)
         map_list = list([m])
     else:
