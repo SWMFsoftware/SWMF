@@ -9,6 +9,8 @@
 #
 # Contains: class GitmBin    - The class for the GITM binary, which will read
 #                              a single GITM output binary
+#           def calc_magdi   - Reads a single GITM ion or mag output binary and
+#                              computes the magnetic inclination and declination
 #           def calc_magvel  - Reads a single GITM ion output binary and
 #                              uses data from the standard GITM output (3DAll)
 #                              to compute the ion characteristics in magnetic
@@ -25,12 +27,12 @@
 #                              in before
 #           def calc_tec     - Calculate the VTEC
 #           def calc_2dion   - Calculate the 2D ionospheric parameters (VTEC,
-#                              hmF2, NmF2).  Checks to see if VTEC already
-#                              exists
+#                              hmF2, NmF2)
 #
 # Updates: Angeline Burrell (AGB) - 1/7/13: Added calc_lt, append_units, and
 #                                           calc_magvel
 #          AGB - 11/7/13: Improved calc_2dion, added Aaron Ridley's calc_tec
+#          AGB - 12/6/13: Added Inclination/Declination calculation
 #------------------------------------------------------------------------------
 
 '''
@@ -86,8 +88,9 @@ class GitmBin(PbData):
         self.calc_lt()
         self.append_units()
 
-        if magfile:
+        if magfile or filename.find("3DION") >= 0:
             self.attrs['magfile']=magfile
+            self.calc_magdi()
             self.calc_magvel()
 
     def __repr__(self):
@@ -222,6 +225,60 @@ class GitmBin(PbData):
                 ltmax = dmarray.max(self['LT'][i])
                 if ltmax >= 24.0:
                     self['LT'][i] -= 24.0 * math.floor(ltmax / 24.0)
+    def calc_magdi(self):
+        '''
+        GITM 3DION and 3DMAG files contain the magnetic field in
+        North-East-Vertical coordinates.  This routine computes the magnetic
+        inclination and declination.
+        '''
+        import math
+
+        mag = None
+        # Test to determine the type of file we have
+        if(self.attrs['file'].find("ION") > 0
+           or self.attrs['file'].find("MAG") > 0):
+            mag = self
+        else:
+            if not self.attrs.has_key('magfile'):
+                print "No 3D MAG/ION file associated with this GITM Binary"
+            elif(self.attrs['magfile'].find("ION") <= 0 and
+                 self.attrs['magfile'].find("MAG") <= 0):
+                print "No 3D MAG/ION file associated with this GITM Binary"
+            else:
+                mag = GitmBin(self.attrs['magfile'])
+
+        if mag is not None:
+            dec_frac = mag['B.F. East'] / mag['B.F. North']
+            inc_sign = -1.0 * mag['B.F. Vertical'] / abs(mag['B.F. Vertical'])
+            inc_pmag = mag['B.F. North']**2 + mag['B.F. East']**2
+
+            for ilon in range(self.attrs['nLon']):
+                for ilat in range(self.attrs['nLat']):
+                    for ialt,df in enumerate(dec_frac[ilon,ilat]):
+                        dec_frac[ilon,ilat,ialt] = math.atan(df) * 180.0 / np.pi
+                        i = (inc_sign[ilon,ilat,ialt]
+                             * math.sqrt(inc_pmag[ilon,ilat,ialt])
+                             / mag['B.F. Magnitude'][ilon,ilat,ialt])
+                        inc_pmag[ilon,ilat,ialt] = math.acos(i) * 180.0 / np.pi
+                        if inc_pmag[ilon,ilat,ialt] > 90.0:
+                            inc_pmag[ilon,ilat,ialt] -= 180.0
+
+            self['Declination'] = dmarray.copy(dec_frac)
+            self['Declination'].attrs = {"name":"Declination", "scale":"linear",
+                                         "units":"degrees"}
+            self['Inclination'] = dmarray.copy(inc_pmag)
+            self['Inclination'].attrs = {"name":"Inclination", "scale":"linear",
+                                         "units":"degrees"}
+            del dec_frac, inc_sign, inc_pmag
+
+            if not self.has_key('B.F. East'):
+                self['B.F. East'] = dmarray.copy(mag['B.F. East'])
+                self['B.F. North'] = dmarray.copy(mag['B.F. North'])
+                self['B.F. Vertical'] = dmarray.copy(mag['B.F. Vertical'])
+                self['B.F. Magnitude'] = dmarray.copy(mag['B.F. Magnitude'])
+            if not self.has_key('Magnetic Latitude'):
+                self['Magnetic Latitude']=dmarray.copy(mag['Magnetic Latitude'])
+                self['Magnetic Longitude']=dmarray.copy(mag['Magnetic Longitude'])
 
     def calc_magvel(self):
         '''
@@ -368,9 +425,9 @@ class GitmBin(PbData):
                      "B.F. Vertical":"nT", "B.F. East":"nT", "B.F. North":"nT",
                      "B.F. Magnitude":"nT", "Magnetic Latitude":"degrees",
                      "Ed1":"", "Ed2":"", "Gravity":"m s^{-2}",
-                     "PressGrad (east)":"Pa m^{-1}",
-                     "PressGrad (north)":"Pa m^{-1}",
-                     "PressGrad (up)":"Pa m^{-1}",
+                     "PressGrad (east)":"Pa\;m^{-1}",
+                     "PressGrad (north)":"Pa\;m^{-1}",
+                     "PressGrad (up)":"Pa\;m^{-1}",
                      "IN Collision Freq":"s^{-1}"}
 
         scale_dict = {"Altitude":"linear", "Ar Mixing Ratio":"linear",
@@ -442,10 +499,10 @@ class GitmBin(PbData):
                      "O(!U2!NP)!U+!N":"[O($^2$P)]", "O(!U3!NP)":"[O($^3$P)]",
                      "O_4SP_!U+!N":"[O($^4$SP)$^+$]",
                      "RadCooling":"Radiative Cooling", "Rho":"Neutral Density",
-                     "Temperature":"T$_n$", "V!Di!N (east)":"v$_{East}$",
-                     "V!Di!N (north)":"v$_{North}$", "V!Di!N (up)":"v$_{Up}$",
-                     "V!Dn!N (east)":"u$_{East}$",
-                     "V!Dn!N (north)":"u$_{North}$", "V!Dn!N (up)":"u$_{Up}$",
+                     "Temperature":"T$_n$", "V!Di!N (east)":"v$_{east}$",
+                     "V!Di!N (north)":"v$_{north}$", "V!Di!N (up)":"v$_{up}$",
+                     "V!Dn!N (east)":"u$_{east}$",
+                     "V!Dn!N (north)":"u$_{north}$", "V!Dn!N (up)":"u$_{up}$",
                      "V!Dn!N (up,N!D2!N              )":"u$_{Up, N_2}$",
                      "V!Dn!N (up,N(!U4!NS)           )":"u$_{Up, N(^4S)}$",
                      "V!Dn!N (up,NO                  )":"u$_{Up, NO}$",
@@ -522,7 +579,6 @@ class GitmBin(PbData):
         To perform these calculations, electron density ("e-") must be one of
         the available data types.
         '''
-
         import scipy.integrate as integ
         from scipy.interpolate import interp1d
 
@@ -544,16 +600,14 @@ class GitmBin(PbData):
         To perform these calculations, electron density ("e-") must be one of
         the available data types.
         '''
-
         import scipy.integrate as integ
         from scipy.interpolate import interp1d
         from scipy.signal import argrelextrema
 
-        calc_vtec = False
-
+        calc_tec = False
         if self.has_key('e-'):
-            if not self.has_key('VTEC'):
-                calc_vtec = True
+            if self.has_key('VTEC') is False:
+                calc_tec = True
                 self['VTEC'] = dmarray(self['e-'] * 1.0e-16,
                                        attrs={'units':'TECU', 'scale':'linear',
                                               'name':'Vertical TEC'})
@@ -567,7 +621,7 @@ class GitmBin(PbData):
 
             for ilon in range(self.attrs['nLon']):
                 for ilat in range(self.attrs['nLat']):
-                    if calc_vtec is True:
+                    if calc_tec is True:
                         # Integrate electron density over altitude
                         vtec = integ.simps(self['VTEC'][ilon,ilat,:],
                                            self['Altitude'][ilon,ilat,:], "avg")
@@ -654,4 +708,22 @@ class GitmBin(PbData):
                         # electron density to the ion peak
                         self['NmF2'][ilon,ilat,:] = edens[eindex]
                         self['hmF2'][ilon,ilat,:] = alt[eindex]
+
+    def lon_lt_ticks(self, x, pos):
+        '''
+        Define ticks to include local time in addition to longitude.  Assumes
+        that x is longitude in degrees.
+        '''
+        import math
+        import gitm_plot_rout as gpr
+
+        # Calculate the local time in hours
+        lth = gpr.glon_to_localtime(self['time'], x)
+        ltm = int((lth - math.floor(lth)) * 60.0)
+
+        # Build the format string
+        fmtstring = "{:g}$^\circ$\n {:02d}:{:02d}".format(x, int(lth), ltm)
+
+        return(fmtstring)
+
 # END
