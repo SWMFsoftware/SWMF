@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission
-#  For more information, see http://csem.engin.umich.edu/tools/swmf
 #-----------------------------------------------------------------------------
 # $Id$
 # gitm_plot_rout
@@ -45,6 +43,7 @@ different geographic configurations
 '''
 
 # Import modules
+import numpy as np
 
 def choose_contour_map(color, center):
     '''
@@ -79,16 +78,16 @@ def add_colorbar(contour_handle, zmin, zmax, zinc, orient, scale, name, units):
            name           = z variable name
            units          = z variable units
     '''
-    import numpy as np
     import matplotlib.pyplot as plt
     import math
     from matplotlib.ticker import FormatStrFormatter, FuncFormatter
 
-    w  = np.linspace(zmin, zmax, zinc, endpoint=True)
+    w = np.linspace(zmin, zmax, zinc, endpoint=True)
     cb = plt.colorbar(contour_handle, ticks=w, pad=.15, orientation=orient,
                       fraction=.07)
+    zscale = max(abs(zmin), abs(zmax))
 
-    if scale.find("exponential") >= 0:
+    if scale.find("exponential") >= 0 or zscale > 1.0e3 or zscale < 1.0e-3:
         omag = find_order_of_magnitude(zmax)
 
         def scaled_ticks(x, pos):
@@ -106,10 +105,7 @@ def add_colorbar(contour_handle, zmin, zmax, zinc, orient, scale, name, units):
         cb.set_label(r'{:s} (${:s} \times 10^{{{:.0f}}}$)'.format(name, units,
                                                                   omag))
     else:
-        zscale = max(abs(zmin), abs(zmax))
-        if zscale > 1.0e3 or zscale < 1.0e-3:
-            cb.formatter=FormatStrFormatter('%.2g')
-        elif zscale < 1.0e1:
+        if zscale < 1.0e1:
             cb.formatter=FormatStrFormatter('%.2f')
         else:
             cb.formatter=FormatStrFormatter('%.0f')
@@ -601,9 +597,7 @@ def find_alt_index(gData, ilon, ilat, alt, units="km"):
     Routine to locate the appropriate altitude index in a given array.
     The altitude may be specified in km (default) or m.
     '''
-
     import string
-    import numpy as np
 
     if string.lower(units) == "km":
         alt *= 1000.0
@@ -707,3 +701,321 @@ def add_geomagnetic_equator(ax, color="k", linestyle="-", markerstyle=None):
 
     return
 # END add_geomagnetic_equator
+
+# Create a contour input 2D numpy array at a specified geo/mag lat/lon/alt
+
+def create_contour_input_array(hold_key, hold_value, xkey, ykey, zkeys, gdata,
+                               xarray, yarray, lonmin=0, lonmax=None, latmin=0,
+                               latmax=None, altmin=0, altmax=None,
+                               *argv, **kwargs):
+    '''
+    create_contour_input_array: A routine to create contour input at a 
+                                specific location.  For example, plotting 
+                                Te at a specific latitude or longitude 
+                                between two grid points.
+    Input: hold_key   = key of coordinate in which desired location is specified
+           hold_value = value of desired, specific coordinate location
+           xkey       = key of x-coordinate
+           ykey       = key of y-coordinate
+           zkeys      = list of keys containing data to be interpolated at
+                        the specified location as a function of the x and y
+                        coordinates
+           gdata      = GitmBin structure
+           xarray     = numpy array with the desired x-coordinate positions
+           yarray     = numpy array with the desired y-coordinate positions
+           lonmin     = Minimum longitude index to include in interpolation grid
+                        (default=0).  Set as -1 if the coordinate specified
+                        by hold_key is analigous to this coordinate.  For
+                        example, if data is desired at declination=10 deg,
+                        then a limited range of longitues are desired.
+           lonmax     = Maximum longitude index to include in interpolation grid
+                        (default=None, will use gdata to find maximum)
+           latmin     = Minimum latitude index to include in interpolation grid
+                        (default=0)  Set as -1 if the coordinate specified
+                        by hold_key is analigous to this coordinate.  For
+                        example, if data is desired at mlat=0 deg,
+                        then a limited range of latitues are desired.
+           latmax     = Maximum latitude index to include in interpolation grid
+                        (default=None, will use gdata to find maximum)
+           altmin     = Minimum altitude index to include in interpolation grid
+                        (default=0)  Set as -1 if the coordinate specified
+                        by hold_key is analigous to this coordinate.  For
+                        example, if data is desired at P=1e10-14 Pa,
+                        then a limited range of atlitues are desired.
+           altmax     = Maximum atlitude index to include in interpolation grid
+                        (default=None, will use gdata to find maximum)
+    Output: out = a dictionary containing xarray and the interpolated data
+                  for the keys specified in ykeys
+    '''
+    from scipy import interpolate
+    module_name = "create_contour_input_array"
+
+    # Establish the lon/lat/alt indices to navigate the GitmBin structure
+    if not lonmax:
+        lonmax = gdata.attrs['nLon']
+
+    if not latmax:
+        latmax = gdata.attrs['nLat']
+
+    if not altmax:
+        altmax = gdata.attrs['nAlt']
+
+    if lonmin < 0:
+        iflag = 0
+        smax = gdata.attrs['nLon']
+        itermax = [[np.searchsorted(gdata[hold_key][:,ilat,ialt], hold_value)
+                    for ilat in range(gdata.attrs['nLat'])]
+                   for ialt in range(gdata.attrs['nAlt'])]
+    elif latmin < 0:
+        iflag = 1
+        smax = gdata.attrs['nLat']
+        itermax = [[np.searchsorted(gdata[hold_key][ilon,:,ialt], hold_value)
+                    for ilon in range(gdata.attrs['nLon'])]
+                   for ialt in range(gdata.attrs['nAlt'])]
+    else:
+        iflag = 2
+        smax = gdata.attrs['nAlt']
+        itermax = [[np.searchsorted(gdata[hold_key][ilon,ilat,:], hold_value)
+                    for ilon in range(gdata.attrs['nLon'])]
+                   for ilat in range(gdata.attrs['nLat'])]
+
+    # Set up the locations where the data will be interpolated
+    out = dict()
+    out[xkey], out[ykey] = np.meshgrid(xarray, yarray)
+
+    # Iterate through one data type
+    for i,ilist in enumerate(itermax):
+        # Ensure the minimum and maximum are not out of bounds
+        imin = np.min(ilist)
+        while imin <= 0:
+            ilist.pop(ilist.index(imin))
+            imin = np.min(ilist)
+
+        imax = np.max(ilist)
+        while imax >= smax:
+            ilist.pop(ilist.index(imax))
+            imax = np.max(ilist)
+
+        if iflag == 2:
+            altmax = imax + 1
+            altmin = imin - 1
+            latmin = i
+            latmax = i + 1
+        else:
+            altmin = i
+            altmax = i + 1
+            if iflag == 1:
+                latmax = imax + 1
+                latmin = imin - 1
+            else:
+                lonmax = imax + 1
+                lonmin = imin - 1
+
+        # Set up a grid to use to hold the data to be interpolated
+        hdata = gdata[hold_key][lonmin:lonmax,latmin:latmax,
+                                altmin:altmax].flatten()
+        xdata = gdata[xkey][lonmin:lonmax,latmin:latmax,altmin:altmax].flatten()
+        N = len(hdata)
+        points = np.ndarray(shape=(N, 2), dtype=float,
+                            buffer=np.array([[h, xdata[j]]
+                                             for j,h in enumerate(hdata)]))
+
+        xinc = out[xkey][i,:].flatten()
+        xi = np.ndarray(shape=(len(xinc), 2), dtype=float,
+                        buffer=np.array([[hold_value, x] for x in xinc]))
+
+        # Cycle through the z keys to find the desired data values at the
+        # desired locations
+        for zk in zkeys:
+            values = np.ndarray(shape=N, dtype=float, buffer=np.array(gdata[zk][lonmin:lonmax,latmin:latmax,altmin:altmax].flatten()))
+            v = interpolate.griddata(points, values, xi, method="linear")
+            if out.has_key(zk):
+                out[zk] = np.append(out[zk], v)
+            else:
+                out[zk] = np.array(v)
+
+    for zk in zkeys:
+        out[zk] = out[zk].reshape(out[xkey].shape)
+
+    return out
+# End create_contour_input_array
+
+def create_linear_input_array(hold_key, hold_value, xkey, ykeys, gdata, xarray,
+                              lonmin=0, lonmax=1, latmin=0, latmax=1, altmin=0,
+                              altmax=1, *argv, **kwargs):
+    '''
+    create_linear_input_array: A routine to create linear input at a 
+                                specific location.  For example, plotting 
+                                VTEC at a specific latitude or longitude 
+                                between two grid points.
+    Input: hold_key   = key of coordinate in which desired location is specified
+           hold_value = value of desired, specific coordinate location
+           xkey       = key of x-coordinate
+           ykeys      = list of keys containing data to be interpolated at
+                        the specified location as a function of the x-coordiante
+           gdata      = GitmBin structure
+           xarray     = numpy array with the desired x-coordinate positions
+           lonmin     = Minimum longitude index to include in interpolation grid
+                        (default=0)
+           lonmax     = Maximum longitude index to include in interpolation grid
+                        (default=1)
+           latmin     = Minimum latitude index to include in interpolation grid
+                        (default=0)
+           latmax     = Maximum latitude index to include in interpolation grid
+                        (default=1)
+           altmin     = Minimum altitude index to include in interpolation grid
+                        (default=0)
+           altmax     = Maximum atlitude index to include in interpolation grid
+                        (default=1)
+    Output: out = a dictionary containing xarray and the interpolated data
+                  for the keys specified in ykeys
+    '''
+    from scipy import interpolate
+    module_name = "create_linear_input_array"
+
+    # Set up the locations where the data will be interpolated
+    out = dict()
+    out[xkey] = xarray
+
+    # Set up a grid to use to hold the data to be interpolated
+    hdata = gdata[hold_key][lonmin:lonmax,latmin:latmax,altmin:altmax].flatten()
+    xdata = gdata[xkey][lonmin:lonmax,latmin:latmax,altmin:altmax].flatten()
+    N = len(hdata)
+    points = np.ndarray(shape=(N, 2), dtype=float,
+                        buffer=np.array([[h, xdata[j]]
+                                         for j,h in enumerate(hdata)]))
+
+    xi = np.ndarray(shape=(len(xarray), 2), dtype=float,
+                    buffer=np.array([[hold_value, x] for x in out[xkey]]))
+
+    # Cycle through the y keys to find the desired data values at the
+    # desired locations
+    for yk in ykeys:
+        values = np.ndarray(shape=N, dtype=float, buffer=np.array(gdata[yk][lonmin:lonmax,latmin:latmax,altmin:altmax].flatten()))
+        v = interpolate.griddata(points, values, xi, method="linear")
+        if out.has_key(yk):
+            out[yk] = np.append(out[yk], v)
+        else:
+            out[yk] = np.array(v)
+
+    return out
+# End create_linear_input_array
+
+def add_dipole_fieldline(ax, apex_alt, lat_array, alt_units="km",
+                         lat_units="degrees", lat_type="geographic",
+                         longitude=0.0, lon_units="degrees", declination=0.0,
+                         dec_units="degrees", color="k", linestyle="-",
+                         markerstyle=None):
+    '''
+    A routine to add a dipole field line to a plot.  Color, linestyle, and
+    markerstyle can be specified using matplotlib symbols.  If the latitude
+    is geographic, the longitude and declination must be specified so that the
+    equatorial offset can be calculated.  Otherwise these are not used.
+
+    Input: ax          = axis handle
+           apex_alt    = Field line apex altitude
+           lat_array   = list of latitudes to calculate the dipole altitude at
+           alt_units   = Altitude units (default is km)
+           lat_units   = Latitude units (default is degrees)
+           lat_type    = Latitude type: geographic (default), magnetic,
+                         inclination
+           longitude   = Longitude at the geomagnetic equator (default is 0.0)
+           lon_units   = Longitude units (default is degrees)
+           longitude   = Longitude at the geomagnetic equator (default is 0.0)
+           lon_units   = Longitude units (default is degrees)
+           color       = Output color for equator line (default is black)
+           linestyle   = Linestyle for equator line (default is solid)
+           markerstyle = Marker style (default is None)
+    '''
+    import math
+
+    # Set the latitude unit conversion
+    ldeg = 1.0
+    lrad = np.pi / 180.0
+    if lat_units.find("rad") >= 0:
+        ldeg = 180.0 / np.pi
+        lrad = 1.0
+
+    if lat_type.find("geog") >= 0: 
+        # Determine the latitude of the geomagnetic equator
+        if lon_units.find("rad") >= 0:
+            longitude = math.degrees(longitude)
+        meq_offset = math.radians(get_meq_offset(longitude))
+
+        # Calculate the cosine of the declination
+        if dec_units.find("deg") >= 0:
+            declination *= (np.pi / 180.0)
+        cos_dec = math.cos(declination)
+
+    # Calculate the height ratio: (apex_alt + earth_rad) / earth_rad
+    Re = 6378.1370 # Equatorial radius in km
+    if apex_alt == "m":
+        Re *= 1000.0
+    elif apex_alt == "L":
+        Re = 1.0
+    
+    hsum = (apex_alt + Re)
+
+    # Calculate the dipole field line heights at the desired locations
+    dipole_alt = list()
+    for lat in lat_array:
+        if lat_type.find("geog") >= 0:
+            angle = (lat * lrad - meq_offset) / cos_dec
+        elif lat_type.find("mag") >= 0:
+            angle = lat * lrad
+        elif lat_type.find("inc") >= 0:
+            angle = math.atan(0.5 * math.tan(lat * lrad))
+        else:
+            print func_name, "ERROR: unknown latitude type"
+            return
+
+        dipole_alt.append(hsum * math.pow(math.cos(angle), 2.0) - Re)
+
+    # Format the plotting options
+    stylestring = "{:s}".format(color)
+    if markerstyle:
+        stylestring = "{:s}{:s}".format(stylestring, markerstyle)
+    if linestyle:
+        stylestring = "{:s}{:s}".format(stylestring, linestyle)
+
+    ax.plot(lat_array, dipole_alt, stylestring)
+
+    return(dipole_alt)
+# END add_dipole_fieldline
+
+
+def get_meq_offset(longitude):
+    '''
+    A routine to determine the geographic latitude in degrees at the
+    geomagnetic equator for a specified longitude (provided in degrees).
+    Longitude may be a single value, a list, or a numpy array.  The location of
+    the equator was determined using IGRF-10.
+
+    Input: longitude = single or multiple longitudes in degrees
+    Output: offset = numpy.ndarray containing the geographic latitude in 
+                     degrees at the geomagnetic equator
+    '''
+    from scipy import interpolate
+
+    meq_lon = [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0,
+               55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 90.0, 95.0, 100.0,
+               105.0, 110.0, 115.0, 120.0, 125.0, 130.0, 135.0, 140.0, 145.0,
+               150.0, 155.0, 160.0, 165.0, 170.0, 175.0, 180.0, 185.0, 190.0,
+               195.0, 200.0, 205.0, 210.0, 215.0, 220.0, 225.0, 230.0, 235.0,
+               240.0, 245.0, 250.0, 255.0, 260.0, 265.0, 270.0, 275.0, 280.0,
+               285.0, 290.0, 295.0, 300.0, 305.0, 310.0, 315.0, 320.0, 325.0,
+               330.0, 335.0, 340.0, 345.0, 350.0, 355.0, 360.,]
+    meq_lat = [10.7, 10.6, 10.5, 10.3, 9.9, 9.5, 9.0, 8.4, 7.9, 7.5, 7.2, 7.0,
+               7.1, 7.2, 7.3, 7.5, 7.7, 7.9, 8.0, 8.1, 8.0, 8.0, 7.9, 7.8, 7.8,
+               7.8, 7.9, 8.0, 7.9, 7.8, 7.5, 7.1, 6.5, 5.7, 4.9, 4.0, 3.1, 2.3,
+               1.6, 0.9, 0.3, -0.4, -1.0, -1.6, -2.3, -3.0, -3.7, -4.4, -5.1,
+               -5.9, -6.7, -7.6, -8.6, -9.6, -10.6, -11.4, -11.9, -12.0, -11.6,
+               -10.5, -8.8, -6.5, -3.8, -1.0, 1.9, 4.4, 6.4, 8.0, 9.2, 9.9,
+               10.4, 10.7, 10.7,]
+
+    # Set up the interpolation curve
+    tck = interpolate.splrep(meq_lon, meq_lat, s=0)
+
+    # Return the data at the desired point(s)
+    return(interpolate.splev(longitude, tck, der=0))
+# END add_meq_offset
