@@ -1,11 +1,9 @@
 #!/usr/bin/env python
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission
-#  For more information, see http://csem.engin.umich.edu/tools/swmf
 #-----------------------------------------------------------------------------
 # $Id$
 # gitm_loc_rout
 #
-# Author: Angeline G. Burrell, UMichigan, Jan 2013
+# Author: Angeline G. Burrell, UMichigan, Oct 2013
 #
 # Comments: Common routine used to find GITM data at a specific location(s)
 #           and match with observations.
@@ -445,9 +443,9 @@ def match_running_median(ydata_list, xdata, locdata, xmatch, locmatch, xbin,
 # End match_running_average
 
 def gitm_inst_loc(obs_date, obs_lat, obs_lon, obs_alt, dat_keys, obs_type,
-                  gitmname_list, gitm_type="1D", mag_file=None,
-                  lat_unit="degrees", lon_unit="degrees", alt_unit="km",
-                  *args, **kwargs):
+                  gitmname_list, gitm_type="1D", mag_file=None, obs_res=0.01,
+                  gitm_res=60.0, lat_unit="degrees", lon_unit="degrees",
+                  alt_unit="km", *args, **kwargs):
     '''
     Extract GITM data for (an) instrument(s) at specified location and times.
     The desired location(s) must be specified in time, latitude, longitude, and
@@ -470,6 +468,8 @@ def gitm_inst_loc(obs_date, obs_lat, obs_lon, obs_alt, dat_keys, obs_type,
     gitmbin_list = list of Gitm binary files, ordered by time
     gitm_type    = GITM binary type (1D, 2D, or 3D)
     mag_file     = 3DMAG or 3DION file (default is None)
+    obs_res      = Temporal resolution of observation data in sec (default=0.01)
+    gitm_res     = Temporal resolution of GITM data in sec (default=60.0)
     lat_unit     = Units of latitudes in track_lat (default degrees)
     lon_unit     = Units of longitude in track_lon (default degrees)
     alt_unit     = Units of altitude in track_alt (default km)
@@ -520,17 +520,32 @@ def gitm_inst_loc(obs_date, obs_lat, obs_lon, obs_alt, dat_keys, obs_type,
         #           
         # Interpolate the satellite's position in time (ms resolution)
         obs_delt = [timedelta.total_seconds(d - obs_date[0]) for d in obs_date]
-        itime = list(np.arange(0.0, obs_delt[-1], 0.01))
+        itime = list(np.arange(0.0, obs_delt[-1], obs_res))
         nlocs = [1 for d in itime] # Since there is one location for each time
-        # Interpolate Altitude
-        tck = interpolate.splrep(obs_delt, obs_alt * alt_scale, s=0)
-        ialt = interpolate.splev(itime, tck, der=0)
-        # Interpolate Latitude
-        tck = interpolate.splrep(obs_delt, obs_lat * dlat_scale, s=0)
-        ilat = interpolate.splev(itime, tck, der=0)
-        # Interpolate Longitude
-        tck = interpolate.splrep(obs_delt, obs_lon * dlon_scale, s=0)
-        ilon = interpolate.splev(itime, tck, der=0)
+        if obs_res == gitm_res:
+            ialt = obs_alt * alt_scale
+            ilat = obs_lat * dlat_scale
+            ilon = obs_lon * dlon_scale
+
+            print min(ilat), max(ilat), min(ilon), max(ilon)
+        else:
+            # Interpolate Altitude
+            tck = interpolate.splrep(obs_delt, obs_alt * alt_scale, s=0)
+            ialt = interpolate.splev(itime, tck, der=0)
+            # Interpolate Latitude
+            tck = interpolate.splrep(obs_delt, obs_lat * dlat_scale, s=0)
+            ilat = interpolate.splev(itime, tck, der=0)
+            # Interpolate Longitude
+            loff = 0.0
+            llon = obs_lon[0]
+            ilon = list()
+            for l,lon in enumerate(obs_lon):
+                if l > 0 and lon < obs_lon[l-1]:
+                    loff += 1.0
+                ilon.append(lon*dlon_scale + 360.0*loff)
+
+            tck = interpolate.splrep(obs_delt, ilon, s=0)
+            ilon = interpolate.splev(itime, tck, der=0)
     elif obs_type.find("ground") >= 0:
         # Group the observation locations by time.  Since we will seldom
         # require a truely vertical altitude profile (radars typically scan
@@ -602,8 +617,7 @@ def gitm_inst_loc(obs_date, obs_lat, obs_lon, obs_alt, dat_keys, obs_type,
             break
 
         if obs_type.find("satellite") >= 0:
-            iobs = int(gdelt * 100)
-
+            iobs = int(gdelt / obs_res)
             if iobs >= len(itime):
                 iobs = -1
         else:
@@ -651,6 +665,10 @@ def gitm_inst_loc(obs_date, obs_lat, obs_lon, obs_alt, dat_keys, obs_type,
                     this_lat = ilat[iobs]
                     this_lon = ilon[iobs]
                     this_alt = ialt[iobs]
+
+                    if this_lon >= 360.0:
+                        loff = int(this_lon / 360.0) * 360.0
+                        this_lon -= loff
                 else:
                     this_lat = ilat[iobs][iloc]
                     this_lon = ilon[iobs][iloc]
@@ -868,7 +886,7 @@ def gitm_inst_loc(obs_date, obs_lat, obs_lon, obs_alt, dat_keys, obs_type,
 def gitm_net_loc(obs_date, obs_lat, obs_lon, obs_alt, obs_dat_list,
                  obs_dat_keys, obs_dat_name, obs_dat_scale, obs_dat_units,
                  dat_keys, gitmname_list, gitm_type="3D",
-                 mag_file=None, lat_unit="degrees", lon_unit="degrees",
+                 magfile=None, lat_unit="degrees", lon_unit="degrees",
                  alt_unit="km", *args, **kwargs):
     '''
     Extract GITM data for a network of instruments at specified locations and
@@ -895,7 +913,7 @@ def gitm_net_loc(obs_date, obs_lat, obs_lon, obs_alt, obs_dat_list,
     dat_keys      = list of keys to extract from GITM, empty list returns all
     gitmbin_list  = list of Gitm binary files, ordered by time
     gitm_type     = GITM binary type (2D or 3D)
-    mag_file      = 3DMAG or 3DION file (default is None)
+    magfile      = 3DMAG or 3DION file (default is None)
     lat_unit      = Units of latitudes in track_lat (default degrees)
     lon_unit      = Units of longitude in track_lon (default degrees)
     alt_unit      = Units of altitude in track_alt (default km)
@@ -1024,8 +1042,8 @@ def gitm_net_loc(obs_date, obs_lat, obs_lon, obs_alt, obs_dat_list,
         vals = dict()
 
         # Read in the data for this GITM binary file
-        if mag_file:
-            gdata = gitm.GitmBin(split_file[0], magfile=mag_file,
+        if magfile:
+            gdata = gitm.GitmBin(split_file[0], magfile=magfile,
                                  varlist=dat_keys)
         else:
             gdata = gitm.GitmBin(split_file[0], varlist=dat_keys)
@@ -1065,8 +1083,12 @@ def gitm_net_loc(obs_date, obs_lat, obs_lon, obs_alt, obs_dat_list,
             # Extract and assign the values that don't require interpolation
             lkeys[gkeys.pop(gkeys.index('Latitude'))] = 1.0 / rlat_scale
             lkeys[gkeys.pop(gkeys.index('Longitude'))] = 1.0 / rlon_scale
+            lkeys[gkeys.pop(gkeys.index('Magnetic Latitude'))] = 1.0
+            lkeys[gkeys.pop(gkeys.index('Magnetic Longitude'))] = 1.0
             lkeys[gkeys.pop(gkeys.index('dLat'))] = 1.0 / dlat_scale
             lkeys[gkeys.pop(gkeys.index('dLon'))] = 1.0 / dlon_scale
+            lkeys[gkeys.pop(gkeys.index('Inclination'))] = 1.0
+            lkeys[gkeys.pop(gkeys.index('Declination'))] = 1.0
             lkeys[gkeys.pop(gkeys.index('Altitude'))] = 1.0
             lkeys[gkeys.pop(gkeys.index('LT'))] = lon_unit
             gkeys.pop(gkeys.index('time'))
