@@ -9,7 +9,7 @@
 
 //init the global variables
 //double* PIC::MolecularData::MolMass=NULL;
-double* PIC::MolecularData::ElectricCharge=NULL;
+//double* PIC::MolecularData::ElectricCharge=NULL;
 //char** PIC::MolecularData::ChemTable=NULL;
 //int *PIC::MolecularData::SpcecieTypeTable=NULL;
 char** PIC::MolecularData::LoadingSpeciesList=NULL;
