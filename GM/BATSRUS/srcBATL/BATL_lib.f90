@@ -53,6 +53,7 @@ module BATL_lib
   public:: IsNewDecomposition, IsNewTree
   public:: iAmrChange_B
   public:: AmrRemoved_, AmrUnchanged_, AmrMoved_, AmrRefined_, AmrCoarsened_
+  public:: get_tree_position
 
   ! Inherited from BATL_geometry
   public:: TypeGeometry, IsCartesianGrid, IsCartesian, IsRzGeometry
