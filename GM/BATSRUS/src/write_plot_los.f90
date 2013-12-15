@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
@@ -53,7 +54,7 @@ subroutine write_plot_los(iFile)
        time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
        Body1,body1_, StartTime, CodeVersion
   use ModGeometry, ONLY: &
-       XyzStart_BLK, TypeGeometry, IsBoundaryBlock_IB, nMirror_D
+       XyzStart_BLK, IsBoundaryBlock_IB, nMirror_D
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
        UnitTemperature_
   use ModIO
@@ -66,16 +67,14 @@ subroutine write_plot_los(iFile)
   use ModPlotFile, ONLY: save_plot_file
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
-  use BATL_lib, ONLY: Xyz_DNB, Xyz_DGB, CellSize_DB
+  use BATL_lib, ONLY: Xyz_DNB, Xyz_DGB, CellSize_DB, &
+       IsCartesianGrid, IsCartesian, IsRzGeometry, IsRLonLat
 
   implicit none
 
   ! Arguments
 
   integer, intent(in) :: iFile
-
-  ! Local variables
-  logical :: IsRzGeometry = .false.
 
   integer :: iError
 
@@ -106,7 +105,7 @@ subroutine write_plot_los(iFile)
   real    :: SizePix, r2Pix    
   real    :: BlockDistance, ObsDistance, Ratio
   real    :: XyzBlockCenter_D(3), CellSize_D(3), aBlockCenter, bBlockCenter
-  real    :: XyzBlockStart_D(3), XyzBlockSign_D(3)=1.0
+  real    :: XyzBlockStart_D(3), XyzBlockSign_D(3)=1.0, CoordMinBlock_D(3)
 
   real, dimension(3,3) :: FromHgi_DD
   real, dimension(3) :: Los_D, ObsPos_D
@@ -137,7 +136,6 @@ subroutine write_plot_los(iFile)
   logical :: UseScattering, UseRho
 
   ! variables added for sph geometry
-  logical :: IsSphGeometry = .false.
   logical :: UseEuv,UseSxr
   real,dimension(3,8) :: Xyz_DN, BBoxVertex_DN
 
@@ -165,21 +163,6 @@ subroutine write_plot_los(iFile)
   call set_oktest('los_timing', DoTiming, DoTimingMe)
 
   call timing_start(NameSub)
-
-  select case(TypeGeometry)
-  case('cartesian')
-     IsRzGeometry  = .false.
-     IsSphGeometry = .false.
-  case('rz')
-     IsRzGeometry = .true.
-     IsSphGeometry = .false.
-  case('spherical','spherical_lnr','spherical_genr')
-     IsRzGeometry  = .false.
-     IsSphGeometry = .true.
-  case default
-     call stop_mpi(NameSub//' is not implemented for TypeGeometry=' &
-          //TypeGeometry)
-  end select
 
   ! Set rInner and rOuter depending on component
   select case(NameThisComp)
@@ -315,10 +298,10 @@ subroutine write_plot_los(iFile)
      if(oktest .and. iProc==0) write(*,*)'unitstr_TEC: ',unitstr_TEC
 
      if(plot_form(ifile) /= 'hdf') then
-         call join_string(nPlotVar, PlotVarNames, plot_vars1)
-         unitstr_IDL = 'x y '//plot_vars1
-         if(oktest .and. iProc==0) write(*,*)'unitstr_IDL: ',unitstr_IDL
-    end if
+        call join_string(nPlotVar, PlotVarNames, plot_vars1)
+        unitstr_IDL = 'x y '//plot_vars1
+        if(oktest .and. iProc==0) write(*,*)'unitstr_IDL: ',unitstr_IDL
+     end if
   endif
 
   ! Create unit vectors aUnit_D and bUnit_D orthogonal to the 
@@ -379,26 +362,30 @@ subroutine write_plot_los(iFile)
 
   if(DoTiming)call timing_start('los_block_loop')
 
-  ! loop over blocks
-  do iBLK = 1, nBlock
+  if(UseLosSimple)then
+     call integrate_image
+  else
+     ! loop over blocks
+     do iBLK = 1, nBlock
 
-     if (Unused_B(iBLK)) CYCLE
+        if (Unused_B(iBLK)) CYCLE
 
-     CellSize_D = CellSize_DB(:,iBlk)
+        CellSize_D = CellSize_DB(:,iBlk)
 
-     do iMirror = 1, nMirror_D(1)
-        XyzBlockSign_D(1) = 3 - 2*iMirror
-        do jMirror = 1, nMirror_D(2)
-           XyzBlockSign_D(2) = 3 - 2*jMirror
-           do kMirror = 1, nMirror_D(3)
-              XyzBlockSign_D(3) = 3 - 2*kMirror
+        do iMirror = 1, nMirror_D(1)
+           XyzBlockSign_D(1) = 3 - 2*iMirror
+           do jMirror = 1, nMirror_D(2)
+              XyzBlockSign_D(2) = 3 - 2*jMirror
+              do kMirror = 1, nMirror_D(3)
+                 XyzBlockSign_D(3) = 3 - 2*kMirror
 
-              call integrate_block
+                 call integrate_block
 
-           end do    ! kMirror
-        end do    ! jMirror
-     end do    ! iMirror
-  end do       ! iBLK loop
+              end do    ! kMirror
+           end do    ! jMirror
+        end do    ! iMirror
+     end do       ! iBLK loop
+  end if
 
   if(DoTiming)call timing_stop('los_block_loop')
   !   if(plot_form(iFile) .ne. 'hdf') then
@@ -430,7 +417,7 @@ subroutine write_plot_los(iFile)
      else
         file_format='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
      end if
-    
+
      !the plot time is stored in the hdf5 files and displayed in VisIt.
      !if you don not include it in the filename VisIt will automacially
      !group all the los files.
@@ -511,7 +498,7 @@ subroutine write_plot_los(iFile)
            end do
         end do
         close(unit_tmp)
-    else
+     else
         ! description of file contains units, physics and dimension
         StringHeadLine = 'LOS integrals_var22'
         ! Write Auxilliary header info, which is useful for EUV images.
@@ -550,7 +537,7 @@ subroutine write_plot_los(iFile)
            write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
            write(StringHeadLine,'(a)')trim(StringHeadLine)//'_HGIXYZ='//&
                 adjustl(StringTmp)
- 
+
         endif
 
         ! Set image size and dimensionalize if necessary
@@ -599,10 +586,481 @@ subroutine write_plot_los(iFile)
   call timing_stop(NameSub)
 
 contains
+  !==========================================================================
+  subroutine integrate_image
+
+    real:: Distance
+    !-----------------------------------------------------------------------
+
+    ! Loop over pixels
+    do jPix = 1, nPix
+
+       ! Y position of the pixel on the image plane
+       bPix = (jPix - 1) * SizePix - rSizeImage
+
+       do iPix = 1, nPix
+
+          ! X position of the pixel on the image plane
+          aPix = (iPix - 1) * SizePix - rSizeImage
+
+          r2Pix = (aPix + aOffset)**2 + (bPix + bOffset)**2
+          ! Check if pixel is within occultation radius
+          if( r2Pix  <= rOccult2 ) CYCLE
+
+          r2Pix = aPix**2 + bPix**2
+          ! Check if pixel is outside the circular region
+          if( r2Pix > rSizeImage2 ) CYCLE 
+
+          ! Get the 3D location of the pixel
+          XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
+
+          ! Unit vector pointing from pixel center to observer
+          LosPix_D = XyzPix_D - ObsPos_D
+          Distance = sqrt(sum(LosPix_D**2))
+          LosPix_D = LosPix_D/Distance
+
+          ! Integrate from pixel to observer
+          call integrate_line(XyzPix_D, Distance)
+
+          ! Integrate in the other direction too if needed !!!
+          LosPix_D = -LosPix_D
+          call integrate_line(XyzPix_D, 1e30)
+
+       end do ! jPix loop
+    end do    ! iPix loop
+
+  end subroutine integrate_image
   !=========================================================================
+  subroutine integrate_line(XyzStartIn_D, LengthMax)
+
+    ! Integrate variables from XyzStartIn_D in the direction LosPix_D
+
+    use ModGeometry,    ONLY: x1, x2, y1, y2, z1, z2
+    use BATL_lib,       ONLY: xyz_to_coord, find_grid_block, &
+         get_tree_position, CoordMin_D, CoordMax_D, IsPeriodic_D, nIJK_D
+
+    real, intent(in):: XyzStartIn_D(3)
+    real, intent(in):: LengthMax
+
+    integer:: iProcFound
+
+    real:: Length          ! Total length of integral
+    real:: Ds              ! Length of line segment
+
+    real:: XyzLos_D(3)    ! Coordinate of center of line segment    
+    integer:: iNode
+    real, dimension(MaxDim):: XyzStart_D, &
+         PositionMin_D, PositionMax_D, &
+         CoordMaxBlock_D, CoordBlock_D, CoordSizeBlock_D, &
+         CoordSize_D, CoordLos_D, &
+         XyzLosNew_D, CoordLosNew_D, dCoord_D
+
+    real, parameter:: StepMax = 1.0, StepMin = 0.5, StepGood = 0.75
+    real:: Step, DsTiny
+    logical:: IsEdge
+
+    logical:: DoTest = .false.
+    integer:: iBlkTest = -1
+
+    character(len=*), parameter:: NameSub='integrate_line'
+    !------------------------------------------------------------------------
+    !write(*,*)'!!! iPix, jPix=', iPix, jPix
+
+    DoTest = iPix==50 .and. jPix==50
+
+    if(DoTest)write(*,*)NameSub,' XyzStartIn_D=', XyzStartIn_D
+
+    CoordSize_D = CoordMax_D - CoordMin_D
+    DsTiny = cTiny*(x2-x1 + y2 - y1 + z2 - x1)
+
+    XyzStart_D = XyzStartIn_D
+    
+
+!!!    call los_cut_rmax(XyzStart_D, XyzEnd_D)
+
+    ! Initial length of segment
+    Ds = DsTiny
+
+    ! Initialize "new" position as the starting point
+    XyzLosNew_D = XyzStart_D
+    call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
+
+    ! Initialize block boundaries so that point is surely outside
+    CoordMinBlock_D = CoordMax_D
+    CoordMaxBlock_D = CoordMin_D
+
+    if(DoTest) write(*,*)'!!! initial Ds=',Ds
+
+    Length = -Ds
+    LOOPLINE: do
+       ! Total length integrated so far
+       Length  = Length + Ds
+
+       ! Stop if reached maximum length
+       if(Length > LengthMax) EXIT LOOPLINE
+
+       ! Move to new position
+       XyzLos_D   = XyzLosNew_D
+       CoordLos_D = CoordLosNew_D
+
+       ! Stop integration if we reached the edge of the domain
+       if(  any(CoordLosNew_D > CoordMax_D) .or. &
+            any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
+
+       if(DoTest)write(*,*)'!!! Inside, Ds, Length=', Ds, Length
+
+       ! Check if we are still in the same block or not
+       if(  any(CoordLos_D < CoordMinBlock_D) .or. &
+            any(CoordLos_D > CoordMaxBlock_D))then
+
+          ! Find new block/node
+          call find_grid_block(XyzLos_D, iProcFound, iBlk, iNodeOut=iNode)
+
+          ! Set block coordinates and the cell size on all processors
+          call get_tree_position(iNode, PositionMin_D, PositionMax_D)
+          CoordMinBlock_D = CoordMin_D + CoordSize_D*PositionMin_D  !Start
+          CoordMaxBlock_D = CoordMin_D + CoordSize_D*PositionMax_D  !End
+          CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) !Center
+          CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D       !Block size
+          CellSize_D      = CoordSizeBlock_D / nIjk_D               !Cell size
+          if(DoTest)then
+             write(*,*)'!!! new iBlk=', iBlk
+             write(*,*)'!!! CoordMin=', CoordMinBlock_D
+             write(*,*)'!!! CoordMax=', CoordMaxBlock_D
+          end if
+
+       end if
+
+       ! Check if mid point will be inside the block. If not, reduce Ds
+       IsEdge = .false.
+       do
+          ! Move to the middle of the segment
+          XyzLosNew_D = XyzLos_D + 0.5*Ds*LosPix_D
+          call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
+
+          ! Check if midpoint is inside block + 1 cell size
+          dCoord_D = abs(CoordLosNew_D - CoordBlock_D)
+          if(all(2*dCoord_D <= CoordSizeBlock_D)) EXIT
+
+          ! Reduce Ds but make sure that 2*Ds is still outside.
+          Ds = Ds*0.5
+
+          ! Don't integrate this segment if it is very small
+          ! Since we took half of Ds, XyzLosNew is at the end
+          if(Ds < DsTiny)CYCLE LOOPLINE
+
+          ! Make sure we don't try to increase the step below
+          IsEdge = .true.
+       end do
+
+       ! Check how big the largest change is in the generalized coordinates
+       Step = maxval(abs(CoordLosNew_D - CoordLos_D)/CellSize_D)
+
+       ! If change is too large or too small adjust the step size
+       if(Step > StepMax .or. (Step < StepMin .and. .not. IsEdge))then
+          ! New interval size corresponds to a StepGood 
+          ! in generalized coordinates instead of Step
+          Ds = Ds*StepGood/Step
+
+          ! Check if mid point will be inside the block. If not, reduce Ds
+          do
+             ! Move to the middle of the modified segment
+             XyzLosNew_D = XyzLos_D + 0.5*Ds*LosPix_D
+             call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
+
+             ! Check if midpoint is inside block
+             dCoord_D = abs(CoordLosNew_D - CoordBlock_D)
+             if(all(2*dCoord_D <= CoordSizeBlock_D)) EXIT
+
+             ! Reduce Ds and try again
+             Ds = Ds*0.5
+
+             ! Don't integrate this segment if it is very small
+             if(Ds < DsTiny)CYCLE LOOPLINE
+          end do
+       end if
+
+       if(iProc == iProcFound)then
+          ! Add contribution from this segment to the image
+          call add_segment(Ds, XyzLosNew_D)
+       end if
+
+       ! Move XyzLosNew to the end of the segment
+       XyzLosNew_D = XyzLos_D + Ds*LosPix_D
+       call xyz_to_coord(XyzLosNew_D, CoordLosNew_D)
+
+    end do LOOPLINE
+
+  end subroutine integrate_line
+
+  !============================================================================
+  subroutine add_segment(Ds, XyzLos_D)
+
+    use ModAdvance,     ONLY: UseElectronPressure
+    use ModInterpolate, ONLY: bilinear, trilinear
+    use ModUser,        ONLY: user_set_plot_var
+    use ModParallel,    ONLY: NeiLWest, NeiLEast, NOBLK
+    use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_
+    use BATL_lib,       ONLY: xyz_to_coord
+
+    real, intent(in):: Ds          ! Length of line segment
+    real, intent(in):: XyzLos_D(3) ! location of center of line segment
+
+    real :: x_q, y_q, z_q
+    real :: a_los, b_los, c_los, d_los
+    real :: SinOmega, CosOmega, Cos2Theta, Sin2Omega, Cos2Omega, Logarithm
+
+    real :: xLos, yLos, zLos, rLos2 ! Coordinates and radial distance squared
+    real :: CoordNorm_D(3) ! Normalized coordinates of current point
+
+    real :: State_V(nVar)  ! State at the center of the segment center
+    real :: Rho            ! Mass density at the point
+    real :: Te, TeSi       ! Electron temperature
+    real :: Ne             ! Electron number density
+    real :: Value          ! Value of the LOS variable at the point
+
+    ! Variables for user defined LOS variables
+    integer :: iBlockLast = -1, iVarLast = -1
+    logical :: IsFound, UseBody
+    character(len=1):: NameTecVar, NameTecUnit, NameIdlUnit
+    real    :: ValueBody
+    real, allocatable, save:: PlotVar_GV(:,:,:,:)
+
+    ! Added for EUV synth and sph geometry
+    real :: GenLos_D(3)
+    real :: LogTe, LogNe, ResponseFactor, EuvResponse(3), SxrResponse(2)
+
+    ! parameters for temperature cuttoff of EUV/SXR response
+    ! idea is to neglect most of the broadened transition region
+    ! since broadening introduces unphysical column depth (by orders of
+    ! magnitude) which can cause it to be large enough to produce an
+    ! unwanted contribution
+    real :: TeCutSi = 4.0e+5
+    real :: DeltaTeCutSi = 3.0e+4
+    real :: FractionTrue
+    !-----------------------------------------------------------------------
+    rLos2= sum(XyzLos_D**2)
+    xLos = XyzLos_D(1)
+    yLos = XyzLos_D(2)
+    zLos = XyzLos_D(3)
+
+    if(UseScattering .and. rLos2 > 1.0)then
+       ! So what is calculated here??? No documentation, no citation !!!
+       ! Just formulas and more formulas...
+
+       ! This calculation is useful for light scattering in SC and IH
+       ! as it assumes that the radiation comes from a central 
+       ! body with radius 1. Normally setting rOccult > 1 ensures rLos2 > 1.
+
+       Sin2Omega = 1.0/rLos2
+       SinOmega  = sqrt(Sin2Omega)
+       Cos2Omega = 1 - Sin2Omega
+       CosOmega = sqrt(Cos2Omega)
+       Logarithm = log((1.0 + SinOmega)/CosOmega)  
+
+       !omega and functions of omega are unique to a given line of sight
+       a_los = CosOmega*Sin2Omega
+       b_los = -0.125*( 1.0 - 3.0*Sin2Omega - (Cos2Omega/SinOmega)* &
+            (1.0 + 3.0*Sin2Omega)*Logarithm )
+       c_los = 4.0/3.0 - CosOmega - (1.0/3.0)*CosOmega*Cos2Omega
+       d_los = 0.125*( 5.0 + Sin2Omega - (Cos2omega/SinOmega) * &
+            (5.0 - Sin2Omega)*Logarithm )
+
+       z_q =   (LosPix_D(1)**2 + LosPix_D(2)**2)*zLos            &
+            - LosPix_D(3)*(LosPix_D(1)*xLos + LosPix_D(2)*yLos)
+       x_q = xLos + (LosPix_D(1)/LosPix_D(3)) * (z_q - zLos)
+       y_q = yLos + (LosPix_D(2)/LosPix_D(3)) * (z_q - zLos)
+       Cos2Theta = (x_q**2 + y_q**2 + z_q**2)/rLos2
+    end if
+
+    ! Calculate normalized position
+    if(IsRzGeometry)then
+       ! Radial distance is sqrt(yLos**2+zLos**2)
+       CoordNorm_D(1:2) = &
+            ( (/xLos*XyzBlockSign_D(1), sqrt(yLos**2+zLos**2) /) &
+            - CoordMinBlock_D(1:2) )/CellSize_D(1:2) + 0.5
+       CoordNorm_D(3) = 0.0
+    elseif(IsCartesian)then
+       CoordNorm_D = &
+            (XyzBlockSign_D*XyzLos_D - CoordMinBlock_D)/CellSize_D + 0.5
+    else
+       ! get gen coord of center point
+       call xyz_to_coord(XyzBlockSign_D*XyzLos_D, GenLos_D)
+
+       ! Normalized coordinates (to cell index)
+       CoordNorm_D = (GenLos_D - CoordMinBlock_D)/CellSize_D + 0.5
+    end if
+
+    ! Interpolate state if it is needed by any of the plot variables
+    if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
+       if(nK == 1)then
+          State_V = bilinear(State_VGB(:,:,:,1,iBlk), &
+               nVar, MinI, MaxI, MinJ, MaxJ, CoordNorm_D(1:2))
+       else
+          State_V = trilinear(State_VGB(:,:,:,:,iBlk), &
+               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
+       end if
+       Rho = State_V(Rho_)
+    end if
+
+    if(UseEuv .or. UseSxr .or. UseTableGen)then
+
+!!! All these log and 10** should be eliminated.
+!!! The general table should be log based, so it does the log internally
+
+       ! Fully ionized hydrogen plasma only for now.
+!!! Should call generic get_electron_temperature function !!!
+       if(UseElectronPressure)then
+          Te = State_V(Pe_)/Rho
+       else
+          ! Fixed mean molecular weight, mu, and electron/ion temperature
+          ! equilibrium.
+          Te = 0.5*State_V(P_)/Rho
+       end if
+!!! So minimum temperature is cTolerance in SI units???
+       TeSi = max(Te*No2Si_V(UnitTemperature_), cTolerance)
+
+!!! This should not be needed here
+       LogTe = log10(TeSi)
+
+       ! Here calc log base 10 of electron density, the -6 is to convert to CGS
+       !LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
+
+!!! Really, cTolerance is the minimum number density in CGS units???
+       ! What about ion mass??? Should call get_electron_density.
+       Ne = 1e-6*max(Rho*No2Si_V(UnitN_), cTolerance)
+       LogNe = log10(Ne)
+
+       ! rconv converts solar radii units to CGS for response function exponent
+       ! calculate Ne**2 and normalize units (10 ^ an exponent)
+       !ResponseFactor = 10.0**(2.0*LogNe + rConv - 26.0)
+
+       ResponseFactor = Ne**2*6.96e-16
+
+       ! calculate temperature cutoff to neglect widened transition region
+       FractionTrue = 0.5*(1.0 + tanh((TeSi - TeCutSi)/DeltaTeCutSi))
+
+!!! There should be just one table, not three!!!
+       if (UseEuv) then
+          ! now interpolate EUV response values from a lookup table
+          if (iTableEUV <=0) &
+               call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
+          call interpolate_lookup_table(iTableEUV, LogTe, LogNe, &
+               EuvResponse, DoExtrapolate=.true.)
+          EuvResponse = EuvResponse * FractionTrue
+       end if
+
+       if (UseSxr) then
+          ! now interpolate SXR response values from a lookup table
+          if (iTableSXR <=0) &
+               call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
+          call interpolate_lookup_table(iTableSXR, LogTe, LogNe, &
+               SxrResponse, DoExtrapolate=.true.)
+          SxrResponse = SxrResponse * FractionTrue
+       end if
+
+       if (UseTableGen) then
+          if(iTableGen <= 0) &
+               call stop_mpi('Need to load #LOOKUPTABLE for ' &
+               //NameLosTable(iFile)//' response!')
+          ! now interpolate the entire table
+          call interpolate_lookup_table(iTableGen, LogTe, LogNe, &
+               InterpValues_I, DoExtrapolate=.true.)
+          InterpValues_I = InterpValues_I * FractionTrue
+
+          ! if using a generalized table can do it vector style
+          ImagePe_VII(:,iPix,jPix) = ImagePe_VII(:,iPix,jPix) + &
+               InterpValues_I*ResponseFactor*Ds
+          RETURN
+
+       endif
+
+    end if
+
+    do iVar = 1, nPlotVar
+       Value = 0.0 ! initialize to 0 so that if statements below work right
+       NameVar = plotvarnames(iVar)
+       select case(NameVar)
+       case ('len')
+          ! Integrate the length of the integration lines
+          Value = 1.0
+
+       case('wl')
+          ! White light with limb darkening
+          if(rLos2 > 1.0) Value = Rho*( &
+               (1 - mu_los)*(2*c_los - a_los*Cos2Theta) &
+               + mu_los*(2*d_los - b_los*Cos2Theta) )
+
+       case('pb')
+          ! Polarization brightness
+          if(rLos2 > 1.0) Value = &
+               Rho*( (1.0 - mu_los)*a_los + mu_los*b_los)*Cos2Theta
+
+       case('euv171')
+          ! EUV 171
+          Value = EuvResponse(1)*ResponseFactor
+
+       case('euv195')
+          ! EUV 195
+          Value = EuvResponse(2)*ResponseFactor
+
+       case('euv284')
+          ! EUV 284
+          Value = EuvResponse(3)*ResponseFactor
+
+       case('sxr')
+          ! Soft X-Ray (Only one channel for now, can add others later)
+          Value = SxrResponse(1)*ResponseFactor
+
+       case('rho')
+          ! Simple density integral
+          Value = Rho
+
+       case('sphere10')
+          ! Sphere of radius 10 with 100-r^2 density profile
+          Value = max(0.0, 100.0 - rLos2)
+
+       case('cube10')
+          ! 20x20x20 cube centered around X=Y=Z=10
+          Value = product( 0.5 + sign(0.5, 10.0 - abs(XyzLos_D-10.0)) )
+
+       case default
+          ! Obtain user defined plot function for the whole block
+          if(iBlk /= iBlockLast .or. iVar > iVarLast)then
+             iBlockLast = iBlk
+             iVarLast   = iVar
+             if(.not.allocated(PlotVar_GV)) &
+                  allocate(PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar))
+             call user_set_plot_var(iBlk, NameVar, &
+                  plot_dimensional(iFile), &
+                  PlotVar_GV(:,:,:,iVar), &
+                  ValueBody, UseBody, NameTecVar, NameTecUnit, NameIdlUnit,&
+                  IsFound)
+             if(.not. IsFound)then
+                PlotVar_GV(:,:,:,iVar)=-7777.
+                if(iProc==0.and.iBLK==1)write(*,*) &
+                     NameSub, ' WARNING: unknown plotvarname=', NameVar
+             end if
+          end if
+          ! Interpolate value
+          if(nK == 1)then
+             Value = bilinear(PlotVar_GV(:,:,1,iVar), &
+                  MinI,MaxI, MinJ,MaxJ, CoordNorm_D(1:2))
+          else
+             Value = trilinear(PlotVar_GV(:,:,:,iVar), &
+                  MinI,MaxI, MinJ,MaxJ, MinK,MaxK, CoordNorm_D)
+          end if
+       end select
+
+       ImagePe_VII(iVar,iPix,jPix) = ImagePe_VII(iVar,iPix,jPix) + Value*Ds
+
+    end do ! iVar
+
+  end subroutine add_segment
+  !============================================================================
   subroutine integrate_block
 
-    if(.not.IsSphGeometry) then      
+    if(IsCartesianGrid) then      
 
        if(IsRzGeometry)then
           ! Exclude blocks that do not intersect the Z=0 plane 
@@ -646,7 +1104,7 @@ contains
           end if
        end if
 
-    else ! need to do additional things to check sph blocks
+    elseif(IsRLonLat)then ! need to do additional things to check sph blocks
 
        call generate_vertex_vectors(1,nI+1,1,nJ+1,1,nK+1,Xyz_DN)
 
@@ -688,11 +1146,34 @@ contains
        do ii=5,8 ! 5-8 are max r bounding vertexes
           CosAngle = sum(XyzBlockCenter_D *  Xyz_DN(:, ii)) &
                /(rBlockCenter * rNodeMax)
+
+          if (CosAngle < 1e-10) then
+             write(*,*) '==========================='
+             write(*,*) 'ii', ii
+             write(*,*) 'sum(XyzBlockCenter_D *  Xyz_DN(:, ii))', sum(XyzBlockCenter_D *  Xyz_DN(:, ii))
+             write(*,*) 'XyzBlockCenter_D', XyzBlockCenter_D
+             write(*,*) 'Xyz_DN(:,ii)', Xyz_DN(:,ii)
+             write(*,*) '==========================='
+          end if
+
           CosAngleMin = min(CosAngle,CosAngleMin)
        enddo
 
+       CosAngleMin = max(cTiny, CosAngleMin)
+
        ! now extend each top vertex along r by this factor   
        BBoxVertex_DN(:,5:8) = BBoxVertex_DN(:, 5:8)/CosAngleMin
+
+       if (maxval(BBoxVertex_DN) > 1e10) then
+          write(*,*) '==========================='
+          write(*,*) 'max in BBoxVertex_DN', maxval(BBoxVertex_DN)
+          write(*,*) 'max in Xyz_DN', maxval(Xyz_DN)
+          write(*,*) 'XyzBlockCenter_D', XyzBlockCenter_D
+          write(*,*) 'rBlockCenter', rBlockCenter
+          write(*,*) 'rNodeMax', rNodeMax
+          write(*,*) 'CosAngleMin', CosAngleMin
+          write(*,*) '==========================='
+       end if
 
        !--- note that now blocks can have odd shapes, so take maximum of
        !distances from XyzBlockCenter to corners to calc rBlockSize
@@ -703,6 +1184,8 @@ contains
        enddo
        rBlockSize = rBlockSize + cTiny !-- just to make sure...
 
+    else
+       call CON_stop(NameSub//' ERROR: grid geometry is not implemented')
     end if
 
     FixedXyzBlockCenter_D = XyzBlockCenter_D
@@ -759,7 +1242,7 @@ contains
           ! if los is on pole, will have block degeneracy 
           !            ---> offset a 'tiny' bit
           ! (will always have this problem if nPix is odd)
-          if (IsSphGeometry.and.AlignedZ) aPix = aPix + cTiny
+          if (IsRLonLat.and.AlignedZ) aPix = aPix + cTiny
 
           ! Check if block can intersect this pixel
           if(DoCheckBlock)then
@@ -788,10 +1271,12 @@ contains
           ! Calculate contribution of this block to this pixel
           if(IsRzGeometry)then
              call integrate_los_block_rz
-          elseif(IsSphGeometry) then
+          elseif(IsCartesian)then
+             call integrate_los_block
+          elseif(IsRLonLat)then
              call integrate_los_block_sph
           else
-             call integrate_los_block
+             call stop_mpi(NameSub//': grid geometry is not implemented')
           end if
 
        end do ! jPix loop
@@ -1251,18 +1736,18 @@ contains
 
     !------------------------------------------------------------------------
     ! Number of segments for an accurate integral
-    if (IsSphGeometry) then
-       ! in gen coords, hard to think of equally weighted length
-       ! (along all 3 axes), so choose n=nI+nJ+nK for now, note that
-       ! CellSize_D has gencoord deltas
-
-       nSegment = nI+nJ+nK
-    elseif (IsRzGeometry) then
+    if (IsRzGeometry) then
        ! In RZ geometry Delta Y is representative for the radial resolution
        nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D) &
             / (/ CellSize_D(1), CellSize_D(2), CellSize_D(2) /) )
-    else
+    elseif(IsCartesian)then
+       ! Measure distance in cell size units and add up dimensions
        nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D)/CellSize_D)
+    else
+       ! in gen coords, hard to think of equally weighted length
+       ! (along all 3 axes), so choose n=nI+nJ+nK for now, note that
+       ! CellSize_D has gencoord deltas
+       nSegment = nI+nJ+nK
     end if
 
     ! Length of a segment
@@ -1317,26 +1802,20 @@ contains
 
        ! Calculate normalized position
        ! XyzStart contains the coordinates of cell 1,1,1, hence add 1
-       if(IsRzGeometry)then
+       if(IsCartesian)then
+          CoordNorm_D = &
+               (XyzBlockSign_D*XyzLos_D - XyzBlockStart_D)/CellSize_D + 1
+       elseif(IsRzGeometry)then
           ! Radial distance is sqrt(yLos**2+zLos**2)
           CoordNorm_D(1:2) = &
                ( (/xLos*XyzBlockSign_D(1), sqrt(yLos**2+zLos**2) /) &
                - XyzBlockStart_D(1:2) )/CellSize_D(1:2) + 1
           CoordNorm_D(3) = 0.0
 
-       elseif(IsSphGeometry) then
+       else
           ! get gen coord of los (note XyzStart_D is already in gen. coord)
           call xyz_to_coord(XyzBlockSign_D*XyzLos_D, GenLos_D)
           CoordNorm_D = (GenLos_D - XyzBlockStart_D)/CellSize_D + 1
-
-          ! need to know if no block neighbor 
-          ! (ghost cells along this edge will be wrong)
-          IsNoBlockInner = (NeiLEast(iBLK) == NOBLK)     
-          IsNoBlockOuter = (NeiLWest(iBLK) == NOBLK)
-
-       else
-          CoordNorm_D = &
-               (XyzBlockSign_D*XyzLos_D - XyzBlockStart_D)/CellSize_D + 1
        end if
 
        ! interpolate density if it is needed by any of the plot variables
@@ -1344,13 +1823,6 @@ contains
           if(nK == 1)then
              Rho = bilinear(State_VGB(Rho_,:,:,1,iBlk), &
                   MinI,MaxI, MinJ,MaxJ, CoordNorm_D(1:2))
-          elseif (IsSphGeometry) then
-             iMin = -1; iMax = nI+2
-             if (IsNoBlockInner) iMin=1
-             if (IsNoBlockOuter) iMax=nI
-             Rho = trilinear(State_VGB(Rho_,iMin:iMax,:,:,iBlk), &
-                  iMin, iMax, MinJ,MaxJ, MinK,MaxK,&
-                  CoordNorm_D, DoExtrapolate=.true.)
           else
              Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
                   MinI,MaxI, MinJ,MaxJ, MinK,MaxK, CoordNorm_D)
@@ -1366,10 +1838,6 @@ contains
           if(nK == 1)then
              Temp = bilinear(Temp_G(:,:,1), MinI,MaxI, MinJ,MaxJ, &
                   CoordNorm_D(1:2))
-          else if (IsSphGeometry) then
-             Temp = trilinear(Temp_G(iMin:iMax,:,:), &
-                  iMin, iMax, MinJ,MaxJ, MinK,MaxK, &
-                  CoordNorm_D, DoExtrapolate=.true.)
           else
              Temp = trilinear(Temp_G(:,:,:), MinI,MaxI, MinJ,MaxJ, MinK,MaxK, &
                   CoordNorm_D)
@@ -1432,7 +1900,7 @@ contains
           Value = 0.0 ! initialize to 0 so that if statements below work right
           NameVar = plotvarnames(iVar)
           select case(NameVar)
-          case ('len')
+          case('len')
              ! Integrate the length of the integration lines
              Value = 1.0
 
@@ -1514,15 +1982,16 @@ contains
   !==========================================================================
 
   subroutine dimensionalize_plotvar_los
+
     use ModConst,   ONLY : cSigmaThomson
-    use ModPhysics, ONLY : No2Si_V, UnitX_, UnitRho_, UnitN_
+    use ModPhysics, ONLY : No2Si_V, UnitX_, UnitRho_
     !--------------------------------------------------------------------------
 
     do iVar = 1, nPlotVar
        NameVar = plotvarnames(iVar)
 
        select case(NameVar)
-       case ('len')
+       case('len')
           Image_VII(iVar,:,:) = Image_VII(iVar,:,:)*No2Si_V(UnitX_)
        case('rho')
           Image_VII(iVar,:,:) = Image_VII(iVar,:,:) &
@@ -1562,6 +2031,11 @@ contains
     Vertex_DN(:,6) = Xyz_DNB(:,i2,j1,k2,iBlk)
     Vertex_DN(:,7) = Xyz_DNB(:,i2,j2,k1,iBlk)
     Vertex_DN(:,8) = Xyz_DNB(:,i2,j2,k2,iBlk)
+
+    if (maxval(Vertex_DN(:, :)) > 1e10) then
+       write(*,*) '====================================================='
+       write(*,*) 'iBlk!!!: ', iBlk
+    end if
 
   end subroutine generate_vertex_vectors
 
@@ -1686,6 +2160,14 @@ contains
 
           if (IsBadFace_S(iSide)) CYCLE
 
+          if (Vertex_DN(1, TriIndex_DIS(3,j,iSide)) > 1e13) then
+             write(*,*) 'Vertex_DN error: iBlk:', iBlk
+             write(*,*) 'max in Vertex_DN(:,:) : ', maxval(abs(Vertex_DN(:,:)))
+             write(*,*) 'max in Xyz_DNB: ', maxval(abs(Xyz_DNB(:,:,:,:,iBlk)))
+             write(*,*) 'max in Xyz_DBG: ', maxval(abs(Xyz_DGB(:,:,:,:,iBlk)))
+             write(*,*) 'CellSize_DB', CellSize_DB(:,iBlk)
+          end if
+
           IsOnTriangle = is_on_triangle(NewIntersect_DN(:, iSide),&
                Vertex_DN(:, TriIndex_DIS(1,j,iSide)),&
                Vertex_DN(:, TriIndex_DIS(2,j,iSide)),&
@@ -1742,6 +2224,13 @@ contains
     !/
 
     ACrossB2 = A2*B2 - sum(A1_D*B1_D)**2
+
+    if(ACrossB2 == 0.0)then
+       write(*,*)'!!! XyzIn_D=', XyzIn_D
+       write(*,*)'!!! aXyz_D =', aXyz_D
+       write(*,*)'!!! bXyz_D =', bXyz_D
+       write(*,*)'!!! cXyz_D =', cXyz_D
+    end if
 
     Alpha = (B2 * sum(A1_D * Q1_D)-sum(A1_D * B1_D)*sum(B1_D * Q1_D) ) / ACrossB2
     Beta  = (A2 * sum(B1_D * Q1_D)-sum(A1_D * B1_D)*sum(A1_D * Q1_D) ) / ACrossB2
