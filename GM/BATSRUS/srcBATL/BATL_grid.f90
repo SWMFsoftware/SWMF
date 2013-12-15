@@ -934,7 +934,8 @@ contains
   !===========================================================================
 
   subroutine find_grid_block(XyzIn_D, &
-       iProcOut, iBlockOut, iCellOut_D, DistOut_D, UseGhostCell)
+       iProcOut, iBlockOut, iCellOut_D, DistOut_D, iNodeOut, &
+       UseGhostCell)
 
     ! Find the processor and block containing location XyzIn_D. 
     ! If iCellOut_D is present and UseGhostCell is not present or false,
@@ -950,6 +951,7 @@ contains
     integer, intent(out):: iBlockOut, iProcOut    ! Block and proc indexes
     integer, intent(out), optional:: iCellOut_D(MaxDim) ! Closest cell indexes
     real,    intent(out), optional:: DistOut_D(MaxDim)  ! Normalized distance
+    integer, intent(out), optional:: iNodeOut     ! Tree node index
     logical, intent(in),  optional:: UseGhostCell ! Use ghost cells or not
 
     real:: CoordTree_D(MaxDim), Coord_D(MaxDim)
@@ -965,6 +967,13 @@ contains
     end if
     ! Calculate normalized coordinates for tree search
     CoordTree_D = (Coord_D - CoordMin_D)/(CoordMax_D - CoordMin_D)
+
+    if(any(CoordTree_D < 0.0) .or. any(CoordTree_D > 1.0))then
+       iBlockOut = Unset_
+       iProcOut  = Unset_
+       if(present(iNodeOut)) iNodeOut = Unset_
+       RETURN
+    end if
 
     ! Find node containing the point
     if(present(iCellOut_D))then
@@ -983,6 +992,8 @@ contains
        iBlockOut = Unset_
        iProcOut  = Unset_
     end if
+
+    if(present(iNodeOut)) iNodeOut = iNode
 
   end subroutine find_grid_block
 
