@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 Module ModIO
@@ -62,6 +63,7 @@ Module ModIO
   real :: offset_angle(maxfile)
   real, dimension(3,maxfile) :: ObsPos_DI
   character (LEN=20) :: NameLosTable(maxfile)
+  logical:: UseLosSimple = .false. !!! experiment with simple LOS algorithm
 
   ! Variables for radiowave image
   ! ObsPos_DI is borrowed from the LOS plot
