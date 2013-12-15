@@ -961,6 +961,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#PLOTFILENAME")
         call read_var('NameMaxTimeUnit', NameMaxTimeUnit)
 
+     case("#LOSPLOT")
+        call read_var('UseLosSimple', UseLosSimple)
+
      case("#SAVELOGNAME")
         call read_var('IsLogName_n',IsLogName_n)
         call read_var('IsLogName_e',IsLogName_e)
