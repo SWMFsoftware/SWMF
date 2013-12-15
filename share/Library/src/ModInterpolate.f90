@@ -72,8 +72,6 @@ contains
     ! Assume normalized coordinates unless x_I is present.
     ! If present x_I contains the coordinates in an increasing order.
 
-    implicit none
-
     integer, intent(in) :: iMin, iMax
     real, intent(in)    :: A_I(iMin:iMax)
     real, intent(in)    :: x
@@ -99,8 +97,6 @@ contains
     ! Calculate linear interpolation of A_VI at position x
     ! Assume normalized coordinates unless x_I is present.
     ! If present x_I contains the coordinates in an increasing order.
-
-    implicit none
 
     integer, intent(in) :: nVar, iMin, iMax
     real, intent(in)    :: A_VI(nVar, iMin:iMax)
@@ -131,8 +127,6 @@ contains
     ! Calculate bilinear interpolation of A_II at position Xy_D
     ! Assume normalized coordinates unless x_I and/or y_I are present.
     ! If present x_I and y_I contain the coordinates in an increasing order.
-
-    implicit none
 
     integer, intent(in) :: iMin, iMax, jMin, jMax
     real, intent(in)    :: A_II(iMin:iMax,jMin:jMax)
@@ -170,8 +164,6 @@ contains
     ! Calculate bilinear interpolation of A_VII at position Xy_D
     ! Assume normalized coordinates unless x_I and/or y_I are present.
     ! If present x_I and y_I contain the coordinates in an increasing order.
-
-    implicit none
 
     integer, intent(in) :: nVar, iMin, iMax, jMin, jMax
     real, intent(in)    :: A_VII(nVar, iMin:iMax,jMin:jMax)
@@ -212,7 +204,6 @@ contains
 
     ! Calculate trilinear interpolation of A_III at position Xyz_D
 
-    implicit none
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
     real, intent(in)    :: A_III(iMin:iMax,jMin:jMax,kMin:kMax)
     real, intent(in)    :: Xyz_D(3)
@@ -260,7 +251,6 @@ contains
 
     ! Calculate trilinear interpolation of A_III at position Xyz_D
 
-    implicit none
     integer, intent(in) :: nVar, iMin, iMax, jMin, jMax, kMin, kMax
     real, intent(in)    :: A_VIII(nVar, iMin:iMax, jMin:jMax, kMin:kMax)
     real, intent(in)    :: Xyz_D(3)
