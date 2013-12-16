@@ -133,7 +133,7 @@ contains
     integer, save:: nDim, nVar
 
     ! List of variables to pass
-    character(len=100):: NameVar = 'Bx By Bz'
+    character(len=100):: NameVar = 'Rho Ux Uy Uz Bx By Bz'
 
     ! Grid index
     integer:: iDecompLastGm = -1, iDecompLastPt = -1
@@ -279,7 +279,7 @@ contains
     allocate(DataPt_VI(nVar,nPointPt))
     call transfer_buffer(iCommGmPt, nProcGmPt, iProcGmPt, nVar, &
          nPointGm, nPointGm_P, DataGm_VI, &
-         nPointPt, nPointPt_P, DataPt_VI) 
+         nPointPt, nPointPt_P, DataPt_VI)
 
     ! Give the data to PT
     if(is_proc(PT_)) call PT_put_from_gm(.true., &
@@ -430,7 +430,7 @@ contains
     character(len=*), parameter:: NameSub = 'transfer_buffer'
     !-----------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*)'NameSub called with nProc, iProc, nData=', &
+    if(DoTestMe)write(*,*)NameSub,' called with nProc, iProc, nData=', &
          nProc, iProc, nData
 
     allocate(iRequestS_I(nProc), iRequestR_I(nProc), iStatus_II(MPI_STATUS_SIZE,nProc))
