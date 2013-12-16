@@ -6,10 +6,12 @@ subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
   ! Get magnetic field data from GM to PT
 
   use ModProcMH,  ONLY: iProc
-  use ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, UnitB_
-  use ModAdvance, ONLY: State_VGB, Bx_, Bz_
+  use ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, UnitB_, UnitU_, UnitP_, UnitRho_
+  use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, nVar, p_, NamePrimitiveVar
+  use ModVarIndexes, ONLY: nVar, NamePrimitiveVar
   use ModB0,      ONLY: UseB0, get_b0
-  use BATL_lib,   ONLY: nDim, MaxDim, MaxJ, MaxK, find_grid_block
+  use BATL_lib,   ONLY: nDim, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block
+  use ModInterpolate, ONLY: trilinear
 
   implicit none
 
@@ -22,17 +24,17 @@ subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
   real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
   real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
 
-  real:: Xyz_D(MaxDim), b_D(MaxDim)
-  real:: Dist_D(MaxDim), Dx1, Dx2, Dy1, Dy2, Dz1, Dz2
+  real:: Xyz_D(MaxDim), b_D(MaxDim), u_D(MaxDim), rho_D, p_D
+  real:: Dist_D(MaxDim), Dx1, Dx2, Dy1, Dy2, Dz1, Dz2, State_V(nVar)
   integer:: iCell_D(MaxDim), i1, i2, j1, j2, k1, k2
 
   integer:: iPoint, iBlock, iProcFound
 
   character(len=*), parameter :: NameSub='GM_get_for_pt'
   !--------------------------------------------------------------------------
-  if(nVarIn /= 3 .or. NameVar /= 'Bx By Bz')then
+  if(nVarIn /= nVar .or. NameVar /= NamePrimitiveVar )then
      write(*,*)NameSub,' ERROR: nVarIn, NameVar=', nVarIn, NameVar
-     call stop_mpi(NameSub//' is only implemented for transferring B field')
+     call stop_mpi(NameSub//': Requested variables are inconsistent with the current equation set.')
   end if
 
   ! We should have second order accurate magnetic field in the ghost cells
@@ -48,38 +50,21 @@ subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
         call stop_mpi(NameSub//' could not find position on this proc')
      end if
 
+     State_V = trilinear(State_VGB(:,:,:,:,iBlock), &
+         nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_D, iCell_D = iCell_D, Dist_D = Dist_D)
+
      if(UseB0)then
         call get_b0(Xyz_D, b_D)
+        State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + b_D
      else
         b_D = 0.0
      end if
 
-        i1=iCell_D(1)
-        i2=i1+1
-        Dx1=Dist_D(1)
-        Dx2=1.0-Dx1
+     u_D = 0.0
 
-        j1=iCell_D(2)
-        j2=min(j1+1, MaxJ)
-        Dy1=Dist_D(2)
-        Dy2=1.0-Dy1
+     Data_VI(:,iPoint) = State_V
 
-        k1=iCell_D(3)
-        k2=min(k1+1, MaxK)
-        Dz1=Dist_D(3)
-        Dz2=1.0-Dz1
-
-
-     b_D = b_D + Dz2*(Dy2*(Dx2*State_VGB(Bx_:Bz_,i1,j1,k1,iBlock)   &
-          +                Dx1*State_VGB(Bx_:Bz_,i2,j1,k1,iBlock))  &
-          +           Dy1*(Dx2*State_VGB(Bx_:Bz_,i1,j2,k1,iBlock)   &
-          +                Dx1*State_VGB(Bx_:Bz_,i2,j2,k1,iBlock))) &
-          +      Dz1*(Dy2*(Dx2*State_VGB(Bx_:Bz_,i1,j1,k2,iBlock)   &
-          +                Dx1*State_VGB(Bx_:Bz_,i2,j1,k2,iBlock))  &
-          +           Dy1*(Dx2*State_VGB(Bx_:Bz_,i1,j2,k2,iBlock)   &
-          +                Dx1*State_VGB(Bx_:Bz_,i2,j2,k2,iBlock)))
-
-     Data_VI(:,iPoint) = b_D*No2Si_V(UnitB_)
+     !Data_VI(:,iPoint) = State_V*No2Si_V(iUnit_V)
 
   end do
 
