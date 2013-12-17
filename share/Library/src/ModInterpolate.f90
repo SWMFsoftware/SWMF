@@ -82,8 +82,8 @@ contains
     integer, intent(in), optional :: iCell_D
     real,    intent(in), optional :: Dist_D
 
-    integer :: i1
-    real    :: Dx1
+    integer :: i1, i2
+    real    :: Dx1, Dx2
     character (len=*), parameter :: NameSub=NameMod//'::linear_scalar'
     !--------------------------------------------------------------------------
 
@@ -91,16 +91,16 @@ contains
 
        ! Calculate the remaining cell indices and interpolation weights
 
-       i1 = iCell_D(1)
+       i1 = iCell_D
        i2 = i1 + 1
-       Dx1 = Dist_D(1)
+       Dx1 = Dist_D
        Dx2 = 1.0 - Dx1
 
     else
 
        ! Locate the point Xyz_D on the grid
-       call find_cell(iMin, iMax, Xyz_D(1), i1, Dx1, x_I, DoExtrapolate, &
-            "Called for coord1 from "//NameSub)
+       call find_cell(iMin, iMax, x, i1, Dx1, x_I, DoExtrapolate, &
+            "Called from "//NameSub)
 
        ! Calculate the remaining cell indices and interpolation weights
        i2 = i1 + 1; Dx2 = 1.0 - Dx1
@@ -131,8 +131,8 @@ contains
     ! return value
     real                :: linear_vector(nVar)
 
-    integer :: i1
-    real    :: Dx1
+    integer :: i1, i2
+    real    :: Dx1, Dx2
     character (len=*), parameter :: NameSub=NameMod//'::linear_vector'
     !--------------------------------------------------------------------------
 
@@ -140,16 +140,16 @@ contains
 
        ! Calculate the remaining cell indices and interpolation weights
 
-       i1 = iCell_D(1)
+       i1 = iCell_D
        i2 = i1 + 1
-       Dx1 = Dist_D(1)
+       Dx1 = Dist_D
        Dx2 = 1.0 - Dx1
 
     else
 
        ! Locate the point Xyz_D on the grid
-       call find_cell(iMin, iMax, Xyz_D(1), i1, Dx1, x_I, DoExtrapolate, &
-            "Called for coord1 from "//NameSub)
+       call find_cell(iMin, iMax, x, i1, Dx1, x_I, DoExtrapolate, &
+            "Called from "//NameSub)
 
        ! Calculate the remaining cell indices and interpolation weights
        i2 = i1 + 1; Dx2 = 1.0 - Dx1
@@ -176,8 +176,8 @@ contains
     real,    intent(in), optional :: x_I(iMin:iMax)
     real,    intent(in), optional :: y_I(jMin:jMax)
     logical, intent(in), optional :: DoExtrapolate
-    integer, intent(in), optional :: iCell_D
-    real,    intent(in), optional :: Dist_D
+    integer, intent(in), optional :: iCell_D(2)
+    real,    intent(in), optional :: Dist_D(2)
 
     integer :: i1, i2, j1, j2
     real    :: Dx1, Dx2, Dy1, Dy2
@@ -201,10 +201,10 @@ contains
     else
 
        ! Locate the point Xyz_D on the grid
-       call find_cell(iMin, iMax, Xyz_D(1), i1, Dx1, x_I, DoExtrapolate, &
+       call find_cell(iMin, iMax, Xy_D(1), i1, Dx1, x_I, DoExtrapolate, &
             "Called for coord1 from "//NameSub)
 
-       call find_cell(jMin, jMax, Xyz_D(2), j1, Dy1, y_I, DoExtrapolate, &
+       call find_cell(jMin, jMax, Xy_D(2), j1, Dy1, y_I, DoExtrapolate, &
             "Called for coord2 from "//NameSub)
 
        ! Calculate the remaining cell indices and interpolation weights
@@ -236,8 +236,8 @@ contains
     real,    intent(in), optional :: x_I(iMin:iMax)
     real,    intent(in), optional :: y_I(jMin:jMax)
     logical, intent(in), optional :: DoExtrapolate
-    integer, intent(in), optional :: iCell_D
-    real,    intent(in), optional :: Dist_D
+    integer, intent(in), optional :: iCell_D(2)
+    real,    intent(in), optional :: Dist_D(2)
 
     ! return value
     real                :: bilinear_vector(nVar)
@@ -264,10 +264,10 @@ contains
     else
 
        ! Locate the point Xyz_D on the grid
-       call find_cell(iMin, iMax, Xyz_D(1), i1, Dx1, x_I, DoExtrapolate, &
+       call find_cell(iMin, iMax, Xy_D(1), i1, Dx1, x_I, DoExtrapolate, &
             "Called for coord1 from "//NameSub)
 
-       call find_cell(jMin, jMax, Xyz_D(2), j1, Dy1, y_I, DoExtrapolate, &
+       call find_cell(jMin, jMax, Xy_D(2), j1, Dy1, y_I, DoExtrapolate, &
             "Called for coord2 from "//NameSub)
 
        ! Calculate the remaining cell indices and interpolation weights
