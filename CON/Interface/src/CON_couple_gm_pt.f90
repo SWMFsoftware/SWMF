@@ -185,7 +185,7 @@ contains
     ! "Rendezvous": 
 
     ! number of processors of the OTHER component to communicate with
-    integer:: nRndvouGm, nRndvouPt
+    integer, save:: nRndvouGm, nRndvouPt
 
     ! processors of the OTHER component to communicate with
     integer, allocatable, save:: nRndvouProcGm_I(:), nRndvouProcPt_I(:)
@@ -218,12 +218,12 @@ contains
        if(is_proc0(GM_)) call GM_get_grid_info(nDim, iGridGm, iDecompGm)
        if(is_proc0(PT_)) call PT_get_grid_info(nDim, iGridGm, iDecompGm)
        call MPI_bcast(&
-            iDecompGm, 1, MPI_INTEGER, i_proc0(GM_), iCommGmPt, iError)
+            iDecompGm, 1, MPI_INTEGER, i_proc0(GM_), MPI_COMM_WORLD, iError)
        call MPI_bcast(&
-            iDecompPt, 1, MPI_INTEGER, i_proc0(PT_), iCommGmPt, iError)
+            iDecompPt, 1, MPI_INTEGER, i_proc0(PT_), MPI_COMM_WORLD, iError)
        ! added by Dmitry
        call MPI_bcast(&
-            nDim, 1, MPI_INTEGER, i_proc0(PT_), iCommGmPt, iError)
+            nDim, 1, MPI_INTEGER, i_proc0(PT_), MPI_COMM_WORLD, iError)
     endif
 
     IsNewRoute = iDecompGm /= iDecompLastGm .or. iDecompLastPt /= iDecompPt
@@ -231,14 +231,13 @@ contains
     iDecompLastGm = iDecompGm
     iDecompLastPt = iDecompPt
 
-
     if(IsNewRoute)then
        nPointPt = 0
        ! Get positions where info is needed from PT. PT will allocate array.
        if(is_proc(PT_)) call PT_put_from_gm(.false., &
             NameVar, nVar, nPointPt, PosPt_DI)
        call MPI_bcast(&
-            nVar, 1, MPI_INTEGER, i_proc0(PT_), iCommGmPt, iError)
+            nVar, 1, MPI_INTEGER, i_proc0(PT_), MPI_COMM_WORLD, iError)
 
        if(IsSameLayout)then
 
@@ -336,8 +335,6 @@ contains
                   nDim, nPointPt, PosSortPt_DI)
 
              deallocate(PosSortPt_DI)
-
-
 
           elseif(is_proc(GM_))then
              ! \
@@ -657,7 +654,7 @@ contains
     integer:: iProcLocal
     integer:: iRndvou ! loop variable
     integer:: nProcTarget, nProcSource
-    integer:: nRndvouOther, nProc0Other, nProcStrideOther
+    integer:: nRndvouOther, nProc0Other
     !------------------------------------------------------------------
     nProcSource = n_proc(nCompSource)
     nProcTarget = n_proc(nCompTarget)
@@ -675,14 +672,12 @@ contains
        nRndvou = nProcSource / nProcTarget
        nRndvouOther   = nProcTarget / nProcSource
        iProcLocal = i_proc(nCompTarget)
-       nProc0Other = i_proc0(nCompSource)
-       nProcStrideOther = i_proc_stride(nCompSource)
+       nProc0Other = 0
     elseif(is_proc(nCompSource))then
        nRndvou = nProcTarget / nProcSource
        nRndvouOther   = nProcSource / nProcTarget
        iProcLocal = i_proc(nCompSource)
-       nProc0Other = i_proc0(nCompTarget)
-       nProcStrideOther = i_proc_stride(nCompTarget)
+       nProc0Other = n_proc(nCompSource)
     end if
 
     !\
@@ -704,32 +699,29 @@ contains
           ! account for discrepancy:: increase nRndvouOther of first dProc by 1
           !/
           nRndvouProc_I(nRndvou) = nProc0Other + &
-               (iProcLocal / (nRndvouOther + 1)) * nProcStrideOther
+               (iProcLocal / (nRndvouOther + 1))
        else
           nRndvouProc_I(nRndvou) = nProc0Other + &
-               (dProc + (iProcLocal - dProc * (nRndvouOther+1)) / nRndvouOther)&
-               * nProcStrideOther
+               (dProc + (iProcLocal - dProc * (nRndvouOther+1)) / nRndvouOther)
        endif
     else
        if(iProcLocal < dProc)then
           do iRndvou = 1, nRndvou
              nRndvouProc_I(iRndvou) = nProc0Other + &
                   (nRndvou * iProcLocal + &
-                  iRndvou - 1) * nProcStrideOther
+                  iRndvou - 1)
           end do
        else
           do iRndvou = 1, nRndvou
              nRndvouProc_I(iRndvou) = nProc0Other + &
                   ((nRndvou+1) * dProc + &
                   nRndvou * (iProcLocal - dProc) + &
-                  iRndvou - 1) * nProcStrideOther
+                  iRndvou - 1)
           end do
        end if
     end if
 
     allocate(nRndvouPoint_I(nRndvou))
-
-!write(*,*)'iProc = ', i_proc(), 'Rndvou = ', nRndvouProc_I
 
   end subroutine set_inquiry_rndvou
 
@@ -763,7 +755,7 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*)NameSub, 'called with nProc, iProc', &
          nProc, iProc
-
+          
     allocate(iRequest_I(nRndvou), iStatus_II(MPI_STATUS_SIZE,nRndvou))
     if(is_proc(nCompSend)) then
        do iRndvou = 1, nRndvou
@@ -850,10 +842,8 @@ contains
              iRndvou = iRndvou + 1
              iRndvouBuffer = iRndvouBuffer + nRndvouPoint_I(iRndvou)
           end if
-          iProcSourceLocal = (iProc_I(iBuffer) - i_proc0(nCompSource)) / &
-               i_proc_stride(nCompSource)
-          iProcTargetLocal = (nRndvouProc_I(iRndvou) - i_proc0(nCompTarget)) / &
-               i_proc_stride(nCompTarget)
+          iProcSourceLocal = (iProc_I(iBuffer) - 0*i_proc0(nCompSource))
+          iProcTargetLocal = (nRndvouProc_I(iRndvou) - n_proc(nCompSource)+0*i_proc0(nCompTarget))
           nPoint_PP(iProcSourceLocal,iProcTargetLocal) = &
                nPoint_PP(iProcSourceLocal,iProcTargetLocal) + 1
        end do
@@ -875,8 +865,8 @@ contains
        do iProcTargetLocal = 0, nProcTarget-1
           if(nPointRecv_P(iProcTargetLocal) > 0)then
              nRndvou = nRndvou + 1
-             iRndvouProc_I( nRndvou-1) = i_proc0(nCompTarget) + &
-                  iProcTargetLocal * i_proc_stride(nCompTarget)
+             iRndvouProc_I( nRndvou-1) = n_proc(nCompSource) + &
+                  iProcTargetLocal
              iRndvouPoint_I(nRndvou-1) = nPointRecv_P(iProcTargetLocal)
           end if
        end do
