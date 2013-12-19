@@ -72,9 +72,9 @@ float
 
 #UNIFORMSTATE
 1.0               Rho		rho
-0.0               Ux		ux
-0.0                Uy		uy
-0.0                Uz		uz
+1.0               Ux		ux
+1.0                Uy		uy
+1.0                Uz		uz
 -1.0              Bx		bx
 -1.0               By		by
 -1.0               Bz		bz
@@ -119,7 +119,7 @@ PT			NameComp2
 -1                     Dtcouple
 
 #STOP
-2			MaxIter
+10			MaxIter
 -1.0			TimeMax
 
 End session: 1
