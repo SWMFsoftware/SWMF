@@ -42,7 +42,7 @@ subroutine MH_set_parameters(TypeAction)
        UseTvdResChange, UseAccurateResChange, &
        UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, nGUsed, &
        DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
-       TypeLimiter5, UseCweno, UsePerVarLimiter, FluxLimiterCriter
+       TypeLimiter5, UseCweno, UsePerVarLimiter, FluxLimiterCrit
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
@@ -1104,7 +1104,7 @@ subroutine MH_set_parameters(TypeAction)
               UseFluxLimiter = .true.
               UseCenterFlux  = .true.
               UseFaceFlux    = .not. UseCenterFlux
-              FluxLimiterCriter = 3.e-2
+              FluxLimiterCrit = 3.e-2
            else
               UseFluxLimiter = .false.
               UseFaceFlux    = .true.
@@ -1117,7 +1117,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseFluxLimiter', UseFluxLimiter)
         if(UseFluxLimiter) then
            call read_var('UseCenterFlux', UseCenterFlux) ! Need 3 ghost cells.
-           call read_var('FluxLimiterCriter', FluxLimiterCriter)
+           call read_var('FluxLimiterCrit', FluxLimiterCrit)
            UseFaceFlux = .not. UseCenterFlux
         endif
 

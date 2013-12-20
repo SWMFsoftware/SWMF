@@ -6,7 +6,7 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
-  use ModAdvance, ONLY: UseFDFaceFlux, Weight_VX, Weight_VY, Weight_VZ, UseFluxLimiter,&
+  use ModAdvance, ONLY: UseFDFaceFlux, Weight_IVX, Weight_IVY, Weight_IVZ, UseFluxLimiter,&
        UseFaceFlux, UseCenterFlux
 
   implicit none
@@ -30,7 +30,7 @@ module ModFaceValue
 
   logical, public:: UsePerVarLimiter = .false. ! Variable for CWENO5
 
-  real,public:: FluxLimiterCriter  ! Varivable for ECHO
+  real,public:: FluxLimiterCrit  ! Varivable for ECHO
 
   public :: read_face_value_param, calc_face_value, correct_monotone_restrict
 
@@ -1434,10 +1434,10 @@ contains
                   ! Calculate the non-linear weight for face flux interpolation.
                   if(UseFluxLimiter) then
                      do iFace = 1, nIFace
-                        Weight_VX(1,iVar,iFace,j,k) = FluxLimiterCriter/ &
-                             max(FluxLimiterCriter,Smooth_II(1,iFace-1),Smooth_II(1, iFace))
-                        Weight_VX(2,iVar,iFace,j,k) = FluxLimiterCriter/ &
-                             max(FluxLimiterCriter,Smooth_II(2,iFace-1),Smooth_II(2, iFace))            
+                        Weight_IVX(1,iVar,iFace,j,k) = FluxLimiterCrit/ &
+                             max(FluxLimiterCrit,Smooth_II(1,iFace-1),Smooth_II(1, iFace))
+                        Weight_IVX(2,iVar,iFace,j,k) = FluxLimiterCrit/ &
+                             max(FluxLimiterCrit,Smooth_II(2,iFace-1),Smooth_II(2, iFace))            
                      enddo
                   end if
 
@@ -1570,10 +1570,10 @@ contains
 
                   if(UseFluxLimiter) then
                      do jFace = 1, nJFace
-                        Weight_VY(1,iVar,i,jFace,k) = FluxLimiterCriter/ &
-                             max(FluxLimiterCriter,Smooth_II(1,jFace-1),Smooth_II(1, jFace))
-                        Weight_VY(2,iVar,i,jFace,k) = FluxLimiterCriter/ &
-                             max(FluxLimiterCriter,Smooth_II(2,jFace-1),Smooth_II(2, jFace))
+                        Weight_IVY(1,iVar,i,jFace,k) = FluxLimiterCrit/ &
+                             max(FluxLimiterCrit,Smooth_II(1,jFace-1),Smooth_II(1, jFace))
+                        Weight_IVY(2,iVar,i,jFace,k) = FluxLimiterCrit/ &
+                             max(FluxLimiterCrit,Smooth_II(2,jFace-1),Smooth_II(2, jFace))
                      enddo
                   end if
 
@@ -1706,10 +1706,10 @@ contains
 
                   if(UseFluxLimiter) then
                      do kFace = 1, nKFace
-                        Weight_VZ(1,iVar,i,j,kFace) = FluxLimiterCriter/ &
-                             max(FluxLimiterCriter,Smooth_II(1,kFace-1),Smooth_II(1, kFace))
-                        Weight_VZ(2,iVar,i,j,kFace) = FluxLimiterCriter/ &
-                             max(FluxLimiterCriter,Smooth_II(2,kFace-1),Smooth_II(2, kFace))
+                        Weight_IVZ(1,iVar,i,j,kFace) = FluxLimiterCrit/ &
+                             max(FluxLimiterCrit,Smooth_II(1,kFace-1),Smooth_II(1, kFace))
+                        Weight_IVZ(2,iVar,i,j,kFace) = FluxLimiterCrit/ &
+                             max(FluxLimiterCrit,Smooth_II(2,kFace-1),Smooth_II(2, kFace))
                      enddo
                   end if
 

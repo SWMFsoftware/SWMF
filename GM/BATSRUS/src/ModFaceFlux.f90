@@ -28,7 +28,7 @@ module ModFaceFlux
        UseIdealEos, UseElectronPressure, &
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseFDFaceFlux, UseFluxLimiter, &
-       Weight_VX, Weight_VY, Weight_VZ, &
+       Weight_IVX, Weight_IVY, Weight_IVZ, &
        UseCenterFlux, FluxCenter_VGD, UseFaceFlux
 
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
@@ -370,8 +370,8 @@ contains
 
     ! Variables for 6th order flux interpolation
     real, parameter:: d0=1067./960, d2=-29./480, d4=3./640
-    real, allocatable :: Flux1_V(:,:,:,:), Weight_V(:,:,:),&
-         Flux2_V(:,:), FluxNew_V(:,:), Cell_I(:), FluxCenter_VG(:,:)
+    real, allocatable :: Flux_VI3(:,:,:,:), Weight_IVI(:,:,:),&
+         Flux_VI(:,:), FluxNew_VI(:,:), Cell_I(:), FluxCenter_VG(:,:)
     integer:: Minl, Maxl, MaxIJK
     !--------------------------------------------------------------------------
 
@@ -382,7 +382,7 @@ contains
     end if
 
     if(UseFluxLimiter) then
-       if(.not. allocated(Weight_V)) then
+       if(.not. allocated(Weight_IVI)) then
           MaxIJK = max(nI,nJ,nK)
           if(UseFaceFlux) then
              Minl = -1; Maxl = MaxIJK+3
@@ -390,9 +390,9 @@ contains
              Minl = 1; Maxl = MaxIJK+1
           endif
 
-          allocate(Flux2_V(nFlux, Minl:Maxl))          
-          allocate(Weight_V(2,nVar,1:MaxIJK+1))
-          allocate(FluxNew_V(nFlux, 1:MaxIJK+1))
+          allocate(Flux_VI(nFlux, Minl:Maxl))          
+          allocate(Weight_IVI(2,nVar,1:MaxIJK+1))
+          allocate(FluxNew_VI(nFlux, 1:MaxIJK+1))
           if(UseCenterFlux) allocate(FluxCenter_VG(nFlux,-1:MaxIJK+3))
        endif
     endif
@@ -612,31 +612,31 @@ contains
             ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
             ! is 6th order at smooth region. 
             do kFace = kMin, kMax; do jFace = jMin, jMax
-               Flux2_V(:,iMin2:iMax2) = Flux_VX(:,iMin2:iMax2, jFace, kFace)
-               Weight_V(:,:,iMin:iMax) = Weight_VX(:,:,iMin:iMax, jFace, kFace)
+               Flux_VI(:,iMin2:iMax2) = Flux_VX(:,iMin2:iMax2, jFace, kFace)
+               Weight_IVI(:,:,iMin:iMax) = Weight_IVX(:,:,iMin:iMax, jFace, kFace)
                if(UseCenterFlux) &
                     FluxCenter_VG(:,iMin-2:iMax+2) = &
                     FluxCenter_VGD(:,iMin-2:iMax+2, jFace, kFace, 1)
                call limit_face_flux(iMin,iMax)
-               Flux_VX(:,iMin:iMax, jFace, kFace) = FluxNew_V(:,iMin:iMax)
+               Flux_VX(:,iMin:iMax, jFace, kFace) = FluxNew_VI(:,iMin:iMax)
             end do; end do
          else
             ! Interpolation without limiter may be not useful in practic. The 
             ! code below left here for test, so it is not optimized. 
             ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx 
             ! is 6th order. May cause unphysical oscillation.
-            allocate(Flux1_V(nVar+nFluid,iMin2:iMax2,jMin:jMax,kMin:kMax))
-            Flux1_V(:,iMin2:iMax2,jMin:jMax,kMin:kMax) = &
+            allocate(Flux_VI3(nVar+nFluid,iMin2:iMax2,jMin:jMax,kMin:kMax))
+            Flux_VI3(:,iMin2:iMax2,jMin:jMax,kMin:kMax) = &
                  Flux_VX(:,iMin2:iMax2,jMin:jMax,kMin:kMax)
             do kFace = kMin,kMax; do jFace = jMin,jMax; do iFace = iMin,iMax
                Flux_VX(:,iFace,jFace,kFace) = &
-                    d0*Flux1_V(:,iFace,jFace,kFace) + &
-                    d2*(Flux1_V(:,iFace-1,jFace,kFace) + &
-                    Flux1_V(:,iFace+1,jFace,kFace)) + &
-                    d4*(Flux1_V(:,iFace-2,jFace,kFace) + &
-                    Flux1_V(:,iFace+2,jFace,kFace))
+                    d0*Flux_VI3(:,iFace,jFace,kFace) + &
+                    d2*(Flux_VI3(:,iFace-1,jFace,kFace) + &
+                    Flux_VI3(:,iFace+1,jFace,kFace)) + &
+                    d4*(Flux_VI3(:,iFace-2,jFace,kFace) + &
+                    Flux_VI3(:,iFace+2,jFace,kFace))
             end do; end do; end do
-            deallocate(Flux1_V)  
+            deallocate(Flux_VI3)  
          end if
       end if
     end subroutine get_flux_x
@@ -711,27 +711,27 @@ contains
       if(UseFDFaceFlux) then
          if(UseFluxLimiter) then
             do kFace = kMin, kMax; do iFace = iMin, iMax
-               Flux2_V(:,jMin2:jMax2) = Flux_VY(:,iFace,jMin2:jMax2, kFace)
-               Weight_V(:,:,jMin:jMax) = Weight_VY(:,:,iFace,jMin:jMax, kFace)
+               Flux_VI(:,jMin2:jMax2) = Flux_VY(:,iFace,jMin2:jMax2, kFace)
+               Weight_IVI(:,:,jMin:jMax) = Weight_IVY(:,:,iFace,jMin:jMax, kFace)
                if(UseCenterFlux) &
                     FluxCenter_VG(:,jMin-2:jMax+2) = &
                     FluxCenter_VGD(:,iFace,jMin-2:jMax+2, kFace, 2)
                call limit_face_flux(jMin,jMax)
-               Flux_VY(:,iFace,jMin:jMax, kFace) = FluxNew_V(:,jMin:jMax)
+               Flux_VY(:,iFace,jMin:jMax, kFace) = FluxNew_VI(:,jMin:jMax)
             end do; end do
          else
-            allocate(Flux1_V(nVar+nFluid,iMin:iMax,jMin2:jMax2,kMin:kMax))
-            Flux1_V(:,iMin:iMax,jMin2:jMax2,kMin:kMax) = &
+            allocate(Flux_VI3(nVar+nFluid,iMin:iMax,jMin2:jMax2,kMin:kMax))
+            Flux_VI3(:,iMin:iMax,jMin2:jMax2,kMin:kMax) = &
                  Flux_VY(:,iMin:iMax,jMin2:jMax2,kMin:kMax)
             do kFace = kMin,kMax; do jFace = jMin,jMax; do iFace =iMin,iMax
                Flux_VY(:,iFace,jFace,kFace) = &
-                    d0*Flux1_V(:,iFace,jFace,kFace) + &
-                    d2*(Flux1_V(:,iFace,jFace-1,kFace) + &
-                    Flux1_V(:,iFace,jFace+1,kFace)) + &
-                    d4*(Flux1_V(:,iFace,jFace-2,kFace) + &
-                    Flux1_V(:,iFace,jFace+2,kFace))
+                    d0*Flux_VI3(:,iFace,jFace,kFace) + &
+                    d2*(Flux_VI3(:,iFace,jFace-1,kFace) + &
+                    Flux_VI3(:,iFace,jFace+1,kFace)) + &
+                    d4*(Flux_VI3(:,iFace,jFace-2,kFace) + &
+                    Flux_VI3(:,iFace,jFace+2,kFace))
             end do; end do; end do
-            deallocate(Flux1_V)  
+            deallocate(Flux_VI3)  
          end if
       end if
     end subroutine get_flux_y
@@ -802,27 +802,27 @@ contains
       if(UseFDFaceFlux) then
          if(UseFluxLimiter) then
             do jFace = jMin, jMax; do iFace = iMin, iMax
-               Flux2_V(:,kMin2:kMax2) = Flux_VZ(:,iFace, jFace, kMin2:kMax2)
-               Weight_V(:,:,kMin:kMax) = Weight_VZ(:,:, iFace, jFace, kMin:kMax)
+               Flux_VI(:,kMin2:kMax2) = Flux_VZ(:,iFace, jFace, kMin2:kMax2)
+               Weight_IVI(:,:,kMin:kMax) = Weight_IVZ(:,:, iFace, jFace, kMin:kMax)
                if(UseCenterFlux) &
                     FluxCenter_VG(:,kMin-2:kMax+2) = &
                     FluxCenter_VGD(:,iFace, jFace, kMin-2:kMax+2, 3)
                call limit_face_flux(kMin,kMax)
-               Flux_VZ(:,iFace, jFace, kMin:kMax) = FluxNew_V(:,kMin:kMax)
+               Flux_VZ(:,iFace, jFace, kMin:kMax) = FluxNew_VI(:,kMin:kMax)
             end do; end do
          else
-            allocate(Flux1_V(nVar+nFluid,iMin:iMax,jMin:jMax,kMin2:kMax2))
-            Flux1_V(:,iMin:iMax,jMin:jMax,kMin2:kMax2) = &
+            allocate(Flux_VI3(nVar+nFluid,iMin:iMax,jMin:jMax,kMin2:kMax2))
+            Flux_VI3(:,iMin:iMax,jMin:jMax,kMin2:kMax2) = &
                  Flux_VZ(:,iMin:iMax,jMin:jMax,kMin2:kMax2)
             do kFace = kMin,kMax; do jFace = jMin,jMax; do iFace = iMin,iMax
                Flux_VZ(:,iFace,jFace,kFace) = &
-                    d0*Flux1_V(:,iFace,jFace,kFace) + &
-                    d2*(Flux1_V(:,iFace,jFace,kFace-1) + &
-                    Flux1_V(:,iFace,jFace,kFace+1)) + &
-                    d4*(Flux1_V(:,iFace,jFace,kFace-2) + &
-                    Flux1_V(:,iFace,jFace,kFace+2))
+                    d0*Flux_VI3(:,iFace,jFace,kFace) + &
+                    d2*(Flux_VI3(:,iFace,jFace,kFace-1) + &
+                    Flux_VI3(:,iFace,jFace,kFace+1)) + &
+                    d4*(Flux_VI3(:,iFace,jFace,kFace-2) + &
+                    Flux_VI3(:,iFace,jFace,kFace+2))
             end do; end do; end do
-            deallocate(Flux1_V)
+            deallocate(Flux_VI3)
          endif
       end if
     end subroutine get_flux_z
@@ -853,17 +853,17 @@ contains
       do iVar = 1, nVar+nFluid
          do l = lMin, lMax
             if(iVar > nVar) then
-               Weight4 = Weight_V(1,Rho_,l)
-               Weight6 = Weight_V(2,Rho_,l)
+               Weight4 = Weight_IVI(1,Rho_,l)
+               Weight6 = Weight_IVI(2,Rho_,l)
             else
-               Weight4 = Weight_V(1,iVar,l)
-               Weight6 = Weight_V(2,iVar,l)
+               Weight4 = Weight_IVI(1,iVar,l)
+               Weight6 = Weight_IVI(2,iVar,l)
             endif
             ! FluxCenter_VG is at cell center
-            ! Flux2_V is the face value. 
+            ! Flux_VI is the face value. 
             FluxValuemm = FluxCenter_VG(iVar, l-2)
             FluxValuem  = FluxCenter_VG(iVar,l-1)
-            FluxValue   = Flux2_V(iVar,l)
+            FluxValue   = Flux_VI(iVar,l)
             FluxValuep  = FluxCenter_VG(iVar,l)
             FluxValuepp = FluxCenter_VG(iVar,l+1)
 
@@ -874,7 +874,7 @@ contains
                  9*(FluxValuem + FluxValuep) + &
                  FluxValuemm + FluxValuepp)
             ! Weitht4(6) got based on the smoothness at this point. 
-            FluxNew_V(iVar,l) = Flux2_V(iVar,l) - Weight4*Der2 + Weight6*Der4
+            FluxNew_VI(iVar,l) = Flux_VI(iVar,l) - Weight4*Der2 + Weight6*Der4
          end do
       end do
 
@@ -893,19 +893,19 @@ contains
       do iVar = 1, nVar+nFluid
          do l = lMin, lMax
             if(iVar > nVar) then
-               Weight4 = Weight_V(1,Rho_,l)
-               Weight6 = Weight_V(2,Rho_,l)
+               Weight4 = Weight_IVI(1,Rho_,l)
+               Weight6 = Weight_IVI(2,Rho_,l)
             else
-               Weight4 = Weight_V(1,iVar,l)
-               Weight6 = Weight_V(2,iVar,l)
+               Weight4 = Weight_IVI(1,iVar,l)
+               Weight6 = Weight_IVI(2,iVar,l)
             endif
 
             Der2 = c1over24*&
-                 (Flux2_V(iVar,l-1) - 2*Flux2_V(iVar, l) + Flux2_V(iVar,l+1))
+                 (Flux_VI(iVar,l-1) - 2*Flux_VI(iVar, l) + Flux_VI(iVar,l+1))
             Der4 = c3over640*&
-                 (Flux2_V(iVar,l-2) - 4*Flux2_V(iVar,l-1) + 6*Flux2_V(iVar,l)&
-                 - 4*Flux2_V(iVar,l+1) + Flux2_V(iVar, l+2))
-            FluxNew_V(iVar,l) = Flux2_V(iVar,l) - Weight4*Der2 + Weight6*Der4
+                 (Flux_VI(iVar,l-2) - 4*Flux_VI(iVar,l-1) + 6*Flux_VI(iVar,l)&
+                 - 4*Flux_VI(iVar,l+1) + Flux_VI(iVar, l+2))
+            FluxNew_VI(iVar,l) = Flux_VI(iVar,l) - Weight4*Der2 + Weight6*Der4
          end do
       end do
 
