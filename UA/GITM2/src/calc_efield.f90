@@ -65,8 +65,8 @@ subroutine calc_efield(iBlock)
            ! the electric field in the vertical direction should not be very
            ! large.  Let's limit it, since it seems to blow up:
 
-           if (EField(j,i,k,iUp_) >  0.1) EField(j,i,k,iUp_) =  0.1
-           if (EField(j,i,k,iUp_) < -0.1) EField(j,i,k,iUp_) = -0.1
+           if (EField(j,i,k,iUp_) >  MaxEField) EField(j,i,k,iUp_) =  MaxEField
+           if (EField(j,i,k,iUp_) < -MaxEField) EField(j,i,k,iUp_) = -MaxEField
 
         enddo
      enddo
