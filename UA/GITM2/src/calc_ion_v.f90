@@ -12,7 +12,7 @@ subroutine calc_ion_v(iBlock)
   integer, intent(in) :: iBlock
   integer :: iLon, iLat, iAlt
   integer :: imax, jmax, kmax, iError, iDir
-  real    :: maxi, MaxVParallel
+  real    :: maxi
 
   real, dimension(1:nLons,1:nLats,1:nAlts) ::           &
                   B02, ForceDotB, Nie, RhoNu, IRho, &
@@ -144,8 +144,8 @@ subroutine calc_ion_v(iBlock)
 !  enddo
 
   ! Let's limit the Parallel Flow to something reasonable...
-
-  MaxVParallel = 100.0
+! AGB: Moved MaxVParallel to an input option
+!  MaxVParallel = 100.0
 
   if (UseNeutralDrag) then
      VIParallel = min( UDotB + MaxVParallel, VIParallel)
