@@ -234,6 +234,10 @@ module ModInputs
 
   logical :: DoCheckStopFile = .true.
 
+! AGB: Setting physical limits for ionospheric dynamics
+  real :: MaxVParallel = 100.0         
+  real :: MaxEField = 0.1
+
   !\
   ! Methods for completing chemistry
   !/
