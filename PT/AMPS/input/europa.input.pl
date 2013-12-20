@@ -148,14 +148,33 @@ while ($line=<InputFile>) {
     }
   }
   
-  elsif ($InputLine eq "PHOTOIONIZATION") { 
+  elsif ($InputLine eq "UNIMOLECULARREACTION") { 
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
     $InputLine=~s/ //g;
      
-    if ($InputLine eq "ON") {
+    if ($InputLine eq "PHOTOIONIZATION") {
       ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS_MODE_\n#define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_\n\n","main/UserDefinition.PIC.h");   
       ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_\n#define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4) Europa::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4);\n","main/UserDefinition.PIC.h");
       ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_\n#define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3) Europa::ExospherePhotoionizationLifeTime(t0,t1,t2,t3);\n","main/UserDefinition.PIC.h");
+    }    
+    elsif ($InputLine eq "GENERICTRANSFORMATION") {
+      my $ReactionProcessor;
+      
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      if ($InputLine eq "FUNC") {    
+        $line=~s/[=()]/ /g;
+        ($ReactionProcessor,$line)=split(' ',$line,2);
+        ($ReactionProcessor,$line)=split(' ',$line,2);
+        ($ReactionProcessor,$line)=split(' ',$line,2);
+        ($ReactionProcessor,$line)=split(' ',$line,2);
+      }
+      else {
+        die "The option is not recognized, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+      
+      ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS_MODE_\n#define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_OFF_\n\n","main/UserDefinition.PIC.h");
+      ampsConfigLib::AddLine2File("#undef _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_\n#define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_\n\n","main/UserDefinition.PIC.h");
+      ampsConfigLib::AddLine2File("#undef _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_\n#define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(t0,t1,t2,t3,t4,t5,t6,t7) $ReactionProcessor(t0,t1,t2,t3,t4,t5,t6,t7);\n","main/UserDefinition.PIC.h"); 
     }
     elsif ($InputLine eq "OFF") {
       ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS_MODE_\n#define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_OFF_\n\n","main/UserDefinition.PIC.h");
@@ -163,7 +182,7 @@ while ($line=<InputFile>) {
     else {
       die "The option is not recognized, line=$InputFileLineNumber ($InputFileName)\n";
     }
-  }
+  }  
   
   elsif ($InputLine eq "FORCES") {    
     $InputComment=~s/[,]/ /g;
