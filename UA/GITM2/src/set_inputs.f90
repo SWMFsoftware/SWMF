@@ -10,6 +10,7 @@
 ! AGB 3/31/13: Added flags for data assimilation to adjust F10.7
 ! AGB 10/23/13: Changed RCMR input to allow driving of photoelectron heating
 !               efficiency
+! AGB 12/20/13: Added input options for efield and ion diff. vel. limits
 !-----------------------------------------------------------------------------
 
 subroutine set_inputs
@@ -614,6 +615,20 @@ subroutine set_inputs
               write(*,*) 'UseBarriers (logical)'
               IsDone = .true.
            endif
+
+        case ("#IONLIMITS")
+           call read_in_real(MaxVParallel, iError)
+           call read_in_real(MaxEField, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #IONLIMITS:'
+              write(*,*) ''
+              write(*,*) '#IONLIMITS'
+              write(*,*) "MaxVParallel   (real, default=100 m/s)"
+              write(*,*) "MaxEField      (real, default=0.1 V/m)"
+              MaxVParallel = 100.0
+              MaxEField    = 0.1
+              IsDone       = .true.
+           end if
 
         case ("#PHOTOELECTRON")
            if(RCMROutType /= 'PHOTOELECTRON') then
