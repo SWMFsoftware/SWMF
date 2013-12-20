@@ -231,7 +231,12 @@ if (spec==_OPLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
   case _O2_SPEC_:
     CharacteristicSpeed=1.0e4;
     break;
-  }
+  case _O2PLUS_SPEC_:
+    CharacteristicSpeed=10*1.0e4;
+    break;
+  default:
+    exit(__LINE__,__FILE__,"unknown species");
+   }
 
 	return 0.3*CellSize/CharacteristicSpeed;
 
@@ -974,10 +979,10 @@ PIC::InitMPI();
 	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_OPLUS_THERMAL_SPEC_);
 
 	//copy the weight and time step from Na neutra to Na ions
-	PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0);
+	PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0e2);
 //	PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0);
 
-  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2PLUS_SPEC_,_OPLUS_THERMAL_SPEC_,1.0);
+  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2PLUS_SPEC_,_O2_SPEC_,1.0E-7);
   PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2PLUS_SPEC_,_OPLUS_THERMAL_SPEC_,1.0);
 
 	//set photolytic reactions
