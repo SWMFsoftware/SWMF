@@ -13,6 +13,7 @@
 !              interpolation routine returns -1, the processor returns. 
 ! AGB 10/18/13: Added gravity, collision frequency, and pressure gradient
 !               to 3DION output
+! AGB 12/20/13: Removed gravity from 3DION output
 !----------------------------------------------------------------------------
 
 integer function bad_outputtype()
@@ -246,8 +247,8 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('3DION')
 
-     nvars_to_write = 8+nIons+6+4+4+1+5
-     ! AGB: added gravity (1) + nu_in (1) + pressure gradient (3)
+     nvars_to_write = 8+nIons+6+4+4+1+4
+     ! AGB: added nu_in (1) + pressure gradient (3)
      call output_3dion(iBlock)
 
   case ('3DTHM')
@@ -645,14 +646,13 @@ contains
           write(iOutputUnit_,"(I7,A1,a)") iOff+14, " ", "E.F. Vertical"
           write(iOutputUnit_,"(I7,A1,a)") iOff+15, " ", "E.F. Magnitude"
 
-          ! AGB: 10/18/17: Add Collision Frequency, Pressure Gradient,
-          ! and local gravity to output
+          ! AGB: 10/18/17: Add Collision Frequency and Pressure Gradient
+          ! to output
 
           write(iOutputUnit_,"(I7,A1,a)") iOff+16, " ", "IN Collision Freq"
           write(iOutputUnit_,"(I7,A1,a)") iOff+17, " ", "PressGrad (east)"
           write(iOutputUnit_,"(I7,A1,a)") iOff+18, " ", "PressGrad (north)"
           write(iOutputUnit_,"(I7,A1,a)") iOff+19, " ", "PressGrad (up)"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+20, " ", "Gravity"
        endif
 
     endif
@@ -995,8 +995,7 @@ subroutine output_3dion(iBlock)
                 EField(iLon,iLat,iAlt,:), &  ! EField(Lon,lat,alt,3)
                 sqrt(sum(EField(iLon,iLat,iAlt,:)**2)), & ! magnitude of E.F.
                 Collisions(iLon,iLat,iAlt,iVIN_), & ! AGB: nu_in
-                PressureGradient(iLon,iLat,iAlt,:,iBlock), & ! AGB: 3D Grad P
-                Gravity_GB(iLon,iLat,iAlt,iBlock) ! AGB: local gravity
+                PressureGradient(iLon,iLat,iAlt,:,iBlock) ! AGB: 3D Grad P
         enddo
      enddo
   enddo
