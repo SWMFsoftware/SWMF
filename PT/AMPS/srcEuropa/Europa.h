@@ -1441,7 +1441,11 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
     double E[3],B[3];
 
     if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
-      exit(__LINE__,__FILE__,"Error: the cell is not found");
+      startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL,startNode);
+
+      if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
+        exit(__LINE__,__FILE__,"Error: the cell is not found");
+      }
     }
 
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
@@ -1460,12 +1464,14 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
       memcpy(B,swB_Typical,3*sizeof(double));
     }
 
+    double ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
+    double mass=PIC::MolecularData::GetMass(spec);
 
-    accl_LOCAL[0]+=ElectronCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/_MASS_(_O2_);
-    accl_LOCAL[1]+=ElectronCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/_MASS_(_O2_);
-    accl_LOCAL[2]+=ElectronCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/_MASS_(_O2_);
+    accl_LOCAL[0]+=ElectricCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
+    accl_LOCAL[1]+=ElectricCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
+    accl_LOCAL[2]+=ElectricCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/mass;
 
-    exit(__LINE__,__FILE__,"error: not implemented");
+//    exit(__LINE__,__FILE__,"error: not implemented");
 #endif
 
 //  }
@@ -1528,18 +1534,17 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
 
 inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag) {
 
-
-  return 1.0E7;
-
-
-  static const double LifeTime=3600.0*5.8/pow(0.4,2);
-
-
   //only sodium can be ionized
   if (spec!=_O2_SPEC_) {
     PhotolyticReactionAllowedFlag=false;
     return -1.0;
   }
+
+  PhotolyticReactionAllowedFlag=true;
+  return 3.8e5;
+
+
+  static const double LifeTime=3600.0*5.8/pow(0.4,2);
 
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   double res,r2=x[1]*x[1]+x[2]*x[2];
@@ -1568,10 +1573,73 @@ inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,b
 inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
 
 
-//  PIC::ParticleBuffer::SetI(spec,ParticleData);
-//  return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
+  PIC::ParticleBuffer::SetI(_O2PLUS_SPEC_,ParticleData);
+  return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
 
-  return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
+//  return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
+}
+
+
+//xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode
+inline int GenericUnimolecularReactionProcessor(double *xInit,double *xFinal,double *vFinal, int &spec, long int ptr,PIC::ParticleBuffer::byte *ParticleData, double TimeInterval,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+  double ParentSpeciesLifeTime;
+  bool PhotolyticReactionAllowedFlag;
+  int ResCode=_GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
+
+  if (spec!=_O2_SPEC_) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
+
+
+  ParentSpeciesLifeTime=ExospherePhotoionizationLifeTime(xFinal,spec,ptr,PhotolyticReactionAllowedFlag);
+
+  //determine if the parent particle sould be removed
+  double c,p;
+
+  c=exp(-TimeInterval/ParentSpeciesLifeTime);
+  p=1.0-c; //the probability for reaction to occur
+
+  if (rnd()<p) {
+    //the reaction has occured -> the original partiucle should be removed
+    ResCode=_GENERIC_PARTICLE_TRANSFORMATION_CODE__PARTICLE_REMOVED_;
+  }
+
+
+  //determine if a daugher particle should be generated
+  if (_O2PLUS_SPEC_!=-1) {
+    double TimeIntervalProduct;
+    PIC::Mesh::cDataBlockAMR *block=node->block;
+    long int newParticle,nDaugherParticles;
+
+    TimeIntervalProduct=TimeInterval*block->GetLocalTimeStep(_O2PLUS_SPEC_)/block->GetLocalTimeStep(_O2_SPEC_);
+    c=(1.0-exp(-TimeIntervalProduct/ParentSpeciesLifeTime))*block->GetLocalParticleWeight(_O2_SPEC_)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData)/block->GetLocalParticleWeight(_O2PLUS_SPEC_); //the number of model O2+ particles generated during time interval 'TimeIntervalProduct'
+
+    nDaugherParticles=(int)c;
+    c-=nDaugherParticles;
+
+    if (rnd()<c) nDaugherParticles++;
+
+    //generate new particles and inject them into the system
+    while (--nDaugherParticles>0) {
+      newParticle=PIC::ParticleBuffer::GetNewParticle();
+
+      double x[3];
+      cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newParticleNode;
+
+      for (int idim=0;idim<3;idim++) x[idim]=xInit[idim]+rnd()*(xFinal[idim]-xInit[idim]);
+      newParticleNode=PIC::Mesh::mesh.findTreeNode(x,node);
+
+
+      PIC::ParticleBuffer::CloneParticle(newParticle,ptr);
+      PIC::ParticleBuffer::SetI(_O2PLUS_SPEC_,newParticle);
+      PIC::ParticleBuffer::SetV(vFinal,newParticle);
+      PIC::ParticleBuffer::SetX(x,newParticle);
+      PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticle);
+
+      _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,0.0,newParticleNode);
+    }
+  }
+
+  return ResCode;
+
 }
 
 
