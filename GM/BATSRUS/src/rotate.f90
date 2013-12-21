@@ -19,8 +19,8 @@ subroutine calc_corotation_velocities(Xyz_D, uRot_D)
   real, intent(in) :: Xyz_D(3)
   real, intent(out):: uRot_D(3)
 
-  real    :: Omega_D(3)
-  logical :: IsUninitialized = .true.
+  real, save:: Omega_D(3)
+  logical   :: IsUninitialized = .true.
 
   !------------------------------------------------------------------------
   select case(TypeCoordSystem)
@@ -29,7 +29,7 @@ subroutine calc_corotation_velocities(Xyz_D, uRot_D)
      Omega_D = (/ 0., 0., OmegaBody /)
   case('GSE')
      if(IsUninitialized)then
-        call get_axes(Time_Simulation,RotAxisGseOut_D=Omega_D)
+        call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
         Omega_D = OmegaBody * Omega_D
         IsUninitialized = .false.
      end if
