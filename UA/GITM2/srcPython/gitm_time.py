@@ -30,7 +30,7 @@ from spacepy.pybats import PbData
 from spacepy.datamodel import dmarray
 from spacepy.pybats import gitm
 import string
-import copy
+from copy import deepcopy as dc
 
 # Temporary
 import gitm
@@ -236,50 +236,61 @@ class GitmTime(PbData):
 
                 if abs(timedelt) <= max_timedelt:
                     # If this point is acceptable, find the nearest location
-                    x_list = list()
-                    y_list = list()
-                    z_list = list()
+                    # if location comparison indexes have been provided
+                    if(latdata is not None or londata is not None or
+                       altdata is not None):
+                        x_list = list()
+                        y_list = list()
+                        z_list = list()
 
-                    for j in range(dims[1] * dims[2] * dims[3]):
-                        ilon = int(j / (dims[2] * dims[3]))
-                        ilat = int((j - ilon * dims[2] * dims[3]) / dims[3])
-                        ialt = int(j - (ilon * dims[2] + ilat) * dims[3])
+                        for j in range(dims[1] * dims[2] * dims[3]):
+                            ilon = int(j / (dims[2] * dims[3]))
+                            ilat = int((j - ilon * dims[2] * dims[3]) / dims[3])
+                            ialt = int(j - (ilon * dims[2] + ilat) * dims[3])
 
-                        if(not np.isnan(self['Longitude'][itime,ilon,ilat,ialt])
-                           and not np.isnan(self['Latitude'][itime,ilon,ilat,
-                                                             ialt])
-                           and not np.isnan(self['Altitude'][itime,ilon,ilat,
-                                                             ialt])):
-                            if altdata:
-                                x_list.append(self['Altitude'][itime,ilon,ilat,
+                            if(not np.isnan(self['Longitude'][itime,ilon,ilat,
+                                                              ialt])
+                               and not np.isnan(self['Latitude'][itime, ilon,
+                                                                 ilat, ialt])
+                               and not np.isnan(self['Altitude'][itime,ilon,
+                                                                 ilat, ialt])):
+                                if altdata:
+                                    x_list.append(self['Altitude'][itime, ilon,
+                                                                   ilat, ialt])
+                                else:
+                                    x_list.append(1.0)
+
+                                y_list.append(self['Longitude'][itime,ilon,ilat,
+                                                                ialt])
+                                z_list.append(self['Latitude'][itime,ilon,ilat,
                                                                ialt])
-                            else:
-                                x_list.append(1.0)
+                        if altdata:
+                            obsloc = [altdata[i]*malt, londata[i]*rlon,
+                                      latdata[i]*rlat]
+                        else:
+                            obsloc = [1.0, londata[i]*rlon, latdata[i]*rlat]
 
-                            y_list.append(self['Longitude'][itime,ilon,ilat,
-                                                            ialt])
-                            z_list.append(self['Latitude'][itime,ilon,ilat,
-                                                           ialt])
-                    if altdata:
-                        obsloc = [altdata[i]*malt, londata[i]*rlon,
-                                  latdata[i]*rlat]
+                        (locdelt, j) = glr.find_nearest_location(x_list, y_list,
+                                                                 z_list, obsloc,
+                                                                 "sph")
+                        if abs(locdelt) <= max_locdelt:
+                            # If this pairing is within the desired range,
+                            # test to see if it is closer than another pairing
+                            # for the same self data point.  Prioritize time
+                            # over location
+
+                            if(selfdelt[itime][0] > abs(timedelt) or
+                               (selfdelt[itime][0] == abs(timedelt) and
+                                selfdelt[itime][1] > abs(locdelt))):
+                                selfdelt[itime]=[abs(timedelt),abs(locdelt),i,j]
                     else:
-                        obsloc = [1.0, londata[i]*rlon, latdata[i]*rlat]
-
-                    (locdelt, j) = glr.find_nearest_location(x_list, y_list,
-                                                             z_list, obsloc,
-                                                             "sph")
-                    if abs(locdelt) <= max_locdelt:
                         # If this pairing is within the desired range,
                         # test to see if it is closer than another pairing
-                        # for the same self data point.  Prioritize time over
-                        # location
+                        # for the same self data point.
 
-                        if(selfdelt[itime][0] > abs(timedelt) or
-                           (selfdelt[itime][0] == abs(timedelt) and
-                            selfdelt[itime][1] > abs(locdelt))):
-                            selfdelt[itime] = [abs(timedelt),abs(locdelt),i,j]
-
+                        if(selfdelt[itime][0] > abs(timedelt)):
+                            selfdelt[itime]=[abs(timedelt),0.0,i,0]
+                                
             for itime,delt in enumerate(selfdelt):
                 if delt[2] >= 0:
                     # Then the time and location are appropriate,
@@ -287,7 +298,7 @@ class GitmTime(PbData):
                     ilon = int(delt[3] / (dims[2] * dims[3]))
                     ilat = int((delt[3] - ilon * dims[2] * dims[3]) / dims[3])
                     ialt = int(delt[3] - (ilon * dims[2] + ilat) * dims[3])
-
+                    
                     for ik,k in enumerate(obs_keylist):
                         self[k][itime,ilon,ilat,ialt] = nplist[ik][delt[2]]
 
@@ -406,7 +417,7 @@ class GitmTime(PbData):
         return(fmtstring)
 #End Class
 
-def load_multiple_gitm_bin(filelist, *args, **kwargs):
+def load_multiple_gitm_bin(filelist, magfile=None, *args, **kwargs):
     '''
     Loads a list of GITM binary files into their own GitmBin data structures.
     The list may be an ascii file containing a list of files or a list object.
@@ -416,6 +427,7 @@ def load_multiple_gitm_bin(filelist, *args, **kwargs):
     Input:
     filelist = python list of file names or an ASCII file containing a list
                of filenames
+    magfile = 3DMAG or 3DION file (default=None)
     '''
     # import local packages
     from os import path
@@ -440,10 +452,7 @@ def load_multiple_gitm_bin(filelist, *args, **kwargs):
 
     for name in namelist:
         name = string.strip(name)
-        if not kwargs.has_key('magfile'):
-            outlist.append(gitm.GitmBin(name))
-        else:
-            outlist.append(gitm.GitmBin(name, magfile=kwargs['magfile']))
+        outlist.append(gitm.GitmBin(name, magfile=magfile))
 
         if outlist[-1].attrs['nAlt'] > 1:
             outlist[-1].calc_2dion()
