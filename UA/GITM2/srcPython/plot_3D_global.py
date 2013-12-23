@@ -60,7 +60,7 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
                          title=None, figname=None, draw=True, nlat=90, slat=-90,
                          linc=6, tlon=90, data_type="scatter", bcolor="#D7DBE0",
                          meq=False, earth=False, m=None, faspect=True,
-                         term_datetime=None, *args, **kwargs):
+                         term_datetime=False, *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
@@ -95,7 +95,7 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
            faspect       = Fix the aspect of Earth (default=True)
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
-                           with the UT for this map.  Only used if earth=True.
+                           with the UT for this map. (default=False)
                            
     Output: f = figure handle
             m = map handle
@@ -164,7 +164,7 @@ def plot_single_nsglobal_3D_image(lat_data, lon_data, z_data, zname, zscale,
                                   draw=True, plat=90, elat=0, linc=3,
                                   tlon=90, bcolor="#D7DBE0", earth=False,
                                   mn=None, ms=None, data_type="scatter",
-                                  term_datetime=None, *args, **kwargs):
+                                  term_datetime=False, *args, **kwargs):
     '''
     Creates a figure with two polar map projections for the northern and 
     southern ends of a specified latitude range.
@@ -197,7 +197,7 @@ def plot_single_nsglobal_3D_image(lat_data, lon_data, z_data, zname, zscale,
            data_type     = Make scatter/contour plot (default=scatter)
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
-                           with the UT for this map.  Only used if earth=True.
+                           with the UT for this map. (defualt=False)
 
     Output: f         = figure handle
             handle[1] = Northern latitude map handle
@@ -240,7 +240,7 @@ def plot_global_3D_snapshot(lat_data, lon_data, z_data, zname, zscale, zunits,
                             title=None, figname=None, draw=True, tlon=90,
                             blat=45, bcolor="#D7DBE0", meq=False, earth=False,
                             ml=None, mn=None, ms=None, data_type="scatter",
-                            term_datetime=None, *args, **kwargs):
+                            term_datetime=False, *args, **kwargs):
     '''
     Creates a map projection plot for the entire globe, seperating the polar
     and central latitude regions.
@@ -277,7 +277,7 @@ def plot_global_3D_snapshot(lat_data, lon_data, z_data, zname, zscale, zunits,
            data_type     = Make a scatter/contour plot (default=scatter)
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
-                           with the UT for this map.  Only used if earth=True.
+                           with the UT for this map.  (default=False)
     Output: f         = figure handle
             handle[1] = Lower latitude map handle
             handle[3] = Northern latitude map handle
@@ -320,7 +320,7 @@ def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
                         zcolor="Spectral_r", title=None, figname=None,
                         draw=True, nlat=90, slat=-90, linc=6, tlon=90,
                         data_type="scatter", bcolor="#D7DBE0", meq=False,
-                        earth=False, faspect=True, term_datetime=None,
+                        earth=False, faspect=True, term_datetime=False,
                         *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
@@ -363,7 +363,7 @@ def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
            faspect       = Fix aspect ratio if using continents (default=True)
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
-                           with the UT for this map.  Only used if earth=True.
+                           with the UT for this map.  (default=False)
     '''
 
     m = None
@@ -517,7 +517,7 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
                             zcolor="Spectral_r", title=True, cb=True, plat=90,
                             elat=0, linc=3, tlon=90, rl=True, tl=True,
                             bcolor="#D7DBE0", earth=False, mn=None, ms=None,
-                            data_type="scatter", term_datetime=None,
+                            data_type="scatter", term_datetime=False,
                             *args, **kwargs):
     '''
     Creates a figure with two polar map projections for the northern and 
@@ -554,7 +554,7 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
            data_type     = Plot type: scatter/contour (default=scatter)
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
-                           with the UT for this map.  Only used if earth=True.
+                           with the UT for this map.  (default=False)
     '''
     # Initialize the z variable limits
     if(zmin is None):
@@ -639,7 +639,7 @@ def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
                             title=True, xl=True, yl=True, xt=True, yt=True,
                             bcolor="#D7DBE0", meq=False, earth=False, ml=None,
                             mn=None, ms=None, data_type="scatter",
-                            term_datetime=None, *args, **kwargs):
+                            term_datetime=False, *args, **kwargs):
     '''
     Creates a map projection plot for the entire globe, seperating the polar
     and central latitude regions.
@@ -680,7 +680,7 @@ def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
            ms            = Map handle for southern latitudes (default=None)
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
-                           with the UT for this map.  Only used if earth=True.
+                           with the UT for this map.  (default=False)
 
            Output: axl = Plot handle for low latitudes
                    ml  = Map handle for low latitudes
@@ -784,7 +784,7 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
                                title=None, tloc="t", xl=True, xt=True, yl=True,
                                yt=True, bcolor="#D7DBE0", meq=False,
                                earth=False, m=None, data_type="scatter",
-                               faspect=True, term_datetime=None,
+                               faspect=True, term_datetime=False,
                                *args, **kwargs):
     '''
     Creates a rectangular map projection plot for a specified latitude range.
@@ -825,7 +825,8 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
            faspect   = Fix the aspect of Earth if using outlines (default=True)
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
-                           with the UT for this map.  Only used if earth=True.
+                           with the UT for this map.  (default=False)
+
     Output: con = Contour handle
             m   = Earth map handle
     '''
@@ -866,6 +867,11 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
         con = ax.scatter(lon_data, lat_data, c=z_data, cmap=get_cmap(zcolor),
                          vmin=zmin, vmax=zmax, edgecolors="none", s=15)
         cax = con.axes
+
+    if not earth and type(term_datetime) is dt.datetime:
+        # Add solar terminator, if desired
+        gpr.add_solar_terminator(term_datetime, ax=ax)
+
 
     # Configure axis
     ytics  = MultipleLocator(ywidth)
@@ -951,7 +957,7 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
                          center_lat=90, edge_lat=0, linc=6, top_lon=90, cb=True,
                          cloc="r", title = None, tloc="t", tl = True, rl = True,
                          bcolor="#D7DBE0", earth=False, m=None,
-                         data_type="scatter", term_datetime=None,
+                         data_type="scatter", term_datetime=False,
                          *args, **kwargs):
     '''
     Creates a single polar projection, with the latitude center and range
@@ -992,7 +998,8 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
            data_type  = scatter or contour (default=scatter)
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
-                           with the UT for this map.  Only used if earth=True.
+                           with the UT for this map.  (default=False)
+
     Output: con = Contour plot handle
             m   = Earth map handle (or None if earth=False and not specified)
     
@@ -1062,9 +1069,10 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
         for i, label in enumerate(lats):
             ax.text(x[i], y[i], "%.0f$^\circ$" % (label))
 
-    elif bcolor is not None:
+    else:
         # Change the background color
-        ax.patch.set_facecolor(bcolor)
+        if bcolor is not None:
+            ax.patch.set_facecolor(bcolor)
 
         # Set the contour
         rwidth *= csign
@@ -1122,6 +1130,10 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
         ax.set_rmax(max(rtics))
         ax.set_rmin(min(rtics))
         ax.set_rticks(rtics)
+
+        # Add solar terminator, if desired
+        if type(term_datetime) is dt.datetime:
+            add_solar_terminator(term_datetime, ax=ax)
 
     # Configure axis.
     if tl:
