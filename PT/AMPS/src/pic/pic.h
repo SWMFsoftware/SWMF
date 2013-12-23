@@ -1791,7 +1791,7 @@ namespace PIC {
 //    extern fSpeciesDependentParticleMover_BoundaryInjection *MoveParticleBoundaryInjection;
 
     //process a particle when it leaves the boundary of the computational domain
-    typedef int (*fProcessOutsideDomainParticles) (long int ptr,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
+    typedef int (*fProcessOutsideDomainParticles) (long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
     extern fProcessOutsideDomainParticles ProcessOutsideDomainParticles;
 
 
@@ -1915,7 +1915,7 @@ namespace PIC {
 
     //coupling with SWMF
     namespace SWMF {
-      extern int MagneticFieldOffset,TotalDataLength;
+      extern int MagneticFieldOffset,TotalDataLength,PlasmaDensityOffset,BulkVelocityOffset,PlasmaPressureOffset;
 
       //init the coupler
       void init();
@@ -2227,9 +2227,11 @@ namespace PIC {
          */
       }
 
+/*
       #define _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_       0
       #define _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_  1
       #define _GENERIC_PARTICLE_TRANSFORMATION_CODE__PARTICLE_REMOVED_        2
+*/
     }
   }
 

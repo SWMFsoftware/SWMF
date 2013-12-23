@@ -621,7 +621,7 @@ int iTemp,jTemp,kTemp;
      int specInit=spec;
 #endif
 
-     GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,x,v,spec,ptr,ParticleData,dtMin,startNode);
+     GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,x,v,spec,ptr,ParticleData,dtMin,startNode);   //xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode
 
      //adjust the value of the dtLeft to match the time step for the species 'spec'
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -1078,7 +1078,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
       int specInit=spec;
 #endif
 
-      GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xinit,x,v,spec,ptr,ParticleData,dt,startNode);
+      GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xinit,x,v,spec,ptr,ParticleData,dt,startNode);  //xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
  #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -1440,6 +1440,41 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 
   //the descriptors of the internal surfaces
   cInternalBoundaryConditionsDescriptor *InternalBoundaryDescriptor,*InternalBoundaryDescriptor_dtMin=NULL,*lastInternalBoundaryDescriptor=NULL;
+  cTriangleFace *IntersectionFace=NULL;
+
+  //the description of the boundaries of the block faces
+  struct cExternalBoundaryFace {
+    double norm[3];
+    int nX0[3];
+    double e0[3],e1[3],x0[3];
+    double lE0,lE1;
+  };
+
+  static bool initExternalBoundaryFaceTable=false;
+
+  static cExternalBoundaryFace ExternalBoundaryFaceTable[6]={
+      {{-1.0,0.0,0.0}, {0,0,0}, {0,1,0},{0,0,1},{0,0,0}, 0.0,0.0}, {{1.0,0.0,0.0}, {1,0,0}, {0,1,0},{0,0,1},{0,0,0}, 0.0,0.0},
+      {{0.0,-1.0,0.0}, {0,0,0}, {1,0,0},{0,0,1},{0,0,0}, 0.0,0.0}, {{0.0,1.0,0.0}, {0,1,0}, {1,0,0},{0,0,1},{0,0,0}, 0.0,0.0},
+      {{0.0,0.0,-1.0}, {0,0,0}, {1,0,0},{0,1,0},{0,0,0}, 0.0,0.0}, {{0.0,0.0,1.0}, {0,0,1}, {1,0,0},{0,1,0},{0,0,0}, 0.0,0.0}
+  };
+
+  if (initExternalBoundaryFaceTable==false) {
+    initExternalBoundaryFaceTable=true;
+
+    for (int nface=0;nface<6;nface++) {
+      double cE0=0.0,cE1=0.0;
+
+      for (int idim=0;idim<3;idim++) {
+        ExternalBoundaryFaceTable[nface].x0[idim]=(ExternalBoundaryFaceTable[nface].nX0==0) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim];
+
+        cE0+=pow(((ExternalBoundaryFaceTable[nface].e0[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
+        cE1+=pow(((ExternalBoundaryFaceTable[nface].e1[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
+      }
+
+      ExternalBoundaryFaceTable[nface].lE0=sqrt(cE0);
+      ExternalBoundaryFaceTable[nface].lE1=sqrt(cE1);
+    }
+  }
 
   //spherical internal surface
 #if DIM == 3
@@ -1580,19 +1615,64 @@ MovingLoop:
     middleNode=PIC::Mesh::mesh.findTreeNode(xMiddle,startNode);
 
     if (middleNode==NULL) {
+      int idim,nface,nIntersectionFace=-1;
+      double cx,cv,r0[3],dt,dtIntersection=-1.0;
+
       //the particle left the computational domain
       int code=_PARTICLE_DELETED_ON_THE_FACE_;
 
       //call the function that process particles that leaved the coputational domain
-      if (ProcessOutsideDomainParticles!=NULL) code=ProcessOutsideDomainParticles(ptr,startNode);
+      if (ProcessOutsideDomainParticles!=NULL) {
+        //determine through which face the particle left the domain
+
+        for (nface=0;nface<6;nface++) {
+          for (idim=0,cx=0.0,cv=0.0;idim<3;idim++) {
+            r0[idim]=xInit[idim]-ExternalBoundaryFaceTable[nface].x0[idim];
+            cx+=r0[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+            cv+=vInit[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+          }
+
+          if (cv>0.0) {
+            dt=-cx/cv;
+
+            if ((nface==0)||(dt<dtIntersection)) {
+              double cE0=0.0,cE1=0.0;
+
+              for (idim=0;idim<3;idim++) {
+                c=r0[idim]+dt*vInit[idim];
+
+                cE0+=c*ExternalBoundaryFaceTable[nface].e0[idim],cE1+=c*ExternalBoundaryFaceTable[nface].e1[idim];
+              }
+
+              if ((cE0<-PIC::Mesh::mesh.EPS)||(cE0<ExternalBoundaryFaceTable[nface].lE0+PIC::Mesh::mesh.EPS) || (cE1<-PIC::Mesh::mesh.EPS)||(cE1<ExternalBoundaryFaceTable[nface].lE1+PIC::Mesh::mesh.EPS)) continue;
+
+              nIntersectionFace=nface,dtIntersection=dt;
+            }
+          }
+        }
+
+        if (nIntersectionFace==-1) exit(__LINE__,__FILE__,"Error: cannot find the face of the intersection");
+
+        for (idim=0;idim<3;idim++) xInit[idim]+=dtIntersection*vInit[idim]-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
+
+        startNode=PIC::Mesh::mesh.findTreeNode(xInit,startNode);
+        if (startNode==NULL) exit(__LINE__,__FILE__,"Error: cannot find the node");
+
+        code=ProcessOutsideDomainParticles(ptr,xInit,vInit,nIntersectionFace,startNode);
+        memcpy(vFinal,vInit,3*sizeof(double));
+        memcpy(xFinal,xInit,3*sizeof(double));
+      }
 
       if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
         PIC::ParticleBuffer::DeleteParticle(ptr);
         return _PARTICLE_LEFT_THE_DOMAIN_;
       }
-      else {
-        exit(__LINE__,__FILE__,"Error: not implemented");
+      else if (code==_PARTICLE_REJECTED_ON_THE_FACE_) {
+        dtMin=dtIntersection;
+        dtTotal-=dtMin;
+        goto ProcessPhotoChemistry;
       }
+      else  exit(__LINE__,__FILE__,"Error: not implemented");
     }
 
     _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode);
@@ -1602,25 +1682,12 @@ MovingLoop:
     exit(__LINE__,__FILE__,"Error: the option is not recognized");
 #endif
 
-    if (middleNode==NULL) {
-      //the particle left the computational domain
-      PIC::ParticleBuffer::DeleteParticle(ptr);
-      return _PARTICLE_LEFT_THE_DOMAIN_;
-    }
-
-    /*
-    xFinal[0]=xInit[0]+dtMinInit*vMiddle[0];
-    xFinal[1]=xInit[1]+dtMinInit*vMiddle[1];
-    xFinal[2]=xInit[2]+dtMinInit*vMiddle[2];
-
-    vFinal[0]=vInit[0]+dtMinInit*acclMiddle[0];
-    vFinal[1]=vInit[1]+dtMinInit*acclMiddle[1];
-    vFinal[2]=vInit[2]+dtMinInit*acclMiddle[2];
-    */
 
 
 
     //Calculate the time of flight to the nearest block's face
+#if _PIC__PARTICLE_MOVER__CHECK_BLOCK_FACE_INTERSECTION__MODE_ == _PIC_MODE_ON_
+
 #if DIM == 1
 
 #if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
@@ -1690,6 +1757,7 @@ MovingLoop:
 
 #else
     exit(__LINE__,__FILE__,"Error: unknown value of DIM");
+#endif
 #endif
 
 
@@ -1774,7 +1842,7 @@ MovingLoop:
     }
 
     //check intersection of the particle trajectory with the cut-faces
-    cTriangleFace *IntersectionFace=NULL;
+//    cTriangleFace *IntersectionFace=NULL;
 
     if (middleNode->FirstTriangleCutFace!=NULL) {
       cTriangleFaceDescriptor *t;
@@ -1790,35 +1858,6 @@ MovingLoop:
         }
       }
     }
-
-
-    //check the possible photolytic reactions
-#if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
-    //check if a photolytic reaction is possible and get the time interval before the transformation occures
-    int PhotolyticReactionsReturnCode;
-
-    dtTotal+=dtMin;
-    PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(xMiddle,ptr,spec,dtMin);
-    dtTotal-=dtMin;
-#elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
-    int GenericParticleTransformationReturnCode=_GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
-    bool TransformationTimeStepLimitFlag=false;
-
-    /*
-    if (PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator!=NULL) if (PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec]!=NULL) {
-      dtTotal+=dtMin;
-      GenericParticleTransformationReturnCode=PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator[spec](xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
-      dtTotal-=dtMin;
-    }
-    */
-
-    dtTotal+=dtMin;
-    GenericParticleTransformationReturnCode= _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_ (xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
-    dtTotal-=dtMin;
-
-    if ((GenericParticleTransformationReturnCode!=_GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_)&&(TransformationTimeStepLimitFlag==true)) ParticleIntersectionCode=_UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
-#endif
-
 
     //adjust the particle moving time
     dtTotal-=dtMin;
@@ -1858,17 +1897,6 @@ MovingLoop:
 
       lastInternalBoundaryDescriptor=InternalBoundaryDescriptor_dtMin;
 
-#if DIM == 3
-      code=((cInternalSphericalData*)(InternalBoundaryDescriptor_dtMin->BoundaryElement))->ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)startNode,InternalBoundaryDescriptor_dtMin->BoundaryElement);
-#elif DIM == 2
-      exit(__LINE__,__FILE__,"not implemented");
-#else
-      code=((cInternalSphere1DData*)(InternalBoundaryDescriptor_dtMin->BoundaryElement))->ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)startNode,InternalBoundaryDescriptor_dtMin->BoundaryElement);
-#endif
-
-
-      if (code==_PARTICLE_DELETED_ON_THE_FACE_) return _PARTICLE_LEFT_THE_DOMAIN_;
-
 #if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
       newNode=PIC::Mesh::mesh.findTreeNode(xFinal,middleNode);
 #elif _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_
@@ -1879,6 +1907,30 @@ MovingLoop:
 #else
       exit(__LINE__,__FILE__,"Error: the option is nor defined");
 #endif
+
+#if DIM == 3
+      code=((cInternalSphericalData*)(InternalBoundaryDescriptor_dtMin->BoundaryElement))->ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)newNode,InternalBoundaryDescriptor_dtMin->BoundaryElement);
+#elif DIM == 2
+      exit(__LINE__,__FILE__,"not implemented");
+#else
+      code=((cInternalSphere1DData*)(InternalBoundaryDescriptor_dtMin->BoundaryElement))->ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)newNode,InternalBoundaryDescriptor_dtMin->BoundaryElement);
+#endif
+
+
+      if (code==_PARTICLE_DELETED_ON_THE_FACE_) return _PARTICLE_LEFT_THE_DOMAIN_;
+
+/*
+#if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
+      newNode=PIC::Mesh::mesh.findTreeNode(xFinal,middleNode);
+#elif _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_
+      double r[3]={0.0,0.0,0.0};
+
+      r[0]=sqrt(xFinal[0]*xFinal[0]+xFinal[1]*xFinal[1]+xFinal[2]*xFinal[2]);
+      newNode=PIC::Mesh::mesh.findTreeNode(r,middleNode);
+#else
+      exit(__LINE__,__FILE__,"Error: the option is nor defined");
+#endif
+*/
     }
     else if (ParticleIntersectionCode==_BLOCK_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
 
@@ -1908,98 +1960,6 @@ exit(__LINE__,__FILE__,"Error: not implemented");
       exit(__LINE__,__FILE__,"Error: the option is nor defined");
 #endif
 
-
-      if (newNode==NULL) {
-        //the particle left the computational domain
-        int code=_PARTICLE_DELETED_ON_THE_FACE_;
-
-        //call the function that process particles that leaved the coputational domain
-        if (ProcessOutsideDomainParticles!=NULL) code=ProcessOutsideDomainParticles(ptr,startNode);
-
-        if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
-          PIC::ParticleBuffer::DeleteParticle(ptr);
-          return _PARTICLE_LEFT_THE_DOMAIN_;
-        }
-        else {
-          exit(__LINE__,__FILE__,"Error: not implemented");
-        }
-      }
-
-      memcpy(xminBlock,startNode->xmin,DIM*sizeof(double));
-      memcpy(xmaxBlock,startNode->xmax,DIM*sizeof(double));
-
-///////////////////////////////////////////////////////////////////
-/*
-
-      iNeibNode[0]=0,iNeibNode[1]=0,iNeibNode[2]=0;
-      neibNodeDirection=(int)(nface_dtMin/2);
-      iNeibNode[neibNodeDirection]=(nface_dtMin-2*neibNodeDirection==0) ? -1 : 1;
-
-
-      double xProbe[3]={xFinal[0],xFinal[1],xFinal[2]};
-      xProbe[neibNodeDirection]+=(startNode->xmax[neibNodeDirection]-startNode->xmin[neibNodeDirection])*iNeibNode[neibNodeDirection]/100.0;
-
-#if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
-      newNode=PIC::Mesh::mesh.findTreeNode(xProbe,middleNode);
-#elif _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_
-      double rProbe[3]={0.0,0.0,0.0};
-
-      rProbe[0]=sqrt(xProbe[0]*xProbe[0]+xProbe[1]*xProbe[1]+xProbe[2]*xProbe[2]);
-      newNode=PIC::Mesh::mesh.findTreeNode(rProbe,middleNode);
-#else
-      exit(__LINE__,__FILE__,"Error: the option is nor defined");
-#endif
-
-
-      if (newNode==NULL) {
-        //the particle left the computational domain
-        PIC::ParticleBuffer::DeleteParticle(ptr);
-        return _PARTICLE_LEFT_THE_DOMAIN_;
-      }
-
-      memcpy(xminBlock,startNode->xmin,DIM*sizeof(double));
-      memcpy(xmaxBlock,startNode->xmax,DIM*sizeof(double));
-
-      #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
-      //check if the new particle coordiname is within the new block
-#if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
-      if ((xFinal[0]<xminBlock[0]-PIC::Mesh::mesh.EPS)||(xFinal[0]>xmaxBlock[0]+PIC::Mesh::mesh.EPS)
-#if DIM > 1
-          || (xFinal[1]<xminBlock[1]-PIC::Mesh::mesh.EPS)||(xFinal[1]>xmaxBlock[1]+PIC::Mesh::mesh.EPS)
-#endif
-#if DIM > 2
-          || (xFinal[2]<xminBlock[2]-PIC::Mesh::mesh.EPS)||(xFinal[2]>xmaxBlock[2]+PIC::Mesh::mesh.EPS)
-#endif
-      ) {
-        exit(__LINE__,__FILE__,"Error: the new particles' coordinates are outside of the block");
-      }
-#endif
-      #endif
-
-      //move the particle's position exactly to the block's face
-#if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
-      for (idim=0;idim<DIM;idim++) {
-        if (xFinal[idim]<=xminBlock[idim]) xFinal[idim]=xminBlock[idim]+PIC::Mesh::mesh.EPS;
-        if (xFinal[idim]>=xmaxBlock[idim]) xFinal[idim]=xmaxBlock[idim]-PIC::Mesh::mesh.EPS;
-      }
-#elif _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_
-      double r2=xFinal[0]*xFinal[0]+xFinal[1]*xFinal[1]+xFinal[2]*xFinal[2];
-
-      if (r2<=xminBlock[0]*xminBlock[0]) {
-        double c=(xminBlock[0]+PIC::Mesh::mesh.EPS)/sqrt(r2);
-        xFinal[0]*=c,xFinal[1]*=c,xFinal[2]*=c;
-      }
-
-      if (r2>=xmaxBlock[0]*xmaxBlock[0]){
-        double c=(xmaxBlock[0]-PIC::Mesh::mesh.EPS)/sqrt(r2);
-        xFinal[0]*=c,xFinal[1]*=c,xFinal[2]*=c;
-      }
-#else
-      exit(__LINE__,__FILE__,"Error: the option is nor defined");
-#endif
-//      x[neibNodeDirection]=(iNeibNode[neibNodeDirection]==-1) ? xmaxBlock[neibNodeDirection] : xminBlock[neibNodeDirection];
-*/
-/////////////////////////////////////////////////////////
 
       //reserve the place for particle's cloning:
       //if a particle crossed a face, the time step and particle weight are changed
@@ -2039,34 +1999,78 @@ exit(__LINE__,__FILE__,"not implemented");
       exit(__LINE__,__FILE__,"Error: the option is nor defined");
 #endif
 
-      if (newNode==NULL) {
-        //the particle left the computational domain
-        int code=_PARTICLE_DELETED_ON_THE_FACE_;
-
-        //call the function that process particles that leaved the coputational domain
-        if (ProcessOutsideDomainParticles!=NULL) code=ProcessOutsideDomainParticles(ptr,startNode);
-
-        if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
-          PIC::ParticleBuffer::DeleteParticle(ptr);
-          return _PARTICLE_LEFT_THE_DOMAIN_;
-        }
-        else {
-          exit(__LINE__,__FILE__,"Error: not implemented");
-        }
-      }
-
-
     }
     else {
       exit(__LINE__,__FILE__,"Error: the option is nor defined");
     }
 
+    if (newNode==NULL) {
+       int idim,nface,nIntersectionFace=-1;
+       double cx,cv,r0[3],dt,dtIntersection=-1.0;
+
+       //the particle left the computational domain
+       int code=_PARTICLE_DELETED_ON_THE_FACE_;
+
+       //call the function that process particles that leaved the coputational domain
+       if (ProcessOutsideDomainParticles!=NULL) {
+         //determine through which face the particle left the domain
+
+         for (nface=0;nface<6;nface++) {
+           for (idim=0,cx=0.0,cv=0.0;idim<3;idim++) {
+             r0[idim]=xInit[idim]-ExternalBoundaryFaceTable[nface].x0[idim];
+             cx+=r0[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+             cv+=vMiddle[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+           }
+
+           if (cv>0.0) {
+             dt=-cx/cv;
+
+             if ((nface==0)||(dt<dtIntersection)) {
+               double cE0=0.0,cE1=0.0;
+
+               for (idim=0;idim<3;idim++) {
+                 c=r0[idim]+dt*vMiddle[idim];
+
+                 cE0+=c*ExternalBoundaryFaceTable[nface].e0[idim],cE1+=c*ExternalBoundaryFaceTable[nface].e1[idim];
+               }
+
+               if ((cE0<-PIC::Mesh::mesh.EPS)||(cE0<ExternalBoundaryFaceTable[nface].lE0+PIC::Mesh::mesh.EPS) || (cE1<-PIC::Mesh::mesh.EPS)||(cE1<ExternalBoundaryFaceTable[nface].lE1+PIC::Mesh::mesh.EPS)) continue;
+
+               nIntersectionFace=nface,dtIntersection=dt;
+             }
+           }
+         }
+
+         if (nIntersectionFace==-1) exit(__LINE__,__FILE__,"Error: cannot find the face of the intersection");
+
+         for (idim=0;idim<3;idim++) xInit[idim]+=dtIntersection*vMiddle[idim]-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
+
+         newNode=PIC::Mesh::mesh.findTreeNode(xInit,middleNode);
+         if (newNode==NULL) exit(__LINE__,__FILE__,"Error: cannot find the node");
+
+         code=ProcessOutsideDomainParticles(ptr,xInit,vInit,nIntersectionFace,startNode);
+         memcpy(vFinal,vInit,3*sizeof(double));
+         memcpy(xFinal,xInit,3*sizeof(double));
+       }
+
+       if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+         PIC::ParticleBuffer::DeleteParticle(ptr);
+         return _PARTICLE_LEFT_THE_DOMAIN_;
+       }
+       else if (code==_PARTICLE_REJECTED_ON_THE_FACE_) {
+         dtTotal+=dtMin-dtIntersection;
+         dtMin=dtIntersection;
+       }
+       else  exit(__LINE__,__FILE__,"Error: not implemented");
+     }
 
 
+    //check the possible photolytic reactions
+ProcessPhotoChemistry:
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
     //model the photolytic transformation
-    if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
-      int specInit=spec;
+    if (PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(xFinal,ptr,spec,dtMin)==_PHOTOLYTIC_REACTION_OCCURES_) {
+      int PhotolyticReactionsReturnCode,specInit=spec;
 
       //PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,xFinal,ptr,spec,ParticleData);
       PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,ptr,spec,ParticleData);
@@ -2081,24 +2085,17 @@ exit(__LINE__,__FILE__,"not implemented");
     }
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
     //model the generic particle transformation
-    if (GenericParticleTransformationReturnCode==_GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_) {
-      int specInit=spec;
+    int GenericParticleTransformationReturnCode,specInit=spec;
 
-      GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode);
+    GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode);   //xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode
 
-      if (GenericParticleTransformationReturnCode==_GENERIC_PARTICLE_TRANSFORMATION_CODE__PARTICLE_REMOVED_) {
-        PIC::ParticleBuffer::DeleteParticle(ptr);
-        return _PARTICLE_LEFT_THE_DOMAIN_;
-      }
-
-      //adjust the value of the dtLeft to match the time step for the species 'spec'
-      dtTotal*=newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalTimeStep(specInit);
-
-
-
+    if (GenericParticleTransformationReturnCode==_GENERIC_PARTICLE_TRANSFORMATION_CODE__PARTICLE_REMOVED_) {
+      PIC::ParticleBuffer::DeleteParticle(ptr);
+      return _PARTICLE_LEFT_THE_DOMAIN_;
     }
 
-
+    //adjust the value of the dtLeft to match the time step for the species 'spec'
+    if (spec!=specInit) dtTotal*=newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalTimeStep(specInit);
 #endif
 
 
