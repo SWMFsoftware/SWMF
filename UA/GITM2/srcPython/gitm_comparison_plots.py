@@ -472,8 +472,11 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
     if title:
         f.suptitle(title, size="medium")
 
+    # Adjust subplot locations
+    plt.subplots_adjust(left=.15)
+
+    # Draw to screen if desired
     if draw:
-        # Draw to screen.
         if plt.isinteractive():
             plt.draw() #In interactive mode, you just "draw".
         else:
