@@ -78,8 +78,20 @@ ${LIB_AMPS}:
 	cd ${WSD}/models/exosphere; make SEARCH_C="${SEARCH}"
 	cd ${WSD}/main; make SEARCH_C="${SEARCH}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
+
+
+ifeq ($(SPICE),nospice)
 	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o \
 		species/*.o models/exosphere/*.o
+else
+	rm -rf ${WSD}/tmpSPICE
+	mkdir ${WSD}/tmpSPICE
+	cp ${SPICE}/lib/cspice.a ${WSD}/tmpSPICE
+	cd ${WSD}/tmpSPICE; ar -x cspice.a
+
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o \
+		species/*.o models/exosphere/*.o tmpSPICE/*.o 
+endif
 
 LIB: ${LIB_AMPS}
 	cd srcInterface; make LIB SEARCH_C="${SEARCH}"
