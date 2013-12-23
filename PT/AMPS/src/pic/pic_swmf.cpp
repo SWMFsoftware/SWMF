@@ -27,43 +27,96 @@
 
 using namespace std;
 
-int PIC::CPLR::SWMF::MagneticFieldOffset=-1;
+int PIC::CPLR::SWMF::MagneticFieldOffset=-1,PIC::CPLR::SWMF::PlasmaDensityOffset=-1,PIC::CPLR::SWMF::BulkVelocityOffset=-1,PIC::CPLR::SWMF::PlasmaPressureOffset=-1;
 int PIC::CPLR::SWMF::TotalDataLength=0;
 
 
 int PIC::CPLR::SWMF::RequestDataBuffer(int offset) {
   MagneticFieldOffset=offset;
+  TotalDataLength=3;
+
+  PlasmaDensityOffset=offset+TotalDataLength*sizeof(double);
+  TotalDataLength++;
+
+  BulkVelocityOffset=offset+TotalDataLength*sizeof(double);
   TotalDataLength+=3;
 
+  PlasmaPressureOffset=offset+TotalDataLength*sizeof(double);
+  TotalDataLength++;
+
   return TotalDataLength*sizeof(double);
+
+
 }
 
 void PIC::CPLR::SWMF::PrintVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,",\"gmBx\", \"gmBy\", \"gmBz\"");
+  fprintf(fout,",\"gmRho\",\"gmP\",\"gmVx\",\"gmVy\",\"gmVz\",\"gmBx\",\"gmBy\",\"gmBz\"");
 }
 
 void PIC::CPLR::SWMF::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
-  double B[3]={0.0,0.0,0.0};
+  double B[3]={0.0,0.0,0.0},V[3]={0.0,0.0,0.0},P=0.0,Rho=0.0;
   int i,idim;
-  char *SamplingBuffer,*CellNodeSamplingBuffer;
-
-  CellNodeSamplingBuffer=CenterNode->GetAssociatedDataBufferPointer()+MagneticFieldOffset;
+  char *SamplingBuffer;
 
   for (i=0;i<nInterpolationCoeficients;i++) {
-    SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+MagneticFieldOffset;
 
-    for (idim=0;idim<3;idim++) B[idim]+=(*((double*)(SamplingBuffer+idim*sizeof(double))))*InterpolationCoeficients[i];
+    for (idim=0,SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+MagneticFieldOffset;idim<3;idim++) B[idim]+=(*((double*)(SamplingBuffer+idim*sizeof(double))))*InterpolationCoeficients[i];
+    for (idim=0,SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+BulkVelocityOffset;idim<3;idim++) V[idim]+=(*((double*)(SamplingBuffer+idim*sizeof(double))))*InterpolationCoeficients[i];
+
+    P+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+PlasmaPressureOffset)))*InterpolationCoeficients[i];
+    Rho+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+PlasmaDensityOffset)))*InterpolationCoeficients[i];
   }
 
-  memcpy(CellNodeSamplingBuffer,B,3*sizeof(double));
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+MagneticFieldOffset,B,3*sizeof(double));
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+BulkVelocityOffset,V,3*sizeof(double));
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+PlasmaPressureOffset,&P,sizeof(double));
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+PlasmaDensityOffset,&Rho,sizeof(double));
 }
 
 void PIC::CPLR::SWMF::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
   int idim;
+  double t;
 
+  //Density
+  if (pipe->ThisThread==CenterNodeThread) {
+    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+PlasmaDensityOffset));
+  }
+
+  if (pipe->ThisThread==0) {
+    if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
+
+    fprintf(fout,"%e ",t);
+  }
+  else pipe->send(t);
+
+  //Pressure
+  if (pipe->ThisThread==CenterNodeThread) {
+    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+PlasmaPressureOffset));
+  }
+
+  if (pipe->ThisThread==0) {
+    if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
+
+    fprintf(fout,"%e ",t);
+  }
+  else pipe->send(t);
+
+  //Bulk Velocity
   for (idim=0;idim<3;idim++) {
-    double t;
+    if (pipe->ThisThread==CenterNodeThread) {
+      t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+BulkVelocityOffset+idim*sizeof(double)));
+    }
 
+    if (pipe->ThisThread==0) {
+      if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
+
+      fprintf(fout,"%e ",t);
+    }
+    else pipe->send(t);
+  }
+
+  //Magnetic Field
+  for (idim=0;idim<3;idim++) {
     if (pipe->ThisThread==CenterNodeThread) {
       t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+MagneticFieldOffset+idim*sizeof(double)));
     }
@@ -244,7 +297,11 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(double *data,int *index) {
             offset=TotalDataLength*(index[cnt++]-1);
             cell->nodeDescriptor.nodeProcessedFlag=_ON_AMR_MESH_;
 
-            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+MagneticFieldOffset+idim*sizeof(double)))=data[idim+offset];
+            //the order of the state vector: rho, V, B, p
+            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaDensityOffset))=data[offset++];
+            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+BulkVelocityOffset+idim*sizeof(double)))=data[offset++];
+            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+MagneticFieldOffset+idim*sizeof(double)))=data[offset++];
+            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaPressureOffset))=data[offset++];
           }
         }
     }
@@ -262,7 +319,11 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(double *data,int *index) {
             offset=TotalDataLength*(index[cnt++]-1);
             cell->nodeDescriptor.nodeProcessedFlag=_ON_AMR_MESH_;
 
-            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+MagneticFieldOffset+idim*sizeof(double)))=data[idim+offset];
+            //the order of the state vector: rho, V, B, p
+            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaDensityOffset))=data[offset++];
+            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+BulkVelocityOffset+idim*sizeof(double)))=data[offset++];
+            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+MagneticFieldOffset+idim*sizeof(double)))=data[offset++];
+            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaPressureOffset))=data[offset++];;
           }
         }
     }
