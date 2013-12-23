@@ -76,8 +76,7 @@ def gitm_single_3D_image(plot_type, zkey, gdata, title=None, figname=None,
            data_type  = scatter or contour (default=scatter)
            faspect    = Fix the aspect of Earth if using outlines (default=True)
            meq        = Include the geomagnetic equator?  (default=False)
-           terminator = Include the solar terminator? Only possible when
-                        including the terrestrial map (default=False)
+           terminator = Include the solar terminator? (default=False)
            m          = Handle for earth map (default=None)
 
     Output: f = figure handle
@@ -153,7 +152,7 @@ def gitm_single_nsglobal_3D_image(zkey, gdata, title=None, figname=None,
            zcolor     = Color scale for plotting the z data (default=Spectral_r)
            data_type  = Type of plot to make scatter/contour (default=scatter)
            terminator = Include the solar terminator by shading the night
-                        time regions? (default=False) Only used if earth=True.
+                        time regions? (default=False)
            mn         = Northern latitude map handle (default=None)
            ms         = Southern latitude map handle (default=None)
 
@@ -227,7 +226,7 @@ def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
            meq        = Add a line for the geomagnetic equator? (default=False)
            data_type  = Type of plot to make scatter/contour (default=contour)
            terminator = Include the solar terminator by shading the night
-                        time regions? (default=False) Only used if earth=True.
+                        time regions? (default=False)
            ml         = Low latitude map handle (default=None)
            mn         = Northern latitude map handle (default=None)
            ms         = Southern latitude map handle (default=None)
@@ -305,7 +304,7 @@ def gitm_mult_3D_slices(plot_type, zkey, gdata, aindex, title=None,
            earth      = include Earth continent outlines (default False)
            faspect    = Fix aspect ratio if using continents (default=True)
            terminator = Include the solar terminator by shading the night
-                        time regions? (default=False) Only used if earth=True.
+                        time regions? (default=False)
     '''
     # Set the latitude limits.  For polar plots, latitudes above and below
     # 90 degrees will cause the routine to fail
