@@ -135,8 +135,24 @@ def find_nearest_value(data_list, value):
     index = index of the nearest value in the data list
     '''
 
-    # Find the index of the nearest observation time
-    index = np.searchsorted(data_list, value)
+    if len(data_list) < 2:
+        index = 0
+    else:
+        # Get an index showing the sorted order of the data array
+        sindex = np.argsort(data_list)
+
+        # Find the index of the nearest observation time.  This must be
+        # done differently for sorted and unsorted lists
+        try:
+            index = np.searchsorted(data_list[sindex], value)
+            # Get the actual index close to the value from the sorted index list
+            try: index = sindex[index]
+            except:
+                if index < 0:
+                    index = sindex[0]
+                else:
+                    index = sindex[-1]
+        except: index = np.searchsorted(data_list, value)
 
     # If the value is greater than the maximum in itime, reduce the index
     # by one.  Otherwise test to see whether this index or the one
@@ -521,20 +537,22 @@ def gitm_inst_loc(obs_date, obs_lat, obs_lon, obs_alt, dat_keys, obs_type,
         # Interpolate the satellite's position in time (ms resolution)
         obs_delt = [timedelta.total_seconds(d - obs_date[0]) for d in obs_date]
         itime = list(np.arange(0.0, obs_delt[-1], obs_res))
-        nlocs = [1 for d in itime] # Since there is one location for each time
+        nlocs = [1 for d in itime] # One location for each time
         if obs_res == gitm_res:
             ialt = obs_alt * alt_scale
             ilat = obs_lat * dlat_scale
             ilon = obs_lon * dlon_scale
-
-            print min(ilat), max(ilat), min(ilon), max(ilon)
         else:
             # Interpolate Altitude
-            tck = interpolate.splrep(obs_delt, obs_alt * alt_scale, s=0)
-            ialt = interpolate.splev(itime, tck, der=0)
+            #tck = interpolate.splrep(obs_delt, obs_alt * alt_scale, s=0)
+            #ialt = interpolate.splev(itime, tck, der=0)
+            tck = interpolate.interp1d(obs_delt, obs_alt*alt_scale)
+            ialt = tck(itime)
             # Interpolate Latitude
-            tck = interpolate.splrep(obs_delt, obs_lat * dlat_scale, s=0)
-            ilat = interpolate.splev(itime, tck, der=0)
+            #tck = interpolate.splrep(obs_delt, obs_lat * dlat_scale, s=0)
+            #ilat = interpolate.splev(itime, tck, der=0)
+            tck = interpolate.interp1d(obs_delt, obs_lat*dlat_scale)
+            ilat = tck(itime)
             # Interpolate Longitude
             loff = 0.0
             llon = obs_lon[0]
@@ -544,8 +562,10 @@ def gitm_inst_loc(obs_date, obs_lat, obs_lon, obs_alt, dat_keys, obs_type,
                     loff += 1.0
                 ilon.append(lon*dlon_scale + 360.0*loff)
 
-            tck = interpolate.splrep(obs_delt, ilon, s=0)
-            ilon = interpolate.splev(itime, tck, der=0)
+            #tck = interpolate.splrep(obs_delt, ilon, s=0)
+            #ilon = interpolate.splev(itime, tck, der=0)
+            tck = interpolate.interp1d(obs_delt, obs_lon*dlon_scale)
+            ilon = tck(itime)
     elif obs_type.find("ground") >= 0:
         # Group the observation locations by time.  Since we will seldom
         # require a truely vertical altitude profile (radars typically scan
@@ -1268,3 +1288,170 @@ def gitm_net_loc(obs_date, obs_lat, obs_lon, obs_alt, obs_dat_list,
     print rout_name, "ERROR: no data to output"
     return
 #END gitm_net_loc
+
+def gitm_time_obs_loc(gtime, interp_gkey, interp_okey, obs_scale=1.0,
+                      interp_i=[0,0,0], *args, **kwargs):
+    '''
+    A routine to find, through interpolation, the GITM value at a specific
+    observation location.  Assumes the observations and model have already
+    been matched and reside in the same GitmTime data structure.  Only performs
+    interpolation in one dimension.  Assumes appended observations have keys
+    that are prefixed by "obs_" (eg "obs_TEC").
+
+    Input: gtime       = GitmTime data structure
+           interp_gkey = GITM position key to perform interpolation over
+           interp_okey = Observation position key to extract data at
+           obs_scale   = If GITM and observable positions use different units,
+                         provide the constant needed to scale the observable
+                         position to the GITM position (default=1.0)
+           interp_i    = List containing position indices where observation is
+                         located [ilon,ilat,ialt] (default=[0,0,0])
+
+    Output: otime = Output GitmTime data structure, reshaped to remove instances
+                    where interp_okey is nan
+    '''
+    import operator
+    from copy import deepcopy as dc
+    from scipy import interpolate
+    from spacepy.datamodel import dmarray
+    import gitm
+    import gitm_time
+    import gitm_plot_rout as gpr
+
+    # Seperate the gtime keys into observation and GITM keys.  Test input.
+
+    gkeys = gtime.keys()
+    okeys = list()
+    pinds = list()
+
+    try:
+        gkeys.pop(gkeys.index(interp_gkey))
+    except:
+        print "Input GITM location key does not exist"
+        return
+
+    gkeys.pop(gkeys.index('time'))
+    gkeys.pop(gkeys.index('file'))
+    gkeys.pop(gkeys.index('magfile'))
+
+    for i,k in enumerate(gkeys):
+        if k.find("obs_") == 0:
+            okeys.append(k)
+            pinds.append(i)
+
+    try:
+        okeys.pop(okeys.index(interp_okey))
+    except:
+        print "Input observation key does not exist"
+        return
+
+    if len(pinds) > 0:
+        pinds.sort(reverse=True)
+        for i in pinds:
+            gkeys.pop(i)
+        pinds = list()
+
+    # Determine what position index we're interpreting over and set index
+    # limits.  Test observation position index
+    dim = list(gtime[interp_gkey].shape)
+    if(interp_i[0] < 0 or interp_i[1] < 0 or interp_i[2] < 0 or
+       interp_i[0] > dim[1] or interp_i[1] > dim[2] or interp_i[2] > dim[3]):
+        print "Observation position indices out of bounds"
+        return
+
+    if interp_gkey.find("Alt") >= 0:
+        alt2 = dim[3]
+        iax = 3
+    elif interp_gkey.find("Lat") >= 0:
+        lat2 = dim[2]
+        iax = 2
+    elif interp_gkey.find("Lon") >= 0:
+        lon2 = dim[1]
+        iax = 1
+    else:
+        print "Unable to determine GITM location index for key", interp_gkey
+        return
+
+    def get_itime(j):
+        return int(j / (dim[1] * dim[2] * dim[3]))
+    def get_ilon(j, iax):
+        if iax == 1:
+            return(0, dim[1], interp_i[0])
+        else:
+            d = dim[1] * dim[2] * dim[3]
+            d = int((j - int(j/d) * d) / (dim[2] * dim[3]))
+            return(d, d+1, d)
+    def get_ilat(j, iax):
+        if iax == 2:
+            return(0, dim[2], interp_i[1])
+        else:
+            d = dim[1] * dim[2] * dim[3]
+            k = int((j - int(j/d)*d)/ (dim[2]*dim[3])) * dim[2] * dim[3]
+            d = int((j- int(j/d) * d - k)/dim[3])
+            return(d, d+1, d)
+    def get_ialt(j, iax):
+        if iax == 3:
+            return(0, dim[3], interp_i[2])
+        else:
+            d = dim[1] * dim[2] * dim[3]
+            k = int((j - int(j/d)*d)/ (dim[2]*dim[3])) * dim[2] * dim[3]
+            l = int((j - k - int(j/d) * d) / dim[3]) * dim[3]
+            d = int(j - int(j/d) * d - k - l)
+            return(d, d+1, d)
+
+    # Prepare the output
+    pinds = list(dim[iax] - 1 - np.arange(dim[iax]))
+    pinds.pop(pinds.index(interp_i[iax-1]))
+    otime = dc(gtime)
+
+    # Cycle through all times and locations, interpolating data at each one
+    for i in range(reduce(operator.mul, dim)):
+        itime = get_itime(i)
+        (lon1, lon2, ilon) = get_ilon(i, iax)
+        (lat1, lat2, ilat) = get_ilat(i, iax)
+        (alt1, alt2, ialt) = get_ialt(i, iax)
+    
+        # Test to see if there is no observable data
+        nan = list(np.array([[b for b in np.isnan(gtime[o][itime,lon1:lon2,lat1:lat2,alt1:alt2]).flatten() if not b] for o in okeys]).flatten())
+
+        # Establish position limits for valid interpolation
+        if len(nan) > 0:
+            pmin = gtime[interp_gkey][itime,lon1:lon2,lat1:lat2,alt1:alt2].min()
+            pmax = gtime[interp_gkey][itime,lon1:lon2,lat1:lat2,alt1:alt2].max()
+
+            if(gtime[interp_okey][itime,ilon,ilat,ialt] * obs_scale < pmin or
+               gtime[interp_okey][itime,ilon,ilat,ialt] * obs_scale > pmax):
+                nan = list()
+
+        # Cycle through all data keys
+        for g in gkeys:
+            # Reshape output array if this is the first iteration
+            if i == 0:
+                otime[g] = np.delete(otime[g], pinds, iax)
+
+            if len(nan) <= 0:
+                # There is no observable data or it is out of range, 
+                # then there is no need to interpolate
+                otime[g][itime,lon1,lat1,alt1] = np.nan
+            else:
+                # Don't attempt interpolation if value is constant over position
+                gmin = gtime[g][itime,lon1:lon2,lat1:lat2,alt1:alt2].min()
+                gmax = gtime[g][itime,lon1:lon2,lat1:lat2,alt1:alt2].max()
+
+                if(gmin == gmax):
+                    otime[g][itime,lon1,lat1,alt1] = gmin
+                else:
+                    # Use a cubic spline to interpolate
+                    gck = interpolate.interp1d(gtime[interp_gkey][itime,lon1:lon2,lat1:lat2,alt1:alt2].flatten(), gtime[g][itime,lon1:lon2,lat1:lat2,alt1:alt2].flatten(), kind="cubic")
+                    try:
+                        gy = gck(gtime[interp_okey][itime,ilon,ilat,ialt]
+                                 * obs_scale)
+                        otime[g][itime,lon1,lat1,alt1] = gy
+                    except:
+                        otime[g][itime,lon1,lat1,alt1] = np.nan
+
+    # Remove unneeded elements of the observational data arrays
+    for g in okeys:
+        otime[g] = np.delete(otime[g], pinds, iax)
+
+    return(otime)
