@@ -41,6 +41,53 @@ import datetime as dt
 import gitm_plot_rout as gpr
 import plot_3D_global as p3g
 
+def extract_data_matched_arrays(data_dict, bad_value=np.nan):
+    '''
+    Extract points from matched data arrays that do not have the specified
+    bad values.
+
+    Input: data_dict = dictionary of lists or numpy arrays with the same
+                       number of data values
+           bad_value = bad value (default=[np.nan])
+
+    Output: good_dict = dictionary of lists with only good, matched values
+    '''
+    # Extract the data, removing any instances where the first data key has
+    # the bad value
+
+    data_key = data_dict.keys()
+    if np.isnan(bad_value):
+        good_index = [i for i,l in enumerate(data_dict[data_key[0]])
+                      if not np.isnan(l)]
+    else:
+        good_index = [i for i,l in enumerate(data_dict[data_key[0]])
+                      if l != bad_value]
+
+    # Cycle through the rest of the data keys to see if they hold bad values
+    if len(data_key) > 1:
+        bad_index = list()
+        dkey = data_key[1:len(data_key)]
+
+        for i,igood in enumerate(good_index):
+            if np.isnan(bad_value):
+                badlist = [k for k in dkey if np.isnan(data_dict[k][igood])]
+            else:
+                badlist = [k for k in dkey if data_dict[k][igood] == bad_value]
+
+            if len(badlist) > 0:
+                bad_index.append(i)
+                
+        if len(bad_index) > 0:
+            good_index = list(np.delete(np.array(good_index), bad_index))
+
+    # Save the good data
+    good_data = dict()
+    if len(good_index) > 0:
+        for k in data_key:
+            good_data[k] = data_dict[k][good_index]
+
+    return(good_data)
+
 def extract_gitm_time_arrays(gtime, data_key, ut_index=-1,
                              lon_index=-1, lat_index=-1, alt_index=-1,
                              *args, **kwargs):
