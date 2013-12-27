@@ -136,7 +136,7 @@ contains
      rPlanet_I(Mercury_)                   = 2439.0e+3               ! [ m]
      mPlanet_I(Mercury_)                   = 3.3022e+23               ! [kg]
      OrbitalPeriodPlanet_I(Mercury_)       = 87.969* cDay          ! [ s]
-     RotationPeriodPlanet_I(Mercury_)      = 58.646* cDay          ! [ s]
+     RotationPeriodPlanet_I(Mercury_)      = 175.942* cDay          ! [ s]
 
      TypeBFieldPlanet_I(Mercury_)         = "DIPOLE"
      DipoleStrengthPlanet_I(Mercury_)     = -200.0e-9              ! [ T]
@@ -149,7 +149,7 @@ contains
      rPlanet_I(Venus_)                   = 6052.0e+3               ! [ m]
      mPlanet_I(Venus_)                   = 4.865e+24               ! [kg]
      OrbitalPeriodPlanet_I(Venus_)       = 224.7   * cDay          ! [ s]
-     RotationPeriodPlanet_I(Venus_)      = 243.0185* cDay          ! [ s]
+     RotationPeriodPlanet_I(Venus_)      = 116.750 * cDay          ! [ s]
                                        
      !\                                
      ! Earth (30)                         
@@ -196,7 +196,7 @@ contains
      rPlanet_I(Mars_)                    = 3396.0e+3               ! [ m]
      mPlanet_I(Mars_)                    = 0.6436e+24              ! [kg]
      OrbitalPeriodPlanet_I(Mars_)        = 686.98* cDay            ! [ s]
-     RotationPeriodPlanet_I(Mars_)       = 1.026 * cDay            ! [ s]
+     RotationPeriodPlanet_I(Mars_)       = 1.0275 * cDay            ! [ s]
                                         
      !\
      ! Jupiter (50)
@@ -206,7 +206,7 @@ contains
      rPlanet_I(Jupiter_)                 = 71492.0e+3              ! [ m]
      mPlanet_I(Jupiter_)                 = 1.8980e+27              ! [kg]
      OrbitalPeriodPlanet_I(Jupiter_)     = 4330.6 * cDay           ! [ s]
-     RotationPeriodPlanet_I(Jupiter_)    = 9.925 * cHour           ! [ s]
+     RotationPeriodPlanet_I(Jupiter_)    = 9.9259 * cHour           ! [ s]
 
      TypeBFieldPlanet_I(Jupiter_)        = "DIPOLE"                
      DipoleStrengthPlanet_I(Jupiter_)    = 428000.0e-9             ! [ T]
@@ -221,7 +221,7 @@ contains
      rPlanet_I(Saturn_)                  = 60268.0e+3              ! [ m]
      mPlanet_I(Saturn_)                  = 0.5685e+27              ! [kg]
      OrbitalPeriodPlanet_I(Saturn_)      = 10746.94 * cDay         ! [ s]
-     RotationPeriodPlanet_I(Saturn_)     = 10.5 * cHour            ! [ s]
+     RotationPeriodPlanet_I(Saturn_)     = 10.656 * cHour            ! [ s]
                                        
      TypeBFieldPlanet_I(Saturn_)         = "DIPOLE"                
      DipoleStrengthPlanet_I(Saturn_)     = 20800.0e-9              ! [ T]
