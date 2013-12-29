@@ -336,9 +336,9 @@ public:
     norm3d[1]=norm2d[1]*cos(AzimuthAngle);
     norm3d[2]=norm2d[1]*sin(AzimuthAngle);
 
-    norm[0]=norm3d[0]*e0[0]+norm3d[0]*e1[0]+norm3d[0]*e2[0];
-    norm[1]=norm3d[0]*e0[1]+norm3d[0]*e1[1]+norm3d[0]*e2[1];
-    norm[2]=norm3d[0]*e0[2]+norm3d[0]*e1[2]+norm3d[0]*e2[2];
+    norm[0]=norm3d[0]*e0[0]+norm3d[1]*e1[0]+norm3d[2]*e2[0];
+    norm[1]=norm3d[0]*e0[1]+norm3d[1]*e1[1]+norm3d[2]*e2[1];
+    norm[2]=norm3d[0]*e0[2]+norm3d[1]*e1[2]+norm3d[2]*e2[2];
   }
 
   inline void GetSurfaceCoordinate(double *x,int iAxis,int iAzimutalPoint) {
