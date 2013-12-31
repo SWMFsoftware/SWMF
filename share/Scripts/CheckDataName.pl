@@ -111,6 +111,7 @@ my $Line;       # line
 my $Here;       # current location
 my $Type;       # variable type
 my $Vars;       # list of variables
+my $Function;   # function name while parsing a function
 
 foreach (@ARGV){
     $File = $_;
@@ -164,6 +165,13 @@ sub check_file{
 	$Line .= $_;              # collect continuation lines
 	next if 
 	    $Line =~ s/\s*\&$/ /; # remove & and read continuation line
+
+	# store function name inside functions
+	if($Line =~ /^function\s+(\w+)/i){
+	    $Function = $1;
+	}elsif($Line =~ /^end\s+function/i){
+	    $Function = "";
+	}
 
 	if($Line =~ /^(program|subroutine|module|function|$AnyType\s+function)\s/i){
 	    &check_methods unless $NoMethodCheck;
@@ -275,7 +283,7 @@ sub check_variables{
 	return;
     }
     my $TypeOrig = $`;
-    my $Vars     = $';
+    my $Vars     = $'; # This is here to make emacs indentation work: ';
 
     my $Type = lc($TypeOrig);
 
@@ -308,12 +316,15 @@ sub check_variables{
     # Get the basic type
     $Type =~ s/^(character|integer|real|logical|type).*/$1/;
 
+    # Remove '= reshape(#N,#M'
+    $Vars =~ s/\s*=\s*reshape\([\#\d,]+//i;
+
     # Split up $Vars
     my @Vars = split(/\s*,\s*/, $Vars);
     my $Var;
     foreach $Var (@Vars){
 
-	$Var =~ s/\s*=.*$//;               # get rid of initialization part
+        $Var =~ s/\s*=.*$//;               # get rid of initialization part
 
 	my $nDim = $nDimAll;               # Set global dimension if any
 	$nDim = $1 if $Var =~ s/\#(\d+)//; # Set individual dimension if any
@@ -324,6 +335,9 @@ sub check_variables{
 
 	# Check for a possible named index
 	next if $NamedIndex and $Var =~ /^$ValidNamedIndex/;
+
+        # Check if this is a declaration for the function return value
+        next if lc($Var) eq lc($Function); # ignore 
 
 	# Check scalar or array variable name
 	if(not $nDim){
