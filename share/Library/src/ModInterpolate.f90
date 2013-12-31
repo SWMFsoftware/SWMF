@@ -67,7 +67,8 @@ module ModInterpolate
 contains
 
   !=========================================================================
-  real function linear_scalar(a_I, iMin, iMax, x, x_I, DoExtrapolate, iCell_D, Dist_D)
+  real function linear_scalar(a_I, iMin, iMax, x, x_I, DoExtrapolate, &
+       iCell, Dist)
 
     ! Calculate linear interpolation of a_I at position x
     ! Assume normalized coordinates unless x_I is present.
@@ -79,21 +80,21 @@ contains
 
     real,    intent(in), optional :: x_I(iMin:iMax)
     logical, intent(in), optional :: DoExtrapolate
-    integer, intent(in), optional :: iCell_D
-    real,    intent(in), optional :: Dist_D
+    integer, intent(in), optional :: iCell
+    real,    intent(in), optional :: Dist
 
     integer :: i1, i2
     real    :: Dx1, Dx2
     character (len=*), parameter :: NameSub=NameMod//'::linear_scalar'
     !--------------------------------------------------------------------------
 
-    if ( present(iCell_D) .and. present(Dist_D) ) then
+    if ( present(iCell) .and. present(Dist) ) then
 
        ! Calculate the remaining cell indices and interpolation weights
 
-       i1 = iCell_D
+       i1 = iCell
        i2 = i1 + 1
-       Dx1 = Dist_D
+       Dx1 = Dist
        Dx2 = 1.0 - Dx1
 
     else
@@ -113,7 +114,8 @@ contains
   end function linear_scalar
 
   !=========================================================================
-  function linear_vector(a_VI, nVar, iMin, iMax, x, x_I, DoExtrapolate, iCell_D, Dist_D)
+  function linear_vector(a_VI, nVar, iMin, iMax, x, x_I, DoExtrapolate, &
+       iCell, Dist)
 
     ! Calculate linear interpolation of a_VI at position x
     ! Assume normalized coordinates unless x_I is present.
@@ -125,8 +127,8 @@ contains
 
     real,    intent(in), optional :: x_I(iMin:iMax)
     logical, intent(in), optional :: DoExtrapolate
-    integer, intent(in), optional :: iCell_D
-    real,    intent(in), optional :: Dist_D
+    integer, intent(in), optional :: iCell
+    real,    intent(in), optional :: Dist
 
     ! return value
     real                :: linear_vector(nVar)
@@ -136,13 +138,13 @@ contains
     character (len=*), parameter :: NameSub=NameMod//'::linear_vector'
     !--------------------------------------------------------------------------
 
-    if ( present(iCell_D) .and. present(Dist_D) ) then
+    if ( present(iCell) .and. present(Dist) ) then
 
        ! Calculate the remaining cell indices and interpolation weights
 
-       i1 = iCell_D
+       i1 = iCell
        i2 = i1 + 1
-       Dx1 = Dist_D
+       Dx1 = Dist
        Dx2 = 1.0 - Dx1
 
     else
@@ -163,7 +165,8 @@ contains
 
   !=========================================================================
   real function bilinear_scalar( &
-       a_II, iMin, iMax, jMin, jMax, Xy_D, x_I, y_I, DoExtrapolate, iCell_D, Dist_D)
+       a_II, iMin, iMax, jMin, jMax, Xy_D, x_I, y_I, DoExtrapolate, iCell_D, &
+       Dist_D)
 
     ! Calculate bilinear interpolation of a_II at position Xy_D
     ! Assume normalized coordinates unless x_I and/or y_I are present.
@@ -223,7 +226,8 @@ contains
 
   !=========================================================================
   function bilinear_vector( &
-       a_VII, nVar, iMin, iMax, jMin, jMax, Xy_D, x_I, y_I, DoExtrapolate, iCell_D, Dist_D)
+       a_VII, nVar, iMin, iMax, jMin, jMax, Xy_D, x_I, y_I, DoExtrapolate, &
+       iCell_D, Dist_D)
 
     ! Calculate bilinear interpolation of a_VII at position Xy_D
     ! Assume normalized coordinates unless x_I and/or y_I are present.
