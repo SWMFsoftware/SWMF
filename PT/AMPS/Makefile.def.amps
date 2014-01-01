@@ -7,3 +7,5 @@ WSD=srcTemp
 Lib=  -lm
 SPICE=nospice
 
+ExternalModules=models/exosphere
+

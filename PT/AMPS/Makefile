@@ -10,6 +10,8 @@ WSD=srcTemp
 include Makefile.def
 include Makefile.conf
 
+
+
 # These definitions are inherited from Makefile.def and Makefile.conf
 CC=${COMPILE.mpicxx}
 CWD=${MYDIR}
@@ -75,22 +77,25 @@ ${LIB_AMPS}:
 	cd ${WSD}/meshAMR; make SEARCH_C="${SEARCH}" 
 	cd ${WSD}/pic; make SEARCH_C="${SEARCH}"
 	cd ${WSD}/species; make SEARCH_C="${SEARCH}"
-	cd ${WSD}/models/exosphere; make SEARCH_C="${SEARCH}"
+
+#compile external modules
+	$(foreach src, $(ExternalModules), (cd ${WSD}/$(src); make SEARCH_C="${SEARCH}")) 
+
 	cd ${WSD}/main; make SEARCH_C="${SEARCH}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
 
 
 ifeq ($(SPICE),nospice)
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o \
-		species/*.o models/exosphere/*.o
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o 
+	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 else
 	rm -rf ${WSD}/tmpSPICE
 	mkdir ${WSD}/tmpSPICE
 	cp ${SPICE}/lib/cspice.a ${WSD}/tmpSPICE
 	cd ${WSD}/tmpSPICE; ar -x cspice.a
 
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o \
-		species/*.o models/exosphere/*.o tmpSPICE/*.o 
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o  tmpSPICE/*.o 
+	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 endif
 
 LIB: ${LIB_AMPS}
