@@ -191,6 +191,8 @@ contains
   !=========================================================================
   subroutine rotate_state_vectors
 
+    use ModCoordTransform, ONLY: cross_product
+
     ! Rotate the vector variables B0*, StateLeft_V(B*_), StateLeft_V(U*_)
     ! StateRight_V(B*_), StateRight_V(U*_) into normal and
     ! tangential components with respect to the face.
@@ -264,20 +266,17 @@ contains
           Tangent1_D(x_) =  Normal_D(y_)
           Tangent1_D(y_) = -Normal_D(x_)
           Tangent1_D(z_) = 0.0
-          ! Tangent2 = Normal x Tangent1
-          Tangent2_D(x_) =  Normal_D(z_)*Normal_D(x_)
-          Tangent2_D(y_) =  Normal_D(z_)*Normal_D(y_)
-          Tangent2_D(z_) = -Normal_D(x_)**2 - Normal_D(y_)**2
        else
           ! Tangent1 = Normal x (1,0,0)
           Tangent1_D(x_) = 0.0
           Tangent1_D(y_) =  Normal_D(z_)
           Tangent1_D(z_) = -Normal_D(y_)
-          ! Tangent2 = Normal x Tangent1
-          Tangent2_D(x_) = -Normal_D(y_)**2 - Normal_D(z_)**2
-          Tangent2_D(y_) =  Normal_D(x_)*Normal_D(y_)
-          Tangent2_D(z_) =  Normal_D(x_)*Normal_D(z_)
        end if
+       ! Normalize Tangent1 vector
+       Tangent1_D = Tangent1_D/sqrt(sum(Tangent1_D**2))
+       ! Tangent2 = Normal x Tangent1
+       Tangent2_D = cross_product(Normal_D, Tangent1_D)
+
        ! B0 on the face
        B0n   = sum(Normal_D  *(/B0x, B0y, B0z/))
        B0t1  = sum(Tangent1_D*(/B0x, B0y, B0z/))
