@@ -165,6 +165,10 @@ double PIC::BC::CalculateInjectionRate_MaxwellianDistribution(double NumberDesni
   double res=0.0,vNorm,beta,vv,sc,cc,aa;
   int idim;
 
+#if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
+  if (spec<0) exit(__LINE__,__FILE__,"Error: negative value of the 'spec' variable");
+#endif
+
   for (vv=0.0,vNorm=0.0,idim=0;idim<DIM;idim++) vv+=BulkVelocity[idim]*BulkVelocity[idim],vNorm+=BulkVelocity[idim]*ExternalNormal[idim];
 
   beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*Temp));
