@@ -27,6 +27,11 @@ double PIC::Distribution::InjectMaxwellianDistribution(double *v,const double *B
 
   double ParticleWeightCorrection=1.0;
 
+#if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
+  if (spec<0) exit(__LINE__,__FILE__,"Error: negative value of the 'spec' variable");
+#endif
+
+
 #if DIM != 1
   double v1[3],v2[3],v3[3]={0.0,0.0,0.0};
 #endif
