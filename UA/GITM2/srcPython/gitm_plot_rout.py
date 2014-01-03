@@ -716,171 +716,179 @@ def add_geomagnetic_equator(ax, color="k", linestyle="-", markerstyle=None):
     return
 # END add_geomagnetic_equator
 
-def add_subsolar_point(ut, ax=None, color='none', edge="k", style="o", size=5):
-    '''
-    A routine to calculate and add a marker at the subsolar point to a plot. 
-    Fill color, edge color, and markerstyle can be specified using matplotlib
-    symbols.  The location can be returned without adding the marker to a plot
-    by setting ax=None.
-
-    Input: ut    = datetime holding the current UT
-           ax    = axis handle (default=None)
-           color = Marker face (fill) color (default='none' (empty))
-           edge  = Marker edge color (default='k' (black))
-           style = Marker style (default='o' (circle))
-           size  = Marker size (default=5)
-
-    Output: sslon = Subsolar Longitude (degrees)
-            sslat = Subsolar Latitude (degrees)
-    '''
+try:
     import solar_rout as sr
 
-    sslon, sslat = sr.subsolar_point(ut)
+    def add_subsolar_point(ut, ax=None, color='none', edge="k", style="o",
+                           size=5):
+        '''
+        A routine to calculate and add a marker at the subsolar point to a plot.
+        Fill color, edge color, and markerstyle can be specified using
+        matplotlib symbols.  The location can be returned without adding the
+        marker to a plot by setting ax=None.
 
-    if ax:
-        ax.plot([sslon], [sslat], marker=style, ms=size, markerfacecolor=color,
-                markeredgecolor=edge)
+        Input: ut    = datetime holding the current UT
+               ax    = axis handle (default=None)
+               color = Marker face (fill) color (default='none' (empty))
+               edge  = Marker edge color (default='k' (black))
+               style = Marker style (default='o' (circle))
+               size  = Marker size (default=5)
 
-    return(sslon, sslat)
-# END add_subsolar_point
+        Output: sslon = Subsolar Longitude (degrees)
+                sslat = Subsolar Latitude (degrees)
+        '''
+        sslon, sslat = sr.subsolar_point(ut)
 
-def add_solar_terminator(ut, alt=0.0, ax=None, color='k', style="-", width=1):
-    '''
-    A routine to calculate and add a line marking the solar terminator to 
-    a plot. Line color, style, and width can be specified using matplotlib
-    symbols.  Lists containing the coordinates of this line can be returned
-    without adding the marker to a plot by setting ax=None.
+        if ax:
+            ax.plot([sslon], [sslat], marker=style, ms=size,
+                    markerfacecolor=color, markeredgecolor=edge)
 
-    Input: ut    = datetime holding the current UT
-           alt   = elevation altitude (default=0.0 m)
-           ax    = axis handle (default=None)
-           color = Line color (default='k' (black))
-           style = Line style (default='-' (solid))
-           width = Line width/weight (default=1)
+        return(sslon, sslat)
+    # END add_subsolar_point
 
-    Output: sslon = Subsolar Longitude (degrees)
-            sslat = Subsolar Latitude (degrees)
-    '''
-    import solar_rout as sr
+    def add_solar_terminator(ut, alt=0.0, ax=None, color='k', style="-",
+                             width=1):
+        '''
+        A routine to calculate and add a line marking the solar terminator to 
+        a plot. Line color, style, and width can be specified using matplotlib
+        symbols.  Lists containing the coordinates of this line can be returned
+        without adding the marker to a plot by setting ax=None.
 
-    # Get the sunrise and sunset coordinates
-    term_lat, rise_lon, set_lon = sr.get_solar_terminator_lat_lon(ut, alt=alt,
-                                                                  nlocs=500)
+        Input: ut    = datetime holding the current UT
+               alt   = elevation altitude (default=0.0 m)
+               ax    = axis handle (default=None)
+               color = Line color (default='k' (black))
+               style = Line style (default='-' (solid))
+               width = Line width/weight (default=1)
 
-    # Align the sunrise and sunset data into a single array
-    tlat = np.array(term_lat)
-    if set_lon.index(min(set_lon)) < rise_lon.index(min(rise_lon)):
-        set_lon = [l if l < 360.0 else l - 360.0 for l in set_lon]
-        tlon = np.array(set_lon)
-        set_lon = rise_lon
-    else:
-        rise_lon = [l if l < 360.0 else l - 360.0 for l in rise_lon]
-        tlon = np.array(rise_lon)
+        Output: sslon = Subsolar Longitude (degrees)
+                sslat = Subsolar Latitude (degrees)
+        '''
+        # Get the sunrise and sunset coordinates
+        term_lat, rise_lon, set_lon = sr.get_solar_terminator_lat_lon(ut,
+                                                                      alt=alt,
+                                                                      nlocs=500)
 
-    tlat = np.append(term_lat, term_lat[::-1])
-    tlon = np.append(tlon, set_lon[::-1])
+        # Align the sunrise and sunset data into a single array
+        tlat = np.array(term_lat)
+        if set_lon.index(min(set_lon)) < rise_lon.index(min(rise_lon)):
+            set_lon = [l if l < 360.0 else l - 360.0 for l in set_lon]
+            tlon = np.array(set_lon)
+            set_lon = rise_lon
+        else:
+            rise_lon = [l if l < 360.0 else l - 360.0 for l in rise_lon]
+            tlon = np.array(rise_lon)
 
-    # Sort the arrays by longitude
-    sindex = np.argsort(tlon)
-    tlon = tlon[sindex]
-    tlat = tlat[sindex]
+        tlat = np.append(term_lat, term_lat[::-1])
+        tlon = np.append(tlon, set_lon[::-1])
 
-    if ax:
-        ax.plot(tlon, tlat, color=color, linestyle=style, linewidth=width)
+        # Sort the arrays by longitude
+        sindex = np.argsort(tlon)
+        tlon = tlon[sindex]
+        tlat = tlat[sindex]
 
-    return(tlon, tlat)
+        if ax:
+            ax.plot(tlon, tlat, color=color, linestyle=style, linewidth=width)
+
+        return(tlon, tlat)
 # END add_solar_terminator
+except:
+    print "solar_rout.py unavailable: can't load add_solar_terminator, add_subsolar_point"
 
-def find_sunside_twilight_sza(ut, lat_top, lat_bot, lon_top, lon_bot, mlon_top,
-                              mlon_bot):
-    '''
-    A routine to find the maximum angluar distance between the solar terminator
-    and the sunlight side with conjugate flux tube feet in darkness.  The
-    solar zenith angle corresponding to the sunlight boundary is returned.
-    the geographic coordinates of the upper and lower boundaries of interest
-    (ie +/- 15 degrees magnetic latitude) must be provided along with the
-    magnetic longitude along these boundaries and a universal time day.  The
-    entire day is searched to identify the sunlight boundary
-
-    Input: ut = datetime object containing UT year, month and day
-           lat_top  = numpy array containing geographic lat at top boundary
-           lat_bot  = numpy array containing geographic lat at bottom boundary
-           lon_top  = numpy array containing geographic lon at top boundary
-           lon_bot  = numpy array containing geographic lon at bottom boundary
-           mlon_top = numpy array containing geographic mlon at top boundary
-           mlon_bot = numpy array containing geographic mlon at bottom boundary
-
-    Output: sza = Solar zenith angle in degrees of inner boundary
-    '''
-    import datetime as dt
+try:
     import solar
-    import gitm_loc_rout as glr
-    import solar_rout as sr
 
-    # Initialize output
-    sza = 90.0
-    bad_time = 0
+    def find_sunside_twilight_sza(ut, lat_top, lat_bot, lon_top, lon_bot,
+                                  mlon_top,  mlon_bot):
+        '''
+        A routine to find the maximum angluar distance between the solar
+        terminator and the sunlight side with conjugate flux tube feet in
+        darkness.  The solar zenith angle corresponding to the sunlight
+        boundary is returned.  The geographic coordinates of the upper and
+        lower boundaries of interest (ie +/- 15 degrees magnetic latitude) must
+        be provided along with the magnetic longitude along these boundaries
+        and a universal time day.  The entire day is searched to identify the
+        sunlight boundary
 
-    for sec in np.arange(0.0, 86400.0, 1800.0):
-        # Incriment time
-        t = ut + dt.timedelta(0.0, sec)
+        Input: ut       = datetime object containing UT year, month and day
+               lat_top  = numpy array containing geog. lat at top boundary
+               lat_bot  = numpy array containing geog. lat at bottom boundary
+               lon_top  = numpy array containing geog. lon at top boundary
+               lon_bot  = numpy array containing geog. lon at bottom boundary
+               mlon_top = numpy array containing geog. mlon at top boundary
+               mlon_bot = numpy array containing geog. mlon at bottom boundary
 
-        # Find the solar zenith angle along the boundaries, decrease the angle
-        # so that values that occur after noon are negative
+        Output: sza = Solar zenith angle in degrees of inner boundary
+        '''
+        import datetime as dt
+        import gitm_loc_rout as glr
 
-        sza_top = np.array([90.0 - solar.GetAltitude(lat_top[i], l, t)
-                            if glon_to_localtime(t, l) < 12.0
-                            else -90.0 + solar.GetAltitude(lat_top[i], l, t)
-                            for i,l in enumerate(lon_top)])
-        sza_bot = np.array([90.0 - solar.GetAltitude(lat_bot[i], l, t)
-                            if glon_to_localtime(t, l) < 12.0
-                            else -90.0 + solar.GetAltitude(lat_bot[i], l, t)
-                            for i,l in enumerate(lon_bot)])
+        # Initialize output
+        sza = 90.0
+        bad_time = 0
 
-        # Find the magnetic longitudes where SZA is +/- 90.0 by identifying
-        # the value closest to the desired SZA
-        ti = list()
-        bi = list()
-        delta, i = glr.find_nearest_value(sza_top, 90.0)
-        if(delta < 1.0):
-            ti.append(i)
-        delta, i = glr.find_nearest_value(sza_top, -90.0)
-        if(delta < 1.0):
-            ti.append(i)
-        delta, i = glr.find_nearest_value(sza_bot, 90.0)
-        if(delta < 1.0):
-            bi.append(i)
-        delta, i = glr.find_nearest_value(sza_bot, -90.0)
-        if(delta < 1.0):
-            bi.append(i)
+        for sec in np.arange(0.0, 86400.0, 1800.0):
+            # Incriment time
+            t = ut + dt.timedelta(0.0, sec)
 
-        # Find the SZA at the opposite borders by locating the correspoding
-        # magnetic longitude at the opposite border for the indices at
-        # the solar terminator
-        new_sza = list()
-        for i in ti:
-            delta, j = glr.find_nearest_value(mlon_bot, mlon_top[i])
-            if sza_bot[j] >= 0.0:
-                new_sza.append(sza_bot[j])
-            else:
-                new_sza.append(-sza_bot[j])
+            # Find the solar zenith angle along the boundaries, decrease the
+            # angle so that values that occur after noon are negative
 
-        for i in bi:
-            delta, j = glr.find_nearest_value(mlon_top, mlon_bot[i])
-            if sza_bot[j] >= 0.0:
-                new_sza.append(sza_top[j])
-            else:
-                new_sza.append(-sza_top[j])
+            sza_top = np.array([90.0 - solar.GetAltitude(lat_top[i], l, t)
+                                if glon_to_localtime(t, l) < 12.0
+                                else -90.0 + solar.GetAltitude(lat_top[i], l, t)
+                                for i,l in enumerate(lon_top)])
+            sza_bot = np.array([90.0 - solar.GetAltitude(lat_bot[i], l, t)
+                                if glon_to_localtime(t, l) < 12.0
+                                else -90.0 + solar.GetAltitude(lat_bot[i], l, t)
+                                for i,l in enumerate(lon_bot)])
 
-        # Test to see if this value is higher than the last
-        try:
-            smin = np.nanmin(new_sza)
-            if sza > smin:
-                sza = smin
-        except:
-            bad_time += 1
+            # Find the magnetic longitudes where SZA is +/- 90.0 by identifying
+            # the value closest to the desired SZA
+            ti = list()
+            bi = list()
+            delta, i = glr.find_nearest_value(sza_top, 90.0)
+            if(delta < 1.0):
+                ti.append(i)
+            delta, i = glr.find_nearest_value(sza_top, -90.0)
+            if(delta < 1.0):
+                ti.append(i)
+            delta, i = glr.find_nearest_value(sza_bot, 90.0)
+            if(delta < 1.0):
+                bi.append(i)
+            delta, i = glr.find_nearest_value(sza_bot, -90.0)
+            if(delta < 1.0):
+                bi.append(i)
 
-    return(sza, bad_time)
+            # Find the SZA at the opposite borders by locating the correspoding
+            # magnetic longitude at the opposite border for the indices at
+            # the solar terminator
+            new_sza = list()
+            for i in ti:
+                delta, j = glr.find_nearest_value(mlon_bot, mlon_top[i])
+                if sza_bot[j] >= 0.0:
+                    new_sza.append(sza_bot[j])
+                else:
+                    new_sza.append(-sza_bot[j])
+
+            for i in bi:
+                delta, j = glr.find_nearest_value(mlon_top, mlon_bot[i])
+                if sza_bot[j] >= 0.0:
+                    new_sza.append(sza_top[j])
+                else:
+                    new_sza.append(-sza_top[j])
+
+            # Test to see if this value is higher than the last
+            try:
+                smin = np.nanmin(new_sza)
+                if sza > smin:
+                    sza = smin
+            except:
+                bad_time += 1
+
+        return(sza, bad_time)
+except:
+    print "PySolar not installed, cannot load find_sunside_twilight_sza"
 
 # Create a contour input 2D numpy array at a specified geo/mag lat/lon/alt
 
