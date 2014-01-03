@@ -83,13 +83,6 @@ class GpsFile:
         f.close()
 
 
-file = 'gps130731g.001.bin'
-gps = GpsFile(file)
-#for i in range(gps.nTimes-1):
-i = 200
-gps.read_time(gps.time[i])
-
-
 
 
 
