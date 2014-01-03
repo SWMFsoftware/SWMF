@@ -982,13 +982,14 @@ CONTAINS
           RCM_Hppvgamma = RCM_Hppvgamma * 2.0/3.0
           RCM_Oppvgamma = RCM_Oppvgamma * 2.0/3.0
 
-
-          RCM_n = 0.
-          RCM_T = 0.
+          RCM_n   = 0.
+          RCM_T   = 0.
           RCM_Hpn = 0.
           RCM_HpT = 0.
           RCM_Opn = 0.
           RCM_OpT = 0.
+          MHD_HpP = 0.
+          MHD_OpP = 0.
           do i=1,isize; do j=1,jsize
              if( i<imin_j(j) ) then
                 RCM_T(i,j) = -1.
@@ -1006,7 +1007,7 @@ CONTAINS
              else if (rcm_Oppvgamma(i,j) == 0.0) then
                 RCM_Opn(i,j) = 0.0
                 RCM_Opt(i,j) = 0.0
-             else    
+             else
                 !compute number density and temperature, for positive ions only
                 do k=kmin(2),kmax(2)
                    if(alamc(k) <=0)cycle
@@ -1092,6 +1093,41 @@ CONTAINS
                         -birk_mhd(i,j)/1.0E-6, density(i,j), temperature(i,j), &
                         MHD_p(i,j), sigmaH_mhd(i,j),sigmaP_mhd(i,j)
                 else
+                   !write(*,*)'!!! i,j=',i,j
+                   !write(*,*)'xmin',xmin(i,j)
+                   !write(*,*)'ymin', ymin(i,j)
+                   !write(*,*)'rtd', rtd
+                   !write(*,*)'colat', colat(i,j)
+                   !write(*,*)'aloct', aloct(i,j)
+                   !write(*,*)'rth', rth
+                   !write(*,*)'bndloc', bndloc(j)
+                   !write(*,*)'vm', vm(i,j)                        
+                   !write(*,*)'bmin', bmin(i,j) 
+                   !write(*,*)'v', v(i,j)
+                   !write(*,*)'birk', birk(i,j)
+                   !write(*,*)'pedlam', pedlam(i,j)
+                   !write(*,*)'pedpsi', pedpsi(i,j)                                 
+                   !write(*,*)'hall', hall(i,j)
+                   !write(*,*)'eflux', eflux(i,j,1)
+                   !write(*,*)'eavg', eavg(i,j,1)
+                   !write(*,*)'RCM_Hpn', RCM_Hpn(i,j)
+                   !write(*,*)'RCM_HpT', RCM_HpT(i,j)
+                   !write(*,*)'RCM_HpP', RCM_HpP(i,j)
+                   !write(*,*)'RCM_Hpp', RCM_Hppvgamma(i,j)
+                   !write(*,*)'RCM_Opn', RCM_Opn(i,j)
+                   !write(*,*)'RCM_OpT', RCM_OpT(i,j)
+                   !write(*,*)'RCM_OpP', RCM_OpP(i,j)
+                   !write(*,*)'RCM_Opp', RCM_Oppvgamma(i,j)                    
+                   !write(*,*)'birk_mhd', birk_mhd(i,j)
+                   !write(*,*)'densityHp', densityHp(i,j)
+                   !write(*,*)'temperatur', temperatureHp(i,j)
+                   !write(*,*)'MHD_Hpp,', MHD_Hpp(i,j)                               
+                   !write(*,*)'densityOp', densityOp(i,j)
+                   !write(*,*)'temperatur', temperatureOp(i,j)
+                   !write(*,*)'MHD_Opp,', MHD_Opp(i,j)                               
+                   !write(*,*)'sigmaH_mhd', sigmaH_mhd(i,j)
+                   !write(*,*)'sigmaP_mhd', sigmaP_mhd(i,j) 
+
                    write(LUN,'(2ES12.3,2I4,30ES12.3)') &
                         xmin(i,j), ymin(i,j), i, j, colat(i,j)*rtd, aloct(i,j), &
                         MODULO(aloct(i,j)*rth+12.0,24.01), bndloc(j), vm(i,j), &
