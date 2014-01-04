@@ -5,6 +5,7 @@
  
 use strict;
 use warnings;
+use Switch;
 
 use ampsConfigLib;
 
@@ -330,6 +331,7 @@ sub ReadMainBlock {
   my $SimulationParticleWeightCorrectionMode; #='_INDIVIDUAL_PARTICLE_WEIGHT_OFF_';
   
   my $CouplingMode;
+  my $TrajectoryIntegrationCheckBlockFaceIntersection;
   
   #force the repeatable execution path
   my $ForceRepatableExecutionPath=0;
@@ -488,7 +490,17 @@ sub ReadMainBlock {
       
       ($InputLine,$ProjectSpecificSourceDirectory)=split(' ',$InputLine,2);
     }
+       
     
+    elsif ($s0 eq "TRAJECTORYINTERSECTIONWITHBLOCKFACES") {
+      ($s0,$s1)=split(' ',$s1,2);
+      
+      switch ($s0) {
+        case "ON" {$TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_ON_";}
+        case "OFF" {$TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_OFF_";}
+        else {die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";}      
+      }
+    }       
     
     elsif ($s0 eq "STDOUTERRORLOG") {
       ($s0,$s1)=split(' ',$s1,2);
@@ -665,6 +677,9 @@ sub ReadMainBlock {
   if (defined $SimulationTimeStepMode) {ampsConfigLib::RedefineMacro("_SIMULATION_TIME_STEP_MODE_",$SimulationTimeStepMode,"pic/picGlobal.dfn");}
   if (defined $SimulationParticleWeightMode) {ampsConfigLib::RedefineMacro("_SIMULATION_PARTICLE_WEIGHT_MODE_",$SimulationParticleWeightMode,"pic/picGlobal.dfn");}
   if (defined $SimulationParticleWeightCorrectionMode) {ampsConfigLib::RedefineMacro("_INDIVIDUAL_PARTICLE_WEIGHT_MODE_",$SimulationParticleWeightCorrectionMode,"pic/picGlobal.dfn");}
+  
+  #check intersection of particle trajectory with the boundaries of the blocks (needed with local timestepping, local weight and when the internal surface has fine fiatures)
+  if (defined $TrajectoryIntegrationCheckBlockFaceIntersection) {ampsConfigLib::RedefineMacro("_PIC__PARTICLE_MOVER__CHECK_BLOCK_FACE_INTERSECTION__MODE_",$TrajectoryIntegrationCheckBlockFaceIntersection,"pic/picGlobal.dfn");}
   
   
   #change prefix,error log file and diagnostic stream
