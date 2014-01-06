@@ -13,6 +13,8 @@ makefile  SPICE=nospice
 makefile  RUNDIR=run
 makefile  MPIRUN=mpirun -np 4
 
+makefile ExternalModules=models/exosphere
+
 ProjectSourceDirectory=srcMoon
 
 WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".") 
