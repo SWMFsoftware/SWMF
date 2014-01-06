@@ -2544,14 +2544,14 @@ LevelProcessingDone:
    }
 
 
-   void GetSurfaceTriangulation(cTriangleFace* &SurfaceTriangulation,int &nSurfaceElements) {
+   void GetSurfaceTriangulation(CutCell::cTriangleFace* &SurfaceTriangulation,int &nSurfaceElements) {
      int iAxis,iAzimuthal,el,i;
      double x0[3],x1[3],x2[3],x3[3],FaceNorm[3],c;
 
      if (SurfaceTriangulation!=NULL) exit(__LINE__,__FILE__,"Error: redefinition of the surface triangulation");
 
      nSurfaceElements=2*nAxisSurfaceElements*nAzimuthalSurfaceElements;
-     SurfaceTriangulation=new cTriangleFace[nSurfaceElements];
+     SurfaceTriangulation=new CutCell::cTriangleFace[nSurfaceElements];
 
 
      for (el=0,iAxis=0;iAxis<nAxisSurfaceElements;iAxis++) for (iAzimuthal=0;iAzimuthal<nAzimuthalSurfaceElements;iAzimuthal++) {
