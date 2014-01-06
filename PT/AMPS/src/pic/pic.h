@@ -1794,6 +1794,9 @@ namespace PIC {
     typedef int (*fProcessOutsideDomainParticles) (long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
     extern fProcessOutsideDomainParticles ProcessOutsideDomainParticles;
 
+    typedef int (*fProcessTriangleCutFaceIntersection) (long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace);
+    extern fProcessTriangleCutFaceIntersection ProcessTriangleCutFaceIntersection;
+
 
     void Init();
     void MoveParticles();
