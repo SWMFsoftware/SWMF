@@ -2188,7 +2188,7 @@ int Exosphere::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation
     Sphere->SurfaceElementAdsorptionFluxDOWN[spec][el]+=ReemissionParticleFraction*ParticleWeight;
     Exosphere::Sampling::PlanetSurfaceStickingRate[spec]+=ParticleWeight;
 
-    PIC::ParticleBuffer::DeleteParticle(ptr);
+//    PIC::ParticleBuffer::DeleteParticle(ptr);
     return _PARTICLE_DELETED_ON_THE_FACE_;
   }
 
