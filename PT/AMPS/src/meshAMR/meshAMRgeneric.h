@@ -42,6 +42,7 @@
 
 #include "meshAMRinternalSurface.h"
 #include "meshAMRcutcell.h"
+#include "meshNASTRAN.h"
 
 
 #include "specfunc.h"
@@ -276,7 +277,8 @@ public:
 
   //the list of the cut-face descriptors
 #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
-  cTriangleFaceDescriptor *FirstTriangleCutFace;
+  CutCell::cTriangleFaceDescriptor *FirstTriangleCutFace;
+  double (*CutCellSurfaceLocalResolution)(CutCell::cTriangleFaceDescriptor*);
 #endif
 
   double xmin[_MESH_DIMENSION_],xmax[_MESH_DIMENSION_];
@@ -1017,6 +1019,10 @@ public:
   bool **ParallelSendRecvMap;
   #endif
 
+  //the Local mesh resolution at the surface defined by the cut-cells
+  #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
+  double (*CutCellSurfaceLocalResolution)(CutCell::cTriangleFace*);
+  #endif
 
   //for testing the parallel mesh generation
   int nMpiBarrierCalls;
@@ -1026,6 +1032,9 @@ public:
 //    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   }
 
+
+  //the internal surface triangulation (NASTRAN MESH)
+  cNASTRANmesh NsatranSurfaceMesh;
 
   //mesh modyfied flag -> is set to true each time the mesh is modified, the flag is set to false when the number of elements and the connectivity list are prepared
   bool meshModifiedFlag;
@@ -1410,7 +1419,7 @@ public:
 
 
     //add the boundary faces to the root node
-    DistributeBoundaryCutBlocks(rootTree,BoundaryTriangleFaces,nBoundaryTriangleFaces);
+    DistributeBoundaryCutBlocks(rootTree,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces);
 
     accepltTreeNodeFunction=NULL;
     MeshName[0]='\0',MeshSignature=0;
@@ -1584,6 +1593,10 @@ public:
 
      #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
      DomainSurfaceBoundaryList=NULL;
+     #endif
+
+     #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
+     CutCellSurfaceLocalResolution=NULL;
      #endif
 
      nMpiBarrierCalls=0;
@@ -5774,6 +5787,18 @@ if (CallsCounter==83) {
         }
         #endif
 
+        //evaluate the required local resolution are the surface defined by the cut-faces
+        #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
+        if ((CutCellSurfaceLocalResolution!=NULL)&&(startNode->FirstTriangleCutFace!=NULL)) {
+          CutCell::cTriangleFaceDescriptor* t;
+
+          for (t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next) {
+            c=CutCellSurfaceLocalResolution(t->TriangleFace);
+            if (c<requredResolution) requredResolution=c;
+          }
+        }
+        #endif
+
         if (c<characteristicBlockSize_min) exit(__LINE__,__FILE__,"The required resolution is smaller than the minimum resolution allowed for the mesh. Increase the value of _MAX_REFINMENT_LEVEL_");
       }  
 
@@ -7556,8 +7581,8 @@ nMPIops++;
       //check all boundary faces for intersection with the block
       int nface;
 
-      for (nface=0;nface<nBoundaryTriangleFaces;nface++) {
-        if (BoundaryTriangleFaces[nface].BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
+      for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
+        if (CutCell::BoundaryTriangleFaces[nface].BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
           //the block is intersected by the face
           cTriangleFaceDescriptor *t=BoundaryTriangleFaceDescriptor.newElement();
 
@@ -7574,15 +7599,15 @@ nMPIops++;
   }
 
 
-  void DistributeBoundaryCutBlocks(cTreeNodeAMR<cBlockAMR> *startNode,cTriangleFaceDescriptor *BoundaryFaces) {
+  void DistributeBoundaryCutBlocks(cTreeNodeAMR<cBlockAMR> *startNode,CutCell::cTriangleFaceDescriptor *BoundaryFaces) {
     //check intersection of the cut-faces with the block
     //if the list is already allocated -> remove it
-    cTriangleFaceDescriptor *tnext,*t=startNode->FirstTriangleCutFace;
+    CutCell::cTriangleFaceDescriptor *tnext,*t=startNode->FirstTriangleCutFace;
 
     if (startNode->FirstTriangleCutFace!=NULL) {
       while (t!=NULL) {
         tnext=t->next;
-        BoundaryTriangleFaceDescriptor.deleteElement(t);
+        CutCell::BoundaryTriangleFaceDescriptor.deleteElement(t);
         t=tnext;
       }
     }
@@ -7591,7 +7616,7 @@ nMPIops++;
     for (t=BoundaryFaces;t!=NULL;t=t->next) {
       if (t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
         //the block is intersected by the face
-        cTriangleFaceDescriptor *startNodeBoundaryDescriptor=BoundaryTriangleFaceDescriptor.newElement();
+        CutCell::cTriangleFaceDescriptor *startNodeBoundaryDescriptor=CutCell::BoundaryTriangleFaceDescriptor.newElement();
 
         startNodeBoundaryDescriptor->TriangleFace=t->TriangleFace;
 
@@ -7599,19 +7624,35 @@ nMPIops++;
         if (startNode->FirstTriangleCutFace!=NULL) startNode->FirstTriangleCutFace->prev=startNodeBoundaryDescriptor;
         startNode->FirstTriangleCutFace=startNodeBoundaryDescriptor;
 
+
+
+/*
+        //DEBUG BEGIN
+        t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS);
+        t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS);
+        t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS);
+        t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS);
+        t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS);
+        //DEBUG END
+*/
+
+
+
+
+
       }
     }
   }
 
-  void DistributeBoundaryCutBlocks(cTreeNodeAMR<cBlockAMR> *startNode,cTriangleFace *BoundaryFaces, int nBoundaryFaces) {
+  void DistributeBoundaryCutBlocks(cTreeNodeAMR<cBlockAMR> *startNode,CutCell::cTriangleFace *BoundaryFaces, int nBoundaryFaces) {
     //check intersection of the cut-faces with the block
     //if the list is already allocated -> remove it
-    cTriangleFaceDescriptor *tnext,*t=startNode->FirstTriangleCutFace;
+    CutCell::cTriangleFaceDescriptor *tnext,*t=startNode->FirstTriangleCutFace;
 
     if (startNode->FirstTriangleCutFace!=NULL) {
       while (t!=NULL) {
         tnext=t->next;
-        BoundaryTriangleFaceDescriptor.deleteElement(t);
+        CutCell::BoundaryTriangleFaceDescriptor.deleteElement(t);
         t=tnext;
       }
     }
@@ -7620,7 +7661,7 @@ nMPIops++;
     for (int nface=0;nface<nBoundaryFaces;nface++)  {
       if (BoundaryFaces[nface].BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
         //the block is intersected by the face
-        cTriangleFaceDescriptor *startNodeBoundaryDescriptor=BoundaryTriangleFaceDescriptor.newElement();
+        CutCell::cTriangleFaceDescriptor *startNodeBoundaryDescriptor=CutCell::BoundaryTriangleFaceDescriptor.newElement();
 
         startNodeBoundaryDescriptor->TriangleFace=BoundaryFaces+nface;
 
@@ -8212,7 +8253,7 @@ nMPIops++;
 
                else if (startNode->FirstTriangleCutFace!=NULL) {
                  //the block is cutted by a list of triangulat faces
-                 centerNode->Measure=GetRemainedBlockVolume(xCellMin,xCellMax,EPS,1.0E-6,BoundaryTriangleFaces,nBoundaryTriangleFaces,startNode->FirstTriangleCutFace);
+                 centerNode->Measure=GetRemainedBlockVolume(xCellMin,xCellMax,EPS,1.0E-6,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,startNode->FirstTriangleCutFace);
                }
 
 

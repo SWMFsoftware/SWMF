@@ -27,20 +27,20 @@ using namespace std;
 #include "ifileopr.h"
 #include "meshAMRcutcell.h"
 
-cTriangleFace *BoundaryTriangleFaces=NULL;
-int nBoundaryTriangleFaces=0;
-cAMRstack<cTriangleFaceDescriptor> BoundaryTriangleFaceDescriptor;
+CutCell::cTriangleFace *CutCell::BoundaryTriangleFaces=NULL;
+int CutCell::nBoundaryTriangleFaces=0;
+cAMRstack<CutCell::cTriangleFaceDescriptor> CutCell::BoundaryTriangleFaceDescriptor;
 
-struct cNodeCoordinates {
+/*struct cNodeCoordinates {
   double *x;
   int id;
 };
 
 struct cFaceNodeConnection {
   list<cNodeCoordinates>::iterator node[3];
-};
+};*/
 
-void PrintSurfaceTriangulationMesh(const char *fname,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS) {
+void CutCell::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS) {
   int nface,pnode,cnt;
   bool flag;
   double *xNode,*xFace;
@@ -106,7 +106,7 @@ void PrintSurfaceTriangulationMesh(const char *fname,cTriangleFace* SurfaceTrian
   delete [] FaceNodeConnection;
 }
 
-struct cNASTRANnode {
+/*struct cNASTRANnode {
   double x[3];
   int id;
 };
@@ -114,9 +114,9 @@ struct cNASTRANnode {
 struct cNASTRANface {
   int node[3],faceat;
   double externalNormal[3];
-};
+};*/
 
-void ReadNastranSurfaceMeshLongFormat(const char *fname,cTriangleFace* &SurfaceTriangulation,int &nSurfaceTriangulation,double *xSurfaceMin,double *xSurfaceMax,double EPS) {
+void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,CutCell::cTriangleFace* &SurfaceTriangulation,int &nSurfaceTriangulation,double *xSurfaceMin,double *xSurfaceMax,double EPS) {
   CiFileOperations ifile;
   char str[10000],dat[10000],*endptr;
   long int i,j,idim,nnodes=0,nfaces=0;
@@ -368,7 +368,7 @@ void ReadNastranSurfaceMeshLongFormat(const char *fname,cTriangleFace* &SurfaceT
     //deternime the direction of the external normal vector
 
     if (angle<0.0) nIntersectionsForward=nIntersectionsBackward;
-    if (faceIntersectionFlag==true) if (2*(nIntersectionsForward/2)==nIntersectionsForward) {
+    if (faceIntersectionFlag==true) if (2*(nIntersectionsForward/2)!=nIntersectionsForward) {
       //the forward direction along the chosen line of the search does not coinsides with the direction of the external normal
       for (idim=0;idim<3;idim++) fcptr->externalNormal[idim]*=-1.0;
     }
@@ -389,7 +389,7 @@ void ReadNastranSurfaceMeshLongFormat(const char *fname,cTriangleFace* &SurfaceT
 //check weather a point (x0) in insed the domain:
 //if the number if interasections of the ray (x=x0+l*t) is even than the point is within the domain; otherwise the point is outsede the domain
 //l -> is a random ray (intersection search) direction
-bool CheckPointInsideDomain(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS) {
+bool CutCell::CheckPointInsideDomain(double *x,CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS) {
   int nface,nfaceStart,nfaceFinish,iIntersections;
   double SearchDirection[3],l;
   int idim;
@@ -447,7 +447,7 @@ bool CheckPointInsideDomain(double *x,cTriangleFace* SurfaceTriangulation,int nS
   return (2*(iIntersections/2)==iIntersections) ? true : false;
 }
 
-bool GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,double *xIntersection,double &tIntersection,cTriangleFace* &FaceIntersection,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS) {
+bool CutCell::GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,double *xIntersection,double &tIntersection,CutCell::cTriangleFace* &FaceIntersection,CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS) {
   int nface,nfaceStart,nfaceFinish,nFaceIntersection=-1;
   double t;
 
@@ -521,7 +521,7 @@ bool GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,double *xInte
 
 //calculate the part of the block that is within the computational domain
 
-class cCutBlockNode {
+/*class cCutBlockNode {
 public:
   double x[3];
   int id;
@@ -583,10 +583,10 @@ public:
 class cTriangleCutFace : public cTriangleFace {
 public:
   list<cCutBlockNode>::iterator node[3];
-};
+};*/
 
 
-double GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double EPS,double RelativeError, cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,cTriangleFaceDescriptor* TriangleCutFaceDescriptorList,int maxIntegrationLevel,int IntegrationLevel) {
+double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double EPS,double RelativeError, CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,CutCell::cTriangleFaceDescriptor* TriangleCutFaceDescriptorList,int maxIntegrationLevel,int IntegrationLevel) {
   int BlockIntersectionCode;
   double VolumeL0=-1.0,VolumeL1=-1.0;
 
@@ -811,7 +811,7 @@ double GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double EPS,doubl
 }
 
 
-double GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double EPS,double RelativeError, cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,cTriangleFaceDescriptor* TriangleCutFaceDescriptorList) {
+double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double EPS,double RelativeError, CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,CutCell::cTriangleFaceDescriptor* TriangleCutFaceDescriptorList) {
   int maxIntegrationLevel;
 
   maxIntegrationLevel=1+(int)(log(1.0/(pow(RelativeError,0.333))));
