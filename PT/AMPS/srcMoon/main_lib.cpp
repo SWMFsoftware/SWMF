@@ -663,7 +663,7 @@ int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &
 
 
    //delete all particles that was not reflected on the surface
-   PIC::ParticleBuffer::DeleteParticle(ptr);
+//   PIC::ParticleBuffer::DeleteParticle(ptr);
    return _PARTICLE_DELETED_ON_THE_FACE_;
 }
 
