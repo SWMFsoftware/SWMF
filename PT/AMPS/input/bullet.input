@@ -1,0 +1,67 @@
+
+#main
+
+SpeciesList=O2  
+
+
+makefile  SPICE=/Users/vtenishe/SPICE/cspice
+
+
+
+ErrorLog=error.log
+Prefix=AMPS
+DiagnosticStream=amps.log !!!screen !!screen, filename 'something like amps.log' 
+OutputDirectory=out
+
+
+DebuggerMode=off !on,off
+ForceRepeatableSimulationPath=on ! on,off 
+
+
+makefile  SOURCES=src
+makefile  SPICE=/Users/vtenishe/SPICE/Toolkit/cspice 
+makefile  RUNDIR=run
+makefile  MPIRUN=mpirun -np 4
+
+makefile ExternalModules= 
+
+ProjectSourceDirectory=srcBullet 
+
+WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".")
+SourceDirectory=src
+
+TrajectoryIntersectionWithBlockFaces=on !on, off 
+
+!ErrorLog=amps_error.log
+Prefix=AMPS
+!DiagnosticStream=output/PT/amps.log !!!screen !!screen, filename 'something like amps.log'
+!OutputDirectory=output/PT
+
+!PT/plots
+ErrorLog=PT/amps_error.log
+DiagnosticStream=PT
+OutputDirectory=PT/plots
+
+
+DebuggerMode=on !on,off
+ForceRepeatableSimulationPath=off ! on,off
+
+
+StdoutErrorLog=off !on,off -> print out error message on the screen
+
+
+CouplerMode=ices !!off, ices, swmf
+
+
+
+#endmain
+
+#include species.input
+
+#UserDefinitions
+  PIC=on ! on, off
+  Mesh=on ! on, off
+#endUserDefinitions
+
+
+#end
