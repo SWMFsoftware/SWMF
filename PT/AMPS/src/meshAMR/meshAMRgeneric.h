@@ -7569,11 +7569,11 @@ nMPIops++;
       //if the list is already allocated -> remove it
 
       if (startNode->FirstTriangleCutFace!=NULL) {
-        cTriangleFaceDescriptor *tnext,*t=startNode->FirstTriangleCutFace;
+        CutCell::cTriangleFaceDescriptor *tnext,*t=startNode->FirstTriangleCutFace;
 
         while (t!=NULL) {
           tnext=t->next;
-          BoundaryTriangleFaceDescriptor.deleteElement(t);
+          CutCell::BoundaryTriangleFaceDescriptor.deleteElement(t);
           t=tnext;
         }
       }
@@ -7584,9 +7584,9 @@ nMPIops++;
       for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
         if (CutCell::BoundaryTriangleFaces[nface].BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
           //the block is intersected by the face
-          cTriangleFaceDescriptor *t=BoundaryTriangleFaceDescriptor.newElement();
+          CutCell::cTriangleFaceDescriptor *t=CutCell::BoundaryTriangleFaceDescriptor.newElement();
 
-          t->TriangleFace=BoundaryTriangleFaces+nface;
+          t->TriangleFace=CutCell::BoundaryTriangleFaces+nface;
 
           t->prev=NULL,t->next=startNode->FirstTriangleCutFace;
           if (startNode->FirstTriangleCutFace!=NULL) startNode->FirstTriangleCutFace->prev=t;

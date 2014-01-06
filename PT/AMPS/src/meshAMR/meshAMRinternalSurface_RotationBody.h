@@ -2476,7 +2476,7 @@ LevelProcessingDone:
        memcpy(bl.xBlockMax,xBlockMax,3*sizeof(double));
        for (int i=0;i<3;i++) bl.dxBlock[i]=xBlockMax[i]-xBlockMin[i];
 
-       cutBlockTetrahedronConnectivity<cCutBlockNode,cCutBlock,cCutData,cTetrahedron>(&bl,indomainConnectivityList,outdomainConnectivityList,TriangleCutConnectivity);
+       CutCell::cutBlockTetrahedronConnectivity<cCutBlockNode,cCutBlock,cCutData,cTetrahedron>(&bl,indomainConnectivityList,outdomainConnectivityList,TriangleCutConnectivity);
        CutBlockSet->AddTetrahedronList(indomainConnectivityList,EPS);
 
        for (itr=indomainConnectivityList.begin();itr!=indomainConnectivityList.end();itr++) {
