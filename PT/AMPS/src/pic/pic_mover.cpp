@@ -12,6 +12,7 @@
 //PIC::Mover::fTotalParticleAcceleration PIC::Mover::TotalParticleAcceleration=PIC::Mover::TotalParticleAcceleration_default;
 //PIC::Mover::fSpeciesDependentParticleMover_BoundaryInjection *PIC::Mover::MoveParticleBoundaryInjection=NULL;
 PIC::Mover::fProcessOutsideDomainParticles PIC::Mover::ProcessOutsideDomainParticles=NULL;
+PIC::Mover::fProcessTriangleCutFaceIntersection PIC::Mover::ProcessTriangleCutFaceIntersection=NULL;
 
 //====================================================
 //init the particle mover
@@ -1440,7 +1441,8 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 
   //the descriptors of the internal surfaces
   cInternalBoundaryConditionsDescriptor *InternalBoundaryDescriptor,*InternalBoundaryDescriptor_dtMin=NULL,*lastInternalBoundaryDescriptor=NULL;
-  cTriangleFace *IntersectionFace=NULL;
+  CutCell::cTriangleFace *IntersectionFace=NULL;
+  CutCell::cTriangleFace *lastIntersectedTriangleFace=NULL;
 
   //the description of the boundaries of the block faces
   struct cExternalBoundaryFace {
@@ -1535,11 +1537,11 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 
   nCall++;
 
-  /*
-  if ((PIC::ThisThread==3)&&(ptr==46)) {
+
+/*  if ((nCall==117771926)||(ptr==72941)) {
     cout << __FILE__ << "@" << __LINE__ << endl;
-  }
-  */
+  }*/
+
 
 
 //===================== END DEBUG ==================
@@ -1548,6 +1550,17 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 
   while (MovingTimeFinished==false) {
 MovingLoop:
+
+
+
+//    DEBUG
+/*{
+  double R,R1;
+
+  R=sqrt(pow(xInit[1],2)+pow(xInit[2],2));
+  R1=R;
+}*/
+
 
 //===================== DEBUG ==================
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
@@ -1808,7 +1821,10 @@ MovingLoop:
         code=Sphere1D->ParticleSphereInteraction(spec,ptr,xInit,vInit,dtTotal,(void*)startNode,InternalBoundaryDescriptor->BoundaryElement);
 #endif
 
-          if (code==_PARTICLE_DELETED_ON_THE_FACE_) return _PARTICLE_LEFT_THE_DOMAIN_;
+          if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+            PIC::ParticleBuffer::DeleteParticle(ptr);
+            return _PARTICLE_LEFT_THE_DOMAIN_;
+          }
 
           goto MovingLoop;
         }
@@ -1844,16 +1860,16 @@ MovingLoop:
     //check intersection of the particle trajectory with the cut-faces
 //    cTriangleFace *IntersectionFace=NULL;
 
-    if (middleNode->FirstTriangleCutFace!=NULL) {
-      cTriangleFaceDescriptor *t;
+    if (startNode->FirstTriangleCutFace!=NULL) {
+      CutCell::cTriangleFaceDescriptor *t;
       double TimeOfFlight;
 
-      for (t=middleNode->FirstTriangleCutFace;t!=NULL;t=t->next) {
-        if (t->TriangleFace->RayIntersection(xInit,vMiddle,TimeOfFlight,PIC::Mesh::mesh.EPS)==true) {
+      for (t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next) if (t->TriangleFace!=lastIntersectedTriangleFace) {
+        if (t->TriangleFace->RayIntersection(xInit,vInit,TimeOfFlight,PIC::Mesh::mesh.EPS)==true) {
           if (TimeOfFlight<dtMin) {
             dtMin=TimeOfFlight;
             IntersectionFace=t->TriangleFace;
-            ParticleIntersectionCode=_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
+            ParticleIntersectionCode=_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_,MovingTimeFinished=false;
           }
         }
       }
@@ -1862,24 +1878,69 @@ MovingLoop:
     //adjust the particle moving time
     dtTotal-=dtMin;
 
+    if (ParticleIntersectionCode!=_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) lastIntersectedTriangleFace=NULL;
+
     //advance the particle's position and velocity
     //interaction with the faces of the block and internal surfaces
     if (ParticleIntersectionCode==_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
-      xFinal[0]=xInit[0]+dtMin*vInit[0];
+/*      xFinal[0]=xInit[0]+dtMin*vInit[0]+PIC::Mesh::mesh.EPS*IntersectionFace->ExternalNormal[0];
+      xFinal[1]=xInit[1]+dtMin*vInit[1]+PIC::Mesh::mesh.EPS*IntersectionFace->ExternalNormal[1];
+      xFinal[2]=xInit[2]+dtMin*vInit[2]+PIC::Mesh::mesh.EPS*IntersectionFace->ExternalNormal[2];*/
+
+//      if (dtTotal==0.0) dtTotal=1.0E-7*dtMin; //make sure that the particle doe not stay on the boundary face at the end of the motion
+
+      //adjust 'dtMin' such that the
+      double x0Face[3],FaceNorm[3];
+      bool ExitFlag=true;
+      int code;
+
+      memcpy(x0Face,IntersectionFace->x0Face,3*sizeof(double));
+      memcpy(FaceNorm,IntersectionFace->ExternalNormal,3*sizeof(double));
+
+      do {
+        ExitFlag=true;
+
+        xFinal[0]=xInit[0]+dtMin*vInit[0];
+        xFinal[1]=xInit[1]+dtMin*vInit[1];
+        xFinal[2]=xInit[2]+dtMin*vInit[2];
+
+        if ( ((xFinal[0]-x0Face[0])*FaceNorm[0] + (xFinal[1]-x0Face[1])*FaceNorm[1] + (xFinal[2]-x0Face[2])*FaceNorm[2]) < PIC::Mesh::mesh.EPS) {
+          dtMin*=(1.0-1.0E-5);
+          ExitFlag=false;
+        }
+      }
+      while (ExitFlag==false);
+
+/*      xFinal[0]=xInit[0]+dtMin*vInit[0];
       xFinal[1]=xInit[1]+dtMin*vInit[1];
-      xFinal[2]=xInit[2]+dtMin*vInit[2];
+      xFinal[2]=xInit[2]+dtMin*vInit[2];*/
+
 
       vFinal[0]=vInit[0]+dtMin*acclInit[0];
       vFinal[1]=vInit[1]+dtMin*acclInit[1];
       vFinal[2]=vInit[2]+dtMin*acclInit[2];
 
-      FirstBoundaryFlag=true;
-      lastInternalBoundaryDescriptor=InternalBoundaryDescriptor_dtMin;
+      lastIntersectedTriangleFace=IntersectionFace;
 
-      double c=vFinal[0]*IntersectionFace->ExternalNormal[0]+vFinal[1]*IntersectionFace->ExternalNormal[1]+vFinal[2]*IntersectionFace->ExternalNormal[2];
+#if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
+      newNode=PIC::Mesh::mesh.findTreeNode(xFinal,middleNode);
+#else
+      exit(__LINE__,__FILE__,"Error: the option is nor defined");
+#endif
+
+
+      code=(ProcessTriangleCutFaceIntersection!=NULL) ? ProcessTriangleCutFaceIntersection(ptr,xFinal,vFinal,IntersectionFace) : _PARTICLE_DELETED_ON_THE_FACE_;
+
+
+/*      double c=vFinal[0]*IntersectionFace->ExternalNormal[0]+vFinal[1]*IntersectionFace->ExternalNormal[1]+vFinal[2]*IntersectionFace->ExternalNormal[2];
       vFinal[0]-=2.0*c*IntersectionFace->ExternalNormal[0];
       vFinal[1]-=2.0*c*IntersectionFace->ExternalNormal[1];
-      vFinal[2]-=2.0*c*IntersectionFace->ExternalNormal[2];
+      vFinal[2]-=2.0*c*IntersectionFace->ExternalNormal[2];*/
+
+      if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+        PIC::ParticleBuffer::DeleteParticle(ptr);
+        return _PARTICLE_LEFT_THE_DOMAIN_;
+      }
 
     }
     else if (ParticleIntersectionCode==_INTERNAL_SPHERE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
@@ -1917,7 +1978,10 @@ MovingLoop:
 #endif
 
 
-      if (code==_PARTICLE_DELETED_ON_THE_FACE_) return _PARTICLE_LEFT_THE_DOMAIN_;
+      if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+        PIC::ParticleBuffer::DeleteParticle(ptr);
+        return _PARTICLE_LEFT_THE_DOMAIN_;
+      }
 
 /*
 #if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
@@ -1944,7 +2008,7 @@ MovingLoop:
 
       FirstBoundaryFlag=false;
 
-      //check if the particle is outside ofthe block - noth the particle outside of the block if its needed
+      //check if the particle is outside ofthe block - force the particle outside of the block if its needed
 #if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
       double EPS=PIC::Mesh::mesh.EPS;
 
@@ -1969,11 +2033,13 @@ exit(__LINE__,__FILE__,"Error: not implemented");
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
       double WeightCorrectionFactor,TimeStepRatio;
 
-      TimeStepRatio=newNode->block->GetLocalTimeStep(spec)/startNode->block->GetLocalTimeStep(spec);
-      WeightCorrectionFactor=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData)*startNode->block->GetLocalParticleWeight(spec)*TimeStepRatio/newNode->block->GetLocalParticleWeight(spec);
-      PIC::ParticleBuffer::SetIndividualStatWeightCorrection(WeightCorrectionFactor,ParticleData);
+      if (newNode!=NULL) {
+        TimeStepRatio=newNode->block->GetLocalTimeStep(spec)/startNode->block->GetLocalTimeStep(spec);
+        WeightCorrectionFactor=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData)*startNode->block->GetLocalParticleWeight(spec)*TimeStepRatio/newNode->block->GetLocalParticleWeight(spec);
+        PIC::ParticleBuffer::SetIndividualStatWeightCorrection(WeightCorrectionFactor,ParticleData);
 
-      dtTotal*=TimeStepRatio;
+        dtTotal*=TimeStepRatio;
+      }
 
       #else
       exit(__LINE__,__FILE__,"Error: option is not recognized");
@@ -2157,7 +2223,10 @@ ProcessPhotoChemistry:
         code=Sphere1D->ParticleSphereInteraction(spec,ptr,xInit,vInit,dtTotal,(void*)startNode,InternalBoundaryDescriptor->BoundaryElement);
 #endif
 
-        if (code==_PARTICLE_DELETED_ON_THE_FACE_) return _PARTICLE_LEFT_THE_DOMAIN_;;
+        if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+          PIC::ParticleBuffer::DeleteParticle(ptr);
+          return _PARTICLE_LEFT_THE_DOMAIN_;
+        }
       }
       break;
 
