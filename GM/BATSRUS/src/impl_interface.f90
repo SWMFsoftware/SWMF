@@ -395,7 +395,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
         iBlock = impl2iBLK(iImplBlock)
 
         ! zero ghost cells for Rhs_VCB
-        call apply_flux_correction_block(iBlock, nVarSemi, 0, &
+        call apply_flux_correction_block(iBlock, nVarSemi, 0, 0, &
              Rhs_VCB(:,:,:,:,iImplBlock), &
              FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
      end do
@@ -543,7 +543,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         iBlock = impl2iBLK(iImplBlock)
 
         ! zero ghost cells for ResImpl_VCB
-        call apply_flux_correction_block(iBlock, nVarSemi, 0, &
+        call apply_flux_correction_block(iBlock, nVarSemi,0, 0, &
              ResImpl_VCB(:,:,:,:,iImplBlock), &
              FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
      end do
