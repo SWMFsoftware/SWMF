@@ -356,7 +356,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModProcMH
   use ModMain
   use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
-  use ModAmr, ONLY: DnAmr, DoAmr, automatic_refinement, do_amr
+  use ModAmr, ONLY: DnAmr, DoAmr, automatic_refinement, do_amr, DtAmr
   use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, &
        UseElectronPressure
@@ -373,6 +373,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModResistivity, ONLY: UseResistivity, UseHeatExchange, calc_heat_exchange
   use ModMultiFluid, ONLY: UseMultiIon
   use ModPic, ONLY: UsePic, pic_save_region, pic_update_states
+  use ModLocalTimeStep, ONLY: advance_localstep, UseLocalTimeStep
 
   implicit none
 
@@ -383,6 +384,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   character(len=*), parameter :: NameSub = 'BATS_advance'
 
   logical :: DoTest, DoTestMe
+
+  real :: AmrTime = 0
   !---------------------------------------------------------------------------
   !Eliminate non-positive timesteps
   if(Time_Simulation>=TimeSimulationLimit)return 
@@ -422,6 +425,8 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseImplicit.and.nBlockImplALL>0)then
      call advance_impl
+  elseif(UseLocalTimeStep) then
+     call advance_localstep(TimeSimulationLimit)
   else
      call advance_expl(.true., -1)
   endif
@@ -489,10 +494,13 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   call BATS_save_files('NORMAL')
 
-  if ( DoAmr .and. mod(n_step, DnAmr) == 0 )then
-
+  ! AmrTime is the time to do AMR.
+  if(DoAmr .and. AmrTime < DtAmr) AmrTime = DtAmr
+  if ( DoAmr .and. ((DnAmr > 0 .and. mod(n_step, DnAmr) == 0) .or. &
+       ( DtAmr >0 .and. time_simulation  >AmrTime)))then
+     if(DtAmr >0) AmrTime = DtAmr + AmrTime
      call timing_start(NameThisComp//'_amr')
-     if(iProc==0 .and. lVerbose > 0 .and. DnAmr > 1)then
+     if(iProc==0 .and. lVerbose > 0 .and. (DnAmr > 1 .or. DtAmr >0))then
         call write_prefix; write(iUnitOut,*) &
              '>>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<'
         if (time_accurate) call write_timeaccurate
@@ -508,7 +516,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
      ! Output timing after AMR.
      call timing_stop(NameThisComp//'_amr')
-     if(iProc == 0 .and. lVerbose > 0 .and. DnAmr > 1)then
+     if(iProc == 0 .and. lVerbose > 0 .and. (DnAmr > 1 .or. DtAmr >0))then
         call timing_show(NameThisComp//'_amr',1)
         call timing_show('load_balance',1)
         call write_prefix; write(iUnitOut,*) &
