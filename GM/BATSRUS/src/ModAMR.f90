@@ -78,7 +78,7 @@ contains
     use ModMessagePass,   ONLY: exchange_messages
     use ModPartSteady,    ONLY: UsePartSteady
     use ModUser,          ONLY: user_specify_refinement
-
+    use ModLocalTimeStep, ONLY: UseLocalTimeStep
     logical, intent(in) :: DoFullMessagePass
     character(3), intent(in) :: TypeAmr
 
@@ -137,7 +137,8 @@ contains
        call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe, &
             Used_GB=true_cell, iTypeNode_A=iTypeAdvance_A)
     else
-       call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe, &
+       call regrid_batl(nVar, State_VGB, Dt_BLK, &
+            DoBalanceEachLevelIn=UseLocalTimeStep, DoTestIn=DoTestMe, &
             Used_GB=true_cell)
     end if
     if(DoProfileAmr) call timing_stop('amr::regrid_batl')

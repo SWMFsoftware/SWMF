@@ -225,7 +225,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, Used_,&
        regrid_batl, IsCartesianGrid
   use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
-
+  use ModLocalTimeStep, ONLY: UseLocalTimeStep
   implicit none
 
   ! Load balance grid using Peano-Hilbert ordering of blocks
@@ -334,6 +334,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         call init_load_balance
 
         call regrid_batl(nVar, State_VGB, Dt_BLK,  &
+             DoBalanceEachLevelIn=UseLocalTimeStep,&
              iTypeBalance_A=iTypeBalance_A,        &
              iTypeNode_A=iTypeAdvance_A,           &
              DoBalanceOnlyIn=.true.,               &
