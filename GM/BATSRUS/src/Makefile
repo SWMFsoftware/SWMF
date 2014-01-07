@@ -39,6 +39,8 @@ OBJ6= ModResistivity.o #                                  ^CFG IF DISSFLUX
 
 OBJ7= clean_divb.o #					  ^CFG IF DIVBDIFFUSE
 
+OBJ8= ModLocalTimeStep.o #				^CFG use local time step			  
+
 # OBJECT FILES FOR LIBRARY / EXECUTABLE
 
 OBJECTS = \
@@ -116,7 +118,7 @@ OBJECTS = \
 	write_plot_sph.o \
 	write_plot_radiowave.o \
 	write_progress.o\
-	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ4} ${OBJ5} ${OBJ6} ${OBJ7}
+	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ4} ${OBJ5} ${OBJ6} ${OBJ7} ${OBJ8}
 
 # Default user module
 ModUser.f90:
