@@ -85,7 +85,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModLaserHeating,    ONLY: read_laser_heating_param
   use ModIoUnit, ONLY: io_unit_new
   use ModNumConst, ONLY: cDegToRad
-
+  use ModLocalTimeStep, ONLY: UseLocalTimeStep
+  
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
   use ModMagnetogram, ONLY: set_parameters_magnetogram, &
@@ -477,6 +478,9 @@ subroutine MH_set_parameters(TypeAction)
         CflOrig = Cfl
         ExplCfl = Cfl
         UseHalfStep = NameCommand == "#TIMESTEPPING" .and. nStage <= 2
+
+     case('#LOCALTIMESTEP')
+        call read_var('UseLocalTimeStep',UseLocalTimeStep)
 
      case("#FIXEDTIMESTEP")
         call read_var('UseDtFixed',UseDtFixed)
