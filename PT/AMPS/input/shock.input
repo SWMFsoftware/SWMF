@@ -3,7 +3,6 @@
 SpeciesList=O2  
 
 
-makefile  SPICE=/Users/fougere/SPICE/cspice
 
 
 
@@ -18,9 +17,11 @@ ForceRepeatableSimulationPath=on ! on,off
 
 
 makefile  SOURCES=src
-makefile  SPICE=/Users/fougere/SPICE/cspice
 makefile  RUNDIR=run
 makefile  MPIRUN=mpirun -np 4
+
+!makefile  SPICE=/Users/fougere/SPICE/cspice
+makefile  SPICE=/Users/vtenishe/SPICE/Toolkit/cspice
 
 makefile ExternalModules= 
 
