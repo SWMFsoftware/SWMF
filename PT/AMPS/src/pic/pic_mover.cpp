@@ -1467,10 +1467,10 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
       double cE0=0.0,cE1=0.0;
 
       for (int idim=0;idim<3;idim++) {
-        ExternalBoundaryFaceTable[nface].x0[idim]=(ExternalBoundaryFaceTable[nface].nX0==0) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim];
+        ExternalBoundaryFaceTable[nface].x0[idim]=(ExternalBoundaryFaceTable[nface].nX0[idim]==0) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim];
 
-        cE0+=pow(((ExternalBoundaryFaceTable[nface].e0[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
-        cE1+=pow(((ExternalBoundaryFaceTable[nface].e1[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
+        cE0+=pow(((ExternalBoundaryFaceTable[nface].e0[idim]+ExternalBoundaryFaceTable[nface].nX0[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
+        cE1+=pow(((ExternalBoundaryFaceTable[nface].e1[idim]+ExternalBoundaryFaceTable[nface].nX0[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
       }
 
       ExternalBoundaryFaceTable[nface].lE0=sqrt(cE0);
@@ -1648,7 +1648,7 @@ MovingLoop:
           if (cv>0.0) {
             dt=-cx/cv;
 
-            if ((nface==0)||(dt<dtIntersection)) {
+            if ((dtIntersection<0.0)||(dt<dtIntersection)) {
               double cE0=0.0,cE1=0.0;
 
               for (idim=0;idim<3;idim++) {
@@ -1657,7 +1657,7 @@ MovingLoop:
                 cE0+=c*ExternalBoundaryFaceTable[nface].e0[idim],cE1+=c*ExternalBoundaryFaceTable[nface].e1[idim];
               }
 
-              if ((cE0<-PIC::Mesh::mesh.EPS)||(cE0<ExternalBoundaryFaceTable[nface].lE0+PIC::Mesh::mesh.EPS) || (cE1<-PIC::Mesh::mesh.EPS)||(cE1<ExternalBoundaryFaceTable[nface].lE1+PIC::Mesh::mesh.EPS)) continue;
+              if ((cE0<-PIC::Mesh::mesh.EPS)||(cE0>ExternalBoundaryFaceTable[nface].lE0+PIC::Mesh::mesh.EPS) || (cE1<-PIC::Mesh::mesh.EPS)||(cE1>ExternalBoundaryFaceTable[nface].lE1+PIC::Mesh::mesh.EPS)) continue;
 
               nIntersectionFace=nface,dtIntersection=dt;
             }
@@ -1666,7 +1666,10 @@ MovingLoop:
 
         if (nIntersectionFace==-1) exit(__LINE__,__FILE__,"Error: cannot find the face of the intersection");
 
-        for (idim=0;idim<3;idim++) xInit[idim]+=dtIntersection*vInit[idim]-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
+        for (idim=0;idim<3;idim++) {
+          xInit[idim]+=dtIntersection*vInit[idim]-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
+          vInit[idim]+=dtIntersection*acclInit[idim];
+        } 
 
         startNode=PIC::Mesh::mesh.findTreeNode(xInit,startNode);
         if (startNode==NULL) exit(__LINE__,__FILE__,"Error: cannot find the node");
@@ -1683,6 +1686,7 @@ MovingLoop:
       else if (code==_PARTICLE_REJECTED_ON_THE_FACE_) {
         dtMin=dtIntersection;
         dtTotal-=dtMin;
+        newNode=startNode;
         goto ProcessPhotoChemistry;
       }
       else  exit(__LINE__,__FILE__,"Error: not implemented");
@@ -2013,8 +2017,8 @@ MovingLoop:
       double EPS=PIC::Mesh::mesh.EPS;
 
       for (idim=0;idim<DIM;idim++) {
-        if (xFinal[idim]<xminBlock[idim]+EPS) xFinal[idim]=xminBlock[idim]-EPS;
-        if (xFinal[idim]>xmaxBlock[idim]-EPS) xFinal[idim]=xmaxBlock[idim]+EPS;
+        if (xFinal[idim]<xminBlock[idim]) xFinal[idim]=xminBlock[idim];
+        if (xFinal[idim]>xmaxBlock[idim]) xFinal[idim]=xmaxBlock[idim];
       }
 
       newNode=PIC::Mesh::mesh.findTreeNode(xFinal,middleNode);
@@ -2100,7 +2104,7 @@ exit(__LINE__,__FILE__,"not implemented");
                  cE0+=c*ExternalBoundaryFaceTable[nface].e0[idim],cE1+=c*ExternalBoundaryFaceTable[nface].e1[idim];
                }
 
-               if ((cE0<-PIC::Mesh::mesh.EPS)||(cE0<ExternalBoundaryFaceTable[nface].lE0+PIC::Mesh::mesh.EPS) || (cE1<-PIC::Mesh::mesh.EPS)||(cE1<ExternalBoundaryFaceTable[nface].lE1+PIC::Mesh::mesh.EPS)) continue;
+               if ((cE0<-PIC::Mesh::mesh.EPS)||(cE0>ExternalBoundaryFaceTable[nface].lE0+PIC::Mesh::mesh.EPS) || (cE1<-PIC::Mesh::mesh.EPS)||(cE1>ExternalBoundaryFaceTable[nface].lE1+PIC::Mesh::mesh.EPS)) continue;
 
                nIntersectionFace=nface,dtIntersection=dt;
              }
@@ -2109,12 +2113,15 @@ exit(__LINE__,__FILE__,"not implemented");
 
          if (nIntersectionFace==-1) exit(__LINE__,__FILE__,"Error: cannot find the face of the intersection");
 
-         for (idim=0;idim<3;idim++) xInit[idim]+=dtIntersection*vMiddle[idim]-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
+         for (idim=0;idim<3;idim++) {
+           xInit[idim]+=dtIntersection*vMiddle[idim]-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
+           vInit[idim]+=dtIntersection*acclMiddle[idim];
+         } 
 
          newNode=PIC::Mesh::mesh.findTreeNode(xInit,middleNode);
          if (newNode==NULL) exit(__LINE__,__FILE__,"Error: cannot find the node");
 
-         code=ProcessOutsideDomainParticles(ptr,xInit,vInit,nIntersectionFace,startNode);
+         code=ProcessOutsideDomainParticles(ptr,xInit,vInit,nIntersectionFace,newNode);
          memcpy(vFinal,vInit,3*sizeof(double));
          memcpy(xFinal,xInit,3*sizeof(double));
        }
