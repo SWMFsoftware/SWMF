@@ -401,7 +401,7 @@ class GitmBin(PbData):
                      "O(!U2!ND)!":"m^{-3}", "O(!U2!ND)!U+!N":"m^{-3}",
                      "O(!U2!NP)!U+!N":"m^{-3}", "O(!U2!NP)!U+!N":"m^{-3}",
                      "O(!U3!NP)":"m^{-3}", "O_4SP_!U+!N":"m^{-3}",
-                     "RadCooling":"", "Rho":"m^{-3}", "Temperature":"K",
+                     "RadCooling":"", "Rho":"kg m^{-3}", "Temperature":"K",
                      "V!Di!N (east)":"m s^{-1}", "V!Di!N (north)":"m s^{-1}",
                      "V!Di!N (up)":"m s^{-1}", "V!Dn!N (east)":"m s^{-1}",
                      "V!Dn!N (north)":"m s^{-1}", "V!Dn!N (up)":"m s^{-1}",
