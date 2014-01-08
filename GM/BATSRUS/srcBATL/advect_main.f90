@@ -988,7 +988,7 @@ contains
           end do
        end do
 
-       call apply_flux_correction(nVar, State_VGB, &
+       call apply_flux_correction(nVar, 0, State_VGB, &
             Flux_VXB, Flux_VYB, Flux_VZB)
 
        call timing_stop('update')
@@ -1099,7 +1099,7 @@ contains
        end do
 
        ! Apply flux correction at the end of full steps at level n-1 or below
-       if(modulo(iStage,4) == 0) call apply_flux_correction(nVar, State_VGB, &
+       if(modulo(iStage,4) == 0) call apply_flux_correction(nVar,0,State_VGB, &
             Flux_VXB, Flux_VYB, Flux_VZB, iStageIn = iStage/2)
 
        TimeStage = TimeStage + DtMin/2
