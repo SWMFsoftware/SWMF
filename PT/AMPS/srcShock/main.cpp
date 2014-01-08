@@ -61,7 +61,19 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 
 int ExternalBoundaryConditions(long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   if (nIntersectionFace==0 || nIntersectionFace==1)   return _PARTICLE_DELETED_ON_THE_FACE_;
-  else return _PARTICLE_REJECTED_ON_THE_FACE_;
+
+  static const int ExternalNormal[6][3]={ 
+       {-1.0,0.0,0.0}, {1.0,0.0,0.0}, 
+       {0.0,-1.0,0.0}, {0.0,1.0,0.0}, 
+       {0.0,0.0,-1.0}, {0.0,0.0,1.0}};
+
+  double c=vInit[0]*ExternalNormal[nIntersectionFace][0]+vInit[1]*ExternalNormal[nIntersectionFace][1]+vInit[2]*ExternalNormal[nIntersectionFace][2];
+
+  vInit[0]-=2.0*c*ExternalNormal[nIntersectionFace][0];
+  vInit[1]-=2.0*c*ExternalNormal[nIntersectionFace][1];
+  vInit[2]-=2.0*c*ExternalNormal[nIntersectionFace][2];
+
+  return _PARTICLE_REJECTED_ON_THE_FACE_;
 }
 
 
