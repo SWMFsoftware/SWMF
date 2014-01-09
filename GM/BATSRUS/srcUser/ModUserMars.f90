@@ -24,7 +24,9 @@ module ModUser
   ! Here you must define a user routine Version number and a 
   ! descriptive string.
   !/
-  real,              parameter :: VersionUserModule = 1.1
+  real,              parameter :: VersionUserModule = 1.2
+! added rotation of crustal magnetic field with time,
+! MHD model is now using MSO coordinate
   character (len=*), parameter :: NameUserModule = &
        'Mars 4 species MHD code, Yingjuan Ma'
 
@@ -142,7 +144,12 @@ module ModUser
   real, dimension(0:61,0:61) :: cmars, dmars
   integer :: NNm
   real :: mars_eps=1e-4
-  logical :: UseMarsB0 = .false.
+  logical :: UseMarsB0 = .false.,USEMSO=.false.
+
+!!!variable needed to convert from MSO to GEO
+!!!u,v,w are the rotation axis in MSO coordinate
+  real :: u=0.0,v=0.0, w=1.0, uv, uvw, sint1, cost1, sint2, cost2 
+
   real :: rot = 1.0, thetilt = 0.0
   logical :: UseHotO = .false.
   logical :: UseTempCont=.false.
@@ -220,6 +227,20 @@ contains
              close(15)
           endif
 
+       case("#USEMSO") !default is false
+          call read_var('USEMSO', USEMSO)
+          if(USEMSO) then
+             call read_var('u',u)
+             call read_var('w',v)
+             call read_var('w',w)
+             uv=sqrt(u*u+v*v)
+             cost1=u/uv
+             sint1=v/uv
+             uvw=sqrt(u*u*w*w+v*v)
+             cost2=w*u/uvw
+             sint2=v/uvw
+          end if
+          
        case("#SOLARCON") !solar cycle condition
           call read_var('SolarCon',SolarCond)
 
@@ -1430,16 +1451,38 @@ contains
     real, intent(in) :: X1,Y1,Z1
     real, intent(out), dimension(3) :: B1
     
-    real :: R0, theta, phi, rr, X0, Y0, Z0
-    real, dimension(3) :: bb, B0
-    real :: sint, sinp, cost, cosp, uB
+    real :: R0, theta, phi, rr, X0, Y0, Z0, delta
+    real, dimension(3) :: bb, B0, B2
+    real :: sint, sinp, cost, cosp
+    real :: X2, Y2, Z2
 
     !-------------------------------------------------------------------------
     call timing_start('user_get_b0')
 
-    X0 = X1*cos(thetilt)-Z1*sin(thetilt)
-    Y0 = Y1
-    Z0 = X1*sin(thetilt)+Z1*cos(thetilt)
+    if(USEMSO)then
+!       uv = sqrt (u*u+v*v)
+!       cost1 = u/ uv
+!       sint1 = v/ uv
+!rotate around Z axis to make the axis in the XZ plane
+       x0 = x1*cost1 + y1*sint1
+       y0 = -x1*sint1 + y1*cost1
+!rotate around Y axis
+       X2 = X0*w-Z1*uv
+       Y2 = Y0
+       Z2 = X0*uv+Z1*w
+!rotate back around Z axis so that the subsolar point is along the x axis
+!       uvw=sqrt(w*w*u*u+v*v)
+!       cost2=w*u/uvw
+!       sint2 = v/uvw
+       x0=x2*cost2-y2*sint2
+       z0=z2
+       y0=x2*sint2+y2*cost2
+
+    else
+       X0 = X1*cos(thetilt)-Z1*sin(thetilt)
+       Y0 = Y1
+       Z0 = X1*sin(thetilt)+Z1*cos(thetilt)      
+    end if
     
     R0 = sqrt(X0*X0 + Y0*Y0 + Z0*Z0)
     rr = max(R0, 1.00E-6)
@@ -1457,11 +1500,19 @@ contains
        endif
     endif
    
-    !rot=cPi	
-   	
-    theta=acos(Z0/rr)
+    !RotPeriodSi=0.0 if not use rotation
+    !delta=rot-Time_Simulation*VRad  !(Vrad=cTwoPi/RotPeriodSi)
+    delta = rot
 
-    call MarsB0(R0,theta, phi+rot, bb)
+    If(RotPeriodSi > 0.0) then
+       delta=rot-Time_Simulation/RotPeriodSi*cTwoPi
+    end If
+    
+!    write(*,*)'RotPeriodSi=',RotPeriodSi
+
+    theta=acos(Z0/rr)
+    
+    call MarsB0(R0,theta, phi+delta, bb)
 
     sint=sin(theta)
     cost=cos(theta)
@@ -1472,19 +1523,29 @@ contains
     B0(2) = bb(1)*sint*sinp+bb(2)*cost*sinp+bb(3)*cosp 
     B0(3) = bb(1)*cost-bb(2)*sint
     
-    B1(1) = B0(1)*cos(thetilt)+B0(3)*sin(thetilt)
-    B1(2) = B0(2)
-    B1(3) = -B0(1)*sin(thetilt)+B0(3)*cos(thetilt)
+    if(USEMSO)then  !rotate around X axis
+       B1(1) = B0(1)*cost2+B0(2)*sint2 
+       B1(2) = -B0(1)*sint2+B0(2)*cost2 
+       B1(3) = B0(3)
 
+       B2(1)=w*B1(1)+uv*B1(3)  
+       B2(2)=B1(2)
+       B2(3)=-uv*B1(1)+w*B1(3)
+       
+       B1(1) = B2(1)*cost1-B2(2)*sint1 
+       B1(2) = B2(1)*sint1+B2(2)*cost1 
+       B1(3) = B2(3)
 
-    !unit of magnetic field is uB=1.677600/0.263661
-    !write(*,*)'unit=',No2Io_V(UnitB_)
-    uB=No2Io_V(UnitB_)
-    !   write(*,*)'UB=',uB
-    !uB=6.3627
-    B1(1)=B1(1)/uB
-    B1(2)=B1(2)/uB
-    B1(3)=B1(3)/uB
+    else
+       B1(1) = B0(1)*cos(thetilt)+B0(3)*sin(thetilt)
+       B1(2) = B0(2)
+       B1(3) = -B0(1)*sin(thetilt)+B0(3)*cos(thetilt)
+    end if
+
+    ! Normalize the crustal magnetic field
+    B1(1)=B1(1)*Io2No_V(UnitB_)
+    B1(2)=B1(2)*Io2No_V(UnitB_)
+    B1(3)=B1(3)*Io2No_V(UnitB_)
 
     call timing_stop('user_get_b0')
   end subroutine user_get_b0
