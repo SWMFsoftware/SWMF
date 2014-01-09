@@ -125,8 +125,8 @@ contains
        enddo ! iBlock
 
        if(modulo(iStage,4) == 0) then
-          call apply_flux_correction(nVar, nFluid, State_VGB, Flux_VXB, &
-               Flux_VYB, Flux_VZB, iStageIn = iStage/2,Energy_GBI=Energy_GBI)
+          call apply_flux_correction(nVar, nFluid, State_VGB, Energy_GBI, &
+          Flux_VXB, Flux_VYB, Flux_VZB, iStageIn = iStage/2)
        endif
        TimeStage = TimeStage + Cfl*DtMin/2*No2Si_V(UnitT_)
 
