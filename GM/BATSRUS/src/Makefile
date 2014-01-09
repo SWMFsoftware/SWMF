@@ -13,112 +13,106 @@ include ../Makefile.conf
 include Makefile.DEPEND
 include Makefile.RULES
 
-# CONFIGURABLE OBJECT FILES
-
-OBJ1 = ModCT.o constrain_B.o #				  ^CFG IF CONSTRAINB
-
-#                                                     ^CFG IF IMPLICIT BEGIN
-OBJ2=   ModImplicit.o \
-        ModImplHypre.o \
-        ModRadDiffusion.o \
-        ModHeatConduction.o \
-        implicit.o\
-	impl_interface.o\
-	impl_jacobian.o\
-	impl_matvec.o\
-	impl_newton.o
-#                                                     ^CFG END IMPLICIT
-
-OBJ3= ModRaytrace.o ray_trace_new.o ray_trace.o ray_pass.o #^CFG IF RAYTRACE
-
-OBJ4= get_im_pressure.o #			            ^CFG IF RCM
-
-OBJ5= ModProject.o project_B.o proj_cg.o proj_bicgstab.o #  ^CFG IF PROJECTION
-
-OBJ6= ModResistivity.o #                                  ^CFG IF DISSFLUX
-
-OBJ7= clean_divb.o #					  ^CFG IF DIVBDIFFUSE
-
-OBJ8= ModLocalTimeStep.o #				^CFG use local time step			  
-
 # OBJECT FILES FOR LIBRARY / EXECUTABLE
 
 OBJECTS = \
-	ModAdvance.o\
-	ModAMR.o\
-	ModB0.o\
-	ModBatlInterface.o\
-	ModBlockData.o\
-	ModBoundaryCells.o\
-	ModCalcSource.o\
-	ModCellBoundary.o\
-	ModConserveFlux.o\
+	ModAdvance.o \
+	ModAMR.o \
+	ModB0.o \
+	ModBatlInterface.o \
+	ModBlockData.o \
+	ModBoundaryCells.o \
+	ModCalcSource.o \
+	ModCellBoundary.o \
+	ModCharacteristic.o \
 	ModChromosphere.o \
+	ModConserveFlux.o \
 	ModCoronalHeating.o \
+	ModCT.o \
+	ModCurrent.o \
 	ModFaceBoundary.o \
-	ModIonoVelocity.o\
-	ModExtraVariables.o\
-	ModSingleFluid.o\
-	ModMultiFluid.o\
-	ModMultiIon.o\
-	ModEnergy.o\
-	ModEquation.o\
-	ModCharacteristic.o\
-	ModCurrent.o\
+	ModIonoVelocity.o \
+	ModImplicit.o \
+	ModImplHypre.o \
+	ModExtraVariables.o \
+	ModHeatConduction.o \
+	ModEnergy.o \
+	ModEquation.o \
 	ModExpansionFactors.o \
-	ModFaceFlux.o\
-	ModFaceGradient.o\
-	ModFaceValue.o\
-	ModGeometry.o\
-	ModGroundMagPerturb.o\
+	ModFaceFlux.o \
+	ModFaceGradient.o \
+	ModFaceValue.o \
+	ModGeometry.o \
+	ModGroundMagPerturb.o \
 	ModGmGeoindices.o \
-	ModHallResist.o\
-	ModHeatFluxCollisionless.o\
-	ModIO.o\
-	ModLaserHeating.o\
-	ModMain.o\
-	ModMessagePass.o\
-	ModNodes.o\
-	ModParallel.o\
-	ModPartSteady.o\
-	ModPIC.o\
-	ModPhysics.o\
-	ModPointImplicit.o\
-	ModProcMH.o\
+	ModHallResist.o \
+	ModHdf5.o \
+	ModHeatFluxCollisionless.o \
+	ModIO.o \
+	ModLaserHeating.o \
+	ModLocalTimeStep.o \
+	ModMain.o \
+	ModMessagePass.o \
+	ModMultiFluid.o \
+	ModMultiIon.o \
+	ModNodes.o \
+	ModParallel.o \
+	ModPartSteady.o \
+	ModPIC.o \
+	ModPhysics.o \
+	ModPointImplicit.o \
+	ModProcMH.o \
+	ModProject.o \
+	ModRadDiffusion.o \
 	ModRadiativeCooling.o \
-	ModRestartFile.o\
-	ModSatelliteFile.o\
-	ModSize.o\
+	ModRaytrace.o \
+	ModRestartFile.o \
+	ModResistivity.o \
+	ModSatelliteFile.o \
+	ModSingleFluid.o \
+	ModSize.o \
 	ModSolarwind.o \
 	ModTimeStepControl.o \
 	ModUserEmpty.o \
 	ModUser.o \
-        ModViscosity.o \
-	user_interface.o \
+	ModViscosity.o \
 	ModWaves.o \
-	ModHdf5.o \
 	BATS_methods.o \
-	MH_set_parameters.o\
-	advect_points.o\
-	explicit.o\
-	fix_axis_cells.o\
-	library.o\
-	load_balance.o\
-	rotate.o\
-	set_block_geometry.o\
-	set_ICs.o\
-	set_physics.o\
-	update_states.o\
-	update_states_MHD.o\
-	write_logfile.o\
-	write_plot_common.o\
-	write_plot_idl.o\
-	write_plot_tec.o\
+	MH_set_parameters.o \
+	advect_points.o \
+	clean_divb.o \
+	constrain_B.o \
+	explicit.o \
+	fix_axis_cells.o \
+	get_im_pressure.o \
+	implicit.o \
+	impl_interface.o \
+	impl_jacobian.o \
+	impl_matvec.o \
+	impl_newton.o \
+	library.o \
+	load_balance.o \
+	project_B.o \
+	proj_bicgstab.o \
+	proj_cg.o \
+	ray_trace.o \
+	ray_trace_new.o \
+	ray_pass.o \
+	rotate.o \
+	set_block_geometry.o \
+	set_ICs.o \
+	set_physics.o \
+	update_states.o \
+	update_states_MHD.o \
+	user_interface.o \
+	write_logfile.o \
+	write_plot_common.o \
+	write_plot_idl.o \
+	write_plot_tec.o \
 	write_plot_los.o \
 	write_plot_sph.o \
 	write_plot_radiowave.o \
-	write_progress.o\
-	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ4} ${OBJ5} ${OBJ6} ${OBJ7} ${OBJ8}
+	write_progress.o
 
 # Default user module
 ModUser.f90:
