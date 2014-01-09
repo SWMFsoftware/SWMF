@@ -8596,18 +8596,92 @@ nMPIops++;
     else startNode->ParallelLoadMeasure=ParallelLoad(startNode);
   }
 
-  void AllocateTreeBlocks(cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
+
+#define _BLOCK_INSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_         0
+#define _BLOCK_INTERSECTS_DOMAIN__ALLOCATE_TREE_BLOCKS_     1
+#define _BLOCK_OUTINSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_     -1
+
+  void AllocateTreeBlocks() {
+    int flag=_BLOCK_INSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_;
+
+#if _AMR__CUT_CELL__MODE_ == _AMR__CUT_CELL__MODE__ON_
+    if (rootTree->FirstTriangleCutFace!=NULL) flag=_BLOCK_INTERSECTS_DOMAIN__ALLOCATE_TREE_BLOCKS_;
+#endif
+
+    AllocateTreeBlocks(rootTree,flag);
+  }
+
+
+  void AllocateTreeBlocks(cTreeNodeAMR<cBlockAMR>* startNode,int DomainIntersectionFlag) {
     static bool ThisThreadBlockFound;
     static long int nAllocatedBlocks;
 
-    if (startNode==NULL) startNode=rootTree,ThisThreadBlockFound=false,nAllocatedBlocks=0;
+    if (startNode==rootTree) ThisThreadBlockFound=false,nAllocatedBlocks=0;
 
 
     if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
       startNode->Thread=-1;
       if ((startNode->block!=NULL)&&(DeallocateUnusedBlocks==true)) DeallocateBlock(startNode);
 
-      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) AllocateTreeBlocks(startNode->downNode[nDownNode]);
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) {
+        bool downNodeDomainIntersectionFlag=DomainIntersectionFlag;
+
+#if _AMR__CUT_CELL__MODE_ == _AMR__CUT_CELL__MODE__ON_
+        switch (DomainIntersectionFlag) {
+        case _BLOCK_OUTINSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_ :
+        case _BLOCK_INSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_ :
+          downNodeDomainIntersectionFlag=DomainIntersectionFlag;
+
+          break;
+        case _BLOCK_INTERSECTS_DOMAIN__ALLOCATE_TREE_BLOCKS_:
+          if (startNode->FirstTriangleCutFace!=NULL) {
+            //getermine if the block inside, cross, or outside of the domain
+            //determine if the block is intersected by a cut-face
+            bool IntersectionFound=false;
+
+
+
+/*            for (int nCutFace=0;nCutFace<CutCell::nBoundaryTriangleFaces;nCutFace++) {
+              if (CutCell::BoundaryTriangleFaces[nCutFace].BlockIntersection(startNode->downNode[nDownNode]->xmin,startNode->downNode[nDownNode]->xmax,EPS)==true) {
+                IntersectionFound=true;
+                downNodeDomainIntersectionFlag=_BLOCK_INTERSECTS_DOMAIN__ALLOCATE_TREE_BLOCKS_;
+                break;
+              }
+            }*/
+
+            for (CutCell::cTriangleFaceDescriptor* Descriptor=startNode->FirstTriangleCutFace;Descriptor!=NULL;Descriptor=Descriptor->next) {
+              if (Descriptor->TriangleFace->BlockIntersection(startNode->downNode[nDownNode]->xmin,startNode->downNode[nDownNode]->xmax,EPS)==true) {
+                IntersectionFound=true;
+                downNodeDomainIntersectionFlag=_BLOCK_INTERSECTS_DOMAIN__ALLOCATE_TREE_BLOCKS_;
+                break;
+              }
+            }
+
+
+            //if intersection with the cut-face is not found, check the middle point of the block is within the domain
+            if (IntersectionFound==false) {
+              int idim;
+              double xMiddle[3];
+
+              for (idim=0;idim<DIM;idim++) xMiddle[idim]=0.5*(startNode->downNode[nDownNode]->xmin[idim]+startNode->downNode[nDownNode]->xmax[idim]);
+
+              if (CutCell::CheckPointInsideDomain(xMiddle,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,EPS)==true) {
+                downNodeDomainIntersectionFlag=_BLOCK_INSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_;
+              }
+              else downNodeDomainIntersectionFlag=_BLOCK_OUTINSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_;
+            }
+          }
+
+          break;
+        default:
+          exit(__LINE__,__FILE__,"error: unknown option");
+        }
+#endif
+
+        if ((downNodeDomainIntersectionFlag==_BLOCK_INSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_)||(downNodeDomainIntersectionFlag==_BLOCK_INTERSECTS_DOMAIN__ALLOCATE_TREE_BLOCKS_)) {
+          AllocateTreeBlocks(startNode->downNode[nDownNode],downNodeDomainIntersectionFlag);
+        }
+      }
     }
     else {
       if (startNode->Thread==ThisThread) {
