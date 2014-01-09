@@ -1069,6 +1069,7 @@ def gitm_net_loc(obs_date, obs_lat, obs_lon, obs_alt, obs_dat_list,
     # Read the list of Gitm Binary files (default 2D or 3D output types).
     for i, gdata in enumerate(gitmname_list):
         vals = dict()
+        good_interp = False
         if type(gdata) is str:
             gitm_file = gdata
             split_file = string.split(gitm_file)
@@ -1295,7 +1296,7 @@ def gitm_net_loc(obs_date, obs_lat, obs_lon, obs_alt, obs_dat_list,
                 # Save the output
                 gitmbin_list.append(dc(gdata))
         else:
-            print rout_name, "ADVISEMENT: file [%s] outside of observation time range" % split_file[0]
+            print rout_name, "ADVISEMENT: data not available at obs time"
 
         del gdata
 
