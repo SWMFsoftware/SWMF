@@ -63,19 +63,26 @@ def extract_data_matched_arrays(data_dict, bad_value=np.nan):
         good_index = [i for i,l in enumerate(data_dict[data_key[0]])
                       if l != bad_value]
 
+    # If not all keys have the same amount of data, remove trailing elements
+    data_len = [len(data_dict[k]) for k in data_key]
+    min_len = np.min(data_len)
+
     # Cycle through the rest of the data keys to see if they hold bad values
     if len(data_key) > 1:
         bad_index = list()
         dkey = data_key[1:len(data_key)]
 
         for i,igood in enumerate(good_index):
-            if np.isnan(bad_value):
-                badlist = [k for k in dkey if np.isnan(data_dict[k][igood])]
-            else:
-                badlist = [k for k in dkey if data_dict[k][igood] == bad_value]
+	    if igood >= min_len:
+	        bad_index.append(i)
+	    else:
+                if np.isnan(bad_value):
+                    badlist = [k for k in dkey if np.isnan(data_dict[k][igood])]
+                else:
+                    badlist = [k for k in dkey if data_dict[k][igood] == bad_value]
 
-            if len(badlist) > 0:
-                bad_index.append(i)
+                if len(badlist) > 0:
+                    bad_index.append(i)
                 
         if len(bad_index) > 0:
             good_index = list(np.delete(np.array(good_index), bad_index))
