@@ -787,6 +787,10 @@ try:
         tlon = tlon[sindex]
         tlat = tlat[sindex]
 
+        # Pad arrays on each side to ensure linear continuity
+        tlon = np.append(tlon - 360.0, [tlon, tlon + 360.0])
+        tlat = np.append(tlat, [tlat, tlat])
+
         if ax:
             ax.plot(tlon, tlat, color=color, linestyle=style, linewidth=width)
 
