@@ -870,7 +870,11 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
 
     if not earth and type(term_datetime) is dt.datetime:
         # Add solar terminator, if desired
-        gpr.add_solar_terminator(term_datetime, ax=ax)
+        try:
+            gpr.add_solar_terminator(term_datetime, ax=ax)
+            gpr.add_subsolar_point(term_datetime, ax=ax, style="*")
+        except:
+            print "Unable to add solar terminator without PySolar"
 
 
     # Configure axis
@@ -1133,7 +1137,11 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
 
         # Add solar terminator, if desired
         if type(term_datetime) is dt.datetime:
-            add_solar_terminator(term_datetime, ax=ax)
+            try:
+                gpr.add_solar_terminator(term_datetime, ax=ax)
+                gpr.add_subsolar_point(term_datetime, ax=ax, style="*")
+            except:
+                print "Unable to add solar terminator without PySolar"
 
     # Configure axis.
     if tl:
