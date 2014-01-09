@@ -180,12 +180,14 @@ def plot_hist_w_stats(ax, x_data, x_name, x_units, res=50, norm=1.0,
     # Configure axis
     if yt:
         width = (nmax - nmin) / ninc
-        ytics = MultipleLocator(width)
-        ax.yaxis.set_major_locator(ytics)
-        if norm == 1.0:
-            ax.yaxis.set_major_formatter(FormatStrFormatter("%1.2f"))
-        elif norm == 100.0:
-            ax.yaxis.set_major_formatter(FormatStrFormatter("%3.1f"))
+        
+	if width > 0.0:
+    	    ytics = MultipleLocator(width)
+            ax.yaxis.set_major_locator(ytics)
+            if norm == 1.0:
+                ax.yaxis.set_major_formatter(FormatStrFormatter("%1.2f"))
+            elif norm == 100.0:
+                ax.yaxis.set_major_formatter(FormatStrFormatter("%3.1f"))
     else:
         ax.yaxis.set_major_formatter(FormatStrFormatter(""))
 
@@ -195,8 +197,10 @@ def plot_hist_w_stats(ax, x_data, x_name, x_units, res=50, norm=1.0,
 
     if xt:
         width = (xmax - xmin) / xinc
-        xtics = MultipleLocator(width)
-        ax.xaxis.set_major_locator(xtics)
+
+	if width > 0.0:
+	    xtics = MultipleLocator(width)
+            ax.xaxis.set_major_locator(xtics)
     else:
         ax.xaxis.set_major_formatter(FormatStrFormatter(""))
 
@@ -212,7 +216,9 @@ def plot_hist_w_stats(ax, x_data, x_name, x_units, res=50, norm=1.0,
 
         if tloc == "b":
             yloc = -.1
-        elif tloc != "t":
+        elif tloc == "t":
+            yloc = .99
+        else:
             rot  = 'vertical'
             yloc = 0.5
             xloc = -.2
