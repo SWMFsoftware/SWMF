@@ -1635,7 +1635,7 @@ contains
     use ModMain, ONLY: UseB0
     use ModPhysics, ONLY: IonMassPerCharge
     use ModAdvance, ONLY: State_VGB, B0_DGB, UseAnisoPressure, &
-         Rho_, Bx_, Bz_, Pe_, p_, Ppar_, WaveFirst_, WaveLast_
+         Rho_, Bx_, Bz_, Pe_, p_, Ppar_
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: CoronalHeating
