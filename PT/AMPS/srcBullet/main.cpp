@@ -48,7 +48,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(6.0,t->CharacteristicSize());
+  return max(1.0,t->CharacteristicSize());
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -236,7 +236,7 @@ int main(int argc,char **argv) {
 
 
   PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=2000; //0; //00; //*10;
-  PIC::RequiredSampleLength=10; //00; //0; //0;
+  PIC::RequiredSampleLength=100; //00; //0; //0;
 
 
   PIC::Init_AfterParser ();
@@ -261,13 +261,10 @@ int main(int argc,char **argv) {
   PIC::Mover::ProcessTriangleCutFaceIntersection=SurfaceBoundaryCondition;
 
 
-
-  if (PIC::ThisThread==0) {
-    char fname[_MAX_STRING_LENGTH_PIC_];
-
-    sprintf(fname,"%s/VolumeMesh.dat",PIC::OutputDataFileDirectory);
-    PIC::Mesh::mesh.outputMeshTECPLOT(fname);
-  }
+  //output the volume mesh
+  char fname[_MAX_STRING_LENGTH_PIC_];
+  sprintf(fname,"%s/VolumeMesh.dat",PIC::OutputDataFileDirectory);
+  PIC::Mesh::mesh.outputMeshTECPLOT(fname);
 
 
   for (long int niter=0;niter<100000001;niter++) {
