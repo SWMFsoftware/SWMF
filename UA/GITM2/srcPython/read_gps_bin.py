@@ -5,6 +5,7 @@ Read TEC binary file that is converted from the Madrigal TEC files
 
 import datetime as dt
 from struct import unpack
+import numpy as np
 
 nBytesLong = 4
 nBytesFloat = 4
@@ -81,6 +82,12 @@ class GpsFile:
         print(iCount," times read. Expected ",self.nPts[iPt],".")
 
         f.close()
+
+        # Recast output as a 1D numpy array
+        self.lon = np.array(self.lon).flatten()
+        self.lat = np.array(self.lat).flatten()
+        self.Tec = np.array(self.Tec).flatten()
+        self.dTec = np.array(self.dTec).flatten()
 
 
 
