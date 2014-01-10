@@ -40,6 +40,7 @@ module CON_couple_gm_pt
 
   ! Router communicator info
   integer:: iCommGmPt, nProcGmPt, iProcGmPt, iProc0Gm, iProc0Pt
+  integer:: iGroupCommon,iCompCommon, nProcCommon
 
 contains
 
@@ -73,6 +74,11 @@ contains
     call MPI_comm_size(iCommGmPt, nProcGmPt, iError)
     call MPI_comm_rank(iCommGmPt, iProcGmPt, iError)
 
+    ! create group on intersection of GM_ and PT_
+    call MPI_Group_intersection(i_group(GM_), i_group(PT_), iGroupCommon, iError)
+    call MPI_Group_size(iGroupCommon,nProcCommon,iError)
+    call MPI_Group_free(iGroupCommon, iError)
+
     IsSameLayout = n_proc(GM_)      == n_proc(PT_) &
          .and.     i_proc0(GM_)     == i_proc0(PT_) &
          .and.     i_proc_last(GM_) == i_proc_last(PT_)
@@ -80,9 +86,8 @@ contains
     !    if(.not.IsSameLayout)call CON_stop(NameSub// &
     !         ': GM and PT must use the same processors for now!')
 
-    if( .not.(IsSameLayout).and. &
-    (nProcGmPt /= n_proc(GM_) + n_proc(PT_)) )call CON_stop(NameSub// &
-         ': GM and PT must either share all processors or not share any for now!')
+    !    if( .not.(IsSameLayout).and.(nProcCommon > 0) )call CON_stop(NameSub// &
+    !         ': GM and PT must either share all processors or not share any for now!')
 
   end subroutine couple_gm_pt_init
 
@@ -185,13 +190,13 @@ contains
     ! "Rendezvous": 
 
     ! number of processors of the OTHER component to communicate with
-    integer, save:: nRndvouGm, nRndvouPt
+    integer, save:: nCoupleGm, nCouplePt
 
     ! processors of the OTHER component to communicate with
-    integer, allocatable, save:: nRndvouProcGm_I(:), nRndvouProcPt_I(:)
+    integer, allocatable, save:: iCoupleProcGm_I(:), iCoupleProcPt_I(:)
 
     ! number of entries received/sent by a processor during rendezvous
-    integer, allocatable, save:: nRndvouPointGm_I(:), nRndvouPointPt_I(:)
+    integer, allocatable, save:: nCouplePointGm_I(:), nCouplePointPt_I(:)
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -218,12 +223,12 @@ contains
        if(is_proc0(GM_)) call GM_get_grid_info(nDim, iGridGm, iDecompGm)
        if(is_proc0(PT_)) call PT_get_grid_info(nDim, iGridGm, iDecompGm)
        call MPI_bcast(&
-            iDecompGm, 1, MPI_INTEGER, i_proc0(GM_), MPI_COMM_WORLD, iError)
+            iDecompGm, 1, MPI_INTEGER, iProc0Gm, iCommGmPt, iError)
        call MPI_bcast(&
-            iDecompPt, 1, MPI_INTEGER, i_proc0(PT_), MPI_COMM_WORLD, iError)
+            iDecompPt, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
        ! added by Dmitry
        call MPI_bcast(&
-            nDim, 1, MPI_INTEGER, i_proc0(PT_), MPI_COMM_WORLD, iError)
+            nDim, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
     endif
 
     IsNewRoute = iDecompGm /= iDecompLastGm .or. iDecompLastPt /= iDecompPt
@@ -233,11 +238,16 @@ contains
 
     if(IsNewRoute)then
        nPointPt = 0
+       nPointGm = 0
        ! Get positions where info is needed from PT. PT will allocate array.
-       if(is_proc(PT_)) call PT_put_from_gm(.false., &
-            NameVar, nVar, nPointPt, PosPt_DI)
+       if(is_proc(PT_))then
+          call PT_put_from_gm(.false., NameVar, nVar, nPointPt, PosPt_DI)
+       else
+          nPointPt = 0
+          allocate(PosPt_DI(nDim,0))
+       end if
        call MPI_bcast(&
-            nVar, 1, MPI_INTEGER, i_proc0(PT_), MPI_COMM_WORLD, iError)
+            nVar, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
 
        if(IsSameLayout)then
 
@@ -269,123 +279,108 @@ contains
                nPointGm, nPointGm_P, PosGm_DI)
 
           deallocate(PosSortPt_DI)
-
        else
+          !\
+          ! Layouts ovelap
+          !/
+          if(allocated(iCoupleProcGm_I ))deallocate(iCoupleProcGm_I )
+          if(allocated(iCoupleProcPt_I ))deallocate(iCoupleProcPt_I )
+          if(allocated(nCouplePointGm_I))deallocate(nCouplePointGm_I)
+          if(allocated(nCouplePointPt_I))deallocate(nCouplePointPt_I)
+          if(allocated(iPointPt_I      ))deallocate(iPointPt_I      )
+          if(allocated(PosGm_DI        ))deallocate(PosGm_DI        )
+
+          call set_inquiry(iCommGmPt,nProcGmPt,iProcGmPt,&
+               GM_, PT_, nProcCommon,&
+               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,&
+               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I)
+          ! iCoupleProc_I, nCouplePoint_I are allocated
+
           if(is_proc(PT_))then
              ! \
              ! processor is on PT component
              ! /
-             if(allocated(nRndvouProcPt_I))&
-                  deallocate(nRndvouProcPt_I)
-             if(allocated(nRndvouPointPt_I))&
-                  deallocate(nRndvouPointPt_I)
-             if(allocated(iPointPt_I))&
-                  deallocate(iPointPt_I)
+             nCouplePointPt_I(1:nCouplePt-1) = nPointPt / nCouplePt 
+             nCouplePointPt_I(nCouplePt) = &
+                  nPointPt - sum(nCouplePointPt_I(1:nCouplePt-1))
+          end if
 
-             call set_inquiry_rndvou(GM_, PT_, &
-                  nRndvouPt, nRndvouProcPt_I, nRndvouPointPt_I)
-             ! nRndvouProcPt_I, nRndvouPointPt_I are allocated
+          ! send number of points
+          call get_recv_buffer_size(iCommGmPt, nProcGmPt, iProcGmPt,&
+               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,&
+               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I)
+          if(is_proc(GM_))&
+               nPointGm = sum(nCouplePointGm_I(:))
 
-             nRndvouPointPt_I(1:nRndvouPt-1) = nPointPt / nRndvouPt 
-             nRndvouPointPt_I(nRndvouPt) = &
-                  nPointPt - sum(nRndvouPointPt_I(1:nRndvoupT-1))
+          allocate(PosGm_DI(nDim,nPointGm))
 
-             ! send number of points
-             call get_recv_buffer_size(iCommGmPt, nProcGmPt, iProcGmPt,&
-                  PT_, GM_,&
-                  nRndvouPt, nRndvouProcPt_I, nRndvouPointPt_I)
-             call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
-                  PT_, GM_,&
-                  nRndvouPt, nRndvouProcPt_I, nRndvouPointPt_I,&
-                  nDim, nPointPt, PosPt_DI)
+          call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
+               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,&
+               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,&
+               nDim,&
+               nBufferS=nPointPt, BufferS_I=PosPt_DI,&
+               nBufferR=nPointGm, BufferR_I=PosGm_DI)
 
-             ! receive processors on GM owning positions of data
-             allocate(iProcPt_I(nPointPt))
-             call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
-                  GM_, PT_,&
-                  nRndvouPt, nRndvouProcPt_I, nRndvouPointPt_I,&
-                  1, nPointPt, iBuffer_I=iProcPt_I)!, .true.)
-             ! Shift from local GM proc index to router proc index
-             iProcPt_I = iProcPt_I + iProc0Gm
+          allocate(iProcGm_I(nPointGm))
+          allocate(iProcPt_I(nPointPt))
+          ! Find processors that own the PT positions in GM
+          if(is_proc(GM_))&
+               call GM_find_points(nDim, nPointGm, PosGm_DI, iProcGm_I)
+          deallocate(PosGm_DI)
+          ! send processors on GM owning positions of data
+          call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
+               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,&
+               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,&
+               1,&
+               nBufferS=nPointGm, iBufferS_I=iProcGm_I,&
+               nBufferR=nPointPt, iBufferR_I=iProcPt_I)
 
-             ! set rendezvous to transfer data
-             call set_transfer_rndvou(GM_, PT_, nPointPt, iProcPt_I, &
-                  nRndvouPt, nRndvouProcPt_I, nRndvouPointPt_I)
+          !set_transfer_rndvou
+          
+          ! Shift from local GM proc index to router proc index
+          !if(is_proc(PT_))&
+          !     iProcPt_I = iProcPt_I + iProc0Gm               
+          call  set_data_transfer(iCommGmPt,&
+               GM_, PT_, &
+               nPointPt, iProcPt_I, &
+               nPointGm, iProcGm_I, &
+               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,&
+               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I)
+          allocate(PosSortPt_DI(nDim,nPointPt))
 
-             ! sort iProcPt_I according to order of procs in nRndvouProcPt_I
+          if(is_proc(PT_))then
+             ! sort iProcPt_I according to order of procs in iCoupleProcPt_I
              allocate(iPointPt_I(nPointPt))
 
-             call get_rndvou_buffer_order(GM_, PT_, &
+             call get_transfer_buffer_order(GM_, PT_, &
                   nPointPt, iProcPt_I, &
-                  nRndvouPt, nRndvouProcPt_I, nRndvouPointPt_I,&
+                  nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,&
                   iPointPt_I)
 
-             deallocate(iProcPt_I)
-
-             allocate(PosSortPt_DI(nDim,nPointPt))
              do iPoint = 1, nPointPt
                 PosSortPt_DI(:,iPointPt_I(iPoint)) = PosPt_DI(:,iPoint)
              end do
-             deallocate(PosPt_DI)
-
-
-             call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
-                  PT_, GM_,&
-                  nRndvouPt, nRndvouProcPt_I, nRndvouPointPt_I,&
-                  nDim, nPointPt, PosSortPt_DI)
-
-             deallocate(PosSortPt_DI)
-
-          elseif(is_proc(GM_))then
-             ! \
-             ! processor is on GM component
-             ! /
-             if(allocated(nRndvouProcGm_I))&
-                  deallocate(nRndvouProcGm_I)
-             if(allocated(nRndvouPointGm_I))&
-                  deallocate(nRndvouPointGm_I)
-             if(allocated(PosGm_DI))&
-                  deallocate(PosGm_DI)
-
-             call set_inquiry_rndvou(GM_, PT_, &
-                  nRndvouGm, nRndvouProcGm_I, nRndvouPointGm_I)
-             ! nRndvouProcGm_I, nRndvouPointGm_I are allocated
-
-             ! find number of points to be received
-             call get_recv_buffer_size(iCommGmPt, nProcGmPt, iProcGmPt,&
-                  PT_, GM_,&
-                  nRndvouGm, nRndvouProcGm_I, nRndvouPointGm_I)
-             nPointGm = sum(nRndvouPointGm_I(:))
-             allocate(PosGm_DI(nDim,nPointGm))
-             call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
-                  PT_, GM_,&
-                  nRndvouGm, nRndvouProcGm_I, nRndvouPointGm_I,&
-                  nDim, nPointGm, PosGm_DI)
-
-             ! Find processors that own the PT positions in GM
-             allocate(iProcGm_I(nPointGm))
-             call GM_find_points(nDim, nPointGm, PosGm_DI, iProcGm_I)
-             deallocate(PosGm_DI)
-             ! send processors on GM owning positions of data
-             call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
-                  GM_, PT_,&
-                  nRndvouGm, nRndvouProcGm_I, nRndvouPointGm_I,&
-                  1, nPointGm, iBuffer_I=iProcGm_I)!, .true.)
-
-             ! set rendezvous to transfer data
-             call set_transfer_rndvou(GM_, PT_, nPointGm, iProcGm_I, &
-                  nRndvouGm, nRndvouProcGm_I, nRndvouPointGm_I)
-
-             deallocate(iProcGm_I)
-
-             nPointGm = sum(nRndvouPointGm_I(:))
-             allocate(PosGm_DI(nDim, nPointGm))
-
-             call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
-                  PT_, GM_,&
-                  nRndvouGm, nRndvouProcGm_I, nRndvouPointGm_I,&
-                  nDim, nPointGm, PosGm_DI)
           end if
+
+          deallocate(iProcPt_I)
+          deallocate(PosPt_DI)
+
+          deallocate(iProcGm_I)
+
+          if(is_proc(GM_))&
+             nPointGm = sum(nCouplePointGm_I(:))
+
+          allocate(PosGm_DI(nDim, nPointGm))
+
+          call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
+               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,&
+               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,&
+               nDim,&
+               nBufferS=nPointPt, BufferS_I=PosSortPt_DI,&
+               nBufferR=nPointGm, BufferR_I=PosGm_DI)
+
+          deallocate(PosSortPt_DI)
+
        end if
     end if
 
@@ -408,40 +403,35 @@ contains
        deallocate(DataGm_VI)
     else
        !\
-       ! Different layouts for components
+       ! Layouts overlap
        !/
-       if(is_proc(PT_))then
+       nPointGm = sum(nCouplePointGm_I)
 
-          allocate(DataPt_VI(nVar,nPointPt))
-          call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
-               GM_, PT_,&
-               nRndvouPt, nRndvouProcPt_I, nRndvouPointPt_I,&
-               nVar, nPointPt, DataPt_VI)
+       allocate(DataPt_VI(nVar,nPointPt))
+       allocate(DataGm_VI(nVar,nPointGm))
 
-          ! Give the data to PT
-          call PT_put_from_gm(.true., &
-               NameVar, nVar, nPointPt, PosPt_DI, DataPt_VI, iPointPt_I)
+       if(is_proc(GM_))&
+            call GM_get_for_pt( IsNewRoute, &
+            NameVar, nVar, nDim, nPointGm, PosGm_DI, DataGm_VI)
 
-          deallocate(DataPt_VI)
+       call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
+            nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,&
+            nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,&
+            nVar,&
+            nBufferS=nPointGm, BufferS_I=DataGm_VI,&
+            nBufferR=nPointPt, BufferR_I=DataPt_VI)
 
-       elseif(is_proc(GM_))then
-
-          nPointGm = sum(nRndvouPointGm_I)
-          allocate(DataGm_VI(nVar,nPointGm))
-          call GM_get_for_pt( IsNewRoute, &
-               NameVar, nVar, nDim, nPointGm, PosGm_DI, DataGm_VI)
-
-          call transfer_buffer_direct(iCommGmPt, nProcGmPt, iProcGmPt,&
-               GM_, PT_,&
-               nRndvouGm, nRndvouProcGm_I, nRndvouPointGm_I,&
-               nVar, nPointGm, DataGm_VI)
-
-          deallocate(DataGm_VI)
-       end if
+       deallocate(DataGm_VI)
+       
+       ! Give the data to PT
+       if(is_proc(PT_))&
+            call PT_put_from_gm(.true., &
+            NameVar, nVar, nPointPt, PosPt_DI, DataPt_VI, iPointPt_I)
+       
+       deallocate(DataPt_VI)
     end if
 
     if(DoTest) write(*,*) NameSub,' finished, iProc=',iProcWorld
-
   end subroutine couple_gm_pt
 
   !==========================================================================
@@ -636,28 +626,60 @@ contains
 
   !===========================================================================
 
-  subroutine set_inquiry_rndvou(nCompSource, nCompTarget,&
-       nRndvou, nRndvouProc_I, nRndvouPoint_I)
+  subroutine set_inquiry(iComm,nProc,iProc,&
+       iCompSource, iCompTarget, nProcCommon,&
+       nCoupleTarget, iCoupleProcTarget_I, nCouplePointTarget_I,&
+       nCoupleSource, iCoupleProcSource_I, nCouplePointSource_I)
     ! the subroutine returns number of processors to be communicated with
-    !     nRndvou
-    ! and stores numbers of these processors in 
-    !     nRndvouProc_I
-    ! this array is ALLOCATED INSIDE this subroutine
-    ! nCompSource is the component which Data is stored on
-    ! nCompTarget is the component which Data is to be sent to
-    integer, intent(in):: nCompSource, nCompTarget
-    integer, intent(out):: nRndvou
-    integer, allocatable, intent(out):: nRndvouProc_I(:)
-    integer, allocatable, intent(out):: nRndvouPoint_I(:)
-
-    integer:: dProc ! remainder of division (nCompSource/nCompTarget)**(+/-1)
-    integer:: iProcLocal
-    integer:: iRndvou ! loop variable
-    integer:: nProcTarget, nProcSource
-    integer:: nRndvouOther, nProc0Other
+    !     nCoupleSource & nCouple Target 
+    ! and stores ids of these processors in 
+    !     iCoupleProcSource_I & iCoupleProcTarget_I
+    ! iCompSource is the component which Data is stored on
+    ! iCompTarget is the component which Data is to be sent to
+    ! in the Union communicator procs on Source are assumed to come first
+    integer,              intent(in ):: iComm, nProc, iProc
+    integer,              intent(in ):: iCompSource, iCompTarget
+    integer,              intent(in ):: nProcCommon
     !------------------------------------------------------------------
-    nProcSource = n_proc(nCompSource)
-    nProcTarget = n_proc(nCompTarget)
+    integer,              intent(out):: nCoupleTarget
+    integer, allocatable, intent(out):: iCoupleProcTarget_I(:)
+    integer, allocatable, intent(out):: nCouplePointTarget_I(:)
+    !------------------------------------------------------------------
+    integer,              intent(out):: nCoupleSource
+    integer, allocatable, intent(out):: iCoupleProcSource_I(:)
+    integer, allocatable, intent(out):: nCouplePointSource_I(:)
+    !------------------------------------------------------------------
+    integer:: dProc ! remainder of division (nCompSource/nCompTarget)**(+/-1)
+    integer:: iProcLocal, iCouple
+    integer:: nProcTarget, nProcSource
+    integer:: nCouple, nCoupleOther, nProc0Other
+    integer, allocatable:: iCoupleProc_I(:)
+    integer:: iError
+    !------------------------------------------------------------------
+    ! Here shared procs are considered to be on Source and not on Target
+    ! they are processed separately in order to send inquiry to itself
+    nProcSource = n_proc(iCompSource)
+    nProcTarget = n_proc(iCompTarget) - nProcCommon
+
+    if(nProcTarget < 1)then
+       ! there are no procs on Target only
+       if(    is_proc(iCompTarget))then
+          nCoupleTarget = 1
+          nCoupleSource = 1
+       elseif(is_proc(iCompSource))then
+          nCoupleTarget = 0
+          nCoupleSource = 0
+       end if
+       allocate(iCoupleProcTarget_I( nCoupleTarget))
+       allocate(iCoupleProcSource_I( nCoupleSource))
+
+       iCoupleProcTarget_I(nCoupleTarget) = iProc
+       iCoupleProcSource_I(nCoupleSource) = iProc
+
+       allocate(nCouplePointTarget_I(nCoupleTarget))
+       allocate(nCouplePointSource_I(nCoupleSource))
+       RETURN
+    end if
 
     !\
     ! if nProcSource/nProcTarget is larger and not an exact multiple of the 
@@ -668,81 +690,95 @@ contains
     else
        dProc = MOD(nProcTarget, nProcSource)
     end if
-    if(    is_proc(nCompTarget))then
-       nRndvou = nProcSource / nProcTarget
-       nRndvouOther   = nProcTarget / nProcSource
-       iProcLocal = i_proc(nCompTarget)
+
+    if(    is_proc(iCompTarget) .and. .not.(is_proc(iCompSource)))then
+       nCouple = nProcSource / nProcTarget
+       nCoupleOther   = nProcTarget / nProcSource
+       call MPI_Comm_rank(iComm, iProcLocal, iError)
+       iProcLocal = iProcLocal - nProcSource
        nProc0Other = 0
-    elseif(is_proc(nCompSource))then
-       nRndvou = nProcTarget / nProcSource
-       nRndvouOther   = nProcSource / nProcTarget
-       iProcLocal = i_proc(nCompSource)
-       nProc0Other = n_proc(nCompSource)
+    elseif(is_proc(iCompSource))then
+       nCouple = nProcTarget / nProcSource
+       nCoupleOther   = nProcSource / nProcTarget
+       call MPI_Comm_rank(iComm, iProcLocal, iError)
+       nProc0Other = nProcSource
     end if
 
-    !\
-    ! account for discrepancy: increase nRndvou of first dProc by 1
-    !/
-    if(nRndvou > 0 .and. dProc > 0 .and. iProcLocal < dProc)&
-         nRndvou = nRndvou + 1
-
-    allocate(nRndvouProc_I(max(1,nRndvou)))
-
-    if(nRndvou == 0)then
+    if(iProcLocal < dProc * (nCoupleOther+1))then
        !\
-       ! there are more procs on this component than on the other
-       ! => only 1 rendezvous
+       ! account for discrepancy:: 
+       ! increase nCoupleOther and nCouple by 1
        !/
-       nRndvou = 1
-       if(iProcLocal < dProc * (nRndvouOther+1))then
-          !\
-          ! account for discrepancy:: increase nRndvouOther of first dProc by 1
-          !/
-          nRndvouProc_I(nRndvou) = nProc0Other + &
-               (iProcLocal / (nRndvouOther + 1))
-       else
-          nRndvouProc_I(nRndvou) = nProc0Other + &
-               (dProc + (iProcLocal - dProc * (nRndvouOther+1)) / nRndvouOther)
-       endif
+       dProc = 0
+       nCoupleOther = nCoupleOther + 1
+       nCouple      = nCouple + 1
     else
-       if(iProcLocal < dProc)then
-          do iRndvou = 1, nRndvou
-             nRndvouProc_I(iRndvou) = nProc0Other + &
-                  (nRndvou * iProcLocal + &
-                  iRndvou - 1)
-          end do
-       else
-          do iRndvou = 1, nRndvou
-             nRndvouProc_I(iRndvou) = nProc0Other + &
-                  ((nRndvou+1) * dProc + &
-                  nRndvou * (iProcLocal - dProc) + &
-                  iRndvou - 1)
-          end do
-       end if
+       ! change sign of dProc if nCouple==0
+       dProc = dProc * (2 * MIN(1,nCouple) - 1)
+       nCouple      = MAX(1, nCouple)
+       nCoupleOther = MAX(1, nCoupleOther)
     end if
 
-    allocate(nRndvouPoint_I(nRndvou))
+    allocate(iCoupleProc_I( nCouple))
 
-  end subroutine set_inquiry_rndvou
+    do iCouple = 1, nCouple
+       iCoupleProc_I(iCouple) = &
+            nProc0Other + (iCouple - 1) + &
+            (nCouple * iProcLocal + dProc)/nCoupleOther
+    end do
+
+    if(  is_proc(iCompSource).and.&
+         is_proc(iCompTarget))then
+       nCoupleTarget = 1
+       nCoupleSource = nCouple + 1
+       allocate(iCoupleProcTarget_I(nCoupleTarget))
+       allocate(iCoupleProcSource_I(nCoupleSource))
+       iCoupleProcTarget_I(1            ) = iProc
+       iCoupleProcSource_I(nCoupleSource) = iProc
+       iCoupleProcSource_I(1:nCoupleSource-1) = iCoupleProc_I(:)
+    elseif(is_proc(iCompSource))then
+       nCoupleTarget = 0
+       nCoupleSource = nCouple
+       allocate(iCoupleProcTarget_I(nCoupleTarget))
+       allocate(iCoupleProcSource_I(nCoupleSource))
+       iCoupleProcSource_I(:) = iCoupleProc_I(:)
+    elseif(is_proc(iCompTarget))then
+       nCoupleTarget = nCouple
+       nCoupleSource = 0
+       allocate(iCoupleProcTarget_I(nCoupleTarget))
+       allocate(iCoupleProcSource_I(nCoupleSource))
+       iCoupleProcTarget_I(:) = iCoupleProc_I(:)
+    end if
+
+    deallocate(iCoupleProc_I)
+
+    allocate(nCouplePointTarget_I(nCoupleTarget))
+    allocate(nCouplePointSource_I(nCoupleSource))
+
+  end subroutine set_inquiry
 
   !===========================================================================
 
   subroutine get_recv_buffer_size(iComm, nProc, iProc,&
-       nCompSend, nCompRecv,&
-       nRndvou, nRndvouProc_I, nRndvouPoint_I)
+       nCoupleS, iCoupleProcS_I, nCouplePointS_I,&
+       nCoupleR, iCoupleProcR_I, nCouplePointR_I)
     ! This subroutine determines how large is the buffer
     ! to be transfered to recv component processor
-    integer, intent(in)   :: iComm                ! MPI communicator
-    integer, intent(in)   :: nProc                ! number of processors
-    integer, intent(in)   :: iProc                ! local proc index
-    integer, intent(in)   :: nCompSend, nCompRecv ! send, recv components
-    integer, intent(in)   :: nRndvou              ! # of Rndvou procs
-    integer, intent(in)   :: nRndvouProc_I( nRndvou)! Rndvou procs
-    integer, intent(inout):: nRndvouPoint_I(nRndvou)! # of points to send/recv
-
+    integer, intent(in)   :: iComm                  ! MPI communicator
+    integer, intent(in)   :: nProc                  ! number of processors
+    integer, intent(in)   :: iProc                  ! local proc index
+    !-----------------------------------------------------------------------
+    integer, intent(in):: nCoupleS                 ! 
+    integer, intent(in):: iCoupleProcS_I( nCoupleS)! Couple procs
+    integer, intent(in):: nCouplePointS_I(nCoupleS)! # of points to send/recv
+    !-----------------------------------------------------------------------
+    integer, intent(in ):: nCoupleR                 !
+    integer, intent(in ):: iCoupleProcR_I( nCoupleR)!
+    integer, intent(out):: nCouplePointR_I(nCoupleR)!
+    !-----------------------------------------------------------------------
     ! index of recv and send processors
-    integer:: iProcRecv, iProcSend 
-    integer:: iRndvou
+    integer:: iProcR, iProcS 
+    integer:: iCouple
 
     ! MPI stuff
     integer:: iStatus(MPI_STATUS_SIZE)
@@ -753,169 +789,207 @@ contains
     character(len=*), parameter:: NameSub = 'get_recv_buffer_size'
     !-----------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*)NameSub, 'called with nProc, iProc', &
+    if(DoTestMe)write(*,*)NameSub, 'called with nProc, iProc=', &
          nProc, iProc
-          
-    allocate(iRequest_I(nRndvou), iStatus_II(MPI_STATUS_SIZE,nRndvou))
-    if(is_proc(nCompSend)) then
-       do iRndvou = 1, nRndvou
-          iProcRecv = nRndvouProc_I(iRndvou)
-          ! Send size of buffer to be sent
+    if(nCoupleS + nCoupleR == 0) RETURN
+
+    allocate(iRequest_I(nCoupleS+nCoupleR))
+    allocate(iStatus_II(MPI_STATUS_SIZE,nCoupleS+nCoupleR))
+    if(nCoupleS > 0)then
+       !\
+       ! Send buffer size
+       !/
+       do iCouple = 1, nCoupleS
+          iProcS = iCoupleProcS_I(iCouple)
           call MPI_Isend(&
-               nRndvouPoint_I(iRndvou), 1, MPI_INTEGER, &
-               iProcRecv, iTag, iComm, iRequest_I(iRndvou), iError)
-       end do
-    elseif(is_proc(nCompRecv))then
-       do iRndvou = 1, nRndvou
-          iProcSend = nRndvouProc_I(iRndvou)
-          ! Recv size of buffer to be recved
-          call MPI_Irecv(&
-               nRndvouPoint_I(iRndvou), 1, MPI_INTEGER, &
-               iProcSend, iTag, iComm, iRequest_I(iRndvou), iError)
+               nCouplePointS_I(iCouple), 1, MPI_INTEGER, &
+               iProcS, iTag, iComm, iRequest_I(iCouple), iError)
        end do
     end if
-
-    call MPI_waitall(nRndvou, iRequest_I, iStatus_II, iError)
+    if(nCoupleR > 0)then
+       !\
+       ! Recv buffer size
+       !/
+       do iCouple = 1, nCoupleR
+          iProcR = iCoupleProcR_I(iCouple)
+          call MPI_Irecv(&
+               nCouplePointR_I(iCouple), 1, MPI_INTEGER, &
+               iProcR, iTag, iComm, iRequest_I(nCoupleS+iCouple), iError)
+       end do
+    end if
+    !\
+    ! Finalize transfer
+    !/
+    call MPI_waitall(nCoupleS + nCoupleR, iRequest_I,iStatus_II,iError)
     deallocate(iRequest_I, iStatus_II)
-
   end subroutine get_recv_buffer_size
 
   !==========================================================================
-
-  subroutine set_transfer_rndvou(&
-       nCompSource, nCompTarget,&       
-       nBuffer, iProc_I, &
-       nRndvou, nRndvouProc_I, nRndvouPoint_I)
-    ! subroutine defines rendezvous based on processrs 
+  
+  subroutine set_data_transfer(iComm, iCompSource, iCompTarget,&
+       nBufferTarget, iProcTarget_I, &
+       nBufferSource, iProcSource_I, &
+       nCoupleTarget, iCoupleProcTarget_I, nCouplePointTarget_I,&
+       nCoupleSource, iCoupleProcSource_I, nCouplePointSource_I)
+    ! subroutine defines transfer based on processors 
     ! of the OTHER components, which own data items
     ! iProc_I
-    integer, intent(in)::  nCompSource, nCompTarget ! send, recv components
-    integer, intent(in)::  nBuffer    ! number of procs and points
-    integer, intent(in)::  iProc_I(nBuffer)  ! proc index for each point
-    integer, intent(out):: nRndvou
-    integer, intent(inout), allocatable:: nRndvouProc_I(:)
-    integer, intent(inout), allocatable:: nRndvouPoint_I(:)
-
-    integer:: nProcSource, nProcTarget
-    integer:: iBuffer, iProc, iProcSourceLocal, iProcTargetLocal, iRndvou, iRndvouBuffer
+    integer, intent(in):: iComm
+    integer, intent(in):: iCompSource, iCompTarget     ! send, recv components
+    integer, intent(in):: nBufferTarget                ! number of points
+    integer, intent(in):: iProcTarget_I(nBufferTarget) ! proc indexes
+    integer, intent(in):: nBufferSource                ! number of points
+    integer, intent(in):: iProcSource_I(nBufferSource) ! proc indexes
+    !----------------------------------------------------------------------
+    integer, intent(  out)             :: nCoupleTarget
+    integer, intent(inout), allocatable:: iCoupleProcTarget_I( :)
+    integer, intent(inout), allocatable:: nCouplePointTarget_I(:)
+    !----------------------------------------------------------------------
+    integer, intent(  out)             :: nCoupleSource
+    integer, intent(inout), allocatable:: iCoupleProcSource_I( :)
+    integer, intent(inout), allocatable:: nCouplePointSource_I(:)
+    !----------------------------------------------------------------------
+    integer:: nProcSource, nProcTarget, nProcIntersect
+    integer:: iBuffer, iProc, iCouple, iCoupleBuffer 
+    integer:: iProcSourceLocal, iProcTargetLocal
     integer:: iError
     integer, allocatable:: nPoint_PP(:,:), nPointRecv_P(:), nPointSend_P(:) 
-    integer, allocatable:: iRndvouProc_I(:), iRndvouPoint_I(:)
-    character(len=*), parameter:: NameSub = 'set_rndvou_target'
+    integer, allocatable:: iCoupleProc_P(:), nCouplePoint_P(:)
+    character(len=*), parameter:: NameSub = 'set_data_transfer'
     !----------------------------------------------------------------------
-    nProcTarget = n_proc(nCompTarget)
-    nProcSource = n_proc(nCompSource)
+    nProcTarget    = n_proc(iCompTarget)
+    nProcSource    = n_proc(iCompSource)
 
-    if(is_proc(nCompTarget))then
-       if(allocated(nRndvouProc_I))&
-            deallocate(nRndvouProc_I)
-       if(allocated(nRndvouPoint_I))&
-            deallocate(nRndvouPoint_I)
-       ! get nRndvou and number of points per proc
-       allocate(iRndvouProc_I(0:nProcSource-1),iRndvouPoint_I(0:nProcSource-1))
-       iRndvouPoint_I = 0
+    if(is_proc(iCompTarget))then
+       if(allocated(iCoupleProcTarget_I )) deallocate(iCoupleProcTarget_I)
+       if(allocated(nCouplePointTarget_I)) deallocate(nCouplePointTarget_I)
+       !\
+       ! get nCouple and number of points per proc
+       !/
+       allocate(iCoupleProc_P(0:nProcSource-1),nCouplePoint_P(0:nProcSource-1))
+       nCouplePoint_P = 0
 
-       do iBuffer = 1, nBuffer
-          iProc = iProc_I(iBuffer)
-          iRndvouPoint_I(iProc) = iRndvouPoint_I(iProc) + 1
+       ! count points per proc on Source
+       do iBuffer = 1, nBufferTarget
+          iProc = iProcTarget_I(iBuffer)
+          nCouplePoint_P(iProc) = nCouplePoint_P(iProc) + 1
        end do
 
-       nRndvou = 0
+       ! count procs to communicate with
+       nCoupleTarget = 0
        do iProc = 0, nProcSource-1
-          if(iRndvouPoint_I(iProc) > 0)then
-             nRndvou = nRndvou + 1 
-             iRndvouProc_I( nRndvou-1) = iProc
-             iRndvouPoint_I(nRndvou-1) = iRndvouPoint_I(iProc)
+          if(nCouplePoint_P(iProc) > 0)then
+             nCoupleTarget = nCoupleTarget + 1 
+             iCoupleProc_P( nCoupleTarget-1) = iProc
+             nCouplePoint_P(nCoupleTarget-1) = nCouplePoint_P(iProc)
           end if
        end do
 
-    elseif(is_proc(nCompSource))then
-       ! array which contains number of pointst to be sent from 
-       ! source component to target
-       allocate(nPoint_PP(0:nProcSource-1, 0:nProcTarget-1))
-       nPoint_PP = 0
+       ! return the result
+       allocate(iCoupleProcTarget_I( nCoupleTarget))
+       allocate(nCouplePointTarget_I(nCoupleTarget))
+       iCoupleProcTarget_I( :) = iCoupleProc_P( :)
+       nCouplePointTarget_I(:) = nCouplePoint_P(:)
+       deallocate(iCoupleProc_P, nCouplePoint_P)
+    end if
 
-       iRndvou = 1
-       iRndvouBuffer = nRndvouPoint_I(iRndvou)
-       do iBuffer = 1, nBuffer
-          if(iBuffer > iRndvouBuffer)then
-             iRndvou = iRndvou + 1
-             iRndvouBuffer = iRndvouBuffer + nRndvouPoint_I(iRndvou)
+    if(is_proc(iCompSource))then
+       ! nPoint_PP is number of points to sent from Source to Target
+       allocate(nPoint_PP(0:nProcSource-1, 0:nProcTarget-1))
+       !\
+       ! build nPoint_PP
+       !/
+
+       ! each proc on Source has only part of the info, store it into nPoint_PP
+       nPoint_PP = 0
+       iCouple = 1
+       iCoupleBuffer = nCouplePointSource_I(iCouple)
+       do iBuffer = 1, nBufferSource
+          if(iBuffer > iCoupleBuffer)then
+             iCouple = iCouple + 1
+             iCoupleBuffer = iCoupleBuffer + nCouplePointSource_I(iCouple)
           end if
-          iProcSourceLocal = (iProc_I(iBuffer) - 0*i_proc0(nCompSource))
-          iProcTargetLocal = (nRndvouProc_I(iRndvou) - n_proc(nCompSource)+0*i_proc0(nCompTarget))
+          ! Source procs come first in the communicator, no need for shift
+          iProcSourceLocal = iProcSource_I(iBuffer)
+          call get_local_rank(iComm, iCompTarget, &
+               iCoupleProcSource_I(iCouple), iProcTargetLocal)
           nPoint_PP(iProcSourceLocal,iProcTargetLocal) = &
                nPoint_PP(iProcSourceLocal,iProcTargetLocal) + 1
        end do
 
-       deallocate(nRndvouProc_I,nRndvouPoint_I)
+       deallocate(iCoupleProcSource_I,nCouplePointSource_I)
 
+       !\
+       ! Reduce the row nPoint_PP(iProcSourceLocal,:)
+       !/
        allocate(nPointSend_P(0:nProcTarget-1),nPointRecv_P(0:nProcTarget-1))
 
        do iProcSourceLocal = 0, nProcSource-1
           nPointSend_P(:) = nPoint_PP(iProcSourceLocal,:)
-          call MPI_Reduce(nPointSend_P, nPointRecv_P, nProcTarget,&
-               MPI_INTEGER, MPI_SUM, iProcSourceLocal, i_comm(nCompSource), iError)
+          call MPI_Reduce(&
+               nPointSend_P, nPointRecv_P, nProcTarget, MPI_INTEGER, MPI_SUM, &
+               iProcSourceLocal, i_comm(iCompSource), iError)
        end do
 
        deallocate(nPoint_PP, nPointSend_P)
-       allocate(iRndvouProc_I(0:nProcTarget-1),iRndvouPoint_I(0:nProcTarget-1))
-
-       nRndvou = 0
+       allocate(iCoupleProc_P(0:nProcTarget-1),nCouplePoint_P(0:nProcTarget-1))
+       !\
+       ! get nCouple and number of points per proc
+       !/
+       nCoupleSource = 0
        do iProcTargetLocal = 0, nProcTarget-1
           if(nPointRecv_P(iProcTargetLocal) > 0)then
-             nRndvou = nRndvou + 1
-             iRndvouProc_I( nRndvou-1) = n_proc(nCompSource) + &
-                  iProcTargetLocal
-             iRndvouPoint_I(nRndvou-1) = nPointRecv_P(iProcTargetLocal)
+             nCoupleSource = nCoupleSource + 1
+             call get_union_rank(iComm, iCompTarget, &
+                  iProcTargetLocal, iCoupleProc_P(nCoupleSource-1))
+
+             nCouplePoint_P(nCoupleSource-1) = nPointRecv_P(iProcTargetLocal)
           end if
        end do
 
-       deallocate(nPointRecv_P)
-
+       allocate(iCoupleProcSource_I( nCoupleSource))
+       allocate(nCouplePointSource_I(nCoupleSource))
+       iCoupleProcSource_I( :) = iCoupleProc_P( :)
+       nCouplePointSource_I(:) = nCouplePoint_P(:)
+       deallocate(iCoupleProc_P, nCouplePoint_P,nPointRecv_P)
     end if
 
-       allocate(nRndvouProc_I(nRndvou), nRndvouPoint_I(nRndvou))
-       nRndvouProc_I( 1:nRndvou) = iRndvouProc_I( 0:nRndvou-1)
-       nRndvouPoint_I(1:nRndvou) = iRndvouPoint_I(0:nRndvou-1)
-       deallocate(iRndvouProc_I, iRndvouPoint_I)
-
-  end subroutine set_transfer_rndvou
+  end subroutine set_data_transfer
   
   !==========================================================================
 
-  subroutine get_rndvou_buffer_order(&
-       nCompSource, nCompTarget, &
+  subroutine get_transfer_buffer_order(&
+       iCompSource, iCompTarget, &
        nBuffer, iProc_I, &
-       nRndvou, nRndvouProc_I, nRndvouPoint_I,&
+       nCouple, iCoupleProc_I, nCouplePoint_I,&
        iBuffer_I)
     ! iBuffer_I returns the order of the points with processor index
-    ! corresponding to nRndvouProc_I
-    integer, intent(in)::  nCompSource, nCompTarget ! send, recv components
+    ! corresponding to iCoupleProc_I
+    integer, intent(in)::  iCompSource, iCompTarget ! send, recv components
     integer, intent(in)::  nBuffer    ! number of points
     integer, intent(in)::  iProc_I(nBuffer)  ! proc index for each point
-    integer, intent(in)::  nRndvou
-    integer, intent(in)::  nRndvouProc_I(nRndvou), nRndvouPoint_I(nRndvou)
+    integer, intent(in)::  nCouple
+    integer, intent(in)::  iCoupleProc_I(nCouple), nCouplePoint_I(nCouple)
     integer, intent(out):: iBuffer_I(nBuffer)! index for reordering
 
-    integer:: iBuffer, iRndvou, iProc, nProc
+    integer:: iBuffer, iCouple, iProc, nProc
     integer, allocatable:: iOrder_I(:)
-    integer, allocatable:: iRndvouProcInv_P(:)
-    character(len=*), parameter:: NameSub = 'get_rndvou_buffer_order'
+    integer, allocatable:: iCoupleProcInv_P(:)
+    character(len=*), parameter:: NameSub = 'get_transfer_buffer_order'
     !----------------------------------------------------------------------
-    nProc = n_proc(nCompSource)
+    nProc = n_proc(iCompSource)
     ! Set starting point of chunks in the reordered buffer
-    allocate(iOrder_I(nRndvou))
+    allocate(iOrder_I(nCouple))
     iOrder_I(1) = 1
-    do iRndvou = 2, nRndvou
-       iOrder_I(iRndvou) = iOrder_I(iRndvou-1) + nRndvouPoint_I(iRndvou-1)
+    do iCouple = 2, nCouple
+       iOrder_I(iCouple) = iOrder_I(iCouple-1) + nCouplePoint_I(iCouple-1)
     end do
 
-    ! inversion of nRndvouProc_I, i.e. iRndvou corresponding to iProc
-    allocate(iRndvouProcInv_P(0:nProc-1))
-    iRndvouProcInv_P = -1
-    do iRndvou = 1, nRndvou
-       iRndvouProcInv_P(nRndvouProc_I(iRndvou)) = iRndvou
+    ! inversion of iCoupleProc_I, i.e. iCouple corresponding to iProc
+    allocate(iCoupleProcInv_P(0:nProc-1))
+    iCoupleProcInv_P = -1
+    do iCouple = 1, nCouple
+       iCoupleProcInv_P(iCoupleProc_I(iCouple)) = iCouple
     end do
 
     ! Get the order that is consecutive per processor index
@@ -923,41 +997,52 @@ contains
        ! This buffer belongs to iProc
        iProc = iProc_I(iBuffer)
        ! It will occupy iBuffer_I position
-       iBuffer_I(iBuffer) = iOrder_I(iRndvouProcInv_P(iProc))
+       iBuffer_I(iBuffer) = iOrder_I(iCoupleProcInv_P(iProc))
        ! Jump to next position
-       iOrder_I(iRndvouProcInv_P(iProc)) = &
-            iOrder_I(iRndvouProcInv_P(iProc)) + 1
+       iOrder_I(iCoupleProcInv_P(iProc)) = &
+            iOrder_I(iCoupleProcInv_P(iProc)) + 1
     end do
 
-    deallocate(iRndvouProcInv_P, iOrder_I)
+    deallocate(iCoupleProcInv_P, iOrder_I)
 
-  end subroutine get_rndvou_buffer_order
+  end subroutine get_transfer_buffer_order
 
   !===========================================================================
 
-  subroutine transfer_buffer_direct(iComm, nProc, iProc,&
-       nCompSend, nCompRecv,&
-       nRndvou, nRndvouProc_I, nRndvouPoint_I,&
-       nData, nBuffer, Buffer_I, iBuffer_I)
-    ! This subroutine transfers data from send component to recv component
+  subroutine transfer_buffer_direct(&
+       iComm, nProc, iProc,&
+       nCoupleS, iCoupleProcS_I, nCouplePointS_I,&
+       nCoupleR, iCoupleProcR_I, nCouplePointR_I,&
+       nData, &
+       nBufferS, BufferS_I, iBufferS_I,&
+       nBufferR, BufferR_I, iBufferR_I)
+    ! This subroutine transfers data
+    ! A processor can both send and recv
+    ! Correctness: only buffers of the same type should be present 
     use ModMpi
 
-    integer, intent(in):: iComm                ! MPI communicator
-    integer, intent(in):: nProc                ! number of processors
-    integer, intent(in):: iProc                ! local proc index
-    integer, intent(in):: nCompSend, nCompRecv ! send and recv components
-    integer, intent(in):: nRndvou              ! # of Rndvou procs
-    integer, intent(in):: nRndvouProc_I( nRndvou)! Rndvou procs
-    integer, intent(in):: nRndvouPoint_I(nRndvou)! # of points to send/recv    
+    integer, intent(in):: iComm  ! MPI communicator
+    integer, intent(in):: nProc  ! number of processors
+    integer, intent(in):: iProc  ! local proc index
+    !------------------------------------------------------------------------
+    integer, intent(in):: nCoupleS                 ! #   of procs to send to
+    integer, intent(in):: iCoupleProcS_I( nCoupleS)! ids of procs to send to
+    integer, intent(in):: nCouplePointS_I(nCoupleS)! # of points  to send
+    !------------------------------------------------------------------------
+    integer, intent(in):: nCoupleR                 ! #   of procs to recv from
+    integer, intent(in):: iCoupleProcR_I( nCoupleR)! ids of procs to recv from
+    integer, intent(in):: nCouplePointR_I(nCoupleR)! # of points  to recv
+    !------------------------------------------------------------------------
+    integer, intent(in   )          :: nData       ! number of items per point
+    integer, intent(in   )          :: nBufferS    ! send buffer size
+    real,    intent(inout), optional::  BufferS_I(nData*nBufferS) ! send buffer
+    integer, intent(inout), optional:: iBufferS_I(nData*nBufferS) ! send buffer
+    integer, intent(in   )          :: nBufferR    ! recv buffer size
+    real,    intent(inout), optional::  BufferR_I(nData*nBufferR) ! recv buffer
+    integer, intent(inout), optional:: iBufferR_I(nData*nBufferR) ! recv buffer
 
-    integer, intent(in):: nData, nBuffer       ! number of reals per point
-    real,    intent(inout), optional:: Buffer_I(nData*nBuffer)
-    integer, intent(inout), optional:: iBuffer_I(nData*nBuffer)
-
-    integer:: iProcRecv, iProcSend ! index of recv and send processors
-    integer:: iRndvou
-    integer:: iBuffer
-
+    integer:: iProcR, iProcS ! R/S is proc to Recv from/Send to
+    integer:: iCouple, iBuffer
     ! MPI stuff
     integer, parameter:: iTag = 77
     integer:: iError
@@ -968,52 +1053,151 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*)NameSub, 'called with nProc, iProc, nData=', &
          nProc, iProc, nData
-    allocate(iRequest_I(nRndvou), iStatus_II(MPI_STATUS_SIZE,nRndvou))
-    iBuffer = 1
-    if(present(Buffer_I))then
+
+    if(nCoupleS + nCoupleR == 0) RETURN
+
+    allocate(iRequest_I(nCoupleS+nCoupleR))
+    allocate(iStatus_II(MPI_STATUS_SIZE,nCoupleS+nCoupleR))
+
+    !\
+    ! Check correctness
+    !/
+    if(present(BufferS_I) .and. present(iBufferR_I)&
+         .or.&
+       present(BufferR_I) .and. present(iBufferS_I))then
+       call CON_stop(NameSub// &
+         ': Send and Recv are attempted for different variable types')
+    end if
+
+    !\
+    ! Send buffer
+    !/
+    if(present(BufferS_I))then
        !\
        ! Transfer array of reals
        !/
-       if(is_proc(nCompSend)) then
-          do iRndvou = 1, nRndvou
-             iProcRecv = nRndvouProc_I(iRndvou)
-             call MPI_Isend(Buffer_I(iBuffer), nData*nRndvouPoint_I(iRndvou), &
-                  MPI_REAL, iProcRecv, iTag, iComm, iRequest_I(iRndvou),iError)       
-             iBuffer = iBuffer + nData*nRndvouPoint_I(iRndvou)
-          end do
-       elseif(is_proc(nCompRecv)) then
-          do iRndvou = 1, nRndvou
-             iProcSend = nRndvouProc_I(iRndvou)
-             call MPI_Irecv(Buffer_I(iBuffer), nData*nRndvouPoint_I(iRndvou),&
-                  MPI_REAL, iProcSend, iTag, iComm, iRequest_I(iRndvou),iError)
-             iBuffer = iBuffer + nData*nRndvouPoint_I(iRndvou)
+       if(nCoupleS > 0)then
+          !\
+          ! Send array of reals
+          !/
+          iBuffer = 1
+          do iCouple = 1, nCoupleS
+             iProcS = iCoupleProcS_I(iCouple)
+             call MPI_Isend(&
+                  BufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
+                  MPI_REAL, iProcS, iTag, iComm, &
+                  iRequest_I(iCouple),iError)
+             iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
           end do
        end if
-    elseif(present(iBuffer_I))then
+       if(nCoupleR > 0)then
+          !\
+          ! Receive array of reals
+          !/
+          iBuffer = 1
+          do iCouple = 1, nCoupleR
+             iProcR = iCoupleProcR_I(iCouple)
+             call MPI_Irecv(&
+                  BufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
+                  MPI_REAL, iProcR, iTag, iComm, &
+                  iRequest_I(nCoupleS+iCouple),iError)
+             iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
+          end do
+       end if
+    elseif(present(iBufferS_I))then
        !\
        ! Transfer array of integers
        !/
-       if(is_proc(nCompSend)) then
-          do iRndvou = 1, nRndvou
-             iProcRecv = nRndvouProc_I(iRndvou)
-             call MPI_Isend(iBuffer_I(iBuffer), nData*nRndvouPoint_I(iRndvou), &
-                  MPI_INTEGER, iProcRecv, iTag, iComm, iRequest_I(iRndvou),iError)       
-             iBuffer = iBuffer + nData*nRndvouPoint_I(iRndvou)
+       if(nCoupleS > 0)then
+          !\
+          ! Send array of integers
+          !/
+          iBuffer = 1
+          do iCouple = 1, nCoupleS
+             iProcS = iCoupleProcS_I(iCouple)
+             call MPI_Isend(&
+                  iBufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
+                  MPI_INTEGER, iProcS, iTag, iComm, &
+                  iRequest_I(iCouple),iError)       
+             iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
           end do
-       elseif(is_proc(nCompRecv)) then
-          do iRndvou = 1, nRndvou
-             iProcSend = nRndvouProc_I(iRndvou)
-             call MPI_Irecv(iBuffer_I(iBuffer), nData*nRndvouPoint_I(iRndvou),&
-                  MPI_INTEGER, iProcSend, iTag, iComm, iRequest_I(iRndvou), iError)
-             iBuffer = iBuffer + nData*nRndvouPoint_I(iRndvou)
+       end if
+       if(nCoupleR > 0)then
+          !\
+          ! Receive array of integers
+          !/
+          iBuffer = 1
+          do iCouple = 1, nCoupleR
+             iProcR = iCoupleProcR_I(iCouple)
+             call MPI_Irecv(&
+                  iBufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
+                  MPI_INTEGER, iProcR, iTag, iComm, &
+                  iRequest_I(nCoupleS+iCouple),iError)
+             iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
           end do
        end if
     end if
     !\
     ! Finalize transfer
     !/
-    call MPI_waitall(nRndvou, iRequest_I,iStatus_II,iError)
+    call MPI_waitall(nCoupleS + nCoupleR, iRequest_I,iStatus_II,iError)
     deallocate(iRequest_I, iStatus_II)
   end subroutine transfer_buffer_direct
+
+  !===========================================================================
+
+  subroutine get_local_rank(iCommUnion, iComp, iProc, iProcLocal)
+    ! for processor with rank iProc in the union communicator iCommUnion
+    ! returns rank iProcLocal in the group associated with component iComp
+    integer, intent(in ) :: iCommUnion, iComp
+    integer, intent(in ) :: iProc
+    integer, intent(out) :: iProcLocal
+
+    integer:: iGroupUnion
+    integer:: iProc_I(1), iProcLocal_I(1)
+    integer:: iError
+    !----------------------------------------------------------------------
+    !\
+    ! Create group associated with iCommUnion
+    call MPI_Comm_Group(iCommUnion, iGroupUnion, iError)
+    !\
+    ! Translate rank
+    iProc_I = iProc
+    call MPI_Group_translate_ranks(&
+         iGroupUnion, 1, iProc_I, i_group(iComp), iProcLocal_I, iError)
+    iProcLocal = iProcLocal_I(1)
+    !\
+    ! free union group
+    call MPI_Group_free(iGroupUnion, iError)
+
+  end subroutine get_local_rank
+  !===========================================================================
+
+  subroutine get_union_rank(iCommUnion, iComp, iProcLocal, iProc)
+    ! for processor with rank iProc in the union communicator iCommUnion
+    ! returns rank iProcLocal in the group associated with component iComp
+    integer, intent(in ) :: iCommUnion, iComp
+    integer, intent(in ) :: iProcLocal
+    integer, intent(out) :: iProc
+
+
+    integer:: iGroupUnion
+    integer:: iProc_I(1), iProcLocal_I(1)
+    integer:: iError
+    !----------------------------------------------------------------------
+    !\
+    ! Create group associated with iCommUnion
+    call MPI_Comm_Group(iCommUnion, iGroupUnion, iError)
+    !\
+    ! Translate rank
+    iProcLocal_I = iProcLocal
+    call MPI_Group_translate_ranks(&
+         i_group(iComp), 1, iProcLocal_I, iGroupUnion, iProc_I, iError)
+    iProc = iProc_I(1)
+    !\
+    ! free union group
+    call MPI_Group_free(iGroupUnion, iError)
+
+  end subroutine get_union_rank
 
 end module CON_couple_gm_pt
