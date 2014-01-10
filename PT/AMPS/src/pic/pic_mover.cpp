@@ -1901,19 +1901,35 @@ MovingLoop:
       memcpy(x0Face,IntersectionFace->x0Face,3*sizeof(double));
       memcpy(FaceNorm,IntersectionFace->ExternalNormal,3*sizeof(double));
 
-      do {
-        ExitFlag=true;
+      double r0=(xInit[0]-x0Face[0])*FaceNorm[0] + (xInit[1]-x0Face[1])*FaceNorm[1] + (xInit[2]-x0Face[2])*FaceNorm[2];
 
-        xFinal[0]=xInit[0]+dtMin*vInit[0];
-        xFinal[1]=xInit[1]+dtMin*vInit[1];
-        xFinal[2]=xInit[2]+dtMin*vInit[2];
+      if (r0>PIC::Mesh::mesh.EPS) {
+        do {
+          ExitFlag=true;
 
-        if ( ((xFinal[0]-x0Face[0])*FaceNorm[0] + (xFinal[1]-x0Face[1])*FaceNorm[1] + (xFinal[2]-x0Face[2])*FaceNorm[2]) < PIC::Mesh::mesh.EPS) {
-          dtMin*=(1.0-1.0E-5);
-          ExitFlag=false;
+          xFinal[0]=xInit[0]+dtMin*vInit[0];
+          xFinal[1]=xInit[1]+dtMin*vInit[1];
+          xFinal[2]=xInit[2]+dtMin*vInit[2];
+
+          if ( ((xFinal[0]-x0Face[0])*FaceNorm[0] + (xFinal[1]-x0Face[1])*FaceNorm[1] + (xFinal[2]-x0Face[2])*FaceNorm[2]) < PIC::Mesh::mesh.EPS) {
+            dtMin*=(1.0-1.0E-5);
+            ExitFlag=false;
+          }
+        }
+        while (ExitFlag==false);
+      }
+      else if (r0<0.0) {
+        if (r0>-PIC::Mesh::mesh.EPS) {
+          for (int idim=0;idim<DIM;idim++) xFinal[idim]-=(PIC::Mesh::mesh.EPS-r0)*FaceNorm[idim];
+        }
+        else {
+          exit(__LINE__,__FILE__,"error: the point is inside the body");
         }
       }
-      while (ExitFlag==false);
+      else {
+        memcpy(xFinal,xInit,3*sizeof(double));
+        dtMin=0.0;
+      }
 
 /*      xFinal[0]=xInit[0]+dtMin*vInit[0];
       xFinal[1]=xInit[1]+dtMin*vInit[1];
@@ -2017,8 +2033,9 @@ MovingLoop:
       double EPS=PIC::Mesh::mesh.EPS;
 
       for (idim=0;idim<DIM;idim++) {
-        if (xFinal[idim]<xminBlock[idim]) xFinal[idim]=xminBlock[idim];
-        if (xFinal[idim]>xmaxBlock[idim]) xFinal[idim]=xmaxBlock[idim];
+        if (xFinal[idim]<xminBlock[idim]+EPS) xFinal[idim]=xminBlock[idim]-EPS;
+        if (xFinal[idim]>xmaxBlock[idim]-EPS) xFinal[idim]=xmaxBlock[idim]+EPS;
+
       }
 
       newNode=PIC::Mesh::mesh.findTreeNode(xFinal,middleNode);
