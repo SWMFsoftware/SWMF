@@ -255,133 +255,99 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,CutCell::cTrian
   for (nd=0;nd<nnodes;nd++) nodes[nd].id=nd;
 
 
-  //calculate external normals to the faces
-  bool faceIntersectionFlag;
-  double x[3],x0[3],angle,e0[3],e1[3],norm[3],searchDirection[3],l;
-  long int nface,nIntersectionsForward,nIntersectionsBackward;
-  cNASTRANface *fcptr,*fc;
-  cNASTRANnode *nd0,*nd1,*nd2;
-  double t,c,c0,c1,c00,c11,c01,xLocal[2];
-
-
-
-  const double angleCosMin=cos(85.0/180.0*3.141592654);
-
-  for (nface=0;nface<nfaces;nface++) {
-    fcptr=&faces[nface];
-
-    nd0=&nodes[fcptr->node[0]];
-    nd1=&nodes[fcptr->node[1]];
-    nd2=&nodes[fcptr->node[2]];
-
-    for (idim=0;idim<3;idim++) {
-      e0[idim]=nd1->x[idim]-nd0->x[idim],e1[idim]=nd2->x[idim]-nd0->x[idim];
-      x0[idim]=nd0->x[idim]+0.25*(e0[idim]+e1[idim]);
-    }
-
-    norm[0]=e0[1]*e1[2]-e0[2]*e1[1];
-    norm[1]=-(e0[0]*e1[2]-e0[2]*e1[0]);
-    norm[2]=e0[0]*e1[1]-e0[1]*e1[0];
-
-    l=sqrt(norm[0]*norm[0]+norm[1]*norm[1]+norm[2]*norm[2]);
-    for (idim=0;idim<3;idim++) fcptr->externalNormal[idim]=norm[idim]/l;
-
-    //scan trought the faces to determine the external normal
-    do {
-      nIntersectionsForward=0,nIntersectionsBackward=0;
-      faceIntersectionFlag=true;
-
-      //generate the search direction
-      do {
-        for (l=0.0,idim=0;idim<3;idim++) {
-          searchDirection[idim]=sqrt(-2.0*log(rnd()))*cos(2.0*3.1415926*rnd());
-          l+=pow(searchDirection[idim],2);
-        }
-
-        for (angle=0.0,l=sqrt(l),idim=0;idim<3;idim++) {
-          searchDirection[idim]/=l;
-          angle+=searchDirection[idim]*fcptr->externalNormal[idim];
-        }
-      }
-      while (fabs(angle)<angleCosMin);
-
-      //get the time and local coordinates of an intersection between the cut face and the direction of the search
-      for (nfc=0;nfc<nfaces;nfc++) if (nfc!=nface) {
-        fc=&faces[nfc];
-
-        nd0=&nodes[fc->node[0]];
-        nd1=&nodes[fc->node[1]];
-        nd2=&nodes[fc->node[2]];
-
-        for (idim=0;idim<3;idim++) e0[idim]=nd1->x[idim]-nd0->x[idim],e1[idim]=nd2->x[idim]-nd0->x[idim];
-
-        //get a normal to the face
-        norm[0]=e0[1]*e1[2]-e0[2]*e1[1];
-        norm[1]=-(e0[0]*e1[2]-e0[2]*e1[0]);
-        norm[2]=e0[0]*e1[1]-e0[1]*e1[0];
-
-        for (c0=0.0,c1=0.0,idim=0;idim<3;idim++) c0+=(x0[idim]-nd0->x[idim])*norm[idim],c1+=searchDirection[idim]*norm[idim];
-
-        if (fabs(c1)<1.0E-15*fabs(c0)) {
-          faceIntersectionFlag=false;
-          break;
-        }
-
-        t=-c0/c1;
-
-        //get local coordanated of the point of the intersection
-        for (c0=0.0,c1=0.0,c00=0.0,c01=0.0,c11=0.0,idim=0;idim<3;idim++) {
-          x[idim]=x0[idim]+searchDirection[idim]*t-nd0->x[idim];
-
-          c1+=x[idim]*e1[idim],c0+=x[idim]*e0[idim];
-          c00+=e0[idim]*e0[idim],c11+=e1[idim]*e1[idim],c01+=e0[idim]*e1[idim];
-        }
-
-        c=c11*c00-c01*c01;
-        xLocal[0]=(c0*c11-c1*c01)/c;
-        xLocal[1]=(c1*c00-c01*c0)/c;
-
-
-        //determine weather the node in outside of the face
-        if (((fabs(xLocal[0])<1.0E-5)||(fabs(xLocal[0]-1.0)<1.0E-5))&&(1.0E-5<xLocal[1])&&(xLocal[0]+xLocal[1]<1.0-1.0E-5)) {
-          faceIntersectionFlag=false;
-          break;
-        }
-
-        if (((fabs(xLocal[1])<1.0E-5)||(fabs(xLocal[1]-1.0)<1.0E-5))&&(1.0E-5<xLocal[0])&&(xLocal[0]+xLocal[1]<1.0-1.0E-5)) {
-          faceIntersectionFlag=false;
-          break;
-        }
-
-        if ((xLocal[0]>-1.0E-5)&&(xLocal[1]>-1.0E-5)&&(fabs(xLocal[0]+xLocal[1]-1.0)<1.0E-5)) {
-          faceIntersectionFlag=false;
-          break;
-        }
-
-        if ((xLocal[0]>0.0)&&(xLocal[1]>0.0)&&(xLocal[0]+xLocal[1]<1.0)) {
-          if (t>0.0) nIntersectionsForward++; else nIntersectionsBackward++;
-        }
-      }
-    }
-    while (faceIntersectionFlag==false);
-
-    //deternime the direction of the external normal vector
-
-    if (angle<0.0) nIntersectionsForward=nIntersectionsBackward;
-    if (faceIntersectionFlag==true) if (2*(nIntersectionsForward/2)!=nIntersectionsForward) {
-      //the forward direction along the chosen line of the search does not coinsides with the direction of the external normal
-      for (idim=0;idim<3;idim++) fcptr->externalNormal[idim]*=-1.0;
-    }
-  }
-
   //create the surface triangulation array
   nSurfaceTriangulation=nfaces;
   SurfaceTriangulation=new cTriangleFace[nfaces];
 
   for (nfc=0;nfc<nfaces;nfc++) {
     SurfaceTriangulation[nfc].SetFaceNodes(nodes[faces[nfc].node[0]].x,nodes[faces[nfc].node[1]].x,nodes[faces[nfc].node[2]].x);
+  }
 
-    memcpy(SurfaceTriangulation[nfc].ExternalNormal,faces[nfc].externalNormal,3*sizeof(double));
+  //calculate external normals to the faces
+  bool faceIntersectionFlag;
+  double x[3],x0[3],angle,e0[3],e1[3],norm[3],SearchDirection[3],l,l0;
+  long int nface,nIntersectionsForward,nIntersectionsBackward;
+  cNASTRANface *fcptr,*fc;
+  cNASTRANnode *nd0,*nd1,*nd2;
+  double t,c,c0,c1,c00,c11,c01,xLocal[2];
+
+  const double angleCosMin=cos(85.0/180.0*3.141592654);
+
+  int nStartFace,nFinishFace,nTotalThreads,ThisThread,nFaceThread;
+
+  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+  MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
+
+  nFaceThread=nfaces/nTotalThreads;
+  nStartFace=nFaceThread*ThisThread;
+  nFinishFace=nStartFace+nFaceThread;
+  if (ThisThread==nTotalThreads-1) nFinishFace=nfaces;
+
+
+
+  for (nface=nStartFace;nface<nFinishFace;nface++) {
+    fcptr=&faces[nface];
+
+    nd0=&nodes[fcptr->node[0]];
+    nd1=&nodes[fcptr->node[1]];
+    nd2=&nodes[fcptr->node[2]];
+
+    do {
+      xLocal[0]=sqrt(rnd());
+      xLocal[1]=(1.0-xLocal[0])*rnd();
+    }
+    while ((xLocal[0]<1.0E-4)||(xLocal[1]<1.0E-4)||(1.0-xLocal[0]-xLocal[1]<1.0E-4));
+
+    for (idim=0,l=0.0,l0=0.0;idim<3;idim++) {
+      e0[idim]=nd1->x[idim]-nd0->x[idim],e1[idim]=nd2->x[idim]-nd0->x[idim];
+      x0[idim]=nd0->x[idim]+xLocal[0]*e0[idim]+xLocal[1]*e1[idim];
+
+      SearchDirection[idim]=sqrt(-2.0*log(rnd()))*cos(2.0*3.1415926*rnd());
+      l+=pow(SearchDirection[idim],2);
+      l0+=SearchDirection[idim]*SurfaceTriangulation[nface].ExternalNormal[idim];
+    }
+
+    l=sqrt(l);
+    if (l0<0.0) l*=-1.0;
+
+    for (idim=0;idim<3;idim++) SearchDirection[idim]/=l;
+
+    //count face intersections
+    int nIntersections=0;
+
+    for (nfc=0;nfc<nfaces;nfc++) if (nfc!=nface) {
+      if (SurfaceTriangulation[nfc].RayIntersection(x0,SearchDirection,EPS)==true) nIntersections++;
+    }
+
+    if (nIntersections%2!=0) {
+      //the norm has to be reversed
+      for (idim=0;idim<3;idim++) SurfaceTriangulation[nface].ExternalNormal[idim]*=-1.0;
+    }
+  }
+
+  //collect the surface normals
+  double sendBuffer[3*2*nFaceThread];
+  int thread,cnt;
+
+  for (thread=0;thread<nTotalThreads;thread++) {
+    nStartFace=nFaceThread*thread;
+    nFinishFace=nStartFace+nFaceThread;
+    if (thread==nTotalThreads-1) nFinishFace=nfaces;
+
+    if (thread==ThisThread) {
+      for (nface=nStartFace,cnt=0;nface<nFinishFace;nface++,cnt++) memcpy(sendBuffer+3*cnt,SurfaceTriangulation[nface].ExternalNormal,3*sizeof(double));
+    }
+
+    MPI_Bcast(sendBuffer,3*(nFinishFace-nStartFace),MPI_DOUBLE,thread,MPI_GLOBAL_COMMUNICATOR);
+
+    if (thread!=ThisThread) {
+      for (nface=nStartFace,cnt=0;nface<nFinishFace;nface++,cnt++) memcpy(SurfaceTriangulation[nface].ExternalNormal,sendBuffer+3*cnt,3*sizeof(double));
+    }
+  }
+
+  //set up the face attribute
+  for (nfc=0;nfc<nfaces;nfc++) {
+    memcpy(faces[nfc].externalNormal,SurfaceTriangulation[nfc].ExternalNormal,3*sizeof(double));
     SurfaceTriangulation[nfc].attribute=faces[nfc].faceat;
   }
 }
