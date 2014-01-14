@@ -38,6 +38,38 @@ SpiceDouble Exosphere::OrbitalMotion::IAU_to_SO_TransformationMartix[6][6]={
 int Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier=1;
 
 
+double Exosphere::OrbitalMotion::GetTAA(const char* TargetName, const char* CenterBodyName, double CenterBodyMass, SpiceDouble EphemerisTime) {
+  SpiceDouble ltlocal,TargetState[6];
+  double EccentricityVector[3],res=0.0;
+  double v2,r,a,c,absEccentricity;
+  int idim;
+
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
+  const double GravitationalParameter=1.0E-9*GravityConstant*CenterBodyMass; //the unit is km^2/s^2
+
+  spkezr_c(TargetName,EphemerisTime,"J2000","none",CenterBodyName,TargetState,&ltlocal);
+
+  r=sqrt(TargetState[0]*TargetState[0]+TargetState[1]*TargetState[1]+TargetState[2]*TargetState[2]);
+  v2=TargetState[3+0]*TargetState[3+0]+TargetState[3+1]*TargetState[3+1]+TargetState[3+2]*TargetState[3+2];
+  c=TargetState[0]*TargetState[3+0]+TargetState[1]*TargetState[3+1]+TargetState[2]*TargetState[3+2];
+
+  for (idim=0,absEccentricity=0.0,a=0.0;idim<3;idim++) {
+    EccentricityVector[idim]=v2*TargetState[idim]/GravitationalParameter - c*TargetState[3+idim]/GravitationalParameter - TargetState[idim]/r;
+    absEccentricity+=EccentricityVector[idim]*EccentricityVector[idim];
+    a+=EccentricityVector[idim]*TargetState[idim];
+  }
+
+  absEccentricity=sqrt(absEccentricity);
+  res=acos(a/(absEccentricity*r));
+
+  if (c<0.0) res=2.0*Pi-res;
+#endif
+
+  return res;
+
+}
+
+
 double Exosphere::OrbitalMotion::GetTAA(const char* UTC) {
   double res=0.0;
 

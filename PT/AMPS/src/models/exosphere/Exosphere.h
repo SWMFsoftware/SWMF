@@ -291,6 +291,7 @@ namespace Exosphere {
     //calculate TAA
     double GetTAA(SpiceDouble);
     double GetTAA(const char*);
+    double GetTAA(const char* TargetName, const char* CenterBodyName, double CenterBodyMass, SpiceDouble EphemerisTime);
 
     //calculate the phase angle
     double GetPhaseAngle(SpiceDouble);

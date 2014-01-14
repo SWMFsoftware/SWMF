@@ -156,36 +156,5 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 
 //calcualte the true anomaly angle
 double Exosphere::OrbitalMotion::GetTAA(SpiceDouble EphemerisTime) {
-  SpiceDouble State[6],ltlocal;
-  double EccentricityVector[3];
-  double res,Speed2,a,c,absEccentricity;
-  const double GravitationalParameter=GravityConstant*_MASS_(_SUN_);
-  double vMercury[3],xMercury[3],rHeliocentric=0.0;
-  int idim;
-
-  spkezr_c("Mercury",EphemerisTime,"MSGR_HCI","none","SUN",State,&ltlocal);
-
-  for (idim=0;idim<3;idim++) {
-    xMercury[idim]=State[idim]*1.0E3;
-    vMercury[idim]=State[idim+3]*1.0E3;
-
-    rHeliocentric+=pow(xMercury[idim],2);
-  }
-
-  rHeliocentric=sqrt(rHeliocentric);
-  Speed2=vMercury[0]*vMercury[0]+vMercury[1]*vMercury[1]+vMercury[2]*vMercury[2];
-  c=xMercury[0]*vMercury[0]+xMercury[1]*vMercury[1]+xMercury[2]*vMercury[2];
-
-  for (idim=0,absEccentricity=0.0,a=0.0;idim<3;idim++) {
-    EccentricityVector[idim]=Speed2/GravitationalParameter*xMercury[idim] - c/GravitationalParameter*vMercury[idim] - xMercury[idim]/rHeliocentric;
-    absEccentricity+=EccentricityVector[idim]*EccentricityVector[idim];
-    a+=EccentricityVector[idim]*xMercury[idim];
-  }
-
-  absEccentricity=sqrt(absEccentricity);
-  res=acos(a/(absEccentricity*rHeliocentric));
-
-  if (c<0.0) res=2.0*Pi-res;
-
-  return res;
+  return GetTAA("Mercury","Sun",_MASS_(_SUN_),EphemerisTime);
 }
