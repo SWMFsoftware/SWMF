@@ -22,7 +22,7 @@ subroutine set_physics_constants
   real :: MassBody2Si
   real :: pCoef
 
-  integer :: i, iBoundary
+  integer :: i, iVar, iBoundary
 
   character (len=*), parameter :: NameSub = "set_physics_constants"
 
@@ -430,6 +430,7 @@ subroutine set_units
   No2Si_V(UnitMass_)       = No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3    ! kg
   No2Si_V(UnitCharge_)     = No2Si_V(UnitJ_)/No2Si_V(UnitU_) &       ! C
        *No2Si_V(UnitX_)**3
+  No2Si_V(UnitUnity_)      = 1.0                                     ! Fallback conversion for undefined units
 
   !\
   ! Set inverse conversion SI -> normalized
@@ -603,14 +604,44 @@ subroutine init_mhd_variables
   ! Set default I/O units and unit names for the state variables 
   ! in MHD type equations
 
+  use ModProcMH,  ONLY: iProc
   use ModVarIndexes
   use ModPhysics
   use ModMultiFluid
   use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos
   use ModMain,    ONLY: UseB
+  use ModUtilities, ONLY: lower_case
   implicit none
 
   integer :: iVar
+  character (len=len(NameVar_V)) :: NameVar
+  character (len=*), parameter :: NameSub="init_mhd_variables"
+
+  ! Set mapping from state variable indices to unit conversion array indices
+  do iVar = 1, nVar
+     NameVar = NameVar_V(iVar)
+     call lower_case(NameVar)
+     call extract_fluid_name(NameVar)
+     select case(NameVar)
+        case('rho')
+           StateIndexToUnitIndex_V(iVar) = UnitRho_
+        case('mx','my','mz')
+           StateIndexToUnitIndex_V(iVar) = UnitRhoU_
+        case('bx','by','bz')
+           StateIndexToUnitIndex_V(iVar) = UnitB_
+        case('p','pe')
+           StateIndexToUnitIndex_V(iVar) = UnitP_
+        case('e')
+           StateIndexToUnitIndex_V(iVar) = UnitEnergyDens_
+        case default
+           if(iProc.eq.0) then
+              write(*,*) NameSub,': Warning, conversion factor mapping for variable ',NameVar,&
+                   ' not defined, using UnitUnity_ instead. Unit conversion for this variable will probably not be correct.'
+              StateIndexToUnitIndex_V(iVar) = UnitUnity_
+           end if
+     end select
+  end do
+
   !--------------------------------------------------------------------------
   if(UseB)then
      UnitUser_V(Bx_:Bz_)        = No2Io_V(UnitB_)
