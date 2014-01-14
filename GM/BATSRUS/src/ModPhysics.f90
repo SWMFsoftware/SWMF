@@ -174,7 +174,7 @@ module ModPhysics
   character (len=20) :: TypeIoUnit = "PLANETARY"
 
   ! Named indexes for I/O variable units
-  integer, parameter :: nIoUnit = 17
+  integer, parameter :: nIoUnit = 18
 
   integer, parameter :: UnitX_           = 1
   integer, parameter :: UnitU_           = 2
@@ -193,11 +193,15 @@ module ModPhysics
   integer, parameter :: UnitAngle_       = 15
   integer, parameter :: UnitMass_        = 16
   integer, parameter :: UnitCharge_      = 17
+  integer, parameter :: UnitUnity_       = 18
 
   ! Conversion between units: e.g. VarSi = VarNo*No2Si_V(UnitVar_)
   ! The following should always be true: No2Si_V*Si2Io_V = No2Io_V
   real, dimension(nIoUnit) :: &
        Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V
+
+  ! Mapping between state array indices and unit conversion array indices
+  integer, dimension(nVar) :: StateIndexToUnitIndex_V
 
   character (len=20), dimension(nIoUnit) :: &
        NameIdlUnit_V, NameTecUnit_V, NameSiUnit_V
