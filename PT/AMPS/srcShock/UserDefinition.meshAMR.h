@@ -10,7 +10,7 @@
 //#define _BLOCK_CELLS_Z_
 
 #undef _BLOCK_CELLS_X_
-#define _BLOCK_CELLS_X_    100
+#define _BLOCK_CELLS_X_    200
 
 #undef _BLOCK_CELLS_Y_
 #define _BLOCK_CELLS_Y_    2
