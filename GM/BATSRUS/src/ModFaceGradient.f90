@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModFaceGradient
 
@@ -288,6 +288,7 @@ contains
 
     ! correct the ghost cells of the given scalar/vector field on iBlock
     ! using third order interpolation
+
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, NOBLK
     use BATL_lib, ONLY: DiLevelNei_IIIB
