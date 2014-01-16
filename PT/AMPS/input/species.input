@@ -25,6 +25,8 @@
   mass=16*_AMU_ 
   charge=1.0 
   
-
+#component=Ar
+  mass=40*_AMU_
+  charge=0
 
 #endspecies
