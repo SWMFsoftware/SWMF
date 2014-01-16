@@ -145,8 +145,9 @@ contains
        end if
 
        if(nJ > 1)then
-       ! 2D or 3D
-          if(.not.True_Cell(i,jL,k,iBlock).and..not.True_Cell(i,jR,k,iBlock))then
+          ! 2D or 3D
+          if(  .not.True_Cell(i,jL,k,iBlock) .and. &
+               .not.True_Cell(i,jR,k,iBlock))then
              Current_D = 0.0
              RETURN
           elseif(.not.True_Cell(i,jL,k,iBlock))then
@@ -170,7 +171,8 @@ contains
 
        if(nK > 1)then
           ! 3D
-          if(.not.True_Cell(i,j,kL,iBlock).and..not.True_Cell(i,j,kR,iBlock))then
+          if(  .not.True_Cell(i,j,kL,iBlock) .and. &
+               .not.True_Cell(i,j,kR,iBlock))then
              Current_D = 0.0
              RETURN
           elseif(.not.True_Cell(i,j,kL,iBlock))then
@@ -250,8 +252,12 @@ contains
       DxyzDcoord_DD(:,2) = InvDy2 &
            *(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock))
 
-      DxyzDcoord_DD(:,3) = InvDz2 &
-           *(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
+      if(nK > 1)then
+         DxyzDcoord_DD(:,3) = InvDz2 &
+              *(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
+      else
+         DxyzDcoord_DD(:,3) = (/ 0., 0., 1./)
+      end if
 
       DcoordDxyz_DD = inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
 
@@ -266,10 +272,14 @@ contains
            + By*State_VGB(Bx_:Bz_,i,j ,k,iBlock) &
            + Cy*State_VGB(Bx_:Bz_,i,jR,k,iBlock)
 
-      DbDcoord_DD(:,3) = &
-           + Az*State_VGB(Bx_:Bz_,i,j,kL,iBlock) &
-           + Bz*State_VGB(Bx_:Bz_,i,j,k ,iBlock) &
-           + Cz*State_VGB(Bx_:Bz_,i,j,kR,iBlock)
+      if(nK > 1)then
+         DbDcoord_DD(:,3) = &
+              + Az*State_VGB(Bx_:Bz_,i,j,kL,iBlock) &
+              + Bz*State_VGB(Bx_:Bz_,i,j,k ,iBlock) &
+              + Cz*State_VGB(Bx_:Bz_,i,j,kR,iBlock)
+      else
+         DbDcoord_DD(:,3) = 0.0
+      end if
 
       ! Jx = Dbz/Dy - Dby/Dz = Dbz/Dcoord.Dcoord/Dy - DBy/Dcoord.Dccord/dz
       Current_D(x_) = &
