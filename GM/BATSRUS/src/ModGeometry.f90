@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module ModGeometry
 
   use ModSize
@@ -61,6 +61,10 @@ module ModGeometry
   ! but will be linearly extrapolated outside of this domain
   real, allocatable :: LogRGen_I(:)
   character(len=100):: NameGridFile=''
+
+  ! Jacobian matrix for general grid: Dgencoord/Dcartesian
+  ! This can be set with call set_block_jacobian_cell(iBlock)
+  real, public :: DgenDxyz_DDC(MaxDim,MaxDim,nI,nJ,nK)
 
 contains
   !============================================================================
@@ -150,4 +154,49 @@ contains
 
   end subroutine set_gen_radial_grid
 
+  !============================================================================
+
+  subroutine set_block_jacobian_cell(iBlock)
+
+    use BATL_lib, ONLY: nDim
+    use ModNumConst, ONLY: i_DD
+    use ModCoordTransform, ONLY: inverse_matrix
+
+    integer, intent(in):: iBlock
+    real:: InvDx1Half, InvDx2Half, InvDx3Half
+    real:: DxyzDgen_DD(MaxDim, MaxDim)
+    integer:: i,j,k
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='set_block_jacobian'
+    !--------------------------------------------------------------------------
+
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
+    ! Calculate the dCartesian/dGencoord matrix
+    
+    InvDx1Half = 0.5/CellSize_DB(1,iBlock)
+    InvDx2Half = 0.5/CellSize_DB(2,iBlock)
+    InvDx3Half = 0.5/CellSize_DB(3,iBlock)
+
+    ! Get the dCartesian/dGencoord matrix with finite differences
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       DxyzDgen_DD(:,1) = InvDx1Half &
+            *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
+
+       DxyzDgen_DD(:,2) = InvDx2Half &
+            *(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock))
+
+       if(nDim==3)then
+          DxyzDgen_DD(:,3) = InvDx3Half &
+               *(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
+       else
+          DxyzDgen_DD(:,3) = i_DD(:,3)
+       end if
+
+       DgenDxyz_DDC(:,:,i,j,k) = &
+            inverse_matrix(DxyzDgen_DD, DoIgnoreSingular=.true.)
+    end do; end do; end do
+
+  end subroutine set_block_jacobian_cell
+ 
 end module ModGeometry

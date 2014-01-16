@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
 subroutine write_plot_common(ifile)
 
@@ -707,9 +707,9 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
        plot_dimensional, Plot_
   use ModNumConst, ONLY: cTiny
-  use ModHallResist, ONLY: UseHallResist, hall_factor, &
-       IsNewBlockCurrent, get_face_current
+  use ModHallResist, ONLY: UseHallResist, hall_factor
   use ModResistivity, ONLY: Eta_GB
+  use ModFaceGradient, ONLY: get_face_curl
   use ModPointImplicit, ONLY: UsePointImplicit_B
   use ModMultiFluid, ONLY: extract_fluid_name, &
        UseMultiIon, nIonFluid, MassIon_I, &
@@ -739,8 +739,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   integer :: i,j,k
 
   integer:: iDir, Di, Dj, Dk
-  real :: Jx, Jy, Jz
-  real ::FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+  real:: Current_D(3)
+  real:: FullB_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
   logical :: IsFound
 
@@ -751,10 +751,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   ! the currents ones per block
   logical :: DoCurrent
 
+  ! Passed to and set by get_face_curl
+  logical:: IsNewBlockCurrent
+
   character(len=*), parameter:: NameSub='set_plotvar'
   !---------------------------------------------------------------------------
-
-  DoCurrent = .true.
 
   if(iBLK==BlkTest.and.iProc==ProcTest)then
      call set_oktest(NameSub,DoTest,DoTestMe)
@@ -762,12 +763,16 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      DoTest=.false.; DoTestMe=.false.
   end if
   if(.not.UseB)then
-     FullB_DG=0.00 
+     FullB_DG = 0.00 
   elseif(UseB0)then
-     FullB_DG=State_VGB(Bx_:Bz_,:,:,:,iBLK)+B0_DGB(:,:,:,:,iBLK)
+     FullB_DG = State_VGB(Bx_:Bz_,:,:,:,iBLK)+B0_DGB(:,:,:,:,iBLK)
   else
-     FullB_DG=State_VGB(Bx_:Bz_,:,:,:,iBLK)
+     FullB_DG = State_VGB(Bx_:Bz_,:,:,:,iBLK)
   end if
+
+  ! Calculate current if needed
+  DoCurrent = .true.
+
   ! Recalculate magnetic field in block for face currents (if needed)
   IsNewBlockCurrent = .true.
 
@@ -975,14 +980,15 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            iDir=3; Dk=1
         end select
         do k=1,nK; do j=1,nJ; do i=1,nI
-           call get_face_current(iDir, i+Di, j+Dj, k+Dk, iBlk, Jx, Jy, Jz)
+           call get_face_curl(iDir, i+Di, j+Dj, k+Dk, iBlk, IsNewBlockCurrent, &
+                FullB_DG, Current_D)
            select case(String(2:2))
            case('x')
-              PlotVar(i,j,k,iVar)=Jx
+              PlotVar(i,j,k,iVar) = Current_D(x_)
            case('y')
-              PlotVar(i,j,k,iVar)=Jy
+              PlotVar(i,j,k,iVar) = Current_D(y_)
            case('z')
-              PlotVar(i,j,k,iVar)=Jz
+              PlotVar(i,j,k,iVar) = Current_D(z_)
            end select
         end do; end do; end do
      case('enumx')

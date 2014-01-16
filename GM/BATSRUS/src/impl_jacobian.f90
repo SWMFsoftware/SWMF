@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 
@@ -532,9 +533,8 @@ contains
          BxPerN_G, ByPerN_G, BzPerN_G, set_ion_mass_per_charge
 
     use ModAdvance, ONLY: B0_DGB
-    
-    use ModHallResist, ONLY: &                 
-         DgenDxyz_DDC, set_block_jacobian_cell 
+    use ModGeometry, ONLY: DgenDxyz_DDC, set_block_jacobian_cell 
+
     real :: DbDgen_DD(3,3)                     
 
     real :: InvDx2, InvDy2, InvDz2
@@ -809,10 +809,10 @@ contains
 
   subroutine impl_hall_resist_general
 
-    use ModHallResist, ONLY: set_block_jacobian_cell, DgenDxyz_DDC, &
-         BxPerN_G, ByPerN_G, BzPerN_G
+    use ModHallResist, ONLY: BxPerN_G, ByPerN_G, BzPerN_G
+    use ModGeometry, ONLY: set_block_jacobian_cell, DgenDxyz_DDC
 
-    use ModNumConst,   ONLY: iLeviCivita_III
+    use ModNumConst, ONLY: iLeviCivita_III
     use BATL_lib, ONLY: FaceNormal_DDFB
 
     ! Notation follows the Toth et. al. Hall MHD on Block Adaptive Grids paper

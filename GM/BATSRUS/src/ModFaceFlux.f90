@@ -37,7 +37,7 @@ module ModFaceFlux
        Pe_X, Pe_Y, Pe_Z ! output: Pe for grad Pe in multi-ion MHD
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
-       IsNewBlockCurrent, hall_factor, get_face_current, &
+       IsNewBlockCurrent, hall_factor, &
        set_ion_mass_per_charge, UseBiermannBattery
 
   use ModRadDiffusion, ONLY: IsNewBlockRadDiffusion, get_radiation_energy_flux
@@ -1156,7 +1156,7 @@ contains
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
-    use ModFaceGradient, ONLY: get_face_gradient
+    use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
     use ModUser,     ONLY: user_material_properties
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
@@ -1169,13 +1169,15 @@ contains
     real :: Cmax
     real :: DiffBn_D(3), DiffE
     real :: EnLeft, EnRight, PeLeft, PeRight, Jx, Jy, Jz
-    real :: uLeft_D(3), uRight_D(3) !,cDivBWave
-    real :: dB0_D(3)
+    real :: uLeft_D(3), uRight_D(3)
+    real :: dB0_D(3), Current_D(3)
 
     real :: GradPe_D(3)
     real :: InvElectronDens
     integer :: i, j, k
     real :: NatomicSi, TeSi
+
+    real, save :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !-----------------------------------------------------------------------
 
     ! Initialize diffusion coefficient for time step restriction
@@ -1187,8 +1189,12 @@ contains
     end if
 
     ! Calculate current for the face if needed for (Hall) resistivity
-    if(HallCoeff > 0.0 .or. Eta > 0.0) &
-         call get_face_current(iDimFace,iFace,jFace,kFace,iBlockFace,Jx,Jy,Jz)
+    if(HallCoeff > 0.0 .or. Eta > 0.0) then
+       if(IsNewBlockCurrent) b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlockFace)
+       call get_face_curl(iDimFace, iFace, jFace, kFace, iBlockFace, &
+            IsNewBlockCurrent, b_DG, Current_D)
+       Jx = Current_D(x_); Jy = Current_D(y_); Jz = Current_D(z_)
+    end if
 
     ! Calculateing stress tensor for viscosity Visco_DDI
     if(ViscoCoeff > 0.0 ) then
