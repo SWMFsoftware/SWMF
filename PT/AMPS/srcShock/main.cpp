@@ -26,6 +26,12 @@
 #include "meshAMRcutcell.h"
 #include "cCutBlockSet.h"
 
+ static double totalTime=0;
+ static bool updateTotalTime=false;
+ static bool computeInjectedBulkVelocity=true;
+ static double averageBulkVelocity;
+ static double averageBulkVelocity2;
+
 double BulletLocalResolution(double *x) {
   int idim;
 
@@ -33,7 +39,7 @@ double BulletLocalResolution(double *x) {
 
 //  return  ((fabs(x[0])<100.0)||(x[1]*x[1]+x[2]*x[2]<40.0*40.0)) ? 5.0 : 100.0;
 
-  return 0.1;
+  return 0.01;
 }
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace) {
@@ -83,8 +89,28 @@ double localParticleInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
   double res=0.0,ExternalNormal[3],BlockSurfaceArea,ModelParticlesInjectionRate;
   int nface;
 
+  double gamma=5.0/3.0;
+  static double M1=1.4,temp=2.93e2,n=1.0E20,M2,n2,temp2;
+
+  double cSon=sqrt(gamma*Kbol*temp/PIC::MolecularData::GetMass(spec));
+  printf("spec=%i cSon=%e gamma=%e mass=%e\n",spec,cSon,gamma,PIC::MolecularData::GetMass(spec));
+
+  static double v[3]={-M1*cSon,000.0,000.0};
+
+  M2=sqrt((pow(M1,2.0)*(gamma-1.0)+2.0)/(2.0*gamma*pow(M1,2.0)-(gamma-1.0)));
+  n2=(gamma+1)*pow(M1,2.0)/((gamma-1.0)*pow(M1,2.0)+2.0)*n;
+  temp2=(1+(gamma-1.0)/2.0*pow(M1,2.0))*(2.0*gamma/(gamma-1.0)*pow(M1,2.0)-1.0)/(pow(M1,2.0)*(2.0*gamma/(gamma-1.0)+(gamma-1.0)/2.0))*temp;
+
+  static double v2[3]={-M2*cSon,000.0,000.0};
+
+  printf("M1=%e v[0]=%e n1=%e temp=%e \n",M1,v[0],n,temp);
+  printf("M2=%e v2[0]=%e n2=%e temp2=%e \n",M2,v2[0],n2,temp2);
+
+  /*
+  //Mach 8
   static double v[3]={-1930.73,000.0,000.0},n=1.0E20,temp=2.0e2;
   static double v2[3]={-692.98,000.0,000.0},n2=2.786e20,temp2=temp*20.87;
+  */
 
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
@@ -111,16 +137,26 @@ bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
   double ExternalNormal[3],ModelParticlesInjectionRate;
   int nface;
 
-  static double vNA[3]={-1930.73,000.0,000.0},nNA=1.0E20,tempNA=2.0e2;
-  static double vNA2[3]={-692.98,000.0,000.0},nNA2=2.786e20,tempNA2=tempNA*20.87;
+  double gamma=5.0/3.0;
+  static double M1=1.4,temp=2.93e2,n=1.0E20,M2,n2,temp2;
+  
+  double cSon=sqrt(gamma*Kbol*temp/PIC::MolecularData::GetMass(0));
+ 
+  static double v[3]={-M1*cSon,000.0,000.0};
+
+  M2=sqrt((pow(M1,2.0)*(gamma-1.0)+2.0)/(2.0*gamma*pow(M1,2.0)-(gamma-1.0)));
+  n2=(gamma+1)*pow(M1,2.0)/((gamma-1.0)*pow(M1,2.0)+2.0)*n;
+  temp2=(1+(gamma-1.0)/2.0*pow(M1,2.0))*(2.0*gamma/(gamma-1.0)*pow(M1,2.0)-1.0)/(pow(M1,2.0)*(2.0*gamma/(gamma-1.0)+(gamma-1.0)/2.0))*temp;
+
+  static double v2[3]={-M2*cSon,000.0,000.0};
 
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
       startNode->GetExternalNormal(ExternalNormal,nface);
       if (ExternalNormal[0]>0) {
-	ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,0);
+	ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(n,temp,v,ExternalNormal,0);
       }else if (ExternalNormal[0]<0) {
-        ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA2,tempNA2,vNA2,ExternalNormal,0);
+        ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(n2,temp2,v2,ExternalNormal,0);
       }
 
       if (ModelParticlesInjectionRate>0.0) return true;
@@ -141,27 +177,88 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
 
   //  if (spec!=_O2_SPEC_) return 0; //inject only spec=0
 
-  static double vNA[3]={-1930.73,000.0,000.0},nNA=1.0E20,tempNA=2.0e2;
-  static double vNA2[3]={-692.98,000.0,000.0},nNA2=2.786e20,tempNA2=tempNA*20.87;
 
-  double v[3];
+  double gamma=5.0/3.0;
+  static double M1=1.4,temp=2.93e2,n=1.0E20,M2,n2,temp2;
 
+  double cSon=sqrt(gamma*Kbol*temp/PIC::MolecularData::GetMass(spec));
+
+  static double v[3]={-M1*cSon,000.0,000.0};
+
+  M2=sqrt((pow(M1,2.0)*(gamma-1.0)+2.0)/(2.0*gamma*pow(M1,2.0)-(gamma-1.0)));
+  n2=(gamma+1)*pow(M1,2.0)/((gamma-1.0)*pow(M1,2.0)+2.0)*n;
+  temp2=(1+(gamma-1.0)/2.0*pow(M1,2.0))*(2.0*gamma/(gamma-1.0)*pow(M1,2.0)-1.0)/(pow(M1,2.0)*(2.0*gamma/(gamma-1.0)+(gamma-1.0)/2.0))*temp;
+
+  static double v2[3]={-M2*cSon,000.0,000.0};
 
   double ModelParticlesInjectionRate;
+
+  double vel[3];
+
+  double beta,f,v_inc=0.0,vf=0.0,dv=0.01;
+  double ct=0;
+  double normal[3]={1.0,0.0,0.0},normal2[3]={-1.0,0.0,0.0}; 
+  /*
+  if (computeInjectedBulkVelocity==true) {
+        beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*temp));
+    while (v_inc<10.0*fabs(v[0])) {
+      f=4.0*Pi*pow(v_inc,2.0)*pow(beta/sqrt(Pi),3.0)*exp(-pow(beta,2.0)*pow(v_inc,2.0));
+      vf+=v_inc*f*dv;
+      v_inc+=dv;
+    }
+    averageBulkVelocity=vf;
+
+    v_inc=0;
+
+    beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*temp2));
+    while (v_inc<fabs(v2[0])) {
+      f=4.0*Pi*pow(v_inc,2.0)*pow(beta/sqrt(Pi),3.0)*exp(-pow(beta,2.0)*pow(v_inc,2.0));
+      vf+=v_inc*f*dv;
+      v_inc+=dv;
+    }
+    averageBulkVelocity2=vf;
+    
+    for (int i=0;i<10000;i++) {
+      PIC::Distribution::InjectMaxwellianDistribution(v,v,temp,normal,0);
+      if (v[0]+v[0]<=0) {
+	v_inc+=sqrt(v[0]*v[0]);
+	ct++;
+      }
+    }
+    averageBulkVelocity=v_inc/ct;
+
+    v_inc=0.0,ct=0.0;
+
+    for (int i=0;i<10000;i++) {
+      PIC::Distribution::InjectMaxwellianDistribution(v,v2,temp2,normal2,0);
+      if (v2[0]+v[0]>=0) {
+	v_inc+=sqrt(v[0]*v[0]);
+	ct++;
+      }
+    }
+    averageBulkVelocity2=v_inc/ct;
+
+    printf("averageBulkVelocity=%e averageBulkVelocity2=%e \n",averageBulkVelocity,averageBulkVelocity2);
+    computeInjectedBulkVelocity=false;
+    }*/
 
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     ParticleWeight=startNode->block->GetLocalParticleWeight(spec);
     LocalTimeStep=startNode->block->GetLocalTimeStep(spec);
 
+    if (updateTotalTime==true) {
+      totalTime+=LocalTimeStep;
+      updateTotalTime=false;
+    }
 
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
       startNode->GetExternalNormal(ExternalNormal,nface);
       TimeCounter=0.0;
 
       if (ExternalNormal[0]>0) {
-	ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,0);
+	ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(n,temp,v,ExternalNormal,0);
       }else if (ExternalNormal[0]<0) {
-        ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA2,tempNA2,vNA2,ExternalNormal,0);
+        ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(n2,temp2,v2,ExternalNormal,0);
       }
 
 
@@ -181,14 +278,14 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
 
           //generate particles' velocity
 	  if (ExternalNormal[0]>0) {
-	    //	    PIC::Distribution::InjectMaxwellianDistribution(v,vNA,tempNA,ExternalNormal,_O2_SPEC_,-1);
-	    PIC::Distribution::InjectMaxwellianDistribution(v,vNA,tempNA,ExternalNormal,0);
+	    //	    PIC::Distribution::InjectMaxwellianDistribution(vel,v,temp,ExternalNormal,_O2_SPEC_,-1);
+	    PIC::Distribution::InjectMaxwellianDistribution(vel,v,temp,ExternalNormal,0);
           }else if (ExternalNormal[0]<0) {
-	    PIC::Distribution::InjectMaxwellianDistribution(v,vNA2,tempNA2,ExternalNormal,0);
+	    PIC::Distribution::InjectMaxwellianDistribution(vel,v2,temp2,ExternalNormal,0);
           }
 
 	  PIC::ParticleBuffer::SetX(x,newParticleData);
-          PIC::ParticleBuffer::SetV(v,newParticleData);
+          PIC::ParticleBuffer::SetV(vel,newParticleData);
           PIC::ParticleBuffer::SetI(spec,newParticleData);
           PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
 
@@ -228,8 +325,8 @@ int main(int argc,char **argv) {
 
 
 
-  double xmin[3]={-0.25,-0.01,-0.01};
-  double xmax[3]={0.25,0.01,0.01};
+  double xmin[3]={-0.23,-0.0025,-0.0025};
+  double xmax[3]={0.23,0.0025,0.0025};
 
 
 
@@ -273,8 +370,8 @@ int main(int argc,char **argv) {
 
 
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=100000; //0; //00; //*10;
-  PIC::RequiredSampleLength=10; //00; //0; //0;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=20000; //0; //00; //*10;
+  PIC::RequiredSampleLength=1000; //00; //0; //0;
 
 
   PIC::Init_AfterParser ();
@@ -308,7 +405,8 @@ int main(int argc,char **argv) {
   }
 
 
-  for (long int niter=0;niter<100000001;niter++) {
+  for (long int niter=0;niter<50001;niter++) {
+    if (niter>0) updateTotalTime=true;
     PIC::TimeStep();
   }
 
