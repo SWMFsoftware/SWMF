@@ -372,10 +372,12 @@ contains
     real, allocatable :: Flux_VI3(:,:,:,:), Weight_IVI(:,:,:),&
          Flux_VI(:,:), FluxNew_VI(:,:), Cell_I(:), FluxCenter_VG(:,:)
     integer:: Minl, Maxl, MaxIJK
+
+    character(len=*), parameter:: NameSub = 'calc_face_flux'
     !--------------------------------------------------------------------------
 
     if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('calc_face_flux', DoTest, DoTestMe)
+       call set_oktest(NameSub, DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
     end if
@@ -1193,7 +1195,7 @@ contains
        if(IsNewBlockCurrent) b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlockFace)
        call get_face_curl(iDimFace, iFace, jFace, kFace, iBlockFace, &
             IsNewBlockCurrent, b_DG, Current_D)
-       Jx = Current_D(x_); Jy = Current_D(y_); Jz = Current_D(z_)
+       Jx = Current_D(1); Jy = Current_D(2); Jz = Current_D(3)
     end if
 
     ! Calculateing stress tensor for viscosity Visco_DDI
