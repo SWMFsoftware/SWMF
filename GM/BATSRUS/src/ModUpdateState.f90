@@ -17,7 +17,7 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModWaves, ONLY: nWave, WaveFirst_,WaveLast_, &
        UseWavePressure, UseWavePressureLtd, UseAlfvenWaves, DoAdvectWaves, &
        update_wave_group_advection
-  use ModResistivity,   ONLY: UseResistivity, &
+  use ModResistivity, ONLY: UseResistivity, UseResistiveFlux, &
        calc_resistivity_source
   use ModFaceValue, ONLY: UseFaceIntegral4
   use BATL_lib, ONLY: CellVolume_GB
@@ -55,10 +55,14 @@ subroutine update_states_MHD(iStage,iBlock)
      EnergyOld_CBI(:,:,:,iBlock,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)
   end if
 
-  ! Add Joule heating: dP/dt += (gamma-1)*eta*j**2
+  ! Add Joule heating: dPe/dt or dP/dt += (gamma-1)*eta*j**2
+  ! also dE/dt += eta*j**2 for semi-implicit scheme (UseResistiveFlux=F)
   ! and heat exchange between electrons and ions (mult-ion is not coded).
+
   if(.not.UseMultiIon .and. UseResistivity .and. &
-       (UseElectronPressure .or. UseNonConservative)) then
+       (UseElectronPressure .or. UseNonConservative .or. &
+       .not.UseResistiveFlux)) then
+
      call calc_resistivity_source(iBlock)   
      if(DoTestMe)write(*,*) NameSub, ' after add_resistive_source=', &
           State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
