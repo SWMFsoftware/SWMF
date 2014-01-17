@@ -195,53 +195,6 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
 
   double vel[3];
 
-  double beta,f,v_inc=0.0,vf=0.0,dv=0.01;
-  double ct=0;
-  double normal[3]={1.0,0.0,0.0},normal2[3]={-1.0,0.0,0.0}; 
-  /*
-  if (computeInjectedBulkVelocity==true) {
-        beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*temp));
-    while (v_inc<10.0*fabs(v[0])) {
-      f=4.0*Pi*pow(v_inc,2.0)*pow(beta/sqrt(Pi),3.0)*exp(-pow(beta,2.0)*pow(v_inc,2.0));
-      vf+=v_inc*f*dv;
-      v_inc+=dv;
-    }
-    averageBulkVelocity=vf;
-
-    v_inc=0;
-
-    beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*temp2));
-    while (v_inc<fabs(v2[0])) {
-      f=4.0*Pi*pow(v_inc,2.0)*pow(beta/sqrt(Pi),3.0)*exp(-pow(beta,2.0)*pow(v_inc,2.0));
-      vf+=v_inc*f*dv;
-      v_inc+=dv;
-    }
-    averageBulkVelocity2=vf;
-    
-    for (int i=0;i<10000;i++) {
-      PIC::Distribution::InjectMaxwellianDistribution(v,v,temp,normal,0);
-      if (v[0]+v[0]<=0) {
-	v_inc+=sqrt(v[0]*v[0]);
-	ct++;
-      }
-    }
-    averageBulkVelocity=v_inc/ct;
-
-    v_inc=0.0,ct=0.0;
-
-    for (int i=0;i<10000;i++) {
-      PIC::Distribution::InjectMaxwellianDistribution(v,v2,temp2,normal2,0);
-      if (v2[0]+v[0]>=0) {
-	v_inc+=sqrt(v[0]*v[0]);
-	ct++;
-      }
-    }
-    averageBulkVelocity2=v_inc/ct;
-
-    printf("averageBulkVelocity=%e averageBulkVelocity2=%e \n",averageBulkVelocity,averageBulkVelocity2);
-    computeInjectedBulkVelocity=false;
-    }*/
-
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     ParticleWeight=startNode->block->GetLocalParticleWeight(spec);
     LocalTimeStep=startNode->block->GetLocalTimeStep(spec);
@@ -370,7 +323,7 @@ int main(int argc,char **argv) {
 
 
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=20000; //0; //00; //*10;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=100000; //0; //00; //*10;
   PIC::RequiredSampleLength=1000; //00; //0; //0;
 
 
@@ -405,7 +358,7 @@ int main(int argc,char **argv) {
   }
 
 
-  for (long int niter=0;niter<50001;niter++) {
+  for (long int niter=0;niter<100001;niter++) {
     if (niter>0) updateTotalTime=true;
     PIC::TimeStep();
   }
