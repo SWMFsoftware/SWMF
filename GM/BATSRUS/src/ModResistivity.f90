@@ -1,7 +1,7 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!This code is a copyright protected software (c) 2002- University of Michigan
 module ModResistivity
 
   ! Resistivity related variables and methods
@@ -142,33 +142,35 @@ contains
          (3*cEps*(cTwoPi*cBoltzmann)**1.5) &
          *CoulombLogarithm
 
-    if(.not.allocated(Eta_GB))then
-       allocate(Eta_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(.not.allocated(Eta_GB)) &
+         allocate(Eta_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(TypeResistivity == 'constant')then
+       Eta_GB = Eta0
+    else
+       Eta_GB = 0.0
+    end if
 
-       if(TypeResistivity == 'constant')then
-          Eta_GB = Eta0
-       else
-          Eta_GB = 0.0
-       end if
+    if(UseSemiImplicit .and. TypeSemiImplicit == 'resistivity')then
+       ! The following will ensure that the explicit evaluation of the
+       ! resistive diffusion is switched off
+       UseResistiveFlux = .false.
 
-       if(UseSemiImplicit .and. TypeSemiImplicit == 'resistivity')then
-          ! The following will ensure that the explicit evaluation of the
-          ! resistive diffusion is switched off
-          UseResistiveFlux = .false.
+       if(.not.allocated(FluxImpl_VFD)) allocate( &
+            FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
+            Eta_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
 
-          allocate( &
-               FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
-               Eta_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
-       end if
+    end if
 
-       if(DoTestMe)then
-          write(*,*)NameSub, ': Si2NoEta = ',Si2NoEta
-          write(*,*)NameSub, ': Si2NoJ   = ',Si2No_V(UnitJ_)
-          write(*,*)NameSub, ': Eta0, Eta0Anom, EtaMaxAnom=', &
-               Eta0, Eta0Anom, EtaMaxAnom
-          write(*,*)NameSub, ': jCritInv = ', jCritInv
-       end if
-
+    if(DoTestMe)then
+       write(*,*)NameSub, ': DoResistiveFlux  = ', DoResistiveFlux
+       write(*,*)NameSub, ': UseResistiveFlux = ', UseResistiveFlux
+       write(*,*)NameSub, ': UseJouleHeating  = ', UseJouleHeating
+       write(*,*)NameSub, ': UseHeatExchange  = ', UseHeatExchange
+       write(*,*)NameSub, ': Si2NoEta = ',Si2NoEta
+       write(*,*)NameSub, ': Si2NoJ   = ',Si2No_V(UnitJ_)
+       write(*,*)NameSub, ': Eta0, Eta0Anom, EtaMaxAnom=', &
+            Eta0, Eta0Anom, EtaMaxAnom
+       write(*,*)NameSub, ': jCritInv = ', jCritInv
     end if
 
   end subroutine init_mod_resistivity
@@ -368,8 +370,8 @@ contains
     use ModGeometry,   ONLY: true_cell
     use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB
     use ModCurrent,    ONLY: get_current
-    use ModPhysics,    ONLY: gm1
-    use ModVarIndexes, ONLY: p_, Pe_, Ppar_, Bz_
+    use ModPhysics,    ONLY: Gm1, Inv_Gm1
+    use ModVarIndexes, ONLY: p_, Pe_, Ppar_, Bz_, Energy_
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          UseElectronPressure, UseAnisoPressure
 
@@ -397,6 +399,10 @@ contains
           ! the same amount of Joule heating applies on Ppar
           if(UseAnisoPressure) &
                Source_VC(Ppar_,i,j,k)  = Source_VC(Ppar_,i,j,k) + JouleHeating
+
+          if(.not.UseResistiveFlux) &
+               Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               + Inv_Gm1*JouleHeating
        end if
 
        ! rz-geometrical source terms
@@ -576,25 +582,22 @@ contains
           call get_face_curl(iDim, i, j, k, iBlock, IsNewBlock, StateImpl_VG, &
                Current_D)
 
-          if(nDim == 3)then
-             FluxImpl_VFD(BxImpl_,i,j,k,iDim) = &
-                  + Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(z_) &
-                  - Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(y_)
-          else
-             FluxImpl_VFD(BxImpl_,i,j,k,iDim) = &
-                  + Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(z_)
-          end if
+          if(nDim == 1) FluxImpl_VFD(BxImpl_,i,j,k,iDim) = 0.0
+          if(nDim == 2) FluxImpl_VFD(BxImpl_,i,j,k,iDim) = &
+               + Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(z_)
+          if(nDim == 3) FluxImpl_VFD(BxImpl_,i,j,k,iDim) = &
+               + Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(z_) &
+               - Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(y_)
 
-          if(nDim == 3)then
-             FluxImpl_VFD(ByImpl_,i,j,k,iDim) = &
-                  + Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(x_) &
-                  - Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(z_)
-          else
-             FluxImpl_VFD(ByImpl_,i,j,k,iDim) = &
-                  - Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(z_)
-          end if
-
-          FluxImpl_VFD(BzImpl_,i,j,k,iDim) = &
+          if(nDim < 3) FluxImpl_VFD(ByImpl_,i,j,k,iDim) = &
+               - Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(z_)
+          if(nDim == 3)FluxImpl_VFD(ByImpl_,i,j,k,iDim) = &
+               + Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(x_) &
+               - Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(z_)
+          
+          if(nDim == 1) FluxImpl_VFD(BzImpl_,i,j,k,iDim) = &
+               + Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(y_)
+          if(nDim > 1) FluxImpl_VFD(BzImpl_,i,j,k,iDim) = &
                + Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(y_) &
                - Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(x_)
 
@@ -604,7 +607,6 @@ contains
     ! Store the fluxes at resolution changes for restoring conservation
     call store_face_flux(iBlock, nVarSemi, FluxImpl_VFD, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
-
 
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
