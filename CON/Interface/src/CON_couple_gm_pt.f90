@@ -41,7 +41,7 @@ module CON_couple_gm_pt
 
   ! Router communicator info
   integer:: iCommGmPt, nProcGmPt, iProcGmPt, iProc0Gm, iProc0Pt, nProcCommon
-
+  
 contains
 
   !BOP =======================================================================
@@ -218,8 +218,8 @@ contains
             iDecompPt, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
 
        ! nDimGm could be checked against nDimPt, but only once
-       !call MPI_bcast(&
-       !     nDim, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
+       call MPI_bcast(&
+            nDim, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
     endif
 
     IsNewRoute = iDecompGm /= iDecompLastGm .or. iDecompLastPt /= iDecompPt
@@ -658,43 +658,44 @@ contains
        RETURN
     end if
 
-    !\
+
     ! if nProcSource/nProcTarget is larger and not an exact multiple of the 
     ! other, there is a discrepancy of dProc processors
-    !/
     if(nProcSource > nProcTarget)then
        dProc = MOD(nProcSource, nProcTarget)
     else
        dProc = MOD(nProcTarget, nProcSource)
     end if
 
-    if(is_proc(iCompTarget) .and. .not.(is_proc(iCompSource)))then
-       nCouple       = nProcSource / nProcTarget  ! number 
-       nCoupleOther  = nProcTarget / nProcSource
-       call MPI_Comm_rank(iComm, iProcLocal, iError)
-       iProcLocal = iProcLocal - nProcSource
-       nProc0Other = 0
-    elseif(is_proc(iCompSource))then
-       nCouple = nProcTarget / nProcSource
-       nCoupleOther   = nProcSource / nProcTarget
-       call MPI_Comm_rank(iComm, iProcLocal, iError)
-       nProc0Other = nProcSource
+    ! in the communicator iComm processor are ordered as follows
+    ! [ SOURCE | TARGET ]
+    ! find the local index of iProc on its component,
+    ! index of 0-processor of the other component,
+    ! # of procs to couple with: nCouple, 
+    ! # of procs other component is coupled with: nCoupleOther
+    if(is_proc(iCompSource))then
+       nCouple      = nProcTarget / nProcSource
+       nCoupleOther = nProcSource / nProcTarget
+       iProcLocal   = iProc
+       nProc0Other  = nProcSource
+    elseif(is_proc(iCompTarget))then
+       nCouple      = nProcSource / nProcTarget
+       nCoupleOther = nProcTarget / nProcSource
+       iProcLocal   = iProc - nProcSource
+       nProc0Other  = 0
     end if
 
+    ! account for discrepancy
     if(iProcLocal < dProc * (nCoupleOther+1))then
-       !\
-       ! account for discrepancy:: 
-       ! increase nCoupleOther and nCouple by 1
-       !/
        dProc = 0
        nCoupleOther = nCoupleOther + 1
-       nCouple      = nCouple + 1
-    else
-       ! change sign of dProc if nCouple==0
-       dProc = dProc * (2 * MIN(1,nCouple) - 1)
-       nCouple      = MAX(1, nCouple)
-       nCoupleOther = MAX(1, nCoupleOther)
+       nCouple = nCouple + 1
+    elseif(nCouple == 0)then
+       dProc =  - dProc
     end if
+    
+    nCouple      = MAX(1, nCouple)
+    nCoupleOther = MAX(1, nCoupleOther)
 
     allocate(iCoupleProc_I( nCouple))
 
@@ -849,9 +850,12 @@ contains
     integer:: iBuffer, iProc, iCouple, iCoupleBuffer 
     integer:: iProcSourceLocal, iProcTargetLocal
     integer:: iError
+    integer, allocatable:: iProcSourceLocal_P(:), iProcTargetLocal_P(:)
+    integer, allocatable:: iProcSourceUnion_P(:), iProcTargetUnion_P(:)
     integer, allocatable:: nPoint_PP(:,:), nPointRecv_P(:), nPointSend_P(:) 
     integer, allocatable:: iCoupleProc_P(:), nCouplePoint_P(:)
     character(len=*), parameter:: NameSub = 'set_data_transfer'
+    integer:: iTmp
     !----------------------------------------------------------------------
     nProcTarget    = n_proc(iCompTarget)
     nProcSource    = n_proc(iCompSource)
@@ -900,6 +904,15 @@ contains
     end if
 
     if(is_proc(iCompSource))then
+       allocate(iProcSourceUnion_P(0:nProcSource-1))
+       allocate(iProcTargetUnion_P(0:nProcTarget-1))
+       allocate(iProcSourceLocal_P(0:nProcSource+nProcTarget-1))
+       allocate(iProcTargetLocal_P(0:nProcSource+nProcTarget-1))
+       call get_rank_translation(&
+            iComm, iCompSource, iCompTarget, nProcSource, nProcTarget, &
+            iProcSourceLocal_P, iProcTargetLocal_P,                    &
+            iProcSourceUnion_P, iProcTargetUnion_P)
+
        ! nPoint_PP is number of points to sent from Source to Target
        allocate(nPoint_PP(0:nProcSource-1, 0:nProcTarget-1))
 
@@ -907,20 +920,19 @@ contains
        ! each proc on Source has only part of the info, store it into nPoint_PP
        nPoint_PP = 0
        iCouple = 1
+       iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
        iCoupleBuffer = nCouplePointSource_I(iCouple)
        do iBuffer = 1, nBufferSource
           if(iBuffer > iCoupleBuffer)then
              iCouple = iCouple + 1
              iCoupleBuffer = iCoupleBuffer + nCouplePointSource_I(iCouple)
-
              ! iCoupleProcSource_I(iCouple) is the index of target proc for
              ! union communicator that sent the request to this source processor. 
              ! iProcTargetLocal is the index of taget processor on the target component
-             call get_local_rank(iComm, iCompTarget, &
-                  iCoupleProcSource_I(iCouple), iProcTargetLocal)
+             iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
           end if
           ! iProcSource_I is the source processor index on source component
-          iProcSourceLocal = iProcSource_I(iBuffer)
+          iProcSourceLocal = iProcSourceLocal_P(iProcSource_I(iBuffer))
 
           ! Count this point in the communication matrix
           nPoint_PP(iProcSourceLocal,iProcTargetLocal) = &
@@ -959,9 +971,7 @@ contains
           nCoupleSource = nCoupleSource + 1
 
           ! Translate local rank iProcTargetLocal to union rank
-          call get_union_rank(iComm, iCompTarget, &
-               iProcTargetLocal, iCoupleProc_P(nCoupleSource-1))
-
+          iCoupleProc_P(nCOupleSource-1) = iProcTargetUnion_P(iProcTargetLocal)
           nCouplePoint_P(nCoupleSource-1) = nPointRecv_P(iProcTargetLocal)
        end do
 
@@ -971,7 +981,9 @@ contains
        iCoupleProcSource_I  = iCoupleProc_P(0:nCoupleSource-1)
        nCouplePointSource_I = nCouplePoint_P(0:nCoupleSource-1)
 
-       deallocate(iCoupleProc_P, nCouplePoint_P,nPointRecv_P)
+       deallocate(iCoupleProc_P, nCouplePoint_P, nPointRecv_P)
+       deallocate(iProcSourceLocal_P, iProcSourceUnion_P)
+       deallocate(iProcTargetLocal_P, iProcTargetUnion_P)
     end if
 
   end subroutine set_data_transfer
@@ -1115,7 +1127,7 @@ contains
     !/
     call MPI_waitall(nCoupleS + nCoupleR, iRequest_I, iStatus_II, iError)
     deallocate(iRequest_I, iStatus_II)
-
+    call MPI_Barrier(iComm, iError)
   end subroutine transfer_buffer_real
 
   !===========================================================================
@@ -1206,63 +1218,66 @@ contains
     !/
     call MPI_waitall(nCoupleS + nCoupleR, iRequest_I, iStatus_II, iError)
     deallocate(iRequest_I, iStatus_II)
-
   end subroutine transfer_buffer_int
 
   !===========================================================================
 
-  subroutine get_local_rank(iCommUnion, iComp, iProc, iProcLocal)
+  subroutine get_rank_translation(                                      &
+       iCommUnion, iCompSource, iCompTarget, nProcSource, nProcTarget,  &
+       iProcSourceLocal_I, iProcTargetLocal_I,                          &
+       iProcSourceUnion_I, iProcTargetUnion_I)
     ! for processor with rank iProc in the union communicator iCommUnion
     ! returns rank iProcLocal in the group associated with component iComp
-    integer, intent(in ) :: iCommUnion, iComp
-    integer, intent(in ) :: iProc
-    integer, intent(out) :: iProcLocal
+    integer,              intent(in) :: iCommUnion, iCompSource, iCompTarget
+    integer, intent(in) :: nProcSource, nProcTarget
+    integer, intent(out):: iProcSourceLocal_I(nProcSource+nProcTarget)
+    integer, intent(out):: iProcTargetLocal_I(nProcSource+nProcTarget)
+    integer, intent(out):: iProcSourceUnion_I(nProcSource)
+    integer, intent(out):: iProcTargetUnion_I(nProcTarget)
 
     integer:: iGroupUnion
-    integer:: iProc_I(1), iProcLocal_I(1)
+    integer:: iProc
+    integer, allocatable:: iProc_I(:)
     integer:: iError
     !----------------------------------------------------------------------
-    !\
     ! Create group associated with iCommUnion
     call MPI_Comm_Group(iCommUnion, iGroupUnion, iError)
-    !\
-    ! Translate rank
-    iProc_I = iProc
+
+    ! Translate ranks for Source Local to Union
+    allocate(iProc_I(nProcSource))
+    do iProc = 0, nProcSource-1
+       iProc_I(iProc+1) = iProc
+    end do
     call MPI_Group_translate_ranks(&
-         iGroupUnion, 1, iProc_I, i_group(iComp), iProcLocal_I, iError)
-    iProcLocal = iProcLocal_I(1)
-    !\
+         i_group(iCompSource), nProcSource, iProc_I, &
+         iGroupUnion, iProcSourceUnion_I, iError)
+    deallocate(iProc_I)
+
+    ! Translate ranks for Target Local to Union
+    allocate(iProc_I(nProcTarget))
+    do iProc = 0, nProcTarget-1
+       iProc_I(iProc+1) = iProc
+    end do
+    call MPI_Group_translate_ranks(&
+         i_group(iCompTarget), nProcTarget, iProc_I, &
+         iGroupUnion, iProcTargetUnion_I, iError)
+    deallocate(iProc_I)
+
+    ! Translate ranks Union to Local
+    allocate(iProc_I(nProcSource+nProcTarget))
+    do iProc = 0, nProcSource+nProcTarget-1
+       iProc_I(iProc+1) = iProc
+    end do
+    call MPI_Group_translate_ranks(&
+         iGroupUnion, nProcSource+nProcTarget, iProc_I, &
+         i_group(iCompSource), iProcSourceLocal_I, iError)
+    call MPI_Group_translate_ranks(&
+         iGroupUnion, nProcSource+nProcTarget, iProc_I, &
+         i_group(iCompTarget), iProcTargetLocal_I, iError)
+    deallocate(iProc_I)
+
     ! free union group
     call MPI_Group_free(iGroupUnion, iError)
-
-  end subroutine get_local_rank
-  !===========================================================================
-
-  subroutine get_union_rank(iCommUnion, iComp, iProcLocal, iProc)
-    ! for processor with rank iProc in the union communicator iCommUnion
-    ! returns rank iProcLocal in the group associated with component iComp
-    integer, intent(in ) :: iCommUnion, iComp
-    integer, intent(in ) :: iProcLocal
-    integer, intent(out) :: iProc
-
-
-    integer:: iGroupUnion
-    integer:: iProc_I(1), iProcLocal_I(1)
-    integer:: iError
-    !----------------------------------------------------------------------
-    !\
-    ! Create group associated with iCommUnion
-    call MPI_Comm_Group(iCommUnion, iGroupUnion, iError)
-    !\
-    ! Translate rank
-    iProcLocal_I = iProcLocal
-    call MPI_Group_translate_ranks(&
-         i_group(iComp), 1, iProcLocal_I, iGroupUnion, iProc_I, iError)
-    iProc = iProc_I(1)
-    !\
-    ! free union group
-    call MPI_Group_free(iGroupUnion, iError)
-
-  end subroutine get_union_rank
+  end subroutine get_rank_translation
 
 end module CON_couple_gm_pt
