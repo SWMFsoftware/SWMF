@@ -26,7 +26,7 @@ module ModUser
   !/
   real,              parameter :: VersionUserModule = 1.2
 ! added rotation of crustal magnetic field with time,
-! MHD model is now using MSO coordinate
+! MHD model can now use MSO coordinate if needed
   character (len=*), parameter :: NameUserModule = &
        'Mars 4 species MHD code, Yingjuan Ma'
 
@@ -144,10 +144,12 @@ module ModUser
   real, dimension(0:61,0:61) :: cmars, dmars
   integer :: NNm
   real :: mars_eps=1e-4
-  logical :: UseMarsB0 = .false.,USEMSO=.false.
+  logical :: UseMarsB0 = .false.,UseMso=.false.
 
+
+!!!RotAxisMso_D is the rotation axis in MSO coordinate
 !!!variable needed to convert from MSO to GEO
-!!!u,v,w are the rotation axis in MSO coordinate
+  real :: RotAxisMso_D(3)
   real :: u=0.0,v=0.0, w=1.0, uv, uvw, sint1, cost1, sint2, cost2 
 
   real :: rot = 1.0, thetilt = 0.0
@@ -227,16 +229,23 @@ contains
              close(15)
           endif
 
-       case("#USEMSO") !default is false
-          call read_var('USEMSO', USEMSO)
-          if(USEMSO) then
-             call read_var('u',u)
-             call read_var('w',v)
-             call read_var('w',w)
-             uv=sqrt(u*u+v*v)
+       case("#UseMso") !default is false
+          call read_var('UseMso', UseMso)
+          if(UseMso) then
+             call read_var('RotAxisMso_D(1)',RotAxisMso_D(1))
+             call read_var('RotAxisMso_D(2)',RotAxisMso_D(2))
+             call read_var('RotAxisMso_D(3)',RotAxisMso_D(3))
+
+             RotAxisMso_D = RotAxisMso_D/sqrt(sum(RotAxisMso_D**2))
+
+             u = RotAxisMso_D(1)
+             v = RotAxisMso_D(2)
+             w = RotAxisMso_D(3)
+
+             uv=sqrt(u**2+v**2)
              cost1=u/uv
              sint1=v/uv
-             uvw=sqrt(u*u*w*w+v*v)
+             uvw=sqrt((u*w)**2+v**2)
              cost2=w*u/uvw
              sint2=v/uvw
           end if
@@ -1459,7 +1468,7 @@ contains
     !-------------------------------------------------------------------------
     call timing_start('user_get_b0')
 
-    if(USEMSO)then
+    if(UseMso)then  !change location from MSO to GEO
 !       uv = sqrt (u*u+v*v)
 !       cost1 = u/ uv
 !       sint1 = v/ uv
@@ -1508,8 +1517,6 @@ contains
        delta=rot-Time_Simulation/RotPeriodSi*cTwoPi
     end If
     
-!    write(*,*)'RotPeriodSi=',RotPeriodSi
-
     theta=acos(Z0/rr)
     
     call MarsB0(R0,theta, phi+delta, bb)
@@ -1523,7 +1530,7 @@ contains
     B0(2) = bb(1)*sint*sinp+bb(2)*cost*sinp+bb(3)*cosp 
     B0(3) = bb(1)*cost-bb(2)*sint
     
-    if(USEMSO)then  !rotate around X axis
+    if(UseMso)then  !change from GEO to MSO
        B1(1) = B0(1)*cost2+B0(2)*sint2 
        B1(2) = -B0(1)*sint2+B0(2)*cost2 
        B1(3) = B0(3)
