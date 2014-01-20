@@ -49,6 +49,8 @@ def writeASCII_file(filename, datalines, *args, **kwargs):
                     f.write(line)
         except:
             f.write(datalines)
+
+        f.close()
     except:
         print func_name, "ERROR: unable to open [", filename, "]"
 
