@@ -649,8 +649,10 @@ contains
        allocate(iCoupleProcTarget_I(nCoupleTarget))
        allocate(iCoupleProcSource_I(nCoupleSource))
 
-       iCoupleProcTarget_I(nCoupleTarget) = iProc
-       iCoupleProcSource_I(nCoupleSource) = iProc
+       if(nCoupleSource*nCoupleTarget > 0)then
+          iCoupleProcTarget_I(nCoupleTarget) = iProc
+          iCoupleProcSource_I(nCoupleSource) = iProc
+       end if
 
        allocate(nCouplePointTarget_I(nCoupleTarget))
        allocate(nCouplePointSource_I(nCoupleSource))
@@ -919,25 +921,27 @@ contains
        ! build nPoint_PP
        ! each proc on Source has only part of the info, store it into nPoint_PP
        nPoint_PP = 0
-       iCouple = 1
-       iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
-       iCoupleBuffer = nCouplePointSource_I(iCouple)
-       do iBuffer = 1, nBufferSource
-          if(iBuffer > iCoupleBuffer)then
-             iCouple = iCouple + 1
-             iCoupleBuffer = iCoupleBuffer + nCouplePointSource_I(iCouple)
-             ! iCoupleProcSource_I(iCouple) is the index of target proc for
-             ! union communicator that sent the request to this source processor. 
-             ! iProcTargetLocal is the index of taget processor on the target component
-             iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
-          end if
-          ! iProcSource_I is the source processor index on source component
-          iProcSourceLocal = iProcSourceLocal_P(iProcSource_I(iBuffer))
-
-          ! Count this point in the communication matrix
-          nPoint_PP(iProcSourceLocal,iProcTargetLocal) = &
-               nPoint_PP(iProcSourceLocal,iProcTargetLocal) + 1
-       end do
+       if(nCoupleSource > 0)then
+          iCouple = 1
+          iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
+          iCoupleBuffer = nCouplePointSource_I(iCouple)
+          do iBuffer = 1, nBufferSource
+             if(iBuffer > iCoupleBuffer)then
+                iCouple = iCouple + 1
+                iCoupleBuffer = iCoupleBuffer + nCouplePointSource_I(iCouple)
+                ! iCoupleProcSource_I(iCouple) is the index of target proc for
+                ! union communicator that sent the request to this source processor. 
+                ! iProcTargetLocal is the index of taget processor on the target component
+                iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
+             end if
+             ! iProcSource_I is the source processor index on source component
+             iProcSourceLocal = iProcSourceLocal_P(iProcSource_I(iBuffer))
+             
+             ! Count this point in the communication matrix
+             nPoint_PP(iProcSourceLocal,iProcTargetLocal) = &
+                  nPoint_PP(iProcSourceLocal,iProcTargetLocal) + 1
+          end do
+       end if
 
        deallocate(iCoupleProcSource_I, nCouplePointSource_I)
 
@@ -1127,7 +1131,6 @@ contains
     !/
     call MPI_waitall(nCoupleS + nCoupleR, iRequest_I, iStatus_II, iError)
     deallocate(iRequest_I, iStatus_II)
-    call MPI_Barrier(iComm, iError)
   end subroutine transfer_buffer_real
 
   !===========================================================================
@@ -1228,7 +1231,7 @@ contains
        iProcSourceUnion_I, iProcTargetUnion_I)
     ! for processor with rank iProc in the union communicator iCommUnion
     ! returns rank iProcLocal in the group associated with component iComp
-    integer,              intent(in) :: iCommUnion, iCompSource, iCompTarget
+    integer, intent(in) :: iCommUnion, iCompSource, iCompTarget
     integer, intent(in) :: nProcSource, nProcTarget
     integer, intent(out):: iProcSourceLocal_I(nProcSource+nProcTarget)
     integer, intent(out):: iProcTargetLocal_I(nProcSource+nProcTarget)
