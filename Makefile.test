@@ -1035,3 +1035,78 @@ test_ramscb_check:
 		${IMDIR}/output/test9/IE.log \
 		> test_ramscb_ie.diff)
 	ls -l test_ramscb*.diff
+
+test_pic:
+	$(MAKE) test_pic_compile
+	$(MAKE) test_pic_rundir
+	$(MAKE) test_pic_run
+	$(MAKE) test_pic_check
+	$(MAKE) test_pic_2step_param
+	$(MAKE) test_pic_2step_run
+	$(MAKE) test_pic_2step_check
+	$(MAKE) test_pic_restart_setup
+	$(MAKE) test_pic_restart_run
+	$(MAKE) test_pic_restart_check
+
+test_pic_compile:
+	./Config.pl -v=Empty,GM/BATSRUS 
+	./Config.pl -g=GM:8,8,1,1024,1024 -o=GM:u=Waves,e=MhdAnisoP
+	$(MAKE) SWMF PIDL  
+	mkdir -p PC/
+	cd PC; cvs co IPIC3D; cd IPIC3D; $(MAKE) test_couple_compile
+	
+test_pic_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR}
+	cd ${TESTDIR}; ln -s ../PC/IPIC3D/IPIC3D.exe ./
+	cp Param/PC/PARAM.in.start_4step  ${TESTDIR}/PARAM.in
+	cp Param/PC/IPIC.in.start_4step  ${TESTDIR}/IPIC.in
+	cp Param/PC/LAYOUT.in  ${TESTDIR}/LAYOUT.in
+
+test_pic_run:
+	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null &
+	cd ${TESTDIR}; mpirun -n 4 ./IPIC3D.exe ./IPIC.in 
+	sleep 5
+	cd ${TESTDIR}; ./PostProc.pl 4step
+
+test_pic_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+		${TESTDIR}/4step/GM/z=0_ipic3d_n00000004.out \
+		 Param/PC/z=0_ipic3d_n00000004.out.ref \
+		> test_pic_4step.diff)
+
+test_pic_2step_param:
+	cp Param/PC/PARAM.in.start_2step  ${TESTDIR}/PARAM.in
+	cp Param/PC/IPIC.in.start_2step  ${TESTDIR}/IPIC.in
+
+test_pic_2step_run:
+	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null &
+	cd ${TESTDIR}; mpirun -n 4 ./IPIC3D.exe ./IPIC.in 
+	sleep 5
+	cd ${TESTDIR}; ./PostProc.pl 2step
+
+test_pic_2step_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+		${TESTDIR}/2step/GM/z=0_ipic3d_n00000002.out \
+		${TESTDIR}/4step/GM/z=0_ipic3d_n00000002.out \
+		> test_pic_2step.diff)
+
+test_pic_restart_setup:
+	cd ${TESTDIR}; ./Restart.pl -i -v 2step/RESTART
+	mkdir -p ${TESTDIR}/RESTART
+	cp ${TESTDIR}/2step/GM/restart*hdf ${TESTDIR}/RESTART/
+	cp ${TESTDIR}/2step/GM/settings.hdf ${TESTDIR}/RESTART/
+	cp Param/PC/PARAM.in.restart_2step  ${TESTDIR}/PARAM.in
+	cp Param/PC/IPIC.in.restart_2step  ${TESTDIR}/IPIC.in
+
+test_pic_restart_run:
+	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null &
+	cd ${TESTDIR}; mpirun -n 4 ./IPIC3D.exe restart ./IPIC.in 
+	sleep 5
+	cd ${TESTDIR}; ./PostProc.pl 2restartstep
+
+test_pic_restart_check:
+	diff ${TESTDIR}/4step/GM/z=0_ipic3d_n00000004.out \
+		${TESTDIR}/2restartstep/GM/z=0_ipic3d_n00000004.out \
+		> test_pic_restart.diff
+

@@ -1,0 +1,104 @@
+Begin session: 1
+#ECHO
+T                       DoEcho
+
+#INCLUDE
+RESTART.in
+
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#INCLUDE
+GM/restartIN/restart.H
+
+#NORMALIZATION
+NONE
+
+#USERMODULE
+Waves and GEM, Yingjuan Ma
+ 1.30                  VersionUserModule
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+640/500			DtFixed
+
+#PIC
+T                       UsePic
+2                       nGhostPic
+0                       nOverlapPic
+
+#PICUNIT
+ 1.0                    xUnitPicSi
+ 1.0                    uUnitPicSi
+
+#PICREGION
+1                       nPicRegion
+-80/3              	xMinCut
+ 80/3               	xMaxCut
+-80/4              	yMinCut
+ 80/4              	yMaxCut
+1.25/3			DxPic
+1.25/3			DyPic
+
+#OUTERBOUNDARY
+periodic                TypeBcEast
+periodic                TypeBcWest
+periodic                TypeBcSouth
+periodic                TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+HALLRESISTIVITY
+T			UseHallResistFlux
+1.0			HallFactor
+0.0			HallCmaxFactor
+
+#TEST
+init_hall_resist	TestString
+
+#DIVBSOURCE
+F			UseB0Source
+
+#SCHEME
+2		nOrder
+Rusanov		TypeFlux
+mc		TypeLimiter
+1.5		BetaLimiter
+
+RK
+3		nStage
+0.8		CflExpl
+
+#TIMESTEPPING
+2                       nStage
+0.8                     CflExpl
+
+#SAVERESTART
+T			DoSaveRestart
+2
+-1
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#SAVEPLOT
+1
+z=0 mhd idl             StringPlot
+1			DnOutput
+-0.05			DtOutput
+0.			DxOutput
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+2			MaxIteration
+640.0			tSimulationMax
+
+End session: 1
+#END ############################################################

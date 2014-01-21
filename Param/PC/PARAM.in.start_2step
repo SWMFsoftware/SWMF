@@ -1,0 +1,205 @@
+Begin session: 1
+
+#ECHO
+T                       DoEcho
+
+#DESCRIPTION
+Fast magnetosonic wave test with anisotropic MHD			StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#USERMODULE
+Waves and GEM, Yingjuan Ma
+ 1.30                  VersionUserModule
+
+#CHECKGRIDSIZE
+       8                              nI
+       8                              nJ
+       1                              nK
+     100                     MinBlockALL
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#UNIFORMSTATE
+1.0			Rho
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.04			By
+0.0			Bz
+4.5e-4			Ppar
+4.5e-4			p
+
+rho   = 1
+By    = 0.04
+cA    = By/sqrt(rho)   = 0.04
+cS    = sqrt(2*p/rho)  = 0.03
+cF    = sqrt(cA^2+cS^2)= 0.05
+lambda= 32
+t     = lambda/(cF) = 640.0
+
+p = pe = 2.25e-4
+vth   = sqrt(p/rho) = 0.015
+me = mi/25
+vthe  = 5*vth       = 0.075 
+dx = 0.4
+dtmax = dx/vthe     = 5.333
+dt    = 0.2*dtmax   = 1.066
+
+#USERINPUTBEGIN ----------------
+
+#WAVE
+1			Rho_
+1000.0			Width
+0.1			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+2			Ux_
+1000.0			Width
+0.005			Amplitude (rho1/rho0)*cF
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+6			By_
+1000.0			Width
+0.004			Amplitude (rho1/rho0)*b0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+8			Ppar_
+10000.0			Width
+4.5e-5			Amplitude (rho1/rho0)*pPar0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+9			p_
+10000.0			Width
+7.5e-5			Amplitude (rho1/rho0)*5/3*p0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#USERINPUTEND   ----------------
+
+#SHOCKPOSITION
+0.0			ShockPosition
+4/3			ShockSlope
+
+#GRID
+32                    	nRootBlockX
+24                     	nRootBlockY
+1                     	nRootBlockZ
+-160/3                  xMin
+ 160/3  		xMax
+-160/4                 	yMin
+ 160/4                 	yMax
+-0.5                  	zMin
+ 0.5                  	zMax
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+640/500			DtFixed
+
+#PIC
+T                       UsePic
+2                       nGhostPic
+0                       nOverlapPic
+
+#PICUNIT
+ 1.0                    xUnitPicSi
+ 1.0                    uUnitPicSi
+
+#PICREGION
+1                       nPicRegion
+-80/3              	xMinCut
+ 80/3               	xMaxCut
+-80/4              	yMinCut
+ 80/4              	yMaxCut
+1.25/3			DxPic
+1.25/3			DyPic
+
+#OUTERBOUNDARY
+periodic                TypeBcEast
+periodic                TypeBcWest
+periodic                TypeBcSouth
+periodic                TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+HALLRESISTIVITY
+T			UseHallResistFlux
+1.0			HallFactor
+0.0			HallCmaxFactor
+
+#TEST
+init_hall_resist	TestString
+
+#DIVBSOURCE
+F			UseB0Source
+
+#SCHEME
+2		nOrder
+Rusanov		TypeFlux
+mc		TypeLimiter
+1.5		BetaLimiter
+
+RK
+3		nStage
+0.8		CflExpl
+
+#TIMESTEPPING
+2                       nStage
+0.8                     CflExpl
+
+#SAVERESTART
+T			DoSaveRestart
+2
+-1
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1
+z=0 mhd idl             StringPlot
+1			DnOutput
+-0.05			DtOutput
+0.			DxOutput
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+2			MaxIteration
+-1.			tSimulationMax
+
+End session: 1
+#END ############################################################
