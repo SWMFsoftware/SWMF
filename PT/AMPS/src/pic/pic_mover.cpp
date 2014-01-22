@@ -2112,7 +2112,7 @@ exit(__LINE__,__FILE__,"not implemented");
            if (cv>0.0) {
              dt=-cx/cv;
 
-             if ((nface==0)||(dt<dtIntersection)) {
+             if ((dtIntersection<0.0)||(dt<dtIntersection)) {
                double cE0=0.0,cE1=0.0;
 
                for (idim=0;idim<3;idim++) {
