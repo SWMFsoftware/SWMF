@@ -131,23 +131,22 @@ subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
 end subroutine PT_get_grid_info
 !==============================================================================
-subroutine PT_put_from_gm(UseData, &
+subroutine PT_put_from_gm( &
      NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
   use CON_coupler, ONLY: i_proc, PT_, n_proc
 
   implicit none
 
-  logical,          intent(in)   :: UseData ! true when data is transferred
+!  logical,          intent(in)   :: UseData ! true when data is transferred
                                             ! false if positions are asked
   character(len=*), intent(inout):: NameVar ! List of variables
   integer,          intent(inout):: nVar    ! Number of variables in Data_VI
   integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
-
   real, pointer:: Pos_DI(:,:)               ! Position vectors
 
-  real,    intent(in), optional:: Data_VI(nVar,nPoint)! Recv data array
-  integer, intent(in), optional:: iPoint_I(nPoint)    ! Order of data
+  real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+  integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
 
   integer:: iPoint, i, iProc, nProc
 
@@ -160,7 +159,7 @@ subroutine PT_put_from_gm(UseData, &
   iProc = i_proc(PT_)
   nProc = n_proc(PT_)
 
-  if(.not.UseData)then
+  if(.not. present(Data_VI))then
      ! Set variable names
      NameVar = 'rho ux uy uz bx by bz p'
      ! Set number of variables needed
