@@ -90,12 +90,12 @@ contains
 
 
     interface
-       subroutine PT_put_from_gm(UseData, &
+       subroutine PT_put_from_gm( &
             NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
          implicit none
 
-         logical,          intent(in)   :: UseData ! true when data is transferred
+!         logical,          intent(in)   :: UseData ! true when data is transferred
          ! false if positions are asked
          character(len=*), intent(inout):: NameVar ! List of variables
          integer,          intent(inout):: nVar    ! Number of variables in Data_VI
@@ -103,7 +103,7 @@ contains
 
          real, pointer:: Pos_DI(:,:)               ! Position vectors
 
-         real,    intent(in), optional:: Data_VI(nVar,nPoint)! Recv data array
+         real,    intent(in), optional:: Data_VI(:,:)! Recv data array
          integer, intent(in), optional:: iPoint_I(nPoint)    ! Order of data
        end subroutine PT_put_from_gm
        subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
@@ -142,6 +142,9 @@ contains
 
     ! Number of local points for PT and GM cores
     integer:: nPointPt = 0, nPointGm = 0
+    
+    ! Number of data points found on GM component
+    integer:: nData = 0
 
     ! Number of points that belong to a given processor of the OTHER component
     integer, allocatable, save:: nPointGm_P(:), nPointPt_P(:)
@@ -230,10 +233,10 @@ contains
     if(IsNewRoute)then
        nPointPt = 0
        nPointGm = 0
-
+       nData    = 0
        ! Get positions where info is needed from PT. PT will allocate array.
        if(is_proc(PT_))then
-          call PT_put_from_gm(.false., NameVar, nVar, nPointPt, PosPt_DI)
+          call PT_put_from_gm(NameVar, nVar, nPointPt, PosPt_DI)
        else
           nPointPt = 0
           allocate(PosPt_DI(nDim,0))
@@ -340,7 +343,6 @@ contains
                nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I, &
                nCouplePt, iCoupleProcPt_I, nCouplePointPt_I)
 
-          allocate(PosSortPt_DI(nDim,nPointPt))
 
           if(is_proc(PT_))then
              ! Order points according to the owner processor indexes
@@ -349,12 +351,17 @@ contains
              call get_transfer_buffer_order(GM_, PT_,           &
                   nPointPt, iProcPt_I,                          &
                   nCouplePt, iCoupleProcPt_I, nCouplePointPt_I, &
-                  iPointPt_I)
+                  iPointPt_I, nData)
+
+             allocate(PosSortPt_DI(nDim, nData))
 
              ! Rearrange coordinate array according to processor order
              do iPoint = 1, nPointPt
+                if(iPointPt_I(iPoint) < 0) CYCLE
                 PosSortPt_DI(:,iPointPt_I(iPoint)) = PosPt_DI(:,iPoint)
              end do
+          else
+             allocate(PosSortPt_DI(nDim, nData))
           end if
 
           deallocate(iProcPt_I, PosPt_DI, iProcGm_I)
@@ -368,7 +375,7 @@ contains
                nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,           &
                nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,           &
                nDim,                                                   &
-               nPointPt, PosSortPt_DI,              &
+               nData,    PosSortPt_DI,              &
                nPointGm, PosGm_DI)
 
           deallocate(PosSortPt_DI)
@@ -382,7 +389,7 @@ contains
          NameVar, nVar, nDim, nPointGm, PosGm_DI, DataGm_VI)
 
     ! Send data from GM to PT into DataPt_VI
-    allocate(DataPt_VI(nVar,nPointPt))
+    allocate(DataPt_VI(nVar, nData))
     if(IsSameLayout)then
        call transfer_buffer(iCommGmPt, nProcGmPt, iProcGmPt, nVar, &
             nPointGm, nPointGm_P, DataGm_VI, &
@@ -398,7 +405,7 @@ contains
     deallocate(DataGm_VI)
 
     ! Give the data to PT
-    if(is_proc(PT_)) call PT_put_from_gm(.true., &
+    if(is_proc(PT_)) call PT_put_from_gm( &
          NameVar, nVar, nPointPt, PosPt_DI, DataPt_VI, iPointPt_I)
 
     deallocate(DataPt_VI)
@@ -878,6 +885,7 @@ contains
        ! count points received from each source processors
        do iBuffer = 1, nBufferTarget
           iProc = iProcTarget_I(iBuffer)
+          if(iProc < 0) CYCLE
           nCouplePoint_P(iProc) = nCouplePoint_P(iProc) + 1
        end do
 
@@ -926,6 +934,8 @@ contains
           iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
           iCoupleBuffer = nCouplePointSource_I(iCouple)
           do iBuffer = 1, nBufferSource
+             iProc = iProcSource_I(iBuffer)
+             if(iProc < 0) CYCLE
              if(iBuffer > iCoupleBuffer)then
                 iCouple = iCouple + 1
                 iCoupleBuffer = iCoupleBuffer + nCouplePointSource_I(iCouple)
@@ -935,7 +945,7 @@ contains
                 iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
              end if
              ! iProcSource_I is the source processor index on source component
-             iProcSourceLocal = iProcSourceLocal_P(iProcSource_I(iBuffer))
+             iProcSourceLocal = iProcSourceLocal_P(iProc)
              
              ! Count this point in the communication matrix
              nPoint_PP(iProcSourceLocal,iProcTargetLocal) = &
@@ -998,22 +1008,25 @@ contains
        iCompSource, iCompTarget, &
        nBuffer, iProc_I, &
        nCouple, iCoupleProc_I, nCouplePoint_I,&
-       iBuffer_I)
+       iBuffer_I, nData)
     ! iBuffer_I returns the order of the points with processor index
     ! corresponding to iCoupleProc_I
-    integer, intent(in)::  iCompSource, iCompTarget ! send, recv components
-    integer, intent(in)::  nBuffer    ! number of points
-    integer, intent(in)::  iProc_I(nBuffer)  ! proc index for each point
-    integer, intent(in)::  nCouple
-    integer, intent(in)::  iCoupleProc_I(nCouple), nCouplePoint_I(nCouple)
+    ! nData is the number of points found on Source
+    integer, intent(in) :: iCompSource, iCompTarget ! send, recv components
+    integer, intent(in) :: nBuffer    ! number of points
+    integer, intent(in) :: iProc_I(nBuffer)  ! proc index for each point
+    integer, intent(in) :: nCouple
+    integer, intent(in) :: iCoupleProc_I(nCouple), nCouplePoint_I(nCouple)
     integer, intent(out):: iBuffer_I(nBuffer)! index for reordering
+    integer, intent(out):: nData ! number of points found on Source
 
-    integer:: iBuffer, iCouple, iProc, nProc
+    integer:: iBuffer, iCouple, iProc, nProc, nPointNotFound
     integer, allocatable:: iOrder_I(:)
     integer, allocatable:: iCoupleProcInv_P(:)
     character(len=*), parameter:: NameSub = 'get_transfer_buffer_order'
     !----------------------------------------------------------------------
     nProc = n_proc(iCompSource)
+    nData = nBuffer
     ! Set starting point of chunks in the reordered buffer
     allocate(iOrder_I(nCouple))
     iOrder_I(1) = 1
@@ -1032,11 +1045,17 @@ contains
     do iBuffer = 1, nBuffer
        ! This buffer belongs to iProc
        iProc = iProc_I(iBuffer)
-       ! It will occupy iBuffer_I position
-       iBuffer_I(iBuffer) = iOrder_I(iCoupleProcInv_P(iProc))
-       ! Jump to next position
-       iOrder_I(iCoupleProcInv_P(iProc)) = &
-            iOrder_I(iCoupleProcInv_P(iProc)) + 1
+       if(iProc < 0)then
+          ! the point hasn't been found
+          iBuffer_I(iBuffer) = - 1
+          nData = nData - 1
+       else
+          ! It will occupy iBuffer_I position
+          iBuffer_I(iBuffer) = iOrder_I(iCoupleProcInv_P(iProc))
+          ! Jump to next position
+          iOrder_I(iCoupleProcInv_P(iProc)) = &
+               iOrder_I(iCoupleProcInv_P(iProc)) + 1
+       end if
     end do
 
     deallocate(iCoupleProcInv_P, iOrder_I)
