@@ -19,6 +19,77 @@ from matplotlib.ticker import FormatStrFormatter, MultipleLocator
 import matplotlib.pyplot as plt
 #import pylab as P <-- uncomment this when distribution lines are added
 
+def add_stat_to_line(line, x_data, sigfig=2, moments=4, quartiles=3, modes=True,
+                     *args, **kwargs):
+    '''
+    Adds the specified statistics in a text box to a plot
+
+    Input: line      = string of characters or empty string to add statistics to
+           x_data    = list or numpy array containing x-axis data
+           sigfig    = Number of significant figures to include
+           moments   = Include moments (mean, standard deviation, skew,
+                       kurtosis) of the distribution.  The number corresponds
+                       to the maximum moment that will be included.  3, for
+                       example, will include the mean, standard deviation, and
+                       skew. (default=4)
+           quartiles = Include quartiles (1st, 2nd=median, 3rd). 1=median only,
+                       2=1st and 3rd only, 3=all (default=3)
+           modes     = Include mode(s) (default=True)
+    '''
+    st = list()
+
+    # Add moments
+    if moments >= 1:
+        mean = np.mean(x_data)
+        line = "{:s} {:g}".format(line, round(mean, sigfig))
+        st.append(mean)
+    if moments >= 2:
+        std = np.std(x_data)
+        line = "{:s} {:g}".format(line, round(std, sigfig))
+        st.append(std)
+    if moments >= 3:
+        skew = stats.skew(x_data)
+        line="{:s} {:g}".format(line, round(skew, sigfig))
+        st.append(skew)
+    if moments >= 4:
+        kurt = stats.kurtosis(x_data)
+        line = "{:s} {:g}".format(line, round(kurt, sigfig))
+        st.append(kurt)
+    # Add quartiles
+    if quartiles == 1:
+        med = np.median(x_data)
+        line = "{:s} {:g}".format(line, round(med, sigfig))
+        st.append(med)
+    elif quartiles == 2:
+        q = stats.mstats.mquantiles(x_data, prob=[.25, .75])
+        line = "{:s} {:g} {:g}".format(line, round(q[0], sigfig),
+                                       round(q[1], sigfig))
+        st.append(q[0])
+        st.append(q[1])
+    elif quartiles == 3:
+        q = stats.mstats.mquantiles(x_data, prob=[.25, .5, .75])
+        line = "{:s} {:g} {:g} {:g}".format(line, round(q[0], sigfig),
+                                            round(q[1], sigfig),
+                                            round(q[2], sigfig))
+        st.append(q[0])
+        st.append(q[1])
+        st.append(q[2])
+
+    # Add mode(s)
+    if modes:
+        m, n = stats.mode(x_data)
+        n = int(n)
+        if n > 0:
+            i = 1
+            line = "{:s} {:d} {:g}".format(line, n, round(m[0], sigfig))
+            st.append(m[0])
+            while i < n:
+                line = "{:s} {:g}".format(line, round(m[i], sigfig))
+                st.append(m[i])
+                i += 1
+
+    return(line, st)
+
 def add_stat_box(ax, x_data, x_units, moments=4, quartiles=3, modes=True,
                  loc="ir",  *args, **kwargs):
     '''
@@ -40,24 +111,44 @@ def add_stat_box(ax, x_data, x_units, moments=4, quartiles=3, modes=True,
                        may be r=right, l=left, b=bottom, t=top. (default="ir")
     '''
     stat_text = ""
+    st = list()
 
     # Add moments
     if moments >= 1:
-        stat_text = "{:s}$\mu$ = {:g} ${:s}$\n".format(stat_text, round(np.mean(x_data), 2), x_units)
+        mean = np.mean(x_data)
+        stat_text = "{:s}$\mu$ = {:g} ${:s}$\n".format(stat_text,
+                                                       round(mean, 2), x_units)
+        st.append(mean)
     if moments >= 2:
-        stat_text = "{:s}$\sigma$ = {:g} ${:s}$\n".format(stat_text, round(np.std(x_data), 2), x_units)
+        std = np.std(x_data)
+        stat_text = "{:s}$\sigma$ = {:g} ${:s}$\n".format(stat_text,
+                                                          round(std,2), x_units)
+        st.append(std)
     if moments >= 3:
-        stat_text="{:s}$\gamma$ = {:g}\n".format(stat_text,round(stats.skew(x_data), 2))
+        skew = stats.skew(x_data)
+        stat_text="{:s}$\gamma$ = {:g}\n".format(stat_text, round(skew, 2))
+        st.append(skew)
     if moments >= 4:
-        stat_text="{:s}$\kappa$ = {:g}\n".format(stat_text,
-                                                 round(stats.kurtosis(x_data), 2))
+        kurt = stats.kurtosis(x_data)
+        stat_text="{:s}$\kappa$ = {:g}\n".format(stat_text, round(kurt, 2))
+        st.append(kurt)
     # Add quartiles
     if quartiles == 1:
-        stat_text="{:s}$q_2$ = {:g} ${:s}$\n".format(stat_text, round(np.median(x_data), 2), x_units)
+        med = np.median(x_data)
+        stat_text="{:s}$q_2$ = {:g} ${:s}$\n".format(stat_text, round(med, 2),
+                                                     x_units)
+        st.append(med)
     elif quartiles == 2:
-        stat_text = "{:s}$q_1$ = {:g} ${:s}$\n$q_3$ = {:g} ${:s}$\n".format(stat_text, *reduce(op.add, [[round(val, 2), x_units] for val in stats.mstats.mquantiles(x_data, prob=[.25, .75])]))
+        q = stats.mstats.mquantiles(x_data, prob=[.25, .75])
+        stat_text = "{:s}$q_1$ = {:g} ${:s}$\n$q_3$ = {:g} ${:s}$\n".format(stat_text, *reduce(op.add, [[round(val, 2), x_units] for val in q]))
+        st.append(q[0])
+        st.append(q[1])
     elif quartiles == 3:
-        stat_text = "{:s}$q_1$ = {:g} ${:s}$\n$q_2$ = {:g} ${:s}$\n$q_3$ = {:g} ${:s}$\n".format(stat_text, *reduce(op.add, [[round(val, 2), x_units] for val in stats.mstats.mquantiles(x_data, prob=[.25, .5, .75])]))
+        q = stats.mstats.mquantiles(x_data, prob=[.25, .5, .75])
+        stat_text = "{:s}$q_1$ = {:g} ${:s}$\n$q_2$ = {:g} ${:s}$\n$q_3$ = {:g} ${:s}$\n".format(stat_text, *reduce(op.add, [[round(val, 2), x_units] for val in q]))
+        st.append(q[0])
+        st.append(q[1])
+        st.append(q[2])
 
     # Add mode(s)
     if modes:
@@ -66,9 +157,11 @@ def add_stat_box(ax, x_data, x_units, moments=4, quartiles=3, modes=True,
         if n > 0:
             i = 1
             stat_text = "{:s}$n_{{modes}}$ = {:d}\nmodes = {:g} ${:s}$".format(stat_text, n, round(m[0], 2), x_units)
+            st.append(m[0])
             while i < n:
                 stat_text = "{:s}, {:g} ${:s}$".format(stat_text,
                                                        round(m[i], 2), x_units)
+                st.append(m[i])
                 i += 1
             stat_text = "{:s}\n".format(stat_text)
 
@@ -107,7 +200,7 @@ def add_stat_box(ax, x_data, x_units, moments=4, quartiles=3, modes=True,
 
     ax.text(xloc, yloc, stat_text, horizontalalignment=ha, verticalalignment=va,
             transform=ax.transAxes)
-    return(stat_text)
+    return(stat_text, st)
 
 def plot_hist_w_stats(ax, x_data, x_name, x_units, res=50, norm=1.0,
                       weights=None, cum=False, htype="bar", align="mid",
@@ -229,10 +322,9 @@ def plot_hist_w_stats(ax, x_data, x_name, x_units, res=50, norm=1.0,
         title = ax.set_title(title, x=xloc, y=yloc, size='medium', rotation=rot)
  
     # Add the statistics, if desired
-    st = add_stat_box(ax, x_data, x_units, moments=moments, quartiles=quartiles,
-                      modes=modes, loc=sloc)
-    return(st)
-
+    s, st = add_stat_box(ax, x_data, x_units, moments=moments,
+                         quartiles=quartiles, modes=modes, loc=sloc)
+    return(s, st)
 
 def plot_lat_lt_stats(lat_data, lat_name, lat_units, sza_data, sza_units,
                       sza_east, x_data, x_name, x_units, datmin=50, 
@@ -309,11 +401,12 @@ def plot_lat_lt_stats(lat_data, lat_name, lat_units, sza_data, sza_units,
     '''
     rout_name = "plot_lat_lt_stats"
     f = list()
+    st = list()
 
     # Start by computing statistics for all data
     if x_data.shape[0] < datmin:
         print rout_name, "WARNING: insufficient data to compute statistics"
-        return f
+        return f, st
 
     hist_lab = "{:s} (N={:d})".format(n_label, len(x_data))
     htitle = "All Locations"
@@ -322,13 +415,17 @@ def plot_lat_lt_stats(lat_data, lat_name, lat_units, sza_data, sza_units,
 
     f.append(plt.figure())
     ax = f[-1].add_subplot(1,1,1)
-    plot_hist_w_stats(ax, x_data, x_name, x_units, res=res, norm=norm,
-                      weights=weights, cum=cum, htype=htype, align=align,
-                      rwidth=rwidth, n_label=hist_lab, xmin=xmin, xmax=xmax,
-                      nmin=nmin, nmax=nmax, xinc=xinc, ninc=ninc, color=color,
-                      title=htitle, tloc=tloc, xl=xl, xt=xt, yl=yl, yt=yt,
-                      moments=moments, quartiles=quartiles, modes=modes,
-                      sloc=sloc)
+    ss, s = plot_hist_w_stats(ax, x_data, x_name, x_units, res=res, norm=norm,
+                              weights=weights, cum=cum, htype=htype,
+                              align=align, rwidth=rwidth, n_label=hist_lab,
+                              xmin=xmin, xmax=xmax, nmin=nmin, nmax=nmax,
+                              xinc=xinc, ninc=ninc, color=color, title=htitle,
+                              tloc=tloc, xl=xl, xt=xt, yl=yl, yt=yt,
+                              moments=moments, quartiles=quartiles,
+                              modes=modes, sloc=sloc)
+    s.insert(0, "All")
+    st.append(s)
+
     if draw and plt.isinteractive():
         plt.draw() #In interactive mode, you just "draw".
 
@@ -431,15 +528,19 @@ def plot_lat_lt_stats(lat_data, lat_name, lat_units, sza_data, sza_units,
                 try: nweights = weights[dat_index]
                 except: nweights = None
 
-                plot_hist_w_stats(ax, x_data[dat_index], x_name, x_units,
-                                  res=res, norm=norm, weights=nweights, cum=cum,
-                                  htype=htype, align=align, rwidth=rwidth,
-                                  n_label=lat_label[i], xmin=xmin, xmax=xmax,
-                                  nmin=nmin, nmax=nmax, xinc=xinc, ninc=ninc,
-                                  color=color, tloc=tloc, xl=xl, xt=xt, yl=yl,
-                                  yt=yt, moments=moments, quartiles=quartiles,
-                                  modes=modes, sloc=sloc)
-
+                ss, s = plot_hist_w_stats(ax, x_data[dat_index], x_name,
+                                          x_units, res=res, norm=norm,
+                                          weights=nweights, cum=cum,
+                                          htype=htype, align=align,
+                                          rwidth=rwidth, n_label=lat_label[i],
+                                          xmin=xmin, xmax=xmax, nmin=nmin,
+                                          nmax=nmax, xinc=xinc, ninc=ninc,
+                                          color=color, tloc=tloc, xl=xl, xt=xt,
+                                          yl=yl, yt=yt, moments=moments,
+                                          quartiles=quartiles, modes=modes,
+                                          sloc=sloc)
+                s.insert(0, "Lat")
+                st.append(s)
             # Adjust subplot locations
             plt.subplots_adjust(left=.15)
             if draw and plt.isinteractive():
@@ -541,18 +642,23 @@ def plot_lat_lt_stats(lat_data, lat_name, lat_units, sza_data, sza_units,
                             try: nweights = weights[dat2_index]
                             except: nweights = None
 
-                            plot_hist_w_stats(ax, x_data[dat2_index], x_name,
-                                              x_units, res=res, norm=norm,
-                                              weights=nweights, cum=cum,
-                                              htype=htype, align=align,
-                                              rwidth=rwidth,
-                                              n_label=lt_label[j], xmin=xmin,
-                                              xmax=xmax, nmin=nmin, nmax=nmax,
-                                              xinc=xinc, ninc=ninc, color=color,
-                                              tloc=tloc, xl=xl, xt=xt, yl=yl,
-                                              yt=yt, moments=moments,
-                                              quartiles=quartiles, modes=modes,
-                                              sloc=sloc)
+                            ss, s = plot_hist_w_stats(ax, x_data[dat2_index],
+                                                      x_name, x_units, res=res,
+                                                      norm=norm,
+                                                      weights=nweights, cum=cum,
+                                                      htype=htype, align=align,
+                                                      rwidth=rwidth,
+                                                      n_label=lt_label[j],
+                                                      xmin=xmin, xmax=xmax,
+                                                      nmin=nmin, nmax=nmax,
+                                                      xinc=xinc, ninc=ninc,
+                                                      color=color, tloc=tloc,
+                                                      xl=xl, xt=xt, yl=yl,
+                                                      yt=yt, moments=moments,
+                                                      quartiles=quartiles,
+                                                      modes=modes, sloc=sloc)
+                            s.insert(0, "{:s}LT".format(lat_root[i]))
+                            st.append(s)
 
                         # Adjust subplot locations
                         plt.subplots_adjust(left=.15)
@@ -633,14 +739,19 @@ def plot_lat_lt_stats(lat_data, lat_name, lat_units, sza_data, sza_units,
                 try: nweights = weights[dat_index]
                 except: nweights = None
 
-                plot_hist_w_stats(ax, x_data[dat_index], x_name, x_units,
-                                  res=res, norm=norm, weights=nweights, cum=cum,
-                                  htype=htype, align=align, rwidth=rwidth,
-                                  n_label=lt_label[i], xmin=xmin, xmax=xmax,
-                                  nmin=nmin, nmax=nmax, xinc=xinc, ninc=ninc,
-                                  color=color, tloc=tloc, xl=xl, xt=xt, yl=yl,
-                                  yt=yt, moments=moments, quartiles=quartiles,
-                                  modes=modes, sloc=sloc)
+                ss, s = plot_hist_w_stats(ax, x_data[dat_index], x_name,
+                                          x_units, res=res, norm=norm,
+                                          weights=nweights, cum=cum,
+                                          htype=htype, align=align,
+                                          rwidth=rwidth, n_label=lt_label[i],
+                                          xmin=xmin, xmax=xmax, nmin=nmin,
+                                          nmax=nmax, xinc=xinc, ninc=ninc,
+                                          color=color, tloc=tloc, xl=xl, xt=xt,
+                                          yl=yl, yt=yt, moments=moments,
+                                          quartiles=quartiles, modes=modes,
+                                          sloc=sloc)
+                s.insert(0, "LT")
+                st.append(s)
 
             # Adjust subplot locations
             plt.subplots_adjust(left=.15)
@@ -656,8 +767,224 @@ def plot_lat_lt_stats(lat_data, lat_name, lat_units, sza_data, sza_units,
         # at the terminal until plots are drawn.
         plt.show()
 
-    return f
+    return f, st
 
+def lat_lt_stat_lines(line, lat_data, sza_data, sza_east, x_data, datmin=50, 
+                      latlim=[55.0, 15.0, -15.0, -55.0], szalim=[108.0, 90.0],
+                      moments=4, quartiles=3, modes=False, sigfig=2,
+                      *args, **kwargs):
+    '''
+    Formats a series of statistic lines by local time and magnetic lat region.
+
+    Input: line      = Beginning of line to append stat data to.
+           lat_data  = Numpy array containing lat data.  To only plot
+                       global or local time regions, make this empty
+           sza_data  = Numpy array containing solar zenith angle.  To only plot
+                       global or latitude regions, make this empty
+           sza_east  = Numpy array of Boolian values indicating whether or not
+                       the observation is east of the subsolar point (True=East)
+           x_data    = Numpy array containing x-axis data
+           datmin    = Minimum number of observations needed to compute stats
+                       (default=50)
+           latlim    = Latitude limit in latitude units [north polar southern
+                       border, equatorial northern limit, equatorial southern
+                       limit, south polar northern border]
+                       (default=[55.0,15.0,-15.0,-55.0])
+           szalim    = Solar Zenith angle limit in SZA units ]twilight
+                       nightside, twilight dayside] (default=[108.0, 90.0])
+           moments   = Include moments (mean, standard deviation, skew,
+                       kurtosis) of the distribution.  The number corresponds
+                       to the maximum moment that will be included.  3, for
+                       example, will include the mean, standard deviation, and
+                       skew. (default=4)
+           quartiles = Include quartiles (1st, 2nd=median, 3rd). 1=median only,
+                       2=1st and 3rd only, 3=all (default=3)
+           modes     = Include mode(s) (default=False)
+           sigfig    = Number of significant figures to include in statistics
+                       (defualt=2)
+    '''
+    rout_name = "lat_lt_stat_lines"
+    out_lines = list()
+
+    # Start by computing statistics for all data
+    if x_data.shape[0] < datmin:
+        print rout_name, "WARNING: insufficient data to compute statistics"
+        return lines
+
+    sline, s = add_stat_to_line("{:s} All".format(line), x_data,
+                                moments=moments, quartiles=quartiles,
+                                modes=modes, sigfig=sigfig)
+    out_lines.append(sline)
+
+    # Compute statistics for all LT by latitude region:
+    # NPolar (>55), NMid (55-15), Eq (+/- 15), SMid (-15- -55), SPolar (<-55)
+    if lat_data.shape == x_data.shape:
+        # Divide data by region and define labels
+        lat_dawn_dusk = list()
+        lat_index = list()
+        lat_root = list()
+        # North Polar
+        lat_index.append([i for i,l in enumerate(lat_data) if l > latlim[0]])
+        if len(lat_index[-1]) >= datmin:
+            lat_root.append("NPole")
+            lat_dawn_dusk.append(False)
+        else:
+            lat_index.pop()
+        # North Mid-Latitude
+        lat_index.append([i for i,l in enumerate(lat_data)
+                          if l <= latlim[0] and l >= latlim[1]])
+        if len(lat_index[-1]) >= datmin:
+            lat_root.append("NMid")
+            lat_dawn_dusk.append(True)
+        else:
+            lat_index.pop()
+        # Equatorial
+        lat_index.append([i for i,l in enumerate(lat_data)
+                          if l < latlim[1] and l > latlim[2]])
+        if len(lat_index[-1]) >= datmin:
+            lat_root.append("Eq")
+            lat_dawn_dusk.append(True)
+        else:
+            lat_index.pop()
+        # South Mid-Latitude
+        lat_index.append([i for i,l in enumerate(lat_data)
+                          if l <= latlim[2] and l >= latlim[3]])
+        if len(lat_index[-1]) >= datmin:
+            lat_root.append("SMid")
+            lat_dawn_dusk.append(True)
+        else:
+            lat_index.pop()
+        # South Polar
+        lat_index.append([i for i,l in enumerate(lat_data) if l < latlim[3]])
+        if len(lat_index[-1]) >= datmin:
+            lat_root.append("SPole")
+            lat_dawn_dusk.append(False)
+        else:
+            lat_index.pop()
+
+        nsub = len(lat_index)
+        if nsub == 0:
+            print rout_name, "ADVISEMENT: not enough data for lat divisions"
+        else:
+            for i, dat_index in enumerate(lat_index):
+                sline, s = add_stat_to_line("{:s} {:s}".format(line,
+                                                               lat_root[i]),
+                                            x_data[dat_index], moments=moments,
+                                            quartiles=quartiles, modes=modes,
+                                            sigfig=sigfig)
+                out_lines.append(sline)
+
+            # Compute statistics for LT regions in each latitude region:
+            # Dawn/Twilight (108-90), Day (<90), Dusk/Twilight (108-90), and
+            # Night (> 108)
+            if sza_data.shape==x_data.shape and sza_east.shape==x_data.shape:
+                # Cycle through each of the latitude regions with data
+                for i, dat_index in enumerate(lat_index):
+                    # Divide into the desired LT regions using the solar
+                    # zenith angle
+                    lt_index = list()
+                    lt_root = list()
+                    # Day
+                    lt_index.append([j for j in dat_index
+                                     if sza_data[j] < szalim[1]])
+                    if len(lt_index[-1]) >= datmin:
+                        lt_root.append("{:s}Day".format(lat_root[i]))
+                    else:
+                        lt_index.pop()
+                    # Night
+                    lt_index.append([j for j in dat_index
+                                     if sza_data[j]>szalim[0]])
+                    if len(lt_index[-1]) >= datmin:
+                        lt_root.append("{:s}Night".format(lat_root[i]))
+                    else:
+                        lt_index.pop()
+
+                    if lat_dawn_dusk[i]:
+                        # Dawn
+                        lt_index.append([j for j in dat_index
+                                         if(sza_data[j] >= szalim[1]
+                                            and sza_data[j] <= szalim[0]
+                                            and sza_east[j])])
+                        if len(lt_index[-1]) >= datmin:
+                            lt_root.append("{:s}Dawn".format(lat_root[i]))
+                        else:
+                            lt_index.pop()
+                        # Dusk
+                        lt_index.append([j for j in dat_index
+                                         if(sza_data[j] >= szalim[1]
+                                            and sza_data[j] <= szalim[0]
+                                            and not sza_east[j])])
+                        if len(lt_index[-1]) >= datmin:
+                            lt_root.append("{:s}Dusk".format(lat_root[i]))
+                        else:
+                            lt_index.pop()
+                    else:
+                        # Twilight
+                        lt_index.append([j for j in dat_index
+                                         if(sza_data[j] >= szalim[1]
+                                            and sza_data[j] <= szalim[0])])
+                        if len(lt_index[-1]) >= datmin:
+                            lt_root.append("{:s}Twilight".format(lat_root[i]))
+                        else:
+                            lt_index.pop()
+
+                    nsub = len(lt_index)
+
+                    if nsub == 0:
+                        print(rout_name, "ADVISEMENT: not enough data for ",
+                              "MLat/LT divisions")
+                    else:
+                        for j, dat2_index in enumerate(lt_index):
+                            sline, s = add_stat_to_line("{:s} {:s}".format(line, lt_root[j]), x_data[dat2_index], moments=moments, quartiles=quartiles, modes=modes, sigfig=sigfig)
+                            out_lines.append(sline)
+
+    # Compute statistics for all latitudes by LT region:
+    # Dawn/Twilight (108-90), Day (<90), Dusk/Twilight (108-90), Night (> 108)
+    if sza_data.shape == x_data.shape and sza_east.shape == sza_data.shape:
+        # Divide into the desired LT regions using the solar zenith angle
+        lt_index = list()
+        lt_root = list()
+        # Day
+        lt_index.append([i for i,l in enumerate(sza_data) if l < szalim[1]])
+        if len(lt_index[-1]) >= datmin:
+            lt_root.append("Day")
+        else:
+            lt_index.pop()
+        # Night
+        lt_index.append([i for i,l in enumerate(sza_data) if l > szalim[0]])
+        if len(lt_index[-1]) >= datmin:
+            lt_root.append("Night")
+        else:
+            lt_index.pop()
+        # Dawn
+        lt_index.append([i for i,l in enumerate(sza_data)
+                         if(l >= szalim[1] and l <= szalim[0] and sza_east[i])])
+        if len(lt_index[-1]) >= datmin:
+            lt_root.append("Dawn")
+        else:
+            lt_index.pop()
+        # Dusk
+        lt_index.append([i for i,l in enumerate(sza_data)
+                         if(l >= szalim[1] and l <= szalim[0]
+                            and not sza_east[i])])
+        if len(lt_index[-1]) >= datmin:
+            lt_root.append("Dusk")
+        else:
+            lt_index.pop()
+
+        # Divide data by region
+        nsub = len(lt_index)
+        if nsub == 0:
+            print rout_name, "ADVISEMENT: not enough data for lt divisions"
+        else:
+            for i, dat_index in enumerate(lt_index):
+                sline, s = add_stat_to_line("{:s} {:s}".format(line,lt_root[i]),
+                                            x_data[dat_index], moments=moments,
+                                            quartiles=quartiles, modes=modes,
+                                            sigfig=sigfig)
+                out_lines.append(sline)
+
+    return out_lines
 
 
 
