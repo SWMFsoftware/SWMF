@@ -1,6 +1,6 @@
 #main
 
-SpeciesList=O2  
+SpeciesList=Ar   
 
 
 
@@ -68,7 +68,7 @@ CouplerMode=ices !!off, ices, swmf
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function
-    const (O2,O2)= 2.0E-19
+    const (Ar,Ar)= 2.0E-19
 
 #endParticleCollisions
 
