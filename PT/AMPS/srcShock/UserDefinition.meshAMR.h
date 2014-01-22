@@ -10,22 +10,22 @@
 //#define _BLOCK_CELLS_Z_
 
 #undef _BLOCK_CELLS_X_
-#define _BLOCK_CELLS_X_    200
+#define _BLOCK_CELLS_X_    10
 
 #undef _BLOCK_CELLS_Y_
-#define _BLOCK_CELLS_Y_    2
+#define _BLOCK_CELLS_Y_    5
 
 #undef _BLOCK_CELLS_Z_
-#define _BLOCK_CELLS_Z_    2
+#define _BLOCK_CELLS_Z_    5
 
 #undef  _GHOST_CELLS_X_
 #define _GHOST_CELLS_X_       2
 
 #undef  _GHOST_CELLS_Y_
-#define _GHOST_CELLS_Y_       0
+#define _GHOST_CELLS_Y_       2
 
 #undef  _GHOST_CELLS_Z_
-#define _GHOST_CELLS_Z_       0
+#define _GHOST_CELLS_Z_       2
 
 
 /*

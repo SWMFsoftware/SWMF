@@ -350,12 +350,10 @@ int main(int argc,char **argv) {
   PIC::Mover::ProcessOutsideDomainParticles=ExternalBoundaryConditions;
 
 
-  if (PIC::ThisThread==0) {
-    char fname[_MAX_STRING_LENGTH_PIC_];
+  char fname[_MAX_STRING_LENGTH_PIC_];
+  sprintf(fname,"%s/VolumeMesh.dat",PIC::OutputDataFileDirectory);
+  PIC::Mesh::mesh.outputMeshTECPLOT(fname);
 
-    sprintf(fname,"%s/VolumeMesh.dat",PIC::OutputDataFileDirectory);
-    PIC::Mesh::mesh.outputMeshTECPLOT(fname);
-  }
 
 
   for (long int niter=0;niter<100001;niter++) {
