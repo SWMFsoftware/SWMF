@@ -1,3 +1,4 @@
+
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !\
@@ -254,6 +255,17 @@ subroutine heidi_driftp
 
            do J=1,JO
               C(J) = P1(I,J) + P2(I,j,K,L)
+              
+              if  (P1(I,J) .le. 0) then 
+                 write(*,*) 'i, j, P1 = ',i, j,  P1(i,j)
+                 !STOP
+              endif
+              
+              if  (P2(I,j, k, l) .le. 0) then 
+                 write(*,*) 'i, j,k, l, P2 = ',i, j, k, l,  P2(i,j,k,l)
+                 !STOP
+              endif
+
               C(J)=AMIN1(0.99,AMAX1(-0.99,C(J)))
               
               ISIGN=1
@@ -346,6 +358,8 @@ subroutine DRECOUL
            end do
            f(1:ko)=f2(i,j,1:ko,l,s)
            do K=1,KO
+              !write(*,*) 'DRECOUL EDDOT=',i,j,k,l, EDOT(I,J,K,L)
+              
               C(K)=EDOT(I,J,K,L)+(COULE(I,j,K,L,S)+COULI(I,j,K,L,S))*XNE(I,J)
               C(K)=AMIN1(0.99,AMAX1(-0.99,C(K)))
               
@@ -371,7 +385,7 @@ subroutine DRECOUL
               F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(K)*FBND(K)*DE(K)/WE(K)   &
                    +C(K-1)*FBND(K-1)*DE(K-1)/WE(K)
               
-!              if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
+             if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
            end do
 
            !\                 
