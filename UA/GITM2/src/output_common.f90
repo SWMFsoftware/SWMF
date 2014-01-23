@@ -1488,19 +1488,26 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
 !        iOff = iOff + 1
 !        Tmp = NDensityS(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock)/NDensity(0:nLons+1,0:nLats+1,iAlt,iBlock)
 !        Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
+! AGB: Fixed this to use interpolation like all the other variables.
+!      Also the porper lat and lon
         iOff = iOff + nSpecies
-        Vars(iOff+1) = Dt*RadCooling(1,1,iiAlt,iBlock)*TempUnit(1,1,iiAlt)
+        Tmp = Dt*RadCooling(0:nLons+1,0:nLats+1,iAlt,iBlock) * &
+             TempUnit(0:nLons+1,0:nLats+1,iAlt)
+        Vars(iOff+1) = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
-        Vars(iOff+2) = Dt*EuvHeating(1,1,iiAlt,iBlock)*TempUnit(1,1,iiAlt)
+        Tmp = Dt*EuvHeating(0:nLons+1,0:nLats+1,iAlt,iBlock) * &
+             TempUnit(0:nLons+1,0:nLats+1,iAlt)
+        Vars(iOff+2) = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
-        Vars(iOff+3) = Conduction(1,1,iiAlt)*TempUnit(1,1,iiAlt)
+        Tmp = Conduction(0:nLons+1,0:nLats+1,iAlt) * &
+             TempUnit(0:nLons+1,0:nLats+1,iAlt)
+        Vars(iOff+3) = inter(Tmp,iiLon,iiLat,rlon,rlat)
+ 
+        Vars(iOff+4) = Vars(iOff+2) - Vars(iOff+1) + Vars(iOff+3)
 
-        Vars(iOff+4) = Dt*EuvHeating(1,1,iiAlt,iBlock)*TempUnit(1,1,iiAlt) - &
-         Dt*RadCooling(1,1,iiAlt,iBlock)*TempUnit(1,1,iiAlt) + &
-         Conduction(1,1,iiAlt)*TempUnit(1,1,iiAlt)
-
-        Vars(iOff+5) = HeatingEfficiency_CB(1,1,iiAlt,iBlock)
+        Tmp = HeatingEfficiency_CB(0:nLons+1,0:nLats+1,iAlt,iBlock)
+        Vars(iOff+5) = inter(Tmp,iiLon,iiLat,rlon,rlat)
+! AGB: End of corrections
 
      write(iOutputUnit_) Vars
 
