@@ -590,6 +590,9 @@ contains
   subroutine integrate_image
 
     real:: Distance
+    real:: d=0.0, Discriminant=-1.0
+    real:: XyzIntersect_D(3)
+
     !-----------------------------------------------------------------------
 
     ! Loop over pixels
@@ -615,16 +618,40 @@ contains
           XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
 
           ! Unit vector pointing from pixel center to observer
-          LosPix_D = XyzPix_D - ObsPos_D
+          LosPix_D = - XyzPix_D + ObsPos_D
           Distance = sqrt(sum(LosPix_D**2))
           LosPix_D = LosPix_D/Distance
 
-          ! Integrate from pixel to observer
-          call integrate_line(XyzPix_D, Distance)
+          ! Calculate whether there are intersections with the rInner sphere
+          ! The LOS line can be written as XyzLine_D = XyzPix_D + d*LosPix_D
+          ! If the LOS line intersects with the sphere of radius rInner+cTiny, then 
+          ! (rInner+cTiny)^2 = (XyzPix_D + d*LosPix_D)^2
+          !                  = XyzPix_D^2 + 2 d XyzPix_D.LosPix_D + d^2
+          ! where we use that LosPix_D is a unit vector. This can be rearranged to
+          ! 0 = d^2 + 2 p d + q
+          ! solved for d = -p + sqrt(p^2 - q) where only the + root is needed,
+          ! as LosPix_D points toward the observer. If there is an intersection,
+          ! we set the starting point to XyzIntersect_D = XyzPix_D + d*LosPix_D
 
-          ! Integrate in the other direction too if needed !!!
-          LosPix_D = -LosPix_D
-          call integrate_line(XyzPix_D, 1e30)
+          ! The discriminant of the equation
+          Discriminant = (sum(LosPix_D*XyzPix_D))**2 &
+               - sum(XyzPix_D**2) + (rInner+cTiny)**2
+
+          if (Discriminant > 0) then
+             ! Only consider the intersection facing the observer
+             d = - sum(LosPix_D*XyzPix_D) + sqrt(Discriminant)
+             XyzIntersect_D = XyzPix_D + d*LosPix_D
+
+             ! Integrate from the intersection point to observer
+             call integrate_line(XyzIntersect_D, Distance)
+          else
+             ! No intersection, integrate from pixel to observer
+             call integrate_line(XyzPix_D, Distance)
+
+             ! Integrate in the other direction too if no intesection
+             LosPix_D = -LosPix_D
+             call integrate_line(XyzPix_D, 1e30)
+          end if
 
        end do ! jPix loop
     end do    ! iPix loop
@@ -845,8 +872,8 @@ contains
     zLos = XyzLos_D(3)
 
     if(UseScattering .and. rLos2 > 1.0)then
-       ! So what is calculated here??? No documentation, no citation !!!
-       ! Just formulas and more formulas...
+       ! See Hundhausen, A. J. (1993), JGR, 98(A8), 13177, doi:10.1029/93JA00157.
+       ! Equations for A, B, C, D on page 13,190
 
        ! This calculation is useful for light scattering in SC and IH
        ! as it assumes that the radiation comes from a central 
@@ -1997,6 +2024,10 @@ contains
           Image_VII(iVar,:,:) = Image_VII(iVar,:,:) &
                *No2Si_V(UnitRho_)*No2Si_V(UnitX_)
        case('wl','pb')
+          ! The sigma in Hundhausen, A. J. (1993) should be the square of the
+          ! electron radius according to Equation (4.54) in Altschuler, M.D. (1979),
+          ! in Image Reconstruction from Projections, ed. G.T. Herman (Berlin:Springer), 105
+          ! So we use cSigmaThomson*3.0/16.0 here.
           Image_VII(iVar,:,:) = Image_VII(iVar,:,:) &
                *No2Si_V(UnitN_)*No2Si_V(UnitX_)*cSigmaThomson*3.0/16.0
        case('euv171','euv195','euv284','sxr')
