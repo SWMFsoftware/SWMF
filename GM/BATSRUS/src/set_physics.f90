@@ -654,26 +654,26 @@ subroutine init_mhd_variables
           'Pui2',  &
           'Pui3',  &
           'Pui4')
-        UnitCons_V(iVar) = UnitRho_
-        UnitPrim_V(iVar) = UnitRho_
+        iUnitCons_V(iVar) = UnitRho_
+        iUnitPrim_V(iVar) = UnitRho_
      case('mx','my','mz','ux','uy','uz')
-        UnitCons_V(iVar) = UnitRhoU_
-        UnitPrim_V(iVar) = UnitU_
+        iUnitCons_V(iVar) = UnitRhoU_
+        iUnitPrim_V(iVar) = UnitU_
      case('bx','by','bz')
-        UnitCons_V(iVar) = UnitB_
-        UnitPrim_V(iVar) = UnitB_
+        iUnitCons_V(iVar) = UnitB_
+        iUnitPrim_V(iVar) = UnitB_
      case('p','pe')
-        UnitCons_V(iVar) = UnitP_
-        UnitPrim_V(iVar) = UnitP_
+        iUnitCons_V(iVar) = UnitP_
+        iUnitPrim_V(iVar) = UnitP_
      case('e')
-        UnitCons_V(iVar) = UnitEnergyDens_
-        UnitPrim_V(iVar) = UnitEnergyDens_
+        iUnitCons_V(iVar) = UnitEnergyDens_
+        iUnitPrim_V(iVar) = UnitEnergyDens_
      case default
         if(iProc.eq.0) write(*,*) NameSub,': ',NameVar, &
              ' was not found to set iUnitState_V,', &
              ' using UnitUnity_ instead.'
-        UnitCons_V(iVar) = UnitUnity_
-        UnitPrim_V(iVar) = UnitUnity_
+        iUnitCons_V(iVar) = UnitUnity_
+        iUnitPrim_V(iVar) = UnitUnity_
      end select
   end do
 

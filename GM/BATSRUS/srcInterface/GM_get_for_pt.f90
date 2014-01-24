@@ -6,7 +6,7 @@ subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
   ! Get magnetic field data from GM to PT
 
   use ModProcMH,  ONLY: iProc
-  use ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, UnitB_, UnitU_, UnitP_, UnitRho_, UnitCons_V
+  use ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, UnitB_, UnitU_, UnitP_, UnitRho_, iUnitCons_V
   use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, nVar, p_, NamePrimitiveVar
   use ModVarIndexes, ONLY: nVar, NamePrimitiveVar
   use ModB0,      ONLY: UseB0, get_b0
@@ -60,7 +60,7 @@ subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
         b_D = 0.0
      end if
 
-     Data_VI(:,iPoint) = State_V*No2Si_V(UnitCons_V)
+     Data_VI(:,iPoint) = State_V*No2Si_V(iUnitCons_V)
 
   end do
 
