@@ -201,7 +201,8 @@ module ModPhysics
        Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V
 
   ! Mapping between state array indices and unit conversion array indices
-  integer, dimension(nVar) :: StateIndexToUnitIndex_V
+  integer, dimension(nVar) :: UnitCons_V
+  integer, dimension(nVar) :: UnitPrim_V
 
   character (len=20), dimension(nIoUnit) :: &
        NameIdlUnit_V, NameTecUnit_V, NameSiUnit_V

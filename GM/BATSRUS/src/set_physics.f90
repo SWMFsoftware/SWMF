@@ -623,22 +623,57 @@ subroutine init_mhd_variables
      call lower_case(NameVar)
      call extract_fluid_name(NameVar)
      select case(NameVar)
-        case('rho')
-           StateIndexToUnitIndex_V(iVar) = UnitRho_
-        case('mx','my','mz')
-           StateIndexToUnitIndex_V(iVar) = UnitRhoU_
-        case('bx','by','bz')
-           StateIndexToUnitIndex_V(iVar) = UnitB_
-        case('p','pe')
-           StateIndexToUnitIndex_V(iVar) = UnitP_
-        case('e')
-           StateIndexToUnitIndex_V(iVar) = UnitEnergyDens_
-        case default
-           if(iProc.eq.0) then
-              write(*,*) NameSub,': Warning, conversion factor mapping for variable ',NameVar,&
-                   ' not defined, using UnitUnity_ instead. Unit conversion for this variable will probably not be correct.'
-              StateIndexToUnitIndex_V(iVar) = UnitUnity_
-           end if
+     case('rho', &
+          'h',  &
+          'hp',  &
+          'hpSw',  &
+          'h2p',  &
+          'o',  &
+          'op',  &
+          'o2p',  & 
+          'he',  &
+          'ohp',  &
+          'N',  &
+          'cop',  &
+          'co2p',  &
+          'h2O',  &
+          'h2Op',  &
+          'h3Op',  &
+          'mp',  &
+          'lp',  &
+          'mhcp',  &
+          'hhcp',  &
+          'hnip',  &
+          'Sw  ',  &
+          'Iono',  &
+          'Neu1',  &
+          'Neu2',  &
+          'Neu3',  &
+          'Neu4',  &
+          'Pui1',  &
+          'Pui2',  &
+          'Pui3',  &
+          'Pui4')
+        UnitCons_V(iVar) = UnitRho_
+        UnitPrim_V(iVar) = UnitRho_
+     case('mx','my','mz','ux','uy','uz')
+        UnitCons_V(iVar) = UnitRhoU_
+        UnitPrim_V(iVar) = UnitU_
+     case('bx','by','bz')
+        UnitCons_V(iVar) = UnitB_
+        UnitPrim_V(iVar) = UnitB_
+     case('p','pe')
+        UnitCons_V(iVar) = UnitP_
+        UnitPrim_V(iVar) = UnitP_
+     case('e')
+        UnitCons_V(iVar) = UnitEnergyDens_
+        UnitPrim_V(iVar) = UnitEnergyDens_
+     case default
+        if(iProc.eq.0) write(*,*) NameSub,': ',NameVar, &
+             ' was not found to set iUnitState_V,', &
+             ' using UnitUnity_ instead.'
+        UnitCons_V(iVar) = UnitUnity_
+        UnitPrim_V(iVar) = UnitUnity_
      end select
   end do
 
