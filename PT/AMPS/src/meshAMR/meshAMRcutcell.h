@@ -120,6 +120,15 @@ namespace CutCell {
 
     cTriangleFace *next,*prev;
 
+    void GetRandomPosition(double *x,double EPS=0.0) {
+      double xLocal[2];
+
+      xLocal[0]=1.0-sqrt(rnd());
+      xLocal[1]=rnd()*(1.0-xLocal[0]);
+
+      for (int idim=0;idim<3;idim++) x[idim]=x0Face[idim]+xLocal[0]*e0[idim]+xLocal[1]*e1[idim]  +   EPS*ExternalNormal[idim];
+    }
+
     void SetFaceNodes(double *x0,double *x1,double *x2) {
       int i;
       double l;
