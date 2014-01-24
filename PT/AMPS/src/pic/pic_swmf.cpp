@@ -298,10 +298,10 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(double *data,int *index) {
             cell->nodeDescriptor.nodeProcessedFlag=_ON_AMR_MESH_;
 
             //the order of the state vector: rho, V, B, p
-            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaDensityOffset))=data[offset++];
-            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+BulkVelocityOffset+idim*sizeof(double)))=data[offset++];
-            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+MagneticFieldOffset+idim*sizeof(double)))=data[offset++];
-            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaPressureOffset))=data[offset++];
+            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaDensityOffset))=(offset>=0) ? data[offset++] : 0.0;
+            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+BulkVelocityOffset+idim*sizeof(double)))=(offset>=0) ? data[offset++] : 0.0;
+            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+MagneticFieldOffset+idim*sizeof(double)))=(offset>=0) ? data[offset++] : 0.0;
+            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaPressureOffset))=(offset>=0) ? data[offset++] : 0.0;
           }
         }
     }
@@ -320,10 +320,10 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(double *data,int *index) {
             cell->nodeDescriptor.nodeProcessedFlag=_ON_AMR_MESH_;
 
             //the order of the state vector: rho, V, B, p
-            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaDensityOffset))=data[offset++];
-            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+BulkVelocityOffset+idim*sizeof(double)))=data[offset++];
-            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+MagneticFieldOffset+idim*sizeof(double)))=data[offset++];
-            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaPressureOffset))=data[offset++];;
+            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaDensityOffset))=(offset>=0) ? data[offset++] : 0.0;
+            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+BulkVelocityOffset+idim*sizeof(double)))=(offset>=0) ? data[offset++] : 0.0;
+            for (idim=0;idim<3;idim++) *((double*)(cell->GetAssociatedDataBufferPointer()+MagneticFieldOffset+idim*sizeof(double)))=(offset>=0) ? data[offset++] : 0.0;
+            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaPressureOffset))=(offset>=0) ? data[offset++] : 0.0;
           }
         }
     }
