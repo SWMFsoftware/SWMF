@@ -22,7 +22,7 @@ makefile  SOURCES=src
 makefile  SPICE=/Users/vtenishe/SPICE/Toolkit/cspice 
 makefile  RUNDIR=run
 makefile  MPIRUN=mpirun -np 4
-makefile ExternalModules=
+makefile ExternalModules=models/exosphere
 
 ProjectSourceDirectory=srcEuropa
 
