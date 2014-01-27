@@ -95,6 +95,8 @@ contains
          BzPerN_G(0:nI+1,j0_:nJp1_,k0_:nKp1_),          &
          IonMassPerCharge_G(0:nI+1,j0_:nJp1_,k0_:nKp1_) )
 
+    HallJ_CD = 0.0
+
     IonMassPerCharge_G = IonMassPerCharge
 
     ! This is used in combination with normalized density
@@ -140,7 +142,9 @@ contains
   !=========================================================================
   subroutine set_ion_mass_per_charge(iBlock)
 
-    use ModAdvance, ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB, UseIdealEos
+    use ModVarIndexes, ONLY: UseMultiSpecies
+    use ModMultiFluid, ONLY: UseMultiIon
 
     ! Set IonMassPerCharge_G based on average mass
     integer, intent(in) :: iBlock
@@ -148,8 +152,11 @@ contains
     integer :: i, j, k
     !-------------------------------------------------------------------------
 
-    ! Multiply IonMassPerCharge_G by average ion mass = rho_total / n_total
+    ! Check if IonMassPerCharge_G varies at all. Return if it is constant.
+    if(.not.UseMultiIon .and. .not.UseMultiSpecies .and. UseIdealEos) RETURN
 
+    ! Set IonMassPerCharge_G to the average ion mass = rho_total / n_total
+    ! including 1 layer of ghost cells
     do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
        call set_ion_mass_per_charge_point(State_VGB(:,i,j,k,iBlock), &
             IonMassPerCharge_G(i,j,k))
@@ -166,7 +173,6 @@ contains
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V
     use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I,ChargeIon_I
     use ModPhysics,    ONLY: IonMassPerCharge
-    use ModUser,       ONLY: user_material_properties
 
     real, intent(in) :: State_V(nVar)
     real, intent(out):: IonMassPerChargeOut
@@ -175,8 +181,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(.not.UseIdealEos)then
-       call user_material_properties(State_V, &
-            AverageIonChargeOut = zAverage, NatomicOut = NatomicSi)
+       call user_material_z_n(State_V, zAverage, NatomicSi)
 
        ! Avoid using small zAverage, since then we will generate magnetic
        ! field with the Biermann Battery term based numerical errors.
