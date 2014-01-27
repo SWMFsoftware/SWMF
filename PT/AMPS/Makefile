@@ -5,11 +5,15 @@ DEFAULT_TARGET : amps
 # These definitions may be overwritten by Makefile.def
 SOURCES=src
 WSD=srcTemp
+InputFileAMPS=moon.input
 #SPICE=nospice
 
 include Makefile.def
 include Makefile.conf
 
+
+#include the local makefile (defined the AMPS' compiling varisbles) if exists  
+include Makefile.local
 
 
 # These definitions are inherited from Makefile.def and Makefile.conf
@@ -17,14 +21,17 @@ CC=${COMPILE.mpicxx}
 CWD=${MYDIR}
 
 install:
+	echo " " > Makefile.local
+	-rm .ampsConfig.Settings
 	./Config.pl -application=Moon
 	@echo "AMPS installed"
 
 distclean:
+	-rm Makefile.local .ampsConfig.Settings
 	./Config.pl -uninstall
 
 allclean:
-	rm -rf main srcTemp *.input* amps
+	rm -rf main srcTemp *.input* amps Makefile.local .ampsConfig.Settings
 	$(MAKE) clean
 
 rundir:
@@ -69,7 +76,7 @@ export Flags
 SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${CWD}
 
 ${WSD}:
-	./ampsConfig.pl -no-compile
+	./ampsConfig.pl -input ${InputFileAMPS} -no-compile
 
 ${LIB_AMPS}: 
 	make ${WSD}
