@@ -206,29 +206,28 @@ while ($line=<InputFile>) {
 }
 
 #modify the makefile for the compilation mode
-my @makefilelines;
-      
-open (MAKEFILE,"<Makefile.def") || die "Cannot open Makefile.def\n";
-@makefilelines=<MAKEFILE>;
-close (MAKEFILEFILE);
-      
-foreach (@makefilelines) {
-    if ($_=~/\${CC} -o \${EXE}/) {
-      $_=~s/^#/\t/;
-      
-      if ($CompilationMode ne "AMPS") {
-        $_=~s/^\t/#/;
-      }
-    }
-}
-      
-open (MAKEFILEFILE,">Makefile.def") || die "Cannot open Makefile.def\n";
-print MAKEFILEFILE @makefilelines;
-close (MAKEFILEFILE);
-
-
-#compile the code 
 if ($CompileProcessedCodeFlag==1) {
+  my @makefilelines;
+        
+  open (MAKEFILE,"<Makefile.local") || die "Cannot open Makefile.local\n";
+  @makefilelines=<MAKEFILE>;
+  close (MAKEFILEFILE);
+        
+  foreach (@makefilelines) {
+      if ($_=~/\${CC} -o \${EXE}/) {
+        $_=~s/^#/\t/;
+        
+        if ($CompilationMode ne "AMPS") {
+          $_=~s/^\t/#/;
+        }
+      }
+  }
+        
+  open (MAKEFILEFILE,">Makefile.local") || die "Cannot open Makefile.local\n";
+  print MAKEFILEFILE @makefilelines;
+  close (MAKEFILEFILE);
+
+  #compile the code 
   print "Compile the code\n";
   
   if (defined $nCompilingThreads) {
@@ -365,7 +364,7 @@ sub ReadMainBlock {
       }        
     }
     elsif ($s0 eq "MAKEFILE") {
-      #substitute the following line in the Makefile.def 
+      #substitute the following line in the Makefile.local 
       my $Variable;
       my $Argument;
       my @MakeFileContent;
@@ -378,8 +377,8 @@ sub ReadMainBlock {
       ($Variable,$Argument)=split(' ',$Variable,2);
       ($Variable,$Argument)=split(' ',$Argument,2);
       
-      if (-e "Makefile.def") {     
-        open (MAKEFILE,"<","Makefile.def") || die "Cannot open Makefile.def\n";
+      if (-e "Makefile.local") {     
+        open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
         @MakeFileContent=<MAKEFILE>;
         close(MAKEFILE);
         
@@ -410,13 +409,13 @@ sub ReadMainBlock {
         }
         
         if ($FoundVariable == 0) {
-          #the definition of the variable is not found -> add it to Makefile.def
+          #the definition of the variable is not found -> add it to Makefile.local
           push(@MakeFileContent,$Variable."=".$Argument);
         }
       }
       
-      #write the updated copy of the Makefile.def 
-      open (MAKEFILE,">","Makefile.def");
+      #write the updated copy of the Makefile.local 
+      open (MAKEFILE,">","Makefile.local");
 
       foreach (@MakeFileContent) {
         print MAKEFILE "$_";
@@ -622,15 +621,15 @@ sub ReadMainBlock {
   
   
   #set working directory in the makefile 
-  if (-e "Makefile.def") {
+  if (-e "Makefile.local") {
     my @MakeFileContent;
     my $FoundWSD=0;
     
-    open (MAKEFILE,"<","Makefile.def") || die "Cannot open Makefile.def\n";
+    open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
     @MakeFileContent=<MAKEFILE>;
     close(MAKEFILE);
     
-    open (MAKEFILE,">","Makefile.def");
+    open (MAKEFILE,">","Makefile.local");
 
     foreach (@MakeFileContent) {
       if ($_=~m/WSD=/) {
@@ -645,11 +644,11 @@ sub ReadMainBlock {
     
     #check if the WSD is found
     if ($FoundWSD eq 0 ) {
-      open (MAKEFILE,"<","Makefile.def") || die "Cannot open Makefile.def\n";
+      open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
       @MakeFileContent=<MAKEFILE>;
       close(MAKEFILE);
     
-      open (MAKEFILE,">","Makefile.def");   
+      open (MAKEFILE,">","Makefile.local");   
       print MAKEFILE "WSD=$ampsConfigLib::WorkingSourceDirectory\n";  
     
       foreach (@MakeFileContent) {
