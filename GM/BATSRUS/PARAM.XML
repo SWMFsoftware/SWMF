@@ -1756,12 +1756,13 @@ Default is false for all logicals.
 		<option name="radcond"/>
 		<option name="parcond"/>
 		<option name="cond"/>
+		<option name="resistivity"/>
 	</parameter>
 #SEMIIMPLICIT
 T                       UseSemiImplicit
 radiation               TypeSemiImplicit (read if UseSemiImplicit is true)
 
-If UseSemiImplicit is true than most of the terms are evaluated explicitly,
+If UseSemiImplicit is true then most of the terms are evaluated explicitly,
 but some of them are evaluated implicitly. 
 
 The TypeSemiImplicit parameter determines which terms and corresponding 
@@ -1786,6 +1787,9 @@ electrons separately...
 The "parcond" option solves for field aligned electron heat conduction only.
 
 The "cond" option solves for electron heat conduction only.
+
+The "resistivity" option solves for the magnetic field with
+either dissipative or Hall Resistivity.
 
 The default is UseSemiImplicit false.
 </command>
