@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModFaceFlux
 
@@ -160,9 +161,10 @@ module ModFaceFlux
   logical:: UseRS7 = .false.
 
 
-  ! Local logical variables 
+  ! Local logical variables for various terms that may be switched off
+  ! if they are treated with semi-implicit scheme.
   logical :: DoRadDiffusion = .false., DoHeatConduction = .false., &
-             DoIonHeatConduction = .false.
+       DoIonHeatConduction = .false., DoHallInduction = .false.
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
@@ -432,12 +434,14 @@ contains
          .not. (index(TypeSemiImplicit,'radiation')>0 .or.&
          index(TypeSemiImplicit,'radcond')>0 .or.&
          index(TypeSemiImplicit,'cond')>0)
+
     DoHeatConduction    = UseHeatConduction .and.&
          .not.  index(TypeSemiImplicit,'parcond')>0
-    DoIonHeatConduction = UseIonHeatConduction 
 
-    if((UseHallResist .or. UseBiermannBattery) .and. &
-         (UseMultiIon .or. UseMultiSpecies .or. .not.UseIdealEos)) &
+    DoHallInduction = UseHallResist .and. &
+         .not. index(TypeSemiImplicit,'resistivity')>0
+
+    if(UseHallResist .or. UseBiermannBattery) &
          call set_ion_mass_per_charge(iBlock)
 
     if (DoResChangeOnly) then
@@ -1108,6 +1112,11 @@ contains
                0.5*( IonMassPerCharge_G(iLeft,jLeft,kLeft) &
                +     IonMassPerCharge_G(iRight,jRight,kRight) )
        end if
+
+       ! No need to calculate anything related to Hall MHD if
+       ! we use semi-implicit scheme to update the magnetic field
+       ! and there is no electron pressure equation that needs Hall velocity.
+       if(.not.UseElectronPressure .and. .not.DoHallInduction) HallCoeff = -1.0
     end if
 
     ViscoCoeff = 0.0
@@ -1435,7 +1444,7 @@ contains
 
     ! Increase maximum speed with the sum of diffusion speeds
     ! Resistivity, viscosity, heat conduction, radiation diffusion
-    CmaxDt = CmaxDt + 2*(DiffCoef+ ViscoCoeff + Eta)*InvDxyz
+    CmaxDt = CmaxDt + 2*(DiffCoef + ViscoCoeff + Eta)*InvDxyz
 
     ! Further limit timestep due to the hyperbolic cleaning equation
     if(UseHyperbolicDivb) CmaxDt = max(SpeedHyp, CmaxDt)
@@ -2503,9 +2512,9 @@ contains
          RhoUn_I = State_V(iRhoIon_I) &
               *(Ux_I*NormalX + Uy_I*NormalY + Uz_I*NormalZ)
 
-         Flux_V(RhoUx_) = sum(RhoUn_I*Ux_I) - Bn*FullBx - B0n*Bx + pTotal*NormalX
-         Flux_V(RhoUy_) = sum(RhoUn_I*Uy_I) - Bn*FullBy - B0n*By + pTotal*NormalY
-         Flux_V(RhoUz_) = sum(RhoUn_I*Uz_I) - Bn*FullBz - B0n*Bz + pTotal*NormalZ
+         Flux_V(RhoUx_)=sum(RhoUn_I*Ux_I) - Bn*FullBx - B0n*Bx + pTotal*NormalX
+         Flux_V(RhoUy_)=sum(RhoUn_I*Uy_I) - Bn*FullBy - B0n*By + pTotal*NormalY
+         Flux_V(RhoUz_)=sum(RhoUn_I*Uz_I) - Bn*FullBz - B0n*Bz + pTotal*NormalZ
       else
          ! f_n[rhou_k] = u_n*u_k*rho - b_n*(b_k + B0_k) - B0_n*b_k + Ptotal*n_k
          Flux_V(RhoUx_) = Un*Rho*Ux - Bn*FullBx - B0n*Bx + pTotal*NormalX
@@ -2521,13 +2530,15 @@ contains
          HallUz = UzPlus - HallJz*InvRho
 
          HallUn = NormalX*HallUx + NormalY*HallUy + NormalZ*HallUz
+      else
+         HallUn = UnPlus
+      end if
 
+      if(HallCoeff > 0.0 .and. DoHallInduction)then
          Flux_V(Bx_) = HallUn*FullBx - HallUx*FullBn
          Flux_V(By_) = HallUn*FullBy - HallUy*FullBn
          Flux_V(Bz_) = HallUn*FullBz - HallUz*FullBn
       else
-         HallUn = UnPlus
-
          Flux_V(Bx_) = UnPlus*FullBx - UxPlus*FullBn
          Flux_V(By_) = UnPlus*FullBy - UyPlus*FullBn
          Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
@@ -2541,31 +2552,38 @@ contains
          ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
          DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
+
          Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
+
          ! f_i[Ppar] = u_i*Ppar
          Flux_V(Ppar_)  = Un*State_V(Ppar_)
       end if
 
-      ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
-      if(HallCoeff > 0.0) then
+      ! de/dt = -div(E x B) = -B.curl E + E.curl B = B.dB/dt + E.j
+      ! For semi-implicit MHD the energy gets updated at the same time 
+      ! as the magnetic field, so de/dt = B.dB/dt = -B.curlE is taken
+      ! into account. The other term is E.j = 0, since the 
+      ! Hall related electric field is j x B/ne so orthogonal to j.
+      if(HallCoeff > 0.0 .and. DoHallInduction) then
          Flux_V(Energy_) = &
               Un*(pTotal + e) &
               - FullBn*(HallUx*Bx + HallUy*By + HallUz*Bz)  &
               + (HallUn - Un)*(B2 + B0B1)
-      else if(UseMultiIon)then
+      elseif(UseMultiIon)then
          Flux_V(Energy_) = &
               Un*(pTotal + e) &
               - FullBn*(UxPlus*Bx + UyPlus*By + UzPlus*Bz)  &
               + (UnPlus - Un)*(B2 + B0B1)
-      else if(UseAnisoPressure)then
-         ! can only work for single fluid without hall 
+      elseif(UseAnisoPressure)then
+         ! can only work for single fluid without Hall 
          Flux_V(Energy_) = &
               Un*(pTotal + e) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz) &
               - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
       else
+         ! f_i[e]=(u_i*(ptotal + e + (b_k*B0_k)) - (b_i+B0_i)*(b_k*u_k))
          Flux_V(Energy_) = &
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
       end if
@@ -2614,7 +2632,7 @@ contains
       ! without a global ion fluid
 
       real :: ChargeDens_I(nIonFluid), InvElectronDens
-      real :: UxPlus, UyPlus, UzPlus
+      real :: UxPlus, UyPlus, UzPlus, UnPlus
       real :: HallUx, HallUy, HallUz
       !-----------------------------------------------------------------------
 
@@ -2626,22 +2644,26 @@ contains
       UxPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUxIon_I))
       UyPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUyIon_I))
       UzPlus = InvElectronDens*sum(ChargeDens_I*State_V(iUzIon_I))
+      UnPlus = UxPlus*NormalX + UyPlus*NormalY + UzPlus*NormalZ
 
       if(HallCoeff > 0.0)then
          HallUx = UxPlus - HallJx*InvElectronDens
          HallUy = UyPlus - HallJy*InvElectronDens
          HallUz = UzPlus - HallJz*InvElectronDens
+         HallUn = NormalX*HallUx + NormalY*HallUy + NormalZ*HallUz
       else
-         HallUx = UxPlus
-         HallUy = UyPlus
-         HallUz = UzPlus
+         HallUn = UnPlus
       end if
 
-      HallUn = NormalX*HallUx + NormalY*HallUy + NormalZ*HallUz
-
-      Flux_V(Bx_) = HallUn*FullBx - HallUx*FullBn
-      Flux_V(By_) = HallUn*FullBy - HallUy*FullBn
-      Flux_V(Bz_) = HallUn*FullBz - HallUz*FullBn
+      if(HallCoeff > 0.0 .and. DoHallInduction)then
+         Flux_V(Bx_) = HallUn*FullBx - HallUx*FullBn
+         Flux_V(By_) = HallUn*FullBy - HallUy*FullBn
+         Flux_V(Bz_) = HallUn*FullBz - HallUz*FullBn
+      else
+         Flux_V(Bx_) = UnPlus*FullBx - UxPlus*FullBn
+         Flux_V(By_) = UnPlus*FullBy - UyPlus*FullBn
+         Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
+      end if
 
       if(DoTestCell)then
          write(*,*)'ChargeDens_I,InvElectronDens=', &
@@ -3197,21 +3219,25 @@ subroutine calc_simple_cell_flux(iBlock)
       else
          Fast = sqrt( 0.5*(Fast2 + Discr) )
       end if
+      FastDt = Fast
 
       ! Add whistler wave speed for the shortest wavelength 2 dx
-      if(HallCoeff > 0.0) then
+      if(HallCoeff > 0.0 .and. DoHallInduction) then
          ! Tangential component of B
          FullBt = sqrt(max(0.0, &
-              (FullBx**2+FullBy**2+FullBz**2) - FullBn**2))
+              (FullBx**2 + FullBy**2 + FullBz**2) - FullBn**2))
+
          ! Calculate Ln = d ln(Rho)/dx = (dRho/dx) / Rho
          Rho1 = State_VGB(Rho_,iLeft,jLeft,kLeft,iBlockFace)
 
          ! Calculate drift speed and whistler speed
          cDrift    = abs(FullBt)*2.0*abs(Rho1 - Rho)/(Rho1 + Rho)
          cWhistler = cPi*abs(FullBn)
+
          ! Take the faster speed
          cHall     = HallCoeff*InvDxyz*InvRho*max(cWhistler, cDrift)
-         !cHall     = HallCoeff*InvDxyz*InvRho*cWhistler
+
+         !cHall    = HallCoeff*InvDxyz*InvRho*cWhistler
          FastDt = Fast + cHall
          Fast   = Fast + HallCmaxFactor*cHall
       end if
