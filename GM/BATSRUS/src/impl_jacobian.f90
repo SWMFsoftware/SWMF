@@ -1,7 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 subroutine impl_jacobian(implBLK,JAC)
 
@@ -175,7 +174,7 @@ subroutine impl_jacobian(implBLK,JAC)
      coeff=qeps*wnrm(jw)
      ImplEps_VC(jw,:,:,:)=Impl_VC(jw,:,:,:) + coeff
 
-     do idim = 1, nDim
+     do iDim = 1, nDim
         ! Index limits for faces and shifted centers
         i1 = 1+i_DD(1,idim); j1= 1+i_DD(2,idim); k1= 1+i_DD(3,idim)
         i2 =nI+i_DD(1,idim); j2=nJ+i_DD(2,idim); k2=nK+i_DD(3,idim);
@@ -251,7 +250,6 @@ subroutine impl_jacobian(implBLK,JAC)
                 +dfdwRface( 1:nI, 1:nJ, 1:nK)                      &
                 -dfdwLface(i1:i2,j1:j2,k1:k2)
 
-
            ! Add Q*dB/dw to dfdwL and dfdwR for upper and lower diagonals
            ! These diagonals are non-zero for the inside interfaces only
            ! which corresponds to the range i1:nI,j1:nJ,k1:nK.
@@ -260,7 +258,7 @@ subroutine impl_jacobian(implBLK,JAC)
                 .or.  (iW >= Bx_    .and. iW <= Bz_   ) &
                 .or.  (iw == E_ .and. UseImplicitEnergy) &
                 ) )then
-              if(.not.IsCartesianGrid .and. jw>=Bx_ .and. jw<=Bz_)then
+              if(.not.IsCartesianGrid .and. jw>=Bx_ .and. jw<=B_+nDim)then
                  ! The source terms are always multiplied by coeff
                  coeff=-0.5*wnrm(jw)/wnrm(iw)
                  ! Get the corresponding face area
@@ -415,19 +413,24 @@ contains
 
     else
        do k=1,nK; do j=1,nJ; do i=1,nI
-          divb(i,j,k) = 0.5/CellVolume_GB(i,j,k,iBlk)*( &
-               sum (Impl_VGB(Bx_:Bz_,i+1,j,k,implBLK) &
+          divb(i,j,k) = &
+               sum (Impl_VGB(Bx_:B_+nDim,i+1,j,k,implBLK) &
                *    FaceNormal_DDFB(:,1,i+1,j,k,iBlk))&
-               -sum(Impl_VGB(Bx_:Bz_,i-1,j,k,implBLK) &
+               -sum(Impl_VGB(Bx_:B_+nDim,i-1,j,k,implBLK) &
                *    FaceNormal_DDFB(:,1,i,j,k,iBlk))  &
-               +sum(Impl_VGB(Bx_:Bz_,i,j+1,k,implBLK) &
+               +sum(Impl_VGB(Bx_:B_+nDim,i,j+1,k,implBLK) &
                *    FaceNormal_DDFB(:,2,i,j+1,k,iBlk))&
-               -sum(Impl_VGB(Bx_:Bz_,i,j-1,k,implBLK) &
-               *    FaceNormal_DDFB(:,2,i,j,k,iBlk))  &
-               +sum(Impl_VGB(Bx_:Bz_,i,j,k+1,implBLK) &
+               -sum(Impl_VGB(Bx_:B_+nDim,i,j-1,k,implBLK) &
+               *    FaceNormal_DDFB(:,2,i,j,k,iBlk))
+
+          if(nK>1) divb(i,j,k) = divb(i,j,k) &
+               +sum(Impl_VGB(Bx_:B_+nDim,i,j,k+1,implBLK) &
                *    FaceNormal_DDFB(:,3,i,j,k+1,iBlk))&
-               -sum(Impl_VGB(Bx_:Bz_,i,j,k-1,implBLK) &
-               *    FaceNormal_DDFB(:,3,i,j,k,iBlk))) 
+               -sum(Impl_VGB(Bx_:B_+nDim,i,j,k-1,implBLK) &
+               *    FaceNormal_DDFB(:,3,i,j,k,iBlk))
+
+          divb(i,j,k) = 0.5/CellVolume_GB(i,j,k,iBlk)*divb(i,j,k)
+
        end do; end do; end do
     end if
 
@@ -556,6 +559,7 @@ contains
     if(IsCartesianGrid)then
 
        do k=1,nK; do j=1,nJ; do i=1,nI
+          ! Jx = dBz/dy - dBy/dz
           if(nJ>1) HallJ_CD(i,j,k,x_) =                    &
                +InvDy2*(Impl_VGB(Bz_,i,j+1,k,implBLK)      &
                -        Impl_VGB(Bz_,i,j-1,k,implBLK))
@@ -565,6 +569,7 @@ contains
        end do; end do; end do
 
        do k=1,nK; do j=1,nJ; do i=1,nI
+          ! Jy = dBx/dz - dBz/dx
           HallJ_CD(i,j,k,y_) = &
                -InvDx2*(Impl_VGB(Bz_,i+1,j,k,implBLK)      &
                -        Impl_VGB(Bz_,i-1,j,k,implBLK))
@@ -574,6 +579,7 @@ contains
        end do; end do; end do
 
        do k=1,nK; do j=1,nJ; do i=1,nI
+          ! Jz = dBy/dx - dBx/dy
           HallJ_CD(i,j,k,z_) = &
                +InvDx2*(Impl_VGB(By_,i+1,j,k,implBLK)      &
                -        Impl_VGB(By_,i-1,j,k,implBLK))
@@ -586,6 +592,8 @@ contains
 
        call set_block_jacobian_cell(iBlk)
 
+       DbDgen_DD = 0.0 !!! make it MaxDim*nDim and use Dim1_, Dim2_, Dim3_
+
        do k=1,nK; do j=1,nJ; do i=1,nI
           DbDgen_DD(:,1) = InvDx2*&
                (Impl_VGB(Bx_:Bz_,i+1,j,k,implBLK) &
@@ -597,19 +605,19 @@ contains
                (Impl_VGB(Bx_:Bz_,i,j,k+1,implBLK) &
                -Impl_VGB(Bx_:Bz_,i,j,k-1,implBLK))
 
-          ! Jx = Dbz/Dy - Dby/Dz
+          ! Jx = dBz/dy - dBy/dz
           if(nJ>1) HallJ_CD(i,j,k,x_) = &
                + sum(DbDgen_DD(z_,:)*DgenDxyz_DDC(:,y_,i,j,k)) 
           if(nK>1) HallJ_CD(i,j,k,x_) = HallJ_CD(i,j,k,x_) &
                - sum(DbDgen_DD(y_,:)*DgenDxyz_DDC(:,z_,i,j,k))
 
-          ! Jy = Dbx/Dz - Dbz/Dx
+          ! Jy = dBx/dz - dBz/dx
           HallJ_CD(i,j,k,y_) = &
                - sum(DbDgen_DD(z_,:)*DgenDxyz_DDC(:,x_,i,j,k))
           if(nK>1)HallJ_CD(i,j,k,y_) = HallJ_CD(i,j,k,y_) &
                + sum(DbDgen_DD(x_,:)*DgenDxyz_DDC(:,z_,i,j,k))
 
-          ! Jz = Dby/Dx - Dbx/Dy
+          ! Jz = dBy/dx - dBx/dy
           HallJ_CD(i,j,k,z_) = &
                + sum(DbDgen_DD(y_,:)*DgenDxyz_DDC(:,x_,i,j,k)) 
           if(nJ>1) HallJ_CD(i,j,k,z_) = HallJ_CD(i,j,k,z_) &
@@ -834,7 +842,7 @@ contains
     BPerN_CD(:,:,:,2) = ByPerN_G(1:nI,1:nJ,1:nK)
     BPerN_CD(:,:,:,3) = BzPerN_G(1:nI,1:nJ,1:nK)
 
-    do kDim = 1,3; do lDim = 1,3
+    do kDim = 1,nDim; do lDim = 1,3
        if(kDim == lDim) CYCLE
 
        do jDim = 1, 3
@@ -843,15 +851,15 @@ contains
           lB = B_ + lDim; 
           Coeff = wnrm(lB)/wnrm(jB)
 
-          jklEpsilon = iLeviCivita_III(jDim, kDim, lDim)
+          jklEpsilon = iLeviCivita_III(jDim,kDim,lDim)
 
-          do iDim = 1,3
+          do iDim = 1,nDim
              if(iDim == jDim) CYCLE  ! Terms cancel out
 
              iklEpsilon = iLeviCivita_III(iDim, kDim, lDim)
              if(iklEpsilon == 0 .and. jklEpsilon == 0) CYCLE
 
-             do iFace = 1,3      ! 3 directions of gen. coordinates
+             do iFace = 1, nDim  ! nDim directions of gen. coordinates
 
                 iSub = 2*iFace   ! stencil index of subdiagonal elements
                 iSup = iSub + 1  ! stencil index of superdiagonal elements
