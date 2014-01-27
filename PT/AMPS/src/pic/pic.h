@@ -2262,6 +2262,9 @@ namespace PIC {
     //calculate of the injection rate of particles distributed with Maxwellian distribution
     double CalculateInjectionRate_MaxwellianDistribution(const double NumberDesnity,const double Temp,const double *BulkVelocity,double *ExternalNormal,const int spec);
 
+    //user-defined generic particle-injection function
+    typedef long int (*fUserDefinedParticleInjectionFunction)();
+    extern fUserDefinedParticleInjectionFunction UserDefinedParticleInjectionFunction;
 
     namespace InternalBoundary {
 

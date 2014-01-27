@@ -55,6 +55,9 @@ void PIC::TimeStep() {
   if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) PIC::BC::nTotalInjectedParticles+=PIC::VolumeParticleInjection::InjectParticle();
 #endif
 
+  //call a user-defined injection function
+  if (PIC::BC::UserDefinedParticleInjectionFunction!=NULL) PIC::BC::nTotalInjectedParticles+=PIC::BC::UserDefinedParticleInjectionFunction();
+
   InjectionBoundaryTime=MPI_Wtime()-InjectionBoundaryTime;
 
 

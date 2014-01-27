@@ -16,6 +16,7 @@ list<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* > PIC::BC::boundingBoxInjectionBloc
 long int* PIC::BC::nInjectedParticles=NULL;
 double *PIC::BC::ParticleProductionRate=NULL;
 long int PIC::BC::nTotalInjectedParticles=0;
+PIC::BC::fUserDefinedParticleInjectionFunction PIC::BC::UserDefinedParticleInjectionFunction=NULL;
 
 //====================================================
 //create the list of blocks where the injection BCs are applied
