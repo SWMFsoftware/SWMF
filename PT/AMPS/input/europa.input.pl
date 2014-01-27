@@ -23,7 +23,7 @@ use ampsConfigLib;
 #print "Process the exospehre model input:\n";
 
 
-my $InputFileName=$ARGV[0];  #"europa.input.Assembled.Block"; #$ARGV[0];  # moon.input.Assembled.Block";
+my $InputFileName=$ARGV[0]; #"europa.input.Assembled.Block"; #$ARGV[0];  # moon.input.Assembled.Block";
 my $SpeciesFileName=$InputFileName; $SpeciesFileName =~ s/\.Block$/.Species/;
 my $WorkingSourceDirectory=$ARGV[1];   #"srcTemp"; #$ARGV[1];   # srcTemp
 
@@ -260,6 +260,25 @@ while ($line=<InputFile>) {
   else {
     die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
   }
+  
+  
+  
+  #extract and redefine the Europa's model related variables from '.ampConfig.Settings' ('.ampConfig.Settings. is created by Config.pl)
+  if (-e ".ampsConfig.Settings") {
+    my @Settings;
+  
+    open (AMPSSETTINGS,".ampsConfig.Settings") || die "Cannot open file\n";
+    @Settings=<AMPSSETTINGS>;
+    close (AMPSSETTINGS);
+  
+    
+    foreach (@Settings){
+      if (/^SPICEKERNELS=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","main/Europa.h"); next};
+      if (/^ICESLOCATION=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("const char IcesLocationPath\\[\\]","\"".$1."\"","main/main_lib.cpp"); next};
+    }    
+  }
+
+  
 }
 
 
