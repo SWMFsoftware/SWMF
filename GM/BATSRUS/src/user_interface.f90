@@ -1,6 +1,7 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
+
 ! We provide external subroutine interfaces to ModUser routines 
 ! to avoid circular dependencies
 
@@ -254,6 +255,8 @@ end subroutine user_set_resistivity
 !=====================================================================
 subroutine user_material_te(State_V, TeOut)
 
+  ! Return the electron temperature in SI units
+
   use ModVarIndexes, ONLY: nVar
   use ModUser, ONLY: user_material_properties
 
@@ -263,3 +266,20 @@ subroutine user_material_te(State_V, TeOut)
   call user_material_properties(State_V, TeOut=TeOut)
 
 end subroutine user_material_te
+!=====================================================================
+subroutine user_material_z_n(State_V, zAverage, NumDensSi)
+
+  ! Return the average ion charge state Z and 
+  ! the number density in SI units.
+
+  use ModVarIndexes, ONLY: nVar
+  use ModUser, ONLY: user_material_properties
+  
+  real, intent(in) :: State_V(nVar)
+  real, intent(out):: zAverage
+  real, intent(out):: NumDensSi
+  !-------------------------------------------------------------------
+  call user_material_properties(State_V, &
+       AverageIonChargeOut = zAverage, NatomicOut=NumDensSi)
+
+end subroutine user_material_z_n
