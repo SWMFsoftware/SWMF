@@ -12,7 +12,7 @@ include Makefile.def
 include Makefile.conf
 
 
-#include the local makefile (defined the AMPS' compiling varisbles) if exists  
+#include the local makefile (defined the AMPS' compiling variables)  
 include Makefile.local
 
 
@@ -21,13 +21,13 @@ CC=${COMPILE.mpicxx}
 CWD=${MYDIR}
 
 install:
-	echo " " > Makefile.local
-	-rm .ampsConfig.Settings
-	./Config.pl -application=Moon
+	@echo " " > Makefile.local
+	@rm -f .ampsConfig.Settings
+	@./Config.pl -application=Moon
 	@echo "AMPS installed"
 
 distclean:
-	-rm Makefile.local .ampsConfig.Settings
+	rm -f Makefile.local .ampsConfig.Settings
 	./Config.pl -uninstall
 
 allclean:
