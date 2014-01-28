@@ -467,7 +467,7 @@ void Europa::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
   //output total source rate
   double summSourceRate;
-  MPI_Reduce(&Europa::TotalInjectionRate,&summSourceRate,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+  MPI_Reduce(&Europa::TotalInjectionRate,&summSourceRate,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::ThisThread==0) {
     cout << "Total Injection Rate: " << summSourceRate/PIC::LastSampleLength/PIC::ParticleWeightTimeStep::GlobalTimeStep[_OPLUS_HIGH_SPEC_] << endl;
@@ -484,7 +484,7 @@ void Europa::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
   }
 
 #if _EUROPA_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EUROPA_SOURCE__ON_
-  ierr=MPI_Gather(&Europa::SourceProcesses::PhotonStimulatedDesorption::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+  ierr=MPI_Gather(&Europa::SourceProcesses::PhotonStimulatedDesorption::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
   if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
   for (thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) SourceRate+=buffer[thread];
@@ -499,7 +499,7 @@ void Europa::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 #endif
 
 #if _EUROPA_SOURCE__IMPACT_VAPORIZATION_ == _EUROPA_SOURCE__ON_
-  ierr=MPI_Gather(&Europa::SourceProcesses::ImpactVaporization::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+  ierr=MPI_Gather(&Europa::SourceProcesses::ImpactVaporization::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
   if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
   for (thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) SourceRate+=buffer[thread];
@@ -515,7 +515,7 @@ void Europa::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
 
 #if _EUROPA_SOURCE__THERMAL_DESORPTION_ == _EUROPA_SOURCE__ON_
-  ierr=MPI_Gather(&Europa::SourceProcesses::ThermalDesorption::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+  ierr=MPI_Gather(&Europa::SourceProcesses::ThermalDesorption::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
   if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
   for (thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) SourceRate+=buffer[thread];
@@ -530,7 +530,7 @@ void Europa::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 #endif
 
 #if _EUROPA_SOURCE__SOLAR_WIND_SPUTTERING_ == _EUROPA_SOURCE__ON_
-  ierr=MPI_Gather(&Europa::SourceProcesses::SolarWindSputtering::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+  ierr=MPI_Gather(&Europa::SourceProcesses::SolarWindSputtering::CalculatedTotalSodiumSourceRate,1,MPI_DOUBLE,buffer,1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
   if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
   for (thread=0,SourceRate=0.0;thread<PIC::nTotalThreads;thread++) SourceRate+=buffer[thread];
@@ -565,7 +565,7 @@ void Europa::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
-    ierr=MPI_Gather(Sampling::PlanetNightSideReturnFlux[spec],_EUROPA_SOURCE_MAX_ID_VALUE_+1,MPI_DOUBLE,FluxAll,_EUROPA_SOURCE_MAX_ID_VALUE_+1, MPI_DOUBLE,0, MPI_COMM_WORLD);
+    ierr=MPI_Gather(Sampling::PlanetNightSideReturnFlux[spec],_EUROPA_SOURCE_MAX_ID_VALUE_+1,MPI_DOUBLE,FluxAll,_EUROPA_SOURCE_MAX_ID_VALUE_+1, MPI_DOUBLE,0, MPI_GLOBAL_COMMUNICATOR);
     if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
 
     for (i=0;i<_EUROPA_SOURCE_MAX_ID_VALUE_+1;i++) {

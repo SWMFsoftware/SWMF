@@ -28,7 +28,7 @@ void Europa::ExchangeSurfaceAreaDensity() {
   memcpy(TotalFlux_GLOBAL,Sphere->O2SurfaceAreaDensity_FluxUP,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber*sizeof(double));
   for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) TotalFlux_LOCAL[el]-=TotalFlux_GLOBAL[el];
 
-  MPI_Allreduce(TotalFlux_LOCAL,TotalFlux_GLOBAL,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(TotalFlux_LOCAL,TotalFlux_GLOBAL,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
 #if _SIMULATION_TIME_STEP_MODE_ != _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
     exit(__LINE__,__FILE__"Error: the model is implemeted only for _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_");
