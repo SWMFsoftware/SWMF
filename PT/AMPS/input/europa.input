@@ -49,7 +49,7 @@ ForceRepeatableSimulationPath=off ! on,off
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
-CouplerMode=ices !!off, ices, swmf
+CouplerMode=swmf !!!ices !!off, ices, swmf
 
 
 
@@ -93,14 +93,10 @@ CouplerMode=ices !!off, ices, swmf
   
   !forces that determine particle'strajectories
   Forces=off ,gravity,FrameRotation,Lorentz !off, gravity, Lorentz, FrameRotation
-  
-  
-  
-  
-  
-  
-  
+#endblock
 
+#block ../exosphere.pl
+  SPICE=on
 #endblock
 
 
