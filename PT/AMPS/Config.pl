@@ -78,7 +78,7 @@ foreach (@Arguments) {
     
   if (/^-mpi=(.*)$/i)        {$MpiLocation=$1;                next}; 
   if (/^-np=(.*)$/i)         {$TestRunProcessorNumber=$1;     next};
-  if (/^-spice=(.*)$/i)      {`echo "SPICE=$1" >> Makefile.local`;     next}; 
+  if (/^-spice=(.*)$/i)      {`echo "SPICE=$1" >> Makefile.local`;`echo "SPICE=$1" >> .ampsConfig.Settings`;     next}; 
   if (/^-kernels=(.*)$/i)    {`echo "SPICEKERNELS=$1" >> .ampsConfig.Settings`;     next};
   if (/^-ices=(.*)$/i)       {`echo "ICESLOCATION=$1" >> .ampsConfig.Settings`;     next};
   
