@@ -25,10 +25,10 @@ use ampsConfigLib;
 #print "Process the exospehre model input:\n";
 
 
-my $InputFileName=$ARGV[0]; # moon.input.Assembled.Block;
+my $InputFileName=$ARGV[0]; #"europa.input.Assembled.Block"; #$ARGV[0]; # moon.input.Assembled.Block;
 my $SpeciesFileName = $InputFileName; $SpeciesFileName =~ s/\.Block$/.Species/;
 
-my $WorkingSourceDirectory=$ARGV[1];  # srcTemp
+my $WorkingSourceDirectory=$ARGV[1]; #"srcTemp";  #$ARGV[1];  # srcTemp
 $ampsConfigLib::WorkingSourceDirectory=$WorkingSourceDirectory;
 
 my $line;
@@ -687,6 +687,27 @@ if (defined $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS) {
   
   
   close (FILEOUT);
+}
+  
+#extract and redefine the Europa's model related variables from '.ampConfig.Settings' ('.ampConfig.Settings. is created by Config.pl)
+if (-e ".ampsConfig.Settings") {
+  my @Settings;
+
+  open (AMPSSETTINGS,".ampsConfig.Settings") || die "Cannot open file\n";
+  @Settings=<AMPSSETTINGS>;
+  close (AMPSSETTINGS);
+
+  
+  foreach (@Settings) {
+    my $t;
+    
+    if (/^SPICE=(.*)$/i) {
+      $t=lc($1);
+          
+      if ($t eq "nospice") {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_OFF_","models/exosphere/Exosphere.h"); next;}
+      else {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_ON_","models/exosphere/Exosphere.h"); next;}
+    }
+  }    
 }
 
 #=============================== Determine the species number  =============================
