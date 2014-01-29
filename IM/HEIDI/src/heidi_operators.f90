@@ -256,15 +256,15 @@ subroutine heidi_driftp
            do J=1,JO
               C(J) = P1(I,J) + P2(I,j,K,L)
               
-              if  (P1(I,J) .le. 0) then 
-                 write(*,*) 'i, j, P1 = ',i, j,  P1(i,j)
-                 !STOP
-              endif
-              
-              if  (P2(I,j, k, l) .le. 0) then 
-                 write(*,*) 'i, j,k, l, P2 = ',i, j, k, l,  P2(i,j,k,l)
-                 !STOP
-              endif
+              !if  (P1(I,J) <= 0) then 
+              !   write(*,*) 'i, j, P1 = ',i, j,  P1(i,j)
+              !   !STOP
+              !endif
+              !
+              !if  (P2(I,j, k, l) <= 0) then 
+              !   write(*,*) 'i, j,k, l, P2 = ',i, j, k, l,  P2(i,j,k,l)
+              !   !STOP
+              !endif
 
               C(J)=AMIN1(0.99,AMAX1(-0.99,C(J)))
               
