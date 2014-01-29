@@ -524,7 +524,7 @@ PIC::InitMPI();
 
 
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 
 	//init the Europa model
@@ -914,10 +914,10 @@ PIC::InitMPI();
 	if (PIC::Mesh::mesh.ThisThread==0) {
 		PIC::Mesh::mesh.buildMesh();
 		PIC::Mesh::mesh.saveMeshFile("mesh.msh");
-		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 	}
 	else {
-		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 		PIC::Mesh::mesh.readMeshFile("mesh.msh");
 	}
 
@@ -993,7 +993,7 @@ PIC::InitMPI();
 	PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
 	PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",0);
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 	if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
 
 
@@ -1130,7 +1130,9 @@ PIC::InitMPI();
 #endif
 
 
-#ifdef _ICES_LOAD_DATA_
+//#ifdef _ICES_LOAD_DATA_
+
+#if _PIC_COUPLER_MODE_ ==	_PIC_COUPLER_MODE__ICES_
 	PIC::CPLR::ICES::readSWMFdata(1.0);
 	//  PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
 
@@ -1182,7 +1184,7 @@ PIC::InitMPI();
 			Europa::Planet->SolarWindSurfaceFlux[el]=c*PlasmaNumberDensity;
 		}
 
-		MPI_Bcast(Europa::Planet->SolarWindSurfaceFlux+el,1,MPI_DOUBLE,node->Thread,MPI_COMM_WORLD);
+		MPI_Bcast(Europa::Planet->SolarWindSurfaceFlux+el,1,MPI_DOUBLE,node->Thread,MPI_GLOBAL_COMMUNICATOR);
 	}
 
 
