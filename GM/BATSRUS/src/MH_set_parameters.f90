@@ -2795,7 +2795,8 @@ contains
          call stop_mpi('CWENO5 is a 5th order scheme!! ')
     if(UseFaceFlux .and. nG /= 5) &
          call stop_mpi('If UseFaceFlux is true, need 5 ghost cells!')
-
+    
+    if( .not.(nStage == 1 .or. UseHalfStep == .true.) ) UseUpdateCheck = .false.
     IsFirstCheck = .false.
   end subroutine correct_parameters
 
