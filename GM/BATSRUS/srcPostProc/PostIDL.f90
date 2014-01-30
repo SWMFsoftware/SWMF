@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
 program PostIDL
 
@@ -686,20 +686,35 @@ contains
  
   subroutine set_gen_coord
 
+    use ModNumConst,       ONLY: cPi, cTwoPi, cHalfPi, cRadToDeg
+    use ModCoordTransform, ONLY: rot_matrix_z
+
     ! Calculate the generalized coordinates mostly for lookup
-
-    real, parameter:: cPi= 3.1415926535897932384626433832795
-    real, parameter:: cTwoPi = 2*cPi, cHalfPi = cPi/2, cRadToDeg=180/cPi
-
     real:: rCyl ! distance from axis Z
 
     ! Toroidal variables
     real:: PoloidalAngle, r, z, StretchCoef, dAngle, Residual, WallRadius
 
+    ! Rotation matrix for rotated Cartesian grid
+    real, allocatable:: GridRot_DD(:,:)
     !---------------------------------------------------------------------
     if(TypeGeometry(1:5)=='round')then
 
        XyzGen_D = sqrt(sum(Xyz_D**2))/maxval(abs(Xyz_D)) * Xyz_D
+
+       RETURN
+    end if
+
+    if(TypeGeometry(1:7)=='rotated')then
+
+       if(.not.allocated(GridRot_DD))then
+          allocate(GridRot_DD(3,3))
+          GridRot_DD = rot_matrix_z(0.6,0.8)
+       end if
+
+       ! Unrotate the coordinates for comparison with Cartesian runs
+       Xyz_D = matmul(Xyz_D, GridRot_DD)
+       XyzGen_D = Xyz_D
 
        RETURN
     end if
