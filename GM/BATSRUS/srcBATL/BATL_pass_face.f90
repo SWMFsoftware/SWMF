@@ -751,11 +751,18 @@ contains
           if(iLevel < MinLevelSend - 1) CYCLE
        end if
 
-       call apply_flux_correction_block(iBlock, nVar,nFluid, nG, &
-            State_VGB(:,:,:,:,iBlock), &
-            Energy_GI=Energy_GBI(:,:,:,iBlock,:), &
-            Flux_VXB=Flux_VXB, Flux_VYB=Flux_VYB, Flux_VZB=Flux_VZB, &
-            DoResChangeOnlyIn=DoResChangeOnlyIn)
+       if(present(Energy_GBI))then
+          call apply_flux_correction_block(iBlock, nVar, nFluid, nG, &
+               State_VGB(:,:,:,:,iBlock), &
+               Energy_GI=Energy_GBI(:,:,:,iBlock,:), &
+               Flux_VXB=Flux_VXB, Flux_VYB=Flux_VYB, Flux_VZB=Flux_VZB, &
+               DoResChangeOnlyIn=DoResChangeOnlyIn)
+       else
+          call apply_flux_correction_block(iBlock, nVar, nFluid, nG, &
+               State_VGB(:,:,:,:,iBlock), &
+               Flux_VXB=Flux_VXB, Flux_VYB=Flux_VYB, Flux_VZB=Flux_VZB, &
+               DoResChangeOnlyIn=DoResChangeOnlyIn)
+       end if
     end do
 
   end subroutine apply_flux_correction
