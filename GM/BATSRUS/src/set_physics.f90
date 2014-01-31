@@ -616,6 +616,7 @@ subroutine init_mhd_variables
   integer :: iVar
   character (len=len(NameVar_V)) :: NameVar
   character (len=*), parameter :: NameSub="init_mhd_variables"
+  !--------------------------------------------------------------------------
 
   ! Set mapping from state variable indices to unit conversion array indices
   do iVar = 1, nVar
@@ -624,36 +625,12 @@ subroutine init_mhd_variables
      call extract_fluid_name(NameVar)
      select case(NameVar)
      case('rho', &
-          'h',  &
-          'hp',  &
-          'hpSw',  &
-          'h2p',  &
-          'o',  &
-          'op',  &
-          'o2p',  & 
-          'he',  &
-          'ohp',  &
-          'N',  &
-          'cop',  &
-          'co2p',  &
-          'h2O',  &
-          'h2Op',  &
-          'h3Op',  &
-          'mp',  &
-          'lp',  &
-          'mhcp',  &
-          'hhcp',  &
-          'hnip',  &
-          'Sw  ',  &
-          'Iono',  &
-          'Neu1',  &
-          'Neu2',  &
-          'Neu3',  &
-          'Neu4',  &
-          'Pui1',  &
-          'Pui2',  &
-          'Pui3',  &
-          'Pui4')
+          'h', 'hp', 'hpsw', 'h2p', 'sw', 'iono', &
+          'o', 'op', 'o2p',  'he', 'ohp', 'n',  &
+          'cop', 'co2p',  'h2O', 'h2Op', 'h3Op',  &
+          'mp', 'lp', 'mhcp', 'hhcp', 'hnip', &
+          'neu1', 'neu2', 'neu3', 'neu4', &
+          'pui1', 'pui2', 'pui3', 'pui4')
         iUnitCons_V(iVar) = UnitRho_
         iUnitPrim_V(iVar) = UnitRho_
      case('mx','my','mz','ux','uy','uz')
@@ -662,27 +639,32 @@ subroutine init_mhd_variables
      case('bx','by','bz')
         iUnitCons_V(iVar) = UnitB_
         iUnitPrim_V(iVar) = UnitB_
-     case('p','pe')
+     case('p','pe', 'ppar')
         iUnitCons_V(iVar) = UnitP_
         iUnitPrim_V(iVar) = UnitP_
-     case('e')
+     case('e', 'ew', 'ehot', 'eint')
         iUnitCons_V(iVar) = UnitEnergyDens_
         iUnitPrim_V(iVar) = UnitEnergyDens_
      case default
-        if(iProc.eq.0) write(*,*) NameSub,': ',NameVar, &
-             ' was not found to set iUnitState_V,', &
-             ' using UnitUnity_ instead.'
-        iUnitCons_V(iVar) = UnitUnity_
-        iUnitPrim_V(iVar) = UnitUnity_
+        if(WaveFirst_ >= iVar .and. iVar <= WaveLast_)then
+           iUnitCons_V(iVar) = UnitEnergyDens_
+           iUnitPrim_V(iVar) = UnitEnergyDens_
+        else
+           if(iProc == 0) write(*,*) NameSub,': ',NameVar, &
+                ' was not found to set iUnitState_V,', &
+                ' using UnitUnity_ instead.'
+           iUnitCons_V(iVar) = UnitUnity_
+           iUnitPrim_V(iVar) = UnitUnity_
+        end if
      end select
   end do
 
-  !--------------------------------------------------------------------------
   if(UseB)then
      UnitUser_V(Bx_:Bz_)        = No2Io_V(UnitB_)
      NameUnitUserTec_V(Bx_:Bz_) = NameTecUnit_V(UnitB_)
      NameUnitUserIdl_V(Bx_:Bz_) = NameIdlUnit_V(UnitB_)
   end if
+
   do iFluid = 1, nFluid
      call select_fluid
      UnitUser_V(iRho)          = No2Io_V(UnitRho_)
