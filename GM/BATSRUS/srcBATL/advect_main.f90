@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program advect
 
-  use BATL_lib, ONLY: nDim, nDimAmr, nI, nJ, nK, &
-       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iProc, barrier_mpi, r_
+  use BATL_lib, ONLY: MaxDim, nDim, nDimAmr, nI, nJ, nK, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iProc, barrier_mpi, r_, &
+       Xyz_DGB, find_grid_block
 
   implicit none
 
@@ -62,10 +64,18 @@ program advect
   ! Face centered flux for conservation fix
   real, allocatable, dimension(:,:,:,:,:):: Flux_VXB, Flux_VYB, Flux_VZB
 
-  logical, parameter :: DoTest = .false.
+  ! Test stuff
+  real:: XyzTest_D(MaxDim) = 0.0
+  integer:: iTest_D(MaxDim), iTest=1, jTest=1, kTest=1
+  integer:: iBlockTest=1, iProcTest=0
+  character(len=100):: StringTest = ' '
+
+  logical:: DoTest
   character(len=*), parameter:: NameSub = 'advect_main'
   !--------------------------------------------------------------------------
   call initialize
+
+  DoTest = do_test(NameSub, iProc)
   
   if(DoTest)write(*,*)NameSub,' starting iProc=',iProc
   if(DoTest)call barrier_mpi
@@ -73,6 +83,16 @@ program advect
   call timing_start('ADVECT')
   do
      if(DoTest)write(*,*)NameSub,' advance iProc, iStep=',iProc,iStep
+
+     if(iProcTest < 0)then
+        call find_grid_block(XyzTest_D, iProcTest, iBlockTest, iTest_D)
+        iTest = iTest_D(1); jTest = iTest_D(2); kTest = iTest_D(3)
+     end if
+     if(iProc==iProcTest .and. StringTest /= '')then
+        write(*,*)'Test cell iTest, jTest, kTest, iBlockTest, iProcTest=', &
+             iTest, jTest, kTest, iBlockTest, iProcTest
+        write(*,*)'Test cell Xyz_D=', Xyz_DGB(:,iTest,jTest,kTest,iBlockTest)
+     end if
 
      ! Save plot at required frequency
      if( Time >= TimePlot - 1e-10 )then
@@ -171,6 +191,7 @@ contains
   real function exact_density(Xyz_D)
 
     use BATL_lib,    ONLY: IsCartesianGrid, IsRzGeometry, IsPeriodic_D
+    use BATL_geometry, ONLY: IsRotatedCartesian, GridRot_DD
     use ModNumConst, ONLY: cHalfPi
     use ModCoordTransform, ONLY: rot_matrix_z
 
@@ -196,12 +217,21 @@ contains
     end if
 
     ! Take periodicity into account for Cartesian and RZ geometries only
-    if(IsCartesianGrid) then
+    if(IsCartesianGrid .or. IsRotatedCartesian) then
+
+       ! Rotate into generalized coordinates to get periodicity right
+       if(IsRotatedCartesian) &
+            XyzShift_D = matmul(XyzShift_D, GridRot_DD(1:nDim,1:nDim))
+
        DomainSize_D = DomainMax_D(1:nDim) - DomainMin_D(1:nDim)
        where(IsPeriodic_D(1:nDim))
           XyzShift_D = modulo(XyzShift_D - DomainMin_D(1:nDim), DomainSize_D) &
                + DomainMin_D(1:nDim)
        end where
+
+       ! Rotate back to XYZ coordinates
+       if(IsRotatedCartesian) &
+            XyzShift_D = matmul(GridRot_DD(1:nDim,1:nDim), XyzShift_D)
     end if
     r2 = sum((XyzShift_D - BlobCenter_D)**2)
 
@@ -227,6 +257,7 @@ contains
          iTree_IA, MaxLevel_, BetaProlong, IsNodeBasedGrid, IsCartesian
 
     use BATL_amr, ONLY: UseSimpleRefinement
+    use BATL_geometry, ONLY: GridRot_DD, IsRotatedCartesian, x_, y_, z_
 
     use ModReadParam, ONLY: read_file, read_init, &
          read_line, read_command, read_var
@@ -238,7 +269,7 @@ contains
     integer:: nRoot_D(MaxDim) = (/4,4,2/)
     logical, allocatable:: DoRefine_B(:)
     real :: BlobRadius, Rgen_I(3)
-    integer :: iDim, i, j, k, iBlock, iLevel
+    integer :: iDim, i, j, k, iBlock, iLevel, iTest_D(MaxDim)
     logical:: IsNodeBasedRead = .true.
     logical:: UseUniformAxis
     !------------------------------------------------------------------------
@@ -296,6 +327,19 @@ contains
           call read_var('DtPlot', DtPlot)
        case("#STOP")
           call read_var('TimeMax', TimeMax)
+       case("#TESTXYZ")
+          call             read_var('xTest', XyzTest_D(x_))
+          if(nDim > 1)call read_var('yTest', XyzTest_D(y_))
+          if(nDim > 2)call read_var('zTest', XyzTest_D(z_))
+          iProcTest = -1
+       case("#TESTIJK")
+          call read_var('iTest', iTest)
+          call read_var('jTest', jTest)
+          call read_var('kTest', kTest)
+          call read_var('iBlockTest', iBlockTest)
+          call read_var('iProcTest', iProcTest)
+       case("#TEST")
+          call read_var('StringTest', StringTest)
        case default
           call CON_stop(NameSub//' unknown command='//trim(NameCommand))
        end select
@@ -303,9 +347,10 @@ contains
 
     UseConstantVelocity = RadialVelocity == 0.0 .and. AngularVelocity == 0.0
 
-    ! Setup generalized radus array
+    ! Setup generalized radius array
     if(index(TypeGeometry,'genr') > 0) Rgen_I = &
-         (/ DomainMin_D(1), (DomainMin_D(1)**3*DomainMax_D(1))**0.25, DomainMax_D(1) /)
+         (/ DomainMin_D(1), (DomainMin_D(1)**3*DomainMax_D(1))**0.25, &
+         DomainMax_D(1) /)
 
     ! Note that the periodicity will be fixed based on TypeGeometry
     call init_batl( &
@@ -318,8 +363,19 @@ contains
          RgenIn_I       = Rgen_I, &
          UseUniformAxisIn = UseUniformAxis)
 
+    if(IsRotatedCartesian) then
+       ! Rotate velocity vector the same way as the grid
+       Velocity_D = matmul(GridRot_DD(1:nDim,1:nDim), Velocity_D)
+
+       ! Rotate the blob center the same way as the grid
+       BlobCenter_D = matmul(GridRot_DD(1:nDim,1:nDim), BlobCenter_D)
+
+       ! Rotate the test cell location
+       XyzTest_D = matmul(GridRot_DD, XyzTest_D)
+    end if
+
     ! The default value is .not.IsRzGeometry
-    UseSimpleRefinement = IsCartesian
+    UseSimpleRefinement = IsCartesian .or. IsRotatedCartesian
 
     IsNodeBasedGrid = IsNodeBasedRead
 
@@ -341,7 +397,7 @@ contains
        end do LOOPBLOCK
 
        call init_grid_batl(DoRefine_B)
-       UseSimpleRefinement = IsCartesian
+       UseSimpleRefinement = IsCartesian .or. IsRotatedCartesian
 
     end do
     deallocate(DoRefine_B)
@@ -753,7 +809,18 @@ contains
     real:: vInv, vFaceNormal
 
     integer :: iDim, i, j, k, Di, Dj, Dk
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_face_flux'
     !------------------------------------------------------------------------
+    DoTest = do_test(NameSub, iProc, iBlock)
+    
+    if(DoTest)then
+       StateLeft_VFD  = -777.7
+       StateRight_VFD = -777.7
+       vFaceNormal_DF = -777.7
+       Flux_VFD       = -777.7
+    end if
 
     if(nOrder==1)then
        do iDim = 1, nDim
@@ -770,7 +837,7 @@ contains
              State_VG(:,i,j,k) = State_VG(:,i,j,k)*CellVolume_GB(i,j,k,iBlock)
           end do; end do; end do
        end if
-       call limit_slope(State_VG, Slope_VGD)
+       call limit_slope(iBlock, State_VG, Slope_VGD)
 
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
@@ -813,20 +880,37 @@ contains
        end do; end do; end do
     end do
 
+    if(DoTest)then
+       write(*,*)NameSub, ': StateLeft_VFD =', &
+            StateLeft_VFD(:,iTest,jTest,kTest,:)
+       write(*,*)NameSub, ': StateRight_VFD=', &
+            StateRight_VFD(:,iTest,jTest,kTest,:)
+       write(*,*)NameSub,': vFaceNormal_D=',vFaceNormal_DF(:,iTest,jTest,kTest)
+       write(*,*)NameSub, ': Flux_VFD = ', Flux_VFD(:,iTest,jTest,kTest,:)
+    end if
+
   end subroutine calc_face_flux
   !===========================================================================
-  subroutine limit_slope(State_VG, Slope_VGD)
+  subroutine limit_slope(iBlock, State_VG, Slope_VGD)
 
     ! Calculate TVD limited slopes Slope_GD of State_VG
 
     use ModNumConst, ONLY: i_DD
 
-    real, intent(in) :: State_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    real, intent(out):: Slope_VGD(nVar,0:nI+1,0:nJ+1,0:nK+1,nDim)
+    integer, intent(in) :: iBlock  ! Passed for testing only
+    real,    intent(in) :: State_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real,    intent(out):: Slope_VGD(nVar,0:nI+1,0:nJ+1,0:nK+1,nDim)
 
     real    :: SlopeLeft_V(nVar), SlopeRight_V(nVar)
     integer :: iDim, i, j, k, Di, Dj, Dk
+    
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'limit_slope'
     !----------------------------------------------------------------------
+    DoTest = do_test(NameSub, iProc, iBlock)
+
+    if(DoTest)Slope_VGD = -777.7
+
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
        do k = 1-Dk, nK+Dk; do j = 1-Dj, nJ+Dj; do i = 1-Di, nI+Di
@@ -840,13 +924,23 @@ contains
        end do; end do; end do
     end do
 
+    if(DoTest)then
+       write(*,*)            NameSub, ': State_VG(:,iTest-1:iTest+1)=', &
+            State_VG(:,iTest-1:iTest+1,jTest,kTest)
+       if(nDim>1) write(*,*) NameSub, ': State_VG(:,jTest-1:jTest+1)=', &
+            State_VG(:,iTest,jTest-1:jTest+1,kTest)
+       if(nDim>2) write(*,*) NameSub, ': State_VG(:,kTest-1:kTest+1)=', &
+            State_VG(:,iTest,jTest,kTest-1:kTest+1)
+       write(*,*) NameSub, ': Slope1=', Slope_VGD(:,iTest,jTest,kTest,:)
+    end if
+
   end subroutine limit_slope
   !===========================================================================
   subroutine calc_vface_normal(iBlock)
 
     use ModNumConst, ONLY: i_DD
-    use BATL_lib, ONLY: IsCartesian, IsRzGeometry, x_, y_, Xyz_DGB, &
-         CellFace_DB, CellFace_DFB, FaceNormal_DDFB
+    use BATL_lib, ONLY: IsCartesian, IsRzGeometry, Xyz_DGB, &
+         CellFace_DB, CellFace_DFB, FaceNormal_DDFB, Dim1_, Dim2_
 
     integer, intent(in):: iBlock
 
@@ -869,8 +963,8 @@ contains
              if(RadialVelocity > 0.)then
                 Velocity_D = XyzFace_D/sqrt(sum(XyzFace_D**2))*RadialVelocity
              else
-                Velocity_D(x_) = -AngularVelocity*XyzFace_D(y_)
-                Velocity_D(y_) =  AngularVelocity*XyzFace_D(x_)
+                Velocity_D(Dim1_) = -AngularVelocity*XyzFace_D(Dim1_)
+                Velocity_D(Dim2_) =  AngularVelocity*XyzFace_D(Dim2_)
              end if
           end if
 
@@ -903,9 +997,11 @@ contains
     integer:: iStage, iDim, iBlock, i, j, k, Di, Dj, Dk, iError
     real:: DtInv, DtPe, DtStage, InvVolume, Flux
 
-    logical, parameter:: DoTest = .false.
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'advance_explicit'
     !--------------------------------------------------------------------------
+    DoTest = do_test(NameSub, iProc)
+
     DtInv = 0.0
 
     ! Calculate time step limit for each block
@@ -949,16 +1045,21 @@ contains
 
     do iStage = 1, nOrder
 
-       if(DoTest)write(*,*)NameSub,' advance_expl iProc, iStage=',iProc,iStage
+       if(DoTest)write(*,*)NameSub,': iProc, iStage, State=', &
+            iProc, iStage, State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
        call set_boundary
+
+       if(DoTest)write(*,*)NameSub,' after set_boundary State=', &
+             State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
        call timing_start('message_pass')
        call message_pass_cell(nVar, State_VGB, &
             DoSendCornerIn=.true., nProlongOrderIn=2)
        call timing_stop('message_pass')
 
-       if(DoTest)write(*,*)NameSub,' finished message_pass iProc=',iProc
+       if(DoTest)write(*,*)NameSub,' after message_pass State=', &
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
        call timing_start('update')
        do iBlock = 1, nBlock
@@ -988,8 +1089,14 @@ contains
           end do
        end do
 
+       if(DoTest)write(*,*)NameSub,': before flux corr. State=', &
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
+
        call apply_flux_correction(nVar, 0, State_VGB, &
             Flux_VXB=Flux_VXB, Flux_VYB=Flux_VYB, Flux_VZB=Flux_VZB)
+
+       if(DoTest)write(*,*)NameSub,': after  flux corr. State=', &
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
        call timing_stop('update')
 
@@ -1012,9 +1119,11 @@ contains
     real, save, allocatable:: Dt_B(:), Time_B(:), TimeOld_B(:)
     integer, save, allocatable:: iStage_B(:)
 
-    logical, parameter:: DoTest = .false.
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'advance_localstep'
     !-----------------------------------------------------------------------
+    DoTest = do_test(NameSub, iProc)
+
     if(.not.allocated(Dt_B))then
        allocate(Dt_B(MaxBlock), Time_B(MaxBlock), TimeOld_B(MaxBlock), &
             iStage_B(MaxBlock))
@@ -1121,6 +1230,25 @@ contains
     end if
 
   end subroutine advance_localstep
+
+  !===========================================================================
+  logical function do_test(NameSub, iProcIn, iBlockIn)
+
+    character(len=*), intent(in):: NameSub
+    integer, intent(in), optional:: iBlockIn
+    integer, intent(in), optional:: iProcIn
+    !------------------------------------------------------------------------
+    do_test = .false.
+
+    if(present(iProcIn))then
+       if(iProcIn /= iProcTest) RETURN
+    end if
+    if(present(iBlockIn))then
+       if(iBlockIn /= iBlockTest) RETURN
+    end if
+    do_test = index(' '//StringTest//' ', ' '//NameSub//' ') > 0
+
+  end function do_test
 
 end program advect
 
