@@ -59,7 +59,7 @@ module BATL_lib
   public:: TypeGeometry, IsCartesianGrid, IsCartesian, IsRzGeometry
   public:: IsSpherical, IsRLonLat, IsCylindrical
   public:: IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, IsAnyAxis
-  public:: x_, y_, z_, r_, Phi_, Theta_, Lon_, Lat_
+  public:: Dim1_, Dim2_, Dim3_, x_, y_, z_, r_, Phi_, Theta_, Lon_, Lat_
   public:: IsLogRadius, IsGenRadius, nRgen, LogRgen_I
   public:: IsPeriodic_D, IsNodeBasedGrid
   public:: xyz_to_coord, coord_to_xyz, radius_to_gen, gen_to_radius
