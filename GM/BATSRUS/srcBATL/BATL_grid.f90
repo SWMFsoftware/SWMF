@@ -200,7 +200,8 @@ contains
     ! used after the AMR is complete.
     logical, optional, intent(in):: DoFaceOnly
 
-    real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim)
+    real :: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim), &
+         FaceNormal_D(MaxDim)
 
     real, allocatable:: rCell_I(:), rFace_I(:), dCosTheta_I(:), &
          Xyz_DN(:,:,:,:)
@@ -234,7 +235,7 @@ contains
        CellFace_DB(:,iBlock) = CellVolume_B(iBlock) / CellSize_DB(:,iBlock)
     end if
 
-    if(IsCartesianGrid)then
+    if(IsCartesianGrid .or. IsRotatedCartesian)then
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Xyz_DGB(:,i,j,k,iBlock) = CoordMin_DB(:,iBlock) + &
@@ -278,6 +279,40 @@ contains
           CellVolume_GB(:,:,:,iBlock) = CellVolume_B(iBlock)
        end if
 
+       if(IsRotatedCartesian)then
+          ! Rotate coordinates
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             Xyz_DGB(:,i,j,k,iBlock) = &
+                  matmul(GridRot_DD, Xyz_DGB(:,i,j,k,iBlock))
+          end do; end do; end do
+
+          do k = 1, nKNode; do j = 1, nJNode; do i = 1, nINode
+             Xyz_DNB(:,i,j,k,iBlock) = &
+                  matmul(GridRot_DD, Xyz_DNB(:,i,j,k,iBlock))
+          end do; end do; end do
+
+          ! Define face variables used by non-Cartesian grids
+          CellFace_DFB(1,:,:,:,iBlock) = CellFace_DB(1,iBlock)
+          CellFace_DFB(2,:,:,:,iBlock) = CellFace_DB(2,iBlock)
+          CellFace_DFB(3,:,:,:,iBlock) = CellFace_DB(3,iBlock)
+
+          FaceNormal_D = matmul(GridRot_DD, (/CellFace_DB(1,iBlock), 0., 0./))
+          do k = 1, nK+1; do j = 1, nJ+1; do i = 1, nI+1
+             FaceNormal_DDFB(:,1,i,j,k,iBlock) = FaceNormal_D(1:nDim)
+          end do; end do; end do
+
+          FaceNormal_D = matmul(GridRot_DD, (/0.0, CellFace_DB(2,iBlock), 0./))
+          do k = 1, nK+1; do j = 1, nJ+1; do i = 1, nI+1
+             FaceNormal_DDFB(:,2,i,j,k,iBlock) = FaceNormal_D(1:nDim)
+          end do; end do; end do
+
+          if(nDim==3)then
+             FaceNormal_D = matmul(GridRot_DD, (/0.,0.,CellFace_DB(3,iBlock)/))
+             do k = 1, nK+1; do j = 1, nJ+1; do i = 1, nI+1
+                FaceNormal_DDFB(:,3,i,j,k,iBlock) = FaceNormal_D
+             end do; end do; end do
+          end if
+       end if
     else
 
        if(.not.present(DoFaceOnly))then
@@ -366,7 +401,7 @@ contains
                 Di = 1
                 if(present(DoFaceOnly).and.j>1.and.j<nJ.and.k>1.and.k<nK) Di=nI
                 do i = 1, nI+1, Di
-                   FaceNormal_DDFB(:,x_,i,j,k,iBlock) = 0.5*cross_product( &
+                   FaceNormal_DDFB(:,1,i,j,k,iBlock) = 0.5*cross_product( &
                         Xyz_DN(:,i,j+1,k+1) - Xyz_DN(:,i,j  ,k),           &
                         Xyz_DN(:,i,j  ,k+1) - Xyz_DN(:,i,j+1,k)          )
 
@@ -379,7 +414,7 @@ contains
                 Dj = 1
                 if(present(DoFaceOnly).and.i>1.and.i<nI.and.k>1.and.k<nK) Dj=nJ
                 do j = 1, nJ+1, Dj
-                   FaceNormal_DDFB(:,y_,i,j,k,iBlock) = 0.5*cross_product( &
+                   FaceNormal_DDFB(:,2,i,j,k,iBlock) = 0.5*cross_product( &
                         Xyz_DN(:,i+1,j,k+1) - Xyz_DN(:,i,j,k  ),           &
                         Xyz_DN(:,i+1,j,k  ) - Xyz_DN(:,i,j,k+1)          )
 
@@ -392,7 +427,7 @@ contains
                 Dk = 1
                 if(present(DoFaceOnly).and.i>1.and.i<nI.and.j>1.and.j<nJ) Dk=nK
                 do k = 1, nK+1, Dk; 
-                   FaceNormal_DDFB(:,z_,i,j,k,iBlock) = 0.5*cross_product( &
+                   FaceNormal_DDFB(:,3,i,j,k,iBlock) = 0.5*cross_product( &
                         Xyz_DN(:,i+1,j+1,k) - Xyz_DN(:,i  ,j,k),           &
                         Xyz_DN(:,i  ,j+1,k) - Xyz_DN(:,i+1,j,k)          )
 
@@ -1314,11 +1349,13 @@ contains
     if(iProc==0)call show_grid_proc
 
     if(DoTestMe) write(*,*)'Testing find_grid_block'
-    call find_grid_block(DomainMin_D, iProcOut, iBlockOut, &
-         iCell_D, Distance_D)
+    Xyz_D = 0.0
+    Xyz_D(1:nDim) = DomainMin_D(1:nDim)
+    call find_grid_block(Xyz_D, iProcOut, iBlockOut, &
+         iCell_D, Distance_D, UseGhostCell=.true.)
     if(iProc == iProcOut) then
        Xyz_D = Xyz_DGB(:,iCell_D(1),iCell_D(2),iCell_D(3),iBlockOut) &
-            - 0.5*CellSize_DB(:,iBlockOut)
+            + 0.5*CellSize_DB(:,iBlockOut)
        if(any(abs(DomainMin_D(1:nDim) - Xyz_D(1:nDim)) > 1e-6)) then
           write(*,*) 'Error: DomainMin_D, Xyz_D=', &
                DomainMin_D, Xyz_D
@@ -1327,20 +1364,22 @@ contains
        end if
     end if
 
-    if(any(iCell_D(1:nDim) /= 1)) then
-       write(*,*) 'Error: iCell_D=', iCell_D(1:nDim),' should be 1'
+    if(any(iCell_D(1:nDim) /= 0)) then
+       write(*,*) 'Error: iCell_D=', iCell_D(1:nDim),' should be 0'
        write(*,*) 'iProcOut, iBlockOut, Distance_D = ',&
             iProcOut, iBlockOut, Distance_D
     end if
 
-    if(any(abs(Distance_D(1:nDim) + 0.5) > 1e-6)) then
+    if(any(abs(Distance_D(1:nDim) - 0.5) > 1e-6)) then
        write(*,*) 'Error: Distance_D=', Distance_D(1:nDim),' should be -0.5'
        write(*,*) 'iProcOut, iBlockOut, iCell_D = ',&
             iProcOut, iBlockOut, iCell_D
     end if
 
-    call find_grid_block(DomainMax_D, iProcOut, iBlockOut, &
-         iCell_D, Distance_D)
+    Xyz_D = 0.0
+    Xyz_D(1:nDim) = DomainMax_D(1:nDim)
+    call find_grid_block(Xyz_D, iProcOut, iBlockOut, &
+         iCell_D, Distance_D, UseGhostCell=.true.)
     if(iProc == iProcOut) then
        Xyz_D = Xyz_DGB(:,iCell_D(1),iCell_D(2),iCell_D(3),iBlockOut) &
             + 0.5*CellSize_DB(:,iBlockOut)
