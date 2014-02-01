@@ -21,8 +21,9 @@ module BATL_geometry
   character(len=20), public:: TypeGeometry = 'cartesian'
 
   ! Cartesian, cylindrical or spherical coordinates
-  logical, public:: IsCartesianGrid   = .true.  ! Cartesian grid
+  logical, public:: IsCartesianGrid   = .true.  ! Cartesian grid (possibly RZ)
   logical, public:: IsCartesian       = .true.  ! Normal Cartesian geometry
+  logical, public:: IsRotatedCartesian= .false. ! Rotated Cartesian grid
   logical, public:: IsRzGeometry      = .false. ! RZ geometry (x is symm. axis)
   logical, public:: IsRoundCube       = .false. ! square/cube stretched
   logical, public:: IsCylindrical     = .false. ! cylindrical: r, phi, z
@@ -38,8 +39,11 @@ module BATL_geometry
   ! Periodicity of the domain per dimension
   logical, public:: IsPeriodic_D(MaxDim) = .false.
 
-  ! Index names for coordinates
-  integer, parameter, public:: x_=1, y_=min(nDim,2), z_=min(nDim,3)
+  ! Index names for coordinates limited by nDim
+  integer, parameter, public:: Dim1_=1, Dim2_=min(nDim,2), Dim3_=min(nDim,3)
+
+  ! Index names for Cartesian components (not limited by nDim)
+  integer, parameter, public:: x_=1, y_=2, z_=3
 
   ! The following index names will be set in init_geometry
   integer, public:: r_=-1, Phi_=-1, Theta_=-1, Lon_=-1, Lat_=-1
@@ -48,11 +52,17 @@ module BATL_geometry
   integer, public:: nRgen = -1    ! number of elements in LogRgen_I
   real,    public, allocatable:: LogRgen_I(:)  ! array of log(r) values
 
+  ! Rotation matrix from generalized to X,Y,Z coordinates
+  real, public:: GridRot_DD(MaxDim,MaxDim)
+
 contains
 
   !=========================================================================
 
   subroutine init_geometry(TypeGeometryIn, IsPeriodicIn_D, RgenIn_I)
+
+    use ModNumConst,       ONLY: i_DD
+    use ModCoordTransform, ONLY: rot_matrix_z
 
     character(len=*), optional, intent(in):: TypeGeometryIn
     logical,          optional, intent(in):: IsPeriodicIn_D(nDim)
@@ -62,6 +72,7 @@ contains
     !
     ! TypeGeometry can be
     !    'cartesian'
+    !    'rotatedcartesian'
     !    'rz'
     !    'roundcube'
     !    'cylindrical'
@@ -92,18 +103,28 @@ contains
     if(present(IsPeriodicIn_D)) IsPeriodic_D(1:nDim) = IsPeriodicIn_D
 
     ! Logicals are useful for efficient code
-    IsCartesian   = TypeGeometry(1:9)  == 'cartesian'
-    IsRzGeometry  = TypeGeometry(1:2)  == 'rz'
-    IsSpherical   = TypeGeometry(1:3)  == 'sph'
-    IsRLonLat     = TypeGeometry(1:3)  == 'rlo'
-    IsCylindrical = TypeGeometry(1:3)  == 'cyl'
-    IsRoundCube   = TypeGeometry(1:5)  == 'round'
+    IsCartesian        = TypeGeometry(1:9)  == 'cartesian'
+    IsRotatedCartesian = TypeGeometry(1:16) == 'rotatedcartesian'
+    IsRzGeometry       = TypeGeometry(1:2)  == 'rz'
+    IsSpherical        = TypeGeometry(1:3)  == 'sph'
+    IsRLonLat          = TypeGeometry(1:3)  == 'rlo'
+    IsCylindrical      = TypeGeometry(1:3)  == 'cyl'
+    IsRoundCube        = TypeGeometry(1:5)  == 'round'
 
     IsLogRadius   = index(TypeGeometry,'lnr')  > 0
     IsGenRadius   = index(TypeGeometry,'genr') > 0
 
     ! Grid is Cartesian (even in RZ geometry)
     IsCartesianGrid = IsCartesian .or. IsRzGeometry
+
+    ! Set up a rotation matrix
+    if(IsRotatedCartesian)then
+       ! Rotate around the Z axis with atan(3/4)
+       GridRot_DD = rot_matrix_z(0.6, 0.8)
+    else
+       ! Just in case it would be used
+       GridRot_DD = i_DD
+    end if
 
     r_ = -1; Phi_ = -1; Theta_ = -1; Lon_ = -1; Lat_ = -1
     if(IsRzGeometry)then
@@ -159,6 +180,8 @@ contains
     if(IsCartesianGrid)then
        CoordOut_D = XyzIn_D
        RETURN
+    elseif(IsRotatedCartesian)then
+       CoordOut_D = matmul(XyzIn_D, GridRot_DD) 
     elseif(IsCylindrical)then
        x = XyzIn_D(1); y = XyzIn_D(2)
        CoordOut_D(1) = sqrt(x**2 + y**2)
@@ -209,6 +232,9 @@ contains
 
     if(IsCartesianGrid)then
        XyzOut_D = CoordIn_D
+       RETURN
+    elseif(IsRotatedCartesian)then
+       XyzOut_D = matmul(GridRot_DD, CoordIn_D)
        RETURN
     endif
 
@@ -309,7 +335,8 @@ contains
          write(*,*)'ERROR: init_geometry failed, ', &
          'TypeGeometry=', TypeGeometry, ' should be Cartesian by default'
 
-    if(.not.IsCartesian .or. IsRzGeometry .or. IsSpherical .or. IsCylindrical)&
+    if(.not.IsCartesian .or. IsRotatedCartesian .or. &
+         IsRzGeometry .or. IsSpherical .or. IsCylindrical)&
          write(*,*)'ERROR: init_geometry failed for Cartesian grid, ', &
          'IsCartesian, IsRzGeometry, IsSpherical, IsCylindrical=', &
          IsCartesian, IsRzGeometry, IsSpherical, IsCylindrical
