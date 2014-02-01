@@ -32,7 +32,7 @@ module BATL_pass_cell
 
   private ! except
 
-  public message_pass_cell
+  public message_pass_cell, message_pass_ng_int1
   public test_pass_cell
 
   interface message_pass_cell
