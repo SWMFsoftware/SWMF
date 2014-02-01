@@ -1,9 +1,9 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module BATL_pass_cell
 
-  use BATL_geometry, ONLY: IsCartesianGrid, IsRoundCube, &
+  use BATL_geometry, ONLY: IsCartesianGrid, IsRotatedCartesian, IsRoundCube, &
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
 
@@ -1070,7 +1070,7 @@ contains
       !------------------------------------------------------------------------
 
       UseSimpleWeights = nDim == 1 .or. nDimAmr < nDim &
-           .or. IsCartesianGrid .or. IsRoundCube
+           .or. IsCartesianGrid .or. IsRotatedCartesian .or. IsRoundCube
 
       ! Loop through the subfaces or subedges
       do kSide = (1-kDir)/2, 1-(1+kDir)/2, 3-kRatio
