@@ -22,7 +22,7 @@ contains
          UseB0,UseDivBsource,GravityDir,UseBody2,&
          TypeCoordSystem,Useraddiffusion,&
          DoThinCurrentSheet,UseUSerSource,test_string
-    use ModAdvance, xx_=> x_,yy_=>y_,zz_=>z_  ! conflicting def of x_,y_,z_
+    use ModAdvance
     use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
     use ModPhysics
     use ModUser,          ONLY: user_calc_sources
@@ -46,7 +46,7 @@ contains
     use ModB0,            ONLY: set_b0_source, UseB0Source, UseCurlB0, &
          rCurrentFreeB0, DivB0_C, CurlB0_DC
     use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
-         Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_
+         Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_
     use ModViscosity,     ONLY: UseViscosity, viscosity_factor
     integer, intent(in):: iBlock
 
@@ -60,10 +60,10 @@ contains
 
     ! Variables needed for Boris source terms also used for div(u)
     real :: FullB_DC(MaxDim,nI,nJ,nK), RhoInv
-    real :: E_D(3), DivE
+    real :: E_D(MaxDim), DivE
 
     ! Variables needed for anisotropic pressure
-    real :: b_D(3), GradU_DD(nDim,maxDim), bDotGradparU
+    real :: b_D(MaxDim), GradU_DD(nDim,MaxDim), bDotGradparU
 
     ! Gravitational force towards body
     real :: ForcePerRho_D(3)
@@ -142,28 +142,28 @@ contains
                    ! tau_ij = rho*nu*(d_i u_j + d_j u_i - 2/3 delta_ij div u)
 
                    ! Calculate first -2/3 (div u)^2
-                   Visco              =         GradU_DD(x_,1) 
-                   if(nDim > 1) Visco = Visco + GradU_DD(y_,2) 
-                   if(nDim > 2) Visco = Visco + GradU_DD(z_,3)
+                   Visco              =         GradU_DD(Dim1_,1)
+                   if(nDim > 1) Visco = Visco + GradU_DD(Dim2_,2) 
+                   if(nDim > 2) Visco = Visco + GradU_DD(Dim3_,3)
                    Visco = -cTwoThirds*Visco**2
 
                    ! Add 2*Sum_i (d_i u_i)^2
-                   Visco              = Visco + 2.0*GradU_DD(x_,1)**2 
-                   if(nDim > 1) Visco = Visco + 2.0*GradU_DD(y_,2)**2
-                   if(nDim > 2) Visco = Visco + 2.0*GradU_DD(z_,3)**2
+                   Visco              = Visco + 2.0*GradU_DD(Dim1_,1)**2 
+                   if(nDim > 1) Visco = Visco + 2.0*GradU_DD(Dim2_,2)**2
+                   if(nDim > 2) Visco = Visco + 2.0*GradU_DD(Dim3_,3)**2
 
                    ! Add Sum_{i<j} (d_i u_j + d_j u_i)^2
-                   Tmp              =       GradU_DD(x_,2)
-                   if(nDim > 1) Tmp = Tmp + GradU_DD(y_,1)
+                   Tmp              =       GradU_DD(Dim1_,2)
+                   if(nDim > 1) Tmp = Tmp + GradU_DD(Dim2_,1)
                    Visco = Visco + Tmp**2
 
-                   Tmp              =       GradU_DD(x_,3)
-                   if(nDim > 2) Tmp = Tmp + GradU_DD(z_,1)
+                   Tmp              =       GradU_DD(Dim1_,3)
+                   if(nDim > 2) Tmp = Tmp + GradU_DD(Dim3_,1)
                    Visco = Visco + Tmp**2
 
                    if(nDim > 1)then
-                      Tmp              =       GradU_DD(y_,3)
-                      if(nDim > 2) Tmp = Tmp + GradU_DD(z_,2)
+                      Tmp              =       GradU_DD(Dim2_,3)
+                      if(nDim > 2) Tmp = Tmp + GradU_DD(Dim3_,2)
                       Visco = Visco + Tmp**2
                    end if
 
@@ -235,7 +235,7 @@ contains
           if(IsRzGeometry) &
                Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
                + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
-               *(GammaWave - 1)/Xyz_DGB(y_,i,j,k,iBlock)
+               *(GammaWave - 1)/Xyz_DGB(Dim2_,i,j,k,iBlock)
        end do; end do; end do
 
        if(UseTurbulentCascade)then
@@ -705,7 +705,7 @@ contains
     !==========================================================================
     subroutine calc_grad_u(GradU_DD, i, j, k, iBlock)
 
-      use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, x_, y_, z_
+      use BATL_lib, ONLY: FaceNormal_DDFB, CellVolume_GB, Dim1_, Dim2_, Dim3_
 
       integer, intent(in) :: i, j, k, iBlock
       real,   intent(out) :: GradU_DD(nDim,MaxDim)
@@ -718,26 +718,26 @@ contains
 
       ! Calculate gradient tensor of velocity
       if(IsCartesian) then
-         GradU_DD(x_,:) = &
+         GradU_DD(Dim1_,:) = &
               ( LeftState_VX(iUx:iUz,i+1,j,k)   &
               + RightState_VX(iUx:iUz,i+1,j,k)  &
               - LeftState_VX(iUx:iUz,i,j,k)     &
               - RightState_VX(iUx:iUz,i,j,k) )  &
-              /(2*CellSize_DB(x_,iBlock))
+              /(2*CellSize_DB(Dim1_,iBlock))
 
-         if(nJ > 1) GradU_DD(y_,:) = &
+         if(nJ > 1) GradU_DD(Dim2_,:) = &
               ( LeftState_VY(iUx:iUz,i,j+1,k)   &
               + RightState_VY(iUx:iUz,i,j+1,k)  &
               - LeftState_VY(iUx:iUz,i,j,k)     &
               - RightState_VY(iUx:iUz,i,j,k) )  &
-              /(2*CellSize_DB(y_,iBlock))
+              /(2*CellSize_DB(Dim2_,iBlock))
 
-         if(nK > 1) GradU_DD(z_,:) = &
+         if(nK > 1) GradU_DD(Dim3_,:) = &
               ( LeftState_VZ(iUx:iUz,i,j,k+1)   &
               + RightState_VZ(iUx:iUz,i,j,k+1)  &
               - LeftState_VZ(iUx:iUz,i,j,k)     &
               - RightState_VZ(iUx:iUz,i,j,k) )  &
-              /(2*CellSize_DB(z_,iBlock))
+              /(2*CellSize_DB(Dim3_,iBlock))
 
       else if(IsRzGeometry) then
          call stop_mpi(NameSub//': RZ geometry to be implemented')

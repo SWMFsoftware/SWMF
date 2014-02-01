@@ -710,11 +710,11 @@ contains
     ! calculate the gradient FaceGrad_DI of field Var_IG 
     ! on face iDir of cell i, j, k of block iBlock
 
-    use BATL_lib,      ONLY: IsCartesianGrid, nDim, x_, y_, z_
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
-    use BATL_lib,      ONLY: CellSize_DB,DiLevelNei_IIIB,MaxDim,&
-         MinI,MaxI,MinJ,MaxJ,MinK,MaxK
+    use BATL_lib,      ONLY: IsCartesianGrid, nDim, Dim1_, Dim2_, Dim3_, &
+         CellSize_DB, DiLevelNei_IIIB, MaxDim, x_, y_, z_, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     integer, intent(in) :: iDir, i, j, k, iBlock, nField
     logical, intent(inout) :: IsNewBlock
@@ -761,7 +761,7 @@ contains
             )then
           iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
        end if
-    elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. NeiLwest(iBlock)==-1 .or. &
+    elseif((i==nI+1 .or. i==nI.and.iDir/=Dim1_) .and. NeiLwest(iBlock)==-1 .or. &
          i==nI .and. ((iDir==y_ .and. &
          (j==1    .and. DiLevelNei_IIIB( 1,-1, 0,iBlock)==-1) .or. &
          (j==nJ+1 .and. DiLevelNei_IIIB( 1, 1, 0,iBlock)==-1)) &
@@ -820,43 +820,43 @@ contains
        ! Use central difference to get gradient at face
        select case(iDir)
        case(1)
-          FaceGrad_DI(x_,iField) = &
+          FaceGrad_DI(Dim1_,iField) = &
                InvDx*(Var_IG(iField,i,j,k) - Var_IG(iField,i-1,j,k))
 
-          if(nJ > 1) FaceGrad_DI(y_,iField) = &
+          if(nJ > 1) FaceGrad_DI(Dim2_,iField) = &
                + Ay*(Var_IG(iField,i-1,jL,k) + Var_IG(iField,i,jL,k)) &
                + By*(Var_IG(iField,i-1,j ,k) + Var_IG(iField,i,j ,k)) &
                + Cy*(Var_IG(iField,i-1,jR,k) + Var_IG(iField,i,jR,k))
 
-          if(nK > 1) FaceGrad_DI(z_,iField) = &
+          if(nK > 1) FaceGrad_DI(Dim3_,iField) = &
                   + Az*(Var_IG(iField,i-1,j,kL) + Var_IG(iField,i,j,kL)) &
                   + Bz*(Var_IG(iField,i-1,j,k ) + Var_IG(iField,i,j,k )) &
                   + Cz*(Var_IG(iField,i-1,j,kR) + Var_IG(iField,i,j,kR))
        case(2)
-          FaceGrad_DI(x_,iField) = &
+          FaceGrad_DI(Dim1_,iField) = &
                + Ax*(Var_IG(iField,iL,j-1,k) + Var_IG(iField,iL,j,k)) &
                + Bx*(Var_IG(iField,i ,j-1,k) + Var_IG(iField,i ,j,k)) &
                + Cx*(Var_IG(iField,iR,j-1,k) + Var_IG(iField,iR,j,k))
 
-          FaceGrad_DI(y_,iField) = &
+          FaceGrad_DI(Dim2_,iField) = &
                InvDy*(Var_IG(iField,i,j,k) - Var_IG(iField,i,j-1,k))
 
-          if(nK > 1) FaceGrad_DI(z_,iField) = &
+          if(nK > 1) FaceGrad_DI(Dim3_,iField) = &
                   + Az*(Var_IG(iField,i,j-1,kL) + Var_IG(iField,i,j,kL)) &
                   + Bz*(Var_IG(iField,i,j-1,k ) + Var_IG(iField,i,j,k )) &
                   + Cz*(Var_IG(iField,i,j-1,kR) + Var_IG(iField,i,j,kR))
        case(3)
-          FaceGrad_DI(x_,iField) = &
+          FaceGrad_DI(Dim1_,iField) = &
                + Ax*(Var_IG(iField,iL,j,k-1) + Var_IG(iField,iL,j,k)) &
                + Bx*(Var_IG(iField,i ,j,k-1) + Var_IG(iField,i ,j,k)) &
                + Cx*(Var_IG(iField,iR,j,k-1) + Var_IG(iField,iR,j,k))
 
-          FaceGrad_DI(y_,iField) = &
+          FaceGrad_DI(Dim2_,iField) = &
                + Ay*(Var_IG(iField,i,jL,k-1) + Var_IG(iField,i,jL,k))  &
                + By*(Var_IG(iField,i,j ,k-1) + Var_IG(iField,i,j ,k))  &
                + Cy*(Var_IG(iField,i,jR,k-1) + Var_IG(iField,i,jR,k))
 
-          FaceGrad_DI(z_,iField) = &
+          FaceGrad_DI(Dim3_,iField) = &
                InvDz*(Var_IG(iField,i,j,k) - Var_IG(iField,i,j,k-1))
        case default
           write(*,*)'Error face index iDir=',iDir

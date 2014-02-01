@@ -2,7 +2,9 @@
 module ModSize
   
   use BATL_size, MaxBlockBatl => MaxBlock
-  use BATL_geometry, ONLY: r_, Phi_, Theta_, Lon_, Lat_
+
+  ! Named indexes for coordinate directions
+  use BATL_geometry, ONLY: x_, y_, z_, r_, Phi_, Theta_, Lon_, Lat_
 
   implicit none
 
@@ -13,8 +15,5 @@ module ModSize
 
   ! Maximum number of implicit blocks (set by Config.pl)
   integer, parameter :: MaxImplBLK = min(MaxBlock, 100)
-
-  ! Named indexes for Cartesian directions (these are limited by nDim in BATL)
-  integer, parameter :: x_ = 1, y_ = 2, z_ = 3
 
 end module ModSize

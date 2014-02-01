@@ -1481,8 +1481,9 @@ contains
 
   subroutine get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
 
-    use BATL_lib, ONLY: IsCartesianGrid, x_, y_, z_, &
-         CellSize_DB, FaceNormal_DDFB, CellVolume_GB
+    use BATL_lib, ONLY: IsCartesianGrid, &
+         CellSize_DB, FaceNormal_DDFB, CellVolume_GB, &
+         x_, y_, z_, Dim1_, Dim2_, Dim3_
     use BATL_size, ONLY: nDim, nI, j0_, nJp1_, k0_, nKp1_
 
     integer, intent(in) :: i, j, k, iBlock
@@ -1497,22 +1498,22 @@ contains
     end if
 
     if(IsCartesianGrid)then
-       GradLogAlfven_D(x_) = 1.0/CellSize_DB(x_,iBlock) &
-            *(LogAlfven_FD(i+1,j,k,x_) - LogAlfven_FD(i,j,k,x_))
-       if(nJ > 1) GradLogAlfven_D(y_) = 1.0/CellSize_DB(y_,iBlock) &
-            *(LogAlfven_FD(i,j+1,k,y_) - LogAlfven_FD(i,j,k,y_))
-       if(nK > 1) GradLogAlfven_D(z_) = 1.0/CellSize_DB(z_,iBlock) &
-            *(LogAlfven_FD(i,j,k+1,z_) - LogAlfven_FD(i,j,k,z_))
+       GradLogAlfven_D(Dim1_) = 1.0/CellSize_DB(x_,iBlock) &
+            *(LogAlfven_FD(i+1,j,k,Dim1_) - LogAlfven_FD(i,j,k,Dim1_))
+       if(nJ > 1) GradLogAlfven_D(Dim2_) = 1.0/CellSize_DB(y_,iBlock) &
+            *(LogAlfven_FD(i,j+1,k,Dim2_) - LogAlfven_FD(i,j,k,Dim2_))
+       if(nK > 1) GradLogAlfven_D(Dim3_) = 1.0/CellSize_DB(z_,iBlock) &
+            *(LogAlfven_FD(i,j,k+1,Dim3_) - LogAlfven_FD(i,j,k,Dim3_))
     else
        GradLogAlfven_D = &
-            LogAlfven_FD(i+1,j,k,x_)*FaceNormal_DDFB(:,x_,i+1,j,k,iBlock) &
-            - LogAlfven_FD(i,j,k,x_)*FaceNormal_DDFB(:,x_,i,j,k,iBlock)
+            LogAlfven_FD(i+1,j,k,Dim1_)*FaceNormal_DDFB(:,Dim1_,i+1,j,k,iBlock) &
+            - LogAlfven_FD(i,j,k,Dim1_)*FaceNormal_DDFB(:,Dim1_,i,j,k,iBlock)
        if(nJ > 1) GradLogAlfven_D = GradLogAlfven_D + &
-            LogAlfven_FD(i,j+1,k,y_)*FaceNormal_DDFB(:,y_,i,j+1,k,iBlock) &
-            - LogAlfven_FD(i,j,k,y_)*FaceNormal_DDFB(:,y_,i,j,k,iBlock)
+            LogAlfven_FD(i,j+1,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j+1,k,iBlock) &
+            - LogAlfven_FD(i,j,k,Dim2_)*FaceNormal_DDFB(:,Dim2_,i,j,k,iBlock)
        if(nK > 1) GradLogAlfven_D = GradLogAlfven_D + &
-            LogAlfven_FD(i,j,k+1,z_)*FaceNormal_DDFB(:,z_,i,j,k+1,iBlock) &
-            - LogAlfven_FD(i,j,k,z_)*FaceNormal_DDFB(:,z_,i,j,k,iBlock)
+            LogAlfven_FD(i,j,k+1,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k+1,iBlock) &
+            - LogAlfven_FD(i,j,k,Dim3_)*FaceNormal_DDFB(:,Dim3_,i,j,k,iBlock)
 
        GradLogAlfven_D = GradLogAlfven_D/CellVolume_GB(i,j,k,iBlock)
     end if
@@ -1545,7 +1546,7 @@ contains
                  + RightState_VY(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DY(:,i,j,k)
             Rho = 0.5*(LeftState_VY(Rho_,i,j,k) + RightState_VY(Rho_,i,j,k))
-            LogAlfven_FD(i,j,k,y_) = log(sqrt(max(sum(FullB_D**2), 1e-30)/Rho))
+            LogAlfven_FD(i,j,k,Dim2_) = log(sqrt(max(sum(FullB_D**2), 1e-30)/Rho))
          end do; end do; end do
       end if
 
@@ -1555,7 +1556,7 @@ contains
                  + RightState_VZ(Bx_:Bz_,i,j,k))
             if(UseB0) FullB_D = FullB_D + B0_DZ(:,i,j,k)
             Rho = 0.5*(LeftState_VZ(Rho_,i,j,k) + RightState_VZ(Rho_,i,j,k))
-            LogAlfven_FD(i,j,k,z_) = log(sqrt(max(sum(FullB_D**2), 1e-30)/Rho))
+            LogAlfven_FD(i,j,k,Dim3_) = log(sqrt(max(sum(FullB_D**2), 1e-30)/Rho))
          end do; end do; end do
       end if
 

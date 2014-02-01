@@ -1171,7 +1171,7 @@ contains
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
     use ModUser,     ONLY: user_material_properties
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use BATL_lib,  ONLY: x_, y_, z_
+    use BATL_lib,  ONLY: Dim1_, Dim2_, Dim3_
 
     real,    intent(out):: Flux_V(nFlux)
 
@@ -1268,9 +1268,9 @@ contains
        end if
 
        ! Calculate grad(Pe)/(n_e * e)
-       GradXPeNe = GradPe_D(x_)*InvElectronDens
-       GradYPeNe = GradPe_D(y_)*InvElectronDens
-       GradZPeNe = GradPe_D(z_)*InvElectronDens
+       GradXPeNe = GradPe_D(Dim1_)*InvElectronDens
+       GradYPeNe = GradPe_D(Dim2_)*InvElectronDens
+       GradZPeNe = GradPe_D(Dim3_)*InvElectronDens
 
     end if
 
