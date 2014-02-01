@@ -27,7 +27,8 @@ OBJECTS = \
 ALLOBJECTS = \
 	${OBJECTS} \
 	main.o \
-	advect_main.o
+	advect_main.o \
+	game_of_life.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${ALLOBJECTS}
@@ -61,6 +62,14 @@ ADVECT:
 
 ${BINDIR}/ADVECT.exe: advect_main.o ${OBJECTS}
 	${LINK.f90} -o ${BINDIR}/ADVECT.exe advect_main.o ${OBJECTS} \
+		-L${LIBDIR} -lTIMING -lSHARE ${Lflag1}
+
+GAME:
+	make DEPEND
+	$(MAKE) ${BINDIR}/GAME.exe
+
+${BINDIR}/GAME.exe: game_of_life.o ${OBJECTS}
+	${LINK.f90} -o ${BINDIR}/GAME.exe game_of_life.o ${OBJECTS} \
 		-L${LIBDIR} -lTIMING -lSHARE ${Lflag1}
 
 distclean: clean
