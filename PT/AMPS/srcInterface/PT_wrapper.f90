@@ -151,19 +151,19 @@ subroutine PT_put_from_gm( &
   integer:: iPoint, i, iProc, nProc
 
   character(len=*), parameter :: NameSub='PT_put_from_gm'
-  integer,parameter::datafile=2
-  character(len=255)::datafilename
-  integer,parameter::pointsfile=1
-  character(len=255)::pointsfilename
+!  integer,parameter::datafile=2
+!  character(len=255)::datafilename
+!  integer,parameter::pointsfile=1
+!  character(len=255)::pointsfilename
   !--------------------------------------------------------------------------
   iProc = i_proc(PT_)
   nProc = n_proc(PT_)
 
   if(.not. present(Data_VI))then
      ! Set variable names
-     NameVar = 'rho ux uy uz bx by bz p'
+ !    NameVar = 'rho ux uy uz bx by bz p'
      ! Set number of variables needed
-     nVar = 8
+ !    nVar = 8
 
      ! set number of grid points on this processor
      call amps_get_center_point_number(nPoint)  !kkkkjjj10
@@ -171,12 +171,14 @@ subroutine PT_put_from_gm( &
      allocate(Pos_DI(3,nPoint))
 
 !     write(pointsfilename,*) "points",iProc,".txt"
-!     open(unit=pointsfile,file=trim(adjustl(pointsfilename)),action="write",status="replace")
+!     open(unit=pointsfile,file=trim(adjustl(pointsfilename)), &
+!     action="write",status="replace")
 
      ! Fill in values
 !     write(pointsfile,*)NameSub,': iProc, iPoint, Pos'        
 !     do iPoint = 1, nPoint
-!        Pos_DI(:,iPoint) = (/ 100.0*(iProc*nPoint+iPoint)/nPoint/nProc-25, 100.0*(iProc*nPoint+iPoint)/nPoint/nProc-50, &
+!        Pos_DI(:,iPoint) = (/ 100.0*(iProc*nPoint+iPoint)/nPoint/nProc-25, &
+!             100.0*(iProc*nPoint+iPoint)/nPoint/nProc-50,
 !             -100.0*(iProc*nPoint+iPoint)/nPoint/nProc+75/)
 !        write(pointsfile,*)NameSub, iProc, iPoint, Pos_DI(:,iPoint)
 !     end do
@@ -189,7 +191,8 @@ subroutine PT_put_from_gm( &
   end if
 
 !  write(datafilename,*) "data",iProc,".txt"
-!  open(unit=datafile,file=trim(adjustl(datafilename)),action="write",status="replace")
+!  open(unit=datafile,file=trim(adjustl(datafilename)),&
+!      action="write",status="replace")
 
 !  write(*,*) NameSub,': nVar=',nVar
 
@@ -204,7 +207,8 @@ subroutine PT_put_from_gm( &
 
 !  close(datafile)
 
-  call amps_recieve_gm2amps_center_point_data(NameVar//char(0),nVar,Data_VI,iPoint_I)
+  call amps_recieve_gm2amps_center_point_data(NameVar//char(0),nVar, &
+       Data_VI,iPoint_I)
 
 end subroutine PT_put_from_gm
 

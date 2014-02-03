@@ -32,10 +32,6 @@ subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
 
   character(len=*), parameter :: NameSub='GM_get_for_pt'
   !--------------------------------------------------------------------------
-  if(nVarIn /= nVar .or. NameVar /= NamePrimitiveVar )then
-     write(*,*)NameSub,' ERROR: nVarIn, NameVar=', nVarIn, NameVar
-     call stop_mpi(NameSub//': Requested variables are inconsistent with the current equation set.')
-  end if
 
   ! We should have second order accurate magnetic field in the ghost cells
 

@@ -87,33 +87,50 @@ contains
   !IROUTINE: couple_gm_pt - couple GM to PT
   !INTERFACE:
   subroutine couple_gm_pt(tSimulation)
-
-
+    
     interface
+
        subroutine PT_put_from_gm( &
             NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
          implicit none
 
-!         logical,          intent(in)   :: UseData ! true when data is transferred
-         ! false if positions are asked
-         character(len=*), intent(inout):: NameVar ! List of variables
-         integer,          intent(inout):: nVar    ! Number of variables in Data_VI
-         integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+         ! true when data is transferred, false if positions are asked
+!         logical,          intent(in)   :: UseData 
 
-         real, pointer:: Pos_DI(:,:)               ! Position vectors
+         ! List of variables
+         character(len=*), intent(inout):: NameVar 
 
-         real,    intent(in), optional:: Data_VI(:,:)! Recv data array
-         integer, intent(in), optional:: iPoint_I(nPoint)    ! Order of data
+         ! Number of variables in Data_VI
+         integer,          intent(inout):: nVar    
+
+         ! Number of points in Pos_DI
+         integer,          intent(inout):: nPoint  
+
+         ! Position vectors
+         real, pointer:: Pos_DI(:,:)               
+
+         ! Recv data array
+         real,    intent(in), optional:: Data_VI(:,:)
+
+         ! Order of data
+         integer, intent(in), optional:: iPoint_I(nPoint)    
        end subroutine PT_put_from_gm
        subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
          implicit none
 
-         integer, intent(in) :: nDimIn                ! dimension of position vectors
-         integer, intent(in) :: nPoint                ! number of positions
-         real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
-         integer, intent(out):: iProc_I(nPoint)       ! processor owning position
+         ! dimension of position vectors
+         integer, intent(in) :: nDimIn             
+
+         ! number of positions
+         integer, intent(in) :: nPoint                
+
+         ! positions
+         real,    intent(in) :: Xyz_DI(nDimIn,nPoint) 
+
+         ! processor owning position
+         integer, intent(out):: iProc_I(nPoint)       
 
        end subroutine GM_find_points
     end interface
@@ -304,8 +321,9 @@ contains
                   nPointPt - sum(nCouplePointPt_I(1:nCouplePt-1))
           end if
 
-          ! send number of points from PT to GM that will be sent to "GM_find_points"
-          ! result is in nCouplePointGm_I (number of points to be recieved)
+          ! send number of points from PT to GM that will be sent to 
+          ! "GM_find_points." result is in nCouplePointGm_I (number of 
+          ! points to be recieved)
           call get_recv_buffer_size(iCommGmPt, nProcGmPt, iProcGmPt, &
                nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,         &
                nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I)
@@ -556,7 +574,8 @@ contains
     if(DoTestMe)write(*,*)NameSub, 'called with nProc, iProc, nData=', &
          nProc, iProc, nData
 
-    allocate(iRequestS_I(nProc), iRequestR_I(nProc), iStatus_II(MPI_STATUS_SIZE,nProc))
+    allocate(iRequestS_I(nProc), iRequestR_I(nProc), &
+         iStatus_II(MPI_STATUS_SIZE,nProc))
 
     ! Possibly optimize for local copies?
 
@@ -879,9 +898,10 @@ contains
        !/
 
        ! Allocate temporary processor index and buffer size arrays.
-       ! nProcSource is the maximum possible number of processors to communicate with.
-       ! The actual size will be reduced later.
-       allocate(iCoupleProc_P(0:nProcSource-1), nCouplePoint_P(0:nProcSource-1))
+       ! nProcSource is the maximum possible number of processors to 
+       ! communicate with. The actual size will be reduced later.
+       allocate(iCoupleProc_P(0:nProcSource-1), &
+            nCouplePoint_P(0:nProcSource-1))
        nCouplePoint_P = 0
 
        ! count points received from each source processors
@@ -942,9 +962,11 @@ contains
                 iCouple = iCouple + 1
                 iCoupleBuffer = iCoupleBuffer + nCouplePointSource_I(iCouple)
                 ! iCoupleProcSource_I(iCouple) is the index of target proc for
-                ! union communicator that sent the request to this source processor. 
-                ! iProcTargetLocal is the index of taget processor on the target component
-                iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
+                ! union communicator that sent the request to this source 
+                ! processor. iProcTargetLocal is the index of taget processor 
+                ! on the target component
+                iProcTargetLocal = iProcTargetLocal_P(&
+                     iCoupleProcSource_I(iCouple))
              end if
              ! iProcSource_I is the source processor index on source component
              iProcSourceLocal = iProcSourceLocal_P(iProc)
@@ -980,7 +1002,8 @@ contains
        ! Count the target processors that have data (nCoupleSource).
        ! Compact the arrays to the target processors that have data.
        ! 
-       allocate(iCoupleProc_P(0:nProcTarget-1), nCouplePoint_P(0:nProcTarget-1))
+       allocate(iCoupleProc_P(0:nProcTarget-1), &
+            nCouplePoint_P(0:nProcTarget-1))
        nCoupleSource = 0
        do iProcTargetLocal = 0, nProcTarget-1
           if(nPointRecv_P(iProcTargetLocal) == 0) CYCLE
@@ -1092,7 +1115,7 @@ contains
     integer, intent(in):: iCoupleProcR_I( nCoupleR)! ids of procs to recv from
     integer, intent(in):: nCouplePointR_I(nCoupleR)! # of points  to recv
 
-    integer, intent(in)   :: nData                     ! number of items per point
+    integer, intent(in)   :: nData                 ! number of items per point
     integer, intent(in)   :: nBufferS                  ! send buffer size
     real,    intent(inout):: BufferS_I(nData*nBufferS) ! send buffer
     integer, intent(in)   :: nBufferR                  ! recv buffer size
@@ -1181,7 +1204,7 @@ contains
     integer, intent(in):: iCoupleProcR_I( nCoupleR)! ids of procs to recv from
     integer, intent(in):: nCouplePointR_I(nCoupleR)! # of points  to recv
 
-    integer, intent(in   ):: nData                      ! number of items per point
+    integer, intent(in   ):: nData                 ! number of items per point
     integer, intent(in   ):: nBufferS                   ! send buffer size
     integer, intent(inout):: iBufferS_I(nData*nBufferS) ! send buffer
     integer, intent(in)   :: nBufferR                   ! recv buffer size
