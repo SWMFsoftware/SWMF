@@ -134,7 +134,7 @@ contains
     integer, save:: nDim, nVar
 
     ! List of variables to pass
-    character(len=100):: NameVar = 'rho ux uy uz bx by bz p'
+    character(len=len(Grid_C(GM_)%NameVar)):: NameVar
 
     ! Grid index
     integer:: iDecompLastGm = -1, iDecompLastPt = -1
@@ -192,6 +192,8 @@ contains
     integer, allocatable, save:: nCouplePointGm_I(:), nCouplePointPt_I(:)
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    NameVar=Grid_C(GM_)%NameVar
 
     if(DoTest)write(*,*)NameSub,' starting iProc=',iProcWorld
 
