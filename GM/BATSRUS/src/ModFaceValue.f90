@@ -29,6 +29,7 @@ module ModFaceValue
   logical, public ::  UseCweno = .false. 
 
   logical, public:: UsePerVarLimiter = .false. ! Variable for CWENO5
+  integer, public:: iVarSmooth_V(nVar), iVarSmoothIndex_I(nVar)
 
   real,public:: FluxLimiterCrit  ! Varivable for ECHO
 
@@ -732,6 +733,8 @@ contains
 
     logical::DoTest,DoTestMe
     character(len=*), parameter :: NameSub = 'calc_face_value'
+
+    integer:: iVarSmoothLast, iVarSmooth 
     !-------------------------------------------------------------------------
     if(iBlock==BLKtest .and. .not. DoResChangeOnly )then
        call set_oktest('calc_face_value', DoTest, DoTestMe)
@@ -1148,17 +1151,22 @@ contains
 
   contains
     !==========================================================================
-    subroutine limit_var(lMin, lMax, iVar)
+    subroutine limit_var(lMin, lMax, iVar, DoCalcWeightIn)
 
       ! Switch between various possibilities for high order variable limiter
 
       integer, intent(in):: lMin, lMax, iVar
+      logical, optional, intent(in):: DoCalcWeightIn
+      logical:: DoCalcWeight
       !------------------------------------------------------------------------
+      
+      DoCalcWeight = .false.
+      if(present(DoCalcWeightIn)) DoCalcWeight = DoCalcWeightIn
 
       if(nOrder == 4)then
          call limiter_ppm4(lMin, lMax, iVar)
       elseif(UseCweno) then
-         if (UsePerVarLimiter .or. iVar == Rho_) &
+         if (UsePerVarLimiter .or. DoCalcWeight) &
               call calc_cweno_weight(lMin, lMax)
          call limiter_cweno5(lMin, lMax, Cell_I, Cell_I, iVar)
       else
@@ -1391,8 +1399,9 @@ contains
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
-      integer:: iVar
+      integer:: iVar, iSort
       integer:: iMin2, iMax2, iFace
+      logical:: IsSmoothIndictor
       !-----------------------------------------------------------------------
       !iMin is smaller than 1 when UseFaceFlux is true, then 
       !Cell_I(iMin-nG: iMax-1+nG) will be wrong. 
@@ -1419,7 +1428,21 @@ contains
             end if
 
             if(.not.DoInterpolateFlux)then
-               do iVar = 1, nVar
+               iVarSmoothLast = 0
+               do iSort = 1, nVar
+                  if(UseCweno) then
+                     iVar = iVarSmoothIndex_I(iSort)
+                     iVarSmooth = iVarSmooth_V(iVar)
+                     if(iVarSmooth /= iVarSmoothLast) then
+                        IsSmoothIndictor = .true.
+                        iVarSmoothLast = iVarSmooth
+                     else
+                        IsSmoothIndictor = .false.
+                     endif
+                  else
+                     iVar = iSort
+                  endif
+
                   ! Copy points along i direction into 1D array
                   Cell_I(iMin2-nG:iMax2-1+nG) = &
                        Primitive_VG(iVar,iMin2-nG:iMax2-1+nG,j,k)
@@ -1429,7 +1452,8 @@ contains
                      FaceL_I(iMin:iMax) = LeftState_VX(iVar,iMin:iMax,j,k)
                      FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
                   end if
-                  call limit_var(iMin, iMax, iVar)
+                  call limit_var(iMin, iMax, iVar, &
+                       DoCalcWeightIn = IsSmoothIndictor)
 
                   ! Calculate the non-linear weight for face flux interpolation.
                   if(UseFluxLimiter) then
@@ -1530,8 +1554,9 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VY(:,:,:,:)
-      integer:: iVar
+      integer:: iVar, iSort
       integer:: jMin2, jMax2, jFace
+      logical:: IsSmoothIndictor
       !-----------------------------------------------------------------------
       jMin2 = max(1,jMin); jMax2 = min(jMax, nJ+1)
 
@@ -1555,7 +1580,24 @@ contains
             end if
 
             if(.not.DoInterpolateFlux)then
-               do iVar = 1, nVar
+               iVarSmoothLast = 0
+               do iSort = 1, nVar
+                  if(UseCweno) then
+                     ! The variables use the same smooth indicator are 
+                     ! calculated one by one. And the smooth indicator 
+                     ! itself is calculated first. 
+                     iVar = iVarSmoothIndex_I(iSort)
+                     iVarSmooth = iVarSmooth_V(iVar)
+                     if(iVarSmooth /= iVarSmoothLast) then
+                        IsSmoothIndictor = .true.
+                        iVarSmoothLast = iVarSmooth
+                     else
+                        IsSmoothIndictor = .false.
+                     endif
+                  else
+                     iVar = iSort
+                  endif
+
                   ! Copy points along j direction into 1D array
                   Cell_I(jMin2-nG:jMax2-1+nG) = &
                        Primitive_VG(iVar,i,jMin2-nG:jMax2-1+nG,k)
@@ -1566,7 +1608,8 @@ contains
                      FaceR_I(jMin:jMax) = RightState_VY(iVar,i,jMin:jMax,k)
                   end if
 
-                  call limit_var(jMin, jMax, iVar)
+                  call limit_var(jMin, jMax, iVar, &
+                       DoCalcWeightIn = IsSmoothIndictor)
 
                   if(UseFluxLimiter) then
                      do jFace = 1, nJFace
@@ -1664,8 +1707,9 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VZ(:,:,:,:)
-      integer:: iVar
+      integer:: iVar, iSort
       integer:: kMin2, kMax2, kFace
+      logical:: IsSmoothIndictor
       !-----------------------------------------------------------------------
       kMin2 = max(kMin, 1); kMax2 = min(kMax,nK+1)
       if(TypeLimiter == 'no')then
@@ -1691,7 +1735,21 @@ contains
             end if
 
             if(.not.DoInterpolateFlux)then
-               do iVar = 1, nVar
+               iVarSmoothLast = 0
+               do iSort = 1, nVar
+                  if(UseCweno) then
+                     iVar = iVarSmoothIndex_I(iSort)
+                     iVarSmooth = iVarSmooth_V(iVar)
+                     if(iVarSmooth /= iVarSmoothLast) then
+                        IsSmoothIndictor = .true.
+                        iVarSmoothLast = iVarSmooth
+                     else
+                        IsSmoothIndictor = .false.
+                     endif
+                  else
+                     iVar = iSort
+                  endif
+
                   ! Copy points along k direction into 1D array
                   Cell_I(kMin2-nG:kMax2-1+nG) = &
                        Primitive_VG(iVar,i,j,kMin2-nG:kMax2-1+nG)
@@ -1702,7 +1760,8 @@ contains
                      FaceR_I(kMin:kMax) = RightState_VZ(iVar,i,j,kMin:kMax)
                   end if
 
-                  call limit_var(kMin, kMax, iVar)
+                  call limit_var(kMin, kMax, iVar, &
+                       DoCalcWeightIn = IsSmoothIndictor)
 
                   if(UseFluxLimiter) then
                      do kFace = 1, nKFace
