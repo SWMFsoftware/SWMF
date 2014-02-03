@@ -42,7 +42,8 @@ subroutine MH_set_parameters(TypeAction)
        UseTvdResChange, UseAccurateResChange, &
        UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, nGUsed, &
        DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
-       TypeLimiter5, UseCweno, UsePerVarLimiter, FluxLimiterCrit
+       TypeLimiter5, UseCweno, UsePerVarLimiter, FluxLimiterCrit, &
+       iVarSmooth_V, iVarSmoothIndex_I
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
@@ -86,7 +87,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModIoUnit, ONLY: io_unit_new
   use ModNumConst, ONLY: cDegToRad
   use ModLocalTimeStep, ONLY: UseLocalTimeStep
-  
+  use ModSort, ONLY: sort_quick
+
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
   use ModMagnetogram, ONLY: set_parameters_magnetogram, &
@@ -1101,7 +1103,17 @@ subroutine MH_set_parameters(TypeAction)
 
         if(DoInterpolateFlux .and. UseFDFaceFlux) &
              call stop_mpi('Do not use DoInterpolateFlux and UseFDFaceFlux at the same time!')
-        
+
+        if(UseCweno .and. .not. DoInterpolateFlux) then
+           ! Density and velocity use density as smooth indicator. 
+           ! Other variables use themselves.
+           iVarSmooth_V(1:Uz_) = Rho_
+           do iVar = Uz_+1, nVar
+              iVarSmooth_V(iVar) = iVar
+           enddo
+           call sort_smooth_indicator
+        endif
+
         ! Set default values.
         if(UseFDFaceFlux) then
            if(UseCweno) then
@@ -3148,6 +3160,27 @@ contains
 !!!
 
   end subroutine set_extra_parameters
+  !================================================================================
+  subroutine sort_smooth_indicator
+    ! The variables use the same smooth indicator should be 
+    ! calculated one by one. And the smooth indicator 
+    ! itself is calculated first. 
+    ! iVarSmoothIndex_I is the calculation order.
+
+    real:: iVarSmoothReal_V(nVar)
+    integer:: iVar
+
+    do iVar = 1, nVar
+       if(iVarSmooth_V(iVar) == iVar) then
+          iVarSmoothReal_V(iVar) = real(iVar) - 0.5
+       else
+          iVarSmoothReal_V(iVar) = real(iVarSmooth_V(iVar))
+       endif
+    enddo
+
+    call sort_quick(nVar,iVarSmoothReal_V,iVarSmoothIndex_I)
+  end subroutine sort_smooth_indicator
+  !================================================================================
 
 end subroutine MH_set_parameters
 !=======================================================================
