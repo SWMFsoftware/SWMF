@@ -59,7 +59,8 @@ extern "C" {
   }
 
 
-  void amps_recieve_gm2amps_center_point_data_(double *data,int *index) {
+  void amps_recieve_gm2amps_center_point_data_(char *NameVar, int nVar, double *data,int *index) {
+    cout<<"Variables passed: '"<<NameVar<<"'"<<endl;
     PIC::CPLR::SWMF::RecieveCenterPointData(data,index);
   }
 

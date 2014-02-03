@@ -204,7 +204,7 @@ subroutine PT_put_from_gm( &
 
 !  close(datafile)
 
-  call amps_recieve_gm2amps_center_point_data(Data_VI,iPoint_I)
+  call amps_recieve_gm2amps_center_point_data(NameVar//char(0),nVar,Data_VI,iPoint_I)
 
 end subroutine PT_put_from_gm
 
