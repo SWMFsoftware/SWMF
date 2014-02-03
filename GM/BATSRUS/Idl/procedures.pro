@@ -1037,13 +1037,13 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    askstr,'func(s) (e.g. rho p ux;uz bx+by -T) ',func,doask
    if plotdim eq 1 then begin
       print,'1D plotmode: plot/plot_io/plot_oi/plot_oo'
-      print,'1D +options: log,noaxis,over,ct###'
+      print,'1D +options: log,noaxis,over,#ct999'
       askstr,'plotmode(s)                ',plotmode,doask
       if strmid(plotmode,0,4) ne 'plot' then plotmode='plot'
    endif else begin
       if strmid(plotmode,0,4) eq 'plot' then plotmode=''
       print,'2D plotmode: shade/surface/cont/tv/polar/velovect/vector/stream'
-      print,'2D +options: bar,body,fill,grid,irr,label,log,mesh,noaxis,over,white,ct###'
+      print,'2D +options: bar,body,fill,grid,irr,label,log,mesh,noaxis,over,white,#ct999'
       askstr,'plotmode(s)                ',plotmode,doask
    endelse
    askstr,'plottitle(s) (e.g. B [G];J)',plottitle,doask
@@ -2032,9 +2032,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
      endif else logarithm=0
 
      ; check if this plot requires a special color table &ct=XXX&
-     i = strpos(plotmod, 'ct')
+     i = strpos(plotmod, '#ct')
      if i ge 0 then begin
-        color = strmid(plotmod,i+2)
+        color = strmid(plotmod,i+3)
         plotmod = strmid(plotmod,0,i)
         loadct_extra, color
      endif
