@@ -50,6 +50,7 @@ contains
   subroutine couple_gm_pt_init
 
     integer:: iError
+    !integer:: nDimPt
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='couple_gm_pt_init'
@@ -81,6 +82,20 @@ contains
          .and.     i_proc0(GM_)     == i_proc0(PT_) &
          .and.     i_proc_last(GM_) == i_proc_last(PT_)
 
+    !! Check if nDim in GM is the same as nDimPt
+    !! nDim info could be stored in Grid_C!
+    !if(is_proc(GM_)) call GM_get_grid_info(nDim, iGridGm, iDecompGm)
+    !if(.not.IsSameLayout) call MPI_bcast(&
+    !     nDim, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
+    !if(is_proc0(PT_))then
+    !   call PT_get_grid_info(nDimPt, iGridPt, iDecompPt)
+    !   if(nDim /= nDimPt)then
+    !      write(*,*) NameSub,' ERROR: nDim, nDimPt=', nDim, nDimPt
+    !      call CON_stop(NameSub// &
+    !          ': GM and PT have different number of spatial dimensions')
+    !   endif
+    !end if
+
   end subroutine couple_gm_pt_init
 
   !BOP =======================================================================
@@ -94,10 +109,6 @@ contains
             NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
          implicit none
-
-         ! true when data is transferred, false if positions are asked
-!         logical,          intent(in)   :: UseData 
-
          ! List of variables
          character(len=*), intent(inout):: NameVar 
 
@@ -151,7 +162,7 @@ contains
     integer, save:: nDim, nVar
 
     ! List of variables to pass
-    character(len=len(Grid_C(GM_)%NameVar)):: NameVar
+    character(len=lNameVar):: NameVar
 
     ! Grid index
     integer:: iDecompLastGm = -1, iDecompLastPt = -1
@@ -210,7 +221,9 @@ contains
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    NameVar=Grid_C(GM_)%NameVar
+    ! GM sends all its variables to PT. Take information from Grid_C
+    NameVar = Grid_C(GM_)%NameVar
+    nVar    = Grid_C(GM_)%nVar
 
     if(DoTest)write(*,*)NameSub,' starting iProc=',iProcWorld
 
@@ -227,21 +240,14 @@ contains
     end if
 
     ! Check if there is a need to redo the mapping
-    if(IsSameLayout)then
-       call GM_get_grid_info(nDim, iGridGm, iDecompGm)
-       call PT_get_grid_info(nDim, iGridPt, iDecompPt)
-    else
-       ! added by Dmitry
-       if(is_proc0(GM_)) call GM_get_grid_info(nDim, iGridGm, iDecompGm)
-       if(is_proc0(PT_)) call PT_get_grid_info(nDim, iGridGm, iDecompGm)
+    call GM_get_grid_info(nDim, iGridGm, iDecompGm)
+    call PT_get_grid_info(nDim, iGridPt, iDecompPt)
+
+    if(.not.IsSameLayout)then
        call MPI_bcast(&
             iDecompGm, 1, MPI_INTEGER, iProc0Gm, iCommGmPt, iError)
        call MPI_bcast(&
             iDecompPt, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
-
-       ! nDimGm could be checked against nDimPt, but only once
-       call MPI_bcast(&
-            nDim, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
     endif
 
     IsNewRoute = iDecompGm /= iDecompLastGm .or. iDecompLastPt /= iDecompPt
@@ -260,8 +266,6 @@ contains
           nPointPt = 0
           allocate(PosPt_DI(nDim,0))
        end if
-       call MPI_bcast(&
-            nVar, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
 
        if(IsSameLayout)then
 
@@ -418,9 +422,7 @@ contains
        call transfer_buffer_real(iCommGmPt, nProcGmPt, iProcGmPt, &
             nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,           &
             nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,           &
-            nVar,                                                   &
-            nPointGm, DataGm_VI,                 &
-            nPointPt, DataPt_VI)
+            nVar, nPointGm, DataGm_VI, nPointPt, DataPt_VI)
     end if
     deallocate(DataGm_VI)
 
