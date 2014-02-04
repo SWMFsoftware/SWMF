@@ -81,6 +81,7 @@ subroutine GM_set_grid
   use CON_test_global_message_pass
   use ModMain,ONLY:TypeCoordSystem, NameVarCouple
   use ModPhysics,ONLY:No2Si_V, UnitX_
+  use ModVarIndexes,ONLY: nVar
   use CON_comp_param,ONLY:GM_
 
   implicit none
@@ -94,7 +95,7 @@ subroutine GM_set_grid
   if(done_dd_init(GM_))return
   call init_decomposition(GM_,GM_,3,.true.)
   call set_coord_system(GM_,TypeCoordSystem,No2Si_V(UnitX_), &
-       NameVar = NameVarCouple)
+       NameVar = NameVarCouple, nVar=nVar)
   
   if(is_proc(GM_))then
      call init_decomposition(&
