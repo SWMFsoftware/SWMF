@@ -1934,7 +1934,7 @@ namespace PIC {
       void ResetCenterPointProcessingFlag();
       void GetCenterPointNumber(int *nCenterPoints);
       void GetCenterPointCoordinates(double *x);
-      void RecieveCenterPointData(double *data,int *index);
+      void RecieveCenterPointData(char* ValiableList, int nVarialbes,double *data,int *index);
 
       //calcualte physical parameters
       inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
