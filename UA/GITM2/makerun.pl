@@ -2,7 +2,7 @@
 #  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-$maindir = "/bigdisk1/Data6/Data/";
+$maindir = "/raid3/augustine/Data6/Data/";
 
 $help = $h;
 
@@ -756,9 +756,9 @@ if ($noymd) {
     # There is a very good chance that we are doing multiple days and 
     # would like to concatinate the files....
     if ($rm) {
-	$command = "/bigdisk1/bin/cat_sat_input.pl -rm";
+	$command = "/raid3/augustine/bin/cat_sat_input.pl -rm";
     } else {
-	$command = "/bigdisk1/bin/cat_sat_input.pl";
+	$command = "/raid3/augustine/bin/cat_sat_input.pl";
     }
     print "Executing : $command\n";
     system $command;
