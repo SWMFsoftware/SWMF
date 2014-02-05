@@ -871,7 +871,7 @@ contains
     ! Based on Toth et al. "Hall MHD on Block Adaptive Grids", JCP 2008
 
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB,&
-         CellVolume_GB, CellFace_DB !!!
+         CellVolume_GB, GridRot_DD
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
     use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap
     use ModNumConst,     ONLY: i_DD, iLeviCivita_III
@@ -962,15 +962,6 @@ contains
           end do; end do; end do
        end do
     else
-       if(.not.allocated(FaceNormal_DDFB))then
-          allocate(FaceNormal_DDFB(nDim,nDim,nI+1,nJ+1,nK+1,MaxBlock))
-          FaceNormal_DDFB = 0.0
-          do i = 1, MaxBlock
-             FaceNormal_DDFB(1,1,:,:,:,i) = CellFace_DB(1,i)
-             FaceNormal_DDFB(2,2,:,:,:,i) = CellFace_DB(2,i)
-          end do
-       end if
-
        ! Jacobian for generalized coordinate (eqs. 50-51)
 
        ! Get dCoord/Dxyz
@@ -1014,13 +1005,13 @@ contains
 
                       TermSub = Term &
                            *FaceNormal_DDFB(iDim,iFace,i,j,k,iBlock)&
-                           *DcoordDxyz_DDFD(kDim,iFace,i,j,k,iFace) &
+                           *DcoordDxyz_DDFD(iFace,kDim,i,j,k,iFace) &
                            *(Bne_DFDB(iDim,i,j,k,iFace,iBlock)*jklEpsilon &
                            - Bne_DFDB(jDir,i,j,k,iFace,iBlock)*iklEpsilon)
 
                       TermSup = Term &
                            *FaceNormal_DDFB(iDim,iFace,i2,j2,k2,iBlock)&
-                           *DcoordDxyz_DDFD(kDim,iFace,i2,j2,k2,iFace) &
+                           *DcoordDxyz_DDFD(iFace,kDim,i2,j2,k2,iFace) &
                            *(Bne_DFDB(iDim,i2,j2,k2,iFace,iBlock)*jklEpsilon &
                            - Bne_DFDB(jDir,i2,j2,k2,iFace,iBlock)*iklEpsilon)
 
@@ -1045,6 +1036,22 @@ contains
                       Jacobian_VVCI(jDir,lDir,i,j,k,iSup) = &
                            Jacobian_VVCI(jDir,lDir,i,j,k,iSup) + TermSup
 
+                      !if(DoTestMe.and.i==iTest.and.j==jTest.and.k==kTest &
+                      !     .and.jDir==3.and.lDir==3)then
+                      !   write(*,*)'!!! JAC(3,3)=',Jacobian_VVCI(jDir,lDir,i,j,k,:)
+                      !   write(*,*)'!!! TermSub,TermSup=',TermSub,TermSup
+                      !   write(*,*)'!!! iFace, iDim, kDim, jklEpsilon, iklEpsilon=', &
+                      !        iFace, iDim, kDim, jklEpsilon, iklEpsilon
+                      !   write(*,*)'!!! i2,j2,k2=', i2,j2,k2
+                      !   write(*,*)'!!! FaceNormal_DDFB =', FaceNormal_DDFB(iDim,iFace,i,j,k,iBlock)
+                      !   write(*,*)'!!! FaceNormal_DDFB2=', FaceNormal_DDFB(iDim,iFace,i2,j2,k2,iBlock)
+                      !   write(*,*)'!!! DcoordDxyz_DDFD =', DcoordDxyz_DDFD(iFace,kDim,i,j,k,iFace)
+                      !   write(*,*)'!!! DcoordDxyz_DDFD2=', DcoordDxyz_DDFD(iFace,kDim,i2,j2,k2,iFace)
+                      !   write(*,*)'!!! Bne_DFDB(iDim)  =', Bne_DFDB(iDim,i,j,k,iFace,iBlock)
+                      !   write(*,*)'!!! Bne_DFDB(iDim) 2=', Bne_DFDB(iDim,i2,j2,k2,iFace,iBlock)
+                      !   write(*,*)'!!! Bne_DFDB(jDir)  =', Bne_DFDB(jDir,i,j,k,iFace,iBlock)
+                      !   write(*,*)'!!! Bne_DFDB(jDir) 2=', Bne_DFDB(jDir,i2,j2,k2,iFace,iBlock)
+                      !end if
                    end do; end do; end do
                 end do
              end do
@@ -1054,6 +1061,17 @@ contains
     end if
 
     if(DoTestMe)then
+       do jDir = 1,nDim
+          write(*,*) NameSub,': unrot B/ne(:,TestCell,',jDir,')=',&
+               matmul(Bne_DFDB(:,iTest,jTest,kTest,jDir,BlkTest), GridRot_DD)
+       end do
+       do jDir = 1, 2*nDim + 1
+          write(*,'(a,i1,a,10es13.5)') &
+               NameSub//': unrot JAC(:,:,TestCell,', jDir, ')=', &
+               matmul(transpose(GridRot_DD), &
+               matmul(Jacobian_VVCI(:,:,iTest,jTest,kTest,jDir), &
+               GridRot_DD))
+       end do
        do iDir=1,3; do jDir = 1,3
           write(*,*) NameSub,': JAC(',iDir,jDir,',TestCell,:),sum(cells)=', &
                Jacobian_VVCI(iDir,jDir,iTest,jTest,kTest,:), &
