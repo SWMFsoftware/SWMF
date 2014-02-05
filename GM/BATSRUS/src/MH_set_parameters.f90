@@ -2820,9 +2820,11 @@ contains
   subroutine correct_grid_geometry
 
     use ModGeometry, ONLY: LogRGen_I
-    use BATL_lib, ONLY: init_batl, CoordMin_D, CoordMax_D
+    use BATL_lib, ONLY: init_batl, CoordMin_D, CoordMax_D, IsRotatedCartesian
     use ModUser,  ONLY : user_specify_refinement
     character(len=20):: TypeGeometryBatl
+
+    character(len=*), parameter:: NameSub='correct_grid_geometry'
     !-----------------------------------------------------------------------
 
     if(i_line_command("#GRID", iSessionIn = 1) < 0) &
@@ -2839,7 +2841,7 @@ contains
     ! Set XyzMin_D, XyzMax_D based on 
     ! #GRID, #GRIDGEOMETRY, and #LIMITRADIUS
     select case(TypeGeometry)
-    case('cartesian', 'round')
+    case('cartesian', 'round', 'rotatedcartesian')
        XyzMin_D = (/x1, y1, z1/)
        XyzMax_D = (/x2, y2, z2/)
     case('rz')
@@ -2857,10 +2859,9 @@ contains
        !            R,   Phi, Z
        XyzMin_D = (/0.0, 0.0, z1/) 
        XyzMax_D = (/sqrt(max(x1**2,x2**2) + max(y1**2,y2**2)), cTwoPi, z2/)
+    case default
+       call stop_mpi(NameSub//': unknown TypeGeometry='//TypeGeometry)
     end select
-
-    !if(index(TypeGeometry,'_lnr')>0) XyzMax_D(R_)=log(XyzMax_D(R_))
-    !if(index(TypeGeometry,'_genr')>0) call radius_to_gen(XyzMax_D(R_))
 
     if(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then 
        XyzMin_D(1) = RadiusMin
@@ -2912,6 +2913,12 @@ contains
          proc_dims(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
          RgenIn_I = exp(LogRGen_I), UseUniformAxisIn=UseUniformAxis,&
          user_amr_geometry=user_specify_refinement)
+
+    if(IsRotatedCartesian)then
+       ! Fix x1, x2 .. z2 to include the full rotated domain
+       x2 = sum(abs(CoordMin_D)) + sum(abs(CoordMax_D)); y2 = x2; z2 = x2
+       x1 = -x2; y1 = x1; z1 = x1
+    end if
 
     if(IsLogRadius .or. IsGenRadius)then
        ! Overwrite radial coordinates if necessary
