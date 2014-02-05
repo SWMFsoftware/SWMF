@@ -873,7 +873,7 @@ contains
 
                    ! Area(iFace)/V*T_ks*(Bi/n*jklEpsilon - Bj/n*iklEpsilon)
 
-                   Term = Coeff*DgenDxyz_DDC(kDim,iFace,i,j,k) &
+                   Term = Coeff*DgenDxyz_DDC(iFace,kDim,i,j,k) &
                         / (CellVolume_GB(i,j,k,iBlk)*dxyz(iFace)) &
                         *(BPerN_CD(i,j,k,iDim)*jklEpsilon &
                         - BPerN_CD(i,j,k,jDim)*iklEpsilon)
