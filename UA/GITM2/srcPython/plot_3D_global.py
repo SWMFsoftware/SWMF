@@ -113,10 +113,20 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
 
+    if zmax == zmin:
+        # Exit gracefully
+        print "plot_single_3D_image ERROR: z variable at a constant value", zmax
+        return
+
     # Initialize the color scheme, if desired
     if zcolor is None:
-        if zmin < 0.0:
+        if zmin < 0.0 and zmax > 0.0:
             zcolor = "seismic_r"
+            # Change zrange to be centered, making white = 0.0
+            if abs(zmin) > zmax:
+                zmax = abs(zmin)
+            else:
+                zmin = -zmax
         else:
             zcolor = "Spectral_r"
 
@@ -227,21 +237,25 @@ def plot_single_nsglobal_3D_image(lat_data, lon_data, z_data, zname, zscale,
                                      earth=earth, mn=mn, ms=ms,
                                      data_type=data_type,
                                      term_datetime=term_datetime)
-    # Output the plot
-    if draw:
-        # Draw to screen.
-        if plt.isinteractive():
-            plt.draw() #In interactive mode, you just "draw".
-        else:
-            # W/o interactive mode, "show" stops the user from typing more 
-            # at the terminal until plots are drawn.
-            plt.show()
 
-    # Save output file
-    if figname is not None:
-        plt.savefig(figname)
+    if handle:
+        # Output the plot
+        if draw:
+            # Draw to screen.
+            if plt.isinteractive():
+                plt.draw() #In interactive mode, you just "draw".
+            else:
+                # W/o interactive mode, "show" stops the user from typing more 
+                # at the terminal until plots are drawn.
+                plt.show()
 
-    return(f, handle[1], handle[3])
+        # Save output file
+        if figname is not None:
+            plt.savefig(figname)
+
+        return(f, handle[1], handle[3])
+    else:
+        return
 # End plot_single_nsglobal_3D_image
 
 def plot_global_3D_snapshot(lat_data, lon_data, z_data, zname, zscale, zunits,
@@ -310,23 +324,27 @@ def plot_global_3D_snapshot(lat_data, lon_data, z_data, zname, zscale, zunits,
                                       data_type=data_type,
                                       term_datetime=term_datetime)
 
-    if title:
-        f.suptitle(title, size="medium")
+    if handles:
+        if title:
+            f.suptitle(title, size="medium")
 
-    if draw:
-        # Draw to screen.
-        if plt.isinteractive():
-            plt.draw() #In interactive mode, you just "draw".
-        else:
-            # W/o interactive mode, "show" stops the user from typing more 
-            # at the terminal until plots are drawn.
-            plt.show()
+        if draw:
+            # Draw to screen.
+            if plt.isinteractive():
+                plt.draw() #In interactive mode, you just "draw".
+            else:
+                # W/o interactive mode, "show" stops the user from typing more 
+                # at the terminal until plots are drawn.
+                plt.show()
 
-    # Save output file
-    if figname is not None:
-        plt.savefig(figname)
+        # Save output file
+        if figname is not None:
+            plt.savefig(figname)
 
-    return(f, handles[1], handles[3], handles[5])
+        return(f, handles[1], handles[3], handles[5])
+    else:
+        return
+
 # End snapshot
 
 def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
@@ -393,10 +411,20 @@ def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
 
+    if zmax == zmin:
+        # Exit gracefully
+        print "plot_mult_3D_slices ERROR: z variable at a constant value", zmax
+        return
+
     # Initialize the color scheme, if desired
     if zcolor is None:
-        if zmin < 0.0:
+        if zmin < 0.0 and zmax > 0.0:
             zcolor = "seismic_r"
+            # Change zrange to be centered, making white = 0.0
+            if abs(zmin) > zmax:
+                zmax = abs(zmin)
+            else:
+                zmin = -zmax
         else:
             zcolor = "Spectral_r"
 
@@ -589,10 +617,20 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
 
+    if zmax == zmin:
+        # Exit gracefully
+        print "plot_nsglobal_subfigure ERROR: z variable at a const value", zmax
+        return
+
     # Initialize the color scheme, if desired
     if zcolor is None:
-        if zmin < 0.0:
+        if zmin < 0.0 and zmax > 0.0:
             zcolor = "seismic_r"
+            # Change zrange to be centered, making white = 0.0
+            if abs(zmin) > zmax:
+                zmax = abs(zmin)
+            else:
+                zmin = -zmax
         else:
             zcolor = "Spectral_r"
 
@@ -732,10 +770,20 @@ def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
 
+    if zmax == zmin:
+        # Exit gracefully
+        print "plot_snapshot_subfigure ERROR: z variable at a const value", zmax
+        return
+
     # Initialize the color scheme, if desired
     if zcolor is None:
-        if zmin < 0.0:
+        if zmin < 0.0 and zmax > 0.0:
             zcolor = "seismic_r"
+            # Change zrange to be centered, making white = 0.0
+            if abs(zmin) > zmax:
+                zmax = abs(zmin)
+            else:
+                zmin = -zmax
         else:
             zcolor = "Spectral_r"
 
@@ -889,14 +937,26 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
             m   = Earth map handle
     '''
 
+    # Exit gracefully, if necessary
+    rout_name = "plot_rectangular_3D_global"
+
     if(nlat == slat):
-        print "plot_rectangular_3D_global ERROR: no latitude range"
+        print rout_name, "ERROR: no latitude range"
+        return
+
+    if zmax == zmin:
+        print rout_name, "ERROR: z variable at a constant value", zmax
         return
 
     # Initialize the color scheme, if desired
     if zcolor is None:
-        if zmin < 0.0:
+        if zmin < 0.0 and zmax > 0.0:
             zcolor = "seismic_r"
+            # Change zrange to be centered, making white = 0.0
+            if abs(zmin) > zmax:
+                zmax = abs(zmin)
+            else:
+                zmin = -zmax
         else:
             zcolor = "Spectral_r"
 
@@ -1077,10 +1137,19 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
 
     rout_name = "plot_polar_3D_global"
 
+    if zmax == zmin:
+        print rout_name, "ERROR: z variable at a constant value", zmax
+        return
+
     # Initialize the color scheme, if desired
     if zcolor is None:
-        if zmin < 0.0:
+        if zmin < 0.0 and zmax > 0.0:
             zcolor = "seismic_r"
+            # Change zrange to be centered, making white = 0.0
+            if abs(zmin) > zmax:
+                zmax = abs(zmin)
+            else:
+                zmin = -zmax
         else:
             zcolor = "Spectral_r"
 
