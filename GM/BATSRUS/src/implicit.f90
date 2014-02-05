@@ -582,25 +582,14 @@ contains
     endif
 
     ! Set tolerance and stopping conditions for iterative solver
-
+    typestop='rel'
     if(UseNewton)then
-       ! link the inner iterative solver with the outer NR
-       ! require inner loop more accurate than outer loop
-       KrylovError=0.1
-       typestop='rel'
-    else if(JacobianType=='prec')then
-       ! No normalization is needed for preconditioned solvers (???!!!)
-       KrylovError=KrylovErrorMax
-       typestop='rel'
+       ! For Newton solver the outer loop has to converge
+       ! The inner loop only needs to reduce the error somewhat.
+       KrylovError = 0.1
     else
-       ! Normalize KrylovError by dt(expl) for non-preconditioned solvers
-       ! Distinguish between steady state and time accurate cases
-       if(time_accurate)then
-          KrylovError=KrylovErrorMax
-       else
-          KrylovError=KrylovErrorMax*dtcoeff
-       endif
-       typestop='abs'
+       ! For linear implicit solver stop when residual decreased enough
+       KrylovError = KrylovErrorMax
     endif
 
     KrylovMatVec=KrylovMatvecMax
