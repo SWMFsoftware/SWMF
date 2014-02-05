@@ -1330,6 +1330,7 @@ The default is component dependent:
 <command name="GRIDGEOMETRY" if="$_IsFirstSession">
 	<parameter name="TypeGeometry" type="string" input="select">
 		<option name="cartesian" default="T"	/>
+		<option name="rotatedcartesian"         />
 		<option name="rz"                       />
 		<option name="cylindrical"		/>
 		<option name="cylindrical_lnr"		/>
@@ -1342,8 +1343,8 @@ The default is component dependent:
 spherical_lnr			TypeGeometry
 		
 This command determines the geometry of the grid. Possible values
-are cartesian, RZ geometry, cylindrical and spherical. The cylindrical
-and spherical grids can have logarithmic (cylindrical_lnr and spherical_lnr)
+are Cartesian, rotated Cartesian, RZ geometry, cylindrical and spherical. 
+The cylindrical and spherical grids can have logarithmic (cylindrical_lnr and spherical_lnr)
 or arbitrarily stretched (spherical_genr, cylindrical_genr) radial coordinates.
 
 The "RZ" geometry is a 2D grid with axial symmetry.
@@ -1353,6 +1354,15 @@ and the "Y" axis is used for the radial direction.
 The spherical coordinates are ordered as r, longitude, latitude. The longitude
 is between 0 and 360 degrees, the latitude is between -90 and 90 degrees. The
 cylindrical coordinates are r, phi, z with phi between 0 and 360 degrees. 
+
+The rotated Cartesian geometry can be used for debugging the generalized
+coordinate code. It allows setting up a Cartesian test on a rotated
+generalized coordinate grid. The rotation is around the Z axis
+with an angle alpha that has sin(alpha)=0.6 and cos(alpha)=0.8 for sake
+of getting nice rational numbers. The PostIDL code unrotates the grid
+and the vector variables so it can be directly compared with 
+a Cartesian simulation. The initial conditions and the boundary conditions,
+however, are not rotated automatically (yet), so they require some attention.
 
 The default is Cartesian geometry.
 </command>
