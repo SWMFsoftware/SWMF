@@ -56,9 +56,9 @@ import datetime as dt
 import gitm_plot_rout as gpr
 
 def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
-                         zunits, zmax=None, zmin=None, zcolor='Spectral_r',
-                         title=None, figname=None, draw=True, nlat=90, slat=-90,
-                         linc=6, tlon=90, data_type="scatter", bcolor="#D7DBE0",
+                         zunits, zmax=None, zmin=None, zcolor=None, title=None,
+                         figname=None, draw=True, nlat=90, slat=-90, linc=6,
+                         tlon=90, data_type="scatter", bcolor="#D7DBE0",
                          meq=False, earth=False, m=None, faspect=True,
                          term_datetime=False, *args, **kwargs):
     '''
@@ -78,7 +78,8 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
            zunits    = Descriptive units for z variable data
            zmin      = minimum value for z variable (default=None)
            zmax      = maximum value for z variable (default=None)
-           zcolor    = Color map for the z variable (default=Spectral_r)
+           zcolor    = Color map for the z variable.  If not specified, will be
+                        determined by the z range. (default=None)
            title     = plot title
            figname   = file name to save figure as (default is none)
            draw      = draw to screen? (default is True)
@@ -111,6 +112,13 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
     if(zran != 0.0):
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
+
+    # Initialize the color scheme, if desired
+    if zcolor is None:
+        if zmin < 0.0:
+            zcolor = "seismic_r"
+        else:
+            zcolor = "Spectral_r"
 
     # Initialize the new figure
     gf = True
@@ -160,7 +168,7 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
 
 def plot_single_nsglobal_3D_image(lat_data, lon_data, z_data, zname, zscale,
                                   zunits, zmax=None, zmin=None,
-                                  zcolor="Spectral_r", title=None, figname=None,
+                                  zcolor=None, title=None, figname=None,
                                   draw=True, plat=90, elat=0, linc=3,
                                   tlon=90, bcolor="#D7DBE0", earth=False,
                                   mn=None, ms=None, data_type="scatter",
@@ -181,7 +189,8 @@ def plot_single_nsglobal_3D_image(lat_data, lon_data, z_data, zname, zscale,
            zunits    = Descriptive units for z variable data
            zmax      = maximum z range (default None)
            zmin      = mininimum z range (default None)
-           zcolor    = Color scale for plotting the z data (default=Spectral_r)
+           zcolor    = Color scale for plotting the z data.  If not specified,
+                       will be determined by the z range. (default=None)
            title     = plot title
            figname   = file name to save figure as (default is none)
            draw      = draw to screen? (default is True)
@@ -236,38 +245,42 @@ def plot_single_nsglobal_3D_image(lat_data, lon_data, z_data, zname, zscale,
 # End plot_single_nsglobal_3D_image
 
 def plot_global_3D_snapshot(lat_data, lon_data, z_data, zname, zscale, zunits,
-                            zmax=None, zmin=None, zcolor="Spectral_r",
-                            title=None, figname=None, draw=True, tlon=90,
-                            blat=45, bcolor="#D7DBE0", meq=False, earth=False,
-                            ml=None, mn=None, ms=None, data_type="scatter",
-                            term_datetime=False, *args, **kwargs):
+                            zmax=None, zmin=None, zcolor=None, title=None,
+                            figname=None, draw=True, tlon=90, polar_blat=45,
+                            rect_blat=45, bcolor="#D7DBE0", meq=False,
+                            earth=False, ml=None, mn=None, ms=None,
+                            data_type="scatter", term_datetime=False,
+                            *args, **kwargs):
     '''
     Creates a map projection plot for the entire globe, seperating the polar
     and central latitude regions.
-    Input: lat_data  = numpy array containing the latitudes (in degrees North)
-                       This can be 1D or 2D for scatter plots and must be 2D
-                       for contours
-                       This should be 1D for scatter plots and 2D for contours
-           lon_data  = numpy array contaiing the longitudes (in degrees East)
-                       This can be 1D or 2D for scatter plots and must be 2D
-                       for contours
-           z_data    = numpy array containing the z variable data
-                       This should be 1D for scatter plots and 2D for contours
-           zname     = Descriptive name of z variable data
-           zscale    = Scaling type (linear/exponential) for z variable data
-           zunits    = Descriptive units for z variable data
-           zmax    = maximum z limit (default None)
-           zmin    = minimum z limit (default None)
-           zcolor  = Color scale for z variable (default=Spectral_r)
-           title   = plot title
-           figname = file name to save figure as (default is none)
-           draw    = output a screen image? (default is True)
-           nlat    = northern latitude limit (degrees North, default 90)
-           slat    = southern latitude limit (degrees North, defalut 90)
-           tlon    = longitude at the top of the polar dial (degrees East,
-                     default 90)
-           blat          = latitude seperating the polar dials and the lower
-                           latitudes (default 45)
+    Input: lat_data      = numpy array containing the latitudes (in degrees
+                           North). This can be 1D or 2D for scatter plots and 
+                           must be 2D for contours.  This should be 1D for
+                           scatter plots and 2D for contours
+           lon_data      = numpy array contaiing the longitudes (in degrees
+                           East) This can be 1D or 2D for scatter plots and
+                           must be 2D for contours
+           z_data        = numpy array containing the z variable data.  This
+                           should be 1D for scatter plots and 2D for contours
+           zname         = Descriptive name of z variable data
+           zscale        = Scaling type (linear/exponential) for z variable
+           zunits        = Descriptive units for z variable data
+           zmax          = maximum z limit (default None)
+           zmin          = minimum z limit (default None)
+           zcolor        = Color scale for z variable.  If not specified, will
+                           be determined by the z range. (default=None)
+           title         = plot title
+           figname       = file name to save figure as (default is none)
+           draw          = output a screen image? (default is True)
+           nlat          = northern latitude limit (degrees North, default 90)
+           slat          = southern latitude limit (degrees North, defalut 90)
+           tlon          = longitude at the top of the polar dial (degrees East,
+                           default 90)
+           polar_blat    = co-latitude of the lower boundary of the polar dials
+                           (default 45)
+           rect_blat     = Upper bounding co-latitude of the rectangular map
+                           (default 45)
            bcolor        = Background color, or None (default="#D7DBE0")
            meq           = Add the geomagnetic equator? (default=False)
            earth         = include Earth continent outlines (default False)
@@ -291,7 +304,8 @@ def plot_global_3D_snapshot(lat_data, lon_data, z_data, zname, zscale, zunits,
     handles = plot_snapshot_subfigure(f, 1, 0, lat_data, lon_data, z_data,
                                       zname, zscale, zunits, zmax=zmax,
                                       zmin=zmin, zcolor=zcolor, cb=True,
-                                      tlon=tlon, blat=blat, bcolor=bcolor,
+                                      tlon=tlon, polar_blat=polar_blat,
+                                      rect_blat=rect_blat, bcolor=bcolor,
                                       meq=meq, earth=earth, ml=ml, mn=mn, ms=ms,
                                       data_type=data_type,
                                       term_datetime=term_datetime)
@@ -317,11 +331,10 @@ def plot_global_3D_snapshot(lat_data, lon_data, z_data, zname, zscale, zunits,
 
 def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
                         zname, zscale, zunits, zmax=None, zmin=None,
-                        zcolor="Spectral_r", title=None, figname=None,
-                        draw=True, nlat=90, slat=-90, linc=6, tlon=90,
-                        data_type="scatter", bcolor="#D7DBE0", meq=False,
-                        earth=False, faspect=True, term_datetime=False,
-                        *args, **kwargs):
+                        zcolor=None, title=None, figname=None, draw=True,
+                        nlat=90, slat=-90, linc=6, tlon=90, data_type="scatter",
+                        bcolor="#D7DBE0", meq=False, earth=False, faspect=True,
+                        term_datetime=False, *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
@@ -347,7 +360,8 @@ def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
            zunits    = Descriptive units for z variable data
            zmax      = maximum z range (default None)
            zmin      = minimum z range (default None)
-           zcolor    = Color spectrum for z data (default=Spectral_r)
+           zcolor    = Color spectrum for z data.  If not specified, will be
+                       determined by the z range. (default=None)
            title     = plot title
            figname   = file name to save figure as (default is none)
            draw      = draw to screen? (default is True)
@@ -378,6 +392,13 @@ def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
     if(zran != 0.0):
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
+
+    # Initialize the color scheme, if desired
+    if zcolor is None:
+        if zmin < 0.0:
+            zcolor = "seismic_r"
+        else:
+            zcolor = "Spectral_r"
 
     # Initialize the new figure
     pf = False
@@ -514,37 +535,38 @@ def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
 
 def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
                             zscale, zunits, zmax=None, zmin=None,
-                            zcolor="Spectral_r", title=True, cb=True, plat=90,
-                            elat=0, linc=3, tlon=90, rl=True, tl=True,
-                            bcolor="#D7DBE0", earth=False, mn=None, ms=None,
-                            data_type="scatter", term_datetime=False,
-                            *args, **kwargs):
+                            zcolor=None, title=True, cb=True, plat=90, elat=0,
+                            linc=3, tlon=90, rl=True, tl=True, bcolor="#D7DBE0",
+                            earth=False, mn=None, ms=None, data_type="scatter",
+                            term_datetime=False, *args, **kwargs):
     '''
     Creates a figure with two polar map projections for the northern and 
     southern ends of a specified latitude range.
-    Input: f         = figure handle
-           nsub      = number of subplots to include
-           isub      = number of this subplot (zero offset)
-           lat_data  = numpy array containing the latitudes (in degrees North)
-                       This can be 1D or 2D for scatter plots and must be 2D
-                       for contours
-           lon_data  = numpy array contaiing the longitudes (in degrees East)
-                       This can be 1D or 2D for scatter plots and must be 2D
-                       for contours
-           z_data    = numpy array containing the z variable data
-                       This should be 1D for scatter plots and 2D for contours
-           zname     = Descriptive name of z variable data
-           zscale    = Scaling type (linear/exponential) for z variable data
-           zunits    = Descriptive units for z variable data
-           zmax      = maximum z range (default None)
-           zmin      = mininimum z range (default None)
-           zcolor    = Color scale for plotting the z data (default=Spectral_r)
-           title     = Include titles indicating which polar dial is North and
-                       South? (default=True)
-           cb        = Include colorbar? (default=True)
-           plat      = polar latitude limit (degrees North, default +/-90)
-           elat      = equatorial latitude limit (degrees North, defalut 0)
-           linc      = number of latitude tick incriments (default 6)
+    Input: f             = figure handle
+           nsub          = number of subplots to include
+           isub          = number of this subplot (zero offset)
+           lat_data      = numpy array containing the latitudes (in degrees
+                           North) This can be 1D or 2D for scatter plots and
+                           must be 2D for contours
+           lon_data      = numpy array contaiing the longitudes (degrees East)
+                           This can be 1D or 2D for scatter plots and must be 2D
+                           for contours
+           z_data        = numpy array containing the z variable data.  This
+                           should be 1D for scatter plots and 2D for contours
+           zname         = Descriptive name of z variable data
+           zscale        = Scaling type (linear/exponential) for z variable data
+           zunits        = Descriptive units for z variable data
+           zmax          = maximum z range (default None)
+           zmin          = mininimum z range (default None)
+           zcolor        = Color scale for plotting the z data.  If not
+                           specified, will be determined by the z range.
+                           (default=None)
+           title         = Include titles indicating which polar dial is North
+                           and South? (default=True)
+           cb            = Include colorbar? (default=True)
+           plat          = polar latitude limit (degrees North, default +/-90)
+           elat          = equatorial latitude limit (degrees North, defalut 0)
+           linc          = number of latitude tick incriments (default 6)
            tlon          = longitude to place on the polar dial top (degrees
                            east, default 90)
            bcolor        = Background color, or None (default="#D7DBE0")
@@ -566,6 +588,13 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
     if(zran != 0.0):
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
+
+    # Initialize the color scheme, if desired
+    if zcolor is None:
+        if zmin < 0.0:
+            zcolor = "seismic_r"
+        else:
+            zcolor = "Spectral_r"
 
     # Initialize the flags for the new subfigure
     pf = True
@@ -634,44 +663,45 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
 # End plot_nsglobal_subfigure
 
 def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
-                            zscale, zunits, zmax=None, zmin=None,
-                            zcolor="Spectral_r", cb=True, tlon=90, blat=45,
-                            title=True, xl=True, yl=True, xt=True, yt=True,
+                            zscale, zunits, zmax=None, zmin=None, zcolor=None,
+                            cb=True, tlon=90, polar_blat=45, rect_blat=45,
+                            title=True, xl=True, yl=True, xt=True, yt=True, 
                             bcolor="#D7DBE0", meq=False, earth=False, ml=None,
                             mn=None, ms=None, data_type="scatter",
                             term_datetime=False, *args, **kwargs):
     '''
     Creates a map projection plot for the entire globe, seperating the polar
     and central latitude regions.
-    Input: f        = figure handle
-           nsub     = number of subplots to include
-           isub     = number of this subplot (zero offset)
-           lat_data = numpy array containing the latitudes (in degrees North)
-                      This can be 1D or 2D for scatter plots and must be 2D
-                      for contours
-           lon_data = numpy array contaiing the longitudes (in degrees East)
-                      This can be 1D or 2D for scatter plots and must be 2D
-                      for contours
-           z_data   = numpy array containing the z variable data
-                      This should be 1D for scatter plots and 2D for contours
-           zname    = Descriptive name of z variable data
-           zscale   = Scaling type (linear/exponential) for z variable data
-           zunits   = Descriptive units for z variable data
-           zmax     = maximum z limit (default None)
-           zmin     = minimum z limit (default None)
-           zcolor   = Color scale for z data (default=Spectral_r)
-           cb       = Include colorbar? (default=True)
-           nlat     = northern latitude limit (degrees North, default 90)
-           slat     = southern latitude limit (degrees North, defalut 90)
-           tlon     = longitude at the top of the polar dial (degrees East,
-                      default 90)
-           blat     = latitude seperating the polar dials and the lower
-                      latitudes (default 45)
-           title    = Include North/South polar titles? (default=True)
-           xl       = Include x (Longitude) label? (default=True)
-           yl       = Include y (Latitude) label? (default=True)
-           xt       = Include x (Longitude) ticks? (default=True)
-           yt       = Include y (Latitude) ticks? (default=True)
+    Input: f             = figure handle
+           nsub          = number of subplots to include
+           isub          = number of this subplot (zero offset)
+           lat_data      = numpy array containing the latitudes (in degrees
+                           North) This can be 1D or 2D for scatter plots and
+                           must be 2D for contours
+           lon_data      = numpy array contaiing the longitudes (in degrees
+                           East) This can be 1D or 2D for scatter plots and
+                           must be 2D for contours
+           z_data        = numpy array containing the z variable data.  This
+                           should be 1D for scatter plots and 2D for contours
+           zname         = Descriptive name of z variable data
+           zscale        = Scaling type (linear/exponential) for z variable data
+           zunits        = Descriptive units for z variable data
+           zmax          = maximum z limit (default None)
+           zmin          = minimum z limit (default None)
+           zcolor        = Color scale for z data.  If not specified, will be
+                           determined by the z range. (default=None)
+           cb            = Include colorbar? (default=True)
+           tlon          = longitude at the top of the polar dial (degrees East,
+                           default 90)
+           polar_blat    = co-latitude of the lower boundary of the polar dials
+                           (default 45)
+           rect_blat     = Upper bounding co-latitude of the rectangular map
+                           (default 45)
+           title         = Include North/South polar titles? (default=True)
+           xl            = Include x (Longitude) label? (default=True)
+           yl            = Include y (Latitude) label? (default=True)
+           xt            = Include x (Longitude) ticks? (default=True)
+           yt            = Include y (Latitude) ticks? (default=True)
            bcolor        = Background color, or None (default="#D7DBE0")
            meq           = Add the geomagnetic equator? (default=False)
            earth         = include Earth continent outlines (default False)
@@ -702,6 +732,13 @@ def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
 
+    # Initialize the color scheme, if desired
+    if zcolor is None:
+        if zmin < 0.0:
+            zcolor = "seismic_r"
+        else:
+            zcolor = "Spectral_r"
+
     # Initialize the subplot numbers. Snapshot uses two subplot spaces per plot
     lsub = 2 * nsub
     rsub = 2 * (isub + 1)
@@ -710,10 +747,10 @@ def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
     axl = f.add_subplot(lsub,1,rsub)
     (con, ml) = plot_rectangular_3D_global(axl, lat_data, lon_data, z_data,
                                            zname, zscale, zunits, zmin, zmax,
-                                           zcolor, nlat=blat, slat=-1.0*blat,
-                                           cb=False, xl=xl, xt=xt, yl=yl,
-                                           yt=yt, bcolor=bcolor, meq=meq,
-                                           earth=earth, m=ml,
+                                           zcolor, nlat=rect_blat,
+                                           slat=-1.0*rect_blat, cb=False, xl=xl,
+                                           xt=xt, yl=yl, yt=yt, bcolor=bcolor,
+                                           meq=meq, earth=earth, m=ml,
                                            data_type=data_type,
                                            term_datetime=term_datetime)
     psl = list(axl.get_position().bounds)
@@ -737,9 +774,9 @@ def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
 
     (con, mn) = plot_polar_3D_global(axn, 2, lat_data, lon_data, z_data, zname,
                                      zscale, zunits, zmin, zmax, zcolor,
-                                     center_lat=90, edge_lat=blat, linc=3,
+                                     center_lat=90, edge_lat=polar_blat, linc=3,
                                      top_lon=tlon, cb=False, title=t,
-                                     tl=xl, rl=False, bcolor=bcolor,
+                                     tl=False, rl=False, bcolor=bcolor,
                                      earth=earth, m=mn, data_type=data_type,
                                      term_datetime=term_datetime)
     psn = list(axn.get_position().bounds)
@@ -751,10 +788,10 @@ def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
         t="South"
     (con, ms) = plot_polar_3D_global(axs, 2, lat_data, lon_data, z_data, zname,
                                      zscale, zunits, zmin, zmax, zcolor,
-                                     center_lat=-90, edge_lat=-1.0*blat, linc=3,
-                                     top_lon=tlon, cb=False, title=t, tl=xl,
-                                     rl=yl, bcolor=bcolor, earth=earth, m=ms,
-                                     data_type=data_type,
+                                     center_lat=-90, edge_lat=-1.0*polar_blat,
+                                     linc=3, top_lon=tlon, cb=False, title=t,
+                                     tl=False, rl=False, bcolor=bcolor,
+                                     earth=earth, m=ms, data_type=data_type,
                                      term_datetime=term_datetime)
     pss = list(axs.get_position().bounds)
 
@@ -764,22 +801,42 @@ def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
                               zunits)
         bp = list(cb.ax.get_position().bounds)
 
-        bp[0] = psl[0] + psl[2] + 0.005
-        bp[1] = bp[1] - bp[3] * 0.5
+        # Ridley Adjustment of plots and colorbar
+        bp[0] = .82
+        bp[1] = psl[1] - 0.02
+        bp[3] = pss[3] + .85
+        bp[2] = bp[2] / 1.8 
+
+        pss[0] = pss[0] - .12
+        pss[1] = pss[1] - .02
+
+        psn[0] = psn[0] - .05
+        psn[1] = psn[1] - .02
+
+        #AGB Adjustment of Ridley alignment
+        if earth:
+            pss[0] = pss[0] - .05
+            if rect_blat > 70.0: psl[0] = psl[0] - .09
+        else:
+            psl[0] = psl[0] - .02
+
         cb.ax.set_position(bp)
+    else:
+    # AGB plot alignments without a colorbar
+        pss[0] = pss[0] - 0.08
+        psn[0] = psn[0] - 0.08
+        psl[0] = psl[0] - 0.02
 
     # Adjust the plot alignments
-    pss[0] = pss[0] - 0.08
-    psn[0] = psn[0] - 0.08
-    psl[0] = psl[0] - 0.02
     axs.set_position(pss)
     axl.set_position(psl)
+    axn.set_position(psn)
 
     return(axl,ml,axn,mn,axs,ms)
 # End snapshot
 
 def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
-                               zunits, zmin, zmax, zcolor='Spectral_r', zinc=6,
+                               zunits, zmin, zmax, zcolor=None, zinc=6,
                                nlat=90, slat=-90, linc=6, cb=True, cloc="r",
                                title=None, tloc="t", xl=True, xt=True, yl=True,
                                yt=True, bcolor="#D7DBE0", meq=False,
@@ -802,7 +859,8 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
            zunits    = Descriptive units for z variable data
            zmin      = minimum value for z variable
            zmax      = maximum value for z variable
-           zcolor    = Color map for the z variable (default=Spectral_r)
+           zcolor    = Color map for the z variable.  If not specified, will be
+                       determined by the z range. (default=None) 
            zinc      = number of tick incriments for z variable (default 6)
            nlat      = northern latitude limit (degrees North, default 90)
            slat      = southern latitude limit (degrees North, defalut 90)
@@ -834,6 +892,13 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
     if(nlat == slat):
         print "plot_rectangular_3D_global ERROR: no latitude range"
         return
+
+    # Initialize the color scheme, if desired
+    if zcolor is None:
+        if zmin < 0.0:
+            zcolor = "seismic_r"
+        else:
+            zcolor = "Spectral_r"
 
     # Set latitude range values
     yrange = nlat - slat
@@ -957,7 +1022,7 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
 #End plot_rectangular_3D_global
 
 def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
-                         zunits, zmin, zmax, zcolor='Spectral_r', zinc=6,
+                         zunits, zmin, zmax, zcolor=None, zinc=6,
                          center_lat=90, edge_lat=0, linc=6, top_lon=90, cb=True,
                          cloc="r", title = None, tloc="t", tl = True, rl = True,
                          bcolor="#D7DBE0", earth=False, m=None,
@@ -982,7 +1047,8 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
            zunits     = Descriptive units for z variable data
            zmin       = minimum value for z variable
            zmax       = maximum value for z variable
-           zcolor     = Color map for the z variable (default=Spectral_r)
+           zcolor     = Color map for the z variable.  If not specified, will be
+                        determined by the z range. (default=None)
            zinc       = number of tick incriments for z variable (default 6)
            center_lat = upper (center) latitude limit (degrees N, default 90)
            edge_lat   = lower (edge) latitude limit (degrees N, default 0)
@@ -1011,9 +1077,15 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
 
     rout_name = "plot_polar_3D_global"
 
+    # Initialize the color scheme, if desired
+    if zcolor is None:
+        if zmin < 0.0:
+            zcolor = "seismic_r"
+        else:
+            zcolor = "Spectral_r"
+
     # Assign the Longitude, Latitude, and Z data structures.  For the polar
     # plots we do not want to include co-latitudes above 90 degrees
-
     csign = np.sign(center_lat)
     if csign == 0:
         csign = 1.0
