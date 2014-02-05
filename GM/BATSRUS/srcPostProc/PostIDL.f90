@@ -688,6 +688,7 @@ contains
 
     use ModNumConst,       ONLY: cPi, cTwoPi, cHalfPi, cRadToDeg
     use ModCoordTransform, ONLY: rot_matrix_z
+    use ModUtilities,      ONLY: lower_case, split_string
 
     ! Calculate the generalized coordinates mostly for lookup
     real:: rCyl ! distance from axis Z
@@ -696,7 +697,16 @@ contains
     real:: PoloidalAngle, r, z, StretchCoef, dAngle, Residual, WallRadius
 
     ! Rotation matrix for rotated Cartesian grid
-    real, allocatable:: GridRot_DD(:,:)
+    real, allocatable, save:: GridRot_DD(:,:)
+
+    ! List of vector variables for rotated Cartesian coordinates
+    integer:: nVector = 0
+    integer, allocatable, save:: iVarVector_I(:)
+
+    ! Temporary variables to process the variable name string
+    integer:: iVector, iVar, MaxWord, nWord, l
+    character(len=10), allocatable:: NameVar_V(:)
+    character(len=10)             :: NameVar, NameVector
     !---------------------------------------------------------------------
     if(TypeGeometry(1:5)=='round')then
 
@@ -708,13 +718,61 @@ contains
     if(TypeGeometry(1:7)=='rotated')then
 
        if(.not.allocated(GridRot_DD))then
+          ! Setup rotation matrix
           allocate(GridRot_DD(3,3))
+
+          ! The rotation matrix should be the same as in BATL_geometry
           GridRot_DD = rot_matrix_z(0.6,0.8)
+          
+          ! Find vectors
+          MaxWord = nDim + nW + nEqpar
+          allocate(NameVar_V(MaxWord))
+          call split_string(varnames, MaxWord, NameVar_V, nWord)
+
+          ! Make this array large enough
+          allocate(iVarVector_I(nW/3))
+
+          NameVector = ' '
+          do iVar = 1, nW - 2
+             ! Add nDim to skip the coordinate names
+             NameVar = NameVar_V(nDim+iVar)
+             call lower_case(NameVar)
+
+             l = len_trim(NameVar)
+             
+             ! Identify vectors as 3 strings ending with x, y, z
+             if(NameVar(l:l) /= 'x') CYCLE
+
+             ! Prospective vector component
+             NameVector = NameVar(1:l-1)
+
+             ! Check the next two names
+             NameVar = NameVar_V(nDim+iVar+1)
+             call lower_case(NameVar)
+             if(NameVar /= trim(NameVector)//'y') CYCLE
+
+             NameVar = NameVar_V(nDim+iVar+2)
+             call lower_case(NameVar)
+             if(NameVar /= trim(NameVector)//'z') CYCLE
+
+             nVector = nVector + 1
+             iVarVector_I(nVector) = iVar
+          end do
+          deallocate(NameVar_V)
+
+          !write(*,*)'nVector, iVarVector_I=', nVector, iVarVector_I(1:nVector)
+
        end if
 
        ! Unrotate the coordinates for comparison with Cartesian runs
        Xyz_D = matmul(Xyz_D, GridRot_DD)
        XyzGen_D = Xyz_D
+
+       ! Unrotate vectors
+       do iVector = 1, nVector
+          iVar = iVarVector_I(iVector)
+          w1(iVar:iVar+2) = matmul(w1(iVar:iVar+2), GridRot_DD)
+       end do
 
        RETURN
     end if
