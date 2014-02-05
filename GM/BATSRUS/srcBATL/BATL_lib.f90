@@ -58,6 +58,7 @@ module BATL_lib
 
   ! Inherited from BATL_geometry
   public:: TypeGeometry, IsCartesianGrid, IsCartesian, IsRzGeometry
+  public:: IsRotatedCartesian, GridRot_DD
   public:: IsSpherical, IsRLonLat, IsCylindrical
   public:: IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, IsAnyAxis
   public:: Dim1_, Dim2_, Dim3_, x_, y_, z_, r_, Phi_, Theta_, Lon_, Lat_
