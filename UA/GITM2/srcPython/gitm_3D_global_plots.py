@@ -112,19 +112,19 @@ def gitm_single_3D_image(plot_type, zkey, gdata, title=None, figname=None,
         title = spec_title
 
     # Output the figure
-    f, m = p3g.plot_single_3D_image(plot_type,
-                                    np.array(gdata['dLat'][:,imin:imax,ialt]),
-                                    np.array(gdata['dLon'][:,imin:imax,ialt]),
-                                    np.array(gdata[zkey][:,imin:imax,ialt]),
-                                    gdata[zkey].attrs['name'],
-                                    gdata[zkey].attrs['scale'],
-                                    gdata[zkey].attrs['units'], zmax=zmax,
-                                    zmin=zmin, zcolor=zcolor, title=title,
-                                    figname=figname, draw=draw, nlat=nlat,
-                                    slat=slat, linc=linc, tlon=tlon,
-                                    data_type=data_type, meq=meq, earth=earth,
-                                    m=m, faspect=faspect, term_datetime=tdt)
-    return(f, m)
+    fm = p3g.plot_single_3D_image(plot_type,
+                                  np.array(gdata['dLat'][:,imin:imax,ialt]),
+                                  np.array(gdata['dLon'][:,imin:imax,ialt]),
+                                  np.array(gdata[zkey][:,imin:imax,ialt]),
+                                  gdata[zkey].attrs['name'],
+                                  gdata[zkey].attrs['scale'],
+                                  gdata[zkey].attrs['units'], zmax=zmax,
+                                  zmin=zmin, zcolor=zcolor, title=title,
+                                  figname=figname, draw=draw, nlat=nlat,
+                                  slat=slat, linc=linc, tlon=tlon,
+                                  data_type=data_type, meq=meq, earth=earth,
+                                  m=m, faspect=faspect, term_datetime=tdt)
+    return fm
 # End gitm_single_3D_image
 
 def gitm_single_nsglobal_3D_image(zkey, gdata, title=None, figname=None,
@@ -187,20 +187,18 @@ def gitm_single_nsglobal_3D_image(zkey, gdata, title=None, figname=None,
         title = spec_title
 
     # Output figure
-    (f, mn, ms) = p3g.plot_single_nsglobal_3D_image(np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[zkey][:,imin:imax,ialt]),
-                                                    gdata[zkey].attrs['name'],
-                                                    gdata[zkey].attrs['scale'],
-                                                    gdata[zkey].attrs['units'],
-                                                    zmax=zmax, zmin=zmin,
-                                                    zcolor=zcolor, title=title,
-                                                    figname=figname, draw=draw,
-                                                    plat=plat, elat=elat,
-                                                    linc=linc, tlon=tlon,
-                                                    earth=earth, mn=mn, ms=ms,
-                                                    data_type=data_type,
-                                                    term_datetime=tdt)
+    fm = p3g.plot_single_nsglobal_3D_image(np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[zkey][:,imin:imax,ialt]),
+                                           gdata[zkey].attrs['name'],
+                                           gdata[zkey].attrs['scale'],
+                                           gdata[zkey].attrs['units'],
+                                           zmax=zmax, zmin=zmin, zcolor=zcolor,
+                                           title=title, figname=figname,
+                                           draw=draw, plat=plat, elat=elat,
+                                           linc=linc, tlon=tlon, earth=earth,
+                                           mn=mn, ms=ms, data_type=data_type,
+                                           term_datetime=tdt)
 
-    return(f, mn, ms)
+    return fm
 # End gitm_single_nsglobal_3D_image
 
 def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
@@ -267,19 +265,18 @@ def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
         title = spec_title
 
     # Output figure
-    f, ml, mn, ms = p3g.plot_global_3D_snapshot(np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[zkey][:,imin:imax,ialt]),
-                                                gdata[zkey].attrs['name'],
-                                                gdata[zkey].attrs['scale'],
-                                                gdata[zkey].attrs['units'],
-                                                zmax=zmax, zmin=zmin,
-                                                zcolor=zcolor, title=title,
-                                                figname=figname, draw=draw,
-                                                tlon=tlon,polar_blat=polar_blat,
-                                                rect_blat=rect_blat, meq=meq,
-                                                earth=earth, ml=ml, mn=mn,
-                                                ms=ms, data_type=data_type,
-                                                term_datetime=tdt)
-    return(f, ml, mn, ms)
+    fm = p3g.plot_global_3D_snapshot(np.array(gdata['dLat'][:,imin:imax,ialt]),
+                                     np.array(gdata['dLon'][:,imin:imax,ialt]),
+                                     np.array(gdata[zkey][:,imin:imax,ialt]),
+                                     gdata[zkey].attrs['name'],
+                                     gdata[zkey].attrs['scale'],
+                                     gdata[zkey].attrs['units'], zmax=zmax,
+                                     zmin=zmin, zcolor=zcolor, title=title,
+                                     figname=figname, draw=draw, tlon=tlon,
+                                     polar_blat=polar_blat, rect_blat=rect_blat,
+                                     meq=meq, earth=earth, ml=ml, mn=mn, ms=ms,
+                                     data_type=data_type, term_datetime=tdt)
+    return fm
 # End gitm_global_3D_snapshot
 
 def gitm_mult_3D_slices(plot_type, zkey, gdata, aindex, title=None,
