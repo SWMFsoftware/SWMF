@@ -52,27 +52,28 @@ import plot_3D_global as p3g
 def gitm_single_3D_image(plot_type, zkey, gdata, title=None, figname=None,
                          draw=True, aindex=-1, nlat=90, slat=-90, linc=6,
                          earth=False, tlon=90, zmax=None, zmin=None,
-                         zcolor='Spectral_r', data_type="contour", faspect=True,
+                         zcolor=None, data_type="contour", faspect=True,
                          meq=False, terminator=False, m=None, *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
-    Input: plot_type = key to determine plot type (rectangular, polar)
-           zkey      = key for z variable (ie 'Vertical TEC')
-           gData     = gitm bin structure
-           title     = plot title
-           figname   = file name to save figure as (default is none)
-           draw      = draw to screen? (default is True)
-           aindex    = altitude index (default -1 if it is a 2D parameter)
-           nlat      = northern latitude limit (degrees North, default 90)
-           slat      = southern latitude limit (degrees North, defalut -90)
-           linc      = number of latitude tick incriments (default 6)
-           earth     = include continent outlines for Earth (default False)
-           tlon      = longitude at the top of a polar dial (degrees east,
-                       default 90)
-           zmax      = Maximum z range (default None)
-           zmin      = Minimum z range (default None)
-           zcolor     = Color map for the z variable (default=Spectral_r)
+    Input: plot_type  = key to determine plot type (rectangular, polar)
+           zkey       = key for z variable (ie 'Vertical TEC')
+           gData      = gitm bin structure
+           title      = plot title
+           figname    = file name to save figure as (default is none)
+           draw       = draw to screen? (default is True)
+           aindex     = altitude index (default -1 if it is a 2D parameter)
+           nlat       = northern latitude limit (degrees North, default 90)
+           slat       = southern latitude limit (degrees North, defalut -90)
+           linc       = number of latitude tick incriments (default 6)
+           earth      = include continent outlines for Earth (default False)
+           tlon       = longitude at the top of a polar dial (degrees east,
+                        default 90)
+           zmax       = Maximum z range (default None)
+           zmin       = Minimum z range (default None)
+           zcolor     = Color map for the z variable.  If none, will be chosen
+                        based on the z range (default=None)
            data_type  = scatter or contour (default=scatter)
            faspect    = Fix the aspect of Earth if using outlines (default=True)
            meq        = Include the geomagnetic equator?  (default=False)
@@ -129,7 +130,7 @@ def gitm_single_3D_image(plot_type, zkey, gdata, title=None, figname=None,
 def gitm_single_nsglobal_3D_image(zkey, gdata, title=None, figname=None,
                                   draw=True, aindex=-1, plat=90, elat=0, linc=3,
                                   tlon=90, earth=False, zmax=None, zmin=None,
-                                  zcolor="Spectral_r", data_type="contour",
+                                  zcolor=None, data_type="contour",
                                   terminator=False, mn=None, ms=None,
                                   *args, **kwargs):
     '''
@@ -149,7 +150,8 @@ def gitm_single_nsglobal_3D_image(zkey, gdata, title=None, figname=None,
            earth      = include Earth continent outlines (default False)
            zmax       = maximum z range (default None)
            zmin       = mininimum z range (default None)
-           zcolor     = Color scale for plotting the z data (default=Spectral_r)
+           zcolor     = Color scale for plotting the z data.  If not specified,
+                        this will be determined by the z range (default=None)
            data_type  = Type of plot to make scatter/contour (default=scatter)
            terminator = Include the solar terminator by shading the night
                         time regions? (default=False)
@@ -202,10 +204,11 @@ def gitm_single_nsglobal_3D_image(zkey, gdata, title=None, figname=None,
 # End gitm_single_nsglobal_3D_image
 
 def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
-                            aindex=-1, tlon=90, blat=45, earth=False, zmax=None,
-                            zmin=None, zcolor="Spectral_r", meq=False, 
-                            data_type="contour", terminator=False, ml=None,
-                            mn=None, ms=None, *args, **kwargs):
+                            aindex=-1, tlon=90, polar_blat=45, rect_blat=45,
+                            earth=False, zmax=None, zmin=None,
+                            zcolor=None, meq=False, data_type="contour",
+                            terminator=False, ml=None, mn=None, ms=None,
+                            *args, **kwargs):
     '''
     Creates a map projection plot for the entire globe, seperating the polar
     and central latitude regions.
@@ -217,12 +220,15 @@ def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
            aindex     = altitude index (default -1 if it is a 2D parameter)
            tlon       = longitude at the top of the polar dial (degrees East,
                         default 90)
-           blat       = latitude seperating the polar dials and the lower
-                        latitudes (default 45)
+           polar_blat = co-latitude of the lower boundary of the polar dials
+                        (default 45)
+           rect_blat  = Upper bounding co-latitude of the rectangular map
+                        (default 45)
            earth      = include Earth continent outlines (default False)
            zmax       = maximum z limit (default None)
            zmin       = minimum z limit (default None)
-           zcolor     = Color scale for z variable (default="Spectral_r")
+           zcolor     = Color scale for z variable.  If not specified, will be
+                        determined by the z range (default=None)
            meq        = Add a line for the geomagnetic equator? (default=False)
            data_type  = Type of plot to make scatter/contour (default=contour)
            terminator = Include the solar terminator by shading the night
@@ -268,7 +274,8 @@ def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
                                                 zmax=zmax, zmin=zmin,
                                                 zcolor=zcolor, title=title,
                                                 figname=figname, draw=draw,
-                                                tlon=tlon, blat=blat, meq=meq,
+                                                tlon=tlon,polar_blat=polar_blat,
+                                                rect_blat=rect_blat, meq=meq,
                                                 earth=earth, ml=ml, mn=mn,
                                                 ms=ms, data_type=data_type,
                                                 term_datetime=tdt)
@@ -278,7 +285,7 @@ def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
 def gitm_mult_3D_slices(plot_type, zkey, gdata, aindex, title=None,
                         figname=None, draw=True, nlat=90, slat=-90, linc=6,
                         earth=False, tlon=90, zmax=None, zmin=None, 
-                        zcolor="Spectral_r", data_type="contour", meq=False,
+                        zcolor=None, data_type="contour", meq=False,
                         faspect=True, terminator=False, *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
@@ -298,7 +305,8 @@ def gitm_mult_3D_slices(plot_type, zkey, gdata, aindex, title=None,
                         default 90)
            zmax       = maximum z range (default None)
            zmin       = minimum z range (default None)
-           zcolor     = Color spectrum for z data (default=Spectral_r)
+           zcolor     = Color spectrum for z data.  If not specified, will be
+                        determined by the z range. (default=None)
            data_type  = Contour or scatter plot? (default=scatter)
            meq        = Add a line for the geomagnetic equator? (default=False)
            earth      = include Earth continent outlines (default False)
