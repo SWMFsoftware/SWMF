@@ -9,6 +9,8 @@
 ; reading ascii and binary data produced by VAC, VACINI, BATSRUS etc:
 ;    openfile, gettype, gethead, get_pict, 
 ;    get_pict_asc, get_pict_bin, get_pict_log, get_log
+; saveing ascii and binary data in the same format:
+;    save_pict
 ; reading numbers and strings from input:
 ;    asknum, askstr, str2arr, arr2arr, readplotpar, readlimits
 ; transforming initial data:
@@ -4474,7 +4476,7 @@ pro save_pict, filename, headline, varname, w, x, $
                it, time, eqpar, ndim=ndim, gencoord=gencoord, $
                filetype=filetype, append=append
 
-  ;; on_error,2
+  on_error,2
 
   if n_elements(filename) eq 0 or n_elements(headline) eq 0 or $
      n_elements(varname) eq 0 or n_elements(w) eq 0 then begin
@@ -4530,7 +4532,7 @@ pro save_pict, filename, headline, varname, w, x, $
      printf, unit, nx, format='(3i8)'
      printf, unit, eqpar, format='(100(1e13.5))'
      printf, unit, varname
-     case ndim of
+     case abs(ndim) of
         1: for i=0L, nx(0)-1 do $
            printf, unit, x(i), w(i,*), format='(100(1e18.10))'
         2: for j =0L, nx(1)-1 do for i=0L, nx(0)-1 do $
@@ -4564,7 +4566,7 @@ pro save_pict, filename, headline, varname, w, x, $
      writeu, unit, eqpar
      writeu, unit, varname
      writeu, unit, x
-     case ndim of
+     case abs(ndim) of
         1: for iw=0, nw-1 do writeu, unit, w(*,iw)
         2: for iw=0, nw-1 do writeu, unit, w(*,*,iw)
         3: for iw=0, nw-1 do writeu, unit, w(*,*,*,iw)
