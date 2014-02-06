@@ -223,6 +223,10 @@ subroutine MH_set_parameters(TypeAction)
         call get_planet(DipoleStrengthOut = DipoleStrengthSi)
      end if
 
+     if(NameThisComp == 'SC') then
+        call init_axes(StartTime)
+     end if
+
      if(IsStandAlone .and. NameThisComp=='GM') then
         ! Check and set some planet variables (e.g. DoUpdateB0)
         call check_planet_var(iProc==0, time_accurate)
