@@ -26,8 +26,7 @@ module ModHallResist
   real:: IonMassPerChargeCoef
 
   ! Arrays for the implicit preconditioning
-  real, public, allocatable :: HallJ_CD(:,:,:,:), &
-       BxPerN_G(:,:,:),ByPerN_G(:,:,:),BzPerN_G(:,:,:)
+  real, public, allocatable :: HallJ_CD(:,:,:,:)
 
   ! Name/shape of the region where Hall effect is used
   character(len=20), public :: NameHallRegion ='all'
@@ -90,9 +89,6 @@ contains
 
     if(.not.allocated(HallJ_CD)) allocate(              &
          HallJ_CD(nI,nJ,nK,MaxDim),                     &
-         BxPerN_G(0:nI+1,j0_:nJp1_,k0_:nKp1_),          &
-         ByPerN_G(0:nI+1,j0_:nJp1_,k0_:nKp1_),          &
-         BzPerN_G(0:nI+1,j0_:nJp1_,k0_:nKp1_),          &
          IonMassPerCharge_G(0:nI+1,j0_:nJp1_,k0_:nKp1_) )
 
     HallJ_CD = 0.0
