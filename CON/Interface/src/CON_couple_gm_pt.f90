@@ -277,13 +277,14 @@ contains
           ! Order points according to the owner processor indexes
           allocate(iPointPt_I(nPointPt))
           call get_buffer_order(nProcGmPt, nPointPt, iProcPt_I, &
-               nPointPt_P, iPointPt_I)
+               nPointPt_P, iPointPt_I, nData)
 
           deallocate(iProcPt_I)
 
           ! Rearrange coordinate array according to processor order
-          allocate(PosSortPt_DI(nDim,nPointPt))
+          allocate(PosSortPt_DI(nDim,nData))
           do iPoint = 1, nPointPt
+             if(iPointPT_I(iPoint) < 0)CYCLE
              PosSortPt_DI(:,iPointPt_I(iPoint)) = PosPt_DI(:,iPoint)
           end do
           deallocate(PosPt_DI)
@@ -295,7 +296,7 @@ contains
           ! Transfer PT positions to the GM processors that own them
           allocate(PosGm_DI(nDim,nPointGm))
           call transfer_buffer(iCommGmPt, nProcGmPt, iProcGmPt, nDim, &
-               nPointPt, nPointPt_P, PosSortPt_DI, &
+               nData,    nPointPt_P, PosSortPt_DI, &
                nPointGm, nPointGm_P, PosGm_DI)
 
           deallocate(PosSortPt_DI)
@@ -417,12 +418,12 @@ contains
     if(IsSameLayout)then
        call transfer_buffer(iCommGmPt, nProcGmPt, iProcGmPt, nVar, &
             nPointGm, nPointGm_P, DataGm_VI, &
-            nPointPt, nPointPt_P, DataPt_VI) 
+            nData,    nPointPt_P, DataPt_VI) 
     else
        call transfer_buffer_real(iCommGmPt, nProcGmPt, iProcGmPt, &
             nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,           &
             nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,           &
-            nVar, nPointGm, DataGm_VI, nPointPt, DataPt_VI)
+            nVar, nPointGm, DataGm_VI, nData, DataPt_VI)
     end if
     deallocate(DataGm_VI)
 
@@ -437,7 +438,8 @@ contains
 
   !==========================================================================
 
-  subroutine get_buffer_order(nProc, nBuffer, iProc_I, nBuffer_P, iBuffer_I)
+  subroutine get_buffer_order(&
+       nProc, nBuffer, iProc_I, nBuffer_P, iBuffer_I, nData)
 
     ! nBuffer_P returns the number of points in the buffer belong 
     !    to each processor based on the iProc_I information.
@@ -448,16 +450,18 @@ contains
     integer, intent(in)::  iProc_I(nBuffer)  ! proc index for each point
     integer, intent(out):: nBuffer_P(0:nProc-1)  ! number of points per procs
     integer, intent(out):: iBuffer_I(nBuffer)! index for reordering
+    integer, intent(out):: nData ! number of points found on Source
 
     integer:: iBuffer, iProc
     integer, allocatable:: iBuffer_P(:)
     character(len=*), parameter:: NameSub = 'get_buffer_order'
     !----------------------------------------------------------------------
-
+    nData = nBuffer
     ! Buffer chunk sizes for each processor
     nBuffer_P = 0
     do iBuffer = 1, nBuffer
        iProc = iProc_I(iBuffer)
+       if(iProc < 0) CYCLE
        nBuffer_P(iProc) = nBuffer_P(iProc) + 1
     end do
 
@@ -472,12 +476,16 @@ contains
     do iBuffer = 1, nBuffer
        ! This buffer belongs to iProc
        iProc = iProc_I(iBuffer)
-
-       ! It will occupy iBufferSort position
-       iBuffer_I(iBuffer) = iBuffer_P(iProc)
-
-       ! Jump to next position
-       iBuffer_P(iProc) = iBuffer_P(iProc) + 1
+       if(iProc < 0)then
+          ! the point hasn't been found
+          iBuffer_I(iBuffer) = - 1
+          nData = nData - 1
+       else
+          ! It will occupy iBufferSort position
+          iBuffer_I(iBuffer) = iBuffer_P(iProc)
+          ! Jump to next position
+          iBuffer_P(iProc) = iBuffer_P(iProc) + 1
+       end if
     end do
     deallocate(iBuffer_P)
 
