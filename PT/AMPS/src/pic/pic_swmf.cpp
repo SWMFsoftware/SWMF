@@ -295,14 +295,14 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(char* ValiableList, int nVarialbes,
   while (n<nVarialbes) {
     i1=i0;
     while (ValiableList[i1]!=' ') {
-      vname[i1-i0]=ValiableList[i1];
+      vname[i1-i0]=tolower(ValiableList[i1]);
       i1++;
     }
 
     vname[i1-i0]=0;
 
     if (strcmp(vname,"rho")==0) Rho_SWMF2AMPS=n;
-    if (strcmp(vname,"vx")==0)  Vx_SWMF2AMPS=n;
+    if (strcmp(vname,"mx")==0)  Vx_SWMF2AMPS=n;
     if (strcmp(vname,"bx")==0)  Bx_SWMF2AMPS=n;
     if (strcmp(vname,"p")==0)   P_SWMF2AMPS=n;
 
@@ -324,6 +324,14 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(char* ValiableList, int nVarialbes,
           if (cell!=NULL) if (cell->nodeDescriptor.nodeProcessedFlag==_OFF_AMR_MESH_) {
             offset=nVarialbes*(index[cnt++]-1);
             cell->nodeDescriptor.nodeProcessedFlag=_ON_AMR_MESH_;
+
+            //convert momentum into velocity
+            if (Vx_SWMF2AMPS!=-1) {
+              if (Rho_SWMF2AMPS!=-1) {
+                for (idim=0;idim<3;idim++) (data[offset+Rho_SWMF2AMPS]>0.0) ? data[offset+Vx_SWMF2AMPS+idim]/=data[offset+Rho_SWMF2AMPS] : 0.0;
+              }
+              else for (idim=0;idim<3;idim++) data[offset+Vx_SWMF2AMPS+idim]=0.0;
+            }
 
             //the order of the state vector: rho, V, B, p
             *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaDensityOffset))=((offset>=0)&&(Rho_SWMF2AMPS>=0)) ? data[offset+Rho_SWMF2AMPS] : 0.0;
