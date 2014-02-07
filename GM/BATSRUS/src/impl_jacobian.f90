@@ -63,6 +63,7 @@ subroutine impl_jacobian(implBLK,JAC)
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
   use ModRadDiffusion, ONLY: add_jacobian_rad_diff
+  use ModResistivity, ONLY: UseResistivity, add_jacobian_resistivity
   use ModGeometry, ONLY: true_cell
   use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, &
        FaceNormal_DDFB, CellSize_DB, CellVolume_GB
@@ -334,16 +335,13 @@ subroutine impl_jacobian(implBLK,JAC)
      end if
   end if
 
-  ! Add extra terms for Hall resistivity
-  if(UseHallResist)then
-     if(IsCartesianGrid)then
-        call impl_hall_resist
-     else
-        call impl_hall_resist_general
-     end if
-  end if
+  ! Add extra terms for (Hall) resistivity
+  if(UseResistivity .or. UseHallResist) &
+       call add_jacobian_resistivity(iBlk, JAC)
 
-  if(UseRadDiffusion) call add_jacobian_rad_diff(iBLK, JAC)
+  ! Add extra terms for radiative diffusion
+  if(UseRadDiffusion) &
+       call add_jacobian_rad_diff(iBLK, JAC)
 
   ! Multiply JAC by the implicit timestep dt and ImplCoeff
   if(time_accurate)then
@@ -533,15 +531,13 @@ contains
     ! Calculate cell centered currents to be used by getflux
 
     use ModHallResist, ONLY: HallJ_CD, IonMassPerCharge_G, &
-         BxPerN_G, ByPerN_G, BzPerN_G, set_ion_mass_per_charge
+         set_ion_mass_per_charge
 
-    use ModAdvance, ONLY: B0_DGB
     use ModGeometry, ONLY: DgenDxyz_DDC, set_block_jacobian_cell 
 
     real :: DbDgen_DD(3,3)                     
 
     real :: InvDx2, InvDy2, InvDz2
-    real :: InvN_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub='impl_init_hall'
@@ -644,263 +640,6 @@ contains
 
     !write(*,*)'iBlock, max(HallJ)=',implBlk,maxval(abs(HallJ_CD(:,:,:,:)))
 
-    InvN_G = HallFactor_G * IonMassPerCharge_G / &
-         Impl_VGB(Rho_,0:nI+1,j0_:nJp1_,k0_:nKp1_,implBLK)
-    if(UseB0)then
-       do k = k0_,nKp1_; do j=j0_,nJp1_; do i=0,nI+1
-          BxPerN_G(i,j,k) = (B0_DGB(x_,i,j,k,iBlk) + &
-               Impl_VGB(Bx_,i,j,k,implBLK))*InvN_G(i,j,k)
-          ByPerN_G(i,j,k) = (B0_DGB(y_,i,j,k,iBlk) + &
-               Impl_VGB(By_,i,j,k,implBLK))*InvN_G(i,j,k)
-          BzPerN_G(i,j,k) = (B0_DGB(z_,i,j,k,iBlk) + &
-               Impl_VGB(Bz_,i,j,k,implBLK))*InvN_G(i,j,k)
-       end do; end do; end do
-    else
-       do k = k0_,nKp1_; do j=j0_,nJp1_; do i=0,nI+1
-          BxPerN_G(i,j,k) = Impl_VGB(Bx_,i,j,k,implBLK)*InvN_G(i,j,k)
-          ByPerN_G(i,j,k) = Impl_VGB(By_,i,j,k,implBLK)*InvN_G(i,j,k)
-          BzPerN_G(i,j,k) = Impl_VGB(Bz_,i,j,k,implBLK)*InvN_G(i,j,k)
-       end do; end do; end do
-    end if
-
   end subroutine impl_init_hall
-  !===========================================================================
-  subroutine impl_hall_resist
-
-    ! Add partial derivatives of the Hall term to the Jacobian that 
-    ! are not calculated by the general algorithm
-
-    ! Cartesian code
-
-    use ModHallResist, ONLY: BxPerN_G, ByPerN_G, BzPerN_G
-    !real :: ResistDiag should be Eta0Resist_ND from calc_resistive_flux
-
-    real :: Coeff
-    !integer:: iVar
-    !-----------------------------------------------------------------------
-
-    ! For diffusion term
-    ! R(Bi) = d^2(Bi)/dx^2 + d^2(Bi)/dy^2 + d^2(Bi)/dz^2 
-    ! dR(Bx)/dBx, dR(By)/dBy, dR(Bz)/dBz 
-    
-    !do iDim = 1, nDim
-    !   Coeff= -ResistDiag/Dxyz(iDim)**2
-    !   do k=1,nK; do j=1,nJ; do i=1,nI
-    !      do iVar=Bx_, Bz_
-    !         JAC(iVar,iVar,i,j,k,1)= &
-    !              JAC(iVar,iVar,i,j,k,1)         - 2.0*Coeff
-    !         JAC(iVar,iVar,i,j,k,2*nDim)= &
-    !              JAC(iVar,iVar,i,j,k,2*nDim)    + Coeff
-    !         JAC(iVar,iVar,i,j,k,2*nDim+1)= & 
-    !              JAC(iVar,iVar,i,j,k,2*nDim+1)  + Coeff
-    !      end do
-    !   end do; end do; end do
-    !end do
-
-    if(nK > 1)then
-       ! dR(Bx)/dBy
-       Coeff = wnrm(By_)/wnrm(Bx_)/Dxyz(z_)**2
-       ! Main diagonal
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          JAC(Bx_,By_,i,j,k,Stencil1_) = JAC(Bx_,By_,i,j,k,Stencil1_) &
-               + Coeff*(BzPerN_G(i,j,k-1) + BzPerN_G(i,j,k+1))
-       end do; end do; end do
-       !K+1
-       do k=1,nK-1; do j=1,nJ; do i=1,nI
-          JAC(Bx_,By_,i,j,k,Stencil7_) = JAC(Bx_,By_,i,j,k,Stencil7_) &
-               - Coeff*BzPerN_G(i,j,k+1)
-       end do; end do; end do
-       !K-1
-       do k=2,nK; do j=1,nJ; do i=1,nI
-          JAC(Bx_,By_,i,j,k,Stencil6_) = JAC(Bx_,By_,i,j,k,Stencil6_) &
-               - Coeff*BzPerN_G(i,j,k-1)
-       end do; end do; end do
-
-       ! dR(By)/dBx
-       Coeff = wnrm(Bx_)/wnrm(By_)/Dxyz(z_)**2
-       ! Main diagonal
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          JAC(By_,Bx_,i,j,k,Stencil1_) = JAC(By_,Bx_,i,j,k,Stencil1_) &
-               - Coeff*(BzPerN_G(i,j,k-1) + BzPerN_G(i,j,k+1))
-       end do; end do; end do
-       !K+1
-       do k=1,nK-1; do j=1,nJ; do i=1,nI
-          JAC(By_,Bx_,i,j,k,Stencil7_) = JAC(By_,Bx_,i,j,k,Stencil7_) &
-               + Coeff*BzPerN_G(i,j,k+1)
-       end do; end do; end do
-       !K-1
-       do k=2,nK; do j=1,nJ; do i=1,nI
-          JAC(By_,Bx_,i,j,k,Stencil6_) = JAC(By_,Bx_,i,j,k,Stencil6_) &
-               + Coeff*BzPerN_G(i,j,k-1)
-       end do; end do; end do
-
-    end if
-
-    if(nJ > 1)then
-       ! dR(Bx)/dBz
-       Coeff = wnrm(Bz_)/wnrm(Bx_)/Dxyz(y_)**2
-       ! Main diagonal
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          JAC(Bx_,Bz_,i,j,k,Stencil1_) = JAC(Bx_,Bz_,i,j,k,Stencil1_) &
-               - Coeff*(ByPerN_G(i,j-1,k)+ByPerN_G(i,j+1,k))
-       end do; end do; end do
-       !J+1
-       do k=1,nK; do j=1,nJ-1; do i=1,nI
-          JAC(Bx_,Bz_,i,j,k,Stencil5_) = JAC(Bx_,Bz_,i,j,k,Stencil5_) &
-               + Coeff*ByPerN_G(i,j+1,k)
-       end do; end do; end do
-       !J-1
-       do k=1,nK; do j=2,nJ; do i=1,nI
-          JAC(Bx_,Bz_,i,j,k,Stencil4_) = JAC(Bx_,Bz_,i,j,k,Stencil4_) &
-               + Coeff*ByPerN_G(i,j-1,k)
-       end do; end do; end do
-
-       ! dR(Bz)/dBx
-       Coeff = wnrm(Bx_)/wnrm(Bz_)/Dxyz(y_)**2
-       ! Main diagonal
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          JAC(Bz_,Bx_,i,j,k,Stencil1_) = JAC(Bz_,Bx_,i,j,k,Stencil1_) &
-               + Coeff*(ByPerN_G(i,j-1,k)+ByPerN_G(i,j+1,k))
-       end do; end do; end do
-       !J+1
-       do k=1,nK; do j=1,nJ-1; do i=1,nI
-          JAC(Bz_,Bx_,i,j,k,Stencil5_) = JAC(Bz_,Bx_,i,j,k,Stencil5_) &
-               - Coeff*ByPerN_G(i,j+1,k)
-       end do; end do; end do
-       !J-1
-       do k=1,nK; do j=2,nJ; do i=1,nI
-          JAC(Bz_,Bx_,i,j,k,Stencil4_) = JAC(Bz_,Bx_,i,j,k,Stencil4_) &
-               - Coeff*ByPerN_G(i,j-1,k)
-       end do; end do; end do
-
-    end if
-
-    ! dR(By)/dBz
-    Coeff = wnrm(Bz_)/wnrm(By_)/Dxyz(x_)**2
-    ! Main diagonal
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       JAC(By_,Bz_,i,j,k,Stencil1_) = JAC(By_,Bz_,i,j,k,Stencil1_) &
-            + Coeff*(BxPerN_G(i-1,j,k)+BxPerN_G(i+1,j,k))
-    end do; end do; end do
-    !I+1
-    do k=1,nK; do j=1,nJ; do i=1,nI-1
-       JAC(By_,Bz_,i,j,k,Stencil3_) = JAC(By_,Bz_,i,j,k,Stencil3_) &
-            - Coeff*BxPerN_G(i+1,j,k)
-    end do; end do; end do
-    !I-1
-    do k=1,nK; do j=1,nJ; do i=2,nI
-       JAC(By_,Bz_,i,j,k,Stencil2_) = JAC(By_,Bz_,i,j,k,Stencil2_) &
-            - Coeff*BxPerN_G(i-1,j,k)
-    end do; end do; end do
-
-    ! dR(Bz)/dBy
-    Coeff = wnrm(By_)/wnrm(Bz_)/Dxyz(x_)**2
-    ! Main diagonal
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       JAC(Bz_,By_,i,j,k,Stencil1_) = JAC(Bz_,By_,i,j,k,Stencil1_) &
-            - Coeff*(BxPerN_G(i-1,j,k)+BxPerN_G(i+1,j,k))
-    end do; end do; end do
-    !I+1
-    do k=1,nK; do j=1,nJ; do i=1,nI-1
-       JAC(Bz_,By_,i,j,k,Stencil3_) = JAC(Bz_,By_,i,j,k,Stencil3_) &
-            + Coeff*BxPerN_G(i+1,j,k)
-    end do; end do; end do
-    !I-1
-    do k=1,nK; do j=1,nJ; do i=2,nI
-       JAC(Bz_,By_,i,j,k,Stencil2_)= JAC(Bz_,By_,i,j,k,Stencil2_) &
-            + Coeff*BxPerN_G(i-1,j,k)
-    end do; end do; end do
-
-  end subroutine impl_hall_resist
-
-  !============================================================================
-
-  subroutine impl_hall_resist_general
-
-    use ModHallResist, ONLY: BxPerN_G, ByPerN_G, BzPerN_G
-    use ModGeometry, ONLY: set_block_jacobian_cell, DgenDxyz_DDC
-
-    use ModNumConst, ONLY: iLeviCivita_III
-    use BATL_lib, ONLY: FaceNormal_DDFB
-
-    ! Notation follows the Toth et. al. Hall MHD on Block Adaptive Grids paper
-
-    integer :: iDim, jDim, kDim, lDim, iFace, i, j, k, i2, j2, k2
-
-    integer :: iSub, iSup                  ! indexes of sub and super diagonals
-    integer :: jB, lB                      ! index of Bj and Bl
-    integer :: iklEpsilon, jklEpsilon      ! Levi-Civita symbols
-    
-    real :: Coeff, Term, TermSub, TermSup
-
-    real :: BPerN_CD(nI,nJ,nK,3)
-    !-------------------------------------------------------------------------
-
-    call set_block_jacobian_cell(iBlk)
-
-    BPerN_CD(:,:,:,1) = BxPerN_G(1:nI,1:nJ,1:nK)
-    BPerN_CD(:,:,:,2) = ByPerN_G(1:nI,1:nJ,1:nK)
-    BPerN_CD(:,:,:,3) = BzPerN_G(1:nI,1:nJ,1:nK)
-
-    do kDim = 1,nDim; do lDim = 1,3
-       if(kDim == lDim) CYCLE
-
-       do jDim = 1, 3
-          ! Normalization for dR(B_j)/dB_l
-          jB = B_ + jDim; 
-          lB = B_ + lDim; 
-          Coeff = wnrm(lB)/wnrm(jB)
-
-          jklEpsilon = iLeviCivita_III(jDim,kDim,lDim)
-
-          do iDim = 1,nDim
-             if(iDim == jDim) CYCLE  ! Terms cancel out
-
-             iklEpsilon = iLeviCivita_III(iDim, kDim, lDim)
-             if(iklEpsilon == 0 .and. jklEpsilon == 0) CYCLE
-
-             do iFace = 1, nDim  ! nDim directions of gen. coordinates
-
-                iSub = 2*iFace   ! stencil index of subdiagonal elements
-                iSup = iSub + 1  ! stencil index of superdiagonal elements
-
-                do k=1,nK; do j=1,nJ; do i=1,nI
-
-                   ! Index for the 'right' face of the cell
-                   i2 = i + i_DD(1,iFace)
-                   j2 = j + i_DD(2,iFace)
-                   k2 = k + i_DD(3,iFace)
-
-                   ! Area(iFace)/V*T_ks*(Bi/n*jklEpsilon - Bj/n*iklEpsilon)
-
-                   Term = Coeff*DgenDxyz_DDC(iFace,kDim,i,j,k) &
-                        / (CellVolume_GB(i,j,k,iBlk)*dxyz(iFace)) &
-                        *(BPerN_CD(i,j,k,iDim)*jklEpsilon &
-                        - BPerN_CD(i,j,k,jDim)*iklEpsilon)
-
-                   TermSub = FaceNormal_DDFB(iDim,iFace,i ,j ,k ,iBlk)*Term
-                   TermSup = FaceNormal_DDFB(iDim,iFace,i2,j2,k2,iBlk)*Term
-
-                   ! Exclude boundaries
-                   if(  iFace==1.and.i>1 .or. &
-                        iFace==2.and.j>1 .or. &
-                        iFace==3.and.k>1)&
-                        JAC(jB,lB,i,j,k,iSub) = JAC(jB,lB,i,j,k,iSub) + TermSub
-
-                   if(  iFace==1.and.i<nI .or. &
-                        iFace==2.and.j<nJ .or. &
-                        iFace==3.and.k<nK)&
-                        JAC(jB,lB,i,j,k,iSup) = JAC(jB,lB,i,j,k,iSup) + TermSup
-
-                   ! The main diagonal is -1 * the sum of off-diagonal terms
-                   JAC(jB,lB,i,j,k,1) = JAC(jB,lB,i,j,k,1) - TermSub - TermSup
-
-                end do; end do; end do
-             end do
-          end do
-       end do
-    end do; end do
-
-  end subroutine impl_hall_resist_general
 
 end subroutine impl_jacobian
