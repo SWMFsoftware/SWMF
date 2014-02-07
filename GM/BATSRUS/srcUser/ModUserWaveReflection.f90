@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModUser
 
@@ -57,7 +58,7 @@ contains
 
     use ModProcMH,  ONLY: iProc
     use ModAdvance, ONLY: Ux_
-    use ModPhysics, ONLY: ShockSlope, Shock_Lstate
+    use ModPhysics, ONLY: ShockSlope, ShockLeftState_V
     !--------------------------------------------------------------------------
     ! Calculate and store the cos and sin of the shock slope
     CosSlope = cos(atan(ShockSlope))
@@ -69,7 +70,7 @@ contains
 
     ! Project the sound and bulk speeds to the X axis
     cSoundX = cSoundX0/CosSlope
-    Ux      = Shock_Lstate(Ux_)/CosSlope
+    Ux      = ShockLeftState_V(Ux_)/CosSlope
 
     if(iProc==0)then
        write(*,*)'user_init_session: ShockSlope  =',ShockSlope
@@ -87,7 +88,7 @@ contains
     use ModGeometry, ONLY: Xyz_DGB, CellSize_DB
     use ModAdvance,  ONLY: State_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, P_, Bx_, By_, Bz_
-    use ModPhysics,  ONLY: ShockSlope, Shock_Lstate, Shock_Rstate, g
+    use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, g
     use ModNumConst, ONLY: cPi
 
     integer, intent(in) :: iBlock
@@ -111,11 +112,11 @@ contains
        ! Rotated  vector potential: A_z = Bx*(Cos*y-Sin*x)-By*(Cos*x+Sin*y)
 
        Potential_G = &
-            Shock_Lstate(Bx_)* &
+            ShockLeftState_V(Bx_)* &
             (CosSlope*Xyz_DGB(Y_,:,:,1,iBlock)-SinSlope*Xyz_DGB(x_,:,:,1,iBlock)) &
-            -Shock_Lstate(By_)*min(0., &
+            -ShockLeftState_V(By_)*min(0., &
             CosSlope*Xyz_DGB(x_,:,:,1,iBlock) + SinSlope*Xyz_DGB(Y_,:,:,1,iBlock)) &
-            -Shock_Rstate(By_)*max(0., &
+            -ShockRightState_V(By_)*max(0., &
             CosSlope*Xyz_DGB(x_,:,:,1,iBlock) + SinSlope*Xyz_DGB(Y_,:,:,1,iBlock))
 
        ! B = curl A so Bx = dA_z/dy and By = -dAz/dx
@@ -168,8 +169,8 @@ contains
           State_VGB(Uz_,:,:,:,iBlock)= &
                   State_VGB(RhoUz_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
 
-          State_VGB(Rho_,:,:,:,iBlock)=Shock_Rstate(Rho_)* &
-                  (State_VGB(P_,:,:,:,iBlock)/Shock_Rstate(p_))**(1./g)
+          State_VGB(Rho_,:,:,:,iBlock)=ShockRightState_V(Rho_)* &
+                  (State_VGB(P_,:,:,:,iBlock)/ShockRightState_V(p_))**(1./g)
 
           State_VGB(RhoUx_,:,:,:,iBlock)= &
                State_VGB(Ux_,:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)
