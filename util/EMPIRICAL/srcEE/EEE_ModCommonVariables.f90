@@ -63,6 +63,9 @@ module EEE_ModCommonVariables
   ! Use shear-flow boundary condition, use arcade magnetic field
   logical:: UseShearFlow = .false., UseArch = .false.
 
+  ! Use CMS nonlinear force free model
+  logical:: UseCms = .false.
+
   ! Add flux rope as an initial condition or apply boundary conditions only
   logical:: DoAddFluxRope = .false.
 

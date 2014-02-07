@@ -104,9 +104,10 @@ contains
     use EEE_ModTD99,      ONLY: set_parameters_TD99
     use EEE_ModArch,      ONLY: set_parameters_arch
     use EEE_ModShearFlow, ONLY: set_parameters_shearflow
+    use EEE_ModCms,       ONLY: set_parameters_cms
     use EEE_ModCommonVariables, ONLY: &
          UseCme, DoAddFluxRope, UseTD, UseGL, UseShearFLow, UseArch, &
-         DoAddFluxRope, LongitudeCme, LatitudeCme, OrientationCme
+         DoAddFluxRope, LongitudeCme, LatitudeCme, OrientationCme, UseCms
 
     character(len=*), intent(in) :: NameCommand
 
@@ -156,6 +157,10 @@ contains
        UseCme       = .true.
        UseShearFlow = .true.
        call set_parameters_shearflow(NameCommand)
+    case("#CMS")
+       UseCme = .true.
+       UseCms = .true.     
+       call set_parameters_cms(NameCommand)
     end select
 
   end subroutine EEE_set_parameters
@@ -164,10 +169,12 @@ contains
 
   subroutine EEE_get_state_BC(x_D,Rho,U_D,B_D,p,Time,n_step,iteration_number)
 
-    use EEE_ModCommonVariables, ONLY: UseCme, UseTD, UseShearFlow, UseGL
+    use EEE_ModCommonVariables, ONLY: UseCme, UseTD, UseShearFlow, UseGL, &
+         UseCms
     use EEE_ModTD99, ONLY: get_transformed_TD99fluxrope, DoBqField
     use EEE_ModShearFlow, ONLY: get_shearflow
     use EEE_ModGL98, ONLY: get_GL98_fluxrope, adjust_GL98_fluxrope
+    use EEE_ModCms, ONLY: get_cms
 
     real, intent(in) :: x_D(3), Time
     real, intent(out) :: Rho, U_D(3), B_D(3), p
@@ -191,7 +198,7 @@ contains
     end if
 
     if(UseGL)then
-       ! Add Gibson & Low (GL98) flux rope                                           
+       ! Add Gibson & Low (GL98) flux rope
        call get_GL98_fluxrope(x_D, Rho1, p1, B1_D)
        B_D = B_D + B1_D
     endif
@@ -202,15 +209,19 @@ contains
        U_D = U_D + U1_D
     end if
 
+    if(UseCms) call get_cms(x_D, B_D)
+
   end subroutine EEE_get_state_BC
 
   !============================================================================
 
   subroutine EEE_get_state_init(x_D, Rho, B_D, p, n_step, iteration_number)
 
-    use EEE_ModCommonVariables, ONLY: UseCme, DoAddFluxRope, UseTD, UseGL
+    use EEE_ModCommonVariables, ONLY: UseCme, DoAddFluxRope, UseTD, UseGL, &
+         UseCms
     use EEE_ModGL98, ONLY: get_GL98_fluxrope, adjust_GL98_fluxrope
     use EEE_ModTD99, ONLY: get_transformed_TD99fluxrope
+    use EEE_ModCms,  ONLY: get_cms
 
     real, intent(in) :: x_D(3)
     real, intent(out) :: Rho, B_D(3), p
@@ -238,6 +249,8 @@ contains
        call adjust_GL98_fluxrope(Rho1, p1)
        Rho = Rho + Rho1; B_D = B_D + B1_D; p = p + p1
     end if
+
+    if(UseCms) call get_cms(x_D, B_D)
 
   end subroutine EEE_get_state_init
 

@@ -1931,7 +1931,8 @@ subroutine MH_set_parameters(TypeAction)
           "#LASERRAYTEST")
         call read_laser_heating_param(NameCommand)
 
-     case("#CME", "#ARCH", "#TD99FLUXROPE", "#GL98FLUXROPE", "#SHEARFLOW")
+     case("#CME", "#ARCH", "#TD99FLUXROPE", "#GL98FLUXROPE", "#SHEARFLOW", &
+          "#CMS")
         call EEE_set_parameters(NameCommand)
 
      case("#STAR")
