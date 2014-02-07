@@ -74,25 +74,29 @@ subroutine advance_impl
   ! We use get_residual(.false.,...) to calculate R_expl
   ! and    get_residual(.true.,....) to calculate R_impl
 
-  use ModProcMH
-  use ModMain
-  use ModVarIndexes
+  use ModImplicit
+  use ModProcMH, ONLY: iComm, nProc
+  use ModMain, ONLY: nBlockMax, nBlockExplAll, time_accurate, &
+       n_step, time_simulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
+       iNewDecomposition, NameThisComp, &
+       test_string, iTest, jTest, kTest, BlkTest, ProcTest, VarTest
+  use ModVarIndexes, ONLY: Rho_
   use ModMultifluid, ONLY: select_fluid, iFluid, nFluid, iP
   use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI, &
        time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
   use ModPhysics, ONLY : No2Si_V, UnitT_
-  use ModImplicit
   use ModPointImplicit, ONLY: UsePointImplicit
-  use ModNumConst
   use ModLinearSolver, ONLY: gmres, bicgstab, cg, prehepta, &
        Uhepta, Lhepta, multiply_dilu
-  use ModMpi
   use ModEnergy, ONLY: calc_old_pressure, calc_old_energy
   use ModImplHypre, ONLY: hypre_preconditioner, hypre_initialize
   use ModMessagePass, ONLY: exchange_messages
-  use BATL_lib, ONLY : Unused_BP, Xyz_DGB
+  use ModResistivity, ONLY: init_impl_resistivity
+  use BATL_lib, ONLY: Unused_B, Unused_BP, Xyz_DGB
   use BATL_size, ONLY: j0_, nJp1_, k0_, nKp1_
+  use ModMpi
+
   implicit none
 
   real, external :: minval_BLK, minval_loc_BLK
@@ -231,11 +235,11 @@ subroutine advance_impl
      if(UseDtFixed)then
         if(DoTestMe)write(*,*)NameSub,': call getdt_courant'
         call getdt_courant(dtexpl)
-        dtexpl=cHalf*dtexpl
-        dtcoeff=dt/dtexpl
+        dtexpl = 0.5*dtexpl
+        dtcoeff = dt/dtexpl
      else
         if(DoTestMe)write(*,*)NameSub,': no call of getdt_courant'
-        dtcoeff=implCFL/cHalf
+        dtcoeff = implCFL/0.5
      endif
   end if
 
@@ -327,7 +331,11 @@ subroutine advance_impl
            if(UseSemiImplicit)then
               call get_semi_impl_jacobian
            else
-              do implBLK=1,nImplBLK
+              ! Initialize variables for preconditioner calculation
+              call init_impl_resistivity
+
+              ! Calculate approximate dR/dU matrix
+              do implBLK = 1, nImplBLK
                  call impl_jacobian(implBLK,MAT(1,1,1,1,1,1,implBLK))
               end do
            end if
