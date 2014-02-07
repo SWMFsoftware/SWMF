@@ -21,6 +21,7 @@ module ModResistivity
   public:: mask_resistivity
   public:: calc_resistivity_source
   public:: calc_heat_exchange
+  public:: init_impl_resistivity
   public:: get_impl_resistivity_state
   public:: get_resistivity_rhs
   public:: add_jacobian_resistivity
@@ -480,36 +481,26 @@ contains
   end subroutine calc_heat_exchange
 
   !============================================================================
-  ! Operator split, semi-implicit collisional and Hall resistivity
+  ! Interface for (Semi-)implicit collisional and Hall resistivity
   !============================================================================
 
-  subroutine get_impl_resistivity_state(StateImpl_VGB, DconsDsemi_VCB)
+  subroutine get_impl_resistivity_state(StateImpl_VGB)
 
-    use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, message_pass_cell, &
-         CellFace_DB, FaceNormal_DDFB
     use BATL_size,       ONLY: j0_, nJp1_, k0_, nKp1_
     use ModAdvance,      ONLY: State_VGB
-    use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk
-    use ModMain,         ONLY: MaxImplBlk, UseB0
-    use ModNumConst,     ONLY: i_DD
-    use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
-    use ModHallResist,   ONLY: UseHallResist, hall_factor, &
-         set_ion_mass_per_charge, IonMassPerCharge_G
-    use ModB0,           ONLY: B0_DGB
+    use ModImplicit,     ONLY: nW, nImplBLK, impl2iBlk
+    use ModMain,         ONLY: MaxImplBlk
+    use ModVarIndexes,   ONLY: Bx_, Bz_
 
     real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
-    real, intent(inout):: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
-    integer :: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock, iImplBlock
-    real :: Eta
-    real :: FaceNormal_D(nDim)
-
-    real :: HallCoeff, Rho, b_D(MaxDim)
+    integer:: i, j, k, iBlock, iImplBlock
 
     character(len=*), parameter :: &
          NameSub = 'ModResistivity::get_impl_resistivity_state'
     !--------------------------------------------------------------------------
 
+    ! Copy magnetic field into the implicit variable
     do iImplBlock = 1, nImplBLK
        iBlock = impl2iBLK(iImplBlock)
 
@@ -521,6 +512,35 @@ contains
 
     end do
 
+    ! Initialize variables for RHS and Jacobian calculation
+    call init_impl_resistivity
+
+  end subroutine get_impl_resistivity_state
+
+  !===========================================================================
+
+  subroutine init_impl_resistivity
+
+    use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, message_pass_cell, &
+         CellFace_DB, FaceNormal_DDFB
+    use ModAdvance,      ONLY: State_VGB
+    use ModImplicit,     ONLY: nImplBLK, impl2iBlk
+    use ModMain,         ONLY: MaxImplBlk, UseB0
+    use ModNumConst,     ONLY: i_DD
+    use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
+    use ModHallResist,   ONLY: UseHallResist, hall_factor, &
+         set_ion_mass_per_charge, IonMassPerCharge_G
+    use ModB0,           ONLY: B0_DGB
+
+    integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock, iImplBlock
+    real:: Eta
+    real:: FaceNormal_D(nDim)
+
+    real:: HallCoeff, Rho, b_D(MaxDim)
+
+    character(len=*), parameter :: &
+         NameSub = 'ModResistivity::init_impl_resistivity'
+    !--------------------------------------------------------------------------
     if(UseResistivity)then
        ! Calculate Eta*FaceNormal_D to be used for resistive flux
        if(.not.allocated(Eta_DFDB)) &
@@ -596,7 +616,7 @@ contains
        end do
     end if
 
-  end subroutine get_impl_resistivity_state
+  end subroutine init_impl_resistivity
 
   !============================================================================
 
@@ -873,7 +893,8 @@ contains
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB,&
          CellVolume_GB, GridRot_DD
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap
+    use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap, Wnrm
+    use ModVarIndexes,   ONLY: B_
     use ModNumConst,     ONLY: i_DD, iLeviCivita_III
     use ModGeometry,     ONLY: true_cell
     use ModMain,         ONLY: iTest, jTest, kTest, BlkTest, ProcTest
@@ -884,7 +905,8 @@ contains
 
     integer:: iDim, iDir, jDir, i, j, k, i2, j2, k2, iSign
     integer:: iSub, iSup, iFace, kDim, lDir, jklEpsilon, iklEpsilon
-    real:: Term, TermSub, TermSup, InvDcoord2_D(nDim)
+    integer:: iB, iVar, jVar
+    real:: Coeff, Term, TermSub, TermSup, InvDcoord2_D(nDim)
 
     logical:: DoTest, DoTestMe
 
@@ -897,6 +919,16 @@ contains
     else
        DoTest = .false.; DoTestMe = .false.
     end if
+
+    ! Set the base index value for magnetic field variables
+    if(nVarSemi == 3)then
+       Coeff = 1.0
+       iB = 0
+    else
+       ! The fully implicit scheme uses Coeff=-Wnrm(jVar)/Wnrm(iVar)
+       iB = B_
+    end if
+
 
     ! the transverse diffusion is ignored in the Jacobian
     if(IsCartesianGrid)then
@@ -925,23 +957,29 @@ contains
                 ! so all 3 have to be different. Their sum is 1+2+3=6.
                 if(iDim == iDir) CYCLE
 
-
                 ! Magnetic field component for partial derivative
                 jDir = 6 - iDir - iDim
+
+                ! Variable indexes for the Jacobian
+                iVar = iDir + iB
+                jVar = jDir + iB
+
+                ! Fully implicit scheme needs opposite sign and normalization
+                if(iB > 0) Coeff = -Wnrm(jVar)/Wnrm(iVar)
+
                 ! Get the sign
                 iSign = iLeviCivita_III(iDim,iDir,jDir)
 
                 ! B/(ne dCoord^2) from eqs 52-53
-                TermSub  = iSign* &
+                TermSub  = iSign*Coeff* &
                      InvDcoord2_D(iDim)*Bne_DFDB(iDim,i,j,k,iDim,iBlock)
-                TermSup = iSign* &
+                TermSup = iSign*Coeff* &
                      InvDcoord2_D(iDim)*Bne_DFDB(iDim,i2,j2,k2,iDim,iBlock)
 
                 ! Jacobian = dF(B_iDir)/dB_jDir
                 ! Main diagonal (eq. 52) 
-                Jacobian_VVCI(iDir,jDir,i,j,k,1) = &
-                     Jacobian_VVCI(iDir,jDir,i,j,k,1) &
-                     - (TermSub + TermSup)
+                Jacobian_VVCI(iVar,jVar,i,j,k,1) = &
+                     Jacobian_VVCI(iVar,jVar,i,j,k,1) - (TermSub + TermSup)
 
                 if(UseNoOverlap)then
                    if(  iDim==1.and.i==1  .or. &
@@ -953,10 +991,10 @@ contains
                 end if
 
                 ! Off diagonals (eq. 53)
-                Jacobian_VVCI(iDir,jDir,i,j,k,iSub)   = &
-                     Jacobian_VVCI(iDir,jDir,i,j,k,iSub) + TermSub
-                Jacobian_VVCI(iDir,jDir,i,j,k,iSup) = &
-                     Jacobian_VVCI(iDir,jDir,i,j,k,iSup) + TermSup
+                Jacobian_VVCI(iVar,jVar,i,j,k,iSub)   = &
+                     Jacobian_VVCI(iVar,jVar,i,j,k,iSub) + TermSub
+                Jacobian_VVCI(iVar,jVar,i,j,k,iSup) = &
+                     Jacobian_VVCI(iVar,jVar,i,j,k,iSup) + TermSup
 
              end do
           end do; end do; end do
@@ -975,6 +1013,14 @@ contains
           ! jDri is the index for flux component in dR(B_j)/d(B_l)
           do jDir = 1, 3 
              jklEpsilon = iLeviCivita_III(jDir,kDim,lDir)
+
+             ! Variable indexes for the Jacobian
+             iVar = jDir + iB
+             jVar = lDir + iB
+
+
+             ! Fully implicit scheme needs opposite sign and normalization
+             if(iB > 0) Coeff = -Wnrm(jVar)/Wnrm(iVar)
 
              ! Index for face normal components
              do iDim = 1, nDim
@@ -1000,7 +1046,7 @@ contains
                       ! dR(Bj)/dBl = +- 1/(V*ds)*(Area_i*T_ks
                       !    *(Bi/ne*jklEpsilon - Bj/ne*iklEpsilon)^S
                       
-                      Term = -1.0/(CellVolume_GB(i,j,k,iBlock) &
+                      Term = -Coeff/(CellVolume_GB(i,j,k,iBlock) &
                            * CellSize_DB(iFace,iBlock))
 
                       TermSub = Term &
@@ -1016,8 +1062,8 @@ contains
                            - Bne_DFDB(jDir,i2,j2,k2,iFace,iBlock)*iklEpsilon)
 
                       ! The main diagonal is -1 * the sum of off-diagonal term
-                      Jacobian_VVCI(jDir,lDir,i,j,k,1) = &
-                           Jacobian_VVCI(jDir,lDir,i,j,k,1) - TermSub - TermSup
+                      Jacobian_VVCI(iVar,jVar,i,j,k,1) = &
+                           Jacobian_VVCI(iVar,jVar,i,j,k,1) - TermSub - TermSup
 
                       if(UseNoOverlap)then
                          ! Exclude boundaries
@@ -1030,28 +1076,12 @@ contains
                       end if
 
                       ! Off-diagonal terms
-                      Jacobian_VVCI(jDir,lDir,i,j,k,iSub) = &
-                           Jacobian_VVCI(jDir,lDir,i,j,k,iSub) + TermSub
+                      Jacobian_VVCI(iVar,jVar,i,j,k,iSub) = &
+                           Jacobian_VVCI(iVar,jVar,i,j,k,iSub) + TermSub
 
-                      Jacobian_VVCI(jDir,lDir,i,j,k,iSup) = &
-                           Jacobian_VVCI(jDir,lDir,i,j,k,iSup) + TermSup
+                      Jacobian_VVCI(iVar,jVar,i,j,k,iSup) = &
+                           Jacobian_VVCI(iVar,jVar,i,j,k,iSup) + TermSup
 
-                      !if(DoTestMe.and.i==iTest.and.j==jTest.and.k==kTest &
-                      !     .and.jDir==3.and.lDir==3)then
-                      !   write(*,*)'!!! JAC(3,3)=',Jacobian_VVCI(jDir,lDir,i,j,k,:)
-                      !   write(*,*)'!!! TermSub,TermSup=',TermSub,TermSup
-                      !   write(*,*)'!!! iFace, iDim, kDim, jklEpsilon, iklEpsilon=', &
-                      !        iFace, iDim, kDim, jklEpsilon, iklEpsilon
-                      !   write(*,*)'!!! i2,j2,k2=', i2,j2,k2
-                      !   write(*,*)'!!! FaceNormal_DDFB =', FaceNormal_DDFB(iDim,iFace,i,j,k,iBlock)
-                      !   write(*,*)'!!! FaceNormal_DDFB2=', FaceNormal_DDFB(iDim,iFace,i2,j2,k2,iBlock)
-                      !   write(*,*)'!!! DcoordDxyz_DDFD =', DcoordDxyz_DDFD(iFace,kDim,i,j,k,iFace)
-                      !   write(*,*)'!!! DcoordDxyz_DDFD2=', DcoordDxyz_DDFD(iFace,kDim,i2,j2,k2,iFace)
-                      !   write(*,*)'!!! Bne_DFDB(iDim)  =', Bne_DFDB(iDim,i,j,k,iFace,iBlock)
-                      !   write(*,*)'!!! Bne_DFDB(iDim) 2=', Bne_DFDB(iDim,i2,j2,k2,iFace,iBlock)
-                      !   write(*,*)'!!! Bne_DFDB(jDir)  =', Bne_DFDB(jDir,i,j,k,iFace,iBlock)
-                      !   write(*,*)'!!! Bne_DFDB(jDir) 2=', Bne_DFDB(jDir,i2,j2,k2,iFace,iBlock)
-                      !end if
                    end do; end do; end do
                 end do
              end do
@@ -1061,21 +1091,21 @@ contains
     end if
 
     if(DoTestMe)then
-       do jDir = 1,nDim
-          write(*,*) NameSub,': unrot B/ne(:,TestCell,',jDir,')=',&
-               matmul(Bne_DFDB(:,iTest,jTest,kTest,jDir,BlkTest), GridRot_DD)
+       do iDim = 1,nDim
+          write(*,*) NameSub,': unrot B/ne(:,TestCell,',iDim,')=',&
+               matmul(Bne_DFDB(:,iTest,jTest,kTest,iDim,BlkTest), GridRot_DD)
        end do
-       do jDir = 1, 2*nDim + 1
+       do iDim = 1, 2*nDim + 1
           write(*,'(a,i1,a,10es13.5)') &
-               NameSub//': unrot JAC(:,:,TestCell,', jDir, ')=', &
-               matmul(transpose(GridRot_DD), &
-               matmul(Jacobian_VVCI(:,:,iTest,jTest,kTest,jDir), &
+               NameSub//': unrot JAC(:,:,TestCell,', iDim, ')=', &
+               matmul(transpose(GridRot_DD), matmul( &
+               Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,iTest,jTest,kTest,iDim), &
                GridRot_DD))
        end do
-       do iDir=1,3; do jDir = 1,3
-          write(*,*) NameSub,': JAC(',iDir,jDir,',TestCell,:),sum(cells)=', &
-               Jacobian_VVCI(iDir,jDir,iTest,jTest,kTest,:), &
-               sum(Jacobian_VVCI(iDir,jDir,:,:,:,:))
+       do iVar = iB+1, iB+3; do jVar = iB+1, iB+3
+          write(*,*) NameSub,': JAC(',iVar,jVar,',TestCell,:),sum(cells)=', &
+               Jacobian_VVCI(iVar,jVar,iTest,jTest,kTest,:), &
+               sum(Jacobian_VVCI(iVar,jVar,:,:,:,:))
        end do; end do
     end if
 
