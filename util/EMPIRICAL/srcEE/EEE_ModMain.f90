@@ -234,7 +234,7 @@ contains
     ! initialize perturbed state variables
     Rho = 0.0; U_D = 0.0; B_D = 0.0; p = 0.0
 
-    if(.not. (UseCme .and. DoAddFluxRope)) RETURN
+    if(.not. (UseCme .and. (DoAddFluxRope .or. UseCms))) RETURN
 
     if(UseTD)then
        ! Add Titov & Demoulin (TD99) flux rope
