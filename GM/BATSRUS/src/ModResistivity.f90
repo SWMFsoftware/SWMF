@@ -586,31 +586,32 @@ contains
 
                 ! Check if the Hall coefficient is positive for this face
                 HallCoeff = hall_factor(iDim, i, j, k, iBlock) 
-                if(HallCoeff <= 0.0) CYCLE
+                if(HallCoeff <= 0.0)then
+                   Bne_DFDB(:,i,j,k,iDim,iBlock) = 0.0
+                else
+                   ! Cell center indexes for the cell on the left of the face
+                   i1 = i-Di; j1 = j-Dj; k1 = k - Dk
 
-                ! Cell center indexes for the cell on the left of the face
-                i1 = i-Di; j1 = j-Dj; k1 = k - Dk
+                   ! Average m/e, rho and B to the face
+                   HallCoeff = HallCoeff* &
+                        0.5*( IonMassPerCharge_G(i1,j1,k1) &
+                        +     IonMassPerCharge_G(i,j,k)    )
 
-                ! Average m/e, rho and B to the face
-                HallCoeff = HallCoeff* &
-                     0.5*( IonMassPerCharge_G(i1,j1,k1) &
-                     +     IonMassPerCharge_G(i,j,k)    )
+                   Rho = 0.5*(State_VGB(Rho_,i1,j1,k1,iBlock) &
+                        +     State_VGB(Rho_,i,j,k,iBlock)    )
 
-                Rho = 0.5*(State_VGB(Rho_,i1,j1,k1,iBlock) &
-                     +     State_VGB(Rho_,i,j,k,iBlock)    )
+                   b_D = 0.5*(State_VGB(Bx_:Bz_,i1,j1,k1,iBlock) &
+                        +     State_VGB(Bx_:Bz_,i,j,k,iBlock)    )
 
-                b_D = 0.5*(State_VGB(Bx_:Bz_,i1,j1,k1,iBlock) &
-                     +     State_VGB(Bx_:Bz_,i,j,k,iBlock)    )
-
-                ! B0 on the face is actually average of cell center B0
-                ! It is easier to use B0_DGB then then the 3 face arrays
-                ! The res change on the coarse side will get overwritten
-                if(UseB0) b_D = b_D + &
-                     0.5*(B0_DGB(:,i1,j1,k1,iBlock) + B0_DGB(:,i,j,k,iBlock))
+                   ! B0 on the face is actually average of cell center B0
+                   ! It is easier to use B0_DGB then then the 3 face arrays
+                   ! The res change on the coarse side will get overwritten
+                   if(UseB0) b_D = b_D + &
+                        0.5*(B0_DGB(:,i1,j1,k1,iBlock) + B0_DGB(:,i,j,k,iBlock))
                 
-                ! Calculate B/ne for the face
-                Bne_DFDB(:,i,j,k,iDim,iBlock) = HallCoeff*b_D/Rho
-
+                   ! Calculate B/ne for the face
+                   Bne_DFDB(:,i,j,k,iDim,iBlock) = HallCoeff*b_D/Rho
+                end if
              end do; end do; end do
           end do
        end do
@@ -666,6 +667,7 @@ contains
        ! Loop over cell faces orthogonal to iDim 
        do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
           call get_face_curl(iDim, i, j, k, iBlock, IsNewBlock, StateImpl_VG, &
                Current_D)
 
@@ -929,8 +931,7 @@ contains
        iB = B_
     end if
 
-
-    ! the transverse diffusion is ignored in the Jacobian
+    ! the transverse part of curl(B) is ignored in the Jacobian
     if(IsCartesianGrid)then
        ! Is there something more to do for RZ geometry??? !!!
        InvDcoord2_D = 1/CellSize_DB(1:nDim,iBlock)**2
