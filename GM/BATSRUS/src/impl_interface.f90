@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 !==============================================================================
 subroutine implicit_init
@@ -91,7 +91,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
      case('parcond')
         call get_impl_heat_cond_state(Var_VGB, DconsDsemi_VCB)
      case('resistivity')
-        call get_impl_resistivity_state(Var_VGB, DconsDsemi_VCB)
+        call get_impl_resistivity_state(Var_VGB)
      case default
         call stop_mpi(NameSub//': no get_impl_state implemented for' &
              //TypeSemiImplicit)
