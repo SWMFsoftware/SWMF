@@ -4,235 +4,143 @@
 use strict;
 use warnings;
 
-my @ProcessDataFileMask=('GroundBasedObservation.*','ColumnDensityMap.spherical.*','NA.s=0','Sphere=0.NA.s=0','LimbColumnDensity*');
-my @RemoveDataFileMask=('NAPLUS.s=1','Sphere=0.NAPLUS.s=1','distribution.NAPLUS.s=1','flux.NA.s=0','flux.NAPLUS.s=1');
-my @CopyDataFileMask=('SurfaceProperties.*','distribution.NA.s=0','TailColumnDensity.*','LimbColumnDensity*','Moon.Anti-sunwardColumnIntegrals*','pic.Moon.Kaguya.TVIS*');
-my $RemoteLocation="tower-right.engin.umich.edu:HEC"; 
+#the structure of the array FileMask: [mask,rm,preplot,send]  
+my @FileMask;
 
-use constant _REMOVE_DATA_FILE__ON_  => 0;
-use constant _REMOVE_DATA_FILE__OFF_ => 1;
+#the structure of the array FileList: [FileName,rm,preplot,send]
+my @FileList;
 
-use constant _REMOTE_LOCATION_SEND_FILE__ON_  => 0;
-use constant _REMOTE_LOCATION_SEND_FILE__OFF_ => 1;
+#constants
+use constant _TRUE_ => 0;
+use constant _FALSE_ => 1;
 
-use constant _WAIT_NEW_DATA_FILES__ON_  => 0;
-use constant _WAIT_NEW_DATA_FILES__OFF_ => 1;
-
-
-my $RemoveDataFileFlag=_REMOVE_DATA_FILE__OFF_;
-my $RemoteLocationSendFlag=_REMOTE_LOCATION_SEND_FILE__OFF_;
-my $WaitNewDataFileFlag=_WAIT_NEW_DATA_FILES__OFF_;
-
-
+#variables used for the parallel execution of the script 
 my $nTotalThreads=1;
 my $ThisThread=0;
 my @childs;
 
-my @RemoveDataFileList;
-my @CopyUnprocessedDataFileList;
-my @PreplottedDataFileList;
+my $host;
+my $dir;
+
+#read the argument line
+foreach (@ARGV) {
+  
+  if (/^-np=(.*)/i) {$nTotalThreads=$1; next};
+  if (/^-host=(.*)/i) {$host=$1; next};
+  if (/^-dir=(.*)/i) {$dir=$1; next};
+  
+  if (/^-send=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_FALSE_, 'preplot'=>_FALSE_,'send'->_TRUE_});next};
+  if (/^-send-rm=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_FALSE_,'send'->_TRUE_});next};
+  
+  if (/^-preplot=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_TRUE_,'send'->_TRUE_});next};
+  
+  if (/^-rm=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_FALSE_,'send'->_FALSE_});next};
+  
+  if (/^-help/i) {
+    print "The argument line:\n";
+    print "-help             -> print the list of the arguments\n";
+    print "-np [number]      -> the number of threads\n\n";
+
+    print "-send=[mask for file search, separated by ',']    -> files send to the remote host without preprocessing, the files are NOT removed\n";
+    print "-send-rm=[mask for file search, separated by ','] -> files send to the remote host without preprocessing, the files are will be removed\n\n";
+    
+    print "-preplot=[mask for file search, separated by ',']    -> preplot the data files and send; after the files sent ther are removed\n";
+
+    print "-rm=[mask for file search, separated by ',']   -> remove the files\n";
+    
+    print "-host   -> the name of the remote host and directory where the files will be copied\n";
+    
+    print "-dir   -> the directory where the output files will be created\n";
+    exit;
+  }
+}
 
 
-#parse the argument line
-#argument list
-#-np [number]      -> the number of threads
-#-send=[on,off]    -> send the files to the remote location
-#-rm=[on,off]      -> remove post processed and send files
 
 print "Starting post processing script\n";
 print "Total threads:  $nTotalThreads\n";
  
 do {
-  #create the file lists
-  #the list of files to be removed
-  @RemoveDataFileList=();
+  if (-d $dir) {
+    #create the file list
+    for (my $i=0;$i<=$#FileMask;$i++) {
+      my @mask;
+      my @files;
+      
+      @mask=split(',',$FileMask[$i]{'mask'});
+      
+      foreach (@mask) {
+        @files=grep {/$_/} readdir $dir;
+        
+        foreach (@files) {
+          push(@FileList,{'file'=>$_},'rm'=>$FileMask[$i]{'rm'}, 'preplot'=>$FileMask[$i]{'preplot'}, 'send'=>$FileMask[$i]{'send'});
+        }      
+      }     
+    }
 	
-  if ($RemoveDataFileFlag==_REMOVE_DATA_FILE__ON_) {
-    foreach (@RemoveDataFileMask) {
-	  push(@RemoveDataFileList,<pic.$_.out=*.dat*>);
-	}
-  }
-	
-  #copy unprocessed data files
-  @CopyUnprocessedDataFileList=();
-	 
-  if ($RemoteLocationSendFlag==_REMOTE_LOCATION_SEND_FILE__ON_) {
-	foreach (@CopyDataFileMask) {
-      push(@CopyUnprocessedDataFileList,<pic.$_.out=*.dat*>);
+    #start slave processes	
+    if (@FileList) {
+      for (my $count=0;$count<$nTotalThreads;$count++) {
+        my $pid = fork();
+      
+        if ($pid) {
+          # parent
+          #print "pid is $pid, parent $$\n";
+          push(@childs, $pid);
+        } elsif ($pid == 0) {
+           # child
+           ProcessDataFiles($count);
+           exit 0;
+        } else {
+           die "couldnt fork: $!\n";
+        } 
+      }
+     
+      foreach (@childs) {
+        my $tmp = waitpid($_, 0);
+      }
     }
   }
   
-  #the list of files to be pre-ploted 
-  @PreplottedDataFileList=();
-  
-  foreach (@ProcessDataFileMask) {
-    push(@PreplottedDataFileList,<pic.$_.out=*.dat*>);
-  } 
-	
-  #start slave processes	
-  for (my $count=0;$count<$nTotalThreads;$count++) {
-    my $pid = fork();
-  
-    if ($pid) {
-      # parent
-      #print "pid is $pid, parent $$\n";
-      push(@childs, $pid);
-    } elsif ($pid == 0) {
-       # child
-       ProcessDataFiles($count);
-       exit 0;
-    } else {
-       die "couldnt fork: $!\n";
-    } 
-  }
- 
-  foreach (@childs) {
-    my $tmp = waitpid($_, 0);
-  }
-  
-   if ($WaitNewDataFileFlag == _WAIT_NEW_DATA_FILES__ON_) {
-   	 sleep(120);
-   }
+   sleep(120);
 }
-while ($WaitNewDataFileFlag == _WAIT_NEW_DATA_FILES__ON_);
+while (1 == 1);
  
 print "Done.\n";
 
 #=============================== Process Data Files =============================
 sub ProcessDataFiles {
-  my $ThisThread=shift;
-  my $FileCounter=0;
+  #process the data files
   
-  #remove unwanted files
-  foreach (@RemoveDataFileList) {
-    my $fname="$_";
-    my $fn;
-
-    if ($FileCounter%$nTotalThreads==$ThisThread) {
-      if (open $fn,"+<",$fname) {
-        close $fn;
-               
-        if ($RemoveDataFileFlag == _REMOVE_DATA_FILE__ON_) {       
-          print "Remove $fname\n";
-	      $fname=~s/\(/\\\(/g;
-	      $fname=~s/\)/\\\)/g;
-	      `rm -f $fname`;
-        }
+  for (my $i=0;$i<=$#FileList;$i++) {
+    if ($i%$nTotalThreads==$ThisThread) {
+      #process the file
+      my $fname=$FileList[$i]{'file'};
+      my $rm=$FileList[$i]{'rm'};
+      my $send=$FileList[$i]{'send'};
+      
+      #preplot the data file
+      if (-e $dir/$fname) {
+        `preplot $dir/$fname`;
+        `rm -f $dir/$fname`;
+        $fname=~s/.dat$/*plt/;
+        
+        $rm=_TRUE_;
+        $send=_TRUE_;
       }
-    }
-    
-    $FileCounter++;
-  } 
-  
-  #copy data files
-  foreach (@CopyUnprocessedDataFileList) {
-    my $fname="$_";
-    my $fn;
-
-    if ($FileCounter%$nTotalThreads==$ThisThread) {
-      if (open $fn,"+<",$fname) {
-        close $fn;
-        
-        $fname=~s/\(/\\\(/g;
-        $fname=~s/\)/\\\)/g;
-        
-        print "Copy ./$fname to $RemoteLocation\n";
-        
-        if ($RemoteLocationSendFlag==_REMOTE_LOCATION_SEND_FILE__ON_) {
-        	`scp ./$fname $RemoteLocation`;
-        }
-        
-        
-        if ($RemoveDataFileFlag == _REMOVE_DATA_FILE__ON_) {
-          print "Remove $fname\n";
-          `rm -f $fname`;
-        }
+      
+      #send the data file
+      if ((-e $dir/$fname) && ($send == _TRUE_)) {
+        `scp $dir/$fname $host`;
       }
+      
+      #remove the data file
+      if ((-e $dir/$fname) && ($rm == _TRUE_)) {
+        `rm -f $dir/$fname`;
+      }      
     }
-    
-    $FileCounter++;
-  } 
-
-
-  #preplot and scp other data files
-  foreach (@PreplottedDataFileList) {
-    my $fh;
-    my $SourceFileName=$_;
-    my $ProcessedFileName;
-    my $FoundProcessedFile;
-
-    if ($FileCounter%$nTotalThreads==$ThisThread) {
-      if (open $fh,"+<",$SourceFileName) {
-        close $fh;
-
-        print "Thread $ThisThread, Preplot: $SourceFileName\n";
-        `preplot $SourceFileName`;
-
-         $FoundProcessedFile=0;
-
-         #check if the processed file exists
-         $ProcessedFileName=$SourceFileName;
-         $ProcessedFileName=~s/\.dat$/\.\.plt/;
-
-         # check if *..plt file is found -> rename the file         
-         if (-e $ProcessedFileName) {           
-           $FoundProcessedFile=1;
-           
-           my $newname=$ProcessedFileName; 
-           $newname=~s/\.\./\./;               
-           print "Thread $ThisThread, Rename $ProcessedFileName to $newname\n";    
-           `mv $ProcessedFileName $newname`;      
-           $ProcessedFileName=$newname;
-         }
-         
-         if ($FoundProcessedFile==0) {
-         	#check if *.plt file exists
-         	
-         	$ProcessedFileName=$SourceFileName;
-         	$ProcessedFileName=~s/\.dat$/\.plt/;
-         	
-         	if (-e $ProcessedFileName) {
-         	  $FoundProcessedFile=1;
-         	}	
-         }
-         
-         if ($FoundProcessedFile==0) {
-           #if no post processed files are found => zip and copy the original data file
-
-           `gzip $SourceFileName`;
-           $ProcessedFileName=$SourceFileName.".gz";
-           $FoundProcessedFile=1;
-
-           print "Thread $ThisThread, Error: no processed file found for the source $SourceFileName, the name of *.zip file is $ProcessedFileName \n";
-         }
-         
-         #copy the processed file
-         if ($RemoteLocationSendFlag==_REMOTE_LOCATION_SEND_FILE__ON_) {
-            print "Thread $ThisThread, Copy ./$ProcessedFileName to $RemoteLocation\n";
-            `scp ./$ProcessedFileName $RemoteLocation`;
-         }
-
-         #remove unwanted files
-         if ($FoundProcessedFile==1) {
-           print "Thread $ThisThread, Remove $SourceFileName\n";
-           $SourceFileName=~s/\(/\\\(/g;
-           $SourceFileName=~s/\)/\\\)/g;
-           `rm -f $SourceFileName`;         	
-         }
-
-         if ($RemoveDataFileFlag == _REMOVE_DATA_FILE__ON_) {     
-           print "Thread $ThisThread, Remove $ProcessedFileName\n";
-           $ProcessedFileName=~s/\(/\\\(/g;
-           $ProcessedFileName=~s/\)/\\\)/g;
-           `rm -f $ProcessedFileName`;
-         }
-
-       }
-    }  
-    
-    $FileCounter++;
   }
 }
-
+ 
 
 
