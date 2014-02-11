@@ -1610,7 +1610,6 @@ contains
 
     if(UseAccurateRadiation)then
 
-       Coeff = 1.0; if(UseFullImplicit) Coeff = -1.0
        InvDcoord_D = 1/CellSize_DB(:,iBlock)
        do iDim = 1, nDim
           if(IsCartesian)then
@@ -1632,9 +1631,9 @@ contains
              do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
 
-                DiffLeft = Coeff*CoeffLeft &
+                DiffLeft = CoeffLeft &
                      *DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock)
-                DiffRight = Coeff*CoeffRight &
+                DiffRight = CoeffRight &
                      *DiffCoef_VFDB(iDiff,i+Di,j+Dj,k+Dk,iDim,iBlock)
 
                 Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
@@ -1662,10 +1661,10 @@ contains
        Coeff = 1.0
        do iDim = 1, nDim
           if(UseFullImplicit) &
-               Coeff = -CellFace_DB(iDim,iBlock)/CellSize_DB(iDim,iBlock)
+               Coeff = CellFace_DB(iDim,iBlock)/CellSize_DB(iDim,iBlock)
 
           Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-          do k=1,nK; do j=1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
              do iDiff = iDiffMin, iDiffMax
                 iVar = iDiff_I(iDiff)
