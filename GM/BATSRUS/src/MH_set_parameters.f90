@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 subroutine MH_set_parameters(TypeAction)
 
   ! Set input parameters for the Global Magnetosphere (GM) module
@@ -23,8 +23,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModBlockData, ONLY: clean_block_data
   use BATL_lib, ONLY: read_amr_criteria, read_amr_geometry, &
        DoCritAmr, DoAutoAmr, DoStrictAmr, BetaProlong,&
-       init_mpi, IsCartesianGrid, IsCartesian, IsRzGeometry, &
-       IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
+       init_mpi, IsCartesianGrid, IsCartesian, IsRotatedCartesian, &
+       IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
   use ModAMR
   use ModParallel, ONLY : proc_dims
   use ModRaytrace
@@ -832,7 +832,6 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'lin' &
                    .and. plot_area /= 'eqr' &
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
-              if(.not.IsCartesianGrid)plot_dx(1,ifile)=-1.0 
 
               ! Extract the type of idl plot file: default is real4
               TypeIdlFile_I(iFile) = 'real4' 
@@ -3075,9 +3074,10 @@ contains
        plot_range(1:5:2, iFile) = max(plot_range(1:5:2, iFile), XyzMin_D)
        plot_range(2:6:2, iFile) = min(plot_range(2:6:2, iFile), XyzMax_D)
 
-       ! Regular grid is not (yet) working in generalized coordinates
+       ! Regular grid is not (yet) working for non-Cartesian grids
        ! because multiple pieces are used in the domain for x=0 and y=0 area
-       if(plot_form(iFile) == 'idl' .and. .not.IsCartesianGrid) &
+       if(plot_form(iFile) == 'idl' .and. &
+            .not.(IsCartesianGrid.or.IsRotatedCartesian)) &
             plot_dx(1, iFile) = -1.0
 
        ! For plot_dx = 0.0 or -1.0 there is no need to adjust cut range
