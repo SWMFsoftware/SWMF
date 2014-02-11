@@ -1,7 +1,6 @@
 #^CFG FILE TESTING
 
 ### TESTS FOR THE STAND-ALONE BATSRUS ###
-$
 # !!! NOTE: In the list below "test_func" should be the last test
 
 TIMINGFILE =./.test_file_timing.txt
@@ -252,7 +251,7 @@ test_hallmhd_run:
 test_hallmhd_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-7 \
 	  Param/SHOCKTUBE/TestOutput/hall_ref.out \
-	  ${TESTDIR}/RESULT/GM/cut_*0118.out > test_hallmhd.diff)
+	  ${TESTDIR}/RESULT/GM/1d_*0485.out > test_hallmhd.diff)
 	ls -l test_hallmhd.diff
 
 ### TWOFLUID MHD TEST ###
