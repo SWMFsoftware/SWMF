@@ -4638,14 +4638,25 @@ T			UseUpdateCheck
 40.			pMinPercent
 400.			pMaxPercent
 
+Note that the "update-check" algorithm controlled by this command 
+does not work together with high order Runge-Kutta schemes (see the #RK
+command) because the RK method combines the intermediate stages for the
+final update. Use the time step control method (see #TIMESTEPCONTROL
+and related commands) in combination with RK time stepping.
+In general, for time accurate simulations the time step control method 
+has more flexibility and it is likely to be more effective and efficient 
+than this update-check method.
+
 If UseUpdateCheck is true, the local or global time step will be adjusted
 so that the density and pressure does not decrease or increase by more than 
-the given percentages in a single timestep. For example with the default settings, 
-if density is 1.0 initially and it would change below 0.4 or above 5.0, 
+the given percentages in a single timestep. For example with the default 
+settings, 
+if density is 1.0 initially and it would change below 0.6 or above 5.0, 
 the (local) time step will be reduced so that the final density remains
 inside the prescribed bounds.
 
-Default values are shown.  
+Default values are shown for the non-Runge-Kutta time integration schemes.
+For Runge-Kutta schemes UseUpdateCheck is forced to be false.
 </command>
 
 <command name="CONTROLTIMESTEP" alias="TIMESTEPCONTROL">
