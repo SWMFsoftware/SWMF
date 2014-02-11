@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module BATL_pass_node
 
   use BATL_geometry, ONLY: &
@@ -831,7 +831,7 @@ contains
 
     use BATL_mpi,  ONLY: iProc,iComm
     use BATL_size, ONLY: MaxDim, nDim, iRatio, jRatio, kRatio, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nBlock, &
+         nI, nJ, nK, nBlock, &
          nINode, nJNode, nKNode, iRatio_D, nIJK_D
 
     use BATL_tree, ONLY: init_tree, set_tree_root, find_tree_node, &

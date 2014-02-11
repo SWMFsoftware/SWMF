@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module BATL_pass_face
 
   ! Possible improvements:
@@ -723,7 +723,8 @@ contains
     integer:: iBlock, iNode, iLevel, iStage, MinLevelSend
     !-------------------------------------------------------------------------
     ! Set the levels MinLevelSend .. nLevel which need to send fluxes
-    ! If iStageIn is a multiple of 2^p then the finest p levels should send fluxes. 
+    ! If iStageIn is a multiple of 2^p then the finest p levels should 
+    ! send fluxes. 
     if(present(iStageIn))then
        MinLevelSend = nLevel + 1
        iStage = iStageIn
@@ -775,7 +776,7 @@ contains
 
     ! Put Flux_VXB, Flux_VYB, Flux_VZB into State_VGB for the appropriate faces
 
-    use BATL_size, ONLY: nI, nJ, nK, MinJ, MaxJ, MinK, MaxK, MaxBlock
+    use BATL_size, ONLY: nI, nJ, nK, jDim_, kDim_, MaxBlock
     use BATL_tree, ONLY: DiLevelNei_IIIB
     use BATL_geometry, ONLY: IsCartesian
     use BATL_grid, ONLY: CellVolume_B, CellVolume_GB
@@ -783,9 +784,9 @@ contains
     integer, intent(in):: iBlock, nVar, nG, nFluid
     ! The min and max functions are needed for 1D and 2D.
     real, intent(inout):: State_VG(nVar, 1-nG:nI+nG, &
-         max(MinJ,1-nG):min(MaxJ,nJ+nG), max(MinK,1-nG):min(MaxK,nK+nG))
+         1-nG*jDim_:nJ+nG*jDim_, 1-nG*kDim_:nK+nG*kDim_)
     real, intent(inout), optional:: Energy_GI(1-nG:nI+nG, &
-         max(MinJ,1-nG):min(MaxJ,nJ+nG), max(MinK,1-nG):min(MaxK,nK+nG), nFluid)
+         1-nG*jDim_:nJ+nG*jDim_, 1-nG*kDim_:nK+nG*kDim_, nFluid)
     real, intent(inout), optional:: &
          Flux_VXB(nVar+nFluid,nJ,nK,2,MaxBlock), &
          Flux_VYB(nVar+nFluid,nI,nK,2,MaxBlock), &

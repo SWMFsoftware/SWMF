@@ -200,7 +200,7 @@ contains
     ! Square of the radius of the circle/sphere
     real:: XyzShift_D(nDim)
 
-    real :: r1, r2, Rho, rot_DD(3,3)
+    real :: r1, r2, Rho, Rot_DD(3,3)
 
     real:: DomainSize_D(nDim)
     !-------------------------------------------------------------------------
@@ -210,8 +210,8 @@ contains
        r2 = max(0.0, r1 - Time*RadialVelocity)
        XyzShift_D = (r2/r1)*Xyz_D
     elseif(AngularVelocity /= 0.0)then
-       rot_DD = rot_matrix_z(Time*AngularVelocity)
-       XyzShift_D = matmul(Xyz_D, rot_DD(1:nDim,1:nDim))
+       Rot_DD = rot_matrix_z(Time*AngularVelocity)
+       XyzShift_D = matmul(Xyz_D, Rot_DD(1:nDim,1:nDim))
     else
        XyzShift_D = Xyz_D - Time*Velocity_D
     end if

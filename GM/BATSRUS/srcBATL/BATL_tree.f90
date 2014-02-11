@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_tree
 
@@ -738,7 +739,7 @@ contains
        ! then we abort refining/coarsening
        if(.not.allocated(iRank_A) .and. DnNode > 0) then
           if(iProc==0) write(*,*)'!!! WARNING in ',NameSub, &
-               ': Need ', DnNode,' more blocks in total! Skipping refinment !!!'
+               ': Need ', DnNode,' more blocks in total! Skipping refinement!'
           where(iStatusNew_A(1:nNode) == Refine_ )
             iStatusNew_A(1:nNode) = Unset_
           end where

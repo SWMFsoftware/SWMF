@@ -1355,7 +1355,6 @@ contains
   !============================================================================
   subroutine set_amr_geometry(iBlock, user_amr_geometry)
 
-    use BATL_size, ONLY:nDim
 
     interface
        subroutine user_amr_geometry(iBlock, iArea, DoRefine)
