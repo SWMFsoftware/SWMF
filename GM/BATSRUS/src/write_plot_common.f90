@@ -282,7 +282,7 @@ subroutine write_plot_common(ifile)
           dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
   end if
 
-  do iBLK=1, nBlockMax
+  do iBLK = 1, nBlock
      if(Unused_B(iBLK))CYCLE
 
      if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
@@ -369,12 +369,10 @@ subroutine write_plot_common(ifile)
   ! Write files for tecplot format
   if(plot_form(ifile)=='tec' .and. .not.IsSphPlot)then
 
-     if(nBlock == 0)then
-        if(.not.allocated(PlotVarNodes_VNB)) then 
-           allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBLK))
-           PlotVarNodes_VNB = 0.0
-        end if
-    end if
+     if(.not.allocated(PlotVarNodes_VNB)) then 
+        allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBLK))
+        PlotVarNodes_VNB = 0.0
+     end if
      
      ! Pass and average the plot variables
      call message_pass_node(nPlotvarMax, PlotVarNodes_VNB, &
