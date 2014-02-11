@@ -903,6 +903,9 @@ module ModCoronalHeating
   real :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
 
+  ! Switch whether to use uniform heat partition or the stochastic heating
+  logical :: UseUniformHeatPartition = .false.
+
   ! Electron heating is a fraction of the total coronal heating
   real :: QeByQtotal = 0.4
   ! The fraction of heating for ion parallel pressure: 1/3 of Qp
@@ -973,10 +976,13 @@ contains
           call read_var('DecayLengthCh', DecayLengthCh)
        end if
     case("#ELECTRONHEATING")
+       UseUniformHeatPartition = .true.
        call read_var('QeByQtotal', QeByQtotal)
     case("#ANISOIONHEATING")
+       UseUniformHeatPartition = .true.
        call read_var('QparByQtotal', QparByQtotal)
     case("#HEATPARTITIONING")
+       UseUniformHeatPartition = .false.
        call read_var('StochasticHeating', StochasticHeating)
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
@@ -1650,7 +1656,7 @@ contains
          NameSub = 'ModCoronalHeating::apportion_coronal_heating'
     !--------------------------------------------------------------------------
 
-    if(UseTurbulentCascade)then
+    if(UseTurbulentCascade .and. .not.UseUniformHeatPartition)then
        ! Damping rates and wave energy partition based on Chandran et al.[2011]
 
        TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
