@@ -2,7 +2,7 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-subroutine impl_jacobian(implBLK,JAC)
+subroutine impl_jacobian(implBLK, JAC)
 
   ! Calculate Jacobian matrix for block implBLK:
   !
@@ -122,7 +122,7 @@ subroutine impl_jacobian(implBLK,JAC)
   if(UseHallResist)call impl_init_hall
 
   ! Initialize matrix to zero (to be safe)
-  JAC=0.0
+  JAC = 0.0
 
   ! Initialize reference flux and the cmax array
   do iDim = 1, nDim
@@ -173,7 +173,7 @@ subroutine impl_jacobian(implBLK,JAC)
 
      ! Perturb new jw variable
      coeff=qeps*wnrm(jw)
-     ImplEps_VC(jw,:,:,:)=Impl_VC(jw,:,:,:) + coeff
+     ImplEps_VC(jw,:,:,:) = Impl_VC(jw,:,:,:) + coeff
 
      do iDim = 1, nDim
         ! Index limits for faces and shifted centers
@@ -189,7 +189,7 @@ subroutine impl_jacobian(implBLK,JAC)
 
         ! Calculate dfdw=(feps-f0)/eps for each iw variable and both
         ! left and right sides
-        do iw=1,nw
+        do iw = 1, nw
 
            !call getflux(ImplEps_VC,B0_DFD(:,i1:i2,j1:j2,k1:k2,idim),&
            !     nI,nJ,nK,iw,idim,implBLK,fepsLface(i1:i2,j1:j2,k1:k2))
@@ -198,15 +198,15 @@ subroutine impl_jacobian(implBLK,JAC)
            !     nI,nJ,nK,iw,idim,implBLK,fepsRface(1:nI,1:nJ,1:nK))
 
            ! dfdw = F_iw(W + eps*W_jw) - F_iw(W)] / eps is multiplied by 
-           ! -ImplCoeff/2/dx*wnrm(jw)/wnrm(iw) in all formulae
-           coeff=-0.5/qeps/wnrm(iw) 
+           ! -0.5 in all formulae
+           Coeff = -0.5/(qeps*wnrm(jw)) 
 
-           dfdwLface(i1:i2,j1:j2,k1:k2)=coeff*&
+           dfdwLface(i1:i2,j1:j2,k1:k2) = Coeff*&
                 (FluxEpsLeft_VF(iw,i1:i2,j1:j2,k1:k2) &
-                -FluxLeft_VFD(iw,   i1:i2,j1:j2,k1:k2,iDim)) 
-           dfdwRface( 1:nI, 1:nJ, 1:nK)=coeff*&
-                (FluxEpsRight_VF( iW, 1:nI, 1:nJ, 1:nK) &
-                -FluxRight_VFD( iW,   1:nI, 1:nJ, 1:nK, iDim))
+                -  FluxLeft_VFD(iw,i1:i2,j1:j2,k1:k2,iDim)) 
+           dfdwRface( 1:nI, 1:nJ, 1:nK) = Coeff*&
+                (FluxEpsRight_VF(iW,1:nI,1:nJ,1:nK) &
+                -  FluxRight_VFD(iW,1:nI,1:nJ,1:nK,iDim))
 
            if(oktest_me)write(*,'(a,i1,i2,6(f15.8))') &
                 'iw,jw,f0L,fepsL,dfdwL,R:', &
@@ -224,20 +224,20 @@ subroutine impl_jacobian(implBLK,JAC)
            !          dfdwLface(Itest,Jtest,Ktest-1)
 
            ! Add contribution of cmax to dfdwL and dfdwR
-           if(iw==jw)then
+           if(iw == jw)then
               ! FxL_i-1/2 <-- (FxL + cmax)_i-1/2
-              dfdwLface(i1:i2,j1:j2,k1:k2)=dfdwLface(i1:i2,j1:j2,k1:k2)&
-                   +Cmax_DF(idim,i1:i2,j1:j2,k1:k2)
+              dfdwLface(i1:i2,j1:j2,k1:k2) = dfdwLface(i1:i2,j1:j2,k1:k2)&
+                   + Cmax_DF(idim,i1:i2,j1:j2,k1:k2)
               ! FxR_i+1/2 <-- (FxR - cmax)_i+1/2
-              dfdwRface( 1:nI, 1:nJ, 1:nK)=dfdwRface( 1:nI, 1:nJ, 1:nK)&
-                   -Cmax_DF(idim, 1:nI, 1:nJ, 1:nK)
+              dfdwRface(1:nI,1:nJ,1:nK) = dfdwRface(1:nI,1:nJ,1:nK) &
+                   - Cmax_DF(idim,1:nI,1:nJ,1:nK)
            endif
 
            ! Divide flux*area by volume
            dfdwLface(i1:i2,j1:j2,k1:k2) = dfdwLface(i1:i2,j1:j2,k1:k2) &
-                /CellVolume_GB(1:nI, 1:nJ, 1:nK, iBlk)
-           dfdwRface( 1:nI, 1:nJ, 1:nK) = dfdwRface( 1:nI, 1:nJ, 1:nK) &
-                /CellVolume_GB(1:nI, 1:nJ, 1:nK, iBlk)
+                /CellVolume_GB(1:nI,1:nJ,1:nK,iBlk)
+           dfdwRface(1:nI,1:nJ,1:nK) = dfdwRface(1:nI,1:nJ,1:nK) &
+                /CellVolume_GB(1:nI,1:nJ,1:nK,iBlk)
 
            !DEBUG
            !if(idim==3.and.iw==4.and.jw==2)&
@@ -247,9 +247,9 @@ subroutine impl_jacobian(implBLK,JAC)
            ! Contribution of fluxes to main diagonal (middle cell)
            ! dR_i/dW_i = 0.5/Dx*[ (dFxR/dW-cmax)_i-1/2 - (dFxL/dW+cmax)_i+1/2 ]
 
-           JAC(iw,jw,:,:,:,1)=JAC(iw,jw,:,:,:,1) &
-                +dfdwRface( 1:nI, 1:nJ, 1:nK)                      &
-                -dfdwLface(i1:i2,j1:j2,k1:k2)
+           JAC(iw,jw,:,:,:,1) = JAC(iw,jw,:,:,:,1) &
+                - dfdwRface( 1:nI, 1:nJ, 1:nK)     &
+                + dfdwLface(i1:i2,j1:j2,k1:k2)
 
            ! Add Q*dB/dw to dfdwL and dfdwR for upper and lower diagonals
            ! These diagonals are non-zero for the inside interfaces only
@@ -261,7 +261,7 @@ subroutine impl_jacobian(implBLK,JAC)
                 ) )then
               if(.not.IsCartesianGrid .and. jw>=Bx_ .and. jw<=B_+nDim)then
                  ! The source terms are always multiplied by coeff
-                 coeff=-0.5*wnrm(jw)/wnrm(iw)
+                 coeff=-0.5
                  ! Get the corresponding face area
                  FaceArea_F(i1:nI,j1:nJ,k1:nK) = &
                       FaceNormal_DDFB(jw-B_,iDim,i1:nI,j1:nJ,k1:nK,iBLK)
@@ -279,7 +279,7 @@ subroutine impl_jacobian(implBLK,JAC)
 
               elseif(jw==B_+idim)then
                  ! The source terms are always multiplied by coeff
-                 coeff=-0.5/dxyz(idim)*wnrm(jw)/wnrm(iw)
+                 coeff=-0.5/dxyz(idim)
 
                  ! Relative to the right face flux Q is shifted to the left
                  dfdwLface(i1:nI,j1:nJ,k1:nK)=dfdwLface(i1:nI,j1:nJ,k1:nK)+ &
@@ -289,8 +289,8 @@ subroutine impl_jacobian(implBLK,JAC)
                       coeff*sPowell_VC(iw, 1:i3, 1:j3, 1:k3)
               end if
            end if
-           JAC(iw,jw,i1:nI,j1:nJ,k1:nK,2*idim  )=  dfdwLface(i1:nI,j1:nJ,k1:nK)
-           JAC(iw,jw, 1:i3, 1:j3, 1:k3,2*idim+1)= -dfdwRface(i1:nI,j1:nJ,k1:nK)
+           JAC(iw,jw,i1:nI,j1:nJ,k1:nK,2*idim  )= -dfdwLface(i1:nI,j1:nJ,k1:nK)
+           JAC(iw,jw, 1:i3, 1:j3, 1:k3,2*idim+1)= +dfdwRface(i1:nI,j1:nJ,k1:nK)
         enddo ! iw
      enddo ! idim
      if(oktest_me)then
@@ -309,11 +309,11 @@ subroutine impl_jacobian(implBLK,JAC)
 
         ! w2=S(Impl_VC+eps*W_jw)
         call getsource(iBLK,ImplEps_VC,sEps_VC)
-        do iw=1,nw
+        coeff = 1.0/(qeps*wnrm(jw))
+        do iw = 1, nw
            ! JAC(..1) += dS/dW_jw
-           coeff=-1.0/qeps/wnrm(iw)
            JAC(iw,jw,:,:,:,1)=JAC(iw,jw,:,:,:,1)&
-                +coeff*(sEps_VC(iw,:,:,:)-s_VC(iw,:,:,:))
+                + coeff*(sEps_VC(iw,:,:,:) - s_VC(iw,:,:,:))
         enddo
      endif
   enddo
@@ -343,22 +343,27 @@ subroutine impl_jacobian(implBLK,JAC)
   if(UseRadDiffusion) &
        call add_jacobian_rad_diff(iBLK, JAC)
 
-  ! Multiply JAC by the implicit timestep dt and ImplCoeff
+  ! Multiply JAC by the implicit timestep dt, ImplCoeff, wnrm, and -1
   if(time_accurate)then
-     do k=1,nK; do j=1,nJ; do i=1,nI
+     do iStencil = 1, nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
         if(true_cell(i,j,k,iBLK))then
-           JAC(:,:,i,j,k,:) = JAC(:,:,i,j,k,:)*dt*ImplCoeff
+           do jw=1,nw; do iw=1,nw
+              JAC(iw,jw,i,j,k,iStencil) = -JAC(iw,jw,i,j,k,iStencil) &
+                   *dt*ImplCoeff*wnrm(jw)/wnrm(iw)
+           end do; end do
         else
            ! Set JAC = 0.0 inside body
-           JAC(:,:,i,j,k,:) = 0.0
+           JAC(:,:,i,j,k,iStencil) = 0.0
         end if
-     end do; end do; end do
+     end do; end do; end do; end do
   else
      ! Local time stepping has time_BLK=0.0 inside the body
-     do istencil=1,nstencil; do jw=1,nw; do iw=1,nw
-        JAC(iw,jw,:,:,:,istencil)=JAC(iw,jw,:,:,:,istencil) &
-             *time_BLK(1:nI,1:nJ,1:nK,iBLK)*implCFL*ImplCoeff
-     end do; end do; end do
+     do iStencil = 1, nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
+        do jw=1,nw; do iw=1,nw
+           JAC(iw,jw,i,j,k,istencil) = -JAC(iw,jw,i,j,k,istencil) &
+                *time_BLK(i,j,k,iBLK)*implCFL*ImplCoeff*wnrm(jw)/wnrm(iw)
+        end do; end do; 
+     end do; end do; end do; end do
   endif
 
   if(oktest_me)then
@@ -370,9 +375,11 @@ subroutine impl_jacobian(implBLK,JAC)
   end if
 
   ! Add unit matrix to main diagonal
-  do iw=1,nw
-     JAC(iw,iw,:,:,:,1)=JAC(iw,iw,:,:,:,1)+1.0
-  end do
+  do k=1,nK; do j=1,nJ; do i=1,nI
+     do iw = 1, nw
+        JAC(iw,iw,i,j,k,1) = JAC(iw,iw,i,j,k,1) + 1.0
+     end do
+  end do; end do; end do
 
   if(oktest_me)then
      write(*,*)'After adding I: row, JAC(...,1):'
@@ -463,38 +470,38 @@ contains
     ! dQ(rhoU)/dB = -divB
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(rhoUx_,Bx_,i,j,k,1)=JAC(rhoUx_,Bx_,i,j,k,1)&
-            +wnrm(Bx_)/wnrm(rhoUx_)*divb(i,j,k) 
+            - divb(i,j,k) 
        JAC(rhoUy_,By_,i,j,k,1)=JAC(rhoUy_,By_,i,j,k,1)&
-            +wnrm(By_)/wnrm(rhoUy_)*divb(i,j,k) 
+            - divb(i,j,k) 
        JAC(rhoUz_,Bz_,i,j,k,1)=JAC(rhoUz_,Bz_,i,j,k,1)&
-            +wnrm(Bz_)/wnrm(rhoUz_)*divb(i,j,k) 
+            - divb(i,j,k) 
 
        ! Q(B)= -divB*rhoU/rho
        ! dQ(B)/drho = +divB*rhoU/rho**2
        JAC(Bx_,rho_,i,j,k,1)=JAC(Bx_,rho_,i,j,k,1) &
-            -wnrm(rho_)/wnrm(Bx_)*divb(i,j,k) &
+            + divb(i,j,k) &
             *Impl_VC(rhoUx_,i,j,k)/Impl_VC(rho_,i,j,k)**2
        JAC(By_,rho_,i,j,k,1)=JAC(By_,rho_,i,j,k,1) &
-            -wnrm(rho_)/wnrm(By_)*divb(i,j,k) &
+            + divb(i,j,k) &
             *Impl_VC(rhoUy_,i,j,k)/Impl_VC(rho_,i,j,k)**2
        JAC(Bz_,rho_,i,j,k,1)=JAC(Bz_,rho_,i,j,k,1) &
-            -wnrm(rho_)/wnrm(Bz_)*divb(i,j,k) &
+            + divb(i,j,k) &
             *Impl_VC(rhoUz_,i,j,k)/Impl_VC(rho_,i,j,k)**2
 
        ! dQ(B)/drhoU= -divB/rho
        JAC(Bx_,rhoUx_,i,j,k,1)=JAC(Bx_,rhoUx_,i,j,k,1)&
-            +wnrm(rhoUx_)/wnrm(Bx_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
+            - divb(i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(By_,rhoUy_,i,j,k,1)=JAC(By_,rhoUy_,i,j,k,1)&
-            +wnrm(rhoUy_)/wnrm(By_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
+            - divb(i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(Bz_,rhoUz_,i,j,k,1)=JAC(Bz_,rhoUz_,i,j,k,1)&
-            +wnrm(rhoUz_)/wnrm(Bz_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
+            - divb(i,j,k)/Impl_VC(rho_,i,j,k) 
 
        if(.not.UseImplicitEnergy) CYCLE
 
        ! Q(E)= -divB*rhoU.B/rho
        ! dQ(E)/drho = +divB*rhoU.B/rho**2
        JAC(E_,rho_,i,j,k,1)=JAC(E_,rho_,i,j,k,1)&
-            -wnrm(rho_)/wnrm(E_)*divb(i,j,k)*&
+            + divb(i,j,k)*&
             (Impl_VC(rhoUx_,i,j,k)*Impl_VC(Bx_,i,j,k)&
             +Impl_VC(rhoUy_,i,j,k)*Impl_VC(By_,i,j,k)&
             +Impl_VC(rhoUz_,i,j,k)*Impl_VC(Bz_,i,j,k))&
@@ -502,24 +509,24 @@ contains
 
        ! dQ(E)/drhoU = -divB*B/rho
        JAC(E_,rhoUx_,i,j,k,1)=JAC(E_,rhoUx_,i,j,k,1) &
-            +wnrm(rhoUx_)/wnrm(E_)*divb(i,j,k) &
+            - divb(i,j,k) &
             *Impl_VC(Bx_,i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(E_,rhoUy_,i,j,k,1)=JAC(E_,rhoUy_,i,j,k,1) &
-            +wnrm(rhoUy_)/wnrm(E_)*divb(i,j,k) &
+            - divb(i,j,k) &
             *Impl_VC(By_,i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(E_,rhoUz_,i,j,k,1)=JAC(E_,rhoUz_,i,j,k,1) &
-            +wnrm(rhoUz_)/wnrm(E_)*divb(i,j,k) &
+            - divb(i,j,k) &
             *Impl_VC(Bz_,i,j,k)/Impl_VC(rho_,i,j,k) 
 
        ! dQ(E)/dB = -divB*rhoU/rho
        JAC(E_,Bx_,i,j,k,1)=JAC(E_,Bx_,i,j,k,1) &
-            +wnrm(Bx_)/wnrm(E_)*divb(i,j,k) &
+            - divb(i,j,k) &
             *Impl_VC(rhoUx_,i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(E_,By_,i,j,k,1)=JAC(E_,By_,i,j,k,1) &
-            +wnrm(By_)/wnrm(E_)*divb(i,j,k) &
+            - divb(i,j,k) &
             *Impl_VC(rhoUy_,i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(E_,Bz_,i,j,k,1)=JAC(E_,Bz_,i,j,k,1) &
-            +wnrm(Bz_)/wnrm(E_)*divb(i,j,k) &
+            - divb(i,j,k) &
             *Impl_VC(rhoUz_,i,j,k)/Impl_VC(rho_,i,j,k) 
     end do; end do; end do
 
