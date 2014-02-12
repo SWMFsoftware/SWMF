@@ -226,7 +226,7 @@ contains
             HeatCoef_G(0:nI+1,j0_:nJp1_,k0_:nKp1_), &
             bb_DDG(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
             HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
-            
+
        if(UseHeatFluxLimiter)then
           allocate( &
                FreeStreamFlux_G(0:nI+1,j0_:nJp1_,k0_:nKp1_), &
@@ -315,8 +315,8 @@ contains
     HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
 
     if(UseHeatFluxRegion)then
-         HeatCondFactor = heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
-         HeatCond_D = HeatCond_D*HeatCondFactor
+       HeatCondFactor = heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
+       HeatCond_D = HeatCond_D*HeatCondFactor
     end if
 
     HeatFlux = -sum(HeatCond_D*FaceGrad_D)
@@ -394,8 +394,8 @@ contains
             HeatCondOut=HeatCoefSi)
 
        HeatCoef = HeatCoefSi &
-              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
-              *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+            *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+            *Si2No_V(UnitU_)*Si2No_V(UnitX_)
     end if
 
     ! Artificial modified heat conduction for a smoother transition
@@ -460,8 +460,8 @@ contains
     HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
 
     if(UseHeatFluxRegion)then
-         HeatCondFactor = heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
-         HeatCond_D = HeatCond_D*HeatCondFactor
+       HeatCondFactor = heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
+       HeatCond_D = HeatCond_D*HeatCondFactor
     end if
 
     HeatFlux = -sum(HeatCond_D*FaceGrad_D)
@@ -532,8 +532,8 @@ contains
 
        call user_material_properties(State_V, IonHeatCondOut=IonHeatCoefSi)
        IonHeatCoef = IonHeatCoefSi &
-              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
-              *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+            *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+            *Si2No_V(UnitU_)*Si2No_V(UnitX_)
     end if
 
     HeatCond_D = IonHeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
@@ -579,7 +579,7 @@ contains
 
   subroutine get_impl_heat_cond_state(StateImpl_VGB, DconsDsemi_VCB)
 
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, time_BLK
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
@@ -594,14 +594,17 @@ contains
     use ModResistivity,  ONLY: Eta_GB, set_resistivity
     use ModUser,         ONLY: user_material_properties
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
-         CellFace_DB, CellFace_DFB, FaceNormal_DDFB
+         CellFace_DB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          j0_, nJp1_, k0_, nKp1_
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         get_gamma_collisionless
 
     real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
     real, intent(inout):: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iImplBlock, iP
+    real :: Gamma
     real :: DtLocal
     real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
     real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
@@ -642,13 +645,19 @@ contains
 
        ! Store the electron temperature in StateImpl_VGB and the
        ! specific heat in DconsDsemi_VCB
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI             
           if(UseIdealEos .and. .not.DoUserHeatConduction)then
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = TeFraction &
                   *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
 
-             DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
-                  inv_gm1*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
+             if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
+                call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+                     1.0/(Gamma - 1)*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
+             else
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+                     inv_gm1*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
+             end if
 
              if(UseElectronPressure)then
                 Natomic = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
@@ -1034,7 +1043,7 @@ contains
     ! of the extremely advanced PGF90 12.9 compiler 
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, time_BLK
-    use ModVarIndexes, ONLY: p_, Pe_, Ppar_, ExtraEint_
+    use ModVarIndexes, ONLY: p_, Pe_, Ppar_, ExtraEint_, Ehot_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: true_cell
     use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB
@@ -1042,13 +1051,16 @@ contains
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, ExtraEintMin
     use ModUser,     ONLY: user_material_properties
-
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         get_gamma_collisionless
+    use BATL_lib,    ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(in) :: StateImpl_VG(nw,nI,nJ,nK)
 
     integer :: i, j, k, iP
     real :: DeltaEinternal, Einternal, EinternalSi, PressureSi
+    real :: Gamma
     real :: DtLocal
     !--------------------------------------------------------------------------
 
@@ -1064,8 +1076,18 @@ contains
             *(StateImpl_VG(iTeImpl,i,j,k) - ImplOld_VCB(iTeImpl,i,j,k,iBlock))
 
        if(UseIdealEos)then
-          State_VGB(iP,i,j,k,iBlock) = max(1e-30, State_VGB(iP,i,j,k,iBlock) &
-               + gm1*DeltaEinternal)
+          if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
+             call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
+
+             State_VGB(iP,i,j,k,iBlock) = max(1e-30, (Gamma - 1) &
+                  *(inv_gm1*State_VGB(iP,i,j,k,iBlock) &
+                  + State_VGB(Ehot_,i,j,k,iBlock) + DeltaEinternal))
+             State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                  *(1.0/(Gamma - 1) - inv_gm1)
+          else
+             State_VGB(iP,i,j,k,iBlock) = &
+                  max(1e-30, State_VGB(iP,i,j,k,iBlock) + gm1*DeltaEinternal)
+          end if
        else
 
           Einternal = inv_gm1*State_VGB(iP,i,j,k,iBlock) &
