@@ -702,6 +702,8 @@ contains
              !       = -div(uH B - B uH)  where uH = -J/(n e)
              !       = -div(-J B/ne + B/ne J)
              !       = -sum(-A.J B/ne + A.B/ne J)
+             !
+             ! Note that B is frozen in, only J varies with StateImpl
 
              if(.not.IsCartesian) &
                   FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
@@ -770,7 +772,8 @@ contains
     use ModHallResist,   ONLY: UseHallResist
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap, UseSemiImplicit
+    use ModImplicit,     ONLY: UseSemiImplicit, nVarSemi, nStencil, &
+         UseNoOverlap
     use ModVarIndexes,   ONLY: B_
     use ModNumConst,     ONLY: i_DD
     use ModGeometry,     ONLY: true_cell
@@ -794,7 +797,7 @@ contains
        iB = B_
     end if
 
-    InvDcoord_D = 1/CellSize_DB(:nDim,iBlock)
+    InvDcoord_D = 1/CellSize_DB(1:nDim,iBlock)
 
     ! the transverse diffusion is ignored in the Jacobian
     if(IsCartesianGrid)then
@@ -907,26 +910,29 @@ contains
     ! Preconditioner for the induction equation in Hall MHD
     ! Based on Toth et al. "Hall MHD on Block Adaptive Grids", JCP 2008
 
+    use ModProcMH,       ONLY: iProc
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB,&
          CellVolume_GB, GridRot_DD
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap, UseSemiImplicit
+    use ModImplicit,     ONLY: UseSemiImplicit, nVarSemi, nStencil, &
+         UseNoOverlap
     use ModVarIndexes,   ONLY: B_
     use ModNumConst,     ONLY: i_DD, iLeviCivita_III
     use ModGeometry,     ONLY: true_cell
     use ModMain,         ONLY: iTest, jTest, kTest, BlkTest, ProcTest
-    use ModProcMH,       ONLY: iProc
+    use ModAdvance,      ONLY: State_VGB, Bx_, Bz_
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
-    integer:: iDim, iDir, jDir, i, j, k, i2, j2, k2, iSign
+    integer:: iDim, iDir, jDir, i, j, k, i2, j2, k2, iSign, iStencil
     integer:: iSub, iSup, iFace, kDim, lDir, jklEpsilon, iklEpsilon
     integer:: iB, iVar, jVar
     real:: Term, TermSub, TermSup, InvDcoord2_D(nDim)
 
-    logical:: DoTest, DoTestMe
+    real, allocatable, save:: Jac_VVI(:,:,:)
 
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'add_jacobian_hall_resist'
     !--------------------------------------------------------------------------
     ! if(index(Test_String,'NOHALLPREC')>0) RETURN !!!
@@ -942,6 +948,21 @@ contains
        iB = 0
     else
        iB = B_
+    end if
+
+    if(DoTestMe)then
+       write(*,*) NameSub,' starting with:'
+       do iDim = 1,nDim
+          write(*,*) NameSub,': unrot B/ne(:,TestCell,',iDim,')=',&
+               matmul(Bne_DFDB(:,iTest,jTest,kTest,iDim,BlkTest), GridRot_DD)
+       end do
+       do iStencil = 1, nStencil
+          write(*,'(a,i1,a,10es13.5)') &
+               NameSub//': unrot JAC(:,:,TestCell,', iStencil, ')=', &
+               matmul(transpose(GridRot_DD), matmul( &
+               Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,iTest,jTest,kTest,iStencil), &
+               GridRot_DD))
+       end do
     end if
 
     ! the transverse part of curl(B) is ignored in the Jacobian
@@ -1098,22 +1119,30 @@ contains
     end if
 
     if(DoTestMe)then
-       do iDim = 1,nDim
-          write(*,*) NameSub,': unrot B/ne(:,TestCell,',iDim,')=',&
-               matmul(Bne_DFDB(:,iTest,jTest,kTest,iDim,BlkTest), GridRot_DD)
-       end do
-       do iDim = 1, 2*nDim + 1
+
+       if(UseSemiImplicit)then
+          if(.not.allocated(Jac_VVI)) &
+               allocate(Jac_VVI(nVarSemi,nVarSemi,nStencil))
+          call test_semi_impl_jacobian( &
+               State_VGB(Bx_:Bz_,:,:,:,iBlock), &
+               1e-4, get_resistivity_rhs, Jac_VVI)
+       end if
+
+       write(*,*) NameSub, ' finished with:'
+       do iStencil = 1, nStencil
           write(*,'(a,i1,a,10es13.5)') &
-               NameSub//': unrot JAC(:,:,TestCell,', iDim, ')=', &
+               NameSub//': unrot JAC(:,:,TestCell,', iStencil, ')=', &
                matmul(transpose(GridRot_DD), matmul( &
-               Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,iTest,jTest,kTest,iDim), &
+               Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,iTest,jTest,kTest,iStencil), &
                GridRot_DD))
+
+          if(UseSemiImplicit) write(*,'(a,i1,a,10es13.5)') &
+               NameSub//': numer JAC(:,:,TestCell,', iStencil, ')=', &
+               matmul(transpose(GridRot_DD), &
+               matmul(Jac_VVI(:,:,iStencil), GridRot_DD))
+
        end do
-       do iVar = iB+1, iB+3; do jVar = iB+1, iB+3
-          write(*,*) NameSub,': JAC(',iVar,jVar,',TestCell,:),sum(cells)=', &
-               Jacobian_VVCI(iVar,jVar,iTest,jTest,kTest,:), &
-               sum(Jacobian_VVCI(iVar,jVar,:,:,:,:))
-       end do; end do
+
     end if
 
   end subroutine add_jacobian_hall_resist
