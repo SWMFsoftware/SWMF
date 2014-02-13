@@ -584,6 +584,99 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
 end subroutine get_semi_impl_matvec
 !==============================================================================
+subroutine test_semi_impl_jacobian(StateSemi_VG, dVar, get_rhs, Jac_VVI)
+
+  ! Calculate the Jacobian Jac_VVI = d(RHS)/dVar for the test cell 
+  ! using numerical derivatives of the RHS obtained with get_rhs
+
+  use ModImplicit, ONLY: nVarSemi, nStencil
+  use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
+  use ModMain, ONLY: iTest, jTest, kTest, BlkTest
+
+  real, intent(in):: StateSemi_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+  real, intent(in):: dVar ! perturbation
+
+  ! subroutine for getting the RHS
+  interface
+     subroutine get_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
+       use ModImplicit, ONLY: nVarSemi
+       use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
+       implicit none
+       integer, intent(in) :: iBlock
+       real, intent(inout) :: &
+            StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+       real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
+       logical, intent(in) :: IsLinear
+     end subroutine get_rhs
+  end interface
+
+  real, intent(out):: Jac_VVI(nVarSemi,nVarSemi,nStencil)
+
+  ! Local variables
+  real, allocatable:: StatePert_VG(:,:,:,:), &
+       Rhs_VC(:,:,:,:), RhsPert_VC(:,:,:,:)
+
+  integer:: i, j, k, iPert, jPert, kPert, iBlock, iStencil, iVar
+
+  character(len=*), parameter:: NameSub = 'test_semi_impl_jacobian'
+  !--------------------------------------------------------------------------
+
+  ! Use shorter variable names for indexes
+  i = iTest; j = jTest; k = kTest; iBlock = BlkTest
+
+  allocate( &
+       StatePert_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+       Rhs_VC(nVarSemi,nI,nJ,nK), RhsPert_VC(nVarSemi,nI,nJ,nK))
+
+  ! Initialize perturbed state
+  StatePert_VG = StateSemi_VG
+
+  ! Get original RHS (use StatePert to keep compiler happy)
+  call get_rhs(iBlock, StatePert_VG, Rhs_VC, IsLinear=.false.)
+
+  ! Loop over stencil
+  do iStencil = 1, nStencil
+
+     ! Set indexes for perturbed cell
+     iPert = i; jPert = j; kPert = k
+     select case(iStencil)
+     case(2)
+        iPert = i - 1
+     case(3)
+        iPert = i + 1
+     case(4)
+        jPert = j - 1
+     case(5)
+        jPert = j + 1
+     case(6)
+        kPert = k - 1
+     case(7)
+        kPert = k + 1
+     end select
+
+     ! Loop over variables to be perturbed
+     do iVar = 1, nVarSemi
+        
+        ! Perturb the variables
+        StatePert_VG(iVar,iPert,jPert,kPert) &
+             = StateSemi_VG(iVar,iPert,jPert,kPert) + dVar
+        
+        ! Calculate perturbed RHS
+        call get_rhs(iBlock, StatePert_VG, RhsPert_VC, IsLinear=.false.)
+
+        ! Calculate Jacobian elements
+        Jac_VVI(:,iVar,iStencil) = (RhsPert_VC(:,i,j,k) - Rhs_VC(:,i,j,k))/dVar
+
+        ! Reset the variable to the original value
+        StatePert_VG(iVar,iPert,jPert,kPert) = &
+             StateSemi_VG(iVar,iPert,jPert,kPert)
+     end do
+  end do
+
+  deallocate(StatePert_VG, Rhs_VC, RhsPert_VC)
+
+end subroutine test_semi_impl_jacobian
+!==============================================================================
 subroutine get_semi_impl_jacobian
 
   use ModAdvance, ONLY: time_BLK
