@@ -769,26 +769,30 @@ contains
     ! Calculate the Jacobian for the preconditioning of 
     ! collisional and Hall resistivity.
 
+    use ModProcMH,       ONLY: iProc
     use ModHallResist,   ONLY: UseHallResist
-    use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
-    use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModImplicit,     ONLY: UseSemiImplicit, nVarSemi, nStencil, &
-         UseNoOverlap
-    use ModVarIndexes,   ONLY: B_
-    use ModNumConst,     ONLY: i_DD
-    use ModGeometry,     ONLY: true_cell
+    use ModImplicit,     ONLY: UseSemiImplicit, nVarSemi, nStencil
+    use BATL_lib,        ONLY: rot_to_cart
+    use ModMain,         ONLY: iTest, jTest, kTest, BlkTest, ProcTest
+    use ModAdvance,      ONLY: State_VGB, Bx_, Bz_, B_
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
-    integer :: iDim, iDir, jDir, i, j, k, Di, Dj, Dk
-    integer:: iB, iVar, jVar
-    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
+    integer:: iStencil, iB, i, j, k
+
+    real, allocatable, save:: Jac_VVI(:,:,:)
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'add_jacobian_resistivity'
     !--------------------------------------------------------------------------
+    if(.not.(UseResistivity .or. UseHallResist)) RETURN
 
-    if(UseHallResist)call add_jacobian_hall_resist(iBlock, Jacobian_VVCI)
-
-    if(.not.UseResistivity) RETURN
+    if(iProc == ProcTest .and. iBlock == BlkTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    end if
 
     ! Set the base index value for magnetic field variables
     if(UseSemiImplicit)then
@@ -797,6 +801,76 @@ contains
        iB = B_
     end if
 
+    if(DoTestMe)then
+       write(*,*) NameSub,' starting with UseResistivity, UseHallResist=', &
+            UseResistivity, UseHallResist
+       do iStencil = 1, nStencil
+          write(*,'(a,i1,a,10es13.5)') &
+               NameSub//': unrot JAC(:,:,TestCell,', iStencil, ')=', &
+               rot_to_cart( &
+               Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,iTest,jTest,kTest,iStencil))
+       end do
+    end if
+
+    if(UseResistivity)call add_jacobian_eta_resist(iBlock, iB, Jacobian_VVCI)
+
+    if(UseHallResist)call add_jacobian_hall_resist(iBlock, iB, Jacobian_VVCI)
+
+    if(DoTestMe)then
+       write(*,*) NameSub, ' finished with:'
+       i = iTest; j = jTest; k = kTest
+       do iStencil = 1, nStencil
+          write(*,'(a,i1,a,10es13.5)') &
+               NameSub//': unrot JAC(:,:,TestCell,', iStencil, ')=', &
+               rot_to_cart(Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,i,j,k,iStencil))
+       end do
+
+       if(UseSemiImplicit)then
+          if(.not.allocated(Jac_VVI)) &
+               allocate(Jac_VVI(nVarSemi,nVarSemi,nStencil))
+          call test_semi_impl_jacobian( &
+               State_VGB(Bx_:Bz_,:,:,:,iBlock), &
+               1e-4, get_resistivity_rhs, Jac_VVI)
+
+          do iStencil = 1, nStencil
+             write(*,'(a,i1,a,10es13.5)') &
+                  NameSub//': numer JAC(:,:,TestCell,', iStencil, ')=', &
+                  rot_to_cart(Jac_VVI(:,:,iStencil))
+          end do
+
+          do iStencil = 1, nStencil
+             write(*,'(a,i1,a,10es13.5)') &
+                  NameSub//': error JAC(:,:,TestCell,', iStencil, ')=', &
+                  rot_to_cart(Jac_VVI(:,:,iStencil) &
+                  - Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,i,j,k,iStencil))
+          end do
+       end if
+    end if
+
+  end subroutine add_jacobian_resistivity
+
+  !========================================================================
+
+  subroutine add_jacobian_eta_resist(iBlock, iB, Jacobian_VVCI)
+
+    ! Calculate the Jacobian for the preconditioning of 
+    ! collisional resistivity.
+
+    use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
+    use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
+    use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap
+    use ModNumConst,     ONLY: i_DD
+    use ModGeometry,     ONLY: true_cell
+
+    integer, intent(in):: iB
+    integer, intent(in):: iBlock
+    real, intent(inout):: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
+
+    integer :: iDim, iDir, jDir, i, j, k, Di, Dj, Dk
+    integer:: iVar, jVar
+    real :: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
+
+    !--------------------------------------------------------------------------
     InvDcoord_D = 1/CellSize_DB(1:nDim,iBlock)
 
     ! the transverse diffusion is ignored in the Jacobian
@@ -816,8 +890,8 @@ contains
                 DiffLeft  = Coeff*Eta_DFDB(iDim,i,j,k,iDim,iBlock)
                 DiffRight = Coeff*Eta_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
 
-                Jacobian_VVCI(iDir,iDir,i,j,k,1) = &
-                     Jacobian_VVCI(iDir,iDir,i,j,k,1) - (DiffLeft + DiffRight)
+                Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
 
                 if(UseNoOverlap)then
                    if(  iDim==1.and.i==1  .or. &
@@ -901,70 +975,33 @@ contains
        end do
     end if
 
-  end subroutine add_jacobian_resistivity
+  end subroutine add_jacobian_eta_resist
 
   !============================================================================
 
-  subroutine add_jacobian_hall_resist(iBlock, Jacobian_VVCI)
+  subroutine add_jacobian_hall_resist(iBlock, iB, Jacobian_VVCI)
 
     ! Preconditioner for the induction equation in Hall MHD
     ! Based on Toth et al. "Hall MHD on Block Adaptive Grids", JCP 2008
 
-    use ModProcMH,       ONLY: iProc
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB,&
-         CellVolume_GB, GridRot_DD
+         CellVolume_GB
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModImplicit,     ONLY: UseSemiImplicit, nVarSemi, nStencil, &
-         UseNoOverlap
-    use ModVarIndexes,   ONLY: B_
+    use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap
     use ModNumConst,     ONLY: i_DD, iLeviCivita_III
     use ModGeometry,     ONLY: true_cell
-    use ModMain,         ONLY: iTest, jTest, kTest, BlkTest, ProcTest
-    use ModAdvance,      ONLY: State_VGB, Bx_, Bz_
 
-    integer, intent(in) :: iBlock
-    real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
+    integer, intent(in):: iBlock
+    integer, intent(in):: iB
+    real, intent(inout):: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
-    integer:: iDim, iDir, jDir, i, j, k, i2, j2, k2, iSign, iStencil
+    integer:: iDim, iDir, jDir, i, j, k, i2, j2, k2, iSign
     integer:: iSub, iSup, iFace, kDim, lDir, jklEpsilon, iklEpsilon
-    integer:: iB, iVar, jVar
+    integer:: iVar, jVar
     real:: Term, TermSub, TermSup, InvDcoord2_D(nDim)
 
-    real, allocatable, save:: Jac_VVI(:,:,:)
-
-    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'add_jacobian_hall_resist'
     !--------------------------------------------------------------------------
-    ! if(index(Test_String,'NOHALLPREC')>0) RETURN !!!
-
-    if(iProc == ProcTest .and. iBlock == BlkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
-
-    ! Set the base index value for magnetic field variables
-    if(UseSemiImplicit)then
-       iB = 0
-    else
-       iB = B_
-    end if
-
-    if(DoTestMe)then
-       write(*,*) NameSub,' starting with:'
-       do iDim = 1,nDim
-          write(*,*) NameSub,': unrot B/ne(:,TestCell,',iDim,')=',&
-               matmul(Bne_DFDB(:,iTest,jTest,kTest,iDim,BlkTest), GridRot_DD)
-       end do
-       do iStencil = 1, nStencil
-          write(*,'(a,i1,a,10es13.5)') &
-               NameSub//': unrot JAC(:,:,TestCell,', iStencil, ')=', &
-               matmul(transpose(GridRot_DD), matmul( &
-               Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,iTest,jTest,kTest,iStencil), &
-               GridRot_DD))
-       end do
-    end if
-
     ! the transverse part of curl(B) is ignored in the Jacobian
     if(IsCartesianGrid)then
        ! Is there something more to do for RZ geometry??? !!!
@@ -1115,33 +1152,6 @@ contains
              end do
           end do
        end do; end do
-
-    end if
-
-    if(DoTestMe)then
-
-       if(UseSemiImplicit)then
-          if(.not.allocated(Jac_VVI)) &
-               allocate(Jac_VVI(nVarSemi,nVarSemi,nStencil))
-          call test_semi_impl_jacobian( &
-               State_VGB(Bx_:Bz_,:,:,:,iBlock), &
-               1e-4, get_resistivity_rhs, Jac_VVI)
-       end if
-
-       write(*,*) NameSub, ' finished with:'
-       do iStencil = 1, nStencil
-          write(*,'(a,i1,a,10es13.5)') &
-               NameSub//': unrot JAC(:,:,TestCell,', iStencil, ')=', &
-               matmul(transpose(GridRot_DD), matmul( &
-               Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,iTest,jTest,kTest,iStencil), &
-               GridRot_DD))
-
-          if(UseSemiImplicit) write(*,'(a,i1,a,10es13.5)') &
-               NameSub//': numer JAC(:,:,TestCell,', iStencil, ')=', &
-               matmul(transpose(GridRot_DD), &
-               matmul(Jac_VVI(:,:,iStencil), GridRot_DD))
-
-       end do
 
     end if
 
