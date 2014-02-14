@@ -284,13 +284,11 @@ contains
        if(IsRotatedCartesian)then
           ! Rotate coordinates
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Xyz_DGB(:,i,j,k,iBlock) = &
-                  matmul(GridRot_DD, Xyz_DGB(:,i,j,k,iBlock))
+             Xyz_DGB(:,i,j,k,iBlock) = cart_to_rot(Xyz_DGB(:,i,j,k,iBlock))
           end do; end do; end do
 
           do k = 1, nKNode; do j = 1, nJNode; do i = 1, nINode
-             Xyz_DNB(:,i,j,k,iBlock) = &
-                  matmul(GridRot_DD, Xyz_DNB(:,i,j,k,iBlock))
+             Xyz_DNB(:,i,j,k,iBlock) = cart_to_rot(Xyz_DNB(:,i,j,k,iBlock))
           end do; end do; end do
 
           ! Define face variables used by non-Cartesian grids
@@ -298,18 +296,18 @@ contains
           CellFace_DFB(2,:,:,:,iBlock) = CellFace_DB(2,iBlock)
           CellFace_DFB(3,:,:,:,iBlock) = CellFace_DB(3,iBlock)
 
-          FaceNormal_D = matmul(GridRot_DD, (/CellFace_DB(1,iBlock), 0., 0./))
+          FaceNormal_D = cart_to_rot((/CellFace_DB(1,iBlock), 0., 0./))
           do k = 1, nK+1; do j = 1, nJ+1; do i = 1, nI+1
              FaceNormal_DDFB(:,1,i,j,k,iBlock) = FaceNormal_D(1:nDim)
           end do; end do; end do
 
-          FaceNormal_D = matmul(GridRot_DD, (/0.0, CellFace_DB(2,iBlock), 0./))
+          FaceNormal_D = cart_to_rot((/0.0, CellFace_DB(2,iBlock), 0./))
           do k = 1, nK+1; do j = 1, nJ+1; do i = 1, nI+1
              FaceNormal_DDFB(:,2,i,j,k,iBlock) = FaceNormal_D(1:nDim)
           end do; end do; end do
 
           if(nDim==3)then
-             FaceNormal_D = matmul(GridRot_DD, (/0.,0.,CellFace_DB(3,iBlock)/))
+             FaceNormal_D = cart_to_rot((/0.,0.,CellFace_DB(3,iBlock)/))
              do k = 1, nK+1; do j = 1, nJ+1; do i = 1, nI+1
                 FaceNormal_DDFB(:,3,i,j,k,iBlock) = FaceNormal_D
              end do; end do; end do
