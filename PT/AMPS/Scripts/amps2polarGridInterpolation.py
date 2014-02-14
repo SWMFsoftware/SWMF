@@ -48,7 +48,7 @@ else:
     filename = 'F21.H2O.dsmc.dat'
     variableListUser = ['n','Vx','Vy','T']
     
-nrOfVars = len(varialbeListUser)
+nrOfVars = len(variableListUser)
 
 #########################################################
 # READ HEADER from amps output file to get variable names
@@ -128,7 +128,7 @@ for phi in np.arange(phiMin, phiMax+dphi, dphi):
         xInterpolate.append(10**r * np.cos(phi))
         yInterpolate.append(10**r * np.sin(phi))
         
-for i in range(nrOfVarsjj):
+for i in range(nrOfVars):
     zInterpolate[i] = Interpolator[i].__call__(xInterpolate,yInterpolate)
 print "interpolation done"
 
