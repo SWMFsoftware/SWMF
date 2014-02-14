@@ -1,13 +1,12 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !#NOTPUBLIC  email:rubinmar@umich.edu  expires:12/31/2099
-!This code is a copyright protected software (c) 2002- University of Michigan
 !========================================================================
 
 module ModUser
 
   use ModSize
-  use ModVarIndexes, ONLY: nVar
   use ModAdvance,    ONLY: Pe_, UseElectronPressure
   use ModUserEmpty,                              &
        IMPLEMENTED1  => user_read_inputs,         &
@@ -105,79 +104,124 @@ contains
     use ModBlockData,  ONLY: get_block_data, set_block_data, put_block_data, &
          use_block_data
     use ModPhysics
-    use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, PROCtest, iteration_number 
+    use ModMain,       ONLY: iTest, jTest, kTest, &
+         BlkTest, PROCtest
     use ModProcMH,     ONLY: iProc 
     use ModGeometry,   ONLY: R_BLK, Xyz_DGB
-    use ModMultiFluid, ONLY: MassIon_I
-    use ModIO,         ONLY: iUnitOut
+
+    use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
 
     integer,intent(in) :: iBlock
 
-    logical :: DoTest, DoTestMe=.true., init=.true.
     integer :: i, j, k, iNeutral
     real, dimension(nNeutral,nNeutral) :: DissocRate_II
     real, dimension(nNeutral) :: DestructRate_I, uNeutr_I
+
+    ! Variables for neutral tables
+    logical:: DoCheckTable = .true.
+    integer, save:: iTableNeutral_I(nNeutral)
+    real:: r, Phi, x, y, z, Yz, Neutral_V(6)
+
+    integer, parameter:: Nn_=1, Uxn_ = 2, Uyn_ = 3, Tn_=4
+
+    logical :: DoTest, DoTestMe=.true.
+    character(len=*), parameter:: NameSub = 'user_neutral_atmosphere'
+    !----------------------------------------------------------------------
+    if(iProc==PROCtest .and. iBlock == BlkTest) then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    end if
 
     !! Neutral dissociation/destruction rates
     DissocRate_II = 0.0 ; DestructRate_I = 0.0 
     DestructRate_I(H2O_) = 1.00E-6 !! Gombosi et al., J. Geophys. Res., (1996) 
 
-    !----------------------------------------------------------------------
-
-    if(iProc==PROCtest .and. iBlock == BlkTest) then
-       call set_oktest('user_neutral_atmosphere',DoTest,DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
-
     iNeutralBlockLast = iBlock
+
+    if(DoCheckTable)then
+       ! Check for neutral data tables
+       do iNeutral = 1, nNeutral
+          iTableNeutral_I(iNeutral) = i_lookup_table(NameNeutral_I(iNeutral))
+       end do
+
+       if(iProc==0)write(*,*) NameSub,' iTableNeutral_I=', iTableNeutral_I
+
+       DoCheckTable = .false.
+    end if
 
     if (.not.use_block_data(iBlock)) then
 
-       if(iProc==0.and.init) then
-          !! Init, placeholder
-          init=.false.
+       ! Fill analytic solution if any neutral data table is missing
+       if(any(iTableNeutral_I < 0))then
+          uNeutr_I(H2O_) = 800.  ! [m/s]
+          uNeutr_I(H_)   = 8000. ! [m/s]
+
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+
+             ! Haser model for H2O
+             NnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod/(4.*cPi*(R_BLK(i,j,k,iBlock)*rPlanetSI)**2&
+                  *uNeutr_I(H2O_))*exp(-DestructRate_I(H2O_)/uNeutr_I(H2O_)*R_BLK(i,j,k,iBlock)*rPlanetSI)
+
+             ! H (after Combi 1996 with [cm^-3] -> [m^-3] and r[m] -> r[cm])
+             NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*rPlanetSI)**(-1.6103)
+
+             ! H from Haser Model (assuming vn_H2O = vn_H)
+             !   DissocRate_II(H2O_,H_) = 1.64E-5/(rHelio**2) ! H2O + hv -> OH + H (Huebner et al. 1992)
+             !NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)    = Qprod*DissocRate_II(H2O_,H_)/ &
+             !     (DestructRate_I(H2O_)-DissocRate_II(H2O_,H_))* &
+             !     (exp(-DissocRate_II(H2O_,H_)/uNeutr_I(H2O_)*R_BLK(i,j,k,iBlock)*rPlanetSI)-&
+             !     exp(-DestructRate_I(H2O_)/uNeutr_I(H2O_)*R_BLK(i,j,k,iBlock)*rPlanetSI))/&
+             !     (4.*cPi*(R_BLK(i,j,k,iBlock)*rPlanetSI)**2*uNeutr_I(H2O_))     
+
+             UnxNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = uNeutr_I(H2O_)*Xyz_DGB(x_,i,j,k,iBlock)/ &
+                  R_BLK(i,j,k,iBlock)
+             UnyNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = uNeutr_I(H2O_)*Xyz_DGB(y_,i,j,k,iBlock)/ &
+                  R_BLK(i,j,k,iBlock)
+             UnzNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = uNeutr_I(H2O_)*Xyz_DGB(z_,i,j,k,iBlock)/ &
+                  R_BLK(i,j,k,iBlock)
+
+             UnxNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)   = uNeutr_I(H_)*Xyz_DGB(x_,i,j,k,iBlock)/ &
+                  R_BLK(i,j,k,iBlock)
+             UnyNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)   = uNeutr_I(H_)*Xyz_DGB(y_,i,j,k,iBlock)/ &
+                  R_BLK(i,j,k,iBlock)
+             UnzNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)   = uNeutr_I(H_)*Xyz_DGB(z_,i,j,k,iBlock)/ &
+                  R_BLK(i,j,k,iBlock)
+
+
+             TnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)  =  25.    !! estimate
+             TnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)    =  1000.  !! estimate
+          end do;  end do;  end do
        end if
 
-       uNeutr_I(H2O_) = 800.  ! [m/s]
-       uNeutr_I(H_)   = 8000. ! [m/s]
+       ! Fill neutral state by interpolating lookup table
+       do iNeutral = 1, nNeutral
 
-       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          if(iTableNeutral_I(iNeutral) <= 0) CYCLE
 
-          ! Haser model for H2O
-          NnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod/(4.*cPi*(R_BLK(i,j,k,iBlock)*rPlanetSI)**2&
-               *uNeutr_I(H2O_))*exp(-DestructRate_I(H2O_)/uNeutr_I(H2O_)*R_BLK(i,j,k,iBlock)*rPlanetSI)
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+             x = Xyz_DGB(1,i,j,k,iBlock)
+             y = Xyz_DGB(2,i,j,k,iBlock)
+             z = Xyz_DGB(3,i,j,k,iBlock)
 
-          ! H (after Combi 1996 with [cm^-3] -> [m^-3] and r[m] -> r[cm])
-          NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*rPlanetSI)**(-1.6103)
+             Yz = sqrt(y**2 + z**2)
 
-          ! H from Haser Model (assuming vn_H2O = vn_H)
-          !   DissocRate_II(H2O_,H_) = 1.64E-5/(rHelio**2) ! H2O + hv -> OH + H (Huebner et al. 1992)
-          !NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)    = Qprod*DissocRate_II(H2O_,H_)/ &
-          !     (DestructRate_I(H2O_)-DissocRate_II(H2O_,H_))* &
-          !     (exp(-DissocRate_II(H2O_,H_)/uNeutr_I(H2O_)*R_BLK(i,j,k,iBlock)*rPlanetSI)-&
-          !     exp(-DestructRate_I(H2O_)/uNeutr_I(H2O_)*R_BLK(i,j,k,iBlock)*rPlanetSI))/&
-          !     (4.*cPi*(R_BLK(i,j,k,iBlock)*rPlanetSI)**2*uNeutr_I(H2O_))     
+             ! Radial distance in meters for lookup
+             r  = sqrt(x**2 + y**2 + z**2)*No2Si_V(UnitX_)
 
-          UnxNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = uNeutr_I(H2O_)*Xyz_DGB(x_,i,j,k,iBlock)/ &
-               R_BLK(i,j,k,iBlock)
-          UnyNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = uNeutr_I(H2O_)*Xyz_DGB(y_,i,j,k,iBlock)/ &
-               R_BLK(i,j,k,iBlock)
-          UnzNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = uNeutr_I(H2O_)*Xyz_DGB(z_,i,j,k,iBlock)/ &
-               R_BLK(i,j,k,iBlock)
+             ! Angle relative to x axis in degrees for lookup
+             Phi  = atan2(Yz, x)*cRadToDeg
 
-          UnxNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)   = uNeutr_I(H_)*Xyz_DGB(x_,i,j,k,iBlock)/ &
-               R_BLK(i,j,k,iBlock)
-          UnyNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)   = uNeutr_I(H_)*Xyz_DGB(y_,i,j,k,iBlock)/ &
-               R_BLK(i,j,k,iBlock)
-          UnzNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)   = uNeutr_I(H_)*Xyz_DGB(z_,i,j,k,iBlock)/ &
-               R_BLK(i,j,k,iBlock)
+             call interpolate_lookup_table( &
+                  iTableNeutral_I(iNeutral), r, Phi, Neutral_V)
 
-
-          TnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)  =  25.    !! estimate
-          TnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)    =  1000.  !! estimate
-       end do;  end do;  end do
+             NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1) = Neutral_V(Nn_)
+             UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= Neutral_V(Uxn_)
+             UnyNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= Neutral_V(Uyn_)*y/Yz
+             UnzNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= Neutral_V(Uyn_)*z/Yz
+             TnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1) = Neutral_V(Tn_)
+          end do; end do; end do
+       end do
 
        NeutralMass_I(H2O_) = 17.*cProtonMass
        NeutralMass_I(H_)   =  1.*cProtonMass
@@ -223,7 +267,7 @@ contains
     ! calculate all collision rates involving electrons 
     ! (used for sources & resistivity)
 
-    use ModAdvance,    ONLY: State_VGB, Rho_
+    use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: No2SI_V, UnitN_
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
 
@@ -267,11 +311,11 @@ contains
 
     ! calculate all rates not involving electron collisions
 
-    use ModPhysics,  ONLY: SI2No_V, UnitN_, rPlanetSI, rBody
+    use ModPhysics,  ONLY: rPlanetSI, rBody
     use ModConst,    ONLY: cElectronCharge, cBoltzmann, cElectronMass, cProtonMass
-    use ModMain,     ONLY: Body1, iTest, jTest, kTest, BlkTest
+    use ModMain,     ONLY: Body1
     use ModNumConst, ONLY: cPi
-    use ModGeometry, ONLY: R_BLK, Xyz_DGB
+    use ModGeometry, ONLY: Xyz_DGB
 
     integer,intent(in) :: i,j,k,iBlock
     real,intent(in)    :: Ti_I(nIonFluid)
@@ -310,7 +354,7 @@ contains
     Qexc_II(H2O_,Hp_)   = 4.0054E-18 ! 25.0 eV, Huebner 1992
     Qexc_II(H_,Hp_)     = 5.6076E-19 !  3.5 eV, Huebner 1992
     Qexc_II(H2O_,H2Op_) = 1.9226E-18 ! 12.0 eV, Huebner 1992
-    
+
     ! ! UV opacity
     J3 = 4.5E14/(rHelio**2) ! J3 = 4.5E14 [m^-2*s^-1]: lambda < 984A solar flux @ 1 AU, Marconi, 1982)
     sigma = (v_II(H2O_,Hp_)+v_II(H_,Hp_)+v_II(H2O_,H2Op_))/J3
@@ -443,11 +487,11 @@ contains
        alpha_I(H2Op_) = 1E-6*1.03E-3*Te**(-1.111) !! rate in [m^3/s]
     end if
 
-!     if (Te < 200.) then 
-!        alpha_I(H2Op_) = 1E-6*7E-7*sqrt(300./Te) !! rate in [m^3/s]
-!     else
-!        alpha_I(H2Op_) = 2.342*1E-6*7E-7*Te**(0.2553-0.1633*log10(Te)) !! rate in [m^3/s]
-!     end if
+    !     if (Te < 200.) then 
+    !        alpha_I(H2Op_) = 1E-6*7E-7*sqrt(300./Te) !! rate in [m^3/s]
+    !     else
+    !        alpha_I(H2Op_) = 2.342*1E-6*7E-7*Te**(0.2553-0.1633*log10(Te)) !! rate in [m^3/s]
+    !     end if
 
     alpha_I(Hp_)   = 1E-6*4.8E-12*(250/Te)**0.7  !! Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
     alpha_I(SW_)  = alpha_I(Hp_)
@@ -460,15 +504,14 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, PROCtest, iteration_number, Dt_BLK
+         BlkTest, Dt_BLK
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, RhoUx_, RhoUy_, RhoUz_, &
-         Bx_,By_,Bz_, P_, Energy_
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, cElectronCharge, cProtonMass
-    use ModGeometry,   ONLY: Rmin_BLK, r_BLK, Xyz_DGB
+         Bx_,By_,Bz_, P_
+    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass
+    use ModGeometry,   ONLY: r_BLK, Xyz_DGB
     use ModCurrent,    ONLY: get_current
-    use ModProcMH,     ONLY: iProc
     use ModPhysics
-    use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, IsPointImplSource
+    use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
 
     integer, intent(in) :: iBlock
 
@@ -493,7 +536,7 @@ contains
 
     logical :: DoTest, DoTestMe=.true.
     real :: theta, fenTot, feiTot,logTe
-    integer :: i,j,k,iNeutral,jNeutral,iIonFluid,jIonFluid,iTerm,iDim
+    integer :: i,j,k,iNeutral,jNeutral,iIonFluid,jIonFluid,iTerm
 
 
     !----------------------------------------------------------------------
@@ -1407,7 +1450,6 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModPhysics
     use ModEnergy
-    use ModGeometry, ONLY: r_BLK
     integer,intent(in) :: iStage, iBlock
     integer :: i,j,k,iIonFluid
 
@@ -1468,13 +1510,12 @@ contains
   !========================================================================
 
   subroutine user_set_resistivity(iBlock, Eta_G)
-    use ModPhysics,     ONLY: No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
-         UnitN_, UnitTemperature_, UnitX_, UnitT_, UnitP_, ElectronPressureRatio
+    use ModPhysics,     ONLY: No2Si_V, Si2No_V, &
+         UnitN_, UnitX_, UnitT_, UnitP_, ElectronPressureRatio
     use ModProcMH,      ONLY: iProc
-    use ModMain,        ONLY: ProcTest, BlkTest, iTest, jTest, kTest, nBlockMax
+    use ModMain,        ONLY: ProcTest, BlkTest, iTest, jTest, kTest
     use ModAdvance,     ONLY: State_VGB
-    use ModGeometry,    ONLY: Rmin_BLK, R_BLK
-    use ModVarIndexes,  ONLY: Rho_, Pe_, P_
+    use ModVarIndexes,  ONLY: Pe_, P_
     use ModConst,       ONLY: cMu, cBoltzmann, cElectronMass, cElectronCharge
     use ModMultiFluid,  ONLY: MassIon_I
     use ModResistivity, ONLY: Eta0
@@ -1563,7 +1604,7 @@ contains
        EntropyOut)
 
     use ModPhysics,     ONLY: No2Si_V, UnitP_, UnitN_, ElectronPressureRatio, inv_gm1
-    use ModVarIndexes,  ONLY: nVar, Rho_, p_, ExtraEInt_
+    use ModVarIndexes,  ONLY: nVar, p_
     use ModConst,       ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
     use ModAdvance,     ONLY: State_VGB
     use ModMain,        ONLY: iTest, jTest, kTest, BlkTest
@@ -1589,7 +1630,7 @@ contains
     real, optional, intent(out) :: OpacityRosselandOut_W(nWave)   ! [1/m] 
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3] 
     real, optional, intent(out) :: EntropyOut
-    
+
     real, save :: KappaCoeffSI = (cBoltzmann/cElectronCharge)**2/cMu
     real :: nElec, EtaSI, TeSI!, HeatCond
     real, dimension(nIonFluid) :: nIon_I, fei_I, eiSigma_I
@@ -1615,7 +1656,7 @@ contains
     end if
     if(present(CvOut)) CvOut = cBoltzmann*nElec*inv_gm1
     if(present(TeOut)) TeOut = TeSI
- 
+
 
     if(present(HeatCondOut)) then
        !!write(*,*)'iBlock = ',iBlock,'iNeutralBlockLast = ',iNeutralBlockLast
@@ -1626,12 +1667,12 @@ contains
        call calc_electron_collision_rates(TeSI,i,j,k,iBlock,fen_I(1:nNeutral),fei_I(1:nIonFluid))
        eiSigma_I(1:nIonFluid) = cElectronCharge**2*nElec/((fei_I(1:nIonFluid)+1E-20)*cElectronMass) 
        enSigma_I(1:nNeutral) = cElectronCharge**2*nElec/((fen_I(1:nNeutral)+1E-20)*cElectronMass)
-    
+
        !! EtaSI is calculated from both conductivities using Kirchhoff's rule:
        !! 1/sigma_tot = 1/eiSigma_IG+1/enSigma_IG
        !! The resulting conductivity is close to Spitzer conductivity far from the comet and
        !! decreases due to abundant electron-neutral collisions close to the nucleus
-       
+
        !! EtaSI = 1/(sigma_tot*mu_0) magnetic diffusivity [m^2/s]
        EtaSI = Eta0SI + (sum(1/eiSigma_I(1:nIonFluid))+sum(1/enSigma_I(1:nNeutral)))/cMu
        HeatCondOut = TeSI/EtaSI*KappaCoeffSI
@@ -1705,10 +1746,10 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_
+    use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_, &
          ElectronCharge, ElectronPressureRatio
-    use ModVarIndexes, ONLY: Rho_, P_, Pe_
+    use ModVarIndexes, ONLY: P_, Pe_
     use ModConst,      ONLY: cBoltzmann
     use ModCurrent,    ONLY: get_current
     use ModMultiFluid, ONLY: MassIon_I
@@ -1858,34 +1899,34 @@ contains
        NameIdlUnit = 's'
        NameTecUnit = '[s]'
        PlotVar_G(:,:,:) = Dt_BLK(iBlock)*No2SI_V(UnitT_)
-    ! case('testarray1')
-    !    NameIdlUnit = ' '   
-    !    NameTecUnit = '[ ]'
-    !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
-    !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-    !       PlotVar_G(i,j,k) = TestArray(1,i,j,k,iBlock)
-    !    end do; end do; end do
-    ! case('testarray2')
-    !    NameIdlUnit = ' '   
-    !    NameTecUnit = '[ ]'
-    !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
-    !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-    !       PlotVar_G(i,j,k) = TestArray(2,i,j,k,iBlock)
-    !    end do; end do; end do
-    ! case('testarray3')
-    !    NameIdlUnit = ' '   
-    !    NameTecUnit = '[ ]'
-    !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
-    !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-    !       PlotVar_G(i,j,k) = TestArray(3,i,j,k,iBlock)
-    !    end do; end do; end do
-    ! case('testarray4')
-    !    NameIdlUnit = ' '   
-    !    NameTecUnit = '[ ]'
-    !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
-    !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-    !       PlotVar_G(i,j,k) = TestArray(4,i,j,k,iBlock)
-    !    end do; end do; end do
+       ! case('testarray1')
+       !    NameIdlUnit = ' '   
+       !    NameTecUnit = '[ ]'
+       !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
+       !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       !       PlotVar_G(i,j,k) = TestArray(1,i,j,k,iBlock)
+       !    end do; end do; end do
+       ! case('testarray2')
+       !    NameIdlUnit = ' '   
+       !    NameTecUnit = '[ ]'
+       !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
+       !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       !       PlotVar_G(i,j,k) = TestArray(2,i,j,k,iBlock)
+       !    end do; end do; end do
+       ! case('testarray3')
+       !    NameIdlUnit = ' '   
+       !    NameTecUnit = '[ ]'
+       !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
+       !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       !       PlotVar_G(i,j,k) = TestArray(3,i,j,k,iBlock)
+       !    end do; end do; end do
+       ! case('testarray4')
+       !    NameIdlUnit = ' '   
+       !    NameTecUnit = '[ ]'
+       !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
+       !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       !       PlotVar_G(i,j,k) = TestArray(4,i,j,k,iBlock)
+       !    end do; end do; end do
     case default
        IsFound = .false.
     end select
@@ -1898,12 +1939,10 @@ contains
   !========================================================================
 
   subroutine user_set_ICs(iBlock)
-    use ModIO,       ONLY: restart
     use ModProcMH,   ONLY: iProc
-    use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest, Body1_, Body1
+    use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest, Body1
     use ModAdvance,  ONLY: P_, Pe_, State_VGB
     use ModPhysics
-    use ModConst,    ONLY: cBoltzmann
     use ModGeometry, ONLY: R_BLK
 
     integer, intent(in) :: iBlock
@@ -2075,15 +2114,14 @@ contains
 
     use ModSize,         ONLY: x_
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_
-    use ModFaceBoundary, ONLY: TimeBc, iFace, jFace, kFace, FaceCoords_D, &
+    use ModFaceBoundary, ONLY: TimeBc, FaceCoords_D, &
          iBoundary, VarsTrueFace_V
     use ModSolarwind,    ONLY: get_solar_wind_point
-!    use ModB0,           ONLY: B0_DX
     use ModMain,         ONLY: body1_
     use ModPhysics,      ONLY: LowDensityRatio, SW_Ux, SW_Uy, SW_Uz, SW_n, SW_T_dim, &
-         ElectronPressureRatio, UnitTemperature_, Io2No_V, SW_Bx, SW_By, SW_Bz, &
-         NO2SI_V, UnitP_, UnitRho_, UnitRhoU_, UnitU_, UnitB_, UnitN_, Io2SI_V, &
-         BodyRho_I, BodyP_I, SW_Bz
+         ElectronPressureRatio, UnitTemperature_, Io2No_V, &
+         NO2SI_V, UnitP_, UnitRho_, UnitU_, UnitB_, UnitN_, &
+         BodyRho_I, BodyP_I
 
     logical :: FirstCall = .true., DoTest, DoTestMe=.true.
     integer :: iIonFluid
@@ -2145,7 +2183,7 @@ contains
        ! ???
        !CellState_VI(:,iBoundary)=FaceState_VI(:,iBoundary)
 
-    !! Body boundaries
+       !! Body boundaries
     else if (iBoundary <= body1_) then
 
        !! Projection length of U_ and B_ on the local surface radius vector
@@ -2231,20 +2269,20 @@ contains
 
   subroutine user_set_boundary_cells(iBlock)
 
-     use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x1, x2
+    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
 
-     implicit none
+    implicit none
 
-     integer, intent(in):: iBlock
+    integer, intent(in):: iBlock
 
-     character (len=*), parameter :: Name='user_set_boundary_cells'
-    
-     !--------------------------------------------------------------------------
-     ! For inflow in positive x direction
-     ! IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) < x1
-     ! For inflow in negative x direction
-     IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
+    character (len=*), parameter :: Name='user_set_boundary_cells'
 
-   end subroutine user_set_boundary_cells
+    !--------------------------------------------------------------------------
+    ! For inflow in positive x direction
+    ! IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) < x1
+    ! For inflow in negative x direction
+    IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
+
+  end subroutine user_set_boundary_cells
 
 end module ModUser
