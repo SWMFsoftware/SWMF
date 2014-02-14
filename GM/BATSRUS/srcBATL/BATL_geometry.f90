@@ -17,6 +17,14 @@ module BATL_geometry
   public:: radius_to_gen  ! convert radial coordinate to generalized coordinate
   public:: gen_to_radius  ! convert generalized coordinate to radial coordinate
   public:: test_geometry  ! unit test
+  public:: rot_to_cart    ! Rotate a vector/matrix from rotated to Cartesian
+  interface rot_to_cart
+     module procedure rot_to_cart_vector, rot_to_cart_matrix
+  end interface
+  public:: cart_to_rot    ! Rotate a vector/matrix from Cartesian to rotated
+  interface cart_to_rot
+     module procedure cart_to_rot_vector, cart_to_rot_matrix
+  end interface
 
   character(len=20), public:: TypeGeometry = 'cartesian'
 
@@ -309,6 +317,74 @@ contains
     r = exp(linear(LogRgen_I, 0, nRgen-1, r*(nRgen-1), DoExtrapolate=.true.))
 
   end subroutine gen_to_radius
+
+  !============================================================================
+
+  function cart_to_rot_vector(a_D)
+
+    ! Rotate a vector from Cartesian to RotatedCartesian frame
+
+    real, intent(in):: a_D(MaxDim)
+    real:: cart_to_rot_vector(MaxDim)
+    !-------------------------------------------------------------------------
+    if(IsRotatedCartesian)then
+       cart_to_rot_vector = matmul(GridRot_DD, a_D)
+    else
+       cart_to_rot_vector = a_D
+    end if
+
+  end function cart_to_rot_vector
+
+  !============================================================================
+
+  function cart_to_rot_matrix(a_DD)
+
+    ! Rotate a matrix from Cartesian to RotatedCartesian frame
+
+    real, intent(in):: a_DD(MaxDim,MaxDim)
+    real:: cart_to_rot_matrix(MaxDim,MaxDim)
+    !-------------------------------------------------------------------------
+    if(IsRotatedCartesian)then
+       cart_to_rot_matrix = matmul(GridRot_DD, &
+            matmul(a_DD, transpose(GridRot_DD)))
+    else
+       cart_to_rot_matrix = a_DD
+    end if
+  end function cart_to_rot_matrix
+
+  !============================================================================
+
+  function rot_to_cart_vector(a_D)
+
+    ! Rotate a vector from RotatedCartesian to Cartesian frame
+
+    real, intent(in):: a_D(MaxDim)
+    real:: rot_to_cart_vector(MaxDim)
+    !-------------------------------------------------------------------------
+    if(IsRotatedCartesian)then
+       rot_to_cart_vector = matmul(a_D, GridRot_DD)
+    else
+       rot_to_cart_vector = a_D
+    end if
+
+  end function rot_to_cart_vector
+
+  !============================================================================
+
+  function rot_to_cart_matrix(a_DD)
+
+    ! Rotate a matrix from RotatedCartesian to Cartesian frame
+
+    real, intent(in):: a_DD(MaxDim,MaxDim)
+    real:: rot_to_cart_matrix(MaxDim,MaxDim)
+    !-------------------------------------------------------------------------
+    if(IsRotatedCartesian)then
+       rot_to_cart_matrix = matmul(transpose(GridRot_DD), &
+            matmul(a_DD, GridRot_DD))
+    else
+       rot_to_cart_matrix = a_DD
+    end if
+  end function rot_to_cart_matrix
 
   !============================================================================
 
