@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModViscosity
 
@@ -310,7 +310,7 @@ contains
 
     ! Get velocity vector for the block, only done ones per block
     if(IsNewBlockViscosity) then
-       do iFluid=iFluidMin,iFluidMax
+       do iFluid = iFluidMin, iFluidMax
           call select_fluid
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              if(State_VGB(iRho,i,j,k,iBlockFace) > 0.0) then 
@@ -327,7 +327,7 @@ contains
     ! Get the velocity gradient on the faces. 
     ! Fill in ghost cells for the block for each fluid once.
     IsNewBlock = IsNewBlockViscosity
-    do iFluid = iFluidMin,iFluidMax
+    do iFluid = iFluidMin, iFluidMax
        call get_face_gradient_field(iDimFace, iFace, jFace, kFace, &
             iBlockFace, nDim,  &
             IsNewBlock, u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
@@ -337,30 +337,30 @@ contains
     IsNewBlockViscosity = .false.        
 
     ! Get the viscosity tensor
-    do iFluid = 1,nFluid
+    do iFluid = 1, nFluid
        Diag              =        GradU_DDI(x_,x_,iFluid)
        if(nDim > 1) Diag = Diag + GradU_DDI(y_,y_,iFluid)
        if(nDim > 2) Diag = Diag + GradU_DDI(z_,z_,iFluid)
        Diag = -TraceCoeff*Diag
 
        ! Diagonal
-       Visco_DDI(x_,x_,iFluid)            = 2*GradU_DDI(x_,x_,iFluid) + Diag
-       if(nDim > 1)Visco_DDI(y_,y_,iFluid)= 2*GradU_DDI(y_,y_,iFluid) + Diag
-       if(nDim > 2)Visco_DDI(z_,z_,iFluid)= 2*GradU_DDI(z_,z_,iFluid) + Diag
+       Visco_DDI(x_,x_,iFluid)             = 2*GradU_DDI(x_,x_,iFluid) + Diag
+       if(nDim > 1)Visco_DDI(y_,y_,iFluid) = 2*GradU_DDI(y_,y_,iFluid) + Diag
+       if(nDim > 2)Visco_DDI(z_,z_,iFluid) = 2*GradU_DDI(z_,z_,iFluid) + Diag
 
        ! Off-diagonal terms are symmetrized
        if(nDim > 1)then
-          Visco_DDI(x_,y_,ifluid) = &
+          Visco_DDI(x_,y_,iFluid) = &
                GradU_DDI(x_,y_,iFluid) + GradU_DDI(y_,x_,iFluid)
-          Visco_DDI(y_,x_,ifluid) = Visco_DDI(x_,y_,iFluid)
+          Visco_DDI(y_,x_,iFluid) = Visco_DDI(x_,y_,iFluid)
        end if
        if(nDim > 2)then
-          Visco_DDI(x_,z_,ifluid) = &
+          Visco_DDI(x_,z_,iFluid) = &
                GradU_DDI(x_,z_,iFluid) + GradU_DDI(z_,x_,iFluid)
-          Visco_DDI(z_,x_,ifluid) = Visco_DDI(x_,z_,iFluid)
-          Visco_DDI(y_,z_,ifluid) = &
+          Visco_DDI(z_,x_,iFluid) = Visco_DDI(x_,z_,iFluid)
+          Visco_DDI(y_,z_,iFluid) = &
                GradU_DDI(y_,z_,iFluid) + GradU_DDI(z_,y_,iFluid)
-          Visco_DDI(z_,y_,ifluid) = Visco_DDI(y_,z_,iFluid)
+          Visco_DDI(z_,y_,iFluid) = Visco_DDI(y_,z_,iFluid)
        end if
 
        Visco_DDI(:,:,iFluid) = ViscoCoeff*Visco_DDI(:,:,iFluid)          
