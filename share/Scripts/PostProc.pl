@@ -1,5 +1,6 @@
 #!/usr/bin/perl -s
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 my $Help    = ($h or $H or $help);
@@ -206,40 +207,6 @@ foreach my $Dir (sort keys %PlotDir){
 	warn "$WARNING: no files were found in $PlotDir\n";
     }
 }
-#############################################################
-sub readrunlog{
-    # Read runlog and print out init time and runtime without init time
-    my $timeinit;
-    my $timerun;
-    my $runlogfile;
-    foreach $runlogfile (glob("runlog*")){
-
-	# Read first timing for initialization
-	open(INPUT, $runlogfile) or die "Could not open $runlogfile: $!\n";
-	while(<INPUT>){
-	    if(/.*(BATSRUS|SWMF)\s+(\d+\.\d+).*/ or 
-	       /.*(BATSRUS|SWMF)\s*1\s*1\s+(.*?)\s+/){
-	       $timeinit = $2;
-	       last;
-	    }   
-	}
-	close(INPUT);
-
-	# Read last timing for total runtime
-	open(INPUT, "tail -n 400 $runlogfile |");
-	while(<INPUT>){
-	    if(/.*(BATSRUS|SWMF)\s+(\d+\.\d+).*/ or 
-	       /.*(BATSRUS|SWMF)\s*1\s*1\s+(.*?)\s+/){
-		$timerun = $2;
-	    }
-	}
-	close(INPUT);
-
-	print "$INFO: TIMINGS from $runlogfile (init, run)".
-	    " $timeinit $timerun\n" if $timeinit or $timerun;
-    }
-}
-##############################################################################
 
 # Copy and move some input and output files if present
 if(-f $ParamIn){
@@ -249,7 +216,7 @@ if(-f $ParamIn){
     warn "$WARNING: no $ParamIn file was found\n";
 }
 
-readrunlog();
+&read_runlog;
 
 if(-f "runlog"){
     print "$INFO: mv runlog $NameOutput/\n";
@@ -287,6 +254,41 @@ sub shell{
 }
 
 #############################################################
+
+sub read_runlog{
+    # Read runlog and print out init time and runtime without init time
+    my $timeinit;
+    my $timerun;
+    my $runlogfile;
+    foreach $runlogfile (glob("runlog*")){
+
+	# Read first timing for initialization
+	open(INPUT, $runlogfile) or die "Could not open $runlogfile: $!\n";
+	while(<INPUT>){
+	    if(/.*(BATSRUS|SWMF)\s+(\d+\.\d+).*/ or 
+	       /.*(BATSRUS|SWMF)\s*1\s*1\s+(.*?)\s+/){
+	       $timeinit = $2;
+	       last;
+	    }   
+	}
+	close(INPUT);
+
+	# Read last timing for total runtime
+	open(INPUT, "tail -n 400 $runlogfile |");
+	while(<INPUT>){
+	    if(/.*(BATSRUS|SWMF)\s+(\d+\.\d+).*/ or 
+	       /.*(BATSRUS|SWMF)\s*1\s*1\s+(.*?)\s+/){
+		$timerun = $2;
+	    }
+	}
+	close(INPUT);
+
+	print "$INFO: TIMINGS from $runlogfile (init, run)".
+	    " $timeinit $timerun\n" if $timeinit or $timerun;
+    }
+}
+
+##############################################################################
 
 sub concat_sat_log{
 
