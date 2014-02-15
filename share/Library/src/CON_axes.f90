@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !BOP
 !MODULE: CON_axes - coordinate system initialization and setting
@@ -9,7 +10,7 @@ module CON_axes
   ! CON uses GSE coordinates for planetary data, because it is convenient 
   !     as well as it is inertial except for orbital motion. It connects
   !     the planet and the Sun with the X axis, which makes it the 
-  !     ideal choice for describing the whole space weather simulations.
+  !     ideal choice for describing the whole space weather simulation.
   !
   ! \bigskip
   !
@@ -72,7 +73,8 @@ module CON_axes
   !   (almost) aligned and/or the rotation speed is slow relative to dynamical
   !   time scales.
 
-  ! GEO (GEOgraphic) or PGR (PlanetoGRaphic)
+  ! GEO (GEOgraphic) 
+  ! PGR (PlanetoGRaphic)
   !
   !   Z is the rotation axis pointing "North".
   !   X goes through the 0 meridian which is defined for the planet.
