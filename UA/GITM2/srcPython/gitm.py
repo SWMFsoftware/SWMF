@@ -460,7 +460,7 @@ class GitmBin(PbData):
                       "V!Dn!N (up,NO                  )":"linear",
                       "V!Dn!N (up,O!D2!N              )":"linear",
                       "V!Dn!N (up,O(!U3!NP)           )":"linear",
-                      "e-":"exponential", "Electron_Average_Energy":"linear",
+                      "e-":"linear", "Electron_Average_Energy":"linear",
                       "eTemperature":"linear", "iTemperature":"linear",
                       "Solar Zenith Angle":"linear", "Vertical TEC":"linear",
                       "Electron_Energy_Flux":"exponential",
