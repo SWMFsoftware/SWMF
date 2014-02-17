@@ -110,7 +110,7 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
         zmax = np.nanmax(z_data)
 
     zran = round((zmax-zmin)/6.0)
-    if(zran != 0.0):
+    if(zran != 0.0 and zscale.find("exp") < 0):
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
 
@@ -408,7 +408,7 @@ def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
         zmax = np.nanmax(z_data)
 
     zran = round((zmax-zmin)/6.0)
-    if(zran != 0.0):
+    if(zran != 0.0 and zscale.find("exp") < 0):
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
 
@@ -614,7 +614,7 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
         zmax = np.nanmax(z_data)
 
     zran = round((zmax-zmin)/6.0)
-    if(zran != 0.0):
+    if(zran != 0.0 and zscale.find("exp") < 0):
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
 
@@ -767,7 +767,7 @@ def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
         zmax = np.nanmax(z_data)
 
     zran = round((zmax-zmin)/6.0)
-    if(zran != 0.0):
+    if(zran != 0.0 and zscale.find("exp") < 0):
         zmin = math.floor(float("{:.14f}".format(zmin / zran))) * zran
         zmax = math.ceil(float("{:.14f}".format(zmax / zran))) * zran
 
