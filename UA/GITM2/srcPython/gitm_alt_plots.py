@@ -93,8 +93,13 @@ def gitm_single_alt_image(plot_type, zkey, gData, lat_index=-1, lon_index=-1,
             amax = math.floor(amax / 10000.0) * 10.0
 
     if(plot_type.find("linear") < 0 and (xmin == None or xmax == None)):
+        if gData[xkey].attrs['scale'].find("exp") >= 0:
+            raw = True
+        else:
+            raw = False
+
         tmin, tmax = gpr.find_data_limits([gData], xkey, lat_index, lon_index,
-                                          -2, 6)
+                                          -2, 6, raw=raw)
         if xmin == None:
             xmin = tmin
         if xmax == None:
@@ -145,8 +150,12 @@ def gitm_single_alt_image(plot_type, zkey, gData, lat_index=-1, lon_index=-1,
                 xmax = np.nanmax(x_data)
         else:
             if(zmin == None or zmax == None):
+                if gData[zkey].attrs['scale'].find("exp") >= 0:
+                    raw = True
+                else:
+                    raw = False
                 tmin, tmax = gpr.find_data_limits([gData],zkey,lat_index,
-                                                  lon_index,-2,6)
+                                                  lon_index,-2,6,raw=raw)
                 if zmin == None:
                     xmin = tmin
                 if zmax == None:
@@ -194,8 +203,12 @@ def gitm_single_alt_image(plot_type, zkey, gData, lat_index=-1, lon_index=-1,
                 zmax = np.nanmax(z_data)
         else:
             if(zmin == None or zmax == None):
+                if gData[zkey].attrs['scale'].find("exp") >= 0:
+                    raw = True
+                else:
+                    raw = False
                 tmin, tmax = gpr.find_data_limits([gData],zkey,lat_index,
-                                                  lon_index,-2,6)
+                                                  lon_index, -2, 6, raw=raw)
                 if zmin == None:
                     zmin = tmin
                 if zmax == None:
@@ -398,7 +411,7 @@ def gitm_mult_alt_images(plot_type, zkey, gData, lat_index, lon_index,
     be of equal length (for paired values), or for a constant value in one
     coordinate, a length of list one can be specified.
     
-    Input: plot_type = key to determine plot type (rectangular, polar)
+    Input: plot_type = key to determine plot type (linear, contour)
            zkey      = key for z variable (ie 'Vertical TEC')
            gData     = gitm bin structure
            lat_index = list of latitude indices (empty list for all)
@@ -434,6 +447,15 @@ def gitm_mult_alt_images(plot_type, zkey, gData, lat_index, lon_index,
         print module_name, "ERROR: improperly paired lat/lon indices"
         return
 
+    if lat_len <= 1:
+        y_label = ["{:.1f}$^\circ$ Lon".format(gData['dLon'][l,1,1])
+                   for l in lon_index]
+    elif lon_len <= 1:
+        y_label = ["{:.1f}$^\circ$ Lat".format(gData['dLat'][1,l,1])
+                   for l in lat_index]
+    else:
+        y_label = ["{:.1f}$^\circ$ Lat, {:.1f}$^\circ$ Lon".format(gData['dLat'][1,l,1], gData['dLon'][lon_index[i],1,1]) for i,l in enumerate(lat_index)]
+
     # Initialize the input data indices
     subindices = [lon_index, lat_index]
 
@@ -462,12 +484,16 @@ def gitm_mult_alt_images(plot_type, zkey, gData, lat_index, lon_index,
             amax = math.floor(tmax / 10000.0) * 10.0
 
     if zmin == None or zmax == None:
+        if gData[zkey].attrs['scale'].find("exp") >= 0:
+            rvals = False
+        else:
+            rvals = True
         tmin, tmax = gpr.find_data_limits_ivalues([gData], zkey, lat_index,
                                                   lon_index, alt_index, 
                                                   lat_range=lat_range,
                                                   lon_range=lon_range,
                                                   alt_range=alt_range,
-                                                  rvals=True)
+                                                  rvals=rvals)
         if zmin == None:
             zmin = tmin
         if zmax == None:
@@ -519,11 +545,12 @@ def gitm_mult_alt_images(plot_type, zkey, gData, lat_index, lon_index,
     alt_data = np.array(gData['Altitude'] / 1000.0)
     f, ax = pap.plot_mult_alt_images(plot_type, subindices, x_data, alt_data,
                                      z_data, x_name, x_scale, x_units, "km",
-                                     z_name=z_name, z_scale=z_scale,
-                                     z_units=z_units, xmin=xmin, xmax=xmax,
-                                     amin=amin, amax=amax, zmin=zmin, zmax=zmax,
-                                     title=title, figname=None, draw=False,
-                                     color1=color, color2=marker, color3=line)
+                                     y_label=y_label, z_name=z_name,
+                                     z_scale=z_scale, z_units=z_units,
+                                     xmin=xmin, xmax=xmax, amin=amin, amax=amax,
+                                     zmin=zmin, zmax=zmax, title=title,
+                                     figname=None, draw=False, color1=color,
+                                     color2=marker, color3=line)
 
     # Add the hmF2 lines, if desired
     if add_hmf2 and not gData.has_key("hmF2"):
@@ -747,8 +774,6 @@ def gitm_alt_slices(zkey, gData, lat_index, lon_index, title=None, figname=None,
             y = np.array([gData['hmF2'][ilon,ilat,0],
                           gData['hmF2'][ilon,ilat,0]])
             y = y.reshape(2)
-
-            print y[0], i, ilon, ilat, gData['dLat'][ilon,ilat,0]
 
             iax.plot(x, y, color=hcolor, linestyle=hline, linewidth=2)
 
