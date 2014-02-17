@@ -100,8 +100,11 @@ def gitm_single_3D_image(plot_type, zkey, gdata, title=None, figname=None,
         tdt = gdata['time']
 
     # Format title
-    spec_title = "{:} UT slice at {:.2f} km".format(gdata['time'], 1.0e-3 *
-                                                    gdata['Altitude'][0,0,ialt])
+    spec_title = "{:} UT".format(gdata['time'])
+    if aindex >= 0:
+        spec_title = "{:s} slice at {:.2f} km".format(spec_title, 1.0e-3 *
+                                                      gdata['Altitude'][0,0,
+                                                                        ialt])
 
     if title:
         title = "{:s}\n{:s}".format(spec_title, title)
@@ -175,9 +178,11 @@ def gitm_single_nsglobal_3D_image(zkey, gdata, title=None, figname=None,
         tdt = gdata['time']
 
     # Format title
-    spec_title = "{:} UT slice at {:.2f} km".format(gdata['time'], 1.0e-3 *
-                                                    gdata['Altitude'][0,0,ialt])
-
+    spec_title = "{:} UT".format(gdata['time'])
+    if aindex >= 0:
+        spec_title = "{:s} slice at {:.2f} km".format(spec_title, 1.0e-3 *
+                                                      gdata['Altitude'][0,0,
+                                                                        ialt])
     if title:
         title = "{:s}\n{:s}".format(spec_title, title)
     else:
@@ -253,8 +258,11 @@ def gitm_global_3D_snapshot(zkey, gdata, title=None, figname=None, draw=True,
         tdt = gdata['time']
 
     # Format title
-    spec_title = "{:} UT slice at {:.2f} km".format(gdata['time'], 1.0e-3 *
-                                                    gdata['Altitude'][0,0,ialt])
+    spec_title = "{:} UT".format(gdata['time'])
+    if aindex >= 0:
+        spec_title = "{:s} slice at {:.2f} km".format(spec_title, 1.0e-3 *
+                                                      gdata['Altitude'][0,0,
+                                                                        ialt])
 
     if title:
         title = "{:s}\n{:s}".format(spec_title, title)
