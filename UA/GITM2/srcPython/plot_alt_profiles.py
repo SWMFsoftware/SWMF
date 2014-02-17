@@ -33,6 +33,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.cm import get_cmap
+from matplotlib.colors import LogNorm
 from matplotlib.ticker import FormatStrFormatter,MultipleLocator
 import gitm_plot_rout as gpr
 
@@ -121,12 +122,12 @@ def plot_single_alt_image(plot_type, x_data, alt_data, z_data, x_name, x_scale,
 # End plot_single_alt_image
 
 def plot_mult_alt_images(plot_type, subindices, x_data, alt_data, z_data,
-                         x_name, x_scale, x_units, alt_units, z_name="",
-                         z_scale="", z_units="", xmin=None, xmax=None,
-                         amin=None, amax=None, zmin=None, zmax=None, xinc=6,
-                         ainc=6, zinc=6, title=None, tloc="t", figname=None,
-                         draw=True, color1="b", color2="o", color3=":", 
-                         *args, **kwargs):
+                         x_name, x_scale, x_units, alt_units, y_label=False,
+                         z_name="", z_scale="", z_units="", xmin=None,
+                         xmax=None, amin=None, amax=None, zmin=None, zmax=None,
+                         xinc=6, ainc=6, zinc=6, title=None, tloc="t",
+                         figname=None, draw=True, color1="b", color2="o",
+                         color3=":", *args, **kwargs):
     '''
     Creates a linear or contour altitude map for a specified altitude range.
     A list of latitude and longitude indexes should be specified.  They may
@@ -155,6 +156,8 @@ def plot_mult_alt_images(plot_type, subindices, x_data, alt_data, z_data,
            x_scale    = Plot x-axis data using a linear or exponetial scale?
            x_units    = x-axis data units
            alt_units  = y-axis altitude units (m or km)
+           y_label    = List of right-side y-axis labels (labeling subplots)
+                        or False to provide no labels (default=False)
            z_name     = Name of z-axis data (default="")
            z_scale    = Plot z-axis data using a linear or exponetial scale?
                         (default="")
@@ -347,6 +350,7 @@ def plot_mult_alt_images(plot_type, subindices, x_data, alt_data, z_data,
     f = plt.figure()
     ax = list()
     tl = " "
+    f.text(0.01,0.55,"Altitude (${:s}$)".format(alt_units),rotation="vertical")
 
     if title:
         f.suptitle(title, size="medium")
@@ -359,15 +363,16 @@ def plot_mult_alt_images(plot_type, subindices, x_data, alt_data, z_data,
     for snum in reversed(range(0, pnum)):
         cl = False
         xl = False
-        yl = False
         fnum = (pnum * 100) + 11 + snum
         ax.append(f.add_subplot(fnum))
 
+        try:
+            yl = y_label[snum]
+        except:
+            yl = False
+
         if(pnum == snum + 1):
             xl = True
-
-        if(math.floor(pnum * 0.5) == snum):
-            yl = True
 
         if(snum == 0):
             cl = True
@@ -462,7 +467,7 @@ def plot_mult_alt_images(plot_type, subindices, x_data, alt_data, z_data,
                               xmin=xmin, xmax=xmax, amin=amin, amax=amax,
                               zmin=zmin, zmax=zmax, xinc=xinc, ainc=ainc,
                               zinc=zinc, cb=False, color=color1,
-                              zcenter=color3, title=title, tloc=tloc,
+                              zcenter=color3, title=False, tloc=tloc,
                               xl=xl, yl=yl, plot_type=plot_type)
 
 
@@ -473,21 +478,20 @@ def plot_mult_alt_images(plot_type, subindices, x_data, alt_data, z_data,
 
             cpr = list(cax.get_position().bounds)
             if cl is True:
-                cpr[1] = cpr[1] + ydiff
+                cpr[2] = new_width
                 cax.set_position(cpr)
             else:
                 # Add and adjust colorbar
-                cbar = gpr.add_colorbar(con, zmin, zmax, zinc, "horizontal",
+                cbar = gpr.add_colorbar(con, zmin, zmax, zinc, "vertical",
                                         z_scale, z_name, z_units)
 
                 bp = list(cbar.ax.get_position().bounds)
                 cp = list(cax.get_position().bounds)
 
-                cp[1] = cp[1] - bp[3]
-                ydiff = cp[1] - cpr[1]
-                cp[3] = cpr[3]
-                bp[1] = 4.0 * bp[3]
-                bp[3] = 0.5 * bp[3]
+                new_width = cp[2] + 0.075
+                cp[2] = new_width
+                bp[1] = bp[1] + bp[3] * (float(pnum - 1) / 2.0)
+                bp[0] = bp[0] + 0.015
 
                 cbar.ax.set_position(bp)
                 cax.set_position(cp)
@@ -695,7 +699,10 @@ def plot_linear_alt(ax, x_data, alt_data, x_name, x_scale, x_units, alt_units,
                        b=bottom, default is top)
            xl        = Include x (z variable) label (default is True)
            xt        = Include x ticks (default is True)
-           yl        = Include y (altitude) label (default is True)
+           yl        = Include y label.  By default this label is placed on 
+                       the left to label the altitude.  If a non-Boolian value
+                       is provided, this will be assumed to be a string to be
+                       placed as a label on the right. (default is True)
            yt        = Include y ticks (default is True)
            color     = line/marker color (default b [blue])
            marker    = marker type (default +)
@@ -727,8 +734,11 @@ def plot_linear_alt(ax, x_data, alt_data, x_name, x_scale, x_units, alt_units,
     else:
         ax.yaxis.set_major_formatter(FormatStrFormatter(""))
 
-    if yl:
+    if yl is True:
         ax.set_ylabel('Altitude ($km$)')
+    elif yl is not False:
+        ax.set_ylabel(yl)
+        ax.yaxis.set_label_position("right")
     plt.ylim(amin, amax)
 
     if x_scale.find("exponential"):
@@ -806,7 +816,10 @@ def plot_3D_alt(ax, x_data, alt_data, z_data, x_name, x_scale, x_units,
                        default is top)
            xl        = Include x label (default is True)
            xt        = Include x ticks (default is True)
-           yl        = Include y (altitude) label (default is True)
+           yl        = Include y label.  This defaults to placing an altitude
+                       label on the left axis.  If a non-Boolian value is
+                       provided, it is assumed to be a string that will be
+                       used as a right axis label.  (default is True)
            yt        = Include y ticks (default is True)
            plot_type = Make a scatter or contour plot? (default=contour)
     '''
@@ -838,16 +851,25 @@ def plot_3D_alt(ax, x_data, alt_data, z_data, x_name, x_scale, x_units,
     arange = amax - amin
     awidth = arange / ainc
 
+    # Determine the z scale
+    if z_scale.find("exp") >= 0:
+        v = np.logspace(math.log10(zmin), math.log10(zmax), zinc*10,
+                        endpoint=True)
+        norm = LogNorm(vmin=zmin, vmax=zmax)
+    else:
+        norm = None
+        v = np.linspace(zmin, zmax, zinc*10, endpoint=True)
+
     # Plot the data
     col = gpr.choose_contour_map(color, zcenter)
     if plot_type.find("scatter") >= 0:
         con = ax.scatter(x_data, alt_data, c=z_data, cmap=get_cmap(col),
-                         vmin=zmin, vmax=zmax, edgecolors="none", s=10)
+                         norm=norm, vmin=zmin, vmax=zmax, edgecolors="none",
+                         s=10)
         cax = con.axes
     else:
-        v = np.linspace(zmin, zmax, zinc*10, endpoint=True)
         con = ax.contourf(x_data, alt_data, z_data, v, cmap=get_cmap(col),
-                          vmin=zmin, vmax=zmax)
+                          norm=norm, vmin=zmin, vmax=zmax)
         cax = con.ax
 
     # Configure axis
@@ -857,8 +879,11 @@ def plot_3D_alt(ax, x_data, alt_data, z_data, x_name, x_scale, x_units,
     else:
         ax.yaxis.set_major_formatter(FormatStrFormatter(""))
 
-    if yl:
+    if yl is True:
         ax.set_ylabel('Altitude ($km$)')
+    elif yl is not False:
+        ax.set_ylabel(yl)
+        ax.yaxis.set_label_position("right")
     plt.ylim(amin, amax)
 
     if x_scale.find("exponential") >= 0:
