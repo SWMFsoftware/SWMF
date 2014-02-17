@@ -6,9 +6,11 @@
 
 module ModUser
 
-  use ModSize
+  use ModMultiFluid
+  use ModSize,       ONLY: nI, nJ, nK, nBlk
+  use ModVarIndexes, ONLY: nVar
   use ModAdvance,    ONLY: Pe_, UseElectronPressure
-  use ModUserEmpty,                              &
+  use ModUserEmpty,                               &
        IMPLEMENTED1  => user_read_inputs,         &
        IMPLEMENTED2  => user_calc_sources,        &
        IMPLEMENTED3  => user_update_states,       &
@@ -18,47 +20,59 @@ module ModUser
        IMPLEMENTED7  => user_init_point_implicit, &
        IMPLEMENTED8  => user_init_session,        &
        IMPLEMENTED9  => user_set_plot_var,        &
-       IMPLEMANTED10 => user_set_ICs,             &
-       IMPLEMANTED11 => user_get_log_var,         & 
+       IMPLEMENTED10 => user_set_ICs,             &
+       IMPLEMENTED11 => user_get_log_var,         & 
        IMPLEMENTED12 => user_set_boundary_cells,  &
        IMPLEMENTED13 => user_set_cell_boundary
-
-
-  use ModMultiFluid
 
   include 'user_module.h' !list of public methods
 
   real,              parameter :: VersionUserModule = 0.1
   character (len=*), parameter :: NameUserModule = &
-       'Rubin, 3-fluid Comet MHD module, Dec 2011'
+       'Rubin, 3-fluid Comet MHD module, Dec 2012'
 
   integer, parameter, public :: nNeutral = 2 !! number of neutral species
   !! Neutral species names
   character (len=6), parameter, public :: NameNeutral_I(nNeutral) = &
        (/ 'H2O  ', 'H    ' /)
-  integer, parameter, public :: H2O_  =  1
-  integer, parameter, public :: H_    =  2
+  integer, parameter :: H2O_  =  1
+  integer, parameter :: H_    =  2
   !! Ion species names
-  integer, parameter, public :: SW_   =  1
-  integer, parameter, public :: Hp_   =  2
-  integer, parameter, public :: H2Op_ =  3
+  integer, parameter :: SW_   =  1
+  integer, parameter :: Hp_   =  2
+  integer, parameter :: H2Op_ =  3
 
   real, dimension(nNeutral,MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1) :: NnNeutral_IG, &
        UnxNeutral_IG, UnyNeutral_IG, UnzNeutral_IG, TnNeutral_IG
   real, dimension(1:nNeutral) :: NeutralMass_I(nNeutral)
   integer :: iNeutralBlockLast = -1
-  real :: Qprod, Tmin, rHelio
-  !! ??? testing
+  real :: Qprod, Tmin, rHelio, vHI
+  real, dimension(MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1,nBLK) :: ne20eV_GB = 0.
+
+  !! Plotting array to be used for testing
   ! real, dimension(4,MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1,nBLK) :: TestArray = 0.
+
+
+  !! To plot the cells where the heat flux is capped by the limiter
+  ! real, public, dimension(MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1,nBLK) :: FluxLimited_GB = 0.
+  !! Add the following lines to get_impl_heat_cond_state 
+  ! use ModUser, ONLY: FluxLimited_GB
+  !! and after "The threshold heat flux limiter model"
+  ! FluxLimited_GB(i,j,k,iBlock) = 0.
+  ! if(HeatCoef*GradTe > FreeStreamFlux) &
+  !    FluxLimited_GB(i,j,k,iBlock) = 1.
+  !! before limiter is applied
+
 
 contains
 
   !========================================================================
+
   subroutine user_read_inputs
 
-    use ModMain
+    use ModMain,      ONLY: lVerbose
     use ModProcMH,    ONLY: iProc
-    use ModReadParam
+    use ModReadParam, ONLY: read_var, read_line, read_command
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
     character (len=100) :: NameCommand
@@ -75,9 +89,10 @@ contains
        select case(NameCommand)
 
        case("#COMET")
-          call read_var('Qprod' , Qprod)            !! Neutral gas production rate [1/s]
+          call read_var('Qprod', Qprod)             !! Neutral gas production rate [1/s]
           call read_var('rHelio', rHelio)           !! Heliocentric distance [AU]
-          call read_var('Tmin' , Tmin)              !! Minimum ion temperature (enforced in update states)
+          call read_var('vHI', vHI)                 !! Ionization frequency for cometary heavy ions (1/lifetime of cometary heavy neutrals)
+          call read_var('Tmin', Tmin)               !! Minimum ion temperature (enforced in update states)
        case('#USERINPUTEND')
           if(iProc==0.and.lVerbose > 0)then
              call write_prefix;
@@ -103,17 +118,23 @@ contains
   subroutine user_neutral_atmosphere(iBlock)
     use ModBlockData,  ONLY: get_block_data, set_block_data, put_block_data, &
          use_block_data
-    use ModPhysics
-    use ModMain,       ONLY: iTest, jTest, kTest, &
-         BlkTest, PROCtest
+    use ModPhysics,    ONLY: cPi, rPlanetSi, cProtonMass, No2SI_V, &
+         cRadToDeg, UnitX_
+    use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
+         BlkTest, PROCtest, iteration_number 
     use ModProcMH,     ONLY: iProc 
-    use ModGeometry,   ONLY: R_BLK, Xyz_DGB
-
-    use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
+    use ModGeometry,   ONLY: R_BLK, Xyz_DGB,x1,y1,y2,z1,z2
+    use ModMultiFluid, ONLY: MassIon_I
+    use ModIO,         ONLY: iUnitOut
+    use ModConst,      ONLY: mSun, cGravitation
+    use ModLookupTable,ONLY: i_lookup_table, interpolate_lookup_table
 
     integer,intent(in) :: iBlock
 
+    logical :: DoTest, DoTestMe=.true., init=.true.
     integer :: i, j, k, iNeutral
+    ! real :: RadAccl, uH
+    real :: xUp
     real, dimension(nNeutral,nNeutral) :: DissocRate_II
     real, dimension(nNeutral) :: DestructRate_I, uNeutr_I
 
@@ -121,12 +142,11 @@ contains
     logical:: DoCheckTable = .true.
     integer, save:: iTableNeutral_I(nNeutral)
     real:: r, Phi, x, y, z, Yz, Neutral_V(6)
-
     integer, parameter:: Nn_=1, Uxn_ = 2, Uyn_ = 3, Tn_=4
 
-    logical :: DoTest, DoTestMe=.true.
     character(len=*), parameter:: NameSub = 'user_neutral_atmosphere'
     !----------------------------------------------------------------------
+
     if(iProc==PROCtest .and. iBlock == BlkTest) then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
@@ -135,7 +155,7 @@ contains
 
     !! Neutral dissociation/destruction rates
     DissocRate_II = 0.0 ; DestructRate_I = 0.0 
-    DestructRate_I(H2O_) = 1.00E-6 !! Gombosi et al., J. Geophys. Res., (1996) 
+    DestructRate_I(H2O_) = vHI  !! from PARAM.in file
 
     iNeutralBlockLast = iBlock
 
@@ -154,8 +174,21 @@ contains
 
        ! Fill analytic solution if any neutral data table is missing
        if(any(iTableNeutral_I < 0))then
-          uNeutr_I(H2O_) = 800.  ! [m/s]
+
+          !if(iProc==0.and.init) then
+          !   !! Init, placeholder
+          !   init=.false.
+          !end if
+
+          uNeutr_I(H2O_) = 1000. ! [m/s]
           uNeutr_I(H_)   = 8000. ! [m/s]
+
+          ! Average hydrogen atom velocity (18 km/s)  
+          ! uH = 18.E3
+          ! Hydrogen radiation pressure acceleration (beta = 1.0)
+          ! RadAccl = 1.0*cGravitation*mSun/(rHelio**2*cAU**2)
+
+          xUp = 4.0 ! upstream limit for hydrogen distribution in Mkm
 
           do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
 
@@ -163,8 +196,25 @@ contains
              NnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod/(4.*cPi*(R_BLK(i,j,k,iBlock)*rPlanetSI)**2&
                   *uNeutr_I(H2O_))*exp(-DestructRate_I(H2O_)/uNeutr_I(H2O_)*R_BLK(i,j,k,iBlock)*rPlanetSI)
 
-             ! H (after Combi 1996 with [cm^-3] -> [m^-3] and r[m] -> r[cm])
-             NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*rPlanetSI)**(-1.6103)
+             ! ! Limits hydrogen upstream distance due to radiation pressure
+             ! ! (parabola x<-0.5*RadAccl/uH^2*(y^2+z^2)+0.5*uH^2/RadAccl)
+             ! if(Xyz_DGB(x_,i,j,k,iBlock) < -0.5*RadAccl/(uH**2)*rPlanetSI*&
+             !      (Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2)+0.5*uH**2/RadAccl/rPlanetSI) then
+             !    ! H (after Combi 1996 with [cm^-3] -> [m^-3] and r[m] -> r[cm])
+             !    NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*rPlanetSI)**(-1.6103)
+             ! else
+             !    NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = 0.
+             ! end if
+
+             ! Limits hydrogen upstream distance by parabola to avoid interaction with the side boundary
+             ! (parabola x<(x_min-x_upstream)/min_width^2*(y^2+z^2)+x_upstream
+             if(Xyz_DGB(x_,i,j,k,iBlock) < (x1-xUp)/min(abs(y1),abs(y2),abs(z1),abs(z2))**2.*&
+                  (Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2)+xUp) then
+                ! H (after Combi 1996 with [cm^-3] -> [m^-3] and r[m] -> r[cm])
+                NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*rPlanetSI)**(-1.6103)
+             else
+                NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = 0.
+             end if
 
              ! H from Haser Model (assuming vn_H2O = vn_H)
              !   DissocRate_II(H2O_,H_) = 1.64E-5/(rHelio**2) ! H2O + hv -> OH + H (Huebner et al. 1992)
@@ -189,7 +239,7 @@ contains
                   R_BLK(i,j,k,iBlock)
 
 
-             TnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)  =  25.    !! estimate
+             TnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)  =  100.   !! estimate
              TnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)    =  1000.  !! estimate
           end do;  end do;  end do
        end if
@@ -223,7 +273,8 @@ contains
           end do; end do; end do
        end do
 
-       NeutralMass_I(H2O_) = 17.*cProtonMass
+
+       NeutralMass_I(H2O_) = 18.*cProtonMass
        NeutralMass_I(H_)   =  1.*cProtonMass
 
        call put_block_data(iBlock, nNeutral, MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1, NnNeutral_IG)
@@ -261,26 +312,31 @@ contains
     end if
 
   end subroutine user_neutral_atmosphere
-  !========================================================================
-  subroutine calc_electron_collision_rates(Te,i,j,k,iBlock,fen_I,fei_I)
 
-    ! calculate all collision rates involving electrons 
+  !========================================================================
+
+  subroutine calc_electron_collision_rates(Te,nElec,i,j,k,iBlock,fen_I,fei_I)
+
+    ! calculate all collision rates for electrons (fen, fei)
     ! (used for sources & resistivity)
 
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, Rho_
     use ModPhysics,    ONLY: No2SI_V, UnitN_
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
 
     integer,intent(in) :: i,j,k,iBlock   
     real,intent(in)    :: Te
+    real,intent(in)    :: nElec
     real,intent(out)   :: fen_I(nNeutral)
     real,intent(out)   :: fei_I(nIonFluid)
+
     real :: sqrtTe
     !----------------------------------------------------------------------
 
     !! electron-neutral and electron-ion collision rates
     !! provide all rates in SI units
 
+    !! reduced temperature ~ Te 
     sqrtTe = sqrt(Te)
 
     !! initialize all collision rates with zero
@@ -298,24 +354,26 @@ contains
     !!Electron - ion collision rates
     !! e - H2Op, Schunk and Nagy, Ionospheres, Cambridge University Press, 2000
     fei_I(H2Op_) = 54.5*ChargeIon_I(H2Op_)**2*State_VGB(H2OpRho_,i,j,k,iBlock)/MassIon_I(H2Op_)* &
-         No2SI_V(UnitN_)/1E6/(Te*sqrtTe)
+         No2SI_V(UnitN_)/1E6/(Te*sqrtTe)      !! rate in [1/s]
     !! e - Hp, Schunk and Nagy, Ionospheres, Cambridge University Press, 2000
     fei_I(Hp_) = 54.5*ChargeIon_I(Hp_)**2*State_VGB(HpRho_,i,j,k,iBlock)/MassIon_I(Hp_)* &
-         No2SI_V(UnitN_)/1E6/(Te*sqrtTe)
-    fei_I(SW_) = fei_I(Hp_)
+         No2SI_V(UnitN_)/1E6/(Te*sqrtTe)      !! rate in [1/s]
+    fei_I(SW_) = 54.5*ChargeIon_I(SW_)**2*State_VGB(SwRho_,i,j,k,iBlock)/MassIon_I(SW_)* &
+         No2SI_V(UnitN_)/1E6/(Te*sqrtTe)      !! rate in [1/s]
 
   end subroutine calc_electron_collision_rates
 
   !========================================================================
-  subroutine user_calc_rates(Ti_I,Te,i,j,k,iBlock,nElec,nIon_I,fin_II,fii_II,alpha_I,kin_IIII,v_II,uElec_D,uIon_DI,Qexc_II)
+  subroutine user_calc_rates(Ti_I,Te,i,j,k,iBlock,nElec,nIon_I,fin_II,fii_II,fie_I,alpha_I,kin_IIII,v_II,&
+       ve_II,uElec_D,uIon_DI,Qexc_II,Qion_II)
 
     ! calculate all rates not involving electron collisions
 
-    use ModPhysics,  ONLY: rPlanetSI, rBody
+    use ModPhysics,  ONLY: SI2No_V, UnitN_, rPlanetSI, rBody
     use ModConst,    ONLY: cElectronCharge, cBoltzmann, cElectronMass, cProtonMass
-    use ModMain,     ONLY: Body1
+    use ModMain,     ONLY: Body1, iTest, jTest, kTest, BlkTest
     use ModNumConst, ONLY: cPi
-    use ModGeometry, ONLY: Xyz_DGB
+    use ModGeometry, ONLY: R_BLK, Xyz_DGB
 
     integer,intent(in) :: i,j,k,iBlock
     real,intent(in)    :: Ti_I(nIonFluid)
@@ -326,34 +384,73 @@ contains
     real,intent(in)    :: uIon_DI(3,nIonFluid)
     real,intent(out)   :: fin_II(nIonFluid,nNeutral)
     real,intent(out)   :: fii_II(nIonFluid,nIonFluid)
+    real,intent(out)   :: fie_I(nIonFluid)
     real,intent(out)   :: alpha_I(nIonFluid)
     real,intent(out)   :: kin_IIII(nIonFluid,nNeutral,nNeutral,nIonFluid)
     real,intent(out)   :: v_II(nNeutral,nIonFluid)
+    real,intent(out)   :: ve_II(nNeutral,nIonFluid)
     real,intent(out)   :: Qexc_II(nNeutral,nIonFluid)
+    real,intent(out)   :: Qion_II(nNeutral,nIonFluid)
 
 
-    real :: Tr, ueBulk2, ueTherm2, Ee, A(7), uiBulk2(nIonFluid), uiTherm2(nIonFluid), Tred, Mred
-    real :: Dist, NCol, sigma, J3, uNeutr
+    real :: Tr, ueBulk2, ueTherm2, Ee, A(7), Tred, Mred
+    real :: Dist, NCol, sigma, J3, uNeutr, log10Te, sqrtTe
     real,dimension(nNeutral,nIonFluid) :: sigma_e
     integer :: n
+    real, save :: ElImpRate_I(nNeutral,61)!, ElCrossSect_I(61)
 
+
+    real, save :: sigmaeh2o = 4.53E-21  !! Ionization cross section for 20 eV electrons [m^2]
+    real, save :: ve = 2.65E6           !! Speed of 20 eV electrons [m/s]
+
+    ! H2O and H electron impact rate depending on electron temperature (Cravens et al. 1987)
+    ElImpRate_I(H2O_,1:61) = (/ 0.00E+00, 1.14E-16, 2.03E-16, 3.04E-16, 4.37E-16, 6.34E-16, 9.07E-16, &
+         1.28E-15, 1.79E-15, 2.34E-15, 3.15E-15, 4.35E-15, 5.54E-15, 6.90E-15, 8.47E-15, 1.05E-14, 1.25E-14, &
+         1.51E-14, 1.80E-14, 2.09E-14, 2.41E-14, 2.74E-14, 3.09E-14, 3.46E-14, 3.90E-14, 4.34E-14, 4.80E-14, &
+         5.24E-14, 5.70E-14, 6.15E-14, 6.63E-14, 7.15E-14, 7.61E-14, 8.03E-14, 8.47E-14, 8.90E-14, 9.30E-14, &
+         9.72E-14, 1.01E-13, 1.05E-13, 1.08E-13, 1.11E-13, 1.14E-13, 1.16E-13, 1.18E-13, 1.21E-13, 1.23E-13, &
+         1.24E-13, 1.25E-13, 1.25E-13, 1.25E-13, 1.23E-13, 1.23E-13, 1.23E-13, 1.21E-13, 1.20E-13, 1.17E-13, &
+         1.15E-13, 1.12E-13, 1.10E-13, 1.07E-13 /)
+    ElImpRate_I(H_,1:61) = (/ 0.00E+00, 1.74E-16, 2.89E-16, 4.14E-16, 6.01E-16, 8.18E-16, 1.02E-15, 1.32E-15, &
+         1.72E-15, 2.20E-15, 2.84E-15, 3.48E-15, 4.20E-15, 5.12E-15, 5.97E-15, 6.83E-15, 7.82E-15, 8.95E-15, &
+         1.01E-14, 1.12E-14, 1.24E-14, 1.36E-14, 1.48E-14, 1.61E-14, 1.75E-14, 1.86E-14, 1.98E-14, 2.12E-14, &
+         2.24E-14, 2.34E-14, 2.48E-14, 2.56E-14, 2.64E-14, 2.73E-14, 2.81E-14, 2.90E-14, 2.95E-14, 2.98E-14, &
+         3.01E-14, 3.06E-14, 3.06E-14, 3.04E-14, 3.01E-14, 2.95E-14, 2.90E-14, 2.87E-14, 2.77E-14, 2.72E-14, &
+         2.63E-14, 2.55E-14, 2.48E-14, 2.37E-14, 2.28E-14, 2.17E-14, 2.07E-14, 1.99E-14, 1.89E-14, 1.80E-14, &
+         1.71E-14, 1.64E-14, 1.56E-14 /)
+
+    ! ! Hydrogen-electron impact ionization cross section depending on electron energy
+    ! ElCrossSect_I(1:61) = (/ 0.000E-00, 0.114E-20, 0.189E-20, 0.257E-20, 0.320E-20, 0.377E-20, &
+    !      0.429E-20, 0.473E-20, 0.510E-20, 0.542E-20, 0.568E-20, 0.587E-20, 0.600E-20, 0.609E-20, 0.613E-20, &
+    !      0.613E-20, 0.608E-20, 0.600E-20, 0.588E-20, 0.575E-20, 0.559E-20, 0.541E-20, 0.521E-20, 0.501E-20, &
+    !      0.480E-20, 0.457E-20, 0.435E-20, 0.414E-20, 0.392E-20, 0.369E-20, 0.348E-20, 0.328E-20, 0.307E-20, &
+    !      0.288E-20, 0.270E-20, 0.252E-20, 0.235E-20, 0.219E-20, 0.204E-20, 0.190E-20, 0.176E-20, 0.163E-20, &
+    !      0.152E-20, 0.141E-20, 0.130E-20, 0.120E-20, 0.111E-20, 0.103E-20, 0.095E-20, 0.088E-20, 0.081E-20, &
+    !      0.075E-20, 0.069E-20, 0.063E-20, 0.059E-20, 0.054E-20, 0.050E-20, 0.045E-20, 0.042E-20, 0.039E-20, &
+    !      0.036E-20 /)
     !----------------------------------------------------------------------
 
     !! provide all rates in SI units
 
     !! initialize all collision rates with zero
-    fin_II = 0. ; fii_II = 0. ; kin_IIII = 0. ; alpha_I = 0. ; v_II = 0.; sigma_e = 0. ; Qexc_II = 0.
+    fin_II = 0. ; fii_II = 0. ; fie_I = 0. ; kin_IIII = 0. ; alpha_I = 0. ; v_II = 0. ; ve_II = 0.
+    sigma_e = 0. ; Qexc_II = 0. ; Qion_II = 0.
 
     !! Ionization rates (add opacity correction/shadowing when needed)
-    v_II(H2O_,Hp_)   = (1.30E-8+3.26E-8)/(rHelio**2) !! Ionization rate producing Hp from H2O & OH [1/s] (Huebner et al. 1992 & estimate)
-    v_II(H_,Hp_)     = 7.30E-8/(rHelio**2) !! Ionization rate producing Hp from H [1/s] (Huebner et al. 1992)
-    v_II(H2O_,H2Op_) = 1.00E-6 !! Gombosi et al., J. Geophys. Res., (1996) 
-    v_II(H_,SW_)     = v_II(H_,Hp_)*1e-9 ! set production of solar wind protons to a small but non-zero value
+    v_II(H2O_,Hp_)   = (1.30E-8+3.26E-8)/(rHelio**2) !! Photoionization rate producing Hp from H2O & OH [1/s] (Huebner et al. 1992)
+    v_II(H_,Hp_)     = 7.30E-8/(rHelio**2)           !! Photoionization rate producing Hp from H [1/s] (Huebner et al. 1992)
+    v_II(H2O_,H2Op_) = vHI                           !! from PARAM.in
+    v_II(H_,SW_)     = v_II(H_,Hp_)*1e-9             !! set production of solar wind protons to a small but non-zero value
 
     !! Electron excess energies from ionization (increases electron pressure)
     Qexc_II(H2O_,Hp_)   = 4.0054E-18 ! 25.0 eV, Huebner 1992
     Qexc_II(H_,Hp_)     = 5.6076E-19 !  3.5 eV, Huebner 1992
     Qexc_II(H2O_,H2Op_) = 1.9226E-18 ! 12.0 eV, Huebner 1992
+
+    !! Ionization potential for electron impact ionization (needs to be delivered by the ionizing electron)
+    Qion_II(H2O_,Hp_)   = 3.70e-18 ! 23.1 eV (estimate) 5.11 eV bond strength OH-H and 4.40 eV O-H and 13.6 eV H-> H+ (Wikipedia)
+    Qion_II(H2O_,H2Op_) = 2.02e-18 ! 12.6 eV Joshipura et al. (2007)
+    Qion_II(H_,Hp_)     = 2.18e-18 ! 13.6 eV
 
     ! ! UV opacity
     J3 = 4.5E14/(rHelio**2) ! J3 = 4.5E14 [m^-2*s^-1]: lambda < 984A solar flux @ 1 AU, Marconi, 1982)
@@ -384,26 +481,52 @@ contains
        !end if
     end if
 
-    !! electron impact ionization rate
-    ueBulk2  = sum(uElec_D(:)**2)                             ! Electron bulk speed qubed in [m^2/s^2]
-    ueTherm2 = 3.*cBoltzmann*Te/(cElectronMass)               ! Electron thermal speed qubed in [m^2/s^2]
-    Ee = 0.5*cElectronMass*(ueBulk2+ueTherm2)/cElectronCharge ! Electron energy in [eV]
-    !! electron impact cross section fitted according to 
-    ! Talukder et al., Empirical model for electron impact ionization cross sections of neutral atoms, The European Physical Journal D
-    if (Ee > 13.) then
-       A = (/ 13.3569, 2457.69, -1910.67, -5405.82, 17242.7, -27453.3, 15429.2 /) ! fit parameters
-       sigma_e(H2O_,H2Op_) = A(2)*log(Ee/A(1))
-       do n=1,5
-          sigma_e(H2O_,H2Op_) = sigma_e(H2O_,H2Op_)+A(n+2)*(1-A(1)/Ee)**n
-       end do
-       sigma_e(H2O_,H2Op_) = 1e-20*1/(Ee*A(1))*sigma_e(H2O_,H2Op_)                ! electron impact cross section in [m^2]
-       if (sigma_e(H2O_,H2Op_).gt.0.) then
-          uiBulk2(H2Op_)  = sum(uIon_DI(:,H2Op_)**2)                                 ! Water bulk speed qubed in [m^2/s^2]
-          uiTherm2(H2Op_) = 3.*cBoltzmann*Ti_I(H2Op_)/(MassIon_I(H2Op_)*cProtonMass) ! Water thermal speed qubed in [m^2/s^2]
-          !! Gombosi book f12=n2*sigma12*sqrt(v1**2+v2**2)                           ! add electron impact ionization rate [1/s]
-          v_II(H2O_,H2Op_) = v_II(H2O_,H2Op_) + nElec*sigma_e(H2O_,H2Op_)*sqrt(ueBulk2+ueTherm2+uiBulk2(H2Op_)+uiTherm2(H2Op_))
-       end if
-    end if
+    log10Te = log10(Te)
+    ! H2O electron impact ionization cross section after Cravens et al. 1987: H2O & e -> H2Op + 2e
+    n = int((log10Te-4.45053516)/0.0415 + 1.0)
+    if (n > 60) n = 60
+    if (n < 1) n = 1
+    ve_II(H2O_,H2Op_) = max(nElec*((log10Te-((n-1.0)*0.0415+4.45053516))/0.0415*(ElImpRate_I(H2O_,n+1)-ElImpRate_I(H2O_,n))+&
+         ElImpRate_I(H2O_,n)),0.0) ! linear interpolation
+    v_II(H2O_,H2Op_) = v_II(H2O_,H2Op_) + ve_II(H2O_,H2Op_) ! v_II is the total ionization rate, photons and electrons!
+    ! TestArray(1,i,j,k,iBlock) = ve_II(H2O_,H2Op_)/v_II(H2O_,H2Op_)
+
+    ! Hydrogen electron impact ionization cross section after Cravens et al. 1987: H & e -> Hp + 2e
+    n = int((log10Te-4.527)/0.0406 + 1.0)
+    if (n > 60) n = 60
+    if (n < 1) n = 1
+    ve_II(H_,Hp_) = max(nElec*((log10Te-((n-1.0)*0.0406+4.527))/0.0406*(ElImpRate_I(H_,n+1)-ElImpRate_I(H_,n))+&
+         ElImpRate_I(H_,n)),0.0) ! linear interpolation
+    v_II(H_,Hp_) = v_II(H_,Hp_) + ve_II(H_,Hp_) ! v_II is the total ionization rate, photons and electrons!
+    ! TestArray(1,i,j,k,iBlock) = ve_II(H_,Hp_)/v_II(H_,Hp_)
+
+    ! Number of energetic electrons (number of equivalent 20 eV electrons)
+    ne20eV_GB(i,j,k,iBlock) = ve_II(H2O_,H2Op_)/(sigmaeh2o*ve)
+
+
+
+    ! ! Evaluate the number of energetic electrons
+    ! ! ! !!Hydrogen electron impact ionization rate: H & e -> Hp + 2e
+    ! ueBulk2  = sum(uElec_D(:)**2)                                ! Electron bulk speed qubed in [m^2/s^2]
+    ! ueTherm2 = 3.*cBoltzmann*Te/(cElectronMass)                  ! Electron thermal speed qubed in [m^2/s^2]
+    ! Ee = 0.5*cElectronMass*(ueBulk2+ueTherm2)/cElectronCharge    ! Electron energy in [eV]
+    ! !! BEQ electron impact cross section from Y.-K. Kim and M.E. Rudd, Phys. Rev. A 50, 3954 (1994)
+    ! n = int((log10(Ee)-1.15286905)/0.0408 + 1.0)
+    ! if (n > 61) n = 61
+    ! if (n < 1) n = 1
+    ! sigma_e(H_,Hp_) = ElCrossSect_I(n)             ! electron impact cross section in [m^2]
+    ! if (n > 1) then
+    !    ne20eV_GB(i,j,k,iBlock) = ve_II(H_,Hp_)/(sigma_e(H_,Hp_)*sqrt(ueBulk2+ueTherm2))
+    ! else
+    !    ne20eV_GB(i,j,k,iBlock) = 0.
+    ! end if
+    ! ! !! Gombosi book f12=n2*sigma12*sqrt(v1**2+v2**2)           
+    ! ! ve_II(H_,Hp_) = nElec*sigma_e(H_,Hp_)*sqrt(ueBulk2+ueTherm2) ! neutral velocity neglected
+    ! ! v_II(H_,Hp_) = v_II(H_,Hp_) + ve_II(H_,Hp_)                  ! v_II is the total ionization rate, photons and electrons!
+    ! ! write(*,*)'Ee = ', Ee, ' Te = ', Te,' ElCrossSect_I(n) = ', ElCrossSect_I(n),' n = ', n
+    ! ! STOP
+
+
 
     !! ********** Ion-neutral collision/charge exchange rates ********** 
     !! Example(s)
@@ -476,6 +599,17 @@ contains
     fii_II(Hp_,SW_) = 1.27*ChargeIon_I(SW_)**2*ChargeIon_I(Hp_)**2/MassIon_I(Hp_)*&
          sqrt(Mred)*1e-6*nIon_I(SW_)/(Tred*sqrt(Tred))
 
+    !! Ion - electron collision rates, reduced mass=~me and reduced temperature=~Te
+    sqrtTe = sqrt(Te)
+    !! H2Op - e, Schunk and Nagy, Ionospheres, Cambridge University Press, 2000
+    fie_I(H2Op_) = 1.27*sqrt(cElectronMass/cProtonMass)/MassIon_I(H2Op_)*ChargeIon_I(H2Op_)**2*nElec/ &
+         1E6/(Te*sqrtTe)      !! rate in [1/s]
+    !! Hp - e, Schunk and Nagy, Ionospheres, Cambridge University Press, 2000
+    fie_I(Hp_) = 1.27*sqrt(cElectronMass/cProtonMass)/MassIon_I(Hp_)*ChargeIon_I(Hp_)**2*nElec/ &
+         1E6/(Te*sqrtTe)      !! rate in [1/s]
+    fie_I(SW_) = 1.27*sqrt(cElectronMass/cProtonMass)/MassIon_I(SW_)*ChargeIon_I(SW_)**2*nElec/ &
+         1E6/(Te*sqrtTe)      !! rate in [1/s]
+
     !! ********** Ion-electron recombination rates ********** 
 
     !! Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
@@ -504,14 +638,16 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, Dt_BLK
+         BlkTest, PROCtest, iteration_number, Dt_BLK
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, RhoUx_, RhoUy_, RhoUz_, &
-         Bx_,By_,Bz_, P_
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass
-    use ModGeometry,   ONLY: r_BLK, Xyz_DGB
+         Bx_,By_,Bz_, P_, Energy_
+    use ModConst,      ONLY: cBoltzmann, cElectronMass, cElectronCharge, cProtonMass
+    use ModGeometry,   ONLY: Rmin_BLK, r_BLK, Xyz_DGB
     use ModCurrent,    ONLY: get_current
-    use ModPhysics
-    use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
+    use ModProcMH,     ONLY: iProc
+    use ModPhysics,    ONLY: SW_Ux, SW_Uy, SW_Uz, UnitN_, UnitRho_, UnitU_, UnitP_, UnitT_, UnitB_, &
+         ElectronPressureRatio, ElectronCharge, Si2No_V, No2Si_V, UnitEnergyDens_, UnitJ_, UnitRhoU_, UnitX_
+    use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, IsPointImplSource
 
     integer, intent(in) :: iBlock
 
@@ -526,19 +662,19 @@ contains
     real, dimension(1:nIonFluid,1:nNeutral,1:nI,1:nJ,1:nK) :: fin_IIC, uIonNeu2_IIC
     real, dimension(1:nNeutral,1:nI,1:nJ,1:nK) :: fen_IC, uNeuElec2_IC
     real, dimension(1:nIonFluid,1:nIonFluid,1:nI,1:nJ,1:nK) :: fii_IIC, uIonIon2_IIC
-    real, dimension(1:nIonFluid,1:nI,1:nJ,1:nK) :: Ti_IC, uIonElec2_IC, fei_IC, nIon_IC, SRho_IC, &
-         SRhoUx_IC, SRhoUy_IC, SRhoUz_IC, SP_IC
-    real, dimension(1:nNeutral,1:nIonFluid) :: Qexc_II
-    real, dimension(1:nNeutral,1:nIonFluid,1:nI,1:nJ,1:nK) :: v_IIC
+    real, dimension(1:nIonFluid,1:nI,1:nJ,1:nK) :: Ti_IC, uIonElec2_IC, fei_IC, fie_IC, &
+         nIon_IC, SRho_IC, SRhoUx_IC, SRhoUy_IC, SRhoUz_IC, SP_IC
+    real, dimension(1:nNeutral,1:nIonFluid) :: Qexc_II, Qion_II
+    real, dimension(1:nNeutral,1:nIonFluid,1:nI,1:nJ,1:nK) :: v_IIC, ve_IIC
     real, dimension(1:nIonFluid,1:nI,1:nJ,1:nK) :: alpha_IC
     real, dimension(1:nIonFluid) :: fiiTot_I, finTot_I, vAdd_I, kinAdd_I, kinSub_I
     real, dimension(1:nIonFluid,1:nNeutral,1:nNeutral,1:nIonFluid,1:nI,1:nJ,1:nK) :: kin_IIIIC
 
     logical :: DoTest, DoTestMe=.true.
     real :: theta, fenTot, feiTot,logTe
-    integer :: i,j,k,iNeutral,jNeutral,iIonFluid,jIonFluid,iTerm
+    integer :: i,j,k,iNeutral,jNeutral,iIonFluid,jIonFluid,iTerm,iDim
 
-
+    real :: a, b, d, l, f=5./8., MaxHeat
     !----------------------------------------------------------------------
 
     ! Do not evaluate any source terms explicitly when running pointimplicit
@@ -550,7 +686,7 @@ contains
     !! Limit region for evaluation for source term evaluation
     !! if(RMin_BLK(iBlock) > 2.) RETURN
 
-    if(iBlock == BlkTest) then
+    if(iBlock == BlkTest.and.iProc==ProcTest) then
        call set_oktest('user_calc_sources',DoTest,DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
@@ -629,26 +765,6 @@ contains
        ! Electron temperature calculated from electron pressure
        ! Ion temperature is calculated from ion pressure
        do k=1,nK; do j=1,nJ; do i=1,nI
-
-
-          !???
-          ! do iIonFluid=1,nIonFluid
-          !    if ((State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock).le.0.).or.(State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock).le.0.)) then
-          !       write(*,*)'Fluid = ',NameFluid_I(iIonFluid+1),'Pi = ',State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock),&
-          !            'Rhoi = ',State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)
-          !       write(*,*)'x = ',Xyz_DGB(x_,i,j,k,iBlock),'y = ',Xyz_DGB(y_,i,j,k,iBlock),'z = ',Xyz_DGB(z_,i,j,k,iBlock),&
-          !            'r   = ',r_BLK(i,j,k,iBlock)
-          !       write(*,*)'i = ',i,'j = ',j,'k = ',k,'iBlock = ',iBlock
-          !    end if
-          ! end do
-          ! if (State_VGB(Pe_,i,j,k,iBlock).le.0.) then
-          !       write(*,*)'Pe = ',State_VGB(Pe_,i,j,k,iBlock)
-          !       write(*,*)'x = ',Xyz_DGB(x_,i,j,k,iBlock),'y = ',Xyz_DGB(y_,i,j,k,iBlock),'z = ',Xyz_DGB(z_,i,j,k,iBlock),&
-          !            'r   = ',r_BLK(i,j,k,iBlock)
-          !       write(*,*)'i = ',i,'j = ',j,'k = ',k,'iBlock = ',iBlock
-          ! end if
-
-
           Ti_IC(1:nIonFluid,i,j,k) = State_VGB(iPIon_I,i,j,k,iBlock)*NO2SI_V(UnitP_)/&
                (cBoltzmann*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*NO2SI_V(UnitN_))
           Te_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock)*NO2SI_V(UnitP_)/(cBoltzmann* &
@@ -666,8 +782,8 @@ contains
     end if
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       ! No need to evaluate source terms for cells between conducting core and surface
-       !!if((R_BLK(i,j,k,iBlock) < PlanetRadius).and.(UseResistivePlanet)) CYCLE
+       ! No need to evaluate source terms for cells inside the body
+       ! if((Body1).and.(R_BLK(i,j,k,iBlock)<rBody)) CYCLE
 
        call get_current(i,j,k,iBlock,Current_DC(:,i,j,k))
 
@@ -675,11 +791,13 @@ contains
        uElec_DC(1:3,i,j,k) = uIonMean_DC(1:3,i,j,k)-Current_DC(1:3,i,j,k)/(nElec_C(i,j,k)*Si2No_V(UnitN_)*&
             ElectronCharge)*No2SI_V(UnitU_)
 
-       call calc_electron_collision_rates(Te_C(i,j,k),i,j,k,iBlock,fen_IC(1:nNeutral,i,j,k),fei_IC(1:nIonFluid,i,j,k))
+       call calc_electron_collision_rates(Te_C(i,j,k),nElec_C(i,j,k),i,j,k,iBlock,fen_IC(1:nNeutral,i,j,k), &
+            fei_IC(1:nIonFluid,i,j,k))
        call user_calc_rates(Ti_IC(1:nIonFluid,i,j,k),Te_C(i,j,k),i,j,k,iBlock,nElec_C(i,j,k),nIon_IC(1:nIonFluid,i,j,k),&
-            fin_IIC(1:nIonFluid,1:nNeutral,i,j,k),fii_IIC(1:nIonFluid,1:nIonFluid,i,j,k),alpha_IC(1:nIonFluid,i,j,k),&
-            kin_IIIIC(1:nIonFluid,1:nNeutral,1:nNeutral,1:nIonFluid,i,j,k),v_IIC(1:nNeutral,1:nIonFluid,i,j,k),uElec_DC(1:3,i,j,k),&
-            uIon_DIC(1:3,1:nIonFluid,i,j,k),Qexc_II(1:nNeutral,1:nIonFluid))
+            fin_IIC(1:nIonFluid,1:nNeutral,i,j,k),fii_IIC(1:nIonFluid,1:nIonFluid,i,j,k),fie_IC(1:nIonFluid,i,j,k),&
+            alpha_IC(1:nIonFluid,i,j,k),kin_IIIIC(1:nIonFluid,1:nNeutral,1:nNeutral,1:nIonFluid,i,j,k),&
+            v_IIC(1:nNeutral,1:nIonFluid,i,j,k),ve_IIC(1:nNeutral,1:nIonFluid,i,j,k),uElec_DC(1:3,i,j,k),&
+            uIon_DIC(1:3,1:nIonFluid,i,j,k),Qexc_II(1:nNeutral,1:nIonFluid),Qion_II(1:nNeutral,1:nIonFluid))
 
        !! Zeroth moment
        !! Sources separated into the terms by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"       
@@ -717,21 +835,16 @@ contains
        !! d(rho_s*u_s)/dt = rho_s*du_s/dt + u_s*drho_s/dt combined from zeroth and first moment by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"
        fiiTot_I = 0. ; finTot_I = 0. ; vAdd_I = 0.
        do iIonFluid=1,nIonFluid                                                                                       !! momentum transfer by ion-ion collisions
-          fiiTot_I(1:nIonFluid) = fiiTot_I(1:nIonFluid)+MassIon_I(iIonFluid)*fii_IIC(1:nIonFluid,iIonFluid,i,j,k)*&   !! ion-ion collisions
+          fiiTot_I(1:nIonFluid) = fiiTot_I(1:nIonFluid)+fii_IIC(1:nIonFluid,iIonFluid,i,j,k)*&                        !! ion-ion collisions
                (uIon_DIC(1,iIonFluid,i,j,k)-uIon_DIC(1,1:nIonFluid,i,j,k))
        end do                                                                                                         !! momentum transfer by ion-neutral collisions
        do iNeutral=1,nNeutral
-          finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+NeutralMass_I(iNeutral)*fin_IIC(1:nIonFluid,iNeutral,i,j,k)*& !! ion-neutral collisions
+          finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+fin_IIC(1:nIonFluid,iNeutral,i,j,k)*&                         !! ion-neutral collisions
                (UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(1,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)* &
                NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*&
                (UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(1,1:nIonFluid,i,j,k))
        end do
-
-       !Current_DC(1,i,j,k) = 0.0001*Si2No_V(UnitJ_)
-       !Current_DC(2,i,j,k) = 1*Si2No_V(UnitJ_)
-       !Current_DC(3,i,j,k) = 1*Si2No_V(UnitJ_)
-
 
        kinAdd_I = 0.
        do iIonFluid=1,nIonFluid
@@ -755,30 +868,24 @@ contains
           SRhoUxTerm_IIC(1,iIonFluid,i,j,k) = SRhoUxTerm_IIC(1,iIonFluid,i,j,k)+sum(SRhoTerm_IIC(1:4,iIonFluid,i,j,k))&
                *uIon_DIC(1,iIonFluid,i,j,k)*Si2No_V(UnitU_)
        end do
-       SRhoUxTerm_IIC(2,1:nIonFluid,i,j,k) = -fei_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)/ElectronCharge* &             !! current dissipation, ion-electron collisions
+       SRhoUxTerm_IIC(2,1:nIonFluid,i,j,k) = -fie_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)/ElectronCharge* &             !! current dissipation, ion-electron collisions
             MassIon_I*nIon_IC(1:nIonFluid,i,j,k)/nElec_C(i,j,k)*Current_DC(1,i,j,k)
-       SRhoUxTerm_IIC(3,1:nIonFluid,i,j,k) = -fei_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*MassIon_I*&
+       SRhoUxTerm_IIC(3,1:nIonFluid,i,j,k) = -fie_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*MassIon_I*&
             nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitN_)*(uIon_DIC(1,1:nIonFluid,i,j,k)-uIonMean_DC(1,i,j,k))*Si2No_V(UnitU_)
        SRhoUxTerm_IIC(4,1:nIonFluid,i,j,k) = nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitRho_)*fiiTot_I(1:nIonFluid)* &    !! ion-ion collisions
-            Si2No_V(UnitU_)/Si2No_V(UnitT_)*cProtonMass
-
-       !if(i==iTest.and.j==jTest.and.k==kTest.and.iBlock==BlkTest) then
-       !   write(*,*)'un-ui     = ',(UnxNeutral_IG(O2_,i-MinI+1,j-MinJ+1,k-MinK+1)- uIon_DIC(1,1,i,j,k))
-       !   write(*,*)'finTot = ',finTot_I(1)
-       !   write(*,*)'ni    = ',nIon_IC(1,i,j,k)
-       !end if
+            Si2No_V(UnitU_)/Si2No_V(UnitT_)*cProtonMass*MassIon_I
        SRhoUxTerm_IIC(5,1:nIonFluid,i,j,k) = nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitRho_)*finTot_I(1:nIonFluid)* &    !! ion neutral collisions
-            Si2No_V(UnitU_)/Si2No_V(UnitT_)
+            Si2No_V(UnitU_)/Si2No_V(UnitT_)*cProtonMass*MassIon_I
 
        !! First moment, y component
        !! Sources separated into the terms by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"
        fiiTot_I = 0. ; finTot_I = 0. ; vAdd_I = 0.
        do iIonFluid=1,nIonFluid                                                                                       !! momentum transfer by ion-ion collisions
-          fiiTot_I(1:nIonFluid) = fiiTot_I(1:nIonFluid)+MassIon_I(iIonFluid)*fii_IIC(1:nIonFluid,iIonFluid,i,j,k)*&   !! ion-ion collisions
+          fiiTot_I(1:nIonFluid) = fiiTot_I(1:nIonFluid)+fii_IIC(1:nIonFluid,iIonFluid,i,j,k)*&                        !! ion-ion collisions
                (uIon_DIC(2,iIonFluid,i,j,k)-uIon_DIC(2,1:nIonFluid,i,j,k))
        end do                                                                                                         !! momentum transfer by ion-neutral collisions
        do iNeutral=1,nNeutral
-          finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+NeutralMass_I(iNeutral)*fin_IIC(1:nIonFluid,iNeutral,i,j,k)*& !! ion-neutral collisions
+          finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+fin_IIC(1:nIonFluid,iNeutral,i,j,k)*&                         !! ion-neutral collisions
                (UnyNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(2,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)* &
                NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*&
@@ -802,31 +909,31 @@ contains
        end do
 
        SRhoUyTerm_IIC(1,1:nIonFluid,i,j,k) = (vAdd_I(1:nIonFluid)/Si2No_V(UnitT_)+ &                                  !! newly photoionized neutrals
-            kinAdd_I(1:nIonFluid)/Si2No_V(UnitT_))*Si2No_V(UnitN_)*MassIon_I* &                               !! new ions from charge exchange
+            kinAdd_I(1:nIonFluid)/Si2No_V(UnitT_))*Si2No_V(UnitN_)*MassIon_I* &                                       !! new ions from charge exchange
             Si2No_V(UnitU_)
        ! Add u_s*drho_s/dt for d(rho_s*u_s)/dt = rho_s*du_s/dt + u_s*drho_s/dt
        do iIonFluid=1,nIonFluid
           SRhoUyTerm_IIC(1,iIonFluid,i,j,k) = SRhoUyTerm_IIC(1,iIonFluid,i,j,k)+sum(SRhoTerm_IIC(1:4,iIonFluid,i,j,k))&
                *uIon_DIC(2,iIonFluid,i,j,k)*Si2No_V(UnitU_)
        end do
-       SRhoUyTerm_IIC(2,1:nIonFluid,i,j,k) = -fei_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)/ElectronCharge* &             !! current dissipation, ion-electron collisions
+       SRhoUyTerm_IIC(2,1:nIonFluid,i,j,k) = -fie_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)/ElectronCharge* &             !! current dissipation, ion-electron collisions
             MassIon_I*nIon_IC(1:nIonFluid,i,j,k)/nElec_C(i,j,k)*Current_DC(2,i,j,k)
-       SRhoUyTerm_IIC(3,1:nIonFluid,i,j,k) = -fei_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*MassIon_I*&
+       SRhoUyTerm_IIC(3,1:nIonFluid,i,j,k) = -fie_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*MassIon_I*&
             nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitN_)*(uIon_DIC(2,1:nIonFluid,i,j,k)-uIonMean_DC(2,i,j,k))*Si2No_V(UnitU_)
        SRhoUyTerm_IIC(4,1:nIonFluid,i,j,k) = nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitRho_)*fiiTot_I(1:nIonFluid)* &    !! ion-ion collisions
-            Si2No_V(UnitU_)/Si2No_V(UnitT_)*cProtonMass
+            Si2No_V(UnitU_)/Si2No_V(UnitT_)*cProtonMass*MassIon_I
        SRhoUyTerm_IIC(5,1:nIonFluid,i,j,k) = nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitRho_)*finTot_I(1:nIonFluid)* &    !! ion neutral collisions
-            Si2No_V(UnitU_)/Si2No_V(UnitT_)
+            Si2No_V(UnitU_)/Si2No_V(UnitT_)*cProtonMass*MassIon_I
 
        !! First moment, z component
        !! Sources separated into the terms by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"
        fiiTot_I = 0. ; finTot_I = 0. ; vAdd_I = 0.
        do iIonFluid=1,nIonFluid                                                                                       !! momentum transfer by ion-ion collisions
-          fiiTot_I(1:nIonFluid) = fiiTot_I(1:nIonFluid)+MassIon_I(iIonFluid)*fii_IIC(1:nIonFluid,iIonFluid,i,j,k)*&   !! ion-ion collisions
+          fiiTot_I(1:nIonFluid) = fiiTot_I(1:nIonFluid)+fii_IIC(1:nIonFluid,iIonFluid,i,j,k)*&                        !! ion-ion collisions
                (uIon_DIC(3,iIonFluid,i,j,k)-uIon_DIC(3,1:nIonFluid,i,j,k))
        end do                                                                                                         !! momentum transfer by ion-neutral collisions
        do iNeutral=1,nNeutral
-          finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+NeutralMass_I(iNeutral)*fin_IIC(1:nIonFluid,iNeutral,i,j,k)*& !! ion-neutral collisions
+          finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+fin_IIC(1:nIonFluid,iNeutral,i,j,k)*&                         !! ion-neutral collisions
                (UnzNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(3,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)* &
                NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*&
@@ -849,22 +956,21 @@ contains
        end do
 
        SRhoUzTerm_IIC(1,1:nIonFluid,i,j,k) = (vAdd_I(1:nIonFluid)/Si2No_V(UnitT_)+ &                                 !! newly photoionized neutrals
-            kinAdd_I(1:nIonFluid)/Si2No_V(UnitT_))*Si2No_V(UnitN_)*MassIon_I* &                              !! new ions from charge exchange
+            kinAdd_I(1:nIonFluid)/Si2No_V(UnitT_))*Si2No_V(UnitN_)*MassIon_I* &                                      !! new ions from charge exchange
             Si2No_V(UnitU_)
        ! Add u_s*drho_s/dt for d(rho_s*u_s)/dt = rho_s*du_s/dt + u_s*drho_s/dt
        do iIonFluid=1,nIonFluid
           SRhoUzTerm_IIC(1,iIonFluid,i,j,k) = SRhoUzTerm_IIC(1,iIonFluid,i,j,k)+sum(SRhoTerm_IIC(1:4,iIonFluid,i,j,k))&
                *uIon_DIC(3,iIonFluid,i,j,k)*Si2No_V(UnitU_)
        end do
-       SRhoUzTerm_IIC(2,1:nIonFluid,i,j,k) = -fei_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)/ElectronCharge* &            !! current dissipation, ion-electron collisions
+       SRhoUzTerm_IIC(2,1:nIonFluid,i,j,k) = -fie_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)/ElectronCharge* &            !! current dissipation, ion-electron collisions
             MassIon_I*nIon_IC(1:nIonFluid,i,j,k)/nElec_C(i,j,k)*Current_DC(3,i,j,k)
-       SRhoUzTerm_IIC(3,1:nIonFluid,i,j,k) = -fei_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*MassIon_I*&
+       SRhoUzTerm_IIC(3,1:nIonFluid,i,j,k) = -fie_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*MassIon_I*&
             nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitN_)*(uIon_DIC(3,1:nIonFluid,i,j,k)-uIonMean_DC(3,i,j,k))*Si2No_V(UnitU_)
        SRhoUzTerm_IIC(4,1:nIonFluid,i,j,k) = nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitRho_)*fiiTot_I(1:nIonFluid)* &   !! ion-ion collisions
-            Si2No_V(UnitU_)/Si2No_V(UnitT_)*cProtonMass
+            Si2No_V(UnitU_)/Si2No_V(UnitT_)*cProtonMass*MassIon_I
        SRhoUzTerm_IIC(5,1:nIonFluid,i,j,k) = nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitRho_)*finTot_I(1:nIonFluid)* &   !! ion neutral collisions
-            Si2No_V(UnitU_)/Si2No_V(UnitT_)
-
+            Si2No_V(UnitU_)/Si2No_V(UnitT_)*cProtonMass*MassIon_I
 
        ! (u_n-u_e)^2 difference in neutral and electron speeds qubed [m^2/s^2]
        do iNeutral=1,nNeutral
@@ -880,11 +986,8 @@ contains
                (uIon_DIC(3,iIonFluid,i,j,k)-uElec_DC(3,i,j,k))**2
        end do
 
-       !alpha_IC(1:nIonFluid,i,j,k) = 0.
-
        !! Second moment
        !! Sources separated into the terms by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"       
-       !!kinAdd_I = 0. ; 
        kinSub_I = 0.
        do iIonFluid=1,nIonFluid
           do jIonFluid=1,nIonFluid
@@ -916,12 +1019,6 @@ contains
 
        SPTerm_IIC(2,1:nIonFluid,i,j,k) = 2.*fiiTot_I(1:nIonFluid)/Si2No_V(UnitT_)*Si2No_V(UnitEnergyDens_)        
 
-       ! if(i==iTest.and.j==jTest.and.k==kTest.and.iBlock==BlkTest) then
-       !    write(*,*)'Ti-Ti     = ',(Ti_IC(2,i,j,k)-Ti_IC(1,i,j,k))
-       !    write(*,*)'fiiTot = ',fiiTot_I(1)
-       !    write(*,*)'ni    = ',nIon_IC(1,i,j,k)
-       ! end if
-
        finTot_I(1:nIonFluid) = 0.                                                                                    !! momentum transfer by ion-neutral collisions
        do iNeutral=1,nNeutral
           finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+fin_IIC(1:nIonFluid,iNeutral,i,j,k)*nIon_IC(1:nIonFluid,i,j,k)*&  
@@ -930,16 +1027,9 @@ contains
        end do
 
        SPTerm_IIC(3,1:nIonFluid,i,j,k) = 2.*finTot_I(1:nIonFluid)/Si2No_V(UnitT_)*Si2No_V(UnitEnergyDens_)
-
-       !if(i==iTest.and.j==jTest.and.k==kTest.and.iBlock==BlkTest) then
-       !   write(*,*)'un-ui     = ',(UnxNeutral_IG(O2_,i-MinI+1,j-MinJ+1,k-MinK+1)- uIon_DIC(1,1,i,j,k))
-       !   write(*,*)'finTot = ',finTot_I(1)
-       !   write(*,*)'ni    = ',nIon_IC(1,i,j,k)
-       !end if
-
-       SPTerm_IIC(4,1:nIonFluid,i,j,k) = 2.*fei_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*nIon_IC(1:nIonFluid,i,j,k)*&
+       SPTerm_IIC(4,1:nIonFluid,i,j,k) = 2.*fie_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*nIon_IC(1:nIonFluid,i,j,k)*&
             cBoltzmann*(Te_C(i,j,k)-Ti_IC(1:nIonFluid,i,j,k))*Si2No_V(UnitEnergyDens_)
-       SPTerm_IIC(5,1:nIonFluid,i,j,k) = 2./3.*fei_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*cElectronMass*&             !! ion-electron collisional exchange (due to Hall velocity)
+       SPTerm_IIC(5,1:nIonFluid,i,j,k) = 2./3.*fie_IC(1:nIonFluid,i,j,k)/Si2No_V(UnitT_)*cElectronMass*&             !! ion-electron collisional exchange (due to Hall velocity)
             nIon_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitRho_)*uIonElec2_IC(1:nIonFluid,i,j,k)*Si2No_V(UnitU_)**2
 
        fiiTot_I(1:nIonFluid) = 0.                                                                                    !! momentum transfer by ion-ion collisions
@@ -978,15 +1068,6 @@ contains
           end do
        end do
 
-
-       !kinAdd_I = 0.
-       !vAdd_I = 0.
-       ! if(i==iTest.and.j==jTest.and.k==kTest.and.iBlock==BlkTest) then
-       !    write(*,*)'un-ui     = ',(UnxNeutral_IG(O2_,i-MinI+1,j-MinJ+1,k-MinK+1)- uIon_DIC(1,1,i,j,k))
-       !    write(*,*)'kinAdd_I  = ',kinAdd_I(2)
-       ! end if
-
-
        SPTerm_IIC(8,1:nIonFluid,i,j,k) = 1./3.*(vAdd_I(1:nIonFluid)/Si2No_V(UnitT_)+kinAdd_I(1:nIonFluid)/Si2No_V(UnitT_))*&
             MassIon_I(1:nIonFluid)*Si2No_V(UnitN_)*Si2No_V(UnitU_)**2
 
@@ -1023,15 +1104,64 @@ contains
           SPeTerm_IC(6,i,j,k) = 2./3.*sum(fen_IC(1:nNeutral,i,j,k)*uNeuElec2_IC(1:nNeutral,i,j,k))/&                      !! electron-neutral collisional exchange (bulk motion)
                Si2No_V(UnitT_)*cElectronMass*nElec_C(i,j,k)*Si2No_V(UnitRho_)*Si2No_V(UnitU_)**2
 
+          ! ! Deriving the heating according to Gan and Cravens 1990
+          ! ! Parabola x=a*d^2+b
+          ! d = sqrt(Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2)*No2SI_V(UnitX_) ! distance d=sqrt(y^2+z^2) from Sun-comet axis [m]
+          ! b = f*d + Xyz_DGB(x_,i,j,k,iBlock)*No2SI_V(UnitX_) ! parabola's vertex point (b, 0.0, 0.0) with f=5/8 estimate for parobola shape
+          ! a = (Xyz_DGB(x_,i,j,k,iBlock)*No2SI_V(UnitX_)-b)/(d**2+1e-9)
+          ! MaxHeat = max(-7.326e-20*b+1.744e-12, 0.0) ! Maximum heating at the parabola's vertex point (b, 0.0, 0.0)
+          ! SPeTerm_IC(7,i,j,k) = MaxHeat 
+          ! l = 0.0 ! path length along the parabola from vertex point
+          ! if (a < 0.) then
+          !    l = (2.*d*sqrt(1.+4.*a**2*d**2)*a+log(2.*a*d+sqrt(4.*a**2*d**2+1.)))/(4.*a)
+          !    if (b > 0.) then
+          !       SPeTerm_IC(7,i,j,k) = min(MaxHeat, 50.29*l**(-1.981))
+          !    else
+          !       SPeTerm_IC(7,i,j,k) = 0.0
+          !    end if
+          ! end if
+          ! ! if ((Xyz_DGB(x_,i,j,k,iBlock)<0.0).and.&
+          ! !     (Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2 < 0.005**2)) then
+          ! !   SPeTerm_IC(7,i,j,k) = 0.
+          ! !end if
+          ! SPeTerm_IC(7,i,j,k) = SPeTerm_IC(7,i,j,k)*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+          ! ! TestArray(1,i,j,k,iBlock) = l
+          ! ! TestArray(2,i,j,k,iBlock) = MaxHeat
+          ! ! TestArray(3,i,j,k,iBlock) = b
+
+          ! if (Xyz_DGB(x_,i,j,k,iBlock) < -160.*(Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2)+0.004) then
+          !    SPeTerm_IC(7,i,j,k) = 0.0
+          !    ! TestArray(1,i,j,k,iBlock) = TestArray(1,i,j,k,iBlock)/3.                                                                                                                                          
+          ! end if
+
+          ! TestArray(1,i,j,k,iBlock) = SPeTerm_IC(7,i,j,k)
+
+          ! ! if(iBlock==BlkTest.and.i==iTest.and.j==jTest.and.k==kTest.and.iProc==ProcTest) then
+          ! !    write(*,*)'x         = ',Xyz_DGB(x_,i,j,k,iBlock)," [rPlanet]"
+          ! !    write(*,*)'y         = ',Xyz_DGB(y_,i,j,k,iBlock)," [rPlanet]"
+          ! !    write(*,*)'z         = ',Xyz_DGB(z_,i,j,k,iBlock)," [rPlanet]"
+          ! !    write(*,*)'l = ', l
+          ! !    write(*,*)'MaxHeat = ', MaxHeat
+          ! !    write(*,*)'b = ', b
+          ! !    write(*,*)'SPeTerm = ', SPeTerm_IC(7,i,j,k)*No2SI_V(UnitEnergyDens_)/No2SI_V(UnitT_)
+          ! ! end if
+
           vAdd_I(1:nIonFluid) = 0.
           do iNeutral=1,nNeutral
-             vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)*ChargeIon_I(1:nIonFluid)* &
-                  NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*Qexc_II(iNeutral,1:nIonFluid)
+             vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+((v_IIC(iNeutral,1:nIonFluid,i,j,k)-&
+                  ve_IIC(iNeutral,1:nIonFluid,i,j,k))*Qexc_II(iNeutral,1:nIonFluid)- &
+                  ve_IIC(iNeutral,1:nIonFluid,i,j,k)*Qion_II(iNeutral,1:nIonFluid))*ChargeIon_I(1:nIonFluid)* &          
+                  NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)
           end do
-          SPeTerm_IC(7,i,j,k) = 2./3.*sum(vAdd_I)*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)                                !! heating of electrons due to ionization excess energy.
+          SPeTerm_IC(7,i,j,k) = 2./3.*sum(vAdd_I)*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)                                ! heating of electrons due to ionization excess energy
 
-          ! TestArray(1,i,j,k,iBlock) = Te_C(i,j,k)
-          ! TestArray(2,i,j,k,iBlock) = nElec_C(i,j,k)
+          SPeTerm_IC(7,i,j,k) = SPeTerm_IC(7,i,j,k)*1./max(1.,((-300.*R_BLK(i,j,k,iBlock)+7.65)*vHI/2e-6))                ! fit to heating ratio of Gan & Cravens 1990
+
+          if (Xyz_DGB(x_,i,j,k,iBlock) < -160.*(Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2)+0.004) then
+             SPeTerm_IC(7,i,j,k) = 0.0
+             ! TestArray(1,i,j,k,iBlock) = TestArray(1,i,j,k,iBlock)/3.                                                                                                                                          
+          end if
+
           logTe = log(Te_C(i,j,k))
           SPeTerm_IC(8,i,j,k) = exp(-188.4701+33.2547*logTe-2.0792*logTe**2+0.0425*logTe**3)                              !! electron cooling due to collisions w/ water vapor
           if(Te_C(i,j,k)<1.5*TnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)) then
@@ -1040,28 +1170,9 @@ contains
           else
              SPeTerm_IC(8,i,j,k)=SPeTerm_IC(8,i,j,k)+4.5e-9
           end if
-          ! TestArray(3,i,j,k,iBlock) = SPeTerm_IC(8,i,j,k)
+
           SPeTerm_IC(8,i,j,k) = -2./3.*NnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)*nElec_C(i,j,k)* &
                SPeTerm_IC(8,i,j,k)/1e6*1.60217733e-19*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)                           
-          ! TestArray(4,i,j,k,iBlock) = SPeTerm_IC(8,i,j,k)
-          ! SPeTerm_IC(8,i,j,k) = 0.
-
-
-          !! Test capping heating in ramp up phase ???
-          ! if (SPeTerm_IC(7,i,j,k) > -SPeTerm_IC(8,i,j,k)) SPeTerm_IC(7,i,j,k) =- SPeTerm_IC(8,i,j,k)
-          ! if (SPeTerm_IC(7,i,j,k) < 0.) SPeTerm_IC(7,i,j,k) = SPeTerm_IC(8,i,j,k)
-
-          !if(iBlock==BlkTest.and.i==iTest.and.j==jTest.and.k==kTest) then
-          ! write(*,*)'vAdd_I = ',sum(vAdd_I)
-          ! write(*,*)'Si2No_V(UnitEnergyDens_) = ',Si2No_V(UnitEnergyDens_)
-          ! write(*,*)'Si2No_V(UnitT_) = ',Si2No_V(UnitT_)
-          ! write(*,*)'NnNeutral_I = ', NnNeutral_IG(:,i-MinI+1,j-MinJ+1,k-MinK+1)
-          ! write(*,*)'Sp3  = ',SPTerm_IIC(3,:,i,j,k)
-          ! write(*,*)'Sp7  = ',SPTerm_IIC(7,:,i,j,k)
-          ! write(*,*)'Spe7 = ',SPeTerm_IC(7,i,j,k)
-          ! write(*,*)'Spe8 = ',SPeTerm_IC(8,i,j,k)
-          !  write(*,*)'Test = ',TestArray(i,j,k,iBlock)
-          !end if
 
        end if
 
@@ -1073,26 +1184,26 @@ contains
        ! SRho_IC(1:nIonFluid,i,j,k) = SRho_IC(1:nIonFluid,i,j,k)+SRhoTerm_IIC(2,1:nIonFluid,i,j,k)
        ! SRho_IC(1:nIonFluid,i,j,k) = SRho_IC(1:nIonFluid,i,j,k)+SRhoTerm_IIC(3,1:nIonFluid,i,j,k)
        ! SRho_IC(1:nIonFluid,i,j,k) = SRho_IC(1:nIonFluid,i,j,k)+SRhoTerm_IIC(4,1:nIonFluid,i,j,k)
-       ! do iTerm=1,5
-       !    SRhoUx_IC(1:nIonFluid,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)+SRhoUxTerm_IIC(iTerm,1:nIonFluid,i,j,k)
-       !    SRhoUy_IC(1:nIonFluid,i,j,k) = SRhoUy_IC(1:nIonFluid,i,j,k)+SRhoUyTerm_IIC(iTerm,1:nIonFluid,i,j,k)
-       !    SRhoUz_IC(1:nIonFluid,i,j,k) = SRhoUz_IC(1:nIonFluid,i,j,k)+SRhoUzTerm_IIC(iTerm,1:nIonFluid,i,j,k)
-       ! end do
-       SRhoUx_IC(1:nIonFluid,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)+SRhoUxTerm_IIC(1,1:nIonFluid,i,j,k)
-       SRhoUy_IC(1:nIonFluid,i,j,k) = SRhoUy_IC(1:nIonFluid,i,j,k)+SRhoUyTerm_IIC(1,1:nIonFluid,i,j,k)
-       SRhoUz_IC(1:nIonFluid,i,j,k) = SRhoUz_IC(1:nIonFluid,i,j,k)+SRhoUzTerm_IIC(1,1:nIonFluid,i,j,k)
+       do iTerm=1,5
+          SRhoUx_IC(1:nIonFluid,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)+SRhoUxTerm_IIC(iTerm,1:nIonFluid,i,j,k)
+          SRhoUy_IC(1:nIonFluid,i,j,k) = SRhoUy_IC(1:nIonFluid,i,j,k)+SRhoUyTerm_IIC(iTerm,1:nIonFluid,i,j,k)
+          SRhoUz_IC(1:nIonFluid,i,j,k) = SRhoUz_IC(1:nIonFluid,i,j,k)+SRhoUzTerm_IIC(iTerm,1:nIonFluid,i,j,k)
+       end do
+       ! SRhoUx_IC(1:nIonFluid,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)+SRhoUxTerm_IIC(1,1:nIonFluid,i,j,k)
+       ! SRhoUy_IC(1:nIonFluid,i,j,k) = SRhoUy_IC(1:nIonFluid,i,j,k)+SRhoUyTerm_IIC(1,1:nIonFluid,i,j,k)
+       ! SRhoUz_IC(1:nIonFluid,i,j,k) = SRhoUz_IC(1:nIonFluid,i,j,k)+SRhoUzTerm_IIC(1,1:nIonFluid,i,j,k)
        ! SRhoUx_IC(1:nIonFluid,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)+SRhoUxTerm_IIC(2,1:nIonFluid,i,j,k)
        ! SRhoUy_IC(1:nIonFluid,i,j,k) = SRhoUy_IC(1:nIonFluid,i,j,k)+SRhoUyTerm_IIC(2,1:nIonFluid,i,j,k)
        ! SRhoUz_IC(1:nIonFluid,i,j,k) = SRhoUz_IC(1:nIonFluid,i,j,k)+SRhoUzTerm_IIC(2,1:nIonFluid,i,j,k)
        ! SRhoUx_IC(1:nIonFluid,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)+SRhoUxTerm_IIC(3,1:nIonFluid,i,j,k)
        ! SRhoUy_IC(1:nIonFluid,i,j,k) = SRhoUy_IC(1:nIonFluid,i,j,k)+SRhoUyTerm_IIC(3,1:nIonFluid,i,j,k)
        ! SRhoUz_IC(1:nIonFluid,i,j,k) = SRhoUz_IC(1:nIonFluid,i,j,k)+SRhoUzTerm_IIC(3,1:nIonFluid,i,j,k)
-       SRhoUx_IC(1:nIonFluid,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)+SRhoUxTerm_IIC(4,1:nIonFluid,i,j,k)
-       SRhoUy_IC(1:nIonFluid,i,j,k) = SRhoUy_IC(1:nIonFluid,i,j,k)+SRhoUyTerm_IIC(4,1:nIonFluid,i,j,k)
-       SRhoUz_IC(1:nIonFluid,i,j,k) = SRhoUz_IC(1:nIonFluid,i,j,k)+SRhoUzTerm_IIC(4,1:nIonFluid,i,j,k)
-       SRhoUx_IC(1:nIonFluid,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)+SRhoUxTerm_IIC(5,1:nIonFluid,i,j,k)
-       SRhoUy_IC(1:nIonFluid,i,j,k) = SRhoUy_IC(1:nIonFluid,i,j,k)+SRhoUyTerm_IIC(5,1:nIonFluid,i,j,k)
-       SRhoUz_IC(1:nIonFluid,i,j,k) = SRhoUz_IC(1:nIonFluid,i,j,k)+SRhoUzTerm_IIC(5,1:nIonFluid,i,j,k)
+       ! SRhoUx_IC(1:nIonFluid,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)+SRhoUxTerm_IIC(4,1:nIonFluid,i,j,k)
+       ! SRhoUy_IC(1:nIonFluid,i,j,k) = SRhoUy_IC(1:nIonFluid,i,j,k)+SRhoUyTerm_IIC(4,1:nIonFluid,i,j,k)
+       ! SRhoUz_IC(1:nIonFluid,i,j,k) = SRhoUz_IC(1:nIonFluid,i,j,k)+SRhoUzTerm_IIC(4,1:nIonFluid,i,j,k)
+       ! SRhoUx_IC(1:nIonFluid,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)+SRhoUxTerm_IIC(5,1:nIonFluid,i,j,k)
+       ! SRhoUy_IC(1:nIonFluid,i,j,k) = SRhoUy_IC(1:nIonFluid,i,j,k)+SRhoUyTerm_IIC(5,1:nIonFluid,i,j,k)
+       ! SRhoUz_IC(1:nIonFluid,i,j,k) = SRhoUz_IC(1:nIonFluid,i,j,k)+SRhoUzTerm_IIC(5,1:nIonFluid,i,j,k)
        do iTerm=1,8
           SP_IC(1:nIonFluid,i,j,k) = SP_IC(1:nIonFluid,i,j,k)+SPTerm_IIC(iTerm,1:nIonFluid,i,j,k)
        end do
@@ -1242,7 +1353,7 @@ contains
        do iIonFluid=1,nIonFluid
           write(*,124)'Ion species     #',iIonFluid,': ',NameFluid_I(iIonFluid+1)," (",&
                MassIon_I(iIonFluid)," amu/",ChargeIon_I(iIonFluid)," e)"
-124       format (A17,I2,A3,A7,A3,F5.1,A5,F5.1,A3)
+124       format (A17,I2,A3,A7,A3,F5.2,A5,F5.1,A3)
           write(*,123)'Ux        = ',uIon_DIC(1,iIonFluid,i,j,k)," [m/s]"
           write(*,123)'Uy        = ',uIon_DIC(2,iIonFluid,i,j,k)," [m/s]"
           write(*,123)'Uz        = ',uIon_DIC(3,iIonFluid,i,j,k)," [m/s]"
@@ -1381,7 +1492,6 @@ contains
                   100.*SPeTerm_IC(7,i,j,k)*Dt_BLK(iBlock)/(State_VGB(Pe_,i,j,k,iBlock)),"%)"
              write(*,123)' SPeT8    = ',SPeTerm_IC(8,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"," (", &
                   100.*SPeTerm_IC(8,i,j,k)*Dt_BLK(iBlock)/(State_VGB(Pe_,i,j,k,iBlock)),"%)"
-             write(*,*)'lr  = ',exp(-188.4701+33.2547*log(Te_C(i,j,k))-2.0792*(log(Te_C(i,j,k)))**2+0.0425*(log(Te_C(i,j,k)))**3)
           else
              write(*,123)'SPe       = ',SPe_C(i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"
              write(*,123)' SPeT1    = ',SPeTerm_IC(1,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"
@@ -1399,6 +1509,7 @@ contains
        do iIonFluid=1,nIonFluid
           write(*,*)NameFluid_I(iIonFluid+1), '&  e'
           write(*,123)'fei       = ',fei_IC(iIonFluid,i,j,k)," [1/s]"
+          write(*,123)'fie       = ',fie_IC(iIonFluid,i,j,k)," [1/s]"
           write(*,123)'|u_ime|   = ',sqrt(uIonElec2_IC(iIonFluid,i,j,k))," [m/s]"
           write(*,123)'alpha     = ',alpha_IC(iIonFluid,i,j,k)," [m^3/s]"
        end do
@@ -1418,7 +1529,8 @@ contains
        do iIonFluid=1,nIonFluid
           do iNeutral=1,nNeutral
              write(*,*)NameFluid_I(iIonFluid+1), '&  ',NameNeutral_I(iNeutral)
-             write(*,123)' v_io     = ',v_IIC(iNeutral,iIonFluid,i,j,k)," [1/s]"
+             write(*,123)' v_phio   = ',v_IIC(iNeutral,iIonFluid,i,j,k)," [1/s]"
+             write(*,123)' v_eio    = ',ve_IIC(iNeutral,iIonFluid,i,j,k)," [1/s]"
              write(*,123)' fin      = ',fin_IIC(iIonFluid,iNeutral,i,j,k)," [1/s]"
              write(*,123)' |u_imn|  = ',sqrt(uIonNeu2_IIC(iIonFluid,iNeutral,i,j,k))," [m/s]"
              write(*,*)' kin (Ion & Neutral-> Neutral & Ion):'
@@ -1446,10 +1558,12 @@ contains
   !========================================================================
 
   subroutine user_update_states(iStage,iBlock)
-    use ModVarIndexes
-    use ModAdvance, ONLY: State_VGB
-    use ModPhysics
-    use ModEnergy
+    use ModAdvance,  ONLY: State_VGB
+    use ModPhysics,  ONLY: SW_N, LowDensityRatio, cBoltzmann, ElectronPressureRatio, Si2No_V, &
+         No2Si_V, UnitN_, UnitP_!, UnitB_
+    use ModEnergy,   ONLY: calc_energy_cell
+    use ModGeometry, ONLY: r_BLK
+
     integer,intent(in) :: iStage, iBlock
     integer :: i,j,k,iIonFluid
 
@@ -1462,11 +1576,10 @@ contains
 
     ! Enforce minimum temperature (pressure), Tmin, if temperatures Ti_IC or Te_C are below
 
-
     do k=1,nK; do j=1,nJ; do i=1,nI
 
        do iIonFluid=1,nIonFluid
-          ! set minimum mass density
+          ! set minimum mass density (and in these locations Ti = Tmin and vi=vbulkplasma)
           if(State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) < SW_n*MassIon_I(iIonFluid)*LowDensityRatio**2) then
              State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) = SW_n*MassIon_I(iIonFluid)*LowDensityRatio**2
              State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock) = State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * &
@@ -1475,8 +1588,25 @@ contains
                   State_VGB(RhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
              State_VGB(iRhoUzIon_I(iIonFluid),i,j,k,iBlock) = State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * &
                   State_VGB(RhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock) = State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)/ &
+                  MassIon_I(iIonFluid)*No2SI_V(UnitN_)*cBoltzmann*Tmin*SI2No_V(UnitP_)
           end if
        end do
+
+       ! ! fix solar wind inside cavity to minimum value
+       ! if(sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)*No2Si_V(UnitB_)**2 < 1e-9**2) then
+       ! if(R_BLK(i,j,k,iBlock)<2.e-5) then
+       !    State_VGB(iRhoIon_I(SW_),i,j,k,iBlock) = SW_n*MassIon_I(SW_)*LowDensityRatio**2
+       !    State_VGB(iRhoUxIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock) * &
+       !         State_VGB(RhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+       !    State_VGB(iRhoUyIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock) * &
+       !         State_VGB(RhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+       !    State_VGB(iRhoUzIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock) * &
+       !         State_VGB(RhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+       !    State_VGB(iPIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock)/ &
+       !         MassIon_I(SW_)*No2SI_V(UnitN_)*cBoltzmann*Tmin*SI2No_V(UnitP_)          
+       ! end if
+
        State_VGB(Rho_,i,j,k,iBlock) = sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
 
        nIon_IC(1:nIonFluid,i,j,k) = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
@@ -1509,13 +1639,100 @@ contains
 
   !========================================================================
 
+  subroutine derive_cell_diffusivity(iBlock, i, j, k, TeSI, nIon_I, nElec, EtaSi)
+    use ModResistivity,  ONLY: Eta0SI
+    use ModAdvance,      ONLY: State_VGB
+    use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
+    use ModPhysics,      ONLY: No2Si_V, UnitP_, UnitN_, UnitTemperature_, ElectronPressureRatio, &
+         UnitB_, UnitRho_
+    use ModConst,        ONLY: cBoltzmann, cElectronMass, cElectronCharge, &
+         cMu, cProtonMass, cPi, cEps!, cLightSpeed, cTwoPi
+    use ModB0,           ONLY: B0_DGB
+    use ModMain,         ONLY: UseB0, iTest, jTest, kTest, BlkTest, ProcTest
+    use ModProcMH,       ONLY: iProc
+
+    integer, intent(in)  :: iBlock, i, j, k
+    real,    intent(in)  :: TeSI
+    real,    intent(in)  :: nIon_I(1:nIonFluid)
+    real,    intent(in)  :: nElec
+    real,    intent(out) :: EtaSi
+
+    real :: EtaSiColl!, EtaSiSpitzer, lnL
+    !    real, save :: SpitzerCoef, EtaPerpSpitzerSi
+    logical, save :: FirstCall = .true.
+    logical :: DoTest, DoTestMe=.true.
+    real :: eeSigma!, B0_D(3)
+    real, dimension(nIonFluid) :: fei_I, eiSigma_I
+    real, dimension(nNeutral)  :: fen_I, enSigma_I
+    integer :: iIonFluid, iNeutral
+
+    !----------------------------------------------------------------------
+
+    if(iBlock==BlkTest.and.i==iTest.and.j==jTest.and.k==kTest.and.iProc==ProcTest) then
+       call set_oktest('derive_cell_diffusivity',DoTest,DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    end if
+
+    ! Spitzer formulation from Stoecker "Taschenbuch der Physik", Verlag "Harri Deutsch"
+    ! lnL = log(1e7*TeSI**1.5/sqrt(nElec))
+    ! EtaSiSpitzer = cElectronCharge**2*lnL/(32.*sqrt(2*cPi/cElectronMass*(cBoltzmann*TeSI)**3)*cEps**2)/cMu
+
+
+    !! Collisional type resisitivity/diffusivity
+    call calc_electron_collision_rates(TeSI,nElec,i,j,k,iBlock,fen_I(1:nNeutral),fei_I(1:nIonFluid))
+    eiSigma_I(1:nIonFluid) = cElectronCharge**2*nElec/((fei_I(1:nIonFluid)+1E-20)*cElectronMass) 
+    enSigma_I(1:nNeutral) = cElectronCharge**2*nElec/((fen_I(1:nNeutral)+1E-20)*cElectronMass)
+    !! Eta_G is calculated from both conductivities using Kirchhoff's rule:
+    !! 1/sigma_tot = 1/eiSigma_I+1/enSigma_I
+    !! The resulting conductivity is close to Spitzer conductivity far from the comet and
+    !! decreases due to abundant electron-neutral collisions close to the nucleus
+    !! EtaSiColl = 1/(sigma_tot*mu_0) magnetic diffusivity [m^2/s]
+    EtaSiColl = (sum(1/eiSigma_I(1:nIonFluid))+sum(1/enSigma_I(1:nNeutral)))/cMu
+    !! Total diffusivity [m^2/s]
+    EtaSi = Eta0SI + EtaSiColl
+
+    ! TestArray(1,i,j,k,iBlock) = EtaSiColl
+    ! TestArray(2,i,j,k,iBlock) = EtaSiSpitzer
+    ! TestArray(3,i,j,k,iBlock) = EtaSiSpitzer/EtaSiColl
+
+    if(DoTestMe) then
+       write(*,*)'derive_cell_diffusivity:'
+       write(*,*)'n_e    = ',nElec," [1/m^3]"
+       write(*,*)'Te     = ',TeSI," [K]"
+       do iIonFluid=1,nIonFluid
+          write(*,*)'e & ',NameFluid_I(iIonFluid+1),':'
+          write(*,*)'s_ei  = ',eiSigma_I(iIonFluid)," [1/(Ohm*m)]"
+       end do
+       do iNeutral=1,nNeutral
+          write(*,*)'e & ',NameNeutral_I(iNeutral),':'
+          write(*,*)'s_en  = ',enSigma_I(iNeutral)," [1/(Ohm*m)]"
+       end do
+       write(*,*)'e & e:'
+       write(*,*)'s_ee  = ',eeSigma," [1/(Ohm*m)]"
+       write(*,*)''
+       write(*,*)'Eta0   = ',Eta0Si," [m^2/s]"
+       write(*,*)'Eta_en = ',sum(1/enSigma_I(1:nNeutral))/cMu," [m^2/s]"
+       write(*,*)'Eta_ei = ',sum(1/eiSigma_I(1:nIonFluid))/cMu," [m^2/s]"
+       write(*,*)'Eta_ee = ',1/eeSigma/cMu," [m^2/s]"
+       write(*,*)'Eta_eX = ',EtaSiColl," [m^2/s]"
+       write(*,*)'EtaTot = ',EtaSi," [m^2/s]"
+       write(*,*)''
+    end if
+
+  end subroutine derive_cell_diffusivity
+
+  !========================================================================
+
   subroutine user_set_resistivity(iBlock, Eta_G)
-    use ModPhysics,     ONLY: No2Si_V, Si2No_V, &
-         UnitN_, UnitX_, UnitT_, UnitP_, ElectronPressureRatio
+
+    use ModPhysics,     ONLY: No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
+         UnitN_, UnitTemperature_, UnitX_, UnitT_, UnitP_, ElectronPressureRatio
     use ModProcMH,      ONLY: iProc
-    use ModMain,        ONLY: ProcTest, BlkTest, iTest, jTest, kTest
+    use ModMain,        ONLY: ProcTest, BlkTest, iTest, jTest, kTest, nBlockMax
     use ModAdvance,     ONLY: State_VGB
-    use ModVarIndexes,  ONLY: Pe_, P_
+    use ModGeometry,    ONLY: Rmin_BLK, R_BLK
+    use ModVarIndexes,  ONLY: Rho_, Pe_, P_
     use ModConst,       ONLY: cMu, cBoltzmann, cElectronMass, cElectronCharge
     use ModMultiFluid,  ONLY: MassIon_I
     use ModResistivity, ONLY: Eta0
@@ -1531,6 +1748,8 @@ contains
     real, dimension(1:nNeutral) :: fen_I
     real, dimension(1:nIonFluid) :: fei_I
     integer :: iIonFluid, iNeutral
+    real :: EtaSi
+
     !---------------------------------------------------------------------
 
     if(iProc==PROCtest .and. iBlock == BlkTest) then
@@ -1559,38 +1778,18 @@ contains
     end if
 
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-       call calc_electron_collision_rates(Te_G(i,j,k),i,j,k,iBlock,fen_I(1:nNeutral),fei_I(1:nIonFluid))
 
-
-       ! classical conductivities due to ion-electron and electron-neutral collisions (1E-20 to avoid div by 0)
-       eiSigma_IG(1:nIonFluid,i,j,k) = cElectronCharge**2*nElec_G(i,j,k)/((fei_I(1:nIonFluid)+1E-20)*cElectronMass) 
-       enSigma_IG(1:nNeutral,i,j,k) = cElectronCharge**2*nElec_G(i,j,k)/((fen_I(1:nNeutral)+1E-20)*cElectronMass)
-
-       !! Eta_G is calculated from both conductivities using Kirchhoff's rule:
-       !! 1/sigma_tot = 1/eiSigma_IG+1/enSigma_IG
-       !! The resulting conductivity is close to Spitzer conductivity far from the comet and
-       !! decreases due to abundant electron-neutral collisions close to the nucleus
-
-       !! Eta_G = 1/(sigma_tot*mu_0) magnetic diffusivity
-       Eta_G(i,j,k) = Eta0 + (sum(1/eiSigma_IG(1:nIonFluid,i,j,k))+sum(1/enSigma_IG(1:nNeutral,i,j,k)))*&
-            SI2No_V(UnitX_)**2/SI2No_V(UnitT_)/cMu
+       call derive_cell_diffusivity(iBlock, i, j, k, Te_G(i,j,k), nIon_IG(1:nIonFluid,i,j,k), nElec_G(i,j,k), EtaSi)
+       Eta_G(i,j,k) = EtaSi*SI2No_V(UnitX_)**2/SI2No_V(UnitT_)
 
     end do; end do; end do
 
     if(DoTestMe) then
+       write(*,*)'user_set_resistivity:'
        write(*,*)'Te    = ',Te_G(iTest,jTest,kTest)," [K]"
        write(*,*)'n_e   = ',nElec_G(iTest,jTest,kTest)," [m^-3]"
-       do iIonFluid=1,nIonFluid
-          write(*,*)'e & ',NameFluid_I(iIonFluid+1),':'
-          write(*,*)'s_ei  = ',eiSigma_IG(iIonFluid,iTest,jTest,kTest)," [1/(Ohm*m)]"
-       end do
-       do iNeutral=1,nNeutral
-          write(*,*)'e & ',NameNeutral_I(iNeutral),':'
-          write(*,*)'s_en  = ',enSigma_IG(iNeutral,iTest,jTest,kTest)," [1/(Ohm*m)]"
-       end do
        write(*,*)'Eta   = ',Eta_G(iTest,jTest,kTest)*No2SI_V(UnitX_)**2/No2SI_V(UnitT_)," [m^2/s]"
     end if
-
 
   end subroutine user_set_resistivity
 
@@ -1603,44 +1802,48 @@ contains
        OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W, &
        EntropyOut)
 
-    use ModPhysics,     ONLY: No2Si_V, UnitP_, UnitN_, ElectronPressureRatio, inv_gm1
-    use ModVarIndexes,  ONLY: nVar, p_
-    use ModConst,       ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
-    use ModAdvance,     ONLY: State_VGB
-    use ModMain,        ONLY: iTest, jTest, kTest, BlkTest
-    use ModResistivity, ONLY: Eta0SI
+    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitX_, ElectronPressureRatio, inv_gm1
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_, ExtraEInt_
+    use ModConst,        ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
+    use ModAdvance,      ONLY: State_VGB
+    use ModMain,         ONLY: ProcTest, iTest, jTest, kTest, BlkTest
+    use ModResistivity,  ONLY: Eta0SI
+    use ModProcMH,       ONLY: iProc
+    use ModGeometry,     ONLY: Xyz_DGB
+    use ModNumConst,     ONLY: cTiny
 
     !------------------------------------------------------------------------
     ! The State_V vector is in normalized units
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in) :: i, j, k, iBlock, iDir
-    real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
-    real, optional, intent(in)  :: TeIn                    ! [K]
-    real, optional, intent(out) :: NatomicOut              ! [1/m^3]
-    real, optional, intent(out) :: AverageIonChargeOut     ! dimensionless
-    real, optional, intent(out) :: EinternalOut            ! [J/m^3]
-    real, optional, intent(out) :: TeOut                   ! [K]
-    real, optional, intent(out) :: PressureOut             ! [Pa]   
-    real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]  
-    real, optional, intent(out) :: GammaOut
-    real, optional, intent(out) :: HeatCondOut             ! [Jm^2/(Ks)]   
-    real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
-    real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]  
-    real, optional, intent(out) :: OpacityPlanckOut_W(nWave)      ! [1/m] 
-    real, optional, intent(out) :: OpacityRosselandOut_W(nWave)   ! [1/m] 
-    real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3] 
+    real, optional, intent(in)  :: EinternalIn                  ! [J/m^3]
+    real, optional, intent(in)  :: TeIn                         ! [K]
+    real, optional, intent(out) :: NatomicOut                   ! [1/m^3]
+    real, optional, intent(out) :: AverageIonChargeOut          ! dimensionless
+    real, optional, intent(out) :: EinternalOut                 ! [J/m^3]
+    real, optional, intent(out) :: TeOut                        ! [K]
+    real, optional, intent(out) :: PressureOut                  ! [Pa]   
+    real, optional, intent(out) :: CvOut                        ! [J/(K*m^3)]  
+    real, optional, intent(out) :: GammaOut                     ! dimensionless
+    real, optional, intent(out) :: HeatCondOut                  ! [W/(m*K)]   
+    real, optional, intent(out) :: IonHeatCondOut               ! [W/(m*K)]
+    real, optional, intent(out) :: TeTiRelaxOut                 ! [1/s]  
+    real, optional, intent(out) :: OpacityPlanckOut_W(nWave)    ! [1/m] 
+    real, optional, intent(out) :: OpacityRosselandOut_W(nWave) ! [1/m] 
+    real, optional, intent(out) :: PlanckOut_W(nWave)           ! [J/m^3] 
     real, optional, intent(out) :: EntropyOut
 
     real, save :: KappaCoeffSI = (cBoltzmann/cElectronCharge)**2/cMu
-    real :: nElec, EtaSI, TeSI!, HeatCond
-    real, dimension(nIonFluid) :: nIon_I, fei_I, eiSigma_I
-    real, dimension(nNeutral) :: fen_I, enSigma_I
-    integer :: iIonFluid, iNeutral
+    real :: nElec, EtaSI, TeSI
+    real, dimension(nIonFluid) :: nIon_I
+    integer :: iIonFluid
     logical :: DoTest, DoTestMe=.true.
+
+    real :: xmin, xmax, HeatCondFactor, widthmax, widthmin, xMaxyz, xMinyz
 
     !----------------------------------------------------------------------
 
-    if(iBlock==BlkTest.and.i==iTest.and.j==jTest.and.k==kTest) then
+    if(iBlock==BlkTest.and.i==iTest.and.j==jTest.and.k==kTest.and.iProc==ProcTest) then
        call set_oktest('user_material_properties',DoTest,DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
@@ -1656,26 +1859,42 @@ contains
     end if
     if(present(CvOut)) CvOut = cBoltzmann*nElec*inv_gm1
     if(present(TeOut)) TeOut = TeSI
-
+    if(present(AverageIonChargeOut).or.present(NatomicOut)) AverageIonChargeOut = nElec/sum(nIon_I(1:nIonFluid))
+    if(present(NatomicOut)) NatomicOut = nElec/AverageIonChargeOut
 
     if(present(HeatCondOut)) then
        !!write(*,*)'iBlock = ',iBlock,'iNeutralBlockLast = ',iNeutralBlockLast
-       if (iBlock.ne.iNeutralBlockLast) then
-          call user_neutral_atmosphere(iBlock)
+
+       xmin =  75000e3*Si2No_V(UnitX_) ! cometopause 75'000 km
+       xmax = 100000e3*Si2No_V(UnitX_) ! cometopause max
+       widthmin = 2.*xmin              ! flaring ratio 2 (Cravens 1989)
+       widthmax = 2.*xmax              ! flaring ratio 2 (Cravens 1989)
+
+       xMaxyz = -(Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2)/widthmax**2*xmax+xmax
+
+       if(Xyz_DGB(x_,i,j,k,iBlock) > xMaxyz) then
+          HeatCondFactor = 0.0
+          HeatCondOut = 0.0
+       else
+          if (iBlock.ne.iNeutralBlockLast) then
+             call user_neutral_atmosphere(iBlock)
+          end if
+
+          call derive_cell_diffusivity(iBlock, i, j, k, TeSI, nIon_I(1:nIonFluid), nElec, EtaSi)
+
+          xMinyz = -(Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2)/widthmin**2*xmin+xmin
+          if (Xyz_DGB(x_,i,j,k,iBlock) < xMinyz) then
+             HeatCondFactor = 1.0
+          else
+             HeatCondFactor=(xMaxyz-Xyz_DGB(x_,i,j,k,iBlock))/(xMaxyz-xMinyz)
+          end if
+          HeatCondOut = TeSI/EtaSI*KappaCoeffSI*HeatCondFactor
        end if
 
-       call calc_electron_collision_rates(TeSI,i,j,k,iBlock,fen_I(1:nNeutral),fei_I(1:nIonFluid))
-       eiSigma_I(1:nIonFluid) = cElectronCharge**2*nElec/((fei_I(1:nIonFluid)+1E-20)*cElectronMass) 
-       enSigma_I(1:nNeutral) = cElectronCharge**2*nElec/((fen_I(1:nNeutral)+1E-20)*cElectronMass)
+       ! TestArray(1,i,j,k,iBlock) = nElec*sqrt(cBoltzmann*TeSi/cElectronMass)*cBoltzmann*TeSI/HeatCondOut
+       ! TestArray(1,i,j,k,iBlock) = HeatCondOut
+       ! TestArray(1,i,j,k,iBlock) = HeatCondFactor
 
-       !! EtaSI is calculated from both conductivities using Kirchhoff's rule:
-       !! 1/sigma_tot = 1/eiSigma_IG+1/enSigma_IG
-       !! The resulting conductivity is close to Spitzer conductivity far from the comet and
-       !! decreases due to abundant electron-neutral collisions close to the nucleus
-
-       !! EtaSI = 1/(sigma_tot*mu_0) magnetic diffusivity [m^2/s]
-       EtaSI = Eta0SI + (sum(1/eiSigma_I(1:nIonFluid))+sum(1/enSigma_I(1:nNeutral)))/cMu
-       HeatCondOut = TeSI/EtaSI*KappaCoeffSI
     end if
 
     if(DoTestMe) then
@@ -1684,16 +1903,9 @@ contains
        write(*,*)'Te     = ',TeSI," [K]"
        if(present(CvOut)) write(*,*)'Cv     = ',CvOut,' [J/(K*m^3)]'
        if(present(HeatCondOut)) then
-          do iIonFluid=1,nIonFluid
-             write(*,*)'e & ',NameFluid_I(iIonFluid+1),':'
-             write(*,*)'s_ei  = ',eiSigma_I(iIonFluid)," [1/(Ohm*m)]"
-          end do
-          do iNeutral=1,nNeutral
-             write(*,*)'e & ',NameNeutral_I(iNeutral),':'
-             write(*,*)'s_en  = ',enSigma_I(iNeutral)," [1/(Ohm*m)]"
-          end do
           write(*,*)'Eta    = ',EtaSI," [m^2/s]"
           write(*,*)'Kappa  = ',HeatCondOut," [W/(m*K)]"
+          write(*,*)'Ffree  = ',nElec*sqrt(cBoltzmann*TeSi/cElectronMass)*cBoltzmann*TeSI," [W/m^2]"
        end if
        write(*,*)''
     end if
@@ -1746,10 +1958,10 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_, &
          ElectronCharge, ElectronPressureRatio
-    use ModVarIndexes, ONLY: P_, Pe_
+    use ModVarIndexes, ONLY: Rho_, P_, Pe_
     use ModConst,      ONLY: cBoltzmann
     use ModCurrent,    ONLY: get_current
     use ModMultiFluid, ONLY: MassIon_I
@@ -1788,6 +2000,14 @@ contains
        !do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           PlotVar_G(i,j,k) = NnNeutral_IG(1,i-MinI+1,j-MinJ+1,k-MinK+1)/1E6
+       end do; end do; end do
+
+    case('nn2')
+       NameIdlUnit = '1/cm^3'
+       NameTecUnit = '[1/cm^3]'
+       !do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          PlotVar_G(i,j,k) = NnNeutral_IG(2,i-MinI+1,j-MinJ+1,k-MinK+1)/1E6
        end do; end do; end do
 
     case('unx1')
@@ -1855,8 +2075,8 @@ contains
              uIonMean_I(1) = uIonMean_I(1)+nIon_I(iIonFluid)* &
                   uIon_I(1,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
           end do
-          PlotVar_G(i,j,k) = uIonMean_I(1)-Current_I(1)/(nElec*Si2No_V(UnitN_)*&
-               ElectronCharge)*No2SI_V(UnitU_)/1E3
+          PlotVar_G(i,j,k) = (uIonMean_I(1)-Current_I(1)/(nElec*Si2No_V(UnitN_)*&
+               ElectronCharge)*No2SI_V(UnitU_))/1E3
        end do; end do; end do
 
     case('uey')
@@ -1873,8 +2093,8 @@ contains
              uIonMean_I(2) = uIonMean_I(2)+nIon_I(iIonFluid)* &
                   uIon_I(2,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
           end do
-          PlotVar_G(i,j,k) = uIonMean_I(2)-Current_I(2)/(nElec*Si2No_V(UnitN_)*&
-               ElectronCharge)*No2SI_V(UnitU_)/1E3
+          PlotVar_G(i,j,k) = (uIonMean_I(2)-Current_I(2)/(nElec*Si2No_V(UnitN_)*&
+               ElectronCharge)*No2SI_V(UnitU_))/1E3
        end do; end do; end do
 
     case('uez')
@@ -1891,14 +2111,21 @@ contains
              uIonMean_I(3) = uIonMean_I(3)+nIon_I(iIonFluid)* &
                   uIon_I(3,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
           end do
-          PlotVar_G(i,j,k) = uIonMean_I(3)-Current_I(3)/(nElec*Si2No_V(UnitN_)*&
-               ElectronCharge)*No2SI_V(UnitU_)/1E3
+          PlotVar_G(i,j,k) = (uIonMean_I(3)-Current_I(3)/(nElec*Si2No_V(UnitN_)*&
+               ElectronCharge)*No2SI_V(UnitU_))/1E3
        end do; end do; end do
 
     case('dt')
        NameIdlUnit = 's'
        NameTecUnit = '[s]'
        PlotVar_G(:,:,:) = Dt_BLK(iBlock)*No2SI_V(UnitT_)
+
+    case('ns')
+       NameIdlUnit = ' '   
+       NameTecUnit = '[ ]'
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          PlotVar_G(i,j,k) = ne20eV_GB(i,j,k,iBlock)
+       end do; end do; end do
        ! case('testarray1')
        !    NameIdlUnit = ' '   
        !    NameTecUnit = '[ ]'
@@ -1927,6 +2154,12 @@ contains
        !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
        !       PlotVar_G(i,j,k) = TestArray(4,i,j,k,iBlock)
        !    end do; end do; end do
+       ! case('fluxlim')
+       !    NameIdlUnit = ' '   
+       !    NameTecUnit = '[ ]'
+       !    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       !       PlotVar_G(i,j,k) = FluxLimited_GB(i,j,k,iBlock)
+       !    end do; end do; end do
     case default
        IsFound = .false.
     end select
@@ -1936,13 +2169,60 @@ contains
 
   end subroutine user_set_plot_var
 
+
+
+  !========================================================================
+
+  subroutine user_preset_conditions(i,j,k,iBlock)
+    ! This is applied as initial conditions and in the upstream boundary for the semi-implicit heat conduction
+    use ModAdvance,  ONLY: P_, Pe_, State_VGB
+    use ModPhysics,  ONLY: SW_N, SW_Ux, SW_Uy, SW_Uz, SW_T_Dim, LowDensityRatio, ElectronPressureRatio, Io2No_V, &
+         UnitTemperature_
+
+    integer,intent(in) :: i, j, k, iBlock
+
+    State_VGB(SwRho_,i,j,k,iBlock)     = SW_n*MassIon_I(SW_)
+    State_VGB(SwRhoUx_,i,j,k,iBlock)   = SW_n*MassIon_I(SW_)*SW_Ux
+    State_VGB(SwRhoUy_,i,j,k,iBlock)   = SW_n*MassIon_I(SW_)*SW_Uy
+    State_VGB(SwRhoUz_,i,j,k,iBlock)   = SW_n*MassIon_I(SW_)*SW_Uz
+    State_VGB(SwP_,i,j,k,iBlock)       = SW_n*SW_T_dim*Io2No_V(UnitTemperature_)
+
+    State_VGB(HpRho_,i,j,k,iBlock)     = SW_n*LowDensityRatio*MassIon_I(Hp_)
+    State_VGB(HpRhoUx_,i,j,k,iBlock)   = SW_n*LowDensityRatio*MassIon_I(Hp_)*SW_Ux
+    State_VGB(HpRhoUy_,i,j,k,iBlock)   = SW_n*LowDensityRatio*MassIon_I(Hp_)*SW_Uy
+    State_VGB(HpRhoUz_,i,j,k,iBlock)   = SW_n*LowDensityRatio*MassIon_I(Hp_)*SW_Uz
+    State_VGB(HpP_,i,j,k,iBlock)       = SW_n*LowDensityRatio*SW_T_dim*Io2No_V(UnitTemperature_)
+
+    State_VGB(H2OpRho_,i,j,k,iBlock)   = SW_n*LowDensityRatio*MassIon_I(H2Op_)
+    State_VGB(H2OpRhoUx_,i,j,k,iBlock) = SW_n*LowDensityRatio*MassIon_I(H2Op_)*SW_Ux
+    State_VGB(H2OpRhoUy_,i,j,k,iBlock) = SW_n*LowDensityRatio*MassIon_I(H2Op_)*SW_Uy
+    State_VGB(H2OpRhoUz_,i,j,k,iBlock) = SW_n*LowDensityRatio*MassIon_I(H2Op_)*SW_Uz
+    State_VGB(H2OpP_,i,j,k,iBlock)     = SW_n*LowDensityRatio*SW_T_dim*Io2No_V(UnitTemperature_)          
+
+    State_VGB(Rho_,i,j,k,iBlock)       = sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
+    State_VGB(RhoUx_,i,j,k,iBlock)     = sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
+    State_VGB(RhoUy_,i,j,k,iBlock)     = sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
+    State_VGB(RhoUz_,i,j,k,iBlock)     = sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+
+    if(UseElectronPressure) then
+       State_VGB(P_,i,j,k,iBlock)      = sum(State_VGB(iPIon_I,i,j,k,iBlock))
+       State_VGB(Pe_,i,j,k,iBlock)     = State_VGB(P_,i,j,k,iBlock)*ElectronPressureRatio
+    else
+       State_VGB(P_,i,j,k,iBlock)      = sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
+            (1.+ElectronPressureRatio)
+    end if
+
+  end subroutine user_preset_conditions
+
   !========================================================================
 
   subroutine user_set_ICs(iBlock)
+    use ModIO,       ONLY: restart
     use ModProcMH,   ONLY: iProc
-    use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest, Body1
+    use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest, Body1_, Body1
     use ModAdvance,  ONLY: P_, Pe_, State_VGB
-    use ModPhysics
+    use ModPhysics,  ONLY: ElectronPressureRatio, No2Si_V, UnitRho_, UnitRhoU_, UnitP_, rBody
+    use ModConst,    ONLY: cBoltzmann
     use ModGeometry, ONLY: R_BLK
 
     integer, intent(in) :: iBlock
@@ -1956,7 +2236,9 @@ contains
        DoTest=.false.; DoTestMe=.false.
     end if
 
-    !call user_neutral_atmosphere(iBlock)
+    !if (iBlock.ne.iNeutralBlockLast) then
+    !   call user_neutral_atmosphere(iBlock)
+    !end if
 
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
        if ((Body1) .and. (R_BLK(i,j,k,iBlock) < Rbody)) then
@@ -1974,39 +2256,8 @@ contains
           !         sum(State_VGB(iPIon_I,i,j,k,iBlock))*(1.+ElectronPressureRatio)
           ! end if
        else
-          ! State_VGB(:,i,j,k,iBlock) = CellState_VI(:,1)
 
-          State_VGB(SwRho_,i,j,k,iBlock)     = SW_n*MassIon_I(SW_)
-          State_VGB(SwRhoUx_,i,j,k,iBlock)   = SW_n*MassIon_I(SW_)*SW_Ux
-          State_VGB(SwRhoUy_,i,j,k,iBlock)   = SW_n*MassIon_I(SW_)*SW_Uy
-          State_VGB(SwRhoUz_,i,j,k,iBlock)   = SW_n*MassIon_I(SW_)*SW_Uz
-          State_VGB(SwP_,i,j,k,iBlock)       = SW_n*SW_T_dim*Io2No_V(UnitTemperature_)
-
-          State_VGB(HpRho_,i,j,k,iBlock)     = SW_n*LowDensityRatio*MassIon_I(Hp_)
-          State_VGB(HpRhoUx_,i,j,k,iBlock)   = SW_n*LowDensityRatio*MassIon_I(Hp_)*SW_Ux
-          State_VGB(HpRhoUy_,i,j,k,iBlock)   = SW_n*LowDensityRatio*MassIon_I(Hp_)*SW_Uy
-          State_VGB(HpRhoUz_,i,j,k,iBlock)   = SW_n*LowDensityRatio*MassIon_I(Hp_)*SW_Uz
-          State_VGB(HpP_,i,j,k,iBlock)       = SW_n*LowDensityRatio*SW_T_dim*Io2No_V(UnitTemperature_)
-
-          State_VGB(H2OpRho_,i,j,k,iBlock)   = SW_n*LowDensityRatio*MassIon_I(H2Op_)
-          State_VGB(H2OpRhoUx_,i,j,k,iBlock) = SW_n*LowDensityRatio*MassIon_I(H2Op_)*SW_Ux
-          State_VGB(H2OpRhoUy_,i,j,k,iBlock) = SW_n*LowDensityRatio*MassIon_I(H2Op_)*SW_Uy
-          State_VGB(H2OpRhoUz_,i,j,k,iBlock) = SW_n*LowDensityRatio*MassIon_I(H2Op_)*SW_Uz
-          State_VGB(H2OpP_,i,j,k,iBlock)     = SW_n*LowDensityRatio*SW_T_dim*Io2No_V(UnitTemperature_)          
-
-          State_VGB(Rho_,i,j,k,iBlock)       = sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-          State_VGB(RhoUx_,i,j,k,iBlock)     = sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-          State_VGB(RhoUy_,i,j,k,iBlock)     = sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-          State_VGB(RhoUz_,i,j,k,iBlock)     = sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
-
-          if(UseElectronPressure) then
-             if(ElectronPressureRatio.le.0.) call stop_mpi('ERROR: Electron Pressure Ratio > 0 for init!')
-             State_VGB(P_,i,j,k,iBlock)      = sum(State_VGB(iPIon_I,i,j,k,iBlock))
-             State_VGB(Pe_,i,j,k,iBlock)     = State_VGB(P_,i,j,k,iBlock)*ElectronPressureRatio
-          else
-             State_VGB(P_,i,j,k,iBlock)      = sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
-                  (1.+ElectronPressureRatio)
-          end if
+          call user_preset_conditions(i,j,k,iBlock)
 
        end if
     end do; end do ; end do
@@ -2056,7 +2307,8 @@ contains
     use ModAdvance,  ONLY: State_VGB
     use ModImplicit, ONLY: StateSemi_VGB, iTeImpl
     use ModSize,     ONLY: nI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
+    use ModPhysics,  ONLY: Si2No_V, UnitTemperature_, SW_n, SW_Ux, SW_Uy, SW_Uz, &
+         LowDensityRatio, ElectronPressureRatio, SW_T_dim, Io2No_V
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*),intent(in)  :: TypeBc
@@ -2072,9 +2324,11 @@ contains
     if(TypeBc == 'usersemi')then
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
 
+          call user_preset_conditions(i,j,k,iBlock)
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, TeOut=TeSi)          
+               i, j, k, iBlock, TeOut=TeSi)
           StateSemi_VGB(iTeImpl,i,j,k,iBlock) = TeSi*Si2No_V(UnitTemperature_)
+
 
        end do; end do; end do
 
@@ -2090,8 +2344,9 @@ contains
 
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModMain,       ONLY: Dt_BLK, BLKtest
+    use ModMain,       ONLY: Dt_BLK, BLKtest, ProcTest
     use ModPhysics,    ONLY: No2SI_V, UnitT_
+    use ModProcMH,     ONLY: iProc
 
     real, intent(out)             :: VarValue
     character (len=*), intent(in) :: TypeVar
@@ -2101,7 +2356,10 @@ contains
     !-------------------------------------------------------------------------
     select case(TypeVar)
     case('dtpnt')
-       VarValue = Dt_BLK(BLKtest)*No2SI_V(UnitT_)
+       ! local time step
+       VarValue = 0.
+       if (iProc == ProcTest) VarValue = Dt_BLK(BLKtest)*No2SI_V(UnitT_)
+
     case default
        VarValue = -7777.0
     end select
@@ -2114,13 +2372,14 @@ contains
 
     use ModSize,         ONLY: x_
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_
-    use ModFaceBoundary, ONLY: TimeBc, FaceCoords_D, &
+    use ModFaceBoundary, ONLY: TimeBc, iFace, jFace, kFace, FaceCoords_D, &
          iBoundary, VarsTrueFace_V
     use ModSolarwind,    ONLY: get_solar_wind_point
+    !    use ModB0,           ONLY: B0_DX
     use ModMain,         ONLY: body1_
     use ModPhysics,      ONLY: LowDensityRatio, SW_Ux, SW_Uy, SW_Uz, SW_n, SW_T_dim, &
-         ElectronPressureRatio, UnitTemperature_, Io2No_V, &
-         NO2SI_V, UnitP_, UnitRho_, UnitU_, UnitB_, UnitN_, &
+         ElectronPressureRatio, UnitTemperature_, Io2No_V, SW_Bx, SW_By, SW_Bz, &
+         NO2SI_V, UnitP_, UnitRho_, UnitRhoU_, UnitU_, UnitB_, UnitN_, Io2SI_V, &
          BodyRho_I, BodyP_I
 
     logical :: FirstCall = .true., DoTest, DoTestMe=.true.
@@ -2180,9 +2439,6 @@ contains
           VarsGhostFace_V(P_)      = sum(VarsGhostFace_V(iPIon_I))*(1.+ElectronPressureRatio)
        end if
 
-       ! ???
-       !CellState_VI(:,iBoundary)=FaceState_VI(:,iBoundary)
-
        !! Body boundaries
     else if (iBoundary <= body1_) then
 
@@ -2214,6 +2470,7 @@ contains
        do iIonFluid=1,nIonFluid
           if (UdotR(iIonFluid) > 0.0) then
              VarsGhostFace_V(iUx_I(iIonFluid):iUz_I(iIonFluid)) = 0.0
+             VarsGhostFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid)) = 0.0
              VarsGhostFace_V(iRhoIon_I(iIonFluid)) = BodyRho_I(iIonFluid)
              VarsGhostFace_V(iPIon_I(iIonFluid)) = BodyP_I(iIonFluid)
           endif
@@ -2278,8 +2535,6 @@ contains
     character (len=*), parameter :: Name='user_set_boundary_cells'
 
     !--------------------------------------------------------------------------
-    ! For inflow in positive x direction
-    ! IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) < x1
     ! For inflow in negative x direction
     IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
 
