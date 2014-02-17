@@ -22,14 +22,10 @@ Plot data from a 3D GITM file for different spatiotemporal coordinates
 '''
 
 # Import modules
-import sys
-import string 
 import math
 import numpy as np
 from spacepy.pybats import gitm
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.cm import get_cmap
 from matplotlib.ticker import FuncFormatter
 import gitm_plot_rout as gpr
 import plot_alt_profiles as pap

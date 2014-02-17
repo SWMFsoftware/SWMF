@@ -38,14 +38,11 @@ model evaluation
 '''
 
 # Import modules
-import string 
 import math
 import numpy as np
 from spacepy.pybats import gitm
 import gitm # Temporary until the new GITM is incorporated into spacepy
 import matplotlib.pyplot as plt
-from matplotlib.cm import get_cmap
-from matplotlib.ticker import MultipleLocator
 import gitm_plot_rout as gpr
 import plot_3D_global as p3g
 
