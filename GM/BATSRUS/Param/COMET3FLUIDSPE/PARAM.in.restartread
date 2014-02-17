@@ -51,6 +51,7 @@ F                       DoFixOuterBoundary
 #COMET
 7.0E29                    Neutral gas production rate [1/s]
 0.9                       Heliocentric distance [AU]
+2.0E-6                    Ionization frequency for cometary heavy ions
 15.0			  Minimum ion temperature (enforced in user_update_states)
 
 #USERINPUTEND ----------------------
