@@ -50,6 +50,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
+from matplotlib.colors import LogNorm
 from matplotlib.ticker import MultipleLocator
 from matplotlib.ticker import FormatStrFormatter
 import datetime as dt
@@ -982,15 +983,24 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
         # Change the background color
         ax.patch.set_facecolor(bcolor)
 
+    # Determine whether the z scale is linear or exponential
+    if zscale.find("exp") >= 0:
+        v = np.logspace(math.log10(zmin), math.log10(zmax), zinc*10,
+                        endpoint=True)
+        norm = LogNorm(vmin=zmin, vmax=zmax)
+    else:
+        v = np.linspace(zmin, zmax, zinc*10, endpoint=True)
+        norm = None
+
     # Plot the data
     if data_type.find("con") >= 0:
-        v = np.linspace(zmin, zmax, 70, endpoint=True)
         con = ax.contourf(lon_data, lat_data, z_data, v, cmap=get_cmap(zcolor),
-                          vmin=zmin, vmax=zmax)
+                          norm=norm, vmin=zmin, vmax=zmax)
         cax = con.ax
     else:
         con = ax.scatter(lon_data, lat_data, c=z_data, cmap=get_cmap(zcolor),
-                         vmin=zmin, vmax=zmax, edgecolors="none", s=15)
+                         norm=norm, vmin=zmin, vmax=zmax, edgecolors="none",
+                         s=15)
         cax = con.axes
 
     if not earth and type(term_datetime) is dt.datetime:
@@ -1197,16 +1207,24 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
             except AttributeError:
                 print rout_name, "AttributeError in Terminator shading"
 
+        # Determine whether the z scale is linear or exponential
+        if zscale.find("exp") >= 0:
+            v = np.logspace(math.log10(zmin), math.log10(zmax), zinc*10,
+                            endpoint=True)
+            norm = LogNorm(vmin=zmin, vmax=zmax)
+        else:
+            v = np.linspace(zmin, zmax, zinc*10, endpoint=True)
+            norm = None
+
         # Plot the data on top of the map
         if data_type.find("con") >= 0:
-            v = np.linspace(zmin, zmax, 70, endpoint=True)
             con = m.contourf(theta, r, z_data, v, cmap=get_cmap(zcolor),
-                             vmin=zmin, vmax=zmax, latlon=True)
+                             norm=norm, vmin=zmin, vmax=zmax, latlon=True)
             cax = con.ax
         else:
             con = m.scatter(theta, r, c=z_data, cmap=get_cmap(zcolor),
-                            vmin=zmin, vmax=zmax, edgecolors="none", s=15,
-                            latlon=True)
+                            norm=norm, vmin=zmin, vmax=zmax, edgecolors="none",
+                            s=15, latlon=True)
             cax = con.axes
         lpad = 20
         x, y = m(list(lon for i in lats), lats)
@@ -1225,21 +1243,29 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
         r = csign * lat_data
         theta = lon_data * np.pi / 180.0
 
+        # Determine whether the z scale is linear or exponential
+        if zscale.find("exp") >= 0:
+            v = np.logspace(math.log10(zmin), math.log10(zmax), zinc*10,
+                            endpoint=True)
+            norm = LogNorm(vmin=zmin, vmax=zmax)
+        else:
+            v = np.linspace(zmin, zmax, zinc*10, endpoint=True)
+            norm = None
+
         # plot the data as a scatter or contour plot
         if data_type.find("con") >= 0:
-            v = np.linspace(zmin, zmax, 70, endpoint=True)
             con = ax.contourf(theta,
                               np.array(gpr.center_polar_cap(abs(center_lat),
                                                             abs(edge_lat),r)),
-                              z_data, v, cmap=get_cmap(zcolor), vmin=zmin,
-                              vmax=zmax)
+                              z_data, v, cmap=get_cmap(zcolor), norm=norm,
+                              vmin=zmin, vmax=zmax)
             cax = con.ax
         else:
             con = ax.scatter(theta,
                              np.array(gpr.center_polar_cap(abs(center_lat),
                                                            abs(edge_lat),r)),
-                             c=z_data, cmap=get_cmap(zcolor), vmin=zmin,
-                             vmax=zmax, edgecolors="none", s=15)
+                             c=z_data, cmap=get_cmap(zcolor), norm=norm,
+                             vmin=zmin, vmax=zmax, edgecolors="none", s=15)
             cax = con.axes
         ax.set_theta_offset(toff)
 
