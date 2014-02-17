@@ -94,35 +94,64 @@ def add_colorbar(contour_handle, zmin, zmax, zinc, orient, scale, name, units):
     import math
     from matplotlib.ticker import FormatStrFormatter, FuncFormatter
 
-    w = np.linspace(zmin, zmax, zinc, endpoint=True)
+    if scale.find("exponential") >= 0:
+        magmin = find_order_of_magnitude(zmin)
+        magmax = find_order_of_magnitude(zmax)
+        expinc = abs(magmin - magmax) + 1
+        w = np.logspace(magmin, magmax, expinc)
+    else:
+        w = np.linspace(zmin, zmax, zinc, endpoint=True)
+
     cb = plt.colorbar(contour_handle, ticks=w, pad=.15, orientation=orient,
                       fraction=.07)
     zscale = max(abs(zmin), abs(zmax))
 
-    if scale.find("exponential") >= 0 or zscale > 1.0e3 or zscale < 1.0e-3:
-        omag = find_order_of_magnitude(zmax)
+    if scale.find("exponential") >= 0:
+        def exp_ticks(x, pos):
+            '''
+            Define ticks so that they use scientific notation
+            '''
+            omag = find_order_of_magnitude(x)
+            lexp = True
+            rord = int(expinc / zinc)
 
-        def scaled_ticks(x, pos):
-            '''
-            Define ticks so that they are scaled by the order of magnitude.
-            The two arguements are the value (x) and the tick position (pos)
-            and are required for this function to be used by FuncFormatter
-            '''
-            tckstr = "{:.1f}".format(x / math.pow(10.0, omag))
+            # If there are too many ticks to label, label half of them
+            if expinc >= 2.0 * zinc and (omag - magmin) % rord != 0:
+                lexp = False
+
+            if x / math.pow(10.0, omag) == 1.0 and lexp is True:
+                tckstr = "10$^{{{:.0f}}}$".format(omag)
+            else:
+                tckstr = ""
             return tckstr
-
-        # Use the previously defined function to scale the ticks
-        cb.formatter = FuncFormatter(scaled_ticks)
-        # Set the label
-        cb.set_label(r'{:s} (${:s} \times 10^{{{:.0f}}}$)'.format(name, units,
-                                                                  omag))
-    else:
-        if zscale < 1.0e1:
-            cb.formatter=FormatStrFormatter('%.2f')
-        else:
-            cb.formatter=FormatStrFormatter('%.0f')
-        # Set the label
+        cb.formatter = FuncFormatter(exp_ticks)
         cb.set_label(r'{:s} (${:s}$)'.format(name, units))
+    else:
+        if zscale > 1.0e3 or zscale < 1.0e-3:
+            omag = find_order_of_magnitude(zmax)
+
+            def scaled_ticks(x, pos):
+                '''
+                Define ticks so that they are scaled by the order of magnitude.
+                The two arguements are the value (x) and the tick position (pos)
+                and are required for this function to be used by FuncFormatter
+                '''
+                tckstr = "{:.1f}".format(x / math.pow(10.0, omag))
+                return tckstr
+
+            # Use the previously defined function to scale the ticks
+            cb.formatter = FuncFormatter(scaled_ticks)
+            # Set the label
+            cb.set_label(r'{:s} (${:s} \times 10^{{{:.0f}}}$)'.format(name,
+                                                                      units,
+                                                                      omag))
+        else:
+            if zscale < 1.0e1:
+                cb.formatter=FormatStrFormatter('%.2f')
+            else:
+                cb.formatter=FormatStrFormatter('%.0f')
+            # Set the label
+            cb.set_label(r'{:s} (${:s}$)'.format(name, units))
 
     # Update the ticks to reflect formatting
     cb.update_ticks()
@@ -149,7 +178,7 @@ def center_polar_cap(rcenter, redge, r):
         return r
 
 def find_data_limits(gDataList, xkey, lat_index=-1, lon_index=-1, alt_index=-2,
-                     inc=6, *args, **kwargs):
+                     inc=6, raw=False, *args, **kwargs):
     '''
     Establish the appropriate axis limits for a list of GitmBin files at
     a particular latitude/longitude index
@@ -160,6 +189,8 @@ def find_data_limits(gDataList, xkey, lat_index=-1, lon_index=-1, alt_index=-2,
            lon_index = longitude index (default -1 for no index)
            alt_index = altitude index (default -2 for no index, -1 for 2D)
            inc       = number of tick incriments (default is 6)
+           raw       = Keep limits (True) or round of data limits to a more
+                       palatable value (False)? (default=False)
     '''
     import math
 
@@ -195,12 +226,11 @@ def find_data_limits(gDataList, xkey, lat_index=-1, lon_index=-1, alt_index=-2,
     xmax = max(hold_max)
     xran = round((xmax-xmin)/inc)
 
-    if(xran != 0.0):
+    if(xran != 0.0 and raw is False):
         xmin = math.floor(float("%.14f" % (xmin / xran))) * xran
         xmax = math.ceil(float("%.14f" % (xmax / xran))) * xran
 
     # Consider physical limits for Latitude and Longitude keys.
-
     if(xkey == "dLat"):
         if(xmin < -90.0):
             xmin = -90.0
