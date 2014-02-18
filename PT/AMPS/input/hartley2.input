@@ -19,7 +19,7 @@ makefile  MPIRUN=mpirun -np 4
 makefile  SPICE=/Users/fougere/SPICE/cspice
 !makefile  SPICE=/Users/vtenishe/SPICE/Toolkit/cspice
 
-makefile ExternalModules= 
+makefile ExternalModules=models/exosphere 
 
 ProjectSourceDirectory=srcHartley2
 
@@ -76,7 +76,7 @@ CouplerMode=ices !!off, ices, swmf
 
 #endSampling
 
-#block ../comet.pl !process settings of the moon module
+#block ../hartley2.pl !process settings of the moon module
   SodiumStickingProbability= Yakshinskiy2005SS !const(1.0)  ! const(?), TemperatureLimit(??), Yakshinskiy2005SS  
   SodiumReemissionFraction=1.0
 
@@ -99,7 +99,7 @@ CouplerMode=ices !!off, ices, swmf
 
   SPICE=off !off !on, off
 
-  ExosphereSamplingMode=off !on, off
+!  ExosphereSamplingMode=off !on, off
 
 !  SimulationStartTime=2008-12-30T00:00:00 
   SimulationStartTime=2009-01-24T00:00:00
