@@ -4,7 +4,7 @@ DEFAULT_TARGET : lib
 
 include ../../Makefile.conf
 
-MAINLIBOBJ = Comet.o Comet_SampleVelocityDistribution.o Comet_SampleSubSolarLimbColumnIntegrals.o  main_lib.o 
+MAINLIBOBJ = Comet.o  main_lib.o 
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)

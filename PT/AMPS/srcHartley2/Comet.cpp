@@ -355,7 +355,7 @@ double Comet::GetTotalProductionRateBjorn(int spec,void *SphereDataPointer){
   //    return 1.0e26; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
 }
 
-bool Comet::GenerateParticlePropertiesBjorn(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+bool Comet::GenerateParticlePropertiesBjorn(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
   double ExternalNormal[3]; 
   int i;
   double rate,TableTotalProductionRate,totalSurface,gamma,SubSolarAngle,ProjectedAngle;
@@ -517,7 +517,7 @@ bool Comet::Radius(double &r,double x){
 }
 
 //bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalRotationBodyData* Nucleus) {
-bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+bool Comet::GenerateParticlePropertiesHartley2(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
   double ExternalNormal[3]; 
   int idim;
   double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
@@ -686,7 +686,7 @@ double Comet::GetTotalProductionRateJet(int spec,void *SphereDataPointer){
 }
 
 //NUCLEUS
-bool Comet::GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+bool Comet::GenerateParticlePropertiesJet(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
   double ExternalNormal[3]; 
   int i,j;
   double total=0.0,TableTotalProductionRate,totalSurface,gamma,gamma2;
@@ -823,7 +823,7 @@ bool Comet::GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *
 
 
 //NUCLEUS
-bool Comet::GenerateParticlePropertiesWaist(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+bool Comet::GenerateParticlePropertiesWaist(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
   double ExternalNormal[3]; 
   int i,j;
   double total=0.0,TableTotalProductionRate,totalSurface,gamma,gamma2;
