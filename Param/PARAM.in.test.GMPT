@@ -1,127 +1,175 @@
-Begin session: 1
-
 #ECHO
-T
-
-#PROGRESS
-1			DnShowProgressShort
-100			DnShowProgressLong
+T			DoEcho
 
 #DESCRIPTION
-Run GM and IE in time accurate mode
+Startup for GM. Solar wind condition based on SC-IH run.
 
 #PLANET
-NONE
+EARTH			NamePlanet
 
-#SAVERESTART
-F		DoSaveRestart
+#STARTTIME
+1998			iYear
+5			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond
+0.0 			FracSecond
 
 #TIMEACCURATE
 F			DoTimeAccurate
 
-#VERBOSE
-10			Verbosity
+#SAVERESTART
+T			DoSaveRestart
+10			DnSaveRestart
+-1.0			DtSaveRestart
 
-#BEGIN_COMP GM ----------------------------------------
+! Start with 1st order scheme and 4 levels of refinemet
+! and do 1 AMR-s at the 300th iteration
 
-#IOUNITS
-NONE
+#BEGIN_COMP GM ----------------------------------------------------------------
 
-#NORMALIZATION
-NONE
+! Check if the block size is correct and the number of blocks are sufficient
+#CHECKGRIDSIZE
+8			nI
+8			nJ
+8			nK
+100			MinBlockALL
 
 #GRID
-4			nRootBlock1
-4			nRootBlock2
-4			nRootBlock3
--100.0			xMin
-100.0			xMax
--100.			yMin
-100.			yMax
--100.			zMin
-100.			zMax
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-5.                   xMin
++5.                   xMax
+-5.                   yMin
++5.                   yMax
+-5.                   zMin
++5.                   zMax
 
-#SAVEPLOT
-3                       nPlotFile
-x=0 VAR idl             StringPlot
-1                      DnSavePlot
--1.			DtSavePlot
-0.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
-bx by bz proc
-g
-y=0 VAR idl             StringPlot
-1                      DnSavePlot
--1.			DtSavePlot
-0.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
-bx by bz proc
-g
-z=0 VAR idl             StringPlot
-1                      DnSavePlot
--1.			DtSavePlot
-0.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
-bx by bz proc
-g
+#INCLUDE
+GM/Param/EARTH/Grid
+
+#GRIDRESOLUTION
+2.0			Resolution
+initial
+
+#AMR
+300			DnRefine
+F			DoAutoRefine
+
+#BODY
+T			UseBody
+2.5			rBody      [rEarth]
+3.5			rCurrents  [rEarth]
+10.0			BodyRhoDim [amu/cc]
+25000.0			BodyTDim   [K]
+
+! This is based on the SC-IH steady state but Bz sign is flipped to northward,
+! the temperature is increased to 250000 K and density is decreased so that
+! the pressure remains constant.
+
+#SOLARWIND
+    11.6                SwRhoDim [amu/cc]
+250000.0                SwTDim   [K]
+  -461.7                SwUxDim  [km/s]
+     0.1                SwUyDim  [km/s]
+     0.1                SwUzDim  [km/s]
+     1.224              SwBxDim  [nT]
+    -0.2                SwByDim  [nT]
+    +0.744              SwBzDim  [nT]
 
 #OUTERBOUNDARY
-float
-float
-float
-float
-float
-float
+outflow			TypeBcEast
+inflow			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
 
-#UNIFORMSTATE
-1.0               Rho		rho
-1.0               Ux		ux
-1.0                Uy		uy
-1.0                Uz		uz
--1.0              Bx		bx
--1.0               By		by
--1.0               Bz		bz
-1.0               P		p
+#TIMESTEPPING
+1			nStage
+0.8			CflExlp
 
-#USERINPUTBEGIN ----------------
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
 
-#WAVE
-5                        Bx		iVar
-500.0                 Width
-0.5                     Amplitude
-200.0                 LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
-0.0                      Phase
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
-#WAVE
-6                        By		iVar
-500.0                 Width
-0.5                     Amplitude
--1.0                 LambdaX
-200.0                    LambdaY
--1.0                    LambdaZ
-0.0                      Phase
+#SAVEPLOT
+2                       nPlotFiles
+3d MHD tec             StringPlot
+200                      DnSavePlot
+-1.			DtSavePlot
+z=0 MHD tec             StringPlot
+200                      DnSavePlot
+-1.			DtSavePlot
 
-#WAVE
-7                        Bz		iVar
-500.0                 Width
-0.5                     Amplitude
--1.0                 LambdaX
--1.0                    LambdaY
-200.0                    LambdaZ
-0.0                      Phase
-
-#USERINPUTEND   ----------------
-#END_COMP GM   ----------------------------------------
+#END_COMP GM ------------------------------------------------------------------
 
 #COUPLE1
 GM			NameComp1
 PT			NameComp2
-1                      DnCouple
+10                      DnCouple
 -1                     Dtcouple
 
 #STOP
-10			MaxIter
--1.0			TimeMax
+100			MaxIteration
+-1.0			tSimulationMax
 
-End session: 1
-#RUN ############################################################
+!#RUN   ########################################################################
 
+! Continue with 2nd order scheme and do 2 more AMRs at iterations 600 and 900
+
+!#BEGIN_COMP GM ---------------------------------------------------------------
+
+!#SCHEME
+!2			nOrder
+!Rusanov			TypeFlux
+!minmod			TypeLimiter
+
+!#END_COMP GM -----------------------------------------------------------------
+
+!#COUPLE1
+!GM			NameComp1
+!PT			NameComp2
+!10                      DnCouple
+!-1                     Dtcouple
+
+!#STOP
+!100			MaxIteration
+!-1.0			tSimulationMax
+
+!#RUN   ########################################################################
+
+!#BEGIN_COMP GM ---------------------------------------------------------------
+
+! Switch off AMR
+!#AMR
+!-1			DnRefine
+
+! Use a sharper limiter
+!#SCHEME
+!2			nOrder
+!Rusanov			TypeFlux
+!mc			TypeLimiter
+!1.2			BetaLimiter
+
+!#END_COMP GM -----------------------------------------------------------------
+
+!#COUPLE1
+!GM			NameComp1
+!PT			NameComp2
+!10                      DnCouple
+!-1                     Dtcouple
+
+!#STOP
+!500			MaxIteration
+!-1.0			tSimulationMax
+
+#END
