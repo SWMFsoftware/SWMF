@@ -89,8 +89,6 @@ subroutine PT_save_restart(TimeSimulation)
 
   character(len=*), parameter :: NameSub='PT_save_restart'
 
-  call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
-
 end subroutine PT_save_restart
 
 !==============================================================================
