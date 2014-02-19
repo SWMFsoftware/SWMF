@@ -69,9 +69,9 @@ const double DebugRunMultiplier=4.0;
 const double rSphere=_RADIUS_(_TARGET_);
 
 
-const double xMaxDomain=400.0; //modeling of the tail
+const double xMaxDomain=5.0; //modeling of the tail
 //const double xMaxDomain=20; //modeling the vicinity of the planet
-const double yMaxDomain=30; //the minimum size of the domain in the direction perpendicular to the direction to the sun
+const double yMaxDomain=5; //the minimum size of the domain in the direction perpendicular to the direction to the sun
 
 
 
