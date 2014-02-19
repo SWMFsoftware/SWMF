@@ -814,6 +814,51 @@ test10_check:
                 > test10_ih.diff)
 		ls -l test10*.diff
 
+### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler
+
+test11:
+	@echo "test11_compile..." > test11_gm.diff
+	@echo "test11_compile..." > test11_pt.diff
+	${MAKE} test11_compile
+	@echo "test11_rundir..." >> test11_gm.diff
+	@echo "test11_rundir..." >> test11_pt.diff
+	${MAKE} test11_rundir
+	@echo "test11_run..." >> test11_gm.diff
+	@echo "test11_run..." >> test11_pt.diff
+	${MAKE} test11_run
+	@echo "test11_check..." >> test11_gm.diff
+	@echo "test11_check..." >> test11_pt.diff
+	${MAKE} test11_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test11_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
+	./Config.pl -o=PT:spice=nospice,application=coupler-test
+	${MAKE} SWMF
+	make PIDL
+
+test11_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.GMPT ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMPT ${TESTDIR}/LAYOUT.in
+
+test11_run:
+	-cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+
+test11_check:
+	-(${SCRIPTDIR}/DiffNum.pl -b -a=1e-27 \
+	        ${TESTDIR}/RESULTS/GM/log_n000001.log \
+		output/test11/GM_log_n000001.log \
+		> test11_gm.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b \
+	        ${TESTDIR}/PT/plots/pic.NA.s=0.out=99.dat \
+		output/test11/pic.NA.s=0.out=99.dat \
+                > test11_pt.diff)
+		ls -l test11*.diff
+
 ### ESMF test ###
 #
 #       Targets for the ESMF compatible executable
