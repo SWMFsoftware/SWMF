@@ -362,6 +362,10 @@ for ($jDayCounter = $startjday; $jDayCounter <= $endjday; $jDayCounter++) {
     # -------------------------------------------------------------
 
     if ($gitm) {
+	if ($euv && length($euv) == 1) {
+	    $command = "cp ".$maindir."FISM/BinnedFiles/".$year."/fismflux".$year.$month.$day.".dat .";       
+	    system $command;                                                                                  
+	}
 
 	if ($jDayCounter == $startjday ||
 	    $jDayCounter == $endjday) {
@@ -590,8 +594,6 @@ for ($jDayCounter = $startjday; $jDayCounter <= $endjday; $jDayCounter++) {
 		    } else {
 			$fismfile = "fismflux$year$month$day.dat";
 		    }
-		    $command = "cp ".$maindir."FISM/BinnedFiles/".$year."/fismflux".$year.$month.$day.".dat .";
-		    system $command;
 		} else {
 		    $fismfile=$euv;
 		}
@@ -600,7 +602,7 @@ for ($jDayCounter = $startjday; $jDayCounter <= $endjday; $jDayCounter++) {
 		print UAM $fismfile."\n";
 		print UAM "\n";
 		push(@tarlist,$fismfile) if ($tar);
-	    }
+	}
 
 #-------------------------------
 # add some satellites
