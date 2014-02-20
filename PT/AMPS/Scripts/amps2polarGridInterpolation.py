@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-call with: python amps2polarGridInterpolation [filename, variable1 variable2 variable3 ...]
+call with: python amps2polarGridInterpolation [filename variable1 variable2 variable3 ... variableN]
 
 filename: path+filename of the amps datafile
 variables: name of the variables to interpolate on the polar grid (must be the same variable name as in the amps datafile)
