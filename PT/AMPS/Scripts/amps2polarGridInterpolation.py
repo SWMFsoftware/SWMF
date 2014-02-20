@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 '''
-call with: python triPlot [filename, variable]
+call with: python amps2polarGridInterpolation [filename, variable1 variable2 variable3 ...]
 
 filename: path+filename of the amps datafile
-variable: name of the variable to interpolate on the polar grid (must be the same variable name as in the amps datafile)
+variables: name of the variables to interpolate on the polar grid (must be the same variable name as in the amps datafile)
 
-reads amps output file specified by filename and interpolates variable
+reads amps output file specified by filename and interpolates  selected variables
 onto a stretched log grid.
 
 number of grid points in radial direction = N_r
