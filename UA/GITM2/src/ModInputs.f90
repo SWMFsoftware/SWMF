@@ -322,6 +322,7 @@ contains
   subroutine set_defaults
 
     use ModTime
+    use ModPlanet, only:IsEarth
 
     call set_strings
 
@@ -334,6 +335,8 @@ contains
     AuroralModel = "ihp"
 
     dTAurora = 120.0
+    
+    if (IsEarth) PhotoElectronHeatingEfficiency = 0.06
 
     tSimulation = 0.0
 
