@@ -68,7 +68,7 @@ void PIC::Debugger::FindDoubleReferencedParticle(cTreeNodeAMR<PIC::Mesh::cDataBl
   long int ptr,ptrNext;
   static long int nAllCountedParticles=0;
 
-  static int* ParticleAllocationTable=NULL;
+  static char* ParticleAllocationTable=NULL;
   static long int* ptrPrevTable=NULL;
 
   if (startNode==NULL) startNode=PIC::Mesh::mesh.rootTree;
@@ -78,7 +78,7 @@ void PIC::Debugger::FindDoubleReferencedParticle(cTreeNodeAMR<PIC::Mesh::cDataBl
     long int cnt=0;
 
     nAllCountedParticles=0;
-    ParticleAllocationTable=new int [PIC::ParticleBuffer::MaxNPart];
+    ParticleAllocationTable=new char [PIC::ParticleBuffer::MaxNPart];
     ptrPrevTable=new long int [PIC::ParticleBuffer::MaxNPart];
 
     //the definition of the bits of ParticleAllocationTable[]
