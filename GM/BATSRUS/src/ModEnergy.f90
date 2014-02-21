@@ -12,8 +12,7 @@ module ModEnergy
        Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
        UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
   use ModPhysics,    ONLY: Gm1, Inv_Gm1, pMin_I
-  use ModVarIndexes, ONLY: Pe_, WaveFirst_, WaveLast_
-  use ModWaves,      ONLY: UseWavePressure
+  use ModVarIndexes, ONLY: Pe_
 
   implicit none
 
@@ -97,18 +96,6 @@ contains
                 end if
              end do; end do; end do
           end if
-          if(UseWavePressure)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                if(IsConserv_CB(i,j,k,iBlock))then
-                   State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                        - gm1*sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-                else
-                   Energy_GBI(i,j,k,iBlock,iFluid) = &
-                        Energy_GBI(i,j,k,iBlock,iFluid) &
-                        + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-                end if
-             end do; end do; end do
-          end if
        end if
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE FLUIDLOOP
@@ -155,12 +142,6 @@ contains
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
                      - StateOld_VCB(Pe_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-          if(UseWavePressure)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
-                     - gm1*sum(StateOld_VCB(WaveFirst_:WaveLast_,i,j,k,iBlock))
              end do; end do; end do
           end if
        end if
@@ -211,13 +192,6 @@ contains
                 EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
                      EnergyOld_CBI(i,j,k,iBlock,iFluid) &
                      + inv_gm1*StateOld_VCB(Pe_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-          if(UseWavePressure)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
-                     EnergyOld_CBI(i,j,k,iBlock,iFluid) &
-                     + sum(StateOld_VCB(WaveFirst_:WaveLast_,i,j,k,iBlock))
              end do; end do; end do
           end if
        end if
@@ -275,12 +249,6 @@ contains
              do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
                 State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                      - State_VGB(Pe_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-          if(UseWavePressure)then
-             do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                     - gm1*sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
              end do; end do; end do
           end if
        end if
@@ -341,13 +309,6 @@ contains
                 Energy_GBI(i,j,k,iBlock,iFluid) = &
                      Energy_GBI(i,j,k,iBlock,iFluid) &
                      + inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-          if(UseWavePressure)then
-             do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-                Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     Energy_GBI(i,j,k,iBlock,iFluid) &
-                     + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
              end do; end do; end do
           end if
        end if
@@ -508,13 +469,6 @@ contains
              Energy_GBI(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock, iFluid) = & 
                   Energy_GBI(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock, iFluid) &
                   + inv_gm1*State_VGB(Pe_,MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)
-          end if
-          if(UseWavePressure)then
-             do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-                Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     Energy_GBI(i,j,k,iBlock,iFluid) &
-                     + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-             end do; end do; end do
           end if
        end if
     end do

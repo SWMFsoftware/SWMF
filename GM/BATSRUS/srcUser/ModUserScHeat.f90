@@ -588,6 +588,7 @@ contains
        else
           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + gm1*CoronalHeating
        end if
+       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + CoronalHeating
 
     end do; end do; end do
 

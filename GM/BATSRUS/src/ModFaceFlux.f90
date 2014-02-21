@@ -2073,8 +2073,6 @@ contains
          do iVar = WaveFirst_, WaveLast_
             Flux_V(iVar) = Factor*StateStar_V(iVar)*Un
          end do
-         Flux_V(Energy_) = Flux_V(Energy_) &
-              + Factor*sum(StateStar_V(WaveFirst_:WaveLast_))*Un
       end if
       if(UseElectronPressure)then
          Flux_V(Pe_) = (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
@@ -2082,10 +2080,7 @@ contains
               + inv_gm1*(Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
       end if
 
-      if(DoRadDiffusion)then
-         Flux_V(Erad_)   = Flux_V(Erad_) + EradFlux
-         Flux_V(Energy_) = Flux_V(Energy_) + EradFlux
-      end if
+      if(DoRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
 
     end subroutine godunov_flux
 
@@ -2280,10 +2275,7 @@ contains
        end if
     end if
 
-    if(DoRadDiffusion)then
-       Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
-       Flux_V(Energy_) = Flux_V(Energy_) + EradFlux
-    end if
+    if(DoRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
     if(DoHeatConduction)then
        if(UseElectronPressure)then
           Flux_V(Pe_) = Flux_V(Pe_) + gm1*HeatFlux
@@ -2350,7 +2342,6 @@ contains
             Ew = sum(State_V(WaveFirst_:WaveLast_))
          end if
          pTotal = pTotal + (GammaWave - 1)*Ew
-         if(nIonFluid == 1 .and. iFluid == 1) e = e + Ew
       end if
 
       ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
@@ -2460,7 +2451,6 @@ contains
             Ew = sum(State_V(WaveFirst_:WaveLast_))
          end if
          pTotal = pTotal + (GammaWave - 1)*Ew
-         if(nIonFluid == 1 .and. iFluid == 1) e = e + Ew
       end if
 
       ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
@@ -2606,14 +2596,10 @@ contains
          do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
             Flux_V(iVar) = (Un + AlfvenSpeed)*State_V(iVar) !!PLUS
          end do
-         Flux_V(Energy_) = Flux_V(Energy_) + AlfvenSpeed &
-              *sum(State_V(AlfvenWavePlusFirst_:AlfvenWavePlusLast_))
 
          do iVar = AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_
             Flux_V(iVar) = (Un - AlfvenSpeed)*State_V(iVar) !!MINUS
          end do
-         Flux_V(Energy_) = Flux_V(Energy_) - AlfvenSpeed &
-              *sum(State_V(AlfvenWaveMinusFirst_:AlfvenWaveMinusLast_))
       end if
 
       if(UseBorisSimple)then
@@ -2708,7 +2694,6 @@ contains
          if(UseWavePressure)then
             Ew = sum(State_V(WaveFirst_:WaveLast_))
             pTotal = pTotal + (GammaWave - 1)*Ew
-            e = e + Ew
          end if
       end if
 

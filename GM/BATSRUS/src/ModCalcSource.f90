@@ -51,7 +51,7 @@ contains
     integer, intent(in):: iBlock
 
     integer :: i, j, k, iVar
-    real :: Pe, DivU
+    real :: Pe, Pwave, DivU
     real :: Coef
 
     ! Variable for B0 source term
@@ -224,18 +224,20 @@ contains
           ! Store div U so it can be used in ModWaves
           DivU_C(i,j,k) = DivU
 
+          Pwave = (GammaWave - 1) &
+               *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+
           do iVar = WaveFirst_, WaveLast_
              Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
                   - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
           end do
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
 
           ! Add "geometrical source term" p/r to the radial momentum equation
           ! The "radial" direction is along the Y axis
           ! NOTE: here we have to use signed radial distance!
-          if(IsRzGeometry) &
-               Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-               + sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)) &
-               *(GammaWave - 1)/Xyz_DGB(Dim2_,i,j,k,iBlock)
+          if(IsRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+               + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
        end do; end do; end do
 
        if(UseTurbulentCascade)then
@@ -286,8 +288,6 @@ contains
              Source_VC(WaveFirst_:WaveLast_,i,j,k) = &
                   Source_VC(WaveFirst_:WaveLast_,i,j,k) &
                   - WaveDissipation_VC(:,i,j,k)
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                  - sum(WaveDissipation_VC(:,i,j,k))
           end do; end do; end do
        end if
 
