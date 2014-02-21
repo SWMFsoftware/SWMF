@@ -1164,7 +1164,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
 
     }
 
-    PIC::ParticleBuffer::DeleteParticle(ptr);
+//    PIC::ParticleBuffer::DeleteParticle(ptr);
     ReturnCode=_PARTICLE_DELETED_ON_THE_FACE_;
 
     break;
