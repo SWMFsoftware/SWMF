@@ -565,21 +565,78 @@ namespace PIC {
 
     //==========================================================
     //get the particle's species ID
+    //the first 7 bits will be used for specie ID, the last 8th bit will be used to control wether the particle is allocated or not
 
     inline unsigned int GetI(byte* ParticleDataStart) {
-      return *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_));
+      return ((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
     }
 
     inline unsigned int GetI(long int ptr) {
-      return *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_));
+      return ((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
     }
 
     inline void SetI(int spec,byte* ParticleDataStart) {
-      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=(unsigned char)spec;
+      unsigned char flag,t=spec;
+
+      flag=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x80);
+      t|=flag;
+
+      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
     }
 
     inline void SetI(int spec,long int ptr) {
-      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=(unsigned char)spec;
+      unsigned char flag,t=spec;
+
+      flag=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x80);
+      t|=flag;
+
+      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
+    }
+
+    inline bool IsParticleAllocated(byte* ParticleDataStart) {
+      unsigned char flag;
+
+      flag=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x80);
+      return (flag==0) ? false : true;
+    }
+
+    inline bool IsParticleAllocated(long int ptr) {
+      unsigned char flag;
+
+      flag=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x80);
+      return (flag==0) ? false : true;
+    }
+
+    inline void SetParticleDeleted(byte* ParticleDataStart) {
+      unsigned char t;
+
+      t=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
+      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
+    }
+
+    inline void SetParticleDeleted(long int ptr) {
+      unsigned char t;
+
+      t=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
+      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
+    }
+
+    inline void SetParticleAllocated(byte* ParticleDataStart) {
+      unsigned char t;
+
+      t=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
+      t|=0x80;
+
+      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
+    }
+
+    inline void SetParticleAllocated(long int ptr) {
+      unsigned char t;
+
+      t=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
+      t|=0x80;
+
+      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
     }
 
     //==========================================================
@@ -1856,6 +1913,14 @@ namespace PIC {
 
      //Latency of the run
      extern double Latency;
+  }
+
+  namespace Debugger {
+    //contains functions that are used for debugging the code
+
+    //InfiniteLoop==false ==> no problem found; InfiniteLoop==true => the actual number of particles does not consider the that in teh particle buffer
+    bool InfiniteLoop(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
+    void FindDoubleReferencedParticle(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
   }
 
   namespace Alarm {
