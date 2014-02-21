@@ -30,6 +30,7 @@ void PIC::ParticleBuffer::Init(long int BufrerLength) {
 
   //init the list of particles in the buffer
   for (long int ptr=0;ptr<MaxNPart-1;ptr++) SetNext(ptr+1,ptr);
+  SetNext(-1,MaxNPart-1);
   FirstPBufferParticle=0;
 
 }
@@ -70,6 +71,11 @@ long int PIC::ParticleBuffer::GetNewParticle() {
   SetPrev(-1,pdataptr);
   SetNext(-1,pdataptr);
 
+//#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  if (IsParticleAllocated(pdataptr)==true) exit(__LINE__,__FILE__,"Error: the particle is re-allocated");
+  SetParticleAllocated(pdataptr);
+//#endif
+
   return newptr;
 }
 
@@ -97,6 +103,11 @@ long int PIC::ParticleBuffer::GetNewParticle(long int &ListFirstParticle) {
     SetNext(ListFirstParticle,pdataptr);
   }
 
+//#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  if (IsParticleAllocated(pdataptr)==true) exit(__LINE__,__FILE__,"Error: the particle is re-allocated");
+  SetParticleAllocated(pdataptr);
+//#endif
+
   ListFirstParticle=newptr;
   return newptr;
 }
@@ -121,6 +132,12 @@ void PIC::ParticleBuffer::ExcludeParticleFromList(long int ptr,long int& ListFir
 
 
 void PIC::ParticleBuffer::DeleteParticle(long int ptr) {
+
+//#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  if (IsParticleAllocated(ptr)==false) exit(__LINE__,__FILE__,"Error: the particle is re-deleted");
+  SetParticleDeleted(ptr);
+//#endif
+
   NAllPart--;
   SetNext(FirstPBufferParticle,ptr);
   FirstPBufferParticle=ptr;
