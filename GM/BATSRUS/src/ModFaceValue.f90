@@ -1458,10 +1458,15 @@ contains
                   ! Calculate the non-linear weight for face flux interpolation.
                   if(UseFluxLimiter) then
                      do iFace = 1, nIFace
-                        Weight_IVX(1,iVar,iFace,j,k) = FluxLimiterCrit/ &
-                             max(FluxLimiterCrit,Smooth_II(1,iFace-1),Smooth_II(1, iFace))
-                        Weight_IVX(2,iVar,iFace,j,k) = FluxLimiterCrit/ &
-                             max(FluxLimiterCrit,Smooth_II(2,iFace-1),Smooth_II(2, iFace))            
+                        Weight_IVX(1,iVar,iFace,j,k) = &
+                             min(1.0,Smooth_II(1,iFace-1), Smooth_II(1,iFace))
+
+                        !FluxLimiterCrit/ &
+                        !max(FluxLimiterCrit,Smooth_II(1,iFace-1),Smooth_II(1, iFace))
+                        Weight_IVX(2,iVar,iFace,j,k) = &
+                             min(1.0,Smooth_II(2,iFace-1), Smooth_II(2,iFace-1))
+                        !FluxLimiterCrit/ &
+                        !max(FluxLimiterCrit,Smooth_II(2,iFace-1),Smooth_II(2, iFace))            
                      enddo
                   end if
 
@@ -1613,10 +1618,14 @@ contains
 
                   if(UseFluxLimiter) then
                      do jFace = 1, nJFace
-                        Weight_IVY(1,iVar,i,jFace,k) = FluxLimiterCrit/ &
-                             max(FluxLimiterCrit,Smooth_II(1,jFace-1),Smooth_II(1, jFace))
-                        Weight_IVY(2,iVar,i,jFace,k) = FluxLimiterCrit/ &
-                             max(FluxLimiterCrit,Smooth_II(2,jFace-1),Smooth_II(2, jFace))
+                        Weight_IVY(1,iVar,i,jFace,k) = &
+                             min(1.0,Smooth_II(1,jFace), Smooth_II(1,jFace))
+                        !FluxLimiterCrit/ &
+                             !max(FluxLimiterCrit,Smooth_II(1,jFace-1),Smooth_II(1, jFace))
+                        Weight_IVY(2,iVar,i,jFace,k) = &
+                             min(1.0,Smooth_II(2,jFace), Smooth_II(2,jFace))
+                             !FluxLimiterCrit/ &
+                             !max(FluxLimiterCrit,Smooth_II(2,jFace-1),Smooth_II(2, jFace))
                      enddo
                   end if
 
@@ -3087,13 +3096,6 @@ contains
        ISmax = maxval(ISLocal_I(1:3))
        ISLocal_I(4) = IsMax
 
-       if(UseFluxLimiter) then
-          c1 = 1./(max(Cell,1.e-3)**2)
-          ! Smooth indicator for [x(l-1), x(l+1)].
-          Smooth_II(1,l) = ISLocal_I(2)*c1
-          ! Smooth indicator for [x(l-2),x(l+2)].
-          Smooth_II(2,l)  = ISmax*c1
-       endif
 
        ! This expression is from G. Capdeville's code
        Epsilon = sqrt(((ISmin + 1e-12)/(ISmax + 1e-12))**3)
@@ -3113,6 +3115,18 @@ contains
        w2 = Weight_I(2)
        w3 = Weight_I(3)
        w4 = Weight_I(4)
+
+       if(UseFluxLimiter) then
+          c1 = 1./(max(abs(Cell), abs(Cellm), abs(Cellp),1.e-3)**2)
+          ! c1 = 1./(max(abs(Cell), 1.e-3))**2
+          ! Smooth indicator for [x(l-1), x(l+1)].
+          Smooth_II(1,l) = w2/LinearCoeff_I(2) !ISLocal_I(2)*c1
+
+          c1 = 1./(max(abs(Cell), abs(Cellm), abs(Cellp),&
+               abs(Cellmm), abs(Cellpp), 1.e-3)**2)
+          ! Smooth indicator for [x(l-2),x(l+2)].
+          Smooth_II(2,l)  = w4/LinearCoeff_I(4) !ISmax*c1
+       endif
 
        if(UseFDFaceFlux) then
           WeightL_II(-2,l) = c3over8*w1 - c3over64*w4
