@@ -362,6 +362,8 @@ void PIC::Sampling::Sampling() {
 
   double *sampledVelocityOffset,*sampledVelocity2Offset;
 
+  //the total number of the sampled particles to compare with the number of the partticles in the buffer
+  long int nTotalSampledParticles=0;
 
   //temporary buffer for sampled data
   char  tempSamplingBuffer[PIC::Mesh::sampleSetDataLength]; //[320];
@@ -521,6 +523,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
             while (ptrNext!=-1) {
               ptr=ptrNext;
               ParticleData=ParticleDataNext;
+              nTotalSampledParticles++;
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
               TreeNodeTotalParticleNumber++;
@@ -764,6 +767,10 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::SampleDistributionFnction();
 #endif
+
+
+  //check if the number of sampled particles coinsides with the number of particles in the buffer
+  if (nTotalSampledParticles!=ParticleBuffer::GetAllPartNum()) exit(__LINE__,__FILE__,"The number of the sampled particles is different from that in the particel buffer");
 
   //Increment the sample length
   CollectingSampleCounter++;
