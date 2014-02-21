@@ -68,6 +68,8 @@ extern "C" {
   void amps_timestep_(double* TimeSimulation, double* TimeSimulationLimit) {
     static bool InitFlag=false;
 
+    *TimeSimulation=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
+
     if (InitFlag==false) {
       //initamps_();
 
