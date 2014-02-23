@@ -41,6 +41,11 @@ extern "C" {
   void amps_get_center_point_number(int*);
   void amps_get_center_point_coordinates(double*);
 
+  //return the number of the AMPS' mesh rebalancing operations
+  void amps_mesh_id_(int* id) {
+    *id=PIC::Mesh::mesh.nParallelListRedistributions;
+  }
+
   void amps_setmpicommunicator_(signed int* iComm,signed int* iProc,signed int* nProc) {
     PIC::CPLR::SWMF::ConvertMpiCommunicatorFortran2C(iComm,iProc,nProc);
 
@@ -67,8 +72,19 @@ extern "C" {
 
   void amps_timestep_(double* TimeSimulation, double* TimeSimulationLimit) {
     static bool InitFlag=false;
+    static double swmfTimeSimulation=-1.0;
 
-    *TimeSimulation=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
+    if (swmfTimeSimulation<0.0) swmfTimeSimulation=*TimeSimulation;
+
+    if (swmfTimeSimulation+PIC::ParticleWeightTimeStep::GlobalTimeStep[0]>*TimeSimulationLimit) {
+      *TimeSimulation=*TimeSimulationLimit;
+      return;
+    }
+    else {
+      swmfTimeSimulation+=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
+      *TimeSimulation=swmfTimeSimulation;
+    }
+
 
     if (InitFlag==false) {
       //initamps_();
