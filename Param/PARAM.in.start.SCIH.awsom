@@ -137,9 +137,8 @@ turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
 
-The stochastic heating parameter is in the range [0,0.34]
 #HEATPARTITIONING
-0.17			StochasticHeating
+0.34			StochasticHeating
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
@@ -434,7 +433,7 @@ T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
 
 #HEATPARTITIONING
-0.17			StochasticHeating
+0.34			StochasticHeating
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
