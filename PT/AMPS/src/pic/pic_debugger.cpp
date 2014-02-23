@@ -124,7 +124,7 @@ void PIC::Debugger::FindDoubleReferencedParticle(cTreeNodeAMR<PIC::Mesh::cDataBl
         }
 
         if ((ParticleAllocationTable[ptr]&2)==2) {
-          printf("Error: the first particle in the list is referenced: %ld --> %ld\n%ld --> %ld\n",ptrPrevTable[ptr],ptr);
+          printf("Error: the first particle in the list is referenced: %ld --> %ld\n%ld --> %ld\n",ptr,ptrNext,ptrPrevTable[ptr],ptr);
           exit(__LINE__,__FILE__,"Error: the first particle in the list is referenced");
         }
         else ParticleAllocationTable[ptr]|=2;
