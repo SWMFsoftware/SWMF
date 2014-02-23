@@ -126,6 +126,8 @@ subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
   nDimOut    = 3
   iGridOut   = 1
   iDecompOut = 1
+  
+  call amps_mesh_id(iDecompOut)
 
 end subroutine PT_get_grid_info
 !==============================================================================
