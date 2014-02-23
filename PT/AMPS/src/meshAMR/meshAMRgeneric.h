@@ -1570,6 +1570,9 @@ public:
      //set the defaul value of the diagnostic stream
      DiagnospticMessageStream=stdout;
 
+     //the counter of the load re-balancing operations
+     nParallelListRedistributions=0;
+
      //set up the tree and the root block
      rootBlock=NULL;
      rootTree=NULL;
@@ -8875,12 +8878,18 @@ if (TmpAllocationCounter==2437) {
   }
 */
 
+
+  long int nParallelListRedistributions;
+
   void CreateNewParallelDistributionLists(int userDefinedCodeForSendingBlockData=-1) {
     double LoadMeasureNormal;
     long int nTotalBlocks,nResolutionLevelBlocks[_MAX_REFINMENT_LEVEL_+1];
     int i,nLevel;
 
     static cTreeNodeAMR<cBlockAMR> *startNodeFillingCurve=NULL;
+
+    //increment the counter of the load redistributions
+    nParallelListRedistributions++;
 
     //calculate and normalized the load measure
     for (nLevel=0;nLevel<=_MAX_REFINMENT_LEVEL_;nLevel++) nResolutionLevelBlocks[nLevel]=0;
