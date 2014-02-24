@@ -275,6 +275,7 @@ contains
           call GM_find_points(nDim, nPointPt, PosPt_DI, iProcPt_I)
 
           ! Order points according to the owner processor indexes
+          if(allocated(iPointPt_I)) deallocate(iPointPt_I)
           allocate(iPointPt_I(nPointPt))
           call get_buffer_order(nProcGmPt, nPointPt, iProcPt_I, &
                nPointPt_P, iPointPt_I, nData)
@@ -294,6 +295,7 @@ contains
                nPointPt_P, nPointGm, nPointGm_P)
 
           ! Transfer PT positions to the GM processors that own them
+          if(allocated(PosGm_DI)) deallocate(PosGm_DI)
           allocate(PosGm_DI(nDim,nPointGm))
           call transfer_buffer(iCommGmPt, nProcGmPt, iProcGmPt, nDim, &
                nData,    nPointPt_P, PosSortPt_DI, &
@@ -393,6 +395,7 @@ contains
 
           ! Allocate buffer for positions on GM (zero size on PT) 
           if(is_proc(GM_)) nPointGm = sum(nCouplePointGm_I)
+          if(allocated(PosGm_DI)) deallocate(PosGm_DI)
           allocate(PosGm_DI(nDim, nPointGm))
 
           ! Send PT point positions to the owner GM processors
