@@ -356,7 +356,7 @@ contains
   !===========================================================================
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
 
-    use ModAdvance,  ONLY: TypeFlux => FluxType
+    use ModAdvance,  ONLY: TypeFlux => FluxType, UseNonconservative
     use ModParallel, ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModMain, ONLY: nIFace, nJFace, nKFace, &
@@ -572,7 +572,7 @@ contains
               .and. jFace == jTest .and. kFace == kTest
 
          call set_cell_values_x
-
+                  
          if(UseB0)then
             B0x = B0_DX(x_,iFace,jFace,kFace)
             B0y = B0_DX(y_,iFace,jFace,kFace)
@@ -601,6 +601,11 @@ contains
          call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
 
          VdtFace_x(iFace, jFace, kFace)       = CmaxDt*Area
+         
+         ! Correct Unormal_I to make div(u) achieve 6th order.
+         ! Only works for Cartesian coordinate so far. 
+         if(UseNonconservative .and. UseFDFaceFlux) &
+              call correct_grad_u(x_) 
          uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
 
          if(UseB .and. UseBoris) &
@@ -698,6 +703,9 @@ contains
          call get_numerical_flux(Flux_VY(:, iFace, jFace, kFace))
 
          VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
+
+         if(UseNonconservative .and. UseFDFaceFlux) &
+              call correct_grad_u(y_)
          uDotArea_YI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBoris) &
@@ -792,6 +800,9 @@ contains
          call get_numerical_flux(Flux_VZ(:, iFace, jFace, kFace))
 
          VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
+
+         if(UseNonconservative .and. UseFDFaceFlux) &
+              call correct_grad_u(z_)  
          uDotArea_ZI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBoris) &
@@ -1143,7 +1154,7 @@ contains
             ( Xyz_DGB(:,iRight,jRight,kRight, iBlockFace)          &
             - Xyz_DGB(:,iLeft, jLeft  ,kLeft, iBlockFace))**2) )
     end if
-
+    
     if(UseClimit)then
        r = 0.5*(r_BLK(iLeft,  jLeft,  kLeft,  iBlockFace) &
             +   r_BLK(iRight, jRight, kRight, iBlockFace))
@@ -3388,6 +3399,35 @@ subroutine calc_simple_cell_flux(iBlock)
 
   end subroutine get_speed_max
 
+  !================================================================================
+  subroutine correct_grad_u(iDim)
+    ! Make div(u) reaches 6th order accuracy.
+    use ModMultiFluid, ONLY: iFluid, iUx, iUy, iUz, select_fluid
+    use ModAdvance,    ONLY: State_VGB
+    integer, intent(in):: iDim
+    real :: UCell_I(4), Unormal ! UCellX, UCellY, UCellZ
+    real :: correct_2nd_derivate
+    !--------------------------------------------------------------------------------
+
+    do iFluid = iFluidMin, iFluidMax
+       Unormal = Unormal_I(iFluid)
+       call select_fluid
+
+       if(iDim == x_) then
+          UCell_I = State_VGB(iUx, iFace-2:iFace+1, jFace, kFace, iBlockFace)/&
+               State_VGB(Rho_, iFace-2:iFace+1, jFace, kFace, iBlockFace)
+       elseif(iDim == y_) then
+          UCell_I = State_VGB(iUy, iFace, jFace-2:jFace+1, kFace, iBlockFace)/&
+               State_VGB(Rho_, iFace, jFace-2:jFace+1, kFace, iBlockFace)
+       else
+          UCell_I = State_VGB(iUz, iFace, jFace, kFace-2:kFace+1, iBlockFace)/&
+               State_VGB(Rho_, iFace, jFace, kFace-2:kFace+1, iBlockFace)
+       endif
+       Unormal_I(iFluid) = correct_2nd_derivate(Unormal, UCell_I)
+    enddo
+
+  end subroutine correct_grad_u
+
 end module ModFaceFlux
 
 !==============================================================================
@@ -3988,3 +4028,19 @@ subroutine calc_electric_field(iBlock)
 
 end subroutine calc_electric_field
 
+!================================================================================
+
+real function correct_2nd_derivate(FaceValue, CellValue_I)
+  real, intent(in):: CellValue_I(4), FaceValue
+  real:: Der2, Der4
+  real, parameter:: c1over6 = 1./6, c1over180 = 1./180
+  !--------------------------------------------------------------------------------
+  
+  ! FaceValue is at cell face. CellValue_I are cell centered.
+
+  Der2 = c1over6*(CellValue_I(2) - 2*FaceValue + CellValue_I(3))
+  Der4 = c1over180*(16*FaceValue - &
+       9*(CellValue_I(2) + CellValue_I(3)) + &
+       CellValue_I(1) + CellValue_I(4))
+  correct_2nd_derivate = FaceValue - Der2 + Der4
+end function correct_2nd_derivate
