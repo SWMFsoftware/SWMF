@@ -65,6 +65,7 @@
 
 const double DebugRunMultiplier=4.0;
 
+#define _TARGET_ _EARTH_
 
 const double rSphere=_RADIUS_(_TARGET_);
 
@@ -387,7 +388,8 @@ double localSphericalSurfaceResolution(double *x) {
 
 
 
-  return rSphere*res;
+  //return rSphere*res;
+  return 1e9;
 }
 
 double localResolution(double *x) {
@@ -409,7 +411,11 @@ double localResolution(double *x) {
 
 //  return rSphere*res;
 
-  return 5.0;
+  //return max(pow(r/rSphere,0.25)*5e8,1e7);
+
+  return max(r*400,1e7);
+
+//  return 5e7;
 }
 
 //set up the local time step
@@ -1206,11 +1212,17 @@ void amps_init() {
 
 
 //the domain is the cube (-100,100)
+    
 
-    for (idim=0;idim<DIM;idim++) xmin[idim]=-100.0,xmax[idim]=100.0;
+    std::cout<<"Setting grid bounds"<<std::endl;
+    for (idim=0;idim<DIM;idim++) xmin[idim]=-16.0*rSphere,xmax[idim]=16.0*rSphere;
+
+    std::cout<<"xmin: "<<xmin[0]<<","<<xmin[1]<<","<<xmin[2]<<std::endl;
+    std::cout<<"xmax: "<<xmax[0]<<","<<xmax[1]<<","<<xmax[2]<<std::endl;
 
     //generate only the tree
     PIC::Mesh::mesh.AllowBlockAllocation=false;
+    std::cout<<"Initializing mesh"<<std::endl;
     PIC::Mesh::mesh.init(xmin,xmax,localResolution);
     PIC::Mesh::mesh.memoryAllocationReport();
 
