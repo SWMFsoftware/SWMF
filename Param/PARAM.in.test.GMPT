@@ -40,22 +40,26 @@ T			DoSaveRestart
 1			nRootBlockX
 1			nRootBlockY
 1			nRootBlockZ
--5.                   xMin
-+5.                   xMax
--5.                   yMin
-+5.                   yMax
--5.                   zMin
-+5.                   zMax
+-16.                   xMin
++16.                   xMax
+-16.                   yMin
++16.                   yMax
+-16.                   zMin
++16.                   zMax
 
-#INCLUDE
-GM/Param/EARTH/Grid
+!refine inner magnetosphere
+#GRIDRESOLUTION
+0.25                    Resolution
+sphere0                 NameArea
+5.0                     rSphere
+
 
 #GRIDRESOLUTION
 2.0			Resolution
 initial
 
 #AMR
-300			DnRefine
+3			DnRefine
 F			DoAutoRefine
 
 #BODY
@@ -104,10 +108,10 @@ RAW			StringLogfile
 #SAVEPLOT
 2                       nPlotFiles
 3d MHD tec             StringPlot
-200                      DnSavePlot
+10                      DnSavePlot
 -1.			DtSavePlot
 z=0 MHD tec             StringPlot
-200                      DnSavePlot
+10                      DnSavePlot
 -1.			DtSavePlot
 
 #END_COMP GM ------------------------------------------------------------------
@@ -115,61 +119,11 @@ z=0 MHD tec             StringPlot
 #COUPLE1
 GM			NameComp1
 PT			NameComp2
-10                      DnCouple
+5                      DnCouple
 -1                     Dtcouple
 
 #STOP
-100			MaxIteration
+20			MaxIteration
 -1.0			tSimulationMax
-
-!#RUN   ########################################################################
-
-! Continue with 2nd order scheme and do 2 more AMRs at iterations 600 and 900
-
-!#BEGIN_COMP GM ---------------------------------------------------------------
-
-!#SCHEME
-!2			nOrder
-!Rusanov			TypeFlux
-!minmod			TypeLimiter
-
-!#END_COMP GM -----------------------------------------------------------------
-
-!#COUPLE1
-!GM			NameComp1
-!PT			NameComp2
-!10                      DnCouple
-!-1                     Dtcouple
-
-!#STOP
-!100			MaxIteration
-!-1.0			tSimulationMax
-
-!#RUN   ########################################################################
-
-!#BEGIN_COMP GM ---------------------------------------------------------------
-
-! Switch off AMR
-!#AMR
-!-1			DnRefine
-
-! Use a sharper limiter
-!#SCHEME
-!2			nOrder
-!Rusanov			TypeFlux
-!mc			TypeLimiter
-!1.2			BetaLimiter
-
-!#END_COMP GM -----------------------------------------------------------------
-
-!#COUPLE1
-!GM			NameComp1
-!PT			NameComp2
-!10                      DnCouple
-!-1                     Dtcouple
-
-!#STOP
-!500			MaxIteration
-!-1.0			tSimulationMax
 
 #END
