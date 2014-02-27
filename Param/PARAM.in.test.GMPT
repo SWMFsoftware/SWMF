@@ -110,9 +110,10 @@ RAW			StringLogfile
 3d MHD tec             StringPlot
 10                      DnSavePlot
 -1.			DtSavePlot
-z=0 MHD tec             StringPlot
+z=0 MHD idl             StringPlot
 10                      DnSavePlot
 -1.			DtSavePlot
+-1.			DxSavePlot
 
 #END_COMP GM ------------------------------------------------------------------
 
