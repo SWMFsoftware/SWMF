@@ -32,6 +32,7 @@ test_help:
 	@echo "    test8		      (run multifluid GM-IM coupling test)"
 	@echo "    test9		      (run Chromo SC-IH coupling test)"
 	@echo "    test10		      (run 3T solar wind test)"
+	@echo "    test11		      (run GM-PT coupler test)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 test:
@@ -53,6 +54,7 @@ test:
 	-@(${MAKE} test8)
 	-@(${MAKE} test9)
 	-@(${MAKE} test10)
+	-@(${MAKE} test11)
 	-@(${MAKE} test_check)
 
 # Note: the "cat ... > /dev/null" makes sure that file size are correct on nyx
@@ -844,18 +846,19 @@ test11_rundir:
 	cp Param/LAYOUT.in.test.GMPT ${TESTDIR}/LAYOUT.in
 
 test11_run:
-	-cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
 
 test11_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -a=1e-27 \
 	        ${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test11/GM_log_n000001.log \
+		output/test11/log_n000001.log \
 		> test11_gm.diff)
+	gunzip -c output/test11/pic.NA.s=0.out=19.dat.gz \
+	       	> ${TESTDIR}/RESULTS/PT/pic.NA.ref
 	-(${SCRIPTDIR}/DiffNum.pl -b \
-	        ${TESTDIR}/PT/plots/pic.NA.s=0.out=99.dat \
-		output/test11/pic.NA.s=0.out=99.dat \
+	        ${TESTDIR}/RESULTS/PT/pic.NA.s=0.out=19.dat \
+		${TESTDIR}/RESULTS/PT/pic.NA.ref \
                 > test11_pt.diff)
 		ls -l test11*.diff
 
