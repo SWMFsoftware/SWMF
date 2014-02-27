@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModPlotFile
 
@@ -8,7 +9,7 @@ module ModPlotFile
   ! The plot file contains 5 header lines: 
   !
   !    Header
-  !    nStep, Time, nDim, nParam, nVar
+  !    nStep Time nDim nParam nVar
   !    n1 .. nNDim
   !    Param1 .. ParamNParam
   !    NameVar
