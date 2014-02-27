@@ -1969,6 +1969,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 
     //the particle buffer used to set-up the new particle data
     char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+    PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
 
    //to satisfy the compiler and fit the while structure
    if (false) {}
