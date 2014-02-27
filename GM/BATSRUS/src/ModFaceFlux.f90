@@ -622,7 +622,8 @@ contains
             ! is 6th order at smooth region. 
             do kFace = kMin, kMax; do jFace = jMin, jMax
                Flux_VI(:,iMin2:iMax2) = Flux_VX(:,iMin2:iMax2, jFace, kFace)
-               Weight_IVI(:,:,iMin:iMax) = Weight_IVX(:,:,iMin:iMax, jFace, kFace)
+               Weight_IVI(:,:,iMin:iMax) = &
+                    Weight_IVX(:,:,iMin:iMax,jFace,kFace)
                if(UseCenterFlux) &
                     FluxCenter_VG(:,iMin-2:iMax+2) = &
                     FluxCenter_VGD(:,iMin-2:iMax+2, jFace, kFace, 1)
@@ -723,7 +724,8 @@ contains
          if(UseFluxLimiter) then
             do kFace = kMin, kMax; do iFace = iMin, iMax
                Flux_VI(:,jMin2:jMax2) = Flux_VY(:,iFace,jMin2:jMax2, kFace)
-               Weight_IVI(:,:,jMin:jMax) = Weight_IVY(:,:,iFace,jMin:jMax, kFace)
+               Weight_IVI(:,:,jMin:jMax) = &
+                    Weight_IVY(:,:,iFace,jMin:jMax,kFace)
                if(UseCenterFlux) &
                     FluxCenter_VG(:,jMin-2:jMax+2) = &
                     FluxCenter_VGD(:,iFace,jMin-2:jMax+2, kFace, 2)
@@ -816,7 +818,8 @@ contains
          if(UseFluxLimiter) then
             do jFace = jMin, jMax; do iFace = iMin, iMax
                Flux_VI(:,kMin2:kMax2) = Flux_VZ(:,iFace, jFace, kMin2:kMax2)
-               Weight_IVI(:,:,kMin:kMax) = Weight_IVZ(:,:, iFace, jFace, kMin:kMax)
+               Weight_IVI(:,:,kMin:kMax) = &
+                    Weight_IVZ(:,:,iFace,jFace,kMin:kMax)
                if(UseCenterFlux) &
                     FluxCenter_VG(:,kMin-2:kMax+2) = &
                     FluxCenter_VGD(:,iFace, jFace, kMin-2:kMax+2, 3)
@@ -840,7 +843,7 @@ contains
       end if
     end subroutine get_flux_z
 
-    !===========================================================================
+    !=======================================================================
     subroutine limit_face_flux(lMin,lMax)
       integer, intent(in):: lMin, lMax
       if(UseCenterFlux) then
@@ -849,7 +852,7 @@ contains
          call limit_flux_use_face_flux(lMin, lMax)
       endif
     end subroutine limit_face_flux
-    !===========================================================================
+    !=====================================================================
     subroutine limit_flux_use_center_flux(lMin, lMax)
       integer, intent(in)::lMin,lMax
       real, parameter:: c1over6 = 1./6, c1over180 = 1./180
@@ -2225,15 +2228,19 @@ contains
           call select_fluid
           FluxViscoX     = sum(Normal_D(1:nDim)*Visco_DDI(:,x_,iFluid))
           Flux_V(iRhoUx) = Flux_V(iRhoUx) - State_V(iRho)*FluxViscoX
-          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRho)*State_V(iUx)*FluxViscoX
+          Flux_V(Energy_)= Flux_V(Energy_) - &
+               State_V(iRho)*State_V(iUx)*FluxViscoX
           if(nDim == 1) CYCLE
           FluxViscoY     = sum(Normal_D(1:nDim)*Visco_DDI(:,y_,iFluid))
-          Flux_V(iRhoUy) = Flux_V(iRhoUy) - State_V(iRho)*FluxViscoY
-          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRho)*State_V(iUy)*FluxViscoY
+          Flux_V(iRhoUy) = Flux_V(iRhoUy) - &
+               State_V(iRho)*FluxViscoY
+          Flux_V(Energy_)= Flux_V(Energy_) - &
+               State_V(iRho)*State_V(iUy)*FluxViscoY
           if(nDim == 2) CYCLE
           FluxViscoZ     = sum(Normal_D(1:nDim)*Visco_DDI(:,z_,iFluid))
           Flux_V(iRhoUz) = Flux_V(iRhoUz) - State_V(iRho)*FluxViscoZ
-          Flux_V(Energy_)= Flux_V(Energy_) - State_V(iRho)*State_V(iUz)*FluxViscoZ
+          Flux_V(Energy_)= Flux_V(Energy_) - &
+               State_V(iRho)*State_V(iUz)*FluxViscoZ
        end do
     end if
 
@@ -2759,7 +2766,7 @@ contains
     real:: Primitive_V(nVar), RhoInv, Flux_V(nFlux)
     real:: CmaxArea, CmaxAll, Cmax_I(nFluid), Conservative_V(nFlux)
 
-!!! These are calculated but not used                                           
+    ! These are calculated but not used                                        
     real:: Un_I(nFluid+1), En, Pe
     !------------------------------------------------------------------------
 
@@ -2787,7 +2794,9 @@ contains
                 ! Get primitive variables used by get_physical_flux
                 Primitive_V = State_VGB(:,i,j,k,iBlock)
                 do iFluid = 1, nFluid
-                   iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
+                   iRho = iRho_I(iFluid)
+                   iUx = iUx_I(iFluid)
+                   iUz = iUz_I(iFluid)
                    RhoInv = 1/Primitive_V(iRho)
                    Primitive_V(iUx:iUz) = RhoInv*Primitive_V(iUx:iUz)
                 end do
@@ -2802,21 +2811,26 @@ contains
                 call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
                      Conservative_V, Flux_V, Un_I, En, Pe)
 
-                FluxLeft_VGD(:,i,j,k,iDim) = 0.5*Area*(Flux_V + CmaxAll*Conservative_V)
-                FluxRight_VGD(:,i,j,k,iDim)= 0.5*Area*(Flux_V - CmaxAll*Conservative_V)
+                FluxLeft_VGD(:,i,j,k,iDim) = &
+                     0.5*Area*(Flux_V + CmaxAll*Conservative_V)
+                FluxRight_VGD(:,i,j,k,iDim)= &
+                     0.5*Area*(Flux_V - CmaxAll*Conservative_V)
 
                 ! Get the maximum speed
                 call get_speed_max(Primitive_V, B0x, B0y, B0z, Cmax_I)
                 CmaxArea = maxval(Cmax_I)*Area
                 select case(iDim)
                 case(1)
-                   if(i>0 .and. i<=nI+1 .and. j>0 .and. j<=nJ .and. k>0 .and. k<=nK) &
+                   if(i>0 .and. i<=nI+1 .and. j>0 .and. j<=nJ .and. &
+                        k>0 .and. k<=nK) &
                         VdtFace_X(i,j,k) = CmaxArea
                 case(2)
-                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ+1 .and. k>0 .and. k<=nK) &
+                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ+1 .and. &
+                        k>0 .and. k<=nK) &
                         VdtFace_Y(i,j,k) = CmaxArea
                 case(3)
-                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ .and. k>0 .and. k<=nK+1) &
+                   if(i>0 .and. i<=nI .and. j>0 .and. j<=nJ .and. &
+                        k>0 .and. k<=nK+1) &
                         VdtFace_Z(i,j,k) = CmaxArea
                 end select
 
@@ -2843,7 +2857,7 @@ subroutine calc_simple_cell_flux(iBlock)
     real:: Primitive_V(nVar), RhoInv, Flux_V(nFlux)
     real:: Conservative_V(nFlux)
 
-!!! These are calculated but not used                                           
+    ! These are calculated but not used          
     real:: Un_I(nFluid+1), En, Pe
     !------------------------------------------------------------------------
 
@@ -2863,7 +2877,9 @@ subroutine calc_simple_cell_flux(iBlock)
                 ! Get primitive variables used by get_physical_flux
                 Primitive_V = State_VGB(:,i,j,k,iBlock)
                 do iFluid = 1, nFluid
-                   iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
+                   iRho = iRho_I(iFluid)
+                   iUx = iUx_I(iFluid)
+                   iUz = iUz_I(iFluid)
                    RhoInv = 1/Primitive_V(iRho)
                    Primitive_V(iUx:iUz) = RhoInv*Primitive_V(iUx:iUz)
                 end do
