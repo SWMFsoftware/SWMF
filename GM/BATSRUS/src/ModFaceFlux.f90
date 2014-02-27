@@ -356,7 +356,7 @@ contains
   !===========================================================================
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
 
-    use ModAdvance,  ONLY: TypeFlux => FluxType, UseNonconservative
+    use ModAdvance,  ONLY: TypeFlux => FluxType
     use ModParallel, ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModMain, ONLY: nIFace, nJFace, nKFace, &
@@ -604,8 +604,7 @@ contains
          
          ! Correct Unormal_I to make div(u) achieve 6th order.
          ! Only works for Cartesian coordinate so far. 
-         if(UseNonconservative .and. UseFDFaceFlux) &
-              call correct_grad_u(x_) 
+         if(UseFDFaceFlux) call correct_u_normal(x_) 
          uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
 
          if(UseB .and. UseBoris) &
@@ -704,8 +703,7 @@ contains
 
          VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
 
-         if(UseNonconservative .and. UseFDFaceFlux) &
-              call correct_grad_u(y_)
+         if(UseFDFaceFlux) call correct_u_normal(y_)
          uDotArea_YI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBoris) &
@@ -801,8 +799,7 @@ contains
 
          VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
 
-         if(UseNonconservative .and. UseFDFaceFlux) &
-              call correct_grad_u(z_)  
+         if(UseFDFaceFlux) call correct_u_normal(z_)  
          uDotArea_ZI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBoris) &
@@ -3399,34 +3396,43 @@ subroutine calc_simple_cell_flux(iBlock)
 
   end subroutine get_speed_max
 
-  !================================================================================
-  subroutine correct_grad_u(iDim)
-    ! Make div(u) reaches 6th order accuracy.
-    use ModMultiFluid, ONLY: iFluid, iUx, iUy, iUz, select_fluid
+  !============================================================================
+  subroutine correct_u_normal(iDim)
+
+    ! Make Unormal 6th order accuracte
+
+    use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
+
     integer, intent(in):: iDim
-    real :: UCell_I(4), Unormal ! UCellX, UCellY, UCellZ
-    real :: correct_2nd_derivate
-    !--------------------------------------------------------------------------------
+
+    integer:: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz
+    real :: Ucell_I(4), Unormal 
+    real, external :: correct_face_value
+    !--------------------------------------------------------------------------
 
     do iFluid = iFluidMin, iFluidMax
+
        Unormal = Unormal_I(iFluid)
-       call select_fluid
+       iRho = iRho_I(iFluid)
 
        if(iDim == x_) then
-          UCell_I = State_VGB(iUx, iFace-2:iFace+1, jFace, kFace, iBlockFace)/&
-               State_VGB(Rho_, iFace-2:iFace+1, jFace, kFace, iBlockFace)
+          iRhoUx = iRhoUx_I(iFluid)
+          Ucell_I = State_VGB(iRhoUx,iFace-2:iFace+1,jFace,kFace,iBlockFace)/&
+               State_VGB(iRho,iFace-2:iFace+1,jFace,kFace,iBlockFace)
        elseif(iDim == y_) then
-          UCell_I = State_VGB(iUy, iFace, jFace-2:jFace+1, kFace, iBlockFace)/&
-               State_VGB(Rho_, iFace, jFace-2:jFace+1, kFace, iBlockFace)
+          iRhoUy = iRhoUy_I(iFluid)
+          Ucell_I = State_VGB(iRhoUy,iFace,jFace-2:jFace+1,kFace,iBlockFace)/&
+               State_VGB(iRho,iFace,jFace-2:jFace+1,kFace,iBlockFace)
        else
-          UCell_I = State_VGB(iUz, iFace, jFace, kFace-2:kFace+1, iBlockFace)/&
-               State_VGB(Rho_, iFace, jFace, kFace-2:kFace+1, iBlockFace)
+          iRhoUz = iRhoUz_I(iFluid)
+          Ucell_I = State_VGB(iRhoUz,iFace,jFace,kFace-2:kFace+1,iBlockFace)/&
+               State_VGB(iRho,iFace,jFace,kFace-2:kFace+1,iBlockFace)
        endif
-       Unormal_I(iFluid) = correct_2nd_derivate(Unormal, UCell_I)
+       Unormal_I(iFluid) = correct_face_value(Unormal, Ucell_I)
     enddo
 
-  end subroutine correct_grad_u
+  end subroutine correct_u_normal
 
 end module ModFaceFlux
 
@@ -4028,19 +4034,21 @@ subroutine calc_electric_field(iBlock)
 
 end subroutine calc_electric_field
 
-!================================================================================
+!==============================================================================
 
-real function correct_2nd_derivate(FaceValue, CellValue_I)
+real function correct_face_value(FaceValue, CellValue_I)
+
+  ! FaceValue is at cell face. CellValue_I are cell centered.
+  ! Return 6th order approximation
+
   real, intent(in):: CellValue_I(4), FaceValue
   real:: Der2, Der4
   real, parameter:: c1over6 = 1./6, c1over180 = 1./180
-  !--------------------------------------------------------------------------------
-  
-  ! FaceValue is at cell face. CellValue_I are cell centered.
-
+  !----------------------------------------------------------------------------
   Der2 = c1over6*(CellValue_I(2) - 2*FaceValue + CellValue_I(3))
   Der4 = c1over180*(16*FaceValue - &
        9*(CellValue_I(2) + CellValue_I(3)) + &
        CellValue_I(1) + CellValue_I(4))
-  correct_2nd_derivate = FaceValue - Der2 + Der4
-end function correct_2nd_derivate
+  correct_face_value = FaceValue - Der2 + Der4
+
+end function correct_face_value
