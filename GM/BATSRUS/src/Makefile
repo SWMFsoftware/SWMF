@@ -48,6 +48,7 @@ OBJECTS = \
 	ModHallResist.o \
 	ModHdf5.o \
 	ModHeatFluxCollisionless.o \
+	ModHighOrder.o \
 	ModIO.o \
 	ModLaserHeating.o \
 	ModLocalTimeStep.o \
