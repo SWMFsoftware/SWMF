@@ -1,6 +1,5 @@
 util
 share
-srcBATL
 run*
 Makefile.conf
 Makefile.def
