@@ -1,0 +1,11 @@
+util
+share
+srcTemp
+Makefile.def
+Makefile.conf
+Makefile.local
+.amps.InputFileName.txt
+.ampsConfig.Settings
+*.input*
+test_*
+run*
