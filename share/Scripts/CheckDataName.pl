@@ -72,8 +72,11 @@ my $ValidScalarName = "($ValidComp)?$FirstPart($Part)*";
 # Valid array variable names: VariableName IE_GridSize_C State_VGB
 my $ValidArrayName = "${ValidScalarName}_[A-Z]+";
 
-# Valid named index name: Rho_ x_ AnyName_
+# Valid named index name: Rho_ x_ AnyName_ GM_
 my $ValidNamedIndex = "$FirstPart($Part)*_|[A-Z][A-Z]_";
+
+# Valid fraction name: c1over3
+my $ValidFraction = 'c\d+over\d+';
 
 # Valid first name parts depending on variable/function type:
 my %ValidPart1 = ('integer'   => '(D?[i-nI-N]|Max|Min|Ijk)\d*',
@@ -331,10 +334,13 @@ sub check_variables{
 
 	print "Type = '$Type' Var = '$Var' nDim = '$nDim'\n" if $Debug;
 
-	my $NamedIndex = $Parameter and $Type eq 'integer' and $nDim == 0;
-
 	# Check for a possible named index
-	next if $NamedIndex and $Var =~ /^$ValidNamedIndex/;
+	my $NamedIndex = $Parameter and $Type eq 'integer' and $nDim == 0;
+	next if $NamedIndex and $Var =~ /^$ValidNamedIndex$/;
+
+	# Check for special real constants like c1over3
+	my $RealConstant = $Parameter and $Type eq 'real' and $nDim == 0;
+	next if $RealConstant and $Var =~ /^$ValidFraction$/;
 
         # Check if this is a declaration for the function return value
         next if lc($Var) eq lc($Function); # ignore 
@@ -349,6 +355,8 @@ sub check_variables{
 			"   $ValidScalarName\n";
 		    print "   or a named index should match:\n".
 			"   $ValidNamedIndex\n" if $NamedIndex;
+		    print "   or a real parameter fraction should match:\n".
+			"   $ValidFraction\n" if $RealConstant;
 		}
 		next;
 	    }
