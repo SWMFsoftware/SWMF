@@ -16,7 +16,7 @@ contains
     real, intent(in):: CellValue_I(4), FaceValue
     real:: Der2, Der4
     real, parameter:: c1over6 = 1./6, c1over180 = 1./180
-    !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------
     Der2 = c1over6*(CellValue_I(2) - 2*FaceValue + CellValue_I(3))
     Der4 = c1over180*(16*FaceValue - &
          9*(CellValue_I(2) + CellValue_I(3)) + &
