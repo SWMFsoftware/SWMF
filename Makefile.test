@@ -835,6 +835,7 @@ test11:
 
 test11_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
+	./Config.pl -g=GM:8,8,8,700,1 -o=GM:u=Default,e=Mhd
 	./Config.pl -o=PT:spice=nospice,application=coupler-test
 	${MAKE} SWMF
 	make PIDL
