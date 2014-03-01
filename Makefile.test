@@ -857,8 +857,12 @@ test11_check:
 		> test11_gm.diff)
 	gunzip -c output/test11/pic.NA.s=0.out=19.dat.gz \
 	       	> ${TESTDIR}/RESULTS/PT/pic.NA.ref
+	cd ${TESTDIR}/RESULTS/PT; \
+	        cp -f pic.NA.s=0.out=19.dat pic.NA.dat; \
+	        perl -ai -ne 'print "@F[0..3] @F[6..$$#F]\n"' \
+			pic.NA.ref pic.NA.dat 
 	-(${SCRIPTDIR}/DiffNum.pl -b \
-	        ${TESTDIR}/RESULTS/PT/pic.NA.s=0.out=19.dat \
+	        ${TESTDIR}/RESULTS/PT/pic.NA.dat \
 		${TESTDIR}/RESULTS/PT/pic.NA.ref \
                 > test11_pt.diff)
 		ls -l test11*.diff
