@@ -5,6 +5,8 @@ COMPILE.c     = icc
 COMPILE.mpicc = icc
 COMPILE.mpicxx= icpc
 
+CPPLIB = -lstdc++
+
 DEBUGC = 
 #DEBUGC = -g
 
