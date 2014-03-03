@@ -1455,14 +1455,17 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
     CenterNode=startNode->block->GetCenterNode(nd);
     offset=CenterNode->GetAssociatedDataBufferPointer();
 
-    if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
+/*    if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
       memcpy(E,offset+PIC::CPLR::ICES::ElectricFieldOffset,3*sizeof(double));
       memcpy(B,offset+PIC::CPLR::ICES::MagneticFieldOffset,3*sizeof(double));
     }
     else {
       memcpy(E,swE_Typical,3*sizeof(double));
       memcpy(B,swB_Typical,3*sizeof(double));
-    }
+    }*/
+
+    PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
+    PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
 
     double ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
     double mass=PIC::MolecularData::GetMass(spec);
