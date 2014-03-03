@@ -901,8 +901,6 @@ public:
     #elif _MESH_DIMENSION_ == 2
     exit(__LINE__,__FILE__,"not implemented");
     #elif _MESH_DIMENSION_ == 3
-    nd=i+_GHOST_CELLS_X_+_TOTAL_BLOCK_CELLS_X_*(j+_GHOST_CELLS_Y_+(k+_GHOST_CELLS_Z_)*_TOTAL_BLOCK_CELLS_Y_);
-
     k=nd/(_TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_);
     j=(nd-k*_TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_)/_TOTAL_BLOCK_CELLS_X_;
     i=nd-k*_TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_-j*_TOTAL_BLOCK_CELLS_X_;
