@@ -2009,6 +2009,23 @@ namespace PIC {
         for (idim=0;idim<3;idim++) B[idim]=offset[idim];
       }
 
+      inline void GetBackgroundPlasmaVelocity(double *v,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        register int idim;
+        register double *offset=(double*)(BulkVelocityOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+        for (idim=0;idim<3;idim++) v[idim]=offset[idim];
+      }
+
+      inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        double B[3],v[3];
+
+        GetBackgroundMagneticField(B,x,nd,node);
+        GetBackgroundPlasmaVelocity(v,x,nd,node);
+
+        E[0]=-(v[1]*B[2]-B[1]*v[2]);
+        E[1]=-(-v[0]*B[2]+B[0]*v[2]);
+        E[2]=-(v[0]*B[1]-B[0]*v[1]);
+      }
 
     }
 
@@ -2132,6 +2149,8 @@ namespace PIC {
     inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
       ICES::GetBackgroundElectricField(E,x,nd,node);
+      #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+      SWMF::GetBackgroundElectricField(E,x,nd,node);
       #else
       exit(__LINE__,__FILE__,"not implemented");
       #endif
@@ -2151,6 +2170,8 @@ namespace PIC {
      inline void GetBackgroundPlasmaVelocity(double *vel,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
        #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
        ICES::GetBackgroundPlasmaVelocity(vel,x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       SWMF::GetBackgroundPlasmaVelocity(vel,x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
