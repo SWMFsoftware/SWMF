@@ -259,14 +259,17 @@ contains
              ! Radial distance in meters for lookup
              r  = sqrt(x**2 + y**2 + z**2)*No2Si_V(UnitX_)
 
-             ! Angle relative to x axis in degrees for lookup
-             Phi  = atan2(Yz, x)*cRadToDeg
+             !! Angle relative to x axis in degrees for lookup
+             !Phi  = atan2(Yz, x)*cRadToDeg
+
+             ! Angle relative to -x axis in degrees for lookup
+             Phi  = atan2(Yz, -1*x)*cRadToDeg
 
              call interpolate_lookup_table( &
                   iTableNeutral_I(iNeutral), r, Phi, Neutral_V)
 
              NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1) = Neutral_V(Nn_)
-             UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= Neutral_V(Uxn_)
+             UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= -1*Neutral_V(Uxn_)
              UnyNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= Neutral_V(Uyn_)*y/Yz
              UnzNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= Neutral_V(Uyn_)*z/Yz
              TnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1) = Neutral_V(Tn_)
@@ -2012,14 +2015,14 @@ contains
 
     case('unx1')
        NameIdlUnit = 'km/s'
-       NameTecUnit = '[cm/s]'
+       NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           PlotVar_G(i,j,k) = UnxNeutral_IG(1,i-MinI+1,j-MinJ+1,k-MinK+1)/1E3 !! x direction
        end do; end do; end do
 
     case('uny1')
        NameIdlUnit = 'km/s'
-       NameTecUnit = '[cm/s]'
+       NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           PlotVar_G(i,j,k) = UnyNeutral_IG(1,i-MinI+1,j-MinJ+1,k-MinK+1)/1E3 !! y direction
        end do; end do; end do
