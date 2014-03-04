@@ -23,6 +23,7 @@ our $Show;
 our $Help;
 our $WARNING;
 our $ERROR;
+our $Hdf5;
 
 &print_help if $Help;
 
@@ -63,6 +64,12 @@ if($ListVersions){
 }
 
 &set_versions if @NewVersion;
+
+if($Version{PC} eq 'IPIC3D' and $Hdf5 eq 'no'){
+    @NewVersion = ("PC/Empty");
+    &set_versions;
+    die "Setting PC/Empty because PC/IPIC3D requires HDF5 compiler.\n"
+}
 
 if($Installed){
     # Create EE/BATSRUS if needed
@@ -231,6 +238,9 @@ sub set_versions{
 
     die "$ERROR non Empty UA version requires non Empty IE version\n"
         if $Version{UA} ne 'Empty' and $Version{IE} eq 'Empty';
+
+    die "$ERROR PC/IPIC3D version requires HDF5 compiler. Use -hdf5.\n"
+	if $Version{PC} eq 'IPIC3D' and $Hdf5 eq 'no';
 
     return unless $change;
 
