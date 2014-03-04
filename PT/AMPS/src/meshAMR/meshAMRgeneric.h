@@ -894,7 +894,6 @@ public:
   }
 
   inline void getCenterNodeCoordinate(int& i,int& j,int& k,long int nd) {
-    long int nd;
 
     #if _MESH_DIMENSION_ == 1
     exit(__LINE__,__FILE__,"not implemented");
