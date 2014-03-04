@@ -84,8 +84,9 @@ our $Hdf5;                  # True if HDF5  lib is enabled
 our $Hypre;                 # True if HYPRE lib is enabled
 our $Spice;                 # True if SPICE lib is enabled
 
-# The name of the parallel HDF5 Fortran compiler
+# The name of the parallel HDF5 Fortran and C compilers
 my $H5pfc = "h5pfc";
+my $H5pcc = "h5pcc";
 
 # This string should be added into Makefile.conf when HYPRE is enabled
 my $HypreDefinition = "# HYPRE library definitions
@@ -555,6 +556,11 @@ sub set_hdf5_{
         return;
     }
 
+    if($NewHdf5 eq "yes" and not `which $H5pcc`){
+        print "Warning: $H5pcc is not in path. Load parallel hdf5 module!/\n";
+        return;
+    }
+
     # $Hdf5 will be $NewHdf5 after changes
     $Hdf5 = $NewHdf5;
 
@@ -568,9 +574,12 @@ sub set_hdf5_{
 		s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_\w+\})(.*)/$1$H5pfc \#$2/;
 		# For pgf90 the F90 compiler has to be changed too
 		s/^(COMPILE\.f90\s*=.*)(pgf90)/$1$H5pfc \#$2/;
+
+		# Change the parallel C++ compiler too
+		s/^(COMPILE\.mpicxx\s*=\s*)(.*)/$1$H5pcc \#$2/;
 	    }else{
 		# Undo the modifications
-		s/$H5pfc \#(.*)/$1/;
+		s/($H5pfc|$H5pcc) \#//;
 	    }
 	    print;
 	}
