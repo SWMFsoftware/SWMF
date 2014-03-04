@@ -48,6 +48,45 @@ foreach (@Arguments) {
   $cntArgument++;
 }
 
+#process the 'help' argument of the script
+foreach (@Arguments) { 
+   if ((/^-h$/)||(/^-help/)) { #print help message
+     print "Config.pl can be used for installing and setting of AMPS\n";
+     print "AMPS' settings can defined in the SWMF's Config.pl: Config.pl -o=PT:spice-path=path,spice-kernels=path,ices-path=path,application=casename\n\n";
+     print "Usage: Config.pl [-help] [-show] [-spice-path] [-spice-kernels] [-ices-path] [-application]\n";
+     print "\nInformation:\n";
+     print "-h -help\t\t\tshow help message.\n";
+     print "-s -show\t\t\tshow current settings.\n";
+     print "-spice-path=PATH\t\tpath to the location of the SPICE installation.\n";
+     print "-spice-kernels=PATH\t\tpath to the location of the SPICE kernels.\n";
+     print "-ices-path=PATH\t\t\tpath to the location of ICES\n";
+     print "-application=case\t\tthe name of the model case to use.\n";
+     
+     exit;
+   }
+   
+   
+   if ((/^-s$/i)||(/^-show/)) { #print AMPS settings
+     print "\nAMPS' Setting options:\n";
+      
+     if (-e ".ampsConfig.Settings") {
+       my @f;
+       
+       open (FSETTINGS,"<.ampsConfig.Settings");
+       @f=<FSETTINGS>;
+       close(FSETTINGS);
+       
+       print @f;
+       print "\n";
+     }
+     else {
+       print "No custom settings\n";
+     }
+     
+     exit;
+   } 
+}
+
 #process the configuration settings
 foreach (@Arguments) {
   if (/^-application=(.*)/i) {
@@ -72,15 +111,17 @@ foreach (@Arguments) {
       }
     }
       
-    close (INPUTFILE);     
+    close (INPUTFILE);   
+    
+    `echo "APPLICATION=$1" >> .ampsConfig.Settings`; 
     next
   };
     
   if (/^-mpi=(.*)$/i)        {$MpiLocation=$1;                next}; 
   if (/^-np=(.*)$/i)         {$TestRunProcessorNumber=$1;     next};
-  if (/^-spice=(.*)$/i)      {`echo "SPICE=$1" >> Makefile.local`;`echo "SPICE=$1" >> .ampsConfig.Settings`;     next}; 
-  if (/^-kernels=(.*)$/i)    {`echo "SPICEKERNELS=$1" >> .ampsConfig.Settings`;     next};
-  if (/^-ices=(.*)$/i)       {`echo "ICESLOCATION=$1" >> .ampsConfig.Settings`;     next};
+  if (/^-spice-path=(.*)$/i)      {`echo "SPICE=$1" >> Makefile.local`;`echo "SPICE=$1" >> .ampsConfig.Settings`;     next}; 
+  if (/^-spice-kernels=(.*)$/i)    {`echo "SPICEKERNELS=$1" >> .ampsConfig.Settings`;     next};
+  if (/^-ices-path=(.*)$/i)       {`echo "ICESLOCATION=$1" >> .ampsConfig.Settings`;     next};
   
   warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
