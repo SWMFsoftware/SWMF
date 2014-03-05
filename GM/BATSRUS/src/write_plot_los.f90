@@ -52,7 +52,7 @@ subroutine write_plot_los(iFile)
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
        time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
-       Body1,body1_, StartTime, CodeVersion
+       Body1,body1_, StartTime
   use ModGeometry, ONLY: &
        XyzStart_BLK, IsBoundaryBlock_IB, nMirror_D
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
@@ -65,7 +65,6 @@ subroutine write_plot_los(iFile)
   use ModCoordTransform, ONLY : rot_matrix_z, cross_product
   use ModUtilities, ONLY: lower_case, split_string, join_string
   use ModPlotFile, ONLY: save_plot_file
-  use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
   use BATL_lib, ONLY: Xyz_DNB, Xyz_DGB, CellSize_DB, &
        IsCartesianGrid, IsCartesian, IsRzGeometry, IsRLonLat
@@ -118,7 +117,6 @@ subroutine write_plot_los(iFile)
 
   character (LEN=500) :: allnames, StringHeadLine
   character (LEN=500) :: unitstr_TEC, unitstr_IDL
-  character (LEN=10) :: unitList_HDF(nPlotVarLosMax)
   character (LEN=5) :: file_extension !changed to LEN=5 to make room for .batl
   character (LEN=40) :: file_format
 
@@ -137,13 +135,9 @@ subroutine write_plot_los(iFile)
 
   ! variables added for sph geometry
   logical :: UseEuv,UseSxr
-  real,dimension(3,8) :: Xyz_DN, BBoxVertex_DN
 
-  integer :: iMid1,iMid2,iMid3,ii
-  real :: dlength
   real :: FixedXyzBlockCenter_D(3) ! XyzBlockcenter changes, so need fixed one
 
-  real ::rNodeMax,rNodeMin,CosAngle,CosAngleMin !BBox stuff
   logical :: AlignedZ = .false.
 
   integer :: iTableEUV = -1, iTableSXR= -1
@@ -363,6 +357,8 @@ subroutine write_plot_los(iFile)
   if(DoTiming)call timing_start('los_block_loop')
 
   if(UseLosSimple)then
+     call integrate_image
+  elseif (IsRLonLat) then
      call integrate_image
   else
      ! loop over blocks
@@ -662,9 +658,9 @@ contains
 
     ! Integrate variables from XyzStartIn_D in the direction LosPix_D
 
-    use ModGeometry,    ONLY: x1, x2, y1, y2, z1, z2
+    use ModGeometry,    ONLY: x1, x2, y1, y2, z2
     use BATL_lib,       ONLY: xyz_to_coord, find_grid_block, &
-         get_tree_position, CoordMin_D, CoordMax_D, IsPeriodic_D, nIJK_D
+         get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 
     real, intent(in):: XyzStartIn_D(3)
     real, intent(in):: LengthMax
@@ -687,15 +683,14 @@ contains
     logical:: IsEdge
 
     logical:: DoTest = .false.
-    integer:: iBlkTest = -1
 
     character(len=*), parameter:: NameSub='integrate_line'
     !------------------------------------------------------------------------
     !write(*,*)'!!! iPix, jPix=', iPix, jPix
 
-    DoTest = iPix==50 .and. jPix==50
+    DoTest = iPix==200 .and. jPix==200
 
-    if(DoTest)write(*,*)NameSub,' XyzStartIn_D=', XyzStartIn_D
+!    if(DoTest .and. iProc == 0)write(*,'(2A, 3F10.7)')NameSub,' XyzStartIn_D=', XyzStartIn_D
 
     CoordSize_D = CoordMax_D - CoordMin_D
     DsTiny = cTiny*(x2-x1 + y2 - y1 + z2 - x1)
@@ -716,7 +711,7 @@ contains
     CoordMinBlock_D = CoordMax_D
     CoordMaxBlock_D = CoordMin_D
 
-    if(DoTest) write(*,*)'!!! initial Ds=',Ds
+!    if(DoTest) write(*,*)'!!! initial Ds=',Ds
 
     Length = -Ds
     LOOPLINE: do
@@ -734,7 +729,7 @@ contains
        if(  any(CoordLosNew_D > CoordMax_D) .or. &
             any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
 
-       if(DoTest)write(*,*)'!!! Inside, Ds, Length=', Ds, Length
+!       if(DoTest)write(*,*)'!!! Inside, Ds, Length=', Ds, Length
 
        ! Check if we are still in the same block or not
        if(  any(CoordLos_D < CoordMinBlock_D) .or. &
@@ -750,11 +745,11 @@ contains
           CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) !Center
           CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D       !Block size
           CellSize_D      = CoordSizeBlock_D / nIjk_D               !Cell size
-          if(DoTest)then
-             write(*,*)'!!! new iBlk=', iBlk
-             write(*,*)'!!! CoordMin=', CoordMinBlock_D
-             write(*,*)'!!! CoordMax=', CoordMaxBlock_D
-          end if
+!          if(DoTest)then
+!             write(*,*)'!!! new iBlk=', iBlk
+!             write(*, '(A, 3E12.5))')'!!! CoordMin=', CoordMinBlock_D
+!             write(*, '(A, 3E12.5))')'!!! CoordMax=', CoordMaxBlock_D
+!          end if
 
        end if
 
@@ -810,7 +805,12 @@ contains
        if(iProc == iProcFound)then
           ! Add contribution from this segment to the image
           call add_segment(Ds, XyzLosNew_D)
-       end if
+!          if(DoTest)then
+!            write(*,*)'!!! new iBlk=', iBlk
+!            write(*, '(A, 3E12.5))')'!!! CoordMin=', CoordMinBlock_D
+!            write(*, '(A, 3E12.5))')'!!! CoordMax=', CoordMaxBlock_D
+!         end if
+      end if
 
        ! Move XyzLosNew to the end of the segment
        XyzLosNew_D = XyzLos_D + Ds*LosPix_D
@@ -826,7 +826,6 @@ contains
     use ModAdvance,     ONLY: UseElectronPressure
     use ModInterpolate, ONLY: bilinear, trilinear
     use ModUser,        ONLY: user_set_plot_var
-    use ModParallel,    ONLY: NeiLWest, NeiLEast, NOBLK
     use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_
     use BATL_lib,       ONLY: xyz_to_coord
 
@@ -865,6 +864,10 @@ contains
     real :: TeCutSi = 4.0e+5
     real :: DeltaTeCutSi = 3.0e+4
     real :: FractionTrue
+
+    logical:: DoTest = .false.
+    DoTest = iPix==200 .and. jPix==200
+
     !-----------------------------------------------------------------------
     rLos2= sum(XyzLos_D**2)
     xLos = XyzLos_D(1)
@@ -944,6 +947,7 @@ contains
           ! equilibrium.
           Te = 0.5*State_V(P_)/Rho
        end if
+
 !!! So minimum temperature is cTolerance in SI units???
        TeSi = max(Te*No2Si_V(UnitTemperature_), cTolerance)
 
@@ -998,11 +1002,11 @@ contains
           ! if using a generalized table can do it vector style
           ImagePe_VII(:,iPix,jPix) = ImagePe_VII(:,iPix,jPix) + &
                InterpValues_I*ResponseFactor*Ds
+
           RETURN
-
        endif
-
     end if
+    
 
     do iVar = 1, nPlotVar
        Value = 0.0 ! initialize to 0 so that if statements below work right
@@ -1087,6 +1091,8 @@ contains
   !============================================================================
   subroutine integrate_block
 
+    character(len=*), parameter :: NameSub='integrate_block'
+
     if(IsCartesianGrid) then      
 
        if(IsRzGeometry)then
@@ -1130,89 +1136,9 @@ contains
                   sqrt(sum(CellSize_D**2))
           end if
        end if
-
-    elseif(IsRLonLat)then ! need to do additional things to check sph blocks
-
-       call generate_vertex_vectors(1,nI+1,1,nJ+1,1,nK+1,Xyz_DN)
-
-       ! want middle node indexes to find center
-       iMid1 = nI/2 + 1; iMid2 = nJ/2 + 1; iMid3 = nK/2 + 1         
-
-       XyzBlockCenter_D = Xyz_DNB(:,iMid1,iMid2,iMid3,iBLK)
-
-       if(iMirror == 2) XyzBlockCenter_D(1) = -XyzBlockCenter_D(1)
-       if(jMirror == 2) XyzBlockCenter_D(2) = -XyzBlockCenter_D(2)
-       if(kMirror == 2) XyzBlockCenter_D(3) = -XyzBlockCenter_D(3)
-
-       rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
-
-
-       ! Main idea behind this method is to avoid r-curvature problems by
-       ! extending top (high r) block bounding vertexes by a factor such
-       ! that the entire curved volume is contained in a planar volume.
-       !
-       ! This way only need to find the planar intersections.
-       !
-       ! Then in the actual integration part, can discount any points that
-       ! are outside curved volume
-       !
-       ! The factor comes from finding the radius where the plane tangent to 
-       ! the point at the center of the top curved sphere intersects the 
-       ! bounding radial lines. (reduces to simple 90 degree triangle calc)
-
-       BBoxVertex_DN = Xyz_DN
-       rNodeMax = sqrt(sum(Xyz_DN(:, 8)**2))
-       rNodeMin = sqrt(sum(Xyz_DN(:, 1)**2))
-
-       ! Now want to find the maximum angular seperation between center of
-       ! bounding sphere and bounding lines that intersect it
-       ! check all 4 in case have non-uniform phi/theta
-       ! (would still need to check 2 values if had fixed dPhi/dTheta)
-
-       CosAngleMin = 1.0
-       do ii=5,8 ! 5-8 are max r bounding vertexes
-          CosAngle = sum(XyzBlockCenter_D *  Xyz_DN(:, ii)) &
-               /(rBlockCenter * rNodeMax)
-
-          if (CosAngle < 1e-10) then
-             write(*,*) '==========================='
-             write(*,*) 'ii', ii
-             write(*,*) 'sum(XyzBlockCenter_D *  Xyz_DN(:, ii))', sum(XyzBlockCenter_D *  Xyz_DN(:, ii))
-             write(*,*) 'XyzBlockCenter_D', XyzBlockCenter_D
-             write(*,*) 'Xyz_DN(:,ii)', Xyz_DN(:,ii)
-             write(*,*) '==========================='
-          end if
-
-          CosAngleMin = min(CosAngle,CosAngleMin)
-       enddo
-
-       CosAngleMin = max(cTiny, CosAngleMin)
-
-       ! now extend each top vertex along r by this factor   
-       BBoxVertex_DN(:,5:8) = BBoxVertex_DN(:, 5:8)/CosAngleMin
-
-       if (maxval(BBoxVertex_DN) > 1e10) then
-          write(*,*) '==========================='
-          write(*,*) 'max in BBoxVertex_DN', maxval(BBoxVertex_DN)
-          write(*,*) 'max in Xyz_DN', maxval(Xyz_DN)
-          write(*,*) 'XyzBlockCenter_D', XyzBlockCenter_D
-          write(*,*) 'rBlockCenter', rBlockCenter
-          write(*,*) 'rNodeMax', rNodeMax
-          write(*,*) 'CosAngleMin', CosAngleMin
-          write(*,*) '==========================='
-       end if
-
-       !--- note that now blocks can have odd shapes, so take maximum of
-       !distances from XyzBlockCenter to corners to calc rBlockSize
-       rBlockSize = 0.0
-       do ii=1,8
-          dlength = sqrt(sum( (XyzBlockCenter_D - BBoxVertex_DN(:,ii))**2))
-          rBlockSize = max(dlength,rBlockSize)
-       enddo
-       rBlockSize = rBlockSize + cTiny !-- just to make sure...
-
     else
-       call CON_stop(NameSub//' ERROR: grid geometry is not implemented')
+       call CON_stop(NameSub// &
+            ' ERROR: non-Cartesian grid geometry is not implemented')
     end if
 
     FixedXyzBlockCenter_D = XyzBlockCenter_D
@@ -1266,11 +1192,6 @@ contains
           ! X position of the pixel on the image plane
           aPix = (iPix - 1) * SizePix - rSizeImage
 
-          ! if los is on pole, will have block degeneracy 
-          !            ---> offset a 'tiny' bit
-          ! (will always have this problem if nPix is odd)
-          if (IsRLonLat.and.AlignedZ) aPix = aPix + cTiny
-
           ! Check if block can intersect this pixel
           if(DoCheckBlock)then
              if( (aPix - aBlockCenter)**2 + (bPix - bBlockCenter)**2 > &
@@ -1300,10 +1221,9 @@ contains
              call integrate_los_block_rz
           elseif(IsCartesian)then
              call integrate_los_block
-          elseif(IsRLonLat)then
-             call integrate_los_block_sph
           else
-             call stop_mpi(NameSub//': grid geometry is not implemented')
+             call stop_mpi(NameSub// &
+                  ': non-Cartesian grid geometry is not implemented')
           end if
 
        end do ! jPix loop
@@ -1357,6 +1277,7 @@ contains
     real :: DistIntersect, DistIntersect_I(MaxIntersect) 
 
     logical, parameter :: DoTestPix = .false.
+
     !------------------------------------------------------------------------
     ! Calculate the closest approach to the origin in the Y-Z plane
     ! Normalize the Y-Z components of the LOS vector to unity
@@ -1648,118 +1569,24 @@ contains
 
   !===========================================================================
 
-  subroutine integrate_los_block_sph
-
-    ! Local variables
-    real :: Xyz1_D(3), Xyz2_D(3), rInside, rOutside
-
-    logical, dimension(2) :: IsPoleNS
-    logical :: IsIntersect, IsAllBehind
-    !------------------------------------------------------------------------
-    ! essentially a more general version of the cartesian version
-    ! except this time made each part into its own subroutine
-    ! note, the 3D location of the pixel is XyzPix_D
-    ! need to make sure you discount the non-zero face on a polar block 
-    ! use same check as fix_axis routines
-    IsIntersect=.false.
-    IsPoleNS = .false.
-    IsPoleNS(1) = (NeiLTop(iBLK) == NOBLK)     
-    IsPoleNS(2) = (NeiLBot(iBLK) == NOBLK)
-
-    ! Block level intersection call
-    ! note BBoxVertex_V is calculated in main routine block loop and is 8 vertex 
-    ! locations of the smallest 6 sided planar volume that bounds the curved block
-    ! (slightly larger than the block itself)
-    !
-    ! this function finds the points where the los intersects this volume
-
-    call find_intersect_general(BBoxVertex_DN,IsPoleNS,IsIntersect,Xyz1_D,Xyz2_D)
-
-    ! NOW CALL SERIES OF ROUTINES that trim the LOS integral to 
-    ! the correct limits within the blocks.
-    !
-    ! the order is as follows:
-    !
-    ! a) los_cut_backside  **trim if los hits sun, only take half of domain facing observer
-    ! b) los_cut_rmax      **trim if los is outside block rmax (node r boundary)
-    ! c) los_cut_rmin      **trim if los is below block rmin (node r boundary),
-    !                        this can branch if double cut.
-    !                        call integrate segment from los_cut_rmin
-
-    if (.not.IsIntersect) RETURN ! return if no intersection
-
-    ! cut off any part of los behind the sun,
-    ! trim to hemisphere towards observer
-    call los_cut_backside(Xyz1_D,Xyz2_D,IsAllBehind)
-    if(IsAllBehind) RETURN ! if this part los is entirely behind sun return
-
-    ! Determine minimum bounding radii for intersection
-    ! (either simulation limits or block limits)
-    rInside = max(rInner, rNodeMin)
-    rOutside = min(rOuter, rNodeMax)
-
-    ! call nested functions to trim between max and min radii,
-    ! which then call integrate segment
-    call los_cut_rmax(Xyz1_D, Xyz2_D, rInside, rOutside)
-
-    RETURN
-
-  end subroutine integrate_los_block_sph
-  !===========================================================================
-
   subroutine integrate_segment(XyzStart_D, XyzEnd_D)
 
     ! Integrate variables from XyzStart_D to XyzEnd_D
     ! The line is split into nSegment segments of length Ds
 
     use ModAdvance,     ONLY: UseElectronPressure
-    use ModInterpolate, ONLY: bilinear, trilinear
-    use ModUser,        ONLY: user_set_plot_var
-    use ModParallel,    ONLY: NeiLWest, NeiLEast, NOBLK
     use ModVarIndexes,  ONLY: Pe_, p_
-    use BATL_lib,       ONLY: xyz_to_coord
+    use BATL_lib,       ONLY: CoordMin_DB
 
     real, intent(in) :: XyzStart_D(3), XyzEnd_D(3)
 
     integer :: iSegment, nSegment
-    real :: x_q, y_q, z_q, q_mag
-    real :: a_los, b_los, c_los, d_los
-    real :: SinOmega, CosOmega, Cos2Theta, Sin2Omega, Cos2Omega, Logarithm
 
     real :: Ds             ! Length of line segment
     real :: XyzLos_D(3)    ! Coordinate of center of line segment    
-    real :: xLos, yLos, zLos, rLos ! Coordinates and radial distance
-    real :: CoordNorm_D(3) ! Normalized coordinates of current point
-    real :: Rho            ! Density at the point
-    real :: Value          ! Value of the LOS variable at the point
 
-    ! Variables for user defined LOS variables
-    integer :: iBlockLast = -1, iVarLast = -1
-    logical :: IsFound, UseBody
-    character(len=1):: NameTecVar, NameTecUnit, NameIdlUnit
-    real    :: ValueBody
-    real, allocatable, save:: PlotVar_GV(:,:,:,:)
-
-    ! Added for EUV synth and sph geometry
-    real :: GenLos_D(3)
-    real :: Temp            ! Electron Temp at the point
-    real :: MuGas = 0.5    ! mean molecular wieght of plasma
-    real :: LogTemp, LogNe, rConv, ResponseFactor, EuvResponse(3), SxrResponse(2)
-    real :: Temp_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
-    ! this is so can modify amount of block sent to interpolation routine
-    integer :: iMin, iMax
-    logical :: IsNoBlockInner = .false.
-    logical :: IsNoBlockOuter = .false.
-
-    ! parameters for temperature cuttoff of EUV/SXR response
-    ! idea is to neglect most of the broadened transition region
-    ! since broadening introduces unphysical column depth (by orders of
-    ! magnitude) which can cause it to be large enough to produce an
-    ! unwanted contribution
-    real :: TeCutSi = 4.0e+5
-    real :: DeltaTeCutSi = 3.0e+4
-    real :: FractionTrue
+    logical:: DoTest = .false.
+    DoTest = iPix==200 .and. jPix==200
 
     !------------------------------------------------------------------------
     ! Number of segments for an accurate integral
@@ -1770,238 +1597,19 @@ contains
     elseif(IsCartesian)then
        ! Measure distance in cell size units and add up dimensions
        nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D)/CellSize_D)
-    else
-       ! in gen coords, hard to think of equally weighted length
-       ! (along all 3 axes), so choose n=nI+nJ+nK for now, note that
-       ! CellSize_D has gencoord deltas
-       nSegment = nI+nJ+nK
     end if
 
     ! Length of a segment
     Ds = sqrt(sum((XyzEnd_D - XyzStart_D)**2)) / nSegment
 
-    ! Don't want to divide block states repeatedly in nSegment loop
-    if(UseEuv .or. UseSxr .or. UseTableGen)then
-       ! Fully ionized hydrogen plasma only for now.
-       if(UseElectronPressure)then
-          Temp_G = State_VGB(Pe_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
-       else
-          ! Fixed mean molecular weight, mu, and electron/ion Temperature
-          ! equilibrium.
-          Temp_G = MuGas*State_VGB(P_,:,:,:,iBlk)/State_VGB(Rho_,:,:,:,iBlk)
-       end if
-    end if
+    CoordMinBlock_D = CoordMin_DB(:, iBlk)
 
     do iSegment = 1, nSegment
        XyzLos_D = XyzStart_D &
             + (iSegment - 0.5)/nSegment*(XyzEnd_D - XyzStart_D)
-       rLos = sqrt(sum(XyzLos_D**2))
-       xLos = XyzLos_D(1)
-       yLos = XyzLos_D(2)
-       zLos = XyzLos_D(3)
 
-       if(UseScattering .and. rLos > 1.0)then
-          ! This calculation is useful for light scattering in SC and IH
-          ! as it assumes that the radiation comes from a central 
-          ! body with radius 1. Normally setting rOccult > 1 ensures rLos > 1.
-          SinOmega = 1.0/rLos
-          Sin2Omega = SinOmega**2
-          Cos2Omega = 1 - Sin2Omega
-          CosOmega = sqrt(Cos2Omega)
-          Logarithm = log((1.0 + SinOmega)/CosOmega)  
-
-          !omega and functions of omega are unique to a given line of sight
-          a_los = CosOmega*Sin2Omega
-          b_los = -0.125*( 1.0 - 3.0*Sin2Omega - (Cos2Omega/SinOmega)* &
-               (1.0 + 3.0*Sin2Omega)*Logarithm )
-          c_los = 4.0/3.0 - CosOmega - (1.0/3.0)*CosOmega*Cos2Omega
-          d_los = 0.125*( 5.0 + Sin2Omega - (Cos2omega/SinOmega) * &
-               (5.0 - Sin2Omega)*Logarithm )
-
-          z_q =   (LosPix_D(1)**2 + LosPix_D(2)**2)*zLos            &
-               - LosPix_D(3)*(LosPix_D(1)*xLos + LosPix_D(2)*yLos)
-          x_q = xLos + (LosPix_D(1)/LosPix_D(3)) * (z_q - zLos)
-          y_q = yLos + (LosPix_D(2)/LosPix_D(3)) * (z_q - zLos)
-          q_mag = sqrt(x_q**2 + y_q**2 + z_q**2)
-
-          Cos2Theta = (q_mag/rLos)**2
-       end if
-
-       ! Calculate normalized position
-       ! XyzStart contains the coordinates of cell 1,1,1, hence add 1
-       if(IsCartesian)then
-          CoordNorm_D = &
-               (XyzBlockSign_D*XyzLos_D - XyzBlockStart_D)/CellSize_D + 1
-       elseif(IsRzGeometry)then
-          ! Radial distance is sqrt(yLos**2+zLos**2)
-          CoordNorm_D(1:2) = &
-               ( (/xLos*XyzBlockSign_D(1), sqrt(yLos**2+zLos**2) /) &
-               - XyzBlockStart_D(1:2) )/CellSize_D(1:2) + 1
-          CoordNorm_D(3) = 0.0
-
-       else
-          ! get gen coord of los (note XyzStart_D is already in gen. coord)
-          call xyz_to_coord(XyzBlockSign_D*XyzLos_D, GenLos_D)
-          CoordNorm_D = (GenLos_D - XyzBlockStart_D)/CellSize_D + 1
-       end if
-
-       ! interpolate density if it is needed by any of the plot variables
-       if(UseRho)then
-          if(nK == 1)then
-             Rho = bilinear(State_VGB(Rho_,:,:,1,iBlk), &
-                  MinI,MaxI, MinJ,MaxJ, CoordNorm_D(1:2))
-          else
-             Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
-                  MinI,MaxI, MinJ,MaxJ, MinK,MaxK, CoordNorm_D)
-          end if
-       end if
-
-       if(UseEuv.or.UseSxr.or.UseTableGen)then
-
-          ! need to interpolate electron temperature. Should really be calling
-          ! user_material_properties, but would need user to have implemented
-          ! this.
-
-          if(nK == 1)then
-             Temp = bilinear(Temp_G(:,:,1), MinI,MaxI, MinJ,MaxJ, &
-                  CoordNorm_D(1:2))
-          else
-             Temp = trilinear(Temp_G(:,:,:), MinI,MaxI, MinJ,MaxJ, MinK,MaxK, &
-                  CoordNorm_D)
-          end if
-
-          ! Note this is log base 10!!
-          LogTemp = log10(max(Temp*No2Si_V(UnitTemperature_), & 
-               cTolerance))
-
-          ! Here calc log base 10 of electron density, the -6 is to convert to CGS
-          LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
-
-          ! rconv converts solar radii units to CGS for response function
-          ! exponent      
-          rConv = log10(6.96) + 10.0
-
-          ! calculate Ne**2 and Normalize units (10 ^ an exponent)
-          ResponseFactor = 10.0**(2.0*LogNe + rConv - 26.0)
-
-          ! calculate Temp cuttoff function to neglect widened Trans region
-          FractionTrue = 0.5*(1.0 + tanh((10**LogTemp - TeCutSi)/DeltaTeCutSi))
-
-          if (UseEuv) then
-             ! now interpolate EUV response values from a lookup table
-             if (iTableEUV <=0) &
-                  call stop_mpi('Need to load #LOOKUPTABLE for EUV response!')
-             call interpolate_lookup_table(iTableEUV, LogTemp, LogNe, &
-                  EuvResponse, DoExtrapolate=.true.)
-             EuvResponse = EuvResponse * FractionTrue
-          end if
-
-          if (UseSxr) then
-             ! now interpolate SXR response values from a lookup table
-             if (iTableSXR <=0) &
-                  call stop_mpi('Need to load #LOOKUPTABLE for SXR response!')
-             call interpolate_lookup_table(iTableSXR, LogTemp, LogNe, &
-                  SxrResponse, DoExtrapolate=.true.)
-             SxrResponse = SxrResponse * FractionTrue
-          end if
-
-          if (UseTableGen) then
-             if(iTableGen <= 0) &
-                  call stop_mpi('Need to load #LOOKUPTABLE for '//NameLosTable(iFile)//' response!')
-             ! now interpolate the entire table
-             call interpolate_lookup_table(iTableGen, LogTemp, LogNe, &
-                  InterpValues_I, DoExtrapolate=.true.)
-             InterpValues_I = InterpValues_I * FractionTrue
-          endif
-
-       end if
-
-       ! if using a generalized table can do it vector style
-       if(UseTableGen) then
-          ImagePe_VII(:,iPix,jPix) = ImagePe_VII(:,iPix,jPix) + &
-               InterpValues_I*ResponseFactor*Ds
-          CYCLE !cycle the nSegment loop
-       endif
-
-       do iVar = 1, nPlotVar
-          Value = 0.0 ! initialize to 0 so that if statements below work right
-          NameVar = plotvarnames(iVar)
-          select case(NameVar)
-          case('len')
-             ! Integrate the length of the integration lines
-             Value = 1.0
-
-          case('wl')
-             ! White light with limb darkening
-             if(rLos > 1.0) Value = Rho*( &
-                  (1 - mu_los)*(2*c_los - a_los*Cos2Theta) &
-                  + mu_los*(2*d_los - b_los*Cos2Theta) )
-
-          case('pb')
-             ! Polarization brightness
-             if(rLos > 1.0) Value = &
-                  Rho*( (1.0 - mu_los)*a_los + mu_los*b_los)*Cos2Theta
-
-          case('euv171')
-             ! EUV 171
-             Value = EuvResponse(1)*ResponseFactor
-
-          case('euv195')
-             ! EUV 195
-             Value = EuvResponse(2)*ResponseFactor
-
-          case('euv284')
-             ! EUV 284
-             Value = EuvResponse(3)*ResponseFactor
-
-          case('sxr')
-             ! Soft X-Ray (Only one channel for now, can add others later)
-             Value = SxrResponse(1)*ResponseFactor
-
-          case('rho')
-             ! Simple density integral
-             Value = Rho
-
-          case('sphere10')
-             ! Sphere of radius 10 with 100-r^2 density profile
-             Value = max(0.0, 100.0 - rLos**2)
-
-          case('cube10')
-             ! 20x20x20 cube centered around X=Y=Z=10
-             Value = product( 0.5 + sign(0.5, 10.0 - abs(XyzLos_D-10.0)) )
-
-          case default
-             ! Obtain user defined plot function for the whole block
-             if(iBlk /= iBlockLast .or. iVar > iVarLast)then
-                iBlockLast = iBlk
-                iVarLast   = iVar
-                if(.not.allocated(PlotVar_GV)) &
-                     allocate(PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar))
-                call user_set_plot_var(iBlk, NameVar, &
-                     plot_dimensional(iFile), &
-                     PlotVar_GV(:,:,:,iVar), &
-                     ValueBody, UseBody, NameTecVar, NameTecUnit, NameIdlUnit,&
-                     IsFound)
-                if(.not. IsFound)then
-                   PlotVar_GV(:,:,:,iVar)=-7777.
-                   if(iProc==0.and.iBLK==1)write(*,*) &
-                        NameSub, ' WARNING: unknown plotvarname=', NameVar
-                end if
-             end if
-             ! Interpolate value
-             if(nK == 1)then
-                Value = bilinear(PlotVar_GV(:,:,1,iVar), &
-                     MinI,MaxI, MinJ,MaxJ, CoordNorm_D(1:2))
-             else
-                Value = trilinear(PlotVar_GV(:,:,:,iVar), &
-                     MinI,MaxI, MinJ,MaxJ, MinK,MaxK, CoordNorm_D)
-             end if
-          end select
-
-          ImagePe_VII(iVar,iPix,jPix) = ImagePe_VII(iVar,iPix,jPix) + Value*Ds
-
-       end do ! iVar
-
+       call add_segment(Ds, XyzLos_D)
+       
     end do !line segment interation loop 
 
   end subroutine integrate_segment
@@ -2301,185 +1909,6 @@ contains
     IsAllBehind = IsBehind1.and.IsBehind2
 
   end subroutine los_cut_backside
-
-  !==========================================================================
-
-  subroutine los_cut_rmin(Xyz1In_D,Xyz2In_D,rInside)
-
-    !Input parameters: coordinates for two points of intersection of
-    !the given LOS with the block boundary
-    real, dimension(3), intent(in) :: Xyz1In_D,Xyz2In_D
-    real, intent(in) :: rInside
-
-    real, dimension(3) :: Xyz1_D, Xyz2_D
-    real :: R2Point1, R2Point2,rLine_D(3),rLine2
-    real :: Coeff1,Coeff2,Coeff3
-    real :: Discr
-    real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
-    logical :: IsGoodSolution1, IsGoodSolution2
-    real :: rInside2
-    !----------------------------
-
-    rInside2 = rInside**2
-
-    Xyz1_D = Xyz1In_D
-    Xyz2_D = Xyz2In_D
-
-    R2Point1 = sum(Xyz1_D**2)
-    R2Point2 = sum(Xyz2_D**2)
-
-    ! Check if the whole segment is inside rInside
-    if( R2Point1 <= rInside2 .and. R2Point2 <= rInside2) RETURN
-
-    rLine_D = XyzPix_D - LosPix_D * sum(LosPix_D * XyzPix_D)
-    rLine2  = sum(rLine_D**2)
-
-    ! Check if there is a need to calculate an intersection
-
-    ! Do we intersect the inner sphere
-    if( rLine2 < rInside2 ) then
-
-       Coeff1 = sum((Xyz2_D - Xyz1_D)**2)
-       Coeff2 = 2 *sum(Xyz1_D * (Xyz2_D - Xyz1_D))
-
-       Coeff3 = R2Point1 - rInside2
-
-       Discr = Coeff2**2 - 4 * Coeff1 * Coeff3
-
-       if(Discr < 0.0)then
-          write(*,*)'Warning: Discr=',Discr
-          !   call SC_stop_mpi("Negative discriminant")
-          RETURN
-       end if
-
-       ! Find the two intersections (distance from point1 towards point2)
-       Discr = sqrt(Discr)
-       Solution1 = (-Coeff2 - Discr)/(2 * Coeff1)
-       Solution2 = (-Coeff2 + Discr)/(2 * Coeff1)
-
-       Solution1_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution1
-       Solution2_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution2
-
-
-       ! Check if the solutions are within the segment
-       IsGoodSolution1 = (Solution1 >= 0.0 .and. Solution1 <= 1.0)
-       IsGoodSolution2 = (Solution2 >= 0.0 .and. Solution2 <= 1.0)
-
-       ! For inner sphere replace 
-       ! internal point1 with solution2 and 
-       ! internal point2 with solution1
-       if(R2Point1 < rInside2) Xyz1_D = Solution2_D
-       if(R2Point2 < rInside2) Xyz2_D = Solution1_D
-
-       ! Weird case: the segment cuts the inner sphere
-       if(IsGoodSolution1 .and. IsGoodSolution2)then
-          ! Need to do two integrals:
-          ! from point1 to solution1 and
-          ! from point2 to solution2
-          if(Discr > 0.0)then
-             if(Solution1>cTiny) &
-                  call integrate_segment(Xyz1_D, Solution1_D)
-             if(solution2 < 1.0-cTiny) &
-                  call integrate_segment(Xyz2_D, Solution2_D)
-             RETURN
-          end if
-       end if
-
-    end if
-
-    call integrate_segment(Xyz1_D, Xyz2_D)
-
-  end subroutine los_cut_rmin
-
-  !==========================================================================
-
-  subroutine los_cut_rmax(Xyz1_D, Xyz2_D, rInside, rOutside)
-
-    !Input parameters: coordinates for two points of intersection of
-    !the given LOS with the block boundary
-    real, dimension(3), intent(inOut) :: Xyz1_D, Xyz2_D
-
-    !The cutoff radius
-    real, intent(in) :: rInside, rOutside
-
-    real :: R2Point1, R2Point2,rLine_D(3),rLine2
-    real :: Coeff1, Coeff2,Coeff3
-    real :: Discr
-    real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
-    logical :: IsOuter, IsGoodSolution1, IsGoodSolution2
-
-    real :: rOutside2
-    !------------------------------------------
-
-    rOutside2 = rOutside**2
-
-    R2Point1 = sum(Xyz1_D**2)
-    R2Point2 = sum(Xyz2_D**2)
-
-    ! Check if the whole segment is outside rOutside
-    rLine_D = XyzPix_D - LosPix_D * sum(LosPix_D * XyzPix_D)
-    rLine2  = sum(rLine_D**2)
-
-    if( rLine2 > rOutside2 ) RETURN
-
-    ! Check if there is a need to calculate an intersection
-
-    ! Do we intersect the outer sphere
-    IsOuter = R2Point1 > rOutside2 .or. R2Point2 > rOutside2
-
-    ! Do we intersect the inner or outer spheres
-    if( IsOuter ) then
-
-       Coeff1 = sum((Xyz2_D - Xyz1_D)**2)
-       Coeff2 = 2 * sum(Xyz1_D *( Xyz2_D - Xyz1_D))
-
-       Coeff3 = R2Point1 - rOutside2
-
-       Discr = Coeff2**2 - 4 * Coeff1 * Coeff3
-
-       if(Discr < 0.0)then
-          write(*,*)'Warning: Discr=',Discr
-          return
-       end if
-
-       ! Line of sight tangent to the outer sphere
-       if( Discr==0.0 )return
-
-       ! Find the two intersections (distance from point1 towards point2)
-       Discr = sqrt(Discr)
-       Solution1 = (-Coeff2 - Discr) / (2.0 * coeff1)
-       Solution2 = (-Coeff2 + Discr) / (2.0 * coeff1)
-
-       Solution1_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution1
-       Solution2_D = Xyz1_D + (Xyz2_D - Xyz1_D) * Solution2
-
-
-       ! Check if the solutions are within the segment
-       IsGoodSolution1 = (Solution1 >= 0.0 .and. Solution1 <= 1.0)
-       IsGoodSolution2 = (Solution2 >= 0.0 .and. Solution2 <= 1.0)
-
-       ! For outer sphere replace
-       ! outlying point1 with solution1 and
-       ! outlying point2 with solution2
-       if(R2Point1 > rOutside2) then
-          if(IsGoodSolution1)then
-             Xyz1_D = Solution1_D
-          else
-             RETURN
-          end if
-       end if
-       if(R2Point2 > rOutside2) then
-          if(IsGoodSolution2)then
-             Xyz2_D = Solution2_D
-          else
-             RETURN
-          end if
-       end if
-    end if
-
-    call los_cut_rmin(Xyz1_D, Xyz2_D,rInside)
-
-  end subroutine los_cut_rmax
 
   !==========================================================================
 
