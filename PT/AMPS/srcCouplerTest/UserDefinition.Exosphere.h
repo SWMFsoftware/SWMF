@@ -20,7 +20,7 @@
 
 
 //the plenat
-#define _TARGET_ _MOON_
+#define _TARGET_ _EARTH_
 
 #ifndef USERDEFINITION_EXOSPHERE_H_
 #define USERDEFINITION_EXOSPHERE_H_

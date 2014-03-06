@@ -24,7 +24,7 @@
 extern int maxLocalBackdroundDensityOffset;
 
 //the plenat
-#define _TARGET_ _EARTH_
+//#define _TARGET_ _EARTH_
 
 //debugger mode
 #undef _PIC_DEBUGGER_MODE_
