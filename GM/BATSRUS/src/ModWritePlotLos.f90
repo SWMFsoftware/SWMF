@@ -1,7 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
 subroutine write_plot_los(iFile)
 
@@ -58,7 +57,7 @@ subroutine write_plot_los(iFile)
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
        UnitTemperature_
   use ModIO
-  use ModAdvance, ONLY : rho_, State_VGB
+  use ModAdvance, ONLY : State_VGB
   use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance
   use ModMpi
   use CON_axes, ONLY : transform_matrix
@@ -66,8 +65,8 @@ subroutine write_plot_los(iFile)
   use ModUtilities, ONLY: lower_case, split_string, join_string
   use ModPlotFile, ONLY: save_plot_file
   use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
-  use BATL_lib, ONLY: Xyz_DNB, Xyz_DGB, CellSize_DB, &
-       IsCartesianGrid, IsCartesian, IsRzGeometry, IsRLonLat
+  use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
+       IsCartesianGrid, IsCartesian, IsRzGeometry
 
   implicit none
 
@@ -356,9 +355,7 @@ subroutine write_plot_los(iFile)
 
   if(DoTiming)call timing_start('los_block_loop')
 
-  if(UseLosSimple)then
-     call integrate_image
-  elseif (IsRLonLat) then
+  if(UseLosSimple .or. .not.IsCartesianGrid)then
      call integrate_image
   else
      ! loop over blocks
@@ -682,23 +679,17 @@ contains
     real:: Step, DsTiny
     logical:: IsEdge
 
-    logical:: DoTest = .false.
-
+    logical, parameter :: DoTest = .false.
     character(len=*), parameter:: NameSub='integrate_line'
     !------------------------------------------------------------------------
-    !write(*,*)'!!! iPix, jPix=', iPix, jPix
-
-    DoTest = iPix==200 .and. jPix==200
-
-!    if(DoTest .and. iProc == 0)write(*,'(2A, 3F10.7)')NameSub,' XyzStartIn_D=', XyzStartIn_D
+    ! DoTest = iPix==200 .and. jPix==200
+    if(DoTest .and. iProc == 0) &
+         write(*,'(2a, 3f10.7)')NameSub,' XyzStartIn_D=', XyzStartIn_D
 
     CoordSize_D = CoordMax_D - CoordMin_D
     DsTiny = cTiny*(x2-x1 + y2 - y1 + z2 - x1)
 
     XyzStart_D = XyzStartIn_D
-    
-
-!!!    call los_cut_rmax(XyzStart_D, XyzEnd_D)
 
     ! Initial length of segment
     Ds = DsTiny
@@ -711,7 +702,7 @@ contains
     CoordMinBlock_D = CoordMax_D
     CoordMaxBlock_D = CoordMin_D
 
-!    if(DoTest) write(*,*)'!!! initial Ds=',Ds
+    if(DoTest) write(*,*) NameSub,': initial Ds=',Ds
 
     Length = -Ds
     LOOPLINE: do
@@ -729,7 +720,7 @@ contains
        if(  any(CoordLosNew_D > CoordMax_D) .or. &
             any(CoordLosNew_D < CoordMin_D)) EXIT LOOPLINE
 
-!       if(DoTest)write(*,*)'!!! Inside, Ds, Length=', Ds, Length
+       if(DoTest)write(*,*) NameSub,' inside: Ds, Length=', Ds, Length
 
        ! Check if we are still in the same block or not
        if(  any(CoordLos_D < CoordMinBlock_D) .or. &
@@ -745,11 +736,11 @@ contains
           CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) !Center
           CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D       !Block size
           CellSize_D      = CoordSizeBlock_D / nIjk_D               !Cell size
-!          if(DoTest)then
-!             write(*,*)'!!! new iBlk=', iBlk
-!             write(*, '(A, 3E12.5))')'!!! CoordMin=', CoordMinBlock_D
-!             write(*, '(A, 3E12.5))')'!!! CoordMax=', CoordMaxBlock_D
-!          end if
+          if(DoTest)then
+             write(*,*)NameSub,': new iBlk=', iBlk
+             write(*, '(A, 3E12.5))')NameSub//': CoordMin=', CoordMinBlock_D
+             write(*, '(A, 3E12.5))')NameSub//': CoordMax=', CoordMaxBlock_D
+          end if
 
        end if
 
@@ -805,11 +796,6 @@ contains
        if(iProc == iProcFound)then
           ! Add contribution from this segment to the image
           call add_segment(Ds, XyzLosNew_D)
-!          if(DoTest)then
-!            write(*,*)'!!! new iBlk=', iBlk
-!            write(*, '(A, 3E12.5))')'!!! CoordMin=', CoordMinBlock_D
-!            write(*, '(A, 3E12.5))')'!!! CoordMax=', CoordMaxBlock_D
-!         end if
       end if
 
        ! Move XyzLosNew to the end of the segment
@@ -864,18 +850,15 @@ contains
     real :: TeCutSi = 4.0e+5
     real :: DeltaTeCutSi = 3.0e+4
     real :: FractionTrue
-
-    logical:: DoTest = .false.
-    DoTest = iPix==200 .and. jPix==200
-
     !-----------------------------------------------------------------------
+
     rLos2= sum(XyzLos_D**2)
     xLos = XyzLos_D(1)
     yLos = XyzLos_D(2)
     zLos = XyzLos_D(3)
 
     if(UseScattering .and. rLos2 > 1.0)then
-       ! See Hundhausen, A. J. (1993), JGR, 98(A8), 13177, doi:10.1029/93JA00157.
+       ! See Hundhausen, A.J. 1993, JGR, 98(A8), 13177, doi:10.1029/93JA00157
        ! Equations for A, B, C, D on page 13,190
 
        ! This calculation is useful for light scattering in SC and IH
@@ -1092,53 +1075,47 @@ contains
   subroutine integrate_block
 
     character(len=*), parameter :: NameSub='integrate_block'
-
-    if(IsCartesianGrid) then      
-
-       if(IsRzGeometry)then
-          ! Exclude blocks that do not intersect the Z=0 plane 
-          if(nK > 1)then
-             if(.not.(Xyz_DGB(z_,1,1,0,iBLK)<0 &
-                  .and. Xyz_DGB(z_,1,1,nK,iBLK)>0)) RETURN
-          end if
-          ! Exclude blocks below the Y=0 plane
-          if(Xyz_DGB(y_,1,nJ,1,iBLK)<0) RETURN
+    !-------------------------------------------------------------------------
+    if(IsRzGeometry)then
+       ! Exclude blocks that do not intersect the Z=0 plane 
+       if(nK > 1)then
+          if(.not.(Xyz_DGB(z_,1,1,0,iBLK)<0 &
+               .and. Xyz_DGB(z_,1,1,nK,iBLK)>0)) RETURN
        end if
+       ! Exclude blocks below the Y=0 plane
+       if(Xyz_DGB(y_,1,nJ,1,iBLK)<0) RETURN
+    end if
 
-       rBlockSize = 0.5*sqrt(&
-            ((nI+1)*CellSize_DB(x_,iBLK))**2 + &
-            ((nJ+1)*CellSize_DB(y_,iBLK))**2 + &
-            ((nK+1)*CellSize_DB(z_,iBLK))**2)
+    rBlockSize = 0.5*sqrt(&
+         ((nI+1)*CellSize_DB(x_,iBLK))**2 + &
+         ((nJ+1)*CellSize_DB(y_,iBLK))**2 + &
+         ((nK+1)*CellSize_DB(z_,iBLK))**2)
 
-       !position of the block center
-       XyzBlockCenter_D = 0.5*(Xyz_DGB(:,nI,nJ,nK,iBLK)+Xyz_DGB(:,1,1,1,iBLK))
+    !position of the block center
+    XyzBlockCenter_D = 0.5*(Xyz_DGB(:,nI,nJ,nK,iBLK)+Xyz_DGB(:,1,1,1,iBLK))
 
-       if(iMirror == 2) XyzBlockCenter_D(1) = -XyzBlockCenter_D(1)
-       if(jMirror == 2) XyzBlockCenter_D(2) = -XyzBlockCenter_D(2)
-       if(kMirror == 2) XyzBlockCenter_D(3) = -XyzBlockCenter_D(3)
+    if(iMirror == 2) XyzBlockCenter_D(1) = -XyzBlockCenter_D(1)
+    if(jMirror == 2) XyzBlockCenter_D(2) = -XyzBlockCenter_D(2)
+    if(kMirror == 2) XyzBlockCenter_D(3) = -XyzBlockCenter_D(3)
 
-       rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
+    rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
 
-       if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr .or. UseTableGen)) then 
-          ! in cartesian grid, the rBody boundary cuts through blocks and,
-          ! since EUV plots are integrating to surface, need to make sure that
-          ! interpolation does not interpolate to ghost cells filled with
-          ! garbage body values. So make sure that rInner is equal to 
-          ! rBody + cell diagonal width. 
-          ! This way, 8 cells bounding a point along the los
-          ! are guaranteed to be true_cells. Only do this for blocks on the
-          ! body (doesn't affect others). Also, changing it within block loop
-          ! means rInner depends on block resolution (which you want).
+    if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr .or. UseTableGen)) then 
+       ! in cartesian grid, the rBody boundary cuts through blocks and,
+       ! since EUV plots are integrating to surface, need to make sure that
+       ! interpolation does not interpolate to ghost cells filled with
+       ! garbage body values. So make sure that rInner is equal to 
+       ! rBody + cell diagonal width. 
+       ! This way, 8 cells bounding a point along the los
+       ! are guaranteed to be true_cells. Only do this for blocks on the
+       ! body (doesn't affect others). Also, changing it within block loop
+       ! means rInner depends on block resolution (which you want).
 
-          rInner = rBody ! reset it with every block
-          if(Body1) then
-             if(IsBoundaryBlock_IB(body1_,iBLK)) rInner = rBody + &
-                  sqrt(sum(CellSize_D**2))
-          end if
+       rInner = rBody ! reset it with every block
+       if(Body1) then
+          if(IsBoundaryBlock_IB(body1_,iBLK)) rInner = rBody + &
+               sqrt(sum(CellSize_D**2))
        end if
-    else
-       call CON_stop(NameSub// &
-            ' ERROR: non-Cartesian grid geometry is not implemented')
     end if
 
     FixedXyzBlockCenter_D = XyzBlockCenter_D
@@ -1219,11 +1196,8 @@ contains
           ! Calculate contribution of this block to this pixel
           if(IsRzGeometry)then
              call integrate_los_block_rz
-          elseif(IsCartesian)then
-             call integrate_los_block
           else
-             call stop_mpi(NameSub// &
-                  ': non-Cartesian grid geometry is not implemented')
+             call integrate_los_block
           end if
 
        end do ! jPix loop
@@ -1275,9 +1249,6 @@ contains
 
     ! distances of intersections from the center of the pixel
     real :: DistIntersect, DistIntersect_I(MaxIntersect) 
-
-    logical, parameter :: DoTestPix = .false.
-
     !------------------------------------------------------------------------
     ! Calculate the closest approach to the origin in the Y-Z plane
     ! Normalize the Y-Z components of the LOS vector to unity
@@ -1574,8 +1545,6 @@ contains
     ! Integrate variables from XyzStart_D to XyzEnd_D
     ! The line is split into nSegment segments of length Ds
 
-    use ModAdvance,     ONLY: UseElectronPressure
-    use ModVarIndexes,  ONLY: Pe_, p_
     use BATL_lib,       ONLY: CoordMin_DB
 
     real, intent(in) :: XyzStart_D(3), XyzEnd_D(3)
@@ -1584,17 +1553,13 @@ contains
 
     real :: Ds             ! Length of line segment
     real :: XyzLos_D(3)    ! Coordinate of center of line segment    
-
-    logical:: DoTest = .false.
-    DoTest = iPix==200 .and. jPix==200
-
     !------------------------------------------------------------------------
     ! Number of segments for an accurate integral
     if (IsRzGeometry) then
        ! In RZ geometry Delta Y is representative for the radial resolution
        nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D) &
             / (/ CellSize_D(1), CellSize_D(2), CellSize_D(2) /) )
-    elseif(IsCartesian)then
+    else
        ! Measure distance in cell size units and add up dimensions
        nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D)/CellSize_D)
     end if
@@ -1649,235 +1614,6 @@ contains
     end do ! iVar
 
   end subroutine dimensionalize_plotvar_los
-
-  !==========================================================================
-
-  subroutine generate_vertex_vectors(i1,i2,j1,j2,k1,k2,Vertex_DN)
-
-    ! build an array containing the 8 vertex vectors bounding a cell/block
-    ! made a routine to make the interesct routine simpler
-    ! also wrote it explicitly so its easy to see which vertex is which
-
-    integer, intent(in) :: i1,i2,j1,j2,k1,k2
-    real, dimension(3,8), intent(out) :: Vertex_DN
-    !----------------------------------------------------------------------
-
-    Vertex_DN(:,1) = Xyz_DNB(:,i1,j1,k1,iBlk)
-    Vertex_DN(:,2) = Xyz_DNB(:,i1,j1,k2,iBlk)
-    Vertex_DN(:,3) = Xyz_DNB(:,i1,j2,k1,iBlk)
-    Vertex_DN(:,4) = Xyz_DNB(:,i1,j2,k2,iBlk)
-    Vertex_DN(:,5) = Xyz_DNB(:,i2,j1,k1,iBlk)
-    Vertex_DN(:,6) = Xyz_DNB(:,i2,j1,k2,iBlk)
-    Vertex_DN(:,7) = Xyz_DNB(:,i2,j2,k1,iBlk)
-    Vertex_DN(:,8) = Xyz_DNB(:,i2,j2,k2,iBlk)
-
-    if (maxval(Vertex_DN(:, :)) > 1e10) then
-       write(*,*) '====================================================='
-       write(*,*) 'iBlk!!!: ', iBlk
-    end if
-
-  end subroutine generate_vertex_vectors
-
-  !==========================================================================
-
-  subroutine find_intersect_general(Vertex_DN,IsPoleNS,IsIntersect,Xyz1_D,Xyz2_D)
-
-    ! subroutine to find general plane interections for finding if los interescts
-    ! a block
-
-    !--- in non-cartesian geometry the face normals do not have only one
-    !--- component so need to use a more general intersection
-    !--- calculation, do this here
-
-    !--- calc normals first... look at xyzC definitions to see locations of
-    !--- vertices. Sign (pointing in or out) and length cancel/divide out later
-
-    real,dimension(3, 8), intent(in) :: Vertex_DN ! 8 vertexes in XYZ
-    logical, intent(in) :: IsPoleNS(2) ! array to take out zero-area face on the pole
-
-    logical, intent(out) :: IsIntersect ! Flag to see if intersection is on the cell/block
-    real, dimension(3), intent(out) :: Xyz1_D, Xyz2_D ! points that intersect on the cell/block
-
-    real, dimension(3,6) :: FaceNormal_DS, NewIntersect_DN
-    integer,parameter,dimension(3,2,6) :: TriIndex_DIS=reshape((/&
-         1,2,3,& ! :,1,1
-         4,2,3,& ! :,2,1
-         1,2,5,& ! :,1,2
-         6,2,5,& ! :,2,2
-         1,3,5,& ! :,1,3
-         7,3,5,& ! :,2,3
-         8,7,6,& ! :,1,4
-         5,7,6,& ! :,2,4
-         8,7,4,& ! :,1,5
-         3,7,4,& ! :,2,5
-         8,6,4,& ! :,1,6
-         2,6,4 & ! :,2,6
-         /),(/3,2,6/))
-    integer :: iSide, j, iCounter, iFace
-    logical, dimension(6) :: IsBadFace_S
-    real :: Coeff1
-
-    logical :: IsOnTriangle
-
-    ! REST OF VARIBLES HERE ARE DEFINED IN parent write_plot_los subroutine!
-    ! (eg LosPix_D etc.)
-
-    FaceNormal_DS(:,1)=cross_product((Vertex_DN(:, 2)-Vertex_DN(:, 1)),(Vertex_DN(:, 3)-Vertex_DN(:, 1)))
-    FaceNormal_DS(:,2)=cross_product((Vertex_DN(:, 2)-Vertex_DN(:, 1)),(Vertex_DN(:, 5)-Vertex_DN(:, 1)))
-    FaceNormal_DS(:,3)=cross_product((Vertex_DN(:, 3)-Vertex_DN(:, 1)),(Vertex_DN(:, 5)-Vertex_DN(:, 1)))
-    FaceNormal_DS(:,4)=cross_product((Vertex_DN(:, 7)-Vertex_DN(:, 8)),(Vertex_DN(:, 6)-Vertex_DN(:, 8)))
-    FaceNormal_DS(:,5)=cross_product((Vertex_DN(:, 7)-Vertex_DN(:, 8)),(Vertex_DN(:, 4)-Vertex_DN(:, 8)))
-    FaceNormal_DS(:,6)=cross_product((Vertex_DN(:, 6)-Vertex_DN(:, 8)),(Vertex_DN(:, 4)-Vertex_DN(:, 8)))
-
-    LosPix_D = ObsPos_D - XyzPix_D
-    LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
-    where(LosPix_D ==0.0) LosPix_D = cTiny
-
-    IsBadFace_S(:) = .false.
-
-    do iSide = 1,6 !-- loop over faces
-       !-- this is a simple vector geometry formua for calculating the
-       !intersection of a plane (specified by a normal and a point on
-       !the plane) with a line (LosPix_D in this case)
-       !-- used this form from numerical recipes 3rd edition eq 21.4.14
-       ! and 21.4.15
-
-       if (iSide < 4) iFace = 1  !-- specify a point on these planes (either pt 1 or 8) 
-       if (iSide > 3) iFace = 8
-
-       ! SouthPole
-       if ((iSide == 3) .and. (IsPoleNS(2))) then
-          IsBadFace_S(iSide) = .true.
-          CYCLE
-       endif
-       ! NorthPole
-       if ((iSide == 6) .and. (IsPoleNS(1))) then
-          IsBadFace_S(iSide) = .true.
-          CYCLE
-       endif
-
-       coeff1 = sum(LosPix_D(:) * FaceNormal_DS(:, iSide))
-
-       if (abs(coeff1) < cTolerance) then 
-          IsBadFace_S(iSide) = .true.
-          CYCLE
-       endif
-
-       !--- calc the 3D point of intersection with the line and this plane
-       NewIntersect_DN(:, iSide) = &
-            XyzPix_D(:) + LosPix_D(:) * &
-            (sum(Vertex_DN(:, iFace) * FaceNormal_DS(:,iSide)) -&
-            sum(XyzPix_D * FaceNormal_DS(:,iSide))           ) / coeff1
-
-    end do
-
-
-
-    IsIntersect = .false.
-
-    !which of the 6 points are on the block?
-    iCounter = 0
-    CHECK3: do iSide = 1,6 
-       do j=1,2
-
-
-          !This Method checks intersection with face the faces by dividing
-          !them into 2 triangles and calculating if the los intersects them
-          !
-          !This is completely general xyz method, do not have to check with
-          !block coordinate min and maxes... However need to be careful
-          !if generalized coordinate is defining non-parallel surfaces. If a bounding
-          !surface is curved (e.g. constant r surface) then planes defined by
-          !the block corners may actually bound OUTSIDE the block limits 
-          !(including ghost cells). This will only happen if there is a high 
-          !degree of relative curvature (i.e. transition region grid)
-          ! 
-          ! To circumvent this problem, need to make bounding planes contain
-          ! the ENTIRE volume (i.e. extend R for top vertexes) and then cut 
-          ! the los to be within the general coordinate range (in later
-          ! routines)
-
-          if (IsBadFace_S(iSide)) CYCLE
-
-          if (Vertex_DN(1, TriIndex_DIS(3,j,iSide)) > 1e13) then
-             write(*,*) 'Vertex_DN error: iBlk:', iBlk
-             write(*,*) 'max in Vertex_DN(:,:) : ', maxval(abs(Vertex_DN(:,:)))
-             write(*,*) 'max in Xyz_DNB: ', maxval(abs(Xyz_DNB(:,:,:,:,iBlk)))
-             write(*,*) 'max in Xyz_DBG: ', maxval(abs(Xyz_DGB(:,:,:,:,iBlk)))
-             write(*,*) 'CellSize_DB', CellSize_DB(:,iBlk)
-          end if
-
-          IsOnTriangle = is_on_triangle(NewIntersect_DN(:, iSide),&
-               Vertex_DN(:, TriIndex_DIS(1,j,iSide)),&
-               Vertex_DN(:, TriIndex_DIS(2,j,iSide)),&
-               Vertex_DN(:, TriIndex_DIS(3,j,iSide)) )
-          if (IsOnTriangle) then
-             iCounter = iCounter + 1
-             if(iCounter == 1) Xyz1_D = NewIntersect_DN(:, iSide)
-             if(iCounter == 2) then
-                Xyz2_D = NewIntersect_DN(:, iSide)
-                ! If point 2 is different from point 1, we are done
-                if(sum(abs(Xyz1_D - Xyz2_D)) > cTolerance) EXIT CHECK3
-                ! Ignore the second point, keep checking
-                iCounter = 1
-             end if
-          end if
-       end do !--- end j loop
-    end do CHECK3
-
-    if (iCounter == 2) IsIntersect = .true.
-
-  end subroutine find_intersect_general
-
-  !==========================================================================
-
-  logical function is_on_triangle(XyzIn_D,aXyz_D,bXyz_D,cXyz_D)
-
-    real, dimension(3), intent(in) :: XyzIn_D,aXyz_D,bXyz_D,cXyz_D
-    real, dimension(3) :: A1_D,B1_D,Q1_D
-    real :: A2, B2, ACrossB2, Alpha, Beta, Gamma
-    !--------------------------------------------
-
-
-    !--- this function is for calclating if point on plane defined by a triangle
-    !--- is within the triangle
-
-    is_on_triangle = .false.
-
-    if(sum(abs(aXyz_D - bXyz_D))<cTolerance) RETURN
-    if(sum(abs(aXyz_D - cXyz_D))<cTolerance) RETURN
-    if(sum(abs(bXyz_D - cXyz_D))<cTolerance) RETURN
-
-    !\
-    !A1, B1, Q1 are the radius vectors with respect to C vertex
-    !/
-    A1_D =  aXyz_D - cXyz_D
-    B1_D =  bXyz_D - cXyz_D
-    Q1_D = XyzIn_D - cXyz_D
-
-    A2  = sum(A1_D**2)
-    B2  = sum(B1_D**2)
-
-    !\
-    !Calculate [a\times b]^2
-    !/
-
-    ACrossB2 = A2*B2 - sum(A1_D*B1_D)**2
-
-    if(ACrossB2 == 0.0)then
-       write(*,*)'!!! XyzIn_D=', XyzIn_D
-       write(*,*)'!!! aXyz_D =', aXyz_D
-       write(*,*)'!!! bXyz_D =', bXyz_D
-       write(*,*)'!!! cXyz_D =', cXyz_D
-    end if
-
-    Alpha = (B2 * sum(A1_D * Q1_D)-sum(A1_D * B1_D)*sum(B1_D * Q1_D) ) / ACrossB2
-    Beta  = (A2 * sum(B1_D * Q1_D)-sum(A1_D * B1_D)*sum(A1_D * Q1_D) ) / ACrossB2
-    Gamma = 1.0 - Alpha - Beta
-
-    is_on_triangle = Alpha >= 0.0 .and.Beta >= 0.0 .and.Gamma >= 0.0
-
-  end function is_on_triangle
 
   !==========================================================================
 
