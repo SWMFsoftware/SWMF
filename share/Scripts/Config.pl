@@ -324,7 +324,7 @@ sub get_settings_{
 	  $Spice = "$1"  if /^\s*SPICELIB\s*=\s*(\S*)/;
           $Optimize = $1 if /^\s*OPT[0-5]\s*=\s*(-O[0-5])/;
       }
-  }
+    }
     close(MAKEFILE);
 
     # Fix these if the Fortran language and C language lines were missing
@@ -428,6 +428,16 @@ sub install_code_{
             &shell_command("cat $Makefile >> $MakefileConf");
 	}else{
 	    die "$ERROR_ could not find $Makefile\n";
+	}
+
+	# Remove -lmpicxx from CPPLIB definition in Makefile.conf if not needed
+	my $remove_mpicxx = (`mpicxx -show` !~ /\-lmpi_cxx/);
+	if($remove_mpicxx){
+	    @ARGV = ($MakefileConf);
+	    while(<>){
+		s/ -lmpi_cxx// if /^CPPLIB/;
+		print;
+	    }
 	}
     }
 
@@ -567,6 +577,11 @@ sub set_hdf5_{
     print "Enabling HDF5 library in $MakefileConf\n" if $Hdf5 eq "yes";
     print "Disabling Hdf5 library in $MakefileConf\n" if $Hdf5 eq "no";
     if(not $DryRun){
+
+	# For the NAG compiler find the HDF5 include directory from h5pfc -show
+	my $H5include;
+	$H5include = $1 if $Compiler eq "f95" and `$H5pfc -show` =~ /( \-I\S+)/;
+
 	@ARGV = ($MakefileConf);
 	while(<>){
 	    if($Hdf5 eq "yes"){
@@ -577,9 +592,13 @@ sub set_hdf5_{
 
 		# Change the parallel C++ compiler too
 		s/^(COMPILE\.mpicxx\s*=\s*)(.*)/$1$H5pcc \#$2/;
+
+		# Add the h5pfc include directory to the search path for hdf5.mod
+		s/\s+$/$H5include\n/ if /^SEARCH\b/ and $H5include;
 	    }else{
 		# Undo the modifications
 		s/($H5pfc|$H5pcc) \#//;
+		s/$H5include// if $H5include;
 	    }
 	    print;
 	}
