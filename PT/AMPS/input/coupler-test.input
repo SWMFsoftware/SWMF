@@ -9,7 +9,7 @@ SpeciesList=Na  !, NA_Plus !lkdsjflksdj
 
 
 makefile  SOURCES=src
-makefile  SPICE=nospice 
+!makefile  SPICE=nospice 
 makefile  RUNDIR=run
 makefile  MPIRUN=mpirun -np 4
 
