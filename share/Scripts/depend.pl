@@ -2,6 +2,10 @@
 #  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 use strict;
+#use Data::Dumper;    # prity printing of a hash Dumper(\%hash)
+
+sub find_all_dependens(\@\@\%$);
+sub remove_duplicat_elements(\@);
 
 # Default values
 my $Output = "Makefile.DEPEND"; # Default output
@@ -105,6 +109,10 @@ open(OUTPUT,">$Output") or
 my %env;        # Directory name --> '${SHELLVAR}'
 my %modulefile; # Module object  --> File name containing the module
 my $dir;
+my %headerdependent; # headerfilename -- > header it needs
+my %headerdir;       # headerfilename -- > directory
+
+
 foreach $dir (@search){
 
     if($dir =~ /:/){
@@ -116,11 +124,12 @@ foreach $dir (@search){
         $env{$dir}='${'.$env.'}';
     }
 
+
     -d $dir or die "$ERROR $dir is not a directory\n";
     opendir(DIR,$dir) or die "$ERROR: could not open directory $dir\n";
 
     my @source; # List of fortran 90 files
-    @source = grep /\.(f|f90|h)$/i, readdir DIR;
+    @source = grep /\.(f|f90|h|H|hxx|HXX)$/i, readdir DIR;
     closedir DIR;
 
     my $file; # Actual F90 file
@@ -159,11 +168,38 @@ foreach $dir (@search){
 	}
 	close FILE;
     }
+    #if its a c++/c header file
+    foreach $file (@source){
+	
+	my @includefile;
+	open FILE,"$dir/$file" or die "$ERROR: could not open $dir/$file\n";
+	while(<FILE>){
+	   # just look at the include statments
+           if(/^\#include/i){
+
+	      # a line will contain aither #include "my.h" or #include <my.h>
+	      # checking for both and return my.h
+	      my ($header)  = join "", $_ =~ /\"(.+)\"/ , $_ =~ /\<(.+)\>/;
+
+	      # only include the file we have in the dependeci list	
+	      if( grep( /^$header$/, @source)){	
+                push(@includefile, $header);
+	      }  
+            #print "*** $file :: $_ :: @includefile \n";
+
+	   }
+        }
+        close FILE;
+	$headerdir{$file} = $dir;
+	@{$headerdependent{$file}} = @includefile;
+   }
+
 }
 
 my @base;    # List of base names (without extension)
 my %use;     # Base name --> space separated list of used module objects
 my %include; # Base name --> space separated list of include files
+my %sourceheader; # Base name --> header files it includes
 
 my $object;  # Name of object file
 OBJECT: 
@@ -181,7 +217,7 @@ OBJECT:
     # Try different extensions
     my $ext;
   SOURCE: 
-    foreach $ext ('.f90','.F90','.f','.F'){
+    foreach $ext ('.f90','.F90','.f','.F','.cpp','cxx','cc','c'){
 	if(-e "$base$ext"){
 	    $file = "$base$ext";
 	    last SOURCE;
@@ -203,6 +239,8 @@ OBJECT:
 
     # Build dependency list $depend for file $file
     my $depend;
+    # Fined called header files, posible dependensi
+    my @headerfile; 
     while($_ = <FILE>){
 	# Collect module file names corresponding to the modules
 	if(/^\s*module\s+(\w+)/i){
@@ -239,29 +277,110 @@ OBJECT:
 	    $include{$base} .= " $include" 
 		unless $include{$base} =~ / $include\b/;
 	}
+	if(/^\#include/i){
+	  my $header = join "", $_ =~ /\"(.+)\"/ , $_ =~ /\<(.+)\>/;
+	  #if header is one of our header files
+	  my($dir,$filenamebase) = $base =~ /(.*)\/(.*)/;
+	  if($header =~ /^($filenamebase)(.*)/){
+	    if($headerdependent{$header}>0){ 
+  	      @headerfile =  (@headerfile, @{$headerdependent{$header}});
+            }
+ 	  }
+	  if($headerdependent{$header}>0){
+            push(@headerfile, $header);
+          }
+ 	}
     }
+
+   @{$sourceheader{$base}} = @headerfile;
+}
+
+
+# Store with header file have a coresonding object file
+my %objhdeader; #header --> object file
+my $obj;
+my $header;
+foreach $obj (@base){
+   my $objname = $obj;
+   $objname =~ s/^.*\///;   
+   foreach $header (@{$sourceheader{$obj}}){
+     my $head = $header;
+     $head=~ s/\.[hH].*//;
+     #have a object file with the same name
+     if($head eq $objname){
+        $objhdeader{$header} = "$obj.o";
+     } 
+   }
 }
 
 my $base; # Name of base file
 foreach $base (@base){
-    my $use; # Space separeted list of used module objects
-    $use = $use{$base};
-    if($use){
-	# Correct module names to file names
-	my @use = split(' ',$use);
-	my $mfile;
-	map {if($mfile=$modulefile{uc($_)}){$_=$mfile}} (@use);
 
-        # Exclude dependency on itself and compiler provided modules
-        map { $_='' if $_ eq "$base.o" or /F90_UNIX_IO/i or /ESMF_Mod.o/i
-	      or /netcdf.o/i or /ezspline/i or /ezcdf.o/i or /^hdf5.o/i}
-	(@use);
-	    
-        # Make string out of array
-	$use=' '.join(' ',@use);
+    my $includefile;
+    my @includedpend =();  # array containg all dependensis for a object file 
+                           #( cleaned version of @dependarray )
+    my @dependarray = ();  # contain full list with all dependensis
+
+    # Get all header file a header file are calling, recusivly
+    if(scalar @{$sourceheader{$base}} > 0) {
+      my @tmp;
+      @tmp = find_all_dependens( @dependarray, @{$sourceheader{$base}}, %headerdependent, "null" ); 
+      # remove "null" in the begining of the array
+      shift(@tmp); 
+      @includedpend = remove_duplicat_elements( @tmp ); 
     }
+
+    # Get the object file a header file coresponds to
+    if(scalar @includedpend > 0){
+       my @objfiles =();
+       $header ="";
+       foreach $header (@includedpend){
+         my $head = $header;
+         my $obj = $base;
+	 $head =~ s/\.[hH].*//; # header file name without extensions or dir
+         $obj  =~ s/^.*\///;   # object file name without extensions or dir
+	 # if there are a corespinding object file but not itself
+         if(exists $objhdeader{$header} &&  $obj ne $head ){
+           push(@objfiles, $objhdeader{$header});
+         }
+       }	
+
+      #set add the directory for the header file
+      for(@includedpend){
+	s/^/$headerdir{$_}\//;
+      } 
+       # array containg all dependensis for a object file
+      # @includedpend = (@includedpend,@objfiles);
+    }
+
     my $depend; # Space separated list of include files and used module objects
-    $depend = $include{$base}.$use;
+
+    # c/c++ and fortran code have differents paths
+    if(scalar @includedpend == 0){  
+      # fortran code section
+      my $use; # Space separeted list of used module objects
+      $use = $use{$base};
+      if($use){
+  	# Correct module names to file names
+  	my @use = split(' ',$use);
+  	my $mfile;
+  	map {if($mfile=$modulefile{uc($_)}){$_=$mfile}} (@use);
+  
+          # Exclude dependency on itself and compiler provided modules
+          map { $_='' if $_ eq "$base.o" or /F90_UNIX_IO/i or /ESMF_Mod.o/i
+  	      or /netcdf.o/i or /ezspline/i or /ezcdf.o/i or /^hdf5.o/i}
+  	(@use);
+  	    
+          # Make string out of array
+  	$use=' '.join(' ',@use);
+      }
+  
+      $depend = $include{$base}.$use;
+    }
+    else {
+      #c/c++ code
+      $depend = ' '.join(' ',@includedpend);
+    }
 
     # Get rid of leading and trailing spaces
     $depend =~ s/^ *//; $depend =~ s/ *$//;
@@ -276,3 +395,53 @@ foreach $base (@base){
 close OUTPUT;
 
 exit;
+
+sub remove_duplicat_elements(\@){
+    my ($inarr) = @_;
+
+    my @arr;
+    my @uniqarr = ();
+
+    @arr     = @$inarr;
+    foreach my $var ( @arr ){
+      if ( ! grep( /^$var$/, @uniqarr ) ){
+         push( @uniqarr, $var );
+      }
+    }
+   return @uniqarr;
+}
+
+sub find_all_dependens(\@\@\%$){
+
+    # @includefiles  :: array of headerfiles
+    # %includefiledepend :: headerfile -> array of headerfiles it depends on
+    # $file  :: the header file we are working on, just to make return statment easy
+    my ($deparray, $incarray, $incdep, $file ) = @_;
+    my @depend;
+    my @includefiles;
+    my %includefiledepend;
+    my @newdepend;
+    #copy input variable into there proper variable
+    @depend            = @$deparray;	
+    @includefiles      = @$incarray;
+    %includefiledepend = %$incdep;
+
+    @newdepend =(@depend,$file); 
+   
+    my $lengde = exists $includefiledepend{$file};
+
+    if(exists $includefiledepend{$file} || $file == "null"){
+       foreach my $newfile (@includefiles){
+	 if(grep( /^$newfile$/, @newdepend) ){
+	    #print "$newfile allready in dependency array \n";
+         } else {
+	    @newdepend = find_all_dependens(@newdepend, @{$includefiledepend{$newfile}},%includefiledepend, $newfile);
+	    #print "newdepend = @newdepend \n";
+	    #@depend = (@depend, @newdepend );
+         }
+       }
+    }
+
+  return @newdepend;
+}
+
