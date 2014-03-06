@@ -33,12 +33,14 @@ test_help:
 	@echo "    test9		      (run Chromo SC-IH coupling test)"
 	@echo "    test10		      (run 3T solar wind test)"
 	@echo "    test11		      (run GM-PT coupler test)"
+	@echo "    test12		      (run GM-PC coupler test)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 test:
 	@rm -f *.diff
 	-@(${MAKE} test_share_library)
 	-@(${MAKE} test11)
+	-@(${MAKE} test12)
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_pw)
 	-@(${MAKE} test_rb)
@@ -1089,75 +1091,43 @@ test_ramscb_check:
 		> test_ramscb_ie.diff)
 	ls -l test_ramscb*.diff
 
-test_pic:
-	$(MAKE) test_pic_compile
-	$(MAKE) test_pic_rundir
-	$(MAKE) test_pic_run
-	$(MAKE) test_pic_check
-	$(MAKE) test_pic_2step_run
-	$(MAKE) test_pic_2step_check
-	$(MAKE) test_pic_restart_setup
-	$(MAKE) test_pic_restart_run
-	$(MAKE) test_pic_restart_check
+######## test ipic3d stand alone in SWMF  ###############
 
-test_pic_compile:
-	./Config.pl -v=Empty,GM/BATSRUS 
-	./Config.pl -g=GM:8,8,1,1024,1024 -o=GM:u=Waves,e=MhdAnisoP
+test12:
+	@echo "test12_compile..." > test12.diff
+	$(MAKE) test12_compile
+	@echo "test12_rundir..." > test12.diff
+	$(MAKE) test12_rundir
+	@echo "test12_run..." > test12.diff
+	$(MAKE) test12_run
+	@echo "test12_check..." > test12.diff
+	$(MAKE) test12_check
+
+test12_compile:
+	./Config.pl -hdf5 -v=Empty,PC/IPIC3D 
+	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicX=true,periodicY=false,periodicZ=true
 	$(MAKE) SWMF PIDL
-	@if([ ! -d "PC/IPIC3D" ]); \
-		then mkdir -p PC/; cd PC; cvs co IPIC3D; fi
-	cd PC/IPIC3D; $(MAKE) test_couple_compile;
-	
-test_pic_rundir:
+
+test12_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR}
-	cd ${TESTDIR}; ln -s ../PC/IPIC3D/IPIC3D.exe ./
-	cp Param/PC/PARAM.in.start_4step  ${TESTDIR}/PARAM.in
-	cp Param/PC/IPIC.in.start_4step  ${TESTDIR}/IPIC.in
-	cp Param/PC/LAYOUT.in  ${TESTDIR}/LAYOUT.in
+	cp PC/IPIC3D/input/GEM.inp  ${TESTDIR}/IPIC.in
+	cp PC/IPIC3D/input/PARAM.in.PC_only  ${TESTDIR}/PARAM.in
+	cp PC/IPIC3D/input/LAYOUT.in.PC_only  ${TESTDIR}/LAYOUT.in
 
-test_pic_run:
-	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null &
-	cd ${TESTDIR}; mpirun -n 4 ./IPIC3D.exe ./IPIC.in 
-	sleep 5
-	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
+test12_run:
+	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
+		cd ${TESTDIR}; $(MPIRUN) -n 4 ./SWMF.exe > runlog; \
+	elif [ "$(MPIRUN)" = "mpirun -np 2" ]; then \
+		cd ${TESTDIR}; mpirun -n 4 ./SWMF.exe > runlog; \
+	else \
+		cd ${TESTDIR}; $(MPIRUN) -n 4 ./SWMF.exe > runlog; \
+	fi;
 
-test_pic_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
-		${TESTDIR}/RESULTS/4step/GM/z=0_ipic3d_n00000004.out \
-		 Param/PC/z=0_ipic3d_n00000004.out.ref \
-		> test_pic_4step.diff)
-
-test_pic_2step_run:
-	cp Param/PC/PARAM.in.start_2step  ${TESTDIR}/PARAM.in
-	cp Param/PC/IPIC.in.start_2step  ${TESTDIR}/IPIC.in
-	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null &
-	cd ${TESTDIR}; mpirun -n 4 ./IPIC3D.exe ./IPIC.in 
-	sleep 5
-	cd ${TESTDIR}; ./PostProc.pl RESULTS/2step
-
-test_pic_2step_check:
-	-@(diff \
-		${TESTDIR}/RESULTS/2step/GM/z=0_ipic3d_n00000002.out \
-		${TESTDIR}/RESUSLTS/4step/GM/z=0_ipic3d_n00000002.out \
-		> test_pic_2step.diff)
-
-test_pic_restart_setup:
-	cd ${TESTDIR}; ./Restart.pl -i -v RESULTS/2step/RESTART
-	mkdir -p ${TESTDIR}/RESTART
-	cp ${TESTDIR}/RESULTS/2step/GM/restart*hdf ${TESTDIR}/RESTART/
-	cp ${TESTDIR}/RESULTS/2step/GM/settings.hdf ${TESTDIR}/RESTART/
-	cp Param/PC/PARAM.in.restart_2step  ${TESTDIR}/PARAM.in
-	cp Param/PC/IPIC.in.restart_2step  ${TESTDIR}/IPIC.in
-
-test_pic_restart_run:
-	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null &
-	cd ${TESTDIR}; mpirun -n 4 ./IPIC3D.exe restart ./IPIC.in 
-	sleep 5
-	cd ${TESTDIR}; ./PostProc.pl RESULTS/2restartstep
-
-test_pic_restart_check:
-	-@(diff ${TESTDIR}/RESULTS/4step/GM/z=0_ipic3d_n00000004.out \
-		${TESTDIR}/RESULTS/2restartstep/GM/z=0_ipic3d_n00000004.out \
-		> test_pic_restart.diff)
-
+test12_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+		${TESTDIR}/PC/ConservedQuantities.txt \
+		PC/IPIC3D/output/ConservedQuantities.txt-GEM-PSEUDRAND\
+		> test12.diff)
+	-@(ls -l test12.diff)
+	-@(./Config.pl  -nohdf5)
