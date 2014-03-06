@@ -52,7 +52,7 @@ foreach (@Arguments) {
 foreach (@Arguments) { 
    if ((/^-h$/)||(/^-help/)) { #print help message
      print "Config.pl can be used for installing and setting of AMPS\n";
-     print "AMPS' settings can defined in the SWMF's Config.pl: Config.pl -o=PT:spice-path=path,spice-kernels=path,ices-path=path,application=casename\n\n";
+     print "AMPS' settings can be defined in the SWMF's Config.pl: Config.pl -o=PT:spice-path=path,spice-kernels=path,ices-path=path,application=casename\n\n";
      print "Usage: Config.pl [-help] [-show] [-spice-path] [-spice-kernels] [-ices-path] [-application]\n";
      print "\nInformation:\n";
      print "-h -help\t\t\tshow help message.\n";
@@ -105,8 +105,9 @@ foreach (@Arguments) {
       chomp($line);
       ($p0,$p1)=split(' ',$line,2);
       $p0=lc($p0);
+      $p0=~s/^\s+//;
         
-      if ($p0 =~ /makefile/) {
+      if ($p0 =~ /^makefile/) {
         `echo "$p1" >> Makefile.local`;
       }
     }
