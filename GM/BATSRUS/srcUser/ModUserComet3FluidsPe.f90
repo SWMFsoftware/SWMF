@@ -259,23 +259,22 @@ contains
              ! Radial distance in meters for lookup
              r  = sqrt(x**2 + y**2 + z**2)*No2Si_V(UnitX_)
 
-             !! Angle relative to x axis in degrees for lookup
-             !Phi  = atan2(Yz, x)*cRadToDeg
-
              ! Angle relative to -x axis in degrees for lookup
-             Phi  = atan2(Yz, -1*x)*cRadToDeg
+             ! Note: AMPS uses a different orientation for the X axis!
+             Phi  = atan2(Yz, -x)*cRadToDeg
 
              call interpolate_lookup_table( &
                   iTableNeutral_I(iNeutral), r, Phi, Neutral_V)
 
              NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1) = Neutral_V(Nn_)
-             UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= -1*Neutral_V(Uxn_)
+
+             ! Note: AMPS uses a different orientation for the X axis!
+             UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= -Neutral_V(Uxn_)
              UnyNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= Neutral_V(Uyn_)*y/Yz
              UnzNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= Neutral_V(Uyn_)*z/Yz
              TnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1) = Neutral_V(Tn_)
           end do; end do; end do
        end do
-
 
        NeutralMass_I(H2O_) = 18.*cProtonMass
        NeutralMass_I(H_)   =  1.*cProtonMass
