@@ -6,7 +6,7 @@ DEFAULT_TARGET : amps
 SOURCES=src
 WSD=srcTemp
 InputFileAMPS=moon.input
-#SPICE=nospice
+SPICE=nospice
 
 include Makefile.def
 include Makefile.conf
