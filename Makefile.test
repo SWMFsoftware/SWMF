@@ -33,14 +33,13 @@ test_help:
 	@echo "    test9		      (run Chromo SC-IH coupling test)"
 	@echo "    test10		      (run 3T solar wind test)"
 	@echo "    test11		      (run GM-PT coupler test)"
-	@echo "    test12		      (run GM-PC coupler test)"
+	@echo "    test12		      (run GM-PC test)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 test:
 	@rm -f *.diff
 	-@(${MAKE} test_share_library)
 	-@(${MAKE} test11)
-	-@(${MAKE} test12)
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_pw)
 	-@(${MAKE} test_rb)
@@ -57,6 +56,7 @@ test:
 	-@(${MAKE} test8)
 	-@(${MAKE} test9)
 	-@(${MAKE} test10)
+	-@(${MAKE} test12)
 	-@(${MAKE} test_check)
 
 # Note: the "cat ... > /dev/null" makes sure that file size are correct on nyx
@@ -1117,11 +1117,9 @@ test12_rundir:
 
 test12_run:
 	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR}; $(MPIRUN) -n 4 ./SWMF.exe > runlog; \
-	elif [ "$(MPIRUN)" = "mpirun -np 2" ]; then \
-		cd ${TESTDIR}; mpirun -n 4 ./SWMF.exe > runlog; \
+		cd ${TESTDIR}; mpiexec -np 4 ./SWMF.exe > runlog; \
 	else \
-		cd ${TESTDIR}; $(MPIRUN) -n 4 ./SWMF.exe > runlog; \
+		cd ${TESTDIR}; mpirun -np 4 ./SWMF.exe > runlog; \
 	fi;
 
 test12_check:
@@ -1130,4 +1128,3 @@ test12_check:
 		PC/IPIC3D/output/ConservedQuantities.txt-GEM-PSEUDRAND\
 		> test12.diff)
 	-@(ls -l test12.diff)
-	-@(./Config.pl  -nohdf5)
