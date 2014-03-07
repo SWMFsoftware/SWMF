@@ -1106,7 +1106,8 @@ test12:
 test12_compile:
 	./Config.pl -hdf5 -v=Empty,PC/IPIC3D 
 	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicX=true,periodicY=false,periodicZ=true
-	$(MAKE) SWMF PIDL
+	$(MAKE) SWMF
+	$(MAKE) PIDL
 
 test12_rundir:
 	rm -rf ${TESTDIR}
