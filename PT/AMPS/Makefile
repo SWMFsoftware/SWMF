@@ -106,7 +106,9 @@ else
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 endif
 
-LIB: ${LIB_AMPS}
+LIB: 
+	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi);
+	make ${LIB_AMPS} 
 	cd srcInterface; make LIB SEARCH_C="${SEARCH}"
 
 amps: ${LIB_AMPS}
