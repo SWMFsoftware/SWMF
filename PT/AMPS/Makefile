@@ -79,6 +79,7 @@ ${WSD}:
 	./ampsConfig.pl -input ${InputFileAMPS} -no-compile
 
 ${LIB_AMPS}: 
+	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi);
 	make ${WSD}
 	cd ${WSD}/general; make SEARCH_C=
 	cd ${WSD}/meshAMR; make SEARCH_C="${SEARCH}" 
@@ -113,7 +114,7 @@ amps: ${LIB_AMPS}
 	cd ${WSD}/main; make amps SEARCH_C="${SEARCH}"
 
 ifeq ($(SPICE),nospice)
-	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB}  
+	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} ${CPPLIB} 
 else 
 	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} ${SPICE}/lib/cspice.a
 endif
@@ -121,6 +122,8 @@ endif
 TESTDIR = run_test
 
 test:
+	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi); 	
+	./Config.pl -application=Moon
 	rm -f *.diff
 	-@($(MAKE) test_amps)
 	#@ls -l *.diff
