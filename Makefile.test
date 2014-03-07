@@ -1123,7 +1123,7 @@ test12_run:
 	fi;
 
 test12_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.e-13 -r=1e-7 \
 		${TESTDIR}/PC/plots/ConservedQuantities.txt \
 		PC/IPIC3D/output/ConservedQuantities.txt-GEM-PSEUDRAND\
 		> test12.diff)
