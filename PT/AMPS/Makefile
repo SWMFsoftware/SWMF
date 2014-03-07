@@ -88,11 +88,8 @@ ${LIB_AMPS}:
 
 #compile external modules
 	$(foreach src, $(ExternalModules), (cd ${WSD}/$(src); make SEARCH_C="${SEARCH}")) 
-
 	cd ${WSD}/main; make SEARCH_C="${SEARCH}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
-
-
 ifeq ($(SPICE),nospice)
 	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o 
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
@@ -114,11 +111,11 @@ LIB:
 amps: ${LIB_AMPS}
 	@rm -f amps
 	cd ${WSD}/main; make amps SEARCH_C="${SEARCH}"
-
 ifeq ($(SPICE),nospice)
 	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} ${CPPLIB} 
 else 
-	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} ${SPICE}/lib/cspice.a
+	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} \
+	${SPICE}/lib/cspice.a ${CPPLIB}
 endif
 
 TESTDIR = run_test
