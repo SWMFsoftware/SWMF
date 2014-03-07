@@ -561,7 +561,6 @@ test_hyades2d_compile:
 	./Config.pl -hdf5
 	$(MAKE) CRASH
 	make PIDL
-	./Config.pl -nohdf5
 
 test_hyades2d_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in
