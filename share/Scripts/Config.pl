@@ -1,5 +1,6 @@
 #!/usr/bin/perl -i
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 use strict;
 
@@ -558,7 +559,7 @@ sub set_mpi_{
 
 sub set_hdf5_{
 
-    $NewHdf5="no" if $Install and not $NewHdf5;
+    $NewHdf5=$Hdf5 if $Install and not $NewHdf5;
 
     # Check if HDF5 module is loaded
     if($NewHdf5 eq "yes" and not `which $H5pfc`){
