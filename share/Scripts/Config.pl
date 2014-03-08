@@ -587,15 +587,20 @@ sub set_hdf5_{
 	while(<>){
 	    if($Hdf5 eq "yes"){
 		# Modify linker definition to use h5pfc
-		s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_\w+\})(.*)/$1$H5pfc \#$2/;
+		s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_\w+\})(.*)/$1$H5pfc \#$2/
+		    unless /\#/;
+
 		# For pgf90 the F90 compiler has to be changed too
-		s/^(COMPILE\.f90\s*=.*)(pgf90)/$1$H5pfc \#$2/;
+		s/^(COMPILE\.f90\s*=.*)(pgf90)/$1$H5pfc \#$2/
+		    unless /\#/;
 
 		# Change the parallel C++ compiler too
-		s/^(COMPILE\.mpicxx\s*=\s*)(.*)/$1$H5pcc \#$2/;
+		s/^(COMPILE\.mpicxx\s*=\s*)(.*)/$1$H5pcc \#$2/
+		    unless /\#/;
 
 		# Add the h5pfc include directory to the search path for hdf5.mod
-		s/\s+$/$H5include\n/ if /^SEARCH\b/ and $H5include;
+		s/\s+$/$H5include\n/ if /^SEARCH\b/ and $H5include
+		    and not /$H5include/;
 	    }else{
 		# Undo the modifications
 		s/($H5pfc|$H5pcc) \#//;
