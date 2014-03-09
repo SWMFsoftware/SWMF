@@ -1126,7 +1126,7 @@ namespace PIC {
         for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
 
         //clean the base class' data
-        cBasicBlockAMR<cDataCornerNode,cDataCenterNode>cleanDataBuffer();
+        cBasicBlockAMR<cDataCornerNode,cDataCenterNode>::cleanDataBuffer();
 
         //clean the Particle Tables
         length=_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_;
