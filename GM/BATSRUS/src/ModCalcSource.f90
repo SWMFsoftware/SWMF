@@ -36,7 +36,7 @@ contains
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          apportion_coronal_heating, UseTurbulentCascade, &
-         UseScaledCorrelationLength, UseWaveReflection, get_wave_reflection
+         UseWaveReflection, get_wave_reflection
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -241,21 +241,6 @@ contains
        end do; end do; end do
 
        if(UseTurbulentCascade)then
-          if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
-             ! Positive (definite) source term for the correlation length
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-                Source_VC(Lperp_,i,j,k) = Source_VC(Lperp_,i,j,k) + 2.0* &
-                     sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
-                     *(State_VGB(WaveLast_,i,j,k,iBlock) &
-                     *sqrt(State_VGB(WaveFirst_,i,j,k,iBlock)) &
-                     + State_VGB(WaveFirst_,i,j,k,iBlock) &
-                     *sqrt(State_VGB(WaveLast_,i,j,k,iBlock))) /max(1e-30, &
-                     sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)))
-             end do; end do; end do
-          end if
-
           if(UseWaveReflection) call get_wave_reflection(iBlock)
        end if ! UseTurbulentCascade
     end if

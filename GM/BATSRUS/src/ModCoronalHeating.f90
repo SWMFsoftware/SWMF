@@ -920,7 +920,6 @@ contains
   subroutine read_corona_heating(NameCommand)
 
     use ModReadParam,  ONLY: read_var
-    use ModVarIndexes, ONLY: Lperp_
 
     character(len=*), intent(in):: NameCommand
     !----------------------------------------------------------------------
@@ -1004,8 +1003,7 @@ contains
             *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     end if
 
-    if(UseAlfvenWaveDissipation .and. UseScaledCorrelationLength) &
-         LperpTimesSqrtB = LperpTimesSqrtBSi &
+    if(UseAlfvenWaveDissipation) LperpTimesSqrtB = LperpTimesSqrtBSi &
          *Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
 
     call set_adiabatic_law_4_waves
@@ -1345,7 +1343,7 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModB0, ONLY: B0_DGB
     use ModMain, ONLY: UseB0
-    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, Lperp_
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), &
@@ -1368,13 +1366,7 @@ contains
     end if
     FullB = sqrt(sum(FullB_D**2))
 
-    if(Lperp_ > 1 .and. .not.UseScaledCorrelationLength)then
-       ! Note that Lperp is multiplied with the density
-       Coef = 2.0*sqrt(State_VGB(Rho_,i,j,k,iBlock)) &
-            /State_VGB(Lperp_,i,j,k,iBlock)
-    else
-       Coef = 2.0*sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
-    end if
+    Coef = 2.0*sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
