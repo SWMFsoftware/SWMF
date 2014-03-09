@@ -39,12 +39,14 @@ int Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier=1;
 
 
 double Exosphere::OrbitalMotion::GetTAA(const char* TargetName, const char* CenterBodyName, double CenterBodyMass, SpiceDouble EphemerisTime) {
+  double res=0.0;
+
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   SpiceDouble ltlocal,TargetState[6];
-  double EccentricityVector[3],res=0.0;
+  double EccentricityVector[3];
   double v2,r,a,c,absEccentricity;
   int idim;
 
-#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   const double GravitationalParameter=1.0E-9*GravityConstant*CenterBodyMass; //the unit is km^2/s^2
 
   spkezr_c(TargetName,EphemerisTime,"J2000","none",CenterBodyName,TargetState,&ltlocal);
