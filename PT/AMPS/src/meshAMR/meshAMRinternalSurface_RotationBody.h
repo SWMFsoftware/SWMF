@@ -252,13 +252,15 @@ public:
       if (alpha>0.0) {
         x1=xAxisSurfaceElement[nAxisElement+1]-x0Cone;
         x0=xAxisSurfaceElement[nAxisElement]-x0Cone;
+   
+        locx[0]=sqrt(x0*x0+rnd()*(x1*x1-x0*x0))+x0Cone;
       }
       else {
-        x0=xAxisSurfaceElement[nAxisElement+1]-x0Cone;
-        x1=xAxisSurfaceElement[nAxisElement]-x0Cone;
-      }
+        x0=x0Cone-xAxisSurfaceElement[nAxisElement+1];
+        x1=x0Cone-xAxisSurfaceElement[nAxisElement];
 
-      locx[0]=sqrt(x0*x0+rnd()*(r1*r1-r0*r0))+x0Cone;
+        locx[0]=x0Cone-sqrt(x0*x0+rnd()*(x1*x1-x0*x0));
+      }
     }
 
 
