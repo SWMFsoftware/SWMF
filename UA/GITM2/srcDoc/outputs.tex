@@ -1,6 +1,3 @@
-%  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-%  For more information, see http://csem.engin.umich.edu/tools/swmf
-
 Now that you have managed to successfully complete a GITM run you've found yourself with a bunch of output files.  All of the GITM output is in mks units and this data is contained within several files located in the {\tt UA/data} directory, as was previously discussed in Chapter~\ref{quickstart.ch} Section~\ref{post_process.sec}.  You will have found yourself with several {\tt iriOut\_*.dat} files, a {\tt log*.dat} file, and many {\tt .bin} files in whichever formats you specified in SAVEPLOT (see Chapter~\ref{input.ch} Section~\ref{def_out.sec}).  The {\tt iriOut\_*.dat} files are required by the IRI model and not typically used when analyzing the outcome of the GITM run.
 
 The log file provides useful information about the run, such as whether a restart was performed, which physical processes were used, and a list of the universal time, time-step, neutral temperature ranges (T), solar and geomagnetic indices, and the neutral velocity (VV) ranges for each iteration.  This file can be very useful when sharing runs with other users, when revisiting an old run, or merely ensuring that GITM performed as expected.  An example log file is provided below:
@@ -179,11 +176,14 @@ Please feel free to provide a description of these routines so that GITM users d
 \section{Python}
 \label{python.sec}
 
-This section provides a complete list of the vetted GITM python routines.  These routines require that you use PyBats, a module included in SpacePy.  This is a library developed for space physics applications by the scientists at Los Alamos and can be downloaded for free at: 
+This section provides an almost complete list of the vetted GITM python routines.  These routines require that you use PyBats, a module included in SpacePy.  This is a library developed for space physics applications by the scientists at Los Alamos and can be downloaded for free at: 
 {\tt http://spacepy.lanl.gov}
 
 Another library, Basemap, is required for certain plotting routines.  Basemap is a part of the Matplotlib Toolkit and can be installed using Fink, Macports, or downloaded at:
 {\tt http://matplotlib.org/basemap/}
+
+Yet another library, Pysolar, is used to calculate the solar position.  You don't \textit{need} to download Pysolar to run any of the GITM plotting scripts, but it does expand the functionality.  Pysolar is documented at Github and can be downloaded at:
+{\tt http://www.pysolar.org}
 
 Python scripts that create movies rely on external programs to do so.  The scripts included here use FFmpeg, which can be installed using Fink, Macports, or downloaded at: {\tt http://http://www.ffmpeg.org/}
 
@@ -212,8 +212,10 @@ Once you have downloaded and installed Spacepy, the gitm submodule can be access
 	\item[]{\bf append\_units: } A routine to append unit, scale, and name attributes to the variable keys in the data class.  Runs automatically with {\bf GitmBin}.
 	\item[]{\bf calc\_deg: } A routine to compute latitude and longitude in degrees instead of radians.  Runs automatically with {\bf GitmBin}.
 	\item[]{\bf calc\_lt: } A routine to compute local time from universal time and longitude.  Runs automatically with {\bf GitmBin}.
+	\item[]{\bf calc\_magdi: } A routine to compute the magnetic inclination and declination from the magnetic field expressed in East-North-Vertical coordinates.  Runs automatically with {\bf GitmBin} when the appropriate inputs are present.
 	\item[]{\bf calc\_magvel: } A routine to compute ion and neutral velocities in magnetic coordinates.  Runs automatically with {\bf GitmBin} if the \textit{ionfile} keyword is specified.
-	\item[]{\bf calc\_2dion: } A routine to calculate the VTEC, $h_mF_2$, and $N_mF_2$ from any GITM data structure that has altitude and electron density
+	\item[]{\bf calc\_tec: } A routine to calculate the VTEC from any GITM data structure that has altitude and electron density.
+	\item[]{\bf calc\_2dion: } A routine to calculate the VTEC (if it hasn't been done already), $h_mF_2$, and $N_mF_2$ from any GITM data structure that has altitude and electron density
 	\end{itemize}
 \end{itemize}
 
@@ -233,6 +235,28 @@ Out[4]:
  `nVars': 39,
  `version': 3.13}
 \end{verbatim}
+
+The method used by {\bf calc\_2dion} to compute the $h_mF_2$ (height of the F$_2$ region density peak) does more than just look for the height of the electron maximum at the specified locations.  Instead it performs a few checks to ensure that the peak density lies within an altitude range consistent with the F region and is not an edge artifact.  This process is outlined in Figure~\ref{hmf2_flowchart.fig}.
+
+\begin{figure}
+\begin{center}
+\noindent\includegraphics[width=\textwidth]{Figures/determining_hmF2_flowchart.png}
+\caption{Process for finding the $h_mF_2$ from a GITM electron density altitude profile.}
+\label{gitm_3D_global_plots.fig}
+\end{center}
+\label{hmf2_flowchart.fig}
+\end{figure}
+
+One of the intermediate steps in Figure~\ref{hmf2_flowchart.fig} is to find the inflection points in the altitude profile of electron density.  Figure~\ref{hmf2_profile.fig} shows an example of an electron density profile with no local maxima.  To determine the height of the F$_2$ peak, the height derivative of the electron density profile is computed and local minima along the profile located.  These local minima correspond to inflection points in the electron density profile, and can be used to locate a reasonable $h_mF_2$.
+
+\begin{figure}
+\begin{center}
+\noindent\includegraphics[width=.6\textwidth]{Figures/determining_hmF2_saddle_profile.png}
+\caption{Electron density profile (red) and height derivative of the electron density profile (blue) for an instance where GITM does not show a clear F$_2$ peak.  The $h_mF_2$ is identified by choosing the inflection point (local minima from the height derivative of the electron density profile) with the largest electron density (dark grey line).  The light grey lines show the remaining locations of inflection points.}
+\label{gitm_3D_global_plots.fig}
+\end{center}
+\label{hmf2_profile.fig}
+\end{figure}
 
 \subsubsection{gitm\_time.py}
 
@@ -303,6 +327,12 @@ Common routines used to format and analyze GITM data.
 \item[]{{\bf find\_alt\_index:} Find the index closest to the specified altitude.  Altitude may be specified in km or m.}
 \item[]{{\bf match\_cindi\_key: } A routine to retrieve a CINDI data key from a GITM key or vice versa.} 
 \item[]{{\bf add\_geomagnetic\_equator: } A routine to add a line showing the geomagnetic equator (specified by IGRF-10) to an existing plot.  Line style and color may be specified.}
+\item[]{{\bf add\_subsolar\_point: } A routine to find the location of the subsolar point at a specified Universal Time using the Pysolar routines.  Returns the geographic location of the point and will also add a marker to a plot.}
+\item[]{{\bf add\_solar\_terminator: } Computes the location of the solar terminator using the Pysolar routines. Returns numpy arrays of the geographic coordinates of the solar terminator and will also add a line denoting the solar terminator to a plot.}
+\item[]{{\bf find\_sunside\_twilight\_sza:} A routine to find the maximum angular distance between the solar terminator and the sunlight side with conjugate flux tube feet in darkness using Pysolar routines.  The solar zenith angle corresponding to the sunlight boundary is returned.  The entire day is searched to identify the sunlight boundary given any degree of magnetic declination.}
+\item[]{{\bf create\_contour\_input\_array:}  Creates contour input at a specified location between GITM grid points.}
+\item[]{{\bf create\_linear\_input\_array:}  Creates linear input at a specified location between GITM grid points.}
+\item[]{{\bf get\_meq\_offset: } Find the offset in degrees between the geographic and geomagnetic equators at a specified longitude.}
 \end{itemize}
 
 This example shows how the index for a specified altitude can be found.  Note that GITM saves altitude in meters.
@@ -317,6 +347,19 @@ In [6]: print ialt, gdata['Altitude'][10,10,ialt]
 27 254283.550238
 \end{verbatim}
 
+\subsubsection{solar\_rout.py}
+
+Routines that use Pysolar to find the location of the solar terminator and subsolar point.
+
+\begin{itemize}
+\item[]{\bf subsolar\_point: } Finds the geographic location of the subsolar point at a specified Universal Time.
+\item[]{\bf lat\_lon2spherical\_xyz: } Converts latitude and longitude to spherical coordinates.  Assumes a spherical earth.
+\item[]{\bf spherical\_xyz2lat\_lon: } Converts from spherical coordinates to geographic latitude and longitude, assuming a spherical earth.
+\item[]{\bf get\_solar\_terminator\_xyz\_matrix: } Finds the location of the solar terminator in spherical coordinates.
+\item[]{\bf get\_terminator\_lat\_lon\_coordinates: } Finds the location of the solar terminator in geographic coordinates using input from a solar-oriented spherical coordinate system.
+\item[]{\bf get\_solar\_terminator\_lat\_lon: } Finds the location of the solar terminator at a specified time in geographic coordinates.
+\end{itemize}
+
 \subsubsection{gitm\_loc\_rout.py}
 
 Routines used to find certain locations or values, as well as routines to align or match points in different data sets.
@@ -329,6 +372,7 @@ Routines used to find certain locations or values, as well as routines to align 
 \item[]{\bf match\_running\_median: } Provide running medians at specified times and locations.
 \item[]{\bf gitm\_inst\_loc: } A routine to align GITM and instrument data.
 \item[]{\bf gitm\_net\_loc: } A routine to align GITM and data from a large network of instruments.
+\item[]{\bf gitm\_time\_obs\_loc: } A routine to find, through interpolation, the GITM value at a specific observation location when only one spatial coordinate needs to be aligned.
 \end{itemize} 
 
 \subsubsection{gitm\_3D\_global\_plots.py}
@@ -408,11 +452,9 @@ Routines to build contour or scatter plots over a geographic range.  Several dif
 Routines to build and output GITM output variable linear and contour plots over an altitude range.  Several different standard plot formats are available, and routines useful for creating custom figures are also included.
 
 \begin{itemize}
-\item[]{{\bf plot\_single\_alt\_image:}  Creates a single linear or contour altitude plot.}
-\item[]{{\bf plot\_mult\_alt\_image:}  Creates a figure with multiple linear or contour altitude plots.}
-\item[]{{\bf plot\_alt\_slices:}  Creates a figure with a contour plot showing the altitude dependence of a quantity as a function of latitude or longitude with several linear altitude slices at specified locations.  An example is shown in figure~\ref{gitm_alt_slices.fig}}
-\item[]{{\bf plot\_linear\_alt:}  Plots the the linear altitude dependence of a quantity, with altitude on the y-axis.}
-\item[]{{\bf plot\_3D\_alt:}  Plots the altitude dependence of a quantity as the function of another spatiotemporal coordinate with the spatiotemporal coordinate on the x-axis, altitude on the y-axis, and the desired quantity as a color contour.}
+\item[]{{\bf gitm\_single\_alt\_image:}  Creates a single linear or contour altitude plot.}
+\item[]{{\bf gitm\_mult\_alt\_image:}  Creates a figure with multiple linear or contour altitude plots.}
+\item[]{{\bf gitm\_alt\_slices:}  Creates a figure with a contour plot showing the altitude dependence of a quantity as a function of latitude or longitude with several linear altitude slices at specified locations.  An example is shown in figure~\ref{gitm_alt_slices.fig}}
 \end{itemize}
 
 \begin{figure}
@@ -453,11 +495,24 @@ In [24]: f = gap.plot_alt_slices("eTemperature", gdata, lat_index, lon_index,
                                  title, "example_alt_plot.png")
 \end{verbatim}
 
+\subsubsection{plot\_alt\_profiles.py}
+
+Routines to build and output linear and contour plots over an altitude range.  Several different standard plot formats are available, and use any numpy array as input.
+
+\begin{itemize}
+\item[]{{\bf plot\_single\_alt\_image:}  Creates a single linear or contour altitude plot.}
+\item[]{{\bf plot\_mult\_alt\_image:}  Creates a figure with multiple linear or contour altitude plots.}
+\item[]{{\bf plot\_alt\_slices:}  Creates a figure with a contour plot showing the altitude dependence of a quantity as a function of latitude or longitude with several linear altitude slices at specified locations.}
+\item[]{{\bf plot\_linear\_alt:}  Plots the the linear altitude dependence of a quantity, with altitude on the y-axis.}
+\item[]{{\bf plot\_3D\_alt:}  Plots the altitude dependence of a quantity as the function of another spatiotemporal coordinate with the spatiotemporal coordinate on the x-axis, altitude on the y-axis, and the desired quantity as a color contour.}
+\end{itemize}
+
 \subsubsection{gitm\_comparison\_plots.py}
 
 Routines to make plots that compare GITM data with observations.  The observational sources include satellites, ground-based receivers, and receiver networks.
 
 \begin{itemize}
+\item[]{\bf extract\_data\_matched\_arrays: } Extract points from matched data arrays for elements where neither array contains a specified `bad' value.
 \item[]{\bf extract\_gitm\_time\_arrays: } Routine to extract all positions with valid data from a GitmTime object and construct numpy arrays.  A single universal time, longitude, latitude, and/or altitude may be specified.
 \item[]{\bf plot\_net\_gitm\_comp: } A routine to create a plot comparing 2D GITM data (such as VTEC or $h_mF_2$) to observations taken from a network of instruments over the globe.  The map format may be rectangular, polar, or a combination (provided by plot\_nsglobal\_subfigure or plot\_snapshot\_subfigure).  The top subfigure shows the observations as a scatter figure, the middle subfigure shows the GITM data as a contour, and the bottom subfigure shows the difference between the two as a scatter plot.  The difference must be computed outside of this program, and so may be the difference, absolute difference, percent difference, or any other type of comparison.  An example is shown in Figure~\ref{teccomp.fig}.
 \item[]{\bf plot\_sat\_gitm\_comp: } Routine to plot satellite and GITM data to show how a single physical quantity varies over the orbit.  Four panels are included; the top panel shows the raw satellite data and the GITM data along the track.  The second panel shows the matched GITM/satellite data.  The third panel shows the difference between the satellite and GITM data.  The fourth panel shows the percent difference 100*(sat-GITM)/sat.
@@ -470,6 +525,63 @@ Routines to make plots that compare GITM data with observations.  The observatio
 \label{teccomp.fig}
 \end{center}
 \end{figure}
+
+\subsubsection{load\_files.py}
+
+Routines to load certain types of data files into a dictionary of numpy arrays, where each data type is used to specify the dictionary keys.
+
+\begin{itemize}
+\item[]{{\bf loadCINDIorbit\_ASCII: } Loads the Coupled Ion Neutral Dynamics Investigation ASCII files provided by the UT Dallas website.}
+\item[]{{\bf loadMadrigalVTEC\_ASCII: } Loads the GPS TEC ASCII files provided by the Millstone Hill Madrigal site.}
+\item[]{{\bf loadGITMsat\_ASCII: } Loads the satellite file used as input for a GITM run.}
+\item[]{{\bf loadMadrigalVTEC\_HDF5:} Loads the GPS TEC HDF5 files provided by the Millstone Hill Madrigal site.}
+\end{itemize}
+
+\subsubsection{read\_files.py}
+
+Routines to read certain file formats and load the data into a dictionary of numpy arrays, where each data type is used to specify the dictionary keys.
+
+\begin{itemize}
+\item[]{{\bf loadASCII\_data\_header: } Loads an ASCII file with header lines denoted by a `\#' .}
+\item[]{{\bf loadASCII\_data\_hline: } Loads an ASCII file with a specified number of header lines.}
+\item[]{{\bf loadASCII\_index\_profile: } Loads an ASCII file with header lines denoted by a `\#' that has been broken up into indexed blocks (blocks separated by double newlines, or indexes as specified by gnuplot).  The indexed structure is maintained in the output dictionary by providing a list of numpy arrays for each data column.}
+\item[]{{\bf load\_multASCII\_data:} Loads multiple ASCII files into a single output dictionary.}
+\item[]{{\bf loadnetCDF\_data: } Loads netCDF files into an output dictionary.}
+\item[]{{\bf combine\_data\_dictionaries: } Combines multiple data dictionaries into a single dictionary, including only the data keys common to all of the inputted data dictionaries.}
+\end{itemize}
+
+\subsubsection{read\_gps\_bin.py}
+
+A script to read a VMR GPS binary file, providing data at a specified Universal Time.
+
+\begin{itemize}
+\item[]{\bf GpsFile: } Class containing all of the data from the VMR GPS binary file.
+	\begin{itemize}
+	\item[]{\bf read\_header: } Reads the VMR GPS binary file header, allowing data to be easily located as desired.
+	\item[]{\bf read\_time: } Read in all the GPS data at the specified Universal Time.  The specified time and the file times do not have to be perfectly aligned, as long as the specified time falls between the first and last time in the GPS file, the data with the closest temporal proximity will be returned.
+	\end{itemize}
+\end{itemize}
+
+\subsubsection{write\_files.py}
+
+Routines to write output files.
+
+\begin{itemize}
+\item[]{\bf writeASCII\_file: } A routine to create an ASCII file from a string or list of strings.  Will overwrite any file of the same name that already exists.
+\item[]{\bf writeASCII\_data\_w\_sorttext: } A routine to create an ASCII file from a data dictionary of dictionaries.  The first layer of keys is used to provide the data columns, the second layer is output as additional data column(s) where the keys are output as strings.  Datetime columns are output as two strings, one containing the date information and a second one containing the time of day information.
+\end{itemize}
+
+\subsubsection{plot\_stats.py}
+
+Routines to compute and plot common statistics.
+
+\begin{itemize}
+\item[]{\bf add\_stat\_to\_line: } Computes the moments, first through third quartiles, and mode(s) (as desired) for a dataset and outputs the statistics as a formatted text line that can be output to a file and in a list.
+\item[]{\bf add\_stat\_box: } Computes the moments, first through third quartiles, and mode(s) (as desired) for a dataset and outputs the statistics in a text box onto a plot and in a list.
+\item[]{\bf plot\_hist\_w\_stats: } Calculates and plots a histogram of a specified dataset, as well as the moments, first through third quartiles, and mode(s) (as desired).
+\item[]{\bf plot\_lat\_lt\_stats: } Calculates and plots histograms and statistics for a specified dataset broken up into latitude and local time regions.
+\item[]{\bf lat\_lt\_stat\_lines: } Calculates statistics for a specified dataset broken up into latitude and local time regions, providing a formatted string with the statistics for each region taking up a line.
+\end{itemize}
 
 \subsubsection{gitm\_movie\_script.py}
 
