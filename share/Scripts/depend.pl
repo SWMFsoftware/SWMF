@@ -199,7 +199,7 @@ OBJECT:
     }
     if(not $file){
 	print "$WARNING source file not found, skipping $object !!!\n"
-	    unless $object =~ /^(main\.o|advect_main\.o)$/;
+	    unless $object =~ /^(main\.o|advect_main\.o|game_of_life\.o)$/;
 	next OBJECT;
     }
 
@@ -324,6 +324,7 @@ sub process_header_files{
 
     # Loop over object directories, find header files and store their dependencies
     foreach $dir (@search, keys %objectdir){
+	next if $dir =~ /:/;
 	opendir(DIR,$dir) or die "$ERROR: could not open object directory $dir\n";
 	my @headerfiles = grep /\.h(xx)?$/i, readdir DIR;
 	closedir DIR;
