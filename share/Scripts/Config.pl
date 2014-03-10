@@ -29,6 +29,9 @@ my %Compiler = (
 my $WARNING_='share/Scripts/Config.pl WARNING:';
 my $ERROR_  ='share/Scripts/Config.pl ERROR:';
 
+my $ErrorCode;   # Return value of system(...)
+my $IsStrict=1;  # If true, shell_command will stop on error
+
 # Obtain $OS, $DIR, and the machine name and provide it to caller script
 our $OS  = `uname`    or die "$ERROR_ could not obtain OS\n"; chop $OS;
 our $DIR = `/bin/pwd` or die "$ERROR_ could not obtain DIR\n"; chop $DIR;
@@ -630,8 +633,22 @@ sub set_hypre_{
 
     # Check if library is present
     if($NewHypre eq "yes" and not -d "util/HYPRE"){
-	print "Warning: util/HYPRE is missing. Use cd util; cvs co HYPRE/\n";
+	print "Warning: util/HYPRE is missing. Use cd util; cvs co HYPRE\n";
 	return;
+    }
+
+    if($NewHypre eq "yes" and not -e "util/HYPRE/lib/libHYPRE.a"){
+	$IsStrict = 0;
+	&shell_command("cd util/HYPRE; make install");
+	$IsStrict = 1;
+	if($ErrorCode){
+	    print "$ERROR cd util/HYPRE; make install failed with ".
+		"error $ErrorCode\n";
+	    print "!!! renaming util/HYPRE to util/HYPRE_FAILED !!!\n";
+	    shell_command("rm -rf util/HYPRE_FAILED; ",
+			  "mv util/HYPRE util/HYPRE_FAILED");
+	    return;
+	}
     }
 
     # $Hypre will be $NewHypre after changes
@@ -648,8 +665,6 @@ sub set_hypre_{
 	    print;
 	}
     }
-    &shell_command("cd util/HYPRE; make install") if $Hypre eq "yes"
-	and not -e "util/HYPRE/lib/libHYPRE.a";
 
     my @files = glob("src/*Hypre_orig.f90 ??/*/src/*Hypre_orig.f90");
     foreach my $file (@files){
@@ -852,8 +867,10 @@ sub shell_command{
 
     return if $DryRun;
 
-    system($command)
-	and die "$ERROR Could not execute command=$command\n";
+    $ErrorCode = system($command) / 256; 
+
+    die "$ERROR Could not execute command=$command: code = $ErrorCode\n"
+	if $ErrorCode and $IsStrict;
 }
 
 ##############################################################################
