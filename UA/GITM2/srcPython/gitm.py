@@ -388,7 +388,7 @@ class GitmBin(PbData):
         '''
         unit_dict = {"Altitude":"m", "Ar Mixing Ratio":"", "Ar":"kg \, m^{-3}",
                      "CH4 Mixing Ratio":"", "Conduction":"W m$^{-1}$ K$^{-1}$",
-                     "EuvHeating":"", "H":"kg \, m^{-3}",
+                     "EuvHeating":"K per timestep", "H":"kg \, m^{-3}",
                      "H!U+!N":"kg \, m^{-3}", "H2 Mixing Ratio":"",
                      "HCN Mixing Ratio":"", "He":"kg \, m^{-3}",
                      "He!U+!N":"kg \, m^{-3}", "Heating Efficiency":"",
@@ -427,10 +427,13 @@ class GitmBin(PbData):
                      "B.F. Vertical":"nT", "B.F. East":"nT", "B.F. North":"nT",
                      "B.F. Magnitude":"nT", "Magnetic Latitude":"degrees",
                      "Ed1":"", "Ed2":"", "Gravity":"m s^{-2}",
-                     "PressGrad (east)":"Pa\;m^{-1}",
-                     "PressGrad (north)":"Pa\;m^{-1}",
-                     "PressGrad (up)":"Pa\;m^{-1}",
-                     "IN Collision Freq":"s^{-1}"}
+                     "PressGrad (east)":"Pa\;m^{-1}", "Joule Heating":"K per timestep",
+                     "PressGrad (north)":"Pa\;m^{-1}", "O Cooling":"K per timestep",
+                     "PressGrad (up)":"Pa\;m^{-1}", "Total Abs EUV":"K per timestep",
+                     "IN Collision Freq":"s^{-1}", "Chemical Heating":"",
+                     "Auroral Heating":"K per timestep", "Photoelectron Heating":"K per timestep",
+                     "Eddy Conduction":"", "Eddy Adiabatic Conduction":"",
+                     "NO Cooling":"K per timestep", "Molecular Conduction":""}
 
         scale_dict = {"Altitude":"linear", "Ar Mixing Ratio":"linear",
                       "Ar":"exponential", "CH4 Mixing Ratio":"linear",
@@ -477,7 +480,13 @@ class GitmBin(PbData):
                       "Magnetic Longitude":"linear", "dLat":"linear",
                       "Gravity":"linear", "PressGrad (east)":"linear",
                       "PressGrad (north)":"linear", "PressGrad (up)":"linear",
-                      "IN Collision Freq":"linear"}
+                      "IN Collision Freq":"linear", "Chemical Heating":"linear",
+                      "Total Abs EUV":"linear", "O Cooling":"linear",
+                      "Joule Heating":"linear", "Auroral Heating":"linear",
+                      "Photoelectron Heating":"linear", "NO Cooling":"linear",
+                      "Eddy Conduction":"linear",
+                      "Molecular Conduction":"linear",
+                      "Eddy Adiabatic Conduction":"linear"}
 
         name_dict = {"Altitude":"Altitude",
                      "Ar Mixing Ratio":"Argon Mixing Ratio",
@@ -546,7 +555,16 @@ class GitmBin(PbData):
                      "PressGrad (east)":r"$\nabla_{east}$ (P$_i$ + P$_e$)",
                      "PressGrad (north)":r"$\nabla_{north}$ (P$_i$ + P$_e$)",
                      "PressGrad (up)":r"$\nabla_{up}$ (P$_i$ + P$_e$)",
-                     "IN Collision Freq":r"$\nu_{in}$"}
+                     "IN Collision Freq":r"$\nu_{in}$",
+                     "Chemical Heating":"Chemical Heating Rate",
+                     "Total Abs EUV":"Total Absolute EUV",
+                     "O Cooling":"O Cooling", "Joule Heating":"Joule Heating",
+                     "Auroral Heating":"Auroral Heating",
+                     "Photoelectron Heating":"Photoelectron Heating",
+                     "Eddy Conduction":"Eddy Conduction",
+                     "Eddy Adiabatic Conduction":"Adiabatic Eddy Conduction",
+                     "NO Cooling":"NO Cooling",
+                     "Molecular Conduction":"Molecular Conduction"}
 
         for k in self.keys():
             if type(self[k]) is dmarray:
@@ -554,9 +572,12 @@ class GitmBin(PbData):
                 # Temporary fix for misspelled key (9/30/13)
                 if nk.find("Heaing Efficiency") >= 0:
                     nk = "Heating Efficiency"
+                elif nk.find("EUV Heating") >= 0:
+                    nk = "EuvHeating"
 
                 # Different versions of GITM differ in header capitalization
                 if not name_dict.has_key(nk):
+                    print nk
                     # Try to capitalize or lowercase the key
                     if nk == nk.capitalize():
                         nk = k.lower()
