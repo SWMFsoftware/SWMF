@@ -741,7 +741,7 @@ def plot_linear_alt(ax, x_data, alt_data, x_name, x_scale, x_units, alt_units,
         ax.yaxis.set_label_position("right")
     plt.ylim(amin, amax)
 
-    if x_scale.find("exponential"):
+    if x_scale.find("exponential") >= 0:
         ax.set_xscale('log')
     elif xt:
         xtics = MultipleLocator(xwidth)
@@ -750,7 +750,10 @@ def plot_linear_alt(ax, x_data, alt_data, x_name, x_scale, x_units, alt_units,
         ax.xaxis.set_major_formatter(FormatStrFormatter(""))
 
     if xl:
-        ax.set_xlabel(r'%s ($%s$)' % (x_name, x_units))
+        if x_units is None:
+            ax.set_xlabel(r'{:s}'.format(x_name))
+        else:
+            ax.set_xlabel(r'%s ($%s$)' % (x_name, x_units))
     plt.xlim(xmin, xmax)
 
     # Set the title
