@@ -39,7 +39,6 @@ test_help:
 test:
 	@rm -f *.diff
 	-@(${MAKE} test_share_library)
-	-@(${MAKE} test11)
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_pw)
 	-@(${MAKE} test_rb)
@@ -56,6 +55,7 @@ test:
 	-@(${MAKE} test8)
 	-@(${MAKE} test9)
 	-@(${MAKE} test10)
+	-@(${MAKE} test11)
 	-@(${MAKE} test12)
 	-@(${MAKE} test_check)
 
