@@ -1,11 +1,8 @@
 #!/usr/bin/perl
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 use strict;
-#use Data::Dumper;    # prity printing of a hash Dumper(\%hash)
-
-sub find_all_dependens(\@\@\%$);
-sub remove_duplicat_elements(\@);
 
 # Default values
 my $Output = "Makefile.DEPEND"; # Default output
@@ -39,7 +36,7 @@ while($ARGV[0] =~ /-/){
 	}
 
 	# Store the path
-	push(@search,split(/,/,$path));
+	push(@search, split(/,/,$path));
     }
 }
 
@@ -49,19 +46,21 @@ $Help   = 1 if $#ARGV<0;                    # No source files
 #BOP
 #!QUOTE: \subsection{Source Code Manipulation}
 #
-#!ROUTINE: depend.pl - automatic generation of Fortran source dependencies
+#!ROUTINE: depend.pl - automatic generation of Fortran/C source dependencies
 #
 #!DESCRIPTION:
 # Create a makefile with dependencies based on the 
 # \begin{verbatim}
 #   include 'file'
 #   include "file"
+#   #include "file"
+#   #include <file>
 #   use SomeModule
 # \end{verbatim}
-# statements. The script takes care of differencies in capitalization,
-# it associates files with the modules found in them, it also finds
-# modules in the search path. All in all this script figures out dependencies
-# in an automated fashion for Fortran codes which can be used in Makefile-s
+# statements. The script takes care of differencies in capitalization for Fortran,
+# it associates files with the modules found in them, it also finds modules and
+# header files in the search path. All in all this script figures out dependencies
+# in an automated fashion for Fortran and C codes which can be used in Makefile-s
 # or to get a dependency tree for its own sake.
 #
 #!REVISION HISTORY:
@@ -71,6 +70,7 @@ $Help   = 1 if $#ARGV<0;                    # No source files
 #                   can be used without any change
 # 07/30/04 I.Sokolov - added search for include files in the search path
 # 01/20/05 G.Toth - improved module -> object file association scheme
+# 03/10/14 L.Daldorff and G.Toth - added C/C++ code processing
 #EOP
 if($Help){
     print 
@@ -105,14 +105,14 @@ Interactively:  depend.pl -o=Makefile.test main.o ModMain.o'
 open(OUTPUT,">$Output") or 
     die "$ERROR could not open dependency file $Output !!!\n";
 
-# Collect the modules from the search path
+# Collect the modules and header files from the search path
 my %env;        # Directory name --> '${SHELLVAR}'
 my %modulefile; # Module object  --> File name containing the module
 my $dir;
-my %headerdependent; # headerfilename -- > header it needs
-my %headerdir;       # headerfilename -- > directory
+my %headeruse;  # filename --> header --> 1 if filename depends on header
+my %headerdir;  # headerfilename --> directory it is in
 
-
+# Loop over the search directories to find F90 modules
 foreach $dir (@search){
 
     if($dir =~ /:/){
@@ -124,12 +124,11 @@ foreach $dir (@search){
         $env{$dir}='${'.$env.'}';
     }
 
-
     -d $dir or die "$ERROR $dir is not a directory\n";
     opendir(DIR,$dir) or die "$ERROR: could not open directory $dir\n";
 
-    my @source; # List of fortran 90 files
-    @source = grep /\.(f|f90|h|H|hxx|HXX)$/i, readdir DIR;
+    my @source; # List of Fortran files
+    @source = grep /\.(f|f90)$/i, readdir DIR;
     closedir DIR;
 
     my $file; # Actual F90 file
@@ -168,38 +167,13 @@ foreach $dir (@search){
 	}
 	close FILE;
     }
-    #if its a c++/c header file
-    foreach $file (@source){
-	
-	my @includefile;
-	open FILE,"$dir/$file" or die "$ERROR: could not open $dir/$file\n";
-	while(<FILE>){
-	   # just look at the include statments
-           if(/^\#include/i){
-
-	      # a line will contain aither #include "my.h" or #include <my.h>
-	      # checking for both and return my.h
-	      my ($header)  = join "", $_ =~ /\"(.+)\"/ , $_ =~ /\<(.+)\>/;
-
-	      # only include the file we have in the dependeci list	
-	      if( grep( /^$header$/, @source)){	
-                push(@includefile, $header);
-	      }  
-            #print "*** $file :: $_ :: @includefile \n";
-
-	   }
-        }
-        close FILE;
-	$headerdir{$file} = $dir;
-	@{$headerdependent{$file}} = @includefile;
-   }
-
 }
+
+&process_header_files;
 
 my @base;    # List of base names (without extension)
 my %use;     # Base name --> space separated list of used module objects
 my %include; # Base name --> space separated list of include files
-my %sourceheader; # Base name --> header files it includes
 
 my $object;  # Name of object file
 OBJECT: 
@@ -217,7 +191,7 @@ OBJECT:
     # Try different extensions
     my $ext;
   SOURCE: 
-    foreach $ext ('.f90','.F90','.f','.F','.cpp','cxx','cc','c'){
+    foreach $ext ('.f90','.F90','.f','.F','.cpp','.cxx','.cc','.c'){
 	if(-e "$base$ext"){
 	    $file = "$base$ext";
 	    last SOURCE;
@@ -239,8 +213,6 @@ OBJECT:
 
     # Build dependency list $depend for file $file
     my $depend;
-    # Fined called header files, posible dependensi
-    my @headerfile; 
     while($_ = <FILE>){
 	# Collect module file names corresponding to the modules
 	if(/^\s*module\s+(\w+)/i){
@@ -277,110 +249,47 @@ OBJECT:
 	    $include{$base} .= " $include" 
 		unless $include{$base} =~ / $include\b/;
 	}
-	if(/^\#include/i){
-	  my $header = join "", $_ =~ /\"(.+)\"/ , $_ =~ /\<(.+)\>/;
-	  #if header is one of our header files
-	  my($dir,$filenamebase) = $base =~ /(.*)\/(.*)/;
-	  if($header =~ /^($filenamebase)(.*)/){
-	    if($headerdependent{$header}>0){ 
-  	      @headerfile =  (@headerfile, @{$headerdependent{$header}});
-            }
- 	  }
-	  if($headerdependent{$header}>0){
-            push(@headerfile, $header);
-          }
+	if(/^\#include\s+[<\"]([^>\"]+)/i){
+	    # Found C type header file. Find the directory it is from.
+	    my $headerfile = $1;
+	    my $dir = $headerdir{$1};
+
+	    # Nothing to do if it is not a know directory
+	    next unless $dir;
+
+	    # Nothing to do if header file is already listed
+	    next if $include{$base} =~ / $dir\/$headerfile\b/;
+
+	    # Add the header file and header files that depend on this header file
+	    my $headerfile2;
+	    foreach $headerfile2 (sort ($headerfile, keys %{$headeruse{$headerfile}})){
+		my $hfile = "$headerdir{$headerfile2}/$headerfile2";
+		$include{$base} .= " $hfile" unless $include{$base} =~ / $hfile\b/;
+	    }
  	}
     }
-
-   @{$sourceheader{$base}} = @headerfile;
-}
-
-
-# Store with header file have a coresonding object file
-my %objhdeader; #header --> object file
-my $obj;
-my $header;
-foreach $obj (@base){
-   my $objname = $obj;
-   $objname =~ s/^.*\///;   
-   foreach $header (@{$sourceheader{$obj}}){
-     my $head = $header;
-     $head=~ s/\.[hH].*//;
-     #have a object file with the same name
-     if($head eq $objname){
-        $objhdeader{$header} = "$obj.o";
-     } 
-   }
 }
 
 my $base; # Name of base file
 foreach $base (@base){
-
-    my $includefile;
-    my @includedpend =();  # array containg all dependensis for a object file 
-                           #( cleaned version of @dependarray )
-    my @dependarray = ();  # contain full list with all dependensis
-
-    # Get all header file a header file are calling, recusivly
-    if(scalar @{$sourceheader{$base}} > 0) {
-      my @tmp;
-      @tmp = find_all_dependens( @dependarray, @{$sourceheader{$base}}, %headerdependent, "null" ); 
-      # remove "null" in the begining of the array
-      shift(@tmp); 
-      @includedpend = remove_duplicat_elements( @tmp ); 
-    }
-
-    # Get the object file a header file coresponds to
-    if(scalar @includedpend > 0){
-       my @objfiles =();
-       $header ="";
-       foreach $header (@includedpend){
-         my $head = $header;
-         my $obj = $base;
-	 $head =~ s/\.[hH].*//; # header file name without extensions or dir
-         $obj  =~ s/^.*\///;   # object file name without extensions or dir
-	 # if there are a corespinding object file but not itself
-         if(exists $objhdeader{$header} &&  $obj ne $head ){
-           push(@objfiles, $objhdeader{$header});
-         }
-       }	
-
-      #set add the directory for the header file
-      for(@includedpend){
-	s/^/$headerdir{$_}\//;
-      } 
-       # array containg all dependensis for a object file
-      # @includedpend = (@includedpend,@objfiles);
-    }
-
-    my $depend; # Space separated list of include files and used module objects
-
-    # c/c++ and fortran code have differents paths
-    if(scalar @includedpend == 0){  
-      # fortran code section
-      my $use; # Space separeted list of used module objects
-      $use = $use{$base};
-      if($use){
+    my $use; # Space separeted list of used module objects
+    $use = $use{$base};
+    if($use){
   	# Correct module names to file names
   	my @use = split(' ',$use);
   	my $mfile;
   	map {if($mfile=$modulefile{uc($_)}){$_=$mfile}} (@use);
   
-          # Exclude dependency on itself and compiler provided modules
-          map { $_='' if $_ eq "$base.o" or /F90_UNIX_IO/i or /ESMF_Mod.o/i
+	# Exclude dependency on itself and compiler provided modules
+	map { $_='' if $_ eq "$base.o" or /F90_UNIX_IO/i or /ESMF_Mod.o/i
   	      or /netcdf.o/i or /ezspline/i or /ezcdf.o/i or /^hdf5.o/i}
   	(@use);
-  	    
-          # Make string out of array
-  	$use=' '.join(' ',@use);
-      }
-  
-      $depend = $include{$base}.$use;
+
+	# Make string out of array
+  	$use = ' '.join(' ',@use);
     }
-    else {
-      #c/c++ code
-      $depend = ' '.join(' ',@includedpend);
-    }
+    my $depend;
+    $depend = $include{$base}.$use;
 
     # Get rid of leading and trailing spaces
     $depend =~ s/^ *//; $depend =~ s/ *$//;
@@ -396,52 +305,74 @@ close OUTPUT;
 
 exit;
 
-sub remove_duplicat_elements(\@){
-    my ($inarr) = @_;
+################################################################################
+sub process_header_files{
 
-    my @arr;
-    my @uniqarr = ();
+    # Find header files
+    my $dir;
+    my $file;
+    my $headerfile;
 
-    @arr     = @$inarr;
-    foreach my $var ( @arr ){
-      if ( ! grep( /^$var$/, @uniqarr ) ){
-         push( @uniqarr, $var );
-      }
-    }
-   return @uniqarr;
-}
-
-sub find_all_dependens(\@\@\%$){
-
-    # @includefiles  :: array of headerfiles
-    # %includefiledepend :: headerfile -> array of headerfiles it depends on
-    # $file  :: the header file we are working on, just to make return statment easy
-    my ($deparray, $incarray, $incdep, $file ) = @_;
-    my @depend;
-    my @includefiles;
-    my %includefiledepend;
-    my @newdepend;
-    #copy input variable into there proper variable
-    @depend            = @$deparray;	
-    @includefiles      = @$incarray;
-    %includefiledepend = %$incdep;
-
-    @newdepend =(@depend,$file); 
-   
-    my $lengde = exists $includefiledepend{$file};
-
-    if(exists $includefiledepend{$file} || $file == "null"){
-       foreach my $newfile (@includefiles){
-	 if(grep( /^$newfile$/, @newdepend) ){
-	    #print "$newfile allready in dependency array \n";
-         } else {
-	    @newdepend = find_all_dependens(@newdepend, @{$includefiledepend{$newfile}},%includefiledepend, $newfile);
-	    #print "newdepend = @newdepend \n";
-	    #@depend = (@depend, @newdepend );
-         }
-       }
+    # Loop over the object files and collect directories
+    my $object;
+    my %objectdir;	 # hash of directories containing object files
+    foreach $object (@ARGV){
+	$dir = ".";		       # assume local directory
+	$dir = $` if $object =~ m#/[^/]+#; # check for / in the name
+	$objectdir{$dir} = 1;
     }
 
-  return @newdepend;
-}
+    # Loop over object directories, find header files and store their dependencies
+    foreach $dir (@search, keys %objectdir){
+	opendir(DIR,$dir) or die "$ERROR: could not open object directory $dir\n";
+	my @headerfiles = grep /\.h(xx)?$/i, readdir DIR;
+	closedir DIR;
+	foreach $file (@headerfiles){
+	    # store headerfile into headerdir (assume that names are unique!)
+	    $headerdir{$file} = $dir;
 
+	    # See if the header file depends on other files
+	    open(FILE, "$dir/$file") 
+		or die "$ERROR: could not open header file $dir/$file\n";
+
+	    # Find #include statements and store dependency
+	    while (<FILE>){
+		$headeruse{$file}{$1} = 1 if /^#include\s+[<\"]([^\">]+)/i;
+	    }
+	    close FILE;
+	}
+    }
+
+    # Remove headers that are not in the search or object directories
+    foreach $file (keys %headeruse){
+	foreach $headerfile (keys %{$headeruse{$file}}){
+	    delete $headeruse{$file}{$headerfile} unless $headerdir{$headerfile};
+	}
+    }
+
+    # Add nested dependencies (loop as long as needed)
+    my $headerfile2;
+    LEVEL:{
+	my $change = 0;
+	foreach $file (keys %headeruse){
+	    foreach $headerfile (keys %{$headeruse{$file}}){
+		foreach $headerfile2 (keys %{$headeruse{$headerfile}}){
+		    next if $headeruse{$file}{$headerfile2};
+		    $headeruse{$file}{$headerfile2} = 1;
+		    $change = 1;
+		}
+	    }
+	}
+	redo if $change;
+    }
+
+    #print "HEADER FILES:\n";
+    #foreach $file (sort keys %headeruse){
+    #    print "$file uses: ";
+    #    foreach $headerfile (sort keys %{ $headeruse{$file} }){
+    #	print " $headerdir{$headerfile}/$headerfile";
+    #    }
+    #    print "\n";
+    #}
+
+}
