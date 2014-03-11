@@ -153,7 +153,7 @@ void PIC::CPLR::SWMF::ConvertMpiCommunicatorFortran2C(signed int* iComm,signed i
 }
 
 void PIC::CPLR::SWMF::ResetCenterPointProcessingFlag() {
-  int res=0,thread,i,j,k;
+  int thread,i,j,k;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   PIC::Mesh::cDataBlockAMR *block;
   PIC::Mesh::cDataCenterNode *cell;

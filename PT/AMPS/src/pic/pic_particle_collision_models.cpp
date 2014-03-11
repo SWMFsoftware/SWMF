@@ -119,7 +119,10 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
   //sampling data
   PIC::Mesh::cDataCenterNode *cell;
+
+#if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
   char *SamplingData;
+#endif
 
 
   //simulate particle's collisions
@@ -134,7 +137,10 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
             cell=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
             cellMeasure=cell->Measure;
+
+#if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
             SamplingData=cell->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset;
+#endif
 
             if (FirstCellParticle!=-1) {
               //simulate collision in the cell
@@ -216,11 +222,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                     if (SigmaCr>SigmaCrMax) SigmaCrMax=SigmaCr;
                   }
 
-#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
-                  //do nothing
-#else
                   SigmaCrMax*=SigmaCrMax_SafetyMargin;
-#endif
 
                   //2.Evaluate the prospective number of collisions
                   double maxLocalTimeStep,minLocalParticleWeight;

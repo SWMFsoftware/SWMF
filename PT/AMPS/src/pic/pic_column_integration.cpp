@@ -191,7 +191,7 @@ void PIC::ColumnIntegration::GetCoulumnIntegral(double *ResultVector,int ResultV
   double lNormalized[3],c,x[3],dl=0.0,IntegratedPath=0.0,a0[ResultVectorLength],a1[ResultVectorLength];
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* xNode=xStartNode;
   int idim,i;
-  MPI_Status status;
+//  MPI_Status status;
   int IntegrationFinished=false;
 
   //the ratio between the step of the integration procedure and the local cell size

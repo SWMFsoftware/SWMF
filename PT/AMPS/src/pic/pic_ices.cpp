@@ -631,6 +631,7 @@ void PIC::CPLR::ICES::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,
 }
 
 void PIC::CPLR::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
+#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_ || _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
   int i;
   double c;
   char *offset,*offsetCenterNode;
@@ -691,6 +692,7 @@ void PIC::CPLR::ICES::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList
 
 
   }
+#endif
 }
 
 //====================================================
