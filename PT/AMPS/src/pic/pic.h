@@ -2459,6 +2459,14 @@ namespace PIC {
         extern fSampleParticleData SampleParticleData;
       }
 
+      namespace RotationBody {
+      using namespace Sphere;
+        extern cAMRheap<cInternalRotationBodyData> InternalRotationBody;
+
+        cInternalBoundaryConditionsDescriptor RegisterInternalRotationBody();
+        void PrintDefaultDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalRotationBodyData *RotationBody,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
+      }
+
       namespace Circle {
         extern int completedCellSampleDataPointerOffset,collectingCellSampleDataPointerOffset;
         extern int sampledFluxDownRelativeOffset,sampledFluxUpRelativeOffset;
