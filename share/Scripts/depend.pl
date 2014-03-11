@@ -3,6 +3,7 @@
 #  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 use strict;
+use English;
 
 # Default values
 my $Output = "Makefile.DEPEND"; # Default output
@@ -13,34 +14,18 @@ my @search;                     # Array of search
 my $ERROR   = "ERROR in depend.pl:";
 my $WARNING = "WARNING in depend.pl:";
 
-# Translation between directory names and Makefile definitions
-my %defdir = ('/share/Library/src' => 'SHAREDIR',
-	      '/CON/Library/src'   => 'LIBRARYDIR',
-	      '/CON/Coupler/src'   => 'COUPLERDIR',
-	      '/CON/Interface/src' => 'INTERFACEDIR');
-
 # Read flags
 while($ARGV[0] =~ /-/){
     my $flag = shift(@ARGV);
     if($flag =~ /^-o=/){$Output=$'};  # -o=Makefile.test
     if($flag =~ /^-h/i){$Help=1};     # -h -help -H -Help
-    if($flag =~ /^(-s|-p|-I)=?/){        # -s=path1,path2 -Ipath
-	my $path = $';  $path = shift(@ARGV) unless $path;
-
-	if($path !~ /[:,]/){
-	    # Add 'variable:' for directories defined in %defdir hash
-	    my $dir;
-	    foreach $dir (keys %defdir){
-		$path = "$defdir{$dir}:$path" if $path =~ /$dir/;
-	    }
-	}
-
-	# Store the path
-	push(@search, split(/,/,$path));
+    if($flag =~ /^(-p|-I)=?/){        # -p=path -Ipath -I path
+        # For "-I path" take the path from the next argument
+	push(@search, ($POSTMATCH or shift @ARGV));
     }
 }
 
-$Help   = 1 if $#ARGV<0;                    # No source files
+$Help = 1 if $#ARGV<0;                    # No source files
 
 #!QUOTE: \clearpage
 #BOP
@@ -75,16 +60,14 @@ $Help   = 1 if $#ARGV<0;                    # No source files
 if($Help){
     print 
 #BOC
-'Usage: depend.pl [-h] [-o=filename] [-s=path] [-Ipath] file1 file2
+'Usage: depend.pl [-h] [-o=filename] [-p=path] [-Ipath] [-I path] file1 file2
 
 Options:
 
 -h             this help message
 
--Ipath -s=path look for modules in the comma separated list of directories.
-               The directory name can be preceeded with an environment
-               variable name and a colon. This flag can be given multiple
-               times. The -s= format is kept for backwards compatibility.
+-Ipath -p=path look for modules in the comma separated list of directories.
+               This flag can be given multiple times to add more directories.
 
 -o=filename    write dependencies into filename (default is Makefile.DEPEND)
 
@@ -106,69 +89,44 @@ open(OUTPUT,">$Output") or
     die "$ERROR could not open dependency file $Output !!!\n";
 
 # Collect the modules and header files from the search path
-my %env;        # Directory name --> '${SHELLVAR}'
 my %modulefile; # Module object  --> File name containing the module
-my $dir;
 my %headeruse;  # filename --> header --> 1 if filename depends on header
 my %headerdir;  # headerfilename --> directory it is in
 
 # Loop over the search directories to find F90 modules
+my $dir;
 foreach $dir (@search){
-
-    if($dir =~ /:/){
-	# Split environment name from dir name if a colon is present
-	my $env;
-	($env,$dir)=split(':',$dir);
-
-	# Store environment variable for this directory in suitable form
-        $env{$dir}='${'.$env.'}';
-    }
 
     -d $dir or die "$ERROR $dir is not a directory\n";
     opendir(DIR,$dir) or die "$ERROR: could not open directory $dir\n";
 
     my @source; # List of Fortran files
-    @source = grep /\.(f|f90)$/i, readdir DIR;
+    @source = grep /\.f\d*?$/i, readdir DIR;
     closedir DIR;
 
-    my $file; # Actual F90 file
+    my $file; # Actual Fortran file
     foreach $file (@source){
 	open FILE,"$dir/$file" or die "$ERROR: could not open $dir/$file\n";
 
 	# Form object name from source file name
-	my $objectfile = $file; $objectfile =~ s/\.f90$/.o/i;
+	my $objectfile = $file; $objectfile =~ s/\.f\d*$/.o/i;
 
+	# Search for module MODULENAME lines
 	while(<FILE>){
-
 	    if(/^\s*module\s+(\w+)/i){
 		my $module = uc($1); # capitalize module name (ignore case)
 		my $object = $module.'.O'; # capitalized object file name
 
-		# The object file must exist already.
-		# If there are multiple source+object files for the same module
-		# use the source file with the name matching the module name.
-
-		# Remove IH_ or SC_ from the name of the module for matching
-		# with the file name (the file name is never renamed)
-		$module =~ s/^(IH|SC)_//;
-
-		if(-e "$dir/$objectfile" and 
-		   $modulefile{$object} !~ /\/$module\.o$/i){
-		    # If not, store the filename into %modulefile
-		    if($env{$dir}){
-			# Store the name using the environment variable
-			$modulefile{$object}="$env{$dir}/$objectfile";
-		    }else{
-			# Store the full path
-			$modulefile{$object}="$dir/$objectfile";
-		    }
-		}
+		# Store the full path if the objectfile exists
+		$modulefile{$object} = "$dir/$objectfile" 
+		    if -e "$dir/$objectfile";
 	    }
 	}
 	close FILE;
     }
 }
 
+# Do header files for C/C++ code
 &process_header_files;
 
 my @base;    # List of base names (without extension)
@@ -180,15 +138,15 @@ OBJECT:
     while($object=shift(@ARGV)){
 
     my $base=$object;
-    # Skip files in other directories
+    # Skip files in directories starting with ..
     next OBJECT if $base=~/^\.\./;
 
     # Skip files which do not have the .o extension
-    $base=~s/\.o$// or next OBJECT;
+    $base =~ s/\.o$// or next OBJECT;
 
     my $file; # Name of the source file corresponding to the object file
 
-    # Try different extensions
+    # Try different extensions for the source file
     my $ext;
   SOURCE: 
     foreach $ext ('.f90','.F90','.f','.F','.cpp','.cxx','.cc','.c'){
@@ -230,17 +188,12 @@ OBJECT:
 	# Check for 'include "filename"'
 	if(/^\s*include\s+[\"\']([^\'\"]+)/i and not /\bmpif.h\b/){
 	    my $include=$1;
-	    my $includeorig=$include;
 	    # If include file is not found check the search path
 	    if(not -e $include){
 		my $dir;
 		foreach $dir (@search){
 		    if( -e "$dir/$include"){
-			if($env{$dir}){
-			    $include="$env{$dir}/$include";
-			}else{
-			    $include="$dir/$include";
-			}
+			$include="$dir/$include";
 			last;
 		    }
 		}
@@ -254,17 +207,19 @@ OBJECT:
 	    my $headerfile = $1;
 	    my $dir = $headerdir{$1};
 
-	    # Nothing to do if it is not a know directory
+	    # Nothing to do if it is not a known directory
 	    next unless $dir;
 
 	    # Nothing to do if header file is already listed
 	    next if $include{$base} =~ / $dir\/$headerfile\b/;
 
-	    # Add the header file and header files that depend on this header file
+	    # Add the header file and header files used by it
 	    my $headerfile2;
-	    foreach $headerfile2 (sort ($headerfile, keys %{$headeruse{$headerfile}})){
+	    foreach $headerfile2 (sort ($headerfile, 
+					keys %{$headeruse{$headerfile}})){
 		my $hfile = "$headerdir{$headerfile2}/$headerfile2";
-		$include{$base} .= " $hfile" unless $include{$base} =~ / $hfile\b/;
+		$include{$base} .= " $hfile" 
+		    unless $include{$base} =~ / $hfile\b/;
 	    }
  	}
     }
@@ -317,17 +272,18 @@ sub process_header_files{
     my $object;
     my %objectdir;	 # hash of directories containing object files
     foreach $object (@ARGV){
-	$dir = ".";		       # assume local directory
+	$dir = ".";		           # assume local directory
 	$dir = $` if $object =~ m#/[^/]+#; # check for / in the name
 	$objectdir{$dir} = 1;
     }
 
-    # Loop over object directories, find header files and store their dependencies
+    # Loop over object directories, find header files and store dependencies
     foreach $dir (@search, keys %objectdir){
-	next if $dir =~ /:/;
-	opendir(DIR,$dir) or die "$ERROR: could not open object directory $dir\n";
+	opendir(DIR,$dir) 
+	    or die "$ERROR: could not open object directory $dir\n";
 	my @headerfiles = grep /\.h(xx)?$/i, readdir DIR;
 	closedir DIR;
+
 	foreach $file (@headerfiles){
 	    # store headerfile into headerdir (assume that names are unique!)
 	    $headerdir{$file} = $dir;
@@ -347,18 +303,20 @@ sub process_header_files{
     # Remove headers that are not in the search or object directories
     foreach $file (keys %headeruse){
 	foreach $headerfile (keys %{$headeruse{$file}}){
-	    delete $headeruse{$file}{$headerfile} unless $headerdir{$headerfile};
+	    delete $headeruse{$file}{$headerfile} 
+	        unless $headerdir{$headerfile};
 	}
     }
 
     # Add nested dependencies (loop as long as needed)
     my $headerfile2;
     LEVEL:{
-	my $change = 0;
+	my $change; # assume no change
 	foreach $file (keys %headeruse){
 	    foreach $headerfile (keys %{$headeruse{$file}}){
 		foreach $headerfile2 (keys %{$headeruse{$headerfile}}){
 		    next if $headeruse{$file}{$headerfile2};
+		    # Add new dependency and note the change
 		    $headeruse{$file}{$headerfile2} = 1;
 		    $change = 1;
 		}
