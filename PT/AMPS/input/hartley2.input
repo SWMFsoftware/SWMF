@@ -82,7 +82,7 @@ CouplerMode=ices !!off, ices, swmf
 
 #endblock
 
-#block ../cometSources.pl	
+#block ../hartley2Sources.pl	
     HeliocentricDistance=1.064*_AU_ \\	
     AzimuthCenter=0.0 \\ !! Azimuth is betweem 0 and 360 degrees with respect to the x-axis
     ZenithCenter=90.0 \\ !! Zenith is between 0 and 180 degrees with respect to the z-axis, ATTENTION ANGLE PASSING ZENITH BOUNDARIES NOT IMPLEMENTED
