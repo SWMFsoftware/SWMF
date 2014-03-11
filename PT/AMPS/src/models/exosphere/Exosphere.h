@@ -770,6 +770,9 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
     double totalProductionRate(int spec,void *SphereDataPointer);
     long int InjectionBoundaryModel(void *SphereDataPointer);
     long int InjectionBoundaryModel(int spec,void *SphereDataPointer);
+
+    long int InjectionBoundaryModelLimited(void *SphereDataPointer);
+    long int InjectionBoundaryModelLimited(int spec,void *SphereDataPointer);
   }
 
 
